@@ -27,10 +27,12 @@
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/TypedPointerType.h"
+#include "llvm/IR/Value.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/Local.h"
 
 #include <cassert>
+#include <optional>
 #include <queue>
 #include <unordered_set>
 
@@ -158,6 +160,20 @@ public:
 
 static bool isaGEP(const Value *V) {
   return isa<StructuredGEPInst>(V) || isa<GetElementPtrInst>(V);
+}
+
+// If Ty is a byte-addressing type, return the multiplier for the offset.
+// Otherwise return std::nullopt.
+static std::optional<uint64_t> getByteAddressingMultiplier(Type *Ty) {
+  if (Ty == IntegerType::getInt8Ty(Ty->getContext())) {
+    return 1;
+  }
+  if (auto *AT = dyn_cast<ArrayType>(Ty)) {
+    if (AT->getElementType() == IntegerType::getInt8Ty(Ty->getContext())) {
+      return AT->getNumElements();
+    }
+  }
+  return std::nullopt;
 }
 
 class SPIRVEmitIntrinsics
@@ -325,13 +341,23 @@ class SPIRVEmitIntrinsics
   //    Parameters:
   //      ElementType: the type of the elements stored in the parent array.
   //      Offset: the Value* containing the byte offset into the array.
+  //      Multiplier: a scaling factor for the offset.
   // Return true if an error occurred during the walk, false otherwise.
   bool walkLogicalAccessChain(
       GetElementPtrInst &GEP,
       const std::function<void(Type *PointedType, uint64_t Index)>
           &OnLiteralIndexing,
-      const std::function<void(Type *ElementType, Value *Offset)>
-          &OnDynamicIndexing);
+      const std::function<void(Type *ElementType, Value *Offset,
+                               uint64_t Multiplier)> &OnDynamicIndexing);
+
+  bool walkLogicalAccessChainDynamic(
+      Type *CurType, Value *Operand, uint64_t Multiplier,
+      const std::function<void(Type *, uint64_t)> &OnLiteralIndexing,
+      const std::function<void(Type *, Value *, uint64_t)> &OnDynamicIndexing);
+
+  bool walkLogicalAccessChainConstant(
+      Type *CurType, uint64_t Offset,
+      const std::function<void(Type *, uint64_t)> &OnLiteralIndexing);
 
   // Returns the type accessed using the given GEP instruction by relying
   // on the GEP type.
@@ -716,33 +742,35 @@ void SPIRVEmitIntrinsics::maybeAssignPtrType(Type *&Ty, Value *Op, Type *RefTy,
   Ty = RefTy;
 }
 
-bool SPIRVEmitIntrinsics::walkLogicalAccessChain(
-    GetElementPtrInst &GEP,
+bool SPIRVEmitIntrinsics::walkLogicalAccessChainDynamic(
+    Type *CurType, Value *Operand, uint64_t Multiplier,
     const std::function<void(Type *, uint64_t)> &OnLiteralIndexing,
-    const std::function<void(Type *, Value *)> &OnDynamicIndexing) {
-  // We only rewrite i8* GEP. Other should be left as-is.
-  // Valid i8* GEP must always have a single index.
-  assert(GEP.getSourceElementType() ==
-         IntegerType::getInt8Ty(CurrF->getContext()));
-  assert(GEP.getNumIndices() == 1);
-
-  auto &DL = CurrF->getDataLayout();
-  Value *Src = getPointerRoot(GEP.getPointerOperand());
-  Type *CurType = deduceElementType(Src, true);
-
-  Value *Operand = *GEP.idx_begin();
-  ConstantInt *CI = dyn_cast<ConstantInt>(Operand);
-  if (!CI) {
-    ArrayType *AT = dyn_cast<ArrayType>(CurType);
-    // Operand is not constant. Either we have an array and accept it, or we
-    // give up.
-    if (AT)
-      OnDynamicIndexing(AT->getElementType(), Operand);
-    return AT == nullptr;
+    const std::function<void(Type *, Value *, uint64_t)> &OnDynamicIndexing) {
+  // Dynamic indexing into a struct is not possible.
+  // We know that we must be accessing the first element
+  // of the struct if the current type is a struct.
+  // Try to find the first array type that is at offset 0 in the struct.
+  while (auto *ST = dyn_cast<StructType>(CurType)) {
+    if (ST->getNumElements() > 0) {
+      CurType = ST->getElementType(0);
+      OnLiteralIndexing(CurType, 0);
+      continue;
+    }
   }
 
-  assert(CI);
-  uint64_t Offset = CI->getZExtValue();
+  assert(CurType);
+  ArrayType *AT = dyn_cast<ArrayType>(CurType);
+  // Operand is not constant. Either we have an array and accept it, or we
+  // give up.
+  if (AT)
+    OnDynamicIndexing(AT->getElementType(), Operand, Multiplier);
+  return AT == nullptr;
+}
+
+bool SPIRVEmitIntrinsics::walkLogicalAccessChainConstant(
+    Type *CurType, uint64_t Offset,
+    const std::function<void(Type *, uint64_t)> &OnLiteralIndexing) {
+  auto &DL = CurrF->getDataLayout();
 
   do {
     if (ArrayType *AT = dyn_cast<ArrayType>(CurType)) {
@@ -772,7 +800,6 @@ bool SPIRVEmitIntrinsics::walkLogicalAccessChain(
       Offset -= Index * EltTypeSize;
       CurType = EltTy;
       OnLiteralIndexing(CurType, Index);
-
     } else {
       // Unknown composite kind; give up.
       return true;
@@ -780,6 +807,30 @@ bool SPIRVEmitIntrinsics::walkLogicalAccessChain(
   } while (Offset > 0);
 
   return false;
+}
+
+bool SPIRVEmitIntrinsics::walkLogicalAccessChain(
+    GetElementPtrInst &GEP,
+    const std::function<void(Type *, uint64_t)> &OnLiteralIndexing,
+    const std::function<void(Type *, Value *, uint64_t)> &OnDynamicIndexing) {
+  // We only rewrite byte-addressing GEP. Other should be left as-is.
+  // Valid byte-addressing GEP must always have a single index.
+  std::optional<uint64_t> MultiplierOpt =
+      getByteAddressingMultiplier(GEP.getSourceElementType());
+  assert(MultiplierOpt && "We only rewrite byte-addressing GEP");
+  uint64_t Multiplier = *MultiplierOpt;
+  assert(GEP.getNumIndices() == 1);
+
+  Value *Src = getPointerRoot(GEP.getPointerOperand());
+  Type *CurType = deduceElementType(Src, true);
+
+  Value *Operand = *GEP.idx_begin();
+  if (ConstantInt *CI = dyn_cast<ConstantInt>(Operand))
+    return walkLogicalAccessChainConstant(
+        CurType, CI->getZExtValue() * Multiplier, OnLiteralIndexing);
+
+  return walkLogicalAccessChainDynamic(CurType, Operand, Multiplier,
+                                       OnLiteralIndexing, OnDynamicIndexing);
 }
 
 Instruction *
@@ -797,11 +848,28 @@ SPIRVEmitIntrinsics::buildLogicalAccessChainFromGEP(GetElementPtrInst &GEP) {
         Indices.push_back(
             ConstantInt::get(B.getInt64Ty(), Index, /* Signed= */ false));
       },
-      [&Indices, &B, &DL](Type *EltType, Value *Offset) {
+      [&Indices, &B, &DL, this](Type *EltType, Value *Offset,
+                                uint64_t Multiplier) {
+        Value *Index = nullptr;
         uint32_t EltTypeSize = DL.getTypeSizeInBits(EltType) / 8;
-        Value *Index = B.CreateUDiv(
-            Offset, ConstantInt::get(Offset->getType(), EltTypeSize,
-                                     /* Signed= */ false));
+        assert(Multiplier != 0);
+        if (Multiplier == EltTypeSize) {
+          Index = Offset;
+        } else if (EltTypeSize % Multiplier == 0) {
+          Index =
+              B.CreateUDiv(Offset, ConstantInt::get(Offset->getType(),
+                                                    EltTypeSize / Multiplier,
+                                                    /* Signed= */ false));
+        } else {
+          Index = B.CreateMul(Offset,
+                              ConstantInt::get(Offset->getType(), Multiplier,
+                                               /* Signed= */ false));
+          insertAssignTypeIntrs(cast<Instruction>(Index), B);
+          Index = B.CreateUDiv(Index,
+                               ConstantInt::get(Offset->getType(), EltTypeSize,
+                                                /* Signed= */ false));
+        }
+        insertAssignTypeIntrs(cast<Instruction>(Index), B);
         Indices.push_back(Index);
       });
 
@@ -821,14 +889,13 @@ Type *SPIRVEmitIntrinsics::getGEPTypeLogical(GetElementPtrInst *GEP) {
 
   bool Interrupted = walkLogicalAccessChain(
       *GEP, [&CurType](Type *EltType, uint64_t Index) { CurType = EltType; },
-      [&CurType](Type *EltType, Value *Index) { CurType = EltType; });
+      [&CurType](Type *EltType, Value *Index, uint64_t) { CurType = EltType; });
 
   return Interrupted ? GEP->getResultElementType() : CurType;
 }
 
 Type *SPIRVEmitIntrinsics::getGEPType(GetElementPtrInst *Ref) {
-  if (Ref->getSourceElementType() ==
-          IntegerType::getInt8Ty(CurrF->getContext()) &&
+  if (getByteAddressingMultiplier(Ref->getSourceElementType()) &&
       TM.getSubtargetImpl()->isLogicalSPIRV()) {
     return getGEPTypeLogical(Ref);
   }
@@ -1651,11 +1718,15 @@ Instruction *SPIRVEmitIntrinsics::visitCallInst(CallInst &Call) {
   if (!Call.isInlineAsm())
     return &Call;
 
-  const InlineAsm *IA = cast<InlineAsm>(Call.getCalledOperand());
   LLVMContext &Ctx = CurrF->getContext();
-
-  Constant *TyC = UndefValue::get(IA->getFunctionType());
-  MDString *ConstraintString = MDString::get(Ctx, IA->getConstraintString());
+  // TODO: this does not retain elementtype info for memory constraints, which
+  //       in turn means that we lower them into pointers to i8, rather than
+  //       pointers to elementtype; this can be fixed during reverse translation
+  //       but we should correct it here, possibly by tweaking the function
+  //       type to take TypedPointerType args.
+  Constant *TyC = UndefValue::get(SPIRV::getOriginalFunctionType(Call));
+  MDString *ConstraintString =
+      MDString::get(Ctx, SPIRV::getOriginalAsmConstraints(Call));
   SmallVector<Value *> Args = {
       buildMD(TyC),
       MetadataAsValue::get(Ctx, MDNode::get(Ctx, ConstraintString))};
@@ -1768,8 +1839,7 @@ Instruction *SPIRVEmitIntrinsics::visitGetElementPtrInst(GetElementPtrInst &I) {
     //
     // If the GEP is doing byte addressing, try to rebuild the full access chain
     // from the type of the pointer.
-    if (I.getSourceElementType() ==
-        IntegerType::getInt8Ty(CurrF->getContext())) {
+    if (getByteAddressingMultiplier(I.getSourceElementType())) {
       return buildLogicalAccessChainFromGEP(I);
     }
 
@@ -2166,10 +2236,19 @@ Instruction *SPIRVEmitIntrinsics::visitLoadInst(LoadInst &I) {
   const auto *TLI = TM.getSubtargetImpl()->getTargetLowering();
   MachineMemOperand::Flags Flags =
       TLI->getLoadMemOperandFlags(I, CurrF->getDataLayout());
-  auto *NewI =
-      B.CreateIntrinsic(Intrinsic::spv_load, {I.getOperand(0)->getType()},
-                        {I.getPointerOperand(), B.getInt16(Flags),
-                         B.getInt32(I.getAlign().value())});
+
+  unsigned IntrinsicId;
+  SmallVector<Value *, 4> Args = {I.getPointerOperand(), B.getInt16(Flags)};
+  if (!I.isAtomic()) {
+    IntrinsicId = Intrinsic::spv_load;
+    Args.push_back(B.getInt32(I.getAlign().value()));
+  } else {
+    IntrinsicId = Intrinsic::spv_atomic_load;
+    Args.push_back(B.getInt8(static_cast<uint8_t>(I.getOrdering())));
+  }
+  CallInst *NewI =
+      B.CreateIntrinsic(IntrinsicId, {I.getOperand(0)->getType()}, Args);
+
   replaceMemInstrUses(&I, NewI, B);
   return NewI;
 }
@@ -2197,10 +2276,18 @@ Instruction *SPIRVEmitIntrinsics::visitStoreInst(StoreInst &I) {
     CB->mutateType(B.getInt32Ty());
   }
 
+  unsigned IntrinsicId;
+  SmallVector<Value *, 4> Args = {I.getValueOperand(), PtrOp,
+                                  B.getInt16(Flags)};
+  if (!I.isAtomic()) {
+    IntrinsicId = Intrinsic::spv_store;
+    Args.push_back(B.getInt32(I.getAlign().value()));
+  } else {
+    IntrinsicId = Intrinsic::spv_atomic_store;
+    Args.push_back(B.getInt8(static_cast<uint8_t>(I.getOrdering())));
+  }
   auto *NewI = B.CreateIntrinsic(
-      Intrinsic::spv_store, {I.getValueOperand()->getType(), PtrOp->getType()},
-      {I.getValueOperand(), PtrOp, B.getInt16(Flags),
-       B.getInt32(I.getAlign().value())});
+      IntrinsicId, {I.getValueOperand()->getType(), PtrOp->getType()}, Args);
   NewI->copyMetadata(I);
   I.eraseFromParent();
   return NewI;
@@ -2240,10 +2327,16 @@ Instruction *SPIRVEmitIntrinsics::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
   SmallVector<Value *> Args(I.operands());
   Args.push_back(B.getInt32(
       static_cast<uint32_t>(getMemScope(I.getContext(), I.getSyncScopeID()))));
+  // Per SPIR-V spec atomic ops must combine the ordering bits with the
+  // storage-class bit.
+  const SPIRVSubtarget &ST = TM.getSubtarget<SPIRVSubtarget>(*I.getFunction());
+  unsigned AS = I.getPointerOperand()->getType()->getPointerAddressSpace();
+  uint32_t ScSem = static_cast<uint32_t>(
+      getMemSemanticsForStorageClass(addressSpaceToStorageClass(AS, ST)));
   Args.push_back(B.getInt32(
-      static_cast<uint32_t>(getMemSemantics(I.getSuccessOrdering()))));
+      static_cast<uint32_t>(getMemSemantics(I.getSuccessOrdering())) | ScSem));
   Args.push_back(B.getInt32(
-      static_cast<uint32_t>(getMemSemantics(I.getFailureOrdering()))));
+      static_cast<uint32_t>(getMemSemantics(I.getFailureOrdering())) | ScSem));
   auto *NewI = B.CreateIntrinsic(Intrinsic::spv_cmpxchg,
                                  {I.getPointerOperand()->getType()}, {Args});
   replaceMemInstrUses(&I, NewI, B);
@@ -2478,25 +2571,12 @@ bool SPIRVEmitIntrinsics::shouldTryToAddMemAliasingDecoration(
   const SPIRVSubtarget *STI = TM.getSubtargetImpl(*Inst->getFunction());
   if (!STI->canUseExtension(SPIRV::Extension::SPV_INTEL_memory_access_aliasing))
     return false;
-  // Add aliasing decorations to internal load and store intrinsics
-  // and atomic instructions, skipping atomic store as it won't have ID to
-  // attach the decoration.
-  if (match(Inst, m_AnyIntrinsic<Intrinsic::spv_load, Intrinsic::spv_store>()))
-    return true;
-  auto *CI = dyn_cast<CallInst>(Inst);
-  if (!CI)
-    return false;
-  if (Function *Fun = CI->getCalledFunction()) {
-    if (Fun->isIntrinsic())
-      return false;
-    std::string Name = getOclOrSpirvBuiltinDemangledName(Fun->getName());
-    const std::string Prefix = "__spirv_Atomic";
-    const bool IsAtomic = Name.find(Prefix) == 0;
-
-    if (!Fun->getReturnType()->isVoidTy() && IsAtomic)
-      return true;
-  }
-  return false;
+  // Add aliasing decorations to internal load and store intrinsics.
+  // Do not attach them to store atomic or load atomic intrinsics / instructions
+  // since the extension is inconsistent at the moment (we cannot add the
+  // decoration to atomic stores because they do not have an id).
+  return match(Inst,
+               m_AnyIntrinsic<Intrinsic::spv_load, Intrinsic::spv_store>());
 }
 
 void SPIRVEmitIntrinsics::insertSpirvDecorations(Instruction *I,
@@ -2538,6 +2618,28 @@ void SPIRVEmitIntrinsics::insertSpirvDecorations(Instruction *I,
     B.CreateIntrinsic(Intrinsic::spv_assign_fpmaxerror_decoration,
                       {I->getType()},
                       {I, MetadataAsValue::get(I->getContext(), MD)});
+  }
+  if (I->getModule()->getTargetTriple().getVendor() == Triple::AMD &&
+      isa<AtomicRMWInst>(I)) {
+    // If present, we encode AMDGPU atomic metadata as UserSemantic string
+    // decorations, which will be parsed during reverse translation.
+    auto &Ctx = B.getContext();
+    auto *US = ConstantAsMetadata::get(
+        ConstantInt::get(B.getInt32Ty(), SPIRV::Decoration::UserSemantic));
+
+    SmallVector<Metadata *> MDs;
+    if (I->hasMetadata("amdgpu.no.fine.grained.memory"))
+      MDs.push_back(MDNode::get(
+          Ctx, {US, MDString::get(Ctx, "amdgpu.no.fine.grained.memory")}));
+    if (I->hasMetadata("amdgpu.no.remote.memory"))
+      MDs.push_back(MDNode::get(
+          Ctx, {US, MDString::get(Ctx, "amdgpu.no.remote.memory")}));
+    if (I->hasMetadata("amdgpu.ignore.denormal.mode"))
+      MDs.push_back(MDNode::get(
+          Ctx, {US, MDString::get(Ctx, "amdgpu.ignore.denormal.mode")}));
+    if (!MDs.empty())
+      B.CreateIntrinsic(Intrinsic::spv_assign_decoration, {I->getType()},
+                        {I, MetadataAsValue::get(Ctx, MDNode::get(Ctx, MDs))});
   }
 }
 
