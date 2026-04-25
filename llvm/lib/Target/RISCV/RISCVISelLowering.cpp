@@ -88,7 +88,6 @@ static cl::opt<bool>
                       cl::init(true));
 
 // TODO: Support more ops
-static const unsigned ZvfbfaVPOps[] = {ISD::VP_FNEG};
 static const unsigned ZvfbfaOps[] = {
     ISD::FNEG,        ISD::FABS,        ISD::FCOPYSIGN,   ISD::FADD,
     ISD::FSUB,        ISD::FMUL,        ISD::FMINNUM,     ISD::FMAXNUM,
@@ -881,8 +880,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VP_CTTZ_ELTS,   ISD::VP_CTTZ_ELTS_ZERO_UNDEF};
 
     static const unsigned FloatingPointVPOps[] = {
-        ISD::VP_FNEG,
-        ISD::VP_FMA,         ISD::VP_REDUCE_FADD, ISD::VP_REDUCE_SEQ_FADD,
+        ISD::VP_REDUCE_FADD, ISD::VP_REDUCE_SEQ_FADD,
         ISD::VP_REDUCE_FMIN, ISD::VP_REDUCE_FMAX, ISD::VP_MERGE,
         ISD::VP_SELECT,
         ISD::VP_FP_ROUND,    ISD::VP_FP_EXTEND,
@@ -1179,7 +1177,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VECREDUCE_FMIN,
         ISD::VECREDUCE_FMAX,
         ISD::VECREDUCE_FMINIMUM,
-        ISD::VECREDUCE_FMAXIMUM};
+        ISD::VECREDUCE_FMAXIMUM,
+        ISD::FCANONICALIZE};
 
     // TODO: Make more of these ops legal.
     static const unsigned ZvfbfaPromoteOps[] = {ISD::FDIV,
@@ -1200,7 +1199,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
     // TODO: support more vp ops.
     static const unsigned ZvfhminZvfbfminPromoteVPOps[] = {
-        ISD::VP_FMA,
         ISD::VP_REDUCE_FMIN,
         ISD::VP_REDUCE_FMAX,
         ISD::VP_REDUCE_FMINIMUM,
@@ -1236,6 +1234,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
       // Expand FP operations that need libcalls.
       setOperationAction(FloatingPointLibCallOps, VT, Expand);
+
+      setOperationAction(ISD::FCANONICALIZE, VT, Expand);
 
       setOperationAction(ISD::FCOPYSIGN, VT, Legal);
 
@@ -1333,6 +1333,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       // Expand FP operations that need libcalls.
       setOperationAction(FloatingPointLibCallOps, VT, Expand);
 
+      setOperationAction(ISD::FCANONICALIZE, VT, Expand);
+
       // Custom split nxv32[b]f16 since nxv32[b]f32 is not legal.
       if (getLMUL(VT) == RISCVVType::LMUL_8) {
         setOperationAction(ZvfhminZvfbfminPromoteOps, VT, Custom);
@@ -1376,7 +1378,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::STRICT_FADD, ISD::STRICT_FSUB, ISD::STRICT_FMUL,
                           ISD::STRICT_FMA},
                          VT, Legal);
-      setOperationAction(ZvfbfaVPOps, VT, Custom);
       setCondCodeAction(VFPCCToExpand, VT, Expand);
 
       setOperationAction({ISD::LOAD, ISD::STORE, ISD::MLOAD, ISD::MSTORE,
@@ -1389,6 +1390,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
       // Expand FP operations that need libcalls.
       setOperationAction(FloatingPointLibCallOps, VT, Expand);
+
+      setOperationAction(ISD::FCANONICALIZE, VT, Expand);
 
       // Custom split nxv32[b]f16 since nxv32[b]f32 is not legal.
       if (getLMUL(VT) == RISCVVType::LMUL_8) {
@@ -1707,7 +1710,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           }
           if (Subtarget.hasVInstructionsBF16()) {
             setOperationAction(ZvfbfaOps, VT, Custom);
-            setOperationAction(ZvfbfaVPOps, VT, Custom);
             setCondCodeAction(VFPCCToExpand, VT, Expand);
           }
           setOperationAction(
@@ -1744,7 +1746,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction({ISD::FTRUNC, ISD::FCEIL, ISD::FFLOOR, ISD::FROUND,
                             ISD::FROUNDEVEN, ISD::FRINT, ISD::LRINT,
                             ISD::LLRINT, ISD::LROUND, ISD::LLROUND,
-                            ISD::FNEARBYINT},
+                            ISD::FNEARBYINT, ISD::FCANONICALIZE},
                            VT, Custom);
 
         setCondCodeAction(VFPCCToExpand, VT, Expand);
@@ -7556,14 +7558,12 @@ static unsigned getRISCVVLOp(SDValue Op) {
   VP_CASE(UDIV)       // VP_UDIV
   VP_CASE(UREM)       // VP_UREM
   VP_CASE(SHL)        // VP_SHL
-  VP_CASE(FNEG)       // VP_FNEG
   VP_CASE(SETCC)      // VP_SETCC
   case ISD::CTLZ_ZERO_UNDEF:
     return RISCVISD::CTLZ_VL;
   case ISD::CTTZ_ZERO_UNDEF:
     return RISCVISD::CTTZ_VL;
   case ISD::FMA:
-  case ISD::VP_FMA:
     return RISCVISD::VFMADD_VL;
   case ISD::STRICT_FMA:
     return RISCVISD::STRICT_VFMADD_VL;
@@ -7636,8 +7636,7 @@ static bool isPromotedOpNeedingSplit(SDValue Op,
         !Subtarget.hasVInstructionsF16()) &&
       !(EltVT == MVT::bf16 && Subtarget.hasVInstructionsBF16Minimal() &&
         (!Subtarget.hasVInstructionsBF16() ||
-         (!llvm::is_contained(ZvfbfaOps, Op.getOpcode()) &&
-          !llvm::is_contained(ZvfbfaVPOps, Op.getOpcode())))))
+         !llvm::is_contained(ZvfbfaOps, Op.getOpcode()))))
     return false;
   // Need to split when the same width f32 vector type isn't legal.
   return !TLI.isTypeLegal(
@@ -8343,6 +8342,16 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     if (isPromotedOpNeedingSplit(Op, Subtarget, *this))
       return SplitVectorOp(Op, DAG);
     return lowerFTRUNC_FCEIL_FFLOOR_FROUND(Op, DAG, Subtarget);
+  case ISD::FCANONICALIZE: {
+    MVT VT = Op.getSimpleValueType();
+    assert(VT.isFixedLengthVector() && "Unexpected type");
+    SDLoc DL(Op);
+    MVT ContainerVT = getContainerForFixedLengthVector(VT);
+    SDValue Src =
+        convertToScalableVector(ContainerVT, Op.getOperand(0), DAG, Subtarget);
+    SDValue Res = DAG.getNode(ISD::FCANONICALIZE, DL, ContainerVT, Src);
+    return convertFromScalableVector(VT, Res, DAG, Subtarget);
+  }
   case ISD::LRINT:
   case ISD::LLRINT:
   case ISD::LROUND:
@@ -8577,17 +8586,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     auto *Store = cast<StoreSDNode>(Op);
     SDValue StoredVal = Store->getValue();
     EVT VT = StoredVal.getValueType();
-    if (Subtarget.hasStdExtP()) {
-      if (VT == MVT::v2i16 || VT == MVT::v4i8) {
-        SDValue DL(Op);
-        SDValue Cast = DAG.getBitcast(MVT::i32, StoredVal);
-        SDValue NewStore =
-            DAG.getStore(Store->getChain(), DL, Cast, Store->getBasePtr(),
-                         Store->getPointerInfo(), Store->getBaseAlign(),
-                         Store->getMemOperand()->getFlags());
-        return NewStore;
-      }
-    }
+
     if (VT == MVT::f64) {
       assert(Subtarget.hasStdExtZdinx() && !Subtarget.hasStdExtZilsd() &&
              !Subtarget.is64Bit() && "Unexpected custom legalisation");
@@ -9018,11 +9017,6 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::VP_OR:
   case ISD::VP_XOR:
     return lowerLogicVPOp(Op, DAG);
-  case ISD::VP_FNEG:
-  case ISD::VP_FMA:
-    if (isPromotedOpNeedingSplit(Op, Subtarget, *this))
-      return SplitVPOp(Op, DAG);
-    [[fallthrough]];
   case ISD::VP_SRA:
   case ISD::VP_SRL:
   case ISD::VP_SHL:

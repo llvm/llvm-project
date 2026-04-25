@@ -1088,8 +1088,9 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     // mess with the vector, fall back.
     EVT VT = Node->getValueType(0);
     EVT EltVT = VT.getVectorElementType();
-    if (TLI.getOperationAction(ISD::FCANONICALIZE, EltVT.getSimpleVT()) !=
-        TargetLowering::Expand)
+    if (!VT.isScalableVector() &&
+        TLI.getOperationAction(ISD::FCANONICALIZE, EltVT.getSimpleVT()) !=
+            TargetLowering::Expand)
       break;
     // Otherwise canonicalize the whole vector.
     SDValue Mul = TLI.expandFCANONICALIZE(Node, DAG);
@@ -1905,42 +1906,7 @@ SDValue VectorLegalizer::ExpandVP_FCOPYSIGN(SDNode *Node) {
 }
 
 SDValue VectorLegalizer::ExpandLOOP_DEPENDENCE_MASK(SDNode *N) {
-  SDLoc DL(N);
-  EVT VT = N->getValueType(0);
-  SDValue SourceValue = N->getOperand(0);
-  SDValue SinkValue = N->getOperand(1);
-  SDValue EltSizeInBytes = N->getOperand(2);
-
-  // Note: The lane offset is scalable if the mask is scalable.
-  ElementCount LaneOffsetEC =
-      ElementCount::get(N->getConstantOperandVal(3), VT.isScalableVT());
-
-  EVT PtrVT = SourceValue->getValueType(0);
-  bool IsReadAfterWrite = N->getOpcode() == ISD::LOOP_DEPENDENCE_RAW_MASK;
-
-  // Take the difference between the pointers and divided by the element size,
-  // to see how many lanes separate them.
-  SDValue Diff = DAG.getNode(ISD::SUB, DL, PtrVT, SinkValue, SourceValue);
-  if (IsReadAfterWrite)
-    Diff = DAG.getNode(ISD::ABS, DL, PtrVT, Diff);
-  Diff = DAG.getNode(ISD::SDIV, DL, PtrVT, Diff, EltSizeInBytes);
-
-  // The pointers do not alias if:
-  //  * Diff <= 0 (WAR_MASK)
-  //  * Diff == 0 (RAW_MASK)
-  EVT CmpVT =
-      TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), PtrVT);
-  SDValue Zero = DAG.getConstant(0, DL, PtrVT);
-  SDValue Cmp = DAG.getSetCC(DL, CmpVT, Diff, Zero,
-                             IsReadAfterWrite ? ISD::SETEQ : ISD::SETLE);
-
-  // The pointers do not alias if:
-  // Lane + LaneOffset < Diff (WAR/RAW_MASK)
-  SDValue LaneOffset = DAG.getElementCount(DL, PtrVT, LaneOffsetEC);
-  SDValue MaskN =
-      DAG.getSelect(DL, PtrVT, Cmp, DAG.getConstant(-1, DL, PtrVT), Diff);
-
-  return DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, VT, LaneOffset, MaskN);
+  return TLI.expandLoopDependenceMask(N, DAG);
 }
 
 SDValue VectorLegalizer::ExpandMaskedBinOp(SDNode *N) {
