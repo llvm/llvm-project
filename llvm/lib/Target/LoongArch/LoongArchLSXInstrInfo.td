@@ -102,6 +102,10 @@ def loongarch_vfcvt_s_d: SDNode<"LoongArchISD::VFCVT", SDT_LoongArchVFCVT_S_D>;
 def loongarch_vfcvtl_d_s: SDNode<"LoongArchISD::VFCVTL", SDT_LoongArchVFCVTLH_D_S>;
 def loongarch_vfcvth_d_s: SDNode<"LoongArchISD::VFCVTH", SDT_LoongArchVFCVTLH_D_S>;
 
+// Vector rounded shift
+def loongarch_vsrlr: SDNode<"LoongArchISD::VSRLR", SDT_LoongArchV2R>;
+def loongarch_vsrar: SDNode<"LoongArchISD::VSRAR", SDT_LoongArchV2R>;
+
 def immZExt1 : ImmLeaf<GRLenVT, [{return isUInt<1>(Imm);}]>;
 def immZExt2 : ImmLeaf<GRLenVT, [{return isUInt<2>(Imm);}]>;
 def immZExt3 : ImmLeaf<GRLenVT, [{return isUInt<3>(Imm);}]>;
@@ -1694,10 +1698,18 @@ defm : PatShiftVrVr<srl, "VSRL">;
 defm : PatShiftVrSplatUimm<srl, "VSRLI">;
 defm : PatShiftVrUimm<loongarch_vsrli, "VSRLI">;
 
+// VSRLR[I]_{B/H/W/D}
+defm : PatVrVr<loongarch_vsrlr, "VSRLR">;
+defm : PatShiftVrSplatUimm<loongarch_vsrlr, "VSRLRI">;
+
 // VSRA[I]_{B/H/W/D}
 defm : PatVrVr<sra, "VSRA">;
 defm : PatShiftVrVr<sra, "VSRA">;
 defm : PatShiftVrSplatUimm<sra, "VSRAI">;
+
+// VSRAR[I]_{B/H/W/D}
+defm : PatVrVr<loongarch_vsrar, "VSRAR">;
+defm : PatShiftVrSplatUimm<loongarch_vsrar, "VSRARI">;
 
 // VROTR[I]_{B/H/W/D}
 defm : PatVrVr<rotr, "VROTR">;
