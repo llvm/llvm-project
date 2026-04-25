@@ -646,21 +646,33 @@ Where each `request` is one of:
 Each field has the same meaning as the corresponding packet in the GDB Remote
 Protocol.
 
+For example, the packet below is a request to set one breakpoint and to remove
+two others:
+
+```
+$jMultiBreakpoint: {"breakpoint_requests": ["Z0,1025783e8,4", "z0,1025783ec,4", "z0,1025783e8,4"]}
+```
+
+The same address may be specified multiple times.
+
 The stub must execute the sequence of `request`s in the order they
 appear in the `jMultiBreakpoint` packet. This is not an atomic operation:
 individual requests may fail, and the stub must process subsequent requests
-upon failure.
+regardless of previous failures.
 
 The reply consists of a JSON dictionary with a single entry, `results`, which
 is an array of strings, with the same contents allowed by a reply to a `z` or
 `Z` packet.
 
 ```
-{"results": ["E03", "OK", "OK"]}
+{"results": ["OK", "E03", "OK"]}
 ```
 
 A stub that supports this packet must include `jMultiBreakpoint+` in the reply
 to `qSupported`.
+
+**Priority To Implement:** Low. This is a performance optimization, reducing
+the number of packets sent when manipulating breakpoints.
 
 ## jThreadExtendedInfo
 
