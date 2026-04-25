@@ -45,19 +45,15 @@ define i32 @stest_f64i32(double %x) {
 ; VFP2-NEXT:    push {r7, lr}
 ; VFP2-NEXT:    vmov r0, r1, d0
 ; VFP2-NEXT:    bl __aeabi_d2lz
-; VFP2-NEXT:    mvn r12, #-2147483648
-; VFP2-NEXT:    subs.w r3, r0, r12
-; VFP2-NEXT:    mov.w r2, #0
+; VFP2-NEXT:    mvn r2, #-2147483648
+; VFP2-NEXT:    subs r3, r0, r2
 ; VFP2-NEXT:    sbcs r3, r1, #0
-; VFP2-NEXT:    it lt
-; VFP2-NEXT:    movlt r2, #1
-; VFP2-NEXT:    cmp r2, #0
-; VFP2-NEXT:    ite ne
-; VFP2-NEXT:    movne r2, r1
-; VFP2-NEXT:    moveq r0, r12
-; VFP2-NEXT:    mov.w r1, #-1
+; VFP2-NEXT:    itt ge
+; VFP2-NEXT:    movge r1, #0
+; VFP2-NEXT:    movge r0, r2
 ; VFP2-NEXT:    rsbs.w r3, r0, #-2147483648
-; VFP2-NEXT:    sbcs r1, r2
+; VFP2-NEXT:    mov.w r2, #-1
+; VFP2-NEXT:    sbcs.w r1, r2, r1
 ; VFP2-NEXT:    it ge
 ; VFP2-NEXT:    movge.w r0, #-2147483648
 ; VFP2-NEXT:    pop {r7, pc}
@@ -139,18 +135,10 @@ define i32 @ustest_f64i32(double %x) {
 ; SOFT-NEXT:    rsbs r3, r0, #0
 ; SOFT-NEXT:    mov r3, r2
 ; SOFT-NEXT:    sbcs r3, r1
-; SOFT-NEXT:    blt .LBB2_7
+; SOFT-NEXT:    blt .LBB2_6
 ; SOFT-NEXT:  @ %bb.5: @ %entry
-; SOFT-NEXT:    cmp r2, #0
-; SOFT-NEXT:    beq .LBB2_8
-; SOFT-NEXT:  .LBB2_6: @ %entry
-; SOFT-NEXT:    pop {r4, pc}
-; SOFT-NEXT:  .LBB2_7:
-; SOFT-NEXT:    movs r2, #1
-; SOFT-NEXT:    cmp r2, #0
-; SOFT-NEXT:    bne .LBB2_6
-; SOFT-NEXT:  .LBB2_8: @ %entry
 ; SOFT-NEXT:    mov r0, r2
+; SOFT-NEXT:  .LBB2_6: @ %entry
 ; SOFT-NEXT:    pop {r4, pc}
 ;
 ; VFP2-LABEL: ustest_f64i32:
@@ -162,20 +150,13 @@ define i32 @ustest_f64i32(double %x) {
 ; VFP2-NEXT:    subs.w r3, r0, #-1
 ; VFP2-NEXT:    mov.w r2, #0
 ; VFP2-NEXT:    sbcs r3, r1, #0
-; VFP2-NEXT:    mov.w r3, #0
-; VFP2-NEXT:    it lt
-; VFP2-NEXT:    movlt r3, #1
-; VFP2-NEXT:    cmp r3, #0
-; VFP2-NEXT:    ite ne
-; VFP2-NEXT:    movne r3, r1
-; VFP2-NEXT:    moveq.w r0, #-1
-; VFP2-NEXT:    rsbs r1, r0, #0
-; VFP2-NEXT:    sbcs.w r1, r2, r3
-; VFP2-NEXT:    it lt
-; VFP2-NEXT:    movlt r2, #1
-; VFP2-NEXT:    cmp r2, #0
-; VFP2-NEXT:    it eq
-; VFP2-NEXT:    moveq r0, r2
+; VFP2-NEXT:    itt ge
+; VFP2-NEXT:    movge r1, r2
+; VFP2-NEXT:    movge.w r0, #-1
+; VFP2-NEXT:    rsbs r3, r0, #0
+; VFP2-NEXT:    sbcs.w r1, r2, r1
+; VFP2-NEXT:    it ge
+; VFP2-NEXT:    movge r0, r2
 ; VFP2-NEXT:    pop {r7, pc}
 ;
 ; FULL-LABEL: ustest_f64i32:
@@ -292,18 +273,10 @@ define i32 @ustest_f32i32(float %x) {
 ; SOFT-NEXT:    rsbs r3, r0, #0
 ; SOFT-NEXT:    mov r3, r2
 ; SOFT-NEXT:    sbcs r3, r1
-; SOFT-NEXT:    blt .LBB5_7
+; SOFT-NEXT:    blt .LBB5_6
 ; SOFT-NEXT:  @ %bb.5: @ %entry
-; SOFT-NEXT:    cmp r2, #0
-; SOFT-NEXT:    beq .LBB5_8
-; SOFT-NEXT:  .LBB5_6: @ %entry
-; SOFT-NEXT:    pop {r4, pc}
-; SOFT-NEXT:  .LBB5_7:
-; SOFT-NEXT:    movs r2, #1
-; SOFT-NEXT:    cmp r2, #0
-; SOFT-NEXT:    bne .LBB5_6
-; SOFT-NEXT:  .LBB5_8: @ %entry
 ; SOFT-NEXT:    mov r0, r2
+; SOFT-NEXT:  .LBB5_6: @ %entry
 ; SOFT-NEXT:    pop {r4, pc}
 ;
 ; VFP-LABEL: ustest_f32i32:
@@ -448,18 +421,10 @@ define i32 @ustest_f16i32(half %x) {
 ; SOFT-NEXT:    rsbs r3, r0, #0
 ; SOFT-NEXT:    mov r3, r2
 ; SOFT-NEXT:    sbcs r3, r1
-; SOFT-NEXT:    blt .LBB8_7
+; SOFT-NEXT:    blt .LBB8_6
 ; SOFT-NEXT:  @ %bb.5: @ %entry
-; SOFT-NEXT:    cmp r2, #0
-; SOFT-NEXT:    beq .LBB8_8
-; SOFT-NEXT:  .LBB8_6: @ %entry
-; SOFT-NEXT:    pop {r4, pc}
-; SOFT-NEXT:  .LBB8_7:
-; SOFT-NEXT:    movs r2, #1
-; SOFT-NEXT:    cmp r2, #0
-; SOFT-NEXT:    bne .LBB8_6
-; SOFT-NEXT:  .LBB8_8: @ %entry
 ; SOFT-NEXT:    mov r0, r2
+; SOFT-NEXT:  .LBB8_6: @ %entry
 ; SOFT-NEXT:    pop {r4, pc}
 ;
 ; VFP2-LABEL: ustest_f16i32:
@@ -1016,22 +981,18 @@ define i64 @stest_f64i64(double %x) {
 ; VFP2-NEXT:    mov.w r12, #0
 ; VFP2-NEXT:    sbcs r4, r2, #0
 ; VFP2-NEXT:    sbcs r4, r3, #0
-; VFP2-NEXT:    mov.w r4, #0
-; VFP2-NEXT:    it lt
-; VFP2-NEXT:    movlt r4, #1
-; VFP2-NEXT:    cmp r4, #0
-; VFP2-NEXT:    itet eq
-; VFP2-NEXT:    moveq r3, r4
-; VFP2-NEXT:    movne r4, r2
-; VFP2-NEXT:    moveq r1, lr
-; VFP2-NEXT:    mov.w r2, #-1
-; VFP2-NEXT:    it eq
-; VFP2-NEXT:    moveq r0, r2
+; VFP2-NEXT:    ittt ge
+; VFP2-NEXT:    movge r3, r12
+; VFP2-NEXT:    movge r2, r12
+; VFP2-NEXT:    movge r1, lr
+; VFP2-NEXT:    mov.w r4, #-1
+; VFP2-NEXT:    it ge
+; VFP2-NEXT:    movge r0, r4
 ; VFP2-NEXT:    rsbs r5, r0, #0
 ; VFP2-NEXT:    mov.w lr, #-2147483648
 ; VFP2-NEXT:    sbcs.w r5, lr, r1
-; VFP2-NEXT:    sbcs.w r4, r2, r4
-; VFP2-NEXT:    sbcs r2, r3
+; VFP2-NEXT:    sbcs.w r2, r4, r2
+; VFP2-NEXT:    sbcs.w r2, r4, r3
 ; VFP2-NEXT:    itt ge
 ; VFP2-NEXT:    movge r0, r12
 ; VFP2-NEXT:    movge r1, lr
@@ -1042,26 +1003,24 @@ define i64 @stest_f64i64(double %x) {
 ; FULL-NEXT:    .save {r4, r5, r7, lr}
 ; FULL-NEXT:    push {r4, r5, r7, lr}
 ; FULL-NEXT:    bl __fixdfti
-; FULL-NEXT:    subs.w lr, r0, #-1
-; FULL-NEXT:    mvn r12, #-2147483648
-; FULL-NEXT:    sbcs.w lr, r1, r12
-; FULL-NEXT:    sbcs lr, r2, #0
-; FULL-NEXT:    sbcs lr, r3, #0
-; FULL-NEXT:    cset lr, lt
-; FULL-NEXT:    cmp.w lr, #0
-; FULL-NEXT:    csel r5, r3, lr, ne
-; FULL-NEXT:    mov.w r3, #-1
-; FULL-NEXT:    csel r0, r0, r3, ne
-; FULL-NEXT:    csel r1, r1, r12, ne
-; FULL-NEXT:    csel r2, r2, lr, ne
-; FULL-NEXT:    rsbs r4, r0, #0
-; FULL-NEXT:    mov.w r12, #-2147483648
-; FULL-NEXT:    sbcs.w r4, r12, r1
-; FULL-NEXT:    sbcs.w r2, r3, r2
-; FULL-NEXT:    sbcs.w r2, r3, r5
-; FULL-NEXT:    it ge
-; FULL-NEXT:    movge r0, #0
-; FULL-NEXT:    csel r1, r1, r12, lt
+; FULL-NEXT:    subs.w r4, r0, #-1
+; FULL-NEXT:    mvn lr, #-2147483648
+; FULL-NEXT:    sbcs.w r4, r1, lr
+; FULL-NEXT:    mov.w r12, #0
+; FULL-NEXT:    sbcs r4, r2, #0
+; FULL-NEXT:    sbcs r4, r3, #0
+; FULL-NEXT:    mov.w r4, #-1
+; FULL-NEXT:    csel r1, r1, lr, lt
+; FULL-NEXT:    csel r0, r0, r4, lt
+; FULL-NEXT:    csel r3, r3, r12, lt
+; FULL-NEXT:    csel r2, r2, r12, lt
+; FULL-NEXT:    rsbs r5, r0, #0
+; FULL-NEXT:    mov.w lr, #-2147483648
+; FULL-NEXT:    sbcs.w r5, lr, r1
+; FULL-NEXT:    sbcs.w r2, r4, r2
+; FULL-NEXT:    sbcs.w r2, r4, r3
+; FULL-NEXT:    csel r0, r0, r12, lt
+; FULL-NEXT:    csel r1, r1, lr, lt
 ; FULL-NEXT:    pop {r4, r5, r7, pc}
 entry:
   %conv = fptosi double %x to i128
@@ -1272,22 +1231,18 @@ define i64 @stest_f32i64(float %x) {
 ; VFP2-NEXT:    mov.w r12, #0
 ; VFP2-NEXT:    sbcs r4, r2, #0
 ; VFP2-NEXT:    sbcs r4, r3, #0
-; VFP2-NEXT:    mov.w r4, #0
-; VFP2-NEXT:    it lt
-; VFP2-NEXT:    movlt r4, #1
-; VFP2-NEXT:    cmp r4, #0
-; VFP2-NEXT:    itet eq
-; VFP2-NEXT:    moveq r3, r4
-; VFP2-NEXT:    movne r4, r2
-; VFP2-NEXT:    moveq r1, lr
-; VFP2-NEXT:    mov.w r2, #-1
-; VFP2-NEXT:    it eq
-; VFP2-NEXT:    moveq r0, r2
+; VFP2-NEXT:    ittt ge
+; VFP2-NEXT:    movge r3, r12
+; VFP2-NEXT:    movge r2, r12
+; VFP2-NEXT:    movge r1, lr
+; VFP2-NEXT:    mov.w r4, #-1
+; VFP2-NEXT:    it ge
+; VFP2-NEXT:    movge r0, r4
 ; VFP2-NEXT:    rsbs r5, r0, #0
 ; VFP2-NEXT:    mov.w lr, #-2147483648
 ; VFP2-NEXT:    sbcs.w r5, lr, r1
-; VFP2-NEXT:    sbcs.w r4, r2, r4
-; VFP2-NEXT:    sbcs r2, r3
+; VFP2-NEXT:    sbcs.w r2, r4, r2
+; VFP2-NEXT:    sbcs.w r2, r4, r3
 ; VFP2-NEXT:    itt ge
 ; VFP2-NEXT:    movge r0, r12
 ; VFP2-NEXT:    movge r1, lr
@@ -1298,26 +1253,24 @@ define i64 @stest_f32i64(float %x) {
 ; FULL-NEXT:    .save {r4, r5, r7, lr}
 ; FULL-NEXT:    push {r4, r5, r7, lr}
 ; FULL-NEXT:    bl __fixsfti
-; FULL-NEXT:    subs.w lr, r0, #-1
-; FULL-NEXT:    mvn r12, #-2147483648
-; FULL-NEXT:    sbcs.w lr, r1, r12
-; FULL-NEXT:    sbcs lr, r2, #0
-; FULL-NEXT:    sbcs lr, r3, #0
-; FULL-NEXT:    cset lr, lt
-; FULL-NEXT:    cmp.w lr, #0
-; FULL-NEXT:    csel r5, r3, lr, ne
-; FULL-NEXT:    mov.w r3, #-1
-; FULL-NEXT:    csel r0, r0, r3, ne
-; FULL-NEXT:    csel r1, r1, r12, ne
-; FULL-NEXT:    csel r2, r2, lr, ne
-; FULL-NEXT:    rsbs r4, r0, #0
-; FULL-NEXT:    mov.w r12, #-2147483648
-; FULL-NEXT:    sbcs.w r4, r12, r1
-; FULL-NEXT:    sbcs.w r2, r3, r2
-; FULL-NEXT:    sbcs.w r2, r3, r5
-; FULL-NEXT:    it ge
-; FULL-NEXT:    movge r0, #0
-; FULL-NEXT:    csel r1, r1, r12, lt
+; FULL-NEXT:    subs.w r4, r0, #-1
+; FULL-NEXT:    mvn lr, #-2147483648
+; FULL-NEXT:    sbcs.w r4, r1, lr
+; FULL-NEXT:    mov.w r12, #0
+; FULL-NEXT:    sbcs r4, r2, #0
+; FULL-NEXT:    sbcs r4, r3, #0
+; FULL-NEXT:    mov.w r4, #-1
+; FULL-NEXT:    csel r1, r1, lr, lt
+; FULL-NEXT:    csel r0, r0, r4, lt
+; FULL-NEXT:    csel r3, r3, r12, lt
+; FULL-NEXT:    csel r2, r2, r12, lt
+; FULL-NEXT:    rsbs r5, r0, #0
+; FULL-NEXT:    mov.w lr, #-2147483648
+; FULL-NEXT:    sbcs.w r5, lr, r1
+; FULL-NEXT:    sbcs.w r2, r4, r2
+; FULL-NEXT:    sbcs.w r2, r4, r3
+; FULL-NEXT:    csel r0, r0, r12, lt
+; FULL-NEXT:    csel r1, r1, lr, lt
 ; FULL-NEXT:    pop {r4, r5, r7, pc}
 entry:
   %conv = fptosi float %x to i128
@@ -1533,22 +1486,18 @@ define i64 @stest_f16i64(half %x) {
 ; VFP2-NEXT:    mov.w r12, #0
 ; VFP2-NEXT:    sbcs r4, r2, #0
 ; VFP2-NEXT:    sbcs r4, r3, #0
-; VFP2-NEXT:    mov.w r4, #0
-; VFP2-NEXT:    it lt
-; VFP2-NEXT:    movlt r4, #1
-; VFP2-NEXT:    cmp r4, #0
-; VFP2-NEXT:    itet eq
-; VFP2-NEXT:    moveq r3, r4
-; VFP2-NEXT:    movne r4, r2
-; VFP2-NEXT:    moveq r1, lr
-; VFP2-NEXT:    mov.w r2, #-1
-; VFP2-NEXT:    it eq
-; VFP2-NEXT:    moveq r0, r2
+; VFP2-NEXT:    ittt ge
+; VFP2-NEXT:    movge r3, r12
+; VFP2-NEXT:    movge r2, r12
+; VFP2-NEXT:    movge r1, lr
+; VFP2-NEXT:    mov.w r4, #-1
+; VFP2-NEXT:    it ge
+; VFP2-NEXT:    movge r0, r4
 ; VFP2-NEXT:    rsbs r5, r0, #0
 ; VFP2-NEXT:    mov.w lr, #-2147483648
 ; VFP2-NEXT:    sbcs.w r5, lr, r1
-; VFP2-NEXT:    sbcs.w r4, r2, r4
-; VFP2-NEXT:    sbcs r2, r3
+; VFP2-NEXT:    sbcs.w r2, r4, r2
+; VFP2-NEXT:    sbcs.w r2, r4, r3
 ; VFP2-NEXT:    itt ge
 ; VFP2-NEXT:    movge r0, r12
 ; VFP2-NEXT:    movge r1, lr
@@ -1561,26 +1510,24 @@ define i64 @stest_f16i64(half %x) {
 ; FULL-NEXT:    vmov.f16 r0, s0
 ; FULL-NEXT:    vmov s0, r0
 ; FULL-NEXT:    bl __fixhfti
-; FULL-NEXT:    subs.w lr, r0, #-1
-; FULL-NEXT:    mvn r12, #-2147483648
-; FULL-NEXT:    sbcs.w lr, r1, r12
-; FULL-NEXT:    sbcs lr, r2, #0
-; FULL-NEXT:    sbcs lr, r3, #0
-; FULL-NEXT:    cset lr, lt
-; FULL-NEXT:    cmp.w lr, #0
-; FULL-NEXT:    csel r5, r3, lr, ne
-; FULL-NEXT:    mov.w r3, #-1
-; FULL-NEXT:    csel r0, r0, r3, ne
-; FULL-NEXT:    csel r1, r1, r12, ne
-; FULL-NEXT:    csel r2, r2, lr, ne
-; FULL-NEXT:    rsbs r4, r0, #0
-; FULL-NEXT:    mov.w r12, #-2147483648
-; FULL-NEXT:    sbcs.w r4, r12, r1
-; FULL-NEXT:    sbcs.w r2, r3, r2
-; FULL-NEXT:    sbcs.w r2, r3, r5
-; FULL-NEXT:    it ge
-; FULL-NEXT:    movge r0, #0
-; FULL-NEXT:    csel r1, r1, r12, lt
+; FULL-NEXT:    subs.w r4, r0, #-1
+; FULL-NEXT:    mvn lr, #-2147483648
+; FULL-NEXT:    sbcs.w r4, r1, lr
+; FULL-NEXT:    mov.w r12, #0
+; FULL-NEXT:    sbcs r4, r2, #0
+; FULL-NEXT:    sbcs r4, r3, #0
+; FULL-NEXT:    mov.w r4, #-1
+; FULL-NEXT:    csel r1, r1, lr, lt
+; FULL-NEXT:    csel r0, r0, r4, lt
+; FULL-NEXT:    csel r3, r3, r12, lt
+; FULL-NEXT:    csel r2, r2, r12, lt
+; FULL-NEXT:    rsbs r5, r0, #0
+; FULL-NEXT:    mov.w lr, #-2147483648
+; FULL-NEXT:    sbcs.w r5, lr, r1
+; FULL-NEXT:    sbcs.w r2, r4, r2
+; FULL-NEXT:    sbcs.w r2, r4, r3
+; FULL-NEXT:    csel r0, r0, r12, lt
+; FULL-NEXT:    csel r1, r1, lr, lt
 ; FULL-NEXT:    pop {r4, r5, r7, pc}
 entry:
   %conv = fptosi half %x to i128
@@ -1738,26 +1685,24 @@ entry:
 define i32 @stest_f64i32_mm(double %x) {
 ; SOFT-LABEL: stest_f64i32_mm:
 ; SOFT:       @ %bb.0: @ %entry
-; SOFT-NEXT:    .save {r4, r5, r7, lr}
-; SOFT-NEXT:    push {r4, r5, r7, lr}
+; SOFT-NEXT:    .save {r4, lr}
+; SOFT-NEXT:    push {r4, lr}
 ; SOFT-NEXT:    bl __aeabi_d2lz
-; SOFT-NEXT:    movs r2, #1
-; SOFT-NEXT:    movs r3, #0
-; SOFT-NEXT:    ldr r4, .LCPI27_0
-; SOFT-NEXT:    subs r5, r0, r4
-; SOFT-NEXT:    mov r5, r1
-; SOFT-NEXT:    sbcs r5, r3
-; SOFT-NEXT:    bge .LBB27_7
+; SOFT-NEXT:    movs r2, #0
+; SOFT-NEXT:    ldr r3, .LCPI27_0
+; SOFT-NEXT:    subs r4, r0, r3
+; SOFT-NEXT:    mov r4, r1
+; SOFT-NEXT:    sbcs r4, r2
+; SOFT-NEXT:    blt .LBB27_2
 ; SOFT-NEXT:  @ %bb.1: @ %entry
-; SOFT-NEXT:    mov r4, r2
-; SOFT-NEXT:    bge .LBB27_8
+; SOFT-NEXT:    mov r1, r2
 ; SOFT-NEXT:  .LBB27_2: @ %entry
-; SOFT-NEXT:    cmp r4, #0
-; SOFT-NEXT:    bne .LBB27_4
-; SOFT-NEXT:  .LBB27_3: @ %entry
-; SOFT-NEXT:    mov r1, r4
+; SOFT-NEXT:    blt .LBB27_4
+; SOFT-NEXT:  @ %bb.3: @ %entry
+; SOFT-NEXT:    mov r0, r3
 ; SOFT-NEXT:  .LBB27_4: @ %entry
-; SOFT-NEXT:    mvns r3, r3
+; SOFT-NEXT:    mvns r3, r2
+; SOFT-NEXT:    movs r2, #1
 ; SOFT-NEXT:    lsls r2, r2, #31
 ; SOFT-NEXT:    subs r4, r2, r0
 ; SOFT-NEXT:    sbcs r3, r1
@@ -1765,18 +1710,9 @@ define i32 @stest_f64i32_mm(double %x) {
 ; SOFT-NEXT:  @ %bb.5: @ %entry
 ; SOFT-NEXT:    mov r0, r2
 ; SOFT-NEXT:  .LBB27_6: @ %entry
-; SOFT-NEXT:    pop {r4, r5, r7, pc}
-; SOFT-NEXT:  .LBB27_7: @ %entry
-; SOFT-NEXT:    mov r0, r4
-; SOFT-NEXT:    mov r4, r2
-; SOFT-NEXT:    blt .LBB27_2
-; SOFT-NEXT:  .LBB27_8: @ %entry
-; SOFT-NEXT:    mov r4, r3
-; SOFT-NEXT:    cmp r4, #0
-; SOFT-NEXT:    beq .LBB27_3
-; SOFT-NEXT:    b .LBB27_4
+; SOFT-NEXT:    pop {r4, pc}
 ; SOFT-NEXT:    .p2align 2
-; SOFT-NEXT:  @ %bb.9:
+; SOFT-NEXT:  @ %bb.7:
 ; SOFT-NEXT:  .LCPI27_0:
 ; SOFT-NEXT:    .long 2147483647 @ 0x7fffffff
 ;
@@ -1789,17 +1725,12 @@ define i32 @stest_f64i32_mm(double %x) {
 ; VFP2-NEXT:    mvn r2, #-2147483648
 ; VFP2-NEXT:    subs r3, r0, r2
 ; VFP2-NEXT:    sbcs r3, r1, #0
-; VFP2-NEXT:    it ge
+; VFP2-NEXT:    itt ge
+; VFP2-NEXT:    movge r1, #0
 ; VFP2-NEXT:    movge r0, r2
-; VFP2-NEXT:    mov.w r2, #0
-; VFP2-NEXT:    it lt
-; VFP2-NEXT:    movlt r2, #1
-; VFP2-NEXT:    cmp r2, #0
-; VFP2-NEXT:    it ne
-; VFP2-NEXT:    movne r2, r1
-; VFP2-NEXT:    mov.w r1, #-1
 ; VFP2-NEXT:    rsbs.w r3, r0, #-2147483648
-; VFP2-NEXT:    sbcs r1, r2
+; VFP2-NEXT:    mov.w r2, #-1
+; VFP2-NEXT:    sbcs.w r1, r2, r1
 ; VFP2-NEXT:    it ge
 ; VFP2-NEXT:    movge.w r0, #-2147483648
 ; VFP2-NEXT:    pop {r7, pc}
@@ -1905,26 +1836,24 @@ entry:
 define i32 @stest_f32i32_mm(float %x) {
 ; SOFT-LABEL: stest_f32i32_mm:
 ; SOFT:       @ %bb.0: @ %entry
-; SOFT-NEXT:    .save {r4, r5, r7, lr}
-; SOFT-NEXT:    push {r4, r5, r7, lr}
+; SOFT-NEXT:    .save {r4, lr}
+; SOFT-NEXT:    push {r4, lr}
 ; SOFT-NEXT:    bl __aeabi_f2lz
-; SOFT-NEXT:    movs r2, #1
-; SOFT-NEXT:    movs r3, #0
-; SOFT-NEXT:    ldr r4, .LCPI30_0
-; SOFT-NEXT:    subs r5, r0, r4
-; SOFT-NEXT:    mov r5, r1
-; SOFT-NEXT:    sbcs r5, r3
-; SOFT-NEXT:    bge .LBB30_7
+; SOFT-NEXT:    movs r2, #0
+; SOFT-NEXT:    ldr r3, .LCPI30_0
+; SOFT-NEXT:    subs r4, r0, r3
+; SOFT-NEXT:    mov r4, r1
+; SOFT-NEXT:    sbcs r4, r2
+; SOFT-NEXT:    blt .LBB30_2
 ; SOFT-NEXT:  @ %bb.1: @ %entry
-; SOFT-NEXT:    mov r4, r2
-; SOFT-NEXT:    bge .LBB30_8
+; SOFT-NEXT:    mov r1, r2
 ; SOFT-NEXT:  .LBB30_2: @ %entry
-; SOFT-NEXT:    cmp r4, #0
-; SOFT-NEXT:    bne .LBB30_4
-; SOFT-NEXT:  .LBB30_3: @ %entry
-; SOFT-NEXT:    mov r1, r4
+; SOFT-NEXT:    blt .LBB30_4
+; SOFT-NEXT:  @ %bb.3: @ %entry
+; SOFT-NEXT:    mov r0, r3
 ; SOFT-NEXT:  .LBB30_4: @ %entry
-; SOFT-NEXT:    mvns r3, r3
+; SOFT-NEXT:    mvns r3, r2
+; SOFT-NEXT:    movs r2, #1
 ; SOFT-NEXT:    lsls r2, r2, #31
 ; SOFT-NEXT:    subs r4, r2, r0
 ; SOFT-NEXT:    sbcs r3, r1
@@ -1932,18 +1861,9 @@ define i32 @stest_f32i32_mm(float %x) {
 ; SOFT-NEXT:  @ %bb.5: @ %entry
 ; SOFT-NEXT:    mov r0, r2
 ; SOFT-NEXT:  .LBB30_6: @ %entry
-; SOFT-NEXT:    pop {r4, r5, r7, pc}
-; SOFT-NEXT:  .LBB30_7: @ %entry
-; SOFT-NEXT:    mov r0, r4
-; SOFT-NEXT:    mov r4, r2
-; SOFT-NEXT:    blt .LBB30_2
-; SOFT-NEXT:  .LBB30_8: @ %entry
-; SOFT-NEXT:    mov r4, r3
-; SOFT-NEXT:    cmp r4, #0
-; SOFT-NEXT:    beq .LBB30_3
-; SOFT-NEXT:    b .LBB30_4
+; SOFT-NEXT:    pop {r4, pc}
 ; SOFT-NEXT:    .p2align 2
-; SOFT-NEXT:  @ %bb.9:
+; SOFT-NEXT:  @ %bb.7:
 ; SOFT-NEXT:  .LCPI30_0:
 ; SOFT-NEXT:    .long 2147483647 @ 0x7fffffff
 ;
@@ -2023,28 +1943,26 @@ entry:
 define i32 @stest_f16i32_mm(half %x) {
 ; SOFT-LABEL: stest_f16i32_mm:
 ; SOFT:       @ %bb.0: @ %entry
-; SOFT-NEXT:    .save {r4, r5, r7, lr}
-; SOFT-NEXT:    push {r4, r5, r7, lr}
+; SOFT-NEXT:    .save {r4, lr}
+; SOFT-NEXT:    push {r4, lr}
 ; SOFT-NEXT:    uxth r0, r0
 ; SOFT-NEXT:    bl __aeabi_h2f
 ; SOFT-NEXT:    bl __aeabi_f2lz
-; SOFT-NEXT:    movs r2, #1
-; SOFT-NEXT:    movs r3, #0
-; SOFT-NEXT:    ldr r4, .LCPI33_0
-; SOFT-NEXT:    subs r5, r0, r4
-; SOFT-NEXT:    mov r5, r1
-; SOFT-NEXT:    sbcs r5, r3
-; SOFT-NEXT:    bge .LBB33_7
+; SOFT-NEXT:    movs r2, #0
+; SOFT-NEXT:    ldr r3, .LCPI33_0
+; SOFT-NEXT:    subs r4, r0, r3
+; SOFT-NEXT:    mov r4, r1
+; SOFT-NEXT:    sbcs r4, r2
+; SOFT-NEXT:    blt .LBB33_2
 ; SOFT-NEXT:  @ %bb.1: @ %entry
-; SOFT-NEXT:    mov r4, r2
-; SOFT-NEXT:    bge .LBB33_8
+; SOFT-NEXT:    mov r1, r2
 ; SOFT-NEXT:  .LBB33_2: @ %entry
-; SOFT-NEXT:    cmp r4, #0
-; SOFT-NEXT:    bne .LBB33_4
-; SOFT-NEXT:  .LBB33_3: @ %entry
-; SOFT-NEXT:    mov r1, r4
+; SOFT-NEXT:    blt .LBB33_4
+; SOFT-NEXT:  @ %bb.3: @ %entry
+; SOFT-NEXT:    mov r0, r3
 ; SOFT-NEXT:  .LBB33_4: @ %entry
-; SOFT-NEXT:    mvns r3, r3
+; SOFT-NEXT:    mvns r3, r2
+; SOFT-NEXT:    movs r2, #1
 ; SOFT-NEXT:    lsls r2, r2, #31
 ; SOFT-NEXT:    subs r4, r2, r0
 ; SOFT-NEXT:    sbcs r3, r1
@@ -2052,18 +1970,9 @@ define i32 @stest_f16i32_mm(half %x) {
 ; SOFT-NEXT:  @ %bb.5: @ %entry
 ; SOFT-NEXT:    mov r0, r2
 ; SOFT-NEXT:  .LBB33_6: @ %entry
-; SOFT-NEXT:    pop {r4, r5, r7, pc}
-; SOFT-NEXT:  .LBB33_7: @ %entry
-; SOFT-NEXT:    mov r0, r4
-; SOFT-NEXT:    mov r4, r2
-; SOFT-NEXT:    blt .LBB33_2
-; SOFT-NEXT:  .LBB33_8: @ %entry
-; SOFT-NEXT:    mov r4, r3
-; SOFT-NEXT:    cmp r4, #0
-; SOFT-NEXT:    beq .LBB33_3
-; SOFT-NEXT:    b .LBB33_4
+; SOFT-NEXT:    pop {r4, pc}
 ; SOFT-NEXT:    .p2align 2
-; SOFT-NEXT:  @ %bb.9:
+; SOFT-NEXT:  @ %bb.7:
 ; SOFT-NEXT:  .LCPI33_0:
 ; SOFT-NEXT:    .long 2147483647 @ 0x7fffffff
 ;
@@ -2592,82 +2501,62 @@ define i64 @stest_f64i64_mm(double %x) {
 ; SOFT:       @ %bb.0: @ %entry
 ; SOFT-NEXT:    .save {r4, r5, r6, r7, lr}
 ; SOFT-NEXT:    push {r4, r5, r6, r7, lr}
-; SOFT-NEXT:    .pad #12
-; SOFT-NEXT:    sub sp, #12
+; SOFT-NEXT:    .pad #4
+; SOFT-NEXT:    sub sp, #4
 ; SOFT-NEXT:    bl __fixdfti
-; SOFT-NEXT:    mov r7, r0
-; SOFT-NEXT:    movs r0, #1
-; SOFT-NEXT:    movs r5, #0
+; SOFT-NEXT:    movs r4, #0
+; SOFT-NEXT:    mvns r5, r4
 ; SOFT-NEXT:    ldr r6, .LCPI45_0
-; SOFT-NEXT:    adds r4, r7, #1
-; SOFT-NEXT:    mov r4, r1
-; SOFT-NEXT:    sbcs r4, r6
-; SOFT-NEXT:    mov r4, r2
-; SOFT-NEXT:    sbcs r4, r5
-; SOFT-NEXT:    mov r4, r3
-; SOFT-NEXT:    sbcs r4, r5
-; SOFT-NEXT:    mov r4, r0
-; SOFT-NEXT:    blt .LBB45_2
+; SOFT-NEXT:    adds r7, r0, #1
+; SOFT-NEXT:    mov r7, r1
+; SOFT-NEXT:    sbcs r7, r6
+; SOFT-NEXT:    mov r7, r2
+; SOFT-NEXT:    sbcs r7, r4
+; SOFT-NEXT:    mov r7, r3
+; SOFT-NEXT:    sbcs r7, r4
+; SOFT-NEXT:    bge .LBB45_8
 ; SOFT-NEXT:  @ %bb.1: @ %entry
-; SOFT-NEXT:    mov r4, r5
+; SOFT-NEXT:    bge .LBB45_9
 ; SOFT-NEXT:  .LBB45_2: @ %entry
-; SOFT-NEXT:    mvns r6, r5
-; SOFT-NEXT:    cmp r4, #0
-; SOFT-NEXT:    beq .LBB45_12
-; SOFT-NEXT:  @ %bb.3: @ %entry
-; SOFT-NEXT:    beq .LBB45_13
+; SOFT-NEXT:    bge .LBB45_10
+; SOFT-NEXT:  .LBB45_3: @ %entry
+; SOFT-NEXT:    blt .LBB45_5
 ; SOFT-NEXT:  .LBB45_4: @ %entry
-; SOFT-NEXT:    str r2, [sp, #8] @ 4-byte Spill
-; SOFT-NEXT:    beq .LBB45_14
-; SOFT-NEXT:  .LBB45_5: @ %entry
-; SOFT-NEXT:    str r3, [sp, #4] @ 4-byte Spill
-; SOFT-NEXT:    bne .LBB45_7
-; SOFT-NEXT:  .LBB45_6: @ %entry
-; SOFT-NEXT:    mov r7, r6
-; SOFT-NEXT:  .LBB45_7: @ %entry
-; SOFT-NEXT:    lsls r3, r0, #31
-; SOFT-NEXT:    rsbs r4, r7, #0
-; SOFT-NEXT:    mov r4, r3
-; SOFT-NEXT:    sbcs r4, r1
-; SOFT-NEXT:    mov r4, r6
-; SOFT-NEXT:    ldr r2, [sp, #8] @ 4-byte Reload
-; SOFT-NEXT:    sbcs r4, r2
-; SOFT-NEXT:    ldr r2, [sp, #4] @ 4-byte Reload
-; SOFT-NEXT:    sbcs r6, r2
-; SOFT-NEXT:    bge .LBB45_15
-; SOFT-NEXT:  @ %bb.8: @ %entry
-; SOFT-NEXT:    cmp r0, #0
-; SOFT-NEXT:    beq .LBB45_16
-; SOFT-NEXT:  .LBB45_9: @ %entry
-; SOFT-NEXT:    bne .LBB45_11
-; SOFT-NEXT:  .LBB45_10: @ %entry
-; SOFT-NEXT:    mov r1, r3
-; SOFT-NEXT:  .LBB45_11: @ %entry
-; SOFT-NEXT:    mov r0, r7
-; SOFT-NEXT:    add sp, #12
-; SOFT-NEXT:    pop {r4, r5, r6, r7, pc}
-; SOFT-NEXT:  .LBB45_12: @ %entry
-; SOFT-NEXT:    mov r3, r4
-; SOFT-NEXT:    bne .LBB45_4
-; SOFT-NEXT:  .LBB45_13: @ %entry
-; SOFT-NEXT:    mov r2, r4
-; SOFT-NEXT:    str r2, [sp, #8] @ 4-byte Spill
-; SOFT-NEXT:    bne .LBB45_5
-; SOFT-NEXT:  .LBB45_14: @ %entry
-; SOFT-NEXT:    ldr r1, .LCPI45_0
-; SOFT-NEXT:    str r3, [sp, #4] @ 4-byte Spill
-; SOFT-NEXT:    beq .LBB45_6
-; SOFT-NEXT:    b .LBB45_7
-; SOFT-NEXT:  .LBB45_15: @ %entry
 ; SOFT-NEXT:    mov r0, r5
-; SOFT-NEXT:    cmp r0, #0
-; SOFT-NEXT:    bne .LBB45_9
-; SOFT-NEXT:  .LBB45_16: @ %entry
-; SOFT-NEXT:    mov r7, r0
-; SOFT-NEXT:    beq .LBB45_10
-; SOFT-NEXT:    b .LBB45_11
+; SOFT-NEXT:  .LBB45_5: @ %entry
+; SOFT-NEXT:    movs r6, #1
+; SOFT-NEXT:    lsls r6, r6, #31
+; SOFT-NEXT:    rsbs r7, r0, #0
+; SOFT-NEXT:    mov r7, r6
+; SOFT-NEXT:    sbcs r7, r1
+; SOFT-NEXT:    mov r7, r5
+; SOFT-NEXT:    sbcs r7, r2
+; SOFT-NEXT:    sbcs r5, r3
+; SOFT-NEXT:    bge .LBB45_11
+; SOFT-NEXT:  @ %bb.6: @ %entry
+; SOFT-NEXT:    bge .LBB45_12
+; SOFT-NEXT:  .LBB45_7: @ %entry
+; SOFT-NEXT:    add sp, #4
+; SOFT-NEXT:    pop {r4, r5, r6, r7, pc}
+; SOFT-NEXT:  .LBB45_8: @ %entry
+; SOFT-NEXT:    mov r3, r4
+; SOFT-NEXT:    blt .LBB45_2
+; SOFT-NEXT:  .LBB45_9: @ %entry
+; SOFT-NEXT:    mov r2, r4
+; SOFT-NEXT:    blt .LBB45_3
+; SOFT-NEXT:  .LBB45_10: @ %entry
+; SOFT-NEXT:    mov r1, r6
+; SOFT-NEXT:    bge .LBB45_4
+; SOFT-NEXT:    b .LBB45_5
+; SOFT-NEXT:  .LBB45_11: @ %entry
+; SOFT-NEXT:    mov r0, r4
+; SOFT-NEXT:    blt .LBB45_7
+; SOFT-NEXT:  .LBB45_12: @ %entry
+; SOFT-NEXT:    mov r1, r6
+; SOFT-NEXT:    add sp, #4
+; SOFT-NEXT:    pop {r4, r5, r6, r7, pc}
 ; SOFT-NEXT:    .p2align 2
-; SOFT-NEXT:  @ %bb.17:
+; SOFT-NEXT:  @ %bb.13:
 ; SOFT-NEXT:  .LCPI45_0:
 ; SOFT-NEXT:    .long 2147483647 @ 0x7fffffff
 ;
@@ -2682,28 +2571,21 @@ define i64 @stest_f64i64_mm(double %x) {
 ; VFP2-NEXT:    mov.w r12, #0
 ; VFP2-NEXT:    sbcs r4, r2, #0
 ; VFP2-NEXT:    sbcs r4, r3, #0
-; VFP2-NEXT:    mov.w r4, #0
-; VFP2-NEXT:    it lt
-; VFP2-NEXT:    movlt r4, #1
-; VFP2-NEXT:    cmp r4, #0
-; VFP2-NEXT:    itet eq
-; VFP2-NEXT:    moveq r3, r4
-; VFP2-NEXT:    movne r4, r2
-; VFP2-NEXT:    moveq r1, lr
-; VFP2-NEXT:    mov.w r2, #-1
-; VFP2-NEXT:    it eq
-; VFP2-NEXT:    moveq r0, r2
+; VFP2-NEXT:    ittt ge
+; VFP2-NEXT:    movge r3, r12
+; VFP2-NEXT:    movge r2, r12
+; VFP2-NEXT:    movge r1, lr
+; VFP2-NEXT:    mov.w r4, #-1
+; VFP2-NEXT:    it ge
+; VFP2-NEXT:    movge r0, r4
 ; VFP2-NEXT:    rsbs r5, r0, #0
 ; VFP2-NEXT:    mov.w lr, #-2147483648
 ; VFP2-NEXT:    sbcs.w r5, lr, r1
-; VFP2-NEXT:    sbcs.w r4, r2, r4
-; VFP2-NEXT:    sbcs r2, r3
-; VFP2-NEXT:    it lt
-; VFP2-NEXT:    movlt.w r12, #1
-; VFP2-NEXT:    cmp.w r12, #0
-; VFP2-NEXT:    itt eq
-; VFP2-NEXT:    moveq r0, r12
-; VFP2-NEXT:    moveq r1, lr
+; VFP2-NEXT:    sbcs.w r2, r4, r2
+; VFP2-NEXT:    sbcs.w r2, r4, r3
+; VFP2-NEXT:    itt ge
+; VFP2-NEXT:    movge r0, r12
+; VFP2-NEXT:    movge r1, lr
 ; VFP2-NEXT:    pop {r4, r5, r7, pc}
 ;
 ; FULL-LABEL: stest_f64i64_mm:
@@ -2711,27 +2593,24 @@ define i64 @stest_f64i64_mm(double %x) {
 ; FULL-NEXT:    .save {r4, r5, r7, lr}
 ; FULL-NEXT:    push {r4, r5, r7, lr}
 ; FULL-NEXT:    bl __fixdfti
-; FULL-NEXT:    subs.w lr, r0, #-1
-; FULL-NEXT:    mvn r12, #-2147483648
-; FULL-NEXT:    sbcs.w lr, r1, r12
-; FULL-NEXT:    sbcs lr, r2, #0
-; FULL-NEXT:    sbcs lr, r3, #0
-; FULL-NEXT:    cset lr, lt
-; FULL-NEXT:    cmp.w lr, #0
-; FULL-NEXT:    csel r5, r3, lr, ne
-; FULL-NEXT:    mov.w r3, #-1
-; FULL-NEXT:    csel r0, r0, r3, ne
-; FULL-NEXT:    csel r1, r1, r12, ne
-; FULL-NEXT:    csel r2, r2, lr, ne
-; FULL-NEXT:    rsbs r4, r0, #0
-; FULL-NEXT:    mov.w r12, #-2147483648
-; FULL-NEXT:    sbcs.w r4, r12, r1
-; FULL-NEXT:    sbcs.w r2, r3, r2
-; FULL-NEXT:    sbcs.w r2, r3, r5
-; FULL-NEXT:    cset r2, lt
-; FULL-NEXT:    cmp r2, #0
-; FULL-NEXT:    csel r0, r0, r2, ne
-; FULL-NEXT:    csel r1, r1, r12, ne
+; FULL-NEXT:    subs.w r4, r0, #-1
+; FULL-NEXT:    mvn lr, #-2147483648
+; FULL-NEXT:    sbcs.w r4, r1, lr
+; FULL-NEXT:    mov.w r12, #0
+; FULL-NEXT:    sbcs r4, r2, #0
+; FULL-NEXT:    sbcs r4, r3, #0
+; FULL-NEXT:    mov.w r4, #-1
+; FULL-NEXT:    csel r1, r1, lr, lt
+; FULL-NEXT:    csel r0, r0, r4, lt
+; FULL-NEXT:    csel r3, r3, r12, lt
+; FULL-NEXT:    csel r2, r2, r12, lt
+; FULL-NEXT:    rsbs r5, r0, #0
+; FULL-NEXT:    mov.w lr, #-2147483648
+; FULL-NEXT:    sbcs.w r5, lr, r1
+; FULL-NEXT:    sbcs.w r2, r4, r2
+; FULL-NEXT:    sbcs.w r2, r4, r3
+; FULL-NEXT:    csel r0, r0, r12, lt
+; FULL-NEXT:    csel r1, r1, lr, lt
 ; FULL-NEXT:    pop {r4, r5, r7, pc}
 entry:
   %conv = fptosi double %x to i128
@@ -2750,22 +2629,15 @@ define i64 @utest_f64i64_mm(double %x) {
 ; SOFT-NEXT:    movs r4, #0
 ; SOFT-NEXT:    subs r2, r2, #1
 ; SOFT-NEXT:    sbcs r3, r4
-; SOFT-NEXT:    blo .LBB46_4
+; SOFT-NEXT:    bhs .LBB46_3
 ; SOFT-NEXT:  @ %bb.1: @ %entry
-; SOFT-NEXT:    cmp r4, #0
-; SOFT-NEXT:    beq .LBB46_5
+; SOFT-NEXT:    bhs .LBB46_4
 ; SOFT-NEXT:  .LBB46_2: @ %entry
-; SOFT-NEXT:    beq .LBB46_6
-; SOFT-NEXT:  .LBB46_3: @ %entry
 ; SOFT-NEXT:    pop {r4, pc}
-; SOFT-NEXT:  .LBB46_4:
-; SOFT-NEXT:    movs r4, #1
-; SOFT-NEXT:    cmp r4, #0
-; SOFT-NEXT:    bne .LBB46_2
-; SOFT-NEXT:  .LBB46_5: @ %entry
+; SOFT-NEXT:  .LBB46_3: @ %entry
 ; SOFT-NEXT:    mov r0, r4
-; SOFT-NEXT:    bne .LBB46_3
-; SOFT-NEXT:  .LBB46_6: @ %entry
+; SOFT-NEXT:    blo .LBB46_2
+; SOFT-NEXT:  .LBB46_4: @ %entry
 ; SOFT-NEXT:    mov r1, r4
 ; SOFT-NEXT:    pop {r4, pc}
 ;
@@ -2777,12 +2649,9 @@ define i64 @utest_f64i64_mm(double %x) {
 ; VFP2-NEXT:    subs r2, #1
 ; VFP2-NEXT:    mov.w r12, #0
 ; VFP2-NEXT:    sbcs r2, r3, #0
-; VFP2-NEXT:    it lo
-; VFP2-NEXT:    movlo.w r12, #1
-; VFP2-NEXT:    cmp.w r12, #0
-; VFP2-NEXT:    itt eq
-; VFP2-NEXT:    moveq r0, r12
-; VFP2-NEXT:    moveq r1, r12
+; VFP2-NEXT:    itt hs
+; VFP2-NEXT:    movhs r0, r12
+; VFP2-NEXT:    movhs r1, r12
 ; VFP2-NEXT:    pop {r7, pc}
 ;
 ; FULL-LABEL: utest_f64i64_mm:
@@ -2791,11 +2660,10 @@ define i64 @utest_f64i64_mm(double %x) {
 ; FULL-NEXT:    push {r7, lr}
 ; FULL-NEXT:    bl __fixunsdfti
 ; FULL-NEXT:    subs r2, #1
+; FULL-NEXT:    mov.w r12, #0
 ; FULL-NEXT:    sbcs r2, r3, #0
-; FULL-NEXT:    cset r2, lo
-; FULL-NEXT:    cmp r2, #0
-; FULL-NEXT:    csel r0, r0, r2, ne
-; FULL-NEXT:    csel r1, r1, r2, ne
+; FULL-NEXT:    csel r0, r0, r12, lo
+; FULL-NEXT:    csel r1, r1, r12, lo
 ; FULL-NEXT:    pop {r7, pc}
 entry:
   %conv = fptoui double %x to i128
@@ -2815,41 +2683,33 @@ define i64 @ustest_f64i64_mm(double %x) {
 ; SOFT-NEXT:    subs r2, r2, #1
 ; SOFT-NEXT:    mov r2, r3
 ; SOFT-NEXT:    sbcs r2, r1
-; SOFT-NEXT:    blt .LBB47_2
+; SOFT-NEXT:    bge .LBB47_7
 ; SOFT-NEXT:  @ %bb.1: @ %entry
-; SOFT-NEXT:    mov r2, r1
-; SOFT-NEXT:    cmp r2, #0
-; SOFT-NEXT:    beq .LBB47_3
-; SOFT-NEXT:    b .LBB47_4
-; SOFT-NEXT:  .LBB47_2:
-; SOFT-NEXT:    movs r2, #1
-; SOFT-NEXT:    cmp r2, #0
-; SOFT-NEXT:    bne .LBB47_4
+; SOFT-NEXT:    bge .LBB47_8
+; SOFT-NEXT:  .LBB47_2: @ %entry
+; SOFT-NEXT:    blt .LBB47_4
 ; SOFT-NEXT:  .LBB47_3: @ %entry
-; SOFT-NEXT:    mov r4, r2
+; SOFT-NEXT:    mov r3, r1
 ; SOFT-NEXT:  .LBB47_4: @ %entry
-; SOFT-NEXT:    beq .LBB47_10
-; SOFT-NEXT:  @ %bb.5: @ %entry
-; SOFT-NEXT:    bne .LBB47_7
-; SOFT-NEXT:  .LBB47_6: @ %entry
-; SOFT-NEXT:    mov r3, r2
-; SOFT-NEXT:  .LBB47_7: @ %entry
 ; SOFT-NEXT:    cmp r3, #0
 ; SOFT-NEXT:    mov r2, r1
-; SOFT-NEXT:    bpl .LBB47_11
-; SOFT-NEXT:  @ %bb.8: @ %entry
-; SOFT-NEXT:    bpl .LBB47_12
-; SOFT-NEXT:  .LBB47_9: @ %entry
+; SOFT-NEXT:    bpl .LBB47_9
+; SOFT-NEXT:  @ %bb.5: @ %entry
+; SOFT-NEXT:    bpl .LBB47_10
+; SOFT-NEXT:  .LBB47_6: @ %entry
 ; SOFT-NEXT:    mov r0, r2
 ; SOFT-NEXT:    pop {r4, pc}
-; SOFT-NEXT:  .LBB47_10: @ %entry
-; SOFT-NEXT:    mov r0, r2
-; SOFT-NEXT:    beq .LBB47_6
-; SOFT-NEXT:    b .LBB47_7
-; SOFT-NEXT:  .LBB47_11: @ %entry
+; SOFT-NEXT:  .LBB47_7: @ %entry
+; SOFT-NEXT:    mov r4, r1
+; SOFT-NEXT:    blt .LBB47_2
+; SOFT-NEXT:  .LBB47_8: @ %entry
+; SOFT-NEXT:    mov r0, r1
+; SOFT-NEXT:    bge .LBB47_3
+; SOFT-NEXT:    b .LBB47_4
+; SOFT-NEXT:  .LBB47_9: @ %entry
 ; SOFT-NEXT:    mov r2, r0
-; SOFT-NEXT:    bmi .LBB47_9
-; SOFT-NEXT:  .LBB47_12: @ %entry
+; SOFT-NEXT:    bmi .LBB47_6
+; SOFT-NEXT:  .LBB47_10: @ %entry
 ; SOFT-NEXT:    mov r1, r4
 ; SOFT-NEXT:    mov r0, r2
 ; SOFT-NEXT:    pop {r4, pc}
@@ -2862,13 +2722,10 @@ define i64 @ustest_f64i64_mm(double %x) {
 ; VFP2-NEXT:    subs r2, #1
 ; VFP2-NEXT:    mov.w r12, #0
 ; VFP2-NEXT:    sbcs r2, r3, #0
-; VFP2-NEXT:    it lt
-; VFP2-NEXT:    movlt.w r12, #1
-; VFP2-NEXT:    cmp.w r12, #0
-; VFP2-NEXT:    itte eq
-; VFP2-NEXT:    moveq r1, r12
-; VFP2-NEXT:    moveq r0, r12
-; VFP2-NEXT:    movne r12, r3
+; VFP2-NEXT:    itte ge
+; VFP2-NEXT:    movge r1, r12
+; VFP2-NEXT:    movge r0, r12
+; VFP2-NEXT:    movlt r12, r3
 ; VFP2-NEXT:    cmp.w r12, #0
 ; VFP2-NEXT:    itt mi
 ; VFP2-NEXT:    movmi r0, #0
@@ -2881,12 +2738,11 @@ define i64 @ustest_f64i64_mm(double %x) {
 ; FULL-NEXT:    push {r7, lr}
 ; FULL-NEXT:    bl __fixdfti
 ; FULL-NEXT:    subs r2, #1
+; FULL-NEXT:    mov.w r12, #0
 ; FULL-NEXT:    sbcs r2, r3, #0
-; FULL-NEXT:    cset r2, lt
-; FULL-NEXT:    cmp r2, #0
-; FULL-NEXT:    csel r1, r1, r2, ne
-; FULL-NEXT:    csel r0, r0, r2, ne
-; FULL-NEXT:    csel r2, r3, r2, ne
+; FULL-NEXT:    csel r1, r1, r12, lt
+; FULL-NEXT:    csel r0, r0, r12, lt
+; FULL-NEXT:    csel r2, r3, r12, lt
 ; FULL-NEXT:    cmp r2, #0
 ; FULL-NEXT:    itt mi
 ; FULL-NEXT:    movmi r0, #0
@@ -2905,82 +2761,62 @@ define i64 @stest_f32i64_mm(float %x) {
 ; SOFT:       @ %bb.0: @ %entry
 ; SOFT-NEXT:    .save {r4, r5, r6, r7, lr}
 ; SOFT-NEXT:    push {r4, r5, r6, r7, lr}
-; SOFT-NEXT:    .pad #12
-; SOFT-NEXT:    sub sp, #12
+; SOFT-NEXT:    .pad #4
+; SOFT-NEXT:    sub sp, #4
 ; SOFT-NEXT:    bl __fixsfti
-; SOFT-NEXT:    mov r7, r0
-; SOFT-NEXT:    movs r0, #1
-; SOFT-NEXT:    movs r5, #0
+; SOFT-NEXT:    movs r4, #0
+; SOFT-NEXT:    mvns r5, r4
 ; SOFT-NEXT:    ldr r6, .LCPI48_0
-; SOFT-NEXT:    adds r4, r7, #1
-; SOFT-NEXT:    mov r4, r1
-; SOFT-NEXT:    sbcs r4, r6
-; SOFT-NEXT:    mov r4, r2
-; SOFT-NEXT:    sbcs r4, r5
-; SOFT-NEXT:    mov r4, r3
-; SOFT-NEXT:    sbcs r4, r5
-; SOFT-NEXT:    mov r4, r0
-; SOFT-NEXT:    blt .LBB48_2
+; SOFT-NEXT:    adds r7, r0, #1
+; SOFT-NEXT:    mov r7, r1
+; SOFT-NEXT:    sbcs r7, r6
+; SOFT-NEXT:    mov r7, r2
+; SOFT-NEXT:    sbcs r7, r4
+; SOFT-NEXT:    mov r7, r3
+; SOFT-NEXT:    sbcs r7, r4
+; SOFT-NEXT:    bge .LBB48_8
 ; SOFT-NEXT:  @ %bb.1: @ %entry
-; SOFT-NEXT:    mov r4, r5
+; SOFT-NEXT:    bge .LBB48_9
 ; SOFT-NEXT:  .LBB48_2: @ %entry
-; SOFT-NEXT:    mvns r6, r5
-; SOFT-NEXT:    cmp r4, #0
-; SOFT-NEXT:    beq .LBB48_12
-; SOFT-NEXT:  @ %bb.3: @ %entry
-; SOFT-NEXT:    beq .LBB48_13
+; SOFT-NEXT:    bge .LBB48_10
+; SOFT-NEXT:  .LBB48_3: @ %entry
+; SOFT-NEXT:    blt .LBB48_5
 ; SOFT-NEXT:  .LBB48_4: @ %entry
-; SOFT-NEXT:    str r2, [sp, #8] @ 4-byte Spill
-; SOFT-NEXT:    beq .LBB48_14
-; SOFT-NEXT:  .LBB48_5: @ %entry
-; SOFT-NEXT:    str r3, [sp, #4] @ 4-byte Spill
-; SOFT-NEXT:    bne .LBB48_7
-; SOFT-NEXT:  .LBB48_6: @ %entry
-; SOFT-NEXT:    mov r7, r6
-; SOFT-NEXT:  .LBB48_7: @ %entry
-; SOFT-NEXT:    lsls r3, r0, #31
-; SOFT-NEXT:    rsbs r4, r7, #0
-; SOFT-NEXT:    mov r4, r3
-; SOFT-NEXT:    sbcs r4, r1
-; SOFT-NEXT:    mov r4, r6
-; SOFT-NEXT:    ldr r2, [sp, #8] @ 4-byte Reload
-; SOFT-NEXT:    sbcs r4, r2
-; SOFT-NEXT:    ldr r2, [sp, #4] @ 4-byte Reload
-; SOFT-NEXT:    sbcs r6, r2
-; SOFT-NEXT:    bge .LBB48_15
-; SOFT-NEXT:  @ %bb.8: @ %entry
-; SOFT-NEXT:    cmp r0, #0
-; SOFT-NEXT:    beq .LBB48_16
-; SOFT-NEXT:  .LBB48_9: @ %entry
-; SOFT-NEXT:    bne .LBB48_11
-; SOFT-NEXT:  .LBB48_10: @ %entry
-; SOFT-NEXT:    mov r1, r3
-; SOFT-NEXT:  .LBB48_11: @ %entry
-; SOFT-NEXT:    mov r0, r7
-; SOFT-NEXT:    add sp, #12
-; SOFT-NEXT:    pop {r4, r5, r6, r7, pc}
-; SOFT-NEXT:  .LBB48_12: @ %entry
-; SOFT-NEXT:    mov r3, r4
-; SOFT-NEXT:    bne .LBB48_4
-; SOFT-NEXT:  .LBB48_13: @ %entry
-; SOFT-NEXT:    mov r2, r4
-; SOFT-NEXT:    str r2, [sp, #8] @ 4-byte Spill
-; SOFT-NEXT:    bne .LBB48_5
-; SOFT-NEXT:  .LBB48_14: @ %entry
-; SOFT-NEXT:    ldr r1, .LCPI48_0
-; SOFT-NEXT:    str r3, [sp, #4] @ 4-byte Spill
-; SOFT-NEXT:    beq .LBB48_6
-; SOFT-NEXT:    b .LBB48_7
-; SOFT-NEXT:  .LBB48_15: @ %entry
 ; SOFT-NEXT:    mov r0, r5
-; SOFT-NEXT:    cmp r0, #0
-; SOFT-NEXT:    bne .LBB48_9
-; SOFT-NEXT:  .LBB48_16: @ %entry
-; SOFT-NEXT:    mov r7, r0
-; SOFT-NEXT:    beq .LBB48_10
-; SOFT-NEXT:    b .LBB48_11
+; SOFT-NEXT:  .LBB48_5: @ %entry
+; SOFT-NEXT:    movs r6, #1
+; SOFT-NEXT:    lsls r6, r6, #31
+; SOFT-NEXT:    rsbs r7, r0, #0
+; SOFT-NEXT:    mov r7, r6
+; SOFT-NEXT:    sbcs r7, r1
+; SOFT-NEXT:    mov r7, r5
+; SOFT-NEXT:    sbcs r7, r2
+; SOFT-NEXT:    sbcs r5, r3
+; SOFT-NEXT:    bge .LBB48_11
+; SOFT-NEXT:  @ %bb.6: @ %entry
+; SOFT-NEXT:    bge .LBB48_12
+; SOFT-NEXT:  .LBB48_7: @ %entry
+; SOFT-NEXT:    add sp, #4
+; SOFT-NEXT:    pop {r4, r5, r6, r7, pc}
+; SOFT-NEXT:  .LBB48_8: @ %entry
+; SOFT-NEXT:    mov r3, r4
+; SOFT-NEXT:    blt .LBB48_2
+; SOFT-NEXT:  .LBB48_9: @ %entry
+; SOFT-NEXT:    mov r2, r4
+; SOFT-NEXT:    blt .LBB48_3
+; SOFT-NEXT:  .LBB48_10: @ %entry
+; SOFT-NEXT:    mov r1, r6
+; SOFT-NEXT:    bge .LBB48_4
+; SOFT-NEXT:    b .LBB48_5
+; SOFT-NEXT:  .LBB48_11: @ %entry
+; SOFT-NEXT:    mov r0, r4
+; SOFT-NEXT:    blt .LBB48_7
+; SOFT-NEXT:  .LBB48_12: @ %entry
+; SOFT-NEXT:    mov r1, r6
+; SOFT-NEXT:    add sp, #4
+; SOFT-NEXT:    pop {r4, r5, r6, r7, pc}
 ; SOFT-NEXT:    .p2align 2
-; SOFT-NEXT:  @ %bb.17:
+; SOFT-NEXT:  @ %bb.13:
 ; SOFT-NEXT:  .LCPI48_0:
 ; SOFT-NEXT:    .long 2147483647 @ 0x7fffffff
 ;
@@ -2995,28 +2831,21 @@ define i64 @stest_f32i64_mm(float %x) {
 ; VFP2-NEXT:    mov.w r12, #0
 ; VFP2-NEXT:    sbcs r4, r2, #0
 ; VFP2-NEXT:    sbcs r4, r3, #0
-; VFP2-NEXT:    mov.w r4, #0
-; VFP2-NEXT:    it lt
-; VFP2-NEXT:    movlt r4, #1
-; VFP2-NEXT:    cmp r4, #0
-; VFP2-NEXT:    itet eq
-; VFP2-NEXT:    moveq r3, r4
-; VFP2-NEXT:    movne r4, r2
-; VFP2-NEXT:    moveq r1, lr
-; VFP2-NEXT:    mov.w r2, #-1
-; VFP2-NEXT:    it eq
-; VFP2-NEXT:    moveq r0, r2
+; VFP2-NEXT:    ittt ge
+; VFP2-NEXT:    movge r3, r12
+; VFP2-NEXT:    movge r2, r12
+; VFP2-NEXT:    movge r1, lr
+; VFP2-NEXT:    mov.w r4, #-1
+; VFP2-NEXT:    it ge
+; VFP2-NEXT:    movge r0, r4
 ; VFP2-NEXT:    rsbs r5, r0, #0
 ; VFP2-NEXT:    mov.w lr, #-2147483648
 ; VFP2-NEXT:    sbcs.w r5, lr, r1
-; VFP2-NEXT:    sbcs.w r4, r2, r4
-; VFP2-NEXT:    sbcs r2, r3
-; VFP2-NEXT:    it lt
-; VFP2-NEXT:    movlt.w r12, #1
-; VFP2-NEXT:    cmp.w r12, #0
-; VFP2-NEXT:    itt eq
-; VFP2-NEXT:    moveq r0, r12
-; VFP2-NEXT:    moveq r1, lr
+; VFP2-NEXT:    sbcs.w r2, r4, r2
+; VFP2-NEXT:    sbcs.w r2, r4, r3
+; VFP2-NEXT:    itt ge
+; VFP2-NEXT:    movge r0, r12
+; VFP2-NEXT:    movge r1, lr
 ; VFP2-NEXT:    pop {r4, r5, r7, pc}
 ;
 ; FULL-LABEL: stest_f32i64_mm:
@@ -3024,27 +2853,24 @@ define i64 @stest_f32i64_mm(float %x) {
 ; FULL-NEXT:    .save {r4, r5, r7, lr}
 ; FULL-NEXT:    push {r4, r5, r7, lr}
 ; FULL-NEXT:    bl __fixsfti
-; FULL-NEXT:    subs.w lr, r0, #-1
-; FULL-NEXT:    mvn r12, #-2147483648
-; FULL-NEXT:    sbcs.w lr, r1, r12
-; FULL-NEXT:    sbcs lr, r2, #0
-; FULL-NEXT:    sbcs lr, r3, #0
-; FULL-NEXT:    cset lr, lt
-; FULL-NEXT:    cmp.w lr, #0
-; FULL-NEXT:    csel r5, r3, lr, ne
-; FULL-NEXT:    mov.w r3, #-1
-; FULL-NEXT:    csel r0, r0, r3, ne
-; FULL-NEXT:    csel r1, r1, r12, ne
-; FULL-NEXT:    csel r2, r2, lr, ne
-; FULL-NEXT:    rsbs r4, r0, #0
-; FULL-NEXT:    mov.w r12, #-2147483648
-; FULL-NEXT:    sbcs.w r4, r12, r1
-; FULL-NEXT:    sbcs.w r2, r3, r2
-; FULL-NEXT:    sbcs.w r2, r3, r5
-; FULL-NEXT:    cset r2, lt
-; FULL-NEXT:    cmp r2, #0
-; FULL-NEXT:    csel r0, r0, r2, ne
-; FULL-NEXT:    csel r1, r1, r12, ne
+; FULL-NEXT:    subs.w r4, r0, #-1
+; FULL-NEXT:    mvn lr, #-2147483648
+; FULL-NEXT:    sbcs.w r4, r1, lr
+; FULL-NEXT:    mov.w r12, #0
+; FULL-NEXT:    sbcs r4, r2, #0
+; FULL-NEXT:    sbcs r4, r3, #0
+; FULL-NEXT:    mov.w r4, #-1
+; FULL-NEXT:    csel r1, r1, lr, lt
+; FULL-NEXT:    csel r0, r0, r4, lt
+; FULL-NEXT:    csel r3, r3, r12, lt
+; FULL-NEXT:    csel r2, r2, r12, lt
+; FULL-NEXT:    rsbs r5, r0, #0
+; FULL-NEXT:    mov.w lr, #-2147483648
+; FULL-NEXT:    sbcs.w r5, lr, r1
+; FULL-NEXT:    sbcs.w r2, r4, r2
+; FULL-NEXT:    sbcs.w r2, r4, r3
+; FULL-NEXT:    csel r0, r0, r12, lt
+; FULL-NEXT:    csel r1, r1, lr, lt
 ; FULL-NEXT:    pop {r4, r5, r7, pc}
 entry:
   %conv = fptosi float %x to i128
@@ -3063,22 +2889,15 @@ define i64 @utest_f32i64_mm(float %x) {
 ; SOFT-NEXT:    movs r4, #0
 ; SOFT-NEXT:    subs r2, r2, #1
 ; SOFT-NEXT:    sbcs r3, r4
-; SOFT-NEXT:    blo .LBB49_4
+; SOFT-NEXT:    bhs .LBB49_3
 ; SOFT-NEXT:  @ %bb.1: @ %entry
-; SOFT-NEXT:    cmp r4, #0
-; SOFT-NEXT:    beq .LBB49_5
+; SOFT-NEXT:    bhs .LBB49_4
 ; SOFT-NEXT:  .LBB49_2: @ %entry
-; SOFT-NEXT:    beq .LBB49_6
-; SOFT-NEXT:  .LBB49_3: @ %entry
 ; SOFT-NEXT:    pop {r4, pc}
-; SOFT-NEXT:  .LBB49_4:
-; SOFT-NEXT:    movs r4, #1
-; SOFT-NEXT:    cmp r4, #0
-; SOFT-NEXT:    bne .LBB49_2
-; SOFT-NEXT:  .LBB49_5: @ %entry
+; SOFT-NEXT:  .LBB49_3: @ %entry
 ; SOFT-NEXT:    mov r0, r4
-; SOFT-NEXT:    bne .LBB49_3
-; SOFT-NEXT:  .LBB49_6: @ %entry
+; SOFT-NEXT:    blo .LBB49_2
+; SOFT-NEXT:  .LBB49_4: @ %entry
 ; SOFT-NEXT:    mov r1, r4
 ; SOFT-NEXT:    pop {r4, pc}
 ;
@@ -3090,12 +2909,9 @@ define i64 @utest_f32i64_mm(float %x) {
 ; VFP2-NEXT:    subs r2, #1
 ; VFP2-NEXT:    mov.w r12, #0
 ; VFP2-NEXT:    sbcs r2, r3, #0
-; VFP2-NEXT:    it lo
-; VFP2-NEXT:    movlo.w r12, #1
-; VFP2-NEXT:    cmp.w r12, #0
-; VFP2-NEXT:    itt eq
-; VFP2-NEXT:    moveq r0, r12
-; VFP2-NEXT:    moveq r1, r12
+; VFP2-NEXT:    itt hs
+; VFP2-NEXT:    movhs r0, r12
+; VFP2-NEXT:    movhs r1, r12
 ; VFP2-NEXT:    pop {r7, pc}
 ;
 ; FULL-LABEL: utest_f32i64_mm:
@@ -3104,11 +2920,10 @@ define i64 @utest_f32i64_mm(float %x) {
 ; FULL-NEXT:    push {r7, lr}
 ; FULL-NEXT:    bl __fixunssfti
 ; FULL-NEXT:    subs r2, #1
+; FULL-NEXT:    mov.w r12, #0
 ; FULL-NEXT:    sbcs r2, r3, #0
-; FULL-NEXT:    cset r2, lo
-; FULL-NEXT:    cmp r2, #0
-; FULL-NEXT:    csel r0, r0, r2, ne
-; FULL-NEXT:    csel r1, r1, r2, ne
+; FULL-NEXT:    csel r0, r0, r12, lo
+; FULL-NEXT:    csel r1, r1, r12, lo
 ; FULL-NEXT:    pop {r7, pc}
 entry:
   %conv = fptoui float %x to i128
@@ -3128,41 +2943,33 @@ define i64 @ustest_f32i64_mm(float %x) {
 ; SOFT-NEXT:    subs r2, r2, #1
 ; SOFT-NEXT:    mov r2, r3
 ; SOFT-NEXT:    sbcs r2, r1
-; SOFT-NEXT:    blt .LBB50_2
+; SOFT-NEXT:    bge .LBB50_7
 ; SOFT-NEXT:  @ %bb.1: @ %entry
-; SOFT-NEXT:    mov r2, r1
-; SOFT-NEXT:    cmp r2, #0
-; SOFT-NEXT:    beq .LBB50_3
-; SOFT-NEXT:    b .LBB50_4
-; SOFT-NEXT:  .LBB50_2:
-; SOFT-NEXT:    movs r2, #1
-; SOFT-NEXT:    cmp r2, #0
-; SOFT-NEXT:    bne .LBB50_4
+; SOFT-NEXT:    bge .LBB50_8
+; SOFT-NEXT:  .LBB50_2: @ %entry
+; SOFT-NEXT:    blt .LBB50_4
 ; SOFT-NEXT:  .LBB50_3: @ %entry
-; SOFT-NEXT:    mov r4, r2
+; SOFT-NEXT:    mov r3, r1
 ; SOFT-NEXT:  .LBB50_4: @ %entry
-; SOFT-NEXT:    beq .LBB50_10
-; SOFT-NEXT:  @ %bb.5: @ %entry
-; SOFT-NEXT:    bne .LBB50_7
-; SOFT-NEXT:  .LBB50_6: @ %entry
-; SOFT-NEXT:    mov r3, r2
-; SOFT-NEXT:  .LBB50_7: @ %entry
 ; SOFT-NEXT:    cmp r3, #0
 ; SOFT-NEXT:    mov r2, r1
-; SOFT-NEXT:    bpl .LBB50_11
-; SOFT-NEXT:  @ %bb.8: @ %entry
-; SOFT-NEXT:    bpl .LBB50_12
-; SOFT-NEXT:  .LBB50_9: @ %entry
+; SOFT-NEXT:    bpl .LBB50_9
+; SOFT-NEXT:  @ %bb.5: @ %entry
+; SOFT-NEXT:    bpl .LBB50_10
+; SOFT-NEXT:  .LBB50_6: @ %entry
 ; SOFT-NEXT:    mov r0, r2
 ; SOFT-NEXT:    pop {r4, pc}
-; SOFT-NEXT:  .LBB50_10: @ %entry
-; SOFT-NEXT:    mov r0, r2
-; SOFT-NEXT:    beq .LBB50_6
-; SOFT-NEXT:    b .LBB50_7
-; SOFT-NEXT:  .LBB50_11: @ %entry
+; SOFT-NEXT:  .LBB50_7: @ %entry
+; SOFT-NEXT:    mov r4, r1
+; SOFT-NEXT:    blt .LBB50_2
+; SOFT-NEXT:  .LBB50_8: @ %entry
+; SOFT-NEXT:    mov r0, r1
+; SOFT-NEXT:    bge .LBB50_3
+; SOFT-NEXT:    b .LBB50_4
+; SOFT-NEXT:  .LBB50_9: @ %entry
 ; SOFT-NEXT:    mov r2, r0
-; SOFT-NEXT:    bmi .LBB50_9
-; SOFT-NEXT:  .LBB50_12: @ %entry
+; SOFT-NEXT:    bmi .LBB50_6
+; SOFT-NEXT:  .LBB50_10: @ %entry
 ; SOFT-NEXT:    mov r1, r4
 ; SOFT-NEXT:    mov r0, r2
 ; SOFT-NEXT:    pop {r4, pc}
@@ -3175,13 +2982,10 @@ define i64 @ustest_f32i64_mm(float %x) {
 ; VFP2-NEXT:    subs r2, #1
 ; VFP2-NEXT:    mov.w r12, #0
 ; VFP2-NEXT:    sbcs r2, r3, #0
-; VFP2-NEXT:    it lt
-; VFP2-NEXT:    movlt.w r12, #1
-; VFP2-NEXT:    cmp.w r12, #0
-; VFP2-NEXT:    itte eq
-; VFP2-NEXT:    moveq r1, r12
-; VFP2-NEXT:    moveq r0, r12
-; VFP2-NEXT:    movne r12, r3
+; VFP2-NEXT:    itte ge
+; VFP2-NEXT:    movge r1, r12
+; VFP2-NEXT:    movge r0, r12
+; VFP2-NEXT:    movlt r12, r3
 ; VFP2-NEXT:    cmp.w r12, #0
 ; VFP2-NEXT:    itt mi
 ; VFP2-NEXT:    movmi r0, #0
@@ -3194,12 +2998,11 @@ define i64 @ustest_f32i64_mm(float %x) {
 ; FULL-NEXT:    push {r7, lr}
 ; FULL-NEXT:    bl __fixsfti
 ; FULL-NEXT:    subs r2, #1
+; FULL-NEXT:    mov.w r12, #0
 ; FULL-NEXT:    sbcs r2, r3, #0
-; FULL-NEXT:    cset r2, lt
-; FULL-NEXT:    cmp r2, #0
-; FULL-NEXT:    csel r1, r1, r2, ne
-; FULL-NEXT:    csel r0, r0, r2, ne
-; FULL-NEXT:    csel r2, r3, r2, ne
+; FULL-NEXT:    csel r1, r1, r12, lt
+; FULL-NEXT:    csel r0, r0, r12, lt
+; FULL-NEXT:    csel r2, r3, r12, lt
 ; FULL-NEXT:    cmp r2, #0
 ; FULL-NEXT:    itt mi
 ; FULL-NEXT:    movmi r0, #0
@@ -3218,84 +3021,64 @@ define i64 @stest_f16i64_mm(half %x) {
 ; SOFT:       @ %bb.0: @ %entry
 ; SOFT-NEXT:    .save {r4, r5, r6, r7, lr}
 ; SOFT-NEXT:    push {r4, r5, r6, r7, lr}
-; SOFT-NEXT:    .pad #12
-; SOFT-NEXT:    sub sp, #12
+; SOFT-NEXT:    .pad #4
+; SOFT-NEXT:    sub sp, #4
 ; SOFT-NEXT:    uxth r0, r0
 ; SOFT-NEXT:    bl __aeabi_h2f
 ; SOFT-NEXT:    bl __fixsfti
-; SOFT-NEXT:    mov r7, r0
-; SOFT-NEXT:    movs r0, #1
-; SOFT-NEXT:    movs r5, #0
+; SOFT-NEXT:    movs r4, #0
+; SOFT-NEXT:    mvns r5, r4
 ; SOFT-NEXT:    ldr r6, .LCPI51_0
-; SOFT-NEXT:    adds r4, r7, #1
-; SOFT-NEXT:    mov r4, r1
-; SOFT-NEXT:    sbcs r4, r6
-; SOFT-NEXT:    mov r4, r2
-; SOFT-NEXT:    sbcs r4, r5
-; SOFT-NEXT:    mov r4, r3
-; SOFT-NEXT:    sbcs r4, r5
-; SOFT-NEXT:    mov r4, r0
-; SOFT-NEXT:    blt .LBB51_2
+; SOFT-NEXT:    adds r7, r0, #1
+; SOFT-NEXT:    mov r7, r1
+; SOFT-NEXT:    sbcs r7, r6
+; SOFT-NEXT:    mov r7, r2
+; SOFT-NEXT:    sbcs r7, r4
+; SOFT-NEXT:    mov r7, r3
+; SOFT-NEXT:    sbcs r7, r4
+; SOFT-NEXT:    bge .LBB51_8
 ; SOFT-NEXT:  @ %bb.1: @ %entry
-; SOFT-NEXT:    mov r4, r5
+; SOFT-NEXT:    bge .LBB51_9
 ; SOFT-NEXT:  .LBB51_2: @ %entry
-; SOFT-NEXT:    mvns r6, r5
-; SOFT-NEXT:    cmp r4, #0
-; SOFT-NEXT:    beq .LBB51_12
-; SOFT-NEXT:  @ %bb.3: @ %entry
-; SOFT-NEXT:    beq .LBB51_13
+; SOFT-NEXT:    bge .LBB51_10
+; SOFT-NEXT:  .LBB51_3: @ %entry
+; SOFT-NEXT:    blt .LBB51_5
 ; SOFT-NEXT:  .LBB51_4: @ %entry
-; SOFT-NEXT:    str r2, [sp, #8] @ 4-byte Spill
-; SOFT-NEXT:    beq .LBB51_14
-; SOFT-NEXT:  .LBB51_5: @ %entry
-; SOFT-NEXT:    str r3, [sp, #4] @ 4-byte Spill
-; SOFT-NEXT:    bne .LBB51_7
-; SOFT-NEXT:  .LBB51_6: @ %entry
-; SOFT-NEXT:    mov r7, r6
-; SOFT-NEXT:  .LBB51_7: @ %entry
-; SOFT-NEXT:    lsls r3, r0, #31
-; SOFT-NEXT:    rsbs r4, r7, #0
-; SOFT-NEXT:    mov r4, r3
-; SOFT-NEXT:    sbcs r4, r1
-; SOFT-NEXT:    mov r4, r6
-; SOFT-NEXT:    ldr r2, [sp, #8] @ 4-byte Reload
-; SOFT-NEXT:    sbcs r4, r2
-; SOFT-NEXT:    ldr r2, [sp, #4] @ 4-byte Reload
-; SOFT-NEXT:    sbcs r6, r2
-; SOFT-NEXT:    bge .LBB51_15
-; SOFT-NEXT:  @ %bb.8: @ %entry
-; SOFT-NEXT:    cmp r0, #0
-; SOFT-NEXT:    beq .LBB51_16
-; SOFT-NEXT:  .LBB51_9: @ %entry
-; SOFT-NEXT:    bne .LBB51_11
-; SOFT-NEXT:  .LBB51_10: @ %entry
-; SOFT-NEXT:    mov r1, r3
-; SOFT-NEXT:  .LBB51_11: @ %entry
-; SOFT-NEXT:    mov r0, r7
-; SOFT-NEXT:    add sp, #12
-; SOFT-NEXT:    pop {r4, r5, r6, r7, pc}
-; SOFT-NEXT:  .LBB51_12: @ %entry
-; SOFT-NEXT:    mov r3, r4
-; SOFT-NEXT:    bne .LBB51_4
-; SOFT-NEXT:  .LBB51_13: @ %entry
-; SOFT-NEXT:    mov r2, r4
-; SOFT-NEXT:    str r2, [sp, #8] @ 4-byte Spill
-; SOFT-NEXT:    bne .LBB51_5
-; SOFT-NEXT:  .LBB51_14: @ %entry
-; SOFT-NEXT:    ldr r1, .LCPI51_0
-; SOFT-NEXT:    str r3, [sp, #4] @ 4-byte Spill
-; SOFT-NEXT:    beq .LBB51_6
-; SOFT-NEXT:    b .LBB51_7
-; SOFT-NEXT:  .LBB51_15: @ %entry
 ; SOFT-NEXT:    mov r0, r5
-; SOFT-NEXT:    cmp r0, #0
-; SOFT-NEXT:    bne .LBB51_9
-; SOFT-NEXT:  .LBB51_16: @ %entry
-; SOFT-NEXT:    mov r7, r0
-; SOFT-NEXT:    beq .LBB51_10
-; SOFT-NEXT:    b .LBB51_11
+; SOFT-NEXT:  .LBB51_5: @ %entry
+; SOFT-NEXT:    movs r6, #1
+; SOFT-NEXT:    lsls r6, r6, #31
+; SOFT-NEXT:    rsbs r7, r0, #0
+; SOFT-NEXT:    mov r7, r6
+; SOFT-NEXT:    sbcs r7, r1
+; SOFT-NEXT:    mov r7, r5
+; SOFT-NEXT:    sbcs r7, r2
+; SOFT-NEXT:    sbcs r5, r3
+; SOFT-NEXT:    bge .LBB51_11
+; SOFT-NEXT:  @ %bb.6: @ %entry
+; SOFT-NEXT:    bge .LBB51_12
+; SOFT-NEXT:  .LBB51_7: @ %entry
+; SOFT-NEXT:    add sp, #4
+; SOFT-NEXT:    pop {r4, r5, r6, r7, pc}
+; SOFT-NEXT:  .LBB51_8: @ %entry
+; SOFT-NEXT:    mov r3, r4
+; SOFT-NEXT:    blt .LBB51_2
+; SOFT-NEXT:  .LBB51_9: @ %entry
+; SOFT-NEXT:    mov r2, r4
+; SOFT-NEXT:    blt .LBB51_3
+; SOFT-NEXT:  .LBB51_10: @ %entry
+; SOFT-NEXT:    mov r1, r6
+; SOFT-NEXT:    bge .LBB51_4
+; SOFT-NEXT:    b .LBB51_5
+; SOFT-NEXT:  .LBB51_11: @ %entry
+; SOFT-NEXT:    mov r0, r4
+; SOFT-NEXT:    blt .LBB51_7
+; SOFT-NEXT:  .LBB51_12: @ %entry
+; SOFT-NEXT:    mov r1, r6
+; SOFT-NEXT:    add sp, #4
+; SOFT-NEXT:    pop {r4, r5, r6, r7, pc}
 ; SOFT-NEXT:    .p2align 2
-; SOFT-NEXT:  @ %bb.17:
+; SOFT-NEXT:  @ %bb.13:
 ; SOFT-NEXT:  .LCPI51_0:
 ; SOFT-NEXT:    .long 2147483647 @ 0x7fffffff
 ;
@@ -3313,28 +3096,21 @@ define i64 @stest_f16i64_mm(half %x) {
 ; VFP2-NEXT:    mov.w r12, #0
 ; VFP2-NEXT:    sbcs r4, r2, #0
 ; VFP2-NEXT:    sbcs r4, r3, #0
-; VFP2-NEXT:    mov.w r4, #0
-; VFP2-NEXT:    it lt
-; VFP2-NEXT:    movlt r4, #1
-; VFP2-NEXT:    cmp r4, #0
-; VFP2-NEXT:    itet eq
-; VFP2-NEXT:    moveq r3, r4
-; VFP2-NEXT:    movne r4, r2
-; VFP2-NEXT:    moveq r1, lr
-; VFP2-NEXT:    mov.w r2, #-1
-; VFP2-NEXT:    it eq
-; VFP2-NEXT:    moveq r0, r2
+; VFP2-NEXT:    ittt ge
+; VFP2-NEXT:    movge r3, r12
+; VFP2-NEXT:    movge r2, r12
+; VFP2-NEXT:    movge r1, lr
+; VFP2-NEXT:    mov.w r4, #-1
+; VFP2-NEXT:    it ge
+; VFP2-NEXT:    movge r0, r4
 ; VFP2-NEXT:    rsbs r5, r0, #0
 ; VFP2-NEXT:    mov.w lr, #-2147483648
 ; VFP2-NEXT:    sbcs.w r5, lr, r1
-; VFP2-NEXT:    sbcs.w r4, r2, r4
-; VFP2-NEXT:    sbcs r2, r3
-; VFP2-NEXT:    it lt
-; VFP2-NEXT:    movlt.w r12, #1
-; VFP2-NEXT:    cmp.w r12, #0
-; VFP2-NEXT:    itt eq
-; VFP2-NEXT:    moveq r0, r12
-; VFP2-NEXT:    moveq r1, lr
+; VFP2-NEXT:    sbcs.w r2, r4, r2
+; VFP2-NEXT:    sbcs.w r2, r4, r3
+; VFP2-NEXT:    itt ge
+; VFP2-NEXT:    movge r0, r12
+; VFP2-NEXT:    movge r1, lr
 ; VFP2-NEXT:    pop {r4, r5, r7, pc}
 ;
 ; FULL-LABEL: stest_f16i64_mm:
@@ -3344,27 +3120,24 @@ define i64 @stest_f16i64_mm(half %x) {
 ; FULL-NEXT:    vmov.f16 r0, s0
 ; FULL-NEXT:    vmov s0, r0
 ; FULL-NEXT:    bl __fixhfti
-; FULL-NEXT:    subs.w lr, r0, #-1
-; FULL-NEXT:    mvn r12, #-2147483648
-; FULL-NEXT:    sbcs.w lr, r1, r12
-; FULL-NEXT:    sbcs lr, r2, #0
-; FULL-NEXT:    sbcs lr, r3, #0
-; FULL-NEXT:    cset lr, lt
-; FULL-NEXT:    cmp.w lr, #0
-; FULL-NEXT:    csel r5, r3, lr, ne
-; FULL-NEXT:    mov.w r3, #-1
-; FULL-NEXT:    csel r0, r0, r3, ne
-; FULL-NEXT:    csel r1, r1, r12, ne
-; FULL-NEXT:    csel r2, r2, lr, ne
-; FULL-NEXT:    rsbs r4, r0, #0
-; FULL-NEXT:    mov.w r12, #-2147483648
-; FULL-NEXT:    sbcs.w r4, r12, r1
-; FULL-NEXT:    sbcs.w r2, r3, r2
-; FULL-NEXT:    sbcs.w r2, r3, r5
-; FULL-NEXT:    cset r2, lt
-; FULL-NEXT:    cmp r2, #0
-; FULL-NEXT:    csel r0, r0, r2, ne
-; FULL-NEXT:    csel r1, r1, r12, ne
+; FULL-NEXT:    subs.w r4, r0, #-1
+; FULL-NEXT:    mvn lr, #-2147483648
+; FULL-NEXT:    sbcs.w r4, r1, lr
+; FULL-NEXT:    mov.w r12, #0
+; FULL-NEXT:    sbcs r4, r2, #0
+; FULL-NEXT:    sbcs r4, r3, #0
+; FULL-NEXT:    mov.w r4, #-1
+; FULL-NEXT:    csel r1, r1, lr, lt
+; FULL-NEXT:    csel r0, r0, r4, lt
+; FULL-NEXT:    csel r3, r3, r12, lt
+; FULL-NEXT:    csel r2, r2, r12, lt
+; FULL-NEXT:    rsbs r5, r0, #0
+; FULL-NEXT:    mov.w lr, #-2147483648
+; FULL-NEXT:    sbcs.w r5, lr, r1
+; FULL-NEXT:    sbcs.w r2, r4, r2
+; FULL-NEXT:    sbcs.w r2, r4, r3
+; FULL-NEXT:    csel r0, r0, r12, lt
+; FULL-NEXT:    csel r1, r1, lr, lt
 ; FULL-NEXT:    pop {r4, r5, r7, pc}
 entry:
   %conv = fptosi half %x to i128
@@ -3385,22 +3158,15 @@ define i64 @utesth_f16i64_mm(half %x) {
 ; SOFT-NEXT:    movs r4, #0
 ; SOFT-NEXT:    subs r2, r2, #1
 ; SOFT-NEXT:    sbcs r3, r4
-; SOFT-NEXT:    blo .LBB52_4
+; SOFT-NEXT:    bhs .LBB52_3
 ; SOFT-NEXT:  @ %bb.1: @ %entry
-; SOFT-NEXT:    cmp r4, #0
-; SOFT-NEXT:    beq .LBB52_5
+; SOFT-NEXT:    bhs .LBB52_4
 ; SOFT-NEXT:  .LBB52_2: @ %entry
-; SOFT-NEXT:    beq .LBB52_6
-; SOFT-NEXT:  .LBB52_3: @ %entry
 ; SOFT-NEXT:    pop {r4, pc}
-; SOFT-NEXT:  .LBB52_4:
-; SOFT-NEXT:    movs r4, #1
-; SOFT-NEXT:    cmp r4, #0
-; SOFT-NEXT:    bne .LBB52_2
-; SOFT-NEXT:  .LBB52_5: @ %entry
+; SOFT-NEXT:  .LBB52_3: @ %entry
 ; SOFT-NEXT:    mov r0, r4
-; SOFT-NEXT:    bne .LBB52_3
-; SOFT-NEXT:  .LBB52_6: @ %entry
+; SOFT-NEXT:    blo .LBB52_2
+; SOFT-NEXT:  .LBB52_4: @ %entry
 ; SOFT-NEXT:    mov r1, r4
 ; SOFT-NEXT:    pop {r4, pc}
 ;
@@ -3415,12 +3181,9 @@ define i64 @utesth_f16i64_mm(half %x) {
 ; VFP2-NEXT:    subs r2, #1
 ; VFP2-NEXT:    mov.w r12, #0
 ; VFP2-NEXT:    sbcs r2, r3, #0
-; VFP2-NEXT:    it lo
-; VFP2-NEXT:    movlo.w r12, #1
-; VFP2-NEXT:    cmp.w r12, #0
-; VFP2-NEXT:    itt eq
-; VFP2-NEXT:    moveq r0, r12
-; VFP2-NEXT:    moveq r1, r12
+; VFP2-NEXT:    itt hs
+; VFP2-NEXT:    movhs r0, r12
+; VFP2-NEXT:    movhs r1, r12
 ; VFP2-NEXT:    pop {r7, pc}
 ;
 ; FULL-LABEL: utesth_f16i64_mm:
@@ -3431,11 +3194,10 @@ define i64 @utesth_f16i64_mm(half %x) {
 ; FULL-NEXT:    vmov s0, r0
 ; FULL-NEXT:    bl __fixunshfti
 ; FULL-NEXT:    subs r2, #1
+; FULL-NEXT:    mov.w r12, #0
 ; FULL-NEXT:    sbcs r2, r3, #0
-; FULL-NEXT:    cset r2, lo
-; FULL-NEXT:    cmp r2, #0
-; FULL-NEXT:    csel r0, r0, r2, ne
-; FULL-NEXT:    csel r1, r1, r2, ne
+; FULL-NEXT:    csel r0, r0, r12, lo
+; FULL-NEXT:    csel r1, r1, r12, lo
 ; FULL-NEXT:    pop {r7, pc}
 entry:
   %conv = fptoui half %x to i128
@@ -3457,41 +3219,33 @@ define i64 @ustest_f16i64_mm(half %x) {
 ; SOFT-NEXT:    subs r2, r2, #1
 ; SOFT-NEXT:    mov r2, r3
 ; SOFT-NEXT:    sbcs r2, r1
-; SOFT-NEXT:    blt .LBB53_2
+; SOFT-NEXT:    bge .LBB53_7
 ; SOFT-NEXT:  @ %bb.1: @ %entry
-; SOFT-NEXT:    mov r2, r1
-; SOFT-NEXT:    cmp r2, #0
-; SOFT-NEXT:    beq .LBB53_3
-; SOFT-NEXT:    b .LBB53_4
-; SOFT-NEXT:  .LBB53_2:
-; SOFT-NEXT:    movs r2, #1
-; SOFT-NEXT:    cmp r2, #0
-; SOFT-NEXT:    bne .LBB53_4
+; SOFT-NEXT:    bge .LBB53_8
+; SOFT-NEXT:  .LBB53_2: @ %entry
+; SOFT-NEXT:    blt .LBB53_4
 ; SOFT-NEXT:  .LBB53_3: @ %entry
-; SOFT-NEXT:    mov r4, r2
+; SOFT-NEXT:    mov r3, r1
 ; SOFT-NEXT:  .LBB53_4: @ %entry
-; SOFT-NEXT:    beq .LBB53_10
-; SOFT-NEXT:  @ %bb.5: @ %entry
-; SOFT-NEXT:    bne .LBB53_7
-; SOFT-NEXT:  .LBB53_6: @ %entry
-; SOFT-NEXT:    mov r3, r2
-; SOFT-NEXT:  .LBB53_7: @ %entry
 ; SOFT-NEXT:    cmp r3, #0
 ; SOFT-NEXT:    mov r2, r1
-; SOFT-NEXT:    bpl .LBB53_11
-; SOFT-NEXT:  @ %bb.8: @ %entry
-; SOFT-NEXT:    bpl .LBB53_12
-; SOFT-NEXT:  .LBB53_9: @ %entry
+; SOFT-NEXT:    bpl .LBB53_9
+; SOFT-NEXT:  @ %bb.5: @ %entry
+; SOFT-NEXT:    bpl .LBB53_10
+; SOFT-NEXT:  .LBB53_6: @ %entry
 ; SOFT-NEXT:    mov r0, r2
 ; SOFT-NEXT:    pop {r4, pc}
-; SOFT-NEXT:  .LBB53_10: @ %entry
-; SOFT-NEXT:    mov r0, r2
-; SOFT-NEXT:    beq .LBB53_6
-; SOFT-NEXT:    b .LBB53_7
-; SOFT-NEXT:  .LBB53_11: @ %entry
+; SOFT-NEXT:  .LBB53_7: @ %entry
+; SOFT-NEXT:    mov r4, r1
+; SOFT-NEXT:    blt .LBB53_2
+; SOFT-NEXT:  .LBB53_8: @ %entry
+; SOFT-NEXT:    mov r0, r1
+; SOFT-NEXT:    bge .LBB53_3
+; SOFT-NEXT:    b .LBB53_4
+; SOFT-NEXT:  .LBB53_9: @ %entry
 ; SOFT-NEXT:    mov r2, r0
-; SOFT-NEXT:    bmi .LBB53_9
-; SOFT-NEXT:  .LBB53_12: @ %entry
+; SOFT-NEXT:    bmi .LBB53_6
+; SOFT-NEXT:  .LBB53_10: @ %entry
 ; SOFT-NEXT:    mov r1, r4
 ; SOFT-NEXT:    mov r0, r2
 ; SOFT-NEXT:    pop {r4, pc}
@@ -3507,13 +3261,10 @@ define i64 @ustest_f16i64_mm(half %x) {
 ; VFP2-NEXT:    subs r2, #1
 ; VFP2-NEXT:    mov.w r12, #0
 ; VFP2-NEXT:    sbcs r2, r3, #0
-; VFP2-NEXT:    it lt
-; VFP2-NEXT:    movlt.w r12, #1
-; VFP2-NEXT:    cmp.w r12, #0
-; VFP2-NEXT:    itte eq
-; VFP2-NEXT:    moveq r1, r12
-; VFP2-NEXT:    moveq r0, r12
-; VFP2-NEXT:    movne r12, r3
+; VFP2-NEXT:    itte ge
+; VFP2-NEXT:    movge r1, r12
+; VFP2-NEXT:    movge r0, r12
+; VFP2-NEXT:    movlt r12, r3
 ; VFP2-NEXT:    cmp.w r12, #0
 ; VFP2-NEXT:    itt mi
 ; VFP2-NEXT:    movmi r0, #0
@@ -3528,12 +3279,11 @@ define i64 @ustest_f16i64_mm(half %x) {
 ; FULL-NEXT:    vmov s0, r0
 ; FULL-NEXT:    bl __fixhfti
 ; FULL-NEXT:    subs r2, #1
+; FULL-NEXT:    mov.w r12, #0
 ; FULL-NEXT:    sbcs r2, r3, #0
-; FULL-NEXT:    cset r2, lt
-; FULL-NEXT:    cmp r2, #0
-; FULL-NEXT:    csel r1, r1, r2, ne
-; FULL-NEXT:    csel r0, r0, r2, ne
-; FULL-NEXT:    csel r2, r3, r2, ne
+; FULL-NEXT:    csel r1, r1, r12, lt
+; FULL-NEXT:    csel r0, r0, r12, lt
+; FULL-NEXT:    csel r2, r3, r12, lt
 ; FULL-NEXT:    cmp r2, #0
 ; FULL-NEXT:    itt mi
 ; FULL-NEXT:    movmi r0, #0
@@ -3553,18 +3303,17 @@ define void @unroll_maxmin(ptr nocapture %0, ptr nocapture readonly %1, i32 %2) 
 ; SOFT:       @ %bb.0:
 ; SOFT-NEXT:    .save {r4, r5, r6, r7, lr}
 ; SOFT-NEXT:    push {r4, r5, r6, r7, lr}
-; SOFT-NEXT:    .pad #20
-; SOFT-NEXT:    sub sp, #20
+; SOFT-NEXT:    .pad #12
+; SOFT-NEXT:    sub sp, #12
 ; SOFT-NEXT:    mov r4, r1
 ; SOFT-NEXT:    mov r5, r0
 ; SOFT-NEXT:    movs r0, #0
-; SOFT-NEXT:    str r0, [sp, #16] @ 4-byte Spill
-; SOFT-NEXT:    mvns r0, r0
 ; SOFT-NEXT:    str r0, [sp, #8] @ 4-byte Spill
+; SOFT-NEXT:    mvns r0, r0
+; SOFT-NEXT:    str r0, [sp] @ 4-byte Spill
 ; SOFT-NEXT:    movs r0, #1
 ; SOFT-NEXT:    lsls r1, r0, #31
-; SOFT-NEXT:    str r1, [sp, #12] @ 4-byte Spill
-; SOFT-NEXT:    str r0, [sp, #4] @ 4-byte Spill
+; SOFT-NEXT:    str r1, [sp, #4] @ 4-byte Spill
 ; SOFT-NEXT:    lsls r7, r0, #10
 ; SOFT-NEXT:    b .LBB54_2
 ; SOFT-NEXT:  .LBB54_1: @ in Loop: Header=BB54_2 Depth=1
@@ -3572,7 +3321,7 @@ define void @unroll_maxmin(ptr nocapture %0, ptr nocapture readonly %1, i32 %2) 
 ; SOFT-NEXT:    adds r4, #8
 ; SOFT-NEXT:    adds r5, #8
 ; SOFT-NEXT:    subs r7, r7, #2
-; SOFT-NEXT:    beq .LBB54_18
+; SOFT-NEXT:    beq .LBB54_14
 ; SOFT-NEXT:  .LBB54_2: @ =>This Inner Loop Header: Depth=1
 ; SOFT-NEXT:    ldr r0, [r4]
 ; SOFT-NEXT:    movs r1, #79
@@ -3583,25 +3332,23 @@ define void @unroll_maxmin(ptr nocapture %0, ptr nocapture readonly %1, i32 %2) 
 ; SOFT-NEXT:    ldr r2, .LCPI54_0
 ; SOFT-NEXT:    subs r2, r0, r2
 ; SOFT-NEXT:    mov r2, r1
-; SOFT-NEXT:    ldr r3, [sp, #16] @ 4-byte Reload
+; SOFT-NEXT:    ldr r3, [sp, #8] @ 4-byte Reload
 ; SOFT-NEXT:    sbcs r2, r3
-; SOFT-NEXT:    bge .LBB54_14
+; SOFT-NEXT:    blt .LBB54_4
 ; SOFT-NEXT:  @ %bb.3: @ in Loop: Header=BB54_2 Depth=1
-; SOFT-NEXT:    ldr r2, [sp, #4] @ 4-byte Reload
-; SOFT-NEXT:    bge .LBB54_15
+; SOFT-NEXT:    ldr r1, [sp, #8] @ 4-byte Reload
 ; SOFT-NEXT:  .LBB54_4: @ in Loop: Header=BB54_2 Depth=1
-; SOFT-NEXT:    cmp r2, #0
-; SOFT-NEXT:    bne .LBB54_6
-; SOFT-NEXT:  .LBB54_5: @ in Loop: Header=BB54_2 Depth=1
-; SOFT-NEXT:    mov r1, r2
+; SOFT-NEXT:    blt .LBB54_6
+; SOFT-NEXT:  @ %bb.5: @ in Loop: Header=BB54_2 Depth=1
+; SOFT-NEXT:    ldr r0, .LCPI54_0
 ; SOFT-NEXT:  .LBB54_6: @ in Loop: Header=BB54_2 Depth=1
-; SOFT-NEXT:    ldr r2, [sp, #12] @ 4-byte Reload
+; SOFT-NEXT:    ldr r2, [sp, #4] @ 4-byte Reload
 ; SOFT-NEXT:    subs r2, r2, r0
-; SOFT-NEXT:    ldr r2, [sp, #8] @ 4-byte Reload
+; SOFT-NEXT:    ldr r2, [sp] @ 4-byte Reload
 ; SOFT-NEXT:    sbcs r2, r1
 ; SOFT-NEXT:    blt .LBB54_8
 ; SOFT-NEXT:  @ %bb.7: @ in Loop: Header=BB54_2 Depth=1
-; SOFT-NEXT:    ldr r0, [sp, #12] @ 4-byte Reload
+; SOFT-NEXT:    ldr r0, [sp, #4] @ 4-byte Reload
 ; SOFT-NEXT:  .LBB54_8: @ in Loop: Header=BB54_2 Depth=1
 ; SOFT-NEXT:    str r0, [r5]
 ; SOFT-NEXT:    ldr r0, [r4, #4]
@@ -3611,48 +3358,29 @@ define void @unroll_maxmin(ptr nocapture %0, ptr nocapture readonly %1, i32 %2) 
 ; SOFT-NEXT:    ldr r2, .LCPI54_0
 ; SOFT-NEXT:    subs r2, r0, r2
 ; SOFT-NEXT:    mov r2, r1
-; SOFT-NEXT:    ldr r3, [sp, #16] @ 4-byte Reload
+; SOFT-NEXT:    ldr r3, [sp, #8] @ 4-byte Reload
 ; SOFT-NEXT:    sbcs r2, r3
-; SOFT-NEXT:    ldr r2, [sp, #4] @ 4-byte Reload
-; SOFT-NEXT:    bge .LBB54_16
+; SOFT-NEXT:    blt .LBB54_10
 ; SOFT-NEXT:  @ %bb.9: @ in Loop: Header=BB54_2 Depth=1
-; SOFT-NEXT:    cmp r2, #0
-; SOFT-NEXT:    beq .LBB54_17
+; SOFT-NEXT:    ldr r1, [sp, #8] @ 4-byte Reload
 ; SOFT-NEXT:  .LBB54_10: @ in Loop: Header=BB54_2 Depth=1
-; SOFT-NEXT:    bne .LBB54_12
-; SOFT-NEXT:  .LBB54_11: @ in Loop: Header=BB54_2 Depth=1
+; SOFT-NEXT:    blt .LBB54_12
+; SOFT-NEXT:  @ %bb.11: @ in Loop: Header=BB54_2 Depth=1
 ; SOFT-NEXT:    ldr r0, .LCPI54_0
 ; SOFT-NEXT:  .LBB54_12: @ in Loop: Header=BB54_2 Depth=1
-; SOFT-NEXT:    ldr r2, [sp, #12] @ 4-byte Reload
+; SOFT-NEXT:    ldr r2, [sp, #4] @ 4-byte Reload
 ; SOFT-NEXT:    subs r2, r2, r0
-; SOFT-NEXT:    ldr r2, [sp, #8] @ 4-byte Reload
+; SOFT-NEXT:    ldr r2, [sp] @ 4-byte Reload
 ; SOFT-NEXT:    sbcs r2, r1
 ; SOFT-NEXT:    blt .LBB54_1
 ; SOFT-NEXT:  @ %bb.13: @ in Loop: Header=BB54_2 Depth=1
-; SOFT-NEXT:    ldr r0, [sp, #12] @ 4-byte Reload
+; SOFT-NEXT:    ldr r0, [sp, #4] @ 4-byte Reload
 ; SOFT-NEXT:    b .LBB54_1
-; SOFT-NEXT:  .LBB54_14: @ in Loop: Header=BB54_2 Depth=1
-; SOFT-NEXT:    ldr r0, .LCPI54_0
-; SOFT-NEXT:    ldr r2, [sp, #4] @ 4-byte Reload
-; SOFT-NEXT:    blt .LBB54_4
-; SOFT-NEXT:  .LBB54_15: @ in Loop: Header=BB54_2 Depth=1
-; SOFT-NEXT:    ldr r2, [sp, #16] @ 4-byte Reload
-; SOFT-NEXT:    cmp r2, #0
-; SOFT-NEXT:    beq .LBB54_5
-; SOFT-NEXT:    b .LBB54_6
-; SOFT-NEXT:  .LBB54_16: @ in Loop: Header=BB54_2 Depth=1
-; SOFT-NEXT:    ldr r2, [sp, #16] @ 4-byte Reload
-; SOFT-NEXT:    cmp r2, #0
-; SOFT-NEXT:    bne .LBB54_10
-; SOFT-NEXT:  .LBB54_17: @ in Loop: Header=BB54_2 Depth=1
-; SOFT-NEXT:    mov r1, r2
-; SOFT-NEXT:    beq .LBB54_11
-; SOFT-NEXT:    b .LBB54_12
-; SOFT-NEXT:  .LBB54_18:
-; SOFT-NEXT:    add sp, #20
+; SOFT-NEXT:  .LBB54_14:
+; SOFT-NEXT:    add sp, #12
 ; SOFT-NEXT:    pop {r4, r5, r6, r7, pc}
 ; SOFT-NEXT:    .p2align 2
-; SOFT-NEXT:  @ %bb.19:
+; SOFT-NEXT:  @ %bb.15:
 ; SOFT-NEXT:  .LCPI54_0:
 ; SOFT-NEXT:    .long 2147483647 @ 0x7fffffff
 ;
