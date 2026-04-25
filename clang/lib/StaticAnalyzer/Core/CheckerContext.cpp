@@ -128,12 +128,16 @@ bool CheckerContext::isHardenedVariantOf(const FunctionDecl *FD,
          CompletelyMatchesParts("__builtin_", "__", Name, "_chk");
 }
 
-StringRef CheckerContext::getMacroNameOrSpelling(SourceLocation &Loc) {
+std::string CheckerContext::getMacroNameOrSpelling(SourceLocation &Loc) {
+  const auto &SM = getSourceManager();
+  const auto &LO = getLangOpts();
   if (Loc.isMacroID())
-    return Lexer::getImmediateMacroName(Loc, getSourceManager(),
-                                             getLangOpts());
-  SmallString<16> buf;
-  return Lexer::getSpelling(Loc, buf, getSourceManager(), getLangOpts());
+    return Lexer::getImmediateMacroName(Loc, SM, LO).str();
+
+  Token Tok;
+  if (Lexer::getRawToken(Loc, Tok, SM, LO))
+    return "";
+  return Lexer::getSpelling(Tok, SM, LO);
 }
 
 /// Evaluate comparison and return true if it's known that condition is true
