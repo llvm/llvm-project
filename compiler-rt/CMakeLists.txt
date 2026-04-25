@@ -399,11 +399,6 @@ if(NOT "${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn|nvptx")
   append_list_if(COMPILER_RT_HAS_FNO_LTO_FLAG -fno-lto SANITIZER_COMMON_CFLAGS)
 endif()
 
-# Select the inline asm syntax for symbol assignment in sanitizer_redefine_builtins.h.
-if(NOT COMPILER_RT_HAS_ASM_DOT_SET AND COMPILER_RT_HAS_ASM_EQUALS_ASSIGN)
-  list(APPEND SANITIZER_COMMON_CFLAGS -DSANITIZER_COMMON_REDEFINE_BUILTINS_USE_ASSIGN)
-endif()
-
 # By default do not instrument or use profdata for compiler-rt.
 if(NOT COMPILER_RT_ENABLE_PGO)
   if(LLVM_PROFDATA_FILE AND COMPILER_RT_HAS_FNO_PROFILE_INSTR_USE_FLAG)
