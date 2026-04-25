@@ -524,9 +524,11 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
          "PendingLocs and PendingArgFlags out of sync");
 
   // Handle passing f64 on RV32D with a soft float ABI or when floating point
-  // registers are exhausted.
-  if (XLen == 32 && LocVT == MVT::f64) {
-    assert(PendingLocs.empty() && "Can't lower f64 if it is split");
+  // registers are exhausted. Or 64-bit P extension vectors on RV32.
+  if (XLen == 32 && (LocVT == MVT::f64 || (Subtarget.isPExtPackedType(LocVT) &&
+                                           LocVT.getSizeInBits() == 64))) {
+    assert(PendingLocs.empty() &&
+           "Can't lower f64 or P extension vector if it is split");
     // Depending on available argument GPRS, f64 may be passed in a pair of
     // GPRs, split between a GPR and the stack, or passed completely on the
     // stack. LowerCall/LowerFormalArguments/LowerReturn must recognise these

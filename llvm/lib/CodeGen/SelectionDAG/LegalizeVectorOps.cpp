@@ -1394,6 +1394,9 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     Results.push_back(ExpandLOOP_DEPENDENCE_MASK(Node));
     return;
 
+  case ISD::AND:
+  case ISD::OR:
+  case ISD::XOR:
   case ISD::FADD:
   case ISD::FMUL:
   case ISD::FMA:
