@@ -549,7 +549,7 @@ bool AArch64ConditionOptimizerImpl::commitPendingPair(
 // Into:
 //   cmp  w8, #10
 //   csinc w9, w0, w1, gt     ; w9 = (w8 > 10) ? w0 : w1+1
-//   cmp w8, #10              ; <- CSE can remove the redunant cmp
+//   cmp w8, #10              ; <- CSE can remove the redundant cmp
 //   csinc w10, w0, w1, ge    ; w10 = (w8 >= 10) ? w0 : w1+1
 //
 bool AArch64ConditionOptimizerImpl::optimizeIntraBlock(MachineBasicBlock &MBB) {
