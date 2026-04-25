@@ -52,7 +52,8 @@ add_or_sub(InType x, InType y) {
   if (LIBC_UNLIKELY(x_bits.is_inf_or_nan() || y_bits.is_inf_or_nan() ||
                     x_bits.is_zero() || y_bits.is_zero())) {
     if (x_bits.is_nan() || y_bits.is_nan()) {
-      if (!cpp::is_constant_evaluated() && (x_bits.is_signaling_nan() || y_bits.is_signaling_nan()))
+      if (!cpp::is_constant_evaluated() &&
+          (x_bits.is_signaling_nan() || y_bits.is_signaling_nan()))
         raise_except_if_required(FE_INVALID);
 
       if (x_bits.is_quiet_nan()) {
@@ -99,15 +100,11 @@ add_or_sub(InType x, InType y) {
       if (y_bits.is_zero()) {
         if (is_effectively_add)
           return OutFPBits::zero(x_bits.sign()).get_val();
-        if (__builtin_is_constant_evaluated()) {
+        switch (fputil::quick_get_round()) {
+        case FE_DOWNWARD:
+          return OutFPBits::zero(Sign::NEG).get_val();
+        default:
           return OutFPBits::zero(Sign::POS).get_val();
-        } else {
-          switch (fputil::quick_get_round()) {
-          case FE_DOWNWARD:
-            return OutFPBits::zero(Sign::NEG).get_val();
-          default:
-            return OutFPBits::zero(Sign::POS).get_val();
-          }
         }
       }
 
@@ -144,15 +141,11 @@ add_or_sub(InType x, InType y) {
   InType y_abs = y_bits.abs().get_val();
 
   if (x_abs == y_abs && !is_effectively_add) {
-    if (__builtin_is_constant_evaluated()) {
+    switch (fputil::quick_get_round()) {
+    case FE_DOWNWARD:
+      return OutFPBits::zero(Sign::NEG).get_val();
+    default:
       return OutFPBits::zero(Sign::POS).get_val();
-    } else {
-      switch (fputil::quick_get_round()) {
-      case FE_DOWNWARD:
-        return OutFPBits::zero(Sign::NEG).get_val();
-      default:
-        return OutFPBits::zero(Sign::POS).get_val();
-      }
     }
   }
 
