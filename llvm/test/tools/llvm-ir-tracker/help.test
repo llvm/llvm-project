@@ -1,0 +1,17 @@
+RUN: %ir-tracker build --help | FileCheck %s --check-prefix=BUILD
+RUN: %ir-tracker --help | FileCheck %s --check-prefix=MAIN
+RUN: %ir-tracker passes --help | FileCheck %s --check-prefix=PASSES
+RUN: %ir-tracker trace --help | FileCheck %s --check-prefix=TRACE
+RUN: %ir-tracker show --help | FileCheck %s --check-prefix=SHOW
+RUN: %ir-tracker html --help | FileCheck %s --check-prefix=HTML
+RUN: %ir-tracker sql --help | FileCheck %s --check-prefix=SQL
+
+MAIN: Build and query IR-tracker SQLite databases
+MAIN: {build,passes,trace,show,html,sql}
+
+BUILD: usage: ir-tracker build
+PASSES: usage: ir-tracker passes
+TRACE: usage: ir-tracker trace
+SHOW: usage: ir-tracker show
+HTML: usage: ir-tracker html
+SQL: usage: ir-tracker sql

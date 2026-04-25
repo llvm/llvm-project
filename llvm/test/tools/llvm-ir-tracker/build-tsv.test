@@ -1,0 +1,12 @@
+RUN: rm -f %t.tsv %t.db
+RUN: printf 'P\t0\tinitial\t<initial>\tf\nT\t1\t/tmp/tsv.c\t8\t3\nI\tf\tentry\t0\tadd\t1\tadd i32 1, 2\nP\t1\tafter\tinstcombine\tf\nI\tf\tentry\t0\tadd\t1\tadd i32 1, 3\n' > %t.tsv
+RUN: %ir-tracker build --input %t.tsv --db %t.db | FileCheck %s --check-prefix=BUILD
+RUN: %ir-tracker passes --db %t.db | FileCheck %s --check-prefix=PASSES
+RUN: %ir-tracker trace --db %t.db --file tsv.c --line 8 | FileCheck %s --check-prefix=TRACE
+
+BUILD: built {{.*}} pass snapshots, 2 instruction rows
+PASSES: 0  id={{[0-9]+}}  initial  '<initial>'  on 'f'
+PASSES: 1  id={{[0-9]+}}  after  'instcombine'  on 'f'
+PASSES: total passes recorded: 2
+TRACE: Matches at final pass (seq=1): 1 instruction(s)
+TRACE: First pass with any matching instruction: seq=0 <initial> on f (1 row(s))
