@@ -3012,10 +3012,31 @@ bool Sema::addProfileEnforcement(StringRef Name, StringRef Designator,
   return true;
 }
 
+static void appendProfileArgumentData(
+    ArrayRef<profiles::ProfileArgument> Arguments,
+    SmallVectorImpl<unsigned> *ArgumentCounts,
+    SmallVectorImpl<StringRef> *ArgumentKeys,
+    SmallVectorImpl<StringRef> *ArgumentValues,
+    SmallVectorImpl<unsigned> *ArgumentKinds) {
+  if (!ArgumentCounts)
+    return;
+
+  assert(ArgumentKeys && ArgumentValues && ArgumentKinds);
+  ArgumentCounts->push_back(Arguments.size());
+  for (const auto &Arg : Arguments) {
+    ArgumentKeys->push_back(Arg.Key);
+    ArgumentValues->push_back(Arg.Value);
+    ArgumentKinds->push_back(static_cast<unsigned>(Arg.Kind));
+  }
+}
+
 bool Sema::processProfilesEnforceAttr(
-    const ParsedAttr &AL, Module *Mod,
-    SmallVectorImpl<StringRef> *NewNames,
-    SmallVectorImpl<StringRef> *NewDesignators) {
+    const ParsedAttr &AL, Module *Mod, SmallVectorImpl<StringRef> *NewNames,
+    SmallVectorImpl<StringRef> *NewDesignators,
+    SmallVectorImpl<unsigned> *NewArgumentCounts,
+    SmallVectorImpl<StringRef> *NewArgumentKeys,
+    SmallVectorImpl<StringRef> *NewArgumentValues,
+    SmallVectorImpl<unsigned> *NewArgumentKinds) {
   const auto &Args = AL.getProfileEnforceArgs();
   if (Args.Designators.empty()) {
     Diag(AL.getLoc(), diag::err_attribute_too_few_arguments) << AL << 1;
@@ -3041,6 +3062,9 @@ bool Sema::processProfilesEnforceAttr(
         NewNames->push_back(Name);
       if (NewDesignators)
         NewDesignators->push_back(Spelling);
+      appendProfileArgumentData(D.Arguments, NewArgumentCounts,
+                                NewArgumentKeys, NewArgumentValues,
+                                NewArgumentKinds);
     }
   }
   return true;
@@ -3054,10 +3078,21 @@ ProfilesSuppressAttr *Sema::makeProfilesSuppressAttr(const ParsedAttr &AL) {
   SmallVector<StringRef, 4> RawArgs;
   for (const auto &Arg : Args.RawArguments)
     RawArgs.push_back(Arg);
+  SmallVector<StringRef, 4> RawArgumentKeys;
+  SmallVector<StringRef, 4> RawArgumentValues;
+  SmallVector<unsigned, 4> RawArgumentKinds;
+  for (const auto &Arg : Args.Arguments) {
+    RawArgumentKeys.push_back(Arg.Key);
+    RawArgumentValues.push_back(Arg.Value);
+    RawArgumentKinds.push_back(static_cast<unsigned>(Arg.Kind));
+  }
 
   return ::new (Context) ProfilesSuppressAttr(
       Context, AL, Args.Name, Args.Justification, Args.Rule,
-      RawArgs.data(), RawArgs.size());
+      RawArgs.data(), RawArgs.size(), RawArgumentKeys.data(),
+      RawArgumentKeys.size(), RawArgumentValues.data(),
+      RawArgumentValues.size(), RawArgumentKinds.data(),
+      RawArgumentKinds.size());
 }
 
 bool Sema::isProfileSuppressed(StringRef ProfileName,

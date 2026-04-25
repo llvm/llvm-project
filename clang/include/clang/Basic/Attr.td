@@ -3462,7 +3462,11 @@ def ProfilesEnforce : Attr {
   let Spellings = [CXX11<"profiles", "enforce">];
   let Args = [
     VariadicStringArgument<"ProfileNames">,
-    VariadicStringArgument<"ProfileDesignators">
+    VariadicStringArgument<"ProfileDesignators">,
+    VariadicUnsignedArgument<"ProfileArgumentCounts">,
+    VariadicStringArgument<"ProfileArgumentKeys">,
+    VariadicStringArgument<"ProfileArgumentValues">,
+    VariadicUnsignedArgument<"ProfileArgumentKinds">
   ];
   let LangOpts = [Profiles];
   let HasCustomParsing = 1;
@@ -3475,7 +3479,10 @@ def ProfilesSuppress : DeclOrStmtAttr {
     StringArgument<"ProfileName">,
     StringArgument<"Justification", 1>,
     StringArgument<"Rule", 1>,
-    VariadicStringArgument<"RawArguments">
+    VariadicStringArgument<"RawArguments">,
+    VariadicStringArgument<"RawArgumentKeys">,
+    VariadicStringArgument<"RawArgumentValues">,
+    VariadicUnsignedArgument<"RawArgumentKinds">
   ];
   let LangOpts = [Profiles];
   let HasCustomParsing = 1;
@@ -3484,7 +3491,12 @@ def ProfilesSuppress : DeclOrStmtAttr {
 
 def ProfilesRequire : Attr {
   let Spellings = [CXX11<"profiles", "require">];
-  let Args = [StringArgument<"Designator">];
+  let Args = [
+    StringArgument<"Designator">,
+    VariadicStringArgument<"DesignatorArgumentKeys">,
+    VariadicStringArgument<"DesignatorArgumentValues">,
+    VariadicUnsignedArgument<"DesignatorArgumentKinds">
+  ];
   let LangOpts = [Profiles];
   let HasCustomParsing = 1;
   let Documentation = [ProfilesRequireDocs];

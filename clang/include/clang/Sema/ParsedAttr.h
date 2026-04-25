@@ -18,6 +18,7 @@
 #include "clang/Basic/AttributeCommonInfo.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/ParsedAttrInfo.h"
+#include "clang/Basic/Profiles.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/Ownership.h"
 #include "llvm/ADT/PointerUnion.h"
@@ -99,6 +100,7 @@ struct PropertyData {
 struct ProfileDesignator {
   StringRef Name;
   StringRef Spelling;
+  ArrayRef<profiles::ProfileArgument> Arguments;
 };
 
 struct ProfileEnforceArgs {
@@ -110,6 +112,7 @@ struct ProfileSuppressArgs {
   StringRef Justification;
   StringRef Rule;
   ArrayRef<StringRef> RawArguments;
+  ArrayRef<profiles::ProfileArgument> Arguments;
 };
 
 struct ProfileRequireArgs {

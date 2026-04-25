@@ -1510,7 +1510,10 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
     for (const auto &E : ProfileSuppressStack)
       Method->addAttr(ProfilesSuppressAttr::CreateImplicit(
           Context, E.ProfileName, /*Justification=*/"", E.RuleName,
-          /*RawArguments=*/nullptr, /*RawArgumentsSize=*/0));
+          /*RawArguments=*/nullptr, /*RawArgumentsSize=*/0,
+          /*RawArgumentKeys=*/nullptr, /*RawArgumentKeysSize=*/0,
+          /*RawArgumentValues=*/nullptr, /*RawArgumentValuesSize=*/0,
+          /*RawArgumentKinds=*/nullptr, /*RawArgumentKindsSize=*/0));
   }
 
   if (Context.getTargetInfo().getTriple().isAArch64())

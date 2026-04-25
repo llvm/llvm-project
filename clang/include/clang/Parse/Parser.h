@@ -15,6 +15,7 @@
 
 #include "clang/Basic/OpenACCKinds.h"
 #include "clang/Basic/OperatorPrecedence.h"
+#include "clang/Basic/Profiles.h"
 #include "clang/Lex/CodeCompletionHandler.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Sema.h"
@@ -2283,22 +2284,38 @@ private:
   struct ParsedProfileDesignator {
     std::string Name;
     std::string Spelling;
+    struct Argument {
+      std::string Key;
+      std::string Value;
+      profiles::ProfileArgumentKind Kind =
+          profiles::ProfileArgumentKind::Positional;
+      SourceRange Range;
+
+      bool isNamed() const {
+        return Kind == profiles::ProfileArgumentKind::Named;
+      }
+    };
+    SmallVector<Argument, 4> Arguments;
   };
   struct ParsedProfileSuppressArgs {
     std::string Name;
     std::string Justification;
     std::string Rule;
     SmallVector<std::string, 2> RawArguments;
+    SmallVector<ParsedProfileDesignator::Argument, 2> Arguments;
   };
 
   bool ParseProfileName(std::string &Name);
   bool ParseProfileDesignator(ParsedProfileDesignator &Designator);
   bool ParseProfileDesignatorList(
       SmallVectorImpl<ParsedProfileDesignator> &Designators);
-  bool ParseProfileArgumentList(SmallVectorImpl<std::string> &Args);
+  bool ParseProfileArgumentList(
+      SmallVectorImpl<ParsedProfileDesignator::Argument> &Args);
   bool ParseProfileSuppressBody(ParsedProfileSuppressArgs &Args);
-  bool ParseNonCommaBalancedToken(std::string &Spelling);
-  bool ParseNonOperatorNonPunctuatorToken(std::string &Spelling);
+  bool ParseNonCommaBalancedToken(std::string &Spelling,
+                                  SourceRange *Range = nullptr);
+  bool ParseNonOperatorNonPunctuatorToken(std::string &Spelling,
+                                          SourceRange *Range = nullptr);
 
   void MaybeParseCXX11Attributes(Declarator &D) {
     if (isAllowedCXX11AttributeSpecifier()) {

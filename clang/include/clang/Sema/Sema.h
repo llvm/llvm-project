@@ -1056,7 +1056,15 @@ public:
                              SourceLocation Loc);
   bool processProfilesEnforceAttr(const ParsedAttr &AL, Module *Mod,
                                   SmallVectorImpl<StringRef> *NewNames,
-                                  SmallVectorImpl<StringRef> *NewDesignators);
+                                  SmallVectorImpl<StringRef> *NewDesignators,
+                                  SmallVectorImpl<unsigned> *NewArgumentCounts =
+                                      nullptr,
+                                  SmallVectorImpl<StringRef> *NewArgumentKeys =
+                                      nullptr,
+                                  SmallVectorImpl<StringRef> *NewArgumentValues =
+                                      nullptr,
+                                  SmallVectorImpl<unsigned> *NewArgumentKinds =
+                                      nullptr);
 
   ProfilesSuppressAttr *makeProfilesSuppressAttr(const ParsedAttr &AL);
 
