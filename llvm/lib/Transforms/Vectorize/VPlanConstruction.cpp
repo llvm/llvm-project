@@ -717,7 +717,7 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
   return WideIV;
 }
 
-/// Try to sink users of \p FOR after \p Previous.  \returns true if sinking
+/// Try to sink users of \p FOR after \p Previous. \returns true if sinking
 /// succeeded or was not necessary, and false otherwise.
 static bool
 sinkRecurrenceUsersAfterPrevious(VPFirstOrderRecurrencePHIRecipe *FOR,
@@ -810,12 +810,6 @@ static bool hoistPreviousBeforeFORUsers(VPFirstOrderRecurrencePHIRecipe *FOR,
     // Hoist candidate was already visited, no need to hoist.
     if (!Visited.insert(HoistCandidate).second)
       return nullptr;
-    // Candidate is in the plan entry (preheader) or a header phi, dominates
-    // FOR users without hoisting.
-    VPBasicBlock *ParentVPBB = HoistCandidate->getParent();
-    if (ParentVPBB->getPlan()->getEntry() == ParentVPBB ||
-        isa<VPHeaderPHIRecipe>(HoistCandidate))
-      return nullptr;
     // If we reached a recipe that dominates HoistPoint, we don't need to
     // hoist the recipe.
     if (VPDT.properlyDominates(HoistCandidate, HoistPoint))
@@ -887,8 +881,10 @@ static bool tryToSinkOrHoistRecurrenceUsers(VPBasicBlock *HeaderVPBB,
     VPRecipeBase *Previous = FOR->getBackedgeValue()->getDefiningRecipe();
     while (auto *PrevPhi =
                dyn_cast_or_null<VPFirstOrderRecurrencePHIRecipe>(Previous)) {
-      assert(PrevPhi->getParent() == FOR->getParent());
-      assert(SeenPhis.insert(PrevPhi).second);
+      assert(PrevPhi->getParent() == FOR->getParent() &&
+             "PrevPhi must be in same block as FOR");
+      assert(SeenPhis.insert(PrevPhi).second &&
+             "PrevPhi must not be visited multiple times");
       Previous = PrevPhi->getBackedgeValue()->getDefiningRecipe();
     }
 
