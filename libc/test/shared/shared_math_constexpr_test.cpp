@@ -19,7 +19,6 @@ static_assert(0.0 == LIBC_NAMESPACE::shared::ceil(0.0));
 static_assert(0.0 == LIBC_NAMESPACE::shared::copysign(0.0, 0.0));
 static_assert(1.0 == LIBC_NAMESPACE::shared::fabs(-1.0));
 static_assert(0.0f == LIBC_NAMESPACE::shared::fdiv(0.0, 1.0));
-static_assert(2.0 == LIBC_NAMESPACE::shared::fmaximum_mag_num(1.0, 2.0));
 static_assert(1.0 == LIBC_NAMESPACE::shared::floor(1.2));
 static_assert(0.0 == LIBC_NAMESPACE::shared::log(1.0));
 
@@ -30,7 +29,6 @@ static_assert(0.0 == LIBC_NAMESPACE::shared::log(1.0));
 static_assert(0.0f == LIBC_NAMESPACE::shared::ceilf(0.0f));
 static_assert(0.0f == LIBC_NAMESPACE::shared::copysignf(0.0f, 0.0f));
 static_assert(1.0f == LIBC_NAMESPACE::shared::fabsf(-1.0f));
-static_assert(2.0f == LIBC_NAMESPACE::shared::fmaximum_mag_numf(1.0f, 2.0f));
 static_assert(0.0f == LIBC_NAMESPACE::shared::floorf(0.0f));
 
 //===----------------------------------------------------------------------===//
@@ -94,9 +92,6 @@ static_assert(bfloat16(0.0) == LIBC_NAMESPACE::shared::asinbf16(bfloat16(0.0)));
 static_assert(bfloat16(0.0) == LIBC_NAMESPACE::shared::ceilbf16(bfloat16(0.0)));
 static_assert(bfloat16(1.0) ==
               LIBC_NAMESPACE::shared::fabsbf16(bfloat16(-1.0)));
-static_assert(bfloat16(2.0) ==
-              LIBC_NAMESPACE::shared::fmaximum_mag_numbf16(bfloat16(1.0),
-                                                           bfloat16(2.0)));
 static_assert(bfloat16(0.0) ==
               LIBC_NAMESPACE::shared::copysignbf16(bfloat16(0.0),
                                                    bfloat16(0.0)));
