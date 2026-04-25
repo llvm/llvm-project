@@ -681,12 +681,7 @@ static void removeRedundantInductionCasts(VPlan &Plan) {
 static void removeRedundantCanonicalIVs(VPlan &Plan) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPValue *CanonicalIV = LoopRegion->getCanonicalIV();
-  VPWidenCanonicalIVRecipe *WidenNewIV = nullptr;
-  for (VPUser *U : CanonicalIV->users()) {
-    WidenNewIV = dyn_cast<VPWidenCanonicalIVRecipe>(U);
-    if (WidenNewIV)
-      break;
-  }
+  auto *WidenNewIV = vputils::findUserOf<VPWidenCanonicalIVRecipe>(CanonicalIV);
 
   if (!WidenNewIV)
     return;
@@ -3031,13 +3026,11 @@ addVPLaneMaskPhiAndUpdateExitBranch(VPlan &Plan) {
 void VPlanTransforms::addActiveLaneMask(VPlan &Plan,
                                         bool UseActiveLaneMaskForControlFlow) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
-  auto *FoundWidenCanonicalIVUser = find_if(
-      LoopRegion->getCanonicalIV()->users(), IsaPred<VPWidenCanonicalIVRecipe>);
-  assert(FoundWidenCanonicalIVUser &&
+  auto *WideCanonicalIV = vputils::findUserOf<VPWidenCanonicalIVRecipe>(
+      LoopRegion->getCanonicalIV());
+  assert(WideCanonicalIV &&
          "Must have widened canonical IV when tail folding!");
   VPSingleDefRecipe *HeaderMask = vputils::findHeaderMask(Plan);
-  auto *WideCanonicalIV =
-      cast<VPWidenCanonicalIVRecipe>(*FoundWidenCanonicalIVUser);
   VPSingleDefRecipe *LaneMask;
   if (UseActiveLaneMaskForControlFlow) {
     LaneMask = addVPLaneMaskPhiAndUpdateExitBranch(Plan);
