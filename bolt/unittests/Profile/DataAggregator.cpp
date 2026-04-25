@@ -44,8 +44,7 @@ protected:
   /// Parse pre-aggregated input and return collected Traces.
   /// Requires BC to be initialized (X86-only tests).
   void parseAndCollectTraces(
-      StringRef Input,
-      std::vector<std::pair<Trace, TakenBranchInfo>> &Result) {
+      StringRef Input, std::vector<std::pair<Trace, TakenBranchInfo>> &Result) {
     DataAggregator DA("<pseudo input>");
     DA.BC = BC.get();
     DA.setParsingBuffer(Input);
