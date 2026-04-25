@@ -77,7 +77,9 @@ static_assert(0.0 ==
               LIBC_NAMESPACE::shared::ddivf128(float128(0.0), float128(1.0)));
 static_assert(0.0 ==
               LIBC_NAMESPACE::shared::dmulf128(float128(0.0), float128(1.0)));
-static_assert(0.0f == 
+static_assert(0.0f ==
+              LIBC_NAMESPACE::shared::fdivf128(float128(0.0), float128(1.0)));
+static_assert(0.0f ==
               LIBC_NAMESPACE::shared::fdivf128(float128(0.0), float128(1.0)));
 static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::floorf128(float128(0.0)));
