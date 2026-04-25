@@ -1510,11 +1510,14 @@ public:
         // as f/zfinx.  On conflict, silently drop --mattr for this region
         // rather than producing an inconsistent decoder.
         if (!MAttrs.empty()) {
-          std::vector<std::string> Combined = std::move(ISAFeatures);
-          Combined.insert(Combined.end(), MAttrs.begin(), MAttrs.end());
+          SubtargetFeatures Combined;
+          Combined.addFeaturesVector(ISAFeatures);
+          for (auto &F : MAttrs)
+            Combined.AddFeature(F);
           if (auto Check = RISCVISAInfo::parseFeatures(
-                  (*ParseResult)->getXLen(), Combined)) {
-            Features.addFeaturesVector(MAttrs);
+                  (*ParseResult)->getXLen(), Combined.getFeatures())) {
+            for (auto &F : MAttrs)
+              Features.AddFeature(F);
           } else {
             consumeError(Check.takeError());
           }
@@ -3867,11 +3870,6 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
   MachOOpt = InputArgs.hasArg(OBJDUMP_macho);
   MCPU = InputArgs.getLastArgValue(OBJDUMP_mcpu_EQ).str();
   MAttrs = commaSeparatedValues(InputArgs, OBJDUMP_mattr_EQ);
-  // Normalize each feature to have a '+' or '-' prefix.
-  // "help" is a sentinel handled separately; leave it untouched.
-  for (std::string &M : MAttrs)
-    if (!M.empty() && M.front() != '+' && M.front() != '-' && M != "help")
-      M.insert(M.begin(), '+');
   ShowRawInsn = !InputArgs.hasArg(OBJDUMP_no_show_raw_insn);
   LeadingAddr = !InputArgs.hasArg(OBJDUMP_no_leading_addr);
   RawClangAST = InputArgs.hasArg(OBJDUMP_raw_clang_ast);
