@@ -9902,18 +9902,6 @@ Register SIInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
   return Register();
 }
 
-unsigned SIInstrInfo::getInstBundleSize(const MachineInstr &MI) const {
-  unsigned Size = 0;
-  MachineBasicBlock::const_instr_iterator I = MI.getIterator();
-  MachineBasicBlock::const_instr_iterator E = MI.getParent()->instr_end();
-  while (++I != E && I->isInsideBundle()) {
-    assert(!I->isBundle() && "No nested bundle!");
-    Size += getInstSizeInBytes(*I);
-  }
-
-  return Size;
-}
-
 unsigned SIInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   unsigned Opc = MI.getOpcode();
   const MCInstrDesc &Desc = getMCOpcodeFromPseudo(Opc);
@@ -10757,10 +10745,11 @@ MachineInstr *SIInstrInfo::createPHISourceCopy(
 
 bool llvm::SIInstrInfo::isWave32() const { return ST.isWave32(); }
 
-MachineInstr *SIInstrInfo::foldMemoryOperandImpl(
-    MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
-    MachineBasicBlock::iterator InsertPt, int FrameIndex, MachineInstr *&CopyMI,
-    LiveIntervals *LIS, VirtRegMap *VRM) const {
+MachineInstr *
+SIInstrInfo::foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
+                                   ArrayRef<unsigned> Ops, int FrameIndex,
+                                   MachineInstr *&CopyMI, LiveIntervals *LIS,
+                                   VirtRegMap *VRM) const {
   // This is a bit of a hack (copied from AArch64). Consider this instruction:
   //
   //   %0:sreg_32 = COPY $m0

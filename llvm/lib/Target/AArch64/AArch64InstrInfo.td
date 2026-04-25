@@ -395,8 +395,6 @@ def HasCPA           : Predicate<"Subtarget->hasCPA()">,
                                  AssemblerPredicateWithAll<(all_of FeatureCPA), "cpa">;
 def HasTLBID         : Predicate<"Subtarget->hasTLBID()">,
                                  AssemblerPredicateWithAll<(all_of FeatureTLBID), "tlbid">;
-def HasMPAMv2        : Predicate<"Subtarget->hasMPAMv2()">,
-                                 AssemblerPredicateWithAll<(all_of FeatureMPAMv2), "mpamv2">;
 def HasMTETC         : Predicate<"Subtarget->hasMTETC()">,
                                  AssemblerPredicateWithAll<(all_of FeatureMTETC), "mtetc">;
 def HasGCIE          : Predicate<"Subtarget->hasGCIE()">,
@@ -8646,6 +8644,21 @@ def : Pat<(v2i64 (AArch64saddlv (v2i32 V64:$Rn))),
 // The UADDLV v2i32 gets mapped to UADDLP.
 def : Pat<(v2i64 (AArch64uaddlv (v2i32 V64:$Rn))),
           (v2i64 (INSERT_SUBREG (v2i64 (IMPLICIT_DEF)), (UADDLPv2i32_v1i64 V64:$Rn), dsub))>;
+
+def : Pat<(add (AArch64bici (v8i16 (bitconvert v16i8:$src)), (i32 255), (i32 8)),
+               (AArch64vlshr (v8i16 (AArch64NvCast v16i8:$src)), (i32 8))),
+          (UADDLPv16i8_v8i16 V128:$src)>;
+
+def : Pat<(add (and (v4i32 (bitconvert v8i16:$src)),
+                    (v4i32 (AArch64NvCast (v2i64 (AArch64movi_edit (i32 51)))))),
+               (AArch64vlshr (v4i32 (AArch64NvCast v8i16:$src)), (i32 16))),
+          (UADDLPv8i16_v4i32 V128:$src)>;
+
+def : Pat<(add (v2i64 (zext (v2i32 (AArch64zip1 (v2i32 (extract_subvector v4i32:$src, (i64 0))),
+                                         (v2i32 (extract_subvector v4i32:$src, (i64 2))))))),
+               (v2i64 (zext (v2i32 (AArch64zip2 (v2i32 (extract_subvector v4i32:$src, (i64 0))),
+                                         (v2i32 (extract_subvector v4i32:$src, (i64 2)))))))),
+          (UADDLPv4i32_v2i64 V128:$src)>;
 
 //------------------------------------------------------------------------------
 // AdvSIMD modified immediate instructions

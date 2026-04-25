@@ -251,7 +251,7 @@ LLVMInitializeAArch64Target() {
   initializeAArch64ExpandPseudoLegacyPass(PR);
   initializeAArch64LoadStoreOptLegacyPass(PR);
   initializeAArch64MIPeepholeOptLegacyPass(PR);
-  initializeAArch64SIMDInstrOptPass(PR);
+  initializeAArch64SIMDInstrOptLegacyPass(PR);
   initializeAArch64O0PreLegalizerCombinerLegacyPass(PR);
   initializeAArch64PreLegalizerCombinerLegacyPass(PR);
   initializeAArch64PointerAuthLegacyPass(PR);
@@ -274,7 +274,7 @@ LLVMInitializeAArch64Target() {
   initializeAArch64SpeculationHardeningPass(PR);
   initializeAArch64SLSHardeningPass(PR);
   initializeAArch64StackTaggingPass(PR);
-  initializeAArch64StackTaggingPreRAPass(PR);
+  initializeAArch64StackTaggingPreRALegacyPass(PR);
   initializeAArch64LowerHomogeneousPrologEpilogPass(PR);
   initializeAArch64DAGToDAGISelLegacyPass(PR);
   initializeAArch64CondBrTuningPass(PR);
@@ -818,7 +818,7 @@ bool AArch64PassConfig::addILPOpts() {
     addPass(createAArch64StorePairSuppressPass());
   addPass(createAArch64SIMDInstrOptPass());
   if (TM->getOptLevel() != CodeGenOptLevel::None)
-    addPass(createAArch64StackTaggingPreRAPass());
+    addPass(createAArch64StackTaggingPreRALegacyPass());
   return true;
 }
 
