@@ -440,15 +440,17 @@ define double @exchange_double(ptr %fptr, double %x) {
 ; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE1-NEXT:    movl (%esi), %eax
 ; X86-SSE1-NEXT:    movl 4(%esi), %edx
+; X86-SSE1-NEXT:    fldz
 ; X86-SSE1-NEXT:    .p2align 4
 ; X86-SSE1-NEXT:  .LBB8_1: # %atomicrmw.start
 ; X86-SSE1-NEXT:    # =>This Inner Loop Header: Depth=1
+; X86-SSE1-NEXT:    fstp %st(0)
 ; X86-SSE1-NEXT:    lock cmpxchg8b (%esi)
+; X86-SSE1-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-SSE1-NEXT:    movl %eax, (%esp)
+; X86-SSE1-NEXT:    fldl (%esp)
 ; X86-SSE1-NEXT:    jne .LBB8_1
 ; X86-SSE1-NEXT:  # %bb.2: # %atomicrmw.end
-; X86-SSE1-NEXT:    movl %eax, (%esp)
-; X86-SSE1-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X86-SSE1-NEXT:    fldl (%esp)
 ; X86-SSE1-NEXT:    addl $12, %esp
 ; X86-SSE1-NEXT:    .cfi_def_cfa_offset 12
 ; X86-SSE1-NEXT:    popl %esi
@@ -478,10 +480,10 @@ define double @exchange_double(ptr %fptr, double %x) {
 ; X86-SSE2-NEXT:    lock cmpxchg8b (%esi)
 ; X86-SSE2-NEXT:    jne .LBB8_1
 ; X86-SSE2-NEXT:  # %bb.2: # %atomicrmw.end
-; X86-SSE2-NEXT:    movd %eax, %xmm0
-; X86-SSE2-NEXT:    movd %edx, %xmm1
-; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; X86-SSE2-NEXT:    movq %xmm0, (%esp)
+; X86-SSE2-NEXT:    movd %edx, %xmm0
+; X86-SSE2-NEXT:    movd %eax, %xmm1
+; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; X86-SSE2-NEXT:    movq %xmm1, (%esp)
 ; X86-SSE2-NEXT:    fldl (%esp)
 ; X86-SSE2-NEXT:    addl $12, %esp
 ; X86-SSE2-NEXT:    .cfi_def_cfa_offset 12
@@ -539,15 +541,17 @@ define double @exchange_double(ptr %fptr, double %x) {
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NOSSE-NEXT:    movl (%esi), %eax
 ; X86-NOSSE-NEXT:    movl 4(%esi), %edx
+; X86-NOSSE-NEXT:    fldz
 ; X86-NOSSE-NEXT:    .p2align 4
 ; X86-NOSSE-NEXT:  .LBB8_1: # %atomicrmw.start
 ; X86-NOSSE-NEXT:    # =>This Inner Loop Header: Depth=1
+; X86-NOSSE-NEXT:    fstp %st(0)
 ; X86-NOSSE-NEXT:    lock cmpxchg8b (%esi)
+; X86-NOSSE-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-NOSSE-NEXT:    movl %eax, (%esp)
+; X86-NOSSE-NEXT:    fldl (%esp)
 ; X86-NOSSE-NEXT:    jne .LBB8_1
 ; X86-NOSSE-NEXT:  # %bb.2: # %atomicrmw.end
-; X86-NOSSE-NEXT:    movl %eax, (%esp)
-; X86-NOSSE-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fldl (%esp)
 ; X86-NOSSE-NEXT:    addl $12, %esp
 ; X86-NOSSE-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NOSSE-NEXT:    popl %esi

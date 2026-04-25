@@ -84,12 +84,13 @@ define fp128 @test_rmw_xchg_f128(ptr %dst, fp128 %new) {
 ; NOLSE-NEXT:    ldp x9, x8, [sp, #16]
 ; NOLSE-NEXT:  .LBB3_1: // %atomicrmw.start
 ; NOLSE-NEXT:    // =>This Inner Loop Header: Depth=1
-; NOLSE-NEXT:    ldaxp x11, x10, [x0]
-; NOLSE-NEXT:    stlxp w12, x9, x8, [x0]
-; NOLSE-NEXT:    cbnz w12, .LBB3_1
+; NOLSE-NEXT:    ldaxp x10, x11, [x0]
+; NOLSE-NEXT:    stp x10, x11, [sp]
+; NOLSE-NEXT:    ldr q0, [sp]
+; NOLSE-NEXT:    stlxp w10, x9, x8, [x0]
+; NOLSE-NEXT:    cbnz w10, .LBB3_1
 ; NOLSE-NEXT:  // %bb.2: // %atomicrmw.end
-; NOLSE-NEXT:    stp x11, x10, [sp]
-; NOLSE-NEXT:    ldr q0, [sp], #32
+; NOLSE-NEXT:    add sp, sp, #32
 ; NOLSE-NEXT:    ret
 ;
 ; LSE-LABEL: test_rmw_xchg_f128:
@@ -101,16 +102,16 @@ define fp128 @test_rmw_xchg_f128(ptr %dst, fp128 %new) {
 ; LSE-NEXT:    ldp x4, x5, [x0]
 ; LSE-NEXT:  .LBB3_1: // %atomicrmw.start
 ; LSE-NEXT:    // =>This Inner Loop Header: Depth=1
-; LSE-NEXT:    mov x7, x5
 ; LSE-NEXT:    mov x6, x4
-; LSE-NEXT:    mov x5, x7
+; LSE-NEXT:    mov x7, x5
+; LSE-NEXT:    caspal x6, x7, x2, x3, [x0]
+; LSE-NEXT:    cmp x7, x5
+; LSE-NEXT:    stp x6, x7, [sp]
+; LSE-NEXT:    ccmp x6, x4, #0, eq
 ; LSE-NEXT:    mov x4, x6
-; LSE-NEXT:    caspal x4, x5, x2, x3, [x0]
-; LSE-NEXT:    cmp x5, x7
-; LSE-NEXT:    ccmp x4, x6, #0, eq
+; LSE-NEXT:    mov x5, x7
 ; LSE-NEXT:    b.ne .LBB3_1
 ; LSE-NEXT:  // %bb.2: // %atomicrmw.end
-; LSE-NEXT:    stp x4, x5, [sp]
 ; LSE-NEXT:    ldr q0, [sp], #32
 ; LSE-NEXT:    ret
   %res = atomicrmw xchg ptr %dst, fp128 %new seq_cst

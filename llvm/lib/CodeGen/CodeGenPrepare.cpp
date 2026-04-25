@@ -1450,7 +1450,7 @@ static bool SinkCast(CastInst *CI) {
   return MadeChange;
 }
 
-// Only hoist scalar-to-vector to avoid breaking backend patterns like atomics.
+/// Hoists bitcasts to the source block to reduce register pressure.
 static bool optimizeBitCast(BitCastInst *BCI, const TargetLowering &TLI,
                             const DataLayout &DL) {
   auto *SrcInst = dyn_cast<Instruction>(BCI->getOperand(0));
@@ -1460,13 +1460,10 @@ static bool optimizeBitCast(BitCastInst *BCI, const TargetLowering &TLI,
   // Identify the target scenario.
   bool IsCrossBlock = (SrcInst->getParent() != BCI->getParent());
   bool IsMovable = !SrcInst->isTerminator();
-
-  bool IsScalarToVector =
-      !SrcInst->getType()->isVectorTy() && BCI->getType()->isVectorTy();
   bool IsSameSize = DL.getTypeSizeInBits(SrcInst->getType()) ==
                     DL.getTypeSizeInBits(BCI->getType());
 
-  if (!IsCrossBlock || !IsMovable || !IsScalarToVector || !IsSameSize)
+  if (!IsCrossBlock || !IsMovable || !IsSameSize)
     return false;
 
   // Evaluate the benefit.
@@ -8948,11 +8945,11 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
     // want to forward-subst the cast.
 
     if (auto *BCI = dyn_cast<BitCastInst>(CI)) {
-      // If this is a bitcast from an illegal integer type to a legal vector
-      // type, try to hoist it to the source's basic block to avoid register
-      // splitting.
-      if (optimizeBitCast(BCI, *TLI, *DL))
+      // Hoist bitcasts of illegal integers to legal types to prevent
+      // cross-block register pressure and splitting.
+      if (optimizeBitCast(BCI, *TLI, *DL)) {
         return true;
+      }
     }
 
     if (isa<Constant>(CI->getOperand(0)))
