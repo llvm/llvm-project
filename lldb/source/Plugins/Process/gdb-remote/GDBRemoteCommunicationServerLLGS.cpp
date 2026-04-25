@@ -2916,29 +2916,30 @@ struct BreakpointKind {
     case eBreakpointSoftware:
       want_hardware = false;
       want_breakpoint = true;
-      break;
+      return;
     case eBreakpointHardware:
       want_hardware = true;
       want_breakpoint = true;
-      break;
+      return;
     case eWatchpointWrite:
       watch_flags = 1;
       want_hardware = true;
       want_breakpoint = false;
-      break;
+      return;
     case eWatchpointRead:
       watch_flags = 2;
       want_hardware = true;
       want_breakpoint = false;
-      break;
+      return;
     case eWatchpointReadWrite:
       watch_flags = 3;
       want_hardware = true;
       want_breakpoint = false;
+      return;
+    case eStoppointInvalid:
       break;
-    default:
-      llvm_unreachable("unhandled GDBStoppointType");
     }
+    llvm_unreachable("unhandled GDBStoppointType");
   }
 };
 
@@ -2954,9 +2955,9 @@ getBreakpointKind(GDBStoppointType stoppoint_type) {
   case eWatchpointReadWrite:
     return BreakpointKind(stoppoint_type);
   case eStoppointInvalid:
-    break;
+    return std::nullopt;
   }
-  return std::nullopt;
+  llvm_unreachable("unhandled GDBStoppointType in getBreakpointKind");
 }
 } // namespace
 
