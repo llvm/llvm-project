@@ -233,9 +233,9 @@ define i128 @test_umul_i128(i128 noundef %x, i128 noundef %y) {
 ; CHECK-NEXT:    umulh x10, x1, x2
 ; CHECK-NEXT:    umulh x8, x3, x0
 ; CHECK-NEXT:    madd x9, x1, x2, x9
-; CHECK-NEXT:    ccmp xzr, x10, #0, eq
+; CHECK-NEXT:    ccmp x10, #0, #0, eq
 ; CHECK-NEXT:    umulh x11, x0, x2
-; CHECK-NEXT:    ccmp xzr, x8, #0, eq
+; CHECK-NEXT:    ccmp x8, #0, #0, eq
 ; CHECK-NEXT:    mul x0, x0, x2
 ; CHECK-NEXT:    cset w8, ne
 ; CHECK-NEXT:    adds x1, x11, x9

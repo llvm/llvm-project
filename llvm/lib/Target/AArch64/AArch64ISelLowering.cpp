@@ -4387,23 +4387,22 @@ getAArch64XALUOOp(AArch64CC::CondCode &CC, SDValue Op, SelectionDAG &DAG) {
     }
     assert(Op.getValueType() == MVT::i64 && "Expected an i64 value type");
     // For the 64 bit multiply
-    Value = DAG.getNode(ISD::MUL, DL, MVT::i64, LHS, RHS);
+    Value = DAG.getNode(IsSigned ? ISD::SMUL_LOHI : ISD::UMUL_LOHI, DL,
+                        DAG.getVTList(MVT::i64, MVT::i64), LHS, RHS);
+    SDVTList VTs = DAG.getVTList(MVT::i64, FlagsVT);
     if (IsSigned) {
-      SDValue UpperBits = DAG.getNode(ISD::MULHS, DL, MVT::i64, LHS, RHS);
-      SDValue LowerBits = DAG.getNode(ISD::SRA, DL, MVT::i64, Value,
-                                      DAG.getConstant(63, DL, MVT::i64));
+      SDValue Bits = DAG.getNode(ISD::SRA, DL, MVT::i64, Value.getValue(0),
+                                 DAG.getConstant(63, DL, MVT::i64));
       // It is important that LowerBits is last, otherwise the arithmetic
       // shift will not be folded into the compare (SUBS).
-      SDVTList VTs = DAG.getVTList(MVT::i64, FlagsVT);
-      Overflow = DAG.getNode(AArch64ISD::SUBS, DL, VTs, UpperBits, LowerBits)
+      Overflow = DAG.getNode(AArch64ISD::SUBS, DL, VTs, Value.getValue(1), Bits)
                      .getValue(1);
+      Value = Value.getValue(0); // We only want the low 64 bits for the result.
     } else {
-      SDValue UpperBits = DAG.getNode(ISD::MULHU, DL, MVT::i64, LHS, RHS);
-      SDVTList VTs = DAG.getVTList(MVT::i64, FlagsVT);
-      Overflow =
-          DAG.getNode(AArch64ISD::SUBS, DL, VTs,
-                      DAG.getConstant(0, DL, MVT::i64),
-                      UpperBits).getValue(1);
+      Overflow = DAG.getNode(AArch64ISD::SUBS, DL, VTs, Value.getValue(1),
+                             DAG.getConstant(0, DL, MVT::i64))
+                     .getValue(1);
+      Value = Value.getValue(0); // We only want the low 64 bits for the result.
     }
     break;
   }

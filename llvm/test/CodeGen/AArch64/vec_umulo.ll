@@ -232,10 +232,10 @@ define <2 x i32> @umulo_v2i64(<2 x i64> %a0, <2 x i64> %a1, ptr %p2) nounwind {
 ; CHECK-NEXT:    umulh x10, x9, x8
 ; CHECK-NEXT:    umulh x13, x12, x11
 ; CHECK-NEXT:    mul x11, x12, x11
-; CHECK-NEXT:    cmp xzr, x10
+; CHECK-NEXT:    cmp x10, #0
 ; CHECK-NEXT:    csetm x10, ne
 ; CHECK-NEXT:    mul x8, x9, x8
-; CHECK-NEXT:    cmp xzr, x13
+; CHECK-NEXT:    cmp x13, #0
 ; CHECK-NEXT:    csetm x13, ne
 ; CHECK-NEXT:    fmov d0, x13
 ; CHECK-NEXT:    fmov d1, x11
@@ -320,9 +320,9 @@ define <2 x i32> @umulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; CHECK-NEXT:    umulh x10, x3, x6
 ; CHECK-NEXT:    umulh x8, x7, x2
 ; CHECK-NEXT:    madd x9, x3, x6, x9
-; CHECK-NEXT:    ccmp xzr, x10, #0, eq
+; CHECK-NEXT:    ccmp x10, #0, #0, eq
 ; CHECK-NEXT:    umulh x11, x2, x6
-; CHECK-NEXT:    ccmp xzr, x8, #0, eq
+; CHECK-NEXT:    ccmp x8, #0, #0, eq
 ; CHECK-NEXT:    mul x13, x5, x0
 ; CHECK-NEXT:    cset w8, ne
 ; CHECK-NEXT:    umulh x14, x1, x4
@@ -332,9 +332,9 @@ define <2 x i32> @umulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; CHECK-NEXT:    cmp x1, #0
 ; CHECK-NEXT:    ccmp x5, #0, #4, ne
 ; CHECK-NEXT:    madd x10, x1, x4, x13
-; CHECK-NEXT:    ccmp xzr, x14, #0, eq
+; CHECK-NEXT:    ccmp x14, #0, #0, eq
 ; CHECK-NEXT:    umulh x11, x0, x4
-; CHECK-NEXT:    ccmp xzr, x12, #0, eq
+; CHECK-NEXT:    ccmp x12, #0, #0, eq
 ; CHECK-NEXT:    cset w12, ne
 ; CHECK-NEXT:    adds x10, x11, x10
 ; CHECK-NEXT:    csinc w11, w12, wzr, lo

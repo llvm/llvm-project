@@ -605,7 +605,7 @@ define zeroext i1 @umulo.i64(i64 %v1, i64 %v2, ptr %res) {
 ; SDAG:       // %bb.0: // %entry
 ; SDAG-NEXT:    umulh x8, x0, x1
 ; SDAG-NEXT:    mul x9, x0, x1
-; SDAG-NEXT:    cmp xzr, x8
+; SDAG-NEXT:    cmp x8, #0
 ; SDAG-NEXT:    cset w0, ne
 ; SDAG-NEXT:    str x9, [x2]
 ; SDAG-NEXT:    ret
@@ -1281,7 +1281,7 @@ define i64 @umulo.select.i64(i64 %v1, i64 %v2) {
 ; SDAG-LABEL: umulo.select.i64:
 ; SDAG:       // %bb.0: // %entry
 ; SDAG-NEXT:    umulh x8, x0, x1
-; SDAG-NEXT:    cmp xzr, x8
+; SDAG-NEXT:    cmp x8, #0
 ; SDAG-NEXT:    csel x0, x0, x1, ne
 ; SDAG-NEXT:    ret
 ;
@@ -1309,14 +1309,14 @@ define i1 @umulo.not.i64(i64 %v1, i64 %v2) {
 ; SDAG-LABEL: umulo.not.i64:
 ; SDAG:       // %bb.0: // %entry
 ; SDAG-NEXT:    umulh x8, x0, x1
-; SDAG-NEXT:    cmp xzr, x8
+; SDAG-NEXT:    cmp x8, #0
 ; SDAG-NEXT:    cset w0, eq
 ; SDAG-NEXT:    ret
 ;
 ; FAST-LABEL: umulo.not.i64:
 ; FAST:       // %bb.0: // %entry
 ; FAST-NEXT:    umulh x8, x0, x1
-; FAST-NEXT:    cmp xzr, x8
+; FAST-NEXT:    cmp x8, #0
 ; FAST-NEXT:    cset w0, eq
 ; FAST-NEXT:    ret
 ;
@@ -2054,7 +2054,7 @@ define i64 @umulo.selectboth.i64(i64 %a, i64 %b) {
 ; SDAG-NEXT:    umulh x9, x0, x1
 ; SDAG-NEXT:    mov w8, #10 // =0xa
 ; SDAG-NEXT:    mul x10, x0, x1
-; SDAG-NEXT:    cmp xzr, x9
+; SDAG-NEXT:    cmp x9, #0
 ; SDAG-NEXT:    csel x0, x10, x8, ne
 ; SDAG-NEXT:    ret
 ;
@@ -2561,7 +2561,7 @@ define zeroext i1 @umulo.br.i64(i64 %v1, i64 %v2) {
 ; SDAG-LABEL: umulo.br.i64:
 ; SDAG:       // %bb.0: // %entry
 ; SDAG-NEXT:    umulh x8, x0, x1
-; SDAG-NEXT:    cmp xzr, x8
+; SDAG-NEXT:    cmp x8, #0
 ; SDAG-NEXT:    cset w0, eq
 ; SDAG-NEXT:    ret
 ;

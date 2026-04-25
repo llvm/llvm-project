@@ -60,7 +60,7 @@ define i64 @func5(i64 %x, i64 %y) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    umulh x8, x0, x1
 ; CHECK-NEXT:    mul x9, x0, x1
-; CHECK-NEXT:    cmp xzr, x8
+; CHECK-NEXT:    cmp x8, #0
 ; CHECK-NEXT:    csinv x0, x9, xzr, eq
 ; CHECK-NEXT:    ret
   %tmp = call i64 @llvm.umul.fix.sat.i64(i64 %x, i64 %y, i32 0)

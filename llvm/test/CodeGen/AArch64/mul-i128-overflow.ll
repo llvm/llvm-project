@@ -158,9 +158,9 @@ define i128 @test3(i128 noundef %x, i128 noundef %y, ptr %out) {
 ; CHECK-NEXT:    umulh x10, x1, x2
 ; CHECK-NEXT:    umulh x9, x3, x0
 ; CHECK-NEXT:    madd x11, x1, x2, x8
-; CHECK-NEXT:    ccmp xzr, x10, #0, eq
+; CHECK-NEXT:    ccmp x10, #0, #0, eq
 ; CHECK-NEXT:    umulh x12, x0, x2
-; CHECK-NEXT:    ccmp xzr, x9, #0, eq
+; CHECK-NEXT:    ccmp x9, #0, #0, eq
 ; CHECK-NEXT:    mul x8, x0, x2
 ; CHECK-NEXT:    cset w10, ne
 ; CHECK-NEXT:    adds x9, x12, x11
@@ -216,9 +216,9 @@ define i128 @test4(i128 noundef %x, i128 noundef %y, i128 %out) {
 ; CHECK-NEXT:    umulh x10, x1, x2
 ; CHECK-NEXT:    umulh x9, x3, x0
 ; CHECK-NEXT:    madd x11, x1, x2, x8
-; CHECK-NEXT:    ccmp xzr, x10, #0, eq
+; CHECK-NEXT:    ccmp x10, #0, #0, eq
 ; CHECK-NEXT:    umulh x12, x0, x2
-; CHECK-NEXT:    ccmp xzr, x9, #0, eq
+; CHECK-NEXT:    ccmp x9, #0, #0, eq
 ; CHECK-NEXT:    mul x8, x0, x2
 ; CHECK-NEXT:    cset w10, ne
 ; CHECK-NEXT:    adds x9, x12, x11
