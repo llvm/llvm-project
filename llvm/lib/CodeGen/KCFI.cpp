@@ -49,11 +49,11 @@ private:
                  MachineBasicBlock::instr_iterator I) const;
 };
 
-class KCFILegacy : public MachineFunctionPass {
+class MachineKCFILegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  KCFILegacy() : MachineFunctionPass(ID) {}
+  MachineKCFILegacy() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override { return KCFI_PASS_NAME; }
   bool runOnMachineFunction(MachineFunction &MF) override {
@@ -61,12 +61,12 @@ public:
   }
 };
 
-char KCFILegacy::ID = 0;
+char MachineKCFILegacy::ID = 0;
 } // end anonymous namespace
 
-INITIALIZE_PASS(KCFILegacy, DEBUG_TYPE, KCFI_PASS_NAME, false, false)
+INITIALIZE_PASS(MachineKCFILegacy, DEBUG_TYPE, KCFI_PASS_NAME, false, false)
 
-FunctionPass *llvm::createKCFIPass() { return new KCFILegacy(); }
+FunctionPass *llvm::createKCFIPass() { return new MachineKCFILegacy(); }
 
 PreservedAnalyses MachineKCFIPass::run(MachineFunction &MF,
                                        MachineFunctionAnalysisManager &MFAM) {
