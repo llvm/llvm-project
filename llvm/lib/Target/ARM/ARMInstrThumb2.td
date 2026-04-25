@@ -4347,7 +4347,9 @@ def t2HVC : T2XI <(outs), (ins imm0_65535:$imm16), IIC_Br, "hvc.w\t$imm16", []>,
 }
 
 // Alias for HVC without the ".w" optional width specifier
-def : t2InstAlias<"hvc\t$imm16", (t2HVC imm0_65535:$imm16)>;
+def : t2InstAlias<"hvc\t$imm16", (t2HVC imm0_65535:$imm16)> {
+  let Predicates = [IsThumb2, HasVirtualization];
+}
 
 //===----------------------------------------------------------------------===//
 // Non-Instruction Patterns

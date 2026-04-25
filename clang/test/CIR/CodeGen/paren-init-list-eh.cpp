@@ -55,13 +55,13 @@ void test_init_list_with_dtor() {
 
 // LLVM: define {{.*}} void @_Z24test_init_list_with_dtorv
 // LLVM:   %[[O:.*]] = alloca %struct.Outer
-// LLVM:   %[[S1_ADDR:.*]] = getelementptr %struct.Outer, ptr %[[O]], i32 0, i32 0
+// LLVM:   %[[S1_ADDR:.*]] = getelementptr inbounds nuw %struct.Outer, ptr %[[O]], i32 0, i32 0
 // LLVM:   call void @_ZN5StrukC1Ei(ptr {{.*}} %[[S1_ADDR]], i32 {{.*}} 1)
-// LLVM:   %[[S2_ADDR:.*]] = getelementptr %struct.Outer, ptr %[[O]], i32 0, i32 1
+// LLVM:   %[[S2_ADDR:.*]] = getelementptr inbounds nuw %struct.Outer, ptr %[[O]], i32 0, i32 1
 // LLVM:   invoke void @_ZN5StrukC1Ei(ptr {{.*}} %[[S2_ADDR]], i32 {{.*}} 2)
 // LLVM:           to label %[[CONT:.*]] unwind label %[[LPAD:.*]]
 // LLVM: [[CONT]]:
-// LLVM:   %[[X_ADDR:.*]] = getelementptr %struct.Outer, ptr %[[O]], i32 0, i32 2
+// LLVM:   %[[X_ADDR:.*]] = getelementptr inbounds nuw %struct.Outer, ptr %[[O]], i32 0, i32 2
 // LLVM:   store i32 3, ptr %[[X_ADDR]]
 // LLVM:   br label %[[EXIT_CLEANUP_SCOPE:.*]]
 // LLVM: [[EXIT_CLEANUP_SCOPE]]:

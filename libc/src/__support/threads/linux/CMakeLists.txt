@@ -24,13 +24,6 @@ add_header_library(
     libc.src.__support.time.abs_timeout
 )
 
-set(monotonicity_flags)
-if (LIBC_CONF_TIMEOUT_ENSURE_MONOTONICITY)
-  libc_set_definition(monotonicity_flags LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY=1)
-else()
-  libc_set_definition(monotonicity_flags LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY=0)
-endif()
-
 add_object_library(
   thread
   SRCS
@@ -63,22 +56,6 @@ add_header_library(
   DEPENDS
     .futex_utils
     libc.src.__support.macros.optimization
-)
-
-add_object_library(
-  CndVar
-  SRCS
-    CndVar.cpp
-  HDRS
-    ../CndVar.h
-  DEPENDS
-    libc.hdr.stdint_proxy
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
-    libc.src.__support.threads.linux.futex_word_type
-    libc.src.__support.threads.mutex
-    libc.src.__support.threads.raw_mutex
-    libc.src.__support.CPP.mutex
 )
 
 add_object_library(

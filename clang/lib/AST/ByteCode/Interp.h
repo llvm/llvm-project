@@ -82,7 +82,7 @@ bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 bool DiagnoseUninitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                            AccessKinds AK);
 bool DiagnoseUninitialized(InterpState &S, CodePtr OpPC, bool Extern,
-                           const Descriptor *Desc, AccessKinds AK);
+                           const Block *B, AccessKinds AK);
 
 /// Checks a direct load of a primitive value from a global or local variable.
 bool CheckGlobalLoad(InterpState &S, CodePtr OpPC, const Block *B);
@@ -863,6 +863,13 @@ bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   }
 
   const T &Value = Ptr.deref<T>();
+
+  // Can't inc/dec non-numbers.
+  if constexpr (isIntegralOrPointer<T>()) {
+    if (!Value.isNumber())
+      return false;
+  }
+
   T Result;
   if constexpr (needsAlloc<T>())
     Result = S.allocAP<T>(Value.bitWidth());
@@ -1544,6 +1551,7 @@ bool GetLocal(InterpState &S, CodePtr OpPC, uint32_t I) {
 bool EndLifetime(InterpState &S, CodePtr OpPC);
 bool EndLifetimePop(InterpState &S, CodePtr OpPC);
 bool StartLifetime(InterpState &S, CodePtr OpPC);
+bool MarkDestroyed(InterpState &S, CodePtr OpPC);
 
 /// 1) Pops the value from the stack.
 /// 2) Writes the value to the local variable with the
@@ -1663,8 +1671,7 @@ bool GetGlobalUnchecked(InterpState &S, CodePtr OpPC, uint32_t I) {
   const Block *B = S.P.getGlobal(I);
   const auto &Desc = B->getBlockDesc<GlobalInlineDescriptor>();
   if (Desc.InitState != GlobalInitState::Initialized)
-    return DiagnoseUninitialized(S, OpPC, B->isExtern(), B->getDescriptor(),
-                                 AK_Read);
+    return DiagnoseUninitialized(S, OpPC, B->isExtern(), B, AK_Read);
 
   S.Stk.push<T>(B->deref<T>());
   return true;
@@ -1975,6 +1982,9 @@ inline bool GetPtrGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
 bool GetPtrField(InterpState &S, CodePtr OpPC, uint32_t Off);
 bool GetPtrFieldPop(InterpState &S, CodePtr OpPC, uint32_t Off);
 
+bool GetPtrBase(InterpState &S, CodePtr OpPC, uint32_t Off);
+bool GetPtrBasePop(InterpState &S, CodePtr OpPC, uint32_t Off, bool NullOK);
+
 inline bool GetPtrThisField(InterpState &S, CodePtr OpPC, uint32_t Off) {
   if (S.checkingPotentialConstantExpression() && S.Current->getDepth() == 0)
     return false;
@@ -2019,58 +2029,8 @@ inline bool GetPtrDerivedPop(InterpState &S, CodePtr OpPC, uint32_t Off,
   return true;
 }
 
-inline bool GetPtrBase(InterpState &S, CodePtr OpPC, uint32_t Off) {
-  const Pointer &Ptr = S.Stk.peek<Pointer>();
-  if (!CheckNull(S, OpPC, Ptr, CSK_Base))
-    return false;
-
-  if (!Ptr.isBlockPointer()) {
-    if (!Ptr.isIntegralPointer())
-      return false;
-    S.Stk.push<Pointer>(Ptr.asIntPointer().baseCast(S.getASTContext(), Off));
-    return true;
-  }
-
-  if (isConstexprUnknown(Ptr))
-    return false;
-
-  if (!CheckSubobject(S, OpPC, Ptr, CSK_Base))
-    return false;
-  const Pointer &Result = Ptr.atField(Off);
-  if (Result.isPastEnd() || !Result.isBaseClass())
-    return false;
-  S.Stk.push<Pointer>(Result);
-  return true;
-}
-
-inline bool GetPtrBasePop(InterpState &S, CodePtr OpPC, uint32_t Off,
-                          bool NullOK) {
-  const Pointer &Ptr = S.Stk.pop<Pointer>();
-
-  if (!NullOK && !CheckNull(S, OpPC, Ptr, CSK_Base))
-    return false;
-
-  if (!Ptr.isBlockPointer()) {
-    if (!Ptr.isIntegralPointer())
-      return false;
-    S.Stk.push<Pointer>(Ptr.asIntPointer().baseCast(S.getASTContext(), Off));
-    return true;
-  }
-
-  if (isConstexprUnknown(Ptr))
-    return false;
-
-  if (!CheckSubobject(S, OpPC, Ptr, CSK_Base))
-    return false;
-  const Pointer &Result = Ptr.atField(Off);
-  if (Result.isPastEnd() || !Result.isBaseClass())
-    return false;
-  S.Stk.push<Pointer>(Result);
-  return true;
-}
-
 inline bool GetPtrThisBase(InterpState &S, CodePtr OpPC, uint32_t Off) {
-  if (S.checkingPotentialConstantExpression())
+  if (S.checkingPotentialConstantExpression() && S.Current->isBottomFrame())
     return false;
   if (!CheckThis(S, OpPC))
     return false;
@@ -2651,12 +2611,15 @@ inline bool SubPtr(InterpState &S, CodePtr OpPC, bool ElemSizeIsZero) {
 
   if (LHS.pointsToLabel() || RHS.pointsToLabel()) {
     if constexpr (isIntegralOrPointer<T>()) {
-      const auto *LHSAddrExpr =
-          dyn_cast_if_present<AddrLabelExpr>(LHS.getDeclDesc()->asExpr());
-      const auto *RHSAddrExpr =
-          dyn_cast_if_present<AddrLabelExpr>(RHS.getDeclDesc()->asExpr());
-      if (!LHSAddrExpr || !RHSAddrExpr)
+      const AddrLabelExpr *LHSAddrExpr = LHS.getPointedToLabel();
+      const AddrLabelExpr *RHSAddrExpr = RHS.getPointedToLabel();
+      if (!LHSAddrExpr || !RHSAddrExpr) {
+        S.FFDiag(S.Current->getSource(OpPC),
+                 diag::note_constexpr_pointer_arith_unspecified)
+            << LHS.toDiagnosticString(S.getASTContext())
+            << RHS.toDiagnosticString(S.getASTContext());
         return false;
+      }
 
       if (LHSAddrExpr->getLabel()->getDeclContext() !=
           RHSAddrExpr->getLabel()->getDeclContext())
@@ -2832,6 +2795,12 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool CastIntegralFloating(InterpState &S, CodePtr OpPC,
                           const llvm::fltSemantics *Sem, uint32_t FPOI) {
   const T &From = S.Stk.pop<T>();
+
+  if constexpr (isIntegralOrPointer<T>()) {
+    if (!From.isNumber())
+      return false;
+  }
+
   APSInt FromAP = From.toAPSInt();
 
   FPOptions FPO = FPOptions::getFromOpaqueInt(FPOI);

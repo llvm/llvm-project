@@ -546,6 +546,12 @@ public:
 
   bool isLValueSuitableForInlineAtomic(LValue lv);
 
+  RValue emitAtomicLoad(LValue lvalue, SourceLocation loc,
+                        AggValueSlot slot = AggValueSlot::ignored());
+  RValue emitAtomicLoad(LValue lvalue, SourceLocation loc, cir::MemOrder order,
+                        bool isVolatile = false,
+                        AggValueSlot slot = AggValueSlot::ignored());
+
   /// An abstract representation of regular/ObjC call/message targets.
   class AbstractCallee {
     /// The function declaration of the callee.
@@ -1094,6 +1100,11 @@ public:
   /// true at the current insertion point (inside the conditional branch).
   Address createCleanupActiveFlag();
 
+  /// Set up the last cleanup that was pushed as a conditional
+  /// full-expression cleanup.
+  void initFullExprCleanup();
+  void initFullExprCleanupWithFlag(Address activeFlag);
+
   /// Promote a single pending cleanup entry onto the EH scope stack. If the
   /// entry has a valid activeFlag, the cleanup is configured as conditional.
   /// Defined in CIRGenDecl.cpp where the concrete cleanup types are visible.
@@ -1395,6 +1406,9 @@ public:
 
   static Destroyer destroyCXXObject;
 
+  void pushEHDestroyIfNeeded(QualType::DestructionKind dtorKind, Address addr,
+                             QualType type);
+
   void pushDestroy(QualType::DestructionKind dtorKind, Address addr,
                    QualType type);
 
@@ -1519,6 +1533,7 @@ public:
   mlir::Value emitArrayLength(const clang::ArrayType *arrayType,
                               QualType &baseType, Address &addr);
   LValue emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e);
+  LValue emitInitListLValue(const InitListExpr *e);
 
   LValue emitExtVectorElementExpr(const ExtVectorElementExpr *e);
 
@@ -1668,6 +1683,8 @@ public:
   cir::CallOp emitCoroAllocBuiltinCall(mlir::Location loc);
   cir::CallOp emitCoroBeginBuiltinCall(mlir::Location loc,
                                        mlir::Value coroframeAddr);
+
+  cir::CallOp emitCoroFreeBuiltin(const CallExpr *e);
   RValue emitCoroutineFrame();
 
   void emitDestroy(Address addr, QualType type, Destroyer *destroyer);
@@ -2039,8 +2056,7 @@ public:
 
   void emitStaticVarDecl(const VarDecl &d, cir::GlobalLinkageKind linkage);
 
-  /// Emit a guarded initializer for a static local variable or a static
-  /// data member of a class template instantiation.
+  /// Emit a guarded initializer for a static local variable.
   void emitCXXGuardedInit(const VarDecl &varDecl, cir::GlobalOp globalOp,
                           bool performInit);
 
