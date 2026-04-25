@@ -2499,6 +2499,10 @@ defm : PatXrF<ftrunc, "XVFRINTRZ">;
 defm : PatXrF<froundeven, "XVFRINTRNE">;
 def : Pat<(v8f32 (loongarch_vfcvt_s_d (v4f64 LASX256:$xj), (v4f64 LASX256:$xk))),
           (XVFCVT_S_D LASX256:$xj, LASX256:$xk)>;
+def : Pat<(v4f64 (loongarch_vfcvtl_d_s (v8f32 LASX256:$xj))),
+          (XVFCVTL_D_S LASX256:$xj)>;
+def : Pat<(v4f64 (loongarch_vfcvth_d_s (v8f32 LASX256:$xj))),
+          (XVFCVTH_D_S LASX256:$xj)>;
 
 // load
 def : Pat<(int_loongarch_lasx_xvld GPR:$rj, timm:$imm),
