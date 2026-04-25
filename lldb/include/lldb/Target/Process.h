@@ -1246,7 +1246,7 @@ public:
   ///
   /// \return
   ///     A Target object pointer to the target that owns this
-  ///     module.
+  ///     process.
   lldb::TargetSP GetTargetSP() const { return m_target_wp.lock(); }
 
   /// \return
