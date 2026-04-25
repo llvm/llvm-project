@@ -17,10 +17,10 @@ define void @test_buffers_with_nuri() {
   ; A[NonUniformResourceIndex(val)];
 
   %nuri1 = tail call noundef i32 @llvm.dx.resource.nonuniformindex(i32 %val)
-  %res1 = call target("dx.TypedBuffer", float, 1, 0, 0) 
+  %res1 = call target("dx.TypedBuffer", float, 1, 0, 0)
             @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 10, i32 %nuri1, ptr @A.str)
-  ; CHECK: %[[RES1:.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217, %dx.types.ResBind { i32 0, i32 9, i32 0, i8 1 }, i32 %val, i1 true) #[[ATTR:.*]]
-  ; CHECK: call  %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle %[[RES1]], %dx.types.ResourceProperties { i32 4106, i32 265 }) #[[ATTR]]
+  ; CHECK: %[[RES1:.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217, %dx.types.ResBind { i32 0, i32 9, i32 0, i8 1 }, i32 %val, i1 true)
+  ; CHECK: call  %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle %[[RES1]], %dx.types.ResourceProperties { i32 4106, i32 265 })
   ; CHECK-NOT: @llvm.dx.cast.handle
   ; CHECK-NOT: @llvm.dx.resource.nonuniformindex
 
@@ -28,18 +28,18 @@ define void @test_buffers_with_nuri() {
   %add1 = add i32 %val, 1
   %nuri2 = tail call noundef i32 @llvm.dx.resource.nonuniformindex(i32 %add1)
   %rem1 = urem i32 %nuri2, 10
-  %res2 = call target("dx.TypedBuffer", float, 1, 0, 0) 
+  %res2 = call target("dx.TypedBuffer", float, 1, 0, 0)
            @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 10, i32 %rem1, ptr @A.str)
-  ; CHECK: %[[RES2:.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217, %dx.types.ResBind { i32 0, i32 9, i32 0, i8 1 }, i32 %rem1, i1 true) #[[ATTR]]
-  ; CHECK: call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle %[[RES2]], %dx.types.ResourceProperties { i32 4106, i32 265 }) #[[ATTR]]
+  ; CHECK: %[[RES2:.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217, %dx.types.ResBind { i32 0, i32 9, i32 0, i8 1 }, i32 %rem1, i1 true)
+  ; CHECK: call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle %[[RES2]], %dx.types.ResourceProperties { i32 4106, i32 265 })
 
   ; A[10 + 3 * NonUniformResourceIndex(GI)];
   %mul1 = mul i32 %nuri1, 3
   %add2 = add i32 %mul1, 10
   %res3 = call target("dx.TypedBuffer", float, 1, 0, 0)
            @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 10, i32 %add2, ptr @A.str)
-  ; CHECK: %[[RES3:.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217, %dx.types.ResBind { i32 0, i32 9, i32 0, i8 1 }, i32 %add2, i1 true) #[[ATTR]]
-  ; CHECK: %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle %[[RES3]], %dx.types.ResourceProperties { i32 4106, i32 265 }) #[[ATTR]]
+  ; CHECK: %[[RES3:.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217, %dx.types.ResBind { i32 0, i32 9, i32 0, i8 1 }, i32 %add2, i1 true)
+  ; CHECK: %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle %[[RES3]], %dx.types.ResourceProperties { i32 4106, i32 265 })
   ret void
 
   ; NonUniformResourceIndex value going through store & load: the flag is not going to get picked up
@@ -48,8 +48,8 @@ define void @test_buffers_with_nuri() {
   %b = load i32, ptr %foo
   %res4 = call target("dx.TypedBuffer", float, 1, 0, 0)
            @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 10, i32 %b, ptr @A.str)
-  ; CHECK: %[[RES4:.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217, %dx.types.ResBind { i32 0, i32 9, i32 0, i8 1 }, i32 %b, i1 false) #[[ATTR]]
-  ; CHECK: %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle %[[RES4]], %dx.types.ResourceProperties { i32 4106, i32 265 }) #[[ATTR]]
+  ; CHECK: %[[RES4:.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217, %dx.types.ResBind { i32 0, i32 9, i32 0, i8 1 }, i32 %b, i1 false)
+  ; CHECK: %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle %[[RES4]], %dx.types.ResourceProperties { i32 4106, i32 265 })
 
   ; NonUniformResourceIndex index value on a single resouce (not an array): the flag is not going to get picked up
   ; RWBuffer<float> B : register(u20);
@@ -59,8 +59,8 @@ define void @test_buffers_with_nuri() {
   %nuri3 = tail call noundef i32 @llvm.dx.resource.nonuniformindex(i32 %val)
   %res5 = call target("dx.TypedBuffer", float, 1, 0, 0)
            @llvm.dx.resource.handlefrombinding(i32 20, i32 0, i32 1, i32 %nuri1, ptr @B.str)
-  ; CHECK: %[[RES4:.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217, %dx.types.ResBind { i32 0, i32 0, i32 20, i8 1 }, i32 %val, i1 false) #[[ATTR]]
-  ; CHECK: %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle %[[RES4]], %dx.types.ResourceProperties { i32 4106, i32 265 }) #[[ATTR]]
+  ; CHECK: %[[RES4:.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217, %dx.types.ResBind { i32 0, i32 0, i32 20, i8 1 }, i32 %val, i1 false)
+  ; CHECK: %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle %[[RES4]], %dx.types.ResourceProperties { i32 4106, i32 265 })
 
   ; NonUniformResourceIndex on unrelated value - the call is removed:
   ; foo = NonUniformResourceIndex(val);
@@ -72,6 +72,7 @@ define void @test_buffers_with_nuri() {
   ret void
 }
 
-; CHECK: attributes #[[ATTR]] = {{{.*}} memory(none) {{.*}}}
+; CHECK: declare %dx.types.Handle @dx.op.createHandleFromBinding(i32, %dx.types.ResBind, i32, i1) #[[#ATTR0:]]
+; CHECK: attributes #[[#ATTR0]] = { nounwind memory(none) }
 
 attributes #0 = { nocallback nofree nosync nounwind willreturn memory(none) }

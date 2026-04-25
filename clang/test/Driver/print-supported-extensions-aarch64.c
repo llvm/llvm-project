@@ -50,7 +50,6 @@
 // CHECK-NEXT:     lut                 FEAT_LUT                                               Enable Lookup Table instructions
 // CHECK-NEXT:     mops                FEAT_MOPS                                              Enable Armv8.8-A memcpy and memset acceleration instructions
 // CHECK-NEXT:     mops-go             FEAT_MOPS_GO                                           Enable memset acceleration granule only
-// CHECK-NEXT:     mpamv2              FEAT_MPAMv2                                            Enable Armv9.7-A MPAMv2 Lookaside Buffer Invalidate instructions
 // CHECK-NEXT:     memtag              FEAT_MTE, FEAT_MTE2                                    Enable Memory Tagging Extension
 // CHECK-NEXT:     mtetc               FEAT_MTETC                                             Enable Virtual Memory Tagging Extension
 // CHECK-NEXT:     simd                FEAT_AdvSIMD                                           Enable Advanced SIMD instructions

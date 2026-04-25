@@ -2837,9 +2837,8 @@ rnb_err_t RNBRemote::SendStopReplyPacketForThread(nub_thread_t tid) {
               } else if (pc_regval.info.size == 8) {
                 pc = pc_regval.value.uint64;
               }
-              if (pc != INVALID_NUB_ADDRESS) {
+              if (pc != INVALID_NUB_ADDRESS)
                 pc_values.push_back(pc);
-              }
             }
           }
         }
@@ -2985,6 +2984,38 @@ rnb_err_t RNBRemote::SendStopReplyPacketForThread(nub_thread_t tid) {
         ostrm << "memory:" << HEXBASE << stack_memory.first << '=';
         append_hex_value(ostrm, stack_memory.second.bytes,
                          stack_memory.second.length, false);
+        ostrm << ';';
+      }
+    }
+
+    std::vector<uint64_t> added_binaries;
+    JSONGenerator::ObjectSP detailed_binary_infos;
+
+    // If we've stopped with a breakpoint exception on this
+    // thread, and we're stopped at the dyld notification
+    // function address, collect information about libraries
+    // that have been loaded, expedite that information in
+    // the stop packet.
+    if (tid_stop_info.details.exception.type == EXC_BREAKPOINT &&
+        DNBGetBinariesLoadedInfo(pid, tid, added_binaries,
+                                 detailed_binary_infos)) {
+      ostrm << std::hex << "added-binaries:";
+      bool first = true;
+      for (nub_addr_t addr : added_binaries) {
+        if (first)
+          first = false;
+        else
+          ostrm << ",";
+        ostrm << addr;
+      }
+      ostrm << ";";
+
+      if (detailed_binary_infos) {
+        ostrm << std::hex << "detailed-binaries-info:";
+        std::ostringstream json_strm;
+        detailed_binary_infos->Dump(json_strm);
+        detailed_binary_infos->Clear();
+        append_hexified_string(ostrm, json_strm.str());
         ostrm << ';';
       }
     }
@@ -5754,6 +5785,28 @@ RNBRemote::GetJSONThreadsInfo(bool threads_with_valid_stop_info_only) {
           }
           thread_dict_sp->AddItem("memory", memory_array_sp);
         }
+      }
+
+      std::vector<uint64_t> added_binaries;
+      JSONGenerator::ObjectSP detailed_binary_infos;
+
+      // If we've stopped with a breakpoint exception on this
+      // thread, and we're stopped at the dyld notification
+      // function address, collect information about libraries
+      // that have been loaded, expedite that information in
+      // the stop packet.
+      if (tid_stop_info.details.exception.type == EXC_BREAKPOINT &&
+          DNBGetBinariesLoadedInfo(pid, tid, added_binaries,
+                                   detailed_binary_infos)) {
+        JSONGenerator::ArraySP load_addresses;
+        load_addresses = std::make_shared<JSONGenerator::Array>();
+        for (nub_addr_t addr : added_binaries)
+          load_addresses->AddIntegerItem(addr);
+        thread_dict_sp->AddItem("added-binaries", load_addresses);
+
+        if (detailed_binary_infos)
+          thread_dict_sp->AddItem("detailed-binaries-info",
+                                  detailed_binary_infos);
       }
 
       threads_array_sp->AddItem(thread_dict_sp);
