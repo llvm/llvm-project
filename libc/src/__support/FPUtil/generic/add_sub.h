@@ -106,7 +106,7 @@ add_or_sub(InType x, InType y) {
         if (__builtin_is_constant_evaluated()) {
           return OutFPBits::zero(Sign::POS).get_val();
         } else {
-          switch (quick_get_round()) {
+          switch (fputil::quick_get_round()) {
           case FE_DOWNWARD:
             return OutFPBits::zero(Sign::NEG).get_val();
           default:
@@ -151,7 +151,7 @@ add_or_sub(InType x, InType y) {
     if (__builtin_is_constant_evaluated()) {
       return OutFPBits::zero(Sign::POS).get_val();
     } else {
-      switch (quick_get_round()) {
+      switch (fputil::quick_get_round()) {
       case FE_DOWNWARD:
         return OutFPBits::zero(Sign::NEG).get_val();
       default:

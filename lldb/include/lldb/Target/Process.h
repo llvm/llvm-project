@@ -1028,10 +1028,12 @@ public:
   virtual void DoDidExec() {}
 
   /// Called after a reported fork.
-  virtual void DidFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {}
+  virtual void DidFork(lldb::pid_t child_pid, lldb::tid_t child_tid,
+                       bool is_expression_fork = false) {}
 
   /// Called after a reported vfork.
-  virtual void DidVFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {}
+  virtual void DidVFork(lldb::pid_t child_pid, lldb::tid_t child_tid,
+                        bool is_expression_fork = false) {}
 
   /// Called after reported vfork completion.
   virtual void DidVForkDone() {}
