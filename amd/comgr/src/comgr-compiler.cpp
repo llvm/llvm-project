@@ -498,7 +498,7 @@ bool executeAssemblerImpl(AssemblerInvocation &Opts, DiagnosticsEngine &Diags,
   // FIXME: init MCTargetOptions from sanitizer flags here.
   MCTargetOptions Options;
   std::unique_ptr<MCTargetAsmParser> TAP(
-      TheTarget->createMCAsmParser(*STI, *Parser, *MCII, Options));
+      TheTarget->createMCAsmParser(*STI, *Parser, *MCII));
   if (!TAP) {
     Failed = Diags.Report(diag::err_target_unknown_triple) << Opts.Triple;
   }
