@@ -14,8 +14,3 @@ needs SPIRV/COMGR
 breaks build of llvm
 [clang][CIR][doc] Add auto-generated ClangIR documentation (#190354)
 ---
-[compiler-rt][asan] Add asan checks for __builtin_assume_dereferencable (#190871)
----
-breaks nekbone
-[flang][OpenMP] Move branching verification to semantic checks (#193324)
----
