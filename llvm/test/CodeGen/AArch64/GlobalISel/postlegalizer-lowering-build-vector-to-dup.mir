@@ -12,9 +12,9 @@ body:             |
     ; LOWER-LABEL: name: same_reg
     ; LOWER: liveins: $d0
     ; LOWER-NEXT: {{  $}}
-    ; LOWER-NEXT: %r:_(s8) = G_IMPLICIT_DEF
-    ; LOWER-NEXT: %build_vector:_(<8 x s8>) = G_DUP %r(s8)
-    ; LOWER-NEXT: $d0 = COPY %build_vector(<8 x s8>)
+    ; LOWER-NEXT: %r:_(i8) = G_IMPLICIT_DEF
+    ; LOWER-NEXT: %build_vector:_(<8 x i8>) = G_DUP %r(i8)
+    ; LOWER-NEXT: $d0 = COPY %build_vector(<8 x i8>)
     ; LOWER-NEXT: RET_ReallyLR implicit $d0
     ;
     ; SELECT-LABEL: name: same_reg
@@ -24,9 +24,9 @@ body:             |
     ; SELECT-NEXT: %build_vector:fpr64 = DUPv8i8gpr %r
     ; SELECT-NEXT: $d0 = COPY %build_vector
     ; SELECT-NEXT: RET_ReallyLR implicit $d0
-    %r:_(s8) = G_IMPLICIT_DEF
-    %build_vector:_(<8 x s8>) = G_BUILD_VECTOR %r, %r, %r, %r, %r, %r, %r, %r
-    $d0 = COPY %build_vector(<8 x s8>)
+    %r:_(i8) = G_IMPLICIT_DEF
+    %build_vector:_(<8 x i8>) = G_BUILD_VECTOR %r, %r, %r, %r, %r, %r, %r, %r
+    $d0 = COPY %build_vector(<8 x i8>)
     RET_ReallyLR implicit $d0
 
 ...
@@ -40,15 +40,15 @@ body:             |
     ; LOWER-LABEL: name: dont_combine_different_reg
     ; LOWER: liveins: $d0, $w0, $w1
     ; LOWER-NEXT: {{  $}}
-    ; LOWER-NEXT: %r:_(s32) = COPY $w0
-    ; LOWER-NEXT: %q:_(s32) = COPY $w1
-    ; LOWER-NEXT: [[DEF:%[0-9]+]]:_(<2 x s32>) = G_IMPLICIT_DEF
-    ; LOWER-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; LOWER-NEXT: [[IVEC:%[0-9]+]]:_(<2 x s32>) = G_INSERT_VECTOR_ELT [[DEF]], %r(s32), [[C]](s64)
-    ; LOWER-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    ; LOWER-NEXT: [[IVEC1:%[0-9]+]]:_(<2 x s32>) = G_INSERT_VECTOR_ELT [[IVEC]], %q(s32), [[C1]](s64)
-    ; LOWER-NEXT: %build_vector:_(<2 x s32>) = COPY [[IVEC1]](<2 x s32>)
-    ; LOWER-NEXT: $d0 = COPY %build_vector(<2 x s32>)
+    ; LOWER-NEXT: %r:_(i32) = COPY $w0
+    ; LOWER-NEXT: %q:_(i32) = COPY $w1
+    ; LOWER-NEXT: [[DEF:%[0-9]+]]:_(<2 x i32>) = G_IMPLICIT_DEF
+    ; LOWER-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+    ; LOWER-NEXT: [[IVEC:%[0-9]+]]:_(<2 x i32>) = G_INSERT_VECTOR_ELT [[DEF]], %r(i32), [[C]](i64)
+    ; LOWER-NEXT: [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
+    ; LOWER-NEXT: [[IVEC1:%[0-9]+]]:_(<2 x i32>) = G_INSERT_VECTOR_ELT [[IVEC]], %q(i32), [[C1]](i64)
+    ; LOWER-NEXT: %build_vector:_(<2 x i32>) = COPY [[IVEC1]](<2 x i32>)
+    ; LOWER-NEXT: $d0 = COPY %build_vector(<2 x i32>)
     ; LOWER-NEXT: RET_ReallyLR implicit $d0
     ;
     ; SELECT-LABEL: name: dont_combine_different_reg
@@ -64,10 +64,10 @@ body:             |
     ; SELECT-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY [[INSvi32gpr]].dsub
     ; SELECT-NEXT: $d0 = COPY [[COPY]]
     ; SELECT-NEXT: RET_ReallyLR implicit $d0
-    %r:_(s32) = COPY $w0
-    %q:_(s32) = COPY $w1
-    %build_vector:_(<2 x s32>) = G_BUILD_VECTOR %r, %q
-    $d0 = COPY %build_vector(<2 x s32>)
+    %r:_(i32) = COPY $w0
+    %q:_(i32) = COPY $w1
+    %build_vector:_(<2 x i32>) = G_BUILD_VECTOR %r, %q
+    $d0 = COPY %build_vector(<2 x i32>)
     RET_ReallyLR implicit $d0
 
 ...
@@ -82,9 +82,9 @@ body:             |
     ; LOWER-LABEL: name: dont_combine_zero
     ; LOWER: liveins: $d0
     ; LOWER-NEXT: {{  $}}
-    ; LOWER-NEXT: %r:_(s8) = G_CONSTANT i8 0
-    ; LOWER-NEXT: %build_vector:_(<8 x s8>) = G_BUILD_VECTOR %r(s8), %r(s8), %r(s8), %r(s8), %r(s8), %r(s8), %r(s8), %r(s8)
-    ; LOWER-NEXT: $d0 = COPY %build_vector(<8 x s8>)
+    ; LOWER-NEXT: %r:_(i8) = G_CONSTANT i8 0
+    ; LOWER-NEXT: %build_vector:_(<8 x i8>) = G_BUILD_VECTOR %r(i8), %r(i8), %r(i8), %r(i8), %r(i8), %r(i8), %r(i8), %r(i8)
+    ; LOWER-NEXT: $d0 = COPY %build_vector(<8 x i8>)
     ; LOWER-NEXT: RET_ReallyLR implicit $d0
     ;
     ; SELECT-LABEL: name: dont_combine_zero
@@ -94,9 +94,9 @@ body:             |
     ; SELECT-NEXT: %build_vector:fpr64 = COPY [[MOVIv2d_ns]].dsub
     ; SELECT-NEXT: $d0 = COPY %build_vector
     ; SELECT-NEXT: RET_ReallyLR implicit $d0
-    %r:_(s8) = G_CONSTANT i8 0
-    %build_vector:_(<8 x s8>) = G_BUILD_VECTOR %r, %r, %r, %r, %r, %r, %r, %r
-    $d0 = COPY %build_vector(<8 x s8>)
+    %r:_(i8) = G_CONSTANT i8 0
+    %build_vector:_(<8 x i8>) = G_BUILD_VECTOR %r, %r, %r, %r, %r, %r, %r, %r
+    $d0 = COPY %build_vector(<8 x i8>)
     RET_ReallyLR implicit $d0
 
 ...
@@ -111,9 +111,9 @@ body:             |
     ; LOWER-LABEL: name: dont_combine_all_ones
     ; LOWER: liveins: $d0
     ; LOWER-NEXT: {{  $}}
-    ; LOWER-NEXT: %r:_(s8) = G_CONSTANT i8 -1
-    ; LOWER-NEXT: %build_vector:_(<8 x s8>) = G_BUILD_VECTOR %r(s8), %r(s8), %r(s8), %r(s8), %r(s8), %r(s8), %r(s8), %r(s8)
-    ; LOWER-NEXT: $d0 = COPY %build_vector(<8 x s8>)
+    ; LOWER-NEXT: %r:_(i8) = G_CONSTANT i8 -1
+    ; LOWER-NEXT: %build_vector:_(<8 x i8>) = G_BUILD_VECTOR %r(i8), %r(i8), %r(i8), %r(i8), %r(i8), %r(i8), %r(i8), %r(i8)
+    ; LOWER-NEXT: $d0 = COPY %build_vector(<8 x i8>)
     ; LOWER-NEXT: RET_ReallyLR implicit $d0
     ;
     ; SELECT-LABEL: name: dont_combine_all_ones
@@ -122,9 +122,9 @@ body:             |
     ; SELECT-NEXT: %build_vector:fpr64 = MOVID 255
     ; SELECT-NEXT: $d0 = COPY %build_vector
     ; SELECT-NEXT: RET_ReallyLR implicit $d0
-    %r:_(s8) = G_CONSTANT i8 -1
-    %build_vector:_(<8 x s8>) = G_BUILD_VECTOR %r, %r, %r, %r, %r, %r, %r, %r
-    $d0 = COPY %build_vector(<8 x s8>)
+    %r:_(i8) = G_CONSTANT i8 -1
+    %build_vector:_(<8 x i8>) = G_BUILD_VECTOR %r, %r, %r, %r, %r, %r, %r, %r
+    $d0 = COPY %build_vector(<8 x i8>)
     RET_ReallyLR implicit $d0
 
 ...
@@ -139,11 +139,11 @@ body:             |
     ; LOWER-LABEL: name: all_zeros_pat_example
     ; LOWER: liveins: $d0
     ; LOWER-NEXT: {{  $}}
-    ; LOWER-NEXT: %v:_(<2 x s32>) = COPY $d0
-    ; LOWER-NEXT: %cst:_(s32) = G_CONSTANT i32 0
-    ; LOWER-NEXT: %build_vector:_(<2 x s32>) = G_BUILD_VECTOR %cst(s32), %cst(s32)
-    ; LOWER-NEXT: %sub:_(<2 x s32>) = G_SUB %build_vector, %v
-    ; LOWER-NEXT: $d0 = COPY %sub(<2 x s32>)
+    ; LOWER-NEXT: %v:_(<2 x i32>) = COPY $d0
+    ; LOWER-NEXT: %cst:_(i32) = G_CONSTANT i32 0
+    ; LOWER-NEXT: %build_vector:_(<2 x i32>) = G_BUILD_VECTOR %cst(i32), %cst(i32)
+    ; LOWER-NEXT: %sub:_(<2 x i32>) = G_SUB %build_vector, %v
+    ; LOWER-NEXT: $d0 = COPY %sub(<2 x i32>)
     ; LOWER-NEXT: RET_ReallyLR implicit $d0
     ;
     ; SELECT-LABEL: name: all_zeros_pat_example
@@ -153,11 +153,11 @@ body:             |
     ; SELECT-NEXT: %sub:fpr64 = NEGv2i32 %v
     ; SELECT-NEXT: $d0 = COPY %sub
     ; SELECT-NEXT: RET_ReallyLR implicit $d0
-      %v:_(<2 x s32>) = COPY $d0
-    %cst:_(s32) = G_CONSTANT i32 0
-    %build_vector:_(<2 x s32>) = G_BUILD_VECTOR %cst, %cst
-    %sub:_(<2 x s32>) = G_SUB %build_vector, %v
-    $d0 = COPY %sub(<2 x s32>)
+      %v:_(<2 x i32>) = COPY $d0
+    %cst:_(i32) = G_CONSTANT i32 0
+    %build_vector:_(<2 x i32>) = G_BUILD_VECTOR %cst, %cst
+    %sub:_(<2 x i32>) = G_SUB %build_vector, %v
+    $d0 = COPY %sub(<2 x i32>)
     RET_ReallyLR implicit $d0
 
 ...
@@ -172,13 +172,13 @@ body:             |
     ; LOWER-LABEL: name: all_ones_pat_example
     ; LOWER: liveins: $d0, $d1
     ; LOWER-NEXT: {{  $}}
-    ; LOWER-NEXT: %v0:_(<2 x s32>) = COPY $d0
-    ; LOWER-NEXT: %v1:_(<2 x s32>) = COPY $d1
-    ; LOWER-NEXT: %cst:_(s32) = G_CONSTANT i32 -1
-    ; LOWER-NEXT: %build_vector:_(<2 x s32>) = G_BUILD_VECTOR %cst(s32), %cst(s32)
-    ; LOWER-NEXT: %xor:_(<2 x s32>) = G_XOR %v0, %build_vector
-    ; LOWER-NEXT: %and:_(<2 x s32>) = G_AND %v1, %xor
-    ; LOWER-NEXT: $d0 = COPY %and(<2 x s32>)
+    ; LOWER-NEXT: %v0:_(<2 x i32>) = COPY $d0
+    ; LOWER-NEXT: %v1:_(<2 x i32>) = COPY $d1
+    ; LOWER-NEXT: %cst:_(i32) = G_CONSTANT i32 -1
+    ; LOWER-NEXT: %build_vector:_(<2 x i32>) = G_BUILD_VECTOR %cst(i32), %cst(i32)
+    ; LOWER-NEXT: %xor:_(<2 x i32>) = G_XOR %v0, %build_vector
+    ; LOWER-NEXT: %and:_(<2 x i32>) = G_AND %v1, %xor
+    ; LOWER-NEXT: $d0 = COPY %and(<2 x i32>)
     ; LOWER-NEXT: RET_ReallyLR implicit $d0
     ;
     ; SELECT-LABEL: name: all_ones_pat_example
@@ -189,11 +189,11 @@ body:             |
     ; SELECT-NEXT: %and:fpr64 = BICv8i8 %v1, %v0
     ; SELECT-NEXT: $d0 = COPY %and
     ; SELECT-NEXT: RET_ReallyLR implicit $d0
-    %v0:_(<2 x s32>) = COPY $d0
-    %v1:_(<2 x s32>) = COPY $d1
-    %cst:_(s32) = G_CONSTANT i32 -1
-    %build_vector:_(<2 x s32>) = G_BUILD_VECTOR %cst, %cst
-    %xor:_(<2 x s32>) = G_XOR %v0, %build_vector
-    %and:_(<2 x s32>) = G_AND %v1, %xor
-    $d0 = COPY %and(<2 x s32>)
+    %v0:_(<2 x i32>) = COPY $d0
+    %v1:_(<2 x i32>) = COPY $d1
+    %cst:_(i32) = G_CONSTANT i32 -1
+    %build_vector:_(<2 x i32>) = G_BUILD_VECTOR %cst, %cst
+    %xor:_(<2 x i32>) = G_XOR %v0, %build_vector
+    %and:_(<2 x i32>) = G_AND %v1, %xor
+    $d0 = COPY %and(<2 x i32>)
     RET_ReallyLR implicit $d0

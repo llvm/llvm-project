@@ -3930,6 +3930,7 @@ public:
   void EmitOMPStripeDirective(const OMPStripeDirective &S);
   void EmitOMPUnrollDirective(const OMPUnrollDirective &S);
   void EmitOMPReverseDirective(const OMPReverseDirective &S);
+  void EmitOMPSplitDirective(const OMPSplitDirective &S);
   void EmitOMPInterchangeDirective(const OMPInterchangeDirective &S);
   void EmitOMPFuseDirective(const OMPFuseDirective &S);
   void EmitOMPForDirective(const OMPForDirective &S);
@@ -4767,6 +4768,13 @@ public:
                          const CallExpr *E, ReturnValueSlot ReturnValue);
 
   RValue emitRotate(const CallExpr *E, bool IsRotateRight);
+
+  RValue emitStdcCountIntrinsic(const CallExpr *E, llvm::Intrinsic::ID IntID,
+                                bool InvertArg, bool IsPop = false);
+  RValue emitStdcBitWidthMinus(const CallExpr *E, llvm::Intrinsic::ID IntID,
+                               bool IsPop);
+  RValue emitStdcFirstBit(const CallExpr *E, llvm::Intrinsic::ID IntID,
+                          bool InvertArg);
 
   /// Emit IR for __builtin_os_log_format.
   RValue emitBuiltinOSLogFormat(const CallExpr &E);
