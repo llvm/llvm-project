@@ -12,9 +12,9 @@ declare i8 @llvm.smax.i8(i8, i8)
 define i32 @t1(i16 zeroext %x, i32 %y) {
 ; CHECK-LABEL: @t1(
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i16 [[X:%.*]] to i32
-; CHECK-NEXT:    [[D1:%.*]] = lshr i32 [[CONV]], [[TMP1:%.*]]
-; CHECK-NEXT:    [[D2:%.*]] = lshr i32 [[D1]], 1
-; CHECK-NEXT:    ret i32 [[D2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[Y:%.*]], 1
+; CHECK-NEXT:    [[D1:%.*]] = lshr i32 [[CONV]], [[TMP1]]
+; CHECK-NEXT:    ret i32 [[D1]]
 ;
   %conv = zext i16 %x to i32
   %s = shl i32 2, %y
@@ -25,9 +25,9 @@ define i32 @t1(i16 zeroext %x, i32 %y) {
 define <2 x i32> @t1vec(<2 x i16> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @t1vec(
 ; CHECK-NEXT:    [[CONV:%.*]] = zext <2 x i16> [[X:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[D1:%.*]] = lshr <2 x i32> [[CONV]], [[TMP1:%.*]]
-; CHECK-NEXT:    [[D2:%.*]] = lshr <2 x i32> [[D1]], splat (i32 1)
-; CHECK-NEXT:    ret <2 x i32> [[D2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[Y:%.*]], splat (i32 1)
+; CHECK-NEXT:    [[D1:%.*]] = lshr <2 x i32> [[CONV]], [[TMP1]]
+; CHECK-NEXT:    ret <2 x i32> [[D1]]
 ;
   %conv = zext <2 x i16> %x to <2 x i32>
   %s = shl <2 x i32> <i32 2, i32 2>, %y
@@ -698,6 +698,30 @@ define <2 x i4> @udiv_shl_nuw_exact(<2 x i4> %x, <2 x i4> %y, <2 x i4> %z) {
   ret <2 x i4> %d
 }
 
+; Y is a power-of-2 constant: defer to existing shl-of-pow2 chain.
+define i8 @udiv_shl_nuw_pow2_const(i8 %x, i8 %z) {
+; CHECK-LABEL: @udiv_shl_nuw_pow2_const(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[Z:%.*]], 2
+; CHECK-NEXT:    [[D:%.*]] = lshr i8 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i8 [[D]]
+;
+  %s = shl nuw i8 4, %z
+  %d = udiv i8 %x, %s
+  ret i8 %d
+}
+
+; Y power-of-2 with udiv exact: existing path preserves the exact flag.
+define i8 @udiv_shl_nuw_pow2_const_exact(i8 %x, i8 %z) {
+; CHECK-LABEL: @udiv_shl_nuw_pow2_const_exact(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[Z:%.*]], 2
+; CHECK-NEXT:    [[D:%.*]] = lshr exact i8 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i8 [[D]]
+;
+  %s = shl nuw i8 4, %z
+  %d = udiv exact i8 %x, %s
+  ret i8 %d
+}
+
 define i8 @udiv_shl(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @udiv_shl(
 ; CHECK-NEXT:    [[S:%.*]] = shl i8 [[Y:%.*]], [[Z:%.*]]
@@ -1008,9 +1032,9 @@ define i8 @udiv_fail_shl_overflow(i8 %x, i8 %y) {
 
 define i8 @udiv_shl_no_overflow(i8 %x, i8 %y) {
 ; CHECK-LABEL: @udiv_shl_no_overflow(
-; CHECK-NEXT:    [[MUL1:%.*]] = lshr i8 [[X:%.*]], [[TMP1:%.*]]
-; CHECK-NEXT:    [[MUL2:%.*]] = lshr i8 [[MUL1]], 1
-; CHECK-NEXT:    ret i8 [[MUL2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[Y:%.*]], 1
+; CHECK-NEXT:    [[MUL1:%.*]] = lshr i8 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i8 [[MUL1]]
 ;
   %shl = shl nuw i8 2, %y
   %min = call i8 @llvm.umax.i8(i8 %shl, i8 1)
