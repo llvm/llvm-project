@@ -2183,7 +2183,7 @@ static bool IsPureProcedureImpl(
     return true; // statement function was not found to be impure
   }
   if (symbol.attrs().test(Attr::SIMPLE)) {
-    return true; // SIMPLE implies PURE (Fortran 2023 §15.8)
+    return true; // SIMPLE implies PURE; F2023 15.8
   }
   return symbol.attrs().test(Attr::PURE) ||
       (symbol.attrs().test(Attr::ELEMENTAL) &&
@@ -2201,7 +2201,10 @@ bool IsPureProcedure(const Scope &scope) {
 }
 
 bool IsSimpleProcedure(const Symbol &original) {
-  return original.attrs().test(Attr::SIMPLE);
+  // An ENTRY is SIMPLE if its containing subprogram is
+  return DEREF(GetMainEntry(&original.GetUltimate()))
+      .attrs()
+      .test(Attr::SIMPLE);
 }
 
 bool IsSimpleProcedure(const Scope &scope) {

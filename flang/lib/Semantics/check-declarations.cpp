@@ -1594,6 +1594,7 @@ void CheckHelper::CheckSubprogram(
       context_.SetError(symbol);
     }
   }
+  // F2023 C1553
   if (symbol.attrs().test(Attr::SIMPLE) && symbol.attrs().test(Attr::IMPURE)) {
     messages_.Say(symbol.name(),
         "A procedure may not have both the SIMPLE and IMPURE attributes"_err_en_US);

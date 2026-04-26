@@ -708,20 +708,10 @@ public:
   void SetExplicitAttr(Symbol &symbol, Attr attr) const {
     symbol.attrs().set(attr);
     symbol.implicitAttrs().reset(attr);
-
-    // SIMPLE implies PURE; mark PURE as implicit
-    if (attr == Attr::SIMPLE && !symbol.attrs().test(Attr::PURE)) {
-      SetImplicitAttr(symbol, Attr::PURE);
-    }
   }
   void SetExplicitAttrs(Symbol &symbol, Attrs attrs) const {
     symbol.attrs() |= attrs;
     symbol.implicitAttrs() &= ~attrs;
-
-    // SIMPLE implies PURE; mark PURE as implicit
-    if (attrs.test(Attr::SIMPLE) && !symbol.attrs().test(Attr::PURE)) {
-      SetImplicitAttr(symbol, Attr::PURE);
-    }
   }
   void SetImplicitAttr(Symbol &symbol, Attr attr) const {
     symbol.attrs().set(attr);
