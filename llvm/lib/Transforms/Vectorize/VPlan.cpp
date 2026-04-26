@@ -915,6 +915,9 @@ static void printFinalVPlan(VPlan &) {}
 /// Assumes a single pre-header basic-block was created for this. Introduce
 /// additional basic-blocks as needed, and fill them all.
 void VPlan::execute(VPTransformState *State) {
+  assert(none_of(vp_depth_first_shallow(getEntry()), IsaPred<VPRegionBlock>) &&
+         "all region blocks must be dissolved before ::execute");
+
   // Initialize CFG state.
   State->CFG.PrevVPBB = nullptr;
   State->CFG.ExitBB = State->CFG.PrevBB->getSingleSuccessor();
