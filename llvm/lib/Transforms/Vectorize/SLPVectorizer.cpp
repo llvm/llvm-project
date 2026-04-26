@@ -2041,6 +2041,9 @@ getNumberOfParts(const TargetTransformInfo &TTI, VectorType *VecTy,
       (PWSz / NumParts) % ScalarSz != 0 ||
       !hasFullVectorsOrPowerOf2(TTI, VecTy->getElementType(), PWSz / NumParts))
     return 1;
+  const unsigned NumElts = PWSz / NumParts;
+  if (divideCeil(Sz, NumElts) != NumParts)
+    return 1;
   return NumParts;
 }
 

@@ -1,4 +1,4 @@
-//===-- Implementation header for fdimf128 ----------------------*- C++ -*-===//
+//===-- Implementation header for fdivf128 ----------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,21 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_FDIMF128_H
-#define LLVM_LIBC_SRC___SUPPORT_MATH_FDIMF128_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_FDIVF128_H
+#define LLVM_LIBC_SRC___SUPPORT_MATH_FDIVF128_H
 
 #include "include/llvm-libc-types/float128.h"
 
 #ifdef LIBC_TYPES_HAS_FLOAT128
 
-#include "src/__support/FPUtil/BasicOperations.h"
+#include "src/__support/FPUtil/generic/div.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE constexpr float128 fdimf128(float128 x, float128 y) {
-  return fputil::fdim(x, y);
+LIBC_INLINE constexpr float fdivf128(float128 x, float128 y) {
+  return fputil::generic::div<float>(x, y);
 }
 
 } // namespace math
@@ -28,4 +28,4 @@ LIBC_INLINE constexpr float128 fdimf128(float128 x, float128 y) {
 
 #endif // LIBC_TYPES_HAS_FLOAT128
 
-#endif // LLVM_LIBC_SRC___SUPPORT_MATH_FDIMF128_H
+#endif // LLVM_LIBC_SRC___SUPPORT_MATH_FDIVF128_H

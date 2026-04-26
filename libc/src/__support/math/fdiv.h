@@ -1,4 +1,4 @@
-//===-- Implementation header for fdim --------------------------*- C++ -*-===//
+//===-- Implementation header for fdiv --------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,20 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_FDIM_H
-#define LLVM_LIBC_SRC___SUPPORT_MATH_FDIM_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_FDIV_H
+#define LLVM_LIBC_SRC___SUPPORT_MATH_FDIV_H
 
-#include "src/__support/FPUtil/BasicOperations.h"
+#include "src/__support/FPUtil/generic/div.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE constexpr double fdim(double x, double y) {
-  return fputil::fdim(x, y);
+LIBC_INLINE constexpr float fdiv(double x, double y) {
+  return fputil::generic::div<float>(x, y);
 }
 
 } // namespace math
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC___SUPPORT_MATH_FDIM_H
+#endif // LLVM_LIBC_SRC___SUPPORT_MATH_FDIV_H
