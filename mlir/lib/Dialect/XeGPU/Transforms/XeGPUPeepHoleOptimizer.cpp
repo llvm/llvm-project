@@ -449,20 +449,49 @@ class MultiRed2dOpPattern
     auto loc = reductionOp.getLoc();
     auto acc = reductionOp.getAcc();
 
-    // If the result is scalar or a single-element vector after reduction,
-    // look for consumer convert_layout op and remove it. The layout
-    // propagation pass will re-install it properly after the decomposition.
-    Type resultType = reductionOp.getResult().getType();
-    bool isSingleElementVector = false;
-    if (auto vecTy = dyn_cast<VectorType>(resultType))
-      isSingleElementVector = vecTy.getNumElements() == 1;
-    if (resultType.isIntOrFloat() || isSingleElementVector) {
-      for (auto &use : reductionOp.getResult().getUses()) {
-        if (auto convertLayoutOp =
-                llvm::dyn_cast<xegpu::ConvertLayoutOp>(use.getOwner())) {
-          rewriter.replaceOp(convertLayoutOp, reductionOp.getResult());
-          break;
-        }
+    // The decomposition below splits the 2D reduction into an intra-lane
+    // then a cross-lane 1D reduction. If a consumer xegpu.convert_layout
+    // exists on the reduction result, its input_layout was stamped by
+    // layout propagation against the original 2D reduction's slice and
+    // is therefore stale once we replace the producer with two 1D
+    // reductions.
+    //
+    // Hence insert a NEW xegpu.convert_layout between the decomposed
+    // reduction result and the existing convert_layout. The new op
+    // bridges from the natural post-decomposition producer layout
+    // to the layout that the existing convert_layout currently expects on its
+    // input. The existing convert_layout is left untouched.
+    xegpu::ConvertLayoutOp consumerConvertOp;
+    for (auto &use : reductionOp.getResult().getUses()) {
+      if (auto convertLayoutOp =
+              llvm::dyn_cast<xegpu::ConvertLayoutOp>(use.getOwner())) {
+        consumerConvertOp = convertLayoutOp;
+        break;
+      }
+    }
+    xegpu::DistributeLayoutAttr postDecompLayout;
+    if (consumerConvertOp) {
+      // Derive the source vector's layout.
+      xegpu::DistributeLayoutAttr srcLayoutForCvt;
+      if (auto resSlice = dyn_cast_if_present<xegpu::SliceAttr>(resLayout))
+        srcLayoutForCvt = resSlice.getParent();
+      if (!srcLayoutForCvt)
+        srcLayoutForCvt =
+            xegpu::getDistributeLayoutAttr(reductionOp.getSource());
+      if (srcLayoutForCvt) {
+        // The natural layout of the post-decomposition reduction result
+        // is a nested SliceAttr: REDUCE_1 (reduces `intraLaneDim` from
+        // the source) yields `slice<src, [intraLaneDim]>`; REDUCE_2
+        // then reduces `adjCrossLaneDim` from that intermediate, giving
+        // `slice<slice<src, [intraLaneDim]>, [adjCrossLaneDim]>`.
+        MLIRContext *ctx = consumerConvertOp.getContext();
+        int64_t adjCrossLaneDim =
+            crossLaneDim > intraLaneDim ? crossLaneDim - 1 : crossLaneDim;
+        auto intermediateLayout = xegpu::SliceAttr::get(
+            ctx, srcLayoutForCvt, DenseI64ArrayAttr::get(ctx, {intraLaneDim}));
+        postDecompLayout = xegpu::SliceAttr::get(
+            ctx, intermediateLayout,
+            DenseI64ArrayAttr::get(ctx, {adjCrossLaneDim}));
       }
     }
 
@@ -484,6 +513,19 @@ class MultiRed2dOpPattern
         ArrayRef<int64_t>(crossLaneDim));
     assert(crossLaneReduced.getType() == reductionOp.getResult().getType() &&
            "Type mismatch");
+
+    if (consumerConvertOp && postDecompLayout) {
+      auto consumerInputLayout = consumerConvertOp.getInputLayoutAttr();
+      OpBuilder::InsertionGuard g(rewriter);
+      rewriter.setInsertionPoint(consumerConvertOp);
+      auto bridgeOp = xegpu::ConvertLayoutOp::create(
+          rewriter, loc, crossLaneReduced.getType(), crossLaneReduced,
+          postDecompLayout, consumerInputLayout);
+      rewriter.modifyOpInPlace(consumerConvertOp, [&]() {
+        consumerConvertOp.getSourceMutable().set(bridgeOp.getResult());
+      });
+    }
+
     rewriter.replaceOp(reductionOp, crossLaneReduced);
     return success();
   }
@@ -587,6 +629,9 @@ struct XeGPUPeepHoleOptimizerPass final
 
     target.addLegalDialect<arith::ArithDialect, memref::MemRefDialect,
                            vector::VectorDialect>();
+    // xegpu.convert_layout is left untouched by this pass; mark it legal
+    // so in-place updates don't trigger re-legalization failures.
+    target.addLegalOp<xegpu::ConvertLayoutOp>();
     scf::populateSCFStructuralTypeConversionsAndLegality(converter, patterns,
                                                          target);
     xegpu::populateXeGPUPeepHoleOptimizerPatterns(patterns);
