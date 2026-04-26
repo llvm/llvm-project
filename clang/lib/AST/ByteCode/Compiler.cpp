@@ -8121,6 +8121,112 @@ private:
   unsigned Count = 0;
 };
 
+/// Visitor that extracts every scalar element of a source value into
+/// its own local variable.
+template <class Emitter>
+class HLSLElementFlattenVisitor
+    : public Compiler<Emitter>::template HLSLAggregateVisitor<
+          HLSLElementFlattenVisitor<Emitter>> {
+  using VisitorBase = typename Compiler<Emitter>::template HLSLAggregateVisitor<
+      HLSLElementFlattenVisitor<Emitter>>;
+  using HLSLFlatElement = typename Compiler<Emitter>::HLSLFlatElement;
+
+public:
+  HLSLElementFlattenVisitor(Compiler<Emitter> &C, unsigned SrcOffset,
+                            SmallVectorImpl<HLSLFlatElement> &Elements,
+                            unsigned MaxElements, const Expr *E)
+      : VisitorBase(C), CurrentSrcOffset(SrcOffset), Elements(Elements),
+        MaxElements(MaxElements), E(E) {}
+
+  bool isDone() const { return Done; }
+
+  bool visitScalarElem(QualType, PrimType ElemT, unsigned I) {
+    if (checkDone())
+      return false;
+    if (!this->C.emitGetLocal(PT_Ptr, CurrentSrcOffset, E))
+      return false;
+    if (!this->C.emitArrayElemPop(ElemT, I, E))
+      return false;
+    return saveToLocal(ElemT);
+  }
+
+  bool visitArrayComposite(QualType ElemType, unsigned I) {
+    if (checkDone())
+      return false;
+    if (!this->C.emitGetLocal(PT_Ptr, CurrentSrcOffset, E))
+      return false;
+    if (!this->C.emitConstUint32(I, E))
+      return false;
+    if (!this->C.emitArrayElemPtrPopUint32(E))
+      return false;
+    return enterSubAggregate(ElemType);
+  }
+
+  bool visitBase(QualType BaseType, const Record::Base *B) {
+    if (checkDone())
+      return false;
+    if (!this->C.emitGetLocal(PT_Ptr, CurrentSrcOffset, E))
+      return false;
+    if (!this->C.emitGetPtrBasePop(B->Offset, /*NullOK=*/false, E))
+      return false;
+    return enterSubAggregate(BaseType);
+  }
+
+  bool visitField(QualType, PrimType FieldT, const Record::Field *F) {
+    if (checkDone())
+      return false;
+    if (!this->C.emitGetLocal(PT_Ptr, CurrentSrcOffset, E))
+      return false;
+    if (!this->C.emitGetPtrFieldPop(F->Offset, E))
+      return false;
+    if (!this->C.emitLoadPop(FieldT, E))
+      return false;
+    return saveToLocal(FieldT);
+  }
+
+  bool visitFieldComposite(QualType FieldType, const Record::Field *F) {
+    if (checkDone())
+      return false;
+    if (!this->C.emitGetLocal(PT_Ptr, CurrentSrcOffset, E))
+      return false;
+    if (!this->C.emitGetPtrFieldPop(F->Offset, E))
+      return false;
+    return enterSubAggregate(FieldType);
+  }
+
+private:
+  bool checkDone() {
+    if (Done || Elements.size() >= MaxElements) {
+      Done = true;
+      return true;
+    }
+    return false;
+  }
+
+  bool saveToLocal(PrimType T) {
+    unsigned Off = this->C.allocateLocalPrimitive(E, T, /*IsConst=*/true);
+    if (!this->C.emitSetLocal(T, Off, E))
+      return false;
+    Elements.push_back({Off, T});
+    return true;
+  }
+
+  bool enterSubAggregate(QualType SubType) {
+    unsigned Offset =
+        this->C.allocateLocalPrimitive(E, PT_Ptr, /*IsConst=*/true);
+    if (!this->C.emitSetLocal(PT_Ptr, Offset, E))
+      return false;
+    llvm::SaveAndRestore SrcOffsetScope(CurrentSrcOffset, Offset);
+    return this->visit(SubType);
+  }
+
+  unsigned CurrentSrcOffset;
+  SmallVectorImpl<HLSLFlatElement> &Elements;
+  unsigned MaxElements;
+  const Expr *E;
+  bool Done = false;
+};
+
 } // namespace interp
 } // namespace clang
 
