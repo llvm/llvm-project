@@ -165,7 +165,7 @@ static SmallVector<MCInst, 2> parseAsmToMCInsts(StringRef AsmStr,
   std::unique_ptr<MCAsmParser> Parser(
       createMCAsmParser(*SrcMgr, *S.Ctx, Streamer, *S.MAI));
   std::unique_ptr<MCTargetAsmParser> TAP(
-      S.Target->createMCAsmParser(*S.STI, *Parser, *S.MCII, McOpts));
+      S.Target->createMCAsmParser(*S.STI, *Parser, *S.MCII));
   if (!TAP) {
     log() << "hotswap: error: parseAsmToMCInsts: createMCAsmParser returned "
           << "null for asm:\n    " << AsmStr << "\n";
