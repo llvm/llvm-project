@@ -188,9 +188,9 @@ static MCAsmInfo *createPPCMCAsmInfo(const MCRegisterInfo &MRI,
 
   MCAsmInfo *MAI;
   if (TheTriple.isOSBinFormatXCOFF())
-    MAI = new PPCXCOFFMCAsmInfo(isPPC64, TheTriple);
+    MAI = new PPCXCOFFMCAsmInfo(isPPC64, TheTriple, Options);
   else
-    MAI = new PPCELFMCAsmInfo(isPPC64, TheTriple);
+    MAI = new PPCELFMCAsmInfo(isPPC64, TheTriple, Options);
 
   // Initial state of the frame pointer is R1.
   unsigned Reg = isPPC64 ? PPC::X1 : PPC::R1;
