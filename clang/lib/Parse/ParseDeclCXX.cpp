@@ -494,6 +494,28 @@ void Parser::CheckUnbracedLinkageOrExportDeclaration(
   }
 
   if (const auto *LS = dyn_cast<LinkageSpecDecl>(LinkageOrExportDecl)) {
+    // HACK: Old versions of the MSVC STL used to have linkage specifications
+    // on some template specializations, but it would be too disruptive to
+    // reject them. This was fixed in
+    // https://github.com/microsoft/STL/pull/6074, merged on 2026-02-11.
+    bool IsStandardLibrarySymbolInOldMSVCSTL = [&] {
+      const MacroInfo *MSVCSTLUpdateMacro =
+          PP.getMacroInfo(PP.getIdentifierInfo("_MSVC_STL_UPDATE"));
+
+      if (!MSVCSTLUpdateMacro || MSVCSTLUpdateMacro->getNumTokens() != 1)
+        return false;
+
+      bool Invalid;
+      std::string MSVCSTLUpdate =
+          PP.getSpelling(MSVCSTLUpdateMacro->getReplacementToken(0), &Invalid);
+      return !Invalid && MSVCSTLUpdate.size() == 7 &&
+             MSVCSTLUpdate < "202603L" &&
+             LinkageOrExportDecl->isInStdNamespace();
+    }();
+
+    if (IsStandardLibrarySymbolInOldMSVCSTL)
+      return;
+
     Diag(LS->getLocation(), diag::err_invalid_decl_in_linkage_spec)
         << (TSK == TSK_ExplicitSpecialization);
     return;

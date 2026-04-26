@@ -5,6 +5,8 @@
 // RUN: %clang_cc1 -std=c++20 -verify -fsyntax-only %t/A.cpp
 // RUN: %clang_cc1 -std=c++20 -verify -fsyntax-only %t/B.cpp
 // RUN: not %clang_cc1 -std=c++20 -fsyntax-only -fdiagnostics-parseable-fixits %t/B.cpp 2>&1 | FileCheck %t/B.cpp
+// RUN: %clang_cc1 -std=c++20 -verify -fsyntax-only %t/msvc-stl-exception-1.cpp
+// RUN: %clang_cc1 -std=c++20 -verify -fsyntax-only %t/msvc-stl-exception-2.cpp
 
 //--- A.cpp
 // expected-no-diagnostics
@@ -110,3 +112,27 @@ extern "C++" { template <typename T> void f4() {} }
 extern "C++" { template <> void f4<int>() {} }
 extern "C++" { template void f4<char>(); }
 extern "C++" { extern template void f4<void>(); }
+
+//--- msvc-stl-exception-1.cpp
+#define _MSVC_STL_UPDATE 202602L
+
+namespace std {
+
+extern "C++" template <typename T> struct s {};
+extern "C++" template<> struct s<int> {}; // expected-no-error {{language linkage specification cannot be applied to a specialization}}
+
+} // namespace std
+
+// Should still diagnose outside the std namespace.
+extern "C++" template <typename T> struct c {};
+extern "C++" template<> struct c<int> {}; // expected-error {{language linkage specification cannot be applied to a specialization}}
+
+//--- msvc-stl-exception-2.cpp
+#define _MSVC_STL_UPDATE 202603L
+
+namespace std {
+
+extern "C++" template <typename T> struct s {};
+extern "C++" template<> struct s<int> {}; // expected-error {{language linkage specification cannot be applied to a specialization}}
+
+} // namespace std
