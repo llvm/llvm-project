@@ -72,19 +72,19 @@ struct __atomic_smart_ptr_storage {
   static constexpr uintptr_t __notify_bit_ = uintptr_t{2};
   static constexpr uintptr_t __ptr_mask_   = ~(__lock_bit_ | __notify_bit_);
 
-  _LIBCPP_HIDE_FROM_ABI static uintptr_t __encode(__shared_weak_count* __ctrl, uintptr_t __bits) _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI static uintptr_t __encode(__shared_weak_count* __ctrl, uintptr_t __bits) noexcept {
     return (reinterpret_cast<uintptr_t>(__ctrl) & __ptr_mask_) | (__bits & ~__ptr_mask_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI static __shared_weak_count* __decode(uintptr_t __word) _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI static __shared_weak_count* __decode(uintptr_t __word) noexcept {
     return reinterpret_cast<__shared_weak_count*>(__word & __ptr_mask_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI static bool __has_lock(uintptr_t __word) _NOEXCEPT { return (__word & __lock_bit_) != 0; }
-  _LIBCPP_HIDE_FROM_ABI static bool __has_notify(uintptr_t __word) _NOEXCEPT { return (__word & __notify_bit_) != 0; }
+  _LIBCPP_HIDE_FROM_ABI static bool __has_lock(uintptr_t __word) noexcept { return (__word & __lock_bit_) != 0; }
+  _LIBCPP_HIDE_FROM_ABI static bool __has_notify(uintptr_t __word) noexcept { return (__word & __notify_bit_) != 0; }
 };
 
-_LIBCPP_HIDE_FROM_ABI inline void __atomic_smart_ptr_notify_one(const void* __address) _NOEXCEPT {
+_LIBCPP_HIDE_FROM_ABI inline void __atomic_smart_ptr_notify_one(const void* __address) noexcept {
 #  if _LIBCPP_AVAILABILITY_HAS_NEW_SYNC
   std::__atomic_notify_one_global_table(__address);
 #  else
@@ -92,7 +92,7 @@ _LIBCPP_HIDE_FROM_ABI inline void __atomic_smart_ptr_notify_one(const void* __ad
 #  endif
 }
 
-_LIBCPP_HIDE_FROM_ABI inline void __atomic_smart_ptr_notify_all(const void* __address) _NOEXCEPT {
+_LIBCPP_HIDE_FROM_ABI inline void __atomic_smart_ptr_notify_all(const void* __address) noexcept {
 #  if _LIBCPP_AVAILABILITY_HAS_NEW_SYNC
   std::__atomic_notify_all_global_table(__address);
 #  else
@@ -101,7 +101,7 @@ _LIBCPP_HIDE_FROM_ABI inline void __atomic_smart_ptr_notify_all(const void* __ad
 }
 
 template <class _Poll>
-_LIBCPP_HIDE_FROM_ABI inline void __atomic_smart_ptr_wait_on_address(const void* __address, _Poll&& __poll) _NOEXCEPT {
+_LIBCPP_HIDE_FROM_ABI inline void __atomic_smart_ptr_wait_on_address(const void* __address, _Poll&& __poll) noexcept {
   while (!__poll()) {
 #  if _LIBCPP_AVAILABILITY_HAS_NEW_SYNC
     auto __monitor_value = std::__atomic_monitor_global(__address);
@@ -123,16 +123,15 @@ struct __atomic_smart_ptr_fields {
   mutable __cxx_atomic_impl<_Element*> __ptr_;
   mutable __cxx_atomic_impl<uintptr_t> __ctrl_;
 
-  _LIBCPP_HIDE_FROM_ABI __atomic_smart_ptr_fields(_Element* __p, __shared_weak_count* __c) _NOEXCEPT
-      : __ptr_(__p),
-        __ctrl_(__atomic_smart_ptr_storage::__encode(__c, 0)) {}
+  _LIBCPP_HIDE_FROM_ABI __atomic_smart_ptr_fields(_Element* __p, __shared_weak_count* __c) noexcept
+      : __ptr_(__p), __ctrl_(__atomic_smart_ptr_storage::__encode(__c, 0)) {}
 
-  _LIBCPP_HIDE_FROM_ABI const void* __ctrl_address() const _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI const void* __ctrl_address() const noexcept {
     return static_cast<const void*>(__builtin_addressof(__ctrl_));
   }
 
   // Acquire lock bit on __ctrl_. Contended path sets notify bit and waits.
-  _LIBCPP_HIDE_FROM_ABI void __lock() const _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI void __lock() const noexcept {
     _LIBCPP_ATOMIC_SP_TSAN_PRE_LOCK(&__ctrl_);
     uintptr_t __expected = std::__cxx_atomic_load(__builtin_addressof(__ctrl_), memory_order_relaxed);
     for (;;) {
@@ -170,7 +169,7 @@ struct __atomic_smart_ptr_fields {
   }
 
   // Publish new control pointer, clear bits, and notify waiters if needed.
-  _LIBCPP_HIDE_FROM_ABI void __unlock(__shared_weak_count* __ctrl_to_publish) const _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI void __unlock(__shared_weak_count* __ctrl_to_publish) const noexcept {
     _LIBCPP_ATOMIC_SP_TSAN_PRE_UNLOCK(&__ctrl_);
     uintptr_t __new_word = __atomic_smart_ptr_storage::__encode(__ctrl_to_publish, 0);
     uintptr_t __previous = std::__cxx_atomic_exchange(__builtin_addressof(__ctrl_), __new_word, memory_order_release);
@@ -186,7 +185,7 @@ _LIBCPP_HIDE_FROM_ABI inline bool __atomic_smart_ptr_equivalent(
     _Element* __ptr,
     __shared_weak_count* __ctrl,
     _Element* __expected_ptr,
-    __shared_weak_count* __expected_ctrl) _NOEXCEPT {
+    __shared_weak_count* __expected_ctrl) noexcept {
   if (__ctrl == nullptr && __expected_ctrl == nullptr)
     return true;
   return __ptr == __expected_ptr && __ctrl == __expected_ctrl;
@@ -198,9 +197,9 @@ struct atomic<shared_ptr<_Tp>> {
 
   static constexpr bool is_always_lock_free = false;
 
-  _LIBCPP_HIDE_FROM_ABI atomic() _NOEXCEPT : __fields_(nullptr, nullptr) {}
-  _LIBCPP_HIDE_FROM_ABI constexpr atomic(nullptr_t) _NOEXCEPT : __fields_(nullptr, nullptr) {}
-  _LIBCPP_HIDE_FROM_ABI atomic(shared_ptr<_Tp> __desired) _NOEXCEPT : __fields_(__desired.__ptr_, __desired.__cntrl_) {
+  _LIBCPP_HIDE_FROM_ABI atomic() noexcept : __fields_(nullptr, nullptr) {}
+  _LIBCPP_HIDE_FROM_ABI constexpr atomic(nullptr_t) noexcept : __fields_(nullptr, nullptr) {}
+  _LIBCPP_HIDE_FROM_ABI atomic(shared_ptr<_Tp> __desired) noexcept : __fields_(__desired.__ptr_, __desired.__cntrl_) {
     __desired.__ptr_   = nullptr;
     __desired.__cntrl_ = nullptr;
   }
@@ -214,13 +213,13 @@ struct atomic<shared_ptr<_Tp>> {
       __c->__release_shared();
   }
 
-  _LIBCPP_HIDE_FROM_ABI bool is_lock_free() const _NOEXCEPT { return false; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool is_lock_free() const noexcept { return false; }
 
-  _LIBCPP_HIDE_FROM_ABI void operator=(shared_ptr<_Tp> __desired) _NOEXCEPT { store(std::move(__desired)); }
-  _LIBCPP_HIDE_FROM_ABI void operator=(nullptr_t) _NOEXCEPT { store(nullptr); }
-  _LIBCPP_HIDE_FROM_ABI operator shared_ptr<_Tp>() const _NOEXCEPT { return load(); }
+  _LIBCPP_HIDE_FROM_ABI void operator=(shared_ptr<_Tp> __desired) noexcept { store(std::move(__desired)); }
+  _LIBCPP_HIDE_FROM_ABI void operator=(nullptr_t) noexcept { store(nullptr); }
+  _LIBCPP_HIDE_FROM_ABI operator shared_ptr<_Tp>() const noexcept { return load(); }
 
-  _LIBCPP_HIDE_FROM_ABI void store(shared_ptr<_Tp> __desired, memory_order __m = memory_order_seq_cst) _NOEXCEPT
+  _LIBCPP_HIDE_FROM_ABI void store(shared_ptr<_Tp> __desired, memory_order __m = memory_order_seq_cst) noexcept
       _LIBCPP_CHECK_STORE_MEMORY_ORDER(__m) {
     (void)__m;
     _Tp* __desired_ptr               = __desired.__ptr_;
@@ -238,7 +237,7 @@ struct atomic<shared_ptr<_Tp>> {
       __old_c->__release_shared();
   }
 
-  _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> load(memory_order __m = memory_order_seq_cst) const _NOEXCEPT
+  _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> load(memory_order __m = memory_order_seq_cst) const noexcept
       _LIBCPP_CHECK_LOAD_MEMORY_ORDER(__m) {
     (void)__m;
     __fields_.__lock();
@@ -252,7 +251,7 @@ struct atomic<shared_ptr<_Tp>> {
   }
 
   _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp>
-  exchange(shared_ptr<_Tp> __desired, memory_order __m = memory_order_seq_cst) _NOEXCEPT {
+  exchange(shared_ptr<_Tp> __desired, memory_order __m = memory_order_seq_cst) noexcept {
     (void)__m;
     _Tp* __desired_ptr               = __desired.__ptr_;
     __shared_weak_count* __desired_c = __desired.__cntrl_;
@@ -270,7 +269,7 @@ struct atomic<shared_ptr<_Tp>> {
   }
 
   _LIBCPP_HIDE_FROM_ABI bool compare_exchange_strong(
-      shared_ptr<_Tp>& __expected, shared_ptr<_Tp> __desired, memory_order __success, memory_order __failure) _NOEXCEPT
+      shared_ptr<_Tp>& __expected, shared_ptr<_Tp> __desired, memory_order __success, memory_order __failure) noexcept
       _LIBCPP_CHECK_EXCHANGE_MEMORY_ORDER(__success, __failure) {
     (void)__success;
     (void)__failure;
@@ -300,24 +299,24 @@ struct atomic<shared_ptr<_Tp>> {
   }
 
   _LIBCPP_HIDE_FROM_ABI bool compare_exchange_strong(
-      shared_ptr<_Tp>& __expected, shared_ptr<_Tp> __desired, memory_order __m = memory_order_seq_cst) _NOEXCEPT {
+      shared_ptr<_Tp>& __expected, shared_ptr<_Tp> __desired, memory_order __m = memory_order_seq_cst) noexcept {
     return compare_exchange_strong(__expected, std::move(__desired), __m, std::__to_failure_order(__m));
   }
 
   _LIBCPP_HIDE_FROM_ABI bool compare_exchange_weak(
-      shared_ptr<_Tp>& __expected, shared_ptr<_Tp> __desired, memory_order __success, memory_order __failure) _NOEXCEPT
+      shared_ptr<_Tp>& __expected, shared_ptr<_Tp> __desired, memory_order __success, memory_order __failure) noexcept
       _LIBCPP_CHECK_EXCHANGE_MEMORY_ORDER(__success, __failure) {
     return compare_exchange_strong(__expected, std::move(__desired), __success, __failure);
   }
 
   _LIBCPP_HIDE_FROM_ABI bool compare_exchange_weak(
-      shared_ptr<_Tp>& __expected, shared_ptr<_Tp> __desired, memory_order __m = memory_order_seq_cst) _NOEXCEPT {
+      shared_ptr<_Tp>& __expected, shared_ptr<_Tp> __desired, memory_order __m = memory_order_seq_cst) noexcept {
     return compare_exchange_strong(__expected, std::move(__desired), __m, std::__to_failure_order(__m));
   }
 
   // Wait until the stored value is not equivalent to __old.
   // __ctrl_ is the wait address; pointer changes are published with control updates.
-  _LIBCPP_HIDE_FROM_ABI void wait(shared_ptr<_Tp> __old, memory_order __m = memory_order_seq_cst) const _NOEXCEPT
+  _LIBCPP_HIDE_FROM_ABI void wait(shared_ptr<_Tp> __old, memory_order __m = memory_order_seq_cst) const noexcept
       _LIBCPP_CHECK_WAIT_MEMORY_ORDER(__m) {
     _Tp* __old_ptr               = __old.__ptr_;
     __shared_weak_count* __old_c = __old.__cntrl_;
@@ -332,8 +331,8 @@ struct atomic<shared_ptr<_Tp>> {
     });
   }
 
-  _LIBCPP_HIDE_FROM_ABI void notify_one() _NOEXCEPT { std::__atomic_smart_ptr_notify_one(__fields_.__ctrl_address()); }
-  _LIBCPP_HIDE_FROM_ABI void notify_all() _NOEXCEPT { std::__atomic_smart_ptr_notify_all(__fields_.__ctrl_address()); }
+  _LIBCPP_HIDE_FROM_ABI void notify_one() noexcept { std::__atomic_smart_ptr_notify_one(__fields_.__ctrl_address()); }
+  _LIBCPP_HIDE_FROM_ABI void notify_all() noexcept { std::__atomic_smart_ptr_notify_all(__fields_.__ctrl_address()); }
 
 private:
   __atomic_smart_ptr_fields<_Tp> __fields_;
@@ -345,8 +344,8 @@ struct atomic<weak_ptr<_Tp>> {
 
   static constexpr bool is_always_lock_free = false;
 
-  _LIBCPP_HIDE_FROM_ABI atomic() _NOEXCEPT : __fields_(nullptr, nullptr) {}
-  _LIBCPP_HIDE_FROM_ABI atomic(weak_ptr<_Tp> __desired) _NOEXCEPT : __fields_(__desired.__ptr_, __desired.__cntrl_) {
+  _LIBCPP_HIDE_FROM_ABI atomic() noexcept : __fields_(nullptr, nullptr) {}
+  _LIBCPP_HIDE_FROM_ABI atomic(weak_ptr<_Tp> __desired) noexcept : __fields_(__desired.__ptr_, __desired.__cntrl_) {
     __desired.__ptr_   = nullptr;
     __desired.__cntrl_ = nullptr;
   }
@@ -360,12 +359,12 @@ struct atomic<weak_ptr<_Tp>> {
       __c->__release_weak();
   }
 
-  _LIBCPP_HIDE_FROM_ABI bool is_lock_free() const _NOEXCEPT { return false; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool is_lock_free() const noexcept { return false; }
 
-  _LIBCPP_HIDE_FROM_ABI void operator=(weak_ptr<_Tp> __desired) _NOEXCEPT { store(std::move(__desired)); }
-  _LIBCPP_HIDE_FROM_ABI operator weak_ptr<_Tp>() const _NOEXCEPT { return load(); }
+  _LIBCPP_HIDE_FROM_ABI void operator=(weak_ptr<_Tp> __desired) noexcept { store(std::move(__desired)); }
+  _LIBCPP_HIDE_FROM_ABI operator weak_ptr<_Tp>() const noexcept { return load(); }
 
-  _LIBCPP_HIDE_FROM_ABI void store(weak_ptr<_Tp> __desired, memory_order __m = memory_order_seq_cst) _NOEXCEPT
+  _LIBCPP_HIDE_FROM_ABI void store(weak_ptr<_Tp> __desired, memory_order __m = memory_order_seq_cst) noexcept
       _LIBCPP_CHECK_STORE_MEMORY_ORDER(__m) {
     (void)__m;
     _Tp* __desired_ptr               = __desired.__ptr_;
@@ -383,7 +382,7 @@ struct atomic<weak_ptr<_Tp>> {
       __old_c->__release_weak();
   }
 
-  _LIBCPP_HIDE_FROM_ABI weak_ptr<_Tp> load(memory_order __m = memory_order_seq_cst) const _NOEXCEPT
+  _LIBCPP_HIDE_FROM_ABI weak_ptr<_Tp> load(memory_order __m = memory_order_seq_cst) const noexcept
       _LIBCPP_CHECK_LOAD_MEMORY_ORDER(__m) {
     (void)__m;
     __fields_.__lock();
@@ -397,7 +396,7 @@ struct atomic<weak_ptr<_Tp>> {
   }
 
   _LIBCPP_HIDE_FROM_ABI weak_ptr<_Tp>
-  exchange(weak_ptr<_Tp> __desired, memory_order __m = memory_order_seq_cst) _NOEXCEPT {
+  exchange(weak_ptr<_Tp> __desired, memory_order __m = memory_order_seq_cst) noexcept {
     (void)__m;
     _Tp* __desired_ptr               = __desired.__ptr_;
     __shared_weak_count* __desired_c = __desired.__cntrl_;
@@ -415,7 +414,7 @@ struct atomic<weak_ptr<_Tp>> {
   }
 
   _LIBCPP_HIDE_FROM_ABI bool compare_exchange_strong(
-      weak_ptr<_Tp>& __expected, weak_ptr<_Tp> __desired, memory_order __success, memory_order __failure) _NOEXCEPT
+      weak_ptr<_Tp>& __expected, weak_ptr<_Tp> __desired, memory_order __success, memory_order __failure) noexcept
       _LIBCPP_CHECK_EXCHANGE_MEMORY_ORDER(__success, __failure) {
     (void)__success;
     (void)__failure;
@@ -445,22 +444,22 @@ struct atomic<weak_ptr<_Tp>> {
   }
 
   _LIBCPP_HIDE_FROM_ABI bool compare_exchange_strong(
-      weak_ptr<_Tp>& __expected, weak_ptr<_Tp> __desired, memory_order __m = memory_order_seq_cst) _NOEXCEPT {
+      weak_ptr<_Tp>& __expected, weak_ptr<_Tp> __desired, memory_order __m = memory_order_seq_cst) noexcept {
     return compare_exchange_strong(__expected, std::move(__desired), __m, std::__to_failure_order(__m));
   }
 
   _LIBCPP_HIDE_FROM_ABI bool compare_exchange_weak(
-      weak_ptr<_Tp>& __expected, weak_ptr<_Tp> __desired, memory_order __success, memory_order __failure) _NOEXCEPT
+      weak_ptr<_Tp>& __expected, weak_ptr<_Tp> __desired, memory_order __success, memory_order __failure) noexcept
       _LIBCPP_CHECK_EXCHANGE_MEMORY_ORDER(__success, __failure) {
     return compare_exchange_strong(__expected, std::move(__desired), __success, __failure);
   }
 
   _LIBCPP_HIDE_FROM_ABI bool compare_exchange_weak(
-      weak_ptr<_Tp>& __expected, weak_ptr<_Tp> __desired, memory_order __m = memory_order_seq_cst) _NOEXCEPT {
+      weak_ptr<_Tp>& __expected, weak_ptr<_Tp> __desired, memory_order __m = memory_order_seq_cst) noexcept {
     return compare_exchange_strong(__expected, std::move(__desired), __m, std::__to_failure_order(__m));
   }
 
-  _LIBCPP_HIDE_FROM_ABI void wait(weak_ptr<_Tp> __old, memory_order __m = memory_order_seq_cst) const _NOEXCEPT
+  _LIBCPP_HIDE_FROM_ABI void wait(weak_ptr<_Tp> __old, memory_order __m = memory_order_seq_cst) const noexcept
       _LIBCPP_CHECK_WAIT_MEMORY_ORDER(__m) {
     _Tp* __old_ptr               = __old.__ptr_;
     __shared_weak_count* __old_c = __old.__cntrl_;
@@ -475,8 +474,8 @@ struct atomic<weak_ptr<_Tp>> {
     });
   }
 
-  _LIBCPP_HIDE_FROM_ABI void notify_one() _NOEXCEPT { std::__atomic_smart_ptr_notify_one(__fields_.__ctrl_address()); }
-  _LIBCPP_HIDE_FROM_ABI void notify_all() _NOEXCEPT { std::__atomic_smart_ptr_notify_all(__fields_.__ctrl_address()); }
+  _LIBCPP_HIDE_FROM_ABI void notify_one() noexcept { std::__atomic_smart_ptr_notify_one(__fields_.__ctrl_address()); }
+  _LIBCPP_HIDE_FROM_ABI void notify_all() noexcept { std::__atomic_smart_ptr_notify_all(__fields_.__ctrl_address()); }
 
 private:
   __atomic_smart_ptr_fields<_Tp> __fields_;

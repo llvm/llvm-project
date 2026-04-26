@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+// REQUIRES: std-at-least-c++20
 // UNSUPPORTED: no-threads
 
 // [util.smartptr.atomic.shared] equivalence checks with aliasing shared_ptr.

@@ -6,13 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+// REQUIRES: std-at-least-c++20
 // UNSUPPORTED: no-threads
 
 // LWG 3661 and LWG 3893 coverage.
 
 #include <atomic>
 #include <cassert>
+#include <cstddef> // Armv7, Armv8 (-fno-exceptions) require for std::nullptr_t
 #include <memory>
 #include <type_traits>
 

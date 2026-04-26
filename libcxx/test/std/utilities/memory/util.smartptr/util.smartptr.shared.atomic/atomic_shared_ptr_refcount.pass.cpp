@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+// REQUIRES: std-at-least-c++20
 // UNSUPPORTED: no-threads
 
 #include <atomic>
 #include <cassert>
 #include <memory>
+#include <utility> // Armv7, Armv8 require for std::move
 
 namespace {
 struct Tracker {

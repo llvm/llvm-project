@@ -3242,17 +3242,11 @@
 #    error "__cpp_lib_atomic_ref should have the value 201806L in c++20"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_atomic_shared_ptr
-#      error "__cpp_lib_atomic_shared_ptr should be defined in c++20"
-#    endif
-#    if __cpp_lib_atomic_shared_ptr != 201711L
-#      error "__cpp_lib_atomic_shared_ptr should have the value 201711L in c++20"
-#    endif
-#  else
-#    ifdef __cpp_lib_atomic_shared_ptr
-#      error "__cpp_lib_atomic_shared_ptr should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifndef __cpp_lib_atomic_shared_ptr
+#    error "__cpp_lib_atomic_shared_ptr should be defined in c++20"
+#  endif
+#  if __cpp_lib_atomic_shared_ptr != 201711L
+#    error "__cpp_lib_atomic_shared_ptr should have the value 201711L in c++20"
 #  endif
 
 #  ifndef __cpp_lib_atomic_value_initialization
@@ -4711,17 +4705,11 @@
 #    error "__cpp_lib_atomic_ref should have the value 201806L in c++23"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_atomic_shared_ptr
-#      error "__cpp_lib_atomic_shared_ptr should be defined in c++23"
-#    endif
-#    if __cpp_lib_atomic_shared_ptr != 201711L
-#      error "__cpp_lib_atomic_shared_ptr should have the value 201711L in c++23"
-#    endif
-#  else
-#    ifdef __cpp_lib_atomic_shared_ptr
-#      error "__cpp_lib_atomic_shared_ptr should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifndef __cpp_lib_atomic_shared_ptr
+#    error "__cpp_lib_atomic_shared_ptr should be defined in c++23"
+#  endif
+#  if __cpp_lib_atomic_shared_ptr != 201711L
+#    error "__cpp_lib_atomic_shared_ptr should have the value 201711L in c++23"
 #  endif
 
 #  ifndef __cpp_lib_atomic_value_initialization
@@ -6414,17 +6402,11 @@
 #    error "__cpp_lib_atomic_ref should have the value 202603L in c++26"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_atomic_shared_ptr
-#      error "__cpp_lib_atomic_shared_ptr should be defined in c++26"
-#    endif
-#    if __cpp_lib_atomic_shared_ptr != 201711L
-#      error "__cpp_lib_atomic_shared_ptr should have the value 201711L in c++26"
-#    endif
-#  else
-#    ifdef __cpp_lib_atomic_shared_ptr
-#      error "__cpp_lib_atomic_shared_ptr should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifndef __cpp_lib_atomic_shared_ptr
+#    error "__cpp_lib_atomic_shared_ptr should be defined in c++26"
+#  endif
+#  if __cpp_lib_atomic_shared_ptr != 201711L
+#    error "__cpp_lib_atomic_shared_ptr should have the value 201711L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_atomic_value_initialization

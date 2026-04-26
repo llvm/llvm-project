@@ -3,7 +3,7 @@
 "`LWG3884 <https://wg21.link/LWG3884>`__","``flat_foo`` is missing allocator-extended copy/move constructors","2023-06 (Varna)","|Complete|","21","`#105269 <https://github.com/llvm/llvm-project/issues/105269>`__",""
 "`LWG3885 <https://wg21.link/LWG3885>`__","``op`` should be in [zombie.names]","2023-06 (Varna)","|Nothing To Do|","","`#105270 <https://github.com/llvm/llvm-project/issues/105270>`__",""
 "`LWG3887 <https://wg21.link/LWG3887>`__","Version macro for ``allocate_at_least``","2023-06 (Varna)","|Complete|","19","`#105271 <https://github.com/llvm/llvm-project/issues/105271>`__",""
-"`LWG3893 <https://wg21.link/LWG3893>`__","LWG 3661 broke ``atomic<shared_ptr<T>> a; a = nullptr;``","2023-06 (Varna)","","","`#105273 <https://github.com/llvm/llvm-project/issues/105273>`__",""
+"`LWG3893 <https://wg21.link/LWG3893>`__","LWG 3661 broke ``atomic<shared_ptr<T>> a; a = nullptr;``","2023-06 (Varna)","|Complete|","22","`#105273 <https://github.com/llvm/llvm-project/issues/105273>`__",""
 "`LWG3894 <https://wg21.link/LWG3894>`__","``generator::promise_type::yield_value(ranges::elements_of<Rng, Alloc>)`` should not be ``noexcept``","2023-06 (Varna)","","","`#105274 <https://github.com/llvm/llvm-project/issues/105274>`__",""
 "`LWG3903 <https://wg21.link/LWG3903>`__","span destructor is redundantly noexcept","2023-06 (Varna)","|Complete|","7","`#105275 <https://github.com/llvm/llvm-project/issues/105275>`__",""
 "`LWG3904 <https://wg21.link/LWG3904>`__","``lazy_split_view::outer-iterator``'s const-converting constructor isn't setting ``trailing_empty_``","2023-06 (Varna)","","","`#105276 <https://github.com/llvm/llvm-project/issues/105276>`__",""
