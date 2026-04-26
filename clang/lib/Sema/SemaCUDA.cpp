@@ -990,7 +990,8 @@ bool SemaCUDA::CheckCall(SourceLocation Loc, FunctionDecl *Callee) {
   assert(Callee && "Callee may not be null.");
 
   const auto &ExprEvalCtx = SemaRef.currentEvaluationContext();
-  if (ExprEvalCtx.isUnevaluated() || ExprEvalCtx.isConstantEvaluated())
+  if (ExprEvalCtx.isUnevaluated() || ExprEvalCtx.isConstantEvaluated() ||
+      ExprEvalCtx.isDiscardedStatementContext())
     return true;
 
   // C++ deduction guides participate in overload resolution but are not
