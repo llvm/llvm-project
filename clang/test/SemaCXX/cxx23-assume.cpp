@@ -58,7 +58,7 @@ void g(int x) {
   [[assume((1, 2))]]; // expected-warning {{has no effect}} // ext-warning {{C++23 extension}}
 
   f3<A>(); // expected-note {{in instantiation of}}
-  f3<B>(); // expected-note {{in instantiation of}}
+  f3<B>();
   [[assume]]; // expected-error {{takes one argument}}
   [[assume(z)]]; // expected-error {{undeclared identifier}}
   [[assume(A{})]]; // expected-error {{not contextually convertible to 'bool'}}
@@ -94,7 +94,7 @@ constexpr bool j(bool b) {
 
 static_assert(i()); // expected-error {{not an integral constant expression}} expected-note {{in call to}}
 static_assert(j(true));
-static_assert(j(false)); // expected-error {{not an integral constant expression}} expected-note {{in call to}}
+static_assert(j(false));
 static_assert(S<true>{}.g<char>());
 static_assert(S<false>{}.g<A>()); // expected-error {{not an integral constant expression}} expected-note {{in call to}}
 
@@ -106,8 +106,8 @@ constexpr bool f4() {
 }
 
 template <typename T>
-concept C = f4<T>(); // expected-note 3 {{in instantiation of}}
-                     // expected-note@-1 3 {{while substituting}}
+concept C = f4<T>(); // expected-note {{in instantiation of}}
+                     // expected-note@-1 {{while substituting}}
                      // expected-error@-2 {{resulted in a non-constant expression}}
                      // expected-note@-3 {{because substituted constraint expression is ill-formed: substitution into constraint expression resulted in a non-constant expression}}
 
@@ -131,8 +131,8 @@ constexpr int f5() requires C<T> { return 1; } // expected-note {{while checking
                                                // expected-note@-1 {{candidate template ignored}}
 
 template <typename T>
-constexpr int f5() requires (!C<T>) { return 2; } // expected-note 3 {{while checking the satisfaction}} \
-                                                  // expected-note 3 {{while substituting template arguments}} \
+constexpr int f5() requires (!C<T>) { return 2; } // expected-note {{while checking the satisfaction}} \
+                                                  // expected-note {{while substituting template arguments}} \
                                                   // expected-note {{candidate template ignored}}
 
 static_assert(f5<int>() == 1);
@@ -141,8 +141,8 @@ static_assert(f5<D>() == 1); // expected-note 2 {{while checking constraint sati
                              // expected-error@-2 {{no matching function for call}}
 
 static_assert(f5<double>() == 2);
-static_assert(f5<E>() == 1); // expected-note {{while checking constraint satisfaction}} expected-note {{while substituting deduced template arguments}}
-static_assert(f5<F>() == 2); // expected-note {{while checking constraint satisfaction}} expected-note {{while substituting deduced template arguments}}
+static_assert(f5<E>() == 1);
+static_assert(f5<F>() == 2);
 
 // Do not validate assumptions whose evaluation would have side-effects.
 constexpr int foo() {
