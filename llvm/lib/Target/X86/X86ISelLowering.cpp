@@ -39031,52 +39031,71 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     SDValue Matrix = Op.getOperand(1);
     SDValue Imm = Op.getOperand(2);
 
-    KnownBits InputKnown = DAG.computeKnownBits(Input, DemandedElts, Depth + 1);
-    KnownBits MatrixKnown =
-        DAG.computeKnownBits(Matrix, DemandedElts, Depth + 1);
-
     auto *ImmN = dyn_cast<ConstantSDNode>(Imm);
-    if (!ImmN || !MatrixKnown.isConstant())
+    if (!ImmN)
       break;
 
-    APInt Mat = MatrixKnown.getConstant();
     uint8_t Imm8 = ImmN->getZExtValue();
+    unsigned NumElts = DemandedElts.getBitWidth();
 
     KnownBits Res(BitWidth);
     Res.resetAll();
 
-    APInt KnownMask = InputKnown.Zero | InputKnown.One;
+    bool HaveAny = false;
 
-    for (unsigned OutBit = 0; OutBit != 8; ++OutBit) {
-      APInt RowMask = APInt::getZero(BitWidth);
-
-      for (unsigned ByteBase = 0; ByteBase < BitWidth; ByteBase += 8) {
-        unsigned MatrixBase = (ByteBase / 64) * 64;
-        unsigned RowOffset = MatrixBase + (7 - OutBit) * 8;
-
-        uint8_t Row = Mat.extractBits(8, RowOffset).getZExtValue();
-        RowMask.insertBits(APInt(8, Row), ByteBase);
-      }
-
-      if (!(RowMask & ~KnownMask).isZero())
+    for (unsigned Elt = 0; Elt != NumElts; ++Elt) {
+      if (!DemandedElts[Elt])
         continue;
 
-      APInt SelectedOnes = InputKnown.One & RowMask;
+      APInt SingleElt = APInt::getOneBitSet(NumElts, Elt);
+      KnownBits InputKnown = DAG.computeKnownBits(Input, SingleElt, Depth + 1);
 
-      for (unsigned ByteBase = 0; ByteBase < BitWidth; ByteBase += 8) {
-        uint8_t Bits = SelectedOnes.extractBits(8, ByteBase).getZExtValue();
+      KnownBits EltKnown(BitWidth);
+      EltKnown.resetAll();
+
+      APInt KnownMask = InputKnown.Zero | InputKnown.One;
+
+      for (unsigned OutBit = 0; OutBit != 8; ++OutBit) {
+        unsigned MatIdx = (Elt / 8) * 8 + (7 - OutBit);
+        if (MatIdx >= NumElts)
+          continue;
+
+        APInt SingleMat = APInt::getOneBitSet(NumElts, MatIdx);
+        KnownBits MatrixKnown =
+            DAG.computeKnownBits(Matrix, SingleMat, Depth + 1);
+
+        if (!MatrixKnown.isConstant())
+          continue;
+
+        uint8_t Row = MatrixKnown.getConstant().getZExtValue();
+        APInt RowMask(BitWidth, Row);
+
+        if (!(RowMask & ~KnownMask).isZero())
+          continue;
+
+        uint8_t Bits = (InputKnown.One & RowMask).getZExtValue();
 
         bool Parity = llvm::popcount(Bits) & 1;
         bool FinalBit = Parity ^ ((Imm8 >> OutBit) & 1);
 
         if (FinalBit)
-          Res.One.setBit(ByteBase + OutBit);
+          EltKnown.One.setBit(OutBit);
         else
-          Res.Zero.setBit(ByteBase + OutBit);
+          EltKnown.Zero.setBit(OutBit);
+      }
+
+      if (!HaveAny) {
+        Res = EltKnown;
+        HaveAny = true;
+      } else {
+        Res.One &= EltKnown.One;
+        Res.Zero &= EltKnown.Zero;
       }
     }
 
-    Known = Res;
+    if (HaveAny)
+      Known = Res;
+
     break;
   }
   case X86ISD::MUL_IMM: {
