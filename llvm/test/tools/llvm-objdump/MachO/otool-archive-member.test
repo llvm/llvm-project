@@ -22,7 +22,7 @@ BOTH: bar.o
 RUN: not llvm-otool -mh "%t.dir/lib.a(bar.o)" 2>&1 \
 RUN: | FileCheck %s --check-prefix=NOPAREN
 
-NOPAREN: error: {{.*}}: No such file or directory
+NOPAREN: '{{.*}}lib.a(bar.o)':
 
 # Non-existent member gives an error.
 RUN: not llvm-otool -h "%t.dir/lib.a(nonexistent)" 2>&1 \
