@@ -861,13 +861,13 @@ bool AsmParser::processIncbinFile(const std::string &Filename, int64_t Skip,
     return false;
 
   std::string IncludedFile;
-  unsigned NewBuf =
-      SrcMgr.AddIncludeFile(Filename, Lexer.getLoc(), IncludedFile);
-  if (!NewBuf)
+  ErrorOr<std::unique_ptr<MemoryBuffer>> BuffOrErr =
+      SrcMgr.OpenIncludeFile(Filename, IncludedFile);
+  if (!BuffOrErr)
     return true;
 
   // Pick up the bytes from the file and emit them.
-  StringRef Bytes = SrcMgr.getMemoryBuffer(NewBuf)->getBuffer();
+  StringRef Bytes = (*BuffOrErr)->getBuffer();
   Bytes = Bytes.drop_front(Skip);
   if (Count) {
     int64_t Res;
