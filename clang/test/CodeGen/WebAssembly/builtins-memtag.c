@@ -137,40 +137,40 @@ void *memtag_randommask(void *p, size_t m) {
 
 // --- 0xfc31: memtag.randommaskstore ---
 // CHECK-LABEL: define {{.*}} @memtag_randommaskstore(ptr {{.*}}, {{.*}}, {{.*}})
-// W32: call ptr @llvm.wasm.memtag.randommaskstore.i32(i32 0, ptr {{.*}}, i32 {{.*}}, i32 {{.*}})
-// W64: call ptr @llvm.wasm.memtag.randommaskstore.i64(i32 0, ptr {{.*}}, i64 {{.*}}, i64 {{.*}})
+// W32: call ptr @llvm.wasm.memtag.randommaskstore.i32.i32(i32 0, ptr {{.*}}, i32 {{.*}}, i32 {{.*}})
+// W64: call ptr @llvm.wasm.memtag.randommaskstore.i64.i64(i32 0, ptr {{.*}}, i64 {{.*}}, i64 {{.*}})
 void *memtag_randommaskstore(void *p, size_t v, size_t m) {
   return __builtin_wasm_memtag_randommaskstore(0, p, v, m);
 }
 
 // --- 0xfc32: memtag.randommaskstorez ---
 // CHECK-LABEL: define {{.*}} @memtag_randommaskstorez(ptr {{.*}}, {{.*}}, {{.*}})
-// W32: call ptr @llvm.wasm.memtag.randommaskstorez.i32(i32 0, ptr {{.*}}, i32 {{.*}}, i32 {{.*}})
-// W64: call ptr @llvm.wasm.memtag.randommaskstorez.i64(i32 0, ptr {{.*}}, i64 {{.*}}, i64 {{.*}})
+// W32: call ptr @llvm.wasm.memtag.randommaskstorez.i32.i32(i32 0, ptr {{.*}}, i32 {{.*}}, i32 {{.*}})
+// W64: call ptr @llvm.wasm.memtag.randommaskstorez.i64.i64(i32 0, ptr {{.*}}, i64 {{.*}}, i64 {{.*}})
 void *memtag_randommaskstorez(void *p, size_t v, size_t m) {
   return __builtin_wasm_memtag_randommaskstorez(0, p, v, m);
 }
 
 // --- 0xfc33: memtag.add ---
 // CHECK-LABEL: define {{.*}} @memtag_add(ptr {{.*}}, {{.*}}, {{.*}})
-// W32: call ptr @llvm.wasm.memtag.add.i32(i32 0, ptr {{.*}}, i32 {{.*}}, i32 {{.*}})
-// W64: call ptr @llvm.wasm.memtag.add.i64(i32 0, ptr {{.*}}, i64 {{.*}}, i64 {{.*}})
+// W32: call ptr @llvm.wasm.memtag.add.i32.i32(i32 0, ptr {{.*}}, i32 {{.*}}, i32 {{.*}})
+// W64: call ptr @llvm.wasm.memtag.add.i64.i64(i32 0, ptr {{.*}}, i64 {{.*}}, i64 {{.*}})
 void *memtag_add(void *p, size_t o, size_t t) {
   return __builtin_wasm_memtag_add(0, p, o, t);
 }
 
 // --- 0xfc34: memtag.addstore ---
 // CHECK-LABEL: define {{.*}} @memtag_addstore(ptr {{.*}}, {{.*}}, {{.*}}, {{.*}})
-// W32: call ptr @llvm.wasm.memtag.addstore.i32(i32 0, ptr {{.*}}, i32 {{.*}}, i32 {{.*}}, i32 {{.*}})
-// W64: call ptr @llvm.wasm.memtag.addstore.i64(i32 0, ptr {{.*}}, i64 {{.*}}, i64 {{.*}}, i64 {{.*}})
+// W32: call ptr @llvm.wasm.memtag.addstore.i32.i32.i32(i32 0, ptr {{.*}}, i32 {{.*}}, i32 {{.*}}, i32 {{.*}})
+// W64: call ptr @llvm.wasm.memtag.addstore.i64.i64.i64(i32 0, ptr {{.*}}, i64 {{.*}}, i64 {{.*}}, i64 {{.*}})
 void *memtag_addstore(void *p, size_t v, size_t o, size_t t) {
   return __builtin_wasm_memtag_addstore(0, p, v, o, t);
 }
 
 // --- 0xfc35: memtag.addstorez ---
 // CHECK-LABEL: define {{.*}} @memtag_addstorez(ptr {{.*}}, {{.*}}, {{.*}}, {{.*}})
-// W32: call ptr @llvm.wasm.memtag.addstorez.i32(i32 0, ptr {{.*}}, i32 {{.*}}, i32 {{.*}}, i32 {{.*}})
-// W64: call ptr @llvm.wasm.memtag.addstorez.i64(i32 0, ptr {{.*}}, i64 {{.*}}, i64 {{.*}}, i64 {{.*}})
+// W32: call ptr @llvm.wasm.memtag.addstorez.i32.i32.i32(i32 0, ptr {{.*}}, i32 {{.*}}, i32 {{.*}}, i32 {{.*}})
+// W64: call ptr @llvm.wasm.memtag.addstorez.i64.i64.i64(i32 0, ptr {{.*}}, i64 {{.*}}, i64 {{.*}}, i64 {{.*}})
 void *memtag_addstorez(void *p, size_t v, size_t o, size_t t) {
   return __builtin_wasm_memtag_addstorez(0, p, v, o, t);
 }
@@ -185,16 +185,16 @@ void *memtag_hint(void *p, void *h, size_t i) {
 
 // --- 0xfc37: memtag.hintstore ---
 // CHECK-LABEL: define {{.*}} @memtag_hintstore(ptr {{.*}}, {{.*}}, ptr {{.*}}, {{.*}})
-// W32: call ptr @llvm.wasm.memtag.hintstore.i32(i32 0, ptr {{.*}}, i32 {{.*}}, ptr {{.*}}, i32 {{.*}})
-// W64: call ptr @llvm.wasm.memtag.hintstore.i64(i32 0, ptr {{.*}}, i64 {{.*}}, ptr {{.*}}, i64 {{.*}})
+// W32: call ptr @llvm.wasm.memtag.hintstore.i32.i32(i32 0, ptr {{.*}}, i32 {{.*}}, ptr {{.*}}, i32 {{.*}})
+// W64: call ptr @llvm.wasm.memtag.hintstore.i64.i64(i32 0, ptr {{.*}}, i64 {{.*}}, ptr {{.*}}, i64 {{.*}})
 void *memtag_hintstore(void *p, size_t v, void *h, size_t i) {
   return __builtin_wasm_memtag_hintstore(0, p, v, h, i);
 }
 
 // --- 0xfc38: memtag.hintstorez ---
 // CHECK-LABEL: define {{.*}} @memtag_hintstorez(ptr {{.*}}, {{.*}}, ptr {{.*}}, {{.*}})
-// W32: call ptr @llvm.wasm.memtag.hintstorez.i32(i32 0, ptr {{.*}}, i32 {{.*}}, ptr {{.*}}, i32 {{.*}})
-// W64: call ptr @llvm.wasm.memtag.hintstorez.i64(i32 0, ptr {{.*}}, i64 {{.*}}, ptr {{.*}}, i64 {{.*}})
+// W32: call ptr @llvm.wasm.memtag.hintstorez.i32.i32(i32 0, ptr {{.*}}, i32 {{.*}}, ptr {{.*}}, i32 {{.*}})
+// W64: call ptr @llvm.wasm.memtag.hintstorez.i64.i64(i32 0, ptr {{.*}}, i64 {{.*}}, ptr {{.*}}, i64 {{.*}})
 void *memtag_hintstorez(void *p, size_t v, void *h, size_t i) {
   return __builtin_wasm_memtag_hintstorez(0, p, v, h, i);
 }

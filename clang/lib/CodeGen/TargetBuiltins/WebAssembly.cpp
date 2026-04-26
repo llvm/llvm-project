@@ -816,7 +816,8 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Value *PtrOffset = EmitScalarExpr(E->getArg(2));
     Value *TagOffset = EmitScalarExpr(E->getArg(3));
     Function *Callee =
-        CGM.getIntrinsic(Intrinsic::wasm_memtag_add, TagOffset->getType());
+        CGM.getIntrinsic(Intrinsic::wasm_memtag_add,
+                         {PtrOffset->getType(), TagOffset->getType()});
     return Builder.CreateCall(Callee, {Index, Ptr, PtrOffset, TagOffset});
   }
   case WebAssembly::BI__builtin_wasm_memtag_addstore: {
@@ -825,8 +826,9 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Value *B16 = EmitScalarExpr(E->getArg(2));
     Value *PtrOffset = EmitScalarExpr(E->getArg(3));
     Value *TagOffset = EmitScalarExpr(E->getArg(4));
-    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memtag_addstore,
-                                        {B16->getType(), TagOffset->getType()});
+    Function *Callee = CGM.getIntrinsic(
+        Intrinsic::wasm_memtag_addstore,
+        {B16->getType(), PtrOffset->getType(), TagOffset->getType()});
     return Builder.CreateCall(Callee, {Index, Ptr, B16, PtrOffset, TagOffset});
   }
   case WebAssembly::BI__builtin_wasm_memtag_addstorez: {
@@ -835,8 +837,9 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Value *B16 = EmitScalarExpr(E->getArg(2));
     Value *PtrOffset = EmitScalarExpr(E->getArg(3));
     Value *TagOffset = EmitScalarExpr(E->getArg(4));
-    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memtag_addstorez,
-                                        {B16->getType(), TagOffset->getType()});
+    Function *Callee = CGM.getIntrinsic(
+        Intrinsic::wasm_memtag_addstorez,
+        {B16->getType(), PtrOffset->getType(), TagOffset->getType()});
     return Builder.CreateCall(Callee, {Index, Ptr, B16, PtrOffset, TagOffset});
   }
   case WebAssembly::BI__builtin_wasm_memtag_hint: {
