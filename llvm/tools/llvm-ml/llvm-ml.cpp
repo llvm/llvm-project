@@ -158,7 +158,7 @@ static int AssembleInput(StringRef ProgName, const Target *TheTarget,
   std::unique_ptr<MCAsmParser> Parser(
       createMCMasmParser(SrcMgr, Ctx, Str, MAI, TM, 0));
   std::unique_ptr<MCTargetAsmParser> TAP(
-      TheTarget->createMCAsmParser(STI, *Parser, MCII, MCOptions));
+      TheTarget->createMCAsmParser(STI, *Parser, MCII));
 
   if (!TAP) {
     WithColor::error(errs(), ProgName)
