@@ -157,9 +157,6 @@ BinaryContext::BinaryContext(std::unique_ptr<MCContext> Ctx,
       STI(std::move(STI)), InstPrinter(std::move(InstPrinter)),
       MIA(std::move(MIA)), MIB(std::move(MIB)), MRI(std::move(MRI)),
       DisAsm(std::move(DisAsm)), Logger(Logger), InitialDynoStats(isAArch64()) {
-  // createMCAsmInfo stored a pointer to a local MCTargetOptions in MCAsmInfo.
-  // Update it to point to our member that will outlive MCAsmInfo.
-  const_cast<MCAsmInfo *>(this->AsmInfo.get())->setTargetOptions(MCOptions);
   RegularPageSize = isAArch64() ? RegularPageSizeAArch64 : RegularPageSizeX86;
   PageAlign = opts::NoHugePages ? RegularPageSize : HugePageSize;
 }
@@ -229,8 +226,9 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
         make_error_code(std::errc::not_supported),
         Twine("BOLT-ERROR: no register info for target ", TripleName));
 
-  // Set up disassembler.
-  MCTargetOptions MCOptions;
+  // Set up disassembler. The MCAsmInfo holds a reference to MCTargetOptions, so
+  // make it static to outlive the AsmInfo.
+  static const MCTargetOptions MCOptions;
   std::unique_ptr<MCAsmInfo> AsmInfo(
       TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
   if (!AsmInfo)
