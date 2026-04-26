@@ -993,6 +993,13 @@ public:
   virtual EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
                                  EVT VT) const;
 
+  /// Return the "preferred" register width on this target.
+  virtual unsigned getRegisterWidth(const DataLayout &DL) const {
+    // Currently we assume the register width matches the pointer width.
+    // NOTE: This should match Clang's `getRegisterWidth`.
+    return DL.getAddressSizeInBits(0u);
+  }
+
   /// Return the ValueType for comparison libcalls. Comparison libcalls include
   /// floating point comparison calls, and Ordered/Unordered check calls on
   /// floating point numbers.
@@ -1002,7 +1009,7 @@ public:
   /// targets that have a cheaper comparison at other sizes.
   virtual MVT::SimpleValueType
   getCmpLibcallReturnType(const DataLayout &DL) const {
-    return getPointerTy(DL).SimpleTy;
+    return MVT::getIntegerVT(getRegisterWidth(DL)).SimpleTy;
   }
 
   /// For targets without i1 registers, this gives the nature of the high-bits
