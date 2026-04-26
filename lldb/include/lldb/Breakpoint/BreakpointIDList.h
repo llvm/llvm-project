@@ -51,7 +51,8 @@ public:
   SplitIDRangeExpression(llvm::StringRef in_string);
 
   static llvm::Error
-  FindAndReplaceIDRanges(Args &old_args, Target *target, bool allow_locations,
+  FindAndReplaceIDRanges(Args &old_args, ExecutionContext &exe_ctx,
+                         bool allow_locations,
                          BreakpointName::Permissions ::PermissionKinds purpose,
                          Args &new_args);
 
