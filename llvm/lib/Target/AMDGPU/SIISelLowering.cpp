@@ -993,6 +993,11 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        Custom);
   }
 
+  if (Subtarget->hasGFX1250Insts()) {
+    setOperationAction(ISD::CONVERT_FROM_ARBITRARY_FP,
+                       {MVT::f16, MVT::v2f16, MVT::v4f16}, Custom);
+  }
+
   if (Subtarget->hasCvtPkF16F32Inst()) {
     setOperationAction(ISD::FP_ROUND,
                        {MVT::v2f16, MVT::v4f16, MVT::v8f16, MVT::v16f16},
@@ -10579,13 +10584,98 @@ SDValue SITargetLowering::lowerWorkitemID(SelectionDAG &DAG, SDValue Op,
                      DAG.getValueType(SmallVT));
 }
 
+// Pack vector inputs as hw instruction is packed.
+// FIXME: note, packing loses lane-wise poison. Should we do something about
+// it?
+SDValue SITargetLowering::packBytesToI32(SelectionDAG &DAG, const SDLoc &SL,
+                                         SDValue Src, unsigned NumBytes,
+                                         unsigned FirstLane) {
+  EVT SrcEltVT = Src.getValueType().getVectorElementType();
+  SDValue PackedI32;
+  for (unsigned I = 0; I != NumBytes; ++I) {
+    SDValue Elt = DAG.getExtractVectorElt(SL, SrcEltVT, Src, FirstLane + I);
+    SDValue Byte = DAG.getZExtOrTrunc(Elt, SL, MVT::i32);
+    Byte = DAG.getNode(ISD::AND, SL, MVT::i32, Byte,
+                       DAG.getConstant(0xFF, SL, MVT::i32));
+    if (I != 0)
+      Byte = DAG.getNode(ISD::SHL, SL, MVT::i32, Byte,
+                         DAG.getConstant(I * 8, SL, MVT::i32));
+    PackedI32 =
+        I == 0 ? Byte : DAG.getNode(ISD::OR, SL, MVT::i32, PackedI32, Byte);
+  }
+  return PackedI32;
+}
+
+SDValue SITargetLowering::lowerFromFP8ToF32(SDValue Op, bool IsBF8,
+                                            SelectionDAG &DAG) const {
+  EVT DstVT = Op.getValueType();
+  SDLoc SL(Op);
+  SDValue Src = Op.getOperand(0);
+
+  if (DstVT == MVT::f32) {
+    unsigned IntrID =
+        IsBF8 ? Intrinsic::amdgcn_cvt_f32_bf8 : Intrinsic::amdgcn_cvt_f32_fp8;
+    SDValue SrcI32 = DAG.getAnyExtOrTrunc(Src, SL, MVT::i32);
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, MVT::f32,
+                       DAG.getTargetConstant(IntrID, SL, MVT::i32), SrcI32,
+                       DAG.getTargetConstant(0, SL, MVT::i32));
+  }
+
+  auto EmitPk = [&](SDValue PackedI32, unsigned WordSel) {
+    unsigned IntrID = IsBF8 ? Intrinsic::amdgcn_cvt_pk_f32_bf8
+                            : Intrinsic::amdgcn_cvt_pk_f32_fp8;
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, MVT::v2f32,
+                       DAG.getTargetConstant(IntrID, SL, MVT::i32), PackedI32,
+                       DAG.getTargetConstant(WordSel, SL, MVT::i1));
+  };
+
+  if (DstVT == MVT::v2f32)
+    return EmitPk(packBytesToI32(DAG, SL, Src, 2, 0), 0);
+
+  SDValue PackedI32 = packBytesToI32(DAG, SL, Src, 4, 0);
+  SDValue Lo = EmitPk(PackedI32, 0);
+  SDValue Hi = EmitPk(PackedI32, 1);
+  return DAG.getNode(ISD::CONCAT_VECTORS, SL, MVT::v4f32, Lo, Hi);
+}
+
+SDValue SITargetLowering::lowerFromFP8ToF16(SDValue Op, bool IsBF8,
+                                            SelectionDAG &DAG) const {
+  assert(Subtarget->hasGFX1250Insts() &&
+         "unscaled fp8/bf8 -> f16 requires gfx1250+");
+  EVT DstVT = Op.getValueType();
+  SDLoc SL(Op);
+  SDValue Src = Op.getOperand(0);
+
+  // amdgcn_cvt_f16_{fp8,bf8}(i32 src, byte_sel) -> f16.
+  // amdgcn_cvt_pk_f16_{fp8,bf8}(i16 src) -> v2f16.
+  if (!DstVT.isVector()) {
+    unsigned IntrID =
+        IsBF8 ? Intrinsic::amdgcn_cvt_f16_bf8 : Intrinsic::amdgcn_cvt_f16_fp8;
+    SDValue SrcI32 = DAG.getAnyExtOrTrunc(Src, SL, MVT::i32);
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, MVT::f16,
+                       DAG.getTargetConstant(IntrID, SL, MVT::i32), SrcI32,
+                       DAG.getTargetConstant(0, SL, MVT::i32));
+  }
+
+  unsigned IntrID = IsBF8 ? Intrinsic::amdgcn_cvt_pk_f16_bf8
+                          : Intrinsic::amdgcn_cvt_pk_f16_fp8;
+  SDValue IntrConst = DAG.getTargetConstant(IntrID, SL, MVT::i32);
+  auto EmitPk = [&](unsigned FirstLane) {
+    SDValue PackedI32 = packBytesToI32(DAG, SL, Src, 2, FirstLane);
+    SDValue PackedI16 = DAG.getNode(ISD::TRUNCATE, SL, MVT::i16, PackedI32);
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, MVT::v2f16, IntrConst,
+                       PackedI16);
+  };
+  if (DstVT.getVectorNumElements() == 2)
+    return EmitPk(0);
+  SDValue Lo = EmitPk(0);
+  SDValue Hi = EmitPk(2);
+  return DAG.getNode(ISD::CONCAT_VECTORS, SL, DstVT, Lo, Hi);
+}
+
 SDValue
 SITargetLowering::LowerCONVERT_FROM_ARBITRARY_FP(SDValue Op,
                                                  SelectionDAG &DAG) const {
-  EVT DstVT = Op.getValueType();
-  if (DstVT != MVT::f32 && DstVT != MVT::v2f32 && DstVT != MVT::v4f32)
-    return SDValue();
-
   bool IsBF8 = false;
   switch (static_cast<APFloatBase::Semantics>(Op.getConstantOperandVal(1))) {
   case APFloatBase::S_Float8E4M3FN:
@@ -10598,57 +10688,17 @@ SITargetLowering::LowerCONVERT_FROM_ARBITRARY_FP(SDValue Op,
     return SDValue();
   }
 
-  SDLoc SL(Op);
-  SDValue Src = Op.getOperand(0);
-
   // Defer constant inputs to generic bit-twiddling expansion.
-  if (DAG.isConstantIntBuildVectorOrConstantInt(Src))
+  if (DAG.isConstantIntBuildVectorOrConstantInt(Op.getOperand(0)))
     return SDValue();
 
-  // Pack vector inputs as hw instruction is packed.
-  // FIXME: note, packing loses lane-wise poison. Should we do something about
-  // it?
-  auto PackBytes = [&](unsigned NumBytes, unsigned FirstLane) {
-    EVT EltVT = Src.getValueType().getVectorElementType();
-    SDValue PackedI32;
-    for (unsigned I = 0; I != NumBytes; ++I) {
-      SDValue Elt = DAG.getExtractVectorElt(SL, EltVT, Src, FirstLane + I);
-      SDValue Byte = DAG.getZExtOrTrunc(Elt, SL, MVT::i32);
-      Byte = DAG.getNode(ISD::AND, SL, MVT::i32, Byte,
-                         DAG.getConstant(0xFF, SL, MVT::i32));
-      if (I != 0)
-        Byte = DAG.getNode(ISD::SHL, SL, MVT::i32, Byte,
-                           DAG.getConstant(I * 8, SL, MVT::i32));
-      PackedI32 =
-          I == 0 ? Byte : DAG.getNode(ISD::OR, SL, MVT::i32, PackedI32, Byte);
-    }
-    return PackedI32;
-  };
-
-  auto EmitPk = [&](SDValue PackedI32, unsigned WordSel) {
-    unsigned IntrID = IsBF8 ? Intrinsic::amdgcn_cvt_pk_f32_bf8
-                            : Intrinsic::amdgcn_cvt_pk_f32_fp8;
-    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, MVT::v2f32,
-                       DAG.getTargetConstant(IntrID, SL, MVT::i32), PackedI32,
-                       DAG.getTargetConstant(WordSel, SL, MVT::i1));
-  };
-
-  if (DstVT == MVT::f32) {
-    unsigned IntrID =
-        IsBF8 ? Intrinsic::amdgcn_cvt_f32_bf8 : Intrinsic::amdgcn_cvt_f32_fp8;
-    SDValue SrcI32 = DAG.getAnyExtOrTrunc(Src, SL, MVT::i32);
-    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, MVT::f32,
-                       DAG.getTargetConstant(IntrID, SL, MVT::i32), SrcI32,
-                       DAG.getTargetConstant(0, SL, MVT::i32));
-  }
-
-  if (DstVT == MVT::v2f32)
-    return EmitPk(PackBytes(2, 0), 0);
-
-  SDValue PackedI32 = PackBytes(4, 0);
-  SDValue Lo = EmitPk(PackedI32, 0);
-  SDValue Hi = EmitPk(PackedI32, 1);
-  return DAG.getNode(ISD::CONCAT_VECTORS, SL, MVT::v4f32, Lo, Hi);
+  EVT DstVT = Op.getValueType();
+  EVT EltVT = DstVT.isVector() ? DstVT.getVectorElementType() : DstVT;
+  if (EltVT == MVT::f16)
+    return lowerFromFP8ToF16(Op, IsBF8, DAG);
+  if (DstVT == MVT::f32 || DstVT == MVT::v2f32 || DstVT == MVT::v4f32)
+    return lowerFromFP8ToF32(Op, IsBF8, DAG);
+  return SDValue();
 }
 
 SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
