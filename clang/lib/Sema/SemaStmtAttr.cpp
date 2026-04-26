@@ -890,7 +890,7 @@ static bool HasSideEffectsForAssume(const Expr *E, const ASTContext &Ctx) {
             return true;
         }
 
-        SmallPtrSet<const FunctionDecl *, 8> Visited;
+        llvm::SmallPtrSet<const FunctionDecl *, 8> Visited;
         if (FunctionBodyHasSideEffects(FD, Ctx, Visited))
           return true;
       } else {
