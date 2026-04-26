@@ -9,7 +9,6 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/OSUtil/linux/sysinfo.h"
 #include "src/fcntl/open.h"
-#include "src/string/memory_utils/inline_memcpy.h"
 #include "src/unistd/close.h"
 #include "src/unistd/unlink.h"
 #include "src/unistd/write.h"
@@ -17,11 +16,8 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-static int write_test_file(cpp::string_view path, cpp::string_view contents) {
-  __extension__ char buf[path.size() + 1];
-  inline_memcpy(buf, path.data(), path.size());
-  buf[path.size()] = '\0';
-  int fd = LIBC_NAMESPACE::open(buf, O_WRONLY | O_CREAT | O_TRUNC, 0600);
+static int write_test_file(const char *path, cpp::string_view contents) {
+  int fd = LIBC_NAMESPACE::open(path, O_WRONLY | O_CREAT | O_TRUNC, 0600);
   if (fd < 0)
     return fd;
 
@@ -54,10 +50,9 @@ TEST(LlvmLibcOSUtilSysinfoTest, OnlineCpuCountSmokeTest) {
 }
 
 TEST(LlvmLibcOSUtilSysinfoTest, SyntheticCpuLists) {
-  constexpr const char *FILENAME =
+  constexpr char FILENAME[] =
       APPEND_LIBC_TEST("sysinfo.synthetic_cpu_list.test");
   CString test_file = libc_make_test_file_path(FILENAME);
-  cpp::string_view test_file_path = static_cast<const char *>(test_file);
 
   struct TestCase {
     cpp::string_view contents;
@@ -76,20 +71,19 @@ TEST(LlvmLibcOSUtilSysinfoTest, SyntheticCpuLists) {
   };
 
   for (const TestCase &test_case : TEST_CASES) {
-    ASSERT_EQ(write_test_file(test_file_path, test_case.contents), 0);
-    cpp::optional<size_t> parsed = sysinfo::parse_nproc_from(test_file_path);
+    ASSERT_EQ(write_test_file(test_file, test_case.contents), 0);
+    cpp::optional<size_t> parsed = sysinfo::parse_nproc_from(test_file);
     EXPECT_EQ(static_cast<bool>(parsed), static_cast<bool>(test_case.expected));
     if (parsed)
       EXPECT_EQ(*parsed, *test_case.expected);
-    EXPECT_GT(sysinfo::parse_nproc_with_fallback_from(test_file_path),
-              size_t(0));
+    EXPECT_GT(sysinfo::parse_nproc_with_fallback_from(test_file), size_t(0));
   }
 
-  ASSERT_EQ(LIBC_NAMESPACE::unlink(test_file_path.data()), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::unlink(test_file), 0);
 }
 
 TEST(LlvmLibcOSUtilSysinfoTest, NonexistentPath) {
-  constexpr cpp::string_view TEST_PATH =
+  constexpr const char *TEST_PATH =
       "/not-exist-at-all-path-for-libc-nproc-test";
 
   EXPECT_FALSE(static_cast<bool>(sysinfo::parse_nproc_from(TEST_PATH)));

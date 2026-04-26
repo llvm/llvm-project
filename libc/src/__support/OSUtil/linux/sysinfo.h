@@ -13,21 +13,19 @@
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/optional.h"
-#include "src/__support/CPP/string_view.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/close.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/open.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/read.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/sched_getaffinity.h"
 #include "src/__support/ctype_utils.h"
 #include "src/__support/macros/config.h"
-#include "src/string/memory_utils/inline_memcpy.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace sysinfo {
 
-LIBC_INLINE_VAR constexpr cpp::string_view POSSIBLE_NPROC_PATH =
+LIBC_INLINE_VAR constexpr char POSSIBLE_NPROC_PATH[] =
     "/sys/devices/system/cpu/possible";
-LIBC_INLINE_VAR constexpr cpp::string_view ONLINE_NPROC_PATH =
+LIBC_INLINE_VAR constexpr char ONLINE_NPROC_PATH[] =
     "/sys/devices/system/cpu/online";
 
 // Parses Linux CPU-list syntax:
@@ -52,12 +50,9 @@ class ProcParser {
   size_t range_start;
   bool has_error;
 
-  LIBC_INLINE static int open_path(cpp::string_view path) {
-    __extension__ char buf[path.size() + 1];
-    inline_memcpy(buf, path.data(), path.size());
-    buf[path.size()] = '\0';
+  LIBC_INLINE static int open_path(const char *path) {
     ErrorOr<int> open_result =
-        linux_syscalls::open(buf, O_RDONLY | O_CLOEXEC, 0);
+        linux_syscalls::open(path, O_RDONLY | O_CLOEXEC, 0);
     return open_result ? *open_result : -1;
   }
 
@@ -134,7 +129,9 @@ class ProcParser {
   }
 
 public:
-  LIBC_INLINE explicit ProcParser(cpp::string_view path)
+  // Using string view isn't exactly correct because we demands null-terminated
+  // strings.
+  LIBC_INLINE explicit ProcParser(const char *path)
       : state(ProcParserState::ParseUnstarted), buffer{}, fd(open_path(path)),
         cursor(buffer.size()), buffer_end(buffer.size()), cpu_count(0),
         current_number(0), range_start(0), has_error(fd < 0) {}
@@ -164,11 +161,11 @@ public:
   }
 };
 
-LIBC_INLINE cpp::optional<size_t> parse_nproc_from(cpp::string_view path) {
+LIBC_INLINE cpp::optional<size_t> parse_nproc_from(const char *path) {
   return ProcParser(path).parse();
 }
 
-LIBC_INLINE size_t parse_nproc_with_fallback_from(cpp::string_view path) {
+LIBC_INLINE size_t parse_nproc_with_fallback_from(const char *path) {
   if (cpp::optional<size_t> cpu_count = parse_nproc_from(path))
     return *cpu_count;
 

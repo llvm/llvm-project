@@ -7,9 +7,9 @@ add_libc_test(
   SUITE libc-osutil-tests
   SRCS sysinfo_test.cpp
   DEPENDS
+    libc.src.__support.CPP.string_view
     libc.src.__support.OSUtil.linux.sysinfo
     libc.src.fcntl.open
-    libc.src.string.memory_utils.inline_memcpy
     libc.src.unistd.close
     libc.src.unistd.unlink
     libc.src.unistd.write
