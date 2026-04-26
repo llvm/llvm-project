@@ -1556,7 +1556,7 @@ static bool checkDivCeilNUW(Value *X, Value *Y, const SimplifyQuery &SQ) {
   APInt MaxX = CRX.getUnsignedMax();
   APInt MaxY = CRY.getUnsignedMax();
 
-  return MinY.ugt(0) && !MaxX.ugt(-MaxY);
+  return !MinY.isZero() && !MaxX.ugt(-MaxY);
 }
 
 /// Fold the div_ceil idiom in both forms:
