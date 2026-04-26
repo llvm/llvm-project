@@ -8098,110 +8098,14 @@ bool Compiler<Emitter>::emitHLSLAggregateSplat(PrimType SrcT,
                                                unsigned SrcOffset,
                                                QualType DestType,
                                                const Expr *E) {
-  // Vectors and matrices are treated as flat sequences of elements.
-  unsigned NumElems = 0;
-  QualType ElemType;
-  if (const auto *VT = DestType->getAs<VectorType>()) {
-    NumElems = VT->getNumElements();
-    ElemType = VT->getElementType();
-  } else if (const auto *MT = DestType->getAs<ConstantMatrixType>()) {
-    NumElems = MT->getNumElementsFlattened();
-    ElemType = MT->getElementType();
-  }
-  if (NumElems > 0) {
-    PrimType ElemT = classifyPrim(ElemType);
-    for (unsigned I = 0; I != NumElems; ++I) {
-      if (!this->emitGetLocal(SrcT, SrcOffset, E))
-        return false;
-      if (!this->emitPrimCast(SrcT, ElemT, ElemType, E))
-        return false;
-      if (!this->emitInitElem(ElemT, I, E))
-        return false;
-    }
-    return true;
-  }
-
-  // Arrays: primitive elements are filled directly; composite elements
-  // require recursion into each sub-aggregate.
-  if (const auto *AT = DestType->getAsArrayTypeUnsafe()) {
-    const auto *CAT = cast<ConstantArrayType>(AT);
-    QualType ArrElemType = CAT->getElementType();
-    unsigned ArrSize = CAT->getZExtSize();
-
-    if (OptPrimType ElemT = classify(ArrElemType)) {
-      for (unsigned I = 0; I != ArrSize; ++I) {
-        if (!this->emitGetLocal(SrcT, SrcOffset, E))
-          return false;
-        if (!this->emitPrimCast(SrcT, *ElemT, ArrElemType, E))
-          return false;
-        if (!this->emitInitElem(*ElemT, I, E))
-          return false;
-      }
-    } else {
-      for (unsigned I = 0; I != ArrSize; ++I) {
-        if (!this->emitConstUint32(I, E))
-          return false;
-        if (!this->emitArrayElemPtrUint32(E))
-          return false;
-        if (!emitHLSLAggregateSplat(SrcT, SrcOffset, ArrElemType, E))
-          return false;
-        if (!this->emitFinishInitPop(E))
-          return false;
-      }
-    }
-    return true;
-  }
-
-  // Records: fill base classes first, then named fields in declaration
-  // order.
-  if (DestType->isRecordType()) {
-    const Record *R = getRecord(DestType);
-    if (!R)
+  auto ProduceValue = [&](PrimType DestT, QualType DestQT,
+                          const Expr *E) -> bool {
+    if (!this->emitGetLocal(SrcT, SrcOffset, E))
       return false;
-
-    if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(R->getDecl())) {
-      for (const CXXBaseSpecifier &BS : CXXRD->bases()) {
-        const Record::Base *B = R->getBase(BS.getType());
-        assert(B);
-        if (!this->emitGetPtrBase(B->Offset, E))
-          return false;
-        if (!emitHLSLAggregateSplat(SrcT, SrcOffset, BS.getType(), E))
-          return false;
-        if (!this->emitFinishInitPop(E))
-          return false;
-      }
-    }
-
-    for (const Record::Field &F : R->fields()) {
-      if (F.isUnnamedBitField())
-        continue;
-
-      QualType FieldType = F.Decl->getType();
-      if (OptPrimType FieldT = classify(FieldType)) {
-        if (!this->emitGetLocal(SrcT, SrcOffset, E))
-          return false;
-        if (!this->emitPrimCast(SrcT, *FieldT, FieldType, E))
-          return false;
-        if (F.isBitField()) {
-          if (!this->emitInitBitField(*FieldT, F.Offset, F.bitWidth(), E))
-            return false;
-        } else {
-          if (!this->emitInitField(*FieldT, F.Offset, E))
-            return false;
-        }
-      } else {
-        if (!this->emitGetPtrField(F.Offset, E))
-          return false;
-        if (!emitHLSLAggregateSplat(SrcT, SrcOffset, FieldType, E))
-          return false;
-        if (!this->emitPopPtr(E))
-          return false;
-      }
-    }
-    return true;
-  }
-
-  return false;
+    return this->emitPrimCast(SrcT, DestT, DestQT, E);
+  };
+  HLSLElementStoreVisitor<Emitter> W(*this, ProduceValue, E);
+  return W.visit(DestType);
 }
 
 /// Return the total number of scalar elements in a type. This is used
