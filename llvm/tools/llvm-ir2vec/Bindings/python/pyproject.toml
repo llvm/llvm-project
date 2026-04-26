@@ -1,0 +1,42 @@
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "llvm-ir2vec"
+version = "0.1.0"
+description = "Python bindings for IR2Vec, an LLVM IR embedding framework"
+readme = {file = "README.md", content-type = "text/markdown"}
+license = "Apache-2.0 WITH LLVM-exception"
+authors = [{ name = "LLVM" }]
+keywords = ["llvm", "ir2vec", "embeddings", "compiler", "machine-learning"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Topic :: Software Development :: Compilers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: C++",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
+]
+requires-python = ">=3.10"
+dependencies = ["numpy"]
+
+[project.urls]
+Homepage = "https://llvm.org/"
+Documentation = "https://llvm.org/docs/MLGO.html#ir2vec"
+"Issue Tracker" = "https://github.com/llvm/llvm-project/issues"
+"Source Code" = "https://github.com/llvm/llvm-project/tree/main/llvm/tools/llvm-ir2vec"
+
+[tool.setuptools.packages.find]
+include = ["ir2vec*"]
