@@ -9,6 +9,7 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/OSUtil/linux/sysinfo.h"
 #include "src/fcntl/open.h"
+#include "src/string/memory_utils/inline_memcpy.h"
 #include "src/unistd/close.h"
 #include "src/unistd/unlink.h"
 #include "src/unistd/write.h"
@@ -17,8 +18,10 @@
 namespace LIBC_NAMESPACE_DECL {
 
 static int write_test_file(cpp::string_view path, cpp::string_view contents) {
-  int fd =
-      LIBC_NAMESPACE::open(path.data(), O_WRONLY | O_CREAT | O_TRUNC, 0600);
+  __extension__ char buf[path.size() + 1];
+  inline_memcpy(buf, path.data(), path.size());
+  buf[path.size()] = '\0';
+  int fd = LIBC_NAMESPACE::open(buf, O_WRONLY | O_CREAT | O_TRUNC, 0600);
   if (fd < 0)
     return fd;
 

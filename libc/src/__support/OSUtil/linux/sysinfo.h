@@ -20,6 +20,7 @@
 #include "src/__support/OSUtil/linux/syscall_wrappers/sched_getaffinity.h"
 #include "src/__support/ctype_utils.h"
 #include "src/__support/macros/config.h"
+#include "src/string/memory_utils/inline_memcpy.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace sysinfo {
@@ -52,8 +53,11 @@ class ProcParser {
   bool has_error;
 
   LIBC_INLINE static int open_path(cpp::string_view path) {
+    __extension__ char buf[path.size() + 1];
+    inline_memcpy(buf, path.data(), path.size());
+    buf[path.size()] = '\0';
     ErrorOr<int> open_result =
-        linux_syscalls::open(path.data(), O_RDONLY | O_CLOEXEC, 0);
+        linux_syscalls::open(buf, O_RDONLY | O_CLOEXEC, 0);
     return open_result ? *open_result : -1;
   }
 
