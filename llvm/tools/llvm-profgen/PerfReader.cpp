@@ -1025,16 +1025,25 @@ void UnsymbolizedProfileReader::readSampleCounters(TraceStream &TraceIt,
 
 void UnsymbolizedProfileReader::readUnsymbolizedProfile(StringRef FileName) {
   TraceStream TraceIt(FileName);
+  StringRef BinaryBuildID = getFilterBuildID(Binary);
   while (!TraceIt.isAtEoF()) {
     std::shared_ptr<StringBasedCtxKey> Key =
         std::make_shared<StringBasedCtxKey>();
     StringRef Line = TraceIt.getCurrentLine();
     // Read context stack for CS profile.
+    // Context frames may have optional [buildid:] prefix.
     if (Line.starts_with("[")) {
       ProfileIsCS = true;
       auto I = ContextStrSet.insert(Line.str());
-      SampleContext::createCtxVectorFromStr(*I.first, Key->Context);
+      bool LeafIsInternal = SampleContext::createCtxVectorFromStr(
+          *I.first, Key->Context, BinaryBuildID);
       TraceIt.advance();
+      if (!LeafIsInternal) {
+        // Skip ranges and branches for non-matching leaf buildid.
+        while (!TraceIt.isAtEoF() && !TraceIt.getCurrentLine().starts_with("["))
+          TraceIt.advance();
+        continue;
+      }
     }
     auto Ret =
         SampleCounters.emplace(Hashable<ContextKey>(Key), SampleCounter());

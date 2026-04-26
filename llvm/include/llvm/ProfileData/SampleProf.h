@@ -599,22 +599,39 @@ public:
   }
 
   /// Create a context vector from a given context string and save it in
-  /// `Context`.
-  static void createCtxVectorFromStr(StringRef ContextStr,
-                                     SampleContextFrameVector &Context) {
+  /// `Context`. If \p FilterBuildID is non-empty, strip matching
+  /// `buildid:` prefixes; non-matching frames become 0x0.
+  /// Returns true if the leaf (first) frame's buildid matches or no
+  /// filter is set, false if the leaf is external (non-matching buildid).
+  static bool createCtxVectorFromStr(StringRef ContextStr,
+                                     SampleContextFrameVector &Context,
+                                     StringRef FilterBuildID = StringRef()) {
     // Remove encapsulating '[' and ']' if any
     ContextStr = ContextStr.substr(1, ContextStr.size() - 2);
     StringRef ContextRemain = ContextStr;
     StringRef ChildContext;
     FunctionId Callee;
+    bool LeafIsInternal = true;
+    bool IsLeaf = true;
     while (!ContextRemain.empty()) {
       auto ContextSplit = ContextRemain.split(" @ ");
       ChildContext = ContextSplit.first;
       ContextRemain = ContextSplit.second;
+      // Strip [buildid:] prefix. On mismatch, the frame address is zero.
+      if (!FilterBuildID.empty()) {
+        auto ColonSplit = ChildContext.split(':');
+        bool Matches = ColonSplit.first == FilterBuildID;
+        ChildContext = Matches ? ColonSplit.second : StringRef("0x0");
+        if (IsLeaf) {
+          LeafIsInternal = Matches;
+          IsLeaf = false;
+        }
+      }
       LineLocation CallSiteLoc(0, 0);
       decodeContextString(ChildContext, Callee, CallSiteLoc);
       Context.emplace_back(Callee, CallSiteLoc);
     }
+    return LeafIsInternal;
   }
 
   // Decode context string for a frame to get function name and location.
