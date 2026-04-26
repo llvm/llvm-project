@@ -15,12 +15,17 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #define DEBUG_TYPE "dxil-metadata-analysis"
 
 using namespace llvm;
 using namespace dxil;
+
+static StringRef asStringRef(Metadata *S) {
+  return dyn_cast<MDString>(S)->getString();
+}
 
 static ModuleMetadataInfo collectMetadataInfo(Module &M) {
   ModuleMetadataInfo MMDAI;
@@ -35,6 +40,26 @@ static ModuleMetadataInfo collectMetadataInfo(Module &M) {
     auto *MinorMD = mdconst::extract<ConstantInt>(ValVerMD->getOperand(1));
     MMDAI.ValidatorVersion =
         VersionTuple(MajorMD->getZExtValue(), MinorMD->getZExtValue());
+  }
+
+  NamedMDNode *ContentsNode = M.getNamedMetadata("dx.source.contents");
+  NamedMDNode *ArgsNode = M.getNamedMetadata("dx.source.args");
+  // TODO Don't emit SRCI in cases when it is not emitted in
+  // DirectXShaderCompiler.
+  // TODO should we remove dx.source.contents/args?
+  if (ContentsNode && ArgsNode) {
+    MMDAI.SourceInfo.emplace();
+    MMDAI.SourceInfo->setCompressionType(
+        compression::zlib::isAvailable()
+            ? dxbc::SourceInfo::Contents::CompressionType::Zlib
+            : dxbc::SourceInfo::Contents::CompressionType::None);
+    for (Metadata *FileInfoNode : ContentsNode->operands()) {
+      auto *FileInfo = dyn_cast<MDTuple>(FileInfoNode);
+      MMDAI.SourceInfo->addFile(asStringRef(FileInfo->getOperand(0)),
+                                asStringRef(FileInfo->getOperand(1)));
+    }
+    for (Metadata *ArgNode : ArgsNode->getOperand(0)->operands())
+      MMDAI.SourceInfo->addArg(asStringRef(ArgNode), "");
   }
 
   // For all HLSL Shader functions
