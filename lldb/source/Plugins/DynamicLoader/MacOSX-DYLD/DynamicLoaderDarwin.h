@@ -42,7 +42,7 @@ public:
                                                   bool stop_others) override;
 
   void FindEquivalentSymbols(
-      lldb_private::Symbol *original_symbol,
+      const lldb_private::Symbol *original_symbol,
       lldb_private::ModuleList &module_list,
       lldb_private::SymbolContextList &equivalent_symbols) override;
 
@@ -57,8 +57,6 @@ public:
   virtual bool NeedToDoInitialImageFetch() = 0;
 
   std::optional<lldb_private::Address> GetStartAddress() override;
-
-  static void CreateSettings(lldb_private::Debugger &debugger);
 
 protected:
   void PrivateInitialize(lldb_private::Process *process);

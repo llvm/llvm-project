@@ -80,7 +80,7 @@ define i8 @reverse_cmp_v8i1(<8 x i16> %a0, <8 x i16> %a1) {
 ; SSE42-LABEL: reverse_cmp_v8i1:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    pcmpeqw %xmm1, %xmm0
-; SSE42-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[u,15,u,13,u,11,u,9,u,7,u,5,u,3,u,1]
+; SSE42-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[14,15,12,13,10,11,8,9,6,7,4,5,2,3,0,1]
 ; SSE42-NEXT:    packsswb %xmm0, %xmm0
 ; SSE42-NEXT:    pmovmskb %xmm0, %eax
 ; SSE42-NEXT:    # kill: def $al killed $al killed $eax
@@ -98,10 +98,9 @@ define i8 @reverse_cmp_v8i1(<8 x i16> %a0, <8 x i16> %a1) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpcmpeqw %xmm1, %xmm0, %k0
 ; AVX512-NEXT:    vpmovm2d %k0, %ymm0
-; AVX512-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [7,6,5,4,3,2,1,0]
+; AVX512-NEXT:    vmovdqa {{.*#+}} ymm1 = [7,6,5,4,3,2,1,0]
 ; AVX512-NEXT:    vpermd %ymm0, %ymm1, %ymm0
-; AVX512-NEXT:    vpmovd2m %ymm0, %k0
-; AVX512-NEXT:    kmovd %k0, %eax
+; AVX512-NEXT:    vmovmskps %ymm0, %eax
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -157,7 +156,7 @@ define i16 @reverse_cmp_v16i1(<16 x i8> %a0, <16 x i8> %a1) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpcmpeqb %xmm1, %xmm0, %k0
 ; AVX512-NEXT:    vpmovm2w %k0, %ymm0
-; AVX512-NEXT:    vpmovsxbw {{.*#+}} ymm1 = [15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
+; AVX512-NEXT:    vmovdqa {{.*#+}} ymm1 = [15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
 ; AVX512-NEXT:    vpermw %ymm0, %ymm1, %ymm0
 ; AVX512-NEXT:    vpmovw2m %ymm0, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax
@@ -227,8 +226,7 @@ define i32 @reverse_cmp_v32i1(<32 x i8> %a0, <32 x i8> %a1) {
 ; AVX512-V4-NEXT:    vpmovm2b %k0, %ymm0
 ; AVX512-V4-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16]
 ; AVX512-V4-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[2,3,0,1]
-; AVX512-V4-NEXT:    vpmovb2m %ymm0, %k0
-; AVX512-V4-NEXT:    kmovd %k0, %eax
+; AVX512-V4-NEXT:    vpmovmskb %ymm0, %eax
 ; AVX512-V4-NEXT:    vzeroupper
 ; AVX512-V4-NEXT:    retq
 ;
@@ -238,8 +236,7 @@ define i32 @reverse_cmp_v32i1(<32 x i8> %a0, <32 x i8> %a1) {
 ; AVX512-VBMI-NEXT:    vpmovm2b %k0, %ymm0
 ; AVX512-VBMI-NEXT:    vmovdqa {{.*#+}} ymm1 = [31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
 ; AVX512-VBMI-NEXT:    vpermb %ymm0, %ymm1, %ymm0
-; AVX512-VBMI-NEXT:    vpmovb2m %ymm0, %k0
-; AVX512-VBMI-NEXT:    kmovd %k0, %eax
+; AVX512-VBMI-NEXT:    vpmovmskb %ymm0, %eax
 ; AVX512-VBMI-NEXT:    vzeroupper
 ; AVX512-VBMI-NEXT:    retq
   %cmp = icmp eq <32 x i8> %a0, %a1

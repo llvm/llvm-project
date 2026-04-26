@@ -43,6 +43,12 @@
 // MAP_V5-NEXT:            name: "/src_root/Inputs/other.S"
 // MAP_V5-NEXT:       dir_index: 0
 
+// RUN: llvm-mc -triple x86_64-unknown-linux-gnu -filetype obj -o %t %s
+// RUN: llvm-readelf --sections %t | FileCheck %s --check-prefix=CHECK-NO-DEBUG
+
+// CHECK-NO-DEBUG: Section Headers:
+// CHECK-NO-DEBUG-NOT: .debug_
+
 # 1 "/MyTest/Inputs/other.S"
 
 foo:

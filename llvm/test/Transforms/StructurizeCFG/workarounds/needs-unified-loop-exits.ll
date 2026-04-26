@@ -28,7 +28,6 @@ define void @exiting-block(i1 %PredH1, i1 %PredB2, i1 %PredB1, i1 %PredH2) {
 ; CHECK:       H1:
 ; CHECK-NEXT:    br i1 [[PREDH1_INV]], label [[B1:%.*]], label [[FLOW3:%.*]]
 ; CHECK:       Flow3:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ true, [[B1]] ], [ undef, [[H1]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi i1 [ [[PREDB1:%.*]], [[B1]] ], [ [[PREDH1]], [[H1]] ]
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[H2:%.*]], label [[FLOW4:%.*]]
 ; CHECK:       H2:
@@ -58,7 +57,7 @@ define void @exiting-block(i1 %PredH1, i1 %PredB2, i1 %PredB1, i1 %PredH2) {
 ; CHECK-NEXT:    [[TMP5]] = phi i1 [ false, [[L2]] ], [ true, [[B2]] ]
 ; CHECK-NEXT:    br label [[FLOW]]
 ; CHECK:       Flow4:
-; CHECK-NEXT:    [[TMP6]] = phi i1 [ false, [[FLOW5]] ], [ [[TMP0]], [[FLOW3]] ]
+; CHECK-NEXT:    [[TMP6]] = phi i1 [ false, [[FLOW5]] ], [ true, [[FLOW3]] ]
 ; CHECK-NEXT:    [[TMP7:%.*]] = phi i1 [ [[TMP4]], [[FLOW5]] ], [ true, [[FLOW3]] ]
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[LOOP_EXIT_GUARD:%.*]], label [[H1]]
 ; CHECK:       loop.exit.guard1:

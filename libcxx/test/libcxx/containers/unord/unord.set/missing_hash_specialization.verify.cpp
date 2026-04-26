@@ -24,26 +24,26 @@
 using VT = std::pair<int, int>;
 
 struct BadHashNoCopy {
-  BadHashNoCopy() = default;
+  BadHashNoCopy()                     = default;
   BadHashNoCopy(BadHashNoCopy const&) = delete;
 
   template <class T>
-  std::size_t operator()(T const&) const { return 0; }
+  std::size_t operator()(T const&) const {
+    return 0;
+  }
 };
 
-struct BadHashNoCall {
-
-};
-
+struct BadHashNoCall {};
 
 struct GoodHashNoDefault {
   explicit GoodHashNoDefault(void*) {}
   template <class T>
-  std::size_t operator()(T const&) const { return 0; }
+  std::size_t operator()(T const&) const {
+    return 0;
+  }
 };
 
 int main(int, char**) {
-
   {
     using Set = std::unordered_set<VT>;
     Set s; // expected-error@__hash_table:* {{the specified hash does not meet the Hash requirements}}
@@ -63,7 +63,7 @@ int main(int, char**) {
   }
   {
     using Set = std::unordered_set<int, GoodHashNoDefault>;
-    Set s(/*bucketcount*/42, GoodHashNoDefault(nullptr));
+    Set s(/*bucketcount*/ 42, GoodHashNoDefault(nullptr));
   }
 
   return 0;

@@ -8,15 +8,23 @@
 
 #include "clang/Analysis/FlowSensitive/ASTOps.h"
 #include "TestingSupport.h"
+#include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Basic/LLVM.h"
+#include "clang/Frontend/ASTUnit.h"
+#include "clang/Tooling/Tooling.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <memory>
+#include <string>
 
 namespace {
 
 using namespace clang;
 using namespace dataflow;
 
+using ast_matchers::cxxMethodDecl;
 using ast_matchers::cxxRecordDecl;
 using ast_matchers::hasName;
 using ast_matchers::hasType;
@@ -105,6 +113,39 @@ TEST(ASTOpsTest, ReferencedDeclsLocalsNotParamsOrStatics) {
 
   EXPECT_THAT(getReferencedDecls(*Func).Locals,
               UnorderedElementsAre(LocalDecl));
+}
+
+TEST(ASTOpsTest, LambdaCaptures) {
+  std::string Code = R"cc(
+    void func(int CapturedByRef, int CapturedByValue, int NotCaptured) {
+    int Local;
+      auto Lambda = [&CapturedByRef, CapturedByValue, &Local](int LambdaParam) {
+      };
+    }
+  )cc";
+  std::unique_ptr<ASTUnit> Unit =
+      tooling::buildASTFromCodeWithArgs(Code, {"-fsyntax-only", "-std=c++17"});
+  auto &ASTCtx = Unit->getASTContext();
+
+  ASSERT_EQ(ASTCtx.getDiagnostics().getClient()->getNumErrors(), 0U);
+
+  auto *LambdaCallOp = selectFirst<CXXMethodDecl>(
+      "l", match(cxxMethodDecl(hasName("operator()")).bind("l"), ASTCtx));
+  ASSERT_NE(LambdaCallOp, nullptr);
+  auto *Func = cast<FunctionDecl>(findValueDecl(ASTCtx, "func"));
+  ASSERT_NE(Func, nullptr);
+  auto *CapturedByRefDecl = Func->getParamDecl(0);
+  ASSERT_NE(CapturedByRefDecl, nullptr);
+  auto *CapturedByValueDecl = Func->getParamDecl(1);
+  ASSERT_NE(CapturedByValueDecl, nullptr);
+
+  EXPECT_THAT(getReferencedDecls(*Func).LambdaCapturedParams, IsEmpty());
+  ReferencedDecls ForLambda = getReferencedDecls(*LambdaCallOp);
+  EXPECT_THAT(ForLambda.LambdaCapturedParams,
+              UnorderedElementsAre(CapturedByRefDecl, CapturedByValueDecl));
+  // Captured locals must be seen in the body for them to appear in
+  // ReferencedDecls.
+  EXPECT_THAT(ForLambda.Locals, IsEmpty());
 }
 
 } // namespace

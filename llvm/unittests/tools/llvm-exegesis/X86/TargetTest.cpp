@@ -9,11 +9,11 @@
 #include "Target.h"
 
 #include <cassert>
-#include <memory>
 
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "MmapUtils.h"
 #include "SubprocessMemory.h"
+#include "TestBase.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "gmock/gmock.h"
@@ -52,9 +52,6 @@ bool operator==(const MCInst &a, const MCInst &b) {
 
 namespace llvm {
 namespace exegesis {
-
-void InitializeX86ExegesisTarget();
-
 namespace {
 
 using testing::AllOf;
@@ -112,19 +109,9 @@ Matcher<MCInst> IsStackDeallocate(unsigned Size) {
                ElementsAre(IsReg(X86::RSP), IsReg(X86::RSP), IsImm(Size)));
 }
 
-constexpr const char kTriple[] = "x86_64-unknown-linux";
-
-class X86TargetTest : public ::testing::Test {
+class X86TargetTest : public X86TestBase {
 protected:
-  X86TargetTest(const char *Features)
-      : State(cantFail(LLVMState::Create(kTriple, "core2", Features))) {}
-
-  static void SetUpTestCase() {
-    LLVMInitializeX86TargetInfo();
-    LLVMInitializeX86Target();
-    LLVMInitializeX86TargetMC();
-    InitializeX86ExegesisTarget();
-  }
+  X86TargetTest(const char *Features) : X86TestBase("core2", Features) {}
 
   std::vector<MCInst> setRegTo(unsigned Reg, const APInt &Value) {
     return State.getExegesisTarget().setRegTo(State.getSubtargetInfo(), Reg,
@@ -134,8 +121,6 @@ protected:
   const Instruction &getInstr(unsigned OpCode) {
     return State.getIC().getInstr(OpCode);
   }
-
-  LLVMState State;
 };
 
 class X86Core2TargetTest : public X86TargetTest {
@@ -585,10 +570,18 @@ TEST_F(X86Core2TargetTest, SetRegToFP1_4Bits) {
                           OpcodeIs(X86::LD_Fp80m), IsStackDeallocate(10)));
 }
 
+TEST_F(X86Core2TargetTest, SetRegToDf1) {
+  EXPECT_THAT(setRegTo(X86::DF, APInt(1, 1)), ElementsAre(OpcodeIs(X86::STD)));
+}
+
+TEST_F(X86Core2TargetTest, SetRegToDf0) {
+  EXPECT_THAT(setRegTo(X86::DF, APInt(1, 0)), ElementsAre(OpcodeIs(X86::CLD)));
+}
+
 TEST_F(X86Core2Avx512TargetTest, FillMemoryOperands_ADD64rm) {
   const Instruction &I = getInstr(X86::ADD64rm);
   InstructionTemplate IT(&I);
-  constexpr const int kOffset = 42;
+  constexpr int kOffset = 42;
   State.getExegesisTarget().fillMemoryOperands(IT, X86::RDI, kOffset);
   // Memory is operands 2-6.
   EXPECT_THAT(IT.getValueFor(I.Operands[2]), IsReg(X86::RDI));
@@ -601,7 +594,7 @@ TEST_F(X86Core2Avx512TargetTest, FillMemoryOperands_ADD64rm) {
 TEST_F(X86Core2Avx512TargetTest, FillMemoryOperands_VGATHERDPSZ128rm) {
   const Instruction &I = getInstr(X86::VGATHERDPSZ128rm);
   InstructionTemplate IT(&I);
-  constexpr const int kOffset = 42;
+  constexpr int kOffset = 42;
   State.getExegesisTarget().fillMemoryOperands(IT, X86::RDI, kOffset);
   // Memory is operands 4-8.
   EXPECT_THAT(IT.getValueFor(I.Operands[4]), IsReg(X86::RDI));
@@ -631,9 +624,9 @@ TEST_F(X86Core2TargetTest, GenerateLowerMunmapTest) {
 }
 
 #ifdef __arm__
-static constexpr const uintptr_t VAddressSpaceCeiling = 0xC0000000;
+static constexpr uintptr_t VAddressSpaceCeiling = 0xC0000000;
 #else
-static constexpr const uintptr_t VAddressSpaceCeiling = 0x0000800000000000;
+static constexpr uintptr_t VAddressSpaceCeiling = 0x0000800000000000;
 #endif
 
 TEST_F(X86Core2TargetTest, GenerateUpperMunmapTest) {

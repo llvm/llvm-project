@@ -12,7 +12,7 @@
 
 define void @f() #0 {
 entry:
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr null)
   %alloc = call ptr @malloc(i64 16) #3
   %vFrame = call noalias nonnull ptr @llvm.coro.begin(token %id, ptr %alloc)
 
@@ -36,7 +36,7 @@ await.ready:
     i8 1, label %exit
   ]
 exit:
-  call i1 @llvm.coro.end(ptr null, i1 false, token none)
+  call void @llvm.coro.end(ptr null, i1 false, token none)
   ret void
 }
 
@@ -58,7 +58,7 @@ declare token @llvm.coro.save(ptr) #2
 declare ptr @llvm.coro.frame() #3
 declare i8 @llvm.coro.suspend(token, i1) #2
 declare ptr @llvm.coro.free(token, ptr nocapture readonly) #1
-declare i1 @llvm.coro.end(ptr, i1, token) #2
+declare void @llvm.coro.end(ptr, i1, token) #2
 declare ptr @llvm.coro.subfn.addr(ptr nocapture readonly, i8) #1
 declare ptr @malloc(i64)
 

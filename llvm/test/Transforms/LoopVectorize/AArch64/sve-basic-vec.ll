@@ -1,5 +1,5 @@
-; RUN: opt -passes=loop-vectorize,dce,instcombine -mtriple aarch64-linux-gnu -mattr=+sve \
-; RUN:   -prefer-predicate-over-epilogue=scalar-epilogue < %s -S | FileCheck %s
+; RUN: opt -passes=loop-vectorize -mtriple aarch64-linux-gnu -mattr=+sve \
+; RUN:   -tail-folding-policy=dont-fold-tail < %s -S | FileCheck %s
 
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
@@ -11,13 +11,13 @@ define void @cmpsel_i32(ptr noalias nocapture %a, ptr noalias nocapture readonly
 ; CHECK:       vector.body:
 ; CHECK:         [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr {{.*}}, align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <vscale x 4 x i32> [[WIDE_LOAD]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = select <vscale x 4 x i1> [[TMP1]], <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 2, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 10, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP2:%.*]] = select <vscale x 4 x i1> [[TMP1]], <vscale x 4 x i32> splat (i32 2), <vscale x 4 x i32> splat (i32 10)
 ; CHECK:         store <vscale x 4 x i32> [[TMP2]], ptr {{.*}}, align 4
 ;
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %b, i64 %indvars.iv
   %0 = load i32, ptr %arrayidx, align 4
@@ -29,10 +29,10 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %indvars.iv.next, %n
   br i1 %exitcond.not, label %for.end.loopexit, label %for.body, !llvm.loop !0
 
-for.end.loopexit:                                 ; preds = %for.body
+for.end.loopexit:
   br label %for.end
 
-for.end:                                          ; preds = %for.end.loopexit, %entry
+for.end:
   ret void
 }
 
@@ -41,14 +41,14 @@ define void @cmpsel_f32(ptr noalias nocapture %a, ptr noalias nocapture readonly
 ; CHECK-NEXT:  entry:
 ; CHECK:       vector.body:
 ; CHECK:         [[WIDE_LOAD:%.*]] = load <vscale x 4 x float>, ptr {{.*}}, align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ogt <vscale x 4 x float> [[WIDE_LOAD]], shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 3.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer)
-; CHECK-NEXT:    [[TMP2:%.*]] = select <vscale x 4 x i1> [[TMP1]], <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 1.000000e+01, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 2.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ogt <vscale x 4 x float> [[WIDE_LOAD]], splat (float 3.000000e+00)
+; CHECK-NEXT:    [[TMP2:%.*]] = select <vscale x 4 x i1> [[TMP1]], <vscale x 4 x float> splat (float 1.000000e+01), <vscale x 4 x float> splat (float 2.000000e+00)
 ; CHECK:         store <vscale x 4 x float> [[TMP2]], ptr {{.*}}, align 4
 
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %b, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
@@ -60,7 +60,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %indvars.iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
@@ -75,7 +75,7 @@ define void @fneg_f32(ptr noalias nocapture %a, ptr noalias nocapture readonly %
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %b, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
@@ -86,7 +86,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %indvars.iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 

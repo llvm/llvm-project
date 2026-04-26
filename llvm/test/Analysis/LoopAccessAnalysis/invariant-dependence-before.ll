@@ -784,3 +784,38 @@ loop:
 exit:
   ret void
 }
+
+define void @invariant_stores_unit_stride(i32 %offset, ptr noalias %dst.1, ptr %dst.2) {
+; CHECK-LABEL: 'invariant_stores_unit_stride'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Memory dependences are safe
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  %add = add i32 %offset, 3
+  br label %loop
+
+loop:
+  %iv.2 = phi i32 [ 0, %entry ], [ %iv.2.next, %loop ]
+  %iv.3 = phi i32 [ 0, %entry ], [ %iv.3.next, %loop ]
+  %iv.mul  = mul i32 %iv.3, %add
+  %gep.mul = getelementptr i8, ptr %dst.1, i32 %iv.mul
+  store i32 0, ptr %gep.mul, align 8
+  %iv.2.mul  = mul i32 %iv.2, %offset
+  %gep = getelementptr i32, ptr %dst.2, i32 %iv.2.mul
+  store i32 0, ptr %gep, align 8
+  %iv.2.next = add i32 %iv.2, 1
+  %iv.3.next = add i32 %iv.3, 1
+  %ec = icmp eq i32 %iv.3, 200
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}

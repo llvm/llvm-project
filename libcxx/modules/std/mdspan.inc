@@ -28,6 +28,11 @@ export namespace std {
   // [mdspan.accessor.default], class template default_accessor
   using std::default_accessor;
 
+#  if _LIBCPP_STD_VER >= 26
+  // [mdspan.accessor.aligned], class template aligned_accessor
+  using std::aligned_accessor;
+#  endif // _LIBCPP_STD_VER >= 26
+
   // [mdspan.mdspan], class template mdspan
   using std::mdspan;
 #endif // _LIBCPP_STD_VER >= 23

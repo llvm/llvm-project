@@ -20,7 +20,11 @@ DEFINE_COMPILERRT_FUNCTION(__negdf2vfp)
 #if defined(COMPILER_RT_ARMHF_TARGET)
 	vneg.f64 d0, d0
 #else
-	eor	r1, r1, #-2147483648	// flip sign bit on double in r0/r1 pair
+#if _YUGA_BIG_ENDIAN
+	eor	r0, r0, #0x80000000	// flip sign bit on double in r0/r1 pair
+#else
+	eor	r1, r1, #0x80000000	// flip sign bit on double in r0/r1 pair
+#endif
 #endif
 	bx	lr
 END_COMPILERRT_FUNCTION(__negdf2vfp)

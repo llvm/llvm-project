@@ -43,25 +43,23 @@
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/User.h"
+#include "llvm/IR/PassTimingInfo.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DOTGraphTraits.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Cloning.h"
-#include <algorithm>
 #include <cassert>
 #include <cmath>
-#include <iterator>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -153,7 +151,8 @@ static constexpr unsigned InvalidPID = -1;
 /// \param Dem denominator
 /// \returns a printable object to print (Num/Dem) using "%0.2f".
 static auto formatRatioOf(CostType Num, CostType Dem) {
-  return format("%0.2f", (static_cast<double>(Num) / Dem) * 100);
+  CostType DemOr1 = Dem ? Dem : 1;
+  return format("%0.2f", (static_cast<double>(Num) / DemOr1) * 100);
 }
 
 /// Checks whether a given function is non-copyable.
@@ -161,13 +160,12 @@ static auto formatRatioOf(CostType Num, CostType Dem) {
 /// Non-copyable functions cannot be cloned into multiple partitions, and only
 /// one copy of the function can be present across all partitions.
 ///
-/// External functions fall into this category. If we were to clone them, we
-/// would end up with multiple symbol definitions and a very unhappy linker.
+/// Kernel functions and external functions fall into this category. If we were
+/// to clone them, we would end up with multiple symbol definitions and a very
+/// unhappy linker.
 static bool isNonCopyable(const Function &F) {
-  assert(AMDGPU::isEntryFunctionCC(F.getCallingConv())
-             ? F.hasExternalLinkage()
-             : true && "Kernel w/o external linkage?");
-  return F.hasExternalLinkage() || !F.isDefinitionExact();
+  return F.hasExternalLinkage() || !F.isDefinitionExact() ||
+         AMDGPU::isEntryFunctionCC(F.getCallingConv());
 }
 
 /// If \p GV has local linkage, make it external + hidden.
@@ -209,8 +207,9 @@ static CostType calculateFunctionCosts(GetTTIFn GetTTI, Module &M,
             TTI.getInstructionCost(&I, TargetTransformInfo::TCK_CodeSize);
         assert(Cost != InstructionCost::getMax());
         // Assume expensive if we can't tell the cost of an instruction.
-        CostType CostVal =
-            Cost.getValue().value_or(TargetTransformInfo::TCC_Expensive);
+        CostType CostVal = Cost.isValid()
+                               ? Cost.getValue()
+                               : (CostType)TargetTransformInfo::TCC_Expensive;
         assert((FnCost + CostVal) >= FnCost && "Overflow!");
         FnCost += CostVal;
       }
@@ -317,9 +316,7 @@ public:
 #endif
 
   bool empty() const { return Nodes.empty(); }
-  const iterator_range<nodes_iterator> nodes() const {
-    return {Nodes.begin(), Nodes.end()};
-  }
+  iterator_range<nodes_iterator> nodes() const { return Nodes; }
   const Node &getNode(unsigned ID) const { return *Nodes[ID]; }
 
   unsigned getNumNodes() const { return Nodes.size(); }
@@ -573,7 +570,7 @@ void SplitGraph::buildGraph(CallGraph &CG) {
         LLVM_DEBUG(dbgs() << "    indirect call found\n");
         FnsWithIndirectCalls.push_back(&Fn);
       } else if (!KnownCallees.empty())
-        DirectCallees.insert(KnownCallees.begin(), KnownCallees.end());
+        DirectCallees.insert_range(KnownCallees);
     }
 
     Node &N = getNode(Cache, Fn);
@@ -996,7 +993,7 @@ void RecursiveSearchSplitting::run() {
   {
     SplitModuleTimer SMT("recursive_search_pick", "partitioning");
     SplitProposal SP(SG, NumParts);
-    pickPartition(/*BranchDepth=*/0, /*Idx=*/0, SP);
+    pickPartition(/*BranchDepth=*/0, /*Idx=*/0, std::move(SP));
   }
 }
 
@@ -1020,13 +1017,13 @@ void RecursiveSearchSplitting::setupWorkList() {
     });
   }
 
-  for (auto I = NodeEC.begin(), E = NodeEC.end(); I != E; ++I) {
-    if (!I->isLeader())
+  for (const auto &Node : NodeEC) {
+    if (!Node->isLeader())
       continue;
 
     BitVector Cluster = SG.createNodesBitVector();
-    for (auto MI = NodeEC.member_begin(I); MI != NodeEC.member_end(); ++MI) {
-      const SplitGraph::Node &N = SG.getNode(*MI);
+    for (unsigned M : NodeEC.members(*Node)) {
+      const SplitGraph::Node &N = SG.getNode(M);
       if (N.isGraphEntryPoint())
         N.getDependencies(Cluster);
     }
@@ -1104,10 +1101,10 @@ void RecursiveSearchSplitting::pickPartition(unsigned Depth, unsigned Idx,
       if (Entry.CostExcludingGraphEntryPoints > LargeClusterThreshold) {
         // Check if the amount of code in common makes it worth it.
         assert(SimilarDepsCost && Entry.CostExcludingGraphEntryPoints);
-        const double Ratio =
-            SimilarDepsCost / Entry.CostExcludingGraphEntryPoints;
+        const double Ratio = static_cast<double>(SimilarDepsCost) /
+                             Entry.CostExcludingGraphEntryPoints;
         assert(Ratio >= 0.0 && Ratio <= 1.0);
-        if (LargeFnOverlapForMerge > Ratio) {
+        if (Ratio > LargeFnOverlapForMerge) {
           // For debug, just print "L", so we'll see "L3=P3" for instance, which
           // will mean we reached max depth and chose P3 based on this
           // heuristic.
@@ -1143,7 +1140,7 @@ void RecursiveSearchSplitting::pickPartition(unsigned Depth, unsigned Idx,
       LLVM_DEBUG(dbgs().indent(Depth)
                  << " [lb] " << Idx << "=P" << CheapestPID << "? ");
       BranchSP.add(CheapestPID, Cluster);
-      pickPartition(Depth + 1, Idx + 1, BranchSP);
+      pickPartition(Depth + 1, Idx + 1, std::move(BranchSP));
     }
 
     // ms = most similar = put in partition with the most in common
@@ -1152,7 +1149,7 @@ void RecursiveSearchSplitting::pickPartition(unsigned Depth, unsigned Idx,
       LLVM_DEBUG(dbgs().indent(Depth)
                  << " [ms] " << Idx << "=P" << MostSimilarPID << "? ");
       BranchSP.add(MostSimilarPID, Cluster);
-      pickPartition(Depth + 1, Idx + 1, BranchSP);
+      pickPartition(Depth + 1, Idx + 1, std::move(BranchSP));
     }
 
     return;
@@ -1166,7 +1163,7 @@ void RecursiveSearchSplitting::pickPartition(unsigned Depth, unsigned Idx,
   SP.setName("recursive_search (depth=" + std::to_string(Depth) + ") #" +
              std::to_string(NumProposalsSubmitted++));
   LLVM_DEBUG(dbgs() << '\n');
-  SubmitProposal(SP);
+  SubmitProposal(std::move(SP));
 }
 
 std::pair<unsigned, CostType>
@@ -1290,7 +1287,9 @@ namespace {
 static bool needsConservativeImport(const GlobalValue *GV) {
   if (const auto *Var = dyn_cast<GlobalVariable>(GV))
     return Var->hasLocalLinkage();
-  return isa<GlobalAlias>(GV);
+  if (const auto *GA = dyn_cast<GlobalAlias>(GV))
+    return GA->hasLocalLinkage();
+  return false;
 }
 
 /// Prints a summary of the partition \p N, represented by module \p M, to \p
@@ -1399,8 +1398,6 @@ static void splitAMDGPUModule(
   // visible copy, then internalize all other copies" for some functions?
   if (!NoExternalizeOnAddrTaken) {
     for (auto &Fn : M) {
-      // TODO: Should aliases count? Probably not but they're so rare I'm not
-      // sure it's worth fixing.
       if (Fn.hasLocalLinkage() && Fn.hasAddressTaken()) {
         LLVM_DEBUG(dbgs() << "[externalize] "; Fn.printAsOperand(dbgs());
                    dbgs() << " because its address is taken\n");
@@ -1416,6 +1413,13 @@ static void splitAMDGPUModule(
       if (GV.hasLocalLinkage())
         LLVM_DEBUG(dbgs() << "[externalize] GV " << GV.getName() << '\n');
       externalize(GV);
+    }
+  }
+
+  for (auto &GA : M.aliases()) {
+    if (GA.hasLocalLinkage()) {
+      LLVM_DEBUG(dbgs() << "[externalize] alias " << GA.getName() << '\n');
+      externalize(GA);
     }
   }
 
@@ -1482,6 +1486,10 @@ static void splitAMDGPUModule(
              << "' - Partition summaries will not be printed\n";
   }
 
+  // One module will import all GlobalValues that are not Functions
+  // and are not subject to conservative import.
+  bool ImportAllGVs = true;
+
   for (unsigned PID = 0; PID < NumParts; ++PID) {
     SplitModuleTimer SMT2("modules_creation",
                           "creating modules for each partition");
@@ -1490,6 +1498,13 @@ static void splitAMDGPUModule(
     DenseSet<const Function *> FnsInPart;
     for (unsigned NodeID : (*Proposal)[PID].set_bits())
       FnsInPart.insert(&SG.getNode(NodeID).getFunction());
+
+    // Don't create empty modules.
+    if (FnsInPart.empty()) {
+      LLVM_DEBUG(dbgs() << "[split] P" << PID
+                        << " is empty, not creating module\n");
+      continue;
+    }
 
     ValueToValueMapTy VMap;
     CostType PartCost = 0;
@@ -1504,12 +1519,17 @@ static void splitAMDGPUModule(
             return false;
           }
 
-          // Everything else goes in the first partition.
-          return needsConservativeImport(GV) || PID == 0;
+          // Aliases should not be separated from their underlying object.
+          if (const auto *GA = dyn_cast<GlobalAlias>(GV)) {
+            if (const auto *Fn = dyn_cast<Function>(GA->getAliaseeObject()))
+              return FnsInPart.contains(Fn);
+          }
+
+          // Everything else goes in the first non-empty module we create.
+          return ImportAllGVs || needsConservativeImport(GV);
         }));
 
-    // FIXME: Aliases aren't seen often, and their handling isn't perfect so
-    // bugs are possible.
+    ImportAllGVs = false;
 
     // Clean-up conservatively imported GVs without any users.
     for (auto &GV : make_early_inc_range(MPart->global_values())) {
@@ -1549,32 +1569,27 @@ PreservedAnalyses AMDGPUSplitModulePass::run(Module &M,
                       << "'\n");
 
     while (true) {
-      llvm::LockFileManager Locked(LockFilePath.str());
-      switch (Locked) {
-      case LockFileManager::LFS_Error:
+      llvm::LockFileManager Lock(LockFilePath.str());
+      bool Owned;
+      if (Error Err = Lock.tryLock().moveInto(Owned)) {
+        consumeError(std::move(Err));
         LLVM_DEBUG(
             dbgs() << "[amdgpu-split-module] unable to acquire lockfile, debug "
                       "output may be mangled by other processes\n");
-        Locked.unsafeRemoveLockFile();
-        break;
-      case LockFileManager::LFS_Owned:
-        break;
-      case LockFileManager::LFS_Shared: {
-        switch (Locked.waitForUnlock()) {
-        case LockFileManager::Res_Success:
+      } else if (!Owned) {
+        switch (Lock.waitForUnlockFor(std::chrono::seconds(90))) {
+        case WaitForUnlockResult::Success:
           break;
-        case LockFileManager::Res_OwnerDied:
+        case WaitForUnlockResult::OwnerDied:
           continue; // try again to get the lock.
-        case LockFileManager::Res_Timeout:
+        case WaitForUnlockResult::Timeout:
           LLVM_DEBUG(
               dbgs()
               << "[amdgpu-split-module] unable to acquire lockfile, debug "
                  "output may be mangled by other processes\n");
-          Locked.unsafeRemoveLockFile();
+          Lock.unsafeUnlock();
           break; // give up
         }
-        break;
-      }
       }
 
       splitAMDGPUModule(TTIGetter, M, N, ModuleCallback);

@@ -1,0 +1,6 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+// expected-error@+1 {{failed to verify 'underlying': expects !cir.double, !cir.fp80 or !cir.fp128}}
+cir.func @bad_long_double(%arg0 : !cir.long_double<!cir.float>) -> () {
+  cir.return
+}

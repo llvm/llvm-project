@@ -32,7 +32,7 @@ module transitive {
 }]
 
 // RUN: sed "s|DIR|%/t|g" %t/cdb.json.template > %t/cdb.json
-// RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full -module-name=root > %t/result.json
+// RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full -module-names=root > %t/result.json
 // RUN: cat %t/result.json | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t %s
 
 // CHECK:      {
@@ -44,8 +44,8 @@ module transitive {
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
+// CHECK-NEXT:         "[[PREFIX]]/Inputs/frameworks/module.modulemap",
 // CHECK-NEXT:         "[[PREFIX]]/Inputs/frameworks/Framework.framework/Headers/Framework.h"
-// CHECK-NEXT:         "[[PREFIX]]/Inputs/frameworks/module.modulemap"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [
 // CHECK-NEXT:         {
@@ -67,8 +67,8 @@ module transitive {
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
+// CHECK-NEXT:         "[[PREFIX]]/module.modulemap",
 // CHECK-NEXT:         "[[PREFIX]]/direct.h"
-// CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "direct"
@@ -89,10 +89,10 @@ module transitive {
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
+// CHECK-NEXT:         "[[PREFIX]]/module.modulemap",
+// CHECK-NEXT:         "[[PREFIX]]/root.h",
+// CHECK-NEXT:         "[[PREFIX]]/root/textual.h",
 // CHECK-NEXT:         "[[PREFIX]]/Inputs/frameworks/module.modulemap"
-// CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
-// CHECK-NEXT:         "[[PREFIX]]/root.h"
-// CHECK-NEXT:         "[[PREFIX]]/root/textual.h"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "root"
@@ -104,7 +104,7 @@ module transitive {
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]/module.modulemap",
 // CHECK-NEXT:         "[[PREFIX]]/transitive.h"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [

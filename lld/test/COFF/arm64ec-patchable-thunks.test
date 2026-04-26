@@ -5,6 +5,7 @@ RUN: llvm-mc -filetype=obj -triple=arm64ec-windows arm64ec-patchable.s -o arm64e
 RUN: llvm-mc -filetype=obj -triple=arm64ec-windows arm64ec-alias.s -o arm64ec-alias.obj
 RUN: llvm-mc -filetype=obj -triple=arm64ec-windows test-sec.s -o test-sec.obj
 RUN: llvm-mc -filetype=obj -triple=arm64ec-windows %S/Inputs/loadconfig-arm64ec.s -o loadconfig-arm64ec.obj
+RUN: llvm-mc -filetype=obj -triple=aarch64-windows %S/Inputs/loadconfig-arm64.s -o loadconfig-arm64.obj
 
 RUN: lld-link -out:test.dll -machine:arm64ec arm64ec-patchable.obj test-sec.obj loadconfig-arm64ec.obj -dll -noentry
 
@@ -56,7 +57,19 @@ RUN: llvm-readobj --coff-load-config test3.dll | FileCheck -check-prefix=PATCH-C
 
 
 RUN: not lld-link -out:test4.dll -machine:arm64ec test-sec.obj loadconfig-arm64ec.obj -dll -noentry 2>&1 | FileCheck --check-prefix=ERR %s
-ERR: error: undefined symbol: EXP+#patchable_func
+ERR: error: undefined symbol: EXP+#patchable_func (EC symbol)
+
+
+RUN: lld-link -out:testx.dll -machine:arm64x arm64ec-patchable.obj test-sec.obj \
+RUN:          loadconfig-arm64.obj loadconfig-arm64ec.obj -dll -noentry
+RUN: llvm-objdump -d testx.dll | FileCheck -check-prefix=PATCH-DISASM %s
+RUN: llvm-readobj --coff-load-config testx.dll | FileCheck -check-prefix=PATCH-CHPE %s
+
+
+RUN: lld-link -out:testx2.dll -machine:arm64x arm64ec-alias.obj loadconfig-arm64.obj \
+RUN:          loadconfig-arm64ec.obj -dll -noentry
+RUN: llvm-objdump -d testx2.dll | FileCheck -check-prefix=PATCH-DISASM %s
+RUN: llvm-readobj --coff-load-config testx2.dll | FileCheck -check-prefix=PATCH-CHPE %s
 
 
 #--- arm64ec-patchable.s

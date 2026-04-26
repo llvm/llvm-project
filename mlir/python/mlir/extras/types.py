@@ -21,6 +21,7 @@ from ..ir import (
     Float8E4M3Type,
     Float8E5M2Type,
     Float8E8M0FNUType,
+    FloatTF32Type,
     FunctionType,
     IndexType,
     IntegerType,
@@ -70,6 +71,7 @@ ui64 = lambda: ui(64)
 
 f16 = lambda: F16Type.get()
 f32 = lambda: F32Type.get()
+tf32 = lambda: FloatTF32Type.get()
 f64 = lambda: F64Type.get()
 bf16 = lambda: BF16Type.get()
 

@@ -1,4 +1,4 @@
-; RUN: llc -march=mipsel -relocation-model=pic < %s | FileCheck %s
+; RUN: llc -mtriple=mipsel -relocation-model=pic < %s | FileCheck %s
 
 
 ; Check that function accesses vector return value from stack in cases when

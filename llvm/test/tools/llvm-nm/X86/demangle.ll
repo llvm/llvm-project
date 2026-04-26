@@ -6,7 +6,7 @@
 
 ; RUN: llc -filetype=obj -mtriple=x86_64-apple-darwin9 -o %t.macho %s
 ; RUN: llvm-nm %t.macho | FileCheck --check-prefix="MACHO-MANGLED" %s
-; RUN: llvm-nm -C %t.macho | FileCheck --check-prefix="DEMANGLED" %s
+; RUN: llvm-nm -C %t.macho | FileCheck --check-prefix="MACHO-DEMANGLED" %s
 
 ; RUN: llc -filetype=obj -mtriple=x86_64-pc-win32 -o %t.coff %s
 ; RUN: llvm-nm %t.coff | FileCheck --check-prefix="COFF-MANGLED" %s
@@ -33,8 +33,8 @@ entry:
   ret i32 1
 }
 
-; MANGLED:       0000000000000020 T _RNvC1a3baz
-; MANGLED:       0000000000000010 T _Z3barf
+; MANGLED:       0000000000000010 T _RNvC1a3baz
+; MANGLED:       0000000000000008 T _Z3barf
 ; MANGLED:       0000000000000000 T _Z3fooi
 
 ; MACHO-MANGLED: 0000000000000020 T __RNvC1a3baz
@@ -45,9 +45,13 @@ entry:
 ; COFF-MANGLED:          00000010 T _Z3barf
 ; COFF-MANGLED:          00000000 T _Z3fooi
 
-; DEMANGLED:     0000000000000020 T a::baz
-; DEMANGLED:     0000000000000010 T bar(float)
+; DEMANGLED:     0000000000000010 T a::baz
+; DEMANGLED:     0000000000000008 T bar(float)
 ; DEMANGLED:     0000000000000000 T foo(int)
+
+; MACHO-DEMANGLED: 0000000000000020 T a::baz
+; MACHO-DEMANGLED: 0000000000000010 T bar(float)
+; MACHO-DEMANGLED: 0000000000000000 T foo(int)
 
 ; COFF-DEMANGLED:        00000020 T a::baz
 ; COFF-DEMANGLED:        00000010 T bar(float)

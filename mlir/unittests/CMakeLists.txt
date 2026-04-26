@@ -18,7 +18,6 @@ add_subdirectory(Support)
 add_subdirectory(Rewrite)
 add_subdirectory(TableGen)
 add_subdirectory(Target)
-add_subdirectory(Tools)
 add_subdirectory(Transforms)
 
 if(MLIR_ENABLE_EXECUTION_ENGINE)

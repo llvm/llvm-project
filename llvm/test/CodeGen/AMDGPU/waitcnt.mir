@@ -350,12 +350,12 @@ body: |
 name: waitcnt_backedge
 body: |
   bb.0:
-    renamable $sgpr4_sgpr5_sgpr6_sgpr7 = S_LOAD_DWORDX4_IMM renamable $sgpr2_sgpr3, 32, 0 :: (load (s128) from `ptr addrspace(4) undef`, addrspace 4)
+    renamable $sgpr4_sgpr5_sgpr6_sgpr7 = S_LOAD_DWORDX4_IMM renamable $sgpr2_sgpr3, 32, 0 :: (load (s128) from `ptr addrspace(4) poison`, addrspace 4)
 
   bb.4:
     renamable $sgpr10_sgpr11 = S_CSELECT_B64 -1, 0, implicit killed $scc
     renamable $vgpr1 = BUFFER_LOAD_DWORD_OFFEN killed renamable $vgpr5, renamable $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 1, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
-    renamable $sgpr10_sgpr11 = S_LOAD_DWORDX2_IMM killed renamable $sgpr0_sgpr1, 0, 0 :: (load (s64) from `ptr addrspace(4) undef`, align 4, addrspace 4)
+    renamable $sgpr10_sgpr11 = S_LOAD_DWORDX2_IMM killed renamable $sgpr0_sgpr1, 0, 0 :: (load (s64) from `ptr addrspace(4) poison`, align 4, addrspace 4)
     S_CBRANCH_SCC0 %bb.9, implicit killed $scc
 
   bb.9:

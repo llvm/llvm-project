@@ -1192,7 +1192,7 @@ define i1 @ult_ult(i8 %a, i8 %b) {
 
 define <2 x i1> @ult_uge_vec(<2 x i8> %a, <2 x i8> %b) {
 ; CHECK-LABEL: @ult_uge_vec(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %cmp1 = icmp ult <2 x i8> %a, %b
   %cmp2 = icmp uge <2 x i8> %a, %b

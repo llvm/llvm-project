@@ -120,8 +120,7 @@ define half @t_vfmah_lane_f16_3_0(half %a, <4 x half> %c) {
 ; CHECK-LABEL: t_vfmah_lane_f16_3_0:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    mov h2, v1.h[3]
-; CHECK-NEXT:    fmadd h0, h1, h2, h0
+; CHECK-NEXT:    fmla h0, h1, v1.h[3]
 ; CHECK-NEXT:    ret
 entry:
   %b = extractelement <4 x half> %c, i32 0
@@ -310,8 +309,7 @@ define half @t_vfmsh_lane_f16_0_3(half %a, <4 x half> %c, i32 %lane) {
 ; CHECK-LABEL: t_vfmsh_lane_f16_0_3:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    mov h2, v1.h[3]
-; CHECK-NEXT:    fmsub h0, h2, h1, h0
+; CHECK-NEXT:    fmls h0, h1, v1.h[3]
 ; CHECK-NEXT:    ret
 entry:
   %b = extractelement <4 x half> %c, i32 0

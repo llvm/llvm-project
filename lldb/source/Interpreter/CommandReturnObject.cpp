@@ -8,7 +8,7 @@
 
 #include "lldb/Interpreter/CommandReturnObject.h"
 
-#include "lldb/Utility/DiagnosticsRendering.h"
+#include "lldb/Host/common/DiagnosticsRendering.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 
@@ -31,6 +31,24 @@ static llvm::raw_ostream &note(Stream &strm) {
   return llvm::WithColor(strm.AsRawOstream(), llvm::HighlightColor::Note,
                          llvm::ColorMode::Enable)
          << "note: ";
+}
+
+static llvm::StringRef validate_diagnostic(llvm::StringRef diagnostic) {
+  // This class is already adding the prefix.
+  assert(!diagnostic.starts_with("warning:") &&
+         !diagnostic.starts_with("error:") &&
+         !diagnostic.starts_with("note:") &&
+         "diagnostics shouldn't duplicate error:/warning:/note:");
+
+  // https://llvm.org/docs/CodingStandards.html#error-and-warning-messages
+  assert(!diagnostic.ends_with('\n') && !diagnostic.ends_with('.') &&
+         "diagnostics should end without a period/newline");
+
+  // Handing the case where the assert doesn't hold goes against the idea of
+  // them being pre-conditions. However this isn't really a matter of internal
+  // consistency and therefore we prioritize a consistent user experience over
+  // purity.
+  return diagnostic.trim("\n.");
 }
 
 static void DumpStringToStreamWithNewline(Stream &strm, const std::string &s) {
@@ -68,42 +86,6 @@ void CommandReturnObject::AppendErrorWithFormat(const char *format, ...) {
   }
 }
 
-void CommandReturnObject::AppendMessageWithFormat(const char *format, ...) {
-  if (!format)
-    return;
-  va_list args;
-  va_start(args, format);
-  StreamString sstrm;
-  sstrm.PrintfVarArg(format, args);
-  va_end(args);
-
-  GetOutputStream() << sstrm.GetString();
-}
-
-void CommandReturnObject::AppendNoteWithFormat(const char *format, ...) {
-  if (!format)
-    return;
-  va_list args;
-  va_start(args, format);
-  StreamString sstrm;
-  sstrm.PrintfVarArg(format, args);
-  va_end(args);
-
-  note(GetOutputStream()) << sstrm.GetString();
-}
-
-void CommandReturnObject::AppendWarningWithFormat(const char *format, ...) {
-  if (!format)
-    return;
-  va_list args;
-  va_start(args, format);
-  StreamString sstrm;
-  sstrm.PrintfVarArg(format, args);
-  va_end(args);
-
-  warning(GetErrorStream()) << sstrm.GetString();
-}
-
 void CommandReturnObject::AppendMessage(llvm::StringRef in_string) {
   if (in_string.empty())
     return;
@@ -111,12 +93,14 @@ void CommandReturnObject::AppendMessage(llvm::StringRef in_string) {
 }
 
 void CommandReturnObject::AppendNote(llvm::StringRef in_string) {
+  in_string = validate_diagnostic(in_string);
   if (in_string.empty())
     return;
   note(GetOutputStream()) << in_string.rtrim() << '\n';
 }
 
 void CommandReturnObject::AppendWarning(llvm::StringRef in_string) {
+  in_string = validate_diagnostic(in_string);
   if (in_string.empty())
     return;
   warning(GetErrorStream()) << in_string.rtrim() << '\n';
@@ -129,6 +113,8 @@ void CommandReturnObject::AppendError(llvm::StringRef in_string) {
   // Workaround to deal with already fully formatted compiler diagnostics.
   llvm::StringRef msg(in_string.rtrim());
   msg.consume_front("error: ");
+
+  // FIXME: We should call validate_diagnostic here.
   error(GetErrorStream()) << msg << '\n';
 }
 
@@ -147,7 +133,8 @@ void CommandReturnObject::SetError(llvm::Error error) {
   }
 }
 
-std::string CommandReturnObject::GetInlineDiagnosticString(unsigned indent) {
+std::string
+CommandReturnObject::GetInlineDiagnosticString(unsigned indent) const {
   StreamString diag_stream(m_colors);
   RenderDiagnosticDetails(diag_stream, indent, true, m_diagnostics);
   // Duplex the diagnostics to the secondary stream (but not inlined).
@@ -157,7 +144,7 @@ std::string CommandReturnObject::GetInlineDiagnosticString(unsigned indent) {
   return diag_stream.GetString().str();
 }
 
-std::string CommandReturnObject::GetErrorString(bool with_diagnostics) {
+std::string CommandReturnObject::GetErrorString(bool with_diagnostics) const {
   StreamString stream(m_colors);
   if (with_diagnostics)
     RenderDiagnosticDetails(stream, std::nullopt, false, m_diagnostics);
@@ -169,66 +156,7 @@ std::string CommandReturnObject::GetErrorString(bool with_diagnostics) {
 }
 
 StructuredData::ObjectSP CommandReturnObject::GetErrorData() {
-  auto make_array = []() { return std::make_unique<StructuredData::Array>(); };
-  auto make_bool = [](bool b) {
-    return std::make_unique<StructuredData::Boolean>(b);
-  };
-  auto make_dict = []() {
-    return std::make_unique<StructuredData::Dictionary>();
-  };
-  auto make_int = [](unsigned i) {
-    return std::make_unique<StructuredData::UnsignedInteger>(i);
-  };
-  auto make_string = [](llvm::StringRef s) {
-    return std::make_unique<StructuredData::String>(s);
-  };
-  auto dict_up = make_dict();
-  dict_up->AddItem("version", make_int(1));
-  auto array_up = make_array();
-  for (const DiagnosticDetail &diag : m_diagnostics) {
-    auto detail_up = make_dict();
-    if (auto &sloc = diag.source_location) {
-      auto sloc_up = make_dict();
-      sloc_up->AddItem("file", make_string(sloc->file.GetPath()));
-      sloc_up->AddItem("line", make_int(sloc->line));
-      sloc_up->AddItem("length", make_int(sloc->length));
-      sloc_up->AddItem("hidden", make_bool(sloc->hidden));
-      sloc_up->AddItem("in_user_input", make_bool(sloc->in_user_input));
-      detail_up->AddItem("source_location", std::move(sloc_up));
-    }
-    llvm::StringRef severity = "unknown";
-    switch (diag.severity) {
-    case lldb::eSeverityError:
-      severity = "error";
-      break;
-    case lldb::eSeverityWarning:
-      severity = "warning";
-      break;
-    case lldb::eSeverityInfo:
-      severity = "note";
-      break;
-    }
-    detail_up->AddItem("severity", make_string(severity));
-    detail_up->AddItem("message", make_string(diag.message));
-    detail_up->AddItem("rendered", make_string(diag.rendered));
-    array_up->AddItem(std::move(detail_up));
-  }
-  dict_up->AddItem("details", std::move(array_up));
-  if (auto stream_sp = m_err_stream.GetStreamAtIndex(eStreamStringIndex)) {
-    auto text = std::static_pointer_cast<StreamString>(stream_sp)->GetString();
-    if (!text.empty())
-      dict_up->AddItem("text", make_string(text));
-  }
-  return dict_up;
-}
-
-// Similar to AppendError, but do not prepend 'Status: ' to message, and don't
-// append "\n" to the end of it.
-
-void CommandReturnObject::AppendRawError(llvm::StringRef in_string) {
-  SetStatus(eReturnStatusFailed);
-  assert(!in_string.empty() && "Expected a non-empty error message");
-  GetErrorStream() << in_string;
+  return Serialize(m_diagnostics);
 }
 
 void CommandReturnObject::SetStatus(ReturnStatus status) { m_status = status; }

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ATOMIC_ATOMIC_FLAG_H
-#define _LIBCPP___ATOMIC_ATOMIC_FLAG_H
+#ifndef _LIBCPP___CXX03___ATOMIC_ATOMIC_FLAG_H
+#define _LIBCPP___CXX03___ATOMIC_ATOMIC_FLAG_H
 
 #include <__cxx03/__atomic/atomic_sync.h>
 #include <__cxx03/__atomic/contention_t.h>
@@ -68,14 +68,9 @@ struct atomic_flag {
   _LIBCPP_DEPRECATED_ATOMIC_SYNC _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void notify_all() _NOEXCEPT {
     std::__atomic_notify_all(*this);
   }
-
-#if _LIBCPP_STD_VER >= 20
-  _LIBCPP_HIDE_FROM_ABI constexpr atomic_flag() _NOEXCEPT : __a_(false) {}
-#else
   atomic_flag() _NOEXCEPT = default;
-#endif
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR atomic_flag(bool __b) _NOEXCEPT : __a_(__b) {} // EXTENSION
+  _LIBCPP_HIDE_FROM_ABI atomic_flag(bool __b) _NOEXCEPT : __a_(__b) {} // EXTENSION
 
   atomic_flag(const atomic_flag&)                     = delete;
   atomic_flag& operator=(const atomic_flag&)          = delete;
@@ -186,4 +181,4 @@ atomic_flag_notify_all(atomic_flag* __o) _NOEXCEPT {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ATOMIC_ATOMIC_FLAG_H
+#endif // _LIBCPP___CXX03___ATOMIC_ATOMIC_FLAG_H

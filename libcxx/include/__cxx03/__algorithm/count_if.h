@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_COUNT_IF_H
-#define _LIBCPP___ALGORITHM_COUNT_IF_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_COUNT_IF_H
+#define _LIBCPP___CXX03___ALGORITHM_COUNT_IF_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__iterator/iterator_traits.h>
@@ -20,8 +20,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _InputIterator, class _Predicate>
-_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
-typename iterator_traits<_InputIterator>::difference_type
+_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI typename iterator_traits<_InputIterator>::difference_type
 count_if(_InputIterator __first, _InputIterator __last, _Predicate __pred) {
   typename iterator_traits<_InputIterator>::difference_type __r(0);
   for (; __first != __last; ++__first)
@@ -32,4 +31,4 @@ count_if(_InputIterator __first, _InputIterator __last, _Predicate __pred) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_COUNT_IF_H
+#endif // _LIBCPP___CXX03___ALGORITHM_COUNT_IF_H

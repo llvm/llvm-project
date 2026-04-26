@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MUTEX_UNIQUE_LOCK_H
-#define _LIBCPP___MUTEX_UNIQUE_LOCK_H
+#ifndef _LIBCPP___CXX03___MUTEX_UNIQUE_LOCK_H
+#define _LIBCPP___CXX03___MUTEX_UNIQUE_LOCK_H
 
 #include <__cxx03/__chrono/duration.h>
 #include <__cxx03/__chrono/time_point.h>
@@ -174,4 +174,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_HAS_NO_THREADS
 
-#endif // _LIBCPP___MUTEX_UNIQUE_LOCK_H
+#endif // _LIBCPP___CXX03___MUTEX_UNIQUE_LOCK_H

@@ -15,14 +15,11 @@
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
-#include "llvm/CodeGen/LowLevelTypeUtils.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/ErrorHandling.h"
 #include <cstdlib>
 
 #define DEBUG_TYPE "gi-combiner"
@@ -32,7 +29,7 @@ using namespace llvm;
 bool CombinerHelper::constantFoldICmp(const GICmp &ICmp,
                                       const GIConstant &LHSCst,
                                       const GIConstant &RHSCst,
-                                      BuildFnTy &MatchInfo) {
+                                      BuildFnTy &MatchInfo) const {
   if (LHSCst.getKind() != GIConstant::GIConstantKind::Scalar)
     return false;
 
@@ -63,7 +60,7 @@ bool CombinerHelper::constantFoldICmp(const GICmp &ICmp,
 bool CombinerHelper::constantFoldFCmp(const GFCmp &FCmp,
                                       const GFConstant &LHSCst,
                                       const GFConstant &RHSCst,
-                                      BuildFnTy &MatchInfo) {
+                                      BuildFnTy &MatchInfo) const {
   if (LHSCst.getKind() != GFConstant::GFConstantKind::Scalar)
     return false;
 
@@ -92,7 +89,7 @@ bool CombinerHelper::constantFoldFCmp(const GFCmp &FCmp,
 }
 
 bool CombinerHelper::matchCanonicalizeICmp(const MachineInstr &MI,
-                                           BuildFnTy &MatchInfo) {
+                                           BuildFnTy &MatchInfo) const {
   const GICmp *Cmp = cast<GICmp>(&MI);
 
   Register Dst = Cmp->getReg(0);
@@ -117,7 +114,7 @@ bool CombinerHelper::matchCanonicalizeICmp(const MachineInstr &MI,
 }
 
 bool CombinerHelper::matchCanonicalizeFCmp(const MachineInstr &MI,
-                                           BuildFnTy &MatchInfo) {
+                                           BuildFnTy &MatchInfo) const {
   const GFCmp *Cmp = cast<GFCmp>(&MI);
 
   Register Dst = Cmp->getReg(0);

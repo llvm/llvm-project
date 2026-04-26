@@ -116,7 +116,7 @@ locale ios_base::getloc() const {
 }
 
 // xalloc
-#if defined(_LIBCPP_HAS_C_ATOMIC_IMP) && !defined(_LIBCPP_HAS_NO_THREADS)
+#if _LIBCPP_HAS_C_ATOMIC_IMP && _LIBCPP_HAS_THREADS
 atomic<int> ios_base::__xindex_{0};
 #else
 int ios_base::__xindex_ = 0;
@@ -180,12 +180,16 @@ void ios_base::register_callback(event_callback fn, int index) {
   if (req_size > __event_cap_) {
     size_t newcap       = __ios_new_cap<event_callback>(req_size, __event_cap_);
     event_callback* fns = static_cast<event_callback*>(realloc(__fn_, newcap * sizeof(event_callback)));
-    if (fns == 0)
+    if (fns == 0) {
       setstate(badbit);
+      return;
+    }
     __fn_      = fns;
     int* indxs = static_cast<int*>(realloc(__index_, newcap * sizeof(int)));
-    if (indxs == 0)
+    if (indxs == 0) {
       setstate(badbit);
+      return;
+    }
     __index_     = indxs;
     __event_cap_ = newcap;
   }
@@ -217,7 +221,7 @@ void ios_base::clear(iostate state) {
     __rdstate_ = state | badbit;
 
   if (((state | (__rdbuf_ ? goodbit : badbit)) & __exceptions_) != 0)
-    __throw_failure("ios_base::clear");
+    std::__throw_failure("ios_base::clear");
 }
 
 // init
@@ -253,24 +257,24 @@ void ios_base::copyfmt(const ios_base& rhs) {
     size_t newesize = sizeof(event_callback) * rhs.__event_size_;
     new_callbacks.reset(static_cast<event_callback*>(malloc(newesize)));
     if (!new_callbacks)
-      __throw_bad_alloc();
+      std::__throw_bad_alloc();
 
     size_t newisize = sizeof(int) * rhs.__event_size_;
     new_ints.reset(static_cast<int*>(malloc(newisize)));
     if (!new_ints)
-      __throw_bad_alloc();
+      std::__throw_bad_alloc();
   }
   if (__iarray_cap_ < rhs.__iarray_size_) {
     size_t newsize = sizeof(long) * rhs.__iarray_size_;
     new_longs.reset(static_cast<long*>(malloc(newsize)));
     if (!new_longs)
-      __throw_bad_alloc();
+      std::__throw_bad_alloc();
   }
   if (__parray_cap_ < rhs.__parray_size_) {
     size_t newsize = sizeof(void*) * rhs.__parray_size_;
     new_pointers.reset(static_cast<void**>(malloc(newsize)));
     if (!new_pointers)
-      __throw_bad_alloc();
+      std::__throw_bad_alloc();
   }
   // Got everything we need.  Copy everything but __rdstate_, __rdbuf_ and __exceptions_
   __fmtflags_           = rhs.__fmtflags_;

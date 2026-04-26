@@ -152,6 +152,13 @@ public:
   /// that the client can get the maximum amount of information from the parser.
   bool SingleFileParseMode = false;
 
+  /// When enabled, preprocessor is in a mode for parsing a single module only.
+  ///
+  /// Disables imports of other modules and if there are any unresolved
+  /// identifiers in preprocessor directive conditions it causes all blocks to
+  /// be skipped so that the client can get a strict subset of the contents.
+  bool SingleModuleParseMode = false;
+
   /// When enabled, the preprocessor will construct editor placeholder tokens.
   bool LexEditorPlaceholders = true;
 
@@ -189,19 +196,6 @@ public:
   /// with support for lifetime-qualified pointers.
   ObjCXXARCStandardLibraryKind ObjCXXARCStandardLibrary = ARCXX_nolib;
 
-  /// Function for getting the dependency preprocessor directives of a file.
-  ///
-  /// These are directives derived from a special form of lexing where the
-  /// source input is scanned for the preprocessor directives that might have an
-  /// effect on the dependencies for a compilation unit.
-  ///
-  /// Enables a client to cache the directives for a file and provide them
-  /// across multiple compiler invocations.
-  /// FIXME: Allow returning an error.
-  std::function<std::optional<ArrayRef<dependency_directives_scan::Directive>>(
-      FileEntryRef)>
-      DependencyDirectivesForFile;
-
   /// Set up preprocessor for RunAnalysis action.
   bool SetUpStaticAnalyzer = false;
 
@@ -210,6 +204,10 @@ public:
 
   /// If set, the UNIX timestamp specified by SOURCE_DATE_EPOCH.
   std::optional<uint64_t> SourceDateEpoch;
+
+  /// The initial value for __COUNTER__; typically is zero but can be set via a
+  /// -cc1 flag for testing purposes.
+  uint32_t InitialCounterValue = 0;
 
 public:
   PreprocessorOptions() : PrecompiledPreambleBytes(0, false) {}

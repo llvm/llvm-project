@@ -1,4 +1,4 @@
-; RUN: llc -march=bpf -mcpu=v3 < %s | FileCheck %s
+; RUN: llc -mtriple=bpf -mcpu=v3 < %s | FileCheck %s
 ;
 ; Source code:
 ;   void foo(int, int, int, long, int);

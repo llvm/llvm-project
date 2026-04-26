@@ -4,7 +4,7 @@
 @ ARM relocatable object files try to look like they're pre-linked, so the
 @ offsets in the instructions are a best-guess. I suspect the "-3" should b
 
-@ CHECK: movw r1, :lower16:((_bar-8)-3)
+@ CHECK: movw r1, :lower16:(_bar-8-3)
 @ [...]
 @ CHECK: .long {{[0-9]*[13579]}}
 

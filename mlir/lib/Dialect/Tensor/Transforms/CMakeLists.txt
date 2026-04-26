@@ -1,14 +1,14 @@
 add_mlir_dialect_library(MLIRTensorTransforms
   BufferizableOpInterfaceImpl.cpp
   ConcatOpPatterns.cpp
+  DropRedundantRankExpansionPatterns.cpp
   EmptyOpPatterns.cpp
   ExtractSliceFromReshapeUtils.cpp
   FoldTensorSubsetOps.cpp
   IndependenceTransforms.cpp
-  MergeConsecutiveInsertExtractSlicePatterns.cpp
-  PackAndUnpackPatterns.cpp
   ReshapePatterns.cpp
   RewriteAsConstant.cpp
+  RuntimeOpVerification.cpp
   SwapExtractSliceWithProducerPatterns.cpp
   SubsetInsertionOpInterfaceImpl.cpp
 
@@ -29,6 +29,7 @@ add_mlir_dialect_library(MLIRTensorTransforms
   MLIRLinalgDialect
   MLIRMemRefDialect
   MLIRPass
+  MLIRRuntimeVerifiableOpInterface
   MLIRSCFDialect
   MLIRSubsetOpInterface
   MLIRTensorDialect

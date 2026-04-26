@@ -8,9 +8,9 @@
 
 #include "PrimType.h"
 #include "Boolean.h"
+#include "Char.h"
 #include "FixedPoint.h"
 #include "Floating.h"
-#include "FunctionPointer.h"
 #include "IntegralAP.h"
 #include "MemberPointer.h"
 #include "Pointer.h"

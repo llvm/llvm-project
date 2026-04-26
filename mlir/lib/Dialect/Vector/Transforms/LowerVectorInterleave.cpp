@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/PatternMatch.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 #define DEBUG_TYPE "vector-interleave-lowering"
 
@@ -60,14 +61,16 @@ public:
       return failure();
 
     auto loc = op.getLoc();
-    Value result = rewriter.create<arith::ConstantOp>(
-        loc, resultType, rewriter.getZeroAttr(resultType));
+    Value result = arith::ConstantOp::create(rewriter, loc, resultType,
+                                             rewriter.getZeroAttr(resultType));
     for (auto position : *unrollIterator) {
-      Value extractLhs = rewriter.create<ExtractOp>(loc, op.getLhs(), position);
-      Value extractRhs = rewriter.create<ExtractOp>(loc, op.getRhs(), position);
+      Value extractLhs =
+          ExtractOp::create(rewriter, loc, op.getLhs(), position);
+      Value extractRhs =
+          ExtractOp::create(rewriter, loc, op.getRhs(), position);
       Value interleave =
-          rewriter.create<InterleaveOp>(loc, extractLhs, extractRhs);
-      result = rewriter.create<InsertOp>(loc, interleave, result, position);
+          InterleaveOp::create(rewriter, loc, extractLhs, extractRhs);
+      result = InsertOp::create(rewriter, loc, interleave, result, position);
     }
 
     rewriter.replaceOp(op, result);
@@ -123,20 +126,20 @@ public:
       return failure();
 
     auto loc = op.getLoc();
-    Value emptyResult = rewriter.create<arith::ConstantOp>(
-        loc, resultType, rewriter.getZeroAttr(resultType));
+    Value emptyResult = arith::ConstantOp::create(
+        rewriter, loc, resultType, rewriter.getZeroAttr(resultType));
     Value evenResult = emptyResult;
     Value oddResult = emptyResult;
 
     for (auto position : *unrollIterator) {
       auto extractSrc =
-          rewriter.create<vector::ExtractOp>(loc, op.getSource(), position);
+          vector::ExtractOp::create(rewriter, loc, op.getSource(), position);
       auto deinterleave =
-          rewriter.create<vector::DeinterleaveOp>(loc, extractSrc);
-      evenResult = rewriter.create<vector::InsertOp>(
-          loc, deinterleave.getRes1(), evenResult, position);
-      oddResult = rewriter.create<vector::InsertOp>(loc, deinterleave.getRes2(),
-                                                    oddResult, position);
+          vector::DeinterleaveOp::create(rewriter, loc, extractSrc);
+      evenResult = vector::InsertOp::create(
+          rewriter, loc, deinterleave.getRes1(), evenResult, position);
+      oddResult = vector::InsertOp::create(
+          rewriter, loc, deinterleave.getRes2(), oddResult, position);
     }
     rewriter.replaceOp(op, ValueRange{evenResult, oddResult});
     return success();
@@ -161,7 +164,7 @@ private:
 ///   : vector<7xi16>, vector<7xi16>
 /// ```
 struct InterleaveToShuffle final : OpRewritePattern<vector::InterleaveOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::InterleaveOp op,
                                 PatternRewriter &rewriter) const override {
@@ -171,8 +174,8 @@ struct InterleaveToShuffle final : OpRewritePattern<vector::InterleaveOp> {
     }
     int64_t n = sourceType.getNumElements();
     auto seq = llvm::seq<int64_t>(2 * n);
-    auto zip = llvm::to_vector(llvm::map_range(
-        seq, [n](int64_t i) { return (i % 2 ? n : 0) + i / 2; }));
+    auto zip = llvm::map_to_vector(
+        seq, [n](int64_t i) { return (i % 2 ? n : 0) + i / 2; });
     rewriter.replaceOpWithNewOp<ShuffleOp>(op, op.getLhs(), op.getRhs(), zip);
     return success();
   }

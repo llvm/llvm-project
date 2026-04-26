@@ -14,11 +14,11 @@
 #ifndef LLVM_TOOLS_LLVM_REDUCE_DELTAS_REDUCEVIRTUALREGISTERS_H
 #define LLVM_TOOLS_LLVM_REDUCE_DELTAS_REDUCEVIRTUALREGISTERS_H
 
-namespace llvm {
-class TestRunner;
+#include "Delta.h"
 
+namespace llvm {
 /// Remove register allocation hints from virtual registes.
-void reduceVirtualRegisterHintsDeltaPass(TestRunner &Test);
+void reduceVirtualRegisterHintsDeltaPass(Oracle &O, ReducerWorkItem &WorkItem);
 
 } // namespace llvm
 

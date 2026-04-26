@@ -21,5 +21,9 @@ entry:
   ret half %elt.log10
 }
 
+; DOPCHECK-DAG: declare half @dx.op.unary.f16(i32, half) #[[#ATTR0:]]
+; DOPCHECK-DAG: declare float @dx.op.unary.f32(i32, float) #[[#ATTR0]]
+; DOPCHECK: attributes #[[#ATTR0]] = { nounwind memory(none) }
+
 declare half @llvm.log10.f16(half)
 declare float @llvm.log10.f32(float)

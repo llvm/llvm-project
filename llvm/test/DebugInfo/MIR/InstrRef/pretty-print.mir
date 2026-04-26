@@ -1,4 +1,4 @@
-# RUN: llc %s -march=x86-64 -run-pass=machineverifier -print-after-all -o /dev/null -experimental-debug-variable-locations 2>&1 | FileCheck %s
+# RUN: llc %s -mtriple=x86_64 -run-pass=machineverifier -print-after-all -o /dev/null -experimental-debug-variable-locations 2>&1 | FileCheck %s
 # REQUIRES: x86-registered-target
 --- |
   define void @pretty_print_test() {

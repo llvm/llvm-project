@@ -118,7 +118,7 @@ bool ValueObjectChild::UpdateValue() {
            (parent_type_flags.AnySet(lldb::eTypeInstanceIsPointer)));
 
       if (parent->GetCompilerType().ShouldTreatScalarValueAsAddress()) {
-        m_value.GetScalar() = parent->GetPointerValue();
+        m_value.GetScalar() = parent->GetPointerValue().address;
 
         switch (parent->GetAddressTypeOfChildren()) {
         case eAddressTypeFile: {
@@ -164,8 +164,9 @@ bool ValueObjectChild::UpdateValue() {
             const bool thread_and_frame_only_if_stopped = true;
             ExecutionContext exe_ctx(GetExecutionContextRef().Lock(
                 thread_and_frame_only_if_stopped));
-            if (auto type_bit_size = GetCompilerType().GetBitSize(
-                    exe_ctx.GetBestExecutionContextScope())) {
+            if (auto type_bit_size =
+                    llvm::expectedToOptional(GetCompilerType().GetBitSize(
+                        exe_ctx.GetBestExecutionContextScope()))) {
               uint64_t bitfield_end =
                   m_bitfield_bit_size + m_bitfield_bit_offset;
               if (bitfield_end > *type_bit_size) {

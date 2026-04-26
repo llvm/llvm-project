@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "../lib/Transforms/Vectorize/VPlanSLP.h"
 #include "../lib/Transforms/Vectorize/VPlan.h"
-#include "../lib/Transforms/Vectorize/VPlanHCFGBuilder.h"
 #include "VPlanTestBase.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
@@ -16,10 +16,8 @@
 namespace llvm {
 namespace {
 
-class VPlanSlpTest : public VPlanTestBase {
+class VPlanSlpTest : public VPlanTestIRBase {
 protected:
-  TargetLibraryInfoImpl TLII;
-  TargetLibraryInfo TLI;
   DataLayout DL;
 
   std::unique_ptr<AssumptionCache> AC;
@@ -31,20 +29,20 @@ protected:
   std::unique_ptr<InterleavedAccessInfo> IAI;
 
   VPlanSlpTest()
-      : TLII(), TLI(TLII),
-        DL("e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-"
+      : DL("e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-"
            "f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:"
            "16:32:64-S128") {}
 
   VPInterleavedAccessInfo getInterleavedAccessInfo(Function &F, Loop *L,
                                                    VPlan &Plan) {
     AC.reset(new AssumptionCache(F));
-    SE.reset(new ScalarEvolution(F, TLI, *AC, *DT, *LI));
-    BasicAA.reset(new BasicAAResult(DL, F, TLI, *AC, &*DT));
-    AARes.reset(new AAResults(TLI));
+    SE.reset(new ScalarEvolution(F, *TLI, *AC, *DT, *LI));
+    BasicAA.reset(new BasicAAResult(DL, F, *TLI, *AC, &*DT));
+    AARes.reset(new AAResults(*TLI));
     AARes->addAAResult(*BasicAA);
     PSE.reset(new PredicatedScalarEvolution(*SE, *L));
-    LAI.reset(new LoopAccessInfo(L, &*SE, nullptr, &TLI, &*AARes, &*DT, &*LI));
+    LAI.reset(
+        new LoopAccessInfo(L, &*SE, nullptr, &*TLI, &*AARes, &*DT, &*LI, &*AC));
     IAI.reset(new InterleavedAccessInfo(*PSE, L, &*DT, &*LI, &*LAI));
     IAI->analyzeInterleaving(false);
     return {Plan, *IAI};
@@ -94,11 +92,9 @@ TEST_F(VPlanSlpTest, testSlpSimple_2) {
 
   Function *F = M.getFunction("add_x2");
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
-  auto Plan = buildHCFG(LoopHeader);
+  auto Plan = buildVPlan(LoopHeader);
   auto VPIAI = getInterleavedAccessInfo(*F, LI->getLoopFor(LoopHeader), *Plan);
 
-  VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
-  EXPECT_NE(nullptr, Entry->getSingleSuccessor());
   VPBasicBlock *Body = Plan->getVectorLoopRegion()->getEntryBasicBlock();
 
   VPInstruction *Store1 = cast<VPInstruction>(&*std::next(Body->begin(), 12));
@@ -167,10 +163,8 @@ TEST_F(VPlanSlpTest, testSlpSimple_3) {
 
   Function *F = M.getFunction("add_x2");
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
-  auto Plan = buildHCFG(LoopHeader);
+  auto Plan = buildVPlan(LoopHeader);
 
-  VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
-  EXPECT_NE(nullptr, Entry->getSingleSuccessor());
   VPBasicBlock *Body = Plan->getVectorLoopRegion()->getEntryBasicBlock();
 
   VPInstruction *Store1 = cast<VPInstruction>(&*std::next(Body->begin(), 12));
@@ -238,11 +232,9 @@ TEST_F(VPlanSlpTest, testSlpReuse_1) {
 
   Function *F = M.getFunction("add_x2");
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
-  auto Plan = buildHCFG(LoopHeader);
+  auto Plan = buildVPlan(LoopHeader);
   auto VPIAI = getInterleavedAccessInfo(*F, LI->getLoopFor(LoopHeader), *Plan);
 
-  VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
-  EXPECT_NE(nullptr, Entry->getSingleSuccessor());
   VPBasicBlock *Body = Plan->getVectorLoopRegion()->getEntryBasicBlock();
 
   VPInstruction *Store1 = cast<VPInstruction>(&*std::next(Body->begin(), 8));
@@ -302,11 +294,9 @@ TEST_F(VPlanSlpTest, testSlpReuse_2) {
 
   Function *F = M.getFunction("add_x2");
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
-  auto Plan = buildHCFG(LoopHeader);
+  auto Plan = buildVPlan(LoopHeader);
   auto VPIAI = getInterleavedAccessInfo(*F, LI->getLoopFor(LoopHeader), *Plan);
 
-  VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
-  EXPECT_NE(nullptr, Entry->getSingleSuccessor());
   VPBasicBlock *Body = Plan->getVectorLoopRegion()->getEntryBasicBlock();
 
   VPInstruction *Store1 = cast<VPInstruction>(&*std::next(Body->begin(), 5));
@@ -440,10 +430,8 @@ TEST_F(VPlanSlpTest, testSlpReorder_1) {
 
   Function *F = M.getFunction("add_x3");
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
-  auto Plan = buildHCFG(LoopHeader);
+  auto Plan = buildVPlan(LoopHeader);
 
-  VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
-  EXPECT_NE(nullptr, Entry->getSingleSuccessor());
   VPBasicBlock *Body = Plan->getVectorLoopRegion()->getEntryBasicBlock();
 
   VPInstruction *Store1 = cast<VPInstruction>(&*std::next(Body->begin(), 24));
@@ -512,10 +500,8 @@ TEST_F(VPlanSlpTest, testSlpReorder_2) {
 
   Function *F = M.getFunction("add_x3");
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
-  auto Plan = buildHCFG(LoopHeader);
+  auto Plan = buildVPlan(LoopHeader);
 
-  VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
-  EXPECT_NE(nullptr, Entry->getSingleSuccessor());
   VPBasicBlock *Body = Plan->getVectorLoopRegion()->getEntryBasicBlock();
 
   VPInstruction *Store1 = cast<VPInstruction>(&*std::next(Body->begin(), 24));
@@ -584,14 +570,12 @@ TEST_F(VPlanSlpTest, testSlpReorder_3) {
 
   Function *F = M.getFunction("add_x3");
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
-  auto Plan = buildHCFG(LoopHeader);
+  auto Plan = buildVPlan(LoopHeader);
 
-  VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
-  EXPECT_NE(nullptr, Entry->getSingleSuccessor());
   VPBasicBlock *Body = Plan->getVectorLoopRegion()->getEntryBasicBlock();
 
-  VPInstruction *Store1 = cast<VPInstruction>(&*std::next(Body->begin(), 24));
-  VPInstruction *Store2 = cast<VPInstruction>(&*std::next(Body->begin(), 26));
+  VPInstruction *Store1 = cast<VPInstruction>(&*std::next(Body->begin(), 25));
+  VPInstruction *Store2 = cast<VPInstruction>(&*std::next(Body->begin(), 27));
 
   auto VPIAI = getInterleavedAccessInfo(*F, LI->getLoopFor(LoopHeader), *Plan);
   VPlanSlp Slp(VPIAI, *Body);
@@ -660,10 +644,8 @@ TEST_F(VPlanSlpTest, testSlpReorder_4) {
 
   Function *F = M.getFunction("add_x3");
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
-  auto Plan = buildHCFG(LoopHeader);
+  auto Plan = buildVPlan(LoopHeader);
 
-  VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
-  EXPECT_NE(nullptr, Entry->getSingleSuccessor());
   VPBasicBlock *Body = Plan->getVectorLoopRegion()->getEntryBasicBlock();
 
   VPInstruction *Store1 = cast<VPInstruction>(&*std::next(Body->begin(), 24));
@@ -720,16 +702,14 @@ TEST_F(VPlanSlpTest, testInstrsInDifferentBBs) {
 
   Function *F = M.getFunction("add_x2");
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
-  auto Plan = buildHCFG(LoopHeader);
+  auto Plan = buildVPlan(LoopHeader);
   auto VPIAI = getInterleavedAccessInfo(*F, LI->getLoopFor(LoopHeader), *Plan);
 
-  VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
-  EXPECT_NE(nullptr, Entry->getSingleSuccessor());
   VPBasicBlock *Body = Plan->getVectorLoopRegion()->getEntryBasicBlock();
   VPBasicBlock *BB2 = Body->getSingleSuccessor()->getEntryBasicBlock();
 
-  VPInstruction *Store1 = cast<VPInstruction>(&*std::next(BB2->begin(), 3));
-  VPInstruction *Store2 = cast<VPInstruction>(&*std::next(BB2->begin(), 5));
+  VPInstruction *Store1 = cast<VPInstruction>(&*std::next(BB2->begin(), 4));
+  VPInstruction *Store2 = cast<VPInstruction>(&*std::next(BB2->begin(), 6));
 
   VPlanSlp Slp(VPIAI, *BB2);
   SmallVector<VPValue *, 4> StoreRoot = {Store1, Store2};
@@ -783,16 +763,14 @@ TEST_F(VPlanSlpTest, testInstrsInDifferentBBs2) {
 
   Function *F = M.getFunction("add_x2");
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
-  auto Plan = buildHCFG(LoopHeader);
+  auto Plan = buildVPlan(LoopHeader);
   auto VPIAI = getInterleavedAccessInfo(*F, LI->getLoopFor(LoopHeader), *Plan);
 
-  VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
-  EXPECT_NE(nullptr, Entry->getSingleSuccessor());
   VPBasicBlock *Body = Plan->getVectorLoopRegion()->getEntryBasicBlock();
   VPBasicBlock *BB2 = Body->getSingleSuccessor()->getEntryBasicBlock();
 
-  VPInstruction *Store1 = cast<VPInstruction>(&*std::next(BB2->begin(), 1));
-  VPInstruction *Store2 = cast<VPInstruction>(&*std::next(BB2->begin(), 3));
+  VPInstruction *Store1 = cast<VPInstruction>(&*std::next(BB2->begin(), 2));
+  VPInstruction *Store2 = cast<VPInstruction>(&*std::next(BB2->begin(), 4));
 
   VPlanSlp Slp(VPIAI, *BB2);
   SmallVector<VPValue *, 4> StoreRoot = {Store1, Store2};
@@ -843,15 +821,13 @@ TEST_F(VPlanSlpTest, testSlpAtomicLoad) {
 
   Function *F = M.getFunction("add_x2");
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
-  auto Plan = buildHCFG(LoopHeader);
+  auto Plan = buildVPlan(LoopHeader);
   auto VPIAI = getInterleavedAccessInfo(*F, LI->getLoopFor(LoopHeader), *Plan);
 
-  VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
-  EXPECT_NE(nullptr, Entry->getSingleSuccessor());
   VPBasicBlock *Body = Plan->getVectorLoopRegion()->getEntryBasicBlock();
 
-  VPInstruction *Store1 = cast<VPInstruction>(&*std::next(Body->begin(), 12));
-  VPInstruction *Store2 = cast<VPInstruction>(&*std::next(Body->begin(), 14));
+  VPInstruction *Store1 = cast<VPInstruction>(&*std::next(Body->begin(), 13));
+  VPInstruction *Store2 = cast<VPInstruction>(&*std::next(Body->begin(), 15));
 
   VPlanSlp Slp(VPIAI, *Body);
   SmallVector<VPValue *, 4> StoreRoot = {Store1, Store2};
@@ -902,15 +878,13 @@ TEST_F(VPlanSlpTest, testSlpAtomicStore) {
 
   Function *F = M.getFunction("add_x2");
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
-  auto Plan = buildHCFG(LoopHeader);
+  auto Plan = buildVPlan(LoopHeader);
   auto VPIAI = getInterleavedAccessInfo(*F, LI->getLoopFor(LoopHeader), *Plan);
 
-  VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
-  EXPECT_NE(nullptr, Entry->getSingleSuccessor());
   VPBasicBlock *Body = Plan->getVectorLoopRegion()->getEntryBasicBlock();
 
-  VPInstruction *Store1 = cast<VPInstruction>(&*std::next(Body->begin(), 12));
-  VPInstruction *Store2 = cast<VPInstruction>(&*std::next(Body->begin(), 14));
+  VPInstruction *Store1 = cast<VPInstruction>(&*std::next(Body->begin(), 13));
+  VPInstruction *Store2 = cast<VPInstruction>(&*std::next(Body->begin(), 15));
 
   VPlanSlp Slp(VPIAI, *Body);
   SmallVector<VPValue *, 4> StoreRoot = {Store1, Store2};

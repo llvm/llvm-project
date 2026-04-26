@@ -745,3 +745,5 @@ bool ento::shouldRegisterPthreadLockBase(const CheckerManager &mgr) { return tru
 REGISTER_CHECKER(PthreadLockChecker)
 REGISTER_CHECKER(FuchsiaLockChecker)
 REGISTER_CHECKER(C11LockChecker)
+
+#undef REGISTER_CHECKER

@@ -7,13 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FUNCTIONAL_MEM_FN_H
-#define _LIBCPP___FUNCTIONAL_MEM_FN_H
+#ifndef _LIBCPP___CXX03___FUNCTIONAL_MEM_FN_H
+#define _LIBCPP___CXX03___FUNCTIONAL_MEM_FN_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__functional/binary_function.h>
-#include <__cxx03/__functional/invoke.h>
 #include <__cxx03/__functional/weak_result_type.h>
+#include <__cxx03/__type_traits/invoke.h>
 #include <__cxx03/__utility/forward.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -32,23 +32,20 @@ private:
   type __f_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __mem_fn(type __f) _NOEXCEPT : __f_(__f) {}
+  _LIBCPP_HIDE_FROM_ABI __mem_fn(type __f) _NOEXCEPT : __f_(__f) {}
 
   // invoke
   template <class... _ArgTypes>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
-
-  typename __invoke_return<type, _ArgTypes...>::type
-  operator()(_ArgTypes&&... __args) const {
+  _LIBCPP_HIDE_FROM_ABI typename __invoke_return<type, _ArgTypes...>::type operator()(_ArgTypes&&... __args) const {
     return std::__invoke(__f_, std::forward<_ArgTypes>(__args)...);
   }
 };
 
 template <class _Rp, class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __mem_fn<_Rp _Tp::*> mem_fn(_Rp _Tp::*__pm) _NOEXCEPT {
+inline _LIBCPP_HIDE_FROM_ABI __mem_fn<_Rp _Tp::*> mem_fn(_Rp _Tp::* __pm) _NOEXCEPT {
   return __mem_fn<_Rp _Tp::*>(__pm);
 }
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FUNCTIONAL_MEM_FN_H
+#endif // _LIBCPP___CXX03___FUNCTIONAL_MEM_FN_H

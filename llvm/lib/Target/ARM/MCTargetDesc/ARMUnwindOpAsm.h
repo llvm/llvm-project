@@ -14,6 +14,7 @@
 #ifndef LLVM_LIB_TARGET_ARM_MCTARGETDESC_ARMUNWINDOPASM_H
 #define LLVM_LIB_TARGET_ARM_MCTARGETDESC_ARMUNWINDOPASM_H
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include <cstddef>
 #include <cstdint>
@@ -60,7 +61,7 @@ public:
 
   /// Emit unwind raw opcodes
   void EmitRaw(const SmallVectorImpl<uint8_t> &Opcodes) {
-    Ops.insert(Ops.end(), Opcodes.begin(), Opcodes.end());
+    llvm::append_range(Ops, Opcodes);
     OpBegins.push_back(OpBegins.back() + Opcodes.size());
   }
 

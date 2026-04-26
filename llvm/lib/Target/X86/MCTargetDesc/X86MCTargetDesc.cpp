@@ -17,6 +17,7 @@
 #include "X86IntelInstPrinter.h"
 #include "X86MCAsmInfo.h"
 #include "X86TargetStreamer.h"
+#include "llvm-c/Visibility.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/MC/MCDwarf.h"
@@ -25,7 +26,6 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/MC/MachineLocation.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/Host.h"
@@ -48,18 +48,21 @@ std::string X86_MC::ParseX86Triple(const Triple &TT) {
   std::string FS;
   // SSE2 should default to enabled in 64-bit mode, but can be turned off
   // explicitly.
-  if (TT.isArch64Bit())
+  if (TT.isX86_64())
     FS = "+64bit-mode,-32bit-mode,-16bit-mode,+sse2";
   else if (TT.getEnvironment() != Triple::CODE16)
     FS = "-64bit-mode,+32bit-mode,-16bit-mode";
   else
     FS = "-64bit-mode,-32bit-mode,+16bit-mode";
 
+  if (TT.isX32())
+    FS += ",+x32";
+
   return FS;
 }
 
 unsigned X86_MC::getDwarfRegFlavour(const Triple &TT, bool isEH) {
-  if (TT.getArch() == Triple::x86_64)
+  if (TT.isX86_64())
     return DWARFFlavour::X86_64;
 
   if (TT.isOSDarwin())
@@ -397,18 +400,6 @@ MCSubtargetInfo *X86_MC::createX86MCSubtargetInfo(const Triple &TT,
   if (CPU.empty())
     CPU = "generic";
 
-  size_t posNoEVEX512 = FS.rfind("-evex512");
-  // Make sure we won't be cheated by "-avx512fp16".
-  size_t posNoAVX512F =
-      FS.ends_with("-avx512f") ? FS.size() - 8 : FS.rfind("-avx512f,");
-  size_t posEVEX512 = FS.rfind("+evex512");
-  size_t posAVX512F = FS.rfind("+avx512"); // Any AVX512XXX will enable AVX512F.
-
-  if (posAVX512F != StringRef::npos &&
-      (posNoAVX512F == StringRef::npos || posNoAVX512F < posAVX512F))
-    if (posEVEX512 == StringRef::npos && posNoEVEX512 == StringRef::npos)
-      ArchFS += ",+evex512";
-
   return createX86MCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, ArchFS);
 }
 
@@ -419,9 +410,8 @@ static MCInstrInfo *createX86MCInstrInfo() {
 }
 
 static MCRegisterInfo *createX86MCRegisterInfo(const Triple &TT) {
-  unsigned RA = (TT.getArch() == Triple::x86_64)
-                    ? X86::RIP  // Should have dwarf #16.
-                    : X86::EIP; // Should have dwarf #8.
+  unsigned RA = TT.isX86_64() ? X86::RIP  // Should have dwarf #16.
+                              : X86::EIP; // Should have dwarf #8.
 
   MCRegisterInfo *X = new MCRegisterInfo();
   InitX86MCRegisterInfo(X, RA, X86_MC::getDwarfRegFlavour(TT, false),
@@ -430,34 +420,68 @@ static MCRegisterInfo *createX86MCRegisterInfo(const Triple &TT) {
   return X;
 }
 
+static void populateReservedIdentifiers(StringSet<> &Set,
+                                        const MCRegisterInfo &MRI) {
+  // Register names: `call rsi` is misassembled as an indirect call.
+  for (unsigned i = 1, e = MRI.getNumRegs(); i < e; ++i)
+    if (const char *Name = MRI.getName(i))
+      if (Name[0])
+        Set.insert(StringRef(Name).lower());
+  // Keywords that GAS Intel syntax misparses as constants, modifiers, or
+  // pseudo-registers instead of symbol references (e.g., `call byte` calls
+  // address 1, not symbol "byte"; `call flat` errors out).
+  for (StringRef KW : {"byte", "word", "dword", "fword", "qword", "mmword",
+                       "tbyte", "oword", "xmmword", "ymmword", "zmmword",
+                       "offset", "flat", "near", "far", "short"})
+    Set.insert(KW);
+  // Operator keywords parsed by GAS/X86AsmParser in Intel mode.
+  for (StringRef KW : {"and", "eq", "ge", "gt", "le", "lt", "mod", "ne", "not",
+                       "or", "shl", "shr", "xor"})
+    Set.insert(KW);
+}
+
 static MCAsmInfo *createX86MCAsmInfo(const MCRegisterInfo &MRI,
                                      const Triple &TheTriple,
                                      const MCTargetOptions &Options) {
-  bool is64Bit = TheTriple.getArch() == Triple::x86_64;
+  bool is64Bit = TheTriple.isX86_64();
 
   MCAsmInfo *MAI;
   if (TheTriple.isOSBinFormatMachO()) {
-    if (is64Bit)
-      MAI = new X86_64MCAsmInfoDarwin(TheTriple);
-    else
-      MAI = new X86MCAsmInfoDarwin(TheTriple);
+    if (is64Bit) {
+      auto *P = new X86_64MCAsmInfoDarwin(TheTriple, Options);
+      populateReservedIdentifiers(P->ReservedIdentifiers, MRI);
+      MAI = P;
+    } else {
+      auto *P = new X86MCAsmInfoDarwin(TheTriple, Options);
+      populateReservedIdentifiers(P->ReservedIdentifiers, MRI);
+      MAI = P;
+    }
   } else if (TheTriple.isOSBinFormatELF()) {
     // Force the use of an ELF container.
-    MAI = new X86ELFMCAsmInfo(TheTriple);
+    auto *P = new X86ELFMCAsmInfo(TheTriple, Options);
+    populateReservedIdentifiers(P->ReservedIdentifiers, MRI);
+    MAI = P;
   } else if (TheTriple.isWindowsMSVCEnvironment() ||
-             TheTriple.isWindowsCoreCLREnvironment()) {
-    if (Options.getAssemblyLanguage().equals_insensitive("masm"))
-      MAI = new X86MCAsmInfoMicrosoftMASM(TheTriple);
-    else
-      MAI = new X86MCAsmInfoMicrosoft(TheTriple);
+             TheTriple.isWindowsCoreCLREnvironment() || TheTriple.isUEFI()) {
+    if (Options.getAssemblyLanguage().equals_insensitive("masm")) {
+      auto *P = new X86MCAsmInfoMicrosoftMASM(TheTriple, Options);
+      populateReservedIdentifiers(P->ReservedIdentifiers, MRI);
+      MAI = P;
+    } else {
+      auto *P = new X86MCAsmInfoMicrosoft(TheTriple, Options);
+      populateReservedIdentifiers(P->ReservedIdentifiers, MRI);
+      MAI = P;
+    }
   } else if (TheTriple.isOSCygMing() ||
              TheTriple.isWindowsItaniumEnvironment()) {
-    MAI = new X86MCAsmInfoGNUCOFF(TheTriple);
-  } else if (TheTriple.isUEFI()) {
-    MAI = new X86MCAsmInfoGNUCOFF(TheTriple);
+    auto *P = new X86MCAsmInfoGNUCOFF(TheTriple, Options);
+    populateReservedIdentifiers(P->ReservedIdentifiers, MRI);
+    MAI = P;
   } else {
     // The default is ELF.
-    MAI = new X86ELFMCAsmInfo(TheTriple);
+    auto *P = new X86ELFMCAsmInfo(TheTriple, Options);
+    populateReservedIdentifiers(P->ReservedIdentifiers, MRI);
+    MAI = P;
   }
 
   // Initialize initial frame state.
@@ -503,7 +527,7 @@ namespace X86_MC {
 class X86MCInstrAnalysis : public MCInstrAnalysis {
   X86MCInstrAnalysis(const X86MCInstrAnalysis &) = delete;
   X86MCInstrAnalysis &operator=(const X86MCInstrAnalysis &) = delete;
-  virtual ~X86MCInstrAnalysis() = default;
+  ~X86MCInstrAnalysis() override = default;
 
 public:
   X86MCInstrAnalysis(const MCInstrInfo *MCII) : MCInstrAnalysis(MCII) {}
@@ -515,7 +539,7 @@ public:
                             APInt &Mask) const override;
   std::vector<std::pair<uint64_t, uint64_t>>
   findPltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents,
-                 const Triple &TargetTriple) const override;
+                 const MCSubtargetInfo &STI) const override;
 
   bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
                       uint64_t &Target) const override;
@@ -547,7 +571,7 @@ bool X86MCInstrAnalysis::clearsSuperRegisters(const MCRegisterInfo &MRI,
   const MCRegisterClass &VR128XRC = MRI.getRegClass(X86::VR128XRegClassID);
   const MCRegisterClass &VR256XRC = MRI.getRegClass(X86::VR256XRegClassID);
 
-  auto ClearsSuperReg = [=](unsigned RegID) {
+  auto ClearsSuperReg = [=](MCRegister RegID) {
     // On X86-64, a general purpose integer register is viewed as a 64-bit
     // register internal to the processor.
     // An update to the lower 32 bits of a 64 bit integer register is
@@ -631,7 +655,8 @@ findX86_64PltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents) {
 std::vector<std::pair<uint64_t, uint64_t>>
 X86MCInstrAnalysis::findPltEntries(uint64_t PltSectionVA,
                                    ArrayRef<uint8_t> PltContents,
-                                   const Triple &TargetTriple) const {
+                                   const MCSubtargetInfo &STI) const {
+  const Triple &TargetTriple = STI.getTargetTriple();
   switch (TargetTriple.getArch()) {
   case Triple::x86:
     return findX86PltEntries(PltSectionVA, PltContents);
@@ -710,7 +735,7 @@ static MCInstrAnalysis *createX86MCInstrAnalysis(const MCInstrInfo *Info) {
 }
 
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86TargetMC() {
+extern "C" LLVM_C_ABI void LLVMInitializeX86TargetMC() {
   for (Target *T : {&getTheX86_32Target(), &getTheX86_64Target()}) {
     // Register the MC asm info.
     RegisterMCAsmInfoFn X(*T, createX86MCAsmInfo);

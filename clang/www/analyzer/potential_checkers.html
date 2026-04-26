@@ -965,7 +965,7 @@ undefbehavior.BasicStringOutOfBound</span><span class="lang">
 (C++03)</span><div class="descr">
 Undefined behavior: out-of-bound <code>basic_string</code> access/modification.
 <br>Note: possibly an enhancement to <span class="name">
-alpha.security.ArrayBoundV2</span>.
+security.ArrayBound</span>.
 <p>Source: C++03 21.3.4p1; C++11 behavior is defined
 (21.4.5p2).</p></div></div></td>
 <td><div class="exampleContainer expandable">
@@ -1687,24 +1687,6 @@ bool test() {
 <div class="example"><pre>
 bool test() {
   return ""; // warn
-}
-</pre></div></div></td>
-<td class="aligned"></td></tr>
-
-
-<tr><td><div class="namedescr expandable"><span class="name">
-different.ArrayBound</span><span class="lang">
-(C++)</span><div class="descr">
-Out-of-bound dynamic array access.
-<br>Note: possibly an enhancement to <span class="name">
-alpha.security.ArrayBoundV2</span>.</div></div></td>
-<td><div class="exampleContainer expandable">
-<div class="example"><pre>
-void test() {
-  int *p = new int[1];
-  int i = 1;
-  if(p[i]) {}; // warn
-  delete[] p;
 }
 </pre></div></div></td>
 <td class="aligned"></td></tr>

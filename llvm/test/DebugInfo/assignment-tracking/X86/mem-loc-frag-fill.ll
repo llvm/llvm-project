@@ -3,16 +3,7 @@
 ; RUN:    -debug-ata-coalesce-frags=true \
 ; RUN: | FileCheck %s --implicit-check-not=DBG_
 
-; RUN: llc --try-experimental-debuginfo-iterators %s -stop-before finalize-isel -o - \
-; RUN:    -experimental-debug-variable-locations=false \
-; RUN:    -debug-ata-coalesce-frags=true \
-; RUN: | FileCheck %s --implicit-check-not=DBG_
 ; RUN: llc %s -stop-before finalize-isel -o - \
-; RUN:    -experimental-debug-variable-locations=true \
-; RUN: | FileCheck %s  --implicit-check-not=DBG_
-
-
-; RUN: llc --try-experimental-debuginfo-iterators %s -stop-before finalize-isel -o - \
 ; RUN:    -experimental-debug-variable-locations=true \
 ; RUN: | FileCheck %s  --implicit-check-not=DBG_
 
@@ -74,6 +65,8 @@ entry:
 ; CHECK-NEXT: DBG_VALUE %stack.0.nums, $noreg, ![[nums]], !DIExpression(DW_OP_deref, DW_OP_LLVM_fragment, 0, 80)
   tail call void @_Z4stepv(), !dbg !32
   call void @_Z3escP4Nums(ptr noundef nonnull %nums), !dbg !33
+; CHECK: CALL64pcrel32 @_Z3escP4Nums
+; CHECK: DBG_VALUE %stack.0.nums, $noreg, ![[nums]], !DIExpression(DW_OP_deref)
   ret i32 0, !dbg !35
 }
 

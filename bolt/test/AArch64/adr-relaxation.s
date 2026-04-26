@@ -3,7 +3,7 @@
 # RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown %s -o %t.o
 # RUN: %clang %cflags %t.o -o %t.exe -Wl,-q -static
 # RUN: llvm-bolt %t.exe -o %t.bolt --split-functions --split-strategy=random2
-# RUN: llvm-objdump -d --disassemble-symbols=_start %t.bolt | FileCheck %s
+# RUN: llvm-objdump -d -j .text %t.bolt | FileCheck %s
 # RUN: llvm-objdump -d --disassemble-symbols=foo.cold.0 %t.bolt \
 # RUN:   | FileCheck --check-prefix=CHECK-FOO %s
 
@@ -13,11 +13,10 @@
   .globl _start
   .type _start, %function
 _start:
-# CHECK: <_start>:
   .cfi_startproc
+# CHECK: <_start>:
+# CHECK-NEXT: adr
   adr x1, _start
-# CHECK-NOT: adrp
-# CHECK: adr
   cmp  x1, x11
   b.hi  .L1
   mov  x0, #0x0
@@ -35,15 +34,29 @@ foo:
   .cfi_startproc
   cmp  x1, x11
   b.hi  .L2
-  mov  x0, #0x0
 .L2:
 # CHECK-FOO: <foo.cold.0>:
-  adr x1, foo
-# CHECK-FOO: adrp
+# CHECK-FOO-NEXT: adrp
 # CHECK-FOO-NEXT: add
+  adr x1, foo
   ret  x30
   .cfi_endproc
 .size foo, .-foo
 
-## Force relocation mode.
-  .reloc 0, R_AARCH64_NONE
+## bar is a non-simple function. We can still relax ADR, because it has a
+## preceding NOP.
+  .globl bar
+  .type bar, %function
+bar:
+  .cfi_startproc
+# CHECK-LABEL: <bar>:
+# CHECK-NEXT: adrp
+# CHECK-NEXT: add
+  nop
+  adr x0, foo
+  adr x1, .L3
+  br x1
+.L3:
+  ret  x0
+  .cfi_endproc
+  .size bar, .-bar

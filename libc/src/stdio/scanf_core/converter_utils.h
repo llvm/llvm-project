@@ -19,16 +19,6 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace scanf_core {
 
-LIBC_INLINE constexpr char to_lower(char a) { return a | 32; }
-
-LIBC_INLINE constexpr int b36_char_to_int(char input) {
-  if (internal::isdigit(input))
-    return input - '0';
-  if (internal::isalpha(input))
-    return to_lower(input) + 10 - 'a';
-  return 0;
-}
-
 LIBC_INLINE void write_int_with_length(uintmax_t output_val,
                                        const FormatSection &to_conv) {
   if ((to_conv.flags & NO_WRITE) != 0) {
@@ -93,11 +83,13 @@ LIBC_INLINE void write_float_with_length(char *str,
     *reinterpret_cast<double *>(output_ptr) = value;
     break;
   }
+#ifndef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
   case (LengthModifier::L): {
     auto value = internal::strtofloatingpoint<long double>(str);
     *reinterpret_cast<long double *>(output_ptr) = value;
     break;
   }
+#endif // !LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
   default: {
     auto value = internal::strtofloatingpoint<float>(str);
     *reinterpret_cast<float *>(output_ptr) = value;

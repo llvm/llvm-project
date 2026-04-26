@@ -19,4 +19,6 @@
 // CHECK-SAME: {{^}}, z15
 // CHECK-SAME: {{^}}, arch14
 // CHECK-SAME: {{^}}, z16
+// CHECK-SAME: {{^}}, arch15
+// CHECK-SAME: {{^}}, z17
 // CHECK-SAME: {{$}}

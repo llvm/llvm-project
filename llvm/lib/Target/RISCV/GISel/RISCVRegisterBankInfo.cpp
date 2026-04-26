@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/RegisterBank.h"
 #include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/IR/IntrinsicsRISCV.h"
 
 #define GET_TARGET_REGBANK_IMPL
 #include "RISCVGenRegisterBank.inc"
@@ -112,6 +113,19 @@ using namespace llvm;
 RISCVRegisterBankInfo::RISCVRegisterBankInfo(unsigned HwMode)
     : RISCVGenRegisterBankInfo(HwMode) {}
 
+const RegisterBank &
+RISCVRegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
+                                              LLT Ty) const {
+  switch (RC.getID()) {
+  // Vector control and status register class
+  case RISCV::VCSRRegClassID:
+    return getRegBank(RISCV::GPRBRegBankID);
+  default:
+    // For all GPR register classes and others, use the default implementation
+    return RISCVGenRegisterBankInfo::getRegBankFromRegClass(RC, Ty);
+  }
+}
+
 static const RegisterBankInfo::ValueMapping *getFPValueMapping(unsigned Size) {
   unsigned Idx;
   switch (Size) {
@@ -149,6 +163,9 @@ bool RISCVRegisterBankInfo::onlyUsesFP(const MachineInstr &MI,
                                        const MachineRegisterInfo &MRI,
                                        const TargetRegisterInfo &TRI) const {
   switch (MI.getOpcode()) {
+  case RISCV::G_FCVT_W_RV64:
+  case RISCV::G_FCVT_WU_RV64:
+  case RISCV::G_FCLASS:
   case TargetOpcode::G_FPTOSI:
   case TargetOpcode::G_FPTOUI:
   case TargetOpcode::G_FCMP:
@@ -321,22 +338,28 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
     OpdsMapping[0] = GPRValueMapping;
 
+    // Atomics always use GPR destinations. Don't refine any further.
+    if (cast<GLoad>(MI).isAtomic())
+      break;
+
     // Use FPR64 for s64 loads on rv32.
     if (GPRSize == 32 && Size.getFixedValue() == 64) {
       assert(MF.getSubtarget<RISCVSubtarget>().hasStdExtD());
-      OpdsMapping[0] = getFPValueMapping(Ty.getSizeInBits());
+      OpdsMapping[0] = getFPValueMapping(Size);
       break;
     }
 
     // Check if that load feeds fp instructions.
     // In that case, we want the default mapping to be on FPR
     // instead of blind map every scalar to GPR.
-    if (anyUseOnlyUseFP(MI.getOperand(0).getReg(), MRI, TRI))
+    if (anyUseOnlyUseFP(MI.getOperand(0).getReg(), MRI, TRI)) {
       // If we have at least one direct use in a FP instruction,
       // assume this was a floating point load in the IR. If it was
       // not, we would have had a bitcast before reaching that
       // instruction.
-      OpdsMapping[0] = getFPValueMapping(Ty.getSizeInBits());
+      OpdsMapping[0] = getFPValueMapping(Size);
+      break;
+    }
 
     break;
   }
@@ -352,6 +375,10 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     }
 
     OpdsMapping[0] = GPRValueMapping;
+
+    // Atomics always use GPR sources. Don't refine any further.
+    if (cast<GStore>(MI).isAtomic())
+      break;
 
     // Use FPR64 for s64 stores on rv32.
     if (GPRSize == 32 && Size.getFixedValue() == 64) {
@@ -432,6 +459,8 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     OpdsMapping[0] = OpdsMapping[2] = OpdsMapping[3] = Mapping;
     break;
   }
+  case RISCV::G_FCVT_W_RV64:
+  case RISCV::G_FCVT_WU_RV64:
   case TargetOpcode::G_FPTOSI:
   case TargetOpcode::G_FPTOUI:
   case RISCV::G_FCLASS: {
@@ -491,6 +520,43 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[1] = getFPValueMapping(ScalarTy.getSizeInBits());
     } else
       OpdsMapping[1] = GPRValueMapping;
+    break;
+  }
+  case TargetOpcode::G_INTRINSIC: {
+    Intrinsic::ID IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
+
+    if (const RISCVVIntrinsicsTable::RISCVVIntrinsicInfo *II =
+            RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(IntrinsicID)) {
+      unsigned ScalarIdx = -1;
+      if (II->hasScalarOperand()) {
+        ScalarIdx = II->ScalarOperand + 2;
+      }
+      for (unsigned Idx = 0; Idx < NumOperands; ++Idx) {
+        const MachineOperand &MO = MI.getOperand(Idx);
+        if (!MO.isReg())
+          continue;
+        LLT Ty = MRI.getType(MO.getReg());
+        if (Ty.isVector()) {
+          OpdsMapping[Idx] =
+              getVRBValueMapping(Ty.getSizeInBits().getKnownMinValue());
+        } else if (II->IsFPIntrinsic && ScalarIdx == Idx) {
+          // Chose the right FPR for scalar operand of RVV intrinsics.
+          OpdsMapping[Idx] = getFPValueMapping(Ty.getSizeInBits());
+        } else {
+          OpdsMapping[Idx] = GPRValueMapping;
+        }
+      }
+    }
+
+    if (IntrinsicID == Intrinsic::riscv_vsetvli ||
+        IntrinsicID == Intrinsic::riscv_vsetvlimax) {
+      for (unsigned Idx = 0; Idx < NumOperands; ++Idx) {
+        const MachineOperand &MO = MI.getOperand(Idx);
+        if (!MO.isReg())
+          continue;
+        OpdsMapping[Idx] = GPRValueMapping;
+      }
+    }
     break;
   }
   default:

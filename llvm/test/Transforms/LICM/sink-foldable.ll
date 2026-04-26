@@ -97,7 +97,7 @@ define ptr @test2(i32 %j, ptr readonly %P, ptr readnone %Q) {
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds ptr, ptr [[ADD_PTR]], i64 [[IDX2_EXT]]
 ; CHECK-NEXT:    [[L1:%.*]] = load ptr, ptr [[ARRAYIDX2]], align 8
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt ptr [[L1]], [[Q]]
-; CHECK-NEXT:    [[ADD_REASS]] = add i32 [[I_ADDR]], 2
+; CHECK-NEXT:    [[ADD_REASS]] = add nsw i32 [[ADD_I]], 1
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[LOOPEXIT2:%.*]], label [[FOR_COND]]
 ; CHECK:       loopexit0:
 ; CHECK-NEXT:    [[P0:%.*]] = phi ptr [ null, [[FOR_COND]] ]

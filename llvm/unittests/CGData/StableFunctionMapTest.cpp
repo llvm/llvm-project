@@ -108,8 +108,8 @@ TEST(StableFunctionMap, Finalize2) {
 
 TEST(StableFunctionMap, Finalize3) {
   StableFunctionMap Map;
-  StableFunction Func1{1, "Func1", "Mod1", 2, {{{0, 1}, 3}, {{1, 1}, 1}}};
-  StableFunction Func2{1, "Func2", "Mod2", 2, {{{0, 1}, 2}, {{1, 1}, 1}}};
+  StableFunction Func1{1, "Func1", "Mod1", 12, {{{0, 1}, 3}, {{1, 1}, 1}}};
+  StableFunction Func2{1, "Func2", "Mod2", 12, {{{0, 1}, 2}, {{1, 1}, 1}}};
   Map.insert(Func1);
   Map.insert(Func2);
 
@@ -117,7 +117,7 @@ TEST(StableFunctionMap, Finalize3) {
   Map.finalize();
   auto &M = Map.getFunctionMap();
   EXPECT_THAT(M, SizeIs(1));
-  auto &FuncEntries = M.begin()->second;
+  auto &FuncEntries = M.begin()->second.Entries;
   for (auto &FuncEntry : FuncEntries) {
     EXPECT_THAT(*FuncEntry->IndexOperandHashMap, SizeIs(1));
     ASSERT_THAT(*FuncEntry->IndexOperandHashMap,

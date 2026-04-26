@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -fblocks -fcxx-exceptions -verify -Wfunction-effects %s
-// RUN: %clang_cc1 -fsyntax-only -fblocks -verify -x c -std=c23 -Wfunction-effects %s
+// RUN: %clang_cc1 -fsyntax-only -fblocks -fcxx-exceptions -verify -Wfunction-effects -Wfunction-effect-redeclarations %s
+// RUN: %clang_cc1 -fsyntax-only -fblocks -verify -x c -std=c23 -Wfunction-effects -Wfunction-effect-redeclarations %s
 
 #if !__has_attribute(nonblocking)
 #error "the 'nonblocking' attribute is not available"
@@ -8,8 +8,8 @@
 // --- ATTRIBUTE SYNTAX: SUBJECTS ---
 
 int nl_var [[clang::nonblocking]]; // expected-warning {{'nonblocking' only applies to function types; type here is 'int'}}
-struct nl_struct {} [[clang::nonblocking]]; // expected-warning {{attribute 'nonblocking' is ignored, place it after "struct" to apply attribute to type declaration}}
-struct [[clang::nonblocking]] nl_struct2 {}; // expected-error {{'nonblocking' attribute cannot be applied to a declaration}}
+struct nl_struct {} [[clang::nonblocking]]; // expected-warning {{attribute 'clang::nonblocking' is ignored, place it after "struct" to apply attribute to type declaration}}
+struct [[clang::nonblocking]] nl_struct2 {}; // expected-error {{'clang::nonblocking' attribute cannot be applied to a declaration}}
 
 // Positive case
 typedef void (*fo)() [[clang::nonblocking]];
@@ -19,10 +19,10 @@ void (*read_me_and_weep(
   [[clang::nonblocking]];
 
 // --- ATTRIBUTE SYNTAX: ARGUMENT COUNT ---
-void nargs_1() [[clang::nonblocking(1, 2)]];  // expected-error {{'nonblocking' attribute takes no more than 1 argument}}
-void nargs_2() [[clang::nonallocating(1, 2)]]; // expected-error {{'nonallocating' attribute takes no more than 1 argument}}
-void nargs_3() [[clang::blocking(1)]]; // expected-error {{'blocking' attribute takes no arguments}}
-void nargs_4() [[clang::allocating(1)]]; // expected-error {{'allocating' attribute takes no arguments}}
+void nargs_1() [[clang::nonblocking(1, 2)]];  // expected-error {{'clang::nonblocking' attribute takes no more than 1 argument}}
+void nargs_2() [[clang::nonallocating(1, 2)]]; // expected-error {{'clang::nonallocating' attribute takes no more than 1 argument}}
+void nargs_3() [[clang::blocking(1)]]; // expected-error {{'clang::blocking' attribute takes no arguments}}
+void nargs_4() [[clang::allocating(1)]]; // expected-error {{'clang::allocating' attribute takes no arguments}}
 
 // --- ATTRIBUTE SYNTAX: COMBINATIONS ---
 // Check invalid combinations of nonblocking/nonallocating attributes
@@ -127,21 +127,27 @@ void type_conversions_2()
 #endif
 
 // --- VIRTUAL METHODS ---
-// Attributes propagate to overridden methods, so no diagnostics except for conflicts.
+// Attributes propagate to overridden methods.
 // Check this in the syntax tests too.
 #ifdef __cplusplus
 struct Base {
   virtual void f1();
-  virtual void nonblocking() noexcept [[clang::nonblocking]];
-  virtual void nonallocating() noexcept [[clang::nonallocating]];
+  virtual void nonblocking() noexcept [[clang::nonblocking]]; // expected-note {{overridden virtual function is here}}
+  virtual void nonallocating() noexcept [[clang::nonallocating]]; // expected-note {{overridden virtual function is here}}
   virtual void f2() [[clang::nonallocating]]; // expected-note {{previous declaration is here}}
+  virtual void f3() [[clang::nonblocking]]; // expected-note {{overridden virtual function is here}}
 };
 
 struct Derived : public Base {
   void f1() [[clang::nonblocking]] override;
-  void nonblocking() noexcept override;
-  void nonallocating() noexcept override;
+  void nonblocking() noexcept override; // expected-warning {{overriding function is missing 'nonblocking' attribute from base declaration}}
+  void nonallocating() noexcept override; // expected-warning {{overriding function is missing 'nonallocating' attribute from base declaration}}
   void f2() [[clang::allocating]] override; // expected-warning {{effects conflict when merging declarations; kept 'allocating', discarded 'nonallocating'}}
+};
+
+template <bool B>
+struct TDerived : public Base {
+  void f3() [[clang::nonblocking(B)]] override; // expected-warning {{attribute 'nonblocking' on overriding function conflicts with base declaration}}
 };
 #endif // __cplusplus
 
@@ -149,7 +155,7 @@ struct Derived : public Base {
 
 void f2();
 void f2() [[clang::nonblocking]]; // expected-note {{previous declaration is here}}
-void f2(); // expected-warning {{attribute 'nonblocking' on function does not match previous declaration}}
+void f2(); // expected-warning {{redeclaration is missing 'nonblocking' attribute from previous declaration}}
 // Note: we verify that the attribute is actually seen during the constraints tests.
 
 void f3() [[clang::blocking]]; // expected-note {{previous declaration is here}}

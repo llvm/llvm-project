@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -ffreestanding %s
+// RUN: %clang_cc1 -fsyntax-only -verify -ffreestanding %s -fexperimental-new-constant-interpreter
 // expected-no-diagnostics
 
-#include <stdint.h>
+typedef __UINTPTR_TYPE__ uintptr_t;
 
 char *a = (void*)(uintptr_t)(void*)&a;

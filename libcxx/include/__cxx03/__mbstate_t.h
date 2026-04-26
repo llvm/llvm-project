@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MBSTATE_T_H
-#define _LIBCPP___MBSTATE_T_H
+#ifndef _LIBCPP___CXX03___MBSTATE_T_H
+#define _LIBCPP___CXX03___MBSTATE_T_H
 
 #include <__cxx03/__config>
 
@@ -51,4 +51,4 @@
 #  error "We don't know how to get the definition of mbstate_t without <wchar.h> on your platform."
 #endif
 
-#endif // _LIBCPP___MBSTATE_T_H
+#endif // _LIBCPP___CXX03___MBSTATE_T_H

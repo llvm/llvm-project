@@ -8,7 +8,7 @@ define void @trunc_nxv2i64_to_nxv2i32(ptr %ptr, <vscale x 4 x i32> %v) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 4 x i32> [[V:%.*]] to <vscale x 2 x i64>
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[TMP0]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc <vscale x 2 x i64> [[TMP1]] to <vscale x 2 x i32>
-; CHECK-NEXT:    call void @llvm.aarch64.sve.st1.nxv2i32(<vscale x 2 x i32> [[TMP3]], <vscale x 2 x i1> [[TMP2]], ptr [[PTR:%.*]])
+; CHECK-NEXT:    call void @llvm.aarch64.sve.st1.nxv2i32.p0(<vscale x 2 x i32> [[TMP3]], <vscale x 2 x i1> [[TMP2]], ptr [[PTR:%.*]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -18,6 +18,21 @@ entry:
   %3 = trunc <vscale x 2 x i64> %1 to <vscale x 2 x i32>
   call void @llvm.aarch64.sve.st1.nxv2i32(<vscale x 2 x i32> %3, <vscale x 2 x i1> %2, ptr %ptr)
   ret void
+}
+
+define <vscale x 1 x i8> @constant_splat_trunc() {
+; CHECK-LABEL: @constant_splat_trunc(
+; CHECK-NEXT:    ret <vscale x 1 x i8> splat (i8 1)
+;
+  %1 = trunc <vscale x 1 x i64> splat (i64 1) to <vscale x 1 x i8>
+  ret <vscale x 1 x i8> %1
+}
+
+define <vscale x 1 x i8> @constant_splat_trunc_constantexpr() {
+; CHECK-LABEL: @constant_splat_trunc_constantexpr(
+; CHECK-NEXT:    ret <vscale x 1 x i8> splat (i8 1)
+;
+  ret <vscale x 1 x i8> trunc (<vscale x 1 x i64> splat (i64 1) to <vscale x 1 x i8>)
 }
 
 declare void @llvm.aarch64.sve.st1.nxv2i32(<vscale x 2 x i32>, <vscale x 2 x i1>, ptr)

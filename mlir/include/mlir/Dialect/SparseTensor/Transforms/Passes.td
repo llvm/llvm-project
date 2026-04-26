@@ -81,6 +81,13 @@ def SparseReinterpretMap : Pass<"sparse-reinterpret-map", "ModuleOp"> {
          clEnumValN(mlir::ReinterpretMapScope::kExceptGeneric,
                     "except-generic",
                     "Run on operations expect linalg.generic (e.g., foreach)"))}]>,
+    Option<"loopOrderingStrategy", "loop-ordering-strategy", "mlir::sparse_tensor::LoopOrderingStrategy",
+       "mlir::sparse_tensor::LoopOrderingStrategy::kDefault",
+       "Set the loop ordering strategy for sparse code generation", [{llvm::cl::values(
+         clEnumValN(mlir::sparse_tensor::LoopOrderingStrategy::kDefault, "default",
+                    "Default strategy (eagerly selects last loop in topological sort)"),
+         clEnumValN(mlir::sparse_tensor::LoopOrderingStrategy::kDenseOuter, "dense-outer",
+                    "Prefer dense, then compressed, then singleton dimensions outermost"))}]>,
   ];
 }
 
@@ -250,7 +257,7 @@ def SparseTensorConversionPass : Pass<"sparse-tensor-conversion", "ModuleOp"> {
     ```mlir
       Before:
         func.func @foo(%arg0: tensor<8x8xf32, #CSR>) -> memref<?xindex> {
-          %0 = sparse_tensor.pointers %arg0 {dimension = 1 : index}
+          %0 = sparse_tensor.positions %arg0 {level = 1 : index}
              : tensor<8x8xf32, #CSR> to memref<?xindex>
           return %0 : memref<?xindex>
         }
@@ -258,7 +265,7 @@ def SparseTensorConversionPass : Pass<"sparse-tensor-conversion", "ModuleOp"> {
       After:
         func.func @foo(%arg0: !llvm.ptr) -> memref<?xindex> {
           %c1 = arith.constant 1 : index
-          %0 = call @sparsePointers0(%arg0, %c1)
+          %0 = call @sparsePositions0(%arg0, %c1)
              : (!llvm.ptr, index) -> memref<?xindex>
           return %0 : memref<?xindex>
         }
@@ -293,18 +300,21 @@ def SparseTensorCodegen : Pass<"sparse-tensor-codegen", "ModuleOp"> {
     ```mlir
       Before:
         func.func @foo(%arg0: tensor<8x8xf32, #CSR>) -> memref<?xindex> {
-          %0 = sparse_tensor.pointers %arg0 {dimension = 1 : index}
+          %0 = sparse_tensor.positions %arg0 {level = 1 : index}
              : tensor<8x8xf32, #CSR> to memref<?xindex>
           return %0 : memref<?xindex>
         }
 
       After:
-        func.func @foo(%arg0: memref<2xindex>,
-                       %arg1: memref<3xindex>,
-                       %arg2: memref<?xindex>,
-                       %arg3: memref<?xindex>,
-                       %arg4: memref<?xf32>) -> memref<?xindex> {
-          return %arg2 : memref<?xindex>
+        func.func @foo(%arg0: memref<?xindex>,
+                       %arg1: memref<?xindex>,
+                       %arg2: memref<?xf32>,
+                       %arg3: !sparse_tensor.storage_specifier<#sparse>) -> memref<?xindex> {
+          %0 = sparse_tensor.storage_specifier.get %arg3 pos_mem_sz at 1
+             : !sparse_tensor.storage_specifier<#sparse>
+          %subview = memref.subview %arg0[0] [%0] [1]
+                   : memref<?xindex> to memref<?xindex>
+          return %subview : memref<?xindex>
         }
     ```
   }];
@@ -380,7 +390,7 @@ def SparseVectorization : Pass<"sparse-vectorization", "ModuleOp"> {
 
       After:
         %3 = memref.load %2[] : memref<f32>
-        %4 = vector.insertelement %3, %cst[%c0 : index] : vector<32xf32>
+        %4 = vector.insert %3, %cst [0] : f32 into vector<32xf32>
         %5 = scf.for %arg3 = %c0 to %c1024 step %c32 iter_args(%arg4 = %4) -> (vector<32xf32>) {
           %8 = vector.load %0[%arg3] : memref<?xf32>, vector<32xf32>
           %9 = vector.load %1[%arg3] : memref<1024xf32>, vector<32xf32>

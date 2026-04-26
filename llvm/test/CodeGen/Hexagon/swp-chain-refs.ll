@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -enable-pipeliner=true -stats -o /dev/null < %s \
+; RUN: llc -mtriple=hexagon -enable-pipeliner=true -stats -o /dev/null < %s \
 ; RUN:      2>&1 -pipeliner-experimental-cg=true | FileCheck %s --check-prefix=STATS
 ; REQUIRES: asserts
 

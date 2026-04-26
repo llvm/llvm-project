@@ -3,49 +3,49 @@
 
 define amdgpu_kernel void @is_local_true(ptr addrspace(3) %lptr) {
 ; CHECK-LABEL: @is_local_true(
-; CHECK-NEXT:    store i32 1, ptr addrspace(1) undef
+; CHECK-NEXT:    store i32 1, ptr addrspace(1) poison
 ; CHECK-NEXT:    ret void
 ;
   %cast = addrspacecast ptr addrspace(3) %lptr to ptr
   %is.shared = call i1 @llvm.amdgcn.is.shared(ptr %cast)
   %ext = zext i1 %is.shared to i32
-  store i32 %ext, ptr addrspace(1) undef
+  store i32 %ext, ptr addrspace(1) poison
   ret void
 }
 
 define amdgpu_kernel void @is_local_false(ptr addrspace(1) %gptr) {
 ; CHECK-LABEL: @is_local_false(
-; CHECK-NEXT:    store i32 0, ptr addrspace(1) undef
+; CHECK-NEXT:    store i32 0, ptr addrspace(1) poison
 ; CHECK-NEXT:    ret void
 ;
   %cast = addrspacecast ptr addrspace(1) %gptr to ptr
   %is.shared = call i1 @llvm.amdgcn.is.shared(ptr %cast)
   %ext = zext i1 %is.shared to i32
-  store i32 %ext, ptr addrspace(1) undef
+  store i32 %ext, ptr addrspace(1) poison
   ret void
 }
 
 define void @is_private_true(ptr addrspace(5) %lptr) {
 ; CHECK-LABEL: @is_private_true(
-; CHECK-NEXT:    store i32 1, ptr addrspace(1) undef
+; CHECK-NEXT:    store i32 1, ptr addrspace(1) poison
 ; CHECK-NEXT:    ret void
 ;
   %cast = addrspacecast ptr addrspace(5) %lptr to ptr
   %is.private = call i1 @llvm.amdgcn.is.private(ptr %cast)
   %ext = zext i1 %is.private to i32
-  store i32 %ext, ptr addrspace(1) undef
+  store i32 %ext, ptr addrspace(1) poison
   ret void
 }
 
 define void @is_private_false(ptr addrspace(1) %gptr) {
 ; CHECK-LABEL: @is_private_false(
-; CHECK-NEXT:    store i32 0, ptr addrspace(1) undef
+; CHECK-NEXT:    store i32 0, ptr addrspace(1) poison
 ; CHECK-NEXT:    ret void
 ;
   %cast = addrspacecast ptr addrspace(1) %gptr to ptr
   %is.private = call i1 @llvm.amdgcn.is.private(ptr %cast)
   %ext = zext i1 %is.private to i32
-  store i32 %ext, ptr addrspace(1) undef
+  store i32 %ext, ptr addrspace(1) poison
   ret void
 }
 

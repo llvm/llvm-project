@@ -33,7 +33,7 @@ define <vscale x 32 x i8> @wide_32i8(i1 %b, <vscale x 16 x i8> %legal, <vscale x
   br i1 %b, label %L1, label %L2
 L1:
   call aarch64_sve_vector_pcs void @bar()
-  ret <vscale x 32 x i8> undef
+  ret <vscale x 32 x i8> poison
 L2:
   ret <vscale x 32 x i8> %illegal
 }
@@ -61,7 +61,7 @@ define <vscale x 16 x i16> @wide_16i16(i1 %b, <vscale x 16 x i8> %legal, <vscale
   br i1 %b, label %L1, label %L2
 L1:
   call aarch64_sve_vector_pcs void @bar()
-  ret <vscale x 16 x i16> undef
+  ret <vscale x 16 x i16> poison
 L2:
   ret <vscale x 16 x i16> %illegal
 }
@@ -89,7 +89,7 @@ define <vscale x 8 x i32> @wide_8i32(i1 %b, <vscale x 16 x i8> %legal, <vscale x
   br i1 %b, label %L1, label %L2
 L1:
   call aarch64_sve_vector_pcs void @bar()
-  ret <vscale x 8 x i32> undef
+  ret <vscale x 8 x i32> poison
 L2:
   ret <vscale x 8 x i32> %illegal
 }
@@ -117,7 +117,7 @@ define <vscale x 4 x i64> @wide_4i64(i1 %b, <vscale x 16 x i8> %legal, <vscale x
   br i1 %b, label %L1, label %L2
 L1:
   call aarch64_sve_vector_pcs void @bar()
-  ret <vscale x 4 x i64> undef
+  ret <vscale x 4 x i64> poison
 L2:
   ret <vscale x 4 x i64> %illegal
 }
@@ -145,7 +145,7 @@ define <vscale x 16 x half> @wide_16f16(i1 %b, <vscale x 16 x i8> %legal, <vscal
   br i1 %b, label %L1, label %L2
 L1:
   call aarch64_sve_vector_pcs void @bar()
-  ret <vscale x 16 x half> undef
+  ret <vscale x 16 x half> poison
 L2:
   ret <vscale x 16 x half> %illegal
 }
@@ -173,7 +173,7 @@ define <vscale x 8 x float> @wide_8f32(i1 %b, <vscale x 16 x i8> %legal, <vscale
   br i1 %b, label %L1, label %L2
 L1:
   call aarch64_sve_vector_pcs void @bar()
-  ret <vscale x 8 x float> undef
+  ret <vscale x 8 x float> poison
 L2:
   ret <vscale x 8 x float> %illegal
 }
@@ -201,7 +201,7 @@ define <vscale x 4 x double> @wide_4f64(i1 %b, <vscale x 16 x i8> %legal, <vscal
   br i1 %b, label %L1, label %L2
 L1:
   call aarch64_sve_vector_pcs void @bar()
-  ret <vscale x 4 x double> undef
+  ret <vscale x 4 x double> poison
 L2:
   ret <vscale x 4 x double> %illegal
 }
@@ -237,7 +237,7 @@ define <vscale x 48 x i8> @wide_48i8(i1 %b, <vscale x 16 x i8> %legal, <vscale x
   br i1 %b, label %L1, label %L2
 L1:
   call aarch64_sve_vector_pcs void @bar()
-  ret <vscale x 48 x i8> undef
+  ret <vscale x 48 x i8> poison
 L2:
   ret <vscale x 48 x i8> %illegal
 }
@@ -269,7 +269,7 @@ define <vscale x 24 x i16> @wide_24i16(i1 %b, <vscale x 16 x i8> %legal, <vscale
   br i1 %b, label %L1, label %L2
 L1:
   call aarch64_sve_vector_pcs void @bar()
-  ret <vscale x 24 x i16> undef
+  ret <vscale x 24 x i16> poison
 L2:
   ret <vscale x 24 x i16> %illegal
 }
@@ -301,7 +301,7 @@ define <vscale x 12 x i32> @wide_12i32(i1 %b, <vscale x 16 x i8> %legal, <vscale
   br i1 %b, label %L1, label %L2
 L1:
   call aarch64_sve_vector_pcs void @bar()
-  ret <vscale x 12 x i32> undef
+  ret <vscale x 12 x i32> poison
 L2:
   ret <vscale x 12 x i32> %illegal
 }
@@ -333,7 +333,7 @@ define <vscale x 6 x i64> @wide_6i64(i1 %b, <vscale x 16 x i8> %legal, <vscale x
   br i1 %b, label %L1, label %L2
 L1:
   call aarch64_sve_vector_pcs void @bar()
-  ret <vscale x 6 x i64> undef
+  ret <vscale x 6 x i64> poison
 L2:
   ret <vscale x 6 x i64> %illegal
 }
@@ -365,7 +365,7 @@ define <vscale x 24 x half> @wide_24f16(i1 %b, <vscale x 16 x i8> %legal, <vscal
   br i1 %b, label %L1, label %L2
 L1:
   call aarch64_sve_vector_pcs void @bar()
-  ret <vscale x 24 x half> undef
+  ret <vscale x 24 x half> poison
 L2:
   ret <vscale x 24 x half> %illegal
 }
@@ -397,7 +397,7 @@ define <vscale x 12 x float> @wide_12f32(i1 %b, <vscale x 16 x i8> %legal, <vsca
   br i1 %b, label %L1, label %L2
 L1:
   call aarch64_sve_vector_pcs void @bar()
-  ret <vscale x 12 x float> undef
+  ret <vscale x 12 x float> poison
 L2:
   ret <vscale x 12 x float> %illegal
 }
@@ -429,7 +429,7 @@ define <vscale x 6 x double> @wide_6f64(i1 %b, <vscale x 16 x i8> %legal, <vscal
   br i1 %b, label %L1, label %L2
 L1:
   call aarch64_sve_vector_pcs void @bar()
-  ret <vscale x 6 x double> undef
+  ret <vscale x 6 x double> poison
 L2:
   ret <vscale x 6 x double> %illegal
 }
@@ -469,7 +469,7 @@ define <vscale x 64 x i8> @wide_64i8(i1 %b, <vscale x 16 x i8> %legal, <vscale x
   br i1 %b, label %L1, label %L2
 L1:
   call aarch64_sve_vector_pcs void @bar()
-  ret <vscale x 64 x i8> undef
+  ret <vscale x 64 x i8> poison
 L2:
   ret <vscale x 64 x i8> %illegal
 }
@@ -505,7 +505,7 @@ define <vscale x 32 x i16> @wide_32i16(i1 %b, <vscale x 16 x i8> %legal, <vscale
   br i1 %b, label %L1, label %L2
 L1:
   call aarch64_sve_vector_pcs void @bar()
-  ret <vscale x 32 x i16> undef
+  ret <vscale x 32 x i16> poison
 L2:
   ret <vscale x 32 x i16> %illegal
 }
@@ -541,7 +541,7 @@ define <vscale x 16 x i32> @wide_16i32(i1 %b, <vscale x 16 x i8> %legal, <vscale
   br i1 %b, label %L1, label %L2
 L1:
   call aarch64_sve_vector_pcs void @bar()
-  ret <vscale x 16 x i32> undef
+  ret <vscale x 16 x i32> poison
 L2:
   ret <vscale x 16 x i32> %illegal
 }
@@ -577,7 +577,7 @@ define <vscale x 8 x i64> @wide_8i64(i1 %b, <vscale x 16 x i8> %legal, <vscale x
   br i1 %b, label %L1, label %L2
 L1:
   call aarch64_sve_vector_pcs void @bar()
-  ret <vscale x 8 x i64> undef
+  ret <vscale x 8 x i64> poison
 L2:
   ret <vscale x 8 x i64> %illegal
 }
@@ -613,7 +613,7 @@ define <vscale x 32 x half> @wide_32f16(i1 %b, <vscale x 16 x i8> %legal, <vscal
   br i1 %b, label %L1, label %L2
 L1:
   call aarch64_sve_vector_pcs void @bar()
-  ret <vscale x 32 x half> undef
+  ret <vscale x 32 x half> poison
 L2:
   ret <vscale x 32 x half> %illegal
 }
@@ -649,7 +649,7 @@ define <vscale x 16 x float> @wide_16f32(i1 %b, <vscale x 16 x i8> %legal, <vsca
   br i1 %b, label %L1, label %L2
 L1:
   call aarch64_sve_vector_pcs void @bar()
-  ret <vscale x 16 x float> undef
+  ret <vscale x 16 x float> poison
 L2:
   ret <vscale x 16 x float> %illegal
 }
@@ -685,7 +685,7 @@ define <vscale x 8 x double> @wide_8f64(i1 %b, <vscale x 16 x i8> %legal, <vscal
   br i1 %b, label %L1, label %L2
 L1:
   call aarch64_sve_vector_pcs void @bar()
-  ret <vscale x 8 x double> undef
+  ret <vscale x 8 x double> poison
 L2:
   ret <vscale x 8 x double> %illegal
 }

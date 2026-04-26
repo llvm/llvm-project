@@ -5,8 +5,8 @@
 ; RUN: opt %s -disable-output -passes='no-op-module' -ir-dump-directory %t/logs -print-after=no-op-module -print-before=no-op-module
 ; RUN: ls %t/logs | FileCheck %s --check-prefix=SINGLE-PASS
 ; RUN: ls %t/logs | count 2
-; SINGLE-PASS-DAG: 0-[[MODULE_NAME_HASH:[a-z0-9]+]]-module-NoOpModulePass-after.ll
-; SINGLE-PASS-DAG: 0-[[MODULE_NAME_HASH]]-module-NoOpModulePass-before.ll
+; SINGLE-PASS-DAG: 1-[[MODULE_NAME_HASH:[a-z0-9]+]]-module-NoOpModulePass-after.ll
+; SINGLE-PASS-DAG: 1-[[MODULE_NAME_HASH]]-module-NoOpModulePass-before.ll
 ; RUN: cat %t/logs/*after.ll | FileCheck %s --check-prefix=SINGLE-PASS-CONTENTS
 
 ; SINGLE-PASS-CONTENTS: ; *** IR Dump After NoOpModulePass on [module] ***
@@ -31,12 +31,12 @@
 ; RUN: opt %s -disable-output -passes='no-op-module,no-op-module,no-op-module' -ir-dump-directory %t/logs -print-after=no-op-module -print-before=no-op-module
 ; RUN: ls %t/logs | FileCheck %s --check-prefix=MULTIPLE-PASSES
 ; RUN: ls %t/logs | count 6
-; MULTIPLE-PASSES-DAG: 0-[[MODULE_NAME_HASH:[a-z0-9]+]]-module-NoOpModulePass-after.ll
-; MULTIPLE-PASSES-DAG: 0-[[MODULE_NAME_HASH]]-module-NoOpModulePass-before.ll
-; MULTIPLE-PASSES-DAG: 1-[[MODULE_NAME_HASH]]-module-NoOpModulePass-after.ll
+; MULTIPLE-PASSES-DAG: 1-[[MODULE_NAME_HASH:[a-z0-9]+]]-module-NoOpModulePass-after.ll
 ; MULTIPLE-PASSES-DAG: 1-[[MODULE_NAME_HASH]]-module-NoOpModulePass-before.ll
 ; MULTIPLE-PASSES-DAG: 2-[[MODULE_NAME_HASH]]-module-NoOpModulePass-after.ll
 ; MULTIPLE-PASSES-DAG: 2-[[MODULE_NAME_HASH]]-module-NoOpModulePass-before.ll
+; MULTIPLE-PASSES-DAG: 3-[[MODULE_NAME_HASH]]-module-NoOpModulePass-after.ll
+; MULTIPLE-PASSES-DAG: 3-[[MODULE_NAME_HASH]]-module-NoOpModulePass-before.ll
 ; RUN: rm -rf %t/logs
 
 ; Dump before and after multiple passes, of various levels of granularity
@@ -44,20 +44,20 @@
 ; RUN: opt %s -disable-output -passes='no-op-module,cgscc(no-op-cgscc),function(no-op-function),function(loop(no-op-loop)),no-op-module' -ir-dump-directory %t/logs -print-after=no-op-module,no-op-cgscc,no-op-function,no-op-loop -print-before=no-op-module,no-op-cgscc,no-op-function,no-op-loop
 ; RUN: ls %t/logs | FileCheck %s --check-prefix=MULTIPLE-GRANULAR-PASSES
 ; RUN: ls %t/logs | count 14
-; MULTIPLE-GRANULAR-PASSES-DAG: 0-[[MODULE_NAME_HASH:[a-z0-9]+]]-module-NoOpModulePass-after.ll
-; MULTIPLE-GRANULAR-PASSES-DAG: 0-[[MODULE_NAME_HASH]]-module-NoOpModulePass-before.ll
-; MULTIPLE-GRANULAR-PASSES-DAG: 1-[[MODULE_NAME_HASH]]-scc-[[SCC_FOO_HASH:[a-z0-9]+]]-NoOpCGSCCPass-after.ll
-; MULTIPLE-GRANULAR-PASSES-DAG: 1-[[MODULE_NAME_HASH]]-scc-[[SCC_FOO_HASH]]-NoOpCGSCCPass-before.ll
-; MULTIPLE-GRANULAR-PASSES-DAG: 2-[[MODULE_NAME_HASH]]-scc-[[SCC_BAR_HASH:[a-z0-9]+]]-NoOpCGSCCPass-after.ll
-; MULTIPLE-GRANULAR-PASSES-DAG: 2-[[MODULE_NAME_HASH]]-scc-[[SCC_BAR_HASH]]-NoOpCGSCCPass-before.ll
-; MULTIPLE-GRANULAR-PASSES-DAG: 3-[[MODULE_NAME_HASH]]-function-[[FUNCTION_FOO_HASH:[a-z0-9]+]]-NoOpFunctionPass-after.ll
-; MULTIPLE-GRANULAR-PASSES-DAG: 3-[[MODULE_NAME_HASH]]-function-[[FUNCTION_FOO_HASH]]-NoOpFunctionPass-before.ll
-; MULTIPLE-GRANULAR-PASSES-DAG: 4-[[MODULE_NAME_HASH]]-function-[[FUNCTION_BAR_HASH:[a-z0-9]+]]-NoOpFunctionPass-after.ll
-; MULTIPLE-GRANULAR-PASSES-DAG: 4-[[MODULE_NAME_HASH]]-function-[[FUNCTION_BAR_HASH]]-NoOpFunctionPass-before.ll
-; MULTIPLE-GRANULAR-PASSES-DAG: 9-[[MODULE_NAME_HASH]]-loop-[[LOOP_NAME_HASH:[a-z0-9]+]]-NoOpLoopPass-after.ll
-; MULTIPLE-GRANULAR-PASSES-DAG: 9-[[MODULE_NAME_HASH]]-loop-[[LOOP_NAME_HASH]]-NoOpLoopPass-before.ll
-; MULTIPLE-GRANULAR-PASSES-DAG: 10-[[MODULE_NAME_HASH]]-module-NoOpModulePass-after.ll
-; MULTIPLE-GRANULAR-PASSES-DAG: 10-[[MODULE_NAME_HASH]]-module-NoOpModulePass-before.ll
+; MULTIPLE-GRANULAR-PASSES-DAG: 1-[[MODULE_NAME_HASH:[a-z0-9]+]]-module-NoOpModulePass-after.ll
+; MULTIPLE-GRANULAR-PASSES-DAG: 1-[[MODULE_NAME_HASH]]-module-NoOpModulePass-before.ll
+; MULTIPLE-GRANULAR-PASSES-DAG: 2-[[MODULE_NAME_HASH]]-scc-[[SCC_FOO_HASH:[a-z0-9]+]]-NoOpCGSCCPass-after.ll
+; MULTIPLE-GRANULAR-PASSES-DAG: 2-[[MODULE_NAME_HASH]]-scc-[[SCC_FOO_HASH]]-NoOpCGSCCPass-before.ll
+; MULTIPLE-GRANULAR-PASSES-DAG: 3-[[MODULE_NAME_HASH]]-scc-[[SCC_BAR_HASH:[a-z0-9]+]]-NoOpCGSCCPass-after.ll
+; MULTIPLE-GRANULAR-PASSES-DAG: 3-[[MODULE_NAME_HASH]]-scc-[[SCC_BAR_HASH]]-NoOpCGSCCPass-before.ll
+; MULTIPLE-GRANULAR-PASSES-DAG: 4-[[MODULE_NAME_HASH]]-function-[[FUNCTION_FOO_HASH:[a-z0-9]+]]-NoOpFunctionPass-after.ll
+; MULTIPLE-GRANULAR-PASSES-DAG: 4-[[MODULE_NAME_HASH]]-function-[[FUNCTION_FOO_HASH]]-NoOpFunctionPass-before.ll
+; MULTIPLE-GRANULAR-PASSES-DAG: 5-[[MODULE_NAME_HASH]]-function-[[FUNCTION_BAR_HASH:[a-z0-9]+]]-NoOpFunctionPass-after.ll
+; MULTIPLE-GRANULAR-PASSES-DAG: 5-[[MODULE_NAME_HASH]]-function-[[FUNCTION_BAR_HASH]]-NoOpFunctionPass-before.ll
+; MULTIPLE-GRANULAR-PASSES-DAG: 10-[[MODULE_NAME_HASH]]-loop-[[LOOP_NAME_HASH:[a-z0-9]+]]-NoOpLoopPass-after.ll
+; MULTIPLE-GRANULAR-PASSES-DAG: 10-[[MODULE_NAME_HASH]]-loop-[[LOOP_NAME_HASH]]-NoOpLoopPass-before.ll
+; MULTIPLE-GRANULAR-PASSES-DAG: 11-[[MODULE_NAME_HASH]]-module-NoOpModulePass-after.ll
+; MULTIPLE-GRANULAR-PASSES-DAG: 11-[[MODULE_NAME_HASH]]-module-NoOpModulePass-before.ll
 ; RUN: rm -rf %t/logs
 
 define void @foo() {

@@ -15,6 +15,9 @@
 #include "flang/Common/enum-set.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/tools.h"
+#include "llvm/ADT/iterator_range.h"
+
+#include <set>
 #include <unordered_map>
 
 namespace Fortran::semantics {
@@ -51,6 +54,21 @@ public:
   }
   void Post(const parser::DoConstruct &) { numDoConstruct_--; }
   void Post(const parser::ReturnStmt &) { EmitBranchOutError("RETURN"); }
+  void Post(const parser::GotoStmt &gotoStmt) {
+    if constexpr (std::is_same_v<D, llvm::acc::Directive>) {
+      switch ((llvm::acc::Directive)currentDirective_) {
+      case llvm::acc::Directive::ACCD_parallel:
+      case llvm::acc::Directive::ACCD_serial:
+      case llvm::acc::Directive::ACCD_kernels:
+        if (labelsInBlock_.count(gotoStmt.v) == 0)
+          EmitBranchOutOfComputeConstructError("GOTO");
+        break;
+      default:
+        break;
+      }
+    }
+  }
+  void CollectLabel(parser::Label label) { labelsInBlock_.insert(label); }
   void Post(const parser::ExitStmt &exitStmt) {
     if (const auto &exitName{exitStmt.v}) {
       CheckConstructNameBranching("EXIT", exitName.value());
@@ -74,6 +92,8 @@ public:
         case llvm::omp::Directive::OMPD_distribute_parallel_for:
         case llvm::omp::Directive::OMPD_distribute_simd:
         case llvm::omp::Directive::OMPD_distribute_parallel_for_simd:
+        case llvm::omp::Directive::OMPD_target_teams_distribute:
+        case llvm::omp::Directive::OMPD_target_teams_distribute_simd:
         case llvm::omp::Directive::OMPD_target_teams_distribute_parallel_do:
         case llvm::omp::Directive::
             OMPD_target_teams_distribute_parallel_do_simd:
@@ -108,6 +128,14 @@ private:
         .Say(currentStatementSourcePosition_,
             "%s statement is not allowed in a %s construct"_err_en_US, stmt,
             upperCaseDirName_)
+        .Attach(sourcePosition_, GetEnclosingMsg());
+  }
+
+  void EmitBranchOutOfComputeConstructError(const char *stmt) const {
+    context_
+        .Say(currentStatementSourcePosition_,
+            "%s to a label outside of a %s construct is not allowed"_err_en_US,
+            stmt, upperCaseDirName_)
         .Attach(sourcePosition_, GetEnclosingMsg());
   }
 
@@ -168,6 +196,7 @@ private:
   D currentDirective_;
   int numDoConstruct_; // tracks number of DoConstruct found AFTER encountering
                        // an OpenMP/OpenACC directive
+  std::set<parser::Label> labelsInBlock_;
 };
 
 // Generic structure checker for directives/clauses language such as OpenMP
@@ -200,6 +229,7 @@ protected:
     const PC *clause{nullptr};
     ClauseMapTy clauseInfo;
     std::list<C> actualClauses;
+    std::list<C> endDirectiveClauses;
     std::list<C> crtGroup;
     Symbol *loopIV{nullptr};
   };
@@ -292,10 +322,9 @@ protected:
     return nullptr;
   }
 
-  std::pair<typename ClauseMapTy::iterator, typename ClauseMapTy::iterator>
-  FindClauses(C type) {
+  llvm::iterator_range<typename ClauseMapTy::iterator> FindClauses(C type) {
     auto it{GetContext().clauseInfo.equal_range(type)};
-    return it;
+    return llvm::make_range(it);
   }
 
   DirectiveContext *GetEnclosingDirContext() {
@@ -379,7 +408,8 @@ protected:
       const C &clause, const parser::ScalarIntConstantExpr &i);
 
   void RequiresPositiveParameter(const C &clause,
-      const parser::ScalarIntExpr &i, llvm::StringRef paramName = "parameter");
+      const parser::ScalarIntExpr &i, llvm::StringRef paramName = "parameter",
+      bool allowZero = true);
 
   void OptionalConstantPositiveParameter(
       const C &clause, const std::optional<parser::ScalarIntConstantExpr> &o);
@@ -396,12 +426,28 @@ protected:
   std::string ClauseSetToString(const common::EnumSet<C, ClauseEnumSize> set);
 };
 
+// Collect all labels defined in a block.
+struct LabelCollector {
+  std::set<parser::Label> labels;
+  template <typename T> bool Pre(const T &) { return true; }
+  template <typename T> void Post(const T &) {}
+  template <typename T> bool Pre(const parser::Statement<T> &stmt) {
+    if (stmt.label)
+      labels.insert(*stmt.label);
+    return true;
+  }
+};
+
 template <typename D, typename C, typename PC, std::size_t ClauseEnumSize>
 void DirectiveStructureChecker<D, C, PC, ClauseEnumSize>::CheckNoBranching(
     const parser::Block &block, D directive,
     const parser::CharBlock &directiveSource) {
+  LabelCollector labelCollector;
+  parser::Walk(block, labelCollector);
   NoBranchingEnforce<D> noBranchingEnforce{
       context_, directiveSource, directive, ContextDirectiveAsFortran()};
+  for (auto label : labelCollector.labels)
+    noBranchingEnforce.CollectLabel(label);
   parser::Walk(block, noBranchingEnforce);
 }
 
@@ -653,9 +699,9 @@ void DirectiveStructureChecker<D, C, PC, ClauseEnumSize>::SayNotMatching(
 template <typename D, typename C, typename PC, std::size_t ClauseEnumSize>
 void DirectiveStructureChecker<D, C, PC,
     ClauseEnumSize>::RequiresPositiveParameter(const C &clause,
-    const parser::ScalarIntExpr &i, llvm::StringRef paramName) {
+    const parser::ScalarIntExpr &i, llvm::StringRef paramName, bool allowZero) {
   if (const auto v{GetIntValue(i)}) {
-    if (*v < 0) {
+    if (*v < (allowZero ? 0 : 1)) {
       context_.Say(GetContext().clauseSource,
           "The %s of the %s clause must be "
           "a positive integer expression"_err_en_US,

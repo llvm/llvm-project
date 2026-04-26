@@ -81,17 +81,12 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp& __mu(reference_w
   return __t.get();
 }
 
-template <class _Ti, class... _Uj, size_t... _Indx>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 typename __invoke_of<_Ti&, _Uj...>::type
-__mu_expand(_Ti& __ti, tuple<_Uj...>& __uj, __tuple_indices<_Indx...>) {
-  return __ti(std::forward<_Uj>(std::get<_Indx>(__uj))...);
-}
-
 template <class _Ti, class... _Uj, __enable_if_t<is_bind_expression<_Ti>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 typename __invoke_of<_Ti&, _Uj...>::type
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __invoke_result_t<_Ti&, _Uj...>
 __mu(_Ti& __ti, tuple<_Uj...>& __uj) {
-  typedef typename __make_tuple_indices<sizeof...(_Uj)>::type __indices;
-  return std::__mu_expand(__ti, __uj, __indices());
+  return [&]<size_t... _Indices>(__index_sequence<_Indices...>) -> __invoke_result_t<_Ti&, _Uj...> {
+    return __ti(std::forward<_Uj>(std::get<_Indices>(__uj))...);
+  }(__index_sequence_for<_Uj...>{});
 }
 
 template <bool _IsPh, class _Ti, class _Uj>
@@ -130,12 +125,12 @@ struct __mu_return_invokable // false
 
 template <class _Ti, class... _Uj>
 struct __mu_return_invokable<true, _Ti, _Uj...> {
-  typedef typename __invoke_of<_Ti&, _Uj...>::type type;
+  using type _LIBCPP_NODEBUG = __invoke_result_t<_Ti&, _Uj...>;
 };
 
 template <class _Ti, class... _Uj>
 struct __mu_return_impl<_Ti, false, true, false, tuple<_Uj...> >
-    : public __mu_return_invokable<__invokable<_Ti&, _Uj...>::value, _Ti, _Uj...> {};
+    : public __mu_return_invokable<__is_invocable_v<_Ti&, _Uj...>, _Ti, _Uj...> {};
 
 template <class _Ti, class _TupleUj>
 struct __mu_return_impl<_Ti, false, false, true, _TupleUj> {
@@ -168,12 +163,12 @@ struct __is_valid_bind_return {
 
 template <class _Fp, class... _BoundArgs, class _TupleUj>
 struct __is_valid_bind_return<_Fp, tuple<_BoundArgs...>, _TupleUj> {
-  static const bool value = __invokable<_Fp, typename __mu_return<_BoundArgs, _TupleUj>::type...>::value;
+  static const bool value = __is_invocable_v<_Fp, typename __mu_return<_BoundArgs, _TupleUj>::type...>;
 };
 
 template <class _Fp, class... _BoundArgs, class _TupleUj>
 struct __is_valid_bind_return<_Fp, const tuple<_BoundArgs...>, _TupleUj> {
-  static const bool value = __invokable<_Fp, typename __mu_return<const _BoundArgs, _TupleUj>::type...>::value;
+  static const bool value = __is_invocable_v<_Fp, typename __mu_return<const _BoundArgs, _TupleUj>::type...>;
 };
 
 template <class _Fp, class _BoundArgs, class _TupleUj, bool = __is_valid_bind_return<_Fp, _BoundArgs, _TupleUj>::value>
@@ -181,31 +176,29 @@ struct __bind_return;
 
 template <class _Fp, class... _BoundArgs, class _TupleUj>
 struct __bind_return<_Fp, tuple<_BoundArgs...>, _TupleUj, true> {
-  typedef typename __invoke_of< _Fp&, typename __mu_return< _BoundArgs, _TupleUj >::type... >::type type;
+  using type _LIBCPP_NODEBUG = __invoke_result_t<_Fp&, typename __mu_return<_BoundArgs, _TupleUj>::type...>;
 };
 
 template <class _Fp, class... _BoundArgs, class _TupleUj>
 struct __bind_return<_Fp, const tuple<_BoundArgs...>, _TupleUj, true> {
-  typedef typename __invoke_of< _Fp&, typename __mu_return< const _BoundArgs, _TupleUj >::type... >::type type;
+  using type _LIBCPP_NODEBUG = __invoke_result_t<_Fp&, typename __mu_return<const _BoundArgs, _TupleUj>::type...>;
 };
 
 template <class _Fp, class _BoundArgs, size_t... _Indx, class _Args>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 typename __bind_return<_Fp, _BoundArgs, _Args>::type
-__apply_functor(_Fp& __f, _BoundArgs& __bound_args, __tuple_indices<_Indx...>, _Args&& __args) {
+__apply_functor(_Fp& __f, _BoundArgs& __bound_args, __index_sequence<_Indx...>, _Args&& __args) {
   return std::__invoke(__f, std::__mu(std::get<_Indx>(__bound_args), __args)...);
 }
 
 template <class _Fp, class... _BoundArgs>
 class __bind : public __weak_result_type<__decay_t<_Fp> > {
 protected:
-  using _Fd = __decay_t<_Fp>;
+  using _Fd _LIBCPP_NODEBUG = __decay_t<_Fp>;
   typedef tuple<__decay_t<_BoundArgs>...> _Td;
 
 private:
   _Fd __f_;
   _Td __bound_args_;
-
-  typedef typename __make_tuple_indices<sizeof...(_BoundArgs)>::type __indices;
 
 public:
   template <
@@ -219,14 +212,16 @@ public:
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 typename __bind_return<_Fd, _Td, tuple<_Args&&...> >::type
   operator()(_Args&&... __args) {
-    return std::__apply_functor(__f_, __bound_args_, __indices(), tuple<_Args&&...>(std::forward<_Args>(__args)...));
+    return std::__apply_functor(
+        __f_, __bound_args_, __index_sequence_for<_BoundArgs...>(), tuple<_Args&&...>(std::forward<_Args>(__args)...));
   }
 
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
   typename __bind_return<const _Fd, const _Td, tuple<_Args&&...> >::type
   operator()(_Args&&... __args) const {
-    return std::__apply_functor(__f_, __bound_args_, __indices(), tuple<_Args&&...>(std::forward<_Args>(__args)...));
+    return std::__apply_functor(
+        __f_, __bound_args_, __index_sequence_for<_BoundArgs...>(), tuple<_Args&&...>(std::forward<_Args>(__args)...));
   }
 };
 
@@ -256,8 +251,7 @@ public:
                         is_void<_Rp>::value,
                     int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 result_type operator()(_Args&&... __args) {
-    typedef __invoke_void_return_wrapper<_Rp> _Invoker;
-    return _Invoker::__call(static_cast<base&>(*this), std::forward<_Args>(__args)...);
+    return std::__invoke_r<_Rp>(static_cast<base&>(*this), std::forward<_Args>(__args)...);
   }
 
   template <class... _Args,
@@ -266,8 +260,7 @@ public:
                               is_void<_Rp>::value,
                           int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 result_type operator()(_Args&&... __args) const {
-    typedef __invoke_void_return_wrapper<_Rp> _Invoker;
-    return _Invoker::__call(static_cast<base const&>(*this), std::forward<_Args>(__args)...);
+    return std::__invoke_r<_Rp>(static_cast<base const&>(*this), std::forward<_Args>(__args)...);
   }
 };
 
@@ -275,14 +268,14 @@ template <class _Rp, class _Fp, class... _BoundArgs>
 struct is_bind_expression<__bind_r<_Rp, _Fp, _BoundArgs...> > : public true_type {};
 
 template <class _Fp, class... _BoundArgs>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __bind<_Fp, _BoundArgs...>
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __bind<_Fp, _BoundArgs...>
 bind(_Fp&& __f, _BoundArgs&&... __bound_args) {
   typedef __bind<_Fp, _BoundArgs...> type;
   return type(std::forward<_Fp>(__f), std::forward<_BoundArgs>(__bound_args)...);
 }
 
 template <class _Rp, class _Fp, class... _BoundArgs>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __bind_r<_Rp, _Fp, _BoundArgs...>
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __bind_r<_Rp, _Fp, _BoundArgs...>
 bind(_Fp&& __f, _BoundArgs&&... __bound_args) {
   typedef __bind_r<_Rp, _Fp, _BoundArgs...> type;
   return type(std::forward<_Fp>(__f), std::forward<_BoundArgs>(__bound_args)...);

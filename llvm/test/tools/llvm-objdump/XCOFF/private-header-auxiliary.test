@@ -1,0 +1,103 @@
+## Test that `llvm-objdump --private-headers` prints out the auxiliary header of an XCOFF object file.
+# RUN: yaml2obj %s -o %t1
+# RUN: llvm-objdump --private-headers %t1 | \
+# RUN:   FileCheck %s --check-prefixes=CHECK32,COMMON --match-full-lines --strict-whitespace
+# RUN: yaml2obj %s -DMAGIC=0x1F7 -DFLAG64=0x2 -o %t2
+# RUN: llvm-objdump --private-headers %t2 | \
+# RUN:   FileCheck %s --check-prefixes=CHECK64,COMMON --match-full-lines --strict-whitespace
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: [[MAGIC=0x1DF]]
+AuxiliaryHeader:
+  Magic:                 0x10B
+  Version:               0x1
+  TextSectionSize:       0x8
+  DataSectionSize:       0x9
+  BssSectionSize:        0x10
+  EntryPointAddr:        0x1111
+  TextStartAddr:         0x2222
+  DataStartAddr:         0x3333
+  TOCAnchorAddr:         0x4444
+  SecNumOfEntryPoint:    1
+  SecNumOfText:          2
+  SecNumOfData:          3
+  SecNumOfTOC:           4
+  SecNumOfLoader:        5
+  SecNumOfBSS:           6
+  MaxAlignOfText:        0x7
+  MaxAlignOfData:        0x3
+  ModuleType:            0x1
+  TextPageSize:          0x1
+  DataPageSize:          0x1
+  StackPageSize:         0x1
+  SecNumOfTData:         7
+  SecNumOfTBSS:          8
+  FlagAndTDataAlignment: 0x1
+  Flag:                  [[FLAG64=<none>]]
+Sections:
+  - Flags:       [ STYP_TEXT ]
+    SectionData: "1232"
+  - Flags:       [ STYP_DATA ]
+    SectionData: "5678"
+  - Flags:       [ STYP_BSS ]
+    SectionData: "9101"
+  - Flags:       [ STYP_TDATA ]
+    SectionData: "1112"
+  - Flags:       [ STYP_TBSS ]
+    SectionData: "1314"
+
+#       COMMON:---Auxiliary Header:
+#  COMMON-NEXT:Magic:                              0x10b
+#  COMMON-NEXT:Version:                            0x1
+# CHECK32-NEXT:Size of .text section:              0x8
+# CHECK32-NEXT:Size of .data section:              0x9
+# CHECK32-NEXT:Size of .bss section:               0x10
+# CHECK32-NEXT:Entry point address:                0x1111
+# CHECK64-NEXT:Reserved for debugger:              0x0
+#  COMMON-NEXT:.text section start address:        0x2222
+#  COMMON-NEXT:.data section start address:        0x3333
+#  COMMON-NEXT:TOC anchor address:                 0x4444
+#  COMMON-NEXT:Section number of entryPoint:       1
+#  COMMON-NEXT:Section number of .text:            2
+#  COMMON-NEXT:Section number of .data:            3
+#  COMMON-NEXT:Section number of TOC:              4
+#  COMMON-NEXT:Section number of loader data:      5
+#  COMMON-NEXT:Section number of .bss:             6
+#  COMMON-NEXT:Maxium alignment of .text:          0x7
+#  COMMON-NEXT:Maxium alignment of .data:          0x3
+#  COMMON-NEXT:Module type:                        0x0
+#  COMMON-NEXT:CPU type of objects:                0x1
+# CHECK32-NEXT:Maximum stack size:                 0x0
+# CHECK32-NEXT:Maximum data size:                  0x0
+# CHECK32-NEXT:Reserved for debugger:              0x0
+#  COMMON-NEXT:Text page size:                     0x1
+#  COMMON-NEXT:Data page size:                     0x1
+#  COMMON-NEXT:Stack page size:                    0x1
+#  COMMON-NEXT:Flag:                               0x0
+#  COMMON-NEXT:Alignment of thread-local storage:  0x1
+# CHECK64-NEXT:Size of .text section:              0x8
+# CHECK64-NEXT:Size of .data section:              0x9
+# CHECK64-NEXT:Size of .bss section:               0x10
+# CHECK64-NEXT:Entry point address:                0x1111
+# CHECK64-NEXT:Maximum stack size:                 0x0
+# CHECK64-NEXT:Maximum data size:                  0x0
+#  COMMON-NEXT:Section number for .tdata:          7
+#  COMMON-NEXT:Section number for .tbss:           8
+# CHECK64-NEXT:Additional flags 64-bit XCOFF:      0x2
+
+## Test how llvm-objdump behaves when the auxiliary header of the XCOFF object file contains a partial field.
+# RUN: cp %t1 %t1_err1
+# RUN: %python -c "with open(r'%t1_err1', 'r+b') as input: input.seek(17); input.write(b'\x45'); input.seek(4); input.write(b'\x00')"
+# RUN: llvm-objdump --private-headers %t1_err1 2>&1 | FileCheck %s --check-prefix=WARN1 --match-full-lines --strict-whitespace
+
+#      WARN1:{{.*}}: only partial field for Section number for .tdata: at offset (68)
+# WARN1-NEXT:Raw data (00)
+
+## Test how llvm-objdump behaves when the auxiliary header of the XCOFF object file contains extra data.
+# RUN: cp %t1 %t1_extra
+# RUN: %python -c "with open(r'%t1_extra', 'r+b') as input: input.seek(17); input.write(b'\x4f'); input.seek(4); input.write(b'\x00')"
+# RUN: llvm-objdump --private-headers %t1_extra 2>&1 | FileCheck %s --check-prefix=EXTRA --match-full-lines --strict-whitespace
+
+#     EXTRA:Extra raw data (00000000 000000)
+# EXTRA-NOT:{{.}}

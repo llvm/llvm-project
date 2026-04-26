@@ -24,7 +24,7 @@ struct S {
   int a, b, c;
   S();
   int x // expected-error {{expected ';'}}
-  friend void f()
+  friend void f() // expected-error {{expected ';' at end of declaration list}}
 };
 8S::S() : a{ 5 }, b{ 6 }, c{ 2 } { // expected-error {{unqualified-id}}
   return;
@@ -214,4 +214,29 @@ struct ::__super, struct ::__super; // expected-error 2 {{expected identifier}} 
 struct ::template foo, struct ::template bar; // expected-error 2 {{expected identifier}} expected-error 2 {{declaration of anonymous struct must be a definition}} expected-warning {{declaration does not declare anything}}
 struct ::foo struct::; // expected-error {{no struct named 'foo' in the global namespace}} expected-error {{expected identifier}}
 class :: : {} a;  // expected-error {{expected identifier}} expected-error {{expected class name}}
+}
+
+namespace GH125225 {
+void func(int);
+void k() {
+  func(1, ); // expected-error {{expected expression}}
+}
+}
+
+namespace GH136254 {
+
+void call() {
+  [a(42, )]() {} (); // expected-error {{expected expression}}
+
+  int *b = new int(42, ); // expected-error {{expected expression}}
+
+  struct S {
+    int c;
+
+    S() : c(42, ) {} // expected-error {{expected expression}}
+  };
+
+  int d(42, ); // expected-error {{expected expression}}
+}
+
 }

@@ -17,7 +17,7 @@
 ! GNU-LINKER-OPTIONS-SAME: "-static"
 ! GNU-LINKER-OPTIONS-SAME: "-rpath" "/path/to/dir"
 
-! RDYNAMIC-LINKER-OPTION: "{{.*}}ld"
+! RDYNAMIC-LINKER-OPTION: "{{.*}}ld{{(\.lld)?(\.exe)?}}"
 ! RDYNAMIC-LINKER-OPTION-SAME: "-export-dynamic"
 
 ! For MSVC, adding -static does not add any additional linker options.

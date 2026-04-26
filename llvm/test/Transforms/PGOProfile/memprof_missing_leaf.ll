@@ -6,15 +6,58 @@
 ;; Avoid failures on big-endian systems that can't read the profile properly
 ; REQUIRES: x86_64-linux
 
-;; TODO: Use text profile inputs once that is available for memprof.
-;; # To update the Inputs below, run Inputs/update_memprof_inputs.sh.
 ;; # To generate below LLVM IR for use in matching.
 ;; $ clang++ -gmlt -fdebug-info-for-profiling -S memprof_missing_leaf.cc \
 ;; 	-O2 -emit-llvm
+;;
+;; where memprof_missing_leaf.cc is as follows:
+;;
+;; #include <new>
+;;
+;; // Use musttail to simulate a missing leaf debug frame in the profiled binary.
+;; // Note we don't currently match onto explicit ::operator new calls, which is
+;; // why the non-musttail case uses implicit new (which doesn't support musttail).
+;; // Note that changes in the code below which affect relative line number
+;; // offsets of calls from their parent function can affect callsite matching in
+;; // the LLVM IR.
+;; #ifndef USE_MUSTTAIL
+;; #define USE_MUSTTAIL 0
+;; #endif
+;;
+;; // clang::musttail requires that the argument signature matches that of the caller.
+;; void *bar(std::size_t s) {
+;; #if USE_MUSTTAIL
+;;   [[clang::musttail]] return ::operator new (s);
+;; #else
+;;   return new char[s];
+;; #endif
+;; }
+;;
+;; int main() {
+;;   char *a = (char *)bar(1);
+;;   delete a;
+;;   return 0;
+;;}
 
-; RUN: llvm-profdata merge %S/Inputs/memprof_missing_leaf.memprofraw --profiled-binary %S/Inputs/memprof_missing_leaf.exe -o %t.memprofdata
-; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -S | FileCheck %s
+; RUN: split-file %s %t
+; RUN: llvm-profdata merge %t/memprof_missing_leaf.yaml -o %t/memprof_missing_leaf.memprofdata
+; RUN: opt < %t/memprof_missing_leaf.ll -passes='memprof-use<profile-filename=%t/memprof_missing_leaf.memprofdata>' -S | FileCheck %s
 
+;--- memprof_missing_leaf.yaml
+---
+HeapProfileRecords:
+  - GUID:            main
+    AllocSites:
+      - Callstack:
+          - { Function: main, LineOffset: 1, Column: 21, IsInlineFrame: false }
+        MemInfoBlock:
+          AllocCount:      1
+          TotalSize:       1
+          TotalLifetime:   0
+          TotalLifetimeAccessDensity: 0
+    CallSites:       []
+...
+;--- memprof_missing_leaf.ll
 ; CHECK: call {{.*}} @_Znam{{.*}} #[[ATTR:[0-9]+]]
 ; CHECK: attributes #[[ATTR]] = {{.*}} "memprof"="notcold"
 

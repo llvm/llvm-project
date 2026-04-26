@@ -49,6 +49,21 @@ public:
                               const TargetRegisterInfo *TRI,
                               std::vector<CalleeSavedInfo> &CSI) const override;
 
+  bool assignCalleeSavedSpillSlotsImpl(MachineFunction &MF,
+                                       const TargetRegisterInfo *TRI,
+                                       std::vector<CalleeSavedInfo> &CSI) const;
+
+  bool spillCalleeSavedRegisters(MachineBasicBlock &MBB,
+                                 MachineBasicBlock::iterator MI,
+                                 ArrayRef<CalleeSavedInfo> CSI,
+                                 const TargetRegisterInfo *TRI) const override;
+
+  bool
+  restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator MI,
+                              MutableArrayRef<CalleeSavedInfo> CSI,
+                              const TargetRegisterInfo *TRI) const override;
+
   bool allocateScavengingFrameIndexesNearIncomingSP(
     const MachineFunction &MF) const override;
 
@@ -86,6 +101,10 @@ private:
 
 public:
   bool requiresStackPointerReference(const MachineFunction &MF) const;
+
+  // Returns true if the function may need to reserve space on the stack for the
+  // CWSR trap handler.
+  bool mayReserveScratchForCWSR(const MachineFunction &MF) const;
 };
 
 } // end namespace llvm

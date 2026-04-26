@@ -1,4 +1,4 @@
-//===-- SBBlock.cpp -------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,10 +18,9 @@
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/VariableList.h"
-#include "lldb/Target/StackFrame.h"
-#include "lldb/Target/Target.h"
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/ValueObject/ValueObjectVariable.h"
+#include "lldb/lldb-types.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -52,6 +51,22 @@ SBBlock::operator bool() const {
   LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_ptr != nullptr;
+}
+
+bool SBBlock::operator==(const SBBlock &rhs) const {
+  LLDB_INSTRUMENT_VA(this, rhs);
+
+  return m_opaque_ptr != nullptr && rhs.m_opaque_ptr != nullptr &&
+         m_opaque_ptr->GetFunction() == rhs.m_opaque_ptr->GetFunction() &&
+         m_opaque_ptr->GetFunction().GetCompileUnit() ==
+             rhs.m_opaque_ptr->GetFunction().GetCompileUnit() &&
+         *m_opaque_ptr == *rhs.m_opaque_ptr;
+}
+
+bool SBBlock::operator!=(const SBBlock &rhs) const {
+  LLDB_INSTRUMENT_VA(this, rhs);
+
+  return !(*this == rhs);
 }
 
 bool SBBlock::IsInlined() const {
@@ -116,8 +131,9 @@ void SBBlock::AppendVariables(bool can_create, bool get_parent_variables,
                               lldb_private::VariableList *var_list) {
   if (IsValid()) {
     bool show_inline = true;
-    m_opaque_ptr->AppendVariables(can_create, get_parent_variables, show_inline,
-                                  [](Variable *) { return true; }, var_list);
+    m_opaque_ptr->AppendVariables(
+        can_create, get_parent_variables, show_inline,
+        [](Variable *) { return true; }, var_list);
   }
 }
 
@@ -176,8 +192,7 @@ bool SBBlock::GetDescription(SBStream &description) {
     m_opaque_ptr->CalculateSymbolContext(&sc);
     if (sc.function) {
       m_opaque_ptr->DumpAddressRanges(
-          &strm,
-          sc.function->GetAddressRange().GetBaseAddress().GetFileAddress());
+          &strm, sc.function->GetAddress().GetFileAddress());
     }
   } else
     strm.PutCString("No value");

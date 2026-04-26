@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/PassTimingInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/PassRegistry.h"
 #include <gtest/gtest.h>
@@ -161,8 +162,8 @@ TEST(TimePassesTest, CustomOut) {
   PI.runBeforePass(Pass2, M);
   PI.runAfterPass(Pass2, M, PreservedAnalyses::all());
 
-  // Generate report by deleting the handler.
-  TimePasses.reset();
+  // Clear and generate report again.
+  TimePasses->print();
 
   // There should be Pass2 in this report and no Pass1.
   EXPECT_FALSE(TimePassesStr.str().empty());

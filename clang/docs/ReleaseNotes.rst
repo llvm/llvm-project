@@ -1,3 +1,6 @@
+.. If you want to modify sections/contents permanently, you should modify both
+   ReleaseNotes.rst and ReleaseNotesTemplate.txt.
+
 ===========================================
 Clang |release| |ReleaseNotesTitle|
 ===========================================
@@ -33,24 +36,6 @@ latest release, please see the `Clang Web Site <https://clang.llvm.org>`_ or the
 
 Potentially Breaking Changes
 ============================
-These changes are ones which we think may surprise users when upgrading to
-Clang |release| because of the opportunity they pose for disruption to existing
-code bases.
-
-- The ``le32`` and ``le64`` targets have been removed.
-
-- ``clang -m32`` defaults to ``-mcpu=v9`` on SPARC Linux now.  Distros
-  still supporting SPARC V8 CPUs need to specify ``-mcpu=v8`` with a
-  `config file
-  <https://clang.llvm.org/docs/UsersManual.html#configuration-files>`_.
-
-- The ``clang-rename`` tool has been removed.
-
-- Removed support for RenderScript targets. This technology is
-  `officially deprecated <https://developer.android.com/guide/topics/renderscript/compute>`_
-  and users are encouraged to
-  `migrate to Vulkan <https://developer.android.com/guide/topics/renderscript/migrate>`_
-  or other options.
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
@@ -58,215 +43,117 @@ C/C++ Language Potentially Breaking Changes
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
 
-- The type trait builtin ``__is_nullptr`` has been removed, since it has very
-  few users and can be written as ``__is_same(__remove_cv(T), decltype(nullptr))``,
-  which GCC supports as well.
+- Clang now more aggressively optimizes away stores to objects after they are
+  dead. This behavior can be disabled with ``-fno-lifetime-dse``.
 
-- Clang will now correctly diagnose as ill-formed a constant expression where an
-  enum without a fixed underlying type is set to a value outside the range of
-  the enumeration's values.
-
-  .. code-block:: c++
-
-    enum E { Zero, One, Two, Three, Four };
-    constexpr E Val1 = (E)3;  // Ok
-    constexpr E Val2 = (E)7;  // Ok
-    constexpr E Val3 = (E)8;  // Now ill-formed, out of the range [0, 7]
-    constexpr E Val4 = (E)-1; // Now ill-formed, out of the range [0, 7]
-
-  Since Clang 16, it has been possible to suppress the diagnostic via
-  `-Wno-enum-constexpr-conversion`, to allow for a transition period for users.
-  Now, in Clang 20, **it is no longer possible to suppress the diagnostic**.
-
-- Extraneous template headers are now ill-formed by default.
-  This error can be disable with ``-Wno-error=extraneous-template-head``.
-
-  .. code-block:: c++
-
-    template <> // error: extraneous template head
-    template <typename T>
-    void f();
-
-- During constant evaluation, comparisons between different evaluations of the
-  same string literal are now correctly treated as non-constant, and comparisons
-  between string literals that cannot possibly overlap in memory are now treated
-  as constant. This updates Clang to match the anticipated direction of open core
-  issue `CWG2765 <http://wg21.link/CWG2765>`, but is subject to change once that
-  issue is resolved.
-
-  .. code-block:: c++
-
-    constexpr const char *f() { return "hello"; }
-    constexpr const char *g() { return "world"; }
-    // Used to evaluate to false, now error: non-constant comparison.
-    constexpr bool a = f() == f();
-    // Might evaluate to true or false, as before.
-    bool at_runtime() { return f() == f(); }
-    // Was error, now evaluates to false.
-    constexpr bool b = f() == g();
-
-- Clang will now correctly not consider pointers to non classes for covariance
-  and disallow changing return type to a type that doesn't have the same or less cv-qualifications.
-
-  .. code-block:: c++
-
-    struct A {
-      virtual const int *f() const;
-      virtual const std::string *g() const;
-    };
-    struct B : A {
-      // Return type has less cv-qualification but doesn't point to a class.
-      // Error will be generated.
-      int *f() const override;
-
-      // Return type doesn't have more cv-qualification also not the same or
-      // less cv-qualification.
-      // Error will be generated.
-      volatile std::string *g() const override;
-    };
-
-- The warning ``-Wdeprecated-literal-operator`` is now on by default, as this is
-  something that WG21 has shown interest in removing from the language. The
-  result is that anyone who is compiling with ``-Werror`` should see this
-  diagnostic.  To fix this diagnostic, simply removing the space character from
-  between the ``operator""`` and the user defined literal name will make the
-  source no longer deprecated. This is consistent with `CWG2521 <https://cplusplus.github.io/CWG/issues/2521.html>_`.
-
-  .. code-block:: c++
-
-    // Now diagnoses by default.
-    unsigned operator"" _udl_name(unsigned long long);
-    // Fixed version:
-    unsigned operator""_udl_name(unsigned long long);
-
-- Clang will now produce an error diagnostic when [[clang::lifetimebound]] is
-  applied on a parameter of a function that returns void. This was previously
-  ignored and had no effect. (#GH107556)
-
-  .. code-block:: c++
-
-    // Now diagnoses with an error.
-    void f(int& i [[clang::lifetimebound]]);
+- Clang now correctly rejects ``export`` declarations in module implementation
+  partitions. (#GH107602)
 
 ABI Changes in This Version
 ---------------------------
 
-- Fixed Microsoft name mangling of placeholder, auto and decltype(auto), return types for MSVC 1920+. This change resolves incompatibilities with code compiled by MSVC 1920+ but will introduce incompatibilities with code compiled by earlier versions of Clang unless such code is built with the compiler option -fms-compatibility-version=19.14 to imitate the MSVC 1914 mangling behavior.
-- Fixed the Itanium mangling of the construction vtable name. This change will introduce incompatibilities with code compiled by Clang 19 and earlier versions, unless the -fclang-abi-compat=19 option is used. (#GH108015)
-- Mangle member-like friend function templates as members of the enclosing class. (#GH110247, #GH110503)
+- Fixed incorrect struct layout for ``_BitInt`` bitfields wider than 255 bits
+  on MSVC targets. Internal bitfield tracking fields were changed from
+  ``unsigned char`` to ``uint64_t`` to prevent overflow. This might be an ABI
+  break for such structs compared to earlier Clang versions.
+- Fixed a number of issues with the ``__regcall`` calling convention for passing
+  structs on non-Windows x86-64 targets, including a crash when handling empty
+  struct arguments. This changes how structs that contain arrays, floating point
+  types, or ``_Complex float`` types are passed, and may introduce
+  incompatibilities with code compiled by earlier versions of Clang that uses
+  the ``__regcall`` calling convention on these targets. (#GH62999) (#GH98635)
 
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
 
+- The JSON AST dump now includes all fields from ``AvailabilityAttr``: ``platform``,
+  ``introduced``, ``deprecated``, ``obsoleted``, ``unavailable``, ``message``,
+  ``strict``, ``replacement``, ``priority``, and ``environment``. Previously, these
+  fields were missing from the JSON output.
+- Colons that appear at the end of a ParamCommentCommand name are not serialized
+  as part of the name.
+
 Clang Frontend Potentially Breaking Changes
 -------------------------------------------
 
+- HIPSPV toolchain: `--offload-targets=spirv{32,64}` option is
+  deprecated and will be removed when the new offload driver becomes
+  default. The replacement for the option is
+  `--offload-targets=spirv{32,64}-unknown-chipstar` when using the new
+  offload driver (`--offload-new-driver`).
+- The new driver (`--offload-new-driver`) is now default for all offloading
+  compilations. This changes the ABI for relocatable device code. Currently,
+  libraries will need to be recompiled, or used with
+  (`--no-offload-new-driver`). This option will be removed in the next release.
+
+
+
 Clang Python Bindings Potentially Breaking Changes
 --------------------------------------------------
-- Parts of the interface returning string results will now return
-  the empty string ``""`` when no result is available, instead of ``None``.
-- Calling a property on the ``CompletionChunk`` or ``CompletionString`` class
-  statically now leads to an error, instead of returning a ``CachedProperty`` object
-  that is used internally. Properties are only available on instances.
-- For a single-line ``SourceRange`` and a ``SourceLocation`` in the same line,
-  but after the end of the ``SourceRange``, ``SourceRange.__contains__``
-  used to incorrectly return ``True``. (#GH22617), (#GH52827)
+- Remove ``CompletionString.Availability``. No libclang interfaces returned instances of it.
+- ``CompletionString.availability`` now returns instances of ``CompletionString.AvailabilityKindCompat``.
+
+  Instances of ``AvailabilityKindCompat`` have the same ``__str__`` representation
+  as the previous ``CompletionChunk.Kind`` and are equality-comparable with
+  the existing ``AvailabilityKind`` enum. It will be replaced by ``AvailabilityKind``
+  in a future release. When this happens, the return type of ``CompletionString.availability``
+  will change to ``AvailabilityKind``, so it is recommended to use ``AvailabilityKind``
+  to compare with the return values of ``CompletionString.availability``.
+- Remove ``availabilityKinds``. In this release, uses of ``availabilityKinds``
+  need to be replaced by ``CompletionString.AvailabilityKind``.
+- ``CompletionChunk.kind`` now returns instances of ``CompletionChunkKind``.
+
+  Instances of ``CompletionChunkKind`` have the same ``__str__`` representation
+  as the previous ``CompletionChunk.Kind`` for compatibility.
+  These representations will be changed in a future release to match other enums.
+- Remove ``completionChunkKindMap``. In this release, uses of ``completionChunkKindMap``
+  need to be replaced by ``CompletionChunkKind``.
+- Move ``SPELLING_CACHE`` into ``CompletionChunk`` and change it to use
+  ``CompletionChunkKind`` instances as keys, instead of the enum values.
+  An alias is kept in the form of a ``SPELLING_CACHE`` variable, but it only supports
+  ``__getitem__`` and ``__contains__``. It will be removed in a future release.
+  Please migrate to using ``CompletionChunk.SPELLING_CACHE`` instead.
+- ``SourceLocation`` and ``SourceRange`` now use ``NotImplemented`` to delegate
+  equality checks (``__eq__``) to the other object they are compared with when
+  they are of different classes. They previously returned ``False`` when compared
+  with objects of other classes.
+- ``TranslationUnit.get_tokens`` now throws an error if both the ``extent`` and
+  ``locations`` argument are passed. Previousy, ``locations`` took precedence.
+- ``_CXUnsavedFile`` will be renamed to ``UnsavedFile`` for consistency.
+  ``UnsavedFile`` is already available to use and existing uses should
+  be adapted to refer to it instead. ``_CXUnsavedFile`` will be removed in a
+  future release.
+
+OpenCL Potentially Breaking Changes
+-----------------------------------
+- Clang now diagnoses zero-length arrays as errors in OpenCL. OpenCL C 3.0
+  section 6.11.d states that "Variable length arrays and structures with
+  flexible (or unsized) arrays are not supported."
 
 What's New in Clang |release|?
 ==============================
-Some of the major new features and improvements to Clang are listed
-here. Generic improvements to Clang as a whole or to its underlying
-infrastructure are described first, followed by language-specific
-sections with improvements to Clang's support for those languages.
 
 C++ Language Changes
 --------------------
-- Allow single element access of GCC vector/ext_vector_type object to be
-  constant expression. Supports the `V.xyzw` syntax and other tidbits
-  as seen in OpenCL. Selecting multiple elements is left as a future work.
-- Implement `CWG1815 <https://wg21.link/CWG1815>`_. Support lifetime extension
-  of temporary created by aggregate initialization using a default member
-  initializer.
 
-- Accept C++26 user-defined ``static_assert`` messages in C++11 as an extension.
-
-- Add ``__builtin_elementwise_popcount`` builtin for integer types only.
-
-- Add ``__builtin_elementwise_fmod`` builtin for floating point types only.
-
-- Add ``__builtin_elementwise_minimum`` and ``__builtin_elementwise_maximum``
-  builtin for floating point types only.
-
-- The builtin type alias ``__builtin_common_type`` has been added to improve the
-  performance of ``std::common_type``.
+- ``__is_trivially_equality_comparable`` no longer returns false for all enum types. (#GH132672)
 
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
-- Add ``__builtin_is_implicit_lifetime`` intrinsic, which supports
-  `P2647R1 A trait for implicit lifetime types <https://wg21.link/p2674r1>`_
-
-- Add ``__builtin_is_virtual_base_of`` intrinsic, which supports
-  `P2985R0 A type trait for detecting virtual base classes <https://wg21.link/p2985r0>`_
-
-- Implemented `P2893R3 Variadic Friends <https://wg21.link/P2893>`_
-
-- Implemented `P2747R2 constexpr placement new <https://wg21.link/P2747R2>`_.
-
-- Added the ``__builtin_is_within_lifetime`` builtin, which supports
-  `P2641R4 Checking if a union alternative is active <https://wg21.link/p2641r4>`_
-
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
-- Removed the restriction to literal types in constexpr functions in C++23 mode.
-
-- Extend lifetime of temporaries in mem-default-init for P2718R0. Clang now fully
-  supports `P2718R0 Lifetime extension in range-based for loops <https://wg21.link/P2718R0>`_.
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
+- Clang now supports `P1857R3 <https://wg21.link/p1857r3>`_ Modules Dependency Discovery. (#GH54047)
+
+C++17 Feature Support
+^^^^^^^^^^^^^^^^^^^^^
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-- Allow calling initializer list constructors from initializer lists with
-  a single element of the same type instead of always copying.
-  (`CWG2137: List-initialization from object of same type <https://cplusplus.github.io/CWG/issues/2137.html>`)
-
-- Speculative resolution for CWG2311 implemented so that the implementation of CWG2137 doesn't remove
-  previous cases where guaranteed copy elision was done. Given a prvalue ``e`` of class type
-  ``T``, ``T{e}`` will try to resolve an initializer list constructor and will use it if successful.
-  Otherwise, if there is no initializer list constructor, the copy will be elided as if it was ``T(e)``.
-  (`CWG2311: Missed case for guaranteed copy elision <https://cplusplus.github.io/CWG/issues/2311.html>`)
-
-- Casts from a bit-field to an integral type is now not considered narrowing if the
-  width of the bit-field means that all potential values are in the range
-  of the target type, even if the type of the bit-field is larger.
-  (`CWG2627: Bit-fields and narrowing conversions <https://cplusplus.github.io/CWG/issues/2627.html>`_)
-
-- ``nullptr`` is now promoted to ``void*`` when passed to a C-style variadic function.
-  (`CWG722: Can nullptr be passed to an ellipsis? <https://cplusplus.github.io/CWG/issues/722.html>`_)
-
-- Allow ``void{}`` as a prvalue of type ``void``.
-  (`CWG2351: void{} <https://cplusplus.github.io/CWG/issues/2351.html>`_).
-
-- Clang now has improved resolution to CWG2398, allowing class templates to have
-  default arguments deduced when partial ordering.
-
-- Clang now allows comparing unequal object pointers that have been cast to ``void *``
-  in constant expressions. These comparisons always worked in non-constant expressions.
-  (`CWG2749: Treatment of "pointer to void" for relational comparisons <https://cplusplus.github.io/CWG/issues/2749.html>`_).
-
-- Reject explicit object parameters with type ``void`` (``this void``).
-  (`CWG2915: Explicit object parameters of type void <https://cplusplus.github.io/CWG/issues/2915.html>`_).
-
-- Clang now allows trailing requires clause on explicit deduction guides.
-  (`CWG2707: Deduction guides cannot have a trailing requires-clause <https://cplusplus.github.io/CWG/issues/2707.html>`_).
-
-- Clang now diagnoses a space in the first production of a ``literal-operator-id``
-  by default.
-  (`CWG2521: User-defined literals and reserved identifiers <https://cplusplus.github.io/CWG/issues/2521.html>`_).
 
 C Language Changes
 ------------------
@@ -276,193 +163,299 @@ C2y Feature Support
 
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
+- Clang now allows C23 ``constexpr`` struct member access through the dot operator in constant expressions. (#GH178349)
 
-- Clang now supports `N3029 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3029.htm>`_ Improved Normal Enumerations.
+Objective-C Language Changes
+-----------------------------
+
+- Clang now emits Objective-C number, array, and dictionary literals as
+  compile-time constant data structures rather than runtime ``objc_msgSend``
+  calls on targets whose runtime supports constant literal classes. The
+  feature can be disabled altogether with ``-fno-objc-constant-literals``,
+  or selectively per literal kind with ``-fno-constant-nsnumber-literals``,
+  ``-fno-constant-nsarray-literals``, and
+  ``-fno-constant-nsdictionary-literals``.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
-- The floating point comparison builtins (``__builtin_isgreater``,
-  ``__builtin_isgreaterequal``, ``__builtin_isless``, etc.) and
-  ``__builtin_signbit`` can now be used in constant expressions.
-- Plugins can now define custom attributes that apply to statements
-  as well as declarations.
-- ``__builtin_abs`` function can now be used in constant expressions.
+- Added support for floating point and pointer values in most ``__atomic_``
+  builtins.
+
+- Added ``__builtin_stdc_rotate_left`` and ``__builtin_stdc_rotate_right``
+  for bit rotation of unsigned integers including ``_BitInt`` types. Rotation
+  counts are normalized modulo the bit-width and support negative values.
+  Usable in constant expressions. Implicit conversion is supported for
+  class/struct types with conversion operators.
+- Implemented the following C23 ``<stdbit.h>`` builtins with ``_BitInt``
+  support and constexpr evaluation:
+  ``__builtin_stdc_leading_zeros``, ``__builtin_stdc_leading_ones``,
+  ``__builtin_stdc_trailing_zeros``, ``__builtin_stdc_trailing_ones``,
+  ``__builtin_stdc_first_leading_zero``, ``__builtin_stdc_first_leading_one``,
+  ``__builtin_stdc_first_trailing_zero``, ``__builtin_stdc_first_trailing_one``,
+  ``__builtin_stdc_count_zeros``, ``__builtin_stdc_count_ones``,
+  ``__builtin_stdc_has_single_bit``, ``__builtin_stdc_bit_width``,
+  ``__builtin_stdc_bit_floor``, and ``__builtin_stdc_bit_ceil``.
+
+- Implemented the type-specific C23 ``<stdbit.h>`` functions with constexpr
+  evaluation support:
+  ``stdc_leading_zeros_{uc,us,ui,ul,ull}``,
+  ``stdc_leading_ones_{uc,us,ui,ul,ull}``,
+  ``stdc_trailing_zeros_{uc,us,ui,ul,ull}``,
+  ``stdc_trailing_ones_{uc,us,ui,ul,ull}``,
+  ``stdc_first_leading_zero_{uc,us,ui,ul,ull}``,
+  ``stdc_first_leading_one_{uc,us,ui,ul,ull}``,
+  ``stdc_first_trailing_zero_{uc,us,ui,ul,ull}``,
+  ``stdc_first_trailing_one_{uc,us,ui,ul,ull}``,
+  ``stdc_count_zeros_{uc,us,ui,ul,ull}``,
+  ``stdc_count_ones_{uc,us,ui,ul,ull}``,
+  ``stdc_has_single_bit_{uc,us,ui,ul,ull}``,
+  ``stdc_bit_width_{uc,us,ui,ul,ull}``,
+  ``stdc_bit_floor_{uc,us,ui,ul,ull}``, and
+  ``stdc_bit_ceil_{uc,us,ui,ul,ull}``.
+
+- A new generic bit-reverse builtin function ``__builtin_bitreverseg`` that
+  extends bit-reversal support to all standard integers type, including
+  ``_BitInt``
+
+- Deprecated float types support from ``__builtin_elementwise_max`` and
+  ``__builtin_elementwise_min``.
+
+- Added header ``endian.h`` which contains byte order helpers specified in POSIX
+
+- Added #pragma loop licm(disable) for llvm.loop.licm.disable metadata
+
+- Added a new ``ExplicitInstantiationDecl`` AST node to represent explicit
+  template instantiations (e.g., ``template void foo<int>();`` or
+  ``extern template class S<int>;``). Previously, source location information
+  for explicit instantiation statements was discarded after parsing. The new
+  node preserves the full source range including the ``extern`` and ``template``
+  keywords, qualifiers, template arguments as written, and the declared type,
+  enabling tools such as language servers and refactoring engines to accurately
+  map source locations back to explicit instantiation sites.
 
 New Compiler Flags
 ------------------
+- New option ``-fms-anonymous-structs`` / ``-fno-ms-anonymous-structs`` added
+  to enable or disable Microsoft's anonymous struct/union extension without
+  enabling other ``-fms-extensions`` features (#GH177607).
+- New option ``--precompile-reduced-bmi`` allows build system to generate a
+  reduced BMI only for a C++20 importable module unit. Previously the users
+  can only generate the reduced BMI as a by-product, e.g, an object files or
+  a full BMI.
 
-- The ``-fc++-static-destructors={all,thread-local,none}`` flag was
-  added to control which C++ variables have static destructors
-  registered: all (the default) does so for all variables, thread-local
-  only for thread-local variables, and none (which corresponds to the
-  existing ``-fno-c++-static-destructors`` flag) skips all static
-  destructors registration.
+- New ``-cc1`` option ``-fexperimental-overflow-behavior-types`` added to
+  enable parsing of the experimental ``overflow_behavior`` type attribute and
+  type specifiers.
+
+- New ``-cl`` option ``/d2guardnochecks`` added to match MSVC. When Windows
+  Control Flow Guard (CFG) is enabled by other options, it will instruct Clang
+  to emit the CFG metadata, but disable adding checks.
+
+- New option ``-fdiagnostics-show-inlining-chain`` added to show inlining chain
+  notes for ``[[gnu::warning]]`` and ``[[gnu::error]]`` diagnostics. When a
+  function with these attributes is called from an inlined context, Clang can
+  now show which functions were inlined to reach the call. When debug info is
+  available (``-gline-directives-only`` (implicitly enabled at ``-g1``) or
+  higher), accurate source locations are used; otherwise, a heuristic fallback
+  is used with a note suggesting how to enable debug info for better accuracy.
+
+- New option ``-fwin-cfg-mechanism=`` added to control the mechanism used by
+  Control Flow Guard on Windows. Accepted values are ``automatic`` (default),
+  ``dispatch``, and ``check``. The ``dispatch`` mechanism uses the dispatch
+  function to perform indirect call checks and can improve performance, while
+  ``check`` uses the traditional check mechanism.
+- New ``-cl`` option ``/d2guardcfgdispatch`` added to match MSVC. This acts as a
+  shorthand for ``-fwin-cfg-mechanism=dispatch``.
+- New ``-cl`` option ``/d2guardcfgdispatch-`` added to match MSVC. This acts as a
+  shorthand for ``-fwin-cfg-mechanism=check``.
+
+- New option ``-f[no-]strict-bool`` added to control whether Clang can assume
+  that ``bool`` values loaded from memory cannot have a bit pattern other
+  than 0 or 1.
 
 Deprecated Compiler Flags
 -------------------------
 
-- ``-fheinous-gnu-extensions`` is deprecated; it is now equivalent to
-  specifying ``-Wno-error=invalid-gnu-asm-cast`` and may be removed in the
-  future.
-
 Modified Compiler Flags
 -----------------------
-
-- The ``-ffp-model`` option has been updated to enable a more limited set of
-  optimizations when the ``fast`` argument is used and to accept a new argument,
-  ``aggressive``. The behavior of ``-ffp-model=aggressive`` is equivalent
-  to the previous behavior of ``-ffp-model=fast``. The updated
-  ``-ffp-model=fast`` behavior no longer assumes finite math only and uses
-  the ``promoted`` algorithm for complex division when possible rather than the
-  less basic (limited range) algorithm.
-
-- The ``-fveclib`` option has been updated to enable ``-fno-math-errno`` for
-  ``-fveclib=ArmPL`` and ``-fveclib=SLEEF``. This gives Clang more opportunities
-  to utilize these vector libraries. The behavior for all other vector function
-  libraries remains unchanged.
-
-- The ``-Wnontrivial-memaccess`` warning has been updated to also warn about
-  passing non-trivially-copyable destrination parameter to ``memcpy``,
-  ``memset`` and similar functions for which it is a documented undefined
-  behavior.
+- The `-mno-outline` and `-moutline` compiler flags are now allowed on RISC-V and X86, which both support the machine outliner.
+- The `-mno-outline` flag will now add the `nooutline` IR attribute, so that
+  `-mno-outline` and `-moutline` objects can be mixed correctly during LTO.
 
 Removed Compiler Flags
--------------------------
-
-- The compiler flag `-Wenum-constexpr-conversion` (and the `Wno-`, `Wno-error-`
-  derivatives) is now removed, since it's no longer possible to suppress the
-  diagnostic (see above). Users can expect an `unknown warning` diagnostic if
-  it's still in use.
+----------------------
 
 Attribute Changes in Clang
 --------------------------
 
-- The ``swift_attr`` can now be applied to types. To make it possible to use imported APIs
-  in Swift safely there has to be a way to annotate individual parameters and result types
-  with relevant attributes that indicate that e.g. a block is called on a particular actor
-  or it accepts a Sendable or global-actor (i.e. ``@MainActor``) isolated parameter.
+- Added new attribute ``stack_protector_ignore`` to opt specific local variables out of
+  the analysis which determines if a function should get a stack protector.  A function
+  will still generate a stack protector if other local variables or command line flags
+  require it.
 
-  For example:
+- Added a new attribute, ``[[clang::no_outline]]`` to suppress outlining from
+  annotated functions. This uses the LLVM `nooutline` attribute.
 
-  .. code-block:: objc
+- Introduced a new type attribute ``__attribute__((overflow_behavior))`` which
+  currently accepts either ``wrap`` or ``trap`` as an argument, enabling
+  type-level control over overflow behavior. There is also an accompanying type
+  specifier for each behavior kind via `__ob_wrap` and `__ob_trap`.
 
-     @interface MyService
-       -(void) handle: (void (^ __attribute__((swift_attr("@Sendable"))))(id)) handler;
-     @end
+- Introduced a new function attribute ``__attribute__((__personality__(...)))``
+  to explicitly specify the personality routine for exception handling. THis is
+  meant to be a low level tool for language runtime authors to associate a
+  foreign language personality with a given function. Note that this does not
+  perform any ABI validation for the personality routine.
 
-- Clang now disallows more than one ``__attribute__((ownership_returns(class, idx)))`` with
-  different class names attached to one function.
+- The :doc:`ThreadSafetyAnalysis` attributes ``guarded_by`` and
+  ``pt_guarded_by`` now accept multiple capability arguments with refined
+  access semantics: *writing* requires all listed capabilities to be held
+  exclusively, while *reading* requires at least one to be held.  This is
+  sound because any writer must hold all capabilities, so holding any one
+  prevents concurrent writes.
 
-- Introduced a new format attribute ``__attribute__((format(syslog, 1, 2)))`` from OpenBSD.
+- The ``[[clang::unsafe_buffer_usage]]`` attribute is now supported in API
+  notes. For example:
+  
+  .. code-block:: yaml
 
-- The ``hybrid_patchable`` attribute is now supported on ARM64EC targets. It can be used to specify
-  that a function requires an additional x86-64 thunk, which may be patched at runtime.
+    Functions:
+      - Name: myUnsafeFunction
+        UnsafeBufferUsage: true
 
-- ``[[clang::lifetimebound]]`` is now explicitly disallowed on explicit object member functions
-  where they were previously silently ignored.
+- Added support for ``[[msvc::forceinline]]`` for functions and
+  ``[[msvc::forceinline_calls]]`` for statements. Both are aliases to
+  ``[[clang::always_inline]]`` with additional checks to ensure that they
+  are only accepted in places where MSVC also does.
 
-- Clang now automatically adds ``[[clang::lifetimebound]]`` to the parameters of
-  ``std::span, std::string_view`` constructors, this enables Clang to capture
-  more cases where the returned reference outlives the object.
-  (#GH100567)
-
-- Clang now correctly diagnoses the use of ``btf_type_tag`` in C++ and ignores
-  it; this attribute is a C-only attribute, and caused crashes with template
-  instantiation by accidentally allowing it in C++ in some circumstances.
-  (#GH106864)
-
-- Introduced a new attribute ``[[clang::coro_await_elidable]]`` on coroutine return types
-  to express elideability at call sites where the coroutine is invoked under a safe elide context.
-
-- Introduced a new attribute ``[[clang::coro_await_elidable_argument]]`` on function parameters
-  to propagate safe elide context to arguments if such function is also under a safe elide context.
-
-- The documentation of the ``[[clang::musttail]]`` attribute was updated to
-  note that the lifetimes of all local variables end before the call. This does
-  not change the behaviour of the compiler, as this was true for previous
-  versions.
-
-- Fix a bug where clang doesn't automatically apply the ``[[gsl::Owner]]`` or
-  ``[[gsl::Pointer]]`` to STL explicit template specialization decls. (#GH109442)
+- The AMDGPU ``amdgpu_num_sgpr`` and ``amdgpu_num_vgpr`` attributes are now
+  deprecated. Clang emits a ``-Wdeprecated-declarations`` warning when they
+  are used. Use ``amdgpu_waves_per_eu`` instead to control SGPR and VGPR
+  usage.
 
 Improvements to Clang's diagnostics
 -----------------------------------
+- Fixed bug in ``-Wdocumentation`` so that it correctly handles explicit
+  function template instantiations (#64087).
 
-- Some template related diagnostics have been improved.
+- ``-Wunused-but-set-variable`` now diagnoses file-scope variables with
+  internal linkage (``static`` storage class) that are assigned but never used.
+  This new coverage is added under the subgroup ``-Wunused-but-set-global``,
+  allowing it to be disabled independently with ``-Wno-unused-but-set-global``.
+  (#GH148361)
+
+- Added ``-Wlifetime-safety`` to enable lifetime safety analysis,
+  a CFG-based intra-procedural analysis that detects use-after-free and related
+  temporal safety bugs. See the
+  `RFC <https://discourse.llvm.org/t/rfc-intra-procedural-lifetime-analysis-in-clang/86291>`_
+  for more details. By design, this warning is enabled in ``-Weverything``. To disable
+  the analysis, use ``-Wno-lifetime-safety`` or ``-fno-lifetime-safety``.
+
+- Added ``-Wlifetime-safety-suggestions`` to enable lifetime annotation suggestions.
+  This provides suggestions for function parameters that
+  should be marked ``[[clang::lifetimebound]]`` based on lifetime analysis. For
+  example, for the following function:
 
   .. code-block:: c++
 
-     void foo() { template <typename> int i; } // error: templates can only be declared in namespace or class scope
+    int* p(int *in) { return in; }
 
-     struct S {
-      template <typename> int i; // error: non-static data member 'i' cannot be declared as a template
-     };
+  Clang will suggest:
 
-- Clang now has improved diagnostics for functions with explicit 'this' parameters. Fixes #GH97878
+  .. code-block:: c++
 
-- Clang now diagnoses dangling references to fields of temporary objects. Fixes #GH81589.
+    warning: parameter in intra-TU function should be marked [[clang::lifetimebound]]
+    int* p(int *in) { return in; }
+           ^~~~~~~
+                   [[clang::lifetimebound]]
+    note: param returned here
+    int* p(int *in) { return in; }
+                             ^~
 
-- Clang now diagnoses undefined behavior in constant expressions more consistently. This includes invalid shifts, and signed overflow in arithmetic.
+- Added ``-Wlifetime-safety-noescape`` to detect misuse of ``[[clang::noescape]]``
+  annotation where the parameter escapes through return. For example:
 
-- -Wdangling-assignment-gsl is enabled by default.
-- Clang now always preserves the template arguments as written used
-  to specialize template type aliases.
+  .. code-block:: c++
 
-- Clang now diagnoses the use of ``main`` in an ``extern`` context as invalid according to [basic.start.main] p3. Fixes #GH101512.
+    int* p(int *in [[clang::noescape]]) { return in; }
 
-- Clang now diagnoses when the result of a [[nodiscard]] function is discarded after being cast in C. Fixes #GH104391.
+  Clang will warn:
 
-- Don't emit duplicated dangling diagnostics. (#GH93386).
+  .. code-block:: c++
 
-- Improved diagnostic when trying to befriend a concept. (#GH45182).
+    warning: parameter is marked [[clang::noescape]] but escapes
+    int* p(int *in [[clang::noescape]]) { return in; }
+           ^~~~~~~
+    note: returned here
+    int* p(int *in [[clang::noescape]]) { return in; }
+                                                 ^~
 
-- Added the ``-Winvalid-gnu-asm-cast`` diagnostic group to control warnings
-  about use of "noop" casts for lvalues (a GNU extension). This diagnostic is
-  a warning which defaults to being an error, is enabled by default, and is
-  also controlled by the now-deprecated ``-fheinous-gnu-extensions`` flag.
+- Added ``-Wlifetime-safety-dangling-field`` to detect dangling field references
+  when stack memory escapes to class fields. This is part of ``-Wlifetime-safety``
+  and detects cases where local variables or parameters are stored in fields but
+  outlive their scope. For example:
 
-- Added the ``-Wdecls-in-multiple-modules`` option to assist users to identify
-  multiple declarations in different modules, which is the major reason of the slow
-  compilation speed with modules. This warning is disabled by default and it needs
-  to be explicitly enabled or by ``-Weverything``.
+  .. code-block:: c++
 
-- Improved diagnostic when trying to overload a function in an ``extern "C"`` context. (#GH80235)
+    struct DanglingView {
+      std::string_view view;
+      DanglingView(std::string s) : view(s) {}  // warning: address of stack memory escapes to a field
+    };
 
-- Clang now respects lifetimebound attribute for the assignment operator parameter. (#GH106372).
+- Improved ``-Wassign-enum`` performance by caching enum enumerator values. (#GH176454)
 
-- The lifetimebound and GSL analysis in clang are coherent, allowing clang to
-  detect more use-after-free bugs. (#GH100549).
+- Fixed a false negative in ``-Warray-bounds`` where the warning was suppressed
+  when accessing a member function on a past-the-end array element.
+  (#GH179128)
 
-- Clang now diagnoses dangling cases where a gsl-pointer is constructed from a gsl-owner object inside a container (#GH100384).
+- Added a missing space to the FixIt for the ``implicit-int`` group of diagnostics and
+  made sure that only one such diagnostic and FixIt is emitted per declaration group. (#GH179354)
 
-- Clang now warns for u8 character literals used in C23 with ``-Wpre-c23-compat`` instead of ``-Wpre-c++17-compat``.
+- Fixed the Fix-It insertion point for ``expected ';' after alias declaration``
+  when parsing alias declarations involving a token-split ``>>`` sequence
+  (for example, ``using A = X<int>>;``). (#GH184425)
 
-- Clang now diagnose when importing module implementation partition units in module interface units.
+- Fixed incorrect ``implicitly deleted`` diagnostic for explicitly deleted
+  candidate function. (#GH185693)
 
-- Don't emit bogus dangling diagnostics when ``[[gsl::Owner]]`` and `[[clang::lifetimebound]]` are used together (#GH108272).
+- The ``-Wloop-analysis`` warning has been extended to catch more cases of
+  variable modification inside lambda expressions (#GH132038).
 
-- The ``-Wreturn-stack-address`` warning now also warns about addresses of
-  local variables passed to function calls using the ``[[clang::musttail]]``
-  attribute.
+- Clang now emits ``-Wsizeof-pointer-memaccess`` when snprintf/vsnprintf use the sizeof
+  the destination buffer(dynamically allocated) in the len parameter(#GH162366)
 
-- Clang now diagnoses cases where a dangling ``GSLOwner<GSLPointer>`` object is constructed, e.g. ``std::vector<string_view> v = {std::string()};`` (#GH100526).
+- Added ``-Wmodule-map-path-outside-directory`` (off by default) to warn on
+  header and umbrella directory paths that use ``..`` to refer outside the module
+  directory in module maps found via implicit search
+  (``-fimplicit-module-maps``). This does not affect module maps specified
+  explicitly via ``-fmodule-map-file=``.
 
-- Clang now diagnoses when a ``requires`` expression has a local parameter of void type, aligning with the function parameter (#GH109831).
+- Honour ``[[maybe_unused]]`` attribute on private fields.
+  ``-Wunused-private-field`` no longer emits a warning for annotated private
+  fields.
 
-- Clang now emits a diagnostic note at the class declaration when the method definition does not match any declaration (#GH110638).
+- Improved ``-Wgnu-zero-variadic-macro-arguments`` to suggest using
+  ``__VA_OPT__`` if the current language version supports it(#GH188624)
 
-- Clang now omits warnings for extra parentheses in fold expressions with single expansion (#GH101863).
+- Clang now emits an error when implicitly casting a complex type to a built-in vector type. (#GH186805)
 
-- The warning for an unsupported type for a named register variable is now phrased ``unsupported type for named register variable``,
-  instead of ``bad type for named register variable``. This makes it clear that the type is not supported at all, rather than being
-  suboptimal in some way the error fails to mention (#GH111550).
+- Added ``-Wnonportable-include-path-separator`` (off by default) to catch
+  #include directives that use backslashes as a path separator. The warning
+  includes a FixIt to change all the backslashes to forward slashes, so that the
+  code can automatically be made portable to other host platforms that don't
+  support backslashes.
 
-- Clang now emits a ``-Wdepredcated-literal-operator`` diagnostic, even if the
-  name was a reserved name, which we improperly allowed to suppress the
-  diagnostic.
+- No longer emitting a ``-Wpre-c2y-compat`` or extension diagnostic about use
+  of octal literals with a ``0o`` prefix, and no longer emitting a
+  ``-Wdeprecated-octal-literals`` diagnostic for use of octal literals without
+  a ``0o`` prefix, when the literal is expanded from a macro defined in a
+  system header. (#GH192389)
 
-- Clang now diagnoses ``[[deprecated]]`` attribute usage on local variables (#GH90073).
+- Improved error recovery for missing semicolons after class members. Clang now avoids
+  skipping subsequent valid declarations when their previous decl is missing semicolon.
+
+- Removed the body of lambdas from some diagnostic messages.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -470,158 +463,126 @@ Improvements to Clang's time-trace
 Improvements to Coverage Mapping
 --------------------------------
 
+- [MC/DC] Nested expressions are handled as individual MC/DC expressions.
+- "Single byte coverage" now supports branch coverage and can be used
+  together with ``-fcoverage-mcdc``.
+- Consteval member functions are no longer emitted in coverage mappings,
+  matching the existing behavior for free consteval functions. (#GH164448)
+
 Bug Fixes in This Version
 -------------------------
 
-- Fixed the definition of ``ATOMIC_FLAG_INIT`` in ``<stdatomic.h>`` so it can
-  be used in C++.
-- Fixed a failed assertion when checking required literal types in C context. (#GH101304).
-- Fixed a crash when trying to transform a dependent address space type. Fixes #GH101685.
-- Fixed a crash when diagnosing format strings and encountering an empty
-  delimited escape sequence (e.g., ``"\o{}"``). #GH102218
-- Fixed a crash using ``__array_rank`` on 64-bit targets. (#GH113044).
-- The warning emitted for an unsupported register variable type now points to
-  the unsupported type instead of the ``register`` keyword (#GH109776).
-- Fixed a crash when emit ctor for global variant with flexible array init (#GH113187).
-- Fixed a crash when GNU statement expression contains invalid statement (#GH113468).
+- Fixed atomic boolean compound assignment; the conversion back to atomic bool would be miscompiled. (#GH33210)
+- Correctly handle default template argument when establishing subsumption. (#GH188640)
+- Fixed a failed assertion in the preprocessor when ``__has_embed`` parameters are missing parentheses. (#GH175088)
+- Fix lifetime extension of temporaries in for-range-initializers in templates. (#GH165182)
+- Fixed a preprocessor crash in ``__has_cpp_attribute`` on incomplete scoped attributes. (#GH178098)
+- Fixes an assertion failure when evaluating ``__underlying_type`` on enum redeclarations. (#GH177943)
+- Fixed an assertion failure caused by nested macro expansion during header-name lexing (``__has_embed(__has_include)``). (#GH178635)
+- Clang now outputs relative paths of embeds for dependency output. (#GH161950)
+- Fix the result type of a binary operation where both operands are 'void' l-values. (#GH111300)
+- Fixed an assertion failure when evaluating ``_Countof`` on invalid ``void``-typed operands. (#GH180893)
+- Fixed an assertion failure in the serialized diagnostic printer when it is destroyed without calling ``finish()``. (#GH140433)
+- Fixed an assertion failure caused by error recovery while extending a nested name specifier with results from ordinary lookup. (#GH181470)
+- Fixed a crash when parsing ``#pragma clang attribute`` arguments for attributes that forbid arguments. (#GH182122)
+- Fixed a bug with multiple-include optimization (MIOpt) state not being preserved in some cases during lexing, which could suppress header-guard mismatch diagnostics and interfere with include-guard optimization. (#GH180155)
+- Fixed a crash when normalizing constraints involving concept template parameters whose index coincided with non-concept template parameters in the same parameter mapping.
+- Fixed a crash caused by accessing dependent diagnostics of a non-dependent context.
+- Fixed a crash when substituting into a non-type template parameter that has a type containing an undeduced placeholder type.
+- Fixed several crashes and improved diagnostics when a multidimensional subscript operator is applied to a built-in type. (#GH187800)
+- Correctly diagnosing and no longer crashing when ``export module foo``
+  (without a semicolon) are the final tokens in a module file. (#GH187771)
+- Fixed a crash in duplicate attribute checking caused by comparing constant arguments with different integer signedness. (#GH188259)
+- Clang now emits an error when returning an initializer list from a lambda
+  with an explicit return type of void. The diagnostic now correctly refers
+  to "lambda" instead of "block". (#GH188661)
+- Fixed a crash on _BitInt(N) arrays where 129 ≤ N ≤ 192 due to incorrect array filler lowering. (#GH189643)
+- Fixed the behavior in C23 of ``auto``, by emitting an error when an array type is specified for a ``char *``. (#GH162694)
+- Fixed an issue where an assert was thrown instead of an error if no vulkan env was specified with ``--triple spirv``. (#GH189964)
+- Fixed incorrect rejection of ``auto`` with reordered declaration specifiers in C23. (#GH164121)
+- Fixed a crash where constexpr evaluation encountered invalid overrides. (#GH183290)
+- Fixed a crash when assigning to an element of an ``ext_vector_type`` with ``bool`` element type. (#GH189260)
+- Clang now emits an error for friend declarations of lambda members. (#GH26540)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-- Fix crash when atomic builtins are called with pointer to zero-size struct (#GH90330)
-
-- Clang now allows pointee types of atomic builtin arguments to be complete template types
-  that was not instantiated elsewhere.
-
-- ``__noop`` can now be used in a constant expression. (#GH102064)
-
-- Fix ``__has_builtin`` incorrectly returning ``false`` for some C++ type traits. (#GH111477)
+- Fix a crash when passing an unresolved overload set to ``__builtin_classify_type``. (#GH175589)
+- Fixed a crash when calling `__builtin_allow_sanitize_check` with no arguments. (#GH183927)
 
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+- Fixed a behavioral discrepancy between deleted functions and private members when checking the ``enable_if`` attribute. (#GH175895)
+- Fixed ``init_priority`` attribute by delaying type checks until after the type is deduced.
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
+- Fixed a crash when a function template is defined as a non-template friend with a global scope qualifier. (#GH185341)
+- Clang now rejects constant template parameters with block pointer types, since these are not implemented anyway and would lead to crashes. (#GH189247)
+- Fixed a crash on error recovery when dealing with invalid templates. (#GH183075)
+- Fixed a crash when instantiating ``requires`` expressions involving substitution failures in C++ concepts. (#GH176402)
+- We no longer caches invalid variable specializations. (#GH132592)
+- Fixed an incorrect template argument deduction when matching packs of template
+  template parameters when one of its parameters is also a pack. (#GH181166)
+- Clang no longer errors on overloads with different ref-qualifiers and constraints. (#GH120812)
+- Fixed a crash when a default argument is passed to an explicit object parameter. (#GH176639)
+- Fixed an alias template CTAD crash.
+- Correctly diagnose uses of ``co_await`` / ``co_yield`` in the default argument of nested function declarations. (#GH98923)
+- Fixed a crash when diagnosing an invalid static member function with an explicit object parameter (#GH177741)
+- Clang incorrectly instantiated variable specializations outside of the immediate context. (#GH54439)
+- Fixed a crash when instantiating an invalid out-of-line static data member definition in a local class. (#GH176152)
+- Fixed a crash when pack expansions are used as arguments for non-pack parameters of built-in templates. (#GH180307)
+- Fix a problem where pack index expressions where incorrectly being regarded as equivalent.
+- Fixed a bug where captured variables in non-mutable lambdas were incorrectly treated as mutable
+  when used inside decltype in the return type. (#GH180460)
+- Fixed a crash when evaluating uninitialized GCC vector/ext_vector_type vectors in ``constexpr``. (#GH180044)
+- Fixed a crash when `explicit(bool)` is used with an incomplete enumeration. (#GH183887)
+- Fixed a crash on ``typeid`` of incomplete local types during template instantiation. (#GH63242), (#GH176397)
+- Fixed a crash when an immediate-invoked ``consteval`` lambda is used as an invalid initializer. (#GH185270)
+- Fixed an assertion failure when using a global destructor with a target with a non-default program address space. (#GH186484)
 
-- Fixed a crash when an expression with a dependent ``__typeof__`` type is used as the operand of a unary operator. (#GH97646)
-- Fixed incorrect pack expansion of init-capture references in requires expresssions.
-- Fixed a failed assertion when checking invalid delete operator declaration. (#GH96191)
-- Fix a crash when checking destructor reference with an invalid initializer. (#GH97230)
-- Clang now correctly parses potentially declarative nested-name-specifiers in pointer-to-member declarators.
-- Fix a crash when checking the initialzier of an object that was initialized
-  with a string literal. (#GH82167)
-- Fix a crash when matching template template parameters with templates which have
-  parameters of different class type. (#GH101394)
-- Clang now correctly recognizes the correct context for parameter
-  substitutions in concepts, so it doesn't incorrectly complain of missing
-  module imports in those situations. (#GH60336)
-- Fix init-capture packs having a size of one before being instantiated. (#GH63677)
-- Clang now preserves the unexpanded flag in a lambda transform used for pack expansion. (#GH56852), (#GH85667),
-  (#GH99877).
-- Fixed a bug when diagnosing ambiguous explicit specializations of constrained member functions.
-- Fixed an assertion failure when selecting a function from an overload set that includes a
-  specialization of a conversion function template.
-- Correctly diagnose attempts to use a concept name in its own definition;
-  A concept name is introduced to its scope sooner to match the C++ standard. (#GH55875)
-- Properly reject defaulted relational operators with invalid types for explicit object parameters,
-  e.g., ``bool operator==(this int, const Foo&)`` (#GH100329), and rvalue reference parameters.
-- Properly reject defaulted copy/move assignment operators that have a non-reference explicit object parameter.
-- Clang now properly handles the order of attributes in `extern` blocks. (#GH101990).
-- Fixed an assertion failure by preventing null explicit object arguments from being deduced. (#GH102025).
-- Correctly check constraints of explicit instantiations of member functions. (#GH46029)
-- When performing partial ordering of function templates, clang now checks that
-  the deduction was consistent. Fixes (#GH18291).
-- Fixed an assertion failure about a constraint of a friend function template references to a value with greater
-  template depth than the friend function template. (#GH98258)
-- Clang now rebuilds the template parameters of out-of-line declarations and specializations in the context
-  of the current instantiation in all cases.
-- Fix evaluation of the index of dependent pack indexing expressions/types specifiers (#GH105900)
-- Correctly handle subexpressions of an immediate invocation in the presence of implicit casts. (#GH105558)
-- Clang now correctly handles direct-list-initialization of a structured bindings from an array. (#GH31813)
-- Mangle placeholders for deduced types as a template-prefix, such that mangling
-  of template template parameters uses the correct production. (#GH106182)
-- Fixed an assertion failure when converting vectors to int/float with invalid expressions. (#GH105486)
-- Template parameter names are considered in the name lookup of out-of-line class template
-  specialization right before its declaration context. (#GH64082)
-- Fixed a constraint comparison bug for friend declarations. (#GH78101)
-- Fix handling of ``_`` as the name of a lambda's init capture variable. (#GH107024)
-- Fix an issue with dependent source location expressions (#GH106428), (#GH81155), (#GH80210), (#GH85373)
-- Fixed a bug in the substitution of empty pack indexing types. (#GH105903)
-- Clang no longer tries to capture non-odr used default arguments of template parameters of generic lambdas (#GH107048)
-- Fixed a bug where defaulted comparison operators would remove ``const`` from base classes. (#GH102588)
-- Fix a crash when using ``source_location`` in the trailing return type of a lambda expression. (#GH67134)
-- A follow-up fix was added for (#GH61460), as the previous fix was not entirely correct. (#GH86361), (#GH112352)
-- Fixed a crash in the typo correction of an invalid CTAD guide. (#GH107887)
-- Fixed a crash when clang tries to subtitute parameter pack while retaining the parameter
-  pack. (#GH63819), (#GH107560)
-- Fix a crash when a static assert declaration has an invalid close location. (#GH108687)
-- Avoided a redundant friend declaration instantiation under a certain ``consteval`` context. (#GH107175)
-- Fixed an assertion failure in debug mode, and potential crashes in release mode, when
-  diagnosing a failed cast caused indirectly by a failed implicit conversion to the type of the constructor parameter.
-- Fixed an assertion failure by adjusting integral to boolean vector conversions (#GH108326)
-- Fixed a crash when mixture of designated and non-designated initializers in union. (#GH113855)
-- Fixed an issue deducing non-type template arguments of reference type. (#GH73460)
-- Fixed an issue in constraint evaluation, where type constraints on the lambda expression
-  containing outer unexpanded parameters were not correctly expanded. (#GH101754)
-- Fixes crashes with function template member specializations, and increases
-  conformance of explicit instantiation behaviour with MSVC. (#GH111266)
-- Fixed a bug in constraint expression comparison where the ``sizeof...`` expression was not handled properly
-  in certain friend declarations. (#GH93099)
-- Clang now instantiates the correct lambda call operator when a lambda's class type is
-  merged across modules. (#GH110401)
-- Clang now uses the correct set of template argument lists when comparing the constraints of
-  out-of-line definitions and member templates explicitly specialized for a given implicit instantiation of
-  a class template. (#GH102320)
-- Fix a crash when parsing a pseudo destructor involving an invalid type. (#GH111460)
-- Fixed an assertion failure when invoking recovery call expressions with explicit attributes
-  and undeclared templates. (#GH107047), (#GH49093)
-- Clang no longer crashes when a lambda contains an invalid block declaration that contains an unexpanded
-  parameter pack. (#GH109148)
-- Fixed overload handling for object parameters with top-level cv-qualifiers in explicit member functions (#GH100394)
-- Fixed a bug in lambda captures where ``constexpr`` class-type objects were not properly considered ODR-used in
-  certain situations. (#GH47400), (#GH90896)
-- Fix erroneous templated array size calculation leading to crashes in generated code. (#GH41441)
-- During the lookup for a base class name, non-type names are ignored. (#GH16855)
-- Fix a crash when recovering an invalid expression involving an explicit object member conversion operator. (#GH112559)
-- Clang incorrectly considered a class with an anonymous union member to not be
-  const-default-constructible even if a union member has a default member initializer.
-  (#GH95854).
-- Fixed an assertion failure when evaluating an invalid expression in an array initializer. (#GH112140)
-- Fixed an assertion failure in range calculations for conditional throw expressions. (#GH111854)
-- Clang now correctly ignores previous partial specializations of member templates explicitly specialized for
-  an implicitly instantiated class template specialization. (#GH51051)
-- Fixed an assertion failure caused by invalid enum forward declarations. (#GH112208)
-- Name independent data members were not correctly initialized from default member initializers. (#GH114069)
+- Inherited constructors in ``dllexport`` classes are now exported for ABI-compatible cases, matching
+  MSVC behavior. Constructors with variadic arguments or callee-cleanup parameters are not yet supported
+  and produce a warning. (#GH162640)
+- Correctly diagnose invalid non-dependent calls in dependent contexts. (#GH135694)
+- Fix initialization of GRO when GRO-return type mismatches, as part of CWG2563. (#GH98744)
+- Fix an error using an initializer list with array new for a type that is not default-constructible. (#GH81157)
+- We no longer consider conversion operators when copy-initializing from the same type. This was non
+  conforming and could lead to recursive constraint satisfaction checking. (#GH149443)
+- Fixed a crash in Itanium C++ name mangling for a lambda in a local class field initializer inside a constructor/destructor. (#GH176395)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
-
-- Fixed a crash that occurred when dividing by zero in complex integer division. (#GH55390).
-- Fixed a bug in ``ASTContext::getRawCommentForAnyRedecl()`` where the function could
-  sometimes incorrectly return null even if a comment was present. (#GH108145)
+- Fixed a bug where explicit nullability property attributes were not stored in AST nodes in Objective-C. (#GH179703)
+- Fixed a crash when parsing Doxygen ``@param`` commands attached to invalid declarations or non-function entities. (#GH182737)
+- Fixed the SourceLocation and SourceRange of reversed rewritten CXXOperatorCallExpr. (#GH192467)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
+- Fixed the arguments of the format attribute on ``__builtin_os_log_format``.  Previously, they were off by 1.
 
 Miscellaneous Clang Crashes Fixed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- Fixed a crash in C due to incorrect lookup that members in nested anonymous struct/union
-  can be found as ordinary identifiers in struct/union definition. (#GH31295)
-
-- Fixed a crash caused by long chains of ``sizeof`` and other similar operators
-  that can be followed by a non-parenthesized expression. (#GH45061)
-
-- Fixed an crash when compiling ``#pragma STDC FP_CONTRACT DEFAULT`` with
-  ``-ffp-contract=fast-honor-pragmas``. (#GH104830)
-
-- Fixed a crash when function has more than 65536 parameters.
-  Now a diagnostic is emitted. (#GH35741)
-
-- Fixed ``-ast-dump`` crashes on codes involving ``concept`` with ``-ast-dump-decl-types``. (#GH94928)
-
-- Fixed internal assertion firing when a declaration in the implicit global
-  module is found through ADL. (GH#109879)
+- Fixed a crash when attempting to jump over initialization of a variable with variably modified type. (#GH175540)
+- Fixed a crash when using loop hint with a value dependent argument inside a
+  generic lambda. (#GH172289)
+- Fixed a crash in C++ overload resolution with ``_Atomic``-qualified argument types. (#GH170433)
+- Fixed a crash related to missing source locations (#GH186655)
+- Fixed a crash when casting a parenthesized unresolved template-id or array section. (#GH183505)
+- Fixed a crash when initializing a ``constexpr`` pointer with a floating-point literal in C23. (#GH180313)
+- Fixed an assertion when diagnosing address-space qualified ``new``/``delete`` in language-defined address spaces such as OpenCL ``__local``. (#GH178319)
+- Fixed an assertion failure in ObjC++ ARC when binding a rvalue reference to reference with different lifetimes (#GH178524)
+- Fixed a crash when subscripting a vector type with large unsigned integer values. (#GH180563)
+- Fixed a crash when attempting to diagnose incompatible conversions involving function types (#GH182534)
+- Fixed a crash when evaluating ``__is_bitwise_cloneable`` on invalid record types. (#GH183707)
+- Fixed an assertion failure when casting a function pointer with a target with a non-default program address space. (#GH186210)
+- Fixed a crash when ``decltype(__builtin_FUNCTION())`` is used as a template type argument. (#GH167433)
+- Fixed an assertion failure when parsing an invalid ``decltype`` specifier with missing parentheses or extra semicolons. (#GH188014)
+- Fixed a crash when explicitly casting a complex type to or from an atomic complex type. (#GH172208)
+- Fixed a crash when explicitly casting a scalar to an atomic complex. (#GH114885)
+- Fixed an assertion failure when parsing an invalid out-of-line enum definition with template parameters. (#GH187909)
+- Fixed an assertion failure on invalid template template parameter during typo correction. (#GH183983)
+- Fixed an assertion failure in ``isAtEndOfMacroExpansion`` on macro expansions crossing the boundary of two fileIDs. (#GH115007), (#GH21755)
 
 OpenACC Specific Changes
 ------------------------
@@ -629,64 +590,26 @@ OpenACC Specific Changes
 Target Specific Changes
 -----------------------
 
-- Clang now implements the Solaris-specific mangling of ``std::tm`` as
-  ``tm``, same for ``std::div_t``, ``std::ldiv_t``, and
-  ``std::lconv``, for Solaris ABI compatibility. (#GH33114)
-
 AMDGPU Support
+^^^^^^^^^^^^^^
+- Introduced a new target specific builtin ``__builtin_amdgcn_processor_is``,
+  a late / deferred query for the current target processor.
+- Introduced a new target specific builtin ``__builtin_amdgcn_is_invocable``,
+  a late / deferred query for the availability of target specific builtins.
+- Initial support for gfx1310
+- The ``amdgpu_num_sgpr`` and ``amdgpu_num_vgpr`` function attributes are now
+  deprecated. Using them produces a ``-Wdeprecated-declarations`` warning. Use
+  ``amdgpu_waves_per_eu`` instead.
+
+NVPTX Support
 ^^^^^^^^^^^^^^
 
 X86 Support
 ^^^^^^^^^^^
-
-- The MMX vector intrinsic functions from ``*mmintrin.h`` which
-  operate on `__m64` vectors, such as ``_mm_add_pi8``, have been
-  reimplemented to use the SSE2 instruction-set and XMM registers
-  unconditionally. These intrinsics are therefore *no longer
-  supported* if MMX is enabled without SSE2 -- either from targeting
-  CPUs from the Pentium-MMX through the Pentium 3, or explicitly via
-  passing arguments such as ``-mmmx -mno-sse2``. MMX assembly code
-  remains supported without requiring SSE2, including inside
-  inline-assembly.
-
-- The compiler builtins such as ``__builtin_ia32_paddb`` which
-  formerly implemented the above MMX intrinsic functions have been
-  removed. Any uses of these removed functions should migrate to the
-  functions defined by the ``*mmintrin.h`` headers. A mapping can be
-  found in the file ``clang/www/builtins.py``.
-
-- Support ISA of ``AVX10.2``.
-  * Supported MINMAX intrinsics of ``*_(mask(z)))_minmax(ne)_p[s|d|h|bh]`` and
-  ``*_(mask(z)))_minmax_s[s|d|h]``.
-
-- Supported intrinsics for ``SM4 and AVX10.2``.
-  * Supported SM4 intrinsics of ``_mm512_sm4key4_epi32`` and
-  ``_mm512_sm4rnds4_epi32``.
-
-- All intrinsics in adcintrin.h can now be used in constant expressions.
-
-- All intrinsics in adxintrin.h can now be used in constant expressions.
-
-- All intrinsics in lzcntintrin.h can now be used in constant expressions.
-
-- All intrinsics in bmiintrin.h can now be used in constant expressions.
-
-- All intrinsics in bmi2intrin.h can now be used in constant expressions.
-
-- All intrinsics in tbmintrin.h can now be used in constant expressions.
-
-- Supported intrinsics for ``MOVRS AND AVX10.2``.
-  * Supported intrinsics of ``_mm(256|512)_(mask(z))_loadrs_epi(8|16|32|64)``.
-- Support ISA of ``AMX-FP8``.
-- Support ISA of ``AMX-TRANSPOSE``.
+- ``march=znver6`` is now supported.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
-
-- In the ARM Target, the frame pointer (FP) of a leaf function can be retained
-  by using the ``-fno-omit-frame-pointer`` option. If you want to eliminate the FP
-  in leaf functions after enabling ``-fno-omit-frame-pointer``, you can do so by adding
-  the ``-momit-leaf-frame-pointer`` option.
 
 Android Support
 ^^^^^^^^^^^^^^^
@@ -694,33 +617,38 @@ Android Support
 Windows Support
 ^^^^^^^^^^^^^^^
 
-- clang-cl now supports ``/std:c++23preview`` which enables C++23 features.
-
-- Clang no longer allows references inside a union when emulating MSVC 1900+ even if `fms-extensions` is enabled.
-  Starting with VS2015, MSVC 1900, this Microsoft extension is no longer allowed and always results in an error.
-  Clang now follows the MSVC behavior in this scenario.
-  When `-fms-compatibility-version=18.00` or prior is set on the command line this Microsoft extension is still
-  allowed as VS2013 and prior allow it.
+- Clang now defines the ``_MSVC_TRADITIONAL`` macro as ``1`` when emulating MSVC
+  19.15 (Visual Studio 2017 version 15.8) and later. (#GH47114)
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
 
+- DWARF fission is now compatible with linker relaxations, allowing `-gsplit-dwarf` and `-mrelax`
+  to be used together when building for the LoongArch platform.
+
 RISC-V Support
 ^^^^^^^^^^^^^^
 
-- The option ``-mcmodel=large`` for the large code model is supported.
+- Tenstorrent Ascalon D8 was renamed to Ascalon X. Use `tt-ascalon-x` with `-mcpu` or `-mtune`.
+- Intrinsics were added for the 'Zvabd` (RISC-V Integer Vector Absolute Difference) extension.
+- Intrinsics were added for the 'Zvzip` (Reordering Structured Data in Vector Registers) extension.
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- The new offloading driver is now the default for HIP. Use
+  `--no-oflfoad-new-driver` to return to the old behavior.
+
 CUDA Support
 ^^^^^^^^^^^^
-- Clang now supports CUDA SDK up to 12.6
-- Added support for sm_100
-- Added support for `__grid_constant__` attribute.
 
 AIX Support
 ^^^^^^^^^^^
+
+- The driver default for the linker flag `-bcdtors` now defaults to `mbr`
+  (instead of `all`) which only extracts static init from archive members which
+  would otherwise be referenced.
+  (See https://www.ibm.com/docs/en/aix/7.2.0?topic=l-ld-command for details).
 
 NetBSD Support
 ^^^^^^^^^^^^^^
@@ -728,19 +656,18 @@ NetBSD Support
 WebAssembly Support
 ^^^^^^^^^^^^^^^^^^^
 
-The default target CPU, "generic", now enables the `-mnontrapping-fptoint`
-and `-mbulk-memory` flags, which correspond to the [Bulk Memory Operations]
-and [Non-trapping float-to-int Conversions] language features, which are
-[widely implemented in engines].
-
-[Bulk Memory Operations]: https://github.com/WebAssembly/bulk-memory-operations/blob/master/proposals/bulk-memory-operations/Overview.md
-[Non-trapping float-to-int Conversions]: https://github.com/WebAssembly/spec/blob/master/proposals/nontrapping-float-to-int-conversion/Overview.md
-[widely implemented in engines]: https://webassembly.org/features/
+- Fixed a crash when ``__funcref`` is applied to a non-function pointer type.
+  (#GH118233)
 
 AVR Support
 ^^^^^^^^^^^
 
-- Reject C/C++ compilation for avr1 devices which have no SRAM.
+SystemZ Support
+^^^^^^^^^^^^^^^
+
+- Add support for `#pragma export` for z/OS.  This is a pragma used to export functions and variables
+  with external linkage from shared libraries.  It provides compatibility with the IBM XL C/C++
+  compiler.
 
 DWARF Support in Clang
 ----------------------
@@ -748,156 +675,89 @@ DWARF Support in Clang
 Floating Point Support in Clang
 -------------------------------
 
-- Add ``__builtin_elementwise_atan2`` builtin for floating point types only.
-
 Fixed Point Support in Clang
 ----------------------------
 
 AST Matchers
 ------------
-
-- Fixed an issue with the `hasName` and `hasAnyName` matcher when matching
-  inline namespaces with an enclosing namespace of the same name.
-
-- Fixed an ordering issue with the `hasOperands` matcher occurring when setting a
-  binding in the first matcher and using it in the second matcher.
-
-- Fixed a crash when traverse lambda expr with invalid captures. (#GH106444)
-
-- Fixed ``isInstantiated`` and ``isInTemplateInstantiation`` to also match for variable templates. (#GH110666)
-
-- Ensure ``hasName`` matches template specializations across inline namespaces,
-  making `matchesNodeFullSlow` and `matchesNodeFullFast` consistent.
+- Add ``functionTypeLoc`` matcher for matching ``FunctionTypeLoc``.
+- Add missing support for ``TraversalKind`` in some ``addMatcher()`` overloads.
 
 clang-format
 ------------
-
-- Adds ``BreakBinaryOperations`` option.
-- Adds ``TemplateNames`` option.
-- Adds ``AlignFunctionDeclarations`` option to ``AlignConsecutiveDeclarations``.
-- Adds ``IndentOnly`` suboption to ``ReflowComments`` to fix the indentation of
-  multi-line comments without touching their contents, renames ``false`` to
-  ``Never``, and ``true`` to ``Always``.
-- Adds ``RemoveEmptyLinesInUnwrappedLines`` option.
-- Adds ``KeepFormFeed`` option and set it to ``true`` for ``GNU`` style.
+- Add ``ObjCSpaceAfterMethodDeclarationPrefix`` option to control space between the
+  '-'/'+' and the return type in Objective-C method declarations
+- Deprecate the ``BinPackParameters`` and ``BinPackArguments`` options and replace 
+  them with the ``PackParameters`` and ``PackArguments`` structs (respectively) to 
+  unify packing behavior. Add the ``BreakAfter`` option to the structs, allowing 
+  parameter and argument lists to be formatted with one parameter/argument on each 
+  line if they exceed the specified count.
+- Add ``AfterComma`` value to ``BreakConstructorInitializers`` to allow breaking
+  constructor initializers after commas, keeping the colon on the same line.
+- Extend ``BreakBinaryOperations`` to accept a structured configuration with
+  per-operator break rules and minimum chain length gating via ``PerOperator``.
+- Add ``AllowShortRecordOnASingleLine`` option and set it to ``EmptyAndAttached`` for LLVM style.
 
 libclang
 --------
-- Add ``clang_isBeforeInTranslationUnit``. Given two source locations, it determines
-  whether the first one comes strictly before the second in the source code.
+- Visit constraints of `auto` type to properly visit concept usages (#GH166580)
+- Visit switch initializer statements (https://bugs.kde.org/show_bug.cgi?id=415537#c2)
+- Fix crash in clang_getBinaryOperatorKindSpelling and clang_getUnaryOperatorKindSpelling
+- The clang_Module_getASTFile API is deprecated and now always returns nullptr
+
+Code Completion
+---------------
+
+- Fixed a crash in code completion when using a C-Style cast with a parenthesized
+  operand in Objective-C++ mode. (#GH180125)
 
 Static Analyzer
 ---------------
 
-New features
-^^^^^^^^^^^^
-
-- Now CSA models `__builtin_*_overflow` functions. (#GH102602)
-
-- MallocChecker now checks for ``ownership_returns(class, idx)`` and ``ownership_takes(class, idx)``
-  attributes with class names different from "malloc". Clang static analyzer now reports an error
-  if class of allocation and deallocation function mismatches.
-  `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#unix-mismatcheddeallocator-c-c>`__.
-
-- Function effects, e.g. the ``nonblocking`` and ``nonallocating`` "performance constraint"
-  attributes, are now verified. For example, for functions declared with the ``nonblocking``
-  attribute, the compiler can generate warnings about the use of any language features, or calls to
-  other functions, which may block.
-
-Crash and bug fixes
-^^^^^^^^^^^^^^^^^^^
-
-Improvements
-^^^^^^^^^^^^
-
-- Improved the handling of the ``ownership_returns`` attribute. Now, Clang reports an
-  error if the attribute is attached to a function that returns a non-pointer value.
-  Fixes (#GH99501)
-
-Moved checkers
-^^^^^^^^^^^^^^
-
-- The checker ``alpha.security.MallocOverflow`` was deleted because it was
-  badly implemented and its agressive logic produced too many false positives.
-  To detect too large arguments passed to malloc, consider using the checker
-  ``alpha.taint.TaintedAlloc``.
-
-- The checkers ``alpha.nondeterministic.PointerSorting`` and
-  ``alpha.nondeterministic.PointerIteration`` were moved to a new bugprone
-  checker named ``bugprone-nondeterministic-pointer-iteration-order``. The
-  original checkers were implemented only using AST matching and make more
-  sense as a single clang-tidy check.
+.. comment:
+  This is for the Static Analyzer.
+  Using the caret `^^^` underlining for subsections:
+    - Crash and bug fixes
+    - New checkers and features
+    - Improvements
+    - Moved checkers
 
 .. _release-notes-sanitizers:
 
 Sanitizers
 ----------
-- Introduced Realtime Sanitizer, activated by using the -fsanitize=realtime
-  flag. This sanitizer detects unsafe system library calls, such as memory
-  allocations and mutex locks. If any such function is called during invocation
-  of a function marked with the ``[[clang::nonblocking]]`` attribute, an error
-  is printed to the console and the process exits non-zero.
-
-- Added the ``-fsanitize-undefined-ignore-overflow-pattern`` flag which can be
-  used to disable specific overflow-dependent code patterns. The supported
-  patterns are: ``add-signed-overflow-test``, ``add-unsigned-overflow-test``,
-  ``negated-unsigned-const``, and ``unsigned-post-decr-while``. The sanitizer
-  instrumentation can be toggled off for all available patterns by specifying
-  ``all``. Conversely, you may disable all exclusions with ``none`` which is
-  the default.
-
-  .. code-block:: c++
-
-     /// specified with ``-fsanitize-undefined-ignore-overflow-pattern=add-unsigned-overflow-test``
-     int common_overflow_check_pattern(unsigned base, unsigned offset) {
-       if (base + offset < base) { /* ... */ } // The pattern of `a + b < a`, and other re-orderings, won't be instrumented
-     }
-
-     /// specified with ``-fsanitize-undefined-ignore-overflow-pattern=add-signed-overflow-test``
-     int common_overflow_check_pattern_signed(signed int base, signed int offset) {
-       if (base + offset < base) { /* ... */ } // The pattern of `a + b < a`, and other re-orderings, won't be instrumented
-     }
-
-     /// specified with ``-fsanitize-undefined-ignore-overflow-pattern=negated-unsigned-const``
-     void negation_overflow() {
-       unsigned long foo = -1UL; // No longer causes a negation overflow warning
-       unsigned long bar = -2UL; // and so on...
-     }
-
-     /// specified with ``-fsanitize-undefined-ignore-overflow-pattern=unsigned-post-decr-while``
-     void while_post_decrement() {
-       unsigned char count = 16;
-       while (count--) { /* ... */ } // No longer causes unsigned-integer-overflow sanitizer to trip
-     }
-
-  Many existing projects have a large amount of these code patterns present.
-  This new flag should allow those projects to enable integer sanitizers with
-  less noise.
-
-- ``-fsanitize=signed-integer-overflow``, ``-fsanitize=unsigned-integer-overflow``,
-  ``-fsanitize=implicit-signed-integer-truncation``, ``-fsanitize=implicit-unsigned-integer-truncation``,
-  ``-fsanitize=enum`` now properly support the
-  "type" prefix within `Sanitizer Special Case Lists (SSCL)
-  <https://clang.llvm.org/docs/SanitizerSpecialCaseList.html>`_. See that link
-  for examples.
 
 Python Binding Changes
 ----------------------
-- Fixed an issue that led to crashes when calling ``Type.get_exception_specification_kind``.
+- Add deprecation warnings to ``CompletionChunk.isKind...`` methods.
+  These will be removed in a future release. Existing uses should be adapted
+  to directly compare equality of the ``CompletionChunk`` kind with
+  the corresponding ``CompletionChunkKind`` variant.
+
+  Affected methods: ``isKindOptional``, ``isKindTypedText``, ``isKindPlaceHolder``,
+  ``isKindInformative`` and ``isKindResultType``.
+- Add a deprecation warning to ``CodeCompletionResults.results``.
+  This property will become an implementation detail with changed behavior in a
+  future release and should not be used directly.. Existing uses of
+  ``CodeCompletionResults.results`` should be changed to directly use
+  ``CodeCompletionResults``: it nows supports ``__len__`` and ``__getitem__``,
+  so it can be used the same as ``CodeCompletionResults.results``.
+- Added a new helper method ``get_clang_version`` to the class ``Config`` to
+  read the version string of the libclang in use.
 
 OpenMP Support
 --------------
-- Added support for 'omp assume' directive.
-- Added support for 'omp scope' directive.
-- Added support for allocator-modifier in 'allocate' clause.
+- Added support for ``transparent`` clause in task and taskloop directives.
+- Added support for ``use_device_ptr`` clause to accept an optional
+  ``fallback`` modifier (``fb_nullify`` or ``fb_preserve``) with OpenMP >= 61.
 
 Improvements
 ^^^^^^^^^^^^
-- Improve the handling of mapping array-section for struct containing nested structs with user defined mappers
+- Improved substitution performance in concept checking. (#GH172266)
 
-- `num_teams` and `thead_limit` now accept multiple expressions when it is used
-  along in ``target teams ompx_bare`` construct. This allows the target region
-  to be launched with multi-dim grid on GPUs.
+- Clang now preserves the left-hand side of a binary expression (such as an
+  assignment or comparison) in a ``RecoveryExpr`` when the right-hand side fails
+  to parse. This improves IDE features like go-to-definition in ``clangd``.
 
 Additional Information
 ======================

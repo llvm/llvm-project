@@ -31,7 +31,7 @@ using namespace llvm;
 using namespace MIPatternMatch;
 
 bool CombinerHelper::matchExtractVectorElement(MachineInstr &MI,
-                                               BuildFnTy &MatchInfo) {
+                                               BuildFnTy &MatchInfo) const {
   GExtractVectorElement *Extract = cast<GExtractVectorElement>(&MI);
 
   Register Dst = Extract->getReg(0);
@@ -89,7 +89,7 @@ bool CombinerHelper::matchExtractVectorElement(MachineInstr &MI,
 }
 
 bool CombinerHelper::matchExtractVectorElementWithDifferentIndices(
-    const MachineOperand &MO, BuildFnTy &MatchInfo) {
+    const MachineOperand &MO, BuildFnTy &MatchInfo) const {
   MachineInstr *Root = getDefIgnoringCopies(MO.getReg(), MRI);
   GExtractVectorElement *Extract = cast<GExtractVectorElement>(Root);
 
@@ -146,7 +146,8 @@ bool CombinerHelper::matchExtractVectorElementWithDifferentIndices(
 }
 
 bool CombinerHelper::matchExtractVectorElementWithBuildVector(
-    const MachineInstr &MI, const MachineInstr &MI2, BuildFnTy &MatchInfo) {
+    const MachineInstr &MI, const MachineInstr &MI2,
+    BuildFnTy &MatchInfo) const {
   const GExtractVectorElement *Extract = cast<GExtractVectorElement>(&MI);
   const GBuildVector *Build = cast<GBuildVector>(&MI2);
 
@@ -185,7 +186,7 @@ bool CombinerHelper::matchExtractVectorElementWithBuildVector(
 }
 
 bool CombinerHelper::matchExtractVectorElementWithBuildVectorTrunc(
-    const MachineOperand &MO, BuildFnTy &MatchInfo) {
+    const MachineOperand &MO, BuildFnTy &MatchInfo) const {
   MachineInstr *Root = getDefIgnoringCopies(MO.getReg(), MRI);
   GExtractVectorElement *Extract = cast<GExtractVectorElement>(Root);
 
@@ -252,7 +253,8 @@ bool CombinerHelper::matchExtractVectorElementWithBuildVectorTrunc(
 }
 
 bool CombinerHelper::matchExtractVectorElementWithShuffleVector(
-    const MachineInstr &MI, const MachineInstr &MI2, BuildFnTy &MatchInfo) {
+    const MachineInstr &MI, const MachineInstr &MI2,
+    BuildFnTy &MatchInfo) const {
   const GExtractVectorElement *Extract = cast<GExtractVectorElement>(&MI);
   const GShuffleVector *Shuffle = cast<GShuffleVector>(&MI2);
 
@@ -338,7 +340,7 @@ bool CombinerHelper::matchExtractVectorElementWithShuffleVector(
 }
 
 bool CombinerHelper::matchInsertVectorElementOOB(MachineInstr &MI,
-                                                 BuildFnTy &MatchInfo) {
+                                                 BuildFnTy &MatchInfo) const {
   GInsertVectorElement *Insert = cast<GInsertVectorElement>(&MI);
 
   Register Dst = Insert->getReg(0);
@@ -361,7 +363,7 @@ bool CombinerHelper::matchInsertVectorElementOOB(MachineInstr &MI,
 }
 
 bool CombinerHelper::matchAddOfVScale(const MachineOperand &MO,
-                                      BuildFnTy &MatchInfo) {
+                                      BuildFnTy &MatchInfo) const {
   GAdd *Add = cast<GAdd>(MRI.getVRegDef(MO.getReg()));
   GVScale *LHSVScale = cast<GVScale>(MRI.getVRegDef(Add->getLHSReg()));
   GVScale *RHSVScale = cast<GVScale>(MRI.getVRegDef(Add->getRHSReg()));
@@ -380,7 +382,7 @@ bool CombinerHelper::matchAddOfVScale(const MachineOperand &MO,
 }
 
 bool CombinerHelper::matchMulOfVScale(const MachineOperand &MO,
-                                      BuildFnTy &MatchInfo) {
+                                      BuildFnTy &MatchInfo) const {
   GMul *Mul = cast<GMul>(MRI.getVRegDef(MO.getReg()));
   GVScale *LHSVScale = cast<GVScale>(MRI.getVRegDef(Mul->getLHSReg()));
 
@@ -401,7 +403,7 @@ bool CombinerHelper::matchMulOfVScale(const MachineOperand &MO,
 }
 
 bool CombinerHelper::matchSubOfVScale(const MachineOperand &MO,
-                                      BuildFnTy &MatchInfo) {
+                                      BuildFnTy &MatchInfo) const {
   GSub *Sub = cast<GSub>(MRI.getVRegDef(MO.getReg()));
   GVScale *RHSVScale = cast<GVScale>(MRI.getVRegDef(Sub->getRHSReg()));
 
@@ -421,7 +423,7 @@ bool CombinerHelper::matchSubOfVScale(const MachineOperand &MO,
 }
 
 bool CombinerHelper::matchShlOfVScale(const MachineOperand &MO,
-                                      BuildFnTy &MatchInfo) {
+                                      BuildFnTy &MatchInfo) const {
   GShl *Shl = cast<GShl>(MRI.getVRegDef(MO.getReg()));
   GVScale *LHSVScale = cast<GVScale>(MRI.getVRegDef(Shl->getSrcReg()));
 

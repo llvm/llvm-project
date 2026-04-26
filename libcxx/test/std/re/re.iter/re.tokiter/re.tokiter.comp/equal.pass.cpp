@@ -19,9 +19,10 @@
 #include <regex>
 
 #include "test_comparisons.h"
+#include "test_macros.h"
 
 int main(int, char**) {
-#if _LIBCPP_STD_VER >= 20
+#if TEST_STD_VER >= 20
   AssertEqualityReturnBool<std::cregex_token_iterator>();
 
   {

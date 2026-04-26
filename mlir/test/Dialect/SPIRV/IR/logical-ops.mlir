@@ -1,6 +1,100 @@
 // RUN: mlir-opt -split-input-file -verify-diagnostics %s | FileCheck %s
 
 //===----------------------------------------------------------------------===//
+// spirv.Any
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @any_vector2
+func.func @any_vector2(%arg0: vector<2xi1>) -> i1 {
+  // CHECK: spirv.Any %{{.*}} : vector<2xi1>
+  %0 = spirv.Any %arg0 : vector<2xi1>
+  return %0 : i1
+}
+
+// -----
+
+// CHECK-LABEL: @any_vector3
+func.func @any_vector3(%arg0: vector<3xi1>) -> i1 {
+  // CHECK: spirv.Any %{{.*}} : vector<3xi1>
+  %0 = spirv.Any %arg0 : vector<3xi1>
+  return %0 : i1
+}
+
+// -----
+
+// CHECK-LABEL: @any_vector4
+func.func @any_vector4(%arg0: vector<4xi1>) -> i1 {
+  // CHECK: spirv.Any %{{.*}} : vector<4xi1>
+  %0 = spirv.Any %arg0 : vector<4xi1>
+  return %0 : i1
+}
+
+// -----
+
+func.func @any_scalar(%arg0: i1) -> i1 {
+  // expected-error @+1 {{invalid kind of type specified: expected builtin.vector, but found 'i1'}}
+  %0 = spirv.Any %arg0 : i1
+  return %0 : i1
+}
+
+// -----
+
+func.func @any_wrong_result_type(%arg0: vector<2xi1>) -> vector<2xi1> {
+  // expected-error @+1 {{'spirv.Any' op result #0 must be bool, but got 'vector<2xi1>'}}
+  %0 = "spirv.Any"(%arg0) : (vector<2xi1>) -> vector<2xi1>
+  return %0 : vector<2xi1>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.All
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @all_vector2
+func.func @all_vector2(%arg0: vector<2xi1>) -> i1 {
+  // CHECK: spirv.All %{{.*}} : vector<2xi1>
+  %0 = spirv.All %arg0 : vector<2xi1>
+  return %0 : i1
+}
+
+// -----
+
+// CHECK-LABEL: @all_vector3
+func.func @all_vector3(%arg0: vector<3xi1>) -> i1 {
+  // CHECK: spirv.All %{{.*}} : vector<3xi1>
+  %0 = spirv.All %arg0 : vector<3xi1>
+  return %0 : i1
+}
+
+// -----
+
+// CHECK-LABEL: @all_vector4
+func.func @all_vector4(%arg0: vector<4xi1>) -> i1 {
+  // CHECK: spirv.All %{{.*}} : vector<4xi1>
+  %0 = spirv.All %arg0 : vector<4xi1>
+  return %0 : i1
+}
+
+// -----
+
+func.func @all_scalar(%arg0: i1) -> i1 {
+  // expected-error @+1 {{invalid kind of type specified: expected builtin.vector, but found 'i1'}}
+  %0 = spirv.All %arg0 : i1
+  return %0 : i1
+}
+
+// -----
+
+func.func @all_wrong_result_type(%arg0: vector<2xi1>) -> vector<2xi1> {
+  // expected-error @+1 {{'spirv.All' op result #0 must be bool, but got 'vector<2xi1>'}}
+  %0 = "spirv.All"(%arg0) : (vector<2xi1>) -> vector<2xi1>
+  return %0 : vector<2xi1>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.IEqual
 //===----------------------------------------------------------------------===//
 
@@ -28,6 +122,24 @@ func.func @inotequal_vector(%arg0: vector<4xi32>, %arg1: vector<4xi32>) -> vecto
   // CHECK: spirv.INotEqual {{.*}}, {{.*}} : vector<4xi32>
   %0 = spirv.INotEqual %arg0, %arg1 : vector<4xi32>
   return %0 : vector<4xi1>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.IsFinite
+//===----------------------------------------------------------------------===//
+
+func.func @isfinite_scalar(%arg0: f32) -> i1 {
+  // CHECK: spirv.IsFinite {{.*}} : f32
+  %0 = spirv.IsFinite %arg0 : f32
+  return %0 : i1
+}
+
+func.func @isfinite_vector(%arg0: vector<2xf32>) -> vector<2xi1> {
+  // CHECK: spirv.IsFinite {{.*}} : vector<2xf32>
+  %0 = spirv.IsFinite %arg0 : vector<2xf32>
+  return %0 : vector<2xi1>
 }
 
 // -----
@@ -166,7 +278,7 @@ func.func @logicalUnary(%arg0 : i1)
 
 func.func @logicalUnary(%arg0 : i32)
 {
-  // expected-error @+1 {{'operand' must be bool or vector of bool values of length 2/3/4/8/16, but got 'i32'}}
+  // expected-error @+1 {{'operand' must be bool or fixed-length vector of bool values of length 2/3/4/8/16 of ranks 1, but got 'i32'}}
   %0 = spirv.LogicalNot %arg0 : i32
   return
 }
@@ -198,6 +310,14 @@ func.func @select_op_float(%arg0: i1) -> () {
   %1 = spirv.Constant 3.0 : f32
   // CHECK: spirv.Select {{%.*}}, {{%.*}}, {{%.*}} : i1, f32
   %2 = spirv.Select %arg0, %0, %1 : i1, f32
+  return
+}
+
+func.func @select_op_bfloat16(%arg0: i1) -> () {
+  %0 = spirv.Constant 2.0 : bf16
+  %1 = spirv.Constant 3.0 : bf16
+  // CHECK: spirv.Select {{%.*}}, {{%.*}}, {{%.*}} : i1, bf16
+  %2 = spirv.Select %arg0, %0, %1 : i1, bf16
   return
 }
 

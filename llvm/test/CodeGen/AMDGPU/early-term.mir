@@ -2,6 +2,8 @@
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize64 -run-pass=si-late-branch-lowering -verify-machineinstrs  %s -o - | FileCheck -check-prefixes=GCN,GFX10 %s
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize64 -run-pass=si-late-branch-lowering -verify-machineinstrs  %s -o - | FileCheck -check-prefixes=GCN,GFX11 %s
 
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize64 -passes=si-late-branch-lowering %s -o - | FileCheck -check-prefixes=GCN,GFX11 %s
+
 --- |
   define amdgpu_ps void @early_term_scc0_end_block() {
     ret void

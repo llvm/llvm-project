@@ -13,8 +13,10 @@
 using namespace lldb;
 using namespace lldb_private;
 
-AbstractSocket::AbstractSocket(bool child_processes_inherit)
-    : DomainSocket(ProtocolUnixAbstract, child_processes_inherit) {}
+AbstractSocket::AbstractSocket() : DomainSocket(ProtocolUnixAbstract) {}
+
+AbstractSocket::AbstractSocket(NativeSocket socket, bool should_close)
+    : DomainSocket(ProtocolUnixAbstract, socket, should_close) {}
 
 size_t AbstractSocket::GetNameOffset() const { return 1; }
 

@@ -1,11 +1,11 @@
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}vgpr:
 ; GCN-DAG: v_mov_b32_e32 v1, v0
-; GCN-DAG: exp mrt0 v0, v0, v0, v0 done vm
+; GCN-DAG: exp mrt0, v0, v0, v0, v0 done vm
 ; GCN: s_waitcnt expcnt(0)
 ; GCN: v_add_f32_e32 v0, 1.0, v1
 ; GCN-NOT: s_endpgm
@@ -13,13 +13,13 @@ define amdgpu_vs { float, float } @vgpr(ptr addrspace(4) inreg %arg, i32 inreg %
 bb:
   call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %arg3, float %arg3, float %arg3, float %arg3, i1 true, i1 true) #0
   %x = fadd float %arg3, 1.000000e+00
-  %a = insertvalue { float, float } undef, float %x, 0
+  %a = insertvalue { float, float } poison, float %x, 0
   %b = insertvalue { float, float } %a, float %arg3, 1
   ret { float, float } %b
 }
 
 ; GCN-LABEL: {{^}}vgpr_literal:
-; GCN: exp mrt0 v0, v0, v0, v0 done vm
+; GCN: exp mrt0, v0, v0, v0, v0 done vm
 
 ; GCN-DAG: v_mov_b32_e32 v0, 1.0
 ; GCN-DAG: v_mov_b32_e32 v1, 2.0
@@ -54,7 +54,7 @@ bb:
   %f1 = bitcast i32 %i1 to float
   %f2 = bitcast i32 %i2 to float
   %f3 = bitcast i32 %i3 to float
-  %r0 = insertvalue { float, float, float, float, float } undef, float %f0, 0
+  %r0 = insertvalue { float, float, float, float, float } poison, float %f0, 0
   %r1 = insertvalue { float, float, float, float, float } %r0, float %f1, 1
   %r2 = insertvalue { float, float, float, float, float } %r1, float %f2, 2
   %r3 = insertvalue { float, float, float, float, float } %r2, float %f3, 3
@@ -86,7 +86,7 @@ bb:
 define amdgpu_ps { float, <2 x float> } @ps_input_ena_pos_w(ptr addrspace(4) inreg %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x i32> %arg3, <2 x i32> %arg4, <2 x i32> %arg5, <3 x i32> %arg6, <2 x i32> %arg7, <2 x i32> %arg8, <2 x i32> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18) #1 {
 bb:
   %f = bitcast <2 x i32> %arg8 to <2 x float>
-  %s = insertvalue { float, <2 x float> } undef, float %arg14, 0
+  %s = insertvalue { float, <2 x float> } poison, float %arg14, 0
   %s1 = insertvalue { float, <2 x float> } %s, <2 x float> %f, 1
   ret { float, <2 x float> } %s1
 }
@@ -112,7 +112,7 @@ bb:
   %f1 = bitcast i32 %i1 to float
   %f2 = bitcast i32 %i2 to float
   %f3 = bitcast i32 %i3 to float
-  %r0 = insertvalue { float, float, float, float, float } undef, float %f0, 0
+  %r0 = insertvalue { float, float, float, float, float } poison, float %f0, 0
   %r1 = insertvalue { float, float, float, float, float } %r0, float %f1, 1
   %r2 = insertvalue { float, float, float, float, float } %r1, float %f2, 2
   %r3 = insertvalue { float, float, float, float, float } %r2, float %f3, 3
@@ -141,7 +141,7 @@ bb:
   %f1 = bitcast i32 %i1 to float
   %f2 = bitcast i32 %i2 to float
   %f3 = bitcast i32 %i3 to float
-  %r0 = insertvalue { float, float, float, float, float } undef, float %f0, 0
+  %r0 = insertvalue { float, float, float, float, float } poison, float %f0, 0
   %r1 = insertvalue { float, float, float, float, float } %r0, float %f1, 1
   %r2 = insertvalue { float, float, float, float, float } %r1, float %f2, 2
   %r3 = insertvalue { float, float, float, float, float } %r2, float %f3, 3
@@ -170,7 +170,7 @@ bb:
   %f1 = bitcast i32 %i1 to float
   %f2 = bitcast i32 %i2 to float
   %f3 = bitcast i32 %i3 to float
-  %r0 = insertvalue { float, float, float, float, float } undef, float %f0, 0
+  %r0 = insertvalue { float, float, float, float, float } poison, float %f0, 0
   %r1 = insertvalue { float, float, float, float, float } %r0, float %f1, 1
   %r2 = insertvalue { float, float, float, float, float } %r1, float %f2, 2
   %r3 = insertvalue { float, float, float, float, float } %r2, float %f3, 3
@@ -185,7 +185,7 @@ bb:
 define amdgpu_vs { i32, i32, i32 } @sgpr(ptr addrspace(4) inreg %arg, i32 inreg %arg1, i32 inreg %arg2, float %arg3) #0 {
 bb:
   %x = add i32 %arg2, 2
-  %a = insertvalue { i32, i32, i32 } undef, i32 %x, 0
+  %a = insertvalue { i32, i32, i32 } poison, i32 %x, 0
   %b = insertvalue { i32, i32, i32 } %a, i32 %arg1, 1
   %c = insertvalue { i32, i32, i32 } %a, i32 %arg2, 2
   ret { i32, i32, i32 } %c
@@ -205,7 +205,7 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}both:
-; GCN-DAG: exp mrt0 v0, v0, v0, v0 done vm
+; GCN-DAG: exp mrt0, v0, v0, v0, v0 done vm
 ; GCN-DAG: v_mov_b32_e32 v1, v0
 ; GCN-DAG: s_mov_b32 s1, s2
 ; GCN-DAG: s_waitcnt expcnt(0)
@@ -218,7 +218,7 @@ bb:
   call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %arg3, float %arg3, float %arg3, float %arg3, i1 true, i1 true) #0
   %v = fadd float %arg3, 1.000000e+00
   %s = add i32 %arg2, 2
-  %a0 = insertvalue { float, i32, float, i32, i32 } undef, float %v, 0
+  %a0 = insertvalue { float, i32, float, i32, i32 } poison, float %v, 0
   %a1 = insertvalue { float, i32, float, i32, i32 } %a0, i32 %s, 1
   %a2 = insertvalue { float, i32, float, i32, i32 } %a1, float %arg3, 2
   %a3 = insertvalue { float, i32, float, i32, i32 } %a2, i32 %arg1, 3
@@ -227,7 +227,7 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}structure_literal:
-; GCN: exp mrt0 v0, v0, v0, v0 done vm
+; GCN: exp mrt0, v0, v0, v0, v0 done vm
 
 ; GCN-DAG: v_mov_b32_e32 v0, 1.0
 ; GCN-DAG: s_mov_b32 s0, 2
@@ -244,7 +244,7 @@ bb:
 ; GCN-LABEL: {{^}}ret_return_to_epilog_pseudo_size:
 ; GCN: codeLenInByte = 0{{$}}
 define amdgpu_ps float @ret_return_to_epilog_pseudo_size() #0 {
-  ret float undef
+  ret float poison
 }
 
 declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0

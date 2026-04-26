@@ -12,8 +12,11 @@
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCInstPrinter.h"
+#include "llvm/MC/MCLFI.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/Support/Regex.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <vector>
@@ -21,6 +24,14 @@ using namespace llvm;
 
 // Clients are responsible for avoid race conditions in registration.
 static Target *FirstTarget = nullptr;
+
+bool Target::isValidFeatureListFormat(StringRef Features) {
+  if (Features.empty())
+    return true;
+
+  static const llvm::Regex pattern("^([+-][^,]+)(,[+-][^,]+)*,?$");
+  return pattern.match(Features);
+}
 
 MCStreamer *Target::createMCObjectStreamer(
     const Triple &T, MCContext &Ctx, std::unique_ptr<MCAsmBackend> TAB,
@@ -75,39 +86,28 @@ MCStreamer *Target::createMCObjectStreamer(
   }
   if (ObjectTargetStreamerCtorFn)
     ObjectTargetStreamerCtorFn(*S, STI);
+  if (T.isLFI())
+    initializeLFIMCStreamer(*S, Ctx, T);
   return S;
-}
-
-MCStreamer *Target::createMCObjectStreamer(
-    const Triple &T, MCContext &Ctx, std::unique_ptr<MCAsmBackend> &&TAB,
-    std::unique_ptr<MCObjectWriter> &&OW,
-    std::unique_ptr<MCCodeEmitter> &&Emitter, const MCSubtargetInfo &STI, bool,
-    bool, bool) const {
-  return createMCObjectStreamer(T, Ctx, std::move(TAB), std::move(OW),
-                                std::move(Emitter), STI);
 }
 
 MCStreamer *Target::createAsmStreamer(MCContext &Ctx,
                                       std::unique_ptr<formatted_raw_ostream> OS,
-                                      MCInstPrinter *IP,
+                                      std::unique_ptr<MCInstPrinter> IP,
                                       std::unique_ptr<MCCodeEmitter> CE,
                                       std::unique_ptr<MCAsmBackend> TAB) const {
+  MCInstPrinter *Printer = IP.get();
   formatted_raw_ostream &OSRef = *OS;
-  MCStreamer *S = llvm::createAsmStreamer(Ctx, std::move(OS), IP,
-                                          std::move(CE), std::move(TAB));
-  createAsmTargetStreamer(*S, OSRef, IP);
-  return S;
-}
+  MCStreamer *S;
+  if (AsmStreamerCtorFn)
+    S = AsmStreamerCtorFn(Ctx, std::move(OS), std::move(IP), std::move(CE),
+                          std::move(TAB));
+  else
+    S = llvm::createAsmStreamer(Ctx, std::move(OS), std::move(IP),
+                                std::move(CE), std::move(TAB));
 
-MCStreamer *Target::createAsmStreamer(MCContext &Ctx,
-                                      std::unique_ptr<formatted_raw_ostream> OS,
-                                      bool IsVerboseAsm, bool UseDwarfDirectory,
-                                      MCInstPrinter *IP,
-                                      std::unique_ptr<MCCodeEmitter> &&CE,
-                                      std::unique_ptr<MCAsmBackend> &&TAB,
-                                      bool ShowInst) const {
-  return createAsmStreamer(Ctx, std::move(OS), IP, std::move(CE),
-                           std::move(TAB));
+  createAsmTargetStreamer(*S, OSRef, Printer);
+  return S;
 }
 
 iterator_range<TargetRegistry::iterator> TargetRegistry::targets() {
@@ -126,7 +126,7 @@ const Target *TargetRegistry::lookupTarget(StringRef ArchName,
                      [&](const Target &T) { return ArchName == T.getName(); });
 
     if (I == targets().end()) {
-      Error = ("invalid target '" + ArchName + "'.\n").str();
+      Error = ("invalid target '" + ArchName + "'.").str();
       return nullptr;
     }
 
@@ -140,7 +140,7 @@ const Target *TargetRegistry::lookupTarget(StringRef ArchName,
   } else {
     // Get the target specific parser.
     std::string TempError;
-    TheTarget = TargetRegistry::lookupTarget(TheTriple.getTriple(), TempError);
+    TheTarget = TargetRegistry::lookupTarget(TheTriple, TempError);
     if (!TheTarget) {
       Error = "unable to get target for '" + TheTriple.getTriple() +
               "', see --version and --triple.";
@@ -151,19 +151,20 @@ const Target *TargetRegistry::lookupTarget(StringRef ArchName,
   return TheTarget;
 }
 
-const Target *TargetRegistry::lookupTarget(StringRef TT, std::string &Error) {
+const Target *TargetRegistry::lookupTarget(const Triple &TT,
+                                           std::string &Error) {
   // Provide special warning when no targets are initialized.
   if (targets().begin() == targets().end()) {
     Error = "Unable to find target for this triple (no targets are registered)";
     return nullptr;
   }
-  Triple::ArchType Arch = Triple(TT).getArch();
+  Triple::ArchType Arch = TT.getArch();
   auto ArchMatch = [&](const Target &T) { return T.ArchMatchFn(Arch); };
   auto I = find_if(targets(), ArchMatch);
 
   if (I == targets().end()) {
-    Error = ("No available targets are compatible with triple \"" + TT + "\"")
-                .str();
+    Error =
+        "No available targets are compatible with triple \"" + TT.str() + "\"";
     return nullptr;
   }
 

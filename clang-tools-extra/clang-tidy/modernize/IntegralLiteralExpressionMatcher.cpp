@@ -1,4 +1,4 @@
-//===--- IntegralLiteralExpressionMatcher.cpp - clang-tidy ----------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -95,7 +95,7 @@ bool IntegralLiteralExpressionMatcher::unaryOperator() {
 }
 
 static LiteralSize literalTokenSize(const Token &Tok) {
-  unsigned int Length = Tok.getLength();
+  const unsigned int Length = Tok.getLength();
   if (Length <= 1)
     return LiteralSize::Int;
 
@@ -107,9 +107,9 @@ static LiteralSize literalTokenSize(const Token &Tok) {
     if (std::isdigit(Text[End]))
       break;
 
-    if (std::toupper(Text[End]) == 'U')
+    if (std::toupper(Text[End]) == 'U') {
       SeenUnsigned = true;
-    else if (std::toupper(Text[End]) == 'L') {
+    } else if (std::toupper(Text[End]) == 'L') {
       if (SeenLong)
         SeenLongLong = true;
       SeenLong = true;

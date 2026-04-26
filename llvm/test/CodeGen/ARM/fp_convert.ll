@@ -7,7 +7,7 @@
 ; RUN: llc -mtriple=arm-eabi -mcpu=cortex-a8 %s -o - \
 ; RUN: | FileCheck %s -check-prefix=VFP2
 
-; RUN: llc -mtriple=arm-eabi -mcpu=cortex-a8 --enable-unsafe-fp-math %s -o - \
+; RUN: llc -mtriple=arm-eabi -mcpu=cortex-a8 --denormal-fp-math=preserve-sign %s -o - \
 ; RUN:  | FileCheck %s -check-prefix=NEON
 
 ; RUN: llc -mtriple=arm-darwin -mcpu=cortex-a8 %s -o - \

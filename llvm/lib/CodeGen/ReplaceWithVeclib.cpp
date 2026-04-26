@@ -26,6 +26,7 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/VFABIDemangler.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
@@ -47,6 +48,7 @@ STATISTIC(NumFuncUsedAdded,
 /// Function.
 Function *getTLIFunction(Module *M, FunctionType *VectorFTy,
                          const StringRef TLIName,
+                         std::optional<CallingConv::ID> CC,
                          Function *ScalarFunc = nullptr) {
   Function *TLIFunc = M->getFunction(TLIName);
   if (!TLIFunc) {
@@ -54,6 +56,8 @@ Function *getTLIFunction(Module *M, FunctionType *VectorFTy,
         Function::Create(VectorFTy, Function::ExternalLinkage, TLIName, *M);
     if (ScalarFunc)
       TLIFunc->copyAttributesFrom(ScalarFunc);
+    if (CC)
+      TLIFunc->setCallingConv(*CC);
 
     LLVM_DEBUG(dbgs() << DEBUG_TYPE << ": Added vector library function `"
                       << TLIName << "` of type `" << *(TLIFunc->getType())
@@ -92,6 +96,7 @@ static void replaceWithTLIFunction(IntrinsicInst *II, VFInfo &Info,
   // Preserve fast math flags for FP math.
   if (isa<FPMathOperator>(Replacement))
     Replacement->copyFastMathFlags(II);
+  Replacement->setCallingConv(TLIVecFunc->getCallingConv());
 }
 
 /// Returns true when successfully replaced \p II, which is a call to a
@@ -110,7 +115,8 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
 
   // OloadTys collects types used in scalar intrinsic overload name.
   SmallVector<Type *, 3> OloadTys;
-  if (!RetTy->isVoidTy() && isVectorIntrinsicWithOverloadTypeAtArg(IID, -1))
+  if (!RetTy->isVoidTy() &&
+      isVectorIntrinsicWithOverloadTypeAtArg(IID, -1, /*TTI=*/nullptr))
     OloadTys.push_back(ScalarRetTy);
 
   // Compute the argument types of the corresponding scalar call and check that
@@ -118,8 +124,9 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
   SmallVector<Type *, 8> ScalarArgTypes;
   for (auto Arg : enumerate(II->args())) {
     auto *ArgTy = Arg.value()->getType();
-    bool IsOloadTy = isVectorIntrinsicWithOverloadTypeAtArg(IID, Arg.index());
-    if (isVectorIntrinsicWithScalarOpAtArg(IID, Arg.index())) {
+    bool IsOloadTy = isVectorIntrinsicWithOverloadTypeAtArg(IID, Arg.index(),
+                                                            /*TTI=*/nullptr);
+    if (isVectorIntrinsicWithScalarOpAtArg(IID, Arg.index(), /*TTI=*/nullptr)) {
       ScalarArgTypes.push_back(ArgTy);
       if (IsOloadTy)
         OloadTys.push_back(ArgTy);
@@ -193,7 +200,7 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
 
   Function *TLIFunc =
       getTLIFunction(II->getModule(), VectorFTy, VD->getVectorFnName(),
-                     II->getCalledFunction());
+                     VD->getCallingConv(), II->getCalledFunction());
   replaceWithTLIFunction(II, *OptInfo, TLIFunc);
   LLVM_DEBUG(dbgs() << DEBUG_TYPE << ": Replaced call to `" << ScalarName
                     << "` with call to `" << TLIFunc->getName() << "`.\n");

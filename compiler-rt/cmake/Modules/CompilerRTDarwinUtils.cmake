@@ -1,4 +1,3 @@
-include(CMakeParseArguments)
 include(CompilerRTUtils)
 include(BuiltinTests)
 
@@ -136,14 +135,13 @@ function(darwin_test_archs os valid_archs)
 
   # The simple program will build for x86_64h on the simulator because it is
   # compatible with x86_64 libraries (mostly), but since x86_64h isn't actually
-  # a valid or useful architecture for the iOS simulator we should drop it.
+  # a valid or useful architecture for the simulators. We should drop it.
   if(${os} MATCHES "^(iossim|tvossim|watchossim)$")
     list(REMOVE_ITEM archs "x86_64h")
-  endif()
-
-  if(${os} MATCHES "iossim")
-    message(STATUS "Disabling i386 slice for iossim")
-    list(REMOVE_ITEM archs "i386")
+    if ("i386" IN_LIST archs)
+      list(REMOVE_ITEM archs "i386")
+      message(STATUS "Disabling i386 slice for simulator")
+    endif()
   endif()
 
   if(${os} MATCHES "^ios$")
@@ -184,31 +182,32 @@ endfunction()
 function(darwin_filter_host_archs input output)
   list_intersect(tmp_var DARWIN_osx_ARCHS ${input})
   execute_process(
-    COMMAND sysctl hw.cputype
-    OUTPUT_VARIABLE CPUTYPE)
-  string(REGEX MATCH "hw.cputype: ([0-9]*)"
-         CPUTYPE_MATCHED "${CPUTYPE}")
-  set(ARM_HOST Off)
-  if(CPUTYPE_MATCHED)
-    # ARM cputype is (0x01000000 | 12) and X86(_64) is always 7.
-    if(${CMAKE_MATCH_1} GREATER 11)
-      set(ARM_HOST On)
-    endif()
+    COMMAND sysctl hw.optional.arm64
+    OUTPUT_VARIABLE IS_ARM64)
+  string(REGEX MATCH "hw.optional.arm64: ([0-9]*)"
+         ARM64_MATCHED "${IS_ARM64}")
+
+  set(ARM_HOST OFF)
+  if(ARM64_MATCHED AND ("${CMAKE_MATCH_1}" STREQUAL "1"))
+    set(ARM_HOST ON)
   endif()
+
+  execute_process(
+    COMMAND sysctl hw.cpusubtype
+    OUTPUT_VARIABLE SUBTYPE)
+  string(REGEX MATCH "hw.cpusubtype: ([0-9]*)"
+          SUBTYPE_MATCHED "${SUBTYPE}")
 
   if(ARM_HOST)
     list(REMOVE_ITEM tmp_var i386)
     list(REMOVE_ITEM tmp_var x86_64)
     list(REMOVE_ITEM tmp_var x86_64h)
+    if(NOT COMPILER_RT_HAS_MAC_PUBLIC_ARM64E)
+      list(REMOVE_ITEM tmp_var arm64e)
+    endif()
   else()
-    list(REMOVE_ITEM tmp_var arm64)
     list(REMOVE_ITEM tmp_var arm64e)
-    execute_process(
-      COMMAND sysctl hw.cpusubtype
-      OUTPUT_VARIABLE SUBTYPE)
-    string(REGEX MATCH "hw.cpusubtype: ([0-9]*)"
-           SUBTYPE_MATCHED "${SUBTYPE}")
-
+    list(REMOVE_ITEM tmp_var arm64)
     set(HASWELL_SUPPORTED Off)
     if(SUBTYPE_MATCHED)
       if(${CMAKE_MATCH_1} GREATER 7)
@@ -284,6 +283,11 @@ macro(darwin_add_builtin_library name suffix)
     ${ARGN})
   set(libname "${name}.${suffix}_${LIB_ARCH}_${LIB_OS}")
   add_library(${libname} STATIC ${LIB_SOURCES})
+  
+  # Write out the sources that were used to compile the builtins so that tests can be run in
+  # an independent compiler-rt build (see: compiler-rt/test/builtins/CMakeLists.txt)
+  file(WRITE "${COMPILER_RT_OUTPUT_LIBRARY_DIR}/${libname}.sources.txt" "${LIB_SOURCES}")
+
   if(DARWIN_${LIB_OS}_SYSROOT)
     set(sysroot_flag -isysroot ${DARWIN_${LIB_OS}_SYSROOT})
   endif()

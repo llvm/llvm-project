@@ -1,0 +1,93 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readobj --sframe %t 2>&1 | \
+# RUN:   FileCheck %s --strict-whitespace --match-full-lines -DFILE=%t
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Size:  0x1000
+  - Name:  .sframe
+    Type:  SHT_GNU_SFRAME
+    Flags: [ SHF_ALLOC ]
+    ContentArray: [
+      0xe2, 0xde, 0x02, 0x04,  # Preamble (magic, version, flags)
+      # Header:
+      0x03, 0x42, 0x40, 0x00,  # ABI, Fixed FP offset, Fixed RA Offset, AUX header length
+      0x03, 0x00, 0x00, 0x00,  # Number of FDEs
+      0x01, 0x00, 0x00, 0x00,  # Number of FREs
+      0x00, 0x10, 0x00, 0x00,  # FRE length
+      0x00, 0x00, 0x00, 0x00,  # FDE offset
+      0x00, 0x00, 0x00, 0x00,  # FRE offset
+
+      # FDE[0]:
+      0x00, 0x00, 0xde, 0x00,  # Start Address
+      0xbe, 0x01, 0x00, 0x00,  # Size
+      0x00, 0x00, 0x00, 0x00,  # Start FRE Offset
+      0x01, 0x00, 0x00, 0x00,  # Number of FREs
+      0x00, 0xde, 0xad, 0x00,  # Info, RepSize, Padding2
+
+      # FDE[1]:
+      0x00, 0x00, 0xad, 0x00,  # Start Address
+      0xbe, 0x01, 0x00, 0x00,  # Size
+      0x00, 0x00, 0x00, 0x00,  # Start FRE Offset
+      0x00, 0x00, 0x00, 0x00,  # Number of FREs
+      0x00, 0xde, 0xad, 0x00,  # Info, RepSize, Padding2
+
+      # FDE[2]:
+      0x00, 0x00, 0xbe, 0x00,  # Start Address
+      0xbe, 0x01, 0x00, 0x00,  # Size
+      0x00, 0x00, 0x00, 0x00,  # Start FRE Offset
+      0x00, 0x00, 0x00, 0x00,  # Number of FREs
+      0x00, 0xde, 0xad, 0x00,  # Info, RepSize, Padding2
+
+      # FRE[0]:
+      0x05, 0x02, 0x10,        # Start Address, Info, Offset[0]
+
+    ]
+  - Name:            .rela.sframe
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .sframe
+    Relocations:
+      - Offset:          0x1c
+        Symbol:          .text
+        Type:            R_X86_64_PC32
+        Addend:          0x42
+      - Offset:          0x30
+        Symbol:          .text
+        Type:            R_X86_64_PC32
+      - Offset:          0x30
+        Symbol:          .text
+        Type:            R_X86_64_PC32
+      - Offset:          0x44
+        Symbol:          4747
+        Type:            R_X86_64_PC32
+Symbols:
+  - Name:            .text
+    Type:            STT_SECTION
+    Section:         .text
+# CHECK-LABEL:SFrame section '.sframe' {
+#       CHECK:    ABI: AMD64EndianLittle (0x3)
+#       CHECK:    FuncDescEntry [0] {
+#  CHECK-NEXT:      PC {
+#  CHECK-NEXT:        Relocation: R_X86_64_PC32
+#  CHECK-NEXT:        Symbol Name: .text
+#  CHECK-NEXT:        Start Address: 0xDE0042
+#  CHECK-NEXT:      }
+#       CHECK:      FREs [
+#  CHECK-NEXT:        Frame Row Entry {
+#  CHECK-NEXT:          Start Address: 0xDE0047
+#       CHECK:    FuncDescEntry [1] {
+#  CHECK-NEXT:{{.*}}: warning: '[[FILE]]': more than one relocation at offset 0x30
+#  CHECK-NEXT:      PC: 0xAD0030
+#       CHECK:    FuncDescEntry [2] {
+#  CHECK-NEXT:{{.*}}: warning: '[[FILE]]': unable to read an entry with index 4747 from SHT_SYMTAB section with index {{[0-9]*}}: can't read an entry at 0x{{[0-9a-f]*}}: it goes past the end of the section (0x30)

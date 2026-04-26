@@ -5,12 +5,12 @@ include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
 
 // Test bit enums
-def None: I32BitEnumAttrCaseNone<"None", "none">;
-def Bit0: I32BitEnumAttrCaseBit<"Bit0", 0, "tagged">;
-def Bit1: I32BitEnumAttrCaseBit<"Bit1", 1>;
-def Bit2: I32BitEnumAttrCaseBit<"Bit2", 2>;
+def None: I32BitEnumCaseNone<"None", "none">;
+def Bit0: I32BitEnumCaseBit<"Bit0", 0, "tagged">;
+def Bit1: I32BitEnumCaseBit<"Bit1", 1>;
+def Bit2: I32BitEnumCaseBit<"Bit2", 2>;
 def Bit3: I32BitEnumAttrCaseBit<"Bit3", 3>;
-def BitGroup: I32BitEnumAttrCaseGroup<"BitGroup", [
+def BitGroup: BitEnumCaseGroup<"BitGroup", [
   Bit0, Bit1
 ]>;
 
@@ -42,7 +42,7 @@ def MyBitEnum: I32BitEnumAttr<"MyBitEnum", "An example bit enum",
 // DECL:     // Symbolize the keyword.
 // DECL:     if (::std::optional<::MyBitEnum> attr = ::symbolizeEnum<::MyBitEnum>(enumKeyword))
 // DECL:       return *attr;
-// DECL:     return parser.emitError(loc, "invalid An example bit enum specification: ") << enumKeyword;
+// DECL:     return parser.emitError(loc, "expected one of [none, tagged, Bit1, Bit2, Bit3, BitGroup] for An example bit enum, got: ") << enumKeyword;
 // DECL:   }
 
 // DECL: inline ::llvm::raw_ostream &operator<<(::llvm::raw_ostream &p, ::MyBitEnum value) {
@@ -57,6 +57,28 @@ def MyBitEnum: I32BitEnumAttr<"MyBitEnum", "An example bit enum",
 // DECL:   if (underlyingValue && !llvm::has_single_bit(underlyingValue))
 // DECL:     return p << '"' << valueStr << '"';
 // DECL:   return p << valueStr;
+
+// DECL: enum class MyI8Enum : uint8_t {
+// DECL:   a = 254,
+// DECL:   b = 255,
+// DECL: };
+
+// DECL: ::std::optional<MyI8Enum> symbolizeMyI8Enum(uint8_t);
+
+// DECL: inline constexpr unsigned getMaxEnumValForMyI8Enum() {
+// DECL:   return 255;
+// DECL: }
+
+// DECL: enum class MyI16Enum : uint16_t {
+// DECL:   a = 65534,
+// DECL:   b = 65535,
+// DECL: };
+
+// DECL: ::std::optional<MyI16Enum> symbolizeMyI16Enum(uint16_t);
+
+// DECL: inline constexpr unsigned getMaxEnumValForMyI16Enum() {
+// DECL:   return 65535;
+// DECL: }
 
 // DEF-LABEL: std::string stringifyMyBitEnum
 // DEF: auto val = static_cast<uint32_t>
@@ -73,7 +95,7 @@ def MyBitEnum: I32BitEnumAttr<"MyBitEnum", "An example bit enum",
 
 // Test enum printer generation for non non-keyword enums.
 
-def NonKeywordBit: I32BitEnumAttrCaseBit<"Bit0", 0, "tag-ged">;
+def NonKeywordBit: I32BitEnumCaseBit<"Bit0", 0, "tag-ged">;
 def MyMixedNonKeywordBitEnum: I32BitEnumAttr<"MyMixedNonKeywordBitEnum", "An example bit enum", [
     NonKeywordBit,
     Bit1
@@ -101,3 +123,42 @@ def MyNonKeywordBitEnum: I32BitEnumAttr<"MyNonKeywordBitEnum", "An example bit e
 // DECL: inline ::llvm::raw_ostream &operator<<(::llvm::raw_ostream &p, ::MyNonKeywordBitEnum value) {
 // DECL:   auto valueStr = stringifyEnum(value);
 // DECL:   return p << '"' << valueStr << '"';
+
+def MyNonQuotedPrintBitEnum
+  : I32BitEnum<"MyNonQuotedPrintBitEnum", "Example new-style bit enum",
+    [None, Bit0, Bit1, Bit2, Bit3, BitGroup]>;
+
+// DECL: struct FieldParser<::MyNonQuotedPrintBitEnum, ::MyNonQuotedPrintBitEnum> {
+// DECL:   template <typename ParserT>
+// DECL:   static FailureOr<::MyNonQuotedPrintBitEnum> parse(ParserT &parser) {
+// DECL:     ::MyNonQuotedPrintBitEnum flags = {};
+// DECL:     do {
+  // DECL:     // Parse the keyword containing a part of the enum.
+// DECL:       ::llvm::StringRef enumKeyword;
+// DECL:       auto loc = parser.getCurrentLocation();
+// DECL:       if (failed(parser.parseOptionalKeyword(&enumKeyword))) {
+// DECL:         return parser.emitError(loc, "expected keyword for Example new-style bit enum");
+// DECL:       }
+// DECL:       // Symbolize the keyword.
+// DECL:       if (::std::optional<::MyNonQuotedPrintBitEnum> flag = ::symbolizeEnum<::MyNonQuotedPrintBitEnum>(enumKeyword))
+// DECL:         flags = flags | *flag;
+// DECL:       } else {
+// DECL:         return parser.emitError(loc, "expected one of [none, tagged, Bit1, Bit2, Bit3, BitGroup] for Example new-style bit enum, got: ") << enumKeyword;
+// DECL:       }
+// DECL:     } while (::mlir::succeeded(parser.parseOptionalVerticalBar()));
+// DECL:     return flags;
+// DECL:   }
+
+// DECL: inline ::llvm::raw_ostream &operator<<(::llvm::raw_ostream &p, ::MyNonQuotedPrintBitEnum value) {
+// DECL:   auto valueStr = stringifyEnum(value);
+// DECL-NEXT:   return p << valueStr;
+
+def MyI8Enum : I8Enum<"MyI8Enum", "Example I8 enum", [
+    I8EnumCase<"a", 254>,
+    I8EnumCase<"b", 255>
+  ]>;
+
+def MyI16Enum : I16Enum<"MyI16Enum", "Example I16 enum", [
+    I16EnumCase<"a", 65534>,
+    I16EnumCase<"b", 65535>
+  ]>;

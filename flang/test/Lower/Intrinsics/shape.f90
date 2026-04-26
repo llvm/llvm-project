@@ -14,7 +14,7 @@ end subroutine
 ! CHECK:           %[[VAL_7:.*]] = fir.call @_QPreturn_array() {{.*}}: () -> !fir.box<!fir.ptr<!fir.array<?x?x?xf32>>>
 ! CHECK:           fir.save_result %[[VAL_7]] to %[[VAL_1:.*]] : !fir.box<!fir.ptr<!fir.array<?x?x?xf32>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?x?xf32>>>>
 ! CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = ".tmp.func_result"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x?x?xf32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x?x?xf32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?x?xf32>>>>)
-! CHECK:           %[[VAL_9:.*]] = fir.load %[[VAL_8]]#1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?x?xf32>>>>
+! CHECK:           %[[VAL_9:.*]] = fir.load %[[VAL_8]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?x?xf32>>>>
 ! CHECK:           %[[VAL_10:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_11:.*]]:3 = fir.box_dims %[[VAL_9]], %[[VAL_10]] : (!fir.box<!fir.ptr<!fir.array<?x?x?xf32>>>, index) -> (index, index, index)
 ! CHECK:           %[[VAL_12:.*]] = fir.convert %[[VAL_11]]#1 : (index) -> i32
@@ -50,7 +50,7 @@ end subroutine
 ! CHECK:           %[[VAL_7:.*]] = fir.call @_QPreturn_array() {{.*}}: () -> !fir.box<!fir.ptr<!fir.array<?x?x?xf32>>>
 ! CHECK:           fir.save_result %[[VAL_7]] to %[[VAL_1:.*]] : !fir.box<!fir.ptr<!fir.array<?x?x?xf32>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?x?xf32>>>>
 ! CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = ".tmp.func_result"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x?x?xf32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x?x?xf32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?x?xf32>>>>)
-! CHECK:           %[[VAL_9:.*]] = fir.load %[[VAL_8]]#1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?x?xf32>>>>
+! CHECK:           %[[VAL_9:.*]] = fir.load %[[VAL_8]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?x?xf32>>>>
 ! CHECK:           %[[VAL_10:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_11:.*]]:3 = fir.box_dims %[[VAL_9]], %[[VAL_10]] : (!fir.box<!fir.ptr<!fir.array<?x?x?xf32>>>, index) -> (index, index, index)
 ! CHECK:           %[[VAL_12:.*]] = fir.convert %[[VAL_11]]#1 : (index) -> i64

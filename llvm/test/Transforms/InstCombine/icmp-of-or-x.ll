@@ -31,7 +31,7 @@ define <2 x i1> @or_ule(<2 x i8> %x, <2 x i8> %y) {
 define <2 x i1> @or_slt_pos(<2 x i8> %xx, <2 x i8> %yy, <2 x i8> %z) {
 ; CHECK-LABEL: @or_slt_pos(
 ; CHECK-NEXT:    [[X:%.*]] = add <2 x i8> [[XX:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[Y:%.*]] = and <2 x i8> [[YY:%.*]], <i8 127, i8 127>
+; CHECK-NEXT:    [[Y:%.*]] = and <2 x i8> [[YY:%.*]], splat (i8 127)
 ; CHECK-NEXT:    [[XN1:%.*]] = or <2 x i8> [[X]], [[Y]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp slt <2 x i8> [[X]], [[XN1]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
@@ -192,7 +192,7 @@ define i1 @or_slt_intmin(i8 %x) {
 define <2 x i1> @or_slt_intmin_2(<2 x i8> %xx, <2 x i8> %z) {
 ; CHECK-LABEL: @or_slt_intmin_2(
 ; CHECK-NEXT:    [[X:%.*]] = add <2 x i8> [[XX:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[XN1:%.*]] = or <2 x i8> [[X]], <i8 -128, i8 -128>
+; CHECK-NEXT:    [[XN1:%.*]] = or <2 x i8> [[X]], splat (i8 -128)
 ; CHECK-NEXT:    [[R:%.*]] = icmp slt <2 x i8> [[X]], [[XN1]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
@@ -268,7 +268,7 @@ pos:
 define <2 x i1> @or_sgt_intmin_2(<2 x i8> %xx, <2 x i8> %z) {
 ; CHECK-LABEL: @or_sgt_intmin_2(
 ; CHECK-NEXT:    [[X:%.*]] = add <2 x i8> [[XX:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[XN1:%.*]] = or <2 x i8> [[X]], <i8 -128, i8 -128>
+; CHECK-NEXT:    [[XN1:%.*]] = or <2 x i8> [[X]], splat (i8 -128)
 ; CHECK-NEXT:    [[R:%.*]] = icmp sgt <2 x i8> [[X]], [[XN1]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;

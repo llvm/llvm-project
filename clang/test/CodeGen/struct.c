@@ -136,7 +136,7 @@ struct a14 { short a; int b; } x = {1, 1};
 
 /* flexible array members */
 struct a15 {char a; int b[];} c15;
-int a16(void) {c15.a = 1;}
+void a16(void) {c15.a = 1;}
 
 /* compound literals */
 void f13(void) {

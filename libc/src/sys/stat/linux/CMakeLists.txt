@@ -73,6 +73,7 @@ add_header_library(
   HDRS
     kernel_statx.h
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.include.sys_stat
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
@@ -116,4 +117,17 @@ add_entrypoint_object(
     libc.hdr.fcntl_macros
     libc.include.sys_stat
     libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  utimensat
+  SRCS
+    utimensat.cpp
+  HDRS
+    ../utimensat.h
+  DEPENDS
+    libc.hdr.types.struct_timespec
+    libc.src.__support.OSUtil.linux.syscall_wrappers.utimensat
+    libc.src.__support.common
+    libc.src.__support.libc_errno
 )

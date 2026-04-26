@@ -50,15 +50,15 @@ int bar(int n){
 
 #endif
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l23
-// CHECK1-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], i64 noundef [[A:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK1-SAME: (i64 noundef [[A:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK1-NEXT:  entry:
-// CHECK1-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
+// CHECK1-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[A_CASTED:%.*]] = alloca i64, align 8
 // CHECK1-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-// CHECK1-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK1-NEXT:    store i64 [[A]], ptr [[A_ADDR]], align 8
+// CHECK1-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l23_kernel_environment, ptr [[DYN_PTR]])
 // CHECK1-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 // CHECK1-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
@@ -90,15 +90,15 @@ int bar(int n){
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l28
-// CHECK1-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], i64 noundef [[AA:%.*]]) #[[ATTR0]] {
+// CHECK1-SAME: (i64 noundef [[AA:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR0]] {
 // CHECK1-NEXT:  entry:
-// CHECK1-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[AA_ADDR:%.*]] = alloca i64, align 8
+// CHECK1-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[AA_CASTED:%.*]] = alloca i64, align 8
 // CHECK1-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-// CHECK1-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK1-NEXT:    store i64 [[AA]], ptr [[AA_ADDR]], align 8
+// CHECK1-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l28_kernel_environment, ptr [[DYN_PTR]])
 // CHECK1-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 // CHECK1-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
@@ -130,15 +130,15 @@ int bar(int n){
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l33
-// CHECK1-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], i64 noundef [[AA:%.*]]) #[[ATTR0]] {
+// CHECK1-SAME: (i64 noundef [[AA:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR0]] {
 // CHECK1-NEXT:  entry:
-// CHECK1-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[AA_ADDR:%.*]] = alloca i64, align 8
+// CHECK1-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[AA_CASTED:%.*]] = alloca i64, align 8
 // CHECK1-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-// CHECK1-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK1-NEXT:    store i64 [[AA]], ptr [[AA_ADDR]], align 8
+// CHECK1-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l33_kernel_environment, ptr [[DYN_PTR]])
 // CHECK1-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 // CHECK1-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
@@ -170,7 +170,7 @@ int bar(int n){
 // CHECK1-NEXT:    store ptr [[AA_ADDR]], ptr [[TMP0]], align 8
 // CHECK1-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 4
-// CHECK1-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP2]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l33_omp_outlined_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i64 1)
+// CHECK1-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP2]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l33_omp_outlined_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i64 1, i32 0)
 // CHECK1-NEXT:    ret void
 //
 //
@@ -184,12 +184,12 @@ int bar(int n){
 // CHECK1-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 8
 // CHECK1-NEXT:    store ptr [[AA]], ptr [[AA_ADDR]], align 8
-// CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[AA_ADDR]], align 8
+// CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[AA_ADDR]], align 8, !nonnull [[META6:![0-9]+]], !align [[META7:![0-9]+]]
 // CHECK1-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [1 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i64 0, i64 0
 // CHECK1-NEXT:    store ptr [[TMP0]], ptr [[TMP1]], align 8
 // CHECK1-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
-// CHECK1-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP3]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l33_omp_outlined_omp_outlined_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i64 1)
+// CHECK1-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP3]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l33_omp_outlined_omp_outlined_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i64 1, i32 0)
 // CHECK1-NEXT:    ret void
 //
 //
@@ -202,21 +202,21 @@ int bar(int n){
 // CHECK1-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 8
 // CHECK1-NEXT:    store ptr [[AA]], ptr [[AA_ADDR]], align 8
-// CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[AA_ADDR]], align 8
+// CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[AA_ADDR]], align 8, !nonnull [[META6]], !align [[META7]]
 // CHECK1-NEXT:    store i16 1, ptr [[TMP0]], align 2
 // CHECK1-NEXT:    ret void
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l23
-// CHECK2-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], i32 noundef [[A:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK2-SAME: (i32 noundef [[A:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK2-NEXT:  entry:
-// CHECK2-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK2-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
+// CHECK2-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK2-NEXT:    [[A_CASTED:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-// CHECK2-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // CHECK2-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
+// CHECK2-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // CHECK2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l23_kernel_environment, ptr [[DYN_PTR]])
 // CHECK2-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 // CHECK2-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
@@ -248,15 +248,15 @@ int bar(int n){
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l28
-// CHECK2-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], i32 noundef [[AA:%.*]]) #[[ATTR0]] {
+// CHECK2-SAME: (i32 noundef [[AA:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR0]] {
 // CHECK2-NEXT:  entry:
-// CHECK2-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK2-NEXT:    [[AA_ADDR:%.*]] = alloca i32, align 4
+// CHECK2-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK2-NEXT:    [[AA_CASTED:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-// CHECK2-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // CHECK2-NEXT:    store i32 [[AA]], ptr [[AA_ADDR]], align 4
+// CHECK2-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // CHECK2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l28_kernel_environment, ptr [[DYN_PTR]])
 // CHECK2-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 // CHECK2-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
@@ -288,15 +288,15 @@ int bar(int n){
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l33
-// CHECK2-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], i32 noundef [[AA:%.*]]) #[[ATTR0]] {
+// CHECK2-SAME: (i32 noundef [[AA:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR0]] {
 // CHECK2-NEXT:  entry:
-// CHECK2-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK2-NEXT:    [[AA_ADDR:%.*]] = alloca i32, align 4
+// CHECK2-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK2-NEXT:    [[AA_CASTED:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-// CHECK2-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // CHECK2-NEXT:    store i32 [[AA]], ptr [[AA_ADDR]], align 4
+// CHECK2-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // CHECK2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l33_kernel_environment, ptr [[DYN_PTR]])
 // CHECK2-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 // CHECK2-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
@@ -328,7 +328,7 @@ int bar(int n){
 // CHECK2-NEXT:    store ptr [[AA_ADDR]], ptr [[TMP0]], align 4
 // CHECK2-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK2-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 4
-// CHECK2-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP2]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l33_omp_outlined_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 1)
+// CHECK2-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP2]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l33_omp_outlined_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 1, i32 0)
 // CHECK2-NEXT:    ret void
 //
 //
@@ -342,12 +342,12 @@ int bar(int n){
 // CHECK2-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK2-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 4
 // CHECK2-NEXT:    store ptr [[AA]], ptr [[AA_ADDR]], align 4
-// CHECK2-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[AA_ADDR]], align 4
+// CHECK2-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[AA_ADDR]], align 4, !nonnull [[META6:![0-9]+]], !align [[META7:![0-9]+]]
 // CHECK2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [1 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i32 0, i32 0
 // CHECK2-NEXT:    store ptr [[TMP0]], ptr [[TMP1]], align 4
 // CHECK2-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK2-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
-// CHECK2-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP3]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l33_omp_outlined_omp_outlined_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 1)
+// CHECK2-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP3]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l33_omp_outlined_omp_outlined_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 1, i32 0)
 // CHECK2-NEXT:    ret void
 //
 //
@@ -360,7 +360,7 @@ int bar(int n){
 // CHECK2-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK2-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 4
 // CHECK2-NEXT:    store ptr [[AA]], ptr [[AA_ADDR]], align 4
-// CHECK2-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[AA_ADDR]], align 4
+// CHECK2-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[AA_ADDR]], align 4, !nonnull [[META6]], !align [[META7]]
 // CHECK2-NEXT:    store i16 1, ptr [[TMP0]], align 2
 // CHECK2-NEXT:    ret void
 //

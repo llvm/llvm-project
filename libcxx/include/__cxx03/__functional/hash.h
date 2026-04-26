@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FUNCTIONAL_HASH_H
-#define _LIBCPP___FUNCTIONAL_HASH_H
+#ifndef _LIBCPP___CXX03___FUNCTIONAL_HASH_H
+#define _LIBCPP___CXX03___FUNCTIONAL_HASH_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__functional/unary_function.h>
@@ -504,39 +504,6 @@ struct _LIBCPP_TEMPLATE_VIS __enum_hash<_Tp, false> {
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS hash : public __enum_hash<_Tp> {};
 
-#if _LIBCPP_STD_VER >= 17
-
-template <>
-struct _LIBCPP_TEMPLATE_VIS hash<nullptr_t> : public __unary_function<nullptr_t, size_t> {
-  _LIBCPP_HIDE_FROM_ABI size_t operator()(nullptr_t) const _NOEXCEPT { return 662607004ull; }
-};
-#endif
-
-#ifndef _LIBCPP_CXX03_LANG
-template <class _Key, class _Hash>
-using __check_hash_requirements _LIBCPP_NODEBUG =
-    integral_constant<bool,
-                      is_copy_constructible<_Hash>::value && is_move_constructible<_Hash>::value &&
-                          __invokable_r<size_t, _Hash, _Key const&>::value >;
-
-template <class _Key, class _Hash = hash<_Key> >
-using __has_enabled_hash _LIBCPP_NODEBUG =
-    integral_constant<bool, __check_hash_requirements<_Key, _Hash>::value && is_default_constructible<_Hash>::value >;
-
-#  if _LIBCPP_STD_VER >= 17
-template <class _Type, class>
-using __enable_hash_helper_imp _LIBCPP_NODEBUG = _Type;
-
-template <class _Type, class... _Keys>
-using __enable_hash_helper _LIBCPP_NODEBUG =
-    __enable_hash_helper_imp<_Type, __enable_if_t<__all<__has_enabled_hash<_Keys>::value...>::value> >;
-#  else
-template <class _Type, class...>
-using __enable_hash_helper _LIBCPP_NODEBUG = _Type;
-#  endif
-
-#endif // !_LIBCPP_CXX03_LANG
-
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FUNCTIONAL_HASH_H
+#endif // _LIBCPP___CXX03___FUNCTIONAL_HASH_H

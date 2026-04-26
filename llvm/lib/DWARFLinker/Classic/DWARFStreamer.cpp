@@ -14,10 +14,10 @@
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCDwarf.h"
+#include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
-#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -55,28 +55,28 @@ Error DwarfStreamer::init(Triple TheTriple,
   TripleName = TheTriple.getTriple();
 
   // Create all the MC Objects.
-  MRI.reset(TheTarget->createMCRegInfo(TripleName));
+  MRI.reset(TheTarget->createMCRegInfo(TheTriple));
   if (!MRI)
     return createStringError(std::errc::invalid_argument,
                              "no register info for target %s",
                              TripleName.c_str());
 
-  MCTargetOptions MCOptions = mc::InitMCTargetOptionsFromFlags();
+  MCOptions = mc::InitMCTargetOptionsFromFlags();
   MCOptions.AsmVerbose = true;
   MCOptions.MCUseDwarfDirectory = MCTargetOptions::EnableDwarfDirectory;
-  MAI.reset(TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
+  MAI.reset(TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
   if (!MAI)
     return createStringError(std::errc::invalid_argument,
                              "no asm info for target %s", TripleName.c_str());
 
-  MSTI.reset(TheTarget->createMCSubtargetInfo(TripleName, "", ""));
+  MSTI.reset(TheTarget->createMCSubtargetInfo(TheTriple, "", ""));
   if (!MSTI)
     return createStringError(std::errc::invalid_argument,
                              "no subtarget info for target %s",
                              TripleName.c_str());
 
   MC.reset(new MCContext(TheTriple, MAI.get(), MRI.get(), MSTI.get(), nullptr,
-                         nullptr, true, Swift5ReflectionSegmentName));
+                         true, Swift5ReflectionSegmentName));
   MOFI.reset(TheTarget->createMCObjectFileInfo(*MC, /*PIC=*/false, false));
   MC->setObjectFileInfo(MOFI.get());
 
@@ -100,10 +100,10 @@ Error DwarfStreamer::init(Triple TheTriple,
 
   switch (OutFileType) {
   case DWARFLinker::OutputFileType::Assembly: {
-    MIP = TheTarget->createMCInstPrinter(TheTriple, MAI->getAssemblerDialect(),
-                                         *MAI, *MII, *MRI);
+    std::unique_ptr<MCInstPrinter> MIP(TheTarget->createMCInstPrinter(
+        TheTriple, MAI->getAssemblerDialect(), *MAI, *MII, *MRI));
     MS = TheTarget->createAsmStreamer(
-        *MC, std::make_unique<formatted_raw_ostream>(OutFile), MIP,
+        *MC, std::make_unique<formatted_raw_ostream>(OutFile), std::move(MIP),
         std::unique_ptr<MCCodeEmitter>(MCE),
         std::unique_ptr<MCAsmBackend>(MAB));
     break;
@@ -123,7 +123,7 @@ Error DwarfStreamer::init(Triple TheTriple,
                              TripleName.c_str());
 
   // Finally create the AsmPrinter we'll use to emit the DIEs.
-  TM.reset(TheTarget->createTargetMachine(TripleName, "", "", TargetOptions(),
+  TM.reset(TheTarget->createTargetMachine(TheTriple, "", "", TargetOptions(),
                                           std::nullopt));
   if (!TM)
     return createStringError(std::errc::invalid_argument,
@@ -472,10 +472,14 @@ void DwarfStreamer::emitDwarfDebugArangesTable(
   Asm->OutStreamer->emitLabel(EndLabel);
 }
 
-void DwarfStreamer::emitDwarfDebugRangesTableFragment(
+Error DwarfStreamer::emitDwarfDebugRangesTableFragment(
     const CompileUnit &Unit, const AddressRanges &LinkedRanges,
     PatchLocation Patch) {
-  Patch.set(RangesSectionSize);
+  Expected<uint64_t> Offset = clampSecOffset(
+      RangesSectionSize, Unit.getOrigUnit().getFormParams(), ".debug_ranges");
+  if (!Offset)
+    return Offset.takeError();
+  Patch.set(*Offset);
 
   // Make .debug_ranges to be current section.
   MS->switchSection(MC->getObjectFileInfo()->getDwarfRangesSection());
@@ -500,6 +504,7 @@ void DwarfStreamer::emitDwarfDebugRangesTableFragment(
 
   RangesSectionSize += AddressSize;
   RangesSectionSize += AddressSize;
+  return Error::success();
 }
 
 MCSymbol *
@@ -538,15 +543,15 @@ DwarfStreamer::emitDwarfDebugRangeListHeader(const CompileUnit &Unit) {
   return EndLabel;
 }
 
-void DwarfStreamer::emitDwarfDebugRangeListFragment(
+Error DwarfStreamer::emitDwarfDebugRangeListFragment(
     const CompileUnit &Unit, const AddressRanges &LinkedRanges,
     PatchLocation Patch, DebugDieValuePool &AddrPool) {
   if (Unit.getOrigUnit().getVersion() < 5) {
-    emitDwarfDebugRangesTableFragment(Unit, LinkedRanges, Patch);
-    return;
+    return emitDwarfDebugRangesTableFragment(Unit, LinkedRanges, Patch);
   }
 
-  emitDwarfDebugRngListsTableFragment(Unit, LinkedRanges, Patch, AddrPool);
+  return emitDwarfDebugRngListsTableFragment(Unit, LinkedRanges, Patch,
+                                             AddrPool);
 }
 
 void DwarfStreamer::emitDwarfDebugRangeListFooter(const CompileUnit &Unit,
@@ -561,10 +566,15 @@ void DwarfStreamer::emitDwarfDebugRangeListFooter(const CompileUnit &Unit,
     Asm->OutStreamer->emitLabel(EndLabel);
 }
 
-void DwarfStreamer::emitDwarfDebugRngListsTableFragment(
+Error DwarfStreamer::emitDwarfDebugRngListsTableFragment(
     const CompileUnit &Unit, const AddressRanges &LinkedRanges,
     PatchLocation Patch, DebugDieValuePool &AddrPool) {
-  Patch.set(RngListsSectionSize);
+  Expected<uint64_t> Offset =
+      clampSecOffset(RngListsSectionSize, Unit.getOrigUnit().getFormParams(),
+                     ".debug_rnglists");
+  if (!Offset)
+    return Offset.takeError();
+  Patch.set(*Offset);
 
   // Make .debug_rnglists to be current section.
   MS->switchSection(MC->getObjectFileInfo()->getDwarfRnglistsSection());
@@ -597,6 +607,7 @@ void DwarfStreamer::emitDwarfDebugRngListsTableFragment(
   // Emit the terminator entry.
   MS->emitInt8(dwarf::DW_RLE_end_of_list);
   RngListsSectionSize += 1;
+  return Error::success();
 }
 
 /// Emit debug locations(.debug_loc, .debug_loclists) header.
@@ -636,17 +647,17 @@ MCSymbol *DwarfStreamer::emitDwarfDebugLocListHeader(const CompileUnit &Unit) {
 }
 
 /// Emit debug locations(.debug_loc, .debug_loclists) fragment.
-void DwarfStreamer::emitDwarfDebugLocListFragment(
+Error DwarfStreamer::emitDwarfDebugLocListFragment(
     const CompileUnit &Unit,
     const DWARFLocationExpressionsVector &LinkedLocationExpression,
     PatchLocation Patch, DebugDieValuePool &AddrPool) {
   if (Unit.getOrigUnit().getVersion() < 5) {
-    emitDwarfDebugLocTableFragment(Unit, LinkedLocationExpression, Patch);
-    return;
+    return emitDwarfDebugLocTableFragment(Unit, LinkedLocationExpression,
+                                          Patch);
   }
 
-  emitDwarfDebugLocListsTableFragment(Unit, LinkedLocationExpression, Patch,
-                                      AddrPool);
+  return emitDwarfDebugLocListsTableFragment(Unit, LinkedLocationExpression,
+                                             Patch, AddrPool);
 }
 
 /// Emit debug locations(.debug_loc, .debug_loclists) footer.
@@ -663,11 +674,15 @@ void DwarfStreamer::emitDwarfDebugLocListFooter(const CompileUnit &Unit,
 }
 
 /// Emit piece of .debug_loc for \p LinkedLocationExpression.
-void DwarfStreamer::emitDwarfDebugLocTableFragment(
+Error DwarfStreamer::emitDwarfDebugLocTableFragment(
     const CompileUnit &Unit,
     const DWARFLocationExpressionsVector &LinkedLocationExpression,
     PatchLocation Patch) {
-  Patch.set(LocSectionSize);
+  Expected<uint64_t> Offset = clampSecOffset(
+      LocSectionSize, Unit.getOrigUnit().getFormParams(), ".debug_loc");
+  if (!Offset)
+    return Offset.takeError();
+  Patch.set(*Offset);
 
   // Make .debug_loc to be current section.
   MS->switchSection(MC->getObjectFileInfo()->getDwarfLocSection());
@@ -700,6 +715,7 @@ void DwarfStreamer::emitDwarfDebugLocTableFragment(
 
   LocSectionSize += AddressSize;
   LocSectionSize += AddressSize;
+  return Error::success();
 }
 
 /// Emit .debug_addr header.
@@ -754,11 +770,16 @@ void DwarfStreamer::emitDwarfDebugAddrsFooter(const CompileUnit &Unit,
 }
 
 /// Emit piece of .debug_loclists for \p LinkedLocationExpression.
-void DwarfStreamer::emitDwarfDebugLocListsTableFragment(
+Error DwarfStreamer::emitDwarfDebugLocListsTableFragment(
     const CompileUnit &Unit,
     const DWARFLocationExpressionsVector &LinkedLocationExpression,
     PatchLocation Patch, DebugDieValuePool &AddrPool) {
-  Patch.set(LocListsSectionSize);
+  Expected<uint64_t> Offset =
+      clampSecOffset(LocListsSectionSize, Unit.getOrigUnit().getFormParams(),
+                     ".debug_loclists");
+  if (!Offset)
+    return Offset.takeError();
+  Patch.set(*Offset);
 
   // Make .debug_loclists the current section.
   MS->switchSection(MC->getObjectFileInfo()->getDwarfLoclistsSection());
@@ -805,11 +826,13 @@ void DwarfStreamer::emitDwarfDebugLocListsTableFragment(
   // Emit the terminator entry.
   MS->emitInt8(dwarf::DW_LLE_end_of_list);
   LocListsSectionSize += 1;
+  return Error::success();
 }
 
 void DwarfStreamer::emitLineTableForUnit(
     const DWARFDebugLine::LineTable &LineTable, const CompileUnit &Unit,
-    OffsetsStringPool &DebugStrPool, OffsetsStringPool &DebugLineStrPool) {
+    OffsetsStringPool &DebugStrPool, OffsetsStringPool &DebugLineStrPool,
+    std::vector<uint64_t> *RowOffsets) {
   // Switch to the section where the table will be emitted into.
   MS->switchSection(MC->getObjectFileInfo()->getDwarfLineSection());
 
@@ -830,7 +853,7 @@ void DwarfStreamer::emitLineTableForUnit(
 
   // Emit rows.
   emitLineTableRows(LineTable, LineEndSym,
-                    Unit.getOrigUnit().getAddressByteSize());
+                    Unit.getOrigUnit().getAddressByteSize(), RowOffsets);
 }
 
 void DwarfStreamer::emitLineTablePrologue(const DWARFDebugLine::Prologue &P,
@@ -1036,7 +1059,7 @@ void DwarfStreamer::emitLineTableProloguePayload(
 
 void DwarfStreamer::emitLineTableRows(
     const DWARFDebugLine::LineTable &LineTable, MCSymbol *LineEndSym,
-    unsigned AddressByteSize) {
+    unsigned AddressByteSize, std::vector<uint64_t> *RowOffsets) {
 
   MCDwarfLineTableParams Params;
   Params.DWARF2LineOpcodeBase = LineTable.Prologue.OpcodeBase;
@@ -1068,6 +1091,11 @@ void DwarfStreamer::emitLineTableRows(
   unsigned RowsSinceLastSequence = 0;
 
   for (const DWARFDebugLine::Row &Row : LineTable.Rows) {
+    // If we're tracking row offsets, record the current section size as the
+    // offset of this row.
+    if (RowOffsets)
+      RowOffsets->push_back(LineSectionSize);
+
     int64_t AddressDelta;
     if (Address == -1ULL) {
       MS->emitIntValue(dwarf::DW_LNS_extended_op, 1);

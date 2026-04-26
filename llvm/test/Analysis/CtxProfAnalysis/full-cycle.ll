@@ -8,7 +8,7 @@
 ; different counter values, and we expect resulting flat profile to be the sum
 ; (of values at the same index).
 ;
-; RUN: llvm-ctxprof-util fromJSON --input=%t/profile.json --output=%t/profile.ctxprofdata
+; RUN: llvm-ctxprof-util fromYAML --input=%t/profile.yaml --output=%t/profile.ctxprofdata
 ;
 ; RUN: opt -module-summary -passes='thinlto-pre-link<O2>' -use-ctx-profile=%t/profile.ctxprofdata -o %t/m1.bc %t/m1.ll
 ; RUN: opt -module-summary -passes='thinlto-pre-link<O2>' -use-ctx-profile=%t/profile.ctxprofdata -o %t/m2.bc %t/m2.ll
@@ -65,55 +65,23 @@ define void @entrypoint() {
   call void @f3()
   ret void
 }
-;--- profile.json
-[
-  {
-    "Callsites": [
-      [
-        {
-          "Callsites": [
-            [
-              {
-                "Counters": [
-                  10,
-                  7
-                ],
-                "Guid": 3087265239403591524
-              }
-            ]
-          ],
-          "Counters": [
-            7
-          ],
-          "Guid": 2072045998141807037
-        }
-      ],
-      [
-        {
-          "Callsites": [
-            [
-              {
-                "Counters": [
-                  1,
-                  2
-                ],
-                "Guid": 3087265239403591524
-              }
-            ]
-          ],
-          "Counters": [
-            2
-          ],
-          "Guid": 4197650231481825559
-        }
-      ]
-    ],
-    "Counters": [
-      1
-    ],
-    "Guid": 10507721908651011566
-  }
-]
+;--- profile.yaml
+Contexts:
+  - Guid: 10507721908651011566
+    TotalRootEntryCount: 10
+    Counters: [1]
+    Callsites:  -
+                  - Guid:  2072045998141807037
+                    Counters: [7]
+                    Callsites:  -
+                                  - Guid: 3087265239403591524
+                                    Counters: [10, 7]
+                -
+                  - Guid: 4197650231481825559
+                    Counters: [2]
+                    Callsites:  -
+                                  - Guid: 3087265239403591524
+                                    Counters: [1, 2]
 ;--- expected.txt
 Function Info:
 2072045998141807037 : f1. MaxCounterID: 1. MaxCallsiteID: 1
@@ -122,57 +90,25 @@ Function Info:
 10507721908651011566 : entrypoint. MaxCounterID: 1. MaxCallsiteID: 2
 
 Current Profile:
-[
-  {
-    "Callsites": [
-      [
-        {
-          "Callsites": [
-            [
-              {
-                "Counters": [
-                  10,
-                  7
-                ],
-                "Guid": 3087265239403591524
-              }
-            ]
-          ],
-          "Counters": [
-            7
-          ],
-          "Guid": 2072045998141807037
-        }
-      ],
-      [
-        {
-          "Callsites": [
-            [
-              {
-                "Counters": [
-                  1,
-                  2
-                ],
-                "Guid": 3087265239403591524
-              }
-            ]
-          ],
-          "Counters": [
-            2
-          ],
-          "Guid": 4197650231481825559
-        }
-      ]
-    ],
-    "Counters": [
-      1
-    ],
-    "Guid": 10507721908651011566
-  }
-]
+
+Contexts:
+  - Guid:            10507721908651011566
+    TotalRootEntryCount: 10
+    Counters:        [ 1 ]
+    Callsites:
+      - - Guid:            2072045998141807037
+          Counters:        [ 7 ]
+          Callsites:
+            - - Guid:            3087265239403591524
+                Counters:        [ 10, 7 ]
+      - - Guid:            4197650231481825559
+          Counters:        [ 2 ]
+          Callsites:
+            - - Guid:            3087265239403591524
+                Counters:        [ 1, 2 ]
 
 Flat Profile:
-2072045998141807037 : 7 
-3087265239403591524 : 11 9 
-4197650231481825559 : 2 
-10507721908651011566 : 1 
+2072045998141807037 : 70 
+3087265239403591524 : 110 90 
+4197650231481825559 : 20 
+10507721908651011566 : 10 

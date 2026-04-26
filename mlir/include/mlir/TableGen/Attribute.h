@@ -16,7 +16,6 @@
 
 #include "mlir/Support/LLVM.h"
 #include "mlir/TableGen/Constraint.h"
-#include "llvm/ADT/StringRef.h"
 
 namespace llvm {
 class DefInit;
@@ -134,79 +133,6 @@ public:
 private:
   // The TableGen definition of this constant attribute.
   const llvm::Record *def;
-};
-
-// Wrapper class providing helper methods for accessing enum attribute cases
-// defined in TableGen. This is used for enum attribute case backed by both
-// StringAttr and IntegerAttr.
-class EnumAttrCase : public Attribute {
-public:
-  explicit EnumAttrCase(const llvm::Record *record);
-  explicit EnumAttrCase(const llvm::DefInit *init);
-
-  // Returns the symbol of this enum attribute case.
-  StringRef getSymbol() const;
-
-  // Returns the textual representation of this enum attribute case.
-  StringRef getStr() const;
-
-  // Returns the value of this enum attribute case.
-  int64_t getValue() const;
-
-  // Returns the TableGen definition this EnumAttrCase was constructed from.
-  const llvm::Record &getDef() const;
-};
-
-// Wrapper class providing helper methods for accessing enum attributes defined
-// in TableGen.This is used for enum attribute case backed by both StringAttr
-// and IntegerAttr.
-class EnumAttr : public Attribute {
-public:
-  explicit EnumAttr(const llvm::Record *record);
-  explicit EnumAttr(const llvm::Record &record);
-  explicit EnumAttr(const llvm::DefInit *init);
-
-  static bool classof(const Attribute *attr);
-
-  // Returns true if this is a bit enum attribute.
-  bool isBitEnum() const;
-
-  // Returns the enum class name.
-  StringRef getEnumClassName() const;
-
-  // Returns the C++ namespaces this enum class should be placed in.
-  StringRef getCppNamespace() const;
-
-  // Returns the underlying type.
-  StringRef getUnderlyingType() const;
-
-  // Returns the name of the utility function that converts a value of the
-  // underlying type to the corresponding symbol.
-  StringRef getUnderlyingToSymbolFnName() const;
-
-  // Returns the name of the utility function that converts a string to the
-  // corresponding symbol.
-  StringRef getStringToSymbolFnName() const;
-
-  // Returns the name of the utility function that converts a symbol to the
-  // corresponding string.
-  StringRef getSymbolToStringFnName() const;
-
-  // Returns the return type of the utility function that converts a symbol to
-  // the corresponding string.
-  StringRef getSymbolToStringFnRetType() const;
-
-  // Returns the name of the utilit function that returns the max enum value
-  // used within the enum class.
-  StringRef getMaxEnumValFnName() const;
-
-  // Returns all allowed cases for this enum attribute.
-  std::vector<EnumAttrCase> getAllCases() const;
-
-  bool genSpecializedAttr() const;
-  const llvm::Record *getBaseAttrClass() const;
-  StringRef getSpecializedAttrClassName() const;
-  bool printBitEnumPrimaryGroups() const;
 };
 
 // Name of infer type op interface.

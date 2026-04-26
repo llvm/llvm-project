@@ -7,13 +7,18 @@ add_mlir_dialect_library(MLIRXeGPUDialect
 
   DEPENDS
   MLIRXeGPUIncGen
+  MLIRXeGPUAttrInterfaceIncGen
   MLIRXeGPUAttrsIncGen
   MLIRXeGPUEnumsIncGen
 
   LINK_LIBS PUBLIC
   MLIRArithDialect
+  MLIRIndexDialect
+  MLIRAffineUtils
   MLIRArithUtils
   MLIRDialectUtils
+  MLIRGPUDialect
+  MLIRXeVMDialect
   MLIRIR
   MLIRViewLikeInterface
   MLIRVectorDialect

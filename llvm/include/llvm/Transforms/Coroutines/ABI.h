@@ -16,6 +16,7 @@
 #define LLVM_TRANSFORMS_COROUTINES_ABI_H
 
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Coroutines/CoroShape.h"
 #include "llvm/Transforms/Coroutines/MaterializationUtils.h"
 #include "llvm/Transforms/Coroutines/SuspendCrossingInfo.h"
@@ -37,11 +38,11 @@ namespace coro {
 // index of an ABI generator for the custom ABI object in a SmallVector passed
 // to CoroSplitPass ctor.
 
-class BaseABI {
+class LLVM_ABI BaseABI {
 public:
   BaseABI(Function &F, coro::Shape &S,
           std::function<bool(Instruction &)> IsMaterializable)
-      : F(F), Shape(S), IsMaterializable(IsMaterializable) {}
+      : F(F), Shape(S), IsMaterializable(std::move(IsMaterializable)) {}
   virtual ~BaseABI() = default;
 
   // Initialize the coroutine ABI
@@ -63,11 +64,11 @@ public:
   std::function<bool(Instruction &I)> IsMaterializable;
 };
 
-class SwitchABI : public BaseABI {
+class LLVM_ABI SwitchABI : public BaseABI {
 public:
   SwitchABI(Function &F, coro::Shape &S,
             std::function<bool(Instruction &)> IsMaterializable)
-      : BaseABI(F, S, IsMaterializable) {}
+      : BaseABI(F, S, std::move(IsMaterializable)) {}
 
   void init() override;
 
@@ -76,11 +77,11 @@ public:
                       TargetTransformInfo &TTI) override;
 };
 
-class AsyncABI : public BaseABI {
+class LLVM_ABI AsyncABI : public BaseABI {
 public:
   AsyncABI(Function &F, coro::Shape &S,
            std::function<bool(Instruction &)> IsMaterializable)
-      : BaseABI(F, S, IsMaterializable) {}
+      : BaseABI(F, S, std::move(IsMaterializable)) {}
 
   void init() override;
 
@@ -89,11 +90,11 @@ public:
                       TargetTransformInfo &TTI) override;
 };
 
-class AnyRetconABI : public BaseABI {
+class LLVM_ABI AnyRetconABI : public BaseABI {
 public:
   AnyRetconABI(Function &F, coro::Shape &S,
                std::function<bool(Instruction &)> IsMaterializable)
-      : BaseABI(F, S, IsMaterializable) {}
+      : BaseABI(F, S, std::move(IsMaterializable)) {}
 
   void init() override;
 

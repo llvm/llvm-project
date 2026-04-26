@@ -4,7 +4,7 @@
 
 program test_atomic_xor
   use iso_fortran_env, only: atomic_int_kind, atomic_logical_kind
-  implicit none
+  implicit none(external, type)
 
   integer(kind=atomic_int_kind) :: scalar_coarray[*], non_scalar_coarray(10)[*], val, non_coarray
   integer(kind=atomic_int_kind) :: repeated_atom[*], repeated_val, array(10)
@@ -31,7 +31,7 @@ program test_atomic_xor
   call atomic_xor(non_scalar_coarray, val)
 
   !ERROR: 'atom=' argument must be a scalar coarray or coindexed object for intrinsic 'atomic_xor'
-  call atomic_xor(non_scalar_coarray[1], val)
+  call atomic_xor(non_scalar_coarray(:)[1], val)
 
   !ERROR: 'atom=' argument must be a scalar coarray or coindexed object for intrinsic 'atomic_xor'
   call atomic_xor(non_coarray, val)

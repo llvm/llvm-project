@@ -1,4 +1,5 @@
-# RUN: llc -o - %s -mtriple=x86_64-- -run-pass=x86-avoid-SFB | FileCheck %s
+# RUN: llc -o - %s -mtriple=x86_64-- -run-pass=x86-avoid-sfb | FileCheck %s
+# RUN: llc -o - %s -mtriple=x86_64-- -passes=x86-avoid-sfb | FileCheck %s
 --- |
   ; ModuleID = '../test50419-2.ll'
   source_filename = "nice.c"
@@ -67,8 +68,8 @@ frameInfo:
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
   localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
   - { id: 0, name: a, type: default, offset: 0, size: 144, alignment: 16,

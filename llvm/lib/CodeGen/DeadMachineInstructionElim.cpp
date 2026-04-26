@@ -38,17 +38,14 @@ public:
   bool runImpl(MachineFunction &MF);
 
 private:
-  bool isDead(const MachineInstr *MI) const;
-  bool eliminateDeadMI(MachineFunction &MF);
+  bool eliminateDeadMI(MachineFunction &MF, bool &NeedAnotherIteration);
 };
 
 class DeadMachineInstructionElim : public MachineFunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  DeadMachineInstructionElim() : MachineFunctionPass(ID) {
-    initializeDeadMachineInstructionElimPass(*PassRegistry::getPassRegistry());
-  }
+  DeadMachineInstructionElim() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     if (skipFunction(MF.getFunction()))
@@ -79,47 +76,6 @@ char &llvm::DeadMachineInstructionElimID = DeadMachineInstructionElim::ID;
 INITIALIZE_PASS(DeadMachineInstructionElim, DEBUG_TYPE,
                 "Remove dead machine instructions", false, false)
 
-bool DeadMachineInstructionElimImpl::isDead(const MachineInstr *MI) const {
-  // Instructions without side-effects are dead iff they only define dead regs.
-  // This function is hot and this loop returns early in the common case,
-  // so only perform additional checks before this if absolutely necessary.
-  for (const MachineOperand &MO : MI->all_defs()) {
-    Register Reg = MO.getReg();
-    if (Reg.isPhysical()) {
-      // Don't delete live physreg defs, or any reserved register defs.
-      if (!LivePhysRegs.available(Reg) || MRI->isReserved(Reg))
-        return false;
-    } else {
-      if (MO.isDead()) {
-#ifndef NDEBUG
-        // Basic check on the register. All of them should be 'undef'.
-        for (auto &U : MRI->use_nodbg_operands(Reg))
-          assert(U.isUndef() && "'Undef' use on a 'dead' register is found!");
-#endif
-        continue;
-      }
-      for (const MachineInstr &Use : MRI->use_nodbg_instructions(Reg)) {
-        if (&Use != MI)
-          // This def has a non-debug use. Don't delete the instruction!
-          return false;
-      }
-    }
-  }
-
-  // Technically speaking inline asm without side effects and no defs can still
-  // be deleted. But there is so much bad inline asm code out there, we should
-  // let them be.
-  if (MI->isInlineAsm())
-    return false;
-
-  // FIXME: See issue #105950 for why LIFETIME markers are considered dead here.
-  if (MI->isLifetimeMarker())
-    return true;
-
-  // If there are no defs with uses, the instruction might be dead.
-  return MI->wouldBeTriviallyDead();
-}
-
 bool DeadMachineInstructionElimImpl::runImpl(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
 
@@ -127,26 +83,34 @@ bool DeadMachineInstructionElimImpl::runImpl(MachineFunction &MF) {
   TII = ST.getInstrInfo();
   LivePhysRegs.init(*ST.getRegisterInfo());
 
-  bool AnyChanges = eliminateDeadMI(MF);
-  while (AnyChanges && eliminateDeadMI(MF))
-    ;
+  bool NeedAnotherIteration;
+  bool AnyChanges = eliminateDeadMI(MF, NeedAnotherIteration);
+  while (NeedAnotherIteration)
+    eliminateDeadMI(MF, NeedAnotherIteration);
   return AnyChanges;
 }
 
-bool DeadMachineInstructionElimImpl::eliminateDeadMI(MachineFunction &MF) {
+bool DeadMachineInstructionElimImpl::eliminateDeadMI(
+    MachineFunction &MF, bool &NeedAnotherIteration) {
   bool AnyChanges = false;
+  SmallPtrSet<MachineBasicBlock *, 4> NeedsProcessing;
 
   // Loop over all instructions in all blocks, from bottom to top, so that it's
   // more likely that chains of dependent but ultimately dead instructions will
   // be cleaned up.
   for (MachineBasicBlock *MBB : post_order(&MF)) {
     LivePhysRegs.addLiveOuts(*MBB);
+    NeedsProcessing.erase(MBB);
 
     // Now scan the instructions and delete dead ones, tracking physreg
     // liveness as we go.
     for (MachineInstr &MI : make_early_inc_range(reverse(*MBB))) {
       // If the instruction is dead, delete it!
-      if (isDead(&MI)) {
+      if (MI.isDead(*MRI, &LivePhysRegs)) {
+        if (MI.isPHI()) {
+          for (MachineBasicBlock *P : MBB->predecessors())
+            NeedsProcessing.insert(P);
+        }
         LLVM_DEBUG(dbgs() << "DeadMachineInstructionElim: DELETING: " << MI);
         // It is possible that some DBG_VALUE instructions refer to this
         // instruction. They will be deleted in the live debug variable
@@ -156,11 +120,10 @@ bool DeadMachineInstructionElimImpl::eliminateDeadMI(MachineFunction &MF) {
         ++NumDeletes;
         continue;
       }
-
       LivePhysRegs.stepBackward(MI);
     }
   }
-
   LivePhysRegs.clear();
+  NeedAnotherIteration = !NeedsProcessing.empty();
   return AnyChanges;
 }

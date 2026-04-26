@@ -52,9 +52,8 @@ public:
     uint64_t MispredictedCount; /// number of branches mispredicted
 
     bool operator<(const BinaryBranchInfo &Other) const {
-      return (Count < Other.Count) ||
-             (Count == Other.Count &&
-              MispredictedCount < Other.MispredictedCount);
+      return std::tie(Count, MispredictedCount) <
+             std::tie(Other.Count, Other.MispredictedCount);
     }
   };
 
@@ -819,6 +818,9 @@ public:
     return OutputAddressRange;
   }
 
+  uint64_t getOutputStartAddress() const { return OutputAddressRange.first; }
+  uint64_t getOutputEndAddress() const { return OutputAddressRange.second; }
+
   bool hasLocSyms() const { return LocSyms != nullptr; }
 
   /// Return mapping of input offsets to symbols in the output.
@@ -887,6 +889,8 @@ public:
 
   /// Needed by graph traits.
   BinaryFunction *getParent() const { return getFunction(); }
+
+  bool hasParent() const { return getParent() != nullptr; }
 
   /// Return true if the containing function is in CFG state.
   bool hasCFG() const;

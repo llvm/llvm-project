@@ -33,8 +33,8 @@ define i64 @fold_binop_into_select_2(i1 %c, i64 %x) {
 ; CHECK-LABEL: fold_binop_into_select_2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li a2, 2
-; CHECK-NEXT:    sub a2, a2, a1
 ; CHECK-NEXT:    slli a0, a0, 63
+; CHECK-NEXT:    sub a2, a2, a1
 ; CHECK-NEXT:    srai a0, a0, 63
 ; CHECK-NEXT:    and a0, a0, a2
 ; CHECK-NEXT:    ret

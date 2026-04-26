@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass hexagon-packetizer %s -o - | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass hexagon-packetizer %s -o - | FileCheck %s
 
 ##############################################################################
 # This test case is not really hexagon specific, but we use hexagon to get

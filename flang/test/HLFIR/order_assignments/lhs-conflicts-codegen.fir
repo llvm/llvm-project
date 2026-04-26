@@ -96,7 +96,7 @@ func.func @save_box_in_stack(%arg0: !fir.box<!fir.array<?xi32>>) {
 // CHECK:           fir.do_loop {{.*}} {
 // CHECK:             %[[VAL_48:.*]] = hlfir.designate %[[VAL_9]]#0 {{.*}}  : (!fir.box<!fir.array<?xi32>>, i32, i32, index, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
 // CHECK:             %[[VAL_49:.*]] = fir.convert %[[VAL_48]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
-// CHECK:             %[[VAL_50:.*]] = fir.call @_FortranAPushDescriptor(%[[VAL_30]], %[[VAL_49]]) : (!fir.llvm_ptr<i8>, !fir.box<none>) -> none
+// CHECK:             fir.call @_FortranAPushDescriptor(%[[VAL_30]], %[[VAL_49]]) : (!fir.llvm_ptr<i8>, !fir.box<none>) -> ()
 // CHECK:           }
 // CHECK:           fir.store %{{.*}} to %[[VAL_2]] : !fir.ref<i64>
 // CHECK:           fir.do_loop {{.*}} {
@@ -104,12 +104,12 @@ func.func @save_box_in_stack(%arg0: !fir.box<!fir.array<?xi32>>) {
 // CHECK:             %[[VAL_61:.*]] = arith.addi %[[VAL_60]], %{{.*}} : i64
 // CHECK:             fir.store %[[VAL_61]] to %[[VAL_2]] : !fir.ref<i64>
 // CHECK:             %[[VAL_62:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
-// CHECK:             %[[VAL_63:.*]] = fir.call @_FortranADescriptorAt(%[[VAL_30]], %[[VAL_60]], %[[VAL_62]]) : (!fir.llvm_ptr<i8>, i64, !fir.ref<!fir.box<none>>) -> none
+// CHECK:             fir.call @_FortranADescriptorAt(%[[VAL_30]], %[[VAL_60]], %[[VAL_62]]) : (!fir.llvm_ptr<i8>, i64, !fir.ref<!fir.box<none>>) -> ()
 // CHECK:             %[[VAL_64:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 // CHECK:             %[[VAL_65:.*]] = fir.convert %[[VAL_64]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>) -> !fir.box<!fir.array<?xi32>>
 // CHECK:             hlfir.assign %{{.*}} to %[[VAL_65]] : i32, !fir.box<!fir.array<?xi32>>
 // CHECK:           }
-// CHECK:           fir.call @_FortranADestroyDescriptorStack(%[[VAL_30]]) : (!fir.llvm_ptr<i8>) -> none
+// CHECK:           fir.call @_FortranADestroyDescriptorStack(%[[VAL_30]]) : (!fir.llvm_ptr<i8>) -> ()
 
 // Test simplified IR for:
 //
@@ -171,13 +171,13 @@ func.func @test_vector_subscript_overlap(%arg0: !fir.ref<!fir.array<?xi64>>) {
 // CHECK:             %[[VAL_52:.*]] = fir.embox %[[VAL_51]](%[[VAL_48]]) : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
 // CHECK:             %[[VAL_55:.*]] = fir.convert %[[VAL_52]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
 // Save the vector subscripted designator shape.
-// CHECK:             %[[VAL_56:.*]] = fir.call @_FortranAPushDescriptor({{.*}}, {{.*}}) : (!fir.llvm_ptr<i8>, !fir.box<none>) -> none
+// CHECK:             fir.call @_FortranAPushDescriptor({{.*}}, {{.*}}) : (!fir.llvm_ptr<i8>, !fir.box<none>) -> ()
 // CHECK:             fir.do_loop {{.*}} {
 // CHECK:               %[[VAL_60:.*]] = hlfir.designate %[[VAL_11]]#0 (%{{.*}})  : (!fir.box<!fir.array<?xi64>>, i64) -> !fir.ref<i64>
 // CHECK:               %[[VAL_61:.*]] = fir.embox %[[VAL_60]] : (!fir.ref<i64>) -> !fir.box<i64>
 // CHECK:               %[[VAL_62:.*]] = fir.convert %[[VAL_61]] : (!fir.box<i64>) -> !fir.box<none>
 // Save the vector subscripted designator element address.
-// CHECK:               %[[VAL_63:.*]] = fir.call @_FortranAPushDescriptor(%[[VAL_30]], %[[VAL_62]]) : (!fir.llvm_ptr<i8>, !fir.box<none>) -> none
+// CHECK:               fir.call @_FortranAPushDescriptor(%[[VAL_30]], %[[VAL_62]]) : (!fir.llvm_ptr<i8>, !fir.box<none>) -> ()
 // CHECK:             }
 // CHECK:           }
 // CHECK:           fir.store %{{.*}} to %[[VAL_4]] : !fir.ref<i64>
@@ -189,7 +189,7 @@ func.func @test_vector_subscript_overlap(%arg0: !fir.ref<!fir.array<?xi64>>) {
 // CHECK:             fir.store %[[VAL_71]] to %[[VAL_2]] : !fir.ref<i64>
 // CHECK:             %[[VAL_72:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 // Fetch the vector subscripted designator shape to create the elemental loop.
-// CHECK:             %[[VAL_73:.*]] = fir.call @_FortranADescriptorAt(%[[VAL_37]], %[[VAL_70]], %[[VAL_72]]) : (!fir.llvm_ptr<i8>, i64, !fir.ref<!fir.box<none>>) -> none
+// CHECK:             fir.call @_FortranADescriptorAt(%[[VAL_37]], %[[VAL_70]], %[[VAL_72]]) : (!fir.llvm_ptr<i8>, i64, !fir.ref<!fir.box<none>>) -> ()
 // CHECK:             %[[VAL_74:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 // CHECK:             %[[VAL_75:.*]] = fir.convert %[[VAL_74]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>) -> !fir.box<!fir.array<?xi32>>
 // CHECK:             %[[VAL_76:.*]] = arith.constant 0 : index
@@ -201,15 +201,15 @@ func.func @test_vector_subscript_overlap(%arg0: !fir.ref<!fir.array<?xi64>>) {
 // CHECK:               fir.store %[[VAL_82]] to %[[VAL_4]] : !fir.ref<i64>
 // CHECK:               %[[VAL_83:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<!fir.box<!fir.ptr<i64>>>) -> !fir.ref<!fir.box<none>>
 // Fetch the vector subscripted designator element address.
-// CHECK:               %[[VAL_84:.*]] = fir.call @_FortranADescriptorAt(%[[VAL_30]], %[[VAL_81]], %[[VAL_83]]) : (!fir.llvm_ptr<i8>, i64, !fir.ref<!fir.box<none>>) -> none
+// CHECK:               fir.call @_FortranADescriptorAt(%[[VAL_30]], %[[VAL_81]], %[[VAL_83]]) : (!fir.llvm_ptr<i8>, i64, !fir.ref<!fir.box<none>>) -> ()
 // CHECK:               %[[VAL_85:.*]] = fir.load %[[VAL_3]] : !fir.ref<!fir.box<!fir.ptr<i64>>>
 // CHECK:               %[[VAL_86:.*]] = fir.box_addr %[[VAL_85]] : (!fir.box<!fir.ptr<i64>>) -> !fir.ptr<i64>
 // CHECK:               %[[VAL_87:.*]] = fir.convert %[[VAL_86]] : (!fir.ptr<i64>) -> !fir.ref<i64>
 // CHECK:               hlfir.assign %{{.*}} to %[[VAL_87]] : i64, !fir.ref<i64>
 // CHECK:             }
 // CHECK:           }
-// CHECK:           %[[VAL_88:.*]] = fir.call @_FortranADestroyDescriptorStack(%[[VAL_30]]) : (!fir.llvm_ptr<i8>) -> none
-// CHECK:           %[[VAL_89:.*]] = fir.call @_FortranADestroyDescriptorStack(%[[VAL_37]]) : (!fir.llvm_ptr<i8>) -> none
+// CHECK:           fir.call @_FortranADestroyDescriptorStack(%[[VAL_30]]) : (!fir.llvm_ptr<i8>) -> ()
+// CHECK:           fir.call @_FortranADestroyDescriptorStack(%[[VAL_37]]) : (!fir.llvm_ptr<i8>) -> ()
 
 func.func private @integer_to_real(!fir.ref<i64>, !fir.logical<4>)
 func.func private @foo(!fir.ref<!fir.array<?xi64>>, index) -> index

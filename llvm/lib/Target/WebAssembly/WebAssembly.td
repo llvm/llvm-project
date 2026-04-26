@@ -29,6 +29,14 @@ def FeatureBulkMemory :
       SubtargetFeature<"bulk-memory", "HasBulkMemory", "true",
                        "Enable bulk memory operations">;
 
+def FeatureBulkMemoryOpt :
+      SubtargetFeature<"bulk-memory-opt", "HasBulkMemoryOpt", "true",
+                       "Enable bulk memory optimization operations">;
+
+def FeatureCallIndirectOverlong :
+      SubtargetFeature<"call-indirect-overlong", "HasCallIndirectOverlong", "true",
+                       "Enable overlong encoding for call_indirect immediates">;
+
 def FeatureExceptionHandling :
       SubtargetFeature<"exception-handling", "HasExceptionHandling", "true",
                        "Enable Wasm exception handling">;
@@ -40,6 +48,8 @@ def FeatureExtendedConst :
 def FeatureFP16 :
       SubtargetFeature<"fp16", "HasFP16", "true",
                        "Enable FP16 instructions">;
+
+def FeatureGC : SubtargetFeature<"gc", "HasGC", "true", "Enable wasm gc">;
 
 def FeatureMultiMemory :
       SubtargetFeature<"multimemory", "HasMultiMemory", "true",
@@ -62,6 +72,10 @@ def FeatureNontrappingFPToInt :
 def FeatureReferenceTypes :
       SubtargetFeature<"reference-types", "HasReferenceTypes", "true",
                        "Enable reference types">;
+
+def FeatureRelaxedAtomics :
+      SubtargetFeature<"relaxed-atomics", "HasRelaxedAtomics", "true",
+                       "Enable relaxed-atomics proposal">;
 
 def FeatureRelaxedSIMD :
       SubtargetFeature<"relaxed-simd", "SIMDLevel", "RelaxedSIMD",
@@ -91,12 +105,21 @@ def FeatureWideArithmetic :
 //===----------------------------------------------------------------------===//
 
 include "WebAssemblyRegisterInfo.td"
+include "WebAssemblyRegisterBanks.td"
 
 //===----------------------------------------------------------------------===//
 // Instruction Descriptions
 //===----------------------------------------------------------------------===//
 
 include "WebAssemblyInstrInfo.td"
+
+def WASM64 : HwMode<[HasAddr64]>;
+
+def wasm_ptr_rc : RegClassByHwMode<
+  [DefaultMode, WASM64],
+  [I32, I64]>;
+
+defm : RemapAllTargetPseudoPointerOperands<wasm_ptr_rc>;
 
 def WebAssemblyInstrInfo : InstrInfo;
 
@@ -114,19 +137,27 @@ def : ProcessorModel<"mvp", NoSchedModel, []>;
 // consideration given to available support in relevant engines and tools, and
 // the importance of the features.
 def : ProcessorModel<"generic", NoSchedModel,
-                      [FeatureBulkMemory, FeatureMultivalue,
+                      [FeatureBulkMemory, FeatureBulkMemoryOpt,
+                       FeatureCallIndirectOverlong, FeatureMultivalue,
                        FeatureMutableGlobals, FeatureNontrappingFPToInt,
                        FeatureReferenceTypes, FeatureSignExt]>;
 
+// Lime1: <https://github.com/WebAssembly/tool-conventions/blob/main/Lime.md#lime1>
+def : ProcessorModel<"lime1", NoSchedModel,
+                      [FeatureBulkMemoryOpt, FeatureCallIndirectOverlong,
+                       FeatureExtendedConst, FeatureMultivalue,
+                       FeatureMutableGlobals, FeatureNontrappingFPToInt,
+                       FeatureSignExt]>;
+
 // Latest and greatest experimental version of WebAssembly. Bugs included!
 def : ProcessorModel<"bleeding-edge", NoSchedModel,
-                      [FeatureAtomics, FeatureBulkMemory,
-                       FeatureExceptionHandling, FeatureExtendedConst,
-                       FeatureFP16, FeatureMultiMemory,
-                       FeatureMultivalue, FeatureMutableGlobals,
-                       FeatureNontrappingFPToInt, FeatureRelaxedSIMD,
-                       FeatureReferenceTypes, FeatureSIMD128, FeatureSignExt,
-                       FeatureTailCall]>;
+                     [FeatureAtomics, FeatureBulkMemory, FeatureBulkMemoryOpt,
+                      FeatureCallIndirectOverlong, FeatureExceptionHandling,
+                      FeatureExtendedConst, FeatureFP16, FeatureGC,
+                      FeatureMultiMemory, FeatureMultivalue, FeatureMutableGlobals,
+                      FeatureNontrappingFPToInt, FeatureRelaxedSIMD,
+                      FeatureReferenceTypes, FeatureSIMD128,
+                      FeatureSignExt, FeatureTailCall]>;
 
 //===----------------------------------------------------------------------===//
 // Target Declaration
@@ -139,7 +170,7 @@ def WebAssemblyAsmParser : AsmParser {
 
 def WebAssemblyAsmWriter : AsmWriter {
   string AsmWriterClassName  = "InstPrinter";
-  int PassSubtarget = 0;
+  int PassSubtarget = 1;
   int Variant = 0;
   bit isMCAsmWriter = 1;
 }

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_CMATH
-#define _LIBCPP_CMATH
+#ifndef _LIBCPP___CXX03_CMATH
+#define _LIBCPP___CXX03_CMATH
 
 /*
     cmath synopsis
@@ -324,10 +324,9 @@ constexpr long double lerp(long double a, long double b, long double t) noexcept
 #include <__cxx03/limits>
 #include <__cxx03/version>
 
-#include <__cxx03/__math/special_functions.h>
 #include <__cxx03/math.h>
 
-#ifndef _LIBCPP_MATH_H
+#ifndef _LIBCPP___CXX03_MATH_H
 #   error <cmath> tried including <math.h> but didn't find libc++'s <math.h> header. \
           This usually means that your header search paths are not configured properly. \
           The header search paths should contain the C++ Standard Library headers before \
@@ -555,7 +554,7 @@ using ::tgammal _LIBCPP_USING_IF_EXISTS;
 using ::truncl _LIBCPP_USING_IF_EXISTS;
 
 template <class _A1, __enable_if_t<is_floating_point<_A1>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool __constexpr_isnan(_A1 __lcpp_x) _NOEXCEPT {
+_LIBCPP_HIDE_FROM_ABI bool __constexpr_isnan(_A1 __lcpp_x) _NOEXCEPT {
 #if __has_builtin(__builtin_isnan)
   return __builtin_isnan(__lcpp_x);
 #else
@@ -564,12 +563,12 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool __constexpr_isnan(_A1 __lcpp_x) _NO
 }
 
 template <class _A1, __enable_if_t<!is_floating_point<_A1>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool __constexpr_isnan(_A1 __lcpp_x) _NOEXCEPT {
+_LIBCPP_HIDE_FROM_ABI bool __constexpr_isnan(_A1 __lcpp_x) _NOEXCEPT {
   return std::isnan(__lcpp_x);
 }
 
 template <class _A1, __enable_if_t<is_floating_point<_A1>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool __constexpr_isinf(_A1 __lcpp_x) _NOEXCEPT {
+_LIBCPP_HIDE_FROM_ABI bool __constexpr_isinf(_A1 __lcpp_x) _NOEXCEPT {
 #if __has_builtin(__builtin_isinf)
   return __builtin_isinf(__lcpp_x);
 #else
@@ -578,12 +577,12 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool __constexpr_isinf(_A1 __lcpp_x) _NO
 }
 
 template <class _A1, __enable_if_t<!is_floating_point<_A1>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool __constexpr_isinf(_A1 __lcpp_x) _NOEXCEPT {
+_LIBCPP_HIDE_FROM_ABI bool __constexpr_isinf(_A1 __lcpp_x) _NOEXCEPT {
   return std::isinf(__lcpp_x);
 }
 
 template <class _A1, __enable_if_t<is_floating_point<_A1>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool __constexpr_isfinite(_A1 __lcpp_x) _NOEXCEPT {
+_LIBCPP_HIDE_FROM_ABI bool __constexpr_isfinite(_A1 __lcpp_x) _NOEXCEPT {
 #if __has_builtin(__builtin_isfinite)
   return __builtin_isfinite(__lcpp_x);
 #else
@@ -592,55 +591,16 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool __constexpr_isfinite(_A1 __lcpp_x) 
 }
 
 template <class _A1, __enable_if_t<!is_floating_point<_A1>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool __constexpr_isfinite(_A1 __lcpp_x) _NOEXCEPT {
+_LIBCPP_HIDE_FROM_ABI bool __constexpr_isfinite(_A1 __lcpp_x) _NOEXCEPT {
   return __builtin_isfinite(__lcpp_x);
 }
-
-#if _LIBCPP_STD_VER >= 20
-template <typename _Fp>
-_LIBCPP_HIDE_FROM_ABI constexpr _Fp __lerp(_Fp __a, _Fp __b, _Fp __t) noexcept {
-  if ((__a <= 0 && __b >= 0) || (__a >= 0 && __b <= 0))
-    return __t * __b + (1 - __t) * __a;
-
-  if (__t == 1)
-    return __b;
-  const _Fp __x = __a + __t * (__b - __a);
-  if ((__t > 1) == (__b > __a))
-    return __b < __x ? __x : __b;
-  else
-    return __x < __b ? __x : __b;
-}
-
-_LIBCPP_HIDE_FROM_ABI inline constexpr float lerp(float __a, float __b, float __t) _NOEXCEPT {
-  return __lerp(__a, __b, __t);
-}
-
-_LIBCPP_HIDE_FROM_ABI inline constexpr double lerp(double __a, double __b, double __t) _NOEXCEPT {
-  return __lerp(__a, __b, __t);
-}
-
-_LIBCPP_HIDE_FROM_ABI inline constexpr long double lerp(long double __a, long double __b, long double __t) _NOEXCEPT {
-  return __lerp(__a, __b, __t);
-}
-
-template <class _A1, class _A2, class _A3>
-inline _LIBCPP_HIDE_FROM_ABI constexpr
-    typename enable_if_t< is_arithmetic<_A1>::value && is_arithmetic<_A2>::value && is_arithmetic<_A3>::value,
-                          __promote<_A1, _A2, _A3> >::type
-    lerp(_A1 __a, _A2 __b, _A3 __t) noexcept {
-  typedef typename __promote<_A1, _A2, _A3>::type __result_type;
-  static_assert(!(
-      _IsSame<_A1, __result_type>::value && _IsSame<_A2, __result_type>::value && _IsSame<_A3, __result_type>::value));
-  return std::__lerp((__result_type)__a, (__result_type)__b, (__result_type)__t);
-}
-#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES)
 #  include <__cxx03/type_traits>
 #endif
 
-#endif // _LIBCPP_CMATH
+#endif // _LIBCPP___CXX03_CMATH

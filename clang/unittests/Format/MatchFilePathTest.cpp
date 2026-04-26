@@ -164,6 +164,41 @@ TEST_F(MatchFilePathTest, Path) {
   EXPECT_FALSE(match("foo\\", R"(foo*\)"));
 }
 
+TEST_F(MatchFilePathTest, Globstar) {
+  EXPECT_TRUE(match("/", "**"));
+  EXPECT_TRUE(match("foo", "**"));
+  EXPECT_TRUE(match("/foo", "**"));
+  EXPECT_TRUE(match("foo/", "**"));
+  EXPECT_TRUE(match("foo/bar", "**"));
+
+  EXPECT_TRUE(match("/", "**/"));
+  EXPECT_TRUE(match("foo/", "**/"));
+  EXPECT_TRUE(match("/foo/", "**/"));
+  EXPECT_TRUE(match("foo/bar/", "**/"));
+
+  EXPECT_TRUE(match("/", "/**"));
+  EXPECT_TRUE(match("/foo", "/**"));
+  EXPECT_TRUE(match("/foo/", "/**"));
+  EXPECT_TRUE(match("/foo/bar", "/**"));
+
+  EXPECT_TRUE(match("foo", "**/foo"));
+  EXPECT_TRUE(match("/foo", "**/foo"));
+  EXPECT_TRUE(match("foo/bar", "**/bar"));
+  EXPECT_TRUE(match("/foo/bar", "**/foo/bar"));
+  EXPECT_TRUE(match("foo/bar/baz", "**/bar/baz"));
+
+  EXPECT_TRUE(match("abc/foo", "abc/**"));
+  EXPECT_TRUE(match("abc/foo/", "abc/**"));
+  EXPECT_TRUE(match("abc/foo/bar", "abc/**"));
+
+  EXPECT_TRUE(match("a/b", "a/**/b"));
+  EXPECT_TRUE(match("a/x/b", "a/**/b"));
+  EXPECT_TRUE(match("a/x/y/b", "a/**/b"));
+
+  EXPECT_FALSE(match("a/x/b", "a**/b"));
+  EXPECT_FALSE(match("a/x/b", "a/**b"));
+}
+
 } // namespace
 } // namespace format
 } // namespace clang

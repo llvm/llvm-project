@@ -15,7 +15,7 @@
 
 // Overlay mode
 
-// glibc <wchar.h header might provide extern inline definitions for few
+// glibc <wchar.h> header might provide extern inline definitions for few
 // functions, causing external alias errors.  They are guarded by
 // `__USE_EXTERN_INLINES` macro.  We temporarily disable `__USE_EXTERN_INLINES`
 // macro by defining `__NO_INLINE__` before including <wchar.h>.

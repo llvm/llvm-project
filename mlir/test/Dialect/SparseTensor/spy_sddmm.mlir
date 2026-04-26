@@ -24,8 +24,8 @@
 // CHECK-DAG:     %[[VAL_3:.*]] = arith.constant 8 : index
 // CHECK-DAG:     %[[VAL_4:.*]] = arith.constant 0 : index
 // CHECK-DAG:     %[[VAL_5:.*]] = arith.constant 1 : index
-// CHECK-DAG:     %[[VAL_6:.*]] = bufferization.to_memref %[[VAL_0]] : memref<8x8xf64>
-// CHECK-DAG:     %[[VAL_7:.*]] = bufferization.to_memref %[[VAL_1]] : memref<8x8xf64>
+// CHECK-DAG:     %[[VAL_6:.*]] = bufferization.to_buffer %[[VAL_0]] : tensor<8x8xf64> to memref<8x8xf64>
+// CHECK-DAG:     %[[VAL_7:.*]] = bufferization.to_buffer %[[VAL_1]] : tensor<8x8xf64> to memref<8x8xf64>
 // CHECK-DAG:     %[[VAL_8:.*]] = sparse_tensor.positions %[[VAL_2]] {level = 1 : index} : tensor<8x8xf64, #sparse{{[0-9]*}}> to memref<?xindex>
 // CHECK-DAG:     %[[VAL_9:.*]] = sparse_tensor.coordinates %[[VAL_2]] {level = 1 : index} : tensor<8x8xf64, #sparse{{[0-9]*}}> to memref<?xindex>
 // CHECK-DAG:     %[[VAL_10:.*]] = sparse_tensor.values %[[VAL_2]] : tensor<8x8xf64, #sparse{{[0-9]*}}> to memref<?xf64>
@@ -68,6 +68,77 @@ func.func @sparse_sampled_dd(%argA: tensor<8x8xf64>,
                 sparse_tensor.yield %add : f64
             }
          linalg.yield %r : f64
+  } -> tensor<8x8xf64, #SM>
+  return %result : tensor<8x8xf64, #SM>
+}
+
+//
+// Variant where the present block directly captures the sparse input (%s).
+// This previously crashed with an assertion failure in relinkBranch.
+//
+
+#trait_sddmm_scaled = {
+  indexing_maps = [
+    affine_map<(i,j,k) -> (i,k)>,  // A
+    affine_map<(i,j,k) -> (k,j)>,  // B
+    affine_map<(i,j,k) -> (i,j)>   // S
+  ],
+  iterator_types = ["parallel", "parallel", "reduction"],
+  doc = "S(i,j) += S(i,j) * SUM_k A(i,k) B(k,j)"
+}
+
+// CHECK-LABEL: func.func @sparse_unary_captures_sparse_arg(
+// CHECK-SAME:    %[[VAL_0:.*0]]: tensor<8x8xf64>,
+// CHECK-SAME:    %[[VAL_1:.*1]]: tensor<8x8xf64>,
+// CHECK-SAME:    %[[VAL_2:.*2]]: tensor<8x8xf64, #sparse{{[0-9]*}}>) -> tensor<8x8xf64, #sparse{{[0-9]*}}> {
+// CHECK-DAG:     %[[VAL_3:.*]] = arith.constant 8 : index
+// CHECK-DAG:     %[[VAL_4:.*]] = arith.constant 0 : index
+// CHECK-DAG:     %[[VAL_5:.*]] = arith.constant 1 : index
+// CHECK-DAG:     %[[VAL_6:.*]] = bufferization.to_buffer %[[VAL_0]] : tensor<8x8xf64> to memref<8x8xf64>
+// CHECK-DAG:     %[[VAL_7:.*]] = bufferization.to_buffer %[[VAL_1]] : tensor<8x8xf64> to memref<8x8xf64>
+// CHECK-DAG:     %[[VAL_8:.*]] = sparse_tensor.values %[[VAL_2]] : tensor<8x8xf64, #sparse{{[0-9]*}}> to memref<?xf64>
+// CHECK-DAG:     %[[VAL_9:.*]] = sparse_tensor.positions %[[VAL_2]] {level = 1 : index} : tensor<8x8xf64, #sparse{{[0-9]*}}> to memref<?xindex>
+// CHECK-DAG:     %[[VAL_10:.*]] = sparse_tensor.coordinates %[[VAL_2]] {level = 1 : index} : tensor<8x8xf64, #sparse{{[0-9]*}}> to memref<?xindex>
+// CHECK:         scf.for %[[VAL_11:.*]] = %[[VAL_4]] to %[[VAL_3]] step %[[VAL_5]] {
+// CHECK:           scf.for %[[VAL_12:.*]] = %[[VAL_4]] to %[[VAL_3]] step %[[VAL_5]] {
+// CHECK:             scf.for %[[VAL_13:.*]] = {{.*}} to {{.*}} step %[[VAL_5]] {
+// CHECK:               %[[VAL_14:.*]] = memref.load %[[VAL_10]]{{\[}}%[[VAL_13]]] : memref<?xindex>
+// CHECK:               %[[VAL_15:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_13]]] : memref<?xf64>
+// CHECK:               %[[VAL_16:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_11]], %[[VAL_12]]] : memref<8x8xf64>
+// CHECK:               %[[VAL_17:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_12]], %[[VAL_14]]] : memref<8x8xf64>
+// CHECK:               %[[VAL_18:.*]] = arith.mulf %[[VAL_16]], %[[VAL_17]] : f64
+// CHECK:               %[[VAL_19:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_13]]] : memref<?xf64>
+// CHECK:               %[[VAL_20:.*]] = arith.mulf %[[VAL_19]], %[[VAL_18]] : f64
+// CHECK:               %[[VAL_21:.*]] = arith.addf %[[VAL_15]], %[[VAL_20]] : f64
+// CHECK:               memref.store %[[VAL_21]], %[[VAL_8]]{{\[}}%[[VAL_13]]] : memref<?xf64>
+// CHECK:             } {"Emitted from" = "linalg.generic"}
+// CHECK:           } {"Emitted from" = "linalg.generic"}
+// CHECK:         } {"Emitted from" = "linalg.generic"}
+// CHECK:         return
+// CHECK:       }
+func.func @sparse_unary_captures_sparse_arg(%argA: tensor<8x8xf64>,
+                                            %argB: tensor<8x8xf64>,
+                                            %argS: tensor<8x8xf64, #SM>) -> tensor<8x8xf64, #SM> {
+  %f0 = arith.constant 0.0 : f64
+  %result = linalg.generic #trait_sddmm_scaled
+    ins(%argA, %argB: tensor<8x8xf64>, tensor<8x8xf64>) outs(%argS: tensor<8x8xf64, #SM>) {
+      ^bb(%a: f64, %b: f64, %s: f64):
+        // The present block captures %s (a sparse tensor block arg) directly.
+        // This used to crash in relinkBranch with an assertion failure.
+        %u = sparse_tensor.unary %s : f64 to f64
+          present={
+            ^bb0(%p: f64):
+              %mul1 = arith.mulf %a, %b : f64
+              %mul2 = arith.mulf %s, %mul1 : f64
+              sparse_tensor.yield %mul2 : f64
+          }
+          absent={}
+        %r = sparse_tensor.reduce %s, %u, %f0 : f64 {
+          ^bb0(%p: f64, %q: f64):
+            %add = arith.addf %p, %q : f64
+            sparse_tensor.yield %add : f64
+        }
+        linalg.yield %r : f64
   } -> tensor<8x8xf64, #SM>
   return %result : tensor<8x8xf64, #SM>
 }

@@ -48,6 +48,10 @@
 ; RUN: llvm-dis %t1.bc.thinlto.bc -o - | FileCheck %s --check-prefix=DIS
 ; DIS: aliasee: null
 
+; RUN: opt -passes=function-import -import-all-index -summary-file=%t1.bc.thinlto.bc %t1.bc -S -o - 2>&1 | FileCheck %s --check-prefix=IR
+; Tests that analias definition is imported.
+; IR: define available_externally void @analias
+
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
 declare void @g(...)

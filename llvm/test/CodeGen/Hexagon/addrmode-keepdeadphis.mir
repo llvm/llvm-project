@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass amode-opt %s -o - | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass amode-opt %s -o - | FileCheck %s
 
 # Check that the addasl is not propagated into the addressing mode.
 # CHECK-NOT: L4_loadri_ur

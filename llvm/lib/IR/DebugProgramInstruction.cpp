@@ -6,13 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/DIBuilder.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/Support/Compiler.h"
+
+using namespace llvm;
 
 namespace llvm {
-
 template <typename T>
 DbgRecordParamRef<T>::DbgRecordParamRef(const T *Param)
     : Ref(const_cast<T *>(Param)) {}
@@ -24,9 +26,10 @@ template <typename T> T *DbgRecordParamRef<T>::get() const {
   return cast<T>(Ref);
 }
 
-template class DbgRecordParamRef<DIExpression>;
-template class DbgRecordParamRef<DILabel>;
-template class DbgRecordParamRef<DILocalVariable>;
+template class LLVM_EXPORT_TEMPLATE DbgRecordParamRef<DIExpression>;
+template class LLVM_EXPORT_TEMPLATE DbgRecordParamRef<DILabel>;
+template class LLVM_EXPORT_TEMPLATE DbgRecordParamRef<DILocalVariable>;
+} // namespace llvm
 
 DbgVariableRecord::DbgVariableRecord(const DbgVariableIntrinsic *DVI)
     : DbgRecord(ValueKind, DVI->getDebugLoc()),
@@ -206,6 +209,22 @@ DbgVariableRecord::createDVRDeclare(Value *Address, DILocalVariable *DV,
   auto *NewDVRDeclare = createDVRDeclare(Address, DV, Expr, DI);
   NewDVRDeclare->insertBefore(&InsertBefore);
   return NewDVRDeclare;
+}
+
+DbgVariableRecord *
+DbgVariableRecord::createDVRDeclareValue(Value *Address, DILocalVariable *DV,
+                                         DIExpression *Expr,
+                                         const DILocation *DI) {
+  return new DbgVariableRecord(ValueAsMetadata::get(Address), DV, Expr, DI,
+                               LocationType::DeclareValue);
+}
+
+DbgVariableRecord *DbgVariableRecord::createDVRDeclareValue(
+    Value *Address, DILocalVariable *DV, DIExpression *Expr,
+    const DILocation *DI, DbgVariableRecord &InsertBefore) {
+  auto *NewDVRCoro = createDVRDeclareValue(Address, DV, Expr, DI);
+  NewDVRCoro->insertBefore(&InsertBefore);
+  return NewDVRCoro;
 }
 
 DbgVariableRecord *DbgVariableRecord::createDVRAssign(
@@ -424,6 +443,10 @@ DbgVariableRecord::createDebugIntrinsic(Module *M,
   case DbgVariableRecord::LocationType::End:
   case DbgVariableRecord::LocationType::Any:
     llvm_unreachable("Invalid LocationType");
+    break;
+  case DbgVariableRecord::LocationType::DeclareValue:
+    llvm_unreachable(
+        "#dbg_declare_value should never be converted to an intrinsic");
   }
 
   // Create the intrinsic from this DbgVariableRecord's information, optionally
@@ -451,7 +474,7 @@ DbgVariableRecord::createDebugIntrinsic(Module *M,
   DVI->setTailCall();
   DVI->setDebugLoc(getDebugLoc());
   if (InsertBefore)
-    DVI->insertBefore(InsertBefore);
+    DVI->insertBefore(InsertBefore->getIterator());
 
   return DVI;
 }
@@ -467,7 +490,7 @@ DbgLabelRecord::createDebugIntrinsic(Module *M,
   DbgLabel->setTailCall();
   DbgLabel->setDebugLoc(getDebugLoc());
   if (InsertBefore)
-    DbgLabel->insertBefore(InsertBefore);
+    DbgLabel->insertBefore(InsertBefore->getIterator());
   return DbgLabel;
 }
 
@@ -548,6 +571,24 @@ void DbgRecord::insertAfter(DbgRecord *InsertAfter) {
          "DbgMarker!");
   InsertAfter->getMarker()->insertDbgRecordAfter(this, InsertAfter);
 }
+
+void DbgRecord::insertBefore(self_iterator InsertBefore) {
+  assert(!getMarker() &&
+         "Cannot insert a DbgRecord that is already has a DbgMarker!");
+  assert(InsertBefore->getMarker() &&
+         "Cannot insert a DbgRecord before a DbgRecord that does not have a "
+         "DbgMarker!");
+  InsertBefore->getMarker()->insertDbgRecord(this, &*InsertBefore);
+}
+void DbgRecord::insertAfter(self_iterator InsertAfter) {
+  assert(!getMarker() &&
+         "Cannot insert a DbgRecord that is already has a DbgMarker!");
+  assert(InsertAfter->getMarker() &&
+         "Cannot insert a DbgRecord after a DbgRecord that does not have a "
+         "DbgMarker!");
+  InsertAfter->getMarker()->insertDbgRecordAfter(this, &*InsertAfter);
+}
+
 void DbgRecord::moveBefore(DbgRecord *MoveBefore) {
   assert(getMarker() &&
          "Canot move a DbgRecord that does not currently have a DbgMarker!");
@@ -555,6 +596,19 @@ void DbgRecord::moveBefore(DbgRecord *MoveBefore) {
   insertBefore(MoveBefore);
 }
 void DbgRecord::moveAfter(DbgRecord *MoveAfter) {
+  assert(getMarker() &&
+         "Canot move a DbgRecord that does not currently have a DbgMarker!");
+  removeFromParent();
+  insertAfter(MoveAfter);
+}
+
+void DbgRecord::moveBefore(self_iterator MoveBefore) {
+  assert(getMarker() &&
+         "Canot move a DbgRecord that does not currently have a DbgMarker!");
+  removeFromParent();
+  insertBefore(MoveBefore);
+}
+void DbgRecord::moveAfter(self_iterator MoveAfter) {
   assert(getMarker() &&
          "Canot move a DbgRecord that does not currently have a DbgMarker!");
   removeFromParent();
@@ -633,11 +687,11 @@ void DbgMarker::eraseFromParent() {
 }
 
 iterator_range<DbgRecord::self_iterator> DbgMarker::getDbgRecordRange() {
-  return make_range(StoredDbgRecords.begin(), StoredDbgRecords.end());
+  return StoredDbgRecords;
 }
 iterator_range<DbgRecord::const_self_iterator>
 DbgMarker::getDbgRecordRange() const {
-  return make_range(StoredDbgRecords.begin(), StoredDbgRecords.end());
+  return StoredDbgRecords;
 }
 
 void DbgRecord::removeFromParent() {
@@ -723,5 +777,3 @@ iterator_range<simple_ilist<DbgRecord>::iterator> DbgMarker::cloneDebugInfoFrom(
     // We inserted a block at the end, return that range.
     return {First->getIterator(), StoredDbgRecords.end()};
 }
-
-} // end namespace llvm

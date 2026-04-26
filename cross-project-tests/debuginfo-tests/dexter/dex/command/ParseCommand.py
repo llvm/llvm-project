@@ -35,6 +35,8 @@ from dex.command.commands.DexLimitSteps import DexLimitSteps
 from dex.command.commands.DexFinishTest import DexFinishTest
 from dex.command.commands.DexUnreachable import DexUnreachable
 from dex.command.commands.DexWatch import DexWatch
+from dex.command.commands.DexStepFunction import DexStepFunction
+from dex.command.commands.DexContinue import DexContinue
 from dex.utils import Timer
 from dex.utils.Exceptions import CommandParseError, DebuggerException
 
@@ -59,6 +61,8 @@ def _get_valid_commands():
         DexFinishTest.get_name(): DexFinishTest,
         DexUnreachable.get_name(): DexUnreachable,
         DexWatch.get_name(): DexWatch,
+        DexStepFunction.get_name(): DexStepFunction,
+        DexContinue.get_name(): DexContinue,
     }
 
 
@@ -98,7 +102,7 @@ def _build_command(
 
     def label_to_line(label_name: str) -> int:
         line = labels.get(label_name, None)
-        if line != None:
+        if line is not None:
             return line
         raise format_unresolved_label_err(label_name, raw_text, path.base, lineno)
 
@@ -128,7 +132,7 @@ def _build_command(
 
 
 def _search_line_for_cmd_start(line: str, start: int, valid_commands: dict) -> int:
-    """Scan `line` for a string matching any key in `valid_commands`.
+    r"""Scan `line` for a string matching any key in `valid_commands`.
 
     Start searching from `start`.
     Commands escaped with `\` (E.g. `\DexLabel('a')`) are ignored.
@@ -543,7 +547,7 @@ class TestParseCommand(unittest.TestCase):
     def test_parse_escaped(self):
         """Escaped commands are ignored."""
 
-        lines = ['words \MockCmd("IGNORED") words words words\n']
+        lines = ['words \\MockCmd("IGNORED") words words words\n']
 
         values = self._find_all_mock_values_in_lines(lines)
 

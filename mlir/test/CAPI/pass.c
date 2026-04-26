@@ -53,7 +53,7 @@ void testRunPassOnModule(void) {
   // CHECK: func.return        , 1
   {
     MlirPassManager pm = mlirPassManagerCreate(ctx);
-    MlirPass printOpStatPass = mlirCreateTransformsPrintOpStats();
+    MlirPass printOpStatPass = mlirCreateTransformsPrintOpStatsPass();
     mlirPassManagerAddOwnedPass(pm, printOpStatPass);
     MlirLogicalResult success = mlirPassManagerRunOnOp(pm, func);
     if (mlirLogicalResultIsFailure(success)) {
@@ -98,7 +98,7 @@ void testRunPassOnNestedModule(void) {
     MlirPassManager pm = mlirPassManagerCreate(ctx);
     MlirOpPassManager nestedFuncPm = mlirPassManagerGetNestedUnder(
         pm, mlirStringRefCreateFromCString("func.func"));
-    MlirPass printOpStatPass = mlirCreateTransformsPrintOpStats();
+    MlirPass printOpStatPass = mlirCreateTransformsPrintOpStatsPass();
     mlirOpPassManagerAddOwnedPass(nestedFuncPm, printOpStatPass);
     MlirLogicalResult success = mlirPassManagerRunOnOp(pm, module);
     if (mlirLogicalResultIsFailure(success))
@@ -116,7 +116,7 @@ void testRunPassOnNestedModule(void) {
         pm, mlirStringRefCreateFromCString("builtin.module"));
     MlirOpPassManager nestedFuncPm = mlirOpPassManagerGetNestedUnder(
         nestedModulePm, mlirStringRefCreateFromCString("func.func"));
-    MlirPass printOpStatPass = mlirCreateTransformsPrintOpStats();
+    MlirPass printOpStatPass = mlirCreateTransformsPrintOpStatsPass();
     mlirOpPassManagerAddOwnedPass(nestedFuncPm, printOpStatPass);
     MlirLogicalResult success = mlirPassManagerRunOnOp(pm, module);
     if (mlirLogicalResultIsFailure(success))
@@ -147,7 +147,7 @@ void testPrintPassPipeline(void) {
       pm, mlirStringRefCreateFromCString("builtin.module"));
   MlirOpPassManager nestedFuncPm = mlirOpPassManagerGetNestedUnder(
       nestedModulePm, mlirStringRefCreateFromCString("func.func"));
-  MlirPass printOpStatPass = mlirCreateTransformsPrintOpStats();
+  MlirPass printOpStatPass = mlirCreateTransformsPrintOpStatsPass();
   mlirOpPassManagerAddOwnedPass(nestedFuncPm, printOpStatPass);
 
   // Print the top level pass manager
@@ -192,7 +192,7 @@ void testParsePassPipeline(void) {
     exit(EXIT_FAILURE);
   }
   // Try again after registrating the pass.
-  mlirRegisterTransformsPrintOpStats();
+  mlirRegisterTransformsPrintOpStatsPass();
   status = mlirParsePassPipeline(
       mlirPassManagerGetAsOpPassManager(pm),
       mlirStringRefCreateFromCString(
@@ -483,6 +483,23 @@ void testExternalPass(void) {
 
     if (userData.runCallCount != 1) {
       fprintf(stderr, "Expected runCallCount to be 1\n");
+      exit(EXIT_FAILURE);
+    }
+
+    // Run the pass again and confirm that the initializeCallCount is still 1.
+    MlirLogicalResult second_success = mlirPassManagerRunOnOp(pm, module);
+    if (mlirLogicalResultIsFailure(second_success)) {
+      fprintf(stderr, "Unexpected failure running external pass.\n");
+      exit(EXIT_FAILURE);
+    }
+
+    if (userData.initializeCallCount != 1) {
+      fprintf(stderr, "Expected initializeCallCount to be 1\n");
+      exit(EXIT_FAILURE);
+    }
+
+    if (userData.runCallCount != 2) {
+      fprintf(stderr, "Expected runCallCount to be 2\n");
       exit(EXIT_FAILURE);
     }
 

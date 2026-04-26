@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ATOMIC_ATOMIC_SYNC_H
-#define _LIBCPP___ATOMIC_ATOMIC_SYNC_H
+#ifndef _LIBCPP___CXX03___ATOMIC_ATOMIC_SYNC_H
+#define _LIBCPP___CXX03___ATOMIC_ATOMIC_SYNC_H
 
 #include <__cxx03/__atomic/contention_t.h>
 #include <__cxx03/__atomic/cxx_atomic_impl.h>
@@ -202,4 +202,4 @@ __atomic_wait(_AtomicWaitable& __a, _Up __val, memory_order __order) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ATOMIC_ATOMIC_SYNC_H
+#endif // _LIBCPP___CXX03___ATOMIC_ATOMIC_SYNC_H

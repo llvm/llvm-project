@@ -30,7 +30,6 @@ using namespace orc_rt;
 using namespace orc_rt::elfnix;
 
 // Declare function tags for functions in the JIT process.
-ORC_RT_JIT_DISPATCH_TAG(__orc_rt_reoptimize_tag)
 ORC_RT_JIT_DISPATCH_TAG(__orc_rt_elfnix_push_initializers_tag)
 ORC_RT_JIT_DISPATCH_TAG(__orc_rt_elfnix_symbol_lookup_tag)
 
@@ -74,6 +73,7 @@ private:
     AtExitsVector AtExits;
     std::vector<PerJITDylibState *> Deps;
     RecordSectionsTracker<void (*)()> RecordedInits;
+    RecordSectionsTracker<void (*)()> RecordedFinis;
 
     bool referenced() const {
       return LinkedAgainstRefCount != 0 || RefCount != 0;
@@ -101,10 +101,15 @@ public:
                       std::vector<ExecutorAddrRange> Inits);
   Error deregisterInits(ExecutorAddr HeaderAddr,
                         std::vector<ExecutorAddrRange> Inits);
+  Error registerFinis(ExecutorAddr HeaderAddr,
+                      std::vector<ExecutorAddrRange> Finis);
+  Error deregisterFinis(ExecutorAddr HeaderAddr,
+                        std::vector<ExecutorAddrRange> Finis);
   Error deregisterObjectSections(ELFNixPerObjectSectionsToRegister POSR);
 
   const char *dlerror();
   void *dlopen(std::string_view Name, int Mode);
+  int dlupdate(void *DSOHandle);
   int dlclose(void *DSOHandle);
   void *dlsym(void *DSOHandle, std::string_view Symbol);
 
@@ -130,12 +135,18 @@ private:
 
   Error runInits(std::unique_lock<std::recursive_mutex> &JDStatesLock,
                  PerJITDylibState &JDS);
+  Error runFinis(std::unique_lock<std::recursive_mutex> &JDStatesLock,
+                 PerJITDylibState &JDS);
   Expected<void *> dlopenImpl(std::string_view Path, int Mode);
   Error dlopenFull(std::unique_lock<std::recursive_mutex> &JDStatesLock,
                    PerJITDylibState &JDS);
   Error dlopenInitialize(std::unique_lock<std::recursive_mutex> &JDStatesLock,
                          PerJITDylibState &JDS,
                          ELFNixJITDylibDepInfoMap &DepInfo);
+  Error dlupdateImpl(void *DSOHandle);
+  Error dlupdateFull(std::unique_lock<std::recursive_mutex> &JDStatesLock,
+                     PerJITDylibState &JDS);
+
   Error dlcloseImpl(void *DSOHandle);
   Error dlcloseInitialize(std::unique_lock<std::recursive_mutex> &JDStatesLock,
                           PerJITDylibState &JDS);
@@ -297,6 +308,46 @@ Error ELFNixPlatformRuntimeState::deregisterInits(
   return Error::success();
 }
 
+Error ELFNixPlatformRuntimeState::registerFinis(
+    ExecutorAddr HeaderAddr, std::vector<ExecutorAddrRange> Finis) {
+  std::lock_guard<std::recursive_mutex> Lock(JDStatesMutex);
+  PerJITDylibState *JDS =
+      getJITDylibStateByHeaderAddr(HeaderAddr.toPtr<void *>());
+
+  if (!JDS) {
+    std::ostringstream ErrStream;
+    ErrStream << "Could not register fini sections for unrecognized header "
+              << HeaderAddr.toPtr<void *>();
+    return make_error<StringError>(ErrStream.str());
+  }
+
+  for (auto &F : Finis) {
+    JDS->RecordedFinis.add(F.toSpan<void (*)()>());
+  }
+
+  return Error::success();
+}
+
+Error ELFNixPlatformRuntimeState::deregisterFinis(
+    ExecutorAddr HeaderAddr, std::vector<ExecutorAddrRange> Finis) {
+  std::lock_guard<std::recursive_mutex> Lock(JDStatesMutex);
+  PerJITDylibState *JDS =
+      getJITDylibStateByHeaderAddr(HeaderAddr.toPtr<void *>());
+
+  if (!JDS) {
+    std::ostringstream ErrStream;
+    ErrStream << "Could not deregister fini sections for unrecognized header "
+              << HeaderAddr.toPtr<void *>();
+    return make_error<StringError>(ErrStream.str());
+  }
+
+  for (auto &F : Finis) {
+    JDS->RecordedFinis.removeIfPresent(F);
+  }
+
+  return Error::success();
+}
+
 const char *ELFNixPlatformRuntimeState::dlerror() { return DLFcnError.c_str(); }
 
 void *ELFNixPlatformRuntimeState::dlopen(std::string_view Path, int Mode) {
@@ -307,6 +358,15 @@ void *ELFNixPlatformRuntimeState::dlopen(std::string_view Path, int Mode) {
     DLFcnError = toString(H.takeError());
     return nullptr;
   }
+}
+
+int ELFNixPlatformRuntimeState::dlupdate(void *DSOHandle) {
+  if (auto Err = dlupdateImpl(DSOHandle)) {
+    // FIXME: Make dlerror thread safe.
+    DLFcnError = toString(std::move(Err));
+    return -1;
+  }
+  return 0;
 }
 
 int ELFNixPlatformRuntimeState::dlclose(void *DSOHandle) {
@@ -438,6 +498,31 @@ Error ELFNixPlatformRuntimeState::runInits(
   return Error::success();
 }
 
+Error ELFNixPlatformRuntimeState::runFinis(
+    std::unique_lock<std::recursive_mutex> &JDStatesLock,
+    PerJITDylibState &JDS) {
+  std::vector<span<void (*)()>> FiniSections;
+
+  // Collect all fini sections (reset to move all to "new" for processing)
+  JDS.RecordedFinis.reset();
+  FiniSections.reserve(JDS.RecordedFinis.numNewSections());
+
+  JDS.RecordedFinis.processNewSections(
+      [&](span<void (*)()> Finis) { FiniSections.push_back(Finis); });
+
+  JDStatesLock.unlock();
+
+  // Run in forward order - sections are already sorted correctly by the JIT:
+  // .dtors first (in order), then .fini_array (in descending priority order)
+  for (auto Sec : FiniSections)
+    for (auto *Fini : Sec)
+      Fini();
+
+  JDStatesLock.lock();
+
+  return Error::success();
+}
+
 Expected<void *> ELFNixPlatformRuntimeState::dlopenImpl(std::string_view Path,
                                                         int Mode) {
   std::unique_lock<std::recursive_mutex> Lock(JDStatesMutex);
@@ -523,6 +608,50 @@ Error ELFNixPlatformRuntimeState::dlopenInitialize(
   return Error::success();
 }
 
+Error ELFNixPlatformRuntimeState::dlupdateImpl(void *DSOHandle) {
+  std::unique_lock<std::recursive_mutex> Lock(JDStatesMutex);
+
+  // Try to find JITDylib state by name.
+  auto *JDS = getJITDylibStateByHeaderAddr(DSOHandle);
+
+  if (!JDS) {
+    std::ostringstream ErrStream;
+    ErrStream << "No registered JITDylib for " << DSOHandle;
+    return make_error<StringError>(ErrStream.str());
+  }
+
+  if (!JDS->referenced())
+    return make_error<StringError>("dlupdate failed, JITDylib must be open.");
+
+  if (auto Err = dlupdateFull(Lock, *JDS))
+    return Err;
+
+  return Error::success();
+}
+
+Error ELFNixPlatformRuntimeState::dlupdateFull(
+    std::unique_lock<std::recursive_mutex> &JDStatesLock,
+    PerJITDylibState &JDS) {
+  // Call back to the JIT to push the initializers.
+  Expected<ELFNixJITDylibDepInfoMap> DepInfo((ELFNixJITDylibDepInfoMap()));
+  // Unlock so that we can accept the initializer update.
+  JDStatesLock.unlock();
+  if (auto Err = WrapperFunction<SPSExpected<SPSELFNixJITDylibDepInfoMap>(
+          SPSExecutorAddr)>::
+          call(JITDispatch(&__orc_rt_elfnix_push_initializers_tag), DepInfo,
+               ExecutorAddr::fromPtr(JDS.Header)))
+    return Err;
+  JDStatesLock.lock();
+
+  if (!DepInfo)
+    return DepInfo.takeError();
+
+  if (auto Err = runInits(JDStatesLock, JDS))
+    return Err;
+
+  return Error::success();
+}
+
 Error ELFNixPlatformRuntimeState::dlcloseImpl(void *DSOHandle) {
 
   std::unique_lock<std::recursive_mutex> Lock(JDStatesMutex);
@@ -545,8 +674,13 @@ Error ELFNixPlatformRuntimeState::dlcloseImpl(void *DSOHandle) {
 Error ELFNixPlatformRuntimeState::dlcloseInitialize(
     std::unique_lock<std::recursive_mutex> &JDStatesLock,
     PerJITDylibState &JDS) {
+  // Run fini sections BEFORE atexits (mirrors static dtor order)
+  if (auto Err = runFinis(JDStatesLock, JDS))
+    return Err;
+
   runAtExits(JDStatesLock, JDS);
   JDS.RecordedInits.reset();
+  JDS.RecordedFinis.reset();
   for (auto *DepJDS : JDS.Deps)
     if (!JDS.referenced())
       if (auto Err = dlcloseInitialize(JDStatesLock, *DepJDS))
@@ -598,7 +732,7 @@ void destroyELFNixTLVMgr(void *ELFNixTLVMgr) {
 //                             JIT entry points
 //------------------------------------------------------------------------------
 
-ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
+ORC_RT_INTERFACE orc_rt_WrapperFunctionResult
 __orc_rt_elfnix_platform_bootstrap(char *ArgData, size_t ArgSize) {
   return WrapperFunction<SPSError(SPSExecutorAddr)>::handle(
              ArgData, ArgSize,
@@ -610,7 +744,7 @@ __orc_rt_elfnix_platform_bootstrap(char *ArgData, size_t ArgSize) {
       .release();
 }
 
-ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
+ORC_RT_INTERFACE orc_rt_WrapperFunctionResult
 __orc_rt_elfnix_platform_shutdown(char *ArgData, size_t ArgSize) {
   return WrapperFunction<SPSError()>::handle(
              ArgData, ArgSize,
@@ -621,7 +755,7 @@ __orc_rt_elfnix_platform_shutdown(char *ArgData, size_t ArgSize) {
       .release();
 }
 
-ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
+ORC_RT_INTERFACE orc_rt_WrapperFunctionResult
 __orc_rt_elfnix_register_jitdylib(char *ArgData, size_t ArgSize) {
   return WrapperFunction<SPSError(SPSString, SPSExecutorAddr)>::handle(
              ArgData, ArgSize,
@@ -632,7 +766,7 @@ __orc_rt_elfnix_register_jitdylib(char *ArgData, size_t ArgSize) {
       .release();
 }
 
-ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
+ORC_RT_INTERFACE orc_rt_WrapperFunctionResult
 __orc_rt_elfnix_deregister_jitdylib(char *ArgData, size_t ArgSize) {
   return WrapperFunction<SPSError(SPSExecutorAddr)>::handle(
              ArgData, ArgSize,
@@ -643,7 +777,7 @@ __orc_rt_elfnix_deregister_jitdylib(char *ArgData, size_t ArgSize) {
       .release();
 }
 
-ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
+ORC_RT_INTERFACE orc_rt_WrapperFunctionResult
 __orc_rt_elfnix_register_init_sections(char *ArgData, size_t ArgSize) {
   return WrapperFunction<SPSError(SPSExecutorAddr,
                                   SPSSequence<SPSExecutorAddrRange>)>::
@@ -656,7 +790,7 @@ __orc_rt_elfnix_register_init_sections(char *ArgData, size_t ArgSize) {
           .release();
 }
 
-ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
+ORC_RT_INTERFACE orc_rt_WrapperFunctionResult
 __orc_rt_elfnix_deregister_init_sections(char *ArgData, size_t ArgSize) {
   return WrapperFunction<SPSError(SPSExecutorAddr,
                                   SPSSequence<SPSExecutorAddrRange>)>::
@@ -669,8 +803,34 @@ __orc_rt_elfnix_deregister_init_sections(char *ArgData, size_t ArgSize) {
           .release();
 }
 
+ORC_RT_INTERFACE orc_rt_WrapperFunctionResult
+__orc_rt_elfnix_register_fini_sections(char *ArgData, size_t ArgSize) {
+  return WrapperFunction<SPSError(SPSExecutorAddr,
+                                  SPSSequence<SPSExecutorAddrRange>)>::
+      handle(ArgData, ArgSize,
+             [](ExecutorAddr HeaderAddr,
+                std::vector<ExecutorAddrRange> &Finis) {
+               return ELFNixPlatformRuntimeState::get().registerFinis(
+                   HeaderAddr, std::move(Finis));
+             })
+          .release();
+}
+
+ORC_RT_INTERFACE orc_rt_WrapperFunctionResult
+__orc_rt_elfnix_deregister_fini_sections(char *ArgData, size_t ArgSize) {
+  return WrapperFunction<SPSError(SPSExecutorAddr,
+                                  SPSSequence<SPSExecutorAddrRange>)>::
+      handle(ArgData, ArgSize,
+             [](ExecutorAddr HeaderAddr,
+                std::vector<ExecutorAddrRange> &Finis) {
+               return ELFNixPlatformRuntimeState::get().deregisterFinis(
+                   HeaderAddr, std::move(Finis));
+             })
+          .release();
+}
+
 /// Wrapper function for registering metadata on a per-object basis.
-ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
+ORC_RT_INTERFACE orc_rt_WrapperFunctionResult
 __orc_rt_elfnix_register_object_sections(char *ArgData, size_t ArgSize) {
   return WrapperFunction<SPSError(SPSELFNixPerObjectSectionsToRegister)>::
       handle(ArgData, ArgSize,
@@ -682,7 +842,7 @@ __orc_rt_elfnix_register_object_sections(char *ArgData, size_t ArgSize) {
 }
 
 /// Wrapper for releasing per-object metadat.
-ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
+ORC_RT_INTERFACE orc_rt_WrapperFunctionResult
 __orc_rt_elfnix_deregister_object_sections(char *ArgData, size_t ArgSize) {
   return WrapperFunction<SPSError(SPSELFNixPerObjectSectionsToRegister)>::
       handle(ArgData, ArgSize,
@@ -718,7 +878,7 @@ ORC_RT_INTERFACE ptrdiff_t ___orc_rt_elfnix_tlsdesc_resolver_impl(
   return TLVPtr - ThreadPointer;
 }
 
-ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
+ORC_RT_INTERFACE orc_rt_WrapperFunctionResult
 __orc_rt_elfnix_create_pthread_key(char *ArgData, size_t ArgSize) {
   return WrapperFunction<SPSExpected<uint64_t>(void)>::handle(
              ArgData, ArgSize,
@@ -763,6 +923,10 @@ const char *__orc_rt_elfnix_jit_dlerror() {
 
 void *__orc_rt_elfnix_jit_dlopen(const char *path, int mode) {
   return ELFNixPlatformRuntimeState::get().dlopen(path, mode);
+}
+
+int __orc_rt_elfnix_jit_dlupdate(void *dso_handle) {
+  return ELFNixPlatformRuntimeState::get().dlupdate(dso_handle);
 }
 
 int __orc_rt_elfnix_jit_dlclose(void *dso_handle) {

@@ -17,17 +17,9 @@
 # INTEL: vcvttpd2dqs xmm22, ymm23
 0x62,0xa5,0xfc,0x28,0x6d,0xf7
 
-# ATT:   vcvttpd2dqs {sae}, %ymm23, %xmm22
-# INTEL: vcvttpd2dqs xmm22, ymm23, {sae}
-0x62,0xa5,0xf8,0x18,0x6d,0xf7
-
 # ATT:   vcvttpd2dqs %ymm23, %xmm22 {%k7}
 # INTEL: vcvttpd2dqs xmm22 {k7}, ymm23
 0x62,0xa5,0xfc,0x2f,0x6d,0xf7
-
-# ATT:   vcvttpd2dqs {sae}, %ymm23, %xmm22 {%k7} {z}
-# INTEL: vcvttpd2dqs xmm22 {k7} {z}, ymm23, {sae}
-0x62,0xa5,0xf8,0x9f,0x6d,0xf7
 
 # ATT:   vcvttpd2dqs %zmm23, %ymm22
 # INTEL: vcvttpd2dqs ymm22, zmm23
@@ -125,17 +117,9 @@
 # INTEL: vcvttpd2qqs ymm22, ymm23
 0x62,0xa5,0xfd,0x28,0x6d,0xf7
 
-# ATT:   vcvttpd2qqs {sae}, %ymm23, %ymm22
-# INTEL: vcvttpd2qqs ymm22, ymm23, {sae}
-0x62,0xa5,0xf9,0x18,0x6d,0xf7
-
 # ATT:   vcvttpd2qqs %ymm23, %ymm22 {%k7}
 # INTEL: vcvttpd2qqs ymm22 {k7}, ymm23
 0x62,0xa5,0xfd,0x2f,0x6d,0xf7
-
-# ATT:   vcvttpd2qqs {sae}, %ymm23, %ymm22 {%k7} {z}
-# INTEL: vcvttpd2qqs ymm22 {k7} {z}, ymm23, {sae}
-0x62,0xa5,0xf9,0x9f,0x6d,0xf7
 
 # ATT:   vcvttpd2qqs %zmm23, %zmm22
 # INTEL: vcvttpd2qqs zmm22, zmm23
@@ -241,17 +225,9 @@
 # INTEL: vcvttpd2udqs xmm22, ymm23
 0x62,0xa5,0xfc,0x28,0x6c,0xf7
 
-# ATT:   vcvttpd2udqs {sae}, %ymm23, %xmm22
-# INTEL: vcvttpd2udqs xmm22, ymm23, {sae}
-0x62,0xa5,0xf8,0x18,0x6c,0xf7
-
 # ATT:   vcvttpd2udqs %ymm23, %xmm22 {%k7}
 # INTEL: vcvttpd2udqs xmm22 {k7}, ymm23
 0x62,0xa5,0xfc,0x2f,0x6c,0xf7
-
-# ATT:   vcvttpd2udqs {sae}, %ymm23, %xmm22 {%k7} {z}
-# INTEL: vcvttpd2udqs xmm22 {k7} {z}, ymm23, {sae}
-0x62,0xa5,0xf8,0x9f,0x6c,0xf7
 
 # ATT:   vcvttpd2udqs %zmm23, %ymm22
 # INTEL: vcvttpd2udqs ymm22, zmm23
@@ -349,17 +325,9 @@
 # INTEL: vcvttpd2uqqs ymm22, ymm23
 0x62,0xa5,0xfd,0x28,0x6c,0xf7
 
-# ATT:   vcvttpd2uqqs {sae}, %ymm23, %ymm22
-# INTEL: vcvttpd2uqqs ymm22, ymm23, {sae}
-0x62,0xa5,0xf9,0x18,0x6c,0xf7
-
 # ATT:   vcvttpd2uqqs %ymm23, %ymm22 {%k7}
 # INTEL: vcvttpd2uqqs ymm22 {k7}, ymm23
 0x62,0xa5,0xfd,0x2f,0x6c,0xf7
-
-# ATT:   vcvttpd2uqqs {sae}, %ymm23, %ymm22 {%k7} {z}
-# INTEL: vcvttpd2uqqs ymm22 {k7} {z}, ymm23, {sae}
-0x62,0xa5,0xf9,0x9f,0x6c,0xf7
 
 # ATT:   vcvttpd2uqqs %zmm23, %zmm22
 # INTEL: vcvttpd2uqqs zmm22, zmm23
@@ -465,17 +433,9 @@
 # INTEL: vcvttps2dqs ymm22, ymm23
 0x62,0xa5,0x7c,0x28,0x6d,0xf7
 
-# ATT:   vcvttps2dqs {sae}, %ymm23, %ymm22
-# INTEL: vcvttps2dqs ymm22, ymm23, {sae}
-0x62,0xa5,0x78,0x18,0x6d,0xf7
-
 # ATT:   vcvttps2dqs %ymm23, %ymm22 {%k7}
 # INTEL: vcvttps2dqs ymm22 {k7}, ymm23
 0x62,0xa5,0x7c,0x2f,0x6d,0xf7
-
-# ATT:   vcvttps2dqs {sae}, %ymm23, %ymm22 {%k7} {z}
-# INTEL: vcvttps2dqs ymm22 {k7} {z}, ymm23, {sae}
-0x62,0xa5,0x78,0x9f,0x6d,0xf7
 
 # ATT:   vcvttps2dqs %zmm23, %zmm22
 # INTEL: vcvttps2dqs zmm22, zmm23
@@ -697,17 +657,9 @@
 # INTEL: vcvttps2udqs ymm22, ymm23
 0x62,0xa5,0x7c,0x28,0x6c,0xf7
 
-# ATT:   vcvttps2udqs {sae}, %ymm23, %ymm22
-# INTEL: vcvttps2udqs ymm22, ymm23, {sae}
-0x62,0xa5,0x78,0x18,0x6c,0xf7
-
 # ATT:   vcvttps2udqs %ymm23, %ymm22 {%k7}
 # INTEL: vcvttps2udqs ymm22 {k7}, ymm23
 0x62,0xa5,0x7c,0x2f,0x6c,0xf7
-
-# ATT:   vcvttps2udqs {sae}, %ymm23, %ymm22 {%k7} {z}
-# INTEL: vcvttps2udqs ymm22 {k7} {z}, ymm23, {sae}
-0x62,0xa5,0x78,0x9f,0x6c,0xf7
 
 # ATT:   vcvttps2udqs %zmm23, %zmm22
 # INTEL: vcvttps2udqs zmm22, zmm23

@@ -13,16 +13,17 @@ int redecl(void);
 int __attribute__((target_clones("frintts", "simd+fp", "default"))) redecl(void) { return 1; }
 
 int __attribute__((target_clones("jscvt+fcma", "rcpc", "default"))) redecl2(void);
+// expected-error@+2 {{'target_clones' attribute does not match previous declaration}}
+// expected-note@-2 {{previous declaration is here}}
 int __attribute__((target_clones("jscvt+fcma", "rcpc"))) redecl2(void) { return 1; }
 
 int __attribute__((target_clones("sve+dotprod"))) redecl3(void);
 int redecl3(void);
 
 int __attribute__((target_clones("rng", "fp16fml+fp", "default"))) redecl4(void);
-// expected-error@+3 {{'target_clones' attribute does not match previous declaration}}
+// expected-error@+2 {{'target_clones' attribute does not match previous declaration}}
 // expected-note@-2 {{previous declaration is here}}
-// expected-warning@+1 {{version list contains entries that don't impact code generation}}
-int __attribute__((target_clones("dgh+rpres", "ebf16+dpb", "default"))) redecl4(void) { return 1; }
+int __attribute__((target_clones("dit", "bf16+dpb", "default"))) redecl4(void) { return 1; }
 
 int __attribute__((target_version("flagm2"))) redef2(void) { return 1; }
 // expected-error@+2 {{multiversioned function redeclarations require identical target attributes}}
@@ -69,7 +70,7 @@ empty_target_5(void);
 void __attribute__((target_clones("sve2-bitperm", "sve2-bitperm")))
 dupe_normal(void);
 
-void __attribute__((target_clones("default"), target_clones("memtag3+bti"))) dupe_normal2(void);
+void __attribute__((target_clones("default"), target_clones("memtag+bti"))) dupe_normal2(void);
 
 int mv_after_use(void);
 int useage(void) {
@@ -79,3 +80,15 @@ int useage(void) {
 int __attribute__((target_clones("sve2-sha3+ssbs", "sm4"))) mv_after_use(void) { return 1; }
 // expected-error@+1 {{'main' cannot be a multiversioned function}}
 int __attribute__((target_clones("i8mm"))) main() { return 1; }
+
+int __attribute__((target_clones("aes + sve2 ; priority=100", "default"))) priority_whitespace(void) { return 0; }
+
+//expected-warning@+2 {{unsupported 'priority=10' in the 'target_clones' attribute string; 'target_clones' attribute ignored}}
+//expected-warning@+1 {{version list contains entries that don't impact code generation}}
+int __attribute__((target_clones("priority=10;aes", "default"))) priority_before_features(void) { return 0; }
+
+//expected-warning@+1 {{version priority '0' is outside the allowed range [1-255]; ignoring priority}}
+int __attribute__((target_clones("aes;priority=0", "default"))) priority_out_of_range(void) { return 0; }
+
+//expected-warning@+1 {{priority of default version cannot be overridden; ignoring priority}}
+int __attribute__((target_clones("aes", "default;priority=10"))) priority_default_version(void) { return 0; }

@@ -163,7 +163,7 @@ protected:
   void DoExecute(Args &args, CommandReturnObject &result) override {
     if (args.GetArgumentCount() < 2) {
       result.AppendErrorWithFormat(
-          "%s takes a log channel and one or more log types.\n",
+          "%s takes a log channel and one or more log types",
           m_cmd_name.c_str());
       return;
     }
@@ -257,7 +257,7 @@ protected:
   void DoExecute(Args &args, CommandReturnObject &result) override {
     if (args.empty()) {
       result.AppendErrorWithFormat(
-          "%s takes a log channel and one or more log types.\n",
+          "%s takes a log channel and one or more log types",
           m_cmd_name.c_str());
       return;
     }
@@ -372,7 +372,7 @@ protected:
   void DoExecute(Args &args, CommandReturnObject &result) override {
     if (args.empty()) {
       result.AppendErrorWithFormat(
-          "%s takes a log channel and one or more log types.\n",
+          "%s takes a log channel and one or more log types",
           m_cmd_name.c_str());
       return;
     }
@@ -394,7 +394,8 @@ protected:
           (*file)->GetDescriptor(), /*shouldClose=*/true);
     } else {
       stream_up = std::make_unique<llvm::raw_fd_ostream>(
-          GetDebugger().GetOutputFile().GetDescriptor(), /*shouldClose=*/false);
+          GetDebugger().GetOutputFileSP()->GetDescriptor(),
+          /*shouldClose=*/false);
     }
 
     const std::string channel = std::string(args[0].ref());
@@ -443,7 +444,7 @@ protected:
 
     if (!result.Succeeded()) {
       result.AppendError("Missing subcommand");
-      result.AppendErrorWithFormat("Usage: %s\n", m_cmd_syntax.c_str());
+      result.AppendErrorWithFormat("Usage: %s", m_cmd_syntax.c_str());
     }
   }
 };
@@ -466,7 +467,7 @@ protected:
 
     if (!result.Succeeded()) {
       result.AppendError("Missing subcommand");
-      result.AppendErrorWithFormat("Usage: %s\n", m_cmd_syntax.c_str());
+      result.AppendErrorWithFormat("Usage: %s", m_cmd_syntax.c_str());
     }
   }
 };
@@ -487,7 +488,7 @@ protected:
 
     if (!result.Succeeded()) {
       result.AppendError("Missing subcommand");
-      result.AppendErrorWithFormat("Usage: %s\n", m_cmd_syntax.c_str());
+      result.AppendErrorWithFormat("Usage: %s", m_cmd_syntax.c_str());
     }
   }
 };
@@ -509,7 +510,7 @@ protected:
 
     if (!result.Succeeded()) {
       result.AppendError("Missing subcommand");
-      result.AppendErrorWithFormat("Usage: %s\n", m_cmd_syntax.c_str());
+      result.AppendErrorWithFormat("Usage: %s", m_cmd_syntax.c_str());
     }
   }
 };
@@ -546,12 +547,12 @@ protected:
         Timer::SetQuiet(!increment);
         result.SetStatus(eReturnStatusSuccessFinishNoResult);
       } else
-        result.AppendError("Could not convert increment value to boolean.");
+        result.AppendError("could not convert increment value to boolean");
     }
 
     if (!result.Succeeded()) {
       result.AppendError("Missing subcommand");
-      result.AppendErrorWithFormat("Usage: %s\n", m_cmd_syntax.c_str());
+      result.AppendErrorWithFormat("Usage: %s", m_cmd_syntax.c_str());
     }
   }
 };

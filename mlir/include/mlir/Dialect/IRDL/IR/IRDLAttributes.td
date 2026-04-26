@@ -13,7 +13,7 @@
 #ifndef MLIR_DIALECT_IRDL_IR_IRDLATTRIBUTES
 #define MLIR_DIALECT_IRDL_IR_IRDLATTRIBUTES
 
-include "IRDL.td"
+include "mlir/Dialect/IRDL/IR/IRDL.td"
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/EnumAttr.td"
 

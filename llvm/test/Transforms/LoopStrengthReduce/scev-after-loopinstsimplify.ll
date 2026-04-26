@@ -18,13 +18,13 @@ target datalayout = "n16"
 
 @a = external global i16, align 1
 
-define void @f1() {
+define void @f1(i1 %arg) {
 entry:
   br label %for.cond
 
 for.cond:                                         ; preds = %land.end, %entry
   %c.0 = phi i16 [ 0, %entry ], [ %dec, %land.end ]
-  br i1 undef, label %for.body, label %for.cond.cleanup
+  br i1 %arg, label %for.body, label %for.cond.cleanup
 
 for.cond.cleanup:                                 ; preds = %for.cond
   ret void

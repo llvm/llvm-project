@@ -12,7 +12,9 @@
 #include <stdarg.h>
 
 #if defined(__Fuchsia__)
+#ifndef ZXTEST_USE_STREAMABLE_MACROS
 #define ZXTEST_USE_STREAMABLE_MACROS
+#endif
 #include <zxtest/zxtest.h>
 namespace testing = zxtest;
 // zxtest defines a different ASSERT_DEATH, taking a lambda and an error message

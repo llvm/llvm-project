@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANDOM_UNIFORM_INT_DISTRIBUTION_H
-#define _LIBCPP___RANDOM_UNIFORM_INT_DISTRIBUTION_H
+#ifndef _LIBCPP___CXX03___RANDOM_UNIFORM_INT_DISTRIBUTION_H
+#define _LIBCPP___CXX03___RANDOM_UNIFORM_INT_DISTRIBUTION_H
 
 #include <__cxx03/__bit/countl.h>
 #include <__cxx03/__config>
@@ -50,14 +50,10 @@ private:
   _Engine_result_type __mask0_;
   _Engine_result_type __mask1_;
 
-#ifdef _LIBCPP_CXX03_LANG
   static const _Working_result_type _Rp = _Engine::_Max - _Engine::_Min + _Working_result_type(1);
-#else
-  static _LIBCPP_CONSTEXPR const _Working_result_type _Rp = _Engine::max() - _Engine::min() + _Working_result_type(1);
-#endif
-  static _LIBCPP_CONSTEXPR const size_t __m  = __log2<_Working_result_type, _Rp>::value;
-  static _LIBCPP_CONSTEXPR const size_t _WDt = numeric_limits<_Working_result_type>::digits;
-  static _LIBCPP_CONSTEXPR const size_t _EDt = numeric_limits<_Engine_result_type>::digits;
+  static const size_t __m               = __log2<_Working_result_type, _Rp>::value;
+  static const size_t _WDt              = numeric_limits<_Working_result_type>::digits;
+  static const size_t _EDt              = numeric_limits<_Engine_result_type>::digits;
 
 public:
   // constructors and seeding functions
@@ -165,15 +161,8 @@ private:
 
 public:
   // constructors and reset functions
-#ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI uniform_int_distribution() : uniform_int_distribution(0) {}
-  _LIBCPP_HIDE_FROM_ABI explicit uniform_int_distribution(
-      result_type __a, result_type __b = numeric_limits<result_type>::max())
-      : __p_(param_type(__a, __b)) {}
-#else
   explicit uniform_int_distribution(result_type __a = 0, result_type __b = numeric_limits<result_type>::max())
       : __p_(param_type(__a, __b)) {}
-#endif
   _LIBCPP_HIDE_FROM_ABI explicit uniform_int_distribution(const param_type& __p) : __p_(__p) {}
   _LIBCPP_HIDE_FROM_ABI void reset() {}
 
@@ -261,4 +250,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___RANDOM_UNIFORM_INT_DISTRIBUTION_H
+#endif // _LIBCPP___CXX03___RANDOM_UNIFORM_INT_DISTRIBUTION_H

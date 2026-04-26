@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass=register-coalescer -o - %s | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass=register-coalescer -o - %s | FileCheck %s
 
 # Make sure that the coalescer does not create a full definition with
 # an undef flag on the destination. This used to happen when rematerializing

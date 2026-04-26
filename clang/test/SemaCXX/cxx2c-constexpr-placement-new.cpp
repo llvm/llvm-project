@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++2c -verify %s
+// RUN: %clang_cc1 -std=c++2c -verify %s -fexperimental-new-constant-interpreter
 
 
 namespace std {
@@ -25,7 +26,7 @@ consteval int conversion() {
 }
 
 consteval int indeterminate() {
-    int * indeterminate;
+    int * indeterminate; // expected-note {{declared here}}
     new (indeterminate) int(0);
     // expected-note@-1 {{read of uninitialized object is not allowed in a constant expression}}
     return 0;
@@ -104,7 +105,7 @@ static_assert(blah()); // expected-error {{not an integral constant expression}}
                        // expected-note {{in call to 'blah()'}}
 
 constexpr int *get_indeterminate() {
-  int *evil;
+  int *evil; // expected-note {{declared here}}
   return evil; // expected-note {{read of uninitialized object is not allowed in a constant expression}}
 }
 
@@ -114,3 +115,42 @@ constexpr bool bleh() {
 }
 static_assert(bleh()); // expected-error {{not an integral constant expression}} \
                         // expected-note {{in call to 'bleh()'}}
+
+constexpr int modify_const_variable() {
+  const int a = 10;
+  new ((int *)&a) int(12); // expected-note {{modification of object of const-qualified type 'const int' is not allowed in a constant expression}}
+  return a;
+}
+static_assert(modify_const_variable()); // expected-error {{not an integral constant expression}} \
+                                        // expected-note {{in call to}}
+
+typedef const int T0;
+typedef T0 T1;
+constexpr T1 modify_const_variable_td() {
+  T1 a = 10;
+  new ((int *)&a) int(12); // expected-note {{modification of object of const-qualified type 'T1' (aka 'const int') is not allowed in a constant expression}}
+  return a;
+}
+static_assert(modify_const_variable_td()); // expected-error {{not an integral constant expression}} \
+                                           // expected-note {{in call to}}
+
+template<typename T>
+constexpr T modify_const_variable_tmpl() {
+  T a = 10;
+  new ((int *)&a) int(12); // expected-note {{modification of object of const-qualified type 'const int' is not allowed in a constant expression}}
+  return a;
+}
+static_assert(modify_const_variable_tmpl<const int>()); // expected-error {{not an integral constant expression}} \
+                                                        // expected-note {{in call to}}
+
+namespace ModifyMutableMember {
+  struct S {
+    mutable int a {10};
+  };
+  constexpr int modify_mutable_member() {
+    const S s;
+    new ((int *)&s.a) int(12);
+    return s.a;
+  }
+  static_assert(modify_mutable_member() == 12);
+}

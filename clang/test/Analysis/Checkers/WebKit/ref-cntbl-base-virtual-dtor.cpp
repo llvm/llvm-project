@@ -1,5 +1,13 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=webkit.RefCntblBaseVirtualDtor -verify %s
 
+namespace WTF {
+
+class NoVirtualDestructorBase { };
+
+};
+
+using WTF::NoVirtualDestructorBase;
+
 struct RefCntblBase {
   void ref() {}
   void deref() {}
@@ -17,6 +25,15 @@ struct DerivedWithVirtualDtor : RefCntblBase {
 struct [[clang::suppress]] SuppressedDerived : RefCntblBase { };
 struct [[clang::suppress]] SuppressedDerivedWithVirtualDtor : RefCntblBase {
   virtual ~SuppressedDerivedWithVirtualDtor() {}
+};
+
+class ClassWithoutVirtualDestructor : public NoVirtualDestructorBase {
+public:
+  void ref() const;
+  void deref() const;
+};
+
+class DerivedClassWithoutVirtualDestructor : public ClassWithoutVirtualDestructor {
 };
 
 // FIXME: Support attributes on base specifiers? Currently clang

@@ -7,17 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
 #include "llvm/ExecutionEngine/Orc/OrcABISupport.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInstrAnalysis.h"
-#include "llvm/Support/Format.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/Cloning.h"
-#include <sstream>
 
 #define DEBUG_TYPE "orc"
 
@@ -276,8 +273,8 @@ createLocalIndirectStubsManagerBuilder(const Triple &T) {
 Constant* createIRTypedAddress(FunctionType &FT, ExecutorAddr Addr) {
   Constant *AddrIntVal =
     ConstantInt::get(Type::getInt64Ty(FT.getContext()), Addr.getValue());
-  Constant *AddrPtrVal =
-    ConstantExpr::getIntToPtr(AddrIntVal, PointerType::get(&FT, 0));
+  Constant *AddrPtrVal = ConstantExpr::getIntToPtr(
+      AddrIntVal, PointerType::get(FT.getContext(), 0));
   return AddrPtrVal;
 }
 
@@ -342,8 +339,7 @@ std::vector<GlobalValue *> SymbolLinkagePromoter::operator()(Module &M) {
 Function* cloneFunctionDecl(Module &Dst, const Function &F,
                             ValueToValueMapTy *VMap) {
   Function *NewF =
-    Function::Create(cast<FunctionType>(F.getValueType()),
-                     F.getLinkage(), F.getName(), &Dst);
+      Function::Create(F.getFunctionType(), F.getLinkage(), F.getName(), &Dst);
   NewF->copyAttributesFrom(&F);
 
   if (VMap) {

@@ -25,6 +25,7 @@
 #define LLVM_ANALYSIS_ALIASANALYSISEVALUATOR_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class AAResults;
@@ -47,10 +48,10 @@ public:
         ModRefCount(Arg.ModRefCount) {
     Arg.FunctionCount = 0;
   }
-  ~AAEvaluator();
+  LLVM_ABI ~AAEvaluator();
 
   /// Run the pass over the function.
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
 private:
   void runInternal(Function &F, AAResults &AA);

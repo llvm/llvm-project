@@ -54,11 +54,11 @@ constraints in mind and may compromise the security of the resulting executable.
 Supported Platforms
 ===================
 
-* Android aarch64/i386/x86_64
-* Fuchsia aarch64/x86_64
-* Linux arm/aarch64/mips64/ppc64/ppc64le/riscv64/s390x/i386/x86\_64
-* macOS aarch64/i386/x86\_64
-* NetBSD i386/x86_64
+* Android
+* Fuchsia
+* Linux
+* macOS
+* NetBSD
 
 More Information
 ================

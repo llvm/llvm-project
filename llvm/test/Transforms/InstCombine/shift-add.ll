@@ -289,7 +289,7 @@ define i8 @lshr_exact_add_negative_shift_positive_extra_use(i8 %x) {
 
 define <2 x i9> @lshr_exact_add_negative_shift_positive_vec(<2 x i9> %x) {
 ; CHECK-LABEL: @lshr_exact_add_negative_shift_positive_vec(
-; CHECK-NEXT:    [[R:%.*]] = lshr exact <2 x i9> <i9 -256, i9 -256>, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = lshr exact <2 x i9> splat (i9 -256), [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i9> [[R]]
 ;
   %a = add <2 x i9> %x, <i9 -7, i9 -7>
@@ -301,8 +301,8 @@ define <2 x i9> @lshr_exact_add_negative_shift_positive_vec(<2 x i9> %x) {
 
 define <2 x i9> @lshr_exact_add_negative_shift_lzcnt(<2 x i9> %x) {
 ; CHECK-LABEL: @lshr_exact_add_negative_shift_lzcnt(
-; CHECK-NEXT:    [[A:%.*]] = add <2 x i9> [[X:%.*]], <i9 -7, i9 -7>
-; CHECK-NEXT:    [[R:%.*]] = lshr exact <2 x i9> <i9 4, i9 4>, [[A]]
+; CHECK-NEXT:    [[A:%.*]] = add <2 x i9> [[X:%.*]], splat (i9 -7)
+; CHECK-NEXT:    [[R:%.*]] = lshr exact <2 x i9> splat (i9 4), [[A]]
 ; CHECK-NEXT:    ret <2 x i9> [[R]]
 ;
   %a = add <2 x i9> %x, <i9 -7, i9 -7>
@@ -372,7 +372,7 @@ define i8 @ashr_exact_add_negative_shift_negative_extra_use(i8 %x) {
 
 define <2 x i7> @ashr_exact_add_negative_shift_negative_vec(<2 x i7> %x) {
 ; CHECK-LABEL: @ashr_exact_add_negative_shift_negative_vec(
-; CHECK-NEXT:    [[R:%.*]] = ashr exact <2 x i7> <i7 -64, i7 -64>, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = ashr exact <2 x i7> splat (i7 -64), [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i7> [[R]]
 ;
   %a = add <2 x i7> %x, <i7 -5, i7 -5>
@@ -384,8 +384,8 @@ define <2 x i7> @ashr_exact_add_negative_shift_negative_vec(<2 x i7> %x) {
 
 define <2 x i7> @ashr_exact_add_negative_leading_ones_vec(<2 x i7> %x) {
 ; CHECK-LABEL: @ashr_exact_add_negative_leading_ones_vec(
-; CHECK-NEXT:    [[A:%.*]] = add <2 x i7> [[X:%.*]], <i7 -5, i7 -5>
-; CHECK-NEXT:    [[R:%.*]] = ashr exact <2 x i7> <i7 -4, i7 -4>, [[A]]
+; CHECK-NEXT:    [[A:%.*]] = add <2 x i7> [[X:%.*]], splat (i7 -5)
+; CHECK-NEXT:    [[R:%.*]] = ashr exact <2 x i7> splat (i7 -4), [[A]]
 ; CHECK-NEXT:    ret <2 x i7> [[R]]
 ;
   %a = add <2 x i7> %x, <i7 -5, i7 -5>
@@ -410,9 +410,9 @@ define i32 @shl_nsw_add_negative(i32 %x) {
 
 define <2 x i8> @shl_nuw_add_negative_splat_uses(<2 x i8> %x, ptr %p) {
 ; CHECK-LABEL: @shl_nuw_add_negative_splat_uses(
-; CHECK-NEXT:    [[A:%.*]] = add <2 x i8> [[X:%.*]], <i8 -2, i8 -2>
+; CHECK-NEXT:    [[A:%.*]] = add <2 x i8> [[X:%.*]], splat (i8 -2)
 ; CHECK-NEXT:    store <2 x i8> [[A]], ptr [[P:%.*]], align 2
-; CHECK-NEXT:    [[R:%.*]] = shl nuw <2 x i8> <i8 3, i8 3>, [[X]]
+; CHECK-NEXT:    [[R:%.*]] = shl nuw <2 x i8> splat (i8 3), [[X]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %a = add <2 x i8> %x, <i8 -2, i8 -2>

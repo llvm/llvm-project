@@ -6,8 +6,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FWD_COMPLEX_H
-#define _LIBCPP___FWD_COMPLEX_H
+#ifndef _LIBCPP___CXX03___FWD_COMPLEX_H
+#define _LIBCPP___CXX03___FWD_COMPLEX_H
 
 #include <__cxx03/__config>
 #include <__cxx03/cstddef>
@@ -21,22 +21,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Tp>
 class _LIBCPP_TEMPLATE_VIS complex;
 
-#if _LIBCPP_STD_VER >= 26
-
-template <size_t _Ip, class _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr _Tp& get(complex<_Tp>&) noexcept;
-
-template <size_t _Ip, class _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr _Tp&& get(complex<_Tp>&&) noexcept;
-
-template <size_t _Ip, class _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr const _Tp& get(const complex<_Tp>&) noexcept;
-
-template <size_t _Ip, class _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr const _Tp&& get(const complex<_Tp>&&) noexcept;
-
-#endif // _LIBCPP_STD_VER >= 26
-
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FWD_COMPLEX_H
+#endif // _LIBCPP___CXX03___FWD_COMPLEX_H

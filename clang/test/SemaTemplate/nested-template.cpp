@@ -90,7 +90,7 @@ Y Outer<X>::Inner1<Y>::ReallyInner::value3 = Y();
 
 template<typename X>
 template<typename Y>
-Y Outer<X>::Inner1<Y*>::ReallyInner::value4; // expected-error{{Outer<X>::Inner1<Y *>::ReallyInner::}}
+Y Outer<X>::Inner1<Y*>::ReallyInner::value4; // expected-error{{'Outer<X>::Inner1<Y *>::ReallyInner'}}
 
 
 template<typename T>
@@ -112,7 +112,9 @@ template struct X1<int>::B<bool>;
 // Template template parameters
 template<typename T>
 struct X2 {
-  template<template<class U, T Value> class>  // expected-error{{cannot have type 'float'}}
+  template<template<class U, T Value> class>  // expected-error {{cannot have type 'float'}}
+                                              // expected-error@-1 {{cannot be narrowed from type 'long long' to 'int'}}
+                                              // expected-note@-2 {{previous template template parameter is here}}
     struct Inner { };
 };
 
@@ -121,7 +123,7 @@ template<typename T, int Value>
 
 X2<int>::Inner<X2_arg> x2i1;
 X2<float> x2a; // expected-note{{instantiation}}
-X2<long>::Inner<X2_arg> x2i3;
+X2<long long>::Inner<X2_arg> x2i3; // expected-note {{has different template parameters}}
 
 namespace PR10896 {
   template<typename TN>
@@ -150,14 +152,14 @@ namespace PR10924 {
 
   template< class Topology, class ctype >
   template< int codim >
-  class ReferenceElement< Topology, ctype > :: BaryCenterArray // expected-error{{out-of-line definition of 'BaryCenterArray' does not match any declaration in 'ReferenceElement<Topology, ctype>'}}
+  class ReferenceElement< Topology, ctype > :: BaryCenterArray // expected-error{{out-of-line definition of 'BaryCenterArray' does not match any declaration in 'PR10924::ReferenceElement<Topology, ctype>'}}
   {
   };
 }
 
 class Outer1 {
     template <typename T> struct X;
-    template <typename T> int X<T>::func() {} //  expected-error{{out-of-line definition of 'func' from class 'X<T>' without definition}}
+    template <typename T> int X<T>::func() {} //  expected-error{{out-of-line definition of 'func' from class 'Outer1::X<T>' without definition}}
 };
 
 namespace RefPack {

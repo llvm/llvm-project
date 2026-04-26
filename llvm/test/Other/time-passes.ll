@@ -14,6 +14,23 @@
 ; RUN: rm -f %t; opt < %s -disable-output -passes='default<O2>' -time-passes -info-output-file=%t
 ; RUN:   cat %t | FileCheck %s --check-prefix=TIME
 ;
+; TIME: Analysis execution timing report
+; TIME: Total Execution Time:
+; TIME: Name
+; TIME-PER-RUN-DAG:      ScalarEvolutionAnalysis
+; TIME-PER-RUN-DAG:      LoopAnalysis
+; TIME-PER-RUN-DAG:      DominatorTreeAnalysis
+; TIME-PER-RUN-DAG:      TargetLibraryAnalysis
+; TIME-PER-PASS-DAG:   ScalarEvolutionAnalysis
+; TIME-PER-PASS-DAG:   LoopAnalysis
+; TIME-PER-PASS-DAG:   DominatorTreeAnalysis
+; TIME-PER-PASS-DAG:   TargetLibraryAnalysis
+; TIME-PER-PASS-NOT:   ScalarEvolutionAnalysis #
+; TIME-PER-PASS-NOT:   LoopAnalysis #
+; TIME-PER-PASS-NOT:   DominatorTreeAnalysis #
+; TIME-PER-PASS-NOT:   TargetLibraryAnalysis #
+; TIME: Total{{$}}
+
 ; TIME: Pass execution timing report
 ; TIME: Total Execution Time:
 ; TIME: Name
@@ -46,23 +63,6 @@
 ; TIME-PER-PASS-NOT:   VerifierPass #
 ; TIME: Total{{$}}
 
-; TIME: Analysis execution timing report
-; TIME: Total Execution Time:
-; TIME: Name
-; TIME-PER-RUN-DAG:      ScalarEvolutionAnalysis
-; TIME-PER-RUN-DAG:      LoopAnalysis
-; TIME-PER-RUN-DAG:      DominatorTreeAnalysis
-; TIME-PER-RUN-DAG:      TargetLibraryAnalysis
-; TIME-PER-PASS-DAG:   ScalarEvolutionAnalysis
-; TIME-PER-PASS-DAG:   LoopAnalysis
-; TIME-PER-PASS-DAG:   DominatorTreeAnalysis
-; TIME-PER-PASS-DAG:   TargetLibraryAnalysis
-; TIME-PER-PASS-NOT:   ScalarEvolutionAnalysis #
-; TIME-PER-PASS-NOT:   LoopAnalysis #
-; TIME-PER-PASS-NOT:   DominatorTreeAnalysis #
-; TIME-PER-PASS-NOT:   TargetLibraryAnalysis #
-; TIME: Total{{$}}
-
 define i32 @foo() {
   %res = add i32 5, 4
   br label %loop1
@@ -83,8 +83,9 @@ end:
 
 }
 
-define void @baz_coro() {
-  %unused = call ptr @llvm.coro.begin(token none, ptr null)
+define void @baz_coro() presplitcoroutine {
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %unused = call ptr @llvm.coro.begin(token %id, ptr null)
   ret void
 }
 

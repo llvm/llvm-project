@@ -57,7 +57,7 @@ end:
 
 ; In this test case a temporary PhiOfOps node gets moved to BB with more
 ; predecessors, so a new one needs to be created.
-define void @test2() {
+define void @test2(i1 %arg) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
@@ -65,7 +65,7 @@ define void @test2() {
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[STOREMERGE]], 0
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[LR_PH:%.*]], label [[CRITEDGE]]
 ; CHECK:       lr.ph:
-; CHECK-NEXT:    br i1 undef, label [[SPLIT1:%.*]], label [[SPLIT2:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[SPLIT1:%.*]], label [[SPLIT2:%.*]]
 ; CHECK:       split1:
 ; CHECK-NEXT:    br label [[CRITEDGE]]
 ; CHECK:       split2:
@@ -87,7 +87,7 @@ bb1:                                      ; preds = %critedge, %0
   br i1 %cmp1, label %lr.ph, label %critedge
 
 lr.ph:                                           ; preds = %bb1
-  br i1 undef, label %split1, label %split2
+  br i1 %arg, label %split1, label %split2
 
 split1:                                     ; preds = %lr.ph
   br label %critedge

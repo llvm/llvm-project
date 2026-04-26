@@ -3,7 +3,7 @@
 //
 // RUN: mlir-opt %s \
 // RUN:   --sparsifier="enable-runtime-library=false parallelization-strategy=dense-outer-loop gpu-triple=nvptx64-nvidia-cuda gpu-chip=sm_80 gpu-features=+ptx71 gpu-format=%gpu_compilation_format" \
-// RUN: | mlir-cpu-runner \
+// RUN: | mlir-runner \
 // RUN:   --shared-libs=%mlir_cuda_runtime \
 // RUN:   --shared-libs=%mlir_c_runner_utils \
 // RUN:   --e main --entry-point-result=void \

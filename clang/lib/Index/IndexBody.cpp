@@ -13,6 +13,7 @@
 #include "clang/AST/ExprConcepts.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
+#include "clang/Sema/HeuristicResolver.h"
 
 using namespace clang;
 using namespace clang::index;
@@ -68,7 +69,7 @@ public:
     while (isa<CastExpr>(*It) || isa<ParenExpr>(*It)) {
       if (auto ICE = dyn_cast<ImplicitCastExpr>(*It)) {
         if (ICE->getCastKind() == CK_LValueToRValue)
-          Roles |= (unsigned)(unsigned)SymbolRole::Read;
+          Roles |= (unsigned)SymbolRole::Read;
       }
       if (It == StmtStack.begin())
         break;
@@ -130,6 +131,9 @@ public:
 
   void addCallRole(SymbolRoleSet &Roles,
                    SmallVectorImpl<SymbolRelation> &Relations) {
+    if (isa<CXXDeductionGuideDecl>(ParentDC))
+      return;
+
     Roles |= (unsigned)SymbolRole::Call;
     if (auto *FD = dyn_cast<FunctionDecl>(ParentDC))
       Relations.emplace_back((unsigned)SymbolRole::RelationCalledBy, FD);
@@ -149,6 +153,20 @@ public:
                                     ParentDC);
   }
 
+  bool VisitCXXNewExpr(CXXNewExpr *E) {
+    if (E->isGlobalNew() || !E->getOperatorNew())
+      return true;
+    return IndexCtx.handleReference(E->getOperatorNew(), E->getBeginLoc(),
+                                    Parent, ParentDC);
+  }
+
+  bool VisitCXXDeleteExpr(CXXDeleteExpr *E) {
+    if (E->isGlobalDelete() || !E->getOperatorDelete())
+      return true;
+    return IndexCtx.handleReference(E->getOperatorDelete(), E->getBeginLoc(),
+                                    Parent, ParentDC);
+  }
+
   bool VisitLabelStmt(LabelStmt *S) {
     if (IndexCtx.shouldIndexFunctionLocalSymbols())
       return IndexCtx.handleDecl(S->getDecl());
@@ -165,51 +183,31 @@ public:
                                     Parent, ParentDC, Roles, Relations, E);
   }
 
-  bool indexDependentReference(
-      const Expr *E, const Type *T, const DeclarationNameInfo &NameInfo,
-      llvm::function_ref<bool(const NamedDecl *ND)> Filter) {
-    if (!T)
-      return true;
-    const TemplateSpecializationType *TST =
-        T->getAs<TemplateSpecializationType>();
-    if (!TST)
-      return true;
-    TemplateName TN = TST->getTemplateName();
-    const ClassTemplateDecl *TD =
-        dyn_cast_or_null<ClassTemplateDecl>(TN.getAsTemplateDecl());
-    if (!TD)
-      return true;
-    CXXRecordDecl *RD = TD->getTemplatedDecl();
-    if (!RD->hasDefinition())
-      return true;
-    RD = RD->getDefinition();
-    std::vector<const NamedDecl *> Symbols =
-        RD->lookupDependentName(NameInfo.getName(), Filter);
+  bool indexDependentReference(const Expr *E, SourceLocation Loc,
+                               std::vector<const NamedDecl *> TargetSymbols) {
     // FIXME: Improve overload handling.
-    if (Symbols.size() != 1)
+    if (TargetSymbols.size() != 1)
       return true;
-    SourceLocation Loc = NameInfo.getLoc();
     if (Loc.isInvalid())
       Loc = E->getBeginLoc();
     SmallVector<SymbolRelation, 4> Relations;
     SymbolRoleSet Roles = getRolesForRef(E, Relations);
-    return IndexCtx.handleReference(Symbols[0], Loc, Parent, ParentDC, Roles,
-                                    Relations, E);
+    return IndexCtx.handleReference(TargetSymbols[0], Loc, Parent, ParentDC,
+                                    Roles, Relations, E);
   }
 
   bool VisitCXXDependentScopeMemberExpr(CXXDependentScopeMemberExpr *E) {
-    const DeclarationNameInfo &Info = E->getMemberNameInfo();
-    return indexDependentReference(
-        E, E->getBaseType().getTypePtrOrNull(), Info,
-        [](const NamedDecl *D) { return D->isCXXInstanceMember(); });
+    auto *Resolver = IndexCtx.getResolver();
+    assert(Resolver);
+    return indexDependentReference(E, E->getMemberNameInfo().getLoc(),
+                                   Resolver->resolveMemberExpr(E));
   }
 
   bool VisitDependentScopeDeclRefExpr(DependentScopeDeclRefExpr *E) {
-    const DeclarationNameInfo &Info = E->getNameInfo();
-    const NestedNameSpecifier *NNS = E->getQualifier();
-    return indexDependentReference(
-        E, NNS->getAsType(), Info,
-        [](const NamedDecl *D) { return !D->isCXXInstanceMember(); });
+    auto *Resolver = IndexCtx.getResolver();
+    assert(Resolver);
+    return indexDependentReference(E, E->getNameInfo().getLoc(),
+                                   Resolver->resolveDeclRefExpr(E));
   }
 
   bool VisitDesignatedInitExpr(DesignatedInitExpr *E) {
@@ -436,6 +434,13 @@ public:
             return IndexCtx.handleReference(FD, D.getFieldLoc(), Parent,
                                             ParentDC, SymbolRoleSet(),
                                             /*Relations=*/{}, E);
+          }
+        } else {
+          if (D.isArrayDesignator())
+            TraverseStmt(E->getArrayIndex(D));
+          else if (D.isArrayRangeDesignator()) {
+            TraverseStmt(E->getArrayRangeStart(D));
+            TraverseStmt(E->getArrayRangeEnd(D));
           }
         }
       }

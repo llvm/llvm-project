@@ -18,7 +18,8 @@ transform.sequence failures(propagate) {
 
 transform.sequence failures(propagate) {
 ^bb1(%arg0: !transform.any_op):
-  %0:2 = transform.structured.split %arg0 after 42 { dimension = 0 } : !transform.any_op
+  %t = transform.structured.split %arg0 after 42 { dimension = 0 } : !transform.any_op
+  %0:2 = transform.split_handle %t : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
   transform.structured.split %0#0 after %0#1 { dimension = 1 } : !transform.any_op, !transform.any_op
 }
 

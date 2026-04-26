@@ -88,15 +88,15 @@ program p
   ! CHECK:       %[[V_43:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_42]]) <{bit = 516 : i32}> : (f32) -> i1
   ! CHECK:       fir.if %[[V_43]] {
   ! CHECK:         %[[V_44:[0-9]+]] = fir.call @_FortranAMapException(%c40{{.*}}) fastmath<contract> : (i32) -> i32
-  ! CHECK:         %[[V_45:[0-9]+]] = fir.call @feraiseexcept(%[[V_44]]) fastmath<contract> : (i32) -> i32
+  ! CHECK:                            fir.call {{.*}}feraiseexcept(%[[V_44]]) fastmath<contract> : (i32)
   ! CHECK:       } else {
   ! CHECK:         %[[V_44:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_42]]) <{bit = 240 : i32}> : (f32) -> i1
   ! CHECK:         fir.if %[[V_44]] {
   ! CHECK:           %[[V_45:[0-9]+]] = fir.call @_FortranAMapException(%c48{{.*}}) fastmath<contract> : (i32) -> i32
-  ! CHECK:           %[[V_46:[0-9]+]] = fir.call @feraiseexcept(%[[V_45]]) fastmath<contract> : (i32) -> i32
+  ! CHECK:                              fir.call {{.*}}feraiseexcept(%[[V_45]]) fastmath<contract> : (i32)
   ! CHECK:         } else {
   ! CHECK:           %[[V_45:[0-9]+]] = fir.call @_FortranAMapException(%c32{{.*}}) fastmath<contract> : (i32) -> i32
-  ! CHECK:           %[[V_46:[0-9]+]] = fir.call @feraiseexcept(%[[V_45]]) fastmath<contract> : (i32) -> i32
+  ! CHECK:                              fir.call {{.*}}feraiseexcept(%[[V_45]]) fastmath<contract> : (i32)
   ! CHECK:         }
   ! CHECK:       }
   ! CHECK:       fir.result %[[V_42]] : f32
@@ -113,7 +113,7 @@ program p
   ! CHECK:     %[[V_19:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_18]]) <{bit = 1 : i32}> : (f32) -> i1
   ! CHECK:     %[[V_20:[0-9]+]] = fir.if %[[V_19]] -> (f32) {
   ! CHECK:       %[[V_27:[0-9]+]] = fir.call @_FortranAMapException(%c1{{.*}}) fastmath<contract> : (i32) -> i32
-  ! CHECK:       %[[V_28:[0-9]+]] = fir.call @feraiseexcept(%[[V_27]]) fastmath<contract> : (i32) -> i32
+  ! CHECK:                          fir.call {{.*}}feraiseexcept(%[[V_27]]) fastmath<contract> : (i32)
   ! CHECK:       %[[V_29:[0-9]+]] = fir.address_of(@_FortranAIeeeValueTable_4) : !fir.ref<!fir.array<12xi32>>
   ! CHECK:       %[[V_30:[0-9]+]] = fir.coordinate_of %[[V_29]], %c2{{.*}} : (!fir.ref<!fir.array<12xi32>>, i8) -> !fir.ref<i32>
   ! CHECK:       %[[V_31:[0-9]+]] = fir.load %[[V_30]] : !fir.ref<i32>
@@ -138,7 +138,7 @@ program p
   ! CHECK:       %[[V_27:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_23]]) <{bit = 1 : i32}> : (f32) -> i1
   ! CHECK:       %[[V_28:[0-9]+]] = fir.if %[[V_27]] -> (f32) {
   ! CHECK:         %[[V_29:[0-9]+]] = fir.call @_FortranAMapException(%c1{{.*}}) fastmath<contract> : (i32) -> i32
-  ! CHECK:         %[[V_30:[0-9]+]] = fir.call @feraiseexcept(%[[V_29]]) fastmath<contract> : (i32) -> i32
+  ! CHECK:                            fir.call {{.*}}feraiseexcept(%[[V_29]]) fastmath<contract> : (i32)
   ! CHECK:         %[[V_31:[0-9]+]] = fir.address_of(@_FortranAIeeeValueTable_4) : !fir.ref<!fir.array<12xi32>>
   ! CHECK:         %[[V_32:[0-9]+]] = fir.coordinate_of %[[V_31]], %c2{{.*}} : (!fir.ref<!fir.array<12xi32>>, i8) -> !fir.ref<i32>
   ! CHECK:         %[[V_33:[0-9]+]] = fir.load %[[V_32]] : !fir.ref<i32>
@@ -198,15 +198,15 @@ program p
   ! CHECK:       %[[V_43:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_42]]) <{bit = 516 : i32}> : (f32) -> i1
   ! CHECK:       fir.if %[[V_43]] {
   ! CHECK:         %[[V_44:[0-9]+]] = fir.call @_FortranAMapException(%c40{{.*}}) fastmath<contract> : (i32) -> i32
-  ! CHECK:         %[[V_45:[0-9]+]] = fir.call @feraiseexcept(%[[V_44]]) fastmath<contract> : (i32) -> i32
+  ! CHECK:                            fir.call {{.*}}feraiseexcept(%[[V_44]]) fastmath<contract> : (i32)
   ! CHECK:       } else {
   ! CHECK:         %[[V_44:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_42]]) <{bit = 240 : i32}> : (f32) -> i1
   ! CHECK:         fir.if %[[V_44]] {
   ! CHECK:           %[[V_45:[0-9]+]] = fir.call @_FortranAMapException(%c48{{.*}}) fastmath<contract> : (i32) -> i32
-  ! CHECK:           %[[V_46:[0-9]+]] = fir.call @feraiseexcept(%[[V_45]]) fastmath<contract> : (i32) -> i32
+  ! CHECK:                              fir.call {{.*}}feraiseexcept(%[[V_45]]) fastmath<contract> : (i32)
   ! CHECK:         } else {
   ! CHECK:           %[[V_45:[0-9]+]] = fir.call @_FortranAMapException(%c32{{.*}}) fastmath<contract> : (i32) -> i32
-  ! CHECK:           %[[V_46:[0-9]+]] = fir.call @feraiseexcept(%[[V_45]]) fastmath<contract> : (i32) -> i32
+  ! CHECK:                              fir.call {{.*}}feraiseexcept(%[[V_45]]) fastmath<contract> : (i32)
   ! CHECK:         }
   ! CHECK:       }
   ! CHECK:       fir.result %[[V_42]] : f32

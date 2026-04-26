@@ -39,7 +39,7 @@ extern void varargs_simple(int, ...);
 // CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON]], ptr [[A]], i32 0, i32 2
 // CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[TMP10]], align 4
 // CHECK-NEXT:    call void (i32, ...) @varargs_simple(i32 noundef 0, i32 [[TMP7]], i8 [[TMP9]], i32 [[TMP11]]) #[[ATTR3]]
-// CHECK-NEXT:    store <4 x i32> <i32 1, i32 1, i32 1, i32 1>, ptr [[V]], align 16
+// CHECK-NEXT:    store <4 x i32> splat (i32 1), ptr [[V]], align 16
 // CHECK-NEXT:    [[TMP12:%.*]] = load <4 x i32>, ptr [[V]], align 16
 // CHECK-NEXT:    call void (i32, ...) @varargs_simple(i32 noundef 0, <4 x i32> noundef [[TMP12]]) #[[ATTR3]]
 // CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON_0]], ptr [[T]], i32 0, i32 0

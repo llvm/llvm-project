@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "IRForTarget.h"
+#include "InjectPointerSigningFixups.h"
 
 #include "ClangExpressionDeclMap.h"
 #include "ClangUtil.h"
@@ -66,17 +67,18 @@ static llvm::Value *FindEntryInstruction(llvm::Function *function) {
   if (function->empty())
     return nullptr;
 
-  return function->getEntryBlock().getFirstNonPHIOrDbg();
+  return &*function->getEntryBlock().getFirstNonPHIOrDbg();
 }
 
 IRForTarget::IRForTarget(lldb_private::ClangExpressionDeclMap *decl_map,
                          bool resolve_vars,
                          lldb_private::IRExecutionUnit &execution_unit,
                          lldb_private::Stream &error_stream,
+                         lldb_private::ExecutionPolicy execution_policy,
                          const char *func_name)
     : m_resolve_vars(resolve_vars), m_func_name(func_name),
       m_decl_map(decl_map), m_error_stream(error_stream),
-      m_execution_unit(execution_unit),
+      m_execution_unit(execution_unit), m_policy(execution_policy),
       m_entry_instruction_finder(FindEntryInstruction) {}
 
 /* Handy utility functions used at several places in the code */
@@ -298,16 +300,17 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
   }
 
   lldb::TargetSP target_sp(m_execution_unit.GetTarget());
-  std::optional<uint64_t> bit_size = m_result_type.GetBitSize(target_sp.get());
-  if (!bit_size) {
+  auto bit_size_or_err = m_result_type.GetBitSize(target_sp.get());
+  if (!bit_size_or_err) {
     lldb_private::StreamString type_desc_stream;
     m_result_type.DumpTypeDescription(&type_desc_stream);
 
     LLDB_LOG(log, "Result type has unknown size");
 
     m_error_stream.Printf("Error [IRForTarget]: Size of result type '%s' "
-                          "couldn't be determined\n",
-                          type_desc_stream.GetData());
+                          "couldn't be determined\n%s",
+                          type_desc_stream.GetData(),
+                          llvm::toString(bit_size_or_err.takeError()).c_str());
     return false;
   }
 
@@ -322,7 +325,8 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
 
   LLDB_LOG(log, "Creating a new result global: \"{0}\" with size {1}",
            m_result_name,
-           m_result_type.GetByteSize(target_sp.get()).value_or(0));
+           llvm::expectedToOptional(m_result_type.GetByteSize(target_sp.get()))
+               .value_or(0));
 
   // Construct a new result global and set up its metadata
 
@@ -361,7 +365,7 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
     // there's nothing to put into its equivalent persistent variable.
 
     BasicBlock &entry_block(llvm_function.getEntryBlock());
-    Instruction *first_entry_instruction(entry_block.getFirstNonPHIOrDbg());
+    Instruction *first_entry_instruction(&*entry_block.getFirstNonPHIOrDbg());
 
     if (!first_entry_instruction)
       return false;
@@ -460,7 +464,7 @@ bool IRForTarget::RewriteObjCConstString(llvm::GlobalVariable *ns_str,
         FunctionType::get(ns_str_ty, CFSCWB_arg_types, false);
 
     // Build the constant containing the pointer to the function
-    PointerType *CFSCWB_ptr_ty = PointerType::getUnqual(CFSCWB_ty);
+    PointerType *CFSCWB_ptr_ty = PointerType::getUnqual(m_module->getContext());
     Constant *CFSCWB_addr_int =
         ConstantInt::get(m_intptr_ty, CFStringCreateWithBytes_addr, false);
     m_CFStringCreateWithBytes = {
@@ -812,7 +816,7 @@ bool IRForTarget::RewriteObjCSelector(Instruction *selector_load) {
         FunctionType::get(sel_ptr_type, srN_arg_types, false);
 
     // Build the constant containing the pointer to the function
-    PointerType *srN_ptr_ty = PointerType::getUnqual(srN_type);
+    PointerType *srN_ptr_ty = PointerType::getUnqual(m_module->getContext());
     Constant *srN_addr_int =
         ConstantInt::get(m_intptr_ty, sel_registerName_addr, false);
     m_sel_registerName = {srN_type,
@@ -1029,13 +1033,14 @@ bool IRForTarget::MaybeHandleVariable(Value *llvm_value_ptr) {
       //
       // We also do this for any user-declared persistent variables.
       compiler_type = compiler_type.GetPointerType();
-      value_type = PointerType::get(global_variable->getType(), 0);
+      value_type = PointerType::getUnqual(global_variable->getContext());
     } else {
       value_type = global_variable->getType();
     }
 
     auto *target = m_execution_unit.GetTarget().get();
-    std::optional<uint64_t> value_size = compiler_type.GetByteSize(target);
+    std::optional<uint64_t> value_size =
+        llvm::expectedToOptional(compiler_type.GetByteSize(target));
     if (!value_size)
       return false;
     std::optional<size_t> opt_alignment = compiler_type.GetTypeBitAlign(target);
@@ -1505,7 +1510,7 @@ bool IRForTarget::ReplaceVariables(Function &llvm_function) {
   LLDB_LOG(log, "Arg: \"{0}\"", PrintValue(argument));
 
   BasicBlock &entry_block(llvm_function.getEntryBlock());
-  Instruction *FirstEntryInstruction(entry_block.getFirstNonPHIOrDbg());
+  Instruction *FirstEntryInstruction(&*entry_block.getFirstNonPHIOrDbg());
 
   if (!FirstEntryInstruction) {
     m_error_stream.Printf("Internal error [IRForTarget]: Couldn't find the "
@@ -1644,10 +1649,7 @@ bool IRForTarget::runOnModule(Module &llvm_module) {
     }
   }
 
-  ////////////////////////////////////////////////////////////
-  // Replace $__lldb_expr_result with a persistent variable
-  //
-
+  // Replace $__lldb_expr_result with a persistent variable.
   if (main_function) {
     if (!CreateResultVariable(*main_function)) {
       LLDB_LOG(log, "CreateResultVariable() failed");
@@ -1696,10 +1698,7 @@ bool IRForTarget::runOnModule(Module &llvm_module) {
     }
   }
 
-  ///////////////////////////////////////////////////////////////////////////////
   // Fix all Objective-C constant strings to use NSStringWithCString:encoding:
-  //
-
   if (!RewriteObjCConstStrings()) {
     LLDB_LOG(log, "RewriteObjCConstStrings() failed");
 
@@ -1733,10 +1732,7 @@ bool IRForTarget::runOnModule(Module &llvm_module) {
     }
   }
 
-  ////////////////////////////////////////////////////////////////////////
-  // Run function-level passes that only make sense on the main function
-  //
-
+  // Run function-level passes that only make sense on the main function.
   if (main_function) {
     if (!ResolveExternals(*main_function)) {
       LLDB_LOG(log, "ResolveExternals() failed");
@@ -1753,6 +1749,14 @@ bool IRForTarget::runOnModule(Module &llvm_module) {
 
       return false;
     }
+  }
+
+  // Run architecture specific module-level passes.
+  if (llvm::Error error =
+          lldb_private::InjectPointerSigningFixupCode(*m_module, m_policy)) {
+    LLDB_LOG_ERROR(log, std::move(error),
+                   "InsertPointerSigningFixups() failed: {0}");
+    return false;
   }
 
   if (log && log->GetVerbose()) {

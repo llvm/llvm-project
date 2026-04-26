@@ -17,6 +17,7 @@ declare void @_ZNSsC1EPKcRKSaIcE() unnamed_addr #0
 ; CHECK: .LBB0_2
 ; Function Attrs: nounwind
 define hidden void @_ZN4llvm14DOTGraphTraitsIPNS_13ScheduleDAGMIEE17getEdgeAttributesEPKNS_5SUnitENS_13SUnitIteratorEPKNS_11ScheduleDAGE() #0 align 2 {
+  %a = alloca i8
   br i1 undef, label %1, label %2
 
 ; <label>:1:                                      ; preds = %0
@@ -25,7 +26,7 @@ define hidden void @_ZN4llvm14DOTGraphTraitsIPNS_13ScheduleDAGMIEE17getEdgeAttri
   br label %3
 
 ; <label>:2:                                      ; preds = %0
-  call void @llvm.lifetime.start.p0(i64 1, ptr undef) #0
+  call void @llvm.lifetime.start.p0(i64 1, ptr %a) #0
   call void @_ZNSaIcEC2Ev() #0
   br label %3
 

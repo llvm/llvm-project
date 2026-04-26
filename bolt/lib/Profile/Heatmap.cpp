@@ -8,6 +8,7 @@
 
 #include "bolt/Profile/Heatmap.h"
 #include "bolt/Utils/CommandLineOpts.h"
+#include "llvm/ADT/AddressRanges.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Debug.h"
@@ -54,6 +55,8 @@ void Heatmap::print(StringRef FileName) const {
     errs() << "error opening output file: " << EC.message() << '\n';
     exit(1);
   }
+  outs() << "HEATMAP: dumping heatmap with bucket size " << BucketSize << " to "
+         << FileName << '\n';
   print(OS);
 }
 
@@ -297,6 +300,7 @@ void Heatmap::printSectionHotness(StringRef FileName) const {
 void Heatmap::printSectionHotness(raw_ostream &OS) const {
   uint64_t NumTotalCounts = 0;
   StringMap<uint64_t> SectionHotness;
+  StringMap<uint64_t> BucketUtilization;
   unsigned TextSectionIndex = 0;
 
   if (TextSections.empty())
@@ -304,12 +308,16 @@ void Heatmap::printSectionHotness(raw_ostream &OS) const {
 
   uint64_t UnmappedHotness = 0;
   auto RecordUnmappedBucket = [&](uint64_t Address, uint64_t Frequency) {
-    errs() << "Couldn't map the address bucket [0x" << Twine::utohexstr(Address)
-           << ", 0x" << Twine::utohexstr(Address + BucketSize)
-           << "] containing " << Frequency
-           << " samples to a text section in the binary.";
+    if (opts::Verbosity >= 1)
+      errs() << "Couldn't map the address bucket [0x"
+             << Twine::utohexstr(Address) << ", 0x"
+             << Twine::utohexstr(Address + BucketSize) << "] containing "
+             << Frequency << " samples to a text section in the binary.";
     UnmappedHotness += Frequency;
   };
+
+  AddressRange HotTextRange(HotStart, HotEnd);
+  StringRef HotTextName = "[hot text]";
 
   for (const std::pair<const uint64_t, uint64_t> &KV : Map) {
     NumTotalCounts += KV.second;
@@ -325,23 +333,46 @@ void Heatmap::printSectionHotness(raw_ostream &OS) const {
       continue;
     }
     SectionHotness[TextSections[TextSectionIndex].Name] += KV.second;
+    ++BucketUtilization[TextSections[TextSectionIndex].Name];
+    if (HotTextRange.contains(Address)) {
+      SectionHotness[HotTextName] += KV.second;
+      ++BucketUtilization[HotTextName];
+    }
   }
+
+  std::vector<SectionNameAndRange> Sections(TextSections);
+  // Append synthetic hot text section to TextSections
+  if (!HotTextRange.empty())
+    Sections.emplace_back(SectionNameAndRange{HotTextName, HotStart, HotEnd});
 
   assert(NumTotalCounts > 0 &&
          "total number of heatmap buckets should be greater than 0");
 
-  OS << "Section Name, Begin Address, End Address, Percentage Hotness\n";
-  for (auto &TextSection : TextSections) {
-    OS << TextSection.Name << ", 0x"
-       << Twine::utohexstr(TextSection.BeginAddress) << ", 0x"
-       << Twine::utohexstr(TextSection.EndAddress) << ", "
-       << format("%.4f",
-                 100.0 * SectionHotness[TextSection.Name] / NumTotalCounts)
-       << "\n";
+  OS << "Section Name, Begin Address, End Address, Percentage Hotness, "
+     << "Utilization Pct, Partition Score\n";
+  const uint64_t MappedCounts = NumTotalCounts - UnmappedHotness;
+  for (const auto [Name, Begin, End] : Sections) {
+    const float Hotness = 1. * SectionHotness[Name] / NumTotalCounts;
+    const float MappedHotness =
+        MappedCounts ? 1. * SectionHotness[Name] / MappedCounts : 0;
+    const uint64_t NumBuckets =
+        End / BucketSize + !!(End % BucketSize) - Begin / BucketSize;
+    const float Utilization = 1. * BucketUtilization[Name] / NumBuckets;
+    const float PartitionScore = MappedHotness * Utilization;
+    OS << formatv("{0}, {1:x}, {2:x}, {3:f4}, {4:f4}, {5:f4}\n", Name, Begin,
+                  End, 100. * Hotness, 100. * Utilization, PartitionScore);
   }
   if (UnmappedHotness > 0)
-    OS << "[unmapped], 0x0, 0x0, "
-       << format("%.4f", 100.0 * UnmappedHotness / NumTotalCounts) << "\n";
+    OS << formatv("[unmapped], 0x0, 0x0, {0:f4}, 0, 0\n",
+                  100.0 * UnmappedHotness / NumTotalCounts);
+}
+
+void Heatmap::resizeBucket(uint64_t NewSize) {
+  std::map<uint64_t, uint64_t> NewMap;
+  for (const auto [Bucket, Count] : Map)
+    NewMap[Bucket * BucketSize / NewSize] += Count;
+  Map = NewMap;
+  BucketSize = NewSize;
 }
 } // namespace bolt
 } // namespace llvm

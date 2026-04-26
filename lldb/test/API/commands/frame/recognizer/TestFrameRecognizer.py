@@ -20,7 +20,7 @@ class FrameRecognizerTestCase(TestBase):
         target, process, thread, _ = lldbutil.run_to_name_breakpoint(
             self, "foo", exe_name=exe
         )
-        frame = thread.GetSelectedFrame()
+        frame = thread.selected_frame
 
         # Clear internal & plugins recognizers that get initialized at launch
         self.runCmd("frame recognizer clear")
@@ -73,12 +73,12 @@ class FrameRecognizerTestCase(TestBase):
         self.expect(
             "frame recognizer delete 2",
             error=True,
-            substrs=["error: '2' is not a valid recognizer id."],
+            substrs=["error: '2' is not a valid recognizer id"],
         )
         self.expect(
             "frame recognizer delete 0",
             error=True,
-            substrs=["error: '0' is not a valid recognizer id."],
+            substrs=["error: '0' is not a valid recognizer id"],
         )
         # Recognizers should have the same state as above.
         self.expect(
@@ -166,7 +166,7 @@ class FrameRecognizerTestCase(TestBase):
         self.build()
 
         target, process, thread, _ = lldbutil.run_to_name_breakpoint(self, "nested")
-        frame = thread.GetSelectedFrame()
+        frame = thread.selected_frame
 
         # Sanity check.
         self.expect(
@@ -229,7 +229,6 @@ class FrameRecognizerTestCase(TestBase):
         target, process, thread, _ = lldbutil.run_to_name_breakpoint(
             self, "foo", exe_name=exe
         )
-        frame = thread.GetSelectedFrame()
 
         self.expect(
             "frame recognizer info 0",
@@ -239,7 +238,6 @@ class FrameRecognizerTestCase(TestBase):
         target, process, thread, _ = lldbutil.run_to_name_breakpoint(
             self, "bar", exe_name=exe
         )
-        frame = thread.GetSelectedFrame()
 
         self.expect(
             "frame recognizer info 0",
@@ -374,7 +372,7 @@ class FrameRecognizerTestCase(TestBase):
 
         opts = lldb.SBVariablesOptions()
         opts.SetIncludeRecognizedArguments(True)
-        frame = thread.GetSelectedFrame()
+        frame = thread.selected_frame
         variables = frame.GetVariables(opts)
 
         self.assertEqual(variables.GetSize(), 2)
@@ -450,22 +448,22 @@ class FrameRecognizerTestCase(TestBase):
         self.expect(
             "frame recognizer delete a",
             error=True,
-            substrs=["error: 'a' is not a valid recognizer id."],
+            substrs=["error: 'a' is not a valid recognizer id"],
         )
         self.expect(
             'frame recognizer delete ""',
             error=True,
-            substrs=["error: '' is not a valid recognizer id."],
+            substrs=["error: '' is not a valid recognizer id"],
         )
         self.expect(
             "frame recognizer delete -1",
             error=True,
-            substrs=["error: '-1' is not a valid recognizer id."],
+            substrs=["error: '-1' is not a valid recognizer id"],
         )
         self.expect(
             "frame recognizer delete 4294967297",
             error=True,
-            substrs=["error: '4294967297' is not a valid recognizer id."],
+            substrs=["error: '4294967297' is not a valid recognizer id"],
         )
 
     @no_debug_info_test
@@ -473,22 +471,22 @@ class FrameRecognizerTestCase(TestBase):
         self.expect(
             "frame recognizer info a",
             error=True,
-            substrs=["error: 'a' is not a valid frame index."],
+            substrs=["error: 'a' is not a valid frame index"],
         )
         self.expect(
             'frame recognizer info ""',
             error=True,
-            substrs=["error: '' is not a valid frame index."],
+            substrs=["error: '' is not a valid frame index"],
         )
         self.expect(
             "frame recognizer info -1",
             error=True,
-            substrs=["error: '-1' is not a valid frame index."],
+            substrs=["error: '-1' is not a valid frame index"],
         )
         self.expect(
             "frame recognizer info 4294967297",
             error=True,
-            substrs=["error: '4294967297' is not a valid frame index."],
+            substrs=["error: '4294967297' is not a valid frame index"],
         )
 
     @no_debug_info_test

@@ -27,5 +27,9 @@ entry:
   ret half %elt.exp
 }
 
+; CHECK-DAG: declare half @dx.op.unary.f16(i32, half) #[[#ATTR0:]]
+; CHECK-DAG: declare float @dx.op.unary.f32(i32, float) #[[#ATTR0]]
+; CHECK: attributes #[[#ATTR0]] = { nounwind memory(none) }
+
 declare half @llvm.exp.f16(half)
 declare float @llvm.exp.f32(float)

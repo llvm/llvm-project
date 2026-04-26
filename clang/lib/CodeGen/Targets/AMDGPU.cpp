@@ -8,7 +8,8 @@
 
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
-#include "clang/Basic/TargetOptions.h"
+#include "clang/AST/DeclCXX.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 
 using namespace clang;
@@ -24,7 +25,7 @@ class AMDGPUABIInfo final : public DefaultABIInfo {
 private:
   static const unsigned MaxNumRegsForArgsRet = 16;
 
-  unsigned numRegsForType(QualType Ty) const;
+  uint64_t numRegsForType(QualType Ty) const;
 
   bool isHomogeneousAggregateBaseType(QualType Ty) const override;
   bool isHomogeneousAggregateSmallEnough(const Type *Base,
@@ -52,6 +53,17 @@ public:
   void computeInfo(CGFunctionInfo &FI) const override;
   RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
                    AggValueSlot Slot) const override;
+
+  llvm::FixedVectorType *
+  getOptimalVectorMemoryType(llvm::FixedVectorType *T,
+                             const LangOptions &Opt) const override {
+    // We have legal instructions for 96-bit so 3x32 can be supported.
+    // FIXME: This check should be a subtarget feature as technically SI doesn't
+    // support it.
+    if (T->getNumElements() == 3 && getDataLayout().getTypeSizeInBits(T) == 96)
+      return T;
+    return DefaultABIInfo::getOptimalVectorMemoryType(T, Opt);
+  }
 };
 
 bool AMDGPUABIInfo::isHomogeneousAggregateBaseType(QualType Ty) const {
@@ -66,26 +78,81 @@ bool AMDGPUABIInfo::isHomogeneousAggregateSmallEnough(
   return Members * NumRegs <= MaxNumRegsForArgsRet;
 }
 
+/// Check if all fields in an aggregate type contain only sub-32-bit integer
+/// types. Such aggregates should be packed into i32 registers rather than
+/// passed as individual elements. Aggregates containing floats or full-sized
+/// integer types (i32, i64) should preserve their original types.
+static bool containsOnlyPackableIntegerTypes(const RecordDecl *RD,
+                                             const ASTContext &Context) {
+  for (const FieldDecl *Field : RD->fields()) {
+    QualType FieldTy = Field->getType();
+
+    // For bitfields, they are always integer types so they're always packable.
+    // A bitfield like "unsigned a : 4" should be packable even though
+    // 'unsigned' is 32 bits. Similarly, larger bitfields that fill into
+    // wider ints (like i64) should also be packed.
+    if (Field->isBitField()) {
+      continue;
+    }
+
+    // Recursively check nested structs
+    if (const RecordDecl *NestedRD = FieldTy->getAsRecordDecl()) {
+      if (!containsOnlyPackableIntegerTypes(NestedRD, Context))
+        return false;
+      continue;
+    }
+
+    // Arrays - check the element type
+    if (const ConstantArrayType *AT = Context.getAsConstantArrayType(FieldTy)) {
+      QualType EltTy = AT->getElementType();
+      if (const RecordDecl *NestedRD = EltTy->getAsRecordDecl()) {
+        if (!containsOnlyPackableIntegerTypes(NestedRD, Context))
+          return false;
+        continue;
+      }
+      // For non-struct array elements, check if they're packable integers
+      if (!EltTy->isIntegerType())
+        return false;
+      uint64_t EltSize = Context.getTypeSize(EltTy);
+      if (EltSize >= 32)
+        return false;
+      continue;
+    }
+
+    // Floating point types should not be packed into integers
+    if (FieldTy->isFloatingType())
+      return false;
+
+    // Only integer types that are smaller than 32 bits should be packed
+    if (!FieldTy->isIntegerType())
+      return false;
+
+    uint64_t FieldSize = Context.getTypeSize(FieldTy);
+    if (FieldSize >= 32)
+      return false;
+  }
+  return true;
+}
+
 /// Estimate number of registers the type will use when passed in registers.
-unsigned AMDGPUABIInfo::numRegsForType(QualType Ty) const {
-  unsigned NumRegs = 0;
+uint64_t AMDGPUABIInfo::numRegsForType(QualType Ty) const {
+  uint64_t NumRegs = 0;
 
   if (const VectorType *VT = Ty->getAs<VectorType>()) {
     // Compute from the number of elements. The reported size is based on the
     // in-memory size, which includes the padding 4th element for 3-vectors.
     QualType EltTy = VT->getElementType();
-    unsigned EltSize = getContext().getTypeSize(EltTy);
+    uint64_t EltSize = getContext().getTypeSize(EltTy);
 
     // 16-bit element vectors should be passed as packed.
     if (EltSize == 16)
       return (VT->getNumElements() + 1) / 2;
 
-    unsigned EltNumRegs = (EltSize + 31) / 32;
+    uint64_t EltNumRegs = (EltSize + 31) / 32;
     return EltNumRegs * VT->getNumElements();
   }
 
-  if (const RecordType *RT = Ty->getAs<RecordType>()) {
-    const RecordDecl *RD = RT->getDecl();
+  if (const auto *RD = Ty->getAsRecordDecl()) {
     assert(!RD->hasFlexibleArrayMember());
 
     for (const FieldDecl *Field : RD->fields()) {
@@ -141,23 +208,31 @@ ABIArgInfo AMDGPUABIInfo::classifyReturnType(QualType RetTy) const {
       if (const Type *SeltTy = isSingleElementStruct(RetTy, getContext()))
         return ABIArgInfo::getDirect(CGT.ConvertType(QualType(SeltTy, 0)));
 
-      if (const RecordType *RT = RetTy->getAs<RecordType>()) {
-        const RecordDecl *RD = RT->getDecl();
-        if (RD->hasFlexibleArrayMember())
-          return DefaultABIInfo::classifyReturnType(RetTy);
-      }
+      if (const auto *RD = RetTy->getAsRecordDecl();
+          RD && RD->hasFlexibleArrayMember())
+        return DefaultABIInfo::classifyReturnType(RetTy);
 
-      // Pack aggregates <= 4 bytes into single VGPR or pair.
+      // Pack aggregates <= 8 bytes into single VGPR or pair, but only if they
+      // contain sub-32-bit integer types. Aggregates with floats or full-sized
+      // integers should preserve their original types.
       uint64_t Size = getContext().getTypeSize(RetTy);
-      if (Size <= 16)
-        return ABIArgInfo::getDirect(llvm::Type::getInt16Ty(getVMContext()));
-
-      if (Size <= 32)
-        return ABIArgInfo::getDirect(llvm::Type::getInt32Ty(getVMContext()));
-
       if (Size <= 64) {
-        llvm::Type *I32Ty = llvm::Type::getInt32Ty(getVMContext());
-        return ABIArgInfo::getDirect(llvm::ArrayType::get(I32Ty, 2));
+        const RecordDecl *RD = RetTy->getAsRecordDecl();
+        bool ShouldPackToInt =
+            RD && containsOnlyPackableIntegerTypes(RD, getContext());
+
+        if (ShouldPackToInt) {
+          if (Size <= 16)
+            return ABIArgInfo::getDirect(
+                llvm::Type::getInt16Ty(getVMContext()));
+
+          if (Size <= 32)
+            return ABIArgInfo::getDirect(
+                llvm::Type::getInt32Ty(getVMContext()));
+
+          llvm::Type *I32Ty = llvm::Type::getInt32Ty(getVMContext());
+          return ABIArgInfo::getDirect(llvm::ArrayType::get(I32Ty, 2));
+        }
       }
 
       if (numRegsForType(RetTy) <= MaxNumRegsForArgsRet)
@@ -187,14 +262,10 @@ ABIArgInfo AMDGPUABIInfo::classifyKernelArgumentType(QualType Ty) const {
         /*ToAS=*/getContext().getTargetAddressSpace(LangAS::cuda_device));
   }
 
-  // FIXME: Should also use this for OpenCL, but it requires addressing the
-  // problem of kernels being called.
-  //
   // FIXME: This doesn't apply the optimization of coercing pointers in structs
   // to global address space when using byref. This would require implementing a
   // new kind of coercion of the in-memory type when for indirect arguments.
-  if (!getContext().getLangOpts().OpenCL && LTy == OrigLTy &&
-      isAggregateTypeForABI(Ty)) {
+  if (LTy == OrigLTy && isAggregateTypeForABI(Ty)) {
     return ABIArgInfo::getIndirectAliased(
         getContext().getTypeAlignInChars(Ty),
         getContext().getTargetAddressSpace(LangAS::opencl_constant),
@@ -225,7 +296,8 @@ ABIArgInfo AMDGPUABIInfo::classifyArgumentType(QualType Ty, bool Variadic,
     // Records with non-trivial destructors/copy-constructors should not be
     // passed by value.
     if (auto RAA = getRecordArgABI(Ty, getCXXABI()))
-      return getNaturalAlignIndirect(Ty, RAA == CGCXXABI::RAA_DirectInMemory);
+      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                     RAA == CGCXXABI::RAA_DirectInMemory);
 
     // Ignore empty structs/unions.
     if (isEmptyRecord(getContext(), Ty, true))
@@ -237,31 +309,36 @@ ABIArgInfo AMDGPUABIInfo::classifyArgumentType(QualType Ty, bool Variadic,
     if (const Type *SeltTy = isSingleElementStruct(Ty, getContext()))
       return ABIArgInfo::getDirect(CGT.ConvertType(QualType(SeltTy, 0)));
 
-    if (const RecordType *RT = Ty->getAs<RecordType>()) {
-      const RecordDecl *RD = RT->getDecl();
-      if (RD->hasFlexibleArrayMember())
-        return DefaultABIInfo::classifyArgumentType(Ty);
-    }
+    if (const auto *RD = Ty->getAsRecordDecl();
+        RD && RD->hasFlexibleArrayMember())
+      return DefaultABIInfo::classifyArgumentType(Ty);
 
-    // Pack aggregates <= 8 bytes into single VGPR or pair.
+    // Pack aggregates <= 8 bytes into single VGPR or pair, but only if they
+    // contain sub-32-bit integer types. Aggregates with floats or full-sized
+    // integers (i32, i64) should preserve their original types.
     uint64_t Size = getContext().getTypeSize(Ty);
     if (Size <= 64) {
-      unsigned NumRegs = (Size + 31) / 32;
-      NumRegsLeft -= std::min(NumRegsLeft, NumRegs);
+      const RecordDecl *RD = Ty->getAsRecordDecl();
+      bool ShouldPackToInt =
+          RD && containsOnlyPackableIntegerTypes(RD, getContext());
 
-      if (Size <= 16)
-        return ABIArgInfo::getDirect(llvm::Type::getInt16Ty(getVMContext()));
+      if (ShouldPackToInt) {
+        unsigned NumRegs = (Size + 31) / 32;
+        NumRegsLeft -= std::min(NumRegsLeft, NumRegs);
 
-      if (Size <= 32)
-        return ABIArgInfo::getDirect(llvm::Type::getInt32Ty(getVMContext()));
+        if (Size <= 16)
+          return ABIArgInfo::getDirect(llvm::Type::getInt16Ty(getVMContext()));
 
-      // XXX: Should this be i64 instead, and should the limit increase?
-      llvm::Type *I32Ty = llvm::Type::getInt32Ty(getVMContext());
-      return ABIArgInfo::getDirect(llvm::ArrayType::get(I32Ty, 2));
+        if (Size <= 32)
+          return ABIArgInfo::getDirect(llvm::Type::getInt32Ty(getVMContext()));
+
+        llvm::Type *I32Ty = llvm::Type::getInt32Ty(getVMContext());
+        return ABIArgInfo::getDirect(llvm::ArrayType::get(I32Ty, 2));
+      }
     }
 
     if (NumRegsLeft > 0) {
-      unsigned NumRegs = numRegsForType(Ty);
+      uint64_t NumRegs = numRegsForType(Ty);
       if (NumRegsLeft >= NumRegs) {
         NumRegsLeft -= NumRegs;
         return ABIArgInfo::getDirect();
@@ -278,8 +355,8 @@ ABIArgInfo AMDGPUABIInfo::classifyArgumentType(QualType Ty, bool Variadic,
   // Otherwise just do the default thing.
   ABIArgInfo ArgInfo = DefaultABIInfo::classifyArgumentType(Ty);
   if (!ArgInfo.isIndirect()) {
-    unsigned NumRegs = numRegsForType(Ty);
-    NumRegsLeft -= std::min(NumRegs, NumRegsLeft);
+    uint64_t NumRegs = numRegsForType(Ty);
+    NumRegsLeft -= std::min(NumRegs, uint64_t{NumRegsLeft});
   }
 
   return ArgInfo;
@@ -290,14 +367,13 @@ public:
   AMDGPUTargetCodeGenInfo(CodeGenTypes &CGT)
       : TargetCodeGenInfo(std::make_unique<AMDGPUABIInfo>(CGT)) {}
 
+  bool supportsLibCall() const override { return false; }
   void setFunctionDeclAttributes(const FunctionDecl *FD, llvm::Function *F,
                                  CodeGenModule &CGM) const;
 
-  void emitTargetGlobals(CodeGen::CodeGenModule &CGM) const override;
-
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &M) const override;
-  unsigned getOpenCLKernelCallingConv() const override;
+  unsigned getDeviceKernelCallingConv() const override;
 
   llvm::Constant *getNullPointer(const CodeGen::CodeGenModule &CGM,
       llvm::PointerType *T, QualType QT) const override;
@@ -306,12 +382,13 @@ public:
     return getLangASFromTargetAS(
         getABIInfo().getDataLayout().getAllocaAddrSpace());
   }
+
+  LangAS getSRetAddrSpace(const CXXRecordDecl *RD) const override;
+
   LangAS getGlobalVarAddressSpace(CodeGenModule &CGM,
                                   const VarDecl *D) const override;
-  llvm::SyncScope::ID getLLVMSyncScopeID(const LangOptions &LangOpts,
-                                         SyncScope Scope,
-                                         llvm::AtomicOrdering Ordering,
-                                         llvm::LLVMContext &Ctx) const override;
+  StringRef getLLVMSyncScopeStr(const LangOptions &LangOpts, SyncScope Scope,
+                                llvm::AtomicOrdering Ordering) const override;
   void setTargetAtomicMetadata(CodeGenFunction &CGF,
                                llvm::Instruction &AtomicInst,
                                const AtomicExpr *Expr = nullptr) const override;
@@ -330,7 +407,7 @@ static bool requiresAMDGPUProtectedVisibility(const Decl *D,
     return false;
 
   return !D->hasAttr<OMPDeclareTargetDeclAttr>() &&
-         (D->hasAttr<OpenCLKernelAttr>() ||
+         (D->hasAttr<DeviceKernelAttr>() ||
           (isa<FunctionDecl>(D) && D->hasAttr<CUDAGlobalAttr>()) ||
           (isa<VarDecl>(D) &&
            (D->hasAttr<CUDADeviceAttr>() || D->hasAttr<CUDAConstantAttr>() ||
@@ -343,7 +420,7 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
   const auto *ReqdWGS =
       M.getLangOpts().OpenCL ? FD->getAttr<ReqdWorkGroupSizeAttr>() : nullptr;
   const bool IsOpenCLKernel =
-      M.getLangOpts().OpenCL && FD->hasAttr<OpenCLKernelAttr>();
+      M.getLangOpts().OpenCL && FD->hasAttr<DeviceKernelAttr>();
   const bool IsHIPKernel = M.getLangOpts().HIP && FD->hasAttr<CUDAGlobalAttr>();
 
   const auto *FlatWGS = FD->getAttr<AMDGPUFlatWorkGroupSizeAttr>();
@@ -400,40 +477,26 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
 
     F->addFnAttr("amdgpu-max-num-workgroups", AttrVal.str());
   }
-}
 
-/// Emits control constants used to change per-architecture behaviour in the
-/// AMDGPU ROCm device libraries.
-void AMDGPUTargetCodeGenInfo::emitTargetGlobals(
-    CodeGen::CodeGenModule &CGM) const {
-  StringRef Name = "__oclc_ABI_version";
-  llvm::GlobalVariable *OriginalGV = CGM.getModule().getNamedGlobal(Name);
-  if (OriginalGV && !llvm::GlobalVariable::isExternalLinkage(OriginalGV->getLinkage()))
-    return;
-
-  if (CGM.getTarget().getTargetOpts().CodeObjectVersion ==
-      llvm::CodeObjectVersionKind::COV_None)
-    return;
-
-  auto *Type = llvm::IntegerType::getIntNTy(CGM.getModule().getContext(), 32);
-  llvm::Constant *COV = llvm::ConstantInt::get(
-      Type, CGM.getTarget().getTargetOpts().CodeObjectVersion);
-
-  // It needs to be constant weak_odr without externally_initialized so that
-  // the load instuction can be eliminated by the IPSCCP.
-  auto *GV = new llvm::GlobalVariable(
-      CGM.getModule(), Type, true, llvm::GlobalValue::WeakODRLinkage, COV, Name,
-      nullptr, llvm::GlobalValue::ThreadLocalMode::NotThreadLocal,
-      CGM.getContext().getTargetAddressSpace(LangAS::opencl_constant));
-  GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Local);
-  GV->setVisibility(llvm::GlobalValue::VisibilityTypes::HiddenVisibility);
-
-  // Replace any external references to this variable with the new global.
-  if (OriginalGV) {
-    OriginalGV->replaceAllUsesWith(GV);
-    GV->takeName(OriginalGV);
-    OriginalGV->eraseFromParent();
+  if (auto *Attr = FD->getAttr<CUDAClusterDimsAttr>()) {
+    auto GetExprVal = [&](const auto &E) {
+      return E ? E->EvaluateKnownConstInt(M.getContext()).getExtValue() : 1;
+    };
+    unsigned X = GetExprVal(Attr->getX());
+    unsigned Y = GetExprVal(Attr->getY());
+    unsigned Z = GetExprVal(Attr->getZ());
+    llvm::SmallString<32> AttrVal;
+    llvm::raw_svector_ostream OS(AttrVal);
+    OS << X << ',' << Y << ',' << Z;
+    F->addFnAttr("amdgpu-cluster-dims", AttrVal.str());
   }
+
+  // OpenCL doesn't support cluster feature.
+  const TargetInfo &TTI = M.getContext().getTargetInfo();
+  if ((IsOpenCLKernel &&
+       TTI.hasFeatureEnabled(TTI.getTargetOpts().FeatureMap, "clusters")) ||
+      FD->hasAttr<CUDANoClusterAttr>())
+    F->addFnAttr("amdgpu-cluster-dims", "0,0,0");
 }
 
 void AMDGPUTargetCodeGenInfo::setTargetAttributes(
@@ -453,12 +516,13 @@ void AMDGPUTargetCodeGenInfo::setTargetAttributes(
   const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
   if (FD)
     setFunctionDeclAttributes(FD, F, M);
-
   if (!getABIInfo().getCodeGenOpts().EmitIEEENaNCompliantInsts)
     F->addFnAttr("amdgpu-ieee", "false");
+  if (getABIInfo().getCodeGenOpts().AMDGPUExpandWaitcntProfiling)
+    F->addFnAttr("amdgpu-expand-waitcnt-profiling");
 }
 
-unsigned AMDGPUTargetCodeGenInfo::getOpenCLKernelCallingConv() const {
+unsigned AMDGPUTargetCodeGenInfo::getDeviceKernelCallingConv() const {
   return llvm::CallingConv::AMDGPU_KERNEL;
 }
 
@@ -478,6 +542,15 @@ llvm::Constant *AMDGPUTargetCodeGenInfo::getNullPointer(
       PT->getContext(), Ctx.getTargetAddressSpace(LangAS::opencl_generic));
   return llvm::ConstantExpr::getAddrSpaceCast(
       llvm::ConstantPointerNull::get(NPT), PT);
+}
+
+LangAS
+AMDGPUTargetCodeGenInfo::getSRetAddrSpace(const CXXRecordDecl *RD) const {
+  // Types with no viable copy/move must be constructed in-place , use the
+  // default AS so the sret pointer matches the "this" convention.
+  if (RD && !RD->canPassInRegisters())
+    return LangAS::Default;
+  return getASTAllocaAddressSpace();
 }
 
 LangAS
@@ -504,47 +577,42 @@ AMDGPUTargetCodeGenInfo::getGlobalVarAddressSpace(CodeGenModule &CGM,
   return DefaultGlobalAS;
 }
 
-llvm::SyncScope::ID
-AMDGPUTargetCodeGenInfo::getLLVMSyncScopeID(const LangOptions &LangOpts,
-                                            SyncScope Scope,
-                                            llvm::AtomicOrdering Ordering,
-                                            llvm::LLVMContext &Ctx) const {
-  std::string Name;
+StringRef AMDGPUTargetCodeGenInfo::getLLVMSyncScopeStr(
+    const LangOptions &LangOpts, SyncScope Scope,
+    llvm::AtomicOrdering Ordering) const {
+
+  // OpenCL assumes by default that atomic scopes are per-address space for
+  // non-sequentially consistent operations.
+  bool IsOneAs = (Scope >= SyncScope::OpenCLWorkGroup &&
+                  Scope <= SyncScope::OpenCLSubGroup &&
+                  Ordering != llvm::AtomicOrdering::SequentiallyConsistent);
+
   switch (Scope) {
   case SyncScope::HIPSingleThread:
   case SyncScope::SingleScope:
-    Name = "singlethread";
-    break;
+    return IsOneAs ? "singlethread-one-as" : "singlethread";
   case SyncScope::HIPWavefront:
   case SyncScope::OpenCLSubGroup:
   case SyncScope::WavefrontScope:
-    Name = "wavefront";
-    break;
+    return IsOneAs ? "wavefront-one-as" : "wavefront";
+  case SyncScope::HIPCluster:
+  case SyncScope::ClusterScope:
+    assert(!IsOneAs && "OpenCL does not have cluster scope");
+    return "cluster";
   case SyncScope::HIPWorkgroup:
   case SyncScope::OpenCLWorkGroup:
   case SyncScope::WorkgroupScope:
-    Name = "workgroup";
-    break;
+    return IsOneAs ? "workgroup-one-as" : "workgroup";
   case SyncScope::HIPAgent:
   case SyncScope::OpenCLDevice:
   case SyncScope::DeviceScope:
-    Name = "agent";
-    break;
+    return IsOneAs ? "agent-one-as" : "agent";
   case SyncScope::SystemScope:
   case SyncScope::HIPSystem:
   case SyncScope::OpenCLAllSVMDevices:
-    Name = "";
-    break;
+    return IsOneAs ? "one-as" : "";
   }
-
-  if (Ordering != llvm::AtomicOrdering::SequentiallyConsistent) {
-    if (!Name.empty())
-      Name = Twine(Twine(Name) + Twine("-")).str();
-
-    Name = Twine(Twine(Name) + Twine("one-as")).str();
-  }
-
-  return Ctx.getOrInsertSyncScopeID(Name);
+  llvm_unreachable("Unknown SyncScope enum");
 }
 
 void AMDGPUTargetCodeGenInfo::setTargetAtomicMetadata(
@@ -569,19 +637,19 @@ void AMDGPUTargetCodeGenInfo::setTargetAtomicMetadata(
     AtomicInst.setMetadata(llvm::LLVMContext::MD_noalias_addrspace, ASRange);
   }
 
-  if (!RMW || !CGF.getTarget().allowAMDGPUUnsafeFPAtomics())
+  if (!RMW)
     return;
 
-  // TODO: Introduce new, more controlled options that also work for integers,
-  // and deprecate allowAMDGPUUnsafeFPAtomics.
-  llvm::AtomicRMWInst::BinOp RMWOp = RMW->getOperation();
-  if (llvm::AtomicRMWInst::isFPOperation(RMWOp)) {
-    llvm::MDNode *Empty = llvm::MDNode::get(CGF.getLLVMContext(), {});
+  AtomicOptions AO = CGF.CGM.getAtomicOpts();
+  llvm::MDNode *Empty = llvm::MDNode::get(CGF.getLLVMContext(), {});
+  if (!AO.getOption(clang::AtomicOptionKind::FineGrainedMemory))
     RMW->setMetadata("amdgpu.no.fine.grained.memory", Empty);
-
-    if (RMWOp == llvm::AtomicRMWInst::FAdd && RMW->getType()->isFloatTy())
-      RMW->setMetadata("amdgpu.ignore.denormal.mode", Empty);
-  }
+  if (!AO.getOption(clang::AtomicOptionKind::RemoteMemory))
+    RMW->setMetadata("amdgpu.no.remote.memory", Empty);
+  if (AO.getOption(clang::AtomicOptionKind::IgnoreDenormalMode) &&
+      RMW->getOperation() == llvm::AtomicRMWInst::FAdd &&
+      RMW->getType()->isFloatTy())
+    RMW->setMetadata("amdgpu.ignore.denormal.mode", Empty);
 }
 
 bool AMDGPUTargetCodeGenInfo::shouldEmitStaticExternCAliases() const {
@@ -595,7 +663,21 @@ bool AMDGPUTargetCodeGenInfo::shouldEmitDWARFBitFieldSeparators() const {
 void AMDGPUTargetCodeGenInfo::setCUDAKernelCallingConvention(
     const FunctionType *&FT) const {
   FT = getABIInfo().getContext().adjustFunctionType(
-      FT, FT->getExtInfo().withCallingConv(CC_OpenCLKernel));
+      FT, FT->getExtInfo().withCallingConv(CC_DeviceKernel));
+}
+
+/// Return IR struct type for rtinfo struct in rocm-device-libs used for device
+/// enqueue.
+///
+/// ptr addrspace(1) kernel_object, i32 private_segment_size,
+/// i32 group_segment_size
+
+static llvm::StructType *
+getAMDGPURuntimeHandleType(llvm::LLVMContext &C,
+                           llvm::Type *KernelDescriptorPtrTy) {
+  llvm::Type *Int32 = llvm::Type::getInt32Ty(C);
+  return llvm::StructType::create(C, {KernelDescriptorPtrTy, Int32, Int32},
+                                  "block.runtime.handle.t");
 }
 
 /// Create an OpenCL kernel for an enqueued block.
@@ -637,23 +719,29 @@ llvm::Value *AMDGPUTargetCodeGenInfo::createEnqueuedBlockKernel(
     ArgNames.push_back(
         llvm::MDString::get(C, (Twine("local_arg") + Twine(I)).str()));
   }
-  std::string Name = Invoke->getName().str() + "_kernel";
+
+  llvm::Module &Mod = CGF.CGM.getModule();
+  const llvm::DataLayout &DL = Mod.getDataLayout();
+
+  llvm::Twine Name = Invoke->getName() + "_kernel";
   auto *FT = llvm::FunctionType::get(llvm::Type::getVoidTy(C), ArgTys, false);
+
+  // The kernel itself can be internal, the runtime does not directly access the
+  // kernel address (only the kernel descriptor).
   auto *F = llvm::Function::Create(FT, llvm::GlobalValue::InternalLinkage, Name,
-                                   &CGF.CGM.getModule());
-  F->setCallingConv(llvm::CallingConv::AMDGPU_KERNEL);
+                                   &Mod);
+  F->setCallingConv(getDeviceKernelCallingConv());
 
   llvm::AttrBuilder KernelAttrs(C);
   // FIXME: The invoke isn't applying the right attributes either
   // FIXME: This is missing setTargetAttributes
   CGF.CGM.addDefaultFunctionDefinitionAttributes(KernelAttrs);
-  KernelAttrs.addAttribute("enqueued-block");
   F->addFnAttrs(KernelAttrs);
 
   auto IP = CGF.Builder.saveIP();
   auto *BB = llvm::BasicBlock::Create(C, "entry", F);
   Builder.SetInsertPoint(BB);
-  const auto BlockAlign = CGF.CGM.getDataLayout().getPrefTypeAlign(BlockTy);
+  const auto BlockAlign = DL.getPrefTypeAlign(BlockTy);
   auto *BlockPtr = Builder.CreateAlloca(BlockTy, nullptr);
   BlockPtr->setAlignment(BlockAlign);
   Builder.CreateAlignedStore(F->arg_begin(), BlockPtr, BlockAlign);
@@ -676,7 +764,39 @@ llvm::Value *AMDGPUTargetCodeGenInfo::createEnqueuedBlockKernel(
   if (CGF.CGM.getCodeGenOpts().EmitOpenCLArgMetadata)
     F->setMetadata("kernel_arg_name", llvm::MDNode::get(C, ArgNames));
 
-  return F;
+  llvm::StructType *HandleTy = getAMDGPURuntimeHandleType(
+      C, llvm::PointerType::get(C, DL.getDefaultGlobalsAddressSpace()));
+  llvm::Constant *RuntimeHandleInitializer =
+      llvm::ConstantAggregateZero::get(HandleTy);
+
+  llvm::Twine RuntimeHandleName = F->getName() + ".runtime.handle";
+
+  // The runtime needs access to the runtime handle as an external symbol. The
+  // runtime handle will need to be made external later, in
+  // AMDGPUExportOpenCLEnqueuedBlocks. The kernel itself has a hidden reference
+  // inside the runtime handle, and is not directly referenced.
+
+  // TODO: We would initialize the first field by declaring F->getName() + ".kd"
+  // to reference the kernel descriptor. The runtime wouldn't need to bother
+  // setting it. We would need to have a final symbol name though.
+  // TODO: Can we directly use an external symbol with getGlobalIdentifier?
+  auto *RuntimeHandle = new llvm::GlobalVariable(
+      Mod, HandleTy,
+      /*isConstant=*/true, llvm::GlobalValue::InternalLinkage,
+      /*Initializer=*/RuntimeHandleInitializer, RuntimeHandleName,
+      /*InsertBefore=*/nullptr, llvm::GlobalValue::NotThreadLocal,
+      DL.getDefaultGlobalsAddressSpace(),
+      /*isExternallyInitialized=*/true);
+
+  llvm::MDNode *HandleAsMD =
+      llvm::MDNode::get(C, llvm::ValueAsMetadata::get(RuntimeHandle));
+  F->setMetadata(llvm::LLVMContext::MD_associated, HandleAsMD);
+
+  RuntimeHandle->setSection(".amdgpu.kernel.runtime.handle");
+
+  CGF.CGM.addUsedGlobal(F);
+  CGF.CGM.addUsedGlobal(RuntimeHandle);
+  return RuntimeHandle;
 }
 
 void CodeGenModule::handleAMDGPUFlatWorkGroupSizeAttr(
@@ -685,12 +805,16 @@ void CodeGenModule::handleAMDGPUFlatWorkGroupSizeAttr(
     int32_t *MaxThreadsVal) {
   unsigned Min = 0;
   unsigned Max = 0;
+  auto Eval = [&](Expr *E) {
+    return E->EvaluateKnownConstInt(getContext()).getExtValue();
+  };
   if (FlatWGS) {
-    Min = FlatWGS->getMin()->EvaluateKnownConstInt(getContext()).getExtValue();
-    Max = FlatWGS->getMax()->EvaluateKnownConstInt(getContext()).getExtValue();
+    Min = Eval(FlatWGS->getMin());
+    Max = Eval(FlatWGS->getMax());
   }
   if (ReqdWGS && Min == 0 && Max == 0)
-    Min = Max = ReqdWGS->getXDim() * ReqdWGS->getYDim() * ReqdWGS->getZDim();
+    Min = Max = Eval(ReqdWGS->getXDim()) * Eval(ReqdWGS->getYDim()) *
+                Eval(ReqdWGS->getZDim());
 
   if (Min != 0) {
     assert(Min <= Max && "Min must be less than or equal Max");

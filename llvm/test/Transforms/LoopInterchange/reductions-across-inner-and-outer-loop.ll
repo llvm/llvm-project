@@ -5,6 +5,14 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
+; REMARKS: --- !Analysis
+; REMARKS-NEXT: Pass:            loop-interchange
+; REMARKS-NEXT: Name:            Dependence
+; REMARKS-NEXT: Function:        test1
+; REMARKS-NEXT: Args:
+; REMARKS-NEXT:   - String:          Computed dependence info, invoking the transform.
+; REMARKS-NEXT: ...
+
 ; REMARKS: --- !Passed
 ; REMARKS-NEXT: Pass:            loop-interchange
 ; REMARKS-NEXT: Name:            Interchanged
@@ -77,6 +85,14 @@ for1.loopexit:                                 ; preds = %for1.inc
 
 ; In this test case, the inner reduction PHI %inner does not involve the outer
 ; reduction PHI %sum.outer, do not interchange.
+; REMARKS: --- !Analysis
+; REMARKS-NEXT: Pass:            loop-interchange
+; REMARKS-NEXT: Name:            Dependence
+; REMARKS-NEXT: Function:        test2
+; REMARKS-NEXT: Args:
+; REMARKS-NEXT:   - String:          Computed dependence info, invoking the transform.
+; REMARKS-NEXT: ...
+
 ; REMARKS: --- !Missed
 ; REMARKS-NEXT: Pass:            loop-interchange
 ; REMARKS-NEXT: Name:            UnsupportedPHIOuter
@@ -114,6 +130,14 @@ for1.loopexit:                                 ; preds = %for1.inc
 
 ; Check that we do not interchange if there is an additional instruction
 ; between the outer and inner reduction PHIs.
+; REMARKS: --- !Analysis
+; REMARKS-NEXT: Pass:            loop-interchange
+; REMARKS-NEXT: Name:            Dependence
+; REMARKS-NEXT: Function:        test3
+; REMARKS-NEXT: Args:
+; REMARKS-NEXT:   - String:          Computed dependence info, invoking the transform.
+; REMARKS-NEXT: ...
+
 ; REMARKS: --- !Missed
 ; REMARKS-NEXT: Pass:            loop-interchange
 ; REMARKS-NEXT: Name:            UnsupportedPHIOuter
@@ -151,9 +175,17 @@ for1.loopexit:                                 ; preds = %for1.inc
 }
 
 ; Check that we do not interchange if reduction is stored in an invariant address inside inner loop
+; REMARKS: --- !Analysis
+; REMARKS-NEXT: Pass:            loop-interchange
+; REMARKS-NEXT: Name:            Dependence
+; REMARKS-NEXT: Function:        test4
+; REMARKS-NEXT: Args:
+; REMARKS-NEXT:   - String:          Computed dependence info, invoking the transform.
+; REMARKS-NEXT: ...
+
 ; REMARKS: --- !Missed
 ; REMARKS-NEXT: Pass:            loop-interchange
-; REMARKS-NEXT: Name:            UnsupportedPHIOuter
+; REMARKS-NEXT: Name:            Dependence
 ; REMARKS-NEXT: Function:        test4
 
 define i64 @test4(ptr %Arr, ptr %dst) {
@@ -190,6 +222,14 @@ for1.loopexit:                                 ; preds = %for1.inc
 
 ; Check that we do not interchange or crash if the PHI in the outer loop gets a
 ; constant from the inner loop.
+; REMARKS: --- !Analysis
+; REMARKS-NEXT: Pass:            loop-interchange
+; REMARKS-NEXT: Name:            Dependence
+; REMARKS-NEXT: Function:        test_constant_inner_loop_res
+; REMARKS-NEXT: Args:
+; REMARKS-NEXT:   - String:          Computed dependence info, invoking the transform.
+; REMARKS-NEXT: ...
+
 ; REMARKS: --- !Missed
 ; REMARKS-NEXT: Pass:            loop-interchange
 ; REMARKS-NEXT: Name:            UnsupportedPHIOuter
@@ -229,6 +269,14 @@ for1.loopexit:                                 ; preds = %for1.inc
 
 ; Floating point reductions are interchanged if all the fp instructions
 ; involved allow reassociation.
+; REMARKS: --- !Analysis
+; REMARKS-NEXT: Pass:            loop-interchange
+; REMARKS-NEXT: Name:            Dependence
+; REMARKS-NEXT: Function:        test5
+; REMARKS-NEXT: Args:
+; REMARKS-NEXT:   - String:          Computed dependence info, invoking the transform.
+; REMARKS-NEXT: ...
+
 ; REMARKS: --- !Passed
 ; REMARKS-NEXT: Pass:            loop-interchange
 ; REMARKS-NEXT: Name:            Interchanged
@@ -253,13 +301,13 @@ for.body3:                                        ; preds = %for.body3, %outer.h
   %vB = load float, ptr %arrayidx6
   %float.inner.inc.inc = fadd fast float %float.inner.inc, %vB
   %iv.inner.next = add nuw nsw i64 %iv.inner, 1
-  %exitcond = icmp eq i64 %iv.inner.next, 100
-  br i1 %exitcond, label %outer.inc, label %for.body3
+  %exitcond = icmp slt i64 %iv.inner.next, 100
+  br i1 %exitcond, label %for.body3, label %outer.inc
 
 outer.inc:                                        ; preds = %for.body3
   %float.inner.lcssa = phi float [ %float.inner.inc.inc, %for.body3 ]
   %iv.outer.next = add nsw i64 %iv.outer, 1
-  %cmp = icmp eq i64 %iv.outer.next, 100
+  %cmp = icmp slt i64 %iv.outer.next, 100
   br i1 %cmp, label %outer.header, label %for.exit
 
 for.exit:                                         ; preds = %outer.inc
@@ -269,6 +317,14 @@ for.exit:                                         ; preds = %outer.inc
 
 ; Floating point reductions are not interchanged if not all the fp instructions
 ; involved allow reassociation.
+; REMARKS: --- !Analysis
+; REMARKS-NEXT: Pass:            loop-interchange
+; REMARKS-NEXT: Name:            Dependence
+; REMARKS-NEXT: Function:        test6
+; REMARKS-NEXT: Args:
+; REMARKS-NEXT:   - String:          Computed dependence info, invoking the transform.
+; REMARKS-NEXT: ...
+
 ; REMARKS: --- !Missed
 ; REMARKS-NEXT: Pass:            loop-interchange
 ; REMARKS-NEXT: Name:            UnsupportedPHIOuter

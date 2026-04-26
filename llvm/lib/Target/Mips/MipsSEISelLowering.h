@@ -45,6 +45,9 @@ class TargetRegisterClass;
         MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
         unsigned *Fast = nullptr) const override;
 
+    TargetLoweringBase::LegalizeTypeAction
+    getPreferredVectorAction(MVT VT) const override;
+
     SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
 
     SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
@@ -71,6 +74,8 @@ class TargetRegisterClass;
                 bool IsCallReloc, CallLoweringInfo &CLI, SDValue Callee,
                 SDValue Chain) const override;
 
+    SDValue lowerR5900FPOp(SDValue Op, SelectionDAG &DAG,
+                           RTLIB::Libcall LC) const;
     SDValue lowerLOAD(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerSTORE(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerBITCAST(SDValue Op, SelectionDAG &DAG) const;

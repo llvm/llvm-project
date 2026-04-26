@@ -54,8 +54,7 @@ void test_throwing() {
 }
 #endif // TEST_HAS_NO_EXCEPTIONS
 
-TEST_CONSTEXPR_CXX20 bool tests()
-{
+TEST_CONSTEXPR_CXX20 bool tests() {
   {
     std::vector<int> d(10, 1);
     std::vector<int>::iterator i = d.insert(d.cbegin() + 2, {3, 4, 5, 6});
@@ -99,7 +98,7 @@ TEST_CONSTEXPR_CXX20 bool tests()
     assert(d[13] == 1);
   }
 
-    return true;
+  return true;
 }
 
 int main(int, char**) {

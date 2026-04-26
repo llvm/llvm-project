@@ -29,7 +29,7 @@ define i32 @add_red(ptr %A, i32 %n) {
 ; CHECK-NEXT:    [[MUL:%.*]] = shl nsw i64 [[I_033]], 2
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[MUL]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul <4 x float> [[TMP1]], <float 7.000000e+00, float 7.000000e+00, float 7.000000e+00, float 7.000000e+00>
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul <4 x float> [[TMP1]], splat (float 7.000000e+00)
 ; CHECK-NEXT:    [[TMP3:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP2]])
 ; CHECK-NEXT:    [[ADD17]] = fadd fast float [[SUM_032]], [[TMP3]]
 ; CHECK-NEXT:    [[INC]] = add nsw i64 [[I_033]], 1

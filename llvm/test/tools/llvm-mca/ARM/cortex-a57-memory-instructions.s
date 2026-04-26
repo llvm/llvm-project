@@ -306,10 +306,10 @@
 # CHECK-NEXT:  2      2     1.00           *            strb	r6, [r2], -r4
 # CHECK-NEXT:  2      3     1.00           *            strb	r7, [r12, -r3, lsl #5]
 # CHECK-NEXT:  2      2     1.00           *            strb	sp, [r7], r2, asr #12
-# CHECK-NEXT:  2      1     1.00                  U     strbt	r6, [r2], #12
-# CHECK-NEXT:  2      1     1.00                  U     strbt	r5, [r6], #-13
-# CHECK-NEXT:  2      2     1.00                  U     strbt	r4, [r9], r5
-# CHECK-NEXT:  2      2     1.00                  U     strbt	r3, [r8], -r2, lsl #3
+# CHECK-NEXT:  2      1     1.00           *            strbt	r6, [r2], #12
+# CHECK-NEXT:  2      1     1.00           *            strbt	r5, [r6], #-13
+# CHECK-NEXT:  2      2     1.00           *            strbt	r4, [r9], r5
+# CHECK-NEXT:  2      2     1.00           *            strbt	r3, [r8], -r2, lsl #3
 # CHECK-NEXT:  1      1     1.00           *            strd	r0, r1, [r4]
 # CHECK-NEXT:  1      1     1.00           *            strd	r2, r3, [r6, #1]
 # CHECK-NEXT:  1      1     1.00           *            strd	r2, r3, [r6, r2]
@@ -325,17 +325,17 @@
 # CHECK-NEXT:  2      1     1.00           *            strd	r4, r5, [r12], -r10
 # CHECK-NEXT:  1      1     1.00           *            strh	r3, [r4]
 # CHECK-NEXT:  1      1     1.00           *            strh	r2, [r7, #4]
-# CHECK-NEXT:  2      1     1.00                  U     strh	r1, [r8, #64]!
+# CHECK-NEXT:  2      1     1.00           *            strh	r1, [r8, #64]!
 # CHECK-NEXT:  2      1     1.00           *            strh	r12, [sp], #4
 # CHECK-NEXT:  1      1     1.00           *            strh	r6, [r5, r4]
-# CHECK-NEXT:  2      1     1.00                  U     strh	r3, [r8, r11]!
-# CHECK-NEXT:  2      1     1.00                  U     strh	r1, [r2, -r1]!
+# CHECK-NEXT:  2      1     1.00           *            strh	r3, [r8, r11]!
+# CHECK-NEXT:  2      1     1.00           *            strh	r1, [r2, -r1]!
 # CHECK-NEXT:  2      1     1.00           *            strh	r9, [r7], r2
 # CHECK-NEXT:  2      1     1.00           *            strh	r4, [r3], -r2
-# CHECK-NEXT:  2      1     1.00                  U     strht	r2, [r5], #76
-# CHECK-NEXT:  2      1     1.00                  U     strht	r8, [r1], #-25
-# CHECK-NEXT:  2      1     1.00                  U     strht	r5, [r3], r4
-# CHECK-NEXT:  2      1     1.00                  U     strht	r6, [r8], -r0
+# CHECK-NEXT:  2      1     1.00           *            strht	r2, [r5], #76
+# CHECK-NEXT:  2      1     1.00           *            strht	r8, [r1], #-25
+# CHECK-NEXT:  2      1     1.00           *            strht	r5, [r3], r4
+# CHECK-NEXT:  2      1     1.00           *            strht	r6, [r8], -r0
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - A57UnitB

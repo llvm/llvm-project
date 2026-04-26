@@ -1,4 +1,4 @@
-; RUN: llc -march=mips < %s | FileCheck %s
+; RUN: llc -mtriple=mips < %s | FileCheck %s
 
 %struct.sret0 = type { i32, i32, i32 }
 

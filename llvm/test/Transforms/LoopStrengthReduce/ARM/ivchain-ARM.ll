@@ -23,9 +23,9 @@ define i32 @simple(ptr %a, ptr %b, i32 %x) nounwind {
 ; A9-NEXT:    add.w r4, lr, r2
 ; A9-NEXT:    ldr.w r6, [lr, r2]
 ; A9-NEXT:    add r0, r3
-; A9-NEXT:    adds r3, r4, r2
-; A9-NEXT:    add r0, r12
 ; A9-NEXT:    ldr r5, [r4, r2]
+; A9-NEXT:    add r0, r12
+; A9-NEXT:    adds r3, r4, r2
 ; A9-NEXT:    add r0, r6
 ; A9-NEXT:    add r3, r2
 ; A9-NEXT:    add r0, r5

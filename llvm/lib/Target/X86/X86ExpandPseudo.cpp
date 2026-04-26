@@ -14,51 +14,36 @@
 
 #include "X86.h"
 #include "X86FrameLowering.h"
-#include "X86InstrBuilder.h"
 #include "X86InstrInfo.h"
 #include "X86MachineFunctionInfo.h"
 #include "X86Subtarget.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/Passes.h" // For IDs of passes that are preserved.
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/Target/TargetMachine.h"
 using namespace llvm;
 
-#define DEBUG_TYPE "x86-pseudo"
+#define DEBUG_TYPE "x86-expand-pseudo"
 #define X86_EXPAND_PSEUDO_NAME "X86 pseudo instruction expansion pass"
 
 namespace {
-class X86ExpandPseudo : public MachineFunctionPass {
+class X86ExpandPseudoImpl {
 public:
-  static char ID;
-  X86ExpandPseudo() : MachineFunctionPass(ID) {}
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    AU.addPreservedID(MachineLoopInfoID);
-    AU.addPreservedID(MachineDominatorsID);
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
-
   const X86Subtarget *STI = nullptr;
   const X86InstrInfo *TII = nullptr;
   const X86RegisterInfo *TRI = nullptr;
   const X86MachineFunctionInfo *X86FI = nullptr;
   const X86FrameLowering *X86FL = nullptr;
 
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
-  }
-
-  StringRef getPassName() const override {
-    return "X86 pseudo instruction expansion pass";
-  }
+  bool runOnMachineFunction(MachineFunction &MF);
 
 private:
   void expandICallBranchFunnel(MachineBasicBlock *MBB,
@@ -80,14 +65,42 @@ private:
       MachineBasicBlock *EntryBlk,
       MachineBasicBlock::iterator VAStartPseudoInstr) const;
 };
-char X86ExpandPseudo::ID = 0;
 
+class X86ExpandPseudoLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+  X86ExpandPseudoLegacy() : MachineFunctionPass(ID) {}
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    AU.addPreservedID(MachineLoopInfoID);
+    AU.addPreservedID(MachineDominatorsID);
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
+  const X86Subtarget *STI = nullptr;
+  const X86InstrInfo *TII = nullptr;
+  const X86RegisterInfo *TRI = nullptr;
+  const X86MachineFunctionInfo *X86FI = nullptr;
+  const X86FrameLowering *X86FL = nullptr;
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().setNoVRegs();
+  }
+
+  StringRef getPassName() const override {
+    return "X86 pseudo instruction expansion pass";
+  }
+};
+char X86ExpandPseudoLegacy::ID = 0;
 } // End anonymous namespace.
 
-INITIALIZE_PASS(X86ExpandPseudo, DEBUG_TYPE, X86_EXPAND_PSEUDO_NAME, false,
-                false)
+INITIALIZE_PASS(X86ExpandPseudoLegacy, DEBUG_TYPE, X86_EXPAND_PSEUDO_NAME,
+                false, false)
 
-void X86ExpandPseudo::expandICallBranchFunnel(
+void X86ExpandPseudoImpl::expandICallBranchFunnel(
     MachineBasicBlock *MBB, MachineBasicBlock::iterator MBBI) {
   MachineBasicBlock *JTMBB = MBB;
   MachineInstr *JTInst = &*MBBI;
@@ -188,8 +201,8 @@ void X86ExpandPseudo::expandICallBranchFunnel(
   JTMBB->erase(JTInst);
 }
 
-void X86ExpandPseudo::expandCALL_RVMARKER(MachineBasicBlock &MBB,
-                                          MachineBasicBlock::iterator MBBI) {
+void X86ExpandPseudoImpl::expandCALL_RVMARKER(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
   // Expand CALL_RVMARKER pseudo to call instruction, followed by the special
   //"movq %rax, %rdi" marker.
   MachineInstr &MI = *MBBI;
@@ -231,8 +244,8 @@ void X86ExpandPseudo::expandCALL_RVMARKER(MachineBasicBlock &MBB,
                      .addReg(TargetReg, RegState::Define)
                      .addReg(X86::RAX)
                      .getInstr();
-  if (MI.shouldUpdateCallSiteInfo())
-    MBB.getParent()->moveCallSiteInfo(&MI, Marker);
+  if (MI.shouldUpdateAdditionalCallInfo())
+    MBB.getParent()->moveAdditionalCallInfo(&MI, Marker);
 
   // Emit call to ObjC runtime.
   const uint32_t *RegMask =
@@ -259,8 +272,8 @@ void X86ExpandPseudo::expandCALL_RVMARKER(MachineBasicBlock &MBB,
 /// If \p MBBI is a pseudo instruction, this method expands
 /// it to the corresponding (sequence of) actual instruction(s).
 /// \returns true if \p MBBI has been expanded.
-bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
-                               MachineBasicBlock::iterator MBBI) {
+bool X86ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
+                                   MachineBasicBlock::iterator MBBI) {
   MachineInstr &MI = *MBBI;
   unsigned Opcode = MI.getOpcode();
   const DebugLoc &DL = MBBI->getDebugLoc();
@@ -271,12 +284,17 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case X86::TCRETURNdi:
   case X86::TCRETURNdicc:
   case X86::TCRETURNri:
+  case X86::TCRETURN_WIN64ri:
+  case X86::TCRETURN_HIPE32ri:
   case X86::TCRETURNmi:
   case X86::TCRETURNdi64:
   case X86::TCRETURNdi64cc:
   case X86::TCRETURNri64:
-  case X86::TCRETURNmi64: {
-    bool isMem = Opcode == X86::TCRETURNmi || Opcode == X86::TCRETURNmi64;
+  case X86::TCRETURNri64_ImpCall:
+  case X86::TCRETURNmi64:
+  case X86::TCRETURN_WINmi64: {
+    bool isMem = Opcode == X86::TCRETURNmi || Opcode == X86::TCRETURNmi64 ||
+                 Opcode == X86::TCRETURN_WINmi64;
     MachineOperand &JumpTarget = MBBI->getOperand(0);
     MachineOperand &StackAdjust = MBBI->getOperand(isMem ? X86::AddrNumOperands
                                                          : 1);
@@ -285,7 +303,7 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     // Adjust stack pointer.
     int StackAdj = StackAdjust.getImm();
     int MaxTCDelta = X86FI->getTCReturnAddrDelta();
-    int Offset = 0;
+    int64_t Offset = 0;
     assert(MaxTCDelta <= 0 && "MaxTCDelta should never be positive");
 
     // Incoporate the retaddr area.
@@ -298,12 +316,13 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
 
     if (Offset) {
       // Check for possible merge with preceding ADD instruction.
-      Offset += X86FL->mergeSPUpdates(MBB, MBBI, true);
+      Offset = X86FL->mergeSPAdd(MBB, MBBI, Offset, true);
       X86FL->emitSPUpdate(MBB, MBBI, DL, Offset, /*InEpilogue=*/true);
     }
 
+    // Use this predicate to set REX prefix for X86_64 targets.
+    bool IsX64 = STI->isTargetWin64() || STI->isTargetUEFI64();
     // Jump to label or value in register.
-    bool IsWin64 = STI->isTargetWin64();
     if (Opcode == X86::TCRETURNdi || Opcode == X86::TCRETURNdicc ||
         Opcode == X86::TCRETURNdi64 || Opcode == X86::TCRETURNdi64cc) {
       unsigned Op;
@@ -339,19 +358,23 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
         MIB.addImm(MBBI->getOperand(2).getImm());
       }
 
-    } else if (Opcode == X86::TCRETURNmi || Opcode == X86::TCRETURNmi64) {
+    } else if (Opcode == X86::TCRETURNmi || Opcode == X86::TCRETURNmi64 ||
+               Opcode == X86::TCRETURN_WINmi64) {
       unsigned Op = (Opcode == X86::TCRETURNmi)
                         ? X86::TAILJMPm
-                        : (IsWin64 ? X86::TAILJMPm64_REX : X86::TAILJMPm64);
+                        : (IsX64 ? X86::TAILJMPm64_REX : X86::TAILJMPm64);
       MachineInstrBuilder MIB = BuildMI(MBB, MBBI, DL, TII->get(Op));
       for (unsigned i = 0; i != X86::AddrNumOperands; ++i)
         MIB.add(MBBI->getOperand(i));
-    } else if (Opcode == X86::TCRETURNri64) {
+    } else if (Opcode == X86::TCRETURNri64 ||
+               Opcode == X86::TCRETURNri64_ImpCall ||
+               Opcode == X86::TCRETURN_WIN64ri) {
       JumpTarget.setIsKill();
       BuildMI(MBB, MBBI, DL,
-              TII->get(IsWin64 ? X86::TAILJMPr64_REX : X86::TAILJMPr64))
+              TII->get(IsX64 ? X86::TAILJMPr64_REX : X86::TAILJMPr64))
           .add(JumpTarget);
     } else {
+      assert(!IsX64 && "Win64 and UEFI64 require REX for indirect jumps.");
       JumpTarget.setIsKill();
       BuildMI(MBB, MBBI, DL, TII->get(X86::TAILJMPr))
           .add(JumpTarget);
@@ -361,9 +384,9 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     NewMI.copyImplicitOps(*MBBI->getParent()->getParent(), *MBBI);
     NewMI.setCFIType(*MBB.getParent(), MI.getCFIType());
 
-    // Update the call site info.
-    if (MBBI->isCandidateForCallSiteEntry())
-      MBB.getParent()->moveCallSiteInfo(&*MBBI, &NewMI);
+    // Update the call info.
+    if (MBBI->isCandidateForAdditionalCallInfo())
+      MBB.getParent()->moveAdditionalCallInfo(&*MBBI, &NewMI);
 
     // Delete the pseudo instruction TCRETURN.
     MBB.erase(MBBI);
@@ -374,8 +397,7 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case X86::EH_RETURN64: {
     MachineOperand &DestAddr = MBBI->getOperand(0);
     assert(DestAddr.isReg() && "Offset should be in register!");
-    const bool Uses64BitFramePtr =
-        STI->isTarget64BitLP64() || STI->isTargetNaCl64();
+    const bool Uses64BitFramePtr = STI->isTarget64BitLP64();
     Register StackPtr = TRI->getStackRegister();
     BuildMI(MBB, MBBI, DL,
             TII->get(Uses64BitFramePtr ? X86::MOV64rr : X86::MOV32rr), StackPtr)
@@ -440,8 +462,18 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     TII->copyPhysReg(MBB, MBBI, DL, X86::RBX, InArg.getReg(), false);
     // Create the actual instruction.
     MachineInstr *NewInstr = BuildMI(MBB, MBBI, DL, TII->get(X86::LCMPXCHG16B));
-    // Copy the operands related to the address.
-    for (unsigned Idx = 1; Idx < 6; ++Idx)
+    // Copy the operands related to the address. If we access a frame variable,
+    // we need to replace the RBX base with SaveRbx, as RBX has another value.
+    const MachineOperand &Base = MBBI->getOperand(1);
+    if (Base.getReg() == X86::RBX || Base.getReg() == X86::EBX)
+      NewInstr->addOperand(MachineOperand::CreateReg(
+          Base.getReg() == X86::RBX
+              ? SaveRbx
+              : Register(TRI->getSubReg(SaveRbx, X86::sub_32bit)),
+          /*IsDef=*/false));
+    else
+      NewInstr->addOperand(Base);
+    for (unsigned Idx = 1 + 1; Idx < 1 + X86::AddrNumOperands; ++Idx)
       NewInstr->addOperand(MBBI->getOperand(Idx));
     // Finally, restore the value of RBX.
     TII->copyPhysReg(MBB, MBBI, DL, X86::RBX, SaveRbx,
@@ -559,138 +591,77 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     return true;
   }
   case X86::PTILELOADDV:
-  case X86::PTILELOADDT1V: {
+  case X86::PTILELOADDT1V:
+  case X86::PTILELOADDRSV:
+  case X86::PTILELOADDRST1V:
+  case X86::PTCVTROWD2PSrteV:
+  case X86::PTCVTROWD2PSrtiV:
+  case X86::PTCVTROWPS2BF16HrteV:
+  case X86::PTCVTROWPS2BF16HrtiV:
+  case X86::PTCVTROWPS2BF16LrteV:
+  case X86::PTCVTROWPS2BF16LrtiV:
+  case X86::PTCVTROWPS2PHHrteV:
+  case X86::PTCVTROWPS2PHHrtiV:
+  case X86::PTCVTROWPS2PHLrteV:
+  case X86::PTCVTROWPS2PHLrtiV:
+  case X86::PTILEMOVROWrteV:
+  case X86::PTILEMOVROWrtiV: {
     for (unsigned i = 2; i > 0; --i)
-      MI.removeOperand(i);
-    unsigned Opc = Opcode == X86::PTILELOADDV
-                       ? GET_EGPR_IF_ENABLED(X86::TILELOADD)
-                       : GET_EGPR_IF_ENABLED(X86::TILELOADDT1);
-    MI.setDesc(TII->get(Opc));
-    return true;
-  }
-  // TILEPAIRLOAD is just for TILEPair spill, we don't have corresponding
-  // AMX instruction to support it. So, split it to 2 load instructions:
-  // "TILEPAIRLOAD TMM0:TMM1, Base, Scale, Index, Offset, Segment" -->
-  // "TILELOAD TMM0, Base, Scale, Index, Offset, Segment" +
-  // "TILELOAD TMM1, Base, Scale, Index, Offset + TMM_SIZE, Segment"
-  case X86::PTILEPAIRLOAD: {
-    int64_t Disp = MBBI->getOperand(1 + X86::AddrDisp).getImm();
-    Register TReg = MBBI->getOperand(0).getReg();
-    bool DstIsDead = MBBI->getOperand(0).isDead();
-    Register TReg0 = TRI->getSubReg(TReg, X86::sub_t0);
-    Register TReg1 = TRI->getSubReg(TReg, X86::sub_t1);
-    unsigned TmmSize = TRI->getRegSizeInBits(X86::TILERegClass) / 8;
-
-    MachineInstrBuilder MIBLo =
-        BuildMI(MBB, MBBI, DL, TII->get(X86::TILELOADD))
-            .addReg(TReg0, RegState::Define | getDeadRegState(DstIsDead));
-    MachineInstrBuilder MIBHi =
-        BuildMI(MBB, MBBI, DL, TII->get(X86::TILELOADD))
-            .addReg(TReg1, RegState::Define | getDeadRegState(DstIsDead));
-
-    for (int i = 0; i < X86::AddrNumOperands; ++i) {
-      MIBLo.add(MBBI->getOperand(1 + i));
-      if (i == X86::AddrDisp)
-        MIBHi.addImm(Disp + TmmSize);
-      else
-        MIBHi.add(MBBI->getOperand(1 + i));
-    }
-
-    // Make sure the first stride reg used in first tileload is alive.
-    MachineOperand &Stride =
-        MIBLo.getInstr()->getOperand(1 + X86::AddrIndexReg);
-    Stride.setIsKill(false);
-
-    // Split the memory operand, adjusting the offset and size for the halves.
-    MachineMemOperand *OldMMO = MBBI->memoperands().front();
-    MachineFunction *MF = MBB.getParent();
-    MachineMemOperand *MMOLo = MF->getMachineMemOperand(OldMMO, 0, TmmSize);
-    MachineMemOperand *MMOHi =
-        MF->getMachineMemOperand(OldMMO, TmmSize, TmmSize);
-
-    MIBLo.setMemRefs(MMOLo);
-    MIBHi.setMemRefs(MMOHi);
-
-    // Delete the pseudo.
-    MBB.erase(MBBI);
-    return true;
-  }
-  // Similar with TILEPAIRLOAD, TILEPAIRSTORE is just for TILEPair spill, no
-  // corresponding AMX instruction to support it. So, split it too:
-  // "TILEPAIRSTORE Base, Scale, Index, Offset, Segment, TMM0:TMM1" -->
-  // "TILESTORE Base, Scale, Index, Offset, Segment, TMM0" +
-  // "TILESTORE Base, Scale, Index, Offset + TMM_SIZE, Segment, TMM1"
-  case X86::PTILEPAIRSTORE: {
-    int64_t Disp = MBBI->getOperand(X86::AddrDisp).getImm();
-    Register TReg = MBBI->getOperand(X86::AddrNumOperands).getReg();
-    bool SrcIsKill = MBBI->getOperand(X86::AddrNumOperands).isKill();
-    Register TReg0 = TRI->getSubReg(TReg, X86::sub_t0);
-    Register TReg1 = TRI->getSubReg(TReg, X86::sub_t1);
-    unsigned TmmSize = TRI->getRegSizeInBits(X86::TILERegClass) / 8;
-
-    MachineInstrBuilder MIBLo =
-        BuildMI(MBB, MBBI, DL, TII->get(X86::TILESTORED));
-    MachineInstrBuilder MIBHi =
-        BuildMI(MBB, MBBI, DL, TII->get(X86::TILESTORED));
-
-    for (int i = 0; i < X86::AddrNumOperands; ++i) {
-      MIBLo.add(MBBI->getOperand(i));
-      if (i == X86::AddrDisp)
-        MIBHi.addImm(Disp + TmmSize);
-      else
-        MIBHi.add(MBBI->getOperand(i));
-    }
-    MIBLo.addReg(TReg0, getKillRegState(SrcIsKill));
-    MIBHi.addReg(TReg1, getKillRegState(SrcIsKill));
-
-    // Make sure the first stride reg used in first tilestore is alive.
-    MachineOperand &Stride = MIBLo.getInstr()->getOperand(X86::AddrIndexReg);
-    Stride.setIsKill(false);
-
-    // Split the memory operand, adjusting the offset and size for the halves.
-    MachineMemOperand *OldMMO = MBBI->memoperands().front();
-    MachineFunction *MF = MBB.getParent();
-    MachineMemOperand *MMOLo = MF->getMachineMemOperand(OldMMO, 0, TmmSize);
-    MachineMemOperand *MMOHi =
-        MF->getMachineMemOperand(OldMMO, TmmSize, TmmSize);
-
-    MIBLo.setMemRefs(MMOLo);
-    MIBHi.setMemRefs(MMOHi);
-
-    // Delete the pseudo.
-    MBB.erase(MBBI);
-    return true;
-  }
-  case X86::PT2RPNTLVWZ0V:
-  case X86::PT2RPNTLVWZ0T1V:
-  case X86::PT2RPNTLVWZ1V:
-  case X86::PT2RPNTLVWZ1T1V: {
-    for (unsigned i = 3; i > 0; --i)
       MI.removeOperand(i);
     unsigned Opc;
     switch (Opcode) {
-    case X86::PT2RPNTLVWZ0V:
-      Opc = X86::T2RPNTLVWZ0;
+    case X86::PTILELOADDRSV:
+      Opc = GET_EGPR_IF_ENABLED(X86::TILELOADDRS);
       break;
-    case X86::PT2RPNTLVWZ0T1V:
-      Opc = X86::T2RPNTLVWZ0T1;
+    case X86::PTILELOADDRST1V:
+      Opc = GET_EGPR_IF_ENABLED(X86::TILELOADDRST1);
       break;
-    case X86::PT2RPNTLVWZ1V:
-      Opc = X86::T2RPNTLVWZ1;
+    case X86::PTILELOADDV:
+      Opc = GET_EGPR_IF_ENABLED(X86::TILELOADD);
       break;
-    case X86::PT2RPNTLVWZ1T1V:
-      Opc = X86::T2RPNTLVWZ1T1;
+    case X86::PTILELOADDT1V:
+      Opc = GET_EGPR_IF_ENABLED(X86::TILELOADDT1);
+      break;
+    case X86::PTCVTROWD2PSrteV:
+      Opc = X86::TCVTROWD2PSrte;
+      break;
+    case X86::PTCVTROWD2PSrtiV:
+      Opc = X86::TCVTROWD2PSrti;
+      break;
+    case X86::PTCVTROWPS2BF16HrteV:
+      Opc = X86::TCVTROWPS2BF16Hrte;
+      break;
+    case X86::PTCVTROWPS2BF16HrtiV:
+      Opc = X86::TCVTROWPS2BF16Hrti;
+      break;
+    case X86::PTCVTROWPS2BF16LrteV:
+      Opc = X86::TCVTROWPS2BF16Lrte;
+      break;
+    case X86::PTCVTROWPS2BF16LrtiV:
+      Opc = X86::TCVTROWPS2BF16Lrti;
+      break;
+    case X86::PTCVTROWPS2PHHrteV:
+      Opc = X86::TCVTROWPS2PHHrte;
+      break;
+    case X86::PTCVTROWPS2PHHrtiV:
+      Opc = X86::TCVTROWPS2PHHrti;
+      break;
+    case X86::PTCVTROWPS2PHLrteV:
+      Opc = X86::TCVTROWPS2PHLrte;
+      break;
+    case X86::PTCVTROWPS2PHLrtiV:
+      Opc = X86::TCVTROWPS2PHLrti;
+      break;
+    case X86::PTILEMOVROWrteV:
+      Opc = X86::TILEMOVROWrte;
+      break;
+    case X86::PTILEMOVROWrtiV:
+      Opc = X86::TILEMOVROWrti;
       break;
     default:
-      llvm_unreachable("Impossible Opcode!");
+      llvm_unreachable("Unexpected Opcode");
     }
     MI.setDesc(TII->get(Opc));
-    return true;
-  }
-  case X86::PTTRANSPOSEDV: {
-    for (int i = 2; i > 0; --i)
-      MI.removeOperand(i);
-    MI.setDesc(TII->get(X86::TTRANSPOSED));
     return true;
   }
   case X86::PTCMMIMFP16PSV:
@@ -700,12 +671,18 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case X86::PTDPBUSDV:
   case X86::PTDPBUUDV:
   case X86::PTDPBF16PSV:
-  case X86::PTDPFP16PSV: {
+  case X86::PTDPFP16PSV:
+  case X86::PTMMULTF32PSV:
+  case X86::PTDPBF8PSV:
+  case X86::PTDPBHF8PSV:
+  case X86::PTDPHBF8PSV:
+  case X86::PTDPHF8PSV: {
     MI.untieRegOperand(4);
     for (unsigned i = 3; i > 0; --i)
       MI.removeOperand(i);
     unsigned Opc;
     switch (Opcode) {
+      // clang-format off
     case X86::PTCMMIMFP16PSV:  Opc = X86::TCMMIMFP16PS; break;
     case X86::PTCMMRLFP16PSV:  Opc = X86::TCMMRLFP16PS; break;
     case X86::PTDPBSSDV:   Opc = X86::TDPBSSD; break;
@@ -714,7 +691,14 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     case X86::PTDPBUUDV:   Opc = X86::TDPBUUD; break;
     case X86::PTDPBF16PSV: Opc = X86::TDPBF16PS; break;
     case X86::PTDPFP16PSV: Opc = X86::TDPFP16PS; break;
-    default: llvm_unreachable("Impossible Opcode!");
+    case X86::PTMMULTF32PSV: Opc = X86::TMMULTF32PS; break;
+    case X86::PTDPBF8PSV: Opc = X86::TDPBF8PS; break;
+    case X86::PTDPBHF8PSV: Opc = X86::TDPBHF8PS; break;
+    case X86::PTDPHBF8PSV: Opc = X86::TDPHBF8PS; break;
+    case X86::PTDPHF8PSV: Opc = X86::TDPHF8PS; break;
+    // clang-format on
+    default:
+      llvm_unreachable("Unexpected Opcode");
     }
     MI.setDesc(TII->get(Opc));
     MI.tieOperands(0, 1);
@@ -737,6 +721,9 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case X86::CALL64r_RVMARKER:
   case X86::CALL64m_RVMARKER:
     expandCALL_RVMARKER(MBB, MBBI);
+    return true;
+  case X86::CALL64r_ImpCall:
+    MI.setDesc(TII->get(X86::CALL64r));
     return true;
   case X86::ADD32mi_ND:
   case X86::ADD64mi32_ND:
@@ -841,7 +828,7 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
 //        |                              |
 //        |                              |
 //
-void X86ExpandPseudo::expandVastartSaveXmmRegs(
+void X86ExpandPseudoImpl::expandVastartSaveXmmRegs(
     MachineBasicBlock *EntryBlk,
     MachineBasicBlock::iterator VAStartPseudoInstr) const {
   assert(VAStartPseudoInstr->getOpcode() == X86::VASTART_SAVE_XMM_REGS);
@@ -926,7 +913,7 @@ void X86ExpandPseudo::expandVastartSaveXmmRegs(
 
 /// Expand all pseudo instructions contained in \p MBB.
 /// \returns true if any expansion occurred for \p MBB.
-bool X86ExpandPseudo::expandMBB(MachineBasicBlock &MBB) {
+bool X86ExpandPseudoImpl::expandMBB(MachineBasicBlock &MBB) {
   bool Modified = false;
 
   // MBBI may be invalidated by the expansion.
@@ -940,7 +927,8 @@ bool X86ExpandPseudo::expandMBB(MachineBasicBlock &MBB) {
   return Modified;
 }
 
-bool X86ExpandPseudo::expandPseudosWhichAffectControlFlow(MachineFunction &MF) {
+bool X86ExpandPseudoImpl::expandPseudosWhichAffectControlFlow(
+    MachineFunction &MF) {
   // Currently pseudo which affects control flow is only
   // X86::VASTART_SAVE_XMM_REGS which is located in Entry block.
   // So we do not need to evaluate other blocks.
@@ -954,7 +942,7 @@ bool X86ExpandPseudo::expandPseudosWhichAffectControlFlow(MachineFunction &MF) {
   return false;
 }
 
-bool X86ExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
+bool X86ExpandPseudoImpl::runOnMachineFunction(MachineFunction &MF) {
   STI = &MF.getSubtarget<X86Subtarget>();
   TII = STI->getInstrInfo();
   TRI = STI->getRegisterInfo();
@@ -969,6 +957,24 @@ bool X86ExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
 }
 
 /// Returns an instance of the pseudo instruction expansion pass.
-FunctionPass *llvm::createX86ExpandPseudoPass() {
-  return new X86ExpandPseudo();
+FunctionPass *llvm::createX86ExpandPseudoLegacyPass() {
+  return new X86ExpandPseudoLegacy();
+}
+
+bool X86ExpandPseudoLegacy::runOnMachineFunction(MachineFunction &MF) {
+  X86ExpandPseudoImpl Impl;
+  return Impl.runOnMachineFunction(MF);
+}
+
+PreservedAnalyses
+X86ExpandPseudoPass::run(MachineFunction &MF,
+                         MachineFunctionAnalysisManager &MFAM) {
+  X86ExpandPseudoImpl Impl;
+  bool Changed = Impl.runOnMachineFunction(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }
