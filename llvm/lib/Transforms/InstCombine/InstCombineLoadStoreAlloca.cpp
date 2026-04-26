@@ -1462,6 +1462,36 @@ static bool equivalentAddressValues(Value *A, Value *B) {
   return false;
 }
 
+/// Recursively rewrite a ConstantByte into an equivalent ConstantInt.
+static Constant *convertConstantByteToConstantInt(Constant *C) {
+  Type *ITy = Type::getIntFromByteType(C->getType());
+  if (auto *CB = dyn_cast<ConstantByte>(C))
+    return ConstantInt::get(ITy, CB->getValue());
+  if (isa<PoisonValue>(C))
+    return PoisonValue::get(ITy);
+  if (isa<UndefValue>(C))
+    return UndefValue::get(ITy);
+  if (C->isNullValue())
+    return Constant::getNullValue(ITy);
+
+  auto *FVTy = dyn_cast<FixedVectorType>(C->getType());
+  if (!FVTy)
+    return nullptr;
+
+  SmallVector<Constant *> Elts;
+  Elts.reserve(FVTy->getNumElements());
+  for (unsigned I = 0, E = FVTy->getNumElements(); I != E; ++I) {
+    Constant *Elt = C->getAggregateElement(I);
+    if (!Elt)
+      return nullptr;
+    Constant *NewElt = convertConstantByteToConstantInt(Elt);
+    if (!NewElt)
+      return nullptr;
+    Elts.push_back(NewElt);
+  }
+  return ConstantVector::get(Elts);
+}
+
 Instruction *InstCombinerImpl::visitStoreInst(StoreInst &SI) {
   Value *Val = SI.getOperand(0);
   Value *Ptr = SI.getOperand(1);
@@ -1577,6 +1607,12 @@ Instruction *InstCombinerImpl::visitStoreInst(StoreInst &SI) {
   // value. Change to PoisonValue once #52930 is resolved.
   if (isa<UndefValue>(Val))
     return eraseInstFromFunction(SI);
+
+  // Replace byte constants with integer constants in stores.
+  if (Val->getType()->isByteOrByteVectorTy())
+    if (auto *C = dyn_cast<Constant>(Val))
+      if (Constant *NewC = convertConstantByteToConstantInt(C))
+        return replaceOperand(SI, 0, NewC);
 
   if (!NullPointerIsDefined(SI.getFunction(), SI.getPointerAddressSpace()))
     if (Value *V = simplifyNonNullOperand(Ptr, /*HasDereferenceable=*/true))

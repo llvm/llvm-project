@@ -401,7 +401,7 @@ define void @store_select_with_null_gep(i1 %cond, ptr %p, i64 %off) {
 
 define void @store_const_b8(ptr %p) {
 ; CHECK-LABEL: @store_const_b8(
-; CHECK-NEXT:    store b8 1, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    store i8 1, ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    ret void
 ;
   store b8 1, ptr %p
@@ -410,7 +410,7 @@ define void @store_const_b8(ptr %p) {
 
 define void @store_const_v4b8_zero(ptr %p) {
 ; CHECK-LABEL: @store_const_v4b8_zero(
-; CHECK-NEXT:    store <4 x b8> zeroinitializer, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store <4 x i8> zeroinitializer, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   store <4 x b8> zeroinitializer, ptr %p
@@ -419,7 +419,7 @@ define void @store_const_v4b8_zero(ptr %p) {
 
 define void @store_const_v4b8_splat(ptr %p) {
 ; CHECK-LABEL: @store_const_v4b8_splat(
-; CHECK-NEXT:    store <4 x b8> splat (b8 5), ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store <4 x i8> splat (i8 5), ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   store <4 x b8> splat (b8 5), ptr %p
@@ -428,7 +428,7 @@ define void @store_const_v4b8_splat(ptr %p) {
 
 define void @store_const_v4b8_mixed(ptr %p) {
 ; CHECK-LABEL: @store_const_v4b8_mixed(
-; CHECK-NEXT:    store <4 x b8> <b8 1, b8 poison, b8 3, b8 undef>, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store <4 x i8> <i8 1, i8 poison, i8 3, i8 undef>, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   store <4 x b8> <b8 1, b8 poison, b8 3, b8 undef>, ptr %p
@@ -437,7 +437,7 @@ define void @store_const_v4b8_mixed(ptr %p) {
 
 define void @store_const_v4b8_data(ptr %p) {
 ; CHECK-LABEL: @store_const_v4b8_data(
-; CHECK-NEXT:    store <4 x b8> <b8 1, b8 2, b8 3, b8 4>, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store <4 x i8> <i8 1, i8 2, i8 3, i8 4>, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   store <4 x b8> <b8 1, b8 2, b8 3, b8 4>, ptr %p
@@ -446,7 +446,7 @@ define void @store_const_v4b8_data(ptr %p) {
 
 define void @store_const_nxv4b8_splat(ptr %p) {
 ; CHECK-LABEL: @store_const_nxv4b8_splat(
-; CHECK-NEXT:    store <vscale x 4 x b8> splat (b8 5), ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store <vscale x 4 x i8> splat (i8 5), ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   store <vscale x 4 x b8> splat (b8 5), ptr %p
@@ -455,7 +455,7 @@ define void @store_const_nxv4b8_splat(ptr %p) {
 
 define void @store_const_nxv4b8_zero(ptr %p) {
 ; CHECK-LABEL: @store_const_nxv4b8_zero(
-; CHECK-NEXT:    store <vscale x 4 x b8> zeroinitializer, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store <vscale x 4 x i8> zeroinitializer, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   store <vscale x 4 x b8> zeroinitializer, ptr %p
@@ -464,7 +464,7 @@ define void @store_const_nxv4b8_zero(ptr %p) {
 
 define void @store_const_b8_atomic(ptr %p) {
 ; CHECK-LABEL: @store_const_b8_atomic(
-; CHECK-NEXT:    store atomic b8 42, ptr [[P:%.*]] unordered, align 1
+; CHECK-NEXT:    store atomic i8 42, ptr [[P:%.*]] unordered, align 1
 ; CHECK-NEXT:    ret void
 ;
   store atomic b8 42, ptr %p unordered, align 1
@@ -473,7 +473,7 @@ define void @store_const_b8_atomic(ptr %p) {
 
 define void @store_const_v4b8_atomic(ptr %p) {
 ; CHECK-LABEL: @store_const_v4b8_atomic(
-; CHECK-NEXT:    store atomic <4 x b8> splat (b8 5), ptr [[P:%.*]] unordered, align 4
+; CHECK-NEXT:    store atomic <4 x i8> splat (i8 5), ptr [[P:%.*]] unordered, align 4
 ; CHECK-NEXT:    ret void
 ;
   store atomic <4 x b8> splat (b8 5), ptr %p unordered, align 4
@@ -482,7 +482,7 @@ define void @store_const_v4b8_atomic(ptr %p) {
 
 define void @store_const_b5(ptr %p) {
 ; CHECK-LABEL: @store_const_b5(
-; CHECK-NEXT:    store b5 5, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    store i5 5, ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    ret void
 ;
   store b5 5, ptr %p, align 1
