@@ -810,6 +810,9 @@ static bool FunctionBodyHasSideEffects(const FunctionDecl *FD,
   if (FD->hasAttr<ConstAttr>() || FD->hasAttr<PureAttr>())
     return false;
 
+  if (isa<CXXDestructorDecl>(FD))
+    return true;
+
   const Stmt *Body = FD->getBody();
   if (!Body)
     return true;
@@ -883,6 +886,9 @@ static bool HasSideEffectsForAssume(const Expr *E, const ASTContext &Ctx) {
           if (MD->isVirtual())
             return true;
         }
+
+        if (isa<CXXDestructorDecl>(FD))
+          return true;
 
         SmallPtrSet<const FunctionDecl *, 8> Visited;
         if (FunctionBodyHasSideEffects(FD, Ctx, Visited))
