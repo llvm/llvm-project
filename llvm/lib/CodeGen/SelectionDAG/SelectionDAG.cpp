@@ -3853,10 +3853,8 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
       KnownBits ShAmt = KnownBits::makeConstant(APInt(BitWidth, Amt));
       Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
       Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
-      if (Opcode == ISD::FSHL)
-        Known = KnownBits::fshl(Known, Known2, ShAmt);
-      else
-        Known = KnownBits::fshr(Known, Known2, ShAmt);
+      Known = Opcode == ISD::FSHL ? KnownBits::fshl(Known, Known2, ShAmt)
+                                  : KnownBits::fshr(Known, Known2, ShAmt);
     }
     break;
   case ISD::SHL_PARTS:

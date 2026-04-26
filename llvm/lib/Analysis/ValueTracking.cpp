@@ -2086,11 +2086,9 @@ static void computeKnownBitsFromOperator(const Operator *I,
         KnownBits Known3(BitWidth);
         computeKnownBits(I->getOperand(0), DemandedElts, Known2, Q, Depth + 1);
         computeKnownBits(I->getOperand(1), DemandedElts, Known3, Q, Depth + 1);
-
-        if (II->getIntrinsicID() == Intrinsic::fshl)
-          Known = KnownBits::fshl(Known2, Known3, ShAmt);
-        else
-          Known = KnownBits::fshr(Known2, Known3, ShAmt);
+        Known = II->getIntrinsicID() == Intrinsic::fshl
+                    ? KnownBits::fshl(Known2, Known3, ShAmt)
+                    : KnownBits::fshr(Known2, Known3, ShAmt);
         break;
       }
       case Intrinsic::clmul:

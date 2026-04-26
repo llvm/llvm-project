@@ -572,11 +572,9 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
                          Depth + 1);
     computeKnownBitsImpl(MI.getOperand(2).getReg(), Known2, DemandedElts,
                          Depth + 1);
-    if (Opcode == TargetOpcode::G_FSHL) {
-      Known = KnownBits::fshl(Known, Known2, Amt);
-    } else {
-      Known = KnownBits::fshr(Known, Known2, Amt);
-    }
+    Known = Opcode == TargetOpcode::G_FSHL
+                ? KnownBits::fshl(Known, Known2, Amt)
+                : KnownBits::fshr(Known, Known2, Amt);
     break;
   }
   case TargetOpcode::G_INTTOPTR:

@@ -677,9 +677,10 @@ TEST(KnownBitsTest, FunnelShiftExhaustive) {
   unsigned Bits = 4;
   ForeachKnownBits(Bits, [&](const KnownBits &Known1) {
     ForeachKnownBits(Bits, [&](const KnownBits &Known2) {
+      if (Known1.hasConflict() || Known2.hasConflict())
+        return;
+
       for (unsigned ShAmt = 0; ShAmt < Bits; ShAmt++) {
-        if (Known1.hasConflict() || Known2.hasConflict())
-          return;
         KnownBits Known3 = KnownBits::makeConstant(APInt(Bits, ShAmt));
         KnownBits FSHLResult(Bits), FSHRResult(Bits);
         FSHLResult.setAllConflict();
