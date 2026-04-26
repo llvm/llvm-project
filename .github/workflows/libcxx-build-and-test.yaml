@@ -228,7 +228,6 @@ jobs:
         with:
           # https://github.com/actions/runner-images/blob/main/images/macos/macos-15-Readme.md
           xcode-version: '26.0'
-      - uses: seanmiddleditch/gha-setup-ninja@3b1f8f94a2f8254bd26914c4ab9474d4f0015f67 # v6
       - name: Build and test
         run: |
           python3 -m venv .venv
