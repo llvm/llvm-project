@@ -10,7 +10,7 @@ declare void @external_call()
 ; YAML-NEXT: Function:        test_spillcost_backedge
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'Stores SLP vectorized with cost '
-; YAML-NEXT:   - Cost:            '-101'
+; YAML-NEXT:   - Cost:            '-99'
 ; YAML-NEXT:   - String:          ' and with tree size '
 ; YAML-NEXT:   - TreeSize:        '6'
 ; YAML-NEXT: ...
@@ -68,11 +68,6 @@ loop.body:                                    ; preds = %loop.header
   br i1 %cond, label %call.block, label %loop.latch
 
 call.block:                                   ; preds = %loop.body
-  ; This block is strictly dominated by %loop.body. The backward BFS in
-  ; getSpillCost must not traverse here when analyzing the edge from the
-  ; fsub pair in %loop.body to the fdiv pair in %entry: in forward
-  ; execution %call.block runs *after* the use in %loop.body, so
-  ; @external_call is not between Op's def and Entry's first use.
   call void @external_call()
   br label %loop.latch
 

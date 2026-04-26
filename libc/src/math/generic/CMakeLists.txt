@@ -3116,7 +3116,7 @@ add_entrypoint_object(
   HDRS
     ../fdiv.h
   DEPENDS
-    libc.src.__support.FPUtil.generic.div
+    libc.src.__support.math.fdiv
 )
 
 add_entrypoint_object(
@@ -3126,7 +3126,7 @@ add_entrypoint_object(
   HDRS
     ../fdivl.h
   DEPENDS
-    libc.src.__support.FPUtil.generic.div
+    libc.src.__support.math.fdivl
 )
 
 add_entrypoint_object(
@@ -3136,8 +3136,7 @@ add_entrypoint_object(
   HDRS
     ../fdivf128.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.generic.div
+    libc.src.__support.math.fdivf128
 )
 
 add_entrypoint_object(

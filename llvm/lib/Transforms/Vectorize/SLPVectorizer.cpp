@@ -2041,6 +2041,9 @@ getNumberOfParts(const TargetTransformInfo &TTI, VectorType *VecTy,
       (PWSz / NumParts) % ScalarSz != 0 ||
       !hasFullVectorsOrPowerOf2(TTI, VecTy->getElementType(), PWSz / NumParts))
     return 1;
+  const unsigned NumElts = PWSz / NumParts;
+  if (divideCeil(Sz, NumElts) != NumParts)
+    return 1;
   return NumParts;
 }
 
@@ -17922,12 +17925,47 @@ InstructionCost BoUpSLP::getSpillCost() {
   // the same block paths multiple times.
   SmallDenseMap<std::pair<const BasicBlock *, const BasicBlock *>, bool>
       ParentOpParentToPreds;
+  // Memoize whether a loop's body (all blocks of the loop, including
+  // sub-loops) contains any non-vec call.
+  SmallDenseMap<const Loop *, bool> LoopBodyHasNonVecCall;
+  auto LoopBodyHasCall = [&](const Loop *L) {
+    if (auto It = LoopBodyHasNonVecCall.find(L);
+        It != LoopBodyHasNonVecCall.end())
+      return It->second;
+    for (BasicBlock *BB : L->blocks()) {
+      if (isa<CatchSwitchInst>(BB->getTerminator()))
+        continue;
+      for (const Instruction &I : *BB) {
+        const auto *CB = dyn_cast<CallBase>(&I);
+        if (!CB || NoCallIntrinsic(CB) || isVectorized(CB))
+          continue;
+        LoopBodyHasNonVecCall.try_emplace(L, true);
+        return true;
+      }
+    }
+    LoopBodyHasNonVecCall.try_emplace(L, false);
+    return false;
+  };
   auto CheckPredecessors = [&](BasicBlock *Root, BasicBlock *Pred,
                                BasicBlock *OpParent) {
     auto Key = std::make_pair(Root, OpParent);
     if (auto It = ParentOpParentToPreds.find(Key);
         It != ParentOpParentToPreds.end())
       return It->second;
+    bool Res = false;
+    scope_exit Cleanup([&]() { ParentOpParentToPreds.try_emplace(Key, Res); });
+    // If Op is loop-invariant, a call anywhere in the loop body forces a spill,
+    // even when a call-free forward path from Root back to OpParent exists on
+    // the first iteration. Find the outermost such enclosing loop and reject if
+    // its body contains a non-vec call.
+    const Loop *L = LI->getLoopFor(Root);
+    const Loop *Outermost = nullptr;
+    while (L && !L->contains(OpParent)) {
+      Outermost = L;
+      L = L->getParentLoop();
+    }
+    if (Outermost && LoopBodyHasCall(Outermost))
+      return Res;
     SmallVector<BasicBlock *> Worklist;
     if (Pred)
       Worklist.push_back(Pred);
@@ -17939,9 +17977,6 @@ InstructionCost BoUpSLP::getSpillCost() {
     // blocks that were visited during the BFS are not necessarily
     // call-free-reachable to OpParent themselves - we may have reached
     // OpParent through a *sibling* path that bypassed them.
-    bool Res = false;
-    llvm::scope_exit Cleanup(
-        [&]() { ParentOpParentToPreds.try_emplace(Key, Res); });
     // We return `true` (no spill cost) if at least one backward path from
     // some predecessor of Root back to OpParent is call-free. Only when
     // *every* such path goes through a non-vec call do we charge the spill
@@ -17997,7 +18032,6 @@ InstructionCost BoUpSLP::getSpillCost() {
     }
     // Worklist drained without ever reaching OpParent: every path between
     // Root and OpParent is blocked by a non-vec call.
-    Res = false;
     return Res;
   };
   SmallVector<const TreeEntry *> LiveEntries(1, Root);
