@@ -82,7 +82,6 @@ public:
         "modernize-deprecated-headers");
     CheckFactories.registerCheck<DeprecatedIosBaseAliasesCheck>(
         "modernize-deprecated-ios-base-aliases");
-    CheckFactories.registerCheck<UseStdEraseCheck>("modernize-use-std-erase");
     CheckFactories.registerCheck<LoopConvertCheck>("modernize-loop-convert");
     CheckFactories.registerCheck<MacroToEnumCheck>("modernize-macro-to-enum");
     CheckFactories.registerCheck<MakeSharedCheck>("modernize-make-shared");
@@ -100,6 +99,7 @@ public:
     CheckFactories.registerCheck<UseStartsEndsWithCheck>(
         "modernize-use-starts-ends-with");
     CheckFactories.registerCheck<UseStdBitCheck>("modernize-use-std-bit");
+    CheckFactories.registerCheck<UseStdEraseCheck>("modernize-use-std-erase");
     CheckFactories.registerCheck<UseStdFormatCheck>("modernize-use-std-format");
     CheckFactories.registerCheck<UseStdNumbersCheck>(
         "modernize-use-std-numbers");

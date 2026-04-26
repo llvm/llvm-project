@@ -1,43 +1,10 @@
 // RUN: %check_clang_tidy -std=c++20 %s modernize-use-std-erase %t
+#include <deque>
+#include <list>
+#include <string>
+#include <vector>
 
 namespace std {
-
-template <typename T>
-struct vector {
-  using iterator = T*;
-  using reverse_iterator = T*;
-  iterator begin();
-  iterator end();
-  reverse_iterator rbegin();
-  reverse_iterator rend();
-  iterator erase(iterator, iterator);
-};
-
-template <typename T>
-struct deque {
-  using iterator = T*;
-  iterator begin();
-  iterator end();
-  iterator erase(iterator, iterator);
-};
-
-template <typename T>
-struct list {
-  using iterator = T*;
-  iterator begin();
-  iterator end();
-  iterator erase(iterator, iterator);
-};
-
-template <typename T>
-struct basic_string {
-  using iterator = T*;
-  iterator begin();
-  iterator end();
-  iterator erase(iterator, iterator);
-};
-using string = basic_string<char>;
-
 template <class ForwardIt, class T>
 ForwardIt remove(ForwardIt first, ForwardIt last, const T& value);
 
@@ -109,7 +76,7 @@ void test_remove_negative_cases() {
 
   v.erase(std::remove_if(v.begin() + 1, v.end(), IsEven), v.end());
   // CHECK-FIXES: v.erase(std::remove_if(v.begin() + 1, v.end(), IsEven), v.end());
-  //
+ 
   v.erase(std::remove(v2.begin(), v2.end(), 1), v.end());
   // CHECK-FIXES: v.erase(std::remove(v2.begin(), v2.end(), 1), v.end());
 

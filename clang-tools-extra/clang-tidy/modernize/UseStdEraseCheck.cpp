@@ -96,27 +96,25 @@ void UseStdEraseCheck::check(const MatchFinder::MatchResult &Result) {
   if (!EraseMethod)
     return;
 
-  const std::string RemoveFuncName =
-      RemoveCall->getDirectCallee()->getName().str();
+  const StringRef RemoveFuncName = RemoveCall->getDirectCallee()->getName();
 
-  const std::string ReplacementFreeFunc =
+  const StringRef ReplacementFreeFunc =
       RemoveFuncName == "remove" ? "std::erase" : "std::erase_if";
 
   std::string Replacement =
-      ReplacementFreeFunc + "(" +
-      Lexer::getSourceText(
-          CharSourceRange::getTokenRange(ContainerThis->getSourceRange()),
-          Result.Context->getSourceManager(), Result.Context->getLangOpts())
-          .str() +
-      ", " +
-      Lexer::getSourceText(
-          CharSourceRange::getTokenRange(ValueOrCond->getSourceRange()),
-          Result.Context->getSourceManager(), Result.Context->getLangOpts())
-          .str() +
-      ")";
+      (ReplacementFreeFunc + "(" +
+       Lexer::getSourceText(
+           CharSourceRange::getTokenRange(ContainerThis->getSourceRange()),
+           Result.Context->getSourceManager(), Result.Context->getLangOpts()) +
+       ", " +
+       Lexer::getSourceText(
+           CharSourceRange::getTokenRange(ValueOrCond->getSourceRange()),
+           Result.Context->getSourceManager(), Result.Context->getLangOpts()) +
+       ")")
+          .str();
 
   diag(EraseCall->getExprLoc(),
-       "prefer %0 over the erase-" + RemoveFuncName + " idiom")
+       ("prefer %0 over the erase-" + RemoveFuncName + " idiom").str())
       << ReplacementFreeFunc
       << FixItHint::CreateReplacement(EraseCall->getSourceRange(), Replacement);
 }
