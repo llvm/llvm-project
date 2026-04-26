@@ -449,3 +449,9 @@ void strcpyDouble(void) {
 
 int *iptr;
 void ignoredConditional(void) { *iptr = (((_Complex double)1.0 ? 2 : 3), a); } // all-warning {{left operand of comma operator has no effect}}
+
+float r  = (float) (intptr_t) &r; // all-error {{initializer element is not a compile-time constant}}
+
+void labelAndNull(void) { int bar = &*(void *)0 - &&baz; } // all-error {{use of undeclared label 'baz'}} \\
+                                                           // pedantic-warning {{use of GNU address-of-label extension}} \
+                                                           // pedantic-warning {{arithmetic on pointers to void is a GNU extension}}

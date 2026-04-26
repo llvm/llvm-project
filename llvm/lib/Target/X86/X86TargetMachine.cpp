@@ -84,7 +84,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86TileConfigLegacyPass(PR);
   initializeX86FastPreTileConfigLegacyPass(PR);
   initializeX86FastTileConfigLegacyPass(PR);
-  initializeKCFIPass(PR);
+  initializeMachineKCFILegacyPass(PR);
   initializeX86LowerTileCopyLegacyPass(PR);
   initializeX86ExpandPseudoLegacyPass(PR);
   initializeX86ExecutionDomainFixPass(PR);
@@ -443,11 +443,7 @@ void X86PassConfig::addIRPasses() {
   // Add Control Flow Guard checks.
   const Triple &TT = TM->getTargetTriple();
   if (TT.isOSWindows()) {
-    if (TT.isX86_64()) {
-      addPass(createCFGuardDispatchPass());
-    } else {
-      addPass(createCFGuardCheckPass());
-    }
+    addPass(createCFGuardPass());
   }
 
   if (TM->Options.JMCInstrument)
@@ -569,7 +565,7 @@ void X86PassConfig::addPreEmitPass() {
 
   addPass(createX86IndirectBranchTrackingLegacyPass());
 
-  addPass(createX86IssueVZeroUpperPass());
+  addPass(createX86InsertVZeroUpperLegacyPass());
 
   if (getOptLevel() != CodeGenOptLevel::None) {
     addPass(createX86FixupBWInstsLegacyPass());

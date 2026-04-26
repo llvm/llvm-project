@@ -13,23 +13,23 @@
 ; CHECK-NEXT:        0: b8 05 00 00 00                movl    $5, %eax
 ; CHECK-NEXT:        5: c3                            retq
 
-; CHECK-NO-DEMANGLE:      0000000000000010 <_ZN3xyz3barEv>:
+; CHECK-NO-DEMANGLE:      0000000000000008 <_ZN3xyz3barEv>:
 ; CHECK-NO-DEMANGLE-NEXT: ; _ZN3xyz3barEv():
-; CHECK-DEMANGLE:         0000000000000010 <xyz::bar()>:
+; CHECK-DEMANGLE:         0000000000000008 <xyz::bar()>:
 ; CHECK-DEMANGLE-NEXT:    ; xyz::bar():
 
 ; CHECK-NEXT: ; /tmp{{/|\\}}src.cc:3
-; CHECK-NEXT:       10: b8 0a 00 00 00                movl    $10, %eax
-; CHECK-NEXT:       15: c3                            retq
+; CHECK-NEXT:        8: b8 0a 00 00 00                movl    $10, %eax
+; CHECK-NEXT:        d: c3                            retq
 
-; CHECK-NO-DEMANGLE:      0000000000000020 <_ZN3xyz3bazEv>:
+; CHECK-NO-DEMANGLE:      0000000000000010 <_ZN3xyz3bazEv>:
 ; CHECK-NO-DEMANGLE-NEXT: ; _ZN3xyz3bazEv():
-; CHECK-DEMANGLE:         0000000000000020 <xyz::baz()>:
+; CHECK-DEMANGLE:         0000000000000010 <xyz::baz()>:
 ; CHECK-DEMANGLE-NEXT:    ; xyz::baz():
 
 ; CHECK-NEXT: ; /tmp{{/|\\}}src.cc:3
-; CHECK-NEXT:       20: b8 14 00 00 00                movl    $20, %eax
-; CHECK-NEXT:       25: c3                            retq
+; CHECK-NEXT:       10: b8 14 00 00 00                movl    $20, %eax
+; CHECK-NEXT:       15: c3                            retq
 
 ;; When symbol information is missing, we can get function names from debug
 ;; info. The IR is intentionally doctored to have different names in debug info
@@ -45,13 +45,13 @@
 
 ; STRIPPED:      ; xyz::bar():
 ; STRIPPED-NEXT: ; /tmp{{/|\\}}src.cc:3
-; STRIPPED-NEXT:       10: b8 0a 00 00 00                movl    $10, %eax
-; STRIPPED-NEXT:       15: c3                            retq
+; STRIPPED-NEXT:        8: b8 0a 00 00 00                movl    $10, %eax
+; STRIPPED-NEXT:        d: c3                            retq
 
 ; STRIPPED:      ; xyz::baz():
 ; STRIPPED-NEXT: ; /tmp{{/|\\}}src.cc:3
-; STRIPPED-NEXT:       20: b8 14 00 00 00                movl    $20, %eax
-; STRIPPED-NEXT:       25: c3                            retq
+; STRIPPED-NEXT:       10: b8 14 00 00 00                movl    $20, %eax
+; STRIPPED-NEXT:       15: c3                            retq
 
 ;; IR adapted from:
 ;; $ cat /tmp/src.cc

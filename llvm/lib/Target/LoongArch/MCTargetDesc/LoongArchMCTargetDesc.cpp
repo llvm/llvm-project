@@ -62,7 +62,7 @@ createLoongArchMCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
 static MCAsmInfo *createLoongArchMCAsmInfo(const MCRegisterInfo &MRI,
                                            const Triple &TT,
                                            const MCTargetOptions &Options) {
-  MCAsmInfo *MAI = new LoongArchMCAsmInfo(TT);
+  MCAsmInfo *MAI = new LoongArchMCAsmInfo(TT, Options);
 
   // Initial state of the frame pointer is sp(r3).
   unsigned SP = MRI.getDwarfRegNum(LoongArch::R3, true);

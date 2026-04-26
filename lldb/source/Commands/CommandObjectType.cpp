@@ -666,7 +666,7 @@ protected:
     const size_t argc = command.GetArgumentCount();
 
     if (argc < 1) {
-      result.AppendErrorWithFormat("%s takes one or more args.\n",
+      result.AppendErrorWithFormat("%s takes one or more args.",
                                    m_cmd_name.c_str());
       return;
     }
@@ -674,7 +674,7 @@ protected:
     const Format format = m_format_options.GetFormat();
     if (format == eFormatInvalid &&
         m_command_options.m_custom_type_name.empty()) {
-      result.AppendErrorWithFormat("%s needs a valid format.\n",
+      result.AppendErrorWithFormat("%s needs a valid format.",
                                    m_cmd_name.c_str());
       return;
     }
@@ -836,7 +836,7 @@ protected:
     const size_t argc = command.GetArgumentCount();
 
     if (argc != 1) {
-      result.AppendErrorWithFormat("%s takes 1 arg.\n", m_cmd_name.c_str());
+      result.AppendErrorWithFormat("%s takes 1 arg.", m_cmd_name.c_str());
       return;
     }
 
@@ -880,7 +880,7 @@ protected:
     if (delete_category || extra_deletion) {
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
     } else {
-      result.AppendErrorWithFormat("no custom formatter for %s.\n", typeA);
+      result.AppendErrorWithFormat("no custom formatter for %s.", typeA);
     }
   }
 };
@@ -1266,7 +1266,7 @@ bool CommandObjectTypeSummaryAdd::Execute_ScriptSummary(
   const size_t argc = command.GetArgumentCount();
 
   if (argc < 1 && !m_options.m_name) {
-    result.AppendErrorWithFormat("%s takes one or more args.\n",
+    result.AppendErrorWithFormat("%s takes one or more args.",
                                  m_cmd_name.c_str());
     return false;
   }
@@ -1293,8 +1293,8 @@ bool CommandObjectTypeSummaryAdd::Execute_ScriptSummary(
 
     if (interpreter && !interpreter->CheckObjectExists(funct_name))
       result.AppendWarningWithFormatv(
-          "The provided function \"{0}\" does not exist - "
-          "please define it before attempting to use this summary.",
+          "the provided function \"{0}\" does not exist - "
+          "please define it before attempting to use this summary",
           funct_name);
   } else if (!m_options.m_python_script
                   .empty()) // we have a quick 1-line script, just use it
@@ -1381,7 +1381,7 @@ bool CommandObjectTypeSummaryAdd::Execute_StringSummary(
   const size_t argc = command.GetArgumentCount();
 
   if (argc < 1 && !m_options.m_name) {
-    result.AppendErrorWithFormat("%s takes one or more args.\n",
+    result.AppendErrorWithFormat("%s takes one or more args.",
                                  m_cmd_name.c_str());
     return false;
   }
@@ -1753,7 +1753,7 @@ protected:
     const size_t argc = command.GetArgumentCount();
 
     if (argc < 1) {
-      result.AppendErrorWithFormat("%s takes 1 or more args.\n",
+      result.AppendErrorWithFormat("%s takes 1 or more args.",
                                    m_cmd_name.c_str());
       return;
     }
@@ -1889,7 +1889,7 @@ protected:
     const size_t argc = command.GetArgumentCount();
 
     if (argc < 1) {
-      result.AppendErrorWithFormat("%s takes 1 or more arg.\n",
+      result.AppendErrorWithFormat("%s takes 1 or more arg.",
                                    m_cmd_name.c_str());
       return;
     }
@@ -2046,7 +2046,7 @@ protected:
         return;
       }
     } else if (argc != 0) {
-      result.AppendErrorWithFormat("%s takes 0 or one arg.\n",
+      result.AppendErrorWithFormat("%s takes 0 or one arg.",
                                    m_cmd_name.c_str());
       return;
     }
@@ -2168,14 +2168,14 @@ bool CommandObjectTypeSynthAdd::Execute_PythonClass(
   const size_t argc = command.GetArgumentCount();
 
   if (argc < 1) {
-    result.AppendErrorWithFormat("%s takes one or more args.\n",
+    result.AppendErrorWithFormat("%s takes one or more args.",
                                  m_cmd_name.c_str());
     return false;
   }
 
   if (m_options.m_class_name.empty() && !m_options.m_input_python) {
     result.AppendErrorWithFormat("%s needs either a Python class name or -P to "
-                                 "directly input Python code.\n",
+                                 "directly input Python code.",
                                  m_cmd_name.c_str());
     return false;
   }
@@ -2197,7 +2197,7 @@ bool CommandObjectTypeSynthAdd::Execute_PythonClass(
   const char *python_class_name = impl->GetPythonClassName();
   if (interpreter && !interpreter->CheckObjectExists(python_class_name))
     result.AppendWarningWithFormatv(
-        "The provided class '{0}' does not exist - please define it "
+        "the provided class '{0}' does not exist - please define it "
         "before attempting to use this synthetic provider",
         llvm::StringRef(python_class_name));
 
@@ -2477,13 +2477,13 @@ protected:
     const size_t argc = command.GetArgumentCount();
 
     if (argc < 1) {
-      result.AppendErrorWithFormat("%s takes one or more args.\n",
+      result.AppendErrorWithFormat("%s takes one or more args.",
                                    m_cmd_name.c_str());
       return;
     }
 
     if (m_options.m_expr_paths.empty()) {
-      result.AppendErrorWithFormat("%s needs one or more children.\n",
+      result.AppendErrorWithFormat("%s needs one or more children.",
                                    m_cmd_name.c_str());
       return;
     }

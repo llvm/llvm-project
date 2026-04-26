@@ -1534,14 +1534,18 @@ void SIRegisterInfo::buildSpillLoadStore(
   const TargetRegisterClass *RC = getRegClassForReg(MF->getRegInfo(), ValueReg);
   // On gfx90a+ AGPR is a regular VGPR acceptable for loads and stores.
   const bool IsAGPR = !ST.hasGFX90AInsts() && isAGPRClass(RC);
-  const unsigned RegWidth = AMDGPU::getRegBitWidth(*RC) / 8;
+  unsigned RegWidth = AMDGPU::getRegBitWidth(*RC) / 8;
 
   // On targets with register tuple alignment requirements,
-  // for unaligned tuples, break the spill into 32-bit pieces.
-  // TODO: Optimize misaligned spills by using larger aligned chunks instead of
-  // 32-bit splits.
+  // for unaligned tuples, spill the first sub-reg as a 32-bit spill,
+  // and spill the rest as a regular aligned tuple.
+  // eg: SPILL_V224 $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+  // will be spilt as:
+  // SPILL_SCRATCH_DWORD $vgpr1
+  // SPILL_SCRATCH_DWORDx4 $vgpr2_vgpr3_vgpr4_vgpr5
+  // SPILL_SCRATCH_DWORDx2 $vgpr6_vgpr7
   bool IsRegMisaligned = false;
-  if (!IsBlock && RegWidth > 4) {
+  if (!IsBlock && !IsAGPR && RegWidth > 4) {
     unsigned SpillOpcode =
         getFlatScratchSpillOpcode(TII, LoadStoreOp, std::min(RegWidth, 16u));
     int VDataIdx =
@@ -1558,18 +1562,22 @@ void SIRegisterInfo::buildSpillLoadStore(
         IsRegMisaligned = true;
     }
   }
+  // The first sub-register will be spilled as a 32-bit value
+  if (IsRegMisaligned)
+    RegWidth -= 4u;
   // Always use 4 byte operations for AGPRs because we need to scavenge
   // a temporary VGPR.
   // If we're using a block operation, the element should be the whole block.
-  // For misaligned registers, use 4-byte elements to avoid alignment errors.
-  unsigned EltSize = IsBlock ? RegWidth
-                     : (IsFlat && !IsAGPR && !IsRegMisaligned)
-                         ? std::min(RegWidth, 16u)
-                         : 4u;
+  unsigned EltSize = IsBlock               ? RegWidth
+                     : (IsFlat && !IsAGPR) ? std::min(RegWidth, 16u)
+                                           : 4u;
   unsigned NumSubRegs = RegWidth / EltSize;
   unsigned Size = NumSubRegs * EltSize;
   unsigned RemSize = RegWidth - Size;
   unsigned NumRemSubRegs = RemSize ? 1 : 0;
+  // An additional sub-register is needed to spill the misaligned component.
+  if (IsRegMisaligned)
+    NumSubRegs += 1;
   int64_t Offset = InstOffset + MFI.getObjectOffset(Index);
   int64_t MaterializedOffset = Offset;
 
@@ -1730,8 +1738,24 @@ void SIRegisterInfo::buildSpillLoadStore(
     Desc = &TII->get(LoadStoreOp);
   }
 
+  // Save a copy of the original element size before its potentially changed for
+  // misaligned tuples.
+  unsigned OrigEltSize = EltSize;
   for (unsigned i = 0, e = NumSubRegs + NumRemSubRegs, RegOffset = 0; i != e;
        ++i, RegOffset += EltSize) {
+    if (IsRegMisaligned) {
+      if (i == 0) {
+        // For misaligned register tuples, spill only the first sub-reg in the
+        // first iteration.
+        EltSize = 4u;
+      } else {
+        // The misaligned register was spilt. Now the rest of the tuple is
+        // properly aligned.
+        IsRegMisaligned = false;
+        EltSize = OrigEltSize;
+      }
+      LoadStoreOp = getFlatScratchSpillOpcode(TII, LoadStoreOp, EltSize);
+    }
     if (i == NumSubRegs) {
       EltSize = RemSize;
       LoadStoreOp = getFlatScratchSpillOpcode(TII, LoadStoreOp, EltSize);
@@ -3007,8 +3031,9 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
         return false;
       }
 
-      bool NeedSaveSCC = RS->isRegUsed(AMDGPU::SCC) &&
-                         !MI->definesRegister(AMDGPU::SCC, /*TRI=*/nullptr);
+      bool NeedSaveSCC = (RS->isRegUsed(AMDGPU::SCC) &&
+                          !MI->definesRegister(AMDGPU::SCC, /*TRI=*/nullptr)) ||
+                         MI->readsRegister(AMDGPU::SCC, /*TRI=*/nullptr);
 
       Register TmpSReg =
           UseSGPR ? TmpReg

@@ -140,10 +140,7 @@ void DIEBuilder::updateReferences() {
   // Handling references in location expressions.
   for (LocWithReference &LocExpr : getState().LocWithReferencesToProcess) {
     SmallVector<uint8_t, 32> Buffer;
-    DataExtractor Data(StringRef((const char *)LocExpr.BlockData.data(),
-                                 LocExpr.BlockData.size()),
-                       LocExpr.U.isLittleEndian(),
-                       LocExpr.U.getAddressByteSize());
+    DataExtractor Data(LocExpr.BlockData, LocExpr.U.isLittleEndian());
     DWARFExpression Expr(Data, LocExpr.U.getAddressByteSize(),
                          LocExpr.U.getFormParams().Format);
     cloneExpression(Data, Expr, LocExpr.U, Buffer, CloneExpressionStage::PATCH);
@@ -794,8 +791,7 @@ void DIEBuilder::cloneBlockAttribute(
   if (DWARFAttribute::mayHaveLocationExpr(AttrSpec.Attr) &&
       (Val.isFormClass(DWARFFormValue::FC_Block) ||
        Val.isFormClass(DWARFFormValue::FC_Exprloc))) {
-    DataExtractor Data(StringRef((const char *)Bytes.data(), Bytes.size()),
-                       U.isLittleEndian(), U.getAddressByteSize());
+    DataExtractor Data(Bytes, U.isLittleEndian());
     DWARFExpression Expr(Data, U.getAddressByteSize(),
                          U.getFormParams().Format);
     if (cloneExpression(Data, Expr, U, Buffer, CloneExpressionStage::INIT))
