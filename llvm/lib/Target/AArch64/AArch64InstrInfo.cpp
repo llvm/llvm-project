@@ -119,12 +119,29 @@ static std::optional<unsigned> getLFIInstSizeInBytes(const MachineInstr &MI) {
   case AArch64::SVC:
     // SVC expands to 4 instructions.
     return 16;
+  case AArch64::BR:
+  case AArch64::BLR:
+    // Indirect branches/calls expand to 2 instructions (guard + br/blr).
+    return 8;
+  case AArch64::RET:
+    // RET through LR is not rewritten, but RET through another register
+    // expands to 2 instructions (guard + ret).
+    if (MI.getOperand(0).getReg() != AArch64::LR)
+      return 8;
+    return 4;
   default:
-    // Default case: instructions that don't cause expansion.
-    // - TP accesses in LFI are a single load/store, so no expansion.
-    // - All remaining instructions are not rewritten.
-    return std::nullopt;
+    break;
   }
+
+  // Instructions that explicitly modify LR expand to 2 instructions.
+  for (const MachineOperand &MO : MI.explicit_operands())
+    if (MO.isReg() && MO.isDef() && MO.getReg() == AArch64::LR)
+      return 8;
+
+  // Default case: instructions that don't cause expansion.
+  // - TP accesses in LFI are a single load/store, so no expansion.
+  // - All remaining instructions are not rewritten.
+  return std::nullopt;
 }
 
 /// GetInstSize - Return the number of bytes of code the specified
@@ -220,22 +237,11 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     NumBytes = MI.getOperand(1).getImm();
     break;
   case TargetOpcode::BUNDLE:
-    NumBytes = getInstBundleLength(MI);
+    NumBytes = getInstBundleSize(MI);
     break;
   }
 
   return NumBytes;
-}
-
-unsigned AArch64InstrInfo::getInstBundleLength(const MachineInstr &MI) const {
-  unsigned Size = 0;
-  MachineBasicBlock::const_instr_iterator I = MI.getIterator();
-  MachineBasicBlock::const_instr_iterator E = MI.getParent()->instr_end();
-  while (++I != E && I->isInsideBundle()) {
-    assert(!I->isBundle() && "No nested bundle!");
-    Size += getInstSizeInBytes(*I);
-  }
-  return Size;
 }
 
 static void parseCondBranch(MachineInstr *LastInst, MachineBasicBlock *&Target,
@@ -6832,8 +6838,9 @@ void llvm::emitFrameOffset(MachineBasicBlock &MBB,
 
 MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
     MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
-    MachineBasicBlock::iterator InsertPt, int FrameIndex, MachineInstr *&CopyMI,
-    LiveIntervals *LIS, VirtRegMap *VRM) const {
+    int FrameIndex, MachineInstr *&CopyMI, LiveIntervals *LIS,
+    VirtRegMap *VRM) const {
+  MachineBasicBlock::iterator InsertPt = MI;
   // This is a bit of a hack. Consider this instruction:
   //
   //   %0 = COPY %sp; GPR64all:%0

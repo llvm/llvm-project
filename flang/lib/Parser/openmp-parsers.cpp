@@ -1775,10 +1775,10 @@ auto OmpDirectiveSpecificationParser::Parse(ParseState &state) const
   return std::nullopt;
 }
 
-static bool IsStandaloneOrdered(const OmpDirectiveSpecification &dirSpec) {
+static bool IsStandaloneOrdered(const OmpDirectiveSpecification &spec) {
   // An ORDERED construct is standalone if it has DOACROSS or DEPEND clause.
-  return dirSpec.DirId() == llvm::omp::Directive::OMPD_ordered &&
-      llvm::any_of(dirSpec.Clauses().v, [](const OmpClause &clause) {
+  return spec.DirId() == llvm::omp::Directive::OMPD_ordered &&
+      llvm::any_of(spec.Clauses().v, [](const OmpClause &clause) {
         llvm::omp::Clause id{clause.Id()};
         return id == llvm::omp::Clause::OMPC_depend ||
             id == llvm::omp::Clause::OMPC_doacross;
@@ -1953,13 +1953,13 @@ struct OmpEndDirectiveParser {
   std::optional<resultType> Parse(ParseState &state) const {
     if (startOmpLine.Parse(state)) {
       if (auto endToken{verbatim("END"_sptok).Parse(state)}) {
-        if (auto &&dirSpec{OmpBeginDirectiveParser(dirs_).Parse(state)}) {
+        if (auto &&spec{OmpBeginDirectiveParser(dirs_).Parse(state)}) {
           // Extend the "source" on both the OmpDirectiveName and the
           // OmpDirectiveNameSpecification.
-          CharBlock &nameSource{std::get<OmpDirectiveName>(dirSpec->t).source};
+          CharBlock &nameSource{std::get<OmpDirectiveName>(spec->t).source};
           nameSource.ExtendToCover(endToken->source);
-          dirSpec->source.ExtendToCover(endToken->source);
-          return std::move(*dirSpec);
+          spec->source.ExtendToCover(endToken->source);
+          return std::move(*spec);
         }
       }
     }
@@ -2048,26 +2048,26 @@ struct OmpLoopConstructParser {
       if (assoc == llvm::omp::Association::LoopNest) {
         if (auto &&item{attempt(loopItem).Parse(state)}) {
           auto end{maybe(OmpEndDirectiveParser{loopDir}).Parse(state)};
-          return OpenMPLoopConstruct{OmpBeginLoopDirective(std::move(*begin)),
+          return OpenMPLoopConstruct{OmpBeginDirective(std::move(*begin)),
               std::move(*item),
               llvm::transformOptional(std::move(*end),
-                  [](auto &&s) { return OmpEndLoopDirective(std::move(s)); })};
+                  [](auto &&s) { return OmpEndDirective(std::move(s)); })};
         } else if (auto &&empty{pure<Block>().Parse(state)}) {
           // Allow empty body.
           auto end{maybe(OmpEndDirectiveParser{loopDir}).Parse(state)};
-          return OpenMPLoopConstruct{OmpBeginLoopDirective(std::move(*begin)),
+          return OpenMPLoopConstruct{OmpBeginDirective(std::move(*begin)),
               std::move(*empty),
               llvm::transformOptional(std::move(*end),
-                  [](auto &&s) { return OmpEndLoopDirective(std::move(s)); })};
+                  [](auto &&s) { return OmpEndDirective(std::move(s)); })};
         }
       } else if (assoc == llvm::omp::Association::LoopSeq) {
         // Parse loop sequence as a block.
         if (auto &&body{validBlock.Parse(state)}) {
           auto end{maybe(OmpEndDirectiveParser{loopDir}).Parse(state)};
-          return OpenMPLoopConstruct{OmpBeginLoopDirective(std::move(*begin)),
+          return OpenMPLoopConstruct{OmpBeginDirective(std::move(*begin)),
               std::move(*body),
               llvm::transformOptional(std::move(*end),
-                  [](auto &&s) { return OmpEndLoopDirective(std::move(s)); })};
+                  [](auto &&s) { return OmpEndDirective(std::move(s)); })};
         }
       } else {
         llvm_unreachable("Unexpected association");
@@ -2153,8 +2153,8 @@ struct OmpAtomicConstructParser {
     }
     recursing_ = true;
 
-    auto dirSpec{OmpDirectiveSpecificationParser{}.Parse(state)};
-    if (!dirSpec || dirSpec->DirId() != llvm::omp::Directive::OMPD_atomic) {
+    auto spec{OmpDirectiveSpecificationParser{}.Parse(state)};
+    if (!spec || spec->DirId() != llvm::omp::Directive::OMPD_atomic) {
       recursing_ = false;
       return std::nullopt;
     }
@@ -2172,7 +2172,7 @@ struct OmpAtomicConstructParser {
         }
       }
       recursing_ = false;
-      return OpenMPAtomicConstruct{OmpBeginDirective(std::move(*dirSpec)),
+      return OpenMPAtomicConstruct{OmpBeginDirective(std::move(*spec)),
           std::move(tail.first),
           llvm::transformOptional(std::move(tail.second),
               [](auto &&s) { return OmpEndDirective(std::move(s)); })};
@@ -2530,6 +2530,7 @@ static constexpr DirectiveSet GetLoopDirectives() {
       unsigned(Directive::OMPD_master_taskloop_simd),
       unsigned(Directive::OMPD_parallel_do),
       unsigned(Directive::OMPD_parallel_do_simd),
+      unsigned(Directive::OMPD_parallel_loop),
       unsigned(Directive::OMPD_parallel_masked_taskloop),
       unsigned(Directive::OMPD_parallel_masked_taskloop_simd),
       unsigned(Directive::OMPD_parallel_master_taskloop),
