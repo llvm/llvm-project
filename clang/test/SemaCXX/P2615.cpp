@@ -4,6 +4,7 @@
 
 // RUN: %clang_cc1 -std=c++20 -verify -fsyntax-only %t/A.cpp
 // RUN: %clang_cc1 -std=c++20 -verify -fsyntax-only %t/B.cpp
+// RUN: not %clang_cc1 -std=c++20 -fsyntax-only -fdiagnostics-parseable-fixits %t/B.cpp 2>&1 | FileCheck %t/B.cpp
 
 //--- A.cpp
 // expected-no-diagnostics
@@ -17,30 +18,41 @@ export module B;
 export template <typename T> class s1 {};
 export template <typename T> class s1<T *> {}; // expected-error {{a specialization cannot be marked 'export'}}
 // expected-note@-1 {{as long as its primary template is exported, it will be too}}
+// CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:1-[[@LINE-2]]:8}:""
 export template <> class s1<int> {}; // expected-error {{a specialization cannot be marked 'export'}}
 // expected-note@-1 {{as long as its primary template is exported, it will be too}}
+// CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:1-[[@LINE-2]]:8}:""
 export template class s1<char>; // expected-error {{an explicit instantiation cannot be marked 'export'}}
 // expected-note@-1 {{as long as its primary template is exported, it will be too}}
+// CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:1-[[@LINE-2]]:8}:""
 export extern template class s1<void>; // expected-error {{an explicit instantiation cannot be marked 'export'}}
 // expected-note@-1 {{as long as its primary template is exported, it will be too}}
+// CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:1-[[@LINE-2]]:8}:""
 
 export template <typename T> int v1 = 0;
 export template <typename T> int v1<T *> = 0; // expected-error {{a specialization cannot be marked 'export'}}
 // expected-note@-1 {{as long as its primary template is exported, it will be too}}
+// CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:1-[[@LINE-2]]:8}:""
 export template <> int v1<int> = 0; // expected-error {{a specialization cannot be marked 'export'}}
 // expected-note@-1 {{as long as its primary template is exported, it will be too}}
+// CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:1-[[@LINE-2]]:8}:""
 export template int v1<char>; // expected-error {{an explicit instantiation cannot be marked 'export'}}
 // expected-note@-1 {{as long as its primary template is exported, it will be too}}
+// CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:1-[[@LINE-2]]:8}:""
 export extern template int v1<void>; // expected-error {{an explicit instantiation cannot be marked 'export'}}
 // expected-note@-1 {{as long as its primary template is exported, it will be too}}
+// CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:1-[[@LINE-2]]:8}:""
 
 export template <typename T> void f1() {}
 export template <> void f1<int>() {} // expected-error {{a specialization cannot be marked 'export'}}
 // expected-note@-1 {{as long as its primary template is exported, it will be too}}
+// CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:1-[[@LINE-2]]:8}:""
 export template void f1<char>(); // expected-error {{an explicit instantiation cannot be marked 'export'}}
 // expected-note@-1 {{as long as its primary template is exported, it will be too}}
+// CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:1-[[@LINE-2]]:8}:""
 export extern template void f1<void>(); // expected-error {{an explicit instantiation cannot be marked 'export'}}
 // expected-note@-1 {{as long as its primary template is exported, it will be too}}
+// CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:1-[[@LINE-2]]:8}:""
 
 
 export { template <typename T> class s2 {}; }
