@@ -6,11 +6,11 @@ declare void @use(i8)
 define i32 @lshr_add_or_low_bias(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i32 @lshr_add_or_low_bias(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[X]], 1
-; CHECK-NEXT:    [[BIASED:%.*]] = or disjoint i32 [[SHL]], 1
-; CHECK-NEXT:    [[BIASED_Y:%.*]] = add i32 [[BIASED]], [[Y]]
+; CHECK-NEXT:    [[BIASED_Y:%.*]] = add i32 [[Y]], 1
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[BIASED_Y]], 1
-; CHECK-NEXT:    ret i32 [[SHR]]
+; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[SHR]], [[X]]
+; CHECK-NEXT:    [[LSHR:%.*]] = and i32 [[TMP3]], 2147483647
+; CHECK-NEXT:    ret i32 [[LSHR]]
 ;
   %shl = shl i32 %x, 1
   %biased = or i32 %shl, 1
@@ -22,11 +22,11 @@ define i32 @lshr_add_or_low_bias(i32 %x, i32 %y) {
 define i8 @lshr_add_or_low_bias_commuted(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i8 @lshr_add_or_low_bias_commuted(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[X]], 1
-; CHECK-NEXT:    [[BIASED:%.*]] = or disjoint i8 [[SHL]], 1
-; CHECK-NEXT:    [[BIASED_Y:%.*]] = add i8 [[Y]], [[BIASED]]
+; CHECK-NEXT:    [[BIASED_Y:%.*]] = add i8 [[Y]], 1
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i8 [[BIASED_Y]], 1
-; CHECK-NEXT:    ret i8 [[SHR]]
+; CHECK-NEXT:    [[TMP3:%.*]] = add i8 [[SHR]], [[X]]
+; CHECK-NEXT:    [[LSHR:%.*]] = and i8 [[TMP3]], 127
+; CHECK-NEXT:    ret i8 [[LSHR]]
 ;
   %shl = shl i8 %x, 1
   %biased = or i8 %shl, 1
@@ -38,11 +38,11 @@ define i8 @lshr_add_or_low_bias_commuted(i8 %x, i8 %y) {
 define i8 @lshr_add_or_max_low_bias(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i8 @lshr_add_or_max_low_bias(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[X]], 2
-; CHECK-NEXT:    [[BIASED:%.*]] = or disjoint i8 [[SHL]], 3
-; CHECK-NEXT:    [[BIASED_Y:%.*]] = add i8 [[BIASED]], [[Y]]
+; CHECK-NEXT:    [[BIASED_Y:%.*]] = add i8 [[Y]], 3
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i8 [[BIASED_Y]], 2
-; CHECK-NEXT:    ret i8 [[SHR]]
+; CHECK-NEXT:    [[TMP3:%.*]] = add i8 [[SHR]], [[X]]
+; CHECK-NEXT:    [[LSHR:%.*]] = and i8 [[TMP3]], 63
+; CHECK-NEXT:    ret i8 [[LSHR]]
 ;
   %shl = shl i8 %x, 2
   %biased = or i8 %shl, 3
@@ -54,11 +54,10 @@ define i8 @lshr_add_or_max_low_bias(i8 %x, i8 %y) {
 define i8 @filter14_like(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i8 @filter14_like(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[REASS_ADD:%.*]] = shl i32 [[X]], 1
-; CHECK-NEXT:    [[BIASED:%.*]] = or disjoint i32 [[REASS_ADD]], 1
-; CHECK-NEXT:    [[BIASED_Y:%.*]] = add i32 [[BIASED]], [[Y]]
+; CHECK-NEXT:    [[BIASED_Y:%.*]] = add i32 [[Y]], 1
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[BIASED_Y]], 1
-; CHECK-NEXT:    [[TR:%.*]] = trunc i32 [[SHR]] to i8
+; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[SHR]], [[X]]
+; CHECK-NEXT:    [[TR:%.*]] = trunc i32 [[TMP3]] to i8
 ; CHECK-NEXT:    ret i8 [[TR]]
 ;
   %reass.add = shl i32 %x, 1
