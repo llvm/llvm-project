@@ -1,4 +1,4 @@
-//===- WebAssemblyGlobalsTagging.cpp - Global tagging in IR -------------------===//
+//===- WebAssemblyGlobalsTagging.cpp - Global tagging in IR ---------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -106,7 +106,9 @@ public:
 
   bool runOnModule(Module &M) override;
 
-  StringRef getPassName() const override { return "WebAssembly Globals Tagging"; }
+  StringRef getPassName() const override {
+    return "WebAssembly Globals Tagging";
+  }
 
 private:
   std::set<GlobalVariable *> GlobalsToTag;

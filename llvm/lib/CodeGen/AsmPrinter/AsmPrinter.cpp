@@ -839,10 +839,7 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 
     bool supportMemtagGlobals = false;
 
-    if (T.isWasm()) {
-      supportMemtagGlobals = true;
-    }
-    else if (arch == Triple::aarch64) {
+    if (T.isWasm() || arch == Triple::aarch64) {
       supportMemtagGlobals = true;
     }
 
