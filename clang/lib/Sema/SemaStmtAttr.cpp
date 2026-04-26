@@ -826,6 +826,11 @@ static bool FunctionBodyHasSideEffects(const FunctionDecl *FD,
     if (!S)
       continue;
 
+    if (isa<AsmStmt>(S)) {
+      HasSE = true;
+      break;
+    }
+
     if (const Expr *E = dyn_cast<Expr>(S)) {
       // Check for definite side effects other than function calls.
       if (E->HasSideEffects(Ctx, /*IncludePossibleEffects=*/false)) {
