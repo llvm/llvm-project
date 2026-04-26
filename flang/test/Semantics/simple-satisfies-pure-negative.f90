@@ -1,7 +1,7 @@
 ! This is the negative/control case for simple-satisfies-pure.f90.
 ! It verifies that a procedure which is neither PURE nor SIMPLE is rejected
 ! when passed to a dummy argument that requires a PURE procedure.
-! RUN: not %flang_fc1 -fsyntax-only %s 2>&1 | FileCheck %s
+! RUN: %python %S/test_errors.py %s %flang_fc1
 
 module m
   implicit none
@@ -27,10 +27,7 @@ contains
   end function
 
   integer function test()
+    !ERROR: Actual procedure argument has interface incompatible with dummy argument 'f=': incompatible procedure attributes: Pure
     test = apply_pure(impure, 1)
   end function
 end module
-
-! CHECK: error: Actual procedure argument has interface incompatible with dummy argument 'f='
-! CHECK-SAME: incompatible procedure attributes: Pure
-
