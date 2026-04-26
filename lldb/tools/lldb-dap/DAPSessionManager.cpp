@@ -113,6 +113,13 @@ DAPSessionManager::GetEventThreadForDebugger(lldb::SBDebugger debugger,
   lldb::SBListener listener = debugger.GetListener();
   requesting_dap->broadcaster.AddListener(listener,
                                           eBroadcastBitStopEventThread);
+  debugger.GetBroadcaster().AddListener(
+      listener, lldb::eBroadcastBitError | lldb::eBroadcastBitWarning);
+  // listen for thread events.
+  listener.StartListeningForEventClass(
+      debugger, lldb::SBThread::GetBroadcasterClassName(),
+      lldb::SBThread::eBroadcastBitStackChanged);
+
   // Create a new event thread and store it.
   auto new_thread_sp = std::make_shared<ManagedEventThread>(
       requesting_dap->broadcaster,
