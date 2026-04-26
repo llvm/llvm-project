@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifdef __ANDROID__
-
 #include "lldb/Host/android/HostInfoAndroid.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/linux/HostInfoLinux.h"
@@ -94,5 +92,3 @@ bool HostInfoAndroid::ComputeTempFileBaseDirectory(FileSpec &file_spec) {
 
   return FileSystem::Instance().Exists(file_spec);
 }
-
-#endif
