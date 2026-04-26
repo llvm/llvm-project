@@ -1597,6 +1597,36 @@ bool PreRARematStage::initGCNSchedStage() {
       }
       CandidateOrder.pop_back();
 
+#ifdef EXPENSIVE_CHECKS
+      // All uses are known to be available / live at the remat point. Thus,
+      // the uses should already be live in to the using region.
+      for (MachineOperand &MO : Reg.DefMI->operands()) {
+        if (!MO.isReg() || !MO.getReg() || !MO.readsReg())
+          continue;
+
+        Register UseReg = MO.getReg();
+        if (!UseReg.isVirtual())
+          continue;
+
+        LiveInterval &LI = DAG.LIS->getInterval(UseReg);
+        LaneBitmask LM = DAG.MRI.getMaxLaneMaskForVReg(MO.getReg());
+        if (LI.hasSubRanges() && MO.getSubReg())
+          LM = DAG.TRI->getSubRegIndexLaneMask(MO.getSubReg());
+
+        const unsigned UseRegion = Reg.Uses.begin()->first;
+        LaneBitmask LiveInMask = DAG.LiveIns[UseRegion].at(UseReg);
+        LaneBitmask UncoveredLanes = LM & ~(LiveInMask & LM);
+        // If this register has lanes not covered by the LiveIns, be sure they
+        // do not map to any subrange. ref:
+        // machine-scheduler-sink-trivial-remats.mir::omitted_subrange
+        if (UncoveredLanes.any()) {
+          assert(LI.hasSubRanges());
+          for (LiveInterval::SubRange &SR : LI.subranges())
+            assert((SR.LaneMask & UncoveredLanes).none());
+        }
+      }
+#endif
+
       // Remove the register from all regions where it is a live-in or live-out,
       // then rematerialize the register.
       REMAT_DEBUG(dbgs() << "** REMAT " << Remater.printRematReg(Cand.RegIdx)
@@ -2185,6 +2215,17 @@ void GCNSchedStage::modifyRegionSchedule(unsigned RegionIdx,
       if (NonDebugReordered)
         DAG.LIS->handleMove(*MI, true);
     } else {
+      // MI is already at the expected position. However, earlier splices in
+      // this loop may have changed neighboring slot indices, so this MI's
+      // slot index can become non-monotonic w.r.t. the physical MBB order.
+      // Only re-seat when monotonicity is actually violated to avoid
+      // unnecessary LiveInterval changes that could perturb scheduling.
+      if (!MI->isDebugInstr()) {
+        SlotIndex MIIdx = DAG.LIS->getInstructionIndex(*MI);
+        SlotIndex PrevIdx = DAG.LIS->getSlotIndexes()->getIndexBefore(*MI);
+        if (PrevIdx >= MIIdx)
+          DAG.LIS->handleMove(*MI, true);
+      }
       ++RegionEnd;
     }
     if (MI->isDebugInstr()) {
@@ -2928,35 +2969,6 @@ void PreRARematStage::ScoredRemat::rematerialize(
     DRI.reuse(Dep.RegIdx);
   unsigned UseRegion = Reg.Uses.begin()->first;
   Remater.rematerializeToRegion(RegIdx, UseRegion, DRI);
-
-#ifdef EXPENSIVE_CHECKS
-  // All uses are known to be available / live at the remat point. Thus,
-  // the uses should already be live in to the using region.
-  for (MachineOperand &MO : DefMI.operands()) {
-    if (!MO.isReg() || !MO.getReg() || !MO.readsReg())
-      continue;
-
-    Register UseReg = MO.getReg();
-    if (!UseReg.isVirtual())
-      continue;
-
-    LiveInterval &LI = DAG.LIS->getInterval(UseReg);
-    LaneBitmask LM = DAG.MRI.getMaxLaneMaskForVReg(MO.getReg());
-    if (LI.hasSubRanges() && MO.getSubReg())
-      LM = DAG.TRI->getSubRegIndexLaneMask(MO.getSubReg());
-
-    LaneBitmask LiveInMask = DAG.LiveIns[Remat->UseRegion].at(UseReg);
-    LaneBitmask UncoveredLanes = LM & ~(LiveInMask & LM);
-    // If this register has lanes not covered by the LiveIns, be sure they
-    // do not map to any subrange. ref:
-    // machine-scheduler-sink-trivial-remats.mir::omitted_subrange
-    if (UncoveredLanes.any()) {
-      assert(LI.hasSubRanges());
-      for (LiveInterval::SubRange &SR : LI.subranges())
-        assert((SR.LaneMask & UncoveredLanes).none());
-    }
-  }
-#endif
 }
 
 void PreRARematStage::updateRPTargets(const BitVector &Regions,

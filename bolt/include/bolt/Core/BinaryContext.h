@@ -679,8 +679,6 @@ public:
 
   std::unique_ptr<MCObjectFileInfo> MOFI;
 
-  MCTargetOptions MCOptions;
-
   std::unique_ptr<const MCAsmInfo> AsmInfo;
 
   std::unique_ptr<const MCInstrInfo> MII;
@@ -725,6 +723,11 @@ public:
   /// function fragments with
   /// FunctionFragment::getFragmentNum() == FragmentNum::warm()
   bool HasWarmSection{false};
+
+  /// Indicates if the binary should assume large code model
+  /// Can be triggered by the presence of .ltext sections if
+  /// unspecified.
+  bool UseLargeCodeModel{false};
 
   /// Is the binary always loaded at a fixed address. Shared objects and
   /// position-independent executables (PIEs) are examples of binaries that
@@ -850,6 +853,10 @@ public:
   /// DWARF encoding. Available encoding types defined in BinaryFormat/Dwarf.h
   /// enum Constants, e.g. DW_EH_PE_omit.
   unsigned LSDAEncoding = dwarf::DW_EH_PE_omit;
+
+  /// Update LSDAEncoding for the binary taking into account
+  /// large code model and position-independent executables.
+  void updateLSDAEncoding();
 
   BinaryContext(std::unique_ptr<MCContext> Ctx,
                 std::unique_ptr<DWARFContext> DwCtx,

@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/IndirectBrExpand.h"
 #include "llvm/CodeGen/InterleavedAccess.h"
 #include "llvm/CodeGen/JMCInstrumenter.h"
+#include "llvm/CodeGen/KCFI.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Passes/CodeGenPassBuilder.h"
 #include "llvm/Passes/PassBuilder.h"
@@ -85,9 +86,7 @@ void X86CodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) const {
   // Add Control Flow Guard checks.
   const Triple &TT = TM.getTargetTriple();
   if (TT.isOSWindows())
-    addFunctionPass(CFGuardPass(TT.isX86_64() ? CFGuardPass::Mechanism::Dispatch
-                                              : CFGuardPass::Mechanism::Check),
-                    PMW);
+    addFunctionPass(CFGuardPass(), PMW);
 
   if (TM.Options.JMCInstrument) {
     flushFPMsToMPM(PMW);
@@ -170,7 +169,7 @@ void X86CodeGenPassBuilder::addPostRegAlloc(PassManagerWrapper &PMW) const {
 
 void X86CodeGenPassBuilder::addPreSched2(PassManagerWrapper &PMW) const {
   addMachineFunctionPass(X86ExpandPseudoPass(), PMW);
-  // TODO(boomanaiden154): Add KCFGPass here once it has been ported.
+  addMachineFunctionPass(MachineKCFIPass(), PMW);
 }
 
 void X86CodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) const {
@@ -181,8 +180,7 @@ void X86CodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) const {
   }
 
   addMachineFunctionPass(X86IndirectBranchTrackingPass(), PMW);
-  // TODO(boomanaiden154): Add X86IssueVZeroUpperPass here once it has been
-  // ported.
+  addMachineFunctionPass(X86InsertVZeroUpperPass(), PMW);
 
   if (getOptLevel() != CodeGenOptLevel::None) {
     addMachineFunctionPass(X86FixupBWInstsPass(), PMW);
