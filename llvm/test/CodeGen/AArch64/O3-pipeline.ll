@@ -157,6 +157,7 @@
 ; CHECK-NEXT:       AArch64 Store Pair Suppression
 ; CHECK-NEXT:       AArch64 SIMD instructions optimization pass
 ; CHECK-NEXT:       AArch64 Stack Tagging PreRA
+; CHECK-NEXT:       Sparse Live Variable Analysis
 ; CHECK-NEXT:       MachineDominator Tree Construction
 ; CHECK-NEXT:       Machine Natural Loop Construction
 ; CHECK-NEXT:       Machine Block Frequency Analysis
@@ -199,6 +200,7 @@
 ; CHECK-NEXT:       Stack Slot Coloring
 ; CHECK-NEXT:       AArch64 SRLT Define Super-Regs Pass
 ; CHECK-NEXT:       Machine Copy Propagation Pass
+; CHECK-NEXT:       Sparse Live Variable Analysis
 ; CHECK-NEXT:       Machine Loop Invariant Code Motion
 ; CHECK-NEXT:       AArch64 Redundant Copy Elimination
 ; CHECK-NEXT:       A57 FP Anti-dependency breaker

@@ -35,6 +35,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
+#include "llvm/CodeGen/SparseLiveVariables.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -127,6 +128,8 @@ namespace {
     bool HasProfileData = false;
     Pass *LegacyPass;
     MachineFunctionAnalysisManager *MFAM;
+    SparseLiveVariables *LV = nullptr;
+    DenseMap<const MachineInstr *, SmallVector<Register, 4>> KilledRegs;
 
     // Various analyses that we use...
     AliasAnalysis *AA = nullptr;               // Alias analysis info.
@@ -244,6 +247,8 @@ namespace {
 
     bool IsGuaranteedToExecute(MachineBasicBlock *BB, MachineLoop *CurLoop);
 
+    void computeKilledRegs(MachineBasicBlock *MBB);
+
     void EnterScope(MachineBasicBlock *MBB);
 
     void ExitScope(MachineBasicBlock *MBB);
@@ -297,6 +302,7 @@ namespace {
     bool runOnMachineFunction(MachineFunction &MF) override;
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
+      AU.addRequired<SparseLiveVariablesWrapperPass>();
       AU.addRequired<MachineLoopInfoWrapperPass>();
       if (DisableHoistingToHotterBlocks != UseBFI::None)
         AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
@@ -329,6 +335,7 @@ char &llvm::EarlyMachineLICMID = EarlyMachineLICM::ID;
 
 INITIALIZE_PASS_BEGIN(MachineLICM, DEBUG_TYPE,
                       "Machine Loop Invariant Code Motion", false, false)
+INITIALIZE_PASS_DEPENDENCY(SparseLiveVariablesWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
@@ -338,6 +345,7 @@ INITIALIZE_PASS_END(MachineLICM, DEBUG_TYPE,
 
 INITIALIZE_PASS_BEGIN(EarlyMachineLICM, "early-machinelicm",
                       "Early Machine Loop Invariant Code Motion", false, false)
+INITIALIZE_PASS_DEPENDENCY(SparseLiveVariablesWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
@@ -371,6 +379,10 @@ bool MachineLICMImpl::run(MachineFunction &MF) {
   MBFI = DisableHoistingToHotterBlocks != UseBFI::None
              ? GET_RESULT(MachineBlockFrequency, getMBFI, Info)
              : nullptr;
+  LV = LegacyPass
+           ? &LegacyPass->getAnalysis<SparseLiveVariablesWrapperPass>().getLV()
+           : (MFAM ? &MFAM->getResult<SparseLiveVariablesAnalysis>(MF)
+                   : nullptr);
 
   Changed = FirstInLoop = false;
   const TargetSubtargetInfo &ST = MF.getSubtarget();
@@ -768,8 +780,30 @@ bool MachineLICMImpl::IsGuaranteedToExecute(MachineBasicBlock *BB,
   return true;
 }
 
+void MachineLICMImpl::computeKilledRegs(MachineBasicBlock *MBB) {
+  KilledRegs.clear();
+  if (!LV || !LV->hasAnalyzed(MBB))
+    return;
+
+  SparseLiveVariables::LivenessTracker Tracker(LV->getLiveOutSet(MBB), MRI);
+  for (const MachineInstr &MI : llvm::reverse(*MBB)) {
+    if (!MI.isDebugInstr() && !MI.isMetaInstruction()) {
+      for (const MachineOperand &MO : MI.operands()) {
+        if (MO.isReg() && MO.isUse()) {
+          Register Reg = MO.getReg();
+          if (Reg.isValid() && Reg.isVirtual() && !Tracker.isLive(Reg))
+            KilledRegs[&MI].push_back(Reg);
+        }
+      }
+      Tracker.stepBackward(MI);
+    }
+  }
+}
+
 void MachineLICMImpl::EnterScope(MachineBasicBlock *MBB) {
   LLVM_DEBUG(dbgs() << "Entering " << printMBBReference(*MBB) << '\n');
+
+  computeKilledRegs(MBB);
 
   // Remember livein register pressure.
   BackTrace.push_back(RegPressure);
@@ -924,6 +958,8 @@ void MachineLICMImpl::InitRegPressure(MachineBasicBlock *BB) {
       InitRegPressure(*BB->pred_begin());
   }
 
+  computeKilledRegs(BB);
+
   for (const MachineInstr &MI : *BB)
     UpdateRegPressure(&MI, /*ConsiderUnseenAsDef=*/true);
 }
@@ -969,7 +1005,16 @@ MachineLICMImpl::calcRegisterCost(const MachineInstr *MI, bool ConsiderSeen,
     if (MO.isDef())
       RCCost = W.RegWeight;
     else {
-      bool isKill = isOperandKill(MO, MRI);
+      bool isKill = false;
+      if (LV && LV->hasAnalyzed(MI->getParent())) {
+        auto It = KilledRegs.find(MI);
+        if (It != KilledRegs.end())
+          isKill = llvm::is_contained(It->second, Reg);
+        if (!isKill && MRI->hasOneNonDBGUse(Reg))
+          isKill = true;
+      } else {
+        isKill = isOperandKill(MO, MRI);
+      }
       if (isNew && !isKill && ConsiderUnseenAsDef)
         // Haven't seen this, it must be a livein.
         RCCost = W.RegWeight;

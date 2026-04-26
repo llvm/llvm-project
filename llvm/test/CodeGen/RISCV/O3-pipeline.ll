@@ -121,6 +121,7 @@
 ; CHECK-NEXT:       Machine Trace Metrics 
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis 
 ; CHECK-NEXT:       Machine InstCombiner 
+; CHECK-NEXT:       Sparse Live Variable Analysis
 ; CHECK-NEXT:       Machine Block Frequency Analysis
 ; CHECK-NEXT:       Early Machine Loop Invariant Code Motion
 ; CHECK-NEXT:       MachineDominator Tree Construction
@@ -171,6 +172,7 @@
 ; CHECK-NEXT:       Register Allocation Pass Scoring
 ; CHECK-NEXT:       Stack Slot Coloring
 ; CHECK-NEXT:       Machine Copy Propagation Pass
+; CHECK-NEXT:       Sparse Live Variable Analysis
 ; CHECK-NEXT:       Machine Loop Invariant Code Motion
 ; CHECK-NEXT:       RISC-V Redundant Copy Elimination
 ; CHECK-NEXT:       Remove Redundant DEBUG_VALUE analysis
