@@ -37,11 +37,13 @@ namespace {
 // Include helper functions to ease the manipulation of MachineFunctions.
 #include "MFCommon.inc"
 
+MCTargetOptions MCOptions;
+
 std::unique_ptr<MCContext> createMCContext(MCAsmInfo *AsmInfo) {
   Triple TheTriple(/*ArchStr=*/"", /*VendorStr=*/"", /*OSStr=*/"",
                    /*EnvironmentStr=*/"elf");
   return std::make_unique<MCContext>(TheTriple, AsmInfo, nullptr, nullptr,
-                                     nullptr, nullptr, false);
+                                     nullptr, false);
 }
 
 // This test makes sure that MachineInstr::isIdenticalTo handles Defs correctly
@@ -268,7 +270,7 @@ TEST(MachineInstrExtraInfo, AddExtraInfo) {
   MCInstrDesc MCID = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
   auto MI = MF->CreateMachineInstr(MCID, DebugLoc());
-  auto MAI = MCAsmInfo();
+  auto MAI = MCAsmInfo(MCOptions);
   auto MC = createMCContext(&MAI);
   auto MMO = MF->getMachineMemOperand(MachinePointerInfo(),
                                       MachineMemOperand::MOLoad, 8, Align(8));
@@ -349,7 +351,7 @@ TEST(MachineInstrExtraInfo, ChangeExtraInfo) {
   MCInstrDesc MCID = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
   auto MI = MF->CreateMachineInstr(MCID, DebugLoc());
-  auto MAI = MCAsmInfo();
+  auto MAI = MCAsmInfo(MCOptions);
   auto MC = createMCContext(&MAI);
   auto MMO = MF->getMachineMemOperand(MachinePointerInfo(),
                                       MachineMemOperand::MOLoad, 8, Align(8));
@@ -404,7 +406,7 @@ TEST(MachineInstrExtraInfo, RemoveExtraInfo) {
   MCInstrDesc MCID = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
   auto MI = MF->CreateMachineInstr(MCID, DebugLoc());
-  auto MAI = MCAsmInfo();
+  auto MAI = MCAsmInfo(MCOptions);
   auto MC = createMCContext(&MAI);
   auto MMO = MF->getMachineMemOperand(MachinePointerInfo(),
                                       MachineMemOperand::MOLoad, 8, Align(8));

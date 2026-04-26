@@ -167,7 +167,7 @@ define ptr @simple_csa_ptr_select(i64 %N, ptr %data, i64 %a, ptr %init) {
 ; AVX512-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; AVX512-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP]], !llvm.loop [[LOOP4:![0-9]+]]
 ; AVX512:       [[MIDDLE_BLOCK]]:
-; AVX512-NEXT:    [[TMP9:%.*]] = extractelement <8 x ptr> [[BROADCAST_SPLAT2]], i32 0
+; AVX512-NEXT:    [[TMP9:%.*]] = extractelement <8 x ptr> [[BROADCAST_SPLAT2]], i64 0
 ; AVX512-NEXT:    [[TMP10:%.*]] = call ptr @llvm.experimental.vector.extract.last.active.v8p0(<8 x ptr> [[TMP7]], <8 x i1> [[TMP6]], ptr [[TMP9]])
 ; AVX512-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; AVX512-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
