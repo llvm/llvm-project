@@ -1,6 +1,6 @@
-// RUN: %clang_cc1            -pedantic -verify=expected,both %s -fexperimental-new-constant-interpreter
-// RUN: %clang_cc1 -std=c++14 -pedantic -verify=expected,both %s -fexperimental-new-constant-interpreter
-// RUN: %clang_cc1 -std=c++20 -pedantic -verify=expected,both %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1            -pedantic -verify=expected,both %s -fexperimental-new-constant-interpreter -DINTERP
+// RUN: %clang_cc1 -std=c++14 -pedantic -verify=expected,both %s -fexperimental-new-constant-interpreter -DINTERP
+// RUN: %clang_cc1 -std=c++20 -pedantic -verify=expected,both %s -fexperimental-new-constant-interpreter -DINTERP
 // RUN: %clang_cc1            -pedantic -verify=ref,both      %s
 // RUN: %clang_cc1 -std=c++14 -pedantic -verify=ref,both      %s
 // RUN: %clang_cc1 -std=c++20 -pedantic -verify=ref,both      %s
@@ -765,3 +765,12 @@ namespace NestedDiags {
     return true;
   }
 }
+
+#ifdef INTERP
+namespace DependentReturnType {
+  template <typename T> struct S {
+    int a = [] { return [](auto t) noexcept((zomg(f))) { return 0; }(0); }(); // both-error {{use of undeclared identifier 'zomg'}}
+  };
+  S<float> x;
+}
+#endif
