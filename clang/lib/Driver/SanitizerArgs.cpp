@@ -1619,8 +1619,7 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
         << "-fvisibility=";
   }
 
-  if (Sanitizers.has(SanitizerKind::MemtagStack) &&
-      !TC.getTriple().isWasm() &&
+  if (Sanitizers.has(SanitizerKind::MemtagStack) && !TC.getTriple().isWasm() &&
       !hasTargetFeatureMTE(CmdArgs))
     TC.getDriver().Diag(diag::err_stack_tagging_requires_hardware_feature);
 }

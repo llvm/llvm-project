@@ -772,7 +772,8 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Value *Index = EmitScalarExpr(E->getArg(0));
     Value *Ptr = EmitScalarExpr(E->getArg(1));
     Value *B16 = EmitScalarExpr(E->getArg(2));
-    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memtag_randomstore, B16->getType());
+    Function *Callee =
+        CGM.getIntrinsic(Intrinsic::wasm_memtag_randomstore, B16->getType());
     return Builder.CreateCall(Callee, {Index, Ptr, B16});
   }
   case WebAssembly::BI__builtin_wasm_memtag_randomstorez: {
