@@ -806,7 +806,7 @@ ExprResult Sema::ActOnCXXAssumeAttr(Stmt *St, const ParsedAttr &A,
 /// \p Visited tracks the current call chain to prevent infinite recursion.
 static bool FunctionBodyHasSideEffects(const FunctionDecl *FD,
                                         const ASTContext &Ctx,
-                                        SmallPtrSetImpl<const FunctionDecl*> &Visited) {
+                                        SmallPtrSetImpl<const FunctionDecl *> &Visited) {
   if (FD->hasAttr<ConstAttr>() || FD->hasAttr<PureAttr>())
     return false;
 
@@ -818,7 +818,7 @@ static bool FunctionBodyHasSideEffects(const FunctionDecl *FD,
     return true;
 
   bool HasSE = false;
-  SmallVector<const Stmt*, 16> Worklist;
+  SmallVector<const Stmt *, 16> Worklist;
   Worklist.push_back(Body);
 
   while (!Worklist.empty()) {
@@ -871,7 +871,7 @@ static bool HasSideEffectsForAssume(const Expr *E, const ASTContext &Ctx) {
     return true;
 
   // Second, walk the expression and check every CallExpr's function body.
-  SmallVector<const Expr*, 16> Worklist;
+  SmallVector<const Expr *, 16> Worklist;
   Worklist.push_back(E);
 
   while (!Worklist.empty()) {
@@ -879,7 +879,7 @@ static bool HasSideEffectsForAssume(const Expr *E, const ASTContext &Ctx) {
 
     if (const CallExpr *CE = dyn_cast<CallExpr>(SubExpr)) {
       if (const FunctionDecl *FD = CE->getDirectCallee()) {
-        SmallPtrSet<const FunctionDecl*, 8> Visited;
+        SmallPtrSet<const FunctionDecl *, 8> Visited;
         if (FunctionBodyHasSideEffects(FD, Ctx, Visited))
           return true;
       } else {
@@ -887,8 +887,10 @@ static bool HasSideEffectsForAssume(const Expr *E, const ASTContext &Ctx) {
       }
 
       // Check nested calls inside arguments (e.g. foo(bar())).
-      for (const Expr *Arg : CE->arguments())
-        Worklist.push_back(Arg);
+      for (const Stmt *Child : CE->children()) {
+        if (const Expr *ChildExpr = dyn_cast_or_null<Expr>(Child))
+          Worklist.push_back(ChildExpr);
+      }
     } else {
       for (const Stmt *Child : SubExpr->children()) {
         if (const Expr *ChildExpr = dyn_cast_or_null<Expr>(Child))
