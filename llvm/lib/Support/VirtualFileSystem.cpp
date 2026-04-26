@@ -126,6 +126,16 @@ FileSystem::getBufferForFile(const llvm::Twine &Name, int64_t FileSize,
   return (*F)->getBuffer(Name, FileSize, RequiresNullTerminator, IsVolatile);
 }
 
+llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
+FileSystem::getSliceBufferForFile(const Twine &Name, int64_t Offset,
+                                  int64_t Count, bool IsVolatile, bool IsText) {
+  auto F = IsText ? openFileForRead(Name) : openFileForReadBinary(Name);
+  if (!F)
+    return F.getError();
+
+  return (*F)->getSliceBuffer(Name, Offset, Count, IsVolatile);
+}
+
 std::error_code FileSystem::makeAbsolute(SmallVectorImpl<char> &Path) const {
   if (llvm::sys::path::is_absolute(Path))
     return {};
@@ -211,6 +221,11 @@ public:
                                                    int64_t FileSize,
                                                    bool RequiresNullTerminator,
                                                    bool IsVolatile) override;
+
+  ErrorOr<std::unique_ptr<MemoryBuffer>>
+  getSliceBuffer(const Twine &Name, int64_t Offset, int64_t Count,
+                 bool IsVolatile) override;
+
   std::error_code close() override;
   void setPath(const Twine &Path) override;
 };
@@ -244,6 +259,15 @@ RealFile::getBuffer(const Twine &Name, int64_t FileSize,
   assert(FD != kInvalidFile && "cannot get buffer for closed file");
   return MemoryBuffer::getOpenFile(FD, Name, FileSize, RequiresNullTerminator,
                                    IsVolatile);
+}
+
+ErrorOr<std::unique_ptr<MemoryBuffer>>
+RealFile::getSliceBuffer(const Twine &Name, int64_t Offset, int64_t Count,
+                         bool IsVolatile) {
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
+  assert(FD != kInvalidFile && "cannot get buffer for closed file");
+  return MemoryBuffer::getOpenFileSlice(FD, Name, Count, Offset, IsVolatile);
 }
 
 std::error_code RealFile::close() {
@@ -2578,6 +2602,20 @@ public:
 
 } // namespace
 
+ErrorOr<std::unique_ptr<MemoryBuffer>> File::getSliceBuffer(const Twine &Name,
+                                                            int64_t Offset,
+                                                            int64_t Count,
+                                                            bool IsVolatile) {
+  auto BuffOrError = getBuffer(Name, -1, false, IsVolatile);
+  if (!BuffOrError)
+    return BuffOrError.getError();
+  assert(Offset >= 0 && "Negative Offset");
+  assert(Count >= 0 && "Negative Count");
+  StringRef Bytes = (*BuffOrError)->getBuffer();
+  Bytes = Bytes.drop_front(Offset);
+  Bytes = Bytes.take_front(Count);
+  return MemoryBuffer::getMemBufferCopy(Bytes, Name);
+}
 ErrorOr<std::unique_ptr<File>>
 File::getWithPath(ErrorOr<std::unique_ptr<File>> Result, const Twine &P) {
   // See \c getRedirectedFileStatus - don't update path if it's exposing an

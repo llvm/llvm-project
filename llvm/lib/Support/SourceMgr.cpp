@@ -90,6 +90,31 @@ SourceMgr::OpenIncludeFile(const std::string &Filename,
   return NewBufOrErr;
 }
 
+ErrorOr<std::unique_ptr<MemoryBuffer>>
+SourceMgr::OpenSliceIncludeFile(const std::string &Filename, int64_t Offset,
+                                int64_t Count, std::string &IncludedFile) {
+  auto GetFileSlice = [this, Offset, Count](StringRef Path) {
+    return FS ? FS->getSliceBufferForFile(Path, Offset, Count)
+              : MemoryBuffer::getFileSlice(Path, Count, Offset);
+  };
+
+  ErrorOr<std::unique_ptr<MemoryBuffer>> NewBufOrErr = GetFileSlice(Filename);
+
+  SmallString<64> Buffer(Filename);
+  // If the file didn't exist directly, see if it's in an include path.
+  for (unsigned i = 0, e = IncludeDirectories.size(); i != e && !NewBufOrErr;
+       ++i) {
+    Buffer = IncludeDirectories[i];
+    sys::path::append(Buffer, Filename);
+    NewBufOrErr = GetFileSlice(Buffer);
+  }
+
+  if (NewBufOrErr)
+    IncludedFile = static_cast<std::string>(Buffer);
+
+  return NewBufOrErr;
+}
+
 unsigned SourceMgr::FindBufferContainingLoc(SMLoc Loc) const {
   for (unsigned i = 0, e = Buffers.size(); i != e; ++i)
     if (Loc.getPointer() >= Buffers[i].Buffer->getBufferStart() &&

@@ -860,23 +860,26 @@ bool AsmParser::processIncbinFile(const std::string &Filename, int64_t Skip,
   if (SymbolScanningMode)
     return false;
 
-  std::string IncludedFile;
-  ErrorOr<std::unique_ptr<MemoryBuffer>> BuffOrErr =
-      SrcMgr.OpenIncludeFile(Filename, IncludedFile);
-  if (!BuffOrErr)
-    return true;
-
-  // Pick up the bytes from the file and emit them.
-  StringRef Bytes = (*BuffOrErr)->getBuffer();
-  Bytes = Bytes.drop_front(Skip);
+  int64_t BytesToRead = -1; // -1 initially for reading the whole file
   if (Count) {
     int64_t Res;
     if (!Count->evaluateAsAbsolute(Res, getStreamer().getAssemblerPtr()))
       return Error(Loc, "expected absolute expression");
     if (Res < 0)
-      return Warning(Loc, "negative count has no effect");
-    Bytes = Bytes.take_front(Res);
+      return Warning(Loc,
+                     "negative count has no effect"); // don't read if assembly
+    // has negative count
+    BytesToRead = Res;
   }
+
+  std::string IncludedFile;
+  ErrorOr<std::unique_ptr<MemoryBuffer>> BuffOrErr =
+      SrcMgr.OpenSliceIncludeFile(Filename, Skip, BytesToRead, IncludedFile);
+  if (!BuffOrErr)
+    return true;
+
+  // Pick up the bytes from the file and emit them.
+  StringRef Bytes = (*BuffOrErr)->getBuffer();
   getStreamer().emitBytes(Bytes);
   return false;
 }

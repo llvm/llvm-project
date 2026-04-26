@@ -133,6 +133,10 @@ public:
   getBuffer(const Twine &Name, int64_t FileSize = -1,
             bool RequiresNullTerminator = true, bool IsVolatile = false) = 0;
 
+  virtual ErrorOr<std::unique_ptr<MemoryBuffer>>
+  getSliceBuffer(const Twine &Name, int64_t Offset = 0, int64_t Count = -1,
+                 bool IsVolatile = false);
+
   /// Closes the file.
   virtual std::error_code close() = 0;
 
@@ -295,6 +299,11 @@ public:
   getBufferForFile(const Twine &Name, int64_t FileSize = -1,
                    bool RequiresNullTerminator = true, bool IsVolatile = false,
                    bool IsText = true);
+
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
+  getSliceBufferForFile(const Twine &Name, int64_t Offset = 0,
+                        int64_t Count = -1, bool IsVolatile = false,
+                        bool IsText = true);
 
   /// Get a directory_iterator for \p Dir.
   /// \note The 'end' iterator is directory_iterator().
