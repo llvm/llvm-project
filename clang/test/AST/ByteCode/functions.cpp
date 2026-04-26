@@ -774,3 +774,12 @@ namespace DependentReturnType {
   S<float> x;
 }
 #endif
+
+namespace FuncToIntRoundtrip {
+  void f() {}
+  constexpr int foo() { // both-error {{constexpr function never produces a constant expression}}
+    auto p = (void*)(__UINTPTR_TYPE__)f; // both-note {{cast that performs the conversions of a reinterpret_cast is not allowed in a constant expression}}
+    return 1;
+  }
+  auto a = foo();
+}
