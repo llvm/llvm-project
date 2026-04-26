@@ -55,7 +55,7 @@ extern "C++" {
     int h();
 }
 
-extern "C++" export int g();
+export int g();
 
 //--- d.cpp
 import c;

@@ -28,7 +28,7 @@ template <class T> constexpr T* zero<T*> = nullptr; // expected-error-re {{decla
                                                     // expected-note@* {{previous}}
 
 template <> constexpr int** zero<int**> = nullptr; // ok, new specialization.
-template <class T> constexpr T** zero<T**> = nullptr; // ok, new partial specilization.
+template <class T> constexpr T** zero<T**> = nullptr; // ok, new partial specialization.
 
 //--- var_def.cppm
 export module var_def;
@@ -37,8 +37,16 @@ export template <class T> constexpr T zero = 0;
 export struct Int {
     int value;
 };
-export template <> constexpr Int zero<Int> = {0};
-export template <class T> constexpr T* zero<T*> = nullptr;
+
+// FIXME: it should make no difference whether a specialization is
+// exported or not, but currently, removing this 'export'
+// leads to an assertion failure in Sema::shouldLinkPossiblyHiddenDecl.
+export {
+
+template <> constexpr Int zero<Int> = {0};
+template <class T> constexpr T* zero<T*> = nullptr;
+
+}
 
 //--- reexport1.cppm
 export module reexport1;

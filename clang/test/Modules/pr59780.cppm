@@ -25,7 +25,7 @@ export module a;
 export template<typename T>
 int x = 0;
 
-export template<>
+template<>
 int x<int> = 0;
 
 export template<typename T>
@@ -36,7 +36,7 @@ struct Y {
 template <typename T>
 int Y<T>::value = 0;
 
-export template<>
+template<>
 struct Y<int> {
     static int value;
 };

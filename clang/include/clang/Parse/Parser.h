@@ -3192,7 +3192,7 @@ private:
   /// \verbatim
   ///       linkage-specification: [C++ 7.5p2: dcl.link]
   ///         'extern' string-literal '{' declaration-seq[opt] '}'
-  ///         'extern' string-literal declaration
+  ///         'extern' string-literal name-declaration
   /// \endverbatim
   ///
   Decl *ParseLinkage(ParsingDeclSpec &DS, DeclaratorContext Context);
@@ -3201,7 +3201,7 @@ private:
   ///
   /// \verbatim
   ///       export-declaration:
-  ///         'export' declaration
+  ///         'export' name-declaration
   ///         'export' '{' declaration-seq[opt] '}'
   /// \endverbatim
   ///
@@ -3216,6 +3216,29 @@ private:
   /// \endverbatim
   ///
   Decl *ParseExportDeclaration();
+
+  /// Ensure the declaration in an unbraced linkage-specification or
+  /// export-declaration is not an explicit-instantiation,
+  /// explicit-specialization, or export-declaration:
+  ///
+  /// \verbatim
+  ///       export-declaration: [C++: module.interface]
+  ///         export name-declaration
+  ///
+  ///       linkage-specification: [C++: dcl.link]
+  ///         export name-declaration
+  ///
+  ///       declaration: [C++: dcl.pre]
+  ///         name-declaration
+  ///         special-declaration
+  ///
+  ///       special-declaration: [C++: dcl.pre]
+  ///         explicit-instantiation
+  ///         explicit-specialization
+  ///         export-declaration
+  /// \endverbatim
+  ///
+  void CheckUnbracedLinkageOrExportDeclaration(Decl *LinkageOrExportDecl);
 
   /// ParseUsingDirectiveOrDeclaration - Parse C++ using using-declaration or
   /// using-directive. Assumes that current token is 'using'.

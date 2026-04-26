@@ -20,7 +20,7 @@ struct S {
 
 export struct A {};
 
-export template <>
+template <>
 struct S<A> {
     static constexpr bool selected = true;
 };
@@ -34,7 +34,7 @@ struct V {
     static constexpr bool selected = false;
 };
 
-export template <>
+template<>
 struct V<S> {
     static constexpr bool selected = true;
 };
@@ -46,7 +46,7 @@ struct Numbers {
     static constexpr int value = X;
 };
 
-export template<>
+template<>
 struct Numbers<43> {
     static constexpr bool selected = true;
     static constexpr int value = 43;
@@ -58,7 +58,7 @@ struct Pointers {
 };
 
 export int IntegralValue = 0;
-export template<>
+template<>
 struct Pointers<&IntegralValue> {
     static constexpr bool selected = true;
 };
@@ -68,7 +68,7 @@ struct NullPointers {
     static constexpr bool selected = false;
 };
 
-export template<>
+template<>
 struct NullPointers<nullptr> {
     static constexpr bool selected = true;
 };
@@ -79,7 +79,7 @@ struct Array {
 };
 
 export int array[5];
-export template<>
+template<>
 struct Array<array> {
     static constexpr bool selected = true;
 };

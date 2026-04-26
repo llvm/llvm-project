@@ -12854,6 +12854,15 @@ def err_invalid_module_name : Error<"%0 is an invalid name for a module">;
 def err_extern_def_in_header_unit : Error<
   "non-inline external definitions are not permitted in C++ header units">;
 
+def err_meaningless_export : Error<
+  "%select{an explicit instantiation|a specialization}0 cannot be "
+  "marked 'export'">;
+def note_meaningless_export_explanation : Note<
+  "as long as its primary template is exported, it will be too">;
+def err_invalid_decl_in_linkage_spec : Error<
+  "language linkage specification cannot be applied to "
+  "%select{an explicit instantiation|a specialization|an export declaration}0">;
+
 def warn_exposure : Warning <
   "TU local entity %0 is exposed">,
   InGroup<DiagGroup<"TU-local-entity-exposure">>;

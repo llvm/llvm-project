@@ -24,12 +24,12 @@ struct a {
 	void aaa() requires(true) {}
 };
 
-export template struct a<double>;
+template struct a<double>;
 
 export template<typename T>
 void foo(T) requires(true) {}
 
-export template void foo<double>(double);
+template void foo<double>(double);
 
 export template <typename T>
 class A {
