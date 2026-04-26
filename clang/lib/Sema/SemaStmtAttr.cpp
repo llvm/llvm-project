@@ -802,6 +802,99 @@ ExprResult Sema::ActOnCXXAssumeAttr(Stmt *St, const ParsedAttr &A,
   return Assumption;
 }
 
+/// Recursively analyze whether a function body has side effects.
+/// \p Visited tracks the current call chain to prevent infinite recursion.
+static bool FunctionBodyHasSideEffects(const FunctionDecl *FD,
+                                        const ASTContext &Ctx,
+                                        SmallPtrSetImpl<const FunctionDecl*> &Visited) {
+  if (FD->hasAttr<ConstAttr>() || FD->hasAttr<PureAttr>())
+    return false;
+
+  const Stmt *Body = FD->getBody();
+  if (!Body)
+    return true;
+
+  if (!Visited.insert(FD).second)
+    return true;
+
+  bool HasSE = false;
+  SmallVector<const Stmt*, 16> Worklist;
+  Worklist.push_back(Body);
+
+  while (!Worklist.empty()) {
+    const Stmt *S = Worklist.pop_back_val();
+    if (!S)
+      continue;
+
+    if (const Expr *E = dyn_cast<Expr>(S)) {
+      // Check for definite side effects other than function calls.
+      if (E->HasSideEffects(Ctx, /*IncludePossibleEffects=*/false)) {
+        HasSE = true;
+        break;
+      }
+
+      // Recursively check callee bodies for nested calls.
+      if (const CallExpr *CE = dyn_cast<CallExpr>(E)) {
+        if (const FunctionDecl *Callee = CE->getDirectCallee()) {
+          if (FunctionBodyHasSideEffects(Callee, Ctx, Visited)) {
+            HasSE = true;
+            break;
+          }
+        } else {
+          HasSE = true;
+          break;
+        }
+      }
+    }
+
+    for (const Stmt *Child : S->children())
+      Worklist.push_back(Child);
+  }
+
+  Visited.erase(FD);
+  return HasSE;
+}
+
+/// Check whether an expression in [[assume]] has side effects.
+/// This is more precise than Expr::HasSideEffects because it attempts to
+/// analyze function bodies to prove that simple functions are side-effect free.
+static bool HasSideEffectsForAssume(const Expr *E, const ASTContext &Ctx) {
+  // First, filter out definite side effects like assignments, increments,
+  // new/delete, volatile accesses, etc.  In this mode, function calls are
+  // ignored (their arguments are still checked).
+  if (E->HasSideEffects(Ctx, /*IncludePossibleEffects=*/false))
+    return true;
+
+  // Second, walk the expression and check every CallExpr's function body.
+  SmallVector<const Expr*, 16> Worklist;
+  Worklist.push_back(E);
+
+  while (!Worklist.empty()) {
+    const Expr *SubExpr = Worklist.pop_back_val();
+
+    if (const CallExpr *CE = dyn_cast<CallExpr>(SubExpr)) {
+      if (const FunctionDecl *FD = CE->getDirectCallee()) {
+        SmallPtrSet<const FunctionDecl*, 8> Visited;
+        if (FunctionBodyHasSideEffects(FD, Ctx, Visited))
+          return true;
+      } else {
+        return true;
+      }
+
+      // Check nested calls inside arguments (e.g. foo(bar())).
+      for (const Expr *Arg : CE->arguments())
+        Worklist.push_back(Arg);
+    } else {
+      for (const Stmt *Child : SubExpr->children()) {
+        if (const Expr *ChildExpr = dyn_cast_or_null<Expr>(Child))
+          Worklist.push_back(ChildExpr);
+      }
+    }
+  }
+
+  return false;
+}
+
 ExprResult Sema::BuildCXXAssumeExpr(Expr *Assumption,
                                     const IdentifierInfo *AttrName,
                                     SourceRange Range) {
@@ -821,7 +914,7 @@ ExprResult Sema::BuildCXXAssumeExpr(Expr *Assumption,
     return ExprError();
 
   Assumption = Res.get();
-  if (Assumption->HasSideEffects(Context))
+  if (HasSideEffectsForAssume(Assumption, Context))
     Diag(Assumption->getBeginLoc(), diag::warn_assume_side_effects)
         << AttrName << Range;
 
