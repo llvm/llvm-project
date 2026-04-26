@@ -2,7 +2,6 @@
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 
-; Function Attrs: nounwind
 define void @foo(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) #0 {
 entry:
   br label %for.body
@@ -32,5 +31,5 @@ for.body:                                         ; preds = %for.body, %entry
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 }
 
-attributes #0 = { nounwind "target-cpu"="pwr8" }
+attributes #0 = { "target-cpu"="pwr8" }
 

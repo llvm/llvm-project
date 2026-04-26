@@ -116,6 +116,7 @@ enum UniformityLLTOpPredicateID {
   B160,
   B256,
   B512,
+  BRC,
 
   UniB32,
   UniB64,
@@ -290,7 +291,9 @@ enum LoweringMethodID {
   VerifyAllSgprGPHI,
   VerifyAllSgprOrVgprGPHI,
   ApplyINTRIN_IMAGE,
-  SplitBitCount64To32
+  SplitBitCount64To32,
+  ExtrVecEltToSel,
+  ExtrVecEltTo32
 };
 
 enum FastRulesTypes {

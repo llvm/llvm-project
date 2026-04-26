@@ -1619,7 +1619,7 @@ bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
     GetObjectFile()->GetModule()->LogMessageVerboseBacktrace(
         log, "{0:x8}: {1} ({2}) '{3}' resolving forward declaration...",
         def_die.GetID(), DW_TAG_value_to_name(def_die.Tag()), def_die.Tag(),
-        type->GetName().AsCString());
+        type->GetName().GetStringRef());
   assert(compiler_type);
   return dwarf_ast->CompleteTypeFromDWARF(def_die, type, compiler_type);
 }

@@ -66,7 +66,7 @@ CIRGenFunction::emitAutoVarAlloca(const VarDecl &d,
         (d.isConstexpr() ||
          ((ty.isPODType(getContext()) ||
            getContext().getBaseElementType(ty)->isObjCObjectPointerType()) &&
-          d.getInit()->isConstantInitializer(getContext(), false)))) {
+          d.getInit()->isConstantInitializer(getContext())))) {
 
       // If the variable's a const type, and it's neither an NRVO
       // candidate nor a __block variable and has no mutable members,
@@ -1005,6 +1005,37 @@ void CIRGenFunction::pushDestroy(QualType::DestructionKind dtorKind,
 void CIRGenFunction::pushDestroy(CleanupKind cleanupKind, Address addr,
                                  QualType type, Destroyer *destroyer) {
   pushFullExprCleanup<DestroyObject>(cleanupKind, addr, type, destroyer);
+}
+
+void CIRGenFunction::pushLifetimeExtendedDestroy(CleanupKind cleanupKind,
+                                                 Address addr, QualType type,
+                                                 Destroyer *destroyer,
+                                                 bool useEHCleanupForArray) {
+  if (isInConditionalBranch()) {
+    cgm.errorNYI("conditional lifetime-extended destroy");
+    return;
+  }
+
+  // Classic codegen also uses pushDestroyAndDeferDeactivation here to push an
+  // EH cleanup that protects the temporary during the rest of the full
+  // expression, then deactivates it when the full expression ends. We don't
+  // have deferred deactivation yet, so we only queue the lifetime-extended
+  // cleanup below. When deferred deactivation is implemented, add the
+  // pushDestroyAndDeferDeactivation call here.
+  if (getLangOpts().Exceptions) {
+    cgm.errorNYI("lifetime-extended cleanup with exceptions enabled");
+    return;
+  }
+
+  assert(!cir::MissingFeatures::useEHCleanupForArray());
+
+  pushCleanupAfterFullExpr(cleanupKind, addr, type, destroyer);
+}
+
+void CIRGenFunction::pushLifetimeExtendedCleanupToEHStack(
+    const LifetimeExtendedCleanupEntry &entry) {
+  ehStack.pushCleanup<DestroyObject>(entry.kind, entry.addr, entry.type,
+                                     entry.destroyer);
 }
 
 /// Destroys all the elements of the given array, beginning from last to first.

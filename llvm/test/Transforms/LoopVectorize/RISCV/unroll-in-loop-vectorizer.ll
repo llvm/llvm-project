@@ -3,7 +3,7 @@
 
 ; Make sure we don't unroll scalar loops in the loop vectorizer.
 ;
-define void @small_loop(ptr nocapture %inArray, i32 %size) nounwind {
+define void @small_loop(ptr nocapture %inArray, i32 %size) {
 ; CHECK-LABEL: @small_loop(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[SIZE:%.*]], 0

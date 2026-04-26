@@ -3541,8 +3541,10 @@ void ExpressionAnalyzer::Analyze(const parser::CallStmt &callStmt) {
       ProcedureDesignator *proc{std::get_if<ProcedureDesignator>(&callee->u)};
       CHECK(proc);
       bool isKernel{false};
+      bool isBindC{false};
       if (const Symbol * procSym{proc->GetSymbol()}) {
         const Symbol &ultimate{procSym->GetUltimate()};
+        isBindC = ultimate.attrs().test(semantics::Attr::BIND_C);
         if (const auto *subpDetails{
                 ultimate.detailsIf<semantics::SubprogramDetails>()}) {
           if (auto attrs{subpDetails->cudaSubprogramAttrs()}) {
@@ -3558,7 +3560,7 @@ void ExpressionAnalyzer::Analyze(const parser::CallStmt &callStmt) {
               procSym->name());
         }
       }
-      if (!isKernel && !chevrons->empty()) {
+      if (!isKernel && !isBindC && !chevrons->empty()) {
         Say("Kernel launch parameters in chevrons may not be used unless calling a kernel subroutine"_err_en_US);
       }
       if (CheckCall(callStmt.source, *proc, callee->arguments)) {

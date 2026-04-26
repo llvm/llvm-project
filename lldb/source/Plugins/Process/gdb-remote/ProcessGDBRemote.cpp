@@ -4420,9 +4420,8 @@ void ProcessGDBRemote::GetMaxMemorySize() {
         // In unlikely scenario that max packet size is less then 70, we will
         // hope that data being written is small enough to fit.
         Log *log(GetLog(GDBRLog::Comm | GDBRLog::Memory));
-        if (log)
-          log->Warning("Packet size is too small. "
-                       "LLDB may face problems while writing memory");
+        LLDB_LOG(log, "warning: Packet size is too small. "
+                      "LLDB may face problems while writing memory");
       }
 
       m_max_memory_size = stub_max_size;
@@ -4979,13 +4978,13 @@ bool ParseRegisters(
             if (reg_info.byte_size == flags_type->GetSize())
               reg_info.flags_type = flags_type;
             else
-              LLDB_LOGF(log,
-                        "ProcessGDBRemote::ParseRegisters Size of register "
-                        "flags %s (%d bytes) for "
-                        "register %s does not match the register size (%d "
-                        "bytes). Ignoring this set of flags.",
-                        flags_type->GetID().c_str(), flags_type->GetSize(),
-                        reg_info.name.AsCString(), reg_info.byte_size);
+              LLDB_LOG(
+                  log,
+                  "ProcessGDBRemote::ParseRegisters Size of register flags {0} "
+                  "({1} bytes) for register {2} does not match the register "
+                  "size ({3} bytes). Ignoring this set of flags.",
+                  flags_type->GetID().c_str(), flags_type->GetSize(),
+                  reg_info.name, reg_info.byte_size);
           }
 
           // There's a slim chance that the gdb_type name is both a flags type
@@ -5038,9 +5037,9 @@ bool ParseRegisters(
         }
 
         if (reg_info.byte_size == 0) {
-          LLDB_LOGF(log,
-                    "ProcessGDBRemote::%s Skipping zero bitsize register %s",
-                    __FUNCTION__, reg_info.name.AsCString());
+          LLDB_LOG(log,
+                   "ProcessGDBRemote::{0} Skipping zero bitsize register {1}",
+                   __FUNCTION__, reg_info.name);
         } else
           registers.push_back(reg_info);
 

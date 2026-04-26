@@ -127,6 +127,17 @@ struct KnownFPClass {
     return isKnownNever(OrderedGreaterThanZeroMask);
   }
 
+  /// Return true if it's known this can never be a positive value or a logical
+  /// 0.
+  ///
+  ///      NaN --> true
+  ///  x <= +0 --> false
+  ///     psub --> true if mode is ieee, false otherwise.
+  ///   x > +0 --> true
+  bool cannotBeOrderedLessEqZero(DenormalMode Mode) const {
+    return isKnownNever(fcNegative) && isKnownNeverLogicalPosZero(Mode);
+  }
+
   /// Return true if it's know this can never be a negative value or a logical
   /// 0.
   ///

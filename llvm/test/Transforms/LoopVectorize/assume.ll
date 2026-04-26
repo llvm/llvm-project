@@ -58,9 +58,7 @@ for.end:                                          ; preds = %for.body
   ret void
 }
 
-declare void @llvm.assume(i1) #0
-
-attributes #0 = { nounwind willreturn }
+declare void @llvm.assume(i1)
 
 define void @test2(ptr noalias %a, ptr noalias %b) {
 ; CHECK-LABEL: define void @test2(

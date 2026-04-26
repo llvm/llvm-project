@@ -1488,6 +1488,18 @@ static bool compileModuleImpl(CompilerInstance &ImportingInstance,
     ImportingInstance.getModuleCache().updateModuleTimestamp(ModuleFileName);
   }
 
+  // This isn't strictly necessary, but it's more efficient to extract the AST
+  // file (which may be wrapped in an object file) now rather than doing so
+  // repeatedly in the readers.
+  const PCHContainerReader &Rdr = ImportingInstance.getPCHContainerReader();
+  StringRef ExtractedBuffer = Rdr.ExtractPCH(*Buffer);
+  // FIXME: Avoid the copy here by having InMemoryModuleCache accept both the
+  // owning buffer and the StringRef.
+  Buffer = llvm::MemoryBuffer::getMemBufferCopy(ExtractedBuffer);
+
+  ImportingInstance.getModuleCache().getInMemoryModuleCache().addBuiltPCM(
+      ModuleFileName, std::move(Buffer));
+
   return true;
 }
 
@@ -1517,7 +1529,6 @@ compileModuleBehindLockOrRead(CompilerInstance &ImportingInstance,
       << ModuleFileName << Module->Name;
 
   auto &ModuleCache = ImportingInstance.getModuleCache();
-  ModuleCache.prepareForGetLock(ModuleFileName);
 
   while (true) {
     auto Lock = ModuleCache.getLock(ModuleFileName);

@@ -11,7 +11,6 @@ target triple = "x86_64-unknown-linux-gnu"
 
 @a = external global [255 x i32]
 
-; Function Attrs: nounwind readonly uwtable
 define i32 @vect() {
 ; CHECK: LV: Checking a loop in 'vect'
 entry:

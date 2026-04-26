@@ -571,14 +571,20 @@ void CIRRecordLowering::accumulateFields() {
       field = accumulateBitFields(field, fieldEnd);
       assert((field == fieldEnd || !field->isBitField()) &&
              "Failed to accumulate all the bitfields");
-    } else if (!field->isZeroSize(astContext)) {
-      members.push_back(MemberInfo(bitsToCharUnits(getFieldBitOffset(*field)),
-                                   MemberInfo::InfoKind::Field,
-                                   getStorageType(*field), *field));
-      ++field;
-    } else {
+    } else if (isEmptyFieldForLayout(astContext, *field)) {
       // TODO(cir): do we want to do anything special about zero size members?
       assert(!cir::MissingFeatures::zeroSizeRecordMembers());
+      ++field;
+    } else {
+      // Use base subobject layout for potentially-overlapping fields,
+      // as it is done in RecordLayoutBuilder.
+      members.push_back(MemberInfo(
+          bitsToCharUnits(getFieldBitOffset(*field)),
+          MemberInfo::InfoKind::Field,
+          field->isPotentiallyOverlapping()
+              ? getStorageType(field->getType()->getAsCXXRecordDecl())
+              : getStorageType(*field),
+          *field));
       ++field;
     }
   }

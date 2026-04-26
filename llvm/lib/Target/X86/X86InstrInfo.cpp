@@ -7592,7 +7592,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
         NewMI->getOperand(0).setSubReg(X86::sub_32bit);
     }
 
-    if (NoNDDM) {
+    if (NoNDDM && !IsTwoAddr) {
       Register SrcReg = MI.getOperand(1).getReg();
       if (MI.killsRegister(SrcReg, /*TRI=*/nullptr))
         return NewMI;

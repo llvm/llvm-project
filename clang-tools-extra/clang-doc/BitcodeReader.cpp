@@ -620,13 +620,6 @@ template <> llvm::Error addTypeInfo(FunctionInfo *I, FieldTypeInfo &&T) {
   return llvm::Error::success();
 }
 
-template <> llvm::Error addTypeInfo(FriendInfo *I, FieldTypeInfo &&T) {
-  if (!I->Params)
-    I->Params.emplace();
-  I->Params->emplace_back(std::move(T));
-  return llvm::Error::success();
-}
-
 template <> llvm::Error addTypeInfo(FriendInfo *I, TypeInfo &&T) {
   I->ReturnType.emplace(std::move(T));
   return llvm::Error::success();
@@ -727,9 +720,11 @@ llvm::Error addReference(NamespaceInfo *I, Reference &&R, FieldId F) {
   case FieldId::F_namespace:
     I->Namespace.emplace_back(std::move(R));
     return llvm::Error::success();
-  case FieldId::F_child_namespace:
-    I->Children.Namespaces.emplace_back(std::move(R));
+  case FieldId::F_child_namespace: {
+    Reference *NewR = allocatePtr<Reference>(TransientArena, std::move(R));
+    I->Children.Namespaces.push_back(*NewR);
     return llvm::Error::success();
+  }
   case FieldId::F_child_record:
     I->Children.Records.emplace_back(std::move(R));
     return llvm::Error::success();
@@ -943,6 +938,51 @@ llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, T I) {
     case Cursor::BlockEnd:
       return llvm::Error::success();
     case Cursor::BlockBegin:
+      if (llvm::Error Err = readSubBlock(BlockOrCode, I)) {
+        if (llvm::Error Skipped = Stream.SkipBlock())
+          return joinErrors(std::move(Err), std::move(Skipped));
+        return Err;
+      }
+      continue;
+    case Cursor::Record:
+      break;
+    }
+    if (auto Err = readRecord(BlockOrCode, I))
+      return Err;
+  }
+}
+
+template <>
+llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, FriendInfo *I) {
+  llvm::TimeTraceScope("Reducing infos", "readBlock");
+  if (llvm::Error Err = Stream.EnterSubBlock(ID))
+    return Err;
+
+  llvm::SmallVector<FieldTypeInfo, 4> LocalParams;
+
+  while (true) {
+    unsigned BlockOrCode = 0;
+    llvm::Expected<Cursor> C = skipUntilRecordOrBlock(BlockOrCode);
+    if (!C)
+      return C.takeError();
+
+    switch (*C) {
+    case Cursor::BadBlock:
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "bad block found");
+    case Cursor::BlockEnd: {
+      if (!LocalParams.empty())
+        I->Params = allocateArray<FieldTypeInfo>(LocalParams, TransientArena);
+      return llvm::Error::success();
+    }
+    case Cursor::BlockBegin:
+      if (BlockOrCode == BI_FIELD_TYPE_BLOCK_ID) {
+        FieldTypeInfo FI;
+        if (auto Err = readBlock(BlockOrCode, &FI))
+          return Err;
+        LocalParams.push_back(std::move(FI));
+        continue;
+      }
       if (llvm::Error Err = readSubBlock(BlockOrCode, I)) {
         if (llvm::Error Skipped = Stream.SkipBlock())
           return joinErrors(std::move(Err), std::move(Skipped));

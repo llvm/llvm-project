@@ -12926,11 +12926,19 @@ bool Sema::CheckUsingShadowDecl(BaseUsingDecl *BUD, NamedDecl *Orig,
   if (FoundEquivalentDecl)
     return false;
 
-  // This using_if_exists decl cannot be a subsitute for the original decl,
-  // so do not create a shadow decl for this case.
+  // Always emit a diagnostic for a mismatch between an unresolved
+  // using_if_exists and a resolved using declaration in either direction.
   if (isa<UnresolvedUsingIfExistsDecl>(Target) !=
-      (isa_and_nonnull<UnresolvedUsingIfExistsDecl>(NonTag)))
-    return false;
+      (isa_and_nonnull<UnresolvedUsingIfExistsDecl>(NonTag))) {
+    if (!NonTag && !Tag)
+      return false;
+    Diag(BUD->getLocation(), diag::err_using_decl_conflict);
+    Diag(Target->getLocation(), diag::note_using_decl_target);
+    Diag((NonTag ? NonTag : Tag)->getLocation(),
+         diag::note_using_decl_conflict);
+    BUD->setInvalidDecl();
+    return true;
+  }
 
   if (FunctionDecl *FD = Target->getAsFunction()) {
     NamedDecl *OldDecl = nullptr;

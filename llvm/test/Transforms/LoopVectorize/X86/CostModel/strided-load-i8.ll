@@ -10,12 +10,12 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @load_i8_stride2() {
 ;CHECK-LABEL: load_i8_stride2
 ;CHECK: Found an estimated cost of 1 for VF 1 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 1 for VF 2 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 1 for VF 4 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 1 for VF 8 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 4 for VF 16 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 8 for VF 32 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 20 for VF 64 For instruction:   %1 = load
+;CHECK: Cost of 1 for VF 2: INTERLEAVE-GROUP with factor 2 at %1,
+;CHECK: Cost of 1 for VF 4: INTERLEAVE-GROUP with factor 2 at %1,
+;CHECK: Cost of 1 for VF 8: INTERLEAVE-GROUP with factor 2 at %1,
+;CHECK: Cost of 4 for VF 16: INTERLEAVE-GROUP with factor 2 at %1,
+;CHECK: Cost of 8 for VF 32: INTERLEAVE-GROUP with factor 2 at %1,
+;CHECK: Cost of 20 for VF 64: INTERLEAVE-GROUP with factor 2 at %1,
 entry:
   br label %for.body
 
@@ -37,12 +37,12 @@ for.end:                                          ; preds = %for.body
 define void @load_i8_stride3() {
 ;CHECK-LABEL: load_i8_stride3
 ;CHECK: Found an estimated cost of 1 for VF 1 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 1 for VF 2 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 1 for VF 4 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 4 for VF 8 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 13 for VF 16 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 16 for VF 32 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 25 for VF 64 For instruction:   %1 = load
+;CHECK: Cost of 1 for VF 2: INTERLEAVE-GROUP with factor 3 at %1,
+;CHECK: Cost of 1 for VF 4: INTERLEAVE-GROUP with factor 3 at %1,
+;CHECK: Cost of 4 for VF 8: INTERLEAVE-GROUP with factor 3 at %1,
+;CHECK: Cost of 13 for VF 16: INTERLEAVE-GROUP with factor 3 at %1,
+;CHECK: Cost of 16 for VF 32: INTERLEAVE-GROUP with factor 3 at %1,
+;CHECK: Cost of 25 for VF 64: INTERLEAVE-GROUP with factor 3 at %1,
 entry:
   br label %for.body
 
@@ -64,12 +64,12 @@ for.end:                                          ; preds = %for.body
 define void @load_i8_stride4() {
 ;CHECK-LABEL: load_i8_stride4
 ;CHECK: Found an estimated cost of 1 for VF 1 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 1 for VF 2 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 1 for VF 4 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 4 for VF 8 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 8 for VF 16 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 20 for VF 32 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 59 for VF 64 For instruction:   %1 = load
+;CHECK: Cost of 1 for VF 2: INTERLEAVE-GROUP with factor 4 at %1,
+;CHECK: Cost of 1 for VF 4: INTERLEAVE-GROUP with factor 4 at %1,
+;CHECK: Cost of 4 for VF 8: INTERLEAVE-GROUP with factor 4 at %1,
+;CHECK: Cost of 8 for VF 16: INTERLEAVE-GROUP with factor 4 at %1,
+;CHECK: Cost of 20 for VF 32: INTERLEAVE-GROUP with factor 4 at %1,
+;CHECK: Cost of 59 for VF 64: INTERLEAVE-GROUP with factor 4 at %1,
 entry:
   br label %for.body
 
@@ -91,12 +91,12 @@ for.end:                                          ; preds = %for.body
 define void @load_i8_stride5() {
 ;CHECK-LABEL: load_i8_stride5
 ;CHECK: Found an estimated cost of 1 for VF 1 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 1 for VF 2 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 4 for VF 4 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 8 for VF 8 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 20 for VF 16 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 39 for VF 32 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 78 for VF 64 For instruction:   %1 = load
+;CHECK: Cost of 1 for VF 2: INTERLEAVE-GROUP with factor 5 at %1,
+;CHECK: Cost of 4 for VF 4: INTERLEAVE-GROUP with factor 5 at %1,
+;CHECK: Cost of 8 for VF 8: INTERLEAVE-GROUP with factor 5 at %1,
+;CHECK: Cost of 20 for VF 16: INTERLEAVE-GROUP with factor 5 at %1,
+;CHECK: Cost of 39 for VF 32: INTERLEAVE-GROUP with factor 5 at %1,
+;CHECK: Cost of 78 for VF 64: INTERLEAVE-GROUP with factor 5 at %1,
 entry:
   br label %for.body
 

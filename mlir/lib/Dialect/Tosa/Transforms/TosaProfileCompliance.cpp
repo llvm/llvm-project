@@ -77,6 +77,17 @@ LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::AvgPool2dOp op) {
   return success();
 }
 
+template <>
+LogicalResult
+ProfileInfoDepot::populateProfileInfo(tosa::AvgPool2dAdaptiveOp op) {
+  addValue(op.getInput());
+  addValue(op.getInputZp());
+  addValue(op.getOutputZp());
+  addType(op.getAccType());
+  addValue(op.getOutput());
+  return success();
+}
+
 template <typename T>
 LogicalResult ProfileInfoDepot::populateProfileInfoConv(T op) {
   addValue(op.getInput());
@@ -255,6 +266,7 @@ LogicalResult ProfileInfoDepot::populatationDispatch(Operation *op) {
   // Skip irrelevant operands when they are independent and not tied to any
   // specific profile/extension.
   POPULATE_PROFILE_INFO_CUSTOM(AvgPool2d)
+  POPULATE_PROFILE_INFO_CUSTOM(AvgPool2dAdaptive)
   POPULATE_PROFILE_INFO_CUSTOM(TransposeConv2D)
   POPULATE_PROFILE_INFO_CUSTOM(Conv2D)
   POPULATE_PROFILE_INFO_CUSTOM(Conv2DBlockScaled)

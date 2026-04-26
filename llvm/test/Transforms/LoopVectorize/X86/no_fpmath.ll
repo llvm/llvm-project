@@ -7,8 +7,7 @@
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.10.0"
 
-; Function Attrs: nounwind readonly ssp uwtable
-define double @cond_sum(ptr nocapture readonly %v, i32 %n) #0 !dbg !4 {
+define double @cond_sum(ptr nocapture readonly %v, i32 %n) !dbg !4 {
 entry:
   %cmp.7 = icmp sgt i32 %n, 0, !dbg !3
   br i1 %cmp.7, label %for.body.preheader, label %for.cond.cleanup, !dbg !8
@@ -38,7 +37,6 @@ for.body:                                         ; preds = %for.body.preheader,
   br i1 %exitcond, label %for.cond.cleanup.loopexit, label %for.body, !dbg !8
 }
 
-; Function Attrs: nounwind readonly ssp uwtable
 define double @cond_sum_loop_hint(ptr nocapture readonly %v, i32 %n) #0 !dbg !20 {
 entry:
   %cmp.7 = icmp sgt i32 %n, 0, !dbg !19
@@ -68,8 +66,6 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond = icmp eq i32 %lftr.wideiv, %n, !dbg !21
   br i1 %exitcond, label %for.cond.cleanup.loopexit, label %for.body, !dbg !21, !llvm.loop !26
 }
-
-attributes #0 = { nounwind }
 
 !llvm.dbg.cu = !{!28}
 !llvm.module.flags = !{!0, !1}

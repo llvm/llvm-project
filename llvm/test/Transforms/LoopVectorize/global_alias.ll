@@ -26,7 +26,7 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK: add nsw <4 x i32>
 ; CHECK: ret
 
-define i32 @noAlias01(i32 %a) nounwind {
+define i32 @noAlias01(i32 %a) {
 entry:
   br label %for.body
 
@@ -506,7 +506,7 @@ for.end:                                          ; preds = %for.body
 ; CHECK: add nsw <4 x i32>
 ; CHECK: ret
 
-define i32 @mayAlias01(i32 %a) nounwind {
+define i32 @mayAlias01(i32 %a) {
 entry:
   br label %for.body
 
@@ -539,7 +539,7 @@ for.end:                                          ; preds = %for.body
 ; CHECK: add nsw <4 x i32>
 ; CHECK: ret
 
-define i32 @mayAlias02(i32 %a) nounwind {
+define i32 @mayAlias02(i32 %a) {
 entry:
   br label %for.body
 
@@ -572,7 +572,7 @@ for.end:                                          ; preds = %for.body
 ; CHECK-NOT: add nsw <4 x i32>
 ; CHECK: ret
 
-define i32 @mayAlias03(i32 %a) nounwind {
+define i32 @mayAlias03(i32 %a) {
 entry:
   br label %for.body
 
@@ -612,7 +612,7 @@ for.end:                                          ; preds = %for.body
 ; CHECK-NOT: add nsw <4 x i32>
 ; CHECK: ret
 
-define i32 @mustAlias01(i32 %a) nounwind {
+define i32 @mustAlias01(i32 %a) {
 entry:
   br label %for.body
 
@@ -645,7 +645,7 @@ for.end:                                          ; preds = %for.body
 ; CHECK-NOT: add nsw <4 x i32>
 ; CHECK: ret
 
-define i32 @mustAlias02(i32 %a) nounwind {
+define i32 @mustAlias02(i32 %a) {
 entry:
   br label %for.body
 
@@ -677,7 +677,7 @@ for.end:                                          ; preds = %for.body
 ; CHECK-NOT: add nsw <4 x i32>
 ; CHECK: ret
 
-define i32 @mustAlias03(i32 %a) nounwind {
+define i32 @mustAlias03(i32 %a) {
 entry:
   br label %for.body
 

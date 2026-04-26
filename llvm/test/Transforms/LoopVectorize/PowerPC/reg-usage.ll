@@ -220,7 +220,7 @@ define void @double_(ptr nocapture %A, i32 %n) {
   ret void
 }
 
-define ppc_fp128 @fp128_(ptr nocapture %n, ppc_fp128 %d) nounwind readonly {
+define ppc_fp128 @fp128_(ptr nocapture %n, ppc_fp128 %d) readonly {
 ;CHECK-LABEL: fp128_
 ;CHECK: LV(REG): VF = 1
 ;CHECK: LV(REG): Found max usage: 2 item

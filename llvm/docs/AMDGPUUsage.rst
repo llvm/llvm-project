@@ -2067,6 +2067,9 @@ The AMDGPU backend supports the following LLVM IR attributes.
      "amdgpu-no-dispatch-id"                          The same as amdgpu-no-workitem-id-x, except for the
                                                       llvm.amdgcn.dispatch.id intrinsic.
 
+     "amdgpu-no-wwm"                                  The same as amdgpu-no-workitem-id-x, except for the
+                                                      llvm.amdgcn.strict.wwm intrinsic.
+
      "amdgpu-no-queue-ptr"                            Similar to amdgpu-no-workitem-id-x, except for the
                                                       llvm.amdgcn.queue.ptr intrinsic. Note that unlike the other ABI hint
                                                       attributes, the queue pointer may be required in situations where the

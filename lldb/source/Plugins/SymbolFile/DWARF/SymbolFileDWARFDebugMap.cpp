@@ -345,8 +345,8 @@ void SymbolFileDWARFDebugMap::InitOSO() {
     if (so_symbol && oso_symbol &&
         so_symbol->GetType() == eSymbolTypeSourceFile &&
         oso_symbol->GetType() == eSymbolTypeObjectFile) {
-      m_compile_unit_infos[i].so_file.SetFile(so_symbol->GetName().AsCString(),
-                                              FileSpec::Style::native);
+      m_compile_unit_infos[i].so_file.SetFile(
+          so_symbol->GetName().GetStringRef(), FileSpec::Style::native);
       m_compile_unit_infos[i].oso_path = oso_symbol->GetName();
       m_compile_unit_infos[i].oso_mod_time =
           llvm::sys::toTimePoint(oso_symbol->GetIntegerValue(0));
@@ -482,7 +482,7 @@ Module *SymbolFileDWARFDebugMap::GetModuleByCompUnitInfo(
             "\"%s\" object from the \"%s\" archive: "
             "either the .o file doesn't exist in the archive or the "
             "modification time (0x%8.8x) of the .o file doesn't match",
-            oso_object.AsCString(), oso_file.GetPath().c_str(),
+            oso_object.AsCString(""), oso_file.GetPath().c_str(),
             (uint32_t)llvm::sys::toTimeT(comp_unit_info->oso_mod_time));
       }
     }

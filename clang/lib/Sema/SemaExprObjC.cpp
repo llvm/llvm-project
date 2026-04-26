@@ -982,7 +982,7 @@ ExprResult SemaObjC::BuildObjCArrayLiteral(SourceRange SR,
     // to be in constant collections since they *could* be modified / reassigned
     if (ExpressibleAsConstantInitLiteral &&
         (!isa<ObjCObjectLiteral>(ElementsBuffer[I]->IgnoreImpCasts()) ||
-         !ElementsBuffer[I]->isConstantInitializer(Context, false)))
+         !ElementsBuffer[I]->isConstantInitializer(Context)))
       ExpressibleAsConstantInitLiteral = false;
   }
 
@@ -1226,7 +1226,7 @@ ExprResult SemaObjC::BuildObjCDictionaryLiteral(
     Element.Value = Value.get();
 
     if (ExpressibleAsConstantInitLiteral &&
-        !Element.Key->isConstantInitializer(Context, false))
+        !Element.Key->isConstantInitializer(Context))
       ExpressibleAsConstantInitLiteral = false;
 
     // Only support string keys like plists
@@ -1238,7 +1238,7 @@ ExprResult SemaObjC::BuildObjCDictionaryLiteral(
     // to be in constant collections since they *could* be modified / reassigned
     if (ExpressibleAsConstantInitLiteral &&
         (!isa<ObjCObjectLiteral>(Element.Value->IgnoreImpCasts()) ||
-         !Element.Value->isConstantInitializer(Context, false)))
+         !Element.Value->isConstantInitializer(Context)))
       ExpressibleAsConstantInitLiteral = false;
 
     if (Element.EllipsisLoc.isInvalid())

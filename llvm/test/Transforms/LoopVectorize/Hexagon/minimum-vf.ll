@@ -14,8 +14,7 @@ target datalayout = "e-m:e-p:32:32:32-a:0-n16:32-i64:64:64-i32:32:32-i16:16:16-i
 declare void @llvm.lifetime.start.p0(ptr nocapture) #0
 declare void @llvm.lifetime.end.p0(ptr nocapture) #0
 
-; Function Attrs: nounwind
-define hidden fastcc void @f0(ptr nocapture %a0, i32 %a1, i32 %a2, i32 %a3, i32 %a4, i8 zeroext %a5) unnamed_addr #1 {
+define hidden fastcc void @f0(ptr nocapture %a0, i32 %a1, i32 %a2, i32 %a3, i32 %a4, i8 zeroext %a5) #1 {
 b0:
   %v0 = alloca [4 x [9 x i16]], align 8
   call void @llvm.lifetime.start.p0(ptr nonnull %v0) #2
@@ -147,13 +146,12 @@ b1:                                               ; preds = %b1, %b0
   br i1 %v120, label %b2, label %b1
 
 b2:                                               ; preds = %b1, %b0
-  call void @llvm.lifetime.end.p0(ptr nonnull %v0) #2
+  call void @llvm.lifetime.end.p0(ptr nonnull %v0)
   ret void
 }
 
-attributes #0 = { argmemonly nounwind }
-attributes #1 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvx-length64b,+hvxv60" }
-attributes #2 = { nounwind }
+attributes #0 = { argmemonly }
+attributes #1 = { "target-cpu"="hexagonv60" "target-features"="+hvx-length64b,+hvxv60" }
 
 !llvm.module.flags = !{!0}
 
