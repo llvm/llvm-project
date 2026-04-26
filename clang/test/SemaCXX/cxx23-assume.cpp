@@ -178,6 +178,43 @@ int foo () {
 }
 }
 
+namespace assume_side_effect_analysis {
+bool no_side_effects() { return true; }
+
+bool nested_no_side_effects() { return no_side_effects(); }
+
+bool side_effects(int &x) { return ++x; }
+
+bool nested_side_effects(int &x) { return side_effects(x); }
+
+bool declared_pure() __attribute__((pure));
+bool declared_const() __attribute__((const));
+
+bool recursive_b();
+bool recursive_a() { return recursive_b(); }
+bool recursive_b() { return recursive_a(); }
+
+struct V {
+  virtual bool f() { return true; }
+};
+
+void test() {
+  int x = 0;
+  V v;
+  V &vr = v;
+  bool (*fp)() = no_side_effects;
+
+  [[assume(no_side_effects())]]; // ext-warning {{C++23 extension}}
+  [[assume(nested_no_side_effects())]]; // ext-warning {{C++23 extension}}
+  [[assume(nested_side_effects(x))]]; // expected-warning {{assumption is ignored because it contains (potential) side-effects}} ext-warning {{C++23 extension}}
+  [[assume(declared_pure())]]; // ext-warning {{C++23 extension}}
+  [[assume(declared_const())]]; // ext-warning {{C++23 extension}}
+  [[assume(fp())]]; // expected-warning {{assumption is ignored because it contains (potential) side-effects}} ext-warning {{C++23 extension}}
+  [[assume(recursive_a())]]; // expected-warning {{assumption is ignored because it contains (potential) side-effects}} ext-warning {{C++23 extension}}
+  [[assume(vr.f())]]; // expected-warning {{assumption is ignored because it contains (potential) side-effects}} ext-warning {{C++23 extension}}
+}
+} // namespace assume_side_effect_analysis
+
 namespace GH114787 {
 
 // FIXME: Correct the C++26 value
