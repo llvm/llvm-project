@@ -31,8 +31,7 @@ public:
 
   static void
   VerifyBreakpointIDs(Args &args, ExecutionContext &exe_ctx,
-                      CommandReturnObject &result,
-                      BreakpointIDList *valid_ids,
+                      CommandReturnObject &result, BreakpointIDList *valid_ids,
                       BreakpointName::Permissions::PermissionKinds purpose) {
     VerifyIDs(args, exe_ctx, false, result, valid_ids, purpose);
   }

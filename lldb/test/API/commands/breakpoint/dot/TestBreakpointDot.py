@@ -43,6 +43,4 @@ class TestCase(TestBase):
         self.build()
         target = self.createTestTarget()
         target.BreakpointCreateByLocation("main.c", 2)
-        self.expect(
-            "breakpoint disable .", error=True, substrs=["no current thread"]
-        )
+        self.expect("breakpoint disable .", error=True, substrs=["no current thread"])
