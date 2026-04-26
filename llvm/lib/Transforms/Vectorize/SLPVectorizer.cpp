@@ -21550,7 +21550,8 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
       }
       if (GatherShuffles.size() == 1 &&
           *GatherShuffles.front() == TTI::SK_PermuteSingleSrc &&
-          Entries.front().front()->isSame(E->Scalars)) {
+          (Entries.front().front()->isSame(E->Scalars) ||
+           E->isSame(Entries.front().front()->Scalars))) {
         // Perfect match in the graph, will reuse the previously vectorized
         // node. Cost is 0.
         LLVM_DEBUG(dbgs() << "SLP: perfect diamond match for gather bundle "
@@ -21558,7 +21559,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
         // Restore the mask for previous partially matched values.
         Mask.resize(E->Scalars.size());
         const TreeEntry *FrontTE = Entries.front().front();
-        if (FrontTE->ReorderIndices.empty() &&
+        if (FrontTE->ReorderIndices.empty() && E->ReorderIndices.empty() &&
             ((FrontTE->ReuseShuffleIndices.empty() &&
               E->Scalars.size() == FrontTE->Scalars.size()) ||
              (E->Scalars.size() == FrontTE->ReuseShuffleIndices.size()))) {
@@ -21576,9 +21577,13 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
         // nodes.
         ShuffleBuilder.resetForSameNode();
         // Full matched entry found, no need to insert subvectors.
-        if (equal(E->Scalars, FrontTE->Scalars) &&
-            equal(E->ReorderIndices, FrontTE->ReorderIndices) &&
-            equal(E->ReuseShuffleIndices, FrontTE->ReuseShuffleIndices)) {
+        if ((E->isSame(FrontTE->Scalars) &&
+             FrontTE->ReuseShuffleIndices.empty() &&
+             FrontTE->ReorderIndices.empty() &&
+             E->getVectorFactor() == FrontTE->getVectorFactor()) ||
+            (equal(E->Scalars, FrontTE->Scalars) &&
+             equal(E->ReorderIndices, FrontTE->ReorderIndices) &&
+             equal(E->ReuseShuffleIndices, FrontTE->ReuseShuffleIndices))) {
           Mask.resize(FrontTE->getVectorFactor());
           std::iota(Mask.begin(), Mask.end(), 0);
           ShuffleBuilder.add(*FrontTE, Mask);
