@@ -455,7 +455,7 @@ TEST_F(RematerializerTest, EmptyRegion) {
 /// Checks that only registers with a single definition are rematerializable,
 /// even when registers are made up of multiple sub-registers each with their
 /// own definition.
-TEST_F(RematerializerTest, SubReg) {
+TEST_F(RematerializerTest, SubRegRematSupport) {
   StringRef MIRBody = R"MIR(
   bb.0:
     undef %01.sub0:vreg_64_align2 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode
@@ -464,10 +464,21 @@ TEST_F(RematerializerTest, SubReg) {
     undef %2.sub0:vreg_64_align2 = nofpexcept V_CVT_I32_F64_e32 2, implicit $exec, implicit $mode
 
     undef %34.sub0:vreg_64_align2 = nofpexcept V_CVT_I32_F64_e32 3, implicit $exec, implicit $mode
-
+    
+    undef %56.sub0:sreg_64 = S_MOV_B32 5
+    %56.sub1:sreg_64 = S_MOV_B32 6, implicit-def $m0    
+    
+    undef %78.sub0:sreg_64 = S_MOV_B32 7
+    S_NOP 0, implicit %78.sub0
+    %78.sub1:sreg_64 = S_MOV_B32 8
+    
+    undef %99.sub0:sreg_64 = S_MOV_B32 9
+    %99.sub1:sreg_64 = S_MOV_B32 %99.sub0
+    
   bb.1:
     %34.sub1:vreg_64_align2 = nofpexcept V_CVT_I32_F64_e32 4, implicit $exec, implicit $mode
-    S_NOP 0, implicit %01, implicit %2, implicit %34
+
+    S_NOP 0, implicit %01, implicit %2, implicit %34, implicit %56, implicit %78, implicit %99
     S_ENDPGM 0
 )MIR";
   rematerializerTest(MIRBody, [](RematerializerWrapper &RW) {
@@ -475,6 +486,15 @@ TEST_F(RematerializerTest, SubReg) {
 
     const unsigned MBB0 = 0, MBB1 = 1;
     const RegisterIdx Cst2 = 0;
+
+    // - %01 is not rematerializable because it has multiplie definitions.
+    // - %34 is not rematerializable because it is defined over multiple
+    // regions.
+    // - %56 is not rematerializable because the second defining MI is
+    // unrematerializable due to the implicit def.
+    // - %78 is not rematerializable because it is read by an MI not defining it
+    // before its last definition.
+    // - %99 is not rematerializable because it has multiplie definitions.
 
     RegisterIdx RematCst2 = RW->rematerializeToRegion(Cst2, MBB1, DRI);
     RW.moveMIs(MBB0, MBB1, 1);
