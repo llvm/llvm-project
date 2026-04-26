@@ -553,6 +553,8 @@ class VFSelectionContext {
   const Loop *TheLoop;
   const Function &F;
   PredicatedScalarEvolution &PSE;
+  /// Demanded bits analysis.
+  DemandedBits *DB;
   OptimizationRemarkEmitter *ORE;
   const LoopVectorizeHints *Hints;
 
@@ -586,6 +588,14 @@ class VFSelectionContext {
   /// computeFeasibleMaxVF.
   std::optional<unsigned> MaxSafeElements;
 
+  /// Map of scalar integer values to the smallest bitwidth they can be legally
+  /// represented as. The vector equivalents of these values should be truncated
+  /// to this type.
+  MapVector<Instruction *, uint64_t> MinBWs;
+
+  /// Whether MinBWs has been computed.
+  bool MinBWsComputed = false;
+
 public:
   /// The kind of cost that we are calculating.
   const TTI::TargetCostKind CostKind;
@@ -597,11 +607,11 @@ public:
   VFSelectionContext(const TargetTransformInfo &TTI,
                      const LoopVectorizationLegality *Legal,
                      const Loop *TheLoop, const Function &F,
-                     PredicatedScalarEvolution &PSE,
+                     PredicatedScalarEvolution &PSE, DemandedBits *DB,
                      OptimizationRemarkEmitter *ORE,
                      const LoopVectorizeHints *Hints, bool OptForSize)
-      : TTI(TTI), Legal(Legal), TheLoop(TheLoop), F(F), PSE(PSE), ORE(ORE),
-        Hints(Hints),
+      : TTI(TTI), Legal(Legal), TheLoop(TheLoop), F(F), PSE(PSE), DB(DB),
+        ORE(ORE), Hints(Hints),
         CostKind(F.hasMinSize() ? TTI::TCK_CodeSize : TTI::TCK_RecipThroughput),
         OptForSize(OptForSize) {
     initializeVScaleForTuning();
@@ -689,6 +699,11 @@ public:
   /// Check whether vectorization would require runtime checks. When optimizing
   /// for size, returning true here aborts vectorization.
   bool runtimeChecksRequired();
+
+  /// \returns The smallest bitwidth each instruction can be represented with.
+  /// The vector equivalents of these instructions should be truncated to this
+  /// type.
+  const MapVector<Instruction *, uint64_t> &getMinimalBitwidths();
 };
 
 /// Planner drives the vectorization process after having passed
