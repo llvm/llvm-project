@@ -679,8 +679,6 @@ public:
 
   std::unique_ptr<MCObjectFileInfo> MOFI;
 
-  MCTargetOptions MCOptions;
-
   std::unique_ptr<const MCAsmInfo> AsmInfo;
 
   std::unique_ptr<const MCInstrInfo> MII;

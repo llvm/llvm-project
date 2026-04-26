@@ -72,8 +72,7 @@ MCContext::MCContext(const Triple &TheTriple, const MCAsmInfo *mai,
       InlineAsmUsedLabelNames(Allocator),
       CurrentDwarfLoc(0, 0, 0, DWARF2_FLAG_IS_STMT, 0, 0),
       AutoReset(DoAutoReset) {
-  assert(MAI && MAI->getTargetOptions() &&
-         "MCAsmInfo and MCTargetOptions must be available");
+  assert(MAI && "MCAsmInfo must be available");
   const MCTargetOptions &TO = getTargetOptions();
   SaveTempLabels = TO.MCSaveTempLabels;
   if (SaveTempLabels)
@@ -121,7 +120,7 @@ MCContext::MCContext(const Triple &TheTriple, const MCAsmInfo *mai,
 }
 
 const MCTargetOptions &MCContext::getTargetOptions() const {
-  return *MAI->getTargetOptions();
+  return MAI->getTargetOptions();
 }
 
 MCContext::~MCContext() {

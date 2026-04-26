@@ -224,8 +224,7 @@ define void @test8() {
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi <8 x float> [ zeroinitializer, [[ENTRY:%.*]] ], [ [[TMP8:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    ret void
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[TMP8]] = phi <8 x float> [ [[TMP2:%.*]], [[FOR_BODY]] ], [ zeroinitializer, [[ENTRY]] ]
-; CHECK-NEXT:    [[TMP2]] = shufflevector <8 x float> [[TMP8]], <8 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP8]] = phi <8 x float> [ [[TMP8]], [[FOR_BODY]] ], [ zeroinitializer, [[ENTRY]] ]
 ; CHECK-NEXT:    br i1 false, label [[FOR0]], label [[FOR_BODY]]
 ;
 entry:

@@ -458,7 +458,7 @@ public:
 void HexagonOperand::print(raw_ostream &OS, const MCAsmInfo &MAI) const {
   switch (Kind) {
   case Immediate:
-    HexagonMCAsmInfo(Triple()).printExpr(OS, *getImm());
+    MAI.printExpr(OS, *getImm());
     break;
   case Register:
     OS << "<register R";
