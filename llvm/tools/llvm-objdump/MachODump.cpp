@@ -2768,9 +2768,8 @@ void objdump::parseInputMachO(MachOUniversalBinary *UB) {
           if (Err)
             reportError(std::move(Err), Filename);
           if (!FoundMember && !ArchiveMemberFilter.empty())
-            reportError(Filename,
-                        "archive does not contain a member named: " +
-                            ArchiveMemberFilter);
+            reportError(Filename, "archive does not contain a member named: " +
+                                      ArchiveMemberFilter);
         } else {
           consumeError(AOrErr.takeError());
           reportError(Filename, "Mach-O universal file for architecture " +
