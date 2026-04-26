@@ -357,7 +357,7 @@ int GetNamedMappingFd(const char *name, uptr size, int *flags) {
   if (!common_flags()->decorate_proc_maps || !name)
     return -1;
   char shmname[200];
-  int len = internal_snprintf(shmname, sizeof(shmname), "/dev/shm/%zu.%zu [%s]",
+  int len = internal_snprintf(shmname, sizeof(shmname), "/dev/shm/%zu.%llu [%s]",
                               internal_getpid(), GetTid(), name);
   CHECK_LT(len, sizeof(shmname));
   int o_cloexec = 0;
