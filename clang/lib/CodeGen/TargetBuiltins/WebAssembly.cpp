@@ -789,7 +789,7 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Value *Ptr = EmitScalarExpr(E->getArg(1));
     Value *Mask = EmitScalarExpr(E->getArg(2));
     Function *Callee =
-        CGM.getIntrinsic(Intrinsic::wasm_memtag_random, Mask->getType());
+        CGM.getIntrinsic(Intrinsic::wasm_memtag_randommask, Mask->getType());
     return Builder.CreateCall(Callee, {Index, Ptr, Mask});
   }
   case WebAssembly::BI__builtin_wasm_memtag_randommaskstore: {
@@ -797,7 +797,7 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Value *Ptr = EmitScalarExpr(E->getArg(1));
     Value *B16 = EmitScalarExpr(E->getArg(2));
     Value *Mask = EmitScalarExpr(E->getArg(3));
-    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memtag_randomstore,
+    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memtag_randommaskstore,
                                         {B16->getType(), Mask->getType()});
     return Builder.CreateCall(Callee, {Index, Ptr, B16, Mask});
   }
@@ -806,7 +806,7 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Value *Ptr = EmitScalarExpr(E->getArg(1));
     Value *B16 = EmitScalarExpr(E->getArg(2));
     Value *Mask = EmitScalarExpr(E->getArg(3));
-    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memtag_randomstorez,
+    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memtag_randommaskstorez,
                                         {B16->getType(), Mask->getType()});
     return Builder.CreateCall(Callee, {Index, Ptr, B16, Mask});
   }
