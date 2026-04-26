@@ -39026,6 +39026,59 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
   Known.resetAll();
   switch (Opc) {
   default: break;
+  case X86ISD::GF2P8AFFINEQB: {
+    SDValue Input = Op.getOperand(0);
+    SDValue Matrix = Op.getOperand(1);
+    SDValue Imm = Op.getOperand(2);
+
+    KnownBits InputKnown = DAG.computeKnownBits(Input, DemandedElts, Depth + 1);
+    KnownBits MatrixKnown =
+        DAG.computeKnownBits(Matrix, DemandedElts, Depth + 1);
+
+    auto *ImmN = dyn_cast<ConstantSDNode>(Imm);
+    if (!ImmN || !MatrixKnown.isConstant())
+      break;
+
+    APInt Mat = MatrixKnown.getConstant();
+    uint8_t Imm8 = ImmN->getZExtValue();
+
+    KnownBits Res(BitWidth);
+    Res.resetAll();
+
+    APInt KnownMask = InputKnown.Zero | InputKnown.One;
+
+    for (unsigned OutBit = 0; OutBit != 8; ++OutBit) {
+      APInt RowMask = APInt::getZero(BitWidth);
+
+      for (unsigned ByteBase = 0; ByteBase < BitWidth; ByteBase += 8) {
+        unsigned MatrixBase = (ByteBase / 64) * 64;
+        unsigned RowOffset = MatrixBase + (7 - OutBit) * 8;
+
+        uint8_t Row = Mat.extractBits(8, RowOffset).getZExtValue();
+        RowMask.insertBits(APInt(8, Row), ByteBase);
+      }
+
+      if (!(RowMask & ~KnownMask).isZero())
+        continue;
+
+      APInt SelectedOnes = InputKnown.One & RowMask;
+
+      for (unsigned ByteBase = 0; ByteBase < BitWidth; ByteBase += 8) {
+        uint8_t Bits = SelectedOnes.extractBits(8, ByteBase).getZExtValue();
+
+        bool Parity = llvm::popcount(Bits) & 1;
+        bool FinalBit = Parity ^ ((Imm8 >> OutBit) & 1);
+
+        if (FinalBit)
+          Res.One.setBit(ByteBase + OutBit);
+        else
+          Res.Zero.setBit(ByteBase + OutBit);
+      }
+    }
+
+    Known = Res;
+    break;
+  }
   case X86ISD::MUL_IMM: {
     KnownBits Known2;
     Known = DAG.computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
