@@ -51,7 +51,7 @@ class UnrollInterleaveOp final : public OpRewritePattern<vector::InterleaveOp> {
 public:
   UnrollInterleaveOp(int64_t targetRank, MLIRContext *context,
                      PatternBenefit benefit = 1)
-      : OpRewritePattern(context, benefit), targetRank(targetRank){};
+      : OpRewritePattern(context, benefit), targetRank(targetRank) {};
 
   LogicalResult matchAndRewrite(vector::InterleaveOp op,
                                 PatternRewriter &rewriter) const override {
@@ -116,7 +116,7 @@ class UnrollDeinterleaveOp final
 public:
   UnrollDeinterleaveOp(int64_t targetRank, MLIRContext *context,
                        PatternBenefit benefit = 1)
-      : OpRewritePattern(context, benefit), targetRank(targetRank){};
+      : OpRewritePattern(context, benefit), targetRank(targetRank) {};
 
   LogicalResult matchAndRewrite(vector::DeinterleaveOp op,
                                 PatternRewriter &rewriter) const override {
