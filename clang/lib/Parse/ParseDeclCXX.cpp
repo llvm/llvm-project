@@ -996,10 +996,13 @@ Decl *Parser::ParseStaticAssertDeclaration(SourceLocation &DeclEnd) {
              getLangOpts().CPlusPlus26
                  ? diag::warn_cxx20_compat_static_assert_user_generated_message
                  : diag::ext_cxx_static_assert_user_generated_message);
+      } else {
+        T.consumeClose();
+        return nullptr;
       }
-    } else if (tokenIsLikeStringLiteral(Tok, getLangOpts()))
+    } else if (tokenIsLikeStringLiteral(Tok, getLangOpts())) {
       AssertMessage = ParseUnevaluatedStringLiteralExpression();
-    else {
+    } else {
       Diag(Tok, diag::err_expected_string_literal)
           << /*Source='static_assert'*/ 1;
       SkipMalformedDecl();
@@ -1012,9 +1015,7 @@ Decl *Parser::ParseStaticAssertDeclaration(SourceLocation &DeclEnd) {
     }
   }
 
-  bool StopAt = Tok.isNot(tok::r_paren);
-  if (T.consumeClose() || StopAt)
-    return nullptr;
+  T.consumeClose();
 
   DeclEnd = Tok.getLocation();
   ExpectAndConsumeSemi(diag::err_expected_semi_after_static_assert, TokName);
