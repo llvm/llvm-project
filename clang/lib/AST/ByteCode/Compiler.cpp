@@ -6907,6 +6907,9 @@ bool Compiler<Emitter>::compileUnionAssignmentOperator(
 
 template <class Emitter>
 bool Compiler<Emitter>::visitFunc(const FunctionDecl *F) {
+  if (F->getReturnType()->isDependentType())
+    return false;
+
   // Classify the return type.
   ReturnType = this->classify(F->getReturnType());
 
