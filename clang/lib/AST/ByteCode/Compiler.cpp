@@ -8148,37 +8148,12 @@ bool Compiler<Emitter>::emitHLSLAggregateSplat(PrimType SrcT,
 /// so we never flatten more than the destination can hold.
 template <class Emitter>
 unsigned Compiler<Emitter>::countHLSLFlatElements(QualType Ty) {
-  // Vector and matrix types are treated as flat sequences of elements.
-  if (const auto *VT = Ty->getAs<VectorType>())
-    return VT->getNumElements();
-  if (const auto *MT = Ty->getAs<ConstantMatrixType>())
-    return MT->getNumElementsFlattened();
-  // Arrays: total count is array size * scalar elements per element.
-  if (const auto *AT = Ty->getAsArrayTypeUnsafe()) {
-    const auto *CAT = cast<ConstantArrayType>(AT);
-    return CAT->getZExtSize() * countHLSLFlatElements(CAT->getElementType());
-  }
-  // Records: sum scalar element counts of base classes and named fields.
-  if (Ty->isRecordType()) {
-    const Record *R = getRecord(Ty);
-    if (!R)
-      return 0;
-    unsigned Count = 0;
-    if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(R->getDecl())) {
-      for (const CXXBaseSpecifier &BS : CXXRD->bases())
-        Count += countHLSLFlatElements(BS.getType());
-    }
-    for (const Record::Field &F : R->fields()) {
-      if (F.isUnnamedBitField())
-        continue;
-      Count += countHLSLFlatElements(F.Decl->getType());
-    }
-    return Count;
-  }
-  // Scalar primitive types contribute one element.
   if (canClassify(Ty))
     return 1;
-  return 0;
+  HLSLFlatElementCounter<Emitter> Counter(*this);
+  if (!Counter.visit(Ty))
+    return 0;
+  return Counter.getCount();
 }
 
 /// Walk a source aggregate and extract every scalar element into its own local
