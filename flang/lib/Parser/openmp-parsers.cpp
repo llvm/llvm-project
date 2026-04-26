@@ -2319,13 +2319,13 @@ TYPE_PARSER(sourced(construct<OmpDeclareVariantDirective>(
     OmpDirectiveSpecificationParser{})))
 
 // 2.16 Declare Reduction Construct
-TYPE_PARSER(sourced(construct<OpenMPDeclareReductionConstruct>(
+TYPE_PARSER(sourced(construct<OmpDeclareReductionDirective>(
     predicated(Parser<OmpDirectiveName>{},
         IsDirective(llvm::omp::Directive::OMPD_declare_reduction)) >=
     OmpStylizedInstanceCreator(OmpDirectiveSpecificationParser{}))))
 
 // 2.10.6 Declare Target Construct
-TYPE_PARSER(sourced(construct<OpenMPDeclareTargetConstruct>(
+TYPE_PARSER(sourced(construct<OmpDeclareTargetDirective>(
     predicated(Parser<OmpDirectiveName>{},
         IsDirective(llvm::omp::Directive::OMPD_declare_target)) >=
     OmpDirectiveSpecificationParser{})))
@@ -2355,7 +2355,7 @@ TYPE_PARSER(applyFunction<OmpMapperSpecifier>(ConstructOmpMapperSpecifier,
     maybe(name / ":" / !":"_tok), typeSpec / "::", name))
 
 // OpenMP 5.2: 5.8.8 Declare Mapper Construct
-TYPE_PARSER(sourced(construct<OpenMPDeclareMapperConstruct>(
+TYPE_PARSER(sourced(construct<OmpDeclareMapperDirective>(
     predicated(Parser<OmpDirectiveName>{},
         IsDirective(llvm::omp::Directive::OMPD_declare_mapper)) >=
     OmpDirectiveSpecificationParser{})))
@@ -2367,7 +2367,7 @@ TYPE_PARSER(sourced(construct<OpenMPCriticalConstruct>(
     OmpBlockConstructParser{llvm::omp::Directive::OMPD_critical})))
 
 // 2.8.2 Declare Simd construct
-TYPE_PARSER(sourced(construct<OpenMPDeclareSimdConstruct>(
+TYPE_PARSER(sourced(construct<OmpDeclareSimdDirective>(
     predicated(Parser<OmpDirectiveName>{},
         IsDirective(llvm::omp::Directive::OMPD_declare_simd)) >=
     OmpDirectiveSpecificationParser{})))
@@ -2403,13 +2403,13 @@ TYPE_PARSER(
                         sourced(construct<OpenMPDeclarativeConstruct>(
                                     Parser<OpenMPDeclarativeAssumes>{}) ||
                             construct<OpenMPDeclarativeConstruct>(
-                                Parser<OpenMPDeclareReductionConstruct>{}) ||
+                                Parser<OmpDeclareReductionDirective>{}) ||
                             construct<OpenMPDeclarativeConstruct>(
-                                Parser<OpenMPDeclareMapperConstruct>{}) ||
+                                Parser<OmpDeclareMapperDirective>{}) ||
                             construct<OpenMPDeclarativeConstruct>(
-                                Parser<OpenMPDeclareSimdConstruct>{}) ||
+                                Parser<OmpDeclareSimdDirective>{}) ||
                             construct<OpenMPDeclarativeConstruct>(
-                                Parser<OpenMPDeclareTargetConstruct>{}) ||
+                                Parser<OmpDeclareTargetDirective>{}) ||
                             construct<OpenMPDeclarativeConstruct>(
                                 Parser<OmpDeclareVariantDirective>{}) ||
                             construct<OpenMPDeclarativeConstruct>(
