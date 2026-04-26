@@ -34,10 +34,6 @@ class function_ref;
 template <class _Fn, bool _NoExcept1, class _Rp, class... _ArgTypes>
 struct __is_convertible_from_specialization : false_type {};
 
-// use a union instead of a plain `void*` to avoid dropping const qualifiers and casting function pointers to data
-// pointers
-// todo: libstdc++ does not support volatile objects. shall we support it? the standard does not say it should not be
-// supported
 union __function_ref_storage {
   void* __obj_ptr_;
   void (*__fn_ptr_)();
