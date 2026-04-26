@@ -806,7 +806,7 @@ ExprResult Sema::ActOnCXXAssumeAttr(Stmt *St, const ParsedAttr &A,
 /// \p Visited tracks the current call chain to prevent infinite recursion.
 static bool FunctionBodyHasSideEffects(const FunctionDecl *FD,
                                         const ASTContext &Ctx,
-                                        SmallPtrSetImpl<const FunctionDecl *> &Visited) {
+                                        llvm::SmallPtrSetImpl<const FunctionDecl *> &Visited) {
   if (FD->hasAttr<ConstAttr>() || FD->hasAttr<PureAttr>())
     return false;
 
