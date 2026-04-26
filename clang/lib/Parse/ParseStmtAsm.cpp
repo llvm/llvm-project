@@ -582,7 +582,7 @@ StmtResult Parser::ParseMicrosoftAsmStatement(SourceLocation AsmLoc) {
       createMCAsmParser(TempSrcMgr, Ctx, *Str, *MAI));
 
   std::unique_ptr<llvm::MCTargetAsmParser> TargetParser(
-      TheTarget->createMCAsmParser(*STI, *Parser, *MII, MCOptions));
+      TheTarget->createMCAsmParser(*STI, *Parser, *MII));
   // Target AsmParser may not be linked in clang-based tools.
   if (!TargetParser) {
     Diag(AsmLoc, diag::err_msasm_unable_to_create_target)
