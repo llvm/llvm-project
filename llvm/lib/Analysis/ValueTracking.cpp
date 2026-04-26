@@ -2082,18 +2082,15 @@ static void computeKnownBitsFromOperator(const Operator *I,
         if (!match(I->getOperand(2), m_APInt(SA)))
           break;
 
-        // Normalize to funnel shift left.
-        uint64_t ShiftAmt = SA->urem(BitWidth);
-        if (II->getIntrinsicID() == Intrinsic::fshr)
-          ShiftAmt = BitWidth - ShiftAmt;
-
+        KnownBits ShAmt = KnownBits::makeConstant(*SA);
         KnownBits Known3(BitWidth);
         computeKnownBits(I->getOperand(0), DemandedElts, Known2, Q, Depth + 1);
         computeKnownBits(I->getOperand(1), DemandedElts, Known3, Q, Depth + 1);
 
-        Known2 <<= ShiftAmt;
-        Known3 >>= BitWidth - ShiftAmt;
-        Known = Known2.unionWith(Known3);
+        if (II->getIntrinsicID() == Intrinsic::fshl)
+          Known = KnownBits::fshl(Known2, Known3, ShAmt);
+        else
+          Known = KnownBits::fshr(Known2, Known3, ShAmt);
         break;
       }
       case Intrinsic::clmul:
