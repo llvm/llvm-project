@@ -8018,6 +8018,77 @@ bool Compiler<Emitter>::emitBuiltinBitCast(const CastExpr *E) {
   return true;
 }
 
+namespace clang {
+namespace interp {
+
+/// Visitor that stores values into an HLSL destination type.
+/// ProduceValue must leave exactly one value of the requested type on the
+/// interpreter stack; the visitor then stores it with the appropriate
+/// InitElem / InitField / etc. opcode.
+template <class Emitter>
+class HLSLElementStoreVisitor
+    : public Compiler<Emitter>::template HLSLAggregateVisitor<
+          HLSLElementStoreVisitor<Emitter>> {
+  using VisitorBase = typename Compiler<Emitter>::template HLSLAggregateVisitor<
+      HLSLElementStoreVisitor<Emitter>>;
+
+public:
+  HLSLElementStoreVisitor(
+      Compiler<Emitter> &C,
+      llvm::function_ref<bool(PrimType, QualType, const Expr *)> ProduceValue,
+      const Expr *E)
+      : VisitorBase(C), ProduceValue(ProduceValue), E(E) {}
+
+  bool visitScalarElem(QualType ElemType, PrimType ElemT, unsigned I) {
+    if (!ProduceValue(ElemT, ElemType, E))
+      return false;
+    return this->C.emitInitElem(ElemT, I, E);
+  }
+
+  bool visitArrayComposite(QualType ElemType, unsigned I) {
+    if (!this->C.emitConstUint32(I, E))
+      return false;
+    if (!this->C.emitArrayElemPtrUint32(E))
+      return false;
+    if (!this->visit(ElemType))
+      return false;
+    return this->C.emitFinishInitPop(E);
+  }
+
+  bool visitBase(QualType BaseType, const Record::Base *B) {
+    if (!this->C.emitGetPtrBase(B->Offset, E))
+      return false;
+    if (!this->visit(BaseType))
+      return false;
+    return this->C.emitFinishInitPop(E);
+  }
+
+  bool visitField(QualType FieldType, PrimType FieldT, const Record::Field *F) {
+    if (!ProduceValue(FieldT, FieldType, E))
+      return false;
+    if (F->isBitField())
+      return this->C.emitInitBitField(FieldT, F->Offset, F->bitWidth(), E);
+    return this->C.emitInitField(FieldT, F->Offset, E);
+  }
+
+  bool visitFieldComposite(QualType FieldType, const Record::Field *F) {
+    if (!this->C.emitGetPtrField(F->Offset, E))
+      return false;
+    if (!this->visit(FieldType))
+      return false;
+    return this->C.emitPopPtr(E);
+  }
+
+private:
+  /// Non-owning — the visitor must not outlive the callable passed at
+  /// construction.
+  llvm::function_ref<bool(PrimType, QualType, const Expr *)> ProduceValue;
+  const Expr *E;
+};
+
+} // namespace interp
+} // namespace clang
+
 /// Replicate a scalar value into every scalar element of an aggregate.
 /// The scalar is stored in a local at \p SrcOffset and a pointer to the
 /// destination must be on top of the interpreter stack. Each element receives
