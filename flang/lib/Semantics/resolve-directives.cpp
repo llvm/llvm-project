@@ -585,7 +585,7 @@ public:
   bool Pre(const parser::OpenMPCriticalConstruct &critical);
   void Post(const parser::OpenMPCriticalConstruct &) { PopContext(); }
 
-  bool Pre(const parser::OpenMPDeclareSimdConstruct &x) {
+  bool Pre(const parser::OmpDeclareSimdDirective &x) {
     PushContext(x.source, llvm::omp::Directive::OMPD_declare_simd);
     for (const parser::OmpArgument &arg : x.v.Arguments().v) {
       if (auto *object{omp::GetArgumentObject(arg)}) {
@@ -594,7 +594,7 @@ public:
     }
     return true;
   }
-  void Post(const parser::OpenMPDeclareSimdConstruct &) { PopContext(); }
+  void Post(const parser::OmpDeclareSimdDirective &) { PopContext(); }
 
   bool Pre(const parser::OpenMPDepobjConstruct &x) {
     PushContext(x.source, llvm::omp::Directive::OMPD_depobj);
@@ -684,14 +684,14 @@ public:
   }
   void Post(const parser::OpenMPRequiresConstruct &) { PopContext(); }
 
-  bool Pre(const parser::OpenMPDeclareTargetConstruct &);
-  void Post(const parser::OpenMPDeclareTargetConstruct &) { PopContext(); }
+  bool Pre(const parser::OmpDeclareTargetDirective &);
+  void Post(const parser::OmpDeclareTargetDirective &) { PopContext(); }
 
-  bool Pre(const parser::OpenMPDeclareMapperConstruct &);
-  void Post(const parser::OpenMPDeclareMapperConstruct &) { PopContext(); }
+  bool Pre(const parser::OmpDeclareMapperDirective &);
+  void Post(const parser::OmpDeclareMapperDirective &) { PopContext(); }
 
-  bool Pre(const parser::OpenMPDeclareReductionConstruct &);
-  void Post(const parser::OpenMPDeclareReductionConstruct &) { PopContext(); }
+  bool Pre(const parser::OmpDeclareReductionDirective &);
+  void Post(const parser::OmpDeclareReductionDirective &) { PopContext(); }
 
   bool Pre(const parser::OpenMPThreadprivate &);
   void Post(const parser::OpenMPThreadprivate &) { PopContext(); }
@@ -2143,7 +2143,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPCriticalConstruct &x) {
   return true;
 }
 
-bool OmpAttributeVisitor::Pre(const parser::OpenMPDeclareTargetConstruct &x) {
+bool OmpAttributeVisitor::Pre(const parser::OmpDeclareTargetDirective &x) {
   PushContext(x.source, llvm::omp::Directive::OMPD_declare_target);
 
   for (const parser::OmpArgument &arg : x.v.Arguments().v) {
@@ -2162,14 +2162,13 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPDeclareTargetConstruct &x) {
   return true;
 }
 
-bool OmpAttributeVisitor::Pre(const parser::OpenMPDeclareMapperConstruct &x) {
+bool OmpAttributeVisitor::Pre(const parser::OmpDeclareMapperDirective &x) {
   const parser::OmpDirectiveName &dirName{x.v.DirName()};
   PushContext(dirName.source, dirName.v);
   return true;
 }
 
-bool OmpAttributeVisitor::Pre(
-    const parser::OpenMPDeclareReductionConstruct &x) {
+bool OmpAttributeVisitor::Pre(const parser::OmpDeclareReductionDirective &x) {
   PushContext(x.source, llvm::omp::Directive::OMPD_declare_reduction);
   return true;
 }
