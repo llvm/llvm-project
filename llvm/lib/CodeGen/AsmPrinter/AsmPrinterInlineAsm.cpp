@@ -116,8 +116,8 @@ void AsmPrinter::emitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
   // because it's not subtarget dependent.
   std::unique_ptr<MCInstrInfo> MII(TM.getTarget().createMCInstrInfo());
   assert(MII && "Failed to create instruction info");
-  std::unique_ptr<MCTargetAsmParser> TAP(TM.getTarget().createMCAsmParser(
-      STI, *Parser, *MII, MCOptions));
+  std::unique_ptr<MCTargetAsmParser> TAP(
+      TM.getTarget().createMCAsmParser(STI, *Parser, *MII));
   if (!TAP)
     report_fatal_error("Inline asm not supported by this streamer because"
                        " we don't have an asm parser for this target\n");

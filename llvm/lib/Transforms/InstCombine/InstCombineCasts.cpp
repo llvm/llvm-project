@@ -1945,6 +1945,18 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
     }
   }
 
+  // sext(scmp(x, y)) -> scmp(x, y) with a wider result type.
+  // sext(ucmp(x, y)) -> ucmp(x, y) with a wider result type.
+  // scmp/ucmp return only -1, 0, or 1, which sign-extend correctly to any
+  // wider integer type, so we can sink the extension into the intrinsic.
+  if (auto *II = dyn_cast<IntrinsicInst>(Src)) {
+    Intrinsic::ID IID = II->getIntrinsicID();
+    if ((IID == Intrinsic::scmp || IID == Intrinsic::ucmp) && II->hasOneUse())
+      return replaceInstUsesWith(
+          Sext, Builder.CreateIntrinsic(
+                    DestTy, IID, {II->getArgOperand(0), II->getArgOperand(1)}));
+  }
+
   return nullptr;
 }
 
@@ -2027,10 +2039,17 @@ static Type *shrinkFPConstantVector(Value *V, bool PreferBFloat) {
 }
 
 /// Find the minimum FP type we can safely truncate to.
-static Type *getMinimumFPType(Value *V, bool PreferBFloat) {
+static Type *getMinimumFPType(Value *V, Type *PreferredTy, InstCombiner &IC) {
   if (auto *FPExt = dyn_cast<FPExtInst>(V))
     return FPExt->getOperand(0)->getType();
 
+  Value *Src;
+  if (match(V, m_IToFP(m_Value(Src))) &&
+      IC.canBeCastedExactlyIntToFP(Src, PreferredTy, isa<SIToFPInst>(V),
+                                   cast<Instruction>(V)))
+    return PreferredTy;
+
+  bool PreferBFloat = PreferredTy->getScalarType()->isBFloatTy();
   // If this value is a constant, return the constant in the smallest FP type
   // that can accurately represent it.  This allows us to turn
   // (float)((double)X+2.0) into x+2.0f.
@@ -2053,30 +2072,27 @@ static Type *getMinimumFPType(Value *V, bool PreferBFloat) {
   return V->getType();
 }
 
-bool InstCombiner::isKnownExactCastIntToFP(CastInst &I) const {
-  CastInst::CastOps Opcode = I.getOpcode();
-  assert((Opcode == CastInst::SIToFP || Opcode == CastInst::UIToFP) &&
-         "Unexpected cast");
-  Value *Src = I.getOperand(0);
-  Type *SrcTy = Src->getType();
-  Type *FPTy = I.getType();
-  bool IsSigned = Opcode == Instruction::SIToFP;
+bool InstCombiner::canBeCastedExactlyIntToFP(Value *V, Type *FPTy,
+                                             bool IsSigned,
+                                             const Instruction *CxtI) const {
+  Type *SrcTy = V->getType();
+  assert(SrcTy->isIntOrIntVectorTy() && "Expected an integer type");
   int SrcSize = (int)SrcTy->getScalarSizeInBits() - IsSigned;
+  int DestNumSigBits = FPTy->getFPMantissaWidth();
 
   // Easy case - if the source integer type has less bits than the FP mantissa,
   // then the cast must be exact.
-  int DestNumSigBits = FPTy->getFPMantissaWidth();
   if (SrcSize <= DestNumSigBits)
     return true;
 
   // Cast from FP to integer and back to FP is independent of the intermediate
   // integer width because of poison on overflow.
   Value *F;
-  if (match(Src, m_FPToI(m_Value(F)))) {
+  if (match(V, m_FPToI(m_Value(F)))) {
     // If this is uitofp (fptosi F), the source needs an extra bit to avoid
     // potential rounding of negative FP input values.
     int SrcNumSigBits = F->getType()->getFPMantissaWidth();
-    if (!IsSigned && match(Src, m_FPToSI(m_Value())))
+    if (!IsSigned && match(V, m_FPToSI(m_Value())))
       SrcNumSigBits++;
 
     // [su]itofp (fpto[su]i F) --> exact if the source type has less or equal
@@ -2089,7 +2105,7 @@ bool InstCombiner::isKnownExactCastIntToFP(CastInst &I) const {
 
   // Try harder to find if the source integer type has less significant bits.
   // Compute number of sign bits or determine trailing zeros.
-  KnownBits SrcKnown = computeKnownBits(Src, &I);
+  KnownBits SrcKnown = computeKnownBits(V, CxtI);
   int SigBits = (int)SrcTy->getScalarSizeInBits() -
                 SrcKnown.countMinLeadingZeros() -
                 SrcKnown.countMinTrailingZeros();
@@ -2099,12 +2115,21 @@ bool InstCombiner::isKnownExactCastIntToFP(CastInst &I) const {
   // For sitofp, the sign maps to the FP sign bit, so only magnitude bits
   // (BitWidth - NumSignBits) consume mantissa.
   if (IsSigned) {
-    SigBits = (int)SrcTy->getScalarSizeInBits() - ComputeNumSignBits(Src, &I);
+    SigBits = (int)SrcTy->getScalarSizeInBits() - ComputeNumSignBits(V, CxtI);
     if (SigBits <= DestNumSigBits)
       return true;
   }
 
   return false;
+}
+
+bool InstCombiner::isKnownExactCastIntToFP(CastInst &I) const {
+  CastInst::CastOps Opcode = I.getOpcode();
+  assert((Opcode == CastInst::SIToFP || Opcode == CastInst::UIToFP) &&
+         "Unexpected cast");
+  Value *Src = I.getOperand(0);
+  Type *FPTy = I.getType();
+  return canBeCastedExactlyIntToFP(Src, FPTy, Opcode == CastInst::SIToFP, &I);
 }
 
 Instruction *InstCombinerImpl::visitFPTrunc(FPTruncInst &FPT) {
@@ -2121,9 +2146,8 @@ Instruction *InstCombinerImpl::visitFPTrunc(FPTruncInst &FPT) {
   Type *Ty = FPT.getType();
   auto *BO = dyn_cast<BinaryOperator>(FPT.getOperand(0));
   if (BO && BO->hasOneUse()) {
-    bool PreferBFloat = Ty->getScalarType()->isBFloatTy();
-    Type *LHSMinType = getMinimumFPType(BO->getOperand(0), PreferBFloat);
-    Type *RHSMinType = getMinimumFPType(BO->getOperand(1), PreferBFloat);
+    Type *LHSMinType = getMinimumFPType(BO->getOperand(0), Ty, *this);
+    Type *RHSMinType = getMinimumFPType(BO->getOperand(1), Ty, *this);
     unsigned OpWidth = BO->getType()->getFPMantissaWidth();
     unsigned LHSWidth = LHSMinType->getFPMantissaWidth();
     unsigned RHSWidth = RHSMinType->getFPMantissaWidth();
@@ -2309,11 +2333,14 @@ Instruction *InstCombinerImpl::visitFPExt(CastInst &FPExt) {
   return commonCastTransforms(FPExt);
 }
 
-/// fpto{s/u}i({u/s}itofp(X)) --> X or zext(X) or sext(X) or trunc(X)
+/// fpto{s/u}i[.sat]({u/s}itofp(X)) --> X or zext(X) or sext(X) or trunc(X)
 /// This is safe if the intermediate type has enough bits in its mantissa to
 /// accurately represent all values of X.  For example, this won't work with
 /// i64 -> float -> i64.
-Instruction *InstCombinerImpl::foldItoFPtoI(CastInst &FI) {
+template <typename FPToIntTy>
+Instruction *InstCombinerImpl::foldItoFPtoI(FPToIntTy &FI) {
+  constexpr bool IsSaturating = std::is_same_v<FPToIntTy, IntrinsicInst>;
+
   if (!isa<UIToFPInst>(FI.getOperand(0)) && !isa<SIToFPInst>(FI.getOperand(0)))
     return nullptr;
 
@@ -2321,7 +2348,13 @@ Instruction *InstCombinerImpl::foldItoFPtoI(CastInst &FI) {
   Value *X = OpI->getOperand(0);
   Type *XType = X->getType();
   Type *DestType = FI.getType();
-  bool IsOutputSigned = isa<FPToSIInst>(FI);
+  bool IsInputSigned = isa<SIToFPInst>(OpI);
+
+  bool IsOutputSigned;
+  if constexpr (IsSaturating)
+    IsOutputSigned = FI.getIntrinsicID() == Intrinsic::fptosi_sat;
+  else
+    IsOutputSigned = isa<FPToSIInst>(FI);
 
   // Since we can assume the conversion won't overflow, our decision as to
   // whether the input will fit in the float should depend on the minimum
@@ -2330,28 +2363,48 @@ Instruction *InstCombinerImpl::foldItoFPtoI(CastInst &FI) {
   // This means this is also safe for a signed input and unsigned output, since
   // a negative input would lead to undefined behavior.
   if (!isKnownExactCastIntToFP(*OpI)) {
-    // The first cast may not round exactly based on the source integer width
-    // and FP width, but the overflow UB rules can still allow this to fold.
-    // If the destination type is narrow, that means the intermediate FP value
-    // must be large enough to hold the source value exactly.
-    // For example, (uint8_t)((float)(uint32_t 16777217) is undefined behavior.
-    int OutputSize = (int)DestType->getScalarSizeInBits();
-    if (OutputSize > OpI->getType()->getFPMantissaWidth())
+    if constexpr (!IsSaturating) {
+      // The first cast may not round exactly based on the source integer width
+      // and FP width, but the overflow UB rules can still allow this to fold.
+      // If the destination type is narrow, that means the intermediate FP value
+      // must be large enough to hold the source value exactly.
+      //
+      // For example, (uint8_t)((float)(uint32_t 16777217) is UB.
+      int OutputSize = (int)DestType->getScalarSizeInBits();
+      if (OutputSize > OpI->getType()->getFPMantissaWidth())
+        return nullptr;
+    } else {
+      // Sat intrinsics produce a defined saturated value on overflow, so
+      // the UB-based shortcut is invalid. Require exactness.
+      return nullptr;
+    }
+  }
+
+  unsigned SrcWidth = XType->getScalarSizeInBits();
+  unsigned DestWidth = DestType->getScalarSizeInBits();
+
+  if constexpr (IsSaturating) {
+    // TODO: cross-sign and narrowing cases could be handled with range
+    //       analysis to prove the source fits in the destination.
+    if (IsInputSigned != IsOutputSigned || DestWidth < SrcWidth)
       return nullptr;
   }
 
-  if (DestType->getScalarSizeInBits() > XType->getScalarSizeInBits()) {
-    bool IsInputSigned = isa<SIToFPInst>(OpI);
+  if (DestWidth > SrcWidth) {
     if (IsInputSigned && IsOutputSigned)
       return new SExtInst(X, DestType);
     return new ZExtInst(X, DestType);
   }
-  if (DestType->getScalarSizeInBits() < XType->getScalarSizeInBits())
+  if (DestWidth < SrcWidth)
     return new TruncInst(X, DestType);
 
   assert(XType == DestType && "Unexpected types for int to FP to int casts");
   return replaceInstUsesWith(FI, X);
 }
+
+template Instruction *InstCombinerImpl::foldItoFPtoI<CastInst>(CastInst &);
+template Instruction *
+InstCombinerImpl::foldItoFPtoI<IntrinsicInst>(IntrinsicInst &);
 
 static Instruction *foldFPtoI(Instruction &FI, InstCombiner &IC) {
   // fpto{u/s}i non-norm --> 0

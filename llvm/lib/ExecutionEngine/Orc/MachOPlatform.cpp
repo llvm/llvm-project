@@ -279,6 +279,7 @@ MachOPlatform::HeaderOptions::BuildVersionOpts::fromTriple(const Triple &TT,
 Expected<std::unique_ptr<MachOPlatform>>
 MachOPlatform::Create(ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
                       std::unique_ptr<DefinitionGenerator> OrcRuntime,
+                      HeaderOptionsBuilder BuildHeaderOpts,
                       HeaderOptions PlatformJDOpts,
                       MachOHeaderMUBuilder BuildMachOHeaderMU,
                       std::optional<SymbolAliasMap> RuntimeAliases) {
@@ -313,19 +314,20 @@ MachOPlatform::Create(ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
 
   // Create the instance.
   Error Err = Error::success();
-  auto P = std::unique_ptr<MachOPlatform>(new MachOPlatform(
-      ObjLinkingLayer, PlatformJD, std::move(OrcRuntime),
-      std::move(PlatformJDOpts), std::move(BuildMachOHeaderMU), Err));
+  auto P = std::unique_ptr<MachOPlatform>(
+      new MachOPlatform(ObjLinkingLayer, PlatformJD, std::move(OrcRuntime),
+                        std::move(BuildHeaderOpts), std::move(PlatformJDOpts),
+                        std::move(BuildMachOHeaderMU), Err));
   if (Err)
     return std::move(Err);
   return std::move(P);
 }
 
-Expected<std::unique_ptr<MachOPlatform>>
-MachOPlatform::Create(ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
-                      const char *OrcRuntimePath, HeaderOptions PlatformJDOpts,
-                      MachOHeaderMUBuilder BuildMachOHeaderMU,
-                      std::optional<SymbolAliasMap> RuntimeAliases) {
+Expected<std::unique_ptr<MachOPlatform>> MachOPlatform::Create(
+    ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
+    const char *OrcRuntimePath, HeaderOptionsBuilder BuildHeaderOpts,
+    HeaderOptions PlatformJDOpts, MachOHeaderMUBuilder BuildMachOHeaderMU,
+    std::optional<SymbolAliasMap> RuntimeAliases) {
 
   // Create a generator for the ORC runtime archive.
   auto OrcRuntimeArchiveGenerator =
@@ -335,12 +337,12 @@ MachOPlatform::Create(ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
 
   return Create(ObjLinkingLayer, PlatformJD,
                 std::move(*OrcRuntimeArchiveGenerator),
-                std::move(PlatformJDOpts), std::move(BuildMachOHeaderMU),
-                std::move(RuntimeAliases));
+                std::move(BuildHeaderOpts), std::move(PlatformJDOpts),
+                std::move(BuildMachOHeaderMU), std::move(RuntimeAliases));
 }
 
 Error MachOPlatform::setupJITDylib(JITDylib &JD) {
-  return setupJITDylib(JD, /*Opts=*/{});
+  return setupJITDylib(JD, BuildHeaderOpts(JD));
 }
 
 Error MachOPlatform::setupJITDylib(JITDylib &JD, HeaderOptions Opts) {
@@ -436,6 +438,10 @@ MachOPlatform::standardLazyCompilationAliases() {
       StandardLazyCompilationAliases);
 }
 
+MachOPlatform::HeaderOptions MachOPlatform::defaultHeaderOpts(JITDylib &JD) {
+  return {};
+}
+
 bool MachOPlatform::supportedTarget(const Triple &TT) {
   switch (TT.getArch()) {
   case Triple::aarch64:
@@ -472,10 +478,11 @@ MachOPlatform::flagsForSymbol(jitlink::Symbol &Sym) {
 MachOPlatform::MachOPlatform(
     ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
     std::unique_ptr<DefinitionGenerator> OrcRuntimeGenerator,
-    HeaderOptions PlatformJDOpts, MachOHeaderMUBuilder BuildMachOHeaderMU,
-    Error &Err)
+    HeaderOptionsBuilder BuildHeaderOpts, HeaderOptions PlatformJDOpts,
+    MachOHeaderMUBuilder BuildMachOHeaderMU, Error &Err)
     : ES(ObjLinkingLayer.getExecutionSession()), PlatformJD(PlatformJD),
       ObjLinkingLayer(ObjLinkingLayer),
+      BuildHeaderOpts(std::move(BuildHeaderOpts)),
       BuildMachOHeaderMU(std::move(BuildMachOHeaderMU)) {
   ErrorAsOutParameter _(Err);
   ObjLinkingLayer.addPlugin(std::make_unique<MachOPlatformPlugin>(*this));
@@ -1757,6 +1764,9 @@ jitlink::Block &createHeaderBlock(MachOPlatform &MOP,
         Opts.IDDylib->CurrentVersion, Opts.IDDylib->CompatibilityVersion);
   else
     B.template addLoadCommand<MachO::LC_ID_DYLIB>(JD.getName(), 0, 0, 0);
+
+  if (Opts.UUID)
+    B.template addLoadCommand<MachO::LC_UUID>(*Opts.UUID);
 
   for (auto &BV : Opts.BuildVersions)
     B.template addLoadCommand<MachO::LC_BUILD_VERSION>(

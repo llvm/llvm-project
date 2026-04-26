@@ -17,16 +17,16 @@ entry:
   %cmp72 = icmp sgt i32 %width_, 0
   br i1 %cmp72, label %for.body.lr.ph, label %for.cond.cleanup
 
-for.body.lr.ph:                                   ; preds = %entry
+for.body.lr.ph:
   br label %for.body
 
-for.cond.cleanup.loopexit:                        ; preds = %for.body
+for.cond.cleanup.loopexit:
   br label %for.cond.cleanup
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %for.body.lr.ph, %for.body
+for.body:
   %i.073 = phi i32 [ 0, %for.body.lr.ph ], [ %add46, %for.body ]
   %arrayidx = getelementptr inbounds [120 x half], ptr @src, i32 0, i32 %i.073
   %0 = load half, ptr %arrayidx, align 4
@@ -106,13 +106,13 @@ entry:
   %cmp27 = icmp sgt i32 %width_, 0
   br i1 %cmp27, label %for.body.lr.ph, label %for.cond.cleanup
 
-for.body.lr.ph:                                   ; preds = %entry
+for.body.lr.ph:
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %for.body.lr.ph, %for.body
+for.body:
   %i.028 = phi i32 [ 0, %for.body.lr.ph ], [ %add16, %for.body ]
   %arrayidx = getelementptr inbounds [120 x half], ptr @src, i32 0, i32 %i.028
   %0 = load half, ptr %arrayidx, align 4
