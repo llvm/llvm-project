@@ -1183,7 +1183,7 @@ void PyDictAttribute::bindDerived(ClassTy &c) {
           auto &mlirAttr = nb::cast<PyAttribute &>(it.second);
           auto name = nb::cast<std::string>(it.first);
           mlirNamedAttributes.push_back(mlirNamedAttributeGet(
-              mlirIdentifierGet(mlirAttributeGetContext(mlirAttr),
+              mlirStringAttrGet(mlirAttributeGetContext(mlirAttr),
                                 toMlirStringRef(name)),
               mlirAttr));
         }
@@ -1210,7 +1210,7 @@ void PyDictAttribute::bindDerived(ClassTy &c) {
     MlirNamedAttribute namedAttr = mlirDictionaryAttrGetElement(self, index);
     return PyNamedAttribute(
         namedAttr.attribute,
-        std::string(mlirIdentifierStr(namedAttr.name).data));
+        std::string(mlirStringAttrGetValue(namedAttr.name).data));
   });
 }
 

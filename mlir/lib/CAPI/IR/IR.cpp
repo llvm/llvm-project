@@ -285,8 +285,9 @@ mlirLocationFileLineColRangeGet(MlirContext context, MlirStringRef filename,
                                      startLine, startCol, endLine, endCol)));
 }
 
-MlirIdentifier mlirLocationFileLineColRangeGetFilename(MlirLocation location) {
-  return wrap(llvm::dyn_cast<FileLineColRange>(unwrap(location)).getFilename());
+MlirAttribute mlirLocationFileLineColRangeGetFilename(MlirLocation location) {
+  return wrap(Attribute(
+      llvm::dyn_cast<FileLineColRange>(unwrap(location)).getFilename()));
 }
 
 int mlirLocationFileLineColRangeGetStartLine(MlirLocation location) {
@@ -384,8 +385,8 @@ MlirLocation mlirLocationNameGet(MlirContext context, MlirStringRef name,
       StringAttr::get(unwrap(context), unwrap(name)), unwrap(childLoc))));
 }
 
-MlirIdentifier mlirLocationNameGetName(MlirLocation location) {
-  return wrap((llvm::dyn_cast<NameLoc>(unwrap(location)).getName()));
+MlirAttribute mlirLocationNameGetName(MlirLocation location) {
+  return wrap(Attribute(llvm::dyn_cast<NameLoc>(unwrap(location)).getName()));
 }
 
 MlirLocation mlirLocationNameGetChildLoc(MlirLocation location) {
@@ -599,8 +600,9 @@ MlirOperation mlirOperationCreate(MlirOperationState *state) {
 
   cppState.attributes.reserve(state->nAttributes);
   for (intptr_t i = 0; i < state->nAttributes; ++i)
-    cppState.addAttribute(unwrap(state->attributes[i].name),
-                          unwrap(state->attributes[i].attribute));
+    cppState.addAttribute(
+        llvm::cast<StringAttr>(unwrap(state->attributes[i].name)),
+        unwrap(state->attributes[i].attribute));
 
   for (intptr_t i = 0; i < state->nRegions; ++i)
     cppState.addRegion(std::unique_ptr<Region>(unwrap(state->regions[i])));
@@ -671,8 +673,8 @@ MlirTypeID mlirOperationGetTypeID(MlirOperation op) {
   return {nullptr};
 }
 
-MlirIdentifier mlirOperationGetName(MlirOperation op) {
-  return wrap(unwrap(op)->getName().getIdentifier());
+MlirAttribute mlirOperationGetName(MlirOperation op) {
+  return wrap(Attribute(unwrap(op)->getName().getIdentifier()));
 }
 
 MlirBlock mlirOperationGetBlock(MlirOperation op) {
@@ -1318,29 +1320,11 @@ void mlirAttributePrint(MlirAttribute attr, MlirStringCallback callback,
 
 void mlirAttributeDump(MlirAttribute attr) { unwrap(attr).dump(); }
 
-MlirNamedAttribute mlirNamedAttributeGet(MlirIdentifier name,
+MlirNamedAttribute mlirNamedAttributeGet(MlirAttribute name,
                                          MlirAttribute attr) {
+  assert(isa<StringAttr>(unwrap(name)) &&
+         "name attribute name must be a string attribute");
   return MlirNamedAttribute{name, attr};
-}
-
-//===----------------------------------------------------------------------===//
-// Identifier API.
-//===----------------------------------------------------------------------===//
-
-MlirIdentifier mlirIdentifierGet(MlirContext context, MlirStringRef str) {
-  return wrap(StringAttr::get(unwrap(context), unwrap(str)));
-}
-
-MlirContext mlirIdentifierGetContext(MlirIdentifier ident) {
-  return wrap(unwrap(ident).getContext());
-}
-
-bool mlirIdentifierEqual(MlirIdentifier ident, MlirIdentifier other) {
-  return unwrap(ident) == unwrap(other);
-}
-
-MlirStringRef mlirIdentifierStr(MlirIdentifier ident) {
-  return wrap(unwrap(ident).strref());
 }
 
 //===----------------------------------------------------------------------===//

@@ -244,13 +244,13 @@ void PyRewritePatternSet::addConversion(nb::handle root,
     nb::object opView = PyOperation::forOperation(ctx, op)->createOpView();
 
     std::vector<MlirValue> operandsVec(operands, operands + nOperands);
-    nb::object adaptorCls =
-        PyGlobals::get()
-            .lookupOpAdaptorClass([&] {
-              MlirStringRef ref = mlirIdentifierStr(mlirOperationGetName(op));
-              return std::string_view(ref.data, ref.length);
-            }())
-            .value_or(nb::borrow(nb::type<PyOpAdaptor>()));
+    nb::object adaptorCls = PyGlobals::get()
+                                .lookupOpAdaptorClass([&] {
+                                  MlirStringRef ref = mlirStringAttrGetValue(
+                                      mlirOperationGetName(op));
+                                  return std::string_view(ref.data, ref.length);
+                                }())
+                                .value_or(nb::borrow(nb::type<PyOpAdaptor>()));
 
     nb::object res = f(opView, adaptorCls(operandsVec, opView),
                        PyConversionPattern(pattern).getTypeConverter(),

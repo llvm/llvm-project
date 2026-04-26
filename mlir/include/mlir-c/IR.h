@@ -61,7 +61,6 @@ DEFINE_C_API_STRUCT(MlirRegion, void);
 DEFINE_C_API_STRUCT(MlirSymbolTable, void);
 
 DEFINE_C_API_STRUCT(MlirAttribute, const void);
-DEFINE_C_API_STRUCT(MlirIdentifier, const void);
 DEFINE_C_API_STRUCT(MlirLocation, const void);
 DEFINE_C_API_STRUCT(MlirModule, const void);
 DEFINE_C_API_STRUCT(MlirType, const void);
@@ -72,9 +71,9 @@ DEFINE_C_API_STRUCT(MlirValue, const void);
 /// Named MLIR attribute.
 ///
 /// A named attribute is essentially a (name, attribute) pair where the name is
-/// a string.
+/// a string attribute (MlirAttribute of string kind).
 struct MlirNamedAttribute {
-  MlirIdentifier name;
+  MlirAttribute name;
   MlirAttribute attribute;
 };
 typedef struct MlirNamedAttribute MlirNamedAttribute;
@@ -271,7 +270,7 @@ MLIR_CAPI_EXPORTED MlirLocation mlirLocationFileLineColRangeGet(
     unsigned start_col, unsigned end_line, unsigned end_col);
 
 /// Getter for filename of FileLineColRange.
-MLIR_CAPI_EXPORTED MlirIdentifier
+MLIR_CAPI_EXPORTED MlirAttribute
 mlirLocationFileLineColRangeGetFilename(MlirLocation location);
 
 /// Getter for start_line of FileLineColRange.
@@ -347,8 +346,7 @@ MLIR_CAPI_EXPORTED MlirLocation mlirLocationNameGet(MlirContext context,
                                                     MlirLocation childLoc);
 
 /// Getter for name of Name.
-MLIR_CAPI_EXPORTED MlirIdentifier
-mlirLocationNameGetName(MlirLocation location);
+MLIR_CAPI_EXPORTED MlirAttribute mlirLocationNameGetName(MlirLocation location);
 
 /// Getter for childLoc of Name.
 MLIR_CAPI_EXPORTED MlirLocation
@@ -648,8 +646,8 @@ MLIR_CAPI_EXPORTED void mlirOperationSetLocation(MlirOperation op,
 /// description.
 MLIR_CAPI_EXPORTED MlirTypeID mlirOperationGetTypeID(MlirOperation op);
 
-/// Gets the name of the operation as an identifier.
-MLIR_CAPI_EXPORTED MlirIdentifier mlirOperationGetName(MlirOperation op);
+/// Gets the name of the operation as a string attribute.
+MLIR_CAPI_EXPORTED MlirAttribute mlirOperationGetName(MlirOperation op);
 
 /// Gets the block that owns this operation, returning null if the operation is
 /// not owned.
@@ -1213,26 +1211,9 @@ MLIR_CAPI_EXPORTED void mlirAttributePrint(MlirAttribute attr,
 MLIR_CAPI_EXPORTED void mlirAttributeDump(MlirAttribute attr);
 
 /// Associates an attribute with the name. Takes ownership of neither.
-MLIR_CAPI_EXPORTED MlirNamedAttribute mlirNamedAttributeGet(MlirIdentifier name,
+/// The name must be a string attribute.
+MLIR_CAPI_EXPORTED MlirNamedAttribute mlirNamedAttributeGet(MlirAttribute name,
                                                             MlirAttribute attr);
-
-//===----------------------------------------------------------------------===//
-// Identifier API.
-//===----------------------------------------------------------------------===//
-
-/// Gets an identifier with the given string value.
-MLIR_CAPI_EXPORTED MlirIdentifier mlirIdentifierGet(MlirContext context,
-                                                    MlirStringRef str);
-
-/// Returns the context associated with this identifier
-MLIR_CAPI_EXPORTED MlirContext mlirIdentifierGetContext(MlirIdentifier);
-
-/// Checks whether two identifiers are the same.
-MLIR_CAPI_EXPORTED bool mlirIdentifierEqual(MlirIdentifier ident,
-                                            MlirIdentifier other);
-
-/// Gets the string value of the identifier.
-MLIR_CAPI_EXPORTED MlirStringRef mlirIdentifierStr(MlirIdentifier ident);
 
 //===----------------------------------------------------------------------===//
 // Symbol and SymbolTable API.

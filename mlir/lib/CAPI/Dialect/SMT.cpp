@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir-c/Dialect/SMT.h"
+#include "mlir/CAPI/IR.h"
 #include "mlir/CAPI/Registration.h"
 #include "mlir/Dialect/SMT/IR/SMTAttributes.h"
 #include "mlir/Dialect/SMT/IR/SMTDialect.h"
@@ -97,7 +98,7 @@ MlirType mlirSMTTypeGetSMTFunc(MlirContext ctx, size_t numberOfDomainTypes,
 
 bool mlirSMTTypeIsASort(MlirType type) { return isa<SortType>(unwrap(type)); }
 
-MlirType mlirSMTTypeGetSort(MlirContext ctx, MlirIdentifier identifier,
+MlirType mlirSMTTypeGetSort(MlirContext ctx, MlirAttribute identifier,
                             size_t numberOfSortParams,
                             const MlirType *sortParams) {
   SmallVector<Type> sortParamsVec;
@@ -106,7 +107,10 @@ MlirType mlirSMTTypeGetSort(MlirContext ctx, MlirIdentifier identifier,
   for (size_t i = 0; i < numberOfSortParams; i++)
     sortParamsVec.push_back(unwrap(sortParams[i]));
 
-  return wrap(SortType::get(unwrap(ctx), unwrap(identifier), sortParamsVec));
+  assert(isa<StringAttr>(unwrap(identifier)) &&
+         "name attribute name must be a string attribute");
+  return wrap(SortType::get(
+      unwrap(ctx), llvm::cast<StringAttr>(unwrap(identifier)), sortParamsVec));
 }
 
 //===----------------------------------------------------------------------===//

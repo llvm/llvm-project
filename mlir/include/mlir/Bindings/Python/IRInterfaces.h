@@ -9,6 +9,7 @@
 #ifndef MLIR_BINDINGS_PYTHON_IRINTERFACES_H
 #define MLIR_BINDINGS_PYTHON_IRINTERFACES_H
 
+#include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/Interfaces.h"
 #include "mlir-c/Support.h"
@@ -63,8 +64,8 @@ public:
         throw nanobind::value_error((msg + ConcreteIface::pyClassName).c_str());
       }
 
-      MlirIdentifier identifier = mlirOperationGetName(*operation);
-      MlirStringRef stringRef = mlirIdentifierStr(identifier);
+      MlirAttribute nameAttr = mlirOperationGetName(*operation);
+      MlirStringRef stringRef = mlirStringAttrGetValue(nameAttr);
       opName = std::string(stringRef.data, stringRef.length);
     } else {
       if (!nanobind::try_cast<std::string>(obj.attr("OPERATION_NAME"), opName))

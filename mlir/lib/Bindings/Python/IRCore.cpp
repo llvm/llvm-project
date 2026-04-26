@@ -1315,7 +1315,7 @@ nb::object PyOperation::create(std::string_view name,
     mlirNamedAttributes.reserve(mlirAttributes.size());
     for (const std::pair<std::string, MlirAttribute> &it : mlirAttributes)
       mlirNamedAttributes.push_back(mlirNamedAttributeGet(
-          mlirIdentifierGet(mlirAttributeGetContext(it.second),
+          mlirStringAttrGet(mlirAttributeGetContext(it.second),
                             toMlirStringRef(it.first)),
           it.second));
     mlirOperationStateAddAttributes(&state, mlirNamedAttributes.size(),
@@ -1356,10 +1356,10 @@ nb::object PyOperation::clone(const nb::object &maybeIp) {
 
 nb::object PyOperation::createOpView() {
   checkValid();
-  MlirIdentifier ident = mlirOperationGetName(get());
-  MlirStringRef identStr = mlirIdentifierStr(ident);
+  MlirAttribute nameAttr = mlirOperationGetName(get());
+  MlirStringRef nameStr = mlirStringAttrGetValue(nameAttr);
   auto operationCls = PyGlobals::get().lookupOperationClass(
-      std::string_view(identStr.data, identStr.length));
+      std::string_view(nameStr.data, nameStr.length));
   if (operationCls)
     return PyOpView::constructDerived(*operationCls, getRef().getObject());
   return nb::cast(PyOpView(getRef().getObject()));
@@ -1534,7 +1534,7 @@ static void populateResultTypes(std::string_view name,
 MlirValue getUniqueResult(MlirOperation operation) {
   auto numResults = mlirOperationGetNumResults(operation);
   if (numResults != 1) {
-    auto name = mlirIdentifierStr(mlirOperationGetName(operation));
+    auto name = mlirStringAttrGetValue(mlirOperationGetName(operation));
     throw nb::value_error(
         join("Cannot call .result on operation ",
              std::string_view(name.data, name.length), " which has ",
@@ -1895,7 +1895,7 @@ nb::typed<nb::object, PyAttribute> PyAttribute::maybeDownCast() {
 PyNamedAttribute::PyNamedAttribute(MlirAttribute attr, std::string ownedName)
     : ownedName(new std::string(std::move(ownedName))) {
   namedAttr = mlirNamedAttributeGet(
-      mlirIdentifierGet(mlirAttributeGetContext(attr),
+      mlirStringAttrGet(mlirAttributeGetContext(attr),
                         toMlirStringRef(*this->ownedName)),
       attr);
 }
@@ -2405,10 +2405,9 @@ PyNamedAttribute PyOpAttributeMap::dunderGetItemIndexed(intptr_t index) {
   }
   MlirNamedAttribute namedAttr =
       mlirOperationGetAttribute(operation->get(), index);
-  return PyNamedAttribute(
-      namedAttr.attribute,
-      std::string(mlirIdentifierStr(namedAttr.name).data,
-                  mlirIdentifierStr(namedAttr.name).length));
+  MlirStringRef name = mlirStringAttrGetValue(namedAttr.name);
+  return PyNamedAttribute(namedAttr.attribute,
+                          std::string(name.data, name.length));
 }
 
 void PyOpAttributeMap::dunderSetItem(const std::string &name,
@@ -2438,7 +2437,7 @@ void PyOpAttributeMap::forEachAttr(
   intptr_t n = mlirOperationGetNumAttributes(op);
   for (intptr_t i = 0; i < n; ++i) {
     MlirNamedAttribute na = mlirOperationGetAttribute(op, i);
-    MlirStringRef name = mlirIdentifierStr(na.name);
+    MlirStringRef name = mlirStringAttrGetValue(na.name);
     fn(name, na.attribute);
   }
 }
@@ -3489,7 +3488,7 @@ void populateIRCore(nb::module_ &m) {
       .def_prop_ro(
           "filename",
           [](PyLocation loc) {
-            return mlirIdentifierStr(
+            return mlirStringAttrGetValue(
                 mlirLocationFileLineColRangeGetFilename(loc));
           },
           "Gets the filename from a FileLineColLoc.")
@@ -3553,7 +3552,7 @@ void populateIRCore(nb::module_ &m) {
       .def_prop_ro(
           "name_str",
           [](PyLocation loc) {
-            return mlirIdentifierStr(mlirLocationNameGetName(loc));
+            return mlirStringAttrGetValue(mlirLocationNameGetName(loc));
           },
           "Gets the name string from a `NameLoc`.")
       .def_prop_ro(
@@ -3772,7 +3771,7 @@ void populateIRCore(nb::module_ &m) {
             auto &concreteOperation = self.getOperation();
             concreteOperation.checkValid();
             MlirOperation operation = concreteOperation.get();
-            return mlirIdentifierStr(mlirOperationGetName(operation));
+            return mlirStringAttrGetValue(mlirOperationGetName(operation));
           },
           "Returns the fully qualified name of the operation.")
       .def_prop_ro(
@@ -4236,7 +4235,7 @@ void populateIRCore(nb::module_ &m) {
         std::string clsOpName =
             nb::cast<std::string>(cls.attr("OPERATION_NAME"));
         MlirStringRef identifier =
-            mlirIdentifierStr(mlirOperationGetName(*parsed.get()));
+            mlirStringAttrGetValue(mlirOperationGetName(*parsed.get()));
         std::string_view parsedOpName(identifier.data, identifier.length);
         if (clsOpName != parsedOpName)
           throw MLIRError(join("Expected a '", clsOpName, "' op, got: '",
@@ -4676,9 +4675,8 @@ void populateIRCore(nb::module_ &m) {
           [](PyNamedAttribute &self) {
             PyPrintAccumulator printAccum;
             printAccum.parts.append("NamedAttribute(");
-            printAccum.parts.append(
-                nb::str(mlirIdentifierStr(self.namedAttr.name).data,
-                        mlirIdentifierStr(self.namedAttr.name).length));
+            MlirStringRef name = mlirStringAttrGetValue(self.namedAttr.name);
+            printAccum.parts.append(nb::str(name.data, name.length));
             printAccum.parts.append("=");
             mlirAttributePrint(self.namedAttr.attribute,
                                printAccum.getCallback(),
@@ -4690,7 +4688,7 @@ void populateIRCore(nb::module_ &m) {
       .def_prop_ro(
           "name",
           [](PyNamedAttribute &self) {
-            return mlirIdentifierStr(self.namedAttr.name);
+            return mlirStringAttrGetValue(self.namedAttr.name);
           },
           "The name of the `NamedAttribute` binding.")
       .def_prop_ro(

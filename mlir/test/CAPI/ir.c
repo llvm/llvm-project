@@ -113,11 +113,11 @@ MlirModule makeAndDumpAdd(MlirContext ctx, MlirLocation location) {
       mlirAttributeParseGet(ctx, mlirStringRefCreateFromCString("\"add\""));
   MlirNamedAttribute funcAttrs[] = {
       mlirNamedAttributeGet(
-          mlirIdentifierGet(ctx,
+          mlirStringAttrGet(ctx,
                             mlirStringRefCreateFromCString("function_type")),
           funcTypeAttr),
       mlirNamedAttributeGet(
-          mlirIdentifierGet(ctx, mlirStringRefCreateFromCString("sym_name")),
+          mlirStringAttrGet(ctx, mlirStringRefCreateFromCString("sym_name")),
           funcNameAttr)};
   MlirOperationState funcState = mlirOperationStateGet(
       mlirStringRefCreateFromCString("func.func"), location);
@@ -131,7 +131,7 @@ MlirModule makeAndDumpAdd(MlirContext ctx, MlirLocation location) {
   MlirAttribute indexZeroLiteral =
       mlirAttributeParseGet(ctx, mlirStringRefCreateFromCString("0 : index"));
   MlirNamedAttribute indexZeroValueAttr = mlirNamedAttributeGet(
-      mlirIdentifierGet(ctx, mlirStringRefCreateFromCString("value")),
+      mlirStringAttrGet(ctx, mlirStringRefCreateFromCString("value")),
       indexZeroLiteral);
   MlirOperationState constZeroState = mlirOperationStateGet(
       mlirStringRefCreateFromCString("arith.constant"), location);
@@ -158,7 +158,7 @@ MlirModule makeAndDumpAdd(MlirContext ctx, MlirLocation location) {
   MlirAttribute indexOneLiteral =
       mlirAttributeParseGet(ctx, mlirStringRefCreateFromCString("1 : index"));
   MlirNamedAttribute indexOneValueAttr = mlirNamedAttributeGet(
-      mlirIdentifierGet(ctx, mlirStringRefCreateFromCString("value")),
+      mlirStringAttrGet(ctx, mlirStringRefCreateFromCString("value")),
       indexOneLiteral);
   MlirOperationState constOneState = mlirOperationStateGet(
       mlirStringRefCreateFromCString("arith.constant"), location);
@@ -386,8 +386,8 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   // clang-format on
 
   // Get the operation name and print it.
-  MlirIdentifier ident = mlirOperationGetName(operation);
-  MlirStringRef identStr = mlirIdentifierStr(ident);
+  MlirAttribute ident = mlirOperationGetName(operation);
+  MlirStringRef identStr = mlirStringAttrGetValue(ident);
   fprintf(stderr, "Operation name: '");
   for (size_t i = 0; i < identStr.length; ++i)
     fputc(identStr.data[i], stderr);
@@ -395,9 +395,10 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   // CHECK: Operation name: 'arith.constant'
 
   // Get the identifier again and verify equal.
-  MlirIdentifier identAgain = mlirIdentifierGet(ctx, identStr);
+  MlirAttribute identAgain =
+      mlirStringAttrGet(mlirAttributeGetContext(ident), identStr);
   fprintf(stderr, "Identifier equal: %d\n",
-          mlirIdentifierEqual(ident, identAgain));
+          mlirAttributeEqual(ident, identAgain));
   // CHECK: Identifier equal: 1
 
   // Get the block terminator and print it.
@@ -637,7 +638,7 @@ static int createOperationWithTypeInference(MlirContext ctx) {
   MlirOperationState state = mlirOperationStateGet(
       mlirStringRefCreateFromCString("shape.const_size"), loc);
   MlirNamedAttribute valueAttr = mlirNamedAttributeGet(
-      mlirIdentifierGet(ctx, mlirStringRefCreateFromCString("value")), iAttr);
+      mlirStringAttrGet(ctx, mlirStringRefCreateFromCString("value")), iAttr);
   mlirOperationStateAddAttributes(&state, 1, &valueAttr);
   mlirOperationStateEnableResultTypeInference(&state);
 
@@ -1823,8 +1824,8 @@ static int testBackreferences(void) {
   mlirRegionAppendOwnedBlock(region, block);
   mlirOperationStateAddOwnedRegions(&opState, 1, &region);
   MlirOperation op = mlirOperationCreate(&opState);
-  MlirIdentifier ident =
-      mlirIdentifierGet(ctx, mlirStringRefCreateFromCString("identifier"));
+  MlirAttribute ident =
+      mlirStringAttrGet(ctx, mlirStringRefCreateFromCString("identifier"));
 
   if (!mlirContextEqual(ctx, mlirOperationGetContext(op))) {
     fprintf(stderr, "ERROR: Getting context from operation failed\n");
@@ -1834,7 +1835,7 @@ static int testBackreferences(void) {
     fprintf(stderr, "ERROR: Getting parent operation from block failed\n");
     return 2;
   }
-  if (!mlirContextEqual(ctx, mlirIdentifierGetContext(ident))) {
+  if (!mlirContextEqual(ctx, mlirAttributeGetContext(ident))) {
     fprintf(stderr, "ERROR: Getting context from identifier failed\n");
     return 3;
   }
@@ -1863,7 +1864,7 @@ int testOperands(void) {
   MlirAttribute indexZeroLiteral =
       mlirAttributeParseGet(ctx, mlirStringRefCreateFromCString("0 : index"));
   MlirNamedAttribute indexZeroValueAttr = mlirNamedAttributeGet(
-      mlirIdentifierGet(ctx, mlirStringRefCreateFromCString("value")),
+      mlirStringAttrGet(ctx, mlirStringRefCreateFromCString("value")),
       indexZeroLiteral);
   MlirOperationState constZeroState = mlirOperationStateGet(
       mlirStringRefCreateFromCString("arith.constant"), loc);
@@ -1875,7 +1876,7 @@ int testOperands(void) {
   MlirAttribute indexOneLiteral =
       mlirAttributeParseGet(ctx, mlirStringRefCreateFromCString("1 : index"));
   MlirNamedAttribute indexOneValueAttr = mlirNamedAttributeGet(
-      mlirIdentifierGet(ctx, mlirStringRefCreateFromCString("value")),
+      mlirStringAttrGet(ctx, mlirStringRefCreateFromCString("value")),
       indexOneLiteral);
   MlirOperationState constOneState = mlirOperationStateGet(
       mlirStringRefCreateFromCString("arith.constant"), loc);
@@ -1957,7 +1958,7 @@ int testOperands(void) {
   MlirAttribute indexTwoLiteral =
       mlirAttributeParseGet(ctx, mlirStringRefCreateFromCString("2 : index"));
   MlirNamedAttribute indexTwoValueAttr = mlirNamedAttributeGet(
-      mlirIdentifierGet(ctx, mlirStringRefCreateFromCString("value")),
+      mlirStringAttrGet(ctx, mlirStringRefCreateFromCString("value")),
       indexTwoLiteral);
   MlirOperationState constTwoState = mlirOperationStateGet(
       mlirStringRefCreateFromCString("arith.constant"), loc);
@@ -2022,7 +2023,7 @@ int testClone(void) {
   MlirAttribute indexZeroLiteral =
       mlirAttributeParseGet(ctx, mlirStringRefCreateFromCString("0 : index"));
   MlirNamedAttribute indexZeroValueAttr = mlirNamedAttributeGet(
-      mlirIdentifierGet(ctx, valueStringRef), indexZeroLiteral);
+      mlirStringAttrGet(ctx, valueStringRef), indexZeroLiteral);
   MlirOperationState constZeroState = mlirOperationStateGet(
       mlirStringRefCreateFromCString("arith.constant"), loc);
   mlirOperationStateAddResults(&constZeroState, 1, &indexType);
@@ -2112,7 +2113,7 @@ int testTypeID(MlirContext ctx) {
   MlirAttribute indexZeroLiteral =
       mlirAttributeParseGet(ctx, mlirStringRefCreateFromCString("0 : index"));
   MlirNamedAttribute indexZeroValueAttr = mlirNamedAttributeGet(
-      mlirIdentifierGet(ctx, valueStringRef), indexZeroLiteral);
+      mlirStringAttrGet(ctx, valueStringRef), indexZeroLiteral);
   MlirOperationState constZeroState = mlirOperationStateGet(
       mlirStringRefCreateFromCString("arith.constant"), loc);
   mlirOperationStateAddResults(&constZeroState, 1, &indexType);
@@ -2258,18 +2259,16 @@ typedef struct {
 
 MlirWalkResult walkCallBack(MlirOperation op, void *rootOpVoid) {
   fprintf(stderr, "%s: %s\n", ((callBackData *)(rootOpVoid))->x,
-          mlirIdentifierStr(mlirOperationGetName(op)).data);
+          mlirStringAttrGetValue(mlirOperationGetName(op)).data);
   return MlirWalkResultAdvance;
 }
 
 MlirWalkResult walkCallBackTestWalkResult(MlirOperation op, void *rootOpVoid) {
-  fprintf(stderr, "%s: %s\n", ((callBackData *)(rootOpVoid))->x,
-          mlirIdentifierStr(mlirOperationGetName(op)).data);
-  if (strcmp(mlirIdentifierStr(mlirOperationGetName(op)).data, "func.func") ==
-      0)
+  MlirStringRef opName = mlirStringAttrGetValue(mlirOperationGetName(op));
+  fprintf(stderr, "%s: %s\n", ((callBackData *)(rootOpVoid))->x, opName.data);
+  if (strcmp(opName.data, "func.func") == 0)
     return MlirWalkResultSkip;
-  if (strcmp(mlirIdentifierStr(mlirOperationGetName(op)).data, "arith.addi") ==
-      0)
+  if (strcmp(opName.data, "arith.addi") == 0)
     return MlirWalkResultInterrupt;
   return MlirWalkResultAdvance;
 }

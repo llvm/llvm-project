@@ -11,6 +11,7 @@
  */
 
 #include "mlir-c/Pass.h"
+#include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/Dialect/Func.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/RegisterEverything.h"
@@ -314,7 +315,7 @@ void testRunExternalPass(MlirOperation op, MlirExternalPass pass,
 void testRunExternalFuncPass(MlirOperation op, MlirExternalPass pass,
                              void *userData) {
   ++((TestExternalPassUserData *)userData)->runCallCount;
-  MlirStringRef opName = mlirIdentifierStr(mlirOperationGetName(op));
+  MlirStringRef opName = mlirStringAttrGetValue(mlirOperationGetName(op));
   if (!mlirStringRefEqual(opName,
                           mlirStringRefCreateFromCString("func.func"))) {
     mlirExternalPassSignalFailure(pass);
