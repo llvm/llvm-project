@@ -119,6 +119,17 @@ define <4 x b8> @load_vb8_from_inttoptr() {
   ret <4 x b8> %load
 }
 
+define <4 x b8> @load_vb8_from_allones_ptr_gep(i64 %idx) {
+; CHECK-LABEL: @load_vb8_from_allones_ptr_gep(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr @allones_ptr, i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load <4 x b8>, ptr [[GEP]], align 4
+; CHECK-NEXT:    ret <4 x b8> [[LOAD]]
+;
+  %gep = getelementptr i8, ptr @allones_ptr, i64 %idx
+  %load = load <4 x b8>, ptr %gep
+  ret <4 x b8> %load
+}
+
 define b8 @load_b8_from_struct_inttoptr() {
 ; CHECK-LABEL: @load_b8_from_struct_inttoptr(
 ; CHECK-NEXT:    [[LOAD:%.*]] = load b8, ptr @struct_inttoptr, align 1
