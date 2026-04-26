@@ -970,9 +970,9 @@ define i8 @udiv_shl_shl_nuw_nsw(i8 %x, i8 %y, i8 %z) {
 
 define i8 @udiv_shl_shl_nsw_nuw(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @udiv_shl_shl_nsw_nuw(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i8 -1, [[Z:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[X:%.*]]
-; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[TMP2]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nsw i8 [[X:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = shl nuw i8 [[Y1:%.*]], [[Z]]
+; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[TMP2]], [[Y]]
 ; CHECK-NEXT:    ret i8 [[D]]
 ;
   %xz = shl nsw i8 %x, %z
@@ -1177,8 +1177,8 @@ define i32 @udiv_shl_pair_overflow_fail1(i32 %a, i32 %x, i32 %y) {
 ; CHECK-LABEL: @udiv_shl_pair_overflow_fail1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LHS:%.*]] = shl nsw i32 [[A:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[LHS]], [[Y:%.*]]
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[TMP1]], [[A]]
+; CHECK-NEXT:    [[RHS:%.*]] = shl nuw i32 [[A]], [[Y:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[LHS]], [[RHS]]
 ; CHECK-NEXT:    ret i32 [[DIV]]
 ;
 entry:
