@@ -435,16 +435,22 @@ class ContainsSimpleUnionTest2 {
     float uf;
     int ui;
     char uc;
-    // TODO: we'd expect the note: {{uninitialized field 'this->u'}}
-  } u; // no-note
+#ifdef PEDANTIC
+  } u; // expected-note{{uninitialized field 'this->u'}}
+#else
+  } u;
+#endif
 
 public:
+#ifdef PEDANTIC
+  ContainsSimpleUnionTest2() {} // expected-warning{{1 uninitialized field at the end of the constructor call}}
+#else
   ContainsSimpleUnionTest2() {}
+#endif
 };
 
 void fContainsSimpleUnionTest2() {
-  // TODO: we'd expect the warning: {{1 uninitialized field}}
-  ContainsSimpleUnionTest2(); // no-warning
+  ContainsSimpleUnionTest2();
 }
 
 class UnionPointerTest1 {
@@ -479,17 +485,23 @@ public:
   };
 
 private:
-  // TODO: we'd expect the note: {{uninitialized field 'this->uptr'}}
-  SimpleUnion *uptr; // no-note
+#ifdef PEDANTIC
+  SimpleUnion *uptr; // expected-note{{uninitialized pointee 'this->uptr'}}
+#else
+  SimpleUnion *uptr;
+#endif
 
 public:
+#ifdef PEDANTIC
+  UnionPointerTest2(SimpleUnion *uptr, char) : uptr(uptr) {} // expected-warning{{1 uninitialized field at the end of the constructor call}}
+#else
   UnionPointerTest2(SimpleUnion *uptr, char) : uptr(uptr) {}
+#endif
 };
 
 void fUnionPointerTest2() {
   UnionPointerTest2::SimpleUnion u;
-  // TODO: we'd expect the warning: {{1 uninitialized field}}
-  UnionPointerTest2(&u, int()); // no-warning
+  UnionPointerTest2(&u, int());
 }
 
 class ContainsUnionWithRecordTest1 {

@@ -374,8 +374,31 @@ bool FindUninitializedFields::isNonUnionUninit(const TypedValueRegion *R,
 bool FindUninitializedFields::isUnionUninit(const TypedValueRegion *R) {
   assert(R->getValueType()->isUnionType() &&
          "This method only checks union objects!");
-  // TODO: Implement support for union fields.
-  return false;
+
+  const RecordDecl *RD = R->getValueType()->getAsRecordDecl()->getDefinition();
+
+  if (!RD)
+    return false;
+
+  // A union is considered initialized if at least one of its fields has a
+  // non-undefined value. If every field is undefined (or the union has no
+  // fields), we treat it as uninitialized.
+  for (const FieldDecl *FD : RD->fields()) {
+    if (FD->isUnnamedBitField())
+      continue;
+
+    const auto FieldVal =
+        State->getLValue(FD, loc::MemRegionVal(R)).castAs<loc::MemRegionVal>();
+    SVal V = State->getSVal(FieldVal);
+
+    // If any field has a defined value, the union is initialized.
+    if (!V.isUndef()) {
+      IsAnyFieldInitialized = true;
+      return false;
+    }
+  }
+
+  return true;
 }
 
 bool FindUninitializedFields::isPrimitiveUninit(SVal V) {
