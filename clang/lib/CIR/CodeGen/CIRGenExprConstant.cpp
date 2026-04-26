@@ -626,6 +626,11 @@ bool ConstRecordBuilder::applyZeroInitPadding(const ASTRecordLayout &layout,
   return true;
 }
 
+static bool emitDesignatedInitUpdater(ConstantEmitter &emitter,
+                                      ConstantAggregateBuilder &constant,
+                                      CharUnits offset, QualType type,
+                                      const InitListExpr *updater);
+
 bool ConstRecordBuilder::build(InitListExpr *ile, bool allowOverwrite) {
   RecordDecl *rd = ile->getType()->castAsRecordDecl();
   const ASTRecordLayout &layout = cgm.getASTContext().getASTRecordLayout(rd);
@@ -679,8 +684,19 @@ bool ConstRecordBuilder::build(InitListExpr *ile, bool allowOverwrite) {
     // a new constant to emit independently.
     if (allowOverwrite &&
         (field->getType()->isArrayType() || field->getType()->isRecordType())) {
-      cgm.errorNYI(field->getSourceRange(), "designated init lists");
-      return false;
+      if (auto *subILE = dyn_cast<InitListExpr>(init)) {
+        CharUnits fieldOffset = cgm.getASTContext().toCharUnitsFromBits(
+            layout.getFieldOffset(index));
+        if (!emitDesignatedInitUpdater(emitter, builder,
+                                       startOffset + fieldOffset,
+                                       field->getType(), subILE))
+          return false;
+        // If we split apart the field's value, try to collapse it down to a
+        // single value now.
+        builder.condense(startOffset + fieldOffset,
+                         cgm.getTypes().convertTypeForMem(field->getType()));
+        continue;
+      }
     }
 
     mlir::Attribute eltInitAttr =
@@ -866,6 +882,65 @@ bool ConstRecordBuilder::updateRecord(ConstantEmitter &emitter,
                                       CharUnits offset, InitListExpr *updater) {
   return ConstRecordBuilder(emitter, constant, offset)
       .build(updater, /*allowOverwrite*/ true);
+}
+
+static bool emitDesignatedInitUpdater(ConstantEmitter &emitter,
+                                      ConstantAggregateBuilder &constant,
+                                      CharUnits offset, QualType type,
+                                      const InitListExpr *updater) {
+  if (type->isRecordType())
+    return ConstRecordBuilder::updateRecord(
+        emitter, constant, offset, const_cast<InitListExpr *>(updater));
+
+  auto *cat = emitter.cgm.getASTContext().getAsConstantArrayType(type);
+  if (!cat)
+    return false;
+  QualType elemType = cat->getElementType();
+  CharUnits elemSize = emitter.cgm.getASTContext().getTypeSizeInChars(elemType);
+  mlir::Type elemTy = emitter.cgm.getTypes().convertTypeForMem(elemType);
+
+  mlir::TypedAttr fillC;
+  if (const Expr *filler = updater->getArrayFiller()) {
+    if (!isa<NoInitExpr>(filler)) {
+      // Classic codegen uses tryEmitAbstractForMemory here to track abstract
+      // state for pointer authentication. We should use that when implemented.
+      assert(!cir::MissingFeatures::constEmitterAbstractForMemory());
+      mlir::Attribute result =
+          emitter.tryEmitPrivateForMemory(filler, elemType);
+      if (!result)
+        return false;
+      fillC = mlir::cast<mlir::TypedAttr>(result);
+    }
+  }
+
+  unsigned numElementsToUpdate =
+      fillC ? cat->getZExtSize() : updater->getNumInits();
+  for (unsigned i = 0; i != numElementsToUpdate; ++i, offset += elemSize) {
+    const Expr *init = nullptr;
+    if (i < updater->getNumInits())
+      init = updater->getInit(i);
+
+    if (!init && fillC) {
+      if (!constant.add(fillC, offset, true))
+        return false;
+    } else if (!init || isa<NoInitExpr>(init)) {
+      continue;
+    } else if (const auto *childILE = dyn_cast<InitListExpr>(init)) {
+      if (!emitDesignatedInitUpdater(emitter, constant, offset, elemType,
+                                     childILE))
+        return false;
+      // Attempt to reduce the array element to a single constant if necessary.
+      constant.condense(offset, elemTy);
+    } else {
+      mlir::Attribute val = emitter.tryEmitPrivateForMemory(init, elemType);
+      if (!val)
+        return false;
+      if (!constant.add(mlir::cast<mlir::TypedAttr>(val), offset, true))
+        return false;
+    }
+  }
+
+  return true;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1074,9 +1149,18 @@ public:
     if (!c)
       return {};
 
-    cgm.errorNYI(e->getBeginLoc(),
-                 "ConstExprEmitter::VisitDesignatedInitUpdateExpr");
-    return {};
+    ConstantAggregateBuilder constant(cgm);
+    constant.add(mlir::cast<mlir::TypedAttr>(c), CharUnits::Zero(), false);
+
+    if (!emitDesignatedInitUpdater(emitter, constant, CharUnits::Zero(),
+                                   destType, e->getUpdater()))
+      return {};
+
+    mlir::Type valTy = cgm.convertType(destType);
+    bool hasFlexibleArray = false;
+    if (const auto *rd = destType->getAsRecordDecl())
+      hasFlexibleArray = rd->hasFlexibleArrayMember();
+    return constant.build(valTy, hasFlexibleArray);
   }
 
   mlir::Attribute VisitCXXConstructExpr(CXXConstructExpr *e, QualType ty) {
