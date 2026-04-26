@@ -173,6 +173,7 @@ struct MissingFeatures {
   static bool atomicUseLibCall() { return false; }
   static bool atomicMicrosoftVolatile() { return false; }
   static bool atomicOpenMP() { return false; }
+  static bool atomicInitTailPadding() { return false; }
 
   // Global ctor handling
   static bool globalCtorLexOrder() { return false; }
