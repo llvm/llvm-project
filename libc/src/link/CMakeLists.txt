@@ -6,4 +6,5 @@ add_entrypoint_object(
     dl_iterate_phdr.h
   DEPENDS
     libc.hdr.stdint_proxy
+    libc.hdr.sys_auxv_macros
 )
