@@ -3693,6 +3693,8 @@ static void parseOtoolOptions(const llvm::opt::InputArgList &InputArgs) {
   ChainedFixups = InputArgs.hasArg(OTOOL_chained_fixups);
   DyldInfo = InputArgs.hasArg(OTOOL_dyld_info);
 
+  NoUseMemberSyntax = InputArgs.hasArg(OTOOL_m);
+
   InputFilenames = InputArgs.getAllArgValues(OTOOL_INPUT);
   if (InputFilenames.empty())
     reportCmdLineError("no input file");

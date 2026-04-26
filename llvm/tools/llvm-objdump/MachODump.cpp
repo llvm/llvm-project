@@ -81,10 +81,12 @@ bool objdump::Verbose;
 bool objdump::ObjcMetaData;
 std::string objdump::DisSymName;
 bool objdump::IsOtool;
+bool objdump::NoUseMemberSyntax;
 bool objdump::SymbolicOperands;
 std::vector<std::string> objdump::ArchFlags;
 
 static bool ArchAll = false;
+static std::string ArchiveMemberFilter;
 static std::string ThumbTripleName;
 
 static StringRef ordinalName(const object::MachOObjectFile *, int);
@@ -2533,6 +2535,17 @@ static bool ValidateArchFlags() {
   return true;
 }
 
+static bool skipArchiveMember(const object::Archive::Child &C) {
+  if (ArchiveMemberFilter.empty())
+    return false;
+  Expected<StringRef> NameOrErr = C.getName();
+  if (!NameOrErr) {
+    consumeError(NameOrErr.takeError());
+    return true;
+  }
+  return *NameOrErr != ArchiveMemberFilter;
+}
+
 // ParseInputMachO() parses the named Mach-O file in Filename and handles the
 // -arch flags selecting just those slices as specified by them and also parses
 // archive files.  Then for each individual Mach-O file ProcessMachO() is
@@ -2540,6 +2553,19 @@ static bool ValidateArchFlags() {
 void objdump::parseInputMachO(StringRef Filename) {
   if (!ValidateArchFlags())
     return;
+
+  // In otool mode, support archive(member) syntax: if the filename ends
+  // with ')' and contains '(', split it into the archive path and member
+  // name. The -m option disables this parsing.
+  ArchiveMemberFilter.clear();
+  if (IsOtool && !NoUseMemberSyntax && !Filename.empty() &&
+      Filename.back() == ')') {
+    auto Pos = Filename.rfind('(');
+    if (Pos != StringRef::npos && Pos > 0) {
+      ArchiveMemberFilter = Filename.substr(Pos + 1).drop_back().str();
+      Filename = Filename.substr(0, Pos);
+    }
+  }
 
   // Attempt to open the binary.
   Expected<OwningBinary<Binary>> BinaryOrErr = createBinary(Filename);
@@ -2559,8 +2585,12 @@ void objdump::parseInputMachO(StringRef Filename) {
 
     Error Err = Error::success();
     unsigned I = -1;
+    bool FoundMember = false;
     for (auto &C : A->children(Err)) {
       ++I;
+      if (skipArchiveMember(C))
+        continue;
+      FoundMember = true;
       Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
       if (!ChildOrErr) {
         if (Error E = isNotObjectErrorInvalidFileType(ChildOrErr.takeError()))
@@ -2575,10 +2605,18 @@ void objdump::parseInputMachO(StringRef Filename) {
     }
     if (Err)
       reportError(std::move(Err), Filename);
+    if (!FoundMember && !ArchiveMemberFilter.empty())
+      reportError(Filename, "archive does not contain a member named: " +
+                                ArchiveMemberFilter);
     return;
   }
   if (MachOUniversalBinary *UB = dyn_cast<MachOUniversalBinary>(&Bin)) {
     parseInputMachO(UB);
+    return;
+  }
+  if (!ArchiveMemberFilter.empty()) {
+    reportError(Filename, "not an archive (cannot extract member: " +
+                              ArchiveMemberFilter + ")");
     return;
   }
   if (ObjectFile *O = dyn_cast<ObjectFile>(&Bin)) {
@@ -2640,8 +2678,12 @@ void objdump::parseInputMachO(MachOUniversalBinary *UB) {
                                   ArchiveMemberOffsets, ArchitectureName);
             Error Err = Error::success();
             unsigned I = -1;
+            bool FoundMember = false;
             for (auto &C : A->children(Err)) {
               ++I;
+              if (skipArchiveMember(C))
+                continue;
+              FoundMember = true;
               Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
               if (!ChildOrErr) {
                 if (Error E =
@@ -2656,6 +2698,10 @@ void objdump::parseInputMachO(MachOUniversalBinary *UB) {
             }
             if (Err)
               reportError(std::move(Err), Filename);
+            if (!FoundMember && !ArchiveMemberFilter.empty())
+              reportError(Filename,
+                          "archive does not contain a member named: " +
+                              ArchiveMemberFilter);
           } else {
             consumeError(AOrErr.takeError());
             reportError(Filename,
@@ -2702,8 +2748,12 @@ void objdump::parseInputMachO(MachOUniversalBinary *UB) {
                                 ArchiveMemberOffsets);
           Error Err = Error::success();
           unsigned I = -1;
+          bool FoundMember = false;
           for (auto &C : A->children(Err)) {
             ++I;
+            if (skipArchiveMember(C))
+              continue;
+            FoundMember = true;
             Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
             if (!ChildOrErr) {
               if (Error E =
@@ -2717,6 +2767,10 @@ void objdump::parseInputMachO(MachOUniversalBinary *UB) {
           }
           if (Err)
             reportError(std::move(Err), Filename);
+          if (!FoundMember && !ArchiveMemberFilter.empty())
+            reportError(Filename,
+                        "archive does not contain a member named: " +
+                            ArchiveMemberFilter);
         } else {
           consumeError(AOrErr.takeError());
           reportError(Filename, "Mach-O universal file for architecture " +
@@ -2755,8 +2809,12 @@ void objdump::parseInputMachO(MachOUniversalBinary *UB) {
                             ArchitectureName);
       Error Err = Error::success();
       unsigned I = -1;
+      bool FoundMember = false;
       for (auto &C : A->children(Err)) {
         ++I;
+        if (skipArchiveMember(C))
+          continue;
+        FoundMember = true;
         Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
         if (!ChildOrErr) {
           if (Error E = isNotObjectErrorInvalidFileType(ChildOrErr.takeError()))
@@ -2771,6 +2829,9 @@ void objdump::parseInputMachO(MachOUniversalBinary *UB) {
       }
       if (Err)
         reportError(std::move(Err), Filename);
+      if (!FoundMember && !ArchiveMemberFilter.empty())
+        reportError(Filename, "archive does not contain a member named: " +
+                                  ArchiveMemberFilter);
     } else {
       consumeError(AOrErr.takeError());
       reportError(Filename, "Mach-O universal file for architecture " +

@@ -54,6 +54,7 @@ extern bool InfoPlist;
 extern bool LazyBind;
 extern bool LeadingHeaders;
 extern bool LinkOptHints;
+extern bool NoUseMemberSyntax;
 extern bool ObjcMetaData;
 extern bool Rebase;
 extern bool Rpaths;
