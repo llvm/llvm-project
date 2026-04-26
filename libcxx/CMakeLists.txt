@@ -35,7 +35,7 @@ MACRO_ENSURE_OUT_OF_SOURCE_BUILD(
  "${PROJECT_NAME} requires an out of source build. Please create a separate
  build directory and run 'cmake /path/to/${PROJECT_NAME} [options]' there."
  )
-if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" AND "${CMAKE_CXX_SIMULATE_ID}" STREQUAL "MSVC")
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" AND "${CMAKE_CXX_COMPILER_FRONTEND_VARIANT}" STREQUAL "MSVC")
   message(STATUS "Configuring for clang-cl")
   set(LIBCXX_TARGETING_CLANG_CL ON)
 endif()
