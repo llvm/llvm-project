@@ -8700,6 +8700,13 @@ def ast_dump_filter : Separate<["-"], "ast-dump-filter">,
   MarshallingInfoString<FrontendOpts<"ASTDumpFilter">>;
 def ast_dump_filter_EQ : Joined<["-"], "ast-dump-filter=">,
   Alias<ast_dump_filter>;
+def ast_dump_filter_path : Separate<["-"], "ast-dump-filter-path">,
+  MetaVarName<"<path_filter>">,
+  HelpText<"Use with -ast-dump or -ast-print to dump/print only AST declaration"
+           " nodes whose source file path matches a glob pattern.">,
+  MarshallingInfoString<FrontendOpts<"ASTDumpFilterPath">>;
+def ast_dump_filter_path_EQ : Joined<["-"], "ast-dump-filter-path=">,
+  Alias<ast_dump_filter_path>;
 def fno_modules_global_index : Flag<["-"], "fno-modules-global-index">,
   HelpText<"Do not automatically generate or update the global module index">,
   MarshallingInfoNegativeFlag<FrontendOpts<"UseGlobalModuleIndex">>;
