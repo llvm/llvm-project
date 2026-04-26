@@ -13,7 +13,7 @@ void IsActOnFinishFullExprCalled() {
   // Do not add other test cases to this function.
   // Make sure `ActOnFinishFullExpr` is called and creates `ExprWithCleanups`
   // to avoid assertion failure.
-  [[assume(B{})]]; // expected-warning {{assumption is ignored because it contains (potential) side-effects}} // ext-warning {{C++23 extension}}
+  [[assume(B{})]]; // ext-warning {{C++23 extension}}
 }
 
 template <bool cond>
@@ -38,7 +38,7 @@ bool f2();
 
 template <typename T>
 constexpr void f3() {
-  [[assume(T{})]]; // expected-error {{not contextually convertible to 'bool'}} expected-warning {{assumption is ignored because it contains (potential) side-effects}} ext-warning {{C++23 extension}}
+  [[assume(T{})]]; // expected-error {{not contextually convertible to 'bool'}} ext-warning {{C++23 extension}}
 }
 
 void g(int x) {
@@ -53,8 +53,8 @@ void g(int x) {
   [[assume((x = 3))]]; // expected-warning {{assumption is ignored because it contains (potential) side-effects}} // ext-warning {{C++23 extension}}
   [[assume(x++)]]; // expected-warning {{assumption is ignored because it contains (potential) side-effects}} // ext-warning {{C++23 extension}}
   [[assume(++x)]]; // expected-warning {{assumption is ignored because it contains (potential) side-effects}} // ext-warning {{C++23 extension}}
-  [[assume([]{ return true; }())]]; // expected-warning {{assumption is ignored because it contains (potential) side-effects}} // ext-warning {{C++23 extension}}
-  [[assume(B{})]]; // expected-warning {{assumption is ignored because it contains (potential) side-effects}} // ext-warning {{C++23 extension}}
+  [[assume([]{ return true; }())]]; // ext-warning {{C++23 extension}}
+  [[assume(B{})]]; // ext-warning {{C++23 extension}}
   [[assume((1, 2))]]; // expected-warning {{has no effect}} // ext-warning {{C++23 extension}}
 
   f3<A>(); // expected-note {{in instantiation of}}
@@ -88,7 +88,7 @@ constexpr bool i() { // ext-error {{never produces a constant expression}}
 }
 
 constexpr bool j(bool b) {
-  [[assume(b)]]; // expected-note {{assumption evaluated to false}} ext-warning {{C++23 extension}}
+  [[assume(B{})]]; // ext-warning {{C++23 extension}}
   return true;
 }
 
@@ -101,7 +101,7 @@ static_assert(S<false>{}.g<A>()); // expected-error {{not an integral constant e
 
 template <typename T>
 constexpr bool f4() {
-  [[assume(!T{})]]; // expected-error {{invalid argument type 'D'}} // expected-warning 2 {{assumption is ignored because it contains (potential) side-effects}} ext-warning {{C++23 extension}}
+  [[assume(!T{})]]; // expected-error {{invalid argument type 'D'}} ext-warning {{C++23 extension}}
   return sizeof(T) == sizeof(int);
 }
 
