@@ -291,7 +291,6 @@ Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
     assert(Lane.isFirstLane() && "cannot get lane > 0 for scalar");
     return VecPart;
   }
-
   // TODO: Cache created scalar values.
   Value *LaneV = Lane.getAsRuntimeExpr(Builder, VF);
   auto *Extract = Builder.CreateExtractElement(VecPart, LaneV);
