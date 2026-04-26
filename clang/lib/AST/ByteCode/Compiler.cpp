@@ -8086,6 +8086,41 @@ private:
   const Expr *E;
 };
 
+/// Visitor that counts the total number of scalar elements in an HLSL type.
+template <class Emitter>
+class HLSLFlatElementCounter
+    : public Compiler<Emitter>::template HLSLAggregateVisitor<
+          HLSLFlatElementCounter<Emitter>> {
+  using VisitorBase = typename Compiler<Emitter>::template HLSLAggregateVisitor<
+      HLSLFlatElementCounter<Emitter>>;
+
+public:
+  explicit HLSLFlatElementCounter(Compiler<Emitter> &C) : VisitorBase(C) {}
+
+  unsigned getCount() const { return Count; }
+
+  bool visitScalarElem(QualType, PrimType, unsigned) {
+    ++Count;
+    return true;
+  }
+  bool visitArrayComposite(QualType ElemType, unsigned) {
+    return this->visit(ElemType);
+  }
+  bool visitBase(QualType BaseType, const Record::Base *) {
+    return this->visit(BaseType);
+  }
+  bool visitField(QualType, PrimType, const Record::Field *) {
+    ++Count;
+    return true;
+  }
+  bool visitFieldComposite(QualType FieldType, const Record::Field *) {
+    return this->visit(FieldType);
+  }
+
+private:
+  unsigned Count = 0;
+};
+
 } // namespace interp
 } // namespace clang
 
