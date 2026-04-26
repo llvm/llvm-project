@@ -37,7 +37,7 @@ template <typename ELFT> class PrinterContext {
   const object::ELFObjectFile<ELFT> &ObjF;
 
   void printEHFrameHdr(const Elf_Phdr *EHFramePHdr) const;
-  void printEHFrame(const Elf_Shdr *EHFrameShdr) const;
+  void printFrame(const Elf_Shdr *FrameShdr, bool IsEH) const;
 
 public:
   PrinterContext(ScopedPrinter &W, const object::ELFObjectFile<ELFT> &ObjF)
@@ -89,7 +89,9 @@ void PrinterContext<ELFT>::printUnwindInformation() const {
     if (!NameOrErr)
       reportError(NameOrErr.takeError(), ObjF.getFileName());
     if (*NameOrErr == ".eh_frame")
-      printEHFrame(&Shdr);
+      printFrame(&Shdr, /*IsEH=*/true);
+    else if (*NameOrErr == ".debug_frame")
+      printFrame(&Shdr, /*IsEH=*/false);
   }
 }
 
@@ -184,31 +186,35 @@ void PrinterContext<ELFT>::printEHFrameHdr(const Elf_Phdr *EHFramePHdr) const {
 }
 
 template <typename ELFT>
-void PrinterContext<ELFT>::printEHFrame(const Elf_Shdr *EHFrameShdr) const {
-  uint64_t Address = EHFrameShdr->sh_addr;
-  uint64_t ShOffset = EHFrameShdr->sh_offset;
-  W.startLine() << format(".eh_frame section at offset 0x%" PRIx64
+void PrinterContext<ELFT>::printFrame(const Elf_Shdr *FrameShdr,
+                                      bool IsEH) const {
+  uint64_t Address = FrameShdr->sh_addr;
+  uint64_t ShOffset = FrameShdr->sh_offset;
+  W.startLine() << format("%s section at offset 0x%" PRIx64
                           " address 0x%" PRIx64 ":\n",
-                          ShOffset, Address);
+                          IsEH ? ".eh_frame" : ".debug_frame", ShOffset,
+                          Address);
   W.indent();
 
   Expected<ArrayRef<uint8_t>> DataOrErr =
-      ObjF.getELFFile().getSectionContents(*EHFrameShdr);
+      ObjF.getELFFile().getSectionContents(*FrameShdr);
   if (!DataOrErr)
     reportError(DataOrErr.takeError(), ObjF.getFileName());
 
   // Construct DWARFDataExtractor to handle relocations ("PC Begin" fields).
   std::unique_ptr<DWARFContext> DICtx = DWARFContext::create(
       ObjF, DWARFContext::ProcessDebugRelocations::Process, nullptr);
-  DWARFDataExtractor DE(
-      DICtx->getDWARFObj(), DICtx->getDWARFObj().getEHFrameSection(),
-      ELFT::Endianness == llvm::endianness::little, ELFT::Is64Bits ? 8 : 4);
-  DWARFDebugFrame EHFrame(Triple::ArchType(ObjF.getArch()), /*IsEH=*/true,
-                          /*EHFrameAddress=*/Address);
-  if (Error E = EHFrame.parse(DE))
+  const DWARFSection &Section = IsEH ? DICtx->getDWARFObj().getEHFrameSection()
+                                     : DICtx->getDWARFObj().getFrameSection();
+  DWARFDataExtractor DE(DICtx->getDWARFObj(), Section,
+                        ELFT::Endianness == llvm::endianness::little,
+                        ELFT::Is64Bits ? 8 : 4);
+  DWARFDebugFrame Frame(Triple::ArchType(ObjF.getArch()), IsEH,
+                        /*EHFrameAddress=*/IsEH ? Address : 0);
+  if (Error E = Frame.parse(DE))
     reportError(std::move(E), ObjF.getFileName());
 
-  for (const dwarf::FrameEntry &Entry : EHFrame) {
+  for (const dwarf::FrameEntry &Entry : Frame) {
     std::optional<uint64_t> InitialLocation;
     if (const dwarf::CIE *CIE = dyn_cast<dwarf::CIE>(&Entry)) {
       W.startLine() << format("[0x%" PRIx64 "] CIE length=%" PRIu64 "\n",
@@ -241,7 +247,7 @@ void PrinterContext<ELFT>::printEHFrame(const Elf_Shdr *EHFrameShdr) const {
     W.startLine() << "Program:\n";
     W.indent();
     auto DumpOpts = DIDumpOptions();
-    DumpOpts.IsEH = true;
+    DumpOpts.IsEH = IsEH;
     printCFIProgram(Entry.cfis(), W.getOStream(), DumpOpts, W.getIndentLevel(),
                     InitialLocation);
     W.unindent();
