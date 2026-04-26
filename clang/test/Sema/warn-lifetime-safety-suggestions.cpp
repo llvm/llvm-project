@@ -620,3 +620,20 @@ HasSetterField test_dangling_field_member_fn() {
 }
 
 } // namespace new_allocation_suggestion
+
+namespace GH193747 {
+
+std::unique_ptr<int> create_up();
+std::shared_ptr<int> create_sp() {
+  return create_up();
+}
+
+struct S {
+  int* field;
+  S(std::unique_ptr<int>&& up) : field(up.get()) { up.release(); }
+};
+
+S foo() {
+  return S(create_up());
+}
+} // namespace GH193747

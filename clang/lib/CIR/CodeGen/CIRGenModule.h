@@ -106,6 +106,23 @@ private:
 
   llvm::DenseSet<clang::GlobalDecl> diagnosedConflictingDefinitions;
 
+  /// -------
+  /// Annotations
+  /// -------
+
+  /// We store each annotation as an attribute of GlobalOp and FuncOp rather
+  /// than collecting them into a single module-level list.  The deferred map
+  /// lets us attach annotations at the end of codegen so the most up-to-date
+  /// ValueDecl (which carries all inherited annotations) is used.
+
+  /// Used for uniquing of annotation arguments.
+  llvm::DenseMap<unsigned, mlir::ArrayAttr> annotationArgs;
+
+  /// Store deferred function annotations so they can be emitted at the end
+  /// with the most up to date ValueDecl that will have all the inherited
+  /// annotations.
+  llvm::DenseMap<llvm::StringRef, const clang::ValueDecl *> deferredAnnotations;
+
   /// A queue of (optional) vtables to consider emitting.
   std::vector<const CXXRecordDecl *> deferredVTables;
 
@@ -120,7 +137,8 @@ private:
                                          mlir::NamedAttrList &retAttrs);
   /// A helper for constructAttributeList that handles argument attributes.
   void constructFunctionArgumentAttributes(
-      const CIRGenFunctionInfo &info, bool isThunk,
+      const CIRGenFunctionInfo &info, const clang::Decl *targetDecl,
+      bool isThunk, bool attrOnCallSite,
       llvm::MutableArrayRef<mlir::NamedAttrList> argAttrs);
   /// A helper function for constructAttributeList that determines whether a
   /// return value might have been discarded.
@@ -577,6 +595,14 @@ public:
   void emitGlobalVarDefinition(const clang::VarDecl *vd,
                                bool isTentative = false);
 
+  /// Helper function for the below two that will create the
+  /// constructor/destructor in specified regions, rather than in the GlobalOp.
+  void emitCXXSpecialVarDeclInit(const VarDecl *varDecl, cir::GlobalOp addr,
+                                 bool performInit, mlir::Region &ctorRegion,
+                                 mlir::Region &dtorRegion);
+  /// Emit the function that initializes the specified static-local variable.
+  void emitCXXStaticLocalVarDeclInit(const VarDecl *varDecl, cir::GlobalOp addr,
+                                     bool performInit);
   /// Emit the function that initializes the specified global
   void emitCXXGlobalVarDeclInit(const VarDecl *varDecl, cir::GlobalOp addr,
                                 bool performInit);
@@ -704,6 +730,7 @@ public:
   static constexpr const char *builtinCoroAlloc = "__builtin_coro_alloc";
   static constexpr const char *builtinCoroBegin = "__builtin_coro_begin";
   static constexpr const char *builtinCoroEnd = "__builtin_coro_end";
+  static constexpr const char *builtinCoroFree = "__builtin_coro_free";
 
   /// Given a builtin id for a function like "__builtin_fabsf", return a
   /// Function* for "fabsf".
@@ -814,6 +841,9 @@ public:
   /// Emits AMDGPU specific Metadata.
   void emitAMDGPUMetadata();
 
+  /// Add global annotations for a global value (GlobalOp or FuncOp).
+  void addGlobalAnnotations(const clang::ValueDecl *d, mlir::Operation *gv);
+
 private:
   // An ordered map of canonical GlobalDecls to their mangled names.
   llvm::MapVector<clang::GlobalDecl, llvm::StringRef> mangledDeclNames;
@@ -828,6 +858,16 @@ private:
 
   /// Map source language used to a CIR attribute.
   std::optional<cir::SourceLanguage> getCIRSourceLanguage() const;
+
+  /// Emit all the global annotations.
+  void emitGlobalAnnotations();
+
+  /// Build (or fetch from the dedup cache) the args ArrayAttr for an
+  /// annotation. Returns the empty ArrayAttr when the annotation has none.
+  mlir::ArrayAttr getOrCreateAnnotationArgs(const clang::AnnotateAttr *attr);
+
+  /// Create cir::AnnotationAttr for a single AnnotateAttr on a global.
+  cir::AnnotationAttr emitAnnotateAttr(const clang::AnnotateAttr *aa);
 
   /// Return the AST address space of the underlying global variable for D, as
   /// determined by its declaration. Normally this is the same as the address
