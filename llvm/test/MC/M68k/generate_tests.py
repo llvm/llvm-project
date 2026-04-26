@@ -24,6 +24,11 @@ def words_to_bytes(words: list[int]) -> bytes:
     return flatten(map(word_to_bytes, words))
 
 
+def byte_to_hex(byte: int) -> str:
+    """Returns hexadecimal representation of a number with 0x prefix"""
+    return f"{byte:#04x}"
+
+
 # Size field
 # https://m680x0.github.io/ref/M68000PM_AD_Rev_1_Programmers_Reference_Manual_1992.html#pf230
 
@@ -188,14 +193,6 @@ class MOVE(Instruction):
                 | self.source.registerField()
             )
         ]
-
-
-# Utility functions
-
-
-def byte_to_hex(byte: int) -> str:
-    """Returns hexadecimal representation of a number with 0x prefix"""
-    return f"{byte:#04x}"
 
 
 # Encoding tests
