@@ -114,7 +114,7 @@ initializeRecordStreamer(const Module &M,
       createMCAsmParser(SrcMgr, MCCtx, Streamer, *MAI));
 
   std::unique_ptr<MCTargetAsmParser> TAP(
-      T->createMCAsmParser(*STI, *Parser, *MCII, MCOptions));
+      T->createMCAsmParser(*STI, *Parser, *MCII));
   if (!TAP)
     return;
 

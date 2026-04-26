@@ -192,10 +192,8 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
   [[maybe_unused]] auto ty = source.getType();
   assert(ty.hasStaticShape() && "expecting a memref with static shape");
 
-  build(builder, state, tdesc, source, ValueRange({}) /* dynamic offsets */,
-        ValueRange({}) /* empty dynamic shape */,
+  build(builder, state, tdesc, source, ValueRange({}) /* empty dynamic shape */,
         ValueRange({}) /* empty dynamic strides */,
-        DenseI64ArrayAttr({}) /* const offsets */,
         DenseI64ArrayAttr({}) /* empty const shape*/,
         DenseI64ArrayAttr({}) /* empty const strides*/);
 }
@@ -234,72 +232,8 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
     }
   }
 
-  build(builder, state, tdesc, source, ValueRange({}), dynamicShape,
-        dynamicStrides, builder.getDenseI64ArrayAttr({}), staticShapeAttr,
-        staticStridesAttr);
-}
-
-void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
-                           Type tdesc, TypedValue<MemRefType> source,
-                           llvm::ArrayRef<OpFoldResult> offsets) {
-  [[maybe_unused]] auto ty = source.getType();
-  assert(ty.hasStaticShape() && offsets.size() == (size_t)ty.getRank());
-
-  llvm::SmallVector<int64_t> staticOffsets;
-  llvm::SmallVector<Value> dynamicOffsets;
-  dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
-
-  build(builder, state, tdesc, source, dynamicOffsets /* dynamic offsets */,
-        ValueRange({}) /* empty dynamic shape */,
-        ValueRange({}) /* empty dynamic strides */,
-        builder.getDenseI64ArrayAttr(staticOffsets) /* const offsets */,
-        {} /* empty const shape*/, {} /* empty const strides*/);
-}
-
-void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
-                           Type tdesc, Value source,
-                           llvm::ArrayRef<OpFoldResult> offsets,
-                           llvm::ArrayRef<OpFoldResult> shape,
-                           llvm::ArrayRef<OpFoldResult> strides) {
-  assert(!shape.empty() && !offsets.empty() && !strides.empty() &&
-         shape.size() == strides.size() && shape.size() == offsets.size());
-
-  Type srcTy = source.getType();
-  assert((isa<IntegerType, MemRefType>(srcTy)) &&
-         "Source has to be either int or memref.");
-
-  llvm::SmallVector<Value> dynamicOffsets;
-  llvm::SmallVector<Value> dynamicShape;
-  llvm::SmallVector<Value> dynamicStrides;
-
-  llvm::SmallVector<int64_t> staticOffsets;
-  llvm::SmallVector<int64_t> staticShape;
-  llvm::SmallVector<int64_t> staticStrides;
-
-  dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
-  dispatchIndexOpFoldResults(shape, dynamicShape, staticShape);
-  dispatchIndexOpFoldResults(strides, dynamicStrides, staticStrides);
-
-  auto staticOffsetsAttr = builder.getDenseI64ArrayAttr(staticOffsets);
-  auto staticShapeAttr = builder.getDenseI64ArrayAttr(staticShape);
-  auto staticStridesAttr = builder.getDenseI64ArrayAttr(staticStrides);
-
-  if (auto memrefTy = dyn_cast<MemRefType>(srcTy)) {
-    auto memrefShape = memrefTy.getShape();
-    auto [memrefStrides, _] = memrefTy.getStridesAndOffset();
-
-    // if shape and strides are from Memref, we don't need attributes for them
-    // to keep the IR print clean (only do so for full-static case, otherwise
-    // printer would fail trying to print empty array-attr).
-    if (staticShape == memrefShape && staticStrides == memrefStrides &&
-        dynamicShape.empty() && dynamicStrides.empty()) {
-      staticShapeAttr = DenseI64ArrayAttr();
-      staticStridesAttr = DenseI64ArrayAttr();
-    }
-  }
-
-  build(builder, state, tdesc, source, dynamicOffsets, dynamicShape,
-        dynamicStrides, staticOffsetsAttr, staticShapeAttr, staticStridesAttr);
+  build(builder, state, tdesc, source, dynamicShape, dynamicStrides,
+        staticShapeAttr, staticStridesAttr);
 }
 
 LogicalResult CreateNdDescOp::verify() {
@@ -318,9 +252,6 @@ LogicalResult CreateNdDescOp::verify() {
            << " Source: " << srcMemorySpace
            << ", TensorDesc: " << tdescMemorySpace;
 
-  if (size_t offsetRank = getMixedOffsets().size())
-    invalidRank |= (offsetRank != rank);
-
   // check source type matches the rank if it is a memref.
   // It also should have the same ElementType as TensorDesc.
   if (auto memrefTy = dyn_cast<MemRefType>(getSourceType()))
@@ -335,14 +266,13 @@ LogicalResult CreateNdDescOp::verify() {
 
   if (invalidRank)
     return emitOpError(
-        "Expecting the rank of shape, strides, offsets, and source (if source "
+        "Expecting the rank of shape, strides, and source (if source "
         "is a memref) should match with each other.");
 
   // check result TensorDesc rank
   if (getType().getRank() > (int64_t)rank)
-    return emitOpError(
-        "Expecting the TensorDesc rank is not greater than the "
-        "ranks of shape, strides, offsets or the memref source.");
+    return emitOpError("Expecting the TensorDesc rank is not greater than the "
+                       "ranks of shape, strides or the memref source.");
 
   if (invalidElemTy)
     return emitOpError("TensorDesc should have the same element "
@@ -351,64 +281,9 @@ LogicalResult CreateNdDescOp::verify() {
   return success();
 }
 
-static ParseResult parseOptionalDynamicIndexList(
-    OpAsmParser &parser,
-    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
-    DenseI64ArrayAttr &integers, SmallVectorImpl<Type> *valueTypes = nullptr,
-    AsmParser::Delimiter delimiter = AsmParser::Delimiter::Square) {
-
-  SmallVector<int64_t, 4> integerVals;
-  auto parseIntegerOrValue = [&]() {
-    OpAsmParser::UnresolvedOperand operand;
-    auto res = parser.parseOptionalOperand(operand);
-
-    if (res.has_value() && succeeded(res.value())) {
-      values.push_back(operand);
-      integerVals.push_back(ShapedType::kDynamic);
-      if (valueTypes && parser.parseColonType(valueTypes->emplace_back()))
-        return failure();
-    } else {
-      int64_t integer;
-      if (failed(parser.parseInteger(integer)))
-        return failure();
-      integerVals.push_back(integer);
-    }
-    return success();
-  };
-
-  // If the optional values are given there must be left bracket
-  if (parser.parseOptionalLSquare().succeeded()) {
-    if (parser.parseCommaSeparatedList(parseIntegerOrValue) ||
-        parser.parseRSquare())
-      return parser.emitError(parser.getNameLoc())
-             << "expected a list of SSA values or integers";
-    integers = parser.getBuilder().getDenseI64ArrayAttr(integerVals);
-    return success();
-  }
-
-  return success();
-}
-
-static void printOptionalDynamicIndexList(OpAsmPrinter &printer, Operation *op,
-                                          OperandRange values,
-                                          DenseI64ArrayAttr integers) {
-  if (!integers || integers.empty())
-    return;
-  printDynamicIndexList(printer, op, values, integers,
-                        /*scalableFlags=*/{}, {}, AsmParser::Delimiter::Square);
-}
 //===----------------------------------------------------------------------===//
 // XeGPU_PrefetchNdOp
 //===----------------------------------------------------------------------===//
-
-void PrefetchNdOp::build(OpBuilder &builder, OperationState &state,
-                         Value tensorDesc, xegpu::CachePolicyAttr l1_hint,
-                         xegpu::CachePolicyAttr l2_hint,
-                         xegpu::CachePolicyAttr l3_hint) {
-
-  return build(builder, state, tensorDesc, ValueRange(), DenseI64ArrayAttr(),
-               l1_hint, l2_hint, l3_hint, /*anchor_layout=*/nullptr);
-}
 
 void PrefetchNdOp::build(OpBuilder &builder, OperationState &state,
                          Value tensorDesc, ArrayRef<OpFoldResult> offsets,
@@ -440,7 +315,7 @@ LogicalResult PrefetchNdOp::verify() {
 
   int64_t tDescRank = tdescTy.getRank();
   int64_t offsetSize = getMixedOffsets().size();
-  if (offsetSize != 0 && offsetSize != tDescRank)
+  if (offsetSize != tDescRank)
     return emitOpError(
         "Mismatched ranks between offsets and tensor descriptor");
 
@@ -456,18 +331,6 @@ LogicalResult PrefetchNdOp::verify() {
 //===----------------------------------------------------------------------===//
 // XeGPU_LoadNdOp
 //===----------------------------------------------------------------------===//
-
-void LoadNdOp::build(OpBuilder &builder, OperationState &state, Type retType,
-                     Value tensorDesc, UnitAttr packed,
-                     DenseI64ArrayAttr transpose,
-                     xegpu::CachePolicyAttr l1_hint,
-                     xegpu::CachePolicyAttr l2_hint,
-                     xegpu::CachePolicyAttr l3_hint) {
-
-  return build(builder, state, retType, tensorDesc, ValueRange(),
-               DenseI64ArrayAttr(), packed, transpose, l1_hint, l2_hint,
-               l3_hint, /*anchor_layout=*/nullptr);
-}
 
 void LoadNdOp::build(OpBuilder &builder, OperationState &state, Type retType,
                      Value tensorDesc, ArrayRef<OpFoldResult> offsets,
@@ -567,7 +430,7 @@ LogicalResult LoadNdOp::verify() {
 
   int64_t tDescRank = tdescTy.getRank();
   int64_t offsetSize = getMixedOffsets().size();
-  if (offsetSize != 0 && offsetSize != tDescRank)
+  if (offsetSize != tDescRank)
     return emitOpError(
         "Mismatched ranks between offsets and tensor descriptor");
 
@@ -583,16 +446,6 @@ LogicalResult LoadNdOp::verify() {
 //===----------------------------------------------------------------------===//
 // XeGPU_StoreNdOp
 //===----------------------------------------------------------------------===//
-
-void StoreNdOp::build(OpBuilder &builder, OperationState &state, Value value,
-                      Value tensorDesc, xegpu::CachePolicyAttr l1_hint,
-                      xegpu::CachePolicyAttr l2_hint,
-                      xegpu::CachePolicyAttr l3_hint) {
-
-  return build(builder, state, value, tensorDesc, ValueRange(),
-               DenseI64ArrayAttr(), l1_hint, l2_hint, l3_hint,
-               /*anchor_layout=*/nullptr);
-}
 
 void StoreNdOp::build(OpBuilder &builder, OperationState &state, Value value,
                       Value tensorDesc, ArrayRef<OpFoldResult> offsets,
@@ -663,7 +516,7 @@ LogicalResult StoreNdOp::verify() {
 
   int64_t tDescRank = dstTy.getRank();
   int64_t offsetSize = getMixedOffsets().size();
-  if (offsetSize != 0 && offsetSize != tDescRank)
+  if (offsetSize != tDescRank)
     return emitOpError(
         "Mismatched ranks between offsets and tensor descriptor");
 
@@ -677,30 +530,9 @@ LogicalResult StoreNdOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// XeGPU_UpdateNDOffsetOp
-//===----------------------------------------------------------------------===//
-LogicalResult UpdateNdOffsetOp::verify() {
-  auto ty = getTensorDescType();
-
-  // number of offsets specified must match the rank of the tensor descriptor
-  if (ty.getRank() != (int64_t)getNumOffsets()) {
-    return emitOpError("Invalid number of offsets.");
-  }
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
 // XeGPU_PrefetchOp
 //===----------------------------------------------------------------------===//
 LogicalResult PrefetchOp::verify() {
-  auto tdescTy = getTensorDescType();
-
-  if (!tdescTy && !getOffsets())
-    return emitOpError("Expects offsets.");
-
-  if (tdescTy && getOffsets())
-    return emitOpError("offsets not allowed.");
-
   if (!isReadHintOrNone(getL1HintAttr()))
     return emitOpError("invalid l1_hint: ") << getL1HintAttr();
 
@@ -719,38 +551,21 @@ LogicalResult PrefetchOp::verify() {
 
   if (auto layout = getAnchorLayout()) {
     // get the offset operand and its shape
-    if (auto offsets = getOffsets()) {
-      auto offsetsTy = offsets.getType();
-      if (llvm::isa<VectorType>(offsetsTy) &&
-          !layout.isDistributable(getShapeOf(offsetsTy)))
-        return emitOpError("offset shape is not distributable with the layout");
-    }
+    auto offsetsTy = getOffsets().getType();
+    if (llvm::isa<VectorType>(offsetsTy) &&
+        !layout.isDistributable(getShapeOf(offsetsTy)))
+      return emitOpError("offset shape is not distributable with the layout");
   }
 
   return success();
-}
-
-void PrefetchOp::build(OpBuilder &builder, OperationState &state, Value source,
-                       xegpu::CachePolicyAttr l1_hint,
-                       xegpu::CachePolicyAttr l2_hint,
-                       xegpu::CachePolicyAttr l3_hint) {
-  build(builder, state, source, Value(), l1_hint, l2_hint, l3_hint,
-        IntegerAttr{}, /*anchor_layout=*/nullptr);
 }
 
 //===----------------------------------------------------------------------===//
 // XeGPU_LoadGatherOp
 //===----------------------------------------------------------------------===//
 LogicalResult LoadGatherOp::verify() {
-  auto tdescTy = getTensorDescType();
   auto maskTy = getMaskType();
   auto valueTy = getValueType();
-
-  if (!tdescTy && !getOffsets())
-    return emitOpError("Expects offsets.");
-
-  if (tdescTy && getOffsets())
-    return emitOpError("offsets not allowed.");
 
   if (!isReadHintOrNone(getL1HintAttr()))
     return emitOpError("invalid l1_hint: ") << getL1HintAttr();
@@ -776,15 +591,6 @@ LogicalResult LoadGatherOp::verify() {
   auto offsetsTy = getOffsets().getType();
   return isValidGatherScatterBufferParams(offsetsTy, maskTy, valueTy, chunkSize,
                                           [&]() { return emitOpError(); });
-}
-
-void LoadGatherOp::build(OpBuilder &builder, OperationState &state,
-                         Type valueType, Value source, Value mask,
-                         xegpu::CachePolicyAttr l1_hint,
-                         xegpu::CachePolicyAttr l2_hint,
-                         xegpu::CachePolicyAttr l3_hint) {
-  build(builder, state, valueType, source, Value(), mask, IntegerAttr(),
-        l1_hint, l2_hint, l3_hint, /*anchor_layout=*/nullptr);
 }
 
 void LoadGatherOp::build(OpBuilder &builder, OperationState &state,
@@ -824,15 +630,8 @@ void LoadGatherOp::build(OpBuilder &builder, OperationState &state,
 // XeGPU_StoreScatterOp
 //===----------------------------------------------------------------------===//
 LogicalResult StoreScatterOp::verify() {
-  auto tdescTy = getTensorDescType();
   auto maskTy = getMaskType();
   auto valueTy = getValueType();
-
-  if (!tdescTy && !getOffsets())
-    return emitOpError("Expects offsets.");
-
-  if (tdescTy && getOffsets())
-    return emitOpError("offsets not allowed.");
 
   if (!isWriteHintOrNone(getL1HintAttr()))
     return emitOpError("invalid l1_hint: ") << getL1HintAttr();
@@ -858,15 +657,6 @@ LogicalResult StoreScatterOp::verify() {
   auto offsetsTy = getOffsets().getType();
   return isValidGatherScatterBufferParams(offsetsTy, maskTy, valueTy, chunkSize,
                                           [&]() { return emitOpError(); });
-}
-
-void StoreScatterOp::build(OpBuilder &builder, OperationState &state,
-                           Value value, Value dest, Value mask,
-                           xegpu::CachePolicyAttr l1_hint,
-                           xegpu::CachePolicyAttr l2_hint,
-                           xegpu::CachePolicyAttr l3_hint) {
-  build(builder, state, value, dest, Value(), mask, IntegerAttr(), l1_hint,
-        l2_hint, l3_hint, /*anchor_layout=*/nullptr);
 }
 
 void StoreScatterOp::build(OpBuilder &builder, OperationState &state,

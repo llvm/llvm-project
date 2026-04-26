@@ -411,6 +411,6 @@ module test_declare_mapper
     real, allocatable     :: data(:)
   end type myvec_t
 
-  ! CHECK-NOT: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareMapperConstruct
+  ! CHECK-NOT: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpDeclareMapperDirective
   !$omp declare mapper(myvec_t :: v) map(v, v%data(1:v%len))
 end module

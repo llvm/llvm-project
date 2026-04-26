@@ -765,7 +765,7 @@ static void promoteNonCPtrUseDevicePtrArgsToUseDeviceAddr(
 static void getDeclareTargetInfo(
     lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
     lower::pft::Evaluation &eval,
-    const parser::OpenMPDeclareTargetConstruct &construct,
+    const parser::OmpDeclareTargetDirective &construct,
     mlir::omp::DeclareTargetOperands &clauseOps,
     llvm::SmallVectorImpl<DeclareTargetCaptureInfo> &symbolAndClause) {
 
@@ -804,7 +804,7 @@ static void getDeclareTargetInfo(
 static void collectDeferredDeclareTargets(
     lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
     lower::pft::Evaluation &eval,
-    const parser::OpenMPDeclareTargetConstruct &declareTargetConstruct,
+    const parser::OmpDeclareTargetDirective &declareTargetConstruct,
     llvm::SmallVectorImpl<lower::OMPDeferredDeclareTargetInfo>
         &deferredDeclareTarget) {
   mlir::omp::DeclareTargetOperands clauseOps;
@@ -830,7 +830,7 @@ static std::optional<mlir::omp::DeclareTargetDeviceType>
 getDeclareTargetFunctionDevice(
     lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
     lower::pft::Evaluation &eval,
-    const parser::OpenMPDeclareTargetConstruct &declareTargetConstruct) {
+    const parser::OmpDeclareTargetDirective &declareTargetConstruct) {
   mlir::omp::DeclareTargetOperands clauseOps;
   llvm::SmallVector<DeclareTargetCaptureInfo> symbolAndClause;
   getDeclareTargetInfo(converter, semaCtx, eval, declareTargetConstruct,
@@ -4112,7 +4112,7 @@ getReductionType(lower::AbstractConverter &converter,
 // manufacture a combiner clause from the combiner expression on the reduction
 // specifier and append it to the list of clauses.
 static const clause::Combiner &
-appendCombiner(const parser::OpenMPDeclareReductionConstruct &construct,
+appendCombiner(const parser::OmpDeclareReductionDirective &construct,
                List<Clause> &clauses, semantics::SemanticsContext &semaCtx) {
   for (const Clause &clause : clauses) {
     if (clause.id == llvm::omp::Clause::OMPC_combiner)
@@ -4138,7 +4138,7 @@ appendCombiner(const parser::OpenMPDeclareReductionConstruct &construct,
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
-                   const parser::OpenMPDeclareReductionConstruct &construct) {
+                   const parser::OmpDeclareReductionDirective &construct) {
   if (semaCtx.langOptions().OpenMPSimd)
     return;
 
@@ -4235,7 +4235,7 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 static void
 genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
        semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
-       const parser::OpenMPDeclareSimdConstruct &declareSimdConstruct) {
+       const parser::OmpDeclareSimdDirective &declareSimdConstruct) {
   mlir::Location loc = converter.getCurrentLocation();
   const parser::OmpDirectiveSpecification &beginSpec = declareSimdConstruct.v;
   List<Clause> clauses = makeClauses(beginSpec.Clauses(), semaCtx);
@@ -4252,10 +4252,11 @@ genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
   mlir::omp::DeclareSimdOp::create(converter.getFirOpBuilder(), loc, clauseOps);
 }
 
-static void genOpenMPDeclareMapperImpl(
-    lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
-    const parser::OpenMPDeclareMapperConstruct &construct,
-    const semantics::Symbol *mapperSymOpt = nullptr) {
+static void
+genOpenMPDeclareMapperImpl(lower::AbstractConverter &converter,
+                           semantics::SemanticsContext &semaCtx,
+                           const parser::OmpDeclareMapperDirective &construct,
+                           const semantics::Symbol *mapperSymOpt = nullptr) {
   mlir::Location loc = converter.genLocation(construct.source);
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   const parser::OmpArgumentList &args = construct.v.Arguments();
@@ -4307,14 +4308,14 @@ static void genOpenMPDeclareMapperImpl(
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
-                   const parser::OpenMPDeclareMapperConstruct &construct) {
+                   const parser::OmpDeclareMapperDirective &construct) {
   genOpenMPDeclareMapperImpl(converter, semaCtx, construct);
 }
 
 static void
 genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
        semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
-       const parser::OpenMPDeclareTargetConstruct &declareTargetConstruct) {
+       const parser::OmpDeclareTargetDirective &declareTargetConstruct) {
   mlir::omp::DeclareTargetOperands clauseOps;
   llvm::SmallVector<DeclareTargetCaptureInfo> symbolAndClause;
   mlir::ModuleOp mod = converter.getFirOpBuilder().getModule();
@@ -4850,7 +4851,7 @@ void Fortran::lower::gatherOpenMPDeferredDeclareTargets(
         &deferredDeclareTarget) {
   Fortran::common::visit(
       common::visitors{
-          [&](const parser::OpenMPDeclareTargetConstruct &ompReq) {
+          [&](const parser::OmpDeclareTargetDirective &ompReq) {
             collectDeferredDeclareTargets(converter, semaCtx, eval, ompReq,
                                           deferredDeclareTarget);
           },
@@ -4865,7 +4866,7 @@ bool Fortran::lower::isOpenMPDeviceDeclareTarget(
     const parser::OpenMPDeclarativeConstruct &ompDecl) {
   return Fortran::common::visit(
       common::visitors{
-          [&](const parser::OpenMPDeclareTargetConstruct &ompReq) {
+          [&](const parser::OmpDeclareTargetDirective &ompReq) {
             mlir::omp::DeclareTargetDeviceType targetType =
                 getDeclareTargetFunctionDevice(converter, semaCtx, eval, ompReq)
                     .value_or(mlir::omp::DeclareTargetDeviceType::host);
@@ -4972,7 +4973,7 @@ void Fortran::lower::materializeOpenMPDeclareMappers(
     if (auto *md = sym.detailsIf<semantics::MapperDetails>()) {
       for (const auto *decl : md->GetDeclList()) {
         if (const auto *mapperDecl =
-                std::get_if<parser::OpenMPDeclareMapperConstruct>(&decl->u)) {
+                std::get_if<parser::OmpDeclareMapperDirective>(&decl->u)) {
           genOpenMPDeclareMapperImpl(converter, semaCtx, *mapperDecl, &sym);
         }
       }

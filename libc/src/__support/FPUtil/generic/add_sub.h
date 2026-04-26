@@ -114,10 +114,14 @@ add_or_sub(InType x, InType y) {
         return y_bits.get_val();
       } else {
 
+#ifdef LIBC_HAS_CONSTANT_EVALUATION
+        InType tmp = y;
+#else
         // volatile prevents Clang from converting tmp to OutType and then
         // immediately back to InType before negating it, resulting in double
         // rounding.
         volatile InType tmp = y;
+#endif // LIBC_HAS_CONSTANT_EVALUATION
         if constexpr (IsSub)
           tmp = -tmp;
         return cast<OutType>(tmp);
@@ -155,7 +159,7 @@ add_or_sub(InType x, InType y) {
   InFPBits max_bits(cpp::max(x_abs, y_abs));
   InFPBits min_bits(cpp::min(x_abs, y_abs));
 
-  InStorageType result_mant;
+  InStorageType result_mant{};
 
   if (max_bits.is_subnormal()) {
     // min_bits must be subnormal too.

@@ -15,6 +15,7 @@
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/Timer.h"
 #include "llvm/Support/ToolOutputFile.h"
 
 #define DEBUG_TYPE "perf-reader"
@@ -59,6 +60,12 @@ static cl::opt<int> CSProfMaxUnsymbolizedCtxDepth(
     cl::desc("Keep the last K contexts while merging unsymbolized profile. -1 "
              "means no depth limit."),
     cl::cat(ProfGenCategory));
+
+cl::opt<bool> TimeProfGen("time-profgen", cl::desc("Time llvm-profgen phases"),
+                          cl::init(false), cl::cat(ProfGenCategory));
+
+static const char *TimerGroupName = "profgen";
+static const char *TimerGroupDesc = "llvm-profgen";
 
 namespace sampleprof {
 
@@ -611,6 +618,8 @@ static std::string getContextKeyStr(ContextKey *K,
 }
 
 void HybridPerfReader::unwindSamples() {
+  NamedRegionTimer T("unwind", "Unwind samples", TimerGroupName, TimerGroupDesc,
+                     TimeProfGen);
   VirtualUnwinder Unwinder(&SampleCounters, Binary);
   for (const auto &Item : AggregatedSamples) {
     const PerfSample *Sample = Item.first.getPtr();
@@ -1143,6 +1152,8 @@ void PerfScriptReader::parseEventOrSample(TraceStream &TraceIt) {
 }
 
 void PerfScriptReader::parseAndAggregateTrace() {
+  NamedRegionTimer T("parseTrace", "Parse and aggregate trace", TimerGroupName,
+                     TimerGroupDesc, TimeProfGen);
   // Trace line iterator
   TraceStream TraceIt(PerfTraceFile);
   while (!TraceIt.isAtEoF())

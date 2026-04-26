@@ -366,6 +366,8 @@ def Math_CbrtOp : Math_FloatUnaryOp<"cbrt"> {
 
     Note: This op is not equivalent to powf(..., 1/3.0).
   }];
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -553,9 +555,8 @@ def Math_SinhOp : Math_FloatUnaryOp<"sinh"> {
 //===----------------------------------------------------------------------===//
 
 def Math_SincosOp : Math_Op<"sincos",
-    [SameOperandsAndResultShape,
-     DeclareOpInterfaceMethods<ArithFastMathInterface>,
-     AllTypesMatch<["operand", "sin", "cos"]>]> {
+    [SameOperandsAndResultType,
+     DeclareOpInterfaceMethods<ArithFastMathInterface>]> {
   let summary = "sine and cosine of the specified value";
   let description = [{
     The `sincos` operation computes both the sine and cosine of a given value
@@ -583,6 +584,8 @@ def Math_SincosOp : Math_Op<"sincos",
   let extraClassDeclaration = [{
     std::optional<SmallVector<int64_t, 4>> getShapeForUnroll();
   }];
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//

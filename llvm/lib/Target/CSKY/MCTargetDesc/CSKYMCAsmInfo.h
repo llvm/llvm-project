@@ -24,7 +24,8 @@ class CSKYMCAsmInfo : public MCAsmInfoELF {
   void anchor() override;
 
 public:
-  explicit CSKYMCAsmInfo(const Triple &TargetTriple);
+  explicit CSKYMCAsmInfo(const Triple &TargetTriple,
+                         const MCTargetOptions &Options);
   void printSpecifierExpr(raw_ostream &OS,
                           const MCSpecifierExpr &Expr) const override;
 };

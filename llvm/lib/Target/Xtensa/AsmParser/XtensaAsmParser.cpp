@@ -92,8 +92,8 @@ public:
   };
 
   XtensaAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
-                  const MCInstrInfo &MII, const MCTargetOptions &Options)
-      : MCTargetAsmParser(Options, STI, MII),
+                  const MCInstrInfo &MII)
+      : MCTargetAsmParser(STI, MII),
         MRI(*Parser.getContext().getRegisterInfo()) {
     setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
   }

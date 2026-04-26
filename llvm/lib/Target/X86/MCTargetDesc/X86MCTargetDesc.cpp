@@ -448,38 +448,38 @@ static MCAsmInfo *createX86MCAsmInfo(const MCRegisterInfo &MRI,
   MCAsmInfo *MAI;
   if (TheTriple.isOSBinFormatMachO()) {
     if (is64Bit) {
-      auto *P = new X86_64MCAsmInfoDarwin(TheTriple);
+      auto *P = new X86_64MCAsmInfoDarwin(TheTriple, Options);
       populateReservedIdentifiers(P->ReservedIdentifiers, MRI);
       MAI = P;
     } else {
-      auto *P = new X86MCAsmInfoDarwin(TheTriple);
+      auto *P = new X86MCAsmInfoDarwin(TheTriple, Options);
       populateReservedIdentifiers(P->ReservedIdentifiers, MRI);
       MAI = P;
     }
   } else if (TheTriple.isOSBinFormatELF()) {
     // Force the use of an ELF container.
-    auto *P = new X86ELFMCAsmInfo(TheTriple);
+    auto *P = new X86ELFMCAsmInfo(TheTriple, Options);
     populateReservedIdentifiers(P->ReservedIdentifiers, MRI);
     MAI = P;
   } else if (TheTriple.isWindowsMSVCEnvironment() ||
              TheTriple.isWindowsCoreCLREnvironment() || TheTriple.isUEFI()) {
     if (Options.getAssemblyLanguage().equals_insensitive("masm")) {
-      auto *P = new X86MCAsmInfoMicrosoftMASM(TheTriple);
+      auto *P = new X86MCAsmInfoMicrosoftMASM(TheTriple, Options);
       populateReservedIdentifiers(P->ReservedIdentifiers, MRI);
       MAI = P;
     } else {
-      auto *P = new X86MCAsmInfoMicrosoft(TheTriple);
+      auto *P = new X86MCAsmInfoMicrosoft(TheTriple, Options);
       populateReservedIdentifiers(P->ReservedIdentifiers, MRI);
       MAI = P;
     }
   } else if (TheTriple.isOSCygMing() ||
              TheTriple.isWindowsItaniumEnvironment()) {
-    auto *P = new X86MCAsmInfoGNUCOFF(TheTriple);
+    auto *P = new X86MCAsmInfoGNUCOFF(TheTriple, Options);
     populateReservedIdentifiers(P->ReservedIdentifiers, MRI);
     MAI = P;
   } else {
     // The default is ELF.
-    auto *P = new X86ELFMCAsmInfo(TheTriple);
+    auto *P = new X86ELFMCAsmInfo(TheTriple, Options);
     populateReservedIdentifiers(P->ReservedIdentifiers, MRI);
     MAI = P;
   }

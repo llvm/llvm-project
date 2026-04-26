@@ -18,7 +18,9 @@
 
 using namespace llvm;
 
-XtensaMCAsmInfo::XtensaMCAsmInfo(const Triple &TT) {
+XtensaMCAsmInfo::XtensaMCAsmInfo(const Triple &TT,
+                                 const MCTargetOptions &Options)
+    : MCAsmInfoELF(Options) {
   CodePointerSize = 4;
   CalleeSaveStackSlotSize = 4;
   InternalSymbolPrefix = ".L";

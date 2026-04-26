@@ -90,8 +90,7 @@ protected:
 
     Parser.reset(createMCAsmParser(SrcMgr, *Ctx, *Str, *MAI));
 
-    TargetAsmParser.reset(
-        TheTarget->createMCAsmParser(*STI, *Parser, *MII, MCOptions));
+    TargetAsmParser.reset(TheTarget->createMCAsmParser(*STI, *Parser, *MII));
     Parser->setTargetParser(*TargetAsmParser);
   }
 

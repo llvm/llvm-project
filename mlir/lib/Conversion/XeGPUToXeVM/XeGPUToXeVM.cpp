@@ -186,9 +186,6 @@ class CreateNdDescToXeVMPattern
   matchAndRewrite(xegpu::CreateNdDescOp op,
                   xegpu::CreateNdDescOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    SmallVector<OpFoldResult> mixedOffsets = op.getMixedOffsets();
-    if (mixedOffsets.size() != 0)
-      return rewriter.notifyMatchFailure(op, "Offsets not supported.");
     auto loc = op.getLoc();
     auto source = op.getSource();
     // Op is lowered to a code sequence that populates payload.
@@ -545,7 +542,6 @@ class LoadStoreToXeVMPattern : public OpConversionPattern<OpType> {
       return rewriter.notifyMatchFailure(op, "Expected offset to be provided.");
     auto loc = op.getLoc();
     auto ctxt = rewriter.getContext();
-    auto tdescTy = op.getTensorDescType();
     Value basePtrI64;
     // Load result or Store valye Type can be vector or scalar.
     Type valOrResTy;
@@ -567,10 +563,6 @@ class LoadStoreToXeVMPattern : public OpConversionPattern<OpType> {
     // Default memory space is global.
     LLVM::LLVMPointerType ptrTypeLLVM = LLVM::LLVMPointerType::get(
         ctxt, getNumericXeVMAddrSpace(xegpu::MemorySpace::Global));
-    // If tensor descriptor is available, we use its memory space.
-    if (tdescTy)
-      ptrTypeLLVM = LLVM::LLVMPointerType::get(
-          ctxt, getNumericXeVMAddrSpace(tdescTy.getMemorySpace()));
     // Base pointer can come from source (load) or dest (store).
     // If they are memrefs, we use their memory space.
     if constexpr (std::is_same_v<OpType, xegpu::LoadGatherOp>) {
@@ -805,7 +797,6 @@ class PrefetchToXeVMPattern : public OpConversionPattern<xegpu::PrefetchOp> {
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = op.getLoc();
     auto ctxt = rewriter.getContext();
-    auto tdescTy = op.getTensorDescType();
     Value basePtrI64 = adaptor.getSource();
     // Base pointer is passed as i32 or i64 by adaptor, cast to i64 if needed.
     if (basePtrI64.getType() != rewriter.getI64Type())
@@ -821,12 +812,8 @@ class PrefetchToXeVMPattern : public OpConversionPattern<xegpu::PrefetchOp> {
       } else {
         int64_t elemBitWidth{0};
         int64_t elemByteSize;
-        // Element byte size can come from three sources:
-        if (tdescTy) {
-          // If tensor descriptor is available, we use its element type to
-          // determine element byte size.
-          elemBitWidth = tdescTy.getElementType().getIntOrFloatBitWidth();
-        } else if (auto memRefTy = dyn_cast<MemRefType>(op.getSourceType())) {
+        // Element byte size can come from two sources:
+        if (auto memRefTy = dyn_cast<MemRefType>(op.getSourceType())) {
           // If memref is available, we use its element type to
           // determine element byte size.
           elemBitWidth = memRefTy.getElementType().getIntOrFloatBitWidth();
@@ -847,10 +834,6 @@ class PrefetchToXeVMPattern : public OpConversionPattern<xegpu::PrefetchOp> {
     // Default memory space is global.
     LLVM::LLVMPointerType ptrTypeLLVM = LLVM::LLVMPointerType::get(
         ctxt, getNumericXeVMAddrSpace(xegpu::MemorySpace::Global));
-    // If tensor descriptor is available, we use its memory space.
-    if (tdescTy)
-      ptrTypeLLVM = LLVM::LLVMPointerType::get(
-          ctxt, getNumericXeVMAddrSpace(tdescTy.getMemorySpace()));
     // If source is a memref, we use its memory space.
     if (auto memRefTy = dyn_cast<MemRefType>(op.getSource().getType())) {
       auto addrSpace = memRefTy.getMemorySpaceAsInt();

@@ -20,7 +20,8 @@ namespace llvm {
 extern cl::opt<cl::boolOrDefault> UseLEB128Directives;
 }
 
-MCAsmInfoXCOFF::MCAsmInfoXCOFF() {
+MCAsmInfoXCOFF::MCAsmInfoXCOFF(const MCTargetOptions &Options)
+    : MCAsmInfo(Options) {
   IsAIX = true;
   IsLittleEndian = false;
 

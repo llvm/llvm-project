@@ -87,6 +87,7 @@ private:
   friend raw_ostream &operator<<(raw_ostream &OS, const LBREntry &);
 
   friend struct PerfSpeEventsTestHelper;
+  friend struct PreAggregatedTestHelper;
 
   struct PerfBranchSample {
     SmallVector<LBREntry, 32> LBR;

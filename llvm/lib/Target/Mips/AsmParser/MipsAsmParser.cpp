@@ -523,10 +523,11 @@ public:
   };
 
   MipsAsmParser(const MCSubtargetInfo &sti, MCAsmParser &parser,
-                const MCInstrInfo &MII, const MCTargetOptions &Options)
-      : MCTargetAsmParser(Options, sti, MII),
-        ABI(MipsABIInfo::computeTargetABI(sti.getTargetTriple(),
-                                          Options.getABIName())) {
+                const MCInstrInfo &MII)
+      : MCTargetAsmParser(sti, MII),
+        ABI(MipsABIInfo::computeTargetABI(
+            sti.getTargetTriple(),
+            parser.getContext().getTargetOptions().getABIName())) {
     MCAsmParserExtension::Initialize(parser);
 
     parser.addAliasForDirective(".asciiz", ".asciz");

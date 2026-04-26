@@ -22,26 +22,21 @@ option(
   LIBCLC_USE_SPIRV_BACKEND "Build SPIR-V targets with the SPIR-V backend." OFF
 )
 
-# List of all supported targets.
-set( LIBCLC_TARGETS_ALL
-  amdgcn-amd-amdhsa-llvm
-  clspv--
-  clspv64--
-  nvptx64--
-  nvptx64--nvidiacl
-  nvptx64-nvidia-cuda
-  spirv-mesa3d-
-  spirv64-mesa3d-
-)
+# List of all supported architectures.
+set( LIBCLC_ARCHS_ALL amdgpu amdgcn clspv clspv64 nvptx64 spirv spirv64 )
 
 set(LIBCLC_TARGET ${LLVM_DEFAULT_TARGET_TRIPLE})
 
 if(NOT LIBCLC_TARGET)
   message(FATAL_ERROR "libclc target is empty\n")
 endif()
-if(NOT "${LIBCLC_TARGET}" IN_LIST LIBCLC_TARGETS_ALL)
-  message(FATAL_ERROR "Unknown libclc target: ${LIBCLC_TARGET}\n"
-    "Valid targets are: ${LIBCLC_TARGETS_ALL}\n")
+
+string( REPLACE "-" ";" _target_components ${LIBCLC_TARGET} )
+list(GET _target_components 0 _target_arch)
+if(NOT "${_target_arch}" IN_LIST LIBCLC_ARCHS_ALL)
+  message(FATAL_ERROR "Unknown libclc target architecture: ${_target_arch}\n"
+    "Target was: ${LIBCLC_TARGET}\n"
+    "Valid architectures are: ${LIBCLC_ARCHS_ALL}\n")
 endif()
 
 if( LIBCLC_STANDALONE_BUILD OR CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
