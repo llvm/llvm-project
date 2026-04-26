@@ -8277,122 +8277,25 @@ bool Compiler<Emitter>::emitHLSLFlattenAggregate(
   return W.isDone() || Result;
 }
 
-/// Populate an HLSL aggregate from a flat list of previously extracted source
-/// elements, casting each to the corresponding destination element type.
+/// Populate an HLSL aggregate from a flat list of previously extracted
+/// source elements, casting each to the corresponding destination element type.
 /// \p ElemIdx tracks the current position in \p Elements and is advanced as
 /// elements are consumed. A pointer to the destination must be on top of the
 /// interpreter stack.
 template <class Emitter>
 bool Compiler<Emitter>::emitHLSLConstructAggregate(
-    QualType DestType, ArrayRef<HLSLFlatElement> Elements, unsigned &ElemIdx,
-    const Expr *E) {
-
-  // Consume the next source element, cast it, and leave it on the stack.
-  auto loadAndCast = [&](PrimType DestT, QualType DestQT) -> bool {
+    QualType DestType, ArrayRef<HLSLFlatElement> Elements, const Expr *E) {
+  unsigned ElemIdx = 0;
+  auto ProduceValue = [&](PrimType DestT, QualType DestQT,
+                          const Expr *E) -> bool {
+    assert(ElemIdx < Elements.size() && "Element index out of bounds");
     const auto &Src = Elements[ElemIdx++];
     if (!this->emitGetLocal(Src.Type, Src.LocalOffset, E))
       return false;
     return this->emitPrimCast(Src.Type, DestT, DestQT, E);
   };
-
-  // Vectors and matrices are flat sequences of elements.
-  unsigned NumElems = 0;
-  QualType ElemType;
-  if (const auto *VT = DestType->getAs<VectorType>()) {
-    NumElems = VT->getNumElements();
-    ElemType = VT->getElementType();
-  } else if (const auto *MT = DestType->getAs<ConstantMatrixType>()) {
-    NumElems = MT->getNumElementsFlattened();
-    ElemType = MT->getElementType();
-  }
-  if (NumElems > 0) {
-    PrimType DestElemT = classifyPrim(ElemType);
-    for (unsigned I = 0; I != NumElems; ++I) {
-      if (!loadAndCast(DestElemT, ElemType))
-        return false;
-      if (!this->emitInitElem(DestElemT, I, E))
-        return false;
-    }
-    return true;
-  }
-
-  // Arrays: primitive elements are filled directly; composite elements
-  // require recursion into each sub-aggregate.
-  if (const auto *AT = DestType->getAsArrayTypeUnsafe()) {
-    const auto *CAT = cast<ConstantArrayType>(AT);
-    QualType ArrElemType = CAT->getElementType();
-    unsigned ArrSize = CAT->getZExtSize();
-
-    if (OptPrimType ElemT = classify(ArrElemType)) {
-      for (unsigned I = 0; I != ArrSize; ++I) {
-        if (!loadAndCast(*ElemT, ArrElemType))
-          return false;
-        if (!this->emitInitElem(*ElemT, I, E))
-          return false;
-      }
-    } else {
-      for (unsigned I = 0; I != ArrSize; ++I) {
-        if (!this->emitConstUint32(I, E))
-          return false;
-        if (!this->emitArrayElemPtrUint32(E))
-          return false;
-        if (!emitHLSLConstructAggregate(ArrElemType, Elements, ElemIdx, E))
-          return false;
-        if (!this->emitFinishInitPop(E))
-          return false;
-      }
-    }
-    return true;
-  }
-
-  // Records: base classes come first, then named fields in declaration
-  // order.
-  if (DestType->isRecordType()) {
-    const Record *R = getRecord(DestType);
-    if (!R)
-      return false;
-
-    if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(R->getDecl())) {
-      for (const CXXBaseSpecifier &BS : CXXRD->bases()) {
-        const Record::Base *B = R->getBase(BS.getType());
-        assert(B);
-        if (!this->emitGetPtrBase(B->Offset, E))
-          return false;
-        if (!emitHLSLConstructAggregate(BS.getType(), Elements, ElemIdx, E))
-          return false;
-        if (!this->emitFinishInitPop(E))
-          return false;
-      }
-    }
-
-    for (const Record::Field &F : R->fields()) {
-      if (F.isUnnamedBitField())
-        continue;
-
-      QualType FieldType = F.Decl->getType();
-      if (OptPrimType FieldT = classify(FieldType)) {
-        if (!loadAndCast(*FieldT, FieldType))
-          return false;
-        if (F.isBitField()) {
-          if (!this->emitInitBitField(*FieldT, F.Offset, F.bitWidth(), E))
-            return false;
-        } else {
-          if (!this->emitInitField(*FieldT, F.Offset, E))
-            return false;
-        }
-      } else {
-        if (!this->emitGetPtrField(F.Offset, E))
-          return false;
-        if (!emitHLSLConstructAggregate(FieldType, Elements, ElemIdx, E))
-          return false;
-        if (!this->emitPopPtr(E))
-          return false;
-      }
-    }
-    return true;
-  }
-
-  return false;
+  HLSLElementStoreVisitor<Emitter> W(*this, ProduceValue, E);
+  return W.visit(DestType);
 }
 
 namespace clang {

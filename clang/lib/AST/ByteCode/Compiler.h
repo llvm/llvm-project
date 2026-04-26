@@ -541,13 +541,7 @@ private:
                                 unsigned MaxElements, const Expr *E);
   bool emitHLSLConstructAggregate(QualType DestType,
                                   ArrayRef<HLSLFlatElement> Elements,
-                                  unsigned &ElemIdx, const Expr *E);
-  bool emitHLSLConstructAggregate(QualType DestType,
-                                  ArrayRef<HLSLFlatElement> Elements,
-                                  const Expr *E) {
-    unsigned ElemIdx = 0;
-    return emitHLSLConstructAggregate(DestType, Elements, ElemIdx, E);
-  }
+                                  const Expr *E);
 
   bool compileConstructor(const CXXConstructorDecl *Ctor);
   bool compileDestructor(const CXXDestructorDecl *Dtor);
