@@ -492,10 +492,8 @@ void WebAssemblyPassConfig::addIRPasses() {
   // to match.
   addPass(createWebAssemblyFixFunctionBitcasts());
 
-  auto optlevel = this->getOptLevel();
-
   // Optimize "returned" function attributes.
-  if (optlevel != CodeGenOptLevel::None)
+  if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createWebAssemblyOptimizeReturned());
 
   addPass(createWebAssemblyGlobalsTaggingPass());
