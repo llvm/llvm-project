@@ -459,6 +459,17 @@ void Parser::CheckUnbracedLinkageOrExportDeclaration(
     return;
   }
 
+  // [module.interface]/1 says:
+  //
+  //     The name-declaration of an export-declaration shall not declare a
+  //     partial specialization.
+  //
+  // There's no equivalent wording for linkage-specification.
+  if (isa<ClassTemplatePartialSpecializationDecl,
+          VarTemplatePartialSpecializationDecl>(D) &&
+      isa<LinkageSpecDecl>(LinkageOrExportDecl))
+    return;
+
   TemplateSpecializationKind TSK = [&] {
     if (const auto *EID = dyn_cast<ExplicitInstantiationDecl>(D))
       return EID->getTemplateSpecializationKind();
@@ -487,6 +498,8 @@ void Parser::CheckUnbracedLinkageOrExportDeclaration(
         << (TSK == TSK_ExplicitSpecialization);
     return;
   }
+
+  llvm_unreachable("Expected either an ExportDecl or a LinkageSpecDecl");
 }
 
 Parser::DeclGroupPtrTy Parser::ParseUsingDirectiveOrDeclaration(

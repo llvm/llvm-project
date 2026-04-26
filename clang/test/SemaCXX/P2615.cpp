@@ -74,13 +74,13 @@ export { extern template void f2<void>(); }
 
 
 extern "C++" template <typename T> class s3 {};
-extern "C++" template <typename T> class s3<T *> {}; // expected-error {{language linkage specification cannot be applied to a specialization}}
+extern "C++" template <typename T> class s3<T *> {};
 extern "C++" template <> class s3<int> {}; // expected-error {{language linkage specification cannot be applied to a specialization}}
 extern "C++" template class s3<char>; // expected-error {{language linkage specification cannot be applied to an explicit instantiation}}
 extern "C++" extern template class s3<void>; // expected-error {{language linkage specification cannot be applied to an explicit instantiation}}
 
 extern "C++" template <typename T> int v3 = 0;
-extern "C++" template <typename T> int v3<T *> = 0; // expected-error {{language linkage specification cannot be applied to a specialization}}
+extern "C++" template <typename T> int v3<T *> = 0;
 extern "C++" template <> int v3<int> = 0; // expected-error {{language linkage specification cannot be applied to a specialization}}
 extern "C++" template int v3<char>; // expected-error {{language linkage specification cannot be applied to an explicit instantiation}}
 extern "C++" extern template int v3<void>; // expected-error {{language linkage specification cannot be applied to an explicit instantiation}}
