@@ -882,13 +882,13 @@ static bool HasSideEffectsForAssume(const Expr *E, const ASTContext &Ctx) {
 
     if (const CallExpr *CE = dyn_cast<CallExpr>(SubExpr)) {
       if (const FunctionDecl *FD = CE->getDirectCallee()) {
+        if (isa<CXXDestructorDecl>(FD))
+          return true;
+
         if (const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(FD)) {
           if (MD->isVirtual())
             return true;
         }
-
-        if (isa<CXXDestructorDecl>(FD))
-          return true;
 
         SmallPtrSet<const FunctionDecl *, 8> Visited;
         if (FunctionBodyHasSideEffects(FD, Ctx, Visited))
