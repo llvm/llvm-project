@@ -301,7 +301,8 @@ static bool canSafelyRematerialize(Value val, fir::DoLoopOp outermost,
   }
 
   auto *defOp = val.getDefiningOp();
-  if (!defOp || !outermost->isAncestor(defOp))
+  assert(defOp && "expected value to be a block argument or have a defining op");
+  if (!outermost->isAncestor(defOp))
     return true;
 
   if (auto conv = dyn_cast<fir::ConvertOp>(*defOp))
@@ -657,11 +658,6 @@ public:
       LLVM_DEBUG(llvm::dbgs()
                  << "SimplifyDoLoop: nest depth " << nestLoops.size() << " at "
                  << outerLoop.getLoc() << "\n");
-
-      if (nestLoops.empty()) {
-        LLVM_DEBUG(llvm::dbgs() << "  skip (empty nest)\n");
-        continue;
-      }
 
       // ======== Analysis Phase ========
       SmallVector<LoopIVInfo> infos;
