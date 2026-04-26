@@ -28,16 +28,41 @@
 ; ALIGN-NEXT:<<<<<<
 ; ALIGN-NEXT:           1: hello world 
 ; ALIGN-NEXT:check:1       ^~~~~
-; ALIGN-NEXT:check:2'0          X~~~~~~ error: no match found
+; ALIGN-NEXT:check:2'0          {       error: no match found
 ; ALIGN-NEXT:           2: goodbye 
-; ALIGN-NEXT:check:2'0     ~~~~~~~~
 ; ALIGN-NEXT:           3: world 
-; ALIGN-NEXT:check:2'0     ~~~~~~
 ; ALIGN-NEXT:           4: unicorn 
-; ALIGN-NEXT:check:2'0     ~~~~~~~~
 ; ALIGN-NEXT:check:2'1     ?        possible intended match
+; ALIGN-NEXT:           5: 
+; ALIGN-NEXT:check:2'2     } search range end
 ; ALIGN-NEXT:>>>>>>
 ; ALIGN-NOT:{{.}}
+
+;--------------------------------------------------
+; Strict-whitespace coverage for the success-case bare brackets
+; (CHECK-NOT not firing -> MatchNoneAndExcluded with empty Note).
+;--------------------------------------------------
+
+; RUN: echo 'hello' > %t.in
+; RUN: echo 'world' >> %t.in
+
+; RUN: echo 'CHECK-NOT: missing' > %t.chk
+
+; RUN: %ProtectFileCheckOutput \
+; RUN: FileCheck -dump-input=always -input-file %t.in %t.chk -vv 2>&1 \
+; RUN: | FileCheck -strict-whitespace -match-full-lines -check-prefix=BARE \
+; RUN:             -implicit-check-not='remark:' %s
+
+; BARE:Input was:
+; BARE-NEXT:<<<<<<
+; BARE-NEXT:         1: hello 
+; BARE-NEXT:not:1'0     {
+; BARE-NEXT:         2: world 
+; BARE-NEXT:         3: 
+; BARE-NEXT:eof:1       ^
+; BARE-NEXT:not:1'1     }
+; BARE-NEXT:>>>>>>
+; BARE-NOT:{{.}}
 
 ;--------------------------------------------------
 ; CHECK (also: multi-line search range, fuzzy match)
@@ -72,12 +97,12 @@
 ; CHK:        <<<<<<
 ; CHK-NEXT:              1: hello 
 ; CHK-V-NEXT: check:1       ^~~~~
-; CHK-NEXT:   check:2'0          X error: no match found
+; CHK-NEXT:   check:2'0          { error: no match found
 ; CHK-NEXT:              2: again 
-; CHK-NEXT:   check:2'0     ~~~~~~
 ; CHK-NEXT:              3: whirled 
-; CHK-NEXT:   check:2'0     ~~~~~~~~
 ; CHK-NEXT:   check:2'1     ?        possible intended match
+; CHK-NEXT:              4: 
+; CHK-NEXT:   check:2'2     } search range end
 ; CHK-NEXT:   >>>>>>
 ; CHK-NOT:    {{.}}
 
@@ -114,13 +139,14 @@
 ; CNT-V-NEXT:   count:1'0     ^~~~
 ; CNT-NEXT:                2: repete 
 ; CNT-V-NEXT:   count:1'1       ^~~~
-; CNT-Q-NEXT:   count:1'0           X error: no match found
-; CNT-V-NEXT:   count:1'2           X error: no match found
+; CNT-Q-NEXT:   count:1'0           { error: no match found
+; CNT-V-NEXT:   count:1'2           { error: no match found
 ; CNT-NEXT:                3: repeat 
-; CNT-Q-NEXT:   count:1'0     ~~~~~~~
 ; CNT-Q-NEXT:   count:1'1     ?       possible intended match
-; CNT-V-NEXT:   count:1'2     ~~~~~~~
 ; CNT-V-NEXT:   count:1'3     ?       possible intended match
+; CNT-NEXT:                4: 
+; CNT-Q-NEXT:   count:1'2     } search range end
+; CNT-V-NEXT:   count:1'4     } search range end
 ; CNT-NEXT:     >>>>>>
 ; CNT-NOT:      {{.}}
 
@@ -158,7 +184,9 @@
 ; NXT-V-NEXT: check:1     ^~~~~
 ; NXT-NEXT:            2: again 
 ; NXT-V-NEXT: next:2      ^~~~~
-; NXT-NEXT:   next:3           X error: no match found
+; NXT-NEXT:   next:3'0           { error: no match found
+; NXT-NEXT:            3: 
+; NXT-NEXT:   next:3'1     } search range end
 ; NXT-NEXT:   >>>>>>
 ; NXT-NOT:    {{.}}
 
@@ -213,7 +241,9 @@
 ; SAM-NEXT:            1: hello world! 
 ; SAM-V-NEXT: check:1     ^~~~~
 ; SAM-V-NEXT: same:2            ^~~~~
-; SAM-NEXT:   same:3                 X~ error: no match found
+; SAM-NEXT:   same:3'0                { error: no match found
+; SAM-NEXT:            2:
+; SAM-NEXT:   same:3'1     } search range end
 ; SAM-NEXT:   >>>>>>
 ; SAM-NOT:    {{.}}
 
@@ -281,12 +311,11 @@
 ; EMP-V-NEXT: check:1     ^~~~~
 ; EMP-NEXT:            2:
 ; EMP-V-NEXT: empty:2     ^
-; EMP-NEXT:   empty:3          X error: no match found
-; EMP-NEXT:            3: world 
-; EMP-NEXT:   empty:3     ~~~~~~
-; EMP-NEXT:            4: label 
+; EMP-NEXT:   empty:3'0     { error: no match found
+; EMP-NEXT:            3: world
+; EMP-NEXT:            4: label
 ; EMP-V-NEXT: label:4     ^~~~~
-; EMP-NEXT:   empty:3     ~~~~~
+; EMP-NEXT:   empty:3'1          } search range end
 ; EMP-NEXT:   >>>>>>
 ; EMP-NOT:    {{.}}
 
@@ -353,15 +382,14 @@
 ; NOT: {{.*}}error:{{.*}}
 
 ; NOT:         <<<<<<
-; NOT-NEXT:           1: hello 
-; NOT-VV-NEXT: not:1     X~~~~~
-; NOT-NEXT:           2: world 
-; NOT-VV-NEXT: not:1     ~~~~~~
-; NOT-NEXT:    not:2     !~~~~  error: no match expected
-; NOT-NEXT:           3: again 
-; NOT-VV-NEXT: not:1     ~~~~~~
+; NOT-NEXT:           1: hello
+; NOT-VV-NEXT: not:1'0     {
+; NOT-NEXT:           2: world
+; NOT-NEXT:    not:2       !~~~~  error: no match expected
+; NOT-NEXT:           3: again
 ; NOT-VV-NEXT:        4:
-; NOT-VV-NEXT: eof:2     ^
+; NOT-VV-NEXT: eof:2       ^
+; NOT-VV-NEXT: not:1'1     }
 ; NOT-NEXT:    >>>>>>
 ; NOT-NOT:     {{.}}
 
@@ -386,14 +414,13 @@
 ; NOT2: {{.*}}error:{{.*}}
 
 ; NOT2:         <<<<<<
-; NOT2-NEXT:             1: hello 
-; NOT2-VV-NEXT: not:1       X~~~~~
-; NOT2-NEXT:             2: world 
-; NOT2-VV-NEXT: not:1       ~~~~~~
+; NOT2-NEXT:             1: hello
+; NOT2-VV-NEXT: not:1'0     {
+; NOT2-NEXT:             2: world
 ; NOT2-NEXT:    not:2       !~~~~  error: no match expected
-; NOT2-NEXT:             3: again 
+; NOT2-NEXT:             3: again
 ; NOT2-V-NEXT:  check:3       ^~~
-; NOT2-VV-NEXT: not:1       ~~
+; NOT2-VV-NEXT: not:1'1       }
 ; NOT2-NEXT:    >>>>>>
 ; NOT2-NOT:     {{.}}
 
@@ -436,21 +463,22 @@
 ; DAG: {{.*}}error:{{.*}}
 
 ; DAG:         <<<<<<
-; DAG-NEXT:             1: abc 
+; DAG-NEXT:             1: abc
 ; DAG-V-NEXT:  dag:2       ^~~
 ; DAG-VV-NEXT: dag:3'0     !~~  discard: overlaps earlier match
-; DAG-NEXT:             2: def 
+; DAG-NEXT:             2: def
 ; DAG-V-NEXT:  dag:1       ^~~
 ; DAG-VV-NEXT: dag:4'0     !~~  discard: overlaps earlier match
-; DAG-Q-NEXT:  dag:4          X error: no match found
-; DAG-VQ-NEXT: dag:4          X error: no match found
-; DAG-VV-NEXT: dag:4'1        X error: no match found
-; DAG-NEXT:             3: abc 
+; DAG-Q-NEXT:  dag:4'0        { error: no match found
+; DAG-VQ-NEXT: dag:4'0        { error: no match found
+; DAG-VV-NEXT: dag:4'1        { error: no match found
+; DAG-NEXT:             3: abc
 ; DAG-VQ-NEXT: dag:3       ^~~
 ; DAG-VV-NEXT: dag:3'1     ^~~
-; DAG-Q-NEXT:  dag:4       ~~~~
-; DAG-VQ-NEXT: dag:4       ~~~~
-; DAG-VV-NEXT: dag:4'1     ~~~~
+; DAG-NEXT:             4:
+; DAG-Q-NEXT:  dag:4'1     } search range end
+; DAG-VQ-NEXT: dag:4'1     } search range end
+; DAG-VV-NEXT: dag:4'2     } search range end
 ; DAG-NEXT:    >>>>>>
 ; DAG-NOT:     {{.}}
 
@@ -484,7 +512,7 @@
 ; DAG1L:{{.*}}error:{{.*}}
 
 ;         DAG1L:<<<<<<
-;    DAG1L-NEXT:         1: abc def abc def 
+;    DAG1L-NEXT:         1: abc def abc def
 ;  DAG1L-V-NEXT:dag:1           ^~~
 ;  DAG1L-V-NEXT:dag:2        ^~
 ; DAG1L-VV-NEXT:dag:3'0     !~~              discard: overlaps earlier match
@@ -495,9 +523,13 @@
 ; DAG1L-VV-NEXT:dag:4'1                 ^~
 ; DAG1L-VV-NEXT:dag:5'0         !~~          discard: overlaps earlier match
 ; DAG1L-VV-NEXT:dag:5'1                 !~~  discard: overlaps earlier match
-;  DAG1L-Q-NEXT:dag:5                     X~ error: no match found
-; DAG1L-VQ-NEXT:dag:5                     X~ error: no match found
-; DAG1L-VV-NEXT:dag:5'2                   X~ error: no match found
+;  DAG1L-Q-NEXT:dag:5'0                   {  error: no match found
+; DAG1L-VQ-NEXT:dag:5'0                   {  error: no match found
+; DAG1L-VV-NEXT:dag:5'2                   {  error: no match found
+;    DAG1L-NEXT:         2:
+;  DAG1L-Q-NEXT:dag:5'1     } search range end
+; DAG1L-VQ-NEXT:dag:5'1     } search range end
+; DAG1L-VV-NEXT:dag:5'3     } search range end
 ;    DAG1L-NEXT:>>>>>>
 ;     DAG1L-NOT:{{.}}
 
@@ -566,40 +598,41 @@
 ; LAB:{{.*}}.chk:9:12: error: CHECK-NOT: excluded string found in input
 
 ;         LAB:<<<<<<
-;    LAB-NEXT:            1: text 
+;    LAB-NEXT:            1: text
 ;  LAB-V-NEXT:check:1        ^~~~
-;    LAB-NEXT:            2: labelA 
+;    LAB-NEXT:            2: labelA
 ;  LAB-V-NEXT:label:2'0      ^~~~~~
 ;  LAB-V-NEXT:label:2'1      ^~~~~~
-;    LAB-NEXT:check:3              X error: no match found
-;    LAB-NEXT:            3: textA 
-;    LAB-NEXT:check:3        ~~~~~~
-;    LAB-NEXT:            4: labelB 
+;    LAB-NEXT:check:3'0            { error: no match found
+;    LAB-NEXT:            3: textA
+;    LAB-NEXT:            4: labelB
 ;  LAB-V-NEXT:label:4        ^~~~~~
-;    LAB-NEXT:check:3        ~~~~~~
-;    LAB-NEXT:            5: textB 
-;    LAB-NEXT:            6: labelC 
+;    LAB-NEXT:check:3'1            } search range end
+;    LAB-NEXT:            5: textB
+;    LAB-NEXT:            6: labelC
 ;  LAB-V-NEXT:label:6'0      ^~~~~~
 ;  LAB-V-NEXT:check:5        ^~~~~~
-;  LAB-Q-NEXT:label:6              X error: no match found
-;  LAB-V-NEXT:label:6'1            X error: no match found
-; LAB-VV-NEXT:not:7                X
-;    LAB-NEXT:            7: textC 
-; LAB-VV-NEXT:not:7          ~~~~~~
-;    LAB-NEXT:            8: labelD 
+;  LAB-Q-NEXT:label:6'0            { error: no match found
+;  LAB-V-NEXT:label:6'1            { error: no match found
+; LAB-VV-NEXT:not:7'0              {
+;  LAB-Q-NEXT:label:6'1            } search range end
+;  LAB-V-NEXT:label:6'2            } search range end
+;    LAB-NEXT:            7: textC
+;    LAB-NEXT:            8: labelD
 ;  LAB-V-NEXT:label:8'0      ^~~~~~
 ;  LAB-V-NEXT:label:8'1      ^~~~~~
-;    LAB-NEXT:            9: textD 
+; LAB-VV-NEXT:not:7'1        }
+;    LAB-NEXT:            9: textD
 ;    LAB-NEXT:not:9          !~~~~  error: no match expected
-;    LAB-NEXT:           10: labelE 
+;    LAB-NEXT:           10: labelE
 ;  LAB-V-NEXT:label:10'0     ^~~~~~
 ;  LAB-V-NEXT:label:10'1     ^~~~~~
-; LAB-VV-NEXT:not:11               X
-;    LAB-NEXT:           11: textE 
-; LAB-VV-NEXT:not:11         ~~~~~~
-;    LAB-NEXT:           12: labelF 
+; LAB-VV-NEXT:not:11'0             {
+;    LAB-NEXT:           11: textE
+;    LAB-NEXT:           12: labelF
 ;  LAB-V-NEXT:label:12'0     ^~~~~~
 ;  LAB-V-NEXT:label:12'1     ^~~~~~
+; LAB-VV-NEXT:not:11'1       }
 ;    LAB-NEXT:>>>>>>
 ;     LAB-NOT:{{.}}
 
@@ -653,21 +686,29 @@
 ; IMPNOT:{{.*}}command line:1:22: error: IMPLICIT-CHECK-NOT: excluded string found in input
 
 ;         IMPNOT:<<<<<<
-;    IMPNOT-NEXT:            1: hello world again! 
+;    IMPNOT-NEXT:            1: hello world again!
 ;  IMPNOT-V-NEXT:check:1        ^~~
-; IMPNOT-VV-NEXT:not:imp1'0     X
-; IMPNOT-VV-NEXT:not:imp2'0     X
-; IMPNOT-VV-NEXT:not:imp3'0     X
+; IMPNOT-VV-NEXT:not:imp1'0     {
+; IMPNOT-VV-NEXT:not:imp2'0     {
+; IMPNOT-VV-NEXT:not:imp3'0     {
 ;  IMPNOT-V-NEXT:check:2              ^~~
-; IMPNOT-VV-NEXT:not:imp1'1        X~~
-; IMPNOT-VV-NEXT:not:imp2'1        X~~
-; IMPNOT-VV-NEXT:not:imp3'1        X~~
+; IMPNOT-VV-NEXT:not:imp1'1        {
+; IMPNOT-VV-NEXT:not:imp2'1        {
+; IMPNOT-VV-NEXT:not:imp3'1        {
 ;  IMPNOT-V-NEXT:check:3                         ^
-; IMPNOT-VV-NEXT:not:imp1'2              X~~~~~~~
-; IMPNOT-VV-NEXT:not:imp2'2              X~~~~~~~
+; IMPNOT-VV-NEXT:not:imp1'2              {
+; IMPNOT-VV-NEXT:not:imp2'2              {
 ;  IMPNOT-Q-NEXT:not:imp3                   !~~~~   error: no match expected
 ; IMPNOT-VQ-NEXT:not:imp3                   !~~~~   error: no match expected
 ; IMPNOT-VV-NEXT:not:imp3'2                 !~~~~   error: no match expected
+; IMPNOT-VV-NEXT:not:imp1'3     }
+; IMPNOT-VV-NEXT:not:imp2'3     }
+; IMPNOT-VV-NEXT:not:imp3'3     }
+; IMPNOT-VV-NEXT:not:imp1'4           }
+; IMPNOT-VV-NEXT:not:imp2'4           }
+; IMPNOT-VV-NEXT:not:imp3'4           }
+; IMPNOT-VV-NEXT:not:imp1'5                      }
+; IMPNOT-VV-NEXT:not:imp2'5                      }
 ;    IMPNOT-NEXT:>>>>>>
 ;     IMPNOT-NOT:{{.}}
 
@@ -688,17 +729,18 @@
 ; RUN: | FileCheck -match-full-lines %s -check-prefix=SUBST-POS
 
 ;      SUBST-POS:<<<<<<
-; SUBST-POS-NEXT:           1: def-match1 def-match2 
+; SUBST-POS-NEXT:           1: def-match1 def-match2
 ; SUBST-POS-NEXT:check:1'0     ^~~~~~~~~~~~~~~~~~~~~
 ; SUBST-POS-NEXT:check:1'1                            with "DEF_MATCH1" equal to "def-match1"
 ; SUBST-POS-NEXT:check:1'2                            with "DEF_MATCH2" equal to "def-match2"
-; SUBST-POS-NEXT:check:2'0     X error: match failed for invalid pattern
+; SUBST-POS-NEXT:check:2'0                          { error: match failed for invalid pattern
 ; SUBST-POS-NEXT:check:2'1                            undefined variable: UNDEF
 ; SUBST-POS-NEXT:check:2'2                            with "DEF_MATCH1" equal to "def-match1"
 ; SUBST-POS-NEXT:check:2'3                            with "DEF_NOMATCH" equal to "foobar"
 ; SUBST-POS-NEXT:           2: def-match1 def-nomatch
-; SUBST-POS-NEXT:check:2'0     ~~~~~~~~~~~~~~~~~~~~~~~
-; SUBST-POS-NEXT:check:2'4 ? possible intended match
+; SUBST-POS-NEXT:check:2'4              ? possible intended match
+; SUBST-POS-NEXT:           3:
+; SUBST-POS-NEXT:check:2'5     } search range end
 ; SUBST-POS-NEXT:>>>>>>
 
 ;--------------------------------------------------
@@ -721,17 +763,17 @@
 
 ;      SUBST-NEG:<<<<<<
 ; SUBST-NEG-NEXT:         1: def-match1 def-nomatch
-; SUBST-NEG-NEXT:not:1'0     X~~~~~~~~~~~~~~~~~~~~~~ error: match failed for invalid pattern
+; SUBST-NEG-NEXT:not:1'0     {                       error: match failed for invalid pattern
 ; SUBST-NEG-NEXT:not:1'1                             undefined variable: UNDEF
 ; SUBST-NEG-NEXT:not:1'2                             with "DEF_MATCH1" equal to "def-match1"
 ; SUBST-NEG-NEXT:not:1'3                             with "DEF_NOMATCH" equal to "foobar"
 ; SUBST-NEG-NEXT:         2: def-match1 def-match2
-; SUBST-NEG-NEXT:not:1'0     ~~~~~~~~~~~~~~~~~~~~~~
 ; SUBST-NEG-NEXT:not:2'0     !~~~~~~~~~~~~~~~~~~~~  error: no match expected
 ; SUBST-NEG-NEXT:not:2'1                            with "DEF_MATCH1" equal to "def-match1"
 ; SUBST-NEG-NEXT:not:2'2                            with "DEF_MATCH2" equal to "def-match2"
 ; SUBST-NEG-NEXT:         3: END
 ; SUBST-NEG-NEXT:check:3     ^~~
+; SUBST-NEG-NEXT:not:1'4     }    search range end
 ; SUBST-NEG-NEXT:>>>>>>
 
 ;--------------------------------------------------

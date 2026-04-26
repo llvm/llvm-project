@@ -235,6 +235,22 @@ static MarkerStyle GetMarker(FileCheckDiag::MatchType MatchTy) {
   llvm_unreachable_internal("unexpected match type");
 }
 
+/// Returns true for diagnostics that report a search range -- a region of
+/// input the directive scanned without finding a match.  These get rendered
+/// as `{` ... `}` bracket pairs (plus a separate error annotation when the
+/// search failed) instead of an `X~~~` underline that spans the entire
+/// scanned region.
+static bool isSearchRangeDiag(FileCheckDiag::MatchType MatchTy) {
+  switch (MatchTy) {
+  case FileCheckDiag::MatchNoneButExpected:
+  case FileCheckDiag::MatchNoneAndExcluded:
+  case FileCheckDiag::MatchNoneForInvalidPattern:
+    return true;
+  default:
+    return false;
+  }
+}
+
 static void DumpInputAnnotationHelp(raw_ostream &OS) {
   OS << "The following description was requested by -dump-input=help to\n"
      << "explain the input dump printed by FileCheck.\n"
@@ -289,11 +305,13 @@ static void DumpInputAnnotationHelp(raw_ostream &OS) {
      << "           - CHECK-DAG overlapping match (discarded, reported if "
      << "-vv)\n"
      << "  - ";
-  WithColor(OS, raw_ostream::SAVEDCOLOR, true) << "X~~";
-  OS << "    marks search range when no match is found, such as:\n"
+  WithColor(OS, raw_ostream::SAVEDCOLOR, true) << "{ }";
+  OS << "    bracket the search range when no match is found, such as:\n"
      << "           - CHECK-NEXT not found (error)\n"
      << "           - CHECK-NOT not found (success, reported if -vv)\n"
      << "           - CHECK-DAG not found after discarded matches (error)\n"
+     << "           Bounds are exclusive; the failing directive's error\n"
+     << "           message appears as a separate annotation row\n"
      << "  - ";
   WithColor(OS, raw_ostream::SAVEDCOLOR, true) << "?";
   OS << "      marks fuzzy match when no match is found\n";
@@ -387,38 +405,84 @@ BuildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
       return LHS.getPointer() < RHS.getPointer();
     }
   };
-  // How many diagnostics does each pattern have?
+  // A bracketed search-range diag expands to two annotations: `{` carrying
+  // the marker's error note (or empty for the success case) and `}` closing
+  // the range.  Sub-notes attached to a search-range MatchType (e.g.
+  // per-substitution diagnostics alongside MatchNoneForInvalidPattern)
+  // carry a non-empty Note and render as a single Lead=' ' annotation, so
+  // the main diag (Note empty) is the only one that brackets.
+  auto IsBracketedSearchRange = [](const FileCheckDiag &D) {
+    return isSearchRangeDiag(D.MatchTy) && D.Note.empty();
+  };
   std::map<SMLoc, unsigned, CompareSMLoc> DiagCountPerPattern;
   for (const FileCheckDiag &Diag : Diags)
-    ++DiagCountPerPattern[Diag.CheckLoc];
-  // How many diagnostics have we seen so far per pattern?
+    DiagCountPerPattern[Diag.CheckLoc] +=
+        IsBracketedSearchRange(Diag) ? 2u : 1u;
   std::map<SMLoc, unsigned, CompareSMLoc> DiagIndexPerPattern;
-  // How many total diagnostics have we seen so far?
   unsigned DiagIndex = 0;
-  // What's the widest label?
   LabelWidth = 0;
-  for (auto DiagItr = Diags.begin(), DiagEnd = Diags.end(); DiagItr != DiagEnd;
-       ++DiagItr) {
-    InputAnnotation A;
-    A.DiagIndex = DiagIndex++;
 
-    // Build label, which uniquely identifies this check result.
-    unsigned CheckBufferID = SM.FindBufferContainingLoc(DiagItr->CheckLoc);
-    auto CheckLineAndCol =
-        SM.getLineAndColumn(DiagItr->CheckLoc, CheckBufferID);
-    llvm::raw_string_ostream Label(A.Label);
-    Label << GetCheckTypeAbbreviation(DiagItr->CheckTy) << ":";
-    if (CheckBufferID == CheckFileBufferID)
-      Label << CheckLineAndCol.first;
-    else if (ImpPatBufferIDRange.first <= CheckBufferID &&
-             CheckBufferID < ImpPatBufferIDRange.second)
-      Label << "imp" << (CheckBufferID - ImpPatBufferIDRange.first + 1);
+  // Mint the next label for an annotation belonging to \p Diag; each call
+  // takes the next per-pattern `'N` slot.
+  auto MakeLabel = [&](const FileCheckDiag &Diag) {
+    std::string Label;
+    raw_string_ostream LS(Label);
+    LS << GetCheckTypeAbbreviation(Diag.CheckTy) << ":";
+    unsigned BufID = SM.FindBufferContainingLoc(Diag.CheckLoc);
+    auto LineCol = SM.getLineAndColumn(Diag.CheckLoc, BufID);
+    if (BufID == CheckFileBufferID)
+      LS << LineCol.first;
+    else if (ImpPatBufferIDRange.first <= BufID &&
+             BufID < ImpPatBufferIDRange.second)
+      LS << "imp" << (BufID - ImpPatBufferIDRange.first + 1);
     else
       llvm_unreachable("expected diagnostic's check location to be either in "
                        "the check file or for an implicit pattern");
-    if (DiagCountPerPattern[DiagItr->CheckLoc] > 1)
-      Label << "'" << DiagIndexPerPattern[DiagItr->CheckLoc]++;
-    LabelWidth = std::max((std::string::size_type)LabelWidth, A.Label.size());
+    if (DiagCountPerPattern[Diag.CheckLoc] > 1)
+      LS << "'" << DiagIndexPerPattern[Diag.CheckLoc]++;
+    LabelWidth = std::max((std::string::size_type)LabelWidth, Label.size());
+    return Label;
+  };
+
+  // Build a single-character bracket annotation (`{` or `}`) for \p Diag.
+  auto MakeBracket = [&](const FileCheckDiag &Diag, const MarkerStyle &Style,
+                         char Lead, StringRef Note, unsigned Line,
+                         unsigned Col) {
+    InputAnnotation A;
+    A.DiagIndex = DiagIndex++;
+    A.Label = MakeLabel(Diag);
+    A.IsFirstLine = true;
+    A.InputLine = Line;
+    A.InputStartCol = Col;
+    A.InputEndCol = Col + 1;
+    A.Marker = MarkerStyle(Lead, Style.Color, Note.str(), Style.FiltersAsError);
+    A.FoundAndExpectedMatch = false;
+    return A;
+  };
+
+  // `}` close brackets are emitted at the end of the main loop so their
+  // `'N` label suffix follows any other annotations at the same CheckLoc
+  // (e.g. a MatchFuzzy `?` candidate), matching input-position order.
+  // Save the diag + cached MarkerStyle to avoid re-iterating `Diags` and
+  // re-calling GetMarker.
+  SmallVector<std::pair<const FileCheckDiag *, MarkerStyle>, 8> CloseDeferred;
+
+  for (auto DiagItr = Diags.begin(), DiagEnd = Diags.end(); DiagItr != DiagEnd;
+       ++DiagItr) {
+    if (IsBracketedSearchRange(*DiagItr)) {
+      MarkerStyle Style = GetMarker(DiagItr->MatchTy);
+      // `{` carries the marker's error note inline (one row instead of
+      // two).  For success cases (MatchNoneAndExcluded) the note is empty.
+      Annotations.push_back(MakeBracket(*DiagItr, Style, '{', Style.Note,
+                                        DiagItr->InputStartLine,
+                                        DiagItr->InputStartCol));
+      CloseDeferred.emplace_back(&*DiagItr, Style);
+      continue;
+    }
+
+    InputAnnotation A;
+    A.DiagIndex = DiagIndex++;
+    A.Label = MakeLabel(*DiagItr);
 
     A.Marker = GetMarker(DiagItr->MatchTy);
     if (!DiagItr->Note.empty()) {
@@ -458,6 +522,8 @@ BuildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
              "expected input range not to be inverted");
       A.InputEndCol = UINT_MAX;
       Annotations.push_back(A);
+      // Multi-line non-search-range matches (e.g. CHECK whose pattern
+      // consumes `\n` via [[:space:]]+) get a `~~~` continuation per line.
       for (unsigned L = DiagItr->InputStartLine + 1, E = DiagItr->InputEndLine;
            L <= E; ++L) {
         // If a range ends before the first column on a line, then it has no
@@ -481,6 +547,15 @@ BuildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
         Annotations.push_back(B);
       }
     }
+  }
+
+  for (auto &[D, Style] : CloseDeferred) {
+    // `}` carries a short note for error diags so --dump-input-filter=error
+    // (the default) pulls its line into view alongside the `{` start.
+    // Success diags (MatchNoneAndExcluded) leave it empty.
+    StringRef Note = Style.FiltersAsError ? "search range end" : "";
+    Annotations.push_back(
+        MakeBracket(*D, Style, '}', Note, D->InputEndLine, D->InputEndCol));
   }
 }
 

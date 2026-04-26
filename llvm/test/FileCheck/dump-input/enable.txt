@@ -246,10 +246,11 @@ BADVAL: {{F|f}}ile{{C|c}}heck{{.*}}: for the --dump-input option: Cannot find op
 
 ; DUMP-ERR:        Input was:
 ; DUMP-ERR-NEXT:   <<<<<<
-; DUMP-ERR-NEXT:            1: hello 
+; DUMP-ERR-NEXT:            1: hello
 ; DUMP-ERR-V-NEXT: check:1     ^~~~~
-; DUMP-ERR-NEXT:   next:2'0         X error: no match found
-; DUMP-ERR-NEXT:            2: whirled 
-; DUMP-ERR-NEXT:   next:2'0    ~~~~~~~~
-; DUMP-ERR-NEXT:   next:2'1    ?        possible intended match
+; DUMP-ERR-NEXT:   next:2'0         { error: no match found
+; DUMP-ERR-NEXT:            2: whirled
+; DUMP-ERR-NEXT:   next:2'1 ? possible intended match
+; DUMP-ERR-NEXT:            3:
+; DUMP-ERR-NEXT:   next:2'2 } search range end
 ; DUMP-ERR-NEXT:   >>>>>>
