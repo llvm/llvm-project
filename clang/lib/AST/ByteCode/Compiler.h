@@ -41,6 +41,9 @@ template <class Emitter> class LabelScope;
 template <class Emitter> class SwitchScope;
 template <class Emitter> class StmtExprScope;
 template <class Emitter> class LocOverrideScope;
+template <class Emitter> class HLSLElementStoreVisitor;
+template <class Emitter> class HLSLFlatElementCounter;
+template <class Emitter> class HLSLElementFlattenVisitor;
 
 template <class Emitter> class Compiler;
 struct InitLink {
@@ -353,6 +356,9 @@ private:
   friend class SwitchScope<Emitter>;
   friend class StmtExprScope<Emitter>;
   friend class LocOverrideScope<Emitter>;
+  friend class HLSLElementStoreVisitor<Emitter>;
+  friend class HLSLFlatElementCounter<Emitter>;
+  friend class HLSLElementFlattenVisitor<Emitter>;
 
   /// Emits a zero initializer.
   bool visitZeroInitializer(PrimType T, QualType QT, const Expr *E);
@@ -421,6 +427,105 @@ private:
                              const QualType DerivedType);
   bool emitLambdaStaticInvokerBody(const CXXMethodDecl *MD);
   bool emitBuiltinBitCast(const CastExpr *E);
+
+  /// Base class for visiting the scalar elements of an HLSL aggregate type
+  /// (vectors, matrices, arrays, records).  Derived classes override the
+  /// \c visit* methods to customise behaviour at each node.  The walker
+  /// calls:
+  ///
+  ///  - \c visitScalarElem   for each scalar element of a vector, matrix,
+  ///                         or primitive array.
+  ///  - \c visitArrayComposite for each composite element of an array.
+  ///  - \c visitBase         for each base class of a record.
+  ///  - \c visitField        for each scalar field of a record.
+  ///  - \c visitFieldComposite for each composite field of a record.
+  ///
+  /// Composite visitors receive the sub-type's \c QualType and must
+  /// call \c visit(SubType) themselves to recurse.
+  template <typename Derived> class HLSLAggregateVisitor {
+  public:
+    explicit HLSLAggregateVisitor(Compiler<Emitter> &C) : C(C) {}
+
+    bool visit(QualType Ty) {
+      // Vectors and matrices are flat sequences of scalar elements.
+      unsigned NumElems = 0;
+      QualType ElemType;
+      if (const auto *VT = Ty->template getAs<VectorType>()) {
+        NumElems = VT->getNumElements();
+        ElemType = VT->getElementType();
+      } else if (const auto *MT = Ty->template getAs<ConstantMatrixType>()) {
+        NumElems = MT->getNumElementsFlattened();
+        ElemType = MT->getElementType();
+      }
+      if (NumElems > 0) {
+        PrimType ElemT = C.classifyPrim(ElemType);
+        for (unsigned I = 0; I != NumElems; ++I) {
+          if (!derived().visitScalarElem(ElemType, ElemT, I))
+            return false;
+        }
+        return true;
+      }
+
+      // Arrays.
+      if (const auto *AT = Ty->getAsArrayTypeUnsafe()) {
+        const auto *CAT = cast<ConstantArrayType>(AT);
+        QualType ArrElemType = CAT->getElementType();
+        unsigned ArrSize = CAT->getZExtSize();
+
+        if (OptPrimType ElemT = C.classify(ArrElemType)) {
+          for (unsigned I = 0; I != ArrSize; ++I) {
+            if (!derived().visitScalarElem(ArrElemType, *ElemT, I))
+              return false;
+          }
+        } else {
+          for (unsigned I = 0; I != ArrSize; ++I) {
+            if (!derived().visitArrayComposite(ArrElemType, I))
+              return false;
+          }
+        }
+        return true;
+      }
+
+      // Records.
+      if (Ty->isRecordType()) {
+        const Record *R = C.getRecord(Ty);
+        if (!R)
+          return false;
+
+        if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(R->getDecl())) {
+          for (const CXXBaseSpecifier &BS : CXXRD->bases()) {
+            const Record::Base *B = R->getBase(BS.getType());
+            assert(B);
+            if (!derived().visitBase(BS.getType(), B))
+              return false;
+          }
+        }
+
+        for (const Record::Field &F : R->fields()) {
+          if (F.isUnnamedBitField())
+            continue;
+          QualType FieldType = F.Decl->getType();
+          if (OptPrimType FieldT = C.classify(FieldType)) {
+            if (!derived().visitField(FieldType, *FieldT, &F))
+              return false;
+          } else {
+            if (!derived().visitFieldComposite(FieldType, &F))
+              return false;
+          }
+        }
+        return true;
+      }
+
+      // All other types: abort visit.
+      return false;
+    }
+
+  protected:
+    Compiler<Emitter> &C;
+
+  private:
+    Derived &derived() { return static_cast<Derived &>(*this); }
+  };
 
   bool emitHLSLAggregateSplat(PrimType SrcT, unsigned SrcOffset,
                               QualType DestType, const Expr *E);
