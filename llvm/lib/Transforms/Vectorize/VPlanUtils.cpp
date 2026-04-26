@@ -466,6 +466,21 @@ unsigned vputils::getVFScaleFactor(VPRecipeBase *R) {
   return 1;
 }
 
+bool vputils::cannotHoistOrSinkRecipe(const VPRecipeBase &R, bool Sinking) {
+  // Assumes don't alias anything or throw; as long as they're guaranteed to
+  // execute, they're safe to hoist. They should however not be sunk, as it
+  // would destroy information.
+  if (match(&R, m_Intrinsic<Intrinsic::assume>()))
+    return Sinking;
+  // TODO: Relax checks in the future, e.g. we could also hoist reads, if their
+  // memory location is not modified in the vector loop.
+  if (R.mayHaveSideEffects() || R.mayReadFromMemory() || R.isPhi())
+    return true;
+  // Allocas cannot be hoisted.
+  auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
+  return RepR && RepR->getOpcode() == Instruction::Alloca;
+}
+
 std::optional<VPValue *>
 vputils::getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
                                       SmallVectorImpl<VPInstruction *> &GEPs,

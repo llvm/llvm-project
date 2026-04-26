@@ -12,7 +12,7 @@
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::introduceMasksAndLinearize
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::createInLoopReductionRecipes
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::makeMemOpWideningDecisions
-; CHECK: VPlan for loop in 'foo' after VPlanTransforms::addExitUsersForFirstOrderRecurrences
+; CHECK: VPlan for loop in 'foo' after VPlanTransforms::adjustFirstOrderRecurrenceMiddleUsers
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::clearReductionWrapFlags
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::optimizeFindIVReductions
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::handleMultiUseReductions
@@ -24,7 +24,6 @@
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::createInterleaveGroups
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::replaceSymbolicStrides
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::dropPoisonGeneratingRecipes
-; CHECK: VPlan for loop in 'foo' after VPlanTransforms::adjustFixedOrderRecurrences
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::truncateToMinimalBitwidths
 ; CHECK: VPlan for loop in 'foo' after removeRedundantCanonicalIVs
 ; CHECK: VPlan for loop in 'foo' after removeRedundantInductionCasts

@@ -72,6 +72,10 @@ VPBasicBlock *getFirstLoopHeader(VPlan &Plan, VPDominatorTree &VPDT);
 /// one.
 unsigned getVFScaleFactor(VPRecipeBase *R);
 
+/// Return true if we do not know how to (mechanically) hoist or sink \p R.
+/// When sinking, passing \p Sinking = true ensures that assumes aren't sunk.
+bool cannotHoistOrSinkRecipe(const VPRecipeBase &R, bool Sinking = false);
+
 /// Returns the VPValue representing the uncountable exit comparison used by
 /// AnyOf if the recipes it depends on can be traced back to live-ins and
 /// the addresses (in GEP/PtrAdd form) of any (non-masked) load used in
