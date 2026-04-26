@@ -116,7 +116,7 @@ class UnrollDeinterleaveOp final
 public:
   UnrollDeinterleaveOp(int64_t targetRank, MLIRContext *context,
                        PatternBenefit benefit = 1)
-      : OpRewritePattern(context, benefit), targetRank(targetRank) {};
+      : OpRewritePattern(context, benefit), targetRank(targetRank){};
 
   LogicalResult matchAndRewrite(vector::DeinterleaveOp op,
                                 PatternRewriter &rewriter) const override {
@@ -150,7 +150,7 @@ private:
 };
 
 /// Rewrite vector.interleave op into an equivalent vector.shuffle op, when
-/// applicable: `sourceType` must be 1D and non-scalable.
+/// applicable: `sourceType` must be 0D or 1D, and non-scalable.
 ///
 /// Example:
 ///
@@ -170,7 +170,7 @@ struct InterleaveToShuffle final : OpRewritePattern<vector::InterleaveOp> {
   LogicalResult matchAndRewrite(vector::InterleaveOp op,
                                 PatternRewriter &rewriter) const override {
     VectorType sourceType = op.getSourceVectorType();
-    if (sourceType.getRank() != 1 || sourceType.isScalable()) {
+    if (sourceType.getRank() > 1 || sourceType.isScalable()) {
       return failure();
     }
     int64_t n = sourceType.getNumElements();
@@ -209,8 +209,7 @@ struct DeinterleaveToShuffle final : OpRewritePattern<vector::DeinterleaveOp> {
 
     auto seq = llvm::seq<int64_t>(sourceType.getNumElements() / 2);
     auto evenZip = llvm::map_to_vector(seq, [](int64_t i) { return i * 2; });
-    auto oddZip =
-        llvm::map_to_vector(evenZip, [](int64_t i) { return i + 1; });
+    auto oddZip = llvm::map_to_vector(evenZip, [](int64_t i) { return i + 1; });
 
     Value evenResult = vector::ShuffleOp::create(
         rewriter, op.getLoc(), op.getOperand(), op.getOperand(), evenZip);
