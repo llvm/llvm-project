@@ -21,8 +21,8 @@ int main(int argc, char **argv) {
   // CHECK-REALLOC: {{0x.* in .*realloc}}
   else if (strcmp(argv[1], "multiple_realloc") == 0) {
     char *orig = (char *)vec_malloc(5);
-    char *r1   = (char *)realloc(orig, 7);
-    p          = (char *)realloc(r1,   10);
+    char *r1 = (char *)realloc(orig, 7);
+    p = (char *)realloc(r1, 10);
   }
   // CHECK-MULTIPLE-REALLOC: {{READ of size 1 at 0x.* thread T0}}
   // CHECK-MULTIPLE-REALLOC: {{0x.* is located 0 bytes after 10-byte region}}
