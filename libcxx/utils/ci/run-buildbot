@@ -451,16 +451,6 @@ generic-hardening-mode-debug)
 generic-llvm-libc)
     clean
 
-    # Install some dependencies that are needed for building the kernel headers
-    # and LLVM libc.
-    # TODO(boomanaiden154): Move these to being part of the base container
-    # image rather than something we install on every run.
-    if [[ -n "$GITHUB_ACTIONS" ]]; then
-        sudo apt-get update
-        sudo apt-get install -y rsync
-        pip3 install pyyaml==6.0.3
-    fi
-
     # Install kernel headers from a known-good Linux kernel version to ensure
     # the test is hermetic.
     export LINUX_VERSION=7.0.1
