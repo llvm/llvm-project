@@ -5755,7 +5755,6 @@ def note_template_arg_requires_copy : Note<
   "non-type template argument is required to be copyable">;
 def err_template_arg_invalid : Error<
   "non-type template argument '%0' is invalid">;
-
 def err_pointer_to_member_type : Error<
   "invalid use of pointer to member type after %select{.*|->*}0">;
 def err_pointer_to_member_call_drops_quals : Error<

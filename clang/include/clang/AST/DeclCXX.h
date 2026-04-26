@@ -310,6 +310,11 @@ private:
     LLVM_PREFERRED_TYPE(bool)
     unsigned HasODRHash : 1;
 
+    /// True if copying a template parameter (C++26 [temp.arg.nontype]p4) of
+    /// this type uses trivial copy constructor.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned TriviallyCopyTemplateParam : 1;
+
     /// A hash of parts of the class to help in ODR checking.
     unsigned ODRHash = 0;
 
@@ -594,6 +599,14 @@ public:
   }
 
   unsigned getODRHash() const;
+
+  void setTriviallyCopyTemplateParam() {
+    data().TriviallyCopyTemplateParam = true;
+  }
+
+  bool isTriviallyCopyTemplateParam() const {
+    return data().TriviallyCopyTemplateParam;
+  }
 
   /// Sets the base classes of this struct or class.
   void setBases(CXXBaseSpecifier const * const *Bases, unsigned NumBases);

@@ -7136,12 +7136,14 @@ static bool CheckTemplateArgumentPointerToMember(
 //     - the initialization would cause P to not be
 //       template-argument-equivalent ([temp.type]) to v,
 //   the program is ill-formed.
-// TODO: Cache accepted APValue for performance improvement.
 static bool CheckTemplateArgumentCopyEquivalence(Sema &S, NamedDecl *Param,
                                                  QualType ParamType,
                                                  const APValue &Value,
                                                  SourceLocation ArgLoc) {
   assert(ParamType->isRecordType() && "no need to check copy equivalence");
+
+  if (ParamType->castAsCXXRecordDecl()->isTriviallyCopyTemplateParam())
+    return false;
 
   SourceLocation ParamLoc = Param->getLocation();
 
@@ -7158,14 +7160,13 @@ static bool CheckTemplateArgumentCopyEquivalence(Sema &S, NamedDecl *Param,
       InitializedEntity::InitializeTemplateParameter(ParamType, Param);
   InitializationSequence InitSeq(S, Entity, Kind, Inits);
   ExprResult Result = InitSeq.Perform(S, Entity, Kind, Inits);
-  if (Result.isInvalid()) {
-    S.Diag(ParamLoc, diag::note_template_arg_requires_copy);
-    return true;
-  }
+  if (Result.isInvalid())
+    return S.Diag(ParamLoc, diag::note_template_arg_requires_copy);
 
-  // Fast path. Trivial copy constructor performs per-element copy.
-  if (cast<CXXConstructExpr>(Result.get())->getConstructor()->isTrivial())
+  if (cast<CXXConstructExpr>(Result.get())->getConstructor()->isTrivial()) {
+    ParamType->castAsCXXRecordDecl()->setTriviallyCopyTemplateParam();
     return false;
+  }
 
   Result = S.ActOnConstantExpression(Result.get());
   Result = S.ActOnFinishFullExpr(AssertSuccess(Result), ArgLoc,
@@ -7177,10 +7178,8 @@ static bool CheckTemplateArgumentCopyEquivalence(Sema &S, NamedDecl *Param,
   Result = S.EvaluateConvertedConstantExpression(
       AssertSuccess(Result), ParamType, ValueAfterCopy, CCEKind::TemplateArg,
       /*RequireInt=*/false, PreNarrowingValue);
-  if (Result.isInvalid()) {
-    S.Diag(ParamLoc, diag::note_template_arg_requires_copy);
-    return true;
-  }
+  if (Result.isInvalid())
+    return S.Diag(ParamLoc, diag::note_template_arg_requires_copy);
 
   llvm::FoldingSetNodeID VID, CID;
   Value.Profile(VID);
@@ -7341,7 +7340,6 @@ ExprResult Sema::CheckTemplateArgument(NamedDecl *Param, QualType ParamType,
   // Fast path. A valid template parameter object is equivalent to its copy. No
   // need to make a copy to check again when initializing a template parameter
   // of class type from a template parameter object of the same type.
-  // TODO: Remove `ParamType->isRecordType()` in condition?
   Expr *InnerArg = DeductionArg->IgnoreParenImpCasts();
   if (ParamType->isRecordType() && isa<DeclRefExpr>(InnerArg) &&
       Context.hasSameUnqualifiedType(ParamType, InnerArg->getType())) {
