@@ -1356,6 +1356,19 @@ multiclass PatVrVrF<SDPatternOperator OpNode, string Inst> {
             (!cast<LAInst>(Inst#"_D") LSX128:$vj, LSX128:$vk)>;
 }
 
+multiclass PatVrVrQ<SDPatternOperator OpNode, string Inst> {
+  def : Pat<(OpNode (v16i8 LSX128:$vj), (v16i8 LSX128:$vk)),
+            (!cast<LAInst>(Inst#"_B") LSX128:$vj, LSX128:$vk)>;
+  def : Pat<(OpNode (v8i16 LSX128:$vj), (v8i16 LSX128:$vk)),
+            (!cast<LAInst>(Inst#"_H") LSX128:$vj, LSX128:$vk)>;
+  def : Pat<(OpNode (v4i32 LSX128:$vj), (v4i32 LSX128:$vk)),
+            (!cast<LAInst>(Inst#"_W") LSX128:$vj, LSX128:$vk)>;
+  def : Pat<(OpNode (v2i64 LSX128:$vj), (v2i64 LSX128:$vk)),
+            (!cast<LAInst>(Inst#"_D") LSX128:$vj, LSX128:$vk)>;
+  def : Pat<(OpNode (v1i128 LSX128:$vj), (v1i128 LSX128:$vk)),
+            (!cast<LAInst>(Inst#"_Q") LSX128:$vj, LSX128:$vk)>;
+}
+
 multiclass PatVrVrU<SDPatternOperator OpNode, string Inst> {
   def : Pat<(OpNode (v16i8 LSX128:$vj), (v16i8 LSX128:$vk)),
             (!cast<LAInst>(Inst#"_BU") LSX128:$vj, LSX128:$vk)>;
@@ -1576,10 +1589,10 @@ multiclass VAvgrPat<SDPatternOperator OpNode, string Inst, ValueType vt> {
 
 let Predicates = [HasExtLSX] in {
 
-// VADD_{B/H/W/D}
-defm : PatVrVr<add, "VADD">;
-// VSUB_{B/H/W/D}
-defm : PatVrVr<sub, "VSUB">;
+// VADD_{B/H/W/D/Q}
+defm : PatVrVrQ<add, "VADD">;
+// VSUB_{B/H/W/D/Q}
+defm : PatVrVrQ<sub, "VSUB">;
 
 // VADDI_{B/H/W/D}U
 defm : PatVrNimm5<sub, "VADDI">;

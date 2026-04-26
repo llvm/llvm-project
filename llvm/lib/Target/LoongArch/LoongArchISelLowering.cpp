@@ -90,9 +90,11 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     addRegisterClass(MVT::f64, &LoongArch::FPR64RegClass);
 
   static const MVT::SimpleValueType LSXVTs[] = {
-      MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64, MVT::v4f32, MVT::v2f64};
+      MVT::v16i8,  MVT::v8i16, MVT::v4i32, MVT::v2i64,
+      MVT::v1i128, MVT::v4f32, MVT::v2f64};
   static const MVT::SimpleValueType LASXVTs[] = {
-      MVT::v32i8, MVT::v16i16, MVT::v8i32, MVT::v4i64, MVT::v8f32, MVT::v4f64};
+      MVT::v32i8,  MVT::v16i16, MVT::v8i32, MVT::v4i64,
+      MVT::v2i128, MVT::v8f32,  MVT::v4f64};
 
   if (Subtarget.hasExtLSX())
     for (MVT VT : LSXVTs)
@@ -397,6 +399,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     }
     setOperationAction(ISD::FP_ROUND, MVT::v2f32, Custom);
     setOperationAction(ISD::FP_EXTEND, MVT::v2f32, Custom);
+    setOperationAction({ISD::ADD, ISD::SUB}, MVT::v1i128, Legal);
   }
 
   // Set operations for 'LASX' feature.
@@ -469,6 +472,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     }
     setOperationAction(ISD::FP_ROUND, MVT::v4f32, Custom);
     setOperationAction(ISD::FP_EXTEND, MVT::v4f64, Custom);
+    setOperationAction({ISD::ADD, ISD::SUB}, MVT::v2i128, Legal);
   }
 
   // Set DAG combine for LA32 and LA64.

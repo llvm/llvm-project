@@ -1153,6 +1153,19 @@ multiclass PatXrXrF<SDPatternOperator OpNode, string Inst> {
             (!cast<LAInst>(Inst#"_D") LASX256:$xj, LASX256:$xk)>;
 }
 
+multiclass PatXrXrQ<SDPatternOperator OpNode, string Inst> {
+  def : Pat<(OpNode (v32i8 LASX256:$xj), (v32i8 LASX256:$xk)),
+            (!cast<LAInst>(Inst#"_B") LASX256:$xj, LASX256:$xk)>;
+  def : Pat<(OpNode (v16i16 LASX256:$xj), (v16i16 LASX256:$xk)),
+            (!cast<LAInst>(Inst#"_H") LASX256:$xj, LASX256:$xk)>;
+  def : Pat<(OpNode (v8i32 LASX256:$xj), (v8i32 LASX256:$xk)),
+            (!cast<LAInst>(Inst#"_W") LASX256:$xj, LASX256:$xk)>;
+  def : Pat<(OpNode (v4i64 LASX256:$xj), (v4i64 LASX256:$xk)),
+            (!cast<LAInst>(Inst#"_D") LASX256:$xj, LASX256:$xk)>;
+  def : Pat<(OpNode (v2i128 LASX256:$xj), (v2i128 LASX256:$xk)),
+            (!cast<LAInst>(Inst#"_Q") LASX256:$xj, LASX256:$xk)>;
+}
+
 multiclass PatXrXrU<SDPatternOperator OpNode, string Inst> {
   def : Pat<(OpNode (v32i8 LASX256:$xj), (v32i8 LASX256:$xk)),
             (!cast<LAInst>(Inst#"_BU") LASX256:$xj, LASX256:$xk)>;
@@ -1347,10 +1360,10 @@ multiclass PairInsertExtractPatV4<ValueType vecty, ValueType elemty> {
 
 let Predicates = [HasExtLASX] in {
 
-// XVADD_{B/H/W/D}
-defm : PatXrXr<add, "XVADD">;
-// XVSUB_{B/H/W/D}
-defm : PatXrXr<sub, "XVSUB">;
+// XVADD_{B/H/W/D/Q}
+defm : PatXrXrQ<add, "XVADD">;
+// XVSUB_{B/H/W/D/Q}
+defm : PatXrXrQ<sub, "XVSUB">;
 
 // XVADDI_{B/H/W/D}U
 defm : PatXrNimm5<sub, "XVADDI">;
