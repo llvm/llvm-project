@@ -8,10 +8,10 @@
 
 #include "fp_lib.h"
 
-// GCC defaults to a word-sized return value, with a few platforms hooking
-// the override. We need to ensure that the return value is sign-extended in
-// the same way as GCC expects (since otherwise GCC-generated __builtin_isinf
-// returns true for finite 128-bit floating-point numbers).
+// GCC defaults to a word-sized (register-sized) return value, with a few
+// platforms hooking the override. If the type defined here is not ABI-
+// compatible with `getCmpLibcallReturnType`, comparison results will be
+// invalid.
 #if defined(__aarch64__) || defined(__arm64ec__)
 // AArch64 GCC overrides libgcc_cmp_return to use an int.
 typedef int CMP_RESULT;
@@ -28,7 +28,15 @@ typedef int CMP_RESULT;
 typedef char CMP_RESULT;
 #else
 // By default, use a signed word.
-typedef sword CMP_RESULT;
+#if __SIZEOF_POINTER__ == 8 && __SIZEOF_LONG__ == 4
+// LLP64 ABIs need to use `long long` for word size.
+typedef long long CMP_RESULT;
+#elif __SIZEOF_POINTER__ == 2
+// `long` is four bytes on IP16L32 ABIs so `int` must be used.
+typedef int CMP_RESULT
+#else
+typedef long CMP_RESULT;
+#endif
 #endif
 
 #if !defined(__clang__) && defined(__GNUC__)

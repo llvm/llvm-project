@@ -18,13 +18,6 @@
 
 #include "int_endianness.h"
 
-#if __SIZEOF_POINTER__ == 8 && __SIZEOF_LONG__ == 4
-// LLP64 ABIs use long long instead of long.
-typedef long long sword;
-#else
-typedef long sword;
-#endif
-
 // si_int is defined in Linux sysroot's asm-generic/siginfo.h
 #ifdef si_int
 #undef si_int
