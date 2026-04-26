@@ -1123,9 +1123,7 @@ define <2 x i8> @test_vector_usub_add_nuw_no_ov_nonsplat2(<2 x i8> %a) {
 ; Can be optimized if constant range is tracked per-element.
 define <2 x i8> @test_vector_usub_add_nuw_no_ov_nonsplat3(<2 x i8> %a) {
 ; CHECK-LABEL: @test_vector_usub_add_nuw_no_ov_nonsplat3(
-; CHECK-NEXT:    [[B:%.*]] = add nuw <2 x i8> [[A:%.*]], <i8 10, i8 9>
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> [[B]], <2 x i8> <i8 10, i8 9>)
-; CHECK-NEXT:    ret <2 x i8> [[R]]
+; CHECK-NEXT:    ret <2 x i8> [[R:%.*]]
 ;
   %b = add nuw <2 x i8> %a, <i8 10, i8 9>
   %r = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> %b, <2 x i8> <i8 10, i8 9>)

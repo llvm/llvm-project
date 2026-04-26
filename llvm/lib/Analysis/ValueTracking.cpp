@@ -9479,85 +9479,570 @@ bool llvm::matchSimpleTernaryIntrinsicRecurrence(const IntrinsicInst *I,
          II == I;
 }
 
+namespace {
+enum PatternKind {
+  MATCH_RHS,  // Match Pred LHS, (op LHS, ...)
+  MATCH_LHS,  // Match Pred (op RHS, ...), RHS
+  MATCH_BOTH, // Match Pred (op1 X, ...), (op2 X, ...)
+  MATCH_NONE  // Match none
+};
+
+std::optional<APFloat> getCompareAPFloat(const APFloat &C,
+                                         const DenormalMode Mode) {
+  if (!C.isDenormal())
+    return C;
+  DenormalMode::DenormalModeKind InMode = Mode.Input;
+  if (InMode == DenormalMode::DenormalModeKind::IEEE)
+    return C;
+  if (InMode == DenormalMode::DenormalModeKind::Dynamic)
+    return std::nullopt;
+  assert(InMode != DenormalMode::DenormalModeKind::Invalid &&
+         InMode != DenormalMode::DenormalModeKind::Dynamic &&
+         "Expected a concrete denormal input mode");
+  // flush denormal input
+  return APFloat::getZero(C.getSemantics(),
+                          InMode == DenormalMode::DenormalModeKind::PreserveSign
+                              ? C.isNegative()
+                              : false);
+}
+
+// If LHS Pred RHS is always true, return true.
+// This function = FCmpInst::compare + DenormalMode
+bool compareFloat(const FCmpInst::Predicate Pred, const APFloat &LHS,
+                  const APFloat &RHS, const Function *CxtF) {
+  DenormalMode Mode = CxtF ? CxtF->getDenormalMode(LHS.getSemantics())
+                           : DenormalMode::getDynamic();
+  auto L = getCompareAPFloat(LHS, Mode);
+  auto R = getCompareAPFloat(RHS, Mode);
+  return L && R && FCmpInst::compare(*L, *R, Pred);
+}
+
+/// Classify a comparison into one of the simple operand-sharing patterns used
+/// by isTrueIntPredicate()/isTrueFPPredicate(), and optionally replace a
+/// constant side with a stronger constant operand found on the opposite side.
+///
+/// \param Pred The original comparison predicate.
+/// \param X Output common operand anchor for MATCH_BOTH and direct-match cases.
+/// \param LHS In/out comparison LHS. May be rewritten to a constant operand
+///            from the other side when the original LHS is constant and that
+///            operand is already sufficient to imply the original predicate.
+/// \param RHS In/out comparison RHS. Symmetric to \p LHS.
+/// \param CLHS Parsed constant for the original LHS, or null if it is not a
+///             supported constant.
+/// \param CRHS Parsed constant for the original RHS, or null if it is not a
+///             supported constant.
+/// \param CxtF Context function to extract DenormalMode for float computing.
+///
+/// Returns The recognized PatternKind, or MATCH_NONE if this helper cannot
+///          normalize the comparison into a supported shape.
+template <typename ConstantT>
+PatternKind classifyCmpPatternAndAnchorConstants(
+    CmpInst::Predicate Pred, const Value *&X, const Value *&LHS,
+    const Value *&RHS, const ConstantT *CLHS, const ConstantT *CRHS,
+    const Function *CxtF = nullptr) {
+  static_assert(std::is_same_v<ConstantT, APInt> ||
+                    std::is_same_v<ConstantT, APFloat>,
+                "Only APInt and APFloat are supported");
+
+  // Candidate Operands: those ops with the same type
+  SmallSetVector<const Value *, 4> LHSOps, RHSOps;
+  auto CmpAndCollectOps = [&](SmallSetVector<const Value *, 4> &Ops,
+                              const Instruction *I,
+                              const Value *CmpTo) -> bool {
+    bool Contains = false;
+    for (const auto &Op : I->operands()) {
+      if (Op->getType() != LHS->getType())
+        continue;
+      if (Op.get() == CmpTo) {
+        X = CmpTo;
+        Contains = true;
+      }
+      Ops.insert(Op.get());
+    }
+    return Contains;
+  };
+  // Category 1: Match Pred LHS, (op LHS, ...)
+  if (auto *RHSInst = dyn_cast<Instruction>(RHS);
+      RHSInst && CmpAndCollectOps(RHSOps, RHSInst, LHS))
+    return MATCH_RHS;
+  // Category 2: Match Pred (op RHS, ...), RHS
+  if (auto *LHSInst = dyn_cast<Instruction>(LHS);
+      LHSInst && CmpAndCollectOps(LHSOps, LHSInst, RHS))
+    return MATCH_LHS;
+  // Category 3: Match Pred (op1 X, ...), (op2 X, ...)
+  if (const auto *It = find_if(
+          LHSOps, [&RHSOps](const Value *Op) { return RHSOps.contains(Op); });
+      It != LHSOps.end() && (X = *It))
+    return MATCH_BOTH;
+  // If one of LHS and RHS is constant, try to find a new LHS/RHS to continue.
+  // E.g., if pred is < :
+  //  CLHS < CLHS' < RHS  --> CLHS < RHS is true, hence we set LHS as CLHS'.
+  //  LHS  < CRHS' < CRHS --> RHS < CRHS is true, hence we set RHS as CRHS'.
+  if (CLHS || CRHS) {
+    const bool IsConstLHS = CLHS != nullptr;
+    const auto &Ops = IsConstLHS ? RHSOps : LHSOps;
+    const auto *It = find_if(Ops, [&](const Value *Op) {
+      const ConstantT *C;
+      if constexpr (std::is_same_v<ConstantT, APInt>) {
+        if (!match(Op, m_APInt(C)))
+          return false;
+        return IsConstLHS ? ICmpInst::compare(*CLHS, *C, Pred)
+                          : ICmpInst::compare(*C, *CRHS, Pred);
+      } else {
+        if (!match(Op, m_APFloat(C)))
+          return false;
+        return IsConstLHS ? compareFloat(Pred, *CLHS, *C, CxtF)
+                          : compareFloat(Pred, *C, *CRHS, CxtF);
+      }
+    });
+    if (It == Ops.end())
+      return MATCH_NONE;
+
+    return IsConstLHS ? (LHS = *It, MATCH_RHS) : (RHS = *It, MATCH_LHS);
+  }
+  // Fast path to quit: We do not handle other patterns for now.
+  return MATCH_NONE;
+}
+
 /// Return true if "icmp Pred LHS RHS" is always true.
-static bool isTruePredicate(CmpInst::Predicate Pred, const Value *LHS,
-                            const Value *RHS) {
-  if (ICmpInst::isTrueWhenEqual(Pred) && LHS == RHS)
+bool isTrueIntPredicate(CmpInst::Predicate Pred, const Value *LHS,
+                        const Value *RHS) {
+  if (LHS->getType() != RHS->getType())
+    return false;
+
+  switch (Pred) {
+  default:
+    break;
+  case CmpInst::ICMP_SGT:
+    return isTrueIntPredicate(CmpInst::ICMP_SLT, RHS, LHS);
+  case CmpInst::ICMP_SGE:
+    return isTrueIntPredicate(CmpInst::ICMP_SLE, RHS, LHS);
+  case CmpInst::ICMP_UGT:
+    return isTrueIntPredicate(CmpInst::ICMP_ULT, RHS, LHS);
+  case CmpInst::ICMP_UGE:
+    return isTrueIntPredicate(CmpInst::ICMP_ULE, RHS, LHS);
+  }
+
+  const APInt *CLHS = nullptr, *CRHS = nullptr;
+  match(LHS, m_APInt(CLHS));
+  match(RHS, m_APInt(CRHS));
+  // If both CLHS and CRHS are constant integers.
+  if (CLHS && CRHS)
+    return ICmpInst::compare(*CLHS, *CRHS, Pred);
+
+  // If the predicate is true when equal?
+  const bool CanEq = ICmpInst::isTrueWhenEqual(Pred);
+  if (CanEq && LHS == RHS)
     return true;
+
+  // Exclude NE/EQ
+  if (ICmpInst::isEquality(Pred))
+    return false;
+
+  // Represent the common operand between LHS and RHS
+  const Value *X;
+
+  // Derive possible match pattern
+  PatternKind PK =
+      classifyCmpPatternAndAnchorConstants(Pred, X, LHS, RHS, CLHS, CRHS);
+
+  // The pattern is too complex to analyze, quit early.
+  if (PK == MATCH_NONE)
+    return false;
+
+  const APInt *C;
+  const Value *V;
+  bool m;
 
   switch (Pred) {
   default:
     return false;
 
+  case CmpInst::ICMP_SLT:
+    // Delegate to CmpInst::ICMP_SLE to share common patterns.
   case CmpInst::ICMP_SLE: {
-    const APInt *C;
+    // TODO: handle select/phi.
 
-    // LHS s<= LHS +_{nsw} C   if C >= 0
-    // LHS s<= LHS | C         if C >= 0
-    if (match(RHS, m_NSWAdd(m_Specific(LHS), m_APInt(C))) ||
-        match(RHS, m_Or(m_Specific(LHS), m_APInt(C))))
-      return !C->isNegative();
+    // Category 1: Match Pred LHS, (op LHS, ...)
+    if (PK == MATCH_RHS) {
+      // LHS s<= LHS +_{nsw} C   if C >= 0
+      // LHS s<  LHS +_{nsw} C   if C > 0
+      if (match(RHS, m_c_NSWAdd(m_Specific(LHS), m_APInt(C))))
+        return CanEq ? C->isNonNegative() : C->isStrictlyPositive();
+      // LHS s<= LHS -_{nsw} C   if C <= 0
+      // LHS s<  LHS -_{nsw} C   if C < 0
+      if (match(RHS, m_NSWSub(m_Specific(LHS), m_APInt(C))))
+        return CanEq ? C->isNonPositive() : C->isNegative();
+      // LHS s<= LHS <<_{nsw,nuw} V  for any V (V < 0 is UB)
+      // slt: cannot exclude LHS == 0
+      if (CanEq && match(RHS, m_NSWShl(m_Specific(LHS), m_Value(V))) &&
+          cast<OverflowingBinaryOperator>(RHS)->hasNoUnsignedWrap())
+        return true;
+      // LHS s<= LHS | C         if C >= 0
+      // LHS s<  LHS |_{disjoint} C if C > 0 (C = 0 should be folded before)
+      if (CanEq ? match(RHS, m_c_Or(m_Specific(LHS), m_APInt(C)))
+                : match(RHS, m_c_DisjointOr(m_Specific(LHS), m_APInt(C)))) {
+        return C->isNonNegative();
+      }
+      // LHS s<= smax(LHS, V) for any V
+      if (CanEq && match(RHS, m_SMax(m_Value(), m_Value())))
+        return true;
+    }
 
-    // LHS s<= smax(LHS, V) for any V
-    if (match(RHS, m_c_SMax(m_Specific(LHS), m_Value())))
-      return true;
+    // Category 2: Match Pred (op RHS, ...), RHS
+    else if (PK == MATCH_LHS) {
+      // RHS +_{nsw} C s<= RHS if C <= 0
+      // RHS +_{nsw} C s<  RHS if C < 0
+      if (match(LHS, m_c_NSWAdd(m_Specific(RHS), m_APInt(C))))
+        return CanEq ? C->isNonPositive() : C->isNegative();
+      // RHS -_{nsw} C s<= RHS if C >= 0
+      // RHS -_{nsw} C s<  RHS if C > 0
+      if (match(LHS, m_NSWSub(m_Specific(RHS), m_APInt(C))))
+        return CanEq ? C->isNonNegative() : C->isStrictlyPositive();
+      // RHS & C s<= RHS if C <= 0 (keep the sign)
+      if (CanEq && match(LHS, m_c_And(m_Specific(RHS), m_APInt(C))))
+        return C->isNonPositive();
+      // smin(RHS, V) s<= RHS for any V
+      if (CanEq && match(LHS, m_SMin(m_Value(), m_Value())))
+        return true;
+    }
 
+    // Category 3: Match Pred (X op V1), (X op V2)
+    else if (PK == MATCH_BOTH) {
+      assert(X && "X should be set if MATCH_BOTH");
+      // Canonicalization: constant should be RHS
+      const APInt *CLHS, *CRHS;
+      // (X +_{nsw} CA) s<= (X +_{nsw} CB) if CA s<= CB
+      // (X +_{nsw} CA) s<  (X +_{nsw} CB) if CA s<  CB
+      if (match(LHS, m_NSWAddLike(m_Specific(X), m_APInt(CLHS))) &&
+          match(RHS, m_NSWAddLike(m_Specific(X), m_APInt(CRHS))))
+        return CanEq ? CLHS->sle(*CRHS) : CLHS->slt(*CRHS);
+      // (X -_{nsw} CA) s<= (X -_{nsw} CB) if CA s>= CB
+      // (X -_{nsw} CA) s<  (X -_{nsw} CB) if CA s>  CB
+      if (match(LHS, m_NSWSub(m_Specific(X), m_APInt(CLHS))) &&
+          match(RHS, m_NSWSub(m_Specific(X), m_APInt(CRHS))))
+        return CanEq ? CLHS->sge(*CRHS) : CLHS->sgt(*CRHS);
+      // (X <<_nuw_nsw CA) s<= (X <<_nuw_nsw CB) if CA s<= CB
+      // slt: cannot exclude X == 0
+      if (CanEq && match(LHS, m_NSWShl(m_Specific(X), m_APInt(CLHS))) &&
+          match(RHS, m_NSWShl(m_Specific(X), m_APInt(CRHS))) &&
+          cast<OverflowingBinaryOperator>(RHS)->hasNoUnsignedWrap())
+        return CLHS->sle(*CRHS);
+      // (X >>u CA) s<= (X >>u CB) if CA s>= CB
+      // slt: cannot exclude X == 0
+      if (CanEq && match(LHS, m_LShr(m_Specific(X), m_APInt(CLHS))) &&
+          match(RHS, m_LShr(m_Specific(X), m_APInt(CRHS))))
+        return CLHS->sge(*CRHS);
+
+      // LHS s<= X s<= RHS --> LHS s<= RHS
+      if (CanEq && isTrueIntPredicate(CmpInst::ICMP_SLE, LHS, X) &&
+          isTrueIntPredicate(CmpInst::ICMP_SLE, X, RHS))
+        return true;
+      // LHS s<  X s<= RHS --> LHS s< RHS
+      // LHS s<= X s<  RHS --> LHS s< RHS
+      if (!CanEq && ((isTrueIntPredicate(CmpInst::ICMP_SLT, LHS, X) &&
+                      isTrueIntPredicate(CmpInst::ICMP_SLE, X, RHS)) ||
+                     (isTrueIntPredicate(CmpInst::ICMP_SLE, LHS, X) &&
+                      isTrueIntPredicate(CmpInst::ICMP_SLT, X, RHS))))
+        return true;
+    }
+
+    // Patterns that don't depend on PK classification
     // smin(RHS, V) s<= RHS for any V
-    if (match(LHS, m_c_SMin(m_Specific(RHS), m_Value())))
+    if (CanEq && match(LHS, m_c_SMin(m_Specific(RHS), m_Value())))
       return true;
-
-    // Match A to (X +_{nsw} CA) and B to (X +_{nsw} CB)
-    const Value *X;
-    const APInt *CLHS, *CRHS;
-    if (match(LHS, m_NSWAddLike(m_Value(X), m_APInt(CLHS))) &&
-        match(RHS, m_NSWAddLike(m_Specific(X), m_APInt(CRHS))))
-      return CLHS->sle(*CRHS);
+    // LHS s<= smax(LHS, V) for any V
+    if (CanEq && match(RHS, m_c_SMax(m_Specific(LHS), m_Value())))
+      return true;
 
     return false;
   }
 
+  case CmpInst::ICMP_ULT:
+    // Delegate to CmpInst::ICMP_ULE to share common patterns.
   case CmpInst::ICMP_ULE: {
-    // LHS u<= LHS +_{nuw} V for any V
-    if (match(RHS, m_c_Add(m_Specific(LHS), m_Value())) &&
-        cast<OverflowingBinaryOperator>(RHS)->hasNoUnsignedWrap())
-      return true;
+    // TODO: handle select/phi.
 
-    // LHS u<= LHS | V for any V
-    if (match(RHS, m_c_Or(m_Specific(LHS), m_Value())))
-      return true;
+    // Category 1: Match Pred LHS, (op LHS, ...)
+    if (PK == MATCH_RHS) {
+      // LHS u<= LHS +_{nuw} V for any V
+      // LHS u<  LHS +_{nuw} C for any C (C = 0 should be folded before)
+      if (match(RHS, m_c_NUWAdd(m_Specific(LHS), m_Value(V))))
+        return CanEq ? true
+                     : (m = match(V, m_APInt(C)),
+                        m && (assert(!C->isZero() &&
+                                     "x + 0 should be folded before"),
+                              true));
+      // LHS u<= LHS *_{nuw} C for any C (C = 0,1 should be folded before)
+      // ult: cannot exclude LHS == 0
+      if (CanEq && (match(RHS, m_NUWMul(m_Specific(LHS), m_APInt(C))) ||
+                    match(RHS, m_NUWMul(m_APInt(C), m_Specific(LHS)))))
+        return true;
+      // LHS u<= LHS | V for any V
+      // LHS u<  LHS |_{disjoint} C for any C (C = 0 should be folded before)
+      if (CanEq ? match(RHS, m_c_Or(m_Specific(LHS), m_Value()))
+                : match(RHS, m_c_DisjointOr(m_Specific(LHS), m_APInt(C)))) {
+        assert((CanEq || !C->isZero()) && "x | 0 should be folded before");
+        return true;
+      }
+      // LHS u<= LHS <<_{nuw} V for any V (V < 0 is UB)
+      // ult: cannot exclude LHS == 0
+      if (CanEq && match(RHS, m_NUWShl(m_Specific(LHS), m_Value(V))))
+        return true;
+      // LHS u<= (V <<_{nuw} LHS) for any V
+      // LHS u<  (C <<_{nuw} LHS) for any C (C = 0 should be folded before)
+      if (match(RHS, m_NUWShl(m_Value(V), m_Specific(LHS))))
+        return CanEq ? true
+                     : (m = match(V, m_APInt(C)),
+                        m && (assert(!C->isZero() &&
+                                     "0 << V should be folded before"),
+                              true));
 
-    // LHS u<= umax(LHS, V) for any V
-    if (match(RHS, m_c_UMax(m_Specific(LHS), m_Value())))
-      return true;
+      // LHS u<= umax(LHS, V) for any V
+      if (CanEq && match(RHS, m_UMax(m_Value(), m_Value())))
+        return true;
+    }
 
-    // RHS >> V u<= RHS for any V
-    if (match(LHS, m_LShr(m_Specific(RHS), m_Value())))
-      return true;
+    // Category 2: Match Pred (op RHS, ...), RHS
+    else if (PK == MATCH_LHS) {
+      // RHS -_{nuw} V u<= RHS for any V
+      if (match(LHS, m_NUWSub(m_Specific(RHS), m_Value(V))))
+        return CanEq ? true
+                     : (m = match(V, m_APInt(C)),
+                        m && (assert(!C->isZero() &&
+                                     "x - 0 should be folded before"),
+                              true));
+      // (RHS >> V) u<= RHS for any V (V < 0 is UB)
+      // ult: cannot exclude RHS == 0
+      if (CanEq && match(LHS, m_LShr(m_Specific(RHS), m_Value(V))))
+        return true;
+      // RHS u/ V u<= RHS for any V (V = 0 means UB)
+      // ult: cannot exclude RHS == 0
+      if (CanEq && match(LHS, m_UDiv(m_Specific(RHS), m_Value(V))))
+        return true;
+      // RHS u% V u<= RHS for any V (V = 0 means UB)
+      if (CanEq && match(LHS, m_URem(m_Specific(RHS), m_Value())))
+        return true;
+      // V u% RHS u<  RHS for any V
+      if (match(LHS, m_URem(m_Value(), m_Specific(RHS))))
+        return true;
+      // RHS & V u<= RHS for any V
+      if (CanEq && match(LHS, m_And(m_Value(), m_Value())))
+        return true;
+      // umin(RHS, V) u<= RHS for any V
+      if (CanEq && match(LHS, m_UMin(m_Value(), m_Value())))
+        return true;
+    }
 
-    // RHS u/ C_ugt_1 u<= RHS
-    const APInt *C;
-    if (match(LHS, m_UDiv(m_Specific(RHS), m_APInt(C))) && C->ugt(1))
-      return true;
+    // Category 3: Match Pred (X op V1), (X op V2)
+    else if (PK == MATCH_BOTH) {
+      assert(X && "X should be set if MATCH_BOTH");
+      // Canonicalization: constant should be RHS
+      const APInt *CLHS, *CRHS;
+      // (X +_{nuw} CA) u<= (X +_{nuw} CB) if CA u<= CB
+      // (X +_{nuw} CA) u<  (X +_{nuw} CB) if CA u<  CB
+      if (match(LHS, m_NUWAddLike(m_Specific(X), m_APInt(CLHS))) &&
+          match(RHS, m_NUWAddLike(m_Specific(X), m_APInt(CRHS))))
+        return CanEq ? CLHS->ule(*CRHS) : CLHS->ult(*CRHS);
+      // (X *_{nuw} CA) u<= (X *_{nuw} CB) if CA u<= CB
+      // ult: cannot exclude X == 0
+      if (CanEq &&
+          (match(LHS, m_NUWMul(m_Specific(X), m_APInt(CLHS))) ||
+           match(LHS, m_NUWMul(m_APInt(CLHS), m_Specific(X)))) &&
+          (match(RHS, m_NUWMul(m_Specific(X), m_APInt(CRHS))) ||
+           match(RHS, m_NUWMul(m_APInt(CRHS), m_Specific(X)))))
+        return CLHS->ule(*CRHS);
+      // (X <<_{nuw} CA) u<= (X <<_{nuw} CB) if CA u<= CB
+      // ult: cannot exclude X == 0
+      if (CanEq && match(LHS, m_NUWShl(m_Specific(X), m_APInt(CLHS))) &&
+          match(RHS, m_NUWShl(m_Specific(X), m_APInt(CRHS))))
+        return CLHS->ule(*CRHS);
+      // (X -_{nuw} CA) u<= (X -_{nuw} CB) if CA u>= CB
+      // (X -_{nuw} CA) u<  (X -_{nuw} CB) if CA u>  CB
+      if (match(LHS, m_NUWSub(m_Specific(X), m_APInt(CLHS))) &&
+          match(RHS, m_NUWSub(m_Specific(X), m_APInt(CRHS))))
+        return CanEq ? CLHS->uge(*CRHS) : CLHS->ugt(*CRHS);
+      // (X /_{nuw} CA) u<= (X /_{nuw} CB) if CA u>= CB
+      // ult: cannot exclude X == 0
+      if (CanEq && match(LHS, m_UDiv(m_Specific(X), m_APInt(CLHS))) &&
+          match(RHS, m_UDiv(m_Specific(X), m_APInt(CRHS))))
+        return CLHS->uge(*CRHS);
+      // (X >>_{nuw} CA) u<= (X >>_{nuw} CB) if CA u>= CB
+      // ult: cannot exclude X == 0
+      if (CanEq && match(LHS, m_LShr(m_Specific(X), m_APInt(CLHS))) &&
+          match(RHS, m_LShr(m_Specific(X), m_APInt(CRHS))))
+        return CLHS->uge(*CRHS);
 
-    // RHS & V u<= RHS for any V
-    if (match(LHS, m_c_And(m_Specific(RHS), m_Value())))
-      return true;
-
-    // umin(RHS, V) u<= RHS for any V
-    if (match(LHS, m_c_UMin(m_Specific(RHS), m_Value())))
-      return true;
-
-    // Match A to (X +_{nuw} CA) and B to (X +_{nuw} CB)
-    const Value *X;
-    const APInt *CLHS, *CRHS;
-    if (match(LHS, m_NUWAddLike(m_Value(X), m_APInt(CLHS))) &&
-        match(RHS, m_NUWAddLike(m_Specific(X), m_APInt(CRHS))))
-      return CLHS->ule(*CRHS);
+      // LHS u<= X u<= RHS --> LHS u<= RHS
+      if (CanEq && isTrueIntPredicate(CmpInst::ICMP_ULE, LHS, X) &&
+          isTrueIntPredicate(CmpInst::ICMP_ULE, X, RHS))
+        return true;
+      // LHS u<  X u<= RHS --> LHS u< RHS
+      // LHS u<= X u<  RHS --> LHS u< RHS
+      if (!CanEq && ((isTrueIntPredicate(CmpInst::ICMP_ULT, LHS, X) &&
+                      isTrueIntPredicate(CmpInst::ICMP_ULE, X, RHS)) ||
+                     (isTrueIntPredicate(CmpInst::ICMP_ULE, LHS, X) &&
+                      isTrueIntPredicate(CmpInst::ICMP_ULT, X, RHS))))
+        return true;
+    }
 
     return false;
   }
   }
 }
+
+/// Return true if "fcmp Pred LHS RHS" is always true.
+bool isTrueFPPredicate(CmpInst::Predicate Pred, const Value *LHS,
+                       const Value *RHS,
+                       const Instruction *ContextI = nullptr) {
+  if (LHS->getType() != RHS->getType())
+    return false;
+
+  if (Pred == CmpInst::FCMP_TRUE)
+    return true;
+
+  const bool CanEqual = CmpInst::isTrueWhenEqual(Pred);
+  if (CanEqual && LHS == RHS)
+    return true;
+
+  switch (Pred) {
+  default:
+    break;
+  case CmpInst::FCMP_OGE:
+    return isTrueFPPredicate(FCmpInst::FCMP_OLE, RHS, LHS, ContextI);
+  case CmpInst::FCMP_UGE:
+    return isTrueFPPredicate(FCmpInst::FCMP_ULE, RHS, LHS, ContextI);
+  }
+
+  if (CmpInst::isUnordered(Pred) &&
+      (match(LHS, m_NaN()) || match(RHS, m_NaN())))
+    return true;
+
+  const APFloat *CLHS = nullptr, *CRHS = nullptr;
+  match(LHS, m_APFloat(CLHS));
+  match(RHS, m_APFloat(CRHS));
+  const Function *CxtF = ContextI ? ContextI->getFunction() : nullptr;
+  if (CLHS && CRHS)
+    return compareFloat(Pred, *CLHS, *CRHS, CxtF);
+
+  const Value *X = nullptr;
+  PatternKind PK =
+      classifyCmpPatternAndAnchorConstants(Pred, X, LHS, RHS, CLHS, CRHS, CxtF);
+  if (PK == MATCH_NONE)
+    return false;
+
+  // max(NaN, x) --> x
+  auto MatchOrderedFMax = [](const Value *V) -> bool {
+    return match(V, m_FMaxNum(m_Value(), m_Value())) ||
+           match(V, m_FMaximumNum(m_Value(), m_Value()));
+  };
+  // min(NaN, x) --> x
+  auto MatchOrderedFMin = [](const Value *V) -> bool {
+    return match(V, m_FMinNum(m_Value(), m_Value())) ||
+           match(V, m_FMinimumNum(m_Value(), m_Value()));
+  };
+  auto MatchFMax = [MatchOrderedFMax](const Value *V) -> bool {
+    return match(V, m_OrdOrUnordFMax(m_Value(), m_Value())) ||
+           match(V, m_FMaximum(m_Value(), m_Value())) || MatchOrderedFMax(V);
+  };
+  auto MatchFMin = [MatchOrderedFMin](const Value *V) -> bool {
+    return match(V, m_OrdOrUnordFMin(m_Value(), m_Value())) ||
+           match(V, m_FMinimum(m_Value(), m_Value())) || MatchOrderedFMin(V);
+  };
+
+  switch (Pred) {
+  default:
+    return false;
+
+  case CmpInst::FCMP_OGT:
+  case CmpInst::FCMP_OLT:
+    // Hard to ensure NaN-free.
+    return false;
+  case CmpInst::FCMP_ORD:
+  case CmpInst::FCMP_OLE: {
+    const APFloat *C;
+    // C o<= omax(V, C) for any V (C = NaN should be folded before)
+    if (PK == MATCH_RHS && match(LHS, m_APFloat(C)) && MatchOrderedFMax(RHS)) {
+      assert(!C->isNaN() && "max(NaN, LHS) should be folded before");
+      return true;
+    }
+    // omin(V, C) o<= C for any V (C = NaN should be folded before)
+    if (PK == MATCH_LHS && match(RHS, m_APFloat(C)) && MatchOrderedFMin(LHS)) {
+      assert(!C->isNaN() && "min(NaN, RHS) should be folded before");
+      return true;
+    }
+
+    return false;
+  }
+
+  case CmpInst::FCMP_UGT:
+  case CmpInst::FCMP_ULT:
+    // Hard to prove due to precision reasons.
+    return false;
+
+  case CmpInst::FCMP_ULE: {
+    const APFloat *C;
+
+    if (PK == MATCH_RHS) {
+      // Category 1: LHS u<= (op LHS, ...)
+
+      // LHS u<= LHS + C if C >= 0 or C is NaN
+      if (match(RHS, m_c_FAdd(m_Specific(LHS), m_APFloat(C))))
+        return C->isNaN() || !C->isNegative() || C->isZero();
+      // LHS u<= LHS - C if C <= 0 or C is NaN
+      if (match(RHS, m_FSub(m_Specific(LHS), m_APFloat(C))))
+        return C->isNaN() || C->isNegative() || C->isZero();
+
+      // LHS u<= fmax(LHS, V) for any V
+      if (MatchFMax(RHS))
+        return true;
+    } else if (PK == MATCH_LHS) {
+      // Category 2: (op RHS, ...) u<= RHS
+      // RHS + C u<= RHS if C <= 0 or C is NaN
+      if (match(LHS, m_c_FAdd(m_Specific(RHS), m_APFloat(C))))
+        return C->isNaN() || C->isNegative() || C->isZero();
+      // RHS - C u<= RHS if C >= 0 or C is NaN
+      if (match(LHS, m_FSub(m_Specific(RHS), m_APFloat(C))))
+        return C->isNaN() || !C->isNegative() || C->isZero();
+      // fmin(RHS, V) u<= RHS for any V
+      if (MatchFMin(LHS))
+        return true;
+    } else if (PK == MATCH_BOTH) {
+      // Category 3: Match Pred (X op C1), (X op C2)
+      const APFloat *CLHS, *CRHS;
+
+      // (X + CA) u<= (X + CB) if CA u<= CB
+      if (match(LHS, m_c_FAdd(m_Specific(X), m_APFloat(CLHS))) &&
+          match(RHS, m_c_FAdd(m_Specific(X), m_APFloat(CRHS))))
+        return compareFloat(FCmpInst::FCMP_ULE, *CLHS, *CRHS, CxtF);
+      // (X - CA) u<= (X - CB) if CA u>= CB
+      if (match(LHS, m_FSub(m_Specific(X), m_APFloat(CLHS))) &&
+          match(RHS, m_FSub(m_Specific(X), m_APFloat(CRHS))))
+        return compareFloat(FCmpInst::FCMP_UGE, *CLHS, *CRHS, CxtF);
+
+      // LHS u<= X u<= RHS --> LHS u<= RHS
+      if (isTrueFPPredicate(CmpInst::FCMP_ULE, LHS, X) &&
+          isTrueFPPredicate(CmpInst::FCMP_ULE, X, RHS))
+        return true;
+    }
+
+    return false;
+  }
+  }
+}
+
+/// Return true if "cmp Pred LHS RHS" is always true.
+/// This function only matches simple patterns and does not use Known* APIs.
+bool isTruePredicate(CmpInst::Predicate Pred, const Value *LHS,
+                     const Value *RHS, const Instruction *ContextI = nullptr) {
+  if (CmpInst::isIntPredicate(Pred))
+    return isTrueIntPredicate(Pred, LHS, RHS);
+  if (CmpInst::isFPPredicate(Pred))
+    return isTrueFPPredicate(Pred, LHS, RHS, ContextI);
+  return false;
+}
+
+} // namespace
 
 /// Return true if "icmp Pred BLHS BRHS" is true whenever "icmp Pred
 /// ALHS ARHS" is true.  Otherwise, return std::nullopt.
@@ -9570,29 +10055,29 @@ isImpliedCondOperands(CmpInst::Predicate Pred, const Value *ALHS,
 
   case CmpInst::ICMP_SLT:
   case CmpInst::ICMP_SLE:
-    if (isTruePredicate(CmpInst::ICMP_SLE, BLHS, ALHS) &&
-        isTruePredicate(CmpInst::ICMP_SLE, ARHS, BRHS))
+    if (isTrueIntPredicate(CmpInst::ICMP_SLE, BLHS, ALHS) &&
+        isTrueIntPredicate(CmpInst::ICMP_SLE, ARHS, BRHS))
       return true;
     return std::nullopt;
 
   case CmpInst::ICMP_SGT:
   case CmpInst::ICMP_SGE:
-    if (isTruePredicate(CmpInst::ICMP_SLE, ALHS, BLHS) &&
-        isTruePredicate(CmpInst::ICMP_SLE, BRHS, ARHS))
+    if (isTrueIntPredicate(CmpInst::ICMP_SLE, ALHS, BLHS) &&
+        isTrueIntPredicate(CmpInst::ICMP_SLE, BRHS, ARHS))
       return true;
     return std::nullopt;
 
   case CmpInst::ICMP_ULT:
   case CmpInst::ICMP_ULE:
-    if (isTruePredicate(CmpInst::ICMP_ULE, BLHS, ALHS) &&
-        isTruePredicate(CmpInst::ICMP_ULE, ARHS, BRHS))
+    if (isTrueIntPredicate(CmpInst::ICMP_ULE, BLHS, ALHS) &&
+        isTrueIntPredicate(CmpInst::ICMP_ULE, ARHS, BRHS))
       return true;
     return std::nullopt;
 
   case CmpInst::ICMP_UGT:
   case CmpInst::ICMP_UGE:
-    if (isTruePredicate(CmpInst::ICMP_ULE, ALHS, BLHS) &&
-        isTruePredicate(CmpInst::ICMP_ULE, BRHS, ARHS))
+    if (isTrueIntPredicate(CmpInst::ICMP_ULE, ALHS, BLHS) &&
+        isTrueIntPredicate(CmpInst::ICMP_ULE, BRHS, ARHS))
       return true;
     return std::nullopt;
   }
@@ -9994,6 +10479,13 @@ std::optional<bool> llvm::isImpliedByDomCondition(CmpPredicate Pred,
                                                   const Value *RHS,
                                                   const Instruction *ContextI,
                                                   const DataLayout &DL) {
+  // Check Pred, LHS, RHS just by data relation, e.g., x < max(x, y)
+  if (isTruePredicate(Pred, LHS, RHS, ContextI))
+    return true;
+  if (isTruePredicate(CmpInst::getInversePredicate(Pred), LHS, RHS, ContextI))
+    return false;
+
+  // Check Pred, LHS, RHS by dom condition.
   auto PredCond = getDomPredecessorCondition(ContextI);
   if (PredCond.first)
     return isImpliedCondition(PredCond.first, Pred, LHS, RHS, DL,

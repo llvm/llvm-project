@@ -3,6 +3,8 @@
 ; RUN: opt < %s -passes=instcombine -use-constant-int-for-fixed-length-splat -S | FileCheck %s
 
 declare void @use(i32)
+declare i64 @llvm.smin.i64(i64, i64)
+declare i64 @llvm.smax.i64(i64, i64)
 
 define i32 @test1(i32 %A) {
 ; CHECK-LABEL: @test1(
@@ -377,6 +379,34 @@ define i32 @test26(i32 %a) {
   %mul = mul nsw i32 %a, 12
   %div = sdiv i32 %mul, 3
   ret i32 %div
+}
+
+define i64 @sdiv_shl_nonneg_from_sub_smin(i64 %a, i64 %b) {
+; CHECK-LABEL: @sdiv_shl_nonneg_from_sub_smin(
+; CHECK-NEXT:    [[M:%.*]] = call i64 @llvm.smin.i64(i64 [[B:%.*]], i64 [[A:%.*]])
+; CHECK-NEXT:    [[X:%.*]] = sub nsw i64 [[A]], [[M]]
+; CHECK-NEXT:    [[R:%.*]] = and i64 [[X]], -4
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %m = call i64 @llvm.smin.i64(i64 %b, i64 %a)
+  %x = sub nsw i64 %a, %m
+  %d = sdiv i64 %x, 4
+  %s = shl nsw i64 %d, 2
+  ret i64 %s
+}
+
+define i64 @sdiv_shl_nonneg_from_sub_smax(i64 %a, i64 %b) {
+; CHECK-LABEL: @sdiv_shl_nonneg_from_sub_smax(
+; CHECK-NEXT:    [[M:%.*]] = call i64 @llvm.smax.i64(i64 [[A:%.*]], i64 [[B:%.*]])
+; CHECK-NEXT:    [[X:%.*]] = sub nsw i64 [[M]], [[A]]
+; CHECK-NEXT:    [[R:%.*]] = and i64 [[X]], -4
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %m = call i64 @llvm.smax.i64(i64 %a, i64 %b)
+  %x = sub nsw i64 %m, %a
+  %d = sdiv i64 %x, 4
+  %s = shl nsw i64 %d, 2
+  ret i64 %s
 }
 
 define i32 @test27(i32 %a) {

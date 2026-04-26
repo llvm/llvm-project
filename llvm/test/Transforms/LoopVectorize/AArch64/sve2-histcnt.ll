@@ -254,7 +254,7 @@ define void @histogram_8bit(ptr noalias %buckets, ptr readonly %indices, i64 %N)
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw nsw i64 [[TMP3]], 4
 ; CHECK-NEXT:    [[DOTNOT:%.*]] = add nsw i64 [[TMP4]], -1
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], [[DOTNOT]]
-; CHECK-NEXT:    [[N_VEC1:%.*]] = sub i64 [[N]], [[N_VEC]]
+; CHECK-NEXT:    [[N_VEC1:%.*]] = sub nuw i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]

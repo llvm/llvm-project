@@ -2648,6 +2648,165 @@ TEST_F(ValueTrackingTest, IsImpliedConditionOr2) {
   EXPECT_EQ(isImpliedCondition(A, A4, DL, false), std::nullopt);
 }
 
+TEST_F(ValueTrackingTest, IsImpliedConditionDoesNotInferFromUnrelatedPatterns) {
+  parseAssembly(R"(
+    declare i32 @llvm.smax.i32(i32, i32)
+    declare i32 @llvm.smin.i32(i32, i32)
+    declare i32 @llvm.umax.i32(i32, i32)
+    declare i32 @llvm.umin.i32(i32, i32)
+
+    define void @test(i32 %w, i32 %x, i32 %y, i32 %z) {
+      %A = icmp sle i32 %w, %x
+      %smax = call i32 @llvm.smax.i32(i32 %y, i32 %z)
+      %A2 = icmp sle i32 %x, %smax
+      %smin = call i32 @llvm.smin.i32(i32 %y, i32 %z)
+      %A3 = icmp sle i32 %smin, %x
+      %umax = call i32 @llvm.umax.i32(i32 %y, i32 %z)
+      %A4 = icmp ule i32 %x, %umax
+      %and = and i32 %y, %z
+      %A5 = icmp ule i32 %and, %x
+      %umin = call i32 @llvm.umin.i32(i32 %y, i32 %z)
+      %A6 = icmp ule i32 %umin, %x
+      %shl1 = shl i32 %x, 1
+      %shl2 = shl i32 %x, 2
+      %A7 = icmp ule i32 %shl1, %shl2
+      ret void
+    }
+  )");
+  const DataLayout &DL = M->getDataLayout();
+
+  for (Instruction *Cmp : {A2, A3, A4, A5, A6, A7})
+    EXPECT_EQ(isImpliedCondition(A, Cmp, DL), std::nullopt);
+}
+
+TEST_F(ValueTrackingTest,
+       IsImpliedByDomConditionOrderedFPDistinguishesMaximum) {
+  parseAssembly(R"(
+    declare float @llvm.maxnum.f32(float, float)
+    declare float @llvm.maximum.f32(float, float)
+    declare float @llvm.maximumnum.f32(float, float)
+    declare float @llvm.minnum.f32(float, float)
+    declare float @llvm.minimum.f32(float, float)
+    declare float @llvm.minimumnum.f32(float, float)
+
+    define void @test(float %y) {
+    entry:
+      %maxnum = call float @llvm.maxnum.f32(float 4.000000e+00, float %y)
+      %A = fcmp ole float 4.000000e+00, %maxnum
+      %maximum = call float @llvm.maximum.f32(float 4.000000e+00, float %y)
+      %A2 = fcmp ole float 4.000000e+00, %maximum
+      %maximumnum = call float @llvm.maximumnum.f32(float 4.000000e+00, float %y)
+      %A3 = fcmp ole float 4.000000e+00, %maximumnum
+
+      %minnum = call float @llvm.minnum.f32(float 4.000000e+00, float %y)
+      %A4 = fcmp oge float 4.000000e+00, %minnum
+      %minimum = call float @llvm.minimum.f32(float 4.000000e+00, float %y)
+      %A5 = fcmp oge float 4.000000e+00, %minimum
+      %minimumnum = call float @llvm.minimumnum.f32(float 4.000000e+00, float %y)
+      %A6 = fcmp oge float 4.000000e+00, %minimumnum
+      ret void
+    }
+  )");
+  const DataLayout &DL = M->getDataLayout();
+
+  EXPECT_EQ(isImpliedCondition(A, A, DL), true);
+  EXPECT_EQ(isImpliedByDomCondition(cast<FCmpInst>(A)->getPredicate(),
+                                    cast<FCmpInst>(A)->getOperand(0),
+                                    cast<FCmpInst>(A)->getOperand(1),
+                                    cast<Instruction>(A), DL),
+            true);
+
+  EXPECT_EQ(isImpliedCondition(A2, A2, DL), true);
+  EXPECT_EQ(isImpliedByDomCondition(cast<FCmpInst>(A2)->getPredicate(),
+                                    cast<FCmpInst>(A2)->getOperand(0),
+                                    cast<FCmpInst>(A2)->getOperand(1),
+                                    cast<Instruction>(A2), DL),
+            std::nullopt);
+
+  EXPECT_EQ(isImpliedByDomCondition(cast<FCmpInst>(A3)->getPredicate(),
+                                    cast<FCmpInst>(A3)->getOperand(0),
+                                    cast<FCmpInst>(A3)->getOperand(1),
+                                    cast<Instruction>(A3), DL),
+            true);
+  EXPECT_EQ(isImpliedByDomCondition(cast<FCmpInst>(A4)->getPredicate(),
+                                    cast<FCmpInst>(A4)->getOperand(0),
+                                    cast<FCmpInst>(A4)->getOperand(1),
+                                    cast<Instruction>(A4), DL),
+            true);
+  EXPECT_EQ(isImpliedByDomCondition(cast<FCmpInst>(A5)->getPredicate(),
+                                    cast<FCmpInst>(A5)->getOperand(0),
+                                    cast<FCmpInst>(A5)->getOperand(1),
+                                    cast<Instruction>(A5), DL),
+            std::nullopt);
+  EXPECT_EQ(isImpliedByDomCondition(cast<FCmpInst>(A6)->getPredicate(),
+                                    cast<FCmpInst>(A6)->getOperand(0),
+                                    cast<FCmpInst>(A6)->getOperand(1),
+                                    cast<Instruction>(A6), DL),
+            true);
+}
+
+TEST_F(ValueTrackingTest,
+       IsImpliedByDomConditionUnorderedFPAcceptsAllFamilies) {
+  parseAssembly(R"(
+    declare float @llvm.maxnum.f32(float, float)
+    declare float @llvm.maximum.f32(float, float)
+    declare float @llvm.maximumnum.f32(float, float)
+    declare float @llvm.minnum.f32(float, float)
+    declare float @llvm.minimum.f32(float, float)
+    declare float @llvm.minimumnum.f32(float, float)
+
+    define void @test(float %x, float %y) {
+      %maxnum = call float @llvm.maxnum.f32(float %x, float %y)
+      %A = fcmp ule float %x, %maxnum
+      %maximum = call float @llvm.maximum.f32(float %x, float %y)
+      %A2 = fcmp ule float %x, %maximum
+      %maximumnum = call float @llvm.maximumnum.f32(float %x, float %y)
+      %A3 = fcmp ule float %x, %maximumnum
+
+      %minnum = call float @llvm.minnum.f32(float %x, float %y)
+      %A4 = fcmp uge float %x, %minnum
+      %minimum = call float @llvm.minimum.f32(float %x, float %y)
+      %A5 = fcmp uge float %x, %minimum
+      %minimumnum = call float @llvm.minimumnum.f32(float %x, float %y)
+      %A6 = fcmp uge float %x, %minimumnum
+      ret void
+    }
+  )");
+  const DataLayout &DL = M->getDataLayout();
+
+  for (Instruction *Cmp : {A, A2, A3, A4, A5, A6}) {
+    auto *FCmp = cast<FCmpInst>(Cmp);
+    EXPECT_EQ(isImpliedByDomCondition(FCmp->getPredicate(), FCmp->getOperand(0),
+                                      FCmp->getOperand(1),
+                                      cast<Instruction>(Cmp), DL),
+              true);
+  }
+}
+
+TEST_F(ValueTrackingTest,
+       IsImpliedByDomConditionUnorderedFPSameOperandArithmetic) {
+  parseAssembly(R"(
+    define void @test(float %x) {
+      %add1 = fadd float %x, 1.000000e+00
+      %add2 = fadd float %x, 2.000000e+00
+      %A = fcmp ule float %add1, %add2
+      %sub1 = fsub float %x, 1.000000e+00
+      %sub2 = fsub float %x, 2.000000e+00
+      %A2 = fcmp uge float %sub1, %sub2
+      ret void
+    }
+  )");
+  const DataLayout &DL = M->getDataLayout();
+
+  for (Instruction *Cmp : {A, A2}) {
+    auto *FCmp = cast<FCmpInst>(Cmp);
+    EXPECT_EQ(isImpliedByDomCondition(FCmp->getPredicate(), FCmp->getOperand(0),
+                                      FCmp->getOperand(1),
+                                      cast<Instruction>(Cmp), DL),
+              true);
+  }
+}
+
 TEST_F(ComputeKnownBitsTest, KnownNonZeroShift) {
   // %q is known nonzero without known bits.
   // Because %q is nonzero, %A[0] is known to be zero.

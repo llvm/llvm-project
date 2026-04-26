@@ -599,3 +599,714 @@ define i1 @same_ops_with_constant_wrong_sign(i8 %x) {
 }
 
 declare void @llvm.assume(i1)
+
+; ============================================================================
+; Tests for new isTrueIntPredicate patterns (use i8 to speedup alive2)
+; ============================================================================
+
+; Signed patterns - Category 1: x compared to op(x)
+
+define i1 @sle_nsw_add_pos(i8 %x) {
+; CHECK-LABEL: @sle_nsw_add_pos(
+; CHECK-NEXT:    ret i1 true
+;
+  %add = add nsw i8 %x, 5
+  %cmp = icmp sle i8 %x, %add
+  ret i1 %cmp
+}
+
+define i1 @slt_nsw_add_pos(i8 %x) {
+; CHECK-LABEL: @slt_nsw_add_pos(
+; CHECK-NEXT:    ret i1 true
+;
+  %add = add nsw i8 %x, 5
+  %cmp = icmp slt i8 %x, %add
+  ret i1 %cmp
+}
+
+define i1 @sle_nsw_sub_neg(i8 %x) {
+; CHECK-LABEL: @sle_nsw_sub_neg(
+; CHECK-NEXT:    ret i1 true
+;
+  %sub = sub nsw i8 %x, 5
+  %cmp = icmp sle i8 %sub, %x
+  ret i1 %cmp
+}
+
+define i1 @slt_nsw_sub_neg(i8 %x) {
+; CHECK-LABEL: @slt_nsw_sub_neg(
+; CHECK-NEXT:    ret i1 true
+;
+  %sub = sub nsw i8 %x, 5
+  %cmp = icmp slt i8 %sub, %x
+  ret i1 %cmp
+}
+
+define i1 @sle_nsw_nuw_shl(i8 %x, i8 %y) {
+; CHECK-LABEL: @sle_nsw_nuw_shl(
+; CHECK-NEXT:    ret i1 true
+;
+  %shl = shl nsw nuw i8 %x, %y
+  %cmp = icmp sle i8 %x, %shl
+  ret i1 %cmp
+}
+
+define i1 @sle_nsw_sub_nonpos_rhs(i8 %x) {
+; CHECK-LABEL: @sle_nsw_sub_nonpos_rhs(
+; CHECK-NEXT:    ret i1 true
+;
+  %sub = sub nsw i8 %x, -5
+  %cmp = icmp sle i8 %x, %sub
+  ret i1 %cmp
+}
+
+define i1 @slt_nsw_sub_neg_rhs(i8 %x) {
+; CHECK-LABEL: @slt_nsw_sub_neg_rhs(
+; CHECK-NEXT:    ret i1 true
+;
+  %sub = sub nsw i8 %x, -5
+  %cmp = icmp slt i8 %x, %sub
+  ret i1 %cmp
+}
+
+define i1 @sle_or_pos(i8 %x) {
+; CHECK-LABEL: @sle_or_pos(
+; CHECK-NEXT:    ret i1 true
+;
+  %or = or i8 %x, 5
+  %cmp = icmp sle i8 %x, %or
+  ret i1 %cmp
+}
+
+define i1 @sle_smax(i8 %x, i8 %y) {
+; CHECK-LABEL: @sle_smax(
+; CHECK-NEXT:    ret i1 true
+;
+  %max = call i8 @llvm.smax.i8(i8 %x, i8 %y)
+  %cmp = icmp sle i8 %x, %max
+  ret i1 %cmp
+}
+
+define i1 @sgt_smax_const_operand(i8 %x) {
+; CHECK-LABEL: @sgt_smax_const_operand(
+; CHECK-NEXT:    ret i1 true
+;
+  %max = call i8 @llvm.smax.i8(i8 3, i8 %x)
+  %cmp = icmp sgt i8 %max, 2
+  ret i1 %cmp
+}
+
+define i1 @slt_smin_const_operand(i8 %x) {
+; CHECK-LABEL: @slt_smin_const_operand(
+; CHECK-NEXT:    ret i1 true
+;
+  %min = call i8 @llvm.smin.i8(i8 3, i8 %x)
+  %cmp = icmp slt i8 %min, 4
+  ret i1 %cmp
+}
+
+; Signed patterns - Category 2: op(x) compared to x
+
+define i1 @sle_nsw_add_neg_to_x(i8 %x) {
+; CHECK-LABEL: @sle_nsw_add_neg_to_x(
+; CHECK-NEXT:    ret i1 true
+;
+  %add = add nsw i8 %x, -5
+  %cmp = icmp sle i8 %add, %x
+  ret i1 %cmp
+}
+
+define i1 @sle_nsw_sub_pos_to_x(i8 %x) {
+; CHECK-LABEL: @sle_nsw_sub_pos_to_x(
+; CHECK-NEXT:    ret i1 true
+;
+  %sub = sub nsw i8 %x, 5
+  %cmp = icmp sle i8 %sub, %x
+  ret i1 %cmp
+}
+
+define i1 @sle_and_neg_to_x(i8 %x) {
+; CHECK-LABEL: @sle_and_neg_to_x(
+; CHECK-NEXT:    ret i1 true
+;
+  %and = and i8 %x, -5
+  %cmp = icmp sle i8 %and, %x
+  ret i1 %cmp
+}
+
+define i1 @sle_smin_to_x(i8 %x, i8 %y) {
+; CHECK-LABEL: @sle_smin_to_x(
+; CHECK-NEXT:    ret i1 true
+;
+  %min = call i8 @llvm.smin.i8(i8 %x, i8 %y)
+  %cmp = icmp sle i8 %min, %x
+  ret i1 %cmp
+}
+
+define i1 @slt_nsw_add_neg_to_x(i8 %x) {
+; CHECK-LABEL: @slt_nsw_add_neg_to_x(
+; CHECK-NEXT:    ret i1 true
+;
+  %add = add nsw i8 %x, -5
+  %cmp = icmp slt i8 %add, %x
+  ret i1 %cmp
+}
+
+; Signed patterns - Category 3: op(x, C1) compared to op(x, C2)
+
+define i1 @sle_nsw_add_add(i8 %x) {
+; CHECK-LABEL: @sle_nsw_add_add(
+; CHECK-NEXT:    ret i1 true
+;
+  %add1 = add nsw i8 %x, 3
+  %add2 = add nsw i8 %x, 7
+  %cmp = icmp sle i8 %add1, %add2
+  ret i1 %cmp
+}
+
+define i1 @slt_nsw_add_add(i8 %x) {
+; CHECK-LABEL: @slt_nsw_add_add(
+; CHECK-NEXT:    ret i1 true
+;
+  %add1 = add nsw i8 %x, 3
+  %add2 = add nsw i8 %x, 7
+  %cmp = icmp slt i8 %add1, %add2
+  ret i1 %cmp
+}
+
+define i1 @sle_nsw_sub_sub(i8 %x) {
+; CHECK-LABEL: @sle_nsw_sub_sub(
+; CHECK-NEXT:    ret i1 true
+;
+  %sub1 = sub nsw i8 %x, 7
+  %sub2 = sub nsw i8 %x, 3
+  %cmp = icmp sle i8 %sub1, %sub2
+  ret i1 %cmp
+}
+
+define i1 @sle_nsw_nuw_shl_shl(i8 %x) {
+; CHECK-LABEL: @sle_nsw_nuw_shl_shl(
+; CHECK-NEXT:    ret i1 true
+;
+  %shl1 = shl nsw nuw i8 %x, 2
+  %shl2 = shl nsw nuw i8 %x, 5
+  %cmp = icmp sle i8 %shl1, %shl2
+  ret i1 %cmp
+}
+
+define i1 @sle_lshr_lshr_signed(i8 %x) {
+; CHECK-LABEL: @sle_lshr_lshr_signed(
+; CHECK-NEXT:    ret i1 true
+;
+  %shr1 = lshr i8 %x, 5
+  %shr2 = lshr i8 %x, 2
+  %cmp = icmp sle i8 %shr1, %shr2
+  ret i1 %cmp
+}
+
+define i1 @sle_transitive_through_x(i8 %x) {
+; CHECK-LABEL: @sle_transitive_through_x(
+; CHECK-NEXT:    ret i1 true
+;
+  %sub = sub nsw i8 %x, 1
+  %add = add nsw i8 %x, 1
+  %cmp = icmp sle i8 %sub, %add
+  ret i1 %cmp
+}
+
+; Unsigned patterns - Category 1: x compared to op(x)
+
+define i1 @ule_nuw_add(i8 %x, i8 %y) {
+; CHECK-LABEL: @ule_nuw_add(
+; CHECK-NEXT:    ret i1 true
+;
+  %add = add nuw i8 %x, %y
+  %cmp = icmp ule i8 %x, %add
+  ret i1 %cmp
+}
+
+define i1 @ult_nuw_add(i8 %x) {
+; CHECK-LABEL: @ult_nuw_add(
+; CHECK-NEXT:    ret i1 true
+;
+  %add = add nuw i8 %x, 5
+  %cmp = icmp ult i8 %x, %add
+  ret i1 %cmp
+}
+
+define i1 @ule_nuw_mul(i8 %x) {
+; CHECK-LABEL: @ule_nuw_mul(
+; CHECK-NEXT:    ret i1 true
+;
+  %mul = mul nuw i8 %x, 3
+  %cmp = icmp ule i8 %x, %mul
+  ret i1 %cmp
+}
+
+define i1 @ule_or(i8 %x, i8 %y) {
+; CHECK-LABEL: @ule_or(
+; CHECK-NEXT:    ret i1 true
+;
+  %or = or i8 %x, %y
+  %cmp = icmp ule i8 %x, %or
+  ret i1 %cmp
+}
+
+define i1 @ule_nuw_shl(i8 %x, i8 %y) {
+; CHECK-LABEL: @ule_nuw_shl(
+; CHECK-NEXT:    ret i1 true
+;
+  %shl = shl nuw i8 %x, %y
+  %cmp = icmp ule i8 %x, %shl
+  ret i1 %cmp
+}
+
+define i1 @ult_nuw_shl_const(i8 %x, i8 %y) {
+; CHECK-LABEL: @ult_nuw_shl_const(
+; CHECK-NEXT:    ret i1 true
+;
+  %shl = shl nuw i8 3, %x
+  %cmp = icmp ult i8 %x, %shl
+  ret i1 %cmp
+}
+
+define i1 @ult_disjoint_or(i8 %x) {
+; CHECK-LABEL: @ult_disjoint_or(
+; CHECK-NEXT:    ret i1 true
+;
+  %or = or disjoint i8 %x, 5
+  %cmp = icmp ult i8 %x, %or
+  ret i1 %cmp
+}
+
+define i1 @ule_umax(i8 %x, i8 %y) {
+; CHECK-LABEL: @ule_umax(
+; CHECK-NEXT:    ret i1 true
+;
+  %max = call i8 @llvm.umax.i8(i8 %x, i8 %y)
+  %cmp = icmp ule i8 %x, %max
+  ret i1 %cmp
+}
+
+; Unsigned patterns - Category 2: op(x) compared to x
+
+define i1 @ule_nuw_sub_to_x(i8 %x, i8 %y) {
+; CHECK-LABEL: @ule_nuw_sub_to_x(
+; CHECK-NEXT:    ret i1 true
+;
+  %sub = sub nuw i8 %x, %y
+  %cmp = icmp ule i8 %sub, %x
+  ret i1 %cmp
+}
+
+define i1 @ult_nuw_sub_to_x_const(i8 %x) {
+; CHECK-LABEL: @ult_nuw_sub_to_x_const(
+; CHECK-NEXT:    ret i1 true
+;
+  %sub = sub nuw i8 %x, 5
+  %cmp = icmp ult i8 %sub, %x
+  ret i1 %cmp
+}
+
+
+define i1 @ule_lshr_to_x(i8 %x, i8 %y) {
+; CHECK-LABEL: @ule_lshr_to_x(
+; CHECK-NEXT:    ret i1 true
+;
+  %shr = lshr i8 %x, %y
+  %cmp = icmp ule i8 %shr, %x
+  ret i1 %cmp
+}
+
+define i1 @ule_udiv_to_x(i8 %x, i8 %y) {
+; CHECK-LABEL: @ule_udiv_to_x(
+; CHECK-NEXT:    ret i1 true
+;
+  %div = udiv i8 %x, %y
+  %cmp = icmp ule i8 %div, %x
+  ret i1 %cmp
+}
+
+define i1 @ule_urem_to_x(i8 %x, i8 %y) {
+; CHECK-LABEL: @ule_urem_to_x(
+; CHECK-NEXT:    ret i1 true
+;
+  %rem = urem i8 %x, %y
+  %cmp = icmp ule i8 %rem, %x
+  ret i1 %cmp
+}
+
+define i1 @ult_urem_of_x(i8 %x, i8 %y) {
+; CHECK-LABEL: @ult_urem_of_x(
+; CHECK-NEXT:    ret i1 true
+;
+  %rem = urem i8 %y, %x
+  %cmp = icmp ult i8 %rem, %x
+  ret i1 %cmp
+}
+
+define i1 @ule_and_to_x(i8 %x, i8 %y) {
+; CHECK-LABEL: @ule_and_to_x(
+; CHECK-NEXT:    ret i1 true
+;
+  %and = and i8 %x, %y
+  %cmp = icmp ule i8 %and, %x
+  ret i1 %cmp
+}
+
+define i1 @ule_umin_to_x(i8 %x, i8 %y) {
+; CHECK-LABEL: @ule_umin_to_x(
+; CHECK-NEXT:    ret i1 true
+;
+  %min = call i8 @llvm.umin.i8(i8 %x, i8 %y)
+  %cmp = icmp ule i8 %min, %x
+  ret i1 %cmp
+}
+
+; Unsigned patterns - Category 3: op(x, C1) compared to op(x, C2)
+
+define i1 @ule_nuw_add_add(i8 %x) {
+; CHECK-LABEL: @ule_nuw_add_add(
+; CHECK-NEXT:    ret i1 true
+;
+  %add1 = add nuw i8 %x, 3
+  %add2 = add nuw i8 %x, 7
+  %cmp = icmp ule i8 %add1, %add2
+  ret i1 %cmp
+}
+
+define i1 @ult_nuw_add_add(i8 %x) {
+; CHECK-LABEL: @ult_nuw_add_add(
+; CHECK-NEXT:    ret i1 true
+;
+  %add1 = add nuw i8 %x, 3
+  %add2 = add nuw i8 %x, 7
+  %cmp = icmp ult i8 %add1, %add2
+  ret i1 %cmp
+}
+
+define i1 @ule_nuw_mul_mul(i8 %x) {
+; CHECK-LABEL: @ule_nuw_mul_mul(
+; CHECK-NEXT:    ret i1 true
+;
+  %mul1 = mul nuw i8 %x, 3
+  %mul2 = mul nuw i8 %x, 7
+  %cmp = icmp ule i8 %mul1, %mul2
+  ret i1 %cmp
+}
+
+define i1 @ule_nuw_shl_shl(i8 %x) {
+; CHECK-LABEL: @ule_nuw_shl_shl(
+; CHECK-NEXT:    ret i1 true
+;
+  %shl1 = shl nuw i8 %x, 2
+  %shl2 = shl nuw i8 %x, 5
+  %cmp = icmp ule i8 %shl1, %shl2
+  ret i1 %cmp
+}
+
+define i1 @ule_nuw_sub_sub(i8 %x) {
+; CHECK-LABEL: @ule_nuw_sub_sub(
+; CHECK-NEXT:    ret i1 true
+;
+  %sub1 = sub nuw i8 %x, 7
+  %sub2 = sub nuw i8 %x, 3
+  %cmp = icmp ule i8 %sub1, %sub2
+  ret i1 %cmp
+}
+
+define i1 @ule_udiv_udiv(i8 %x) {
+; CHECK-LABEL: @ule_udiv_udiv(
+; CHECK-NEXT:    ret i1 true
+;
+  %div1 = udiv i8 %x, 7
+  %div2 = udiv i8 %x, 3
+  %cmp = icmp ule i8 %div1, %div2
+  ret i1 %cmp
+}
+
+define i1 @ule_lshr_lshr(i8 %x) {
+; CHECK-LABEL: @ule_lshr_lshr(
+; CHECK-NEXT:    ret i1 true
+;
+  %shr1 = lshr i8 %x, 5
+  %shr2 = lshr i8 %x, 2
+  %cmp = icmp ule i8 %shr1, %shr2
+  ret i1 %cmp
+}
+
+define i1 @ule_transitive_through_x(i8 %x) {
+; CHECK-LABEL: @ule_transitive_through_x(
+; CHECK-NEXT:    ret i1 true
+;
+  %sub = sub nuw i8 %x, 1
+  %add = add nuw i8 %x, 1
+  %cmp = icmp ule i8 %sub, %add
+  ret i1 %cmp
+}
+
+
+; ============================================================================
+; Tests for isTrueFPPredicate patterns
+; ============================================================================
+
+define i1 @fp_ule_fadd_pos(float %x) {
+; CHECK-LABEL: @fp_ule_fadd_pos(
+; CHECK-NEXT:    ret i1 true
+;
+  %add = fadd float %x, 5.000000e+00
+  %cmp = fcmp ule float %x, %add
+  ret i1 %cmp
+}
+
+define i1 @fp_uge_fsub_pos(float %x) {
+; CHECK-LABEL: @fp_uge_fsub_pos(
+; CHECK-NEXT:    ret i1 true
+;
+  %sub = fsub float %x, 5.000000e+00
+  %cmp = fcmp uge float %x, %sub
+  ret i1 %cmp
+}
+
+define i1 @fp_ule_maximumnum(float %x, float %y) {
+; CHECK-LABEL: @fp_ule_maximumnum(
+; CHECK-NEXT:    ret i1 true
+;
+  %max = call float @llvm.maximumnum.f32(float %x, float %y)
+  %cmp = fcmp ule float %x, %max
+  ret i1 %cmp
+}
+
+define i1 @fp_ule_maxnum(float %x, float %y) {
+; CHECK-LABEL: @fp_ule_maxnum(
+; CHECK-NEXT:    ret i1 true
+;
+  %max = call float @llvm.maxnum.f32(float %x, float %y)
+  %cmp = fcmp ule float %x, %max
+  ret i1 %cmp
+}
+
+define i1 @fp_ule_maximum(float %x, float %y) {
+; CHECK-LABEL: @fp_ule_maximum(
+; CHECK-NEXT:    ret i1 true
+;
+  %max = call float @llvm.maximum.f32(float %x, float %y)
+  %cmp = fcmp ule float %x, %max
+  ret i1 %cmp
+}
+
+define i1 @fp_uge_minimumnum(float %x, float %y) {
+; CHECK-LABEL: @fp_uge_minimumnum(
+; CHECK-NEXT:    ret i1 true
+;
+  %min = call float @llvm.minimumnum.f32(float %x, float %y)
+  %cmp = fcmp uge float %x, %min
+  ret i1 %cmp
+}
+
+define i1 @fp_uge_minnum(float %x, float %y) {
+; CHECK-LABEL: @fp_uge_minnum(
+; CHECK-NEXT:    ret i1 true
+;
+  %min = call float @llvm.minnum.f32(float %x, float %y)
+  %cmp = fcmp uge float %x, %min
+  ret i1 %cmp
+}
+
+define i1 @fp_uge_minimum(float %x, float %y) {
+; CHECK-LABEL: @fp_uge_minimum(
+; CHECK-NEXT:    ret i1 true
+;
+  %min = call float @llvm.minimum.f32(float %x, float %y)
+  %cmp = fcmp uge float %x, %min
+  ret i1 %cmp
+}
+
+define i1 @fp_ole_const_maximumnum(float %y) {
+; CHECK-LABEL: @fp_ole_const_maximumnum(
+; CHECK-NEXT:    ret i1 true
+;
+  %max = call float @llvm.maximumnum.f32(float 4.000000e+00, float %y)
+  %cmp = fcmp ole float 4.000000e+00, %max
+  ret i1 %cmp
+}
+
+define i1 @fp_ole_const_maxnum(float %y) {
+; CHECK-LABEL: @fp_ole_const_maxnum(
+; CHECK-NEXT:    ret i1 true
+;
+  %max = call float @llvm.maxnum.f32(float 4.000000e+00, float %y)
+  %cmp = fcmp ole float 4.000000e+00, %max
+  ret i1 %cmp
+}
+
+define i1 @fp_ole_smaller_const_maxnum(float %y) {
+; CHECK-LABEL: @fp_ole_smaller_const_maxnum(
+; CHECK-NEXT:    ret i1 true
+;
+  %max = call float @llvm.maxnum.f32(float 3.000000e+00, float %y)
+  %cmp = fcmp ole float 2.000000e+00, %max
+  ret i1 %cmp
+}
+
+; maximum propagates NaN
+define i1 @fp_ole_const_maximum_neg(float %y) {
+; CHECK-LABEL: @fp_ole_const_maximum_neg(
+; CHECK-NEXT:    [[MAX:%.*]] = call float @llvm.maximum.f32(float 4.000000e+00, float [[Y:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ole float 4.000000e+00, [[MAX]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %max = call float @llvm.maximum.f32(float 4.000000e+00, float %y)
+  %cmp = fcmp ole float 4.000000e+00, %max
+  ret i1 %cmp
+}
+
+define i1 @fp_oge_const_minnum(float %y) {
+; CHECK-LABEL: @fp_oge_const_minnum(
+; CHECK-NEXT:    ret i1 true
+;
+  %min = call float @llvm.minnum.f32(float 4.000000e+00, float %y)
+  %cmp = fcmp oge float 4.000000e+00, %min
+  ret i1 %cmp
+}
+
+define i1 @fp_oge_larger_const_minnum(float %y) {
+; CHECK-LABEL: @fp_oge_larger_const_minnum(
+; CHECK-NEXT:    ret i1 true
+;
+  %min = call float @llvm.minnum.f32(float 3.000000e+00, float %y)
+  %cmp = fcmp oge float 4.000000e+00, %min
+  ret i1 %cmp
+}
+
+define i1 @fp_oge_const_minimumnum(float %y) {
+; CHECK-LABEL: @fp_oge_const_minimumnum(
+; CHECK-NEXT:    ret i1 true
+;
+  %min = call float @llvm.minimumnum.f32(float 4.000000e+00, float %y)
+  %cmp = fcmp oge float 4.000000e+00, %min
+  ret i1 %cmp
+}
+
+define i1 @fp_oge_const_minimum_neg(float %y) {
+; CHECK-LABEL: @fp_oge_const_minimum_neg(
+; CHECK-NEXT:    [[MIN:%.*]] = call float @llvm.minimum.f32(float 4.000000e+00, float [[Y:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge float 4.000000e+00, [[MIN]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %min = call float @llvm.minimum.f32(float 4.000000e+00, float %y)
+  %cmp = fcmp oge float 4.000000e+00, %min
+  ret i1 %cmp
+}
+
+define i1 @fp_uge_unrelated_maximumnum_neg(float %x, float %y, float %z) {
+; CHECK-LABEL: @fp_uge_unrelated_maximumnum_neg(
+; CHECK-NEXT:    [[MAX:%.*]] = call float @llvm.maximumnum.f32(float [[Y:%.*]], float [[Z:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uge float [[X:%.*]], [[MAX]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %max = call float @llvm.maximumnum.f32(float %y, float %z)
+  %cmp = fcmp uge float %x, %max
+  ret i1 %cmp
+}
+
+; ============================================================================
+; Negative tests - missing required flags
+; ============================================================================
+
+define i1 @sle_add_no_nsw_neg(i8 %x) {
+; CHECK-LABEL: @sle_add_no_nsw_neg(
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X:%.*]], 5
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i8 [[X]], [[ADD]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add = add i8 %x, 5
+  %cmp = icmp sle i8 %x, %add
+  ret i1 %cmp
+}
+
+define i1 @ule_add_no_nuw_neg(i8 %x) {
+; CHECK-LABEL: @ule_add_no_nuw_neg(
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X:%.*]], 5
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i8 [[X]], [[ADD]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add = add i8 %x, 5
+  %cmp = icmp ule i8 %x, %add
+  ret i1 %cmp
+}
+
+define i1 @ule_mul_no_nuw_neg(i8 %x) {
+; CHECK-LABEL: @ule_mul_no_nuw_neg(
+; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i8 [[X]], [[MUL]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = mul i8 %x, 3
+  %cmp = icmp ule i8 %x, %mul
+  ret i1 %cmp
+}
+
+define i1 @sle_nsw_shl_shl(i8 %x) {
+; CHECK-LABEL: @sle_nsw_shl_shl(
+; CHECK-NEXT:    [[SHL1:%.*]] = shl nsw i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[SHL2:%.*]] = shl nsw i8 [[X]], 5
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i8 [[SHL1]], [[SHL2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl1 = shl nsw i8 %x, 2
+  %shl2 = shl nsw i8 %x, 5
+  %cmp = icmp sle i8 %shl1, %shl2
+  ret i1 %cmp
+}
+
+define i1 @sle_nsw_shl(i8 %x, i8 %y) {
+; CHECK-LABEL: @sle_nsw_shl(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i8 [[X]], [[SHL]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl = shl nsw i8 %x, %y
+  %cmp = icmp sle i8 %x, %shl
+  ret i1 %cmp
+}
+
+; ============================================================================
+; Negative tests - wrong constant sign
+; ============================================================================
+
+
+define i1 @sle_or_neg_wrong(i8 %x) {
+; CHECK-LABEL: @sle_or_neg_wrong(
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X:%.*]], -5
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i8 [[X]], [[OR]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %or = or i8 %x, -5
+  %cmp = icmp sle i8 %x, %or
+  ret i1 %cmp
+}
+
+; X might be 0
+define i1 @ult_nuw_mul(i8 %x) {
+; CHECK-LABEL: @ult_nuw_mul(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[X]], [[MUL]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = mul nuw i8 %x, 3
+  %cmp = icmp ult i8 %x, %mul
+  ret i1 %cmp
+}
+
+
+declare i8 @llvm.smax.i8(i8, i8)
+declare i8 @llvm.smin.i8(i8, i8)
+declare i8 @llvm.umax.i8(i8, i8)
+declare i8 @llvm.umin.i8(i8, i8)
+declare float @llvm.maxnum.f32(float, float)
+declare float @llvm.maximum.f32(float, float)
+declare float @llvm.maximumnum.f32(float, float)
+declare float @llvm.minnum.f32(float, float)
+declare float @llvm.minimum.f32(float, float)
+declare float @llvm.minimumnum.f32(float, float)
