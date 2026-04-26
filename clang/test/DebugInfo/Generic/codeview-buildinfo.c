@@ -58,13 +58,23 @@ int main(void) { return 42; }
 // MESSAGELEN: 0x{{.+}} | LF_BUILDINFO [size = {{.+}}]
 // MESSAGELEN-NOT: -fmessage-length
 
-// The cmdline LF_STRING_ID quotes each cc1 arg, so a leaked source
-// positional appears as a quoted token. The FILEPATH LF_STRING_ID prints
-// the path without surrounding quotes, so it won't trigger the negative.
-// ABSPATH:     0x{{.+}} | LF_STRING_ID [size = {{.+}}] ID: <no type>, String: "-cc1
-// ABSPATH-NOT: "{{[^"]*[\\/]codeview-buildinfo\.c}}"
-// ABSPATH:     0x{{.+}} | LF_BUILDINFO [size = {{.+}}]
+// The cmdline is the 5th argument of LF_BUILDINFO. The source filename must
+// not appear inside its value (the SourceFile field, the 3rd argument, is
+// reserved for that).
+// ABSPATH:       0x{{.+}} | LF_BUILDINFO [size = {{.+}}]
+// ABSPATH-NEXT:           0x{{.*}}: `{{.*}}`
+// ABSPATH-NEXT:           0x{{.*}}: `{{.*}}`
+// ABSPATH-NEXT:           0x{{.*}}: `{{.+[\\/]codeview-buildinfo\.c}}`
+// ABSPATH-NEXT:           0x{{.*}}: ``
+// ABSPATH-NEXT:           0x{{.*}}: `
+// ABSPATH-NOT:   {{[^"]*[\\/]codeview-buildinfo\.c}}
+// ABSPATH-SAME:  `
 
-// RELPATH:     0x{{.+}} | LF_STRING_ID [size = {{.+}}] ID: <no type>, String: "-cc1
-// RELPATH-NOT: "hello.cpp"
-// RELPATH:     0x{{.+}} | LF_BUILDINFO [size = {{.+}}]
+// RELPATH:       0x{{.+}} | LF_BUILDINFO [size = {{.+}}]
+// RELPATH-NEXT:           0x{{.*}}: `{{.*}}`
+// RELPATH-NEXT:           0x{{.*}}: `{{.*}}`
+// RELPATH-NEXT:           0x{{.*}}: `{{.*hello\.cpp}}`
+// RELPATH-NEXT:           0x{{.*}}: ``
+// RELPATH-NEXT:           0x{{.*}}: `
+// RELPATH-NOT:   {{hello\.cpp}}
+// RELPATH-SAME:  `
