@@ -8376,4 +8376,90 @@ TEST_F(OpenMPIRBuilderTest, EmitOffloadingArraysNonContigCountExpression) {
   EXPECT_EQ(dyn_cast<AllocaInst>(RTArgs.SizesArray), nullptr);
 }
 
+TEST_F(OpenMPIRBuilderTest, ScopeDirective) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  F->setName("func");
+  IRBuilder<> Builder(BB);
+
+  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+
+  // Track the basic block where the body was emitted so we can find the
+  // barrier that scope must insert after the body.
+  BasicBlock *BodyBB = nullptr;
+  auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
+                       ArrayRef<BasicBlock *> DeallocBlocks) {
+    BodyBB = CodeGenIP.getBlock();
+    Builder.restoreIP(CodeGenIP);
+    // Emit a no-op store so the body block is non-empty.
+    Builder.CreateStore(Builder.getInt32(42),
+                        Builder.CreateAlloca(Builder.getInt32Ty()));
+  };
+
+  auto FiniCB = [&](InsertPointTy IP) {};
+
+  ASSERT_EXPECTED_INIT(InsertPointTy, AfterIP,
+                       OMPBuilder.createScope(Loc, BODYGENCB_WRAPPER(BodyGenCB),
+                                              FINICB_WRAPPER(FiniCB),
+                                              /*IsNowait=*/false));
+  Builder.restoreIP(AfterIP);
+  Builder.CreateRetVoid();
+  OMPBuilder.finalize();
+
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+
+  // Scope with IsNowait=false must emit a __kmpc_barrier after the body.
+  bool FoundBarrier = false;
+  for (BasicBlock &Block : *F) {
+    for (Instruction &I : Block) {
+      auto *CI = dyn_cast<CallInst>(&I);
+      if (CI && CI->getCalledFunction() &&
+          CI->getCalledFunction()->getName() == "__kmpc_barrier") {
+        FoundBarrier = true;
+        break;
+      }
+    }
+  }
+  EXPECT_TRUE(FoundBarrier);
+}
+
+TEST_F(OpenMPIRBuilderTest, ScopeDirectiveNowait) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  F->setName("func");
+  IRBuilder<> Builder(BB);
+
+  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+
+  auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
+                       ArrayRef<BasicBlock *> DeallocBlocks) {
+    Builder.restoreIP(CodeGenIP);
+    Builder.CreateStore(Builder.getInt32(42),
+                        Builder.CreateAlloca(Builder.getInt32Ty()));
+  };
+
+  auto FiniCB = [&](InsertPointTy IP) {};
+
+  ASSERT_EXPECTED_INIT(InsertPointTy, AfterIP,
+                       OMPBuilder.createScope(Loc, BODYGENCB_WRAPPER(BodyGenCB),
+                                              FINICB_WRAPPER(FiniCB),
+                                              /*IsNowait=*/true));
+  Builder.restoreIP(AfterIP);
+  Builder.CreateRetVoid();
+  OMPBuilder.finalize();
+
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+
+  // Scope with IsNowait=true must NOT emit any __kmpc_barrier.
+  for (BasicBlock &Block : *F) {
+    for (Instruction &I : Block) {
+      auto *CI = dyn_cast<CallInst>(&I);
+      if (CI && CI->getCalledFunction())
+        EXPECT_NE(CI->getCalledFunction()->getName(), "__kmpc_barrier");
+    }
+  }
+}
+
 } // namespace
