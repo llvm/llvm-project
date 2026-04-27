@@ -1526,7 +1526,7 @@ static void handleOwnershipAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     Module = &S.PP.getIdentifierTable().get(ModuleName);
   }
 
-  // Check if the new ownership_returns attribute does not contain
+  // Check if the new ownership_returns attribute does not contain 
   // an index, but previous attributes do.
   if (K == OwnershipAttr::Returns && AL.getNumArgs() == 1) {
     for (const auto *I : D->specific_attrs<OwnershipAttr>()) {
@@ -1580,7 +1580,7 @@ static void handleOwnershipAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       }
 
       if (K == OwnershipAttr::Returns &&
-          I->getOwnKind() == OwnershipAttr::Returns) {
+                 I->getOwnKind() == OwnershipAttr::Returns) {
         bool IHasArgs = I->args_size() > 0;
 
         if (!IHasArgs || !llvm::is_contained(I->args(), Idx)) {
