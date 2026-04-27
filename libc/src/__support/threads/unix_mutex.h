@@ -25,7 +25,9 @@ namespace LIBC_NAMESPACE_DECL {
 // TODO: support shared/recursive/robust mutexes.
 class Mutex final : private RawMutex {
   // Use bitfields to allow encoding more attributes.
-  // TODO: also track errorchecking mutex type explicitly?
+  // TODO: we may still need error checking or other flags and the robustness
+  //       and priority inheritance will need to be implemented.
+  //       See also https://github.com/llvm/llvm-project/issues/194396
   LIBC_PREFERED_TYPE(bool) unsigned int priority_inherit : 1;
   LIBC_PREFERED_TYPE(bool) unsigned int recursive : 1;
   LIBC_PREFERED_TYPE(bool) unsigned int robust : 1;
