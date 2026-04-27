@@ -347,7 +347,79 @@ std::optional<size_t> ConstantAggregateBuilder::splitAt(CharUnits pos) {
 /// Hint indicates the location at which we'd like to split, but may be
 /// ignored.
 bool ConstantAggregateBuilder::split(size_t index, CharUnits hint) {
-  cgm.errorNYI("split constant at index");
+  naturalLayout = false;
+  mlir::TypedAttr c = elements[index].element;
+  CharUnits offset = elements[index].offset;
+
+  if (auto constRecord = mlir::dyn_cast<cir::ConstRecordAttr>(c)) {
+    // Expand the record into its contained member elements.
+    auto recordTy = mlir::cast<cir::RecordType>(constRecord.getType());
+    mlir::ArrayAttr members = constRecord.getMembers();
+    unsigned numMembers = members.size();
+
+    SmallVector<Element> newElems;
+    newElems.reserve(numMembers);
+    for (unsigned i = 0; i < numMembers; ++i) {
+      auto memberAttr = mlir::cast<mlir::TypedAttr>(members[i]);
+      CharUnits memberOffset =
+          offset + CharUnits::fromQuantity(
+                       recordTy.getElementOffset(dataLayout.layout, i));
+      newElems.emplace_back(memberAttr, memberOffset);
+    }
+    replace(elements, index, index + 1, newElems);
+    return true;
+  }
+
+  if (auto constArray = mlir::dyn_cast<cir::ConstArrayAttr>(c)) {
+    // Expand the array into its contained elements.
+    auto arrayTy = mlir::cast<cir::ArrayType>(constArray.getType());
+    CharUnits elemSize = getSize(arrayTy.getElementType());
+
+    if (auto arrayAttr = mlir::dyn_cast<mlir::ArrayAttr>(constArray.getElts())) {
+      // Array with explicit elements (plus possible trailing zeros).
+      SmallVector<Element> newElems;
+      unsigned numExplicit = arrayAttr.size();
+      unsigned trailingZeros = constArray.getTrailingZerosNum();
+      newElems.reserve(numExplicit + trailingZeros);
+
+      for (unsigned i = 0; i < numExplicit; ++i) {
+        auto eltAttr = mlir::cast<mlir::TypedAttr>(arrayAttr[i]);
+        newElems.emplace_back(eltAttr, offset + i * elemSize);
+      }
+      // Expand trailing zeros as individual zero elements.
+      for (unsigned i = 0; i < trailingZeros; ++i) {
+        auto zeroAttr = mlir::cast<mlir::TypedAttr>(
+            cir::ZeroAttr::get(arrayTy.getElementType()));
+        newElems.emplace_back(zeroAttr, offset + (numExplicit + i) * elemSize);
+      }
+      replace(elements, index, index + 1, newElems);
+      return true;
+    }
+    // TODO: Handle StringAttr elements (char arrays) if needed.
+    return false;
+  }
+
+  if (mlir::isa<cir::ZeroAttr>(c)) {
+    // Split into two zeros at the hinted offset.
+    CharUnits elemSize = getSize(c);
+    assert(hint > offset && hint < offset + elemSize && "nothing to split");
+    // Create two byte-array padding elements to represent the two halves.
+    mlir::TypedAttr firstZero = getPadding(hint - offset);
+    mlir::TypedAttr secondZero = getPadding(offset + elemSize - hint);
+    SmallVector<Element> newElems;
+    newElems.emplace_back(firstZero, offset);
+    newElems.emplace_back(secondZero, hint);
+    replace(elements, index, index + 1, newElems);
+    return true;
+  }
+
+  if (mlir::isa<cir::UndefAttr>(c)) {
+    // Drop undef; it doesn't contribute to the final layout.
+    replace(elements, index, index + 1, SmallVector<Element>{});
+    return true;
+  }
+
+  // FIXME: We could split a cir::IntAttr if the need ever arose.
   return false;
 }
 
@@ -674,7 +746,7 @@ bool ConstRecordBuilder::build(InitListExpr *ile, bool allowOverwrite) {
       continue;
     }
 
-    if (zeroInitPadding &&
+    if (zeroInitPadding && !allowOverwrite &&
         !applyZeroInitPadding(layout, index, *field, allowOverwrite, sizeSoFar,
                               zeroFieldSize))
       return false;
@@ -730,7 +802,7 @@ bool ConstRecordBuilder::build(InitListExpr *ile, bool allowOverwrite) {
     }
   }
 
-  return !zeroInitPadding ||
+  return !zeroInitPadding || allowOverwrite ||
          applyZeroInitPadding(layout, allowOverwrite, sizeSoFar);
 }
 

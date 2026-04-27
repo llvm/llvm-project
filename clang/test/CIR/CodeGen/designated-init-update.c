@@ -34,3 +34,17 @@ struct Outer g3 = (struct Outer){{1, 2, 3}, 4, .inner.b = 50};
 // CIR: cir.global external @g3 = #cir.const_record<{#cir.const_record<{#cir.int<1> : !s32i, #cir.int<50> : !s32i, #cir.int<3> : !s32i}> : !rec_S, #cir.int<4> : !s32i}> : !rec_Outer
 // LLVM: @g3 = global %struct.Outer { %struct.S { i32 1, i32 50, i32 3 }, i32 4 }
 // OGCG: @g3 = global %struct.Outer { %struct.S { i32 1, i32 50, i32 3 }, i32 4 }
+
+// Compound literal as sub-object with later field override.
+// This produces a DesignatedInitUpdateExpr AST node (unlike the cases above
+// which Sema folds in-place) and exercises ConstantAggregateBuilder::split().
+struct P {
+  struct S s;
+  int x;
+};
+
+struct P g4 = { (struct S){1, 2, 3}, 4, .s.b = 9 };
+
+// CIR: cir.global external @g4 = #cir.const_record<{#cir.const_record<{#cir.int<1> : !s32i, #cir.int<9> : !s32i, #cir.int<3> : !s32i}> : !rec_S, #cir.int<4> : !s32i}> : !rec_P
+// LLVM: @g4 = global %struct.P { %struct.S { i32 1, i32 9, i32 3 }, i32 4 }
+// OGCG: @g4 = global %struct.P { %struct.S { i32 1, i32 9, i32 3 }, i32 4 }
