@@ -1142,8 +1142,7 @@ static const Symbol *FindUnsafeIoDirectComponent(common::DefinedIo which,
         if (const DeclTypeSpec * type{details->type()}) {
           if (type->category() == DeclTypeSpec::Category::TypeDerived) {
             const DerivedTypeSpec &componentDerived{type->derivedTypeSpec()};
-            if (const Symbol *
-                bad{FindUnsafeIoDirectComponent(
+            if (const Symbol *bad{FindUnsafeIoDirectComponent(
                     which, componentDerived, scope, inProgress)}) {
               return bad;
             }
@@ -1196,8 +1195,7 @@ static const Symbol *FindInaccessibleComponent(common::DefinedIo which,
             }
           }
           if (componentDerived) {
-            if (const Symbol *
-                bad{FindInaccessibleComponent(
+            if (const Symbol *bad{FindInaccessibleComponent(
                     which, *componentDerived, scope, inProgress)}) {
               return bad;
             }
