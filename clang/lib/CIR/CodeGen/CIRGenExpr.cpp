@@ -1062,7 +1062,8 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
 
   if (const auto *tpo = dyn_cast<TemplateParamObjectDecl>(nd)) {
     CharUnits alignment = cgm.getNaturalTypeAlignment(tpo->getType());
-    cir::GetGlobalOp atpo = cgm.getAddrOfTemplateParamObject(tpo);
+    cir::GetGlobalOp atpo =
+        builder.createGetGlobal(cgm.getAddrOfTemplateParamObject(tpo));
     assert(!MissingFeatures::addressSpace() &&
            "Do an address space conversion if necessary");
 
