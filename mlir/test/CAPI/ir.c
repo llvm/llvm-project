@@ -1495,7 +1495,7 @@ int printAffineMap(MlirContext ctx) {
   // CHECK: (d0, d1, d2) -> (d2)
 
   // CHECK: distinct[0]<"foo">
-  mlirAttributeDump(mlirDisctinctAttrCreate(
+  mlirAttributeDump(mlirDistinctAttrCreate(
       mlirStringAttrGet(ctx, mlirStringRefCreateFromCString("foo"))));
 
   return 0;
@@ -2469,29 +2469,29 @@ int testBlockPredecessorsSuccessors(MlirContext ctx) {
 #define FPRINTF_OP(OP, FMT) fprintf(stderr, #OP ": " FMT "\n", OP)
 
   // CHECK: mlirBlockGetNumPredecessors(entryBlock): 0
-  FPRINTF_OP(mlirBlockGetNumPredecessors(entryBlock), "%ld");
+  FPRINTF_OP(mlirBlockGetNumPredecessors(entryBlock), "%" PRIdPTR);
 
   // CHECK: mlirBlockGetNumSuccessors(entryBlock): 1
-  FPRINTF_OP(mlirBlockGetNumSuccessors(entryBlock), "%ld");
+  FPRINTF_OP(mlirBlockGetNumSuccessors(entryBlock), "%" PRIdPTR);
   // CHECK: mlirBlockEqual(middleBlock, mlirBlockGetSuccessor(entryBlock, 0)): 1
   FPRINTF_OP(mlirBlockEqual(middleBlock, mlirBlockGetSuccessor(entryBlock, 0)),
              "%d");
   // CHECK: mlirBlockGetNumPredecessors(middleBlock): 1
-  FPRINTF_OP(mlirBlockGetNumPredecessors(middleBlock), "%ld");
+  FPRINTF_OP(mlirBlockGetNumPredecessors(middleBlock), "%" PRIdPTR);
   // CHECK: mlirBlockEqual(entryBlock, mlirBlockGetPredecessor(middleBlock, 0))
   FPRINTF_OP(
       mlirBlockEqual(entryBlock, mlirBlockGetPredecessor(middleBlock, 0)),
       "%d");
 
   // CHECK: mlirBlockGetNumSuccessors(middleBlock): 1
-  FPRINTF_OP(mlirBlockGetNumSuccessors(middleBlock), "%ld");
+  FPRINTF_OP(mlirBlockGetNumSuccessors(middleBlock), "%" PRIdPTR);
   // CHECK: BlockEqual(successorBlock, mlirBlockGetSuccessor(middleBlock, 0)): 1
   fprintf(
       stderr,
       "BlockEqual(successorBlock, mlirBlockGetSuccessor(middleBlock, 0)): %d\n",
       mlirBlockEqual(successorBlock, mlirBlockGetSuccessor(middleBlock, 0)));
   // CHECK: mlirBlockGetNumPredecessors(successorBlock): 1
-  FPRINTF_OP(mlirBlockGetNumPredecessors(successorBlock), "%ld");
+  FPRINTF_OP(mlirBlockGetNumPredecessors(successorBlock), "%" PRIdPTR);
   // CHECK: Equal(middleBlock, mlirBlockGetPredecessor(successorBlock, 0)): 1
   fprintf(
       stderr,
@@ -2499,7 +2499,7 @@ int testBlockPredecessorsSuccessors(MlirContext ctx) {
       mlirBlockEqual(middleBlock, mlirBlockGetPredecessor(successorBlock, 0)));
 
   // CHECK: mlirBlockGetNumSuccessors(successorBlock): 0
-  FPRINTF_OP(mlirBlockGetNumSuccessors(successorBlock), "%ld");
+  FPRINTF_OP(mlirBlockGetNumSuccessors(successorBlock), "%" PRIdPTR);
 
 #undef FPRINTF_OP
 

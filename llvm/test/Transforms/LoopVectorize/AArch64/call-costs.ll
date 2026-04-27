@@ -14,7 +14,7 @@ define void @fshl_operand_first_order_recurrence(ptr %dst, ptr noalias %src) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <2 x i64> [ <i64 poison, i64 0>, %[[VECTOR_PH]] ], [ [[WIDE_LOAD1:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 2
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i64 2
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD1]] = load <2 x i64>, ptr [[TMP5]], align 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i64> [[VECTOR_RECUR]], <2 x i64> [[WIDE_LOAD]], <2 x i32> <i32 1, i32 2>
@@ -22,14 +22,14 @@ define void @fshl_operand_first_order_recurrence(ptr %dst, ptr noalias %src) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <2 x i64> @llvm.fshl.v2i64(<2 x i64> splat (i64 1), <2 x i64> [[TMP6]], <2 x i64> splat (i64 1))
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <2 x i64> @llvm.fshl.v2i64(<2 x i64> splat (i64 1), <2 x i64> [[TMP7]], <2 x i64> splat (i64 1))
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i64, ptr [[TMP10]], i32 2
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i64, ptr [[TMP10]], i64 2
 ; CHECK-NEXT:    store <2 x i64> [[TMP8]], ptr [[TMP10]], align 8
 ; CHECK-NEXT:    store <2 x i64> [[TMP9]], ptr [[TMP13]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; CHECK-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <2 x i64> [[WIDE_LOAD1]], i32 1
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <2 x i64> [[WIDE_LOAD1]], i64 1
 ; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
@@ -201,11 +201,6 @@ exit:
   ret void
 }
 
-declare i32 @llvm.smax.i32(i32, i32)
-declare i32 @llvm.umin.i32(i32, i32)
-declare double @llvm.sqrt.f64(double)
-declare double @llvm.powi.f64.i32(double, i32)
-declare i64 @llvm.fshl.i64(i64, i64, i64)
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}

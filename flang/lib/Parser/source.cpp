@@ -64,8 +64,15 @@ std::optional<std::string> LocateSourceFile(
     return name;
   }
   for (const std::string &dir : searchPath) {
-    llvm::SmallString<128> path{dir};
-    llvm::sys::path::append(path, name);
+    llvm::SmallString<128> path;
+    // If the file is found in the current directory, don't append the
+    // directory path. This preserves the user's format.
+    if (dir == ".") {
+      path = name;
+    } else {
+      path = dir;
+      llvm::sys::path::append(path, name);
+    }
     bool isDir{false};
     auto er = llvm::sys::fs::is_directory(path, isDir);
     if (!er && !isDir) {
@@ -82,8 +89,15 @@ std::vector<std::string> LocateSourceFileAll(
   }
   std::vector<std::string> result;
   for (const std::string &dir : searchPath) {
-    llvm::SmallString<128> path{dir};
-    llvm::sys::path::append(path, name);
+    llvm::SmallString<128> path;
+    // If the file is found in the current directory, don't append the
+    // directory path. This preserves the user's format.
+    if (dir == ".") {
+      path = name;
+    } else {
+      path = dir;
+      llvm::sys::path::append(path, name);
+    }
     bool isDir{false};
     auto er = llvm::sys::fs::is_directory(path, isDir);
     if (!er && !isDir) {
@@ -142,7 +156,7 @@ bool SourceFile::Open(std::string path, llvm::raw_ostream &error) {
 
 bool SourceFile::ReadStandardInput(llvm::raw_ostream &error) {
   Close();
-  path_ = "standard input";
+  path_ = "<stdin>";
   auto buf_or = llvm::MemoryBuffer::getSTDIN();
   if (!buf_or) {
     auto err = buf_or.getError();

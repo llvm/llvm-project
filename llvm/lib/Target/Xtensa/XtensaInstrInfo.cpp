@@ -159,7 +159,7 @@ void XtensaInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                            MachineBasicBlock::iterator MBBI,
                                            Register DestReg, int FrameIdx,
                                            const TargetRegisterClass *RC,
-                                           Register VReg,
+                                           Register VReg, unsigned SubReg,
                                            MachineInstr::MIFlag Flags) const {
   DebugLoc DL = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
   unsigned LoadOpcode, StoreOpcode;
@@ -221,8 +221,10 @@ unsigned XtensaInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   case TargetOpcode::INLINEASM: { // Inline Asm: Variable size.
     const MachineFunction *MF = MI.getParent()->getParent();
     const char *AsmStr = MI.getOperand(0).getSymbolName();
-    return getInlineAsmLength(AsmStr, *MF->getTarget().getMCAsmInfo());
+    return getInlineAsmLength(AsmStr, MF->getTarget().getMCAsmInfo());
   }
+  case TargetOpcode::BUNDLE:
+    return getInstBundleSize(MI);
   default:
     return MI.getDesc().getSize();
   }

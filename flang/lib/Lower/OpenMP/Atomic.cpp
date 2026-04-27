@@ -80,7 +80,7 @@ dumpAtomicAnalysis(const parser::OpenMPAtomicConstruct::Analysis &analysis) {
     }
     return "<null>"s;
   };
-  auto assignStr = [&](const parser::AssignmentStmt::TypedAssignment &assign) {
+  auto assignStr = [&](const parser::TypedAssignment &assign) {
     if (auto *maybe = assign.get(); maybe && maybe->v) {
       std::string str;
       llvm::raw_string_ostream os(str);

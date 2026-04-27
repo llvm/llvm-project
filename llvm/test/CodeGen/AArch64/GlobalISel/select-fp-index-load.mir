@@ -17,7 +17,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: early-clobber %3:gpr64sp, %4:fpr8 = LDRBpost [[COPY]], 4 :: (load (s8))
-    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:fpr16 = SUBREG_TO_REG 0, %4, %subreg.bsub
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:fpr16 = SUBREG_TO_REG %4, %subreg.bsub
     ; CHECK-NEXT: $h0 = COPY [[SUBREG_TO_REG]]
     ; CHECK-NEXT: $x0 = COPY %3
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
@@ -44,7 +44,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: early-clobber %3:gpr64sp, %4:fpr8 = LDRBpost [[COPY]], 4 :: (load (s8))
-    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:fpr32 = SUBREG_TO_REG 0, %4, %subreg.bsub
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:fpr32 = SUBREG_TO_REG %4, %subreg.bsub
     ; CHECK-NEXT: $s0 = COPY [[SUBREG_TO_REG]]
     ; CHECK-NEXT: $x0 = COPY %3
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
@@ -71,7 +71,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: early-clobber %3:gpr64sp, %4:fpr8 = LDRBpost [[COPY]], 4 :: (load (s8))
-    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:fpr64 = SUBREG_TO_REG 0, %4, %subreg.bsub
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:fpr64 = SUBREG_TO_REG %4, %subreg.bsub
     ; CHECK-NEXT: $d0 = COPY [[SUBREG_TO_REG]]
     ; CHECK-NEXT: $x0 = COPY %3
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
@@ -98,7 +98,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: early-clobber %3:gpr64sp, %4:fpr16 = LDRHpost [[COPY]], 4 :: (load (s16))
-    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:fpr32 = SUBREG_TO_REG 0, %4, %subreg.hsub
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:fpr32 = SUBREG_TO_REG %4, %subreg.hsub
     ; CHECK-NEXT: $s0 = COPY [[SUBREG_TO_REG]]
     ; CHECK-NEXT: $x0 = COPY %3
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
@@ -125,7 +125,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: early-clobber %3:gpr64sp, %4:fpr16 = LDRHpost [[COPY]], 4 :: (load (s16))
-    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:fpr64 = SUBREG_TO_REG 0, %4, %subreg.hsub
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:fpr64 = SUBREG_TO_REG %4, %subreg.hsub
     ; CHECK-NEXT: $d0 = COPY [[SUBREG_TO_REG]]
     ; CHECK-NEXT: $x0 = COPY %3
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
@@ -152,7 +152,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: early-clobber %3:gpr64sp, %4:fpr32 = LDRSpost [[COPY]], 4 :: (load (s32))
-    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:fpr64 = SUBREG_TO_REG 0, %4, %subreg.ssub
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:fpr64 = SUBREG_TO_REG %4, %subreg.ssub
     ; CHECK-NEXT: $d0 = COPY [[SUBREG_TO_REG]]
     ; CHECK-NEXT: $x0 = COPY %3
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
@@ -179,7 +179,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: early-clobber %3:gpr64sp, %4:fpr8 = LDRBpre [[COPY]], 4 :: (load (s8))
-    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:fpr16 = SUBREG_TO_REG 0, %4, %subreg.bsub
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:fpr16 = SUBREG_TO_REG %4, %subreg.bsub
     ; CHECK-NEXT: $h0 = COPY [[SUBREG_TO_REG]]
     ; CHECK-NEXT: $x0 = COPY %3
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
@@ -206,7 +206,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: early-clobber %3:gpr64sp, %4:fpr8 = LDRBpre [[COPY]], 4 :: (load (s8))
-    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:fpr32 = SUBREG_TO_REG 0, %4, %subreg.bsub
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:fpr32 = SUBREG_TO_REG %4, %subreg.bsub
     ; CHECK-NEXT: $s0 = COPY [[SUBREG_TO_REG]]
     ; CHECK-NEXT: $x0 = COPY %3
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
@@ -233,7 +233,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: early-clobber %3:gpr64sp, %4:fpr8 = LDRBpre [[COPY]], 4 :: (load (s8))
-    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:fpr64 = SUBREG_TO_REG 0, %4, %subreg.bsub
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:fpr64 = SUBREG_TO_REG %4, %subreg.bsub
     ; CHECK-NEXT: $d0 = COPY [[SUBREG_TO_REG]]
     ; CHECK-NEXT: $x0 = COPY %3
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
@@ -260,7 +260,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: early-clobber %3:gpr64sp, %4:fpr16 = LDRHpre [[COPY]], 4 :: (load (s16))
-    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:fpr32 = SUBREG_TO_REG 0, %4, %subreg.hsub
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:fpr32 = SUBREG_TO_REG %4, %subreg.hsub
     ; CHECK-NEXT: $s0 = COPY [[SUBREG_TO_REG]]
     ; CHECK-NEXT: $x0 = COPY %3
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
@@ -287,7 +287,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: early-clobber %3:gpr64sp, %4:fpr16 = LDRHpre [[COPY]], 4 :: (load (s16))
-    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:fpr64 = SUBREG_TO_REG 0, %4, %subreg.hsub
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:fpr64 = SUBREG_TO_REG %4, %subreg.hsub
     ; CHECK-NEXT: $d0 = COPY [[SUBREG_TO_REG]]
     ; CHECK-NEXT: $x0 = COPY %3
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
@@ -314,7 +314,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: early-clobber %3:gpr64sp, %4:fpr32 = LDRSpre [[COPY]], 4 :: (load (s32))
-    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:fpr64 = SUBREG_TO_REG 0, %4, %subreg.ssub
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:fpr64 = SUBREG_TO_REG %4, %subreg.ssub
     ; CHECK-NEXT: $d0 = COPY [[SUBREG_TO_REG]]
     ; CHECK-NEXT: $x0 = COPY %3
     ; CHECK-NEXT: RET_ReallyLR implicit $d0

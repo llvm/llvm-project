@@ -18,7 +18,7 @@ void fail(const char *);
  ({ int result = 0; __VA_ARGS__; if (!result) { fail(#__VA_ARGS__); }; result })
 
 static inline int f(int k) {
-  return MUNCH( // expected-note {{to match this '('}} expected-error {{returning 'void'}} expected-note {{expansion of macro 'MUNCH' requested here}}
+  return MUNCH( // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{returning 'void'}} expected-note {{expansion of macro 'MUNCH' requested here}}
     if (k < 3)
       result = 24;
     else if (k > 4)
@@ -27,6 +27,6 @@ static inline int f(int k) {
 
 #include "macro_arg_directive.h" // expected-error {{embedding a #include directive within macro arguments is not supported}}
 
-int g(int k) { // expected-error {{expected ')'}}
+int g(int k) {
   return f(k) + f(k-1));
 }

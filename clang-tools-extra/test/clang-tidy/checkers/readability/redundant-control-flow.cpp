@@ -7,16 +7,16 @@ void f() {
   return;
 }
 // CHECK-MESSAGES: :[[@LINE-2]]:3: warning: redundant return statement at the end of a function with a void return type [readability-redundant-control-flow]
-// CHECK-FIXES: void f() {
-// CHECK-FIXES-NEXT: {{^ *}$}}
+// CHECK-FIXES:      void f() {
+// CHECK-FIXES-NEXT: }
 
 void g() {
   f();
   return;
 }
 // CHECK-MESSAGES: :[[@LINE-2]]:3: warning: redundant return statement
-// CHECK-FIXES: f();
-// CHECK-FIXES-NEXT: {{^ *}$}}
+// CHECK-FIXES:        f();
+// CHECK-FIXES-NEXT: }
 
 void g(int i) {
   if (i < 0) {
@@ -40,8 +40,8 @@ void k() {
   }
 }
 // CHECK-MESSAGES: :[[@LINE-3]]:5: warning: redundant continue statement at the end of loop statement
-// CHECK-FIXES: for (int i = 0; i < 10; ++i) {
-// CHECK-FIXES-NEXT: {{^ *}$}}
+// CHECK-FIXES:      for (int i = 0; i < 10; ++i) {
+// CHECK-FIXES-NEXT: }
 
 void k2() {
   int v[10] = { 0 };
@@ -50,8 +50,8 @@ void k2() {
   }
 }
 // CHECK-MESSAGES: :[[@LINE-3]]:5: warning: redundant continue statement
-// CHECK-FIXES: for (auto i : v) {
-// CHECK-FIXES-NEXT: {{^ *}$}}
+// CHECK-FIXES:      for (auto i : v) {
+// CHECK-FIXES-NEXT: }
 
 void m() {
   int i = 0;
@@ -61,8 +61,8 @@ void m() {
   } while (i < 10);
 }
 // CHECK-MESSAGES: :[[@LINE-3]]:5: warning: redundant continue statement
-// CHECK-FIXES: {{^  do {$}}
-// CHECK-FIXES-NEXT: ++i;
+// CHECK-FIXES:      do {
+// CHECK-FIXES-NEXT:   ++i;
 // CHECK-FIXES-NEXT: } while (i < 10);
 
 void p() {
@@ -73,9 +73,9 @@ void p() {
   }
 }
 // CHECK-MESSAGES: :[[@LINE-3]]:5: warning: redundant continue statement
-// CHECK-FIXES: while (i < 10) {
-// CHECK-FIXES-NEXT: ++i;
-// CHECK-FIXES-NEXT: {{^ *}$}}
+// CHECK-FIXES:      while (i < 10) {
+// CHECK-FIXES-NEXT:   ++i;
+// CHECK-FIXES-NEXT: }
 
 void im_not_dead(int i) {
   if (i > 0) {
@@ -176,10 +176,10 @@ void template_return(T check) {
   return;
 }
 // CHECK-MESSAGES: :[[@LINE-2]]:3: warning: redundant return statement
-// CHECK-FIXES: if (check < T(0)) {
-// CHECK-FIXES-NEXT: {{^    return;$}}
-// CHECK-FIXES-NEXT: {{^ *}$}}
-// CHECK-FIXES-NEXT: {{^ *}$}}
+// CHECK-FIXES:        if (check < T(0)) {
+// CHECK-FIXES-NEXT:     return;
+// CHECK-FIXES-NEXT:   }
+// CHECK-FIXES-NEXT: }
 
 template <>
 void template_return(int check) {
@@ -189,10 +189,10 @@ void template_return(int check) {
   return;
 }
 // CHECK-MESSAGES: :[[@LINE-2]]:3: warning: redundant return statement
-// CHECK-FIXES: if (check < 0) {
-// CHECK-FIXES-NEXT: {{^    return;$}}
-// CHECK-FIXES-NEXT: {{^ *}$}}
-// CHECK-FIXES-NEXT: {{^ *}$}}
+// CHECK-FIXES:        if (check < 0) {
+// CHECK-FIXES-NEXT:     return;
+// CHECK-FIXES-NEXT:   }
+// CHECK-FIXES-NEXT: }
 
 template <typename T>
 void template_loop(T end) {
@@ -201,8 +201,8 @@ void template_loop(T end) {
   }
 }
 // CHECK-MESSAGES: :[[@LINE-3]]:5: warning: redundant continue statement
-// CHECK-FIXES: for (T i = 0; i < end; ++i) {
-// CHECK-FIXES-NEXT: {{^ *}$}}
+// CHECK-FIXES:      for (T i = 0; i < end; ++i) {
+// CHECK-FIXES-NEXT: }
 
 template <>
 void template_loop(int end) {
@@ -211,8 +211,8 @@ void template_loop(int end) {
   }
 }
 // CHECK-MESSAGES: :[[@LINE-3]]:5: warning: redundant continue statement
-// CHECK-FIXES: for (int i = 0; i < end; ++i) {
-// CHECK-FIXES-NEXT: {{^ *}$}}
+// CHECK-FIXES:      for (int i = 0; i < end; ++i) {
+// CHECK-FIXES-NEXT: }
 
 void call_templates() {
   template_return(10);
@@ -222,3 +222,53 @@ void call_templates() {
   template_loop(10L);
   template_loop(10U);
 }
+
+void dont_delete_lines_before_return_statement() {
+	do {} while (0);
+#ifdef FOO
+#endif
+  return;
+}
+// CHECK-MESSAGES: :[[@LINE-2]]:3: warning: redundant return statement
+// CHECK-FIXES:      void dont_delete_lines_before_return_statement() {
+// CHECK-FIXES-NEXT: 	 do {} while (0);
+// CHECK-FIXES-NEXT: #ifdef FOO
+// CHECK-FIXES-NEXT: #endif
+// CHECK-FIXES-NEXT: }
+
+void dont_delete_lines_before_continue_statement() {
+  for (;;) {
+	  do {} while (0);
+#ifdef BAR
+#endif
+    continue;
+  }
+}
+// CHECK-MESSAGES: :[[@LINE-3]]:5: warning: redundant continue statement
+// CHECK-FIXES:      void dont_delete_lines_before_continue_statement() {
+// CHECK-FIXES-NEXT:   for (;;) {
+// CHECK-FIXES-NEXT: 	   do {} while (0);
+// CHECK-FIXES-NEXT: #ifdef BAR
+// CHECK-FIXES-NEXT: #endif
+// CHECK-FIXES-NEXT:   }
+// CHECK-FIXES-NEXT: }
+
+void semicolon_far_from_return() {
+  return
+
+  ;
+}
+// CHECK-MESSAGES: :[[@LINE-4]]:3: warning: redundant return statement at the end of a function with a void return type [readability-redundant-control-flow]
+// CHECK-FIXES:      void semicolon_far_from_return() {
+// CHECK-FIXES-NEXT: }
+
+void semicolon_far_from_continue() {
+  for (int i = 0; i < 20; ++i) {
+    continue
+
+    ;
+  }
+}
+// CHECK-MESSAGES: :[[@LINE-5]]:5: warning: redundant continue statement at the end of loop statement
+// CHECK-FIXES:      for (int i = 0; i < 20; ++i) {
+// CHECK-FIXES-NEXT: }

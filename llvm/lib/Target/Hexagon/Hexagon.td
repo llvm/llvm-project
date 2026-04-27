@@ -413,6 +413,8 @@ include "HexagonPatternsV65.td"
 include "HexagonDepMappings.td"
 include "HexagonIntrinsics.td"
 
+defm : RemapAllTargetPseudoPointerOperands<IntRegs>;
+
 def HexagonInstrInfo : InstrInfo;
 
 //===----------------------------------------------------------------------===//
@@ -497,8 +499,8 @@ def : Proc<"hexagonv79", HexagonModelV79,
            FeatureCompound, FeatureDuplex, FeatureMemNoShuf, FeatureMemops,
            FeatureNVJ, FeatureNVS, FeaturePackets, FeatureSmallData]>;
 def : Proc<"hexagonv81", HexagonModelV81,
-           [ArchV65, ArchV66, ArchV67, ArchV68, ArchV69, ArchV71, ArchV73,
-            ArchV75, ArchV79, ArchV81,
+           [ArchV5, ArchV55, ArchV60, ArchV62, ArchV65, ArchV66, ArchV67,
+            ArchV68, ArchV69, ArchV71, ArchV73, ArchV75, ArchV79, ArchV81,
             FeatureCompound, FeatureDuplex, FeatureMemNoShuf, FeatureMemops,
             FeatureNVJ, FeatureNVS, FeaturePackets, FeatureSmallData]>;
 

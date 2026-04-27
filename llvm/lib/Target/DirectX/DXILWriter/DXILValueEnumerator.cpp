@@ -193,6 +193,10 @@ static OrderMap orderModule(const Module &M) {
             orderValue(Op, OM);
         if (auto *SVI = dyn_cast<ShuffleVectorInst>(&I))
           orderValue(SVI->getShuffleMaskForBitcode(), OM);
+        if (auto *SI = dyn_cast<SwitchInst>(&I)) {
+          for (const auto &Case : SI->cases())
+            orderValue(Case.getCaseValue(), OM);
+        }
       }
     for (const BasicBlock &BB : F)
       for (const Instruction &I : BB)
@@ -371,7 +375,7 @@ ValueEnumerator::ValueEnumerator(const Module &M, Type *PrefixType) {
   // Enumerate the functions.
   for (const Function &F : M) {
     EnumerateValue(&F);
-    EnumerateType(F.getValueType());
+    EnumerateType(F.getFunctionType());
     EnumerateType(
         TypedPointerType::get(F.getFunctionType(), F.getAddressSpace()));
     EnumerateAttributes(F.getAttributes());
@@ -539,22 +543,26 @@ void ValueEnumerator::print(raw_ostream &OS, const ValueMapType &Map,
   for (const auto &I : Map) {
     const Value *V = I.first;
     if (V->hasName())
-      OS << "Value: " << V->getName();
+      OS << "Value: " << V->getName() << '\n';
     else
       OS << "Value: [null]\n";
-    V->print(errs());
-    errs() << '\n';
+    V->print(OS);
+    OS << '\n';
 
-    OS << " Uses(" << V->getNumUses() << "):";
-    for (const Use &U : V->uses()) {
-      if (&U != &*V->use_begin())
-        OS << ",";
-      if (U->hasName())
-        OS << " " << U->getName();
-      else
-        OS << " [null]";
+    if (V->hasUseList()) {
+      OS << " Uses(" << V->getNumUses() << "):";
+      for (const Use &U : V->uses()) {
+        if (&U != &*V->use_begin())
+          OS << ",";
+        if (U->hasName())
+          OS << " " << U->getName();
+        else
+          OS << " [null]";
+      }
+      OS << '\n';
     }
-    OS << "\n\n";
+
+    OS << '\n';
   }
 }
 
@@ -1053,6 +1061,10 @@ void ValueEnumerator::incorporateFunction(const Function &F) {
       }
       if (auto *SVI = dyn_cast<ShuffleVectorInst>(&I))
         EnumerateValue(SVI->getShuffleMaskForBitcode());
+      if (auto *SI = dyn_cast<SwitchInst>(&I)) {
+        for (const auto &Case : SI->cases())
+          EnumerateValue(Case.getCaseValue());
+      }
     }
     BasicBlocks.push_back(&BB);
     ValueMap[&BB] = BasicBlocks.size();

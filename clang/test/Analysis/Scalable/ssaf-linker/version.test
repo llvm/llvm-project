@@ -1,0 +1,5 @@
+// Test clang-ssaf-linker version
+
+// RUN: clang-ssaf-linker --version | FileCheck %s
+
+// CHECK: clang-ssaf-linker

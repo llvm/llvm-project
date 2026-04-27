@@ -39,25 +39,25 @@ define i32 @jump_table(i32 %a) {
   ; 32SMALL-MIR-NEXT: bb.2.sw.bb:
   ; 32SMALL-MIR-NEXT:   successors: %bb.6(0x80000000)
   ; 32SMALL-MIR-NEXT: {{  $}}
-  ; 32SMALL-MIR-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; 32SMALL-MIR-NEXT:   INLINEASM &"", sideeffect attdialect
   ; 32SMALL-MIR-NEXT:   B %bb.6
   ; 32SMALL-MIR-NEXT: {{  $}}
   ; 32SMALL-MIR-NEXT: bb.3.sw.bb1:
   ; 32SMALL-MIR-NEXT:   successors: %bb.6(0x80000000)
   ; 32SMALL-MIR-NEXT: {{  $}}
-  ; 32SMALL-MIR-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; 32SMALL-MIR-NEXT:   INLINEASM &"", sideeffect attdialect
   ; 32SMALL-MIR-NEXT:   B %bb.6
   ; 32SMALL-MIR-NEXT: {{  $}}
   ; 32SMALL-MIR-NEXT: bb.4.sw.bb2:
   ; 32SMALL-MIR-NEXT:   successors: %bb.6(0x80000000)
   ; 32SMALL-MIR-NEXT: {{  $}}
-  ; 32SMALL-MIR-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; 32SMALL-MIR-NEXT:   INLINEASM &"", sideeffect attdialect
   ; 32SMALL-MIR-NEXT:   B %bb.6
   ; 32SMALL-MIR-NEXT: {{  $}}
   ; 32SMALL-MIR-NEXT: bb.5.sw.bb3:
   ; 32SMALL-MIR-NEXT:   successors: %bb.6(0x80000000)
   ; 32SMALL-MIR-NEXT: {{  $}}
-  ; 32SMALL-MIR-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; 32SMALL-MIR-NEXT:   INLINEASM &"", sideeffect attdialect
   ; 32SMALL-MIR-NEXT: {{  $}}
   ; 32SMALL-MIR-NEXT: bb.6.sw.epilog:
   ; 32SMALL-MIR-NEXT:   $r3 = LI 0
@@ -87,25 +87,25 @@ define i32 @jump_table(i32 %a) {
   ; 32LARGE-MIR-NEXT: bb.2.sw.bb:
   ; 32LARGE-MIR-NEXT:   successors: %bb.6(0x80000000)
   ; 32LARGE-MIR-NEXT: {{  $}}
-  ; 32LARGE-MIR-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; 32LARGE-MIR-NEXT:   INLINEASM &"", sideeffect attdialect
   ; 32LARGE-MIR-NEXT:   B %bb.6
   ; 32LARGE-MIR-NEXT: {{  $}}
   ; 32LARGE-MIR-NEXT: bb.3.sw.bb1:
   ; 32LARGE-MIR-NEXT:   successors: %bb.6(0x80000000)
   ; 32LARGE-MIR-NEXT: {{  $}}
-  ; 32LARGE-MIR-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; 32LARGE-MIR-NEXT:   INLINEASM &"", sideeffect attdialect
   ; 32LARGE-MIR-NEXT:   B %bb.6
   ; 32LARGE-MIR-NEXT: {{  $}}
   ; 32LARGE-MIR-NEXT: bb.4.sw.bb2:
   ; 32LARGE-MIR-NEXT:   successors: %bb.6(0x80000000)
   ; 32LARGE-MIR-NEXT: {{  $}}
-  ; 32LARGE-MIR-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; 32LARGE-MIR-NEXT:   INLINEASM &"", sideeffect attdialect
   ; 32LARGE-MIR-NEXT:   B %bb.6
   ; 32LARGE-MIR-NEXT: {{  $}}
   ; 32LARGE-MIR-NEXT: bb.5.sw.bb3:
   ; 32LARGE-MIR-NEXT:   successors: %bb.6(0x80000000)
   ; 32LARGE-MIR-NEXT: {{  $}}
-  ; 32LARGE-MIR-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; 32LARGE-MIR-NEXT:   INLINEASM &"", sideeffect attdialect
   ; 32LARGE-MIR-NEXT: {{  $}}
   ; 32LARGE-MIR-NEXT: bb.6.sw.epilog:
   ; 32LARGE-MIR-NEXT:   $r3 = LI 0
@@ -134,25 +134,25 @@ define i32 @jump_table(i32 %a) {
   ; 64SMALL-MIR-NEXT: bb.2.sw.bb:
   ; 64SMALL-MIR-NEXT:   successors: %bb.6(0x80000000)
   ; 64SMALL-MIR-NEXT: {{  $}}
-  ; 64SMALL-MIR-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; 64SMALL-MIR-NEXT:   INLINEASM &"", sideeffect attdialect
   ; 64SMALL-MIR-NEXT:   B %bb.6
   ; 64SMALL-MIR-NEXT: {{  $}}
   ; 64SMALL-MIR-NEXT: bb.3.sw.bb1:
   ; 64SMALL-MIR-NEXT:   successors: %bb.6(0x80000000)
   ; 64SMALL-MIR-NEXT: {{  $}}
-  ; 64SMALL-MIR-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; 64SMALL-MIR-NEXT:   INLINEASM &"", sideeffect attdialect
   ; 64SMALL-MIR-NEXT:   B %bb.6
   ; 64SMALL-MIR-NEXT: {{  $}}
   ; 64SMALL-MIR-NEXT: bb.4.sw.bb2:
   ; 64SMALL-MIR-NEXT:   successors: %bb.6(0x80000000)
   ; 64SMALL-MIR-NEXT: {{  $}}
-  ; 64SMALL-MIR-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; 64SMALL-MIR-NEXT:   INLINEASM &"", sideeffect attdialect
   ; 64SMALL-MIR-NEXT:   B %bb.6
   ; 64SMALL-MIR-NEXT: {{  $}}
   ; 64SMALL-MIR-NEXT: bb.5.sw.bb3:
   ; 64SMALL-MIR-NEXT:   successors: %bb.6(0x80000000)
   ; 64SMALL-MIR-NEXT: {{  $}}
-  ; 64SMALL-MIR-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; 64SMALL-MIR-NEXT:   INLINEASM &"", sideeffect attdialect
   ; 64SMALL-MIR-NEXT: {{  $}}
   ; 64SMALL-MIR-NEXT: bb.6.sw.epilog:
   ; 64SMALL-MIR-NEXT:   $x3 = LI8 0
@@ -182,25 +182,25 @@ define i32 @jump_table(i32 %a) {
   ; 64LARGE-MIR-NEXT: bb.2.sw.bb:
   ; 64LARGE-MIR-NEXT:   successors: %bb.6(0x80000000)
   ; 64LARGE-MIR-NEXT: {{  $}}
-  ; 64LARGE-MIR-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; 64LARGE-MIR-NEXT:   INLINEASM &"", sideeffect attdialect
   ; 64LARGE-MIR-NEXT:   B %bb.6
   ; 64LARGE-MIR-NEXT: {{  $}}
   ; 64LARGE-MIR-NEXT: bb.3.sw.bb1:
   ; 64LARGE-MIR-NEXT:   successors: %bb.6(0x80000000)
   ; 64LARGE-MIR-NEXT: {{  $}}
-  ; 64LARGE-MIR-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; 64LARGE-MIR-NEXT:   INLINEASM &"", sideeffect attdialect
   ; 64LARGE-MIR-NEXT:   B %bb.6
   ; 64LARGE-MIR-NEXT: {{  $}}
   ; 64LARGE-MIR-NEXT: bb.4.sw.bb2:
   ; 64LARGE-MIR-NEXT:   successors: %bb.6(0x80000000)
   ; 64LARGE-MIR-NEXT: {{  $}}
-  ; 64LARGE-MIR-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; 64LARGE-MIR-NEXT:   INLINEASM &"", sideeffect attdialect
   ; 64LARGE-MIR-NEXT:   B %bb.6
   ; 64LARGE-MIR-NEXT: {{  $}}
   ; 64LARGE-MIR-NEXT: bb.5.sw.bb3:
   ; 64LARGE-MIR-NEXT:   successors: %bb.6(0x80000000)
   ; 64LARGE-MIR-NEXT: {{  $}}
-  ; 64LARGE-MIR-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; 64LARGE-MIR-NEXT:   INLINEASM &"", sideeffect attdialect
   ; 64LARGE-MIR-NEXT: {{  $}}
   ; 64LARGE-MIR-NEXT: bb.6.sw.epilog:
   ; 64LARGE-MIR-NEXT:   $x3 = LI8 0

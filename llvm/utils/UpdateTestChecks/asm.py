@@ -132,6 +132,15 @@ ASM_FUNCTION_RISCV_RE = re.compile(
     flags=(re.M | re.S),
 )
 
+ASM_FUNCTION_RISCV_MACHO_RE = re.compile(
+    r'^_?(?P<func>[^:]+):[ \t]*;[ \t]*@"?(?P=func)"?\n'
+    r"(?:[ \t]+.cfi_startproc\n)?"  # drop optional cfi noise
+    r"(?P<body>^;;?[ \t]+[^:]+:.*?)\s*"
+    r"([ \t]*.cfi_endproc\n[\s]*)?"
+    r"^[ \t]*;[ \t]--[ \t]End[ \t]function",
+    flags=(re.M | re.S),
+)
+
 ASM_FUNCTION_LANAI_RE = re.compile(
     r'^_?(?P<func>[^:]+):[ \t]*!+[ \t]*@"?(?P=func)"?\n'
     r"(?:[ \t]+.cfi_startproc\n)?"  # drop optional cfi noise
@@ -591,6 +600,7 @@ def get_run_handler(triple):
         "ppc64": (scrub_asm_powerpc, ASM_FUNCTION_PPC_RE),
         "powerpc": (scrub_asm_powerpc, ASM_FUNCTION_PPC_RE),
         "riscv32": (scrub_asm_riscv, ASM_FUNCTION_RISCV_RE),
+        "riscv32-apple-none-macho": (scrub_asm_riscv, ASM_FUNCTION_RISCV_MACHO_RE),
         "riscv64": (scrub_asm_riscv, ASM_FUNCTION_RISCV_RE),
         "lanai": (scrub_asm_lanai, ASM_FUNCTION_LANAI_RE),
         "sparc": (scrub_asm_sparc, ASM_FUNCTION_SPARC_RE),

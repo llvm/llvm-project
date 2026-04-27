@@ -1153,11 +1153,15 @@ bool HexagonFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   if (HasAlloca || HasExtraAlign)
     return true;
 
+  // If FP-elimination is disabled, we have to use FP. This must not be
+  // gated on stack size: the user/ABI-requested frame pointer is needed
+  // regardless of whether the function currently has a stack frame.
+  // Every other target checks DisableFramePointerElim unconditionally.
+  const TargetMachine &TM = MF.getTarget();
+  if (TM.Options.DisableFramePointerElim(MF) || !EliminateFramePointer)
+    return true;
+
   if (MFI.getStackSize() > 0) {
-    // If FP-elimination is disabled, we have to use FP at this point.
-    const TargetMachine &TM = MF.getTarget();
-    if (TM.Options.DisableFramePointerElim(MF) || !EliminateFramePointer)
-      return true;
     if (EnableStackOVFSanitizer)
       return true;
   }
@@ -1394,21 +1398,39 @@ bool HexagonFrameLowering::insertCSRSpillsInBlock(MachineBasicBlock &MBB,
     // Add live in registers.
     for (const CalleeSavedInfo &I : CSI)
       MBB.addLiveIn(I.getReg());
-    return true;
+  } else {
+    for (const CalleeSavedInfo &I : CSI) {
+      MCRegister Reg = I.getReg();
+      // Add live in registers. We treat eh_return callee saved register r0 - r3
+      // specially. They are not really callee saved registers as they are not
+      // supposed to be killed.
+      bool IsKill = !HRI.isEHReturnCalleeSaveReg(Reg);
+      int FI = I.getFrameIdx();
+      const TargetRegisterClass *RC = HRI.getMinimalPhysRegClass(Reg);
+      HII.storeRegToStackSlot(MBB, MI, Reg, IsKill, FI, RC, Register());
+      if (IsKill)
+        MBB.addLiveIn(Reg);
+    }
   }
 
-  for (const CalleeSavedInfo &I : CSI) {
-    MCRegister Reg = I.getReg();
-    // Add live in registers. We treat eh_return callee saved register r0 - r3
-    // specially. They are not really callee saved registers as they are not
-    // supposed to be killed.
-    bool IsKill = !HRI.isEHReturnCalleeSaveReg(Reg);
-    int FI = I.getFrameIdx();
-    const TargetRegisterClass *RC = HRI.getMinimalPhysRegClass(Reg);
-    HII.storeRegToStackSlot(MBB, MI, Reg, IsKill, FI, RC, Register());
-    if (IsKill)
-      MBB.addLiveIn(Reg);
+  // Move PS_aligna to after all CSR spills (both inline and spill-function
+  // paths). PS_aligna initializes the AP register (e.g. R16) with an aligned
+  // value derived from FP. Since AP is a callee-saved register, its original
+  // value must be saved before it is overwritten, and it must be defined
+  // before any AP-relative stack accesses.
+  // MI points to the first non-spill instruction; all spills are before it.
+  auto &HFI = *MF.getSubtarget<HexagonSubtarget>().getFrameLowering();
+  if (const MachineInstr *AlignaI = HFI.getAlignaInstr(MF)) {
+    MachineInstr *AI = const_cast<MachineInstr *>(AlignaI);
+    // PS_aligna is always created in EntryBB during ISEL. Since PS_aligna
+    // causes needsStackFrame() to return true, EntryBB will be included in
+    // the set of blocks needing a frame. Because EntryBB dominates all blocks,
+    // shrink-wrapping will always place PrologB at EntryBB when PS_aligna
+    // exists. Therefore, this assertion should always hold.
+    assert(AI->getParent() == &MBB && "PS_aligna not in prologue block");
+    MBB.splice(MI, AI->getParent(), AI->getIterator());
   }
+
   return true;
 }
 

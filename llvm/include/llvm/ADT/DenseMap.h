@@ -162,7 +162,7 @@ public:
       return;
     }
     derived().deallocateBuckets();
-    derived().init(NewNumBuckets);
+    initWithExactBucketCount(NewNumBuckets);
   }
 
   /// Return true if the specified key is in the map, false otherwise.
@@ -217,6 +217,14 @@ public:
     if (const BucketT *Bucket = doFind(Val))
       return Bucket->getSecond();
     return Default;
+  }
+
+  /// at - Return the entry for the specified key, or abort if no such
+  /// entry exists.
+  [[nodiscard]] ValueT &at(const_arg_type_t<KeyT> Val) {
+    auto Iter = this->find(std::move(Val));
+    assert(Iter != this->end() && "DenseMap::at failed due to a missing key");
+    return Iter->second;
   }
 
   /// at - Return the entry for the specified key, or abort if no such
@@ -558,7 +566,12 @@ private:
 
   void grow(unsigned MinNumBuckets) {
     unsigned NumBuckets = DerivedT::roundUpNumBuckets(MinNumBuckets);
-    derived().grow(NumBuckets);
+    DerivedT Tmp(NumBuckets, ExactBucketCount{});
+    Tmp.moveFrom(derived());
+    if (derived().maybeMoveFast(std::move(Tmp)))
+      return;
+    initWithExactBucketCount(NumBuckets);
+    moveFrom(Tmp);
   }
 
   template <typename LookupKeyT>
@@ -738,10 +751,10 @@ class DenseMap : public DenseMapBase<DenseMap<KeyT, ValueT, KeyInfoT, BucketT>,
   // simplicity of referring to them.
   using BaseT = DenseMapBase<DenseMap, KeyT, ValueT, KeyInfoT, BucketT>;
 
-  BucketT *Buckets;
-  unsigned NumEntries;
-  unsigned NumTombstones;
-  unsigned NumBuckets;
+  BucketT *Buckets = nullptr;
+  unsigned NumEntries = 0;
+  unsigned NumTombstones = 0;
+  unsigned NumBuckets = 0;
 
   explicit DenseMap(unsigned NumBuckets, typename BaseT::ExactBucketCount) {
     this->initWithExactBucketCount(NumBuckets);
@@ -750,9 +763,9 @@ class DenseMap : public DenseMapBase<DenseMap<KeyT, ValueT, KeyInfoT, BucketT>,
 public:
   /// Create a DenseMap with an optional \p NumElementsToReserve to guarantee
   /// that this number of elements can be inserted in the map without grow().
-  explicit DenseMap(unsigned NumElementsToReserve = 0) {
-    init(NumElementsToReserve);
-  }
+  explicit DenseMap(unsigned NumElementsToReserve = 0)
+      : DenseMap(BaseT::getMinBucketToReserveForEntries(NumElementsToReserve),
+                 typename BaseT::ExactBucketCount{}) {}
 
   DenseMap(const DenseMap &other) : DenseMap() { this->copyFrom(other); }
 
@@ -784,7 +797,7 @@ public:
   DenseMap &operator=(DenseMap &&other) {
     this->destroyAll();
     deallocateBuckets();
-    init(0);
+    this->initWithExactBucketCount(0);
     this->swap(other);
     return *this;
   }
@@ -825,11 +838,6 @@ private:
     return true;
   }
 
-  void init(unsigned InitNumEntries) {
-    auto InitBuckets = BaseT::getMinBucketToReserveForEntries(InitNumEntries);
-    this->initWithExactBucketCount(InitBuckets);
-  }
-
   // Put the zombie instance in a known good state after a move.
   void kill() {
     deallocateBuckets();
@@ -842,10 +850,9 @@ private:
                     static_cast<unsigned>(NextPowerOf2(MinNumBuckets - 1)));
   }
 
-  void grow(unsigned AtLeast) {
-    DenseMap Tmp(AtLeast, typename BaseT::ExactBucketCount{});
-    Tmp.moveFrom(*this);
-    swapImpl(Tmp);
+  bool maybeMoveFast(DenseMap &&Other) {
+    swapImpl(Other);
+    return true;
   }
 
   // Plan how to shrink the bucket table.  Return:
@@ -898,9 +905,10 @@ class SmallDenseMap
   }
 
 public:
-  explicit SmallDenseMap(unsigned NumElementsToReserve = 0) {
-    init(NumElementsToReserve);
-  }
+  explicit SmallDenseMap(unsigned NumElementsToReserve = 0)
+      : SmallDenseMap(
+            BaseT::getMinBucketToReserveForEntries(NumElementsToReserve),
+            typename BaseT::ExactBucketCount{}) {}
 
   SmallDenseMap(const SmallDenseMap &other) : SmallDenseMap() {
     this->copyFrom(other);
@@ -935,7 +943,7 @@ public:
   SmallDenseMap &operator=(SmallDenseMap &&other) {
     this->destroyAll();
     deallocateBuckets();
-    init(0);
+    this->initWithExactBucketCount(0);
     this->swap(other);
     return *this;
   }
@@ -1029,6 +1037,13 @@ private:
     // Note that this cast does not violate aliasing rules as we assert that
     // the memory's dynamic type is the small, inline bucket buffer, and the
     // 'storage' is a POD containing a char buffer.
+#if defined(__clang__) &&                                                      \
+    (defined(__SANITIZE_ADDRESS__) || defined(__SANITIZE_HWADDRESS__))
+    // Unless it's a sanitizer with container overflow detection. In this case
+    // some items in buckets can be partially poisoned, triggering sanitizer
+    // report on load.
+    __asm__ volatile("" ::: "memory");
+#endif
     return reinterpret_cast<const BucketT *>(&storage);
   }
 
@@ -1040,6 +1055,10 @@ private:
   const LargeRep *getLargeRep() const {
     assert(!Small);
     // Note, same rule about aliasing as with getInlineBuckets.
+#if defined(__clang__) &&                                                      \
+    (defined(__SANITIZE_ADDRESS__) || defined(__SANITIZE_HWADDRESS__))
+    __asm__ volatile("" ::: "memory");
+#endif
     return reinterpret_cast<const LargeRep *>(&storage);
   }
 
@@ -1091,11 +1110,6 @@ private:
     return true;
   }
 
-  void init(unsigned InitNumEntries) {
-    auto InitBuckets = BaseT::getMinBucketToReserveForEntries(InitNumEntries);
-    this->initWithExactBucketCount(InitBuckets);
-  }
-
   // Put the zombie instance in a known good state after a move.
   void kill() {
     deallocateBuckets();
@@ -1110,23 +1124,16 @@ private:
                     static_cast<unsigned>(NextPowerOf2(MinNumBuckets - 1)));
   }
 
-  void grow(unsigned NumBuckets) {
-    SmallDenseMap Tmp(NumBuckets, typename BaseT::ExactBucketCount{});
-    Tmp.moveFrom(*this);
+  bool maybeMoveFast(SmallDenseMap &&Other) {
+    if (Other.Small)
+      return false;
 
-    if (Tmp.Small) {
-      // Use moveFrom in those rare cases where we stay in the small mode.  This
-      // can happen when we have many tombstones.
-      Small = true;
-      this->BaseT::initEmpty();
-      this->moveFrom(Tmp);
-    } else {
-      Small = false;
-      NumEntries = Tmp.NumEntries;
-      NumTombstones = Tmp.NumTombstones;
-      *getLargeRep() = std::move(*Tmp.getLargeRep());
-      Tmp.getLargeRep()->NumBuckets = 0;
-    }
+    Small = false;
+    NumEntries = Other.NumEntries;
+    NumTombstones = Other.NumTombstones;
+    *getLargeRep() = std::move(*Other.getLargeRep());
+    Other.getLargeRep()->NumBuckets = 0;
+    return true;
   }
 
   // Plan how to shrink the bucket table.  Return:

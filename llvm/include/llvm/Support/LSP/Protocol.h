@@ -215,6 +215,13 @@ struct InitializeParams {
 
   /// The initial trace setting. If omitted trace is disabled ('off').
   std::optional<TraceLevel> trace;
+
+  /// The root URI of the workspace. Is null if no folder is open.
+  std::optional<std::string> rootUri;
+
+  /// The root path of the workspace. Is null if no folder is open.
+  /// This is deprecated, use rootUri instead, but kept for more compatibility.
+  std::optional<std::string> rootPath;
 };
 
 /// Add support for JSON serialization.
@@ -493,6 +500,18 @@ struct DidCloseTextDocumentParams {
 LLVM_ABI_FOR_TEST bool fromJSON(const llvm::json::Value &value,
                                 DidCloseTextDocumentParams &result,
                                 llvm::json::Path path);
+
+//===----------------------------------------------------------------------===//
+// DidSaveTextDocumentParams
+//===----------------------------------------------------------------------===//
+
+struct DidSaveTextDocumentParams {
+  /// The document that was saved.
+  TextDocumentIdentifier textDocument;
+};
+
+LLVM_ABI_FOR_TEST bool fromJSON(const llvm::json::Value &,
+                                DidSaveTextDocumentParams &, llvm::json::Path);
 
 //===----------------------------------------------------------------------===//
 // DidChangeTextDocumentParams
@@ -1268,6 +1287,33 @@ struct CodeAction {
 
 /// Add support for JSON serialization.
 LLVM_ABI_FOR_TEST llvm::json::Value toJSON(const CodeAction &);
+
+//===----------------------------------------------------------------------===//
+//  ShowMessageParams
+//===----------------------------------------------------------------------===//
+
+enum class MessageType { Error = 1, Warning = 2, Info = 3, Log = 4, Debug = 5 };
+
+struct MessageActionItem {
+  /// A short title like 'Retry', 'Open Log' etc.
+  std::string title;
+};
+
+struct ShowMessageParams {
+  ShowMessageParams(MessageType Type, std::string Message)
+      : type(Type), message(Message) {}
+  MessageType type;
+  /// The actual message.
+  std::string message;
+  /// The message action items to present.
+  std::optional<std::vector<MessageActionItem>> actions;
+};
+
+/// Add support for JSON serialization.
+llvm::json::Value toJSON(const MessageActionItem &Params);
+
+/// Add support for JSON serialization.
+llvm::json::Value toJSON(const ShowMessageParams &Params);
 
 } // namespace lsp
 } // namespace llvm

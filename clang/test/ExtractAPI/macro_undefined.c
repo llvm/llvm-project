@@ -89,7 +89,7 @@ FUNC_GEN(bar, const int *, unsigned);
       },
       "location": {
         "position": {
-          "character": 9,
+          "character": 0,
           "line": 2
         },
         "uri": "file://INPUT_DIR/input.h"
@@ -241,7 +241,7 @@ FUNC_GEN(bar, const int *, unsigned);
       },
       "location": {
         "position": {
-          "character": 9,
+          "character": 0,
           "line": 3
         },
         "uri": "file://INPUT_DIR/input.h"

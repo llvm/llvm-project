@@ -58,7 +58,7 @@ define amdgpu_kernel void @v_test_sub_v2i16(ptr addrspace(1) %out, ptr addrspace
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    global_load_dword v2, v0, s[6:7] glc dlc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX10-NEXT:    s_mov_b32 s2, -1
 ; GFX10-NEXT:    v_pk_sub_i16 v0, v1, v2
@@ -303,7 +303,7 @@ define amdgpu_kernel void @v_test_sub_v2i16_constant(ptr addrspace(1) %out, ptr 
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    global_load_dword v0, v0, s[2:3] glc dlc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX10-NEXT:    s_mov_b32 s2, -1
 ; GFX10-NEXT:    v_pk_sub_i16 v0, v0, 0x1c8007b
@@ -375,7 +375,7 @@ define amdgpu_kernel void @v_test_sub_v2i16_neg_constant(ptr addrspace(1) %out, 
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    global_load_dword v0, v0, s[2:3] glc dlc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX10-NEXT:    s_mov_b32 s2, -1
 ; GFX10-NEXT:    v_pk_sub_i16 v0, v0, 0xfc21fcb3
@@ -445,7 +445,7 @@ define amdgpu_kernel void @v_test_sub_v2i16_inline_neg1(ptr addrspace(1) %out, p
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    global_load_dword v0, v0, s[2:3] glc dlc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX10-NEXT:    s_mov_b32 s2, -1
 ; GFX10-NEXT:    v_pk_sub_i16 v0, v0, -1
@@ -514,7 +514,7 @@ define amdgpu_kernel void @v_test_sub_v2i16_inline_lo_zero_hi(ptr addrspace(1) %
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    global_load_dword v0, v0, s[2:3] glc dlc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX10-NEXT:    s_mov_b32 s2, -1
 ; GFX10-NEXT:    v_pk_sub_i16 v0, v0, 32
@@ -584,7 +584,7 @@ define amdgpu_kernel void @v_test_sub_v2i16_inline_fp_split(ptr addrspace(1) %ou
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    global_load_dword v0, v0, s[2:3] glc dlc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX10-NEXT:    s_mov_b32 s2, -1
 ; GFX10-NEXT:    v_pk_sub_i16 v0, v0, 1.0
@@ -668,7 +668,7 @@ define amdgpu_kernel void @v_test_sub_v2i16_zext_to_v2i32(ptr addrspace(1) %out,
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    global_load_dword v2, v0, s[6:7] glc dlc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX10-NEXT:    s_mov_b32 s2, -1
 ; GFX10-NEXT:    v_pk_sub_i16 v0, v1, v2
@@ -791,7 +791,7 @@ define amdgpu_kernel void @v_test_sub_v2i16_zext_to_v2i64(ptr addrspace(1) %out,
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    global_load_dword v2, v0, s[6:7] glc dlc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX10-NEXT:    s_mov_b32 s2, -1
 ; GFX10-NEXT:    v_pk_sub_i16 v0, v1, v2
@@ -807,23 +807,21 @@ define amdgpu_kernel void @v_test_sub_v2i16_zext_to_v2i64(ptr addrspace(1) %out,
 ; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-TRUE16-NEXT:    s_load_b64 s[4:5], s[4:5], 0x34
-; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v2.h, 0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 0x3ff, v0
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v3, v1 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    global_load_b32 v1, v0, s[2:3] glc dlc
+; GFX11-TRUE16-NEXT:    global_load_b32 v2, v0, s[2:3] glc dlc
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    global_load_b32 v0, v0, s[4:5] glc dlc
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s2, -1
-; GFX11-TRUE16-NEXT:    v_pk_sub_i16 v0, v1, v0
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
+; GFX11-TRUE16-NEXT:    v_pk_sub_i16 v0, v2, v0
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v2.h, v1.l
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v2.l, v0.h
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v2.h
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v3, v1
+; GFX11-TRUE16-NEXT:    v_cvt_u32_u16_e32 v0, v0.l
 ; GFX11-TRUE16-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], 0
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;
@@ -917,7 +915,7 @@ define amdgpu_kernel void @v_test_sub_v2i16_sext_to_v2i32(ptr addrspace(1) %out,
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    global_load_dword v2, v0, s[6:7] glc dlc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX10-NEXT:    s_mov_b32 s2, -1
 ; GFX10-NEXT:    v_pk_sub_i16 v0, v1, v2
@@ -1017,7 +1015,7 @@ define amdgpu_kernel void @v_test_sub_v2i16_sext_to_v2i64(ptr addrspace(1) %out,
 ; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dword v1, v0, s[2:3]
 ; GFX10-NEXT:    global_load_dword v2, v0, s[6:7]
-; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX10-NEXT:    s_mov_b32 s2, -1
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)

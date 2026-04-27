@@ -437,6 +437,20 @@ class MapInfoFinalizationPass
 
     mapFlags flags =
         mapFlags::to | (mapTypeFlag & (mapFlags::implicit | mapFlags::always));
+
+    // Descriptors for objects will always be copied. This is because the
+    // descriptor can be rematerialized by the compiler, and so the address
+    // of the descriptor for a given object at one place in the code may
+    // differ from that address in another place. The contents of the
+    // descriptor (the base address in particular) will remain unchanged
+    // though.
+    // TODO/FIXME: We currently cannot have MAP_CLOSE and MAP_ALWAYS on
+    // the descriptor at once, these are mutually exclusive and when
+    // both are applied the runtime will fail to map.
+    flags |= ((mapFlags(mapTypeFlag) & mapFlags::close) == mapFlags::close)
+                 ? mapFlags::close
+                 : mapFlags::always;
+
     // For unified_shared_memory, we additionally add `CLOSE` on the descriptor
     // to ensure device-local placement where required by tests relying on USM +
     // close semantics.
@@ -1129,7 +1143,8 @@ class MapInfoFinalizationPass
           newMemberIndices.emplace_back(path);
 
         op.setMembersIndexAttr(builder.create2DI64ArrayAttr(newMemberIndices));
-        op.setPartialMap(true);
+        // Set to partial map only if there is no user-defined mapper.
+        op.setPartialMap(op.getMapperIdAttr() == nullptr);
 
         return mlir::WalkResult::advance();
       });
@@ -1167,6 +1182,41 @@ class MapInfoFinalizationPass
           mlir::Operation *targetUser = getFirstTargetUser(op);
           assert(targetUser && "expected user of map operation was not found");
           genDescriptorMemberMaps(op, builder, targetUser);
+        }
+      });
+
+      func->walk([&](mlir::omp::MapInfoOp op) {
+        // If a record type is not mapped with the `close` modifier while some
+        // of its members are (e.g. descriptor maps), then in USM mode, the
+        // memory for the record will be allocated in unified memory while the
+        // the members might be allocated in device memory. This creates an
+        // inconsistent map for the record type where some of its members are
+        // allocated in different address spaces.
+        //
+        // This fixes this issue by taking a conservative approach and removing
+        // the `close` flag from members if it is not used for mapping the
+        // parent record.
+        if (op.getMembers().empty())
+          return;
+
+        mlir::Type varTy = fir::unwrapRefType(op.getVarPtr().getType());
+        if (!mlir::isa<fir::RecordType>(varTy))
+          return;
+
+        auto mapFlag = op.getMapType();
+        bool hasClose = (mapFlag & mlir::omp::ClauseMapFlags::close) ==
+                        mlir::omp::ClauseMapFlags::close;
+
+        if (hasClose)
+          return;
+
+        for (auto member : op.getMembers()) {
+          if (auto memberOp = llvm::dyn_cast_if_present<mlir::omp::MapInfoOp>(
+                  member.getDefiningOp())) {
+            auto memberMapFlag =
+                memberOp.getMapType() & ~mlir::omp::ClauseMapFlags::close;
+            memberOp.setMapType(memberMapFlag);
+          }
         }
       });
 

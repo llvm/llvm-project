@@ -24,7 +24,9 @@
 define void @gcdmiv_coef_ovfl(ptr %A, i64 %m) {
 ; CHECK-ALL-LABEL: 'gcdmiv_coef_ovfl'
 ; CHECK-ALL-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
-; CHECK-ALL-NEXT:    da analyze - none!
+; CHECK-ALL-NEXT:    da analyze - output [0]!
+; CHECK-ALL-NEXT:    Runtime Assumptions:
+; CHECK-ALL-NEXT:    Compare predicate: (3 * %m) ne) 0
 ; CHECK-ALL-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
 ; CHECK-ALL-NEXT:    da analyze - output [*|<]!
 ; CHECK-ALL-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
@@ -32,11 +34,11 @@ define void @gcdmiv_coef_ovfl(ptr %A, i64 %m) {
 ;
 ; CHECK-GCD-MIV-LABEL: 'gcdmiv_coef_ovfl'
 ; CHECK-GCD-MIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
-; CHECK-GCD-MIV-NEXT:    da analyze - consistent output [*]!
+; CHECK-GCD-MIV-NEXT:    da analyze - output [*]!
 ; CHECK-GCD-MIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-GCD-MIV-NEXT:    da analyze - consistent output [*|<]!
+; CHECK-GCD-MIV-NEXT:    da analyze - output [*|<]!
 ; CHECK-GCD-MIV-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-GCD-MIV-NEXT:    da analyze - consistent output [*]!
+; CHECK-GCD-MIV-NEXT:    da analyze - output [*]!
 ;
 entry:
   %step = mul i64 3, %m
@@ -58,6 +60,206 @@ loop:
 
 exit:
   ret void
+}
+
+; max_i = INT64_MAX/6  // 1537228672809129301
+; for (long long i = 0; i <= max_i; i++) {
+;   A[-6*i + INT64_MAX] = 0;
+;   if (i)
+;     A[3*i - 2] = 1;
+; }
+;
+; There is a bidirectional dependency between the two stores, for example,
+;
+;  memory access       | i == 1 | i == (max_i + 1) / 2 | i == max_i
+; ---------------------|--------|----------------------|-------------------
+;  A[-6*i + INT64_MAX] |        | A[3*max_i - 2]       | A[1]
+;  A[3*i - 2]          | A[1]   |                      | A[3*max_i - 2]
+;
+;
+define void @gcdmiv_delta_ovfl(ptr %A) {
+; CHECK-ALL-LABEL: 'gcdmiv_delta_ovfl'
+; CHECK-ALL-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 0, ptr %idx.0, align 1
+; CHECK-ALL-NEXT:    da analyze - none!
+; CHECK-ALL-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
+; CHECK-ALL-NEXT:    da analyze - output [*|<]!
+; CHECK-ALL-NEXT:  Src: store i8 1, ptr %idx.1, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
+; CHECK-ALL-NEXT:    da analyze - none!
+;
+; CHECK-GCD-MIV-LABEL: 'gcdmiv_delta_ovfl'
+; CHECK-GCD-MIV-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 0, ptr %idx.0, align 1
+; CHECK-GCD-MIV-NEXT:    da analyze - output [*]!
+; CHECK-GCD-MIV-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
+; CHECK-GCD-MIV-NEXT:    da analyze - output [*|<]!
+; CHECK-GCD-MIV-NEXT:  Src: store i8 1, ptr %idx.1, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
+; CHECK-GCD-MIV-NEXT:    da analyze - output [*]!
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %i = phi i64 [ 0, %entry ], [ %i.inc, %loop.latch ]
+  %subscript.0 = phi i64 [ 9223372036854775807, %entry ], [ %subscript.0.next, %loop.latch ]
+  %subscript.1 = phi i64 [ -2, %entry ], [ %subscript.1.next, %loop.latch ]
+  %idx.0 = getelementptr inbounds i8, ptr %A, i64 %subscript.0
+  store i8 0, ptr %idx.0
+  %cond.store = icmp ne i64 %i, 0
+  br i1 %cond.store, label %if.store, label %loop.latch
+
+if.store:
+  %idx.1 = getelementptr i8, ptr %A, i64 %subscript.1
+  store i8 1, ptr %idx.1
+  br label %loop.latch
+
+loop.latch:
+  %i.inc = add nuw nsw i64 %i, 1
+  %subscript.0.next = add nsw i64 %subscript.0, -6
+  %subscript.1.next = add nsw i64 %subscript.1, 3
+  %exitcond = icmp sgt i64 %i.inc, 1537228672809129301
+  br i1 %exitcond, label %exit, label %loop.header
+
+exit:
+  ret void
+}
+
+; max_i = INT64_MAX/3  // 3074457345618258602
+; for (i = 0; i < max_i; i++) {
+;   A[3*i] = 0;
+;   A[-3*i - 3*m - INT64_MAX] = 1;
+; }
+;
+; Dependency may exist between the two stores. For example, consider `m = 1`.
+; Then, `-3*m - INT64_MAX` is `INT64_MAX - 1`. So `-3*i - 3*m - INT64_MAX` is
+; effectively `-3*i + (INT64_MAX - 1)`. Thus, accesses will be as follows:
+;
+;  memory access             | i == 1           | i == max_i - 1
+; ---------------------------|------------------|------------------
+;  A[3*i]                    | A[3]             | A[INT64_MAX - 4]
+;  A[-3*i - 3*m - INT64_MAX] | A[INT64_MAX - 4] | A[3]
+;
+
+define void @gcdmiv_const_ovfl(ptr %A, i64 %m) {
+; CHECK-ALL-LABEL: 'gcdmiv_const_ovfl'
+; CHECK-ALL-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 0, ptr %gep.0, align 1
+; CHECK-ALL-NEXT:    da analyze - none!
+; CHECK-ALL-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.1, align 1
+; CHECK-ALL-NEXT:    da analyze - output [*|<]!
+; CHECK-ALL-NEXT:  Src: store i8 1, ptr %gep.1, align 1 --> Dst: store i8 1, ptr %gep.1, align 1
+; CHECK-ALL-NEXT:    da analyze - none!
+;
+; CHECK-GCD-MIV-LABEL: 'gcdmiv_const_ovfl'
+; CHECK-GCD-MIV-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 0, ptr %gep.0, align 1
+; CHECK-GCD-MIV-NEXT:    da analyze - output [*]!
+; CHECK-GCD-MIV-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.1, align 1
+; CHECK-GCD-MIV-NEXT:    da analyze - output [*|<]!
+; CHECK-GCD-MIV-NEXT:  Src: store i8 1, ptr %gep.1, align 1 --> Dst: store i8 1, ptr %gep.1, align 1
+; CHECK-GCD-MIV-NEXT:    da analyze - output [*]!
+;
+entry:
+  %m.3 = mul nsw i64 -3, %m
+  %const = sub i64 %m.3, 9223372036854775807
+  %guard = icmp ne i64 %const, 0
+  br i1 %guard, label %loop, label %exit
+
+loop:
+  %i = phi i64 [ 0, %entry ], [ %i.inc, %loop ]
+  %offset.0 = phi i64 [ 0, %entry ], [ %offset.0.next, %loop ]
+  %offset.1 = phi i64 [ %const, %entry ], [ %offset.1.next, %loop ]
+  %gep.0 = getelementptr inbounds i8, ptr %A, i64 %offset.0
+  %gep.1 = getelementptr inbounds i8, ptr %A, i64 %offset.1
+  store i8 0, ptr %gep.0
+  store i8 1, ptr %gep.1
+  %i.inc = add nuw nsw i64 %i, 1
+  %offset.0.next = add nsw i64 %offset.0, 3
+  %offset.1.next = add nsw i64 %offset.1, -3
+  %ec = icmp eq i64 %i.inc, 3074457345618258602
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; // 5*1844674407370955161 == 9223372036854775805 == INT64_MAX - 2, so addrecs don't overflow.
+;
+; for (i = 0; i < 1844674407370955162; i++)
+;   for (j = 0; j < 2; j++) {
+;     offset0 =  5*i - 9223372036854775805*j;
+;     offset1 = -5*i + 9223372036854775796*j - 1;
+;     if (offset0 == -5) A[offset0] = 0;
+;     if (offset1 == -5) A[offset1] = 0;
+;   }
+;
+; FIXME: DependenceAnalysis fails to detect dependency between two stores.
+;
+; memory accesses                     | (i,j) == (1844674407370955160,1)
+; ------------------------------------|----------------------------------
+; A[ 5*i - 9223372036854775805*j]     | A[-5]
+; A[-5*i + 9223372036854775796*j - 1] | A[-5]
+;
+define void @gcdmiv_delta_ovfl2(ptr %A) {
+; CHECK-ALL-LABEL: 'gcdmiv_delta_ovfl2'
+; CHECK-ALL-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 0, ptr %gep.0, align 1
+; CHECK-ALL-NEXT:    da analyze - none!
+; CHECK-ALL-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 0, ptr %gep.1, align 1
+; CHECK-ALL-NEXT:    da analyze - none!
+; CHECK-ALL-NEXT:  Src: store i8 0, ptr %gep.1, align 1 --> Dst: store i8 0, ptr %gep.1, align 1
+; CHECK-ALL-NEXT:    da analyze - none!
+;
+; CHECK-GCD-MIV-LABEL: 'gcdmiv_delta_ovfl2'
+; CHECK-GCD-MIV-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 0, ptr %gep.0, align 1
+; CHECK-GCD-MIV-NEXT:    da analyze - output [* *]!
+; CHECK-GCD-MIV-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 0, ptr %gep.1, align 1
+; CHECK-GCD-MIV-NEXT:    da analyze - output [* *|<]!
+; CHECK-GCD-MIV-NEXT:  Src: store i8 0, ptr %gep.1, align 1 --> Dst: store i8 0, ptr %gep.1, align 1
+; CHECK-GCD-MIV-NEXT:    da analyze - output [* *]!
+;
+entry:
+  br label %loop.i.header
+
+loop.i.header:
+  %i = phi i64 [ 0, %entry ], [ %i.inc, %loop.i.latch ]
+  %c.i.0 = phi i64 [ 0, %entry ], [ %c.i.0.next, %loop.i.latch ]
+  %c.i.1 = phi i64 [ -1, %entry ], [ %c.i.1.next, %loop.i.latch ]
+  br label %loop.j.header
+
+loop.j.header:
+  %j = phi i64 [ 0, %loop.i.header ], [ %j.inc, %loop.j.latch ]
+  %offset.0 = phi i64 [ %c.i.0, %loop.i.header ], [ %offset.0.next, %loop.j.latch ]
+  %offset.1 = phi i64 [ %c.i.1, %loop.i.header ], [ %offset.1.next, %loop.j.latch ]
+  %cond.0 = icmp eq i64 %offset.0, -5
+  br i1 %cond.0, label %if.then.0, label %loop.j.middle
+
+if.then.0:
+  %gep.0 = getelementptr i8, ptr %A, i64 %offset.0
+  store i8 0, ptr %gep.0
+  br label %loop.j.middle
+
+loop.j.middle:
+  %cond.1 = icmp eq i64 %offset.1, -5
+  br i1 %cond.1, label %if.then.1, label %loop.j.latch
+
+if.then.1:
+  %gep.1 = getelementptr i8, ptr %A, i64 %offset.1
+  store i8 0, ptr %gep.1
+  br label %loop.j.latch
+
+loop.j.latch:
+  %j.inc = add i64 %j, 1
+  %offset.0.next = add nsw i64 %offset.0, -9223372036854775805
+  %offset.1.next = add nsw i64 %offset.1, 9223372036854775796
+  %ec.j = icmp eq i64 %j, 2
+  br i1 %ec.j, label %loop.i.latch, label %loop.j.header
+
+loop.i.latch:
+  %i.inc = add i64 %i, 1
+  %c.i.0.next = add nsw i64 %c.i.0, 5
+  %c.i.1.next = add nsw i64 %c.i.1, -5
+  %ec.i = icmp eq i64 %i.inc, 1844674407370955161
+  br i1 %ec.i, label %exit, label %loop.i.header
+
+exit:
+  ret void
+
 }
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; CHECK: {{.*}}

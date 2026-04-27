@@ -265,6 +265,11 @@
 # RUN: llvm-readelf --notes %t_nt_arm_fpmr.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_ARM_FPMR (AArch64 Floating Point Mode Register)"
 # RUN: llvm-readobj --notes %t_nt_arm_fpmr.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_ARM_FPMR (AArch64 Floating Point Mode Register)"
 
+## Check ELF::NT_ARM_POE
+# RUN: yaml2obj %s -DTYPE=0x40f -o %t_nt_arm_poe.o
+# RUN: llvm-readelf --notes %t_nt_arm_poe.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_ARM_POE (AArch64 Permission Overlay Extension Registers)"
+# RUN: llvm-readobj --notes %t_nt_arm_poe.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_ARM_POE (AArch64 Permission Overlay Extension Registers)"
+
 ## Check ELF::NT_ARM_GCS
 # RUN: yaml2obj %s -DTYPE=0x410 -o %t_nt_arm_gcs.o
 # RUN: llvm-readelf --notes %t_nt_arm_gcs.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_ARM_GCS (AArch64 Guarded Control Stack state)"

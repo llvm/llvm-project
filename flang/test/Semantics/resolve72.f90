@@ -1,6 +1,6 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
-! C709 An assumed-type entity shall be a dummy data object that does not have 
-! the ALLOCATABLE, CODIMENSION, INTENT (OUT), POINTER, or VALUE attribute and 
+! C709 An assumed-type entity shall be a dummy data object that does not have
+! the ALLOCATABLE, CODIMENSION, INTENT (OUT), POINTER, or VALUE attribute and
 ! is not an explicit-shape array.
 subroutine s()
   !ERROR: Assumed-type entity 'starvar' must be a dummy argument
@@ -8,8 +8,8 @@ subroutine s()
 
     contains
       subroutine inner1(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)
-        type(*) :: arg1 ! OK        
-        type(*), dimension(*) :: arg2 ! OK        
+        type(*) :: arg1 ! OK
+        type(*), dimension(*) :: arg2 ! OK
         !ERROR: Assumed-type argument 'arg3' cannot have the ALLOCATABLE attribute
         type(*), allocatable :: arg3
         !ERROR: Assumed-type argument 'arg4' cannot be a coarray

@@ -49,6 +49,7 @@ public:
   bool isScalar() const { return flavor == Scalar; }
   bool isComplex() const { return flavor == Complex; }
   bool isAggregate() const { return flavor == Aggregate; }
+  bool isIgnored() const { return isScalar() && !getValue(); }
 
   bool isVolatileQualified() const { return isVolatile; }
 
@@ -327,6 +328,10 @@ public:
     r.initialize(type, type.getQualifiers(), addr.getAlignment(), baseInfo);
     return r;
   }
+
+  RValue asAggregateRValue() const {
+    return RValue::getAggregate(getAddress(), isVolatileQualified());
+  }
 };
 
 /// An aggregate value slot.
@@ -372,7 +377,7 @@ public:
   enum IsDestructed_t { IsNotDestructed, IsDestructed };
   enum IsZeroed_t { IsNotZeroed, IsZeroed };
   enum IsAliased_t { IsNotAliased, IsAliased };
-  enum Overlap_t { MayOverlap, DoesNotOverlap };
+  enum Overlap_t { DoesNotOverlap, MayOverlap };
 
   /// Returns an aggregate value slot indicating that the aggregate
   /// value is being ignored.

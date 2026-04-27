@@ -50,7 +50,12 @@ Older swig versions will simply ignore this setting.
     import $module
 except ImportError:
     # Relative import should work if we are being loaded by Python.
-    from . import $module"
+    # The cpython module built by swig is pushed one level down into
+    # the native submodule, because at this point the interpreter
+    # is still constructing the lldb module itself.
+    # Simply importing anything using `from . import` constitutes
+    # a cyclic importing.
+    from .native import $module"
 %enddef
 
 // The name of the module to be created.

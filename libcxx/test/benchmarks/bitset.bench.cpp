@@ -52,65 +52,30 @@ static void BM_BitsetToString(benchmark::State& state) {
 // Sparse bitset
 BENCHMARK(BM_BitsetToString<32>)->Arg(10)->Name("BM_BitsetToString<32>/Sparse (10%)");
 BENCHMARK(BM_BitsetToString<64>)->Arg(10)->Name("BM_BitsetToString<64>/Sparse (10%)");
-BENCHMARK(BM_BitsetToString<128>)->Arg(10)->Name("BM_BitsetToString<128>/Sparse (10%)");
-BENCHMARK(BM_BitsetToString<256>)->Arg(10)->Name("BM_BitsetToString<256>/Sparse (10%)");
-BENCHMARK(BM_BitsetToString<512>)->Arg(10)->Name("BM_BitsetToString<512>/Sparse (10%)");
-BENCHMARK(BM_BitsetToString<1024>)->Arg(10)->Name("BM_BitsetToString<1024>/Sparse (10%)");
-BENCHMARK(BM_BitsetToString<2048>)->Arg(10)->Name("BM_BitsetToString<2048>/Sparse (10%)");
-BENCHMARK(BM_BitsetToString<4096>)->Arg(10)->Name("BM_BitsetToString<4096>/Sparse (10%)");
 BENCHMARK(BM_BitsetToString<8192>)->Arg(10)->Name("BM_BitsetToString<8192>/Sparse (10%)");
-BENCHMARK(BM_BitsetToString<16384>)->Arg(10)->Name("BM_BitsetToString<16384>/Sparse (10%)");
-BENCHMARK(BM_BitsetToString<32768>)->Arg(10)->Name("BM_BitsetToString<32768>/Sparse (10%)");
-BENCHMARK(BM_BitsetToString<65536>)->Arg(10)->Name("BM_BitsetToString<65536>/Sparse (10%)");
-BENCHMARK(BM_BitsetToString<131072>)->Arg(10)->Name("BM_BitsetToString<131072>/Sparse (10%)");
-BENCHMARK(BM_BitsetToString<262144>)->Arg(10)->Name("BM_BitsetToString<262144>/Sparse (10%)");
-BENCHMARK(BM_BitsetToString<524288>)->Arg(10)->Name("BM_BitsetToString<524288>/Sparse (10%)");
 BENCHMARK(BM_BitsetToString<1048576>)->Arg(10)->Name("BM_BitsetToString<1048576>/Sparse (10%)"); // 1 << 20
 
 // Dense bitset
 BENCHMARK(BM_BitsetToString<32>)->Arg(90)->Name("BM_BitsetToString<32>/Dense (90%)");
 BENCHMARK(BM_BitsetToString<64>)->Arg(90)->Name("BM_BitsetToString<64>/Dense (90%)");
-BENCHMARK(BM_BitsetToString<128>)->Arg(90)->Name("BM_BitsetToString<128>/Dense (90%)");
-BENCHMARK(BM_BitsetToString<256>)->Arg(90)->Name("BM_BitsetToString<256>/Dense (90%)");
-BENCHMARK(BM_BitsetToString<512>)->Arg(90)->Name("BM_BitsetToString<512>/Dense (90%)");
-BENCHMARK(BM_BitsetToString<1024>)->Arg(90)->Name("BM_BitsetToString<1024>/Dense (90%)");
-BENCHMARK(BM_BitsetToString<2048>)->Arg(90)->Name("BM_BitsetToString<2048>/Dense (90%)");
-BENCHMARK(BM_BitsetToString<4096>)->Arg(90)->Name("BM_BitsetToString<4096>/Dense (90%)");
 BENCHMARK(BM_BitsetToString<8192>)->Arg(90)->Name("BM_BitsetToString<8192>/Dense (90%)");
-BENCHMARK(BM_BitsetToString<16384>)->Arg(90)->Name("BM_BitsetToString<16384>/Dense (90%)");
-BENCHMARK(BM_BitsetToString<32768>)->Arg(90)->Name("BM_BitsetToString<32768>/Dense (90%)");
-BENCHMARK(BM_BitsetToString<65536>)->Arg(90)->Name("BM_BitsetToString<65536>/Dense (90%)");
-BENCHMARK(BM_BitsetToString<131072>)->Arg(90)->Name("BM_BitsetToString<131072>/Dense (90%)");
-BENCHMARK(BM_BitsetToString<262144>)->Arg(90)->Name("BM_BitsetToString<262144>/Dense (90%)");
-BENCHMARK(BM_BitsetToString<524288>)->Arg(90)->Name("BM_BitsetToString<524288>/Dense (90%)");
 BENCHMARK(BM_BitsetToString<1048576>)->Arg(90)->Name("BM_BitsetToString<1048576>/Dense (90%)"); // 1 << 20
 
 // Uniform bitset
 BENCHMARK(BM_BitsetToString<32>)->Arg(50)->Name("BM_BitsetToString<32>/Uniform (50%)");
 BENCHMARK(BM_BitsetToString<64>)->Arg(50)->Name("BM_BitsetToString<64>/Uniform (50%)");
-BENCHMARK(BM_BitsetToString<128>)->Arg(50)->Name("BM_BitsetToString<128>/Uniform (50%)");
-BENCHMARK(BM_BitsetToString<256>)->Arg(50)->Name("BM_BitsetToString<256>/Uniform (50%)");
-BENCHMARK(BM_BitsetToString<512>)->Arg(50)->Name("BM_BitsetToString<512>/Uniform (50%)");
-BENCHMARK(BM_BitsetToString<1024>)->Arg(50)->Name("BM_BitsetToString<1024>/Uniform (50%)");
-BENCHMARK(BM_BitsetToString<2048>)->Arg(50)->Name("BM_BitsetToString<2048>/Uniform (50%)");
-BENCHMARK(BM_BitsetToString<4096>)->Arg(50)->Name("BM_BitsetToString<4096>/Uniform (50%)");
 BENCHMARK(BM_BitsetToString<8192>)->Arg(50)->Name("BM_BitsetToString<8192>/Uniform (50%)");
-BENCHMARK(BM_BitsetToString<16384>)->Arg(50)->Name("BM_BitsetToString<16384>/Uniform (50%)");
-BENCHMARK(BM_BitsetToString<32768>)->Arg(50)->Name("BM_BitsetToString<32768>/Uniform (50%)");
-BENCHMARK(BM_BitsetToString<65536>)->Arg(50)->Name("BM_BitsetToString<65536>/Uniform (50%)");
-BENCHMARK(BM_BitsetToString<131072>)->Arg(50)->Name("BM_BitsetToString<131072>/Uniform (50%)");
-BENCHMARK(BM_BitsetToString<262144>)->Arg(50)->Name("BM_BitsetToString<262144>/Uniform (50%)");
-BENCHMARK(BM_BitsetToString<524288>)->Arg(50)->Name("BM_BitsetToString<524288>/Uniform (50%)");
 BENCHMARK(BM_BitsetToString<1048576>)->Arg(50)->Name("BM_BitsetToString<1048576>/Uniform (50%)"); // 1 << 20
 
 static void BM_Bitset_ctor_ull(benchmark::State& state) {
-  unsigned long long val = (1ULL << state.range(0)) - 1;
+  unsigned long long val = 1;
   for (auto _ : state) {
+    benchmark::DoNotOptimize(val);
     std::bitset<128> b(val);
     benchmark::DoNotOptimize(b);
   }
 }
 
-BENCHMARK(BM_Bitset_ctor_ull)->DenseRange(1, 63);
+BENCHMARK(BM_Bitset_ctor_ull);
 
 BENCHMARK_MAIN();

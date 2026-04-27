@@ -24,28 +24,52 @@ namespace lldb_private {
 
 /// This struct contains the metadata needed to instantiate a frame provider
 /// and optional filters to control which threads it applies to.
-struct SyntheticFrameProviderDescriptor {
+struct ScriptedFrameProviderDescriptor {
   /// Metadata for instantiating the provider (e.g. script class name and args).
   lldb::ScriptedMetadataSP scripted_metadata_sp;
+
+  /// Interface for calling static methods on the provider class.
+  lldb::ScriptedFrameProviderInterfaceSP interface_sp;
 
   /// Optional list of thread specifications to which this provider applies.
   /// If empty, the provider applies to all threads. A thread matches if it
   /// satisfies ANY of the specs in this vector (OR logic).
   std::vector<ThreadSpec> thread_specs;
 
-  SyntheticFrameProviderDescriptor() = default;
+  /// Monotonically increasing ID assigned by Target when this descriptor is
+  /// registered. LLDB_INVALID_FRAME_PROVIDER_ID (UINT32_MAX) means no ID has
+  /// been assigned yet.
+  uint32_t m_id = LLDB_INVALID_FRAME_PROVIDER_ID;
 
-  SyntheticFrameProviderDescriptor(lldb::ScriptedMetadataSP metadata_sp)
+  ScriptedFrameProviderDescriptor() = default;
+
+  ScriptedFrameProviderDescriptor(lldb::ScriptedMetadataSP metadata_sp)
       : scripted_metadata_sp(metadata_sp) {}
 
-  SyntheticFrameProviderDescriptor(lldb::ScriptedMetadataSP metadata_sp,
-                                   const std::vector<ThreadSpec> &specs)
+  ScriptedFrameProviderDescriptor(lldb::ScriptedMetadataSP metadata_sp,
+                                  const std::vector<ThreadSpec> &specs)
       : scripted_metadata_sp(metadata_sp), thread_specs(specs) {}
 
   /// Get the name of this descriptor (the scripted class name).
   llvm::StringRef GetName() const {
     return scripted_metadata_sp ? scripted_metadata_sp->GetClassName() : "";
   }
+
+  /// Get the description of this frame provider.
+  ///
+  /// \return A string describing what this frame provider does, or an
+  ///         empty string if no description is available.
+  std::string GetDescription() const;
+
+  /// Get the priority of this frame provider.
+  ///
+  /// Priority determines the order in which providers are evaluated when
+  /// multiple providers could apply to the same thread. Lower numbers indicate
+  /// higher priority (like Unix nice values).
+  ///
+  /// \return Priority value where 0 is highest priority, or std::nullopt for
+  ///         default priority (UINT32_MAX - lowest priority).
+  std::optional<uint32_t> GetPriority() const;
 
   /// Check if this descriptor applies to the given thread.
   bool AppliesToThread(Thread &thread) const {
@@ -64,6 +88,20 @@ struct SyntheticFrameProviderDescriptor {
   /// Check if this descriptor has valid metadata for script-based providers.
   bool IsValid() const { return scripted_metadata_sp != nullptr; }
 
+  /// Get a unique identifier for this descriptor.
+  /// Returns the monotonically increasing ID assigned by Target if set,
+  /// otherwise returns LLDB_INVALID_FRAME_PROVIDER_ID (UINT32_MAX).
+  uint32_t GetID() const { return m_id; }
+
+  /// Set the monotonically increasing ID for this descriptor. Called by Target
+  /// when the descriptor is registered.
+  void SetID(uint32_t id) { m_id = id; }
+
+  /// Get the content-based hash from ScriptedMetadata.
+  /// Used for duplicate detection (same class name + args).
+  uint32_t GetHash() const;
+
+  /// Dump a description of this descriptor to the given stream.
   void Dump(Stream *s) const;
 };
 
@@ -95,7 +133,7 @@ public:
   ///     otherwise an \a llvm::Error.
   static llvm::Expected<lldb::SyntheticFrameProviderSP>
   CreateInstance(lldb::StackFrameListSP input_frames,
-                 const SyntheticFrameProviderDescriptor &descriptor);
+                 const ScriptedFrameProviderDescriptor &descriptor);
 
   /// Try to create a SyntheticFrameProvider instance for the given input
   /// frames using a specific C++ plugin.
@@ -124,6 +162,19 @@ public:
                  const std::vector<ThreadSpec> &thread_specs = {});
 
   ~SyntheticFrameProvider() override;
+
+  virtual std::string GetDescription() const = 0;
+
+  /// Get the priority of this frame provider.
+  ///
+  /// Priority determines the order in which providers are evaluated when
+  /// multiple providers could apply to the same thread. Lower numbers indicate
+  /// higher priority (like Unix nice values).
+  ///
+  /// \return
+  ///     Priority value where 0 is highest priority, or std::nullopt for
+  ///     default priority (UINT32_MAX - lowest priority).
+  virtual std::optional<uint32_t> GetPriority() const { return std::nullopt; }
 
   /// Get a single stack frame at the specified index.
   ///

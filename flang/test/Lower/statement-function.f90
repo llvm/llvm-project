@@ -21,7 +21,7 @@ end function
 
 ! Check this is not lowered as a simple macro: e.g. argument is only
 ! evaluated once even if it appears in several placed inside the
-! statement function expression 
+! statement function expression
 ! CHECK-LABEL: func @_QPtest_stmt_only_eval_arg_once() -> f32
 real(4) function test_stmt_only_eval_arg_once()
   real(4) :: only_once, x1

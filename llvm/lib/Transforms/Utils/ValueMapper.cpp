@@ -526,8 +526,9 @@ Value *Mapper::mapValue(const Value *V) {
   if (isa<ConstantVector>(C))
     return getVM()[V] = ConstantVector::get(Ops);
   if (isa<ConstantPtrAuth>(C))
-    return getVM()[V] = ConstantPtrAuth::get(Ops[0], cast<ConstantInt>(Ops[1]),
-                                             cast<ConstantInt>(Ops[2]), Ops[3]);
+    return getVM()[V] =
+               ConstantPtrAuth::get(Ops[0], cast<ConstantInt>(Ops[1]),
+                                    cast<ConstantInt>(Ops[2]), Ops[3], Ops[4]);
   // If this is a no-operand constant, it must be because the type was remapped.
   if (isa<PoisonValue>(C))
     return getVM()[V] = PoisonValue::get(NewTy);
@@ -992,6 +993,12 @@ void Mapper::remapInstruction(Instruction *I) {
   if (auto *CB = dyn_cast<CallBase>(I)) {
     if (CB->getMetadata(LLVMContext::MD_callee_type) && !CB->isIndirectCall())
       CB->setMetadata(LLVMContext::MD_callee_type, nullptr);
+    // !inline_history metadata can contain references to other functions that
+    // we don't want to map because ThinLTO doesn't track metadata references
+    // to functions.
+    if ((Flags & RF_Importing) &&
+        CB->getMetadata(LLVMContext::MD_inline_history))
+      CB->setMetadata(LLVMContext::MD_inline_history, nullptr);
   }
 
   // Remap phi nodes' incoming blocks.

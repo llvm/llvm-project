@@ -12,8 +12,6 @@
 ; RUN:   -verify-machineinstrs -target-abi lp64 | \
 ; RUN:   FileCheck -check-prefixes=CHECKIZHINX %s
 
-declare half @llvm.minimum.f16(half, half)
-
 define half @fminimum_f16(half %a, half %b) nounwind {
 ; CHECKIZFH-LABEL: fminimum_f16:
 ; CHECKIZFH:       # %bb.0:
@@ -55,8 +53,6 @@ define half @fminimum_f16(half %a, half %b) nounwind {
   %1 = call half @llvm.minimum.f16(half %a, half %b)
   ret half %1
 }
-
-declare half @llvm.maximum.f16(half, half)
 
 define half @fmaximum_f16(half %a, half %b) nounwind {
 ; CHECKIZFH-LABEL: fmaximum_f16:
@@ -128,7 +124,7 @@ define half @fmaximum_nnan_f16(half %a, half %b) nounwind {
   ret half %1
 }
 
-define half @fminimum_nnan_attr_f16(half %a, half %b) nounwind "no-nans-fp-math"="true" {
+define half @fminimum_nnan_attr_f16(half %a, half %b) nounwind {
 ; CHECKIZFH-LABEL: fminimum_nnan_attr_f16:
 ; CHECKIZFH:       # %bb.0:
 ; CHECKIZFH-NEXT:    fmin.h fa0, fa0, fa1
@@ -138,7 +134,7 @@ define half @fminimum_nnan_attr_f16(half %a, half %b) nounwind "no-nans-fp-math"
 ; CHECKIZHINX:       # %bb.0:
 ; CHECKIZHINX-NEXT:    fmin.h a0, a0, a1
 ; CHECKIZHINX-NEXT:    ret
-  %1 = call half @llvm.minimum.f16(half %a, half %b)
+  %1 = call nnan half @llvm.minimum.f16(half %a, half %b)
   ret half %1
 }
 

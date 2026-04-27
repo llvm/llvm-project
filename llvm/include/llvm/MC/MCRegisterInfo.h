@@ -180,6 +180,7 @@ private:
   unsigned NumSubRegIndices;                  // Number of subreg indices.
   const uint16_t *RegEncodingTable;           // Pointer to array of register
                                               // encodings.
+  const unsigned (*RegUnitIntervals)[2]; // Pointer to regunit interval table.
 
   unsigned L2DwarfRegsSize;
   unsigned EHL2DwarfRegsSize;
@@ -286,7 +287,8 @@ public:
                           const int16_t *DL, const LaneBitmask *RUMS,
                           const char *Strings, const char *ClassStrings,
                           const uint16_t *SubIndices, unsigned NumIndices,
-                          const uint16_t *RET) {
+                          const uint16_t *RET,
+                          const unsigned (*RUI)[2] = nullptr) {
     Desc = D;
     NumRegs = NR;
     RAReg = RA;
@@ -302,6 +304,7 @@ public:
     SubRegIndices = SubIndices;
     NumSubRegIndices = NumIndices;
     RegEncodingTable = RET;
+    RegUnitIntervals = RUI;
 
     // Initialize DWARF register mapping variables
     EHL2DwarfRegs = nullptr;
@@ -438,7 +441,7 @@ public:
   /// number.  Returns -1 if there is no equivalent value.  The second
   /// parameter allows targets to use different numberings for EH info and
   /// debugging info.
-  virtual int64_t getDwarfRegNum(MCRegister RegNum, bool isEH) const;
+  virtual int64_t getDwarfRegNum(MCRegister Reg, bool isEH) const;
 
   /// Map a dwarf register back to a target register. Returns std::nullopt if
   /// there is no mapping.
@@ -450,11 +453,11 @@ public:
 
   /// Map a target register to an equivalent SEH register
   /// number.  Returns LLVM register number if there is no equivalent value.
-  int getSEHRegNum(MCRegister RegNum) const;
+  int getSEHRegNum(MCRegister Reg) const;
 
   /// Map a target register to an equivalent CodeView register
   /// number.
-  int getCodeViewRegNum(MCRegister RegNum) const;
+  int getCodeViewRegNum(MCRegister Reg) const;
 
   regclass_iterator regclass_begin() const { return Classes; }
   regclass_iterator regclass_end() const { return Classes+NumClasses; }
@@ -511,6 +514,19 @@ public:
 
   /// Returns true if the two registers are equal or alias each other.
   bool regsOverlap(MCRegister RegA, MCRegister RegB) const;
+
+  /// Returns true if this target uses regunit intervals.
+  bool hasRegUnitIntervals() const { return RegUnitIntervals != nullptr; }
+
+  /// Returns an iterator range over all native regunits in the RegUnitInterval
+  /// table for \p Reg.
+  iota_range<unsigned> regunits_interval(MCRegister Reg) const {
+    assert(hasRegUnitIntervals() &&
+           "Target does not support regunit intervals");
+    assert(Reg.id() < NumRegs && "Invalid register number");
+    return seq<unsigned>(RegUnitIntervals[Reg.id()][0],
+                         RegUnitIntervals[Reg.id()][1]);
+  }
 };
 
 //===----------------------------------------------------------------------===//

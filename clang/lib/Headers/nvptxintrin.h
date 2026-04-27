@@ -31,9 +31,6 @@ _Pragma("omp begin declare variant match(device = {arch(nvptx64)})");
 #define __gpu_global __attribute__((address_space(1)))
 #define __gpu_generic __attribute__((address_space(0)))
 
-// Attribute to declare a function as a kernel.
-#define __gpu_kernel __attribute__((nvptx_kernel, visibility("protected")))
-
 // Returns the number of CUDA blocks in the 'x' dimension.
 _DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_num_blocks_x(void) {
   return __nvvm_read_ptx_sreg_nctaid_x();
@@ -140,7 +137,7 @@ __gpu_shuffle_idx_u32(uint64_t __lane_mask, uint32_t __idx, uint32_t __x,
                       uint32_t __width) {
   // Mask out inactive lanes to match AMDGPU behavior.
   uint32_t __mask = (uint32_t)__lane_mask;
-  bool __bitmask = (1ull << __idx) & __lane_mask;
+  bool __bitmask = (UINT64_C(1) << __idx) & __lane_mask;
   return -__bitmask &
          __nvvm_shfl_sync_idx_i32(__mask, __x, __idx,
                                   ((__gpu_num_lanes() - __width) << 8u) | 0x1f);

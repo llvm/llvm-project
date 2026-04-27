@@ -529,7 +529,9 @@ private:
   /// that we don't re-emit the initializer.
   llvm::DenseMap<const Decl*, unsigned> DelayedCXXInitPosition;
 
-  /// To remember which types did require a vector deleting dtor.
+  /// To remember which types did require a vector deleting destructor body.
+  /// This set basically contains classes that have virtual destructor and new[]
+  /// was emitted for the class.
   llvm::SmallPtrSet<const CXXRecordDecl *, 16> RequireVectorDeletingDtor;
 
   typedef std::pair<OrderGlobalInitsOrStermFinalizers, llvm::Function *>
@@ -719,6 +721,39 @@ public:
 
   /// Return true iff an Objective-C runtime has been configured.
   bool hasObjCRuntime() { return !!ObjCRuntime; }
+
+  /// Check if the precondition thunk optimization is enabled.
+  /// This checks runtime support and codegen options, but does NOT check
+  /// whether a specific method is eligible for thunks or inline preconditions.
+  ///
+  /// TODO: Add support for GNUStep as well, currently only supports NeXT
+  /// family.
+  bool isObjCDirectPreconditionThunkEnabled() const {
+    return getLangOpts().ObjCRuntime.allowsDirectDispatch() &&
+           getLangOpts().ObjCRuntime.isNeXTFamily() &&
+           getCodeGenOpts().ObjCDirectPreconditionThunk;
+  }
+
+  /// Check if a direct method should use precondition thunks at call sites.
+  /// Returns false if OMD is null, not a direct method, or variadic.
+  ///
+  /// Variadic methods use inline preconditions instead of thunks to avoid
+  /// musttail complexity across different architectures.
+  bool shouldHavePreconditionThunk(const ObjCMethodDecl *OMD) const {
+    return OMD && OMD->isDirectMethod() && !OMD->isVariadic() &&
+           isObjCDirectPreconditionThunkEnabled();
+  }
+
+  /// Check if a direct method should have inline precondition checks at call
+  /// sites.
+  /// Returns false if OMD is null, not a direct method, or not variadic.
+  ///
+  /// Variadic direct methods use inline preconditions rather than thunks
+  /// to avoid musttail complexity across different architectures.
+  bool shouldHavePreconditionInline(const ObjCMethodDecl *OMD) const {
+    return OMD && OMD->isDirectMethod() && OMD->isVariadic() &&
+           isObjCDirectPreconditionThunkEnabled();
+  }
 
   const std::string &getModuleNameHash() const { return ModuleNameHash; }
 
@@ -1371,6 +1406,9 @@ public:
   /// Print out an error that codegen doesn't support the specified stmt yet.
   void ErrorUnsupported(const Stmt *S, const char *Type);
 
+  /// Print out an error that codegen doesn't support the specified stmt yet.
+  void ErrorUnsupported(const Stmt *S, llvm::StringRef Type);
+
   /// Print out an error that codegen doesn't support the specified decl yet.
   void ErrorUnsupported(const Decl *D, const char *Type);
 
@@ -1548,6 +1586,13 @@ public:
   /// Emit code for a single global function or var decl. Forward declarations
   /// are emitted lazily.
   void EmitGlobal(GlobalDecl D);
+
+  /// Record that new[] was called for the class, transform vector deleting
+  /// destructor definition in a form of alias to the actual definition.
+  void requireVectorDestructorDefinition(const CXXRecordDecl *RD);
+
+  /// Check that class need vector deleting destructor body.
+  bool classNeedsVectorDestructor(const CXXRecordDecl *RD);
 
   bool TryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D);
   void EmitDefinitionAsAlias(GlobalDecl Alias, GlobalDecl Target);
@@ -1828,13 +1873,11 @@ public:
     // behavior. So projects like the Linux kernel can rely on it.
     return !getLangOpts().CPlusPlus;
   }
-  void requireVectorDestructorDefinition(const CXXRecordDecl *RD);
-  bool classNeedsVectorDestructor(const CXXRecordDecl *RD);
 
   // Helper to get the alignment for a variable.
   unsigned getVtableGlobalVarAlignment(const VarDecl *D = nullptr) {
     LangAS AS = GetGlobalVarAddressSpace(D);
-    unsigned PAlign = getItaniumVTableContext().isRelativeLayout()
+    unsigned PAlign = Context.getLangOpts().RelativeCXXABIVTables
                           ? 32
                           : getTarget().getPointerAlign(AS);
     return PAlign;
@@ -1844,6 +1887,19 @@ public:
   TrapReasonBuilder BuildTrapReason(unsigned DiagID, TrapReason &TR) {
     return TrapReasonBuilder(&getDiags(), DiagID, TR);
   }
+
+  llvm::Constant *performAddrSpaceCast(llvm::Constant *Src,
+                                       llvm::Type *DestTy) {
+    // Since target may map different address spaces in AST to the same address
+    // space, an address space conversion may end up as a bitcast.
+    return llvm::ConstantExpr::getPointerCast(Src, DestTy);
+  }
+
+  std::optional<llvm::Attribute::AttrKind>
+  StackProtectorAttribute(const Decl *D) const;
+
+  std::string getPFPFieldName(const FieldDecl *FD);
+  llvm::GlobalValue *getPFPDeactivationSymbol(const FieldDecl *FD);
 
 private:
   bool shouldDropDLLAttribute(const Decl *D, const llvm::GlobalValue *GV) const;
@@ -2048,6 +2104,10 @@ private:
 
   llvm::Metadata *CreateMetadataIdentifierImpl(QualType T, MetadataTypeMap &Map,
                                                StringRef Suffix);
+
+  /// Emit deactivation symbols for any PFP fields whose offset is taken with
+  /// offsetof.
+  void emitPFPFieldsWithEvaluatedOffset();
 };
 
 }  // end namespace CodeGen

@@ -590,3 +590,92 @@ define <2 x float> @mixed_clamp_to_float_vec(<2 x i32> %x) {
   %r = select <2 x i1> %lo_cmp, <2 x float> <float 1.0, float 1.0>, <2 x float> %f_min
   ret <2 x float> %r
 }
+
+define i8 @clamp_float_fast_minnum_max_select_nsz_fptoui(float %x) {
+; CHECK-LABEL: @clamp_float_fast_minnum_max_select_nsz_fptoui(
+; CHECK-NEXT:    [[MIN:%.*]] = call float @llvm.minnum.f32(float [[X:%.*]], float 2.550000e+02)
+; CHECK-NEXT:    [[R:%.*]] = call nnan nsz float @llvm.maxnum.f32(float [[MIN]], float 0.000000e+00)
+; CHECK-NEXT:    [[FPTOUI:%.*]] = fptoui float [[R]] to i8
+; CHECK-NEXT:    ret i8 [[FPTOUI]]
+;
+  %min = call float @llvm.minnum.f32(float %x, float 2.550000e+02)
+  %cmp1 = fcmp nnan olt float %x, 0.0
+  %r = select nsz i1 %cmp1, float 0.0, float %min
+  %fptoui = fptoui float %r to i8
+  ret i8 %fptoui
+}
+
+define i8 @clamp_float_fast_maxnum_min_select_nsz_fptoui(float %x) {
+; CHECK-LABEL: @clamp_float_fast_maxnum_min_select_nsz_fptoui(
+; CHECK-NEXT:    [[MAX:%.*]] = call float @llvm.maxnum.f32(float [[X:%.*]], float 0.000000e+00)
+; CHECK-NEXT:    [[R:%.*]] = call nnan nsz float @llvm.minnum.f32(float [[MAX]], float 2.550000e+02)
+; CHECK-NEXT:    [[FPTOUI:%.*]] = fptoui float [[R]] to i8
+; CHECK-NEXT:    ret i8 [[FPTOUI]]
+;
+  %max = call float @llvm.maxnum.f32(float %x, float 0.000000e+00)
+  %cmp1 = fcmp nnan ogt float %x, 255.0
+  %r = select nsz i1 %cmp1, float 255.0, float %max
+  %fptoui = fptoui float %r to i8
+  ret i8 %fptoui
+}
+
+; Negative test. Constants in the wrong order.
+define i8 @clamp_float_fast_minnum_max_select_nsz_fptoui_negative(float %x) {
+; CHECK-LABEL: @clamp_float_fast_minnum_max_select_nsz_fptoui_negative(
+; CHECK-NEXT:    [[MIN:%.*]] = call float @llvm.minnum.f32(float [[X:%.*]], float 1.270000e+02)
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp nnan olt float [[X]], 2.550000e+02
+; CHECK-NEXT:    [[R:%.*]] = select nsz i1 [[CMP1]], float 2.550000e+02, float [[MIN]]
+; CHECK-NEXT:    [[FPTOUI:%.*]] = fptoui float [[R]] to i8
+; CHECK-NEXT:    ret i8 [[FPTOUI]]
+;
+  %min = call float @llvm.minnum.f32(float %x, float 1.270000e+02)
+  %cmp1 = fcmp nnan olt float %x, 255.0
+  %r = select nsz i1 %cmp1, float 255.0, float %min
+  %fptoui = fptoui float %r to i8
+  ret i8 %fptoui
+}
+
+; Negative test. Constants in the wrong order.
+define i8 @clamp_float_fast_maxnum_min_select_nsz_fptoui_negative(float %x) {
+; CHECK-LABEL: @clamp_float_fast_maxnum_min_select_nsz_fptoui_negative(
+; CHECK-NEXT:    [[MAX:%.*]] = call float @llvm.maxnum.f32(float [[X:%.*]], float 2.550000e+02)
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp nnan ogt float [[X]], 1.280000e+02
+; CHECK-NEXT:    [[R:%.*]] = select nsz i1 [[CMP1]], float 1.280000e+02, float [[MAX]]
+; CHECK-NEXT:    [[FPTOUI:%.*]] = fptoui float [[R]] to i8
+; CHECK-NEXT:    ret i8 [[FPTOUI]]
+;
+  %max = call float @llvm.maxnum.f32(float %x, float 2.550000e+02)
+  %cmp1 = fcmp nnan ogt float %x, 128.0
+  %r = select nsz i1 %cmp1, float 128.0, float %max
+  %fptoui = fptoui float %r to i8
+  ret i8 %fptoui
+}
+
+; Negative test no nsz flag
+define float @clamp_float_fast_minnum_max_select_no_nsz(float %x) {
+; CHECK-LABEL: @clamp_float_fast_minnum_max_select_no_nsz(
+; CHECK-NEXT:    [[MIN:%.*]] = call float @llvm.minnum.f32(float [[X:%.*]], float 2.550000e+02)
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp nnan olt float [[X]], 0.000000e+00
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP1]], float 0.000000e+00, float [[MIN]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %min = call float @llvm.minnum.f32(float %x, float 2.550000e+02)
+  %cmp1 = fcmp nnan olt float %x, 0.0
+  %r = select i1 %cmp1, float 0.0, float %min
+  ret float %r
+}
+
+; Negative test no nsz flag
+define float @clamp_float_fast_maxnum_min_select_no_nsz(float %x) {
+; CHECK-LABEL: @clamp_float_fast_maxnum_min_select_no_nsz(
+; CHECK-NEXT:    [[MAX:%.*]] = call float @llvm.maxnum.f32(float [[X:%.*]], float 0.000000e+00)
+; CHECK-NEXT:    [[DOTINV:%.*]] = fcmp nnan ole float [[MAX]], 2.550000e+02
+; CHECK-NEXT:    [[R:%.*]] = select nnan i1 [[DOTINV]], float [[MAX]], float 2.550000e+02
+; CHECK-NEXT:    ret float [[R]]
+;
+  %max = call float @llvm.maxnum.f32(float %x, float 0.000000e+00)
+  %cmp1 = fcmp nnan ogt float %x, 255.0
+  %r = select i1 %cmp1, float 255.0, float %max
+  ret float %r
+}
+

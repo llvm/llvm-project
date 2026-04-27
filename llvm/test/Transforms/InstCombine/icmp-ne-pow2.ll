@@ -35,10 +35,9 @@ define i32 @not_pow2_32_assume(i32 %x) {
 
 define i64 @pow2_64_assume(i64 %x) {
 ; CHECK-LABEL: @pow2_64_assume(
-; CHECK-NEXT:    [[AND:%.*]] = and i64 [[X:%.*]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[AND]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = trunc i64 [[X1:%.*]] to i1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    ret i64 [[X]]
+; CHECK-NEXT:    ret i64 [[X1]]
 ;
   %and = and i64 %x, 1
   %cmp = icmp ne i64 %and, 0

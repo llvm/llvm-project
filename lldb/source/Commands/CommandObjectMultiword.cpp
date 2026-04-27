@@ -164,7 +164,7 @@ void CommandObjectMultiword::Execute(const char *args_string,
   }
 
   if (m_subcommand_dict.empty()) {
-    result.AppendErrorWithFormat("'%s' does not have any subcommands.\n",
+    result.AppendErrorWithFormat("'%s' does not have any subcommands.",
                                  GetCommandName().str().c_str());
     return;
   }
@@ -204,8 +204,7 @@ void CommandObjectMultiword::Execute(const char *args_string,
                     " Use \"help " + GetCommandName() + "\" to find out more.")
             .str());
   }
-  error_msg.append("\n");
-  result.AppendRawError(error_msg.c_str());
+  result.AppendError(error_msg);
 }
 
 std::string CommandObjectMultiword::GetSubcommandsHintText() {

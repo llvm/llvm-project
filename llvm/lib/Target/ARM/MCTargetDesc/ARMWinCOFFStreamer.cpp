@@ -54,7 +54,7 @@ void ARMWinCOFFStreamer::emitWindowsUnwindTables() {
 }
 
 void ARMWinCOFFStreamer::finishImpl() {
-  emitFrames(nullptr);
+  emitFrames();
   emitWindowsUnwindTables();
 
   MCWinCOFFStreamer::finishImpl();

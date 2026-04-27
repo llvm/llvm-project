@@ -79,15 +79,15 @@ class VOPD3e<bits<6> opX, bits<6> opY, VOP_Pseudo VDX, VOP_Pseudo VDY> : Enc96 {
   let Inst{44} = !if(VDY.Pfl.HasModifiers, src0Y_modifiers, 0);
   let Inst{45} = !if(!and(VDY.Pfl.HasSrc1, VDY.Pfl.HasModifiers), vsrc1Y_modifiers, 0);
   let Inst{46} = !if(!and(VDY.Pfl.HasVOPD3Src2, VDY.Pfl.HasModifiers), vsrc2Y_modifiers, 0);
-  let Inst{55-48} = !if(!eq(!find(VDX.Pfl.AsmVOPD3X, "$vsrc1X"), -1), 0, vsrc1X);
+  let Inst{55-48} = !if(!eq(!find(VDX.Pfl.AsmVOPD3X, "$vsrc1X"), -1), ?, vsrc1X);
 
   // Despite the vsrc operand name, SGPRs can be used for vsrc2X for
   // V_DUAL_CNDMASK_B32
-  let Inst{63-56} = !if(!eq(!find(VDX.Pfl.AsmVOPD3X, "$vsrc2X"), -1), 0, vsrc2X);
+  let Inst{63-56} = !if(!eq(!find(VDX.Pfl.AsmVOPD3X, "$vsrc2X"), -1), ?, vsrc2X);
   let Inst{71-64} = vdstX;
-  let Inst{79-72} = !if(!eq(!find(VDY.Pfl.AsmVOPD3Y, "$vsrc1Y"), -1), 0, vsrc1Y);
+  let Inst{79-72} = !if(!eq(!find(VDY.Pfl.AsmVOPD3Y, "$vsrc1Y"), -1), ?, vsrc1Y);
   let Inst{87-80} = !if(!ne(!find(VDY.Pfl.AsmVOPD3Y, "bitop"), -1), bitop3,
-                        !if(!eq(!find(VDY.Pfl.AsmVOPD3Y, "$vsrc2Y"), -1), 0, vsrc2Y));
+                        !if(!eq(!find(VDY.Pfl.AsmVOPD3Y, "$vsrc2Y"), -1), ?, vsrc2Y));
   let Inst{95-88} = vdstY;
 }
 
@@ -194,9 +194,11 @@ defvar VOPDYPseudosGFX11 = !listconcat(VOPDXPseudosGFX11, VOPDYOnlyPseudosCommon
 defvar VOPDYPseudosGFX12 = !listconcat(VOPDXPseudosGFX12, VOPDYOnlyPseudosCommon, VOPDYOnlyPseudosGFX11_12);
 defvar VOPDYPseudosGFX1250 = !listconcat(VOPDXPseudosGFX12, VOPDYOnlyPseudosCommon, VOPDYOnlyPseudosGFX1250);
 
-def GFX11GenD : GFXGenD<GFX11Gen, VOPDXPseudosGFX11, VOPDYPseudosGFX11>;
+def GFX11GenD : GFXGenD<GFX11Not11_70Gen, VOPDXPseudosGFX11, VOPDYPseudosGFX11>;
+def GFX1170GenD : GFXGenD<GFX1170Gen, VOPDXPseudosGFX11, VOPDYPseudosGFX11>;
 def GFX12GenD : GFXGenD<GFX12Not12_50Gen, VOPDXPseudosGFX12, VOPDYPseudosGFX12>;
 def GFX1250GenD : GFXGenD<GFX1250Gen, VOPDXPseudosGFX12, VOPDYPseudosGFX1250>;
+def GFX13GenD : GFXGenD<GFX13Gen, VOPDXPseudosGFX12, VOPDYPseudosGFX1250>;
 
 
 def VOPDDstYOperand : RegisterOperand<VGPR_32, "printRegularOperand"> {
@@ -210,7 +212,7 @@ class getRenamed<string VOPDName, GFXGen Gen> {
                      true                                   : VOPDName);
 }
 
-foreach Gen = [GFX11GenD, GFX12GenD, GFX1250GenD] in {
+foreach Gen = [GFX11GenD, GFX1170GenD, GFX12GenD, GFX1250GenD, GFX13GenD] in {
   foreach x = Gen.VOPDXPseudos in {
     foreach y = Gen.VOPDYPseudos in {
       defvar xInst = !cast<VOP_Pseudo>(x);
@@ -245,13 +247,15 @@ foreach Gen = [GFX11GenD, GFX12GenD, GFX1250GenD] in {
   }
 }
 
-defvar VOPD3XPseudosExtra = ["V_ADD_U32_e32", "V_LSHLREV_B32_e32", "V_FMA_F32_e64", "V_SUB_U32_e32",
-                             "V_LSHRREV_B32_e32", "V_ASHRREV_I32_e32", "V_FMA_F64_e64", "V_ADD_F64_pseudo_e32",
-                             "V_MUL_F64_pseudo_e32", "V_MAX_NUM_F64_e32", "V_MIN_NUM_F64_e32"];
-defvar VOPD3XPseudosGFX1250 = !listconcat(
-                                !filter(x, VOPDXPseudosGFX12, !and(!eq(!find(x, "FMAAK"), -1),
-                                                                   !eq(!find(x, "FMAMK"), -1))),
-                                VOPD3XPseudosExtra);
+defvar VOPD3XPseudosExtraGFX13 = ["V_ADD_U32_e32", "V_LSHLREV_B32_e32", "V_FMA_F32_e64", "V_SUB_U32_e32",
+                                  "V_LSHRREV_B32_e32", "V_ASHRREV_I32_e32"];
+defvar VOPD3XPseudosExtraGFX1250 = ["V_FMA_F64_e64", "V_ADD_F64_pseudo_e32",
+                                    "V_MUL_F64_pseudo_e32", "V_MAX_NUM_F64_e32", "V_MIN_NUM_F64_e32"];
+defvar VOPD3XPseudosGFX13 = !listconcat(
+                              !filter(x, VOPDXPseudosGFX12, !and(!eq(!find(x, "FMAAK"), -1),
+                                                                 !eq(!find(x, "FMAMK"), -1))),
+                              VOPD3XPseudosExtraGFX13);
+defvar VOPD3XPseudosGFX1250 = !listconcat(VOPD3XPseudosGFX13, VOPD3XPseudosExtraGFX1250);
 defvar VOPD3YPseudosExtra = ["V_BITOP3_B32_e64", "V_FMA_F32_e64"];
 defvar VOPD3YPseudosGFX1250 = !listconcat(
                                 !filter(x, VOPDYPseudosGFX1250, !and(!eq(!find(x, "FMAAK"), -1),
@@ -260,13 +264,15 @@ defvar VOPD3YPseudosGFX1250 = !listconcat(
 
 def GFX1250GenD3 : GFXGenD<GFX1250Gen, VOPD3XPseudosGFX1250, VOPD3YPseudosGFX1250>;
 
+def GFX13GenD3 : GFXGenD<GFX13Gen, VOPD3XPseudosGFX13, VOPD3YPseudosGFX1250>;
+
 class getOpcMap<string OPName> {
   defvar BaseName = !substr(OPName,2);
   string ret = !cond(!eq(BaseName, "BITOP3_B32_e64")   : "BITOP2_B32_e64",
                      1 : BaseName);
 }
 
-foreach Gen = [GFX1250GenD3] in {
+foreach Gen = [GFX1250GenD3, GFX13GenD3] in {
   foreach x = Gen.VOPDXPseudos in {
     foreach y = Gen.VOPDYPseudos in {
       defvar xInst = !cast<VOP_Pseudo>(x);

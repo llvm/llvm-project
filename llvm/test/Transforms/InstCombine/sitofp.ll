@@ -415,3 +415,74 @@ define <2 x i1> @i8_vec_sitofp_test4(<2 x i8> %A) {
   %C = fcmp ult <2 x double> %B, <double 127.0, double 127.0>
   ret <2 x i1> %C
 }
+
+; Mask 98 = PosZero (64) | NegZero (32) | QNan (2)
+define i1 @test_sitofp_nonzero(i32 %a) {
+; CHECK-LABEL: @test_sitofp_nonzero(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %or = or i32 %a, 1
+  %f = sitofp i32 %or to float
+  %is.zero = call i1 @llvm.is.fpclass.f32(float %f, i32 98)
+  ret i1 %is.zero
+}
+
+; The i32 value 0xFF80 truncated to i16 is 0xFF80 = -128 (signed).
+; Mask 960 = PosInf(512) | PosNormal(256) | PosSubnormal(128) | PosZero(64)
+define i1 @test_sitofp_known_negative_trunc(i32 %a) {
+; CHECK-LABEL: @test_sitofp_known_negative_trunc(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %or = or i32 %a, 65408
+  %trunc = trunc i32 %or to i16
+  %f = sitofp i16 %trunc to float
+  %is.pos = call i1 @llvm.is.fpclass.f32(float %f, i32 960)
+  ret i1 %is.pos
+}
+
+; The i32 value masked with 0x7FFF truncated to i16 clears the sign bit.
+; Mask 60 = NegInf(4) | NegNormal(8) | NegSubnormal(16) | NegZero(32)
+define i1 @test_sitofp_known_nonneg_trunc(i32 %a) {
+; CHECK-LABEL: @test_sitofp_known_nonneg_trunc(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %and = and i32 %a, 32767
+  %trunc = trunc i32 %and to i16
+  %f = sitofp i16 %trunc to float
+  %is.neg = call i1 @llvm.is.fpclass.f32(float %f, i32 60)
+  ret i1 %is.neg
+}
+
+; Mask 516 = PosInf (512) | NegInf (4)
+define i1 @test_uitofp_no_inf(i64 %a) {
+; CHECK-LABEL: @test_uitofp_no_inf(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %and = and i64 %a, 32767
+  %f = uitofp i64 %and to half
+  ; 516 checks for +Inf or -Inf
+  %is.inf = call i1 @llvm.is.fpclass.f16(half %f, i32 516)
+  ret i1 %is.inf
+}
+
+; Mask 516 = PosInf (512) | NegInf (4)
+define i1 @test_sitofp_no_inf(i64 %a) {
+; CHECK-LABEL: @test_sitofp_no_inf(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %and = and i64 %a, 32767
+  %f = sitofp i64 %and to half
+  ; 516 checks for +Inf or -Inf
+  %is.inf = call i1 @llvm.is.fpclass.f16(half %f, i32 516)
+  ret i1 %is.inf
+}

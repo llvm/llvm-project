@@ -12,7 +12,7 @@ import os
 import re
 import sys
 import subprocess
-from typing import Dict
+from typing import Dict, Tuple
 
 # LLDB modules
 import lldb
@@ -319,13 +319,28 @@ def sort_stopped_threads(
 # Utility functions for setting breakpoints
 # ==================================================
 
+g_use_break_add = True
+
+
+def set_use_break_add(use_it):
+    global g_use_break_add
+    g_use_break_add = use_it
+
+
+def get_use_break_add():
+    global g_use_break_add
+    return g_use_break_add
+
 
 def run_break_set_by_script(
     test, class_name, extra_options=None, num_expected_locations=1
 ):
     """Set a scripted breakpoint.  Check that it got the right number of locations."""
     test.assertTrue(class_name is not None, "Must pass in a class name.")
-    command = "breakpoint set -P " + class_name
+    if get_use_break_add():
+        command = f"breakpoint add scripted -P {class_name}"
+    else:
+        command = "breakpoint set -P " + class_name
     if extra_options is not None:
         command += " " + extra_options
 
@@ -353,10 +368,16 @@ def run_break_set_by_file_and_line(
     If loc_exact is true, we check that there is one location, and that location must be at the input file and line number.
     """
 
-    if file_name is None:
-        command = "breakpoint set -l %d" % (line_number)
+    if get_use_break_add():
+        if file_name is None:
+            command = f"breakpoint add file {line_number} "
+        else:
+            command = f"breakpoint add file -f {file_name} -l {line_number} "
     else:
-        command = 'breakpoint set -f "%s" -l %d' % (file_name, line_number)
+        if file_name is None:
+            command = "breakpoint set -l %d" % (line_number)
+        else:
+            command = 'breakpoint set -f "%s" -l %d' % (file_name, line_number)
 
     if module_name:
         command += " --shlib '%s'" % (module_name)
@@ -395,13 +416,19 @@ def run_break_set_by_symbol(
 
     If sym_exact is true, then the output symbol must match the input exactly, otherwise we do a substring match.
     """
-    command = 'breakpoint set -n "%s"' % (symbol)
+    if get_use_break_add():
+        command = f"breakpoint add name"
+    else:
+        command = 'breakpoint set -n "%s"' % (symbol)
 
     if module_name:
         command += " --shlib '%s'" % (module_name)
 
     if extra_options:
         command += " " + extra_options
+
+    if get_use_break_add():
+        command += f" -- '{symbol}'"
 
     break_results = run_break_set_command(test, command)
 
@@ -426,7 +453,10 @@ def run_break_set_by_selector(
 ):
     """Set a breakpoint by selector.  Common options are the same as run_break_set_by_file_and_line."""
 
-    command = 'breakpoint set -S "%s"' % (selector)
+    if get_use_break_add():
+        command = f"breakpoint add name --match-style selector '{selector}'"
+    else:
+        command = 'breakpoint set -S "%s"' % (selector)
 
     if module_name:
         command += ' --shlib "%s"' % (module_name)
@@ -458,7 +488,10 @@ def run_break_set_by_regexp(
 ):
     """Set a breakpoint by regular expression match on symbol name.  Common options are the same as run_break_set_by_file_and_line."""
 
-    command = 'breakpoint set -r "%s"' % (regexp)
+    if get_use_break_add():
+        command = f"breakpoint add name --match-style regex '{regexp}'"
+    else:
+        command = 'breakpoint set -r "%s"' % (regexp)
     if extra_options:
         command += " " + extra_options
 
@@ -473,9 +506,15 @@ def run_break_set_by_source_regexp(
     test, regexp, extra_options=None, num_expected_locations=-1
 ):
     """Set a breakpoint by source regular expression.  Common options are the same as run_break_set_by_file_and_line."""
-    command = 'breakpoint set -p "%s"' % (regexp)
+    if get_use_break_add():
+        command = "breakpoint add pattern"
+    else:
+        command = 'breakpoint set -p "%s"' % (regexp)
     if extra_options:
         command += " " + extra_options
+
+    if get_use_break_add():
+        command += f" -- {regexp}"
 
     break_results = run_break_set_command(test, command)
 
@@ -493,7 +532,11 @@ def run_break_set_by_file_colon_line(
     extra_options=None,
     num_expected_locations=-1,
 ):
-    command = 'breakpoint set -y "%s"' % (specifier)
+    if get_use_break_add():
+        command = f"breakpoint add file '{specifier}'"
+    else:
+        command = 'breakpoint set -y "%s"' % (specifier)
+
     if extra_options:
         command += " " + extra_options
 
@@ -860,7 +903,7 @@ def run_to_breakpoint_make_target(test, exe_name="a.out", in_cwd=True):
 
 def run_to_breakpoint_do_run(
     test, target, bkpt, launch_info=None, only_one_thread=True, extra_images=None
-):
+) -> Tuple[lldb.SBTarget, lldb.SBProcess, lldb.SBThread, lldb.SBBreakpoint]:
     # Launch the process, and do not stop at the entry point.
     if not launch_info:
         launch_info = target.GetLaunchInfo()
@@ -943,7 +986,7 @@ def run_to_name_breakpoint(
     in_cwd=True,
     only_one_thread=True,
     extra_images=None,
-):
+) -> Tuple[lldb.SBTarget, lldb.SBProcess, lldb.SBThread, lldb.SBBreakpoint]:
     """Start up a target, using exe_name as the executable, and run it to
     a breakpoint set by name on bkpt_name restricted to bkpt_module.
 
@@ -996,7 +1039,7 @@ def run_to_source_breakpoint(
     only_one_thread=True,
     extra_images=None,
     has_locations_before_run=True,
-):
+) -> Tuple[lldb.SBTarget, lldb.SBProcess, lldb.SBThread, lldb.SBBreakpoint]:
     """Start up a target, using exe_name as the executable, and run it to
     a breakpoint set by source regex bkpt_pattern.
 
@@ -1030,7 +1073,7 @@ def run_to_line_breakpoint(
     in_cwd=True,
     only_one_thread=True,
     extra_images=None,
-):
+) -> Tuple[lldb.SBTarget, lldb.SBProcess, lldb.SBThread, lldb.SBBreakpoint]:
     """Start up a target, using exe_name as the executable, and run it to
     a breakpoint set by (source_spec, line_number(, column)).
 
@@ -1214,9 +1257,11 @@ def print_stacktrace(thread, string_buffer=False):
                     func="%s [inlined]" % funcs[i] if frame.IsInlined() else funcs[i],
                     file=files[i],
                     line=lines[i],
-                    args=get_args_as_string(frame, showFuncName=False)
-                    if not frame.IsInlined()
-                    else "()",
+                    args=(
+                        get_args_as_string(frame, showFuncName=False)
+                        if not frame.IsInlined()
+                        else "()"
+                    ),
                 ),
                 file=output,
             )
@@ -1644,16 +1689,18 @@ def read_file_from_process_wd(test, name):
     return read_file_on_target(test, path)
 
 
-def wait_for_file_on_target(testcase, file_path, max_attempts=6):
-    for i in range(max_attempts):
-        err, retcode, msg = testcase.run_platform_command("ls %s" % file_path)
+def wait_for_file_on_target(testcase, file_path):
+    import time
+
+    MAX_ATTEMPTS = 60
+    timeout_seconds = 20 if "ASAN_OPTIONS" in os.environ else 2
+    for i in range(MAX_ATTEMPTS):
+        command = f"ls {file_path}"
+        err, retcode, msg = testcase.run_platform_command(command)
         if err.Success() and retcode == 0:
             break
-        if i < max_attempts:
-            # Exponential backoff!
-            import time
 
-            time.sleep(pow(2, i) * 0.25)
+        time.sleep(timeout_seconds)
     else:
         testcase.fail(
             "File %s not found even after %d attempts." % (file_path, max_attempts)
@@ -1688,20 +1735,50 @@ def packetlog_get_dylib_info(log):
     dylib_info = None
     with open(log, "r") as logfile:
         dylib_info = None
+        fetched_all_binary_addresses = False
         expect_dylib_info_response = False
         for line in logfile:
+            # We've seen a jGetLoadedDynamicLibrariesInfos
+            # We may have a response with *only* addresses, or
+            # it may include detailed information.  If it is
+            # addresses-only, set fetched_all_binary_addresses to
+            # True, and when we send another jGetLoadedDynamicLibrariesInfos
+            # getting the detailed information for these, we'll have
+            # what we want.
             if expect_dylib_info_response:
                 while line[0] != "$":
                     line = line[1:]
                 line = line[1:]
                 # Unescape '}'.
                 dylib_info = json.loads(line.replace("}]", "}")[:-4])
-                expect_dylib_info_response = False
+                # See if this is an addresses-only response.
+                if "images" in dylib_info:
+                    if len(dylib_info["images"]) > 0:
+                        if not ("mach_header" in dylib_info["images"][0]):
+                            fetched_all_binary_addresses = True
+                            expect_dylib_info_response = False
+                            dylib_info = None
+                            continue
+                break
+
             if (
-                'send packet: $jGetLoadedDynamicLibrariesInfos:{"fetch_all_solibs":true}'
+                'send packet: $jGetLoadedDynamicLibrariesInfos:{"fetch_all_solibs":true'
                 in line
             ):
                 expect_dylib_info_response = True
+                continue
+
+            # We had an addresses-only jGetLoadedDynamicLibrariesInfos
+            # and now we're getting the detailed information for a group
+            # of the binaries.
+            if (
+                fetched_all_binary_addresses
+                and 'send packet: $jGetLoadedDynamicLibrariesInfos:{"information-level":"full","solib_addresses"'
+                in line
+            ):
+                fetched_all_binary_addresses = False
+                expect_dylib_info_response = True
+                continue
 
     return dylib_info
 
@@ -1751,7 +1828,6 @@ def launch_exe_in_apple_simulator(
     device_uuid,
     exe_path,
     exe_args=[],
-    stderr_lines_to_read=0,
     stderr_patterns=[],
     log=None,
 ):
@@ -1775,18 +1851,21 @@ def launch_exe_in_apple_simulator(
     total_patterns = len(stderr_patterns)
     matches_found = 0
     matched_strings = [None] * total_patterns
-    for _ in range(0, stderr_lines_to_read):
-        stderr = sim_launcher.stderr.readline().decode("utf-8")
-        if not stderr:
-            continue
-        for i, pattern in enumerate(stderr_patterns):
-            if matched_strings[i] is not None:
+    if len(stderr_patterns) != 0:
+        while True:
+            stderr = sim_launcher.stderr.readline().decode("utf-8")
+            if not stderr:
                 continue
-            match = re.match(pattern, stderr)
-            if match:
-                matched_strings[i] = str(match.group(1))
-                matches_found += 1
-        if matches_found == total_patterns:
-            break
+            if log:
+                log(f"searching stderr line: {stderr}")
+            for i, pattern in enumerate(stderr_patterns):
+                if matched_strings[i] is not None:
+                    continue
+                match = re.match(pattern, stderr)
+                if match:
+                    matched_strings[i] = str(match.group(1))
+                    matches_found += 1
+            if matches_found == total_patterns:
+                break
 
     return exe_path, matched_strings

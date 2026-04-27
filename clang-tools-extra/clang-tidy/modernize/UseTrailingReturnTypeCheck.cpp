@@ -14,7 +14,6 @@
 #include "clang/Tooling/FixIt.h"
 #include "llvm/ADT/StringExtras.h"
 
-#include <cctype>
 #include <optional>
 
 namespace clang::tidy {
@@ -55,13 +54,12 @@ public:
 
   bool visitUnqualName(StringRef UnqualName) {
     // Check for collisions with function arguments.
-    for (const ParmVarDecl *Param : F.parameters())
+    Collision = llvm::any_of(F.parameters(), [&](const ParmVarDecl *Param) {
       if (const IdentifierInfo *Ident = Param->getIdentifier())
-        if (Ident->getName() == UnqualName) {
-          Collision = true;
-          return true;
-        }
-    return false;
+        return Ident->getName() == UnqualName;
+      return false;
+    });
+    return Collision;
   }
 
   bool TraverseTypeLoc(TypeLoc TL, bool TraverseQualifier = true) {
@@ -141,9 +139,9 @@ AST_MATCHER(LambdaExpr, hasExplicitResultType) {
 
 } // namespace
 
-constexpr llvm::StringLiteral ErrorMessageOnFunction =
+constexpr StringRef ErrorMessageOnFunction =
     "use a trailing return type for this function";
-constexpr llvm::StringLiteral ErrorMessageOnLambda =
+constexpr StringRef ErrorMessageOnLambda =
     "use a trailing return type for this lambda";
 
 static SourceLocation expandIfMacroId(SourceLocation Loc,
@@ -271,10 +269,8 @@ classifyTokensBeforeFunctionName(const FunctionDecl &F, const ASTContext &Ctx,
 
       if (Info.hasMacroDefinition()) {
         const MacroInfo *MI = PP->getMacroInfo(&Info);
-        if (!MI || MI->isFunctionLike()) {
-          // Cannot handle function style macros.
+        if (!MI || MI->isFunctionLike() || MI->isBuiltinMacro())
           return std::nullopt;
-        }
       }
 
       T.setIdentifierInfo(&Info);
@@ -305,7 +301,6 @@ static SourceRange
 findReturnTypeAndCVSourceRange(const FunctionDecl &F, const TypeLoc &ReturnLoc,
                                const ASTContext &Ctx, const SourceManager &SM,
                                const LangOptions &LangOpts, Preprocessor *PP) {
-
   // We start with the range of the return type and expand to neighboring
   // qualifiers (const, volatile and restrict).
   SourceRange ReturnTypeRange = F.getReturnTypeSourceRange();
@@ -459,7 +454,6 @@ UseTrailingReturnTypeCheck::UseTrailingReturnTypeCheck(
     : ClangTidyCheck(Name, Context),
       TransformFunctions(Options.get("TransformFunctions", true)),
       TransformLambdas(Options.get("TransformLambdas", TransformLambda::All)) {
-
   if (TransformFunctions == false && TransformLambdas == TransformLambda::None)
     this->configurationDiag(
         "The check 'modernize-use-trailing-return-type' will not perform any "
@@ -604,7 +598,6 @@ void UseTrailingReturnTypeCheck::check(const MatchFinder::MatchResult &Result) {
 void UseTrailingReturnTypeCheck::diagOnLambda(
     const LambdaExpr *Lambda,
     const ast_matchers::MatchFinder::MatchResult &Result) {
-
   const CXXMethodDecl *Method = Lambda->getCallOperator();
   if (!Method || Lambda->hasExplicitResultType())
     return;

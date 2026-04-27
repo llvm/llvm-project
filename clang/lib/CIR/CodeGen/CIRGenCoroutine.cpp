@@ -22,12 +22,27 @@ using namespace clang;
 using namespace clang::CIRGen;
 
 struct clang::CIRGen::CGCoroData {
+  // What is the current await expression kind and how many
+  // await/yield expressions were encountered so far.
+  // These are used to generate pretty labels for await expressions in LLVM IR.
+  cir::AwaitKind currentAwaitKind = cir::AwaitKind::Init;
   // Stores the __builtin_coro_id emitted in the function so that we can supply
   // it as the first argument to other builtins.
   cir::CallOp coroId = nullptr;
 
   // Stores the result of __builtin_coro_begin call.
   mlir::Value coroBegin = nullptr;
+
+  // How many co_return statements are in the coroutine. Used to decide whether
+  // we need to add co_return; equivalent at the end of the user authored body.
+  unsigned coreturnCount = 0;
+
+  // The promise type's 'unhandled_exception' handler, if it defines one.
+  Stmt *exceptionHandler = nullptr;
+
+  // Stores the last emitted coro.free for the deallocate expressions, we use it
+  // to wrap dealloc code with if(auto mem = coro.free) dealloc(mem).
+  cir::CallOp lastCoroFree = nullptr;
 };
 
 // Defining these here allows to keep CGCoroData private to this file.
@@ -93,6 +108,72 @@ struct ParamReferenceReplacerRAII {
   }
 };
 } // namespace
+
+namespace {
+// Make sure to call coro.delete on scope exit.
+struct CallCoroDelete final : public EHScopeStack::Cleanup {
+  Stmt *deallocate;
+
+  // Emit "if (coro.free(CoroId, CoroBegin)) Deallocate;"
+
+  // Note: That deallocation will be emitted twice: once for a normal exit and
+  // once for exceptional exit. This usage is safe because Deallocate does not
+  // contain any declarations. The SubStmtBuilder::makeNewAndDeleteExpr()
+  // builds a single call to a deallocation function which is safe to emit
+  // multiple times.
+  void emit(CIRGenFunction &cgf, Flags) override {
+    // Remember the current point, as we are going to emit deallocation code
+    // first to get to coro.free instruction that is an argument to a delete
+    // call.
+
+    if (cgf.emitStmt(deallocate, /*useCurrentScope=*/true).failed()) {
+      cgf.cgm.error(deallocate->getBeginLoc(),
+                    "failed to emit coroutine deallocation expression");
+      return;
+    }
+
+    CIRGenBuilderTy &builder = cgf.getBuilder();
+    cir::CallOp coroFree = cgf.curCoro.data->lastCoroFree;
+
+    if (!coroFree) {
+      cgf.cgm.error(deallocate->getBeginLoc(),
+                    "Deallocation expression does not refer to coro.free");
+      return;
+    }
+
+    builder.setInsertionPointAfter(coroFree);
+    mlir::Value isPtrNotNull = builder.createPtrIsNotNull(coroFree.getResult());
+
+    llvm::SmallVector<mlir::Operation *> opsToMove;
+    mlir::Block *block = builder.getInsertionBlock();
+    mlir::Block::iterator it(isPtrNotNull.getDefiningOp());
+
+    for (++it; it != block->end(); ++it)
+      opsToMove.push_back(&*it);
+
+    auto ifOp =
+        cir::IfOp::create(builder, cgf.getLoc(deallocate->getSourceRange()),
+                          isPtrNotNull, /*withElseRegion*/ false,
+                          [&](mlir::OpBuilder &builder, mlir::Location loc) {
+                            cir::YieldOp::create(builder, loc);
+                          });
+
+    mlir::Operation *yieldOp = ifOp.getThenRegion().back().getTerminator();
+    for (auto *op : opsToMove)
+      op->moveBefore(yieldOp);
+  }
+  explicit CallCoroDelete(Stmt *deallocStmt) : deallocate(deallocStmt) {}
+};
+} // namespace
+
+RValue CIRGenFunction::emitCoroutineFrame() {
+  if (curCoro.data && curCoro.data->coroBegin) {
+    return RValue::get(curCoro.data->coroBegin);
+  }
+  cgm.errorNYI("NYI");
+  return RValue();
+}
+
 static void createCoroData(CIRGenFunction &cgf,
                            CIRGenFunction::CGCoroInfo &curCoro,
                            cir::CallOp coroId) {
@@ -100,6 +181,29 @@ static void createCoroData(CIRGenFunction &cgf,
 
   curCoro.data = std::make_unique<CGCoroData>();
   curCoro.data->coroId = coroId;
+}
+
+static mlir::LogicalResult
+emitBodyAndFallthrough(CIRGenFunction &cgf, const CoroutineBodyStmt &s,
+                       Stmt *body,
+                       const CIRGenFunction::LexicalScope *currLexScope) {
+  if (cgf.emitStmt(body, /*useCurrentScope=*/true).failed())
+    return mlir::failure();
+  // Note that classic codegen checks CanFallthrough by looking into the
+  // availability of the insert block which is kinda brittle and unintuitive,
+  // seems to be related with how landing pads are handled.
+  //
+  // CIRGen handles this by checking pre-existing co_returns in the current
+  // scope instead.
+
+  // From LLVM IR Gen: const bool CanFallthrough = Builder.GetInsertBlock();
+  const bool canFallthrough = !currLexScope->hasCoreturn();
+  if (canFallthrough)
+    if (Stmt *onFallthrough = s.getFallthroughHandler())
+      if (cgf.emitStmt(onFallthrough, /*useCurrentScope=*/true).failed())
+        return mlir::failure();
+
+  return mlir::success();
 }
 
 cir::CallOp CIRGenFunction::emitCoroIDBuiltinCall(mlir::Location loc,
@@ -167,6 +271,48 @@ CIRGenFunction::emitCoroBeginBuiltinCall(mlir::Location loc,
       mlir::ValueRange{curCoro.data->coroId.getResult(), coroframeAddr});
 }
 
+cir::CallOp CIRGenFunction::emitCoroEndBuiltinCall(mlir::Location loc,
+                                                   mlir::Value nullPtr) {
+  cir::BoolType boolTy = builder.getBoolTy();
+  mlir::Operation *builtin = cgm.getGlobalValue(cgm.builtinCoroEnd);
+
+  cir::FuncOp fnOp;
+  if (!builtin) {
+    fnOp = cgm.createCIRBuiltinFunction(
+        loc, cgm.builtinCoroEnd,
+        cir::FuncType::get({voidPtrTy, boolTy}, boolTy),
+        /*fd=*/nullptr);
+    assert(fnOp && "should always succeed");
+  } else {
+    fnOp = cast<cir::FuncOp>(builtin);
+  }
+
+  return builder.createCallOp(
+      loc, fnOp, mlir::ValueRange{nullPtr, builder.getBool(false, loc)});
+}
+
+cir::CallOp CIRGenFunction::emitCoroFreeBuiltin(const CallExpr *e) {
+  mlir::Operation *builtin = cgm.getGlobalValue(cgm.builtinCoroFree);
+  mlir::Location loc = getLoc(e->getBeginLoc());
+  cir::FuncOp fnOp;
+  if (!builtin) {
+    fnOp = cgm.createCIRBuiltinFunction(
+        loc, cgm.builtinCoroFree,
+        cir::FuncType::get({uInt32Ty, voidPtrTy}, voidPtrTy),
+        /*fd=*/nullptr);
+    assert(fnOp && "should always succeed");
+  } else {
+    fnOp = cast<cir::FuncOp>(builtin);
+  }
+  cir::CallOp coroFree =
+      builder.createCallOp(loc, fnOp,
+                           mlir::ValueRange{curCoro.data->coroId.getResult(),
+                                            curCoro.data->coroBegin});
+
+  curCoro.data->lastCoroFree = coroFree;
+  return coroFree;
+}
+
 mlir::LogicalResult
 CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
   mlir::Location openCurlyLoc = getLoc(s.getBeginLoc());
@@ -212,6 +358,8 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
   {
     assert(!cir::MissingFeatures::generateDebugInfo());
     ParamReferenceReplacerRAII paramReplacer(localDeclMap);
+    RunCleanupsScope resumeScope(*this);
+    ehStack.pushCleanup<CallCoroDelete>(NormalAndEHCleanup, s.getDeallocate());
     // Create mapping between parameters and copy-params for coroutine
     // function.
     llvm::ArrayRef<const Stmt *> paramMoves = s.getParamMoves();
@@ -249,7 +397,261 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
       emitAnyExprToMem(s.getReturnValue(), returnValue,
                        s.getReturnValue()->getType().getQualifiers(),
                        /*isInit*/ true);
-    assert(!cir::MissingFeatures::emitBodyAndFallthrough());
+
+    assert(!cir::MissingFeatures::ehCleanupScope());
+
+    curCoro.data->currentAwaitKind = cir::AwaitKind::Init;
+    if (emitStmt(s.getInitSuspendStmt(), /*useCurrentScope=*/true).failed())
+      return mlir::failure();
+
+    curCoro.data->currentAwaitKind = cir::AwaitKind::User;
+
+    mlir::OpBuilder::InsertPoint userBody;
+    auto coroBodyOp =
+        cir::CoroBodyOp::create(builder, openCurlyLoc, /*scopeBuilder=*/
+                                [&](mlir::OpBuilder &b, mlir::Location loc) {
+                                  userBody = b.saveInsertionPoint();
+                                });
+    {
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      builder.restoreInsertionPoint(userBody);
+      // FIXME(cir): wrap emitBodyAndFallthrough with try/catch bits.
+      if (s.getExceptionHandler()) {
+        assert(!cir::MissingFeatures::coroutineExceptions());
+        cgm.errorNYI("exceptions in coroutines are not yet supported in CIR");
+      }
+      if (emitBodyAndFallthrough(*this, s, s.getBody(), curLexScope).failed()) {
+        return mlir::failure();
+      }
+    }
+
+    mlir::Block &coroBodyBlock = coroBodyOp.getBody().back();
+    if (!coroBodyBlock.mightHaveTerminator()) {
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      builder.setInsertionPointToEnd(&coroBodyBlock);
+      cir::YieldOp::create(builder, openCurlyLoc);
+    }
+
+    // Note that LLVM checks CanFallthrough by looking into the availability
+    // of the insert block which is kinda brittle and unintuitive, seems to be
+    // related with how landing pads are handled.
+    //
+    // CIRGen handles this by checking pre-existing co_returns in the current
+    // scope instead.
+    //
+    // From LLVM IR Gen: const bool CanFallthrough = Builder.GetInsertBlock();
+    const bool canFallthrough = curLexScope->hasCoreturn();
+    const bool hasCoreturns = curCoro.data->coreturnCount > 0;
+    if (canFallthrough || hasCoreturns) {
+      curCoro.data->currentAwaitKind = cir::AwaitKind::Final;
+      {
+        mlir::OpBuilder::InsertionGuard guard(builder);
+        if (emitStmt(s.getFinalSuspendStmt(), /*useCurrentScope=*/true)
+                .failed())
+          return mlir::failure();
+      }
+    }
   }
+
+  emitCoroEndBuiltinCall(
+      openCurlyLoc, builder.getNullPtr(builder.getVoidPtrTy(), openCurlyLoc));
+  if (auto *ret = cast_or_null<ReturnStmt>(s.getReturnStmt())) {
+    // Since we already emitted the return value above, so we shouldn't
+    // emit it again here.
+    Expr *previousRetValue = ret->getRetValue();
+    ret->setRetValue(nullptr);
+    if (emitStmt(ret, /*useCurrentScope=*/true).failed())
+      return mlir::failure();
+    // Set the return value back. The code generator, as the AST **Consumer**,
+    // shouldn't change the AST.
+    ret->setRetValue(previousRetValue);
+  }
+  return mlir::success();
+}
+
+static bool memberCallExpressionCanThrow(const Expr *e) {
+  if (const auto *ce = dyn_cast<CXXMemberCallExpr>(e))
+    if (const auto *proto =
+            ce->getMethodDecl()->getType()->getAs<FunctionProtoType>())
+      if (isNoexceptExceptionSpec(proto->getExceptionSpecType()) &&
+          proto->canThrow() == CT_Cannot)
+        return false;
+  return true;
+}
+
+// Given a suspend expression which roughly looks like:
+//
+//   auto && x = CommonExpr();
+//   if (!x.await_ready()) {
+//      x.await_suspend(...); (*)
+//   }
+//   x.await_resume();
+//
+// where the result of the entire expression is the result of x.await_resume()
+//
+//   (*) If x.await_suspend return type is bool, it allows to veto a suspend:
+//      if (x.await_suspend(...))
+//        llvm_coro_suspend();
+//
+// This is more higher level than LLVM codegen, for that one see llvm's
+// docs/Coroutines.rst for more details.
+namespace {
+struct LValueOrRValue {
+  LValue lv;
+  RValue rv;
+};
+} // namespace
+
+static LValueOrRValue
+emitSuspendExpression(CIRGenFunction &cgf, CGCoroData &coro,
+                      CoroutineSuspendExpr const &s, cir::AwaitKind kind,
+                      AggValueSlot aggSlot, bool ignoreResult,
+                      mlir::Block *scopeParentBlock,
+                      mlir::Value &tmpResumeRValAddr, bool forLValue) {
+  [[maybe_unused]] mlir::LogicalResult awaitBuild = mlir::success();
+  LValueOrRValue awaitRes;
+
+  CIRGenFunction::OpaqueValueMapping binder =
+      CIRGenFunction::OpaqueValueMapping(cgf, s.getOpaqueValue());
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  [[maybe_unused]] cir::AwaitOp awaitOp = cir::AwaitOp::create(
+      builder, cgf.getLoc(s.getSourceRange()), kind,
+      /*readyBuilder=*/
+      [&](mlir::OpBuilder &b, mlir::Location loc) {
+        Expr *condExpr = s.getReadyExpr()->IgnoreParens();
+        builder.createCondition(cgf.evaluateExprAsBool(condExpr));
+      },
+      /*suspendBuilder=*/
+      [&](mlir::OpBuilder &b, mlir::Location loc) {
+        // Note that differently from LLVM codegen we do not emit coro.save
+        // and coro.suspend here, that should be done as part of lowering this
+        // to LLVM dialect (or some other MLIR dialect)
+
+        // A invalid suspendRet indicates "void returning await_suspend"
+        mlir::Value suspendRet = cgf.emitScalarExpr(s.getSuspendExpr());
+
+        // Veto suspension if requested by bool returning await_suspend.
+        if (suspendRet) {
+          cgf.cgm.errorNYI("Veto await_suspend");
+        }
+
+        // Signals the parent that execution flows to next region.
+        cir::YieldOp::create(builder, loc);
+      },
+      /*resumeBuilder=*/
+      [&](mlir::OpBuilder &b, mlir::Location loc) {
+        // Exception handling requires additional IR. If the 'await_resume'
+        // function is marked as 'noexcept', we avoid generating this additional
+        // IR.
+        CXXTryStmt *tryStmt = nullptr;
+        if (coro.exceptionHandler && kind == cir::AwaitKind::Init &&
+            memberCallExpressionCanThrow(s.getResumeExpr()))
+          cgf.cgm.errorNYI("Coro resume Exception");
+
+        // FIXME(cir): the alloca for the resume expr should be placed in the
+        // enclosing cir.scope instead.
+        if (forLValue) {
+          awaitRes.lv = cgf.emitLValue(s.getResumeExpr());
+        } else {
+          awaitRes.rv =
+              cgf.emitAnyExpr(s.getResumeExpr(), aggSlot, ignoreResult);
+          if (!awaitRes.rv.isIgnored()) {
+            // Create the alloca in the block before the scope wrapping
+            // cir.await.
+            tmpResumeRValAddr = cgf.emitAlloca(
+                "__coawait_resume_rval", awaitRes.rv.getValue().getType(), loc,
+                CharUnits::One(),
+                builder.getBestAllocaInsertPoint(scopeParentBlock));
+            // Store the rvalue so we can reload it before the promise call.
+            builder.CIRBaseBuilderTy::createStore(loc, awaitRes.rv.getValue(),
+                                                  tmpResumeRValAddr);
+          }
+        }
+
+        if (tryStmt)
+          cgf.cgm.errorNYI("Coro tryStmt");
+
+        // Returns control back to parent.
+        cir::YieldOp::create(builder, loc);
+      });
+
+  assert(awaitBuild.succeeded() && "Should know how to codegen");
+  return awaitRes;
+}
+
+static RValue emitSuspendExpr(CIRGenFunction &cgf,
+                              const CoroutineSuspendExpr &e,
+                              cir::AwaitKind kind, AggValueSlot aggSlot,
+                              bool ignoreResult) {
+  RValue rval;
+  mlir::Location scopeLoc = cgf.getLoc(e.getSourceRange());
+
+  // Since we model suspend / resume as an inner region, we must store
+  // resume scalar results in a tmp alloca, and load it after we build the
+  // suspend expression. An alternative way to do this would be to make
+  // every region return a value when promise.return_value() is used, but
+  // it's a bit awkward given that resume is the only region that actually
+  // returns a value.
+  mlir::Block *currEntryBlock = cgf.curLexScope->getEntryBlock();
+  [[maybe_unused]] mlir::Value tmpResumeRValAddr;
+
+  // No need to explicitly wrap this into a scope since the AST already uses a
+  // ExprWithCleanups, which will wrap this into a cir.scope anyways.
+  rval = emitSuspendExpression(cgf, *cgf.curCoro.data, e, kind, aggSlot,
+                               ignoreResult, currEntryBlock, tmpResumeRValAddr,
+                               /*forLValue*/ false)
+             .rv;
+
+  if (ignoreResult || rval.isIgnored())
+    return rval;
+
+  if (rval.isScalar()) {
+    rval = RValue::get(cir::LoadOp::create(cgf.getBuilder(), scopeLoc,
+                                           rval.getValue().getType(),
+                                           tmpResumeRValAddr));
+  } else if (rval.isAggregate()) {
+    // This is probably already handled via AggSlot, remove this assertion
+    // once we have a testcase and prove all pieces work.
+    cgf.cgm.errorNYI("emitSuspendExpr Aggregate");
+  } else { // complex
+    cgf.cgm.errorNYI("emitSuspendExpr Complex");
+  }
+  return rval;
+}
+
+RValue CIRGenFunction::emitCoawaitExpr(const CoawaitExpr &e,
+                                       AggValueSlot aggSlot,
+                                       bool ignoreResult) {
+  return emitSuspendExpr(*this, e, curCoro.data->currentAwaitKind, aggSlot,
+                         ignoreResult);
+}
+
+RValue CIRGenFunction::emitCoyieldExpr(const CoyieldExpr &e,
+                                       AggValueSlot aggSlot,
+                                       bool ignoreResult) {
+  return emitSuspendExpr(*this, e, cir::AwaitKind::Yield, aggSlot,
+                         ignoreResult);
+}
+
+mlir::LogicalResult CIRGenFunction::emitCoreturnStmt(CoreturnStmt const &s) {
+  ++curCoro.data->coreturnCount;
+  curLexScope->setCoreturn();
+
+  const Expr *rv = s.getOperand();
+  if (rv && rv->getType()->isVoidType() && !isa<InitListExpr>(rv)) {
+    // Make sure to evaluate the non initlist expression of a co_return
+    // with a void expression for side effects.
+    RunCleanupsScope cleanupScope(*this);
+    emitIgnoredExpr(rv);
+  }
+
+  if (emitStmt(s.getPromiseCall(), /*useCurrentScope=*/true).failed())
+    return mlir::failure();
+  // Create a new return block (if not existent) and add a branch to
+  // it. The actual return instruction is only inserted during current
+  // scope cleanup handling.
+  mlir::Location loc = getLoc(s.getSourceRange());
+  cir::CoReturnOp::create(builder, loc);
+
   return mlir::success();
 }

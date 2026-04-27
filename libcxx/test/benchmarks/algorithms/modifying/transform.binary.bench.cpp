@@ -60,9 +60,6 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("std::transform(vector<int>, vector<int>)", std_transform);
     bm.operator()<std::deque<int>>("std::transform(deque<int>, deque<int>)", std_transform);
     bm.operator()<std::list<int>>("std::transform(list<int>, list<int>)", std_transform);
-    bm.operator()<std::vector<int>>("rng::transform(vector<int>, vector<int>)", std::ranges::transform);
-    bm.operator()<std::deque<int>>("rng::transform(deque<int>, deque<int>)", std::ranges::transform);
-    bm.operator()<std::list<int>>("rng::transform(list<int>, list<int>)", std::ranges::transform);
   }
 
   benchmark::Initialize(&argc, argv);

@@ -13,6 +13,7 @@
 #include "ProfiledBinary.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/ProfileData/ProfileCommon.h"
+#include "llvm/Support/Timer.h"
 #include <algorithm>
 #include <float.h>
 #include <unordered_set>
@@ -244,10 +245,10 @@ bool ProfileGeneratorBase::filterAmbiguousProfile(FunctionSamples &FS) {
 // from the profile map during the profile generation time. The profiles are all
 // cold functions, it won't have perf impact.
 void ProfileGeneratorBase::filterAmbiguousProfile(SampleProfileMap &Profiles) {
-  for (auto I = ProfileMap.begin(); I != ProfileMap.end();) {
+  for (auto I = Profiles.begin(); I != Profiles.end();) {
     auto FS = I++;
     if (filterAmbiguousProfile(FS->second))
-      ProfileMap.erase(FS);
+      Profiles.erase(FS);
   }
 }
 
@@ -501,10 +502,15 @@ ProfileGenerator::getTopLevelFunctionProfile(FunctionId FuncName) {
 }
 
 void ProfileGenerator::generateProfile() {
+  NamedRegionTimer T("generate", "Generate profile", "profgen", "llvm-profgen",
+                     TimeProfGen);
   collectProfiledFunctions();
 
-  if (Binary->usePseudoProbes())
+  if (Binary->usePseudoProbes()) {
     Binary->decodePseudoProbe();
+    if (LoadFunctionFromSymbol)
+      Binary->loadSymbolsFromPseudoProbe();
+  }
 
   if (SampleCounters) {
     if (Binary->usePseudoProbes()) {
@@ -526,15 +532,14 @@ void ProfileGeneratorBase::markAllContextPreinlined(
 
 void ProfileGenerator::postProcessProfiles() {
   computeSummaryAndThreshold(ProfileMap);
-  trimColdProfiles(ProfileMap, ColdCountThreshold);
+  trimColdProfiles(ColdCountThreshold);
   filterAmbiguousProfile(ProfileMap);
   if (MarkAllContextPreinlined)
     markAllContextPreinlined(ProfileMap);
   calculateAndShowDensity(ProfileMap);
 }
 
-void ProfileGenerator::trimColdProfiles(const SampleProfileMap &Profiles,
-                                        uint64_t ColdCntThreshold) {
+void ProfileGenerator::trimColdProfiles(uint64_t ColdCntThreshold) {
   if (!TrimColdProfile)
     return;
 
@@ -732,6 +737,14 @@ ProfileGeneratorBase::getCalleeNameForAddress(uint64_t TargetAddress) {
   if (!FRange || !FRange->IsFuncEntry)
     return StringRef();
 
+  // DWARF and symbol table may have mismatching function names. Instead, we'll
+  // try to use its pseudo probe name first.
+  if (Binary->usePseudoProbes()) {
+    auto FuncName = Binary->findPseudoProbeName(FRange->Func);
+    if (FuncName.size())
+      return FunctionSamples::getCanonicalFnName(FuncName);
+  }
+
   return FunctionSamples::getCanonicalFnName(FRange->getFuncName());
 }
 
@@ -911,6 +924,8 @@ CSProfileGenerator::getOrCreateContextNode(const SampleContextFrames Context,
 }
 
 void CSProfileGenerator::generateProfile() {
+  NamedRegionTimer T("generate", "Generate CS profile", "profgen",
+                     "llvm-profgen", TimeProfGen);
   FunctionSamples::ProfileIsCS = true;
 
   collectProfiledFunctions();
@@ -919,6 +934,8 @@ void CSProfileGenerator::generateProfile() {
     Binary->decodePseudoProbe();
     if (InferMissingFrames)
       initializeMissingFrameInferrer();
+    if (LoadFunctionFromSymbol)
+      Binary->loadSymbolsFromPseudoProbe();
   }
 
   if (SampleCounters) {

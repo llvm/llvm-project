@@ -2,7 +2,8 @@
 // depending on a real target.
 class BogusTargetLowering : public TargetLowering {
 public:
-  BogusTargetLowering(TargetMachine &TM) : TargetLowering(TM) {}
+  BogusTargetLowering(const TargetMachine &TM, const TargetSubtargetInfo &STI)
+      : TargetLowering(TM, STI) {}
 };
 
 class BogusFrameLowering : public TargetFrameLowering {
@@ -19,14 +20,11 @@ protected:
   bool hasFPImpl(const MachineFunction &MF) const override { return false; }
 };
 
-static TargetRegisterClass *const BogusRegisterClasses[] = {nullptr};
-
 class BogusRegisterInfo : public TargetRegisterInfo {
 public:
   BogusRegisterInfo()
-      : TargetRegisterInfo(nullptr, BogusRegisterClasses, BogusRegisterClasses,
-                           nullptr, nullptr, nullptr, LaneBitmask(~0u), nullptr,
-                           nullptr) {
+      : TargetRegisterInfo(nullptr, {}, nullptr, {}, nullptr, nullptr,
+                           LaneBitmask(~0u), nullptr, nullptr) {
     InitMCRegisterInfo(nullptr, 0, 0, 0, nullptr, 0, nullptr, 0, nullptr,
                        nullptr, nullptr, nullptr, nullptr, 0, nullptr);
   }
@@ -87,7 +85,7 @@ public:
   BogusSubtarget(TargetMachine &TM)
       : TargetSubtargetInfo(Triple(""), "", "", "", {}, {}, {}, nullptr,
                             nullptr, nullptr, nullptr, nullptr, nullptr),
-        FL(), TL(TM) {}
+        FL(), TL(TM, *this) {}
   ~BogusSubtarget() override = default;
 
   const TargetFrameLowering *getFrameLowering() const override { return &FL; }
@@ -117,7 +115,11 @@ public:
       : CodeGenTargetMachineImpl(
             Target(), "", Triple(""), "", "", getTargetOptionsForBogusMachine(),
             Reloc::Static, CodeModel::Small, CodeGenOptLevel::Default),
-        ST(*this) {}
+        ST(*this) {
+    // With an empty Triple, `initAsmInfo` cannot be called. Provide a
+    // default MCAsmInfo so that MCContext can be created.
+    AsmInfo = std::make_unique<MCAsmInfo>(Options.MCOptions);
+  }
 
   ~BogusTargetMachine() override = default;
 

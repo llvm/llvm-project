@@ -16,8 +16,6 @@ llvm.func @init_mbarrier(%barrier_gen : !llvm.ptr, %barrier : !llvm.ptr<3>, %cou
 
 // CHECK-LABEL: @init_mbarrier_arrive_expect_tx
 llvm.func @init_mbarrier_arrive_expect_tx(%barrier : !llvm.ptr<3>, %txcount : i32, %pred : i1) {
-  //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "mbarrier.arrive.expect_tx.shared.b64 _, [$0], $1;", "r,r"
-  nvvm.mbarrier.arrive.expect_tx %barrier, %txcount : !llvm.ptr<3>, i32
   //CHECK:  llvm.inline_asm has_side_effects asm_dialect = att "@$2 mbarrier.arrive.expect_tx.shared.b64 _, [$0], $1;", "r,r,b"
   nvvm.mbarrier.arrive.expect_tx %barrier, %txcount, predicate = %pred : !llvm.ptr<3>, i32, i1 
   llvm.return
@@ -25,8 +23,6 @@ llvm.func @init_mbarrier_arrive_expect_tx(%barrier : !llvm.ptr<3>, %txcount : i3
 
 // CHECK-LABEL: @init_mbarrier_arrive_expect_tx_generic
 llvm.func @init_mbarrier_arrive_expect_tx_generic(%barrier : !llvm.ptr, %txcount : i32, %pred : i1) {
-  // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "mbarrier.arrive.expect_tx.b64 _, [$0], $1;", "l,r" 
-  nvvm.mbarrier.arrive.expect_tx %barrier, %txcount : !llvm.ptr, i32
   // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "@$2 mbarrier.arrive.expect_tx.b64 _, [$0], $1;", "l,r,b"
   nvvm.mbarrier.arrive.expect_tx %barrier, %txcount, predicate = %pred : !llvm.ptr, i32, i1 
   llvm.return
@@ -66,19 +62,19 @@ llvm.func @init_mbarrier_try_wait(%barrier : !llvm.ptr, %ticks : i32, %phase : i
 
 // CHECK-LABEL: @async_cp
 func.func @async_cp(%dst: !llvm.ptr<3>, %src: !llvm.ptr<1>) {
-  // CHECK: nvvm.cp.async.shared.global %{{.*}}, %{{.*}}, 16, cache =  ca : !llvm.ptr<3>, !llvm.ptr<1>
-  nvvm.cp.async.shared.global %dst, %src, 16, cache =  ca : !llvm.ptr<3>, !llvm.ptr<1>
-  // CHECK: nvvm.cp.async.shared.global %{{.*}}, %{{.*}}, 16, cache =  cg : !llvm.ptr<3>, !llvm.ptr<1>
-  nvvm.cp.async.shared.global %dst, %src, 16, cache =  cg : !llvm.ptr<3>, !llvm.ptr<1>
+  // CHECK: nvvm.cp.async.shared.global %{{.*}}, %{{.*}}, 16, cache = ca : !llvm.ptr<3>, !llvm.ptr<1>
+  nvvm.cp.async.shared.global %dst, %src, 16, cache = ca : !llvm.ptr<3>, !llvm.ptr<1>
+  // CHECK: nvvm.cp.async.shared.global %{{.*}}, %{{.*}}, 16, cache = cg : !llvm.ptr<3>, !llvm.ptr<1>
+  nvvm.cp.async.shared.global %dst, %src, 16, cache = cg : !llvm.ptr<3>, !llvm.ptr<1>
   return
 }
 
 // CHECK-LABEL: @async_cp_zfill
 func.func @async_cp_zfill(%dst: !llvm.ptr<3>, %src: !llvm.ptr<1>, %cpSize: i32) {
-  // CHECK: nvvm.cp.async.shared.global %{{.*}}, %{{.*}}, 16, cache =  cg, %{{.*}} : !llvm.ptr<3>, !llvm.ptr<1>, i32
-  nvvm.cp.async.shared.global %dst, %src, 16, cache =  cg, %cpSize : !llvm.ptr<3>, !llvm.ptr<1>, i32
-  // CHECK: nvvm.cp.async.shared.global %{{.*}}, %{{.*}}, 4, cache =  ca, %{{.*}} : !llvm.ptr<3>, !llvm.ptr<1>, i32
-  nvvm.cp.async.shared.global %dst, %src, 4, cache =  ca, %cpSize : !llvm.ptr<3>, !llvm.ptr<1>, i32
+  // CHECK: nvvm.cp.async.shared.global %{{.*}}, %{{.*}}, 16, cache = cg, %{{.*}} : !llvm.ptr<3>, !llvm.ptr<1>, i32
+  nvvm.cp.async.shared.global %dst, %src, 16, cache = cg, %cpSize : !llvm.ptr<3>, !llvm.ptr<1>, i32
+  // CHECK: nvvm.cp.async.shared.global %{{.*}}, %{{.*}}, 4, cache = ca, %{{.*}} : !llvm.ptr<3>, !llvm.ptr<1>, i32
+  nvvm.cp.async.shared.global %dst, %src, 4, cache = ca, %cpSize : !llvm.ptr<3>, !llvm.ptr<1>, i32
   return
 }
 
@@ -544,8 +540,8 @@ func.func @elect_one_leader_sync() {
 
 // -----
 
-// CHECK-LABEL: @init_mbarrier_arrive_expect_tx
-llvm.func @init_mbarrier_arrive_expect_tx(%desc : !llvm.ptr, %pred : i1) {
+// CHECK-LABEL: @test_nvvm_prefetch
+llvm.func @test_nvvm_prefetch(%desc : !llvm.ptr, %pred : i1) {
   //CHECK: nvvm.prefetch tensormap, %{{.*}}
   nvvm.prefetch tensormap, %desc : !llvm.ptr
   //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "@$1 prefetch.tensormap [$0];", "l,b"
@@ -588,29 +584,6 @@ func.func @cp_async_bulk_wait_group() {
 
 // -----
 
-func.func @fence_mbarrier_init() {
-  //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "fence.mbarrier_init.release.cluster;"
-  nvvm.fence.mbarrier.init
-  func.return 
-}
-// -----
-
-func.func @fence_proxy() {
-  //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "fence.proxy.alias;", ""  : () -> ()
-  nvvm.fence.proxy { kind = #nvvm.proxy_kind<alias>}
-  //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "fence.proxy.async;", ""  : () -> ()
-  nvvm.fence.proxy { kind = #nvvm.proxy_kind<async>}
-  //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "fence.proxy.async.global;", ""  : () -> ()
-  nvvm.fence.proxy { kind = #nvvm.proxy_kind<async.global>}
-  //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "fence.proxy.async.shared::cta;", ""  : () -> ()
-  nvvm.fence.proxy { kind = #nvvm.proxy_kind<async.shared>, space = #nvvm.shared_space<cta>}
-  //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "fence.proxy.async.shared::cluster;", ""  : () -> ()
-  nvvm.fence.proxy { kind = #nvvm.proxy_kind<async.shared>, space = #nvvm.shared_space<cluster>}
-  func.return
-}
-
-// -----
-
 // CHECK-LABEL: @llvm_nvvm_barrier_arrive
 // CHECK-SAME: (%[[barId:.*]]: i32, %[[numberOfThreads:.*]]: i32)
 llvm.func @llvm_nvvm_barrier_arrive(%barID : i32, %numberOfThreads : i32) {
@@ -641,9 +614,23 @@ llvm.func @ex2(%input : f32, %pred : i1) {
   // CHECK: %{{.*}} = llvm.inline_asm has_side_effects asm_dialect = att "ex2.approx.ftz.f32 $0, $1;", "=f,f" %{{.*}} : (f32) -> f32
   %0 = nvvm.inline_ptx "ex2.approx.ftz.f32 {$w0}, {$r0};" ro (%input : f32) -> f32
   
-  // CHECK: %{{.*}} =  llvm.inline_asm has_side_effects asm_dialect = att "@$1 ex2.approx.ftz.f32 $0, $1;", "=f,f,b" %{{.*}}, %{{.*}} : (f32, i1) -> f32
+  // CHECK: %{{.*}} =  llvm.inline_asm has_side_effects asm_dialect = att "@$2 ex2.approx.ftz.f32 $0, $1;", "=f,f,b" %{{.*}}, %{{.*}} : (f32, i1) -> f32
   %1 = nvvm.inline_ptx "ex2.approx.ftz.f32 {$w0}, {$r0};" ro (%input : f32), predicate = %pred  -> f32
   llvm.return
+}
+
+// CHECK-LABEL: @multi_return_pred(
+// CHECK-SAME: %[[arg0:[a-zA-Z0-9_]+]]: i32, %[[arg1:[a-zA-Z0-9_]+]]: i32, %[[pred:[a-zA-Z0-9_]+]]: i1)
+llvm.func @multi_return_pred(%a : i32, %b : i32, %pred : i1) -> i32 {
+  // CHECK: %[[S1:.+]] = llvm.inline_asm has_side_effects asm_dialect = att "@$4 {.reg .pred p; setp.ge.s32 p, $2, $3; selp.s32 $0, $2,$3, p; selp.s32 $1, $2,$3, p;}", "=r,=r,r,r,b" %[[arg0]], %[[arg1]], %[[pred]] : (i32, i32, i1) -> !llvm.struct<(i32, i32)>
+  // CHECK: %[[S2:.+]] = llvm.extractvalue %[[S1]][0] : !llvm.struct<(i32, i32)>
+  // CHECK: %[[S3:.+]] = llvm.extractvalue %[[S1]][1] : !llvm.struct<(i32, i32)>
+  // CHECK: %[[S4:.+]] = llvm.add %[[S2]], %[[S3]] : i32
+  // CHECK: llvm.return %[[S4]] : i32
+   %r1, %r2 = nvvm.inline_ptx "{.reg .pred p; setp.ge.s32 p, {$r0}, {$r1}; selp.s32 {$w0}, {$r0},{$r1}, p; selp.s32 {$w1}, {$r0},{$r1}, p;}"
+                  ro (%a, %b : i32,i32), predicate = %pred -> i32,i32
+   %r3 = llvm.add %r1, %r2 : i32
+   llvm.return %r3 : i32
 }
 
 // CHECK-LABEL: @multi_return(
@@ -678,6 +665,24 @@ llvm.func @inline_ptx_multi_rw(%a : i32, %b : i32,  %rw_c : f32, %rw_d : f32) ->
    llvm.return %r4 : f32
 }
 
+// CHECK-LABEL: @inline_ptx_multi_rw_pred(
+// CHECK-SAME: %[[arg0:[a-zA-Z0-9_]+]]: i32, %[[arg1:[a-zA-Z0-9_]+]]: i32, %[[arg2:[a-zA-Z0-9_]+]]: f32, %[[arg3:[a-zA-Z0-9_]+]]: f32, %[[pred:[a-zA-Z0-9_]+]]: i1)
+llvm.func @inline_ptx_multi_rw_pred(%a : i32, %b : i32, %rw_c : f32, %rw_d : f32, %pred : i1) -> f32 {
+// CHECK: %[[S0:.+]] = llvm.inline_asm has_side_effects asm_dialect = att "@$4 {.reg .pred p; setp.ge.s32 p, $2, $3; selp.s32 $0, $2,$3, p; selp.s32 $1, $2,$3, p;}",
+// CHECK-SAME: "=f,=f,r,r,b,0,1"
+// CHECK-SAME: %[[arg2]], %[[arg3]], %[[arg0]], %[[arg1]], %[[pred]]
+// CHECK-SAME: : (f32, f32, i32, i32, i1) -> !llvm.struct<(f32, f32)>
+// CHECK: %[[S1:.+]] = llvm.extractvalue %[[S0]][0] : !llvm.struct<(f32, f32)>
+// CHECK: %[[S2:.+]] = llvm.extractvalue %[[S0]][1] : !llvm.struct<(f32, f32)>
+// CHECK: %[[S3:.+]] = llvm.fadd %[[S1]], %[[S2]] : f32
+// CHECK: llvm.return %[[S3]] : f32
+    nvvm.inline_ptx "{.reg .pred p; setp.ge.s32 p, {$r0}, {$r1}; selp.s32 {$rw0}, {$r0},{$r1}, p; selp.s32 {$rw1}, {$r0},{$r1}, p;}"
+    ro (%a, %b : i32,i32)
+    rw (%rw_c, %rw_d: f32,f32), predicate = %pred
+   %r4 = llvm.fadd %rw_c, %rw_d : f32
+   llvm.return %r4 : f32
+}
+
 // CHECK-LABEL: @inline_ptx_multi_rw_r(
 // CHECK-SAME: %[[arg0:[a-zA-Z0-9_]+]]: i32, %[[arg1:[a-zA-Z0-9_]+]]: i32, %[[arg2:[a-zA-Z0-9_]+]]: f32, %[[arg3:[a-zA-Z0-9_]+]]: f32)
 llvm.func @inline_ptx_multi_rw_r(%a : i32, %b : i32,  %rw_c : f32, %rw_d : f32) -> f32 {
@@ -705,19 +710,31 @@ llvm.func @inline_ptx_multi_rw_r(%a : i32, %b : i32,  %rw_c : f32, %rw_d : f32) 
    llvm.return %r5 : f32
 }
 
+// CHECK-LABEL: @inline_ptx_multi_rw_r_pred(
+// CHECK-SAME: %[[arg0:[a-zA-Z0-9_]+]]: i32, %[[arg1:[a-zA-Z0-9_]+]]: i32, %[[arg2:[a-zA-Z0-9_]+]]: f32, %[[arg3:[a-zA-Z0-9_]+]]: f32, %[[pred:[a-zA-Z0-9_]+]]: i1)
+llvm.func @inline_ptx_multi_rw_r_pred(%a : i32, %b : i32, %rw_c : f32, %rw_d : f32, %pred : i1) -> f32 {
+// CHECK: %[[S0:.+]] = llvm.inline_asm has_side_effects asm_dialect = att "@$6 {.reg .pred p; setp.ge.s32 p, $4, $5; selp.s32 $0, $4,$5, p; selp.s32 $1, $4,$5, p; selp.s32 $2, $4,$5, p; selp.s32 $3, $4,$5, p;}",
+// CHECK-SAME: "=f,=f,=r,=r,r,r,b,0,1"
+// CHECK-SAME: %[[arg2]], %[[arg3]], %[[arg0]], %[[arg1]], %[[pred]] :
+// CHECK-SAME: (f32, f32, i32, i32, i1) -> !llvm.struct<(f32, f32, i32, i32)>
+// CHECK: %[[S1:.+]] = llvm.extractvalue %[[S0]][0] : !llvm.struct<(f32, f32, i32, i32)>
+// CHECK: %[[S2:.+]] = llvm.extractvalue %[[S0]][1] : !llvm.struct<(f32, f32, i32, i32)>
+// CHECK: %[[S3:.+]] = llvm.extractvalue %[[S0]][2] : !llvm.struct<(f32, f32, i32, i32)>
+// CHECK: %[[S4:.+]] = llvm.extractvalue %[[S0]][3] : !llvm.struct<(f32, f32, i32, i32)>
+// CHECK: %[[S5:.+]] = llvm.add %[[S3]], %[[S4]] : i32
+// CHECK: %[[S6:.+]] = llvm.sitofp %[[S5]] : i32 to f32
+// CHECK: %[[S7:.+]] = llvm.fadd %[[S1]], %[[S2]] : f32
+// CHECK: %[[S8:.+]] = llvm.fadd %[[S6]], %[[S2]] : f32
+// CHECK: llvm.return %[[S8]] : f32
 
-// -----
-
-// CHECK-LABEL: @nvvm_pmevent
-llvm.func @nvvm_pmevent() {
-  // CHECK: %[[S0:.+]] = llvm.mlir.constant(10 : i32) : i32
-  // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "pmevent $0;", "n" %[[S0]] : (i32) -> ()
-  
-  nvvm.pmevent id = 10
-  // CHECK: %[[S1:.+]] = llvm.mlir.constant(4 : i32) : i32
-  // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "pmevent $0;", "n" %[[S1]] : (i32) -> ()
-  nvvm.pmevent id = 4
-  llvm.return
+  %wo0, %wo1 = nvvm.inline_ptx "{.reg .pred p; setp.ge.s32 p, {$r0}, {$r1}; selp.s32 {$rw0}, {$r0},{$r1}, p; selp.s32 {$rw1}, {$r0},{$r1}, p; selp.s32 {$w0}, {$r0},{$r1}, p; selp.s32 {$w1}, {$r0},{$r1}, p;}"
+      ro (%a, %b : i32,i32)
+      rw (%rw_c, %rw_d: f32,f32), predicate = %pred -> i32,i32
+   %r3 = llvm.add %wo0, %wo1 : i32
+   %r3f = llvm.sitofp %r3 : i32 to f32
+   %r4 = llvm.fadd %rw_c, %rw_d : f32
+   %r5 = llvm.fadd %r3f, %rw_d : f32
+   llvm.return %r5 : f32
 }
 
 // -----

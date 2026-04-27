@@ -61,6 +61,9 @@ public:
                                       cir::PointerType destCIRTy,
                                       bool isRefCast, Address src) = 0;
 
+  virtual cir::MethodAttr buildVirtualMethodAttr(cir::MethodType methodTy,
+                                                 const CXXMethodDecl *md) = 0;
+
 public:
   /// Similar to AddedStructorArgs, but only notes the number of additional
   /// arguments.
@@ -124,7 +127,16 @@ public:
   virtual void emitRethrow(CIRGenFunction &cgf, bool isNoReturn) = 0;
   virtual void emitThrow(CIRGenFunction &cgf, const CXXThrowExpr *e) = 0;
 
+  /// Determine whether it's possible to emit a vtable for \p RD, even
+  /// though we do not know that the vtable has been marked as used by semantic
+  /// analysis.
+  virtual bool canSpeculativelyEmitVTable(const CXXRecordDecl *RD) const = 0;
+
   virtual void emitBadCastCall(CIRGenFunction &cgf, mlir::Location loc) = 0;
+
+  virtual void emitBeginCatch(CIRGenFunction &cgf,
+                              const CXXCatchStmt *catchStmt,
+                              mlir::Value ehToken) = 0;
 
   virtual mlir::Attribute getAddrOfRTTIDescriptor(mlir::Location loc,
                                                   QualType ty) = 0;
@@ -158,7 +170,14 @@ public:
   /// Loads the incoming C++ this pointer as it was passed by the caller.
   mlir::Value loadIncomingCXXThis(CIRGenFunction &cgf);
 
+  virtual CatchTypeInfo
+  getAddrOfCXXCatchHandlerType(mlir::Location loc, QualType ty,
+                               QualType catchHandlerType) = 0;
   virtual CatchTypeInfo getCatchAllTypeInfo();
+  virtual bool shouldTypeidBeNullChecked(QualType srcTy) = 0;
+  virtual mlir::Value emitTypeid(CIRGenFunction &cgf, QualType srcTy,
+                                 Address thisPtr, mlir::Type typeInfoPtrTy) = 0;
+  virtual void emitBadTypeidCall(CIRGenFunction &cgf, mlir::Location loc) = 0;
 
   /// Get the implicit (second) parameter that comes after the "this" pointer,
   /// or nullptr if there is isn't one.
@@ -192,6 +211,9 @@ public:
                                        QualType elementType,
                                        const CXXDestructorDecl *dtor) = 0;
 
+  virtual size_t getSrcArgforCopyCtor(const CXXConstructorDecl *,
+                                      FunctionArgList &args) const = 0;
+
   /// Checks if ABI requires extra virtual offset for vtable field.
   virtual bool
   isVirtualOffsetNeededForVTableField(CIRGenFunction &cgf,
@@ -213,6 +235,36 @@ public:
   /// Emit any tables needed to implement virtual inheritance.  For Itanium,
   /// this emits virtual table tables.
   virtual void emitVirtualInheritanceTables(const CXXRecordDecl *rd) = 0;
+
+  /// Returns true if the thunk should be exported.
+  virtual bool exportThunk() = 0;
+
+  /// Set the linkage and visibility of a thunk function.
+  virtual void setThunkLinkage(cir::FuncOp thunk, bool forVTable, GlobalDecl gd,
+                               bool returnAdjustment) = 0;
+
+  /// Perform adjustment on the 'this' pointer for a thunk.
+  /// Returns the adjusted 'this' pointer value.
+  virtual mlir::Value
+  performThisAdjustment(CIRGenFunction &cgf, Address thisAddr,
+                        const CXXRecordDecl *unadjustedClass,
+                        const ThunkInfo &ti) = 0;
+
+  /// Perform adjustment on a return pointer for a thunk (covariant returns).
+  /// Returns the adjusted return pointer value.
+  virtual mlir::Value
+  performReturnAdjustment(CIRGenFunction &cgf, Address ret,
+                          const CXXRecordDecl *unadjustedClass,
+                          const ReturnAdjustment &ra) = 0;
+
+  /// Adjust call arguments for a destructor thunk.
+  virtual void adjustCallArgsForDestructorThunk(CIRGenFunction &cgf,
+                                                GlobalDecl globalDecl,
+                                                CallArgList &callArgs) {}
+
+  /// Emit a return from a thunk.
+  virtual void emitReturnFromThunk(CIRGenFunction &cgf, RValue rv,
+                                   QualType resultType);
 
   /// Returns true if the given destructor type should be emitted as a linkonce
   /// delegating thunk, regardless of whether the dtor is defined in this TU or
@@ -246,6 +298,9 @@ public:
   virtual mlir::Value getVTableAddressPointInStructor(
       CIRGenFunction &cgf, const CXXRecordDecl *vtableClass, BaseSubobject base,
       const CXXRecordDecl *nearestVBase) = 0;
+
+  virtual llvm::StringRef getPureVirtualCallName() = 0;
+  virtual llvm::StringRef getDeletedVirtualCallName() = 0;
 
   /// Insert any ABI-specific implicit parameters into the parameter list for a
   /// function. This generally involves extra data for constructors and
@@ -325,6 +380,10 @@ public:
                                         mlir::Value numElements,
                                         const CXXNewExpr *e,
                                         QualType elementType) = 0;
+
+  /// Return true if the given member pointer can be zero-initialized
+  /// (in the C++ sense).
+  virtual bool isZeroInitializable(const MemberPointerType *mpt) = 0;
 
 protected:
   /// Returns the extra size required in order to store the array
