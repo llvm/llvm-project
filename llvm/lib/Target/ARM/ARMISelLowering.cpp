@@ -1506,9 +1506,8 @@ EVT ARMTargetLowering::getSetCCResultType(const DataLayout &DL, LLVMContext &C,
     return getPointerTy(DL);
 
   // MVE has a predicate register.
-  if ((Subtarget->hasMVEIntegerOps() && VT.isInteger()) ||
-      (Subtarget->hasMVEFloatOps() && VT.isFloatingPoint()))
-    return VT.changeElementType(C, MVT::i1);
+  if (Subtarget->hasMVEIntegerOps())
+    return EVT::getVectorVT(C, MVT::i1, VT.getVectorElementCount());
 
   return VT.changeVectorElementTypeToInteger();
 }
