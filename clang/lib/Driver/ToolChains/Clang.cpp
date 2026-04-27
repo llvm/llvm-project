@@ -6520,7 +6520,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       else
         CmdArgs.push_back("-std=c89");
     else {
-      if (Args.hasArg(options::OPT_fsycl)) {
+      if (IsSYCL) {
         const LangStandard *LangStd =
             LangStandard::getLangStandardForName(Std->getValue());
         if (LangStd) {
