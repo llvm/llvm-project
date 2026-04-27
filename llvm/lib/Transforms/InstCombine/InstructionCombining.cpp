@@ -593,6 +593,20 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
         Value *A = Op0->getOperand(0);
         Value *B = Op0->getOperand(1);
         Value *C = I.getOperand(1);
+        
+        // Form "V op B" when "C op A" is a symmetric pair
+        if (Op0->hasOneUse()) {
+          if (auto Pair = matchSymmetricPair(C, A)) {
+            replaceOperand(*Op0, 0, Pair->first);
+            replaceOperand(*Op0, 1, Pair->second);
+            Op0->dropPoisonGeneratingFlags();
+            replaceOperand(I, 1, B);
+            ClearSubclassDataAfterReassociation(I);
+            Changed = true;
+            ++NumReassoc;
+            continue;
+          }
+        }
 
         // Does "C op A" simplify?
         if (Value *V = simplifyBinOp(Opcode, C, A, SQ.getWithInstruction(&I))) {
