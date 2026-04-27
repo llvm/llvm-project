@@ -1394,11 +1394,9 @@ BuiltinTypeDeclBuilder::addArraySubscriptOperators(ResourceDimension Dim) {
       AST.DeclarationNames.getCXXOperatorName(OO_Subscript);
 
   addHandleAccessFunction(Subscript,
-                          /*IsConstReturn=*/true, /*IsRef=*/true, IndexTy);
-  if (getResourceAttrs().ResourceClass == llvm::dxil::ResourceClass::UAV)
-    addHandleAccessFunction(Subscript,
-                            /*IsConstReturn=*/false, /*IsRef=*/true, IndexTy,
-                            /*ElemTy=*/QualType(), /*IsConstMethod=*/false);
+                          /*IsConstReturn=*/getResourceAttrs().ResourceClass !=
+                              llvm::dxil::ResourceClass::UAV,
+                          /*IsRef=*/true, IndexTy);
 
   return *this;
 }
@@ -2239,14 +2237,15 @@ BuiltinTypeDeclBuilder::addLoadWithStatusFunction(DeclarationName &Name,
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addHandleAccessFunction(
     DeclarationName &Name, bool IsConstReturn, bool IsRef, QualType IndexTy,
-    QualType ElemTy, bool IsConstMethod) {
+    QualType ElemTy) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = SemaRef.getASTContext();
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
   bool NeedsTypedBuiltin = !ElemTy.isNull();
 
   // The empty QualType is a placeholder. The actual return type is set below.
-  BuiltinTypeMethodBuilder MMB(*this, Name, QualType(), IsConstMethod);
+  // All access methods are const; none of them rebind the resource handle.
+  BuiltinTypeMethodBuilder MMB(*this, Name, QualType(), true);
 
   if (!NeedsTypedBuiltin)
     ElemTy = getHandleElementType();

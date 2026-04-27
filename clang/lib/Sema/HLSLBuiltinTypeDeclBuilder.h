@@ -116,8 +116,7 @@ public:
   BuiltinTypeDeclBuilder &addHandleAccessFunction(DeclarationName &Name,
                                                   bool IsConstReturn,
                                                   bool IsRef, QualType IndexTy,
-                                                  QualType ElemTy = QualType(),
-                                                  bool IsConstMethod = true);
+                                                  QualType ElemTy = QualType());
   BuiltinTypeDeclBuilder &
   addLoadWithStatusFunction(DeclarationName &Name,
                             QualType ReturnTy = QualType());
