@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,msvc %s -triple x86_64-pc-windows-msvc -fms-compatibility
 
 // GH#58229 - rejects-valid
 __attribute__((__visibility__("default"))) [[nodiscard]] int f();
@@ -43,8 +44,10 @@ void fn() {
 
 namespace GH184954 {
   struct S {
-    int a __attribute__((packed)) : 4;
-    int b __attribute__((aligned(16))) : 4;
+    int a __attribute__((packed)) : 4;       // msvc-error {{expected ';' at end of declaration list}} \
+                                             // msvc-error {{expected member name or ';' after declaration specifiers}}
+    int b __attribute__((aligned(16))) : 4;  // msvc-error {{expected ';' at end of declaration list}} \
+                                             // msvc-error {{expected member name or ';' after declaration specifiers}}
   };
 }
 

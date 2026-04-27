@@ -2513,7 +2513,7 @@ bool Parser::ParseCXXMemberDeclaratorBeforeInitializer(
     DeclaratorInfo.SetIdentifier(nullptr, Tok.getLocation());
 
   const bool IsFunctionDeclarator = DeclaratorInfo.isFunctionDeclarator();
-  if (!IsFunctionDeclarator)
+  if (!IsFunctionDeclarator && !getLangOpts().MSVCCompat)
     MaybeParseGNUAttributes(DeclaratorInfo, &LateParsedAttrs);
 
   if (getLangOpts().HLSL)
