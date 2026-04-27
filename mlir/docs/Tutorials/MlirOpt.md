@@ -271,6 +271,7 @@ For more general information on pass management, see [Pass Infrastructure](/docs
 
 ## Useful CLI flags
 
+- `--help` and `--help-hidden` show a list of flags.
 - `--debug` prints all debug information produced by `LLVM_DEBUG` calls.
 - `--debug-only="my-tag"` prints only the debug information produced by `LLVM_DEBUG`
   in files that have the macro `#define DEBUG_TYPE "my-tag"`.
