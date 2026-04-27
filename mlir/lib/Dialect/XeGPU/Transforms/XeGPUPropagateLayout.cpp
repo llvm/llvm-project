@@ -316,7 +316,8 @@ private:
   void visitDpasOp(xegpu::DpasOp dpas, ArrayRef<LayoutInfoLattice *> operands,
                    ArrayRef<const LayoutInfoLattice *> results);
 
-  void visitDpasMxOp(xegpu::DpasMxOp dpasMx, ArrayRef<LayoutInfoLattice *> operands,
+  void visitDpasMxOp(xegpu::DpasMxOp dpasMx,
+                     ArrayRef<LayoutInfoLattice *> operands,
                      ArrayRef<const LayoutInfoLattice *> results);
 
   void visitStoreNdOp(xegpu::StoreNdOp store,
@@ -822,9 +823,9 @@ void LayoutInfoPropagation::visitDpasOp(
     propagateIfChanged(operands[2], operands[2]->meet(dpasCDLayout));
 }
 
-
 /// Propagate layout for DpasMxOp operands using the layout attributes.
-/// DpasMxOp has operands: a, b, acc (optional), scale_a (optional), scale_b (optional)
+/// DpasMxOp has operands: a, b, acc (optional), scale_a (optional), scale_b
+/// (optional)
 void LayoutInfoPropagation::visitDpasMxOp(
     xegpu::DpasMxOp dpasMx, ArrayRef<LayoutInfoLattice *> operands,
     ArrayRef<const LayoutInfoLattice *> results) {
@@ -848,8 +849,10 @@ void LayoutInfoPropagation::visitDpasMxOp(
     dpasMxCDLayout = LayoutInfo(anchorLayoutCD);
 
     // Get scale layouts if available
-    xegpu::DistributeLayoutAttr anchorLayoutAScale = dpasMx.getLayoutAScaleAttr();
-    xegpu::DistributeLayoutAttr anchorLayoutBScale = dpasMx.getLayoutBScaleAttr();
+    xegpu::DistributeLayoutAttr anchorLayoutAScale =
+        dpasMx.getLayoutAScaleAttr();
+    xegpu::DistributeLayoutAttr anchorLayoutBScale =
+        dpasMx.getLayoutBScaleAttr();
     if (anchorLayoutAScale)
       dpasMxAScaleLayout = LayoutInfo(anchorLayoutAScale);
     if (anchorLayoutBScale)
@@ -894,9 +897,9 @@ void LayoutInfoPropagation::visitDpasMxOp(
       numSg = numSgOrErr.value();
     }
 
-    auto layouts = xegpu::setupDpasMxLayout(layoutKind, aTy, bTy, cdTy,
-                                            aScaleTy, bScaleTy,
-                                            consumerLayoutAttr, numSg, uArch);
+    auto layouts =
+        xegpu::setupDpasMxLayout(layoutKind, aTy, bTy, cdTy, aScaleTy, bScaleTy,
+                                 consumerLayoutAttr, numSg, uArch);
     if (!layouts.has_value()) {
       dpasMx.emitWarning(
           "Failed to determine required layouts for DPAS_MX operands.");
