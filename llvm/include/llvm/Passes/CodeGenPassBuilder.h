@@ -791,9 +791,8 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addIRPasses(
 template <typename Derived, typename TargetMachineT>
 void CodeGenPassBuilder<Derived, TargetMachineT>::addPassesToHandleExceptions(
     PassManagerWrapper &PMW) const {
-  const MCAsmInfo *MCAI = TM.getMCAsmInfo();
-  assert(MCAI && "No MCAsmInfo");
-  switch (MCAI->getExceptionHandlingType()) {
+  const MCAsmInfo &MCAI = TM.getMCAsmInfo();
+  switch (MCAI.getExceptionHandlingType()) {
   case ExceptionHandling::SjLj:
     // SjLj piggy-backs on dwarf for this bit. The cleanups done apply to both
     // Dwarf EH prepare needs to be run after SjLj prepare. Otherwise,

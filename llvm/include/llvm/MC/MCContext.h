@@ -376,7 +376,7 @@ private:
   DenseSet<StringRef> ELFSeenGenericMergeableSections;
 
 public:
-  LLVM_ABI explicit MCContext(const Triple &TheTriple, const MCAsmInfo *MAI,
+  LLVM_ABI explicit MCContext(const Triple &TheTriple, const MCAsmInfo &MAI,
                               const MCRegisterInfo *MRI,
                               const MCSubtargetInfo *MSTI,
                               const SourceMgr *Mgr = nullptr,
