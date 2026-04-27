@@ -113,7 +113,7 @@
 /mlir/**/*VectorInterfaces* @dcaballe @nicolasvasilache
 /mlir/**/*VectorToSCF* @banach-space @dcaballe @matthias-springer @nicolasvasilache
 /mlir/**/*VectorToLLVM* @banach-space @dcaballe @nicolasvasilache
-/mlir/**/*X86* @aartbik @dcaballe @nicolasvasilache
+/mlir/**/*X86* @aartbik @dcaballe @nicolasvasilache @adam-smnk
 /mlir/include/mlir/Dialect/Vector @banach-space @dcaballe @nicolasvasilache @Groverkss
 /mlir/include/mlir/Dialect/Vector/IR @kuhar
 /mlir/lib/Dialect/Vector @banach-space @dcaballe @nicolasvasilache @Groverkss
