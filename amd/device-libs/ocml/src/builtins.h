@@ -91,23 +91,25 @@
 #define BUILTIN_FLOOR_2F16 __builtin_elementwise_floor
 
 // These will codegen to v_fract_{f16|f32|f64} as appropriate.
-#define BUILTIN_FRACTION_F32(X) ({                              \
-    const float _x = X;                                         \
-    const float _floor_x = BUILTIN_FLOOR_F32(_x);               \
-    float _f = BUILTIN_MIN_F32(_x - _floor_x, 0x1.fffffep-1f);  \
-    if (!FINITE_ONLY_OPT()) {                                   \
-        _f = BUILTIN_ISNAN_F32(_x) ? _x : _f;                   \
-        _f = BUILTIN_ISINF_F32(_x) ? 0.0f : _f;                  \
-    }                                                           \
-    _f;                                                         \
-})
+#define BUILTIN_FRACTION_F32(X)                                                                                        \
+    ({                                                                                                                 \
+        const float _x = X;                                                                                            \
+        const float _floor_x = BUILTIN_FLOOR_F32(_x);                                                                  \
+        const float _x_sub_floor = _x - _floor_x;                                                                      \
+        float _f = _x_sub_floor >= 0x1.fffffep-1f ? 0x1.fffffep-1f : _x_sub_floor;                                     \
+        if (!FINITE_ONLY_OPT()) {                                                                                      \
+            _f = BUILTIN_ISINF_F32(_x) ? 0.0f : _f;                                                                    \
+        }                                                                                                              \
+        _f;                                                                                                            \
+    })
 
 // Perform the non-finite component of fract
 #define BUILTIN_FRACTION_F64_IMPL(X)                                                                                   \
     ({                                                                                                                 \
         const double _x = X;                                                                                           \
         const double _floor_x = BUILTIN_FLOOR_F64(_x);                                                                 \
-        double _f = BUILTIN_MIN_F64(_x - _floor_x, 0x1.fffffffffffffp-1);                                              \
+        const double _x_sub_floor = _x - _floor_x;                                                                     \
+        double _f = _x_sub_floor >= 0x1.fffffffffffffp-1 ? 0x1.fffffffffffffp-1 : _x_sub_floor;                        \
         _f;                                                                                                            \
     })
 
@@ -120,7 +122,6 @@
         const double _x = X;                                                                                           \
         double _f = F;                                                                                                 \
         if (!FINITE_ONLY_OPT()) {                                                                                      \
-            _f = BUILTIN_ISNAN_F64(_x) ? _x : _f;                                                                      \
             _f = BUILTIN_ISINF_F64(_x) ? 0.0 : _f;                                                                     \
         }                                                                                                              \
         _f;                                                                                                            \
@@ -128,16 +129,17 @@
 
 #define BUILTIN_FRACTION_F64(X) BUILTIN_FRACTION_F64_FIXUP(BUILTIN_FRACTION_F64_IMPL(X), X)
 
-#define BUILTIN_FRACTION_F16(X) ({                                      \
-    const half _x = X;                                                  \
-    const half _floor_x = BUILTIN_FLOOR_F16(_x);                        \
-    half _f = BUILTIN_MIN_F16(_x - _floor_x, 0x1.ffcp-1h);              \
-    if (!FINITE_ONLY_OPT()) {                                           \
-        _f = BUILTIN_ISNAN_F16(_x) ? _x : _f;                           \
-        _f = BUILTIN_ISINF_F16(_x) ? 0.0h : _f;                         \
-    }                                                                   \
-    _f;                                                                 \
-})
+#define BUILTIN_FRACTION_F16(X)                                                                                        \
+    ({                                                                                                                 \
+        const half _x = X;                                                                                             \
+        const half _floor_x = BUILTIN_FLOOR_F16(_x);                                                                   \
+        const half _x_sub_floor = _x - _floor_x;                                                                       \
+        half _f = _x_sub_floor >= 0x1.ffcp-1h ? 0x1.ffcp-1h : _x_sub_floor;                                            \
+        if (!FINITE_ONLY_OPT()) {                                                                                      \
+            _f = BUILTIN_ISINF_F16(_x) ? 0.0h : _f;                                                                    \
+        }                                                                                                              \
+        _f;                                                                                                            \
+    })
 
 #define BUILTIN_MAD_U32(A,B,C) ((A)*(B)+(C))
 
