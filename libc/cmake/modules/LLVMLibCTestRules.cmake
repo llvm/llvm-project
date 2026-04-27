@@ -901,6 +901,29 @@ function(add_libc_hermetic test_name)
         $<TARGET_FILE:${fq_build_target_name}> ${HERMETIC_TEST_ARGS})
     endif()
 
+  set(_params_content "")
+  foreach(_arg IN LISTS HERMETIC_TEST_LOADER_ARGS)
+    string(APPEND _params_content "${_arg}\n")
+  endforeach()
+  string(APPEND _params_content "---\n")
+  foreach(_arg IN LISTS HERMETIC_TEST_ARGS)
+    string(APPEND _params_content "${_arg}\n")
+  endforeach()
+  string(APPEND _params_content "---\n")
+  foreach(_env_entry IN LISTS HERMETIC_TEST_ENV)
+    string(APPEND _params_content "${_env_entry}\n")
+  endforeach()
+  if(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
+    string(APPEND _params_content "LIBOMPTARGET_STACK_SIZE=3072\n")
+  endif()
+
+  if(HERMETIC_TEST_LOADER_ARGS OR HERMETIC_TEST_ARGS OR HERMETIC_TEST_ENV OR LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
+    file(GENERATE
+      OUTPUT  "${CMAKE_CURRENT_BINARY_DIR}/${fq_build_target_name}.params"
+      CONTENT "${_params_content}"
+    )
+  endif()
+
     add_custom_target(
       ${fq_target_name}
       DEPENDS ${fq_target_name}.__cmd__
