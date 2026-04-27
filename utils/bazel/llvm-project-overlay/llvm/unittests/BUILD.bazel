@@ -550,6 +550,7 @@ cc_test(
         "//llvm:AllTargetsCodeGens",
         "//llvm:AllTargetsDisassemblers",
         "//llvm:BinaryFormat",
+        "//llvm:DebugInfoDWARF",
         "//llvm:MC",
         "//llvm:MCDisassembler",
         "//llvm:Object",

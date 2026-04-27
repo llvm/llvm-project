@@ -20,28 +20,28 @@ define void @low_trip_count_small(i32 %x, ptr %dst) {
 ; CHECK-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[DST]], i64 2
 ; CHECK-NEXT:    [[NEXT_GEP4:%.*]] = getelementptr i8, ptr [[DST]], i64 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ule <4 x i64> <i64 0, i64 1, i64 2, i64 3>, [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP5]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP5]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[DST]], i64 1
 ; CHECK-NEXT:    store i8 0, ptr [[TMP7]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i1> [[TMP5]], i32 1
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i1> [[TMP5]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP8]], label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6:.*]]
 ; CHECK:       [[PRED_STORE_IF5]]:
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[NEXT_GEP2]], i64 1
 ; CHECK-NEXT:    store i8 0, ptr [[TMP9]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
 ; CHECK:       [[PRED_STORE_CONTINUE6]]:
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i1> [[TMP5]], i32 2
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i1> [[TMP5]], i64 2
 ; CHECK-NEXT:    br i1 [[TMP10]], label %[[PRED_STORE_IF7:.*]], label %[[PRED_STORE_CONTINUE8:.*]]
 ; CHECK:       [[PRED_STORE_IF7]]:
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[NEXT_GEP3]], i64 1
 ; CHECK-NEXT:    store i8 0, ptr [[TMP11]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE8]]
 ; CHECK:       [[PRED_STORE_CONTINUE8]]:
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i1> [[TMP5]], i32 3
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i1> [[TMP5]], i64 3
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[PRED_STORE_IF9:.*]], label %[[PRED_STORE_CONTINUE10:.*]]
 ; CHECK:       [[PRED_STORE_IF9]]:
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[NEXT_GEP4]], i64 1
@@ -93,28 +93,28 @@ define ptr @low_trip_count_small_with_live_out(i32 %x, ptr %dst) {
 ; CHECK-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[DST]], i64 2
 ; CHECK-NEXT:    [[NEXT_GEP4:%.*]] = getelementptr i8, ptr [[DST]], i64 3
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ule <4 x i64> <i64 0, i64 1, i64 2, i64 3>, [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i1> [[TMP6]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i1> [[TMP6]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
 ; CHECK-NEXT:    [[PTR_NEXT:%.*]] = getelementptr i8, ptr [[DST]], i64 1
 ; CHECK-NEXT:    store i8 0, ptr [[PTR_NEXT]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP6]], i32 1
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP6]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[EXIT:.*]], label %[[PRED_STORE_CONTINUE6:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[NEXT_GEP2]], i64 1
 ; CHECK-NEXT:    store i8 0, ptr [[TMP10]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
 ; CHECK:       [[PRED_STORE_CONTINUE6]]:
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i1> [[TMP6]], i32 2
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i1> [[TMP6]], i64 2
 ; CHECK-NEXT:    br i1 [[TMP11]], label %[[PRED_STORE_IF7:.*]], label %[[PRED_STORE_CONTINUE8:.*]]
 ; CHECK:       [[PRED_STORE_IF7]]:
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[NEXT_GEP3]], i64 1
 ; CHECK-NEXT:    store i8 0, ptr [[TMP12]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE8]]
 ; CHECK:       [[PRED_STORE_CONTINUE8]]:
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i1> [[TMP6]], i32 3
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i1> [[TMP6]], i64 3
 ; CHECK-NEXT:    br i1 [[TMP13]], label %[[PRED_STORE_IF9:.*]], label %[[PRED_STORE_CONTINUE10:.*]]
 ; CHECK:       [[PRED_STORE_IF9]]:
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[NEXT_GEP4]], i64 1
