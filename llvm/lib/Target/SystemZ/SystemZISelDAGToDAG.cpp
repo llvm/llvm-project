@@ -1328,21 +1328,17 @@ static bool isFusableLoadOpStorePattern(StoreSDNode *StoreNode,
   if (!StoredVal.getNode()->hasNUsesOfValue(1, 0))
     return false;
 
-  // Allow truncating stores for sub-word types but still reject
-  // complex addressing (indexed) and special memory hints (non-temporal).
-  if (StoreNode->isIndexed() || StoreNode->isNonTemporal())
+  // Is the store non-extending and non-indexed?
+  if (!ISD::isNormalStore(StoreNode) || StoreNode->isNonTemporal())
     return false;
 
   SDValue Load = StoredVal->getOperand(0);
-
-  // Peeking through ISD::ANY_EXTEND and allowing non-normal
-  // (Extending/Truncating) Loads/Stores.
-  if (Load.getOpcode() == ISD::ANY_EXTEND)
-    Load = Load.getOperand(0);
-  // Allow truncating stores and extending loads for sub-word logical ops.
-  LoadNode = dyn_cast<LoadSDNode>(Load);
-  if (!LoadNode || LoadNode->isIndexed())
+  // Is the stored value a non-extending and non-indexed load?
+  if (!ISD::isNormalLoad(Load.getNode()))
     return false;
+
+  // Return LoadNode by reference.
+  LoadNode = cast<LoadSDNode>(Load);
 
   // Is store the only read of the loaded value?
   if (!Load.hasOneUse())
@@ -1419,7 +1415,7 @@ bool SystemZDAGToDAGISel::tryFoldLoadStoreIntoMemOperand(SDNode *Node) {
   // and opcode we can handle. Note that this must match the code below that
   // actually lowers the opcodes.
   EVT MemVT = StoreNode->getMemoryVT();
-  std::pair<unsigned, unsigned> LOpcs;
+  unsigned NewOpc = 0;
   bool NegateOperand = false;
   switch (Opc) {
   default:
@@ -1429,9 +1425,9 @@ bool SystemZDAGToDAGISel::tryFoldLoadStoreIntoMemOperand(SDNode *Node) {
     [[fallthrough]];
   case SystemZISD::SADDO:
     if (MemVT == MVT::i32)
-      LOpcs.first = SystemZ::ASI;
+      NewOpc = SystemZ::ASI;
     else if (MemVT == MVT::i64)
-      LOpcs.first = SystemZ::AGSI;
+      NewOpc = SystemZ::AGSI;
     else
       return false;
     break;
@@ -1440,20 +1436,11 @@ bool SystemZDAGToDAGISel::tryFoldLoadStoreIntoMemOperand(SDNode *Node) {
     [[fallthrough]];
   case SystemZISD::UADDO:
     if (MemVT == MVT::i32)
-      LOpcs.first = SystemZ::ALSI;
+      NewOpc = SystemZ::ALSI;
     else if (MemVT == MVT::i64)
-      LOpcs.first = SystemZ::ALGSI;
+      NewOpc = SystemZ::ALGSI;
     else
       return false;
-    break;
-  case ISD::AND:
-    LOpcs = {SystemZ::NI, SystemZ::NIY};
-    break;
-  case ISD::OR:
-    LOpcs = {SystemZ::OI, SystemZ::OIY};
-    break;
-  case ISD::XOR:
-    LOpcs = {SystemZ::XI, SystemZ::XIY};
     break;
   }
 
@@ -1470,71 +1457,22 @@ bool SystemZDAGToDAGISel::tryFoldLoadStoreIntoMemOperand(SDNode *Node) {
   auto OperandV = OperandC->getAPIntValue();
   if (NegateOperand)
     OperandV = -OperandV;
-
-  bool IsLogicalByteOp = (LOpcs.second != 0);
-  unsigned NewOpc = 0;
-  if (!IsLogicalByteOp) {
-    if (OperandV.getSignificantBits() > 8)
-      return false;
-    NewOpc = LOpcs.first;
-    Operand = CurDAG->getTargetConstant(OperandV, DL, MemVT);
-  } else {
-    if (OperandV.getActiveBits() > 8)
-      return false;
-    // Fix for logical byte ops (XI/Y, NI/Y, OI/Y).
-    // Ensure the APInt width matches the requested MVT::i32 width
-    // exactly to satisfy SelectionDAG assertions.
-    Operand = CurDAG->getTargetConstant(OperandV.zextOrTrunc(32), DL, MVT::i32);
-  }
+  if (OperandV.getSignificantBits() > 8)
+    return false;
+  Operand = CurDAG->getTargetConstant(OperandV, DL, MemVT);
 
   SDValue Base, Disp;
   if (!selectBDAddr20Only(StoreNode->getBasePtr(), Base, Disp))
     return false;
 
-  // Handle Big-Endian offset for any integer width (i16, i32, i64).
-  if (IsLogicalByteOp) {
-    auto *DispC = dyn_cast<ConstantSDNode>(Disp);
-    if (!DispC)
-      return false;
-
-    int64_t NewDisp = DispC->getSExtValue();
-    // Calculate offset to the least significant byte.
-    if (MemVT.getStoreSize() > 1)
-      NewDisp += (MemVT.getStoreSize() - 1);
-    // Select the opcode based on the final displacement.
-    if (isUInt<12>(NewDisp)) {
-      NewOpc = LOpcs.first;
-    } else if (isInt<20>(NewDisp)) {
-      NewOpc = LOpcs.second;
-    } else {
-      return false;
-    }
-    Disp = CurDAG->getTargetConstant(NewDisp, DL, DispC->getValueType(0));
-  }
-  // Arithmetic ops like ASI/AGSI produce a result/CC (i32) and a Chain.
-  // Logical ops like XI/NI/OI produce just a Chain (MVT::Other).
-  SmallVector<EVT, 2> RetVTs;
-  // For ASI/AGSI/ALSI/ALGSI.
-  if (!IsLogicalByteOp)
-    RetVTs.push_back(MVT::i32);
-  // For the Chain.
-  RetVTs.push_back(MVT::Other);
-
   SDValue Ops[] = { Base, Disp, Operand, InputChain };
-  MachineSDNode *Result = CurDAG->getMachineNode(NewOpc, DL, RetVTs, Ops);
-
+  MachineSDNode *Result =
+    CurDAG->getMachineNode(NewOpc, DL, MVT::i32, MVT::Other, Ops);
   CurDAG->setNodeMemRefs(
       Result, {StoreNode->getMemOperand(), LoadNode->getMemOperand()});
 
-  if (IsLogicalByteOp) {
-    // XI/NI/OI only produce a Chain at index 0.
-    ReplaceUses(SDValue(StoreNode, 0), SDValue(Result, 0));
-  } else {
-    // ASI/AGSI produce CC/Result at index 0 and Chain at index 1.
-    ReplaceUses(SDValue(StoreNode, 0), SDValue(Result, 1));
-    ReplaceUses(SDValue(StoredVal.getNode(), 1), SDValue(Result, 0));
-  }
-
+  ReplaceUses(SDValue(StoreNode, 0), SDValue(Result, 1));
+  ReplaceUses(SDValue(StoredVal.getNode(), 1), SDValue(Result, 0));
   CurDAG->RemoveDeadNode(Node);
   return true;
 }
