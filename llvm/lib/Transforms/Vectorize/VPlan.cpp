@@ -1107,6 +1107,14 @@ const VPRegionBlock *VPlan::getVectorLoopRegion() const {
   return nullptr;
 }
 
+bool VPlan::isOuterLoop() const {
+  const VPRegionBlock *LoopRegion = getVectorLoopRegion();
+  assert(LoopRegion && "expected a vector loop region");
+  return any_of(VPBlockUtils::blocksOnly<const VPRegionBlock>(
+                    vp_depth_first_shallow(LoopRegion->getEntry())),
+                [](const VPRegionBlock *R) { return !R->isReplicator(); });
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPlan::printLiveIns(raw_ostream &O) const {
   VPSlotTracker SlotTracker(this);

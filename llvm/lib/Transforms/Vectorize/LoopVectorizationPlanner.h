@@ -689,6 +689,10 @@ public:
   /// Check whether vectorization would require runtime checks. When optimizing
   /// for size, returning true here aborts vectorization.
   bool runtimeChecksRequired();
+
+  /// Returns a scalable VF to use for outer-loop vectorization if the target
+  /// supports it and a fixed VF otherwise.
+  FixedScalableVFPair computeVPlanOuterloopVF(ElementCount UserVF);
 };
 
 /// Planner drives the vectorization process after having passed

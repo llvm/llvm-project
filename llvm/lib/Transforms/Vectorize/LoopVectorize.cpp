@@ -350,8 +350,8 @@ cl::opt<bool> llvm::VPlanPrintVectorRegionScope(
 // VPlan-native vectorization path. It must be used in conjuction with
 // -enable-vplan-native-path. -vplan-verify-hcfg can also be used to enable the
 // verification of the H-CFGs built.
-static cl::opt<bool> VPlanBuildStressTest(
-    "vplan-build-stress-test", cl::init(false), cl::Hidden,
+cl::opt<bool> VPlanBuildOuterloopStressTest(
+    "vplan-build-outerloop-stress-test", cl::init(false), cl::Hidden,
     cl::desc(
         "Build VPlan for every supported loop nest in the function and bail "
         "out right after the build (stress test the VPlan H-CFG construction "
@@ -745,8 +745,8 @@ Value *getRuntimeVF(IRBuilderBase &B, Type *Ty, ElementCount VF) {
 
 void reportVectorizationFailure(const StringRef DebugMsg,
                                 const StringRef OREMsg, const StringRef ORETag,
-                                OptimizationRemarkEmitter *ORE, Loop *TheLoop,
-                                Instruction *I) {
+                                OptimizationRemarkEmitter *ORE,
+                                const Loop *TheLoop, Instruction *I) {
   LLVM_DEBUG(debugVectorizationMessage("Not vectorizing: ", DebugMsg, I));
   LoopVectorizeHints Hints(TheLoop, true /* doesn't matter */, *ORE);
   ORE->emit(
@@ -1891,7 +1891,7 @@ static void collectSupportedLoops(Loop &L, LoopInfo *LI,
   // now, only collect outer loops that have explicit vectorization hints. If we
   // are stress testing the VPlan H-CFG construction, we collect the outermost
   // loop of every loop nest.
-  if (L.isInnermost() || VPlanBuildStressTest ||
+  if (L.isInnermost() || VPlanBuildOuterloopStressTest ||
       (EnableVPlanNativePath && isExplicitVecOuterLoop(&L, ORE))) {
     LoopBlocksRPO RPOT(&L);
     RPOT.perform(LI);
@@ -2972,58 +2972,12 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
   Uniforms[VF].insert_range(Worklist);
 }
 
-// This function will select a scalable VF if the target supports scalable
-// vectors and a fixed one otherwise.
-// TODO: we could return a pair of values that specify the max VF and
-// min VF, to be used in `buildVPlans(MinVF, MaxVF)` instead of
-// `buildVPlans(VF, VF)`. We cannot do it because VPLAN at the moment
-// doesn't have a cost model that can choose which plan to execute if
-// more than one is generated.
-static ElementCount determineVPlanVF(const TargetTransformInfo &TTI,
-                                     VFSelectionContext &Config) {
-  auto [_, WidestType] = Config.getSmallestAndWidestTypes();
-
-  auto RegKind = TTI.enableScalableVectorization()
-                     ? TargetTransformInfo::RGK_ScalableVector
-                     : TargetTransformInfo::RGK_FixedWidthVector;
-
-  TypeSize RegSize = TTI.getRegisterBitWidth(RegKind);
-  unsigned N = RegSize.getKnownMinValue() / WidestType;
-  return ElementCount::get(N, RegSize.isScalable());
-}
-
 FixedScalableVFPair
 LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   // For outer loops, use simple type-based heuristic VF. No cost model or
   // memory dependence analysis is available.
   if (!TheLoop->isInnermost()) {
-    ElementCount VF = UserVF;
-    if (VF.isZero()) {
-      VF = determineVPlanVF(TTI, Config);
-      LLVM_DEBUG(dbgs() << "LV: VPlan computed VF " << VF << ".\n");
-
-      // Make sure we have a VF > 1 for stress testing.
-      if (VPlanBuildStressTest && VF.isScalar()) {
-        LLVM_DEBUG(dbgs() << "LV: VPlan stress testing: "
-                          << "overriding computed VF.\n");
-        VF = ElementCount::getFixed(4);
-      }
-    } else if (VF.isScalable() && !Config.supportsScalableVectors()) {
-      reportVectorizationFailure(
-          "Scalable vectorization requested but not supported by the target",
-          "the scalable user-specified vectorization width for outer-loop "
-          "vectorization cannot be used because the target does not support "
-          "scalable vectors.",
-          "ScalableVFUnfeasible", ORE, TheLoop);
-      return FixedScalableVFPair::getNone();
-    }
-    assert(isPowerOf2_32(VF.getKnownMinValue()) &&
-           "VF needs to be a power of two");
-    if (VF.isScalar())
-      return FixedScalableVFPair::getNone();
-    LLVM_DEBUG(dbgs() << "LV: Using " << (!UserVF.isZero() ? "user " : "")
-                      << "VF " << VF << " to build VPlans.\n");
-    return FixedScalableVFPair(VF);
+    return Config.computeVPlanOuterloopVF(UserVF);
   }
 
   if (Legal->getRuntimePointerChecking()->Need && TTI.hasBranchDivergence()) {
@@ -6140,30 +6094,24 @@ LoopVectorizationPlanner::computeBestVF() {
   // If there is a single VPlan with a single VF, return it directly.
   VPlan &FirstPlan = *VPlans[0];
 
-  // For outer loops, the plan has a single vector VF determined by the
-  // heuristic.
-  if (!OrigLoop->isInnermost()) {
-    assert(VPlans.size() == 1 && FirstPlan.getSingleVF().isVector() &&
-           "only a single plan excepted for outer loops");
+  ElementCount UserVF = Hints.getWidth();
+  if (VPlans.size() == 1) {
+    // For outer loops, the plan has a single vector VF determined by the
+    // heuristic.
+    assert((FirstPlan.hasScalarVFOnly() || hasPlanWithVF(UserVF) ||
+            FirstPlan.isOuterLoop()) &&
+           "must have a single scalar VF, UserVF or an outer loop");
     return {VectorizationFactor(FirstPlan.getSingleVF(), 0, 0), &FirstPlan};
   }
 
-  ElementCount UserVF = Hints.getWidth();
-  if (hasPlanWithVF(UserVF)) {
-    if (VPlans.size() == 1) {
-      assert(FirstPlan.getSingleVF() == UserVF &&
-             "UserVF must match single VF");
-      return {VectorizationFactor(FirstPlan.getSingleVF(), 0, 0), &FirstPlan};
-    }
-    if (EpilogueVectorizationForceVF > 1) {
-      assert(VPlans.size() == 2 && "Must have exactly 2 VPlans built");
-      assert(VPlans[0]->getSingleVF() ==
-                 ElementCount::getFixed(EpilogueVectorizationForceVF) &&
-             "expected first plan to be for the forced epilogue VF");
-      assert(VPlans[1]->getSingleVF() == UserVF &&
-             "expected second plan to be for the forced UserVF");
-      return {VectorizationFactor(UserVF, 0, 0), VPlans[1].get()};
-    }
+  if (hasPlanWithVF(UserVF) && EpilogueVectorizationForceVF > 1) {
+    assert(VPlans.size() == 2 && "Must have exactly 2 VPlans built");
+    assert(VPlans[0]->getSingleVF() ==
+               ElementCount::getFixed(EpilogueVectorizationForceVF) &&
+           "expected first plan to be for the forced epilogue VF");
+    assert(VPlans[1]->getSingleVF() == UserVF &&
+           "expected second plan to be for the forced UserVF");
+    return {VectorizationFactor(UserVF, 0, 0), VPlans[1].get()};
   }
 
   LLVM_DEBUG(dbgs() << "LV: Computing best VF using cost kind: "
@@ -6971,9 +6919,7 @@ void LoopVectorizationPlanner::buildVPlans(ElementCount MinVF,
   RUN_VPLAN_PASS(VPlanTransforms::createLoopRegions, *VPlan0);
   if (CM.foldTailByMasking())
     RUN_VPLAN_PASS(VPlanTransforms::foldTailByMasking, *VPlan0);
-  // introduceMasksAndLinearize does not support nested loop regions yet.
-  if (IsInnerLoop)
-    RUN_VPLAN_PASS(VPlanTransforms::introduceMasksAndLinearize, *VPlan0);
+  RUN_VPLAN_PASS(VPlanTransforms::introduceMasksAndLinearize, *VPlan0);
 
   auto MaxVFTimes2 = MaxVF * 2;
   for (ElementCount VF = MinVF; ElementCount::isKnownLT(VF, MaxVFTimes2);) {
@@ -7013,7 +6959,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
   // For outer loops, the plan only needs basic recipe conversion and induction
   // live-out optimization; the full inner-loop recipe building below does not
   // apply (no widening decisions, interleave groups, reductions, etc.).
-  if (!OrigLoop->isInnermost()) {
+  if (Plan->isOuterLoop()) {
     for (ElementCount VF : Range)
       Plan->addVF(VF);
     if (!VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(*Plan, *TLI))
@@ -7453,7 +7399,7 @@ void LoopVectorizationPlanner::attachRuntimeChecks(
   if (MemCheckBlock && MemCheckBlock->hasNPredecessors(0)) {
     // VPlan-native path does not do any analysis for runtime checks
     // currently.
-    assert((!EnableVPlanNativePath || OrigLoop->isInnermost()) &&
+    assert((!EnableVPlanNativePath || !Plan.isOuterLoop()) &&
            "Runtime checks are not supported for outer loops yet");
 
     if (Config.OptForSize) {
@@ -8221,14 +8167,15 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   }
 
   InterleavedAccessInfo IAI(PSE, L, DT, LI, LVL.getLAI());
-  bool UseInterleaved = TTI->enableInterleavedAccessVectorization();
+  bool UseInterleaved =
+      IsInnerLoop && TTI->enableInterleavedAccessVectorization();
 
   // If an override option has been passed in for interleaved accesses, use it.
   if (EnableInterleavedMemAccesses.getNumOccurrences() > 0)
-    UseInterleaved = EnableInterleavedMemAccesses;
+    UseInterleaved = IsInnerLoop && EnableInterleavedMemAccesses;
 
   // Analyze interleaved memory accesses.
-  if (UseInterleaved && IsInnerLoop)
+  if (UseInterleaved)
     IAI.analyzeInterleaving(useMaskedInterleavedAccesses(*TTI));
 
   if (LVL.hasUncountableEarlyExit()) {
@@ -8341,7 +8288,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   // For VPlan build stress testing of outer loops, bail after plan
   // construction.
-  if (!IsInnerLoop && VPlanBuildStressTest)
+  if (!IsInnerLoop && VPlanBuildOuterloopStressTest)
     return false;
 
   if (IsInnerLoop && ORE->allowExtraAnalysis(LV_NAME))
