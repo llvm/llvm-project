@@ -19,13 +19,12 @@ using namespace llvm;
 
 void InstructionCost::print(raw_ostream &OS) const {
   if (isValid()) {
-    CostType WholeNumber = Value / CostGranularity;
-    CostType Remainder = Value % CostGranularity;
-    // Keep the decimal component positive
-    if (Remainder < 0)
-      Remainder = -Remainder;
-    // Print a leading '-' separately for values in (-1, 0)
-    if (WholeNumber == 0 && Value < 0)
+    UnsignedCostType AbsValue = (Value == MinValue)
+                                    ? ((UnsignedCostType)(-(Value + 1)) + 1)
+                                    : std::abs(Value);
+    CostType WholeNumber = AbsValue / CostGranularity;
+    CostType Remainder = AbsValue % CostGranularity;
+    if (Value < 0)
       OS << "-";
     CostType RemainderHundreds = (Remainder * 100) / CostGranularity;
     while (RemainderHundreds % 10 == 0 && RemainderHundreds)

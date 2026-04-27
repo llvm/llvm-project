@@ -106,5 +106,7 @@ TEST_F(CostTest, StreamOperator) {
   EXPECT_EQ(ToString(InstructionCost(-3) / 4), "-0.75");
   EXPECT_EQ(ToString(InstructionCost(-5) / 3), "-1.5");
   EXPECT_EQ(ToString(InstructionCost(5) / 3), "1.5");
+  EXPECT_EQ(ToString(InstructionCost::getMax()), "2305843009213693951.75");
+  EXPECT_EQ(ToString(InstructionCost::getMin()), "-2305843009213693952");
   EXPECT_EQ(ToString(InstructionCost::getInvalid(-7)), "Invalid");
 }
