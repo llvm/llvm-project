@@ -481,8 +481,6 @@ if(LIBC_TARGET_ARCHITECTURE STREQUAL "x86_64")
     sys_ucontext
     HDR
       sys/ucontext.h
-    DEPENDS
-      .ucontext
   )
 endif()
 
