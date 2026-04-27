@@ -196,6 +196,12 @@ bool CheckShift(InterpState &S, CodePtr OpPC, const LT &LHS, const RT &RHS,
 /// Checks if Div/Rem operation on LHS and RHS is valid.
 template <typename T>
 bool CheckDivRem(InterpState &S, CodePtr OpPC, const T &LHS, const T &RHS) {
+
+  if constexpr (isIntegralOrPointer<T>()) {
+    if (!LHS.isNumber() || !RHS.isNumber())
+      return false;
+  }
+
   if (RHS.isZero()) {
     const auto *Op = cast<BinaryOperator>(S.Current->getExpr(OpPC));
     if constexpr (std::is_same_v<T, Floating>) {
