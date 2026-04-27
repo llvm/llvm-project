@@ -70,24 +70,29 @@ int main(int argc, char *argv[]) {
   if (Status != AMD_COMGR_STATUS_SUCCESS)
     fail("unexpected error status %d", (int)Status);
 
-  size_t OutSize = 0;
-  amd_comgr_(get_data(OutputData, &OutSize, NULL));
-
-  if (OutSize != ElfSize)
-    fail("output size %zu != input size %zu", OutSize, ElfSize);
-
-  char *OutBuf = (char *)malloc(OutSize);
-  if (!OutBuf)
-    fail("malloc failed");
-  amd_comgr_(get_data(OutputData, &OutSize, OutBuf));
-
-  if (memcmp(OutBuf, ElfBuf, ElfSize) != 0)
-    fail("output content differs from input");
-
-  if (OutputPath)
+  if (OutputPath) {
+    size_t OutSize = 0;
+    amd_comgr_(get_data(OutputData, &OutSize, NULL));
+    if (OutSize != ElfSize)
+      fail("output size %zu != input size %zu", OutSize, ElfSize);
     dumpData(OutputData, OutputPath);
+  } else {
+    size_t OutSize = 0;
+    amd_comgr_(get_data(OutputData, &OutSize, NULL));
 
-  free(OutBuf);
+    if (OutSize != ElfSize)
+      fail("output size %zu != input size %zu", OutSize, ElfSize);
+
+    char *OutBuf = (char *)malloc(OutSize);
+    if (!OutBuf)
+      fail("malloc failed");
+    amd_comgr_(get_data(OutputData, &OutSize, OutBuf));
+
+    if (memcmp(OutBuf, ElfBuf, ElfSize) != 0)
+      fail("output content differs from input");
+
+    free(OutBuf);
+  }
   amd_comgr_(release_data(OutputData));
   amd_comgr_(release_data(InputData));
   free(ElfBuf);

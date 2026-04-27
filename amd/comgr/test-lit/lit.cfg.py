@@ -4,7 +4,7 @@ import platform
 import lit.formats
 
 config.name = "Comgr"
-config.suffixes = {".hip", ".cl", ".c", ".cpp"}
+config.suffixes = {".hip", ".cl", ".c", ".cpp", ".s"}
 config.test_format = lit.formats.ShTest(True)
 
 config.excludes = ["comgr-sources"]

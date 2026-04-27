@@ -80,6 +80,7 @@ set(SOURCES
   src/comgr-hotswap-b0a0.cpp
   src/comgr-hotswap-elf.cpp
   src/comgr-hotswap-llvm.cpp
+  src/comgr-hotswap-patch-inplace.cpp
   src/comgr-libcxx-headers.cpp
   src/comgr-metadata.cpp
   src/comgr-signal.cpp
