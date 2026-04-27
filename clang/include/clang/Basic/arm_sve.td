@@ -259,6 +259,10 @@ let SVETargetGuard = "bf16", SMETargetGuard = InvalidMode in {
   def SVBFMMLA       : SInst<"svbfmmla[_{0}]",       "MMdd",  "b", MergeNone, "aarch64_sve_bfmmla",       [IsOverloadNone]>;
 }
 
+let SVETargetGuard = "sve-b16mm", SMETargetGuard = InvalidMode in {
+  def SVMMLA_BF16 : SInst<"svmmla[_bf16]", "dddd", "b", MergeNone, "aarch64_sve_fmmla", [IsOverloadFirstandLast]>;
+}
+
 let SVETargetGuard = "bf16", SMETargetGuard = "bf16" in {
   def SVBFDOT        : SInst<"svbfdot[_{0}]",        "MMdd",  "b", MergeNone, "aarch64_sve_bfdot",           [IsOverloadNone, VerifyRuntimeMode]>;
   def SVBFMLALB      : SInst<"svbfmlalb[_{0}]",      "MMdd",  "b", MergeNone, "aarch64_sve_bfmlalb",         [IsOverloadNone, VerifyRuntimeMode]>;
@@ -1237,6 +1241,10 @@ def SVMMLA_F64 : SInst<"svmmla[_f64]",  "dddd", "d", MergeNone, "aarch64_sve_fmm
 
 let SVETargetGuard = "sve-f16f32mm", SMETargetGuard = InvalidMode in {
   def SVMMLA_F32_F16  : SInst<"svmmla[_f32_f16]", "ddhh", "f", MergeNone, "aarch64_sve_fmmla", [IsOverloadFirstandLast]>;
+}
+
+let SVETargetGuard = "sve2p2,f16mm", SMETargetGuard = InvalidMode in {
+  def SVMMLA_F16 : SInst<"svmmla[_f16]", "dddd", "h", MergeNone, "aarch64_sve_fmmla", [IsOverloadFirstandLast]>;
 }
 
 let SVETargetGuard = "sve2,f8f32mm", SMETargetGuard = InvalidMode in {
