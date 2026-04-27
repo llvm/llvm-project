@@ -248,7 +248,6 @@ public:
       mlir::Value newBox = emitOptionalBoxGuard(rewriter, rebox, [&] {
         return matchAndRewriteImpl(rebox, rewriter)->getResult(0);
       });
-      llvm::errs() << newBox;
       rewriter.replaceOp(rebox, newBox);
       return mlir::success();
     }
