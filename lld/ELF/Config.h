@@ -9,6 +9,7 @@
 #ifndef LLD_ELF_CONFIG_H
 #define LLD_ELF_CONFIG_H
 
+#include "lld/Common/BPSectionOrdererBase.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/ADT/CachedHashString.h"
@@ -174,6 +175,21 @@ struct VersionDefinition {
   SmallVector<SymbolVersion, 0> localPatterns;
 };
 
+// Deferred file-load job: one per input, expanded by loadFiles().
+struct LoadJob {
+  enum Kind : uint8_t { Obj, Bitcode, Archive, Shared, Binary };
+  llvm::MemoryBufferRef mbref;
+  llvm::StringRef path;
+  Kind kind;
+  bool inWholeArchive;
+  bool lazy;
+  bool asNeeded;
+  bool withLOption;
+  uint32_t groupId;
+  SmallVector<std::unique_ptr<InputFile>, 0> out;
+  std::vector<std::unique_ptr<llvm::MemoryBuffer>> thinBufs;
+};
+
 class LinkerDriver {
 public:
   LinkerDriver(Ctx &ctx);
@@ -185,16 +201,19 @@ public:
 private:
   Ctx &ctx;
   void createFiles(llvm::opt::InputArgList &args);
+  void loadFiles();
   void inferMachineType();
   template <class ELFT> void link(llvm::opt::InputArgList &args);
   template <class ELFT> void compileBitcodeFiles(bool skipLinkedOutput);
-  bool tryAddFatLTOFile(MemoryBufferRef mb, StringRef archiveName,
-                        uint64_t offsetInArchive, bool lazy);
   // True if we are in --whole-archive and --no-whole-archive.
   bool inWholeArchive = false;
 
   // True if we are in --start-lib and --end-lib.
   bool inLib = false;
+
+  // True inside createFiles(): defers to loadFiles().
+  bool deferLoad = false;
+  SmallVector<LoadJob, 0> loadJobs;
 
   std::unique_ptr<BitcodeCompiler> lto;
   SmallVector<std::unique_ptr<InputFile>, 0> files, ltoObjectFiles;
@@ -305,6 +324,7 @@ struct Config {
   bool bpCompressionSortStartupFunctions = false;
   bool bpFunctionOrderForCompression = false;
   bool bpDataOrderForCompression = false;
+  llvm::SmallVector<BPCompressionSortSpec> bpCompressionSortSpecs;
   bool bpVerboseSectionOrderer = false;
   bool branchToBranch = false;
   bool checkSections;

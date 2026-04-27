@@ -14,6 +14,7 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/FileSpecList.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Timer.h"
@@ -44,6 +45,7 @@
 #include <AvailabilityMacros.h>
 #include <CoreFoundation/CoreFoundation.h>
 #include <Foundation/Foundation.h>
+#include <Security/Security.h>
 #include <mach-o/dyld.h>
 #if defined(MAC_OS_X_VERSION_MIN_REQUIRED) && \
     MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_VERSION_12_0
@@ -1095,4 +1097,31 @@ bool HostInfoMacOSX::SharedCacheIndexFiles(FileSpec &filepath, UUID &uuid,
     return GetSharedCacheSingleton(sc_mode).CreateSharedCacheImageList(
         uuid, filepath.GetPath());
   return false;
+}
+
+bool HostInfoMacOSX::IsBundleCodeSignTrusted(const FileSpec &bundle_path) {
+  std::string path = bundle_path.GetPath();
+  CFURLRef url = CFURLCreateFromFileSystemRepresentation(
+      kCFAllocatorDefault, reinterpret_cast<const UInt8 *>(path.data()),
+      path.size(), /*isDirectory=*/true);
+  if (!url)
+    return false;
+  auto url_cleanup = llvm::make_scope_exit([&]() { CFRelease(url); });
+
+  SecStaticCodeRef static_code = nullptr;
+  if (SecStaticCodeCreateWithPath(url, kSecCSDefaultFlags, &static_code) !=
+      errSecSuccess)
+    return false;
+  auto code_cleanup = llvm::make_scope_exit([&]() { CFRelease(static_code); });
+
+  // Check that the signature chains to a trusted root CA.
+  SecRequirementRef requirement = nullptr;
+  if (SecRequirementCreateWithString(CFSTR("anchor trusted"),
+                                     kSecCSDefaultFlags,
+                                     &requirement) != errSecSuccess)
+    return false;
+  auto req_cleanup = llvm::make_scope_exit([&]() { CFRelease(requirement); });
+
+  return SecStaticCodeCheckValidity(static_code, kSecCSDefaultFlags,
+                                    requirement) == errSecSuccess;
 }

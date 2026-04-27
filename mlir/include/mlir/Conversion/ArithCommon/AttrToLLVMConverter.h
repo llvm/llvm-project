@@ -157,6 +157,11 @@ public:
       convertedAttr.set(TargetOp::getRoundingModeAttrName(),
                         convertArithRoundingModeAttrToLLVM(arithAttr));
     }
+    // Constrained intrinsics (llvm.intr.experimental.constrained.*) do not
+    // support fastmath flags. Remove the arith fastmath attribute if present.
+    if constexpr (SourceOp::template hasTrait<
+                      arith::ArithFastMathInterface::Trait>())
+      convertedAttr.erase(srcOp.getFastMathAttrName());
     convertedAttr.set(TargetOp::getFPExceptionBehaviorAttrName(),
                       getLLVMDefaultFPExceptionBehavior(*srcOp->getContext()));
   }

@@ -20,6 +20,7 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/Support/TrailingObjects.h"
 
 using namespace clang;
@@ -488,9 +489,13 @@ static mlir::Value emitCXXNewAllocSize(CIRGenFunction &cgf, const CXXNewExpr *e,
     // The equivalent code in CodeGen/CGExprCXX.cpp handles these cases as
     // overflow, but that should never happen. The size argument is implicitly
     // cast to a size_t, so it can never be negative and numElementsWidth will
-    // always equal sizeWidth.
+    // always equal sizeWidth. However, sometimes in operator-new, it seems that
+    // `numElements` might remain an 'int', so we have to support smaller than
+    // that.  We immediately do the zextOrTrunc below (which should really only
+    // do zext, since our assert handles the trunc), but it will make sure the
+    // width is correct.
     assert(!count.isNegative() && "Expected non-negative array size");
-    assert(numElementsWidth == sizeWidth &&
+    assert(numElementsWidth <= sizeWidth &&
            "Expected a size_t array size constant");
 
     // Okay, compute a count at the right width.
@@ -798,12 +803,12 @@ class CallDeleteDuringNew final
 
   PlacementArg<Traits> *getPlacementArgs() { return getTrailingObjects(); }
 
+public:
   void setPlacementArg(unsigned i, RValueTy argValue, QualType argType) {
     assert(i < numPlacementArgs && "index out of range");
     getPlacementArgs()[i] = {argValue, argType};
   }
 
-public:
   static size_t getExtraSize(size_t numPlacementArgs) {
     return TrailingObj::template additionalSizeToAlloc<PlacementArg<Traits>>(
         numPlacementArgs);
@@ -813,18 +818,11 @@ public:
                       const FunctionDecl *operatorDelete, ValueTy ptr,
                       ValueTy allocSize,
                       const ImplicitAllocationParameters &iap,
-                      CharUnits allocAlign, const CallArgList *newArgs,
-                      unsigned numNonPlacementArgs, CIRGenFunction *cgf,
-                      mlir::Location loc)
+                      CharUnits allocAlign)
       : numPlacementArgs(numPlacementArgs),
         passAlignmentToPlacementDelete(isAlignedAllocation(iap.PassAlignment)),
         operatorDelete(operatorDelete), ptr(ptr), allocSize(allocSize),
-        allocAlign(allocAlign) {
-    for (unsigned i = 0, n = numPlacementArgs; i != n; ++i) {
-      const CallArg &arg = (*newArgs)[i + numNonPlacementArgs];
-      setPlacementArg(i, arg.getRValue(*cgf, loc), arg.ty);
-    }
-  }
+        allocAlign(allocAlign) {}
 
   void emit(CIRGenFunction &cgf, Flags flags) override {
     const auto *fpt = operatorDelete->getType()->castAs<FunctionProtoType>();
@@ -901,17 +899,60 @@ static void enterNewDeleteCleanup(CIRGenFunction &cgf, const CXXNewExpr *e,
     typedef CallDeleteDuringNew<DirectCleanupTraits> DirectCleanup;
 
     assert(!cir::MissingFeatures::typeAwareAllocation());
-    cgf.ehStack.pushCleanupWithExtra<DirectCleanup>(
+    DirectCleanup *cleanup = cgf.ehStack.pushCleanupWithExtra<DirectCleanup>(
         EHCleanup, e->getNumPlacementArgs(), e->getOperatorDelete(),
         newPtr.getPointer(), allocSize, e->implicitAllocationParameters(),
-        allocAlign, &newArgs, numNonPlacementArgs, &cgf,
-        cgf.getLoc(e->getSourceRange()));
+        allocAlign);
+    for (auto i : llvm::seq<unsigned>(0, e->getNumPlacementArgs())) {
+      const CallArg &arg = newArgs[i + numNonPlacementArgs];
+      cleanup->setPlacementArg(
+          i, arg.getRValue(cgf, cgf.getLoc(e->getSourceRange())), arg.ty);
+    }
 
     return;
   }
 
-  cgf.cgm.errorNYI(e->getSourceRange(),
-                   "enterNewDeleteCleanup: conditional branch");
+  // Otherwise, we need to save all this stuff.
+  auto saveValue = [&](mlir::Value value) -> mlir::Value {
+    CharUnits align = CharUnits::fromQuantity(
+        cgf.cgm.getDataLayout().getABITypeAlign(value.getType()));
+    Address alloca = cgf.createTempAlloca(value.getType(), align,
+                                          value.getLoc(), "cond-cleanup.save");
+    cgf.getBuilder().createStore(value.getLoc(), value, alloca);
+    return alloca.emitRawPointer();
+  };
+
+  mlir::Value savedNewPtr = saveValue(newPtr.getPointer());
+  mlir::Value savedAllocSize = saveValue(allocSize);
+
+  struct ConditionalCleanupTraits {
+    typedef mlir::Value ValueTy;
+    typedef mlir::Value RValueTy;
+    static RValue get(CIRGenFunction &cgf, ValueTy v) {
+      auto alloca = v.getDefiningOp<cir::AllocaOp>();
+      return RValue::get(cgf.getBuilder().createAlignedLoad(
+          alloca.getLoc(), alloca.getAllocaType(), alloca,
+          llvm::MaybeAlign(alloca.getAlignment())));
+    }
+  };
+  typedef CallDeleteDuringNew<ConditionalCleanupTraits> ConditionalCleanup;
+
+  assert(!cir::MissingFeatures::typeAwareAllocation());
+  ConditionalCleanup *cleanup =
+      cgf.ehStack.pushCleanupWithExtra<ConditionalCleanup>(
+          EHCleanup, e->getNumPlacementArgs(), e->getOperatorDelete(),
+          savedNewPtr, savedAllocSize, e->implicitAllocationParameters(),
+          allocAlign);
+  for (auto i : llvm::seq<unsigned>(0, e->getNumPlacementArgs())) {
+    const CallArg &arg = newArgs[i + numNonPlacementArgs];
+    cleanup->setPlacementArg(
+        i,
+        saveValue(
+            arg.getRValue(cgf, cgf.getLoc(e->getSourceRange())).getValue()),
+        arg.ty);
+  }
+
+  cgf.initFullExprCleanup();
 }
 
 static void storeAnyExprIntoOneUnit(CIRGenFunction &cgf, const Expr *init,
@@ -1006,8 +1047,52 @@ void CIRGenFunction::emitNewArrayInitializer(
     // Initializing from a (braced) string literal is a special case; the init
     // list element does not initialize a (single) array element.
     if ((ile && ile->isStringLiteralInit()) || sl || ocee) {
-      cgm.errorNYI(ile->getSourceRange(),
-                   "emitNewArrayInitializer: string literal init");
+      if (!ile)
+        init = ignoreParen;
+
+      // Initialize the initial portion of length equal to that of the string
+      // literal. The allocation must be for at least this much; we emitted a
+      // check for that earlier. Since we intend to use a cir.copy here, we must
+      // introduce a cast to the string-literal-size here, so that cir.copy does
+      // the right thing.
+
+      const Expr *initExpr = ile ? ile->getInit(0) : init;
+      mlir::Type initExprTy = convertType(initExpr->getType());
+      Address coercedPtr = curPtr.withElementType(builder, initExprTy);
+
+      AggValueSlot slot = AggValueSlot::forAddr(
+          coercedPtr, elementType.getQualifiers(), AggValueSlot::IsDestructed,
+          AggValueSlot::IsNotAliased, AggValueSlot::DoesNotOverlap,
+          AggValueSlot::IsNotZeroed);
+      assert(!cir::MissingFeatures::aggValueSlotGC());
+      assert(!cir::MissingFeatures::sanitizers());
+      emitAggExpr(initExpr, slot);
+
+      // Move past these elements.
+      initListElements =
+          cast<ConstantArrayType>(init->getType()->getAsArrayTypeUnsafe())
+              ->getZExtSize();
+
+      bool alreadyInitedAll = false;
+      auto constElts = numElements.getDefiningOp<cir::ConstantOp>();
+      if (constElts) {
+        int64_t constVal = getZExtIntValueFromConstOp(numElements);
+        alreadyInitedAll = (constVal == initListElements);
+      }
+
+      // Init the rest with memset, unless we've already done everything.
+      if (!alreadyInitedAll) {
+        mlir::Location initLoc = cgm.getLoc(init->getSourceRange());
+        mlir::Value initListElementsOp = builder.getUnsignedInt(
+            initLoc, initListElements,
+            getContext().getTypeSize(getContext().getSizeType()));
+        curPtr = curPtr.withPointer(builder.createPtrStride(
+            initLoc, curPtr.getPointer(), initListElementsOp));
+
+        bool ok = tryMemsetInitialization();
+        (void)ok;
+        assert(ok && "couldn't memset character type?");
+      }
       return;
     }
 
@@ -1020,10 +1105,9 @@ void CIRGenFunction::emitNewArrayInitializer(
     QualType allocType = e->getAllocatedType();
     if (const ConstantArrayType *cat = dyn_cast_or_null<ConstantArrayType>(
             allocType->getAsArrayTypeUnsafe())) {
-      (void)cat;
-      cgm.errorNYI(ile->getSourceRange(),
-                   "emitNewArrayInitializer: constant array init");
-      return;
+      elementTy = convertTypeForMem(allocType);
+      curPtr = curPtr.withElementType(builder, elementTy);
+      initListElements *= getContext().getConstantArrayElementCount(cat);
     }
 
     // Enter a partial-destruction Cleanup if necessary.
@@ -1154,14 +1238,53 @@ void CIRGenFunction::emitNewArrayInitializer(
   }
 
   // If this is value-initialization, we can usually use memset.
+  ImplicitValueInitExpr ivie(elementType);
   if (isa<ImplicitValueInitExpr>(init)) {
     if (tryMemsetInitialization())
       return;
-    cgm.errorNYI(init->getSourceRange(),
-                 "emitNewArrayInitializer: implicit value init");
-    return;
+    // Switch to an ImplicitValueInitExpr for the element type. This handles
+    // only one case: multidimensional array new of pointers to members. In
+    // all other cases, we already have an initializer for the array element.
+    init = &ivie;
   }
 
+  // At this point we should have found an initializer for the individual
+  // elements of the array.
+  assert(getContext().hasSameUnqualifiedType(elementType, init->getType()) &&
+         "got wrong type of element to initialize");
+
+  // If we have a struct whose every field is value-initialized, we can
+  // usually use memset.
+  if (auto *ile = dyn_cast<InitListExpr>(init)) {
+
+    // If we have an empty initializer list, we can usually use memset.
+    if (ile->getNumInits() == 0 && tryMemsetInitialization())
+      return;
+
+    if (const auto *rtype = ile->getType()->getAsCanonical<RecordType>()) {
+      if (rtype->getDecl()->isStruct()) {
+        const RecordDecl *rd = rtype->getDecl()->getDefinitionOrSelf();
+        unsigned numElements = 0;
+        if (auto *cxxrd = dyn_cast<CXXRecordDecl>(rd))
+          numElements = cxxrd->getNumBases();
+        for (FieldDecl *field : rd->fields())
+          if (!field->isUnnamedBitField())
+            ++numElements;
+        // FIXME: Recurse into nested InitListExprs.
+        if (ile->getNumInits() == numElements)
+          for (unsigned i = 0, e = ile->getNumInits(); i != e; ++i)
+            if (!isa<ImplicitValueInitExpr>(ile->getInit(i)))
+              --numElements;
+        if (ile->getNumInits() == numElements && tryMemsetInitialization())
+          return;
+      }
+    }
+  }
+
+  // The rest of this has to go through the rest of the initializer, generating
+  // a loop with cleanups/destruction/etc. See the test
+  // 'check_array_value_init'(currently disabled) in
+  // CodeGenCXX/new-array-init.cpp when we get more of this implemented.
   cgm.errorNYI(init->getSourceRange(),
                "emitNewArrayInitializer: unsupported initializer");
   return;
@@ -1239,6 +1362,24 @@ struct CallObjectDelete final : EHScopeStack::Cleanup {
   }
 };
 } // namespace
+
+/// Emit the code for deleting a single object via a destroying operator
+/// delete. If the element type has a non-virtual destructor, Ptr has already
+/// been converted to the type of the parameter of 'operator delete'. Otherwise
+/// Ptr points to an object of the static type.
+static void emitDestroyingObjectDelete(CIRGenFunction &cgf,
+                                       const CXXDeleteExpr *de, Address ptr,
+                                       QualType elementType) {
+  const CXXDestructorDecl *dtor =
+      elementType->getAsCXXRecordDecl()->getDestructor();
+  if (dtor && dtor->isVirtual()) {
+    cgf.cgm.getCXXABI().emitVirtualObjectDelete(cgf, de, ptr, elementType,
+                                                dtor);
+    return;
+  }
+
+  cgf.emitDeleteCall(de->getOperatorDelete(), ptr.getPointer(), elementType);
+}
 
 /// Emit the code for deleting a single object.
 static void emitObjectDelete(CIRGenFunction &cgf, const CXXDeleteExpr *de,
@@ -1318,8 +1459,7 @@ void CIRGenFunction::emitCXXDeleteExpr(const CXXDeleteExpr *e) {
   // A destroying operator delete overrides the entire operation of the
   // delete expression.
   if (e->getOperatorDelete()->isDestroyingOperatorDelete()) {
-    cgm.errorNYI(e->getSourceRange(),
-                 "emitCXXDeleteExpr: destroying operator delete");
+    emitDestroyingObjectDelete(*this, e, ptr, deleteTy);
     return;
   }
 
@@ -1376,14 +1516,19 @@ mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *e) {
   // If there is a brace-initializer, cannot allocate fewer elements than inits.
   unsigned minElements = 0;
   if (e->isArray() && e->hasInitializer()) {
-    const InitListExpr *ile = dyn_cast<InitListExpr>(e->getInitializer());
-    if (ile && ile->isStringLiteralInit())
+    const Expr *init = e->getInitializer();
+    const InitListExpr *ile = dyn_cast<InitListExpr>(init);
+    const CXXParenListInitExpr *cplie = dyn_cast<CXXParenListInitExpr>(init);
+    const Expr *ignoreParen = init->IgnoreParenImpCasts();
+    if ((ile && ile->isStringLiteralInit()) ||
+        isa<StringLiteral>(ignoreParen) || isa<ObjCEncodeExpr>(ignoreParen)) {
       minElements =
-          cast<ConstantArrayType>(ile->getType()->getAsArrayTypeUnsafe())
+          cast<ConstantArrayType>(init->getType()->getAsArrayTypeUnsafe())
               ->getSize()
               .getZExtValue();
-    else if (ile)
-      minElements = ile->getNumInits();
+    } else if (ile || cplie) {
+      minElements = ile ? ile->getNumInits() : cplie->getInitExprs().size();
+    }
   }
 
   mlir::Value numElements = nullptr;
@@ -1561,7 +1706,7 @@ void CIRGenFunction::emitDeleteCall(const FunctionDecl *deleteFD,
   CallArgList deleteArgs;
 
   UsualDeleteParams params = deleteFD->getUsualDeleteParams();
-  auto paramTypeIt = deleteFTy->param_type_begin();
+  auto paramTypeIter = deleteFTy->param_type_begin();
 
   // Pass std::type_identity tag if present
   if (isTypeAwareAllocation(params.TypeAwareDelete))
@@ -1569,19 +1714,25 @@ void CIRGenFunction::emitDeleteCall(const FunctionDecl *deleteFD,
                  "emitDeleteCall: type aware delete");
 
   // Pass the pointer itself.
-  QualType argTy = *paramTypeIt++;
+  QualType argTy = *paramTypeIter;
+  std::advance(paramTypeIter, 1);
   mlir::Value deletePtr =
       builder.createBitcast(ptr.getLoc(), ptr, convertType(argTy));
   deleteArgs.add(RValue::get(deletePtr), argTy);
 
   // Pass the std::destroying_delete tag if present.
-  if (params.DestroyingDelete)
-    cgm.errorNYI(deleteFD->getSourceRange(),
-                 "emitDeleteCall: destroying delete");
+  if (params.DestroyingDelete) {
+    QualType tagType = *paramTypeIter;
+    std::advance(paramTypeIter, 1);
+    Address tagAddr =
+        createMemTemp(tagType, ptr.getLoc(), "destroying.delete.tag");
+    deleteArgs.add(RValue::getAggregate(tagAddr), tagType);
+  }
 
   // Pass the size if the delete function has a size_t parameter.
   if (params.Size) {
-    QualType sizeType = *paramTypeIt++;
+    QualType sizeType = *paramTypeIter;
+    std::advance(paramTypeIter, 1);
     CharUnits deleteTypeSize = getContext().getTypeSizeInChars(deleteTy);
     assert(mlir::isa<cir::IntType>(convertType(sizeType)) &&
            "expected cir::IntType");
@@ -1596,7 +1747,7 @@ void CIRGenFunction::emitDeleteCall(const FunctionDecl *deleteFD,
     cgm.errorNYI(deleteFD->getSourceRange(),
                  "emitDeleteCall: aligned allocation");
 
-  assert(paramTypeIt == deleteFTy->param_type_end() &&
+  assert(paramTypeIter == deleteFTy->param_type_end() &&
          "unknown parameter to usual delete function");
 
   // Emit the call to delete.

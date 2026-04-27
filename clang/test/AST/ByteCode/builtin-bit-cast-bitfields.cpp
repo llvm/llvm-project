@@ -156,8 +156,9 @@ namespace BitFields {
 
     static_assert(f()[0] + f()[1] + f()[2] == 0xc0 + 0xff + 0xee);
     {
-      // expected-error@+2 {{initialized by a constant expression}}
-      // expected-note@+1 {{in call to}}
+      // expected-error@+3 {{initialized by a constant expression}}
+      // expected-note@+2 {{in call to}}
+      // expected-note@+1 {{temporary created here}}
       constexpr auto _bad = f()[3];
     }
 
@@ -173,8 +174,9 @@ namespace BitFields {
     };
     static_assert(g().s0 + g().s1 + g().b0 + g().b1 == 0xc0 + 0xff + 0xe + 0xe);
     {
-      // expected-error@+2 {{initialized by a constant expression}}
-      // expected-note@+1 {{read of uninitialized object is not allowed in a constant expression}}
+      // expected-error@+3 {{initialized by a constant expression}}
+      // expected-note@+2 {{read of uninitialized object is not allowed in a constant expression}}
+      // expected-note@+1 {{temporary created here}}
       constexpr auto _bad = g().b2;
     }
   }

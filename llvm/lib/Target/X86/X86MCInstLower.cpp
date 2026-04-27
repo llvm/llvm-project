@@ -145,7 +145,7 @@ void X86AsmPrinter::EmitAndCountInstruction(MCInst &Inst) {
 X86MCInstLower::X86MCInstLower(const MachineFunction &mf,
                                X86AsmPrinter &asmprinter)
     : Ctx(asmprinter.OutContext), MF(mf), TM(mf.getTarget()),
-      MAI(*TM.getMCAsmInfo()), AsmPrinter(asmprinter) {}
+      MAI(TM.getMCAsmInfo()), AsmPrinter(asmprinter) {}
 
 MachineModuleInfoMachO &X86MCInstLower::getMachOMMI() const {
   return AsmPrinter.MMI->getObjFileInfo<MachineModuleInfoMachO>();
@@ -572,7 +572,7 @@ void X86AsmPrinter::LowerTlsAddr(X86MCInstLower &MCInstLowering,
   // only using GOT when GOTPCRELX is enabled.
   // TODO Delete the workaround when rustc no longer relies on the hack
   bool UseGot = MMI->getModule()->getRtLibUseGOT() &&
-                Ctx.getTargetOptions()->X86RelaxRelocations;
+                Ctx.getTargetOptions().X86RelaxRelocations;
 
   if (Specifier == X86::S_TLSDESC) {
     const MCSymbolRefExpr *Expr = MCSymbolRefExpr::create(
@@ -1967,6 +1967,10 @@ static void addConstantComments(const MachineInstr *MI,
   INSTR_CASE(V, Instr, Z, kz)
 
     // TODO: Add additional instructions when useful.
+    CASE_ARITH_RM(PADDB)
+    CASE_ARITH_RM(PADDW)
+    CASE_ARITH_RM(PADDD)
+    CASE_ARITH_RM(PADDQ)
     CASE_ARITH_RM(PMADDUBSW)
     CASE_ARITH_RM(PMADDWD)
     CASE_ARITH_RM(PMULDQ)

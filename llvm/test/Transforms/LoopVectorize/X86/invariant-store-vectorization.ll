@@ -106,7 +106,7 @@ entry:
   %ntrunc = trunc i64 %n to i32
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %i = phi i64 [ %i.next, %for.body ], [ 0, %entry ]
   %t0 = phi i32 [ %t3, %for.body ], [ 0, %entry ]
   %t1 = getelementptr inbounds i32, ptr %b, i64 %i
@@ -117,7 +117,7 @@ for.body:                                         ; preds = %for.body, %entry
   %cond = icmp slt i64 %i.next, %n
   br i1 %cond, label %for.body, label %for.end
 
-for.end:                                          ; preds = %for.body
+for.end:
   %t4 = phi i32 [ %t3, %for.body ]
   ret i32 %t4
 }
@@ -185,25 +185,25 @@ define void @inv_val_store_to_inv_address_conditional(ptr %a, i64 %n, ptr %b, i3
 ; CHECK-NEXT:    [[WIDE_LOAD15:%.*]] = load <4 x i32>, ptr [[TMP4]], align 8, !alias.scope [[META11]], !noalias [[META14]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD15]], [[BROADCAST_SPLAT15]]
 ; CHECK-NEXT:    store <4 x i32> [[BROADCAST_SPLAT13]], ptr [[TMP4]], align 4, !alias.scope [[META11]], !noalias [[META14]]
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP5]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP5]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
 ; CHECK-NEXT:    store i32 [[NTRUNC]], ptr [[A]], align 4, !alias.scope [[META14]]
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i1> [[TMP5]], i32 1
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i1> [[TMP5]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[PRED_STORE_IF16:.*]], label %[[PRED_STORE_CONTINUE17:.*]]
 ; CHECK:       [[PRED_STORE_IF16]]:
 ; CHECK-NEXT:    store i32 [[NTRUNC]], ptr [[A]], align 4, !alias.scope [[META14]]
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE17]]
 ; CHECK:       [[PRED_STORE_CONTINUE17]]:
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i1> [[TMP5]], i32 2
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i1> [[TMP5]], i64 2
 ; CHECK-NEXT:    br i1 [[TMP8]], label %[[PRED_STORE_IF18:.*]], label %[[PRED_STORE_CONTINUE19:.*]]
 ; CHECK:       [[PRED_STORE_IF18]]:
 ; CHECK-NEXT:    store i32 [[NTRUNC]], ptr [[A]], align 4, !alias.scope [[META14]]
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE19]]
 ; CHECK:       [[PRED_STORE_CONTINUE19]]:
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP5]], i32 3
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP5]], i64 3
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[PRED_STORE_IF20:.*]], label %[[PRED_STORE_CONTINUE21]]
 ; CHECK:       [[PRED_STORE_IF20]]:
 ; CHECK-NEXT:    store i32 [[NTRUNC]], ptr [[A]], align 4, !alias.scope [[META14]]
@@ -239,7 +239,7 @@ entry:
   %ntrunc = trunc i64 %n to i32
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %i = phi i64 [ %i.next, %latch ], [ 0, %entry ]
   %t1 = getelementptr inbounds i32, ptr %b, i64 %i
   %t2 = load i32, ptr %t1, align 8
@@ -256,7 +256,7 @@ latch:
   %cond = icmp slt i64 %i.next, %n
   br i1 %cond, label %for.body, label %for.end
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
@@ -369,7 +369,7 @@ entry:
   %ntrunc = trunc i64 %n to i32
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %i = phi i64 [ %i.next, %latch ], [ 0, %entry ]
   %t1 = getelementptr inbounds i32, ptr %b, i64 %i
   %t2 = load i32, ptr %t1, align 8
@@ -388,7 +388,7 @@ latch:
   %cond = icmp slt i64 %i.next, %n
   br i1 %cond, label %for.body, label %for.end
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 

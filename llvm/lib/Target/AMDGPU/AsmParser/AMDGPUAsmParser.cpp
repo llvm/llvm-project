@@ -1468,8 +1468,8 @@ public:
   using OptionalImmIndexMap = std::map<AMDGPUOperand::ImmTy, unsigned>;
 
   AMDGPUAsmParser(const MCSubtargetInfo &STI, MCAsmParser &_Parser,
-                  const MCInstrInfo &MII, const MCTargetOptions &Options)
-      : MCTargetAsmParser(Options, STI, MII), Parser(_Parser),
+                  const MCInstrInfo &MII)
+      : MCTargetAsmParser(STI, MII), Parser(_Parser),
         HwMode(STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo)) {
     MCAsmParserExtension::Initialize(Parser);
 
@@ -5036,12 +5036,6 @@ bool AMDGPUAsmParser::validateNeg(const MCInst &Inst, AMDGPU::OpName OpName) {
         return false;
     }
   }
-
-  // neg_lo[0:1] and neg_hi[0:1] are reserved and shall not used on gfx1250.
-  // in the _iu8 case neg bits are repurposed for signed/unsigned.
-  if (isGFX1250() && (TSFlags & SIInstrFlags::IsWMMA) && (Neg & 3) &&
-      Inst.getOpcode() != AMDGPU::V_WMMA_I32_16X16X64_IU8_w32_twoaddr_gfx1250)
-    return false;
 
   return true;
 }
@@ -10526,7 +10520,8 @@ ParseStatus AMDGPUAsmParser::parseCustomOperand(OperandVector &Operands,
   case MCK_idxen:
     return parseTokenOp("idxen", Operands);
   case MCK_lds:
-    return parseTokenOp("lds", Operands);
+    return parseNamedBit("lds", Operands, AMDGPUOperand::ImmTyLDS,
+                         /*IgnoreNegative=*/true);
   case MCK_offen:
     return parseTokenOp("offen", Operands);
   case MCK_off:

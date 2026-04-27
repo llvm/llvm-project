@@ -78,7 +78,11 @@ static cl::opt<LoopVectorizeHints::ScalableForceKind>
             clEnumValN(
                 LoopVectorizeHints::SK_PreferScalable, "on",
                 "Scalable vectorization is available and favored when the "
-                "cost is inconclusive.")));
+                "cost is inconclusive."),
+            clEnumValN(
+                LoopVectorizeHints::SK_AlwaysScalable, "always",
+                "Scalable vectorization is available and always favored when "
+                "feasible")));
 
 static cl::opt<bool> EnableHistogramVectorization(
     "enable-histogram-loop-vectorization", cl::init(false), cl::Hidden,
@@ -2070,11 +2074,6 @@ bool LoopVectorizationLegality::canFoldTailByMasking() const {
   }
 
   LLVM_DEBUG(dbgs() << "LV: checking if tail can be folded by masking.\n");
-
-  SmallPtrSet<const Value *, 8> ReductionLiveOuts;
-
-  for (const auto &Reduction : getReductionVars())
-    ReductionLiveOuts.insert(Reduction.second.getLoopExitInstr());
 
   // The list of pointers that we can safely read and write to remains empty.
   SmallPtrSet<Value *, 8> SafePointers;

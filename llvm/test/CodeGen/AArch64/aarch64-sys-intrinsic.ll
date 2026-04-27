@@ -3,7 +3,6 @@
 ; RUN: llc < %s -mtriple=aarch64 -mattr=+specres2 -asm-verbose=false | FileCheck %s --check-prefix=SPECRES2
 ; RUN: llc < %s -mtriple=aarch64 -mattr=+gcie -asm-verbose=false | FileCheck %s --check-prefix=GCIE
 ; RUN: llc < %s -mtriple=aarch64 -mattr=+poe2 -asm-verbose=false | FileCheck %s --check-prefix=POE2
-; RUN: llc < %s -mtriple=aarch64 -mattr=+mpamv2 -asm-verbose=false | FileCheck %s --check-prefix=MPAMV2
 
 declare void @llvm.aarch64.sys(i32 immarg, i32 immarg, i32 immarg, i32 immarg,
                                i64)
@@ -113,14 +112,5 @@ define void @sys_plbi_vmalle1() {
 ; POE2-NEXT:  ret
 entry:
   call void @llvm.aarch64.sys(i32 0, i32 10, i32 7, i32 0, i64 0)
-  ret void
-}
-
-define void @sys_mlbi_vmalle1() {
-; MPAMV2-LABEL: sys_mlbi_vmalle1:
-; MPAMV2:       mlbi vmalle1
-; MPAMV2-NEXT:  ret
-entry:
-  call void @llvm.aarch64.sys(i32 4, i32 7, i32 0, i32 5, i64 0)
   ret void
 }

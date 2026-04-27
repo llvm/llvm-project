@@ -1306,6 +1306,8 @@ void TargetLoweringObjectFileMachO::emitModuleMetadata(MCStreamer &Streamer,
   // Emit the linker options if present.
   emitLinkerDirectives(Streamer, M);
 
+  emitPseudoProbeDescMetadata(Streamer, M);
+
   unsigned VersionVal = 0;
   unsigned ImageInfoFlags = 0;
   StringRef SectionVal;
@@ -1635,8 +1637,7 @@ void TargetLoweringObjectFileMachO::getNameWithPrefix(
   if (auto *GO = GV->getAliaseeObject()) {
     SectionKind GOKind = TargetLoweringObjectFile::getKindForGlobal(GO, TM);
     const MCSection *TheSection = SectionForGlobal(GO, GOKind, TM);
-    CannotUsePrivateLabel =
-        !canUsePrivateLabel(*TM.getMCAsmInfo(), *TheSection);
+    CannotUsePrivateLabel = !canUsePrivateLabel(TM.getMCAsmInfo(), *TheSection);
   }
   getMangler().getNameWithPrefix(OutName, GV, CannotUsePrivateLabel);
 }

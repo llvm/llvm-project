@@ -189,11 +189,23 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(NonUniformResourceIndex,
                                    resource_nonuniformindex)
   GENERATE_HLSL_INTRINSIC_FUNCTION(BufferUpdateCounter, resource_updatecounter)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(AllMemoryBarrier, all_memory_barrier)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(AllMemoryBarrierWithGroupSync,
+                                   all_memory_barrier_with_group_sync)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(DeviceMemoryBarrier, device_memory_barrier)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(DeviceMemoryBarrierWithGroupSync,
+                                   device_memory_barrier_with_group_sync)
   GENERATE_HLSL_INTRINSIC_FUNCTION(GroupMemoryBarrier, group_memory_barrier)
   GENERATE_HLSL_INTRINSIC_FUNCTION(GroupMemoryBarrierWithGroupSync,
                                    group_memory_barrier_with_group_sync)
   GENERATE_HLSL_INTRINSIC_FUNCTION(GetDimensionsX, resource_getdimensions_x)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(GetDimensionsXY, resource_getdimensions_xy)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(GetDimensionsLevelsXY,
+                                   resource_getdimensions_levels_xy)
   GENERATE_HLSL_INTRINSIC_FUNCTION(LoadLevel, resource_load_level)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(CalculateLod, resource_calculate_lod)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(CalculateLodUnclamped,
+                                   resource_calculate_lod_unclamped)
   GENERATE_HLSL_INTRINSIC_FUNCTION(DdxCoarse, ddx_coarse)
   GENERATE_HLSL_INTRINSIC_FUNCTION(DdyCoarse, ddy_coarse)
   GENERATE_HLSL_INTRINSIC_FUNCTION(DdxFine, ddx_fine)
@@ -298,6 +310,8 @@ public:
                       QualType CType);
 
   LValue emitBufferMemberExpr(CodeGenFunction &CGF, const MemberExpr *E);
+  std::optional<LValue> emitResourceMemberExpr(CodeGenFunction &CGF,
+                                               const MemberExpr *E);
 
 private:
   void emitBufferGlobalsAndMetadata(const HLSLBufferDecl *BufDecl,

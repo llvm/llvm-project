@@ -199,3 +199,13 @@ llvm::Error MockSerializationFormat::writeLUSummaryEncoding(
   llvm_unreachable(
       "MockSerializationFormat does not support LUSummaryEncoding");
 }
+
+llvm::Expected<WPASuite>
+MockSerializationFormat::readWPASuite(llvm::StringRef Path) {
+  llvm_unreachable("MockSerializationFormat does not support WPASuite");
+}
+
+llvm::Error MockSerializationFormat::writeWPASuite(const WPASuite &Suite,
+                                                   llvm::StringRef Path) {
+  llvm_unreachable("MockSerializationFormat does not support WPASuite");
+}
