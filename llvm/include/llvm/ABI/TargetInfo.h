@@ -16,6 +16,7 @@
 
 #include "llvm/ABI/FunctionInfo.h"
 #include "llvm/ABI/Types.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cassert>
 
 namespace llvm {
@@ -82,6 +83,19 @@ protected:
 };
 
 std::unique_ptr<TargetInfo> createBPFTargetInfo(TypeBuilder &TB);
+
+/// The AVX ABI level for X86 targets.
+enum class X86AVXABILevel {
+  None,
+  AVX,
+  AVX512,
+};
+
+std::unique_ptr<TargetInfo> createX8664TargetInfo(TypeBuilder &TB,
+                                                  const Triple &Triple,
+                                                  X86AVXABILevel AVXLevel,
+                                                  bool Has64BitPointers,
+                                                  const ABICompatInfo &Compat);
 
 } // namespace abi
 } // namespace llvm
