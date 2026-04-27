@@ -182,6 +182,8 @@ static void emitDeclDestroy(CIRGenFunction &cgf, const VarDecl *vd,
     // address of the global into whose dtor region we are emiiting the destroy.
     // The same applies to code above where it is calling getAddrOfGlobalVar.
     mlir::Value globalVal = builder.createGetGlobal(addr);
+    mlir::cast<cir::GetGlobalOp>(globalVal.getDefiningOp())
+        .setStaticLocal(addr.getStaticLocalGuard().has_value());
     CharUnits alignment = cgf.getContext().getDeclAlign(vd);
     Address globalAddr{globalVal, cgf.convertTypeForMem(type), alignment};
     cgf.emitDestroy(globalAddr, type, cgf.getDestroyer(dtorKind));
