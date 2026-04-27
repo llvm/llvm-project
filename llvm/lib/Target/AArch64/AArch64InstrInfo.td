@@ -221,11 +221,11 @@ def HasOCCMO         : Predicate<"Subtarget->hasOCCMO()">,
                                  AssemblerPredicateWithAll<(all_of FeatureOCCMO), "occmo">;
 def HasLSCP          : Predicate<"Subtarget->hasLSCP()">,
                                  AssemblerPredicateWithAll<(all_of FeatureLSCP), "lscp">;
-def HasSVE2p2        : Predicate<"Subtarget->hasSVE2p2()">,
+def HasSVE2p2        : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE2p2()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE2p2), "sve2p2">;
 def HasSVE_B16MM     : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE_B16MM()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE_B16MM), "sve-b16mm">;
-def HasF16MM         : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasF16MM()">,
+def HasF16MM         : Predicate<"Subtarget->hasF16MM()">,
                                  AssemblerPredicateWithAll<(all_of FeatureF16MM), "f16mm">;
 def HasSVE2p3        : Predicate<"Subtarget->hasSVE2p3()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE2p3), "sve2p3">;
@@ -11899,10 +11899,10 @@ let Predicates = [HasF16F32DOT] in {
 }
 
 let Predicates = [HasF16MM] in
-  defm FMMLA : SIMDThreeSameVectorFMLA<"fmmla">;
+  defm FMMLA : SIMDThreeSameVectorFMLA<"fmmla", int_aarch64_neon_fmmla>;
 
 let Predicates = [HasF16F32MM] in
-  defm FMMLA : SIMDThreeSameVectorFMLAWiden<"fmmla">;
+  defm FMMLA : SIMDThreeSameVectorFMLAWiden<"fmmla", int_aarch64_neon_fmmla>;
 
 let Uses = [FPMR, FPCR] in
   defm FMMLA : SIMDThreeSameVectorFP8MatrixMul<"fmmla", int_aarch64_neon_fmmla>;
