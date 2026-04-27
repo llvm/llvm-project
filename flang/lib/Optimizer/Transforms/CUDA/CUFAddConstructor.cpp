@@ -128,7 +128,7 @@ struct CUFAddConstructor
       if (!hasKernel) {
         // No kernels means no GPU binary to register. This happens for host
         // TUs that USE a kernel module but don't define any device code.
-        builder.create<mlir::LLVM::ReturnOp>(loc, mlir::ValueRange{});
+        mlir::LLVM::ReturnOp::create(builder, loc, mlir::ValueRange{});
         return;
       }
 
