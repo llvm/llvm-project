@@ -50,6 +50,21 @@ TEST_F(VPPatternMatchTest, ScalarIVSteps) {
                                             m_Specific(VF))));
 }
 
+TEST_F(VPPatternMatchTest, CanonicalIV) {
+  VPlan &Plan = getPlan();
+  IntegerType *I64Ty = IntegerType::get(C, 64);
+  VPRegionBlock *VPR =
+      Plan.createLoopRegion(I64Ty, DebugLoc::getCompilerGenerated());
+  VPValue *CanIV = VPR->getCanonicalIV();
+
+  using namespace VPlanPatternMatch;
+
+  ASSERT_TRUE(match(CanIV, m_CanonicalIV()));
+
+  VPValue *LiveIn = Plan.getOrAddLiveIn(ConstantInt::get(I64Ty, 1));
+  ASSERT_FALSE(match(LiveIn, m_CanonicalIV()));
+}
+
 TEST_F(VPPatternMatchTest, GetElementPtr) {
   VPlan &Plan = getPlan();
   VPBasicBlock *VPBB = Plan.createVPBasicBlock("entry");
