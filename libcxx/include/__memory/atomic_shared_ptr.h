@@ -237,7 +237,7 @@ struct atomic<shared_ptr<_Tp>> {
       __old_c->__release_shared();
   }
 
-  _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> load(memory_order __m = memory_order_seq_cst) const noexcept
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> load(memory_order __m = memory_order_seq_cst) const noexcept
       _LIBCPP_CHECK_LOAD_MEMORY_ORDER(__m) {
     (void)__m;
     __fields_.__lock();
@@ -382,7 +382,7 @@ struct atomic<weak_ptr<_Tp>> {
       __old_c->__release_weak();
   }
 
-  _LIBCPP_HIDE_FROM_ABI weak_ptr<_Tp> load(memory_order __m = memory_order_seq_cst) const noexcept
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI weak_ptr<_Tp> load(memory_order __m = memory_order_seq_cst) const noexcept
       _LIBCPP_CHECK_LOAD_MEMORY_ORDER(__m) {
     (void)__m;
     __fields_.__lock();

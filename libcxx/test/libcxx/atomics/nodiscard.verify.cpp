@@ -11,6 +11,7 @@
 // Check that functions are marked [[nodiscard]]
 
 #include <atomic>
+#include <memory>
 
 #include "test_macros.h"
 
@@ -30,6 +31,26 @@ void test() {
 
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     atRef.load();
+  }
+
+  {
+    std::atomic<std::shared_ptr<int>> asp;
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    asp.is_lock_free();
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    asp.load();
+  }
+
+  {
+    std::atomic<std::weak_ptr<int>> awp;
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    awp.is_lock_free();
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    awp.load();
   }
 #endif
 
