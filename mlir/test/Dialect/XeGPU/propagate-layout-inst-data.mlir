@@ -373,3 +373,29 @@ gpu.module @test{
     gpu.return
   }
 }
+
+// -----
+// CHECK-LABEL: gpu.func @shape_cast_collapse_dims_with_order
+gpu.module @test_collapse_dims [#xevm.target<O = 3, chip = "pvc">] {
+  gpu.func @shape_cast_collapse_dims_with_order(%arg0: memref<32x32xf32>) {
+    // CHECK: %[[STEP:.*]] = vector.step {{.*}} : vector<1024xindex>
+    %0 = vector.step : vector<1024xindex>
+
+    // Shape cast from 1D to 2D triggers collapseDims in layout propagation
+    // CHECK: %[[CAST:.*]] = vector.shape_cast %[[STEP]] {{.*}} : vector<1024xindex> to vector<32x32xindex>
+    %1 = vector.shape_cast %0 : vector<1024xindex> to vector<32x32xindex>
+
+    // Anchor the layout with a store operation
+    %ptr = memref.extract_aligned_pointer_as_index %arg0 : memref<32x32xf32> -> index
+    %ptr_i64 = arith.index_cast %ptr : index to i64
+    %mask = arith.constant dense<true> : vector<32x32xi1>
+    %data = arith.constant dense<0.0> : vector<32x32xf32>
+
+    // CHECK: xegpu.store {{.*}} <{{{.*}}layout = #xegpu.layout<inst_data = [32, 32]>{{.*}}}> :
+    xegpu.store %data, %ptr_i64[%1], %mask {
+      layout = #xegpu.layout<inst_data = [32, 32]>
+    } : vector<32x32xf32>, i64, vector<32x32xindex>, vector<32x32xi1>
+
+    gpu.return
+  }
+}
