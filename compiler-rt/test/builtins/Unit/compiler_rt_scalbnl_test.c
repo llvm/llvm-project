@@ -39,10 +39,12 @@ int test__compiler_rt_scalbnl(const char *mode, fp_t x, int y) {
 }
 
 fp_t cases[] = {
+#ifndef __MVS__
     -NAN,
     NAN,
     -INFINITY,
     INFINITY,
+#endif
     -0.0,
     0.0,
     -1,

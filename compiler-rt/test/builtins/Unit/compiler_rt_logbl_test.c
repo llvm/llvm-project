@@ -34,8 +34,11 @@ int test__compiler_rt_logbl(fp_t x) {
 }
 
 fp_t cases[] = {
-    1.e-6, -1.e-6, NAN, -NAN, INFINITY, -INFINITY, -1,
-    -0.0,  0.0,    1,   -2,   2,        -0.5,      0.5,
+    1.e-6, -1.e-6,
+#ifndef __MVS__
+    NAN, -NAN, INFINITY, -INFINITY,
+#endif
+    -1,  -0.0,  0.0,    1,   -2,   2,        -0.5,      0.5,
 };
 
 int main() {
