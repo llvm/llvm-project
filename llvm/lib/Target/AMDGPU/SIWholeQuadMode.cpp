@@ -497,7 +497,6 @@ char SIWholeQuadMode::scanInstructions(
   // instruction as needing e.g. WQM before visiting it and realizing it needs
   // WQM disabled.
   ReversePostOrderTraversal<MachineFunction *> RPOT(&MF);
-
   for (MachineBasicBlock *MBB : RPOT) {
     BlockInfo &BBI = Blocks[MBB];
 
