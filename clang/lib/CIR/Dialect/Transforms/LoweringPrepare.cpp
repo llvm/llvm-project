@@ -183,6 +183,7 @@ struct LoweringPreparePass
       guard.setInitialValueAttr(cir::IntAttr::get(guardTy, 0));
       guard.setDSOLocal(globalOp.getDsoLocal());
       guard.setAlignment(guardAlignment.getAsAlign().value());
+      guard.setTlsModel(globalOp.getTlsModel());
 
       // The ABI says: "It is suggested that it be emitted in the same COMDAT
       // group as the associated data object." In practice, this doesn't work
@@ -241,7 +242,7 @@ struct LoweringPreparePass
 
   void emitGlobalGuardedDtorRegion(CIRBaseBuilderTy &builder,
                                    cir::GlobalOp global,
-                                   mlir::Region &dtorRegion,
+                                   mlir::Region &dtorRegion, bool tls,
                                    mlir::Block &entryBB) {
     // Create a variable that binds the atexit to this shared object.
     builder.setInsertionPointToStart(&mlirModule.getBodyRegion().front());
@@ -266,6 +267,11 @@ struct LoweringPreparePass
         builder.getVoidFnTy({voidFnPtrTy, voidPtrTy, handlePtrTy});
 
     llvm::StringLiteral nameAtExit = "__cxa_atexit";
+    if (tls)
+      nameAtExit = astCtx->getTargetInfo().getTriple().isOSDarwin()
+                       ? llvm::StringLiteral("_tlv_atexit")
+                       : llvm::StringLiteral("__cxa_thread_atexit");
+
     cir::FuncOp fnAtExit = buildRuntimeFunction(builder, nameAtExit,
                                                 global.getLoc(), fnAtExitType);
 
@@ -317,6 +323,28 @@ struct LoweringPreparePass
     // initialization so that recursive accesses during initialization do not
     // restart initialization.
 
+    auto emitBody = [&]() {
+      // Emit the initializer and add a global destructor if appropriate.
+      mlir::Block *insertBlock = builder.getInsertionBlock();
+      if (!ctorRegion.empty()) {
+        assert(ctorRegion.hasOneBlock() && "Enforced by MaxSizedRegion<1>");
+
+        mlir::Block &block = ctorRegion.front();
+        insertBlock->getOperations().splice(
+            insertBlock->end(), block.getOperations(), block.begin(),
+            std::prev(block.end()));
+      }
+
+      if (!dtorRegion.empty()) {
+        assert(dtorRegion.hasOneBlock() && "Enforced by MaxSizedRegion<1>");
+
+        emitGlobalGuardedDtorRegion(builder, globalOp, dtorRegion, !threadsafe,
+                                    *insertBlock);
+      }
+      builder.setInsertionPointToEnd(insertBlock);
+      ctorRegion.getBlocks().clear();
+    };
+
     // Variables used when coping with thread-safe statics and exceptions.
     if (threadsafe) {
       // Call __cxa_guard_acquire.
@@ -341,26 +369,7 @@ struct LoweringPreparePass
       // OG: CGF.EHStack.pushCleanup<CallGuardAbort>(EHCleanup, guard);
       assert(!cir::MissingFeatures::guardAbortOnException());
 
-      // Emit the initializer and add a global destructor if appropriate.
-      mlir::Block *insertBlock = builder.getInsertionBlock();
-      if (!ctorRegion.empty()) {
-        assert(ctorRegion.hasOneBlock() && "Enforced by MaxSizedRegion<1>");
-
-        mlir::Block &block = ctorRegion.front();
-        insertBlock->getOperations().splice(
-            insertBlock->end(), block.getOperations(), block.begin(),
-            std::prev(block.end()));
-      }
-
-      if (!dtorRegion.empty()) {
-        assert(dtorRegion.hasOneBlock() && "Enforced by MaxSizedRegion<1>");
-
-        emitGlobalGuardedDtorRegion(builder, globalOp, dtorRegion,
-                                    *insertBlock);
-      }
-
-      builder.setInsertionPointToEnd(insertBlock);
-      ctorRegion.getBlocks().clear();
+      emitBody();
 
       // Pop the guard-abort cleanup if we pushed one.
       // OG: CGF.PopCleanupBlock();
@@ -380,11 +389,13 @@ struct LoweringPreparePass
       globalOp->emitError("NYI: non-threadsafe init for non-local variables");
       return;
     } else {
+      emitBody();
       // For local variables, store 1 into the first byte of the guard variable
       // after the object initialization completes so that initialization is
       // retried if initialization is interrupted by an exception.
-      globalOp->emitError("NYI: non-threadsafe init for local variables");
-      return;
+      builder.createStore(
+          loc, builder.getConstantInt(loc, guardPtrTy.getPointee(), 1),
+          guardPtr);
     }
 
     builder.createYield(loc); // Outermost IfOp
@@ -1063,7 +1074,8 @@ LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op) {
     assert(!cir::MissingFeatures::astVarDeclInterface());
     assert(!cir::MissingFeatures::opGlobalThreadLocal());
 
-    emitGlobalGuardedDtorRegion(builder, op, dtorRegion, *entryBB);
+    emitGlobalGuardedDtorRegion(builder, op, dtorRegion,
+                                op.getTlsModel().has_value(), *entryBB);
   }
 
   // Replace cir.yield with cir.return
@@ -1159,31 +1171,27 @@ void LoweringPreparePass::handleStaticLocal(cir::GlobalOp globalOp,
                     (varDecl.isLocalVarDecl() || nonTemplateInline) &&
                     !varDecl.getTLSKind();
 
-  // TLS variables need special handling - the guard must also be thread-local.
-  if (varDecl.getTLSKind()) {
-    globalOp->emitError("NYI: guarded initialization for thread-local statics");
-    return;
-  }
-
   // If we have a global variable with internal linkage and thread-safe statics
   // are disabled, we can just let the guard variable be of type i8.
   bool useInt8GuardVariable = !threadsafe && globalOp.hasInternalLinkage();
-  if (useInt8GuardVariable) {
-    globalOp->emitError("NYI: int8 guard variables for non-threadsafe statics");
-    return;
-  }
-
+  cir::CIRDataLayout dataLayout(mlirModule);
+  cir::IntType guardTy;
+  clang::CharUnits guardAlignment;
   // Guard variables are 64 bits in the generic ABI and size width on ARM
   // (i.e. 32-bit on AArch32, 64-bit on AArch64).
-  if (useARMGuardVarABI()) {
+  if (useInt8GuardVariable) {
+    guardTy = cir::IntType::get(&getContext(), 8, /*isSigned=*/true);
+    guardAlignment = clang::CharUnits::One();
+  } else if (useARMGuardVarABI()) {
     globalOp->emitError("NYI: ARM-style guard variables for static locals");
     return;
+  } else {
+    guardTy = cir::IntType::get(&getContext(), 64, /*isSigned=*/true);
+    guardAlignment =
+        clang::CharUnits::fromQuantity(dataLayout.getABITypeAlign(guardTy));
   }
-  cir::IntType guardTy =
-      cir::IntType::get(&getContext(), 64, /*isSigned=*/true);
-  cir::CIRDataLayout dataLayout(mlirModule);
-  clang::CharUnits guardAlignment =
-      clang::CharUnits::fromQuantity(dataLayout.getABITypeAlign(guardTy));
+  assert(guardTy && guardAlignment.getQuantity() != 0);
+
   auto guardPtrTy = cir::PointerType::get(guardTy);
 
   // Create the guard variable if we don't already have it.
@@ -1195,7 +1203,7 @@ void LoweringPreparePass::handleStaticLocal(cir::GlobalOp globalOp,
     return;
   }
 
-  mlir::Value guardPtr = builder.createGetGlobal(guard, /*threadLocal*/ false);
+  mlir::Value guardPtr = builder.createGetGlobal(guard, localInitOp.getTls());
 
   // Test whether the variable has completed initialization.
   //
@@ -1292,10 +1300,6 @@ void LoweringPreparePass::handleStaticLocal(cir::GlobalOp globalOp,
 
 void LoweringPreparePass::lowerLocalInitOp(
     cir::LocalInitOp initOp, mlir::SymbolTableCollection &symbolTables) {
-  if (!initOp.getStaticLocal()) {
-    initOp->emitError("NYI: Non-static-local in lower-init-local op");
-    return;
-  }
 
   // If we don't actually need to initialize anything anymore, we're done here.
   if (initOp.getCtorRegion().empty() && initOp.getDtorRegion().empty()) {
