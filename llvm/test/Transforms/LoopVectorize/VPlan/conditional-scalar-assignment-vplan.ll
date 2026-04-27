@@ -94,19 +94,19 @@ define i32 @simple_csa_int_select(i64 %N, ptr %data, i32 %a) {
 ; CHECK-TF-NEXT:  vp<[[VP4:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-TF-EMPTY:
 ; CHECK-TF-NEXT:    vector.body:
-; CHECK-TF-NEXT:      WIDEN-REDUCTION-PHI ir<%data.phi> = phi ir<-1>, vp<[[VP13:%[0-9]+]]>
-; CHECK-TF-NEXT:      WIDEN-PHI vp<[[VP5:%[0-9]+]]> = phi [ ir<false>, vector.ph ], [ vp<[[VP12:%[0-9]+]]>, vector.body ]
+; CHECK-TF-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
+; CHECK-TF-NEXT:      WIDEN-REDUCTION-PHI ir<%data.phi> = phi ir<-1>, vp<[[VP12:%[0-9]+]]>
+; CHECK-TF-NEXT:      WIDEN-PHI vp<[[VP5:%[0-9]+]]> = phi [ ir<false>, vector.ph ], [ vp<[[VP11:%[0-9]+]]>, vector.body ]
 ; CHECK-TF-NEXT:      vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
-; CHECK-TF-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION vp<[[VP4]]>
-; CHECK-TF-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = icmp ule vp<[[VP7]]>, vp<[[VP3]]>
+; CHECK-TF-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = icmp ule ir<%iv>, vp<[[VP3]]>
 ; CHECK-TF-NEXT:      CLONE ir<%ld.addr> = getelementptr inbounds ir<%data>, vp<[[VP6]]>
-; CHECK-TF-NEXT:      vp<[[VP9:%[0-9]+]]> = vector-pointer inbounds ir<%ld.addr>
-; CHECK-TF-NEXT:      WIDEN ir<%ld> = load vp<[[VP9]]>, vp<[[VP8]]>
+; CHECK-TF-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer inbounds ir<%ld.addr>
+; CHECK-TF-NEXT:      WIDEN ir<%ld> = load vp<[[VP8]]>, vp<[[VP7]]>
 ; CHECK-TF-NEXT:      WIDEN ir<%select.cmp> = icmp slt ir<%a>, ir<%ld>
-; CHECK-TF-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = logical-and vp<[[VP8]]>, ir<%select.cmp>
-; CHECK-TF-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = any-of vp<[[VP10]]>
-; CHECK-TF-NEXT:      EMIT vp<[[VP12]]> = select vp<[[VP11]]>, vp<[[VP10]]>, vp<[[VP5]]>
-; CHECK-TF-NEXT:      EMIT vp<[[VP13]]> = select vp<[[VP11]]>, ir<%ld>, ir<%data.phi>
+; CHECK-TF-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = logical-and vp<[[VP7]]>, ir<%select.cmp>
+; CHECK-TF-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = any-of vp<[[VP9]]>
+; CHECK-TF-NEXT:      EMIT vp<[[VP11]]> = select vp<[[VP10]]>, vp<[[VP9]]>, vp<[[VP5]]>
+; CHECK-TF-NEXT:      EMIT vp<[[VP12]]> = select vp<[[VP10]]>, ir<%ld>, ir<%data.phi>
 ; CHECK-TF-NEXT:      EMIT vp<%index.next> = add vp<[[VP4]]>, vp<[[VP1]]>
 ; CHECK-TF-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-TF-NEXT:    No successors
@@ -114,11 +114,11 @@ define i32 @simple_csa_int_select(i64 %N, ptr %data, i32 %a) {
 ; CHECK-TF-NEXT:  Successor(s): middle.block
 ; CHECK-TF-EMPTY:
 ; CHECK-TF-NEXT:  middle.block:
-; CHECK-TF-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = extract-last-active ir<-1>, vp<[[VP13]]>, vp<[[VP12]]>
+; CHECK-TF-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = extract-last-active ir<-1>, vp<[[VP12]]>, vp<[[VP11]]>
 ; CHECK-TF-NEXT:  Successor(s): ir-bb<exit>
 ; CHECK-TF-EMPTY:
 ; CHECK-TF-NEXT:  ir-bb<exit>:
-; CHECK-TF-NEXT:    IR   %select.data.lcssa = phi i32 [ %select.data, %loop ] (extra operand: vp<[[VP15]]> from middle.block)
+; CHECK-TF-NEXT:    IR   %select.data.lcssa = phi i32 [ %select.data, %loop ] (extra operand: vp<[[VP14]]> from middle.block)
 ; CHECK-TF-NEXT:  No successors
 ; CHECK-TF-EMPTY:
 ; CHECK-TF-NEXT:  scalar.ph:
@@ -258,22 +258,22 @@ define i32 @simple_csa_int_load(ptr noalias %a, ptr noalias %b, i32 %default_val
 ; CHECK-TF-NEXT:  vp<[[VP4:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-TF-EMPTY:
 ; CHECK-TF-NEXT:    vector.body:
-; CHECK-TF-NEXT:      WIDEN-REDUCTION-PHI ir<%data.phi> = phi ir<%default_val>, vp<[[VP14:%[0-9]+]]>
-; CHECK-TF-NEXT:      WIDEN-PHI vp<[[VP5:%[0-9]+]]> = phi [ ir<false>, vector.ph ], [ vp<[[VP13:%[0-9]+]]>, vector.body ]
+; CHECK-TF-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
+; CHECK-TF-NEXT:      WIDEN-REDUCTION-PHI ir<%data.phi> = phi ir<%default_val>, vp<[[VP13:%[0-9]+]]>
+; CHECK-TF-NEXT:      WIDEN-PHI vp<[[VP5:%[0-9]+]]> = phi [ ir<false>, vector.ph ], [ vp<[[VP12:%[0-9]+]]>, vector.body ]
 ; CHECK-TF-NEXT:      vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
-; CHECK-TF-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION vp<[[VP4]]>
-; CHECK-TF-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = icmp ule vp<[[VP7]]>, vp<[[VP3]]>
+; CHECK-TF-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = icmp ule ir<%iv>, vp<[[VP3]]>
 ; CHECK-TF-NEXT:      CLONE ir<%a.addr> = getelementptr inbounds nuw ir<%a>, vp<[[VP6]]>
-; CHECK-TF-NEXT:      vp<[[VP9:%[0-9]+]]> = vector-pointer inbounds nuw ir<%a.addr>
-; CHECK-TF-NEXT:      WIDEN ir<%ld.a> = load vp<[[VP9]]>, vp<[[VP8]]>
+; CHECK-TF-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer inbounds nuw ir<%a.addr>
+; CHECK-TF-NEXT:      WIDEN ir<%ld.a> = load vp<[[VP8]]>, vp<[[VP7]]>
 ; CHECK-TF-NEXT:      WIDEN ir<%if.cond> = icmp sgt ir<%ld.a>, ir<%threshold>
-; CHECK-TF-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = logical-and vp<[[VP8]]>, ir<%if.cond>
+; CHECK-TF-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = logical-and vp<[[VP7]]>, ir<%if.cond>
 ; CHECK-TF-NEXT:      CLONE ir<%b.addr> = getelementptr ir<%b>, vp<[[VP6]]>
-; CHECK-TF-NEXT:      vp<[[VP11:%[0-9]+]]> = vector-pointer ir<%b.addr>
-; CHECK-TF-NEXT:      WIDEN ir<%ld.b> = load vp<[[VP11]]>, vp<[[VP10]]>
-; CHECK-TF-NEXT:      EMIT vp<[[VP12:%[0-9]+]]> = any-of vp<[[VP10]]>
-; CHECK-TF-NEXT:      EMIT vp<[[VP13]]> = select vp<[[VP12]]>, vp<[[VP10]]>, vp<[[VP5]]>
-; CHECK-TF-NEXT:      EMIT vp<[[VP14]]> = select vp<[[VP12]]>, ir<%ld.b>, ir<%data.phi>
+; CHECK-TF-NEXT:      vp<[[VP10:%[0-9]+]]> = vector-pointer ir<%b.addr>
+; CHECK-TF-NEXT:      WIDEN ir<%ld.b> = load vp<[[VP10]]>, vp<[[VP9]]>
+; CHECK-TF-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = any-of vp<[[VP9]]>
+; CHECK-TF-NEXT:      EMIT vp<[[VP12]]> = select vp<[[VP11]]>, vp<[[VP9]]>, vp<[[VP5]]>
+; CHECK-TF-NEXT:      EMIT vp<[[VP13]]> = select vp<[[VP11]]>, ir<%ld.b>, ir<%data.phi>
 ; CHECK-TF-NEXT:      EMIT vp<%index.next> = add vp<[[VP4]]>, vp<[[VP1]]>
 ; CHECK-TF-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-TF-NEXT:    No successors
@@ -281,11 +281,11 @@ define i32 @simple_csa_int_load(ptr noalias %a, ptr noalias %b, i32 %default_val
 ; CHECK-TF-NEXT:  Successor(s): middle.block
 ; CHECK-TF-EMPTY:
 ; CHECK-TF-NEXT:  middle.block:
-; CHECK-TF-NEXT:    EMIT vp<[[VP16:%[0-9]+]]> = extract-last-active ir<%default_val>, vp<[[VP14]]>, vp<[[VP13]]>
+; CHECK-TF-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = extract-last-active ir<%default_val>, vp<[[VP13]]>, vp<[[VP12]]>
 ; CHECK-TF-NEXT:  Successor(s): ir-bb<exit>
 ; CHECK-TF-EMPTY:
 ; CHECK-TF-NEXT:  ir-bb<exit>:
-; CHECK-TF-NEXT:    IR   %select.data.lcssa = phi i32 [ %select.data, %latch ] (extra operand: vp<[[VP16]]> from middle.block)
+; CHECK-TF-NEXT:    IR   %select.data.lcssa = phi i32 [ %select.data, %latch ] (extra operand: vp<[[VP15]]> from middle.block)
 ; CHECK-TF-NEXT:  No successors
 ; CHECK-TF-EMPTY:
 ; CHECK-TF-NEXT:  scalar.ph:

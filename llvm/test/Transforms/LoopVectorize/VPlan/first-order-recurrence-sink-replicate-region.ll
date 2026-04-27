@@ -220,27 +220,28 @@ exit:
 define i32 @sink_replicate_region_3_reduction(i32 %x, i8 %y, ptr %ptr) optsize {
 ; CHECK-LABEL: VPlan for loop in 'sink_replicate_region_3_reduction'
 ; CHECK:  VPlan 'Initial VPlan for VF={2},UF>=1' {
-; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF * UF
-; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = vector-trip-count
-; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = backedge-taken count
+; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
+; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
+; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
+; CHECK-NEXT:  Live-in vp<[[VP3:%[0-9]+]]> = backedge-taken count
 ; CHECK-NEXT:  Live-in ir<20001> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
 ; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
-; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = reduction-start-vector ir<1234>, ir<-1>, ir<1>
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = reduction-start-vector ir<1234>, ir<-1>, ir<1>
 ; CHECK-NEXT:    WIDEN-CAST ir<%recur.next> = sext ir<%y> to i32
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
-; CHECK-NEXT:  vp<[[VP4:%[0-9]+]]> = CANONICAL-IV
+; CHECK-NEXT:  vp<[[VP5:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      FIRST-ORDER-RECURRENCE-PHI ir<%recur> = phi ir<0>, ir<%recur.next>
-; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%and.red> = phi vp<[[VP3]]>, ir<%and.red.next>
-; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION vp<[[VP4]]>
-; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = icmp ule vp<[[VP5]]>, vp<[[VP2]]>
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%and.red> = phi vp<[[VP4]]>, ir<%and.red.next>
+; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = icmp ule ir<%iv>, vp<[[VP3]]>
 ; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = first-order splice ir<%recur>, ir<%recur.next>
 ; CHECK-NEXT:    Successor(s): pred.srem
 ; CHECK-EMPTY:
@@ -262,8 +263,8 @@ define i32 @sink_replicate_region_3_reduction(i32 %x, i8 %y, ptr %ptr) optsize {
 ; CHECK-NEXT:    loop.0:
 ; CHECK-NEXT:      WIDEN ir<%add> = add vp<[[VP8]]>, ir<%recur.next>
 ; CHECK-NEXT:      WIDEN ir<%and.red.next> = and ir<%and.red>, ir<%add>
-; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP4]]>, vp<[[VP0]]>
-; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP1]]>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP5]]>, vp<[[VP1]]>
+; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Successor(s): middle.block

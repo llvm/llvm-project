@@ -23,23 +23,26 @@ define i32 @two_reductions(i64 %N, ptr %a, ptr %b) {
 ; UF1-NEXT:    EMIT vp<%trip.count.minus.1> = sub ir<%N>, ir<1>
 ; UF1-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = reduction-start-vector ir<0>, ir<0>, ir<1>
 ; UF1-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = broadcast vp<%trip.count.minus.1>
+; UF1-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = step-vector i64
+; UF1-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = broadcast ir<4>
 ; UF1-NEXT:  Successor(s): vector.body
 ; UF1-EMPTY:
 ; UF1-NEXT:  vector.body:
 ; UF1-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%index.next>, vector.body ]
+; UF1-NEXT:    WIDEN-PHI vp<[[VP6:%[0-9]+]]> = phi [ vp<[[VP4]]>, vector.ph ], [ vp<%vec.ind.next>, vector.body ]
 ; UF1-NEXT:    WIDEN-REDUCTION-PHI ir<%sum.a> = phi vp<[[VP2]]>, ir<%sum.a.next>
 ; UF1-NEXT:    WIDEN-REDUCTION-PHI ir<%sum.b> = phi vp<[[VP2]]>, ir<%sum.b.next>
-; UF1-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION vp<%index>
-; UF1-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = icmp ule vp<[[VP4]]>, vp<[[VP3]]>
+; UF1-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = icmp ule vp<[[VP6]]>, vp<[[VP3]]>
 ; UF1-NEXT:    CLONE ir<%ga> = getelementptr inbounds ir<%a>, vp<%index>
 ; UF1-NEXT:    CLONE ir<%gb> = getelementptr inbounds ir<%b>, vp<%index>
-; UF1-NEXT:    WIDEN ir<%la> = load ir<%ga>, vp<[[VP5]]>
-; UF1-NEXT:    WIDEN ir<%lb> = load ir<%gb>, vp<[[VP5]]>
+; UF1-NEXT:    WIDEN ir<%la> = load ir<%ga>, vp<[[VP7]]>
+; UF1-NEXT:    WIDEN ir<%lb> = load ir<%gb>, vp<[[VP7]]>
 ; UF1-NEXT:    WIDEN ir<%sum.a.next> = add ir<%sum.a>, ir<%la>
 ; UF1-NEXT:    WIDEN ir<%sum.b.next> = add ir<%sum.b>, ir<%lb>
 ; UF1-NEXT:    EMIT vp<%index.next> = add vp<%index>, ir<4>
-; UF1-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = icmp eq vp<%index.next>, vp<%n.vec>
-; UF1-NEXT:    EMIT branch-on-cond vp<[[VP6]]>
+; UF1-NEXT:    EMIT vp<%vec.ind.next> = add vp<[[VP6]]>, vp<[[VP5]]>
+; UF1-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = icmp eq vp<%index.next>, vp<%n.vec>
+; UF1-NEXT:    EMIT branch-on-cond vp<[[VP8]]>
 ; UF1-NEXT:  Successor(s): middle.block, vector.body
 ; UF1-EMPTY:
 ; UF1-NEXT:  middle.block:
@@ -52,48 +55,50 @@ define i32 @two_reductions(i64 %N, ptr %a, ptr %b) {
 ; UF4-NEXT:  Successor(s): vector.ph
 ; UF4-EMPTY:
 ; UF4-NEXT:  vector.ph:
+; UF4-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = broadcast ir<4>
 ; UF4-NEXT:    EMIT vp<%n.rnd.up> = add ir<%N>, ir<15>
 ; UF4-NEXT:    EMIT vp<%n.mod.vf> = urem vp<%n.rnd.up>, ir<16>
 ; UF4-NEXT:    EMIT vp<%n.vec> = sub vp<%n.rnd.up>, vp<%n.mod.vf>
 ; UF4-NEXT:    EMIT vp<%trip.count.minus.1> = sub ir<%N>, ir<1>
-; UF4-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = reduction-start-vector ir<0>, ir<0>, ir<1>
-; UF4-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = broadcast vp<%trip.count.minus.1>
+; UF4-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = reduction-start-vector ir<0>, ir<0>, ir<1>
+; UF4-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = broadcast vp<%trip.count.minus.1>
+; UF4-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = step-vector i64
 ; UF4-NEXT:  Successor(s): vector.body
 ; UF4-EMPTY:
 ; UF4-NEXT:  vector.body:
 ; UF4-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%index.next>, vector.body ]
-; UF4-NEXT:    WIDEN-REDUCTION-PHI ir<%sum.a> = phi vp<[[VP2]]>, ir<%sum.a.next>
+; UF4-NEXT:    WIDEN-PHI vp<[[VP6:%[0-9]+]]> = phi [ vp<[[VP5]]>, vector.ph ], [ vp<%vec.ind.next>, vector.body ]
+; UF4-NEXT:    WIDEN-REDUCTION-PHI ir<%sum.a> = phi vp<[[VP3]]>, ir<%sum.a.next>
 ; UF4-NEXT:    WIDEN-REDUCTION-PHI ir<%sum.a>.1 = phi ir<0>, ir<%sum.a.next>.1
 ; UF4-NEXT:    WIDEN-REDUCTION-PHI ir<%sum.a>.2 = phi ir<0>, ir<%sum.a.next>.2
 ; UF4-NEXT:    WIDEN-REDUCTION-PHI ir<%sum.a>.3 = phi ir<0>, ir<%sum.a.next>.3
-; UF4-NEXT:    WIDEN-REDUCTION-PHI ir<%sum.b> = phi vp<[[VP2]]>, ir<%sum.b.next>
+; UF4-NEXT:    WIDEN-REDUCTION-PHI ir<%sum.b> = phi vp<[[VP3]]>, ir<%sum.b.next>
 ; UF4-NEXT:    WIDEN-REDUCTION-PHI ir<%sum.b>.1 = phi ir<0>, ir<%sum.b.next>.1
 ; UF4-NEXT:    WIDEN-REDUCTION-PHI ir<%sum.b>.2 = phi ir<0>, ir<%sum.b.next>.2
 ; UF4-NEXT:    WIDEN-REDUCTION-PHI ir<%sum.b>.3 = phi ir<0>, ir<%sum.b.next>.3
-; UF4-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION vp<%index>
-; UF4-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION vp<%index>, ir<1>
-; UF4-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION vp<%index>, ir<2>
-; UF4-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION vp<%index>, ir<3>
-; UF4-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = icmp ule vp<[[VP4]]>, vp<[[VP3]]>
-; UF4-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = icmp ule vp<[[VP5]]>, vp<[[VP3]]>
-; UF4-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = icmp ule vp<[[VP6]]>, vp<[[VP3]]>
-; UF4-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = icmp ule vp<[[VP7]]>, vp<[[VP3]]>
+; UF4-NEXT:    EMIT vp<%step.add> = add nuw vp<[[VP6]]>, vp<[[VP2]]>
+; UF4-NEXT:    EMIT vp<%step.add.2> = add nuw vp<%step.add>, vp<[[VP2]]>
+; UF4-NEXT:    EMIT vp<%step.add.3> = add nuw vp<%step.add.2>, vp<[[VP2]]>
+; UF4-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = icmp ule vp<[[VP6]]>, vp<[[VP4]]>
+; UF4-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = icmp ule vp<%step.add>, vp<[[VP4]]>
+; UF4-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = icmp ule vp<%step.add.2>, vp<[[VP4]]>
+; UF4-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = icmp ule vp<%step.add.3>, vp<[[VP4]]>
 ; UF4-NEXT:    CLONE ir<%ga> = getelementptr inbounds ir<%a>, vp<%index>
 ; UF4-NEXT:    CLONE ir<%gb> = getelementptr inbounds ir<%b>, vp<%index>
-; UF4-NEXT:    vp<[[VP12:%[0-9]+]]> = vector-pointer inbounds ir<%ga>, ir<4>
-; UF4-NEXT:    vp<[[VP13:%[0-9]+]]> = vector-pointer inbounds ir<%ga>, ir<8>
-; UF4-NEXT:    vp<[[VP14:%[0-9]+]]> = vector-pointer inbounds ir<%ga>, ir<12>
-; UF4-NEXT:    WIDEN ir<%la> = load ir<%ga>, vp<[[VP8]]>
-; UF4-NEXT:    WIDEN ir<%la>.1 = load vp<[[VP12]]>, vp<[[VP9]]>
-; UF4-NEXT:    WIDEN ir<%la>.2 = load vp<[[VP13]]>, vp<[[VP10]]>
-; UF4-NEXT:    WIDEN ir<%la>.3 = load vp<[[VP14]]>, vp<[[VP11]]>
-; UF4-NEXT:    vp<[[VP15:%[0-9]+]]> = vector-pointer inbounds ir<%gb>, ir<4>
-; UF4-NEXT:    vp<[[VP16:%[0-9]+]]> = vector-pointer inbounds ir<%gb>, ir<8>
-; UF4-NEXT:    vp<[[VP17:%[0-9]+]]> = vector-pointer inbounds ir<%gb>, ir<12>
-; UF4-NEXT:    WIDEN ir<%lb> = load ir<%gb>, vp<[[VP8]]>
-; UF4-NEXT:    WIDEN ir<%lb>.1 = load vp<[[VP15]]>, vp<[[VP9]]>
-; UF4-NEXT:    WIDEN ir<%lb>.2 = load vp<[[VP16]]>, vp<[[VP10]]>
-; UF4-NEXT:    WIDEN ir<%lb>.3 = load vp<[[VP17]]>, vp<[[VP11]]>
+; UF4-NEXT:    vp<[[VP11:%[0-9]+]]> = vector-pointer inbounds ir<%ga>, ir<4>
+; UF4-NEXT:    vp<[[VP12:%[0-9]+]]> = vector-pointer inbounds ir<%ga>, ir<8>
+; UF4-NEXT:    vp<[[VP13:%[0-9]+]]> = vector-pointer inbounds ir<%ga>, ir<12>
+; UF4-NEXT:    WIDEN ir<%la> = load ir<%ga>, vp<[[VP7]]>
+; UF4-NEXT:    WIDEN ir<%la>.1 = load vp<[[VP11]]>, vp<[[VP8]]>
+; UF4-NEXT:    WIDEN ir<%la>.2 = load vp<[[VP12]]>, vp<[[VP9]]>
+; UF4-NEXT:    WIDEN ir<%la>.3 = load vp<[[VP13]]>, vp<[[VP10]]>
+; UF4-NEXT:    vp<[[VP14:%[0-9]+]]> = vector-pointer inbounds ir<%gb>, ir<4>
+; UF4-NEXT:    vp<[[VP15:%[0-9]+]]> = vector-pointer inbounds ir<%gb>, ir<8>
+; UF4-NEXT:    vp<[[VP16:%[0-9]+]]> = vector-pointer inbounds ir<%gb>, ir<12>
+; UF4-NEXT:    WIDEN ir<%lb> = load ir<%gb>, vp<[[VP7]]>
+; UF4-NEXT:    WIDEN ir<%lb>.1 = load vp<[[VP14]]>, vp<[[VP8]]>
+; UF4-NEXT:    WIDEN ir<%lb>.2 = load vp<[[VP15]]>, vp<[[VP9]]>
+; UF4-NEXT:    WIDEN ir<%lb>.3 = load vp<[[VP16]]>, vp<[[VP10]]>
 ; UF4-NEXT:    WIDEN ir<%sum.a.next> = add ir<%sum.a>, ir<%la>
 ; UF4-NEXT:    WIDEN ir<%sum.a.next>.1 = add ir<%sum.a>.1, ir<%la>.1
 ; UF4-NEXT:    WIDEN ir<%sum.a.next>.2 = add ir<%sum.a>.2, ir<%la>.2
@@ -103,8 +108,9 @@ define i32 @two_reductions(i64 %N, ptr %a, ptr %b) {
 ; UF4-NEXT:    WIDEN ir<%sum.b.next>.2 = add ir<%sum.b>.2, ir<%lb>.2
 ; UF4-NEXT:    WIDEN ir<%sum.b.next>.3 = add ir<%sum.b>.3, ir<%lb>.3
 ; UF4-NEXT:    EMIT vp<%index.next> = add vp<%index>, ir<16>
-; UF4-NEXT:    EMIT vp<[[VP18:%[0-9]+]]> = icmp eq vp<%index.next>, vp<%n.vec>
-; UF4-NEXT:    EMIT branch-on-cond vp<[[VP18]]>
+; UF4-NEXT:    EMIT vp<%vec.ind.next> = add vp<%step.add.3>, vp<[[VP2]]>
+; UF4-NEXT:    EMIT vp<[[VP17:%[0-9]+]]> = icmp eq vp<%index.next>, vp<%n.vec>
+; UF4-NEXT:    EMIT branch-on-cond vp<[[VP17]]>
 ; UF4-NEXT:  Successor(s): middle.block, vector.body
 ; UF4-EMPTY:
 ; UF4-NEXT:  middle.block:

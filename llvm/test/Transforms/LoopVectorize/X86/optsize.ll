@@ -18,16 +18,15 @@ define i32 @foo_optsize() #0 {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <64 x i32> poison, i32 [[INDEX]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <64 x i32> [[BROADCAST_SPLATINSERT]], <64 x i32> poison, <64 x i32> zeroinitializer
-; CHECK-NEXT:    [[VEC_IV:%.*]] = add <64 x i32> [[BROADCAST_SPLAT]], <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule <64 x i32> [[VEC_IV]], splat (i32 202)
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <64 x i8> [ <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 20, i8 21, i8 22, i8 23, i8 24, i8 25, i8 26, i8 27, i8 28, i8 29, i8 30, i8 31, i8 32, i8 33, i8 34, i8 35, i8 36, i8 37, i8 38, i8 39, i8 40, i8 41, i8 42, i8 43, i8 44, i8 45, i8 46, i8 47, i8 48, i8 49, i8 50, i8 51, i8 52, i8 53, i8 54, i8 55, i8 56, i8 57, i8 58, i8 59, i8 60, i8 61, i8 62, i8 63>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule <64 x i8> [[VEC_IND]], splat (i8 -54)
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <64 x i8> @llvm.masked.load.v64i8.p0(ptr align 1 [[TMP2]], <64 x i1> [[TMP1]], <64 x i8> poison)
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <64 x i8> [[WIDE_MASKED_LOAD]], zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = select <64 x i1> [[TMP4]], <64 x i8> splat (i8 2), <64 x i8> splat (i8 1)
 ; CHECK-NEXT:    call void @llvm.masked.store.v64i8.p0(<64 x i8> [[TMP5]], ptr align 1 [[TMP2]], <64 x i1> [[TMP1]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 64
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <64 x i8> [[VEC_IND]], splat (i8 64)
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 256
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -43,16 +42,15 @@ define i32 @foo_optsize() #0 {
 ; AUTOVF-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; AUTOVF:       [[VECTOR_BODY]]:
 ; AUTOVF-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; AUTOVF-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <32 x i32> poison, i32 [[INDEX]], i64 0
-; AUTOVF-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <32 x i32> [[BROADCAST_SPLATINSERT]], <32 x i32> poison, <32 x i32> zeroinitializer
-; AUTOVF-NEXT:    [[VEC_IV:%.*]] = add <32 x i32> [[BROADCAST_SPLAT]], <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; AUTOVF-NEXT:    [[TMP1:%.*]] = icmp ule <32 x i32> [[VEC_IV]], splat (i32 202)
+; AUTOVF-NEXT:    [[VEC_IND:%.*]] = phi <32 x i8> [ <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 20, i8 21, i8 22, i8 23, i8 24, i8 25, i8 26, i8 27, i8 28, i8 29, i8 30, i8 31>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; AUTOVF-NEXT:    [[TMP1:%.*]] = icmp ule <32 x i8> [[VEC_IND]], splat (i8 -54)
 ; AUTOVF-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 [[INDEX]]
 ; AUTOVF-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <32 x i8> @llvm.masked.load.v32i8.p0(ptr align 1 [[TMP2]], <32 x i1> [[TMP1]], <32 x i8> poison)
 ; AUTOVF-NEXT:    [[TMP4:%.*]] = icmp eq <32 x i8> [[WIDE_MASKED_LOAD]], zeroinitializer
 ; AUTOVF-NEXT:    [[TMP5:%.*]] = select <32 x i1> [[TMP4]], <32 x i8> splat (i8 2), <32 x i8> splat (i8 1)
 ; AUTOVF-NEXT:    call void @llvm.masked.store.v32i8.p0(<32 x i8> [[TMP5]], ptr align 1 [[TMP2]], <32 x i1> [[TMP1]])
 ; AUTOVF-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 32
+; AUTOVF-NEXT:    [[VEC_IND_NEXT]] = add <32 x i8> [[VEC_IND]], splat (i8 32)
 ; AUTOVF-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 224
 ; AUTOVF-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; AUTOVF:       [[MIDDLE_BLOCK]]:
@@ -90,16 +88,15 @@ define i32 @foo_minsize() #1 {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <64 x i32> poison, i32 [[INDEX]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <64 x i32> [[BROADCAST_SPLATINSERT]], <64 x i32> poison, <64 x i32> zeroinitializer
-; CHECK-NEXT:    [[VEC_IV:%.*]] = add <64 x i32> [[BROADCAST_SPLAT]], <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule <64 x i32> [[VEC_IV]], splat (i32 202)
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <64 x i8> [ <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 20, i8 21, i8 22, i8 23, i8 24, i8 25, i8 26, i8 27, i8 28, i8 29, i8 30, i8 31, i8 32, i8 33, i8 34, i8 35, i8 36, i8 37, i8 38, i8 39, i8 40, i8 41, i8 42, i8 43, i8 44, i8 45, i8 46, i8 47, i8 48, i8 49, i8 50, i8 51, i8 52, i8 53, i8 54, i8 55, i8 56, i8 57, i8 58, i8 59, i8 60, i8 61, i8 62, i8 63>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule <64 x i8> [[VEC_IND]], splat (i8 -54)
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <64 x i8> @llvm.masked.load.v64i8.p0(ptr align 1 [[TMP2]], <64 x i1> [[TMP1]], <64 x i8> poison)
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <64 x i8> [[WIDE_MASKED_LOAD]], zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = select <64 x i1> [[TMP4]], <64 x i8> splat (i8 2), <64 x i8> splat (i8 1)
 ; CHECK-NEXT:    call void @llvm.masked.store.v64i8.p0(<64 x i8> [[TMP5]], ptr align 1 [[TMP2]], <64 x i1> [[TMP1]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 64
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <64 x i8> [[VEC_IND]], splat (i8 64)
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 256
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -115,16 +112,15 @@ define i32 @foo_minsize() #1 {
 ; AUTOVF-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; AUTOVF:       [[VECTOR_BODY]]:
 ; AUTOVF-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; AUTOVF-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <32 x i32> poison, i32 [[INDEX]], i64 0
-; AUTOVF-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <32 x i32> [[BROADCAST_SPLATINSERT]], <32 x i32> poison, <32 x i32> zeroinitializer
-; AUTOVF-NEXT:    [[VEC_IV:%.*]] = add <32 x i32> [[BROADCAST_SPLAT]], <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; AUTOVF-NEXT:    [[TMP1:%.*]] = icmp ule <32 x i32> [[VEC_IV]], splat (i32 202)
+; AUTOVF-NEXT:    [[VEC_IND:%.*]] = phi <32 x i8> [ <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 20, i8 21, i8 22, i8 23, i8 24, i8 25, i8 26, i8 27, i8 28, i8 29, i8 30, i8 31>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; AUTOVF-NEXT:    [[TMP1:%.*]] = icmp ule <32 x i8> [[VEC_IND]], splat (i8 -54)
 ; AUTOVF-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 [[INDEX]]
 ; AUTOVF-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <32 x i8> @llvm.masked.load.v32i8.p0(ptr align 1 [[TMP2]], <32 x i1> [[TMP1]], <32 x i8> poison)
 ; AUTOVF-NEXT:    [[TMP4:%.*]] = icmp eq <32 x i8> [[WIDE_MASKED_LOAD]], zeroinitializer
 ; AUTOVF-NEXT:    [[TMP5:%.*]] = select <32 x i1> [[TMP4]], <32 x i8> splat (i8 2), <32 x i8> splat (i8 1)
 ; AUTOVF-NEXT:    call void @llvm.masked.store.v32i8.p0(<32 x i8> [[TMP5]], ptr align 1 [[TMP2]], <32 x i1> [[TMP1]])
 ; AUTOVF-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 32
+; AUTOVF-NEXT:    [[VEC_IND_NEXT]] = add <32 x i8> [[VEC_IND]], splat (i8 32)
 ; AUTOVF-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 224
 ; AUTOVF-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; AUTOVF:       [[MIDDLE_BLOCK]]:

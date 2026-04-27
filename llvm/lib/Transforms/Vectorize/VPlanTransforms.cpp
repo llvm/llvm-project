@@ -672,22 +672,14 @@ static void removeRedundantCanonicalIVs(VPlan &Plan) {
     if (!WidenOriginalIV || !WidenOriginalIV->isCanonical())
       continue;
 
-    // Replace WidenNewIV with WidenOriginalIV if WidenOriginalIV provides
-    // everything WidenNewIV's users need. That is, WidenOriginalIV will
-    // generate a vector phi or all users of WidenNewIV demand the first lane
-    // only.
-    if (Plan.hasScalarVFOnly() ||
-        !vputils::onlyScalarValuesUsed(WidenOriginalIV) ||
-        vputils::onlyFirstLaneUsed(WidenNewIV)) {
-      // We are replacing a wide canonical iv with a suitable wide induction.
-      // This is used to compute header mask, hence all lanes will be used and
-      // we need to drop wrap flags only applying to lanes guranteed to execute
-      // in the original scalar loop.
-      WidenOriginalIV->dropPoisonGeneratingFlags();
-      WidenNewIV->replaceAllUsesWith(WidenOriginalIV);
-      WidenNewIV->eraseFromParent();
-      return;
-    }
+    // We are replacing a wide canonical iv with a suitable wide induction.
+    // This is used to compute header mask, hence all lanes will be used and
+    // we need to drop wrap flags only applying to lanes guranteed to execute
+    // in the original scalar loop.
+    WidenOriginalIV->dropPoisonGeneratingFlags();
+    WidenNewIV->replaceAllUsesWith(WidenOriginalIV);
+    WidenNewIV->eraseFromParent();
+    return;
   }
 }
 
