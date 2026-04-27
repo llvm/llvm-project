@@ -5231,34 +5231,33 @@ struct OmpDeclareVariantDirective {
 // declare-target-directive ->                      // since 4.5
 //    DECLARE_TARGET[(extended-list)] |
 //    DECLARE_TARGET clause-list
-struct OpenMPDeclareTargetConstruct {
+struct OmpDeclareTargetDirective {
   WRAPPER_CLASS_BOILERPLATE(
-      OpenMPDeclareTargetConstruct, OmpDirectiveSpecification);
+      OmpDeclareTargetDirective, OmpDirectiveSpecification);
   CharBlock source;
 };
 
 // OMP v5.2: 5.8.8
 //  declare-mapper -> DECLARE MAPPER ([mapper-name :] type :: var) map-clauses
-struct OpenMPDeclareMapperConstruct {
+struct OmpDeclareMapperDirective {
   WRAPPER_CLASS_BOILERPLATE(
-      OpenMPDeclareMapperConstruct, OmpDirectiveSpecification);
+      OmpDeclareMapperDirective, OmpDirectiveSpecification);
   CharBlock source;
 };
 
 // ref: 5.2: Section 5.5.11 139-141
 // 2.16 declare-reduction -> DECLARE REDUCTION (reduction-identifier : type-list
 //                                              : combiner) [initializer-clause]
-struct OpenMPDeclareReductionConstruct {
+struct OmpDeclareReductionDirective {
   WRAPPER_CLASS_BOILERPLATE(
-      OpenMPDeclareReductionConstruct, OmpDirectiveSpecification);
+      OmpDeclareReductionDirective, OmpDirectiveSpecification);
   CharBlock source;
 };
 
 // 2.8.2 declare-simd -> DECLARE SIMD [(proc-name)] [declare-simd-clause[ [,]
 //                                                   declare-simd-clause]...]
-struct OpenMPDeclareSimdConstruct {
-  WRAPPER_CLASS_BOILERPLATE(
-      OpenMPDeclareSimdConstruct, OmpDirectiveSpecification);
+struct OmpDeclareSimdDirective {
+  WRAPPER_CLASS_BOILERPLATE(OmpDeclareSimdDirective, OmpDirectiveSpecification);
   CharBlock source;
 };
 
@@ -5319,8 +5318,8 @@ struct OpenMPDeclarativeConstruct {
   UNION_CLASS_BOILERPLATE(OpenMPDeclarativeConstruct);
   CharBlock source;
   std::variant<OmpAllocateDirective, OpenMPDeclarativeAssumes,
-      OpenMPDeclareMapperConstruct, OpenMPDeclareReductionConstruct,
-      OpenMPDeclareSimdConstruct, OpenMPDeclareTargetConstruct,
+      OmpDeclareMapperDirective, OmpDeclareReductionDirective,
+      OmpDeclareSimdDirective, OmpDeclareTargetDirective,
       OmpDeclareVariantDirective, OpenMPGroupprivate, OpenMPThreadprivate,
       OpenMPRequiresConstruct, OpenMPUtilityConstruct,
       OmpMetadirectiveDirective>
@@ -5448,32 +5447,12 @@ struct OpenMPStandaloneConstruct {
       u;
 };
 
-struct OmpBeginLoopDirective : public OmpBeginDirective {
-  INHERITED_TUPLE_CLASS_BOILERPLATE(OmpBeginLoopDirective, OmpBeginDirective);
-};
-
-struct OmpEndLoopDirective : public OmpEndDirective {
-  INHERITED_TUPLE_CLASS_BOILERPLATE(OmpEndLoopDirective, OmpEndDirective);
-};
-
 // OpenMP directives enclosing do loop
-struct OpenMPLoopConstruct {
-  TUPLE_CLASS_BOILERPLATE(OpenMPLoopConstruct);
-  OpenMPLoopConstruct(OmpBeginLoopDirective &&a)
-      : t({std::move(a), Block{}, std::nullopt}) {}
+struct OpenMPLoopConstruct : public OmpBlockConstruct {
+  INHERITED_TUPLE_CLASS_BOILERPLATE(OpenMPLoopConstruct, OmpBlockConstruct);
 
-  const OmpBeginLoopDirective &BeginDir() const {
-    return std::get<OmpBeginLoopDirective>(t);
-  }
-  const std::optional<OmpEndLoopDirective> &EndDir() const {
-    return std::get<std::optional<OmpEndLoopDirective>>(t);
-  }
   const DoConstruct *GetNestedLoop() const;
   const OpenMPLoopConstruct *GetNestedConstruct() const;
-
-  CharBlock source;
-  std::tuple<OmpBeginLoopDirective, Block, std::optional<OmpEndLoopDirective>>
-      t;
 };
 
 // Lookahead class to identify execution-part OpenMP constructs without

@@ -1498,6 +1498,7 @@ public:
       FMT(G);
       FMT(L);
       FMT(A);
+      FMT(AT);
       FMT(D);
 #undef FMT
     }
@@ -2204,9 +2205,6 @@ public:
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OmpBeginLoopDirective &x) {
-    Unparse(static_cast<const OmpBeginDirective &>(x));
-  }
   void Unparse(const OmpBeginSectionsDirective &x) {
     Unparse(static_cast<const OmpBeginDirective &>(x));
   }
@@ -2311,9 +2309,6 @@ public:
     Walk(static_cast<const OmpDirectiveSpecification &>(x));
     Put("\n");
     EndOpenMP();
-  }
-  void Unparse(const OmpEndLoopDirective &x) {
-    Unparse(static_cast<const OmpEndDirective &>(x));
   }
   void Unparse(const OmpEndSectionsDirective &x) {
     Unparse(static_cast<const OmpEndDirective &>(x));
@@ -2666,28 +2661,28 @@ public:
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OpenMPDeclareMapperConstruct &x) {
+  void Unparse(const OmpDeclareMapperDirective &x) {
     BeginOpenMP();
     Word("!$OMP ");
     Walk(x.v);
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OpenMPDeclareReductionConstruct &x) {
+  void Unparse(const OmpDeclareReductionDirective &x) {
     BeginOpenMP();
     Word("!$OMP ");
     Walk(x.v);
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OpenMPDeclareSimdConstruct &x) {
+  void Unparse(const OmpDeclareSimdDirective &x) {
     BeginOpenMP();
     Word("!$OMP ");
     Walk(x.v);
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OpenMPDeclareTargetConstruct &x) {
+  void Unparse(const OmpDeclareTargetDirective &x) {
     BeginOpenMP();
     Word("!$OMP ");
     Walk(x.v);
