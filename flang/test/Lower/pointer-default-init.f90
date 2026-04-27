@@ -2,7 +2,7 @@
 ! clean NULL() status. This is required by f18 runtime to do pointer
 ! association with a RHS with an undefined association status from a
 ! Fortran point of view.
-! RUN: bbc -emit-fir -hlfir=false -I nw %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -I nw %s -o - | FileCheck %s
 
 module test
   type t
@@ -55,7 +55,7 @@ subroutine test_struct_ctor_cst(x)
   x = t(42)
 end subroutine
 ! CHECK-LABEL:   func.func @_QPtest_struct_ctor_cst(
-! CHECK:  fir.call @_FortranAInitialize(
+! CHECK:  hlfir.assign
 
 subroutine test_struct_ctor_dyn(x, i)
   use test, only : t

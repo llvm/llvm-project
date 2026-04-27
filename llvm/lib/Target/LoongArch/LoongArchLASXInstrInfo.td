@@ -1425,15 +1425,27 @@ def : Pat<(or (vt LASX256:$xj), (vt (vnot LASX256:$xk))),
 // XVANDI_B
 def : Pat<(and (v32i8 LASX256:$xj), (v32i8 (SplatPat_uimm8 uimm8:$imm))),
           (XVANDI_B LASX256:$xj, uimm8:$imm)>;
+foreach vt = [v16i16, v8i32, v4i64] in
+def : Pat<(and (vt LASX256:$xj), (vt (vsplat_i8_uimm8 grlenimm:$imm))),
+          (XVANDI_B LASX256:$xj, grlenimm:$imm)>;
 // XVORI_B
 def : Pat<(or (v32i8 LASX256:$xj), (v32i8 (SplatPat_uimm8 uimm8:$imm))),
           (XVORI_B LASX256:$xj, uimm8:$imm)>;
+foreach vt = [v16i16, v8i32, v4i64] in
+def : Pat<(or (vt LASX256:$xj), (vt (vsplat_i8_uimm8 grlenimm:$imm))),
+          (XVORI_B LASX256:$xj, grlenimm:$imm)>;
 // XVXORI_B
 def : Pat<(xor (v32i8 LASX256:$xj), (v32i8 (SplatPat_uimm8 uimm8:$imm))),
           (XVXORI_B LASX256:$xj, uimm8:$imm)>;
+foreach vt = [v16i16, v8i32, v4i64] in
+def : Pat<(xor (vt LASX256:$xj), (vt (vsplat_i8_uimm8 grlenimm:$imm))),
+          (XVXORI_B LASX256:$xj, grlenimm:$imm)>;
 // XVNORI_B
 def : Pat<(vnot (or (v32i8 LASX256:$xj), (v32i8 (SplatPat_uimm8 uimm8:$imm)))),
           (XVNORI_B LASX256:$xj, uimm8:$imm)>;
+foreach vt = [v16i16, v8i32, v4i64] in
+def : Pat<(vnot (or (vt LASX256:$xj), (vt (vsplat_i8_uimm8 grlenimm:$imm)))),
+          (XVNORI_B LASX256:$xj, grlenimm:$imm)>;
 
 // XVBSLL_V
 foreach vt = [v32i8, v16i16, v8i32, v4i64, v8f32,
@@ -1457,10 +1469,18 @@ defm : PatShiftXrXr<srl, "XVSRL">;
 defm : PatShiftXrSplatUimm<srl, "XVSRLI">;
 defm : PatShiftXrUimm<loongarch_vsrli, "XVSRLI">;
 
+// XVSRLR[I]_{B/H/W/D}
+defm : PatXrXr<loongarch_vsrlr, "XVSRLR">;
+defm : PatShiftXrSplatUimm<loongarch_vsrlr, "XVSRLRI">;
+
 // XVSRA[I]_{B/H/W/D}
 defm : PatXrXr<sra, "XVSRA">;
 defm : PatShiftXrXr<sra, "XVSRA">;
 defm : PatShiftXrSplatUimm<sra, "XVSRAI">;
+
+// XVSRAR[I]_{B/H/W/D}
+defm : PatXrXr<loongarch_vsrar, "XVSRAR">;
+defm : PatShiftXrSplatUimm<loongarch_vsrar, "XVSRARI">;
 
 // XVROTR[I]_{B/H/W/D}
 defm : PatXrXr<rotr, "XVROTR">;
@@ -2487,6 +2507,10 @@ defm : PatXrF<ftrunc, "XVFRINTRZ">;
 defm : PatXrF<froundeven, "XVFRINTRNE">;
 def : Pat<(v8f32 (loongarch_vfcvt_s_d (v4f64 LASX256:$xj), (v4f64 LASX256:$xk))),
           (XVFCVT_S_D LASX256:$xj, LASX256:$xk)>;
+def : Pat<(v4f64 (loongarch_vfcvtl_d_s (v8f32 LASX256:$xj))),
+          (XVFCVTL_D_S LASX256:$xj)>;
+def : Pat<(v4f64 (loongarch_vfcvth_d_s (v8f32 LASX256:$xj))),
+          (XVFCVTH_D_S LASX256:$xj)>;
 
 // load
 def : Pat<(int_loongarch_lasx_xvld GPR:$rj, timm:$imm),

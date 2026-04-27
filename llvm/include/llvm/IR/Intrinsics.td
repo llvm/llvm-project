@@ -228,6 +228,9 @@ def IntrHasSideEffects : IntrinsicProperty;
 // poison.
 def IntrNoCreateUndefOrPoison : IntrinsicProperty;
 
+// This property indicates that the intrinsic is trivially scalarizable.
+def IntrTriviallyScalarizable : IntrinsicProperty;
+
 //===----------------------------------------------------------------------===//
 // IIT constants and utils
 //===----------------------------------------------------------------------===//
@@ -391,8 +394,8 @@ class LLVMType<ValueType vt> {
          "Invalid IIT encoding for vector type v" # vt.nElem # vt.ElementType;
 
   list<int> Sig = !listconcat(
-    !if(vt.isScalable, [IIT_SCALABLE_VEC.Number], []),
     !foreach(iit, IIT_Vecs, iit.Number),
+    !if(vt.isScalable, [IIT_SCALABLE_VEC.Number], []),
     !foreach(iit, IITs,     iit.Number));
 }
 
@@ -2549,12 +2552,12 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<1>>] in {
 
 def int_loop_dependence_raw_mask:
   DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-            [llvm_ptr_ty, llvm_ptr_ty, llvm_i64_ty],
+            [llvm_anyint_ty, LLVMMatchType<1>, LLVMMatchType<1>],
             [IntrNoMem, IntrNoSync, IntrWillReturn, ImmArg<ArgIndex<2>>]>;
 
 def int_loop_dependence_war_mask:
   DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-            [llvm_ptr_ty, llvm_ptr_ty, llvm_i64_ty],
+            [llvm_anyint_ty, LLVMMatchType<1>, LLVMMatchType<1>],
             [IntrNoMem, IntrNoSync, IntrWillReturn, ImmArg<ArgIndex<2>>]>;
 
 def int_get_active_lane_mask:

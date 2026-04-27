@@ -118,7 +118,6 @@ tool_dirs = [config.clang_tools_dir, config.llvm_tools_dir]
 tools = [
     "apinotes-test",
     "c-index-test",
-    "cir-opt",
     "clang-diff",
     "clang-format",
     "clang-repl",
@@ -145,6 +144,9 @@ tools = [
     "clang-ssaf-linker",
     "clang-ssaf-format",
 ]
+
+if config.clang_enable_cir:
+    tools.append("cir-opt")
 
 if config.clang_examples:
     config.available_features.add("examples")

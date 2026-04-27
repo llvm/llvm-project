@@ -32,8 +32,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x p0>) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x s64>) = G_BITCAST [[COPY]](<2 x p0>)
-    ; CHECK-NEXT: G_STORE [[BITCAST]](<2 x s64>), [[COPY1]](p0) :: (store (<2 x s64>) into %ir.ptr)
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x i64>) = G_BITCAST [[COPY]](<2 x p0>)
+    ; CHECK-NEXT: G_STORE [[BITCAST]](<2 x i64>), [[COPY1]](p0) :: (store (<2 x i64>) into %ir.ptr)
     ; CHECK-NEXT: RET_ReallyLR
     %0:_(<2 x p0>) = COPY $q0
     %1:_(p0) = COPY $x0
@@ -54,8 +54,8 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(<2 x s64>) = G_LOAD [[COPY]](p0) :: (load (<2 x s64>) from %ir.ptr)
-    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x p0>) = G_BITCAST [[LOAD]](<2 x s64>)
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(<2 x i64>) = G_LOAD [[COPY]](p0) :: (load (<2 x i64>) from %ir.ptr)
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x p0>) = G_BITCAST [[LOAD]](<2 x i64>)
     ; CHECK-NEXT: $q0 = COPY [[BITCAST]](<2 x p0>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(p0) = COPY $x0

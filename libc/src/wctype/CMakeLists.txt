@@ -138,7 +138,8 @@ add_entrypoint_object(
   HDRS
     iswctype.h
   DEPENDS
-    libc.src.__support.wctype_utils
+    libc.src.__support.wctype_impl
+    libc.hdr.types.wctype_t
     libc.hdr.types.wint_t
 )
 
@@ -149,5 +150,6 @@ add_entrypoint_object(
   HDRS
     wctype.h
   DEPENDS
-    libc.src.__support.wctype_utils
+    libc.src.__support.wctype_impl
+    libc.hdr.types.wctype_t
 )

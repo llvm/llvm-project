@@ -5,7 +5,7 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 target triple = "arm64-apple-ios5.0.0"
 
 define float @main() #0 !dbg !14 {
-; CHECK: %0:_(s32) = G_FCONSTANT float 0.000000e+00
+; CHECK: %0:_(f32) = G_FCONSTANT float 0.000000e+00
   ret float 0.000000e+00, !dbg !24
 }
 
