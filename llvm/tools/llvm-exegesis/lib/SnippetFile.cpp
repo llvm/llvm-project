@@ -272,8 +272,7 @@ Expected<std::vector<BenchmarkCode>> readSnippets(const LLVMState &State,
 
   const std::unique_ptr<MCTargetAsmParser> TargetAsmParser(
       TM.getTarget().createMCAsmParser(*TM.getMCSubtargetInfo(), *AsmParser,
-                                       *TM.getMCInstrInfo(),
-                                       MCTargetOptions()));
+                                       *TM.getMCInstrInfo()));
 
   if (!TargetAsmParser)
     return make_error<Failure>("cannot create target asm parser");
