@@ -1122,18 +1122,16 @@ void IoChecker::CheckForUselessIomsg() const {
 using VisitedSymbolSet = std::unordered_set<const Symbol *>;
 
 // Seeks out an allocatable or pointer ultimate component that is not
-// nested in a nonallocatable/nonpointer component with a specific
-// defined I/O procedure.  The inProgress set tracks derived types
-// currently on the recursion path to break cycles caused by an illegal
-// recursive type definition (F2023 C749) that has already been
-// diagnosed but whose offending component is still in the symbol table.
+// nested in a nonallocatable/nonpointer component with a specific defined I/O
+// procedure. The 'visited' set tracks derived types to break cycles caused by
+// an illegal recursive type definition (F2023 C749).
 static const Symbol *FindUnsafeIoDirectComponent(common::DefinedIo which,
     const DerivedTypeSpec &derived, const Scope &scope,
-    VisitedSymbolSet &inProgress) {
+    VisitedSymbolSet &visited) {
   if (HasDefinedIo(which, derived, &scope)) {
     return nullptr;
   }
-  if (!inProgress.insert(&derived.typeSymbol()).second) {
+  if (!visited.insert(&derived.typeSymbol()).second) {
     return nullptr;
   }
   if (const Scope * dtScope{derived.scope()}) {
@@ -1147,7 +1145,7 @@ static const Symbol *FindUnsafeIoDirectComponent(common::DefinedIo which,
           if (type->category() == DeclTypeSpec::Category::TypeDerived) {
             const DerivedTypeSpec &componentDerived{type->derivedTypeSpec()};
             if (const Symbol *bad{FindUnsafeIoDirectComponent(
-                    which, componentDerived, scope, inProgress)}) {
+                    which, componentDerived, scope, visited)}) {
               return bad;
             }
           }
@@ -1160,18 +1158,18 @@ static const Symbol *FindUnsafeIoDirectComponent(common::DefinedIo which,
 
 static const Symbol *FindUnsafeIoDirectComponent(common::DefinedIo which,
     const DerivedTypeSpec &derived, const Scope &scope) {
-  VisitedSymbolSet inProgress;
-  return FindUnsafeIoDirectComponent(which, derived, scope, inProgress);
+  VisitedSymbolSet visited;
+  return FindUnsafeIoDirectComponent(which, derived, scope, visited);
 }
 
 // For a type that does not have a defined I/O subroutine, finds a direct
 // component that is a witness to an accessibility violation outside the module
-// in which the type was defined.  See FindUnsafeIoDirectComponent for the
-// purpose of inProgress.
+// in which the type was defined.  The 'visited' set tracks derived types to
+// break cycles caused by an illegal recursive type definition (F2023 C749).
 static const Symbol *FindInaccessibleComponent(common::DefinedIo which,
     const DerivedTypeSpec &derived, const Scope &scope,
-    VisitedSymbolSet &inProgress) {
-  if (!inProgress.insert(&derived.typeSymbol()).second) {
+    VisitedSymbolSet &visited) {
+  if (!visited.insert(&derived.typeSymbol()).second) {
     return nullptr;
   }
   if (const Scope * dtScope{derived.scope()}) {
@@ -1200,7 +1198,7 @@ static const Symbol *FindInaccessibleComponent(common::DefinedIo which,
           }
           if (componentDerived) {
             if (const Symbol *bad{FindInaccessibleComponent(
-                    which, *componentDerived, scope, inProgress)}) {
+                    which, *componentDerived, scope, visited)}) {
               return bad;
             }
           }
@@ -1213,8 +1211,8 @@ static const Symbol *FindInaccessibleComponent(common::DefinedIo which,
 
 static const Symbol *FindInaccessibleComponent(common::DefinedIo which,
     const DerivedTypeSpec &derived, const Scope &scope) {
-  VisitedSymbolSet inProgress;
-  return FindInaccessibleComponent(which, derived, scope, inProgress);
+  VisitedSymbolSet visited;
+  return FindInaccessibleComponent(which, derived, scope, visited);
 }
 
 // Fortran 2018, 12.6.3 paragraphs 5 & 7
