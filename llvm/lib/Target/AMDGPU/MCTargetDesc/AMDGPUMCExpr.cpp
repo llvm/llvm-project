@@ -200,16 +200,12 @@ static unsigned getInstPrefSizeFieldWidth(const MCSubtargetInfo *STI) {
 
 bool AMDGPUMCExpr::evaluateInstPrefSize(MCValue &Res,
                                         const MCAssembler *Asm) const {
-  assert(Args.size() == 1 &&
-         "AMDGPUMCExpr Argument count incorrect for InstPrefSize");
-
   uint64_t CodeSizeInBytes = 0;
   if (!evaluateMCExprs(Args, Asm, {CodeSizeInBytes}))
     return false;
   const MCSubtargetInfo *STI = Ctx.getSubtargetInfo();
   unsigned FieldWidth = getInstPrefSizeFieldWidth(STI);
-  // All targets with inst_pref_size (GFX11+) have 128-byte cache lines.
-  constexpr unsigned CacheLineSize = 128;
+  unsigned CacheLineSize = AMDGPU::IsaInfo::getInstCacheLineSize(STI);
   uint64_t CodeSizeInLines = divideCeil(CodeSizeInBytes, CacheLineSize);
   uint64_t MaxVal = (1u << FieldWidth) - 1;
   Res = MCValue::get(std::min(CodeSizeInLines, MaxVal));
@@ -525,7 +521,7 @@ static void targetOpKnownBitsMapHelper(const MCExpr *Expr, KnownBitsMap &KBM,
       if (const MCSubtargetInfo *STI = AGVK->getCtx().getSubtargetInfo()) {
         unsigned FieldWidth = getInstPrefSizeFieldWidth(STI);
         KnownBits KB(BitWidth);
-        KB.Zero.setHighBits(BitWidth - FieldWidth);
+        KB.Zero.setBitsFrom(FieldWidth);
         KBM[Expr] = KB;
         return;
       }
