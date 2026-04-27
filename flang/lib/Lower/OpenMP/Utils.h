@@ -14,6 +14,7 @@
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Value.h"
+#include "llvm/Frontend/OpenMP/OMPContext.h"
 #include "llvm/Support/CommandLine.h"
 #include <cstdint>
 #include <optional>
@@ -228,6 +229,19 @@ mlir::Value genIteratorCoordinate(Fortran::lower::AbstractConverter &converter,
 std::optional<llvm::SmallVector<mlir::Value>> getIteratorElementIndices(
     Fortran::lower::AbstractConverter &converter, const omp::Object &object,
     Fortran::lower::StatementContext &stmtCtx, mlir::Location loc);
+
+llvm::omp::TraitSet
+mapTraitSet(parser::OmpTraitSetSelectorName::Value flangSet);
+
+llvm::omp::TraitSelector
+mapTraitSelector(const parser::OmpTraitSelectorName &name,
+                 llvm::omp::TraitSet set);
+
+void makeVariantMatchInfo(llvm::omp::VariantMatchInfo &vmi,
+                          const parser::modifier::OmpContextSelector &ctxSel,
+                          semantics::SemanticsContext &semaCtx,
+                          mlir::Location loc,
+                          const parser::ScalarExpr *&dynamicCondExpr);
 
 } // namespace omp
 } // namespace lower
