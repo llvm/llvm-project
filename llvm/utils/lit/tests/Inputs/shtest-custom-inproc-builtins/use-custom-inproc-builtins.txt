@@ -1,0 +1,13 @@
+RUN: returns_0
+RUN: not returns_1
+
+RUN: custom_echo "hello" > %t1
+RUN: grep -x "hello" < %t1
+
+RUN: custom_echo ", world" >> %t1
+RUN: grep -x "hello, world" < %t1
+
+RUN: echo_to_stderr "goodbye" 2> %t2
+RUN: grep -x "goodbye" < %t2
+RUN: echo_to_stderr ", for now" 2>> %t2
+RUN: grep -x "goodbye, for now" < %t2
