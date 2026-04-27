@@ -21752,9 +21752,11 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
       }
     }
     if (!GatherShuffles.empty()) {
-      unsigned SliceSize = getPartNumElems(
-          E->Scalars.size(),
-          ::getNumberOfParts(*TTI, VecTy, ScalarTy, E->Scalars.size()));
+      unsigned SliceSize = getPartNumElems(VF, NumParts);
+      if (Mask.size() == E->Scalars.size())
+        SliceSize = getPartNumElems(
+            E->Scalars.size(),
+            ::getNumberOfParts(*TTI, VecTy, ScalarTy, E->Scalars.size()));
       SmallVector<int> VecMask(Mask.size(), PoisonMaskElem);
       for (const auto [I, TEs] : enumerate(Entries)) {
         if (TEs.empty()) {
