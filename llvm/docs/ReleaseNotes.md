@@ -69,6 +69,15 @@ Changes to the LLVM IR
 * The `"nooutline"` attribute is now writen as `nooutline`. Existing IR and
   bitcode will be automatically updated.
 
+* LLVM IR floating-point literals have greatly changed:
+
+  * The old hexadecimal bitwise representation is deprecated and will be removed
+    in the next revision. It is replaced with a unified `f0x` prefix.
+
+  * Hexadecimal literals akin to C99's syntax are supported.
+
+  * Special values for infinities and NaNs, including NaN payloads, are added.
+
 Changes to LLVM infrastructure
 ------------------------------
 
