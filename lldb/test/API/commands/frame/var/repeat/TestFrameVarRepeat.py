@@ -12,23 +12,23 @@ class TestCase(TestBase):
             self, "break here", lldb.SBFileSpec("main.cpp")
         )
 
-        # Start with --depth 2 showing a, b, and c, but but not d.
+        # Start with --depth 2, shows a, b, and c, but but not d.
         self.expect(
             "frame variable --depth 2 a",
             inHistory=True,
             patterns=[r"\(A\) a = {", "b = {", "c = {", r"(?!.*d = {)"],
         )
 
-        # First repeat: --depth 4, showing d, but not e.
+        # First repeat: shows d, but not e.
         self.expect("", patterns=["d = {", "(?!.*e = {)"])
 
-        # Second repeat: --depth 5, showing e, but not f.
+        # Second repeat: shows e, but not f.
         self.expect("", patterns=["e = {", "(?!.*f = {)"])
 
-        # Third repeat: --depth 6, showing d, but not f.
-        self.expect("", patterns=["e = {", "(?!.*leaf = 42)"])
+        # Third repeat: shows f, but not leaf.
+        self.expect("", patterns=["f = {", "(?!.*leaf = 42)"])
 
-        # Fourth repeat: --depth 7, showing leaf, the deepest child.
+        # Fourth repeat: shows leaf, the deepest child.
         self.expect("", substrs=["leaf = 42"])
 
     def test_default_depth(self):
@@ -45,5 +45,5 @@ class TestCase(TestBase):
             patterns=[r"f = \{...\}", r"(?!.*leaf = 42)"],
         )
 
-        # Repeat
+        # Repeat to show leaf.
         self.expect("", substrs=["leaf = 42"])
