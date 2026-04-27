@@ -1,8 +1,8 @@
 // Normally this file can't be compiled due to
 // nullptr cast in offset calculation
-// RUN: not %clang_cc1 -ast-dump  %s -o - 2>&1 | FileCheck %s --check-prefix=AST-ORIG
+// RUN: not %clang_cc1 -triple x86_64-pc-win32 -ast-dump  %s -o - 2>&1 | FileCheck %s --check-prefix=AST-ORIG
 // Kernel variant works OK.
-// RUN: %clang_cc1 -fms-kernel -ast-dump  %s -o - | FileCheck %s --check-prefix=AST-NEW
+// RUN: %clang_cc1 -triple x86_64-pc-win32 -fms-kernel -ast-dump  %s -o - | FileCheck %s --check-prefix=AST-NEW
 
 // AST-ORIG: error: constexpr function never produces a constant expression [-Winvalid-constexpr]
 // AST-ORIG: FunctionDecl
@@ -39,7 +39,6 @@
 // AST-NEW-NEXT: ParenExpr
 // AST-NEW-NEXT: DeclRefExpr
 // AST-NEW-NEXT: CStyleCastExpr
-// AST-NEW-NEXT: ImplicitCastExpr
 // AST-NEW-NEXT: OffsetOfExpr
 
 typedef char* PCHAR;
