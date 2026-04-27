@@ -388,93 +388,94 @@ unsigned encodeXSfmmVType(unsigned SEW, unsigned Widen, bool AltFmt) {
   return VTypeI;
 }
 
-static void assertValidXLenForIMEVType(unsigned XLen) {
+namespace IME {
+static void assertValidXLenForVType(unsigned XLen) {
   assert((XLen == 32 || XLen == 64) && "Invalid XLEN");
 }
 
-static unsigned getIMELambdaShift(unsigned XLen) {
-  assertValidXLenForIMEVType(XLen);
+static unsigned getLambdaShift(unsigned XLen) {
+  assertValidXLenForVType(XLen);
   return XLen - 4;
 }
 
-static unsigned getIMEAltFmtAShift(unsigned XLen) {
-  assertValidXLenForIMEVType(XLen);
+static unsigned getAltFmtAShift(unsigned XLen) {
+  assertValidXLenForVType(XLen);
   return XLen - 5;
 }
 
-static unsigned getIMEAltFmtBShift(unsigned XLen) {
-  assertValidXLenForIMEVType(XLen);
+static unsigned getAltFmtBShift(unsigned XLen) {
+  assertValidXLenForVType(XLen);
   return XLen - 6;
 }
 
-static unsigned getIMEBSShift(unsigned XLen) {
-  assertValidXLenForIMEVType(XLen);
+static unsigned getBSShift(unsigned XLen) {
+  assertValidXLenForVType(XLen);
   return XLen - 7;
 }
 
-unsigned encodeIMELambda(unsigned Lambda) {
-  assert(isValidIMELambda(Lambda) && "Invalid IME lambda");
+unsigned encodeLambda(unsigned Lambda) {
+  assert(isValidLambda(Lambda) && "Invalid IME lambda");
   if (Lambda == 0)
     return 0;
   return Log2_32(Lambda) + 1;
 }
 
-std::optional<unsigned> decodeIMELambda(unsigned Encoding) {
+std::optional<unsigned> decodeLambda(unsigned Encoding) {
   assert(Encoding < 8 && "Invalid IME lambda encoding");
   if (Encoding == 0)
     return std::nullopt;
   return 1U << (Encoding - 1);
 }
 
-uint64_t getIMEVTypeFieldsMask(unsigned XLen) {
-  assertValidXLenForIMEVType(XLen);
-  return (0x7ULL << getIMELambdaShift(XLen)) |
-         (1ULL << getIMEAltFmtAShift(XLen)) |
-         (1ULL << getIMEAltFmtBShift(XLen)) | (1ULL << getIMEBSShift(XLen));
+uint64_t getVTypeFieldsMask(unsigned XLen) {
+  assertValidXLenForVType(XLen);
+  return (0x7ULL << getLambdaShift(XLen)) | (1ULL << getAltFmtAShift(XLen)) |
+         (1ULL << getAltFmtBShift(XLen)) | (1ULL << getBSShift(XLen));
 }
 
-uint64_t encodeIMEVTypeFields(unsigned XLen, unsigned Lambda, bool AltFmtA,
-                              bool AltFmtB, bool BlockSize16) {
-  assertValidXLenForIMEVType(XLen);
-  uint64_t VType = uint64_t(encodeIMELambda(Lambda)) << getIMELambdaShift(XLen);
+uint64_t encodeVTypeFields(unsigned XLen, unsigned Lambda, bool AltFmtA,
+                           bool AltFmtB, bool BlockSize16) {
+  assertValidXLenForVType(XLen);
+  uint64_t VType = uint64_t(encodeLambda(Lambda)) << getLambdaShift(XLen);
   if (AltFmtA)
-    VType |= 1ULL << getIMEAltFmtAShift(XLen);
+    VType |= 1ULL << getAltFmtAShift(XLen);
   if (AltFmtB)
-    VType |= 1ULL << getIMEAltFmtBShift(XLen);
+    VType |= 1ULL << getAltFmtBShift(XLen);
   if (BlockSize16)
-    VType |= 1ULL << getIMEBSShift(XLen);
+    VType |= 1ULL << getBSShift(XLen);
   return VType;
 }
 
-uint64_t addIMEVTypeFields(uint64_t VType, unsigned XLen, unsigned Lambda,
-                           bool AltFmtA, bool AltFmtB, bool BlockSize16) {
-  return (VType & ~getIMEVTypeFieldsMask(XLen)) |
-         encodeIMEVTypeFields(XLen, Lambda, AltFmtA, AltFmtB, BlockSize16);
+uint64_t addVTypeFields(uint64_t VType, unsigned XLen, unsigned Lambda,
+                        bool AltFmtA, bool AltFmtB, bool BlockSize16) {
+  return (VType & ~getVTypeFieldsMask(XLen)) |
+         encodeVTypeFields(XLen, Lambda, AltFmtA, AltFmtB, BlockSize16);
 }
 
-unsigned getIMELambdaEncoding(uint64_t VType, unsigned XLen) {
-  assertValidXLenForIMEVType(XLen);
-  return (VType >> getIMELambdaShift(XLen)) & 0x7;
+unsigned getLambdaEncoding(uint64_t VType, unsigned XLen) {
+  assertValidXLenForVType(XLen);
+  return (VType >> getLambdaShift(XLen)) & 0x7;
 }
 
-std::optional<unsigned> getIMELambda(uint64_t VType, unsigned XLen) {
-  return decodeIMELambda(getIMELambdaEncoding(VType, XLen));
+std::optional<unsigned> getLambda(uint64_t VType, unsigned XLen) {
+  return decodeLambda(getLambdaEncoding(VType, XLen));
 }
 
-bool isIMEAltFmtA(uint64_t VType, unsigned XLen) {
-  assertValidXLenForIMEVType(XLen);
-  return VType & (1ULL << getIMEAltFmtAShift(XLen));
+bool isAltFmtA(uint64_t VType, unsigned XLen) {
+  assertValidXLenForVType(XLen);
+  return VType & (1ULL << getAltFmtAShift(XLen));
 }
 
-bool isIMEAltFmtB(uint64_t VType, unsigned XLen) {
-  assertValidXLenForIMEVType(XLen);
-  return VType & (1ULL << getIMEAltFmtBShift(XLen));
+bool isAltFmtB(uint64_t VType, unsigned XLen) {
+  assertValidXLenForVType(XLen);
+  return VType & (1ULL << getAltFmtBShift(XLen));
 }
 
-bool isIMEBlockSize16(uint64_t VType, unsigned XLen) {
-  assertValidXLenForIMEVType(XLen);
-  return VType & (1ULL << getIMEBSShift(XLen));
+bool isBlockSize16(uint64_t VType, unsigned XLen) {
+  assertValidXLenForVType(XLen);
+  return VType & (1ULL << getBSShift(XLen));
 }
+} // namespace IME
 
 std::pair<unsigned, bool> decodeVLMUL(VLMUL VLMul) {
   switch (VLMul) {

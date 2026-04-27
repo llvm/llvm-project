@@ -1,4 +1,4 @@
-//===---- RISCVInstrInfoZvvmm.td - 'Zvvmm' instructions -*- tablegen -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -30,20 +30,8 @@ class VIMEMACVV<bits<6> funct6, string opcodestr>
 }
 
 let Predicates = [HasStdExtZvvmm] in {
-  def VMMACC_VV
-      : VIMEMACVV<0b111000, "vmmacc.vv">,
-        SchedTernaryMC<"WriteVIMulAddV", "ReadVIMulAddV", "ReadVIMulAddV",
-                       "ReadVIMulAddV", forceMasked=0>;
-  def VWMMACC_VV
-      : VIMEMACVV<0b111001, "vwmmacc.vv">,
-        SchedTernaryMC<"WriteVIWMulAddV", "ReadVIWMulAddV", "ReadVIWMulAddV",
-                       "ReadVIWMulAddV", forceMasked=0>;
-  def VQMMACC_VV
-      : VIMEMACVV<0b111010, "vqmmacc.vv">,
-        SchedTernaryMC<"WriteVIWMulAddV", "ReadVIWMulAddV", "ReadVIWMulAddV",
-                       "ReadVIWMulAddV", forceMasked=0>;
-  def V8WMMACC_VV
-      : VIMEMACVV<0b111011, "v8wmmacc.vv">,
-        SchedTernaryMC<"WriteVIWMulAddV", "ReadVIWMulAddV", "ReadVIWMulAddV",
-                       "ReadVIWMulAddV", forceMasked=0>;
+  def VMMACC_VV : VIMEMACVV<0b111000, "vmmacc.vv">;
+  def VWMMACC_VV : VIMEMACVV<0b111001, "vwmmacc.vv">;
+  def VQMMACC_VV : VIMEMACVV<0b111010, "vqmmacc.vv">;
+  def V8WMMACC_VV : VIMEMACVV<0b111011, "v8wmmacc.vv">;
 } // Predicates = [HasStdExtZvvmm]
