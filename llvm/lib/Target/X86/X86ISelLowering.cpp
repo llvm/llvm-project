@@ -39041,61 +39041,38 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     KnownBits Res(BitWidth);
     Res.resetAll();
 
-    bool HaveAny = false;
+    KnownBits InputKnown = DAG.computeKnownBits(Input, DemandedElts, Depth + 1);
 
-    for (unsigned Elt = 0; Elt != NumElts; ++Elt) {
-      if (!DemandedElts[Elt])
+    APInt KnownMask = InputKnown.Zero | InputKnown.One;
+
+    for (unsigned OutBit = 0; OutBit != 8; ++OutBit) {
+      unsigned RowIdx = 7 - OutBit;
+
+      APInt RowDemandedElts = APInt::getSplat(NumElts, APInt(8, 1u << RowIdx));
+
+      KnownBits RowKnown =
+          DAG.computeKnownBits(Matrix, RowDemandedElts, Depth + 1);
+
+      if (!RowKnown.isConstant())
         continue;
 
-      APInt SingleElt = APInt::getOneBitSet(NumElts, Elt);
-      KnownBits InputKnown = DAG.computeKnownBits(Input, SingleElt, Depth + 1);
+      uint8_t Row = RowKnown.getConstant().getZExtValue();
+      APInt RowMask(BitWidth, Row);
 
-      KnownBits EltKnown(BitWidth);
-      EltKnown.resetAll();
+      if (!(RowMask & ~KnownMask).isZero())
+        continue;
 
-      APInt KnownMask = InputKnown.Zero | InputKnown.One;
+      uint8_t Bits = (InputKnown.One & RowMask).getZExtValue();
+      bool Parity = llvm::popcount(Bits) & 1;
+      bool FinalBit = Parity ^ ((Imm8 >> OutBit) & 1);
 
-      for (unsigned OutBit = 0; OutBit != 8; ++OutBit) {
-        unsigned MatIdx = (Elt / 8) * 8 + (7 - OutBit);
-        if (MatIdx >= NumElts)
-          continue;
-
-        APInt SingleMat = APInt::getOneBitSet(NumElts, MatIdx);
-        KnownBits MatrixKnown =
-            DAG.computeKnownBits(Matrix, SingleMat, Depth + 1);
-
-        if (!MatrixKnown.isConstant())
-          continue;
-
-        uint8_t Row = MatrixKnown.getConstant().getZExtValue();
-        APInt RowMask(BitWidth, Row);
-
-        if (!(RowMask & ~KnownMask).isZero())
-          continue;
-
-        uint8_t Bits = (InputKnown.One & RowMask).getZExtValue();
-
-        bool Parity = llvm::popcount(Bits) & 1;
-        bool FinalBit = Parity ^ ((Imm8 >> OutBit) & 1);
-
-        if (FinalBit)
-          EltKnown.One.setBit(OutBit);
-        else
-          EltKnown.Zero.setBit(OutBit);
-      }
-
-      if (!HaveAny) {
-        Res = EltKnown;
-        HaveAny = true;
-      } else {
-        Res.One &= EltKnown.One;
-        Res.Zero &= EltKnown.Zero;
-      }
+      if (FinalBit)
+        Res.One.setBit(OutBit);
+      else
+        Res.Zero.setBit(OutBit);
     }
 
-    if (HaveAny)
-      Known = Res;
-
+    Known = Res;
     break;
   }
   case X86ISD::MUL_IMM: {
