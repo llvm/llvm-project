@@ -26527,19 +26527,6 @@ public:
     }
   }
 
-  /// Remove all stores that have been vectorized from this group.
-  void clearVectorizedStores(const BoUpSLP::ValueSet &VectorizedStores) {
-    DistToInstMap::reverse_iterator LastVectorizedStore = find_if(
-        reverse(Instrs), [&](const std::pair<int64_t, unsigned> &DistAndIdx) {
-          return VectorizedStores.contains(AllStores[DistAndIdx.second]);
-        });
-
-    // Get a forward iterator pointing after the last vectorized store and erase
-    // all stores before it so we don't try to vectorize them again.
-    DistToInstMap::iterator VectorizedStoresEnd = LastVectorizedStore.base();
-    Instrs.erase(Instrs.begin(), VectorizedStoresEnd);
-  }
-
 private:
   /// The index of the Base instruction, i.e. the one with a 0 pointer distance.
   unsigned BaseInstrIdx;
@@ -26734,7 +26721,6 @@ bool SLPVectorizerPass::vectorizeStores(
     if (std::optional<unsigned> PrevInst =
             RelatedStores->insertOrLookup(Idx, *PtrDist)) {
       ExtendOperands(RelatedStores->getStores());
-      RelatedStores->clearVectorizedStores(VectorizedStores);
       RelatedStores->rebase(/*MinSafeIdx=*/*PrevInst + 1,
                             /*NewBaseInstIdx=*/Idx,
                             /*DistFromCurBase=*/*PtrDist);
