@@ -863,6 +863,8 @@ private:
   SDValue ScalarizeVecRes_FIX(SDNode *N);
   SDValue ScalarizeVecRes_UnaryOpWithTwoResults(SDNode *N, unsigned ResNo);
 
+  SDValue ScalarizeVecRes_INTRINSIC(SDNode *N);
+
   // Vector Operand Scalarization: <1 x ty> -> ty.
   bool ScalarizeVectorOperand(SDNode *N, unsigned OpNo);
   SDValue ScalarizeVecOp_BITCAST(SDNode *N);
@@ -901,6 +903,8 @@ private:
   /// elements of Op, and Hi to the last 4 elements.
   void GetSplitVector(SDValue Op, SDValue &Lo, SDValue &Hi);
   void SetSplitVector(SDValue Op, SDValue Lo, SDValue Hi);
+
+  bool CanSplitVectorIntrinsic(const SDNode *N);
 
   /// Split mask operator of a VP intrinsic.
   std::pair<SDValue, SDValue> SplitMask(SDValue Mask);
@@ -965,6 +969,7 @@ private:
   void SplitVecRes_VP_REVERSE(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_PARTIAL_REDUCE_MLA(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_GET_ACTIVE_LANE_MASK(SDNode *N, SDValue &Lo, SDValue &Hi);
+  void SplitVecRes_INTRINSIC(SDNode *N, SDValue &Lo, SDValue &Hi);
 
   // Vector Operand Splitting: <128 x ty> -> 2 x <64 x ty>.
   bool SplitVectorOperand(SDNode *N, unsigned OpNo);

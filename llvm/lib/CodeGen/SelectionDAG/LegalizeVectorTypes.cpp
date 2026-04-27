@@ -256,6 +256,12 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::UDIVFIXSAT:
     R = ScalarizeVecRes_FIX(N);
     break;
+
+  case ISD::INTRINSIC_WO_CHAIN:
+  case ISD::INTRINSIC_W_CHAIN:
+  case ISD::INTRINSIC_VOID:
+    R = ScalarizeVecRes_INTRINSIC(N);
+    break;
   }
 
   // If R is null, the sub-method took care of registering the result.
@@ -827,6 +833,89 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_IS_FPCLASS(SDNode *N) {
   ISD::NodeType ExtendCode =
       TargetLowering::getExtendForContent(TLI.getBooleanContents(ArgVT));
   return DAG.getNode(ExtendCode, DL, ResultVT, Res);
+}
+
+bool DAGTypeLegalizer::CanSplitVectorIntrinsic(const SDNode *N) {
+  unsigned ConstIdx = N->getOpcode() == ISD::INTRINSIC_WO_CHAIN ? 0 : 1;
+  unsigned IntrinsicID = N->getConstantOperandVal(ConstIdx);
+
+  // Analyze the intrinsic signature. If there is one unique vector type used
+  // between all the operands and results, we can split.
+  SmallVector<Intrinsic::IITDescriptor> Descriptors;
+  Intrinsic::getIntrinsicInfoTableEntries(IntrinsicID, Descriptors);
+
+  auto GetOpVT = [&](unsigned I) -> EVT {
+    switch (N->getOpcode()) {
+    case ISD::INTRINSIC_WO_CHAIN:
+      return I < N->getNumValues()
+                 ? N->getValueType(I)
+                 : N->getOperand(I - N->getNumValues()).getValueType();
+    case ISD::INTRINSIC_W_CHAIN:
+      return I < N->getNumValues() - 1
+                 ? N->getValueType(I)
+                 : N->getOperand(I - N->getNumValues() + 1).getValueType();
+    case ISD::INTRINSIC_VOID:
+      return N->getOperand(I).getValueType();
+    default:
+      llvm_unreachable("Expected intrinsic opcode");
+    }
+  };
+
+  std::optional<EVT> SeenVecVT;
+  for (auto [I, OperandDesc] : enumerate(Descriptors)) {
+    EVT OpVT = GetOpVT(I);
+
+    if (!OpVT.isVector())
+      continue;
+
+    // All vector types must be equal to VT. Furthermore, we must see at most
+    // one T that is not a LLVMMatchType for VT, otherwise we can't be sure how
+    // to split this intrinsic.
+    switch (OperandDesc.Kind) {
+    case Intrinsic::IITDescriptor::Overloaded:
+      if (OperandDesc.getOverloadKind() ==
+          Intrinsic::IITDescriptor::AK_MatchType)
+        if (OperandDesc.getOverloadIndex() != 0) {
+          DAG.getContext()->emitError(
+              Twine("Can't expand. Intrinsic must have a single overloaded "
+                    "vector type: ") +
+              N->getOperationName(&DAG));
+          return false;
+        }
+      break;
+    default:
+      break;
+    }
+
+    if (SeenVecVT && OpVT != SeenVecVT) {
+      DAG.getContext()->emitError(
+          Twine("Can't expand. Intrinsic has a non-overloaded vector type: ") +
+          N->getOperationName(&DAG));
+      return false;
+    }
+
+    SeenVecVT = OpVT;
+  }
+
+  return true;
+}
+
+SDValue DAGTypeLegalizer::ScalarizeVecRes_INTRINSIC(SDNode *N) {
+  if (!CanSplitVectorIntrinsic(N))
+    return SDValue();
+
+  SmallVector<SDValue> ScalarOps(map_range(N->ops(), [&](const SDValue &Op) {
+    if (EVT VT = Op.getValueType(); VT.isVector())
+      return DAG.getExtractVectorElt(SDLoc(N), VT.getVectorElementType(), Op,
+                                     0);
+    return Op;
+  }));
+
+  SmallVector<EVT> ScalarVTs(map_range(N->values(), [](EVT VT) {
+    return VT.isVector() ? VT.getVectorElementType() : VT;
+  }));
+
+  return DAG.getNode(N->getOpcode(), SDLoc(N), ScalarVTs, ScalarOps);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1614,6 +1703,12 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
     break;
   case ISD::GET_ACTIVE_LANE_MASK:
     SplitVecRes_GET_ACTIVE_LANE_MASK(N, Lo, Hi);
+    break;
+
+  case ISD::INTRINSIC_WO_CHAIN:
+  case ISD::INTRINSIC_W_CHAIN:
+  case ISD::INTRINSIC_VOID:
+    SplitVecRes_INTRINSIC(N, Lo, Hi);
     break;
   }
 
@@ -3667,6 +3762,39 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_INTERLEAVE(SDNode *N) {
     SetSplitVector(SDValue(N, i), Res[IdxLo / Factor].getValue(IdxLo % Factor),
                    Res[IdxHi / Factor].getValue(IdxHi % Factor));
   }
+}
+
+void DAGTypeLegalizer::SplitVecRes_INTRINSIC(SDNode *N, SDValue &Lo,
+                                             SDValue &Hi) {
+  if (!CanSplitVectorIntrinsic(N))
+    return;
+
+  SmallVector<SDValue> Operands1, Operands2;
+  for (auto [I, Op] : enumerate(N->ops())) {
+    if (auto OpVT = Op.getValueType(); OpVT.isVector()) {
+      auto [OpLeft, OpRight] = DAG.SplitVectorOperand(N, I);
+      Operands1.push_back(OpLeft);
+      Operands2.push_back(OpRight);
+    } else {
+      Operands1.push_back(Op);
+      Operands2.push_back(Op);
+    }
+  }
+
+  SmallVector<EVT> ResultVTs1, ResultVTs2;
+  for (auto [I, RVT] : enumerate(N->values())) {
+    if (RVT.isVector()) {
+      auto [VTLeft, VTRight] = DAG.GetSplitDestVTs(RVT);
+      ResultVTs1.push_back(VTLeft);
+      ResultVTs2.push_back(VTRight);
+    } else {
+      ResultVTs1.push_back(RVT);
+      ResultVTs2.push_back(RVT);
+    }
+  }
+
+  Lo = DAG.getNode(N->getOpcode(), SDLoc(N), ResultVTs1, Operands1);
+  Hi = DAG.getNode(N->getOpcode(), SDLoc(N), ResultVTs2, Operands2);
 }
 
 //===----------------------------------------------------------------------===//

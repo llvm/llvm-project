@@ -1299,6 +1299,33 @@ public:
     return OpActions[(unsigned)VT.getSimpleVT().SimpleTy][Op];
   }
 
+  /// Same as getOperationAction(), but for an intrinsic.
+  std::optional<LegalizeAction> getIntrinsicAction(Intrinsic::ID ID,
+                                                   EVT VT) const {
+    if (VT.isExtended())
+      return Expand;
+    auto Key = std::make_pair(VT.getSimpleVT().SimpleTy, ID);
+    if (auto It = IntrinsicActions.find(Key); It != IntrinsicActions.end())
+      return It->second;
+    return std::nullopt;
+  }
+
+  LegalizeAction getOperationAction(const SDNode *N, EVT VT) const {
+    switch (N->getOpcode()) {
+    case ISD::INTRINSIC_VOID:
+    case ISD::INTRINSIC_W_CHAIN:
+    case ISD::INTRINSIC_WO_CHAIN: {
+      unsigned ConstIdx = N->getOpcode() == ISD::INTRINSIC_WO_CHAIN ? 0 : 1;
+      if (auto Action =
+              getIntrinsicAction(N->getConstantOperandVal(ConstIdx), VT))
+        return *Action;
+    }
+      [[fallthrough]];
+    default:
+      return getOperationAction(N->getOpcode(), VT);
+    }
+  }
+
   /// Custom method defined by each target to indicate if an operation which
   /// may require a scale is supported natively by the target.
   /// If not, the operation is illegal.
@@ -2717,6 +2744,20 @@ protected:
       setOperationAction(Ops, VT, Action);
   }
 
+  void setIntrinsicAction(Intrinsic::ID ID, MVT VT, LegalizeAction Action) {
+    IntrinsicActions[{VT.SimpleTy, ID}] = Action;
+  }
+  void setIntrinsicAction(ArrayRef<Intrinsic::ID> IDs, MVT VT,
+                          LegalizeAction Action) {
+    for (auto ID : IDs)
+      setIntrinsicAction(ID, VT, Action);
+  }
+  void setIntrinsicAction(ArrayRef<Intrinsic::ID> IDs, ArrayRef<MVT> VTs,
+                          LegalizeAction Action) {
+    for (auto VT : VTs)
+      setIntrinsicAction(IDs, VT, Action);
+  }
+
   /// Indicate that the specified load with extension does not work with the
   /// specified type and indicate what to do about it.
   void setLoadExtAction(unsigned ExtType, MVT ValVT, MVT MemVT,
@@ -3851,6 +3892,11 @@ private:
   /// operations that are not should be described.  Note that operations on
   /// non-legal value types are not described here.
   LegalizeAction OpActions[MVT::VALUETYPE_SIZE][ISD::BUILTIN_OP_END];
+
+  /// Like OpActions but for intrinsics. Entries are optional. Will defer to
+  /// OpActions for the ISD intrinsic wrapper if not present.
+  SmallDenseMap<std::pair<MVT::SimpleValueType, Intrinsic::ID>, LegalizeAction>
+      IntrinsicActions;
 
   /// For each load extension type and each value type, keep a LegalizeAction
   /// that indicates how instruction selection should deal with a load of a

@@ -922,7 +922,7 @@ SDValue DAGTypeLegalizer::CreateStackStoreLoad(SDValue Op,
 /// illegal ResNo in that case.
 bool DAGTypeLegalizer::CustomLowerNode(SDNode *N, EVT VT, bool LegalizeResult) {
   // See if the target wants to custom lower this node.
-  if (TLI.getOperationAction(N->getOpcode(), VT) != TargetLowering::Custom)
+  if (TLI.getOperationAction(N, VT) != TargetLowering::Custom)
     return false;
 
   SmallVector<SDValue, 8> Results;
@@ -944,12 +944,11 @@ bool DAGTypeLegalizer::CustomLowerNode(SDNode *N, EVT VT, bool LegalizeResult) {
   return true;
 }
 
-
 /// Widen the node's results with custom code provided by the target and return
 /// "true", or do nothing and return "false".
 bool DAGTypeLegalizer::CustomWidenLowerNode(SDNode *N, EVT VT) {
   // See if the target wants to custom lower this node.
-  if (TLI.getOperationAction(N->getOpcode(), VT) != TargetLowering::Custom)
+  if (TLI.getOperationAction(N, VT) != TargetLowering::Custom)
     return false;
 
   SmallVector<SDValue, 8> Results;

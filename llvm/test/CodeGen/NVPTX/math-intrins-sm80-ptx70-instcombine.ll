@@ -73,7 +73,7 @@ define <2 x half> @fmin_ftz_f16x2(<2 x half> %0, <2 x half> %1) #0 {
 ; CHECK-LABEL: fmin_ftz_f16x2_no_attr
 define <2 x half> @fmin_ftz_f16x2_no_attr(<2 x half> %0, <2 x half> %1) {
   ; CHECK-NOT: @llvm.minimumnum.v2f16
-  ; CHECK: @llvm.nvvm.fmin.ftz.f16x2
+  ; CHECK: @llvm.nvvm.fmin.ftz.v2f16
   %res = call <2 x half> @llvm.nvvm.fmin.ftz.f16x2(<2 x half> %0, <2 x half> %1)
   ret <2 x half> %res
 }
@@ -96,7 +96,7 @@ define float @fmin_ftz_nan_f(float %0, float %1) #1 {
 
 ; CHECK-LABEL: fmin_ftz_nan_f_no_attr
 define float @fmin_ftz_nan_f_no_attr(float %0, float %1) {
-  ; CHECK: @llvm.nvvm.fmin.ftz.nan.f
+  ; CHECK: @llvm.nvvm.fmin.ftz.nan.f32
   ; CHECK-NOT: @llvm.minimum.f32
   %res = call float @llvm.nvvm.fmin.ftz.nan.f(float %0, float %1)
   ret float %res
@@ -145,7 +145,7 @@ define <2 x half> @fmin_ftz_nan_f16x2(<2 x half> %0, <2 x half> %1) #0 {
 ; CHECK-LABEL: fmin_ftz_nan_f16x2_no_attr
 define <2 x half> @fmin_ftz_nan_f16x2_no_attr(<2 x half> %0, <2 x half> %1) {
   ; CHECK-NOT: @llvm.minimum.v2f16
-  ; CHECK: @llvm.nvvm.fmin.ftz.nan.f16x2
+  ; CHECK: @llvm.nvvm.fmin.ftz.nan.v2f16
   %res = call <2 x half> @llvm.nvvm.fmin.ftz.nan.f16x2(<2 x half> %0, <2 x half> %1)
   ret <2 x half> %res
 }
@@ -193,7 +193,7 @@ define <2 x half> @fmax_ftz_f16x2(<2 x half> %0, <2 x half> %1) #0 {
 ; CHECK-LABEL: fmax_ftz_f16x2_no_attr
 define <2 x half> @fmax_ftz_f16x2_no_attr(<2 x half> %0, <2 x half> %1) {
   ; CHECK-NOT: @llvm.maximumnum.v2f16
-  ; CHECK: @llvm.nvvm.fmax.ftz.f16x2
+  ; CHECK: @llvm.nvvm.fmax.ftz.v2f16
   %res = call <2 x half> @llvm.nvvm.fmax.ftz.f16x2(<2 x half> %0, <2 x half> %1)
   ret <2 x half> %res
 }
@@ -216,7 +216,7 @@ define float @fmax_ftz_nan_f(float %0, float %1) #1 {
 
 ; CHECK-LABEL: fmax_ftz_nan_f_no_attr
 define float @fmax_ftz_nan_f_no_attr(float %0, float %1) {
-  ; CHECK: @llvm.nvvm.fmax.ftz.nan.f
+  ; CHECK: @llvm.nvvm.fmax.ftz.nan.f32
   ; CHECK-NOT: @llvm.maximum.f32
   %res = call float @llvm.nvvm.fmax.ftz.nan.f(float %0, float %1)
   ret float %res
@@ -265,7 +265,7 @@ define <2 x half> @fmax_ftz_nan_f16x2(<2 x half> %0, <2 x half> %1) #0 {
 ; CHECK-LABEL: fmax_ftz_nan_f16x2_no_attr
 define <2 x half> @fmax_ftz_nan_f16x2_no_attr(<2 x half> %0, <2 x half> %1) {
   ; CHECK-NOT: @llvm.maximum.v2f16
-  ; CHECK: @llvm.nvvm.fmax.ftz.nan.f16x2
+  ; CHECK: @llvm.nvvm.fmax.ftz.nan.v2f16
   %res = call <2 x half> @llvm.nvvm.fmax.ftz.nan.f16x2(<2 x half> %0, <2 x half> %1)
   ret <2 x half> %res
 }

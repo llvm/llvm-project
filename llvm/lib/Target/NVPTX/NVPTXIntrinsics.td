@@ -1262,30 +1262,30 @@ foreach op = ["test_wait", "try_wait"] in {
 // max(0.0, min(x, 1.0)) is 1.0 while sat(x) is 0.
 // Same story for fmax, fmin.
 
-def : Pat<(int_nvvm_fmin_f fpimm_1,
-            (int_nvvm_fmax_f fpimm_0, f32:$a)),
+def : Pat<(f32 (int_nvvm_fmin (f32 fpimm_1),
+            (f32 (int_nvvm_fmax (f32 fpimm_0), f32:$a)))),
           (CVT_f32_f32 $a, CvtSAT)>;
-def : Pat<(int_nvvm_fmin_f fpimm_1,
-            (int_nvvm_fmax_f f32:$a, fpimm_0)),
+def : Pat<(f32 (int_nvvm_fmin (f32 fpimm_1),
+            (f32 (int_nvvm_fmax f32:$a, (f32 fpimm_0))))),
           (CVT_f32_f32 $a, CvtSAT)>;
-def : Pat<(int_nvvm_fmin_f
-            (int_nvvm_fmax_f fpimm_0, f32:$a), fpimm_1),
+def : Pat<(f32 (int_nvvm_fmin
+            (f32 (int_nvvm_fmax (f32 fpimm_0), f32:$a)), (f32 fpimm_1))),
           (CVT_f32_f32 $a, CvtSAT)>;
-def : Pat<(int_nvvm_fmin_f
-            (int_nvvm_fmax_f f32:$a, fpimm_0), fpimm_1),
+def : Pat<(f32 (int_nvvm_fmin
+            (f32 (int_nvvm_fmax f32:$a, (f32 fpimm_0))), (f32 fpimm_1))),
           (CVT_f32_f32 $a, CvtSAT)>;
 
-def : Pat<(int_nvvm_fmin_d fpimm_1,
-            (int_nvvm_fmax_d fpimm_0, f64:$a)),
+def : Pat<(f64 (int_nvvm_fmin (f64 fpimm_1),
+            (f64 (int_nvvm_fmax (f64 fpimm_0), f64:$a)))),
           (CVT_f64_f64 $a, CvtSAT)>;
-def : Pat<(int_nvvm_fmin_d fpimm_1,
-            (int_nvvm_fmax_d f64:$a, fpimm_0)),
+def : Pat<(f64 (int_nvvm_fmin (f64 fpimm_1),
+            (f64 (int_nvvm_fmax f64:$a, (f64 fpimm_0))))),
           (CVT_f64_f64 $a, CvtSAT)>;
-def : Pat<(int_nvvm_fmin_d
-            (int_nvvm_fmax_d fpimm_0, f64:$a), fpimm_1),
+def : Pat<(f64 (int_nvvm_fmin
+            (f64 (int_nvvm_fmax (f64 fpimm_0), f64:$a)), (f64 fpimm_1))),
           (CVT_f64_f64 $a, CvtSAT)>;
-def : Pat<(int_nvvm_fmin_d
-            (int_nvvm_fmax_d f64:$a, fpimm_0), fpimm_1),
+def : Pat<(f64 (int_nvvm_fmin
+            (f64 (int_nvvm_fmax f64:$a, (f64 fpimm_0))), (f64 fpimm_1))),
           (CVT_f64_f64 $a, CvtSAT)>;
 
 
@@ -1308,6 +1308,14 @@ class F_MATH_2<string OpcStr, NVPTXRegClass t_regclass,
               (ins s0_regclass:$src0, s1_regclass:$src1),
             OpcStr,
         [(set t_regclass:$dst, (IntOP s0_regclass:$src0, s1_regclass:$src1))]>,
+        Requires<Preds>;
+
+class F_MATH_2_TYPED<string OpcStr, RegTyInfo t_ty,
+  RegTyInfo s0_ty, RegTyInfo s1_ty, Intrinsic IntOP,
+  list<Predicate> Preds = []>
+            : BasicNVPTXInst<(outs t_ty.RC:$dst), (ins s0_ty.RC:$src0, s1_ty.RC:$src1),
+            OpcStr,
+        [(set t_ty.Ty:$dst, (IntOP s0_ty.Ty:$src0, s1_ty.Ty:$src1))]>,
         Requires<Preds>;
 
 class F_MATH_3<string OpcStr, NVPTXRegClass t_regclass,
@@ -1348,132 +1356,43 @@ def INT_PM_EVENT_MASK : BasicNVPTXInst<(outs),
 // Min Max
 //
 
-def : Pat<(int_nvvm_fmin_f f32:$a, f32:$b), (MIN_f32_rr $a, $b, NoFTZ)>;
-def : Pat<(int_nvvm_fmin_ftz_f f32:$a, f32:$b), (MIN_f32_rr $a, $b, FTZ)>;
+def : Pat<(f32 (int_nvvm_fmin f32:$a, f32:$b)), (MIN_f32_rr $a, $b, NoFTZ)>;
+def : Pat<(f32 (int_nvvm_fmin_ftz f32:$a, f32:$b)), (MIN_f32_rr $a, $b, FTZ)>;
 
 let Predicates = [hasPTX<70>, hasSM<80>] in {
-  def : Pat<(int_nvvm_fmin_nan_f f32:$a, f32:$b), (MIN_NAN_f32_rr $a, $b, NoFTZ)>;
-  def : Pat<(int_nvvm_fmin_ftz_nan_f f32:$a, f32:$b), (MIN_NAN_f32_rr $a, $b, FTZ)>;
+  def : Pat<(f32 (int_nvvm_fmin_nan f32:$a, f32:$b)), (MIN_NAN_f32_rr $a, $b, NoFTZ)>;
+  def : Pat<(f32 (int_nvvm_fmin_ftz_nan f32:$a, f32:$b)), (MIN_NAN_f32_rr $a, $b, FTZ)>;
 }
 
-def INT_NVVM_FMIN_XORSIGN_ABS_F :
- F_MATH_2<"min.xorsign.abs.f32", B32, B32, B32, int_nvvm_fmin_xorsign_abs_f,
-    [hasPTX<72>, hasSM<86>]>;
-def INT_NVVM_FMIN_FTZ_XORSIGN_ABS_F :
-  F_MATH_2<"min.ftz.xorsign.abs.f32", B32, B32, B32, int_nvvm_fmin_ftz_xorsign_abs_f,
-    [hasPTX<72>, hasSM<86>]>;
-def INT_NVVM_FMIN_NAN_XORSIGN_ABS_F :
-  F_MATH_2<"min.NaN.xorsign.abs.f32", B32, B32, B32, int_nvvm_fmin_nan_xorsign_abs_f,
-    [hasPTX<72>, hasSM<86>]>;
-def INT_NVVM_FMIN_FTZ_NAN_XORSIGN_ABS_F :
-  F_MATH_2<"min.ftz.NaN.xorsign.abs.f32", B32, B32, B32, int_nvvm_fmin_ftz_nan_xorsign_abs_f,
-    [hasPTX<72>, hasSM<86>]>;
-
-
-def : Pat<(int_nvvm_fmax_f f32:$a, f32:$b), (MAX_f32_rr $a, $b, NoFTZ)>;
-def : Pat<(int_nvvm_fmax_ftz_f f32:$a, f32:$b), (MAX_f32_rr $a, $b, FTZ)>;
+def : Pat<(f32 (int_nvvm_fmax f32:$a, f32:$b)), (MAX_f32_rr $a, $b, NoFTZ)>;
+def : Pat<(f32 (int_nvvm_fmax_ftz f32:$a, f32:$b)), (MAX_f32_rr $a, $b, FTZ)>;
 
 let Predicates = [hasPTX<70>, hasSM<80>] in {
-  def : Pat<(int_nvvm_fmax_nan_f f32:$a, f32:$b), (MAX_NAN_f32_rr $a, $b, NoFTZ)>;
-  def : Pat<(int_nvvm_fmax_ftz_nan_f f32:$a, f32:$b), (MAX_NAN_f32_rr $a, $b, FTZ)>;
+  def : Pat<(f32 (int_nvvm_fmax_nan f32:$a, f32:$b)), (MAX_NAN_f32_rr $a, $b, NoFTZ)>;
+  def : Pat<(f32 (int_nvvm_fmax_ftz_nan f32:$a, f32:$b)), (MAX_NAN_f32_rr $a, $b, FTZ)>;
 }
 
-def INT_NVVM_FMAX_XORSIGN_ABS_F :
-  F_MATH_2<"max.xorsign.abs.f32", B32, B32, B32, int_nvvm_fmax_xorsign_abs_f,
-    [hasPTX<72>, hasSM<86>]>;
-def INT_NVVM_FMAX_FTZ_XORSIGN_ABS_F :
-  F_MATH_2<"max.ftz.xorsign.abs.f32", B32, B32, B32, int_nvvm_fmax_ftz_xorsign_abs_f,
-    [hasPTX<72>, hasSM<86>]>;
-def INT_NVVM_FMAX_NAN_XORSIGN_ABS_F :
-  F_MATH_2<"max.NaN.xorsign.abs.f32", B32, B32, B32, int_nvvm_fmax_nan_xorsign_abs_f,
-    [hasPTX<72>, hasSM<86>]>;
-def INT_NVVM_FMAX_FTZ_NAN_XORSIGN_ABS_F :
-  F_MATH_2<"max.ftz.NaN.xorsign.abs.f32", B32, B32, B32, int_nvvm_fmax_ftz_nan_xorsign_abs_f,
-    [hasPTX<72>, hasSM<86>]>;
-
-def : Pat<(int_nvvm_fmin_d f64:$a, f64:$b), (MIN_f64_rr $a, $b)>;
-def : Pat<(int_nvvm_fmax_d f64:$a, f64:$b), (MAX_f64_rr $a, $b)>;
+def : Pat<(f64 (int_nvvm_fmin f64:$a, f64:$b)), (MIN_f64_rr $a, $b)>;
+def : Pat<(f64 (int_nvvm_fmax f64:$a, f64:$b)), (MAX_f64_rr $a, $b)>;
 
 //
-// Min Max f16, f16x2, bf16, bf16x2
+// Min Max f16, f16x2, bf16, bf16x2, f32, f64
 //
-
-class MIN_MAX_TUPLE<string V, Intrinsic I, NVPTXRegClass RC,
-                    list<Predicate> Preds = [hasPTX<70>, hasSM<80>]> {
-  string Variant = V;
-  Intrinsic Intr = I;
-  NVPTXRegClass RegClass = RC;
-  list<Predicate> Predicates = Preds;
-}
 
 multiclass MIN_MAX<string IntName> {
-  foreach P = [
-    MIN_MAX_TUPLE<"_f16", !if(!eq(IntName, "min"), int_nvvm_fmin_f16,
-      int_nvvm_fmax_f16), B16>,
-    MIN_MAX_TUPLE<"_ftz_f16", !if(!eq(IntName, "min"), int_nvvm_fmin_ftz_f16,
-      int_nvvm_fmax_ftz_f16), B16>,
-    MIN_MAX_TUPLE<"_NaN_f16", !if(!eq(IntName, "min"), int_nvvm_fmin_nan_f16,
-      int_nvvm_fmax_nan_f16), B16>,
-    MIN_MAX_TUPLE<"_ftz_NaN_f16", !if(!eq(IntName, "min"),
-      int_nvvm_fmin_ftz_nan_f16, int_nvvm_fmax_ftz_nan_f16), B16>,
-    MIN_MAX_TUPLE<"_xorsign_abs_f16", !if(!eq(IntName, "min"),
-      int_nvvm_fmin_xorsign_abs_f16, int_nvvm_fmax_xorsign_abs_f16),
-      B16, [hasPTX<72>, hasSM<86>]>,
-    MIN_MAX_TUPLE<"_ftz_xorsign_abs_f16", !if(!eq(IntName, "min"),
-      int_nvvm_fmin_ftz_xorsign_abs_f16, int_nvvm_fmax_ftz_xorsign_abs_f16),
-      B16, [hasPTX<72>, hasSM<86>]>,
-    MIN_MAX_TUPLE<"_NaN_xorsign_abs_f16", !if(!eq(IntName, "min"),
-      int_nvvm_fmin_nan_xorsign_abs_f16, int_nvvm_fmax_nan_xorsign_abs_f16),
-      B16, [hasPTX<72>, hasSM<86>]>,
-    MIN_MAX_TUPLE<"_ftz_NaN_xorsign_abs_f16", !if(!eq(IntName, "min"),
-      int_nvvm_fmin_ftz_nan_xorsign_abs_f16,
-      int_nvvm_fmax_ftz_nan_xorsign_abs_f16), B16, [hasPTX<72>, hasSM<86>]>,
-    MIN_MAX_TUPLE<"_f16x2", !if(!eq(IntName, "min"), int_nvvm_fmin_f16x2,
-      int_nvvm_fmax_f16x2), B32>,
-    MIN_MAX_TUPLE<"_ftz_f16x2", !if(!eq(IntName, "min"),
-      int_nvvm_fmin_ftz_f16x2, int_nvvm_fmax_ftz_f16x2), B32>,
-    MIN_MAX_TUPLE<"_NaN_f16x2", !if(!eq(IntName, "min"),
-      int_nvvm_fmin_nan_f16x2, int_nvvm_fmax_nan_f16x2), B32>,
-    MIN_MAX_TUPLE<"_ftz_NaN_f16x2", !if(!eq(IntName, "min"),
-      int_nvvm_fmin_ftz_nan_f16x2, int_nvvm_fmax_ftz_nan_f16x2), B32>,
-    MIN_MAX_TUPLE<"_xorsign_abs_f16x2", !if(!eq(IntName, "min"),
-      int_nvvm_fmin_xorsign_abs_f16x2, int_nvvm_fmax_xorsign_abs_f16x2),
-      B32, [hasPTX<72>, hasSM<86>]>,
-    MIN_MAX_TUPLE<"_ftz_xorsign_abs_f16x2", !if(!eq(IntName, "min"),
-      int_nvvm_fmin_ftz_xorsign_abs_f16x2, int_nvvm_fmax_ftz_xorsign_abs_f16x2),
-      B32, [hasPTX<72>, hasSM<86>]>,
-    MIN_MAX_TUPLE<"_NaN_xorsign_abs_f16x2", !if(!eq(IntName, "min"),
-      int_nvvm_fmin_nan_xorsign_abs_f16x2, int_nvvm_fmax_nan_xorsign_abs_f16x2),
-      B32, [hasPTX<72>, hasSM<86>]>,
-    MIN_MAX_TUPLE<"_ftz_NaN_xorsign_abs_f16x2", !if(!eq(IntName, "min"),
-      int_nvvm_fmin_ftz_nan_xorsign_abs_f16x2,
-      int_nvvm_fmax_ftz_nan_xorsign_abs_f16x2),
-      B32, [hasPTX<72>, hasSM<86>]>,
-    MIN_MAX_TUPLE<"_bf16", !if(!eq(IntName, "min"),
-      int_nvvm_fmin_bf16, int_nvvm_fmax_bf16), B16>,
-    MIN_MAX_TUPLE<"_NaN_bf16", !if(!eq(IntName, "min"), int_nvvm_fmin_nan_bf16,
-      int_nvvm_fmax_nan_bf16), B16>,
-    MIN_MAX_TUPLE<"_xorsign_abs_bf16", !if(!eq(IntName, "min"),
-      int_nvvm_fmin_xorsign_abs_bf16, int_nvvm_fmax_xorsign_abs_bf16),
-      B16, [hasPTX<72>, hasSM<86>]>,
-    MIN_MAX_TUPLE<"_NaN_xorsign_abs_bf16", !if(!eq(IntName, "min"),
-      int_nvvm_fmin_nan_xorsign_abs_bf16, int_nvvm_fmax_nan_xorsign_abs_bf16),
-      B16, [hasPTX<72>, hasSM<86>]>,
-    MIN_MAX_TUPLE<"_bf16x2", !if(!eq(IntName, "min"), int_nvvm_fmin_bf16x2,
-      int_nvvm_fmax_bf16x2), B32>,
-    MIN_MAX_TUPLE<"_NaN_bf16x2", !if(!eq(IntName, "min"),
-      int_nvvm_fmin_nan_bf16x2, int_nvvm_fmax_nan_bf16x2), B32>,
-    MIN_MAX_TUPLE<"_xorsign_abs_bf16x2", !if(!eq(IntName, "min"),
-      int_nvvm_fmin_xorsign_abs_bf16x2, int_nvvm_fmax_xorsign_abs_bf16x2),
-      B32, [hasPTX<72>, hasSM<86>]>,
-    MIN_MAX_TUPLE<"_NaN_xorsign_abs_bf16x2", !if(!eq(IntName, "min"),
-      int_nvvm_fmin_nan_xorsign_abs_bf16x2,
-      int_nvvm_fmax_nan_xorsign_abs_bf16x2),
-      B32, [hasPTX<72>, hasSM<86>]>] in {
-        def P.Variant : F_MATH_2<!strconcat(
-          IntName, !subst("_", ".", P.Variant)),
-          P.RegClass, P.RegClass, P.RegClass, P.Intr, P.Predicates>;
-  }
+  foreach variant = ["", "_xorsign_abs"] in {
+    foreach nan = ["", "_NaN"] in {
+      foreach ftz = ["", "_ftz"] in {
+        foreach rt = [F16RT, F16X2RT, BF16RT, BF16X2RT, F32RT, F64RT] in {
+          def ftz # nan # variant # "_" # rt.Ty
+            : F_MATH_2_TYPED<IntName # !subst("_", ".", ftz # nan # variant) # "." # rt.PtxType,
+              rt, rt, rt,
+              !cast<Intrinsic>("int_nvvm_f" # IntName # ftz # !tolower(nan) # variant),
+              !if(!eq(variant, "_xorsign_abs"), [hasPTX<72>, hasSM<86>], [])>;
+        } // vt
+      } // ftz
+    } // nan
+  } // variant
 }
 
 defm INT_NVVM_FMIN : MIN_MAX<"min">;

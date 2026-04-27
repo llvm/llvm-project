@@ -1195,54 +1195,6 @@ static Intrinsic::ID shouldUpgradeNVPTXBF16Intrinsic(StringRef Name) {
         .Case("relu.bf16x2", Intrinsic::nvvm_fma_rn_relu_bf16x2)
         .Default(Intrinsic::not_intrinsic);
 
-  if (Name.consume_front("fmax."))
-    return StringSwitch<Intrinsic::ID>(Name)
-        .Case("bf16", Intrinsic::nvvm_fmax_bf16)
-        .Case("bf16x2", Intrinsic::nvvm_fmax_bf16x2)
-        .Case("ftz.bf16", Intrinsic::nvvm_fmax_ftz_bf16)
-        .Case("ftz.bf16x2", Intrinsic::nvvm_fmax_ftz_bf16x2)
-        .Case("ftz.nan.bf16", Intrinsic::nvvm_fmax_ftz_nan_bf16)
-        .Case("ftz.nan.bf16x2", Intrinsic::nvvm_fmax_ftz_nan_bf16x2)
-        .Case("ftz.nan.xorsign.abs.bf16",
-              Intrinsic::nvvm_fmax_ftz_nan_xorsign_abs_bf16)
-        .Case("ftz.nan.xorsign.abs.bf16x2",
-              Intrinsic::nvvm_fmax_ftz_nan_xorsign_abs_bf16x2)
-        .Case("ftz.xorsign.abs.bf16", Intrinsic::nvvm_fmax_ftz_xorsign_abs_bf16)
-        .Case("ftz.xorsign.abs.bf16x2",
-              Intrinsic::nvvm_fmax_ftz_xorsign_abs_bf16x2)
-        .Case("nan.bf16", Intrinsic::nvvm_fmax_nan_bf16)
-        .Case("nan.bf16x2", Intrinsic::nvvm_fmax_nan_bf16x2)
-        .Case("nan.xorsign.abs.bf16", Intrinsic::nvvm_fmax_nan_xorsign_abs_bf16)
-        .Case("nan.xorsign.abs.bf16x2",
-              Intrinsic::nvvm_fmax_nan_xorsign_abs_bf16x2)
-        .Case("xorsign.abs.bf16", Intrinsic::nvvm_fmax_xorsign_abs_bf16)
-        .Case("xorsign.abs.bf16x2", Intrinsic::nvvm_fmax_xorsign_abs_bf16x2)
-        .Default(Intrinsic::not_intrinsic);
-
-  if (Name.consume_front("fmin."))
-    return StringSwitch<Intrinsic::ID>(Name)
-        .Case("bf16", Intrinsic::nvvm_fmin_bf16)
-        .Case("bf16x2", Intrinsic::nvvm_fmin_bf16x2)
-        .Case("ftz.bf16", Intrinsic::nvvm_fmin_ftz_bf16)
-        .Case("ftz.bf16x2", Intrinsic::nvvm_fmin_ftz_bf16x2)
-        .Case("ftz.nan.bf16", Intrinsic::nvvm_fmin_ftz_nan_bf16)
-        .Case("ftz.nan.bf16x2", Intrinsic::nvvm_fmin_ftz_nan_bf16x2)
-        .Case("ftz.nan.xorsign.abs.bf16",
-              Intrinsic::nvvm_fmin_ftz_nan_xorsign_abs_bf16)
-        .Case("ftz.nan.xorsign.abs.bf16x2",
-              Intrinsic::nvvm_fmin_ftz_nan_xorsign_abs_bf16x2)
-        .Case("ftz.xorsign.abs.bf16", Intrinsic::nvvm_fmin_ftz_xorsign_abs_bf16)
-        .Case("ftz.xorsign.abs.bf16x2",
-              Intrinsic::nvvm_fmin_ftz_xorsign_abs_bf16x2)
-        .Case("nan.bf16", Intrinsic::nvvm_fmin_nan_bf16)
-        .Case("nan.bf16x2", Intrinsic::nvvm_fmin_nan_bf16x2)
-        .Case("nan.xorsign.abs.bf16", Intrinsic::nvvm_fmin_nan_xorsign_abs_bf16)
-        .Case("nan.xorsign.abs.bf16x2",
-              Intrinsic::nvvm_fmin_nan_xorsign_abs_bf16x2)
-        .Case("xorsign.abs.bf16", Intrinsic::nvvm_fmin_xorsign_abs_bf16)
-        .Case("xorsign.abs.bf16x2", Intrinsic::nvvm_fmin_xorsign_abs_bf16x2)
-        .Default(Intrinsic::not_intrinsic);
-
   if (Name.consume_front("neg."))
     return StringSwitch<Intrinsic::ID>(Name)
         .Case("bf16", Intrinsic::nvvm_neg_bf16)

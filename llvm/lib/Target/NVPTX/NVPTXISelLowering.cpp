@@ -1124,6 +1124,22 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::INTRINSIC_WO_CHAIN,
                      {MVT::i32, MVT::i128, MVT::v4f32, MVT::Other}, Custom);
 
+  // Enable automatic expansion for intrinsics:
+  //   * nvvm.{fmin/fmax}
+  for (auto VT : MVT::fp_fixedlen_vector_valuetypes()) {
+    setIntrinsicAction(
+        {Intrinsic::nvvm_fmax, Intrinsic::nvvm_fmax_ftz,
+         Intrinsic::nvvm_fmax_ftz_nan, Intrinsic::nvvm_fmax_ftz_nan_xorsign_abs,
+         Intrinsic::nvvm_fmax_ftz_xorsign_abs, Intrinsic::nvvm_fmax_nan,
+         Intrinsic::nvvm_fmax_nan_xorsign_abs, Intrinsic::nvvm_fmax_xorsign_abs,
+         Intrinsic::nvvm_fmin, Intrinsic::nvvm_fmin_ftz,
+         Intrinsic::nvvm_fmin_ftz_nan, Intrinsic::nvvm_fmin_ftz_nan_xorsign_abs,
+         Intrinsic::nvvm_fmin_ftz_xorsign_abs, Intrinsic::nvvm_fmin_nan,
+         Intrinsic::nvvm_fmin_nan_xorsign_abs,
+         Intrinsic::nvvm_fmin_xorsign_abs},
+        VT, Expand);
+  }
+
   // Custom lowering for bswap
   setOperationAction(ISD::BSWAP, {MVT::i16, MVT::i32, MVT::i64, MVT::v2i16},
                      Custom);
