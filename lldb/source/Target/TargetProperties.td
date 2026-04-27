@@ -322,8 +322,8 @@ let Definition = "process", Path = "target.process" in {
   def UseDelayedBreakpoints
       : Property<"use-delayed-breakpoints", "Boolean">,
         DefaultTrue,
-        Desc<"Specify whether to delay setting breakpoints until the process "
-             "is about to resume.">;
+        Desc<"Specify whether updating breakpoints may be delayed until the "
+             "process is about to resume.">;
 }
 
 let Definition = "platform", Path = "platform" in {

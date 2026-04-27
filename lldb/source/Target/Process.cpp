@@ -1709,6 +1709,7 @@ llvm::Error Process::FlushDelayedBreakpoints() {
   // possibly early return. However, when called from FlushDelayedBreakpoints,
   // the queue better be empty so that no early returns take place.
   auto site_to_action = std::move(m_delayed_breakpoints.m_site_to_action);
+  m_delayed_breakpoints.m_site_to_action.clear();
 
   auto error = UpdateBreakpointSites(site_to_action);
   return error;
