@@ -3562,7 +3562,16 @@ protected:
     }
     void Clear() { m_site_to_action.clear(); }
 
-    std::map<lldb::BreakpointSiteSP, BreakpointAction> m_site_to_action;
+    /// Compare BreakpointSiteSPs by ID, so that iteration order is independent
+    /// of pointer addresses.
+    struct SiteIDCmp {
+      bool operator()(const lldb::BreakpointSiteSP lhs,
+                      const lldb::BreakpointSiteSP &rhs) const {
+        return lhs->GetID() < rhs->GetID();
+      }
+    };
+    std::map<lldb::BreakpointSiteSP, BreakpointAction, SiteIDCmp>
+        m_site_to_action;
   };
 
   DelayedBreakpointCache m_delayed_breakpoints;
