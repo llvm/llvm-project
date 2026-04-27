@@ -39,6 +39,22 @@ class TestCase(TestBase):
         )
         self.assertFalse(bp.FindLocationByID(1).IsEnabled())
 
+    def test_error_not_breakpoint_stop(self):
+        self.build()
+        _, _, thread, bp = lldbutil.run_to_source_breakpoint(
+            self, "break here", lldb.SBFileSpec("main.c")
+        )
+
+        self.assertTrue(bp.FindLocationByID(1).IsEnabled())
+        thread.StepOver()
+        self.assertNotEqual(thread.stop_reason, lldb.eStopReasonBreakpoint)
+        self.expect(
+            "breakpoint disable .",
+            error=True,
+            startstr="error: current thread is not stopped at a breakpoint",
+        )
+        self.assertTrue(bp.FindLocationByID(1).IsEnabled())
+
     def test_error_no_process(self):
         self.build()
         target = self.createTestTarget()
