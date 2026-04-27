@@ -1393,11 +1393,12 @@ BuiltinTypeDeclBuilder::addArraySubscriptOperators(ResourceDimension Dim) {
   DeclarationName Subscript =
       AST.DeclarationNames.getCXXOperatorName(OO_Subscript);
 
-  addHandleAccessFunction(Subscript, /*IsConstMethod=*/true,
+  addHandleAccessFunction(Subscript,
                           /*IsConstReturn=*/true, /*IsRef=*/true, IndexTy);
   if (getResourceAttrs().ResourceClass == llvm::dxil::ResourceClass::UAV)
-    addHandleAccessFunction(Subscript, /*IsConstMethod=*/false,
-                            /*IsConstReturn=*/false, /*IsRef=*/true, IndexTy);
+    addHandleAccessFunction(Subscript,
+                            /*IsConstReturn=*/false, /*IsRef=*/true, IndexTy,
+                            /*ElemTy=*/QualType(), /*IsConstMethod=*/false);
 
   return *this;
 }
@@ -1408,11 +1409,11 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addLoadMethods() {
   ASTContext &AST = Record->getASTContext();
   IdentifierInfo &II = AST.Idents.get("Load", tok::TokenKind::identifier);
   DeclarationName Load(&II);
-  // TODO: We also need versions with status for CheckAccessFullyMapped.
-  addHandleAccessFunction(Load, /*IsConstMethod=*/true,
+
+  addHandleAccessFunction(Load,
                           /*IsConstReturn=*/false, /*IsRef=*/false,
                           AST.UnsignedIntTy);
-  addLoadWithStatusFunction(Load, /*IsConstMethod=*/true);
+  addLoadWithStatusFunction(Load);
 
   return *this;
 }
@@ -1564,10 +1565,10 @@ BuiltinTypeDeclBuilder::addByteAddressBufferLoadMethods() {
     IdentifierInfo &II = AST.Idents.get(MethodName, tok::TokenKind::identifier);
     DeclarationName Load(&II);
 
-    addHandleAccessFunction(Load, /*IsConstMethod=*/true,
+    addHandleAccessFunction(Load,
                             /*IsConstReturn=*/false, /*IsRef=*/false,
                             AST.UnsignedIntTy, ReturnType);
-    addLoadWithStatusFunction(Load, /*IsConstMethod=*/true, ReturnType);
+    addLoadWithStatusFunction(Load, ReturnType);
   };
 
   AddLoads("Load", AST.UnsignedIntTy);
@@ -2204,15 +2205,17 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addDecrementCounterMethod() {
       .finalize();
 }
 
-BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addLoadWithStatusFunction(
-    DeclarationName &Name, bool IsConstMethod, QualType ReturnTy) {
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addLoadWithStatusFunction(DeclarationName &Name,
+                                                  QualType ReturnTy) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = SemaRef.getASTContext();
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
   bool NeedsTypedBuiltin = !ReturnTy.isNull();
 
   // The empty QualType is a placeholder. The actual return type is set below.
-  BuiltinTypeMethodBuilder MMB(*this, Name, QualType(), IsConstMethod);
+  // All load methods will be const.
+  BuiltinTypeMethodBuilder MMB(*this, Name, QualType(), true);
 
   if (!NeedsTypedBuiltin)
     ReturnTy = getHandleElementType();
@@ -2235,8 +2238,8 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addLoadWithStatusFunction(
 }
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addHandleAccessFunction(
-    DeclarationName &Name, bool IsConstMethod, bool IsConstReturn, bool IsRef,
-    QualType IndexTy, QualType ElemTy) {
+    DeclarationName &Name, bool IsConstReturn, bool IsRef, QualType IndexTy,
+    QualType ElemTy, bool IsConstMethod) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = SemaRef.getASTContext();
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;

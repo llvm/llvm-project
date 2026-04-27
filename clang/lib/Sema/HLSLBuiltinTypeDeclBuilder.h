@@ -114,12 +114,12 @@ public:
   BuiltinTypeDeclBuilder &addIncrementCounterMethod();
   BuiltinTypeDeclBuilder &addDecrementCounterMethod();
   BuiltinTypeDeclBuilder &addHandleAccessFunction(DeclarationName &Name,
-                                                  bool IsConstMethod,
                                                   bool IsConstReturn,
                                                   bool IsRef, QualType IndexTy,
-                                                  QualType ElemTy = QualType());
+                                                  QualType ElemTy = QualType(),
+                                                  bool IsConstMethod = true);
   BuiltinTypeDeclBuilder &
-  addLoadWithStatusFunction(DeclarationName &Name, bool IsConstMethod,
+  addLoadWithStatusFunction(DeclarationName &Name,
                             QualType ReturnTy = QualType());
   BuiltinTypeDeclBuilder &addStoreFunction(DeclarationName &Name, bool IsConst,
                                            QualType ValueType);
