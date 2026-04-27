@@ -740,6 +740,7 @@ add_header_macro(
     .llvm-libc-macros.sys_socket_macros
     .llvm-libc-types.sa_family_t
     .llvm-libc-types.socklen_t
+    .llvm-libc-types.struct_cmsghdr
     .llvm-libc-types.struct_iovec
     .llvm-libc-types.struct_linger
     .llvm-libc-types.struct_msghdr

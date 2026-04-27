@@ -21,6 +21,7 @@
 #include "Shared/Environment.h"
 
 #include "GlobalHandler.h"
+#include "OffloadAPI.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "PluginInterface.h"
 #include "Utils/ELF.h"
@@ -1240,6 +1241,26 @@ struct CUDADeviceTy : public GenericDeviceTy {
       Info.add("Multi-Device Boars", bool(TmpInt));
 
     Info.add("Compute Capabilities", ComputeCapability.str());
+
+    ol_device_fp_capability_flags_t FPFlags =
+        OL_DEVICE_FP_CAPABILITY_FLAG_CORRECTLY_ROUNDED_DIVIDE_SQRT |
+        OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_NEAREST |
+        OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_ZERO |
+        OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_INF |
+        OL_DEVICE_FP_CAPABILITY_FLAG_INF_NAN |
+        OL_DEVICE_FP_CAPABILITY_FLAG_DENORM | OL_DEVICE_FP_CAPABILITY_FLAG_FMA;
+
+    Info.add("Single FP Support", true, "", DeviceInfo::SINGLE_FP_SUPPORT);
+    Info.add("Single FP Capabilities", FPFlags, "",
+             DeviceInfo::SINGLE_FP_CONFIG);
+
+    Info.add("Double FP Support", true, "", DeviceInfo::DOUBLE_FP_SUPPORT);
+    Info.add("Double FP Capabilities", FPFlags, "",
+             DeviceInfo::DOUBLE_FP_CONFIG);
+
+    Info.add("Half FP Support", false, "", DeviceInfo::HALF_FP_SUPPORT);
+    Info.add("Half FP Capabilities", ol_device_fp_capability_flags_t{0}, "",
+             DeviceInfo::HALF_FP_CONFIG);
 
     return Info;
   }

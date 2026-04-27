@@ -3010,7 +3010,7 @@ unsigned PPCInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   case PPC::INLINEASM_BR: {
     const MachineFunction *MF = MI.getParent()->getParent();
     const char *AsmStr = MI.getOperand(0).getSymbolName();
-    return getInlineAsmLength(AsmStr, *MF->getTarget().getMCAsmInfo());
+    return getInlineAsmLength(AsmStr, MF->getTarget().getMCAsmInfo());
   }
   case TargetOpcode::STACKMAP: {
     StackMapOpers Opers(&MI);
