@@ -161,7 +161,6 @@ public:
   }
 
   bool isCoercionProfitable(Instruction *II) {
-    using namespace PatternMatch;
     SmallPtrSet<Instruction *, 4> CVisited;
     SmallVector<Instruction *, 4> UserList;
 
@@ -172,7 +171,8 @@ public:
         UserList.push_back(UseInst);
 
     auto IsLookThru = [](Instruction *II) {
-      return match(II, m_Intrinsic<Intrinsic::amdgcn_perm>()) ||
+      return PatternMatch::match(
+                 II, PatternMatch::m_Intrinsic<Intrinsic::amdgcn_perm>()) ||
              isa<PHINode, ShuffleVectorInst, InsertElementInst,
                  ExtractElementInst, CastInst>(II);
     };

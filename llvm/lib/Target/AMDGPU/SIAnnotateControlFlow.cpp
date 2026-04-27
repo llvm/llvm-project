@@ -167,9 +167,9 @@ bool SIAnnotateControlFlow::isElse(PHINode *Phi) {
 }
 
 bool SIAnnotateControlFlow::hasKill(const BasicBlock *BB) {
-  using namespace PatternMatch;
   for (const Instruction &I : *BB) {
-    if (match(&I, m_Intrinsic<Intrinsic::amdgcn_kill>()))
+    if (PatternMatch::match(
+            &I, PatternMatch::m_Intrinsic<Intrinsic::amdgcn_kill>()))
       return true;
   }
   return false;

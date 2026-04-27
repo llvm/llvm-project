@@ -1793,8 +1793,8 @@ unsigned GCNTTIImpl::getNumberOfParts(Type *Tp) const {
 }
 
 ValueUniformity GCNTTIImpl::getValueUniformity(const Value *V) const {
-  using namespace llvm::PatternMatch;
-  if (match(V, m_Intrinsic<Intrinsic::amdgcn_wave_shuffle>()))
+  if (PatternMatch::match(
+          V, PatternMatch::m_Intrinsic<Intrinsic::amdgcn_wave_shuffle>()))
     return ValueUniformity::Custom;
 
   if (isAlwaysUniform(V))

@@ -1572,8 +1572,6 @@ static bool runImpl(SetVector<Function *> &Functions, bool IsModulePass,
                     bool DeleteFns, Module &M, AnalysisGetter &AG,
                     TargetMachine &TM, AMDGPUAttributorOptions Options,
                     ThinOrFullLTOPhase LTOPhase) {
-  using namespace PatternMatch;
-
   CallGraphUpdater CGUpdater;
   BumpPtrAllocator Allocator;
   AMDGPUInformationCache InfoCache(M, AG, Allocator, nullptr, TM);
@@ -1643,7 +1641,8 @@ static bool runImpl(SetVector<Function *> &Functions, bool IsModulePass,
       if (Ptr) {
         A.getOrCreateAAFor<AAAddressSpace>(IRPosition::value(*Ptr));
         A.getOrCreateAAFor<AANoAliasAddrSpace>(IRPosition::value(*Ptr));
-        if (match(Ptr, m_Intrinsic<Intrinsic::amdgcn_make_buffer_rsrc>()))
+        if (PatternMatch::match(Ptr, PatternMatch::m_Intrinsic<
+                                         Intrinsic::amdgcn_make_buffer_rsrc>()))
           A.getOrCreateAAFor<AAAlign>(IRPosition::value(*Ptr));
       }
     }

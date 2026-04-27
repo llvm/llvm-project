@@ -355,15 +355,14 @@ void removeFnAttrFromReachable(CallGraph &CG, Function *KernelRoot,
 }
 
 bool isReallyAClobber(const Value *Ptr, MemoryDef *Def, AAResults *AA) {
-  using namespace PatternMatch;
   Instruction *DefInst = Def->getMemoryInst();
 
   if (isa<FenceInst>(DefInst))
     return false;
 
-  if (match(
+  if (PatternMatch::match(
           DefInst,
-          m_AnyIntrinsic<
+          PatternMatch::m_AnyIntrinsic<
               Intrinsic::amdgcn_s_barrier, Intrinsic::amdgcn_s_cluster_barrier,
               Intrinsic::amdgcn_s_barrier_signal,
               Intrinsic::amdgcn_s_barrier_signal_var,

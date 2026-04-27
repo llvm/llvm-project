@@ -636,7 +636,6 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
                                         unsigned VecStoreSize,
                                         unsigned ElementSize,
                                         function_ref<Value *()> GetCurVal) {
-  using namespace PatternMatch;
   // Note: we use InstSimplifyFolder because it can leverage the DataLayout
   // to do more folding, especially in the case of vector splats.
   IRBuilder<InstSimplifyFolder> Builder(Inst->getContext(),
@@ -805,7 +804,8 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
       return Builder.CreateVectorSplat(AA.Vector.Ty->getElementCount(), Elt);
     }
 
-    if (match(Inst, m_Intrinsic<Intrinsic::objectsize>())) {
+    if (PatternMatch::match(
+            Inst, PatternMatch::m_Intrinsic<Intrinsic::objectsize>())) {
       auto *Intr = cast<IntrinsicInst>(Inst);
       Intr->replaceAllUsesWith(
           Builder.getIntN(Intr->getType()->getIntegerBitWidth(),
@@ -964,7 +964,6 @@ AMDGPUPromoteAllocaImpl::getVectorTypeForAlloca(Type *AllocaTy) const {
 }
 
 void AMDGPUPromoteAllocaImpl::analyzePromoteToVector(AllocaAnalysis &AA) const {
-  using namespace PatternMatch;
   if (AA.HaveSelectOrPHI) {
     LLVM_DEBUG(dbgs() << "  Cannot convert to vector due to select or phi\n");
     return;
@@ -1079,7 +1078,8 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToVector(AllocaAnalysis &AA) const {
       continue;
     }
 
-    if (match(Inst, m_Intrinsic<Intrinsic::objectsize>())) {
+    if (PatternMatch::match(
+            Inst, PatternMatch::m_Intrinsic<Intrinsic::objectsize>())) {
       AA.Vector.Worklist.push_back(Inst);
       continue;
     }
@@ -1315,15 +1315,13 @@ Value *AMDGPUPromoteAllocaImpl::getWorkitemID(IRBuilder<> &Builder,
 }
 
 static bool isCallPromotable(CallInst *CI) {
-  using namespace PatternMatch;
-  return match(
-      CI,
-      m_AnyIntrinsic<Intrinsic::memcpy, Intrinsic::memmove, Intrinsic::memset,
-                     Intrinsic::lifetime_start, Intrinsic::lifetime_end,
-                     Intrinsic::invariant_start, Intrinsic::invariant_end,
-                     Intrinsic::launder_invariant_group,
-                     Intrinsic::strip_invariant_group,
-                     Intrinsic::objectsize>());
+  return PatternMatch::match(
+      CI, PatternMatch::m_AnyIntrinsic<
+              Intrinsic::memcpy, Intrinsic::memmove, Intrinsic::memset,
+              Intrinsic::lifetime_start, Intrinsic::lifetime_end,
+              Intrinsic::invariant_start, Intrinsic::invariant_end,
+              Intrinsic::launder_invariant_group,
+              Intrinsic::strip_invariant_group, Intrinsic::objectsize>());
 }
 
 bool AMDGPUPromoteAllocaImpl::binaryOpIsDerivedFromSameAlloca(
