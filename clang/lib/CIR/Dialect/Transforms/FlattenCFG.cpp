@@ -1682,10 +1682,14 @@ public:
     }
 
     // If there are no throwing calls and no resume ops from inner cleanup
-    // scopes, exceptions cannot reach the catch handlers. Skip handler and
-    // dispatch block creation — the handler regions will be dropped when
-    // the try op is erased.
+    // scopes, exceptions cannot reach the catch handlers. Drop all uses
+    // from the (unreachable) handler regions before erasing the try op,
+    // since handler ops may reference values that were inlined from the
+    // try body into the parent block.
     if (callsToRewrite.empty() && resumeOpsToChain.empty()) {
+      for (mlir::Region &handlerRegion : handlerRegions)
+        for (mlir::Block &block : handlerRegion)
+          block.dropAllDefinedValueUses();
       rewriter.eraseOp(tryOp);
       return mlir::success();
     }
