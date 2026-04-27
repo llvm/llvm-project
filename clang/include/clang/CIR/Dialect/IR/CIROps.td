@@ -599,7 +599,7 @@ def CIR_AllocaOp : CIR_Op<"alloca", [
     UnitAttr:$constant,
     UnitAttr:$cleanup_dest_slot,
     ConfinedAttr<I64Attr, [IntMinValue<1>]>:$alignment,
-    OptionalAttr<ArrayAttr>:$annotations
+    OptionalAttr<CIR_AnnotationArrayAttr>:$annotations
   );
 
   let results = (outs Res<CIR_PointerType, "",
@@ -1055,12 +1055,14 @@ def CIR_ContinueOp : CIR_Op<"continue", [Terminator]> {
 // Resume
 //===----------------------------------------------------------------------===//
 
+// Note: cir.resume can appear transiently inside any structured CIR op
+// during FlattenCFG. Its final position (inside cir.try, cir.cleanup.scope,
+// or cir.func) is validated by post-flattening verification.
 def CIR_ResumeOp : CIR_Op<"resume", [
   DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface, [
     "getMutableSuccessorOperands"
   ]>,
-  Terminator,
-  ParentOneOf<["cir::TryOp", "cir::CleanupScopeOp", "cir::FuncOp"]>
+  Terminator
 ]> {
   let summary = "Resumes execution after not catching exceptions";
   let description = [{
@@ -1070,11 +1072,11 @@ def CIR_ResumeOp : CIR_Op<"resume", [
     `CatchUnwind` region of `cir.try`, where it receives an `!cir.eh_token`
     argument representing the in-flight exception.
 
-    During CFG flattening, this operation may appear within a `cir.try`
-    operation where it indicates that exception unwinding should continue
-    from that point. When the `cir.try` operation is flattened, the resume
-    operation will be replaced with a branch to the flattened try operation's
-    dispatch block.
+    During CFG flattening, this operation may temporarily appear inside any
+    structured CIR operation (scope, loop, switch, etc.) when an inner cleanup
+    scope is flattened before the enclosing structured op. When the enclosing
+    op is subsequently flattened, the resume will end up in a `cir.try`
+    operation or at function level.
 
     After CFG flattening, this operation appears at the function level (inside
     `cir.func`) to indicate that the exception should be re-thrown to the
@@ -2066,7 +2068,7 @@ class CIR_WhileOpBase<string mnemonic> : CIR_LoopOpBase<mnemonic> {
 }
 
 def CIR_WhileOp : CIR_WhileOpBase<"while"> {
-  let regions = (region SizedRegion<1>:$cond, MinSizedRegion<1>:$body);
+  let regions = (region MinSizedRegion<1>:$cond, MinSizedRegion<1>:$body);
   let assemblyFormat = "$cond `do` $body attr-dict";
 
   let description = [{
@@ -2093,7 +2095,7 @@ def CIR_WhileOp : CIR_WhileOpBase<"while"> {
 }
 
 def CIR_DoWhileOp : CIR_WhileOpBase<"do"> {
-  let regions = (region MinSizedRegion<1>:$body, SizedRegion<1>:$cond);
+  let regions = (region MinSizedRegion<1>:$body, MinSizedRegion<1>:$cond);
   let assemblyFormat = " $body `while` $cond attr-dict";
 
   let extraClassDeclaration = [{
@@ -2149,9 +2151,9 @@ def CIR_ForOp : CIR_LoopOpBase<"for"> {
     ```
   }];
 
-  let regions = (region SizedRegion<1>:$cond,
+  let regions = (region MinSizedRegion<1>:$cond,
                         MinSizedRegion<1>:$body,
-                        SizedRegion<1>:$step);
+                        MinSizedRegion<1>:$step);
   let assemblyFormat = [{
     `:` `cond` $cond
     `body` $body
@@ -2862,7 +2864,8 @@ def CIR_GlobalOp : CIR_Op<"global", [
                        OptionalAttr<CIR_StaticLocalGuardAttr>:$static_local_guard,
                        OptionalAttr<I64Attr>:$alignment,
                        OptionalAttr<ASTVarDeclInterface>:$ast,
-                       OptionalAttr<StrAttr>:$section
+                       OptionalAttr<StrAttr>:$section,
+                       OptionalAttr<CIR_AnnotationArrayAttr>:$annotations
                        );
 
   let regions = (region AnyRegion:$ctorRegion,
@@ -2881,6 +2884,7 @@ def CIR_GlobalOp : CIR_Op<"global", [
     $sym_name
     custom<GlobalOpTypeAndInitialValue>($sym_type, $initial_value,
                                         $ctorRegion, $dtorRegion)
+    ($annotations^)?
     attr-dict
   }];
 
@@ -3717,7 +3721,8 @@ def CIR_FuncOp : CIR_Op<"func", [
     OptionalAttr<FlatSymbolRefAttr>:$personality,
     CIR_OptionalPriorityAttr:$global_ctor_priority,
     CIR_OptionalPriorityAttr:$global_dtor_priority,
-    OptionalAttr<CIR_CXXSpecialMemberAttr>:$cxx_special_member
+    OptionalAttr<CIR_CXXSpecialMemberAttr>:$cxx_special_member,
+    OptionalAttr<CIR_AnnotationArrayAttr>:$annotations
   );
 
   let regions = (region AnyRegion:$body);

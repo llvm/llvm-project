@@ -946,6 +946,31 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
     return emitHLSLConstructAggregate(DestType, Elements, E);
   }
 
+  case CK_ToUnion: {
+    const FieldDecl *UnionField = E->getTargetUnionField();
+    const Record *R = this->getRecord(E->getType());
+    assert(R);
+    const Record::Field *RF = R->getField(UnionField);
+    QualType FieldType = RF->Decl->getType();
+
+    if (OptPrimType PT = classify(FieldType)) {
+      if (!this->visit(SubExpr))
+        return false;
+      if (RF->isBitField())
+        return this->emitInitBitFieldActivate(*PT, RF->Offset, RF->bitWidth(),
+                                              E);
+      return this->emitInitFieldActivate(*PT, RF->Offset, E);
+    }
+
+    if (!this->emitGetPtrField(RF->Offset, E))
+      return false;
+    if (!this->emitActivate(E))
+      return false;
+    if (!this->visitInitializer(SubExpr))
+      return false;
+    return this->emitPopPtr(E);
+  }
+
   default:
     return this->emitInvalid(E);
   }
@@ -6882,6 +6907,9 @@ bool Compiler<Emitter>::compileUnionAssignmentOperator(
 
 template <class Emitter>
 bool Compiler<Emitter>::visitFunc(const FunctionDecl *F) {
+  if (F->getReturnType()->isDependentType())
+    return false;
+
   // Classify the return type.
   ReturnType = this->classify(F->getReturnType());
 
