@@ -289,7 +289,8 @@ void ProcessAIXCore::ParseAIXCore32File() {
             memcpy(static_cast<void *>(const_cast<uint8_t *>(regs_buf_sp->GetBytes())),
                    &m_aixcore32_header.threads[i-1].context, regs_size);          
         }
-        lldb_private::DataExtractor regs_data(regs_buf_sp, lldb::eByteOrderBig, 8);
+
+        lldb_private::DataExtractor regs_data(regs_buf_sp, lldb::eByteOrderBig, 4);
         thread_data.gpregset = DataExtractor(regs_data, 0, regs_size);          
                                                                                 
         thread_data.prstatus_sig = 0;                                           

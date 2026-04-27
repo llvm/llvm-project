@@ -12,7 +12,7 @@
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/RegisterValue.h"
 
-#include "Plugins/Process/Utility/lldb-ppc64le-register-enums.h"
+#include "Plugins/Process/Utility/lldb-ppc64-register-enums.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
 
 #include <memory>
@@ -22,7 +22,7 @@ using namespace lldb_private;
 RegisterContextCoreAIX_ppc64::RegisterContextCoreAIX_ppc64(
     Thread &thread, RegisterInfoInterface *register_info,
     const DataExtractor &gpregset)
-    : RegisterContextPOSIX_ppc64le(thread, 0, register_info) {
+    : RegisterContextPOSIX_ppc64(thread, 0, register_info) {
   m_gpr_buffer = std::make_shared<DataBufferHeap>(gpregset.GetDataStart(),
                                                   gpregset.GetByteSize());
   m_gpr.SetData(m_gpr_buffer);
@@ -52,20 +52,21 @@ RegisterContextCoreAIX_ppc64::RegisterContextCoreAIX_ppc64(
 }
 
 size_t RegisterContextCoreAIX_ppc64::GetFPRSize() const {
-  return k_num_fpr_registers_ppc64le * sizeof(uint64_t);
+  return k_num_fpr_registers_ppc64 * sizeof(uint64_t);
 }
 
 size_t RegisterContextCoreAIX_ppc64::GetVMXSize() const {
-  return (k_num_vmx_registers_ppc64le - 1) * sizeof(uint64_t) * 2 +
+  return (k_num_vmx_registers_ppc64 - 1) * sizeof(uint64_t) * 2 +
          sizeof(uint32_t);
 }
 
 size_t RegisterContextCoreAIX_ppc64::GetVSXSize() const {
-  return k_num_vsx_registers_ppc64le * sizeof(uint64_t) * 2;
+  return k_num_vsx_registers_ppc64 * sizeof(uint64_t) * 2;
 }
 
 bool RegisterContextCoreAIX_ppc64::ReadRegister(
     const RegisterInfo *reg_info, RegisterValue &value) {
+
   lldb::offset_t offset = reg_info->byte_offset;
 
   if (IsFPR(reg_info->kinds[lldb::eRegisterKindLLDB])) {

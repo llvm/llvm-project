@@ -22,21 +22,40 @@
 namespace AIXCORE {
 
 enum CoreVersion : uint64_t {AIXCORE32 = 0xFEEDDB1, AIXCORE64 = 0xFEEDDB2};
-struct RegContext {
+struct RegContext32 {
+    // The data is arranged in order as filled by AIXCore.cpp in this coredump file
+    // so we have to fetch in that exact order, refer there. 
+    // But need to change
+    // the context structure in order according to Infos_ppc64
+        uint32_t                gpr[32];    /* 64-bit gprs */
+        uint32_t                cr;             /* CR */
+        uint32_t                msr;            /* msr */
+        uint32_t                xer;            /* XER */
+        uint32_t                lr;             /* LR */
+        uint32_t                ctr;            /* CTR */
+        uint32_t                pc;            /* pc */
+        unsigned int            fpscr;          /* floating pt status reg */
+        unsigned int            fpscrx;         /* software ext to fpscr */
+        unsigned long           except[1];      /* exception address    */
+        double                  fpr[32];    /* floating pt regs     */
+        char                    fpeu;           /* floating pt ever used */
+        char                    fpinfo;         /* floating pt info     */
+        char                    fpscr24_31;     /* bits 24-31 of 64-bit FPSCR */
+        char                    pad[1];
+        int                     excp_type;      /* exception type       */
+};
+struct RegContext64 {
     // The data is arranged in order as filled by AIXCore.cpp in this coredump file
     // so we have to fetch in that exact order, refer there. 
     // But need to change
     // the context structure in order according to Infos_ppc64
         uint64_t                gpr[32];    /* 64-bit gprs */
-        unsigned long           pc;            /* msr */
-        unsigned long           msr;            /* iar */
-        unsigned long           origr3;            /* iar */
-        unsigned long           ctr;            /* CTR */
-        unsigned long           lr;             /* LR */
-        unsigned long           xer;            /* XER */
-        unsigned long           cr;             /* CR */
-        unsigned long           softe;             /* CR */
-        unsigned long           trap;             /* CR */
+        uint32_t                cr;             /* CR */
+        uint32_t                xer;            /* XER */
+        uint64_t                msr;            /* msr */
+        uint64_t                lr;             /* LR */
+        uint64_t                ctr;            /* CTR */
+        uint64_t                pc;            /* pc */
         unsigned int            fpscr;          /* floating pt status reg */
         unsigned int            fpscrx;         /* software ext to fpscr */
         unsigned long           except[1];      /* exception address    */
@@ -50,12 +69,13 @@ struct RegContext {
 
     struct ThreadContext64 {
         struct thrdentry64 thread;
-        struct RegContext context;
+        struct RegContext64 context;
     };
 
     struct ThreadContext32 {
         struct thrdsinfo64 thread;
-        struct RegContext context; // This one saves mstsave32 and not context64
+        // It should be RegContext32 but needs some changes before it
+        struct RegContext32 context; // This one saves mstsave32 and not context64
     };
 
     struct UserData {

@@ -9,10 +9,10 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_AIX_CORE_REGISTERCONTEXTAIXCORE_PPC64_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_AIX_CORE_REGISTERCONTEXTAIXCORE_PPC64_H
 
-#include "Plugins/Process/Utility/RegisterContextPOSIX_ppc64le.h"
+#include "Plugins/Process/Utility/RegisterContextPOSIX_ppc64.h"
 #include "lldb/Utility/DataExtractor.h"
 
-class RegisterContextCoreAIX_ppc64 : public RegisterContextPOSIX_ppc64le {
+class RegisterContextCoreAIX_ppc64 : public RegisterContextPOSIX_ppc64 {
 public:
   RegisterContextCoreAIX_ppc64(
       lldb_private::Thread &thread,

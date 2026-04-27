@@ -16,9 +16,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/ProcessInfo.h"
 
-#include "Plugins/Process/Utility/RegisterContextPOSIX_powerpc.h"
-#include "Plugins/Process/Utility/RegisterContextPOSIX_ppc64le.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_ppc64le.h"
+#include "Plugins/Process/Utility/RegisterContextPOSIX_ppc64.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_ppc64.h"
 #include "Plugins/Process/elf-core/RegisterContextPOSIXCore_powerpc.h"
 #include "RegisterContextCoreAIX_ppc64.h"

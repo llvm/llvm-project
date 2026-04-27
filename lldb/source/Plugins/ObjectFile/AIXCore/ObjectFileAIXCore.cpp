@@ -41,6 +41,7 @@ LLDB_PLUGIN_DEFINE(ObjectFileAIXCore)
 enum CoreVersion : uint64_t {AIXCORE32 = 0xFEEDDB1, AIXCORE64 = 0xFEEDDB2};
 
 bool m_is_core = false;
+bool m_is32bit = false;
 
 // Static methods.
 void ObjectFileAIXCore::Initialize() {
@@ -116,10 +117,12 @@ ModuleSpecList ObjectFileAIXCore::GetModuleSpecifications(
 
   ModuleSpecList specs;
   if (ObjectFileAIXCore::MagicBytesMatch(extractor_sp, 0, extractor_sp->GetByteSize())) {
+    const uint32_t cpu_type =
+        (m_is32bit) ? XCOFF::TCPU_PPC : XCOFF::TCPU_PPC64;
     // Need new ArchType???
-    ArchSpec arch_spec = ArchSpec(eArchTypeXCOFF, XCOFF::TCPU_PPC64, LLDB_INVALID_CPUTYPE);
+    ArchSpec arch_spec = ArchSpec(eArchTypeXCOFF, cpu_type, LLDB_INVALID_CPUTYPE);
     ModuleSpec spec(file, arch_spec);
-    spec.GetArchitecture().SetArchitecture(eArchTypeXCOFF, XCOFF::TCPU_PPC64, LLDB_INVALID_CPUTYPE, llvm::Triple::AIX);
+    spec.GetArchitecture().SetArchitecture(eArchTypeXCOFF, cpu_type, LLDB_INVALID_CPUTYPE, llvm::Triple::AIX);
     specs.Append(spec);
   }
   return specs;
@@ -131,6 +134,7 @@ static bool AIXCoreHeaderCheckFromMagic(uint32_t magic) {
     bool ret = false;
     switch (magic) {
         case AIXCORE32: 
+            m_is32bit = true;
         case AIXCORE64:
             m_is_core = true;
             ret = true; 
@@ -164,6 +168,8 @@ bool ObjectFileAIXCore::IsExecutable() const {
 }
 
 uint32_t ObjectFileAIXCore::GetAddressByteSize() const {
+    if (m_is32bit)
+        return 4;
     return 8;
 }
 
@@ -193,7 +199,9 @@ void ObjectFileAIXCore::Dump(Stream *s) {
 }
 
 ArchSpec ObjectFileAIXCore::GetArchitecture() {
-  ArchSpec arch_spec = ArchSpec(eArchTypeXCOFF, XCOFF::TCPU_PPC64, LLDB_INVALID_CPUTYPE);
+    const uint32_t cpu_type =
+        (m_is32bit) ? XCOFF::TCPU_PPC : XCOFF::TCPU_PPC64;
+  ArchSpec arch_spec = ArchSpec(eArchTypeXCOFF, cpu_type, LLDB_INVALID_CPUTYPE);
   return arch_spec;
 }
 
