@@ -55,8 +55,14 @@ libc_test(
     srcs = ["linux/sendmsg_recvmsg_test.cpp"],
     deps = [
         "//libc:close",
+        "//libc:getsockopt",
+        "//libc:hdr_sys_socket_macros",
+        "//libc:llvm_libc_macros_sys_socket_macros",
+        "//libc:memcpy",
+        "//libc:memset",
         "//libc:recvmsg",
         "//libc:sendmsg",
         "//libc:socketpair",
+        "//libc:types_struct_cmsghdr",
     ],
 )
