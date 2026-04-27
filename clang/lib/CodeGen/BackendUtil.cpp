@@ -89,6 +89,7 @@
 #include "llvm/Transforms/Scalar/EarlyCSE.h"
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Scalar/JumpThreading.h"
+#include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Debugify.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <limits>
@@ -1407,6 +1408,176 @@ runThinLTOBackend(CompilerInstance &CI, ModuleSummaryIndex *CombinedIndex,
   }
 }
 
+// Alters M and creates new Unopt module.
+static std::unique_ptr<llvm::Module> createUnoptModule(llvm::Module &M,
+                                                       CodeGenOptions &CGOpts) {
+  using namespace llvm;
+  assert(M.getNamedMetadata("llvm.dbg.cu") &&
+         "Expected module with debug info");
+
+  auto ShouldPromoteGlobal = [](const GlobalValue &GV) {
+    if (!GV.hasLocalLinkage())
+      return false;
+
+    // Local symbols in a comdat shouldn't be promoted either.
+    // This can happen with (at least) __cxx_global_var_init (which is local
+    // and may initialize an ODR-weak global variable).
+    if (GV.hasComdat())
+      return false;
+
+    return true;
+  };
+
+  // Compute a hash suffix for promoting static globals (once per TU).
+  std::string PromotionSuffix;
+  {
+    // LLVM's hash/hash_combine is not guaranteed to be stable.
+    MD5 Hash;
+    // Include args in the hash else preprocessor definitions used to alter
+    // the same source file compiled twice won't generate unique hashes.
+    Hash.update(CGOpts.CmdArgs);
+    for (auto *CU : M.debug_compile_units()) {
+      Hash.update(CU->getDirectory());
+      Hash.update(CU->getFilename());
+    }
+
+    MD5::MD5Result Result;
+    Hash.final(Result);
+    PromotionSuffix = ".dyndbg." + utohexstr(Result.low());
+  }
+
+  // Clone functions definitions only - CloneModule will clone data definitions
+  // as declarations. We rename these and explicitly set their linkage later.
+  auto ShouldCloneDefinition = [](const GlobalValue *GV) {
+    return isa<Function>(GV);
+  };
+  ValueToValueMapTy VMap;
+  std::unique_ptr<llvm::Module> UnoptM =
+      CloneModule(M, VMap, ShouldCloneDefinition);
+
+  // Insert declarations into Inner that point to Outer, apply attributes to
+  // Outer functions.
+  DenseMap<Function *, Function *> OuterDefToInnerDecl;
+  for (Function &OuterDef : M.functions()) {
+    if (OuterDef.isDeclaration())
+      continue;
+
+    // Find the Inner version of Outer's function.
+    Function *InnerDef = cast<Function>(VMap[&OuterDef]);
+
+    // Apply some attributes to both Inner and Outer defs.
+    {
+      // Unoptimized module wants no inlining at all.
+      InnerDef->addFnAttr(llvm::Attribute::NoInline);
+      InnerDef->removeFnAttr(llvm::Attribute::AlwaysInline);
+
+      // Apply optnone, remove clashing attributes.
+      InnerDef->addFnAttr(llvm::Attribute::OptimizeNone);
+      InnerDef->removeFnAttr(llvm::Attribute::OptimizeForSize);
+      InnerDef->removeFnAttr(llvm::Attribute::MinSize);
+
+      // Add attributes to the outer-object functions to ensure they're
+      // always patchable.
+      OuterDef.addFnAttr("tail-pad-to-size", "5");
+      OuterDef.addFnAttr("tail-pad-value", "144"); // 0x90
+      OuterDef.addFnAttr("no-func-spec");
+    }
+
+    // Apply COMDAT grouping to the clone if OuterDef is in one.
+    if (OuterDef.hasComdat()) {
+      std::string NewComdat =
+          Twine("__dyndbg." + OuterDef.getComdat()->getName()).str();
+      llvm::Comdat *C = M.getOrInsertComdat(NewComdat);
+      C->setSelectionKind(OuterDef.getComdat()->getSelectionKind());
+      InnerDef->setComdat(C);
+    }
+
+    // Rename Inner's copy and set appropriate linkage depending on whether
+    // it'll get promoted in Outer or not.
+    if (ShouldPromoteGlobal(OuterDef)) {
+      InnerDef->setName("__dyndbg." + InnerDef->getName() + PromotionSuffix);
+      InnerDef->setLinkage(GlobalValue::ExternalLinkage);
+      InnerDef->setVisibility(GlobalValue::HiddenVisibility);
+    } else {
+      InnerDef->setName("__dyndbg." + InnerDef->getName());
+      InnerDef->setLinkage(OuterDef.getLinkage());
+      InnerDef->setVisibility(OuterDef.getVisibility());
+    }
+
+    // Create Inner's external reference to Outer's version.
+    Function *InnerDeclOfOuterDef =
+        Function::Create(cast<llvm::FunctionType>(OuterDef.getValueType()),
+                         OuterDef.getLinkage(), OuterDef.getAddressSpace(),
+                         OuterDef.getName(), UnoptM.get());
+    InnerDeclOfOuterDef->copyAttributesFrom(&OuterDef);
+    // Re-set linkage and visibility after copyAttributesFrom.
+    InnerDeclOfOuterDef->setLinkage(GlobalValue::ExternalLinkage);
+    InnerDeclOfOuterDef->setPersonalityFn(nullptr);
+
+    // Replace Inner uses of function with that external reference.
+    InnerDef->replaceAllUsesWith(InnerDeclOfOuterDef);
+
+    VMap[&OuterDef] = InnerDeclOfOuterDef;
+  }
+
+  // Add Outer aliases for globals with internal linkage, adding
+  // ".dyndbg.<TU-unique-hash>" suffix. Update Inner's external references to
+  // these promoted functions to use their new names.
+  SmallVector<GlobalValue *> GlobalsToPreserve;
+  for (GlobalValue &GV : M.global_values()) {
+    assert(GV.getSection() != ".debug_llvm_dyndbg" && "Double dyndbg nesting?");
+
+    // If the global is used but may be discarded after optimizations
+    // (e.g. inlining) then ensure it's marked as compiler-used to prevent
+    // that. It may be referenced from the inner module.
+    if (GV.isDiscardableIfUnused()) {
+      if (GV.getNumUses()) {
+        GlobalsToPreserve.push_back(&GV);
+      } else {
+        // No uses, so the inner module doesn't need a reference nor do we need
+        // to produce an alias.
+        // Remove the inner module reference.
+        auto GVAndUnoptPair = VMap.find(&GV);
+        assert(GVAndUnoptPair != VMap.end() && "Unmapped global?");
+        // Delete the external reference - VMap shold only contain mappings to
+        // those declarations now.
+        assert(cast<GlobalValue>(GVAndUnoptPair->second)->isDeclaration() &&
+               "expected only declarations in VMap now");
+        cast<GlobalValue>(GVAndUnoptPair->second)->eraseFromParent();
+        GVAndUnoptPair->second = nullptr;
+        // Nothing else to do for this global.
+        continue;
+      }
+    }
+
+    if (!ShouldPromoteGlobal(GV))
+      continue;
+
+    // We need external aliases with a mangled name and hidden visability.
+    auto *Alias = GlobalAlias::create(GlobalValue::ExternalLinkage,
+                                      GV.getName() + PromotionSuffix, &GV);
+    Alias->setVisibility(GlobalValue::HiddenVisibility);
+
+    // Update the Inner external reference that corresponds to the promoted
+    // Outer global (created just now as an alias in opt) to reference the new
+    // alias.
+    GlobalValue *UnoptGV = cast<GlobalValue>(VMap[&GV]);
+    UnoptGV->setName(Alias->getName());
+    UnoptGV->setVisibility(GlobalValue::HiddenVisibility);
+    assert(UnoptGV->getLinkage() == GlobalValue::ExternalLinkage &&
+           "Expected ExternalLinkage from CloneModule or inserted decl");
+  }
+
+  // Preserve functions that may be discarded after optimizing away call sites
+  // (e.g. ODR-weak). Another desirable effect of this is that it prevents
+  // GlobalOpt promoting the alias. If the function-preservation mechanism
+  // changes in the future GlobalOpt alias promotion must be handled another
+  // way.
+  llvm::appendToCompilerUsed(M, GlobalsToPreserve);
+
+  return UnoptM;
+}
+
 void clang::emitBackendOutput(CompilerInstance &CI, CodeGenOptions &CGOpts,
                               StringRef TDesc, llvm::Module *M,
                               BackendAction Action,
@@ -1454,6 +1625,70 @@ void clang::emitBackendOutput(CompilerInstance &CI, CodeGenOptions &CGOpts,
       EmptyModule->setTargetTriple(M->getTargetTriple());
       M = EmptyModule.get();
     }
+  }
+
+
+  bool EnableDynamicDebugging = CGOpts.DynamicDebugging;
+  // Disable dyndbg if the target isn't available as we're compiling to the
+  // inner module to object regardless of other options. (This may change).
+  if (EnableDynamicDebugging) {
+    std::string Error;
+    const llvm::Target *TheTarget =
+        TargetRegistry::lookupTarget(M->getTargetTriple(), Error);
+    if (!TheTarget) {
+      Diags.Report(diag::warn_dyndbg_unable_to_create_target) << Error;
+      EnableDynamicDebugging = false;
+    }
+  }
+
+  if (EnableDynamicDebugging) {
+    /// Helper for saving the module(s) at various dyndbg stages.
+    auto SaveModule = [&](StringRef Name, llvm::Module &M) {
+      if (CGOpts.SaveDynDbgTempsFilePrefix == "")
+        return;
+      std::error_code EC;
+      std::string Path =
+          Twine(CGOpts.SaveDynDbgTempsFilePrefix + "." + Name + ".ll").str();
+      raw_fd_ostream OS(Path, EC, sys::fs::OpenFlags::OF_None);
+      if (EC) {
+        // Copy -save-temps behaviour: this is a debugging option so we simply
+        // exit if there's an issue.
+        errs() << "failed to open " << Path << ": " << EC.message() << '\n';
+        errs().flush();
+        exit(1);
+      }
+      M.print(OS, nullptr);
+    };
+
+    SaveModule("dyndbg.0.input", *M);
+    // Modify M as needed and create an "unoptimized" clone.
+    auto UnoptM = createUnoptModule(*M, CGOpts);
+    SaveModule("dyndbg.1.inner", *UnoptM);
+
+    CodeGenOptions UnoptOpts = CGOpts;
+    UnoptOpts.OptimizationLevel = 0;
+    UnoptOpts.OptimizeSize = 0;
+    EmitAssemblyHelper AsmHelper(CI, UnoptOpts, UnoptM.get(), VFS);
+
+    // Create a buffer and ostream for the inner ELF.
+    SmallVector<char, 0> UnoptBuf;
+    std::unique_ptr<llvm::raw_pwrite_stream> UnoptOS =
+        std::make_unique<llvm::raw_svector_ostream>(UnoptBuf);
+
+    // Always run the full codegen pipeline (Backend_EmitObj). This causes
+    // assertion failures if there's no registered backend which is why we
+    // disable the feature if that's the case (see
+    // warn_dyndbg_unable_to_create_target above).
+    AsmHelper.emitAssembly(Backend_EmitObj, std::move(UnoptOS), BC);
+    assert(!UnoptBuf.empty() && "Expected emitAssembly to fill UnoptBuf");
+
+    // Inject the inner ELF into the outer module.
+    StringRef SR(UnoptBuf.data(), UnoptBuf.size());
+    std::unique_ptr<MemoryBuffer> Buf =
+        MemoryBuffer::getMemBuffer(SR, "", false);
+
+    llvm::embedBufferInModule(*M, *Buf, ".debug_llvm_dyndbg");
+    SaveModule("dyndbg.2.outer", *M);
   }
 
   EmitAssemblyHelper AsmHelper(CI, CGOpts, M, VFS);

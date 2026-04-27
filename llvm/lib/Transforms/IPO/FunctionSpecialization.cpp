@@ -1047,6 +1047,14 @@ bool FunctionSpecializer::isCandidateFunction(Function *F) {
   if (F->hasOptSize())
     return false;
 
+  // FIXME: We could disable function specialization in the pass builder
+  // (see IPSCCPOptions). An attribute is easier to test and requires fewer
+  // changes so go with it for now. Another advantage is it can be used
+  // in other passes, though it doesn't seem there are others we need to
+  // suppress in this way with the current implementaiton.
+  if (F->hasFnAttribute("no-func-spec"))
+    return false;
+
   // Do not specialize the cloned function again.
   if (Specializations.contains(F))
     return false;

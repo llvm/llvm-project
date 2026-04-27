@@ -2483,6 +2483,32 @@ void AsmPrinter::emitFunctionBody() {
     OutStreamer->emitELFSize(CurrentFnSym, SizeExp);
     if (CurrentFnBeginLocal)
       OutStreamer->emitELFSize(CurrentFnBeginLocal, SizeExp);
+
+    // Tail-pad functions that want it.
+    if (F.hasFnAttribute("tail-pad-to-size")) {
+      uint64_t PadToSize;
+      if (F.getFnAttribute("tail-pad-to-size")
+              .getValueAsString()
+              .getAsInteger(10, PadToSize))
+        PadToSize = 0;
+      uint64_t FillValue;
+      if (!F.hasFnAttribute("tail-pad-value") ||
+          F.getFnAttribute("tail-pad-value")
+              .getValueAsString()
+              .getAsInteger(10, FillValue))
+        FillValue = 0;
+
+      // Emit: .fill ((PadToSize - FuncSize) & (PadToSize - FuncSize >= 0))
+      // FillValue
+      const MCExpr *SizeConst = MCConstantExpr::create(PadToSize, OutContext);
+      const MCExpr *Zero = MCConstantExpr::create(0, OutContext);
+      const MCExpr *SubExpr =
+          MCBinaryExpr::createSub(SizeConst, SizeExp, OutContext);
+      const MCExpr *Cmp = MCBinaryExpr::createGTE(SubExpr, Zero, OutContext);
+      const MCExpr *FillExpr =
+          MCBinaryExpr::createAnd(SubExpr, Cmp, OutContext);
+      OutStreamer->emitFill(*FillExpr, FillValue);
+    }
   }
 
   // Call endBasicBlockSection on the last block now, if it wasn't already
@@ -3228,7 +3254,8 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
   MBBSectionRanges.clear();
   MBBSectionExceptionSyms.clear();
   bool NeedsLocalForSize = MAI->needsLocalForSize();
-  if (F.hasFnAttribute("patchable-function-entry") ||
+  if (F.hasFnAttribute("tail-pad-to-size") ||
+      F.hasFnAttribute("patchable-function-entry") ||
       F.hasFnAttribute("function-instrument") ||
       F.hasFnAttribute("xray-instruction-threshold") ||
       needFuncLabels(MF, *this) || NeedsLocalForSize ||
