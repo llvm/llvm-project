@@ -7149,7 +7149,7 @@ static bool CheckTemplateArgumentCopyEquivalence(Sema &S, NamedDecl *Param,
 
   // Instead of creating a variable (C++26 [temp.arg.nontype]p3),
   // create a template parameter object to represent the candidate initializer.
-  // They are equivalent during creating a copy.
+  // They are equivalent when creating a copy.
   auto *CandidateInitializer =
       S.BuildDeclRefExpr(S.Context.getTemplateParamObjectDecl(ParamType, Value),
                          ParamType.withConst(), VK_LValue, ArgLoc);
