@@ -499,6 +499,7 @@ def OMPC_Release : Clause<[Spelling<"release">]> {
   let clangClass = "OMPReleaseClause";
 }
 def OMPC_Replayable : Clause<[Spelling<"replayable">]> {
+  let clangClass = "OMPReplayableClause";
   let flangClass = "OmpReplayableClause";
   let isValueOptional = true;
 }
