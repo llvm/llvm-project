@@ -74,3 +74,15 @@ module m4
   end subroutine
 end module
 
+! Regression test: an illegal recursive derived-type component used to cause
+! infinite recursion in FindUnsafeIoDirectComponent when the object appeared
+! in an I/O list (https://github.com/llvm/llvm-project/issues/192387).
+subroutine test_recursive_io
+  type t1
+    !ERROR: Recursive use of the derived type requires POINTER or ALLOCATABLE
+    type(t1) :: b
+  end type t1
+  type(t1) :: obj
+  print *, obj
+end subroutine
+

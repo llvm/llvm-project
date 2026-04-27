@@ -15,6 +15,7 @@
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/tools.h"
+#include <set>
 #include <unordered_map>
 
 namespace Fortran::semantics {
@@ -1118,10 +1119,17 @@ void IoChecker::CheckForUselessIomsg() const {
 
 // Seeks out an allocatable or pointer ultimate component that is not
 // nested in a nonallocatable/nonpointer component with a specific
-// defined I/O procedure.
+// defined I/O procedure.  The inProgress set tracks derived types
+// currently on the recursion path to break cycles caused by an illegal
+// recursive type definition (F2023 C749) that has already been
+// diagnosed but whose offending component is still in the symbol table.
 static const Symbol *FindUnsafeIoDirectComponent(common::DefinedIo which,
-    const DerivedTypeSpec &derived, const Scope &scope) {
+    const DerivedTypeSpec &derived, const Scope &scope,
+    std::set<const Symbol *> &inProgress) {
   if (HasDefinedIo(which, derived, &scope)) {
+    return nullptr;
+  }
+  if (!inProgress.insert(&derived.typeSymbol()).second) {
     return nullptr;
   }
   if (const Scope * dtScope{derived.scope()}) {
@@ -1136,7 +1144,7 @@ static const Symbol *FindUnsafeIoDirectComponent(common::DefinedIo which,
             const DerivedTypeSpec &componentDerived{type->derivedTypeSpec()};
             if (const Symbol *
                 bad{FindUnsafeIoDirectComponent(
-                    which, componentDerived, scope)}) {
+                    which, componentDerived, scope, inProgress)}) {
               return bad;
             }
           }
@@ -1147,11 +1155,22 @@ static const Symbol *FindUnsafeIoDirectComponent(common::DefinedIo which,
   return nullptr;
 }
 
+static const Symbol *FindUnsafeIoDirectComponent(common::DefinedIo which,
+    const DerivedTypeSpec &derived, const Scope &scope) {
+  std::set<const Symbol *> inProgress;
+  return FindUnsafeIoDirectComponent(which, derived, scope, inProgress);
+}
+
 // For a type that does not have a defined I/O subroutine, finds a direct
 // component that is a witness to an accessibility violation outside the module
-// in which the type was defined.
+// in which the type was defined.  See FindUnsafeIoDirectComponent for the
+// purpose of inProgress.
 static const Symbol *FindInaccessibleComponent(common::DefinedIo which,
-    const DerivedTypeSpec &derived, const Scope &scope) {
+    const DerivedTypeSpec &derived, const Scope &scope,
+    std::set<const Symbol *> &inProgress) {
+  if (!inProgress.insert(&derived.typeSymbol()).second) {
+    return nullptr;
+  }
   if (const Scope * dtScope{derived.scope()}) {
     if (const Scope * module{FindModuleContaining(*dtScope)}) {
       for (const auto &pair : *dtScope) {
@@ -1179,7 +1198,7 @@ static const Symbol *FindInaccessibleComponent(common::DefinedIo which,
           if (componentDerived) {
             if (const Symbol *
                 bad{FindInaccessibleComponent(
-                    which, *componentDerived, scope)}) {
+                    which, *componentDerived, scope, inProgress)}) {
               return bad;
             }
           }
@@ -1188,6 +1207,12 @@ static const Symbol *FindInaccessibleComponent(common::DefinedIo which,
     }
   }
   return nullptr;
+}
+
+static const Symbol *FindInaccessibleComponent(common::DefinedIo which,
+    const DerivedTypeSpec &derived, const Scope &scope) {
+  std::set<const Symbol *> inProgress;
+  return FindInaccessibleComponent(which, derived, scope, inProgress);
 }
 
 // Fortran 2018, 12.6.3 paragraphs 5 & 7
