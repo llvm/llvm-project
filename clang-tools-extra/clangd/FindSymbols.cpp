@@ -203,19 +203,22 @@ SymbolTags filterSymbolTags(SymbolTags ST) {
   const SymbolTags AbstractMask = toSymbolTagBitmask(SymbolTag::Abstract);
   const SymbolTags FinalMask = toSymbolTagBitmask(SymbolTag::Final);
 
-  const SymbolTags RemoveVirtualAndOverrides = VirtualMask | OverridesMask;
-
-  // Implements implies both Overrides and Virtual.
+  // Implements implies Overrides + Virtual.
   if (ST & ImplementsMask)
-    ST &= ~RemoveVirtualAndOverrides;
+    ST &= ~(OverridesMask | VirtualMask);
 
-  // Final also suppresses both Virtual and Overrides in this model.
-  if (ST & FinalMask)
-    ST &= ~RemoveVirtualAndOverrides;
-
-  // Overrides or Abstract each imply Virtual.
-  if (ST & (OverridesMask | AbstractMask))
+  // Overrides implies Virtual.
+  if (ST & OverridesMask)
     ST &= ~VirtualMask;
+
+  // Abstract implies Virtual.
+  if (ST & AbstractMask)
+    ST &= ~VirtualMask;
+
+  // Final implies Virtual; Overrides is also redundant as Final overrides are
+  // still overrides.
+  if (ST & FinalMask)
+    ST &= ~(VirtualMask | OverridesMask);
 
   return ST;
 }
