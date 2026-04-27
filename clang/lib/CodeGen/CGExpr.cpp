@@ -3938,15 +3938,14 @@ llvm::Constant *CodeGenFunction::EmitCheckTypeDescriptor(QualType T) {
     // Follow suggestion from discussion of issue 64100.
     // So we can write the exact amount of bits in TypeName after '\0'
     // making it <diagnostic-like type name>.'\0'.<32-bit width>.
-    if (T->isSignedIntegerType() && T->getAs<BitIntType>()) {
+    if (T->getAs<BitIntType>()) {
       // Do a sanity checks as we are using 32-bit type to store bit length.
       assert(getContext().getTypeSize(T) > 0 &&
              " non positive amount of bits in __BitInt type");
       assert(getContext().getTypeSize(T) <= 0xFFFFFFFF &&
              " too many bits in __BitInt type");
 
-      // Redefine TypeKind with the actual __BitInt type if we have signed
-      // BitInt.
+      // Redefine TypeKind with the actual __BitInt type.
       TypeKind = TK_BitInt;
       IsBitInt = true;
     }
