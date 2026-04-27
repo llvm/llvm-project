@@ -177,8 +177,8 @@ LIBC_INLINE size_t parse_nproc_with_fallback_from(const char *path) {
     return 1;
 
   size_t cpu_count = 0;
-  for (size_t i = 0; i < mask_buffer.size(); ++i)
-    cpu_count += static_cast<size_t>(cpp::popcount(mask_buffer[i]));
+  for (unsigned char byte : mask_buffer)
+    cpu_count += static_cast<size_t>(cpp::popcount(byte));
 
   return cpu_count > 0 ? cpu_count : 1;
 }

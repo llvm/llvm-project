@@ -372,7 +372,7 @@ functions:
   - name: sysconf
     standards:
       - POSIX
-    return_type: int
+    return_type: long
     arguments:
       - type: int
   - name: truncate

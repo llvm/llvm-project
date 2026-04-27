@@ -10,6 +10,7 @@
 
 #include "src/__support/common.h"
 
+#include "hdr/sys_auxv_macros.h"
 #include "hdr/unistd_macros.h"
 #include "src/__support/OSUtil/linux/auxv.h"
 #include "src/__support/OSUtil/linux/sysinfo.h"
