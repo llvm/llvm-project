@@ -6176,7 +6176,7 @@ defm MUL      : SIMDThreeSameVectorBHS<0, 0b10011, "mul", mul>;
 let isCommutable = 1 in
 defm PMUL     : SIMDThreeSameVectorB<1, 0b10011, "pmul", clmul>;
 defm SABA     : SIMDThreeSameVectorBHSTied<0, 0b01111, "saba",
-      TriOpFrag<(add node:$LHS, (abds node:$MHS, node:$RHS))> >;
+      TriOpFrag<(add_like node:$LHS, (abds node:$MHS, node:$RHS))> >;
 defm SABD     : SIMDThreeSameVectorBHS<0,0b01110,"sabd", abds>;
 defm SHADD    : SIMDThreeSameVectorBHS<0,0b00000,"shadd", avgfloors>;
 defm SHSUB    : SIMDThreeSameVectorBHS<0,0b00100,"shsub", int_aarch64_neon_shsub>;
@@ -6195,7 +6195,7 @@ defm SRSHL    : SIMDThreeSameVector<0,0b01010,"srshl", int_aarch64_neon_srshl>;
 defm SSHL     : SIMDThreeSameVector<0,0b01000,"sshl", int_aarch64_neon_sshl>;
 defm SUB      : SIMDThreeSameVector<1,0b10000,"sub", sub>;
 defm UABA     : SIMDThreeSameVectorBHSTied<1, 0b01111, "uaba",
-      TriOpFrag<(add node:$LHS, (abdu node:$MHS, node:$RHS))> >;
+      TriOpFrag<(add_like node:$LHS, (abdu node:$MHS, node:$RHS))> >;
 defm UABD     : SIMDThreeSameVectorBHS<1,0b01110,"uabd", abdu>;
 defm UHADD    : SIMDThreeSameVectorBHS<1,0b00000,"uhadd", avgflooru>;
 defm UHSUB    : SIMDThreeSameVectorBHS<1,0b00100,"uhsub", int_aarch64_neon_uhsub>;
@@ -7399,7 +7399,7 @@ defm RSUBHN  : SIMDNarrowThreeVectorBHS<1,0b0110,"rsubhn",int_aarch64_neon_rsubh
 let isCommutable = 1 in
 defm PMULL   : SIMDDifferentThreeVectorBD<0,0b1110,"pmull", AArch64pmull>;
 defm SABAL   : SIMDLongThreeVectorTiedBHS<0,0b0101,"sabal",
-                 TriOpFrag<(add node:$LHS, (zext (abds node:$MHS, node:$RHS)))>>;
+                 TriOpFrag<(add_like node:$LHS, (zext (abds node:$MHS, node:$RHS)))>>;
 defm SABDL   : SIMDLongThreeVectorBHS<0, 0b0111, "sabdl",
                  BinOpFrag<(zext (abds node:$LHS, node:$RHS))>>;
 defm SADDL   : SIMDLongThreeVectorBHS<   0, 0b0000, "saddl",
@@ -7420,7 +7420,7 @@ defm SSUBL   : SIMDLongThreeVectorBHS<0, 0b0010, "ssubl",
 defm SSUBW   : SIMDWideThreeVectorBHS<0, 0b0011, "ssubw",
                  BinOpFrag<(sub node:$LHS, (sext node:$RHS))>>;
 defm UABAL   : SIMDLongThreeVectorTiedBHS<1, 0b0101, "uabal",
-                 TriOpFrag<(add node:$LHS, (zext (abdu node:$MHS, node:$RHS)))>>;
+                 TriOpFrag<(add_like node:$LHS, (zext (abdu node:$MHS, node:$RHS)))>>;
 defm UABDL   : SIMDLongThreeVectorBHS<1, 0b0111, "uabdl",
                  BinOpFrag<(zext (abdu node:$LHS, node:$RHS))>>;
 defm UADDL   : SIMDLongThreeVectorBHS<1, 0b0000, "uaddl",
@@ -8874,25 +8874,25 @@ def MVNIv4s_msl   : SIMDModifiedImmMoveMSL<1, 1, {1,1,0,?}, V128, "mvni", ".4s",
 }
 
 // SABA patterns for add(x, abs(y)) -> saba(x, y, 0)
-def : Pat<(v8i8 (add V64:$Vn, (abs V64:$Vm))),
+def : Pat<(v8i8 (add_like V64:$Vn, (abs V64:$Vm))),
           (SABAv8i8 V64:$Vn, V64:$Vm, (EXTRACT_SUBREG (MOVIv2d_ns (i32 0)), dsub))>;
-def : Pat<(v4i16 (add V64:$Vn, (abs V64:$Vm))),
+def : Pat<(v4i16 (add_like V64:$Vn, (abs V64:$Vm))),
           (SABAv4i16 V64:$Vn, V64:$Vm, (EXTRACT_SUBREG (MOVIv2d_ns (i32 0)), dsub))>;
-def : Pat<(v2i32 (add V64:$Vn, (abs V64:$Vm))),
+def : Pat<(v2i32 (add_like V64:$Vn, (abs V64:$Vm))),
           (SABAv2i32 V64:$Vn, V64:$Vm, (EXTRACT_SUBREG (MOVIv2d_ns (i32 0)), dsub))>;
-def : Pat<(v16i8 (add V128:$Vn, (abs V128:$Vm))),
+def : Pat<(v16i8 (add_like V128:$Vn, (abs V128:$Vm))),
           (SABAv16i8 V128:$Vn, V128:$Vm, (MOVIv2d_ns (i32 0)))>;
-def : Pat<(v8i16 (add V128:$Vn, (abs V128:$Vm))),
+def : Pat<(v8i16 (add_like V128:$Vn, (abs V128:$Vm))),
           (SABAv8i16 V128:$Vn, V128:$Vm, (MOVIv2d_ns (i32 0)))>;
-def : Pat<(v4i32 (add V128:$Vn, (abs V128:$Vm))),
+def : Pat<(v4i32 (add_like V128:$Vn, (abs V128:$Vm))),
           (SABAv4i32 V128:$Vn, V128:$Vm, (MOVIv2d_ns (i32 0)))>;
 
 // SABAL patterns for add(x, zext(abs(y))) -> sabal(x, y, 0)
-def : Pat<(v8i16 (add V128:$Vn, (zext (abs (v8i8 V64:$Vm))))),
+def : Pat<(v8i16 (add_like V128:$Vn, (zext (abs (v8i8 V64:$Vm))))),
           (SABALv8i8_v8i16 V128:$Vn, V64:$Vm, (EXTRACT_SUBREG (MOVIv2d_ns (i32 0)), dsub))>;
-def : Pat<(v4i32 (add V128:$Vn, (zext (abs (v4i16 V64:$Vm))))),
+def : Pat<(v4i32 (add_like V128:$Vn, (zext (abs (v4i16 V64:$Vm))))),
           (SABALv4i16_v4i32 V128:$Vn, V64:$Vm, (EXTRACT_SUBREG (MOVIv2d_ns (i32 0)), dsub))>;
-def : Pat<(v2i64 (add V128:$Vn, (zext (abs (v2i32 V64:$Vm))))),
+def : Pat<(v2i64 (add_like V128:$Vn, (zext (abs (v2i32 V64:$Vm))))),
           (SABALv2i32_v2i64 V128:$Vn, V64:$Vm, (EXTRACT_SUBREG (MOVIv2d_ns (i32 0)), dsub))>;
 
 
