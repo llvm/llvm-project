@@ -661,6 +661,7 @@ struct GetReturnObjectManager {
 
   Address GroActiveFlag;
   CodeGenFunction::AutoVarEmission GroEmission;
+  std::unique_ptr<CodeGenFunction::RunCleanupsScope> GroScope;
 
   GetReturnObjectManager(CodeGenFunction &CGF, const CoroutineBodyStmt &S)
       : CGF(CGF), Builder(CGF.Builder), S(S), GroActiveFlag(Address::invalid()),
@@ -713,14 +714,14 @@ struct GetReturnObjectManager {
     Builder.CreateStore(Builder.getFalse(), GroActiveFlag);
   }
 
-  std::unique_ptr<CodeGenFunction::RunCleanupsScope> EmitGroAlloca() {
+  void EmitGroAlloca() {
     if (DirectEmit)
-      return nullptr;
+      return;
 
     auto *GroDeclStmt = dyn_cast_or_null<DeclStmt>(S.getResultDecl());
     if (!GroDeclStmt) {
       // If get_return_object returns void, no need to do an alloca.
-      return nullptr;
+      return;
     }
 
     auto *GroVarDecl = cast<VarDecl>(GroDeclStmt->getSingleDecl());
@@ -736,7 +737,7 @@ struct GetReturnObjectManager {
                              llvm::MDNode::get(CGF.CGM.getLLVMContext(), {}));
     }
 
-    auto GroScope = std::make_unique<CodeGenFunction::RunCleanupsScope>(CGF);
+    GroScope = std::make_unique<CodeGenFunction::RunCleanupsScope>(CGF);
     // Remember the top of EHStack before emitting the cleanup.
     auto old_top = CGF.EHStack.stable_begin();
     CGF.EmitAutoVarCleanups(GroEmission);
@@ -752,7 +753,6 @@ struct GetReturnObjectManager {
         Cleanup->setTestFlagInNormalCleanup();
       }
     }
-    return GroScope;
   }
 
   void EmitGroInit() {
@@ -850,6 +850,7 @@ struct GetReturnObjectManager {
     CGF.EmitAnyExprToMem(S.getReturnValue(), CGF.ReturnValue,
                          S.getReturnValue()->getType().getQualifiers(),
                          /*IsInit*/ true);
+    GroScope->ForceCleanup();
     Builder.CreateBr(AfterConvBB);
 
     CGF.EmitBlock(AfterConvBB);
@@ -983,7 +984,7 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
     CoroId->setArgOperand(1, PromiseAddr.emitRawPointer(*this));
 
     // Now we have the promise, initialize the GRO
-    auto GroScope = GroManager.EmitGroAlloca();
+    GroManager.EmitGroAlloca();
     GroManager.EmitGroInit();
 
     EHStack.pushCleanup<CallCoroEnd>(EHCleanup);
@@ -1043,10 +1044,8 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
 
     // We need conversion if get_return_object's type doesn't matches the
     // coroutine return type.
-    if (!GroManager.DirectEmit) {
+    if (!GroManager.DirectEmit)
       GroManager.EmitGroConv(RetBB);
-      GroScope->ForceCleanup();
-    }
     EmitBlock(CleanupBB);
   }
 

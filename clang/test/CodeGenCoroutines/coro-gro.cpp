@@ -63,20 +63,17 @@ int f() {
   // CHECK: [[GroConv]]:
   // CHECK-NEXT: %[[Conv:.+]] = call noundef i32 @_ZN7GroTypecviEv(
   // CHECK-NEXT: store i32 %[[Conv]], ptr %[[RetVal]]
-  // CHECK-NEXT: br label %[[AfterGroConv]]
-
-  // CHECK: [[AfterGroConv]]:
-  // CHECK-NEXT: br i1  %[[IsFinalExit]], label %[[Cleanup:.+]], label %[[CoroRet:.+]]
-
-  // CHECK: [[Cleanup]]:
   // CHECK-NEXT: %[[IsActive:.+]] = load i1, ptr %[[GroActive]]
-  // CHECK-NEXT: br i1 %[[IsActive]], label %[[CleanupGro:.+]], label %[[Done:.+]]
+  // CHECK-NEXT: br i1 %[[IsActive]], label %[[CleanupGro:.+]], label %{{.*}}
 
   // CHECK: [[CleanupGro]]:
   // CHECK-NEXT: call void @_ZN7GroTypeD1Ev(
   // CHECK-NEXT: br label %cleanup.done
 
-  // CHECK: cleanup.done:
+  // CHECK: after.gro.conv:
+  // CHECK-NEXT: br i1  %[[IsFinalExit]], label %cleanup.cont10, label %[[CoroRet:.+]]
+
+  // CHECK: cleanup.cont10:
   // CHECK-NEXT: br label %coro.cleanup
 
   // Destroy promise and free the memory.

@@ -40,7 +40,12 @@ struct wrapper {
 
 wrapper fn() { co_return; }
 
+// CHECK: define dso_local void @_Z2fnv
+// CHECK: call void @gro_destroy()
+// CHECK: ret void
+
 // CHECK: define internal fastcc void @_Z2fnv.resume
 // CHECK-NOT: call void @gro_destroy()
+
 // CHECK: define internal fastcc void @_Z2fnv.destroy
 // CHECK-NOT: call void @gro_destroy()
