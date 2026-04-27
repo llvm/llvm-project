@@ -515,6 +515,7 @@ Bug Fixes in This Version
 - Fixed incorrect rejection of ``auto`` with reordered declaration specifiers in C23. (#GH164121)
 - Fixed a crash where constexpr evaluation encountered invalid overrides. (#GH183290)
 - Fixed a crash when assigning to an element of an ``ext_vector_type`` with ``bool`` element type. (#GH189260)
+- Fixed a crash caused by declaring multiple ``ownership_returns`` attributes with mismatched or missing arguments. (#GH188733)
 - Clang now emits an error for friend declarations of lambda members. (#GH26540)
 - Fixed a crash caused by lambda capture handling in delayed default arguments. (#GH176534)
 - Fixed a crash when parsing invalid ``static_assert`` declarations with string-literal messages (#GH187690).
