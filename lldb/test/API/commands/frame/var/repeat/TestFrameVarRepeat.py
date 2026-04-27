@@ -4,7 +4,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestCase(TestBase):
-
     def test_explicit_depth(self):
         """Test that repeating 'frame variable' increments --depth."""
         self.build()
