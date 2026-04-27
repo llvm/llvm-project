@@ -418,6 +418,18 @@ bool AMDGPURegBankCombinerImpl::combineD16Load(MachineInstr &MI) const {
       return false;
     }
 
+    if (Load->getOpcode() == AMDGPU::G_ZEXT) {
+      SextLoad = getDefIgnoringCopies(Load->getOperand(1).getReg(), MRI);
+      if (!SextLoad || SextLoad->getOpcode() != AMDGPU::G_SEXTLOAD)
+        return false;
+
+      const MachineMemOperand *MMO = *SextLoad->memoperands_begin();
+      if (MMO->getSizeInBits().getValue() != 8)
+        return false;
+
+      return applyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_LO_I8, MI, SextLoad, Dst);
+    }
+
     if (mi_match(
             Load, MRI,
             m_GAnd(m_MInstr(SextLoad), m_Copy(m_SpecificICst(CleanHi16))))) {
@@ -448,6 +460,18 @@ bool AMDGPURegBankCombinerImpl::combineD16Load(MachineInstr &MI) const {
       if (LoadSize == 16)
         return applyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_HI, MI, Load, Dst);
       return false;
+    }
+
+    if (Load->getOpcode() == AMDGPU::G_ZEXT) {
+      SextLoad = getDefIgnoringCopies(Load->getOperand(1).getReg(), MRI);
+      if (!SextLoad || SextLoad->getOpcode() != AMDGPU::G_SEXTLOAD)
+        return false;
+
+      const MachineMemOperand *MMO = *SextLoad->memoperands_begin();
+      if (MMO->getSizeInBits().getValue() != 8)
+        return false;
+
+      return applyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_HI_I8, MI, SextLoad, Dst);
     }
 
     if (mi_match(

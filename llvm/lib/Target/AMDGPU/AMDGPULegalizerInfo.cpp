@@ -1583,13 +1583,14 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                                       {S64, ConstantPtr, S64, GlobalAlign32},
                                       {V2S32, ConstantPtr, V2S32, GlobalAlign32}});
 
-    if (ST.useRealTrue16Insts())
+    if (ST.useRealTrue16Insts()) {
       Actions.legalForTypesWithMemDesc({{S16, GlobalPtr, S8, GlobalAlign8},
                                         {S16, GlobalPtr, S16, GlobalAlign16},
                                         {S16, LocalPtr, S8, 8},
                                         {S16, LocalPtr, S16, 16},
                                         {S16, PrivatePtr, S8, 8},
                                         {S16, PrivatePtr, S16, 16}});
+    }
 
     Actions.legalIf(
       [=](const LegalityQuery &Query) -> bool {

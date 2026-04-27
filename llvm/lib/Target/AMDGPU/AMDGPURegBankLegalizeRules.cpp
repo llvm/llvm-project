@@ -1122,23 +1122,28 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   addRulesForGOpcs({G_ZEXTLOAD, G_SEXTLOAD}) // i8 and i16 zeroextending loads
       .Any({{DivS32, P0}, {{Vgpr32}, {VgprP0}}})
+      .Any({{DivS16, P0}, {{Vgpr16}, {VgprP0}}}, usesTrue16)
 
       .Any({{DivS32, P1}, {{Vgpr32}, {VgprP1}}})
+      .Any({{DivS16, P1}, {{Vgpr16}, {VgprP1}}}, usesTrue16)
       .Any({{{UniS32, P1}, isAlign4 && isUL}, {{Sgpr32}, {SgprP1}, WidenMMOToS32}}, !hasSMRDSmall)
       .Any({{{UniS32, P1}, isNaturalAligned && isUL}, {{Sgpr32}, {SgprP1}}}, hasSMRDSmall)
       .Any({{{UniS32, P1}, !isAlign4 || !isUL}, {{UniInVgprS32}, {SgprP1}}}, !hasSMRDSmall)
       .Any({{{UniS32, P1}, !isNaturalAligned || !isUL}, {{UniInVgprS32}, {SgprP1}}}, hasSMRDSmall)
 
       .Any({{DivS32, P3}, {{Vgpr32}, {VgprP3}}})
+      .Any({{DivS16, P3}, {{Vgpr16}, {VgprP3}}}, usesTrue16)
       .Any({{UniS32, P3}, {{UniInVgprS32}, {VgprP3}}})
 
       .Any({{DivS32, P4}, {{Vgpr32}, {VgprP4}}})
+      .Any({{DivS16, P4}, {{Vgpr16}, {VgprP4}}}, usesTrue16)
       .Any({{{UniS32, P4}, isAlign4 && isUL}, {{Sgpr32}, {SgprP4}, WidenMMOToS32}}, !hasSMRDSmall)
       .Any({{{UniS32, P4}, isNaturalAligned && isUL}, {{Sgpr32}, {SgprP4}}}, hasSMRDSmall)
       .Any({{{UniS32, P4}, !isAlign4 || !isUL}, {{UniInVgprS32}, {SgprP4}}}, !hasSMRDSmall)
       .Any({{{UniS32, P4}, !isNaturalAligned || !isUL}, {{UniInVgprS32}, {SgprP4}}}, hasSMRDSmall)
 
-      .Any({{DivS32, P5}, {{Vgpr32}, {VgprP5}}});
+      .Any({{DivS32, P5}, {{Vgpr32}, {VgprP5}}})
+      .Any({{DivS16, P5}, {{Vgpr16}, {VgprP5}}}, usesTrue16);
 
   addRulesForGOpcs({G_STORE})
       // addrspace(0)
