@@ -182,8 +182,8 @@ static void emitDeclDestroy(CIRGenFunction &cgf, const VarDecl *vd,
     // address of the global into whose dtor region we are emiiting the destroy.
     // The same applies to code above where it is calling getAddrOfGlobalVar.
     mlir::Value globalVal = builder.createGetGlobal(addr);
-    mlir::cast<cir::GetGlobalOp>(globalVal.getDefiningOp())
-        .setStaticLocal(addr.getStaticLocalGuard().has_value());
+    globalVal.getDefiningOp<cir::GetGlobalOp>().setStaticLocal(
+        addr.getStaticLocalGuard().has_value());
     CharUnits alignment = cgf.getContext().getDeclAlign(vd);
     Address globalAddr{globalVal, cgf.convertTypeForMem(type), alignment};
     cgf.emitDestroy(globalAddr, type, cgf.getDestroyer(dtorKind));
@@ -300,8 +300,8 @@ void CIRGenModule::emitCXXSpecialVarDeclInit(const VarDecl *varDecl,
   mlir::Value getGlobal = builder.createGetGlobal(addr);
   // If we're initializing a static local with a guard variable, set the flag
   // that indicates that.
-  mlir::cast<cir::GetGlobalOp>(getGlobal.getDefiningOp())
-      .setStaticLocal(addr.getStaticLocalGuard().has_value());
+  getGlobal.getDefiningOp<cir::GetGlobalOp>().setStaticLocal(
+      addr.getStaticLocalGuard().has_value());
 
   Address declAddr(getGlobal, getASTContext().getDeclAlign(varDecl));
   assert(performInit && "cannot have a constant initializer which needs "
