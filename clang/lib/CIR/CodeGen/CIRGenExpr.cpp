@@ -1031,7 +1031,7 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
 
   if (const auto *bd = dyn_cast<BindingDecl>(nd)) {
     if (e->refersToEnclosingVariableOrCapture()) {
-      auto *fd = lambdaCaptureFields.lookup(bd);
+      FieldDecl *fd = lambdaCaptureFields.lookup(bd);
       return emitCapturedFieldLValue(*this, fd, cxxabiThisValue);
     }
     return emitLValue(bd->getBinding());
