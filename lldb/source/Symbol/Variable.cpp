@@ -21,6 +21,7 @@
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ABI.h"
+#include "lldb/Target/Language.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StackFrame.h"
@@ -475,6 +476,28 @@ static void PrivateAutoComplete(
         &prefix_path, // Anything that has been resolved already will be in here
     const CompilerType &compiler_type, CompletionRequest &request);
 
+// Get the CompilerType of the instance variable (this/self) for direct ivar
+// completion. Returns an invalid CompilerType if not in a method context.
+static CompilerType GetInstanceVariableType(StackFrame &frame,
+                                            VariableList &variable_list) {
+  auto *lang = Language::FindPlugin(frame.GetLanguage().AsLanguageType());
+  if (!lang)
+    return {};
+  llvm::StringRef instance_name = lang->GetInstanceVariableName();
+  if (instance_name.empty())
+    return {};
+  VariableSP var_sp = variable_list.FindVariable(ConstString(instance_name));
+  if (!var_sp)
+    return {};
+  Type *var_type = var_sp->GetType();
+  if (!var_type)
+    return {};
+  CompilerType compiler_type = var_type->GetForwardCompilerType();
+  if (compiler_type.IsPointerType())
+    compiler_type = compiler_type.GetPointeeType();
+  return compiler_type.GetCanonicalType();
+}
+
 static void PrivateAutoCompleteMembers(
     StackFrame *frame, const std::string &partial_member_name,
     llvm::StringRef partial_path,
@@ -598,6 +621,14 @@ static void PrivateAutoComplete(
         if (variable_list) {
           for (const VariableSP &var_sp : *variable_list)
             request.AddCompletion(var_sp->GetName());
+
+          // Offer members of this/self so that direct ivar access can be
+          // completed (eg "frame variable member" for "this->member").
+          CompilerType instance_type =
+              GetInstanceVariableType(*frame, *variable_list);
+          if (instance_type)
+            PrivateAutoCompleteMembers(frame, "", "", "", instance_type,
+                                       request);
         }
       }
     }
@@ -720,6 +751,14 @@ static void PrivateAutoComplete(
               }
             }
           }
+
+          // Try also completing the token as a member of this/self (direct ivar
+          // access).
+          CompilerType instance_type =
+              GetInstanceVariableType(*frame, *variable_list);
+          if (instance_type)
+            PrivateAutoCompleteMembers(frame, token, remaining_partial_path,
+                                       prefix_path, instance_type, request);
         }
       }
       break;
