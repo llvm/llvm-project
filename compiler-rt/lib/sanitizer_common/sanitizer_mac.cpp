@@ -1363,14 +1363,16 @@ uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding,
     } else if (kr == KERN_DENIED) {
       Report("ERROR: Unable to find a memory range for dynamic shadow.\n");
       Report("HINT: Ensure mach_vm_region_recurse is allowed under sandbox.\n");
-      Die();
+      address = max_vm_address;
+
+      // We will break after this iteration since kr != KERN_SUCCESS
     } else {
       Report(
           "WARNING: mach_vm_region_recurse returned unexpected code %d (%s)\n",
           kr, mach_error_string(kr));
-      DCHECK(false && "mach_vm_region_recurse returned unexpected code");
-      break;  // address is not valid unless KERN_SUCCESS, therefore we must not
-              // use it.
+      address = max_vm_address;
+
+      // We will break after this iteration since kr != KERN_SUCCESS
     }
 
     if (free_begin != address) {
