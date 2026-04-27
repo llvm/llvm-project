@@ -68,7 +68,8 @@ void ProgramAndKernelManager::registerFatBin(const void *BinaryStart,
   assert(Inserted && "Fat binary registered twice");
 }
 
-void ProgramAndKernelManager::unregisterFatBin(const void *BinaryStart) {
+void ProgramAndKernelManager::unregisterFatBin(const void *BinaryStart,
+                                               size_t /*Size*/) {
   assert(BinaryStart && "Binary pointer can't be nullptr");
 
   std::lock_guard<std::mutex> Guard(MDataCollectionMutex);
@@ -140,7 +141,8 @@ extern "C" _LIBSYCL_EXPORT void __sycl_register_lib(const void *BinaryStart,
       BinaryStart, Size);
 }
 
-extern "C" _LIBSYCL_EXPORT void __sycl_unregister_lib(const void *BinaryStart) {
+extern "C" _LIBSYCL_EXPORT void __sycl_unregister_lib(const void *BinaryStart,
+                                                      size_t Size) {
   sycl::detail::ProgramAndKernelManager::getInstance().unregisterFatBin(
-      BinaryStart);
+      BinaryStart, Size);
 }

@@ -672,7 +672,7 @@ public:
     appendToGlobalCtors(M, Func, /*Priority*/ 1);
   }
 
-  void createUnregisterFunction(Constant *Start) {
+  void createUnregisterFunction(Constant *Start, Constant *Size) {
     FunctionType *FuncTy =
         FunctionType::get(Type::getVoidTy(C), /*isVarArg*/ false);
     Function *Func = Function::Create(FuncTy, GlobalValue::InternalLinkage,
@@ -680,13 +680,15 @@ public:
     Func->setSection(".text.startup");
 
     PointerType *PtrTy = PointerType::getUnqual(C);
-    FunctionType *UnRegFuncTy = FunctionType::get(Type::getVoidTy(C), {PtrTy},
-                                                  /*isVarArg=*/false);
+    IntegerType *Int64Ty = Type::getInt64Ty(C);
+    FunctionType *UnRegFuncTy =
+        FunctionType::get(Type::getVoidTy(C), {PtrTy, Int64Ty},
+                          /*isVarArg=*/false);
     FunctionCallee UnRegFuncC =
         M.getOrInsertFunction("__sycl_unregister_lib", UnRegFuncTy);
 
     IRBuilder<> Builder(BasicBlock::Create(C, "entry", Func));
-    Builder.CreateCall(UnRegFuncC, {Start});
+    Builder.CreateCall(UnRegFuncC, {Start, Size});
     Builder.CreateRetVoid();
 
     appendToGlobalDtors(M, Func, /*Priority*/ 1);
@@ -744,6 +746,6 @@ Error llvm::offloading::wrapSYCLBinaries(llvm::Module &M, ArrayRef<char> Buffer,
   SYCLWrapper W(M, Options);
   auto [Start, Size] = W.embedBinary(Buffer);
   W.createRegisterFatbinFunction(Start, Size);
-  W.createUnregisterFunction(Start);
+  W.createUnregisterFunction(Start, Size);
   return Error::success();
 }

@@ -41,9 +41,12 @@ extern "C" _LIBSYCL_EXPORT void __sycl_register_lib(const void *BinaryStart,
 /// Executed as a part of current module's (.exe, .dll) static
 /// de-initialization.
 /// Unregisters device executable images with the runtime.
-/// \param BinaryStart pointer to the start of the OffloadBinary that was
-/// previously passed to __sycl_register_lib.
-extern "C" _LIBSYCL_EXPORT void __sycl_unregister_lib(const void *BinaryStart);
+/// \param BinaryStart pointer to the start of the OffloadBinary.
+/// \param Size size in bytes of the OffloadBinary.
+/// BinaryStart and Size must match the values passed to the corresponding
+/// __sycl_register_lib call.
+extern "C" _LIBSYCL_EXPORT void __sycl_unregister_lib(const void *BinaryStart,
+                                                      size_t Size);
 
 // +++ }
 
@@ -69,8 +72,9 @@ public:
   void registerFatBin(const void *BinaryStart, size_t Size);
 
   /// Removes all entries associated with the fat binary that was previously
-  /// passed to registerFatBin via BinaryStart.
-  void unregisterFatBin(const void *BinaryStart);
+  /// passed to registerFatBin. BinaryStart and Size must match the values
+  /// passed to the corresponding registerFatBin call.
+  void unregisterFatBin(const void *BinaryStart, size_t Size);
 
   /// Creates a liboffload kernel that is ready for execution.
   /// This method is thread-safe.

@@ -283,6 +283,6 @@
 
 //      SYCL: define internal void @sycl.descriptor_unreg() section ".text.startup" {
 // SYCL-NEXT: entry:
-// SYCL-NEXT:   call void @__sycl_unregister_lib(ptr @.sycl_offloading.binary)
+// SYCL-NEXT:   call void @__sycl_unregister_lib(ptr @.sycl_offloading.binary, i64 [[SIZE]])
 // SYCL-NEXT:   ret void
 // SYCL-NEXT: }
