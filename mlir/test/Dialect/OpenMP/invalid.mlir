@@ -3449,3 +3449,17 @@ func.func @iterator_yield_type_mismatch(%lb : index, %ub : index, %st : index) {
   } -> !omp.iterated<i64>
   return
 }
+
+// -----
+func.func @target_allocmem_invalid_uniq_name(%device : i32) -> () {
+// expected-error @below {{op attribute 'uniq_name' failed to satisfy constraint: string attribute}}
+  %0 = omp.target_allocmem %device : i32, i64 {uniq_name=2}
+  return
+}
+
+// -----
+func.func @target_allocmem_invalid_bindc_name(%device : i32) -> () {
+// expected-error @below {{op attribute 'bindc_name' failed to satisfy constraint: string attribute}}
+  %0 = omp.target_allocmem %device : i32, i64 {bindc_name=2}
+  return
+}
