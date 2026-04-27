@@ -4892,14 +4892,14 @@ let Predicates = [HasSVE2p3] in {
 // SVE_B16MM Instructions
 //===----------------------------------------------------------------------===//
 let Predicates = [HasSVE_B16MM] in {
-  def BFMMLA_ZZZ_H : sve_fp_matrix_mla<0b110, "bfmmla", ZPR16, ZPR16>;
+  defm BFMMLA_ZZZ_H : sve_fp_matrix_mla<0b110, "bfmmla", ZPR16, ZPR16, int_aarch64_sve_fmmla, nxv8bf16, nxv8bf16>;
 }
 
 //===----------------------------------------------------------------------===//
 // F16MM Instructions
 //===----------------------------------------------------------------------===//
 let Predicates = [HasSVE2p2, HasF16MM] in {
-  def FMMLA_ZZZ_H : sve_fp_matrix_mla<0b100, "fmmla", ZPR16, ZPR16>;
+  defm FMMLA_ZZZ_H : sve_fp_matrix_mla<0b100, "fmmla", ZPR16, ZPR16, int_aarch64_sve_fmmla, nxv8f16, nxv8f16>;
 }
 
 //===----------------------------------------------------------------------===//
