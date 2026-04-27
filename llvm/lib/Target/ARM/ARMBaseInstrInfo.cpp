@@ -605,7 +605,7 @@ template <> bool IsCPSRDead<MachineInstr>(const MachineInstr *MI) {
 unsigned ARMBaseInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   const MachineBasicBlock &MBB = *MI.getParent();
   const MachineFunction *MF = MBB.getParent();
-  const MCAsmInfo *MAI = MF->getTarget().getMCAsmInfo();
+  const MCAsmInfo &MAI = MF->getTarget().getMCAsmInfo();
 
   const MCInstrDesc &MCID = MI.getDesc();
 
@@ -618,7 +618,7 @@ unsigned ARMBaseInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     // example.
     return MCID.getSize();
   case TargetOpcode::BUNDLE:
-    return getInstBundleLength(MI);
+    return getInstBundleSize(MI);
   case TargetOpcode::COPY:
     if (!MF->getInfo<ARMFunctionInfo>()->isThumbFunction())
       return 4;
@@ -637,23 +637,12 @@ unsigned ARMBaseInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   case ARM::INLINEASM:
   case ARM::INLINEASM_BR: {
     // If this machine instr is an inline asm, measure it.
-    unsigned Size = getInlineAsmLength(MI.getOperand(0).getSymbolName(), *MAI);
+    unsigned Size = getInlineAsmLength(MI.getOperand(0).getSymbolName(), MAI);
     if (!MF->getInfo<ARMFunctionInfo>()->isThumbFunction())
       Size = alignTo(Size, 4);
     return Size;
   }
   }
-}
-
-unsigned ARMBaseInstrInfo::getInstBundleLength(const MachineInstr &MI) const {
-  unsigned Size = 0;
-  MachineBasicBlock::const_instr_iterator I = MI.getIterator();
-  MachineBasicBlock::const_instr_iterator E = MI.getParent()->instr_end();
-  while (++I != E && I->isInsideBundle()) {
-    assert(!I->isBundle() && "No nested bundle!");
-    Size += getInstSizeInBytes(*I);
-  }
-  return Size;
 }
 
 void ARMBaseInstrInfo::copyFromCPSR(MachineBasicBlock &MBB,

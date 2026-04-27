@@ -108,7 +108,10 @@ void SPIRV64TargetInfo::getTargetDefines(const LangOptions &Opts,
   DefineStd(Builder, "SPIRV64", Opts);
 }
 
-static const AMDGPUTargetInfo AMDGPUTI(llvm::Triple("amdgcn-amd-amdhsa"), {});
+static const AMDGPUTargetInfo
+    AMDGPUTI(llvm::Triple(llvm::Triple::amdgcn, llvm::Triple::NoSubArch,
+                          llvm::Triple::AMD, llvm::Triple::AMDHSA),
+             {});
 
 ArrayRef<const char *> SPIRV64AMDGCNTargetInfo::getGCCRegNames() const {
   return AMDGPUTI.getGCCRegNames();

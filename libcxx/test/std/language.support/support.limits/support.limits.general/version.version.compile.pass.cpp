@@ -672,6 +672,10 @@
 #    error "__cpp_lib_ranges_contains should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_ranges_enumerate
+#    error "__cpp_lib_ranges_enumerate should not be defined before c++23"
+#  endif
+
 #  ifdef __cpp_lib_ranges_find_last
 #    error "__cpp_lib_ranges_find_last should not be defined before c++23"
 #  endif
@@ -698,6 +702,10 @@
 
 #  ifdef __cpp_lib_ranges_starts_ends_with
 #    error "__cpp_lib_ranges_starts_ends_with should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_stride
+#    error "__cpp_lib_ranges_stride should not be defined before c++23"
 #  endif
 
 #  ifdef __cpp_lib_ranges_to_container
@@ -798,10 +806,6 @@
 
 #  ifdef __cpp_lib_span_at
 #    error "__cpp_lib_span_at should not be defined before c++26"
-#  endif
-
-#  ifdef __cpp_lib_span_initializer_list
-#    error "__cpp_lib_span_initializer_list should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_spanstream
@@ -1632,6 +1636,10 @@
 #    error "__cpp_lib_ranges_contains should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_ranges_enumerate
+#    error "__cpp_lib_ranges_enumerate should not be defined before c++23"
+#  endif
+
 #  ifdef __cpp_lib_ranges_find_last
 #    error "__cpp_lib_ranges_find_last should not be defined before c++23"
 #  endif
@@ -1658,6 +1666,10 @@
 
 #  ifdef __cpp_lib_ranges_starts_ends_with
 #    error "__cpp_lib_ranges_starts_ends_with should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_stride
+#    error "__cpp_lib_ranges_stride should not be defined before c++23"
 #  endif
 
 #  ifdef __cpp_lib_ranges_to_container
@@ -1773,10 +1785,6 @@
 
 #  ifdef __cpp_lib_span_at
 #    error "__cpp_lib_span_at should not be defined before c++26"
-#  endif
-
-#  ifdef __cpp_lib_span_initializer_list
-#    error "__cpp_lib_span_initializer_list should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_spanstream
@@ -2757,6 +2765,10 @@
 #    error "__cpp_lib_ranges_contains should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_ranges_enumerate
+#    error "__cpp_lib_ranges_enumerate should not be defined before c++23"
+#  endif
+
 #  ifdef __cpp_lib_ranges_find_last
 #    error "__cpp_lib_ranges_find_last should not be defined before c++23"
 #  endif
@@ -2783,6 +2795,10 @@
 
 #  ifdef __cpp_lib_ranges_starts_ends_with
 #    error "__cpp_lib_ranges_starts_ends_with should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_stride
+#    error "__cpp_lib_ranges_stride should not be defined before c++23"
 #  endif
 
 #  ifdef __cpp_lib_ranges_to_container
@@ -2928,10 +2944,6 @@
 
 #  ifdef __cpp_lib_span_at
 #    error "__cpp_lib_span_at should not be defined before c++26"
-#  endif
-
-#  ifdef __cpp_lib_span_initializer_list
-#    error "__cpp_lib_span_initializer_list should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_spanstream
@@ -4149,6 +4161,10 @@
 #    error "__cpp_lib_ranges_contains should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_ranges_enumerate
+#    error "__cpp_lib_ranges_enumerate should not be defined before c++23"
+#  endif
+
 #  ifdef __cpp_lib_ranges_find_last
 #    error "__cpp_lib_ranges_find_last should not be defined before c++23"
 #  endif
@@ -4175,6 +4191,10 @@
 
 #  ifdef __cpp_lib_ranges_starts_ends_with
 #    error "__cpp_lib_ranges_starts_ends_with should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_stride
+#    error "__cpp_lib_ranges_stride should not be defined before c++23"
 #  endif
 
 #  ifdef __cpp_lib_ranges_to_container
@@ -4344,10 +4364,6 @@
 
 #  ifdef __cpp_lib_span_at
 #    error "__cpp_lib_span_at should not be defined before c++26"
-#  endif
-
-#  ifdef __cpp_lib_span_initializer_list
-#    error "__cpp_lib_span_initializer_list should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_spanstream
@@ -5733,6 +5749,13 @@
 #    error "__cpp_lib_ranges_contains should have the value 202207L in c++23"
 #  endif
 
+#  ifndef __cpp_lib_ranges_enumerate
+#    error "__cpp_lib_ranges_enumerate should be defined in c++23"
+#  endif
+#  if __cpp_lib_ranges_enumerate != 202302L
+#    error "__cpp_lib_ranges_enumerate should have the value 202302L in c++23"
+#  endif
+
 #  ifndef __cpp_lib_ranges_find_last
 #    error "__cpp_lib_ranges_find_last should be defined in c++23"
 #  endif
@@ -5783,6 +5806,13 @@
 #  endif
 #  if __cpp_lib_ranges_starts_ends_with != 202106L
 #    error "__cpp_lib_ranges_starts_ends_with should have the value 202106L in c++23"
+#  endif
+
+#  ifndef __cpp_lib_ranges_stride
+#    error "__cpp_lib_ranges_stride should be defined in c++23"
+#  endif
+#  if __cpp_lib_ranges_stride != 202207L
+#    error "__cpp_lib_ranges_stride should have the value 202207L in c++23"
 #  endif
 
 #  ifndef __cpp_lib_ranges_to_container
@@ -5967,10 +5997,6 @@
 
 #  ifdef __cpp_lib_span_at
 #    error "__cpp_lib_span_at should not be defined before c++26"
-#  endif
-
-#  ifdef __cpp_lib_span_initializer_list
-#    error "__cpp_lib_span_initializer_list should not be defined before c++26"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)
@@ -7662,6 +7688,13 @@
 #    error "__cpp_lib_ranges_contains should have the value 202207L in c++26"
 #  endif
 
+#  ifndef __cpp_lib_ranges_enumerate
+#    error "__cpp_lib_ranges_enumerate should be defined in c++26"
+#  endif
+#  if __cpp_lib_ranges_enumerate != 202302L
+#    error "__cpp_lib_ranges_enumerate should have the value 202302L in c++26"
+#  endif
+
 #  ifndef __cpp_lib_ranges_find_last
 #    error "__cpp_lib_ranges_find_last should be defined in c++26"
 #  endif
@@ -7715,6 +7748,13 @@
 #  endif
 #  if __cpp_lib_ranges_starts_ends_with != 202106L
 #    error "__cpp_lib_ranges_starts_ends_with should have the value 202106L in c++26"
+#  endif
+
+#  ifndef __cpp_lib_ranges_stride
+#    error "__cpp_lib_ranges_stride should be defined in c++26"
+#  endif
+#  if __cpp_lib_ranges_stride != 202207L
+#    error "__cpp_lib_ranges_stride should have the value 202207L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_ranges_to_container
@@ -7938,13 +7978,6 @@
 #  endif
 #  if __cpp_lib_span_at != 202311L
 #    error "__cpp_lib_span_at should have the value 202311L in c++26"
-#  endif
-
-#  ifndef __cpp_lib_span_initializer_list
-#    error "__cpp_lib_span_initializer_list should be defined in c++26"
-#  endif
-#  if __cpp_lib_span_initializer_list != 202311L
-#    error "__cpp_lib_span_initializer_list should have the value 202311L in c++26"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)

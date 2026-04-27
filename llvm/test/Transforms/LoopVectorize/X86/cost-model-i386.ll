@@ -32,7 +32,7 @@ define void @icmp_predicate_and_branch_cost(i32 %size, ptr %dst, i64 %conv5.i) #
 ; CHECK-NEXT:    [[TMP10:%.*]] = select <16 x i1> [[TMP6]], <16 x i1> [[TMP7]], <16 x i1> zeroinitializer
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <16 x i1> [[TMP10]], <16 x i8> zeroinitializer, <16 x i8> [[TMP9]]
 ; CHECK-NEXT:    [[PREDPHI3:%.*]] = select <16 x i1> [[TMP6]], <16 x i8> [[PREDPHI]], <16 x i8> splat (i8 1)
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <16 x i8> [[PREDPHI3]], i32 15
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <16 x i8> [[PREDPHI3]], i64 15
 ; CHECK-NEXT:    store i8 [[TMP11]], ptr [[DST:%.*]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 16
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <16 x i32> [[VEC_IND]], splat (i32 128)

@@ -29,7 +29,7 @@ define void @fshl_operand_first_order_recurrence(ptr %dst, ptr noalias %src) {
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; CHECK-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <2 x i64> [[WIDE_LOAD1]], i32 1
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <2 x i64> [[WIDE_LOAD1]], i64 1
 ; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
@@ -127,44 +127,44 @@ define void @call_scalarized(ptr noalias %src, ptr noalias %dst) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = or <2 x i1> [[TMP7]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = xor <2 x i1> [[TMP10]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP13:%.*]] = xor <2 x i1> [[TMP11]], splat (i1 true)
-; CHECK-NEXT:    [[OR_COND:%.*]] = extractelement <2 x i1> [[TMP12]], i32 0
+; CHECK-NEXT:    [[OR_COND:%.*]] = extractelement <2 x i1> [[TMP12]], i64 0
 ; CHECK-NEXT:    br i1 [[OR_COND]], label %[[LOOP_LATCH:.*]], label %[[THEN:.*]]
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr double, ptr [[DST]], i64 [[IV_NEXT]]
-; CHECK-NEXT:    [[L:%.*]] = extractelement <2 x double> [[REVERSE]], i32 0
+; CHECK-NEXT:    [[L:%.*]] = extractelement <2 x double> [[REVERSE]], i64 0
 ; CHECK-NEXT:    [[SQRT:%.*]] = call double @llvm.sqrt.f64(double [[L]])
 ; CHECK-NEXT:    store double [[SQRT]], ptr [[GEP_DST]], align 8
 ; CHECK-NEXT:    br label %[[THEN]]
 ; CHECK:       [[THEN]]:
-; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <2 x i1> [[TMP12]], i32 1
+; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <2 x i1> [[TMP12]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP20]], label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4:.*]]
 ; CHECK:       [[PRED_STORE_IF3]]:
 ; CHECK-NEXT:    [[TMP21:%.*]] = add i64 [[IV]], -1
 ; CHECK-NEXT:    [[TMP22:%.*]] = add i64 [[TMP21]], -1
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP22]]
-; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <2 x double> [[REVERSE]], i32 1
+; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <2 x double> [[REVERSE]], i64 1
 ; CHECK-NEXT:    [[TMP25:%.*]] = call double @llvm.sqrt.f64(double [[TMP24]])
 ; CHECK-NEXT:    store double [[TMP25]], ptr [[TMP23]], align 8
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
 ; CHECK:       [[PRED_STORE_CONTINUE4]]:
-; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <2 x i1> [[TMP13]], i32 0
+; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <2 x i1> [[TMP13]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP26]], label %[[EXIT:.*]], label %[[PRED_STORE_CONTINUE6:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[TMP27:%.*]] = add i64 [[IV]], -2
 ; CHECK-NEXT:    [[TMP28:%.*]] = add i64 [[TMP27]], -1
 ; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP28]]
-; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <2 x double> [[REVERSE2]], i32 0
+; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <2 x double> [[REVERSE2]], i64 0
 ; CHECK-NEXT:    [[TMP31:%.*]] = call double @llvm.sqrt.f64(double [[TMP30]])
 ; CHECK-NEXT:    store double [[TMP31]], ptr [[TMP29]], align 8
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
 ; CHECK:       [[PRED_STORE_CONTINUE6]]:
-; CHECK-NEXT:    [[TMP32:%.*]] = extractelement <2 x i1> [[TMP13]], i32 1
+; CHECK-NEXT:    [[TMP32:%.*]] = extractelement <2 x i1> [[TMP13]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP32]], label %[[PRED_STORE_IF7:.*]], label %[[PRED_STORE_CONTINUE8]]
 ; CHECK:       [[PRED_STORE_IF7]]:
 ; CHECK-NEXT:    [[TMP33:%.*]] = add i64 [[IV]], -3
 ; CHECK-NEXT:    [[TMP34:%.*]] = add i64 [[TMP33]], -1
 ; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP34]]
-; CHECK-NEXT:    [[TMP36:%.*]] = extractelement <2 x double> [[REVERSE2]], i32 1
+; CHECK-NEXT:    [[TMP36:%.*]] = extractelement <2 x double> [[REVERSE2]], i64 1
 ; CHECK-NEXT:    [[TMP37:%.*]] = call double @llvm.sqrt.f64(double [[TMP36]])
 ; CHECK-NEXT:    store double [[TMP37]], ptr [[TMP35]], align 8
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE8]]
