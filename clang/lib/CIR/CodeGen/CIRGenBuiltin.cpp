@@ -884,6 +884,16 @@ decodeFixedType(CIRGenFunction &cgf,
   switch (descriptor.Kind) {
   case IITDescriptor::Void:
     return cir::VoidType::get(context);
+  case IITDescriptor::Half:
+    return cir::FP16Type::get(context);
+  case IITDescriptor::BFloat:
+    return cir::BF16Type::get(context);
+  case IITDescriptor::Float:
+    return cir::SingleType::get(context);
+  case IITDescriptor::Double:
+    return cir::DoubleType::get(context);
+  case IITDescriptor::Quad:
+    return cir::FP128Type::get(context);
   // If the intrinsic expects unsigned integers, the signedness is corrected in
   // correctIntegerSignedness()
   case IITDescriptor::Integer:
