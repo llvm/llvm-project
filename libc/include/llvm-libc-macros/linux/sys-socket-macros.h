@@ -50,4 +50,23 @@
 #define SHUT_WR 1
 #define SHUT_RDWR 2
 
+#define SCM_RIGHTS 1
+
+#define CMSG_ALIGN(len) (((len) + sizeof(size_t) - 1) & ~(sizeof(size_t) - 1))
+#define CMSG_LEN(len) (sizeof(struct cmsghdr) + (len))
+#define CMSG_SPACE(len) (sizeof(struct cmsghdr) + CMSG_ALIGN(len))
+
+#define CMSG_FIRSTHDR(msg)                                                     \
+  ((msg)->msg_controllen >= sizeof(struct cmsghdr)                             \
+       ? (struct cmsghdr *)(msg)->msg_control                                  \
+       : 0)
+#define __CMSG_NXTHDR_CANDIDATE(cmsg)                                          \
+  ((struct cmsghdr *)((unsigned char *)(cmsg) + CMSG_ALIGN((cmsg)->cmsg_len)))
+#define CMSG_NXTHDR(msg, cmsg)                                                 \
+  ((char *)(__CMSG_NXTHDR_CANDIDATE(cmsg) + 1) <=                              \
+           ((char *)((msg)->msg_control) + (msg)->msg_controllen)              \
+       ? __CMSG_NXTHDR_CANDIDATE(cmsg)                                         \
+       : 0)
+#define CMSG_DATA(cmsg) ((unsigned char *)((struct cmsghdr *)(cmsg) + 1))
+
 #endif // LLVM_LIBC_MACROS_LINUX_SYS_SOCKET_MACROS_H

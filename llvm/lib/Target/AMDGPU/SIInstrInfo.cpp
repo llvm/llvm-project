@@ -9902,18 +9902,6 @@ Register SIInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
   return Register();
 }
 
-unsigned SIInstrInfo::getInstBundleSize(const MachineInstr &MI) const {
-  unsigned Size = 0;
-  MachineBasicBlock::const_instr_iterator I = MI.getIterator();
-  MachineBasicBlock::const_instr_iterator E = MI.getParent()->instr_end();
-  while (++I != E && I->isInsideBundle()) {
-    assert(!I->isBundle() && "No nested bundle!");
-    Size += getInstSizeInBytes(*I);
-  }
-
-  return Size;
-}
-
 unsigned SIInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   unsigned Opc = MI.getOpcode();
   const MCInstrDesc &Desc = getMCOpcodeFromPseudo(Opc);
@@ -9988,7 +9976,7 @@ unsigned SIInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   case TargetOpcode::INLINEASM_BR: {
     const MachineFunction *MF = MI.getMF();
     const char *AsmStr = MI.getOperand(0).getSymbolName();
-    return getInlineAsmLength(AsmStr, *MF->getTarget().getMCAsmInfo(), &ST);
+    return getInlineAsmLength(AsmStr, MF->getTarget().getMCAsmInfo(), &ST);
   }
   default:
     if (MI.isMetaInstruction())

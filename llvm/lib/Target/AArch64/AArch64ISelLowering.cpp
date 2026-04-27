@@ -5464,6 +5464,7 @@ AArch64TargetLowering::LowerLOOP_DEPENDENCE_MASK(SDValue Op,
   unsigned LaneOffset = Op.getConstantOperandVal(3);
   unsigned NumElements = VT.getVectorMinNumElements();
   uint64_t EltSizeInBytes = Op.getConstantOperandVal(2);
+  EVT AddrTy = Op->getOperand(0).getValueType();
 
   // Lane offsets and other element sizes are not supported by whilewr/rw.
   if (LaneOffset != 0 || !is_contained({1u, 2u, 4u, 8u}, EltSizeInBytes))
@@ -5473,9 +5474,19 @@ AArch64TargetLowering::LowerLOOP_DEPENDENCE_MASK(SDValue Op,
   EVT PredVT =
       getPackedSVEVectorVT(EltVT).changeElementType(*DAG.getContext(), MVT::i1);
 
-  // Legal whilewr/rw (lowered by tablegen matcher).
-  if (PredVT == VT)
-    return Op;
+  if (PredVT == VT) {
+    // Legal whilewr/rw (lowered by tablegen matcher).
+    if (AddrTy == MVT::i64)
+      return Op;
+
+    // Almost legal whilewr/rw (addresses must be promoted to i64).
+    assert(AddrTy == MVT::i32 && "Only expected i32 to be legal!");
+    return DAG.getNode(
+        Op.getOpcode(), DL, VT,
+        DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, Op->getOperand(0)),
+        DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, Op->getOperand(1)),
+        DAG.getConstant(EltSizeInBytes, DL, MVT::i64), Op->getOperand(3));
+  }
 
   // Expand if this mask needs splitting (this will produce a whilelo).
   if (NumElements > PredVT.getVectorMinNumElements())
@@ -27762,6 +27773,58 @@ static SDValue trySwapVSelectOperands(SDNode *N, SelectionDAG &DAG) {
                      {InverseSetCC, SelectB, SelectA});
 }
 
+static SDValue performVselectPowCombine(SDNode *N,
+                                        TargetLowering::DAGCombinerInfo &DCI) {
+  assert(N->getOpcode() == ISD::VSELECT && "Expected VSELECT opcode");
+  SDValue Cond = N->getOperand(0);
+  SDValue TrueVal = N->getOperand(1);
+  SDValue FalseVal = N->getOperand(2);
+  bool TrueValIsPow = TrueVal.getOpcode() == ISD::FPOW;
+  bool FalseValIsPow = FalseVal.getOpcode() == ISD::FPOW;
+
+  // If both inputs are pow we could equally remove the select and simply
+  // select between pow inputs instead.
+  if (TrueValIsPow == FalseValIsPow)
+    return SDValue();
+
+  if ((TrueValIsPow && !TrueVal.hasOneUse()) ||
+      (FalseValIsPow && !FalseVal.hasOneUse()))
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  RTLIB::Libcall LC = RTLIB::getPOW(VT);
+  SelectionDAG &DAG = DCI.DAG;
+  auto &TLI = DAG.getTargetLoweringInfo();
+  bool HasLibCall =
+      TLI.getLibcallLoweringInfo().getLibcallImpl(LC) != RTLIB::Unsupported;
+  if (!HasLibCall)
+    return SDValue();
+
+  SDValue OldPow = TrueValIsPow ? TrueVal : FalseVal;
+  SDValue OldPowArg0 = OldPow->getOperand(0);
+
+  // Bail out if argument 0 is already a select, in order to avoid an infinite
+  // combine loop.
+  if (OldPowArg0.getOpcode() == ISD::VSELECT)
+    return SDValue();
+
+  // For a given call pow(x, y) when x=1.0 it is guaranteed to return 1.0 for
+  // any value of y.
+  SDLoc DL(N);
+  SDValue SplatOne = DAG.getConstantFP(1.0, DL, VT);
+  SDValue NewPowArg0;
+  if (TrueValIsPow)
+    NewPowArg0 = DAG.getNode(ISD::VSELECT, DL, VT, Cond, OldPowArg0, SplatOne);
+  else
+    NewPowArg0 = DAG.getNode(ISD::VSELECT, DL, VT, Cond, SplatOne, OldPowArg0);
+  SDValue NewPow = DAG.getNode(ISD::FPOW, DL, VT, NewPowArg0,
+                               OldPow->getOperand(1), OldPow->getFlags());
+
+  if (TrueValIsPow)
+    return DAG.getNode(ISD::VSELECT, DL, VT, Cond, NewPow, FalseVal);
+  return DAG.getNode(ISD::VSELECT, DL, VT, Cond, TrueVal, NewPow);
+}
+
 // vselect (v1i1 setcc) ->
 //     vselect (v1iXX setcc)  (XX is the size of the compared operand type)
 // FIXME: Currently the type legalizer can't handle VSELECT having v1i1 as
@@ -27848,6 +27911,9 @@ static SDValue performVSelectCombine(SDNode *N,
       return DAG.getSelect(DL, ResVT, ExtCond, IfTrue, IfFalse);
     }
   }
+
+  if (SDValue R = performVselectPowCombine(N, DCI))
+    return R;
 
   EVT CmpVT = N0.getOperand(0).getValueType();
   if (N0.getOpcode() != ISD::SETCC ||
