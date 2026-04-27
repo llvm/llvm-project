@@ -223,77 +223,111 @@ static mlir::FlatSymbolRefAttr gatherComponentInit(
   return mlir::FlatSymbolRefAttr::get(mlirContext, name);
 }
 
-/// Emit fir.use_stmt operations for USE statements in the given function unit
+/// Emit a single fir.use_stmt from preserved frontend USE metadata.
+static void emitUseStmtOp(Fortran::lower::AbstractConverter &converter,
+                          mlir::OpBuilder &builder, mlir::Location loc,
+                          const Fortran::semantics::PreservedUseStmt &stmt,
+                          const Fortran::semantics::Scope &lookupScope) {
+  mlir::MLIRContext *context = builder.getContext();
+  mlir::StringAttr moduleNameAttr =
+      mlir::StringAttr::get(context, stmt.moduleName);
+
+  // Helper function to get mangled name for a symbol
+  auto getMangledName = [&](const std::string &localName) -> std::string {
+    Fortran::parser::CharBlock charBlock{localName.data(), localName.size()};
+    const auto *sym = lookupScope.FindSymbol(charBlock);
+    if (!sym)
+      return "";
+
+    const auto &ultimateSym = sym->GetUltimate();
+
+    // Skip cases which can cause mangleName to fail.
+    if (ultimateSym.has<Fortran::semantics::DerivedTypeDetails>())
+      return "";
+
+    if (ultimateSym.has<Fortran::semantics::UseErrorDetails>())
+      return "";
+
+    if (const auto *generic =
+            ultimateSym.detailsIf<Fortran::semantics::GenericDetails>()) {
+      if (!generic->specific())
+        return "";
+    }
+
+    return converter.mangleName(ultimateSym);
+  };
+
+  llvm::SmallVector<mlir::Attribute> onlySymbolAttrs;
+  llvm::SmallVector<mlir::Attribute> renameAttrs;
+
+  for (const auto &name : stmt.onlyNames) {
+    std::string mangledName = getMangledName(name);
+    if (!mangledName.empty())
+      onlySymbolAttrs.push_back(
+          mlir::FlatSymbolRefAttr::get(context, mangledName));
+  }
+
+  for (const auto &local : stmt.renames) {
+    std::string mangledName = getMangledName(local);
+    if (!mangledName.empty()) {
+      auto localAttr = mlir::StringAttr::get(context, local);
+      auto symbolRef = mlir::FlatSymbolRefAttr::get(context, mangledName);
+      renameAttrs.push_back(
+          fir::UseRenameAttr::get(context, localAttr, symbolRef));
+    }
+  }
+
+  mlir::ArrayAttr onlySymbolsAttr =
+      onlySymbolAttrs.empty() ? mlir::ArrayAttr()
+                              : mlir::ArrayAttr::get(context, onlySymbolAttrs);
+  mlir::ArrayAttr renamesAttr =
+      renameAttrs.empty() ? mlir::ArrayAttr()
+                          : mlir::ArrayAttr::get(context, renameAttrs);
+
+  fir::UseStmtOp::create(builder, loc, moduleNameAttr, onlySymbolsAttr,
+                         renamesAttr);
+}
+
+/// Emit fir.module_debug_imports for USE statements in a module.
+static void
+emitModuleDebugImports(Fortran::lower::AbstractConverter &converter,
+                       mlir::OpBuilder &builder, mlir::Location loc,
+                       const Fortran::lower::pft::ModuleLikeUnit &mod) {
+  if (!converter.getLoweringOptions().getPreserveUseDebugInfo())
+    return;
+  if (mod.preservedUseStmts.empty())
+    return;
+
+  const Fortran::semantics::Scope &modScope = mod.getScope();
+  const Fortran::semantics::Symbol *modSym = modScope.symbol();
+  if (!modSym)
+    return;
+
+  mlir::ModuleOp mlirModule = converter.getModuleOp();
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPoint(mlirModule.getBody(), mlirModule.getBody()->end());
+
+  auto op = fir::ModuleDebugImportsOp::create(
+      builder, loc,
+      mlir::StringAttr::get(builder.getContext(), modSym->name().ToString()));
+  mlir::Region &region = op.getUses();
+  mlir::Block *block = new mlir::Block();
+  region.push_back(block);
+  builder.setInsertionPointToStart(block);
+  for (const auto &stmt : mod.preservedUseStmts)
+    emitUseStmtOp(converter, builder, loc, stmt, modScope);
+  fir::FirEndOp::create(builder, loc);
+}
+
+/// Emit `fir.use_stmt` operations for USE statements that appear in the given
+/// function unit.
 static void
 emitUseStatementsFromFunit(Fortran::lower::AbstractConverter &converter,
                            mlir::OpBuilder &builder, mlir::Location loc,
                            const Fortran::lower::pft::FunctionLikeUnit &funit) {
-  mlir::MLIRContext *context = builder.getContext();
   const Fortran::semantics::Scope &scope = funit.getScope();
-
-  for (const auto &preservedStmt : funit.preservedUseStmts) {
-
-    auto getMangledName = [&](const std::string &localName) -> std::string {
-      Fortran::parser::CharBlock charBlock{localName.data(), localName.size()};
-      const auto *sym = scope.FindSymbol(charBlock);
-      if (!sym)
-        return "";
-
-      const auto &ultimateSym = sym->GetUltimate();
-
-      // Skip cases which can cause mangleName to fail.
-      if (ultimateSym.has<Fortran::semantics::DerivedTypeDetails>())
-        return "";
-
-      if (ultimateSym.has<Fortran::semantics::UseErrorDetails>())
-        return "";
-
-      if (const auto *generic =
-              ultimateSym.detailsIf<Fortran::semantics::GenericDetails>()) {
-        if (!generic->specific())
-          return "";
-      }
-
-      return converter.mangleName(ultimateSym);
-    };
-
-    mlir::StringAttr moduleNameAttr =
-        mlir::StringAttr::get(context, preservedStmt.moduleName);
-
-    llvm::SmallVector<mlir::Attribute> onlySymbolAttrs;
-    llvm::SmallVector<mlir::Attribute> renameAttrs;
-
-    // Handle only
-    for (const auto &name : preservedStmt.onlyNames) {
-      std::string mangledName = getMangledName(name);
-      if (!mangledName.empty())
-        onlySymbolAttrs.push_back(
-            mlir::FlatSymbolRefAttr::get(context, mangledName));
-    }
-
-    // Handle renames
-    for (const auto &local : preservedStmt.renames) {
-      std::string mangledName = getMangledName(local);
-      if (!mangledName.empty()) {
-        auto localAttr = mlir::StringAttr::get(context, local);
-        auto symbolRef = mlir::FlatSymbolRefAttr::get(context, mangledName);
-        renameAttrs.push_back(
-            fir::UseRenameAttr::get(context, localAttr, symbolRef));
-      }
-    }
-
-    // Create optional array attributes
-    mlir::ArrayAttr onlySymbolsAttr =
-        onlySymbolAttrs.empty()
-            ? mlir::ArrayAttr()
-            : mlir::ArrayAttr::get(context, onlySymbolAttrs);
-    mlir::ArrayAttr renamesAttr =
-        renameAttrs.empty() ? mlir::ArrayAttr()
-                            : mlir::ArrayAttr::get(context, renameAttrs);
-
-    fir::UseStmtOp::create(builder, loc, moduleNameAttr, onlySymbolsAttr,
-                           renamesAttr);
-  }
+  for (const auto &preservedStmt : funit.preservedUseStmts)
+    emitUseStmtOp(converter, builder, loc, preservedStmt, scope);
 }
 
 /// Helper class to generate the runtime type info global data and the
@@ -2083,6 +2117,9 @@ private:
               [&](const Fortran::parser::CompilerDirective::ForceInline &) {
                 stmt.typedCall->setAlwaysInline(true);
               },
+              [&](const Fortran::parser::CompilerDirective::InlineAlways &) {
+                stmt.typedCall->setAlwaysInline(true);
+              },
               [&](const Fortran::parser::CompilerDirective::Inline &) {
                 stmt.typedCall->setInlineHint(true);
               },
@@ -2432,6 +2469,9 @@ private:
                   callOp.setInlineAttr(fir::FortranInlineEnum::inline_hint);
                 },
                 [&](const Fortran::parser::CompilerDirective::ForceInline &) {
+                  callOp.setInlineAttr(fir::FortranInlineEnum::always_inline);
+                },
+                [&](const Fortran::parser::CompilerDirective::InlineAlways &) {
                   callOp.setInlineAttr(fir::FortranInlineEnum::always_inline);
                 },
                 [&](const auto &) {}},
@@ -2833,6 +2873,11 @@ private:
               [&](const Fortran::parser::CompilerDirective::IVDep &iv) {
                 aga.push_back(
                     mlir::LLVM::AccessGroupAttr::get(builder->getContext()));
+                has_attrs = true;
+              },
+              [&](const Fortran::parser::CompilerDirective::Simd &simd) {
+                disableVecAttr =
+                    mlir::BoolAttr::get(builder->getContext(), false);
                 has_attrs = true;
               },
               [&](const auto &) {}},
@@ -3518,6 +3563,18 @@ private:
       e->dirs.push_back(&dir);
   }
 
+  void markCurrentFuncAsAlwaysInline(
+      const Fortran::parser::CompilerDirective::InlineAlways &dir) {
+    mlir::func::FuncOp func = builder->getFunction();
+    if (currentFunctionUnit && !currentFunctionUnit->isMainProgram()) {
+      const std::string symName =
+          currentFunctionUnit->getSubprogramSymbol().name().ToString();
+      if (dir.v->ToString() == symName) {
+        func->setAttr("llvm.always_inline", builder->getUnitAttr());
+      }
+    }
+  }
+
   void
   attachInliningDirectiveToStmt(const Fortran::parser::CompilerDirective &dir,
                                 Fortran::lower::pft::Evaluation *e) {
@@ -3594,6 +3651,16 @@ private:
               }
             },
             [&](const Fortran::parser::CompilerDirective::IVDep &) {
+              attachDirectiveToLoop(dir, &eval);
+            },
+            [&](const Fortran::parser::CompilerDirective::InlineAlways
+                    &inlineAlways) {
+              if (inlineAlways.v.has_value())
+                markCurrentFuncAsAlwaysInline(inlineAlways);
+              else
+                attachInliningDirectiveToStmt(dir, &eval);
+            },
+            [&](const Fortran::parser::CompilerDirective::Simd &) {
               attachDirectiveToLoop(dir, &eval);
             },
             [&](const auto &) {}},
@@ -5608,15 +5675,23 @@ private:
 
     // Gather some information about the assignment that will impact how it is
     // lowered.
-    const bool isWholeAllocatableAssignment =
+    const bool lhsIsWholeAllocatable =
         !userDefinedAssignment && !isInsideHlfirWhere() &&
-        Fortran::lower::isWholeAllocatable(assign.lhs) &&
-        bridge.getLoweringOptions().getReallocateLHS();
+        Fortran::lower::isWholeAllocatable(assign.lhs);
+    std::optional<Fortran::evaluate::DynamicType> lhsType =
+        assign.lhs.GetType();
+    // Polymorphic allocatable LHS always requires reallocation semantics
+    // regardless of -fno-realloc-lhs: assignment to a polymorphic variable
+    // is a F2003+ feature that requires dynamic type tracking, which cannot
+    // be safely skipped.  A warning is emitted by the semantics phase.
+    const bool lhsIsPolymorphic =
+        lhsType.has_value() && lhsType->IsPolymorphic();
+    const bool isWholeAllocatableAssignment =
+        lhsIsWholeAllocatable &&
+        (bridge.getLoweringOptions().getReallocateLHS() || lhsIsPolymorphic);
     const bool isUserDefAssignToPointerOrAllocatable =
         userDefinedAssignment &&
         firstDummyIsPointerOrAllocatable(*userDefinedAssignment);
-    std::optional<Fortran::evaluate::DynamicType> lhsType =
-        assign.lhs.GetType();
     const bool keepLhsLengthInAllocatableAssignment =
         isWholeAllocatableAssignment && lhsType.has_value() &&
         lhsType->category() == Fortran::common::TypeCategory::Character &&
@@ -6316,7 +6391,6 @@ private:
   void genFIR(const Fortran::parser::IfStmt &) {}              // nop
   void genFIR(const Fortran::parser::IfThenStmt &) {}          // nop
   void genFIR(const Fortran::parser::NonLabelDoStmt &) {}      // nop
-  void genFIR(const Fortran::parser::OmpEndLoopDirective &) {} // nop
   void genFIR(const Fortran::parser::SelectTypeStmt &) {}      // nop
   void genFIR(const Fortran::parser::TypeGuardStmt &) {}       // nop
   void genFIR(const Fortran::parser::ChangeTeamStmt &stmt) {}  // nop
@@ -6558,18 +6632,21 @@ private:
 
     Fortran::lower::AggregateStoreMap storeMap;
 
-    // Map all containing submodule and module equivalences and variables, in
-    // case they are referenced. It might be better to limit this to variables
-    // that are actually referenced, although that is more complicated when
-    // there are equivalenced variables.
-    auto &scopeVariableListMap =
-        Fortran::lower::pft::getScopeVariableListMap(funit);
-    for (auto *scp = &scope.parent(); !scp->IsGlobal(); scp = &scp->parent())
-      if (scp->kind() == Fortran::semantics::Scope::Kind::Module)
-        for (const auto &var : Fortran::lower::pft::getScopeVariableList(
-                 *scp, scopeVariableListMap))
-          if (!var.isRuntimeTypeInfoData())
-            instantiateVar(var, storeMap);
+    // Map containing [sub]module equivalences and variables that are
+    // referenced in this function-like unit. Only referenced host module
+    // variables are instantiated to avoid generating IR for unused module
+    // variables. Equivalenced variables are handled via the aggregate store
+    // analysis performed on the host [sub]module scopes.
+    const bool hasHostModuleScope = [&]() {
+      for (auto *scp = &scope.parent(); !scp->IsGlobal(); scp = &scp->parent())
+        if (scp->kind() == Fortran::semantics::Scope::Kind::Module)
+          return true;
+      return false;
+    }();
+    if (hasHostModuleScope)
+      for (const auto &var :
+           Fortran::lower::pft::getHostModuleVariableList(funit))
+        instantiateVar(var, storeMap);
 
     // Map function equivalences and variables.
     mlir::Value primaryFuncResultStorage;
@@ -6897,6 +6974,7 @@ private:
   /// declarative construct.
   void lowerModuleDeclScope(Fortran::lower::pft::ModuleLikeUnit &mod) {
     setCurrentPosition(mod.getStartingSourceLoc());
+    emitModuleDebugImports(*this, *builder, toLocation(), mod);
     auto &scopeVariableListMap =
         Fortran::lower::pft::getScopeVariableListMap(mod);
     for (const auto &var : Fortran::lower::pft::getScopeVariableList(

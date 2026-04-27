@@ -259,7 +259,7 @@ define i8 @multiple_inductions_start_at_0() {
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <32 x i8> [[STEP_ADD_3]], i32 31
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <32 x i8> [[STEP_ADD_3]], i64 31
 ; CHECK-NEXT:    br i1 false, label [[EXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; CHECK:       vec.epilog.iter.check:
 ; CHECK-NEXT:    br i1 false, label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF11:![0-9]+]]
@@ -277,7 +277,7 @@ define i8 @multiple_inductions_start_at_0() {
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT3]], 1052
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i8> [[VEC_IND2]], i32 3
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i8> [[VEC_IND2]], i64 3
 ; CHECK-NEXT:    br i1 true, label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi i32 [ 1052, [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 1024, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK:%.*]] ]

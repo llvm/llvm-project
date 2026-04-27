@@ -34,6 +34,8 @@ def SDT_LoongArchVLDREPL : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisPtrTy<1>]>;
 def SDT_LoongArchVMSKCOND : SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisVec<1>]>;
 def SDT_LoongArchVFCVT_S_D : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisFP<0>,
                                                   SDTCisVec<1>, SDTCisFP<1>, SDTCisSameAs<1, 2>]>;
+def SDT_LoongArchVFCVTLH_D_S : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisFP<0>,
+                                                    SDTCisVec<1>, SDTCisFP<1>]>;
 
 // Target nodes.
 
@@ -97,6 +99,12 @@ def loongarch_vmskeqz: SDNode<"LoongArchISD::VMSKEQZ", SDT_LoongArchVMSKCOND>;
 def loongarch_vmsknez: SDNode<"LoongArchISD::VMSKNEZ", SDT_LoongArchVMSKCOND>;
 
 def loongarch_vfcvt_s_d: SDNode<"LoongArchISD::VFCVT", SDT_LoongArchVFCVT_S_D>;
+def loongarch_vfcvtl_d_s: SDNode<"LoongArchISD::VFCVTL", SDT_LoongArchVFCVTLH_D_S>;
+def loongarch_vfcvth_d_s: SDNode<"LoongArchISD::VFCVTH", SDT_LoongArchVFCVTLH_D_S>;
+
+// Vector rounded shift
+def loongarch_vsrlr: SDNode<"LoongArchISD::VSRLR", SDT_LoongArchV2R>;
+def loongarch_vsrar: SDNode<"LoongArchISD::VSRAR", SDT_LoongArchV2R>;
 
 def immZExt1 : ImmLeaf<GRLenVT, [{return isUInt<1>(Imm);}]>;
 def immZExt2 : ImmLeaf<GRLenVT, [{return isUInt<2>(Imm);}]>;
@@ -200,16 +208,19 @@ def vsplati64imm63 : PatFrag<(ops node:$reg),
                              (and node:$reg, vsplati64_imm_eq_63)>;
 
 foreach N = [3, 4, 5, 6, 8] in
-  def SplatPat_uimm#N : ComplexPattern<vAny, 1, "selectVSplatImm<"#N#">",
+  def SplatPat_uimm#N : ComplexPattern<vAny, 1, "selectVSplatImm<"#N#", 0>",
                                        [build_vector, bitconvert], [], 2>;
 
 foreach N = [5] in
-  def SplatPat_simm#N : ComplexPattern<vAny, 1, "selectVSplatImm<"#N#", true>",
+  def SplatPat_simm#N : ComplexPattern<vAny, 1, "selectVSplatImm<"#N#", 0, true>",
                                        [build_vector, bitconvert]>;
 
 foreach N = [5] in
   def SplatPat_nimm#N : ComplexPattern<vAny, 1, "selectVSplatImmNeg<"#N#">",
                                        [build_vector, bitconvert]>;
+
+def vsplat_i8_uimm8 : ComplexPattern<vAny, 1, "selectVSplatImm<8, 8>",
+                                     [build_vector, bitconvert]>;
 
 def vsplat_uimm_inv_pow2 : ComplexPattern<vAny, 1, "selectVSplatUimmInvPow2",
                                           [build_vector, bitconvert]>;
@@ -1643,15 +1654,27 @@ def : Pat<(or (vt LSX128:$vj), (vt (vnot LSX128:$vk))),
 // VANDI_B
 def : Pat<(and (v16i8 LSX128:$vj), (v16i8 (SplatPat_uimm8 uimm8:$imm))),
           (VANDI_B LSX128:$vj, uimm8:$imm)>;
+foreach vt = [v8i16, v4i32, v2i64] in
+def : Pat<(and (vt LSX128:$vj), (vt (vsplat_i8_uimm8 grlenimm:$imm))),
+          (VANDI_B LSX128:$vj, grlenimm:$imm)>;
 // VORI_B
 def : Pat<(or (v16i8 LSX128:$vj), (v16i8 (SplatPat_uimm8 uimm8:$imm))),
           (VORI_B LSX128:$vj, uimm8:$imm)>;
+foreach vt = [v8i16, v4i32, v2i64] in
+def : Pat<(or (vt LSX128:$vj), (vt (vsplat_i8_uimm8 grlenimm:$imm))),
+          (VORI_B LSX128:$vj, grlenimm:$imm)>;
 // VXORI_B
 def : Pat<(xor (v16i8 LSX128:$vj), (v16i8 (SplatPat_uimm8 uimm8:$imm))),
           (VXORI_B LSX128:$vj, uimm8:$imm)>;
+foreach vt = [v8i16, v4i32, v2i64] in
+def : Pat<(xor (vt LSX128:$vj), (vt (vsplat_i8_uimm8 grlenimm:$imm))),
+          (VXORI_B LSX128:$vj, grlenimm:$imm)>;
 // VNORI_B
 def : Pat<(vnot (or (v16i8 LSX128:$vj), (v16i8 (SplatPat_uimm8 uimm8:$imm)))),
           (VNORI_B LSX128:$vj, uimm8:$imm)>;
+foreach vt = [v8i16, v4i32, v2i64] in
+def : Pat<(vnot (or (vt LSX128:$vj), (vt (vsplat_i8_uimm8 grlenimm:$imm)))),
+          (VNORI_B LSX128:$vj, grlenimm:$imm)>;
 
 // VBSLL_V
 foreach vt = [v16i8, v8i16, v4i32, v2i64, v4f32,
@@ -1675,10 +1698,18 @@ defm : PatShiftVrVr<srl, "VSRL">;
 defm : PatShiftVrSplatUimm<srl, "VSRLI">;
 defm : PatShiftVrUimm<loongarch_vsrli, "VSRLI">;
 
+// VSRLR[I]_{B/H/W/D}
+defm : PatVrVr<loongarch_vsrlr, "VSRLR">;
+defm : PatShiftVrSplatUimm<loongarch_vsrlr, "VSRLRI">;
+
 // VSRA[I]_{B/H/W/D}
 defm : PatVrVr<sra, "VSRA">;
 defm : PatShiftVrVr<sra, "VSRA">;
 defm : PatShiftVrSplatUimm<sra, "VSRAI">;
+
+// VSRAR[I]_{B/H/W/D}
+defm : PatVrVr<loongarch_vsrar, "VSRAR">;
+defm : PatShiftVrSplatUimm<loongarch_vsrar, "VSRARI">;
 
 // VROTR[I]_{B/H/W/D}
 defm : PatVrVr<rotr, "VROTR">;
@@ -2600,6 +2631,11 @@ defm : PatVrF<froundeven, "VFRINTRNE">;
 
 def : Pat<(v4f32 (loongarch_vfcvt_s_d (v2f64 LSX128:$vj), (v2f64 LSX128:$vk))),
           (VFCVT_S_D LSX128:$vj, LSX128:$vk)>;
+
+def : Pat<(v2f64 (loongarch_vfcvtl_d_s (v4f32 LSX128:$vj))),
+          (VFCVTL_D_S LSX128:$vj)>;
+def : Pat<(v2f64 (loongarch_vfcvth_d_s (v4f32 LSX128:$vj))),
+          (VFCVTH_D_S LSX128:$vj)>;
 
 // load
 def : Pat<(int_loongarch_lsx_vld GPR:$rj, timm:$imm),

@@ -78,7 +78,8 @@ public:
                 const DataLayout *DL, TTI::TargetCostKind CostKind,
                 bool TryEarlyFoldsOnly)
       : F(F), Builder(F.getContext(), InstSimplifyFolder(*DL)), TTI(TTI),
-        DT(DT), AA(AA), AC(AC), DL(DL), CostKind(CostKind), SQ(*DL),
+        DT(DT), AA(AA), DL(DL), CostKind(CostKind),
+        SQ(*DL, /*TLI=*/nullptr, &DT, &AC),
         TryEarlyFoldsOnly(TryEarlyFoldsOnly) {}
 
   bool run();
@@ -89,7 +90,6 @@ private:
   const TargetTransformInfo &TTI;
   const DominatorTree &DT;
   AAResults &AA;
-  AssumptionCache &AC;
   const DataLayout *DL;
   TTI::TargetCostKind CostKind;
   const SimplifyQuery SQ;
@@ -267,8 +267,8 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   auto *MinVecTy = VectorType::get(ScalarTy, MinVecNumElts, false);
   unsigned OffsetEltIndex = 0;
   Align Alignment = Load->getAlign();
-  if (!isSafeToLoadUnconditionally(SrcPtr, MinVecTy, Align(1), *DL, Load, &AC,
-                                   &DT)) {
+  if (!isSafeToLoadUnconditionally(SrcPtr, MinVecTy, Align(1), *DL, Load, SQ.AC,
+                                   SQ.DT)) {
     // It is not safe to load directly from the pointer, but we can still peek
     // through gep offsets and check if it safe to load from a base address with
     // updated alignment. If it is, we can shuffle the element(s) into place
@@ -293,8 +293,8 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
     if (OffsetEltIndex >= MinVecNumElts)
       return false;
 
-    if (!isSafeToLoadUnconditionally(SrcPtr, MinVecTy, Align(1), *DL, Load, &AC,
-                                     &DT))
+    if (!isSafeToLoadUnconditionally(SrcPtr, MinVecTy, Align(1), *DL, Load,
+                                     SQ.AC, SQ.DT))
       return false;
 
     // Update alignment with offset value. Note that the offset could be negated
@@ -379,7 +379,8 @@ bool VectorCombine::widenSubvectorLoad(Instruction &I) {
   Value *SrcPtr = Load->getPointerOperand()->stripPointerCasts();
   assert(isa<PointerType>(SrcPtr->getType()) && "Expected a pointer type");
   Align Alignment = Load->getAlign();
-  if (!isSafeToLoadUnconditionally(SrcPtr, Ty, Align(1), *DL, Load, &AC, &DT))
+  if (!isSafeToLoadUnconditionally(SrcPtr, Ty, Align(1), *DL, Load, SQ.AC,
+                                   SQ.DT))
     return false;
 
   Alignment = std::max(SrcPtr->getPointerAlignment(*DL), Alignment);
@@ -1265,9 +1266,9 @@ bool VectorCombine::scalarizeVPIntrinsic(Instruction &I) {
                           .hasAttribute(Attribute::AttrKind::Speculatable);
   else
     SafeToSpeculate = isSafeToSpeculativelyExecuteWithOpcode(
-        *FunctionalOpcode, &VPI, nullptr, &AC, &DT);
+        *FunctionalOpcode, &VPI, nullptr, SQ.AC, SQ.DT);
   if (!SafeToSpeculate &&
-      !isKnownNonZero(EVL, SimplifyQuery(*DL, &DT, &AC, &VPI)))
+      !isKnownNonZero(EVL, SimplifyQuery(*DL, SQ.DT, SQ.AC, &VPI)))
     return false;
 
   Value *ScalarVal =
@@ -1873,9 +1874,7 @@ public:
 /// Check if it is legal to scalarize a memory access to \p VecTy at index \p
 /// Idx. \p Idx must access a valid vector element.
 static ScalarizationResult canScalarizeAccess(VectorType *VecTy, Value *Idx,
-                                              Instruction *CtxI,
-                                              AssumptionCache &AC,
-                                              const DominatorTree &DT) {
+                                              const SimplifyQuery &SQ) {
   // We do checks for both fixed vector types and scalable vector types.
   // This is the number of elements of fixed vector types,
   // or the minimum number of elements of scalable vector types.
@@ -1897,9 +1896,9 @@ static ScalarizationResult canScalarizeAccess(VectorType *VecTy, Value *Idx,
   ConstantRange ValidIndices(Zero, MaxElts);
   ConstantRange IdxRange(IntWidth, true);
 
-  if (isGuaranteedNotToBePoison(Idx, &AC)) {
-    if (ValidIndices.contains(computeConstantRange(Idx, /* ForSigned */ false,
-                                                   true, &AC, CtxI, &DT)))
+  if (isGuaranteedNotToBePoison(Idx, SQ.AC, SQ.CxtI, SQ.DT)) {
+    if (ValidIndices.contains(
+            computeConstantRange(Idx, /*ForSigned=*/false, SQ)))
       return ScalarizationResult::safe();
     return ScalarizationResult::unsafe();
   }
@@ -1967,7 +1966,8 @@ bool VectorCombine::foldSingleElementStore(Instruction &I) {
         SrcAddr != SI->getPointerOperand()->stripPointerCasts())
       return false;
 
-    auto ScalarizableIdx = canScalarizeAccess(VecTy, Idx, Load, AC, DT);
+    auto ScalarizableIdx =
+        canScalarizeAccess(VecTy, Idx, SQ.getWithInstruction(Load));
     if (ScalarizableIdx.isUnsafe() ||
         isMemModifiedBetween(Load->getIterator(), SI->getIterator(),
                              MemoryLocation::get(SI), AA))
@@ -2073,8 +2073,8 @@ bool VectorCombine::scalarizeLoadExtract(LoadInst *LI, VectorType *VecTy,
   for (User *U : LI->users()) {
     auto *UI = cast<ExtractElementInst>(U);
 
-    auto ScalarIdx =
-        canScalarizeAccess(VecTy, UI->getIndexOperand(), LI, AC, DT);
+    auto ScalarIdx = canScalarizeAccess(VecTy, UI->getIndexOperand(),
+                                        SQ.getWithInstruction(LI));
     if (ScalarIdx.isUnsafe())
       return false;
     if (ScalarIdx.isSafeWithFreeze()) {
@@ -2255,8 +2255,8 @@ bool VectorCombine::scalarizeExtExtract(Instruction &I) {
     return false;
 
   Value *ScalarV = Ext->getOperand(0);
-  if (!isGuaranteedNotToBePoison(ScalarV, &AC, dyn_cast<Instruction>(ScalarV),
-                                 &DT)) {
+  if (!isGuaranteedNotToBePoison(ScalarV, SQ.AC, dyn_cast<Instruction>(ScalarV),
+                                 SQ.DT)) {
     // Check wether all lanes are extracted, all extracts trigger UB
     // on poison, and the last extract (and hence all previous ones)
     // are guaranteed to execute if Ext executes.  If so, we do not
