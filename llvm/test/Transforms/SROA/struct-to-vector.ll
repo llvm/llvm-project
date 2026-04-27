@@ -7,8 +7,8 @@ define dso_local void @foo_flat(ptr noundef %x, i64 %y.coerce0, i64 %y.coerce1, 
 ; CHECK-SAME: ptr noundef [[X:%.*]], i64 [[Y_COERCE0:%.*]], i64 [[Y_COERCE1:%.*]], i32 noundef [[COND:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[COND]], 0
-; CHECK-NEXT:    [[DOTY_COERCE0:%.*]] = select i1 [[TOBOOL_NOT]], i64 0, i64 [[Y_COERCE0]]
 ; CHECK-NEXT:    [[DOTY_COERCE1:%.*]] = select i1 [[TOBOOL_NOT]], i64 0, i64 [[Y_COERCE1]]
+; CHECK-NEXT:    [[DOTY_COERCE0:%.*]] = select i1 [[TOBOOL_NOT]], i64 0, i64 [[Y_COERCE0]]
 ; CHECK-NEXT:    store i64 [[DOTY_COERCE0]], ptr [[X]], align 16
 ; CHECK-NEXT:    [[X_REPACK7:%.*]] = getelementptr inbounds nuw i8, ptr [[X]], i64 8
 ; CHECK-NEXT:    store i64 [[DOTY_COERCE1]], ptr [[X_REPACK7]], align 8
@@ -62,8 +62,8 @@ define dso_local void @foo_nested(ptr noundef %x, i64 %y.coerce0, i64 %y.coerce1
 ; CHECK-SAME: ptr noundef [[X:%.*]], i64 [[Y_COERCE0:%.*]], i64 [[Y_COERCE1:%.*]], i32 noundef [[COND:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[COND]], 0
-; CHECK-NEXT:    [[DOTY_COERCE0:%.*]] = select i1 [[TOBOOL_NOT]], i64 0, i64 [[Y_COERCE0]]
 ; CHECK-NEXT:    [[DOTY_COERCE1:%.*]] = select i1 [[TOBOOL_NOT]], i64 0, i64 [[Y_COERCE1]]
+; CHECK-NEXT:    [[DOTY_COERCE0:%.*]] = select i1 [[TOBOOL_NOT]], i64 0, i64 [[Y_COERCE0]]
 ; CHECK-NEXT:    store i64 [[DOTY_COERCE0]], ptr [[X]], align 16
 ; CHECK-NEXT:    [[X_REPACK7:%.*]] = getelementptr inbounds nuw i8, ptr [[X]], i64 8
 ; CHECK-NEXT:    store i64 [[DOTY_COERCE1]], ptr [[X_REPACK7]], align 8

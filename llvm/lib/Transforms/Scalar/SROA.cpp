@@ -5088,14 +5088,12 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
 
 /// Try to canonicalize a homogeneous struct partition to a vector type.
 ///
-/// This is only used as a fallback after the usual promotion choices fail, so
-/// it stays intentionally conservative: besides requiring a tightly-packed
-/// homogeneous struct shape, it rejects sub-element loads and only recovers a
-/// narrow class of memcpy-only i64 cases.
+/// This is only used as a fallback after the usual promotion choices fail.
+/// Keep the policy simple: canonicalize when every remaining use of the
+/// partition is either a mem intrinsic or a whole-partition load/store.
 static FixedVectorType *tryCanonicalizeStructToVector(StructType *STy,
                                                       Partition &P,
-                                                      const DataLayout &DL,
-                                                      AllocaInst &AI) {
+                                                      const DataLayout &DL) {
   unsigned NumElts = STy->getNumElements();
   if (NumElts != 2 && NumElts != 4)
     return nullptr;
@@ -5120,17 +5118,9 @@ static FixedVectorType *tryCanonicalizeStructToVector(StructType *STy,
     return nullptr;
 
   auto *VTy = FixedVectorType::get(EltTy, NumElts);
-  bool HasWholePartitionUse = false;
-  bool HasSubElementLoad = false;
-  bool HasRecoverableSplittableTransfer = false;
-  bool IsI64Candidate = VTy->getElementType()->isIntegerTy(64);
-  std::optional<TypeSize> AllocSize = AI.getAllocationSize(DL);
-  bool IsInteriorSubaggregate = AllocSize && AllocSize->isFixed() &&
-                                P.beginOffset() != 0 &&
-                                P.endOffset() < AllocSize->getFixedValue();
-  bool IsOriginalFullRecord = P.beginOffset() == 0 && AllocSize &&
-                              AllocSize->isFixed() &&
-                              AllocSize->getFixedValue() == P.size();
+  bool SawUse = false;
+  bool AllMemIntrinsics = true;
+  bool AllWholePartitionLoadStore = true;
 
   for (const Slice &S : P) {
     if (S.isDead())
@@ -5140,30 +5130,19 @@ static FixedVectorType *tryCanonicalizeStructToVector(StructType *STy,
     if (!U)
       continue;
 
-    if (S.isSplittable()) {
-      if (IsI64Candidate && IsInteriorSubaggregate &&
-          S.beginOffset() == P.beginOffset() &&
-          S.endOffset() == P.endOffset() && isa<MemIntrinsic>(U->getUser()))
-        HasRecoverableSplittableTransfer = true;
-      if (IsI64Candidate && IsOriginalFullRecord && P.size() >= 32 &&
-          S.beginOffset() == P.beginOffset() &&
-          S.endOffset() == P.endOffset() && isa<MemIntrinsic>(U->getUser()))
-        HasRecoverableSplittableTransfer = true;
+    User *Usr = U->getUser();
+    if (isa<LifetimeIntrinsic>(Usr) || isa<DbgInfoIntrinsic>(Usr))
       continue;
-    }
+    SawUse = true;
+    bool CoversWholePartition =
+        S.beginOffset() == P.beginOffset() && S.endOffset() == P.endOffset();
 
-    uint64_t SliceSize = S.endOffset() - S.beginOffset();
-    if (SliceSize < P.size()) {
-      if (isa<LoadInst>(U->getUser()))
-        HasSubElementLoad = true;
-      continue;
-    }
-
-    HasWholePartitionUse = true;
+    AllMemIntrinsics &= isa<MemIntrinsic>(Usr);
+    AllWholePartitionLoadStore &=
+        CoversWholePartition && (isa<LoadInst>(Usr) || isa<StoreInst>(Usr));
   }
 
-  if ((HasWholePartitionUse || HasRecoverableSplittableTransfer) &&
-      !HasSubElementLoad)
+  if (SawUse && (AllMemIntrinsics || AllWholePartitionLoadStore))
     return VTy;
   return nullptr;
 }
@@ -5274,7 +5253,7 @@ selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
 
     // Try homogeneous struct to vector canonicalization.
     if (auto *STy = dyn_cast<StructType>(TypePartitionTy))
-      if (auto *VTy = tryCanonicalizeStructToVector(STy, P, DL, AI)) {
+      if (auto *VTy = tryCanonicalizeStructToVector(STy, P, DL)) {
         LogSelection("struct-fallback-vecty", VTy, nullptr, false);
         return {VTy, false, nullptr};
       }
