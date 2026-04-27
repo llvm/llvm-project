@@ -1007,7 +1007,8 @@ public:
   /// This should match `CMP_RESULT` in `compiler-rt` and `CMPtype` in
   /// `libgcc`. The default return is word-sized. Consider overriding on
   /// targets that have a cheaper comparison or smaller comparison
-  /// encoding at other sizes.
+  /// encoding at other sizes. This affects the ABI so be sure to coordinate
+  /// with other compiler vendors.
   virtual MVT::SimpleValueType
   getCmpLibcallReturnType(const DataLayout &DL) const {
     return MVT::getIntegerVT(getRegisterWidth(DL)).SimpleTy;
