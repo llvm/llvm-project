@@ -4,7 +4,7 @@
 ; factor in an address expression (e.g. [rax - 8 * rdx]) instead of silently
 ; inverting the sign and producing [rax + 8*rdx].
 
-; CHECK: error: scale factor in address cannot be negative
+; CHECK: error: Scale can't be negative
 
 define i64 @test_neg_scale(i64 %0) {
   %result = call i64 asm sideeffect alignstack inteldialect
