@@ -15,8 +15,8 @@
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/tools.h"
-#include <set>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace Fortran::semantics {
 
@@ -1125,7 +1125,7 @@ void IoChecker::CheckForUselessIomsg() const {
 // diagnosed but whose offending component is still in the symbol table.
 static const Symbol *FindUnsafeIoDirectComponent(common::DefinedIo which,
     const DerivedTypeSpec &derived, const Scope &scope,
-    std::set<const Symbol *> &inProgress) {
+    std::unordered_set<const Symbol *> &inProgress) {
   if (HasDefinedIo(which, derived, &scope)) {
     return nullptr;
   }
@@ -1156,7 +1156,7 @@ static const Symbol *FindUnsafeIoDirectComponent(common::DefinedIo which,
 
 static const Symbol *FindUnsafeIoDirectComponent(common::DefinedIo which,
     const DerivedTypeSpec &derived, const Scope &scope) {
-  std::set<const Symbol *> inProgress;
+  std::unordered_set<const Symbol *> inProgress;
   return FindUnsafeIoDirectComponent(which, derived, scope, inProgress);
 }
 
@@ -1166,7 +1166,7 @@ static const Symbol *FindUnsafeIoDirectComponent(common::DefinedIo which,
 // purpose of inProgress.
 static const Symbol *FindInaccessibleComponent(common::DefinedIo which,
     const DerivedTypeSpec &derived, const Scope &scope,
-    std::set<const Symbol *> &inProgress) {
+    std::unordered_set<const Symbol *> &inProgress) {
   if (!inProgress.insert(&derived.typeSymbol()).second) {
     return nullptr;
   }
@@ -1209,7 +1209,7 @@ static const Symbol *FindInaccessibleComponent(common::DefinedIo which,
 
 static const Symbol *FindInaccessibleComponent(common::DefinedIo which,
     const DerivedTypeSpec &derived, const Scope &scope) {
-  std::set<const Symbol *> inProgress;
+  std::unordered_set<const Symbol *> inProgress;
   return FindInaccessibleComponent(which, derived, scope, inProgress);
 }
 
