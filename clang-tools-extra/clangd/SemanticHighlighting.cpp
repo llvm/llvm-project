@@ -1070,15 +1070,15 @@ getSemanticHighlightings(ParsedAST &AST, bool IncludeInactiveRegionTokens) {
               };
 
           for (const auto &[Tag, Modifier] : TagModifierMap) {
-            if (SymbolTags & SymbolTags::fromTag(Tag))
+            if (SymbolTags & toSymbolTagBitmask(Tag))
               Tok.addModifier(Modifier);
           }
 
           if (R.IsDecl &&
-              (SymbolTags & SymbolTags::fromTag(SymbolTag::Declaration))) {
+              (SymbolTags & toSymbolTagBitmask(SymbolTag::Declaration))) {
             Tok.addModifier(HighlightingModifier::Declaration);
 
-            if (SymbolTags & SymbolTags::fromTag(SymbolTag::Definition))
+            if (SymbolTags & toSymbolTagBitmask(SymbolTag::Definition))
               Tok.addModifier(HighlightingModifier::Definition);
           }
 

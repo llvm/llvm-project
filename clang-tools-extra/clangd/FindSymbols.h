@@ -51,6 +51,9 @@ getWorkspaceSymbols(llvm::StringRef Query, int Limit,
 /// same order that they appear.
 llvm::Expected<std::vector<DocumentSymbol>> getDocumentSymbols(ParsedAST &AST);
 
+/// Converts a single SymbolTag to a bitmask.
+SymbolTags toSymbolTagBitmask(SymbolTag ST);
+
 /// Computes symbol tags for a given NamedDecl.
 SymbolTags computeSymbolTags(const NamedDecl &ND);
 
