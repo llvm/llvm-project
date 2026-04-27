@@ -56,7 +56,7 @@ parseStripOptions(ArrayRef<const char *> ArgsArr,
 // set then ParseExtractBundleEntryOptions will print the help messege and exit.
 // All functionality of the llvm-extract-bundle-entry utility is performed in
 // runExtractBundleEntry and the Driver Config is not used.
-Error runExtractBundleEntry(SmallVector<StringRef> Args);
+Error runExtractBundleEntry(const SmallVectorImpl<StringRef> &Args);
 Expected<SmallVector<StringRef>>
 parseExtractBundleEntryOptions(ArrayRef<const char *> ArgsArr);
 } // namespace objcopy

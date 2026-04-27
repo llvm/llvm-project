@@ -1717,8 +1717,9 @@ objcopy::parseStripOptions(ArrayRef<const char *> RawArgsArr,
   return std::move(DC);
 }
 
-Error llvm::objcopy::runExtractBundleEntry(SmallVector<StringRef> args) {
-  for (StringRef Input : args)
+Error llvm::objcopy::runExtractBundleEntry(
+    const SmallVectorImpl<StringRef> &Args) {
+  for (StringRef Input : Args)
     if (Error Err = object::extractOffloadBundleByURI(Input))
       return Err;
 
