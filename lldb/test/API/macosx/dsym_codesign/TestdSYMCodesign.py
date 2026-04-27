@@ -1,6 +1,7 @@
 import os
 import shutil
 import subprocess
+import sys
 
 import lldb
 from lldbsuite.test.decorators import *
@@ -10,7 +11,7 @@ from lldbsuite.test.lldbtest import *
 def has_lldb_codesign():
     """Check if the lldb_codesign certificate is available."""
     try:
-        if lldbplatformutil.getPlatform() not in lldbplatformutil.getDarwinOSTriples():
+        if sys.platform != "darwin":
             return False
         result = subprocess.run(
             [
