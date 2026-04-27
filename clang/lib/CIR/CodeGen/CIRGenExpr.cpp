@@ -676,7 +676,7 @@ mlir::Value CIRGenFunction::emitLoadOfScalar(Address addr, bool isVolatile,
   assert(!cir::MissingFeatures::opLoadStoreTbaa());
   LValue atomicLValue = LValue::makeAddr(addr, ty, baseInfo);
   if (ty->isAtomicType() || isLValueSuitableForInlineAtomic(atomicLValue))
-    cgm.errorNYI("emitLoadOfScalar: load atomic");
+    return emitAtomicLoad(atomicLValue, loc).getValue();
 
   if (mlir::isa<cir::VoidType>(eltTy))
     cgm.errorNYI(loc, "emitLoadOfScalar: void type");
@@ -1008,10 +1008,20 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
     auto iter = localDeclMap.find(vd);
     if (iter != localDeclMap.end()) {
       addr = iter->second;
-    } else {
+
+    } else if (vd->isStaticLocal()) {
       // Otherwise, it might be static local we haven't emitted yet for some
       // reason; most likely, because it's in an outer function.
-      cgm.errorNYI(e->getSourceRange(), "emitDeclRefLValue: static local");
+      cir::GlobalOp var =
+          cgm.getOrCreateStaticVarDecl(*vd, cgm.getCIRLinkageVarDefinition(vd));
+      mlir::Value getGlobVal = builder.createGetGlobal(var);
+      auto getGlob = getGlobVal.getDefiningOp<cir::GetGlobalOp>();
+      getGlob.setStaticLocal(var.getStaticLocalGuard().has_value());
+      getGlob.setTls(vd->getTLSKind() != VarDecl::TLS_None);
+      addr = Address(getGlob, convertTypeForMem(vd->getType()),
+                     getContext().getDeclAlign(vd));
+    } else {
+      llvm_unreachable("DeclRefExpr for Decl not entered in localDeclMap?");
     }
 
     // Drill into reference types.
@@ -1248,13 +1258,28 @@ CIRGenFunction::emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e) {
          "index was neither LHS nor RHS");
 
   auto emitIdxAfterBase = [&](bool promote) -> mlir::Value {
-    const mlir::Value idx = emitScalarExpr(e->getIdx());
+    mlir::Value idx = emitScalarExpr(e->getIdx());
 
-    // Extend or truncate the index type to 32 or 64-bits.
-    auto ptrTy = mlir::dyn_cast<cir::PointerType>(idx.getType());
-    if (promote && ptrTy && ptrTy.isPtrTo<cir::IntType>())
-      cgm.errorNYI(e->getSourceRange(),
-                   "emitArraySubscriptExpr: index type cast");
+    assert(!cir::MissingFeatures::sanitizers());
+
+    // Extend or truncate the index type to pointer-sized integer.
+    if (promote) {
+      // Choose the type we extend or truncate to based on the signedness of the
+      // index type.
+      mlir::Type desiredIdxTy =
+          e->getIdx()->getType()->isSignedIntegerOrEnumerationType()
+              ? ptrDiffTy
+              : uIntPtrTy;
+
+      if (idx.getType() != desiredIdxTy) {
+        cir::CastKind kind = mlir::isa<cir::BoolType>(idx.getType())
+                                 ? cir::CastKind::bool_to_int
+                                 : cir::CastKind::integral;
+        idx = builder.createOrFold<cir::CastOp>(idx.getLoc(), desiredIdxTy,
+                                                kind, idx);
+      }
+    }
+
     return idx;
   };
 
@@ -1508,15 +1533,17 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
   case CK_ToUnion:
     return emitAggExprToLValue(e);
 
-  case CK_NonAtomicToAtomic:
-  case CK_AtomicToNonAtomic:
-  case CK_ObjCObjectLValueCast:
-  case CK_VectorSplat:
   case CK_ConstructorConversion:
   case CK_UserDefinedConversion:
   case CK_CPointerToObjCPointerCast:
   case CK_BlockPointerToObjCPointerCast:
-  case CK_LValueToRValue: {
+  case CK_LValueToRValue:
+    return emitLValue(e->getSubExpr());
+
+  case CK_NonAtomicToAtomic:
+  case CK_AtomicToNonAtomic:
+  case CK_ObjCObjectLValueCast:
+  case CK_VectorSplat: {
     cgm.errorNYI(e->getSourceRange(),
                  std::string("emitCastLValue for unhandled cast kind: ") +
                      e->getCastKindName());

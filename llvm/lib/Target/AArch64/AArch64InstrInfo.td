@@ -221,11 +221,11 @@ def HasOCCMO         : Predicate<"Subtarget->hasOCCMO()">,
                                  AssemblerPredicateWithAll<(all_of FeatureOCCMO), "occmo">;
 def HasLSCP          : Predicate<"Subtarget->hasLSCP()">,
                                  AssemblerPredicateWithAll<(all_of FeatureLSCP), "lscp">;
-def HasSVE2p2        : Predicate<"Subtarget->hasSVE2p2()">,
+def HasSVE2p2        : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE2p2()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE2p2), "sve2p2">;
 def HasSVE_B16MM     : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE_B16MM()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE_B16MM), "sve-b16mm">;
-def HasF16MM         : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasF16MM()">,
+def HasF16MM         : Predicate<"Subtarget->hasF16MM()">,
                                  AssemblerPredicateWithAll<(all_of FeatureF16MM), "f16mm">;
 def HasSVE2p3        : Predicate<"Subtarget->hasSVE2p3()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE2p3), "sve2p3">;
@@ -395,8 +395,6 @@ def HasCPA           : Predicate<"Subtarget->hasCPA()">,
                                  AssemblerPredicateWithAll<(all_of FeatureCPA), "cpa">;
 def HasTLBID         : Predicate<"Subtarget->hasTLBID()">,
                                  AssemblerPredicateWithAll<(all_of FeatureTLBID), "tlbid">;
-def HasMPAMv2        : Predicate<"Subtarget->hasMPAMv2()">,
-                                 AssemblerPredicateWithAll<(all_of FeatureMPAMv2), "mpamv2">;
 def HasMTETC         : Predicate<"Subtarget->hasMTETC()">,
                                  AssemblerPredicateWithAll<(all_of FeatureMTETC), "mtetc">;
 def HasGCIE          : Predicate<"Subtarget->hasGCIE()">,
@@ -8647,6 +8645,21 @@ def : Pat<(v2i64 (AArch64saddlv (v2i32 V64:$Rn))),
 def : Pat<(v2i64 (AArch64uaddlv (v2i32 V64:$Rn))),
           (v2i64 (INSERT_SUBREG (v2i64 (IMPLICIT_DEF)), (UADDLPv2i32_v1i64 V64:$Rn), dsub))>;
 
+def : Pat<(add (AArch64bici (v8i16 (bitconvert v16i8:$src)), (i32 255), (i32 8)),
+               (AArch64vlshr (v8i16 (AArch64NvCast v16i8:$src)), (i32 8))),
+          (UADDLPv16i8_v8i16 V128:$src)>;
+
+def : Pat<(add (and (v4i32 (bitconvert v8i16:$src)),
+                    (v4i32 (AArch64NvCast (v2i64 (AArch64movi_edit (i32 51)))))),
+               (AArch64vlshr (v4i32 (AArch64NvCast v8i16:$src)), (i32 16))),
+          (UADDLPv8i16_v4i32 V128:$src)>;
+
+def : Pat<(add (v2i64 (zext (v2i32 (AArch64zip1 (v2i32 (extract_subvector v4i32:$src, (i64 0))),
+                                         (v2i32 (extract_subvector v4i32:$src, (i64 2))))))),
+               (v2i64 (zext (v2i32 (AArch64zip2 (v2i32 (extract_subvector v4i32:$src, (i64 0))),
+                                         (v2i32 (extract_subvector v4i32:$src, (i64 2)))))))),
+          (UADDLPv4i32_v2i64 V128:$src)>;
+
 //------------------------------------------------------------------------------
 // AdvSIMD modified immediate instructions
 //------------------------------------------------------------------------------
@@ -9283,6 +9296,53 @@ defm : FCVTPat<v4f16, v4i16, i16, V64, fixedpoint_v4f16>;
 defm : FCVTPat<v8f16, v8i16, i16, V128, fixedpoint_v8f16>;
 }
 
+// fmul(sitofp(x), 1/2^N) -> scvtf(x, N), fmul(uitofp(x), 1/2^N) -> ucvtf(x, N)
+class fixedpoint_recip_vec_f64<ValueType FloatVT>
+    : ComplexPattern<FloatVT, 1, "SelectCVTFixedPosRecipOperandVec<64>">;
+class fixedpoint_recip_vec_f32<ValueType FloatVT>
+    : ComplexPattern<FloatVT, 1, "SelectCVTFixedPosRecipOperandVec<32>">;
+class fixedpoint_recip_vec_f16<ValueType FloatVT>
+    : ComplexPattern<FloatVT, 1, "SelectCVTFixedPosRecipOperandVec<16>">;
+def fixedpoint_recip_vec_xform : SDNodeXForm<timm, [{
+  (void)N;
+  return V;
+}]>;
+def gi_fixedpoint_recip_vec_xform
+    : GICustomOperandRenderer<"renderFixedPointRecipXForm">,
+      GISDNodeXFormEquiv<fixedpoint_recip_vec_xform>;
+
+def fixedpoint_recip_v2f64 : fixedpoint_recip_vec_f64<v2f64>;
+def fixedpoint_recip_v2f32 : fixedpoint_recip_vec_f32<v2f32>;
+def fixedpoint_recip_v4f32 : fixedpoint_recip_vec_f32<v4f32>;
+def fixedpoint_recip_v4f16 : fixedpoint_recip_vec_f16<v4f16>;
+def fixedpoint_recip_v8f16 : fixedpoint_recip_vec_f16<v8f16>;
+
+def gi_fixedpoint_recip_v2f64
+    : GIComplexOperandMatcher<v2s64, "selectCVTFixedPosRecipOperandVec">,
+      GIComplexPatternEquiv<fixedpoint_recip_v2f64>;
+def gi_fixedpoint_recip_v2f32
+    : GIComplexOperandMatcher<v2s32, "selectCVTFixedPosRecipOperandVec">,
+      GIComplexPatternEquiv<fixedpoint_recip_v2f32>;
+def gi_fixedpoint_recip_v4f32
+    : GIComplexOperandMatcher<v4s32, "selectCVTFixedPosRecipOperandVec">,
+      GIComplexPatternEquiv<fixedpoint_recip_v4f32>;
+def gi_fixedpoint_recip_v4f16
+    : GIComplexOperandMatcher<v4s16, "selectCVTFixedPosRecipOperandVec">,
+      GIComplexPatternEquiv<fixedpoint_recip_v4f16>;
+def gi_fixedpoint_recip_v8f16
+    : GIComplexOperandMatcher<v8s16, "selectCVTFixedPosRecipOperandVec">,
+      GIComplexPatternEquiv<fixedpoint_recip_v8f16>;
+
+multiclass CVTFRecipPat<ValueType FVT, ValueType IVT,
+                        RegisterOperand RC, ComplexPattern fixedpoint> {
+  def : Pat<(FVT (fmul (sint_to_fp (IVT RC:$Rn)), fixedpoint:$scale)),
+            (!cast<Instruction>("SCVTF"#IVT#"_shift") RC:$Rn,
+                (fixedpoint_recip_vec_xform fixedpoint:$scale))>;
+  def : Pat<(FVT (fmul (uint_to_fp (IVT RC:$Rn)), fixedpoint:$scale)),
+            (!cast<Instruction>("UCVTF"#IVT#"_shift") RC:$Rn,
+                (fixedpoint_recip_vec_xform fixedpoint:$scale))>;
+}
+
 // X << 1 ==> X + X
 class SHLToADDPat<ValueType ty, RegisterClass regtype>
   : Pat<(ty (AArch64vshl (ty regtype:$Rn), (i32 1))),
@@ -9336,6 +9396,16 @@ defm USHLL   : SIMDVectorLShiftLongBHSD<1, 0b10100, "ushll",
 defm USHR    : SIMDVectorRShiftBHSD<1, 0b00000, "ushr", AArch64vlshr>;
 defm USRA    : SIMDVectorRShiftBHSDTied<1, 0b00010, "usra",
                 TriOpFrag<(add_like node:$LHS, (AArch64vlshr node:$MHS, node:$RHS))> >;
+
+let Predicates = [HasNEON] in {
+defm : CVTFRecipPat<v2f64, v2i64, V128, fixedpoint_recip_v2f64>;
+defm : CVTFRecipPat<v2f32, v2i32, V64, fixedpoint_recip_v2f32>;
+defm : CVTFRecipPat<v4f32, v4i32, V128, fixedpoint_recip_v4f32>;
+}
+let Predicates = [HasNEON, HasFullFP16] in {
+defm : CVTFRecipPat<v4f16, v4i16, V64, fixedpoint_recip_v4f16>;
+defm : CVTFRecipPat<v8f16, v8i16, V128, fixedpoint_recip_v8f16>;
+}
 
 def VImm0080:         PatLeaf<(AArch64movi_shift (i32 128), (i32 0))>;
 def VImm00008000:     PatLeaf<(AArch64movi_shift (i32 128), (i32 8))>;
@@ -10916,9 +10986,9 @@ defm : InsertSubvectorUndef<i64>;
 
 // Use pair-wise add instructions when summing up the lanes for v2f64, v2i64
 // or v2f32.
-def : Pat<(i64 (add (vector_extract (v2i64 FPR128:$Rn), (i64 0)),
-                    (vector_extract (v2i64 FPR128:$Rn), (i64 1)))),
-           (i64 (ADDPv2i64p (v2i64 FPR128:$Rn)))>;
+def : Pat<(i64 (add_like (vector_extract (v2i64 FPR128:$Rn), (i64 0)),
+                         (vector_extract (v2i64 FPR128:$Rn), (i64 1)))),
+          (i64 (ADDPv2i64p (v2i64 FPR128:$Rn)))>;
 def : Pat<(f64 (any_fadd (vector_extract (v2f64 FPR128:$Rn), (i64 0)),
                          (vector_extract (v2f64 FPR128:$Rn), (i64 1)))),
            (f64 (FADDPv2i64p (v2f64 FPR128:$Rn)))>;
@@ -10966,24 +11036,24 @@ multiclass PairwiseZIPBinOp<SDPatternOperator Op, ValueType VT,
 }
 
 // add(uzp1(X, Y), uzp2(X, Y)) -> addp(X, Y)
-defm : PairwiseZIPBinOp<add, v2i64, FPR128, ADDPv2i64>;
-defm : PairwiseZIPBinOp<add, v2i32, FPR64,  ADDPv2i32>;
-defm : PairwiseUZPBinOp<add, v4i32, FPR128, ADDPv4i32>;
-defm : PairwiseUZPBinOp<add, v4i16, FPR64,  ADDPv4i16>;
-defm : PairwiseUZPBinOp<add, v8i16, FPR128, ADDPv8i16>;
-defm : PairwiseUZPBinOp<add, v8i8,  FPR64,  ADDPv8i8>;
-defm : PairwiseUZPBinOp<add, v16i8, FPR128, ADDPv16i8>;
+defm : PairwiseZIPBinOp<add_like, v2i64, FPR128, ADDPv2i64>;
+defm : PairwiseZIPBinOp<add_like, v2i32, FPR64,  ADDPv2i32>;
+defm : PairwiseUZPBinOp<add_like, v4i32, FPR128, ADDPv4i32>;
+defm : PairwiseUZPBinOp<add_like, v4i16, FPR64,  ADDPv4i16>;
+defm : PairwiseUZPBinOp<add_like, v8i16, FPR128, ADDPv8i16>;
+defm : PairwiseUZPBinOp<add_like, v8i8,  FPR64,  ADDPv8i8>;
+defm : PairwiseUZPBinOp<add_like, v16i8, FPR128, ADDPv16i8>;
 
-def : Pat<(v2i32 (add (AArch64zip1 (extract_subvector (v4i32 FPR128:$Rn), (i64 0)),
-                                   (extract_subvector (v4i32 FPR128:$Rn), (i64 2))),
-                      (AArch64zip2 (extract_subvector (v4i32 FPR128:$Rn), (i64 0)),
-                                   (extract_subvector (v4i32 FPR128:$Rn), (i64 2))))),
+def : Pat<(v2i32 (add_like (AArch64zip1 (extract_subvector (v4i32 FPR128:$Rn), (i64 0)),
+                                        (extract_subvector (v4i32 FPR128:$Rn), (i64 2))),
+                           (AArch64zip2 (extract_subvector (v4i32 FPR128:$Rn), (i64 0)),
+                                        (extract_subvector (v4i32 FPR128:$Rn), (i64 2))))),
           (EXTRACT_SUBREG (ADDPv4i32 $Rn, $Rn), dsub)>;
-def : Pat<(v4i16 (add (trunc (v4i32 (bitconvert FPR128:$Rn))),
-                      (extract_subvector (AArch64uzp2 (v8i16 FPR128:$Rn), undef), (i64 0)))),
+def : Pat<(v4i16 (add_like (trunc (v4i32 (bitconvert FPR128:$Rn))),
+                           (extract_subvector (AArch64uzp2 (v8i16 FPR128:$Rn), undef), (i64 0)))),
           (EXTRACT_SUBREG (ADDPv8i16 $Rn, $Rn), dsub)>;
-def : Pat<(v8i8  (add (trunc (v8i16 (bitconvert FPR128:$Rn))),
-                      (extract_subvector (AArch64uzp2 (v16i8 FPR128:$Rn), undef), (i64 0)))),
+def : Pat<(v8i8  (add_like (trunc (v8i16 (bitconvert FPR128:$Rn))),
+                           (extract_subvector (AArch64uzp2 (v16i8 FPR128:$Rn), undef), (i64 0)))),
           (EXTRACT_SUBREG (ADDPv16i8 $Rn, $Rn), dsub)>;
 
 defm : PairwiseZIPBinOp<fadd, v2f64, FPR128, FADDPv2f64>;
@@ -11829,10 +11899,10 @@ let Predicates = [HasF16F32DOT] in {
 }
 
 let Predicates = [HasF16MM] in
-  defm FMMLA : SIMDThreeSameVectorFMLA<"fmmla">;
+  defm FMMLA : SIMDThreeSameVectorFMLA<"fmmla", int_aarch64_neon_fmmla>;
 
 let Predicates = [HasF16F32MM] in
-  defm FMMLA : SIMDThreeSameVectorFMLAWiden<"fmmla">;
+  defm FMMLA : SIMDThreeSameVectorFMLAWiden<"fmmla", int_aarch64_neon_fmmla>;
 
 let Uses = [FPMR, FPCR] in
   defm FMMLA : SIMDThreeSameVectorFP8MatrixMul<"fmmla", int_aarch64_neon_fmmla>;
