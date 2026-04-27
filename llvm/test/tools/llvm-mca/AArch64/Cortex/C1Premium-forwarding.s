@@ -1295,26 +1295,26 @@ orns p0.b, p15/z, p1.b, p0.b
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      400
-# CHECK-NEXT: Total Cycles:      1603
+# CHECK-NEXT: Total Cycles:      1003
 # CHECK-NEXT: Total uOps:        400
 
 # CHECK:      Dispatch Width:    10
-# CHECK-NEXT: uOps Per Cycle:    0.25
-# CHECK-NEXT: IPC:               0.25
+# CHECK-NEXT: uOps Per Cycle:    0.40
+# CHECK-NEXT: IPC:               0.40
 # CHECK-NEXT: Block RThroughput: 2.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          01234
-# CHECK-NEXT: Index     0123456789          0123456789
+# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: Index     0123456789          012
 
-# CHECK:      [0,0]     DeeeeER   .    .    .    .    .   .   mul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [0,1]     D====eeeeER    .    .    .    .   .   cmla	z0.b, z1.b, z2.b, #90
-# CHECK-NEXT: [0,2]     D========eeeeER.    .    .    .   .   cmla	z0.b, z1.b, z2.b, #90
-# CHECK-NEXT: [0,3]     D============eeeeER .    .    .   .   cmla	z0.b, z0.b, z1.b, #90
-# CHECK-NEXT: [1,0]     D================eeeeER  .    .   .   mul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [1,1]     D====================eeeeER   .   .   cmla	z0.b, z1.b, z2.b, #90
-# CHECK-NEXT: [1,2]     D========================eeeeER   .   cmla	z0.b, z1.b, z2.b, #90
-# CHECK-NEXT: [1,3]     D============================eeeeER   cmla	z0.b, z0.b, z1.b, #90
+# CHECK:      [0,0]     DeeeeER   .    .    . .   mul	z0.d, z0.d, z0.d
+# CHECK-NEXT: [0,1]     D====eeeeER    .    . .   cmla	z0.b, z1.b, z2.b, #90
+# CHECK-NEXT: [0,2]     D=====eeeeER   .    . .   cmla	z0.b, z1.b, z2.b, #90
+# CHECK-NEXT: [0,3]     D======eeeeER  .    . .   cmla	z0.b, z0.b, z1.b, #90
+# CHECK-NEXT: [1,0]     D==========eeeeER   . .   mul	z0.d, z0.d, z0.d
+# CHECK-NEXT: [1,1]     D==============eeeeER .   cmla	z0.b, z1.b, z2.b, #90
+# CHECK-NEXT: [1,2]     D===============eeeeER.   cmla	z0.b, z1.b, z2.b, #90
+# CHECK-NEXT: [1,3]     D================eeeeER   cmla	z0.b, z0.b, z1.b, #90
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1323,36 +1323,36 @@ orns p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     2     9.0    0.5    0.0       mul	z0.d, z0.d, z0.d
-# CHECK-NEXT: 1.     2     13.0   0.0    0.0       cmla	z0.b, z1.b, z2.b, #90
-# CHECK-NEXT: 2.     2     17.0   0.0    0.0       cmla	z0.b, z1.b, z2.b, #90
-# CHECK-NEXT: 3.     2     21.0   0.0    0.0       cmla	z0.b, z0.b, z1.b, #90
-# CHECK-NEXT:        2     15.0   0.1    0.0       <total>
+# CHECK-NEXT: 0.     2     6.0    0.5    0.0       mul	z0.d, z0.d, z0.d
+# CHECK-NEXT: 1.     2     10.0   0.0    0.0       cmla	z0.b, z1.b, z2.b, #90
+# CHECK-NEXT: 2.     2     11.0   0.0    0.0       cmla	z0.b, z1.b, z2.b, #90
+# CHECK-NEXT: 3.     2     12.0   0.0    0.0       cmla	z0.b, z0.b, z1.b, #90
+# CHECK-NEXT:        2     9.8    0.1    0.0       <total>
 
 # CHECK:      [24] Code Region - Z cmla.d
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      400
-# CHECK-NEXT: Total Cycles:      1603
+# CHECK-NEXT: Total Cycles:      1003
 # CHECK-NEXT: Total uOps:        400
 
 # CHECK:      Dispatch Width:    10
-# CHECK-NEXT: uOps Per Cycle:    0.25
-# CHECK-NEXT: IPC:               0.25
+# CHECK-NEXT: uOps Per Cycle:    0.40
+# CHECK-NEXT: IPC:               0.40
 # CHECK-NEXT: Block RThroughput: 2.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          01234
-# CHECK-NEXT: Index     0123456789          0123456789
+# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: Index     0123456789          012
 
-# CHECK:      [0,0]     DeeeeER   .    .    .    .    .   .   mul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [0,1]     D====eeeeER    .    .    .    .   .   cmla	z0.d, z1.d, z2.d, #90
-# CHECK-NEXT: [0,2]     D========eeeeER.    .    .    .   .   cmla	z0.d, z1.d, z2.d, #90
-# CHECK-NEXT: [0,3]     D============eeeeER .    .    .   .   cmla	z0.d, z0.d, z1.d, #90
-# CHECK-NEXT: [1,0]     D================eeeeER  .    .   .   mul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [1,1]     D====================eeeeER   .   .   cmla	z0.d, z1.d, z2.d, #90
-# CHECK-NEXT: [1,2]     D========================eeeeER   .   cmla	z0.d, z1.d, z2.d, #90
-# CHECK-NEXT: [1,3]     D============================eeeeER   cmla	z0.d, z0.d, z1.d, #90
+# CHECK:      [0,0]     DeeeeER   .    .    . .   mul	z0.d, z0.d, z0.d
+# CHECK-NEXT: [0,1]     D====eeeeER    .    . .   cmla	z0.d, z1.d, z2.d, #90
+# CHECK-NEXT: [0,2]     D=====eeeeER   .    . .   cmla	z0.d, z1.d, z2.d, #90
+# CHECK-NEXT: [0,3]     D======eeeeER  .    . .   cmla	z0.d, z0.d, z1.d, #90
+# CHECK-NEXT: [1,0]     D==========eeeeER   . .   mul	z0.d, z0.d, z0.d
+# CHECK-NEXT: [1,1]     D==============eeeeER .   cmla	z0.d, z1.d, z2.d, #90
+# CHECK-NEXT: [1,2]     D===============eeeeER.   cmla	z0.d, z1.d, z2.d, #90
+# CHECK-NEXT: [1,3]     D================eeeeER   cmla	z0.d, z0.d, z1.d, #90
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1361,11 +1361,11 @@ orns p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     2     9.0    0.5    0.0       mul	z0.d, z0.d, z0.d
-# CHECK-NEXT: 1.     2     13.0   0.0    0.0       cmla	z0.d, z1.d, z2.d, #90
-# CHECK-NEXT: 2.     2     17.0   0.0    0.0       cmla	z0.d, z1.d, z2.d, #90
-# CHECK-NEXT: 3.     2     21.0   0.0    0.0       cmla	z0.d, z0.d, z1.d, #90
-# CHECK-NEXT:        2     15.0   0.1    0.0       <total>
+# CHECK-NEXT: 0.     2     6.0    0.5    0.0       mul	z0.d, z0.d, z0.d
+# CHECK-NEXT: 1.     2     10.0   0.0    0.0       cmla	z0.d, z1.d, z2.d, #90
+# CHECK-NEXT: 2.     2     11.0   0.0    0.0       cmla	z0.d, z1.d, z2.d, #90
+# CHECK-NEXT: 3.     2     12.0   0.0    0.0       cmla	z0.d, z0.d, z1.d, #90
+# CHECK-NEXT:        2     9.8    0.1    0.0       <total>
 
 # CHECK:      [25] Code Region - Z sdot.s
 

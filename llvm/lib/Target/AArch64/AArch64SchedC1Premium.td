@@ -93,6 +93,10 @@ def C1PWrite_0c : SchedWriteRes<[]> { let Latency = 0; }
 def C1PWrite_1c_1B          : SchedWriteRes<[C1PUnitB]>  { let Latency = 1; }
 def C1PWrite_2c_1B          : SchedWriteRes<[C1PUnitB]>  { let Latency = 2; }
 def C1PWrite_1c_1I          : SchedWriteRes<[C1PUnitI]>  { let Latency = 1; }
+def C1PWrite_1c_8I          : SchedWriteRes<[
+    C1PUnitI, C1PUnitI, C1PUnitI, C1PUnitI,
+    C1PUnitI, C1PUnitI, C1PUnitI, C1PUnitI
+]>  { let Latency = 1; }
 def C1PWrite_2c_1I          : SchedWriteRes<[C1PUnitI]>  { let Latency = 2; }
 def C1PWrite_3c_1I          : SchedWriteRes<[C1PUnitI]>  { let Latency = 3; }
 def C1PWrite_2c_1I4         : SchedWriteRes<[C1PUnitI4]> { let Latency = 2; }
@@ -160,7 +164,6 @@ def C1PWrite_1c_1SA_1D_1I   : SchedWriteRes<[C1PUnitSA, C1PUnitD, C1PUnitI]> { l
 def C1PWrite_2c_1B_1I       : SchedWriteRes<[C1PUnitB, C1PUnitI]> { let Latency = 2; }
 def C1PWrite_5c_1L_1I       : SchedWriteRes<[C1PUnitL, C1PUnitI]> { let Latency = 5; }
 def C1PWrite_5c_2L_1I       : SchedWriteRes<[C1PUnitL, C1PUnitL, C1PUnitI]> { let Latency = 5; }
-def C1PWrite_5c_2L_2I       : SchedWriteRes<[C1PUnitL, C1PUnitL, C1PUnitI, C1PUnitI]> { let Latency = 5; }
 def C1PWrite_6c_1L_1I       : SchedWriteRes<[C1PUnitL, C1PUnitI]> { let Latency = 6; }
 def C1PWrite_6c_2L_1I       : SchedWriteRes<[C1PUnitL, C1PUnitL, C1PUnitI]> { let Latency = 6; }
 def C1PWrite_7c_1L_1I       : SchedWriteRes<[C1PUnitL, C1PUnitI]> { let Latency = 7; }
@@ -530,6 +533,7 @@ def C1PRd_CRC : SchedReadAdvance<1, [C1PWr_CRC]>;
 // -----------------------------------------------------------------------------
 
 def : InstRW<[WriteI], (instrs COPY)>;
+def : WriteRes<WriteSys, []> { let Latency = 1; }
 
 
 //===----------------------------------------------------------------------===//
@@ -590,8 +594,8 @@ def : InstRW<[C1PWrite_1c_1I],
 
 // Convert floating-point condition flags
 // Flag manipulation instructions
-def : WriteRes<WriteSys, []> { let Latency = 1; }
-def : InstRW<[C1PWrite_1c_1I], (instrs AXFLAG, XAFLAG)>;
+def : InstRW<[C1PWrite_1c_8I],
+              (instrs AXFLAG, XAFLAG, SETF8, SETF16, RMIF, CFINV)>;
 
 // Insert Random Tags
 // NOTE: SOG reports 2c on M (RRND=1) and 3c on M0 (RRND=0); model 2c on M.
@@ -709,7 +713,7 @@ def : InstRW<[C1PWrite_4c_2L_1I], (instrs LDPXpre, LDPXpost)>;
 def : InstRW<[C1PWrite_5c_2L_1I, WriteLDHi], (instrs LDPSWi)>;
 
 // Load pair, immed post-index or immed pre-index, signed words
-def : InstRW<[WriteAdr, C1PWrite_5c_2L_2I, WriteLDHi],
+def : InstRW<[WriteAdr, C1PWrite_5c_2L_1I, WriteLDHi],
              (instregex "^LDPSW(post|pre)$")>;
 
 // Store instructions
@@ -763,7 +767,7 @@ def : SchedAlias<WriteF,     C1PWrite_2c_1V>;
 def : SchedAlias<WriteFCmp,  C1PWrite_2c_1V01>;
 
 // FP divide, square root
-def : SchedAlias<WriteFDiv,  C1PWrite_5c_1V1_8rc>;
+def : SchedAlias<WriteFDiv,  C1PWrite_5c_1V1>;
 
 // FP divide, H-form
 def : InstRW<[C1PWrite_5c_1V1],  (instrs FDIVHrr)>;
@@ -812,7 +816,7 @@ def : InstRW<[C1PWrite_3c_1V], (instrs FCVTSHr, FCVTDHr, FCVTHSr, FCVTDSr,
 // FP move, register
 def : SchedAlias<WriteFImm, C1PWrite_2c_1V>;
 
-//FP transfer, from gen to low half of vec reg
+// FP transfer, from gen to low half of vec reg
 def : InstRW<[C1PWrite_3c_1M0],
              (instrs FMOVWHr, FMOVXHr, FMOVWSr, FMOVXDr)>;
 
@@ -1665,7 +1669,7 @@ def : InstRW<[C1PWr_ZDOTB, C1PRd_ZDOTB, C1PRd_ZDOTB], (instrs CDOT_ZZZ_S, CDOT_Z
 def : InstRW<[C1PWr_ZDOTH, C1PRd_ZDOTH, C1PRd_ZDOTH], (instrs CDOT_ZZZ_D, CDOT_ZZZI_D)>;
 
 // Complex multiply-add B, H, S, D element size
-def : InstRW<[C1PWr_ZCMABHS, C1URd_ZCMABHS, C1PRd_ZCMABHS], (instregex "^CMLA_ZZZ_[BHSD]",
+def : InstRW<[C1PWr_ZCMABHS, C1PRd_ZCMABHS, C1PRd_ZCMABHS], (instregex "^CMLA_ZZZ_[BHSD]",
                                                       "^CMLA_ZZZI_[HS]")>;
 
 // Conditional extract operations, scalar form

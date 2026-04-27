@@ -104,6 +104,10 @@ def C1UWrite_1c_1B      : SchedWriteRes<[C1UUnitB]>  { let Latency = 1; }
 def C1UWrite_2c_1B      : SchedWriteRes<[C1UUnitB]>  { let Latency = 2; }
 def C1UWrite_2c_1B_1I   : SchedWriteRes<[C1UUnitB, C1UUnitI]>  { let Latency = 2; }
 def C1UWrite_1c_1I      : SchedWriteRes<[C1UUnitI]>  { let Latency = 1; }
+def C1UWrite_1c_8I          : SchedWriteRes<[
+    C1UUnitI, C1UUnitI, C1UUnitI, C1UUnitI,
+    C1UUnitI, C1UUnitI, C1UUnitI, C1UUnitI
+]>  { let Latency = 1; }
 def C1UWrite_1c_2I      : SchedWriteRes<[C1UUnitI, C1UUnitI]>  { let Latency = 1; }
 def C1UWrite_2c_1I      : SchedWriteRes<[C1UUnitI]>  { let Latency = 2; }
 def C1UWrite_2c_2I      : SchedWriteRes<[C1UUnitI, C1UUnitI]>  { let Latency = 2; }
@@ -710,6 +714,7 @@ def C1UWrite_3or4c_1M0_1M : SchedWriteVariant<[
 // -----------------------------------------------------------------------------
 
 def : InstRW<[WriteI], (instrs COPY)>;
+def : WriteRes<WriteSys, []> { let Latency = 1; }
 
 
 //===----------------------------------------------------------------------===//
@@ -770,8 +775,8 @@ def : InstRW<[C1UWrite_1c_1I],
 
 // Convert floating-point condition flags
 // Flag manipulation instructions
-def : WriteRes<WriteSys, []> { let Latency = 1; }
-def : InstRW<[C1UWrite_1c_1I], (instrs AXFLAG, XAFLAG)>;
+def : InstRW<[C1UWrite_1c_8I],
+              (instrs AXFLAG, XAFLAG, SETF8, SETF16, RMIF, CFINV)>;
 
 // Insert Random Tags
 def : InstRW<[C1UWrite_2c_1M], (instrs IRG, IRGstack)>;
