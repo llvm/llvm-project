@@ -1,0 +1,23 @@
+This test verifies that the custom in-process builtins defined in lit.cfg
+are working as expected.
+
+Testing "streq"
+
+Testing "print_out_err"
+RUN: print_out_err "hello stdout" "hello stderr" > %t.out 2> %t.err
+RUN: grep -x "hello stdout" %t.out
+RUN: grep -x "hello stderr" %t.err
+
+Testing redirection in append mode.
+RUN: print_out_err "1" "2" >> %t.out 2>> %t.err
+RUN: grep -x "hello stdout1" %t.out
+RUN: grep -x "hello stderr2" %t.err
+
+RUN: not print_out_err > %t.out 2> %t.err
+RUN: streq < %t.out ""
+RUN: streq < %t.err "Expected two arguments."
+
+Testing "uppercaser"
+RUN: echo "testtest" > %t.lowercase
+RUN: uppercaser < %t.lowercase > %t.uppercase
+RUN: grep -x "TESTTEST" < %t.uppercase
