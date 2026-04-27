@@ -865,7 +865,7 @@ defm V_CNDMASK_B16_t16 : VOP2eInst <"v_cndmask_b16_t16", VOP2e_I16_I16_I16_I1_tr
 let SubtargetPredicate = isGFX11Plus, True16Predicate = UseFakeTrue16Insts in
 defm V_CNDMASK_B16_fake16 : VOP2eInst <"v_cndmask_b16_fake16", VOP2e_I16_I16_I16_I1_fake16>;
 defm V_CNDMASK_B32 : VOP2eInst_VOPD <"v_cndmask_b32", VOP2e_I32_I32_I32_I1, 0x9, "v_cndmask_b32">;
-let SubtargetPredicate = HasMadMacF32Insts, isReMaterializable = 1 in
+let SubtargetPredicate = HasMadMacF32Insts, isReMaterializable = 1, FixedSize = 1 in
 def V_MADMK_F32 : VOP2_Pseudo <"v_madmk_f32", VOP_MADMK_F32, []>;
 
 let isCommutable = 1 in {
@@ -904,7 +904,7 @@ defm V_MAC_LEGACY_F32 : VOP2Inst <"v_mac_legacy_f32", VOP_MAC_LEGACY_F32>;
 } // End Constraints = "$vdst = $src2",
   //     isConvertibleToThreeAddress = 1
 
-let isReMaterializable = 1 in
+let isReMaterializable = 1, FixedSize = 1 in
 def V_MADAK_F32 : VOP2_Pseudo <"v_madak_f32", VOP_MADAK_F32, []>;
 } // End OtherPredicates = [HasMadMacF32Insts]
 } // End mayRaiseFPException = 0
@@ -1202,11 +1202,11 @@ let True16Predicate = UseFakeTrue16Insts in {
 
 let SubtargetPredicate = Has16BitInsts in {
 let isReMaterializable = 1 in {
-let FPDPRounding = 1 in {
+let FPDPRounding = 1, FixedSize = 1 in {
   def V_MADMK_F16 : VOP2_Pseudo <"v_madmk_f16", VOP_MADMK_F16, [], "">;
 } // End FPDPRounding = 1
 let isCommutable = 1 in {
-let mayRaiseFPException = 0 in {
+let mayRaiseFPException = 0, FixedSize = 1 in {
   def V_MADAK_F16 : VOP2_Pseudo <"v_madak_f16", VOP_MADAK_F16, [], "">;
 }
 let SubtargetPredicate = isGFX8GFX9 in {
