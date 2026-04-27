@@ -656,9 +656,6 @@ defm ORC8 : XForm_6r<31, 412, (outs g8rc:$RA), (ins g8rc:$RST, g8rc:$RB),
                      "orc", "$RA, $RST, $RB", IIC_IntSimple,
                      [(set i64:$RA, (or i64:$RST, (not i64:$RB)))]>;
 let isCommutable = 1 in {
-defm EQV8 : XForm_6r<31, 284, (outs g8rc:$RA), (ins g8rc:$RST, g8rc:$RB),
-                     "eqv", "$RA, $RST, $RB", IIC_IntSimple,
-                     [(set i64:$RA, (not (xor i64:$RST, i64:$RB)))]>;
 defm XOR8 : XForm_6r<31, 316, (outs g8rc:$RA), (ins g8rc:$RST, g8rc:$RB),
                      "xor", "$RA, $RST, $RB", IIC_IntSimple,
                      [(set i64:$RA, (xor i64:$RST, i64:$RB))]>;
