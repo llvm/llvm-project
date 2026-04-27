@@ -14,7 +14,7 @@ from lldbsuite.test.gdbclientutils import *
 
 @skipUnlessDarwin  # Remove once lldbsever support is implemented.
 @skipIfOutOfTreeDebugserver
-#Runs on systems where we can always predict the software break size
+# Runs on systems where we can always predict the software break size
 @skipIf(archs=no_match(["x86_64", "arm64", "aarch64"]))
 class TestMultiBreakpoint(TestBase):
     def send_packet(self, packet_str):
