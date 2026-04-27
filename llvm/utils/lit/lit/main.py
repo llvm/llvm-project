@@ -254,7 +254,7 @@ def mark_unsupported(selected_tests, opts):
         test_file = os.sep.join(t.path_in_suite)
         test_full_name = t.getFullName()
         if test_file in opts.unsupported or test_full_name in opts.unsupported:
-            # Add a special feature that's always present to mark as unsupported
+            # Add a special feature that's always present to mark as unsupported.
             t.config.available_features.add("lit-unsupported-marker")
             t.unsupported.append("lit-unsupported-marker")
         if test_file in opts.unsupported_not or test_full_name in opts.unsupported_not:
