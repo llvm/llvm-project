@@ -137,7 +137,10 @@ html_logo = "_static/LLVMWyvernSmall.png"
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["_static"]
 
+html_js_files = ["copybutton.js"]
+
 html_css_files = [
+    "copybutton.css",
     "custom.css",
 ]
 
