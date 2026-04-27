@@ -12,8 +12,13 @@ class BinaryDistribution(Distribution):
         return True
 
 
-if not glob.glob("ir2vec/*.so") + glob.glob("ir2vec/*.pyd") + glob.glob("ir2vec/*.dylib"):
+if (
+    not glob.glob("ir2vec/*.so")
+    + glob.glob("ir2vec/*.pyd")
+    + glob.glob("ir2vec/*.dylib")
+):
     import warnings
+
     warnings.warn(
         "No native module (.so/.pyd/.dylib) found in ir2vec/. "
         "Run the CMake build step before invoking pip wheel.",

@@ -28,6 +28,7 @@ Example usage::
 
 try:
     from importlib.metadata import version as _get_version
+
     __version__ = _get_version("llvm-ir2vec")
 except Exception:
     # Package not installed (e.g., running from the build tree or during
