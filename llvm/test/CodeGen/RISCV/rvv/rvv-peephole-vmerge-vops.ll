@@ -455,7 +455,7 @@ define <vscale x 2 x i32> @vpselect_vpadd2(<vscale x 2 x i32> %passthru, <vscale
 define <vscale x 2 x i32> @vpselect_vpadd3(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> %x, <vscale x 2 x i32> %y, i32 zeroext %vl) {
 ; CHECK-LABEL: vpselect_vpadd3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %a = call <vscale x 2 x i32> @llvm.vp.add.nxv2i32(<vscale x 2 x i32> %x, <vscale x 2 x i32> %y, <vscale x 2 x i1> splat (i1 -1), i32 %vl)
