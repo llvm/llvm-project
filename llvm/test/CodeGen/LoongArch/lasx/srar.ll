@@ -5,13 +5,7 @@
 define <32 x i8> @srar_b(<32 x i8> %a, <32 x i8> %b) nounwind {
 ; CHECK-LABEL: srar_b:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvsra.b $xr2, $xr0, $xr1
-; CHECK-NEXT:    xvsubi.bu $xr3, $xr1, 1
-; CHECK-NEXT:    xvsrl.b $xr3, $xr0, $xr3
-; CHECK-NEXT:    xvandi.b $xr3, $xr3, 1
-; CHECK-NEXT:    xvadd.b $xr2, $xr3, $xr2
-; CHECK-NEXT:    xvseqi.b $xr1, $xr1, 0
-; CHECK-NEXT:    xvbitsel.v $xr0, $xr2, $xr0, $xr1
+; CHECK-NEXT:    xvsrar.b $xr0, $xr0, $xr1
 ; CHECK-NEXT:    ret
 entry:
   %0 = ashr <32 x i8> %a, %b
@@ -27,14 +21,7 @@ entry:
 define <16 x i16> @srar_h(<16 x i16> %a, <16 x i16> %b) nounwind {
 ; CHECK-LABEL: srar_h:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvsra.h $xr2, $xr0, $xr1
-; CHECK-NEXT:    xvsubi.hu $xr3, $xr1, 1
-; CHECK-NEXT:    xvsrl.h $xr3, $xr0, $xr3
-; CHECK-NEXT:    xvrepli.h $xr4, 1
-; CHECK-NEXT:    xvand.v $xr3, $xr3, $xr4
-; CHECK-NEXT:    xvadd.h $xr2, $xr3, $xr2
-; CHECK-NEXT:    xvseqi.h $xr1, $xr1, 0
-; CHECK-NEXT:    xvbitsel.v $xr0, $xr2, $xr0, $xr1
+; CHECK-NEXT:    xvsrar.h $xr0, $xr0, $xr1
 ; CHECK-NEXT:    ret
 entry:
   %0 = ashr <16 x i16> %a, %b
@@ -50,14 +37,7 @@ entry:
 define <8 x i32> @srar_w(<8 x i32> %a, <8 x i32> %b) nounwind {
 ; CHECK-LABEL: srar_w:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvsra.w $xr2, $xr0, $xr1
-; CHECK-NEXT:    xvsubi.wu $xr3, $xr1, 1
-; CHECK-NEXT:    xvsrl.w $xr3, $xr0, $xr3
-; CHECK-NEXT:    xvrepli.w $xr4, 1
-; CHECK-NEXT:    xvand.v $xr3, $xr3, $xr4
-; CHECK-NEXT:    xvadd.w $xr2, $xr3, $xr2
-; CHECK-NEXT:    xvseqi.w $xr1, $xr1, 0
-; CHECK-NEXT:    xvbitsel.v $xr0, $xr2, $xr0, $xr1
+; CHECK-NEXT:    xvsrar.w $xr0, $xr0, $xr1
 ; CHECK-NEXT:    ret
 entry:
   %0 = ashr <8 x i32> %a, %b
@@ -73,14 +53,7 @@ entry:
 define <4 x i64> @srar_d(<4 x i64> %a, <4 x i64> %b) nounwind {
 ; CHECK-LABEL: srar_d:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvsra.d $xr2, $xr0, $xr1
-; CHECK-NEXT:    xvsubi.du $xr3, $xr1, 1
-; CHECK-NEXT:    xvsrl.d $xr3, $xr0, $xr3
-; CHECK-NEXT:    xvrepli.d $xr4, 1
-; CHECK-NEXT:    xvand.v $xr3, $xr3, $xr4
-; CHECK-NEXT:    xvadd.d $xr2, $xr3, $xr2
-; CHECK-NEXT:    xvseqi.d $xr1, $xr1, 0
-; CHECK-NEXT:    xvbitsel.v $xr0, $xr2, $xr0, $xr1
+; CHECK-NEXT:    xvsrar.d $xr0, $xr0, $xr1
 ; CHECK-NEXT:    ret
 entry:
   %0 = ashr <4 x i64> %a, %b
@@ -96,9 +69,7 @@ entry:
 define <32 x i8> @srar_b_1(<32 x i8> %a) nounwind {
 ; CHECK-LABEL: srar_b_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvsrai.b $xr1, $xr0, 1
-; CHECK-NEXT:    xvandi.b $xr0, $xr0, 1
-; CHECK-NEXT:    xvadd.b $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvsrari.b $xr0, $xr0, 1
 ; CHECK-NEXT:    ret
 entry:
   %0 = ashr <32 x i8> %a, splat (i8 1)
@@ -110,10 +81,7 @@ entry:
 define <32 x i8> @srar_b_7(<32 x i8> %a) nounwind {
 ; CHECK-LABEL: srar_b_7:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvsrai.b $xr1, $xr0, 7
-; CHECK-NEXT:    xvsrli.b $xr0, $xr0, 6
-; CHECK-NEXT:    xvandi.b $xr0, $xr0, 1
-; CHECK-NEXT:    xvadd.b $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvsrari.b $xr0, $xr0, 7
 ; CHECK-NEXT:    ret
 entry:
   %0 = ashr <32 x i8> %a, splat (i8 7)
@@ -126,10 +94,7 @@ entry:
 define <16 x i16> @srar_h_1(<16 x i16> %a) nounwind {
 ; CHECK-LABEL: srar_h_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvsrai.h $xr1, $xr0, 1
-; CHECK-NEXT:    xvrepli.h $xr2, 1
-; CHECK-NEXT:    xvand.v $xr0, $xr0, $xr2
-; CHECK-NEXT:    xvadd.h $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvsrari.h $xr0, $xr0, 1
 ; CHECK-NEXT:    ret
 entry:
   %0 = ashr <16 x i16> %a, splat (i16 1)
@@ -141,11 +106,7 @@ entry:
 define <16 x i16> @srar_h_15(<16 x i16> %a) nounwind {
 ; CHECK-LABEL: srar_h_15:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvsrai.h $xr1, $xr0, 15
-; CHECK-NEXT:    xvsrli.h $xr0, $xr0, 14
-; CHECK-NEXT:    xvrepli.h $xr2, 1
-; CHECK-NEXT:    xvand.v $xr0, $xr0, $xr2
-; CHECK-NEXT:    xvadd.h $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvsrari.h $xr0, $xr0, 15
 ; CHECK-NEXT:    ret
 entry:
   %0 = ashr <16 x i16> %a, splat (i16 15)
@@ -158,10 +119,7 @@ entry:
 define <8 x i32> @srar_w_1(<8 x i32> %a) nounwind {
 ; CHECK-LABEL: srar_w_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvsrai.w $xr1, $xr0, 1
-; CHECK-NEXT:    xvrepli.w $xr2, 1
-; CHECK-NEXT:    xvand.v $xr0, $xr0, $xr2
-; CHECK-NEXT:    xvadd.w $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvsrari.w $xr0, $xr0, 1
 ; CHECK-NEXT:    ret
 entry:
   %0 = ashr <8 x i32> %a, splat (i32 1)
@@ -173,11 +131,7 @@ entry:
 define <8 x i32> @srar_w_31(<8 x i32> %a) nounwind {
 ; CHECK-LABEL: srar_w_31:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvsrai.w $xr1, $xr0, 31
-; CHECK-NEXT:    xvsrli.w $xr0, $xr0, 30
-; CHECK-NEXT:    xvrepli.w $xr2, 1
-; CHECK-NEXT:    xvand.v $xr0, $xr0, $xr2
-; CHECK-NEXT:    xvadd.w $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvsrari.w $xr0, $xr0, 31
 ; CHECK-NEXT:    ret
 entry:
   %0 = ashr <8 x i32> %a, splat (i32 31)
@@ -190,10 +144,7 @@ entry:
 define <4 x i64> @srar_d_1(<4 x i64> %a) nounwind {
 ; CHECK-LABEL: srar_d_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvsrai.d $xr1, $xr0, 1
-; CHECK-NEXT:    xvrepli.d $xr2, 1
-; CHECK-NEXT:    xvand.v $xr0, $xr0, $xr2
-; CHECK-NEXT:    xvadd.d $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvsrari.d $xr0, $xr0, 1
 ; CHECK-NEXT:    ret
 entry:
   %0 = ashr <4 x i64> %a, splat (i64 1)
@@ -205,11 +156,7 @@ entry:
 define <4 x i64> @srar_d_63(<4 x i64> %a) nounwind {
 ; CHECK-LABEL: srar_d_63:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvsrai.d $xr1, $xr0, 63
-; CHECK-NEXT:    xvsrli.d $xr0, $xr0, 62
-; CHECK-NEXT:    xvrepli.d $xr2, 1
-; CHECK-NEXT:    xvand.v $xr0, $xr0, $xr2
-; CHECK-NEXT:    xvadd.d $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvsrari.d $xr0, $xr0, 63
 ; CHECK-NEXT:    ret
 entry:
   %0 = ashr <4 x i64> %a, splat (i64 63)

@@ -635,6 +635,62 @@ running, then an error message is returned.
 do live tracing. Specifically, the name of the plug-in should match the name
 of the tracing technology returned by this packet.
 
+## jMultiBreakpoint
+
+This packet allows setting and removing multiple breakpoints in one go. It
+lists multiple `Z` and `z` packets using a JSON array of strings.
+Formally:
+
+```
+$jMultiBreakpoint:{"breakpoint_requests" : ["request"[,"request"]*]}
+```
+
+Where each `request` is one of:
+
+```
+* z0,addr,kind
+* z1,addr,kind
+* z2,addr,kind
+* z3,addr,kind
+* z4,addr,kind
+* Z0,addr,kind[;cond_list…][;cmds:persist,cmd_list…]
+* Z1,addr,kind[;cond_list…][;cmds:persist,cmd_list…]
+* Z2,addr,kind
+* Z3,addr,kind
+* Z4,addr,kind
+```
+
+Each field has the same meaning as the corresponding packet in the GDB Remote
+Protocol.
+
+For example, the packet below is a request to set one breakpoint and to remove
+two others:
+
+```
+$jMultiBreakpoint: {"breakpoint_requests": ["Z0,1025783e8,4", "z0,1025783ec,4", "z0,1025783e8,4"]}
+```
+
+The same address may be specified multiple times.
+
+The stub must execute the sequence of `request`s in the order they
+appear in the `jMultiBreakpoint` packet. This is not an atomic operation:
+individual requests may fail, and the stub must process subsequent requests
+regardless of previous failures.
+
+The reply consists of a JSON dictionary with a single entry, `results`, which
+is an array of strings, with the same contents allowed by a reply to a `z` or
+`Z` packet.
+
+```
+{"results": ["OK", "E03", "OK"]}
+```
+
+A stub that supports this packet must include `jMultiBreakpoint+` in the reply
+to `qSupported`.
+
+**Priority To Implement:** Low. This is a performance optimization, reducing
+the number of packets sent when manipulating breakpoints.
+
 ## jThreadExtendedInfo
 
 This packet, which takes its arguments as JSON and sends its reply as

@@ -2611,12 +2611,15 @@ inline bool SubPtr(InterpState &S, CodePtr OpPC, bool ElemSizeIsZero) {
 
   if (LHS.pointsToLabel() || RHS.pointsToLabel()) {
     if constexpr (isIntegralOrPointer<T>()) {
-      const auto *LHSAddrExpr =
-          dyn_cast_if_present<AddrLabelExpr>(LHS.getDeclDesc()->asExpr());
-      const auto *RHSAddrExpr =
-          dyn_cast_if_present<AddrLabelExpr>(RHS.getDeclDesc()->asExpr());
-      if (!LHSAddrExpr || !RHSAddrExpr)
+      const AddrLabelExpr *LHSAddrExpr = LHS.getPointedToLabel();
+      const AddrLabelExpr *RHSAddrExpr = RHS.getPointedToLabel();
+      if (!LHSAddrExpr || !RHSAddrExpr) {
+        S.FFDiag(S.Current->getSource(OpPC),
+                 diag::note_constexpr_pointer_arith_unspecified)
+            << LHS.toDiagnosticString(S.getASTContext())
+            << RHS.toDiagnosticString(S.getASTContext());
         return false;
+      }
 
       if (LHSAddrExpr->getLabel()->getDeclContext() !=
           RHSAddrExpr->getLabel()->getDeclContext())
@@ -2704,7 +2707,7 @@ template <PrimType TIn, PrimType TOut> bool Cast(InterpState &S, CodePtr OpPC) {
   if constexpr (isIntegralOrPointer<T>()) {
     if (In.getKind() != IntegralKind::Number &&
         In.getKind() != IntegralKind::AddrLabelDiff) {
-      if (!CheckIntegralAddressCast(S, OpPC, In.bitWidth()))
+      if (!CheckIntegralAddressCast(S, OpPC, U::bitWidth()))
         return Invalid(S, OpPC);
     } else if (In.getKind() == IntegralKind::AddrLabelDiff) {
       // Allow casts of address-of-label differences if they are no-ops
@@ -2917,7 +2920,7 @@ bool CastPointerIntegral(InterpState &S, CodePtr OpPC) {
       S.Stk.push<T>(Kind, PtrVal, /*Offset=*/0);
     } else if (Ptr.isFunctionPointer()) {
       const void *FuncDecl = Ptr.asFunctionPointer().Func->getDecl();
-      S.Stk.push<T>(IntegralKind::Address, FuncDecl, /*Offset=*/0);
+      S.Stk.push<T>(IntegralKind::FunctionAddress, FuncDecl, /*Offset=*/0);
     } else {
       S.Stk.push<T>(T::from(Ptr.getIntegerRepresentation()));
     }
@@ -3511,6 +3514,10 @@ inline bool GetIntPtr(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
 
       const Block *B = (const Block *)IntVal.getPtr();
       S.Stk.push<Pointer>(const_cast<Block *>(B));
+    } else if (IntVal.getKind() == IntegralKind::FunctionAddress) {
+      const Function *F =
+          S.P.getFunction((const FunctionDecl *)IntVal.getPtr());
+      S.Stk.push<Pointer>(F, IntVal.getOffset());
     } else {
       S.Stk.push<Pointer>(static_cast<uint64_t>(IntVal), Desc);
     }
