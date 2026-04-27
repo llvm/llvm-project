@@ -11036,13 +11036,13 @@ multiclass PairwiseZIPBinOp<SDPatternOperator Op, ValueType VT,
 }
 
 // add(uzp1(X, Y), uzp2(X, Y)) -> addp(X, Y)
-defm : PairwiseZIPBinOp<add, v2i64, FPR128, ADDPv2i64>;
-defm : PairwiseZIPBinOp<add, v2i32, FPR64,  ADDPv2i32>;
-defm : PairwiseUZPBinOp<add, v4i32, FPR128, ADDPv4i32>;
-defm : PairwiseUZPBinOp<add, v4i16, FPR64,  ADDPv4i16>;
-defm : PairwiseUZPBinOp<add, v8i16, FPR128, ADDPv8i16>;
-defm : PairwiseUZPBinOp<add, v8i8,  FPR64,  ADDPv8i8>;
-defm : PairwiseUZPBinOp<add, v16i8, FPR128, ADDPv16i8>;
+defm : PairwiseZIPBinOp<add_like, v2i64, FPR128, ADDPv2i64>;
+defm : PairwiseZIPBinOp<add_like, v2i32, FPR64,  ADDPv2i32>;
+defm : PairwiseUZPBinOp<add_like, v4i32, FPR128, ADDPv4i32>;
+defm : PairwiseUZPBinOp<add_like, v4i16, FPR64,  ADDPv4i16>;
+defm : PairwiseUZPBinOp<add_like, v8i16, FPR128, ADDPv8i16>;
+defm : PairwiseUZPBinOp<add_like, v8i8,  FPR64,  ADDPv8i8>;
+defm : PairwiseUZPBinOp<add_like, v16i8, FPR128, ADDPv16i8>;
 
 def : Pat<(v2i32 (add (AArch64zip1 (extract_subvector (v4i32 FPR128:$Rn), (i64 0)),
                                    (extract_subvector (v4i32 FPR128:$Rn), (i64 2))),
