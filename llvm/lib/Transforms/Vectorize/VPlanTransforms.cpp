@@ -730,7 +730,7 @@ static void removeRedundantCanonicalIVs(VPlan &Plan) {
     }
   }
 
-  if (!Plan.hasScalarVFOnly() && !vputils::onlyScalarValuesUsed(WidenNewIV))
+  if (!vputils::onlyFirstLaneUsed(WidenNewIV))
     return;
 
   // Replace the wide canonical IV with a scalar-iv-steps over the canonical
