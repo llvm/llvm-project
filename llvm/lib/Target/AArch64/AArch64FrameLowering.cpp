@@ -345,23 +345,6 @@ static unsigned getStackHazardSize(const MachineFunction &MF) {
   return MF.getSubtarget<AArch64Subtarget>().getStreamingHazardSize();
 }
 
-static const TargetRegisterClass *
-getAArch64CalleeSavedRegClass(MCRegister Reg) {
-  if (AArch64::GPR64RegClass.contains(Reg))
-    return &AArch64::GPR64RegClass;
-  if (AArch64::FPR64RegClass.contains(Reg))
-    return &AArch64::FPR64RegClass;
-  if (AArch64::FPR128RegClass.contains(Reg))
-    return &AArch64::FPR128RegClass;
-  if (AArch64::ZPRRegClass.contains(Reg))
-    return &AArch64::ZPRRegClass;
-  if (AArch64::PPRRegClass.contains(Reg))
-    return &AArch64::PPRRegClass;
-  if (Reg == AArch64::VG)
-    return &AArch64::FIXED_REGSRegClass;
-  llvm_unreachable("Unsupported register class.");
-}
-
 StackOffset
 AArch64FrameLowering::getZPRStackSize(const MachineFunction &MF) const {
   const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
@@ -2640,7 +2623,8 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   unsigned PPRCSStackSize = 0;
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   for (unsigned Reg : SavedRegs.set_bits()) {
-    auto *RC = getAArch64CalleeSavedRegClass(MCRegister(Reg));
+    auto *RC = TRI->getPhysRegBaseClass(MCRegister(Reg));
+    assert(RC && "expected register class!");
     auto SpillSize = TRI->getSpillSize(*RC);
     bool IsZPR = AArch64::ZPRRegClass.contains(Reg);
     bool IsPPR = !IsZPR && AArch64::PPRRegClass.contains(Reg);
@@ -2820,7 +2804,7 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
   int HazardSlotIndex = std::numeric_limits<int>::max();
   for (auto &CS : CSI) {
     MCRegister Reg = CS.getReg();
-    const TargetRegisterClass *RC = getAArch64CalleeSavedRegClass(Reg);
+    const TargetRegisterClass *RC = RegInfo->getPhysRegBaseClass(Reg);
 
     // Create a hazard slot as we switch between GPR and FPR CSRs.
     if (AFI->isStackHazardIncludedInCalleeSaveArea() &&
