@@ -1117,6 +1117,11 @@ void IoChecker::CheckForUselessIomsg() const {
   }
 }
 
+// Set of derived-type symbols already visited on the current recursion
+// path of the component walks below.  Localized here so the underlying
+// container can be swapped without touching call sites.
+using VisitedSymbolSet = std::unordered_set<const Symbol *>;
+
 // Seeks out an allocatable or pointer ultimate component that is not
 // nested in a nonallocatable/nonpointer component with a specific
 // defined I/O procedure.  The inProgress set tracks derived types
@@ -1125,7 +1130,7 @@ void IoChecker::CheckForUselessIomsg() const {
 // diagnosed but whose offending component is still in the symbol table.
 static const Symbol *FindUnsafeIoDirectComponent(common::DefinedIo which,
     const DerivedTypeSpec &derived, const Scope &scope,
-    std::unordered_set<const Symbol *> &inProgress) {
+    VisitedSymbolSet &inProgress) {
   if (HasDefinedIo(which, derived, &scope)) {
     return nullptr;
   }
@@ -1156,7 +1161,7 @@ static const Symbol *FindUnsafeIoDirectComponent(common::DefinedIo which,
 
 static const Symbol *FindUnsafeIoDirectComponent(common::DefinedIo which,
     const DerivedTypeSpec &derived, const Scope &scope) {
-  std::unordered_set<const Symbol *> inProgress;
+  VisitedSymbolSet inProgress;
   return FindUnsafeIoDirectComponent(which, derived, scope, inProgress);
 }
 
@@ -1166,7 +1171,7 @@ static const Symbol *FindUnsafeIoDirectComponent(common::DefinedIo which,
 // purpose of inProgress.
 static const Symbol *FindInaccessibleComponent(common::DefinedIo which,
     const DerivedTypeSpec &derived, const Scope &scope,
-    std::unordered_set<const Symbol *> &inProgress) {
+    VisitedSymbolSet &inProgress) {
   if (!inProgress.insert(&derived.typeSymbol()).second) {
     return nullptr;
   }
@@ -1209,7 +1214,7 @@ static const Symbol *FindInaccessibleComponent(common::DefinedIo which,
 
 static const Symbol *FindInaccessibleComponent(common::DefinedIo which,
     const DerivedTypeSpec &derived, const Scope &scope) {
-  std::unordered_set<const Symbol *> inProgress;
+  VisitedSymbolSet inProgress;
   return FindInaccessibleComponent(which, derived, scope, inProgress);
 }
 
