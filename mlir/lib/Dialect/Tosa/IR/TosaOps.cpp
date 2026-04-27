@@ -666,13 +666,15 @@ static LogicalResult
 verifyOutputShapeCompatibleWithExpected(Operation *op, ShapedType outputType,
                                         ArrayRef<int64_t> expectedShape,
                                         StringRef outputName = "output") {
+  assert(outputType.hasRank() && "expected output type to be ranked");
+
   if (succeeded(verifyCompatibleShape(outputType.getShape(), expectedShape)))
     return success();
 
   InFlightDiagnostic diag = op->emitOpError("expected ");
   diag << outputName << " shape ";
   printShapeToDiagnostic(diag, outputType.getShape());
-  diag << " to be compatible with expected shape ";
+  diag << " to be compatible with inferred shape ";
   printShapeToDiagnostic(diag, expectedShape);
   return diag;
 }
@@ -4904,7 +4906,7 @@ LogicalResult RescaleOp::verify() {
   if (succeeded(maybeOZp) && verifyOutputZeroPoint(*maybeOZp).failed())
     return failure();
 
-  const auto multiplierType = cast<ShapedType>(getMultiplier().getType());
+  const auto multiplierType = llvm::cast<ShapedType>(getMultiplier().getType());
   // multiplier element type must be i32 for scale32 = true
   if (getScale32() && !multiplierType.getElementType().isInteger(32)) {
     emitOpError("expect i32 element type for multiplier for scale32=true, got ")
@@ -4955,7 +4957,7 @@ LogicalResult RescaleOp::verify() {
     }
   }
 
-  const auto shiftType = cast<ShapedType>(getShift().getType());
+  const auto shiftType = llvm::cast<ShapedType>(getShift().getType());
   if (shiftType.hasRank()) {
     ArrayRef<int64_t> shiftShape = shiftType.getShape();
     // shift input has rank 1 by dialect definition
