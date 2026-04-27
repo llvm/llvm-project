@@ -30,6 +30,10 @@ find_package(nanobind CONFIG REQUIRED)
 
 nanobind_add_module(ir2vec MODULE PyIR2Vec.cpp)
 
+set_target_properties(ir2vec PROPERTIES
+  LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+)
+
 # Python bindings require exception handling and RTTI to convert C++ exceptions
 # to Python exceptions. LLVM core is compiled with -fno-exceptions -fno-rtti,
 # but Python bindings are compiled separately with these features enabled.
