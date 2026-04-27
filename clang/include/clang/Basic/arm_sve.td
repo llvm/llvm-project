@@ -259,6 +259,10 @@ let SVETargetGuard = "bf16", SMETargetGuard = InvalidMode in {
   def SVBFMMLA       : SInst<"svbfmmla[_{0}]",       "MMdd",  "b", MergeNone, "aarch64_sve_bfmmla",       [IsOverloadNone]>;
 }
 
+let SVETargetGuard = "sve-b16mm", SMETargetGuard = InvalidMode in {
+  def SVMMLA_BF16 : SInst<"svmmla[_bf16]", "dddd", "b", MergeNone, "aarch64_sve_fmmla", [IsOverloadFirstandLast]>;
+}
+
 let SVETargetGuard = "bf16", SMETargetGuard = "bf16" in {
   def SVBFDOT        : SInst<"svbfdot[_{0}]",        "MMdd",  "b", MergeNone, "aarch64_sve_bfdot",           [IsOverloadNone, VerifyRuntimeMode]>;
   def SVBFMLALB      : SInst<"svbfmlalb[_{0}]",      "MMdd",  "b", MergeNone, "aarch64_sve_bfmlalb",         [IsOverloadNone, VerifyRuntimeMode]>;
@@ -1239,6 +1243,10 @@ let SVETargetGuard = "sve-f16f32mm", SMETargetGuard = InvalidMode in {
   def SVMMLA_F32_F16  : SInst<"svmmla[_f32_f16]", "ddhh", "f", MergeNone, "aarch64_sve_fmmla", [IsOverloadFirstandLast]>;
 }
 
+let SVETargetGuard = "sve2p2,f16mm", SMETargetGuard = InvalidMode in {
+  def SVMMLA_F16 : SInst<"svmmla[_f16]", "dddd", "h", MergeNone, "aarch64_sve_fmmla", [IsOverloadFirstandLast]>;
+}
+
 let SVETargetGuard = "sve2,f8f32mm", SMETargetGuard = InvalidMode in {
   def SVMMLA_F32_MF8 : SInst<"svmmla[_f32_mf8]", "dd~~>", "f", MergeNone, "aarch64_sve_fp8_fmmla">;
 }
@@ -1340,6 +1348,17 @@ defm SVQABS   : SInstZPZ<"svqabs",   "csil", "aarch64_sve_sqabs">;
 defm SVQNEG   : SInstZPZ<"svqneg",   "csil", "aarch64_sve_sqneg">;
 defm SVRECPE  : SInstZPZ<"svrecpe",  "Ui",   "aarch64_sve_urecpe">;
 defm SVRSQRTE : SInstZPZ<"svrsqrte", "Ui",   "aarch64_sve_ursqrte">;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// SVE2.3 - Two-way signed/unsigned absolute difference sum and accumulate long
+
+let SVETargetGuard = "sve2p3|sme2p3", SMETargetGuard = "sve2p3|sme2p3" in {
+  def SVABAL_S : SInst<"svabal[_{d}]", "ddhh", "sil"   , MergeNone, "aarch64_sve_sabal", [VerifyRuntimeMode]>;
+  def SVABAL_S_N : SInst<"svabal[_n_{d}]", "ddhR", "sil"   , MergeNone, "aarch64_sve_sabal", [VerifyRuntimeMode]>;
+
+  def SVABAL_U : SInst<"svabal[_{d}]", "ddhh", "UsUiUl", MergeNone, "aarch64_sve_uabal", [VerifyRuntimeMode]>;
+  def SVABAL_U_N : SInst<"svabal[_n_{d}]", "ddhR", "UsUiUl", MergeNone, "aarch64_sve_uabal", [VerifyRuntimeMode]>;
 }
 
 //------------------------------------------------------------------------------

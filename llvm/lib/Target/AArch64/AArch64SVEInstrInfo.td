@@ -4841,8 +4841,8 @@ let Predicates = [HasSVE2p3_or_SME2p3] in {
   defm SUBP_ZPmZZ    : sve2_int_arith_pred<0b100001, "subp", int_aarch64_sve_subp>;
 
   // SVE2 integer absolute difference and accumulate long
-  defm SABAL_ZZZ : sve2_int_two_way_absdiff_accum_long<0b0, "sabal">;
-  defm UABAL_ZZZ : sve2_int_two_way_absdiff_accum_long<0b1, "uabal">;
+  defm SABAL_ZZZ : sve2_int_two_way_absdiff_accum_long<0b0, "sabal", int_aarch64_sve_sabal>;
+  defm UABAL_ZZZ : sve2_int_two_way_absdiff_accum_long<0b1, "uabal", int_aarch64_sve_uabal>;
 
   // SVE2 integer dot product
   def SDOT_ZZZ_BtoH : sve_intx_dot<0b01, 0b00000, 0b0, "sdot", ZPR16, ZPR8>;
@@ -4892,14 +4892,14 @@ let Predicates = [HasSVE2p3] in {
 // SVE_B16MM Instructions
 //===----------------------------------------------------------------------===//
 let Predicates = [HasSVE_B16MM] in {
-  def BFMMLA_ZZZ_H : sve_fp_matrix_mla<0b110, "bfmmla", ZPR16, ZPR16>;
+  defm BFMMLA_ZZZ_H : sve_fp_matrix_mla<0b110, "bfmmla", ZPR16, ZPR16, int_aarch64_sve_fmmla, nxv8bf16, nxv8bf16>;
 }
 
 //===----------------------------------------------------------------------===//
 // F16MM Instructions
 //===----------------------------------------------------------------------===//
 let Predicates = [HasSVE2p2, HasF16MM] in {
-  def FMMLA_ZZZ_H : sve_fp_matrix_mla<0b100, "fmmla", ZPR16, ZPR16>;
+  defm FMMLA_ZZZ_H : sve_fp_matrix_mla<0b100, "fmmla", ZPR16, ZPR16, int_aarch64_sve_fmmla, nxv8f16, nxv8f16>;
 }
 
 //===----------------------------------------------------------------------===//

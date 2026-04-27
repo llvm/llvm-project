@@ -5992,17 +5992,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   // Apply some call-site-specific attributes.
   // TODO: work this into building the attribute set.
 
-  // Apply always_inline to all calls within flatten functions.
-  // FIXME: should this really take priority over __try, below?
-  if (CurCodeDecl && CurCodeDecl->hasAttr<FlattenAttr>() &&
-      !InNoInlineAttributedStmt &&
-      !(TargetDecl && TargetDecl->hasAttr<NoInlineAttr>()) &&
-      !CGM.getTargetCodeGenInfo().wouldInliningViolateFunctionCallABI(
-          CallerDecl, CalleeDecl)) {
-    Attrs =
-        Attrs.addFnAttribute(getLLVMContext(), llvm::Attribute::AlwaysInline);
-  }
-
   // Disable inlining inside SEH __try blocks.
   if (isSEHTryScope()) {
     Attrs = Attrs.addFnAttribute(getLLVMContext(), llvm::Attribute::NoInline);
