@@ -316,7 +316,8 @@ public:
     }
 
     // Rewrite all uses in the matching BBs.
-    for (auto *user : linearOrigVal[varIndex]->users()) {
+    llvm::SmallVector<llvm::User *> users(linearOrigVal[varIndex]->users());
+    for (auto *user : users) {
       if (auto *userInst = dyn_cast<llvm::Instruction>(user)) {
         if (matchingBBs.contains(userInst->getParent()))
           user->replaceUsesOfWith(linearOrigVal[varIndex],
