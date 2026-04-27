@@ -1118,8 +1118,7 @@ void IoChecker::CheckForUselessIomsg() const {
 }
 
 // Set of derived-type symbols already visited on the current recursion
-// path of the component walks below.  Localized here so the underlying
-// container can be swapped without touching call sites.
+// path of the component walks below.
 using VisitedSymbolSet = std::unordered_set<const Symbol *>;
 
 // Seeks out an allocatable or pointer ultimate component that is not
