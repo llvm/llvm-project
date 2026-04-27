@@ -659,7 +659,7 @@ bool VectorCombine::foldExtractExtract(Instruction &I) {
       !match(I1, m_ExtractElt(m_Value(V1), m_ConstantInt(C1))) ||
       V0->getType() != V1->getType())
     return false;
-  
+
   // For fixed-width vectors, reject out-of-bounds extract indexes
   if (auto *FixedVecTy = dyn_cast<FixedVectorType>(V0->getType())) {
     unsigned NumElts = FixedVecTy->getNumElements();
