@@ -1129,7 +1129,14 @@ class TruncfToOCLPattern : public OpConversionPattern<TruncfOp> {
     // Supported source and result types are resticted for now.
     auto srcEtype = op.getSrcEtype().getEtype();
     auto dstEtype = op.getDstEtype().getEtype();
-    // TODO: support power of 2 number of elements
+    // Currently only 16 input elements are supported as
+    //  - Any vector beyond 16 elements not a valid OpenCL vector.
+    //  - 2D block load can only load up to 16 16bit elements per lane.
+    //      Widest load is 8x16xi32 with 16 lanes, which is 16 16bit
+    //      elements per lane.
+    //  - mma_mx A and B operands need more than 16 elements per lane
+    //
+    // Conversion is done in batches depending on the dst type.
     // batch_size =
     //   16 if dst type == fp8
     //   8  if dst type == fp4
@@ -1139,8 +1146,7 @@ class TruncfToOCLPattern : public OpConversionPattern<TruncfOp> {
     //   concat batches by shufflevector
     // For num_elem = batch_size
     //   use API for conversion
-    // For num_elem < batch_size
-    //   not supported for now
+    // Scalar case is not supported until usage case become clear.
     if (auto vecSrcTy = dyn_cast<VectorType>(op.getSrc().getType())) {
       if (vecSrcTy.getNumElements() != 16)
         return rewriter.notifyMatchFailure(
@@ -1148,13 +1154,9 @@ class TruncfToOCLPattern : public OpConversionPattern<TruncfOp> {
     } else {
       return rewriter.notifyMatchFailure(op, "Scalar src is not supported.");
     }
-    if (auto vecDstTy = dyn_cast<VectorType>(op.getDst().getType())) {
-      if (vecDstTy.getNumElements() != 16)
-        return rewriter.notifyMatchFailure(
-            op, "Only vector dst of 16 elements is supported");
-    } else {
+    auto vecDstTy = dyn_cast<VectorType>(op.getDst().getType());
+    if (!vecDstTy)
       return rewriter.notifyMatchFailure(op, "Scalar dst is not supported.");
-    }
     if (srcEtype == TruncfSrcElemTypes::F16 &&
         dstEtype == TruncfDstElemTypes::BF8) {
       // BF8 is just F16 with lower 8 bits of mantessa discard.
