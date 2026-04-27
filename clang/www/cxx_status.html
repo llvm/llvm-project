@@ -999,8 +999,9 @@ C++23, informally referred to as C++26.</p>
       <td><a href="https://wg21.link/p0912r5">P0912R5</a></td>
       <td class="partial" align="center">
         <details><summary>Partial</summary>
-          Fully supported on all targets except Windows, which
-          still has some stability and ABI issues.
+          Fully supported on all targets except Windows, which still has some stability and ABI issues.
+          On 32-bit x86 Windows, the <code>__cpp_impl_coroutine</code> feature macro is not defined,
+          and a warning is emitted when using coroutines.
         </details></td>
     </tr>
     <!-- Cologne 2019 papers -->

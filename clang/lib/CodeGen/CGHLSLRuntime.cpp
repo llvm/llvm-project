@@ -1605,64 +1605,34 @@ namespace {
 /// copying out of a cbuffer).
 class HLSLBufferCopyEmitter {
   CodeGenFunction &CGF;
-  Address DestPtr;
+  Address DstPtr;
   Address SrcPtr;
   llvm::Type *LayoutTy = nullptr;
 
   SmallVector<llvm::Value *> CurStoreIndices;
   SmallVector<llvm::Value *> CurLoadIndices;
 
-  void emitCopyAtIndices(llvm::Type *FieldTy, llvm::ConstantInt *StoreIndex,
-                         llvm::ConstantInt *LoadIndex) {
-    CurStoreIndices.push_back(StoreIndex);
-    CurLoadIndices.push_back(LoadIndex);
-    llvm::scope_exit RestoreIndices([&]() {
-      CurStoreIndices.pop_back();
-      CurLoadIndices.pop_back();
-    });
+  // Creates & returns either a structured.gep or a ptradd/gep depending on
+  // langopts.
+  llvm::Value *emitAccessChain(llvm::Type *BaseTy, llvm::Value *Base,
+                               ArrayRef<llvm::Value *> Indices) {
+    bool EmitLogical = CGF.getLangOpts().EmitLogicalPointer;
+    if (EmitLogical)
+      return CGF.Builder.CreateAccessChain(EmitLogical, BaseTy, Base, Indices);
 
-    // First, see if this is some kind of aggregate and recurse.
-    if (processArray(FieldTy))
-      return;
-    if (processBufferLayoutArray(FieldTy))
-      return;
-    if (processStruct(FieldTy))
-      return;
-
-    // When we have a scalar or vector element we can emit the copy.
-    CharUnits Align = CharUnits::fromQuantity(
-        CGF.CGM.getDataLayout().getABITypeAlign(FieldTy));
-    Address SrcGEP = RawAddress(
-        CGF.Builder.CreateInBoundsGEP(LayoutTy, SrcPtr.getBasePointer(),
-                                      CurLoadIndices, "cbuf.src"),
-        FieldTy, Align, SrcPtr.isKnownNonNull());
-    Address DestGEP = CGF.Builder.CreateInBoundsGEP(
-        DestPtr, CurStoreIndices, FieldTy, Align, "cbuf.dest");
-    llvm::Value *Load = CGF.Builder.CreateLoad(SrcGEP, "cbuf.load");
-    CGF.Builder.CreateStore(Load, DestGEP);
+    llvm::SmallVector<llvm::Value *> GEPIndices;
+    GEPIndices.reserve(Indices.size() + 1);
+    GEPIndices.push_back(llvm::ConstantInt::get(CGF.IntTy, 0));
+    GEPIndices.append(Indices.begin(), Indices.end());
+    return CGF.Builder.CreateAccessChain(EmitLogical, BaseTy, Base, GEPIndices);
   }
 
-  bool processArray(llvm::Type *FieldTy) {
-    auto *AT = dyn_cast<llvm::ArrayType>(FieldTy);
-    if (!AT)
-      return false;
-
-    // If we have an llvm::ArrayType this is just a regular array with no top
-    // level padding, so all we need to do is copy each member.
-    for (unsigned I = 0, E = AT->getNumElements(); I < E; ++I)
-      emitCopyAtIndices(AT->getElementType(),
-                        llvm::ConstantInt::get(CGF.SizeTy, I),
-                        llvm::ConstantInt::get(CGF.SizeTy, I));
-    return true;
-  }
-
-  bool processBufferLayoutArray(llvm::Type *FieldTy) {
+  bool isBufferLayoutArray(llvm::StructType *ST) {
     // A buffer layout array is a struct with two elements: the padded array,
     // and the last element. That is, is should look something like this:
     //
     //   { [%n x { %type, %padding }], %type }
     //
-    auto *ST = dyn_cast<llvm::StructType>(FieldTy);
     if (!ST || ST->getNumElements() != 2)
       return false;
 
@@ -1681,51 +1651,103 @@ class HLSLBufferCopyEmitter {
     llvm::Type *ElementTy = ST->getElementType(1);
     if (PaddedTy->getElementType(0) != ElementTy)
       return false;
-
-    // All but the last of the logical array elements are in the padded array.
-    unsigned NumElts = PaddedEltsTy->getNumElements() + 1;
-
-    // Add an extra indirection to the load for the struct and walk the
-    // array prefix.
-    CurLoadIndices.push_back(llvm::ConstantInt::get(CGF.Int32Ty, 0));
-    for (unsigned I = 0; I < NumElts - 1; ++I) {
-      // We need to copy the element itself, without the padding.
-      CurLoadIndices.push_back(llvm::ConstantInt::get(CGF.SizeTy, I));
-      emitCopyAtIndices(ElementTy, llvm::ConstantInt::get(CGF.SizeTy, I),
-                        llvm::ConstantInt::get(CGF.Int32Ty, 0));
-      CurLoadIndices.pop_back();
-    }
-    CurLoadIndices.pop_back();
-
-    // Now copy the last element.
-    emitCopyAtIndices(ElementTy,
-                      llvm::ConstantInt::get(CGF.SizeTy, NumElts - 1),
-                      llvm::ConstantInt::get(CGF.Int32Ty, 1));
-
     return true;
   }
 
-  bool processStruct(llvm::Type *FieldTy) {
-    auto *ST = dyn_cast<llvm::StructType>(FieldTy);
-    if (!ST)
-      return false;
+  void emitBufferLayoutCopy(Value *Src, llvm::StructType *SrcTy, Value *Dst,
+                            llvm::ArrayType *DstTy) {
+    // Those assumptions are checked by isBufferLayoutArray.
+    auto *SrcPaddedArrayTy = cast<llvm::ArrayType>(SrcTy->getElementType(0));
+    assert(SrcPaddedArrayTy->getNumElements() + 1 == DstTy->getNumElements());
+    assert(cast<llvm::StructType>(SrcPaddedArrayTy->getElementType())
+               ->getElementType(0) == SrcTy->getElementType(1));
 
-    // Copy the struct field by field, but skip any explicit padding.
-    unsigned Skipped = 0;
-    for (unsigned I = 0, E = ST->getNumElements(); I < E; ++I) {
-      llvm::Type *ElementTy = ST->getElementType(I);
-      if (CGF.CGM.getTargetCodeGenInfo().isHLSLPadding(ElementTy))
-        ++Skipped;
-      else
-        emitCopyAtIndices(ElementTy, llvm::ConstantInt::get(CGF.Int32Ty, I),
-                          llvm::ConstantInt::get(CGF.Int32Ty, I + Skipped));
+    auto *SrcDataTy = SrcTy->getElementType(1);
+    auto Zero = llvm::ConstantInt::get(CGF.IntTy, 0);
+
+    for (unsigned I = 0; I < SrcPaddedArrayTy->getNumElements(); ++I) {
+      auto Index = llvm::ConstantInt::get(CGF.IntTy, I);
+      auto *SrcElt = emitAccessChain(SrcTy, Src, {Zero, Index, Zero});
+      auto *DstElt = emitAccessChain(DstTy, Dst, {Index});
+      emitElementCopy(SrcElt, SrcDataTy, DstElt, DstTy->getElementType());
     }
-    return true;
+
+    auto *SrcElt =
+        emitAccessChain(SrcTy, Src, {llvm::ConstantInt::get(CGF.IntTy, 1)});
+    auto *DstElt = emitAccessChain(
+        DstTy, Dst,
+        {llvm::ConstantInt::get(CGF.IntTy, DstTy->getNumElements() - 1)});
+    emitElementCopy(SrcElt, SrcDataTy, DstElt, DstTy->getElementType());
+  }
+
+  void emitCopy(Value *Src, llvm::StructType *SrcTy, Value *Dst,
+                llvm::Type *DstTy) {
+    if (isBufferLayoutArray(SrcTy))
+      return emitBufferLayoutCopy(Src, SrcTy, Dst,
+                                  cast<llvm::ArrayType>(DstTy));
+
+    unsigned SrcIndex = 0;
+    unsigned DstIndex = 0;
+
+    auto *DstST = cast<llvm::StructType>(DstTy);
+    while (SrcIndex < SrcTy->getNumElements() &&
+           DstIndex < DstST->getNumElements()) {
+      if (CGF.CGM.getTargetCodeGenInfo().isHLSLPadding(
+              SrcTy->getElementType(SrcIndex))) {
+        SrcIndex += 1;
+        continue;
+      }
+
+      if (CGF.CGM.getTargetCodeGenInfo().isHLSLPadding(
+              DstST->getElementType(DstIndex))) {
+        DstIndex += 1;
+        continue;
+      }
+
+      auto *SrcElt = emitAccessChain(
+          SrcTy, Src, {llvm::ConstantInt::get(CGF.IntTy, SrcIndex)});
+      auto *DstElt = emitAccessChain(
+          DstTy, Dst, {llvm::ConstantInt::get(CGF.IntTy, DstIndex)});
+      emitElementCopy(SrcElt, SrcTy->getElementType(SrcIndex), DstElt,
+                      DstST->getElementType(DstIndex));
+      DstIndex += 1;
+      SrcIndex += 1;
+    }
+  }
+
+  void emitCopy(Value *Src, llvm::ArrayType *SrcTy, Value *Dst,
+                llvm::Type *DstTy) {
+    for (unsigned I = 0, E = SrcTy->getNumElements(); I < E; ++I) {
+      auto *SrcElt =
+          emitAccessChain(SrcTy, Src, {llvm::ConstantInt::get(CGF.IntTy, I)});
+      auto *DstElt =
+          emitAccessChain(DstTy, Dst, {llvm::ConstantInt::get(CGF.IntTy, I)});
+      emitElementCopy(SrcElt, SrcTy->getElementType(), DstElt,
+                      cast<llvm::ArrayType>(DstTy)->getElementType());
+    }
+  }
+
+  void emitElementCopy(Value *Src, llvm::Type *SrcTy, Value *Dst,
+                       llvm::Type *DstTy) {
+    if (auto *AT = dyn_cast<llvm::ArrayType>(SrcTy))
+      return emitCopy(Src, AT, Dst, DstTy);
+    if (auto *ST = dyn_cast<llvm::StructType>(SrcTy))
+      return emitCopy(Src, ST, Dst, DstTy);
+
+    // When we have a scalar or vector element we can emit the copy.
+    CharUnits SrcAlign =
+        CharUnits::fromQuantity(CGF.CGM.getDataLayout().getABITypeAlign(SrcTy));
+    CharUnits DstAlign =
+        CharUnits::fromQuantity(CGF.CGM.getDataLayout().getABITypeAlign(DstTy));
+    Address SrcAddr(Src, SrcTy, SrcAlign);
+    Address DstAddr(Dst, DstTy, DstAlign);
+    llvm::Value *Load = CGF.Builder.CreateLoad(SrcAddr, "cbuf.load");
+    CGF.Builder.CreateStore(Load, DstAddr);
   }
 
 public:
-  HLSLBufferCopyEmitter(CodeGenFunction &CGF, Address DestPtr, Address SrcPtr)
-      : CGF(CGF), DestPtr(DestPtr), SrcPtr(SrcPtr) {}
+  HLSLBufferCopyEmitter(CodeGenFunction &CGF, Address DstPtr, Address SrcPtr)
+      : CGF(CGF), DstPtr(DstPtr), SrcPtr(SrcPtr) {}
 
   bool emitCopy(QualType CType) {
     LayoutTy = HLSLBufferLayoutBuilder(CGF.CGM).layOutType(CType);
@@ -1735,16 +1757,16 @@ public:
     // currently.
     //
     // See https://github.com/llvm/wg-hlsl/issues/351
-    emitCopyAtIndices(LayoutTy, llvm::ConstantInt::get(CGF.SizeTy, 0),
-                      llvm::ConstantInt::get(CGF.SizeTy, 0));
+    emitElementCopy(SrcPtr.getBasePointer(), LayoutTy, DstPtr.getBasePointer(),
+                    DstPtr.getElementType());
     return true;
   }
 };
 } // namespace
 
-bool CGHLSLRuntime::emitBufferCopy(CodeGenFunction &CGF, Address DestPtr,
+bool CGHLSLRuntime::emitBufferCopy(CodeGenFunction &CGF, Address DstPtr,
                                    Address SrcPtr, QualType CType) {
-  return HLSLBufferCopyEmitter(CGF, DestPtr, SrcPtr).emitCopy(CType);
+  return HLSLBufferCopyEmitter(CGF, DstPtr, SrcPtr).emitCopy(CType);
 }
 
 LValue CGHLSLRuntime::emitBufferMemberExpr(CodeGenFunction &CGF,

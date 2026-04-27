@@ -160,7 +160,11 @@ add_libc_unittest(
     sendmsg_recvmsg_test.cpp
   DEPENDS
     libc.include.sys_socket
+    libc.hdr.types.struct_cmsghdr
     libc.src.errno.errno
+    libc.src.string.memcpy
+    libc.src.string.memset
+    libc.src.sys.socket.getsockopt
     libc.src.sys.socket.socketpair
     libc.src.sys.socket.sendmsg
     libc.src.sys.socket.recvmsg

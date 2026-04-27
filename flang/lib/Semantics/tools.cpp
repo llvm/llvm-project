@@ -262,7 +262,7 @@ bool DoesScopeContain(const Scope *maybeAncestor, const Symbol &symbol) {
   return DoesScopeContain(maybeAncestor, symbol.owner());
 }
 
-static const Symbol &FollowHostAssoc(const Symbol &symbol) {
+const Symbol &FollowHostAssoc(const Symbol &symbol) {
   for (const Symbol *s{&symbol};;) {
     const auto *details{s->detailsIf<HostAssocDetails>()};
     if (!details) {

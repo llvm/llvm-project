@@ -184,3 +184,15 @@ define <vscale x 1 x i64> @vector_elt_type_legality() {
   %b = bitcast <vscale x 8 x i8> %a to <vscale x 1 x i64>
   ret <vscale x 1 x i64> %b
 }
+
+define <vscale x 4 x float> @eq_num_elts() {
+; CHECK-LABEL: define <vscale x 4 x float> @eq_num_elts(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:    [[A:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vmv.v.x.nxv4i32.i64(<vscale x 4 x i32> poison, i32 -1615569626, i64 2)
+; CHECK-NEXT:    [[B:%.*]] = bitcast <vscale x 4 x i32> [[A]] to <vscale x 4 x float>
+; CHECK-NEXT:    ret <vscale x 4 x float> [[B]]
+;
+  %a = call <vscale x 4 x i32> @llvm.riscv.vmv.v.x.nxv4i32.i64(<vscale x 4 x i32> poison, i32 -1615569626, i64 2)
+  %b = bitcast <vscale x 4 x i32> %a to <vscale x 4 x float>
+  ret <vscale x 4 x float> %b
+}

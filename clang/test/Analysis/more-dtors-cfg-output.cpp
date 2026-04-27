@@ -1,6 +1,6 @@
 // RUN: rm -f %t.14 %t.2a
-// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -std=c++14 -DCXX2A=0 -fblocks -Wall -Wno-unused -Werror %s > %t.14 2>&1
-// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -std=c++2a -DCXX2A=1 -fblocks -Wall -Wno-unused -Werror %s > %t.2a 2>&1
+// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -std=c++14 -DCXX2A=0 -fblocks -Wall -Wno-unused -Werror -Wno-coroutines-unsupported-target %s > %t.14 2>&1
+// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -std=c++2a -DCXX2A=1 -fblocks -Wall -Wno-unused -Werror -Wno-coroutines-unsupported-target %s > %t.2a 2>&1
 // RUN: FileCheck --input-file=%t.14 -check-prefixes=CHECK,CXX14 -implicit-check-not=destructor %s
 // RUN: FileCheck --input-file=%t.2a -check-prefixes=CHECK,CXX2A -implicit-check-not=destructor %s
 

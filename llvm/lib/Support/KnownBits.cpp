@@ -603,6 +603,18 @@ KnownBits KnownBits::ashr(const KnownBits &LHS, const KnownBits &RHS,
   return Known;
 }
 
+KnownBits KnownBits::fshl(const KnownBits &LHS, const KnownBits &RHS,
+                          const APInt &Amt) {
+  return KnownBits(APIntOps::fshl(LHS.Zero, RHS.Zero, Amt),
+                   APIntOps::fshl(LHS.One, RHS.One, Amt));
+}
+
+KnownBits KnownBits::fshr(const KnownBits &LHS, const KnownBits &RHS,
+                          const APInt &Amt) {
+  return KnownBits(APIntOps::fshr(LHS.Zero, RHS.Zero, Amt),
+                   APIntOps::fshr(LHS.One, RHS.One, Amt));
+}
+
 KnownBits KnownBits::clmul(const KnownBits &LHS, const KnownBits &RHS) {
   KnownBits Res =
       makeConstant(APIntOps::clmul(LHS.getMinValue(), RHS.getMinValue()));

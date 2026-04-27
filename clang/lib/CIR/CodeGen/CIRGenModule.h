@@ -16,6 +16,7 @@
 #include "CIRGenBuilder.h"
 #include "CIRGenCUDARuntime.h"
 #include "CIRGenCall.h"
+#include "CIRGenOpenMPRuntime.h"
 #include "CIRGenTypeCache.h"
 #include "CIRGenTypes.h"
 #include "CIRGenVTables.h"
@@ -95,6 +96,9 @@ private:
   /// Holds the CUDA runtime
   std::unique_ptr<CIRGenCUDARuntime> cudaRuntime;
 
+  /// Holds the OpenMP runtime
+  std::unique_ptr<CIRGenOpenMPRuntime> openMPRuntime;
+
   /// Per-function codegen information. Updated everytime emitCIR is called
   /// for FunctionDecls's.
   CIRGenFunction *curCGF = nullptr;
@@ -130,6 +134,7 @@ private:
   std::vector<const CXXRecordDecl *> opportunisticVTables;
 
   void createCUDARuntime();
+  void createOpenMPRuntime();
 
   /// A helper for constructAttributeList that handles return attributes.
   void constructFunctionReturnAttributes(const CIRGenFunctionInfo &info,
@@ -739,6 +744,11 @@ public:
   CIRGenCUDARuntime &getCUDARuntime() {
     assert(cudaRuntime != nullptr);
     return *cudaRuntime;
+  }
+
+  CIRGenOpenMPRuntime &getOpenMPRuntime() {
+    assert(openMPRuntime != nullptr);
+    return *openMPRuntime;
   }
 
   mlir::IntegerAttr getSize(CharUnits size) {

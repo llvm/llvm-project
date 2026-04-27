@@ -80,7 +80,7 @@ getIndirectSymViaRWPI(const MCSymbol *Sym) const {
 const MCExpr *ARMElfTargetObjectFile::getTTypeGlobalReference(
     const GlobalValue *GV, unsigned Encoding, const TargetMachine &TM,
     MachineModuleInfo *MMI, MCStreamer &Streamer) const {
-  if (TM.getMCAsmInfo()->getExceptionHandlingType() != ExceptionHandling::ARM)
+  if (TM.getMCAsmInfo().getExceptionHandlingType() != ExceptionHandling::ARM)
     return TargetLoweringObjectFileELF::getTTypeGlobalReference(
         GV, Encoding, TM, MMI, Streamer);
 

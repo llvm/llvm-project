@@ -658,17 +658,9 @@ void EventThread(lldb::SBDebugger debugger, lldb::SBBroadcaster broadcaster,
   llvm::set_thread_name(thread_name);
 
   lldb::SBListener listener = debugger.GetListener();
-  broadcaster.AddListener(listener, eBroadcastBitStopEventThread);
-  debugger.GetBroadcaster().AddListener(
-      listener, lldb::eBroadcastBitError | lldb::eBroadcastBitWarning);
-
-  // listen for thread events.
-  listener.StartListeningForEventClass(
-      debugger, lldb::SBThread::GetBroadcasterClassName(),
-      lldb::SBThread::eBroadcastBitStackChanged);
-
   lldb::SBEvent event;
   bool done = false;
+
   while (!done) {
     if (!listener.WaitForEvent(UINT32_MAX, event))
       continue;
@@ -691,6 +683,7 @@ void EventThread(lldb::SBDebugger debugger, lldb::SBBroadcaster broadcaster,
       }
     }
   }
+  DAP_LOG(log, "Stopped Event Thread.");
 }
 
 } // namespace lldb_dap

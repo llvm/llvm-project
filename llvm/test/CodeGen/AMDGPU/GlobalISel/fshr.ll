@@ -1880,45 +1880,43 @@ define amdgpu_ps i48 @s_fshr_v2i24(i48 inreg %lhs.arg, i48 inreg %rhs.arg, i48 i
 ; GFX6-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX6-NEXT:    v_cvt_f32_ubyte0_e32 v0, 24
 ; GFX6-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; GFX6-NEXT:    s_and_b32 s3, s9, 0xff
 ; GFX6-NEXT:    s_lshl_b32 s11, s11, 8
 ; GFX6-NEXT:    s_and_b32 s7, s7, 0xff
-; GFX6-NEXT:    s_and_b32 s3, s9, 0xff
+; GFX6-NEXT:    s_and_b32 s3, 0xffff, s3
 ; GFX6-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
-; GFX6-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX6-NEXT:    s_or_b32 s10, s10, s11
 ; GFX6-NEXT:    s_and_b32 s7, 0xffff, s7
-; GFX6-NEXT:    s_and_b32 s3, 0xffff, s3
+; GFX6-NEXT:    s_lshl_b32 s3, s3, 16
+; GFX6-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX6-NEXT:    s_and_b32 s10, 0xffff, s10
 ; GFX6-NEXT:    s_lshl_b32 s7, s7, 16
-; GFX6-NEXT:    s_and_b32 s2, 0xffff, s2
-; GFX6-NEXT:    s_lshl_b32 s3, s3, 16
-; GFX6-NEXT:    s_or_b32 s7, s10, s7
 ; GFX6-NEXT:    s_or_b32 s2, s2, s3
 ; GFX6-NEXT:    s_lshr_b32 s3, s4, 16
-; GFX6-NEXT:    s_lshr_b32 s9, s5, 8
-; GFX6-NEXT:    s_and_b32 s10, s4, 0xff
 ; GFX6-NEXT:    s_bfe_u32 s11, s4, 0x80008
-; GFX6-NEXT:    s_and_b32 s5, s5, 0xff
-; GFX6-NEXT:    v_mov_b32_e32 v1, s4
-; GFX6-NEXT:    v_readfirstlane_b32 s4, v0
-; GFX6-NEXT:    v_alignbit_b32 v1, s5, v1, 24
-; GFX6-NEXT:    s_mul_i32 s5, s4, 0xffffffe8
-; GFX6-NEXT:    v_mul_hi_u32 v0, v0, s5
+; GFX6-NEXT:    s_or_b32 s7, s10, s7
+; GFX6-NEXT:    s_and_b32 s10, s4, 0xff
 ; GFX6-NEXT:    s_lshl_b32 s11, s11, 8
 ; GFX6-NEXT:    s_and_b32 s3, s3, 0xff
 ; GFX6-NEXT:    s_or_b32 s10, s10, s11
 ; GFX6-NEXT:    s_and_b32 s3, 0xffff, s3
 ; GFX6-NEXT:    s_and_b32 s10, 0xffff, s10
 ; GFX6-NEXT:    s_lshl_b32 s3, s3, 16
+; GFX6-NEXT:    v_mov_b32_e32 v1, s4
+; GFX6-NEXT:    v_readfirstlane_b32 s4, v0
 ; GFX6-NEXT:    s_or_b32 s3, s10, s3
+; GFX6-NEXT:    s_mul_i32 s10, s4, 0xffffffe8
+; GFX6-NEXT:    v_mul_hi_u32 v0, v0, s10
+; GFX6-NEXT:    s_lshr_b32 s9, s5, 8
+; GFX6-NEXT:    s_and_b32 s5, s5, 0xff
+; GFX6-NEXT:    s_and_b32 s9, s9, 0xff
 ; GFX6-NEXT:    v_readfirstlane_b32 s10, v0
 ; GFX6-NEXT:    s_add_i32 s4, s4, s10
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX6-NEXT:    v_mul_hi_u32 v0, s3, v0
-; GFX6-NEXT:    s_and_b32 s9, s9, 0xff
-; GFX6-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX6-NEXT:    v_alignbit_b32 v1, s5, v1, 24
 ; GFX6-NEXT:    s_and_b32 s9, 0xffff, s9
-; GFX6-NEXT:    s_and_b32 s5, 0xffff, s5
+; GFX6-NEXT:    v_readfirstlane_b32 s5, v1
 ; GFX6-NEXT:    s_lshl_b32 s9, s9, 16
 ; GFX6-NEXT:    s_or_b32 s5, s5, s9
 ; GFX6-NEXT:    v_readfirstlane_b32 s9, v0
@@ -1926,7 +1924,6 @@ define amdgpu_ps i48 @s_fshr_v2i24(i48 inreg %lhs.arg, i48 inreg %rhs.arg, i48 i
 ; GFX6-NEXT:    s_mul_i32 s9, s9, 24
 ; GFX6-NEXT:    s_and_b32 s8, 0xffff, s8
 ; GFX6-NEXT:    s_and_b32 s6, 0xffff, s6
-; GFX6-NEXT:    s_and_b32 s0, 0xffff, s0
 ; GFX6-NEXT:    s_and_b32 s1, 0xffff, s1
 ; GFX6-NEXT:    s_sub_i32 s3, s3, s9
 ; GFX6-NEXT:    s_cmp_ge_u32 s3, 24

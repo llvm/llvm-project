@@ -429,22 +429,6 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
     else
       return Info.write<ol_device_type_t>(OL_DEVICE_TYPE_GPU);
 
-  case OL_DEVICE_INFO_SINGLE_FP_CONFIG:
-  case OL_DEVICE_INFO_DOUBLE_FP_CONFIG: {
-    ol_device_fp_capability_flags_t flags{0};
-    flags |= OL_DEVICE_FP_CAPABILITY_FLAG_CORRECTLY_ROUNDED_DIVIDE_SQRT |
-             OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_NEAREST |
-             OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_ZERO |
-             OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_INF |
-             OL_DEVICE_FP_CAPABILITY_FLAG_INF_NAN |
-             OL_DEVICE_FP_CAPABILITY_FLAG_DENORM |
-             OL_DEVICE_FP_CAPABILITY_FLAG_FMA;
-    return Info.write(flags);
-  }
-
-  case OL_DEVICE_INFO_HALF_FP_CONFIG:
-    return Info.write<ol_device_fp_capability_flags_t>(0);
-
   case OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_CHAR:
   case OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_SHORT:
   case OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_INT:
@@ -503,6 +487,9 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
   case OL_DEVICE_INFO_NUM_COMPUTE_UNITS:
   case OL_DEVICE_INFO_ADDRESS_BITS:
   case OL_DEVICE_INFO_MAX_CLOCK_FREQUENCY:
+  case OL_DEVICE_INFO_SINGLE_FP_CONFIG:
+  case OL_DEVICE_INFO_DOUBLE_FP_CONFIG:
+  case OL_DEVICE_INFO_HALF_FP_CONFIG:
   case OL_DEVICE_INFO_MEMORY_CLOCK_RATE: {
     // Uint32 values
     if (!std::holds_alternative<uint64_t>(Entry->Value))
@@ -520,6 +507,16 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
       return makeError(ErrorCode::BACKEND_FAILURE,
                        "plugin returned incorrect type");
     return Info.write(std::get<uint64_t>(Entry->Value));
+  }
+
+  case OL_DEVICE_INFO_SINGLE_FP_SUPPORT:
+  case OL_DEVICE_INFO_DOUBLE_FP_SUPPORT:
+  case OL_DEVICE_INFO_HALF_FP_SUPPORT: {
+    // Boolean values
+    if (!std::holds_alternative<bool>(Entry->Value))
+      return makeError(ErrorCode::BACKEND_FAILURE,
+                       "plugin returned incorrect type");
+    return Info.write<bool>(std::get<bool>(Entry->Value));
   }
 
   case OL_DEVICE_INFO_MAX_WORK_SIZE_PER_DIMENSION:

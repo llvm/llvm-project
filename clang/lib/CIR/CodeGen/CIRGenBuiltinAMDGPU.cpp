@@ -48,10 +48,33 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
   }
   case AMDGPU::BI__builtin_amdgcn_div_scale:
   case AMDGPU::BI__builtin_amdgcn_div_scalef: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    Address flagOutPtr = emitPointerWithAlignment(expr->getArg(3));
+    llvm::StringRef intrinsicName = "amdgcn.div.scale";
+    mlir::Value x = emitScalarExpr(expr->getArg(0));
+    mlir::Value y = emitScalarExpr(expr->getArg(1));
+    mlir::Value z = emitScalarExpr(expr->getArg(2));
+
+    auto i1Ty = builder.getUIntNTy(1);
+    cir::RecordType resTy = builder.getAnonRecordTy(
+        {x.getType(), i1Ty}, /*packed=*/false, /*padded=*/false);
+
+    mlir::Value structResult =
+        cir::LLVMIntrinsicCallOp::create(builder, getLoc(expr->getExprLoc()),
+                                         builder.getStringAttr(intrinsicName),
+                                         resTy, {x, y, z})
+            .getResult();
+
+    mlir::Value result = cir::ExtractMemberOp::create(
+        builder, getLoc(expr->getExprLoc()), x.getType(), structResult, 0);
+    mlir::Value flag = cir::ExtractMemberOp::create(
+        builder, getLoc(expr->getExprLoc()), i1Ty, structResult, 1);
+
+    mlir::Type flagType = flagOutPtr.getElementType();
+    mlir::Value flagToStore =
+        cir::CastOp::create(builder, getLoc(expr->getExprLoc()), flagType,
+                            cir::CastKind::int_to_bool, flag);
+    builder.createStore(getLoc(expr->getExprLoc()), flagToStore, flagOutPtr);
+    return result;
   }
   case AMDGPU::BI__builtin_amdgcn_div_fmas:
   case AMDGPU::BI__builtin_amdgcn_div_fmasf: {

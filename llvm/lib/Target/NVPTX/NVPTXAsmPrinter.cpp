@@ -639,6 +639,15 @@ void NVPTXAsmPrinter::emitDeclarations(const Module &M, raw_ostream &O) {
         continue;
       if (F.getIntrinsicID())
         continue;
+      // An unrecognized intrinsic would produce an invalid PTX declaration. Let
+      // the user know that, and skip it.
+      if (F.isIntrinsic()) {
+        LLVMContext &Ctx = F.getContext();
+        Ctx.diagnose(DiagnosticInfoUnsupported(
+            F, "unknown intrinsic '" + F.getName() +
+                   "' cannot be lowered by the NVPTX backend"));
+        continue;
+      }
       emitDeclaration(&F, O);
       continue;
     }

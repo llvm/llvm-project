@@ -249,13 +249,17 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
   uint32_t NumBlocks[3] = {KernelArgs.NumTeams[0], KernelArgs.NumTeams[1],
                            KernelArgs.NumTeams[2]};
   if (!isBareMode()) {
+    assert(
+        NumThreads[1] == 1 && NumThreads[2] == 1 && NumBlocks[1] == 1 &&
+        NumBlocks[2] == 1 &&
+        "Non-bare mode should only use the first thread and block dimensions");
     NumThreads[0] = getNumThreads(GenericDevice, NumThreads);
     NumBlocks[0] = getNumBlocks(GenericDevice, NumBlocks, KernelArgs.Tripcount,
                                 NumThreads[0], KernelArgs.ThreadLimit[0] > 0);
   }
 
-  auto DynBlockMemConfOrErr =
-      prepareBlockMemory(GenericDevice, KernelArgs, NumBlocks[0]);
+  auto DynBlockMemConfOrErr = prepareBlockMemory(
+      GenericDevice, KernelArgs, NumBlocks[0] * NumBlocks[1] * NumBlocks[2]);
   if (!DynBlockMemConfOrErr)
     return DynBlockMemConfOrErr.takeError();
 

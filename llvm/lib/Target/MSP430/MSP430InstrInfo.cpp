@@ -298,7 +298,7 @@ unsigned MSP430InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     const MachineFunction *MF = MI.getParent()->getParent();
     const TargetInstrInfo &TII = *MF->getSubtarget().getInstrInfo();
     return TII.getInlineAsmLength(MI.getOperand(0).getSymbolName(),
-                                  *MF->getTarget().getMCAsmInfo());
+                                  MF->getTarget().getMCAsmInfo());
   }
   case TargetOpcode::BUNDLE:
     return getInstBundleSize(MI);

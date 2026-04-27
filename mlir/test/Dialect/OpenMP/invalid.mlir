@@ -3449,3 +3449,52 @@ func.func @iterator_yield_type_mismatch(%lb : index, %ub : index, %st : index) {
   } -> !omp.iterated<i64>
   return
 }
+
+// -----
+func.func @target_allocmem_invalid_uniq_name(%device : i32) -> () {
+// expected-error @below {{op attribute 'uniq_name' failed to satisfy constraint: string attribute}}
+  %0 = omp.target_allocmem %device : i32, i64 {uniq_name=2}
+  return
+}
+
+// -----
+func.func @target_allocmem_invalid_bindc_name(%device : i32) -> () {
+// expected-error @below {{op attribute 'bindc_name' failed to satisfy constraint: string attribute}}
+  %0 = omp.target_allocmem %device : i32, i64 {bindc_name=2}
+  return
+}
+
+// -----
+func.func @alloc_shared_mem_invalid_alignment1(%n: i32) -> () {
+  // expected-error @below {{op attribute 'mem_alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive}}
+  %0 = omp.alloc_shared_mem %n x i64 : (i32) align(-2) -> !llvm.ptr
+  return
+}
+
+// -----
+func.func @alloc_shared_mem_invalid_alignment2(%n: i32) -> () {
+  // expected-error @below {{ALIGN value : 3 must be power of 2}}
+  %0 = omp.alloc_shared_mem %n x i64 : (i32) align(3) -> !llvm.ptr
+  return
+}
+
+// -----
+func.func @free_shared_mem_invalid_array_size(%n: f32, %ptr : !llvm.ptr) -> () {
+  // expected-error @below {{invalid kind of type specified: expected builtin.integer, but found 'f32'}}
+  %0 = omp.free_shared_mem [%n x i64 : (f32)] %ptr : !llvm.ptr
+  return
+}
+
+// -----
+func.func @free_shared_mem_invalid_alignment1(%n: i32, %ptr : !llvm.ptr) -> () {
+  // expected-error @below {{op attribute 'mem_alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive}}
+  omp.free_shared_mem [%n x i64 : (i32) align(-2)] %ptr : !llvm.ptr
+  return
+}
+
+// -----
+func.func @free_shared_mem_invalid_alignment2(%n: i32, %ptr : !llvm.ptr) -> () {
+  // expected-error @below {{ALIGN value : 3 must be power of 2}}
+  omp.free_shared_mem [%n x i64 : (i32) align(3)] %ptr : !llvm.ptr
+  return
+}

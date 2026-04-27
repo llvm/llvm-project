@@ -3368,6 +3368,20 @@ OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
       }
       break;
     }
+    case cir::CmpOpKind::one: {
+      llvm::APFloat::cmpResult cr =
+          mlir::cast<cir::FPAttr>(lhsAttr).getValue().compare(
+              mlir::cast<cir::FPAttr>(rhsAttr).getValue());
+      cmpResult =
+          cr != llvm::APFloat::cmpUnordered && cr != llvm::APFloat::cmpEqual;
+      break;
+    }
+    case cir::CmpOpKind::uno: {
+      cmpResult = mlir::cast<cir::FPAttr>(lhsAttr).getValue().compare(
+                      mlir::cast<cir::FPAttr>(rhsAttr).getValue()) ==
+                  llvm::APFloat::cmpUnordered;
+      break;
+    }
     }
 
     elements[i] = cir::IntAttr::get(getType().getElementType(), cmpResult);

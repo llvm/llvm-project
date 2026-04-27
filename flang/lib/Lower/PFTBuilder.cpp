@@ -1622,6 +1622,20 @@ struct SymbolDependenceAnalysis {
     analyze(symbol);
     finalize();
   }
+  /// Analyze the dependencies of a set of module variables that are host
+  /// associated (or use associated in host module scopes).
+  explicit SymbolDependenceAnalysis(
+      const llvm::SetVector<const semantics::Symbol *> &moduleVariables) {
+    for (const semantics::Symbol *sym : moduleVariables)
+      analyzeLocalEquivalenceSets(sym->owner());
+    // Add all aggregate stores to the front of the variable list.
+    adjustSize(1);
+    for (auto st : stores)
+      layeredVarList[0].emplace_back(std::move(st));
+    for (const semantics::Symbol *sym : moduleVariables)
+      analyze(*sym);
+    finalize();
+  }
   Fortran::lower::pft::VariableList getVariableList() {
     return std::move(layeredVarList[0]);
   }
@@ -2128,6 +2142,61 @@ lower::pft::getDependentVariableList(const semantics::Symbol &symbol) {
   LLVM_DEBUG(llvm::dbgs() << "\ngetDependentVariableList of " << &symbol
                           << " - " << symbol << "\n");
   SymbolDependenceAnalysis sda(symbol);
+  return sda.getVariableList();
+}
+
+static bool
+isGenericHidingProcedurePointer(const Fortran::semantics::Symbol &sym) {
+  if (const auto *generic = sym.detailsIf<Fortran::semantics::GenericDetails>())
+    if (const Fortran::semantics::Symbol *specific = generic->specific())
+      return Fortran::semantics::IsProcedurePointer(*specific);
+  return false;
+}
+
+/// Collect the canonical list of host [sub]module variables referenced in \p
+/// funit. A symbol is considered a host module variable if it is an
+/// ObjectEntityDetails, a ProcedurePointer, or a NamelistDetails symbol whose
+/// ultimate owning scope is a [sub]module scope containing \p funit's scope.
+/// Namelist groups are expanded to the set of their objects.
+static void collectHostAssociatedModuleVariables(
+    const Fortran::lower::pft::FunctionLikeUnit &funit,
+    llvm::SetVector<const Fortran::semantics::Symbol *> &moduleVariables) {
+  auto addIfHostModuleVariable = [&](const Fortran::semantics::Symbol &sym) {
+    const Fortran::semantics::Symbol &ultimate = sym.GetUltimate();
+    const auto *namelistDetails =
+        ultimate.detailsIf<Fortran::semantics::NamelistDetails>();
+    if (!ultimate.has<Fortran::semantics::ObjectEntityDetails>() &&
+        !Fortran::semantics::IsProcedurePointer(ultimate) &&
+        !isGenericHidingProcedurePointer(ultimate) && !namelistDetails)
+      return;
+    const Fortran::semantics::Scope &symbolScope =
+        Fortran::semantics::FollowHostAssoc(sym).owner();
+    if (symbolScope.kind() != Fortran::semantics::Scope::Kind::Module)
+      return;
+    if (namelistDetails) {
+      // Namelist symbols are processed on the fly in IO lowering, which
+      // needs to be able to access each of their objects. Capture the
+      // objects rather than the namelist symbol itself.
+      for (const auto &namelistObject : namelistDetails->objects())
+        moduleVariables.insert(&namelistObject->GetUltimate());
+    } else {
+      moduleVariables.insert(&ultimate);
+    }
+  };
+  Fortran::lower::pft::visitAllSymbols(funit, addIfHostModuleVariable);
+}
+
+/// Create an ordered list of equivalences and variables from host
+/// [sub]modules of \p funit that are referenced in \p funit. The result is
+/// not cached.
+lower::pft::VariableList
+lower::pft::getHostModuleVariableList(const FunctionLikeUnit &funit) {
+  LLVM_DEBUG(llvm::dbgs() << "\ngetHostModuleVariableList of funit scope <"
+                          << &funit.getScope() << "> "
+                          << funit.getScope().GetName() << "\n");
+  llvm::SetVector<const semantics::Symbol *> moduleVariables;
+  collectHostAssociatedModuleVariables(funit, moduleVariables);
+  SymbolDependenceAnalysis sda(moduleVariables);
   return sda.getVariableList();
 }
 

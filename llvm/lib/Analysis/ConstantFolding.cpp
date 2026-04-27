@@ -535,9 +535,12 @@ namespace {
 /// Recursive helper to read bits out of global. C is the constant being copied
 /// out of. ByteOffset is an offset into C. CurPtr is the pointer to copy
 /// results into and BytesLeft is the number of bytes left in
-/// the CurPtr buffer. DL is the DataLayout.
+/// the CurPtr buffer. DL is the DataLayout. When IsByteLoad is true, do not
+/// unwrap inttoptr constant expressions. The caller would reconstruct those
+/// bits as a ConstantByte, dropping the pointer's provenance.
 bool ReadDataFromGlobal(Constant *C, uint64_t ByteOffset, unsigned char *CurPtr,
-                        unsigned BytesLeft, const DataLayout &DL) {
+                        unsigned BytesLeft, const DataLayout &DL,
+                        bool IsByteLoad = false) {
   assert(ByteOffset <= DL.getTypeAllocSize(C->getType()) &&
          "Out of range access");
 
@@ -571,15 +574,18 @@ bool ReadDataFromGlobal(Constant *C, uint64_t ByteOffset, unsigned char *CurPtr,
   if (CFP && CFP->getType()->isFloatingPointTy()) {
     if (CFP->getType()->isDoubleTy()) {
       C = FoldBitCast(C, Type::getInt64Ty(C->getContext()), DL);
-      return ReadDataFromGlobal(C, ByteOffset, CurPtr, BytesLeft, DL);
+      return ReadDataFromGlobal(C, ByteOffset, CurPtr, BytesLeft, DL,
+                                IsByteLoad);
     }
     if (CFP->getType()->isFloatTy()){
       C = FoldBitCast(C, Type::getInt32Ty(C->getContext()), DL);
-      return ReadDataFromGlobal(C, ByteOffset, CurPtr, BytesLeft, DL);
+      return ReadDataFromGlobal(C, ByteOffset, CurPtr, BytesLeft, DL,
+                                IsByteLoad);
     }
     if (CFP->getType()->isHalfTy()){
       C = FoldBitCast(C, Type::getInt16Ty(C->getContext()), DL);
-      return ReadDataFromGlobal(C, ByteOffset, CurPtr, BytesLeft, DL);
+      return ReadDataFromGlobal(C, ByteOffset, CurPtr, BytesLeft, DL,
+                                IsByteLoad);
     }
     return false;
   }
@@ -597,7 +603,7 @@ bool ReadDataFromGlobal(Constant *C, uint64_t ByteOffset, unsigned char *CurPtr,
 
       if (ByteOffset < EltSize &&
           !ReadDataFromGlobal(CS->getOperand(Index), ByteOffset, CurPtr,
-                              BytesLeft, DL))
+                              BytesLeft, DL, IsByteLoad))
         return false;
 
       ++Index;
@@ -645,7 +651,7 @@ bool ReadDataFromGlobal(Constant *C, uint64_t ByteOffset, unsigned char *CurPtr,
 
     for (; Index != NumElts; ++Index) {
       if (!ReadDataFromGlobal(C->getAggregateElement(Index), Offset, CurPtr,
-                              BytesLeft, DL))
+                              BytesLeft, DL, IsByteLoad))
         return false;
 
       uint64_t BytesWritten = EltSize - Offset;
@@ -663,8 +669,12 @@ bool ReadDataFromGlobal(Constant *C, uint64_t ByteOffset, unsigned char *CurPtr,
   if (auto *CE = dyn_cast<ConstantExpr>(C)) {
     if (CE->getOpcode() == Instruction::IntToPtr &&
         CE->getOperand(0)->getType() == DL.getIntPtrType(CE->getType())) {
+      // Folding byte loads through the integer operand would rebuild the result
+      // as a `ConstantByte`, dropping the pointer's provenance.
+      if (IsByteLoad)
+        return false;
       return ReadDataFromGlobal(CE->getOperand(0), ByteOffset, CurPtr,
-                                BytesLeft, DL);
+                                BytesLeft, DL, IsByteLoad);
     }
   }
 
@@ -690,7 +700,7 @@ Constant *FoldReinterpretLoadFromConst(Constant *C, Type *LoadTy,
     // that address spaces don't matter here since we're not going to result in
     // an actual new load.
     if (!LoadTy->isFloatingPointTy() && !LoadTy->isPointerTy() &&
-        !LoadTy->isVectorTy())
+        !LoadTy->isByteTy() && !LoadTy->isVectorTy())
       return nullptr;
 
     Type *MapTy = Type::getIntNTy(C->getContext(),
@@ -750,7 +760,8 @@ Constant *FoldReinterpretLoadFromConst(Constant *C, Type *LoadTy,
     Offset = 0;
   }
 
-  if (!ReadDataFromGlobal(C, Offset, CurPtr, BytesLeft, DL))
+  if (!ReadDataFromGlobal(C, Offset, CurPtr, BytesLeft, DL,
+                          /*IsByteLoad=*/OrigLoadTy->isByteOrByteVectorTy()))
     return nullptr;
 
   APInt ResultVal = APInt(IntType->getBitWidth(), 0);
@@ -904,7 +915,8 @@ Constant *llvm::ConstantFoldLoadFromUniformValue(Constant *C, Type *Ty,
   if (C->isNullValue() && !Ty->isX86_AMXTy())
     return Constant::getNullValue(Ty);
   if (C->isAllOnesValue() &&
-      (Ty->isIntOrIntVectorTy() || Ty->isFPOrFPVectorTy()))
+      (Ty->isIntOrIntVectorTy() || Ty->isByteOrByteVectorTy() ||
+       Ty->isFPOrFPVectorTy()))
     return Constant::getAllOnesValue(Ty);
   return nullptr;
 }

@@ -150,12 +150,12 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   const MachineBasicBlock &MBB = *MI.getParent();
   const MachineFunction *MF = MBB.getParent();
   const Function &F = MF->getFunction();
-  const MCAsmInfo *MAI = MF->getTarget().getMCAsmInfo();
+  const MCAsmInfo &MAI = MF->getTarget().getMCAsmInfo();
 
   {
     auto Op = MI.getOpcode();
     if (Op == AArch64::INLINEASM || Op == AArch64::INLINEASM_BR)
-      return getInlineAsmLength(MI.getOperand(0).getSymbolName(), *MAI);
+      return getInlineAsmLength(MI.getOperand(0).getSymbolName(), MAI);
   }
 
   // Meta-instructions emit no code.
@@ -3369,9 +3369,9 @@ bool AArch64InstrInfo::isCandidateToMergeOrPair(const MachineInstr &MI) const {
   // prologue/epilogue if the CFI information encoded the operations as separate
   // instructions, as that will cause the size of the actual prologue to mismatch
   // with the prologue size recorded in the Windows CFI.
-  const MCAsmInfo *MAI = MI.getMF()->getTarget().getMCAsmInfo();
-  bool NeedsWinCFI = MAI->usesWindowsCFI() &&
-                     MI.getMF()->getFunction().needsUnwindTableEntry();
+  const MCAsmInfo &MAI = MI.getMF()->getTarget().getMCAsmInfo();
+  bool NeedsWinCFI =
+      MAI.usesWindowsCFI() && MI.getMF()->getFunction().needsUnwindTableEntry();
   if (NeedsWinCFI && (MI.getFlag(MachineInstr::FrameSetup) ||
                       MI.getFlag(MachineInstr::FrameDestroy)))
     return false;
@@ -10528,7 +10528,7 @@ bool AArch64InstrInfo::isFunctionSafeToOutlineFrom(
     return false;
 
   // FIXME: Teach the outliner to generate/handle Windows unwind info.
-  if (MF.getTarget().getMCAsmInfo()->usesWindowsCFI())
+  if (MF.getTarget().getMCAsmInfo().usesWindowsCFI())
     return false;
 
   // It's safe to outline from MF.

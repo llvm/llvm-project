@@ -1154,6 +1154,40 @@ namespace BrokenDelete {
   }
 }
 
+namespace vdtor {
+  constexpr int vdtor_3(int mode) {
+    int a = 0;
+    struct S { constexpr virtual ~S() {} };
+    struct T : S {
+      constexpr T(int *p) : p(p) {}
+      constexpr ~T() { ++*p; }
+      int *p;
+    };
+    S *p = new T[3]{&a, &a, &a}; // both-note 2{{heap allocation}} \
+                                 // both-note {{allocated with 'new[]' here}}
+    switch (mode) {
+    case 0:
+      delete p; // both-note {{non-array delete used to delete pointer to array object of type 'T[3]'}} \
+                // both-warning {{'delete' applied to a pointer that was allocated with 'new[]'}}
+      break;
+    case 1:
+      delete[] p; // both-note {{delete of pointer to subobject '&{*new T[3]#0}[0]'}}
+      break;
+    case 2:
+      delete (T*)p; // both-note {{non-array delete used to delete pointer to array object of type 'T[3]'}}
+      break;
+    case 3:
+      delete[] (T*)p;
+      break;
+    }
+    return a;
+  }
+  static_assert(vdtor_3(0) == 3); // both-error {{}} both-note {{in call}}
+  static_assert(vdtor_3(1) == 1); // both-error {{}} both-note {{in call}}
+  static_assert(vdtor_3(2) == 3); // both-error {{}} both-note {{in call}}
+  static_assert(vdtor_3(3) == 3);
+}
+
 #else
 /// Make sure we reject this prior to C++20
 constexpr int a() { // both-error {{never produces a constant expression}}

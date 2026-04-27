@@ -1183,14 +1183,10 @@ struct AAPointerInfoImpl
     auto HasKernelLifetime = [&](Value *V, Module &M) {
       if (!AA::isGPU(M))
         return false;
-      switch (AA::GPUAddressSpace(V->getType()->getPointerAddressSpace())) {
-      case AA::GPUAddressSpace::Shared:
-      case AA::GPUAddressSpace::Constant:
-      case AA::GPUAddressSpace::Local:
-        return true;
-      default:
-        return false;
-      };
+      unsigned VAS = V->getType()->getPointerAddressSpace();
+      return AA::isGPUSharedAddressSpace(M, VAS) ||
+             AA::isGPUConstantAddressSpace(M, VAS) ||
+             AA::isGPULocalAddressSpace(M, VAS);
     };
 
     // The IsLiveInCalleeCB will be used by the AA::isPotentiallyReachable query
@@ -8718,11 +8714,12 @@ void AAMemoryLocationImpl::categorizePtrValue(
 
     // Filter accesses to constant (GPU) memory if we have an AS at the access
     // site or the object is known to actually have the associated AS.
-    if ((AccessAS == (unsigned)AA::GPUAddressSpace::Constant ||
-         (ObjectAS == (unsigned)AA::GPUAddressSpace::Constant &&
-          isIdentifiedObject(&Obj))) &&
-        AA::isGPU(*I.getModule()))
-      return true;
+    if (AA::isGPU(A.getModule())) {
+      if (AA::isGPUConstantAddressSpace(A.getModule(), AccessAS) ||
+          (AA::isGPUConstantAddressSpace(A.getModule(), ObjectAS) &&
+           isIdentifiedObject(&Obj)))
+        return true;
+    }
 
     if (isa<UndefValue>(&Obj))
       return true;

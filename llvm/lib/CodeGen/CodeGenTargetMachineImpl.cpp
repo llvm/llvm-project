@@ -170,7 +170,7 @@ CodeGenTargetMachineImpl::createMCStreamer(raw_pwrite_stream &Out,
                                            CodeGenFileType FileType,
                                            MCContext &Context) {
   const MCSubtargetInfo &STI = *getMCSubtargetInfo();
-  const MCAsmInfo &MAI = *getMCAsmInfo();
+  const MCAsmInfo &MAI = getMCAsmInfo();
   const MCRegisterInfo &MRI = *getMCRegisterInfo();
   const MCInstrInfo &MII = *getMCInstrInfo();
 

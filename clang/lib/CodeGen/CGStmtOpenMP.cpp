@@ -2122,10 +2122,10 @@ void CodeGenFunction::EmitOMPParallelDirective(const OMPParallelDirective &S) {
     const CapturedStmt *CS = S.getCapturedStmt(OMPD_parallel);
     const Stmt *ParallelRegionBodyStmt = CS->getCapturedStmt();
 
-    auto BodyGenCB = [&, this](InsertPointTy AllocaIP,
-                               InsertPointTy CodeGenIP) {
+    auto BodyGenCB = [&, this](InsertPointTy AllocIP, InsertPointTy CodeGenIP,
+                               ArrayRef<llvm::BasicBlock *> DeallocBlocks) {
       OMPBuilderCBHelpers::EmitOMPOutlinedRegionBody(
-          *this, ParallelRegionBodyStmt, AllocaIP, CodeGenIP, "parallel");
+          *this, ParallelRegionBodyStmt, AllocIP, CodeGenIP, "parallel");
       return llvm::Error::success();
     };
 
@@ -2133,9 +2133,10 @@ void CodeGenFunction::EmitOMPParallelDirective(const OMPParallelDirective &S) {
     CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(*this, &CGSI);
     llvm::OpenMPIRBuilder::InsertPointTy AllocaIP(
         AllocaInsertPt->getParent(), AllocaInsertPt->getIterator());
-    llvm::OpenMPIRBuilder::InsertPointTy AfterIP = cantFail(
-        OMPBuilder.createParallel(Builder, AllocaIP, BodyGenCB, PrivCB, FiniCB,
-                                  IfCond, NumThreads, ProcBind, S.hasCancel()));
+    llvm::OpenMPIRBuilder::InsertPointTy AfterIP =
+        cantFail(OMPBuilder.createParallel(
+            Builder, AllocaIP, /*DeallocBlocks=*/{}, BodyGenCB, PrivCB, FiniCB,
+            IfCond, NumThreads, ProcBind, S.hasCancel()));
     Builder.restoreIP(AfterIP);
     return;
   }
@@ -4669,21 +4670,23 @@ void CodeGenFunction::EmitOMPSectionsDirective(const OMPSectionsDirective &S) {
     llvm::SmallVector<BodyGenCallbackTy, 4> SectionCBVector;
     if (CS) {
       for (const Stmt *SubStmt : CS->children()) {
-        auto SectionCB = [this, SubStmt](InsertPointTy AllocaIP,
-                                         InsertPointTy CodeGenIP) {
-          OMPBuilderCBHelpers::EmitOMPInlinedRegionBody(
-              *this, SubStmt, AllocaIP, CodeGenIP, "section");
+        auto SectionCB = [this, SubStmt](
+                             InsertPointTy AllocIP, InsertPointTy CodeGenIP,
+                             ArrayRef<llvm::BasicBlock *> DeallocBlocks) {
+          OMPBuilderCBHelpers::EmitOMPInlinedRegionBody(*this, SubStmt, AllocIP,
+                                                        CodeGenIP, "section");
           return llvm::Error::success();
         };
         SectionCBVector.push_back(SectionCB);
       }
     } else {
-      auto SectionCB = [this, CapturedStmt](InsertPointTy AllocaIP,
-                                            InsertPointTy CodeGenIP) {
-        OMPBuilderCBHelpers::EmitOMPInlinedRegionBody(
-            *this, CapturedStmt, AllocaIP, CodeGenIP, "section");
-        return llvm::Error::success();
-      };
+      auto SectionCB =
+          [this, CapturedStmt](InsertPointTy AllocIP, InsertPointTy CodeGenIP,
+                               ArrayRef<llvm::BasicBlock *> DeallocBlocks) {
+            OMPBuilderCBHelpers::EmitOMPInlinedRegionBody(
+                *this, CapturedStmt, AllocIP, CodeGenIP, "section");
+            return llvm::Error::success();
+          };
       SectionCBVector.push_back(SectionCB);
     }
 
@@ -4737,10 +4740,11 @@ void CodeGenFunction::EmitOMPSectionDirective(const OMPSectionDirective &S) {
       return llvm::Error::success();
     };
 
-    auto BodyGenCB = [SectionRegionBodyStmt, this](InsertPointTy AllocaIP,
-                                                   InsertPointTy CodeGenIP) {
+    auto BodyGenCB = [SectionRegionBodyStmt,
+                      this](InsertPointTy AllocIP, InsertPointTy CodeGenIP,
+                            ArrayRef<llvm::BasicBlock *> DeallocBlocks) {
       OMPBuilderCBHelpers::EmitOMPInlinedRegionBody(
-          *this, SectionRegionBodyStmt, AllocaIP, CodeGenIP, "section");
+          *this, SectionRegionBodyStmt, AllocIP, CodeGenIP, "section");
       return llvm::Error::success();
     };
 
@@ -4822,10 +4826,11 @@ void CodeGenFunction::EmitOMPMasterDirective(const OMPMasterDirective &S) {
       return llvm::Error::success();
     };
 
-    auto BodyGenCB = [MasterRegionBodyStmt, this](InsertPointTy AllocaIP,
-                                                  InsertPointTy CodeGenIP) {
+    auto BodyGenCB = [MasterRegionBodyStmt,
+                      this](InsertPointTy AllocIP, InsertPointTy CodeGenIP,
+                            ArrayRef<llvm::BasicBlock *> DeallocBlocks) {
       OMPBuilderCBHelpers::EmitOMPInlinedRegionBody(
-          *this, MasterRegionBodyStmt, AllocaIP, CodeGenIP, "master");
+          *this, MasterRegionBodyStmt, AllocIP, CodeGenIP, "master");
       return llvm::Error::success();
     };
 
@@ -4872,10 +4877,11 @@ void CodeGenFunction::EmitOMPMaskedDirective(const OMPMaskedDirective &S) {
       return llvm::Error::success();
     };
 
-    auto BodyGenCB = [MaskedRegionBodyStmt, this](InsertPointTy AllocaIP,
-                                                  InsertPointTy CodeGenIP) {
+    auto BodyGenCB = [MaskedRegionBodyStmt,
+                      this](InsertPointTy AllocIP, InsertPointTy CodeGenIP,
+                            ArrayRef<llvm::BasicBlock *> DeallocBlocks) {
       OMPBuilderCBHelpers::EmitOMPInlinedRegionBody(
-          *this, MaskedRegionBodyStmt, AllocaIP, CodeGenIP, "masked");
+          *this, MaskedRegionBodyStmt, AllocIP, CodeGenIP, "masked");
       return llvm::Error::success();
     };
 
@@ -4915,10 +4921,11 @@ void CodeGenFunction::EmitOMPCriticalDirective(const OMPCriticalDirective &S) {
       return llvm::Error::success();
     };
 
-    auto BodyGenCB = [CriticalRegionBodyStmt, this](InsertPointTy AllocaIP,
-                                                    InsertPointTy CodeGenIP) {
+    auto BodyGenCB = [CriticalRegionBodyStmt,
+                      this](InsertPointTy AllocIP, InsertPointTy CodeGenIP,
+                            ArrayRef<llvm::BasicBlock *> DeallocBlocks) {
       OMPBuilderCBHelpers::EmitOMPInlinedRegionBody(
-          *this, CriticalRegionBodyStmt, AllocaIP, CodeGenIP, "critical");
+          *this, CriticalRegionBodyStmt, AllocIP, CodeGenIP, "critical");
       return llvm::Error::success();
     };
 
@@ -5885,8 +5892,8 @@ void CodeGenFunction::EmitOMPTaskgroupDirective(
     InsertPointTy AllocaIP(AllocaInsertPt->getParent(),
                            AllocaInsertPt->getIterator());
 
-    auto BodyGenCB = [&, this](InsertPointTy AllocaIP,
-                               InsertPointTy CodeGenIP) {
+    auto BodyGenCB = [&, this](InsertPointTy AllocIP, InsertPointTy CodeGenIP,
+                               ArrayRef<llvm::BasicBlock *> DeallocBlocks) {
       Builder.restoreIP(CodeGenIP);
       EmitStmt(S.getInnermostCapturedStmt()->getCapturedStmt());
       return llvm::Error::success();
@@ -5895,7 +5902,8 @@ void CodeGenFunction::EmitOMPTaskgroupDirective(
     if (!CapturedStmtInfo)
       CapturedStmtInfo = &CapStmtInfo;
     llvm::OpenMPIRBuilder::InsertPointTy AfterIP =
-        cantFail(OMPBuilder.createTaskgroup(Builder, AllocaIP, BodyGenCB));
+        cantFail(OMPBuilder.createTaskgroup(Builder, AllocaIP,
+                                            /*DeallocBlocks=*/{}, BodyGenCB));
     Builder.restoreIP(AfterIP);
     return;
   }
@@ -6475,8 +6483,9 @@ void CodeGenFunction::EmitOMPOrderedDirective(const OMPOrderedDirective &S) {
         return llvm::Error::success();
       };
 
-      auto BodyGenCB = [&S, C, this](InsertPointTy AllocaIP,
-                                     InsertPointTy CodeGenIP) {
+      auto BodyGenCB = [&S, C,
+                        this](InsertPointTy AllocIP, InsertPointTy CodeGenIP,
+                              ArrayRef<llvm::BasicBlock *> DeallocBlocks) {
         Builder.restoreIP(CodeGenIP);
 
         const CapturedStmt *CS = S.getInnermostCapturedStmt();
@@ -6493,7 +6502,7 @@ void CodeGenFunction::EmitOMPOrderedDirective(const OMPOrderedDirective &S) {
                                                OutlinedFn, CapturedVars);
         } else {
           OMPBuilderCBHelpers::EmitOMPInlinedRegionBody(
-              *this, CS->getCapturedStmt(), AllocaIP, CodeGenIP, "ordered");
+              *this, CS->getCapturedStmt(), AllocIP, CodeGenIP, "ordered");
         }
         return llvm::Error::success();
       };

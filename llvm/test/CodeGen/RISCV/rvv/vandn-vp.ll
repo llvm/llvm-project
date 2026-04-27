@@ -1458,20 +1458,20 @@ define <vscale x 1 x i64> @vandn_vx_vp_imm64(<vscale x 1 x i64> %x, <vscale x 1 
 define <vscale x 1 x i16> @vand_vadd_vx_vp_imm16(<vscale x 1 x i16> %x, <vscale x 1 x i1> %mask, i32 zeroext %evl) {
 ; CHECK-LABEL: vand_vadd_vx_vp_imm16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a1, 8
-; CHECK-NEXT:    addi a1, a1, -1
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
-; CHECK-NEXT:    vand.vx v8, v8, a1
-; CHECK-NEXT:    vadd.vx v8, v8, a1, v0.t
+; CHECK-NEXT:    lui a0, 8
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    vsetvli a1, zero, e16, mf4, ta, ma
+; CHECK-NEXT:    vand.vx v8, v8, a0
+; CHECK-NEXT:    vadd.vx v8, v8, a0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-ZVKB-LABEL: vand_vadd_vx_vp_imm16:
 ; CHECK-ZVKB:       # %bb.0:
-; CHECK-ZVKB-NEXT:    lui a1, 8
-; CHECK-ZVKB-NEXT:    addi a1, a1, -1
-; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
-; CHECK-ZVKB-NEXT:    vand.vx v8, v8, a1
-; CHECK-ZVKB-NEXT:    vadd.vx v8, v8, a1, v0.t
+; CHECK-ZVKB-NEXT:    lui a0, 8
+; CHECK-ZVKB-NEXT:    addi a0, a0, -1
+; CHECK-ZVKB-NEXT:    vsetvli a1, zero, e16, mf4, ta, ma
+; CHECK-ZVKB-NEXT:    vand.vx v8, v8, a0
+; CHECK-ZVKB-NEXT:    vadd.vx v8, v8, a0
 ; CHECK-ZVKB-NEXT:    ret
   %a = call <vscale x 1 x i16> @llvm.vp.and.nxv1i16(<vscale x 1 x i16> splat (i16 32767), <vscale x 1 x i16> %x, <vscale x 1 x i1> %mask, i32 %evl)
   %b = call <vscale x 1 x i16> @llvm.vp.add.nxv1i16(<vscale x 1 x i16> splat (i16 32767), <vscale x 1 x i16> %a, <vscale x 1 x i1> %mask, i32 %evl)

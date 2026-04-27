@@ -21,18 +21,18 @@ target datalayout = "p1:32:32"
 ; memset of all-zero global
 @g0 = global { i32, i32 } zeroinitializer
 ;.
-; CHECK: @[[LLVM_GLOBAL_CTORS:[a-zA-Z0-9_$"\\.-]+]] = appending global [4 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @ctor3, ptr null }, { i32, ptr, ptr } { i32 65535, ptr @ctor4, ptr null }, { i32, ptr, ptr } { i32 65535, ptr @ctor7, ptr null }, { i32, ptr, ptr } { i32 65535, ptr @ctor10, ptr null }]
-; CHECK: @[[G0:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr global { i32, i32 } zeroinitializer
-; CHECK: @[[G1:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr global { i32, i32, i32 } { i32 0, i32 0, i32 1 }
-; CHECK: @[[G2:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr global { i32, i32, i32 } { i32 1, i32 0, i32 0 }
-; CHECK: @[[G3:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr global { i32, i32 } { i32 0, i32 1 }
-; CHECK: @[[G4:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr global { i32, i32 } { i32 0, i32 undef }
-; CHECK: @[[G5:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr global { i16, i32 } { i16 0, i32 1 }
-; CHECK: @[[G6:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr global { i32, i32 } { i32 -1, i32 -1 }
-; CHECK: @[[G7:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr global { i32, i32 } { i32 -1, i32 1 }
-; CHECK: @[[G8:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr addrspace(1) global { i32, i32 } zeroinitializer
-; CHECK: @[[G9:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr global [100000000 x i32] zeroinitializer
-; CHECK: @[[G10:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr global { [99999999 x i32], i32 } { [99999999 x i32] zeroinitializer, i32 1 }
+; CHECK: @llvm.global_ctors = appending global [4 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @ctor3, ptr null }, { i32, ptr, ptr } { i32 65535, ptr @ctor4, ptr null }, { i32, ptr, ptr } { i32 65535, ptr @ctor7, ptr null }, { i32, ptr, ptr } { i32 65535, ptr @ctor10, ptr null }]
+; CHECK: @g0 = local_unnamed_addr global { i32, i32 } zeroinitializer
+; CHECK: @g1 = local_unnamed_addr global { i32, i32, i32 } { i32 0, i32 0, i32 1 }
+; CHECK: @g2 = local_unnamed_addr global { i32, i32, i32 } { i32 1, i32 0, i32 0 }
+; CHECK: @g3 = local_unnamed_addr global { i32, i32 } { i32 0, i32 1 }
+; CHECK: @g4 = local_unnamed_addr global { i32, i32 } { i32 0, i32 undef }
+; CHECK: @g5 = local_unnamed_addr global { i16, i32 } { i16 0, i32 1 }
+; CHECK: @g6 = local_unnamed_addr global { i32, i32 } { i32 -1, i32 -1 }
+; CHECK: @g7 = local_unnamed_addr global { i32, i32 } { i32 -1, i32 1 }
+; CHECK: @g8 = local_unnamed_addr addrspace(1) global { i32, i32 } zeroinitializer
+; CHECK: @g9 = local_unnamed_addr global [100000000 x i32] zeroinitializer
+; CHECK: @g10 = local_unnamed_addr global { [99999999 x i32], i32 } { [99999999 x i32] zeroinitializer, i32 1 }
 ;.
 define internal void @ctor0() {
   call void @llvm.memset.p0.i64(ptr @g0, i8 0, i64 8, i1 false)

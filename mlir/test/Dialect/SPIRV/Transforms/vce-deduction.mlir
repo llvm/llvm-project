@@ -232,6 +232,45 @@ spirv.module Logical GLSL450 attributes {
   }
 }
 
+// Cooperative matrix with bf16 component type
+// CHECK: requires #spirv.vce<v1.6, [BFloat16TypeKHR, CooperativeMatrixKHR, BFloat16CooperativeMatrixKHR, Shader, Matrix], [SPV_KHR_bfloat16, SPV_KHR_cooperative_matrix]>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.6, [Shader, CooperativeMatrixKHR, BFloat16TypeKHR, BFloat16CooperativeMatrixKHR], [SPV_KHR_cooperative_matrix, SPV_KHR_bfloat16]>,
+    #spirv.resource_limits<>
+  >
+} {
+  spirv.func @bf16_coopmatrix(%arg0: !spirv.coopmatrix<4x4xbf16, Subgroup, MatrixA>) -> !spirv.coopmatrix<4x4xbf16, Subgroup, MatrixA> "None" {
+    spirv.ReturnValue %arg0 : !spirv.coopmatrix<4x4xbf16, Subgroup, MatrixA>
+  }
+}
+
+// Cooperative matrix with f8E4M3FN component type
+// CHECK: requires #spirv.vce<v1.6, [Float8EXT, CooperativeMatrixKHR, Float8CooperativeMatrixEXT, Shader, Matrix], [SPV_EXT_float8, SPV_KHR_cooperative_matrix]>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.6, [Shader, CooperativeMatrixKHR, Float8EXT, Float8CooperativeMatrixEXT], [SPV_KHR_cooperative_matrix, SPV_EXT_float8]>,
+    #spirv.resource_limits<>
+  >
+} {
+  spirv.func @f8_coopmatrix(%arg0: !spirv.coopmatrix<4x4xf8E4M3FN, Subgroup, MatrixA>) -> !spirv.coopmatrix<4x4xf8E4M3FN, Subgroup, MatrixA> "None" {
+    spirv.ReturnValue %arg0 : !spirv.coopmatrix<4x4xf8E4M3FN, Subgroup, MatrixA>
+  }
+}
+
+// Cooperative matrix with f8E5M2 component type
+// CHECK: requires #spirv.vce<v1.6, [Float8EXT, CooperativeMatrixKHR, Float8CooperativeMatrixEXT, Shader, Matrix], [SPV_EXT_float8, SPV_KHR_cooperative_matrix]>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.6, [Shader, CooperativeMatrixKHR, Float8EXT, Float8CooperativeMatrixEXT], [SPV_KHR_cooperative_matrix, SPV_EXT_float8]>,
+    #spirv.resource_limits<>
+  >
+} {
+  spirv.func @f8_coopmatrix(%arg0: !spirv.coopmatrix<4x4xf8E5M2, Subgroup, MatrixA>) -> !spirv.coopmatrix<4x4xf8E5M2, Subgroup, MatrixA> "None" {
+    spirv.ReturnValue %arg0 : !spirv.coopmatrix<4x4xf8E5M2, Subgroup, MatrixA>
+  }
+}
+
 // CHECK: requires #spirv.vce<v1.5, [GraphARM, Int8, TensorsARM, Float16, VulkanMemoryModel], [SPV_ARM_graph, SPV_ARM_tensors, SPV_KHR_vulkan_memory_model]>
 spirv.module Logical Vulkan attributes {
   spirv.target_env = #spirv.target_env<

@@ -6,7 +6,7 @@
 
 #include <arm_neon.h>
 
-void undefined(uint32x2_t v2i32, uint32x4_t v4i32, uint16x8_t v8i16, uint8x16_t v16i8, uint8x8_t v8i8, float32x2_t v2f32, float32x4_t v4f32, float16x4_t v4f16, float64x2_t v2f64, bfloat16x4_t v4bf16, __bf16 bf16, poly64_t poly64, poly64x2_t poly64x2) {
+void undefined(uint32x2_t v2i32, uint32x4_t v4i32, uint16x8_t v8i16, uint8x16_t v16i8, uint8x8_t v8i8, float32x2_t v2f32, float32x4_t v4f32, float16x4_t v4f16, float16x8_t v8f16, float64x2_t v2f64, bfloat16x4_t v4bf16, __bf16 bf16, poly64_t poly64, poly64x2_t poly64x2) {
   // dotprod
   vdot_u32(v2i32, v8i8, v8i8); // expected-error {{always_inline function 'vdot_u32' requires target feature 'neon'}}
   vdot_laneq_u32(v2i32, v8i8, v16i8, 1); // expected-error {{always_inline function 'vdot_u32' requires target feature 'neon'}} expected-error {{'__builtin_neon_splat_laneq_v' needs target feature neon}}
@@ -28,6 +28,8 @@ void undefined(uint32x2_t v2i32, uint32x4_t v4i32, uint16x8_t v8i16, uint8x16_t 
   vld1_bf16(0); // expected-error {{'__builtin_neon_vld1_bf16' needs target feature bf16,neon}}
   vcvt_f32_bf16(v4bf16); // expected-error {{always_inline function 'vcvt_f32_bf16' requires target feature 'neon'}}
   vcvt_bf16_f32(v4f32); // expected-error {{always_inline function 'vcvt_bf16_f32' requires target feature 'neon'}}
+  vmmlaq_f16_f16(v8f16, v8f16, v8f16); // expected-error {{always_inline function 'vmmlaq_f16_f16' requires target feature 'neon'}}
+  vmmlaq_f32_f16(v4f32, v8f16, v8f16); // expected-error {{always_inline function 'vmmlaq_f32_f16' requires target feature 'neon'}}
   vmull_p64(poly64, poly64);  // expected-error {{always_inline function 'vmull_p64' requires target feature 'neon'}}
   vmull_high_p64(poly64x2, poly64x2);  // expected-error {{always_inline function 'vmull_high_p64' requires target feature 'neon'}}
   vtrn1_s8(v8i8, v8i8); // expected-error {{always_inline function 'vtrn1_s8' requires target feature 'neon'}}

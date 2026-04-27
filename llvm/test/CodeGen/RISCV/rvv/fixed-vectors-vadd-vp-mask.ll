@@ -7,7 +7,7 @@
 define <2 x i1> @vadd_vv_v2i1(<2 x i1> %va, <2 x i1> %b, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vadd_vv_v2i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmxor.mm v0, v0, v8
 ; CHECK-NEXT:    ret
   %v = call <2 x i1> @llvm.vp.add.v2i1(<2 x i1> %va, <2 x i1> %b, <2 x i1> %m, i32 %evl)
@@ -17,7 +17,7 @@ define <2 x i1> @vadd_vv_v2i1(<2 x i1> %va, <2 x i1> %b, <2 x i1> %m, i32 zeroex
 define <4 x i1> @vadd_vv_v4i1(<4 x i1> %va, <4 x i1> %b, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vadd_vv_v4i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmxor.mm v0, v0, v8
 ; CHECK-NEXT:    ret
   %v = call <4 x i1> @llvm.vp.add.v4i1(<4 x i1> %va, <4 x i1> %b, <4 x i1> %m, i32 %evl)
@@ -27,7 +27,7 @@ define <4 x i1> @vadd_vv_v4i1(<4 x i1> %va, <4 x i1> %b, <4 x i1> %m, i32 zeroex
 define <8 x i1> @vadd_vv_v8i1(<8 x i1> %va, <8 x i1> %b, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vadd_vv_v8i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmxor.mm v0, v0, v8
 ; CHECK-NEXT:    ret
   %v = call <8 x i1> @llvm.vp.add.v8i1(<8 x i1> %va, <8 x i1> %b, <8 x i1> %m, i32 %evl)
@@ -37,7 +37,7 @@ define <8 x i1> @vadd_vv_v8i1(<8 x i1> %va, <8 x i1> %b, <8 x i1> %m, i32 zeroex
 define <16 x i1> @vadd_vv_v16i1(<16 x i1> %va, <16 x i1> %b, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vadd_vv_v16i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vmxor.mm v0, v0, v8
 ; CHECK-NEXT:    ret
   %v = call <16 x i1> @llvm.vp.add.v16i1(<16 x i1> %va, <16 x i1> %b, <16 x i1> %m, i32 %evl)
@@ -47,6 +47,7 @@ define <16 x i1> @vadd_vv_v16i1(<16 x i1> %va, <16 x i1> %b, <16 x i1> %m, i32 z
 define <32 x i1> @vadd_vv_v32i1(<32 x i1> %va, <32 x i1> %b, <32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vadd_vv_v32i1:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
 ; CHECK-NEXT:    vmxor.mm v0, v0, v8
 ; CHECK-NEXT:    ret
@@ -57,6 +58,7 @@ define <32 x i1> @vadd_vv_v32i1(<32 x i1> %va, <32 x i1> %b, <32 x i1> %m, i32 z
 define <64 x i1> @vadd_vv_v64i1(<64 x i1> %va, <64 x i1> %b, <64 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vadd_vv_v64i1:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 64
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
 ; CHECK-NEXT:    vmxor.mm v0, v0, v8
 ; CHECK-NEXT:    ret

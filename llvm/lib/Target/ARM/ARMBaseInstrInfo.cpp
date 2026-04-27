@@ -605,7 +605,7 @@ template <> bool IsCPSRDead<MachineInstr>(const MachineInstr *MI) {
 unsigned ARMBaseInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   const MachineBasicBlock &MBB = *MI.getParent();
   const MachineFunction *MF = MBB.getParent();
-  const MCAsmInfo *MAI = MF->getTarget().getMCAsmInfo();
+  const MCAsmInfo &MAI = MF->getTarget().getMCAsmInfo();
 
   const MCInstrDesc &MCID = MI.getDesc();
 
@@ -637,7 +637,7 @@ unsigned ARMBaseInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   case ARM::INLINEASM:
   case ARM::INLINEASM_BR: {
     // If this machine instr is an inline asm, measure it.
-    unsigned Size = getInlineAsmLength(MI.getOperand(0).getSymbolName(), *MAI);
+    unsigned Size = getInlineAsmLength(MI.getOperand(0).getSymbolName(), MAI);
     if (!MF->getInfo<ARMFunctionInfo>()->isThumbFunction())
       Size = alignTo(Size, 4);
     return Size;

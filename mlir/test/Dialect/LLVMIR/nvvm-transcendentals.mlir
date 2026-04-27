@@ -29,6 +29,20 @@ func.func @nvvm_sin_ftz_f32(%arg0: f32) -> f32 {
   return %0 : f32
 }
 
+// CHECK-LABEL: @nvvm_lg2_f32
+func.func @nvvm_lg2_f32(%arg0: f32) -> f32 {
+  // CHECK: nvvm.log2 {{.*}} : f32
+  %0 = nvvm.log2 %arg0 : f32
+  return %0 : f32
+}
+
+// CHECK-LABEL: @nvvm_lg2_ftz_f32
+func.func @nvvm_lg2_ftz_f32(%arg0: f32) -> f32 {
+  // CHECK: nvvm.log2 {{.*}} {ftz = true} : f32
+  %0 = nvvm.log2 %arg0 {ftz = true} : f32
+  return %0 : f32
+}
+
 // CHECK-LABEL: @nvvm_ex2_f32
 func.func @nvvm_ex2_f32(%arg0: f32) -> f32 {
   // CHECK: nvvm.ex2 {{.*}} : f32

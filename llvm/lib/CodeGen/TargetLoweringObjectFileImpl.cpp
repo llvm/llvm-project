@@ -1637,8 +1637,7 @@ void TargetLoweringObjectFileMachO::getNameWithPrefix(
   if (auto *GO = GV->getAliaseeObject()) {
     SectionKind GOKind = TargetLoweringObjectFile::getKindForGlobal(GO, TM);
     const MCSection *TheSection = SectionForGlobal(GO, GOKind, TM);
-    CannotUsePrivateLabel =
-        !canUsePrivateLabel(*TM.getMCAsmInfo(), *TheSection);
+    CannotUsePrivateLabel = !canUsePrivateLabel(TM.getMCAsmInfo(), *TheSection);
   }
   getMangler().getNameWithPrefix(OutName, GV, CannotUsePrivateLabel);
 }

@@ -430,7 +430,7 @@ public:
   /// If AF_INET is a macro, the result should be treated as a source of taint.
   ///
   /// \sa clang::Lexer::getSpelling(), clang::Lexer::getImmediateMacroName().
-  StringRef getMacroNameOrSpelling(SourceLocation &Loc);
+  std::string getMacroNameOrSpelling(SourceLocation &Loc);
 
 private:
   ExplodedNode *addTransitionImpl(ProgramStateRef State,

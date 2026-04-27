@@ -87,10 +87,8 @@ void AsmPrinter::emitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
   // Otherwise parse the asm and emit it via MC support.
   // This is useful in case the asm parser doesn't handle something but the
   // system assembler does.
-  const MCAsmInfo *MCAI = TM.getMCAsmInfo();
-  assert(MCAI && "No MCAsmInfo");
-  if (!MCAI->useIntegratedAssembler() &&
-      !MCAI->parseInlineAsmUsingAsmParser() &&
+  const MCAsmInfo &MCAI = TM.getMCAsmInfo();
+  if (!MCAI.useIntegratedAssembler() && !MCAI.parseInlineAsmUsingAsmParser() &&
       !OutStreamer->isIntegratedAssemblerRequired()) {
     emitInlineAsmStart();
     OutStreamer->emitRawText(Str);

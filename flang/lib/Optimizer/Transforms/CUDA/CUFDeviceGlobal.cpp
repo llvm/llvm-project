@@ -163,7 +163,7 @@ public:
     for (auto globalOp : candidates) {
       auto globalName{globalOp.getSymbol().getValue()};
       if (gpuSymTable.lookup<fir::GlobalOp>(globalName)) {
-        break;
+        continue;
       }
       gpuSymTable.insert(globalOp->clone());
     }

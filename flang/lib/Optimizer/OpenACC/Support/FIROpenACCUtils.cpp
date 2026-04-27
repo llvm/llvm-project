@@ -56,20 +56,12 @@ std::string fir::acc::getVariableName(Value v, bool preferDemangledName) {
   while (v && (defOp = v.getDefiningOp()) && iterate) {
     iterate =
         llvm::TypeSwitch<mlir::Operation *, bool>(defOp)
-            .Case([&v](mlir::ViewLikeOpInterface op) {
-              v = op.getViewSource();
-              return true;
-            })
             .Case([&v](fir::ReboxOp op) {
               v = op.getBox();
               return true;
             })
             .Case([&v](fir::EmboxOp op) {
               v = op.getMemref();
-              return true;
-            })
-            .Case([&v](fir::ConvertOp op) {
-              v = op.getValue();
               return true;
             })
             .Case([&v](fir::LoadOp op) {
@@ -148,6 +140,10 @@ std::string fir::acc::getVariableName(Value v, bool preferDemangledName) {
                                               : "";
               }
               return false;
+            })
+            .Case([&v](mlir::ViewLikeOpInterface op) {
+              v = op.getViewSource();
+              return true;
             })
             .Default([](mlir::Operation *) { return false; });
   }
@@ -629,21 +625,25 @@ mlir::Value fir::acc::getOriginalDef(mlir::Value value, bool stripDeclare) {
       continue;
     }
 
+    if (auto declareOp = mlir::dyn_cast<hlfir::DeclareOp>(definingOp)) {
+      if (stripDeclare) {
+        currentValue = declareOp.getMemref();
+        continue;
+      }
+      return currentValue;
+    }
+
+    if (auto declareOp = mlir::dyn_cast<fir::DeclareOp>(definingOp)) {
+      if (stripDeclare) {
+        currentValue = declareOp.getMemref();
+        continue;
+      }
+      return currentValue;
+    }
+
     if (auto viewLike = mlir::dyn_cast<mlir::ViewLikeOpInterface>(definingOp)) {
       currentValue = viewLike.getViewSource();
       continue;
-    }
-
-    if (stripDeclare) {
-      if (auto declareOp = mlir::dyn_cast<hlfir::DeclareOp>(definingOp)) {
-        currentValue = declareOp.getMemref();
-        continue;
-      }
-
-      if (auto declareOp = mlir::dyn_cast<fir::DeclareOp>(definingOp)) {
-        currentValue = declareOp.getMemref();
-        continue;
-      }
     }
     break;
   }

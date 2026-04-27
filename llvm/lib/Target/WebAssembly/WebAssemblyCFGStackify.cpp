@@ -2458,11 +2458,11 @@ void WebAssemblyCFGStackify::placeMarkers(MachineFunction &MF) {
   for (auto &MBB : MF)
     placeLoopMarker(MBB);
 
-  const MCAsmInfo *MCAI = MF.getTarget().getMCAsmInfo();
+  const MCAsmInfo &MCAI = MF.getTarget().getMCAsmInfo();
   for (auto &MBB : MF) {
     if (MBB.isEHPad()) {
       // Place the TRY/TRY_TABLE for MBB if MBB is the EH pad of an exception.
-      if (MCAI->getExceptionHandlingType() == ExceptionHandling::Wasm &&
+      if (MCAI.getExceptionHandlingType() == ExceptionHandling::Wasm &&
           MF.getFunction().hasPersonalityFn()) {
         if (WebAssembly::WasmUseLegacyEH)
           placeTryMarker(MBB);
@@ -2475,7 +2475,7 @@ void WebAssemblyCFGStackify::placeMarkers(MachineFunction &MF) {
     }
   }
 
-  if (MCAI->getExceptionHandlingType() == ExceptionHandling::Wasm &&
+  if (MCAI.getExceptionHandlingType() == ExceptionHandling::Wasm &&
       MF.getFunction().hasPersonalityFn()) {
     const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
     // Add an 'unreachable' after 'end_try_table's.
@@ -2646,7 +2646,7 @@ bool WebAssemblyCFGStackify::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "********** CFG Stackifying **********\n"
                        "********** Function: "
                     << MF.getName() << '\n');
-  const MCAsmInfo *MCAI = MF.getTarget().getMCAsmInfo();
+  const MCAsmInfo &MCAI = MF.getTarget().getMCAsmInfo();
   MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
 
   releaseMemory();
@@ -2659,7 +2659,7 @@ bool WebAssemblyCFGStackify::runOnMachineFunction(MachineFunction &MF) {
   placeMarkers(MF);
 
   // Remove unnecessary instructions possibly introduced by try/end_trys.
-  if (MCAI->getExceptionHandlingType() == ExceptionHandling::Wasm &&
+  if (MCAI.getExceptionHandlingType() == ExceptionHandling::Wasm &&
       MF.getFunction().hasPersonalityFn() && WebAssembly::WasmUseLegacyEH)
     removeUnnecessaryInstrs(MF);
 

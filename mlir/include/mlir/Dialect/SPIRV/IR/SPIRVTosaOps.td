@@ -285,7 +285,9 @@ def SPIRV_TosaAvgPool2DOp : SPIRV_TosaOpWithResult<"AvgPool2D", 1, [NoMemoryEffe
   TypeImpliesAccType<"input", F32, ["FP32"]>,
   TypeImpliesAccType<"input", F8E4M3FN, ["FP16"]>,
   TypeImpliesAccType<"input", F8E5M2, ["FP16"]>,
-  AllElementTypesMatch<["input", "input_zp", "output", "output_zp"]>]> {
+  AllElementTypesMatch<["input", "input_zp", "output", "output_zp"]>,
+  NHWCInputOutputShapeMatch<"input", "output">,
+  Pool2DPadValuesLessThanKernel<"pad", "kernel">]> {
   let summary = "Performs average pooling on the input.";
 
   let description = [{
@@ -308,9 +310,9 @@ def SPIRV_TosaAvgPool2DOp : SPIRV_TosaOpWithResult<"AvgPool2D", 1, [NoMemoryEffe
   }];
 
   let arguments = (ins
-    SPIRV_I32_1DTensorArmOfLength2Attr: $kernel,
-    SPIRV_I32_1DTensorArmOfLength2Attr: $stride,
-    SPIRV_I32_1DTensorArmOfLength4Attr: $pad,
+    SPIRV_PositiveInt32_1DTensorArmOfLength2Attr: $kernel,
+    SPIRV_PositiveInt32_1DTensorArmOfLength2Attr: $stride,
+    SPIRV_NonNegativeInt32_1DTensorArmOfLength4Attr: $pad,
     SPIRV_TosaExtAccTypeAttr: $acc_type,
     SPIRV_I8OrI16OrF16OrF32OrBF16OrFP8_TensorArm4D: $input,
     SPIRV_I8OrI16OrF16OrF32OrBF16OrFP8_1DTensorArmOfLength1: $input_zp,
@@ -337,6 +339,8 @@ def SPIRV_TosaAvgPool2DOp : SPIRV_TosaOpWithResult<"AvgPool2D", 1, [NoMemoryEffe
       return cast<::mlir::spirv::TensorArmType>(getInput().getType());
     }
   }];
+
+  let hasVerifier = 1;
 }
 
 
@@ -619,7 +623,9 @@ def SPIRV_TosaMatMulOp : SPIRV_TosaOpWithResult<"MatMul", 6, [NoMemoryEffect,
 
 
 def SPIRV_TosaMaxPool2DOp : SPIRV_TosaOpWithResult<"MaxPool2D", 7, [Pure,
-  AllElementTypesMatch<["input", "output"]>]> {
+  AllElementTypesMatch<["input", "output"]>,
+  NHWCInputOutputShapeMatch<"input", "output">,
+  Pool2DPadValuesLessThanKernel<"pad", "kernel">]> {
   let summary = "Performs max pooling on the input.";
 
   let description = [{
@@ -640,9 +646,9 @@ def SPIRV_TosaMaxPool2DOp : SPIRV_TosaOpWithResult<"MaxPool2D", 7, [Pure,
   }];
 
   let arguments = (ins
-    SPIRV_I32_1DTensorArmOfLength2Attr: $kernel,
-    SPIRV_I32_1DTensorArmOfLength2Attr: $stride,
-    SPIRV_I32_1DTensorArmOfLength4Attr: $pad,
+    SPIRV_PositiveInt32_1DTensorArmOfLength2Attr: $kernel,
+    SPIRV_PositiveInt32_1DTensorArmOfLength2Attr: $stride,
+    SPIRV_NonNegativeInt32_1DTensorArmOfLength4Attr: $pad,
     SPIRV_TosaExtNaNPropagationModeAttr: $nan_mode,
     SPIRV_I8OrI16OrF16OrF32OrBF16OrFP8_TensorArm4D: $input
   );
@@ -665,6 +671,8 @@ def SPIRV_TosaMaxPool2DOp : SPIRV_TosaOpWithResult<"MaxPool2D", 7, [Pure,
       return cast<::mlir::spirv::TensorArmType>(getInput().getType());
     }
   }];
+
+  let hasVerifier = 1;
 }
 
 

@@ -94,9 +94,6 @@ bool WebAssemblyCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
                                           FunctionLoweringInfo &FLI,
                                           Register SwiftErrorVReg) const {
   MachineFunction &MF = MIRBuilder.getMF();
-  const WebAssemblySubtarget &Subtarget =
-      MF.getSubtarget<WebAssemblySubtarget>();
-  const RegisterBankInfo &RBI = *Subtarget.getRegBankInfo();
   const Function &F = MF.getFunction();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const WebAssemblyTargetLowering &TLI = *getTLI<WebAssemblyTargetLowering>();
@@ -173,15 +170,10 @@ bool WebAssemblyCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
           // the incoming component of the larger value. These will later be
           // merged to form the final vreg.
           for (unsigned Part = 0; Part < NumParts; ++Part) {
-            Register NewOutReg = MRI.createGenericVirtualRegister(NewLLT);
-
-            if (!RBI.constrainGenericRegister(NewOutReg, NewRegClass, MRI))
-              reportFatalInternalError(
-                  "Couldn't constrain brand-new register?");
-
-            MIB.addUse(NewOutReg);
-
-            Ret.Regs[Part] = NewOutReg;
+            Register NewReg = MRI.createVirtualRegister(&NewRegClass);
+            MRI.setType(NewReg, NewLLT);
+            MIB.addUse(NewReg);
+            Ret.Regs[Part] = NewReg;
           }
 
           buildCopyToRegs(MIRBuilder, Ret.Regs, Ret.OrigRegs[0], OrigLLT,
@@ -241,6 +233,34 @@ static unsigned getWasmArgumentOpcode(MVT ArgType) {
   llvm_unreachable("Found unexpected type for Wasm argument");
 }
 
+static Register buildWasmArgument(unsigned Idx, MVT ArgVT, LLT ArgLLT,
+                                  MachineIRBuilder &MIRBuilder,
+                                  Register Def = Register()) {
+  unsigned Op = getWasmArgumentOpcode(ArgVT);
+
+  const TargetInstrInfo &TII = MIRBuilder.getTII();
+  MachineFunction &MF = MIRBuilder.getMF();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  const TargetRegisterClass &RegClass = *TII.getRegClass(TII.get(Op), 0);
+
+  Register NewReg;
+
+  if (Def.isValid()) {
+    assert(MRI.getRegClassOrRegBank(Def).isNull() &&
+           "Def already has reg bank or reg class?");
+    MRI.setRegClass(Def, &RegClass);
+
+    NewReg = Def;
+  } else {
+    NewReg = MRI.createVirtualRegister(&RegClass);
+    MRI.setType(NewReg, ArgLLT);
+  }
+
+  MIRBuilder.buildInstr(Op).addDef(NewReg).addImm(Idx);
+
+  return NewReg;
+}
+
 bool WebAssemblyCallLowering::lowerFormalArguments(
     MachineIRBuilder &MIRBuilder, const Function &F,
     ArrayRef<ArrayRef<Register>> VRegs, FunctionLoweringInfo &FLI) const {
@@ -249,27 +269,20 @@ bool WebAssemblyCallLowering::lowerFormalArguments(
   WebAssemblyFunctionInfo *MFI = MF.getInfo<WebAssemblyFunctionInfo>();
   const DataLayout &DL = F.getDataLayout();
   const WebAssemblyTargetLowering &TLI = *getTLI<WebAssemblyTargetLowering>();
-  const WebAssemblySubtarget &Subtarget =
-      MF.getSubtarget<WebAssemblySubtarget>();
-  const WebAssemblyRegisterInfo &TRI = *Subtarget.getRegisterInfo();
-  const WebAssemblyInstrInfo &TII = *Subtarget.getInstrInfo();
-  const RegisterBankInfo &RBI = *Subtarget.getRegBankInfo();
 
   LLVMContext &Ctx = MIRBuilder.getContext();
   const CallingConv::ID CallConv = F.getCallingConv();
 
-  if (!callingConvSupported(CallConv)) {
+  if (!callingConvSupported(CallConv))
     return false;
-  }
 
   MF.getRegInfo().addLiveIn(WebAssembly::ARGUMENTS);
   MF.front().addLiveIn(WebAssembly::ARGUMENTS);
 
   SmallVector<ArgInfo, 8> SplitArgs;
 
-  if (!FLI.CanLowerReturn) {
+  if (!FLI.CanLowerReturn)
     insertSRetIncomingArgument(F, SplitArgs, FLI.DemoteRegister, MRI, DL);
-  }
 
   unsigned ArgIdx = 0;
   bool HasSwiftErrorArg = false;
@@ -280,12 +293,11 @@ bool WebAssemblyCallLowering::lowerFormalArguments(
 
     HasSwiftSelfArg |= Arg.hasSwiftSelfAttr();
     HasSwiftErrorArg |= Arg.hasSwiftErrorAttr();
-    if (Arg.hasInAllocaAttr()) {
+    if (Arg.hasInAllocaAttr())
       return false;
-    }
-    if (Arg.hasNestAttr()) {
+    if (Arg.hasNestAttr())
       return false;
-    }
+
     splitToValueTypes(OrigArg, SplitArgs, DL, F.getCallingConv());
     ++ArgIdx;
   }
@@ -329,25 +341,16 @@ bool WebAssemblyCallLowering::lowerFormalArguments(
       // the incoming component of the larger value. These will later be
       // merged to form the final vreg.
       for (unsigned Part = 0; Part < NumParts; ++Part) {
-        Arg.Regs[Part] = MRI.createGenericVirtualRegister(NewLLT);
+        Arg.Regs[Part] =
+            buildWasmArgument(FinalArgIdx++, NewVT, NewLLT, MIRBuilder);
+        MFI->addParam(NewVT);
       }
-    }
 
-    for (unsigned Part = 0; Part < NumParts; ++Part) {
-      MachineInstrBuilder ArgInst =
-          MIRBuilder.buildInstr(getWasmArgumentOpcode(NewVT))
-              .addDef(Arg.Regs[Part])
-              .addImm(FinalArgIdx);
-
-      constrainOperandRegClass(MF, TRI, MRI, TII, RBI, *ArgInst,
-                               ArgInst->getDesc(), ArgInst->getOperand(0), 0);
-      MFI->addParam(NewVT);
-      ++FinalArgIdx;
-    }
-
-    if (OrigVT != NewVT) {
       buildCopyFromRegs(MIRBuilder, Arg.OrigRegs, Arg.Regs, OrigLLT, NewLLT,
                         Arg.Flags[0]);
+    } else {
+      buildWasmArgument(FinalArgIdx++, NewVT, NewLLT, MIRBuilder, Arg.Regs[0]);
+      MFI->addParam(NewVT);
     }
   }
 
@@ -358,12 +361,10 @@ bool WebAssemblyCallLowering::lowerFormalArguments(
   if (CallConv == CallingConv::Swift) {
     const MVT PtrVT = TLI.getPointerTy(DL);
 
-    if (!HasSwiftSelfArg) {
+    if (!HasSwiftSelfArg)
       MFI->addParam(PtrVT);
-    }
-    if (!HasSwiftErrorArg) {
+    if (!HasSwiftErrorArg)
       MFI->addParam(PtrVT);
-    }
   }
 
   // Varargs are copied into a buffer allocated by the caller, and a pointer to
@@ -371,17 +372,10 @@ bool WebAssemblyCallLowering::lowerFormalArguments(
   if (F.isVarArg()) {
     const MVT PtrVT = TLI.getPointerTy(DL, 0);
     const LLT PtrLLT = LLT::pointer(0, DL.getPointerSizeInBits(0));
-    Register VarargVreg = MF.getRegInfo().createGenericVirtualRegister(PtrLLT);
 
+    Register VarargVreg =
+        buildWasmArgument(FinalArgIdx++, PtrVT, PtrLLT, MIRBuilder);
     MFI->setVarargBufferVreg(VarargVreg);
-
-    MachineInstrBuilder ArgInst =
-        MIRBuilder.buildInstr(getWasmArgumentOpcode(PtrVT))
-            .addDef(VarargVreg)
-            .addImm(FinalArgIdx);
-
-    constrainOperandRegClass(MF, TRI, MRI, TII, RBI, *ArgInst,
-                             ArgInst->getDesc(), ArgInst->getOperand(0), 0);
 
     MFI->addParam(PtrVT);
     ++FinalArgIdx;
@@ -405,5 +399,218 @@ bool WebAssemblyCallLowering::lowerFormalArguments(
 
 bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                         CallLoweringInfo &Info) const {
-  return false;
+  MachineFunction &MF = MIRBuilder.getMF();
+  const DataLayout &DL = MIRBuilder.getDataLayout();
+  LLVMContext &Ctx = MIRBuilder.getContext();
+  const WebAssemblyTargetLowering &TLI = *getTLI<WebAssemblyTargetLowering>();
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+  const Function &F = MF.getFunction();
+
+  CallingConv::ID CallConv = Info.CallConv;
+  if (!callingConvSupported(CallConv))
+    return false;
+
+  // TODO: tail calls
+  if (Info.CB->isMustTailCall())
+    return false;
+
+  // TODO: varargs
+  if (Info.IsVarArg)
+    return false;
+
+  // TODO: swiftcc
+  if (CallConv == CallingConv::Swift)
+    return false;
+
+  MachineInstrBuilder CallInst;
+
+  // TODO: indirect calls
+  if (Info.Callee.isReg())
+    return false;
+
+  CallInst = MIRBuilder.buildInstrNoInsert(WebAssembly::CALL);
+
+  if (Info.Callee.isGlobal()) {
+    CallInst.addGlobalAddress(Info.Callee.getGlobal());
+  } else if (Info.Callee.isSymbol()) {
+    CallInst.addExternalSymbol(Info.Callee.getSymbolName());
+  } else {
+    return false;
+  }
+
+  SmallVector<ArgInfo, 8> SplitArgs;
+
+  for (const ArgInfo &Arg : Info.OrigArgs) {
+    if (Arg.Flags[0].isNest())
+      return false;
+    if (Arg.Flags[0].isInAlloca())
+      return false;
+    if (Arg.Flags[0].isInConsecutiveRegs())
+      return false;
+    if (Arg.Flags[0].isInConsecutiveRegsLast())
+      return false;
+
+    // TODO: bulk memory, then byval
+    if (Arg.Flags[0].isByVal() && Arg.Flags[0].getByValSize() != 0)
+      return false;
+
+    splitToValueTypes(Arg, SplitArgs, DL, CallConv);
+  }
+
+  for (ArgInfo &Arg : SplitArgs) {
+    const EVT OrigVT = TLI.getValueType(DL, Arg.Ty);
+    const MVT NewVT = TLI.getRegisterTypeForCallingConv(Ctx, CallConv, OrigVT);
+    const LLT OrigLLT =
+        getLLTForType(*OrigVT.getTypeForEVT(F.getContext()), DL);
+    const LLT NewLLT = getLLTForWasmMVT(NewVT, DL);
+
+    const TargetRegisterClass &NewRegClass = *TLI.getRegClassFor(NewVT);
+
+    // If we need to split the type over multiple regs, check it's a scenario
+    // we currently support.
+    const unsigned NumParts =
+        TLI.getNumRegistersForCallingConv(Ctx, CallConv, OrigVT);
+
+    const ISD::ArgFlagsTy OrigFlags = Arg.Flags[0];
+    Arg.Flags.clear();
+
+    for (unsigned Part = 0; Part < NumParts; ++Part) {
+      ISD::ArgFlagsTy Flags = OrigFlags;
+      if (Part == 0) {
+        Flags.setSplit();
+      } else {
+        Flags.setOrigAlign(Align(1));
+        if (Part == NumParts - 1)
+          Flags.setSplitEnd();
+      }
+
+      Arg.Flags.push_back(Flags);
+    }
+
+    Arg.OrigRegs.assign(Arg.Regs.begin(), Arg.Regs.end());
+    if (NumParts != 1 || OrigLLT != NewLLT) {
+      // If we can't directly assign the register, we need one or more
+      // intermediate values.
+      Arg.Regs.resize(NumParts);
+
+      // For each split register, create and assign a vreg that will store
+      // the incoming component of the larger value. These will later be
+      // merged to form the final vreg.
+      for (unsigned Part = 0; Part < NumParts; ++Part) {
+        Register NewReg = MRI.createVirtualRegister(&NewRegClass);
+        MRI.setType(NewReg, NewLLT);
+        CallInst.addUse(NewReg);
+        Arg.Regs[Part] = NewReg;
+      }
+
+      buildCopyToRegs(MIRBuilder, Arg.Regs, Arg.OrigRegs[0], OrigLLT, NewLLT,
+                      extendOpFromFlags(Arg.Flags[0]));
+    } else {
+      CallInst.addUse(Arg.Regs[0]);
+    }
+  }
+
+  // Analyze operands of the call, assigning locations to each operand.
+  SmallVector<CCValAssign, 16> ArgLocs;
+  CCState CCInfo(CallConv, Info.IsVarArg, MF, ArgLocs, Ctx);
+
+  MIRBuilder.insertInstr(CallInst);
+
+  if (Info.CanLowerReturn && !Info.OrigRet.Ty->isVoidTy()) {
+    SmallVector<EVT, 4> SplitEVTs;
+    ComputeValueVTs(TLI, DL, Info.OrigRet.Ty, SplitEVTs);
+    assert(Info.OrigRet.Regs.size() == SplitEVTs.size() &&
+           "For each split Type there should be exactly one VReg.");
+
+    SmallVector<ArgInfo, 8> SplitRets;
+
+    unsigned RetIdx = 0;
+    for (EVT SplitEVT : SplitEVTs) {
+      Register CurVReg = Info.OrigRet.Regs[RetIdx];
+      ArgInfo CurArgInfo = ArgInfo{CurVReg, SplitEVT.getTypeForEVT(Ctx), 0};
+
+      if (Info.CB) {
+        setArgFlags(CurArgInfo, AttributeList::ReturnIndex, DL, *Info.CB);
+      } else {
+        // We don't have a call base, so chances are we're looking at a
+        // libcall (external symbol).
+
+        // TODO: figure out how to get ALL the correct attributes
+        ISD::ArgFlagsTy &Flags = CurArgInfo.Flags[0];
+        PointerType *PtrTy =
+            dyn_cast<PointerType>(CurArgInfo.Ty->getScalarType());
+        if (PtrTy) {
+          Flags.setPointer();
+          Flags.setPointerAddrSpace(PtrTy->getPointerAddressSpace());
+        }
+        Align MemAlign = DL.getABITypeAlign(CurArgInfo.Ty);
+        Flags.setMemAlign(MemAlign);
+        Flags.setOrigAlign(MemAlign);
+      }
+
+      splitToValueTypes(CurArgInfo, SplitRets, DL, CallConv);
+      ++RetIdx;
+    }
+
+    for (ArgInfo &Ret : SplitRets) {
+      const EVT OrigVT = TLI.getValueType(DL, Ret.Ty);
+      const MVT NewVT =
+          TLI.getRegisterTypeForCallingConv(Ctx, CallConv, OrigVT);
+      const LLT OrigLLT =
+          getLLTForType(*OrigVT.getTypeForEVT(F.getContext()), DL);
+      const LLT NewLLT = getLLTForWasmMVT(NewVT, DL);
+
+      const TargetRegisterClass &NewRegClass = *TLI.getRegClassFor(NewVT);
+
+      // If we need to split the type over multiple regs, check it's a scenario
+      // we currently support.
+      const unsigned NumParts =
+          TLI.getNumRegistersForCallingConv(Ctx, CallConv, OrigVT);
+
+      const ISD::ArgFlagsTy OrigFlags = Ret.Flags[0];
+      Ret.Flags.clear();
+
+      for (unsigned Part = 0; Part < NumParts; ++Part) {
+        ISD::ArgFlagsTy Flags = OrigFlags;
+        if (Part == 0) {
+          Flags.setSplit();
+        } else {
+          Flags.setOrigAlign(Align(1));
+          if (Part == NumParts - 1)
+            Flags.setSplitEnd();
+        }
+
+        Ret.Flags.push_back(Flags);
+      }
+
+      Ret.OrigRegs.assign(Ret.Regs.begin(), Ret.Regs.end());
+
+      if (NumParts != 1 || OrigLLT != NewLLT) {
+        // If we can't directly assign the register, we need one or more
+        // intermediate values.
+        Ret.Regs.resize(NumParts);
+
+        // For each split register, create and assign a vreg that will store
+        // the incoming component of the larger value. These will later be
+        // merged to form the final vreg.
+        for (unsigned Part = 0; Part < NumParts; ++Part) {
+          Register NewReg = MRI.createVirtualRegister(&NewRegClass);
+          MRI.setType(NewReg, NewLLT);
+          CallInst.addDef(NewReg);
+          Ret.Regs[Part] = NewReg;
+        }
+
+        buildCopyFromRegs(MIRBuilder, Ret.OrigRegs, Ret.Regs, OrigLLT, NewLLT,
+                          Ret.Flags[0]);
+      } else {
+        CallInst.addDef(Ret.Regs[0]);
+      }
+    }
+  }
+
+  if (!Info.CanLowerReturn)
+    insertSRetLoads(MIRBuilder, Info.OrigRet.Ty, Info.OrigRet.Regs,
+                    Info.DemoteRegister, Info.DemoteStackIndex);
+
+  return true;
 }
