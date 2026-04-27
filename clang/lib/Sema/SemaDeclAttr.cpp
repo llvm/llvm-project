@@ -1527,7 +1527,7 @@ static void handleOwnershipAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   }
 
   // Check if the new ownership_returns attribute does not contain 
-  // an index, but previous attributes do
+  // an index, but previous attributes do.
   if (K == OwnershipAttr::Returns && AL.getNumArgs() == 1) {
     for (const auto *I : D->specific_attrs<OwnershipAttr>()) {
       if (I->getOwnKind() == OwnershipAttr::Returns && I->args_size() > 0) {
@@ -1593,9 +1593,7 @@ static void handleOwnershipAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
               << Idx.getSourceIndex() << 0 << Ex->getSourceRange();
           return;
         }
-      }
-      
-      if (K == OwnershipAttr::Takes &&
+      } else if (K == OwnershipAttr::Takes &&
                  I->getOwnKind() == OwnershipAttr::Takes) {
         if (I->getModule()->getName() != ModuleName) {
           S.Diag(I->getLocation(), diag::err_ownership_takes_class_mismatch)
