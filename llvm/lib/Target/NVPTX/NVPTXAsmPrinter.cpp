@@ -1983,7 +1983,7 @@ NVPTXAsmPrinter::lowerConstantForGV(const Constant *CV,
 }
 
 void NVPTXAsmPrinter::printMCExpr(const MCExpr &Expr, raw_ostream &OS) const {
-  OutContext.getAsmInfo()->printExpr(OS, Expr);
+  OutContext.getAsmInfo().printExpr(OS, Expr);
 }
 
 /// PrintAsmOperand - Print out an operand for an inline asm expression.
