@@ -19,7 +19,7 @@
 
 include(FindPackageHandleStandardArgs)
 
-macro(compiler_rt_find_amdgpu_sanitizer_dependencies)
+macro(compiler_rt_find_amdgpu_runtime_headers)
   # --- HSA (hsa.h) ---
   set(_hsa_search_paths "")
   foreach(_root IN ITEMS "${HSA_ROOT}" "${ROCM_PATH}" "$ENV{ROCM_PATH}")

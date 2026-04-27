@@ -556,7 +556,7 @@ endif()
 if(SANITIZER_AMDGPU)
   list(APPEND SANITIZER_COMMON_CFLAGS -DSANITIZER_AMDGPU=1)
   include(CompilerRTAMDGPUUtils)
-  compiler_rt_find_amdgpu_sanitizer_dependencies()
+  compiler_rt_find_amdgpu_runtime_headers()
   include_directories(${HSA_INCLUDE_DIR} ${AMDComgr_INCLUDE_DIR})
 endif()
 
