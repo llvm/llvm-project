@@ -1736,12 +1736,12 @@ cir::GlobalOp LoweringPreparePass::getOrCreateConstAggregateGlobal(
   // No match found, create a new global. The loop above found an unused name.
   mlir::OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPointToStart(mlirModule.getBody());
-  auto gv = cir::GlobalOp::create(
-      builder, loc, name, ty,
-      /*isConstant=*/true,
-      cir::LangAddressSpaceAttr::get(&getContext(),
-                                     cir::LangAddressSpace::Default),
-      cir::GlobalLinkageKind::PrivateLinkage);
+  auto gv =
+      cir::GlobalOp::create(builder, loc, name, ty,
+                            /*isConstant=*/true,
+                            cir::LangAddressSpaceAttr::get(
+                                &getContext(), cir::LangAddressSpace::Default),
+                            cir::GlobalLinkageKind::PrivateLinkage);
   mlir::SymbolTable::setSymbolVisibility(
       gv, mlir::SymbolTable::Visibility::Private);
   gv.setInitialValueAttr(constant);
