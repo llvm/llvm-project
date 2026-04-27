@@ -2906,7 +2906,7 @@ GDBRemoteCommunicationServerLLGS::Handle_qMemoryRegionInfo(
 
 namespace {
 struct UseBreakpoint {
-  bool want_hardware;
+  bool want_hardware = false;
 };
 struct UseWatchpoint {
   uint32_t flags;
