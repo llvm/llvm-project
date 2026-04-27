@@ -102,26 +102,16 @@ pygments_style = "friendly"
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-if not tags.has("builder-man"):
-    try:
-        import furo
-    except ModuleNotFoundError:
-        print(f"install sphinx furo theme with {sys.executable} -m pip install furo")
-    html_theme = "furo"
-else:
-    html_theme = "llvm-theme"
+html_theme = "furo"
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-if html_theme == "furo":
-    html_theme_options = {
-        "source_repository": "https://github.com/llvm/llvm-project",
-        "source_branch": "main",
-        "source_directory": "llvm/docs/",
-    }
-else:
-    html_theme_options = {"nosidebar": False}
+html_theme_options = {
+    "source_repository": "https://github.com/llvm/llvm-project",
+    "source_branch": "main",
+    "source_directory": "llvm/docs/",
+}
 
 # Add any paths that contain custom themes here, relative to this directory.
 # html_theme_path = ["_themes"]
@@ -158,17 +148,6 @@ html_last_updated_fmt = "%Y-%m-%d"
 # If true, SmartyPants will be used to convert quotes and dashes to
 # typographically correct entities.
 # html_use_smartypants = True
-
-# Custom sidebar templates, maps document names to template names.
-
-if html_theme != "furo":
-    html_sidebars = {
-        "**": [
-            "indexsidebar.html",
-            "sourcelink.html",
-            "searchbox.html",
-        ]
-    }
 
 # Additional templates that should be rendered to pages, maps page names to
 # template names.
