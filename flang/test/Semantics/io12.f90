@@ -76,7 +76,7 @@ end module
 
 ! Regression test: an illegal recursive derived-type component used to cause
 ! infinite recursion in FindUnsafeIoDirectComponent when the object appeared
-! in an I/O list (https://github.com/llvm/llvm-project/issues/192387).
+! in an I/O list (issue #192387).
 subroutine test_recursive_io
   type t1
     !ERROR: Recursive use of the derived type requires POINTER or ALLOCATABLE
