@@ -4,18 +4,33 @@
 # Regression test for mergeAsyncMarks() asserting when OtherMarks is empty.
 #
 # At a CFG join point where one predecessor has an ASYNCMARK (non-empty
-# AsyncMarks) and the other does not (empty OtherMarks), MergeCount becomes
-# min(0, N) = 0. Before the fix, seq_inclusive<unsigned>(1, 0) asserted
-# Begin <= End. After the fix the function returns early: the other predecessor
-# contributed no async marks so our marks are unchanged and no stricter waits
-# are needed.
+# AsyncMarks) and the other does not (empty OtherMarks), before the fix
+# seq_inclusive<unsigned>(1, 0) would assert Begin <= End.
 #
-# Key check: no S_WAITCNT is inserted at the join block (bb.3). The else
-# branch had no async operations so merging its empty marks into the then
-# branch's non-empty marks requires no additional waits.
+# After the fix the function returns early when either side is empty.  The
+# pending async marks from the non-empty predecessor are preserved, so any
+# consumer instruction in the join block still receives the correct S_WAITCNT.
+#
+# Two patterns are tested:
+#   asyncmark_in_then - ASYNCMARK in the then-successor, else-successor is sync
+#   asyncmark_in_else - ASYNCMARK in the else-successor, then-successor is sync
+#
+# In both cases the join block must emit S_WAITCNT to drain the pending async
+# buffer load before the result is consumed.
 
 --- |
-  define void @asyncmark_merge_empty_other(i32 %cond) {
+  define void @asyncmark_in_then(i32 %cond) {
+  entry:
+    br i1 true, label %then, label %else
+  then:
+    br label %join
+  else:
+    br label %join
+  join:
+    ret void
+  }
+
+  define void @asyncmark_in_else(i32 %cond) {
   entry:
     br i1 true, label %then, label %else
   then:
@@ -28,15 +43,87 @@
 ...
 
 ---
-name:            asyncmark_merge_empty_other
+# Pattern 1: ASYNCMARK in then-successor, else-successor is sync.
+# The join block must wait for the async load from the then path.
+name:            asyncmark_in_then
 tracksRegLiveness: true
 machineFunctionInfo:
   occupancy:       8
 body:             |
-  ; CHECK-LABEL: name: asyncmark_merge_empty_other
+  ; CHECK-LABEL: name: asyncmark_in_then
   ; CHECK: bb.0.entry:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK-NEXT:   liveins: $sgpr0, $sgpr1
+  ; CHECK-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr4_sgpr5_sgpr6_sgpr7
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   S_WAITCNT 0
+  ; CHECK-NEXT:   S_CMP_LG_U32 $sgpr0, $sgpr1, implicit-def $scc
+  ; CHECK-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit killed $scc
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1.then:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT:   liveins: $sgpr0, $sgpr4_sgpr5_sgpr6_sgpr7
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr4_sgpr5_sgpr6_sgpr7, $sgpr0, 0, 0, 0, implicit $exec
+  ; CHECK-NEXT:   ASYNCMARK
+  ; CHECK-NEXT:   S_BRANCH %bb.3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2.else:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+  ; CHECK-NEXT:   S_BRANCH %bb.3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3.join:
+  ; CHECK-NEXT:   liveins: $vgpr0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   S_WAITCNT 3952
+  ; CHECK-NEXT:   $vgpr1 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+  ; CHECK-NEXT:   S_ENDPGM 0
+  bb.0.entry:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: $sgpr0, $sgpr1, $sgpr4_sgpr5_sgpr6_sgpr7
+
+    S_CMP_LG_U32 $sgpr0, $sgpr1, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.2, implicit killed $scc
+
+  ; then branch — issues async buffer load + ASYNCMARK
+  bb.1.then:
+    successors: %bb.3(0x80000000)
+    liveins: $sgpr0, $sgpr4_sgpr5_sgpr6_sgpr7
+
+    $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr4_sgpr5_sgpr6_sgpr7, $sgpr0, 0, 0, 0, implicit $exec
+    ASYNCMARK
+    S_BRANCH %bb.3
+
+  ; else branch — sync path, no async operations, OtherMarks is empty at join
+  bb.2.else:
+    successors: %bb.3(0x80000000)
+
+    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    S_BRANCH %bb.3
+
+  ; join — mergeAsyncMarks sees non-empty AsyncMarks (then) and empty OtherMarks (else).
+  ; Before fix: assertion. After fix: returns early, preserves async marks.
+  ; S_WAITCNT must be emitted before the use of $vgpr0 to drain the pending load.
+  ; (mergeAsyncMarks sees non-empty AsyncMarks from then, empty from else)
+  bb.3.join:
+    liveins: $vgpr0
+
+    $vgpr1 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+    S_ENDPGM 0
+...
+---
+# Pattern 2: ASYNCMARK in else-successor, then-successor is sync.
+# Mirror of asyncmark_in_then — exercises the opposite predecessor ordering.
+name:            asyncmark_in_else
+tracksRegLiveness: true
+machineFunctionInfo:
+  occupancy:       8
+body:             |
+  ; CHECK-LABEL: name: asyncmark_in_else
+  ; CHECK: bb.0.entry:
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr4_sgpr5_sgpr6_sgpr7
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   S_WAITCNT 0
   ; CHECK-NEXT:   S_CMP_LG_U32 $sgpr0, $sgpr1, implicit-def $scc
@@ -45,42 +132,51 @@ body:             |
   ; CHECK-NEXT: bb.1.then:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   ASYNCMARK
+  ; CHECK-NEXT:   $vgpr0 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.else:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT:   liveins: $sgpr0, $sgpr4_sgpr5_sgpr6_sgpr7
   ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr4_sgpr5_sgpr6_sgpr7, $sgpr0, 0, 0, 0, implicit $exec
+  ; CHECK-NEXT:   ASYNCMARK
   ; CHECK-NEXT:   S_BRANCH %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.join:
+  ; CHECK-NEXT:   liveins: $vgpr0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   S_WAITCNT 3952
+  ; CHECK-NEXT:   $vgpr1 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
   ; CHECK-NEXT:   S_ENDPGM 0
-  ; entry — conditional branch to then (async) or else (no async)
   bb.0.entry:
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
-    liveins: $sgpr0, $sgpr1
+    liveins: $sgpr0, $sgpr1, $sgpr4_sgpr5_sgpr6_sgpr7
 
     S_CMP_LG_U32 $sgpr0, $sgpr1, implicit-def $scc
     S_CBRANCH_SCC1 %bb.2, implicit killed $scc
 
-  ; then branch — ASYNCMARK records non-empty AsyncMarks
+  ; then branch — sync path, no async operations
   bb.1.then:
     successors: %bb.3(0x80000000)
 
+    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    S_BRANCH %bb.3
+
+  ; else branch — issues async buffer load + ASYNCMARK
+  bb.2.else:
+    successors: %bb.3(0x80000000)
+    liveins: $sgpr0, $sgpr4_sgpr5_sgpr6_sgpr7
+
+    $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr4_sgpr5_sgpr6_sgpr7, $sgpr0, 0, 0, 0, implicit $exec
     ASYNCMARK
     S_BRANCH %bb.3
 
-  ; else branch — no async operations, OtherMarks is empty at join
-  bb.2.else:
-    successors: %bb.3(0x80000000)
-
-    S_BRANCH %bb.3
-
-  ; join — mergeAsyncMarks() sees non-empty AsyncMarks (bb.1) and empty
-  ; OtherMarks (bb.2). Before the fix: assertion. After the fix: early
-  ; return, no waitcnt inserted.
+  ; join — mergeAsyncMarks sees empty AsyncMarks (then) and non-empty OtherMarks (else).
+  ; S_WAITCNT must be emitted before the use of $vgpr0 to drain the pending load.
   bb.3.join:
-    ; Verify no waitcnt is inserted before S_ENDPGM — the else predecessor
-    ; had no async marks so no stricter waits are needed at the join.
+    liveins: $vgpr0
+
+    $vgpr1 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
     S_ENDPGM 0
 ...
