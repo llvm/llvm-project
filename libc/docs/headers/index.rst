@@ -23,6 +23,7 @@ Implementation Status
    math/index.rst
    net/if
    netinet/in
+   nl_types
    poll
    search
    setjmp
