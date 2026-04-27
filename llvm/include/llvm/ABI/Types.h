@@ -257,7 +257,9 @@ enum RecordFlags : unsigned {
   IsCXXRecord = 1 << 3,
   IsPolymorphic = 1 << 4,
   HasFlexibleArrayMember = 1 << 5,
-  LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ HasFlexibleArrayMember),
+  HasNonTrivialCopyConstructor = 1 << 6,
+  HasNonTrivialDestructor = 1 << 7,
+  LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ HasNonTrivialDestructor),
 };
 
 class RecordType : public Type {
@@ -294,6 +296,14 @@ public:
   bool hasFlexibleArrayMember() const {
     return static_cast<unsigned>(Flags & RecordFlags::HasFlexibleArrayMember) !=
            0;
+  }
+  bool hasNonTrivialCopyConstructor() const {
+    return static_cast<unsigned>(
+               Flags & RecordFlags::HasNonTrivialCopyConstructor) != 0;
+  }
+  bool hasNonTrivialDestructor() const {
+    return static_cast<unsigned>(Flags &
+                                 RecordFlags::HasNonTrivialDestructor) != 0;
   }
   uint32_t getNumBaseClasses() const { return BaseClasses.size(); }
   uint32_t getNumVirtualBaseClasses() const {
