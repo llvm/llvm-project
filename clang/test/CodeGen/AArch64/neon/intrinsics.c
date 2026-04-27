@@ -66,6 +66,8 @@ int32_t test_vmaxv_s32(int32x2_t a) {
 // LLVM:      [[VMAXV_S32_I:%.*]] = call i32 @llvm.vector.reduce.smax.v2i32(<2 x i32> [[A]])
 // LLVM:      ret i32 [[VMAXV_S32_I]]
   return vmaxv_s32(a);
+}
+
 // 2.1.3.2 Vector Saturating Shift Left
 // 
 // TODO: Implement the remaining intrinsics from this group.
