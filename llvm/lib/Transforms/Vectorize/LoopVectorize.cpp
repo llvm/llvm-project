@@ -6130,7 +6130,7 @@ InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan, ElementCount VF,
 
   // Add the cost of spills due to excess register usage
   if (RU && Config.shouldConsiderRegPressureForVF(VF))
-    Cost += RU->spillCost(CostCtx, ForceTargetNumVectorRegs);
+    Cost += RU->spillCost(CM.TTI, Config.CostKind, ForceTargetNumVectorRegs);
 
 #ifndef NDEBUG
   unsigned EstimatedWidth =
