@@ -2301,10 +2301,6 @@ int TargetLoweringBase::IntrinsicIDToISD(Intrinsic::ID ID) const {
     return ISD::FASIN;
   case Intrinsic::atan:
     return ISD::FATAN;
-  case Intrinsic::atan2:
-    return ISD::FATAN2;
-  case Intrinsic::canonicalize:
-    return ISD::FCANONICALIZE;
   case Intrinsic::cos:
     return ISD::FCOS;
   case Intrinsic::cosh:
@@ -2315,18 +2311,12 @@ int TargetLoweringBase::IntrinsicIDToISD(Intrinsic::ID ID) const {
     return ISD::FEXP2;
   case Intrinsic::exp10:
     return ISD::FEXP10;
-  case Intrinsic::ldexp:
-    return ISD::FLDEXP;
   case Intrinsic::log:
     return ISD::FLOG;
   case Intrinsic::log2:
     return ISD::FLOG2;
   case Intrinsic::log10:
     return ISD::FLOG10;
-  case Intrinsic::pow:
-    return ISD::FPOW;
-  case Intrinsic::powi:
-    return ISD::FPOWI;
   case Intrinsic::sin:
     return ISD::FSIN;
   case Intrinsic::sinh:

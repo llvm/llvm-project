@@ -313,7 +313,7 @@ Error LVBinaryReader::loadGenericTargetInfo(StringRef TripleName,
                              "no instruction info for target " + TripleName);
   MII.reset(InstructionInfo);
 
-  MC = std::make_unique<MCContext>(Triple(TheTriple), MAI.get(), MRI.get(),
+  MC = std::make_unique<MCContext>(Triple(TheTriple), *MAI, MRI.get(),
                                    STI.get());
 
   // Assembler.
