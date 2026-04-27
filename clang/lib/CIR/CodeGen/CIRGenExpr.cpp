@@ -1031,9 +1031,8 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
 
   if (const auto *bd = dyn_cast<BindingDecl>(nd)) {
     if (e->refersToEnclosingVariableOrCapture()) {
-      assert(!cir::MissingFeatures::lambdaCaptures());
-      cgm.errorNYI(e->getSourceRange(), "emitDeclRefLValue: lambda captures");
-      return LValue();
+      auto *fd = lambdaCaptureFields.lookup(bd);
+      return emitCapturedFieldLValue(*this, fd, cxxabiThisValue);
     }
     return emitLValue(bd->getBinding());
   }
