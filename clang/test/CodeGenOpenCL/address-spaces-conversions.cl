@@ -8,9 +8,7 @@
 // pointers to different address spaces
 
 // CHECK: define{{.*}} void @test
-void test(global int *arg_glob, generic int *arg_gen,
-          __attribute__((opencl_global_device)) int *arg_device,
-          __attribute__((opencl_global_host)) int *arg_host) {
+void test(global int *arg_glob, generic int *arg_gen) {
   int var_priv;
   arg_gen = arg_glob; // implicit cast global -> generic
   // CHECK: %{{[0-9]+}} = addrspacecast ptr addrspace(1) %{{[0-9]+}} to ptr addrspace(4)
@@ -39,30 +37,6 @@ void test(global int *arg_glob, generic int *arg_gen,
   // CHECK: %{{[0-9]+}} = addrspacecast ptr addrspace(1) %{{[0-9]+}} to ptr addrspace(4)
 
   generic void *var_gen_v = arg_glob;
-  // CHECK: addrspacecast
-  // CHECK-NOFAKE-NOT: addrspacecast
-
-  arg_glob = arg_device; // implicit cast
-  // CHECK: addrspacecast
-  // CHECK-NOFAKE-NOT: addrspacecast
-
-  arg_glob = arg_host; // implicit cast
-  // CHECK: addrspacecast
-  // CHECK-NOFAKE-NOT: addrspacecast
-
-  arg_glob = (global int *)arg_device; // explicit cast
-  // CHECK: addrspacecast
-  // CHECK-NOFAKE-NOT: addrspacecast
-
-  arg_glob = (global int *)arg_host; // explicit cast
-  // CHECK: addrspacecast
-  // CHECK-NOFAKE-NOT: addrspacecast
-
-  arg_device = (__attribute((opencl_global_device)) int *)arg_glob; // explicit cast
-  // CHECK: addrspacecast
-  // CHECK-NOFAKE-NOT: addrspacecast
-
-  arg_host = (__attribute((opencl_global_host)) int *)arg_glob; // explicit cast
   // CHECK: addrspacecast
   // CHECK-NOFAKE-NOT: addrspacecast
 }

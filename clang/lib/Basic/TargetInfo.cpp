@@ -34,27 +34,23 @@ static const LangASMap FakeAddrSpaceMap = {
     2,  // opencl_constant
     0,  // opencl_private
     4,  // opencl_generic
-    5,  // opencl_global_device
-    6,  // opencl_global_host
-    7,  // cuda_device
-    8,  // cuda_constant
-    9,  // cuda_shared
+    5,  // cuda_device
+    6,  // cuda_constant
+    7,  // cuda_shared
     1,  // sycl_global
-    5,  // sycl_global_device
-    6,  // sycl_global_host
     3,  // sycl_local
     0,  // sycl_private
-    10, // ptr32_sptr
-    11, // ptr32_uptr
-    12, // ptr64
-    13, // hlsl_groupshared
-    14, // hlsl_constant
-    15, // hlsl_private
-    16, // hlsl_device
-    17, // hlsl_input
-    18, // hlsl_output
-    19, // hlsl_push_constant
-    20, // wasm_funcref
+    8,  // ptr32_sptr
+    9,  // ptr32_uptr
+    10, // ptr64
+    11, // hlsl_groupshared
+    12, // hlsl_constant
+    13, // hlsl_private
+    14, // hlsl_device
+    15, // hlsl_input
+    16, // hlsl_output
+    17, // hlsl_push_constant
+    18, // wasm_funcref
 };
 
 // TargetInfo Constructor.

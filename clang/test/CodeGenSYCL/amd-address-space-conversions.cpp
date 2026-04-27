@@ -25,10 +25,6 @@ void tmpl(T t) {}
   // CHECK-DAG: [[LOC:%[a-zA-Z0-9]+]] = alloca ptr addrspace(3), align 4, addrspace(5)
   __attribute__((opencl_private)) int *PRIV;
   // CHECK-DAG: [[PRIV:%[a-zA-Z0-9]+]] = alloca ptr addrspace(5), align 4, addrspace(5)
-  __attribute__((opencl_global_device)) int *GLOBDEVICE;
-  // CHECK-DAG: [[GLOB_DEVICE:%[a-zA-Z0-9]+]] = alloca ptr addrspace(1), align 8, addrspace(5)
-  __attribute__((opencl_global_host)) int *GLOBHOST;
-  // CHECK-DAG: [[GLOB_HOST:%[a-zA-Z0-9]+]] = alloca ptr addrspace(1), align 8, addrspace(5)
   LOC = nullptr;
   // CHECK-DAG: store ptr addrspace(3) addrspacecast (ptr null to ptr addrspace(3)), ptr [[LOC]].ascast, align 4
   GLOB = nullptr;
@@ -57,12 +53,6 @@ void tmpl(T t) {}
   // CHECK-DAG: [[NoAS_LOAD:%[a-zA-Z0-9]+]] = load ptr, ptr [[NoAS]].ascast, align 8
   // CHECK-DAG: [[NoAS_CAST:%[a-zA-Z0-9]+]] = addrspacecast ptr [[NoAS_LOAD]] to ptr addrspace(5)
   // CHECK-DAG: store ptr addrspace(5) [[NoAS_CAST]], ptr [[PRIV]].ascast, align 4
-  GLOB = (__attribute__((opencl_global)) int *)GLOBDEVICE;
-  // CHECK-DAG: [[NoAS_LOAD:%[a-zA-Z0-9]+]] = load ptr addrspace(1), ptr [[GLOB]]DEVICE.ascast, align 8
-  // CHECK-DAG: store ptr addrspace(1) [[NoAS_LOAD]], ptr [[GLOB]].ascast, align 8
-  GLOB = (__attribute__((opencl_global)) int *)GLOBHOST;
-  // CHECK-DAG: [[NoAS_LOAD:%[a-zA-Z0-9]+]] = load ptr addrspace(1), ptr [[GLOB]]HOST.ascast, align 8
-  // CHECK-DAG: tore ptr addrspace(1) [[NoAS_LOAD]], ptr [[GLOB]].ascast, align 8
   bar(*GLOB);
   // CHECK-DAG: [[GLOB_LOAD:%[a-zA-Z0-9]+]] = load ptr addrspace(1), ptr [[GLOB]].ascast, align 8
   // CHECK-DAG: [[GLOB_CAST:%[a-zA-Z0-9]+]] = addrspacecast ptr addrspace(1) [[GLOB_LOAD]] to ptr

@@ -40,12 +40,6 @@ following conversions:
   space-attributed type
 - implicit conversions from the address space-attributed type to the default
   address space
-- explicit conversions to/from the global address space from/to the
-  ``__attribute__((opencl_global_device))`` or
-  ``__attribute__((opencl_global_host))`` address space-attributed type
-- implicit conversions from the ``__attribute__((opencl_global_device))`` or
-  ``__attribute__((opencl_global_host))`` address space-attributed type to the
-  global address space
 
 All named address spaces are disjoint and sub-sets of default address space.
 
@@ -103,10 +97,6 @@ space attributes for pointers:
      - SYCL address_space enumeration
    * - ``__attribute__((opencl_global))``
      - global_space, constant_space
-   * - ``__attribute__((opencl_global_device))``
-     - global_space
-   * - ``__attribute__((opencl_global_host))``
-     - global_space
    * - ``__attribute__((opencl_local))``
      - local_space
    * - ``__attribute__((opencl_private))``
@@ -114,6 +104,4 @@ space attributes for pointers:
 
 
 .. code-block:: C++
-
-    //TODO: add support for __attribute__((opencl_global_host)) and __attribute__((opencl_global_device)).
 
