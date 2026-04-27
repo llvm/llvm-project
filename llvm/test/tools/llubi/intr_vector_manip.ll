@@ -23,6 +23,11 @@ define void @main() {
   %splice_right_full_rhs = call <4 x i32> @llvm.vector.splice.right.v4i32(<4 x i32> <i32 0, i32 1, i32 2, i32 3>, <4 x i32> <i32 10, i32 11, i32 12, i32 13>, i32 0)
   %splice_right_poison = call <4 x i32> @llvm.vector.splice.right.v4i32(<4 x i32> <i32 0, i32 1, i32 2, i32 3>, <4 x i32> <i32 10, i32 11, i32 12, i32 13>, i32 5)
 
+  %extract_poison_idx = call <2 x i32> @llvm.vector.extract.v2i32.v6i32(<6 x i32> zeroinitializer, i64 poison)
+  %insert_poison_idx = call <6 x i32> @llvm.vector.insert.v6i32.v2i32(<6 x i32> zeroinitializer, <2 x i32> <i32 1, i32 2>, i64 poison)
+  %splice_left_poison_idx = call <4 x i32> @llvm.vector.splice.left.v4i32(<4 x i32> zeroinitializer, <4 x i32> zeroinitializer, i32 poison)
+  %splice_right_poison_idx = call <4 x i32> @llvm.vector.splice.right.v4i32(<4 x i32> zeroinitializer, <4 x i32> zeroinitializer, i32 poison)
+
   ret void
 }
 
@@ -43,5 +48,9 @@ define void @main() {
 ; CHECK-NEXT:   %splice_right = call <4 x i32> @llvm.vector.splice.right.v4i32(<4 x i32> <i32 0, i32 1, i32 2, i32 3>, <4 x i32> <i32 10, i32 11, i32 12, i32 13>, i32 1) => { i32 3, i32 10, i32 11, i32 12 }
 ; CHECK-NEXT:   %splice_right_full_rhs = call <4 x i32> @llvm.vector.splice.right.v4i32(<4 x i32> <i32 0, i32 1, i32 2, i32 3>, <4 x i32> <i32 10, i32 11, i32 12, i32 13>, i32 0) => { i32 10, i32 11, i32 12, i32 13 }
 ; CHECK-NEXT:   %splice_right_poison = call <4 x i32> @llvm.vector.splice.right.v4i32(<4 x i32> <i32 0, i32 1, i32 2, i32 3>, <4 x i32> <i32 10, i32 11, i32 12, i32 13>, i32 5) => poison
+; CHECK-NEXT:   %extract_poison_idx = call <2 x i32> @llvm.vector.extract.v2i32.v6i32(<6 x i32> zeroinitializer, i64 poison) => poison
+; CHECK-NEXT:   %insert_poison_idx = call <6 x i32> @llvm.vector.insert.v6i32.v2i32(<6 x i32> zeroinitializer, <2 x i32> <i32 1, i32 2>, i64 poison) => poison
+; CHECK-NEXT:   %splice_left_poison_idx = call <4 x i32> @llvm.vector.splice.left.v4i32(<4 x i32> zeroinitializer, <4 x i32> zeroinitializer, i32 poison) => poison
+; CHECK-NEXT:   %splice_right_poison_idx = call <4 x i32> @llvm.vector.splice.right.v4i32(<4 x i32> zeroinitializer, <4 x i32> zeroinitializer, i32 poison) => poison
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

@@ -380,11 +380,53 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
   }
 
   // Helper function to get the length of a (possible scalable) vector.
-  uint32_t getVectorLength(VectorType *Ty) {
+  uint32_t getVectorNumElements(VectorType *Ty) {
     const auto ElemCount = Ty->getElementCount();
     if (ElemCount.isFixed())
       return ElemCount.getFixedValue();
     return ElemCount.getKnownMinValue() * Ctx.getVScale();
+  }
+
+  unsigned getDeinterleaveIntrinsicFactor(Intrinsic::ID IID) {
+    switch (IID) {
+    case Intrinsic::vector_deinterleave2:
+      return 2;
+    case Intrinsic::vector_deinterleave3:
+      return 3;
+    case Intrinsic::vector_deinterleave4:
+      return 4;
+    case Intrinsic::vector_deinterleave5:
+      return 5;
+    case Intrinsic::vector_deinterleave6:
+      return 6;
+    case Intrinsic::vector_deinterleave7:
+      return 7;
+    case Intrinsic::vector_deinterleave8:
+      return 8;
+    default:
+      llvm_unreachable("Unexpected intrinsic ID");
+    }
+  }
+
+  unsigned getInterleaveIntrinsicFactor(Intrinsic::ID IID) {
+    switch (IID) {
+    case Intrinsic::vector_interleave2:
+      return 2;
+    case Intrinsic::vector_interleave3:
+      return 3;
+    case Intrinsic::vector_interleave4:
+      return 4;
+    case Intrinsic::vector_interleave5:
+      return 5;
+    case Intrinsic::vector_interleave6:
+      return 6;
+    case Intrinsic::vector_interleave7:
+      return 7;
+    case Intrinsic::vector_interleave8:
+      return 8;
+    default:
+      llvm_unreachable("Unexpected intrinsic ID");
+    }
   }
 
 public:
@@ -746,10 +788,8 @@ public:
       return Res ? *Res : AnyValue::poison();
     }
     case Intrinsic::vector_insert: {
-      if (Args[2].isPoison()) {
-        reportImmediateUB("vector_insert with poison index");
+      if (Args[2].isPoison())
         return AnyValue::poison();
-      }
       const auto &Vec = Args[0].asAggregate();
       const auto &SubVec = Args[1].asAggregate();
       const auto &Idx = Args[2].asInteger();
@@ -767,10 +807,8 @@ public:
       return std::move(Res);
     }
     case Intrinsic::vector_extract: {
-      if (Args[1].isPoison()) {
-        reportImmediateUB("vector_extract with poison index");
+      if (Args[1].isPoison())
         return AnyValue::poison();
-      }
       const auto &Vec = Args[0].asAggregate();
       const auto &Idx = Args[1].asInteger();
       const uint64_t Offset = Idx.getZExtValue();
@@ -791,26 +829,7 @@ public:
     case Intrinsic::vector_deinterleave6:
     case Intrinsic::vector_deinterleave7:
     case Intrinsic::vector_deinterleave8: {
-      const unsigned Factor = [IID]() -> unsigned {
-        switch (IID) {
-        case Intrinsic::vector_deinterleave2:
-          return 2;
-        case Intrinsic::vector_deinterleave3:
-          return 3;
-        case Intrinsic::vector_deinterleave4:
-          return 4;
-        case Intrinsic::vector_deinterleave5:
-          return 5;
-        case Intrinsic::vector_deinterleave6:
-          return 6;
-        case Intrinsic::vector_deinterleave7:
-          return 7;
-        case Intrinsic::vector_deinterleave8:
-          return 8;
-        default:
-          llvm_unreachable("Unexpected intrinsic ID");
-        }
-      }();
+      const unsigned Factor = getDeinterleaveIntrinsicFactor(IID);
       const auto &Vec = Args[0].asAggregate();
       std::vector<std::vector<AnyValue>> Res(Factor);
       for (auto &SubVec : Res)
@@ -831,26 +850,7 @@ public:
     case Intrinsic::vector_interleave6:
     case Intrinsic::vector_interleave7:
     case Intrinsic::vector_interleave8: {
-      const unsigned Factor = [IID]() -> unsigned {
-        switch (IID) {
-        case Intrinsic::vector_interleave2:
-          return 2;
-        case Intrinsic::vector_interleave3:
-          return 3;
-        case Intrinsic::vector_interleave4:
-          return 4;
-        case Intrinsic::vector_interleave5:
-          return 5;
-        case Intrinsic::vector_interleave6:
-          return 6;
-        case Intrinsic::vector_interleave7:
-          return 7;
-        case Intrinsic::vector_interleave8:
-          return 8;
-        default:
-          llvm_unreachable("Unexpected intrinsic ID");
-        }
-      }();
+      const unsigned Factor = getInterleaveIntrinsicFactor(IID);
       const auto &Vec = Args[0].asAggregate();
       std::vector<AnyValue> Res;
       Res.reserve(Vec.size() * Factor);
@@ -861,10 +861,8 @@ public:
       return std::move(Res);
     }
     case Intrinsic::vector_splice_left: {
-      if (Args[2].isPoison()) {
-        reportImmediateUB("vector_splice_left with poison offset");
+      if (Args[2].isPoison())
         return AnyValue::poison();
-      }
       const auto &LHS = Args[0].asAggregate();
       const auto &RHS = Args[1].asAggregate();
       const auto &Off = Args[2].asInteger();
@@ -881,10 +879,8 @@ public:
       return std::move(Res);
     }
     case Intrinsic::vector_splice_right: {
-      if (Args[2].isPoison()) {
-        reportImmediateUB("vector_splice_right with poison offset");
+      if (Args[2].isPoison())
         return AnyValue::poison();
-      }
       const auto &LHS = Args[0].asAggregate();
       const auto &RHS = Args[1].asAggregate();
       const auto &Off = Args[2].asInteger();
@@ -902,11 +898,12 @@ public:
     }
     case Intrinsic::stepvector: {
       std::vector<AnyValue> Res;
-      const uint32_t Len = getVectorLength(cast<VectorType>(RetTy));
+      const uint32_t Len = getVectorNumElements(cast<VectorType>(RetTy));
       const unsigned BitWidth = RetTy->getScalarSizeInBits();
       Res.reserve(Len);
       for (uint64_t I = 0; I != Len; ++I) {
-        Res.push_back(APInt(BitWidth, I, false, true));
+        Res.push_back(
+            APInt(BitWidth, I, /*IsSigned=*/false, /*ImplicitTrunc*/ true));
       }
       return std::move(Res);
     }
