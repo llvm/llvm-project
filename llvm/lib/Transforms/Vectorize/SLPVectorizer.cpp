@@ -8224,8 +8224,8 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom,
                        ++UndefCnt;
                      return Idx != PoisonMaskElem && Idx != Val;
                    }) ||
-            Val >= static_cast<int>(NumParts) || UsedVals.test(Val) ||
-            UndefCnt > Sz / 2)
+            Val >= static_cast<int>(NumParts) || Val == PoisonMaskElem ||
+            UsedVals.test(Val) || UndefCnt > Sz / 2)
           return std::nullopt;
         UsedVals.set(Val);
         for (unsigned K = 0; K < NumParts; ++K) {
@@ -11281,7 +11281,7 @@ static bool tryToFindDuplicates(SmallVectorImpl<Value *> &VL,
       if (isConstant(V))
         UniquesDemandedElts.clearBit(Idx);
     InstructionCost UniquesCost =
-        (!BuildGatherOnly || R.hasSameNode(S, UniqueValues))
+        CanSkipBVCost
             ? InstructionCost(TTI::TCC_Free)
             : ::getScalarizationOverhead(TTI, ScalarTy, UniquesVecTy,
                                          UniquesDemandedElts, /*Insert=*/true,
