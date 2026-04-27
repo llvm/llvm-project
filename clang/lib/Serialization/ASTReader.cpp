@@ -11735,6 +11735,9 @@ OMPClause *OMPClauseReader::readClause() {
   case llvm::omp::OMPC_graph_reset:
     C = new (Context) OMPGraphResetClause();
     break;
+  case llvm::omp::OMPC_replayable:
+    C = new (Context) OMPReplayableClause();
+    break;
   case llvm::omp::OMPC_num_tasks:
     C = new (Context) OMPNumTasksClause();
     break;
@@ -12039,6 +12042,11 @@ void OMPClauseReader::VisitOMPDetachClause(OMPDetachClause *C) {
 }
 
 void OMPClauseReader::VisitOMPNowaitClause(OMPNowaitClause *C) {
+  C->setCondition(Record.readSubExpr());
+  C->setLParenLoc(Record.readSourceLocation());
+}
+
+void OMPClauseReader::VisitOMPReplayableClause(OMPReplayableClause *C) {
   C->setCondition(Record.readSubExpr());
   C->setLParenLoc(Record.readSourceLocation());
 }
