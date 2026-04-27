@@ -747,6 +747,7 @@ int referenced_inside_const() {
 //
 // OGCG-LABEL: define internal noundef i32 @"_ZZ23referenced_inside_constvENK3$_0clEv"(
 // OGCG:   load i32, ptr @_ZZ23referenced_inside_constvE12static_local
+}
 
 // Reference-typed static local with a non-constant initializer. The
 // cir.get_global emitted inside the initializer region for the reference
