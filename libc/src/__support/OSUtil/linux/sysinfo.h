@@ -102,6 +102,8 @@ class ProcParser {
 
   LIBC_INLINE bool consume(char ch) {
     if (internal::isdigit(ch)) {
+      // Not using internal::strtointeger here because a number can be across
+      // two reads in rare cases.
       current_number = current_number * 10 + static_cast<size_t>(ch - '0');
       if (state == ProcParserState::ParseUnstarted)
         state = ProcParserState::ParseNumber;
