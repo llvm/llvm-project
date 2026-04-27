@@ -27,14 +27,13 @@ using namespace lldb_private;
 /// \param[in,out] data  Buffer containing raw ConPTY output.
 /// \param[in,out] len   On entry, the number of valid bytes in \p data.
 ///                      Updated to the number of bytes after stripping.
-/// \return  true if at least one sequence was stripped (caller should stop
-///          calling this function on future reads).
-static bool StripConPTYSequences(void *data, size_t &len) {
+/// \param[in] strip_init  If true, also strip init-only sequences (\x1b[m,
+///                        \x1b[?25h) that ConPTY emits at startup.
+static void StripConPTYSequences(void *data, size_t &len, bool strip_init) {
   auto *buf = static_cast<char *>(data);
   char *out = buf;
   const char *in = buf;
   const char *end = buf + len;
-  bool stripped = false;
 
   while (in < end) {
     if (*in != '\x1b') {
@@ -45,17 +44,30 @@ static bool StripConPTYSequences(void *data, size_t &len) {
     size_t remaining = end - in;
 
     // \x1b[6n - cursor-position query (PSEUDOCONSOLE_INHERIT_CURSOR init)
+    // This query is always replied to in OpenPseudoConsole.
     if (remaining >= 4 && memcmp(in, "\x1b[6n", 4) == 0) {
       in += 4;
-      stripped = true;
       continue;
+    }
+
+    if (strip_init) {
+      // \x1b[m - SGR reset (ConPTY init)
+      if (remaining >= 3 && memcmp(in, "\x1b[m", 3) == 0) {
+        in += 3;
+        continue;
+      }
+
+      // \x1b[?25h - show cursor (ConPTY init)
+      if (remaining >= 6 && memcmp(in, "\x1b[?25h", 6) == 0) {
+        in += 6;
+        continue;
+      }
     }
 
     // \x1b[?9001h / \x1b[?9001l - Win32 Input Mode enable/disable
     if (remaining >= 8 && memcmp(in, "\x1b[?9001", 7) == 0 &&
         (in[7] == 'h' || in[7] == 'l')) {
       in += 8;
-      stripped = true;
       continue;
     }
 
@@ -63,7 +75,6 @@ static bool StripConPTYSequences(void *data, size_t &len) {
     if (remaining >= 8 && memcmp(in, "\x1b[?1004", 7) == 0 &&
         (in[7] == 'h' || in[7] == 'l')) {
       in += 8;
-      stripped = true;
       continue;
     }
 
@@ -71,12 +82,11 @@ static bool StripConPTYSequences(void *data, size_t &len) {
     if (remaining >= 4 && in[1] == ']' && in[2] == '0' && in[3] == ';') {
       const char *bel =
           static_cast<const char *>(memchr(in + 4, '\x07', end - in - 4));
-      if (bel) {
+      // We assume a sequence is not split accross multiple chunks.
+      if (bel)
         in = bel + 1;
-      } else {
+      else
         in = end;
-      }
-      stripped = true;
       continue;
     }
 
@@ -84,7 +94,6 @@ static bool StripConPTYSequences(void *data, size_t &len) {
   }
 
   len = static_cast<size_t>(out - buf);
-  return stripped;
 }
 
 ConnectionConPTY::ConnectionConPTY(std::shared_ptr<PseudoConsole> pty)
@@ -117,38 +126,9 @@ size_t ConnectionConPTY::Read(void *dst, size_t dst_len,
   size_t bytes_read =
       ConnectionGenericFile::Read(out, dst_len, timeout, status, error_ptr);
 
-  if (bytes_read > 0 && !m_conpty_sequences_stripped)
-    if (StripConPTYSequences(out, bytes_read))
-      m_conpty_sequences_stripped = true;
-
-  // ConPTY translates LF -> CRLF via two separate pipe writes.
-  if (bytes_read > 0 && bytes_read < dst_len && out[bytes_read - 1] == '\r' &&
-      status == eConnectionStatusSuccess) {
-    OVERLAPPED lf_ov = {};
-    lf_ov.hEvent = ::CreateEvent(nullptr, /*bManualReset=*/TRUE,
-                                 /*bInitialState=*/FALSE, nullptr);
-    if (lf_ov.hEvent) {
-      BOOL ok = ::ReadFile(m_file, out + bytes_read, 1, nullptr, &lf_ov);
-      DWORD err = ok ? ERROR_SUCCESS : ::GetLastError();
-      if (err == ERROR_IO_PENDING) {
-        if (::WaitForSingleObject(lf_ov.hEvent, 20) == WAIT_OBJECT_0)
-          err = ERROR_SUCCESS;
-        else {
-          ::CancelIoEx(m_file, &lf_ov);
-          err = ERROR_OPERATION_ABORTED;
-        }
-      }
-      if (err == ERROR_SUCCESS) {
-        DWORD lf_read = 0;
-        if (::GetOverlappedResult(m_file, &lf_ov, &lf_read, FALSE))
-          bytes_read += lf_read;
-      } else if (err == ERROR_OPERATION_ABORTED) {
-        // Wait for the cancel to complete so lf_ov is safe to destroy.
-        DWORD dummy = 0;
-        ::GetOverlappedResult(m_file, &lf_ov, &dummy, TRUE);
-      }
-      ::CloseHandle(lf_ov.hEvent);
-    }
+  if (bytes_read > 0) {
+    StripConPTYSequences(out, bytes_read, !m_conpty_sequences_stripped);
+    m_conpty_sequences_stripped = true;
   }
 
   return bytes_read;
