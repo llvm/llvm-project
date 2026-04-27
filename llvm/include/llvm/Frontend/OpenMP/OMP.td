@@ -510,6 +510,7 @@ def OMPC_Release : Clause<[Spelling<"release">]> {
   let clangClass = "OMPReleaseClause";
 }
 def OMPC_Replayable : Clause<[Spelling<"replayable">]> {
+  let clangClass = "OMPReplayableClause";
   let flangClass = "OmpReplayableClause";
   let isValueOptional = true;
 }
@@ -1797,6 +1798,7 @@ def OMP_target_loop : Directive<[Spelling<"target loop">]> {
     VersionedClause<OMPC_NoWait>,
     VersionedClause<OMPC_OMPX_DynCGroupMem>,
     VersionedClause<OMPC_Order>,
+    VersionedClause<OMPC_Replayable, 60>,
     VersionedClause<OMPC_ThreadLimit>,
   ];
   let leafConstructs = [OMP_Target, OMP_loop];
@@ -2308,6 +2310,7 @@ def OMP_TargetParallel : Directive<[Spelling<"target parallel">]> {
     VersionedClause<OMPC_NumThreads>,
     VersionedClause<OMPC_OMPX_DynCGroupMem>,
     VersionedClause<OMPC_ProcBind>,
+    VersionedClause<OMPC_Replayable, 60>,
     VersionedClause<OMPC_Severity, 60>,
     VersionedClause<OMPC_ThreadLimit, 51>,
   ];
@@ -2342,6 +2345,7 @@ def OMP_TargetParallelDo : Directive<[Spelling<"target parallel do">]> {
     VersionedClause<OMPC_Order, 50>,
     VersionedClause<OMPC_Ordered>,
     VersionedClause<OMPC_ProcBind>,
+    VersionedClause<OMPC_Replayable, 60>,
     VersionedClause<OMPC_Schedule>,
     VersionedClause<OMPC_Severity, 60>,
   ];
@@ -2380,6 +2384,7 @@ def OMP_TargetParallelDoSimd
     VersionedClause<OMPC_Order, 50>,
     VersionedClause<OMPC_Ordered>,
     VersionedClause<OMPC_ProcBind>,
+    VersionedClause<OMPC_Replayable, 60>,
     VersionedClause<OMPC_SafeLen>,
     VersionedClause<OMPC_Schedule>,
     VersionedClause<OMPC_Severity, 60>,
@@ -2419,6 +2424,7 @@ def OMP_TargetParallelFor : Directive<[Spelling<"target parallel for">]> {
     VersionedClause<OMPC_Order, 50>,
     VersionedClause<OMPC_Ordered>,
     VersionedClause<OMPC_ProcBind>,
+    VersionedClause<OMPC_Replayable, 60>,
     VersionedClause<OMPC_Schedule>,
     VersionedClause<OMPC_Severity, 60>,
     VersionedClause<OMPC_ThreadLimit, 51>,
@@ -2460,6 +2466,7 @@ def OMP_TargetParallelForSimd
     VersionedClause<OMPC_Order, 50>,
     VersionedClause<OMPC_Ordered>,
     VersionedClause<OMPC_ProcBind>,
+    VersionedClause<OMPC_Replayable, 60>,
     VersionedClause<OMPC_SafeLen>,
     VersionedClause<OMPC_Schedule>,
     VersionedClause<OMPC_Severity, 60>,
@@ -2499,6 +2506,7 @@ def OMP_target_parallel_loop : Directive<[Spelling<"target parallel loop">]> {
     VersionedClause<OMPC_OMPX_DynCGroupMem>,
     VersionedClause<OMPC_Order>,
     VersionedClause<OMPC_ProcBind>,
+    VersionedClause<OMPC_Replayable, 60>,
     VersionedClause<OMPC_Severity, 60>,
     VersionedClause<OMPC_ThreadLimit, 51>,
   ];
@@ -2535,6 +2543,7 @@ def OMP_TargetSimd : Directive<[Spelling<"target simd">]> {
     VersionedClause<OMPC_OMPX_DynCGroupMem>,
     VersionedClause<OMPC_Order, 50>,
     VersionedClause<OMPC_ProcBind>,
+    VersionedClause<OMPC_Replayable, 60>,
     VersionedClause<OMPC_SafeLen>,
     VersionedClause<OMPC_Schedule>,
     VersionedClause<OMPC_Severity, 60>,
@@ -2568,6 +2577,7 @@ def OMP_TargetTeams : Directive<[Spelling<"target teams">]> {
     VersionedClause<OMPC_NumTeams>,
     VersionedClause<OMPC_OMPX_Bare>,
     VersionedClause<OMPC_OMPX_DynCGroupMem>,
+    VersionedClause<OMPC_Replayable, 60>,
     VersionedClause<OMPC_ThreadLimit>,
   ];
   let leafConstructs = [OMP_Target, OMP_Teams];
@@ -2601,6 +2611,7 @@ def OMP_TargetTeamsDistribute
     VersionedClause<OMPC_NumTeams>,
     VersionedClause<OMPC_OMPX_DynCGroupMem>,
     VersionedClause<OMPC_Order, 50>,
+    VersionedClause<OMPC_Replayable, 60>,
     VersionedClause<OMPC_ThreadLimit>,
   ];
   let leafConstructs = [OMP_Target, OMP_Teams, OMP_Distribute];
@@ -2636,6 +2647,7 @@ def OMP_TargetTeamsDistributeParallelDo
     VersionedClause<OMPC_NumThreads>,
     VersionedClause<OMPC_Order, 50>,
     VersionedClause<OMPC_ProcBind>,
+    VersionedClause<OMPC_Replayable, 60>,
     VersionedClause<OMPC_Schedule>,
     VersionedClause<OMPC_Severity, 60>,
     VersionedClause<OMPC_ThreadLimit>,
@@ -2677,6 +2689,7 @@ def OMP_TargetTeamsDistributeParallelDoSimd
     VersionedClause<OMPC_NumThreads>,
     VersionedClause<OMPC_Order, 50>,
     VersionedClause<OMPC_ProcBind>,
+    VersionedClause<OMPC_Replayable, 60>,
     VersionedClause<OMPC_SafeLen>,
     VersionedClause<OMPC_Schedule>,
     VersionedClause<OMPC_Severity, 60>,
@@ -2719,6 +2732,7 @@ def OMP_TargetTeamsDistributeParallelFor
     VersionedClause<OMPC_OMPX_DynCGroupMem>,
     VersionedClause<OMPC_Order, 50>,
     VersionedClause<OMPC_ProcBind>,
+    VersionedClause<OMPC_Replayable, 60>,
     VersionedClause<OMPC_Schedule>,
     VersionedClause<OMPC_Severity, 60>,
     VersionedClause<OMPC_ThreadLimit>,
@@ -2762,6 +2776,7 @@ def OMP_TargetTeamsDistributeParallelForSimd
     VersionedClause<OMPC_OMPX_DynCGroupMem>,
     VersionedClause<OMPC_Order, 50>,
     VersionedClause<OMPC_ProcBind>,
+    VersionedClause<OMPC_Replayable, 60>,
     VersionedClause<OMPC_SafeLen>,
     VersionedClause<OMPC_Schedule>,
     VersionedClause<OMPC_Severity, 60>,
@@ -2804,6 +2819,7 @@ def OMP_TargetTeamsDistributeSimd
     VersionedClause<OMPC_NumTeams>,
     VersionedClause<OMPC_OMPX_DynCGroupMem>,
     VersionedClause<OMPC_Order, 50>,
+    VersionedClause<OMPC_Replayable, 60>,
     VersionedClause<OMPC_SafeLen>,
     VersionedClause<OMPC_SimdLen>,
     VersionedClause<OMPC_ThreadLimit>,
@@ -2834,6 +2850,7 @@ def OMP_TargetTeamsWorkdistribute : Directive<[Spelling<"target teams workdistri
     VersionedClause<OMPC_NumTeams>,
     VersionedClause<OMPC_OMPX_Bare>,
     VersionedClause<OMPC_OMPX_DynCGroupMem>,
+    VersionedClause<OMPC_Replayable, 60>,
     VersionedClause<OMPC_ThreadLimit>,
   ];
   let leafConstructs = [OMP_Target, OMP_Teams, OMP_Workdistribute];
@@ -2867,6 +2884,7 @@ def OMP_target_teams_loop : Directive<[Spelling<"target teams loop">]> {
     VersionedClause<OMPC_NumTeams>,
     VersionedClause<OMPC_OMPX_DynCGroupMem>,
     VersionedClause<OMPC_Order>,
+    VersionedClause<OMPC_Replayable, 60>,
     VersionedClause<OMPC_ThreadLimit>,
   ];
   let leafConstructs = [OMP_Target, OMP_Teams, OMP_loop];
