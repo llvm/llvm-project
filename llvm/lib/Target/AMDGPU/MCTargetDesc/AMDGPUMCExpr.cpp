@@ -19,7 +19,6 @@
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/TargetParser/TargetParser.h"
 #include <functional>
 #include <optional>
 
@@ -123,6 +122,8 @@ evaluateMCExprs(ArrayRef<const MCExpr *> Exprs, const MCAssembler *Asm,
 
 bool AMDGPUMCExpr::evaluateExtraSGPRs(MCValue &Res,
                                       const MCAssembler *Asm) const {
+  assert(Args.size() == 3 &&
+         "AMDGPUMCExpr Argument count incorrect for ExtraSGPRs");
   const MCSubtargetInfo *STI = Ctx.getSubtargetInfo();
   uint64_t VCCUsed = 0, FlatScrUsed = 0, XNACKUsed = 0;
 
@@ -137,6 +138,8 @@ bool AMDGPUMCExpr::evaluateExtraSGPRs(MCValue &Res,
 
 bool AMDGPUMCExpr::evaluateTotalNumVGPR(MCValue &Res,
                                         const MCAssembler *Asm) const {
+  assert(Args.size() == 2 &&
+         "AMDGPUMCExpr Argument count incorrect for TotalNumVGPRs");
   const MCSubtargetInfo *STI = Ctx.getSubtargetInfo();
   uint64_t NumAGPR = 0, NumVGPR = 0;
 
@@ -152,6 +155,8 @@ bool AMDGPUMCExpr::evaluateTotalNumVGPR(MCValue &Res,
 }
 
 bool AMDGPUMCExpr::evaluateAlignTo(MCValue &Res, const MCAssembler *Asm) const {
+  assert(Args.size() == 2 &&
+         "AMDGPUMCExpr Argument count incorrect for AlignTo");
   uint64_t Value = 0, Align = 0;
   if (!evaluateMCExprs(Args, Asm, {Value, Align}))
     return false;
@@ -162,6 +167,8 @@ bool AMDGPUMCExpr::evaluateAlignTo(MCValue &Res, const MCAssembler *Asm) const {
 
 bool AMDGPUMCExpr::evaluateOccupancy(MCValue &Res,
                                      const MCAssembler *Asm) const {
+  assert(Args.size() == 7 &&
+         "AMDGPUMCExpr Argument count incorrect for Occupancy");
   uint64_t InitOccupancy, MaxWaves, Granule, TargetTotalNumVGPRs, Generation,
       NumSGPRs, NumVGPRs;
 
@@ -190,12 +197,10 @@ bool AMDGPUMCExpr::evaluateOccupancy(MCValue &Res,
 }
 
 /// Get the inst_pref_size field width for the given subtarget.
-static unsigned getInstPrefSizeFieldWidth(const MCSubtargetInfo *STI) {
-  auto Version = getIsaVersion(STI->getCPU());
-  assert(Version.Major >= 11 && "inst_pref_size only exists on GFX11+");
-  if (Version.Major == 11)
-    return amdhsa::COMPUTE_PGM_RSRC3_GFX11_INST_PREF_SIZE_WIDTH;
-  return amdhsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE_WIDTH;
+static unsigned getInstPrefSizeFieldWidth(const MCSubtargetInfo &STI) {
+  if (AMDGPU::isGFX12Plus(STI))
+    return amdhsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE_WIDTH;
+  return amdhsa::COMPUTE_PGM_RSRC3_GFX11_INST_PREF_SIZE_WIDTH;
 }
 
 bool AMDGPUMCExpr::evaluateInstPrefSize(MCValue &Res,
@@ -204,7 +209,7 @@ bool AMDGPUMCExpr::evaluateInstPrefSize(MCValue &Res,
   if (!evaluateMCExprs(Args, Asm, {CodeSizeInBytes}))
     return false;
   const MCSubtargetInfo *STI = Ctx.getSubtargetInfo();
-  unsigned FieldWidth = getInstPrefSizeFieldWidth(STI);
+  unsigned FieldWidth = getInstPrefSizeFieldWidth(*STI);
   unsigned CacheLineSize = AMDGPU::IsaInfo::getInstCacheLineSize(STI);
   uint64_t CodeSizeInLines = divideCeil(CodeSizeInBytes, CacheLineSize);
   uint64_t MaxVal = (1u << FieldWidth) - 1;
@@ -519,7 +524,7 @@ static void targetOpKnownBitsMapHelper(const MCExpr *Expr, KnownBitsMap &KBM,
       // The result is clamped to (1 << FieldWidth) - 1, so upper bits are
       // known zero. FieldWidth is derived from the subtarget.
       if (const MCSubtargetInfo *STI = AGVK->getCtx().getSubtargetInfo()) {
-        unsigned FieldWidth = getInstPrefSizeFieldWidth(STI);
+        unsigned FieldWidth = getInstPrefSizeFieldWidth(*STI);
         KnownBits KB(BitWidth);
         KB.Zero.setBitsFrom(FieldWidth);
         KBM[Expr] = KB;
