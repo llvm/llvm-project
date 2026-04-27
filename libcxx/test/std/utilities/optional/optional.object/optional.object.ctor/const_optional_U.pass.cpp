@@ -151,6 +151,8 @@ constexpr bool test_ref() {
     assert(*o2 == 1);
   }
 
+  static_assert(!std::is_constructible_v<std::optional<int>, const std::optional<ConstRValueOnly<int>>&&>);
+
   return true;
 }
 #endif

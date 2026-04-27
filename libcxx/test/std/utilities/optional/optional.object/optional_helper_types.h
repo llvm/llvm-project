@@ -61,4 +61,14 @@ struct LValueOnly {
   constexpr operator T&() const&& = delete;
 };
 
+template <typename T>
+struct ConstRValueOnly {
+  mutable T val{};
+
+  constexpr operator T&() &      = delete;
+  constexpr operator T&() const& = delete;
+  constexpr operator T&() &&     = delete;
+  constexpr operator T&() const&& { return val; };
+};
+
 #endif
