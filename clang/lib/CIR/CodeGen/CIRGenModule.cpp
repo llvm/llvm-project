@@ -24,6 +24,7 @@
 #include "clang/AST/DeclOpenACC.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/AST/RecordLayout.h"
+#include "clang/AST/StmtOpenMP.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
@@ -150,6 +151,8 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
 
   if (langOpts.CUDA)
     createCUDARuntime();
+  if (langOpts.OpenMP)
+    createOpenMPRuntime();
 
   // Set the module name to be the name of the main file. TranslationUnitDecl
   // often contains invalid source locations and isn't a reliable source for the
@@ -181,6 +184,10 @@ CIRGenModule::~CIRGenModule() = default;
 
 void CIRGenModule::createCUDARuntime() {
   cudaRuntime.reset(createNVCUDARuntime(*this));
+}
+
+void CIRGenModule::createOpenMPRuntime() {
+  openMPRuntime = std::make_unique<CIRGenOpenMPRuntime>(*this);
 }
 
 /// FIXME: this could likely be a common helper and not necessarily related
@@ -455,12 +462,6 @@ void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
     return;
   }
 
-  // TODO(OMP): The logic in this function for the 'rest' of the OpenMP
-  // declarative declarations is complicated and needs to be done on a per-kind
-  // basis, so all of that needs to be added when we implement the individual
-  // global-allowed declarations. See uses of `cir::MissingFeatures::openMP
-  // throughout this function.
-
   const auto *global = cast<ValueDecl>(gd.getDecl());
 
   // If this is CUDA, be selective about which declarations we emit.
@@ -491,6 +492,22 @@ void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
     } else if (!global->hasAttr<CUDAHostAttr>() &&
                global->hasAttr<CUDADeviceAttr>())
       return;
+  }
+
+  if (langOpts.OpenMP) {
+    // If this is OpenMP, check if it is legal to emit this global normally.
+    if (openMPRuntime && openMPRuntime->emitTargetGlobal(gd))
+      return;
+    if (auto *drd = dyn_cast<OMPDeclareReductionDecl>(global)) {
+      if (mustBeEmitted(global))
+        emitOMPDeclareReduction(drd);
+      return;
+    }
+    if (auto *dmd = dyn_cast<OMPDeclareMapperDecl>(global)) {
+      if (mustBeEmitted(global))
+        emitOMPDeclareMapper(dmd);
+      return;
+    }
   }
 
   if (const auto *fd = dyn_cast<FunctionDecl>(global)) {
@@ -601,6 +618,9 @@ void CIRGenModule::emitGlobalFunctionDefinition(clang::GlobalDecl gd,
 
   if (funcDecl->getAttr<AnnotateAttr>())
     deferredAnnotations[getMangledName(gd)] = funcDecl;
+
+  if (getLangOpts().OpenMP && funcDecl->hasAttr<OMPDeclareTargetDeclAttr>())
+    getOpenMPRuntime().emitDeclareTargetFunction(funcDecl, funcOp);
 }
 
 /// Track functions to be called before main() runs.
@@ -2837,11 +2857,21 @@ cir::FuncOp CIRGenModule::getOrCreateCIRFunction(
   const Decl *d = gd.getDecl();
 
   if (const auto *fd = cast_or_null<FunctionDecl>(d)) {
-    // For the device mark the function as one that should be emitted.
-    if (getLangOpts().OpenMPIsTargetDevice && fd->isDefined() && !dontDefer &&
-        !isForDefinition)
-      errorNYI(fd->getSourceRange(),
-               "getOrCreateCIRFunction: OpenMP target function");
+    // For the device, mark the function as one that should be emitted.
+    if (getLangOpts().OpenMPIsTargetDevice && openMPRuntime &&
+        !getOpenMPRuntime().markAsGlobalTarget(gd) && fd->isDefined() &&
+        !dontDefer && !isForDefinition) {
+      if (const FunctionDecl *fdDef = fd->getDefinition()) {
+        GlobalDecl gdDef;
+        if (const auto *cd = dyn_cast<CXXConstructorDecl>(fdDef))
+          gdDef = GlobalDecl(cd, gd.getCtorType());
+        else if (const auto *dd = dyn_cast<CXXDestructorDecl>(fdDef))
+          gdDef = GlobalDecl(dd, gd.getDtorType());
+        else
+          gdDef = GlobalDecl(fdDef);
+        emitGlobal(gdDef);
+      }
+    }
 
     // Any attempts to use a MultiVersion function should result in retrieving
     // the iFunc instead. Name mangling will handle the rest of the changes.
