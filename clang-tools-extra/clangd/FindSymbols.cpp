@@ -197,11 +197,11 @@ bool isUniqueDefinition(const NamedDecl *Decl) {
 // symbol. This is needed to avoid redundant tags, e.g. Overrides implies
 // Virtual and Implements implies Overrides/Virtual.
 SymbolTags filterSymbolTags(SymbolTags ST) {
-  const SymbolTags VirtualMask = toSymbolTagBitmask(SymbolTag::Virtual);
-  const SymbolTags OverridesMask = toSymbolTagBitmask(SymbolTag::Overrides);
-  const SymbolTags ImplementsMask = toSymbolTagBitmask(SymbolTag::Implements);
-  const SymbolTags AbstractMask = toSymbolTagBitmask(SymbolTag::Abstract);
-  const SymbolTags FinalMask = toSymbolTagBitmask(SymbolTag::Final);
+  const SymbolTags VirtualMask = SymbolTags::fromTag(SymbolTag::Virtual);
+  const SymbolTags OverridesMask = SymbolTags::fromTag(SymbolTag::Overrides);
+  const SymbolTags ImplementsMask = SymbolTags::fromTag(SymbolTag::Implements);
+  const SymbolTags AbstractMask = SymbolTags::fromTag(SymbolTag::Abstract);
+  const SymbolTags FinalMask = SymbolTags::fromTag(SymbolTag::Final);
 
   // Implements implies Overrides + Virtual.
   if (ST & ImplementsMask)
@@ -242,57 +242,53 @@ template <typename E> constexpr E enumIncrement(E Value) {
 }
 } // namespace
 
-SymbolTags toSymbolTagBitmask(const SymbolTag ST) {
-  return SymbolTags::fromTag(ST);
-}
-
 SymbolTags computeSymbolTags(const NamedDecl &ND) {
   SymbolTags Result;
   const auto IsDef = isUniqueDefinition(&ND);
 
   if (ND.isDeprecated())
-    Result |= toSymbolTagBitmask(SymbolTag::Deprecated);
+    Result |= SymbolTags::fromTag(SymbolTag::Deprecated);
 
   if (isConst(&ND))
-    Result |= toSymbolTagBitmask(SymbolTag::ReadOnly);
+    Result |= SymbolTags::fromTag(SymbolTag::ReadOnly);
 
   if (isStatic(&ND))
-    Result |= toSymbolTagBitmask(SymbolTag::Static);
+    Result |= SymbolTags::fromTag(SymbolTag::Static);
 
   if (isVirtual(&ND))
-    Result |= toSymbolTagBitmask(SymbolTag::Virtual);
+    Result |= SymbolTags::fromTag(SymbolTag::Virtual);
 
   if (isAbstract(&ND))
-    Result |= toSymbolTagBitmask(SymbolTag::Abstract);
+    Result |= SymbolTags::fromTag(SymbolTag::Abstract);
 
   if (isOverrides(&ND))
-    Result |= toSymbolTagBitmask(SymbolTag::Overrides);
+    Result |= SymbolTags::fromTag(SymbolTag::Overrides);
 
   if (isFinal(&ND))
-    Result |= toSymbolTagBitmask(SymbolTag::Final);
+    Result |= SymbolTags::fromTag(SymbolTag::Final);
 
   if (isImplements(&ND))
-    Result |= toSymbolTagBitmask(SymbolTag::Implements);
+    Result |= SymbolTags::fromTag(SymbolTag::Implements);
 
   if (not isa<UnresolvedUsingValueDecl>(ND)) {
     // Do not treat an UnresolvedUsingValueDecl as a declaration.
     // It's more common to think of it as a reference to the
     // underlying declaration.
-    Result |= toSymbolTagBitmask(SymbolTag::Declaration);
+    Result |= SymbolTags::fromTag(SymbolTag::Declaration);
 
     if (IsDef)
-      Result |= toSymbolTagBitmask(SymbolTag::Definition);
+      Result |= SymbolTags::fromTag(SymbolTag::Definition);
   }
 
   switch (ND.getAccess()) {
   case AS_public:
-    Result |= toSymbolTagBitmask(SymbolTag::Public);
+    Result |= SymbolTags::fromTag(SymbolTag::Public);
     break;
   case AS_protected:
-    Result |= toSymbolTagBitmask(SymbolTag::Protected);
+    Result |= SymbolTags::fromTag(SymbolTag::Protected);
     break;
   case AS_private:
-    Result |= toSymbolTagBitmask(SymbolTag::Private);
+    Result |= SymbolTags::fromTag(SymbolTag::Private);
     break;
   default:
     break;
@@ -318,7 +314,7 @@ std::vector<SymbolTag> expandTagBitmask(const SymbolTags STGS) {
   constexpr uint32_t MaxTag = static_cast<uint32_t>(SymbolTag::LastTag);
   for (uint32_t I = MinTag; I <= MaxTag; ++I) {
     auto ST = static_cast<SymbolTag>(I);
-    if (STGS & toSymbolTagBitmask(ST))
+    if (STGS & SymbolTags::fromTag(ST))
       Tags.push_back(ST);
   }
   return Tags;
@@ -347,7 +343,7 @@ std::vector<SymbolTag> getSymbolTags(const NamedDecl &ND) {
   // [FirstTag .. LastTag].
   for (SymbolTag Tag = SymbolTag::FirstTag; Tag <= SymbolTag::LastTag;
        Tag = enumIncrement(Tag)) {
-    if (FilteredTags & toSymbolTagBitmask(Tag))
+    if (FilteredTags & SymbolTags::fromTag(Tag))
       Tags.push_back(Tag);
   }
   return Tags;
