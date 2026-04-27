@@ -842,28 +842,6 @@ defm DS_BPERMUTE_B32 : DS_1A1D_PERMUTE_mc<"ds_bpermute_b32",
 
 } // let SubtargetPredicate = isGFX8Plus
 
-def uniform_ds_bpermute
-    : PatFrag<(ops node:$byte_offset, node:$src),
-              (int_amdgcn_ds_bpermute node:$byte_offset, node:$src),
-              [{ return !N->getOperand(1)->isDivergent(); }]> {
-  let GISelPredicateCode = [{ return true; }];
-}
-
-let SubtargetPredicate = isGFX8Plus in {
-
-// ds_bpermute(shl(uniform_lane, 2), src) -> v_readlane_b32(src, uniform_lane)
-let AddedComplexity = 20 in
-def : GCNPat<(i32 (uniform_ds_bpermute (shl (i32 SGPR_32:$lane), (i32 2)), i32:$src)),
-             (V_READLANE_B32 VRegOrLdsSrc_32:$src, SCSrc_b32:$lane)>;
-
-// ds_bpermute(uniform_byte_offset, src) -> v_readlane_b32(src, uniform_byte_offset >> 2)
-let AddedComplexity = 10 in
-def : GCNPat<(i32 (uniform_ds_bpermute (i32 SGPR_32:$byte_offset), i32:$src)),
-             (V_READLANE_B32 VRegOrLdsSrc_32:$src,
-              (S_LSHR_B32 SCSrc_b32:$byte_offset, (i32 2)))>;
-
-} // let SubtargetPredicate = isGFX8Plus
-
 let SubtargetPredicate = HasLDSFPAtomicAddF32, OtherPredicates = [HasDsSrc2Insts] in {
 def DS_ADD_SRC2_F32 : DS_1A<"ds_add_src2_f32">;
 }

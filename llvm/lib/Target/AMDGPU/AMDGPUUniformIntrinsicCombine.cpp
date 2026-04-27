@@ -129,6 +129,37 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II,
         Mod, Intrinsic::amdgcn_readlane, II.getType()));
     return true;
   }
+  case Intrinsic::amdgcn_ds_bpermute: {
+    Use &IdxUse = II.getOperandUse(0);
+    Use &SrcUse = II.getOperandUse(1);
+    Value *SrcVal = SrcUse.get();
+
+    // If src argument is uniform then bpermute returns the same value for every
+    // lane.
+    if (!isDivergentUseWithNew(SrcUse, UI, Tracker)) {
+      LLVM_DEBUG(dbgs() << "Replacing " << II << " with uniform src " << *SrcVal
+                        << '\n');
+      II.replaceAllUsesWith(SrcVal);
+      II.eraseFromParent();
+      return true;
+    }
+
+    if (isDivergentUseWithNew(IdxUse, UI, Tracker))
+      return false;
+
+    IRBuilder<> Builder(&II);
+    Value *Lane = Builder.CreateLShr(IdxUse.get(), 2);
+    Tracker[Lane] = true; // new shl is uniform
+
+    Module *Mod = II.getModule();
+    II.setCalledFunction(Intrinsic::getOrInsertDeclaration(
+        Mod, Intrinsic::amdgcn_readlane, II.getType()));
+    II.setArgOperand(0, SrcVal);
+    II.setArgOperand(1, Lane);
+    LLVM_DEBUG(dbgs() << "Folded bpermute with uniform index to readlane: "
+                      << II << '\n');
+    return true;
+  }
   default:
     return false;
   }
