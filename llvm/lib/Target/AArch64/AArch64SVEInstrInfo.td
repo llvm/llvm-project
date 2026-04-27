@@ -4834,11 +4834,11 @@ let Predicates = [HasSVE2p2_or_SME2p2] in {
 //===----------------------------------------------------------------------===//
 let Predicates = [HasSVE2p3_or_SME2p3] in {
   // SVE2 Add pairwise within quadword vector segments (unpredicated)
-  defm ADDQP_ZZZ     : sve2_int_mul<0b110, "addqp",   null_frag>;
+  defm ADDQP_ZZZ     : sve2_int_mul<0b110, "addqp",   int_aarch64_sve_addqp>;
 
   // SVE2 Add subtract/subtract pairwise
-  defm ADDSUBP_ZZZ   : sve2_int_mul<0b111, "addsubp", null_frag>;
-  defm SUBP_ZPmZZ    : sve2_int_arith_pred<0b100001, "subp", null_frag>;
+  defm ADDSUBP_ZZZ   : sve2_int_mul<0b111, "addsubp", int_aarch64_sve_addsubp>;
+  defm SUBP_ZPmZZ    : sve2_int_arith_pred<0b100001, "subp", int_aarch64_sve_subp>;
 
   // SVE2 integer absolute difference and accumulate long
   defm SABAL_ZZZ : sve2_int_two_way_absdiff_accum_long<0b0, "sabal">;

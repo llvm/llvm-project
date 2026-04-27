@@ -40,7 +40,8 @@ bool MCAsmInfoELF::useCodeAlign(const MCSection &Sec) const {
   return static_cast<const MCSectionELF &>(Sec).getFlags() & ELF::SHF_EXECINSTR;
 }
 
-MCAsmInfoELF::MCAsmInfoELF() {
+MCAsmInfoELF::MCAsmInfoELF(const MCTargetOptions &Options)
+    : MCAsmInfo(Options) {
   HasIdentDirective = true;
   HasPreferredAlignment = true;
   WeakRefDirective = "\t.weak\t";
