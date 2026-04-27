@@ -1216,6 +1216,70 @@ class TruncfToOCLPattern : public OpConversionPattern<TruncfOp> {
               ->getResult(0);
 
       rewriter.replaceOp(op, result);
+    } else if (dstEtype == TruncfDstElemTypes::E2M1) {
+      // Convert 8 elements at a time.
+      // To convert 8 elements, vector<8xf16>:
+      // Use:
+      // uint __builtin_IB_dnscl_hf16(uint, uint, 1, 0)
+      // uint __builtin_IB_dnscl_hf16(uint, uint, 1, 3)
+      // llvm.or
+      Value cast = LLVM::BitcastOp::create(
+          rewriter, op.getLoc(), VectorType::get(8, rewriter.getI32Type()),
+          src);
+
+      auto genDnscl = [&](Value input, Value idx0, Value idx1, Value dstTy,
+                          Value mode) -> Value {
+        std::string fnName = "__builtin_IB_dnscl_hf16";
+        Value arg1 =
+            LLVM::ExtractElementOp::create(rewriter, op.getLoc(), input, idx0)
+                ->getResult(0);
+        Value arg2 =
+            LLVM::ExtractElementOp::create(rewriter, op.getLoc(), input, idx1)
+                ->getResult(0);
+        SmallVector<Type> argTypes{arg1.getType(), arg2.getType()};
+        SmallVector<Value> args{arg1, arg2};
+        Value dnscl = createDeviceFunctionCall(
+                          rewriter, fnName, rewriter.getI32Type(), argTypes,
+                          args, {}, funcAttrs, op.getOperation())
+                          ->getResult(0);
+        return dnscl;
+      };
+
+      Value zero = LLVM::ConstantOp::create(rewriter, op.getLoc(),
+                                            rewriter.getI32Type(), 0);
+      Value one = LLVM::ConstantOp::create(rewriter, op.getLoc(),
+                                           rewriter.getI32Type(), 1);
+      Value two = LLVM::ConstantOp::create(rewriter, op.getLoc(),
+                                           rewriter.getI32Type(), 2);
+      Value three = LLVM::ConstantOp::create(rewriter, op.getLoc(),
+                                             rewriter.getI32Type(), 3);
+      Value even = genDnscl(cast, zero, two, one, zero);
+      Value odd = genDnscl(cast, one, three, one, three);
+      Value firstHalf = LLVM::OrOp::create(rewriter, op.getLoc(), even, odd);
+      Value four = LLVM::ConstantOp::create(rewriter, op.getLoc(),
+                                            rewriter.getI32Type(), 4);
+      Value five = LLVM::ConstantOp::create(rewriter, op.getLoc(),
+                                            rewriter.getI32Type(), 5);
+      Value six = LLVM::ConstantOp::create(rewriter, op.getLoc(),
+                                           rewriter.getI32Type(), 6);
+      Value seven = LLVM::ConstantOp::create(rewriter, op.getLoc(),
+                                             rewriter.getI32Type(), 7);
+      even = genDnscl(cast, four, six, one, zero);
+      odd = genDnscl(cast, five, seven, one, three);
+      Value secondHalf = LLVM::OrOp::create(rewriter, op.getLoc(), even, odd);
+      // Create vector<2xi32> from two i32 values and then bitcast to
+      // vector<8xi8> to match the dst type.
+      Value combined = LLVM::UndefOp::create(
+          rewriter, op.getLoc(), VectorType::get(2, rewriter.getI32Type()));
+      combined = LLVM::InsertElementOp::create(rewriter, op.getLoc(), combined,
+                                               firstHalf, zero)
+                     ->getResult(0);
+      combined = LLVM::InsertElementOp::create(rewriter, op.getLoc(), combined,
+                                               secondHalf, one)
+                     ->getResult(0);
+      Value result =
+          LLVM::BitcastOp::create(rewriter, op.getLoc(), vecDstTy, combined);
+      rewriter.replaceOp(op, result);
     } else {
       return rewriter.notifyMatchFailure(
           op, "Unsupported src, dst element type pair.");
