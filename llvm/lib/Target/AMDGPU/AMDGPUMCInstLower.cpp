@@ -484,7 +484,7 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
       std::string &DisasmLine = DisasmLines.back();
       raw_string_ostream DisasmStream(DisasmLine);
 
-      AMDGPUInstPrinter InstPrinter(*TM.getMCAsmInfo(), *STI.getInstrInfo(),
+      AMDGPUInstPrinter InstPrinter(TM.getMCAsmInfo(), *STI.getInstrInfo(),
                                     *STI.getRegisterInfo());
       InstPrinter.printInst(&TmpInst, 0, StringRef(), STI, DisasmStream);
 
