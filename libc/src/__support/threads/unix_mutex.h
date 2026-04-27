@@ -71,7 +71,6 @@ public:
     return MutexError::NONE;
   }
 
-  // TODO: record owner and lock count.
   LIBC_INLINE MutexError lock() {
     return lock_impl([this] {
       // Since timeout is not specified, we do not need to check the return
@@ -82,7 +81,6 @@ public:
     });
   }
 
-  // TODO: record owner and lock count.
   LIBC_INLINE MutexError timed_lock(internal::AbsTimeout abs_time) {
     return lock_impl([this, abs_time] {
       // TODO: check deadlock? POSIX made it optional.
@@ -105,7 +103,6 @@ public:
     return MutexError::UNLOCK_WITHOUT_LOCK;
   }
 
-  // TODO: record owner and lock count.
   LIBC_INLINE MutexError try_lock() {
     return lock_impl([this] {
       if (this->RawMutex::try_lock())
