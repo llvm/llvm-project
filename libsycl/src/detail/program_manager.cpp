@@ -18,6 +18,23 @@
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace detail {
 
+DeviceKernelInfo &_LIBSYCL_EXPORT
+getDeviceKernelInfo(std::string_view KernelName) {
+  return ProgramAndKernelManager::getInstance().getDeviceKernelInfo(KernelName);
+}
+
+DeviceKernelInfo &
+ProgramAndKernelManager::getDeviceKernelInfo(std::string_view KernelName) {
+  auto It = MDeviceKernelInfoMap.find(KernelName);
+  assert(It != MDeviceKernelInfoMap.end());
+  return It->second;
+}
+
+void ProgramAndKernelManager::releaseResources() {
+  MDeviceKernelInfoMap.clear();
+  MDeviceImageManagers.clear();
+}
+
 static inline bool checkFatBinVersion(const __sycl_tgt_bin_desc &FatbinDesc) {
   return FatbinDesc.Version == SupportedOffloadBinaryVersion;
 }
