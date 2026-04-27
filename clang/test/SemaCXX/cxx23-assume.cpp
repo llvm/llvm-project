@@ -88,13 +88,13 @@ constexpr bool i() { // ext-error {{never produces a constant expression}}
 }
 
 constexpr bool j(bool b) {
-  [[assume(B{})]]; // ext-warning {{C++23 extension}}
+  [[assume(b)]]; // expected-note {{assumption evaluated to false}} ext-warning {{C++23 extension}}
   return true;
 }
 
 static_assert(i()); // expected-error {{not an integral constant expression}} expected-note {{in call to}}
 static_assert(j(true));
-static_assert(j(false));
+static_assert(j(false)); // expected-error {{not an integral constant expression}} expected-note {{in call to}}
 static_assert(S<true>{}.g<char>());
 static_assert(S<false>{}.g<A>()); // expected-error {{not an integral constant expression}} expected-note {{in call to}}
 
