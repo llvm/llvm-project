@@ -1329,27 +1329,39 @@ bool LoopInterchangeLegality::findInductions(
   return !Inductions.empty();
 }
 
-// We currently only support LCSSA PHI nodes in the inner loop exit, if their
-// users are either reduction PHIs or PHIs outside the outer loop (which means
-// the we are only interested in the final value after the loop).
+/// We currently only support LCSSA PHI nodes in the inner loop exit if their
+/// users are either of the following:
+///
+/// - Reduction PHIs
+/// - PHIs outside the outer loop
+/// - PHIs in the outer loop that have exactly one incoming value
+///
+/// These conditions mean that we are only interested in the final value after
+/// the inner loop.
 static bool
-areInnerLoopExitPHIsSupported(Loop *InnerL, Loop *OuterL,
+areInnerLoopExitPHIsSupported(Loop *OuterL, Loop *InnerL,
                               SmallPtrSetImpl<PHINode *> &Reductions,
                               PHINode *LcssaReduction) {
-  BasicBlock *InnerExit = OuterL->getUniqueExitBlock();
-  for (PHINode &PHI : InnerExit->phis()) {
-    // The reduction LCSSA PHI will have only one incoming block, which comes
-    // from the loop latch.
-    if (PHI.getNumIncomingValues() > 1)
+  BasicBlock *InnerExit = InnerL->getUniqueExitBlock();
+  SmallVector<PHINode *, 4> PHIs;
+  for (PHINode &PHI : InnerExit->phis())
+    PHIs.push_back(&PHI);
+
+  while (!PHIs.empty()) {
+    PHINode *PHI = PHIs.pop_back_val();
+    if (PHI->getNumIncomingValues() > 1)
       return false;
-    if (&PHI == LcssaReduction)
-      return true;
-    if (any_of(PHI.users(), [&Reductions, OuterL](User *U) {
-          PHINode *PN = dyn_cast<PHINode>(U);
-          return !PN ||
-                 (!Reductions.count(PN) && OuterL->contains(PN->getParent()));
-        })) {
-      return false;
+    if (PHI == LcssaReduction)
+      continue;
+    for (User *U : PHI->users()) {
+      PHINode *PN = dyn_cast<PHINode>(U);
+      if (!PN)
+        return false;
+      if (OuterL->contains(PN->getParent())) {
+        if (Reductions.count(PN))
+          continue;
+        PHIs.push_back(PN);
+      }
     }
   }
   return true;
