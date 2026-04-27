@@ -13577,6 +13577,10 @@ def err_hlsl_attr_invalid_ast_node : Error<
    "attribute %0 only applies to %1">;
 def err_hlsl_attr_incompatible
     : Error<"%0 attribute is not compatible with %1 attribute">;
+def err_hlsl_matrix_layout_non_matrix
+    : Error<"%0 attribute can only be applied to a matrix type">;
+def err_hlsl_matrix_layout_conflict
+    : Error<"%0 and %1 attributes are not compatible">;
 
 def err_hlsl_entry_shader_attr_mismatch : Error<
    "%0 attribute on entry function does not match the target profile">;
