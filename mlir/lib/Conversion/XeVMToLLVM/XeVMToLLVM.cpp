@@ -1157,37 +1157,56 @@ class TruncfToOCLPattern : public OpConversionPattern<TruncfOp> {
     auto vecDstTy = dyn_cast<VectorType>(op.getDst().getType());
     if (!vecDstTy)
       return rewriter.notifyMatchFailure(op, "Scalar dst is not supported.");
-    if (srcEtype == TruncfSrcElemTypes::F16 &&
-        dstEtype == TruncfDstElemTypes::BF8) {
-      // BF8 is just F16 with lower 8 bits of mantessa discard.
-      //     Signbit Exponent Mantessa
-      // BF8 1       5        2
-      // F16 1       5        10
-      // Xe arch is Little Endian so BF8 is just the second byte of the two
-      // byte representation used for F16
-      auto firstHalf =
-          LLVM::ShuffleVectorOp::create(rewriter, op.getLoc(), op.getSrc(),
-                                        op.getSrc(), {0, 1, 2, 3, 4, 5, 6, 7});
-      auto secondHalf = LLVM::ShuffleVectorOp::create(
-          rewriter, op.getLoc(), op.getSrc(), op.getSrc(),
-          {8, 9, 10, 11, 12, 13, 14, 15});
-      auto firstHalfCasted = LLVM::BitcastOp::create(
-          rewriter, op.getLoc(), VectorType::get(16, rewriter.getI8Type()),
-          firstHalf);
-      auto secondHalfCasted = LLVM::BitcastOp::create(
-          rewriter, op.getLoc(), VectorType::get(16, rewriter.getI8Type()),
-          secondHalf);
-      // Gather just the second bytes from every two byte F16 values
-      auto resFirstHalf = LLVM::ShuffleVectorOp::create(
-          rewriter, op.getLoc(), firstHalfCasted, firstHalfCasted,
-          {1, 3, 5, 7, 9, 11, 13, 15});
-      auto resSecondHalf = LLVM::ShuffleVectorOp::create(
-          rewriter, op.getLoc(), secondHalfCasted, secondHalfCasted,
-          {1, 3, 5, 7, 9, 11, 13, 15});
-      auto res = LLVM::ShuffleVectorOp::create(
-          rewriter, op.getLoc(), resFirstHalf, resSecondHalf,
-          {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15});
-      rewriter.replaceOp(op, res);
+    // BF16 type needs some preprocessing before conversion,
+    // First extended to F32 and then truncated to F16.
+    if (srcEtype == TruncfSrcElemTypes::BF16) {
+      // Step 1: Extend to F32
+      // Use float16 __builtin_IB_bftof_16(short16)
+      // Step 2: Truncf to F16
+      // Use half16 convert_half16(float16)
+    }
+    if (dstEtype == TruncfDstElemTypes::BF8) {
+      // Use char16 __builtin_IB_hftobf8_16(half16)
+      std::string fnName = "__builtin_IB_hftobf8_16";
+      SmallVector<Type> argTypes{op.getSrc().getType()};
+      SmallVector<Value> args{op.getSrc()};
+
+      auto memAttr = rewriter.getAttr<LLVM::MemoryEffectsAttr>(
+          /*other=*/LLVM::ModRefInfo::NoModRef,
+          /*argMem=*/LLVM::ModRefInfo::NoModRef,
+          /*inaccessibleMem=*/LLVM::ModRefInfo::NoModRef,
+          /*errnoMem=*/LLVM::ModRefInfo::NoModRef,
+          /*targetMem0=*/LLVM::ModRefInfo::NoModRef,
+          /*targetMem1=*/LLVM::ModRefInfo::NoModRef);
+      auto funcAttrs = convergentNoUnwindWillReturnAttrs;
+      funcAttrs.memEffectsAttr = memAttr;
+      Value result =
+          createDeviceFunctionCall(rewriter, fnName, vecDstTy, argTypes, args,
+                                   {}, funcAttrs, op.getOperation())
+              ->getResult(0);
+
+      rewriter.replaceOp(op, result);
+    } else if (dstEtype == TruncfDstElemTypes::F8) {
+      // Use char16 __builtin_IB_hftohf8_16(half16)
+      std::string fnName = "__builtin_IB_hftohf8_16";
+      SmallVector<Type> argTypes{op.getSrc().getType()};
+      SmallVector<Value> args{op.getSrc()};
+
+      auto memAttr = rewriter.getAttr<LLVM::MemoryEffectsAttr>(
+          /*other=*/LLVM::ModRefInfo::NoModRef,
+          /*argMem=*/LLVM::ModRefInfo::NoModRef,
+          /*inaccessibleMem=*/LLVM::ModRefInfo::NoModRef,
+          /*errnoMem=*/LLVM::ModRefInfo::NoModRef,
+          /*targetMem0=*/LLVM::ModRefInfo::NoModRef,
+          /*targetMem1=*/LLVM::ModRefInfo::NoModRef);
+      auto funcAttrs = convergentNoUnwindWillReturnAttrs;
+      funcAttrs.memEffectsAttr = memAttr;
+      Value result =
+          createDeviceFunctionCall(rewriter, fnName, vecDstTy, argTypes, args,
+                                   {}, funcAttrs, op.getOperation())
+              ->getResult(0);
+
+      rewriter.replaceOp(op, result);
     } else {
       return rewriter.notifyMatchFailure(
           op, "Unsupported src, dst element type pair.");
