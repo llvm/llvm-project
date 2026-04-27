@@ -10,6 +10,8 @@ from lldbsuite.test.lldbtest import *
 def has_lldb_codesign():
     """Check if the lldb_codesign certificate is available."""
     try:
+        if lldbplatformutil.getPlatform() not in lldbplatformutil.getDarwinOSTriples():
+            return False
         result = subprocess.run(
             [
                 "security",
