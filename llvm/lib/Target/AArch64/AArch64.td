@@ -67,7 +67,9 @@ include "AArch64LFI.td"
 
 class AArch64Unsupported { list<Predicate> F; }
 
-let F = [HasSVE2p1, HasSVE2p1_or_SME2, HasSVE2p1_or_StreamingSME2, HasSVE2p1_or_SME2p1] in
+let F = [HasSVE2p1, HasSVE2p1_or_SME, HasSVE2p1_or_SME2,
+         HasSVE2p1_or_StreamingSME2, HasSVE2p1_or_SME2p1,
+         HasSMEandIsNonStreamingSafe] in
 def SVE2p1Unsupported : AArch64Unsupported;
 
 def SVE2Unsupported : AArch64Unsupported {

@@ -113,6 +113,8 @@ def C1UWrite_2c_1I4     : SchedWriteRes<[C1UUnitI4]> { let Latency = 2; }
 def C1UWrite_1c_1M      : SchedWriteRes<[C1UUnitM]>  { let Latency = 1; }
 def C1UWrite_1c_2M      : SchedWriteRes<[C1UUnitM, C1UUnitM]>  { let Latency = 1; }
 def C1UWrite_2c_1M      : SchedWriteRes<[C1UUnitM]>  { let Latency = 2; }
+def C1UWrite_2c_2M      : SchedWriteRes<[C1UUnitM, C1UUnitM]>  { let Latency = 2; }
+def C1UWrite_3c_1M      : SchedWriteRes<[C1UUnitM]>  { let Latency = 3; }
 def C1UWrite_2c_1M0     : SchedWriteRes<[C1UUnitM0]> { let Latency = 2; }
 def C1UWrite_3c_1M0     : SchedWriteRes<[C1UUnitM0]> { let Latency = 3; }
 def C1UWrite_4c_1M0     : SchedWriteRes<[C1UUnitM0]> { let Latency = 4; }
@@ -124,6 +126,7 @@ def C1UWrite_1c_1V      : SchedWriteRes<[C1UUnitV]>  { let Latency = 1; }
 def C1UWrite_2c_1V      : SchedWriteRes<[C1UUnitV]>  { let Latency = 2; }
 def C1UWrite_2c_3V      : SchedWriteRes<[C1UUnitV, C1UUnitV, C1UUnitV]>  { let Latency = 2; }
 def C1UWrite_3c_1V      : SchedWriteRes<[C1UUnitV]>  { let Latency = 3; }
+def C1UWrite_3c_2V      : SchedWriteRes<[C1UUnitV, C1UUnitV]>  { let Latency = 3; }
 def C1UWrite_4c_1V      : SchedWriteRes<[C1UUnitV]>  { let Latency = 4; }
 def C1UWrite_4c_2V      : SchedWriteRes<[C1UUnitV, C1UUnitV]>  { let Latency = 4; }
 def C1UWrite_4c_3V      : SchedWriteRes<[C1UUnitV, C1UUnitV, C1UUnitV]>  { let Latency = 4; }
@@ -709,6 +712,44 @@ def C1UWrite_5or7c_5SA_5V01 : SchedWriteVariant<[
 def C1UWrite_3or4c_1M0_1M : SchedWriteVariant<[
                       SchedVar<NeoversePdIsPg,  [C1UWrite_4c_1M0_1M]>,
                       SchedVar<NoSchedPred,     [C1UWrite_3c_1M0_1M]>]>;
+
+// SME predicates
+
+def C1UWrite_1c_1I_Streaming : SchedWriteVariant<[
+                      SchedVar<SMESchedPred, [C1UWrite_1c_1I]>,
+                      SchedVar<NoSchedPred,          [C1UWrite_0c]>]>;
+
+def C1UWrite_1c_1M_Streaming : SchedWriteVariant<[
+                      SchedVar<SMESchedPred, [C1UWrite_1c_1M]>,
+                      SchedVar<NoSchedPred,          [C1UWrite_0c]>]>;
+
+def C1UWrite_2c_1V_Streaming : SchedWriteVariant<[
+                      SchedVar<SMESchedPred, [C1UWrite_2c_1V]>,
+                      SchedVar<NoSchedPred,          [C1UWrite_0c]>]>;
+
+def C1UWrite_3c_1V_Streaming : SchedWriteVariant<[
+                      SchedVar<SMESchedPred, [C1UWrite_3c_1V]>,
+                      SchedVar<NoSchedPred,          [C1UWrite_0c]>]>;
+
+def C1UWrite_3c_1V01_Streaming : SchedWriteVariant<[
+                      SchedVar<SMESchedPred, [C1UWrite_3c_1V01]>,
+                      SchedVar<NoSchedPred,          [C1UWrite_0c]>]>;
+
+def C1UWrite_4c_1V_Streaming : SchedWriteVariant<[
+                      SchedVar<SMESchedPred, [C1UWrite_4c_1V]>,
+                      SchedVar<NoSchedPred,          [C1UWrite_0c]>]>;
+
+def C1UWrite_2c_1M_Streaming : SchedWriteVariant<[
+                      SchedVar<SMESchedPred, [C1UWrite_2c_1M]>,
+                      SchedVar<NoSchedPred,          [C1UWrite_0c]>]>;
+
+def C1UWrite_3c_1M_Streaming : SchedWriteVariant<[
+                      SchedVar<SMESchedPred, [C1UWrite_3c_1M]>,
+                      SchedVar<NoSchedPred,          [C1UWrite_0c]>]>;
+
+def C1UWrite_2c_2M_Streaming : SchedWriteVariant<[
+                      SchedVar<SMESchedPred, [C1UWrite_2c_2M]>,
+                      SchedVar<NoSchedPred,          [C1UWrite_0c]>]>;
 
 
 // Miscellaneous
@@ -2463,5 +2504,59 @@ def : InstRW<[C1UWrite_2c_1V], (instregex "^(BCAX|EOR3)_ZZZZ$",
 
 // Crypto SM4 ops
 def : InstRW<[C1UWrite_4c_1V0], (instregex "^SM4E(KEY)?_ZZZ_S$")>;
+
+// SVE instructions added by SME and available when not in Streaming SVE mode
+// -----------------------------------------------------------------------------
+// BFloat16 floating-point multiply-subtract long from single-precision vector and indexed form
+def : InstRW<[C1UWrite_4c_1V_Streaming], (instregex "^BFMLSLB_", "^BFMLSLT_")>;
+
+// Floating-point clamp to minimum/maximu m number
+def : InstRW<[C1UWrite_2c_1V_Streaming], (instregex "^FCLAMP_ZZZ")>;
+
+// Half-precision floating-point indexed or vector forms dot product
+def : InstRW<[C1UWrite_4c_1V_Streaming], (instregex "^FDOT_ZZZI?_S$")>;
+
+// Predicate selection
+def : InstRW<[C1UWrite_2c_2M_Streaming], (instregex "^PSEL_PPPRI")>;
+
+// Reverse doubleword elements
+def : InstRW<[C1UWrite_2c_1V_Streaming], (instregex "^REVD_ZPmZ")>;
+
+// Signed/unsigned clamp
+def : InstRW<[C1UWrite_2c_1V_Streaming], (instregex "^(S|U)CLAMP_ZZZ")>;
+
+// TODO: throughput is 2 instead of 4
+// Half-precision signed/unsigned dot product vector and indexed forms
+def : InstRW<[C1UWrite_3c_1V01_Streaming], (instregex "^(S|U)DOT_ZZZI?_HtoS")>;
+
+// Signed/unsigned saturating narrow conversion
+def : InstRW<[C1UWrite_2c_1V_Streaming], (instregex "^(SQCVTN|SQCVTUN|UQCVTN)_Z2Z_StoH")>;
+
+// Signed/unsigned saturating rounding shift-right narrow
+def : InstRW<[C1UWrite_3c_1V01_Streaming], (instregex "^(SQRSHRN|SQRSHRUN|UQRSHRN)_Z2ZI_StoH")>;
+
+// Signed/unsigned pair-producing while compare
+def : InstRW<[C1UWrite_2c_1M_Streaming], (instregex "^WHILE(GE|GT|HI|HS|LE|LO|LS|LT)_2PXX")>;
+
+// SVE instructions added by SME but not sent to CME when in Streaming SVE mode
+// -----------------------------------------------------------------------------
+
+// Add/Read multiple of streaming SVE Predicate/vector register size to scalar register
+def : InstRW<[C1UWrite_1c_1I_Streaming], (instrs ADDSPL_XXI, ADDSVL_XXI, RDSVLI_XI)>;
+
+// Predicate counting scalar to count from predicate-as-counter
+def : InstRW<[C1UWrite_2c_1M_Streaming], (instregex "^CNTP_XCI_[BHSD]$")>;
+
+// Set predicates from predicate-as-counter
+def : InstRW<[C1UWrite_2c_1M_Streaming], (instregex "^PEXT_PCI_[BHSD]$")>;
+
+// Set pair of predicates from predicate-as-counter
+def : InstRW<[C1UWrite_3c_1M_Streaming], (instregex "^PEXT_2PCI_[BHSD]$")>;
+
+// Predicate as counter set
+def : InstRW<[C1UWrite_1c_1M_Streaming], (instregex "^PTRUE_C_[BHSD]$")>;
+
+// Loop control, based on GPR generating predicate as counter
+def : InstRW<[C1UWrite_1c_1M_Streaming], (instregex "^WHILE(GE|GT|HI|HS|LE|LO|LS|LT)_CXX_[BHSD]$")>;
 
 }
