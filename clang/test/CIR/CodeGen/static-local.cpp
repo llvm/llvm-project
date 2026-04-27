@@ -740,3 +740,30 @@ int referenced_inside_const() {
 // OGCG-LABEL: define internal noundef i32 @"_ZZ23referenced_inside_constvENK3$_0clEv"(
 // OGCG:   load i32, ptr @_ZZ23referenced_inside_constvE12static_local
 }
+
+// Static local inside a nested scope (e.g., inside an if block).
+// The local_init op must be allowed inside scope ops, not just
+// directly under cir.func.
+void nested_scope_static_local(bool cond) {
+  if (cond) {
+    static A nested_a;
+  }
+}
+// CIR-BEFORE-LPP-LABEL: cir.func no_inline dso_local @_Z25nested_scope_static_localb(
+// CIR-BEFORE-LPP:   cir.scope
+// CIR-BEFORE-LPP:     cir.if
+// CIR-BEFORE-LPP:       cir.local_init static_local @_ZZ25nested_scope_static_localbE8nested_a
+//
+// CIR-LABEL: cir.func no_inline dso_local @_Z25nested_scope_static_localb(
+// CIR:   cir.scope
+// CIR:     cir.if
+// CIR:       cir.get_global @_ZGVZ25nested_scope_static_localbE8nested_a
+// CIR:       cir.call @__cxa_guard_acquire
+//
+// LLVM-CIR-LABEL: define dso_local void @_Z25nested_scope_static_localb(
+// LLVM-CIR:   load atomic i8, ptr @_ZGVZ25nested_scope_static_localbE8nested_a
+// LLVM-CIR:   call i32 @__cxa_guard_acquire(ptr @_ZGVZ25nested_scope_static_localbE8nested_a)
+//
+// OGCG-LABEL: define dso_local void @_Z25nested_scope_static_localb(
+// OGCG:   load atomic i8, ptr @_ZGVZ25nested_scope_static_localbE8nested_a
+// OGCG:   call i32 @__cxa_guard_acquire(ptr @_ZGVZ25nested_scope_static_localbE8nested_a)

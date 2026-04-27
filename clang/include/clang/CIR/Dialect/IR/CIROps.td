@@ -3820,7 +3820,6 @@ def CIR_FuncOp : CIR_Op<"func", [
 
 def CIR_LocalInitOp : CIR_Op<"local_init", [
   DeclareOpInterfaceMethods<SymbolUserOpInterface>, NoRegionArguments,
-  ParentOneOf<["cir::FuncOp"]>,
   HasAtMostOneOfAttrs<["tls", "static_local"]>
 ]> {
   let summary = "initialize a static or thread local object";
@@ -3873,6 +3872,7 @@ def CIR_LocalInitOp : CIR_Op<"local_init", [
 }
 }];
 
+  let hasVerifier = 1;
   let hasLLVMLowering = false;
 }
 
