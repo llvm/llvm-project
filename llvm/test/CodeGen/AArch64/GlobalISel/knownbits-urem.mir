@@ -2,7 +2,6 @@
 # RUN: llc -mtriple aarch64 -passes="print<gisel-value-tracking>" %s -filetype=null 2>&1 | FileCheck %s
 
 name:            urem_pow2
-
 body:             |
   bb.1:
 
