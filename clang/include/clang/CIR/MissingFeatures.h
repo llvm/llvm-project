@@ -287,7 +287,6 @@ struct MissingFeatures {
   static bool intrinsicElementTypeSupport() { return false; }
   static bool intrinsics() { return false; }
   static bool isTrivialCtorOrDtor() { return false; }
-  static bool lambdaCaptures() { return false; }
   static bool loopInfoStack() { return false; }
   static bool lowerAggregateLoadStore() { return false; }
   static bool lowerModeOptLevel() { return false; }
