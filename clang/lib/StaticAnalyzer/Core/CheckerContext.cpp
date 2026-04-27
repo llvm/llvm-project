@@ -133,11 +133,8 @@ std::string CheckerContext::getMacroNameOrSpelling(SourceLocation &Loc) {
   const auto &LO = getLangOpts();
   if (Loc.isMacroID())
     return Lexer::getImmediateMacroName(Loc, SM, LO).str();
-
-  Token Tok;
-  if (Lexer::getRawToken(Loc, Tok, SM, LO))
-    return "";
-  return Lexer::getSpelling(Tok, SM, LO);
+  SmallString<16> buf;
+  return Lexer::getSpelling(Loc, buf, SM, LO).str();
 }
 
 /// Evaluate comparison and return true if it's known that condition is true
