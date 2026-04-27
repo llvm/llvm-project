@@ -168,30 +168,27 @@ MATH_MANGLE(lgamma_r_impl)(double x)
     const double z5  = -0x1.a8b9c17aa6149p-3;
 
     double ax = BUILTIN_ABS_F64(x);
-    uint hax = AS_UINT2(ax).hi;
     double ret;
 
-    if (hax < 0x3f700000) {
-        // ax < 0x1.0p-8
+    if (ax < 0x1.0p-8) {
         ret = MATH_MAD(ax, MATH_MAD(ax, MATH_MAD(ax, MATH_MAD(ax, MATH_MAD(ax, z5, z4), z3), z2), z1),
                        -MATH_MANGLE(log)(ax));
-    } else if (hax < 0x40000000) {
-        // ax < 2.0
+    } else if (ax < 2.0) {
         int i;
         bool c;
         double y, t;
-        if (hax <= 0x3feccccc) { // |x| < 0.9 : lgamma(x) = lgamma(x+1)-log(x)
+        if (ax <= 0x1.cccccp-1) { // |x| < 0.9 : lgamma(x) = lgamma(x+1)-log(x)
             ret = -MATH_MANGLE(log)(ax);
 
             y = 1.0 - ax;
             i = 0;
 
-            c = hax < 0x3FE76944; // x < 0.7316
+            c = ax < 0x1.76944p-1; // x < 0.7316
             t = ax - (tc - 1.0);
             y = c ? t : y;
             i = c ? 1 : i;
 
-            c = hax < 0x3FCDA661; // x < .2316
+            c = ax < 0x1.da661p-3; // x < .2316
             y = c ? ax : y;
             i = c ? 2 : i;
         } else {
@@ -200,12 +197,12 @@ MATH_MANGLE(lgamma_r_impl)(double x)
             y = 2.0 - ax;
             i = 0;
 
-            c = hax < 0x3FFBB4C3; // x < 1.7316
+            c = ax < 0x1.bb4c3p+0; // x < 1.7316
             t = ax - tc;
             y = c ? t : y;
             i = c ? 1 : i;
 
-            c = hax < 0x3FF3B4C4; // x < 1.2316
+            c = ax < 0x1.3b4c4p+0; // x < 1.2316
             t = ax - 1.0;
             y = c ? t : y;
             i = c ? 2 : i;
@@ -235,7 +232,7 @@ MATH_MANGLE(lgamma_r_impl)(double x)
             ret += MATH_MAD(y, -0.5, MATH_DIV(p1, p2));
             break;
         }
-    } else if (hax < 0x40200000) { // 2 < ax < 8
+    } else if (ax < 8.0) { // 2 < ax < 8
         int i = (int)ax;
         double y = ax - (double)i;
         double p = y * MATH_MAD(y, MATH_MAD(y, MATH_MAD(y, MATH_MAD(y, MATH_MAD(y, MATH_MAD(y, s6, s5), s4), s3), s2), s1), s0);
@@ -256,22 +253,21 @@ MATH_MANGLE(lgamma_r_impl)(double x)
         z *= i > 6 ? y6 : 1.0;
 
         ret += MATH_MANGLE(log)(z);
-    } else if (hax < 0x43900000) { // 8 <= ax < 2^58
+    } else if (ax < 0x1p+58) { // 8 <= ax < 2^58
         double z = MATH_RCP(ax);
         double y = z*z;
         double w = MATH_MAD(z, MATH_MAD(y, MATH_MAD(y, MATH_MAD(y, MATH_MAD(y, MATH_MAD(y, w6, w5), w4), w3), w2), w1), w0);
         ret = MATH_MAD(ax - 0.5, MATH_MANGLE(log)(ax) - 1.0, w);
-    } else  { // 2^58 <= ax <= Inf
+    } else { // 2^58 <= ax <= Inf
         ret = MATH_MAD(ax, MATH_MANGLE(log)(ax), -ax);
     }
-
 
     int s = 0;
     if (x >= 0.0) {
         ret = (x == 1.0 | x == 2.0) ? 0.0 : ret;
         s = x == 0.0 ? 0 : 1;
-    } else if (hax < 0x43300000) { // x > -0x1.0p+52
-        if (hax > 0x3cd00000) { // x < -0x1.0p-50
+    } else if (ax < 0x1p+52) { // x > -0x1.0p+52
+        if (ax > 0x1.0p-50) {  // x < -0x1.0p-50
             double t = MATH_MANGLE(sinpi)(x);
             double negadj = MATH_MANGLE(log)(MATH_DIV(pi, BUILTIN_ABS_F64(t * x)));
             ret = negadj - ret;
@@ -286,7 +282,7 @@ MATH_MANGLE(lgamma_r_impl)(double x)
 
     if (!FINITE_ONLY_OPT()) {
         // Handle negative integer, Inf, NaN
-        ret = BUILTIN_CLASS_F64(ax, CLASS_NZER|CLASS_PZER|CLASS_PINF) | (x < 0.0f & hax >= 0x43300000) ? PINF_F64 : ret;
+        ret = BUILTIN_CLASS_F64(ax, CLASS_NZER | CLASS_PZER | CLASS_PINF) | (x < 0.0 & ax >= 0x1p+52) ? PINF_F64 : ret;
         ret = BUILTIN_ISNAN_F64(x) ? x : ret;
     }
 
