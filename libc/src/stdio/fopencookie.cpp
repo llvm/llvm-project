@@ -13,6 +13,7 @@
 #include "hdr/types/off_t.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/File/file.h"
+#include "src/__support/alloc-checker.h"
 
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"

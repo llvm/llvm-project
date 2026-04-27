@@ -17,3 +17,9 @@ func.func @check_poison() {
   %3 = ub.poison : !llvm.ptr
   return
 }
+
+// CHECK-LABEL: @check_unrechable
+func.func @check_unrechable() {
+// CHECK: llvm.unreachable
+  ub.unreachable
+}

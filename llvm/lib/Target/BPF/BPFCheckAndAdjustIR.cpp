@@ -46,7 +46,7 @@ class BPFCheckAndAdjustIR final : public ModulePass {
 public:
   static char ID;
   BPFCheckAndAdjustIR() : ModulePass(ID) {}
-  virtual void getAnalysisUsage(AnalysisUsage &AU) const override;
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
 
 private:
   void checkIR(Module &M);

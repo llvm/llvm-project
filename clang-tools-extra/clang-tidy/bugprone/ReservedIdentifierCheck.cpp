@@ -37,9 +37,9 @@ static int getMessageSelectIndex(StringRef Tag) {
   return 0;
 }
 
-llvm::SmallVector<llvm::Regex>
+SmallVector<llvm::Regex>
 ReservedIdentifierCheck::parseAllowedIdentifiers() const {
-  llvm::SmallVector<llvm::Regex> AllowedIdentifiers;
+  SmallVector<llvm::Regex> AllowedIdentifiers;
   AllowedIdentifiers.reserve(AllowedIdentifiersRaw.size());
 
   for (const auto &Identifier : AllowedIdentifiersRaw) {
@@ -102,7 +102,7 @@ static std::optional<std::string> getUnderscoreCapitalFixup(StringRef Name) {
 static bool startsWithUnderscoreInGlobalNamespace(StringRef Name,
                                                   bool IsInGlobalNamespace,
                                                   bool IsMacro) {
-  return !IsMacro && IsInGlobalNamespace && Name.starts_with("_");
+  return !IsMacro && IsInGlobalNamespace && Name.starts_with('_');
 }
 
 static std::optional<std::string>

@@ -214,12 +214,15 @@ entry:
   ret i64 %1
 }
 
-; Check that poison is returned when the extracted element has wrapped.
+; TODO: stepvector now wraps rather than poisons elements when the value does
+; not fit, so this should return 0.
 
 define i8 @ext_lane256_from_stepvec() {
 ; CHECK-LABEL: @ext_lane256_from_stepvec(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret i8 poison
+; CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 512 x i8> @llvm.stepvector.nxv512i8()
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <vscale x 512 x i8> [[TMP0]], i64 256
+; CHECK-NEXT:    ret i8 [[TMP1]]
 ;
 entry:
   %0 = call <vscale x 512 x i8> @llvm.stepvector.nxv512i8()

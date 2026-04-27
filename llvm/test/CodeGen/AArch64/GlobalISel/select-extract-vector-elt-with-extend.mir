@@ -67,7 +67,7 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
     ; CHECK-NEXT: [[UMOVvi32_:%[0-9]+]]:gpr32 = UMOVvi32 [[COPY]], 1
-    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[UMOVvi32_]], %subreg.sub_32
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG [[UMOVvi32_]], %subreg.sub_32
     ; CHECK-NEXT: $x0 = COPY [[SUBREG_TO_REG]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:fpr(<4 x s32>) = COPY $q0
@@ -95,7 +95,7 @@ body: |
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
     ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.dsub
     ; CHECK-NEXT: [[UMOVvi32_:%[0-9]+]]:gpr32 = UMOVvi32 [[INSERT_SUBREG]], 1
-    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[UMOVvi32_]], %subreg.sub_32
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG [[UMOVvi32_]], %subreg.sub_32
     ; CHECK-NEXT: $x0 = COPY [[SUBREG_TO_REG]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
      %0:fpr(<2 x s32>) = COPY $d0
@@ -323,7 +323,7 @@ body:             |
     ; CHECK-LABEL: name: skip_anyext_to_16
     ; CHECK: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr8 = COPY [[DEF]].bsub
-    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:fpr32 = SUBREG_TO_REG 0, [[COPY]], %subreg.bsub
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:fpr32 = SUBREG_TO_REG [[COPY]], %subreg.bsub
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32all = COPY [[SUBREG_TO_REG]]
     ; CHECK-NEXT: $w0 = COPY [[COPY1]]
     %5:fpr(<16 x s8>) = G_IMPLICIT_DEF

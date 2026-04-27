@@ -13,8 +13,8 @@
 #ifndef LLVM_LIB_TARGET_AARCH64_AARCH64MACHINEFUNCTIONINFO_H
 #define LLVM_LIB_TARGET_AARCH64_AARCH64MACHINEFUNCTIONINFO_H
 
+#include "AArch64SMEAttributes.h"
 #include "AArch64Subtarget.h"
-#include "Utils/AArch64SMEAttributes.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -37,9 +37,13 @@ struct AArch64FunctionInfo;
 class AArch64Subtarget;
 class MachineInstr;
 
-struct TPIDR2Object {
-  int FrameIndex = std::numeric_limits<int>::max();
-  unsigned Uses = 0;
+/// Condition of signing the return address in a function.
+///
+/// Corresponds to possible values of "sign-return-address" function attribute.
+enum class SignReturnAddress {
+  None,
+  NonLeaf,
+  All,
 };
 
 /// AArch64FunctionInfo - This class is derived from MachineFunctionInfo and
@@ -170,13 +174,8 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   // CalleeSavedStackSize) to the address of the frame record.
   int CalleeSaveBaseToFrameRecordOffset = 0;
 
-  /// SignReturnAddress is true if PAC-RET is enabled for the function with
-  /// defaults being sign non-leaf functions only, with the B key.
-  bool SignReturnAddress = false;
-
-  /// SignReturnAddressAll modifies the default PAC-RET mode to signing leaf
-  /// functions as well.
-  bool SignReturnAddressAll = false;
+  /// SignCondition controls when PAC-RET protection should be used.
+  SignReturnAddress SignCondition = SignReturnAddress::None;
 
   /// SignWithBKey modifies the default PAC-RET mode to signing with the B key.
   bool SignWithBKey = false;
@@ -241,19 +240,6 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   // support).
   Register EarlyAllocSMESaveBuffer = AArch64::NoRegister;
 
-  // Holds the spill slot for ZT0.
-  int ZT0SpillSlotIndex = std::numeric_limits<int>::max();
-
-  // Note: The following properties are only used for the old SME ABI lowering:
-  /// The frame-index for the TPIDR2 object used for lazy saves.
-  TPIDR2Object TPIDR2;
-  // Holds a pointer to a buffer that is large enough to represent
-  // all SME ZA state and any additional state required by the
-  // __arm_sme_save/restore support routines.
-  Register SMESaveBufferAddr = MCRegister::NoRegister;
-  // true if SMESaveBufferAddr is used.
-  bool SMESaveBufferUsed = false;
-
 public:
   AArch64FunctionInfo(const Function &F, const AArch64Subtarget *STI);
 
@@ -269,22 +255,6 @@ public:
   Register getEarlyAllocSMESaveBuffer() const {
     return EarlyAllocSMESaveBuffer;
   }
-
-  void setZT0SpillSlotIndex(int FI) { ZT0SpillSlotIndex = FI; }
-  int getZT0SpillSlotIndex() const {
-    assert(hasZT0SpillSlotIndex() && "ZT0 spill slot index not set!");
-    return ZT0SpillSlotIndex;
-  }
-  bool hasZT0SpillSlotIndex() const {
-    return ZT0SpillSlotIndex != std::numeric_limits<int>::max();
-  }
-
-  // Old SME ABI lowering state getters/setters:
-  Register getSMESaveBufferAddr() const { return SMESaveBufferAddr; };
-  void setSMESaveBufferAddr(Register Reg) { SMESaveBufferAddr = Reg; };
-  unsigned isSMESaveBufferUsed() const { return SMESaveBufferUsed; };
-  void setSMESaveBufferUsed(bool Used = true) { SMESaveBufferUsed = Used; };
-  TPIDR2Object &getTPIDR2Obj() { return TPIDR2; }
 
   void setPredicateRegForFillSpill(unsigned Reg) {
     PredicateRegForFillSpill = Reg;
@@ -591,8 +561,14 @@ public:
     CalleeSaveBaseToFrameRecordOffset = Offset;
   }
 
+  static bool shouldSignReturnAddress(SignReturnAddress Condition,
+                                      bool IsLRSpilled);
+
   bool shouldSignReturnAddress(const MachineFunction &MF) const;
-  bool shouldSignReturnAddress(bool SpillsLR) const;
+
+  SignReturnAddress getSignReturnAddressCondition() const {
+    return SignCondition;
+  }
 
   bool needsShadowCallStackPrologueEpilogue(MachineFunction &MF) const;
 
@@ -651,7 +627,7 @@ struct AArch64FunctionInfo final : public yaml::MachineFunctionInfo {
   AArch64FunctionInfo(const llvm::AArch64FunctionInfo &MFI);
 
   void mappingImpl(yaml::IO &YamlIO) override;
-  ~AArch64FunctionInfo() = default;
+  ~AArch64FunctionInfo() override = default;
 };
 
 template <> struct MappingTraits<AArch64FunctionInfo> {

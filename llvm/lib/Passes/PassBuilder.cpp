@@ -45,7 +45,6 @@
 #include "llvm/Analysis/IR2Vec.h"
 #include "llvm/Analysis/IVUsers.h"
 #include "llvm/Analysis/InlineAdvisor.h"
-#include "llvm/Analysis/InlineSizeEstimatorAnalysis.h"
 #include "llvm/Analysis/InstCount.h"
 #include "llvm/Analysis/KernelInfo.h"
 #include "llvm/Analysis/LastRunTrackingAnalysis.h"
@@ -67,6 +66,7 @@
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/RegionInfo.h"
+#include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/ScalarEvolutionDivision.h"
@@ -83,7 +83,6 @@
 #include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
 #include "llvm/CodeGen/BranchFoldingPass.h"
 #include "llvm/CodeGen/BranchRelaxation.h"
-#include "llvm/CodeGen/CallBrPrepare.h"
 #include "llvm/CodeGen/CodeGenPrepare.h"
 #include "llvm/CodeGen/ComplexDeinterleavingPass.h"
 #include "llvm/CodeGen/DeadMachineInstructionElim.h"
@@ -91,24 +90,26 @@
 #include "llvm/CodeGen/DwarfEHPrepare.h"
 #include "llvm/CodeGen/EarlyIfConversion.h"
 #include "llvm/CodeGen/EdgeBundles.h"
-#include "llvm/CodeGen/ExpandFp.h"
-#include "llvm/CodeGen/ExpandLargeDivRem.h"
-#include "llvm/CodeGen/ExpandMemCmp.h"
+#include "llvm/CodeGen/ExpandIRInsts.h"
 #include "llvm/CodeGen/ExpandPostRAPseudos.h"
 #include "llvm/CodeGen/ExpandReductions.h"
 #include "llvm/CodeGen/FEntryInserter.h"
 #include "llvm/CodeGen/FinalizeISel.h"
 #include "llvm/CodeGen/FixupStatepointCallerSaved.h"
+#include "llvm/CodeGen/GCEmptyBasicBlocks.h"
 #include "llvm/CodeGen/GCMetadata.h"
+#include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalMerge.h"
 #include "llvm/CodeGen/GlobalMergeFunctions.h"
 #include "llvm/CodeGen/HardwareLoops.h"
 #include "llvm/CodeGen/IndirectBrExpand.h"
 #include "llvm/CodeGen/InitUndef.h"
+#include "llvm/CodeGen/InlineAsmPrepare.h"
 #include "llvm/CodeGen/InterleavedAccess.h"
 #include "llvm/CodeGen/InterleavedLoadCombine.h"
 #include "llvm/CodeGen/JMCInstrumenter.h"
+#include "llvm/CodeGen/KCFI.h"
 #include "llvm/CodeGen/LiveDebugValuesPass.h"
 #include "llvm/CodeGen/LiveDebugVariables.h"
 #include "llvm/CodeGen/LiveIntervals.h"
@@ -119,12 +120,15 @@
 #include "llvm/CodeGen/LowerEmuTLS.h"
 #include "llvm/CodeGen/MIRPrinter.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
+#include "llvm/CodeGen/MachineBlockHashInfo.h"
 #include "llvm/CodeGen/MachineBlockPlacement.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineCSE.h"
 #include "llvm/CodeGen/MachineCopyPropagation.h"
+#include "llvm/CodeGen/MachineDominanceFrontier.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
+#include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/CodeGen/MachineLICM.h"
 #include "llvm/CodeGen/MachineLateInstrsCleanup.h"
 #include "llvm/CodeGen/MachinePassManager.h"
@@ -132,6 +136,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/MachineSink.h"
+#include "llvm/CodeGen/MachineStripDebug.h"
 #include "llvm/CodeGen/MachineTraceMetrics.h"
 #include "llvm/CodeGen/MachineUniformityAnalysis.h"
 #include "llvm/CodeGen/MachineVerifier.h"
@@ -278,6 +283,7 @@
 #include "llvm/Transforms/Scalar/DivRemPairs.h"
 #include "llvm/Transforms/Scalar/DropUnnecessaryAssumes.h"
 #include "llvm/Transforms/Scalar/EarlyCSE.h"
+#include "llvm/Transforms/Scalar/ExpandMemCmp.h"
 #include "llvm/Transforms/Scalar/FlattenCFG.h"
 #include "llvm/Transforms/Scalar/Float2Int.h"
 #include "llvm/Transforms/Scalar/GVN.h"
@@ -371,6 +377,7 @@
 #include "llvm/Transforms/Utils/PredicateInfo.h"
 #include "llvm/Transforms/Utils/ProfileVerify.h"
 #include "llvm/Transforms/Utils/RelLookupTableConverter.h"
+#include "llvm/Transforms/Utils/StripConvergenceIntrinsics.h"
 #include "llvm/Transforms/Utils/StripGCRelocates.h"
 #include "llvm/Transforms/Utils/StripNonLineTableDebugInfo.h"
 #include "llvm/Transforms/Utils/SymbolRewriter.h"
@@ -483,13 +490,17 @@ public:
 } // namespace
 
 static std::optional<OptimizationLevel> parseOptLevel(StringRef S) {
+  if (S == "Os" || S == "Oz")
+    reportFatalUsageError(
+        Twine("The optimization level \"") + S +
+        "\" is no longer supported. Use O2 in conjunction with the " +
+        (S == "Os" ? "optsize" : "minsize") + " attribute instead.");
+
   return StringSwitch<std::optional<OptimizationLevel>>(S)
       .Case("O0", OptimizationLevel::O0)
       .Case("O1", OptimizationLevel::O1)
       .Case("O2", OptimizationLevel::O2)
       .Case("O3", OptimizationLevel::O3)
-      .Case("Os", OptimizationLevel::Os)
-      .Case("Oz", OptimizationLevel::Oz)
       .Default(std::nullopt);
 }
 
@@ -669,7 +680,14 @@ void PassBuilder::registerFunctionAnalyses(FunctionAnalysisManager &FAM) {
   FAM.registerPass([&] { return buildDefaultAAPipeline(); });
 
 #define FUNCTION_ANALYSIS(NAME, CREATE_PASS)                                   \
-  FAM.registerPass([&] { return CREATE_PASS; });
+  if constexpr (std::is_constructible_v<                                       \
+                    std::remove_reference_t<decltype(CREATE_PASS)>,            \
+                    const TargetMachine &>) {                                  \
+    if (TM)                                                                    \
+      FAM.registerPass([&] { return CREATE_PASS; });                           \
+  } else {                                                                     \
+    FAM.registerPass([&] { return CREATE_PASS; });                             \
+  }
 #include "PassRegistry.def"
 
   for (auto &C : FunctionAnalysisRegistrationCallbacks)
@@ -796,6 +814,17 @@ Expected<bool> parseLintOptions(StringRef Params) {
                                             "LintPass");
 }
 
+/// Parser of parameters for FunctionPropertiesStatistics pass.
+Expected<bool> parseFunctionPropertiesStatisticsOptions(StringRef Params) {
+  return PassBuilder::parseSinglePassOption(Params, "pre-opt",
+                                            "FunctionPropertiesStatisticsPass");
+}
+
+/// Parser of parameters for InstCount pass.
+Expected<bool> parseInstCountOptions(StringRef Params) {
+  return PassBuilder::parseSinglePassOption(Params, "pre-opt", "InstCountPass");
+}
+
 /// Parser of parameters for LoopUnroll pass.
 Expected<LoopUnrollOptions> parseLoopUnrollOptions(StringRef Params) {
   LoopUnrollOptions UnrollOpts;
@@ -803,8 +832,7 @@ Expected<LoopUnrollOptions> parseLoopUnrollOptions(StringRef Params) {
     StringRef ParamName;
     std::tie(ParamName, Params) = Params.split(';');
     std::optional<OptimizationLevel> OptLevel = parseOptLevel(ParamName);
-    // Don't accept -Os/-Oz.
-    if (OptLevel && !OptLevel->isOptimizingForSize()) {
+    if (OptLevel) {
       UnrollOpts.setOptLevel(OptLevel->getSpeedupLevel());
       continue;
     }
@@ -863,26 +891,6 @@ Expected<bool> parsePostOrderFunctionAttrsPassOptions(StringRef Params) {
       Params, "skip-non-recursive-function-attrs", "PostOrderFunctionAttrs");
 }
 
-Expected<CFGuardPass::Mechanism> parseCFGuardPassOptions(StringRef Params) {
-  if (Params.empty())
-    return CFGuardPass::Mechanism::Check;
-
-  auto [Param, RHS] = Params.split(';');
-  if (!RHS.empty())
-    return make_error<StringError>(
-        formatv("too many CFGuardPass parameters '{}'", Params).str(),
-        inconvertibleErrorCode());
-
-  if (Param == "check")
-    return CFGuardPass::Mechanism::Check;
-  if (Param == "dispatch")
-    return CFGuardPass::Mechanism::Dispatch;
-
-  return make_error<StringError>(
-      formatv("invalid CFGuardPass mechanism: '{}'", Param).str(),
-      inconvertibleErrorCode());
-}
-
 Expected<bool> parseEarlyCSEPassOptions(StringRef Params) {
   return PassBuilder::parseSinglePassOption(Params, "memssa", "EarlyCSE");
 }
@@ -890,6 +898,11 @@ Expected<bool> parseEarlyCSEPassOptions(StringRef Params) {
 Expected<bool> parseEntryExitInstrumenterPassOptions(StringRef Params) {
   return PassBuilder::parseSinglePassOption(Params, "post-inline",
                                             "EntryExitInstrumenter");
+}
+
+Expected<bool> parseDropUnnecessaryAssumesPassOptions(StringRef Params) {
+  return PassBuilder::parseSinglePassOption(Params, "drop-deref",
+                                            "DropUnnecessaryAssumes");
 }
 
 Expected<bool> parseLoopExtractorPassOptions(StringRef Params) {
@@ -960,6 +973,26 @@ Expected<HWAddressSanitizerOptions> parseHWASanPassOptions(StringRef Params) {
       return make_error<StringError>(
           formatv("invalid HWAddressSanitizer pass parameter '{}'", ParamName)
               .str(),
+          inconvertibleErrorCode());
+    }
+  }
+  return Result;
+}
+
+Expected<lowertypetests::DropTestKind>
+parseDropTypeTestsPassOptions(StringRef Params) {
+  lowertypetests::DropTestKind Result = lowertypetests::DropTestKind::Assume;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    if (ParamName == "all") {
+      Result = lowertypetests::DropTestKind::All;
+    } else if (ParamName == "assume") {
+      Result = lowertypetests::DropTestKind::Assume;
+    } else {
+      return make_error<StringError>(
+          formatv("invalid DropTypeTestsPass parameter '{}'", ParamName).str(),
           inconvertibleErrorCode());
     }
   }
@@ -1089,6 +1122,31 @@ Expected<MemorySanitizerOptions> parseMSanPassOptions(StringRef Params) {
       return make_error<StringError>(
           formatv("invalid MemorySanitizer pass parameter '{}'", ParamName)
               .str(),
+          inconvertibleErrorCode());
+    }
+  }
+  return Result;
+}
+
+Expected<AllocTokenOptions> parseAllocTokenPassOptions(StringRef Params) {
+  AllocTokenOptions Result;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    if (ParamName.consume_front("mode=")) {
+      if (auto Mode = getAllocTokenModeFromString(ParamName))
+        Result.Mode = *Mode;
+      else
+        return make_error<StringError>(
+            formatv("invalid argument to AllocToken pass mode "
+                    "parameter: '{}'",
+                    ParamName)
+                .str(),
+            inconvertibleErrorCode());
+    } else {
+      return make_error<StringError>(
+          formatv("invalid AllocToken pass parameter '{}'", ParamName).str(),
           inconvertibleErrorCode());
     }
   }
@@ -1234,17 +1292,25 @@ Expected<LICMOptions> parseLICMOptions(StringRef Params) {
   return Result;
 }
 
-Expected<std::pair<bool, bool>> parseLoopRotateOptions(StringRef Params) {
-  std::pair<bool, bool> Result = {true, false};
+struct LoopRotateOptions {
+  bool EnableHeaderDuplication = true;
+  bool PrepareForLTO = false;
+  bool CheckExitCount = false;
+};
+
+Expected<LoopRotateOptions> parseLoopRotateOptions(StringRef Params) {
+  LoopRotateOptions Result;
   while (!Params.empty()) {
     StringRef ParamName;
     std::tie(ParamName, Params) = Params.split(';');
 
     bool Enable = !ParamName.consume_front("no-");
     if (ParamName == "header-duplication") {
-      Result.first = Enable;
+      Result.EnableHeaderDuplication = Enable;
     } else if (ParamName == "prepare-for-lto") {
-      Result.second = Enable;
+      Result.PrepareForLTO = Enable;
+    } else if (ParamName == "check-exit-count") {
+      Result.CheckExitCount = Enable;
     } else {
       return make_error<StringError>(
           formatv("invalid LoopRotate pass parameter '{}'", ParamName).str(),
@@ -1553,24 +1619,31 @@ parseBoundsCheckingOptions(StringRef Params) {
       Options.Rt = {
           /*MinRuntime=*/false,
           /*MayReturn=*/true,
+          /*HandlerPreserveAllRegs=*/false,
       };
     } else if (ParamName == "rt-abort") {
       Options.Rt = {
           /*MinRuntime=*/false,
           /*MayReturn=*/false,
+          /*HandlerPreserveAllRegs=*/false,
       };
     } else if (ParamName == "min-rt") {
       Options.Rt = {
           /*MinRuntime=*/true,
           /*MayReturn=*/true,
+          /*HandlerPreserveAllRegs=*/false,
       };
     } else if (ParamName == "min-rt-abort") {
       Options.Rt = {
           /*MinRuntime=*/true,
           /*MayReturn=*/false,
+          /*HandlerPreserveAllRegs=*/false,
       };
     } else if (ParamName == "merge") {
       Options.Merge = true;
+    } else if (ParamName == "handler-preserve-all-regs") {
+      if (Options.Rt)
+        Options.Rt->HandlerPreserveAllRegs = true;
     } else {
       StringRef ParamEQ;
       StringRef Val;
@@ -1589,7 +1662,7 @@ parseBoundsCheckingOptions(StringRef Params) {
   return Options;
 }
 
-Expected<CodeGenOptLevel> parseExpandFpOptions(StringRef Param) {
+Expected<CodeGenOptLevel> parseExpandIRInstsOptions(StringRef Param) {
   if (Param.empty())
     return CodeGenOptLevel::None;
 
@@ -1598,13 +1671,13 @@ Expected<CodeGenOptLevel> parseExpandFpOptions(StringRef Param) {
 
   uint8_t N;
   if (!Prefix.empty() || Digit.getAsInteger(10, N))
-    return createStringError("invalid expand-fp pass parameter '%s'",
+    return createStringError("invalid expand-ir-insts pass parameter '%s'",
                              Param.str().c_str());
 
   std::optional<CodeGenOptLevel> Level = CodeGenOpt::getLevel(N);
   if (!Level.has_value())
     return createStringError(
-        "invalid optimization level for expand-fp pass: %s",
+        "invalid optimization level for expand-ir-insts pass: %s",
         Digit.str().c_str());
 
   return *Level;
@@ -1912,11 +1985,8 @@ PassBuilder::parsePipelineText(StringRef Text) {
 
 static void setupOptionsForPipelineAlias(PipelineTuningOptions &PTO,
                                          OptimizationLevel L) {
-  // This is consistent with old pass manager invoked via opt, but
-  // inconsistent with clang. Clang doesn't enable loop vectorization
-  // but does enable slp vectorization at Oz.
-  PTO.LoopVectorization = L.getSpeedupLevel() > 1 && L != OptimizationLevel::Oz;
-  PTO.SLPVectorization = L.getSpeedupLevel() > 1 && L != OptimizationLevel::Oz;
+  PTO.LoopVectorization = L.getSpeedupLevel() > 1;
+  PTO.SLPVectorization = L.getSpeedupLevel() > 1;
 }
 
 Error PassBuilder::parseModulePass(ModulePassManager &MPM,
@@ -2013,6 +2083,14 @@ Error PassBuilder::parseModulePass(ModulePassManager &MPM,
   }
 #define FUNCTION_PASS(NAME, CREATE_PASS)                                       \
   if (Name == NAME) {                                                          \
+    if constexpr (std::is_constructible_v<                                     \
+                      std::remove_reference_t<decltype(CREATE_PASS)>,          \
+                      const TargetMachine &>) {                                \
+      if (!TM)                                                                 \
+        return make_error<StringError>(                                        \
+            formatv("pass '{0}' requires TargetMachine", Name).str(),          \
+            inconvertibleErrorCode());                                         \
+    }                                                                          \
     MPM.addPass(createModuleToFunctionPassAdaptor(CREATE_PASS));               \
     return Error::success();                                                   \
   }
@@ -2021,6 +2099,18 @@ Error PassBuilder::parseModulePass(ModulePassManager &MPM,
     auto Params = parsePassParameters(PARSER, Name, NAME);                     \
     if (!Params)                                                               \
       return Params.takeError();                                               \
+    auto CreatePass = CREATE_PASS;                                             \
+    if constexpr (std::is_constructible_v<                                     \
+                      std::remove_reference_t<decltype(CreatePass(             \
+                          Params.get()))>,                                     \
+                      const TargetMachine &,                                   \
+                      std::remove_reference_t<decltype(Params.get())>>) {      \
+      if (!TM) {                                                               \
+        return make_error<StringError>(                                        \
+            formatv("pass '{0}' requires TargetMachine", Name).str(),          \
+            inconvertibleErrorCode());                                         \
+      }                                                                        \
+    }                                                                          \
     MPM.addPass(createModuleToFunctionPassAdaptor(CREATE_PASS(Params.get()))); \
     return Error::success();                                                   \
   }
@@ -2127,6 +2217,14 @@ Error PassBuilder::parseCGSCCPass(CGSCCPassManager &CGPM,
   }
 #define FUNCTION_PASS(NAME, CREATE_PASS)                                       \
   if (Name == NAME) {                                                          \
+    if constexpr (std::is_constructible_v<                                     \
+                      std::remove_reference_t<decltype(CREATE_PASS)>,          \
+                      const TargetMachine &>) {                                \
+      if (!TM)                                                                 \
+        return make_error<StringError>(                                        \
+            formatv("pass '{0}' requires TargetMachine", Name).str(),          \
+            inconvertibleErrorCode());                                         \
+    }                                                                          \
     CGPM.addPass(createCGSCCToFunctionPassAdaptor(CREATE_PASS));               \
     return Error::success();                                                   \
   }
@@ -2135,6 +2233,18 @@ Error PassBuilder::parseCGSCCPass(CGSCCPassManager &CGPM,
     auto Params = parsePassParameters(PARSER, Name, NAME);                     \
     if (!Params)                                                               \
       return Params.takeError();                                               \
+    auto CreatePass = CREATE_PASS;                                             \
+    if constexpr (std::is_constructible_v<                                     \
+                      std::remove_reference_t<decltype(CreatePass(             \
+                          Params.get()))>,                                     \
+                      const TargetMachine &,                                   \
+                      std::remove_reference_t<decltype(Params.get())>>) {      \
+      if (!TM) {                                                               \
+        return make_error<StringError>(                                        \
+            formatv("pass '{0}' requires TargetMachine", Name).str(),          \
+            inconvertibleErrorCode());                                         \
+      }                                                                        \
+    }                                                                          \
     CGPM.addPass(createCGSCCToFunctionPassAdaptor(CREATE_PASS(Params.get()))); \
     return Error::success();                                                   \
   }
@@ -2214,6 +2324,14 @@ Error PassBuilder::parseFunctionPass(FunctionPassManager &FPM,
 // Now expand the basic registered passes from the .inc file.
 #define FUNCTION_PASS(NAME, CREATE_PASS)                                       \
   if (Name == NAME) {                                                          \
+    if constexpr (std::is_constructible_v<                                     \
+                      std::remove_reference_t<decltype(CREATE_PASS)>,          \
+                      const TargetMachine &>) {                                \
+      if (!TM)                                                                 \
+        return make_error<StringError>(                                        \
+            formatv("pass '{0}' requires TargetMachine", Name).str(),          \
+            inconvertibleErrorCode());                                         \
+    }                                                                          \
     FPM.addPass(CREATE_PASS);                                                  \
     return Error::success();                                                   \
   }
@@ -2222,14 +2340,34 @@ Error PassBuilder::parseFunctionPass(FunctionPassManager &FPM,
     auto Params = parsePassParameters(PARSER, Name, NAME);                     \
     if (!Params)                                                               \
       return Params.takeError();                                               \
+    auto CreatePass = CREATE_PASS;                                             \
+    if constexpr (std::is_constructible_v<                                     \
+                      std::remove_reference_t<decltype(CreatePass(             \
+                          Params.get()))>,                                     \
+                      const TargetMachine &,                                   \
+                      std::remove_reference_t<decltype(Params.get())>>) {      \
+      if (!TM) {                                                               \
+        return make_error<StringError>(                                        \
+            formatv("pass '{0}' requires TargetMachine", Name).str(),          \
+            inconvertibleErrorCode());                                         \
+      }                                                                        \
+    }                                                                          \
     FPM.addPass(CREATE_PASS(Params.get()));                                    \
     return Error::success();                                                   \
   }
 #define FUNCTION_ANALYSIS(NAME, CREATE_PASS)                                   \
   if (Name == "require<" NAME ">") {                                           \
+    if constexpr (std::is_constructible_v<                                     \
+                      std::remove_reference_t<decltype(CREATE_PASS)>,          \
+                      const TargetMachine &>) {                                \
+      if (!TM)                                                                 \
+        return make_error<StringError>(                                        \
+            formatv("pass '{0}' requires TargetMachine", Name).str(),          \
+            inconvertibleErrorCode());                                         \
+    }                                                                          \
     FPM.addPass(                                                               \
-        RequireAnalysisPass<                                                   \
-            std::remove_reference_t<decltype(CREATE_PASS)>, Function>());      \
+        RequireAnalysisPass<std::remove_reference_t<decltype(CREATE_PASS)>,    \
+                            Function>());                                      \
     return Error::success();                                                   \
   }                                                                            \
   if (Name == "invalidate<" NAME ">") {                                        \

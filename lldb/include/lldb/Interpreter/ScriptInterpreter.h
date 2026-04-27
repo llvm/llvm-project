@@ -16,10 +16,12 @@
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBEvent.h"
 #include "lldb/API/SBExecutionContext.h"
+#include "lldb/API/SBFrameList.h"
 #include "lldb/API/SBLaunchInfo.h"
 #include "lldb/API/SBMemoryRegionInfo.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBSymbolContext.h"
+#include "lldb/API/SBThread.h"
 #include "lldb/Breakpoint/BreakpointOptions.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/SearchFilter.h"
@@ -28,6 +30,7 @@
 #include "lldb/Host/StreamFile.h"
 #include "lldb/Interpreter/Interfaces/OperatingSystemInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedFrameInterface.h"
+#include "lldb/Interpreter/Interfaces/ScriptedFrameProviderInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedPlatformInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedProcessInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedThreadInterface.h"
@@ -352,7 +355,7 @@ public:
     return lldb::ValueObjectSP();
   }
 
-  virtual llvm::Expected<int>
+  virtual llvm::Expected<uint32_t>
   GetIndexOfChildWithName(const StructuredData::ObjectSP &implementor,
                           const char *child_name) {
     return llvm::createStringError("Type has no child named '%s'", child_name);
@@ -537,6 +540,11 @@ public:
     return {};
   }
 
+  virtual lldb::ScriptedFrameProviderInterfaceSP
+  CreateScriptedFrameProviderInterface() {
+    return {};
+  }
+
   virtual lldb::ScriptedThreadPlanInterfaceSP
   CreateScriptedThreadPlanInterface() {
     return {};
@@ -564,6 +572,51 @@ public:
     return {};
   }
 
+  /// Holds an lldb_private::Module name and a "sanitized" version
+  /// of it for the purposes of loading a script of that name by
+  /// the relevant ScriptInterpreter.
+  ///
+  /// E.g., for Python the sanitized name can't include:
+  /// * Special characters: '-', ' ', '.'
+  /// * Python keywords
+  class SanitizedScriptingModuleName {
+  public:
+    SanitizedScriptingModuleName(std::string name, std::string sanitized_name,
+                                 std::string conflicting_keyword)
+        : m_original_name(std::move(name)),
+          m_sanitized_name(std::move(sanitized_name)),
+          m_conflicting_keyword(std::move(conflicting_keyword)) {}
+
+    /// Returns \c true if this name is a keyword in the associated scripting
+    /// language.
+    bool IsKeyword() const { return !m_conflicting_keyword.empty(); }
+
+    /// Returns \c true if the original name has been sanitized (i.e., required
+    /// changes).
+    bool RequiredSanitization() const {
+      return m_sanitized_name != m_original_name;
+    }
+
+    llvm::StringRef GetSanitizedName() const { return m_sanitized_name; }
+    llvm::StringRef GetOriginalName() const { return m_original_name; }
+    llvm::StringRef GetConflictingKeyword() const {
+      return m_conflicting_keyword;
+    }
+
+  private:
+    std::string m_original_name;
+    std::string m_sanitized_name;
+
+    /// If the m_sanitized_name conflicts with a keyword for the
+    /// ScriptInterpreter language associated with this
+    /// SanitizedScriptingModuleName, is set to the conflicting keyword. Empty
+    /// otherwise.
+    std::string m_conflicting_keyword;
+  };
+
+  virtual SanitizedScriptingModuleName
+  GetSanitizedScriptingModuleName(llvm::StringRef name);
+
   lldb::DataExtractorSP
   GetDataExtractorFromSBData(const lldb::SBData &data) const;
 
@@ -572,6 +625,8 @@ public:
   Event *GetOpaqueTypeFromSBEvent(const lldb::SBEvent &event) const;
 
   lldb::StreamSP GetOpaqueTypeFromSBStream(const lldb::SBStream &stream) const;
+
+  lldb::ThreadSP GetOpaqueTypeFromSBThread(const lldb::SBThread &exe_ctx) const;
 
   lldb::StackFrameSP GetOpaqueTypeFromSBFrame(const lldb::SBFrame &frame) const;
 
@@ -595,6 +650,12 @@ public:
 
   lldb::ExecutionContextRefSP GetOpaqueTypeFromSBExecutionContext(
       const lldb::SBExecutionContext &exe_ctx) const;
+
+  lldb::StackFrameListSP
+  GetOpaqueTypeFromSBFrameList(const lldb::SBFrameList &exe_ctx) const;
+
+  lldb::ValueObjectSP
+  GetOpaqueTypeFromSBValue(const lldb::SBValue &value) const;
 
 protected:
   Debugger &m_debugger;

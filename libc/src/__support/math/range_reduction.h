@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LIBC_SRC___SUPPORT_MATH_RANGE_REDUCTION_H
-#define LIBC_SRC___SUPPORT_MATH_RANGE_REDUCTION_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_RANGE_REDUCTION_H
+#define LLVM_LIBC_SRC___SUPPORT_MATH_RANGE_REDUCTION_H
 
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/multiply_add.h"
@@ -17,11 +17,13 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-namespace generic {
+namespace math {
 
-static constexpr uint32_t FAST_PASS_BOUND = 0x4a80'0000U; // 2^22
+namespace trigonometric_func_utils_internal {
 
-static constexpr int N_ENTRIES = 8;
+LIBC_INLINE_VAR constexpr uint32_t FAST_PASS_BOUND = 0x4a80'0000U; // 2^22
+
+LIBC_INLINE_VAR constexpr int N_ENTRIES = 8;
 
 // We choose to split bits of 32/pi into 28-bit precision pieces, so that the
 // product of x * THIRTYTWO_OVER_PI_28[i] is exact.
@@ -31,13 +33,13 @@ static constexpr int N_ENTRIES = 8;
 // > a3 = D(round(32/pi - a1 - a2, 28, RN)); a3;
 // > a4 = D(round(32/pi - a1 - a2 - a3, 28, RN)); a4;
 // ...
-static constexpr double THIRTYTWO_OVER_PI_28[N_ENTRIES] = {
+LIBC_INLINE_VAR constexpr double THIRTYTWO_OVER_PI_28[N_ENTRIES] = {
     0x1.45f306ep+3,   -0x1.b1bbeaep-28,  0x1.3f84ebp-57,    -0x1.7056592p-87,
     0x1.c0db62ap-116, -0x1.4cd8778p-145, -0x1.bef806cp-174, 0x1.63abdecp-204};
 
 // Exponents of the least significant bits of the corresponding entries in
 // THIRTYTWO_OVER_PI_28.
-static constexpr int THIRTYTWO_OVER_PI_28_LSB_EXP[N_ENTRIES] = {
+LIBC_INLINE_VAR constexpr int THIRTYTWO_OVER_PI_28_LSB_EXP[N_ENTRIES] = {
     -24, -55, -81, -114, -143, -170, -200, -230};
 
 // Return k and y, where
@@ -83,8 +85,10 @@ LIBC_INLINE int64_t large_range_reduction(double x, int x_exp, double &y) {
   return static_cast<int64_t>(k_hi) + static_cast<int64_t>(k_lo);
 }
 
-} // namespace generic
+} // namespace trigonometric_func_utils_internal
+
+} // namespace math
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LIBC_SRC___SUPPORT_MATH_RANGE_REDUCTION_H
+#endif // LLVM_LIBC_SRC___SUPPORT_MATH_RANGE_REDUCTION_H

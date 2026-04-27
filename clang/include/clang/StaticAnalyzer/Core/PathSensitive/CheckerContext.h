@@ -89,9 +89,7 @@ public:
 
   /// Returns the number of times the current block has been visited
   /// along the analyzed path.
-  unsigned blockCount() const {
-    return NB.getContext().blockCount();
-  }
+  unsigned blockCount() const { return Eng.getNumVisitedCurrent(); }
 
   ASTContext &getASTContext() {
     return Eng.getContext();
@@ -155,9 +153,7 @@ public:
   }
 
   /// Get the blockID.
-  unsigned getBlockID() const {
-    return NB.getContext().getBlock()->getBlockID();
-  }
+  unsigned getBlockID() const { return Eng.getCurrBlock()->getBlockID(); }
 
   /// If the given node corresponds to a PostStore program point,
   /// retrieve the location region as it was uttered in the code.

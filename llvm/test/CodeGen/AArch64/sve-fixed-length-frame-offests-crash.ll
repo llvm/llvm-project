@@ -13,7 +13,7 @@ define dso_local void @func1(ptr %v1, ptr %v2, ptr %v3, ptr %v4, ptr %v5, ptr %v
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #368
 ; CHECK-NEXT:    stp x29, x30, [sp, #336] // 16-byte Folded Spill
-; CHECK-NEXT:    str x28, [sp, #352] // 8-byte Folded Spill
+; CHECK-NEXT:    str x28, [sp, #352] // 8-byte Spill
 ; CHECK-NEXT:    add x29, sp, #336
 ; CHECK-NEXT:    .cfi_def_cfa w29, 32
 ; CHECK-NEXT:    .cfi_offset w28, -16
@@ -53,7 +53,7 @@ define dso_local void @func1(ptr %v1, ptr %v2, ptr %v3, ptr %v4, ptr %v5, ptr %v
 ; CHECK-NEXT:    str z0, [sp]
 ; CHECK-NEXT:    bl func2
 ; CHECK-NEXT:    ldp x29, x30, [sp, #336] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x28, [sp, #352] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x28, [sp, #352] // 8-byte Reload
 ; CHECK-NEXT:    add sp, sp, #368
 ; CHECK-NEXT:    ret
                              ptr %v9, ptr %v10, ptr %v11, ptr %v12, ptr %v13, ptr %v14,  ptr %v15, ptr %v16,

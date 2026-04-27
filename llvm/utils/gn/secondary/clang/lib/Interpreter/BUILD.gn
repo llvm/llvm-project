@@ -32,6 +32,7 @@ static_library("Interpreter") {
     "Interpreter.cpp",
     "InterpreterUtils.cpp",
     "InterpreterValuePrinter.cpp",
+    "OrcIncrementalExecutor.cpp",
     "Value.cpp",
   ]
 }

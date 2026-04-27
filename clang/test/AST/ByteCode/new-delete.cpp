@@ -14,6 +14,20 @@ constexpr int *Global = new int(12); // both-error {{must be initialized by a co
 static_assert(*(new int(12)) == 12); // both-error {{not an integral constant expression}} \
                                      // both-note {{allocation performed here was not deallocated}}
 
+static_assert((delete[] (new int[3] + 1), true)); // both-error {{not an integral constant expression}} \
+                                                  // both-note {{delete of pointer to subobject '&{*new int[3]#0}[1]'}}
+
+struct S {
+  int a;
+  int b;
+
+  static constexpr S *create(int a, int b) {
+    return new S(a, b);
+  }
+};
+
+static_assert(((delete[] (new int[true])), true));
+static_assert(((delete[] (new S[true])), true));
 
 constexpr int a() {
   new int(12); // both-note {{allocation performed here was not deallocated}}
@@ -28,16 +42,6 @@ constexpr int b() {
   return m;
 }
 static_assert(b() == 12, "");
-
-
-struct S {
-  int a;
-  int b;
-
-  static constexpr S *create(int a, int b) {
-    return new S(a, b);
-  }
-};
 
 constexpr int c() {
   S *s = new S(12, 13);
@@ -113,6 +117,12 @@ constexpr int AutoArray() {
 }
 
 static_assert(AutoArray() == 3);
+
+namespace ThisPtrInRunRecordDestructor {
+  struct S {
+    constexpr ~S() { delete new S; };
+  };
+}
 
 #if 0
 consteval int largeArray1(bool b) {
@@ -523,7 +533,6 @@ namespace DeleteRunsDtors {
   static_assert(abc2() == 1);
 }
 
-/// FIXME: There is a slight difference in diagnostics here.
 namespace FaultyDtorCalledByDelete {
   struct InnerFoo {
     int *mem;
@@ -603,6 +612,16 @@ namespace CastedDelete {
   }
   static_assert(foo() == 1); // both-error {{not an integral constant expression}} \
                              // both-note {{in call to}}
+
+  constexpr bool nvdtor() { // both-error {{never produces a constant expression}}
+    struct S {
+      constexpr ~S() {}
+    };
+    struct T : S {};
+    delete (S*)new T; // both-note {{delete of object with dynamic type 'T' through pointer to base class type 'S' with non-virtual destructor}}
+    return true;
+  }
+
 }
 
 constexpr void use_after_free_2() { // both-error {{never produces a constant expression}}
@@ -694,7 +713,7 @@ namespace OperatorNewDelete {
   static_assert(zeroAlloc());
 
   constexpr int arrayAlloc() {
-    int *F = std::allocator<int>().allocate(2);
+    int *F = std::allocator<int>().allocate(2); // both-note {{heap allocation performed here}}
     F[0] = 10; // both-note {{assignment to object outside its lifetime is not allowed in a constant expression}}
     F[1] = 13;
     int Res = F[1] + F[0];
@@ -712,7 +731,7 @@ namespace OperatorNewDelete {
 
   /// FIXME: This is broken in the current interpreter.
   constexpr bool structAlloc() {
-    S *s = std::allocator<S>().allocate(1);
+    S *s = std::allocator<S>().allocate(1); // ref-note {{heap allocation performed here}}
 
     s->i = 12; // ref-note {{assignment to object outside its lifetime is not allowed in a constant expression}}
 
@@ -725,7 +744,7 @@ namespace OperatorNewDelete {
                                 // ref-note {{in call to}}
 
   constexpr bool structAllocArray() {
-    S *s = std::allocator<S>().allocate(9);
+    S *s = std::allocator<S>().allocate(9); // ref-note {{heap allocation performed here}}
 
     s[2].i = 12; // ref-note {{assignment to object outside its lifetime is not allowed in a constant expression}}
     bool Res = (s[2].i == 12);
@@ -764,7 +783,7 @@ namespace Limits {
     return n;
   }
   static_assert(dynarray<char>(5, 0) == 'f');
-
+  static_assert(dynarray<char>(5, 4) == 0);
 
 #if __LP64__
   template <typename T>
@@ -891,7 +910,7 @@ namespace IncompleteArray {
   };
   constexpr int test1() {
     int n = 5;
-    int* a = new int[n];
+    int* a = new int[n]; // both-note {{heap allocation performed here}}
     int c = a[0]; // both-note {{read of uninitialized object}}
     delete[] a;
     return c;
@@ -1104,6 +1123,37 @@ namespace HugeAllocation {
 }
 #endif
 
+namespace ZeroSizeArray {
+  constexpr int foo() {
+    int *A = new int[0];
+    int diff = A - (&A[0]);
+    delete[] A;
+    return diff;
+  }
+  static_assert(foo() == 0);
+}
+
+namespace NonLiteralType {
+  /// This used to crash.
+  constexpr void foo() {
+    struct O {};
+
+    struct S {
+      O *s;
+      constexpr S() : s{std::allocator<O>{}.allocate(1)} {}
+    };
+  }
+}
+
+namespace BrokenDelete {
+  constexpr void foo() {
+    F *f = /* missing */; // both-error {{unknown type name 'F'}} \
+                          // both-error {{expected expression}}
+
+    delete f;
+  }
+}
+
 #else
 /// Make sure we reject this prior to C++20
 constexpr int a() { // both-error {{never produces a constant expression}}
@@ -1115,6 +1165,7 @@ static_assert(a() == 1, ""); // both-error {{not an integral constant expression
 
 
 static_assert(true ? *new int : 4, ""); // both-error {{expression is not an integral constant expression}} \
-                                        // both-note {{read of uninitialized object is not allowed in a constant expression}}
+                                        // both-note {{read of uninitialized object is not allowed in a constant expression}} \
+                                        // both-note {{heap allocation performed here}}
 
 #endif

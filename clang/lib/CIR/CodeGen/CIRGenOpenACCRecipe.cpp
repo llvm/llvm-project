@@ -92,8 +92,7 @@ void OpenACCRecipeBuilderBase::makeAllocaCopy(mlir::Location loc,
         [&](mlir::OpBuilder &b, mlir::Location loc) {
           // Simple increment of the iterator.
           auto load = cir::LoadOp::create(builder, loc, {itr});
-          auto inc = cir::UnaryOp::create(builder, loc, load.getType(),
-                                          cir::UnaryOpKind::Inc, load);
+          auto inc = builder.createInc(loc, load);
           builder.CIRBaseBuilderTy::createStore(loc, inc, itr);
           builder.createYield(loc);
         });
@@ -269,8 +268,8 @@ std::pair<mlir::Value, mlir::Value> OpenACCRecipeBuilderBase::createBoundsLoop(
     if (inverse) {
       cir::ConstantOp constOne = builder.getConstInt(loc, itrTy, 1);
 
-      auto sub = cir::BinOp::create(builder, loc, itrTy, cir::BinOpKind::Sub,
-                                    ubConversion.getResult(0), constOne);
+      auto sub =
+          cir::SubOp::create(builder, loc, ubConversion.getResult(0), constOne);
 
       // Upperbound is exclusive, so subtract 1.
       builder.CIRBaseBuilderTy::createStore(loc, sub, itr);
@@ -308,9 +307,8 @@ std::pair<mlir::Value, mlir::Value> OpenACCRecipeBuilderBase::createBoundsLoop(
         /*stepBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
           auto load = cir::LoadOp::create(builder, loc, {itr});
-          auto unary = cir::UnaryOp::create(
-              builder, loc, load.getType(),
-              inverse ? cir::UnaryOpKind::Dec : cir::UnaryOpKind::Inc, load);
+          auto unary = inverse ? builder.createDec(loc, load)
+                               : builder.createInc(loc, load);
           builder.CIRBaseBuilderTy::createStore(loc, unary, itr);
           builder.createYield(loc);
         });
@@ -617,11 +615,11 @@ void OpenACCRecipeBuilderBase::createReductionRecipeCombiner(
   if (const auto *cat = cgf.getContext().getAsConstantArrayType(origType)) {
     // If we're in an array, we have to emit the combiner for each element of
     // the array.
-    auto itrTy = mlir::cast<cir::IntType>(cgf.PtrDiffTy);
+    auto itrTy = mlir::cast<cir::IntType>(cgf.ptrDiffTy);
     auto itrPtrTy = cir::PointerType::get(itrTy);
 
     mlir::Value zero =
-        builder.getConstInt(loc, mlir::cast<cir::IntType>(cgf.PtrDiffTy), 0);
+        builder.getConstInt(loc, mlir::cast<cir::IntType>(cgf.ptrDiffTy), 0);
     mlir::Value itr =
         cir::AllocaOp::create(builder, loc, itrPtrTy, itrTy, "itr",
                               cgf.cgm.getSize(cgf.getPointerAlign()));
@@ -633,7 +631,7 @@ void OpenACCRecipeBuilderBase::createReductionRecipeCombiner(
         [&](mlir::OpBuilder &b, mlir::Location loc) {
           auto loadItr = cir::LoadOp::create(builder, loc, {itr});
           mlir::Value arraySize = builder.getConstInt(
-              loc, mlir::cast<cir::IntType>(cgf.PtrDiffTy), cat->getZExtSize());
+              loc, mlir::cast<cir::IntType>(cgf.ptrDiffTy), cat->getZExtSize());
           auto cmp = builder.createCompare(loc, cir::CmpOpKind::lt, loadItr,
                                            arraySize);
           builder.createCondition(cmp);
@@ -654,8 +652,7 @@ void OpenACCRecipeBuilderBase::createReductionRecipeCombiner(
         /*stepBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
           auto loadItr = cir::LoadOp::create(builder, loc, {itr});
-          auto inc = cir::UnaryOp::create(builder, loc, loadItr.getType(),
-                                          cir::UnaryOpKind::Inc, loadItr);
+          auto inc = builder.createInc(loc, loadItr);
           builder.CIRBaseBuilderTy::createStore(loc, inc, itr);
           builder.createYield(loc);
         }));

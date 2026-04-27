@@ -215,7 +215,7 @@ void SBCommandInterpreter::HandleCommandsFromFile(
   if (!file.IsValid()) {
     SBStream s;
     file.GetDescription(s);
-    result->AppendErrorWithFormat("File is not valid: %s.", s.GetData());
+    result->AppendErrorWithFormat("File is not valid: %s", s.GetData());
   }
 
   FileSpec tmp_spec = file.ref();
@@ -526,7 +526,7 @@ const char *SBCommandInterpreter::GetBroadcasterClass() {
   LLDB_INSTRUMENT();
 
   return ConstString(CommandInterpreter::GetStaticBroadcasterClass())
-      .AsCString();
+      .AsCString(nullptr);
 }
 
 const char *SBCommandInterpreter::GetArgumentTypeAsCString(
@@ -661,21 +661,22 @@ SBCommand::operator bool() const {
 const char *SBCommand::GetName() {
   LLDB_INSTRUMENT_VA(this);
 
-  return (IsValid() ? ConstString(m_opaque_sp->GetCommandName()).AsCString()
-                    : nullptr);
+  return (IsValid()
+              ? ConstString(m_opaque_sp->GetCommandName()).AsCString(nullptr)
+              : nullptr);
 }
 
 const char *SBCommand::GetHelp() {
   LLDB_INSTRUMENT_VA(this);
 
-  return (IsValid() ? ConstString(m_opaque_sp->GetHelp()).AsCString()
+  return (IsValid() ? ConstString(m_opaque_sp->GetHelp()).AsCString(nullptr)
                     : nullptr);
 }
 
 const char *SBCommand::GetHelpLong() {
   LLDB_INSTRUMENT_VA(this);
 
-  return (IsValid() ? ConstString(m_opaque_sp->GetHelpLong()).AsCString()
+  return (IsValid() ? ConstString(m_opaque_sp->GetHelpLong()).AsCString(nullptr)
                     : nullptr);
 }
 

@@ -18,6 +18,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/SandboxIR/Context.h"
 #include "llvm/SandboxIR/Function.h"
+#include "llvm/SandboxIR/Module.h"
 #include "llvm/SandboxIR/Type.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gmock/gmock.h"
@@ -424,6 +425,86 @@ TEST_F(VecUtilsTest, GetWideType) {
   EXPECT_EQ(sandboxir::VecUtils::getWideType(Int32X4Ty, 2), Int32X8Ty);
 }
 
+TEST_F(VecUtilsTest, GetCombinedVectorTypeFor) {
+  parseIR(R"IR(
+define void @foo(ptr %ptr, i8 %i8, i16 %i16, i32 %i32, float %f32, double %f64, <2 x i8> %v2xi8, <2 x i16> %v2xi16) {
+  store i8 %i8, ptr %ptr
+  store i16 %i16, ptr %ptr
+  store i32 %i32, ptr %ptr
+  store float %f32, ptr %ptr
+  store double %f64, ptr %ptr
+  store <2 x i8> %v2xi8, ptr %ptr
+  store <2 x i16> %v2xi16, ptr %ptr
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto &BB = *F.begin();
+  const auto &DL = F.getParent()->getDataLayout();
+  auto It = BB.begin();
+  auto *Store_i8 = &*It++;
+  auto *Store_i16 = &*It++;
+  auto *Store_i32 = &*It++;
+  auto *Store_f32 = &*It++;
+  auto *Store_f64 = &*It++;
+  auto *Store_2xi8 = &*It++;
+  auto *Store_2xi16 = &*It++;
+
+  auto *I8Ty = sandboxir::IntegerType::get(Ctx, 8);
+  auto *I16Ty = sandboxir::IntegerType::get(Ctx, 16);
+  auto *F32Ty = sandboxir::Type::getFloatTy(Ctx);
+
+  // Check same type.
+  EXPECT_EQ(
+      sandboxir::VecUtils::getCombinedVectorTypeFor({Store_i8, Store_i8}, DL),
+      sandboxir::FixedVectorType::get(I8Ty, 2));
+  EXPECT_EQ(sandboxir::VecUtils::getCombinedVectorTypeFor(
+                {Store_2xi8, Store_2xi8}, DL),
+            sandboxir::FixedVectorType::get(I8Ty, 4));
+
+  // Check different types, power-of-two.
+  EXPECT_EQ(sandboxir::VecUtils::getCombinedVectorTypeFor(
+                {Store_i8, Store_i8, Store_i16}, DL),
+            sandboxir::FixedVectorType::get(I8Ty, 4));
+  EXPECT_EQ(sandboxir::VecUtils::getCombinedVectorTypeFor(
+                {Store_i8, Store_i8, Store_i16, Store_i32}, DL),
+            sandboxir::FixedVectorType::get(I8Ty, 8));
+  EXPECT_EQ(sandboxir::VecUtils::getCombinedVectorTypeFor(
+                {Store_2xi8, Store_2xi8, Store_2xi16}, DL),
+            sandboxir::FixedVectorType::get(I8Ty, 8));
+
+  // Check different types non-power-of-two.
+  EXPECT_EQ(
+      sandboxir::VecUtils::getCombinedVectorTypeFor({Store_f32, Store_f64}, DL),
+      sandboxir::FixedVectorType::get(F32Ty, 3));
+  EXPECT_EQ(
+      sandboxir::VecUtils::getCombinedVectorTypeFor({Store_i32, Store_i16}, DL),
+      sandboxir::FixedVectorType::get(I16Ty, 3));
+  EXPECT_EQ(sandboxir::VecUtils::getCombinedVectorTypeFor(
+                {Store_i8, Store_i16, Store_i32}, DL),
+            sandboxir::FixedVectorType::get(I8Ty, 7));
+  EXPECT_EQ(sandboxir::VecUtils::getCombinedVectorTypeFor(
+                {Store_i8, Store_i16, Store_2xi8}, DL),
+            sandboxir::FixedVectorType::get(I8Ty, 5));
+
+  // Mix float and integer.
+  {
+    auto *CVTy = sandboxir::VecUtils::getCombinedVectorTypeFor(
+        {Store_i32, Store_f32}, DL);
+    EXPECT_EQ(cast<sandboxir::FixedVectorType>(CVTy)->getNumElements(), 2u);
+    EXPECT_EQ(CVTy->getScalarSizeInBits(), 32u);
+  }
+  {
+    auto *CVTy = sandboxir::VecUtils::getCombinedVectorTypeFor(
+        {Store_f32, Store_2xi8}, DL);
+    EXPECT_EQ(cast<sandboxir::FixedVectorType>(CVTy)->getNumElements(), 6u);
+    EXPECT_EQ(CVTy->getScalarSizeInBits(), 8u);
+  }
+}
+
 TEST_F(VecUtilsTest, GetLowest) {
   parseIR(R"IR(
 define void @foo(i8 %v) {
@@ -442,7 +523,7 @@ bb1:
   auto &F = *Ctx.createFunction(&LLVMF);
   auto &BB0 = getBasicBlockByName(F, "bb0");
   auto It = BB0.begin();
-  auto *BB0I = cast<sandboxir::BranchInst>(&*It++);
+  auto *BB0I = cast<sandboxir::UncondBrInst>(&*It++);
 
   auto &BB = getBasicBlockByName(F, "bb1");
   It = BB.begin();
@@ -518,7 +599,7 @@ bb2:
   auto It = BB.begin();
   auto *PHI1 = cast<sandboxir::PHINode>(&*It++);
   auto *PHI2 = cast<sandboxir::PHINode>(&*It++);
-  auto *Br = cast<sandboxir::BranchInst>(&*It++);
+  auto *Br = cast<sandboxir::UncondBrInst>(&*It++);
   EXPECT_EQ(sandboxir::VecUtils::getLastPHIOrSelf(PHI1), PHI2);
   EXPECT_EQ(sandboxir::VecUtils::getLastPHIOrSelf(PHI2), PHI2);
   EXPECT_EQ(sandboxir::VecUtils::getLastPHIOrSelf(Br), Br);
@@ -616,4 +697,97 @@ bb1:
     for (auto *NotPack : {NotPack0, NotPack1, NotPack2, NotPackBB})
       EXPECT_FALSE(sandboxir::VecUtils::matchPack(NotPack));
   }
+}
+
+TEST_F(VecUtilsTest, Unpack) {
+  parseIR(R"IR(
+define void @foo(<4 x i32> %vec, i32 %scalar) {
+bb0:
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto &BB = getBasicBlockByName(F, "bb0");
+  auto It = BB.begin();
+  sandboxir::Value *Vec = F.getArg(0);
+  [[maybe_unused]] sandboxir::Value *Scalar = F.getArg(1);
+
+  auto *Int32Ty = sandboxir::Type::getInt32Ty(Ctx);
+
+  // Check unpacking scalars.
+  auto WhereIt = It;
+  for (unsigned Lane = 0; Lane != 4; ++Lane) {
+    auto *ExtrI = cast<sandboxir::ExtractElementInst>(
+        sandboxir::VecUtils::unpack(Vec, Int32Ty, Lane, WhereIt));
+    EXPECT_EQ(ExtrI->getOperand(0), Vec);
+    EXPECT_EQ(ExtrI->getOperand(1), sandboxir::ConstantInt::get(Int32Ty, Lane));
+    ExtrI->eraseFromParent();
+  }
+  auto *Int8Ty = sandboxir::Type::getInt8Ty(Ctx);
+  // Check assertions.
+#ifndef NDEBUG
+  EXPECT_DEATH(sandboxir::VecUtils::unpack(Scalar, Int32Ty, 0, WhereIt),
+               ".*vector.*");
+  EXPECT_DEATH(sandboxir::VecUtils::unpack(Vec, Int32Ty, 4, WhereIt),
+               "Out of bounds.*");
+  EXPECT_DEATH(sandboxir::VecUtils::unpack(Vec, Int8Ty, 0, WhereIt),
+               ".*element type.*");
+#endif // NDEBUG
+
+  // Check unpacking vectors.
+  auto *ExtrTy = sandboxir::FixedVectorType::get(Int32Ty, 2);
+  auto *VecTy = cast<sandboxir::FixedVectorType>(Vec->getType());
+  for (unsigned Lane = 0; Lane != 2; ++Lane) {
+    auto *Shuff = cast<sandboxir::ShuffleVectorInst>(
+        sandboxir::VecUtils::unpack(Vec, ExtrTy, Lane, WhereIt));
+    EXPECT_EQ(Shuff->getOperand(0), Vec);
+    EXPECT_EQ(Shuff->getOperand(1), sandboxir::PoisonValue::get(VecTy));
+    auto Mask = Shuff->getShuffleMask();
+    EXPECT_THAT(Mask, testing::ElementsAre(Lane, Lane + 1));
+
+    Shuff->eraseFromParent();
+  }
+  // Check out of bounds!.
+  auto *Ty2xi32 = sandboxir::FixedVectorType::get(Int32Ty, 2);
+  EXPECT_DEBUG_DEATH(sandboxir::VecUtils::unpack(Vec, Ty2xi32, 3, WhereIt),
+                     "Out of bounds.*");
+  EXPECT_DEBUG_DEATH(sandboxir::VecUtils::unpack(Vec, Ty2xi32, 4, WhereIt),
+                     "Out of bounds.*");
+  auto *Ty2xi8 = sandboxir::FixedVectorType::get(Int8Ty, 2);
+  EXPECT_DEBUG_DEATH(sandboxir::VecUtils::unpack(Vec, Ty2xi8, 4, WhereIt),
+                     ".*type.*");
+}
+
+TEST_F(VecUtilsTest, LaneValueEnumerator) {
+  parseIR(R"IR(
+define void @foo(i32 %s0, <4 x i32> %v0, i32 %s1, <2 x i32> %v1, <3 x i32> %v2, i32 %s2) {
+bb0:
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  unsigned Idx = 0;
+  sandboxir::Value *S0 = F.getArg(Idx++);
+  sandboxir::Value *V0 = F.getArg(Idx++);
+  sandboxir::Value *S1 = F.getArg(Idx++);
+  sandboxir::Value *V1 = F.getArg(Idx++);
+  sandboxir::Value *V2 = F.getArg(Idx++);
+  sandboxir::Value *S2 = F.getArg(Idx++);
+
+  SmallVector<sandboxir::Value *, 6> Bndl({S0, V0, S1, V1, V2, S2});
+  SmallVector<unsigned, 6> Lanes;
+  SmallVector<sandboxir::Value *, 6> Elms;
+  for (auto [Lane, Elm] : sandboxir::VecUtils::enumerateLanes(Bndl)) {
+    Lanes.push_back(Lane);
+    Elms.push_back(Elm);
+  }
+
+  EXPECT_EQ(Elms, Bndl);
+  EXPECT_THAT(Lanes, testing::ElementsAre(0, 1, 5, 6, 8, 11));
 }

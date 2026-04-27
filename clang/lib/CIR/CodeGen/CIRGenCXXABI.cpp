@@ -37,6 +37,10 @@ CIRGenCXXABI::AddedStructorArgCounts CIRGenCXXABI::addImplicitConstructorArgs(
                                 addedArgs.suffix.size());
 }
 
+CatchTypeInfo CIRGenCXXABI::getCatchAllTypeInfo() {
+  return CatchTypeInfo{{}, 0};
+}
+
 void CIRGenCXXABI::buildThisParam(CIRGenFunction &cgf,
                                   FunctionArgList &params) {
   const auto *md = cast<CXXMethodDecl>(cgf.curGD.getDecl());
@@ -59,15 +63,14 @@ void CIRGenCXXABI::buildThisParam(CIRGenFunction &cgf,
 cir::GlobalLinkageKind CIRGenCXXABI::getCXXDestructorLinkage(
     GVALinkage linkage, const CXXDestructorDecl *dtor, CXXDtorType dt) const {
   // Delegate back to cgm by default.
-  return cgm.getCIRLinkageForDeclarator(dtor, linkage,
-                                        /*isConstantVariable=*/false);
+  return cgm.getCIRLinkageForDeclarator(dtor, linkage);
 }
 
 mlir::Value CIRGenCXXABI::loadIncomingCXXThis(CIRGenFunction &cgf) {
   ImplicitParamDecl *vd = getThisDecl(cgf);
   Address addr = cgf.getAddrOfLocalVar(vd);
-  return cgf.getBuilder().create<cir::LoadOp>(
-      cgf.getLoc(vd->getLocation()), addr.getElementType(), addr.getPointer());
+  return cir::LoadOp::create(cgf.getBuilder(), cgf.getLoc(vd->getLocation()),
+                             addr.getElementType(), addr.getPointer());
 }
 
 void CIRGenCXXABI::setCXXABIThisValue(CIRGenFunction &cgf,
@@ -81,8 +84,7 @@ CharUnits CIRGenCXXABI::getArrayCookieSize(const CXXNewExpr *e) {
   if (!requiresArrayCookie(e))
     return CharUnits::Zero();
 
-  cgm.errorNYI(e->getSourceRange(), "CIRGenCXXABI::getArrayCookieSize");
-  return CharUnits::Zero();
+  return getArrayCookieSizeImpl(e->getAllocatedType());
 }
 
 bool CIRGenCXXABI::requiresArrayCookie(const CXXNewExpr *e) {
@@ -92,4 +94,12 @@ bool CIRGenCXXABI::requiresArrayCookie(const CXXNewExpr *e) {
     return true;
 
   return e->getAllocatedType().isDestructedType();
+}
+
+void CIRGenCXXABI::emitReturnFromThunk(CIRGenFunction &cgf, RValue rv,
+                                       QualType resultType) {
+  assert(!cgf.hasAggregateEvaluationKind(resultType) &&
+         "cannot handle aggregates");
+  mlir::Location loc = cgf.getBuilder().getUnknownLoc();
+  cgf.emitReturnOfRValue(loc, rv, resultType);
 }

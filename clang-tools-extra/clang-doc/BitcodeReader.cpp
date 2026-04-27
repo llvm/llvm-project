@@ -7,14 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "BitcodeReader.h"
-#include "llvm/ADT/IndexedMap.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 
 namespace clang {
 namespace doc {
+
+static llvm::ExitOnError ExitOnErr("clang-doc error: ");
 
 using Record = llvm::SmallVector<uint64_t, 1024>;
 
@@ -23,6 +25,12 @@ static llvm::Error decodeRecord(const Record &R,
                                 llvm::SmallVectorImpl<char> &Field,
                                 llvm::StringRef Blob) {
   Field.assign(Blob.begin(), Blob.end());
+  return llvm::Error::success();
+}
+
+static llvm::Error decodeRecord(const Record &R, llvm::StringRef &Field,
+                                llvm::StringRef Blob) {
+  Field = internString(Blob);
   return llvm::Error::success();
 }
 
@@ -121,14 +129,6 @@ static llvm::Error decodeRecord(const Record &R, FieldId &Field,
                                  "invalid value for FieldId");
 }
 
-static llvm::Error
-decodeRecord(const Record &R,
-             llvm::SmallVectorImpl<llvm::SmallString<16>> &Field,
-             llvm::StringRef Blob) {
-  Field.push_back(Blob);
-  return llvm::Error::success();
-}
-
 static llvm::Error decodeRecord(const Record &R,
                                 llvm::SmallVectorImpl<Location> &Field,
                                 llvm::StringRef Blob) {
@@ -157,6 +157,8 @@ static llvm::Error parseRecord(const Record &R, unsigned ID,
     return decodeRecord(R, I->Name, Blob);
   case NAMESPACE_PATH:
     return decodeRecord(R, I->Path, Blob);
+  case NAMESPACE_PARENT_USR:
+    return decodeRecord(R, I->ParentUSR, Blob);
   default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "invalid field for NamespaceInfo");
@@ -182,6 +184,8 @@ static llvm::Error parseRecord(const Record &R, unsigned ID,
     return decodeRecord(R, I->IsTypeDef, Blob);
   case RECORD_MANGLED_NAME:
     return decodeRecord(R, I->MangledName, Blob);
+  case RECORD_PARENT_USR:
+    return decodeRecord(R, I->ParentUSR, Blob);
   default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "invalid field for RecordInfo");
@@ -335,7 +339,10 @@ static llvm::Error parseRecord(const Record &R, unsigned ID,
 }
 
 static llvm::Error parseRecord(const Record &R, unsigned ID,
-                               llvm::StringRef Blob, CommentInfo *I) {
+                               llvm::StringRef Blob, CommentInfo *I,
+                               llvm::SmallVectorImpl<StringRef> &AttrKeys,
+                               llvm::SmallVectorImpl<StringRef> &AttrValues,
+                               llvm::SmallVectorImpl<StringRef> &Args) {
   llvm::SmallString<16> KindStr;
   switch (ID) {
   case COMMENT_KIND:
@@ -354,11 +361,14 @@ static llvm::Error parseRecord(const Record &R, unsigned ID,
   case COMMENT_CLOSENAME:
     return decodeRecord(R, I->CloseName, Blob);
   case COMMENT_ATTRKEY:
-    return decodeRecord(R, I->AttrKeys, Blob);
+    AttrKeys.push_back(internString(Blob));
+    return llvm::Error::success();
   case COMMENT_ATTRVAL:
-    return decodeRecord(R, I->AttrValues, Blob);
+    AttrValues.push_back(internString(Blob));
+    return llvm::Error::success();
   case COMMENT_ARG:
-    return decodeRecord(R, I->Args, Blob);
+    Args.push_back(internString(Blob));
+    return llvm::Error::success();
   case COMMENT_SELFCLOSING:
     return decodeRecord(R, I->SelfClosing, Blob);
   case COMMENT_EXPLICIT:
@@ -367,6 +377,108 @@ static llvm::Error parseRecord(const Record &R, unsigned ID,
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "invalid field for CommentInfo");
   }
+}
+
+template <typename T, typename BlockBeginHandler, typename BlockEndHandler,
+          typename RecordHandler>
+llvm::Error
+ClangDocBitcodeReader::parseBlock(unsigned ID, T I, BlockBeginHandler &&BBH,
+                                  BlockEndHandler &&BEH, RecordHandler &&RH) {
+  llvm::TimeTraceScope("Reducing infos", "readBlock");
+  if (llvm::Error Err = Stream.EnterSubBlock(ID))
+    return Err;
+
+  while (true) {
+    unsigned BlockOrCode = 0;
+    llvm::Expected<Cursor> C = skipUntilRecordOrBlock(BlockOrCode);
+    if (!C)
+      return C.takeError();
+
+    switch (*C) {
+    case Cursor::BadBlock:
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "bad block found");
+    case Cursor::BlockEnd:
+      if (llvm::Error Err = BEH())
+        return Err;
+      return llvm::Error::success();
+    case Cursor::BlockBegin: {
+      llvm::Expected<bool> Handled = BBH(BlockOrCode);
+      if (!Handled)
+        return Handled.takeError();
+      if (*Handled)
+        continue;
+
+      if (llvm::Error Err = readSubBlock(BlockOrCode, I)) {
+        if (llvm::Error Skipped = Stream.SkipBlock())
+          return joinErrors(std::move(Err), std::move(Skipped));
+        return Err;
+      }
+      continue;
+    }
+    case Cursor::Record:
+      break;
+    }
+
+    if (llvm::Error Err = RH(BlockOrCode))
+      return Err;
+  }
+}
+
+template <>
+llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, CommentInfo *I) {
+  llvm::SmallVector<CommentInfo> LocalChildren;
+  llvm::SmallVector<StringRef> AttrKeys;
+  llvm::SmallVector<StringRef> AttrValues;
+  llvm::SmallVector<StringRef> Args;
+
+  return parseBlock(
+      ID, I,
+      [&](unsigned BlockOrCode) -> llvm::Expected<bool> {
+        if (BlockOrCode == BI_COMMENT_BLOCK_ID) {
+          CommentInfo Child;
+          if (llvm::Error Err = readBlock(BlockOrCode, &Child))
+            return std::move(Err);
+          LocalChildren.push_back(std::move(Child));
+          return true;
+        }
+        return false;
+      },
+      [&]() -> llvm::Error {
+        if (!LocalChildren.empty())
+          I->Children =
+              allocateArray<CommentInfo>(LocalChildren, TransientArena);
+        if (!AttrKeys.empty()) {
+          StringRef *KeysMem =
+              TransientArena.Allocate<StringRef>(AttrKeys.size());
+          std::uninitialized_copy(AttrKeys.begin(), AttrKeys.end(), KeysMem);
+          I->AttrKeys = llvm::ArrayRef<StringRef>(KeysMem, AttrKeys.size());
+        }
+        if (!AttrValues.empty()) {
+          StringRef *ValuesMem =
+              TransientArena.Allocate<StringRef>(AttrValues.size());
+          std::uninitialized_copy(AttrValues.begin(), AttrValues.end(),
+                                  ValuesMem);
+          I->AttrValues =
+              llvm::ArrayRef<StringRef>(ValuesMem, AttrValues.size());
+        }
+        if (!Args.empty()) {
+          StringRef *ArgsMem = TransientArena.Allocate<StringRef>(Args.size());
+          std::uninitialized_copy(Args.begin(), Args.end(), ArgsMem);
+          I->Args = llvm::ArrayRef<StringRef>(ArgsMem, Args.size());
+        }
+        return llvm::Error::success();
+      },
+      [&](unsigned BlockOrCode) -> llvm::Error {
+        Record R;
+        llvm::StringRef Blob;
+        llvm::Expected<unsigned> MaybeRecID =
+            Stream.readRecord(BlockOrCode, R, &Blob);
+        if (!MaybeRecID)
+          return MaybeRecID.takeError();
+        return parseRecord(R, MaybeRecID.get(), Blob, I, AttrKeys, AttrValues,
+                           Args);
+      });
 }
 
 static llvm::Error parseRecord(const Record &R, unsigned ID,
@@ -427,6 +539,8 @@ static llvm::Error parseRecord(const Record &R, unsigned ID,
     return decodeRecord(R, I->IsType, Blob);
   case CONCEPT_CONSTRAINT_EXPRESSION:
     return decodeRecord(R, I->ConstraintExpression, Blob);
+  case CONCEPT_DEFLOCATION:
+    return decodeRecord(R, I->DefLoc, Blob);
   }
   llvm_unreachable("invalid field for ConceptInfo");
 }
@@ -498,16 +612,15 @@ template <> llvm::Expected<CommentInfo *> getCommentInfo(EnumValueInfo *I) {
   return &I->Description.emplace_back();
 }
 
-template <> llvm::Expected<CommentInfo *> getCommentInfo(CommentInfo *I) {
-  I->Children.emplace_back(std::make_unique<CommentInfo>());
-  return I->Children.back().get();
-}
-
 template <> llvm::Expected<CommentInfo *> getCommentInfo(ConceptInfo *I) {
   return &I->Description.emplace_back();
 }
 
 template <> Expected<CommentInfo *> getCommentInfo(VarInfo *I) {
+  return &I->Description.emplace_back();
+}
+
+template <> Expected<CommentInfo *> getCommentInfo(FriendInfo *I) {
   return &I->Description.emplace_back();
 }
 
@@ -537,13 +650,6 @@ template <> llvm::Error addTypeInfo(FunctionInfo *I, TypeInfo &&T) {
 
 template <> llvm::Error addTypeInfo(FunctionInfo *I, FieldTypeInfo &&T) {
   I->Params.emplace_back(std::move(T));
-  return llvm::Error::success();
-}
-
-template <> llvm::Error addTypeInfo(FriendInfo *I, FieldTypeInfo &&T) {
-  if (!I->Params)
-    I->Params.emplace();
-  I->Params->emplace_back(std::move(T));
   return llvm::Error::success();
 }
 
@@ -647,9 +753,11 @@ llvm::Error addReference(NamespaceInfo *I, Reference &&R, FieldId F) {
   case FieldId::F_namespace:
     I->Namespace.emplace_back(std::move(R));
     return llvm::Error::success();
-  case FieldId::F_child_namespace:
-    I->Children.Namespaces.emplace_back(std::move(R));
+  case FieldId::F_child_namespace: {
+    Reference *NewR = allocatePtr<Reference>(TransientArena, std::move(R));
+    I->Children.Namespaces.push_back(*NewR);
     return llvm::Error::success();
+  }
   case FieldId::F_child_record:
     I->Children.Records.emplace_back(std::move(R));
     return llvm::Error::success();
@@ -717,8 +825,8 @@ llvm::Error addReference(FriendInfo *Friend, Reference &&R, FieldId F) {
 
 template <typename T, typename ChildInfoType>
 static void addChild(T I, ChildInfoType &&R) {
-  llvm::errs() << "invalid child type for info";
-  exit(1);
+  ExitOnErr(llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                    "invalid child type for info"));
 }
 
 // Namespace children:
@@ -767,8 +875,9 @@ template <> void addChild(BaseRecordInfo *I, FunctionInfo &&R) {
 // parameters) or TemplateSpecializationInfo (for the specialization's
 // parameters).
 template <typename T> static void addTemplateParam(T I, TemplateParamInfo &&P) {
-  llvm::errs() << "invalid container for template parameter";
-  exit(1);
+  ExitOnErr(
+      llvm::createStringError(llvm::inconvertibleErrorCode(),
+                              "invalid container for template parameter"));
 }
 template <> void addTemplateParam(TemplateInfo *I, TemplateParamInfo &&P) {
   I->Params.emplace_back(std::move(P));
@@ -780,8 +889,8 @@ void addTemplateParam(TemplateSpecializationInfo *I, TemplateParamInfo &&P) {
 
 // Template info. These apply to either records or functions.
 template <typename T> static void addTemplate(T I, TemplateInfo &&P) {
-  llvm::errs() << "invalid container for template info";
-  exit(1);
+  ExitOnErr(llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                    "invalid container for template info"));
 }
 template <> void addTemplate(RecordInfo *I, TemplateInfo &&P) {
   I->Template.emplace(std::move(P));
@@ -795,12 +904,16 @@ template <> void addTemplate(ConceptInfo *I, TemplateInfo &&P) {
 template <> void addTemplate(FriendInfo *I, TemplateInfo &&P) {
   I->Template.emplace(std::move(P));
 }
+template <> void addTemplate(TypedefInfo *I, TemplateInfo &&P) {
+  I->Template.emplace(std::move(P));
+}
 
 // Template specializations go only into template records.
 template <typename T>
 static void addTemplateSpecialization(T I, TemplateSpecializationInfo &&TSI) {
-  llvm::errs() << "invalid container for template specialization info";
-  exit(1);
+  ExitOnErr(llvm::createStringError(
+      llvm::inconvertibleErrorCode(),
+      "invalid container for template specialization info"));
 }
 template <>
 void addTemplateSpecialization(TemplateInfo *I,
@@ -809,8 +922,8 @@ void addTemplateSpecialization(TemplateInfo *I,
 }
 
 template <typename T> static void addConstraint(T I, ConstraintInfo &&C) {
-  llvm::errs() << "invalid container for constraint info";
-  exit(1);
+  ExitOnErr(llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                    "invalid container for constraint info"));
 }
 template <> void addConstraint(TemplateInfo *I, ConstraintInfo &&C) {
   I->Constraints.emplace_back(std::move(C));
@@ -841,33 +954,38 @@ llvm::Error ClangDocBitcodeReader::readRecord(unsigned ID, Reference *I) {
 // Read a block of records into a single info.
 template <typename T>
 llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, T I) {
-  llvm::TimeTraceScope("Reducing infos", "readBlock");
-  if (llvm::Error Err = Stream.EnterSubBlock(ID))
-    return Err;
+  return parseBlock(
+      ID, I, [](unsigned BlockOrCode) -> llvm::Expected<bool> { return false; },
+      []() -> llvm::Error { return llvm::Error::success(); },
+      [&](unsigned BlockOrCode) -> llvm::Error {
+        return readRecord(BlockOrCode, I);
+      });
+}
 
-  while (true) {
-    unsigned BlockOrCode = 0;
-    Cursor Res = skipUntilRecordOrBlock(BlockOrCode);
+template <>
+llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, FriendInfo *I) {
+  llvm::SmallVector<FieldTypeInfo, 4> LocalParams;
 
-    switch (Res) {
-    case Cursor::BadBlock:
-      return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                     "bad block found");
-    case Cursor::BlockEnd:
-      return llvm::Error::success();
-    case Cursor::BlockBegin:
-      if (llvm::Error Err = readSubBlock(BlockOrCode, I)) {
-        if (llvm::Error Skipped = Stream.SkipBlock())
-          return joinErrors(std::move(Err), std::move(Skipped));
-        return Err;
-      }
-      continue;
-    case Cursor::Record:
-      break;
-    }
-    if (auto Err = readRecord(BlockOrCode, I))
-      return Err;
-  }
+  return parseBlock(
+      ID, I,
+      [&](unsigned BlockOrCode) -> llvm::Expected<bool> {
+        if (BlockOrCode == BI_FIELD_TYPE_BLOCK_ID) {
+          FieldTypeInfo FI;
+          if (auto Err = readBlock(BlockOrCode, &FI))
+            return std::move(Err);
+          LocalParams.push_back(std::move(FI));
+          return true;
+        }
+        return false;
+      },
+      [&]() -> llvm::Error {
+        if (!LocalParams.empty())
+          I->Params = allocateArray<FieldTypeInfo>(LocalParams, TransientArena);
+        return llvm::Error::success();
+      },
+      [&](unsigned BlockOrCode) -> llvm::Error {
+        return readRecord(BlockOrCode, I);
+      });
 }
 
 // TODO: fix inconsistentent returning of errors in add callbacks.
@@ -985,45 +1103,39 @@ llvm::Error ClangDocBitcodeReader::readSubBlock(unsigned ID, T I) {
   }
 }
 
-ClangDocBitcodeReader::Cursor
+llvm::Expected<ClangDocBitcodeReader::Cursor>
 ClangDocBitcodeReader::skipUntilRecordOrBlock(unsigned &BlockOrRecordID) {
   llvm::TimeTraceScope("Reducing infos", "skipUntilRecordOrBlock");
   BlockOrRecordID = 0;
 
   while (!Stream.AtEndOfStream()) {
-    Expected<unsigned> MaybeCode = Stream.ReadCode();
-    if (!MaybeCode) {
-      // FIXME this drops the error on the floor.
-      consumeError(MaybeCode.takeError());
-      return Cursor::BadBlock;
-    }
+    Expected<unsigned> Code = Stream.ReadCode();
+    if (!Code)
+      return Code.takeError();
 
-    unsigned Code = MaybeCode.get();
-    if (Code >= static_cast<unsigned>(llvm::bitc::FIRST_APPLICATION_ABBREV)) {
-      BlockOrRecordID = Code;
+    if (*Code >= static_cast<unsigned>(llvm::bitc::FIRST_APPLICATION_ABBREV)) {
+      BlockOrRecordID = *Code;
       return Cursor::Record;
     }
-    switch (static_cast<llvm::bitc::FixedAbbrevIDs>(Code)) {
+    switch (static_cast<llvm::bitc::FixedAbbrevIDs>(*Code)) {
     case llvm::bitc::ENTER_SUBBLOCK:
       if (Expected<unsigned> MaybeID = Stream.ReadSubBlockID())
         BlockOrRecordID = MaybeID.get();
-      else {
-        // FIXME this drops the error on the floor.
-        consumeError(MaybeID.takeError());
-      }
+      else
+        return MaybeID.takeError();
       return Cursor::BlockBegin;
     case llvm::bitc::END_BLOCK:
       if (Stream.ReadBlockEnd())
-        return Cursor::BadBlock;
+        return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                       "error at end of block");
       return Cursor::BlockEnd;
     case llvm::bitc::DEFINE_ABBREV:
-      if (llvm::Error Err = Stream.ReadAbbrevRecord()) {
-        // FIXME this drops the error on the floor.
-        consumeError(std::move(Err));
-      }
+      if (llvm::Error Err = Stream.ReadAbbrevRecord())
+        return std::move(Err);
       continue;
     case llvm::bitc::UNABBREV_RECORD:
-      return Cursor::BadBlock;
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "found unabbreviated record");
     case llvm::bitc::FIRST_APPLICATION_ABBREV:
       llvm_unreachable("Unexpected abbrev id.");
     }
@@ -1063,16 +1175,15 @@ llvm::Error ClangDocBitcodeReader::readBlockInfoBlock() {
 }
 
 template <typename T>
-llvm::Expected<std::unique_ptr<Info>>
-ClangDocBitcodeReader::createInfo(unsigned ID) {
+llvm::Expected<OwnedPtr<Info>> ClangDocBitcodeReader::createInfo(unsigned ID) {
   llvm::TimeTraceScope("Reducing infos", "createInfo");
-  std::unique_ptr<Info> I = std::make_unique<T>();
-  if (auto Err = readBlock(ID, static_cast<T *>(I.get())))
+  OwnedPtr<Info> I = doc::allocatePtr<T>();
+  if (auto Err = readBlock(ID, static_cast<T *>(getPtr(I))))
     return std::move(Err);
-  return std::unique_ptr<Info>{std::move(I)};
+  return OwnedPtr<Info>{std::move(I)};
 }
 
-llvm::Expected<std::unique_ptr<Info>>
+llvm::Expected<OwnedPtr<Info>>
 ClangDocBitcodeReader::readBlockToInfo(unsigned ID) {
   llvm::TimeTraceScope("Reducing infos", "readBlockToInfo");
   switch (ID) {
@@ -1099,9 +1210,8 @@ ClangDocBitcodeReader::readBlockToInfo(unsigned ID) {
 }
 
 // Entry point
-llvm::Expected<std::vector<std::unique_ptr<Info>>>
-ClangDocBitcodeReader::readBitcode() {
-  std::vector<std::unique_ptr<Info>> Infos;
+llvm::Expected<OwningPtrArray<Info>> ClangDocBitcodeReader::readBitcode() {
+  OwningPtrArray<Info> Infos;
   if (auto Err = validateStream())
     return std::move(Err);
 
@@ -1149,10 +1259,8 @@ ClangDocBitcodeReader::readBitcode() {
         return std::move(Err);
       continue;
     default:
-      if (llvm::Error Err = Stream.SkipBlock()) {
-        // FIXME this drops the error on the floor.
-        consumeError(std::move(Err));
-      }
+      if (llvm::Error Err = Stream.SkipBlock())
+        return std::move(Err);
       continue;
     }
   }

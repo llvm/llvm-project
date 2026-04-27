@@ -54,6 +54,7 @@ Clang-Tidy Checks
    :doc:`abseil-string-find-str-contains <abseil/string-find-str-contains>`, "Yes"
    :doc:`abseil-time-comparison <abseil/time-comparison>`, "Yes"
    :doc:`abseil-time-subtraction <abseil/time-subtraction>`, "Yes"
+   :doc:`abseil-unchecked-statusor-access <abseil/unchecked-statusor-access>`,
    :doc:`abseil-upgrade-duration-conversions <abseil/upgrade-duration-conversions>`, "Yes"
    :doc:`altera-id-dependent-backward-branch <altera/id-dependent-backward-branch>`,
    :doc:`altera-kernel-name-restriction <altera/kernel-name-restriction>`,
@@ -80,6 +81,7 @@ Clang-Tidy Checks
    :doc:`bugprone-argument-comment <bugprone/argument-comment>`, "Yes"
    :doc:`bugprone-assert-side-effect <bugprone/assert-side-effect>`,
    :doc:`bugprone-assignment-in-if-condition <bugprone/assignment-in-if-condition>`,
+   :doc:`bugprone-assignment-in-selection-statement <bugprone/assignment-in-selection-statement>`,
    :doc:`bugprone-bad-signal-to-kill-thread <bugprone/bad-signal-to-kill-thread>`,
    :doc:`bugprone-bitwise-pointer-cast <bugprone/bitwise-pointer-cast>`,
    :doc:`bugprone-bool-pointer-implicit-conversion <bugprone/bool-pointer-implicit-conversion>`, "Yes"
@@ -90,13 +92,17 @@ Clang-Tidy Checks
    :doc:`bugprone-command-processor <bugprone/command-processor>`,
    :doc:`bugprone-compare-pointer-to-member-virtual-function <bugprone/compare-pointer-to-member-virtual-function>`,
    :doc:`bugprone-copy-constructor-init <bugprone/copy-constructor-init>`, "Yes"
+   :doc:`bugprone-copy-constructor-mutates-argument <bugprone/copy-constructor-mutates-argument>`,
    :doc:`bugprone-crtp-constructor-accessibility <bugprone/crtp-constructor-accessibility>`, "Yes"
    :doc:`bugprone-dangling-handle <bugprone/dangling-handle>`,
+   :doc:`bugprone-default-operator-new-on-overaligned-type <bugprone/default-operator-new-on-overaligned-type>`,
    :doc:`bugprone-derived-method-shadowing-base-method <bugprone/derived-method-shadowing-base-method>`,
    :doc:`bugprone-dynamic-static-initializers <bugprone/dynamic-static-initializers>`,
    :doc:`bugprone-easily-swappable-parameters <bugprone/easily-swappable-parameters>`,
    :doc:`bugprone-empty-catch <bugprone/empty-catch>`,
+   :doc:`bugprone-exception-copy-constructor-throws <bugprone/exception-copy-constructor-throws>`,
    :doc:`bugprone-exception-escape <bugprone/exception-escape>`,
+   :doc:`bugprone-float-loop-counter <bugprone/float-loop-counter>`,
    :doc:`bugprone-fold-init-type <bugprone/fold-init-type>`,
    :doc:`bugprone-forward-declaration-namespace <bugprone/forward-declaration-namespace>`,
    :doc:`bugprone-forwarding-reference-overload <bugprone/forwarding-reference-overload>`,
@@ -129,16 +135,21 @@ Clang-Tidy Checks
    :doc:`bugprone-parent-virtual-call <bugprone/parent-virtual-call>`, "Yes"
    :doc:`bugprone-pointer-arithmetic-on-polymorphic-object <bugprone/pointer-arithmetic-on-polymorphic-object>`,
    :doc:`bugprone-posix-return <bugprone/posix-return>`, "Yes"
+   :doc:`bugprone-random-generator-seed <bugprone/random-generator-seed>`,
+   :doc:`bugprone-raw-memory-call-on-non-trivial-type <bugprone/raw-memory-call-on-non-trivial-type>`,
    :doc:`bugprone-redundant-branch-condition <bugprone/redundant-branch-condition>`, "Yes"
    :doc:`bugprone-reserved-identifier <bugprone/reserved-identifier>`, "Yes"
    :doc:`bugprone-return-const-ref-from-parameter <bugprone/return-const-ref-from-parameter>`,
    :doc:`bugprone-shared-ptr-array-mismatch <bugprone/shared-ptr-array-mismatch>`, "Yes"
    :doc:`bugprone-signal-handler <bugprone/signal-handler>`,
+   :doc:`bugprone-signed-bitwise <bugprone/signed-bitwise>`,
    :doc:`bugprone-signed-char-misuse <bugprone/signed-char-misuse>`,
    :doc:`bugprone-sizeof-container <bugprone/sizeof-container>`,
    :doc:`bugprone-sizeof-expression <bugprone/sizeof-expression>`,
    :doc:`bugprone-spuriously-wake-up-functions <bugprone/spuriously-wake-up-functions>`,
    :doc:`bugprone-standalone-empty <bugprone/standalone-empty>`, "Yes"
+   :doc:`bugprone-std-exception-baseclass <bugprone/std-exception-baseclass>`,
+   :doc:`bugprone-std-namespace-modification <bugprone/std-namespace-modification>`,
    :doc:`bugprone-string-constructor <bugprone/string-constructor>`, "Yes"
    :doc:`bugprone-string-integer-assignment <bugprone/string-integer-assignment>`, "Yes"
    :doc:`bugprone-string-literal-with-embedded-nul <bugprone/string-literal-with-embedded-nul>`,
@@ -168,20 +179,12 @@ Clang-Tidy Checks
    :doc:`bugprone-unintended-char-ostream-output <bugprone/unintended-char-ostream-output>`, "Yes"
    :doc:`bugprone-unique-ptr-array-mismatch <bugprone/unique-ptr-array-mismatch>`, "Yes"
    :doc:`bugprone-unsafe-functions <bugprone/unsafe-functions>`,
+   :doc:`bugprone-unsafe-to-allow-exceptions <bugprone/unsafe-to-allow-exceptions>`,
    :doc:`bugprone-unused-local-non-trivial-variable <bugprone/unused-local-non-trivial-variable>`,
    :doc:`bugprone-unused-raii <bugprone/unused-raii>`, "Yes"
    :doc:`bugprone-unused-return-value <bugprone/unused-return-value>`,
    :doc:`bugprone-use-after-move <bugprone/use-after-move>`,
    :doc:`bugprone-virtual-near-miss <bugprone/virtual-near-miss>`, "Yes"
-   :doc:`cert-dcl58-cpp <cert/dcl58-cpp>`,
-   :doc:`cert-err33-c <cert/err33-c>`,
-   :doc:`cert-err60-cpp <cert/err60-cpp>`,
-   :doc:`cert-flp30-c <cert/flp30-c>`,
-   :doc:`cert-mem57-cpp <cert/mem57-cpp>`,
-   :doc:`cert-msc50-cpp <cert/msc50-cpp>`,
-   :doc:`cert-msc51-cpp <cert/msc51-cpp>`,
-   :doc:`cert-oop57-cpp <cert/oop57-cpp>`,
-   :doc:`cert-oop58-cpp <cert/oop58-cpp>`,
    :doc:`concurrency-mt-unsafe <concurrency/mt-unsafe>`,
    :doc:`concurrency-thread-canceltype-asynchronous <concurrency/thread-canceltype-asynchronous>`,
    :doc:`cppcoreguidelines-avoid-capturing-lambda-coroutines <cppcoreguidelines/avoid-capturing-lambda-coroutines>`,
@@ -219,14 +222,12 @@ Clang-Tidy Checks
    :doc:`darwin-dispatch-once-nonstatic <darwin/dispatch-once-nonstatic>`, "Yes"
    :doc:`fuchsia-default-arguments-calls <fuchsia/default-arguments-calls>`,
    :doc:`fuchsia-default-arguments-declarations <fuchsia/default-arguments-declarations>`, "Yes"
-   :doc:`fuchsia-multiple-inheritance <fuchsia/multiple-inheritance>`,
    :doc:`fuchsia-overloaded-operator <fuchsia/overloaded-operator>`,
    :doc:`fuchsia-statically-constructed-objects <fuchsia/statically-constructed-objects>`,
    :doc:`fuchsia-temporary-objects <fuchsia/temporary-objects>`,
    :doc:`fuchsia-trailing-return <fuchsia/trailing-return>`,
    :doc:`fuchsia-virtual-inheritance <fuchsia/virtual-inheritance>`,
    :doc:`google-build-explicit-make-pair <google/build-explicit-make-pair>`,
-   :doc:`google-build-namespaces <google/build-namespaces>`,
    :doc:`google-build-using-namespace <google/build-using-namespace>`,
    :doc:`google-default-arguments <google/default-arguments>`,
    :doc:`google-explicit-constructor <google/explicit-constructor>`, "Yes"
@@ -236,17 +237,12 @@ Clang-Tidy Checks
    :doc:`google-objc-function-naming <google/objc-function-naming>`,
    :doc:`google-objc-global-variable-declaration <google/objc-global-variable-declaration>`,
    :doc:`google-readability-avoid-underscore-in-googletest-name <google/readability-avoid-underscore-in-googletest-name>`,
-   :doc:`google-readability-casting <google/readability-casting>`,
    :doc:`google-readability-todo <google/readability-todo>`,
    :doc:`google-runtime-float <google/runtime-float>`,
    :doc:`google-runtime-int <google/runtime-int>`,
    :doc:`google-runtime-operator <google/runtime-operator>`,
    :doc:`google-upgrade-googletest-case <google/upgrade-googletest-case>`, "Yes"
-   :doc:`hicpp-exception-baseclass <hicpp/exception-baseclass>`,
-   :doc:`hicpp-ignored-remove-result <hicpp/ignored-remove-result>`,
    :doc:`hicpp-multiway-paths-covered <hicpp/multiway-paths-covered>`,
-   :doc:`hicpp-no-assembler <hicpp/no-assembler>`,
-   :doc:`hicpp-signed-bitwise <hicpp/signed-bitwise>`,
    :doc:`linuxkernel-must-check-errs <linuxkernel/must-check-errs>`,
    :doc:`llvm-header-guard <llvm/header-guard>`,
    :doc:`llvm-include-order <llvm/include-order>`, "Yes"
@@ -254,13 +250,17 @@ Clang-Tidy Checks
    :doc:`llvm-prefer-isa-or-dyn-cast-in-conditionals <llvm/prefer-isa-or-dyn-cast-in-conditionals>`, "Yes"
    :doc:`llvm-prefer-register-over-unsigned <llvm/prefer-register-over-unsigned>`, "Yes"
    :doc:`llvm-prefer-static-over-anonymous-namespace <llvm/prefer-static-over-anonymous-namespace>`,
+   :doc:`llvm-redundant-casting <llvm/redundant-casting>`, "Yes"
    :doc:`llvm-twine-local <llvm/twine-local>`, "Yes"
+   :doc:`llvm-type-switch-case-types <llvm/type-switch-case-types>`, "Yes"
    :doc:`llvm-use-new-mlir-op-builder <llvm/use-new-mlir-op-builder>`, "Yes"
    :doc:`llvm-use-ranges <llvm/use-ranges>`, "Yes"
+   :doc:`llvm-use-vector-utils <llvm/use-vector-utils>`, "Yes"
    :doc:`llvmlibc-callee-namespace <llvmlibc/callee-namespace>`,
    :doc:`llvmlibc-implementation-in-namespace <llvmlibc/implementation-in-namespace>`,
    :doc:`llvmlibc-inline-function-decl <llvmlibc/inline-function-decl>`, "Yes"
    :doc:`llvmlibc-restrict-system-libc-headers <llvmlibc/restrict-system-libc-headers>`, "Yes"
+   :doc:`misc-anonymous-namespace-in-header <misc/anonymous-namespace-in-header>`,
    :doc:`misc-confusable-identifiers <misc/confusable-identifiers>`,
    :doc:`misc-const-correctness <misc/const-correctness>`, "Yes"
    :doc:`misc-coroutine-hostile-raii <misc/coroutine-hostile-raii>`,
@@ -270,11 +270,13 @@ Clang-Tidy Checks
    :doc:`misc-misleading-bidirectional <misc/misleading-bidirectional>`,
    :doc:`misc-misleading-identifier <misc/misleading-identifier>`,
    :doc:`misc-misplaced-const <misc/misplaced-const>`,
+   :doc:`misc-multiple-inheritance <misc/multiple-inheritance>`,
    :doc:`misc-new-delete-overloads <misc/new-delete-overloads>`,
    :doc:`misc-no-recursion <misc/no-recursion>`,
    :doc:`misc-non-copyable-objects <misc/non-copyable-objects>`,
    :doc:`misc-non-private-member-variables-in-classes <misc/non-private-member-variables-in-classes>`,
    :doc:`misc-override-with-different-visibility <misc/override-with-different-visibility>`,
+   :doc:`misc-predictable-rand <misc/predictable-rand>`,
    :doc:`misc-redundant-expression <misc/redundant-expression>`, "Yes"
    :doc:`misc-static-assert <misc/static-assert>`, "Yes"
    :doc:`misc-throw-by-value-catch-by-reference <misc/throw-by-value-catch-by-reference>`,
@@ -287,6 +289,7 @@ Clang-Tidy Checks
    :doc:`misc-use-internal-linkage <misc/use-internal-linkage>`, "Yes"
    :doc:`modernize-avoid-bind <modernize/avoid-bind>`, "Yes"
    :doc:`modernize-avoid-c-arrays <modernize/avoid-c-arrays>`,
+   :doc:`modernize-avoid-c-style-cast <modernize/avoid-c-style-cast>`, "Yes"
    :doc:`modernize-avoid-setjmp-longjmp <modernize/avoid-setjmp-longjmp>`,
    :doc:`modernize-avoid-variadic-functions <modernize/avoid-variadic-functions>`,
    :doc:`modernize-concat-nested-namespaces <modernize/concat-nested-namespaces>`, "Yes"
@@ -323,9 +326,12 @@ Clang-Tidy Checks
    :doc:`modernize-use-ranges <modernize/use-ranges>`, "Yes"
    :doc:`modernize-use-scoped-lock <modernize/use-scoped-lock>`, "Yes"
    :doc:`modernize-use-starts-ends-with <modernize/use-starts-ends-with>`, "Yes"
+   :doc:`modernize-use-std-bit <modernize/use-std-bit>`, "Yes"
    :doc:`modernize-use-std-format <modernize/use-std-format>`, "Yes"
    :doc:`modernize-use-std-numbers <modernize/use-std-numbers>`, "Yes"
    :doc:`modernize-use-std-print <modernize/use-std-print>`, "Yes"
+   :doc:`modernize-use-string-view <modernize/use-string-view>`, "Yes"
+   :doc:`modernize-use-structured-binding <modernize/use-structured-binding>`, "Yes"
    :doc:`modernize-use-trailing-return-type <modernize/use-trailing-return-type>`, "Yes"
    :doc:`modernize-use-transparent-functors <modernize/use-transparent-functors>`, "Yes"
    :doc:`modernize-use-uncaught-exceptions <modernize/use-uncaught-exceptions>`, "Yes"
@@ -345,7 +351,6 @@ Clang-Tidy Checks
    :doc:`openmp-use-default-none <openmp/use-default-none>`,
    :doc:`performance-avoid-endl <performance/avoid-endl>`, "Yes"
    :doc:`performance-enum-size <performance/enum-size>`,
-   :doc:`performance-faster-string-find <performance/faster-string-find>`, "Yes"
    :doc:`performance-for-range-copy <performance/for-range-copy>`, "Yes"
    :doc:`performance-implicit-conversion-in-loop <performance/implicit-conversion-in-loop>`,
    :doc:`performance-inefficient-algorithm <performance/inefficient-algorithm>`, "Yes"
@@ -358,11 +363,15 @@ Clang-Tidy Checks
    :doc:`performance-noexcept-destructor <performance/noexcept-destructor>`, "Yes"
    :doc:`performance-noexcept-move-constructor <performance/noexcept-move-constructor>`, "Yes"
    :doc:`performance-noexcept-swap <performance/noexcept-swap>`, "Yes"
+   :doc:`performance-prefer-single-char-overloads <performance/prefer-single-char-overloads>`, "Yes"
+   :doc:`performance-string-view-conversions <performance/string-view-conversions>`, "Yes"
    :doc:`performance-trivially-destructible <performance/trivially-destructible>`, "Yes"
    :doc:`performance-type-promotion-in-math-fn <performance/type-promotion-in-math-fn>`, "Yes"
    :doc:`performance-unnecessary-copy-initialization <performance/unnecessary-copy-initialization>`, "Yes"
    :doc:`performance-unnecessary-value-param <performance/unnecessary-value-param>`, "Yes"
+   :doc:`performance-use-std-move <performance/use-std-move>`, "Yes"
    :doc:`portability-avoid-pragma-once <portability/avoid-pragma-once>`,
+   :doc:`portability-no-assembler <portability/no-assembler>`,
    :doc:`portability-restrict-system-includes <portability/restrict-system-includes>`, "Yes"
    :doc:`portability-simd-intrinsics <portability/simd-intrinsics>`,
    :doc:`portability-std-allocator-const <portability/std-allocator-const>`,
@@ -388,6 +397,7 @@ Clang-Tidy Checks
    :doc:`readability-identifier-naming <readability/identifier-naming>`, "Yes"
    :doc:`readability-implicit-bool-conversion <readability/implicit-bool-conversion>`, "Yes"
    :doc:`readability-inconsistent-declaration-parameter-name <readability/inconsistent-declaration-parameter-name>`, "Yes"
+   :doc:`readability-inconsistent-ifelse-braces <readability/inconsistent-ifelse-braces>`, "Yes"
    :doc:`readability-isolate-declaration <readability/isolate-declaration>`, "Yes"
    :doc:`readability-magic-numbers <readability/magic-numbers>`,
    :doc:`readability-make-member-function-const <readability/make-member-function-const>`, "Yes"
@@ -404,12 +414,15 @@ Clang-Tidy Checks
    :doc:`readability-redundant-declaration <readability/redundant-declaration>`, "Yes"
    :doc:`readability-redundant-function-ptr-dereference <readability/redundant-function-ptr-dereference>`, "Yes"
    :doc:`readability-redundant-inline-specifier <readability/redundant-inline-specifier>`, "Yes"
+   :doc:`readability-redundant-lambda-parameter-list <readability/redundant-lambda-parameter-list>`, "Yes"
    :doc:`readability-redundant-member-init <readability/redundant-member-init>`, "Yes"
    :doc:`readability-redundant-parentheses <readability/redundant-parentheses>`, "Yes"
    :doc:`readability-redundant-preprocessor <readability/redundant-preprocessor>`,
+   :doc:`readability-redundant-qualified-alias <readability/redundant-qualified-alias>`, "Yes"
    :doc:`readability-redundant-smartptr-get <readability/redundant-smartptr-get>`, "Yes"
    :doc:`readability-redundant-string-cstr <readability/redundant-string-cstr>`, "Yes"
    :doc:`readability-redundant-string-init <readability/redundant-string-init>`, "Yes"
+   :doc:`readability-redundant-typename <readability/redundant-typename>`, "Yes"
    :doc:`readability-reference-to-constructed-temporary <readability/reference-to-constructed-temporary>`,
    :doc:`readability-simplify-boolean-expr <readability/simplify-boolean-expr>`, "Yes"
    :doc:`readability-simplify-subscript-expr <readability/simplify-subscript-expr>`, "Yes"
@@ -417,6 +430,7 @@ Clang-Tidy Checks
    :doc:`readability-static-definition-in-anonymous-namespace <readability/static-definition-in-anonymous-namespace>`, "Yes"
    :doc:`readability-string-compare <readability/string-compare>`, "Yes"
    :doc:`readability-suspicious-call-argument <readability/suspicious-call-argument>`,
+   :doc:`readability-trailing-comma <readability/trailing-comma>`, "Yes"
    :doc:`readability-uniqueptr-delete-release <readability/uniqueptr-delete-release>`, "Yes"
    :doc:`readability-uppercase-literal-suffix <readability/uppercase-literal-suffix>`, "Yes"
    :doc:`readability-use-anyofallof <readability/use-anyofallof>`,
@@ -440,24 +454,34 @@ Check aliases
    :doc:`cert-dcl50-cpp <cert/dcl50-cpp>`, :doc:`modernize-avoid-variadic-functions <modernize/avoid-variadic-functions>`,
    :doc:`cert-dcl51-cpp <cert/dcl51-cpp>`, :doc:`bugprone-reserved-identifier <bugprone/reserved-identifier>`, "Yes"
    :doc:`cert-dcl54-cpp <cert/dcl54-cpp>`, :doc:`misc-new-delete-overloads <misc/new-delete-overloads>`,
-   :doc:`cert-dcl59-cpp <cert/dcl59-cpp>`, :doc:`google-build-namespaces <google/build-namespaces>`,
-   :doc:`cert-err09-cpp <cert/err09-cpp>`, :doc:`misc-throw-by-value-catch-by-reference <misc/throw-by-value-catch-by-reference>`,
+   :doc:`cert-dcl58-cpp <cert/dcl58-cpp>`, :doc:`bugprone-std-namespace-modification <bugprone/std-namespace-modification>`,
+   :doc:`cert-dcl59-cpp <cert/dcl59-cpp>`, :doc:`misc-anonymous-namespace-in-header <misc/anonymous-namespace-in-header>`,
    :doc:`cert-env33-c <cert/env33-c>`, :doc:`bugprone-command-processor <bugprone/command-processor>`,
+   :doc:`cert-err09-cpp <cert/err09-cpp>`, :doc:`misc-throw-by-value-catch-by-reference <misc/throw-by-value-catch-by-reference>`,
+   :doc:`cert-err33-c <cert/err33-c>`, :doc:`bugprone-unused-return-value <bugprone/unused-return-value>`,
    :doc:`cert-err34-c <cert/err34-c>`, :doc:`bugprone-unchecked-string-to-number-conversion <bugprone/unchecked-string-to-number-conversion>`,
    :doc:`cert-err52-cpp <cert/err52-cpp>`, :doc:`modernize-avoid-setjmp-longjmp <modernize/avoid-setjmp-longjmp>`,
    :doc:`cert-err58-cpp <cert/err58-cpp>`, :doc:`bugprone-throwing-static-initialization <bugprone/throwing-static-initialization>`,
+   :doc:`cert-err60-cpp <cert/err60-cpp>`, :doc:`bugprone-exception-copy-constructor-throws <bugprone/exception-copy-constructor-throws>`,
    :doc:`cert-err61-cpp <cert/err61-cpp>`, :doc:`misc-throw-by-value-catch-by-reference <misc/throw-by-value-catch-by-reference>`,
    :doc:`cert-exp42-c <cert/exp42-c>`, :doc:`bugprone-suspicious-memory-comparison <bugprone/suspicious-memory-comparison>`,
+   :doc:`cert-exp45-c <cert/exp45-c>`, :doc:`bugprone-assignment-in-selection-statement <bugprone/assignment-in-selection-statement>`,
    :doc:`cert-fio38-c <cert/fio38-c>`, :doc:`misc-non-copyable-objects <misc/non-copyable-objects>`,
+   :doc:`cert-flp30-c <cert/flp30-c>`, :doc:`bugprone-float-loop-counter <bugprone/float-loop-counter>`,
    :doc:`cert-flp37-c <cert/flp37-c>`, :doc:`bugprone-suspicious-memory-comparison <bugprone/suspicious-memory-comparison>`,
    :doc:`cert-int09-c <cert/int09-c>`, :doc:`readability-enum-initial-value <readability/enum-initial-value>`, "Yes"
+   :doc:`cert-mem57-cpp <cert/mem57-cpp>`, :doc:`bugprone-default-operator-new-on-overaligned-type <bugprone/default-operator-new-on-overaligned-type>`,
    :doc:`cert-msc24-c <cert/msc24-c>`, :doc:`bugprone-unsafe-functions <bugprone/unsafe-functions>`,
-   :doc:`cert-msc30-c <cert/msc30-c>`, :doc:`cert-msc50-cpp <cert/msc50-cpp>`,
-   :doc:`cert-msc32-c <cert/msc32-c>`, :doc:`cert-msc51-cpp <cert/msc51-cpp>`,
+   :doc:`cert-msc30-c <cert/msc30-c>`, :doc:`misc-predictable-rand <misc/predictable-rand>`,
+   :doc:`cert-msc32-c <cert/msc32-c>`, :doc:`bugprone-random-generator-seed <bugprone/random-generator-seed>`,
    :doc:`cert-msc33-c <cert/msc33-c>`, :doc:`bugprone-unsafe-functions <bugprone/unsafe-functions>`,
+   :doc:`cert-msc50-cpp <cert/msc50-cpp>`, :doc:`misc-predictable-rand <misc/predictable-rand>`,
+   :doc:`cert-msc51-cpp <cert/msc51-cpp>`, :doc:`bugprone-random-generator-seed <bugprone/random-generator-seed>`,
    :doc:`cert-msc54-cpp <cert/msc54-cpp>`, :doc:`bugprone-signal-handler <bugprone/signal-handler>`,
    :doc:`cert-oop11-cpp <cert/oop11-cpp>`, :doc:`performance-move-constructor-init <performance/move-constructor-init>`,
    :doc:`cert-oop54-cpp <cert/oop54-cpp>`, :doc:`bugprone-unhandled-self-assignment <bugprone/unhandled-self-assignment>`,
+   :doc:`cert-oop57-cpp <cert/oop57-cpp>`, :doc:`bugprone-raw-memory-call-on-non-trivial-type <bugprone/raw-memory-call-on-non-trivial-type>`,
+   :doc:`cert-oop58-cpp <cert/oop58-cpp>`, :doc:`bugprone-copy-constructor-mutates-argument <bugprone/copy-constructor-mutates-argument>`,
    :doc:`cert-pos44-c <cert/pos44-c>`, :doc:`bugprone-bad-signal-to-kill-thread <bugprone/bad-signal-to-kill-thread>`,
    :doc:`cert-pos47-c <cert/pos47-c>`, :doc:`concurrency-thread-canceltype-asynchronous <concurrency/thread-canceltype-asynchronous>`,
    :doc:`cert-sig30-c <cert/sig30-c>`, :doc:`bugprone-signal-handler <bugprone/signal-handler>`,
@@ -537,7 +561,7 @@ Check aliases
    :doc:`clang-analyzer-security.insecureAPI.bcmp <clang-analyzer/security.insecureAPI.bcmp>`, `Clang Static Analyzer security.insecureAPI.bcmp <https://clang.llvm.org/docs/analyzer/checkers.html#security-insecureapi-bcmp>`_,
    :doc:`clang-analyzer-security.insecureAPI.bcopy <clang-analyzer/security.insecureAPI.bcopy>`, `Clang Static Analyzer security.insecureAPI.bcopy <https://clang.llvm.org/docs/analyzer/checkers.html#security-insecureapi-bcopy>`_,
    :doc:`clang-analyzer-security.insecureAPI.bzero <clang-analyzer/security.insecureAPI.bzero>`, `Clang Static Analyzer security.insecureAPI.bzero <https://clang.llvm.org/docs/analyzer/checkers.html#security-insecureapi-bzero>`_,
-   :doc:`clang-analyzer-security.insecureAPI.decodeValueOfObjCType <clang-analyzer/security.insecureAPI.decodeValueOfObjCType>`, Clang Static Analyzer security.insecureAPI.decodeValueOfObjCType,
+   :doc:`clang-analyzer-security.insecureAPI.decodeValueOfObjCType <clang-analyzer/security.insecureAPI.decodeValueOfObjCType>`, `Clang Static Analyzer security.insecureAPI.decodeValueOfObjCType <https://clang.llvm.org/docs/analyzer/checkers.html#security-insecureapi-decodevalueofobjctype>`_,
    :doc:`clang-analyzer-security.insecureAPI.getpw <clang-analyzer/security.insecureAPI.getpw>`, `Clang Static Analyzer security.insecureAPI.getpw <https://clang.llvm.org/docs/analyzer/checkers.html#security-insecureapi-getpw>`_,
    :doc:`clang-analyzer-security.insecureAPI.gets <clang-analyzer/security.insecureAPI.gets>`, `Clang Static Analyzer security.insecureAPI.gets <https://clang.llvm.org/docs/analyzer/checkers.html#security-insecureapi-gets>`_,
    :doc:`clang-analyzer-security.insecureAPI.mkstemp <clang-analyzer/security.insecureAPI.mkstemp>`, `Clang Static Analyzer security.insecureAPI.mkstemp <https://clang.llvm.org/docs/analyzer/checkers.html#security-insecureapi-mkstemp>`_,
@@ -570,24 +594,31 @@ Check aliases
    :doc:`cppcoreguidelines-noexcept-swap <cppcoreguidelines/noexcept-swap>`, :doc:`performance-noexcept-swap <performance/noexcept-swap>`, "Yes"
    :doc:`cppcoreguidelines-non-private-member-variables-in-classes <cppcoreguidelines/non-private-member-variables-in-classes>`, :doc:`misc-non-private-member-variables-in-classes <misc/non-private-member-variables-in-classes>`,
    :doc:`cppcoreguidelines-use-default-member-init <cppcoreguidelines/use-default-member-init>`, :doc:`modernize-use-default-member-init <modernize/use-default-member-init>`, "Yes"
-   :doc:`fuchsia-header-anon-namespaces <fuchsia/header-anon-namespaces>`, :doc:`google-build-namespaces <google/build-namespaces>`,
+   :doc:`fuchsia-header-anon-namespaces <fuchsia/header-anon-namespaces>`, :doc:`misc-anonymous-namespace-in-header <misc/anonymous-namespace-in-header>`,
+   :doc:`fuchsia-multiple-inheritance <fuchsia/multiple-inheritance>`, :doc:`misc-multiple-inheritance <misc/multiple-inheritance>`,
+   :doc:`google-build-namespaces <google/build-namespaces>`, :doc:`misc-anonymous-namespace-in-header <misc/anonymous-namespace-in-header>`,
    :doc:`google-readability-braces-around-statements <google/readability-braces-around-statements>`, :doc:`readability-braces-around-statements <readability/braces-around-statements>`, "Yes"
+   :doc:`google-readability-casting <google/readability-casting>`, :doc:`modernize-avoid-c-style-cast <modernize/avoid-c-style-cast>`, "Yes"
    :doc:`google-readability-function-size <google/readability-function-size>`, :doc:`readability-function-size <readability/function-size>`,
    :doc:`google-readability-namespace-comments <google/readability-namespace-comments>`, :doc:`llvm-namespace-comment <llvm/namespace-comment>`,
    :doc:`hicpp-avoid-c-arrays <hicpp/avoid-c-arrays>`, :doc:`modernize-avoid-c-arrays <modernize/avoid-c-arrays>`,
    :doc:`hicpp-avoid-goto <hicpp/avoid-goto>`, :doc:`cppcoreguidelines-avoid-goto <cppcoreguidelines/avoid-goto>`,
    :doc:`hicpp-braces-around-statements <hicpp/braces-around-statements>`, :doc:`readability-braces-around-statements <readability/braces-around-statements>`, "Yes"
    :doc:`hicpp-deprecated-headers <hicpp/deprecated-headers>`, :doc:`modernize-deprecated-headers <modernize/deprecated-headers>`, "Yes"
+   :doc:`hicpp-exception-baseclass <hicpp/exception-baseclass>`, :doc:`bugprone-std-exception-baseclass <bugprone/std-exception-baseclass>`,
    :doc:`hicpp-explicit-conversions <hicpp/explicit-conversions>`, :doc:`google-explicit-constructor <google/explicit-constructor>`, "Yes"
    :doc:`hicpp-function-size <hicpp/function-size>`, :doc:`readability-function-size <readability/function-size>`,
+   :doc:`hicpp-ignored-remove-result <hicpp/ignored-remove-result>`, :doc:`bugprone-unused-return-value <bugprone/unused-return-value>`,
    :doc:`hicpp-invalid-access-moved <hicpp/invalid-access-moved>`, :doc:`bugprone-use-after-move <bugprone/use-after-move>`,
    :doc:`hicpp-member-init <hicpp/member-init>`, :doc:`cppcoreguidelines-pro-type-member-init <cppcoreguidelines/pro-type-member-init>`, "Yes"
    :doc:`hicpp-move-const-arg <hicpp/move-const-arg>`, :doc:`performance-move-const-arg <performance/move-const-arg>`, "Yes"
    :doc:`hicpp-named-parameter <hicpp/named-parameter>`, :doc:`readability-named-parameter <readability/named-parameter>`, "Yes"
    :doc:`hicpp-new-delete-operators <hicpp/new-delete-operators>`, :doc:`misc-new-delete-overloads <misc/new-delete-overloads>`,
    :doc:`hicpp-no-array-decay <hicpp/no-array-decay>`, :doc:`cppcoreguidelines-pro-bounds-array-to-pointer-decay <cppcoreguidelines/pro-bounds-array-to-pointer-decay>`,
+   :doc:`hicpp-no-assembler <hicpp/no-assembler>`, :doc:`portability-no-assembler <portability/no-assembler>`,
    :doc:`hicpp-no-malloc <hicpp/no-malloc>`, :doc:`cppcoreguidelines-no-malloc <cppcoreguidelines/no-malloc>`,
    :doc:`hicpp-noexcept-move <hicpp/noexcept-move>`, :doc:`performance-noexcept-move-constructor <performance/noexcept-move-constructor>`, "Yes"
+   :doc:`hicpp-signed-bitwise <hicpp/signed-bitwise>`, :doc:`bugprone-signed-bitwise <bugprone/signed-bitwise>`,
    :doc:`hicpp-special-member-functions <hicpp/special-member-functions>`, :doc:`cppcoreguidelines-special-member-functions <cppcoreguidelines/special-member-functions>`,
    :doc:`hicpp-static-assert <hicpp/static-assert>`, :doc:`misc-static-assert <misc/static-assert>`, "Yes"
    :doc:`hicpp-undelegated-constructor <hicpp/undelegated-constructor>`, :doc:`bugprone-undelegated-constructor <bugprone/undelegated-constructor>`,
@@ -602,3 +633,4 @@ Check aliases
    :doc:`hicpp-vararg <hicpp/vararg>`, :doc:`cppcoreguidelines-pro-type-vararg <cppcoreguidelines/pro-type-vararg>`,
    :doc:`llvm-else-after-return <llvm/else-after-return>`, :doc:`readability-else-after-return <readability/else-after-return>`, "Yes"
    :doc:`llvm-qualified-auto <llvm/qualified-auto>`, :doc:`readability-qualified-auto <readability/qualified-auto>`, "Yes"
+   :doc:`performance-faster-string-find <performance/faster-string-find>`, :doc:`performance-prefer-single-char-overloads <performance/prefer-single-char-overloads>`, "Yes"

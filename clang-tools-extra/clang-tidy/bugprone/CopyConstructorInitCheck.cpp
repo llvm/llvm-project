@@ -31,7 +31,7 @@ void CopyConstructorInitCheck::registerMatchers(MatchFinder *Finder) {
 
 void CopyConstructorInitCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Ctor = Result.Nodes.getNodeAs<CXXConstructorDecl>("ctor");
-  std::string ParamName = Ctor->getParamDecl(0)->getNameAsString();
+  const std::string ParamName = Ctor->getParamDecl(0)->getNameAsString();
 
   // We want only one warning (and FixIt) for each ctor.
   std::string FixItInitList;
@@ -40,7 +40,7 @@ void CopyConstructorInitCheck::check(const MatchFinder::MatchResult &Result) {
   bool HasWrittenInitializer = false;
   SmallVector<FixItHint, 2> SafeFixIts;
   for (const auto *Init : Ctor->inits()) {
-    bool CtorInitIsWritten = Init->isWritten();
+    const bool CtorInitIsWritten = Init->isWritten();
     HasWrittenInitializer = HasWrittenInitializer || CtorInitIsWritten;
     if (!Init->isBaseInitializer())
       continue;

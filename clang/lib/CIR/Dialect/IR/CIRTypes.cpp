@@ -12,12 +12,21 @@
 
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
+#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/MLIRContext.h"
+#include "mlir/Support/LLVM.h"
+#include "clang/Basic/AddressSpaces.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypesDetails.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/MathExtras.h"
 
 //===----------------------------------------------------------------------===//
 // CIR Helpers
@@ -55,6 +64,14 @@ static void printFuncTypeParams(mlir::AsmPrinter &p,
 // AddressSpace
 //===----------------------------------------------------------------------===//
 
+mlir::ParseResult
+parseAddressSpaceValue(mlir::AsmParser &p,
+                       mlir::ptr::MemorySpaceAttrInterface &attr);
+
+void printAddressSpaceValue(mlir::AsmPrinter &printer,
+                            mlir::ptr::MemorySpaceAttrInterface attr);
+
+// Custom parser/printer for the `addrSpace` parameter in `!cir.ptr`.
 mlir::ParseResult parseTargetAddressSpace(mlir::AsmParser &p,
                                           cir::TargetAddressSpaceAttr &attr);
 
@@ -279,6 +296,25 @@ bool RecordType::getPadded() const { return getImpl()->padded; }
 cir::RecordType::RecordKind RecordType::getKind() const {
   return getImpl()->kind;
 }
+bool RecordType::isABIConvertedRecord() const {
+  return getName() && getName().getValue().starts_with(abi_conversion_prefix);
+}
+
+mlir::StringAttr RecordType::getABIConvertedName() const {
+  assert(!isABIConvertedRecord());
+
+  return StringAttr::get(getContext(),
+                         abi_conversion_prefix + getName().getValue());
+}
+
+void RecordType::removeABIConversionNamePrefix() {
+  mlir::StringAttr recordName = getName();
+
+  if (recordName && recordName.getValue().starts_with(abi_conversion_prefix))
+    getImpl()->name = mlir::StringAttr::get(
+        recordName.getValue().drop_front(sizeof(abi_conversion_prefix) - 1),
+        recordName.getType());
+}
 
 void RecordType::complete(ArrayRef<Type> members, bool packed, bool padded) {
   assert(!cir::MissingFeatures::astRecordDeclAttr());
@@ -292,17 +328,21 @@ void RecordType::complete(ArrayRef<Type> members, bool packed, bool padded) {
 Type RecordType::getLargestMember(const ::mlir::DataLayout &dataLayout) const {
   assert(isUnion() && "Only call getLargestMember on unions");
   llvm::ArrayRef<Type> members = getMembers();
+  if (members.empty())
+    return {};
+
   // If the union is padded, we need to ignore the last member,
   // which is the padding.
-  return *std::max_element(
-      members.begin(), getPadded() ? members.end() - 1 : members.end(),
-      [&](Type lhs, Type rhs) {
-        return dataLayout.getTypeABIAlignment(lhs) <
-                   dataLayout.getTypeABIAlignment(rhs) ||
-               (dataLayout.getTypeABIAlignment(lhs) ==
-                    dataLayout.getTypeABIAlignment(rhs) &&
-                dataLayout.getTypeSize(lhs) < dataLayout.getTypeSize(rhs));
-      });
+  auto endIt = getPadded() ? std::prev(members.end()) : members.end();
+  if (endIt == members.begin())
+    return {};
+  return *std::max_element(members.begin(), endIt, [&](Type lhs, Type rhs) {
+    return dataLayout.getTypeABIAlignment(lhs) <
+               dataLayout.getTypeABIAlignment(rhs) ||
+           (dataLayout.getTypeABIAlignment(lhs) ==
+                dataLayout.getTypeABIAlignment(rhs) &&
+            dataLayout.getTypeSize(lhs) < dataLayout.getTypeSize(rhs));
+  });
 }
 
 bool RecordType::isLayoutIdentical(const RecordType &other) {
@@ -338,10 +378,14 @@ PointerType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
 llvm::TypeSize
 RecordType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
                               mlir::DataLayoutEntryListRef params) const {
-  if (isUnion())
-    return dataLayout.getTypeSize(getLargestMember(dataLayout));
+  if (isUnion()) {
+    mlir::Type largest = getLargestMember(dataLayout);
+    if (!largest)
+      return llvm::TypeSize::getFixed(0);
+    return dataLayout.getTypeSizeInBits(largest);
+  }
 
-  unsigned recordSize = computeStructSize(dataLayout);
+  auto recordSize = static_cast<uint64_t>(computeStructSize(dataLayout));
   return llvm::TypeSize::getFixed(recordSize * 8);
 }
 
@@ -384,6 +428,29 @@ RecordType::computeStructSize(const mlir::DataLayout &dataLayout) const {
   // At the end, add padding to the struct to satisfy its own alignment
   // requirement. Otherwise structs inside of arrays would be misaligned.
   recordSize = llvm::alignTo(recordSize, recordAlignment);
+  return recordSize;
+}
+
+unsigned
+RecordType::computeStructDataSize(const mlir::DataLayout &dataLayout) const {
+  assert(isComplete() && "Cannot get layout of incomplete records");
+
+  // Compute the data size (excluding tail padding) for this record type. For
+  // padded records, the last member is the tail padding array added by
+  // CIRGenRecordLayoutBuilder::appendPaddingBytes, so we exclude it. For
+  // non-padded records, data size equals the full struct size without
+  // alignment.
+  auto members = getMembers();
+  unsigned numMembers =
+      getPadded() && members.size() > 1 ? members.size() - 1 : members.size();
+  unsigned recordSize = 0;
+  for (unsigned i = 0; i < numMembers; ++i) {
+    mlir::Type ty = members[i];
+    const uint64_t tyAlign =
+        (getPacked() ? 1 : dataLayout.getTypeABIAlignment(ty));
+    recordSize = llvm::alignTo(recordSize, tyAlign);
+    recordSize += dataLayout.getTypeSize(ty);
+  }
   return recordSize;
 }
 
@@ -478,15 +545,28 @@ Type IntType::parse(mlir::AsmParser &parser) {
     return {};
   }
 
+  bool isBitInt = false;
+  if (succeeded(parser.parseOptionalComma())) {
+    llvm::StringRef kw;
+    if (parser.parseKeyword(&kw) || kw != "bitint") {
+      parser.emitError(loc, "expected 'bitint'");
+      return {};
+    }
+    isBitInt = true;
+  }
+
   if (parser.parseGreater())
     return {};
 
-  return IntType::get(context, width, isSigned);
+  return IntType::get(context, width, isSigned, isBitInt);
 }
 
 void IntType::print(mlir::AsmPrinter &printer) const {
   char sign = isSigned() ? 's' : 'u';
-  printer << '<' << sign << ", " << getWidth() << '>';
+  printer << '<' << sign << ", " << getWidth();
+  if (isBitInt())
+    printer << ", bitint";
+  printer << '>';
 }
 
 llvm::TypeSize
@@ -497,12 +577,20 @@ IntType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
 
 uint64_t IntType::getABIAlignment(const mlir::DataLayout &dataLayout,
                                   mlir::DataLayoutEntryListRef params) const {
-  return (uint64_t)(getWidth() / 8);
+  unsigned width = getWidth();
+  if (isBitInt()) {
+    // _BitInt alignment: min(PowerOf2Ceil(width), 64 bits) in bytes.
+    // Matches Clang's TargetInfo::getBitIntAlign with default max = 64.
+    uint64_t alignBits =
+        std::min(llvm::PowerOf2Ceil(width), static_cast<uint64_t>(64));
+    return std::max(alignBits / 8, static_cast<uint64_t>(1));
+  }
+  return (uint64_t)(width / 8);
 }
 
 mlir::LogicalResult
 IntType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
-                unsigned width, bool isSigned) {
+                unsigned width, bool isSigned, bool isBitInt) {
   if (width < IntType::minBitwidth() || width > IntType::maxBitwidth())
     return emitError() << "IntType only supports widths from "
                        << IntType::minBitwidth() << " up to "
@@ -730,6 +818,34 @@ FuncType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
 }
 
 //===----------------------------------------------------------------------===//
+// MethodType Definitions
+//===----------------------------------------------------------------------===//
+
+static mlir::Type getMethodLayoutType(mlir::MLIRContext *ctx) {
+  // With Itanium ABI, member function pointers have the same layout as the
+  // following struct: struct { fnptr_t, ptrdiff_t }, where fnptr_t is a
+  // function pointer type.
+  // TODO: consider member function pointer layout in other ABIs
+  auto voidPtrTy = cir::PointerType::get(cir::VoidType::get(ctx));
+  mlir::Type fields[2]{voidPtrTy, voidPtrTy};
+  return cir::RecordType::get(ctx, fields, /*packed=*/false,
+                              /*padded=*/false, cir::RecordType::Struct);
+}
+
+llvm::TypeSize
+MethodType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
+                              mlir::DataLayoutEntryListRef params) const {
+  return dataLayout.getTypeSizeInBits(getMethodLayoutType(getContext()));
+}
+
+uint64_t
+MethodType::getABIAlignment(const mlir::DataLayout &dataLayout,
+                            mlir::DataLayoutEntryListRef params) const {
+  return cast<cir::RecordType>(getMethodLayoutType(getContext()))
+      .getABIAlignment(dataLayout, params);
+}
+
+//===----------------------------------------------------------------------===//
 // BoolType
 //===----------------------------------------------------------------------===//
 
@@ -743,6 +859,26 @@ uint64_t
 BoolType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
                           ::mlir::DataLayoutEntryListRef params) const {
   return 1;
+}
+
+//===----------------------------------------------------------------------===//
+//  DataMemberType Definitions
+//===----------------------------------------------------------------------===//
+
+llvm::TypeSize
+DataMemberType::getTypeSizeInBits(const ::mlir::DataLayout &dataLayout,
+                                  ::mlir::DataLayoutEntryListRef params) const {
+  // FIXME: consider size differences under different ABIs
+  assert(!MissingFeatures::cxxABI());
+  return llvm::TypeSize::getFixed(64);
+}
+
+uint64_t
+DataMemberType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
+                                ::mlir::DataLayoutEntryListRef params) const {
+  // FIXME: consider alignment differences under different ABIs
+  assert(!MissingFeatures::cxxABI());
+  return 8;
 }
 
 //===----------------------------------------------------------------------===//
@@ -797,44 +933,262 @@ cir::VectorType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
 
 mlir::LogicalResult cir::VectorType::verify(
     llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
-    mlir::Type elementType, uint64_t size) {
+    mlir::Type elementType, uint64_t size, bool scalable) {
   if (size == 0)
     return emitError() << "the number of vector elements must be non-zero";
   return success();
 }
 
+mlir::Type cir::VectorType::parse(::mlir::AsmParser &odsParser) {
+
+  llvm::SMLoc odsLoc = odsParser.getCurrentLocation();
+  mlir::Builder odsBuilder(odsParser.getContext());
+  mlir::FailureOr<::mlir::Type> elementType;
+  mlir::FailureOr<uint64_t> size;
+  bool isScalabe = false;
+
+  // Parse literal '<'
+  if (odsParser.parseLess())
+    return {};
+
+  // Parse literal '[', if present, and set the scalability flag accordingly
+  if (odsParser.parseOptionalLSquare().succeeded())
+    isScalabe = true;
+
+  // Parse variable 'size'
+  size = mlir::FieldParser<uint64_t>::parse(odsParser);
+  if (mlir::failed(size)) {
+    odsParser.emitError(odsParser.getCurrentLocation(),
+                        "failed to parse CIR_VectorType parameter 'size' which "
+                        "is to be a `uint64_t`");
+    return {};
+  }
+
+  // Parse literal ']', which is expected when dealing with scalable
+  // dim sizes
+  if (isScalabe && odsParser.parseRSquare().failed()) {
+    odsParser.emitError(odsParser.getCurrentLocation(),
+                        "missing closing `]` for scalable dim size");
+    return {};
+  }
+
+  // Parse literal 'x'
+  if (odsParser.parseKeyword("x"))
+    return {};
+
+  // Parse variable 'elementType'
+  elementType = mlir::FieldParser<::mlir::Type>::parse(odsParser);
+  if (mlir::failed(elementType)) {
+    odsParser.emitError(odsParser.getCurrentLocation(),
+                        "failed to parse CIR_VectorType parameter "
+                        "'elementType' which is to be a `mlir::Type`");
+    return {};
+  }
+
+  // Parse literal '>'
+  if (odsParser.parseGreater())
+    return {};
+  return odsParser.getChecked<VectorType>(odsLoc, odsParser.getContext(),
+                                          mlir::Type((*elementType)),
+                                          uint64_t((*size)), isScalabe);
+}
+
+void cir::VectorType::print(mlir::AsmPrinter &odsPrinter) const {
+  mlir::Builder odsBuilder(getContext());
+  odsPrinter << "<";
+  if (this->getIsScalable())
+    odsPrinter << "[";
+
+  odsPrinter.printStrippedAttrOrType(getSize());
+  if (this->getIsScalable())
+    odsPrinter << "]";
+  odsPrinter << ' ' << "x";
+  odsPrinter << ' ';
+  odsPrinter.printStrippedAttrOrType(getElementType());
+  odsPrinter << ">";
+}
+
 //===----------------------------------------------------------------------===//
-// TargetAddressSpace definitions
+// AddressSpace definitions
 //===----------------------------------------------------------------------===//
 
-mlir::ParseResult parseTargetAddressSpace(mlir::AsmParser &p,
-                                          cir::TargetAddressSpaceAttr &attr) {
-  if (failed(p.parseKeyword("target_address_space")))
-    return mlir::failure();
+bool cir::isSupportedCIRMemorySpaceAttr(
+    mlir::ptr::MemorySpaceAttrInterface memorySpace) {
+  return mlir::isa<cir::LangAddressSpaceAttr, cir::TargetAddressSpaceAttr>(
+      memorySpace);
+}
 
-  if (failed(p.parseLParen()))
-    return mlir::failure();
+cir::LangAddressSpace cir::toCIRLangAddressSpace(clang::LangAS langAS) {
+  using clang::LangAS;
+  switch (langAS) {
+  case LangAS::Default:
+    return LangAddressSpace::Default;
+  case LangAS::opencl_global:
+    return LangAddressSpace::OffloadGlobal;
+  case LangAS::opencl_local:
+  case LangAS::cuda_shared:
+    // Local means local among the work-group (OpenCL) or block (CUDA).
+    // All threads inside the kernel can access local memory.
+    return LangAddressSpace::OffloadLocal;
+  case LangAS::cuda_device:
+    return LangAddressSpace::OffloadGlobal;
+  case LangAS::opencl_constant:
+  case LangAS::cuda_constant:
+    return LangAddressSpace::OffloadConstant;
+  case LangAS::opencl_private:
+    return LangAddressSpace::OffloadPrivate;
+  case LangAS::opencl_generic:
+    return LangAddressSpace::OffloadGeneric;
+  case LangAS::opencl_global_device:
+  case LangAS::opencl_global_host:
+  case LangAS::sycl_global:
+  case LangAS::sycl_global_device:
+  case LangAS::sycl_global_host:
+  case LangAS::sycl_local:
+  case LangAS::sycl_private:
+  case LangAS::ptr32_sptr:
+  case LangAS::ptr32_uptr:
+  case LangAS::ptr64:
+  case LangAS::hlsl_groupshared:
+  case LangAS::wasm_funcref:
+    llvm_unreachable("NYI");
+  default:
+    llvm_unreachable("unknown/unsupported clang language address space");
+  }
+}
 
-  int32_t targetValue;
-  if (failed(p.parseInteger(targetValue)))
-    return p.emitError(p.getCurrentLocation(),
-                       "expected integer address space value");
+mlir::ParseResult
+parseAddressSpaceValue(mlir::AsmParser &p,
+                       mlir::ptr::MemorySpaceAttrInterface &attr) {
 
-  if (failed(p.parseRParen()))
-    return p.emitError(p.getCurrentLocation(),
-                       "expected ')' after address space value");
+  llvm::SMLoc loc = p.getCurrentLocation();
 
-  mlir::MLIRContext *context = p.getBuilder().getContext();
-  attr = cir::TargetAddressSpaceAttr::get(
-      context, p.getBuilder().getUI32IntegerAttr(targetValue));
+  // Try to parse target address space first.
+  attr = nullptr;
+  if (p.parseOptionalKeyword("target_address_space").succeeded()) {
+    unsigned val;
+    if (p.parseLParen())
+      return p.emitError(loc, "expected '(' after 'target_address_space'");
+
+    if (p.parseInteger(val))
+      return p.emitError(loc, "expected target address space value");
+
+    if (p.parseRParen())
+      return p.emitError(loc, "expected ')'");
+
+    attr = cir::TargetAddressSpaceAttr::get(p.getContext(), val);
+    return mlir::success();
+  }
+
+  // Try to parse language specific address space.
+  if (p.parseOptionalKeyword("lang_address_space").succeeded()) {
+    if (p.parseLParen())
+      return p.emitError(loc, "expected '(' after 'lang_address_space'");
+
+    mlir::FailureOr<cir::LangAddressSpace> result =
+        mlir::FieldParser<cir::LangAddressSpace>::parse(p);
+    if (mlir::failed(result))
+      return mlir::failure();
+
+    if (p.parseRParen())
+      return p.emitError(loc, "expected ')'");
+
+    attr = cir::LangAddressSpaceAttr::get(p.getContext(), result.value());
+    return mlir::success();
+  }
+
+  llvm::StringRef keyword;
+  if (p.parseOptionalKeyword(&keyword).succeeded())
+    return p.emitError(loc, "unknown address space specifier '")
+           << keyword << "'; expected 'target_address_space' or "
+           << "'lang_address_space'";
+
   return mlir::success();
 }
 
-// The custom printer for the `addrspace` parameter in `!cir.ptr`.
-// in the format of `target_address_space(N)`.
-void printTargetAddressSpace(mlir::AsmPrinter &p,
-                             cir::TargetAddressSpaceAttr attr) {
-  p << "target_address_space(" << attr.getValue().getUInt() << ")";
+void printAddressSpaceValue(mlir::AsmPrinter &p,
+                            mlir::ptr::MemorySpaceAttrInterface attr) {
+  if (!attr)
+    return;
+
+  if (auto language = dyn_cast<cir::LangAddressSpaceAttr>(attr)) {
+    p << "lang_address_space("
+      << cir::stringifyLangAddressSpace(language.getValue()) << ')';
+    return;
+  }
+
+  if (auto target = dyn_cast<cir::TargetAddressSpaceAttr>(attr)) {
+    p << "target_address_space(" << target.getValue() << ')';
+    return;
+  }
+
+  llvm_unreachable("unexpected address-space attribute kind");
+}
+
+mlir::OptionalParseResult
+parseGlobalAddressSpaceValue(mlir::AsmParser &p,
+                             mlir::ptr::MemorySpaceAttrInterface &attr) {
+
+  mlir::SMLoc loc = p.getCurrentLocation();
+  if (parseAddressSpaceValue(p, attr).failed())
+    return p.emitError(loc, "failed to parse Address Space Value for GlobalOp");
+  return mlir::success();
+}
+
+void printGlobalAddressSpaceValue(mlir::AsmPrinter &printer, cir::GlobalOp,
+                                  mlir::ptr::MemorySpaceAttrInterface attr) {
+  printAddressSpaceValue(printer, attr);
+}
+
+mlir::ptr::MemorySpaceAttrInterface cir::normalizeDefaultAddressSpace(
+    mlir::ptr::MemorySpaceAttrInterface addrSpace) {
+  if (auto langAS =
+          mlir::dyn_cast_if_present<cir::LangAddressSpaceAttr>(addrSpace))
+    if (langAS.getValue() == cir::LangAddressSpace::Default)
+      return {};
+  return addrSpace;
+}
+
+mlir::ptr::MemorySpaceAttrInterface
+cir::toCIRAddressSpaceAttr(mlir::MLIRContext &ctx, clang::LangAS langAS) {
+  using clang::LangAS;
+
+  if (langAS == LangAS::Default)
+    return cir::LangAddressSpaceAttr::get(&ctx, cir::LangAddressSpace::Default);
+
+  if (clang::isTargetAddressSpace(langAS)) {
+    unsigned targetAS = clang::toTargetAddressSpace(langAS);
+    return cir::TargetAddressSpaceAttr::get(&ctx, targetAS);
+  }
+
+  return cir::LangAddressSpaceAttr::get(&ctx, toCIRLangAddressSpace(langAS));
+}
+
+bool cir::isMatchingAddressSpace(mlir::ptr::MemorySpaceAttrInterface cirAS,
+                                 clang::LangAS as) {
+  cirAS = normalizeDefaultAddressSpace(cirAS);
+  if (!cirAS)
+    return as == clang::LangAS::Default;
+  mlir::ptr::MemorySpaceAttrInterface expected = normalizeDefaultAddressSpace(
+      toCIRAddressSpaceAttr(*cirAS.getContext(), as));
+  return expected == cirAS;
+}
+
+//===----------------------------------------------------------------------===//
+// PointerType Definitions
+//===----------------------------------------------------------------------===//
+
+mlir::LogicalResult cir::PointerType::verify(
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+    mlir::Type pointee, mlir::ptr::MemorySpaceAttrInterface addrSpace) {
+  if (addrSpace) {
+    if (!isSupportedCIRMemorySpaceAttr(addrSpace)) {
+      return emitError() << "unsupported address space attribute; expected "
+                            "'target_address_space' or 'lang_address_space'";
+    }
+  }
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

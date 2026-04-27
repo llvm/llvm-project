@@ -14,7 +14,7 @@ entry:
   %0 = call token @llvm.coro.id(i32 0, ptr null, ptr @flink, ptr null), !dbg !16
   %1 = call i64 @llvm.coro.size.i64(), !dbg !16
   %call = call ptr @malloc(i64 %1), !dbg !16
-  %2 = call ptr @llvm.coro.begin(token %0, ptr %call) #7, !dbg !16
+  %2 = call ptr @llvm.coro.begin(token %0, ptr %call), !dbg !16
   store ptr %2, ptr %coro_hdl, align 8, !dbg !16
   %3 = call i8 @llvm.coro.suspend(token none, i1 false), !dbg !17
   %conv = sext i8 %3 to i32, !dbg !17
@@ -62,17 +62,16 @@ indirect.dest:
   br label %coro_Cleanup
 
 coro_Cleanup:                                     ; preds = %sw.epilog, %sw.bb1
-  %5 = load ptr, ptr %coro_hdl, align 8, !dbg !24
-  %6 = call ptr @llvm.coro.free(token %0, ptr %5), !dbg !24
-  call void @free(ptr %6), !dbg !24
+  %mem = call ptr @llvm.coro.free(token %0, ptr %2), !dbg !24
+  call void @free(ptr %mem), !dbg !24
   call void @llvm.dbg.value(metadata i32 %asm_res, metadata !32, metadata !13), !dbg !16
   br label %coro_Suspend, !dbg !24
 
 coro_Suspend:                                     ; preds = %coro_Cleanup, %sw.default
-  call void @llvm.coro.end(ptr null, i1 false, token none) #7, !dbg !24
-  %7 = load ptr, ptr %coro_hdl, align 8, !dbg !24
+  call void @llvm.coro.end(ptr null, i1 false, token none), !dbg !24
+  %ret = load ptr, ptr %coro_hdl, align 8, !dbg !24
   store i32 0, ptr %late_local, !dbg !24
-  ret ptr %7, !dbg !24
+  ret ptr %ret, !dbg !24
 
 ehcleanup:
   %ex = landingpad { ptr, i32 }
@@ -82,47 +81,40 @@ ehcleanup:
 }
 
 ; Function Attrs: nounwind readnone speculatable
-declare void @llvm.dbg.value(metadata, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 ; Function Attrs: nounwind readnone speculatable
-declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
+declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 ; Function Attrs: argmemonly nounwind readonly
-declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr) #2
+declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr)
 
-declare ptr @malloc(i64) #3
+declare ptr @malloc(i64)
 declare ptr @allocate() 
 declare void @print({ ptr, i32 })
 declare void @log()
 
 ; Function Attrs: nounwind readnone
-declare i64 @llvm.coro.size.i64() #4
+declare i64 @llvm.coro.size.i64()
 
 ; Function Attrs: nounwind
-declare ptr @llvm.coro.begin(token, ptr writeonly) #5
+declare ptr @llvm.coro.begin(token, ptr writeonly)
 
 ; Function Attrs: nounwind
-declare i8 @llvm.coro.suspend(token, i1) #5
+declare i8 @llvm.coro.suspend(token, i1)
 
-declare void @free(ptr) #3
+declare void @free(ptr)
 
 ; Function Attrs: argmemonly nounwind readonly
-declare ptr @llvm.coro.free(token, ptr nocapture readonly) #2
+declare ptr @llvm.coro.free(token, ptr nocapture readonly)
 
 ; Function Attrs: nounwind
-declare void @llvm.coro.end(ptr, i1, token) #5
+declare void @llvm.coro.end(ptr, i1, token)
 
 ; Function Attrs: argmemonly nounwind readonly
-declare ptr @llvm.coro.subfn.addr(ptr nocapture readonly, i8) #2
+declare ptr @llvm.coro.subfn.addr(ptr nocapture readonly, i8)
 
-attributes #0 = { noinline nounwind presplitcoroutine "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-features"="+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind readnone speculatable }
-attributes #2 = { argmemonly nounwind readonly }
-attributes #3 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-features"="+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #4 = { nounwind readnone }
-attributes #5 = { nounwind }
-attributes #6 = { alwaysinline }
-attributes #7 = { noduplicate }
+attributes #0 = { noinline nounwind presplitcoroutine }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}
@@ -170,10 +162,9 @@ attributes #7 = { noduplicate }
 ; Also check that it contains `#dbg_declare` and `#dbg_value` debug instructions
 ; making the debug variables available to the debugger.
 ;
-; CHECK: define internal fastcc void @flink.resume(ptr noundef nonnull align 8 dereferenceable(40) %0) #0 personality i32 0 !dbg ![[RESUME:[0-9]+]]
+; CHECK: define internal fastcc void @flink.resume(ptr noundef nonnull align 8 dereferenceable(32) %0) #0 personality i32 0 !dbg ![[RESUME:[0-9]+]]
 ; CHECK: entry.resume:
 ; CHECK: %[[DBG_PTR:.*]] = alloca ptr
-; CHECK-NEXT: #dbg_declare(ptr %[[DBG_PTR]], ![[RESUME_COROHDL:[0-9]+]], !DIExpression(DW_OP_deref, DW_OP_plus_uconst,
 ; CHECK-NEXT: #dbg_declare(ptr %[[DBG_PTR]], ![[RESUME_X:[0-9]+]], !DIExpression(DW_OP_deref, DW_OP_plus_uconst, [[EXPR_TAIL:.*]])
 ; CHECK-NEXT: store ptr {{.*}}, ptr %[[DBG_PTR]]
 ; CHECK-NOT: alloca ptr
@@ -195,8 +186,8 @@ attributes #7 = { noduplicate }
 
 ; Check that the destroy and cleanup functions are present and capture their debug info id.
 ;
-; CHECK: define internal fastcc void @flink.destroy(ptr noundef nonnull align 8 dereferenceable(40) %0) #0 personality i32 0 !dbg ![[DESTROY:[0-9]+]]
-; CHECK: define internal fastcc void @flink.cleanup(ptr noundef nonnull align 8 dereferenceable(40) %0) #0 personality i32 0 !dbg ![[CLEANUP:[0-9]+]]
+; CHECK: define internal fastcc void @flink.destroy(ptr noundef nonnull align 8 dereferenceable(32) %0) #0 personality i32 0 !dbg ![[DESTROY:[0-9]+]]
+; CHECK: define internal fastcc void @flink.cleanup(ptr noundef nonnull align 8 dereferenceable(32) %0) #0 personality i32 0 !dbg ![[CLEANUP:[0-9]+]]
 
 ; Check that the linkage name of the original function is set correctly.
 ;
@@ -205,7 +196,6 @@ attributes #7 = { noduplicate }
 
 ; Check that metadata for local variables in the resume function is set correctly.
 ;
-; CHECK: ![[RESUME_COROHDL]] = !DILocalVariable(name: "coro_hdl", scope: ![[RESUME]]
 ; CHECK: ![[RESUME_X]] = !DILocalVariable(name: "x", arg: 1, scope: ![[RESUME]]
 ; CHECK: ![[RESUME_CONST]] = !DILocalVariable(name: "direct_const", scope: ![[RESUME]]
 ; CHECK: ![[RESUME_DIRECT]] = !DILocalVariable(name: "direct_mem", scope: ![[RESUME]]

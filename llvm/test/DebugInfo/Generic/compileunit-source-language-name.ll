@@ -1,11 +1,11 @@
 ; AIX doesn't have support for DWARF 6 DW_AT_language_name
 ; XFAIL: target={{.*}}-zos{{.*}}, target={{.*}}-aix{{.*}}
-; RUN: %llc_dwarf -filetype=obj -O0 < %s | llvm-dwarfdump -debug-info - | FileCheck %s --implicit-check-not "DW_AT_language"
+; RUN: %llc_dwarf -filetype=obj -O0 < %s | llvm-dwarfdump -debug-info -v - | FileCheck %s --implicit-check-not "DW_AT_language"
 
-; CHECK:     DW_AT_language_name (DW_LNAME_ObjC_plus_plus)
-; CHECK:     DW_AT_language_name (DW_LNAME_C_plus_plus)
-; CHECK:     DW_AT_language_version (201100)
-; CHECK:     DW_AT_language_name (DW_LNAME_Rust)
+; CHECK:     DW_AT_language_name [DW_FORM_data2] (DW_LNAME_ObjC_plus_plus)
+; CHECK:     DW_AT_language_name [DW_FORM_data2] (DW_LNAME_C_plus_plus)
+; CHECK:     DW_AT_language_version [DW_FORM_data4] (201100 C++11)
+; CHECK:     DW_AT_language_name [DW_FORM_data2] (DW_LNAME_Rust)
 ; CHECK-NOT: DW_AT_language_version
 
 @x = global i32 0, align 4, !dbg !0

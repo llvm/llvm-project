@@ -108,7 +108,7 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
     CXXScopeSpec &SS, ParsedType ObjectType, bool ObjectHadErrors,
     bool EnteringContext, bool *MayBePseudoDestructor, bool IsTypename,
     const IdentifierInfo **LastII, bool OnlyNamespace, bool InUsingDeclaration,
-    bool Disambiguation) {
+    bool Disambiguation, bool IsAddressOfOperand, bool IsInDeclarationContext) {
   assert(getLangOpts().CPlusPlus &&
          "Call sites of this function should be guarded by checking for C++");
 
@@ -237,7 +237,8 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
         // completion token follows the '::'.
         Actions.CodeCompletion().CodeCompleteQualifiedId(
             getCurScope(), SS, EnteringContext, InUsingDeclaration,
-            ObjectType.get(), SavedType.get(SS.getBeginLoc()));
+            IsAddressOfOperand, IsInDeclarationContext, ObjectType.get(),
+            SavedType.get(SS.getBeginLoc()));
         // Include code completion token into the range of the scope otherwise
         // when we try to annotate the scope tokens the dangling code completion
         // token will cause assertion in
@@ -565,8 +566,7 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
 }
 
 ExprResult Parser::tryParseCXXIdExpression(CXXScopeSpec &SS,
-                                           bool isAddressOfOperand,
-                                           Token &Replacement) {
+                                           bool isAddressOfOperand) {
   ExprResult E;
 
   // We may have already annotated this id-expression.
@@ -619,8 +619,7 @@ ExprResult Parser::tryParseCXXIdExpression(CXXScopeSpec &SS,
 
     E = Actions.ActOnIdExpression(
         getCurScope(), SS, TemplateKWLoc, Name, Tok.is(tok::l_paren),
-        isAddressOfOperand, /*CCC=*/nullptr, /*IsInlineAsmIdentifier=*/false,
-        &Replacement);
+        isAddressOfOperand, /*CCC=*/nullptr, /*IsInlineAsmIdentifier=*/false);
     break;
   }
 
@@ -666,15 +665,7 @@ ExprResult Parser::ParseCXXIdExpression(bool isAddressOfOperand) {
                                  /*ObjectHasErrors=*/false,
                                  /*EnteringContext=*/false);
 
-  Token Replacement;
-  ExprResult Result =
-      tryParseCXXIdExpression(SS, isAddressOfOperand, Replacement);
-  if (Result.isUnset()) {
-    // If the ExprResult is valid but null, then typo correction suggested a
-    // keyword replacement that needs to be reparsed.
-    UnconsumeToken(Replacement);
-    Result = tryParseCXXIdExpression(SS, isAddressOfOperand, Replacement);
-  }
+  ExprResult Result = tryParseCXXIdExpression(SS, isAddressOfOperand);
   assert(!Result.isUnset() && "Typo correction suggested a keyword replacement "
                               "for a previous keyword suggestion");
   return Result;
@@ -772,9 +763,11 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
 
   // Produce a diagnostic if we're not tentatively parsing; otherwise track
   // that our parse has failed.
-  auto Invalid = [&](llvm::function_ref<void()> Action) {
+  auto Result = [&](llvm::function_ref<void()> Action,
+                    LambdaIntroducerTentativeParse State =
+                        LambdaIntroducerTentativeParse::Invalid) {
     if (Tentative) {
-      *Tentative = LambdaIntroducerTentativeParse::Invalid;
+      *Tentative = State;
       return false;
     }
     Action();
@@ -824,7 +817,7 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
           break;
         }
 
-        return Invalid([&] {
+        return Result([&] {
           Diag(Tok.getLocation(), diag::err_expected_comma_or_rsquare);
         });
       }
@@ -861,7 +854,7 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
         ConsumeToken();
         Kind = LCK_StarThis;
       } else {
-        return Invalid([&] {
+        return Result([&] {
           Diag(Tok.getLocation(), diag::err_expected_star_this_capture);
         });
       }
@@ -875,8 +868,9 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
       // or the start of a capture (in the "&" case) with the rest of the
       // capture missing. Both are an error but a misplaced capture-default
       // is more likely if we don't already have a capture default.
-      return Invalid(
-          [&] { Diag(Tok.getLocation(), diag::err_capture_default_first); });
+      return Result(
+          [&] { Diag(Tok.getLocation(), diag::err_capture_default_first); },
+          LambdaIntroducerTentativeParse::Incomplete);
     } else {
       TryConsumeToken(tok::ellipsis, EllipsisLocs[0]);
 
@@ -899,14 +893,13 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
         Id = Tok.getIdentifierInfo();
         Loc = ConsumeToken();
       } else if (Tok.is(tok::kw_this)) {
-        return Invalid([&] {
+        return Result([&] {
           // FIXME: Suggest a fixit here.
           Diag(Tok.getLocation(), diag::err_this_captured_by_reference);
         });
       } else {
-        return Invalid([&] {
-          Diag(Tok.getLocation(), diag::err_expected_capture);
-        });
+        return Result(
+            [&] { Diag(Tok.getLocation(), diag::err_expected_capture); });
       }
 
       TryConsumeToken(tok::ellipsis, EllipsisLocs[2]);
@@ -1222,6 +1215,8 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
                                    Scope::FunctionPrototypeScope);
 
   Actions.PushLambdaScope();
+  SourceLocation DeclLoc = Tok.getLocation();
+
   Actions.ActOnLambdaExpressionAfterIntroducer(Intro, getCurScope());
 
   ParsedAttributes Attributes(AttrFactory);
@@ -1306,7 +1301,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
   TypeResult TrailingReturnType;
   SourceLocation TrailingReturnTypeLoc;
   SourceLocation LParenLoc, RParenLoc;
-  SourceLocation DeclEndLoc;
+  SourceLocation DeclEndLoc = DeclLoc;
   bool HasParentheses = false;
   bool HasSpecifiers = false;
   SourceLocation MutableLoc;
@@ -1413,6 +1408,11 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
       ConsumeToken();
     }
 
+    // We have called ActOnLambdaClosureQualifiers for parentheses-less cases
+    // above.
+    if (HasParentheses)
+      Actions.ActOnLambdaClosureQualifiers(Intro, MutableLoc);
+
     SourceLocation FunLocalRangeEnd = DeclEndLoc;
 
     // Parse trailing-return-type[opt].
@@ -1440,11 +1440,6 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
                       /*DeclsInPrototype=*/{}, LParenLoc, FunLocalRangeEnd, D,
                       TrailingReturnType, TrailingReturnTypeLoc, &DS),
                   std::move(Attributes), DeclEndLoc);
-
-    // We have called ActOnLambdaClosureQualifiers for parentheses-less cases
-    // above.
-    if (HasParentheses)
-      Actions.ActOnLambdaClosureQualifiers(Intro, MutableLoc);
 
     if (HasParentheses && Tok.is(tok::kw_requires))
       ParseTrailingRequiresClause(D);

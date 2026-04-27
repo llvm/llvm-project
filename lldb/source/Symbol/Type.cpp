@@ -531,9 +531,9 @@ lldb::TypeSP Type::GetTypedefType() {
 
 lldb::Format Type::GetFormat() { return GetForwardCompilerType().GetFormat(); }
 
-lldb::Encoding Type::GetEncoding(uint64_t &count) {
+lldb::Encoding Type::GetEncoding() {
   // Make sure we resolve our type if it already hasn't been.
-  return GetForwardCompilerType().GetEncoding(count);
+  return GetForwardCompilerType().GetEncoding();
 }
 
 bool Type::ReadFromMemory(ExecutionContext *exe_ctx, lldb::addr_t addr,
@@ -1239,12 +1239,12 @@ bool TypeMemberFunctionImpl::GetDescription(Stream &stream) {
                   m_type.GetTypeName().AsCString("<unknown>"));
     break;
   case lldb::eMemberFunctionKindInstanceMethod:
-    stream.Printf("instance method %s of type %s", m_name.AsCString(),
-                  m_decl.GetDeclContext().GetName().AsCString());
+    stream.Format("instance method {0} of type {1}", m_name,
+                  m_decl.GetDeclContext().GetName());
     break;
   case lldb::eMemberFunctionKindStaticMethod:
-    stream.Printf("static method %s of type %s", m_name.AsCString(),
-                  m_decl.GetDeclContext().GetName().AsCString());
+    stream.Format("static method {0} of type {1}", m_name,
+                  m_decl.GetDeclContext().GetName());
     break;
   }
   return true;

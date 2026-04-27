@@ -16,8 +16,8 @@
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Distro.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
+#include "clang/Options/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Path.h"
@@ -203,8 +203,21 @@ static StringRef getOSLibDir(const llvm::Triple &Triple, const ArgList &Args) {
   if (Triple.getArch() == llvm::Triple::x86_64 && Triple.isX32())
     return "libx32";
 
-  if (Triple.getArch() == llvm::Triple::riscv32)
+  if (Triple.isRISCV32())
     return "lib32";
+
+  if (Triple.getArch() == llvm::Triple::loongarch32) {
+    switch (Triple.getEnvironment()) {
+    default:
+      return "lib32";
+    case llvm::Triple::GNUSF:
+    case llvm::Triple::MuslSF:
+      return "lib32/sf";
+    case llvm::Triple::GNUF32:
+    case llvm::Triple::MuslF32:
+      return "lib32/f32";
+    }
+  }
 
   return Triple.isArch32Bit() ? "lib" : "lib64";
 }
@@ -221,6 +234,9 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
   GCCInstallation.init(Triple, Args);
   Multilibs = GCCInstallation.getMultilibs();
   SelectedMultilibs.assign({GCCInstallation.getMultilib()});
+
+  loadMultilibsFromYAML(Args, D);
+
   llvm::Triple::ArchType Arch = Triple.getArch();
   std::string SysRoot = computeSysRoot();
   ToolChain::path_list &PPaths = getProgramPaths();
@@ -261,15 +277,16 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
       // issue that this flag is not accepted by other linkers.
       ExtraOpts.push_back("--no-rosegment");
     }
-    if (!Triple.isAndroidVersionLT(28)) {
-      // Android supports relr packing starting with API 28 and had its own
-      // flavor (--pack-dyn-relocs=android) starting in API 23.
-      // TODO: It's possible to use both with --pack-dyn-relocs=android+relr,
-      // but we need to gather some data on the impact of that form before we
-      // can know if it's a good default.
-      // On the other hand, relr should always be an improvement.
+    // SHT_RELR relocations are only supported at API level >= 30.
+    // ANDROID_RELR relocations were supported at API level >= 28.
+    // Relocation packer was supported at API level >= 23.
+    if (!Triple.isAndroidVersionLT(30)) {
+      ExtraOpts.push_back("--pack-dyn-relocs=android+relr");
+    } else if (!Triple.isAndroidVersionLT(28)) {
+      ExtraOpts.push_back("--pack-dyn-relocs=android+relr");
       ExtraOpts.push_back("--use-android-relr-tags");
-      ExtraOpts.push_back("--pack-dyn-relocs=relr");
+    } else if (!Triple.isAndroidVersionLT(23)) {
+      ExtraOpts.push_back("--pack-dyn-relocs=android");
     }
   }
 
@@ -445,6 +462,102 @@ std::string Linux::computeSysRoot() const {
   return std::string();
 }
 
+static void setPAuthABIInTriple(const Driver &D, const ArgList &Args,
+                                llvm::Triple &Triple) {
+  Arg *ABIArg = Args.getLastArg(options::OPT_mabi_EQ);
+  bool HasPAuthABI =
+      ABIArg ? (StringRef(ABIArg->getValue()) == "pauthtest") : false;
+
+  switch (Triple.getEnvironment()) {
+  case llvm::Triple::UnknownEnvironment:
+    if (HasPAuthABI)
+      Triple.setEnvironment(llvm::Triple::PAuthTest);
+    break;
+  case llvm::Triple::PAuthTest:
+    break;
+  default:
+    if (HasPAuthABI)
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << ABIArg->getAsString(Args) << Triple.getTriple();
+    break;
+  }
+}
+
+std::string Linux::ComputeEffectiveClangTriple(const llvm::opt::ArgList &Args,
+                                               types::ID InputType) const {
+  std::string TripleString =
+      Generic_ELF::ComputeEffectiveClangTriple(Args, InputType);
+  if (getTriple().isAArch64()) {
+    llvm::Triple Triple(TripleString);
+    setPAuthABIInTriple(getDriver(), Args, Triple);
+    return Triple.getTriple();
+  }
+  return TripleString;
+}
+
+// Each combination of options here forms a signing schema, and in most cases
+// each signing schema is its own incompatible ABI. The default values of the
+// options represent the default signing schema.
+static void handlePAuthABI(const Driver &D, const ArgList &DriverArgs,
+                           ArgStringList &CC1Args) {
+  if (!DriverArgs.hasArg(options::OPT_fptrauth_intrinsics,
+                         options::OPT_fno_ptrauth_intrinsics))
+    CC1Args.push_back("-fptrauth-intrinsics");
+
+  if (!DriverArgs.hasArg(options::OPT_fptrauth_calls,
+                         options::OPT_fno_ptrauth_calls))
+    CC1Args.push_back("-fptrauth-calls");
+
+  if (!DriverArgs.hasArg(options::OPT_fptrauth_returns,
+                         options::OPT_fno_ptrauth_returns))
+    CC1Args.push_back("-fptrauth-returns");
+
+  if (!DriverArgs.hasArg(options::OPT_fptrauth_auth_traps,
+                         options::OPT_fno_ptrauth_auth_traps))
+    CC1Args.push_back("-fptrauth-auth-traps");
+
+  if (!DriverArgs.hasArg(
+          options::OPT_fptrauth_vtable_pointer_address_discrimination,
+          options::OPT_fno_ptrauth_vtable_pointer_address_discrimination))
+    CC1Args.push_back("-fptrauth-vtable-pointer-address-discrimination");
+
+  if (!DriverArgs.hasArg(
+          options::OPT_fptrauth_vtable_pointer_type_discrimination,
+          options::OPT_fno_ptrauth_vtable_pointer_type_discrimination))
+    CC1Args.push_back("-fptrauth-vtable-pointer-type-discrimination");
+
+  if (!DriverArgs.hasArg(
+          options::OPT_fptrauth_type_info_vtable_pointer_discrimination,
+          options::OPT_fno_ptrauth_type_info_vtable_pointer_discrimination))
+    CC1Args.push_back("-fptrauth-type-info-vtable-pointer-discrimination");
+
+  if (!DriverArgs.hasArg(options::OPT_fptrauth_indirect_gotos,
+                         options::OPT_fno_ptrauth_indirect_gotos))
+    CC1Args.push_back("-fptrauth-indirect-gotos");
+
+  if (!DriverArgs.hasArg(options::OPT_fptrauth_init_fini,
+                         options::OPT_fno_ptrauth_init_fini))
+    CC1Args.push_back("-fptrauth-init-fini");
+
+  if (!DriverArgs.hasArg(
+          options::OPT_fptrauth_init_fini_address_discrimination,
+          options::OPT_fno_ptrauth_init_fini_address_discrimination))
+    CC1Args.push_back("-fptrauth-init-fini-address-discrimination");
+
+  if (!DriverArgs.hasArg(options::OPT_faarch64_jump_table_hardening,
+                         options::OPT_fno_aarch64_jump_table_hardening))
+    CC1Args.push_back("-faarch64-jump-table-hardening");
+}
+
+void Linux::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
+                                  llvm::opt::ArgStringList &CC1Args,
+                                  Action::OffloadKind DeviceOffloadKind) const {
+  llvm::Triple Triple(ComputeEffectiveClangTriple(DriverArgs));
+  if (Triple.isAArch64() && Triple.getEnvironment() == llvm::Triple::PAuthTest)
+    handlePAuthABI(getDriver(), DriverArgs, CC1Args);
+  Generic_ELF::addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadKind);
+}
+
 std::string Linux::getDynamicLinker(const ArgList &Args) const {
   const llvm::Triple::ArchType Arch = getArch();
   const llvm::Triple &Triple = getTriple();
@@ -583,7 +696,9 @@ std::string Linux::getDynamicLinker(const ArgList &Args) const {
         (tools::ppc::hasPPCAbiArg(Args, "elfv1")) ? "ld64.so.1" : "ld64.so.2";
     break;
   case llvm::Triple::riscv32:
-  case llvm::Triple::riscv64: {
+  case llvm::Triple::riscv64:
+  case llvm::Triple::riscv32be:
+  case llvm::Triple::riscv64be: {
     StringRef ArchName = llvm::Triple::getArchTypeName(Arch);
     StringRef ABIName = tools::riscv::getRISCVABI(Args, Triple);
     LibDir = "lib";
@@ -635,7 +750,7 @@ void Linux::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   const Driver &D = getDriver();
   std::string SysRoot = computeSysRoot();
 
-  if (DriverArgs.hasArg(clang::driver::options::OPT_nostdinc))
+  if (DriverArgs.hasArg(options::OPT_nostdinc))
     return;
 
   // Add 'include' in the resource directory, which is similar to
@@ -650,6 +765,23 @@ void Linux::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 
   if (DriverArgs.hasArg(options::OPT_nostdlibinc))
     return;
+
+  // Add multilib variant include paths in priority order.
+  for (const Multilib &M : getOrderedMultilibs()) {
+    if (M.isDefault())
+      continue;
+    if (std::optional<std::string> StdlibIncDir = getStdlibIncludePath()) {
+      SmallString<128> Dir(*StdlibIncDir);
+      llvm::sys::path::append(Dir, M.includeSuffix());
+      if (D.getVFS().exists(Dir))
+        addSystemInclude(DriverArgs, CC1Args, Dir);
+    }
+  }
+
+  // After the resource directory, we prioritize the standard clang include
+  // directory.
+  if (std::optional<std::string> Path = getStdlibIncludePath())
+    addSystemInclude(DriverArgs, CC1Args, *Path);
 
   // LOCAL_INCLUDE_DIR
   addSystemInclude(DriverArgs, CC1Args, concat(SysRoot, "/usr/local/include"));
@@ -736,19 +868,38 @@ void Linux::AddHIPIncludeArgs(const ArgList &DriverArgs,
   RocmInstallation->AddHIPIncludeArgs(DriverArgs, CC1Args);
 }
 
-void Linux::AddHIPRuntimeLibArgs(const ArgList &Args,
-                                 ArgStringList &CmdArgs) const {
-  CmdArgs.push_back(
-      Args.MakeArgString(StringRef("-L") + RocmInstallation->getLibPath()));
+void Linux::addOffloadRTLibs(unsigned ActiveKinds, const ArgList &Args,
+                             ArgStringList &CmdArgs) const {
+  if (!Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
+                    true) ||
+      Args.hasArg(options::OPT_nostdlib) ||
+      Args.hasArg(options::OPT_no_hip_rt) || Args.hasArg(options::OPT_r))
+    return;
 
-  if (Args.hasFlag(options::OPT_frtlib_add_rpath,
-                   options::OPT_fno_rtlib_add_rpath, false)) {
-    SmallString<0> p = RocmInstallation->getLibPath();
-    llvm::sys::path::remove_dots(p, true);
-    CmdArgs.append({"-rpath", Args.MakeArgString(p)});
+  llvm::SmallVector<std::pair<StringRef, StringRef>> Libraries;
+  if (ActiveKinds & Action::OFK_HIP)
+    Libraries.emplace_back(RocmInstallation->getLibPath(), "libamdhip64.so");
+  else if (ActiveKinds & Action::OFK_SYCL)
+    Libraries.emplace_back(SYCLInstallation->getSYCLRTLibPath(),
+                           "libLLVMSYCL.so");
+
+  for (auto [Path, Library] : Libraries) {
+    if (Args.hasFlag(options::OPT_frtlib_add_rpath,
+                     options::OPT_fno_rtlib_add_rpath, false)) {
+      SmallString<0> p = Path;
+      llvm::sys::path::remove_dots(p, true);
+      CmdArgs.append({"-rpath", Args.MakeArgString(p)});
+    }
+
+    SmallString<0> p = Path;
+    llvm::sys::path::append(p, Library);
+    CmdArgs.push_back(Args.MakeArgString(p));
   }
 
-  CmdArgs.push_back("-lamdhip64");
+  // FIXME: The ROCm builds implicitly depends on this being present.
+  if (ActiveKinds & Action::OFK_HIP)
+    CmdArgs.push_back(
+        Args.MakeArgString(StringRef("-L") + RocmInstallation->getLibPath()));
 }
 
 void Linux::AddIAMCUIncludeArgs(const ArgList &DriverArgs,
@@ -804,7 +955,7 @@ SanitizerMask Linux::getSupportedSanitizers() const {
                          getTriple().getArch() == llvm::Triple::armeb ||
                          getTriple().getArch() == llvm::Triple::thumbeb;
   const bool IsLoongArch64 = getTriple().getArch() == llvm::Triple::loongarch64;
-  const bool IsRISCV64 = getTriple().getArch() == llvm::Triple::riscv64;
+  const bool IsRISCV64 = getTriple().isRISCV64();
   const bool IsSystemZ = getTriple().getArch() == llvm::Triple::systemz;
   const bool IsHexagon = getTriple().getArch() == llvm::Triple::hexagon;
   const bool IsAndroid = getTriple().isAndroid();
@@ -818,7 +969,7 @@ SanitizerMask Linux::getSupportedSanitizers() const {
   Res |= SanitizerKind::KernelAddress;
   Res |= SanitizerKind::Vptr;
   Res |= SanitizerKind::SafeStack;
-  if (IsX86_64 || IsMIPS64 || IsAArch64 || IsLoongArch64)
+  if (IsX86_64 || IsMIPS64 || IsAArch64 || IsLoongArch64 || IsSystemZ)
     Res |= SanitizerKind::DataFlow;
   if (IsX86_64 || IsMIPS64 || IsAArch64 || IsX86 || IsArmArch || IsPowerPC64 ||
       IsRISCV64 || IsSystemZ || IsHexagon || IsLoongArch64)
@@ -826,12 +977,12 @@ SanitizerMask Linux::getSupportedSanitizers() const {
   if (IsX86_64 || IsMIPS64 || IsAArch64 || IsPowerPC64 || IsSystemZ ||
       IsLoongArch64 || IsRISCV64)
     Res |= SanitizerKind::Thread;
-  if (IsX86_64 || IsAArch64)
+  if (IsX86_64 || IsAArch64 || IsSystemZ || IsHexagon)
     Res |= SanitizerKind::Type;
   if (IsX86_64 || IsSystemZ || IsPowerPC64)
     Res |= SanitizerKind::KernelMemory;
   if (IsX86_64 || IsMIPS64 || IsAArch64 || IsX86 || IsMIPS || IsArmArch ||
-      IsPowerPC64 || IsHexagon || IsLoongArch64 || IsRISCV64)
+      IsPowerPC64 || IsHexagon || IsLoongArch64 || IsRISCV64 || IsSystemZ)
     Res |= SanitizerKind::Scudo;
   if (IsX86_64 || IsAArch64 || IsRISCV64) {
     Res |= SanitizerKind::HWAddress;

@@ -6,9 +6,8 @@ define void @shufflevector_reverse_v16i8(ptr %res, ptr %a) nounwind {
 ; CHECK-LABEL: shufflevector_reverse_v16i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI0_0)
-; CHECK-NEXT:    vld $vr1, $a1, %pc_lo12(.LCPI0_0)
-; CHECK-NEXT:    vshuf.b $vr0, $vr0, $vr0, $vr1
+; CHECK-NEXT:    vshuf4i.w $vr0, $vr0, 27
+; CHECK-NEXT:    vshuf4i.b $vr0, $vr0, 27
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -22,10 +21,9 @@ define void @shufflevector_reverse_v8i16(ptr %res, ptr %a) nounwind {
 ; CHECK-LABEL: shufflevector_reverse_v8i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI1_0)
-; CHECK-NEXT:    vld $vr1, $a1, %pc_lo12(.LCPI1_0)
-; CHECK-NEXT:    vshuf.h $vr1, $vr0, $vr0
-; CHECK-NEXT:    vst $vr1, $a0, 0
+; CHECK-NEXT:    vshuf4i.d $vr0, $vr0, 1
+; CHECK-NEXT:    vshuf4i.h $vr0, $vr0, 27
+; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
   %va = load <8 x i16>, ptr %a

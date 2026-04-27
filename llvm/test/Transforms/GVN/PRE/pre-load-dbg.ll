@@ -16,9 +16,11 @@ define void @withdbg() {
 ; CHECK-LABEL: define void @withdbg() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[AGG_TMP_ENSURED_SROA_0_I:%.*]] = alloca i16, align 1
+; CHECK-NEXT:    br i1 true, label %[[ENTRY_LOR_END_CRIT_EDGE:.*]], label %[[LOR_RHS:.*]]
+; CHECK:       [[ENTRY_LOR_END_CRIT_EDGE]]:
 ; CHECK-NEXT:    [[TMP11_PRE:%.*]] = load i16, ptr @f, align 1
 ; CHECK-NEXT:    [[TMP12_PRE:%.*]] = load ptr, ptr @m, align 1
-; CHECK-NEXT:    br i1 true, label %[[LOR_END:.*]], label %[[LOR_RHS:.*]]
+; CHECK-NEXT:    br label %[[LOR_END:.*]]
 ; CHECK:       [[LOR_RHS]]:
 ; CHECK-NEXT:      #dbg_declare(ptr undef, [[META4:![0-9]+]], !DIExpression(), [[META14:![0-9]+]])
 ; CHECK-NEXT:      #dbg_declare(ptr undef, [[META10:![0-9]+]], !DIExpression(), [[META14]])
@@ -43,10 +45,14 @@ define void @withdbg() {
 ; CHECK-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_7_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
 ; CHECK-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_8_I:%.*]] = load volatile i16, ptr @h, align 1
 ; CHECK-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_8_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
+; CHECK-NEXT:    [[FVALUE:%.*]] = load i16, ptr @f, align 1
+; CHECK-NEXT:    [[MVALUE:%.*]] = load ptr, ptr @m, align 1
 ; CHECK-NEXT:    br label %[[LOR_END]]
 ; CHECK:       [[LOR_END]]:
-; CHECK-NEXT:    [[CONV_I_I6:%.*]] = sext i16 [[TMP11_PRE]] to i32
-; CHECK-NEXT:    store i32 [[CONV_I_I6]], ptr [[TMP12_PRE]], align 1
+; CHECK-NEXT:    [[TMP12:%.*]] = phi ptr [ [[TMP12_PRE]], %[[ENTRY_LOR_END_CRIT_EDGE]] ], [ poison, %[[LOR_RHS]] ]
+; CHECK-NEXT:    [[TMP11:%.*]] = phi i16 [ [[TMP11_PRE]], %[[ENTRY_LOR_END_CRIT_EDGE]] ], [ poison, %[[LOR_RHS]] ]
+; CHECK-NEXT:    [[CONV_I_I6:%.*]] = sext i16 [[TMP11]] to i32
+; CHECK-NEXT:    store i32 [[CONV_I_I6]], ptr [[TMP12]], align 1
 ; CHECK-NEXT:    ret void
 ;
 
@@ -95,9 +101,11 @@ define void @lessdbg() {
 ; CHECK-LABEL: define void @lessdbg() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[AGG_TMP_ENSURED_SROA_0_I:%.*]] = alloca i16, align 1
+; CHECK-NEXT:    br i1 true, label %[[ENTRY_LOR_END_CRIT_EDGE:.*]], label %[[LOR_RHS:.*]]
+; CHECK:       [[ENTRY_LOR_END_CRIT_EDGE]]:
 ; CHECK-NEXT:    [[TMP11_PRE:%.*]] = load i16, ptr @f, align 1
 ; CHECK-NEXT:    [[TMP12_PRE:%.*]] = load ptr, ptr @m, align 1
-; CHECK-NEXT:    br i1 true, label %[[LOR_END:.*]], label %[[LOR_RHS:.*]]
+; CHECK-NEXT:    br label %[[LOR_END:.*]]
 ; CHECK:       [[LOR_RHS]]:
 ; CHECK-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_I:%.*]] = load volatile i16, ptr @h, align 1
 ; CHECK-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
@@ -117,10 +125,14 @@ define void @lessdbg() {
 ; CHECK-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_7_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
 ; CHECK-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_8_I:%.*]] = load volatile i16, ptr @h, align 1
 ; CHECK-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_8_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
+; CHECK-NEXT:    [[FVALUE:%.*]] = load i16, ptr @f, align 1
+; CHECK-NEXT:    [[MVALUE:%.*]] = load ptr, ptr @m, align 1
 ; CHECK-NEXT:    br label %[[LOR_END]]
 ; CHECK:       [[LOR_END]]:
-; CHECK-NEXT:    [[CONV_I_I6:%.*]] = sext i16 [[TMP11_PRE]] to i32
-; CHECK-NEXT:    store i32 [[CONV_I_I6]], ptr [[TMP12_PRE]], align 1
+; CHECK-NEXT:    [[TMP12:%.*]] = phi ptr [ [[TMP12_PRE]], %[[ENTRY_LOR_END_CRIT_EDGE]] ], [ poison, %[[LOR_RHS]] ]
+; CHECK-NEXT:    [[TMP11:%.*]] = phi i16 [ [[TMP11_PRE]], %[[ENTRY_LOR_END_CRIT_EDGE]] ], [ poison, %[[LOR_RHS]] ]
+; CHECK-NEXT:    [[CONV_I_I6:%.*]] = sext i16 [[TMP11]] to i32
+; CHECK-NEXT:    store i32 [[CONV_I_I6]], ptr [[TMP12]], align 1
 ; CHECK-NEXT:    ret void
 ;
 

@@ -7,6 +7,9 @@ on:
       - "Check for private emails used in PRs"
       - "PR Request Release Note"
       - "Code lint"
+      - "CI Checks"
+      - "Test Issue Write"
+      - "Check LLVM ABI annotations"
     types:
       - completed
 
@@ -26,8 +29,9 @@ jobs:
       )
     steps:
       - name: Fetch Sources
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
+          persist-credentials: false
           sparse-checkout: |
             .github/workflows/unprivileged-download-artifact/action.yml
           sparse-checkout-cone-mode: false
@@ -39,13 +43,18 @@ jobs:
           artifact-name: workflow-args
 
       - name: 'Comment on PR'
-        if: steps.download-artifact.outputs.artifact-id != ''
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+        if: steps.download-artifact.outputs.artifact-ids != ''
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             var fs = require('fs');
-            const comments = JSON.parse(fs.readFileSync('./comments'));
+            var comments = []
+            for (local_file of fs.readdirSync('.')) {
+              if (local_file.startsWith("comments")) {
+                comments.push(...JSON.parse(fs.readFileSync(local_file)))
+              }
+            }
             if (!comments || comments.length == 0) {
               return;
             }
@@ -154,5 +163,5 @@ jobs:
       - name: Dump comments file
         if: >-
           always() &&
-          steps.download-artifact.outputs.artifact-id != ''
-        run: cat comments
+          steps.download-artifact.outputs.artifact-ids != ''
+        run: cat comments*

@@ -12,12 +12,30 @@ define <8 x i8> @trn1.v8i8(<8 x i8> %v0, <8 x i8> %v1) {
   ret <8 x i8> %tmp0
 }
 
+define <8 x i8> @trn1.v8i8_flipped(<8 x i8> %v0, <8 x i8> %v1) {
+; CHECK-LABEL: 'trn1.v8i8_flipped'
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %tmp0 = shufflevector <8 x i8> %v0, <8 x i8> %v1, <8 x i32> <i32 8, i32 0, i32 10, i32 2, i32 12, i32 4, i32 14, i32 6>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i8> %tmp0
+;
+  %tmp0 = shufflevector <8 x i8> %v0, <8 x i8> %v1, <8 x i32> <i32 8, i32 0, i32 10, i32 2, i32 12, i32 4, i32 14, i32 6>
+  ret <8 x i8> %tmp0
+}
+
 define <8 x i8> @trn2.v8i8(<8 x i8> %v0, <8 x i8> %v1) {
 ; CHECK-LABEL: 'trn2.v8i8'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %tmp0 = shufflevector <8 x i8> %v0, <8 x i8> %v1, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i8> %tmp0
 ;
   %tmp0 = shufflevector <8 x i8> %v0, <8 x i8> %v1, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
+  ret <8 x i8> %tmp0
+}
+
+define <8 x i8> @trn2.v8i8_flipped(<8 x i8> %v0, <8 x i8> %v1) {
+; CHECK-LABEL: 'trn2.v8i8_flipped'
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %tmp0 = shufflevector <8 x i8> %v0, <8 x i8> %v1, <8 x i32> <i32 9, i32 1, i32 11, i32 3, i32 13, i32 5, i32 15, i32 7>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i8> %tmp0
+;
+  %tmp0 = shufflevector <8 x i8> %v0, <8 x i8> %v1, <8 x i32> <i32 9, i32 1, i32 11, i32 3, i32 13, i32 5, i32 15, i32 7>
   ret <8 x i8> %tmp0
 }
 
@@ -30,12 +48,30 @@ define <16 x i8> @trn1.v16i8(<16 x i8> %v0, <16 x i8> %v1) {
   ret <16 x i8> %tmp0
 }
 
+define <16 x i8> @trn1.v16i8_flipped(<16 x i8> %v0, <16 x i8> %v1) {
+; CHECK-LABEL: 'trn1.v16i8_flipped'
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %tmp0 = shufflevector <16 x i8> %v0, <16 x i8> %v1, <16 x i32> <i32 16, i32 0, i32 18, i32 2, i32 20, i32 4, i32 22, i32 6, i32 24, i32 8, i32 26, i32 10, i32 28, i32 12, i32 30, i32 14>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <16 x i8> %tmp0
+;
+  %tmp0 = shufflevector <16 x i8> %v0, <16 x i8> %v1, <16 x i32> <i32 16, i32 0, i32 18, i32 2, i32 20, i32 4, i32 22, i32 6, i32 24, i32 8, i32 26, i32 10, i32 28, i32 12, i32 30, i32 14>
+  ret <16 x i8> %tmp0
+}
+
 define <16 x i8> @trn2.v16i8(<16 x i8> %v0, <16 x i8> %v1) {
 ; CHECK-LABEL: 'trn2.v16i8'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %tmp0 = shufflevector <16 x i8> %v0, <16 x i8> %v1, <16 x i32> <i32 1, i32 17, i32 3, i32 19, i32 5, i32 21, i32 7, i32 23, i32 9, i32 25, i32 11, i32 27, i32 13, i32 29, i32 15, i32 31>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <16 x i8> %tmp0
 ;
   %tmp0 = shufflevector <16 x i8> %v0, <16 x i8> %v1, <16 x i32> <i32 1, i32 17, i32 3, i32 19, i32 5, i32 21, i32 7, i32 23, i32 9, i32 25, i32 11, i32 27, i32 13, i32 29, i32 15, i32 31>
+  ret <16 x i8> %tmp0
+}
+
+define <16 x i8> @trn2.v16i8_flipped(<16 x i8> %v0, <16 x i8> %v1) {
+; CHECK-LABEL: 'trn2.v16i8_flipped'
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %tmp0 = shufflevector <16 x i8> %v0, <16 x i8> %v1, <16 x i32> <i32 17, i32 1, i32 19, i32 3, i32 21, i32 5, i32 23, i32 7, i32 25, i32 9, i32 27, i32 11, i32 29, i32 13, i32 31, i32 15>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <16 x i8> %tmp0
+;
+  %tmp0 = shufflevector <16 x i8> %v0, <16 x i8> %v1, <16 x i32> <i32 17, i32 1, i32 19, i32 3, i32 21, i32 5, i32 23, i32 7, i32 25, i32 9, i32 27, i32 11, i32 29, i32 13, i32 31, i32 15>
   ret <16 x i8> %tmp0
 }
 
@@ -48,12 +84,30 @@ define <4 x i16> @trn1.v4i16(<4 x i16> %v0, <4 x i16> %v1) {
   ret <4 x i16> %tmp0
 }
 
+define <4 x i16> @trn1.v4i16_flipped(<4 x i16> %v0, <4 x i16> %v1) {
+; CHECK-LABEL: 'trn1.v4i16_flipped'
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %tmp0 = shufflevector <4 x i16> %v0, <4 x i16> %v1, <4 x i32> <i32 4, i32 0, i32 6, i32 2>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <4 x i16> %tmp0
+;
+  %tmp0 = shufflevector <4 x i16> %v0, <4 x i16> %v1, <4 x i32> <i32 4, i32 0, i32 6, i32 2>
+  ret <4 x i16> %tmp0
+}
+
 define <4 x i16> @trn2.v4i16(<4 x i16> %v0, <4 x i16> %v1) {
 ; CHECK-LABEL: 'trn2.v4i16'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %tmp0 = shufflevector <4 x i16> %v0, <4 x i16> %v1, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <4 x i16> %tmp0
 ;
   %tmp0 = shufflevector <4 x i16> %v0, <4 x i16> %v1, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
+  ret <4 x i16> %tmp0
+}
+
+define <4 x i16> @trn2.v4i16_flipped(<4 x i16> %v0, <4 x i16> %v1) {
+; CHECK-LABEL: 'trn2.v4i16_flipped'
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %tmp0 = shufflevector <4 x i16> %v0, <4 x i16> %v1, <4 x i32> <i32 5, i32 1, i32 7, i32 3>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <4 x i16> %tmp0
+;
+  %tmp0 = shufflevector <4 x i16> %v0, <4 x i16> %v1, <4 x i32> <i32 5, i32 1, i32 7, i32 3>
   ret <4 x i16> %tmp0
 }
 
@@ -66,12 +120,30 @@ define <8 x i16> @trn1.v8i16(<8 x i16> %v0, <8 x i16> %v1) {
   ret <8 x i16> %tmp0
 }
 
+define <8 x i16> @trn1.v8i16_flipped(<8 x i16> %v0, <8 x i16> %v1) {
+; CHECK-LABEL: 'trn1.v8i16_flipped'
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %tmp0 = shufflevector <8 x i16> %v0, <8 x i16> %v1, <8 x i32> <i32 8, i32 0, i32 10, i32 2, i32 12, i32 4, i32 14, i32 6>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i16> %tmp0
+;
+  %tmp0 = shufflevector <8 x i16> %v0, <8 x i16> %v1, <8 x i32> <i32 8, i32 0, i32 10, i32 2, i32 12, i32 4, i32 14, i32 6>
+  ret <8 x i16> %tmp0
+}
+
 define <8 x i16> @trn2.v8i16(<8 x i16> %v0, <8 x i16> %v1) {
 ; CHECK-LABEL: 'trn2.v8i16'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %tmp0 = shufflevector <8 x i16> %v0, <8 x i16> %v1, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i16> %tmp0
 ;
   %tmp0 = shufflevector <8 x i16> %v0, <8 x i16> %v1, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
+  ret <8 x i16> %tmp0
+}
+
+define <8 x i16> @trn2.v8i16_flipped(<8 x i16> %v0, <8 x i16> %v1) {
+; CHECK-LABEL: 'trn2.v8i16_flipped'
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %tmp0 = shufflevector <8 x i16> %v0, <8 x i16> %v1, <8 x i32> <i32 9, i32 1, i32 11, i32 3, i32 13, i32 5, i32 15, i32 7>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i16> %tmp0
+;
+  %tmp0 = shufflevector <8 x i16> %v0, <8 x i16> %v1, <8 x i32> <i32 9, i32 1, i32 11, i32 3, i32 13, i32 5, i32 15, i32 7>
   ret <8 x i16> %tmp0
 }
 
@@ -84,12 +156,30 @@ define <2 x i32> @trn1.v2i32(<2 x i32> %v0, <2 x i32> %v1) {
   ret <2 x i32> %tmp0
 }
 
+define <2 x i32> @trn1.v2i32_flipped(<2 x i32> %v0, <2 x i32> %v1) {
+; CHECK-LABEL: 'trn1.v2i32_flipped'
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %tmp0 = shufflevector <2 x i32> %v0, <2 x i32> %v1, <2 x i32> <i32 2, i32 0>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <2 x i32> %tmp0
+;
+  %tmp0 = shufflevector <2 x i32> %v0, <2 x i32> %v1, <2 x i32> <i32 2, i32 0>
+  ret <2 x i32> %tmp0
+}
+
 define <2 x i32> @trn2.v2i32(<2 x i32> %v0, <2 x i32> %v1) {
 ; CHECK-LABEL: 'trn2.v2i32'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %tmp0 = shufflevector <2 x i32> %v0, <2 x i32> %v1, <2 x i32> <i32 1, i32 3>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <2 x i32> %tmp0
 ;
   %tmp0 = shufflevector <2 x i32> %v0, <2 x i32> %v1, <2 x i32> <i32 1, i32 3>
+  ret <2 x i32> %tmp0
+}
+
+define <2 x i32> @trn2.v2i32_flipped(<2 x i32> %v0, <2 x i32> %v1) {
+; CHECK-LABEL: 'trn2.v2i32_flipped'
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %tmp0 = shufflevector <2 x i32> %v0, <2 x i32> %v1, <2 x i32> <i32 3, i32 1>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <2 x i32> %tmp0
+;
+  %tmp0 = shufflevector <2 x i32> %v0, <2 x i32> %v1, <2 x i32> <i32 3, i32 1>
   ret <2 x i32> %tmp0
 }
 
@@ -102,12 +192,30 @@ define <4 x i32> @trn1.v4i32(<4 x i32> %v0, <4 x i32> %v1) {
   ret <4 x i32> %tmp0
 }
 
+define <4 x i32> @trn1.v4i32_flipped(<4 x i32> %v0, <4 x i32> %v1) {
+; CHECK-LABEL: 'trn1.v4i32_flipped'
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %tmp0 = shufflevector <4 x i32> %v0, <4 x i32> %v1, <4 x i32> <i32 4, i32 0, i32 6, i32 2>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <4 x i32> %tmp0
+;
+  %tmp0 = shufflevector <4 x i32> %v0, <4 x i32> %v1, <4 x i32> <i32 4, i32 0, i32 6, i32 2>
+  ret <4 x i32> %tmp0
+}
+
 define <4 x i32> @trn2.v4i32(<4 x i32> %v0, <4 x i32> %v1) {
 ; CHECK-LABEL: 'trn2.v4i32'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %tmp0 = shufflevector <4 x i32> %v0, <4 x i32> %v1, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <4 x i32> %tmp0
 ;
   %tmp0 = shufflevector <4 x i32> %v0, <4 x i32> %v1, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
+  ret <4 x i32> %tmp0
+}
+
+define <4 x i32> @trn2.v4i32_flipped(<4 x i32> %v0, <4 x i32> %v1) {
+; CHECK-LABEL: 'trn2.v4i32_flipped'
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %tmp0 = shufflevector <4 x i32> %v0, <4 x i32> %v1, <4 x i32> <i32 5, i32 1, i32 7, i32 3>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <4 x i32> %tmp0
+;
+  %tmp0 = shufflevector <4 x i32> %v0, <4 x i32> %v1, <4 x i32> <i32 5, i32 1, i32 7, i32 3>
   ret <4 x i32> %tmp0
 }
 
@@ -120,12 +228,30 @@ define <2 x i64> @trn1.v2i64(<2 x i64> %v0, <2 x i64> %v1) {
   ret <2 x i64> %tmp0
 }
 
+define <2 x i64> @trn1.v2i64_flipped(<2 x i64> %v0, <2 x i64> %v1) {
+; CHECK-LABEL: 'trn1.v2i64_flipped'
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %tmp0 = shufflevector <2 x i64> %v0, <2 x i64> %v1, <2 x i32> <i32 2, i32 0>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <2 x i64> %tmp0
+;
+  %tmp0 = shufflevector <2 x i64> %v0, <2 x i64> %v1, <2 x i32> <i32 2, i32 0>
+  ret <2 x i64> %tmp0
+}
+
 define <2 x i64> @trn2.v2i64(<2 x i64> %v0, <2 x i64> %v1) {
 ; CHECK-LABEL: 'trn2.v2i64'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %tmp0 = shufflevector <2 x i64> %v0, <2 x i64> %v1, <2 x i32> <i32 1, i32 3>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <2 x i64> %tmp0
 ;
   %tmp0 = shufflevector <2 x i64> %v0, <2 x i64> %v1, <2 x i32> <i32 1, i32 3>
+  ret <2 x i64> %tmp0
+}
+
+define <2 x i64> @trn2.v2i64_flipped(<2 x i64> %v0, <2 x i64> %v1) {
+; CHECK-LABEL: 'trn2.v2i64_flipped'
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %tmp0 = shufflevector <2 x i64> %v0, <2 x i64> %v1, <2 x i32> <i32 3, i32 1>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <2 x i64> %tmp0
+;
+  %tmp0 = shufflevector <2 x i64> %v0, <2 x i64> %v1, <2 x i32> <i32 3, i32 1>
   ret <2 x i64> %tmp0
 }
 
@@ -138,12 +264,30 @@ define <2 x float> @trn1.v2f32(<2 x float> %v0, <2 x float> %v1) {
   ret <2 x float> %tmp0
 }
 
+define <2 x float> @trn1.v2f32_flipped(<2 x float> %v0, <2 x float> %v1) {
+; CHECK-LABEL: 'trn1.v2f32_flipped'
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %tmp0 = shufflevector <2 x float> %v0, <2 x float> %v1, <2 x i32> <i32 2, i32 0>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <2 x float> %tmp0
+;
+  %tmp0 = shufflevector <2 x float> %v0, <2 x float> %v1, <2 x i32> <i32 2, i32 0>
+  ret <2 x float> %tmp0
+}
+
 define <2 x float> @trn2.v2f32(<2 x float> %v0, <2 x float> %v1) {
 ; CHECK-LABEL: 'trn2.v2f32'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %tmp0 = shufflevector <2 x float> %v0, <2 x float> %v1, <2 x i32> <i32 1, i32 3>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <2 x float> %tmp0
 ;
   %tmp0 = shufflevector <2 x float> %v0, <2 x float> %v1, <2 x i32> <i32 1, i32 3>
+  ret <2 x float> %tmp0
+}
+
+define <2 x float> @trn2.v2f32_flipped(<2 x float> %v0, <2 x float> %v1) {
+; CHECK-LABEL: 'trn2.v2f32_flipped'
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %tmp0 = shufflevector <2 x float> %v0, <2 x float> %v1, <2 x i32> <i32 3, i32 1>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <2 x float> %tmp0
+;
+  %tmp0 = shufflevector <2 x float> %v0, <2 x float> %v1, <2 x i32> <i32 3, i32 1>
   ret <2 x float> %tmp0
 }
 
@@ -156,12 +300,30 @@ define <4 x float> @trn1.v4f32(<4 x float> %v0, <4 x float> %v1) {
   ret <4 x float> %tmp0
 }
 
+define <4 x float> @trn1.v4f32_flipped(<4 x float> %v0, <4 x float> %v1) {
+; CHECK-LABEL: 'trn1.v4f32_flipped'
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %tmp0 = shufflevector <4 x float> %v0, <4 x float> %v1, <4 x i32> <i32 4, i32 0, i32 6, i32 2>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <4 x float> %tmp0
+;
+  %tmp0 = shufflevector <4 x float> %v0, <4 x float> %v1, <4 x i32> <i32 4, i32 0, i32 6, i32 2>
+  ret <4 x float> %tmp0
+}
+
 define <4 x float> @trn2.v4f32(<4 x float> %v0, <4 x float> %v1) {
 ; CHECK-LABEL: 'trn2.v4f32'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %tmp0 = shufflevector <4 x float> %v0, <4 x float> %v1, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <4 x float> %tmp0
 ;
   %tmp0 = shufflevector <4 x float> %v0, <4 x float> %v1, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
+  ret <4 x float> %tmp0
+}
+
+define <4 x float> @trn2.v4f32_flipped(<4 x float> %v0, <4 x float> %v1) {
+; CHECK-LABEL: 'trn2.v4f32_flipped'
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %tmp0 = shufflevector <4 x float> %v0, <4 x float> %v1, <4 x i32> <i32 5, i32 1, i32 7, i32 3>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <4 x float> %tmp0
+;
+  %tmp0 = shufflevector <4 x float> %v0, <4 x float> %v1, <4 x i32> <i32 5, i32 1, i32 7, i32 3>
   ret <4 x float> %tmp0
 }
 
@@ -174,12 +336,30 @@ define <2 x double> @trn1.v2f64(<2 x double> %v0, <2 x double> %v1) {
   ret <2 x double> %tmp0
 }
 
+define <2 x double> @trn1.v2f64_flipped(<2 x double> %v0, <2 x double> %v1) {
+; CHECK-LABEL: 'trn1.v2f64_flipped'
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %tmp0 = shufflevector <2 x double> %v0, <2 x double> %v1, <2 x i32> <i32 2, i32 0>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <2 x double> %tmp0
+;
+  %tmp0 = shufflevector <2 x double> %v0, <2 x double> %v1, <2 x i32> <i32 2, i32 0>
+  ret <2 x double> %tmp0
+}
+
 define <2 x double> @trn2.v2f64(<2 x double> %v0, <2 x double> %v1) {
 ; CHECK-LABEL: 'trn2.v2f64'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %tmp0 = shufflevector <2 x double> %v0, <2 x double> %v1, <2 x i32> <i32 1, i32 3>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <2 x double> %tmp0
 ;
   %tmp0 = shufflevector <2 x double> %v0, <2 x double> %v1, <2 x i32> <i32 1, i32 3>
+  ret <2 x double> %tmp0
+}
+
+define <2 x double> @trn2.v2f64_flipped(<2 x double> %v0, <2 x double> %v1) {
+; CHECK-LABEL: 'trn2.v2f64_flipped'
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %tmp0 = shufflevector <2 x double> %v0, <2 x double> %v1, <2 x i32> <i32 3, i32 1>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <2 x double> %tmp0
+;
+  %tmp0 = shufflevector <2 x double> %v0, <2 x double> %v1, <2 x i32> <i32 3, i32 1>
   ret <2 x double> %tmp0
 }
 
@@ -192,12 +372,30 @@ define <4 x half> @trn1.v4f16(<4 x half> %v0, <4 x half> %v1) {
   ret <4 x half> %tmp0
 }
 
+define <4 x half> @trn1.v4f16_flipped(<4 x half> %v0, <4 x half> %v1) {
+; CHECK-LABEL: 'trn1.v4f16_flipped'
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %tmp0 = shufflevector <4 x half> %v0, <4 x half> %v1, <4 x i32> <i32 4, i32 0, i32 6, i32 2>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <4 x half> %tmp0
+;
+  %tmp0 = shufflevector <4 x half> %v0, <4 x half> %v1, <4 x i32> <i32 4, i32 0, i32 6, i32 2>
+  ret <4 x half> %tmp0
+}
+
 define <4 x half> @trn2.v4f16(<4 x half> %v0, <4 x half> %v1) {
 ; CHECK-LABEL: 'trn2.v4f16'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %tmp0 = shufflevector <4 x half> %v0, <4 x half> %v1, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <4 x half> %tmp0
 ;
   %tmp0 = shufflevector <4 x half> %v0, <4 x half> %v1, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
+  ret <4 x half> %tmp0
+}
+
+define <4 x half> @trn2.v4f16_flipped(<4 x half> %v0, <4 x half> %v1) {
+; CHECK-LABEL: 'trn2.v4f16_flipped'
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %tmp0 = shufflevector <4 x half> %v0, <4 x half> %v1, <4 x i32> <i32 5, i32 1, i32 7, i32 3>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <4 x half> %tmp0
+;
+  %tmp0 = shufflevector <4 x half> %v0, <4 x half> %v1, <4 x i32> <i32 5, i32 1, i32 7, i32 3>
   ret <4 x half> %tmp0
 }
 
@@ -210,12 +408,30 @@ define <8 x half> @trn1.v8f16(<8 x half> %v0, <8 x half> %v1) {
   ret <8 x half> %tmp0
 }
 
+define <8 x half> @trn1.v8f16_flipped(<8 x half> %v0, <8 x half> %v1) {
+; CHECK-LABEL: 'trn1.v8f16_flipped'
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %tmp0 = shufflevector <8 x half> %v0, <8 x half> %v1, <8 x i32> <i32 8, i32 0, i32 10, i32 2, i32 12, i32 4, i32 14, i32 6>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x half> %tmp0
+;
+  %tmp0 = shufflevector <8 x half> %v0, <8 x half> %v1, <8 x i32> <i32 8, i32 0, i32 10, i32 2, i32 12, i32 4, i32 14, i32 6>
+  ret <8 x half> %tmp0
+}
+
 define <8 x half> @trn2.v8f16(<8 x half> %v0, <8 x half> %v1) {
 ; CHECK-LABEL: 'trn2.v8f16'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %tmp0 = shufflevector <8 x half> %v0, <8 x half> %v1, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x half> %tmp0
 ;
   %tmp0 = shufflevector <8 x half> %v0, <8 x half> %v1, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
+  ret <8 x half> %tmp0
+}
+
+define <8 x half> @trn2.v8f16_flipped(<8 x half> %v0, <8 x half> %v1) {
+; CHECK-LABEL: 'trn2.v8f16_flipped'
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %tmp0 = shufflevector <8 x half> %v0, <8 x half> %v1, <8 x i32> <i32 9, i32 1, i32 11, i32 3, i32 13, i32 5, i32 15, i32 7>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x half> %tmp0
+;
+  %tmp0 = shufflevector <8 x half> %v0, <8 x half> %v1, <8 x i32> <i32 9, i32 1, i32 11, i32 3, i32 13, i32 5, i32 15, i32 7>
   ret <8 x half> %tmp0
 }
 
@@ -228,12 +444,30 @@ define <4 x bfloat> @trn1.v4bf16(<4 x bfloat> %v0, <4 x bfloat> %v1) {
   ret <4 x bfloat> %tmp0
 }
 
+define <4 x bfloat> @trn1.v4bf16_flipped(<4 x bfloat> %v0, <4 x bfloat> %v1) {
+; CHECK-LABEL: 'trn1.v4bf16_flipped'
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %tmp0 = shufflevector <4 x bfloat> %v0, <4 x bfloat> %v1, <4 x i32> <i32 4, i32 0, i32 6, i32 2>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <4 x bfloat> %tmp0
+;
+  %tmp0 = shufflevector <4 x bfloat> %v0, <4 x bfloat> %v1, <4 x i32> <i32 4, i32 0, i32 6, i32 2>
+  ret <4 x bfloat> %tmp0
+}
+
 define <4 x bfloat> @trn2.v4bf16(<4 x bfloat> %v0, <4 x bfloat> %v1) {
 ; CHECK-LABEL: 'trn2.v4bf16'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %tmp0 = shufflevector <4 x bfloat> %v0, <4 x bfloat> %v1, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <4 x bfloat> %tmp0
 ;
   %tmp0 = shufflevector <4 x bfloat> %v0, <4 x bfloat> %v1, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
+  ret <4 x bfloat> %tmp0
+}
+
+define <4 x bfloat> @trn2.v4bf16_flipped(<4 x bfloat> %v0, <4 x bfloat> %v1) {
+; CHECK-LABEL: 'trn2.v4bf16_flipped'
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %tmp0 = shufflevector <4 x bfloat> %v0, <4 x bfloat> %v1, <4 x i32> <i32 5, i32 1, i32 7, i32 3>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <4 x bfloat> %tmp0
+;
+  %tmp0 = shufflevector <4 x bfloat> %v0, <4 x bfloat> %v1, <4 x i32> <i32 5, i32 1, i32 7, i32 3>
   ret <4 x bfloat> %tmp0
 }
 
@@ -246,11 +480,29 @@ define <8 x bfloat> @trn1.v8bf16(<8 x bfloat> %v0, <8 x bfloat> %v1) {
   ret <8 x bfloat> %tmp0
 }
 
+define <8 x bfloat> @trn1.v8bf16_flipped(<8 x bfloat> %v0, <8 x bfloat> %v1) {
+; CHECK-LABEL: 'trn1.v8bf16_flipped'
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %tmp0 = shufflevector <8 x bfloat> %v0, <8 x bfloat> %v1, <8 x i32> <i32 8, i32 0, i32 10, i32 2, i32 12, i32 4, i32 14, i32 6>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x bfloat> %tmp0
+;
+  %tmp0 = shufflevector <8 x bfloat> %v0, <8 x bfloat> %v1, <8 x i32> <i32 8, i32 0, i32 10, i32 2, i32 12, i32 4, i32 14, i32 6>
+  ret <8 x bfloat> %tmp0
+}
+
 define <8 x bfloat> @trn2.v8bf16(<8 x bfloat> %v0, <8 x bfloat> %v1) {
 ; CHECK-LABEL: 'trn2.v8bf16'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %tmp0 = shufflevector <8 x bfloat> %v0, <8 x bfloat> %v1, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x bfloat> %tmp0
 ;
   %tmp0 = shufflevector <8 x bfloat> %v0, <8 x bfloat> %v1, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
+  ret <8 x bfloat> %tmp0
+}
+
+define <8 x bfloat> @trn2.v8bf16_flipped(<8 x bfloat> %v0, <8 x bfloat> %v1) {
+; CHECK-LABEL: 'trn2.v8bf16_flipped'
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %tmp0 = shufflevector <8 x bfloat> %v0, <8 x bfloat> %v1, <8 x i32> <i32 9, i32 1, i32 11, i32 3, i32 13, i32 5, i32 15, i32 7>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x bfloat> %tmp0
+;
+  %tmp0 = shufflevector <8 x bfloat> %v0, <8 x bfloat> %v1, <8 x i32> <i32 9, i32 1, i32 11, i32 3, i32 13, i32 5, i32 15, i32 7>
   ret <8 x bfloat> %tmp0
 }

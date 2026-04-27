@@ -62,3 +62,62 @@ void exceptions() {
   // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: redundant parentheses around expression [readability-redundant-parentheses]
   // CHECK-FIXES:    alignof(3);
 }
+
+namespace std {
+  template<class T> T max(T, T);
+  template<class T> T min(T, T);
+} // namespace std
+void ignoreStdMaxMin() {
+  (std::max)(1,2);
+  (std::min)(1,2);
+}
+
+struct Foo
+{
+  bool x;
+  struct Y {
+    bool z;
+  } y;
+  void foo()
+  {
+   if ((x)) {
+     // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: redundant parentheses around expression [readability-redundant-parentheses]
+     // CHECK-FIXES:    if (x) {
+   }
+   if((this->x)) {
+     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant parentheses around expression [readability-redundant-parentheses]
+     // CHECK-FIXES:    if(this->x) {
+   }
+  }
+  bool bar() {
+    return true;
+  }
+
+  Y fooBar() {
+    Y y{};
+    return y;
+  }
+};
+
+void memberExpr() {
+  Foo foo{};
+  if ((foo.x)) {
+   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant parentheses around expression [readability-redundant-parentheses]
+   // CHECK-FIXES:    if (foo.x) {
+  }
+
+  if ((foo.y.z)) {
+   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant parentheses around expression [readability-redundant-parentheses]
+   // CHECK-FIXES:    if (foo.y.z) {
+  }
+
+  if ((foo.bar())) {
+   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant parentheses around expression [readability-redundant-parentheses]
+   // CHECK-FIXES:    if (foo.bar()) {
+  }
+
+  if ((foo.fooBar().z)) {
+   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant parentheses around expression [readability-redundant-parentheses]
+   // CHECK-FIXES:    if (foo.fooBar().z) {
+  }
+}

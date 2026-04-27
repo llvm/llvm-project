@@ -29,6 +29,6 @@ declare !type !2 i32 @bar(i8 signext)
 
 ; CHECK:      Hex dump of section '.llvm.callgraph':
 ; CHECK-NEXT: 0x00000000 00050000 00008e19 0b7f3326 e3000154
-; CHECK-NEXT: 0x00000010 86bc5981 4b8e3000 05100000 00a150b8
+; CHECK-NEXT: 0x00000010 86bc5981 4b8e3000 05000000 00a150b8
 ;; Verify that the type id 0x308e4b8159bc8654 is in section.
 ; CHECK-NEXT: 0x00000020 3e0cfe3c b2015486 bc59814b 8e30

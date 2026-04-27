@@ -252,6 +252,13 @@ llvm::raw_ostream &ActualArgument::AsFortran(llvm::raw_ostream &o) const {
   return o;
 }
 
+std::string ActualArgument::AsFortran() const {
+  std::string result;
+  llvm::raw_string_ostream sstream(result);
+  AsFortran(sstream);
+  return result;
+}
+
 llvm::raw_ostream &SpecificIntrinsic::AsFortran(llvm::raw_ostream &o) const {
   return o << name;
 }
@@ -578,6 +585,29 @@ llvm::raw_ostream &ArrayConstructor<SomeDerived>::AsFortran(
   o << '[' << GetType().AsFortran() << "::";
   EmitArray(o, *this);
   return o << ']';
+}
+
+template <typename T>
+llvm::raw_ostream &ConditionalExpr<T>::AsFortran(llvm::raw_ostream &o) const {
+  // Iterate over chained else-branches to avoid adding extra parentheses for
+  // chained conditional expressions.
+  o << '(';
+  const ConditionalExpr<T> *node{this};
+  while (true) {
+    node->condition().AsFortran(o);
+    o << " ? ";
+    node->thenValue().AsFortran(o);
+    o << " : ";
+    // Continue chain for nested ConditionalExpr; else emit terminal value.
+    if (const auto *nested{
+            std::get_if<ConditionalExpr<T>>(&node->elseValue().u)}) {
+      node = nested;
+    } else {
+      node->elseValue().AsFortran(o);
+      break;
+    }
+  }
+  return o << ')';
 }
 
 template <typename RESULT>

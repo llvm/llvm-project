@@ -130,7 +130,7 @@ static std::string ReadPCHRecord(StringRef type) {
       .EndsWith("Decl *", "Record.readDeclAs<" + type.drop_back().str() + ">()")
       .Case("TypeSourceInfo *", "Record.readTypeSourceInfo()")
       .Case("Expr *", "Record.readExpr()")
-      .Case("IdentifierInfo *", "Record.readIdentifier()")
+      .Case("const IdentifierInfo *", "Record.readIdentifier()")
       .Case("StringRef", "Record.readString()")
       .Case("ParamIdx", "ParamIdx::deserialize(Record.readInt())")
       .Case("OMPTraitInfo *", "Record.readOMPTraitInfo()")
@@ -152,7 +152,7 @@ static std::string WritePCHRecord(StringRef type, StringRef name) {
              .Case("TypeSourceInfo *",
                    "AddTypeSourceInfo(" + name.str() + ");\n")
              .Case("Expr *", "AddStmt(" + name.str() + ");\n")
-             .Case("IdentifierInfo *",
+             .Case("const IdentifierInfo *",
                    "AddIdentifierRef(" + name.str() + ");\n")
              .Case("StringRef", "AddString(" + name.str() + ");\n")
              .Case("ParamIdx", "push_back(" + name.str() + ".serialize());\n")
@@ -280,6 +280,13 @@ namespace {
     virtual void writeImplicitCtorArgs(raw_ostream &OS) const {
       OS << getUpperName();
     }
+
+    constexpr StringRef getArgEqualityFn() const { return "equalAttrArgs"; }
+
+    virtual std::string emitAttrArgEqualityCheck() const {
+      std::string S = std::string("get") + std::string(getUpperName()) + "()";
+      return getArgEqualityFn().str() + "(" + S + ", Other." + S + ", Context)";
+    }
   };
 
   class SimpleArgument : public Argument {
@@ -340,7 +347,7 @@ namespace {
         return ((subject == list) || ...);
       };
 
-      if (IsOneOf(type, "IdentifierInfo *", "Expr *"))
+      if (IsOneOf(type, "const IdentifierInfo *", "Expr *"))
         return "!get" + getUpperName().str() + "()";
       if (IsOneOf(type, "TypeSourceInfo *"))
         return "!get" + getUpperName().str() + "Loc()";
@@ -356,7 +363,7 @@ namespace {
       if (type == "FunctionDecl *")
         OS << "\" << get" << getUpperName()
            << "()->getNameInfo().getAsString() << \"";
-      else if (type == "IdentifierInfo *")
+      else if (type == "const IdentifierInfo *")
         // Some non-optional (comma required) identifier arguments can be the
         // empty string but are then recorded as a nullptr.
         OS << "\" << (get" << getUpperName() << "() ? get" << getUpperName()
@@ -375,7 +382,7 @@ namespace {
       if (StringRef(type).ends_with("Decl *")) {
         OS << "    OS << \" \";\n";
         OS << "    dumpBareDeclRef(SA->get" << getUpperName() << "());\n";
-      } else if (type == "IdentifierInfo *") {
+      } else if (type == "const IdentifierInfo *") {
         // Some non-optional (comma required) identifier arguments can be the
         // empty string but are then recorded as a nullptr.
         OS << "    if (SA->get" << getUpperName() << "())\n"
@@ -679,6 +686,17 @@ namespace {
     void writeHasChildren(raw_ostream &OS) const override {
       OS << "SA->is" << getUpperName() << "Expr()";
     }
+
+    std::string emitAttrArgEqualityCheck() const override {
+      auto GetStr = [&](bool Other) {
+        std::string CtxStr = Other ? "Context.ToCtx" : "Context.FromCtx";
+        std::string S = std::string("get") + std::string(getUpperName()) + "(" +
+                        CtxStr + ")";
+        return S;
+      };
+      return getArgEqualityFn().str() + "(" + GetStr(false) + ", Other." +
+             GetStr(true) + ", Context)";
+    }
   };
 
   class VariadicArgument : public Argument {
@@ -835,6 +853,19 @@ namespace {
     void writeDump(raw_ostream &OS) const override {
       OS << "    for (const auto &Val : SA->" << RangeName << "())\n";
       writeDumpImpl(OS);
+    }
+
+    std::string emitAttrArgEqualityCheck() const override {
+      auto GenIter = [&](bool IsOther, const std::string &Suffix) {
+        std::string S = IsOther ? "Other." : "";
+        std::string LN = getLowerName().str();
+        S += LN + "_" + Suffix + "()";
+        return S;
+      };
+
+      return getArgEqualityFn().str() + "(" + GenIter(false, "begin") + ", " +
+             GenIter(false, "end") + ", " + GenIter(true, "begin") + ", " +
+             GenIter(true, "end") + ", Context)";
     }
   };
 
@@ -1371,8 +1402,7 @@ namespace {
   class VariadicIdentifierArgument : public VariadicArgument {
   public:
     VariadicIdentifierArgument(const Record &Arg, StringRef Attr)
-      : VariadicArgument(Arg, Attr, "IdentifierInfo *")
-    {}
+        : VariadicArgument(Arg, Attr, "const IdentifierInfo *") {}
   };
 
   class VariadicStringArgument : public VariadicArgument {
@@ -1439,9 +1469,40 @@ namespace {
   };
 
   class WrappedAttr : public SimpleArgument {
+    std::string AttrType; // C++ class name for the wrapped attr
+
   public:
     WrappedAttr(const Record &Arg, StringRef Attr)
-        : SimpleArgument(Arg, Attr, "Attr *") {}
+        : SimpleArgument(Arg, Attr, "Attr *"),
+          AttrType(Arg.getValueAsString("AttrType")) {}
+
+    void writeAccessors(raw_ostream &OS) const override {
+      // The field is always stored as Attr * regardless of AttrType. This is
+      // required because the generated isEquivalent method calls
+      // equalAttrArgs(getInferredAttr(), Other.getInferredAttr(), Context).
+      // If the field were AttrType * (e.g. AvailabilityAttr *), that call
+      // would instantiate equalAttrArgs<AvailabilityAttr *>, which has no
+      // specialization and returns false. Storing Attr * routes the call
+      // through equalAttrArgs<Attr *>, which handles null and calls
+      // isEquivalent. Typed get<Name>As() / set<Name>As() accessors are
+      // provided for callers that need the specific type.
+      OS << "  Attr *get" << getUpperName() << "() const {\n";
+      OS << "    return " << getLowerName() << ";\n";
+      OS << "  }\n";
+      OS << "  void set" << getUpperName() << "(Attr *V) {\n";
+      OS << "    " << getLowerName() << " = V;\n";
+      OS << "  }";
+      if (!AttrType.empty()) {
+        OS << "\n";
+        OS << "  " << AttrType << " *get" << getUpperName() << "As() const {\n";
+        OS << "    return llvm::cast_or_null<" << AttrType << ">("
+           << getLowerName() << ");\n";
+        OS << "  }\n";
+        OS << "  void set" << getUpperName() << "As(" << AttrType << " *V) {\n";
+        OS << "    " << getLowerName() << " = V;\n";
+        OS << "  }";
+      }
+    }
 
     void writePCHReadDecls(raw_ostream &OS) const override {
       OS << "    Attr *" << getLowerName() << " = Record.readAttr();";
@@ -1451,13 +1512,31 @@ namespace {
       OS << "    AddAttr(SA->get" << getUpperName() << "());";
     }
 
+    std::string getIsOmitted() const override {
+      if (isOptional())
+        return "!get" + getUpperName().str() + "()";
+      return "false";
+    }
+
+    void writeValue(raw_ostream &OS) const override {}
+
     void writeDump(raw_ostream &OS) const override {}
 
     void writeDumpChildren(raw_ostream &OS) const override {
-      OS << "    Visit(SA->get" << getUpperName() << "());\n";
+      if (isOptional()) {
+        OS << "    if (auto *W = SA->get" << getUpperName() << "())\n";
+        OS << "      Visit(W);\n";
+      } else {
+        OS << "    Visit(SA->get" << getUpperName() << "());\n";
+      }
     }
 
-    void writeHasChildren(raw_ostream &OS) const override { OS << "true"; }
+    void writeHasChildren(raw_ostream &OS) const override {
+      if (isOptional())
+        OS << "SA->get" << getUpperName() << "() != nullptr";
+      else
+        OS << "true";
+    }
   };
 
   } // end anonymous namespace
@@ -1481,7 +1560,7 @@ createArgument(const Record &Arg, StringRef Attr,
     Ptr = std::make_unique<SimpleArgument>(
         Arg, Attr, (Arg.getValueAsDef("Kind")->getName() + "Decl *").str());
   else if (ArgName == "IdentifierArgument")
-    Ptr = std::make_unique<SimpleArgument>(Arg, Attr, "IdentifierInfo *");
+    Ptr = std::make_unique<SimpleArgument>(Arg, Attr, "const IdentifierInfo *");
   else if (ArgName == "DefaultBoolArgument")
     Ptr = std::make_unique<DefaultSimpleArgument>(
         Arg, Attr, "bool", Arg.getValueAsBit("Default"));
@@ -2725,15 +2804,12 @@ static void emitAttributes(const RecordKeeper &Records, raw_ostream &OS,
     assert(!Supers.empty() && "Forgot to specify a superclass for the attr");
     std::string SuperName;
     bool Inheritable = false;
-    bool HLSLSemantic = false;
     for (const Record *R : reverse(Supers)) {
       if (R->getName() != "TargetSpecificAttr" &&
           R->getName() != "DeclOrTypeAttr" && SuperName.empty())
         SuperName = R->getName().str();
       if (R->getName() == "InheritableAttr")
         Inheritable = true;
-      if (R->getName() == "HLSLSemanticAttr")
-        HLSLSemantic = true;
     }
 
     if (Header)
@@ -3057,8 +3133,6 @@ static void emitAttributes(const RecordKeeper &Records, raw_ostream &OS,
            << (R.getValueAsBit("InheritEvenIfAlreadyPresent") ? "true"
                                                               : "false");
       }
-      if (HLSLSemantic)
-        OS << ", " << (R.getValueAsBit("SemanticIndexable") ? "true" : "false");
       OS << ")\n";
 
       for (auto const &ai : Args) {
@@ -3153,6 +3227,28 @@ static void emitAttributes(const RecordKeeper &Records, raw_ostream &OS,
             OS, Header);
     }
 
+    std::string FnStr = "isEquivalent(const ";
+    FnStr += R.getName();
+    FnStr += "Attr &Other, StructuralEquivalenceContext &Context) const";
+    if (Header) {
+      OS << "  bool " << FnStr << ";\n";
+    } else {
+      OS << "bool " << R.getName() << "Attr::" << FnStr << " {\n";
+      std::string CustomFn = R.getValueAsString("comparisonFn").str();
+      if (CustomFn.empty()) {
+        if (!ElideSpelling)
+          OS << "  if (getSpelling() != Other.getSpelling()) return false;\n\n";
+        for (const auto &ai : Args) {
+          OS << "  if (!" << ai->emitAttrArgEqualityCheck() << ")\n";
+          OS << "    return false;\n";
+        }
+        OS << "  return true;\n";
+      } else {
+        OS << "  return " + CustomFn + "(*this, Other, Context);\n";
+      }
+      OS << "}\n\n";
+    }
+
     if (Header) {
       if (DelayedArgs) {
         DelayedArgs->writeAccessors(OS);
@@ -3205,6 +3301,26 @@ void clang::EmitClangAttrClass(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "#endif // LLVM_CLANG_ATTR_CLASSES_INC\n";
 }
 
+static void emitEquivalenceFunction(const RecordKeeper &Records,
+                                    raw_ostream &OS) {
+  OS << "bool Attr::isEquivalent(const Attr &Other, "
+        "StructuralEquivalenceContext &Context) const {\n";
+  OS << "if (getKind() != Other.getKind()) return false;\n\n";
+  OS << "  switch (getKind()) {\n";
+  for (const auto *Attr : Records.getAllDerivedDefinitions("Attr")) {
+    const Record &R = *Attr;
+    if (!R.getValueAsBit("ASTNode"))
+      continue;
+
+    OS << "  case attr::" << R.getName() << ":\n";
+    OS << "    return cast<" << R.getName() << "Attr>(this)->isEquivalent(cast<"
+       << R.getName() << "Attr>(Other), Context);\n";
+  }
+  OS << "  }\n";
+  OS << "  llvm_unreachable(\"Unexpected attribute kind!\");\n";
+  OS << "}\n\n";
+}
+
 // Emits the class method definitions for attributes.
 void clang::EmitClangAttrImpl(const RecordKeeper &Records, raw_ostream &OS) {
   emitSourceFileHeader("Attribute classes' member function definitions", OS,
@@ -3239,6 +3355,8 @@ void clang::EmitClangAttrImpl(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "void Attr::printPretty(raw_ostream &OS, "
         "const PrintingPolicy &Policy) const {\n";
   EmitFunc("printPretty(OS, Policy)");
+
+  emitEquivalenceFunction(Records, OS);
 }
 
 static void emitAttrList(raw_ostream &OS, StringRef Class,
@@ -3276,7 +3394,7 @@ static const AttrClassDescriptor AttrClassDescriptors[] = {
     {"INHERITABLE_PARAM_OR_STMT_ATTR", "InheritableParamOrStmtAttr"},
     {"PARAMETER_ABI_ATTR", "ParameterABIAttr"},
     {"HLSL_ANNOTATION_ATTR", "HLSLAnnotationAttr"},
-    {"HLSL_SEMANTIC_ATTR", "HLSLSemanticAttr"}};
+    {"HLSL_SEMANTIC_ATTR", "HLSLSemanticBaseAttr"}};
 
 static void emitDefaultDefine(raw_ostream &OS, StringRef name,
                               const char *superName) {
@@ -5048,6 +5166,26 @@ void EmitClangAttrParsedAttrKinds(const RecordKeeper &Records,
   OS << "  }\n";
   OS << "  return AttributeCommonInfo::UnknownAttribute;\n"
      << "}\n";
+}
+
+// Emits Sema calls for type dependent attributes
+void EmitClangAttrIsTypeDependent(const RecordKeeper &Records,
+                                  raw_ostream &OS) {
+  emitSourceFileHeader("Attribute is type dependent", OS, Records);
+
+  OS << "void checkAttrIsTypeDependent(Decl *D, const Attr *A) {\n";
+  OS << "  switch (A->getKind()) {\n";
+  OS << "  default:\n";
+  OS << "    break;\n";
+  for (const auto *A : Records.getAllDerivedDefinitions("Attr")) {
+    if (A->getValueAsBit("IsTypeDependent")) {
+      OS << "  case attr::" << A->getName() << ":\n";
+      OS << "    ActOn" << A->getName() << "Attr(D, A);\n";
+      OS << "    break;\n";
+    }
+  }
+  OS << "  }\n";
+  OS << "}\n";
 }
 
 // Emits the code to dump an attribute.

@@ -35,3 +35,15 @@ int *constArrAddr = &arr[2][1];
 // LLVM: @constArrAddr = global ptr getelementptr inbounds nuw (i8, ptr @arr, i64 132), align 8
 
 // OGCG: @constArrAddr = global ptr getelementptr (i8, ptr @arr, i64 132), align 8
+
+bool bool_global = true;
+
+// CIR: cir.global external @bool_global = #true {alignment = 1 : i64}
+// LLVM: @bool_global = global i8 1, align 1
+// OGCG: @bool_global = global i8 1, align 1
+
+bool boolArr_global[4] = {true, false, true, false};
+
+// CIR: cir.global external @boolArr_global = #cir.const_array<[#true, #false, #true, #false]> : !cir.array<!cir.bool x 4>
+// LLVM: @boolArr_global = global [4 x i8] c"\01\00\01\00", align 1
+// OGCG: @boolArr_global = global [4 x i8] c"\01\00\01\00", align 1

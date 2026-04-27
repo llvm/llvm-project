@@ -76,7 +76,7 @@ protected:
     EXPECT_EQ(pltTy.getElementType(), ty);
 
     OwningOpRef<cir::AllocaOp> varPtrOp =
-        b.create<cir::AllocaOp>(loc, ptrTy, ty, "", getAlignOne(&context));
+        cir::AllocaOp::create(b, loc, ptrTy, ty, "", getAlignOne(&context));
 
     mlir::Value val = varPtrOp.get();
     mlir::acc::VariableTypeCategory typeCategory = pltTy.getPointeeTypeCategory(
@@ -110,7 +110,7 @@ protected:
 
     // Create an alloca for the array
     OwningOpRef<cir::AllocaOp> varPtrOp =
-        b.create<cir::AllocaOp>(loc, ptrTy, arrTy, "", getAlignOne(&context));
+        cir::AllocaOp::create(b, loc, ptrTy, arrTy, "", getAlignOne(&context));
 
     // Verify that the type category is array.
     mlir::Value val = varPtrOp.get();
@@ -121,8 +121,8 @@ protected:
 
     // Create an array-to-pointer decay cast.
     mlir::Type ptrToElemTy = cir::PointerType::get(ty);
-    OwningOpRef<cir::CastOp> decayPtr = b.create<cir::CastOp>(
-        loc, ptrToElemTy, cir::CastKind::array_to_ptrdecay, val);
+    OwningOpRef<cir::CastOp> decayPtr = cir::CastOp::create(
+        b, loc, ptrToElemTy, cir::CastKind::array_to_ptrdecay, val);
     mlir::Value decayVal = decayPtr.get();
 
     // Verify that we still get the expected element type.
@@ -141,9 +141,9 @@ protected:
     // Create an element access.
     mlir::Type i32Ty = cir::IntType::get(&context, 32, true);
     mlir::Value index =
-        b.create<cir::ConstantOp>(loc, cir::IntAttr::get(i32Ty, 2));
+        cir::ConstantOp::create(b, loc, cir::IntAttr::get(i32Ty, 2));
     OwningOpRef<cir::PtrStrideOp> accessPtr =
-        b.create<cir::PtrStrideOp>(loc, ptrToElemTy, decayVal, index);
+        cir::PtrStrideOp::create(b, loc, ptrToElemTy, decayVal, index);
     mlir::Value accessVal = accessPtr.get();
 
     // Verify that we still get the expected element type.
@@ -175,8 +175,8 @@ protected:
     EXPECT_EQ(pltTy.getElementType(), structTy);
 
     // Create an alloca for the array
-    OwningOpRef<cir::AllocaOp> varPtrOp = b.create<cir::AllocaOp>(
-        loc, ptrTy, structTy, "", getAlignOne(&context));
+    OwningOpRef<cir::AllocaOp> varPtrOp = cir::AllocaOp::create(
+        b, loc, ptrTy, structTy, "", getAlignOne(&context));
 
     // Verify that the type category is composite.
     mlir::Value val = varPtrOp.get();
@@ -186,8 +186,8 @@ protected:
     EXPECT_EQ(typeCategory, mlir::acc::VariableTypeCategory::composite);
 
     // Access the first element of the structure.
-    OwningOpRef<cir::GetMemberOp> access1 = b.create<cir::GetMemberOp>(
-        loc, cir::PointerType::get(ty1), val, b.getStringAttr("f1"), 0);
+    OwningOpRef<cir::GetMemberOp> access1 = cir::GetMemberOp::create(
+        b, loc, cir::PointerType::get(ty1), val, "f1", 0u);
     mlir::Value accessVal1 = access1.get();
 
     // Verify that we get the expected element type.
@@ -204,8 +204,8 @@ protected:
     EXPECT_EQ(access1TypeCategory, mlir::acc::VariableTypeCategory::composite);
 
     // Access the second element of the structure.
-    OwningOpRef<cir::GetMemberOp> access2 = b.create<cir::GetMemberOp>(
-        loc, cir::PointerType::get(ty2), val, b.getStringAttr("f2"), 1);
+    OwningOpRef<cir::GetMemberOp> access2 = cir::GetMemberOp::create(
+        b, loc, cir::PointerType::get(ty2), val, "f2", 1u);
     mlir::Value accessVal2 = access2.get();
 
     // Verify that we get the expected element type.
@@ -252,17 +252,17 @@ protected:
     mlir::Type structPptrTy = cir::PointerType::get(structTy);
 
     // Create an alloca for the struct.
-    OwningOpRef<cir::AllocaOp> varPtrOp = b.create<cir::AllocaOp>(
-        loc, structPptrTy, structTy, "S", getAlignOne(&context));
+    OwningOpRef<cir::AllocaOp> varPtrOp = cir::AllocaOp::create(
+        b, loc, structPptrTy, structTy, "S", getAlignOne(&context));
     mlir::Value val = varPtrOp.get();
 
     // Get a pointer to the second member.
-    OwningOpRef<cir::GetMemberOp> access = b.create<cir::GetMemberOp>(
-        loc, cir::PointerType::get(ptrTy), val, b.getStringAttr("f2"), 1);
+    OwningOpRef<cir::GetMemberOp> access = cir::GetMemberOp::create(
+        b, loc, cir::PointerType::get(ptrTy), val, b.getStringAttr("f2"), 1);
     mlir::Value accessVal = access.get();
 
     // Load the value of the second member. This is the pointer we want to test.
-    OwningOpRef<cir::LoadOp> loadOp = b.create<cir::LoadOp>(loc, accessVal);
+    OwningOpRef<cir::LoadOp> loadOp = cir::LoadOp::create(b, loc, accessVal);
     mlir::Value loadVal = loadOp.get();
 
     // Verify that the type category is the expected type category.

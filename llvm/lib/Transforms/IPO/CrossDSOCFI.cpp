@@ -129,7 +129,7 @@ void CrossDSOCFI::buildCFICheck(Module &M) {
         Intrinsic::type_test,
         {&Addr,
          MetadataAsValue::get(Ctx, ConstantAsMetadata::get(CaseTypeId))});
-    BranchInst *BI = IRBTest.CreateCondBr(Test, ExitBB, TrapBB);
+    CondBrInst *BI = IRBTest.CreateCondBr(Test, ExitBB, TrapBB);
     BI->setMetadata(LLVMContext::MD_prof, VeryLikelyWeights);
 
     SI->addCase(CaseTypeId, TestBB);

@@ -32,6 +32,14 @@ list(INSERT CMAKE_MODULE_PATH 0
   "${LLVM_COMMON_CMAKE_UTILS}/Modules"
   )
 
+# Expose the shared `runtimes-libc-*` targets to compiler-rt subcomponents
+# (same as libcxx / libcxxabi / libunwind).
+if(LLVM_RUNTIMES_BUILD)
+  list(APPEND CMAKE_MODULE_PATH
+       "${CMAKE_CURRENT_SOURCE_DIR}/../runtimes/cmake/Modules")
+  include(HandleLibC)
+endif()
+
 if(CMAKE_CONFIGURATION_TYPES)
   set(CMAKE_CFG_RESOLVED_INTDIR "${CMAKE_CFG_INTDIR}/")
 else()
@@ -290,6 +298,9 @@ option(SANITIZER_USE_STATIC_TEST_CXX
   "Use static libc++ for tests." ${DEFAULT_SANITIZER_USE_STATIC_TEST_CXX})
 pythonize_bool(SANITIZER_USE_STATIC_TEST_CXX)
 
+option(SANITIZER_AARCH64_39BIT_VA
+  "Configure sanitizers for 39-bit VA kernel." OFF)
+
 set(COMPILER_RT_SUPPORTED_CXX_LIBRARIES none default libcxx)
 set(COMPILER_RT_CXX_LIBRARY "default" CACHE STRING "Specify C++ library to use. Supported values are ${COMPILER_RT_SUPPORTED_CXX_LIBRARIES}.")
 if (NOT "${COMPILER_RT_CXX_LIBRARY}" IN_LIST COMPILER_RT_SUPPORTED_CXX_LIBRARIES)
@@ -309,13 +320,15 @@ option(COMPILER_RT_USE_BUILTINS_LIBRARY
 
 option(COMPILER_RT_USE_ATOMIC_LIBRARY "Use compiler-rt atomic instead of libatomic" OFF)
 
+option(COMPILER_RT_PROFILE_BAREMETAL "Build minimal baremetal profile library" OFF)
+
 include(config-ix)
 
 #================================
 # Setup Compiler Flags
 #================================
 
-# fcf-protection is a gcc/clang option for CET support on Linux platforms.
+# fcf-protection is a gcc/clang option for CET support on some ELF platforms.
 # We need to handle MSVC CET option on Windows platforms.
 if (NOT MSVC)
   if (COMPILER_RT_ENABLE_CET AND NOT COMPILER_RT_HAS_FCF_PROTECTION_FLAG)
@@ -350,6 +363,23 @@ if("${ANDROID_API_LEVEL}" GREATER_EQUAL 29)
   list(APPEND SANITIZER_COMMON_CFLAGS -fno-emulated-tls)
   string(APPEND COMPILER_RT_TEST_COMPILER_CFLAGS " -fno-emulated-tls")
 endif()
+# Hexagon Linux uses native TLS (TPREL via the UGP register); the sanitizer
+# runtimes must be built without emulated TLS so that __thread variables are
+# placed in .tdata/.tbss instead of emutls control structures.
+if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "hexagon")
+  list(APPEND SANITIZER_COMMON_CFLAGS -fno-emulated-tls)
+  string(APPEND COMPILER_RT_TEST_COMPILER_CFLAGS " -fno-emulated-tls")
+endif()
+if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn|nvptx")
+  append_list_if(UBSAN_COMMON_SUPPORTED_ARCH -ffreestanding SANITIZER_COMMON_CFLAGS)
+  append_list_if(COMPILER_RT_HAS_NOGPULIB_FLAG -nogpulib SANITIZER_COMMON_CFLAGS)
+  append_list_if(COMPILER_RT_HAS_FLTO_FLAG -flto SANITIZER_COMMON_CFLAGS)
+  if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn")
+    append_list_if(COMPILER_RT_HAS_CODE_OBJECT_VERSION_FLAG
+                   "SHELL:-Xclang -mcode-object-version=none" SANITIZER_COMMON_CFLAGS)
+  endif()
+endif()
+
 if(NOT WIN32)
   append_list_if(COMPILER_RT_HAS_FPIC_FLAG -fPIC SANITIZER_COMMON_CFLAGS)
 endif()
@@ -365,7 +395,9 @@ append_list_if(COMPILER_RT_HAS_FVISIBILITY_HIDDEN_FLAG -fvisibility=hidden SANIT
 if(NOT COMPILER_RT_HAS_FVISIBILITY_HIDDEN_FLAG)
   append_list_if(COMPILER_RT_HAS_FVISIBILITY_INLINES_HIDDEN_FLAG -fvisibility-inlines-hidden SANITIZER_COMMON_CFLAGS)
 endif()
-append_list_if(COMPILER_RT_HAS_FNO_LTO_FLAG -fno-lto SANITIZER_COMMON_CFLAGS)
+if(NOT "${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn|nvptx")
+  append_list_if(COMPILER_RT_HAS_FNO_LTO_FLAG -fno-lto SANITIZER_COMMON_CFLAGS)
+endif()
 
 # By default do not instrument or use profdata for compiler-rt.
 if(NOT COMPILER_RT_ENABLE_PGO)
@@ -467,7 +499,7 @@ else()
   set(SANITIZER_LIMIT_FRAME_SIZE FALSE)
 endif()
 
-if(FUCHSIA OR UNIX)
+if(NOT COMPILER_RT_GPU_BUILD AND (FUCHSIA OR UNIX))
   set(SANITIZER_USE_SYMBOLS TRUE)
 else()
   set(SANITIZER_USE_SYMBOLS FALSE)
@@ -557,6 +589,10 @@ if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "sparc")
   list(APPEND SANITIZER_COMMON_LINK_LIBS -Wl,--as-needed atomic -Wl,--no-as-needed)
 endif()
 
+if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "mips")
+  list(APPEND SANITIZER_COMMON_LINK_LIBS atomic)
+endif()
+
 if (COMPILER_RT_USE_BUILTINS_LIBRARY)
   string(REPLACE "-Wl,-z,defs" "" CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}")
 else()
@@ -598,12 +634,16 @@ append_list_if(COMPILER_RT_HAS_NOSTDINCXX_FLAG -nostdinc++ SANITIZER_COMMON_CFLA
 append_list_if(COMPILER_RT_HAS_NOSTDLIBXX_FLAG -nostdlib++ SANITIZER_COMMON_LINK_FLAGS)
 
 # Remove -stdlib= which is unused when passing -nostdinc++...
-string(REGEX MATCHALL "-stdlib=[a-zA-Z+]*" stdlib_flag "${CMAKE_CXX_FLAGS}")
-string(REGEX REPLACE "-stdlib=[a-zA-Z+]*" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+string(REGEX MATCHALL "-?-stdlib=[a-zA-Z+]*" stdlib_flag "${CMAKE_CXX_FLAGS}")
+string(REGEX REPLACE "-?-stdlib=[a-zA-Z+]*" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
 # ...we need it to build some runtimes and tests so readd it where appropriate.
 list(APPEND COMPILER_RT_COMMON_CFLAGS ${stdlib_flag})
 list(APPEND COMPILER_RT_COMMON_LINK_FLAGS ${stdlib_flag})
+
+# Add assembler flags for execute-only code generation. C and C++ flags should have already
+# been added to CMAKE_C_FLAGS and CMAKE_CXX_FLAGS.
+append_string_if(RUNTIMES_EXECUTE_ONLY_CODE -DCOMPILER_RT_EXECUTE_ONLY_CODE CMAKE_ASM_FLAGS)
 
 # TODO: There's a lot of duplication across lib/*/tests/CMakeLists.txt files,
 # move some of the common flags to COMPILER_RT_UNITTEST_CFLAGS.
@@ -841,6 +881,10 @@ mark_as_advanced(SANITIZER_DISABLE_SYMBOLIZER_PATH_SEARCH)
 
 if (SANITIZER_DISABLE_SYMBOLIZER_PATH_SEARCH)
   add_compile_definitions(SANITIZER_DISABLE_SYMBOLIZER_PATH_SEARCH)
+endif()
+
+if (SANITIZER_AARCH64_39BIT_VA)
+  add_compile_definitions(SANITIZER_AARCH64_39BIT_VA)
 endif()
 
 add_subdirectory(lib)

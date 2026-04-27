@@ -12,7 +12,7 @@ define i32 @non_entry_func(i32 %x) {
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_xor_saveexec_b32 s0, -1
 ; CHECK-NEXT:    scratch_store_b32 off, v2, s32 offset:100 ; 4-byte Folded Spill
-; CHECK-NEXT:    s_wait_alu 0xfffe
+; CHECK-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; CHECK-NEXT:    s_mov_b32 exec_lo, s0
 ; CHECK-NEXT:    v_writelane_b32 v2, s48, 0
 ; CHECK-NEXT:    s_mov_b32 m0, 0x110003
@@ -37,7 +37,7 @@ define i32 @non_entry_func(i32 %x) {
 ; CHECK-NEXT:    v_readlane_b32 s48, v2, 0
 ; CHECK-NEXT:    s_xor_saveexec_b32 s0, -1
 ; CHECK-NEXT:    scratch_load_b32 v2, off, s32 offset:100 ; 4-byte Folded Reload
-; CHECK-NEXT:    s_wait_alu 0xfffe
+; CHECK-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; CHECK-NEXT:    s_mov_b32 exec_lo, s0
 ; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -66,7 +66,7 @@ define amdgpu_kernel void @entry_func(i32 %x) {
 ; GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s6
 ; GISEL-NEXT:    s_mov_b64 s[6:7], s[2:3]
-; GISEL-NEXT:    s_wait_alu 0xfffe
+; GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GISEL-NEXT:    s_endpgm
 ;

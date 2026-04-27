@@ -14,7 +14,7 @@ contains
   subroutine acc1()
   end subroutine
 
-! CHECK-LABEL: func.func @_QMacc_routinesPacc1() 
+! CHECK-LABEL: func.func @_QMacc_routinesPacc1()
 ! CHECK-SAME:attributes {acc.routine_info = #acc.routine_info<[@[[r1]]]>}
 
   subroutine acc2()

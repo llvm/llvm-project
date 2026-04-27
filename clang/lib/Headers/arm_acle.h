@@ -98,6 +98,12 @@ __swp(uint32_t __x, volatile uint32_t *__p) {
 #else
 #define __pldx(access_kind, cache_level, retention_policy, addr) \
   __builtin_arm_prefetch(addr, access_kind, cache_level, retention_policy, 1)
+#define __pldx_range(access_kind, retention_policy, length, count, stride,     \
+                     reuse_distance, addr)                                     \
+  __builtin_arm_range_prefetch_x(addr, access_kind, retention_policy, length,  \
+                                 count, stride, reuse_distance)
+#define __pld_range(access_kind, retention_policy, metadata, addr)             \
+  __builtin_arm_range_prefetch(addr, access_kind, retention_policy, metadata)
 #endif
 
 /* 7.6.2 Instruction prefetch */
@@ -109,6 +115,7 @@ __swp(uint32_t __x, volatile uint32_t *__p) {
 #else
 #define __plix(cache_level, retention_policy, addr) \
   __builtin_arm_prefetch(addr, 0, cache_level, retention_policy, 0)
+#define __pldir(addr) __builtin_arm_prefetch_ir(addr)
 #endif
 
 /* 7.7 NOP */
@@ -820,28 +827,6 @@ __arm_st64bv0(void *__addr, data512_t __value) {
 #endif
 
 #endif // __ARM_FEATURE_COPROC
-
-/* 17 Transactional Memory Extension (TME) Intrinsics */
-#if defined(__ARM_FEATURE_TME) && __ARM_FEATURE_TME
-
-#define _TMFAILURE_REASON  0x00007fffu
-#define _TMFAILURE_RTRY    0x00008000u
-#define _TMFAILURE_CNCL    0x00010000u
-#define _TMFAILURE_MEM     0x00020000u
-#define _TMFAILURE_IMP     0x00040000u
-#define _TMFAILURE_ERR     0x00080000u
-#define _TMFAILURE_SIZE    0x00100000u
-#define _TMFAILURE_NEST    0x00200000u
-#define _TMFAILURE_DBG     0x00400000u
-#define _TMFAILURE_INT     0x00800000u
-#define _TMFAILURE_TRIVIAL 0x01000000u
-
-#define __tstart()        __builtin_arm_tstart()
-#define __tcommit()       __builtin_arm_tcommit()
-#define __tcancel(__arg)  __builtin_arm_tcancel(__arg)
-#define __ttest()         __builtin_arm_ttest()
-
-#endif /* __ARM_FEATURE_TME */
 
 /* 8.7 Armv8.5-A Random number generation intrinsics */
 #if defined(__ARM_64BIT_STATE) && __ARM_64BIT_STATE

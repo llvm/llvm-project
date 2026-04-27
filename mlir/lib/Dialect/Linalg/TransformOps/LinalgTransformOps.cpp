@@ -9,7 +9,6 @@
 #include "mlir/Dialect/Linalg/TransformOps/LinalgTransformOps.h"
 
 #include "mlir/AsmParser/AsmParser.h"
-
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
@@ -28,7 +27,7 @@
 #include "mlir/Dialect/Transform/IR/TransformTypes.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/Dialect/Transform/Utils/Utils.h"
-#include "mlir/Dialect/UB/IR/UBOps.h"
+#include "mlir/Dialect/UB/IR/UBMatchers.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
@@ -43,6 +42,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/DebugLog.h"
 #include "llvm/Support/LogicalResult.h"
@@ -176,7 +176,9 @@ static DiagnosedSilenceableFailure reifyMixedParamAndHandleResults(
     if (auto attr = dyn_cast<Attribute>(paramOrHandle)) {
       reified.push_back(cast<IntegerAttr>(attr).getInt());
       continue;
-    } else if (isa<ParamType>(cast<Value>(paramOrHandle).getType())) {
+    }
+    if (isa<TransformParamTypeInterface>(
+            cast<Value>(paramOrHandle).getType())) {
       ArrayRef<Attribute> params = state.getParams(cast<Value>(paramOrHandle));
       if (params.size() != 1)
         return transformOp.emitSilenceableError() << "expected a single param";
@@ -270,6 +272,26 @@ void transform::ApplyFoldPackUnpackIntoEmptyPatternsOp::populatePatterns(
   linalg::populateFoldPackUnpackIntoTensorEmptyPatterns(patterns);
 }
 
+void transform::ApplyDataLayoutPropagationPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  linalg::ControlPropagationFn defaultControlFn = [](OpOperand *operand) {
+    return true;
+  };
+  linalg::populateDataLayoutPropagationPatterns(patterns, defaultControlFn,
+                                                getPoisonPadding());
+}
+
+void transform::ApplyExtractSliceSinkingPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  linalg::ControlPropagationFn defaultControlFn =
+      [](OpOperand *opOperand) -> bool {
+    Operation *producer = opOperand->get().getDefiningOp();
+    Operation *consumer = opOperand->getOwner();
+    return consumer->getBlock() == producer->getBlock();
+  };
+  linalg::populateExtractSliceSinkingPatterns(patterns, defaultControlFn);
+}
+
 //===----------------------------------------------------------------------===//
 // BufferizeToAllocationOp
 //===----------------------------------------------------------------------===//
@@ -309,8 +331,8 @@ DiagnosedSilenceableFailure transform::BufferizeToAllocationOp::apply(
     transform::TransformResults &results, transform::TransformState &state) {
   // Attach listener to keep track of newly created ops.
   OpBuilder::Listener *previousListener = rewriter.getListener();
-  auto resetListener =
-      llvm::make_scope_exit([&]() { rewriter.setListener(previousListener); });
+  llvm::scope_exit resetListener(
+      [&]() { rewriter.setListener(previousListener); });
   NewOpsListener newOpsListener(previousListener);
   rewriter.setListener(&newOpsListener);
 
@@ -437,13 +459,15 @@ transform::PromoteTensorOp::apply(transform::TransformRewriter &rewriter,
     for (auto [pos, dim] : llvm::enumerate(type.getShape())) {
       if (!ShapedType::isDynamic(dim))
         continue;
-      Value cst = rewriter.create<arith::ConstantIndexOp>(tensor.getLoc(), pos);
-      auto dimOp = rewriter.create<tensor::DimOp>(tensor.getLoc(), tensor, cst);
+      Value cst =
+          arith::ConstantIndexOp::create(rewriter, tensor.getLoc(), pos);
+      auto dimOp =
+          tensor::DimOp::create(rewriter, tensor.getLoc(), tensor, cst);
       preservedOps.insert(dimOp);
       dynamicDims.push_back(dimOp);
     }
-    auto allocation = rewriter.create<bufferization::AllocTensorOp>(
-        tensor.getLoc(), type, dynamicDims);
+    auto allocation = bufferization::AllocTensorOp::create(
+        rewriter, tensor.getLoc(), type, dynamicDims);
     // Set memory space if provided.
     if (getMemorySpaceAttr())
       allocation.setMemorySpaceAttr(getMemorySpaceAttr());
@@ -452,8 +476,8 @@ transform::PromoteTensorOp::apply(transform::TransformRewriter &rewriter,
     // Only insert a materialization (typically bufferizes to a copy) when the
     // value may be read from.
     if (needsMaterialization) {
-      auto copy = rewriter.create<bufferization::MaterializeInDestinationOp>(
-          tensor.getLoc(), tensor, allocated);
+      auto copy = bufferization::MaterializeInDestinationOp::create(
+          rewriter, tensor.getLoc(), tensor, allocated);
       preservedOps.insert(copy);
       promoted.push_back(copy.getResult());
     } else {
@@ -481,32 +505,12 @@ transform::DecomposeOp::applyToOne(transform::TransformRewriter &rewriter,
                                    LinalgOp target,
                                    transform::ApplyToEachResultList &results,
                                    transform::TransformState &state) {
-#define DOWNSCALE(trans)                                                       \
-  {                                                                            \
-    FailureOr<LinalgOp> res = tryApply<trans>(target);                         \
-    if (succeeded(res)) {                                                      \
-      results.push_back(*res);                                                 \
-      return DiagnosedSilenceableFailure::success();                           \
-    }                                                                          \
+  FailureOr<linalg::LinalgOp> res =
+      downscaleSizeOneWindowedConvolution(rewriter, target);
+  if (succeeded(res)) {
+    results.push_back(*res);
+    return DiagnosedSilenceableFailure::success();
   }
-
-#define DOWNSCALE_CALL(a, b) DownscaleSizeOneWindowed2DConvolution<a, b>
-#define DOWNSCALE_NORMAL(a, b) DOWNSCALE(DOWNSCALE_CALL(a, b))
-
-  DOWNSCALE_NORMAL(Conv2DNhwcHwcfOp, Conv1DNwcWcfOp)
-  DOWNSCALE_NORMAL(Conv2DNchwFchwOp, Conv1DNcwFcwOp)
-  DOWNSCALE_NORMAL(PoolingNhwcSumOp, PoolingNwcSumOp)
-  DOWNSCALE_NORMAL(PoolingNchwSumOp, PoolingNcwSumOp)
-  DOWNSCALE_NORMAL(PoolingNhwcMaxOp, PoolingNwcMaxOp)
-  DOWNSCALE_NORMAL(PoolingNhwcMaxUnsignedOp, PoolingNwcMaxUnsignedOp)
-  DOWNSCALE_NORMAL(PoolingNhwcMinOp, PoolingNwcMinOp)
-  DOWNSCALE_NORMAL(PoolingNhwcMinUnsignedOp, PoolingNwcMinUnsignedOp)
-  DOWNSCALE_NORMAL(PoolingNchwMaxOp, PoolingNcwMaxOp)
-  DOWNSCALE(DownscaleDepthwiseConv2DNhwcHwcOp)
-  DOWNSCALE(DownscaleConv2DOp)
-#undef DOWNSCALE_NORMAL
-#undef DOWNSCALE_CALL
-#undef DOWNSCALE
   return emitDefaultSilenceableFailure(target);
 }
 
@@ -873,8 +877,8 @@ static Operation *replaceForAllWithNewSignature(
 
   // Fix terminator
   scf::InParallelOp terminatorOp = newforallOp.getTerminator();
-  SmallVector<Operation *> yieldingOps = llvm::to_vector<4>(llvm::map_range(
-      terminatorOp.getYieldingOps(), [](Operation &op) { return &op; }));
+  SmallVector<Operation *> yieldingOps = llvm::map_to_vector<4>(
+      terminatorOp.getYieldingOps(), [](Operation &op) { return &op; });
   Operation *firstYieldOp = yieldingOps.front();
   rewriter.setInsertionPoint(firstYieldOp);
   Value src = tileAndFuseResult.tiledValues[0];
@@ -995,8 +999,11 @@ tileAndFuseFirstExtractUse(RewriterBase &rewriter, Diagnostic &diag,
       // Iterate over the outputs of the producer and over the loop bbArgs and
       // check if any bbArg points to the same value as the producer output. In
       // such case, make the producer output point to the bbArg directly.
-      for (OpOperand &initOperandPtr :
-           cast<DestinationStyleOpInterface>(clone).getDpsInitsMutable()) {
+      auto dpsInterface = dyn_cast<DestinationStyleOpInterface>(clone);
+      if (!dpsInterface)
+        return;
+
+      for (OpOperand &initOperandPtr : dpsInterface.getDpsInitsMutable()) {
         Value producerOperand =
             clone->getOperand(initOperandPtr.getOperandNumber());
         for (BlockArgument containerIterArg :
@@ -1058,7 +1065,7 @@ tileAndFuseFirstExtractUse(RewriterBase &rewriter, Diagnostic &diag,
       resultNumber, offsets, sizes);
 
   // Cleanup clone.
-  if (dyn_cast<LoopLikeOpInterface>(containingOp))
+  if (isa<LoopLikeOpInterface>(containingOp))
     rewriter.eraseOp(tileableProducer);
 
   return std::make_tuple(tileAndFuseResult->tiledOps, newContainingOp);
@@ -1143,8 +1150,8 @@ tileAndFuseFirstExtractUseThroughContainingOpBlockArgument(
   bvm.map(destinationTensors[resultNumber], bbArg);
   auto tileableProducerClone =
       cast<TilingInterface>(rewriter.clone(*tileableProducer, bvm));
-  auto scopeGuard =
-      llvm::make_scope_exit([&]() { rewriter.eraseOp(tileableProducerClone); });
+  llvm::scope_exit scopeGuard(
+      [&]() { rewriter.eraseOp(tileableProducerClone); });
 
   // Tile the producer.
   FailureOr<TilingResult> tileAndFuseResult =
@@ -1386,8 +1393,10 @@ transform::SpecializeOp::applyToOne(transform::TransformRewriter &rewriter,
     return DiagnosedSilenceableFailure::success();
   }
   rewriter.setInsertionPoint(target);
+  GenericOpSpecializationOptions opts;
+  opts.emitCategoryOps = getEmitCategory();
   FailureOr<LinalgOp> named =
-      specializeGenericOp(rewriter, cast<GenericOp>(target));
+      specializeGenericOp(rewriter, cast<GenericOp>(target), opts);
   if (succeeded(named)) {
     results.push_back(named->getOperation());
     return DiagnosedSilenceableFailure::success();
@@ -1549,6 +1558,7 @@ DiagnosedSilenceableFailure transform::LowerUnPackOp::applyToOne(
   transformResults.push_back(res->transposeOp);
   transformResults.push_back(res->collapseShapeOp);
   transformResults.push_back(res->extractSliceOp);
+  transformResults.push_back(res->copyOp);
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -1956,7 +1966,7 @@ enum class OuterOrInnerPerm { Outer = 0, Inner = 1 };
 /// Return true if either `op` or `permutation` are empty to allow a simpler
 /// polymorphic implementation.
 template <typename RelayoutOpTy>
-bool isValidPackingPermutation(
+static bool isValidPackingPermutation(
     RelayoutOpTy op, ArrayRef<int64_t> permutation,
     OuterOrInnerPerm outerOrInnerPerm = OuterOrInnerPerm::Outer) {
   static_assert(
@@ -2171,7 +2181,7 @@ transform::PadOp::apply(transform::TransformRewriter &rewriter,
     for (auto const &[untypedAttr, elementOrTensorType] :
          llvm::zip(getPaddingValues(), linalgTarget->getOperandTypes())) {
 
-      if (isa<ub::PoisonAttr>(untypedAttr)) {
+      if (matchPattern(untypedAttr, ub::m_Poison())) {
         paddingValues.push_back(untypedAttr);
         continue;
       }
@@ -2424,7 +2434,7 @@ transform::PadTilingInterfaceOp::apply(transform::TransformRewriter &rewriter,
       auto attr = dyn_cast<TypedAttr>(untypedAttr);
       Type elementType = getElementTypeOrSelf(elementOrTensorType);
 
-      if (isa<ub::PoisonAttr>(untypedAttr)) {
+      if (matchPattern(untypedAttr, ub::m_Poison())) {
         paddingValues.push_back(untypedAttr);
         continue;
       }
@@ -2462,6 +2472,8 @@ transform::PadTilingInterfaceOp::apply(transform::TransformRewriter &rewriter,
         .setPaddingSizes(getMixedPaddingSizes())
         .setPadToMultipleOf(getPadToMultipleOf());
 
+    OpBuilder::InsertionGuard g(rewriter);
+    rewriter.setInsertionPointAfter(targetOp);
     auto maybePadOps = rewriteAsPaddedOp(
         rewriter, cast<TilingInterface>(targetOp.getOperation()), options);
     if (failed(maybePadOps)) {
@@ -2833,7 +2845,7 @@ SplitOp::apply(transform::TransformRewriter &rewriter,
   if (getDynamicChunkSizes()) {
     auto diag = DiagnosedSilenceableFailure::success();
     if (isa<TransformHandleTypeInterface>(getDynamicChunkSizes().getType())) {
-      chunkSizes = llvm::to_vector(llvm::map_range(
+      chunkSizes = llvm::map_to_vector(
           state.getPayloadOps(getDynamicChunkSizes()), [&](Operation *op) {
             if (op->getNumResults() != 1 ||
                 !op->getResult(0).getType().isIndex()) {
@@ -2843,11 +2855,11 @@ SplitOp::apply(transform::TransformRewriter &rewriter,
               diag.attachNote(op->getLoc()) << "dynamic split point";
             }
             return OpFoldResult(op->getResult(0));
-          }));
+          });
     } else {
-      chunkSizes = llvm::to_vector(
-          llvm::map_range(state.getParams(getDynamicChunkSizes()),
-                          [](Attribute attr) { return OpFoldResult(attr); }));
+      chunkSizes = llvm::map_to_vector(
+          state.getParams(getDynamicChunkSizes()),
+          [](Attribute attr) { return OpFoldResult(attr); });
     }
     if (diag.isSilenceableFailure())
       return diag;
@@ -3182,9 +3194,9 @@ DiagnosedSilenceableFailure transform::TileReductionUsingForOp::applyToOne(
   rewriter.replaceOp(target, result->replacements);
   for (Value initValue : result->initialValues)
     results.push_back(initValue.getDefiningOp());
-  for (auto parallelTiledOp : result->tiledOps)
+  for (auto *parallelTiledOp : result->tiledOps)
     results.push_back(parallelTiledOp);
-  for (auto mergeOp : result->mergeOps)
+  for (auto *mergeOp : result->mergeOps)
     results.push_back(mergeOp);
   results.push_back(result->loops.front());
   return DiagnosedSilenceableFailure::success();
@@ -3266,9 +3278,9 @@ DiagnosedSilenceableFailure transform::TileReductionUsingForallOp::applyToOne(
 
   for (Value initValue : result->initialValues)
     results.push_back(initValue.getDefiningOp());
-  for (auto parallelTiledOp : result->tiledOps)
+  for (auto *parallelTiledOp : result->tiledOps)
     results.push_back(parallelTiledOp);
-  for (auto mergeOp : result->mergeOps)
+  for (auto *mergeOp : result->mergeOps)
     results.push_back(mergeOp);
   results.push_back(result->loops.front());
   return DiagnosedSilenceableFailure::success();
@@ -3518,13 +3530,12 @@ transform::TileUsingForOp::apply(transform::TransformRewriter &rewriter,
   dynamicSizeProducers.reserve(getDynamicSizes().size());
   paramSizes.reserve(getDynamicSizes().size());
   for (Value transformValue : getDynamicSizes()) {
-    if (isa<ParamType>(transformValue.getType())) {
+    if (isa<TransformParamTypeInterface>(transformValue.getType())) {
       dynamicSizeProducers.push_back({});
       ArrayRef<Attribute> params = state.getParams(transformValue);
-      paramSizes.push_back(
-          llvm::to_vector(llvm::map_range(params, [](Attribute attr) {
-            return cast<IntegerAttr>(attr).getValue().getSExtValue();
-          })));
+      paramSizes.push_back(llvm::map_to_vector(params, [](Attribute attr) {
+        return cast<IntegerAttr>(attr).getValue().getSExtValue();
+      }));
 
       if (paramSizes.back().size() != targets.size()) {
         DiagnosedSilenceableFailure diag =
@@ -3879,7 +3890,9 @@ DiagnosedSilenceableFailure transform::tileToForallOpImpl(
 
   tilingResult = *maybeTilingResult;
 
-  if (mixedNumThreads.empty()) {
+  // Rank-0 ops produce no loops; skip normalization when there is nothing
+  // to normalize.
+  if (mixedNumThreads.empty() && !tilingResult.loops.empty()) {
     auto generatedForallOp = cast<scf::ForallOp>(tilingResult.loops.front());
     OpBuilder::InsertionGuard g(rewriter);
     rewriter.setInsertionPoint(generatedForallOp);
@@ -3927,7 +3940,8 @@ DiagnosedSilenceableFailure transform::TileUsingForallOp::apply(
         getMapping(), tilingResult);
     if (!diag.succeeded())
       return diag;
-    tileOps.push_back(tilingResult.loops.front());
+    if (!tilingResult.loops.empty())
+      tileOps.push_back(tilingResult.loops.front());
     tiledOps.append(tilingResult.tiledOps);
   }
 
@@ -4306,7 +4320,7 @@ DiagnosedSilenceableFailure transform::TransposeMatmulOp::applyToOne(
           .Case([&](linalg::BatchMatmulOp op) {
             return transposeBatchMatmul(rewriter, op, transposeLHS);
           })
-          .Default([&](Operation *op) { return failure(); });
+          .Default(failure());
   if (failed(maybeTransformed))
     return emitSilenceableFailure(target->getLoc()) << "not supported";
   // Handle to the new Matmul operation with transposed filters
@@ -4318,9 +4332,10 @@ DiagnosedSilenceableFailure transform::TransposeMatmulOp::applyToOne(
 // InsertSliceToCopyOp
 //===----------------------------------------------------------------------===//
 template <typename OpTy>
-DiagnosedSilenceableFailure doit(RewriterBase &rewriter, OpTy target,
-                                 transform::ApplyToEachResultList &results,
-                                 transform::TransformState &state) {
+static DiagnosedSilenceableFailure
+doit(RewriterBase &rewriter, OpTy target,
+     transform::ApplyToEachResultList &results,
+     transform::TransformState &state) {
   static_assert(llvm::is_one_of<OpTy, tensor::InsertSliceOp,
                                 tensor::ParallelInsertSliceOp>() &&
                 "wrong op type");
@@ -4439,7 +4454,7 @@ DiagnosedSilenceableFailure transform::MapCopyToThreadsOp::applyToOne(
     return diag;
 
   results.push_back(tilingResult.loops.front());
-  for (auto op : tilingResult.tiledOps)
+  for (auto *op : tilingResult.tiledOps)
     results.push_back(op);
   return DiagnosedSilenceableFailure::success();
 }
@@ -4495,7 +4510,7 @@ DiagnosedSilenceableFailure transform::DecomposeWinogradOp::applyToOne(
             maybeTransformed = decomposeWinogradOutputTransformOp(rewriter, op);
             return true;
           })
-          .Default([&](Operation *op) { return false; });
+          .Default(false);
 
   if (!supported) {
     DiagnosedSilenceableFailure diag =

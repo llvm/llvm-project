@@ -818,7 +818,7 @@ def Shape_AssumingAllOp : Shape_Op<"assuming_all", [Commutative, Pure]> {
 
 def Shape_AssumingOp : Shape_Op<"assuming", [
     SingleBlockImplicitTerminator<"AssumingYieldOp">,
-    DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+    DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
     RecursiveMemoryEffects]> {
   let summary = "Execute the region";
   let description = [{

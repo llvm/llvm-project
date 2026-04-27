@@ -1,6 +1,6 @@
 ! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
-! Tests the different possible type involving polymorphic entities. 
+! Tests the different possible type involving polymorphic entities.
 
 module polymorphic_types
   type p1

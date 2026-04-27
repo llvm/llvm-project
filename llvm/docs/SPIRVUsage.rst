@@ -30,12 +30,14 @@ Static Compiler Commands
    Description: This command compiles an LLVM IL file (`input.ll`) to a SPIR-V binary (`output.spvt`) for a 32-bit architecture.
 
 2. **Compilation with Extensions and Optimization**
-   Command: `llc -O1 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_arbitrary_precision_integers input.ll -o output.spvt`
-   Description: Compiles an LLVM IL file to SPIR-V with (`-O1`) optimizations, targeting a 64-bit architecture. It enables the SPV_INTEL_arbitrary_precision_integers extension.
+   Command: `llc -O1 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_ALTERA_arbitrary_precision_integers input.ll -o output.spvt`
+   Description: Compiles an LLVM IL file to SPIR-V with (`-O1`) optimizations, targeting a 64-bit architecture. It enables the SPV_ALTERA_arbitrary_precision_integers extension.
 
-3. **Compilation with experimental NonSemantic.Shader.DebugInfo.100 support**
-   Command: `llc --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info input.ll -o output.spvt`
-   Description: Compiles an LLVM IL file to SPIR-V with additional NonSemantic.Shader.DebugInfo.100 instructions. It enables the required SPV_KHR_non_semantic_info extension.
+3. **Compilation with NonSemantic.Shader.DebugInfo support**
+   Command: `llc -g --spirv-ext=+SPV_KHR_non_semantic_info input.ll -o output.spvt`
+   Description: Compiles an LLVM IL file to SPIR-V with NonSemantic.Shader.DebugInfo.100 instructions. The ``-g`` flag causes the backend to emit NSDI instructions when the module contains debug metadata. The required SPV_KHR_non_semantic_info extension must be enabled explicitly.
+
+   Note: ``--spv-emit-nonsemantic-debug-info`` is a deprecated synonym for ``-g`` and will be removed in a future release.
 
 4. **SPIR-V Binary Generation**
    Command: `llc -O0 -mtriple=spirv64-unknown-unknown -filetype=obj input.ll -o output.spvt`
@@ -136,7 +138,7 @@ extensions to enable or disable, each prefixed with ``+`` or ``-``, respectively
 
 To enable multiple extensions, list them separated by comma. For example, to enable support for atomic operations on floating-point numbers and arbitrary precision integers, use:
 
-``-spirv-ext=+SPV_EXT_shader_atomic_float_add,+SPV_INTEL_arbitrary_precision_integers``
+``-spirv-ext=+SPV_EXT_shader_atomic_float_add,+SPV_ALTERA_arbitrary_precision_integers``
 
 To enable all extensions, use the following option:
 ``-spirv-ext=all``
@@ -145,7 +147,7 @@ To enable all KHR extensions, use the following option:
 ``-spirv-ext=khr``
 
 To enable all extensions except specified, specify ``all`` followed by a list of disallowed extensions. For example:
-``-spirv-ext=all,-SPV_INTEL_arbitrary_precision_integers``
+``-spirv-ext=all,-SPV_ALTERA_arbitrary_precision_integers``
 
 Below is a list of supported SPIR-V extensions, sorted alphabetically by their extension names:
 
@@ -167,12 +169,18 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Adds atomic add instruction on floating-point numbers.
    * - ``SPV_EXT_shader_atomic_float_min_max``
      - Adds atomic min and max instruction on floating-point numbers.
+   * - ``SPV_INTEL_16bit_atomics``
+     - Extends the SPV_EXT_shader_atomic_float_add and SPV_EXT_shader_atomic_float_min_max to support addition, minimum and maximum on 16-bit `bfloat16` floating-point numbers in memory.
+   * - ``SPV_NV_shader_atomic_fp16_vector``
+     - Adds atomic add, min and max instructions on 2 or 4-component vectors with 16-bit float components.
    * - ``SPV_INTEL_2d_block_io``
      - Adds additional subgroup block prefetch, load, load transposed, load transformed and store instructions to read two-dimensional blocks of data from a two-dimensional region of memory, or to write two-dimensional blocks of data to a two dimensional region of memory.
-   * - ``SPV_INTEL_arbitrary_precision_integers``
+   * - ``SPV_ALTERA_arbitrary_precision_integers``
      - Allows generating arbitrary width integer types.
    * - ``SPV_INTEL_bindless_images``
      - Adds instructions to convert convert unsigned integer handles to images, samplers and sampled images.
+   * - ``SPV_INTEL_bfloat16_arithmetic``
+     - Allows the use of 16-bit bfloat16 values in arithmetic and relational operators.
    * - ``SPV_INTEL_bfloat16_conversion``
      - Adds instructions to convert between single-precision 32-bit floating-point values and 16-bit bfloat16 values.
    * - ``SPV_INTEL_cache_controls``
@@ -187,6 +195,8 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Adds decorations that can be applied to global (module scope) variables.
    * - ``SPV_INTEL_global_variable_fpga_decorations``
      - Adds decorations that can be applied to global (module scope) variables to help code generation for FPGA devices.
+   * - ``SPV_INTEL_kernel_attributes``
+     - Adds execution modes that can be applied to entry points to inform scheduling.
    * - ``SPV_INTEL_media_block_io``
      - Adds additional subgroup block read and write functionality that allow applications to flexibly specify the width and height of the block to read from or write to a 2D image.
    * - ``SPV_INTEL_memory_access_aliasing``
@@ -210,9 +220,11 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
    * - ``SPV_KHR_float_controls``
      - Provides new execution modes to control floating-point computations by overriding an implementation’s default behavior for rounding modes, denormals, signed zero, and infinities.
    * - ``SPV_KHR_integer_dot_product``
-     - Adds instructions for dot product operations on integer vectors with optional accumulation. Integer vectors includes 4-component vector of 8 bit integers and 4-component vectors of 8 bit integers packed into 32-bit integers.
+     - Adds instructions for dot product operations on integer vectors with optional accumulation. Integer vectors includes 4-component vector of 8-bit integers and 4-component vectors of 8-bit integers packed into 32-bit integers.
    * - ``SPV_KHR_linkonce_odr``
      - Allows to use the LinkOnceODR linkage type that lets a function or global variable to be merged with other functions or global variables of the same name when linkage occurs.
+   * - ``SPV_AMD_weak_linkage``
+     - Allows to use the Weak linkage type that lets a function or global variable to be replaced by a definition with Export linkage from another module during linking.
    * - ``SPV_KHR_no_integer_wrap_decoration``
      - Adds decorations to indicate that a given instruction does not cause integer wrapping.
    * - ``SPV_KHR_shader_clock``
@@ -226,9 +238,9 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
    * - ``SPV_INTEL_fp_max_error``
      - Adds the ability to specify the maximum error for floating-point operations.
    * - ``SPV_INTEL_ternary_bitwise_function``
-     - Adds a bitwise instruction on three operands and a look-up table index for specifying the bitwise operation to perform. 
+     - Adds a bitwise instruction on three operands and a look-up table index for specifying the bitwise operation to perform.
    * - ``SPV_INTEL_subgroup_matrix_multiply_accumulate``
-     - Adds an instruction to compute the matrix product of an M x K matrix with a K x N matrix and then add an M x N matrix. 
+     - Adds an instruction to compute the matrix product of an M x K matrix with a K x N matrix and then add an M x N matrix.
    * - ``SPV_INTEL_int4``
      - Adds support for 4-bit integer type, and allow this type to be used in cooperative matrices.
    * - ``SPV_KHR_float_controls2``
@@ -237,6 +249,37 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Adds predicated load and store instructions that conditionally read from or write to memory based on a boolean predicate.
    * - ``SPV_KHR_maximal_reconvergence``
      - Adds execution mode and capability to enable maximal reconvergence.
+   * - ``SPV_ALTERA_blocking_pipes``
+     - Adds new pipe read and write functions that have blocking semantics instead of the non-blocking semantics of the existing pipe read/write functions.
+   * - ``SPV_ALTERA_arbitrary_precision_fixed_point``
+     - Add instructions for fixed point arithmetic. The extension works without SPV_ALTERA_arbitrary_precision_integers, but together they allow greater flexibility in representing arbitrary precision data types.
+   * - ``SPV_EXT_image_raw10_raw12``
+     - Adds Image Channel Data Type definitions for RAW10 and RAW12 image formats.
+   * - ``SPV_ALTERA_arbitrary_precision_floating_point``
+     - Adds instructions for arbitrary precision floating-point arithmetic. The extension works without SPV_ALTERA_arbitrary_precision_integers, but together they allow greater flexibility in representing arbitrary precision data types.
+   * - ``SPV_KHR_fma``
+     - Adds a core fused-multiply-add (fma) instruction to replace the different variants that have existed in extended instruction sets.
+   * - ``SPV_AMD_shader_trinary_minmax_extension``
+     - Adds an extended instruction set providing trinary min and max operations for shaders.
+   * - ``SPV_EXT_relaxed_printf_string_address_space``
+     - Allows printf format strings to reside in address spaces other than constant.
+   * - ``SPV_EXT_shader_image_int64``
+     - Enables 64-bit integer types to be used with image read and write operations.
+   * - ``SPV_INTEL_long_composites``
+     - Adds continued instructions to allow composites with a large number of constituents.
+   * - ``SPV_INTEL_masked_gather_scatter``
+     - Adds masked gather and scatter instructions for vectors of pointers.
+   * - ``SPV_INTEL_tensor_float32_conversion``
+     - Adds an instruction to round a floating-point value to TensorFloat32.
+   * - ``SPV_INTEL_unstructured_loop_controls``
+     - Adds an instruction to control loop execution without structured loop constructs.
+   * - ``SPV_KHR_bfloat16``
+     - Adds a 16-bit bfloat floating-point type, along with dot product and cooperative matrix capabilities using bfloat16.
+   * - ``SPV_KHR_cooperative_matrix``
+     - Adds cooperative matrix types and instructions for matrix multiply-add operations across invocations in a subgroup.
+   * - ``SPV_KHR_vulkan_memory_model``
+     - Adds the Vulkan memory model, which defines memory semantics for the Vulkan API.
+
 
 SPIR-V representation in LLVM IR
 ================================
@@ -614,6 +657,15 @@ LLVM IR representations.
 +--------------------+---------------------------------------------------------+
 | SPIR-V instruction | LLVM IR                                                 |
 +====================+=========================================================+
+| OpMemoryModel      | .. code-block:: llvm                                    |
+|                    |                                                         |
+|                    |    !spirv.MemoryModel = !{!0}                           |
+|                    |    !0 = !{i32 0, i32 1}                                 |
+|                    |    ; Set addressing model to Logical (0) and memory     |
+|                    |    ; model to GLSL450 (1). Valid memory models:         |
+|                    |    ; Simple (0), GLSL450 (1), OpenCL (2),               |
+|                    |    ; VulkanKHR (3).                                     |
++--------------------+---------------------------------------------------------+
 | OpExecutionMode    | .. code-block:: llvm                                    |
 |                    |                                                         |
 |                    |    !spirv.ExecutionMode = !{!0}                         |
