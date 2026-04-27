@@ -196,7 +196,7 @@ void X86CodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) const {
 
 void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) const {
   const Triple &TT = TM.getTargetTriple();
-  const MCAsmInfo *MAI = TM.getMCAsmInfo();
+  const MCAsmInfo &MAI = TM.getMCAsmInfo();
 
   // The X86 Speculative Execution Pass must run after all control
   // flow graph modifying passes. As a result it was listed to run right before
@@ -223,7 +223,7 @@ void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) const {
   // instructions.
   if (!TT.isOSDarwin() &&
       (!TT.isOSWindows() ||
-       MAI->getExceptionHandlingType() == ExceptionHandling::DwarfCFI)) {
+       MAI.getExceptionHandlingType() == ExceptionHandling::DwarfCFI)) {
     // TODO(boomanaiden154): Add CFInstrInserterPass here when it has been
     // ported.
   }
