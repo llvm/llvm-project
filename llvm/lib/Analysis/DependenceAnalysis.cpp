@@ -892,6 +892,24 @@ static const SCEV *minusSCEVNoSignedOverflow(const SCEV *A, const SCEV *B,
   return nullptr;
 }
 
+/// Returns \p A * \p B if it guaranteed not to signed wrap. Otherwise returns
+/// nullptr. \p A and \p B must have the same integer type.
+static const SCEV *mulSCEVNoSignedOverflow(const SCEV *A, const SCEV *B,
+                                           ScalarEvolution &SE) {
+  if (SE.willNotOverflow(Instruction::Mul, /*Signed=*/true, A, B))
+    return SE.getMulExpr(A, B);
+  return nullptr;
+}
+
+/// Returns \p A + \p B if it guaranteed not to signed wrap. Otherwise returns
+/// nullptr. \p A and \p B must have the same integer type.
+static const SCEV *addSCEVNoSignedOverflow(const SCEV *A, const SCEV *B,
+                                           ScalarEvolution &SE) {
+  if (SE.willNotOverflow(Instruction::Add, /*Signed=*/true, A, B))
+    return SE.getAddExpr(A, B);
+  return nullptr;
+}
+
 /// Returns true iff \p Test is enabled.
 static bool isDependenceTestEnabled(DependenceTestType Test) {
   if (EnableDependenceTest == DependenceTestType::All)
@@ -2189,10 +2207,16 @@ void DependenceInfo::findBoundsALL(ArrayRef<CoefficientInfo> A,
   Bound[K].Upper[Dependence::DVEntry::ALL] =
       nullptr; // Default value = +infinity.
   if (Bound[K].Iterations) {
-    Bound[K].Lower[Dependence::DVEntry::ALL] = SE->getMulExpr(
-        SE->getMinusSCEV(A[K].NegPart, B[K].PosPart), Bound[K].Iterations);
-    Bound[K].Upper[Dependence::DVEntry::ALL] = SE->getMulExpr(
-        SE->getMinusSCEV(A[K].PosPart, B[K].NegPart), Bound[K].Iterations);
+    const SCEV *LowerDiff =
+        minusSCEVNoSignedOverflow(A[K].NegPart, B[K].PosPart, *SE);
+    if (LowerDiff)
+      Bound[K].Lower[Dependence::DVEntry::ALL] =
+          mulSCEVNoSignedOverflow(LowerDiff, Bound[K].Iterations, *SE);
+    const SCEV *UpperDiff =
+        minusSCEVNoSignedOverflow(A[K].PosPart, B[K].NegPart, *SE);
+    if (UpperDiff)
+      Bound[K].Upper[Dependence::DVEntry::ALL] =
+          mulSCEVNoSignedOverflow(UpperDiff, Bound[K].Iterations, *SE);
   } else {
     // If the difference is 0, we won't need to know the number of iterations.
     if (SE->isKnownPredicate(CmpInst::ICMP_EQ, A[K].NegPart, B[K].PosPart))
@@ -2228,23 +2252,27 @@ void DependenceInfo::findBoundsEQ(ArrayRef<CoefficientInfo> A,
   Bound[K].Upper[Dependence::DVEntry::EQ] =
       nullptr; // Default value = +infinity.
   if (Bound[K].Iterations) {
-    const SCEV *Delta = SE->getMinusSCEV(A[K].Coeff, B[K].Coeff);
+    const SCEV *Delta = minusSCEVNoSignedOverflow(A[K].Coeff, B[K].Coeff, *SE);
+    if (!Delta)
+      return;
     const SCEV *NegativePart = getNegativePart(Delta);
     Bound[K].Lower[Dependence::DVEntry::EQ] =
-        SE->getMulExpr(NegativePart, Bound[K].Iterations);
+        mulSCEVNoSignedOverflow(NegativePart, Bound[K].Iterations, *SE);
     const SCEV *PositivePart = getPositivePart(Delta);
     Bound[K].Upper[Dependence::DVEntry::EQ] =
-        SE->getMulExpr(PositivePart, Bound[K].Iterations);
+        mulSCEVNoSignedOverflow(PositivePart, Bound[K].Iterations, *SE);
   } else {
     // If the positive/negative part of the difference is 0,
     // we won't need to know the number of iterations.
-    const SCEV *Delta = SE->getMinusSCEV(A[K].Coeff, B[K].Coeff);
+    const SCEV *Delta = minusSCEVNoSignedOverflow(A[K].Coeff, B[K].Coeff, *SE);
+    if (!Delta)
+      return;
     const SCEV *NegativePart = getNegativePart(Delta);
     if (NegativePart->isZero())
-      Bound[K].Lower[Dependence::DVEntry::EQ] = NegativePart; // Zero
+      Bound[K].Lower[Dependence::DVEntry::EQ] = NegativePart;
     const SCEV *PositivePart = getPositivePart(Delta);
     if (PositivePart->isZero())
-      Bound[K].Upper[Dependence::DVEntry::EQ] = PositivePart; // Zero
+      Bound[K].Upper[Dependence::DVEntry::EQ] = PositivePart;
   }
 }
 
@@ -2270,27 +2298,47 @@ void DependenceInfo::findBoundsLT(ArrayRef<CoefficientInfo> A,
   Bound[K].Upper[Dependence::DVEntry::LT] =
       nullptr; // Default value = +infinity.
   if (Bound[K].Iterations) {
-    const SCEV *Iter_1 = SE->getMinusSCEV(
-        Bound[K].Iterations, SE->getOne(Bound[K].Iterations->getType()));
-    const SCEV *NegPart =
-        getNegativePart(SE->getMinusSCEV(A[K].NegPart, B[K].Coeff));
-    Bound[K].Lower[Dependence::DVEntry::LT] =
-        SE->getMinusSCEV(SE->getMulExpr(NegPart, Iter_1), B[K].Coeff);
-    const SCEV *PosPart =
-        getPositivePart(SE->getMinusSCEV(A[K].PosPart, B[K].Coeff));
-    Bound[K].Upper[Dependence::DVEntry::LT] =
-        SE->getMinusSCEV(SE->getMulExpr(PosPart, Iter_1), B[K].Coeff);
+    const SCEV *Iter_1 = minusSCEVNoSignedOverflow(
+        Bound[K].Iterations, SE->getOne(Bound[K].Iterations->getType()), *SE);
+    if (Iter_1) {
+      const SCEV *NegDiff =
+          minusSCEVNoSignedOverflow(A[K].NegPart, B[K].Coeff, *SE);
+      if (NegDiff) {
+        const SCEV *NegPart = getNegativePart(NegDiff);
+        const SCEV *LowerMul = mulSCEVNoSignedOverflow(NegPart, Iter_1, *SE);
+        if (LowerMul)
+          Bound[K].Lower[Dependence::DVEntry::LT] =
+              minusSCEVNoSignedOverflow(LowerMul, B[K].Coeff, *SE);
+      }
+      const SCEV *PosDiff =
+          minusSCEVNoSignedOverflow(A[K].PosPart, B[K].Coeff, *SE);
+      if (PosDiff) {
+        const SCEV *PosPart = getPositivePart(PosDiff);
+        const SCEV *UpperMul = mulSCEVNoSignedOverflow(PosPart, Iter_1, *SE);
+        if (UpperMul)
+          Bound[K].Upper[Dependence::DVEntry::LT] =
+              minusSCEVNoSignedOverflow(UpperMul, B[K].Coeff, *SE);
+      }
+    }
   } else {
     // If the positive/negative part of the difference is 0,
     // we won't need to know the number of iterations.
-    const SCEV *NegPart =
-        getNegativePart(SE->getMinusSCEV(A[K].NegPart, B[K].Coeff));
-    if (NegPart->isZero())
-      Bound[K].Lower[Dependence::DVEntry::LT] = SE->getNegativeSCEV(B[K].Coeff);
-    const SCEV *PosPart =
-        getPositivePart(SE->getMinusSCEV(A[K].PosPart, B[K].Coeff));
-    if (PosPart->isZero())
-      Bound[K].Upper[Dependence::DVEntry::LT] = SE->getNegativeSCEV(B[K].Coeff);
+    const SCEV *NegDiff =
+        minusSCEVNoSignedOverflow(A[K].NegPart, B[K].Coeff, *SE);
+    if (NegDiff) {
+      const SCEV *NegPart = getNegativePart(NegDiff);
+      if (NegPart->isZero())
+        Bound[K].Lower[Dependence::DVEntry::LT] =
+            SE->getNegativeSCEV(B[K].Coeff);
+    }
+    const SCEV *PosDiff =
+        minusSCEVNoSignedOverflow(A[K].PosPart, B[K].Coeff, *SE);
+    if (PosDiff) {
+      const SCEV *PosPart = getPositivePart(PosDiff);
+      if (PosPart->isZero())
+        Bound[K].Upper[Dependence::DVEntry::LT] =
+            SE->getNegativeSCEV(B[K].Coeff);
+    }
   }
 }
 
@@ -2316,27 +2364,45 @@ void DependenceInfo::findBoundsGT(ArrayRef<CoefficientInfo> A,
   Bound[K].Upper[Dependence::DVEntry::GT] =
       nullptr; // Default value = +infinity.
   if (Bound[K].Iterations) {
-    const SCEV *Iter_1 = SE->getMinusSCEV(
-        Bound[K].Iterations, SE->getOne(Bound[K].Iterations->getType()));
-    const SCEV *NegPart =
-        getNegativePart(SE->getMinusSCEV(A[K].Coeff, B[K].PosPart));
-    Bound[K].Lower[Dependence::DVEntry::GT] =
-        SE->getAddExpr(SE->getMulExpr(NegPart, Iter_1), A[K].Coeff);
-    const SCEV *PosPart =
-        getPositivePart(SE->getMinusSCEV(A[K].Coeff, B[K].NegPart));
-    Bound[K].Upper[Dependence::DVEntry::GT] =
-        SE->getAddExpr(SE->getMulExpr(PosPart, Iter_1), A[K].Coeff);
+    const SCEV *Iter_1 = minusSCEVNoSignedOverflow(
+        Bound[K].Iterations, SE->getOne(Bound[K].Iterations->getType()), *SE);
+    if (Iter_1) {
+      const SCEV *NegDiff =
+          minusSCEVNoSignedOverflow(A[K].Coeff, B[K].PosPart, *SE);
+      if (NegDiff) {
+        const SCEV *NegPart = getNegativePart(NegDiff);
+        const SCEV *LowerMul = mulSCEVNoSignedOverflow(NegPart, Iter_1, *SE);
+        if (LowerMul)
+          Bound[K].Lower[Dependence::DVEntry::GT] =
+              addSCEVNoSignedOverflow(LowerMul, A[K].Coeff, *SE);
+      }
+      const SCEV *PosDiff =
+          minusSCEVNoSignedOverflow(A[K].Coeff, B[K].NegPart, *SE);
+      if (PosDiff) {
+        const SCEV *PosPart = getPositivePart(PosDiff);
+        const SCEV *UpperMul = mulSCEVNoSignedOverflow(PosPart, Iter_1, *SE);
+        if (UpperMul)
+          Bound[K].Upper[Dependence::DVEntry::GT] =
+              addSCEVNoSignedOverflow(UpperMul, A[K].Coeff, *SE);
+      }
+    }
   } else {
     // If the positive/negative part of the difference is 0,
     // we won't need to know the number of iterations.
-    const SCEV *NegPart =
-        getNegativePart(SE->getMinusSCEV(A[K].Coeff, B[K].PosPart));
-    if (NegPart->isZero())
-      Bound[K].Lower[Dependence::DVEntry::GT] = A[K].Coeff;
-    const SCEV *PosPart =
-        getPositivePart(SE->getMinusSCEV(A[K].Coeff, B[K].NegPart));
-    if (PosPart->isZero())
-      Bound[K].Upper[Dependence::DVEntry::GT] = A[K].Coeff;
+    const SCEV *NegDiff =
+        minusSCEVNoSignedOverflow(A[K].Coeff, B[K].PosPart, *SE);
+    if (NegDiff) {
+      const SCEV *NegPart = getNegativePart(NegDiff);
+      if (NegPart->isZero())
+        Bound[K].Lower[Dependence::DVEntry::GT] = A[K].Coeff;
+    }
+    const SCEV *PosDiff =
+        minusSCEVNoSignedOverflow(A[K].Coeff, B[K].NegPart, *SE);
+    if (PosDiff) {
+      const SCEV *PosPart = getPositivePart(PosDiff);
+      if (PosPart->isZero())
+        Bound[K].Upper[Dependence::DVEntry::GT] = A[K].Coeff;
+    }
   }
 }
 
