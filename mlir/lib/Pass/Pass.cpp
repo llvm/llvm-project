@@ -1053,10 +1053,15 @@ LogicalResult PassManager::run(Operation *op) {
   DialectRegistry dependentDialects;
   getDependentDialects(dependentDialects);
   context->appendDialectRegistry(dependentDialects);
-  for (StringRef name : dependentDialects.getDialectNames()) {
+  for (StringRef name : dependentDialects.getRegisteredDialectNames()) {
     LDBG(2) << "Loading dialect: " << name;
-    context->getOrLoadDialect(name);
+    Dialect *loaded = context->getOrLoadDialect(name);
+    assert(loaded && "allocator-backed registration must resolve");
+    (void)loaded;
   }
+  if (failed(dependentDialects.preloadSelectDialects(
+          context, [&]() { return emitError(op->getLoc()); })))
+    return failure();
 
   // Before running, make sure to finalize the pipeline pass list.
   if (failed(getImpl().finalizePassList(context))) {
