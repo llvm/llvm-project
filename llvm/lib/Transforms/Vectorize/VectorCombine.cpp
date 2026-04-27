@@ -659,6 +659,13 @@ bool VectorCombine::foldExtractExtract(Instruction &I) {
       !match(I1, m_ExtractElt(m_Value(V1), m_ConstantInt(C1))) ||
       V0->getType() != V1->getType())
     return false;
+  
+  // For fixed-width vectors, reject out-of-bounds extract indexes
+  if (auto *FixedVecTy = dyn_cast<FixedVectorType>(V0->getType())) {
+    unsigned NumElts = FixedVecTy->getNumElements();
+    if (C0 >= NumElts || C1 >= NumElts)
+      return false;
+  }
 
   // If the scalar value 'I' is going to be re-inserted into a vector, then try
   // to create an extract to that same element. The extract/insert can be
