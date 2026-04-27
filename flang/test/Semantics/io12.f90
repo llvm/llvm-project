@@ -103,8 +103,7 @@ end subroutine
 
 ! Positive cases: a recursive type is legal when the recursive component
 ! is POINTER or ALLOCATABLE.  With defined I/O, an I/O list item of such
-! a type is accepted without diagnostics, and the cycle-break in the
-! component walk is reached and exited cleanly.
+! a type is accepted without diagnostics.
 module m_recursive_pointer
   type :: rp
     integer :: x
