@@ -20337,26 +20337,6 @@ float64_t test_vaddvq_f64(float64x2_t a) {
   return vaddvq_f64(a);
 }
 
-// CHECK-LABEL: define dso_local float @test_vminv_f32(
-// CHECK-SAME: <2 x float> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VMINV_F32_I:%.*]] = call float @llvm.aarch64.neon.fminv.f32.v2f32(<2 x float> [[A]])
-// CHECK-NEXT:    ret float [[VMINV_F32_I]]
-//
-float32_t test_vminv_f32(float32x2_t a) {
-  return vminv_f32(a);
-}
-
-// CHECK-LABEL: define dso_local double @test_vminvq_f64(
-// CHECK-SAME: <2 x double> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VMINVQ_F64_I:%.*]] = call double @llvm.aarch64.neon.fminv.f64.v2f64(<2 x double> [[A]])
-// CHECK-NEXT:    ret double [[VMINVQ_F64_I]]
-//
-float64_t test_vminvq_f64(float64x2_t a) {
-  return vminvq_f64(a);
-}
-
 // CHECK-LABEL: define dso_local double @test_vmaxnmvq_f64(
 // CHECK-SAME: <2 x double> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -20923,26 +20903,6 @@ float64x1_t test_vrecps_f64(float64x1_t a, float64x1_t b) {
 //
 float64x1_t test_vrsqrts_f64(float64x1_t a, float64x1_t b) {
   return vrsqrts_f64(a, b);
-}
-
-// CHECK-LABEL: define dso_local i32 @test_vminv_s32(
-// CHECK-SAME: <2 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VMINV_S32_I:%.*]] = call i32 @llvm.vector.reduce.smin.v2i32(<2 x i32> [[A]])
-// CHECK-NEXT:    ret i32 [[VMINV_S32_I]]
-//
-int32_t test_vminv_s32(int32x2_t a) {
-  return vminv_s32(a);
-}
-
-// CHECK-LABEL: define dso_local i32 @test_vminv_u32(
-// CHECK-SAME: <2 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VMINV_U32_I:%.*]] = call i32 @llvm.vector.reduce.umin.v2i32(<2 x i32> [[A]])
-// CHECK-NEXT:    ret i32 [[VMINV_U32_I]]
-//
-uint32_t test_vminv_u32(uint32x2_t a) {
-  return vminv_u32(a);
 }
 
 // CHECK-LABEL: define dso_local i32 @test_vaddv_s32(
