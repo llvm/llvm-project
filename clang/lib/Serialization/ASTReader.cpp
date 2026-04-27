@@ -2394,7 +2394,6 @@ HeaderFileInfoTrait::ReadData(internal_key_ref key, const unsigned char *d,
 
   auto FE = getFile(key);
   Preprocessor &PP = Reader.getPreprocessor();
-  ModuleMap &ModMap = PP.getHeaderSearchInfo().getModuleMap();
 
   unsigned IncludedCount =
       endian::readNext<uint32_t, llvm::endianness::little, unaligned>(d);
@@ -2420,6 +2419,7 @@ HeaderFileInfoTrait::ReadData(internal_key_ref key, const unsigned char *d,
 
   assert((End - d) % 4 == 0 &&
          "Wrong data length in HeaderFileInfo deserialization");
+  ModuleMap &ModMap = PP.getHeaderSearchInfo().getModuleMap();
   while (d != End) {
     uint32_t LocalSMID =
         endian::readNext<uint32_t, llvm::endianness::little>(d);

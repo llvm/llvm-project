@@ -595,6 +595,9 @@ public:
   /// to import but didn't because they are not direct uses.
   llvm::SmallSetVector<const Module *, 2> UndeclaredUses;
 
+  /// The set of files included during the build of this module/submodule.
+  /// Used to track per-submodule header inclusion for visibility-aware
+  /// #import semantics.
   llvm::DenseSet<const FileEntry *> Includes;
 
   /// A library or framework to link against when an entity from this

@@ -1132,7 +1132,7 @@ Clang behaves when importing a non-modular header.
   // The import directive below cannot be omitted.
   #import "NonModular.h"
 
-  int foo() {
+  int bar() {
     return MACRO_NON_MODULAR + 1;
   }
 

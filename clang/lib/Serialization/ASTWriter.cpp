@@ -2296,15 +2296,17 @@ void ASTWriter::WriteHeaderSearch(const HeaderSearch &HS) {
     std::vector<const Module *> Includers;
     if (WritingModule) {
       llvm::DenseSet<const Module *> Seen;
-      std::function<void(const Module *)> Visit = [&](const Module *M) {
+      SmallVector<const Module *, 16> Worklist;
+      Worklist.push_back(WritingModule);
+      while (!Worklist.empty()) {
+        const Module *M = Worklist.pop_back_val();
         if (!Seen.insert(M).second)
-          return;
+          continue;
         if (M->Includes.contains(*File))
           Includers.push_back(M);
         for (const Module *SubM : M->submodules())
-          Visit(SubM);
-      };
-      Visit(WritingModule);
+          Worklist.push_back(SubM);
+      }
     } else if (PP->getTopLevelIncludes().contains(*File)) {
       Includers.push_back(nullptr);
     }

@@ -59,7 +59,7 @@ static int x = MACRO_NON_MODULAR;
 
 // Build the pcms
 // RUN: %clang_cc1 -fmodules -I %t/include -emit-module %t/include/A/module.modulemap -fmodule-name=A -o %t/A.pcm
-// RUN: %clang_cc1 -fmodules -I %t/include -emit-module %t/include/B/module.modulemap -fmodule-name=B -o %t/B.pcm
+// RUN: %clang_cc1 -fmodules -I %t/include -emit-module %t/include/B/module.modulemap -fmodule-name=B -fmodule-file=%t/A.pcm -o %t/B.pcm
 
 // Test case 1: loading the pcm but not importing it in the TU.
 // RUN: %clang_cc1 -fmodules -I %t/include -fsyntax-only %t/test_pcm_loaded.c -fmodule-file=%t/A.pcm
@@ -67,5 +67,5 @@ static int x = MACRO_NON_MODULAR;
 // Test case 2: invisible sibling.
 // RUN: %clang_cc1 -fmodules -I %t/include -fsyntax-only %t/test_invisible_sibling.c -fmodule-file=%t/A.pcm
 
-// Test case 3: invisible transtivie imported module.
+// Test case 3: invisible transitive imported module.
 // RUN: %clang_cc1 -fmodules -I %t/include -fsyntax-only %t/test_invisible_transitive.c -fmodule-file=%t/B.pcm

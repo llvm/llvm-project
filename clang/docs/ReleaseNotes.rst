@@ -497,6 +497,7 @@ Bug Fixes in This Version
 - Fixed a crash where constexpr evaluation encountered invalid overrides. (#GH183290)
 - Fixed a crash when assigning to an element of an ``ext_vector_type`` with ``bool`` element type. (#GH189260)
 - Clang now emits an error for friend declarations of lambda members. (#GH26540)
+- Fixed ``#import`` incorrectly skipping non-modular headers when the header was included by a module that is not visible in the current translation unit. Non-modular headers are now only considered "already imported" when the including module is visible. (#GH170215)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

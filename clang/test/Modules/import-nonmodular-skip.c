@@ -3,7 +3,7 @@
 //
 //   If a non-modular header was included by module M, and M is visible in the
 //   current TU, then #import of that header skips importing the header. In
-//   other words, the #import sematic (import only once) is satisfied.
+//   other words, the #import semantic (import only once) is satisfied.
 //
 // We cover two different cases, and we skip the header in the
 // translation unit for both of them:
@@ -54,7 +54,7 @@ non_modular_type_t val = MACRO_NON_MODULAR;
 
 // Build the pcms
 // RUN: %clang_cc1 -fmodules -I %t/include -emit-module %t/include/A/module.modulemap -fmodule-name=A -o %t/A.pcm
-// RUN: %clang_cc1 -fmodules -I %t/include -emit-module %t/include/B/module.modulemap -fmodule-name=B -o %t/B.pcm
+// RUN: %clang_cc1 -fmodules -I %t/include -emit-module %t/include/B/module.modulemap -fmodule-name=B -fmodule-file=%t/A.pcm -o %t/B.pcm
 
 // Test 1: directly importing a submodule that includes a non-modular header.
 // RUN: %clang_cc1 -fmodules -I %t/include -fsyntax-only %t/test_direct_import.c -fmodule-file=%t/A.pcm

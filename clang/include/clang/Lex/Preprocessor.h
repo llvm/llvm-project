@@ -1574,11 +1574,17 @@ public:
     return CurSubmoduleState->VisibleIncludedFiles.contains(File);
   }
 
+  /// Mark a file as included at the top level (outside any module).
+  /// Called by ASTReader when deserializing header file info.
   void markIncludedOnTopLevel(const FileEntry *File) {
     Includes.insert(File);
     CurSubmoduleState->VisibleIncludedFiles.insert(File);
   }
 
+  /// Mark a file as included by module \p M.
+  /// Called by ASTReader when deserializing header file info.
+  /// The file is added to VisibleIncludedFiles only if \p M is currently
+  /// visible.
   void markIncludedInModule(Module *M, const FileEntry *File) {
     M->Includes.insert(File);
 
