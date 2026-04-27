@@ -10,6 +10,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
     fir.has_value %1 : !fir.box<!fir.heap<!fir.array<?xi32>>>
   }
 
+  // A kernel and the device globals must be present in the gpu.module
+  // for the constructor to register them (it skips modules without kernels
+  // and globals not in the gpu.module's symbol table).
   gpu.module @cuda_device_mod {
     gpu.func @_QMmtestsPkernel() kernel {
       gpu.return
@@ -81,6 +84,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<i8 = dense<8> : vector<2xi64>, i
     %2 = fir.embox %0(%1) {allocator_idx = 3 : i32} : (!fir.heap<!fir.array<?x?x?x?x?xf64>>, !fir.shape<5>) -> !fir.box<!fir.heap<!fir.array<?x?x?x?x?xf64>>>
     fir.has_value %2 : !fir.box<!fir.heap<!fir.array<?x?x?x?x?xf64>>>
   }
+  // A kernel and the managed global must be in the gpu.module for
+  // the constructor to register them.
   gpu.module @cuda_device_mod {
     gpu.func @_QMmPkernel() kernel {
       gpu.return
@@ -120,6 +125,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
     fir.has_value %0 : !fir.array<100xi32>
   }
 
+  // A kernel and the managed global must be in the gpu.module for
+  // the constructor to register them.
   gpu.module @cuda_device_mod {
     gpu.func @_QMtestPkernel() kernel {
       gpu.return
