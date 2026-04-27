@@ -397,7 +397,6 @@ public:
         Intrinsic::vp_reduce_xor,
         Intrinsic::vp_scatter,
         Intrinsic::vp_sdiv,
-        Intrinsic::vp_select,
         Intrinsic::vp_sext,
         Intrinsic::vp_srem,
         Intrinsic::vp_store,
