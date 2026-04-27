@@ -32,8 +32,10 @@ define <8 x i32> @vpmerge_vpadd2(<8 x i32> %passthru, <8 x i32> %x, <8 x i32> %y
 define <8 x i32> @vpmerge_vpadd3(<8 x i32> %passthru, <8 x i32> %x, <8 x i32> %y, i32 zeroext %vl) {
 ; CHECK-LABEL: vpmerge_vpadd3:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e32, m1, ta, ma
+; CHECK-NEXT:    vadd.vv v9, v9, v10
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
-; CHECK-NEXT:    vadd.vv v8, v9, v10
+; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
   %a = call <8 x i32> @llvm.vp.add.v8i32(<8 x i32> %x, <8 x i32> %y, <8 x i1> splat (i1 true), i32 %vl)
   %b = call <8 x i32> @llvm.vp.merge.v8i32(<8 x i1> splat (i1 true), <8 x i32> %a, <8 x i32> %passthru, i32 %vl)
@@ -183,7 +185,7 @@ define <8 x i32> @vpselect_vpadd2(<8 x i32> %passthru, <8 x i32> %x, <8 x i32> %
 define <8 x i32> @vpselect_vpadd3(<8 x i32> %passthru, <8 x i32> %x, <8 x i32> %y, i32 zeroext %vl) {
 ; CHECK-LABEL: vpselect_vpadd3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e32, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %a = call <8 x i32> @llvm.vp.add.v8i32(<8 x i32> %x, <8 x i32> %y, <8 x i1> splat (i1 true), i32 %vl)
