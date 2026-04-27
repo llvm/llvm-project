@@ -1677,34 +1677,68 @@ void AccAttributeVisitor::CheckAssociatedLoop(
 
   Symbol::Flag flag = Symbol::Flag::AccPrivate;
   llvm::SmallVector<Symbol *> ivs;
-  using Bounds = parser::LoopControl::Bounds;
+
+  // Iterate the index variables of one DoConstruct, calling fn(name, lower,
+  // upper) for each: once for a regular do loop, once per control variable for
+  // a do concurrent loop.  Null pointers signal a loop without valid bounds
+  // (e.g. do while); the level must still be consumed.
+  auto forEachIndex = [this](const parser::DoConstruct &loop, auto &&fn) {
+    if (loop.IsDoConcurrent()) {
+      const auto &loopControl{*loop.GetLoopControl()};
+      const auto &concurrent{
+          std::get<parser::LoopControl::Concurrent>(loopControl.u)};
+      const auto &header{std::get<parser::ConcurrentHeader>(concurrent.t)};
+      for (const auto &control :
+          std::get<std::list<parser::ConcurrentControl>>(header.t)) {
+        fn(&std::get<parser::Name>(control.t),
+            &parser::UnwrapRef<parser::Expr>(std::get<1>(control.t)),
+            &parser::UnwrapRef<parser::Expr>(std::get<2>(control.t)));
+      }
+    } else {
+      auto bounds{GetLoopBounds(loop)};
+      const parser::ScalarExpr *lower{std::get<1>(bounds)};
+      const parser::ScalarExpr *upper{std::get<2>(bounds)};
+      fn(std::get<0>(bounds),
+          lower ? &parser::UnwrapRef<parser::Expr>(*lower) : nullptr,
+          upper ? &parser::UnwrapRef<parser::Expr>(*upper) : nullptr);
+    }
+  };
+
   for (const parser::DoConstruct *loop{&outerDoConstruct}; loop && level > 0;) {
-    // Go through all nested loops to ensure index variable exists.
-    if (const parser::Name *ivName{GetLoopIndex(*loop)}) {
-      if (auto *symbol{ResolveAcc(*ivName, flag, currScope())}) {
-        if (auto &control{loop->GetLoopControl()}) {
-          if (const Bounds *b{std::get_if<Bounds>(&control->u)}) {
-            if (auto lowerExpr{semantics::AnalyzeExpr(context_, b->Lower())}) {
-              semantics::UnorderedSymbolSet lowerSyms =
-                  evaluate::CollectSymbols(*lowerExpr);
-              checkExprHasSymbols(ivs, lowerSyms);
-            }
-            if (auto upperExpr{semantics::AnalyzeExpr(context_, b->Upper())}) {
-              semantics::UnorderedSymbolSet upperSyms =
-                  evaluate::CollectSymbols(*upperExpr);
-              checkExprHasSymbols(ivs, upperSyms);
+    forEachIndex(*loop,
+        [&](const parser::Name *ivName, const parser::Expr *lower,
+            const parser::Expr *upper) {
+          if (level <= 0)
+            return;
+          if (ivName && lower && upper) {
+            if (auto *symbol{ResolveAcc(*ivName, flag, currScope())}) {
+              if (auto lowerExpr{semantics::AnalyzeExpr(context_, *lower)}) {
+                semantics::UnorderedSymbolSet lowerSyms =
+                    evaluate::CollectSymbols(*lowerExpr);
+                checkExprHasSymbols(ivs, lowerSyms);
+              }
+              if (auto upperExpr{semantics::AnalyzeExpr(context_, *upper)}) {
+                semantics::UnorderedSymbolSet upperSyms =
+                    evaluate::CollectSymbols(*upperExpr);
+                checkExprHasSymbols(ivs, upperSyms);
+              }
+              ivs.push_back(symbol);
             }
           }
-        }
-        ivs.push_back(symbol);
-      }
-    }
+          --level;
+        });
 
     const auto &block{std::get<parser::Block>(loop->t)};
-    --level;
     loop = getNextDoConstruct(block, level);
   }
-  CHECK(level == 0);
+
+  if (level != 0) {
+    context_.Say(GetContext().directiveSource,
+        "Not enough %s for COLLAPSE(%jd) clause, found %jd, expected %jd more"_err_en_US,
+        forceCollapsed ? "nested loops" : "perfectly nested loops",
+        GetContext().associatedLoopLevel,
+        GetContext().associatedLoopLevel - level, level);
+  }
 }
 
 void AccAttributeVisitor::EnsureAllocatableOrPointer(
