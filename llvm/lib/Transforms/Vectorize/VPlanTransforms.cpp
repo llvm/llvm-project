@@ -660,32 +660,29 @@ static void removeRedundantInductionCasts(VPlan &Plan) {
 static void removeRedundantCanonicalIVs(VPlan &Plan) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPValue *CanonicalIV = LoopRegion->getCanonicalIV();
-  auto *WidenNewIV = vputils::findUserOf<VPWidenCanonicalIVRecipe>(CanonicalIV);
-
-  if (!WidenNewIV)
+  auto *WideCanIV = vputils::findUserOf<VPWidenCanonicalIVRecipe>(CanonicalIV);
+  if (!WideCanIV)
     return;
 
   VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
   for (VPRecipeBase &Phi : HeaderVPBB->phis()) {
-    auto *WidenOriginalIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
-
-    if (!WidenOriginalIV || !WidenOriginalIV->isCanonical())
+    auto *WideInd = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
+    if (!WideInd || !WideInd->isCanonical())
       continue;
 
     // Replace WidenNewIV with WidenOriginalIV if WidenOriginalIV provides
     // everything WidenNewIV's users need. That is, WidenOriginalIV will
     // generate a vector phi or all users of WidenNewIV demand the first lane
     // only.
-    if (Plan.hasScalarVFOnly() ||
-        !vputils::onlyScalarValuesUsed(WidenOriginalIV) ||
-        vputils::onlyFirstLaneUsed(WidenNewIV)) {
+    if (Plan.hasScalarVFOnly() || !vputils::onlyScalarValuesUsed(WideInd) ||
+        vputils::onlyFirstLaneUsed(WideCanIV)) {
       // We are replacing a wide canonical iv with a suitable wide induction.
       // This is used to compute header mask, hence all lanes will be used and
       // we need to drop wrap flags only applying to lanes guranteed to execute
       // in the original scalar loop.
-      WidenOriginalIV->dropPoisonGeneratingFlags();
-      WidenNewIV->replaceAllUsesWith(WidenOriginalIV);
-      WidenNewIV->eraseFromParent();
+      WideInd->dropPoisonGeneratingFlags();
+      WideCanIV->replaceAllUsesWith(WideInd);
+      WideCanIV->eraseFromParent();
       return;
     }
   }
