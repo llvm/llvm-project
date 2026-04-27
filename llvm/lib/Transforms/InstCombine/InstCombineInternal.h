@@ -544,6 +544,12 @@ public:
   /// (Binop (cast C), (select C, T, F))
   ///    -> (select C, C0, C1)
   Instruction *foldBinOpOfSelectAndCastOfSelectCondition(BinaryOperator &I);
+  /// Fold both forms of the div_ceil idiom:
+  ///   (add (udiv X, Y), (zext (icmp ne (urem X, Y), 0)))
+  ///     -> (udiv (add nuw X, Y-1), Y)
+  ///   (add (zext (udiv X, Y)), (zext (icmp ne (urem X, Y), 0)))
+  ///     -> (zext (udiv (add nuw X, Y-1), Y))
+  Instruction *foldDivCeil(BinaryOperator &I);
 
   /// This tries to simplify binary operations by factorizing out common terms
   /// (e. g. "(A*B)+(A*C)" -> "A*(B+C)").

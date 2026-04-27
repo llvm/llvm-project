@@ -377,6 +377,24 @@ bool ValueObject::IsLogicalTrue(Status &error) {
   return ret;
 }
 
+ValueObjectSP ValueObject::CheckValueObjectOwnership(ValueObject *child) {
+  Target *target_ptr = GetTargetSP().get();
+  if (!target_ptr)
+    return {};
+
+  if (target_ptr->GetCheckValueObjectOwnership()) {
+    // Child value objects should always be owned by their parent's manager.
+    if (child && (child->GetManager() != GetManager())) {
+      Status error = Status::FromErrorStringWithFormatv(
+          "ValueObject: '{0}' not owned by its parent: '{1}'", child->GetName(),
+          GetName());
+      return ValueObjectConstResult::Create(target_ptr, std::move(error),
+                                            this->GetManager());
+    }
+  }
+  return {};
+}
+
 ValueObjectSP ValueObject::GetChildAtIndex(uint32_t idx, bool can_create) {
   ValueObjectSP child_sp;
   // We may need to update our value if we are dynamic
@@ -2089,21 +2107,6 @@ ValueObject *ValueObject::GetNonBaseClassParent() {
   return nullptr;
 }
 
-bool ValueObject::IsBaseClass(uint32_t &depth) {
-  if (!IsBaseClass()) {
-    depth = 0;
-    return false;
-  }
-  if (GetParent()) {
-    GetParent()->IsBaseClass(depth);
-    depth = depth + 1;
-    return true;
-  }
-  // TODO: a base of no parent? weird..
-  depth = 1;
-  return true;
-}
-
 void ValueObject::GetExpressionPath(Stream &s,
                                     GetExpressionPathFormat epformat) {
   // synthetic children do not actually "exist" as part of the hierarchy, and
@@ -2908,7 +2911,8 @@ ValueObjectSP ValueObject::AddressOf(Status &error) {
         m_addr_of_valobj_sp = ValueObjectConstResult::Create(
             exe_ctx.GetBestExecutionContextScope(),
             compiler_type.GetPointerType(), ConstString(name.c_str()), buffer,
-            endian::InlHostByteOrder(), exe_ctx.GetAddressByteSize());
+            endian::InlHostByteOrder(), exe_ctx.GetAddressByteSize(),
+            LLDB_INVALID_ADDRESS, this->GetManager());
       }
     } break;
     default:
@@ -3521,23 +3525,27 @@ SymbolContextScope *ValueObject::GetSymbolContextScope() {
   return nullptr;
 }
 
-lldb::ValueObjectSP
-ValueObject::CreateValueObjectFromExpression(llvm::StringRef name,
-                                             llvm::StringRef expression,
-                                             const ExecutionContext &exe_ctx) {
+lldb::ValueObjectSP ValueObject::CreateValueObjectFromExpression(
+    llvm::StringRef name, llvm::StringRef expression,
+    const ExecutionContext &exe_ctx, ValueObject *parent) {
   return CreateValueObjectFromExpression(name, expression, exe_ctx,
-                                         EvaluateExpressionOptions());
+                                         EvaluateExpressionOptions(), parent);
 }
 
 lldb::ValueObjectSP ValueObject::CreateValueObjectFromExpression(
     llvm::StringRef name, llvm::StringRef expression,
-    const ExecutionContext &exe_ctx, const EvaluateExpressionOptions &options) {
+    const ExecutionContext &exe_ctx, const EvaluateExpressionOptions &options,
+    ValueObject *parent) {
+  // FIXME: I haven't handled parent in this case yet.  That is a WHOLE lot of
+  // plumbing.
+
   lldb::ValueObjectSP retval_sp;
   lldb::TargetSP target_sp(exe_ctx.GetTargetSP());
   if (!target_sp)
     return retval_sp;
   if (expression.empty())
     return retval_sp;
+
   target_sp->EvaluateExpression(expression, exe_ctx.GetFrameSP().get(),
                                 retval_sp, options);
   if (retval_sp && !name.empty())
@@ -3547,7 +3555,7 @@ lldb::ValueObjectSP ValueObject::CreateValueObjectFromExpression(
 
 lldb::ValueObjectSP ValueObject::CreateValueObjectFromAddress(
     llvm::StringRef name, uint64_t address, const ExecutionContext &exe_ctx,
-    CompilerType type, bool do_deref) {
+    CompilerType type, bool do_deref, ValueObject *parent) {
   if (type) {
     CompilerType pointer_type(type.GetPointerType());
     if (!do_deref)
@@ -3558,7 +3566,8 @@ lldb::ValueObjectSP ValueObject::CreateValueObjectFromAddress(
       lldb::ValueObjectSP ptr_result_valobj_sp(ValueObjectConstResult::Create(
           exe_ctx.GetBestExecutionContextScope(), pointer_type,
           ConstString(name), buffer, exe_ctx.GetByteOrder(),
-          exe_ctx.GetAddressByteSize()));
+          exe_ctx.GetAddressByteSize(), /*address=*/LLDB_INVALID_ADDRESS,
+          parent ? parent->GetManager() : nullptr));
       if (ptr_result_valobj_sp) {
         if (do_deref)
           ptr_result_valobj_sp->GetValue().SetValueType(
@@ -3577,21 +3586,20 @@ lldb::ValueObjectSP ValueObject::CreateValueObjectFromAddress(
 
 lldb::ValueObjectSP ValueObject::CreateValueObjectFromData(
     llvm::StringRef name, const DataExtractor &data,
-    const ExecutionContext &exe_ctx, CompilerType type) {
+    const ExecutionContext &exe_ctx, CompilerType type, ValueObject *parent) {
   lldb::ValueObjectSP new_value_sp;
   new_value_sp = ValueObjectConstResult::Create(
       exe_ctx.GetBestExecutionContextScope(), type, ConstString(name), data,
-      LLDB_INVALID_ADDRESS);
+      LLDB_INVALID_ADDRESS, parent ? parent->GetManager() : nullptr);
   new_value_sp->SetAddressTypeOfChildren(eAddressTypeLoad);
   if (new_value_sp && !name.empty())
     new_value_sp->SetName(ConstString(name));
   return new_value_sp;
 }
 
-lldb::ValueObjectSP
-ValueObject::CreateValueObjectFromAPInt(const ExecutionContext &exe_ctx,
-                                        const llvm::APInt &v, CompilerType type,
-                                        llvm::StringRef name) {
+lldb::ValueObjectSP ValueObject::CreateValueObjectFromAPInt(
+    const ExecutionContext &exe_ctx, const llvm::APInt &v, CompilerType type,
+    llvm::StringRef name, ValueObject *parent) {
   uint64_t byte_size =
       llvm::expectedToOptional(
           type.GetByteSize(exe_ctx.GetBestExecutionContextScope()))
@@ -3599,27 +3607,28 @@ ValueObject::CreateValueObjectFromAPInt(const ExecutionContext &exe_ctx,
   lldb::DataExtractorSP data_sp = std::make_shared<DataExtractor>(
       reinterpret_cast<const void *>(v.getRawData()), byte_size,
       exe_ctx.GetByteOrder(), exe_ctx.GetAddressByteSize());
-  return ValueObject::CreateValueObjectFromData(name, *data_sp, exe_ctx, type);
+  return ValueObject::CreateValueObjectFromData(name, *data_sp, exe_ctx, type,
+                                                parent);
 }
 
 lldb::ValueObjectSP ValueObject::CreateValueObjectFromAPFloat(
     const ExecutionContext &exe_ctx, const llvm::APFloat &v, CompilerType type,
-    llvm::StringRef name) {
-  return CreateValueObjectFromAPInt(exe_ctx, v.bitcastToAPInt(), type, name);
+    llvm::StringRef name, ValueObject *parent) {
+  return CreateValueObjectFromAPInt(exe_ctx, v.bitcastToAPInt(), type, name,
+                                    parent);
 }
 
-lldb::ValueObjectSP
-ValueObject::CreateValueObjectFromScalar(const ExecutionContext &exe_ctx,
-                                         Scalar &s, CompilerType type,
-                                         llvm::StringRef name) {
-  return ValueObjectConstResult::Create(exe_ctx.GetBestExecutionContextScope(),
-                                        type, s, ConstString(name));
+lldb::ValueObjectSP ValueObject::CreateValueObjectFromScalar(
+    const ExecutionContext &exe_ctx, Scalar &s, CompilerType type,
+    llvm::StringRef name, ValueObject *parent) {
+  return ValueObjectConstResult::Create(
+      exe_ctx.GetBestExecutionContextScope(), type, s, ConstString(name),
+      /*module_ptr=*/nullptr, parent ? parent->GetManager() : nullptr);
 }
 
-lldb::ValueObjectSP
-ValueObject::CreateValueObjectFromBool(const ExecutionContext &exe_ctx,
-                                       TypeSystemSP typesystem_sp, bool value,
-                                       llvm::StringRef name) {
+lldb::ValueObjectSP ValueObject::CreateValueObjectFromBool(
+    const ExecutionContext &exe_ctx, TypeSystemSP typesystem_sp, bool value,
+    llvm::StringRef name, ValueObject *parent) {
   CompilerType type = typesystem_sp->GetBasicTypeFromAST(lldb::eBasicTypeBool);
   ExecutionContextScope *exe_scope = exe_ctx.GetBestExecutionContextScope();
   uint64_t byte_size =
@@ -3627,11 +3636,13 @@ ValueObject::CreateValueObjectFromBool(const ExecutionContext &exe_ctx,
   lldb::DataExtractorSP data_sp = std::make_shared<DataExtractor>(
       reinterpret_cast<const void *>(&value), byte_size, exe_ctx.GetByteOrder(),
       exe_ctx.GetAddressByteSize());
-  return ValueObject::CreateValueObjectFromData(name, *data_sp, exe_ctx, type);
+  return ValueObject::CreateValueObjectFromData(name, *data_sp, exe_ctx, type,
+                                                parent);
 }
 
 lldb::ValueObjectSP ValueObject::CreateValueObjectFromNullptr(
-    const ExecutionContext &exe_ctx, CompilerType type, llvm::StringRef name) {
+    const ExecutionContext &exe_ctx, CompilerType type, llvm::StringRef name,
+    ValueObject *parent) {
   if (!type.IsNullPtrType()) {
     lldb::ValueObjectSP ret_val;
     return ret_val;
@@ -3644,7 +3655,8 @@ lldb::ValueObjectSP ValueObject::CreateValueObjectFromNullptr(
   lldb::DataExtractorSP data_sp = std::make_shared<DataExtractor>(
       reinterpret_cast<const void *>(zero), byte_size, exe_ctx.GetByteOrder(),
       exe_ctx.GetAddressByteSize());
-  return ValueObject::CreateValueObjectFromData(name, *data_sp, exe_ctx, type);
+  return ValueObject::CreateValueObjectFromData(name, *data_sp, exe_ctx, type,
+                                                parent);
 }
 
 ModuleSP ValueObject::GetModule() {

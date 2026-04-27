@@ -395,6 +395,15 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  struct_cmsghdr
+  HDRS
+    struct_cmsghdr.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_cmsghdr
+    libc.include.sys_socket
+)
+
+add_proxy_header_library(
   struct_msghdr
   HDRS
     struct_msghdr.h
