@@ -164,7 +164,11 @@ bool AMDGPURegBankCombinerImpl::matchFmulSelectToFldexpVgpr(
   if (!isVgprRegBank(Dst))
     return false;
 
-  return matchFmulWithSelectToFldexpImpl(MI, Sel, MatchInfo, MRI, TII);
+  const RegisterBank *RB = MRI.getRegBankOrNull(Dst);
+  LLT DestTy = MRI.getType(Dst);
+  LLT IntDestTy = DestTy.changeElementType(LLT::scalar(32));
+  return matchFmulWithSelectToFldexpImpl(
+      MI, Sel, MatchInfo, MRI, TII, DstOp(RB, DestTy), DstOp(RB, IntDestTy));
 }
 
 AMDGPURegBankCombinerImpl::MinMaxMedOpc

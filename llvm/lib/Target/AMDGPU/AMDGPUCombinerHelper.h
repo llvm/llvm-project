@@ -18,6 +18,7 @@
 #include "GCNSubtarget.h"
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
+#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 
 namespace llvm {
 class AMDGPUCombinerHelper : public CombinerHelper {
@@ -52,7 +53,8 @@ public:
 bool matchFmulWithSelectToFldexpImpl(
     MachineInstr &MI, MachineInstr &Sel,
     std::function<void(MachineIRBuilder &)> &MatchInfo,
-    const MachineRegisterInfo &MRI, const SIInstrInfo &TII);
+    const MachineRegisterInfo &MRI, const SIInstrInfo &TII, DstOp DestTyOp,
+    DstOp IntDestTyOp);
 
 } // namespace llvm
 

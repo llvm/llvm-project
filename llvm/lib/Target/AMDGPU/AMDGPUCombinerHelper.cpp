@@ -455,7 +455,8 @@ void AMDGPUCombinerHelper::applyExpandPromotedF16FMed3(MachineInstr &MI,
 bool llvm::matchFmulWithSelectToFldexpImpl(
     MachineInstr &MI, MachineInstr &Sel,
     std::function<void(MachineIRBuilder &)> &MatchInfo,
-    const MachineRegisterInfo &MRI, const SIInstrInfo &TII) {
+    const MachineRegisterInfo &MRI, const SIInstrInfo &TII, DstOp DestTyOp,
+    DstOp IntDestTyOp) {
   assert(MI.getOpcode() == TargetOpcode::G_FMUL);
   assert(Sel.getOpcode() == TargetOpcode::G_SELECT);
   assert(MI.getOperand(2).getReg() == Sel.getOperand(0).getReg());
@@ -503,28 +504,15 @@ bool llvm::matchFmulWithSelectToFldexpImpl(
     return false;
 
   MatchInfo = [=, &MI, &MRI](MachineIRBuilder &Builder) {
-    LLT IntDestTy = DestTy.changeElementType(LLT::scalar(32));
     auto NewSel = Builder.buildSelect(
-        IntDestTy, SelectCondReg,
-        Builder.buildConstant(IntDestTy, SelectTrueLog2Val),
-        Builder.buildConstant(IntDestTy, SelectFalseLog2Val));
-
-    const auto *RegBank = MRI.getRegBankOrNull(Dst);
-    if (RegBank) {
-      auto &MutMRI = Builder.getMF().getRegInfo();
-      MutMRI.setRegBank(NewSel.getReg(0), *RegBank);
-      MutMRI.setRegBank(NewSel->getOperand(2).getReg(), *RegBank);
-      MutMRI.setRegBank(NewSel->getOperand(3).getReg(), *RegBank);
-    }
+        IntDestTyOp, SelectCondReg,
+        Builder.buildConstant(IntDestTyOp, SelectTrueLog2Val),
+        Builder.buildConstant(IntDestTyOp, SelectFalseLog2Val));
 
     Register XReg = MI.getOperand(1).getReg();
     if (SelectTrueVal->isNegative()) {
       auto NegX =
-          Builder.buildFNeg(DestTy, XReg, MRI.getVRegDef(XReg)->getFlags());
-      if (RegBank) {
-        auto &MutMRI = Builder.getMF().getRegInfo();
-        MutMRI.setRegBank(NegX.getReg(0), *RegBank);
-      }
+          Builder.buildFNeg(DestTyOp, XReg, MRI.getVRegDef(XReg)->getFlags());
       Builder.buildFLdexp(Dst, NegX, NewSel, MI.getFlags());
     } else {
       Builder.buildFLdexp(Dst, XReg, NewSel, MI.getFlags());
@@ -546,7 +534,10 @@ bool AMDGPUCombinerHelper::matchCombineFmulWithSelectToFldexp(
   if (STI.hasSALUFloatInsts() && ScalarDestTy == LLT::scalar(32))
     return false;
 
-  return matchFmulWithSelectToFldexpImpl(MI, Sel, MatchInfo, MRI, TII);
+  LLT DestTy = MRI.getType(Dst);
+  LLT IntDestTy = DestTy.changeElementType(LLT::scalar(32));
+  return matchFmulWithSelectToFldexpImpl(MI, Sel, MatchInfo, MRI, TII, DestTy,
+                                         IntDestTy);
 }
 
 bool AMDGPUCombinerHelper::matchConstantIs32BitMask(Register Reg) const {
