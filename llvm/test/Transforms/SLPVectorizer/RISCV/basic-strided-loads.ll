@@ -1008,13 +1008,10 @@ define void @two_wide(ptr %pl, ptr %ps, i64 %stride) {
 ; CHECK-LABEL: define void @two_wide(
 ; CHECK-SAME: ptr [[PL:%.*]], ptr [[PS:%.*]], i64 [[STRIDE:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[GEP_L0:%.*]] = getelementptr i8, ptr [[PL]], i64 0
-; CHECK-NEXT:    [[GEP_L1:%.*]] = getelementptr i8, ptr [[PL]], i64 [[STRIDE]]
-; CHECK-NEXT:    [[LOAD0:%.*]] = load i8, ptr [[GEP_L0]], align 1
-; CHECK-NEXT:    [[LOAD1:%.*]] = load i8, ptr [[GEP_L1]], align 1
 ; CHECK-NEXT:    [[GEP_S0:%.*]] = getelementptr i8, ptr [[PS]], i64 0
-; CHECK-NEXT:    [[GEP_S1:%.*]] = getelementptr i8, ptr [[PS]], i64 1
-; CHECK-NEXT:    store i8 [[LOAD0]], ptr [[GEP_S0]], align 1
-; CHECK-NEXT:    store i8 [[LOAD1]], ptr [[GEP_S1]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[STRIDE]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i8> @llvm.experimental.vp.strided.load.v2i8.p0.i64(ptr align 1 [[GEP_L0]], i64 [[TMP1]], <2 x i1> splat (i1 true), i32 2)
+; CHECK-NEXT:    store <2 x i8> [[TMP2]], ptr [[GEP_S0]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %gep_l0 = getelementptr i8, ptr %pl, i64 0
