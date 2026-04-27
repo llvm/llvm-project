@@ -3478,15 +3478,24 @@ ExprResult Sema::BuildCStyleCastExpr(SourceLocation LPLoc,
 
   Op.checkQualifiedDestType();
 
-  if (Op.Kind == CK_PointerToIntegral && Context.getLangOpts().Kernel) {
-    ExprResult Transformed =
-        TransformForMSKernel(Op.SrcExpr.get()->IgnoreParenImpCasts());
-    if (Transformed.isUsable())
-      return BuildCStyleCastExpr(LPLoc, CastTypeInfo, RPLoc, Transformed.get());
-  }
-  return Op.complete(CStyleCastExpr::Create(
+  ExprResult Cast = Op.complete(CStyleCastExpr::Create(
       Context, Op.ResultType, Op.ValueKind, Op.Kind, Op.SrcExpr.get(),
       &Op.BasePath, CurFPFeatureOverrides(), CastTypeInfo, LPLoc, RPLoc));
+  if (!Cast.isUsable() || Op.Kind != CK_PointerToIntegral ||
+      !Context.getLangOpts().Kernel)
+    return Cast;
+
+  ExprResult Transformed =
+      TransformForMSKernel(Op.SrcExpr.get()->IgnoreParenImpCasts());
+  if (!Transformed.isUsable())
+    return Cast;
+
+  ExprResult NewCast =
+      BuildCStyleCastExpr(LPLoc, CastTypeInfo, RPLoc, Transformed.get());
+  if (!NewCast.isUsable())
+    return NewCast;
+  Expr *RealExpr = NewCast.get();
+  return PseudoObjectExpr::Create(Context, Cast.get(), {&RealExpr, 1}, 0);
 }
 
 ExprResult Sema::BuildCXXFunctionalCastExpr(TypeSourceInfo *CastTypeInfo,

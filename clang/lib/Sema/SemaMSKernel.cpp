@@ -51,7 +51,7 @@ ExprResult TransformUnaryOperator(Sema &SemaRef, UnaryOperator *UO) {
       return {};
     std::reverse(Components.begin(), Components.end());
 
-    // Get the root structure type (e.g., MyStruct)
+    // Get the root structure type
     TypeSourceInfo *TInfo = SemaRef.Context.getTrivialTypeSourceInfo(
         Current->getType()->getPointeeType(), Current->getBeginLoc());
     return SemaRef.BuildBuiltinOffsetOf(UO->getBeginLoc(), TInfo, Components,
