@@ -176,10 +176,10 @@ static void synthesizeMissingInstructionLocs(Module &M) {
   DIBuilder DIB(M);
   LLVMContext &Ctx = M.getContext();
   DIFile *File = DIB.createFile("<ir-tracker-synthetic>", ".");
-  DICompileUnit *CU = DIB.createCompileUnit(
-      dwarf::DW_LANG_C, File, "ir-tracker",
-      /*isOptimized=*/true, "", /*RV=*/0, /*SplitName=*/"",
-      DICompileUnit::FullDebug);
+  DICompileUnit *CU =
+      DIB.createCompileUnit(dwarf::DW_LANG_C, File, "ir-tracker",
+                            /*isOptimized=*/true, "", /*RV=*/0,
+                            /*SplitName=*/"", DICompileUnit::FullDebug);
   auto SPType = DIB.createSubroutineType(DIB.getOrCreateTypeArray({}));
   unsigned NextOrdinal = 1;
 
@@ -194,8 +194,8 @@ static void synthesizeMissingInstructionLocs(Module &M) {
     if (F.hasPrivateLinkage() || F.hasInternalLinkage())
       SPFlags |= DISubprogram::SPFlagLocalToUnit;
     DISubprogram *SP =
-        DIB.createFunction(CU, F.getName(), F.getName(), File, FuncLine,
-                           SPType, FuncLine, DINode::FlagZero, SPFlags);
+        DIB.createFunction(CU, F.getName(), F.getName(), File, FuncLine, SPType,
+                           FuncLine, DINode::FlagZero, SPFlags);
     F.setSubprogram(SP);
 
     for (BasicBlock &BB : F) {
@@ -236,26 +236,31 @@ static stable_hash hashValueIdentity(const Value &V) {
   if (const auto *Arg = dyn_cast<Argument>(&V))
     return stable_hash_combine(static_cast<stable_hash>(1), Arg->getArgNo());
   if (const auto *GV = dyn_cast<GlobalValue>(&V))
-    return stable_hash_combine(static_cast<stable_hash>(2),
-                               static_cast<stable_hash>(hash_value(GV->getName())));
+    return stable_hash_combine(
+        static_cast<stable_hash>(2),
+        static_cast<stable_hash>(hash_value(GV->getName())));
   if (const auto *BB = dyn_cast<BasicBlock>(&V)) {
     if (BB->hasName())
-      return stable_hash_combine(static_cast<stable_hash>(3),
-                                 static_cast<stable_hash>(hash_value(BB->getName())));
+      return stable_hash_combine(
+          static_cast<stable_hash>(3),
+          static_cast<stable_hash>(hash_value(BB->getName())));
     return 0;
   }
   if (const auto *I = dyn_cast<Instruction>(&V)) {
-    if (const DILocation *Loc = I->getDebugLoc() ? I->getDebugLoc().get() : nullptr)
+    if (const DILocation *Loc =
+            I->getDebugLoc() ? I->getDebugLoc().get() : nullptr)
       return stable_hash_combine(static_cast<stable_hash>(4),
                                  hashTrackerIdentity(Loc));
     if (I->hasName())
-      return stable_hash_combine(static_cast<stable_hash>(5),
-                                 static_cast<stable_hash>(hash_value(I->getName())));
+      return stable_hash_combine(
+          static_cast<stable_hash>(5),
+          static_cast<stable_hash>(hash_value(I->getName())));
     return 0;
   }
   if (V.hasName())
-    return stable_hash_combine(static_cast<stable_hash>(6),
-                               static_cast<stable_hash>(hash_value(V.getName())));
+    return stable_hash_combine(
+        static_cast<stable_hash>(6),
+        static_cast<stable_hash>(hash_value(V.getName())));
   return 0;
 }
 
@@ -293,14 +298,14 @@ static stable_hash hashInstruction(const Instruction &I) {
   for (const Use &U : I.operands()) {
     Value *V = U.get();
     H = stable_hash_combine(
-        H, stable_hash_combine(
-               static_cast<stable_hash>(V->getType()->getTypeID()),
-               static_cast<stable_hash>(isa<Constant>(V) ? 1 : 0),
-               static_cast<stable_hash>(isa<Argument>(V) ? 1 : 0),
-               hashValueIdentity(*V)));
+        H,
+        stable_hash_combine(static_cast<stable_hash>(V->getType()->getTypeID()),
+                            static_cast<stable_hash>(isa<Constant>(V) ? 1 : 0),
+                            static_cast<stable_hash>(isa<Argument>(V) ? 1 : 0),
+                            hashValueIdentity(*V)));
     if (auto *C = dyn_cast<ConstantInt>(V))
-      H = stable_hash_combine(H,
-                              static_cast<stable_hash>(hash_value(C->getValue())));
+      H = stable_hash_combine(
+          H, static_cast<stable_hash>(hash_value(C->getValue())));
   }
   if (I.isCommutative())
     H = stable_hash_combine(H, 1);
@@ -348,9 +353,9 @@ static stable_hash hashInstruction(const Instruction &I) {
 static stable_hash hashTrackerIdentity(const DILocation *Loc) {
   if (!Loc)
     return 0;
-  stable_hash FileKey =
-      stable_hash_combine(static_cast<stable_hash>(hash_value(Loc->getDirectory())),
-                          static_cast<stable_hash>(hash_value(Loc->getFilename())));
+  stable_hash FileKey = stable_hash_combine(
+      static_cast<stable_hash>(hash_value(Loc->getDirectory())),
+      static_cast<stable_hash>(hash_value(Loc->getFilename())));
   unsigned ScopeLine = 0;
   if (DISubprogram *SP = Loc->getScope()->getSubprogram())
     ScopeLine = SP->getLine();
@@ -495,8 +500,8 @@ class IRTrackerRecorder {
     std::string FilePath = Loc ? getIRTrackerFilePath(Loc) : "<synthetic>";
     unsigned LineN = Loc ? Loc->getLine() : 0;
     unsigned ColN = Loc ? Loc->getColumn() : 0;
-    *OS << "T\t" << ID << '\t' << FilePath << '\t' << LineN << '\t'
-        << ColN << '\n';
+    *OS << "T\t" << ID << '\t' << FilePath << '\t' << LineN << '\t' << ColN
+        << '\n';
   }
 
   /// Look up (or assign) the tracker ID for a source location.
@@ -755,18 +760,19 @@ class IRTrackerRecorder {
         return;
       }
 
-      if (const auto *BI = dyn_cast<BranchInst>(&I)) {
-        if (BI->isUnconditional()) {
-          OS << ' ';
-          writeValueRef(OS, BI->getSuccessor(0));
-        } else {
-          OS << ' ';
-          writeValueRef(OS, BI->getCondition());
-          OS << ", ";
-          writeValueRef(OS, BI->getSuccessor(0));
-          OS << ", ";
-          writeValueRef(OS, BI->getSuccessor(1));
-        }
+      if (const auto *BI = dyn_cast<UncondBrInst>(&I)) {
+        OS << ' ';
+        writeValueRef(OS, BI->getSuccessor(0));
+        return;
+      }
+
+      if (const auto *BI = dyn_cast<CondBrInst>(&I)) {
+        OS << ' ';
+        writeValueRef(OS, BI->getCondition());
+        OS << ", ";
+        writeValueRef(OS, BI->getSuccessor(0));
+        OS << ", ";
+        writeValueRef(OS, BI->getSuccessor(1));
         return;
       }
 
@@ -1097,8 +1103,7 @@ public:
       if (C->begin() != C->end())
         M = const_cast<Module *>(C->begin()->getFunction().getParent());
     } else if (const auto *L = unwrapIR<Loop>(IR))
-      M = const_cast<Module *>(
-          L->getHeader()->getParent()->getParent());
+      M = const_cast<Module *>(L->getHeader()->getParent()->getParent());
     if (!M)
       return;
     if (!ModulesWithSynthesizedLocs.insert(M).second)
