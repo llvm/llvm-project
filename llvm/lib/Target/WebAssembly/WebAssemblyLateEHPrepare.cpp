@@ -117,7 +117,7 @@ bool WebAssemblyLateEHPrepare::runOnMachineFunction(MachineFunction &MF) {
                        "********** Function: "
                     << MF.getName() << '\n');
 
-  if (MF.getTarget().getMCAsmInfo()->getExceptionHandlingType() !=
+  if (MF.getTarget().getMCAsmInfo().getExceptionHandlingType() !=
       ExceptionHandling::Wasm)
     return false;
 

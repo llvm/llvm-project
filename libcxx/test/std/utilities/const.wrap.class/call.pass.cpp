@@ -82,6 +82,18 @@ static_assert(std::is_nothrow_invocable_v<std::constant_wrapper<throwing_call>, 
               "the call expression is still nothrow because the constexpr path is taken");
 // clang-format on
 
+template <class T>
+struct MustBeInt {
+  static_assert(std::same_as<T, int>);
+};
+
+struct Poison {
+  template <class T>
+  constexpr auto operator()(T) const noexcept -> MustBeInt<T> {
+    return {};
+  }
+};
+
 constexpr bool test() {
   {
     // with runtime param
@@ -225,6 +237,12 @@ constexpr bool test() {
     std::integral_constant<int, 2> ic2;
     std::same_as<std::constant_wrapper<3>> decltype(auto) result = T::operator()(ic1, ic2);
     static_assert(result == 3);
+  }
+
+  {
+    using T = std::constant_wrapper<Poison{}>;
+    [[maybe_unused]] std::same_as<std::constant_wrapper<MustBeInt<int>{}>> decltype(auto) result =
+        T::operator()(std::cw<5>);
   }
 
   return true;
