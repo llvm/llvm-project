@@ -159,6 +159,8 @@ __rtsan_notify_blocking_call(const char *func_name) {
                     OnViolation);
 }
 
+// This function is used for interop with UBSan, they have tests to confirm this
+// works as intended
 SANITIZER_INTERFACE_ATTRIBUTE
 void __sanitizer_print_stack_trace() {
 
