@@ -164,6 +164,11 @@ int main(int, char**) {
     test<Z>(std::move(rhs), true);
   }
 
+#if TEST_STD_VER >= 26
+  // GH: #194415
+  static_assert(!std::is_constructible_v<std::optional<int>, std::optional<LValueOnly<int>>&>);
+#endif
+
   static_assert(!(std::is_constructible<optional<X>, optional<Z>>::value), "");
 
 #if TEST_STD_VER >= 26

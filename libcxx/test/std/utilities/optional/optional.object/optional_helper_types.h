@@ -51,4 +51,14 @@ struct ReferenceConversionThrows {
   }
 };
 
+template <typename T>
+struct LValueOnly {
+  T val{};
+
+  constexpr operator T&() & noexcept { return val; }
+  constexpr operator T&() const&  = delete;
+  constexpr operator T&() &&      = delete;
+  constexpr operator T&() const&& = delete;
+};
+
 #endif
