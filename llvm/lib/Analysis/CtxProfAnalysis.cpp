@@ -441,7 +441,9 @@ GlobalValue::GUID AssignGUIDPass::getGUID(const Function &F) {
     return F.getGUID();
   }
   auto *MD = F.getMetadata(GUIDMetadataName);
-  assert(MD && "guid not found for defined function");
+  if (!MD)
+    reportFatalUsageError(
+        "this pass requires the GUID metadata to be available.");
   return cast<ConstantInt>(cast<ConstantAsMetadata>(MD->getOperand(0))
                                ->getValue()
                                ->stripPointerCasts())
