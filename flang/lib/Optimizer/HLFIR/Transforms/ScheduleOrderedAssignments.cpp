@@ -11,7 +11,9 @@
 #include "flang/Optimizer/Analysis/ArraySectionAnalyzer.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/Dialect/FortranVariableInterface.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
+#include "mlir/IR/OperationSupport.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/Debug.h"
 
@@ -178,8 +180,9 @@ namespace {
 /// assignment evaluation.
 class Scheduler {
 public:
-  Scheduler(bool tryFusingAssignments)
-      : tryFusingAssignments{tryFusingAssignments} {}
+  Scheduler(hlfir::OrderedAssignmentTreeOpInterface root,
+            bool tryFusingAssignments)
+      : root{root}, tryFusingAssignments{tryFusingAssignments} {}
 
   /// Start scheduling an assignment. Gather the write side effect from the
   /// assignment.
@@ -244,6 +247,15 @@ private:
   /// only possible if the assignment and all of its dependencies have no side
   /// effects conflicting with the previous run.
   bool canFuseAssignmentWithPreviousRun();
+
+  /// Tell if \p v1 and \p v2 are guaranteed to evaluate to the same value at
+  /// runtime, used by the ArraySectionAnalyzer to recognize identical
+  /// sections whose subscripts are not the same SSA value (e.g. when CSE
+  /// could not merge loads across the LHS and RHS regions of a WHERE).
+  bool haveTheSameValue(mlir::Value v1, mlir::Value v2);
+
+  /// Root of the ordered assignment tree being scheduled.
+  hlfir::OrderedAssignmentTreeOpInterface root;
 
   /// Memory effects of the assignments being lowered.
   llvm::SmallVector<hlfir::DetailedEffectInstance> assignEffects;
@@ -514,10 +526,12 @@ struct ConflictKind {
 
 /// Could there be any read or write in effectsA on a variable written to in
 /// effectsB?
-static ConflictKind
-anyRAWorWAW(llvm::ArrayRef<hlfir::DetailedEffectInstance> effectsA,
-            llvm::ArrayRef<hlfir::DetailedEffectInstance> effectsB,
-            fir::AliasAnalysis &aliasAnalysis) {
+static ConflictKind anyRAWorWAW(
+    llvm::ArrayRef<hlfir::DetailedEffectInstance> effectsA,
+    llvm::ArrayRef<hlfir::DetailedEffectInstance> effectsB,
+    fir::AliasAnalysis &aliasAnalysis,
+    fir::ArraySectionAnalyzer::ValueEquivalenceCallback areKnownEquivalent =
+        nullptr) {
   ConflictKind result = ConflictKind::none();
   for (const auto &effectB : effectsB)
     if (mlir::isa<mlir::MemoryEffects::Write>(effectB.getEffect())) {
@@ -544,7 +558,8 @@ anyRAWorWAW(llvm::ArrayRef<hlfir::DetailedEffectInstance> effectsA,
                                        writtenVarB, /*isAligned=*/true));
                 continue;
               }
-              auto overlap = fir::ArraySectionAnalyzer::analyze(arrayA, arrayB);
+              auto overlap = fir::ArraySectionAnalyzer::analyze(
+                  arrayA, arrayB, areKnownEquivalent);
               if (overlap == fir::ArraySectionAnalyzer::SlicesOverlapKind::
                                  DefinitelyDisjoint)
                 continue;
@@ -572,15 +587,19 @@ anyRAWorWAW(llvm::ArrayRef<hlfir::DetailedEffectInstance> effectsA,
 
 /// Could there be any read or write in effectsA on a variable written to in
 /// effectsB, or any read in effectsB on a variable written to in effectsA?
-static ConflictKind
-conflict(llvm::ArrayRef<hlfir::DetailedEffectInstance> effectsA,
-         llvm::ArrayRef<hlfir::DetailedEffectInstance> effectsB) {
+static ConflictKind conflict(
+    llvm::ArrayRef<hlfir::DetailedEffectInstance> effectsA,
+    llvm::ArrayRef<hlfir::DetailedEffectInstance> effectsB,
+    fir::ArraySectionAnalyzer::ValueEquivalenceCallback areKnownEquivalent =
+        nullptr) {
   fir::AliasAnalysis aliasAnalysis;
   // (RAW || WAW) || (WAR || WAW).
-  ConflictKind result = anyRAWorWAW(effectsA, effectsB, aliasAnalysis);
+  ConflictKind result =
+      anyRAWorWAW(effectsA, effectsB, aliasAnalysis, areKnownEquivalent);
   if (result.isAny())
     return result;
-  return result || anyRAWorWAW(effectsB, effectsA, aliasAnalysis);
+  return result ||
+         anyRAWorWAW(effectsB, effectsA, aliasAnalysis, areKnownEquivalent);
 }
 
 /// Could there be any write effects in "effects" affecting memory storages
@@ -606,6 +625,83 @@ anyNonLocalWrite(llvm::ArrayRef<hlfir::DetailedEffectInstance> effects,
 //===----------------------------------------------------------------------===//
 // Scheduling Implementation : Scheduler class implementation
 //===----------------------------------------------------------------------===//
+
+/// Return the closest enclosing hlfir.region_assign of \p op if \p op lives
+/// in its rhs or lhs region, null otherwise.
+static hlfir::RegionAssignOp getOwningRegionAssign(mlir::Operation *op) {
+  auto assign = op->getParentOfType<hlfir::RegionAssignOp>();
+  if (!assign)
+    return nullptr;
+  if (assign.getRhsRegion().findAncestorOpInRegion(*op) ||
+      assign.getLhsRegion().findAncestorOpInRegion(*op))
+    return assign;
+  return nullptr;
+}
+
+/// Two fir.load are considered to evaluate to the same value when:
+///   * They load the same Fortran variable (same memref SSA value coming
+///     from a fir.declare/hlfir.declare defined outside \p root).
+///   * They sit in the rhs/lhs region of the same hlfir.region_assign, where
+///     no intervening write to the variable can occur.
+/// This relies on F2023 10.1.5, which states: "The evaluation of a function
+/// reference shall neither affect nor be affected by the evaluation of any
+/// other entity within the statement". Therefore any variable used in both
+/// the RHS and LHS, or several times on one side, cannot be modified by
+/// evaluation side effects.
+/// The restriction of the fir.declare/hlfir.declare being defined outside of
+/// the root is to ensure this is not an inner variable from a function that
+/// could have been inlined and for which the rule does not apply.
+static bool
+areLoadsKnownEquivalent(fir::LoadOp load1, fir::LoadOp load2,
+                        hlfir::OrderedAssignmentTreeOpInterface root) {
+  if (!root)
+    return false;
+  if (load1.getMemref() != load2.getMemref())
+    return false;
+  auto variableOp =
+      load1.getMemref().getDefiningOp<fir::FortranVariableOpInterface>();
+  if (!variableOp || root->isAncestor(variableOp.getOperation()))
+    return false;
+  hlfir::RegionAssignOp assign1 = getOwningRegionAssign(load1);
+  return assign1 && assign1 == getOwningRegionAssign(load2);
+}
+
+/// Tell whether two SSA values are guaranteed to evaluate to the same value
+/// at runtime. This is useful to compare two SSA values used as array indices
+/// in the RHS and LHS in order to prove that the array sections on the LHS
+/// and RHS are identical.
+/// Loop-invariant code motion and CSE cannot always be used before this pass
+/// because index variable references may not be safe to hoist out of masked
+/// evaluations (the variable could be optional, out of bounds, or modified by
+/// previous assignment statements in the same construct).
+bool Scheduler::haveTheSameValue(mlir::Value v1, mlir::Value v2) {
+  if (v1 == v2)
+    return true;
+  if (!v1 || !v2)
+    return false;
+  mlir::Operation *op1 = v1.getDefiningOp();
+  mlir::Operation *op2 = v2.getDefiningOp();
+  if (!op1 || !op2)
+    return false;
+  // Special-case fir.load whose memref is a Fortran variable defined outside
+  // the tree root (loads cannot be matched structurally because they have
+  // memory effects). Could be extended to recurse on hlfir.designate operands
+  // to cover patterns like x(:, vec(j)) = x(:, vec(j)).
+  if (auto load1 = mlir::dyn_cast<fir::LoadOp>(op1))
+    if (auto load2 = mlir::dyn_cast<fir::LoadOp>(op2))
+      if (areLoadsKnownEquivalent(load1, load2, root))
+        return true;
+  if (!mlir::isMemoryEffectFree(op1) || !mlir::isMemoryEffectFree(op2))
+    return false;
+  // Otherwise, structural equivalence of pure ops, recursing through operands.
+  return mlir::OperationEquivalence::isEquivalentTo(
+      op1, op2,
+      [this](mlir::Value a, mlir::Value b) {
+        return mlir::success(haveTheSameValue(a, b));
+      },
+      /*markEquivalent=*/nullptr,
+      mlir::OperationEquivalence::Flags::IgnoreLocations);
+}
 
 void Scheduler::startSchedulingAssignment(hlfir::RegionAssignOp assign,
                                           bool leafRegionsMayOnlyRead) {
@@ -654,7 +750,10 @@ void Scheduler::saveEvaluationIfConflict(mlir::Region &yieldRegion,
                    << "\n";);
     saveEvaluation(yieldRegion, effects, /*anyWrite=*/true);
   } else {
-    ConflictKind conflictKind = conflict(effects, assignEffects);
+    auto sameValue = [&](mlir::Value v1, mlir::Value v2) {
+      return haveTheSameValue(v1, v2);
+    };
+    ConflictKind conflictKind = conflict(effects, assignEffects, sameValue);
     if (conflictKind.isAny()) {
       // Region that conflicts with the current assignments must be fully
       // evaluated and saved before doing the assignment (Note that it may
@@ -667,7 +766,7 @@ void Scheduler::saveEvaluationIfConflict(mlir::Region &yieldRegion,
         pendingAlignedRegions.push_back(&yieldRegion);
 
       if (evaluationsMayConflict &&
-          !conflict(effects, assignEvaluateEffects).isNone()) {
+          !conflict(effects, assignEvaluateEffects, sameValue).isNone()) {
         // If evaluations of the assignment may conflict with the yield
         // evaluations, we have to save yield evaluation.
         // For example, a WHERE mask might be written by the masked assignment
@@ -868,7 +967,7 @@ hlfir::buildEvaluationSchedule(hlfir::OrderedAssignmentTreeOpInterface root,
       mlir::isa<hlfir::ForallOp>(root.getOperation());
 
   // Loop through the assignments and schedule them.
-  Scheduler scheduler(tryFusingAssignments);
+  Scheduler scheduler(root, tryFusingAssignments);
   llvm::SmallVector<hlfir::RegionAssignOp> assignments;
   gatherAssignments(root, assignments);
   for (hlfir::RegionAssignOp assign : assignments) {
