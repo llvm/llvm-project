@@ -1167,56 +1167,9 @@ class TruncfToOCLPattern : public OpConversionPattern<TruncfOp> {
         /*targetMem1=*/LLVM::ModRefInfo::NoModRef);
     auto funcAttrs = convergentNoUnwindWillReturnAttrs;
     funcAttrs.memEffectsAttr = memAttr;
-    // BF16 type needs some preprocessing before conversion,
-    // First extended to F32 and then truncated to F16.
-    if (srcEtype == TruncfSrcElemTypes::BF16) {
-      // Step 1: Extend to F32
-      // Use float16 __builtin_IB_bftof_16(short16)
-      src = LLVM::BitcastOp::create(
-          rewriter, op.getLoc(),
-          VectorType::get(vecSrcTy.getShape(), rewriter.getI16Type()), src);
-      std::string fnName = "__builtin_IB_bftof_16";
-      SmallVector<Type> argTypes{src.getType()};
-      SmallVector<Value> args{src};
-      Type resTy = VectorType::get(vecSrcTy.getShape(), rewriter.getF32Type());
-      src = createDeviceFunctionCall(rewriter, fnName, resTy, argTypes, args,
-                                     {}, funcAttrs, op.getOperation())
-                ->getResult(0);
-      // Step 2: Truncf to F16
-      // Use half16 convert_half16(float16)
-      std::string truncFnName = "convert_half16";
-      SmallVector<Type> truncArgTypes{src.getType()};
-      SmallVector<Value> truncArgs{src};
-      truncFnName = mangle(truncFnName, truncArgTypes);
-      resTy = VectorType::get(vecSrcTy.getShape(), rewriter.getF16Type());
-      src =
-          createDeviceFunctionCall(rewriter, truncFnName, resTy, truncArgTypes,
-                                   truncArgs, {}, funcAttrs, op.getOperation())
-              ->getResult(0);
-    }
-    if (dstEtype == TruncfDstElemTypes::BF8) {
-      // Use char16 __builtin_IB_hftobf8_16(half16)
-      std::string fnName = "__builtin_IB_hftobf8_16";
-      SmallVector<Type> argTypes{src.getType()};
-      SmallVector<Value> args{src};
-      Value result =
-          createDeviceFunctionCall(rewriter, fnName, vecDstTy, argTypes, args,
-                                   {}, funcAttrs, op.getOperation())
-              ->getResult(0);
 
-      rewriter.replaceOp(op, result);
-    } else if (dstEtype == TruncfDstElemTypes::F8) {
-      // Use char16 __builtin_IB_hftohf8_16(half16)
-      std::string fnName = "__builtin_IB_hftohf8_16";
-      SmallVector<Type> argTypes{src.getType()};
-      SmallVector<Value> args{src};
-      Value result =
-          createDeviceFunctionCall(rewriter, fnName, vecDstTy, argTypes, args,
-                                   {}, funcAttrs, op.getOperation())
-              ->getResult(0);
-
-      rewriter.replaceOp(op, result);
-    } else if (dstEtype == TruncfDstElemTypes::E2M1) {
+    // Handle the case where dst type is fp4 first.
+    if (dstEtype == TruncfDstElemTypes::E2M1) {
       // Convert 8 elements at a time.
       // To convert 8 elements, vector<8xf16>:
       // Use:
@@ -1227,9 +1180,10 @@ class TruncfToOCLPattern : public OpConversionPattern<TruncfOp> {
           rewriter, op.getLoc(), VectorType::get(8, rewriter.getI32Type()),
           src);
 
+      std::string fnName = "__builtin_IB_dnscl_";
+      fnName += (srcEtype == TruncfSrcElemTypes::F16) ? "hf16" : "bf16";
       auto genDnscl = [&](Value input, Value idx0, Value idx1, Value dstTy,
                           Value mode) -> Value {
-        std::string fnName = "__builtin_IB_dnscl_hf16";
         Value arg1 =
             LLVM::ExtractElementOp::create(rewriter, op.getLoc(), input, idx0)
                 ->getResult(0);
@@ -1280,6 +1234,59 @@ class TruncfToOCLPattern : public OpConversionPattern<TruncfOp> {
                      ->getResult(0);
       Value result =
           LLVM::BitcastOp::create(rewriter, op.getLoc(), vecDstTy, combined);
+      rewriter.replaceOp(op, result);
+      return success();
+    }
+
+    // Handle the case where dst type is fp8.
+    // BF16 type needs some preprocessing before conversion,
+    // First extended to F32 and then truncated to F16.
+    if (srcEtype == TruncfSrcElemTypes::BF16) {
+      // Step 1: Extend to F32
+      // Use float16 __builtin_IB_bftof_16(short16)
+      src = LLVM::BitcastOp::create(
+          rewriter, op.getLoc(),
+          VectorType::get(vecSrcTy.getShape(), rewriter.getI16Type()), src);
+      std::string fnName = "__builtin_IB_bftof_16";
+      SmallVector<Type> argTypes{src.getType()};
+      SmallVector<Value> args{src};
+      Type resTy = VectorType::get(vecSrcTy.getShape(), rewriter.getF32Type());
+      src = createDeviceFunctionCall(rewriter, fnName, resTy, argTypes, args,
+                                     {}, funcAttrs, op.getOperation())
+                ->getResult(0);
+      // Step 2: Truncf to F16
+      // Use half16 convert_half16(float16)
+      std::string truncFnName = "convert_half16";
+      SmallVector<Type> truncArgTypes{src.getType()};
+      SmallVector<Value> truncArgs{src};
+      truncFnName = mangle(truncFnName, truncArgTypes);
+      resTy = VectorType::get(vecSrcTy.getShape(), rewriter.getF16Type());
+      src =
+          createDeviceFunctionCall(rewriter, truncFnName, resTy, truncArgTypes,
+                                   truncArgs, {}, funcAttrs, op.getOperation())
+              ->getResult(0);
+    }
+    if (dstEtype == TruncfDstElemTypes::BF8) {
+      // Use char16 __builtin_IB_hftobf8_16(half16)
+      std::string fnName = "__builtin_IB_hftobf8_16";
+      SmallVector<Type> argTypes{src.getType()};
+      SmallVector<Value> args{src};
+      Value result =
+          createDeviceFunctionCall(rewriter, fnName, vecDstTy, argTypes, args,
+                                   {}, funcAttrs, op.getOperation())
+              ->getResult(0);
+
+      rewriter.replaceOp(op, result);
+    } else if (dstEtype == TruncfDstElemTypes::F8) {
+      // Use char16 __builtin_IB_hftohf8_16(half16)
+      std::string fnName = "__builtin_IB_hftohf8_16";
+      SmallVector<Type> argTypes{src.getType()};
+      SmallVector<Value> args{src};
+      Value result =
+          createDeviceFunctionCall(rewriter, fnName, vecDstTy, argTypes, args,
+                                   {}, funcAttrs, op.getOperation())
+              ->getResult(0);
+
       rewriter.replaceOp(op, result);
     } else {
       return rewriter.notifyMatchFailure(
