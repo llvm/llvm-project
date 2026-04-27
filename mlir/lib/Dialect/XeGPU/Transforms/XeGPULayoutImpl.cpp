@@ -1214,12 +1214,12 @@ getDpasInstDataVectors(VectorType aTy, VectorType bTy, VectorType cdTy,
   if (maxALen == -1 || maxBLen == -1 || maxCLen == -1)
     return std::nullopt;
 
-  // For DPAS_MX, use getSupportedK to get the scaled K dimension
+  // For DPAS_MX, use getSupportedK to get the scaled K dimension.
+  // assume single element in the returned vector.
   int kDimSize = subgroupSize;
   if (isDpasMx) {
     auto supportedKLen = uArchInstruction->getSupportedK(aTy.getElementType());
-    if (!supportedKLen.empty())
-      kDimSize = supportedKLen[0];
+    kDimSize = supportedKLen[0];
   }
 
   SmallVector<int64_t> instDataA(aTy.getRank(), 1);
@@ -1454,9 +1454,8 @@ std::optional<
                xegpu::DistributeLayoutAttr, xegpu::DistributeLayoutAttr,
                xegpu::DistributeLayoutAttr>>
 xegpu::setupDpasMxLayout(xegpu::LayoutKind layoutKind, VectorType aTy,
-                         VectorType bTy, VectorType cdTy,
-                         std::optional<VectorType> aScaleTy,
-                         std::optional<VectorType> bScaleTy,
+                         VectorType bTy, VectorType cdTy, VectorType aScaleTy,
+                         VectorType bScaleTy,
                          xegpu::DistributeLayoutAttr consumerLayout, int numSg,
                          const xegpu::uArch::uArch *uArch) {
   auto context = aTy.getContext();
@@ -1472,14 +1471,11 @@ xegpu::setupDpasMxLayout(xegpu::LayoutKind layoutKind, VectorType aTy,
     auto [dpasALayout, dpasBLayout, dpasCDLayout] = *dpasLayouts;
 
     // Create scale layouts
-    auto aScaleLayout = aScaleTy.has_value()
-                            ? createScaleLayout(context, aTy, *aScaleTy,
-                                                dpasALayout, false, uArch)
-                            : nullptr;
-    auto bScaleLayout = bScaleTy.has_value()
-                            ? createScaleLayout(context, bTy, *bScaleTy,
-                                                dpasBLayout, true, uArch)
-                            : nullptr;
+    auto aScaleLayout =
+        createScaleLayout(context, aTy, aScaleTy, dpasALayout, false, uArch);
+
+    auto bScaleLayout =
+        createScaleLayout(context, bTy, bScaleTy, dpasBLayout, true, uArch);
 
     return std::make_tuple(dpasALayout, dpasBLayout, dpasCDLayout, aScaleLayout,
                            bScaleLayout);
@@ -1498,14 +1494,10 @@ xegpu::setupDpasMxLayout(xegpu::LayoutKind layoutKind, VectorType aTy,
         context, SmallVector<int>(instDataCD.begin(), instDataCD.end()));
 
     // Create scale layouts
-    auto aScaleLayout = aScaleTy.has_value()
-                            ? createScaleLayout(context, aTy, *aScaleTy,
-                                                dpasALayout, false, uArch)
-                            : nullptr;
-    auto bScaleLayout = bScaleTy.has_value()
-                            ? createScaleLayout(context, bTy, *bScaleTy,
-                                                dpasBLayout, true, uArch)
-                            : nullptr;
+    auto aScaleLayout =
+        createScaleLayout(context, aTy, aScaleTy, dpasALayout, false, uArch);
+    auto bScaleLayout =
+        createScaleLayout(context, bTy, bScaleTy, dpasBLayout, true, uArch);
 
     return std::make_tuple(dpasALayout, dpasBLayout, dpasCDLayout, aScaleLayout,
                            bScaleLayout);
@@ -1521,13 +1513,9 @@ xegpu::setupDpasMxLayout(xegpu::LayoutKind layoutKind, VectorType aTy,
 
     // Create scale layouts
     auto aScaleLayout =
-        aScaleTy.has_value()
-            ? createScaleLayout(context, aTy, *aScaleTy, aLayout, false, uArch)
-            : nullptr;
+        createScaleLayout(context, aTy, aScaleTy, aLayout, false, uArch);
     auto bScaleLayout =
-        bScaleTy.has_value()
-            ? createScaleLayout(context, bTy, *bScaleTy, bLayout, true, uArch)
-            : nullptr;
+        createScaleLayout(context, bTy, bScaleTy, bLayout, true, uArch);
 
     return std::make_tuple(aLayout, bLayout, cdLayout, aScaleLayout,
                            bScaleLayout);

@@ -206,8 +206,7 @@ std::optional<
     std::tuple<DistributeLayoutAttr, DistributeLayoutAttr, DistributeLayoutAttr,
                DistributeLayoutAttr, DistributeLayoutAttr>>
 setupDpasMxLayout(LayoutKind layoutKind, VectorType aTy, VectorType bTy,
-                  VectorType cdTy, std::optional<VectorType> aScaleTy,
-                  std::optional<VectorType> bScaleTy,
+                  VectorType cdTy, VectorType aScaleTy, VectorType bScaleTy,
                   DistributeLayoutAttr consumerLayout, int numSg,
                   const uArch::uArch *uArch);
 

@@ -868,8 +868,8 @@ void LayoutInfoPropagation::visitDpasMxOp(
     VectorType cdTy = dpasMx.getResultType();
 
     // Get scale types if present
-    std::optional<VectorType> aScaleTy = std::nullopt;
-    std::optional<VectorType> bScaleTy = std::nullopt;
+    VectorType aScaleTy;
+    VectorType bScaleTy;
     Value scaleA = dpasMx.getScaleA();
     Value scaleB = dpasMx.getScaleB();
     if (scaleA)
@@ -926,17 +926,29 @@ void LayoutInfoPropagation::visitDpasMxOp(
       dpasMxBScaleLayout = LayoutInfo(requiredBScaleLayout);
   }
 
-  // Propagate layouts to operands
-  // operands[0] = a, operands[1] = b, operands[2] = acc (optional),
-  // operands[3] = scale_a (optional), operands[4] = scale_b (optional)
+  // Propagate layouts to operands. Because acc, scale_a, scale_b are all
+  // optional (AttrSizedOperandSegments), the index of each present operand in
+  // `operands` depends on which optionals are actually supplied. Use the
+  // op's accessors to determine the correct positional index.
   propagateIfChanged(operands[0], operands[0]->meet(dpasMxALayout));
   propagateIfChanged(operands[1], operands[1]->meet(dpasMxBLayout));
-  if (operands.size() > 2)
-    propagateIfChanged(operands[2], operands[2]->meet(dpasMxCDLayout));
-  if (operands.size() > 3 && dpasMxAScaleLayout.isAssigned())
-    propagateIfChanged(operands[3], operands[3]->meet(dpasMxAScaleLayout));
-  if (operands.size() > 4 && dpasMxBScaleLayout.isAssigned())
-    propagateIfChanged(operands[4], operands[4]->meet(dpasMxBScaleLayout));
+  unsigned idx = 2;
+  if (dpasMx.getAcc()) {
+    propagateIfChanged(operands[idx], operands[idx]->meet(dpasMxCDLayout));
+    ++idx;
+  }
+  if (dpasMx.getScaleA()) {
+    if (dpasMxAScaleLayout.isAssigned())
+      propagateIfChanged(operands[idx],
+                         operands[idx]->meet(dpasMxAScaleLayout));
+    ++idx;
+  }
+  if (dpasMx.getScaleB()) {
+    if (dpasMxBScaleLayout.isAssigned())
+      propagateIfChanged(operands[idx],
+                         operands[idx]->meet(dpasMxBScaleLayout));
+    ++idx;
+  }
 }
 
 /// Set the layout for the value and tensor descriptor operands in StoreNdOp.

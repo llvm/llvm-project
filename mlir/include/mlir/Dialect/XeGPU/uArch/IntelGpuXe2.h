@@ -657,8 +657,10 @@ SubgroupScaledMatrixMultiplyAcc::getSupportedK(Type type) const {
     kSize = 32; // FP8: scale K by 2 (base 16-bit K=16 -> 32)
     break;
   default:
-    llvm_unreachable("Scaled dpas only supports FP8 (8-bit) and FP4 (4-bit) "
-                     "types for A/B matrices");
+    // Scaled dpas only supports FP8 (8-bit) and FP4 (4-bit) types for A/B
+    // matrices. Return empty so callers can gracefully reject unsupported
+    // types instead of aborting.
+    return {};
   }
   return {kSize};
 }
