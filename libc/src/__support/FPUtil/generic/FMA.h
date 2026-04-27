@@ -275,7 +275,7 @@ fma(InType x, InType y, InType z) {
   if (prod_mant == 0) {
     // When there is exact cancellation, i.e., x*y == -z exactly, return -0.0 if
     // rounding downward and +0.0 for other rounding modes.
-    if (quick_get_round() == FE_DOWNWARD)
+    if (fputil::quick_get_round() == FE_DOWNWARD)
       prod_sign = Sign::NEG;
     else
       prod_sign = Sign::POS;

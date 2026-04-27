@@ -350,6 +350,16 @@ bool ThreadPlanCallFunction::DoPlanExplainsStop(Event *event_ptr) {
     // say we explain the stop but aren't done and everything will continue on
     // from there.
 
+    // Fork events are not handled by this plan — let them fall through
+    // to ThreadPlanBase. DidFork is called via PerformAction when the
+    // event is delivered.
+    if (m_real_stop_info_sp) {
+      StopReason reason = m_real_stop_info_sp->GetStopReason();
+      if (reason == eStopReasonFork || reason == eStopReasonVFork ||
+          reason == eStopReasonVForkDone)
+        return false;
+    }
+
     if (m_real_stop_info_sp &&
         m_real_stop_info_sp->ShouldStopSynchronous(event_ptr)) {
       SetPlanComplete(false);

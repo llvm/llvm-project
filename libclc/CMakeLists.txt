@@ -22,26 +22,21 @@ option(
   LIBCLC_USE_SPIRV_BACKEND "Build SPIR-V targets with the SPIR-V backend." OFF
 )
 
-# List of all supported targets.
-set( LIBCLC_TARGETS_ALL
-  amdgcn-amd-amdhsa-llvm
-  clspv--
-  clspv64--
-  nvptx64--
-  nvptx64--nvidiacl
-  nvptx64-nvidia-cuda
-  spirv-mesa3d-
-  spirv64-mesa3d-
-)
+# List of all supported architectures.
+set( LIBCLC_ARCHS_ALL amdgpu amdgcn clspv clspv64 nvptx64 spirv spirv64 )
 
-set(LIBCLC_TARGET ${LLVM_RUNTIMES_TARGET})
+set(LIBCLC_TARGET ${LLVM_DEFAULT_TARGET_TRIPLE})
 
 if(NOT LIBCLC_TARGET)
   message(FATAL_ERROR "libclc target is empty\n")
 endif()
-if(NOT "${LIBCLC_TARGET}" IN_LIST LIBCLC_TARGETS_ALL)
-  message(FATAL_ERROR "Unknown libclc target: ${LIBCLC_TARGET}\n"
-    "Valid targets are: ${LIBCLC_TARGETS_ALL}\n")
+
+string( REPLACE "-" ";" _target_components ${LIBCLC_TARGET} )
+list(GET _target_components 0 _target_arch)
+if(NOT "${_target_arch}" IN_LIST LIBCLC_ARCHS_ALL)
+  message(FATAL_ERROR "Unknown libclc target architecture: ${_target_arch}\n"
+    "Target was: ${LIBCLC_TARGET}\n"
+    "Valid architectures are: ${LIBCLC_ARCHS_ALL}\n")
 endif()
 
 if( LIBCLC_STANDALONE_BUILD OR CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
@@ -49,8 +44,6 @@ if( LIBCLC_STANDALONE_BUILD OR CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DI
 
   find_package(LLVM REQUIRED HINTS "${LLVM_CMAKE_DIR}")
   include(AddLLVM)
-
-  message( STATUS "libclc LLVM version: ${LLVM_PACKAGE_VERSION}" )
 
   foreach( tool IN ITEMS llvm-link opt )
     find_program( LLVM_TOOL_${tool} ${tool} PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH )
@@ -64,16 +57,16 @@ if( LIBCLC_STANDALONE_BUILD OR CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DI
 else()
   set( LIBCLC_STANDALONE_BUILD FALSE )
 
-  if( NOT LLVM_PACKAGE_VERSION )
-    set( LLVM_PACKAGE_VERSION ${LLVM_VERSION} )
-  endif()
-  set( PACKAGE_VERSION ${LLVM_PACKAGE_VERSION} )
-
   # Note that we check this later (for both build types) but we can provide a
   # more useful error message when built in-tree. We assume that LLVM tools are
   # always available so don't warn here.
   if( NOT LLVM_RUNTIMES_BUILD AND NOT clang IN_LIST LLVM_ENABLE_PROJECTS )
     message(FATAL_ERROR "Clang is not enabled, but is required to build libclc in-tree")
+  endif()
+
+  # The package version is required to find the resource directory.
+  if( LLVM_PACKAGE_VERSION AND NOT PACKAGE_VERSION )
+    set( PACKAGE_VERSION "${LLVM_PACKAGE_VERSION}" )
   endif()
 
   get_host_tool_path( llvm-link LLVM_LINK llvm-link_exe llvm-link_target )
@@ -272,4 +265,8 @@ add_libclc_library(libclc-${LIBCLC_TARGET}
   PARENT_TARGET libclc-opencl-builtins
 )
 
-add_subdirectory(test)
+set(LIBCLC_UNRESOLVED_SYMBOL_TEST_TARGETS libclc-${LIBCLC_TARGET})
+
+if(LLVM_INCLUDE_TESTS)
+  add_subdirectory(test)
+endif()

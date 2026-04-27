@@ -36,6 +36,7 @@ __all__ = [
     "Type",
     "Attribute",
     "result",
+    "infer_result",
     "operand",
     "attribute",
 ]
@@ -128,23 +129,28 @@ class FieldSpecifier:
 
 def result(
     *,
-    infer_type: bool = False,
     default_factory: Optional[Callable[[], Any]] = None,
     kw_only: bool = False,
 ) -> Result:
     """
     A field specifier for `Result` definitions.
     """
-    if infer_type and default_factory:
-        raise ValueError(
-            "a result field cannot have both infer_type and default_factory"
-        )
 
     return FieldSpecifier(
         type_=Result,
-        infer_type=infer_type,
         default_factory=default_factory,
         kw_only=kw_only,
+    )
+
+
+def infer_result() -> Result:
+    """
+    A field specifier for `Result` definitions with type inference enabled.
+    """
+
+    return FieldSpecifier(
+        type_=Result,
+        infer_type=True,
     )
 
 
@@ -894,12 +900,12 @@ class Dialect(ir.Dialect):
 
     class ConstantOp(MyInt.Operation, name="constant"):
         value: IntegerAttr
-        cst: Result[i32]
+        cst: Result[i32] = infer_result()
 
     class AddOp(MyInt.Operation, name="add"):
         lhs: Operand[i32]
         rhs: Operand[i32]
-        res: Result[i32]
+        res: Result[i32] = infer_result()
     ```
     """
 

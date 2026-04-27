@@ -1244,6 +1244,8 @@ def Plus1 : SDNodeXForm<imm, [{
 // Node immediate is zero (e.g. insve.d)
 def immz : PatLeaf<(imm), [{ return N->getSExtValue() == 0; }]>;
 
+def timmz : PatLeaf<(timm), [{ return N->getSExtValue() == 0; }]>;
+
 // Node immediate fits as 16-bit sign extended on target immediate.
 // e.g. addi, andi
 def immSExt8  : PatLeaf<(imm), [{ return isInt<8>(N->getSExtValue()); }]>;
@@ -1695,7 +1697,7 @@ class DEI_FT<string opstr, RegisterOperand RO,
 let hasSideEffects = 1 in
 class SYNC_FT<string opstr> :
   InstSE<(outs), (ins uimm5:$stype), "sync $stype",
-         [(MipsSync immZExt5:$stype)], II_SYNC, FrmOther, opstr>;
+         [(MipsSync timmZExt5:$stype)], II_SYNC, FrmOther, opstr>;
 
 class SYNCI_FT<string opstr, DAGOperand MO> :
   InstSE<(outs), (ins MO:$addr), !strconcat(opstr, "\t$addr"), [],
@@ -3217,7 +3219,7 @@ def : MipsPat<(mul GPR32:$lhs, GPR32:$rhs),
       ISA_MIPS1_NOT_32R6_64R6;
 
 // SYNC
-def : MipsPat<(MipsSync (i32 immz)),
+def : MipsPat<(MipsSync (i32 timmz)),
               (SYNC 0)>, ISA_MIPS2;
 
 // Call

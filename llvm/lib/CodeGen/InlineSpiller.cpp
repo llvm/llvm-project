@@ -1106,8 +1106,13 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
       LIS.InsertMachineInstrInMaps(MI);
 
   if (CopyMI) {
-    LiveInterval &LI = LIS.getInterval(CopyMI->getOperand(1).getReg());
-    LIS.shrinkToUses(&LI);
+    Register R = CopyMI->getOperand(1).getReg();
+    if (R.isVirtual()) {
+      LiveInterval &LI = LIS.getInterval(R);
+      LIS.shrinkToUses(&LI);
+    } else {
+      assert(MRI.isReserved(R) && "Unexpected PhysReg in source operand!");
+    }
   }
 
   // TII.foldMemoryOperand may have left some implicit operands on the

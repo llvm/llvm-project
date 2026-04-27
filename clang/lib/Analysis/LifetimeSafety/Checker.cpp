@@ -114,7 +114,7 @@ public:
   void checkAnnotations(const OriginEscapesFact *OEF) {
     OriginID EscapedOID = OEF->getEscapedOriginID();
     LoanSet EscapedLoans = LoanPropagation.getLoans(EscapedOID, OEF);
-    auto CheckParam = [&](const ParmVarDecl *PVD) {
+    auto CheckParam = [&](const ParmVarDecl *PVD, bool IsMoved) {
       // NoEscape param should not escape.
       if (PVD->hasAttr<NoEscapeAttr>()) {
         if (auto *ReturnEsc = dyn_cast<ReturnEscapeFact>(OEF))
@@ -125,8 +125,12 @@ public:
           NoescapeWarningsMap.try_emplace(PVD, GlobalEsc->getGlobal());
         return;
       }
-      // Suggest lifetimebound for parameter escaping through return or a field
-      // in constructor.
+      // Skip annotation suggestion for moved loans, as ownership transfer
+      // obscures the lifetime relationship (e.g., shared_ptr from unique_ptr).
+      if (IsMoved)
+        return;
+      // Otherwise, suggest lifetimebound for parameter escaping through return
+      // or a field in constructor.
       if (!PVD->hasAttr<LifetimeBoundAttr>()) {
         if (auto *ReturnEsc = dyn_cast<ReturnEscapeFact>(OEF))
           AnnotationWarningsMap.try_emplace(PVD, ReturnEsc->getReturnExpr());
@@ -142,11 +146,12 @@ public:
         if (auto *ReturnEsc = dyn_cast<ReturnEscapeFact>(OEF))
           AnnotationWarningsMap.try_emplace(MD, ReturnEsc->getReturnExpr());
     };
+    auto MovedAtEscape = MovedLoans.getMovedLoans(OEF);
     for (LoanID LID : EscapedLoans) {
       const Loan *L = FactMgr.getLoanMgr().getLoan(LID);
       const AccessPath &AP = L->getAccessPath();
       if (const auto *PVD = AP.getAsPlaceholderParam())
-        CheckParam(PVD);
+        CheckParam(PVD, /*IsMoved=*/MovedAtEscape.lookup(LID));
       else if (const auto *MD = AP.getAsPlaceholderThis())
         CheckImplicitThis(MD);
     }
@@ -250,8 +255,8 @@ public:
 
         } else
           // Scope-based expiry (use-after-scope).
-          SemaHelper->reportUseAfterFree(IssueExpr, UF->getUseExpr(), MovedExpr,
-                                         ExpiryLoc);
+          SemaHelper->reportUseAfterScope(IssueExpr, UF->getUseExpr(),
+                                          MovedExpr, ExpiryLoc);
       } else if (const auto *OEF =
                      CausingFact.dyn_cast<const OriginEscapesFact *>()) {
         if (const auto *RetEscape = dyn_cast<ReturnEscapeFact>(OEF))

@@ -1097,6 +1097,8 @@ cc_library(
 cc_library(
     name = "MLIRBindingsPythonNanobindHeaders",
     hdrs = [":MLIRBindingsPythonHeaderFiles"],
+    copts = PYTHON_BINDINGS_COPTS,
+    features = PYTHON_BINDINGS_FEATURES,
     includes = ["include"],
     deps = [
         ":CAPIDebugHeaders",
@@ -3413,6 +3415,7 @@ td_library(
     includes = ["include"],
     deps = [
         ":InferTypeOpInterfaceTdFiles",
+        ":MemoryAccessOpInterfacesTdFiles",
         ":NVGPUTypesTdFiles",
         ":SideEffectInterfacesTdFiles",
     ],
@@ -3445,6 +3448,7 @@ gentbl_cc_library(
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/NVGPU/IR/NVGPUOps.td",
     deps = [
+        ":MemoryAccessOpInterfacesIncGen",
         ":NVGPUOpsTdFiles",
         ":NVGPUTdFiles",
         ":NVGPUTypesTdFiles",
@@ -3479,6 +3483,7 @@ cc_library(
         ":IR",
         ":InferTypeOpInterface",
         ":LLVMDialect",
+        ":MemRefDialect",
         ":NVGPUIncGen",
         ":SideEffectInterfaces",
         "//llvm:Support",
@@ -7755,6 +7760,7 @@ cc_library(
     ],
     hdrs = [
         "include/mlir/Transforms/CFGToSCF.h",
+        "include/mlir/Transforms/CSE.h",
         "include/mlir/Transforms/CommutativityUtils.h",
         "include/mlir/Transforms/ControlFlowSinkUtils.h",
         "include/mlir/Transforms/DialectConversion.h",
@@ -8181,6 +8187,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":DataLayoutInterfaces",
+        ":FunctionInterfaces",
         ":IR",
         ":LLVMDialect",
         ":Support",
@@ -9221,6 +9228,7 @@ cc_library(
         ":LLVMDialect",
         ":OpenMPCommon",
         ":OpenMPDialect",
+        ":OpenMPUtils",
         ":SideEffectInterfaces",
         ":Support",
         ":ToLLVMIRTranslation",
@@ -9576,6 +9584,7 @@ cc_library(
         ":MemRefDialect",
         ":MemRefTransforms",
         ":NVGPUDialect",
+        ":NVGPUTransforms",
         ":NVVMDialect",
         ":NVVMTarget",
         ":OpenACCDialect",
@@ -10669,6 +10678,22 @@ gentbl_cc_library(
 )
 
 cc_library(
+    name = "OpenMPUtils",
+    srcs = glob(["lib/Dialect/OpenMP/Utils/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/OpenMP/Utils/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":AtomicInterfaces",
+        ":CallOpInterfaces",
+        ":IR",
+        ":LLVMDialect",
+        ":OpenMPDialect",
+        ":Support",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "OpenMPTransforms",
     srcs = glob(
         [
@@ -10679,12 +10704,15 @@ cc_library(
     includes = ["include"],
     deps = [
         ":Analysis",
+        ":AtomicInterfaces",
         ":FuncDialect",
         ":FunctionInterfaces",
         ":IR",
         ":LLVMDialect",
+        ":OpenACCMPOpsInterfacesIncGen",
         ":OpenMPDialect",
         ":OpenMPPassIncGen",
+        ":OpenMPUtils",
         ":Pass",
         ":Support",
         ":Transforms",
@@ -12204,6 +12232,8 @@ gentbl_cc_library(
         "include/mlir/Dialect/Transform/Interfaces/TransformInterfaces.cpp.inc": ["-gen-op-interface-defs"],
         "include/mlir/Dialect/Transform/Interfaces/TransformTypeInterfaces.h.inc": ["-gen-type-interface-decls"],
         "include/mlir/Dialect/Transform/Interfaces/TransformTypeInterfaces.cpp.inc": ["-gen-type-interface-defs"],
+        "include/mlir/Dialect/Transform/Interfaces/TransformAttrInterfaces.h.inc": ["-gen-attr-interface-decls"],
+        "include/mlir/Dialect/Transform/Interfaces/TransformAttrInterfaces.cpp.inc": ["-gen-attr-interface-defs"],
     },
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/Transform/Interfaces/TransformInterfaces.td",
@@ -12283,6 +12313,7 @@ cc_library(
         ":ConvertToLLVMInterface",
         ":FunctionInterfaces",
         ":IR",
+        ":InliningUtils",
         ":LLVMCommonConversion",
         ":LLVMDialect",
         ":LoopLikeInterface",

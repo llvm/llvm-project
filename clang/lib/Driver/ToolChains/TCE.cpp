@@ -44,4 +44,10 @@ TCELEToolChain::TCELEToolChain(const Driver &D, const llvm::Triple& Triple,
   : TCEToolChain(D, Triple, Args) {
 }
 
+TCELE64ToolChain::TCELE64ToolChain(const Driver &D, const llvm::Triple &Triple,
+                                   const ArgList &Args)
+    : TCEToolChain(D, Triple, Args) {}
+
+TCELE64ToolChain::~TCELE64ToolChain() {}
+
 TCELEToolChain::~TCELEToolChain() {}
