@@ -206,6 +206,14 @@ struct CUFAllocOpConversion : public mlir::OpRewritePattern<cuf::AllocOp> {
                 rewriter, loc, nbElem,
                 builder.loadIfRef(loc, op.getShape()[i]));
           }
+          for (auto extent : seqTy.getShape()) {
+            if (extent != fir::SequenceType::getUnknownExtent()) {
+              nbElem = mlir::arith::MulIOp::create(
+                  rewriter, loc, nbElem,
+                  builder.createIntegerConstant(loc, builder.getIndexType(),
+                                                extent));
+            }
+          }
         } else {
           nbElem = builder.createIntegerConstant(loc, builder.getIndexType(),
                                                  seqTy.getConstantArraySize());
