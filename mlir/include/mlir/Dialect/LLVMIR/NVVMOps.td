@@ -521,8 +521,8 @@ def NVVM_RcpApproxFtzF32Op : NVVM_IntrOp<"rcp.approx.ftz.f", [Pure], 1> {
 //===----------------------------------------------------------------------===//
 // NVVM transcendental op definitions
 //===----------------------------------------------------------------------===//
-// PTX provides only fast approximations for sin/cos/lg2/ex2/tanh. Exposing
-// these as plain `nvvm.{sin,cos,lg2,ex2,tanh}` (without a `.approx` suffix)
+// PTX provides only fast approximations for sin/cos/log2/ex2/tanh. Exposing
+// these as plain `nvvm.{sin,cos,log2,ex2,tanh}` (without a `.approx` suffix)
 // keeps the NVVM dialect self-contained -- users don't need to reach for
 // `math.*` ops for something that already has a PTX instruction.
 
@@ -558,7 +558,7 @@ def NVVM_CosOp : NVVM_SingleResultIntrinsicOp<"cos",
   let assemblyFormat = "$src attr-dict `:` type($src)";
 }
 
-def NVVM_Lg2Op : NVVM_SingleResultIntrinsicOp<"lg2",
+def NVVM_Log2Op : NVVM_SingleResultIntrinsicOp<"log2",
     [Pure, SameOperandsAndResultType]> {
   let summary = "Base-2 logarithm (fast approximation)";
   let description = [{
