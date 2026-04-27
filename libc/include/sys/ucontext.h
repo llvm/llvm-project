@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef SYS_UCONTEXT_H
-#define SYS_UCONTEXT_H
+#ifndef LLVM_LIBC_SYS_UCONTEXT_H
+#define LLVM_LIBC_SYS_UCONTEXT_H
 
 #include <ucontext.h>
 
-#endif // SYS_UCONTEXT_H
+#endif // LLVM_LIBC_SYS_UCONTEXT_H
