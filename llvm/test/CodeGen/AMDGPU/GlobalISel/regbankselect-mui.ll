@@ -506,33 +506,35 @@ define amdgpu_cs void @loop_with_2breaks(ptr addrspace(1) %x, ptr addrspace(1) %
 ; OLD_RBS-NEXT:    s_andn2_b32 s1, s1, exec_lo
 ; OLD_RBS-NEXT:    s_and_b32 s2, exec_lo, -1
 ; OLD_RBS-NEXT:    s_or_b32 s1, s1, s2
-; OLD_RBS-NEXT:    v_lshlrev_b64 v[7:8], 2, v[6:7]
-; OLD_RBS-NEXT:    v_add_co_u32 v9, vcc_lo, v2, v7
-; OLD_RBS-NEXT:    v_add_co_ci_u32_e32 v10, vcc_lo, v3, v8, vcc_lo
-; OLD_RBS-NEXT:    global_load_dword v9, v[9:10], off
+; OLD_RBS-NEXT:    v_lshlrev_b64 v[8:9], 2, v[6:7]
+; OLD_RBS-NEXT:    v_add_co_u32 v8, vcc_lo, v2, v8
+; OLD_RBS-NEXT:    v_add_co_ci_u32_e32 v9, vcc_lo, v3, v9, vcc_lo
+; OLD_RBS-NEXT:    global_load_dword v8, v[8:9], off
 ; OLD_RBS-NEXT:    s_waitcnt vmcnt(0)
-; OLD_RBS-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v9
+; OLD_RBS-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v8
 ; OLD_RBS-NEXT:    s_and_saveexec_b32 s2, vcc_lo
 ; OLD_RBS-NEXT:    s_cbranch_execz .LBB16_2
 ; OLD_RBS-NEXT:  ; %bb.4: ; %B
 ; OLD_RBS-NEXT:    ; in Loop: Header=BB16_3 Depth=1
-; OLD_RBS-NEXT:    v_add_co_u32 v9, vcc_lo, v4, v7
-; OLD_RBS-NEXT:    v_add_co_ci_u32_e32 v10, vcc_lo, v5, v8, vcc_lo
+; OLD_RBS-NEXT:    v_lshlrev_b64 v[8:9], 2, v[6:7]
 ; OLD_RBS-NEXT:    s_mov_b32 s4, -1
-; OLD_RBS-NEXT:    global_load_dword v9, v[9:10], off
+; OLD_RBS-NEXT:    v_add_co_u32 v8, vcc_lo, v4, v8
+; OLD_RBS-NEXT:    v_add_co_ci_u32_e32 v9, vcc_lo, v5, v9, vcc_lo
+; OLD_RBS-NEXT:    global_load_dword v8, v[8:9], off
 ; OLD_RBS-NEXT:    s_waitcnt vmcnt(0)
-; OLD_RBS-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v9
+; OLD_RBS-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v8
 ; OLD_RBS-NEXT:    s_and_saveexec_b32 s3, vcc_lo
 ; OLD_RBS-NEXT:    s_cbranch_execz .LBB16_1
 ; OLD_RBS-NEXT:  ; %bb.5: ; %loop.body
 ; OLD_RBS-NEXT:    ; in Loop: Header=BB16_3 Depth=1
+; OLD_RBS-NEXT:    v_lshlrev_b64 v[7:8], 2, v[6:7]
+; OLD_RBS-NEXT:    v_add_nc_u32_e32 v10, 1, v6
+; OLD_RBS-NEXT:    s_andn2_b32 s4, -1, exec_lo
 ; OLD_RBS-NEXT:    v_add_co_u32 v7, vcc_lo, v0, v7
 ; OLD_RBS-NEXT:    v_add_co_ci_u32_e32 v8, vcc_lo, v1, v8, vcc_lo
-; OLD_RBS-NEXT:    v_add_nc_u32_e32 v10, 1, v6
 ; OLD_RBS-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 0x64, v6
-; OLD_RBS-NEXT:    s_andn2_b32 s4, -1, exec_lo
-; OLD_RBS-NEXT:    global_load_dword v9, v[7:8], off
 ; OLD_RBS-NEXT:    v_mov_b32_e32 v6, v10
+; OLD_RBS-NEXT:    global_load_dword v9, v[7:8], off
 ; OLD_RBS-NEXT:    s_and_b32 s5, exec_lo, vcc_lo
 ; OLD_RBS-NEXT:    s_or_b32 s4, s4, s5
 ; OLD_RBS-NEXT:    s_waitcnt vmcnt(0)

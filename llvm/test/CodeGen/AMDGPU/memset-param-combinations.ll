@@ -1779,10 +1779,10 @@ define void @memset_p1_varsz_align_4_set0(ptr addrspace(1) align 4 %dst, i64 %si
 ; GFX942-SDAG-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; GFX942-SDAG-NEXT:    s_cbranch_execz .LBB13_3
 ; GFX942-SDAG-NEXT:  ; %bb.1: ; %dynamic-memset-expansion-main-body.preheader
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v8, v5
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v9, v5
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v10, v5
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v11, v5
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v8, 0
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v9, v8
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v10, v8
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v11, v8
 ; GFX942-SDAG-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX942-SDAG-NEXT:  .LBB13_2: ; %dynamic-memset-expansion-main-body
 ; GFX942-SDAG-NEXT:    ; =>This Inner Loop Header: Depth=1

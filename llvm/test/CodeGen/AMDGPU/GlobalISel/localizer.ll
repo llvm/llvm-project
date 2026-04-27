@@ -166,10 +166,9 @@ define void @localize_internal_globals(i1 %cond) {
 ; GFX9-LABEL: localize_internal_globals:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_and_b32_e32 v1, 1, v0
+; GFX9-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX9-NEXT:    s_mov_b64 s[4:5], exec
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v1
-; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
 ; GFX9-NEXT:    s_xor_b64 s[4:5], vcc, s[4:5]
 ; GFX9-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
 ; GFX9-NEXT:    s_xor_b64 s[4:5], exec, s[6:7]
@@ -184,6 +183,7 @@ define void @localize_internal_globals(i1 %cond) {
 ; GFX9-NEXT:    s_getpc_b64 s[6:7]
 ; GFX9-NEXT:    s_add_u32 s6, s6, static.gv2@rel32@lo+4
 ; GFX9-NEXT:    s_addc_u32 s7, s7, static.gv2@rel32@hi+12
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    global_store_dword v0, v0, s[6:7]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_getpc_b64 s[6:7]

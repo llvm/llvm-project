@@ -32,7 +32,6 @@ define void @needs_align16_default_stack_align(i32 %idx) #0 {
 ; GCN-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-; GCN: ; ScratchSize: 144
   %alloca.align16 = alloca [8 x <4 x i32>], align 16, addrspace(5)
   %gep0 = getelementptr inbounds [8 x <4 x i32>], ptr addrspace(5) %alloca.align16, i32 0, i32 %idx
   store volatile <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr addrspace(5) %gep0, align 16
@@ -71,7 +70,6 @@ define void @needs_align16_stack_align4(i32 %idx) #2 {
 ; GCN-NEXT:    s_mov_b32 s34, s5
 ; GCN-NEXT:    s_mov_b32 s33, s4
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-; GCN: ; ScratchSize: 160
   %alloca.align16 = alloca [8 x <4 x i32>], align 16, addrspace(5)
   %gep0 = getelementptr inbounds [8 x <4 x i32>], ptr addrspace(5) %alloca.align16, i32 0, i32 %idx
   store volatile <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr addrspace(5) %gep0, align 16
@@ -111,7 +109,6 @@ define void @needs_align32(i32 %idx) #0 {
 ; GCN-NEXT:    s_mov_b32 s34, s5
 ; GCN-NEXT:    s_mov_b32 s33, s4
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-; GCN: ; ScratchSize: 192
   %alloca.align16 = alloca [8 x <4 x i32>], align 32, addrspace(5)
   %gep0 = getelementptr inbounds [8 x <4 x i32>], ptr addrspace(5) %alloca.align16, i32 0, i32 %idx
   store volatile <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr addrspace(5) %gep0, align 32
@@ -138,7 +135,6 @@ define void @force_realign4(i32 %idx) #1 {
 ; GCN-NEXT:    s_mov_b32 s34, s5
 ; GCN-NEXT:    s_mov_b32 s33, s4
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-; GCN: ; ScratchSize: 52
   %alloca.align16 = alloca [8 x i32], align 4, addrspace(5)
   %gep0 = getelementptr inbounds [8 x i32], ptr addrspace(5) %alloca.align16, i32 0, i32 %idx
   store volatile i32 3, ptr addrspace(5) %gep0, align 4
@@ -366,11 +362,11 @@ define i32 @needs_align1024_stack_args_used_inside_loop(ptr addrspace(5) nocaptu
 ; GCN-NEXT:    s_cbranch_execz .LBB10_4
 ; GCN-NEXT:  .LBB10_2: ; %loop_body
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN-NEXT:    buffer_load_dword v0, v1, s[0:3], 0 offen
+; GCN-NEXT:    buffer_load_dword v2, v1, s[0:3], 0 offen
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_or_b64 s[6:7], s[6:7], exec
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, s10, v0
-; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, s10, v2
 ; GCN-NEXT:    s_and_saveexec_b64 s[8:9], vcc
 ; GCN-NEXT:    s_cbranch_execz .LBB10_1
 ; GCN-NEXT:  ; %bb.3: ; %loop_end
