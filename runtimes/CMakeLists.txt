@@ -33,6 +33,9 @@ list(INSERT CMAKE_MODULE_PATH 0
   "${CMAKE_CURRENT_SOURCE_DIR}/../llvm/cmake/modules"
 )
 
+# This can be used to detect whether we're in the runtimes build.
+set(LLVM_RUNTIMES_BUILD ON)
+
 # We order libraries to mirror roughly how they are layered, except that
 # compiler-rt can depend on libc++, so we put it after. Offload can depend on
 # flang-rt so we order it before.
@@ -309,9 +312,6 @@ endif()
 if(CMAKE_HOST_APPLE AND APPLE)
   include(UseLibtool)
 endif()
-
-# This can be used to detect whether we're in the runtimes build.
-set(LLVM_RUNTIMES_BUILD ON)
 
 # Make GTest available to all runtimes
 # The runtime must call make_gtest_target() for it to become available. This is
