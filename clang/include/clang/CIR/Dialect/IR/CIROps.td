@@ -3843,7 +3843,7 @@ def CIR_LocalInitOp : CIR_Op<"local_init", [
   }];
   let arguments = (ins
     FlatSymbolRefAttr : $globalName,
-    UnitAttr : $tls
+    UnitProp : $tls
   );
 
   let regions = (region
