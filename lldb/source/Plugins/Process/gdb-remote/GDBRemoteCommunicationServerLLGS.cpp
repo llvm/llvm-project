@@ -3081,14 +3081,16 @@ GDBRemoteCommunicationServerLLGS::SendBreakpointResponse(
   return std::visit(
       [&](auto &&arg) {
         using T = std::decay_t<decltype(arg)>;
+        static_assert(std::is_same_v<T, BreakpointOK> ||
+                          std::is_same_v<T, BreakpointError> ||
+                          std::is_same_v<T, BreakpointIllFormed>,
+                      "non-exhaustive visitor!");
         if constexpr (std::is_same_v<T, BreakpointOK>)
           return SendOKResponse();
         else if constexpr (std::is_same_v<T, BreakpointError>)
           return SendErrorResponse(arg.error_code);
-        else if constexpr (std::is_same_v<T, BreakpointIllFormed>)
-          return SendIllFormedResponse(packet, arg.message.c_str());
         else
-          static_assert(false, "non-exhaustive visitor!");
+          return SendIllFormedResponse(packet, arg.message.c_str());
       },
       result);
 }
