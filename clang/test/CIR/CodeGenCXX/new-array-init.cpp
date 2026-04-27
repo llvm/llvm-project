@@ -27,7 +27,7 @@ void fn(int n) {
   // 64 bit all 1s
   // CIR: %[[ALL_ONES:.*]] = cir.const #cir.int<18446744073709551615> : !u64i
   // CIR: %[[ADJ_SIZE:.*]] = cir.select if %[[LT_THREE_OR_OVRFL]] then %[[ALL_ONES]] else %[[N_IN_BYTES]] : (!cir.bool, !u64i, !u64i) -> !u64i
-  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[ADJ_SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.noundef})
+  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[ADJ_SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.nonnull, llvm.noundef})
   // CIR: %[[ALLOC_TO_INTS:.*]] = cir.cast bitcast %[[ALLOC]] : !cir.ptr<!void> -> !cir.ptr<!s32i>
   // CIR: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
   // CIR: cir.store {{.*}}%[[ONE]], %[[ALLOC_TO_INTS]] : !s32i, !cir.ptr<!s32i>
@@ -56,7 +56,7 @@ void fn(int n) {
   // LLVM-DAG: %[[OVERFLOW:.*]] = extractvalue { i64, i1 } %[[MUL_RES]], 1
   // LLVM-DAG: %[[N_LT3_OR_OF:.*]] = or i1 %[[N_LT_THREE]], %[[OVERFLOW]]
   // LLVM-DAG: %[[ADJ_SIZE:.*]] = select i1 %[[N_LT3_OR_OF]], i64 -1, i64 %[[N_IN_BYTES]]
-  // LLVM: %[[ALLOC:.*]] = call{{.*}}ptr @_Znam(i64 noundef %[[ADJ_SIZE]])
+  // LLVM: %[[ALLOC:.*]] = call{{.*}}nonnull ptr @_Znam(i64 noundef %[[ADJ_SIZE]])
   // LLVM: store i32 1, ptr %[[ALLOC]]
   // LLVM: %[[ELT1:.*]] = getelementptr{{.*}}i32, ptr %[[ALLOC]], i64 1
   // LLVM: store i32 2, ptr %[[ELT1]]
@@ -82,7 +82,7 @@ void fn_paren(int n) {
   // 64 bit all 1s
   // CIR: %[[ALL_ONES:.*]] = cir.const #cir.int<18446744073709551615> : !u64i
   // CIR: %[[ADJ_SIZE:.*]] = cir.select if %[[LT_THREE_OR_OVRFL]] then %[[ALL_ONES]] else %[[N_IN_BYTES]] : (!cir.bool, !u64i, !u64i) -> !u64i
-  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[ADJ_SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.noundef})
+  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[ADJ_SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.nonnull, llvm.noundef})
   // CIR: %[[ALLOC_TO_INTS:.*]] = cir.cast bitcast %[[ALLOC]] : !cir.ptr<!void> -> !cir.ptr<!s32i>
   // CIR: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
   // CIR: cir.store {{.*}}%[[ONE]], %[[ALLOC_TO_INTS]] : !s32i, !cir.ptr<!s32i>
@@ -111,7 +111,7 @@ void fn_paren(int n) {
   // LLVM-DAG: %[[OVERFLOW:.*]] = extractvalue { i64, i1 } %[[MUL_RES]], 1
   // LLVM-DAG: %[[N_LT3_OR_OF:.*]] = or i1 %[[N_LT_THREE]], %[[OVERFLOW]]
   // LLVM-DAG: %[[ADJ_SIZE:.*]] = select i1 %[[N_LT3_OR_OF]], i64 -1, i64 %[[N_IN_BYTES]]
-  // LLVM: %[[ALLOC:.*]] = call{{.*}}ptr @_Znam(i64 noundef %[[ADJ_SIZE]])
+  // LLVM: %[[ALLOC:.*]] = call{{.*}}nonnull ptr @_Znam(i64 noundef %[[ADJ_SIZE]])
   // LLVM: store i32 1, ptr %[[ALLOC]]
   // LLVM: %[[ELT1:.*]] = getelementptr{{.*}}i32, ptr %[[ALLOC]], i64 1
   // LLVM: store i32 2, ptr %[[ELT1]]
@@ -127,7 +127,7 @@ void fn_paren(int n) {
 // LLVM-LABEL: define{{.*}} void @_Z11const_exactv
 void const_exact() {
   // CIR: %[[ALLOC_SIZE:.*]] = cir.const #cir.int<12> : !u64i
-  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[ALLOC_SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.noundef})
+  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[ALLOC_SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.nonnull, llvm.noundef})
   // CIR: %[[ALLOC_TO_INTS:.*]] = cir.cast bitcast %[[ALLOC]] : !cir.ptr<!void> -> !cir.ptr<!s32i>
   // CIR: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
   // CIR: cir.store {{.*}}%[[ONE]], %[[ALLOC_TO_INTS]] : !s32i, !cir.ptr<!s32i>
@@ -143,7 +143,7 @@ void const_exact() {
   // CIR: %[[ELT3:.*]] = cir.ptr_stride %[[ELT2]], %[[ONE]] : (!cir.ptr<!s32i>, !s32i) -> !cir.ptr<!s32i>
   // CIR: cir.return
 
-  // LLVM: %[[ALLOC:.*]] = call{{.*}}ptr @_Znam(i64 noundef 12)
+  // LLVM: %[[ALLOC:.*]] = call{{.*}}nonnull ptr @_Znam(i64 noundef 12)
   // LLVM: store i32 1, ptr %[[ALLOC]]
   // LLVM: %[[ELT1:.*]] = getelementptr{{.*}}i32, ptr %[[ALLOC]], i64 1
   // LLVM: store i32 2, ptr %[[ELT1]]
@@ -158,7 +158,7 @@ void const_exact() {
 // LLVM-LABEL: define{{.*}} void @_Z17const_exact_parenv
 void const_exact_paren() {
   // CIR: %[[SIZE:.*]] = cir.const #cir.int<12> : !u64i
-  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.noundef})
+  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.nonnull, llvm.noundef})
   // CIR: %[[ALLOC_CAST:.*]] = cir.cast bitcast %[[ALLOC]] : !cir.ptr<!void> -> !cir.ptr<!s32i>
   // CIR: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
   // CIR: cir.store {{.*}} %[[ONE]], %[[ALLOC_CAST]] : !s32i, !cir.ptr<!s32i>
@@ -173,7 +173,7 @@ void const_exact_paren() {
   // CIR: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
   // CIR: %[[ELT3:.*]] = cir.ptr_stride %[[ELT2]], %[[ONE]] : (!cir.ptr<!s32i>, !s32i) -> !cir.ptr<!s32i>
 
-  // LLVM: %[[ALLOC:.*]] = call{{.*}}ptr @_Znam(i64 noundef 12)
+  // LLVM: %[[ALLOC:.*]] = call{{.*}}nonnull ptr @_Znam(i64 noundef 12)
   // LLVM: store i32 1, ptr %[[ALLOC]]
   // LLVM: %[[ELT1:.*]] = getelementptr{{.*}}i32, ptr %[[ALLOC]], i64 1
   // LLVM: store i32 2, ptr %[[ELT1]]
@@ -188,7 +188,7 @@ void const_exact_paren() {
 // LLVM-LABEL: define{{.*}} void @_Z16const_sufficientv
 void const_sufficient() {
   // CIR: %[[SIZE:.*]] = cir.const #cir.int<16> : !u64i
-  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.noundef})
+  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.nonnull, llvm.noundef})
   // CIR: %[[ALLOC_INTS:.*]] = cir.cast bitcast %[[ALLOC]] : !cir.ptr<!void> -> !cir.ptr<!s32i>
   // CIR: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
   // CIR: cir.store {{.*}} %[[ONE]], %[[ALLOC_INTS]] : !s32i, !cir.ptr<!s32i>
@@ -209,7 +209,7 @@ void const_sufficient() {
   // CIR: cir.libc.memset %[[REST_SIZE]] bytes at %[[REST_PTR_DECAY]] to %[[ZERO]] : !cir.ptr<!void>, !u8i, !u64i
   // CIR: cir.return
 
-  // LLVM: %[[ALLOC:.*]] = call{{.*}}ptr @_Znam(i64 noundef 16)
+  // LLVM: %[[ALLOC:.*]] = call{{.*}}nonnull ptr @_Znam(i64 noundef 16)
   // LLVM: store i32 1, ptr %[[ALLOC]]
   // LLVM: %[[ELT1:.*]] = getelementptr{{.*}}i32, ptr %[[ALLOC]], i64 1
   // LLVM: store i32 2, ptr %[[ELT1]]
@@ -225,7 +225,7 @@ void const_sufficient() {
 // LLVM-LABEL: define{{.*}} void @_Z22const_sufficient_parenv
 void const_sufficient_paren() {
   // CIR: %[[SIZE:.*]] = cir.const #cir.int<16> : !u64i
-  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.noundef})
+  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.nonnull, llvm.noundef})
   // CIR: %[[ALLOC_INTS:.*]] = cir.cast bitcast %[[ALLOC]] : !cir.ptr<!void> -> !cir.ptr<!s32i>
   // CIR: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
   // CIR: cir.store {{.*}} %[[ONE]], %[[ALLOC_INTS]] : !s32i, !cir.ptr<!s32i>
@@ -246,7 +246,7 @@ void const_sufficient_paren() {
   // CIR: cir.libc.memset %[[REST_SIZE]] bytes at %[[REST_PTR_DECAY]] to %[[ZERO]] : !cir.ptr<!void>, !u8i, !u64i
   // CIR: cir.return
 
-  // LLVM: %[[ALLOC:.*]] = call{{.*}}ptr @_Znam(i64 noundef 16)
+  // LLVM: %[[ALLOC:.*]] = call{{.*}}nonnull ptr @_Znam(i64 noundef 16)
   // LLVM: store i32 1, ptr %[[ALLOC]]
   // LLVM: %[[ELT1:.*]] = getelementptr{{.*}}i32, ptr %[[ALLOC]], i64 1
   // LLVM: store i32 2, ptr %[[ELT1]]
@@ -287,7 +287,7 @@ void string_nonconst(int n) {
   // CIR: %[[N_LT_4:.*]] = cir.cmp lt %[[N_CAST]], %[[FOUR]] : !u64i
   // CIR: %[[NEG_ONE:.*]] = cir.const #cir.int<18446744073709551615> : !u64i
   // CIR: %[[SIZE:.*]] = cir.select if %[[N_LT_4]] then %[[NEG_ONE]] else %[[N_CAST]] : (!cir.bool, !u64i, !u64i) -> !u64i
-  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.noundef})
+  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.nonnull, llvm.noundef})
   // CIR: %[[ALLOC_CAST:.*]] = cir.cast bitcast %[[ALLOC]] : !cir.ptr<!void> -> !cir.ptr<!s8i>
   // CIR: %[[ALLOC_AS_STRING:.*]] = cir.cast bitcast %[[ALLOC_CAST]] : !cir.ptr<!s8i> -> !cir.ptr<!cir.array<!s8i x 4>>
   // CIR: %[[GET_STR:.*]] = cir.get_global @[[ABC4]] : !cir.ptr<!cir.array<!s8i x 4>>
@@ -305,7 +305,7 @@ void string_nonconst(int n) {
   // LLVM: %[[ARG_CAST:.*]] = sext i32 %[[ARG_LOAD]] to i64
   // LLVM: %[[N_LT_4:.*]] = icmp ult i64 %[[ARG_CAST]], 4
   // LLVM: %[[SIZE:.*]] = select i1 %[[N_LT_4]], i64 -1, i64 %[[ARG_CAST]]
-  // LLVM: %[[ALLOC:.*]] = call{{.*}}ptr @_Znam(i64 noundef %[[SIZE]])
+  // LLVM: %[[ALLOC:.*]] = call{{.*}}nonnull ptr @_Znam(i64 noundef %[[SIZE]])
   // LLVM: call void @llvm.memcpy.p0.p0.i64(ptr{{.*}} %[[ALLOC]], ptr {{.*}}@[[ABC4]], i64 4, i1 false)
   // LLVM: %[[AFTER_COPY:.*]] = getelementptr {{.*}}i8, ptr %[[ALLOC]]
   // LLVM: %[[SIZE_LEFT:.*]] = sub i64 %[[SIZE]], 4
@@ -323,7 +323,7 @@ void string_nonconst_paren(int n) {
   // CIR: %[[N_LT_4:.*]] = cir.cmp lt %[[N_CAST]], %[[FOUR]] : !u64i
   // CIR: %[[NEG_ONE:.*]] = cir.const #cir.int<18446744073709551615> : !u64i
   // CIR: %[[SIZE:.*]] = cir.select if %[[N_LT_4]] then %[[NEG_ONE]] else %[[N_CAST]] : (!cir.bool, !u64i, !u64i) -> !u64i
-  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.noundef})
+  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.nonnull, llvm.noundef})
   // CIR: %[[ALLOC_CAST:.*]] = cir.cast bitcast %[[ALLOC]] : !cir.ptr<!void> -> !cir.ptr<!s8i>
   // CIR: %[[ALLOC_AS_STRING:.*]] = cir.cast bitcast %[[ALLOC_CAST]] : !cir.ptr<!s8i> -> !cir.ptr<!cir.array<!s8i x 4>>
   // CIR: %[[GET_STR:.*]] = cir.get_global @[[ABC4]] : !cir.ptr<!cir.array<!s8i x 4>>
@@ -341,7 +341,7 @@ void string_nonconst_paren(int n) {
   // LLVM: %[[ARG_CAST:.*]] = sext i32 %[[ARG_LOAD]] to i64
   // LLVM: %[[N_LT_4:.*]] = icmp ult i64 %[[ARG_CAST]], 4
   // LLVM: %[[SIZE:.*]] = select i1 %[[N_LT_4]], i64 -1, i64 %[[ARG_CAST]]
-  // LLVM: %[[ALLOC:.*]] = call{{.*}}ptr @_Znam(i64 noundef %[[SIZE]])
+  // LLVM: %[[ALLOC:.*]] = call{{.*}}nonnull ptr @_Znam(i64 noundef %[[SIZE]])
   // LLVM: call void @llvm.memcpy.p0.p0.i64(ptr{{.*}} %[[ALLOC]], ptr {{.*}}@[[ABC4]], i64 4, i1 false)
   // LLVM: %[[AFTER_COPY:.*]] = getelementptr {{.*}}i8, ptr %[[ALLOC]]
   // LLVM: %[[SIZE_LEFT:.*]] = sub i64 %[[SIZE]], 4
@@ -359,7 +359,7 @@ void string_nonconst_paren_extra_paren(int n) {
   // CIR: %[[N_LT_4:.*]] = cir.cmp lt %[[N_CAST]], %[[FOUR]] : !u64i
   // CIR: %[[NEG_ONE:.*]] = cir.const #cir.int<18446744073709551615> : !u64i
   // CIR: %[[SIZE:.*]] = cir.select if %[[N_LT_4]] then %[[NEG_ONE]] else %[[N_CAST]] : (!cir.bool, !u64i, !u64i) -> !u64i
-  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.noundef})
+  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.nonnull, llvm.noundef})
   // CIR: %[[ALLOC_CAST:.*]] = cir.cast bitcast %[[ALLOC]] : !cir.ptr<!void> -> !cir.ptr<!s8i>
   // CIR: %[[ALLOC_AS_STRING:.*]] = cir.cast bitcast %[[ALLOC_CAST]] : !cir.ptr<!s8i> -> !cir.ptr<!cir.array<!s8i x 4>>
   // CIR: %[[GET_STR:.*]] = cir.get_global @[[ABC4]] : !cir.ptr<!cir.array<!s8i x 4>>
@@ -377,7 +377,7 @@ void string_nonconst_paren_extra_paren(int n) {
   // LLVM: %[[ARG_CAST:.*]] = sext i32 %[[ARG_LOAD]] to i64
   // LLVM: %[[N_LT_4:.*]] = icmp ult i64 %[[ARG_CAST]], 4
   // LLVM: %[[SIZE:.*]] = select i1 %[[N_LT_4]], i64 -1, i64 %[[ARG_CAST]]
-  // LLVM: %[[ALLOC:.*]] = call{{.*}}ptr @_Znam(i64 noundef %[[SIZE]])
+  // LLVM: %[[ALLOC:.*]] = call{{.*}}nonnull ptr @_Znam(i64 noundef %[[SIZE]])
   // LLVM: call void @llvm.memcpy.p0.p0.i64(ptr{{.*}} %[[ALLOC]], ptr {{.*}}@[[ABC4]], i64 4, i1 false)
   // LLVM: %[[AFTER_COPY:.*]] = getelementptr {{.*}}i8, ptr %[[ALLOC]]
   // LLVM: %[[SIZE_LEFT:.*]] = sub i64 %[[SIZE]], 4
@@ -389,14 +389,14 @@ void string_nonconst_paren_extra_paren(int n) {
 // LLVM-LABEL: define{{.*}} void @_Z12string_exactv
 void string_exact() {
   // CIR: %[[SIZE:.*]] = cir.const #cir.int<4> : !u64i
-  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.noundef})
+  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.nonnull, llvm.noundef})
   // CIR: %[[ALLOC_CAST:.*]] = cir.cast bitcast %[[ALLOC]] : !cir.ptr<!void> -> !cir.ptr<!s8i>
   // CIR: %[[ALLOC_AS_STRING:.*]] = cir.cast bitcast %[[ALLOC_CAST]] : !cir.ptr<!s8i> -> !cir.ptr<!cir.array<!s8i x 4>>
   // CIR: %[[GET_STR:.*]] = cir.get_global @[[ABC4]] : !cir.ptr<!cir.array<!s8i x 4>>
   // CIR: cir.copy %[[GET_STR]] to %[[ALLOC_AS_STRING]] : !cir.ptr<!cir.array<!s8i x 4>>
   // CIR: cir.return
 
-  // LLVM: %[[ALLOC:.*]] = call{{.*}}ptr @_Znam(i64 noundef 4)
+  // LLVM: %[[ALLOC:.*]] = call{{.*}}nonnull ptr @_Znam(i64 noundef 4)
   // LLVM: call void @llvm.memcpy.p0.p0.i64(ptr{{.*}} %[[ALLOC]], ptr {{.*}}@[[ABC4]], i64 4, i1 false)
   new char[4] { "abc" };
 }
@@ -405,14 +405,14 @@ void string_exact() {
 // LLVM-LABEL: define{{.*}} void @_Z18string_exact_parenv
 void string_exact_paren() {
   // CIR: %[[SIZE:.*]] = cir.const #cir.int<4> : !u64i
-  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.noundef})
+  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.nonnull, llvm.noundef})
   // CIR: %[[ALLOC_CAST:.*]] = cir.cast bitcast %[[ALLOC]] : !cir.ptr<!void> -> !cir.ptr<!s8i>
   // CIR: %[[ALLOC_AS_STRING:.*]] = cir.cast bitcast %[[ALLOC_CAST]] : !cir.ptr<!s8i> -> !cir.ptr<!cir.array<!s8i x 4>>
   // CIR: %[[GET_STR:.*]] = cir.get_global @[[ABC4]] : !cir.ptr<!cir.array<!s8i x 4>>
   // CIR: cir.copy %[[GET_STR]] to %[[ALLOC_AS_STRING]] : !cir.ptr<!cir.array<!s8i x 4>>
   // CIR: cir.return
 
-  // LLVM: %[[ALLOC:.*]] = call{{.*}}ptr @_Znam(i64 noundef 4)
+  // LLVM: %[[ALLOC:.*]] = call{{.*}}nonnull ptr @_Znam(i64 noundef 4)
   // LLVM: call void @llvm.memcpy.p0.p0.i64(ptr{{.*}} %[[ALLOC]], ptr {{.*}}@[[ABC4]], i64 4, i1 false)
   new char[4]("abc");
 }
@@ -421,14 +421,14 @@ void string_exact_paren() {
 // LLVM-LABEL: define{{.*}} void @_Z28string_exact_paren_extensionv
 void string_exact_paren_extension() {
   // CIR: %[[SIZE:.*]] = cir.const #cir.int<4> : !u64i
-  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.noundef})
+  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.nonnull, llvm.noundef})
   // CIR: %[[ALLOC_CAST:.*]] = cir.cast bitcast %[[ALLOC]] : !cir.ptr<!void> -> !cir.ptr<!s8i>
   // CIR: %[[ALLOC_AS_STRING:.*]] = cir.cast bitcast %[[ALLOC_CAST]] : !cir.ptr<!s8i> -> !cir.ptr<!cir.array<!s8i x 4>>
   // CIR: %[[GET_STR:.*]] = cir.get_global @[[ABC4]] : !cir.ptr<!cir.array<!s8i x 4>>
   // CIR: cir.copy %[[GET_STR]] to %[[ALLOC_AS_STRING]] : !cir.ptr<!cir.array<!s8i x 4>>
   // CIR: cir.return
 
-  // LLVM: %[[ALLOC:.*]] = call{{.*}}ptr @_Znam(i64 noundef 4)
+  // LLVM: %[[ALLOC:.*]] = call{{.*}}nonnull ptr @_Znam(i64 noundef 4)
   // LLVM: call void @llvm.memcpy.p0.p0.i64(ptr{{.*}} %[[ALLOC]], ptr {{.*}}@[[ABC4]], i64 4, i1 false)
   new char[4](__extension__ "abc");
 }
@@ -437,14 +437,14 @@ void string_exact_paren_extension() {
 // LLVM-LABEL: define{{.*}} void @_Z17string_sufficientv
 void string_sufficient() {
   // CIR: %[[SIZE:.*]] = cir.const #cir.int<15> : !u64i
-  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.noundef})
+  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.nonnull, llvm.noundef})
   // CIR: %[[ALLOC_CAST:.*]] = cir.cast bitcast %[[ALLOC]] : !cir.ptr<!void> -> !cir.ptr<!s8i>
   // CIR: %[[ALLOC_AS_STRING:.*]] = cir.cast bitcast %[[ALLOC_CAST]] : !cir.ptr<!s8i> -> !cir.ptr<!cir.array<!s8i x 15>>
   // CIR: %[[GET_STR:.*]] = cir.get_global @[[ABC15]] : !cir.ptr<!cir.array<!s8i x 15>>
   // CIR: cir.copy %[[GET_STR]] to %[[ALLOC_AS_STRING]] : !cir.ptr<!cir.array<!s8i x 15>>
   // CIR: cir.return
 
-  // LLVM: %[[ALLOC:.*]] = call{{.*}}ptr @_Znam(i64 noundef 15)
+  // LLVM: %[[ALLOC:.*]] = call{{.*}}nonnull ptr @_Znam(i64 noundef 15)
   // LLVM: call void @llvm.memcpy.p0.p0.i64(ptr{{.*}} %[[ALLOC]], ptr {{.*}}@[[ABC15]], i64 15, i1 false)
   new char[15] { "abc" };
 }
@@ -453,14 +453,14 @@ void string_sufficient() {
 // LLVM-LABEL: define{{.*}} void @_Z23string_sufficient_parenv
 void string_sufficient_paren() {
   // CIR: %[[SIZE:.*]] = cir.const #cir.int<15> : !u64i
-  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.noundef})
+  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.nonnull, llvm.noundef})
   // CIR: %[[ALLOC_CAST:.*]] = cir.cast bitcast %[[ALLOC]] : !cir.ptr<!void> -> !cir.ptr<!s8i>
   // CIR: %[[ALLOC_AS_STRING:.*]] = cir.cast bitcast %[[ALLOC_CAST]] : !cir.ptr<!s8i> -> !cir.ptr<!cir.array<!s8i x 15>>
   // CIR: %[[GET_STR:.*]] = cir.get_global @[[ABC15]] : !cir.ptr<!cir.array<!s8i x 15>>
   // CIR: cir.copy %[[GET_STR]] to %[[ALLOC_AS_STRING]] : !cir.ptr<!cir.array<!s8i x 15>>
   // CIR: cir.return
 
-  // LLVM: %[[ALLOC:.*]] = call{{.*}}ptr @_Znam(i64 noundef 15)
+  // LLVM: %[[ALLOC:.*]] = call{{.*}}nonnull ptr @_Znam(i64 noundef 15)
   // LLVM: call void @llvm.memcpy.p0.p0.i64(ptr{{.*}} %[[ALLOC]], ptr {{.*}}@[[ABC15]], i64 15, i1 false)
   new char[15]("abc");
 }
@@ -469,7 +469,7 @@ void string_sufficient_paren() {
 // LLVM-LABEL: define{{.*}} void @_Z10aggr_exactv
 void aggr_exact() {
   // CIR: %[[SIZE:.*]] = cir.const #cir.int<16> : !u64i
-  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.noundef})
+  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.nonnull, llvm.noundef})
   // CIR: %[[ALLOC_CAST:.*]] = cir.cast bitcast %[[ALLOC]] : !cir.ptr<!void> -> !cir.ptr<!rec_Aggr>
   // CIR: %[[GET_A:.*]] = cir.get_member %[[ALLOC_CAST]][0] {name = "a"} : !cir.ptr<!rec_Aggr> -> !cir.ptr<!s32i>
   // CIR: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
@@ -489,7 +489,7 @@ void aggr_exact() {
   // CIR: %[[ELT2:.*]] = cir.ptr_stride %[[ELT1]], %[[ONE]] : (!cir.ptr<!rec_Aggr>, !s32i) -> !cir.ptr<!rec_Aggr>
   // CIR: cir.return
 
-  // LLVM: %[[ALLOC:.*]] = call{{.*}}ptr @_Znam(i64 noundef 16)
+  // LLVM: %[[ALLOC:.*]] = call{{.*}}nonnull ptr @_Znam(i64 noundef 16)
   // LLVM: %[[GET_A:.*]] = getelementptr {{.*}}%struct.Aggr, ptr %[[ALLOC]], i32 0, i32 0
   // LLVM: store i32 1, ptr %[[GET_A]]
   // LLVM: %[[GET_B:.*]] = getelementptr {{.*}}%struct.Aggr, ptr %[[ALLOC]], i32 0, i32 1
@@ -518,7 +518,7 @@ void aggr_sufficient(int n) {
   // CIR: %[[N_LT_OR_OF:.*]] = cir.or %[[N_LT_2]], %[[MUL_OF]] : !cir.bool
   // CIR: %[[NEG_ONE:.*]] = cir.const #cir.int<18446744073709551615> : !u64i
   // CIR: %[[SIZE:.*]] = cir.select if %[[N_LT_OR_OF]] then %[[NEG_ONE]] else %[[N_BYTES]] : (!cir.bool, !u64i, !u64i) -> !u64i
-  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.noundef})
+  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.nonnull, llvm.noundef})
   // CIR: %[[ALLOC_CAST:.*]] = cir.cast bitcast %[[ALLOC]] : !cir.ptr<!void> -> !cir.ptr<!rec_Aggr2E0>
   // CIR: %[[GET_A:.*]] = cir.get_member %[[ALLOC_CAST]][0] {name = "a"} : !cir.ptr<!rec_Aggr2E0> -> !cir.ptr<!s32i>
   // CIR: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
@@ -551,7 +551,7 @@ void aggr_sufficient(int n) {
   // LLVM-DAG: %[[MUL_OF:.*]] = extractvalue { i64, i1 } %[[MUL_RES]], 1
   // LLVM-DAG: %[[N_LT_OR_OF:.*]] = or i1 %[[N_LT_2]], %[[MUL_OF]]
   // LLVM-DAG: %[[SIZE:.*]] = select i1 %[[N_LT_OR_OF]], i64 -1, i64 %[[N_BYTES]]
-  // LLVM: %[[ALLOC:.*]] = call{{.*}}ptr @_Znam(i64 noundef %[[SIZE]])
+  // LLVM: %[[ALLOC:.*]] = call{{.*}}nonnull ptr @_Znam(i64 noundef %[[SIZE]])
   // LLVM: %[[GET_A:.*]] = getelementptr {{.*}}%struct.Aggr.0, ptr %[[ALLOC]], i32 0, i32 0
   // LLVM: store i32 1, ptr %[[GET_A]]
   // LLVM: %[[GET_B:.*]] = getelementptr {{.*}}%struct.Aggr.0, ptr %[[ALLOC]], i32 0, i32 1
@@ -572,14 +572,14 @@ void aggr_sufficient(int n) {
 // LLVM-LABEL: define{{.*}} void @_Z14constexpr_testv
 void constexpr_test() {
   // CIR: %[[SIZE:.*]] = cir.const #cir.int<4> : !u64i
-  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.noundef})
+  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.nonnull, llvm.noundef})
   // CIR: %[[ALLOC_INTS:.*]] = cir.cast bitcast %[[ALLOC]] : !cir.ptr<!void> -> !cir.ptr<!s32i>
   // CIR: %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
   // CIR: cir.store {{.*}} %[[ZERO]], %[[ALLOC_INTS]] : !s32i, !cir.ptr<!s32i>
   // CIR: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
   // CIR: %[[ELT1:.*]] = cir.ptr_stride %[[ALLOC_INTS]], %[[ONE]] : (!cir.ptr<!s32i>, !s32i) -> !cir.ptr<!s32i>
 
-  // LLVM: %[[ALLOC:.*]] = call{{.*}}ptr @_Znam(i64 noundef 4)
+  // LLVM: %[[ALLOC:.*]] = call{{.*}}nonnull ptr @_Znam(i64 noundef 4)
   // LLVM: store i32 0, ptr %[[ALLOC]]
   // LLVM: %[[ELT1:.*]] = getelementptr{{.*}}i32, ptr %[[ALLOC]], i64 1
 
@@ -590,7 +590,7 @@ void constexpr_test() {
 // LLVM-LABEL: define{{.*}} void @_Z13unknown_boundv
 void unknown_bound() {
   // CIR: %[[SIZE:.*]] = cir.const #cir.int<24> : !u64i
-  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.noundef})
+  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.nonnull, llvm.noundef})
   // CIR: %[[ALLOC_AGG:.*]] = cir.cast bitcast %[[ALLOC]] : !cir.ptr<!void> -> !cir.ptr<!rec_Aggr2E1>
   // CIR: %[[GET_X:.*]] = cir.get_member %[[ALLOC_AGG]][0] {name = "x"} : !cir.ptr<!rec_Aggr2E1> -> !cir.ptr<!s32i>
   // CIR: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
@@ -615,7 +615,7 @@ void unknown_bound() {
   // CIR: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
   // CIR: %[[ELT2:.*]] = cir.ptr_stride %[[ELT1]], %[[ONE]] : (!cir.ptr<!rec_Aggr2E1>, !s32i) -> !cir.ptr<!rec_Aggr2E1>
 
-  // LLVM: %[[ALLOC:.*]] = call{{.*}}ptr @_Znam(i64 noundef 24)
+  // LLVM: %[[ALLOC:.*]] = call{{.*}}nonnull ptr @_Znam(i64 noundef 24)
   // LLVM: %[[GET_X:.*]] = getelementptr {{.*}}%struct.Aggr.1, ptr %[[ALLOC]], i32 0, i32 0
   // LLVM: store i32 1, ptr %[[GET_X]]
   // LLVM: %[[GET_Y:.*]] = getelementptr {{.*}}%struct.Aggr.1, ptr %[[ALLOC]], i32 0, i32 1
@@ -638,14 +638,14 @@ void unknown_bound() {
 // LLVM-LABEL: define{{.*}} void @_Z20unknown_bound_stringv
 void unknown_bound_string() {
   // CIR: %[[SIZE:.*]] = cir.const #cir.int<6> : !u64i
-  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.noundef})
+  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.nonnull, llvm.noundef})
   // CIR: %[[ALLOC_CHAR:.*]] = cir.cast bitcast %[[ALLOC]] : !cir.ptr<!void> -> !cir.ptr<!s8i>
   // CIR: %[[ALLOC_STR:.*]] = cir.cast bitcast %[[ALLOC_CHAR]] : !cir.ptr<!s8i> -> !cir.ptr<!cir.array<!s8i x 6>>
   // CIR: %[[GET_HELLO:.*]] = cir.get_global @[[HELLO]] : !cir.ptr<!cir.array<!s8i x 6>>
   // CIR: cir.copy %[[GET_HELLO]] to %[[ALLOC_STR]] : !cir.ptr<!cir.array<!s8i x 6>>
   // CIR: cir.return
 
-  // LLVM: %[[ALLOC:.*]] = call{{.*}}ptr @_Znam(i64 noundef 6)
+  // LLVM: %[[ALLOC:.*]] = call{{.*}}nonnull ptr @_Znam(i64 noundef 6)
   // LLVM: call void @llvm.memcpy.p0.p0.i64(ptr{{.*}} %[[ALLOC]], ptr {{.*}}@[[HELLO]], i64 6, i1 false)
   new char[]{"hello"};
 }

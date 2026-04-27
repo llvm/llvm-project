@@ -2607,6 +2607,17 @@ LogicalResult NVVM::StMatrixOp::verify() {
   return success();
 }
 
+LogicalResult NVVM::MovMatrixOp::verify() {
+  int m = getShape().getM(), n = getShape().getN();
+  if (m != 8 || n != 8)
+    return emitOpError("expected shape to be 8x8");
+  if (getLayout() != NVVM::MMALayout::col)
+    return emitOpError("expected layout to be col");
+  if (getEltType() != NVVM::LdStMatrixEltType::B16)
+    return emitOpError("expected element type to be b16");
+  return success();
+}
+
 static FailureOr<int> getAllowedSizeK(NVVM::WGMMATypes typeA) {
   if (typeA == NVVM::WGMMATypes::tf32)
     return 8;
@@ -3465,6 +3476,36 @@ mlir::NVVM::IDArgPair NVVM::BarrierOp::getIntrinsicIDAndArgs(
 }
 
 mlir::NVVM::IDArgPair
+CosOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                             llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::CosOp>(op);
+  llvm::Intrinsic::ID id = thisOp.getFtz()
+                               ? llvm::Intrinsic::nvvm_cos_approx_ftz_f
+                               : llvm::Intrinsic::nvvm_cos_approx_f;
+  return {id, {mt.lookupValue(thisOp.getSrc())}};
+}
+
+mlir::NVVM::IDArgPair
+SinOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                             llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::SinOp>(op);
+  llvm::Intrinsic::ID id = thisOp.getFtz()
+                               ? llvm::Intrinsic::nvvm_sin_approx_ftz_f
+                               : llvm::Intrinsic::nvvm_sin_approx_f;
+  return {id, {mt.lookupValue(thisOp.getSrc())}};
+}
+
+mlir::NVVM::IDArgPair
+Ex2Op::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                             llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::Ex2Op>(op);
+  llvm::Intrinsic::ID id = thisOp.getFtz()
+                               ? llvm::Intrinsic::nvvm_ex2_approx_ftz
+                               : llvm::Intrinsic::nvvm_ex2_approx;
+  return {id, {mt.lookupValue(thisOp.getSrc())}};
+}
+
+mlir::NVVM::IDArgPair
 PMEventOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
                                  llvm::IRBuilderBase &builder) {
   auto thisOp = cast<NVVM::PMEventOp>(op);
@@ -3852,6 +3893,14 @@ mlir::NVVM::IDArgPair CpAsyncMBarrierArriveOp::getIntrinsicIDAndArgs(
   }
 
   return {id, {mt.lookupValue(thisOp.getAddr())}};
+}
+
+mlir::NVVM::IDArgPair
+MovMatrixOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                                   llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::MovMatrixOp>(op);
+  return {llvm::Intrinsic::nvvm_movmatrix_sync_aligned_m8n8_trans_b16,
+          {mt.lookupValue(thisOp.getSrc())}};
 }
 
 #define CP_ASYNC_ID_IMPL(mod, size, suffix)                                    \
