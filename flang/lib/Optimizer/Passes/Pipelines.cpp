@@ -13,6 +13,7 @@
 #include "flang/Optimizer/OpenACC/Passes.h"
 #include "mlir/Conversion/Passes.h"
 #include "mlir/Dialect/LLVMIR/Transforms/Passes.h"
+#include "mlir/Dialect/OpenMP/Transforms/Passes.h"
 #include "llvm/Support/CommandLine.h"
 
 /// Force setting the no-alias attribute on fuction arguments when possible.
