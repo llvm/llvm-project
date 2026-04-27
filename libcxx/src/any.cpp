@@ -27,6 +27,6 @@ public:
 
 const char* bad_any_cast::what() const noexcept { return "bad any cast"; }
 
-#endif
-
 _LIBCPP_END_NAMESPACE_LFTS
+
+#endif

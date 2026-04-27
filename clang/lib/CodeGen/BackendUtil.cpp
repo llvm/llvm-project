@@ -323,7 +323,8 @@ static bool actionRequiresCodeGen(BackendAction Action) {
 }
 
 static std::string flattenClangCommandLine(ArrayRef<std::string> Args,
-                                           StringRef MainFilename) {
+                                           StringRef MainFilename,
+                                           ArrayRef<StringRef> InputFiles) {
   if (Args.empty())
     return std::string{};
 
@@ -342,7 +343,15 @@ static std::string flattenClangCommandLine(ArrayRef<std::string> Args,
       i++; // Skip this argument and next one.
       continue;
     }
-    if (Arg.starts_with("-object-file-name") || Arg == MainFilename)
+    if (Arg.starts_with("-object-file-name"))
+      continue;
+    // Strip the source positional, matching either MainFilename (the
+    // -main-file-name basename) or one of the resolved frontend input paths
+    // (which is what the cc1 positional looks like for an absolute driver
+    // input). Avoid a generic basename match: it would also strip values of
+    // args like `-include <path>` whose trailing component happens to equal
+    // the source basename.
+    if (Arg == MainFilename || llvm::is_contained(InputFiles, Arg))
       continue;
     // Skip fmessage-length for reproducibility.
     if (Arg.starts_with("-fmessage-length"))
@@ -519,8 +528,15 @@ static bool initTargetOptions(const CompilerInstance &CI,
       Options.MCOptions.IASSearchPaths.push_back(
           Entry.IgnoreSysRoot ? Entry.Path : HSOpts.Sysroot + Entry.Path);
   Options.MCOptions.Argv0 = CodeGenOpts.Argv0 ? CodeGenOpts.Argv0 : "";
+  // Pass the resolved frontend inputs so flattenClangCommandLine can strip
+  // the cc1 source positional even when the driver received an absolute path
+  // (which won't match CodeGenOpts.MainFileName, that's just the basename).
+  SmallVector<StringRef, 1> InputFiles;
+  for (const auto &Input : CI.getFrontendOpts().Inputs)
+    if (Input.isFile())
+      InputFiles.push_back(Input.getFile());
   Options.MCOptions.CommandlineArgs = flattenClangCommandLine(
-      CodeGenOpts.CommandLineArgs, CodeGenOpts.MainFileName);
+      CodeGenOpts.CommandLineArgs, CodeGenOpts.MainFileName, InputFiles);
   Options.MCOptions.AsSecureLogFile = CodeGenOpts.AsSecureLogFile;
   Options.MCOptions.PPCUseFullRegisterNames =
       CodeGenOpts.PPCUseFullRegisterNames;
@@ -629,19 +645,7 @@ static OptimizationLevel mapToLevel(const CodeGenOptions &Opts) {
     return OptimizationLevel::O1;
 
   case 2:
-    switch (Opts.OptimizeSize) {
-    default:
-      llvm_unreachable("Invalid optimization level for size!");
-
-    case 0:
-      return OptimizationLevel::O2;
-
-    case 1:
-      return OptimizationLevel::Os;
-
-    case 2:
-      return OptimizationLevel::Oz;
-    }
+    return OptimizationLevel::O2;
 
   case 3:
     return OptimizationLevel::O3;
@@ -1031,10 +1035,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     if (IsThinLTOPostLink)
       PB.registerPipelineStartEPCallback(
           [](ModulePassManager &MPM, OptimizationLevel Level) {
-            MPM.addPass(LowerTypeTestsPass(
-                /*ExportSummary=*/nullptr,
-                /*ImportSummary=*/nullptr,
-                /*DropTypeTests=*/lowertypetests::DropTestKind::Assume));
+            MPM.addPass(DropTypeTestsPass());
           });
 
     // Register callbacks to schedule sanitizer passes at the appropriate part

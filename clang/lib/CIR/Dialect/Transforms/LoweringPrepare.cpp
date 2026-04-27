@@ -8,9 +8,15 @@
 
 #include "PassDetail.h"
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/BuiltinAttributeInterfaces.h"
+#include "mlir/IR/IRMapping.h"
+#include "mlir/IR/Location.h"
+#include "mlir/IR/Value.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Mangle.h"
+#include "clang/Basic/Cuda.h"
 #include "clang/Basic/Module.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TargetCXXABI.h"
 #include "clang/Basic/TargetInfo.h"
@@ -19,13 +25,20 @@
 #include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/Dialect/Passes.h"
 #include "clang/CIR/Interfaces/ASTAttrInterfaces.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/VirtualFileSystem.h"
 
 #include <memory>
+#include <optional>
 
 using namespace mlir;
 using namespace cir;
@@ -70,7 +83,7 @@ struct LoweringPreparePass
   LoweringPreparePass() = default;
   void runOnOperation() override;
 
-  void runOnOp(mlir::Operation *op);
+  void runOnOp(mlir::Operation *op, mlir::SymbolTableCollection &symbolTables);
   void lowerCastOp(cir::CastOp op);
   void lowerComplexDivOp(cir::ComplexDivOp op);
   void lowerComplexMulOp(cir::ComplexMulOp op);
@@ -81,6 +94,8 @@ struct LoweringPreparePass
   void lowerArrayCtor(cir::ArrayCtor op);
   void lowerTrivialCopyCall(cir::CallOp op);
   void lowerStoreOfConstAggregate(cir::StoreOp op);
+  void lowerLocalInitOp(cir::LocalInitOp op,
+                        mlir::SymbolTableCollection &symbolTables);
 
   /// Build the function that initializes the specified global
   cir::FuncOp buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op);
@@ -101,14 +116,28 @@ struct LoweringPreparePass
       cir::FuncType type,
       cir::GlobalLinkageKind linkage = cir::GlobalLinkageKind::ExternalLinkage);
 
-  cir::GlobalOp buildRuntimeVariable(
+  cir::GlobalOp getOrCreateRuntimeVariable(
       mlir::OpBuilder &builder, llvm::StringRef name, mlir::Location loc,
       mlir::Type type,
       cir::GlobalLinkageKind linkage = cir::GlobalLinkageKind::ExternalLinkage,
       cir::VisibilityKind visibility = cir::VisibilityKind::Default);
 
+  /// ------------
+  /// CUDA registration related
+  /// ------------
+
+  llvm::StringMap<FuncOp> cudaKernelMap;
+
+  /// Build the CUDA module constructor that registers the fat binary
+  /// with the CUDA runtime.
+  void buildCUDAModuleCtor();
+  std::optional<FuncOp> buildCUDAModuleDtor();
+  std::optional<FuncOp> buildCUDARegisterGlobals();
+  void buildCUDARegisterGlobalFunctions(cir::CIRBaseBuilderTy &builder,
+                                        FuncOp regGlobalFunc);
+
   /// Handle static local variable initialization with guard variables.
-  void handleStaticLocal(cir::GlobalOp globalOp, cir::GetGlobalOp getGlobalOp);
+  void handleStaticLocal(cir::GlobalOp globalOp, cir::LocalInitOp localInitOp);
 
   /// Get or create __cxa_guard_acquire function.
   cir::FuncOp getGuardAcquireFn(cir::PointerType guardPtrTy);
@@ -166,8 +195,7 @@ struct LoweringPreparePass
         globalOp->emitError("NYI: guard COMDAT for non-local variables");
         return {};
       } else if (hasComdat && globalOp.isWeakForLinker()) {
-        globalOp->emitError("NYI: guard COMDAT for weak linkage");
-        return {};
+        guard.setComdat(true);
       }
 
       setStaticLocalDeclGuardAddress(globalSymName, guard);
@@ -211,10 +239,63 @@ struct LoweringPreparePass
     }
   }
 
+  void emitGlobalGuardedDtorRegion(CIRBaseBuilderTy &builder,
+                                   cir::GlobalOp global,
+                                   mlir::Region &dtorRegion,
+                                   mlir::Block &entryBB) {
+    // Create a variable that binds the atexit to this shared object.
+    builder.setInsertionPointToStart(&mlirModule.getBodyRegion().front());
+    cir::GlobalOp handle = getOrCreateRuntimeVariable(
+        builder, "__dso_handle", global.getLoc(), builder.getI8Type(),
+        cir::GlobalLinkageKind::ExternalLinkage, cir::VisibilityKind::Hidden);
+
+    // If this is a simple call to a destructor, get the called function.
+    // Otherwise, create a helper function for the entire dtor region,
+    // replacing the current dtor region body with a call to the helper
+    // function.
+    cir::CallOp dtorCall;
+    cir::FuncOp dtorFunc =
+        getOrCreateDtorFunc(builder, global, dtorRegion, dtorCall);
+
+    // Create a runtime helper function:
+    //    extern "C" int __cxa_atexit(void (*f)(void *), void *p, void *d);
+    cir::PointerType voidPtrTy = builder.getVoidPtrTy();
+    cir::PointerType voidFnPtrTy = builder.getVoidFnPtrTy({voidPtrTy});
+    cir::PointerType handlePtrTy = builder.getPointerTo(handle.getSymType());
+    auto fnAtExitType =
+        builder.getVoidFnTy({voidFnPtrTy, voidPtrTy, handlePtrTy});
+
+    llvm::StringLiteral nameAtExit = "__cxa_atexit";
+    cir::FuncOp fnAtExit = buildRuntimeFunction(builder, nameAtExit,
+                                                global.getLoc(), fnAtExitType);
+
+    // Replace the dtor (or helper) call with a call to
+    //   __cxa_atexit(&dtor, &var, &__dso_handle)
+    builder.setInsertionPointAfter(dtorCall);
+    mlir::Value args[3];
+    auto dtorPtrTy = cir::PointerType::get(dtorFunc.getFunctionType());
+    args[0] = cir::GetGlobalOp::create(builder, dtorCall.getLoc(), dtorPtrTy,
+                                       dtorFunc.getSymName());
+    args[0] = cir::CastOp::create(builder, dtorCall.getLoc(), voidFnPtrTy,
+                                  cir::CastKind::bitcast, args[0]);
+    args[1] =
+        cir::CastOp::create(builder, dtorCall.getLoc(), voidPtrTy,
+                            cir::CastKind::bitcast, dtorCall.getArgOperand(0));
+    args[2] = cir::GetGlobalOp::create(builder, handle.getLoc(), handlePtrTy,
+                                       handle.getSymName());
+    builder.createCallOp(dtorCall.getLoc(), fnAtExit, args);
+    dtorCall->erase();
+    mlir::Block &dtorBlock = dtorRegion.front();
+    entryBB.getOperations().splice(entryBB.end(), dtorBlock.getOperations(),
+                                   dtorBlock.begin(),
+                                   std::prev(dtorBlock.end()));
+  }
+
   /// Emit the guarded initialization for a static local variable.
   /// This handles the if/else structure after the guard byte check,
   /// following OG's ItaniumCXXABI::EmitGuardedInit skeleton.
   void emitCXXGuardedInitIf(CIRBaseBuilderTy &builder, cir::GlobalOp globalOp,
+                            mlir::Region &ctorRegion, mlir::Region &dtorRegion,
                             cir::ASTVarDeclInterface varDecl,
                             mlir::Value guardPtr, cir::PointerType guardPtrTy,
                             bool threadsafe) {
@@ -261,15 +342,23 @@ struct LoweringPreparePass
       assert(!cir::MissingFeatures::guardAbortOnException());
 
       // Emit the initializer and add a global destructor if appropriate.
-      auto &ctorRegion = globalOp.getCtorRegion();
-      assert(!ctorRegion.empty() && "This should never be empty here.");
-      if (!ctorRegion.hasOneBlock())
-        llvm_unreachable("Multiple blocks NYI");
-      mlir::Block &block = ctorRegion.front();
       mlir::Block *insertBlock = builder.getInsertionBlock();
-      insertBlock->getOperations().splice(insertBlock->end(),
-                                          block.getOperations(), block.begin(),
-                                          std::prev(block.end()));
+      if (!ctorRegion.empty()) {
+        assert(ctorRegion.hasOneBlock() && "Enforced by MaxSizedRegion<1>");
+
+        mlir::Block &block = ctorRegion.front();
+        insertBlock->getOperations().splice(
+            insertBlock->end(), block.getOperations(), block.begin(),
+            std::prev(block.end()));
+      }
+
+      if (!dtorRegion.empty()) {
+        assert(dtorRegion.hasOneBlock() && "Enforced by MaxSizedRegion<1>");
+
+        emitGlobalGuardedDtorRegion(builder, globalOp, dtorRegion,
+                                    *insertBlock);
+      }
+
       builder.setInsertionPointToEnd(insertBlock);
       ctorRegion.getBlocks().clear();
 
@@ -306,7 +395,7 @@ struct LoweringPreparePass
 
 } // namespace
 
-cir::GlobalOp LoweringPreparePass::buildRuntimeVariable(
+cir::GlobalOp LoweringPreparePass::getOrCreateRuntimeVariable(
     mlir::OpBuilder &builder, llvm::StringRef name, mlir::Location loc,
     mlir::Type type, cir::GlobalLinkageKind linkage,
     cir::VisibilityKind visibility) {
@@ -319,8 +408,7 @@ cir::GlobalOp LoweringPreparePass::buildRuntimeVariable(
         cir::GlobalLinkageKindAttr::get(builder.getContext(), linkage));
     mlir::SymbolTable::setSymbolVisibility(
         g, mlir::SymbolTable::Visibility::Private);
-    g.setGlobalVisibilityAttr(
-        cir::VisibilityAttr::get(builder.getContext(), visibility));
+    g.setGlobalVisibility(visibility);
   }
   return g;
 }
@@ -884,6 +972,16 @@ cir::FuncOp LoweringPreparePass::getOrCreateDtorFunc(CIRBaseBuilderTy &builder,
   cir::FuncOp dtorFunc =
       buildRuntimeFunction(builder, fnName, op.getLoc(), fnType,
                            cir::GlobalLinkageKind::InternalLinkage);
+
+  SmallVector<mlir::NamedAttribute> paramAttrs;
+  paramAttrs.push_back(
+      builder.getNamedAttr("llvm.noundef", builder.getUnitAttr()));
+  SmallVector<mlir::Attribute> argAttrDicts;
+  argAttrDicts.push_back(
+      mlir::DictionaryAttr::get(builder.getContext(), paramAttrs));
+  dtorFunc.setArgAttrsAttr(
+      mlir::ArrayAttr::get(builder.getContext(), argAttrDicts));
+
   mlir::Block *entryBB = dtorFunc.addEntryBlock();
 
   // Move everything from the dtor region into the helper function.
@@ -946,7 +1044,12 @@ LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op) {
   FuncOp f = buildRuntimeFunction(builder, fnName, op.getLoc(), fnType,
                                   cir::GlobalLinkageKind::InternalLinkage);
 
-  // Move over the initialzation code of the ctor region.
+  // Move over the initialization code of the ctor region.
+  // The ctor region may have multiple blocks when exception handling
+  // scaffolding creates extra blocks (e.g., unreachable/trap blocks).
+  // We move all operations from the first block (minus the yield) into
+  // the function entry, and discard extra blocks (which contain only
+  // unreachable terminators from EH cleanup paths).
   mlir::Block *entryBB = f.addEntryBlock();
   if (!op.getCtorRegion().empty()) {
     mlir::Block &block = op.getCtorRegion().front();
@@ -960,53 +1063,7 @@ LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op) {
     assert(!cir::MissingFeatures::astVarDeclInterface());
     assert(!cir::MissingFeatures::opGlobalThreadLocal());
 
-    // Create a variable that binds the atexit to this shared object.
-    builder.setInsertionPointToStart(&mlirModule.getBodyRegion().front());
-    cir::GlobalOp handle = buildRuntimeVariable(
-        builder, "__dso_handle", op.getLoc(), builder.getI8Type(),
-        cir::GlobalLinkageKind::ExternalLinkage, cir::VisibilityKind::Hidden);
-
-    // If this is a simple call to a destructor, get the called function.
-    // Otherwise, create a helper function for the entire dtor region,
-    // replacing the current dtor region body with a call to the helper
-    // function.
-    cir::CallOp dtorCall;
-    cir::FuncOp dtorFunc =
-        getOrCreateDtorFunc(builder, op, dtorRegion, dtorCall);
-
-    // Create a runtime helper function:
-    //    extern "C" int __cxa_atexit(void (*f)(void *), void *p, void *d);
-    auto voidPtrTy = cir::PointerType::get(voidTy);
-    auto voidFnTy = cir::FuncType::get({voidPtrTy}, voidTy);
-    auto voidFnPtrTy = cir::PointerType::get(voidFnTy);
-    auto handlePtrTy = cir::PointerType::get(handle.getSymType());
-    auto fnAtExitType =
-        cir::FuncType::get({voidFnPtrTy, voidPtrTy, handlePtrTy}, voidTy);
-    const char *nameAtExit = "__cxa_atexit";
-    cir::FuncOp fnAtExit =
-        buildRuntimeFunction(builder, nameAtExit, op.getLoc(), fnAtExitType);
-
-    // Replace the dtor (or helper) call with a call to
-    //   __cxa_atexit(&dtor, &var, &__dso_handle)
-    builder.setInsertionPointAfter(dtorCall);
-    mlir::Value args[3];
-    auto dtorPtrTy = cir::PointerType::get(dtorFunc.getFunctionType());
-    // dtorPtrTy
-    args[0] = cir::GetGlobalOp::create(builder, dtorCall.getLoc(), dtorPtrTy,
-                                       dtorFunc.getSymName());
-    args[0] = cir::CastOp::create(builder, dtorCall.getLoc(), voidFnPtrTy,
-                                  cir::CastKind::bitcast, args[0]);
-    args[1] =
-        cir::CastOp::create(builder, dtorCall.getLoc(), voidPtrTy,
-                            cir::CastKind::bitcast, dtorCall.getArgOperand(0));
-    args[2] = cir::GetGlobalOp::create(builder, handle.getLoc(), handlePtrTy,
-                                       handle.getSymName());
-    builder.createCallOp(dtorCall.getLoc(), fnAtExit, args);
-    dtorCall->erase();
-    mlir::Block &dtorBlock = dtorRegion.front();
-    entryBB->getOperations().splice(entryBB->end(), dtorBlock.getOperations(),
-                                    dtorBlock.begin(),
-                                    std::prev(dtorBlock.end()));
+    emitGlobalGuardedDtorRegion(builder, op, dtorRegion, *entryBB);
   }
 
   // Replace cir.yield with cir.return
@@ -1064,20 +1121,22 @@ cir::GlobalOp LoweringPreparePass::createGuardGlobalOp(
 }
 
 void LoweringPreparePass::handleStaticLocal(cir::GlobalOp globalOp,
-                                            cir::GetGlobalOp getGlobalOp) {
+                                            cir::LocalInitOp localInitOp) {
   CIRBaseBuilderTy builder(getContext());
 
   std::optional<cir::ASTVarDeclInterface> astOption = globalOp.getAst();
   assert(astOption.has_value());
   cir::ASTVarDeclInterface varDecl = astOption.value();
 
-  builder.setInsertionPointAfter(getGlobalOp);
-  mlir::Block *getGlobalOpBlock = builder.getInsertionBlock();
+  builder.setInsertionPointAfter(localInitOp);
+  mlir::Block *localInitBlock = builder.getInsertionBlock();
 
   // Remove the terminator temporarily - we'll add it back at the end.
-  mlir::Operation *ret = getGlobalOpBlock->getTerminator();
+  mlir::Operation *ret = localInitBlock->getTerminator();
   ret->remove();
-  builder.setInsertionPointAfter(getGlobalOp);
+  // Note: These two insert-point-after sets are necessary, as the 'trailing'
+  // operation has changed thanks to the terminator removal.
+  builder.setInsertionPointAfter(localInitOp);
 
   // Inline variables that weren't instantiated from variable templates have
   // partially-ordered initialization within their translation unit.
@@ -1132,7 +1191,7 @@ void LoweringPreparePass::handleStaticLocal(cir::GlobalOp globalOp,
       builder, globalOp, varDecl, guardTy, guardAlignment);
   if (!guard) {
     // Error was already emitted, just restore the terminator and return.
-    getGlobalOpBlock->push_back(ret);
+    localInitBlock->push_back(ret);
     return;
   }
 
@@ -1166,7 +1225,7 @@ void LoweringPreparePass::handleStaticLocal(cir::GlobalOp globalOp,
     auto bytePtrTy = cir::PointerType::get(builder.getSIntNTy(8));
     mlir::Value bytePtr = builder.createBitcast(guardPtr, bytePtrTy);
     mlir::Value guardLoad = builder.createAlignedLoad(
-        getGlobalOp.getLoc(), bytePtr, guardAlignment.getAsAlign().value());
+        localInitOp.getLoc(), bytePtr, guardAlignment.getAsAlign().value());
 
     // Itanium ABI:
     //   An implementation supporting thread-safety on multiprocessor
@@ -1208,17 +1267,18 @@ void LoweringPreparePass::handleStaticLocal(cir::GlobalOp globalOp,
 
     // Check if the first byte of the guard variable is zero.
     auto zero = builder.getConstantInt(
-        getGlobalOp.getLoc(), mlir::cast<cir::IntType>(guardLoad.getType()), 0);
-    auto needsInit = builder.createCompare(getGlobalOp.getLoc(),
+        localInitOp.getLoc(), mlir::cast<cir::IntType>(guardLoad.getType()), 0);
+    auto needsInit = builder.createCompare(localInitOp.getLoc(),
                                            cir::CmpOpKind::eq, guardLoad, zero);
 
     // Build the guarded initialization inside an if block.
-    cir::IfOp::create(builder, globalOp.getLoc(), needsInit,
-                      /*withElseRegion=*/false,
-                      [&](mlir::OpBuilder &, mlir::Location) {
-                        emitCXXGuardedInitIf(builder, globalOp, varDecl,
-                                             guardPtr, guardPtrTy, threadsafe);
-                      });
+    cir::IfOp::create(
+        builder, globalOp.getLoc(), needsInit,
+        /*withElseRegion=*/false, [&](mlir::OpBuilder &, mlir::Location) {
+          emitCXXGuardedInitIf(builder, globalOp, localInitOp.getCtorRegion(),
+                               localInitOp.getDtorRegion(), varDecl, guardPtr,
+                               guardPtrTy, threadsafe);
+        });
   } else {
     // Threadsafe statics without inline atomics - call __cxa_guard_acquire
     // unconditionally without the initial guard byte check.
@@ -1228,6 +1288,28 @@ void LoweringPreparePass::handleStaticLocal(cir::GlobalOp globalOp,
 
   // Insert the removed terminator back.
   builder.getInsertionBlock()->push_back(ret);
+}
+
+void LoweringPreparePass::lowerLocalInitOp(
+    cir::LocalInitOp initOp, mlir::SymbolTableCollection &symbolTables) {
+  if (!initOp.getStaticLocal()) {
+    initOp->emitError("NYI: Non-static-local in lower-init-local op");
+    return;
+  }
+
+  // If we don't actually need to initialize anything anymore, we're done here.
+  if (initOp.getCtorRegion().empty() && initOp.getDtorRegion().empty()) {
+    initOp.erase();
+    return;
+  }
+
+  cir::GlobalOp globalOp = initOp.getReferencedGlobal(symbolTables);
+  assert(globalOp && "No global-op found");
+
+  handleStaticLocal(globalOp, initOp);
+
+  // Remove the init local op, now that we've done everything we need with it.
+  initOp.erase();
 }
 
 void LoweringPreparePass::lowerGlobalOp(GlobalOp op) {
@@ -1369,13 +1451,16 @@ void LoweringPreparePass::buildCXXGlobalInitFunc() {
   cir::ReturnOp::create(builder, f.getLoc());
 }
 
+/// Lower a cir.array.ctor or cir.array.dtor into a do-while loop that
+/// iterates over every element.  For cir.array.ctor ops whose partial_dtor
+/// region is non-empty, the ctor loop is wrapped in a cir.cleanup.scope whose
+/// EH cleanup performs a reverse destruction loop using the partial dtor body.
 static void lowerArrayDtorCtorIntoLoop(cir::CIRBaseBuilderTy &builder,
                                        clang::ASTContext *astCtx,
                                        mlir::Operation *op, mlir::Type eltTy,
                                        mlir::Value addr,
                                        mlir::Value numElements,
                                        uint64_t arrayLen, bool isCtor) {
-  // Generate loop to call into ctor/dtor for every element.
   mlir::Location loc = op->getLoc();
   bool isDynamic = numElements != nullptr;
 
@@ -1384,19 +1469,16 @@ static void lowerArrayDtorCtorIntoLoop(cir::CIRBaseBuilderTy &builder,
   const unsigned sizeTypeSize =
       astCtx->getTypeSize(astCtx->getSignedSizeType());
 
+  // Both constructors and destructors use end = begin + numElements.
+  // Constructors iterate forward [begin, end).  Destructors iterate backward
+  // from end, decrementing before calling the destructor on each element.
   mlir::Value begin, end;
   if (isDynamic) {
-    assert(!isCtor && "Unexpected dynamic ctor loop");
-    mlir::Value one = builder.getUnsignedInt(loc, 1, sizeTypeSize);
-    mlir::Value endOffsetVal = builder.createSub(loc, numElements, one);
     begin = addr;
-    end = cir::PtrStrideOp::create(builder, loc, eltTy, begin, endOffsetVal);
+    end = cir::PtrStrideOp::create(builder, loc, eltTy, begin, numElements);
   } else {
-    // Static: emit endOffset const first, then array_to_ptrdecay, matching
-    // the expected IR ordering.
-    uint64_t endOffset = isCtor ? arrayLen : arrayLen - 1;
     mlir::Value endOffsetVal =
-        builder.getUnsignedInt(loc, endOffset, sizeTypeSize);
+        builder.getUnsignedInt(loc, arrayLen, sizeTypeSize);
     begin = cir::CastOp::create(builder, loc, eltTy,
                                 cir::CastKind::array_to_ptrdecay, addr);
     end = cir::PtrStrideOp::create(builder, loc, eltTy, begin, endOffsetVal);
@@ -1409,9 +1491,18 @@ static void lowerArrayDtorCtorIntoLoop(cir::CIRBaseBuilderTy &builder,
   // This places the destructor loop emitted below inside the if block.
   cir::IfOp ifOp;
   if (isDynamic) {
-    mlir::Value isEmpty =
-        cir::CmpOp::create(builder, loc, cir::CmpOpKind::ne, start, stop);
-    ifOp = cir::IfOp::create(builder, loc, isEmpty,
+    mlir::Value guardCond;
+    if (isCtor) {
+      mlir::Value zero = builder.getUnsignedInt(loc, 0, sizeTypeSize);
+      guardCond = cir::CmpOp::create(builder, loc, cir::CmpOpKind::ne,
+                                     numElements, zero);
+    } else {
+      // We could check for numElements != 0 in this case too, but this matches
+      // what classic codegen does.
+      guardCond =
+          cir::CmpOp::create(builder, loc, cir::CmpOpKind::ne, start, stop);
+    }
+    ifOp = cir::IfOp::create(builder, loc, guardCond,
                              /*withElseRegion=*/false,
                              [&](mlir::OpBuilder &, mlir::Location) {});
     builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
@@ -1422,39 +1513,102 @@ static void lowerArrayDtorCtorIntoLoop(cir::CIRBaseBuilderTy &builder,
       /*var type*/ eltTy, "__array_idx", builder.getAlignmentAttr(1));
   builder.createStore(loc, start, tmpAddr);
 
-  builder.createDoWhile(
-      loc,
-      /*condBuilder=*/
-      [&](mlir::OpBuilder &b, mlir::Location loc) {
-        auto currentElement = cir::LoadOp::create(b, loc, eltTy, tmpAddr);
-        auto cmp = cir::CmpOp::create(builder, loc, cir::CmpOpKind::ne,
-                                      currentElement, stop);
-        builder.createCondition(cmp);
-      },
-      /*bodyBuilder=*/
-      [&](mlir::OpBuilder &b, mlir::Location loc) {
-        auto currentElement = cir::LoadOp::create(b, loc, eltTy, tmpAddr);
+  mlir::Block *bodyBlock = &op->getRegion(0).front();
 
-        cir::CallOp ctorCall;
-        op->walk([&](cir::CallOp c) { ctorCall = c; });
-        assert(ctorCall && "expected ctor call");
+  // Clone the region body (ctor/dtor call and any setup ops like per-element
+  // zero-init) into the loop, remapping the block argument to the current
+  // element pointer.
+  auto cloneRegionBodyInto = [&](mlir::Block *srcBlock,
+                                 mlir::Value replacement) {
+    mlir::IRMapping map;
+    map.map(srcBlock->getArgument(0), replacement);
+    for (mlir::Operation &regionOp : *srcBlock) {
+      if (!mlir::isa<cir::YieldOp>(&regionOp))
+        builder.clone(regionOp, map);
+    }
+  };
 
-        // Array elements get constructed in order but destructed in reverse.
-        mlir::Value stride;
-        if (isCtor)
-          stride = builder.getUnsignedInt(loc, 1, sizeTypeSize);
-        else
-          stride = builder.getSignedInt(loc, -1, sizeTypeSize);
+  mlir::Block *partialDtorBlock = nullptr;
+  if (auto arrayCtor = mlir::dyn_cast<cir::ArrayCtor>(op)) {
+    mlir::Region &partialDtor = arrayCtor.getPartialDtor();
+    if (!partialDtor.empty())
+      partialDtorBlock = &partialDtor.front();
+  }
 
-        ctorCall->moveBefore(stride.getDefiningOp());
-        ctorCall->setOperand(0, currentElement);
-        auto nextElement = cir::PtrStrideOp::create(builder, loc, eltTy,
-                                                    currentElement, stride);
+  auto emitCtorDtorLoop = [&]() {
+    builder.createDoWhile(
+        loc,
+        /*condBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          auto currentElement = cir::LoadOp::create(b, loc, eltTy, tmpAddr);
+          auto cmp = cir::CmpOp::create(builder, loc, cir::CmpOpKind::ne,
+                                        currentElement, stop);
+          builder.createCondition(cmp);
+        },
+        /*bodyBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          auto currentElement = cir::LoadOp::create(b, loc, eltTy, tmpAddr);
+          if (isCtor) {
+            cloneRegionBodyInto(bodyBlock, currentElement);
+            mlir::Value stride = builder.getUnsignedInt(loc, 1, sizeTypeSize);
+            auto nextElement = cir::PtrStrideOp::create(builder, loc, eltTy,
+                                                        currentElement, stride);
+            builder.createStore(loc, nextElement, tmpAddr);
+          } else {
+            mlir::Value stride = builder.getSignedInt(loc, -1, sizeTypeSize);
+            auto prevElement = cir::PtrStrideOp::create(builder, loc, eltTy,
+                                                        currentElement, stride);
+            builder.createStore(loc, prevElement, tmpAddr);
+            cloneRegionBodyInto(bodyBlock, prevElement);
+          }
 
-        // Store the element pointer to the temporary variable
-        builder.createStore(loc, nextElement, tmpAddr);
-        builder.createYield(loc);
-      });
+          cir::YieldOp::create(b, loc);
+        });
+  };
+
+  if (partialDtorBlock) {
+    cir::CleanupScopeOp::create(
+        builder, loc, cir::CleanupKind::EH,
+        /*bodyBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          emitCtorDtorLoop();
+          cir::YieldOp::create(b, loc);
+        },
+        /*cleanupBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          auto cur = cir::LoadOp::create(b, loc, eltTy, tmpAddr);
+          auto cmp =
+              cir::CmpOp::create(builder, loc, cir::CmpOpKind::ne, cur, begin);
+          cir::IfOp::create(
+              builder, loc, cmp, /*withElseRegion=*/false,
+              [&](mlir::OpBuilder &b, mlir::Location loc) {
+                builder.createDoWhile(
+                    loc,
+                    /*condBuilder=*/
+                    [&](mlir::OpBuilder &b, mlir::Location loc) {
+                      auto el = cir::LoadOp::create(b, loc, eltTy, tmpAddr);
+                      auto neq = cir::CmpOp::create(
+                          builder, loc, cir::CmpOpKind::ne, el, begin);
+                      builder.createCondition(neq);
+                    },
+                    /*bodyBuilder=*/
+                    [&](mlir::OpBuilder &b, mlir::Location loc) {
+                      auto el = cir::LoadOp::create(b, loc, eltTy, tmpAddr);
+                      mlir::Value negOne =
+                          builder.getSignedInt(loc, -1, sizeTypeSize);
+                      auto prev = cir::PtrStrideOp::create(builder, loc, eltTy,
+                                                           el, negOne);
+                      builder.createStore(loc, prev, tmpAddr);
+                      cloneRegionBodyInto(partialDtorBlock, prev);
+                      builder.createYield(loc);
+                    });
+                cir::YieldOp::create(builder, loc);
+              });
+          cir::YieldOp::create(b, loc);
+        });
+  } else {
+    emitCtorDtorLoop();
+  }
 
   if (ifOp)
     cir::YieldOp::create(builder, loc);
@@ -1475,7 +1629,6 @@ void LoweringPreparePass::lowerArrayDtor(cir::ArrayDtor op) {
     return;
   }
 
-  assert(!cir::MissingFeatures::vlas());
   auto arrayLen =
       mlir::cast<cir::ArrayType>(op.getAddr().getType().getPointee()).getSize();
   lowerArrayDtorCtorIntoLoop(builder, astCtx, op, eltTy, op.getAddr(),
@@ -1488,7 +1641,14 @@ void LoweringPreparePass::lowerArrayCtor(cir::ArrayCtor op) {
   builder.setInsertionPointAfter(op.getOperation());
 
   mlir::Type eltTy = op->getRegion(0).getArgument(0).getType();
-  assert(!cir::MissingFeatures::vlas());
+
+  if (op.getNumElements()) {
+    lowerArrayDtorCtorIntoLoop(builder, astCtx, op, eltTy, op.getAddr(),
+                               op.getNumElements(), /*arrayLen=*/0,
+                               /*isCtor=*/true);
+    return;
+  }
+
   auto arrayLen =
       mlir::cast<cir::ArrayType>(op.getAddr().getType().getPointee()).getSize();
   lowerArrayDtorCtorIntoLoop(builder, astCtx, op, eltTy, op.getAddr(),
@@ -1593,7 +1753,8 @@ void LoweringPreparePass::lowerStoreOfConstAggregate(cir::StoreOp op) {
     constOp.erase();
 }
 
-void LoweringPreparePass::runOnOp(mlir::Operation *op) {
+void LoweringPreparePass::runOnOp(mlir::Operation *op,
+                                  mlir::SymbolTableCollection &symbolTables) {
   if (auto arrayCtor = dyn_cast<cir::ArrayCtor>(op)) {
     lowerArrayCtor(arrayCtor);
   } else if (auto arrayDtor = dyn_cast<cir::ArrayDtor>(op)) {
@@ -1606,23 +1767,6 @@ void LoweringPreparePass::runOnOp(mlir::Operation *op) {
     lowerComplexMulOp(complexMul);
   } else if (auto glob = mlir::dyn_cast<cir::GlobalOp>(op)) {
     lowerGlobalOp(glob);
-  } else if (auto getGlobal = mlir::dyn_cast<cir::GetGlobalOp>(op)) {
-    // Handle static local variables with guard variables.
-    // Only process GetGlobalOps inside function bodies, not in GlobalOp
-    // regions.
-    if (getGlobal.getStaticLocal() &&
-        getGlobal->getParentOfType<cir::FuncOp>()) {
-      auto globalOp = mlir::dyn_cast_or_null<cir::GlobalOp>(
-          mlir::SymbolTable::lookupNearestSymbolFrom(getGlobal,
-                                                     getGlobal.getNameAttr()));
-      // Only process if the GlobalOp has static_local and the ctor region is
-      // not empty. After handleStaticLocal processes a static local, the ctor
-      // region is cleared. GetGlobalOps that were spliced from the ctor region
-      // into the function will be skipped on subsequent iterations.
-      if (globalOp && globalOp.getStaticLocalGuard() &&
-          !globalOp.getCtorRegion().empty())
-        handleStaticLocal(globalOp, getGlobal);
-    }
   } else if (auto unaryOp = mlir::dyn_cast<cir::UnaryOpInterface>(op)) {
     lowerUnaryOp(unaryOp);
   } else if (auto callOp = dyn_cast<cir::CallOp>(op)) {
@@ -1634,8 +1778,389 @@ void LoweringPreparePass::runOnOp(mlir::Operation *op) {
       globalCtorList.emplace_back(fnOp.getName(), globalCtor.value());
     else if (auto globalDtor = fnOp.getGlobalDtorPriority())
       globalDtorList.emplace_back(fnOp.getName(), globalDtor.value());
+
+    if (mlir::Attribute attr =
+            fnOp->getAttr(cir::CUDAKernelNameAttr::getMnemonic())) {
+      auto kernelNameAttr = dyn_cast<CUDAKernelNameAttr>(attr);
+      llvm::StringRef kernelName = kernelNameAttr.getKernelName();
+      cudaKernelMap[kernelName] = fnOp;
+    }
   } else if (auto threeWayCmp = dyn_cast<cir::CmpThreeWayOp>(op)) {
     lowerThreeWayCmpOp(threeWayCmp);
+  } else if (auto initOp = dyn_cast<cir::LocalInitOp>(op)) {
+    lowerLocalInitOp(initOp, symbolTables);
+  }
+}
+
+static llvm::StringRef getCUDAPrefix(clang::ASTContext *astCtx) {
+  if (astCtx->getLangOpts().HIP)
+    return "hip";
+  return "cuda";
+}
+
+static std::string addUnderscoredPrefix(llvm::StringRef prefix,
+                                        llvm::StringRef name) {
+  return ("__" + prefix + name).str();
+}
+
+/// Creates a global constructor function for the module:
+///
+/// For CUDA:
+/// \code
+/// void __cuda_module_ctor() {
+///     Handle = __cudaRegisterFatBinary(GpuBinaryBlob);
+///     __cuda_register_globals(Handle);
+/// }
+/// \endcode
+///
+/// For HIP:
+/// \code
+/// void __hip_module_ctor() {
+///     if (__hip_gpubin_handle == 0) {
+///         __hip_gpubin_handle  = __hipRegisterFatBinary(GpuBinaryBlob);
+///         __hip_register_globals(__hip_gpubin_handle);
+///     }
+/// }
+/// \endcode
+void LoweringPreparePass::buildCUDAModuleCtor() {
+  bool isHIP = astCtx->getLangOpts().HIP;
+
+  if (isHIP)
+    assert(!cir::MissingFeatures::hipModuleCtor());
+  if (astCtx->getLangOpts().GPURelocatableDeviceCode)
+    llvm_unreachable("GPU RDC NYI");
+
+  // For CUDA without -fgpu-rdc, it's safe to stop generating ctor
+  // if there's nothing to register.
+  if (cudaKernelMap.empty())
+    return;
+
+  // There's no device-side binary, so no need to proceed for CUDA.
+  // HIP has to create an external symbol in this case, which is NYI.
+  mlir::Attribute cudaBinaryHandleAttr =
+      mlirModule->getAttr(CIRDialect::getCUDABinaryHandleAttrName());
+  if (!cudaBinaryHandleAttr) {
+    if (isHIP)
+      assert(!cir::MissingFeatures::hipModuleCtor());
+    return;
+  }
+
+  llvm::StringRef cudaGPUBinaryName =
+      mlir::cast<CUDABinaryHandleAttr>(cudaBinaryHandleAttr)
+          .getName()
+          .getValue();
+
+  llvm::vfs::FileSystem &vfs =
+      astCtx->getSourceManager().getFileManager().getVirtualFileSystem();
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> gpuBinaryOrErr =
+      vfs.getBufferForFile(cudaGPUBinaryName);
+  if (std::error_code ec = gpuBinaryOrErr.getError()) {
+    mlirModule->emitError("cannot open GPU binary file: " + cudaGPUBinaryName +
+                          ": " + ec.message());
+    return;
+  }
+  std::unique_ptr<llvm::MemoryBuffer> gpuBinary =
+      std::move(gpuBinaryOrErr.get());
+
+  // Set up common types and builder.
+  llvm::StringRef cudaPrefix = getCUDAPrefix(astCtx);
+  mlir::Location loc = mlirModule->getLoc();
+  CIRBaseBuilderTy builder(getContext());
+  builder.setInsertionPointToStart(mlirModule.getBody());
+
+  Type voidTy = builder.getVoidTy();
+  PointerType voidPtrTy = builder.getVoidPtrTy();
+  PointerType voidPtrPtrTy = builder.getPointerTo(voidPtrTy);
+  IntType intTy = builder.getSIntNTy(32);
+  IntType charTy = cir::IntType::get(&getContext(), astCtx->getCharWidth(),
+                                     /*isSigned=*/false);
+
+  // --- Create fatbin globals ---
+
+  // The section names are different for MAC OS X.
+  llvm::StringRef fatbinConstName =
+      astCtx->getLangOpts().HIP ? ".hip_fatbin" : ".nv_fatbin";
+
+  llvm::StringRef fatbinSectionName =
+      astCtx->getLangOpts().HIP ? ".hipFatBinSegment" : ".nvFatBinSegment";
+
+  // Create the fatbin string constant with GPU binary contents.
+  auto fatbinType =
+      ArrayType::get(&getContext(), charTy, gpuBinary->getBuffer().size());
+  std::string fatbinStrName = addUnderscoredPrefix(cudaPrefix, "_fatbin_str");
+  GlobalOp fatbinStr = GlobalOp::create(builder, loc, fatbinStrName, fatbinType,
+                                        /*isConstant=*/true, {},
+                                        GlobalLinkageKind::PrivateLinkage);
+  fatbinStr.setAlignment(8);
+  fatbinStr.setInitialValueAttr(cir::ConstArrayAttr::get(
+      fatbinType, builder.getStringAttr(gpuBinary->getBuffer())));
+  fatbinStr.setSection(fatbinConstName);
+  fatbinStr.setPrivate();
+
+  // Create the fatbin wrapper struct:
+  //    struct { int magic; int version; void *fatbin; void *unused; };
+  auto fatbinWrapperType = RecordType::get(
+      &getContext(), {intTy, intTy, voidPtrTy, voidPtrTy},
+      /*packed=*/false, /*padded=*/false, RecordType::RecordKind::Struct);
+  std::string fatbinWrapperName =
+      addUnderscoredPrefix(cudaPrefix, "_fatbin_wrapper");
+  GlobalOp fatbinWrapper = GlobalOp::create(
+      builder, loc, fatbinWrapperName, fatbinWrapperType,
+      /*isConstant=*/true, {}, GlobalLinkageKind::PrivateLinkage);
+  fatbinWrapper.setSection(fatbinSectionName);
+
+  constexpr unsigned cudaFatMagic = 0x466243b1;
+  constexpr unsigned hipFatMagic = 0x48495046;
+  unsigned fatMagic = isHIP ? hipFatMagic : cudaFatMagic;
+
+  auto magicInit = IntAttr::get(intTy, fatMagic);
+  auto versionInit = IntAttr::get(intTy, 1);
+  auto fatbinStrSymbol =
+      mlir::FlatSymbolRefAttr::get(fatbinStr.getSymNameAttr());
+  auto fatbinInit = GlobalViewAttr::get(voidPtrTy, fatbinStrSymbol);
+  mlir::TypedAttr unusedInit = builder.getConstNullPtrAttr(voidPtrTy);
+  fatbinWrapper.setInitialValueAttr(cir::ConstRecordAttr::get(
+      fatbinWrapperType,
+      mlir::ArrayAttr::get(&getContext(),
+                           {magicInit, versionInit, fatbinInit, unusedInit})));
+
+  // Create the GPU binary handle global variable.
+  std::string gpubinHandleName =
+      addUnderscoredPrefix(cudaPrefix, "_gpubin_handle");
+
+  GlobalOp gpuBinHandle = GlobalOp::create(
+      builder, loc, gpubinHandleName, voidPtrPtrTy,
+      /*isConstant=*/false, {}, cir::GlobalLinkageKind::InternalLinkage);
+  gpuBinHandle.setInitialValueAttr(builder.getConstNullPtrAttr(voidPtrPtrTy));
+  gpuBinHandle.setPrivate();
+
+  // Declare this function:
+  //    void **__{cuda|hip}RegisterFatBinary(void *);
+
+  std::string regFuncName =
+      addUnderscoredPrefix(cudaPrefix, "RegisterFatBinary");
+  FuncType regFuncType = FuncType::get({voidPtrTy}, voidPtrPtrTy);
+  cir::FuncOp regFunc =
+      buildRuntimeFunction(builder, regFuncName, loc, regFuncType);
+
+  std::string moduleCtorName = addUnderscoredPrefix(cudaPrefix, "_module_ctor");
+  cir::FuncOp moduleCtor = buildRuntimeFunction(
+      builder, moduleCtorName, loc, FuncType::get({}, voidTy),
+      GlobalLinkageKind::InternalLinkage);
+
+  globalCtorList.emplace_back(moduleCtorName,
+                              cir::GlobalCtorAttr::getDefaultPriority());
+  builder.setInsertionPointToStart(moduleCtor.addEntryBlock());
+  assert(!cir::MissingFeatures::opGlobalCtorPriority());
+  if (isHIP) {
+    llvm_unreachable("HIP Module Constructor Support");
+  } else if (!astCtx->getLangOpts().GPURelocatableDeviceCode) {
+
+    // --- Create CUDA CTOR-DTOR ---
+    // Register binary with CUDA runtime. This is substantially different in
+    // default mode vs. separate compilation.
+    // Corresponding code:
+    //     gpuBinaryHandle = __cudaRegisterFatBinary(&fatbinWrapper);
+    mlir::Value wrapper = builder.createGetGlobal(fatbinWrapper);
+    mlir::Value fatbinVoidPtr = builder.createBitcast(wrapper, voidPtrTy);
+    cir::CallOp gpuBinaryHandleCall =
+        builder.createCallOp(loc, regFunc, fatbinVoidPtr);
+    mlir::Value gpuBinaryHandle = gpuBinaryHandleCall.getResult();
+    // Store the value back to the global `__cuda_gpubin_handle`.
+    mlir::Value gpuBinaryHandleGlobal = builder.createGetGlobal(gpuBinHandle);
+    builder.createStore(loc, gpuBinaryHandle, gpuBinaryHandleGlobal);
+
+    // --- Generate __cuda_register_globals and call it ---
+    if (std::optional<FuncOp> regGlobal = buildCUDARegisterGlobals()) {
+      builder.createCallOp(loc, *regGlobal, gpuBinaryHandle);
+    }
+
+    // From CUDA 10.1 onwards, we must call this function to end registration:
+    //      void __cudaRegisterFatBinaryEnd(void **fatbinHandle);
+    // This is CUDA-specific, so no need to use `addUnderscoredPrefix`.
+    if (clang::CudaFeatureEnabled(
+            astCtx->getTargetInfo().getSDKVersion(),
+            clang::CudaFeature::CUDA_USES_FATBIN_REGISTER_END)) {
+      cir::CIRBaseBuilderTy globalBuilder(getContext());
+      globalBuilder.setInsertionPointToStart(mlirModule.getBody());
+      FuncOp endFunc =
+          buildRuntimeFunction(globalBuilder, "__cudaRegisterFatBinaryEnd", loc,
+                               FuncType::get({voidPtrPtrTy}, voidTy));
+      builder.createCallOp(loc, endFunc, gpuBinaryHandle);
+    }
+  } else
+    llvm_unreachable("GPU RDC NYI");
+
+  // Create destructor and register it with atexit() the way NVCC does it. Doing
+  // it during regular destructor phase worked in CUDA before 9.2 but results in
+  // double-free in 9.2.
+  if (std::optional<FuncOp> dtor = buildCUDAModuleDtor()) {
+
+    // extern "C" int atexit(void (*f)(void));
+    cir::CIRBaseBuilderTy globalBuilder(getContext());
+    globalBuilder.setInsertionPointToStart(mlirModule.getBody());
+    FuncOp atexit = buildRuntimeFunction(
+        globalBuilder, "atexit", loc,
+        FuncType::get(PointerType::get(dtor->getFunctionType()), intTy));
+    mlir::Value dtorFunc = GetGlobalOp::create(
+        builder, loc, PointerType::get(dtor->getFunctionType()),
+        mlir::FlatSymbolRefAttr::get(dtor->getSymNameAttr()));
+    builder.createCallOp(loc, atexit, dtorFunc);
+  }
+  cir::ReturnOp::create(builder, loc);
+}
+
+std::optional<FuncOp> LoweringPreparePass::buildCUDAModuleDtor() {
+  if (!mlirModule->getAttr(CIRDialect::getCUDABinaryHandleAttrName()))
+    return {};
+
+  llvm::StringRef prefix = getCUDAPrefix(astCtx);
+
+  VoidType voidTy = VoidType::get(&getContext());
+  PointerType voidPtrPtrTy = PointerType::get(PointerType::get(voidTy));
+
+  mlir::Location loc = mlirModule.getLoc();
+
+  cir::CIRBaseBuilderTy builder(getContext());
+  builder.setInsertionPointToStart(mlirModule.getBody());
+
+  // define: void __cudaUnregisterFatBinary(void ** handle);
+  std::string unregisterFuncName =
+      addUnderscoredPrefix(prefix, "UnregisterFatBinary");
+  FuncOp unregisterFunc = buildRuntimeFunction(
+      builder, unregisterFuncName, loc, FuncType::get({voidPtrPtrTy}, voidTy));
+
+  // void __cuda_module_dtor();
+  // Despite the name, OG doesn't treat it as a destructor, so it shouldn't be
+  // put into globalDtorList. If it were a real dtor, then it would cause
+  // double free above CUDA 9.2. The way to use it is to manually call
+  // atexit() at end of module ctor.
+  std::string dtorName = addUnderscoredPrefix(prefix, "_module_dtor");
+  FuncOp dtor =
+      buildRuntimeFunction(builder, dtorName, loc, FuncType::get({}, voidTy),
+                           GlobalLinkageKind::InternalLinkage);
+
+  builder.setInsertionPointToStart(dtor.addEntryBlock());
+
+  // For dtor, we only need to call:
+  //    __cudaUnregisterFatBinary(__cuda_gpubin_handle);
+
+  std::string gpubinName = addUnderscoredPrefix(prefix, "_gpubin_handle");
+  GlobalOp gpubinGlobal = cast<GlobalOp>(mlirModule.lookupSymbol(gpubinName));
+  mlir::Value gpubinAddress = builder.createGetGlobal(gpubinGlobal);
+  mlir::Value gpubin = builder.createLoad(loc, gpubinAddress);
+  builder.createCallOp(loc, unregisterFunc, gpubin);
+  ReturnOp::create(builder, loc);
+
+  return dtor;
+}
+
+std::optional<FuncOp> LoweringPreparePass::buildCUDARegisterGlobals() {
+  // There is nothing to register.
+  if (cudaKernelMap.empty())
+    return {};
+
+  cir::CIRBaseBuilderTy builder(getContext());
+  builder.setInsertionPointToStart(mlirModule.getBody());
+
+  mlir::Location loc = mlirModule.getLoc();
+  llvm::StringRef cudaPrefix = getCUDAPrefix(astCtx);
+
+  auto voidTy = VoidType::get(&getContext());
+  auto voidPtrTy = PointerType::get(voidTy);
+  auto voidPtrPtrTy = PointerType::get(voidPtrTy);
+
+  // Create the function:
+  //      void __cuda_register_globals(void **fatbinHandle)
+  std::string regGlobalFuncName =
+      addUnderscoredPrefix(cudaPrefix, "_register_globals");
+  auto regGlobalFuncTy = FuncType::get({voidPtrPtrTy}, voidTy);
+  FuncOp regGlobalFunc =
+      buildRuntimeFunction(builder, regGlobalFuncName, loc, regGlobalFuncTy,
+                           /*linkage=*/GlobalLinkageKind::InternalLinkage);
+  builder.setInsertionPointToStart(regGlobalFunc.addEntryBlock());
+
+  buildCUDARegisterGlobalFunctions(builder, regGlobalFunc);
+  // TODO: Handle shadow registration
+  assert(!cir::MissingFeatures::globalRegistration());
+
+  ReturnOp::create(builder, loc);
+  return regGlobalFunc;
+}
+
+void LoweringPreparePass::buildCUDARegisterGlobalFunctions(
+    cir::CIRBaseBuilderTy &builder, FuncOp regGlobalFunc) {
+  mlir::Location loc = mlirModule.getLoc();
+  llvm::StringRef cudaPrefix = getCUDAPrefix(astCtx);
+  cir::CIRDataLayout dataLayout(mlirModule);
+
+  auto voidTy = VoidType::get(&getContext());
+  auto voidPtrTy = PointerType::get(voidTy);
+  auto voidPtrPtrTy = PointerType::get(voidPtrTy);
+  IntType intTy = builder.getSIntNTy(32);
+  IntType charTy = cir::IntType::get(&getContext(), astCtx->getCharWidth(),
+                                     /*isSigned=*/false);
+
+  // Extract the GPU binary handle argument.
+  mlir::Value fatbinHandle = *regGlobalFunc.args_begin();
+
+  cir::CIRBaseBuilderTy globalBuilder(getContext());
+  globalBuilder.setInsertionPointToStart(mlirModule.getBody());
+
+  // Declare CUDA internal functions:
+  // int __cudaRegisterFunction(
+  //   void **fatbinHandle,
+  //   const char *hostFunc,
+  //   char *deviceFunc,
+  //   const char *deviceName,
+  //   int threadLimit,
+  //   uint3 *tid, uint3 *bid, dim3 *bDim, dim3 *gDim,
+  //   int *wsize
+  // )
+  // OG doesn't care about the types at all. They're treated as void*.
+
+  FuncOp cudaRegisterFunction = buildRuntimeFunction(
+      globalBuilder, addUnderscoredPrefix(cudaPrefix, "RegisterFunction"), loc,
+      FuncType::get({voidPtrPtrTy, voidPtrTy, voidPtrTy, voidPtrTy, intTy,
+                     voidPtrTy, voidPtrTy, voidPtrTy, voidPtrTy, voidPtrTy},
+                    intTy));
+
+  auto makeConstantString = [&](llvm::StringRef str) -> GlobalOp {
+    auto strType = ArrayType::get(&getContext(), charTy, 1 + str.size());
+    auto tmpString = cir::GlobalOp::create(
+        globalBuilder, loc, (".str" + str).str(), strType,
+        /*isConstant=*/true, {},
+        /*linkage=*/cir::GlobalLinkageKind::PrivateLinkage);
+
+    // We must make the string zero-terminated.
+    tmpString.setInitialValueAttr(ConstArrayAttr::get(
+        strType, StringAttr::get(&getContext(), str + "\0")));
+    tmpString.setPrivate();
+    return tmpString;
+  };
+
+  cir::ConstantOp cirNullPtr = builder.getNullPtr(voidPtrTy, loc);
+  bool isHIP = astCtx->getLangOpts().HIP;
+  for (auto kernelName : cudaKernelMap.keys()) {
+    FuncOp deviceStub = cudaKernelMap[kernelName];
+    GlobalOp deviceFuncStr = makeConstantString(kernelName);
+    mlir::Value deviceFunc = builder.createBitcast(
+        builder.createGetGlobal(deviceFuncStr), voidPtrTy);
+
+    if (isHIP) {
+      llvm_unreachable("HIP kernel registration NYI");
+    } else {
+      mlir::Value hostFunc = builder.createBitcast(
+          GetGlobalOp::create(
+              builder, loc, PointerType::get(deviceStub.getFunctionType()),
+              mlir::FlatSymbolRefAttr::get(deviceStub.getSymNameAttr())),
+          voidPtrTy);
+      builder.createCallOp(
+          loc, cudaRegisterFunction,
+          {fatbinHandle, hostFunc, deviceFunc, deviceFunc,
+           ConstantOp::create(builder, loc, IntAttr::get(intTy, -1)),
+           cirNullPtr, cirNullPtr, cirNullPtr, cirNullPtr, cirNullPtr});
+    }
   }
 }
 
@@ -1645,20 +2170,24 @@ void LoweringPreparePass::runOnOperation() {
     mlirModule = cast<::mlir::ModuleOp>(op);
 
   llvm::SmallVector<mlir::Operation *> opsToTransform;
+  mlir::SymbolTableCollection symbolTables;
 
   op->walk([&](mlir::Operation *op) {
     if (mlir::isa<cir::ArrayCtor, cir::ArrayDtor, cir::CastOp,
                   cir::ComplexMulOp, cir::ComplexDivOp, cir::DynamicCastOp,
-                  cir::FuncOp, cir::CallOp, cir::GetGlobalOp, cir::GlobalOp,
-                  cir::StoreOp, cir::CmpThreeWayOp, cir::IncOp, cir::DecOp,
-                  cir::MinusOp, cir::NotOp>(op))
+                  cir::FuncOp, cir::CallOp, cir::GlobalOp, cir::StoreOp,
+                  cir::CmpThreeWayOp, cir::IncOp, cir::DecOp, cir::MinusOp,
+                  cir::NotOp, cir::LocalInitOp>(op))
       opsToTransform.push_back(op);
   });
 
   for (mlir::Operation *o : opsToTransform)
-    runOnOp(o);
+    runOnOp(o, symbolTables);
 
   buildCXXGlobalInitFunc();
+  if (astCtx->getLangOpts().CUDA && !astCtx->getLangOpts().CUDAIsDevice)
+    buildCUDAModuleCtor();
+
   buildGlobalCtorDtorList();
 }
 

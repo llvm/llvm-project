@@ -17,12 +17,24 @@
 #define MODULE_PASS(NAME, CREATE_PASS)
 #endif
 MODULE_PASS("spirv-cbuffer-access", SPIRVCBufferAccess())
+MODULE_PASS("spirv-legalize-implicit-binding", SPIRVLegalizeImplicitBinding())
 MODULE_PASS("spirv-legalize-zero-size-arrays", SPIRVLegalizeZeroSizeArrays(*static_cast<const SPIRVTargetMachine *>(this)))
+MODULE_PASS("spirv-lower-ctor-dtor", SPIRVCtorDtorLoweringPass())
 MODULE_PASS("spirv-pushconstant-access", SPIRVPushConstantAccess(*static_cast<const SPIRVTargetMachine *>(this)))
+MODULE_PASS("spirv-emit-intrinsics", SPIRVEmitIntrinsicsPass(*static_cast<const SPIRVTargetMachine *>(this)))
 #undef MODULE_PASS
 
 #ifndef FUNCTION_PASS
 #define FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
+FUNCTION_PASS("spirv-legalize-pointer-cast", SPIRVLegalizePointerCast(*static_cast<const SPIRVTargetMachine *>(this)))
+FUNCTION_PASS("spirv-merge-region-exits", SPIRVMergeRegionExitTargets())
+FUNCTION_PASS("spirv-regularizer", SPIRVRegularizer())
 FUNCTION_PASS("spirv-structurizer", SPIRVStructurizerWrapper())
 #undef FUNCTION_PASS
+
+#ifndef FUNCTION_ANALYSIS
+#define FUNCTION_ANALYSIS(NAME, CREATE_PASS)
+#endif
+FUNCTION_ANALYSIS("spirv-convergence-region", SPIRVConvergenceRegionAnalysis())
+#undef FUNCTION_ANALYSIS

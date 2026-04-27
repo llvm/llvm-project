@@ -785,6 +785,11 @@ protected:
     /// value of OverloadedOperatorKind.
     LLVM_PREFERRED_TYPE(OverloadedOperatorKind)
     unsigned OperatorKind : 6;
+
+    /// Whether this is a C++20 rewritten reversed operator, where the
+    /// arguments are in reversed source order.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned IsReversed : 1;
   };
 
   class CXXRewrittenBinaryOperatorBitfields {
@@ -1272,6 +1277,14 @@ protected:
 
   //===--- Obj-C Expression bitfields classes ---===//
 
+  class ObjCObjectLiteralBitfields {
+    friend class ObjCObjectLiteral;
+
+    unsigned : NumExprBits;
+
+    unsigned IsExpressibleAsConstantInitializer : 1;
+  };
+
   class ObjCIndirectCopyRestoreExprBitfields {
     friend class ObjCIndirectCopyRestoreExpr;
 
@@ -1393,6 +1406,7 @@ protected:
     CoawaitExprBitfields CoawaitBits;
 
     // Obj-C Expressions
+    ObjCObjectLiteralBitfields ObjCObjectLiteralBits;
     ObjCIndirectCopyRestoreExprBitfields ObjCIndirectCopyRestoreExprBits;
 
     // Clang Extensions

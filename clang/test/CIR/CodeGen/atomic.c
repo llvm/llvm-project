@@ -72,6 +72,22 @@ void f4(_Atomic(float) *p) {
 // OGCG-LABEL: @f4
 // OGCG: store atomic float 0x40091EB860000000, ptr %{{.+}} seq_cst, align 4
 
+void atomic_to_non_atomic(_Atomic int *ptr, _Atomic volatile int *vptr) {
+  // CIR-LABEL: @atomic_to_non_atomic
+  // LLVM-LABEL: @atomic_to_non_atomic
+  // OGCG-LABEL: @atomic_to_non_atomic
+
+  int a = *ptr;
+  // CIR: %{{.+}} = cir.load align(4) atomic(seq_cst) %{{.+}} : !cir.ptr<!s32i>, !s32i
+  // LLVM: %{{.+}} = load atomic i32, ptr %{{.+}} seq_cst, align 4
+  // OGCG: %{{.+}} = load atomic i32, ptr %{{.+}} seq_cst, align 4
+
+  int b = *vptr;
+  // CIR: %{{.+}} = cir.load volatile align(4) atomic(seq_cst) %{{.+}} : !cir.ptr<!s32i>, !s32i
+  // LLVM: %{{.+}} = load atomic volatile i32, ptr %{{.+}} seq_cst, align 4
+  // OGCG: %{{.+}} = load atomic volatile i32, ptr %{{.+}} seq_cst, align 4
+}
+
 void load(int *ptr) {
   int x;
   __atomic_load(ptr, &x, __ATOMIC_RELAXED);
@@ -2950,4 +2966,34 @@ int atomic_load_and_store_dynamic_order(int *ptr, int order) {
   // OGCG-NEXT:   br label %[[CONTINUE_BLK]]
   // OGCG:      [[CONTINUE_BLK]]:
   // OGCG-NEXT:   %{{.+}} = load i32, ptr %[[RES_SLOT]], align 4
+}
+
+int atomic_fetch_uinc(int *ptr, int value) {
+  // CIR-LABEL: @atomic_fetch_uinc
+  // LLVM-LABEL: @atomic_fetch_uinc
+  // OGCG-LABEL: @atomic_fetch_uinc
+
+  return __atomic_fetch_uinc(ptr, value, __ATOMIC_SEQ_CST);
+  // CIR: %{{.+}} = cir.atomic.fetch uinc_wrap seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+
+  // LLVM:      %[[RES:.+]] = atomicrmw uinc_wrap ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+  // LLVM-NEXT: store i32 %[[RES]], ptr %{{.+}}, align 4
+
+  // OGCG:      %[[RES:.+]] = atomicrmw uinc_wrap ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+  // OGCG-NEXT: store i32 %[[RES]], ptr %{{.+}}, align 4
+}
+
+int atomic_fetch_udec(int *ptr, int value) {
+  // CIR-LABEL: @atomic_fetch_udec
+  // LLVM-LABEL: @atomic_fetch_udec
+  // OGCG-LABEL: @atomic_fetch_udec
+
+  return __atomic_fetch_udec(ptr, value, __ATOMIC_SEQ_CST);
+  // CIR: %{{.+}} = cir.atomic.fetch udec_wrap seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+
+  // LLVM:      %[[RES:.+]] = atomicrmw udec_wrap ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+  // LLVM-NEXT: store i32 %[[RES]], ptr %{{.+}}, align 4
+
+  // OGCG:      %[[RES:.+]] = atomicrmw udec_wrap ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+  // OGCG-NEXT: store i32 %[[RES]], ptr %{{.+}}, align 4
 }

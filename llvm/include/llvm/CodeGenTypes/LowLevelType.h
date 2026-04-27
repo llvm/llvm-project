@@ -367,9 +367,7 @@ public:
     return {(BaseSize.getKnownMinValue() + 7) / 8, BaseSize.isScalable()};
   }
 
-  constexpr LLT getScalarType() const {
-    return isVector() ? getElementType() : *this;
-  }
+  LLT getScalarType() const { return isVector() ? getElementType() : *this; }
 
   constexpr FpSemantics getFpSemantics() const {
     assert((isFloat() || isFloatVector()) &&
@@ -394,7 +392,7 @@ public:
   /// If this type is a vector, return a vector with the same number of elements
   /// but the new element size. Otherwise, return the new element type. Invalid
   /// for pointer types. For these, use changeElementType.
-  constexpr LLT changeElementSize(unsigned NewEltSize) const {
+  LLT changeElementSize(unsigned NewEltSize) const {
     assert(!isPointerOrPointerVector() &&
            "invalid to directly change element size for pointers");
     if (isVector())
@@ -412,7 +410,7 @@ public:
 
   /// Return a vector with the same element type and the new element count. Must
   /// be called on vector types.
-  constexpr LLT changeVectorElementCount(ElementCount EC) const {
+  LLT changeVectorElementCount(ElementCount EC) const {
     assert(isVector() &&
            "cannot change vector element count of non-vector type");
     return LLT::vector(EC, getElementType());
@@ -420,18 +418,18 @@ public:
 
   /// Return a vector or scalar with the same element type and the new element
   /// count.
-  constexpr LLT changeElementCount(ElementCount EC) const {
+  LLT changeElementCount(ElementCount EC) const {
     return LLT::scalarOrVector(EC, getScalarType());
   }
 
-  constexpr LLT changeElementCount(unsigned NumElements) const {
+  LLT changeElementCount(unsigned NumElements) const {
     return changeElementCount(ElementCount::getFixed(NumElements));
   }
 
   /// Return a type that is \p Factor times smaller. Reduces the number of
   /// elements if this is a vector, or the bitwidth for scalar/pointers. Does
   /// not attempt to handle cases that aren't evenly divisible.
-  constexpr LLT divide(int Factor) const {
+  LLT divide(int Factor) const {
     assert(Factor != 1);
     assert((!isScalar() || getScalarSizeInBits() != 0) && !isFloat() &&
            "cannot divide scalar of size zero and floats");
@@ -451,7 +449,7 @@ public:
   /// Produce a vector type that is \p Factor times bigger, preserving the
   /// element type. For a scalar or pointer, this will produce a new vector with
   /// \p Factor elements.
-  constexpr LLT multiplyElements(int Factor) const {
+  LLT multiplyElements(int Factor) const {
     if (isVector()) {
       return scalarOrVector(getElementCount().multiplyCoefficientBy(Factor),
                             getElementType());
@@ -477,7 +475,7 @@ public:
   }
 
   /// Returns the vector's element type. Only valid for vector types.
-  constexpr LLT getElementType() const {
+  LLT getElementType() const {
     assert(isVector() && "cannot get element type of scalar/aggregate");
     if (isPointerVector())
       return pointer(getAddressSpace(), getScalarSizeInBits());
@@ -491,7 +489,7 @@ public:
     return scalar(getScalarSizeInBits());
   }
 
-  constexpr LLT changeToInteger() const {
+  LLT changeToInteger() const {
     if (isPointer() || isPointerVector())
       return *this;
 
@@ -507,7 +505,7 @@ public:
   LLVM_DUMP_METHOD void dump() const;
 #endif
 
-  constexpr bool operator==(const LLT &RHS) const {
+  bool operator==(const LLT &RHS) const {
     if (isAnyScalar() || RHS.isAnyScalar())
       return isScalar() == RHS.isScalar() &&
              getScalarSizeInBits() == RHS.getScalarSizeInBits();
@@ -519,7 +517,7 @@ public:
     return Info == RHS.Info && RawData == RHS.RawData;
   }
 
-  constexpr bool operator!=(const LLT &RHS) const { return !(*this == RHS); }
+  bool operator!=(const LLT &RHS) const { return !(*this == RHS); }
 
   friend struct DenseMapInfo<LLT>;
   friend class GISelInstProfileBuilder;

@@ -1,8 +1,8 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -passes=loop-vectorize -prefer-predicate-over-epilogue=predicate-else-scalar-epilogue -force-tail-folding-style=data \
+; RUN: opt < %s -passes=loop-vectorize -tail-folding-policy=prefer-fold-tail -force-tail-folding-style=data \
 ; RUN:   -mtriple riscv64-linux-gnu -mattr=+v,+f -S -disable-output -debug-only=loop-vectorize 2>&1 | FileCheck %s --check-prefix=DATA
 
-; RUN: opt < %s -passes=loop-vectorize -prefer-predicate-over-epilogue=predicate-else-scalar-epilogue \
+; RUN: opt < %s -passes=loop-vectorize -tail-folding-policy=prefer-fold-tail \
 ; RUN:   -mtriple riscv64-linux-gnu -mattr=+v,+f -S \
 ; RUN:   -disable-output -debug-only=loop-vectorize 2>&1 | FileCheck %s --check-prefix=EVL
 
@@ -21,7 +21,7 @@ define void @simple_memset(i32 %val, ptr %ptr, i64 %n) #0 {
 entry:
   br label %while.body
 
-while.body:                                       ; preds = %while.body, %entry
+while.body:
   %index = phi i64 [ %index.next, %while.body ], [ 0, %entry ]
   %gep = getelementptr i32, ptr %ptr, i64 %index
   store i32 %val, ptr %gep
@@ -29,6 +29,6 @@ while.body:                                       ; preds = %while.body, %entry
   %cmp10 = icmp ult i64 %index.next, %n
   br i1 %cmp10, label %while.body, label %while.end.loopexit
 
-while.end.loopexit:                               ; preds = %while.body
+while.end.loopexit:
   ret void
 }

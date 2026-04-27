@@ -210,6 +210,12 @@ MPFRNumber MPFRNumber::erf() const {
   return result;
 }
 
+MPFRNumber MPFRNumber::erfc() const {
+  MPFRNumber result(*this);
+  mpfr_erfc(result.value, value, mpfr_rounding);
+  return result;
+}
+
 MPFRNumber MPFRNumber::exp() const {
   MPFRNumber result(*this);
   mpfr_exp(result.value, value, mpfr_rounding);
@@ -327,6 +333,22 @@ MPFRNumber MPFRNumber::log2() const {
   MPFRNumber result(*this);
   mpfr_log2(result.value, value, mpfr_rounding);
   return result;
+}
+
+MPFRNumber MPFRNumber::log2p1() const {
+  // TODO: Only use mpfr_log2p1 once CI and buildbots get MPFR >= 4.2.0.
+#if MPFR_VERSION >= MPFR_VERSION_NUM(4, 2, 0)
+  MPFRNumber result(*this);
+  mpfr_log2p1(result.value, value, mpfr_rounding);
+  return result;
+#else
+  unsigned int prec = mpfr_precision * 3;
+  MPFRNumber result(*this, prec);
+  MPFRNumber one(1.0f, prec);
+  mpfr_add(result.value, value, one.value, mpfr_rounding);
+  mpfr_log2(result.value, result.value, mpfr_rounding);
+  return result;
+#endif
 }
 
 MPFRNumber MPFRNumber::log10() const {

@@ -818,7 +818,7 @@ Expected<std::vector<BBAddrMap>> static readBBAddrMapImpl(
     if (!BBAddrMapOrErr) {
       if (PGOAnalyses)
         PGOAnalyses->clear();
-      return createError("unable to read " + describe(EF, *Sec) + ": " +
+      return createError("unable to read BB addr map section: " +
                          toString(BBAddrMapOrErr.takeError()));
     }
     std::move(BBAddrMapOrErr->begin(), BBAddrMapOrErr->end(),

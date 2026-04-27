@@ -15,9 +15,7 @@
 #include "mlir/IR/DialectRegistry.h"
 #include "mlir/Target/LLVMIR/LLVMTranslationInterface.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
-#include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
-#include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -54,7 +52,11 @@ public:
       mlir::Operation *op, llvm::ArrayRef<llvm::Instruction *> instructions,
       mlir::NamedAttribute attribute,
       mlir::LLVM::ModuleTranslation &moduleTranslation) const override {
-    if (auto mod = dyn_cast<mlir::ModuleOp>(op)) {
+    if (auto func = dyn_cast<mlir::LLVM::LLVMFuncOp>(op)) {
+      if (mlir::failed(
+              amendFunction(func, instructions, attribute, moduleTranslation)))
+        return mlir::failure();
+    } else if (auto mod = dyn_cast<mlir::ModuleOp>(op)) {
       if (mlir::failed(amendModule(mod, attribute, moduleTranslation)))
         return mlir::failure();
     }
@@ -62,6 +64,22 @@ public:
   }
 
 private:
+  // Translate CIR function attributes to LLVM function attributes.
+  mlir::LogicalResult
+  amendFunction(mlir::LLVM::LLVMFuncOp func,
+                llvm::ArrayRef<llvm::Instruction *> instructions,
+                mlir::NamedAttribute attribute,
+                mlir::LLVM::ModuleTranslation &moduleTranslation) const {
+    llvm::Function *llvmFunc = moduleTranslation.lookupFunction(func.getName());
+    llvm::StringRef attrName = attribute.getName().strref();
+
+    // Strip the "cir." prefix to get the LLVM attribute name.
+    llvm::StringRef llvmAttrName = attrName.substr(strlen("cir."));
+    if (auto strAttr = mlir::dyn_cast<mlir::StringAttr>(attribute.getValue()))
+      llvmFunc->addFnAttr(llvmAttrName, strAttr.getValue());
+    return mlir::success();
+  }
+
   // Translate CIR's module attributes to LLVM's module metadata
   mlir::LogicalResult
   amendModule(mlir::ModuleOp mod, mlir::NamedAttribute attribute,

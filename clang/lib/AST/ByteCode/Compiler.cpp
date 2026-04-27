@@ -703,8 +703,10 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
 
   case CK_VectorSplat: {
     assert(!canClassify(E->getType()));
-    assert(canClassify(SubExpr->getType()));
     assert(E->getType()->isVectorType());
+
+    if (!canClassify(SubExpr->getType()))
+      return false;
 
     if (!Initializing) {
       UnsignedOrNone LocalIndex = allocateLocal(E);
@@ -855,25 +857,10 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
   }
 
   case CK_HLSLAggregateSplatCast: {
-    // Aggregate splat cast: convert a scalar value to one of an aggregate type,
-    // inserting casts when necessary to convert the scalar to the aggregate's
-    // element type(s).
-    // TODO: Aggregate splat to struct and array types
+    // Aggregate splat cast: convert a scalar value to one of an aggregate type
+    // by replicating and casting the scalar to every element of the destination
+    // aggregate (vector, matrix, array, or struct).
     assert(canClassify(SubExpr->getType()));
-
-    unsigned NumElems;
-    PrimType DestElemT;
-    QualType DestElemType;
-    if (const auto *VT = E->getType()->getAs<VectorType>()) {
-      NumElems = VT->getNumElements();
-      DestElemType = VT->getElementType();
-    } else if (const auto *MT = E->getType()->getAs<ConstantMatrixType>()) {
-      NumElems = MT->getNumElementsFlattened();
-      DestElemType = MT->getElementType();
-    } else {
-      return false;
-    }
-    DestElemT = classifyPrim(DestElemType);
 
     if (!Initializing) {
       UnsignedOrNone LocalIndex = allocateLocal(E);
@@ -883,99 +870,53 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
         return false;
     }
 
+    // The scalar to be splatted is stored in a local to be repeatedly loaded
+    // once for every scalar element of the destination.
     PrimType SrcElemT = classifyPrim(SubExpr->getType());
     unsigned SrcOffset =
-        allocateLocalPrimitive(SubExpr, DestElemT, /*IsConst=*/true);
+        allocateLocalPrimitive(SubExpr, SrcElemT, /*IsConst=*/true);
 
     if (!this->visit(SubExpr))
       return false;
-    if (SrcElemT != DestElemT) {
-      if (!this->emitPrimCast(SrcElemT, DestElemT, DestElemType, E))
-        return false;
-    }
-    if (!this->emitSetLocal(DestElemT, SrcOffset, E))
+    if (!this->emitSetLocal(SrcElemT, SrcOffset, E))
       return false;
 
-    for (unsigned I = 0; I != NumElems; ++I) {
-      if (!this->emitGetLocal(DestElemT, SrcOffset, E))
-        return false;
-      if (!this->emitInitElem(DestElemT, I, E))
-        return false;
-    }
-    return true;
+    // Recursively splat the scalar into every element of the destination.
+    return emitHLSLAggregateSplat(SrcElemT, SrcOffset, E->getType(), E);
   }
 
   case CK_HLSLElementwiseCast: {
-    // Elementwise cast: flatten source elements of one aggregate type and store
-    // to a destination scalar or aggregate type of the same or fewer number of
-    // elements, while inserting casts as necessary.
-    // TODO: Elementwise cast to structs, nested arrays, and arrays of composite
-    // types
+    // Elementwise cast: flatten the elements of one aggregate source type and
+    // store to a destination scalar or aggregate type of the same or fewer
+    // number of elements. Casts are inserted element-wise to convert each
+    // source scalar element to its corresponding destination scalar element.
     QualType SrcType = SubExpr->getType();
     QualType DestType = E->getType();
 
-    // Allowed SrcTypes
-    const auto *SrcVT = SrcType->getAs<VectorType>();
-    const auto *SrcMT = SrcType->getAs<ConstantMatrixType>();
-    const auto *SrcAT = SrcType->getAsArrayTypeUnsafe();
-    const auto *SrcCAT = SrcAT ? dyn_cast<ConstantArrayType>(SrcAT) : nullptr;
-
-    // Allowed DestTypes
-    const auto *DestVT = DestType->getAs<VectorType>();
-    const auto *DestMT = DestType->getAs<ConstantMatrixType>();
-    const auto *DestAT = DestType->getAsArrayTypeUnsafe();
-    const auto *DestCAT =
-        DestAT ? dyn_cast<ConstantArrayType>(DestAT) : nullptr;
-    const OptPrimType DestPT = classify(DestType);
-
-    if (!SrcVT && !SrcMT && !SrcCAT)
-      return false;
-    if (!DestVT && !DestMT && !DestCAT && !DestPT)
-      return false;
-
-    unsigned SrcNumElems;
-    PrimType SrcElemT;
-    if (SrcVT) {
-      SrcNumElems = SrcVT->getNumElements();
-      SrcElemT = classifyPrim(SrcVT->getElementType());
-    } else if (SrcMT) {
-      SrcNumElems = SrcMT->getNumElementsFlattened();
-      SrcElemT = classifyPrim(SrcMT->getElementType());
-    } else if (SrcCAT) {
-      SrcNumElems = SrcCAT->getZExtSize();
-      SrcElemT = classifyPrim(SrcCAT->getElementType());
-    }
-
-    if (DestPT) {
-      // Scalar destination: extract element 0 and cast.
+    if (OptPrimType DestT = classify(DestType)) {
+      // When the destination is a scalar, we only need the first scalar
+      // element of the source.
+      unsigned SrcPtrOffset =
+          allocateLocalPrimitive(SubExpr, PT_Ptr, /*IsConst=*/true);
       if (!this->visit(SubExpr))
         return false;
-      if (!this->emitArrayElemPop(SrcElemT, 0, E))
+      if (!this->emitSetLocal(PT_Ptr, SrcPtrOffset, E))
         return false;
-      if (SrcElemT != *DestPT) {
-        if (!this->emitPrimCast(SrcElemT, *DestPT, DestType, E))
-          return false;
-      }
-      return true;
-    }
 
-    unsigned DestNumElems;
-    PrimType DestElemT;
-    QualType DestElemType;
-    if (DestVT) {
-      DestNumElems = DestVT->getNumElements();
-      DestElemType = DestVT->getElementType();
-    } else if (DestMT) {
-      DestNumElems = DestMT->getNumElementsFlattened();
-      DestElemType = DestMT->getElementType();
-    } else if (DestCAT) {
-      DestNumElems = DestCAT->getZExtSize();
-      DestElemType = DestCAT->getElementType();
+      SmallVector<HLSLFlatElement, 1> Elements;
+      if (!emitHLSLFlattenAggregate(SrcType, SrcPtrOffset, Elements, 1, E))
+        return false;
+      if (Elements.empty())
+        return false;
+
+      const HLSLFlatElement &Src = Elements[0];
+      if (!this->emitGetLocal(Src.Type, Src.LocalOffset, E))
+        return false;
+      return this->emitPrimCast(Src.Type, *DestT, DestType, E);
     }
-    DestElemT = classifyPrim(DestElemType);
 
     if (!Initializing) {
-      UnsignedOrNone LocalIndex = allocateTemporary(E);
+      UnsignedOrNone LocalIndex = allocateLocal(E);
       if (!LocalIndex)
         return false;
       if (!this->emitGetPtrLocal(*LocalIndex, E))
@@ -989,20 +930,45 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
     if (!this->emitSetLocal(PT_Ptr, SrcOffset, E))
       return false;
 
-    unsigned NumElems = std::min(SrcNumElems, DestNumElems);
-    for (unsigned I = 0; I != NumElems; ++I) {
-      if (!this->emitGetLocal(PT_Ptr, SrcOffset, E))
+    // Only flatten as many source elements as the destination requires.
+    unsigned ElemCount = countHLSLFlatElements(DestType);
+
+    SmallVector<HLSLFlatElement, 16> Elements;
+    Elements.reserve(ElemCount);
+    if (!emitHLSLFlattenAggregate(SrcType, SrcOffset, Elements, ElemCount, E))
+      return false;
+
+    // Sema is expected to reject an elementwise cast whose source has fewer
+    // scalar elements than the destination.
+    assert(Elements.size() == ElemCount &&
+           "Source type has fewer scalar elements than the destination type");
+
+    return emitHLSLConstructAggregate(DestType, Elements, E);
+  }
+
+  case CK_ToUnion: {
+    const FieldDecl *UnionField = E->getTargetUnionField();
+    const Record *R = this->getRecord(E->getType());
+    assert(R);
+    const Record::Field *RF = R->getField(UnionField);
+    QualType FieldType = RF->Decl->getType();
+
+    if (OptPrimType PT = classify(FieldType)) {
+      if (!this->visit(SubExpr))
         return false;
-      if (!this->emitArrayElemPop(SrcElemT, I, E))
-        return false;
-      if (SrcElemT != DestElemT) {
-        if (!this->emitPrimCast(SrcElemT, DestElemT, DestElemType, E))
-          return false;
-      }
-      if (!this->emitInitElem(DestElemT, I, E))
-        return false;
+      if (RF->isBitField())
+        return this->emitInitBitFieldActivate(*PT, RF->Offset, RF->bitWidth(),
+                                              E);
+      return this->emitInitFieldActivate(*PT, RF->Offset, E);
     }
-    return true;
+
+    if (!this->emitGetPtrField(RF->Offset, E))
+      return false;
+    if (!this->emitActivate(E))
+      return false;
+    if (!this->visitInitializer(SubExpr))
+      return false;
+    return this->emitPopPtr(E);
   }
 
   default:
@@ -2130,9 +2096,11 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
 
       bool BitField = FieldToInit->isBitField();
       if (BitField && Activate)
-        return this->emitInitBitFieldActivate(T, FieldToInit, E);
+        return this->emitInitBitFieldActivate(T, FieldToInit->Offset,
+                                              FieldToInit->bitWidth(), E);
       if (BitField)
-        return this->emitInitBitField(T, FieldToInit, E);
+        return this->emitInitBitField(T, FieldToInit->Offset,
+                                      FieldToInit->bitWidth(), E);
       if (Activate)
         return this->emitInitFieldActivate(T, FieldToInit->Offset, E);
       return this->emitInitField(T, FieldToInit->Offset, E);
@@ -2665,22 +2633,16 @@ bool Compiler<Emitter>::VisitMemberExpr(const MemberExpr *E) {
   if (DiscardResult)
     return this->discard(Base);
 
-  // MemberExprs are almost always lvalues, in which case we don't need to
-  // do the load. But sometimes they aren't.
-  const auto maybeLoadValue = [&]() -> bool {
-    if (E->isGLValue())
-      return true;
-    if (OptPrimType T = classify(E))
-      return this->emitLoadPop(*T, E);
-    return false;
-  };
-
   if (const auto *VD = dyn_cast<VarDecl>(Member)) {
     // I am almost confident in saying that a var decl must be static
-    // and therefore registered as a global variable. But this will probably
-    // turn out to be wrong some time in the future, as always.
-    if (auto GlobalIndex = P.getGlobal(VD))
-      return this->emitGetPtrGlobal(*GlobalIndex, E) && maybeLoadValue();
+    // and therefore registered as a global variable.
+    if (auto GlobalIndex = P.getGlobal(VD)) {
+      if (!this->emitGetPtrGlobal(*GlobalIndex, E))
+        return false;
+      if (Member->getType()->isReferenceType())
+        return this->emitLoadPopPtr(E);
+      return true;
+    }
     return false;
   }
 
@@ -2701,6 +2663,17 @@ bool Compiler<Emitter>::VisitMemberExpr(const MemberExpr *E) {
   if (!R)
     return false;
   const Record::Field *F = R->getField(FD);
+
+  // MemberExprs are almost always lvalues, in which case we don't need to
+  // do the load. But sometimes they aren't.
+  const auto maybeLoadValue = [&]() -> bool {
+    if (E->isGLValue())
+      return true;
+    if (OptPrimType T = classify(E))
+      return this->emitLoadPop(*T, E);
+    return false;
+  };
+
   // Leave a pointer to the field on the stack.
   if (F->Decl->getType()->isReferenceType())
     return this->emitGetFieldPop(PT_Ptr, F->Offset, E) && maybeLoadValue();
@@ -2722,16 +2695,27 @@ bool Compiler<Emitter>::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E) {
   assert(Initializing);
   assert(!DiscardResult);
 
+  const Expr *Common = E->getCommonExpr();
+  const Expr *SubExpr = E->getSubExpr();
+  OptPrimType SubExprT = classify(SubExpr);
+  size_t Size = E->getArraySize().getZExtValue();
+
+  if (SubExprT) {
+    // Unwrap the OpaqueValueExpr so we don't cache something we won't reuse.
+    Common = cast<OpaqueValueExpr>(Common)->getSourceExpr();
+
+    if (!this->visit(Common))
+      return false;
+    return this->emitCopyArray(*SubExprT, 0, 0, Size, E);
+  }
+
   // We visit the common opaque expression here once so we have its value
   // cached.
-  if (!this->discard(E->getCommonExpr()))
+  if (!this->discard(Common))
     return false;
 
   // TODO: This compiles to quite a lot of bytecode if the array is larger.
   //   Investigate compiling this to a loop.
-  const Expr *SubExpr = E->getSubExpr();
-  size_t Size = E->getArraySize().getZExtValue();
-  OptPrimType SubExprT = classify(SubExpr);
 
   // So, every iteration, we execute an assignment here
   // where the LHS is on the stack (the target array)
@@ -2819,7 +2803,7 @@ bool Compiler<Emitter>::VisitAbstractConditionalOperator(
   LabelTy LabelFalse = this->getLabel(); // Label for the false expr.
 
   if (IsBcpCall) {
-    if (!this->emitStartSpeculation(E))
+    if (!this->emitPushIgnoreDiags(E))
       return false;
   }
 
@@ -2851,7 +2835,7 @@ bool Compiler<Emitter>::VisitAbstractConditionalOperator(
   this->emitLabel(LabelEnd);
 
   if (IsBcpCall)
-    return this->emitEndSpeculation(E);
+    return this->emitPopIgnoreDiags(E);
   return true;
 }
 
@@ -3203,22 +3187,37 @@ bool Compiler<Emitter>::VisitExprWithCleanups(const ExprWithCleanups *E) {
 template <class Emitter>
 bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
     const MaterializeTemporaryExpr *E) {
-  const Expr *SubExpr = E->getSubExpr();
-
   if (Initializing) {
     // We already have a value, just initialize that.
-    return this->delegate(SubExpr);
+    return this->delegate(E->getSubExpr());
   }
   // If we don't end up using the materialized temporary anyway, don't
   // bother creating it.
   if (DiscardResult)
-    return this->discard(SubExpr);
+    return this->discard(E->getSubExpr());
+
+  SmallVector<const Expr *, 2> CommaLHSs;
+  SmallVector<SubobjectAdjustment, 2> Adjustments;
+  const Expr *Inner;
+  if (!Ctx.getLangOpts().CPlusPlus11)
+    Inner =
+        E->getSubExpr()->skipRValueSubobjectAdjustments(CommaLHSs, Adjustments);
+  else
+    Inner = E->getSubExpr();
+
+  // If we passed any comma operators, evaluate their LHSs.
+  for (const Expr *LHS : CommaLHSs) {
+    if (!this->discard(LHS))
+      return false;
+  }
+
+  // FIXME: Find a test case where Adjustments matters.
 
   // When we're initializing a global variable *or* the storage duration of
   // the temporary is explicitly static, create a global variable.
-  OptPrimType SubExprT = classify(SubExpr);
+  OptPrimType InnerT = classify(Inner);
   if (E->getStorageDuration() == SD_Static) {
-    UnsignedOrNone GlobalIndex = P.createGlobal(E);
+    UnsignedOrNone GlobalIndex = P.createGlobal(E, Inner->getType());
     if (!GlobalIndex)
       return false;
 
@@ -3226,20 +3225,20 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
         E->getLifetimeExtendedTemporaryDecl();
     assert(TempDecl);
 
-    if (SubExprT) {
-      if (!this->visit(SubExpr))
+    if (InnerT) {
+      if (!this->visit(Inner))
         return false;
-      if (!this->emitInitGlobalTemp(*SubExprT, *GlobalIndex, TempDecl, E))
+      if (!this->emitInitGlobalTemp(*InnerT, *GlobalIndex, TempDecl, E))
         return false;
       return this->emitGetPtrGlobal(*GlobalIndex, E);
     }
 
-    if (!this->checkLiteralType(SubExpr))
+    if (!this->checkLiteralType(Inner))
       return false;
     // Non-primitive values.
     if (!this->emitGetPtrGlobal(*GlobalIndex, E))
       return false;
-    if (!this->visitInitializer(SubExpr))
+    if (!this->visitInitializer(Inner))
       return false;
     return this->emitInitGlobalTempComp(TempDecl, E);
   }
@@ -3249,27 +3248,26 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
                            : ScopeKind::Block;
 
   // For everyhing else, use local variables.
-  if (SubExprT) {
-    bool IsConst = SubExpr->getType().isConstQualified();
-    bool IsVolatile = SubExpr->getType().isVolatileQualified();
+  if (InnerT) {
+    bool IsConst = Inner->getType().isConstQualified();
+    bool IsVolatile = Inner->getType().isVolatileQualified();
     unsigned LocalIndex =
-        allocateLocalPrimitive(E, *SubExprT, IsConst, IsVolatile, VarScope);
+        allocateLocalPrimitive(E, *InnerT, IsConst, IsVolatile, VarScope);
     if (!this->VarScope->LocalsAlwaysEnabled &&
         !this->emitEnableLocal(LocalIndex, E))
       return false;
 
-    if (!this->visit(SubExpr))
+    if (!this->visit(Inner))
       return false;
-    if (!this->emitSetLocal(*SubExprT, LocalIndex, E))
+    if (!this->emitSetLocal(*InnerT, LocalIndex, E))
       return false;
 
     return this->emitGetPtrLocal(LocalIndex, E);
   }
 
-  if (!this->checkLiteralType(SubExpr))
+  if (!this->checkLiteralType(Inner))
     return false;
 
-  const Expr *Inner = E->getSubExpr()->skipRValueSubobjectAdjustments();
   if (UnsignedOrNone LocalIndex =
           allocateLocal(E, Inner->getType(), VarScope)) {
     InitLinkScope<Emitter> ILS(this, InitLink::Temp(*LocalIndex));
@@ -3280,7 +3278,7 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
 
     if (!this->emitGetPtrLocal(*LocalIndex, E))
       return false;
-    return this->visitInitializer(SubExpr) && this->emitFinishInit(E);
+    return this->visitInitializer(Inner) && this->emitFinishInit(E);
   }
   return false;
 }
@@ -3321,7 +3319,7 @@ bool Compiler<Emitter>::VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
     if (T && !E->isLValue())
       return this->delegate(Init);
 
-    UnsignedOrNone GlobalIndex = P.createGlobal(E);
+    UnsignedOrNone GlobalIndex = P.createGlobal(E, E->getType());
     if (!GlobalIndex)
       return false;
 
@@ -4212,6 +4210,21 @@ bool Compiler<Emitter>::VisitCXXTypeidExpr(const CXXTypeidExpr *E) {
 }
 
 template <class Emitter>
+bool Compiler<Emitter>::VisitObjCDictionaryLiteral(
+    const ObjCDictionaryLiteral *E) {
+  if (E->isExpressibleAsConstantInitializer())
+    return this->emitDummyPtr(E, E);
+  return this->emitError(E);
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::VisitObjCArrayLiteral(const ObjCArrayLiteral *E) {
+  if (E->isExpressibleAsConstantInitializer())
+    return this->emitDummyPtr(E, E);
+  return this->emitError(E);
+}
+
+template <class Emitter>
 bool Compiler<Emitter>::VisitExpressionTraitExpr(const ExpressionTraitExpr *E) {
   assert(Ctx.getLangOpts().CPlusPlus);
   return this->emitConstBool(E->getValue(), E);
@@ -4630,6 +4643,9 @@ template <class Emitter> bool Compiler<Emitter>::visitAsLValue(const Expr *E) {
 }
 
 template <class Emitter> bool Compiler<Emitter>::visitBool(const Expr *E) {
+  OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/false,
+                             /*NewInitializing=*/false, /*ToLValue=*/ToLValue);
+
   OptPrimType T = classify(E->getType());
   if (!T) {
     // Convert complex values to bool.
@@ -4718,7 +4734,7 @@ bool Compiler<Emitter>::visitZeroRecordInitializer(const Record *R,
     const Descriptor *D = Field.Desc;
     if (D->isPrimitive()) {
       QualType QT = D->getType();
-      PrimType T = classifyPrim(D->getType());
+      PrimType T = D->getPrimType();
       if (!this->visitZeroInitializer(T, QT, E))
         return false;
       if (R->isUnion()) {
@@ -4736,7 +4752,7 @@ bool Compiler<Emitter>::visitZeroRecordInitializer(const Record *R,
 
     if (D->isPrimitiveArray()) {
       QualType ET = D->getElemQualType();
-      PrimType T = classifyPrim(ET);
+      PrimType T = D->getPrimType();
       for (uint32_t I = 0, N = D->getNumElems(); I != N; ++I) {
         if (!this->visitZeroInitializer(T, ET, E))
           return false;
@@ -4959,15 +4975,14 @@ template <class Emitter>
 unsigned Compiler<Emitter>::allocateLocalPrimitive(DeclTy &&Src, PrimType Ty,
                                                    bool IsConst,
                                                    bool IsVolatile,
-                                                   ScopeKind SC,
-                                                   bool IsConstexprUnknown) {
+                                                   ScopeKind SC) {
   // FIXME: There are cases where Src.is<Expr*>() is wrong, e.g.
   //   (int){12} in C. Consider using Expr::isTemporaryObject() instead
   //   or isa<MaterializeTemporaryExpr>().
   Descriptor *D = P.createDescriptor(Src, Ty, nullptr, Descriptor::InlineDescMD,
                                      IsConst, isa<const Expr *>(Src),
                                      /*IsMutable=*/false, IsVolatile);
-  D->IsConstexprUnknown = IsConstexprUnknown;
+  D->IsConstexprUnknown = this->VariablesAreConstexprUnknown;
   Scope::Local Local = this->createLocal(D);
   if (auto *VD = dyn_cast_if_present<ValueDecl>(Src.dyn_cast<const Decl *>()))
     Locals.insert({VD, Local});
@@ -4977,8 +4992,7 @@ unsigned Compiler<Emitter>::allocateLocalPrimitive(DeclTy &&Src, PrimType Ty,
 
 template <class Emitter>
 UnsignedOrNone Compiler<Emitter>::allocateLocal(DeclTy &&Src, QualType Ty,
-                                                ScopeKind SC,
-                                                bool IsConstexprUnknown) {
+                                                ScopeKind SC) {
   const ValueDecl *Key = nullptr;
   const Expr *Init = nullptr;
   bool IsTemporary = false;
@@ -5000,7 +5014,7 @@ UnsignedOrNone Compiler<Emitter>::allocateLocal(DeclTy &&Src, QualType Ty,
       Init);
   if (!D)
     return std::nullopt;
-  D->IsConstexprUnknown = IsConstexprUnknown;
+  D->IsConstexprUnknown = this->VariablesAreConstexprUnknown;
 
   Scope::Local Local = this->createLocal(D);
   if (Key)
@@ -5103,11 +5117,9 @@ bool Compiler<Emitter>::visitExpr(const Expr *E, bool DestroyToplevelScope) {
 }
 
 template <class Emitter>
-VarCreationState Compiler<Emitter>::visitDecl(const VarDecl *VD,
-                                              bool IsConstexprUnknown) {
+VarCreationState Compiler<Emitter>::visitDecl(const VarDecl *VD) {
 
-  auto R = this->visitVarDecl(VD, VD->getInit(), /*Toplevel=*/true,
-                              IsConstexprUnknown);
+  auto R = this->visitVarDecl(VD, VD->getInit(), /*Toplevel=*/true);
 
   if (R.notCreated())
     return R;
@@ -5191,9 +5203,9 @@ bool Compiler<Emitter>::visitDeclAndReturn(const VarDecl *VD, const Expr *Init,
 }
 
 template <class Emitter>
-VarCreationState
-Compiler<Emitter>::visitVarDecl(const VarDecl *VD, const Expr *Init,
-                                bool Toplevel, bool IsConstexprUnknown) {
+VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD,
+                                                 const Expr *Init,
+                                                 bool Toplevel) {
   // We don't know what to do with these, so just return false.
   if (VD->getType().isNull())
     return false;
@@ -5215,7 +5227,6 @@ Compiler<Emitter>::visitVarDecl(const VarDecl *VD, const Expr *Init,
     };
 
     DeclScope<Emitter> LocalScope(this, VD);
-
     UnsignedOrNone GlobalIndex = P.getGlobal(VD);
     if (GlobalIndex) {
       // The global was previously created but the initializer failed.
@@ -5257,10 +5268,9 @@ Compiler<Emitter>::visitVarDecl(const VarDecl *VD, const Expr *Init,
   if (VarT) {
     unsigned Offset = this->allocateLocalPrimitive(
         VD, *VarT, VD->getType().isConstQualified(),
-        VD->getType().isVolatileQualified(), ScopeKind::Block,
-        IsConstexprUnknown);
+        VD->getType().isVolatileQualified(), ScopeKind::Block);
 
-    if (!Init)
+    if (!Init || Init->getType()->isVoidType())
       return true;
 
     // If this is a toplevel declaration, create a scope for the
@@ -5276,8 +5286,8 @@ Compiler<Emitter>::visitVarDecl(const VarDecl *VD, const Expr *Init,
     return this->emitSetLocal(*VarT, Offset, VD);
   }
   // Local composite variables.
-  if (UnsignedOrNone Offset = this->allocateLocal(
-          VD, VD->getType(), ScopeKind::Block, IsConstexprUnknown)) {
+  if (UnsignedOrNone Offset =
+          this->allocateLocal(VD, VD->getType(), ScopeKind::Block)) {
     if (!Init)
       return true;
 
@@ -5361,7 +5371,8 @@ bool Compiler<Emitter>::visitAPValueInitializer(const APValue &Val,
       if (!this->visitAPValue(F, *PT, E))
         return false;
       if (RF->isBitField())
-        return this->emitInitBitFieldActivate(*PT, RF, E);
+        return this->emitInitBitFieldActivate(*PT, RF->Offset, RF->bitWidth(),
+                                              E);
       return this->emitInitFieldActivate(*PT, RF->Offset, E);
     }
 
@@ -5417,9 +5428,9 @@ bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E,
     LabelTy EndLabel = this->getLabel();
     if (!this->speculate(E, EndLabel))
       return false;
-    this->fallthrough(EndLabel);
     if (!this->emitEndSpeculation(E))
       return false;
+    this->fallthrough(EndLabel);
     if (DiscardResult)
       return this->emitPop(classifyPrim(E), E);
     return true;
@@ -5559,12 +5570,15 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
   SmallVector<const Expr *, 8> Args(ArrayRef(E->getArgs(), E->getNumArgs()));
 
   bool IsAssignmentOperatorCall = false;
+  bool ActivateLHS = false;
   if (const auto *OCE = dyn_cast<CXXOperatorCallExpr>(E);
       OCE && OCE->isAssignmentOp()) {
     // Just like with regular assignments, we need to special-case assignment
     // operators here and evaluate the RHS (the second arg) before the LHS (the
     // first arg). We fix this by using a Flip op later.
     assert(Args.size() == 2);
+    const CXXRecordDecl *LHSRecord = Args[0]->getType()->getAsCXXRecordDecl();
+    ActivateLHS = LHSRecord && LHSRecord->hasTrivialDefaultConstructor();
     IsAssignmentOperatorCall = true;
     std::reverse(Args.begin(), Args.end());
   }
@@ -5642,7 +5656,7 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
       return false;
   }
 
-  if (!this->visitCallArgs(Args, FuncDecl, IsAssignmentOperatorCall,
+  if (!this->visitCallArgs(Args, FuncDecl, ActivateLHS,
                            isa<CXXOperatorCallExpr>(E)))
     return false;
 
@@ -6126,28 +6140,28 @@ bool Compiler<Emitter>::visitWhileStmt(const WhileStmt *S) {
       return false;
   }
 
-    if (!this->visitBool(Cond))
-      return false;
+  if (!this->visitBool(Cond))
+    return false;
 
-    if (!this->maybeEmitDeferredVarInit(S->getConditionVariable()))
-      return false;
+  if (!this->maybeEmitDeferredVarInit(S->getConditionVariable()))
+    return false;
 
-    if (!this->jumpFalse(EndLabel, S))
-      return false;
+  if (!this->jumpFalse(EndLabel, S))
+    return false;
 
-    if (!this->visitStmt(Body))
-      return false;
+  if (!this->visitStmt(Body))
+    return false;
 
-    if (!CondScope.destroyLocals())
-      return false;
-    // } End of loop body.
+  if (!CondScope.destroyLocals())
+    return false;
+  // } End of loop body.
 
-    if (!this->jump(CondLabel, S))
-      return false;
-    this->fallthrough(EndLabel);
-    this->emitLabel(EndLabel);
+  if (!this->jump(CondLabel, S))
+    return false;
+  this->fallthrough(EndLabel);
+  this->emitLabel(EndLabel);
 
-    return CondScope.destroyLocals() && WholeLoopScope.destroyLocals();
+  return CondScope.destroyLocals() && WholeLoopScope.destroyLocals();
 }
 
 template <class Emitter> bool Compiler<Emitter>::visitDoStmt(const DoStmt *S) {
@@ -6669,9 +6683,9 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
       if (!this->visit(InitExpr))
         return false;
 
-      bool BitField = F->isBitField();
-      if (BitField)
-        return this->emitInitThisBitField(*T, F, FieldOffset, InitExpr);
+      if (F->isBitField())
+        return this->emitInitThisBitField(*T, FieldOffset, F->bitWidth(),
+                                          InitExpr);
       return this->emitInitThisField(*T, FieldOffset, InitExpr);
     }
     // Non-primitive case. Get a pointer to the field-to-initialize
@@ -6753,12 +6767,13 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
     } else if (const IndirectFieldDecl *IFD = Init->getIndirectMember()) {
       LocOverrideScope<Emitter> LOS(this, SourceInfo{},
                                     initNeedsOverridenLoc(Init));
-      assert(IFD->getChainingSize() >= 2);
+      unsigned ChainSize = IFD->getChainingSize();
+      assert(ChainSize >= 2);
 
       unsigned NestedFieldOffset = 0;
       const Record::Field *NestedField = nullptr;
-      for (const NamedDecl *ND : IFD->chain()) {
-        const auto *FD = cast<FieldDecl>(ND);
+      for (unsigned I = 0; I != ChainSize; ++I) {
+        const auto *FD = cast<FieldDecl>(IFD->chain()[I]);
         const Record *FieldRecord = this->P.getOrCreateRecord(FD->getParent());
         assert(FieldRecord);
 
@@ -6767,12 +6782,13 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
         IsUnion = IsUnion || FieldRecord->isUnion();
 
         NestedFieldOffset += NestedField->Offset;
+
+        // Add a new InitChainLink for the record, but not for the final field.
+        if (I != ChainSize - 1)
+          InitStack.push_back(InitLink::Field(NestedField->Offset));
       }
       assert(NestedField);
 
-      unsigned FirstLinkOffset =
-          R->getField(cast<FieldDecl>(IFD->chain()[0]))->Offset;
-      InitLinkScope<Emitter> ILS(this, InitLink::Field(FirstLinkOffset));
       InitStackScope<Emitter> ISS(this, isa<CXXDefaultInitExpr>(InitExpr));
       if (!emitFieldInitializer(NestedField, NestedFieldOffset, InitExpr,
                                 IsUnion))
@@ -6792,6 +6808,8 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
         if (!this->emitFinishInitPop(InitExpr))
           return false;
       }
+
+      InitStack.pop_back_n(ChainSize - 1);
 
     } else {
       assert(Init->isDelegatingInitializer());
@@ -6868,6 +6886,9 @@ bool Compiler<Emitter>::compileDestructor(const CXXDestructorDecl *Dtor) {
       return false;
   }
 
+  if (!this->emitMarkDestroyed(Dtor))
+    return false;
+
   // FIXME: Virtual bases.
   return this->emitPopPtr(Dtor) && this->emitRetVoid(Dtor);
 }
@@ -6886,6 +6907,9 @@ bool Compiler<Emitter>::compileUnionAssignmentOperator(
 
 template <class Emitter>
 bool Compiler<Emitter>::visitFunc(const FunctionDecl *F) {
+  if (F->getReturnType()->isDependentType())
+    return false;
+
   // Classify the return type.
   ReturnType = this->classify(F->getReturnType());
 
@@ -7462,8 +7486,10 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
   // Local variables.
   if (auto It = Locals.find(D); It != Locals.end()) {
     const unsigned Offset = It->second.Offset;
-    if (IsReference)
-      return this->emitGetLocal(classifyPrim(E), Offset, E);
+    if (IsReference) {
+      assert(classifyPrim(E) == PT_Ptr);
+      return this->emitGetRefLocal(Offset, E);
+    }
     return this->emitGetPtrLocal(Offset, E);
   }
   // Global variables.
@@ -7478,10 +7504,13 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
   }
 
   // In case we need to re-visit a declaration.
-  auto revisit = [&](const VarDecl *VD) -> bool {
+  auto revisit = [&](const VarDecl *VD,
+                     bool IsConstexprUnknown = true) -> bool {
+    llvm::SaveAndRestore CURS(this->VariablesAreConstexprUnknown,
+                              IsConstexprUnknown);
     if (!this->emitPushCC(VD->hasConstantInitialization(), E))
       return false;
-    auto VarState = this->visitDecl(VD, /*IsConstexprUnknown=*/true);
+    auto VarState = this->visitDecl(VD);
 
     if (!this->emitPopCC(E))
       return false;
@@ -7529,7 +7558,7 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
   if (!Ctx.getLangOpts().CPlusPlus) {
     if (VD->getAnyInitializer() && DeclType.isConstant(Ctx.getASTContext()) &&
         !VD->isWeak())
-      return revisit(VD);
+      return revisit(VD, /*IsConstexprUnknown=*/false);
     return this->emitDummyPtr(D, E);
   }
 
@@ -7563,11 +7592,14 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
   if (VD->isLocalVarDecl() && typeShouldBeVisited(DeclType) && VD->getInit() &&
       !VD->getInit()->isValueDependent()) {
     if (VD->evaluateValue()) {
+      bool IsConstexprUnknown = !DeclType.isConstant(Ctx.getASTContext()) &&
+                                !DeclType->isReferenceType();
       // Revisit the variable declaration, but make sure it's associated with a
       // different evaluation, so e.g. mutable reads don't work on it.
       EvalIDScope _(Ctx);
-      return revisit(VD);
-    }
+      return revisit(VD, IsConstexprUnknown);
+    } else if (Ctx.getLangOpts().CPlusPlus23 && IsReference)
+      return revisit(VD, /*IsConstexprUnknown=*/true);
 
     if (IsReference)
       return this->emitInvalidDeclRef(cast<DeclRefExpr>(E),
@@ -7984,6 +8016,420 @@ bool Compiler<Emitter>::emitBuiltinBitCast(const CastExpr *E) {
     return this->emitPop(*ToT, E);
 
   return true;
+}
+
+/// Replicate a scalar value into every scalar element of an aggregate.
+/// The scalar is stored in a local at \p SrcOffset and a pointer to the
+/// destination must be on top of the interpreter stack. Each element receives
+/// the scalar, cast to its own type.
+template <class Emitter>
+bool Compiler<Emitter>::emitHLSLAggregateSplat(PrimType SrcT,
+                                               unsigned SrcOffset,
+                                               QualType DestType,
+                                               const Expr *E) {
+  // Vectors and matrices are treated as flat sequences of elements.
+  unsigned NumElems = 0;
+  QualType ElemType;
+  if (const auto *VT = DestType->getAs<VectorType>()) {
+    NumElems = VT->getNumElements();
+    ElemType = VT->getElementType();
+  } else if (const auto *MT = DestType->getAs<ConstantMatrixType>()) {
+    NumElems = MT->getNumElementsFlattened();
+    ElemType = MT->getElementType();
+  }
+  if (NumElems > 0) {
+    PrimType ElemT = classifyPrim(ElemType);
+    for (unsigned I = 0; I != NumElems; ++I) {
+      if (!this->emitGetLocal(SrcT, SrcOffset, E))
+        return false;
+      if (!this->emitPrimCast(SrcT, ElemT, ElemType, E))
+        return false;
+      if (!this->emitInitElem(ElemT, I, E))
+        return false;
+    }
+    return true;
+  }
+
+  // Arrays: primitive elements are filled directly; composite elements
+  // require recursion into each sub-aggregate.
+  if (const auto *AT = DestType->getAsArrayTypeUnsafe()) {
+    const auto *CAT = cast<ConstantArrayType>(AT);
+    QualType ArrElemType = CAT->getElementType();
+    unsigned ArrSize = CAT->getZExtSize();
+
+    if (OptPrimType ElemT = classify(ArrElemType)) {
+      for (unsigned I = 0; I != ArrSize; ++I) {
+        if (!this->emitGetLocal(SrcT, SrcOffset, E))
+          return false;
+        if (!this->emitPrimCast(SrcT, *ElemT, ArrElemType, E))
+          return false;
+        if (!this->emitInitElem(*ElemT, I, E))
+          return false;
+      }
+    } else {
+      for (unsigned I = 0; I != ArrSize; ++I) {
+        if (!this->emitConstUint32(I, E))
+          return false;
+        if (!this->emitArrayElemPtrUint32(E))
+          return false;
+        if (!emitHLSLAggregateSplat(SrcT, SrcOffset, ArrElemType, E))
+          return false;
+        if (!this->emitFinishInitPop(E))
+          return false;
+      }
+    }
+    return true;
+  }
+
+  // Records: fill base classes first, then named fields in declaration
+  // order.
+  if (DestType->isRecordType()) {
+    const Record *R = getRecord(DestType);
+    if (!R)
+      return false;
+
+    if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(R->getDecl())) {
+      for (const CXXBaseSpecifier &BS : CXXRD->bases()) {
+        const Record::Base *B = R->getBase(BS.getType());
+        assert(B);
+        if (!this->emitGetPtrBase(B->Offset, E))
+          return false;
+        if (!emitHLSLAggregateSplat(SrcT, SrcOffset, BS.getType(), E))
+          return false;
+        if (!this->emitFinishInitPop(E))
+          return false;
+      }
+    }
+
+    for (const Record::Field &F : R->fields()) {
+      if (F.isUnnamedBitField())
+        continue;
+
+      QualType FieldType = F.Decl->getType();
+      if (OptPrimType FieldT = classify(FieldType)) {
+        if (!this->emitGetLocal(SrcT, SrcOffset, E))
+          return false;
+        if (!this->emitPrimCast(SrcT, *FieldT, FieldType, E))
+          return false;
+        if (F.isBitField()) {
+          if (!this->emitInitBitField(*FieldT, F.Offset, F.bitWidth(), E))
+            return false;
+        } else {
+          if (!this->emitInitField(*FieldT, F.Offset, E))
+            return false;
+        }
+      } else {
+        if (!this->emitGetPtrField(F.Offset, E))
+          return false;
+        if (!emitHLSLAggregateSplat(SrcT, SrcOffset, FieldType, E))
+          return false;
+        if (!this->emitPopPtr(E))
+          return false;
+      }
+    }
+    return true;
+  }
+
+  return false;
+}
+
+/// Return the total number of scalar elements in a type. This is used
+/// to cap how many source elements are extracted during an elementwise cast,
+/// so we never flatten more than the destination can hold.
+template <class Emitter>
+unsigned Compiler<Emitter>::countHLSLFlatElements(QualType Ty) {
+  // Vector and matrix types are treated as flat sequences of elements.
+  if (const auto *VT = Ty->getAs<VectorType>())
+    return VT->getNumElements();
+  if (const auto *MT = Ty->getAs<ConstantMatrixType>())
+    return MT->getNumElementsFlattened();
+  // Arrays: total count is array size * scalar elements per element.
+  if (const auto *AT = Ty->getAsArrayTypeUnsafe()) {
+    const auto *CAT = cast<ConstantArrayType>(AT);
+    return CAT->getZExtSize() * countHLSLFlatElements(CAT->getElementType());
+  }
+  // Records: sum scalar element counts of base classes and named fields.
+  if (Ty->isRecordType()) {
+    const Record *R = getRecord(Ty);
+    if (!R)
+      return 0;
+    unsigned Count = 0;
+    if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(R->getDecl())) {
+      for (const CXXBaseSpecifier &BS : CXXRD->bases())
+        Count += countHLSLFlatElements(BS.getType());
+    }
+    for (const Record::Field &F : R->fields()) {
+      if (F.isUnnamedBitField())
+        continue;
+      Count += countHLSLFlatElements(F.Decl->getType());
+    }
+    return Count;
+  }
+  // Scalar primitive types contribute one element.
+  if (canClassify(Ty))
+    return 1;
+  return 0;
+}
+
+/// Walk a source aggregate and extract every scalar element into its own local
+/// variable. The results are appended to \p Elements in declaration order,
+/// stopping once \p MaxElements have been collected. A pointer to the
+/// source aggregate must be stored in the local at \p SrcOffset.
+template <class Emitter>
+bool Compiler<Emitter>::emitHLSLFlattenAggregate(
+    QualType SrcType, unsigned SrcOffset,
+    SmallVectorImpl<HLSLFlatElement> &Elements, unsigned MaxElements,
+    const Expr *E) {
+
+  // Save a scalar value from the stack into a new local and record it.
+  auto saveToLocal = [&](PrimType T) -> bool {
+    unsigned Offset = allocateLocalPrimitive(E, T, /*IsConst=*/true);
+    if (!this->emitSetLocal(T, Offset, E))
+      return false;
+    Elements.push_back({Offset, T});
+    return true;
+  };
+
+  // Save a pointer from the stack into a new local for later use.
+  auto savePtrToLocal = [&]() -> UnsignedOrNone {
+    unsigned Offset = allocateLocalPrimitive(E, PT_Ptr, /*IsConst=*/true);
+    if (!this->emitSetLocal(PT_Ptr, Offset, E))
+      return std::nullopt;
+    return Offset;
+  };
+
+  // Vectors and matrices are flat sequences of elements.
+  unsigned NumElems = 0;
+  QualType ElemType;
+  if (const auto *VT = SrcType->getAs<VectorType>()) {
+    NumElems = VT->getNumElements();
+    ElemType = VT->getElementType();
+  } else if (const auto *MT = SrcType->getAs<ConstantMatrixType>()) {
+    NumElems = MT->getNumElementsFlattened();
+    ElemType = MT->getElementType();
+  }
+  if (NumElems > 0) {
+    PrimType ElemT = classifyPrim(ElemType);
+    for (unsigned I = 0; I != NumElems && Elements.size() < MaxElements; ++I) {
+      if (!this->emitGetLocal(PT_Ptr, SrcOffset, E))
+        return false;
+      if (!this->emitArrayElemPop(ElemT, I, E))
+        return false;
+      if (!saveToLocal(ElemT))
+        return false;
+    }
+    return true;
+  }
+
+  // Arrays: primitive elements are extracted directly; composite elements
+  // require recursion into each sub-aggregate.
+  if (const auto *AT = SrcType->getAsArrayTypeUnsafe()) {
+    const auto *CAT = cast<ConstantArrayType>(AT);
+    QualType ArrElemType = CAT->getElementType();
+    unsigned ArrSize = CAT->getZExtSize();
+
+    if (OptPrimType ElemT = classify(ArrElemType)) {
+      for (unsigned I = 0; I != ArrSize && Elements.size() < MaxElements; ++I) {
+        if (!this->emitGetLocal(PT_Ptr, SrcOffset, E))
+          return false;
+        if (!this->emitArrayElemPop(*ElemT, I, E))
+          return false;
+        if (!saveToLocal(*ElemT))
+          return false;
+      }
+    } else {
+      for (unsigned I = 0; I != ArrSize && Elements.size() < MaxElements; ++I) {
+        if (!this->emitGetLocal(PT_Ptr, SrcOffset, E))
+          return false;
+        if (!this->emitConstUint32(I, E))
+          return false;
+        if (!this->emitArrayElemPtrPopUint32(E))
+          return false;
+        UnsignedOrNone ElemPtrOffset = savePtrToLocal();
+        if (!ElemPtrOffset)
+          return false;
+        if (!emitHLSLFlattenAggregate(ArrElemType, *ElemPtrOffset, Elements,
+                                      MaxElements, E))
+          return false;
+      }
+    }
+    return true;
+  }
+
+  // Records: base classes come first, then named fields in declaration
+  // order.
+  if (SrcType->isRecordType()) {
+    const Record *R = getRecord(SrcType);
+    if (!R)
+      return false;
+
+    if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(R->getDecl())) {
+      for (const CXXBaseSpecifier &BS : CXXRD->bases()) {
+        if (Elements.size() >= MaxElements)
+          break;
+        const Record::Base *B = R->getBase(BS.getType());
+        assert(B);
+        if (!this->emitGetLocal(PT_Ptr, SrcOffset, E))
+          return false;
+        if (!this->emitGetPtrBasePop(B->Offset, /*NullOK=*/false, E))
+          return false;
+        UnsignedOrNone BasePtrOffset = savePtrToLocal();
+        if (!BasePtrOffset)
+          return false;
+        if (!emitHLSLFlattenAggregate(BS.getType(), *BasePtrOffset, Elements,
+                                      MaxElements, E))
+          return false;
+      }
+    }
+
+    for (const Record::Field &F : R->fields()) {
+      if (Elements.size() >= MaxElements)
+        break;
+      if (F.isUnnamedBitField())
+        continue;
+
+      QualType FieldType = F.Decl->getType();
+      if (!this->emitGetLocal(PT_Ptr, SrcOffset, E))
+        return false;
+      if (!this->emitGetPtrFieldPop(F.Offset, E))
+        return false;
+
+      if (OptPrimType FieldT = classify(FieldType)) {
+        if (!this->emitLoadPop(*FieldT, E))
+          return false;
+        if (!saveToLocal(*FieldT))
+          return false;
+      } else {
+        UnsignedOrNone FieldPtrOffset = savePtrToLocal();
+        if (!FieldPtrOffset)
+          return false;
+        if (!emitHLSLFlattenAggregate(FieldType, *FieldPtrOffset, Elements,
+                                      MaxElements, E))
+          return false;
+      }
+    }
+    return true;
+  }
+
+  return false;
+}
+
+/// Populate an HLSL aggregate from a flat list of previously extracted source
+/// elements, casting each to the corresponding destination element type.
+/// \p ElemIdx tracks the current position in \p Elements and is advanced as
+/// elements are consumed. A pointer to the destination must be on top of the
+/// interpreter stack.
+template <class Emitter>
+bool Compiler<Emitter>::emitHLSLConstructAggregate(
+    QualType DestType, ArrayRef<HLSLFlatElement> Elements, unsigned &ElemIdx,
+    const Expr *E) {
+
+  // Consume the next source element, cast it, and leave it on the stack.
+  auto loadAndCast = [&](PrimType DestT, QualType DestQT) -> bool {
+    const auto &Src = Elements[ElemIdx++];
+    if (!this->emitGetLocal(Src.Type, Src.LocalOffset, E))
+      return false;
+    return this->emitPrimCast(Src.Type, DestT, DestQT, E);
+  };
+
+  // Vectors and matrices are flat sequences of elements.
+  unsigned NumElems = 0;
+  QualType ElemType;
+  if (const auto *VT = DestType->getAs<VectorType>()) {
+    NumElems = VT->getNumElements();
+    ElemType = VT->getElementType();
+  } else if (const auto *MT = DestType->getAs<ConstantMatrixType>()) {
+    NumElems = MT->getNumElementsFlattened();
+    ElemType = MT->getElementType();
+  }
+  if (NumElems > 0) {
+    PrimType DestElemT = classifyPrim(ElemType);
+    for (unsigned I = 0; I != NumElems; ++I) {
+      if (!loadAndCast(DestElemT, ElemType))
+        return false;
+      if (!this->emitInitElem(DestElemT, I, E))
+        return false;
+    }
+    return true;
+  }
+
+  // Arrays: primitive elements are filled directly; composite elements
+  // require recursion into each sub-aggregate.
+  if (const auto *AT = DestType->getAsArrayTypeUnsafe()) {
+    const auto *CAT = cast<ConstantArrayType>(AT);
+    QualType ArrElemType = CAT->getElementType();
+    unsigned ArrSize = CAT->getZExtSize();
+
+    if (OptPrimType ElemT = classify(ArrElemType)) {
+      for (unsigned I = 0; I != ArrSize; ++I) {
+        if (!loadAndCast(*ElemT, ArrElemType))
+          return false;
+        if (!this->emitInitElem(*ElemT, I, E))
+          return false;
+      }
+    } else {
+      for (unsigned I = 0; I != ArrSize; ++I) {
+        if (!this->emitConstUint32(I, E))
+          return false;
+        if (!this->emitArrayElemPtrUint32(E))
+          return false;
+        if (!emitHLSLConstructAggregate(ArrElemType, Elements, ElemIdx, E))
+          return false;
+        if (!this->emitFinishInitPop(E))
+          return false;
+      }
+    }
+    return true;
+  }
+
+  // Records: base classes come first, then named fields in declaration
+  // order.
+  if (DestType->isRecordType()) {
+    const Record *R = getRecord(DestType);
+    if (!R)
+      return false;
+
+    if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(R->getDecl())) {
+      for (const CXXBaseSpecifier &BS : CXXRD->bases()) {
+        const Record::Base *B = R->getBase(BS.getType());
+        assert(B);
+        if (!this->emitGetPtrBase(B->Offset, E))
+          return false;
+        if (!emitHLSLConstructAggregate(BS.getType(), Elements, ElemIdx, E))
+          return false;
+        if (!this->emitFinishInitPop(E))
+          return false;
+      }
+    }
+
+    for (const Record::Field &F : R->fields()) {
+      if (F.isUnnamedBitField())
+        continue;
+
+      QualType FieldType = F.Decl->getType();
+      if (OptPrimType FieldT = classify(FieldType)) {
+        if (!loadAndCast(*FieldT, FieldType))
+          return false;
+        if (F.isBitField()) {
+          if (!this->emitInitBitField(*FieldT, F.Offset, F.bitWidth(), E))
+            return false;
+        } else {
+          if (!this->emitInitField(*FieldT, F.Offset, E))
+            return false;
+        }
+      } else {
+        if (!this->emitGetPtrField(F.Offset, E))
+          return false;
+        if (!emitHLSLConstructAggregate(FieldType, Elements, ElemIdx, E))
+          return false;
+        if (!this->emitPopPtr(E))
+          return false;
+      }
+    }
+    return true;
+  }
+
+  return false;
 }
 
 namespace clang {

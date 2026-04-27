@@ -1004,11 +1004,9 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
         } else if (SwitchInst *SI = dyn_cast<SwitchInst>(&I)) {
           if (getSimplifiedValue<ConstantInt>(SI->getCondition()))
             CurrentSavings += InstrCost;
-        } else if (Value *V = dyn_cast<Value>(&I)) {
+        } else if (SimplifiedValues.count(&I)) {
           // Count an instruction as savings if we can fold it.
-          if (SimplifiedValues.count(V)) {
-            CurrentSavings += InstrCost;
-          }
+          CurrentSavings += InstrCost;
         }
       }
 
@@ -1321,6 +1319,7 @@ private:
     if (IsIndirectCall) {
       InlineParams IndirectCallParams = {/* DefaultThreshold*/ 0,
                                          /*HintThreshold*/ {},
+                                         /*OptSizeHintThreshold*/ {},
                                          /*ColdThreshold*/ {},
                                          /*OptSizeThreshold*/ {},
                                          /*OptMinSizeThreshold*/ {},
@@ -2132,8 +2131,11 @@ void InlineCostCallAnalyzer::updateThreshold(CallBase &Call, Function &Callee) {
   // Adjust the threshold based on inlinehint attribute and profile based
   // hotness information if the caller does not have MinSize attribute.
   if (!Caller->hasMinSize()) {
+    std::optional<int> HintThreshold = Caller->hasOptSize()
+                                           ? Params.OptSizeHintThreshold
+                                           : Params.HintThreshold;
     if (Callee.hasFnAttribute(Attribute::InlineHint))
-      Threshold = MaxIfValid(Threshold, Params.HintThreshold);
+      Threshold = MaxIfValid(Threshold, HintThreshold);
 
     // FIXME: After switching to the new passmanager, simplify the logic below
     // by checking only the callsite hotness/coldness as we will reliably
@@ -2167,7 +2169,7 @@ void InlineCostCallAnalyzer::updateThreshold(CallBase &Call, Function &Callee) {
         // If callsite hotness can not be determined, we may still know
         // that the callee is hot and treat it as a weaker hint for threshold
         // increase.
-        Threshold = MaxIfValid(Threshold, Params.HintThreshold);
+        Threshold = MaxIfValid(Threshold, HintThreshold);
       } else if (PSI->isFunctionEntryCold(&Callee)) {
         LLVM_DEBUG(dbgs() << "Cold callee.\n");
         // Do not apply bonuses for a cold callee including the
@@ -3150,6 +3152,7 @@ std::optional<int> llvm::getInliningCostEstimate(
     ProfileSummaryInfo *PSI, OptimizationRemarkEmitter *ORE) {
   const InlineParams Params = {/* DefaultThreshold*/ 0,
                                /*HintThreshold*/ {},
+                               /*OptSizeHintThreshold*/ {},
                                /*ColdThreshold*/ {},
                                /*OptSizeThreshold*/ {},
                                /*OptMinSizeThreshold*/ {},
@@ -3241,11 +3244,6 @@ std::optional<InlineResult> llvm::getAttributeBasedInliningDecision(
   // Don't inline this call if the caller has the optnone attribute.
   if (Caller->hasOptNone())
     return InlineResult::failure("optnone attribute");
-
-  // Don't inline a function that treats null pointer as valid into a caller
-  // that does not have this attribute.
-  if (!Caller->nullPointerIsDefined() && Callee->nullPointerIsDefined())
-    return InlineResult::failure("nullptr definitions incompatible");
 
   // Don't inline functions which can be interposed at link-time.
   if (Callee->isInterposable())
@@ -3394,6 +3392,8 @@ InlineParams llvm::getInlineParams(int Threshold) {
 
   // Set the HintThreshold knob from the -inlinehint-threshold.
   Params.HintThreshold = HintThreshold;
+  // Use same threshold for optsize by default.
+  Params.OptSizeHintThreshold = HintThreshold;
 
   // Set the HotCallSiteThreshold knob from the -hot-callsite-threshold.
   Params.HotCallSiteThreshold = HotCallSiteThreshold;
@@ -3434,22 +3434,10 @@ InlineParams llvm::getInlineParams() {
   return getInlineParams(DefaultThreshold);
 }
 
-// Compute the default threshold for inlining based on the opt level and the
-// size opt level.
-static int computeThresholdFromOptLevels(unsigned OptLevel,
-                                         unsigned SizeOptLevel) {
-  if (OptLevel > 2)
-    return InlineConstants::OptAggressiveThreshold;
-  if (SizeOptLevel == 1) // -Os
-    return InlineConstants::OptSizeThreshold;
-  if (SizeOptLevel == 2) // -Oz
-    return InlineConstants::OptMinSizeThreshold;
-  return DefaultThreshold;
-}
-
-InlineParams llvm::getInlineParams(unsigned OptLevel, unsigned SizeOptLevel) {
+InlineParams llvm::getInlineParamsFromOptLevel(unsigned OptLevel) {
   auto Params =
-      getInlineParams(computeThresholdFromOptLevels(OptLevel, SizeOptLevel));
+      getInlineParams(OptLevel > 2 ? InlineConstants::OptAggressiveThreshold
+                                   : DefaultThreshold);
   // At O3, use the value of -locally-hot-callsite-threshold option to populate
   // Params.LocallyHotCallSiteThreshold. Below O3, this flag has effect only
   // when it is specified explicitly.

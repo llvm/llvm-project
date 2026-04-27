@@ -54,6 +54,75 @@ void printSPIRV_I32_1DArmTensor(OpAsmPrinter &printer, Operation *,
 // SPIRV Tosa Custom verifiers
 //===----------------------------------------------------------------------===//
 
+namespace {
+
+int64_t getIntValue(DenseIntElementsAttr attr, size_t idx) {
+  return attr.getValues<APInt>()[idx].getSExtValue();
+}
+
+LogicalResult verifyPool2DOutputDim(Operation *op, int64_t inputSize,
+                                    int64_t outputSize, int64_t kernelSize,
+                                    int64_t strideSize, int64_t padBefore,
+                                    int64_t padAfter, StringRef dimName,
+                                    StringRef dimAxis, StringRef padBeforeName,
+                                    StringRef padAfterName) {
+  if (ShapedType::isDynamic(inputSize))
+    return success();
+
+  const int64_t numerator = inputSize + padBefore + padAfter - kernelSize;
+  if (numerator % strideSize != 0)
+    return op->emitOpError("expected input_")
+           << dimName << " + pad_" << padBeforeName << " + pad_" << padAfterName
+           << " - kernel_" << dimAxis << " to be wholly divisible by stride_"
+           << dimAxis << ", got (" << inputSize << " + " << padBefore << " + "
+           << padAfter << " - " << kernelSize << ") / " << strideSize;
+
+  const int64_t calculatedOutput = numerator / strideSize + 1;
+  if (!ShapedType::isDynamic(outputSize) && outputSize != calculatedOutput)
+    return op->emitOpError("failed to verify that shapes of input and output "
+                           "must satisfy [N,IH,IW,C] and [N,OH,OW,C], with "
+                           "OH = ((IH + pad_top + pad_bottom - kernel_y) / "
+                           "stride_y) + 1 and OW = ((IW + pad_left + "
+                           "pad_right - kernel_x) / stride_x) + 1");
+
+  return success();
+}
+
+LogicalResult verifyPool2DOp(Operation *op, DenseIntElementsAttr kernel,
+                             DenseIntElementsAttr stride,
+                             DenseIntElementsAttr pad, TensorArmType inputType,
+                             TensorArmType outputType) {
+
+  if (!inputType.hasRank() || !outputType.hasRank())
+    return success();
+
+  if (failed(verifyPool2DOutputDim(
+          op, inputType.getDimSize(1), outputType.getDimSize(1),
+          getIntValue(kernel, 0), getIntValue(stride, 0), getIntValue(pad, 0),
+          getIntValue(pad, 1), "height", "y", "top", "bottom")))
+    return failure();
+
+  if (failed(verifyPool2DOutputDim(
+          op, inputType.getDimSize(2), outputType.getDimSize(2),
+          getIntValue(kernel, 1), getIntValue(stride, 1), getIntValue(pad, 2),
+          getIntValue(pad, 3), "width", "x", "left", "right")))
+    return failure();
+
+  return success();
+}
+
+} // namespace
+
+LogicalResult TosaAvgPool2DOp::verify() {
+  return verifyPool2DOp(getOperation(), getKernel(), getStride(), getPad(),
+                        getInputType(), getResultType());
+}
+
+LogicalResult TosaMaxPool2DOp::verify() {
+  return verifyPool2DOp(getOperation(), getKernel(), getStride(), getPad(),
+                        getInputType(), getResultType());
+}
+
 LogicalResult TosaSelectOp::verify() {
   TensorArmType condType = getConditionType();
   TensorArmType trueValType = getTrueValueType();
