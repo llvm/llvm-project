@@ -2634,12 +2634,12 @@ For example:
     If a function has this attribute, a signaling NaN (sNaN) is assumed to be
     treated according to IEEE 754 rules. That is, arithmetic operations never
     return an sNaN, and the ``Invalid``  exception  is raised if an operand of
-    such an operation is an sNaN. If this attribute is absent, an sNaN is assumed
-    to be treated identically to a quiet NaN: it can be produced by an operation
-    (so that the transformation `x + 0 -> x` becomes valid), and an operation on
-    such a NaN does not raise the "Invalid" exception. This attribute cannot be
-    set if the target architecture does not support IEEE 754 compatible
-    sNaN handling.
+    such an operation is an sNaN and strictfp is also enabled. If this attribute
+    is absent, an sNaN is assumed to be treated identically to a quiet NaN: it
+    can be produced by an operation (so that the transformation `x + 0 -> x`
+    becomes valid), and an operation on such a NaN does not raise the "Invalid"
+    exception. This attribute cannot be set if the target architecture does not
+    support IEEE 754 compatible sNaN handling.
 ``speculative_load_hardening``
     This attribute indicates that
     `Speculative Load Hardening <https://llvm.org/docs/SpeculativeLoadHardening.html>`_

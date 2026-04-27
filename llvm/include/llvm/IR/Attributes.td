@@ -426,7 +426,8 @@ def AllowDirectAccessInHotPatchFunction
 /// Signaling NaNs should be handled according to IEEE 754 semantics: they
 /// cannot be the result of a floating-point operation, and using them as
 /// operands raises an "Invalid" exception.
-def SignalingNans : EnumAttr<"signaling_nans", IntersectCustom, [FnAttr]>;
+/// NB: Could be IntersectCustom with "or" handling.
+def SignalingNans : EnumAttr<"signaling_nans", IntersectPreserve, [FnAttr]>;
 
 /// Target-independent string attributes.
 def LessPreciseFPMAD : StrBoolAttr<"less-precise-fpmad">;

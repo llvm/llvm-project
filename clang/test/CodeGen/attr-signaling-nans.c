@@ -10,5 +10,5 @@ float func_01(float x) {
 // CHECK: define{{.*}} float @func_01(float noundef{{.*}}) #[[ATTR:[0-9]+]] {
 
 
-// SIGNALING: attributes #[[ATTR]] = {{{.*}} "signaling-nans" {{.*}}}
-// NO-SIGNALING-NOT: attributes #[[ATTR]] = {{{.*}} "signaling-nans" {{.*}}}
+// SIGNALING: attributes #[[ATTR]] = {{{.*}} signaling_nans {{.*}}}
+// NO-SIGNALING-NOT: attributes #[[ATTR]] = {{{.*}} signaling_nans {{.*}}}

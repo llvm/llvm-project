@@ -1,7 +1,7 @@
 // RUN: %clang_dxc -T lib_6_4 -Gis %s 2>&1 -### | FileCheck -check-prefix=Gis %s
 // RUN: %clang_dxc -T lib_6_4 %s 2>&1 -### | FileCheck -check-prefix=NO_Gis %s
 
-// Gis: "-ffp-contract=off" "-frounding-math" "-ffp-exception-behavior=strict" "-complex-range=full"
+// Gis: "-ffp-contract=off" "-frounding-math" "-ffp-exception-behavior=strict" "-fsignaling-nans" "-complex-range=full"
 // assert expected floating point options are present
 // NO_Gis-NOT: "-ffp-contract=off" 
 // NO_Gis-NOT: "-frounding-math" 
