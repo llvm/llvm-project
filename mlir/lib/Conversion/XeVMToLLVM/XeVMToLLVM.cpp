@@ -1236,8 +1236,9 @@ class TruncfToOCLPattern : public OpConversionPattern<TruncfOp> {
         Value arg2 =
             LLVM::ExtractElementOp::create(rewriter, op.getLoc(), input, idx1)
                 ->getResult(0);
-        SmallVector<Type> argTypes{arg1.getType(), arg2.getType()};
-        SmallVector<Value> args{arg1, arg2};
+        SmallVector<Type> argTypes{arg1.getType(), arg2.getType(),
+                                   dstTy.getType(), mode.getType()};
+        SmallVector<Value> args{arg1, arg2, dstTy, mode};
         Value dnscl = createDeviceFunctionCall(
                           rewriter, fnName, rewriter.getI32Type(), argTypes,
                           args, {}, funcAttrs, op.getOperation())
