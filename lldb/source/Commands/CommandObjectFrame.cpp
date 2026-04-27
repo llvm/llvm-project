@@ -32,6 +32,7 @@
 #include "lldb/Utility/ValueType.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/lldb-enumerations.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 
 #include <memory>
@@ -440,11 +441,15 @@ may even involve JITing and running code in the target program.)");
   // is too shallow, hitting enter a few times will quickly expand the data.
   std::optional<std::string> GetRepeatCommand(Args &current_command_args,
                                               uint32_t index) override {
-    std::string cmd;
-    llvm::raw_string_ostream os(cmd);
-
-    uint32_t new_depth = m_varobj_options.max_depth + 1;
+    Args repeat_args;
     bool has_depth_option = false;
+    auto new_depth = m_varobj_options.max_depth + 1;
+    auto increment_depth_option = [&]() {
+      repeat_args.AppendArgument("--depth");
+      repeat_args.AppendArgument(llvm::utostr(new_depth));
+      has_depth_option = true;
+    };
+
     bool skip_next = false;
     for (const auto &entry : current_command_args) {
       if (skip_next) {
@@ -455,20 +460,22 @@ may even involve JITing and running code in the target program.)");
       llvm::StringRef arg = entry.ref();
       if (arg == "--depth" || arg == "-D") {
         skip_next = true;
-        os << " " << arg << " " << new_depth;
-        has_depth_option = true;
+        increment_depth_option();
       } else if (arg.starts_with("-D")) {
-        os << "-D" << new_depth;
-        has_depth_option = true;
+        increment_depth_option();
       } else {
-        os << " " << arg;
+        repeat_args.AppendArgument(arg);
       }
     }
 
     if (!has_depth_option)
-      os << " --depth " << new_depth;
+      // Default depth was used.
+      increment_depth_option();
 
-    return cmd;
+    std::string repeat_command;
+    if (!repeat_args.GetQuotedCommandString(repeat_command))
+      return std::nullopt;
+    return repeat_command;
   }
 
 protected:
