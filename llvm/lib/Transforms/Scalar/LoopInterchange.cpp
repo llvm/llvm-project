@@ -1334,7 +1334,7 @@ bool LoopInterchangeLegality::findInductions(
 ///
 /// - Reduction PHIs
 /// - PHIs outside the outer loop
-/// - PHIs in the outer loop that have exactly one incoming value
+/// - PHIs belonging to the latch of the outer loop
 ///
 /// These conditions mean that we are only interested in the final value after
 /// the inner loop.
@@ -1343,26 +1343,25 @@ areInnerLoopExitPHIsSupported(Loop *OuterL, Loop *InnerL,
                               SmallPtrSetImpl<PHINode *> &Reductions,
                               PHINode *LcssaReduction) {
   BasicBlock *InnerExit = InnerL->getUniqueExitBlock();
-  SmallVector<PHINode *, 4> PHIs;
-  for (PHINode &PHI : InnerExit->phis())
-    PHIs.push_back(&PHI);
-
-  while (!PHIs.empty()) {
-    PHINode *PHI = PHIs.pop_back_val();
-    if (PHI->getNumIncomingValues() > 1)
+  for (PHINode &PHI : InnerExit->phis()) {
+    // The reduction LCSSA PHI will have only one incoming block, which comes
+    // from the loop latch.
+    if (PHI.getNumIncomingValues() > 1)
       return false;
-    if (PHI == LcssaReduction)
-      continue;
-    for (User *U : PHI->users()) {
-      PHINode *PN = dyn_cast<PHINode>(U);
-      if (!PN)
-        return false;
-      if (OuterL->contains(PN->getParent())) {
-        if (Reductions.count(PN))
-          continue;
-        PHIs.push_back(PN);
-      }
-    }
+    if (&PHI == LcssaReduction)
+      return true;
+    if (any_of(PHI.users(), [&Reductions, OuterL](User *U) {
+          PHINode *PN = dyn_cast<PHINode>(U);
+          if (!PN)
+            return true;
+          if (Reductions.count(PN))
+            return false;
+          BasicBlock *PB = PN->getParent();
+          if (!OuterL->contains(PB))
+            return false;
+          return PB != OuterL->getLoopLatch();
+        }))
+      return false;
   }
   return true;
 }
