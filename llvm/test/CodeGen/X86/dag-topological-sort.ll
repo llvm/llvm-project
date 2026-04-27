@@ -5,35 +5,6 @@
 
 ; Example tests demonstrating current effect of topological sorting on DAG combines.
 
-define i32 @PR134602(i16 %a0) {
-; DEFAULT-LABEL: PR134602:
-; DEFAULT:       # %bb.0:
-; DEFAULT-NEXT:    movzwl %di, %eax
-; DEFAULT-NEXT:    movd %eax, %xmm0
-; DEFAULT-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; DEFAULT-NEXT:    pshuflw {{.*#+}} xmm1 = xmm0[2,2,2,2,4,5,6,7]
-; DEFAULT-NEXT:    paddw %xmm0, %xmm1
-; DEFAULT-NEXT:    movdqa %xmm1, %xmm0
-; DEFAULT-NEXT:    psrld $16, %xmm0
-; DEFAULT-NEXT:    paddw %xmm1, %xmm0
-; DEFAULT-NEXT:    movd %xmm0, %eax
-; DEFAULT-NEXT:    cwtl
-; DEFAULT-NEXT:    retq
-;
-; TOPOLOGICAL-LABEL: PR134602:
-; TOPOLOGICAL:       # %bb.0:
-; TOPOLOGICAL-NEXT:    orl $1, %edi
-; TOPOLOGICAL-NEXT:    addl $3, %edi
-; TOPOLOGICAL-NEXT:    movswl %di, %eax
-; TOPOLOGICAL-NEXT:    retq
-  %splat= insertelement <4 x i16> zeroinitializer, i16 %a0, i64 0
-  %mul = mul <4 x i16> %splat, <i16 1, i16 1, i16 0, i16 0>
-  %or = or <4 x i16> splat (i16 1), %mul
-  %reduce = call i16 @llvm.vector.reduce.add.v4i16(<4 x i16> %or)
-  %ret_32 = sext i16 %reduce to i32
-  ret i32 %ret_32
-}
-
 define i32 @Test_use_divrem_reg_imm(i32 %a) nounwind {
 ; DEFAULT-LABEL: Test_use_divrem_reg_imm:
 ; DEFAULT:       # %bb.0:
