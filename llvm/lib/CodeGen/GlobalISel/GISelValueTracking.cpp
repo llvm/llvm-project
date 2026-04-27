@@ -567,7 +567,7 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     if (!MaybeAmtOp)
       break;
 
-    KnownBits Amt = KnownBits::makeConstant(*MaybeAmtOp);
+    const APInt Amt = *MaybeAmtOp;
     computeKnownBitsImpl(MI.getOperand(1).getReg(), Known, DemandedElts,
                          Depth + 1);
     computeKnownBitsImpl(MI.getOperand(2).getReg(), Known2, DemandedElts,

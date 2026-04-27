@@ -3850,7 +3850,9 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
         break;
       }
 
-      KnownBits ShAmt = KnownBits::makeConstant(APInt(BitWidth, Amt));
+      // fshl: (X << (Z % BW)) | (Y >> (BW - (Z % BW)))
+      // fshr: (X << (BW - (Z % BW))) | (Y >> (Z % BW))
+      const APInt ShAmt(BitWidth, Amt);
       Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
       Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
       Known = Opcode == ISD::FSHL ? KnownBits::fshl(Known, Known2, ShAmt)

@@ -681,7 +681,6 @@ TEST(KnownBitsTest, FunnelShiftExhaustive) {
         return;
 
       for (unsigned ShAmt = 0; ShAmt < Bits; ShAmt++) {
-        KnownBits Known3 = KnownBits::makeConstant(APInt(Bits, ShAmt));
         KnownBits FSHLResult(Bits), FSHRResult(Bits);
         FSHLResult.setAllConflict();
         FSHRResult.setAllConflict();
@@ -697,8 +696,9 @@ TEST(KnownBitsTest, FunnelShiftExhaustive) {
           });
         });
 
-        KnownBits ComputeFSHL = KnownBits::fshl(Known1, Known2, Known3);
-        KnownBits ComputeFSHR = KnownBits::fshr(Known1, Known2, Known3);
+        const APInt Amt(Bits, ShAmt);
+        KnownBits ComputeFSHL = KnownBits::fshl(Known1, Known2, Amt);
+        KnownBits ComputeFSHR = KnownBits::fshr(Known1, Known2, Amt);
         EXPECT_TRUE(FSHLResult.Zero.isSubsetOf(ComputeFSHL.Zero) &&
                     FSHLResult.One.isSubsetOf(ComputeFSHL.One));
         EXPECT_TRUE(FSHRResult.Zero.isSubsetOf(ComputeFSHR.Zero) &&

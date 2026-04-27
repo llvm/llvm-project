@@ -472,11 +472,11 @@ public:
 
   /// Compute known bits for fshl(LHS, RHS, Amt).
   LLVM_ABI static KnownBits fshl(const KnownBits &LHS, const KnownBits &RHS,
-                                 const KnownBits &Amt);
+                                 const APInt &Amt);
 
   /// Compute known bits for fshr(LHS, RHS, Amt).
   LLVM_ABI static KnownBits fshr(const KnownBits &LHS, const KnownBits &RHS,
-                                 const KnownBits &Amt);
+                                 const APInt &Amt);
 
   /// Compute known bits for clmul(LHS, RHS).
   LLVM_ABI static KnownBits clmul(const KnownBits &LHS, const KnownBits &RHS);
