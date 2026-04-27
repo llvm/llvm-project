@@ -72,7 +72,7 @@ DisassemblyInfo::create(const TargetIdentifier &Ident,
   }
 
   std::unique_ptr<MCContext> Ctx(new (std::nothrow) MCContext(
-      Triple(TT), MAI.get(), MRI.get(), STI.get()));
+      Triple(TT), *MAI, MRI.get(), STI.get()));
   if (!Ctx) {
     return AMD_COMGR_STATUS_ERROR;
   }

@@ -417,7 +417,7 @@ bool executeAssemblerImpl(AssemblerInvocation &Opts, DiagnosticsEngine &Diags,
   std::unique_ptr<MCSubtargetInfo> STI(
       TheTarget->createMCSubtargetInfo(llvm::Triple(Opts.Triple), Opts.CPU, FS));
 
-  MCContext Ctx(Triple(Opts.Triple), MAI.get(), MRI.get(), STI.get(), &SrcMgr);
+  MCContext Ctx(Triple(Opts.Triple), *MAI, MRI.get(), STI.get(), &SrcMgr);
   Ctx.setObjectFileInfo(MOFI.get());
 
   bool PIC = false;
