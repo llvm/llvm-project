@@ -9985,7 +9985,7 @@ exceptions according to their own rules.
 }
 
 def AliasDocs : Documentation {
-  let Category = DocCatFunction;
+  let Category = DocCatDecl;
   let Content = [{
 The ``alias`` attribute causes the declaration to be emitted as an alias to
 another symbol, which must be defined in the same translation unit.
@@ -10014,6 +10014,7 @@ signature. For variables, while Clang allows aliasing ABI-compatible types
 target must have the same size and alignment to avoid undefined behavior.
 
 This attribute requires support from the target's assembler and object file 
-format. Notably, it is not supported on Apple (Darwin) platforms.
+format. Notably, it is not supported on Apple (Darwin) platforms or in 
+CUDA versions prior to 10.0.
   }];
 }
