@@ -19,41 +19,41 @@ export module B;
 
 export template <typename T> class s1 {};
 export template <typename T> class s1<T *> {}; // expected-error {{a specialization cannot be marked 'export'}}
-// expected-note@-1 {{as long as its primary template is exported, it will be too}}
+// expected-note@-1 {{it is exported if the primary template is exported}}
 // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:1-[[@LINE-2]]:8}:""
 export template <> class s1<int> {}; // expected-error {{a specialization cannot be marked 'export'}}
-// expected-note@-1 {{as long as its primary template is exported, it will be too}}
+// expected-note@-1 {{it is exported if the primary template is exported}}
 // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:1-[[@LINE-2]]:8}:""
 export template class s1<char>; // expected-error {{an explicit instantiation cannot be marked 'export'}}
-// expected-note@-1 {{as long as its primary template is exported, it will be too}}
+// expected-note@-1 {{it is exported if the primary template is exported}}
 // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:1-[[@LINE-2]]:8}:""
 export extern template class s1<void>; // expected-error {{an explicit instantiation cannot be marked 'export'}}
-// expected-note@-1 {{as long as its primary template is exported, it will be too}}
+// expected-note@-1 {{it is exported if the primary template is exported}}
 // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:1-[[@LINE-2]]:8}:""
 
 export template <typename T> int v1 = 0;
 export template <typename T> int v1<T *> = 0; // expected-error {{a specialization cannot be marked 'export'}}
-// expected-note@-1 {{as long as its primary template is exported, it will be too}}
+// expected-note@-1 {{it is exported if the primary template is exported}}
 // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:1-[[@LINE-2]]:8}:""
 export template <> int v1<int> = 0; // expected-error {{a specialization cannot be marked 'export'}}
-// expected-note@-1 {{as long as its primary template is exported, it will be too}}
+// expected-note@-1 {{it is exported if the primary template is exported}}
 // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:1-[[@LINE-2]]:8}:""
 export template int v1<char>; // expected-error {{an explicit instantiation cannot be marked 'export'}}
-// expected-note@-1 {{as long as its primary template is exported, it will be too}}
+// expected-note@-1 {{it is exported if the primary template is exported}}
 // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:1-[[@LINE-2]]:8}:""
 export extern template int v1<void>; // expected-error {{an explicit instantiation cannot be marked 'export'}}
-// expected-note@-1 {{as long as its primary template is exported, it will be too}}
+// expected-note@-1 {{it is exported if the primary template is exported}}
 // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:1-[[@LINE-2]]:8}:""
 
 export template <typename T> void f1() {}
 export template <> void f1<int>() {} // expected-error {{a specialization cannot be marked 'export'}}
-// expected-note@-1 {{as long as its primary template is exported, it will be too}}
+// expected-note@-1 {{it is exported if the primary template is exported}}
 // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:1-[[@LINE-2]]:8}:""
 export template void f1<char>(); // expected-error {{an explicit instantiation cannot be marked 'export'}}
-// expected-note@-1 {{as long as its primary template is exported, it will be too}}
+// expected-note@-1 {{it is exported if the primary template is exported}}
 // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:1-[[@LINE-2]]:8}:""
 export extern template void f1<void>(); // expected-error {{an explicit instantiation cannot be marked 'export'}}
-// expected-note@-1 {{as long as its primary template is exported, it will be too}}
+// expected-note@-1 {{it is exported if the primary template is exported}}
 // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:1-[[@LINE-2]]:8}:""
 
 
@@ -77,23 +77,23 @@ export { extern template void f2<void>(); }
 
 extern "C++" template <typename T> class s3 {};
 extern "C++" template <typename T> class s3<T *> {};
-extern "C++" template <> class s3<int> {}; // expected-error {{language linkage specification cannot be applied to a specialization}}
-extern "C++" template class s3<char>; // expected-error {{language linkage specification cannot be applied to an explicit instantiation}}
-extern "C++" extern template class s3<void>; // expected-error {{language linkage specification cannot be applied to an explicit instantiation}}
+extern "C++" template <> class s3<int> {}; // expected-error {{language linkage cannot be specified for a specialization}}
+extern "C++" template class s3<char>; // expected-error {{language linkage cannot be specified for an explicit instantiation}}
+extern "C++" extern template class s3<void>; // expected-error {{language linkage cannot be specified for an explicit instantiation}}
 
 extern "C++" template <typename T> int v3 = 0;
 extern "C++" template <typename T> int v3<T *> = 0;
-extern "C++" template <> int v3<int> = 0; // expected-error {{language linkage specification cannot be applied to a specialization}}
-extern "C++" template int v3<char>; // expected-error {{language linkage specification cannot be applied to an explicit instantiation}}
-extern "C++" extern template int v3<void>; // expected-error {{language linkage specification cannot be applied to an explicit instantiation}}
+extern "C++" template <> int v3<int> = 0; // expected-error {{language linkage cannot be specified for a specialization}}
+extern "C++" template int v3<char>; // expected-error {{language linkage cannot be specified for an explicit instantiation}}
+extern "C++" extern template int v3<void>; // expected-error {{language linkage cannot be specified for an explicit instantiation}}
 
 extern "C++" template <typename T> void f3() {}
-extern "C++" template <> void f3<int>() {} // expected-error {{language linkage specification cannot be applied to a specialization}}
-extern "C++" template void f3<char>(); // expected-error {{language linkage specification cannot be applied to an explicit instantiation}}
-extern "C++" extern template void f3<void>(); // expected-error {{language linkage specification cannot be applied to an explicit instantiation}}
+extern "C++" template <> void f3<int>() {} // expected-error {{language linkage cannot be specified for a specialization}}
+extern "C++" template void f3<char>(); // expected-error {{language linkage cannot be specified for an explicit instantiation}}
+extern "C++" extern template void f3<void>(); // expected-error {{language linkage cannot be specified for an explicit instantiation}}
 
-extern "C++" export int i; // expected-error {{language linkage specification cannot be applied to an export declaration}}
-extern "C++" export {} // expected-error {{language linkage specification cannot be applied to an export declaration}}
+extern "C++" export int i; // expected-error {{language linkage cannot be specified for an export declaration}}
+extern "C++" export {} // expected-error {{language linkage cannot be specified for an export declaration}}
 
 
 extern "C++" { template <typename T> class s4 {}; }
@@ -119,13 +119,12 @@ extern "C++" { extern template void f4<void>(); }
 namespace std {
 
 extern "C++" template <typename T> struct s {};
-extern "C++" template<> struct s<int> {}; // expected-no-error {{language linkage specification cannot be applied to a specialization}}
+extern "C++" template<> struct s<int> {};
 
 } // namespace std
 
-// Should still diagnose outside the std namespace.
 extern "C++" template <typename T> struct c {};
-extern "C++" template<> struct c<int> {}; // expected-error {{language linkage specification cannot be applied to a specialization}}
+extern "C++" template<> struct c<int> {}; // expected-error {{language linkage cannot be specified for a specialization}}
 
 //--- msvc-stl-exception-2.cpp
 #define _MSVC_STL_UPDATE 202603L
@@ -133,6 +132,6 @@ extern "C++" template<> struct c<int> {}; // expected-error {{language linkage s
 namespace std {
 
 extern "C++" template <typename T> struct s {};
-extern "C++" template<> struct s<int> {}; // expected-error {{language linkage specification cannot be applied to a specialization}}
+extern "C++" template<> struct s<int> {}; // expected-error {{language linkage cannot be specified for a specialization}}
 
 } // namespace std

@@ -12858,9 +12858,9 @@ def err_meaningless_export : Error<
   "%select{an explicit instantiation|a specialization}0 cannot be "
   "marked 'export'">;
 def note_meaningless_export_explanation : Note<
-  "as long as its primary template is exported, it will be too">;
+  "it is exported if the primary template is exported">;
 def err_invalid_decl_in_linkage_spec : Error<
-  "language linkage specification cannot be applied to "
+  "language linkage cannot be specified for "
   "%select{an explicit instantiation|a specialization|an export declaration}0">;
 
 def warn_exposure : Warning <
