@@ -514,7 +514,8 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
         // completely unnecessary line break after a template type that isn't
         // line-wrapped.
         (Previous.NestingLevel == 1 ||
-         Style.BinPackParameters == FormatStyle::BPPS_BinPack)) ||
+         (Style.PackParameters.BinPack == FormatStyle::BPPS_BinPack ||
+          Style.PackParameters.BinPack == FormatStyle::BPPS_UseBreakAfter))) ||
        (Style.BreakBeforeTernaryOperators && Current.is(TT_ConditionalExpr) &&
         Previous.isNot(tok::question)) ||
        (!Style.BreakBeforeTernaryOperators &&
@@ -1017,10 +1018,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
       !(Current.MacroParent && Previous.MacroParent) &&
       (Current.isNot(TT_LineComment) ||
        (Previous.is(BK_BracedInit) &&
-        (Style.Cpp11BracedListStyle != FormatStyle::BLS_FunctionCall ||
-         !Previous.Previous ||
-         Previous.Previous->isNoneOf(tok::identifier, tok::l_paren,
-                                     BK_BracedInit))) ||
+        Style.Cpp11BracedListStyle != FormatStyle::BLS_FunctionCall) ||
        Previous.is(TT_VerilogMultiLineListLParen)) &&
       !IsInTemplateString(Current, false)) {
     CurrentState.Indent = State.Column + Spaces;
@@ -2112,11 +2110,12 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
       NewIndent = CurrentState.LastSpace + Style.ContinuationIndentWidth;
     }
     const FormatToken *NextNonComment = Current.getNextNonComment();
-    AvoidBinPacking = EndsInComma || Current.is(TT_DictLiteral) ||
-                      Style.isProto() || !Style.BinPackArguments ||
-                      (NextNonComment && NextNonComment->isOneOf(
-                                             TT_DesignatedInitializerPeriod,
-                                             TT_DesignatedInitializerLSquare));
+    AvoidBinPacking =
+        EndsInComma || Current.is(TT_DictLiteral) || Style.isProto() ||
+        Style.PackArguments.BinPack == FormatStyle::BPAS_OnePerLine ||
+        (NextNonComment &&
+         NextNonComment->isOneOf(TT_DesignatedInitializerPeriod,
+                                 TT_DesignatedInitializerLSquare));
     BreakBeforeParameter = EndsInComma;
     if (Current.ParameterCount > 1)
       NestedBlockIndent = std::max(NestedBlockIndent, State.Column + 1);
@@ -2149,12 +2148,14 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
     // for backwards compatibility.
     bool ObjCBinPackProtocolList =
         (Style.ObjCBinPackProtocolList == FormatStyle::BPS_Auto &&
-         Style.BinPackParameters == FormatStyle::BPPS_BinPack) ||
+         (Style.PackParameters.BinPack == FormatStyle::BPPS_BinPack ||
+          Style.PackParameters.BinPack == FormatStyle::BPPS_UseBreakAfter)) ||
         Style.ObjCBinPackProtocolList == FormatStyle::BPS_Always;
 
     bool BinPackDeclaration =
         (State.Line->Type != LT_ObjCDecl &&
-         Style.BinPackParameters == FormatStyle::BPPS_BinPack) ||
+         (Style.PackParameters.BinPack == FormatStyle::BPPS_BinPack ||
+          Style.PackParameters.BinPack == FormatStyle::BPPS_UseBreakAfter)) ||
         (State.Line->Type == LT_ObjCDecl && ObjCBinPackProtocolList);
 
     bool GenericSelection =
@@ -2165,7 +2166,8 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
         (CurrentState.IsCSharpGenericTypeConstraint) || GenericSelection ||
         (Style.isJavaScript() && EndsInComma) ||
         (State.Line->MustBeDeclaration && !BinPackDeclaration) ||
-        (!State.Line->MustBeDeclaration && !Style.BinPackArguments) ||
+        (!State.Line->MustBeDeclaration &&
+         Style.PackArguments.BinPack == FormatStyle::BPAS_OnePerLine) ||
         (Style.ExperimentalAutoDetectBinPacking &&
          (Current.is(PPK_OnePerLine) ||
           (!BinPackInconclusiveFunctions && Current.is(PPK_Inconclusive))));

@@ -7,7 +7,7 @@
 define <vscale x 2 x i1> @vmul_vv_nxv2i1(<vscale x 2 x i1> %va, <vscale x 2 x i1> %b, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vmul_vv_nxv2i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmand.mm v0, v0, v8
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x i1> @llvm.vp.mul.nxv2i1(<vscale x 2 x i1> %va, <vscale x 2 x i1> %b, <vscale x 2 x i1> %m, i32 %evl)
@@ -17,7 +17,7 @@ define <vscale x 2 x i1> @vmul_vv_nxv2i1(<vscale x 2 x i1> %va, <vscale x 2 x i1
 define <vscale x 4 x i1> @vmul_vv_nxv4i1(<vscale x 4 x i1> %va, <vscale x 4 x i1> %b, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vmul_vv_nxv4i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmand.mm v0, v0, v8
 ; CHECK-NEXT:    ret
   %v = call <vscale x 4 x i1> @llvm.vp.mul.nxv4i1(<vscale x 4 x i1> %va, <vscale x 4 x i1> %b, <vscale x 4 x i1> %m, i32 %evl)
@@ -27,7 +27,7 @@ define <vscale x 4 x i1> @vmul_vv_nxv4i1(<vscale x 4 x i1> %va, <vscale x 4 x i1
 define <vscale x 8 x i1> @vmul_vv_nxv8i1(<vscale x 8 x i1> %va, <vscale x 8 x i1> %b, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vmul_vv_nxv8i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vmand.mm v0, v0, v8
 ; CHECK-NEXT:    ret
   %v = call <vscale x 8 x i1> @llvm.vp.mul.nxv8i1(<vscale x 8 x i1> %va, <vscale x 8 x i1> %b, <vscale x 8 x i1> %m, i32 %evl)
@@ -37,7 +37,7 @@ define <vscale x 8 x i1> @vmul_vv_nxv8i1(<vscale x 8 x i1> %va, <vscale x 8 x i1
 define <vscale x 16 x i1> @vmul_vv_nxv16i1(<vscale x 16 x i1> %va, <vscale x 16 x i1> %b, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vmul_vv_nxv16i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vmand.mm v0, v0, v8
 ; CHECK-NEXT:    ret
   %v = call <vscale x 16 x i1> @llvm.vp.mul.nxv16i1(<vscale x 16 x i1> %va, <vscale x 16 x i1> %b, <vscale x 16 x i1> %m, i32 %evl)
@@ -47,7 +47,7 @@ define <vscale x 16 x i1> @vmul_vv_nxv16i1(<vscale x 16 x i1> %va, <vscale x 16 
 define <vscale x 32 x i1> @vmul_vv_nxv32i1(<vscale x 32 x i1> %va, <vscale x 32 x i1> %b, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vmul_vv_nxv32i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
 ; CHECK-NEXT:    vmand.mm v0, v0, v8
 ; CHECK-NEXT:    ret
   %v = call <vscale x 32 x i1> @llvm.vp.mul.nxv32i1(<vscale x 32 x i1> %va, <vscale x 32 x i1> %b, <vscale x 32 x i1> %m, i32 %evl)

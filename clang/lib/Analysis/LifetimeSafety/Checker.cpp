@@ -53,13 +53,12 @@ struct PendingWarning {
 
 using AnnotationTarget =
     llvm::PointerUnion<const ParmVarDecl *, const CXXMethodDecl *>;
-using EscapingTarget =
-    llvm::PointerUnion<const Expr *, const FieldDecl *, const VarDecl *>;
+using EscapingTarget = LifetimeSafetySemaHelper::EscapingTarget;
 
 class LifetimeChecker {
 private:
   llvm::DenseMap<LoanID, PendingWarning> FinalWarningsMap;
-  llvm::DenseMap<AnnotationTarget, const Expr *> AnnotationWarningsMap;
+  llvm::DenseMap<AnnotationTarget, EscapingTarget> AnnotationWarningsMap;
   llvm::DenseMap<const ParmVarDecl *, EscapingTarget> NoescapeWarningsMap;
   const LoanPropagationAnalysis &LoanPropagation;
   const MovedLoansAnalysis &MovedLoans;
@@ -67,6 +66,7 @@ private:
   FactManager &FactMgr;
   LifetimeSafetySemaHelper *SemaHelper;
   ASTContext &AST;
+  const Decl *FD;
 
   static SourceLocation
   GetFactLoc(llvm::PointerUnion<const UseFact *, const OriginEscapesFact *> F) {
@@ -89,7 +89,7 @@ public:
                   LifetimeSafetySemaHelper *SemaHelper)
       : LoanPropagation(LoanPropagation), MovedLoans(MovedLoans),
         LiveOrigins(LiveOrigins), FactMgr(FM), SemaHelper(SemaHelper),
-        AST(ADC.getASTContext()) {
+        AST(ADC.getASTContext()), FD(ADC.getDecl()) {
     for (const CFGBlock *B : *ADC.getAnalysis<PostOrderCFGView>())
       for (const Fact *F : FactMgr.getFacts(B))
         if (const auto *EF = F->getAs<ExpireFact>())
@@ -114,7 +114,7 @@ public:
   void checkAnnotations(const OriginEscapesFact *OEF) {
     OriginID EscapedOID = OEF->getEscapedOriginID();
     LoanSet EscapedLoans = LoanPropagation.getLoans(EscapedOID, OEF);
-    auto CheckParam = [&](const ParmVarDecl *PVD) {
+    auto CheckParam = [&](const ParmVarDecl *PVD, bool IsMoved) {
       // NoEscape param should not escape.
       if (PVD->hasAttr<NoEscapeAttr>()) {
         if (auto *ReturnEsc = dyn_cast<ReturnEscapeFact>(OEF))
@@ -125,10 +125,19 @@ public:
           NoescapeWarningsMap.try_emplace(PVD, GlobalEsc->getGlobal());
         return;
       }
-      // Suggest lifetimebound for parameter escaping through return.
-      if (!PVD->hasAttr<LifetimeBoundAttr>())
+      // Skip annotation suggestion for moved loans, as ownership transfer
+      // obscures the lifetime relationship (e.g., shared_ptr from unique_ptr).
+      if (IsMoved)
+        return;
+      // Otherwise, suggest lifetimebound for parameter escaping through return
+      // or a field in constructor.
+      if (!PVD->hasAttr<LifetimeBoundAttr>()) {
         if (auto *ReturnEsc = dyn_cast<ReturnEscapeFact>(OEF))
           AnnotationWarningsMap.try_emplace(PVD, ReturnEsc->getReturnExpr());
+        else if (auto *FieldEsc = dyn_cast<FieldEscapeFact>(OEF);
+                 FieldEsc && isa<CXXConstructorDecl>(FD))
+          AnnotationWarningsMap.try_emplace(PVD, FieldEsc->getFieldDecl());
+      }
       // TODO: Suggest lifetime_capture_by(this) for parameter escaping to a
       // field!
     };
@@ -137,11 +146,12 @@ public:
         if (auto *ReturnEsc = dyn_cast<ReturnEscapeFact>(OEF))
           AnnotationWarningsMap.try_emplace(MD, ReturnEsc->getReturnExpr());
     };
+    auto MovedAtEscape = MovedLoans.getMovedLoans(OEF);
     for (LoanID LID : EscapedLoans) {
       const Loan *L = FactMgr.getLoanMgr().getLoan(LID);
       const AccessPath &AP = L->getAccessPath();
       if (const auto *PVD = AP.getAsPlaceholderParam())
-        CheckParam(PVD);
+        CheckParam(PVD, /*IsMoved=*/MovedAtEscape.lookup(LID));
       else if (const auto *MD = AP.getAsPlaceholderThis())
         CheckImplicitThis(MD);
     }
@@ -245,8 +255,8 @@ public:
 
         } else
           // Scope-based expiry (use-after-scope).
-          SemaHelper->reportUseAfterFree(IssueExpr, UF->getUseExpr(), MovedExpr,
-                                         ExpiryLoc);
+          SemaHelper->reportUseAfterScope(IssueExpr, UF->getUseExpr(),
+                                          MovedExpr, ExpiryLoc);
       } else if (const auto *OEF =
                      CausingFact.dyn_cast<const OriginEscapesFact *>()) {
         if (const auto *RetEscape = dyn_cast<ReturnEscapeFact>(OEF))
@@ -292,14 +302,18 @@ public:
   static void suggestWithScopeForParmVar(LifetimeSafetySemaHelper *SemaHelper,
                                          const ParmVarDecl *PVD,
                                          SourceManager &SM,
-                                         const Expr *EscapeExpr) {
+                                         EscapingTarget EscapeTarget) {
+    if (llvm::isa<const VarDecl *>(EscapeTarget))
+      return;
+
     if (const FunctionDecl *CrossTUDecl = getCrossTUDecl(*PVD, SM))
       SemaHelper->suggestLifetimeboundToParmVar(
           SuggestionScope::CrossTU,
-          CrossTUDecl->getParamDecl(PVD->getFunctionScopeIndex()), EscapeExpr);
+          CrossTUDecl->getParamDecl(PVD->getFunctionScopeIndex()),
+          EscapeTarget);
     else
       SemaHelper->suggestLifetimeboundToParmVar(SuggestionScope::IntraTU, PVD,
-                                                EscapeExpr);
+                                                EscapeTarget);
   }
 
   static void
@@ -319,11 +333,15 @@ public:
     if (!SemaHelper)
       return;
     SourceManager &SM = AST.getSourceManager();
-    for (auto [Target, EscapeExpr] : AnnotationWarningsMap) {
+    for (auto [Target, EscapeTarget] : AnnotationWarningsMap) {
       if (const auto *PVD = Target.dyn_cast<const ParmVarDecl *>())
-        suggestWithScopeForParmVar(SemaHelper, PVD, SM, EscapeExpr);
-      else if (const auto *MD = Target.dyn_cast<const CXXMethodDecl *>())
-        suggestWithScopeForImplicitThis(SemaHelper, MD, SM, EscapeExpr);
+        suggestWithScopeForParmVar(SemaHelper, PVD, SM, EscapeTarget);
+      else if (const auto *MD = Target.dyn_cast<const CXXMethodDecl *>()) {
+        if (const auto *EscapeExpr = EscapeTarget.dyn_cast<const Expr *>())
+          suggestWithScopeForImplicitThis(SemaHelper, MD, SM, EscapeExpr);
+        else
+          llvm_unreachable("Implicit this can only escape via Expr (return)");
+      }
     }
   }
 
@@ -341,7 +359,7 @@ public:
   }
 
   void inferAnnotations() {
-    for (auto [Target, EscapeExpr] : AnnotationWarningsMap) {
+    for (auto [Target, EscapeTarget] : AnnotationWarningsMap) {
       if (const auto *MD = Target.dyn_cast<const CXXMethodDecl *>()) {
         if (!implicitObjectParamIsLifetimeBound(MD))
           SemaHelper->addLifetimeBoundToImplicitThis(cast<CXXMethodDecl>(MD));
