@@ -4494,6 +4494,34 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_fdiv",
+    hdrs = ["src/__support/math/fdiv.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fdivf128",
+    hdrs = ["src/__support/math/fdivf128.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fdivl",
+    hdrs = ["src/__support/math/fdivl.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_f16mul",
     hdrs = ["src/__support/math/f16mul.h"],
     deps = [
@@ -4788,6 +4816,34 @@ libc_support_library(
 libc_support_library(
     name = "__support_math_fmaxl",
     hdrs = ["src/__support/math/fmaxl.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fmaximum_mag_num",
+    hdrs = ["src/__support/math/fmaximum_mag_num.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fmaximum_mag_numbf16",
+    hdrs = ["src/__support/math/fmaximum_mag_numbf16.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_fputil_bfloat16",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fmaximum_mag_numf",
+    hdrs = ["src/__support/math/fmaximum_mag_numf.h"],
     deps = [
         ":__support_fputil_basic_operations",
         ":__support_macros_config",
@@ -7721,12 +7777,25 @@ libc_math_function(
     ],
 )
 
-libc_math_function(name = "fdiv")
+libc_math_function(
+    name = "fdiv",
+    additional_deps = [
+        ":__support_math_fdiv",
+    ],
+)
 
-libc_math_function(name = "fdivl")
+libc_math_function(
+    name = "fdivl",
+    additional_deps = [
+        ":__support_math_fdivl",
+    ],
+)
 
 libc_math_function(
     name = "fdivf128",
+    additional_deps = [
+        ":__support_math_fdivf128",
+    ],
 )
 
 libc_math_function(
@@ -7884,9 +7953,26 @@ libc_math_function(
     name = "fmaximum_magf16",
 )
 
-libc_math_function(name = "fmaximum_mag_num")
+libc_math_function(
+    name = "fmaximum_mag_num",
+    additional_deps = [
+        ":__support_math_fmaximum_mag_num",
+    ],
+)
 
-libc_math_function(name = "fmaximum_mag_numf")
+libc_math_function(
+    name = "fmaximum_mag_numbf16",
+    additional_deps = [
+        ":__support_math_fmaximum_mag_numbf16",
+    ],
+)
+
+libc_math_function(
+    name = "fmaximum_mag_numf",
+    additional_deps = [
+        ":__support_math_fmaximum_mag_numf",
+    ],
+)
 
 libc_math_function(name = "fmaximum_mag_numl")
 

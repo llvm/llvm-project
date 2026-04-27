@@ -62,18 +62,16 @@ static void defaultDiagHandler(const SMDiagnostic &SMD, bool, const SourceMgr &,
   SMD.print(nullptr, errs());
 }
 
-MCContext::MCContext(const Triple &TheTriple, const MCAsmInfo *mai,
+MCContext::MCContext(const Triple &TheTriple, const MCAsmInfo &mai,
                      const MCRegisterInfo *mri, const MCSubtargetInfo *msti,
                      const SourceMgr *mgr, bool DoAutoReset,
                      StringRef Swift5ReflSegmentName)
     : Swift5ReflectionSegmentName(Swift5ReflSegmentName), TT(TheTriple),
       SrcMgr(mgr), InlineSrcMgr(nullptr), DiagHandler(defaultDiagHandler),
-      MAI(mai), MRI(mri), MSTI(msti), Symbols(Allocator),
+      MAI(&mai), MRI(mri), MSTI(msti), Symbols(Allocator),
       InlineAsmUsedLabelNames(Allocator),
       CurrentDwarfLoc(0, 0, 0, DWARF2_FLAG_IS_STMT, 0, 0),
       AutoReset(DoAutoReset) {
-  assert(MAI && MAI->getTargetOptions() &&
-         "MCAsmInfo and MCTargetOptions must be available");
   const MCTargetOptions &TO = getTargetOptions();
   SaveTempLabels = TO.MCSaveTempLabels;
   if (SaveTempLabels)
@@ -121,7 +119,7 @@ MCContext::MCContext(const Triple &TheTriple, const MCAsmInfo *mai,
 }
 
 const MCTargetOptions &MCContext::getTargetOptions() const {
-  return *MAI->getTargetOptions();
+  return MAI->getTargetOptions();
 }
 
 MCContext::~MCContext() {
