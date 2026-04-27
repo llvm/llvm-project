@@ -3148,15 +3148,17 @@ GDBRemoteCommunicationServerLLGS::Handle_jMultiBreakpoint(
     std::visit(
         [&](const auto &arg) {
           using T = std::decay_t<decltype(arg)>;
+          static_assert(std::is_same_v<T, BreakpointOK> ||
+                            std::is_same_v<T, BreakpointError> ||
+                            std::is_same_v<T, BreakpointIllFormed>,
+                        "non-exhaustive visitor!");
           if constexpr (std::is_same_v<T, BreakpointOK>)
             reply_array.push_back("OK");
           else if constexpr (std::is_same_v<T, BreakpointError>)
             reply_array.push_back(
                 llvm::formatv("E{0:X-2}", arg.error_code).str());
-          else if constexpr (std::is_same_v<T, BreakpointIllFormed>)
-            reply_array.push_back("E03");
           else
-            static_assert(false, "non-exhaustive visitor!");
+            reply_array.push_back("E03");
         },
         result);
   }
