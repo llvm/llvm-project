@@ -245,7 +245,7 @@ def get_user_values_str(values: list) -> str:
 class PRGreeter:
     COMMENT_TAG = "<!--LLVM NEW CONTRIBUTOR COMMENT-->\n"
 
-    def __init__(self, token: str, repo, pr_number: int):
+    def __init__(self, token: str, repo: str, pr_number: int):
         repo = github.Github(auth=github.Auth.Token(token)).get_repo(repo)
         self.pr = repo.get_issue(pr_number).as_pull_request()
         self.author = self.pr.user
@@ -256,20 +256,34 @@ class PRGreeter:
 
         # This text is using Markdown formatting.
 
-        comment = f"""\
+        comment_missing_email = ""
+        if self.author.email is None:
+            comment_missing_email = f"""\
+---
+
+It looks like your GitHub email is not public. Before proceeding, please update your settings so that it is public:
+* https://llvm.org/docs/DeveloperPolicy.html#email-addresses
+
+---
+"""
+
+        comment = (
+            f"""\
 {PRGreeter.COMMENT_TAG}
 Hello @{self.author} :wave:
 
 Thank you for submitting a Pull Request (PR) to the LLVM Project. Since this is your first PR, here are a few useful links covering our main contribution policies and review practices.
 
-* All contributions to LLVM must follow our [LLVM AI Tool Use Policy](https://llvm.org/docs/AIToolPolicy.html). In particular, if you used AI while working on this PR, please add a note to the PR summary.
+* All contributions to LLVM must follow our [LLVM AI Tool Use Policy](https://llvm.org/docs/AIToolPolicy.html). In particular, if you used AI while working on this PR, please add a note to the PR description.
 * The [LLVM Code-Review Policy and Practices](https://llvm.org/docs/CodeReview.html) document contains practical information about the PR process, including how patches are reviewed and accepted, and who can review a PR
-* Our [LLVM Developer Policy](https://llvm.org/docs/DeveloperPolicy.html) describes our expectations for code quality and commit/PR summaries, and also includes information on obtaining commit access.
+* Our [LLVM Developer Policy](https://llvm.org/docs/DeveloperPolicy.html) describes our expectations for code quality and commit summaries, and also includes notes on our CI system.
 
-If you have questions, feel free to leave a comment on this PR, or ask on [LLVM Discord](https://discord.com/invite/xS7Z362) or [LLVM Discourse](https://discourse.llvm.org/).
-
+If you have questions, feel free to leave a comment on this PR, or ask on [LLVM Discord](https://discord.com/invite/xS7Z362) or [LLVM Discourse](https://discourse.llvm.org/)."""
+            + comment_missing_email
+            + f"""\
 Thank you,
 The LLVM Community"""
+        )
         self.pr.as_issue().create_comment(comment)
         return True
 
