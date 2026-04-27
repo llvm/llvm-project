@@ -101,3 +101,55 @@ subroutine test_recursive_io_module
   print *, obj
 end subroutine
 
+! Positive cases: a recursive type is legal when the recursive component
+! is POINTER or ALLOCATABLE.  With defined I/O, an I/O list item of such
+! a type is accepted without diagnostics, and the cycle-break in the
+! component walk is reached and exited cleanly.
+module m_recursive_pointer
+  type :: rp
+    integer :: x
+    type(rp), pointer :: next => null()
+   contains
+    procedure :: wuf_rp
+    generic :: write(unformatted) => wuf_rp
+  end type
+ contains
+  subroutine wuf_rp(dtv, unit, iostat, iomsg)
+    class(rp), intent(in) :: dtv
+    integer, intent(in) :: unit
+    integer, intent(out) :: iostat
+    character(*), intent(in out) :: iomsg
+    write(unit) dtv%x
+  end subroutine
+end module
+subroutine test_recursive_pointer_io(u)
+  use m_recursive_pointer
+  integer, intent(in) :: u
+  type(rp) :: obj
+  write(u) obj ! ok: defined I/O
+end subroutine
+
+module m_recursive_allocatable
+  type :: ra
+    integer :: x
+    type(ra), allocatable :: next
+   contains
+    procedure :: wuf_ra
+    generic :: write(unformatted) => wuf_ra
+  end type
+ contains
+  subroutine wuf_ra(dtv, unit, iostat, iomsg)
+    class(ra), intent(in) :: dtv
+    integer, intent(in) :: unit
+    integer, intent(out) :: iostat
+    character(*), intent(in out) :: iomsg
+    write(unit) dtv%x
+  end subroutine
+end module
+subroutine test_recursive_allocatable_io(u)
+  use m_recursive_allocatable
+  integer, intent(in) :: u
+  type(ra) :: obj
+  write(u) obj ! ok: defined I/O
+end subroutine
+
