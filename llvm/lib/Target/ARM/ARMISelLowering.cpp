@@ -4930,9 +4930,20 @@ SDValue ARMTargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     }
   }
 
-  return DAG.getSelectCC(dl, Cond,
-                         DAG.getConstant(0, dl, Cond.getValueType()),
-                         SelectTrue, SelectFalse, ISD::SETNE);
+  // Lower it the same way as we would lower a SELECT_CC node.
+  ISD::CondCode CC;
+  SDValue LHS, RHS;
+  if (Cond.getOpcode() == ISD::SETCC) {
+    LHS = Cond.getOperand(0);
+    RHS = Cond.getOperand(1);
+    CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
+  } else {
+    LHS = Cond;
+    RHS = DAG.getConstant(0, dl, Cond.getValueType());
+    CC = ISD::SETNE;
+  }
+
+  return DAG.getSelectCC(dl, LHS, RHS, SelectTrue, SelectFalse, CC);
 }
 
 static void checkVSELConstraints(ISD::CondCode CC, ARMCC::CondCodes &CondCode,
