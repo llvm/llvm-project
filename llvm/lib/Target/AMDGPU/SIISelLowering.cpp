@@ -43,6 +43,7 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/ModRef.h"
@@ -20281,30 +20282,16 @@ static bool hasCFUser(const Value *V, SmallPtrSet<const Value *, 16> &Visited,
     return false;
   bool Result = false;
   for (const auto *U : V->users()) {
-    if (const IntrinsicInst *Intrinsic = dyn_cast<IntrinsicInst>(U)) {
-      if (V == U->getOperand(1)) {
-        switch (Intrinsic->getIntrinsicID()) {
-        default:
-          Result = false;
-          break;
-        case Intrinsic::amdgcn_if_break:
-        case Intrinsic::amdgcn_if:
-        case Intrinsic::amdgcn_else:
-          Result = true;
-          break;
-        }
-      }
-      if (V == U->getOperand(0)) {
-        switch (Intrinsic->getIntrinsicID()) {
-        default:
-          Result = false;
-          break;
-        case Intrinsic::amdgcn_end_cf:
-        case Intrinsic::amdgcn_loop:
-          Result = true;
-          break;
-        }
-      }
+    if (isa<IntrinsicInst>(U)) {
+      if (V == U->getOperand(1))
+        Result = PatternMatch::match(
+            U, PatternMatch::m_AnyIntrinsic<Intrinsic::amdgcn_if_break,
+                                            Intrinsic::amdgcn_if,
+                                            Intrinsic::amdgcn_else>());
+      if (V == U->getOperand(0))
+        Result = PatternMatch::match(
+            U, PatternMatch::m_AnyIntrinsic<Intrinsic::amdgcn_end_cf,
+                                            Intrinsic::amdgcn_loop>());
     } else {
       Result = hasCFUser(U, Visited, WaveSize);
     }

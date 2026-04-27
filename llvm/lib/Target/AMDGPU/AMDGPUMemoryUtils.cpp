@@ -17,6 +17,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ReplaceConstant.h"
 
 #define DEBUG_TYPE "amdgpu-memory-utils"
@@ -354,33 +355,29 @@ void removeFnAttrFromReachable(CallGraph &CG, Function *KernelRoot,
 }
 
 bool isReallyAClobber(const Value *Ptr, MemoryDef *Def, AAResults *AA) {
+  using namespace PatternMatch;
   Instruction *DefInst = Def->getMemoryInst();
 
   if (isa<FenceInst>(DefInst))
     return false;
 
-  if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(DefInst)) {
-    switch (II->getIntrinsicID()) {
-    case Intrinsic::amdgcn_s_barrier:
-    case Intrinsic::amdgcn_s_cluster_barrier:
-    case Intrinsic::amdgcn_s_barrier_signal:
-    case Intrinsic::amdgcn_s_barrier_signal_var:
-    case Intrinsic::amdgcn_s_barrier_signal_isfirst:
-    case Intrinsic::amdgcn_s_barrier_init:
-    case Intrinsic::amdgcn_s_barrier_join:
-    case Intrinsic::amdgcn_s_barrier_wait:
-    case Intrinsic::amdgcn_s_barrier_leave:
-    case Intrinsic::amdgcn_s_get_barrier_state:
-    case Intrinsic::amdgcn_s_wakeup_barrier:
-    case Intrinsic::amdgcn_wave_barrier:
-    case Intrinsic::amdgcn_sched_barrier:
-    case Intrinsic::amdgcn_sched_group_barrier:
-    case Intrinsic::amdgcn_iglp_opt:
-      return false;
-    default:
-      break;
-    }
-  }
+  if (match(
+          DefInst,
+          m_AnyIntrinsic<
+              Intrinsic::amdgcn_s_barrier, Intrinsic::amdgcn_s_cluster_barrier,
+              Intrinsic::amdgcn_s_barrier_signal,
+              Intrinsic::amdgcn_s_barrier_signal_var,
+              Intrinsic::amdgcn_s_barrier_signal_isfirst,
+              Intrinsic::amdgcn_s_barrier_init,
+              Intrinsic::amdgcn_s_barrier_join,
+              Intrinsic::amdgcn_s_barrier_wait,
+              Intrinsic::amdgcn_s_barrier_leave,
+              Intrinsic::amdgcn_s_get_barrier_state,
+              Intrinsic::amdgcn_s_wakeup_barrier,
+              Intrinsic::amdgcn_wave_barrier, Intrinsic::amdgcn_sched_barrier,
+              Intrinsic::amdgcn_sched_group_barrier,
+              Intrinsic::amdgcn_iglp_opt>()))
+    return false;
 
   // Ignore atomics not aliasing with the original load, any atomic is a
   // universal MemoryDef from MSSA's point of view too, just like a fence.

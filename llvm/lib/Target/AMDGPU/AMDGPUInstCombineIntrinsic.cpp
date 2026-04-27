@@ -788,7 +788,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     //
     // llvm.amdgcn.rcp(llvm.sqrt(x)) -> llvm.amdgcn.rsq(x) if contractable and
     // relaxed.
-    if (IID == Intrinsic::amdgcn_sqrt || IID == Intrinsic::sqrt) {
+    if (match(SrcCI,
+              m_AnyIntrinsic<Intrinsic::amdgcn_sqrt, Intrinsic::sqrt>())) {
       const FPMathOperator *SqrtOp = cast<FPMathOperator>(SrcCI);
       FastMathFlags InnerFMF = SqrtOp->getFastMathFlags();
       if (!InnerFMF.allowContract() || !SrcCI->hasOneUse())
