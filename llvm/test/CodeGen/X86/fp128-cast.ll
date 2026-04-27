@@ -1024,7 +1024,7 @@ define dso_local i32 @TestConst128(fp128 %v) nounwind {
 ; X64-SSE-NEXT:    movaps {{.*#+}} xmm1 = [1.0E+0]
 ; X64-SSE-NEXT:    callq __gttf2@PLT
 ; X64-SSE-NEXT:    xorl %ecx, %ecx
-; X64-SSE-NEXT:    testq %rax, %rax
+; X64-SSE-NEXT:    testl %eax, %eax
 ; X64-SSE-NEXT:    setg %cl
 ; X64-SSE-NEXT:    movl %ecx, %eax
 ; X64-SSE-NEXT:    popq %rcx
@@ -1056,7 +1056,7 @@ define dso_local i32 @TestConst128(fp128 %v) nounwind {
 ; X64-AVX-NEXT:    vmovaps {{.*#+}} xmm1 = [1.0E+0]
 ; X64-AVX-NEXT:    callq __gttf2@PLT
 ; X64-AVX-NEXT:    xorl %ecx, %ecx
-; X64-AVX-NEXT:    testq %rax, %rax
+; X64-AVX-NEXT:    testl %eax, %eax
 ; X64-AVX-NEXT:    setg %cl
 ; X64-AVX-NEXT:    movl %ecx, %eax
 ; X64-AVX-NEXT:    popq %rcx
@@ -1075,7 +1075,7 @@ define dso_local i32 @TestConst128Zero(fp128 %v) nounwind {
 ; X64-SSE-NEXT:    xorps %xmm1, %xmm1
 ; X64-SSE-NEXT:    callq __gttf2@PLT
 ; X64-SSE-NEXT:    xorl %ecx, %ecx
-; X64-SSE-NEXT:    testq %rax, %rax
+; X64-SSE-NEXT:    testl %eax, %eax
 ; X64-SSE-NEXT:    setg %cl
 ; X64-SSE-NEXT:    movl %ecx, %eax
 ; X64-SSE-NEXT:    popq %rcx
@@ -1107,7 +1107,7 @@ define dso_local i32 @TestConst128Zero(fp128 %v) nounwind {
 ; X64-AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X64-AVX-NEXT:    callq __gttf2@PLT
 ; X64-AVX-NEXT:    xorl %ecx, %ecx
-; X64-AVX-NEXT:    testq %rax, %rax
+; X64-AVX-NEXT:    testl %eax, %eax
 ; X64-AVX-NEXT:    setg %cl
 ; X64-AVX-NEXT:    movl %ecx, %eax
 ; X64-AVX-NEXT:    popq %rcx

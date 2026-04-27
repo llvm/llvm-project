@@ -19,11 +19,11 @@ define fp128 @TestSelect(fp128 %a, fp128 %b) {
 ; CHECK-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    callq __gttf2@PLT
-; CHECK-NEXT:    movq %rax, %rbx
+; CHECK-NEXT:    movl %eax, %ebx
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    callq __subtf3@PLT
-; CHECK-NEXT:    testq %rbx, %rbx
+; CHECK-NEXT:    testl %ebx, %ebx
 ; CHECK-NEXT:    jg .LBB0_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    xorps %xmm0, %xmm0

@@ -323,7 +323,8 @@ namespace llvm {
     EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
                            EVT VT) const override;
 
-    MVT::SimpleValueType getCmpLibcallReturnType() const override {
+    MVT::SimpleValueType
+    getCmpLibcallReturnType(const DataLayout &DL) const override {
       // 32-bit comparisons have a smaller encoding than 64-bit on x86-64.
       return MVT::i32;
     }

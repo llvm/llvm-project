@@ -48,11 +48,11 @@ define fp128 @test_select_cc(fp128, fp128) nounwind {
 ; SSE-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
 ; SSE-NEXT:    callq __netf2@PLT
-; SSE-NEXT:    movq %rax, %rbx
+; SSE-NEXT:    movl %eax, %ebx
 ; SSE-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; SSE-NEXT:    callq __eqtf2@PLT
-; SSE-NEXT:    testq %rax, %rax
+; SSE-NEXT:    testl %eax, %eax
 ; SSE-NEXT:    je .LBB1_1
 ; SSE-NEXT:  # %bb.2: # %BB0
 ; SSE-NEXT:    xorps %xmm1, %xmm1
@@ -60,7 +60,7 @@ define fp128 @test_select_cc(fp128, fp128) nounwind {
 ; SSE-NEXT:  .LBB1_1:
 ; SSE-NEXT:    movaps {{.*#+}} xmm1 = [1.0E+0]
 ; SSE-NEXT:  .LBB1_3: # %BB0
-; SSE-NEXT:    testq %rbx, %rbx
+; SSE-NEXT:    testl %ebx, %ebx
 ; SSE-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    jne .LBB1_5
 ; SSE-NEXT:  # %bb.4: # %BB1
@@ -72,9 +72,9 @@ define fp128 @test_select_cc(fp128, fp128) nounwind {
 ;
 ; NOSSE-LABEL: test_select_cc:
 ; NOSSE:       # %bb.0: # %BB0
+; NOSSE-NEXT:    pushq %rbp
 ; NOSSE-NEXT:    pushq %r15
 ; NOSSE-NEXT:    pushq %r14
-; NOSSE-NEXT:    pushq %r13
 ; NOSSE-NEXT:    pushq %r12
 ; NOSSE-NEXT:    pushq %rbx
 ; NOSSE-NEXT:    movq %rcx, %r15
@@ -82,18 +82,18 @@ define fp128 @test_select_cc(fp128, fp128) nounwind {
 ; NOSSE-NEXT:    movq %rsi, %rbx
 ; NOSSE-NEXT:    movq %rdi, %r14
 ; NOSSE-NEXT:    callq __netf2@PLT
-; NOSSE-NEXT:    movq %rax, %r13
+; NOSSE-NEXT:    movl %eax, %ebp
 ; NOSSE-NEXT:    movq %r14, %rdi
 ; NOSSE-NEXT:    movq %rbx, %rsi
 ; NOSSE-NEXT:    movq %r12, %rdx
 ; NOSSE-NEXT:    movq %r15, %rcx
 ; NOSSE-NEXT:    callq __eqtf2@PLT
-; NOSSE-NEXT:    movq %rax, %rcx
+; NOSSE-NEXT:    movl %eax, %ecx
 ; NOSSE-NEXT:    xorl %eax, %eax
-; NOSSE-NEXT:    testq %rcx, %rcx
+; NOSSE-NEXT:    testl %ecx, %ecx
 ; NOSSE-NEXT:    movabsq $4611404543450677248, %rdx # imm = 0x3FFF000000000000
 ; NOSSE-NEXT:    cmovneq %rax, %rdx
-; NOSSE-NEXT:    testq %r13, %r13
+; NOSSE-NEXT:    testl %ebp, %ebp
 ; NOSSE-NEXT:    je .LBB1_2
 ; NOSSE-NEXT:  # %bb.1:
 ; NOSSE-NEXT:    movq %r14, %rax
@@ -101,9 +101,9 @@ define fp128 @test_select_cc(fp128, fp128) nounwind {
 ; NOSSE-NEXT:  .LBB1_2: # %BB2
 ; NOSSE-NEXT:    popq %rbx
 ; NOSSE-NEXT:    popq %r12
-; NOSSE-NEXT:    popq %r13
 ; NOSSE-NEXT:    popq %r14
 ; NOSSE-NEXT:    popq %r15
+; NOSSE-NEXT:    popq %rbp
 ; NOSSE-NEXT:    retq
 BB0:
   %a = fcmp oeq fp128 %0, %1
