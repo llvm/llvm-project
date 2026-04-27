@@ -70,6 +70,8 @@ AST Dumping Potentially Breaking Changes
   ``introduced``, ``deprecated``, ``obsoleted``, ``unavailable``, ``message``,
   ``strict``, ``replacement``, ``priority``, and ``environment``. Previously, these
   fields were missing from the JSON output.
+- Colons that appear at the end of a ParamCommentCommand name are not serialized
+  as part of the name.
 
 Clang Frontend Potentially Breaking Changes
 -------------------------------------------
@@ -121,6 +123,12 @@ Clang Python Bindings Potentially Breaking Changes
   ``UnsavedFile`` is already available to use and existing uses should
   be adapted to refer to it instead. ``_CXUnsavedFile`` will be removed in a
   future release.
+
+OpenCL Potentially Breaking Changes
+-----------------------------------
+- Clang now diagnoses zero-length arrays as errors in OpenCL. OpenCL C 3.0
+  section 6.11.d states that "Variable length arrays and structures with
+  flexible (or unsized) arrays are not supported."
 
 What's New in Clang |release|?
 ==============================
@@ -189,6 +197,23 @@ Non-comprehensive list of changes in this release
   ``__builtin_stdc_has_single_bit``, ``__builtin_stdc_bit_width``,
   ``__builtin_stdc_bit_floor``, and ``__builtin_stdc_bit_ceil``.
 
+- Implemented the type-specific C23 ``<stdbit.h>`` functions with constexpr
+  evaluation support:
+  ``stdc_leading_zeros_{uc,us,ui,ul,ull}``,
+  ``stdc_leading_ones_{uc,us,ui,ul,ull}``,
+  ``stdc_trailing_zeros_{uc,us,ui,ul,ull}``,
+  ``stdc_trailing_ones_{uc,us,ui,ul,ull}``,
+  ``stdc_first_leading_zero_{uc,us,ui,ul,ull}``,
+  ``stdc_first_leading_one_{uc,us,ui,ul,ull}``,
+  ``stdc_first_trailing_zero_{uc,us,ui,ul,ull}``,
+  ``stdc_first_trailing_one_{uc,us,ui,ul,ull}``,
+  ``stdc_count_zeros_{uc,us,ui,ul,ull}``,
+  ``stdc_count_ones_{uc,us,ui,ul,ull}``,
+  ``stdc_has_single_bit_{uc,us,ui,ul,ull}``,
+  ``stdc_bit_width_{uc,us,ui,ul,ull}``,
+  ``stdc_bit_floor_{uc,us,ui,ul,ull}``, and
+  ``stdc_bit_ceil_{uc,us,ui,ul,ull}``.
+
 - A new generic bit-reverse builtin function ``__builtin_bitreverseg`` that
   extends bit-reversal support to all standard integers type, including
   ``_BitInt``
@@ -199,6 +224,15 @@ Non-comprehensive list of changes in this release
 - Added header ``endian.h`` which contains byte order helpers specified in POSIX
 
 - Added #pragma loop licm(disable) for llvm.loop.licm.disable metadata
+
+- Added a new ``ExplicitInstantiationDecl`` AST node to represent explicit
+  template instantiations (e.g., ``template void foo<int>();`` or
+  ``extern template class S<int>;``). Previously, source location information
+  for explicit instantiation statements was discarded after parsing. The new
+  node preserves the full source range including the ``extern`` and ``template``
+  keywords, qualifiers, template arguments as written, and the declared type,
+  enabling tools such as language servers and refactoring engines to accurately
+  map source locations back to explicit instantiation sites.
 
 New Compiler Flags
 ------------------
@@ -235,6 +269,10 @@ New Compiler Flags
   shorthand for ``-fwin-cfg-mechanism=dispatch``.
 - New ``-cl`` option ``/d2guardcfgdispatch-`` added to match MSVC. This acts as a
   shorthand for ``-fwin-cfg-mechanism=check``.
+
+- New option ``-f[no-]strict-bool`` added to control whether Clang can assume
+  that ``bool`` values loaded from memory cannot have a bit pattern other
+  than 0 or 1.
 
 Deprecated Compiler Flags
 -------------------------
@@ -276,6 +314,15 @@ Attribute Changes in Clang
   exclusively, while *reading* requires at least one to be held.  This is
   sound because any writer must hold all capabilities, so holding any one
   prevents concurrent writes.
+
+- The ``[[clang::unsafe_buffer_usage]]`` attribute is now supported in API
+  notes. For example:
+  
+  .. code-block:: yaml
+
+    Functions:
+      - Name: myUnsafeFunction
+        UnsafeBufferUsage: true
 
 - Added support for ``[[msvc::forceinline]]`` for functions and
   ``[[msvc::forceinline_calls]]`` for statements. Both are aliases to
@@ -419,6 +466,8 @@ Improvements to Coverage Mapping
 - [MC/DC] Nested expressions are handled as individual MC/DC expressions.
 - "Single byte coverage" now supports branch coverage and can be used
   together with ``-fcoverage-mcdc``.
+- Consteval member functions are no longer emitted in coverage mappings,
+  matching the existing behavior for free consteval functions. (#GH164448)
 
 Bug Fixes in This Version
 -------------------------
@@ -480,7 +529,6 @@ Bug Fixes to C++ Support
 - Correctly diagnose uses of ``co_await`` / ``co_yield`` in the default argument of nested function declarations. (#GH98923)
 - Fixed a crash when diagnosing an invalid static member function with an explicit object parameter (#GH177741)
 - Clang incorrectly instantiated variable specializations outside of the immediate context. (#GH54439)
-- Fixed a bug matching constrained out-of-line definitions of class members.
 - Fixed a crash when instantiating an invalid out-of-line static data member definition in a local class. (#GH176152)
 - Fixed a crash when pack expansions are used as arguments for non-pack parameters of built-in templates. (#GH180307)
 - Fix a problem where pack index expressions where incorrectly being regarded as equivalent.

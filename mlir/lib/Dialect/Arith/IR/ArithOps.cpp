@@ -516,6 +516,11 @@ OpFoldResult arith::SubIOp::fold(FoldAdaptor adaptor) {
       return add.getRhs();
   }
 
+  // subi(a, subi(a, b)) -> b
+  if (auto sub = getRhs().getDefiningOp<SubIOp>())
+    if (getLhs() == sub.getLhs())
+      return sub.getRhs();
+
   return constFoldBinaryOp<IntegerAttr>(
       adaptor.getOperands(),
       [](APInt a, const APInt &b) { return std::move(a) - b; });
@@ -1102,6 +1107,28 @@ OpFoldResult arith::NegFOp::fold(FoldAdaptor adaptor) {
     return op.getOperand();
   return constFoldUnaryOp<FloatAttr>(adaptor.getOperands(),
                                      [](const APFloat &a) { return -a; });
+}
+
+//===----------------------------------------------------------------------===//
+// FlushDenormalsOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult arith::FlushDenormalsOp::fold(FoldAdaptor adaptor) {
+  // TODO: Fold flush_denormals if the floating-point type does not support
+  // denormals. There is currently no API to query this information from
+  // APFloat.
+
+  // flush_denormals(flush_denormals(x)) -> flush_denormals(x)
+  if (auto op = this->getOperand().getDefiningOp<arith::FlushDenormalsOp>())
+    return op.getResult();
+
+  // Constant-fold flush_denormals if the operand is a constant.
+  return constFoldUnaryOp<FloatAttr>(
+      adaptor.getOperands(), [](const APFloat &a) {
+        if (a.isDenormal())
+          return APFloat::getZero(a.getSemantics(), a.isNegative());
+        return a;
+      });
 }
 
 //===----------------------------------------------------------------------===//
@@ -2926,8 +2953,8 @@ std::optional<TypedAttr> mlir::arith::getNeutralElement(Operation *op) {
 Value mlir::arith::getIdentityValue(AtomicRMWKind op, Type resultType,
                                     OpBuilder &builder, Location loc,
                                     bool useOnlyFiniteValue) {
-  if (auto attr =
-getIdentityValueAttr(op, resultType, builder, loc, useOnlyFiniteValue))
+  if (auto attr = getIdentityValueAttr(op, resultType, builder, loc,
+                                       useOnlyFiniteValue))
     return arith::ConstantOp::create(builder, loc, attr);
   return {};
 }
