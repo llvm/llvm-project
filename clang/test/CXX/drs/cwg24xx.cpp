@@ -65,6 +65,9 @@ struct S {
 };
 } // namespace cwg2430
 
+
+// cwg2443 is in cwg2443.cpp
+
 namespace cwg2450 { // cwg2450: 18
 #if __cplusplus >= 202302L
 struct S {int a;};
