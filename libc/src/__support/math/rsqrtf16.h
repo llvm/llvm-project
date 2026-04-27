@@ -13,6 +13,7 @@
 
 #ifdef LIBC_TYPES_HAS_FLOAT16
 
+#include "src/__support/CPP/bit.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/cast.h"
@@ -39,12 +40,7 @@ LIBC_INLINE_VAR constexpr int64_t COEFFS[5] = {
 LIBC_INLINE_VAR constexpr int64_t ONE_OVER_SQRT2 = 0x16a09e60;
 
 LIBC_INLINE constexpr int floor_log2(uint64_t x) {
-  int result = -1;
-  while (x) {
-    x >>= 1;
-    ++result;
-  }
-  return result;
+  return 63 - cpp::countl_zero(x);
 }
 
 LIBC_INLINE constexpr int64_t eval_polynomial(uint32_t m) {
@@ -87,11 +83,9 @@ LIBC_INLINE constexpr uint16_t approximate_rsqrt(uint16_t x_abs) {
     x_mant |= 0x0400;
     exponent = static_cast<int>(x_abs >> 10) - 14;
   } else {
-    exponent = -13;
-    while ((x_mant & 0x0400) == 0) {
-      x_mant <<= 1;
-      --exponent;
-    }
+    int shift = cpp::countl_zero(x_mant) - (32 - 11);
+    x_mant <<= shift;
+    exponent = -13 - shift;
   }
 
   uint32_t m = x_mant << (RSQRT_FRACTION_BITS - 11);
@@ -140,9 +134,10 @@ LIBC_INLINE constexpr int compare_half_with_rsqrt(uint16_t y, uint32_t x_sig,
 LIBC_INLINE constexpr uint16_t floor_rsqrt(uint16_t approx, uint32_t x_sig,
                                            int x_exp) {
   uint16_t y = approx < 0x0400 ? 0x0400 : approx;
-  while (compare_half_with_rsqrt(y, x_sig, x_exp) > 0)
+  if (LIBC_UNLIKELY(compare_half_with_rsqrt(y, x_sig, x_exp) > 0))
     --y;
-  while (y < 0x7bff && compare_half_with_rsqrt(y + 1, x_sig, x_exp) <= 0)
+  if (LIBC_UNLIKELY(y < 0x7bff &&
+                    compare_half_with_rsqrt(y + 1, x_sig, x_exp) <= 0))
     ++y;
   return y;
 }
