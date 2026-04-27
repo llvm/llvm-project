@@ -1617,8 +1617,33 @@ public:
   /// other lambda expressions. When true, the lambda expressions with the same
   /// implementation will be considered to be the same. ProfileLambdaExpr should
   /// only be true when we try to merge two declarations within modules.
+  /// \param IgnoringUnresolvedLookupExpr whether or not to ignore
+  /// UnresolvedLookupExpr when profiling. When true,
+  /// IgnoringUnresolvedLookupExpr won't be invoked during profiling. This is
+  /// useful in case we don't hope the unresolved lookup expr to pollute the
+  /// profile result. e.g.,
+  ///
+  /// "a.h"
+  ///
+  ///   #pragma once
+  ///   struct F {
+  ///     template <typename... T> requires ((sizeof(T) > 0) && ...)
+  ///     void operator()(T...) {}
+  ///   } f;
+  ///
+  /// and
+  ///
+  /// "c.h"
+  ///
+  ///   void operator&&(struct X, struct X);
+  ///   #include "a.h"
+  ///
+  /// Here the `F::operator()` may produce different profiling results depending
+  /// on whether there is a freestanding `operator&&` declared before it. And
+  /// this affects declaration merging in modules.
   void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
-               bool Canonical, bool ProfileLambdaExpr = false) const;
+               bool Canonical, bool ProfileLambdaExpr = false,
+               bool IgnoringUnresolvedLookupExpr = false) const;
 
   /// Calculate a unique representation for a statement that is
   /// stable across compiler invocations.

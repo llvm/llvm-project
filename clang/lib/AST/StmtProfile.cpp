@@ -30,11 +30,13 @@ namespace {
     llvm::FoldingSetNodeID &ID;
     bool Canonical;
     bool ProfileLambdaExpr;
+    bool IgnoringUnresolvedLookupExpr;
 
   public:
     StmtProfiler(llvm::FoldingSetNodeID &ID, bool Canonical,
-                 bool ProfileLambdaExpr)
-        : ID(ID), Canonical(Canonical), ProfileLambdaExpr(ProfileLambdaExpr) {}
+                 bool ProfileLambdaExpr, bool IgnoringUnresolvedLookupExpr)
+        : ID(ID), Canonical(Canonical), ProfileLambdaExpr(ProfileLambdaExpr),
+          IgnoringUnresolvedLookupExpr(IgnoringUnresolvedLookupExpr) {}
 
     virtual ~StmtProfiler() {}
 
@@ -86,8 +88,11 @@ namespace {
   public:
     StmtProfilerWithPointers(llvm::FoldingSetNodeID &ID,
                              const ASTContext &Context, bool Canonical,
-                             bool ProfileLambdaExpr)
-        : StmtProfiler(ID, Canonical, ProfileLambdaExpr), Context(Context) {}
+                             bool ProfileLambdaExpr,
+                             bool IgnoringUnresolvedLookupExpr)
+        : StmtProfiler(ID, Canonical, ProfileLambdaExpr,
+                       IgnoringUnresolvedLookupExpr),
+          Context(Context) {}
 
   private:
     void HandleStmtClass(Stmt::StmtClass SC) override {
@@ -184,8 +189,11 @@ namespace {
   class StmtProfilerWithoutPointers : public StmtProfiler {
     ODRHash &Hash;
   public:
+    // Set IgnoringUnresolvedLookupExpr as we don't want the unresolved lookup
+    // expr affecting the merging results.
     StmtProfilerWithoutPointers(llvm::FoldingSetNodeID &ID, ODRHash &Hash)
-        : StmtProfiler(ID, /*Canonical=*/false, /*ProfileLambdaExpr=*/false),
+        : StmtProfiler(ID, /*Canonical=*/false, /*ProfileLambdaExpr=*/false,
+                       /*IgnoringUnresolvedLookupExpr=*/true),
           Hash(Hash) {}
 
   private:
@@ -2269,6 +2277,10 @@ void StmtProfiler::VisitOverloadExpr(const OverloadExpr *S) {
 
 void
 StmtProfiler::VisitUnresolvedLookupExpr(const UnresolvedLookupExpr *S) {
+  if (IgnoringUnresolvedLookupExpr) {
+    ID.AddInteger(0);
+    return;
+  }
   VisitOverloadExpr(S);
 }
 
@@ -2951,8 +2963,10 @@ void StmtProfiler::VisitHLSLOutArgExpr(const HLSLOutArgExpr *S) {
 }
 
 void Stmt::Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
-                   bool Canonical, bool ProfileLambdaExpr) const {
-  StmtProfilerWithPointers Profiler(ID, Context, Canonical, ProfileLambdaExpr);
+                   bool Canonical, bool ProfileLambdaExpr,
+                   bool IgnoringUnresolvedLookupExpr) const {
+  StmtProfilerWithPointers Profiler(ID, Context, Canonical, ProfileLambdaExpr,
+                                    IgnoringUnresolvedLookupExpr);
   Profiler.Visit(this);
 }
 

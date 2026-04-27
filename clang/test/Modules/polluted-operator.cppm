@@ -71,9 +71,4 @@ export namespace std {
   using std::operator&&;
 }
 
-#ifdef SKIP_ODR_CHECK_IN_GMF
 // expected-no-diagnostics
-#else
-// expected-error@* {{has different definitions in different modules; first difference is defined here found data member '_S_copy_ctor' with an initializer}}
-// expected-note@* {{but in 'a.<global>' found data member '_S_copy_ctor' with a different initializer}}
-#endif

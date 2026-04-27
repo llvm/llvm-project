@@ -4035,7 +4035,15 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
     for (QualType Ex : epi.ExceptionSpec.Exceptions)
       ID.AddPointer(Ex.getAsOpaquePtr());
   } else if (isComputedNoexcept(epi.ExceptionSpec.Type)) {
-    epi.ExceptionSpec.NoexceptExpr->Profile(ID, Context, Canonical);
+    // Make sure the profiling result of the noexcept expression
+    // won't be affected by the unresolved lookup expressions.
+    // See clang/test/Modules/polluted-operator.cppm for an example
+    // for it.
+    //
+    // ProfileLambdaExpr=false is the default value.
+    epi.ExceptionSpec.NoexceptExpr->Profile(
+        ID, Context, Canonical, /*ProfileLambdaExpr=*/false,
+        /*IgnoringUnresolvedLookupExpr=*/true);
   } else if (epi.ExceptionSpec.Type == EST_Uninstantiated ||
              epi.ExceptionSpec.Type == EST_Unevaluated) {
     ID.AddPointer(epi.ExceptionSpec.SourceDecl->getCanonicalDecl());

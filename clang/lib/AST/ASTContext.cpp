@@ -7454,8 +7454,12 @@ bool ASTContext::isSameConstraintExpr(const Expr *XCE, const Expr *YCE) const {
     return true;
 
   llvm::FoldingSetNodeID XCEID, YCEID;
-  XCE->Profile(XCEID, *this, /*Canonical=*/true, /*ProfileLambdaExpr=*/true);
-  YCE->Profile(YCEID, *this, /*Canonical=*/true, /*ProfileLambdaExpr=*/true);
+  /// The unresolved lookup expr may misguide the profiling results. See
+  /// clang/test/Modules/callable-require-clause-merge.cppm for an example.
+  XCE->Profile(XCEID, *this, /*Canonical=*/true, /*ProfileLambdaExpr=*/true,
+               /*IgnoringUnresolvedLookupExpr=*/true);
+  YCE->Profile(YCEID, *this, /*Canonical=*/true, /*ProfileLambdaExpr=*/true,
+               /*IgnoringUnresolvedLookupExpr=*/true);
   return XCEID == YCEID;
 }
 
