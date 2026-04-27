@@ -1369,6 +1369,16 @@ func.func @subSub0(%arg0: index, %arg1: index) -> index {
   return %sub2 : index
 }
 
+// CHECK-LABEL: @subSub1
+// CHECK-SAME:    %[[ARG0:.*]]: index,
+// CHECK-SAME:    %[[ARG1:.*]]: index)
+//      CHECK:    return %[[ARG1]] : index
+func.func @subSub1(%arg0: index, %arg1: index) -> index {
+  %sub1 = arith.subi %arg0, %arg1 : index
+  %sub2 = arith.subi %arg0, %sub1 : index
+  return %sub2 : index
+}
+
 // CHECK-LABEL: @subSub0Ovf
 //       CHECK:   %[[c0:.+]] = arith.constant 0 : index
 //       CHECK:   %[[add:.+]] = arith.subi %[[c0]], %arg1 overflow<nsw, nuw> : index
@@ -3090,6 +3100,29 @@ func.func @test_negf1(%f : f32) -> (f32) {
   %0 = arith.negf %f : f32
   %1 = arith.negf %0 : f32
   return %1: f32
+}
+
+// -----
+
+// CHECK-LABEL: @test_flush_denormals_const(
+// CHECK: %[[res:.+]] = arith.constant 0.000000e+00 : f32
+// CHECK: return %[[res]]
+func.func @test_flush_denormals_const() -> (f32) {
+  %c = arith.constant 1.0e-40 : f32
+  %0 = arith.flush_denormals %c : f32
+  return %0 : f32
+}
+
+// -----
+
+// CHECK-LABEL: @test_flush_denormals_idempotent(
+// CHECK-SAME: %[[arg0:.+]]:
+// CHECK: %[[res:.+]] = arith.flush_denormals %[[arg0]] : f32
+// CHECK: return %[[res]]
+func.func @test_flush_denormals_idempotent(%f : f32) -> (f32) {
+  %0 = arith.flush_denormals %f : f32
+  %1 = arith.flush_denormals %0 : f32
+  return %1 : f32
 }
 
 // -----

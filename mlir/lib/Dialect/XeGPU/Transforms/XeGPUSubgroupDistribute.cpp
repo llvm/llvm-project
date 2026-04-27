@@ -173,7 +173,7 @@ struct MoveFuncBodyToWarpOp : public OpRewritePattern<gpu::GPUFuncOp> {
           gpuFuncOp, "expected gpu.func terminator to be gpu.return");
     // Create a new function with the same signature and same attributes.
     SmallVector<Type> workgroupAttributionsTypes =
-        llvm::map_to_vector(gpuFuncOp.getWorkgroupAttributions(),
+        llvm::map_to_vector(gpuFuncOp.getWorkgroupAttributionBBArgs(),
                             [](BlockArgument arg) { return arg.getType(); });
     SmallVector<Type> privateAttributionsTypes =
         llvm::map_to_vector(gpuFuncOp.getPrivateAttributions(),
@@ -260,11 +260,6 @@ struct CreateNdDescDistribution final : public gpu::WarpDistributionPattern {
     if (!layout)
       return rewriter.notifyMatchFailure(
           descOp, "the tensor descriptor lacks layout attribute");
-    // CreateNdOp must not have offsets.
-    if (descOp.getMixedOffsets().size())
-      return rewriter.notifyMatchFailure(
-          descOp, "xegpu::CreateNdDescOp must not have offsets");
-
     SmallVector<size_t> newRetIndices;
     rewriter.setInsertionPoint(warpOp);
     gpu::WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
@@ -2280,4 +2275,6 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
       op->erase();
     return WalkResult::advance();
   });
+
+  xegpu::removeTemporaryLayoutAttrs(getOperation());
 }

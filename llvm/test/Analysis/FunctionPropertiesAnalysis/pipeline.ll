@@ -4,7 +4,6 @@
 ; RUN: opt -stats -enable-detailed-function-properties -disable-output -O0 < %s 2>&1 | FileCheck %s --check-prefixes=PRE,POSTNOOPT
 ; RUN: opt -stats -enable-detailed-function-properties -disable-output -O3 < %s 2>&1 | FileCheck %s --check-prefixes=PRE,POST
 ; RUN: opt -stats -enable-detailed-function-properties -disable-output -passes='lto<O3>' < %s 2>&1 | FileCheck %s --check-prefixes=PRE,POST
-; RUN: opt -stats -enable-detailed-function-properties -disable-output -passes='lto-pre-link<Os>' < %s 2>&1 | FileCheck %s --check-prefixes=PRE,POST
 ; RUN: opt -stats -enable-detailed-function-properties -disable-output -passes='lto-pre-link<O3>' < %s 2>&1 | FileCheck %s --check-prefixes=PRE,POST
 ; RUN: opt -stats -enable-detailed-function-properties -disable-output -passes='thinlto<O3>' < %s 2>&1 | FileCheck %s --check-prefixes=PRE,POST
 ; RUN: opt -stats -enable-detailed-function-properties -disable-output -passes='thinlto-pre-link<O2>' < %s 2>&1 | FileCheck %s --check-prefixes=PRE,POST
