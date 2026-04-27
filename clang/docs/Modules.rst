@@ -1081,6 +1081,61 @@ When writing a private module as part of a *framework*, it's recommended that:
   to work with this naming, using ``FooPrivate`` or ``Foo.Private`` (submodule)
   trigger warnings and might not work as expected.
 
+Non-modular Headers
+-------------------
+A non-modular header is a header file that is included or imported in modular
+headers, but is not a part of any modules (i.e., not listed in any module map).
+A non-modular header is considered visible in a translation unit only if it was
+included by a module that is itself visible.
+
+For example, consider the following setup. The inline comments describe how
+Clang behaves when importing a non-modular header.
+
+.. code-block:: c
+
+  // This example assumes the header search path is ./include.
+  /* include/NonModular.h */
+  #define MACRO_NON_MODULAR 1
+
+  /* include/A/module.modulemap */
+  module A {
+    header "A.h"
+  }
+
+  /* include/A/A.h */
+  // Module A includes a non-modular header.
+  #include "NonModular.h"
+
+  /* include/B/module.modulemap */
+  module B {
+    header "B.h"
+  }
+
+  /* include/B/B.h */
+  #include "A/A.h"
+
+  /* source_1.m */
+  #import "A/A.h"
+  // The import below is skipped, because the non-modular header is
+  // visible through module A. In other words, one can omit
+  // the import directive below, and the program compiles correctly.
+  #import "NonModular.h"
+
+  int foo() {
+    return MACRO_NON_MODULAR + 1;
+  }
+
+  /* source_2.m */
+  #import "B/B.h"
+  // Since B does not export its dependent modules, A is not visible.
+  // Hence "NonModular.h" is not visible. Thus clang re-enters "NonModular.h".
+  // The import directive below cannot be omitted.
+  #import "NonModular.h"
+
+  int foo() {
+    return MACRO_NON_MODULAR + 1;
+  }
+
 Modularizing a Platform
 =======================
 To get any benefit out of modules, one needs to introduce module maps for software libraries starting at the bottom of the stack. This typically means introducing a module map covering the operating system's headers and the C standard library headers (in ``/usr/include``, for a Unix system).
