@@ -179,7 +179,7 @@ TEST_F(LlvmLibcSendMsgRecvMsgTest, SendAndReceiveFileDescriptor) {
   ASSERT_TRUE(cmsg != nullptr);
   ASSERT_EQ(cmsg->cmsg_level, SOL_SOCKET);
   // Use ASSERT_TRUE, as ASSERT_EQ requires SCM_RIGHTS to be an int,
-  // which is not true on all systems.
+  // which is not true on all systems (e.g. glibc).
   ASSERT_TRUE(cmsg->cmsg_type == SCM_RIGHTS);
   ASSERT_EQ(cmsg->cmsg_len, CMSG_LEN(sizeof(int)));
   ASSERT_EQ(CMSG_NXTHDR(&msg, cmsg), nullptr);
@@ -193,7 +193,7 @@ TEST_F(LlvmLibcSendMsgRecvMsgTest, SendAndReceiveFileDescriptor) {
                                          &new_sock_type, &optlen),
               Succeeds(0));
   // Use ASSERT_TRUE, as ASSERT_EQ requires SOCK_STREAM to be an int,
-  // which is not true on all systems.
+  // which is not true on all systems (e.g. glibc).
   ASSERT_TRUE(new_sock_type == SOCK_STREAM);
 
   ASSERT_THAT(LIBC_NAMESPACE::close(sockpair[0]), Succeeds(0));
