@@ -311,8 +311,6 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     break;
   }
 
-
->>>>>>> d6326def9f85 ([GlobalISel][KnownBits] Use KnownBits::urem for G_UREM)
   case TargetOpcode::G_UREM: {
     KnownBits LHSKnown(Known.getBitWidth());
     KnownBits RHSKnown(Known.getBitWidth());
@@ -323,12 +321,10 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
                          Depth + 1);
 
     KnownBits Res = KnownBits::urem(LHSKnown, RHSKnown);
-
     Known = KnownBits::urem(LHSKnown, RHSKnown);
     break;
   }
 
->>>>>>> 4d20a64c45fc ([GlobalISel][AArch64] - Add G_UREM computeKnownBits)
   case TargetOpcode::G_CONSTANT: {
     Known = KnownBits::makeConstant(MI.getOperand(1).getCImm()->getValue());
     break;
