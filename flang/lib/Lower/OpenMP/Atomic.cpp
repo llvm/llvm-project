@@ -557,6 +557,7 @@ void Fortran::lower::omp::lowerAtomic(
 
     common::RelationalOperator relOpr = common::RelationalOperator::EQ;
     std::optional<semantics::SomeExpr> expectedExprStorage;
+    bool isUnsigned = false;
 
     if (const auto *rel =
             evaluate::UnwrapExpr<evaluate::Relational<evaluate::SomeType>>(
@@ -565,6 +566,7 @@ void Fortran::lower::omp::lowerAtomic(
           [&](const auto &relImpl) {
             relOpr = relImpl.opr;
             using Operand = typename std::decay_t<decltype(relImpl)>::Operand;
+            isUnsigned = Operand::category == common::TypeCategory::Unsigned;
             auto leftExpr = evaluate::AsGenericExpr(
                 evaluate::Expr<Operand>{relImpl.left()});
             auto rightExpr = evaluate::AsGenericExpr(
@@ -607,7 +609,8 @@ void Fortran::lower::omp::lowerAtomic(
     // Generate comparison: e.g. x == e
     mlir::Value cmpResult;
     if (mlir::isa<mlir::IntegerType>(elemTypeOfX)) {
-      auto pred = lower::translateSignedRelational(relOpr);
+      auto pred = isUnsigned ? lower::translateUnsignedRelational(relOpr)
+                             : lower::translateSignedRelational(relOpr);
       cmpResult = mlir::arith::CmpIOp::create(builder, loc, pred, blockArg,
                                               expectedVal);
     } else if (mlir::isa<mlir::FloatType>(elemTypeOfX)) {

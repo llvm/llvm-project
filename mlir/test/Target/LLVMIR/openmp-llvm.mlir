@@ -2536,6 +2536,32 @@ llvm.func @omp_atomic_compare(
     omp.yield(%sel5 : f32)
   }
 
+  // Integer equality with seq_cst  →  cmpxchg + flush
+  // CHECK: cmpxchg ptr %[[X]], i32 %[[E]], i32 %[[D]] seq_cst seq_cst
+  // CHECK: call void @__kmpc_flush(ptr @{{.*}})
+  omp.atomic.compare memory_order(seq_cst) %x : !llvm.ptr {
+  ^bb0(%xval6 : i32):
+    %cmp6 = llvm.icmp "eq" %xval6, %e : i32
+    %sel6 = llvm.select %cmp6, %d, %xval6 : i1, i32
+    omp.yield(%sel6 : i32)
+  }
+
+  // Complex equality with seq_cst  →  cmpxchg + flush
+  // CHECK: cmpxchg ptr %[[XC]], i64 %{{.*}}, i64 %{{.*}} seq_cst seq_cst
+  // CHECK: call void @__kmpc_flush(ptr @{{.*}})
+  omp.atomic.compare memory_order(seq_cst) %xc : !llvm.ptr {
+  ^bb0(%xval7 : !llvm.struct<(f32, f32)>):
+    %re_x7 = llvm.extractvalue %xval7[0] : !llvm.struct<(f32, f32)>
+    %re_e7 = llvm.extractvalue %ec[0] : !llvm.struct<(f32, f32)>
+    %cmp_re7 = llvm.fcmp "oeq" %re_x7, %re_e7 : f32
+    %im_x7 = llvm.extractvalue %xval7[1] : !llvm.struct<(f32, f32)>
+    %im_e7 = llvm.extractvalue %ec[1] : !llvm.struct<(f32, f32)>
+    %cmp_im7 = llvm.fcmp "oeq" %im_x7, %im_e7 : f32
+    %cmp7 = llvm.and %cmp_re7, %cmp_im7 : i1
+    %sel7 = llvm.select %cmp7, %dc, %xval7 : i1, !llvm.struct<(f32, f32)>
+    omp.yield(%sel7 : !llvm.struct<(f32, f32)>)
+  }
+
   llvm.return
 }
 

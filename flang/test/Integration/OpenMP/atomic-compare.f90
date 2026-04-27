@@ -146,3 +146,14 @@ subroutine atomic_compare_complex8(x, e, d)
   !$omp atomic compare
   if (x == e) x = d
 end
+
+! Complex(4) equality with seq_cst → type-punned i64 cmpxchg seq_cst + flush
+!CHECK-LABEL: define void @atomic_compare_complex4_seq_cst_(
+!CHECK-SAME: ptr noalias %[[X:.*]], ptr noalias %[[E:.*]], ptr noalias %[[D:.*]])
+!CHECK: cmpxchg ptr %[[X]], i64 %{{.*}}, i64 %{{.*}} seq_cst seq_cst
+!CHECK: call void @__kmpc_flush(
+subroutine atomic_compare_complex4_seq_cst(x, e, d)
+  complex :: x, e, d
+  !$omp atomic compare seq_cst
+  if (x == e) x = d
+end
