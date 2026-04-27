@@ -81,7 +81,7 @@ bool objdump::Verbose;
 bool objdump::ObjcMetaData;
 std::string objdump::DisSymName;
 bool objdump::IsOtool;
-bool objdump::NoUseMemberSyntax;
+bool objdump::UseMemberSyntax;
 bool objdump::SymbolicOperands;
 std::vector<std::string> objdump::ArchFlags;
 
@@ -2535,12 +2535,13 @@ static bool ValidateArchFlags() {
   return true;
 }
 
-static bool skipArchiveMember(const object::Archive::Child &C) {
+static bool skipArchiveMember(const object::Archive::Child &C,
+                              StringRef Filename) {
   if (ArchiveMemberFilter.empty())
     return false;
   Expected<StringRef> NameOrErr = C.getName();
   if (!NameOrErr) {
-    consumeError(NameOrErr.takeError());
+    reportError(NameOrErr.takeError(), Filename);
     return true;
   }
   return *NameOrErr != ArchiveMemberFilter;
@@ -2558,7 +2559,7 @@ void objdump::parseInputMachO(StringRef Filename) {
   // with ')' and contains '(', split it into the archive path and member
   // name. The -m option disables this parsing.
   ArchiveMemberFilter.clear();
-  if (IsOtool && !NoUseMemberSyntax && !Filename.empty() &&
+  if (IsOtool && UseMemberSyntax && !Filename.empty() &&
       Filename.back() == ')') {
     auto Pos = Filename.rfind('(');
     if (Pos != StringRef::npos && Pos > 0) {
@@ -2588,7 +2589,7 @@ void objdump::parseInputMachO(StringRef Filename) {
     bool FoundMember = false;
     for (auto &C : A->children(Err)) {
       ++I;
-      if (skipArchiveMember(C))
+      if (skipArchiveMember(C, Filename))
         continue;
       FoundMember = true;
       Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
@@ -2681,7 +2682,7 @@ void objdump::parseInputMachO(MachOUniversalBinary *UB) {
             bool FoundMember = false;
             for (auto &C : A->children(Err)) {
               ++I;
-              if (skipArchiveMember(C))
+              if (skipArchiveMember(C, Filename))
                 continue;
               FoundMember = true;
               Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
@@ -2751,7 +2752,7 @@ void objdump::parseInputMachO(MachOUniversalBinary *UB) {
           bool FoundMember = false;
           for (auto &C : A->children(Err)) {
             ++I;
-            if (skipArchiveMember(C))
+            if (skipArchiveMember(C, Filename))
               continue;
             FoundMember = true;
             Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
@@ -2811,7 +2812,7 @@ void objdump::parseInputMachO(MachOUniversalBinary *UB) {
       bool FoundMember = false;
       for (auto &C : A->children(Err)) {
         ++I;
-        if (skipArchiveMember(C))
+        if (skipArchiveMember(C, Filename))
           continue;
         FoundMember = true;
         Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
