@@ -8,9 +8,9 @@
 @b = common global [10 x [10 x [10 x i32]]] zeroinitializer
 @c = common global [10 x [10 x [10 x i32]]] zeroinitializer
 
-define i32 @triple_loop_nest_inner_guard(i32 %m, i32 %n, i32 %mm, i32 %nn) {
+define i32 @triple_loop_nest_inner_guard(i32 %m, i32 %n, i32 %mm) {
 ; CHECK-LABEL: define i32 @triple_loop_nest_inner_guard(
-; CHECK-SAME: i32 [[M:%.*]], i32 [[N:%.*]], i32 [[MM:%.*]], i32 [[NN:%.*]]) {
+; CHECK-SAME: i32 [[M:%.*]], i32 [[N:%.*]], i32 [[MM:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CMP101:%.*]] = icmp sgt i32 [[M]], 0
 ; CHECK-NEXT:    br i1 [[CMP101]], label %[[OUTER1_PH:.*]], label %[[FUNC_EXIT:.*]]
