@@ -1801,7 +1801,7 @@ define amdgpu_ps i48 @s_fshl_v2i24(i48 inreg %lhs.arg, i48 inreg %rhs.arg, i48 i
 ; GFX6-NEXT:    s_and_b32 s3, s5, 0xff
 ; GFX6-NEXT:    v_mov_b32_e32 v5, s4
 ; GFX6-NEXT:    s_and_b32 s2, s2, 0xff
-; GFX6-NEXT:    v_and_b32_e32 v5, 0xffff, v5
+; GFX6-NEXT:    v_alignbit_b32 v5, s3, v5, 24
 ; GFX6-NEXT:    v_mul_lo_u32 v4, v4, v3
 ; GFX6-NEXT:    s_lshl_b32 s2, s2, 16
 ; GFX6-NEXT:    v_or_b32_e32 v5, s2, v5
