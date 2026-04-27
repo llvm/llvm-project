@@ -106,7 +106,7 @@ llvm::Error BreakpointIDList::FindAndReplaceIDRanges(
           stop_info_sp->GetStopReason() != eStopReasonBreakpoint) {
         new_args.Clear();
         return llvm::createStringError(
-            "current thread is not stopped at a breakpoint.");
+            "current thread is not stopped at a breakpoint");
       }
 
       uint32_t data_count = stop_info_sp->GetStopReasonDataCount();
