@@ -192,7 +192,7 @@ TEST_F(LlvmLibcSendMsgRecvMsgTest, SendAndReceiveFileDescriptor) {
   ASSERT_THAT(LIBC_NAMESPACE::getsockopt(new_fd, SOL_SOCKET, SO_TYPE,
                                          &new_sock_type, &optlen),
               Succeeds(0));
-  // Use ASSERT_TRUE, as ASSERT_EQ requires SCM_RIGHTS to be an int,
+  // Use ASSERT_TRUE, as ASSERT_EQ requires SOCK_STREAM to be an int,
   // which is not true on all systems.
   ASSERT_TRUE(new_sock_type == SOCK_STREAM);
 
