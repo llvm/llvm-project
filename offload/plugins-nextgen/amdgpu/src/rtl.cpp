@@ -3339,8 +3339,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
              DeviceInfo::DOUBLE_FP_CONFIG);
 
     // TODO: Use HSA_AGENT_INFO_FAST_F16_OPERATION to detect FP16 support.
-    Info.add("Half FP Support", ol_bool_t(false), "",
-             DeviceInfo::HALF_FP_SUPPORT);
+    Info.add("Half FP Support", false, "", DeviceInfo::HALF_FP_SUPPORT);
     Info.add("Half FP Capabilities", ol_device_fp_capability_flags_t{0}, "",
              DeviceInfo::HALF_FP_CONFIG);
 
