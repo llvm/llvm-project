@@ -285,7 +285,6 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     }
     break;
   }
-
   case TargetOpcode::G_STEP_VECTOR: {
     APInt Step = MI.getOperand(1).getCImm()->getValue();
 
@@ -310,7 +309,6 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     Known.Zero.setHighBits(MaxValue.countl_zero());
     break;
   }
-
   case TargetOpcode::G_UREM: {
     KnownBits LHSKnown(Known.getBitWidth());
     KnownBits RHSKnown(Known.getBitWidth());
@@ -324,7 +322,6 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     Known = KnownBits::urem(LHSKnown, RHSKnown);
     break;
   }
-
   case TargetOpcode::G_CONSTANT: {
     Known = KnownBits::makeConstant(MI.getOperand(1).getCImm()->getValue());
     break;
