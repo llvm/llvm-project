@@ -3326,6 +3326,36 @@ def NVVM_LdMatrixOp: NVVM_Op<"ldmatrix", [InferTypeOpAdaptor]>,
   let hasVerifier = 1;
 }
 
+def NVVM_MovMatrixOp
+    : NVVM_SingleResultIntrinsicOp<"movmatrix", [NVVMRequiresSM<75>], "$dst"> {
+  let summary = "Warp-level matrix transpose";
+  let description = [{
+    Moves a row-major matrix across all threads in a warp, reading elements
+    from source `$src`, and writing the transposed elements to destination
+    `$dst`.
+
+    The `shape` attribute indicates the dimensions of the matrix being
+    transposed. Each matrix element holds 16-bit data as indicated by the
+    `eltType` attribute.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#warp-level-matrix-movmatrix-instruction)
+
+    Example:
+    ```mlir
+    %dst = nvvm.movmatrix %src {shape = #nvvm.ld_st_matrix_shape<m = 8, n = 8>,
+                                eltType = #nvvm.ld_st_matrix_elt_type<b16>} : i32
+    ```
+  }];
+
+  let results = (outs I32:$dst);
+  let arguments = (ins I32:$src, LdStMatrixShapeAttr:$shape,
+      DefaultValuedAttr<MMALayoutAttr, "MMALayout::col">:$layout,
+      LdStMatrixEltTypeAttr:$eltType);
+
+  let assemblyFormat = "$src attr-dict `:` type($src)";
+  let hasVerifier = 1;
+}
+
 def NVVM_MmaOp : NVVM_Op<"mma.sync", [AttrSizedOperandSegments]> {
 
   let summary = "cooperative matrix-multiply and accumulate";
