@@ -61853,24 +61853,27 @@ static SDValue combineEXTEND_VECTOR_INREG(SDNode *N, SelectionDAG &DAG,
 static SDValue combineKSHIFT(SDNode *N, SelectionDAG &DAG,
                              TargetLowering::DAGCombinerInfo &DCI) {
   EVT VT = N->getValueType(0);
+  SDValue Src = N->getOperand(0);
+  uint64_t Amt = N->getConstantOperandVal(1);
+  unsigned Opcode = N->getOpcode();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  if (ISD::isBuildVectorAllZeros(N->getOperand(0).getNode()))
+
+  if (ISD::isBuildVectorAllZeros(Src.getNode()))
     return DAG.getConstant(0, SDLoc(N), VT);
 
   // Fold kshiftr(extract_subvector(X,C1),C2)
   //  --> extract_subvector(kshiftr(X,C1+C2),0)
   // Fold kshiftr(kshiftr(X,C1),C2) --> kshiftr(X,C1+C2)
-  if (N->getOpcode() == X86ISD::KSHIFTR) {
+  if (Opcode == X86ISD::KSHIFTR) {
     SDLoc DL(N);
-    if (N->getOperand(0).getOpcode() == ISD::EXTRACT_SUBVECTOR ||
-        N->getOperand(0).getOpcode() == X86ISD::KSHIFTR) {
-      SDValue Src = N->getOperand(0).getOperand(0);
-      uint64_t Amt = N->getConstantOperandVal(1) +
-                     N->getOperand(0).getConstantOperandVal(1);
-      EVT SrcVT = Src.getValueType();
-      if (TLI.isTypeLegal(SrcVT) && Amt < SrcVT.getVectorNumElements()) {
-        SDValue Shift = DAG.getNode(X86ISD::KSHIFTR, DL, SrcVT, Src,
-                                    DAG.getTargetConstant(Amt, DL, MVT::i8));
+    if (Src.getOpcode() == ISD::EXTRACT_SUBVECTOR ||
+        Src.getOpcode() == X86ISD::KSHIFTR) {
+      SDValue Inner = Src.getOperand(0);
+      EVT InnerVT = Inner.getValueType();
+      uint64_t NewAmt = Amt + Src.getConstantOperandVal(1);
+      if (TLI.isTypeLegal(InnerVT) && NewAmt < InnerVT.getVectorNumElements()) {
+        SDValue Shift = DAG.getNode(X86ISD::KSHIFTR, DL, InnerVT, Inner,
+                                    DAG.getTargetConstant(NewAmt, DL, MVT::i8));
         return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Shift,
                            DAG.getVectorIdxConstant(0, DL));
       }
