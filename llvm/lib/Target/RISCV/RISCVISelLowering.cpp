@@ -866,7 +866,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                        MVT::Other, Custom);
 
     static const unsigned IntegerVPOps[] = {
-        ISD::VP_ADD,         ISD::VP_SUB,         ISD::VP_MUL,
         ISD::VP_SDIV,        ISD::VP_UDIV,        ISD::VP_SREM,
         ISD::VP_UREM,        ISD::VP_AND,         ISD::VP_OR,
         ISD::VP_XOR,         ISD::VP_SRA,         ISD::VP_SRL,
@@ -7545,9 +7544,6 @@ static unsigned getRISCVVLOp(SDValue Op) {
   OP_CASE(STRICT_FMUL)
   OP_CASE(STRICT_FDIV)
   OP_CASE(STRICT_FSQRT)
-  VP_CASE(ADD)        // VP_ADD
-  VP_CASE(SUB)        // VP_SUB
-  VP_CASE(MUL)        // VP_MUL
   VP_CASE(SDIV)       // VP_SDIV
   VP_CASE(SREM)       // VP_SREM
   VP_CASE(UDIV)       // VP_UDIV
@@ -8968,9 +8964,6 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       return lowerVPMergeMask(Op, DAG);
     [[fallthrough]];
   case ISD::VP_SELECT:
-  case ISD::VP_ADD:
-  case ISD::VP_SUB:
-  case ISD::VP_MUL:
   case ISD::VP_SDIV:
   case ISD::VP_UDIV:
   case ISD::VP_SREM:
@@ -19316,18 +19309,16 @@ static SDValue performVP_TRUNCATECombine(SDNode *N, SelectionDAG &DAG,
   if (!isOneOrOneSplat(In.getOperand(1)))
     return SDValue();
 
-  // Shifted value should be a vp_add with same mask and VL.
+  // Shifted value should be an add.
   SDValue LHS = In.getOperand(0);
-  if (LHS.getOpcode() != ISD::VP_ADD || LHS.getOperand(2) != Mask ||
-      LHS.getOperand(3) != VL)
+  if (LHS.getOpcode() != ISD::ADD)
     return SDValue();
 
   SDValue Operands[3];
 
-  // Matches another VP_ADD with same VL and Mask.
+  // Matches another add.
   auto FindAdd = [&](SDValue V, SDValue Other) {
-    if (V.getOpcode() != ISD::VP_ADD || V.getOperand(2) != Mask ||
-        V.getOperand(3) != VL)
+    if (V.getOpcode() != ISD::ADD)
       return false;
 
     Operands[0] = Other;
@@ -19336,7 +19327,7 @@ static SDValue performVP_TRUNCATECombine(SDNode *N, SelectionDAG &DAG,
     return true;
   };
 
-  // We need to find another VP_ADD in one of the operands.
+  // We need to find another add in one of the operands.
   SDValue LHS0 = LHS.getOperand(0);
   SDValue LHS1 = LHS.getOperand(1);
   if (!FindAdd(LHS0, LHS1) && !FindAdd(LHS1, LHS0))
