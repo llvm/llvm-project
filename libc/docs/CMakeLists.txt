@@ -68,6 +68,7 @@ if (SPHINX_FOUND)
       sys/mman
       sys/resource
       sys/select
+      sys/sem
       sys/socket
       sys/stat
       sys/statvfs
