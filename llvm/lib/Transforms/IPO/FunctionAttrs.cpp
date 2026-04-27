@@ -1957,10 +1957,6 @@ static bool isOrderedAtomic(Instruction *I) {
 }
 
 static bool InstrBreaksNoSync(Instruction &I, const SCCNodeSet &SCCNodes) {
-  // Volatile may synchronize
-  if (I.isVolatile())
-    return true;
-
   // An ordered atomic may synchronize.  (See comment about on monotonic.)
   if (isOrderedAtomic(&I))
     return true;

@@ -3635,7 +3635,7 @@ declare void @llvm.assume(i1 noundef)
 ; TUNIT: attributes #[[ATTR13]] = { nofree norecurse nosync nounwind memory(none) }
 ; TUNIT: attributes #[[ATTR14]] = { nofree nosync nounwind }
 ; TUNIT: attributes #[[ATTR15:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
-; TUNIT: attributes #[[ATTR16:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
+; TUNIT: attributes #[[ATTR16:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 ; TUNIT: attributes #[[ATTR17]] = { nofree willreturn }
 ; TUNIT: attributes #[[ATTR18]] = { nofree nosync nounwind willreturn memory(write) }
 ; TUNIT: attributes #[[ATTR19]] = { nocallback }
@@ -3663,7 +3663,7 @@ declare void @llvm.assume(i1 noundef)
 ; CGSCC: attributes #[[ATTR16]] = { mustprogress nofree nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR17]] = { nofree nosync nounwind }
 ; CGSCC: attributes #[[ATTR18:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
-; CGSCC: attributes #[[ATTR19:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
+; CGSCC: attributes #[[ATTR19:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 ; CGSCC: attributes #[[ATTR20]] = { nofree willreturn }
 ; CGSCC: attributes #[[ATTR21]] = { nofree nounwind willreturn memory(write) }
 ; CGSCC: attributes #[[ATTR22]] = { nocallback }
