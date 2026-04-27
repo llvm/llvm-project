@@ -721,8 +721,8 @@ static void convertRecipesInRegionBlocksToSingleScalar(VPlan &Plan, Type *IdxTy,
       } else if (auto *PredPhi = dyn_cast<VPPredInstPHIRecipe>(&OldR)) {
         VPValue *PredOp = PredPhi->getOperand(0);
         Type *PredTy = TypeInfo.inferScalarType(PredOp);
-        VPValue *PoisonVal = Plan.getOrAddLiveIn(PoisonValue::get(PredTy));
-        VPPhi *NewPhi = Builder.createScalarPhi({PoisonVal, PredOp}, OldDL);
+        VPValue *Poison = Plan.getOrAddLiveIn(PoisonValue::get(PredTy));
+        VPPhi *NewPhi = Builder.createScalarPhi({Poison, PredOp}, OldDL);
         PredPhi->replaceAllUsesWith(NewPhi);
         PredPhi->eraseFromParent();
       } else {
@@ -759,14 +759,13 @@ static void processLaneForReplicateRegion(VPlan &Plan, Type *IdxTy,
           NewR.setOperand(I, NewOp);
       }
 
-      if (auto *Steps = dyn_cast<VPScalarIVStepsRecipe>(&NewR))
+      if (auto *Steps = dyn_cast<VPScalarIVStepsRecipe>(&NewR)) {
         addLaneToStartIndex(Steps, Lane, Plan, Steps);
-      else if (match(&NewR, m_ExtractElement(m_VPValue(), m_VPValue()))) {
+      } else if (match(&NewR, m_ExtractElement(m_VPValue(), m_VPValue()))) {
         assert(match(NewR.getOperand(1), m_ZeroInt()) &&
                "extract indices must be zero");
         NewR.setOperand(1, IdxLane);
       } else if (auto *NewPhi = dyn_cast<VPPhi>(&NewR)) {
-
         VPUser *SingleUser = OldR.getVPSingleValue()->getSingleUser();
         if (SingleUser &&
             match(SingleUser,
@@ -904,7 +903,7 @@ static void replicateReplicateRegionsByVF(VPlan &Plan, ElementCount VF,
          "cannot replicate across scalable VFs");
 
   // Dissolve replicate regions by replicating their blocks for each lane.
-  // Traversing in regions in reverse ensures that the successor of every region
+  // Traversing regions in reverse ensures that the successor of every region
   // being processed is a basic-block, rather than another region.
   for (VPRegionBlock *Region : reverse(ReplicateRegions))
     dissolveReplicateRegion(Region, VF, Plan, IdxTy);
