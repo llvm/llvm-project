@@ -318,7 +318,6 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     computeKnownBitsImpl(MI.getOperand(2).getReg(), RHSKnown, DemandedElts,
                          Depth + 1);
 
-    KnownBits Res = KnownBits::urem(LHSKnown, RHSKnown);
     Known = KnownBits::urem(LHSKnown, RHSKnown);
     break;
   }
