@@ -1147,39 +1147,58 @@ class TruncfToOCLPattern : public OpConversionPattern<TruncfOp> {
     // For num_elem = batch_size
     //   use API for conversion
     // Scalar case is not supported until usage case become clear.
-    if (auto vecSrcTy = dyn_cast<VectorType>(op.getSrc().getType())) {
-      if (vecSrcTy.getNumElements() != 16)
-        return rewriter.notifyMatchFailure(
-            op, "Only vector src of 16 elements is supported");
-    } else {
+    auto vecSrcTy = dyn_cast<VectorType>(op.getSrc().getType());
+    if (!vecSrcTy) {
       return rewriter.notifyMatchFailure(op, "Scalar src is not supported.");
     }
+    if (vecSrcTy.getNumElements() != 16)
+      return rewriter.notifyMatchFailure(
+          op, "Only vector src of 16 elements is supported");
     auto vecDstTy = dyn_cast<VectorType>(op.getDst().getType());
     if (!vecDstTy)
       return rewriter.notifyMatchFailure(op, "Scalar dst is not supported.");
+    Value src = op.getSrc();
+    auto memAttr = rewriter.getAttr<LLVM::MemoryEffectsAttr>(
+        /*other=*/LLVM::ModRefInfo::NoModRef,
+        /*argMem=*/LLVM::ModRefInfo::NoModRef,
+        /*inaccessibleMem=*/LLVM::ModRefInfo::NoModRef,
+        /*errnoMem=*/LLVM::ModRefInfo::NoModRef,
+        /*targetMem0=*/LLVM::ModRefInfo::NoModRef,
+        /*targetMem1=*/LLVM::ModRefInfo::NoModRef);
+    auto funcAttrs = convergentNoUnwindWillReturnAttrs;
+    funcAttrs.memEffectsAttr = memAttr;
     // BF16 type needs some preprocessing before conversion,
     // First extended to F32 and then truncated to F16.
     if (srcEtype == TruncfSrcElemTypes::BF16) {
       // Step 1: Extend to F32
       // Use float16 __builtin_IB_bftof_16(short16)
+      src = LLVM::BitcastOp::create(
+          rewriter, op.getLoc(),
+          VectorType::get(vecSrcTy.getShape(), rewriter.getI16Type()), src);
+      std::string fnName = "__builtin_IB_bftof_16";
+      SmallVector<Type> argTypes{src.getType()};
+      SmallVector<Value> args{src};
+      Type resTy = VectorType::get(vecSrcTy.getShape(), rewriter.getF32Type());
+      src = createDeviceFunctionCall(rewriter, fnName, resTy, argTypes, args,
+                                     {}, funcAttrs, op.getOperation())
+                ->getResult(0);
       // Step 2: Truncf to F16
       // Use half16 convert_half16(float16)
+      std::string truncFnName = "convert_half16";
+      SmallVector<Type> truncArgTypes{src.getType()};
+      SmallVector<Value> truncArgs{src};
+      truncFnName = mangle(truncFnName, truncArgTypes);
+      resTy = VectorType::get(vecSrcTy.getShape(), rewriter.getF16Type());
+      src =
+          createDeviceFunctionCall(rewriter, truncFnName, resTy, truncArgTypes,
+                                   truncArgs, {}, funcAttrs, op.getOperation())
+              ->getResult(0);
     }
     if (dstEtype == TruncfDstElemTypes::BF8) {
       // Use char16 __builtin_IB_hftobf8_16(half16)
       std::string fnName = "__builtin_IB_hftobf8_16";
-      SmallVector<Type> argTypes{op.getSrc().getType()};
-      SmallVector<Value> args{op.getSrc()};
-
-      auto memAttr = rewriter.getAttr<LLVM::MemoryEffectsAttr>(
-          /*other=*/LLVM::ModRefInfo::NoModRef,
-          /*argMem=*/LLVM::ModRefInfo::NoModRef,
-          /*inaccessibleMem=*/LLVM::ModRefInfo::NoModRef,
-          /*errnoMem=*/LLVM::ModRefInfo::NoModRef,
-          /*targetMem0=*/LLVM::ModRefInfo::NoModRef,
-          /*targetMem1=*/LLVM::ModRefInfo::NoModRef);
-      auto funcAttrs = convergentNoUnwindWillReturnAttrs;
-      funcAttrs.memEffectsAttr = memAttr;
+      SmallVector<Type> argTypes{src.getType()};
+      SmallVector<Value> args{src};
       Value result =
           createDeviceFunctionCall(rewriter, fnName, vecDstTy, argTypes, args,
                                    {}, funcAttrs, op.getOperation())
@@ -1189,18 +1208,8 @@ class TruncfToOCLPattern : public OpConversionPattern<TruncfOp> {
     } else if (dstEtype == TruncfDstElemTypes::F8) {
       // Use char16 __builtin_IB_hftohf8_16(half16)
       std::string fnName = "__builtin_IB_hftohf8_16";
-      SmallVector<Type> argTypes{op.getSrc().getType()};
-      SmallVector<Value> args{op.getSrc()};
-
-      auto memAttr = rewriter.getAttr<LLVM::MemoryEffectsAttr>(
-          /*other=*/LLVM::ModRefInfo::NoModRef,
-          /*argMem=*/LLVM::ModRefInfo::NoModRef,
-          /*inaccessibleMem=*/LLVM::ModRefInfo::NoModRef,
-          /*errnoMem=*/LLVM::ModRefInfo::NoModRef,
-          /*targetMem0=*/LLVM::ModRefInfo::NoModRef,
-          /*targetMem1=*/LLVM::ModRefInfo::NoModRef);
-      auto funcAttrs = convergentNoUnwindWillReturnAttrs;
-      funcAttrs.memEffectsAttr = memAttr;
+      SmallVector<Type> argTypes{src.getType()};
+      SmallVector<Value> args{src};
       Value result =
           createDeviceFunctionCall(rewriter, fnName, vecDstTy, argTypes, args,
                                    {}, funcAttrs, op.getOperation())
