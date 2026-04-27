@@ -1568,7 +1568,7 @@ LoadInst *GVNPass::findLoadToHoistIntoPred(BasicBlock *Pred, BasicBlock *LoadBB,
       // Do not hoist if the identical load has ordering constraint.
       if (auto *MA = MSSA->getMemoryAccess(&Inst); MA && isa<MemoryUse>(MA)) {
         auto *Clobber = MSSA->getWalker()->getClobberingMemoryAccess(MA);
-        HasLocalDep = isa<MemoryDef>(Clobber) && Clobber->getBlock() == SuccBB;
+        HasLocalDep = Clobber->getBlock() == SuccBB;
       }
     }
 
@@ -2245,9 +2245,9 @@ static Instruction *findInvariantGroupValue(LoadInst *L, DominatorTree &DT) {
   return MostDominatingInstruction != L ? MostDominatingInstruction : nullptr;
 }
 
-// Return the memory location accessed by the (masked) load/store instruction
-// `I`, if the instruction could potentially provide a useful value for
-// eliminating the load.
+/// Return the memory location accessed by the (masked) load/store instruction
+/// `I`, if the instruction could potentially provide a useful value for
+/// eliminating the load.
 static std::optional<MemoryLocation>
 maybeLoadStoreLocation(Instruction *I, bool AllowStores,
                        const TargetLibraryInfo *TLI) {
@@ -2275,6 +2275,9 @@ maybeLoadStoreLocation(Instruction *I, bool AllowStores,
   return std::nullopt;
 }
 
+/// Scan the users of each MemoryAccess in `ClobbersList` that belong to `BB`,
+/// looking for memory reads whose location aliases `Loc` and dominates our
+/// load.
 std::optional<GVNPass::ReachingMemVal> GVNPass::scanMemoryAccessesUsers(
     const MemoryLocation &Loc, bool IsInvariantLoad, BasicBlock *BB,
     const SmallVectorImpl<MemoryAccess *> &ClobbersList, MemorySSA &MSSA,
@@ -2348,7 +2351,7 @@ std::optional<GVNPass::ReachingMemVal> GVNPass::scanMemoryAccessesUsers(
 }
 
 /// Check if a given MemoryAccess (usually a MemoryDef) actually modifies a
-/// given location.
+/// given location. Returns a ReachingMemVal describing the dependency.
 std::optional<GVNPass::ReachingMemVal> GVNPass::accessMayModifyLocation(
     MemoryAccess *ClobberMA, const MemoryLocation &Loc, bool IsInvariantLoad,
     BasicBlock *BB, MemorySSA &MSSA, BatchAAResults &AA) {
@@ -2503,8 +2506,11 @@ bool GVNPass::collectPredecessors(BasicBlock *BB, const PHITransAddr &Addr,
   return true;
 }
 
-/// Gather a list of memory clobbers, such that their memory uses could
-/// potentially alias our memory location.
+/// Build a list of MemoryAccesses whose users could potentially alias the
+/// memory location being queried. Starts from StartInfo's initial clobber,
+/// walk the use-def chain to the final clobber. If the chain extends beyond
+/// `BB`, continue into that block but only if it is in the previously collected
+/// set.
 void GVNPass::collectClobberList(SmallVectorImpl<MemoryAccess *> &Clobbers,
                                  BasicBlock *BB,
                                  const DependencyBlockInfo &StartInfo,
@@ -2524,6 +2530,9 @@ void GVNPass::collectClobberList(SmallVectorImpl<MemoryAccess *> &Clobbers,
         (MA->getBlock() == BB && !isa<MemoryPhi>(MA)))
       break;
 
+    // If the final clobber in the current block is a MemoryPhi, go to the
+    // immediate dominator; otherwise, just get to the block containing the
+    // final clobber.
     if (MA->getBlock() == BB)
       BB = DT->getNode(BB)->getIDom()->getBlock();
     else
@@ -2540,10 +2549,18 @@ void GVNPass::collectClobberList(SmallVectorImpl<MemoryAccess *> &Clobbers,
   }
 }
 
-/// Find the set of all the reaching memory definitions for the location
-/// referred to by the pointer operand of the given load instruction. Definitely
-/// aliasing memory reads are treated as definitions, for the purposes of this
-/// function.
+/// Entrypoint for the MemorySSA-based redundant load elimination algorithm.
+/// Given as input a load instruction, the function computes the set of reaching
+/// memory values, one per predecessor path, that AnalyzeLoadAvailability can
+/// later use to establish whether the load may be eliminated. A reaching value
+/// may be of the following descriptor kind:
+/// * Def: a precise instruction that produces the exact bits the load would
+/// read (e.g., an equivalent load or a MustAlias store);
+/// * Clobber: a write that clobbers a superset of the bits the load would read
+/// (e.g., a memset over a larger region);
+/// * Other: we know which block defines the memory location in some way, but
+/// could not identify a precise instruction (e.g., memory already live at
+/// function entry).
 bool GVNPass::findReachingValuesForLoad(LoadInst *L,
                                         SmallVectorImpl<ReachingMemVal> &Values,
                                         MemorySSA &MSSA, AAResults &AAR) {
@@ -2551,6 +2568,7 @@ bool GVNPass::findReachingValuesForLoad(LoadInst *L,
   BatchAAResults AA(AAR, &EA);
   BasicBlock *StartBlock = L->getParent();
   bool IsInvariantLoad = L->hasMetadata(LLVMContext::MD_invariant_load);
+  // TODO: Simplify later work by just getClobberingMemoryAccess().
   MemoryAccess *ClobberMA = MSSA.getMemoryAccess(L)->getDefiningAccess();
   const MemoryLocation Loc = MemoryLocation::get(L);
 
@@ -2563,9 +2581,9 @@ bool GVNPass::findReachingValuesForLoad(LoadInst *L,
     }
   }
 
-  // First off, look for a local dependency. Doing this allows us to avoid
-  // having to disambiguate between the parts of the initial basic block before
-  // and after the original load instruction (when entered from a backedge).
+  // Phase 1. First off, look for a local dependency to avoid having to
+  // disambiguate between before the load and after the load of the starting
+  // block (as the load may be visited from a backedge).
   do {
     // Scan users of the clobbering memory access.
     if (auto RMV = scanMemoryAccessesUsers(
@@ -2575,8 +2593,8 @@ bool GVNPass::findReachingValuesForLoad(LoadInst *L,
       return true;
     }
 
-    // Proceed visiting predecessors if the clobbering access is non-local or it
-    // is a MemoryPhi.
+    // Exit from here, and proceed visiting predecessors if the clobbering
+    // access is non-local or is a MemoryPhi.
     if (ClobberMA->getBlock() != StartBlock || isa<MemoryPhi>(ClobberMA))
       break;
 
@@ -2597,10 +2615,12 @@ bool GVNPass::findReachingValuesForLoad(LoadInst *L,
       L->getFunction()->hasFnAttribute(Attribute::SanitizeHWAddress))
     return false;
 
-  // Walk backwards through the CFG, collecting blocks along the way,
-  // terminating at blocks/instructions, which definitely define our memory
-  // location (perhaps in an unknown way). Start off by collecting the
-  // predecessors of the initial basic block as starting points for the walk.
+  // Phase 2. Walk backwards through the CFG, collecting all the blocks that
+  // contain an instruction that modifies the load memory location, or that lie
+  // on a path between a clobbering block and our load. Start off by collecting
+  // the predecessors of `StartBlock`. All the visited blocks are stored in a
+  // the set `Blocks`. If possible, the memory address maintained for the block
+  // visited does get phi-translated.
   DependencyBlockSet Blocks;
   SmallVector<BasicBlock *, 16> InitialWorklist;
   const DataLayout &DL = L->getModule()->getDataLayout();
@@ -2609,7 +2629,7 @@ bool GVNPass::findReachingValuesForLoad(LoadInst *L,
                            ClobberMA, Blocks, InitialWorklist))
     return false;
 
-  // Do a bottom-up depth-first search.
+  // Do a bottom-up DFS.
   auto Worklist = InitialWorklist;
   while (!Worklist.empty()) {
     auto *BB = Worklist.pop_back_val();
@@ -2620,8 +2640,9 @@ bool GVNPass::findReachingValuesForLoad(LoadInst *L,
       continue;
 
     // If the clobbering memory access is in the current block and it indeed
-    // clobbers our load location, record the dependency and stop the
-    // traversal.
+    // clobbers our load location, record the dependency and do not visit the
+    // predecessors of this block further, continue with the blocks in the
+    // worklist.
     if (Info.ClobberMA->getBlock() == BB && !isa<MemoryPhi>(Info.ClobberMA)) {
       if (auto RMV = accessMayModifyLocation(
               Info.ClobberMA, Loc.getWithNewPtr(Info.Addr.getAddr()),
@@ -2655,10 +2676,13 @@ bool GVNPass::findReachingValuesForLoad(LoadInst *L,
       Info.ForceUnknown = true;
   }
 
-  // Now we have collected all the blocks, that write a (possibly unknown)
-  // value to our memory location and that there exists a path to the load
-  // instruction, along which the memory location is not modified. Do a second
-  // traversal, looking at memory loads.
+  // Phase 3. We have collected all the blocks that either write a value to the
+  // memory location of the load, or there exists a path to the load, along
+  // which the memory location is not modified. Perform a second DFS to find
+  // load-to-load dependencies; namely, look at the dominating memory reads,
+  // that alias our load. These are the MemoryUses that are users of the
+  // MemoryDefs we previously identified. If no memory read is encountered,
+  // either confirm the clobbering write found before or set to unknown.
   Worklist = InitialWorklist;
   for (BasicBlock *BB : Worklist) {
     DependencyBlockInfo &Info = Blocks.find(BB)->second;
