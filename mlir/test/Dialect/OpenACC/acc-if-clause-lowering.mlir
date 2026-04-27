@@ -37,6 +37,42 @@ func.func @test_parallel_if(%arg0: memref<10xi32>, %cond: i1) {
 
 // -----
 
+// Test acc.parallel if lowering when host fallback region has multiple blocks.
+// CHECK-LABEL: func.func @test_parallel_if_multiblock
+func.func @test_parallel_if_multiblock(%cond: i1, %n: i32) {
+  %c0_i32 = arith.constant 0 : i32
+  %c1_i32 = arith.constant 1 : i32
+  %counter = memref.alloca() : memref<i32>
+  memref.store %n, %counter[] : memref<i32>
+
+  // CHECK-NOT: acc.parallel if
+  // CHECK: scf.if %{{.*}} {
+  // CHECK:   acc.parallel {
+  // CHECK: } else {
+  // CHECK:   scf.execute_region {
+  // CHECK:   ^bb
+  // CHECK:   cf.cond_br
+  // CHECK:   scf.yield
+  // CHECK:   }
+  // CHECK: }
+  acc.parallel if(%cond) {
+    cf.br ^bb1
+  ^bb1:
+    %v = memref.load %counter[] : memref<i32>
+    %pred = arith.cmpi sgt, %v, %c0_i32 : i32
+    cf.cond_br %pred, ^bb2, ^bb3
+  ^bb2:
+    %next = arith.subi %v, %c1_i32 : i32
+    memref.store %next, %counter[] : memref<i32>
+    cf.br ^bb1
+  ^bb3:
+    acc.yield
+  }
+  return
+}
+
+// -----
+
 // Test acc.kernels with if condition
 // CHECK-LABEL: func.func @test_kernels_if
 func.func @test_kernels_if(%arg0: memref<5xi32>, %cond: i1) {

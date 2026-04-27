@@ -148,6 +148,11 @@ void ThreeWayBranch::runOnFunction(BinaryFunction &Function) {
 }
 
 Error ThreeWayBranch::runOnFunctions(BinaryContext &BC) {
+  if (!BC.isX86()) {
+    BC.errs() << "BOLT-ERROR: " << getName() << " is supported only on X86\n";
+    exit(1);
+  }
+
   for (auto &It : BC.getBinaryFunctions()) {
     BinaryFunction &Function = It.second;
     if (!shouldRunOnFunction(Function))

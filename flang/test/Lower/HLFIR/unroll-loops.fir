@@ -29,13 +29,13 @@ func.func @unroll(%arg0: !fir.ref<!fir.array<1000 x index>> {fir.bindc_name = "a
     // NO-UNROLL-NEXT: %[[NIV:.*]] = add nuw i64 %{{.*}}, 2
     // NO-UNROLL-NEXT: %[[NVIND]] = add nuw nsw <2 x i64> %[[VIND]], splat (i64 2)
 
-    // UNROLL-NEXT: %[[VIND1:.*]] = add <2 x i64> %[[VIND]], splat (i64 2)
+    // UNROLL-NEXT: %[[VIND1:.*]] = add nuw nsw <2 x i64> %[[VIND]], splat (i64 2)
     // UNROLL-NEXT: %[[GEP0:.*]] = getelementptr [8 x i8], ptr %[[ARG0]], i64 %[[IND]]
     // UNROLL-NEXT: %[[GEP1:.*]] = getelementptr i8, ptr %[[GEP0]], i64 16
     // UNROLL-NEXT: store <2 x i64> %[[VIND]], ptr %[[GEP0]]
     // UNROLL-NEXT: store <2 x i64> %[[VIND1]], ptr %[[GEP1]]
     // UNROLL-NEXT: %[[NIV:.*]] = add nuw i64 %[[IND]], 4
-    // UNROLL-NEXT: %[[NVIND:.*]] = add <2 x i64> %[[VIND]], splat (i64 4)
+    // UNROLL-NEXT: %[[NVIND:.*]] = add nuw nsw <2 x i64> %[[VIND]], splat (i64 4)
 
     // CHECK-NEXT: %[[EXIT:.*]] = icmp eq i64 %[[NIV]], 1000
     // CHECK-NEXT: br i1 %[[EXIT]], label %{{.*}}, label %[[BLK]]

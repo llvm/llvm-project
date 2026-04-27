@@ -10,7 +10,8 @@ define swiftcc void @"$s1t1f1bySb_tF"(i1 %0) !dbg !35 {
   %3 = bitcast ptr %2 to ptr
   call void @llvm.memset.p0.i64(ptr align 8 %3, i8 0, i64 1, i1 false)
   store i1 %0, ptr %2, align 8, !dbg !37
-; CHECK:   B %[[BB4:bb\.[0-9]+]], debug-location !{{[0-9]+}}
+; CHECK:   TBNZW killed renamable $w0, 0, %[[BB4:bb\.[0-9]+]], debug-location !{{[0-9]+}}
+; CHECK:   B %[[BB5:bb\.[0-9]+]], debug-location !{{[0-9]+}}
   br i1 %0, label %4, label %5, !dbg !38
 
 4:                                                ; preds = %1

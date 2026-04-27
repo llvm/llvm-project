@@ -26,6 +26,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
@@ -2813,8 +2814,15 @@ Instruction *InstCombinerImpl::foldICmpDivConstant(ICmpInst &Cmp,
   // (x /u C2) <u C.  Simply casting the operands and result won't
   // work. :(  The if statement below tests that condition and bails
   // if it finds it.
-  if (!Cmp.isEquality() && DivIsSigned != Cmp.isSigned())
-    return nullptr;
+  // However, when the divisor is a positive constant and the dividend is
+  // known non-negative, sdiv is equivalent to udiv, so we can lower
+  // DivIsSigned and proceed through the unsigned path.
+  if (!Cmp.isEquality() && DivIsSigned != Cmp.isSigned()) {
+    if (!DivIsSigned || !C2->isStrictlyPositive() ||
+        !isKnownNonNegative(X, SQ.getWithInstruction(&Cmp)))
+      return nullptr;
+    DivIsSigned = false;
+  }
 
   // The ProdOV computation fails on divide by 0 and divide by -1. Cases with
   // INT_MIN will also fail if the divisor is 1. Although folds of all these
@@ -3178,7 +3186,9 @@ Instruction *InstCombinerImpl::foldICmpAddConstant(ICmpInst &Cmp,
 
   if (ICmpInst::isUnsigned(Pred) && Add->hasNoSignedWrap() &&
       C.isNonNegative() && (C - *C2).isNonNegative() &&
-      computeConstantRange(X, /*ForSigned=*/true).add(*C2).isAllNonNegative())
+      computeConstantRange(X, /*ForSigned=*/true, SQ.getWithInstruction(&Cmp))
+          .add(*C2)
+          .isAllNonNegative())
     return new ICmpInst(ICmpInst::getSignedPredicate(Pred), X,
                         ConstantInt::get(Ty, C - *C2));
 
@@ -5802,7 +5812,7 @@ Instruction *InstCombinerImpl::foldICmpWithMinMax(Instruction &I,
 
 /// Match and fold patterns like:
 ///   icmp eq/ne X, min(max(X, Lo), Hi)
-/// which represents a range check and can be repsented as a ConstantRange.
+/// which represents a range check and can be represented as a ConstantRange.
 ///
 /// For icmp eq, build ConstantRange [Lo, Hi + 1) and convert to:
 ///   (X - Lo) u< (Hi + 1 - Lo)
@@ -7785,13 +7795,34 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
   if (Instruction *Res = foldICmpWithZero(I))
     return Res;
 
+  Value *X;
+  const APInt *C;
+  if (I.getPredicate() == ICmpInst::ICMP_UGT &&
+      match(Op0, m_UMax(m_Value(X), m_APInt(C))) &&
+      match(Op1, m_Not(m_Specific(X)))) {
+    if (C->isNonNegative())
+      return new ICmpInst(ICmpInst::ICMP_SLT, X,
+                          Constant::getNullValue(X->getType()));
+    return new ICmpInst(ICmpInst::ICMP_UGT, X,
+                        ConstantInt::get(X->getType(), ~*C));
+  }
+
+  if (I.getPredicate() == ICmpInst::ICMP_ULT &&
+      match(Op0, m_UMax(m_Value(X), m_APInt(C))) &&
+      match(Op1, m_Not(m_Specific(X)))) {
+    if (C->isNonNegative())
+      return new ICmpInst(ICmpInst::ICMP_SGT, X,
+                          Constant::getAllOnesValue(X->getType()));
+    return new ICmpInst(ICmpInst::ICMP_ULT, X,
+                        ConstantInt::get(X->getType(), ~*C));
+  }
+
   // FIXME: We only do this after checking for min/max to prevent infinite
   // looping caused by a reverse canonicalization of these patterns for min/max.
   // FIXME: The organization of folds is a mess. These would naturally go into
   // canonicalizeCmpWithConstant(), but we can't move all of the above folds
   // down here after the min/max restriction.
   ICmpInst::Predicate Pred = I.getPredicate();
-  const APInt *C;
   if (match(Op1, m_APInt(C))) {
     // For i32: x >u 2147483647 -> x <s 0  -> true if sign bit set
     if (Pred == ICmpInst::ICMP_UGT && C->isMaxSignedValue()) {
@@ -7846,6 +7877,11 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
       return &I;
     }
   }
+
+  // Fold icmp pred (select C1, TV1, FV1), (select C2, TV2, FV2)
+  // when all select arms are constants, via truth table.
+  if (Instruction *R = foldCmpSelectOfConstants(I))
+    return R;
 
   // In case of a comparison with two select instructions having the same
   // condition, check whether one of the resulting branches can be simplified.
@@ -8310,6 +8346,57 @@ Instruction *InstCombinerImpl::foldFCmpIntToFPConst(FCmpInst &I,
                       ConstantInt::get(LHSI->getOperand(0)->getType(), RHSInt));
 }
 
+/// Fold fcmp/icmp pred (select C1, TV1, FV1), (select C2, TV2, FV2)
+/// where all true/false values are constants that allow the compare to be
+/// constant-folded for every combination of C1 and C2.
+/// We compute a 4-entry truth table and use createLogicFromTable to
+/// synthesize a boolean expression of C1 and C2.
+Instruction *InstCombinerImpl::foldCmpSelectOfConstants(CmpInst &I) {
+  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
+  Value *C1, *C2;
+  Constant *TV1, *FV1, *TV2, *FV2;
+
+  if (!match(Op0, m_Select(m_Value(C1), m_Constant(TV1), m_Constant(FV1))) ||
+      !match(Op1, m_Select(m_Value(C2), m_Constant(TV2), m_Constant(FV2))))
+    return nullptr;
+
+  if (I.getType() != C1->getType() || I.getType() != C2->getType())
+    return nullptr;
+
+  unsigned Pred = I.getPredicate();
+  const DataLayout &DL = I.getDataLayout();
+
+  Constant *Res00 = ConstantFoldCompareInstOperands(Pred, FV1, FV2, DL);
+  Constant *Res01 = ConstantFoldCompareInstOperands(Pred, FV1, TV2, DL);
+  Constant *Res10 = ConstantFoldCompareInstOperands(Pred, TV1, FV2, DL);
+  Constant *Res11 = ConstantFoldCompareInstOperands(Pred, TV1, TV2, DL);
+
+  if (!Res00 || !Res01 || !Res10 || !Res11)
+    return nullptr;
+
+  if ((!Res00->isNullValue() && !Res00->isAllOnesValue()) ||
+      (!Res01->isNullValue() && !Res01->isAllOnesValue()) ||
+      (!Res10->isNullValue() && !Res10->isAllOnesValue()) ||
+      (!Res11->isNullValue() && !Res11->isAllOnesValue()))
+    return nullptr;
+
+  std::bitset<4> Table;
+  if (!Res00->isNullValue())
+    Table.set(0);
+  if (!Res01->isNullValue())
+    Table.set(1);
+  if (!Res10->isNullValue())
+    Table.set(2);
+  if (!Res11->isNullValue())
+    Table.set(3);
+
+  Value *Res = createLogicFromTable(Table, C1, C2, Builder,
+                                    Op0->hasOneUse() && Op1->hasOneUse());
+  if (!Res)
+    return nullptr;
+  return replaceInstUsesWith(I, Res);
+}
+
 /// Fold (C / X) < 0.0 --> X < 0.0 if possible. Swap predicate if necessary.
 static Instruction *foldFCmpReciprocalAndZero(FCmpInst &I, Instruction *LHSI,
                                               Constant *RHSC) {
@@ -8359,15 +8446,32 @@ static Instruction *foldFCmpReciprocalAndZero(FCmpInst &I, Instruction *LHSI,
 
 // Transform 'fptrunc(x) cmp C' to 'x cmp ext(C)' if possible.
 // Patterns include:
-//    fptrunc(x) <  C  -->  x <  ext(C)
-//    fptrunc(x) <= C  -->  x <= ext(C)
-//    fptrunc(x) >  C  -->  x >  ext(C)
-//    fptrunc(x) >= C  -->  x >= ext(C)
+//    fptrunc(x) <  C       -->  x <  ext(C)
+//    fptrunc(x) <= C       -->  x <= ext(C)
+//    fptrunc(x) >  C       -->  x >  ext(C)
+//    fptrunc(x) >= C       -->  x >= ext(C)
+//    fptrunc(x) ord/uno C  -->  x ord/uno 0
 // where 'ext(C)' is the extension of 'C' to the type of 'x' with a small bias
 // due to precision loss.
 static Instruction *foldFCmpFpTrunc(FCmpInst &I, const Instruction &FPTrunc,
                                     const Constant &C) {
   FCmpInst::Predicate Pred = I.getPredicate();
+  Type *DestType = FPTrunc.getOperand(0)->getType();
+
+  const APFloat *CValue;
+  // TODO: support vec
+  if (!match(&C, m_APFloat(CValue)))
+    return nullptr;
+
+  // Handle ord/uno
+  if (Pred == FCmpInst::FCMP_ORD || Pred == FCmpInst::FCMP_UNO) {
+    assert(!CValue->isNaN() &&
+           "X ord/uno NaN should be folded away by simplifyFCmpInst()");
+    return new FCmpInst(Pred, FPTrunc.getOperand(0),
+                        ConstantFP::getZero(DestType), "", &I);
+  }
+
+  // Handle <, >, <=, >=
   bool RoundDown = false;
 
   if (Pred == FCmpInst::FCMP_OGE || Pred == FCmpInst::FCMP_UGE ||
@@ -8377,10 +8481,6 @@ static Instruction *foldFCmpFpTrunc(FCmpInst &I, const Instruction &FPTrunc,
            Pred == FCmpInst::FCMP_OLE || Pred == FCmpInst::FCMP_ULE)
     RoundDown = false;
   else
-    return nullptr;
-
-  const APFloat *CValue;
-  if (!match(&C, m_APFloat(CValue)))
     return nullptr;
 
   if (CValue->isNaN() || CValue->isInfinity())
@@ -8401,7 +8501,6 @@ static Instruction *foldFCmpFpTrunc(FCmpInst &I, const Instruction &FPTrunc,
 
   APFloat NextCValue = NextValue(*CValue, RoundDown);
 
-  Type *DestType = FPTrunc.getOperand(0)->getType();
   const fltSemantics &DestFltSema =
       DestType->getScalarType()->getFltSemantics();
 
@@ -8673,10 +8772,107 @@ static Instruction *foldFCmpFSubIntoFCmp(FCmpInst &I, Instruction *LHSI,
         I.setHasNoNaNs(true);
       return &I;
     }
+    // fcmp `pred (C - Y), C` -> `fcmp swap(pred), Y, 0`
+    // where C and Y can't be arbitrary floating-point values.
+    // For example, with `C = 1.0f` and `Y = 0x1p-149`, `1.0f - Y` rounds back
+    // to `1.0f`, so the source compare is false while the rewritten compare is
+    // true.
+    // We need to make sure (C - Y) never rounds back to C
+    const APFloat *C;
+    Value *IntSrc;
+    if (match(RHSC, m_APFloat(C)) &&
+        match(LHSI, m_FSub(m_Specific(RHSC), m_IToFP(m_Value(IntSrc)))) &&
+        C->isNormal()) {
+      // Requirements on C and Y:
+      // 1. C is finite, nonzero, normal.
+      // 2. C shouldn't be too large, that is, ULP(C) <= 1.
+      // 3. Y must be the form of `[su]itofp`, so the finite nonzero result of Y
+      // must be integer-valued with an absolute value of at least 1;
+      // as long as the step size near C does not exceed 1,
+      // C - Y cannot be rounded back to C when Y != 0.
+      // 4. If Y = 0, `fcmp pred (C - 0), C` are equivalent to `fcmp swap(pred)
+      // 0, 0` for ordered and unordered predicates as long as C is finite and
+      // nonzero.
+      int MantissaWidth = LHSI->getType()->getFPMantissaWidth();
+      if (MantissaWidth != -1 && ilogb(*C) < MantissaWidth) {
+        Constant *ZeroC = ConstantFP::getZero(LHSI->getType());
+        I.setPredicate(I.getSwappedPredicate());
+        CI.replaceOperand(I, 0, Y);
+        CI.replaceOperand(I, 1, ZeroC);
+        return &I;
+      }
+    }
     break;
   }
 
   return nullptr;
+}
+
+/// Fold: fabs(uitofp(a) - uitofp(b)) pred C --> a == b
+/// where 'pred' is olt, ult, ogt, ugt, oge or uge and C is a positive, Non-NaN
+/// float when the uitofp casts are exact and C is in the valid range.
+///
+/// Since exact uitofp means distinct integers map to distinct floats, the only
+/// values fabs(uitofp(a) - uitofp(b)) can take are {0.0, 1.0, 2.0, ...}.
+/// There are no values in the open interval (0, 1), so:
+///   fabs(...) <  C  where 0 < C <= 1.0  -->  a == b  (strict lt: C=1.0 ok)
+//    fabs(..) >= C where C >= 1.0 -> a != b
+///
+/// The same logic applies to sitofp.
+static Instruction *foldFCmpFAbsFSubIntToFP(FCmpInst &I, InstCombinerImpl &IC) {
+  Value *FAbsArg;
+  if (!match(I.getOperand(0), m_FAbs(m_Value(FAbsArg))))
+    return nullptr;
+
+  const APFloat *C;
+  if (!match(I.getOperand(1), PatternMatch::m_FiniteNonZero(C)))
+    return nullptr;
+
+  FCmpInst::Predicate Pred = I.getPredicate();
+  bool IsStrictLt = Pred == FCmpInst::FCMP_OLT || Pred == FCmpInst::FCMP_ULT;
+  bool IsLe = Pred == FCmpInst::FCMP_OLE || Pred == FCmpInst::FCMP_ULE;
+  bool IsStrictGt = Pred == FCmpInst::FCMP_OGT || Pred == FCmpInst::FCMP_UGT;
+  bool IsGe = Pred == FCmpInst::FCMP_OGE || Pred == FCmpInst::FCMP_UGE;
+  if (!IsStrictLt && !IsStrictGt && !IsGe)
+    return nullptr;
+
+  APFloat One = APFloat::getOne(C->getSemantics());
+  APFloat::cmpResult Cmp = C->compare(One);
+
+  // For strict-lt (olt/ult): C must be in (0, 1.0] -- C == 1.0 is fine since
+  //   the next possible value after 0.0 is 1.0, and < 1.0 excludes it.
+  if (IsStrictLt && Cmp == APFloat::cmpGreaterThan)
+    return nullptr;
+  if (IsGe && Cmp == APFloat::cmpGreaterThan)
+    return nullptr;
+  if (IsLe && Cmp != APFloat::cmpGreaterThan)
+    return nullptr;
+  if (IsStrictGt && Cmp != APFloat::cmpLessThan)
+    return nullptr;
+
+  // Match: fsub(uitofp(A), uitofp(B)) where both casts are uitofp or sitofp
+  Value *A, *B;
+  bool IsSigned;
+  if (match(FAbsArg, m_FSub(m_UIToFP(m_Value(A)), m_UIToFP(m_Value(B))))) {
+    IsSigned = false;
+  } else if (match(FAbsArg,
+                   m_FSub(m_SIToFP(m_Value(A)), m_SIToFP(m_Value(B))))) {
+    IsSigned = true;
+  } else {
+    return nullptr;
+  }
+
+  // A and B must have the same integer type
+  if (A->getType() != B->getType())
+    return nullptr;
+
+  Type *FPTy = FAbsArg->getType();
+  if (!IC.canBeCastedExactlyIntToFP(A, FPTy, IsSigned, &I) ||
+      !IC.canBeCastedExactlyIntToFP(B, FPTy, IsSigned, &I))
+    return nullptr;
+  ICmpInst::Predicate ResultPred =
+      IsStrictLt || IsLe ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE;
+  return new ICmpInst(ResultPred, A, B);
 }
 
 static Instruction *foldFCmpWithFloorAndCeil(FCmpInst &I,
@@ -8694,6 +8890,14 @@ static Instruction *foldFCmpWithFloorAndCeil(FCmpInst &I,
       std::swap(LHS, RHS);
       Pred = I.getSwappedPredicate();
     }
+  }
+
+  if ((FloorX || CeilX) && FCmpInst::isCommutative(Pred) && LHS->hasOneUse()) {
+    // fcmp pred floor(x), x => fcmp pred trunc(x), x
+    // fcmp pred  ceil(x), x => fcmp pred trunc(x), x
+    // where pred is oeq, one, ord, ueq, une, uno.
+    Value *TruncX = IC.Builder.CreateUnaryIntrinsic(Intrinsic::trunc, RHS);
+    return new FCmpInst(Pred, TruncX, RHS, "", &I);
   }
 
   switch (Pred) {
@@ -8984,10 +9188,16 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
   if (Instruction *R = foldFabsWithFcmpZero(I, *this))
     return R;
 
+  if (Instruction *R = foldFCmpFAbsFSubIntToFP(I, *this))
+    return R;
+
   if (Instruction *R = foldSqrtWithFcmpZero(I, *this))
     return R;
 
   if (Instruction *R = foldFCmpWithFloorAndCeil(I, *this))
+    return R;
+
+  if (Instruction *R = foldCmpSelectOfConstants(I))
     return R;
 
   if (match(Op0, m_FNeg(m_Value(X)))) {
@@ -9005,6 +9215,12 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
   // fcmp X, (fadd Y, 0.0) --> fcmp X, Y
   if (match(Op1, m_FAdd(m_Value(Y), m_AnyZeroFP())))
     return new FCmpInst(Pred, Op0, Y, "", &I);
+
+  // fcmp ord/uno (fptrunc X), (fptrunc Y) -> fcmp ord/uno X, Y
+  if ((Pred == FCmpInst::FCMP_ORD || Pred == FCmpInst::FCMP_UNO) &&
+      match(Op0, m_FPTrunc(m_Value(X))) && match(Op1, m_FPTrunc(m_Value(Y))) &&
+      X->getType() == Y->getType())
+    return new FCmpInst(Pred, X, Y, "", &I);
 
   if (match(Op0, m_FPExt(m_Value(X)))) {
     // fcmp (fpext X), (fpext Y) -> fcmp X, Y

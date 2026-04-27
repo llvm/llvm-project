@@ -1766,15 +1766,14 @@ define amdgpu_ps i48 @s_fshl_v2i24(i48 inreg %lhs.arg, i48 inreg %rhs.arg, i48 i
 ; GFX6-NEXT:    s_lshr_b32 s7, s1, 8
 ; GFX6-NEXT:    s_or_b32 s8, s8, s9
 ; GFX6-NEXT:    s_and_b32 s6, s6, 0xff
-; GFX6-NEXT:    s_and_b32 s1, s1, 0xff
-; GFX6-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX6-NEXT:    s_and_b32 s8, 0xffff, s8
 ; GFX6-NEXT:    s_lshl_b32 s6, s6, 16
-; GFX6-NEXT:    v_alignbit_b32 v0, s1, v0, 24
+; GFX6-NEXT:    s_and_b32 s1, s1, 0xff
+; GFX6-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX6-NEXT:    s_and_b32 s0, s7, 0xff
 ; GFX6-NEXT:    v_not_b32_e32 v3, 23
 ; GFX6-NEXT:    s_or_b32 s6, s8, s6
-; GFX6-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX6-NEXT:    v_alignbit_b32 v0, s1, v0, 24
 ; GFX6-NEXT:    s_lshl_b32 s0, s0, 16
 ; GFX6-NEXT:    s_bfe_u32 s8, s2, 0x80008
 ; GFX6-NEXT:    v_mul_lo_u32 v4, v2, v3
@@ -1785,14 +1784,13 @@ define amdgpu_ps i48 @s_fshl_v2i24(i48 inreg %lhs.arg, i48 inreg %rhs.arg, i48 i
 ; GFX6-NEXT:    s_lshr_b32 s1, s3, 8
 ; GFX6-NEXT:    s_or_b32 s7, s7, s8
 ; GFX6-NEXT:    s_and_b32 s0, s0, 0xff
-; GFX6-NEXT:    s_and_b32 s3, s3, 0xff
-; GFX6-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX6-NEXT:    s_and_b32 s7, 0xffff, s7
 ; GFX6-NEXT:    s_lshl_b32 s0, s0, 16
-; GFX6-NEXT:    v_alignbit_b32 v1, s3, v1, 24
+; GFX6-NEXT:    s_and_b32 s3, s3, 0xff
+; GFX6-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX6-NEXT:    s_and_b32 s1, s1, 0xff
 ; GFX6-NEXT:    s_or_b32 s0, s7, s0
-; GFX6-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; GFX6-NEXT:    v_alignbit_b32 v1, s3, v1, 24
 ; GFX6-NEXT:    s_lshl_b32 s1, s1, 16
 ; GFX6-NEXT:    s_bfe_u32 s7, s4, 0x80008
 ; GFX6-NEXT:    v_mul_hi_u32 v4, v2, v4
@@ -1810,9 +1808,8 @@ define amdgpu_ps i48 @s_fshl_v2i24(i48 inreg %lhs.arg, i48 inreg %rhs.arg, i48 i
 ; GFX6-NEXT:    s_lshr_b32 s2, s5, 8
 ; GFX6-NEXT:    s_and_b32 s3, s5, 0xff
 ; GFX6-NEXT:    v_mov_b32_e32 v5, s4
-; GFX6-NEXT:    v_alignbit_b32 v5, s3, v5, 24
 ; GFX6-NEXT:    s_and_b32 s2, s2, 0xff
-; GFX6-NEXT:    v_and_b32_e32 v5, 0xffff, v5
+; GFX6-NEXT:    v_alignbit_b32 v5, s3, v5, 24
 ; GFX6-NEXT:    v_mul_lo_u32 v4, v4, 24
 ; GFX6-NEXT:    s_lshl_b32 s2, s2, 16
 ; GFX6-NEXT:    v_or_b32_e32 v5, s2, v5

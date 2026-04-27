@@ -41,6 +41,7 @@
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/Timeout.h"
 #include "lldb/lldb-public.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace lldb_private {
@@ -56,7 +57,8 @@ enum InlineStrategy {
 enum LoadScriptFromSymFile {
   eLoadScriptFromSymFileTrue,
   eLoadScriptFromSymFileFalse,
-  eLoadScriptFromSymFileWarn
+  eLoadScriptFromSymFileWarn,
+  eLoadScriptFromSymFileTrusted,
 };
 
 enum LoadCWDlldbinitFile {
@@ -238,6 +240,11 @@ public:
 
   LoadScriptFromSymFile GetLoadScriptFromSymbolFile() const;
 
+  /// Set the target-wide target.load-script-from-symbol-file setting.
+  /// See \c SetAutoLoadScriptsForModule for overriding this setting
+  /// per-module.
+  void SetLoadScriptFromSymbolFile(LoadScriptFromSymFile load_style);
+
   LoadCWDlldbinitFile GetLoadCWDlldbinitFile() const;
 
   Disassembler::HexImmediateStyle GetHexImmediateStyle() const;
@@ -277,6 +284,20 @@ public:
   void SetDebugUtilityExpression(bool debug);
 
   bool GetDebugUtilityExpression() const;
+
+  void SetCheckValueObjectOwnership(bool check);
+
+  bool GetCheckValueObjectOwnership() const;
+
+  std::optional<LoadScriptFromSymFile>
+  GetAutoLoadScriptsForModule(llvm::StringRef module_name) const;
+
+  /// Set the \c LoadScriptFromSymFile for a module called \c module_name
+  /// (excluding file extension). LLDB will prefer this over the target-wide
+  /// target.load-script-from-symbol-file setting
+  /// (see \c SetLoadScriptFromSymbolFile).
+  void SetAutoLoadScriptsForModule(llvm::StringRef module_name,
+                                   LoadScriptFromSymFile load_style);
 
 private:
   std::optional<bool>
@@ -429,6 +450,10 @@ public:
 
   void SetTrapExceptions(bool b) { m_trap_exceptions = b; }
 
+  bool GetStopOnFork() const { return m_stop_on_fork; }
+
+  void SetStopOnFork(bool b) { m_stop_on_fork = b; }
+
   bool GetREPLEnabled() const { return m_repl; }
 
   void SetREPLEnabled(bool b) { m_repl = b; }
@@ -513,6 +538,7 @@ private:
   bool m_stop_others = true;
   bool m_debug = false;
   bool m_trap_exceptions = true;
+  bool m_stop_on_fork = false;
   bool m_repl = false;
   bool m_generate_debug_info = false;
   bool m_ansi_color_errors = false;
@@ -797,7 +823,7 @@ public:
   void ClearScriptedFrameProviderDescriptors();
 
   /// Get all scripted frame provider descriptors for this target.
-  const llvm::DenseMap<uint32_t, ScriptedFrameProviderDescriptor> &
+  const llvm::MapVector<uint32_t, ScriptedFrameProviderDescriptor> &
   GetScriptedFrameProviderDescriptors() const;
 
 protected:
@@ -1704,6 +1730,12 @@ public:
 
   void SaveScriptedLaunchInfo(lldb_private::ProcessInfo &process_info);
 
+  /// Get the list of paths that LLDB will consider automatically loading
+  /// scripting resources from. Currently whether to load scripts
+  /// unconditionally is controlled via the
+  /// `target.load-script-from-symbol-file` setting.
+  FileSpecList GetSafeAutoLoadPaths() const;
+
   /// Add a signal for the target.  This will get copied over to the process
   /// if the signal exists on that target.  Only the values with Yes and No are
   /// set, Calculate values will be ignored.
@@ -1805,11 +1837,13 @@ protected:
   TypeSystemMap m_scratch_type_system_map;
 
   /// Map of scripted frame provider descriptors for this target.
-  /// Keys are the provider descriptors ids, values are the descriptors.
-  /// Used to initialize frame providers for new threads.
-  llvm::DenseMap<uint32_t, ScriptedFrameProviderDescriptor>
+  /// Keys are the provider descriptor IDs, values are the descriptors.
+  /// Insertion order is preserved so that equal-priority providers chain
+  /// in registration order.
+  llvm::MapVector<uint32_t, ScriptedFrameProviderDescriptor>
       m_frame_provider_descriptors;
   mutable std::recursive_mutex m_frame_provider_descriptors_mutex;
+  uint32_t m_next_frame_provider_id = 1;
 
   typedef std::map<lldb::LanguageType, lldb::REPLSP> REPLMap;
   REPLMap m_repl_map;
@@ -1841,6 +1875,8 @@ protected:
   /// more usefully in the Dummy target where you can't know exactly what
   /// signals you will have.
   llvm::StringMap<DummySignalValues> m_dummy_signals;
+
+  lldb::RegisterTypeBuilderSP m_register_type_builder_sp;
 
   static void ImageSearchPathsChanged(const PathMappingList &path_list,
                                       void *baton);

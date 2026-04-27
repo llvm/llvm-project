@@ -7,7 +7,7 @@ target datalayout = "e-m:e-p:64:64-i64:64-f80:128-n8:16:32:64-S128"
 define ptr @f(ptr %p) presplitcoroutine {
 entry:
   %x = load i32, ptr %p, !tbaa !3
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr null)
   %need.alloc = call i1 @llvm.coro.alloc(token %id)
   br i1 %need.alloc, label %dyn.alloc, label %begin
 
@@ -60,7 +60,7 @@ declare void @free(ptr) willreturn allockind("free") "alloc-family"="malloc"
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P]], align 4, !tbaa [[INT_TBAA0:![0-9]+]]
-; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr @f.resumers)
+; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr @f.resumers)
 ; CHECK-NEXT:    [[NEED_ALLOC:%.*]] = call i1 @llvm.coro.alloc(token [[ID]])
 ; CHECK-NEXT:    br i1 [[NEED_ALLOC]], label %[[DYN_ALLOC:.*]], label %[[BEGIN:.*]]
 ; CHECK:       [[DYN_ALLOC]]:

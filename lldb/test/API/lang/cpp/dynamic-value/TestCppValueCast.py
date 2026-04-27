@@ -9,6 +9,8 @@ from lldbsuite.test import lldbutil
 
 
 class CppValueCastTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     @skipIf(bugnumber="llvm.org/PR36714")
     @add_test_categories(["pyapi"])
     def test_value_cast_with_virtual_inheritance(self):

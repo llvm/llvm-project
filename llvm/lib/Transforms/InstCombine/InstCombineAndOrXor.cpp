@@ -1558,8 +1558,7 @@ Value *InstCombinerImpl::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS,
       if (!IsLogicalSelect)
         NewFlag |= RHS->getFastMathFlags();
 
-      Value *FAbs =
-          Builder.CreateUnaryIntrinsic(Intrinsic::fabs, LHS0, NewFlag);
+      Value *FAbs = Builder.CreateFAbs(LHS0, NewFlag);
       return Builder.CreateFCmpFMF(
           PredL, FAbs, ConstantFP::get(LHS0->getType(), *LHSC), NewFlag);
     }
@@ -2692,7 +2691,7 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
     Type *EltTy = CastOp->getType()->getScalarType();
     if (EltTy->isFloatingPointTy() &&
         APFloat::hasSignBitInMSB(EltTy->getFltSemantics())) {
-      Value *FAbs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, CastOp);
+      Value *FAbs = Builder.CreateFAbs(CastOp);
       return new BitCastInst(FAbs, I.getType());
     }
   }
@@ -4208,6 +4207,16 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     return BinaryOperator::CreateMul(X, IncrementY);
   }
 
+  // Canonicalization to achieve lowering to Bit Manipulation Instructions (BMI)
+  // ~X | (X-1) => ~(X & -X)
+  Value *Op;
+  if (match(&I, m_c_Or(m_OneUse(m_Not(m_Value(Op))),
+                       m_OneUse(m_Add(m_Deferred(Op), m_AllOnes()))))) {
+    Value *NegX = Builder.CreateNeg(Op);
+    Value *And = Builder.CreateAnd(Op, NegX);
+    return BinaryOperator::CreateNot(And);
+  }
+
   // (C && A) || (C && B) => select C, A, B (and similar cases)
   //
   // Note: This is the same transformation used in `foldSelectOfBools`,
@@ -4628,7 +4637,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     Type *EltTy = CastOp->getType()->getScalarType();
     if (EltTy->isFloatingPointTy() &&
         APFloat::hasSignBitInMSB(EltTy->getFltSemantics())) {
-      Value *FAbs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, CastOp);
+      Value *FAbs = Builder.CreateFAbs(CastOp);
       Value *FNegFAbs = Builder.CreateFNeg(FAbs);
       return new BitCastInst(FNegFAbs, I.getType());
     }

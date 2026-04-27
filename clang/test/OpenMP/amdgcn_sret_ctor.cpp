@@ -19,8 +19,7 @@ E::E() noexcept : foo(s()) {}
 // CHECK-NEXT:    [[THIS_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[THIS_ADDR]] to ptr
 // CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[THIS1_ASCAST:%.*]] = addrspacecast ptr [[THIS1]] to ptr addrspace(5)
-// CHECK-NEXT:    call void @_Z1sv(ptr addrspace(5) dead_on_unwind writable sret([[STRUCT_S:%.*]]) align 1 [[THIS1_ASCAST]]) #[[ATTR2:[0-9]+]]
+// CHECK-NEXT:    call void @_Z1sv(ptr dead_on_unwind writable sret([[STRUCT_S:%.*]]) align 1 [[THIS1]]) #[[ATTR2:[0-9]+]]
 // CHECK-NEXT:    ret void
 //
 //

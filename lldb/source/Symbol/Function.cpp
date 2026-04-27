@@ -89,9 +89,9 @@ void InlineFunctionInfo::DumpStopContext(Stream *s) const {
   //    s->Indent("[inlined] ");
   s->Indent();
   if (m_mangled)
-    s->PutCString(m_mangled.GetName().AsCString());
+    s->PutCString(m_mangled.GetName());
   else
-    s->PutCString(m_name.AsCString());
+    s->PutCString(m_name);
 }
 
 ConstString InlineFunctionInfo::GetName() const {
@@ -158,39 +158,37 @@ lldb::addr_t CallEdge::GetReturnPCAddress(Function &caller,
   return GetLoadAddress(GetUnresolvedReturnPCAddress(), caller, target);
 }
 
-void DirectCallEdge::ParseSymbolFileAndResolve(ModuleList &images) {
-  if (resolved)
-    return;
+Function *DirectCallEdge::ResolveCallee(ModuleList &images) {
+  if (!m_symbol_name)
+    return nullptr;
 
   Log *log = GetLog(LLDBLog::Step);
   LLDB_LOG(log, "DirectCallEdge: Lazily parsing the call graph for {0}",
-           lazy_callee.symbol_name);
+           m_symbol_name);
 
-  auto resolve_lazy_callee = [&]() -> Function * {
-    ConstString callee_name{lazy_callee.symbol_name};
-    SymbolContextList sc_list;
-    images.FindFunctionSymbols(callee_name, eFunctionNameTypeAuto, sc_list);
-    size_t num_matches = sc_list.GetSize();
-    if (num_matches == 0 || !sc_list[0].symbol) {
-      LLDB_LOG(log,
-               "DirectCallEdge: Found no symbols for {0}, cannot resolve it",
-               callee_name);
-      return nullptr;
-    }
-    Address callee_addr = sc_list[0].symbol->GetAddress();
-    if (!callee_addr.IsValid()) {
-      LLDB_LOG(log, "DirectCallEdge: Invalid symbol address");
-      return nullptr;
-    }
-    Function *f = callee_addr.CalculateSymbolContextFunction();
-    if (!f) {
-      LLDB_LOG(log, "DirectCallEdge: Could not find complete function");
-      return nullptr;
-    }
-    return f;
-  };
-  lazy_callee.def = resolve_lazy_callee();
-  resolved = true;
+  SymbolContextList sc_list;
+  images.FindFunctionSymbols(ConstString(m_symbol_name), eFunctionNameTypeAuto,
+                             sc_list);
+  size_t num_matches = sc_list.GetSize();
+  if (num_matches == 0 || !sc_list[0].symbol) {
+    LLDB_LOG(log, "DirectCallEdge: Found no symbols for {0}, cannot resolve it",
+             m_symbol_name);
+    return nullptr;
+  }
+
+  Address callee_addr = sc_list[0].symbol->GetAddress();
+  if (!callee_addr.IsValid()) {
+    LLDB_LOG(log, "DirectCallEdge: Invalid symbol address");
+    return nullptr;
+  }
+
+  Function *f = callee_addr.CalculateSymbolContextFunction();
+  if (!f) {
+    LLDB_LOG(log, "DirectCallEdge: Could not find complete function");
+    return nullptr;
+  }
+
+  return f;
 }
 
 DirectCallEdge::DirectCallEdge(const char *symbol_name,
@@ -198,14 +196,13 @@ DirectCallEdge::DirectCallEdge(const char *symbol_name,
                                lldb::addr_t caller_address, bool is_tail_call,
                                CallSiteParameterArray &&parameters)
     : CallEdge(caller_address_type, caller_address, is_tail_call,
-               std::move(parameters)) {
-  lazy_callee.symbol_name = symbol_name;
-}
+               std::move(parameters)),
+      m_symbol_name(symbol_name) {}
 
 Function *DirectCallEdge::GetCallee(ModuleList &images, ExecutionContext &) {
-  ParseSymbolFileAndResolve(images);
-  assert(resolved && "Did not resolve lazy callee");
-  return lazy_callee.def;
+  std::call_once(m_resolved_flag,
+                 [&] { m_callee_def = ResolveCallee(images); });
+  return m_callee_def;
 }
 
 IndirectCallEdge::IndirectCallEdge(DWARFExpressionList call_target,

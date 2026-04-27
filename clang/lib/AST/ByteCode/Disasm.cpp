@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Boolean.h"
+#include "Char.h"
 #include "Context.h"
 #include "EvaluationResult.h"
 #include "FixedPoint.h"
@@ -149,7 +150,14 @@ LLVM_DUMP_METHOD void Function::dump(llvm::raw_ostream &OS,
   }
   {
     ColorScope SC(OS, true, {llvm::raw_ostream::BRIGHT_GREEN, true});
-    OS << getName() << " " << (const void *)this << "\n";
+    if (const FunctionDecl *FD = getDecl()) {
+      FD->getNameForDiagnostic(
+          OS, P.getContext().getASTContext().getPrintingPolicy(),
+          /*Qualified=*/true);
+    } else {
+      OS << getName();
+    }
+    OS << " " << (const void *)this << "\n";
   }
   OS << "frame size: " << getFrameSize() << "\n";
   OS << "arg size:   " << getArgSize() << "\n";
@@ -313,6 +321,20 @@ static const char *primTypeToString(PrimType T) {
   llvm_unreachable("Unhandled PrimType");
 }
 
+static std::string formatBytes(size_t B) {
+  std::string Result;
+  llvm::raw_string_ostream SS(Result);
+
+  if (B < (1u << 10u))
+    SS << B << " B";
+  else if (B < (1u << 20u))
+    SS << llvm::format("{0:F2}", B / 1024.) << " KB";
+  else
+    SS << llvm::format("{0:F2}", B / 1024. / 1024.) << " MB";
+
+  return Result;
+}
+
 LLVM_DUMP_METHOD void Program::dump(llvm::raw_ostream &OS) const {
   {
     ColorScope SC(OS, true, {llvm::raw_ostream::BRIGHT_RED, true});
@@ -321,8 +343,25 @@ LLVM_DUMP_METHOD void Program::dump(llvm::raw_ostream &OS) const {
 
   {
     ColorScope SC(OS, true, {llvm::raw_ostream::WHITE, true});
-    OS << "Total memory : " << Allocator.getTotalMemory() << " bytes\n";
-    OS << "Global Variables: " << Globals.size() << "\n";
+    size_t Bytes = 0;
+    Bytes += Allocator.getTotalMemory();
+    // All the maps.
+    Bytes += GlobalIndices.getMemorySize();
+    Bytes += Records.getMemorySize();
+    Bytes += DummyVariables.getMemorySize();
+
+    // All Records.
+    for (const Record *R : Records.values()) {
+      Bytes += sizeof(Record) + R->BaseMap.getMemorySize() +
+               R->VirtualBaseMap.getMemorySize();
+      Bytes += R->Fields.capacity_in_bytes() + R->Bases.capacity_in_bytes() +
+               R->VirtualBases.capacity_in_bytes();
+    }
+
+    // Globals are allocated via the allocator, so already counted.
+
+    OS << "Total memory : " << formatBytes(Bytes) << '\n';
+    OS << "Global Variables: " << Globals.size() << '\n';
   }
   unsigned GI = 0;
   for (const Global *G : Globals) {
@@ -412,9 +451,9 @@ LLVM_DUMP_METHOD void Descriptor::dump(llvm::raw_ostream &OS) const {
   else if (isCompositeArray())
     OS << " composite-array";
   else if (isUnion())
-    OS << " union";
+    OS << " union(" << ElemRecord->getName() << ")";
   else if (isRecord())
-    OS << " record";
+    OS << " record(" << ElemRecord->getName() << ")";
   else if (isPrimitive())
     OS << " primitive " << primTypeToString(getPrimType());
 

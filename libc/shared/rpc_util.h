@@ -417,6 +417,15 @@ RPC_ATTRS uint64_t ballot([[maybe_unused]] uint64_t lane_mask, bool x) {
 #endif
 }
 
+/// Signal an interrupt from the device to wake the server. Only supported for
+/// AMDGPU targets currently.
+RPC_ATTRS void signal_interrupt([[maybe_unused]] uint32_t event_id) {
+#ifdef __AMDGPU__
+  constexpr uint32_t MSG_INTERRUPT = 1;
+  __builtin_amdgcn_s_sendmsg(MSG_INTERRUPT, event_id);
+#endif
+}
+
 /// Return \p val aligned "upwards" according to \p align.
 template <typename V, typename A>
 RPC_ATTRS constexpr V align_up(V val, A align) {
@@ -444,8 +453,13 @@ template <typename T, typename U> RPC_ATTRS T *advance(T *ptr, U bytes) {
 
 /// Wrapper around the optimal memory copy implementation for the target.
 RPC_ATTRS void rpc_memcpy(void *dst, const void *src, uint64_t count) {
+#if __has_builtin(__builtin_memcpy)
   if (count)
     __builtin_memcpy(dst, src, count);
+#else
+  for (uint64_t i = 0; i < count; ++i)
+    static_cast<uint8_t *>(dst)[i] = static_cast<const uint8_t *>(src)[i];
+#endif
 }
 
 /// Minimal string length function.

@@ -38,8 +38,9 @@ jobs:
       LLVM_VERSION_PATCH: ${{ steps.version.outputs.patch }}
     steps:
       - name: Checkout source
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
+          persist-credentials: false
           fetch-depth: 250
 
       - name: Get LLVM version
@@ -73,7 +74,7 @@ jobs:
     needs: abi-dump-setup
     runs-on: ubuntu-24.04
     container:
-      image: "ghcr.io/llvm/ci-ubuntu-24.04-abi-tests@sha256:ef869c1d087258db22c2b19b93f585d53c0d0e70952aaf02d45866ad26a200a0" #ghcr.io/llvm/ci-ubuntu-24.04-abi-tests:bb0bd382ab2b"
+      image: "ghcr.io/llvm/ci-ubuntu-24.04-abi-tests@sha256:cb3aea3ecdd521194ca12cfa239ab5a53f9e160a13a55ae3abdc1dfbf134476e" #ghcr.io/llvm/ci-ubuntu-24.04-abi-tests:bb0bd382ab2b"
     strategy:
       matrix:
         name:
@@ -90,8 +91,9 @@ jobs:
             repo: ${{ github.repository }}
     steps:
       - name: Download source code
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
+          persist-credentials: false
           ref: ${{ matrix.ref }}
           repository: ${{ matrix.repo }}
       - name: Configure
@@ -117,14 +119,14 @@ jobs:
           # Remove symbol versioning from dumps, so we can compare across major versions.
           sed -i 's/LLVM_${{ matrix.llvm_version_major }}/LLVM_NOVERSION/' ${{ matrix.ref }}.abi
       - name: Upload ABI file
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # 7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ${{ matrix.name }}
           path: ${{ matrix.ref }}.abi
 
       - name: Upload symbol list file
         if: matrix.name == 'build-baseline'
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # 7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: symbol-list
           path: llvm.symbols
@@ -133,7 +135,7 @@ jobs:
     if: github.repository_owner == 'llvm'
     runs-on: ubuntu-24.04
     container:
-      image: "ghcr.io/llvm/ci-ubuntu-24.04-abi-tests@sha256:ef869c1d087258db22c2b19b93f585d53c0d0e70952aaf02d45866ad26a200a0" #ghcr.io/llvm/ci-ubuntu-24.04-abi-tests:bb0bd382ab2b
+      image: "ghcr.io/llvm/ci-ubuntu-24.04-abi-tests@sha256:cb3aea3ecdd521194ca12cfa239ab5a53f9e160a13a55ae3abdc1dfbf134476e" #ghcr.io/llvm/ci-ubuntu-24.04-abi-tests:bb0bd382ab2b
     needs:
       - abi-dump-setup
       - abi-dump
@@ -166,7 +168,7 @@ jobs:
           abi-compliance-checker $EXTRA_ARGS -l libLLVM.so -old build-baseline/*.abi -new build-latest/*.abi || test "${{ needs.abi-dump-setup.outputs.ABI_HEADERS }}" = "llvm-c"
       - name: Upload ABI Comparison
         if: always()
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # 7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: compat-report-${{ github.sha }}
           path: compat_reports/

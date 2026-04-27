@@ -42,6 +42,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SPIRVLegalizePointerCast.h"
 #include "SPIRV.h"
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
@@ -56,7 +57,7 @@
 using namespace llvm;
 
 namespace {
-class SPIRVLegalizePointerCast : public FunctionPass {
+class SPIRVLegalizePointerCastImpl {
 
   // Builds the `spv_assign_type` assigning |Ty| to |Value| at the current
   // builder position.
@@ -149,8 +150,8 @@ class SPIRVLegalizePointerCast : public FunctionPass {
   // which should be the load being legalized. Returns the loaded value.
   Value *loadFirstValueFromAggregate(IRBuilder<> &B, Type *ElementType,
                                      Value *Source, LoadInst *BadLoad) {
-    SmallVector<Type *, 2> Types = {BadLoad->getPointerOperandType(),
-                                    Source->getType()};
+    std::array<Type *, 2> Types = {BadLoad->getPointerOperandType(),
+                                   Source->getType()};
     SmallVector<Value *, 8> Args{/* isInBounds= */ B.getInt1(false), Source};
 
     Type *AggregateType = GR->findDeducedElementType(Source);
@@ -172,7 +173,7 @@ class SPIRVLegalizePointerCast : public FunctionPass {
     Value *NewVector = PoisonValue::get(TargetType);
     buildAssignType(B, TargetType, NewVector);
 
-    for (unsigned I = 0; I < TargetType->getNumElements(); ++I) {
+    for (unsigned I = 0, E = TargetType->getNumElements(); I < E; ++I) {
       Value *Index = B.getInt32(I);
       SmallVector<Type *, 4> Types = {TargetType, TargetType,
                                       TargetType->getElementType(),
@@ -193,16 +194,14 @@ class SPIRVLegalizePointerCast : public FunctionPass {
     unsigned ScalarsPerArrayElement = ArrElemVecTy->getNumElements();
     // Load each element of the array.
     SmallVector<Value *, 4> LoadedElements;
-    SmallVector<Type *, 2> Types = {Source->getType(), Source->getType()};
-    for (unsigned I = 0; I < TargetType->getNumElements(); ++I) {
+    std::array<Type *, 2> Types = {Source->getType(), Source->getType()};
+    for (unsigned I = 0, E = TargetType->getNumElements(); I < E; ++I) {
       unsigned ArrayIndex = I / ScalarsPerArrayElement;
       unsigned ElementIndexInArrayElem = I % ScalarsPerArrayElement;
       // Create a GEP to access the i-th element of the array.
-      SmallVector<Value *, 4> Args;
-      Args.push_back(B.getInt1(/*Inbounds=*/false));
-      Args.push_back(Source);
-      Args.push_back(B.getInt32(0));
-      Args.push_back(ConstantInt::get(B.getInt32Ty(), ArrayIndex));
+      std::array<Value *, 4> Args = {
+          B.getInt1(/*Inbounds=*/false), Source, B.getInt32(0),
+          ConstantInt::get(B.getInt32Ty(), ArrayIndex)};
       auto *ElementPtr = B.CreateIntrinsic(Intrinsic::spv_gep, {Types}, {Args});
       GR->buildAssignPtr(B, ArrElemVecTy, ElementPtr);
       Value *LoadVec = B.CreateLoad(ArrElemVecTy, ElementPtr);
@@ -217,14 +216,12 @@ class SPIRVLegalizePointerCast : public FunctionPass {
                              Value *Source) {
     // Load each element of the array.
     SmallVector<Value *, 4> LoadedElements;
-    SmallVector<Type *, 2> Types = {Source->getType(), Source->getType()};
-    for (unsigned I = 0; I < TargetType->getNumElements(); ++I) {
+    std::array<Type *, 2> Types = {Source->getType(), Source->getType()};
+    for (unsigned I = 0, E = TargetType->getNumElements(); I < E; ++I) {
       // Create a GEP to access the i-th element of the array.
-      SmallVector<Value *, 4> Args;
-      Args.push_back(B.getInt1(/*Inbounds=*/false));
-      Args.push_back(Source);
-      Args.push_back(B.getInt32(0));
-      Args.push_back(ConstantInt::get(B.getInt32Ty(), I));
+      std::array<Value *, 4> Args = {B.getInt1(/*Inbounds=*/false), Source,
+                                     B.getInt32(0),
+                                     ConstantInt::get(B.getInt32Ty(), I)};
       auto *ElementPtr = B.CreateIntrinsic(Intrinsic::spv_gep, {Types}, {Args});
       GR->buildAssignPtr(B, TargetType->getElementType(), ElementPtr);
 
@@ -236,44 +233,68 @@ class SPIRVLegalizePointerCast : public FunctionPass {
     return buildVectorFromLoadedElements(B, TargetType, LoadedElements);
   }
 
+  // Stores elements from a vector into a matrix (an array of vectors).
+  void storeMatrixArrayFromVector(IRBuilder<> &B, Value *SrcVector,
+                                  Value *DstArrayPtr, ArrayType *ArrTy,
+                                  Align Alignment) {
+    auto *SrcVecTy = cast<FixedVectorType>(SrcVector->getType());
+    auto *ArrElemVecTy = cast<FixedVectorType>(ArrTy->getElementType());
+    Type *ElemTy = ArrElemVecTy->getElementType();
+    unsigned ScalarsPerArrayElement = ArrElemVecTy->getNumElements();
+    unsigned SrcNumElements = SrcVecTy->getNumElements();
+    assert(
+        SrcNumElements % ScalarsPerArrayElement == 0 &&
+        "Source vector size must be a multiple of array element vector size");
+
+    std::array<Type *, 2> Types = {DstArrayPtr->getType(),
+                                   DstArrayPtr->getType()};
+
+    for (unsigned I = 0; I < SrcNumElements; I += ScalarsPerArrayElement) {
+      unsigned ArrayIndex = I / ScalarsPerArrayElement;
+      // Create a GEP to access the array element.
+      std::array<Value *, 4> Args = {
+          B.getInt1(/*Inbounds=*/false), DstArrayPtr, B.getInt32(0),
+          ConstantInt::get(B.getInt32Ty(), ArrayIndex)};
+      auto *ElementPtr = B.CreateIntrinsic(Intrinsic::spv_gep, {Types}, {Args});
+      GR->buildAssignPtr(B, ArrElemVecTy, ElementPtr);
+
+      // Extract scalar elements from the source vector for this array slot.
+      SmallVector<Value *, 4> Elements;
+      for (unsigned J = 0; J < ScalarsPerArrayElement; ++J)
+        Elements.push_back(makeExtractElement(B, ElemTy, SrcVector, I + J));
+
+      // Build a vector from the extracted elements and store it.
+      Value *Vec = buildVectorFromLoadedElements(B, ArrElemVecTy, Elements);
+      StoreInst *SI = B.CreateStore(Vec, ElementPtr);
+      SI->setAlignment(Alignment);
+    }
+  }
+
   // Stores elements from a vector into an array.
   void storeArrayFromVector(IRBuilder<> &B, Value *SrcVector,
                             Value *DstArrayPtr, ArrayType *ArrTy,
                             Align Alignment) {
     auto *VecTy = cast<FixedVectorType>(SrcVector->getType());
+    Type *ElemTy = ArrTy->getElementType();
 
     // Ensure the element types of the array and vector are the same.
-    assert(VecTy->getElementType() == ArrTy->getElementType() &&
+    assert(VecTy->getElementType() == ElemTy &&
            "Element types of array and vector must be the same.");
+    std::array<Type *, 2> Types = {DstArrayPtr->getType(),
+                                   DstArrayPtr->getType()};
 
-    const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
-    uint64_t ElemSize = DL.getTypeAllocSize(ArrTy->getElementType());
-
-    for (unsigned i = 0; i < VecTy->getNumElements(); ++i) {
+    for (unsigned I = 0, E = VecTy->getNumElements(); I < E; ++I) {
       // Create a GEP to access the i-th element of the array.
-      SmallVector<Type *, 2> Types = {DstArrayPtr->getType(),
-                                      DstArrayPtr->getType()};
-      SmallVector<Value *, 4> Args;
-      Args.push_back(B.getInt1(false));
-      Args.push_back(DstArrayPtr);
-      Args.push_back(B.getInt32(0));
-      Args.push_back(ConstantInt::get(B.getInt32Ty(), i));
+      std::array<Value *, 4> Args = {B.getInt1(/*Inbounds=*/false), DstArrayPtr,
+                                     B.getInt32(0),
+                                     ConstantInt::get(B.getInt32Ty(), I)};
       auto *ElementPtr = B.CreateIntrinsic(Intrinsic::spv_gep, {Types}, {Args});
-      GR->buildAssignPtr(B, ArrTy->getElementType(), ElementPtr);
+      GR->buildAssignPtr(B, ElemTy, ElementPtr);
 
       // Extract the element from the vector and store it.
-      Value *Index = B.getInt32(i);
-      SmallVector<Type *, 3> EltTypes = {VecTy->getElementType(), VecTy,
-                                         Index->getType()};
-      SmallVector<Value *, 2> EltArgs = {SrcVector, Index};
-      Value *Element =
-          B.CreateIntrinsic(Intrinsic::spv_extractelt, {EltTypes}, {EltArgs});
-      buildAssignType(B, VecTy->getElementType(), Element);
-
-      Types = {Element->getType(), ElementPtr->getType()};
-      Align NewAlign = commonAlignment(Alignment, i * ElemSize);
-      Args = {Element, ElementPtr, B.getInt16(2), B.getInt32(NewAlign.value())};
-      B.CreateIntrinsic(Intrinsic::spv_store, {Types}, {Args});
+      Value *Element = makeExtractElement(B, ElemTy, SrcVector, I);
+      StoreInst *SI = B.CreateStore(Element, ElementPtr);
+      SI->setAlignment(Alignment);
     }
   }
 
@@ -409,7 +430,7 @@ class SPIRVLegalizePointerCast : public FunctionPass {
   // Stores the given Src value into the first entry of the Dst aggregate.
   Value *storeToFirstValueAggregate(IRBuilder<> &B, Value *Src, Value *Dst,
                                     Type *DstPointeeType, Align Alignment) {
-    SmallVector<Type *, 2> Types = {Dst->getType(), Dst->getType()};
+    std::array<Type *, 2> Types = {Dst->getType(), Dst->getType()};
     SmallVector<Value *, 8> Args{/* isInBounds= */ B.getInt1(true), Dst};
     buildGEPIndexChain(B, Src->getType(), DstPointeeType, Args);
     auto *GEP = B.CreateIntrinsic(Intrinsic::spv_gep, {Types}, {Args});
@@ -441,6 +462,8 @@ class SPIRVLegalizePointerCast : public FunctionPass {
     auto *S_VT = dyn_cast<FixedVectorType>(FromTy);
     auto *D_VT = dyn_cast<FixedVectorType>(ToTy);
     auto *D_AT = dyn_cast<ArrayType>(ToTy);
+    auto *D_MAT =
+        D_AT ? dyn_cast<FixedVectorType>(D_AT->getElementType()) : nullptr;
 
     B.SetInsertPoint(BadStore);
     if (isTypeFirstElementAggregate(FromTy, ToTy))
@@ -451,6 +474,8 @@ class SPIRVLegalizePointerCast : public FunctionPass {
       storeToFirstValueAggregate(B, Src, Dst, D_VT, Alignment);
     else if (D_AT && S_VT && S_VT->getElementType() == D_AT->getElementType())
       storeArrayFromVector(B, Src, Dst, D_AT, Alignment);
+    else if (D_MAT && S_VT && D_MAT->getElementType() == S_VT->getElementType())
+      storeMatrixArrayFromVector(B, Src, Dst, D_AT, Alignment);
     else
       llvm_unreachable("Unsupported ptrcast use in store. Please fix.");
 
@@ -507,10 +532,10 @@ class SPIRVLegalizePointerCast : public FunctionPass {
   }
 
 public:
-  SPIRVLegalizePointerCast(SPIRVTargetMachine *TM) : FunctionPass(ID), TM(TM) {}
+  SPIRVLegalizePointerCastImpl(const SPIRVTargetMachine &TM) : TM(TM) {}
 
-  bool runOnFunction(Function &F) override {
-    const SPIRVSubtarget &ST = TM->getSubtarget<SPIRVSubtarget>(F);
+  bool run(Function &F) {
+    const SPIRVSubtarget &ST = TM.getSubtarget<SPIRVSubtarget>(F);
     GR = ST.getSPIRVGlobalRegistry();
     DeadInstructions.clear();
 
@@ -533,19 +558,36 @@ public:
   }
 
 private:
-  SPIRVTargetMachine *TM = nullptr;
+  const SPIRVTargetMachine &TM;
   SPIRVGlobalRegistry *GR = nullptr;
   std::vector<Instruction *> DeadInstructions;
+};
 
+class SPIRVLegalizePointerCastLegacy : public FunctionPass {
 public:
   static char ID;
+  SPIRVLegalizePointerCastLegacy(const SPIRVTargetMachine &TM)
+      : FunctionPass(ID), TM(TM) {}
+
+  bool runOnFunction(Function &F) override {
+    return SPIRVLegalizePointerCastImpl(TM).run(F);
+  }
+
+private:
+  const SPIRVTargetMachine &TM;
 };
 } // namespace
 
-char SPIRVLegalizePointerCast::ID = 0;
-INITIALIZE_PASS(SPIRVLegalizePointerCast, "spirv-legalize-bitcast",
-                "SPIRV legalize bitcast pass", false, false)
+PreservedAnalyses SPIRVLegalizePointerCast::run(Function &F,
+                                                FunctionAnalysisManager &AM) {
+  return SPIRVLegalizePointerCastImpl(TM).run(F) ? PreservedAnalyses::none()
+                                                 : PreservedAnalyses::all();
+}
+
+char SPIRVLegalizePointerCastLegacy::ID = 0;
+INITIALIZE_PASS(SPIRVLegalizePointerCastLegacy, "spirv-legalize-pointer-cast",
+                "SPIRV legalize pointer cast pass", false, false)
 
 FunctionPass *llvm::createSPIRVLegalizePointerCastPass(SPIRVTargetMachine *TM) {
-  return new SPIRVLegalizePointerCast(TM);
+  return new SPIRVLegalizePointerCastLegacy(*TM);
 }

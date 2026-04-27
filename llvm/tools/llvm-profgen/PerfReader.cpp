@@ -15,6 +15,7 @@
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/Timer.h"
 #include "llvm/Support/ToolOutputFile.h"
 
 #define DEBUG_TYPE "perf-reader"
@@ -59,6 +60,12 @@ static cl::opt<int> CSProfMaxUnsymbolizedCtxDepth(
     cl::desc("Keep the last K contexts while merging unsymbolized profile. -1 "
              "means no depth limit."),
     cl::cat(ProfGenCategory));
+
+cl::opt<bool> TimeProfGen("time-profgen", cl::desc("Time llvm-profgen phases"),
+                          cl::init(false), cl::cat(ProfGenCategory));
+
+static const char *TimerGroupName = "profgen";
+static const char *TimerGroupDesc = "llvm-profgen";
 
 namespace sampleprof {
 
@@ -611,6 +618,8 @@ static std::string getContextKeyStr(ContextKey *K,
 }
 
 void HybridPerfReader::unwindSamples() {
+  NamedRegionTimer T("unwind", "Unwind samples", TimerGroupName, TimerGroupDesc,
+                     TimeProfGen);
   VirtualUnwinder Unwinder(&SampleCounters, Binary);
   for (const auto &Item : AggregatedSamples) {
     const PerfSample *Sample = Item.first.getPtr();
@@ -1143,6 +1152,8 @@ void PerfScriptReader::parseEventOrSample(TraceStream &TraceIt) {
 }
 
 void PerfScriptReader::parseAndAggregateTrace() {
+  NamedRegionTimer T("parseTrace", "Parse and aggregate trace", TimerGroupName,
+                     TimerGroupDesc, TimeProfGen);
   // Trace line iterator
   TraceStream TraceIt(PerfTraceFile);
   while (!TraceIt.isAtEoF())
@@ -1344,6 +1355,48 @@ void PerfScriptReader::warnInvalidRange() {
       "range end acrossing the unconditinal jmp.");
 }
 
+void PerfScriptReader::warnIfBranchTargetMismatch() {
+  // Collect unique branch source and target addresses from LBR samples,
+  // then check what percentage don't match known instructions in the binary.
+
+  uint64_t MismatchedBranches = 0;
+  uint64_t MismatchedIndirectTargets = 0;
+  uint64_t MismatchedTargets = 0;
+  uint64_t TotalSamples = 0;
+
+  for (const auto &Item : AggregatedSamples) {
+    const PerfSample *Sample = Item.first.getPtr();
+    for (const LBREntry &LBR : Sample->LBRStack) {
+      uint64_t Source = LBR.Source;
+      uint64_t Target = LBR.Target;
+      if (Source == ExternalAddr || Target == ExternalAddr)
+        continue;
+      TotalSamples++;
+
+      // Validate Branch sources are Call/Branch/Indirect Branch
+      if (!Binary->addressIsTransfer(Source))
+        MismatchedBranches++;
+
+      // Validate Indirect Branch targets landed in code. This may over estimate
+      // the vaid targets only because there's no good way to determine jump
+      // table targets
+      if (Binary->addressIsIndirectBranch(Source)) {
+        if (!Binary->addressIsCode(Target))
+          MismatchedIndirectTargets++;
+      } else if (!Binary->addressIsBranchTarget(Target) &&
+                 !Binary->findFuncRangeForStartAddr(Target))
+        MismatchedTargets++;
+    }
+  }
+
+  emitWarningSummary(MismatchedBranches, TotalSamples,
+                     "of branch samples do not match the binary.");
+  emitWarningSummary(MismatchedTargets, TotalSamples,
+                     "of branch targets do not match the binary.");
+  emitWarningSummary(MismatchedIndirectTargets, TotalSamples,
+                     "of indirect branch targets do not match the binary.");
+}
+
 void PerfScriptReader::parsePerfTraces() {
   // Parse perf traces and do aggregation.
   parseAndAggregateTrace();
@@ -1360,6 +1413,7 @@ void PerfScriptReader::parsePerfTraces() {
   // Generate unsymbolized profile.
   warnTruncatedStack();
   warnInvalidRange();
+  warnIfBranchTargetMismatch();
   generateUnsymbolizedProfile();
   AggregatedSamples.clear();
 

@@ -16,6 +16,7 @@
 #include <vector>
 
 #include "lldb/Core/UserSettingsController.h"
+#include "lldb/Host/HostThread.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/RegisterCheckpoint.h"
 #include "lldb/Target/StackFrameList.h"
@@ -1004,7 +1005,7 @@ public:
                                  bool stop_other_threads, Status &status);
 
   virtual lldb::ThreadPlanSP QueueThreadPlanForStepUntil(
-      bool abort_other_plans, lldb::addr_t *address_list, size_t num_addresses,
+      bool abort_other_plans, llvm::ArrayRef<lldb::addr_t> address_list,
       bool stop_others, uint32_t frame_idx, Status &status);
 
   virtual lldb::ThreadPlanSP
@@ -1025,6 +1026,10 @@ public:
   /// \return
   ///     A pointer to the next executed plan.
   ThreadPlan *GetCurrentPlan() const;
+
+  /// Returns true if this thread has a ThreadPlanCallFunction on its
+  /// plan stack, indicating it is running a debugger-injected expression.
+  bool IsRunningCallFunctionPlan() const;
 
   /// Unwinds the thread stack for the innermost expression plan currently
   /// on the thread plan stack.
@@ -1184,6 +1189,21 @@ public:
                              uint32_t num_frames, bool show_frame_info,
                              uint32_t num_frames_with_source, bool show_hidden);
 
+  /// If this thread stopped on a binary-loaded breakpoint, the
+  /// addresses of the newly added binaries may have already been
+  /// provided by the gdb stub in the stop-packet.
+  virtual std::vector<lldb::addr_t> FetchNewlyAddedBinaries() { return {}; }
+
+  /// If this thread stopped on a binary-loaded breakpoint, the
+  /// detailed information about the new binaries may be provided.
+  /// If any detailed information about binaries is provided, it must
+  /// be provided for all binaries that have been loaded at this stop.
+  /// Detailed information is likely to only be provided when the number
+  /// of new binaries is small.
+  virtual lldb_private::StructuredData::ObjectSP FetchDetailedBinariesInfo() {
+    return {};
+  }
+
   // We need a way to verify that even though we have a thread in a shared
   // pointer that the object itself is still valid. Currently this won't be the
   // case if DestroyThread() was called. DestroyThread is called when a thread
@@ -1299,6 +1319,11 @@ public:
 
   lldb::StackFrameListSP GetStackFrameList();
 
+  /// Push/pop provider input frames for the current host thread.
+  /// Used by SyntheticStackFrameList to scope re-entrant frame lookups.
+  void PushProviderFrameList(lldb::StackFrameListSP frames);
+  void PopProviderFrameList();
+
   /// Get a frame list by its unique identifier.
   lldb::StackFrameListSP GetFrameListByIdentifier(lldb::frame_list_id_t id);
 
@@ -1313,6 +1338,28 @@ public:
   const llvm::DenseMap<lldb::frame_list_id_t, lldb::SyntheticFrameProviderSP> &
   GetFrameProviders() const {
     return m_frame_providers;
+  }
+
+  /// Returns true if any host thread is currently inside a provider.
+  bool IsAnyProviderActive();
+
+  /// Get the ordered chain of provider descriptors and their frame list IDs.
+  ///
+  /// Each element is a pair of:
+  ///   - \b ScriptedFrameProviderDescriptor: metadata for the provider
+  ///     (class name, description, priority, thread specs).
+  ///   - \b frame_list_id_t: the sequential frame list identifier assigned
+  ///     to that provider in the chain (1 for the first provider, 2 for the
+  ///     second, etc.). ID 0 is reserved for the base unwinder and is never
+  ///     present in this vector.
+  ///
+  /// The vector is ordered by provider chain position (registration order
+  /// adjusted by priority). It persists across \c ClearStackFrames() so that
+  /// provider IDs remain stable for the lifetime of the thread.
+  const std::vector<
+      std::pair<ScriptedFrameProviderDescriptor, lldb::frame_list_id_t>> &
+  GetProviderChainIds() const {
+    return m_provider_chain_ids;
   }
 
 protected:
@@ -1396,6 +1443,21 @@ protected:
       m_unwinder_frames_sp;                ///< The unwinder frame list (ID 0).
   lldb::StackFrameListSP m_curr_frames_sp; ///< The stack frames that get lazily
                                            ///populated after a thread stops.
+  /// Per-host-thread stack of active provider input frames. A provider
+  /// always operates on its parent StackFrameList — not the synthetic list
+  /// currently being constructed. While a provider is running, its parent
+  /// list is pushed here so that any code the provider executes that
+  /// fetches a StackFrameList (e.g. GetFrameAtIndex, EvaluateExpression)
+  /// transparently sees the parent list rather than the in-construction
+  /// list at the end of the provider chain.
+  ///
+  /// Keyed by host thread so the provider's own thread and the private state
+  /// thread get the parent list, while unrelated threads proceed normally.
+  /// ClearStackFrames() is also guarded: frame state is shared, so it must
+  /// not be torn down while any provider is mid-construction.
+  std::mutex m_provider_frames_mutex;
+  llvm::DenseMap<HostThread, std::vector<lldb::StackFrameListSP>>
+      m_active_frame_providers_by_thread;
   lldb::StackFrameListSP m_prev_frames_sp; ///< The previous stack frames from
                                            ///the last time this thread stopped.
   std::optional<lldb::addr_t>
@@ -1433,10 +1495,6 @@ protected:
   /// Map from frame list identifier to frame list weak pointer.
   mutable llvm::DenseMap<lldb::frame_list_id_t, lldb::StackFrameListWP>
       m_frame_lists_by_id;
-
-  /// Counter for assigning unique provider IDs. Starts at 1 since 0 is
-  /// reserved for normal unwinder frames. Persists across ClearStackFrames.
-  lldb::frame_list_id_t m_next_provider_id = 1;
 
 private:
   bool m_extended_info_fetched; // Have we tried to retrieve the m_extended_info

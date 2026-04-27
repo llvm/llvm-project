@@ -2288,8 +2288,7 @@ static bool nextIRInstructionDataMatchesNextInst(IRInstructionData &ID) {
   if (!ID.Inst->isTerminator())
     NextModuleInst = ID.Inst->getNextNode();
   else if (NextIDLInst != nullptr)
-    NextModuleInst =
-        &*NextIDIt->Inst->getParent()->instructionsWithoutDebug().begin();
+    NextModuleInst = &*NextIDIt->Inst->getParent()->begin();
 
   if (NextIDLInst && NextIDLInst != NextModuleInst)
     return false;
@@ -2790,7 +2789,7 @@ unsigned IROutliner::doOutline(Module &M) {
       OS->Candidate->getBasicBlocks(BlocksInRegion, BE);
       OS->CE = new (ExtractorAllocator.Allocate())
           CodeExtractor(BE, nullptr, false, nullptr, nullptr, nullptr, false,
-                        false, nullptr, "outlined");
+                        false, nullptr, {}, "outlined");
       findAddInputsOutputs(M, *OS, NotSame);
       if (!OS->IgnoreRegion)
         OutlinedRegions.push_back(OS);
@@ -2901,7 +2900,7 @@ unsigned IROutliner::doOutline(Module &M) {
       OS->Candidate->getBasicBlocks(BlocksInRegion, BE);
       OS->CE = new (ExtractorAllocator.Allocate())
           CodeExtractor(BE, nullptr, false, nullptr, nullptr, nullptr, false,
-                        false, nullptr, "outlined");
+                        false, nullptr, {}, "outlined");
       bool FunctionOutlined = extractSection(*OS);
       if (FunctionOutlined) {
         unsigned StartIdx = OS->Candidate->getStartIdx();
