@@ -24,6 +24,50 @@
 
 #include <arm_neon.h>
 
+//===------------------------------------------------------===//
+// 2.1.1.13 Maximum across vector
+//===------------------------------------------------------===//
+
+//ALL-LABEL: @test_vmaxv_f64(
+float64_t test_vmaxvq_f64(float64x2_t a) {
+// CIR:   {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.fmaxv" {{%.*}}
+    
+// LLVM-SAME: <2 x double> {{.*}}[[A:%.*]])
+// LLVM:      [[VMAXVQ_F64_I:%.*]] = call double @llvm.aarch64.neon.fmaxv.f64.v2f64(<2 x double> [[A]])
+// LLVM:      ret double [[VMAXVQ_F64_I]]
+  return vmaxvq_f64(a);
+}
+
+//ALL-LABEL: @test_vmaxv_f32(
+float32_t test_vmaxv_f32(float32x2_t a) {
+// CIR:   {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.fmaxv" {{%.*}}
+    
+// LLVM-SAME: <2 x float> {{.*}}[[A:%.*]])
+// LLVM:      [[VMAXV_F32_I:%.*]] = call float @llvm.aarch64.neon.fmaxv.f32.v2f32(<2 x float> [[A]])
+// LLVM:      ret float [[VMAXV_F32_I]]
+  return vmaxv_f32(a);
+}
+
+//ALL-LABEL: @test_vmaxv_u32(
+uint32_t test_vmaxv_u32(uint32x2_t a) {
+// CIR:   {{%.*}} = cir.call_llvm_intrinsic "vector.reduce.umax" {{%.*}}
+    
+// LLVM-SAME: <2 x i32> {{.*}}[[A:%.*]])
+// LLVM:      [[VMAXV_U32_I:%.*]] = call i32 @llvm.vector.reduce.umax.v2i32(<2 x i32> [[A]])
+// LLVM:      ret i32 [[VMAXV_U32_I]]
+  return vmaxv_u32(a);
+}
+
+//ALL-LABEL: @test_vmaxv_s32(
+int32_t test_vmaxv_s32(int32x2_t a) {
+// CIR:   {{%.*}} = cir.call_llvm_intrinsic "vector.reduce.smax" {{%.*}}
+    
+// LLVM-SAME: <2 x i32> {{.*}}[[A:%.*]])
+// LLVM:      [[VMAXV_S32_I:%.*]] = call i32 @llvm.vector.reduce.smax.v2i32(<2 x i32> [[A]])
+// LLVM:      ret i32 [[VMAXV_S32_I]]
+  return vmaxv_s32(a);
+}
+
 // LLVM-LABEL: @test_vnegd_s64
 // CIR-LABEL: @vnegd_s64
 int64_t test_vnegd_s64(int64_t a) {
