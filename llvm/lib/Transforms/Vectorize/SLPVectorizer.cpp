@@ -26577,7 +26577,7 @@ bool SLPVectorizerPass::vectorizeStores(
       union {
         // If added, index into AllContexts
         unsigned AllContextsIdx;
-        // Index into StoreSeq if not added to AllContexts yet
+        // Index into Stores if not added to AllContexts yet
         unsigned StoresIdx;
       };
       // If not added to AllContexts, what is the single store in the chain
