@@ -93,7 +93,8 @@ struct LoweringPreparePass
   void lowerArrayDtor(cir::ArrayDtor op);
   void lowerArrayCtor(cir::ArrayCtor op);
   void lowerTrivialCopyCall(cir::CallOp op);
-  void lowerStoreOfConstAggregate(cir::StoreOp op);
+  void lowerStoreOfConstAggregate(cir::StoreOp op,
+                                  mlir::SymbolTableCollection &symbolTables);
   void lowerLocalInitOp(cir::LocalInitOp op,
                         mlir::SymbolTableCollection &symbolTables);
 
@@ -104,11 +105,11 @@ struct LoweringPreparePass
   /// already has a matching type and initial value, that global is reused.
   /// Otherwise a new global is created with the next available `.<n>` suffix
   /// (matching CIRGenBuilder::createVersionedGlobal and OGCG behavior).
-  cir::GlobalOp getOrCreateConstAggregateGlobal(CIRBaseBuilderTy &builder,
-                                                mlir::Location loc,
-                                                llvm::StringRef baseName,
-                                                mlir::Type ty,
-                                                mlir::TypedAttr constant);
+  cir::GlobalOp
+  getOrCreateConstAggregateGlobal(CIRBaseBuilderTy &builder,
+                                  mlir::SymbolTableCollection &symbolTables,
+                                  mlir::Location loc, llvm::StringRef baseName,
+                                  mlir::Type ty, mlir::TypedAttr constant);
 
   /// Build the function that initializes the specified global
   cir::FuncOp buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op);
@@ -1695,8 +1696,9 @@ void LoweringPreparePass::lowerTrivialCopyCall(cir::CallOp op) {
 }
 
 cir::GlobalOp LoweringPreparePass::getOrCreateConstAggregateGlobal(
-    CIRBaseBuilderTy &builder, mlir::Location loc, llvm::StringRef baseName,
-    mlir::Type ty, mlir::TypedAttr constant) {
+    CIRBaseBuilderTy &builder, mlir::SymbolTableCollection &symbolTables,
+    mlir::Location loc, llvm::StringRef baseName, mlir::Type ty,
+    mlir::TypedAttr constant) {
   // Look up (and lazily populate) the per-base-name cache.
   llvm::SmallVector<cir::GlobalOp, 1> &versions =
       constAggregateGlobals[baseName];
@@ -1707,10 +1709,10 @@ cir::GlobalOp LoweringPreparePass::getOrCreateConstAggregateGlobal(
       return gv;
   }
 
-  // No cached match. Scan the symbol table starting from the next unscanned
-  // version. In practice, this should usually exit on the first iteration, but
-  // it's possible that some other pass or a previous invocation of this pass
-  // created globals using this same logic.
+  // No cached match. Scan the module's symbol table starting from the next
+  // unscanned version. In practice this should usually exit on the first
+  // iteration, but it's possible that some other pass or a previous
+  // invocation of this pass created globals using this same logic.
   llvm::SmallString<128> name(baseName);
   size_t baseLen = name.size();
   unsigned version = versions.size();
@@ -1720,9 +1722,8 @@ cir::GlobalOp LoweringPreparePass::getOrCreateConstAggregateGlobal(
       name.push_back('.');
       llvm::Twine(version).toVector(name);
     }
-    auto existingGv = dyn_cast_or_null<cir::GlobalOp>(
-        mlir::SymbolTable::lookupSymbolIn(
-            mlirModule, mlir::StringAttr::get(&getContext(), name)));
+    auto existingGv = symbolTables.lookupSymbolIn<cir::GlobalOp>(
+        mlirModule, mlir::StringAttr::get(&getContext(), name));
     if (!existingGv)
       break;
     versions.push_back(existingGv);
@@ -1745,11 +1746,16 @@ cir::GlobalOp LoweringPreparePass::getOrCreateConstAggregateGlobal(
       gv, mlir::SymbolTable::Visibility::Private);
   gv.setInitialValueAttr(constant);
 
+  // Keep the cached symbol table in sync with the new global so subsequent
+  // lookups for other base names find it.
+  symbolTables.getSymbolTable(mlirModule).insert(gv);
+
   versions.push_back(gv);
   return gv;
 }
 
-void LoweringPreparePass::lowerStoreOfConstAggregate(cir::StoreOp op) {
+void LoweringPreparePass::lowerStoreOfConstAggregate(
+    cir::StoreOp op, mlir::SymbolTableCollection &symbolTables) {
   // Check if the value operand is a cir.const with aggregate type.
   auto constOp = op.getValue().getDefiningOp<cir::ConstantOp>();
   if (!constOp)
@@ -1791,8 +1797,8 @@ void LoweringPreparePass::lowerStoreOfConstAggregate(cir::StoreOp op) {
 
   // Check for existing globals and create a new global with a unique name
   // if no match is found.
-  cir::GlobalOp gv = getOrCreateConstAggregateGlobal(builder, op.getLoc(),
-                                                    baseName, ty, constant);
+  cir::GlobalOp gv = getOrCreateConstAggregateGlobal(
+      builder, symbolTables, op.getLoc(), baseName, ty, constant);
 
   // Now replace the store with get_global + copy.
   builder.setInsertionPoint(op);
@@ -1831,7 +1837,7 @@ void LoweringPreparePass::runOnOp(mlir::Operation *op,
   } else if (auto callOp = dyn_cast<cir::CallOp>(op)) {
     lowerTrivialCopyCall(callOp);
   } else if (auto storeOp = dyn_cast<cir::StoreOp>(op)) {
-    lowerStoreOfConstAggregate(storeOp);
+    lowerStoreOfConstAggregate(storeOp, symbolTables);
   } else if (auto fnOp = dyn_cast<cir::FuncOp>(op)) {
     if (auto globalCtor = fnOp.getGlobalCtorPriority())
       globalCtorList.emplace_back(fnOp.getName(), globalCtor.value());
