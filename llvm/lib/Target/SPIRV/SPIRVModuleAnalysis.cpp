@@ -2765,6 +2765,62 @@ static void handleMIFlagDecoration(
   }
 }
 
+static void applyFlatDecorations(SPIRV::ModuleAnalysisInfo &MAI,
+                                 const SPIRVInstrInfo &TII,
+                                 const SPIRVSubtarget &ST) {
+  // 1. Safety Guard: Flat is a Shader concept. Abort if OpenCL.
+  if (!ST.isShader())
+    return;
+
+  for (const MachineInstr *VarMI : MAI.GlobalVarList) {
+    if (!VarMI || VarMI->getOpcode() != SPIRV::OpVariable)
+      continue;
+
+    if (VarMI->getNumOperands() < 3 || !VarMI->getOperand(2).isImm() ||
+        VarMI->getOperand(2).getImm() != SPIRV::StorageClass::Input)
+      continue;
+
+    const MachineRegisterInfo &MRI = VarMI->getMF()->getRegInfo();
+    if (!VarMI->getOperand(1).isReg())
+      continue;
+
+    MachineInstr *TypeInst = MRI.getVRegDef(VarMI->getOperand(1).getReg());
+
+    // 2. Unwrap Pointer
+    if (TypeInst && TypeInst->getOpcode() == SPIRV::OpTypePointer &&
+        TypeInst->getNumOperands() >= 3) {
+      if (TypeInst->getOperand(2).isReg())
+        TypeInst = MRI.getVRegDef(TypeInst->getOperand(2).getReg());
+    }
+
+    // 3. Unwrap Arrays, RuntimeArrays, and Vectors
+    while (TypeInst && (TypeInst->getOpcode() == SPIRV::OpTypeArray ||
+                        TypeInst->getOpcode() == SPIRV::OpTypeRuntimeArray ||
+                        TypeInst->getOpcode() == SPIRV::OpTypeVector)) {
+      if (TypeInst->getNumOperands() < 2 || !TypeInst->getOperand(1).isReg())
+        break;
+      TypeInst = MRI.getVRegDef(TypeInst->getOperand(1).getReg());
+    }
+
+    if (!TypeInst)
+      continue;
+
+    // 4. Check base types
+    bool IsInt = (TypeInst->getOpcode() == SPIRV::OpTypeInt);
+    bool IsDouble =
+        (TypeInst->getOpcode() == SPIRV::OpTypeFloat &&
+         TypeInst->getNumOperands() >= 2 && TypeInst->getOperand(1).isImm() &&
+         TypeInst->getOperand(1).getImm() == 64);
+
+    // 5. Apply decoration right before the variable definition
+    if (IsInt || IsDouble) {
+      MachineInstr *NonConstMI = const_cast<MachineInstr *>(VarMI);
+      buildOpDecorate(VarMI->getOperand(0).getReg(), *NonConstMI, TII,
+                      SPIRV::Decoration::Flat, {});
+    }
+  }
+}
+
 // Walk all functions and add decorations related to MI flags.
 static void addDecorations(const Module &M, const SPIRVInstrInfo &TII,
                            MachineModuleInfo *MMI, const SPIRVSubtarget &ST,
@@ -2964,6 +3020,9 @@ bool SPIRVModuleAnalysis::runOnModule(Module &M) {
 
   // Number rest of registers from N+1 onwards.
   numberRegistersGlobally(M);
+
+  // Apply our custom Flat decorations to global variables
+  applyFlatDecorations(MAI, *TII, *ST);
 
   // Collect OpName, OpEntryPoint, OpDecorate etc, process other instructions.
   processOtherInstrs(M);
