@@ -4035,6 +4035,12 @@ TEST_F(TokenAnnotatorTest, BraceKind) {
   Tokens = annotate("&(type){v}");
   ASSERT_EQ(Tokens.size(), 8u) << Tokens;
   EXPECT_BRACE_KIND(Tokens[4], BK_BracedInit);
+
+  Tokens = annotate("a = {x * x, x * x};");
+  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
+  EXPECT_BRACE_KIND(Tokens[2], BK_BracedInit);
+  EXPECT_TOKEN(Tokens[4], tok::star, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[8], tok::star, TT_BinaryOperator);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsElaboratedTypeSpecifier) {
