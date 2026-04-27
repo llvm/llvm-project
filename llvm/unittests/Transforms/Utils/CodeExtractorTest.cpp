@@ -178,8 +178,8 @@ TEST(CodeExtractor, InputOutputReturnMonitoring) {
   CodeExtractor CE(Candidates, /* DT */ nullptr, /* AggregateArgs */ false,
                    /* BFI */ nullptr, /* BPI */ nullptr, /* AC */ nullptr,
                    /* AllowVarargs */ false, /* AllowAlloca */ false,
-                   /* AllocaBlock */ nullptr, /* Suffix */ "",
-                   /* ArgsInZeroAddressSpace */ false,
+                   /* AllocaBlock */ nullptr, /* DeallocationBlock */ nullptr,
+                   /* Suffix */ "", /* ArgsInZeroAddressSpace */ false,
                    /* VoidReturnWithSingleOutput */ false);
   EXPECT_TRUE(CE.isEligible());
 
@@ -779,7 +779,8 @@ TEST(CodeExtractor, OpenMPAggregateArgs) {
                    /* AssumptionCache */ nullptr,
                    /* AllowVarArgs */ true,
                    /* AllowAlloca */ true,
-                   /* AllocaBlock*/ &Func->getEntryBlock(),
+                   /* AllocationBlock*/ &Func->getEntryBlock(),
+                   /* DeallocationBlock */ nullptr,
                    /* Suffix */ ".outlined",
                    /* ArgsInZeroAddressSpace */ true);
 
