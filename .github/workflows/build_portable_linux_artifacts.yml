@@ -100,17 +100,6 @@ jobs:
           git submodule status
           git submodule
 
-      - name: Temp - Pin rocm-libraries submodule checkout for nightly 
-        if: ${{ github.event_name != 'pull_request' && inputs.test_type == 'full' }}
-        run: |
-          git config --global --add safe.directory "$PWD"
-          git update-index --cacheinfo 160000,080aa34e798c4b33803036aca6c66aae666a76dd,rocm-libraries
-          git config --global user.email "z1-cciauto@amd.com"
-          git config --global user.name "Z1 cciauto"
-          git commit -m "Pin rocm-libraries to 080aa34e798c4b33803036aca6c66aae666a76dd"
-          git submodule status rocm-libraries || true
-          
-
       - name: Download LLVM, SPIRV and HIPIFY PR's stored in file
         if: ${{ github.event_name == 'workflow_dispatch' }}
         continue-on-error: true 
