@@ -307,7 +307,6 @@ Changes to Sanitizers
 ---------------------
 
 * Add a random delay into ThreadSanitizer to help find rare thread interleavings.
-* Support running RealtimeSanitizer with UndefinedBehaviorSanitizer
 
 Other Changes
 -------------
