@@ -18,10 +18,10 @@
 ; ERROR: no-inline-glue feature is only supported on AIX
 
 @a = dso_local global i32 55, align 4
-@d = dso_local local_unnamed_addr global double 3.141590e+00, align 8
-@fp = dso_local local_unnamed_addr global ptr null, align 8
+@d = dso_local global double 3.141590e+00, align 8
+@fp = dso_local global ptr null, align 8
 
-define i32 @caller1(ptr noundef readonly captures(none) %fp) local_unnamed_addr {
+define i32 @caller1(ptr noundef readonly captures(none) %fp) {
 entry:
   %call = tail call i32 %fp(i32 signext 1, i32 signext 2, i32 signext 3)
   ret i32 %call
@@ -50,7 +50,7 @@ entry:
 ; MIR64:   BL8_RESTORE &"._ptrgl[PR]", csr_ppc64, implicit-def dead $lr8, implicit-def dead $x2, implicit $rm, implicit $x1, implicit $x11, implicit $x3, implicit $x4, implicit $x5, implicit $x2, implicit-def $r1, implicit-def $x3
 ; MIR64:   ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
 
-define dso_local zeroext i1 @caller2() local_unnamed_addr {
+define dso_local zeroext i1 @caller2() {
 entry:
   %0 = load ptr, ptr @fp
   %1 = load i32, ptr @a
