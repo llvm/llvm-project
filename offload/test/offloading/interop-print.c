@@ -8,8 +8,6 @@
 // RUN:   %fcheck-spirv64-intel -check-prefixes=INTEL
 
 // REQUIRES: gpu
-// XFAIL: nvptx64-nvidia-cuda
-// XFAIL: nvptx64-nvidia-cuda-LTO
 
 #include <omp.h>
 #include <stdio.h>
