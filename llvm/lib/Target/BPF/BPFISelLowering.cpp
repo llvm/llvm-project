@@ -126,9 +126,9 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SMUL_LOHI, VT, Expand);
     setOperationAction(ISD::ROTR, VT, Expand);
     setOperationAction(ISD::ROTL, VT, Expand);
-    setOperationAction(ISD::SHL_PARTS, VT, Expand);
-    setOperationAction(ISD::SRL_PARTS, VT, Expand);
-    setOperationAction(ISD::SRA_PARTS, VT, Expand);
+    setOperationAction(ISD::SHL_PARTS, VT, Custom);
+    setOperationAction(ISD::SRL_PARTS, VT, Custom);
+    setOperationAction(ISD::SRA_PARTS, VT, Custom);
     setOperationAction(ISD::CTPOP, VT, Expand);
     setOperationAction(ISD::CTTZ, VT, Expand);
     setOperationAction(ISD::CTLZ, VT, Expand);
@@ -363,6 +363,10 @@ SDValue BPFTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::SDIV:
   case ISD::SREM:
     return LowerSDIVSREM(Op, DAG);
+  case ISD::SHL_PARTS:
+  case ISD::SRL_PARTS:
+  case ISD::SRA_PARTS:
+    return LowerShiftParts(Op, DAG);
   case ISD::DYNAMIC_STACKALLOC:
     return LowerDYNAMIC_STACKALLOC(Op, DAG);
   case ISD::ATOMIC_LOAD:
@@ -448,9 +452,6 @@ SDValue BPFTargetLowering::LowerFormalArguments(
     fail(DL, DAG, "stack arguments are not supported");
   if (IsVarArg)
     fail(DL, DAG, "variadic functions are not supported");
-  if (MF.getFunction().hasStructRetAttr())
-    fail(DL, DAG, "aggregate returns are not supported");
-
   return Chain;
 }
 
@@ -565,12 +566,14 @@ SDValue BPFTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     Callee = DAG.getTargetGlobalAddress(G->getGlobal(), CLI.DL, PtrVT,
                                         G->getOffset(), 0);
   } else if (ExternalSymbolSDNode *E = dyn_cast<ExternalSymbolSDNode>(Callee)) {
-    if (StringRef(E->getSymbol()) != BPF_TRAP) {
-      Callee = DAG.getTargetExternalSymbol(E->getSymbol(), PtrVT, 0);
-      fail(CLI.DL, DAG,
-           Twine("A call to built-in function '" + StringRef(E->getSymbol()) +
-                 "' is not supported."));
-    }
+    Callee = DAG.getTargetExternalSymbol(E->getSymbol(), PtrVT, 0);
+    StringRef Sym = E->getSymbol();
+    if (Sym != BPF_TRAP && Sym != "__multi3" && Sym != "__divti3" &&
+        Sym != "__modti3" && Sym != "__udivti3" && Sym != "__umodti3" &&
+        Sym != "memcpy" && Sym != "memset" && Sym != "memmove")
+      fail(
+          CLI.DL, DAG,
+          Twine("A call to built-in function '" + Sym + "' is not supported."));
   }
 
   // Returns a chain & a flag for retval copy to use.
@@ -633,11 +636,6 @@ BPFTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   // CCState - Info about the registers and stack slot.
   CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, *DAG.getContext());
 
-  if (MF.getFunction().getReturnType()->isAggregateType()) {
-    fail(DL, DAG, "aggregate returns are not supported");
-    return DAG.getNode(Opc, DL, MVT::Other, Chain);
-  }
-
   // Analize return values.
   CCInfo.AnalyzeReturn(Outs, getHasAlu32() ? RetCC_BPF32 : RetCC_BPF64);
 
@@ -677,13 +675,6 @@ SDValue BPFTargetLowering::LowerCallResult(
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, *DAG.getContext());
 
-  if (Ins.size() > 1) {
-    fail(DL, DAG, "only small returns supported");
-    for (auto &In : Ins)
-      InVals.push_back(DAG.getConstant(0, DL, In.VT));
-    return DAG.getCopyFromReg(Chain, DL, 1, Ins[0].VT, InGlue).getValue(1);
-  }
-
   CCInfo.AnalyzeCallResult(Ins, getHasAlu32() ? RetCC_BPF32 : RetCC_BPF64);
 
   // Copy all of the result registers out of their specified physreg.
@@ -716,6 +707,13 @@ SDValue BPFTargetLowering::LowerSDIVSREM(SDValue Op, SelectionDAG &DAG) const {
   fail(DL, DAG,
        "unsupported signed division, please convert to unsigned div/mod.");
   return DAG.getUNDEF(Op->getValueType(0));
+}
+
+SDValue BPFTargetLowering::LowerShiftParts(SDValue Op,
+                                           SelectionDAG &DAG) const {
+  SDValue Lo, Hi;
+  expandShiftParts(Op.getNode(), Lo, Hi, DAG);
+  return DAG.getMergeValues({Lo, Hi}, SDLoc(Op));
 }
 
 SDValue BPFTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
@@ -1195,4 +1193,13 @@ bool BPFTargetLowering::isLegalAddressingMode(const DataLayout &DL,
   }
 
   return true;
+}
+
+bool BPFTargetLowering::CanLowerReturn(
+    CallingConv::ID CallConv, MachineFunction &MF, bool IsVarArg,
+    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
+    const Type *RetTy) const {
+  SmallVector<CCValAssign, 16> RVLocs;
+  CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, Context);
+  return CCInfo.CheckReturn(Outs, getHasAlu32() ? RetCC_BPF32 : RetCC_BPF64);
 }

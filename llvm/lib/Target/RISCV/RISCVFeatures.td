@@ -693,9 +693,6 @@ def HasStdExtZvabd : Predicate<"Subtarget->hasStdExtZvabd()">,
 def FeatureStdExtZvfbfa
     : RISCVExperimentalExtension<0, 1, "Additional BF16 vector compute support",
                                  [FeatureStdExtZve32f, FeatureStdExtZfbfmin]>;
-def HasStdExtZvfbfa : Predicate<"Subtarget->hasStdExtZvfbfa()">,
-                      AssemblerPredicate<(all_of FeatureStdExtZvfbfa),
-                          "'Zvfbfa' (Additional BF16 vector compute support)">;
 
 def FeatureStdExtZvfbfmin
     : RISCVExtension<1, 0, "Vector BF16 Converts", [FeatureStdExtZve32f]>;
@@ -1750,6 +1747,13 @@ def HasXAIFET : Predicate<"Subtarget->hasXAIFET()">,
                           AssemblerPredicate<(all_of FeatureVendorXAIFET),
                           "'XAIFET' (AI Foundry ET Extension)">;
 
+def FeatureVendorXCheriot
+    : RISCVExtension<1, 0, "CHERIoT extension",
+    [FeatureStdExtZca, FeatureStdExtE, FeatureStdExtM]>;
+def HasCheriot
+    : Predicate<"Subtarget->hasVendorXCheriot()">,
+      AssemblerPredicate<(all_of FeatureVendorXCheriot), "'XCheriot' (CHERIoT Extension)">;
+
 //===----------------------------------------------------------------------===//
 // LLVM specific features and extensions
 //===----------------------------------------------------------------------===//
@@ -1787,7 +1791,7 @@ def RV64 : HwMode<[IsRV64]>;
 
 def FeatureRelax
     : SubtargetFeature<"relax", "EnableLinkerRelax", "true",
-                       "Enable Linker relaxation.">;
+                       "Enable Linker relaxation">;
 
 def FeatureExactAssembly
     : SubtargetFeature<"exact-asm", "EnableExactAssembly", "true",
@@ -1799,12 +1803,12 @@ foreach i = {1-31} in
                        "true", "Reserve X"#i>;
 
 def FeatureSaveRestore : SubtargetFeature<"save-restore", "EnableSaveRestore",
-                                          "true", "Enable save/restore.">;
+                                          "true", "Enable save/restore">;
 
 def FeatureNoTrailingSeqCstFence : SubtargetFeature<"no-trailing-seq-cst-fence",
                                           "EnableTrailingSeqCstFence",
                                           "false",
-                                          "Disable trailing fence for seq-cst store.">;
+                                          "Disable trailing fence for seq-cst store">;
 
 def FeatureUnalignedScalarMem
    : SubtargetFeature<"unaligned-scalar-mem", "EnableUnalignedScalarMem",
@@ -1944,7 +1948,7 @@ def TuneDLenFactor2
 def TuneNoDefaultUnroll
     : RISCVTuneFeature<"no-default-unroll", "no-default-unroll",
                        "enable-default-unroll", "EnableDefaultUnroll", "false",
-                       "Disable default unroll preference.">;
+                       "Disable default unroll preference">;
 
 // Many Microarchitectures are able to fuse a branch over a single instruction
 // with the branched-over instruction. We call this fusion "short forward

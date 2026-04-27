@@ -834,8 +834,7 @@ ErrorOr<StringRef> DataReader::parseString(char EndChar, bool EndNl) {
   size_t StringEnd = 0;
   do {
     StringEnd = ParsingBuf.find_first_of(EndChars, StringEnd);
-    if (StringEnd == StringRef::npos ||
-        (StringEnd == 0 && ParsingBuf[StringEnd] != '\\')) {
+    if (StringEnd == StringRef::npos) {
       reportError("malformed field");
       return make_error_code(llvm::errc::io_error);
     }
@@ -884,9 +883,14 @@ ErrorOr<uint64_t> DataReader::parseHexField(char EndChar, bool EndNl) {
   StringRef NumStr = NumStrRes.get();
   uint64_t Num;
   if (NumStr.getAsInteger(16, Num)) {
-    reportError("expected hexadecimal number");
-    Diag << "Found: " << NumStr << "\n";
-    return make_error_code(llvm::errc::io_error);
+    // Accept signed input (e.g. -1) to support sentinel values like BR_ONLY.
+    int64_t SignedNum;
+    if (NumStr.getAsInteger(16, SignedNum)) {
+      reportError("expected hexadecimal number");
+      Diag << "Found: " << NumStr << "\n";
+      return make_error_code(llvm::errc::io_error);
+    }
+    return static_cast<uint64_t>(SignedNum);
   }
   return Num;
 }

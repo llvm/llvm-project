@@ -326,8 +326,6 @@ private:
   /// Do automatic reset in destructor
   bool AutoReset;
 
-  MCTargetOptions const *TargetOptions;
-
   bool HadError = false;
 
   void reportCommon(SMLoc Loc,
@@ -378,11 +376,10 @@ private:
   DenseSet<StringRef> ELFSeenGenericMergeableSections;
 
 public:
-  LLVM_ABI explicit MCContext(const Triple &TheTriple, const MCAsmInfo *MAI,
+  LLVM_ABI explicit MCContext(const Triple &TheTriple, const MCAsmInfo &MAI,
                               const MCRegisterInfo *MRI,
                               const MCSubtargetInfo *MSTI,
                               const SourceMgr *Mgr = nullptr,
-                              MCTargetOptions const *TargetOpts = nullptr,
                               bool DoAutoReset = true,
                               StringRef Swift5ReflSegmentName = {});
   MCContext(const MCContext &) = delete;
@@ -417,7 +414,7 @@ public:
 
   const MCSubtargetInfo *getSubtargetInfo() const { return MSTI; }
 
-  const MCTargetOptions *getTargetOptions() const { return TargetOptions; }
+  LLVM_ABI const MCTargetOptions &getTargetOptions() const;
 
   LLVM_ABI CodeViewContext &getCVContext();
 

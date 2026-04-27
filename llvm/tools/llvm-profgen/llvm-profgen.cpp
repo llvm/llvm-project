@@ -32,7 +32,9 @@ cl::OptionCategory ProfGenCategory("ProfGen Options");
 static cl::opt<std::string> PerfScriptFilename(
     "perfscript", cl::value_desc("perfscript"),
     cl::desc("Path of perf-script trace created by Linux perf tool with "
-             "`script` command(the raw perf.data should be profiled with -b)"),
+             "`script` command(the raw perf.data should be profiled with -b). "
+             "Cannot be used with --perfdata, --unsymbolized-profile, or "
+             "--llvm-sample-profile."),
     cl::cat(ProfGenCategory));
 static cl::alias PSA("ps", cl::desc("Alias for --perfscript"),
                      cl::aliasopt(PerfScriptFilename));
@@ -40,7 +42,8 @@ static cl::alias PSA("ps", cl::desc("Alias for --perfscript"),
 static cl::opt<std::string> PerfDataFilename(
     "perfdata", cl::value_desc("perfdata"),
     cl::desc("Path of raw perf data created by Linux perf tool (it should be "
-             "profiled with -b)"),
+             "profiled with -b). Cannot be used with --perfscript, "
+             "--unsymbolized-profile, or --llvm-sample-profile."),
     cl::cat(ProfGenCategory));
 static cl::alias PDA("pd", cl::desc("Alias for --perfdata"),
                      cl::aliasopt(PerfDataFilename));
@@ -48,14 +51,18 @@ static cl::alias PDA("pd", cl::desc("Alias for --perfdata"),
 static cl::opt<std::string> UnsymbolizedProfFilename(
     "unsymbolized-profile", cl::value_desc("unsymbolized profile"),
     cl::desc("Path of the unsymbolized profile created by "
-             "`llvm-profgen` with `--skip-symbolization`"),
+             "`llvm-profgen` with `--skip-symbolization`. "
+             "Cannot be used with --perfscript, --perfdata, or "
+             "--llvm-sample-profile."),
     cl::cat(ProfGenCategory));
 static cl::alias UPA("up", cl::desc("Alias for --unsymbolized-profile"),
                      cl::aliasopt(UnsymbolizedProfFilename));
 
 static cl::opt<std::string> SampleProfFilename(
     "llvm-sample-profile", cl::value_desc("llvm sample profile"),
-    cl::desc("Path of the LLVM sample profile"), cl::cat(ProfGenCategory));
+    cl::desc("Path of the LLVM sample profile. Cannot be used with"
+             "--perfscript, --perfdata, or --unsymbolized-profile"),
+    cl::cat(ProfGenCategory));
 
 static cl::opt<std::string>
     BinaryPath("binary", cl::value_desc("binary"), cl::Required,
@@ -168,6 +175,8 @@ int main(int argc, const char *argv[]) {
     auto FS = vfs::getRealFileSystem();
     auto ReaderOrErr =
         SampleProfileReader::create(SampleProfFilename, Context, *FS);
+    if (std::error_code EC = ReaderOrErr.getError())
+      exitWithError(EC, SampleProfFilename);
     std::unique_ptr<sampleprof::SampleProfileReader> Reader =
         std::move(ReaderOrErr.get());
     Reader->read();

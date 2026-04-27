@@ -213,7 +213,7 @@ enum {
 };
 #endif
 
-static const FileSpecList &GetDefaultSafeAutoLoadPaths() {
+const FileSpecList &Debugger::GetDefaultSafeAutoLoadPaths() {
   static const FileSpecList sSafePaths = [] {
     // FIXME: in c++20 this could be a std::array (with CTAD deduced size)
     // and we could statically assert that all members are non-empty.
@@ -328,7 +328,8 @@ Status Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
       std::lock_guard<std::mutex> guard(m_statusline_mutex);
       if (StatuslineSupported()) {
         m_statusline.emplace(*this);
-        m_statusline->Enable(GetSelectedExecutionContextRef());
+        m_statusline->Enable(
+            GetSelectedExecutionContextRef(/*adopt_dummy_target=*/true));
       } else {
         m_statusline.reset();
       }
@@ -1270,7 +1271,8 @@ void Debugger::RestoreInputTerminalState() {
   {
     std::lock_guard<std::mutex> guard(m_statusline_mutex);
     if (m_statusline)
-      m_statusline->Enable(GetSelectedExecutionContext());
+      m_statusline->Enable(
+          GetSelectedExecutionContext(/*adopt_dummy_target=*/true));
   }
 }
 
@@ -1284,17 +1286,31 @@ void Debugger::RedrawStatusline(
   m_statusline->Redraw(exe_ctx_ref);
 }
 
-ExecutionContext Debugger::GetSelectedExecutionContext() {
-  bool adopt_selected = true;
-  ExecutionContextRef exe_ctx_ref(GetSelectedTarget().get(), adopt_selected);
-  return ExecutionContext(exe_ctx_ref);
+void Debugger::FlushStatusLine() {
+  std::lock_guard<std::mutex> guard(m_statusline_mutex);
+
+  if (!m_statusline)
+    return;
+
+  m_statusline->ClearExecutionContext();
 }
 
-ExecutionContextRef Debugger::GetSelectedExecutionContextRef() {
+ExecutionContext
+Debugger::GetSelectedExecutionContext(bool adopt_dummy_target) {
+  return ExecutionContext(GetSelectedExecutionContextRef(adopt_dummy_target));
+}
+
+ExecutionContextRef
+Debugger::GetSelectedExecutionContextRef(bool adopt_dummy_target) {
   if (TargetSP selected_target_sp = GetSelectedTarget())
     return ExecutionContextRef(selected_target_sp.get(),
                                /*adopt_selected=*/true);
-  return ExecutionContextRef(m_dummy_target_sp.get(), /*adopt_selected=*/false);
+
+  if (adopt_dummy_target)
+    return ExecutionContextRef(m_dummy_target_sp.get(),
+                               /*adopt_selected=*/false);
+
+  return ExecutionContextRef();
 }
 
 void Debugger::DispatchInputInterrupt() {
@@ -2189,9 +2205,10 @@ static bool RequiresFollowChildWorkaround(const Process &process) {
 
 lldb::thread_result_t Debugger::DefaultEventHandler() {
   ListenerSP listener_sp(GetListener());
-  ConstString broadcaster_class_target(Target::GetStaticBroadcasterClass());
-  ConstString broadcaster_class_process(Process::GetStaticBroadcasterClass());
-  ConstString broadcaster_class_thread(Thread::GetStaticBroadcasterClass());
+  llvm::StringRef broadcaster_class_target(Target::GetStaticBroadcasterClass());
+  llvm::StringRef broadcaster_class_process(
+      Process::GetStaticBroadcasterClass());
+  llvm::StringRef broadcaster_class_thread(Thread::GetStaticBroadcasterClass());
   BroadcastEventSpec target_event_spec(broadcaster_class_target,
                                        Target::eBroadcastBitBreakpointChanged);
 
@@ -2230,7 +2247,8 @@ lldb::thread_result_t Debugger::DefaultEventHandler() {
     std::lock_guard<std::mutex> guard(m_statusline_mutex);
     if (!m_statusline) {
       m_statusline.emplace(*this);
-      m_statusline->Enable(GetSelectedExecutionContextRef());
+      m_statusline->Enable(
+          GetSelectedExecutionContextRef(/*adopt_dummy_target=*/true));
     }
   }
 
@@ -2243,12 +2261,21 @@ lldb::thread_result_t Debugger::DefaultEventHandler() {
         Broadcaster *broadcaster = event_sp->GetBroadcaster();
         if (broadcaster) {
           uint32_t event_type = event_sp->GetType();
-          ConstString broadcaster_class(broadcaster->GetBroadcasterClass());
+          llvm::StringRef broadcaster_class(broadcaster->GetBroadcasterClass());
           if (broadcaster_class == broadcaster_class_process) {
-            if (ProcessSP process_sp = HandleProcessEvent(event_sp))
+            if (ProcessSP process_sp = HandleProcessEvent(event_sp)) {
+              // Don't pass adopt_selected = true if this is a stop for an
+              // auto-continue event (e.g. an auto-continue breakpoint).  We
+              // would be fetching stale state, since the process resumed since
+              // this event, and we'd needlessly interrupt the target to do so.
+              const bool adopt_selected =
+                  process_sp->GetPrivateState() == eStateStopped &&
+                  !Process::ProcessEventData::GetRestartedFromEvent(
+                      event_sp.get());
               if (!RequiresFollowChildWorkaround(*process_sp))
-                exe_ctx_ref = ExecutionContextRef(process_sp.get(),
-                                                  /*adopt_selected=*/true);
+                exe_ctx_ref =
+                    ExecutionContextRef(process_sp.get(), adopt_selected);
+            }
           } else if (broadcaster_class == broadcaster_class_target) {
             if (Breakpoint::BreakpointEventData::GetEventDataFromEvent(
                     event_sp.get())) {
@@ -2316,7 +2343,8 @@ bool Debugger::StartEventHandlerThread() {
     // function. We do this by listening to events for the
     // eBroadcastBitEventThreadIsListening from the m_sync_broadcaster
     ConstString full_name("lldb.debugger.event-handler");
-    ListenerSP listener_sp(Listener::MakeListener(full_name.AsCString()));
+    ListenerSP listener_sp(
+        Listener::MakeListener(full_name.AsCString(nullptr)));
     listener_sp->StartListeningForEvents(&m_sync_broadcaster,
                                          eBroadcastBitEventThreadIsListening);
 
@@ -2589,16 +2617,4 @@ StructuredData::DictionarySP Debugger::GetBuildConfiguration() {
       "A boolean value that indicates if lua support is enabled in LLDB");
   AddLLVMTargets(*config_up);
   return config_up;
-}
-
-FileSpecList Debugger::GetSafeAutoLoadPaths() {
-  FileSpecList fspecs = GetDefaultSafeAutoLoadPaths();
-
-#ifndef NDEBUG
-  for (const auto &fspec :
-       TestingProperties::GetGlobalTestingProperties().GetSafeAutoLoadPaths())
-    fspecs.Append(fspec);
-#endif
-
-  return fspecs;
 }

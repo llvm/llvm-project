@@ -392,3 +392,112 @@ define {<8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat>} @vector_deinterl
   ret {<8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat>} %retval
 }
 
+define {<2 x double>, <2 x double>, <2 x double>} @vector_deinterleave3_v6f64(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
+; CHECK-LABEL: vector_deinterleave3_v6f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    stp q1, q2, [sp, #16]
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    str q0, [sp]
+; CHECK-NEXT:    ld3 { v0.2d, v1.2d, v2.2d }, [x8]
+; CHECK-NEXT:    add sp, sp, #48
+; CHECK-NEXT:    ret
+  %ins0 = call <6 x double> @llvm.vector.insert.v6f64.v2f64(<6 x double> poison, <2 x double> %a, i64 0)
+  %ins1 = call <6 x double> @llvm.vector.insert.v6f64.v2f64(<6 x double> %ins0, <2 x double> %b, i64 2)
+  %ins2 = call <6 x double> @llvm.vector.insert.v6f64.v2f64(<6 x double> %ins1, <2 x double> %c, i64 4)
+  %retval = call {<2 x double>, <2 x double>, <2 x double>} @llvm.vector.deinterleave3.v6f64(<6 x double> %ins2)
+  ret {<2 x double>, <2 x double>, <2 x double>} %retval
+}
+
+define {<4 x float>, <4 x float>, <4 x float>} @vector_deinterleave3_v12f32(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
+; CHECK-LABEL: vector_deinterleave3_v12f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    stp q1, q2, [sp, #16]
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    str q0, [sp]
+; CHECK-NEXT:    ld3 { v0.4s, v1.4s, v2.4s }, [x8]
+; CHECK-NEXT:    add sp, sp, #48
+; CHECK-NEXT:    ret
+  %ins0 = call <12 x float> @llvm.vector.insert.v12f32.v4f32(<12 x float> poison, <4 x float> %a, i64 0)
+  %ins1 = call <12 x float> @llvm.vector.insert.v12f32.v4f32(<12 x float> %ins0, <4 x float> %b, i64 4)
+  %ins2 = call <12 x float> @llvm.vector.insert.v12f32.v4f32(<12 x float> %ins1, <4 x float> %c, i64 8)
+  %retval = call {<4 x float>, <4 x float>, <4 x float>} @llvm.vector.deinterleave3.v12f32(<12 x float> %ins2)
+  ret {<4 x float>, <4 x float>, <4 x float>} %retval
+}
+
+define {<8 x half>, <8 x half>, <8 x half>} @vector_deinterleave3_v24f16(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
+; CHECK-LABEL: vector_deinterleave3_v24f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    stp q1, q2, [sp, #16]
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    str q0, [sp]
+; CHECK-NEXT:    ld3 { v0.8h, v1.8h, v2.8h }, [x8]
+; CHECK-NEXT:    add sp, sp, #48
+; CHECK-NEXT:    ret
+  %ins0 = call <24 x half> @llvm.vector.insert.v24f16.v8f16(<24 x half> poison, <8 x half> %a, i64 0)
+  %ins1 = call <24 x half> @llvm.vector.insert.v24f16.v8f16(<24 x half> %ins0, <8 x half> %b, i64 8)
+  %ins2 = call <24 x half> @llvm.vector.insert.v24f16.v8f16(<24 x half> %ins1, <8 x half> %c, i64 16)
+  %retval = call {<8 x half>, <8 x half>, <8 x half>} @llvm.vector.deinterleave3.v24f16(<24 x half> %ins2)
+  ret {<8 x half>, <8 x half>, <8 x half>} %retval
+}
+
+define {<16 x i8>, <16 x i8>, <16 x i8>} @vector_deinterleave3_v48i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c) {
+; CHECK-LABEL: vector_deinterleave3_v48i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    stp q1, q2, [sp, #16]
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    str q0, [sp]
+; CHECK-NEXT:    ld3 { v0.16b, v1.16b, v2.16b }, [x8]
+; CHECK-NEXT:    add sp, sp, #48
+; CHECK-NEXT:    ret
+  %ins0 = call <48 x i8> @llvm.vector.insert.v48i8.v16i8(<48 x i8> poison, <16 x i8> %a, i64 0)
+  %ins1 = call <48 x i8> @llvm.vector.insert.v48i8.v16i8(<48 x i8> %ins0, <16 x i8> %b, i64 16)
+  %ins2 = call <48 x i8> @llvm.vector.insert.v48i8.v16i8(<48 x i8> %ins1, <16 x i8> %c, i64 32)
+  %retval = call {<16 x i8>, <16 x i8>, <16 x i8>} @llvm.vector.deinterleave3.v48i8(<48 x i8> %ins2)
+  ret {<16 x i8>, <16 x i8>, <16 x i8>} %retval
+}
+
+
+define {<4 x half>, <4 x half>, <4 x half>} @vector_deinterleave3_v12f16(<4 x half> %a, <4 x half> %b, <4 x half> %c) {
+; CHECK-LABEL: vector_deinterleave3_v12f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #32
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    stp d1, d2, [sp, #16]
+; CHECK-NEXT:    add x8, sp, #8
+; CHECK-NEXT:    str d0, [sp, #8]
+; CHECK-NEXT:    ld3 { v0.4h, v1.4h, v2.4h }, [x8]
+; CHECK-NEXT:    add sp, sp, #32
+; CHECK-NEXT:    ret
+  %ins0 = call <12 x half> @llvm.vector.insert.v12f16.v4f16(<12 x half> poison, <4 x half> %a, i64 0)
+  %ins1 = call <12 x half> @llvm.vector.insert.v12f16.v4f16(<12 x half> %ins0, <4 x half> %b, i64 4)
+  %ins2 = call <12 x half> @llvm.vector.insert.v12f16.v4f16(<12 x half> %ins1, <4 x half> %c, i64 8)
+  %retval = call {<4 x half>, <4 x half>, <4 x half>} @llvm.vector.deinterleave3.v12f16(<12 x half> %ins2)
+  ret {<4 x half>, <4 x half>, <4 x half>} %retval
+}
+
+
+define {<8 x i8>, <8 x i8>, <8 x i8>} @vector_deinterleave3_v24i8(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c) {
+; CHECK-LABEL: vector_deinterleave3_v24i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #32
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    stp d1, d2, [sp, #16]
+; CHECK-NEXT:    add x8, sp, #8
+; CHECK-NEXT:    str d0, [sp, #8]
+; CHECK-NEXT:    ld3 { v0.8b, v1.8b, v2.8b }, [x8]
+; CHECK-NEXT:    add sp, sp, #32
+; CHECK-NEXT:    ret
+  %ins0 = call <24 x i8> @llvm.vector.insert.v24i8.v8i8(<24 x i8> poison, <8 x i8> %a, i64 0)
+  %ins1 = call <24 x i8> @llvm.vector.insert.v24i8.v8i8(<24 x i8> %ins0, <8 x i8> %b, i64 8)
+  %ins2 = call <24 x i8> @llvm.vector.insert.v24i8.v8i8(<24 x i8> %ins1, <8 x i8> %c, i64 16)
+  %retval = call {<8 x i8>, <8 x i8>, <8 x i8>} @llvm.vector.deinterleave3.v24i8(<24 x i8> %ins2)
+  ret {<8 x i8>, <8 x i8>, <8 x i8>} %retval
+}

@@ -1166,7 +1166,7 @@ enum PredefinedTypeIDs {
 ///
 /// Type IDs for non-predefined types will start at
 /// NUM_PREDEF_TYPE_IDs.
-const unsigned NUM_PREDEF_TYPE_IDS = 515;
+const unsigned NUM_PREDEF_TYPE_IDS = 529;
 
 // Ensure we do not overrun the predefined types we reserved
 // in the enum PredefinedTypeIDs above.
@@ -1543,7 +1543,10 @@ enum DeclCode {
   // An OpenACCRoutineDecl record.
   DECL_OPENACC_ROUTINE,
 
-  DECL_LAST = DECL_OPENACC_ROUTINE
+  /// An ExplicitInstantiationDecl record.
+  DECL_EXPLICIT_INSTANTIATION,
+
+  DECL_LAST = DECL_EXPLICIT_INSTANTIATION
 };
 
 /// Record codes for each kind of statement or expression.
@@ -1965,6 +1968,7 @@ enum StmtCode {
   STMP_OMP_STRIPE_DIRECTIVE,
   STMT_OMP_UNROLL_DIRECTIVE,
   STMT_OMP_REVERSE_DIRECTIVE,
+  STMT_OMP_SPLIT_DIRECTIVE,
   STMT_OMP_INTERCHANGE_DIRECTIVE,
   STMT_OMP_FUSE_DIRECTIVE,
   STMT_OMP_FOR_DIRECTIVE,

@@ -446,13 +446,7 @@ TEST_P(TUSummaryTest, LinkageTableMissingId) {
         "id": 0,
         "name": {
           "usr": "c:@F@foo",
-          "suffix": "",
-          "namespace": [
-            {
-              "kind": "CompilationUnit",
-              "name": "test.cpp"
-            }
-          ]
+          "suffix": ""
         }
       }
     ],
@@ -480,13 +474,7 @@ TEST_P(TUSummaryTest, LinkageTableDuplicateId) {
         "id": 0,
         "name": {
           "usr": "c:@F@foo",
-          "suffix": "",
-          "namespace": [
-            {
-              "kind": "CompilationUnit",
-              "name": "test.cpp"
-            }
-          ]
+          "suffix": ""
         }
       }
     ],
@@ -580,176 +568,7 @@ TEST_P(TUSummaryTest, MissingName) {
 }
 
 // ============================================================================
-// JSONFormat::nestedBuildNamespaceFromJSON() Error Tests
-// ============================================================================
-
-TEST_P(TUSummaryTest, NamespaceElementNotObject) {
-  auto Result = readFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
-    "id_table": [
-      {
-        "id": 0,
-        "name": {
-          "usr": "c:@F@foo",
-          "suffix": "",
-          "namespace": ["invalid"]
-        }
-      }
-    ],
-    "linkage_table": [
-      {
-        "id": 0,
-        "linkage": { "type": "None" }
-      }
-    ],
-    "data": []
-  })");
-
-  EXPECT_THAT_ERROR(
-      std::move(Result),
-      FailedWithMessage(AllOf(
-          HasSubstr("reading TUSummary from file"),
-          HasSubstr("reading IdTable from field 'id_table'"),
-          HasSubstr("reading EntityIdTable entry from index '0'"),
-          HasSubstr("reading EntityName from field 'name'"),
-          HasSubstr("reading NestedBuildNamespace from field 'namespace'"),
-          HasSubstr("failed to read BuildNamespace from index '0'"),
-          HasSubstr("expected JSON object"))));
-}
-
-TEST_P(TUSummaryTest, NamespaceElementMissingKind) {
-  auto Result = readFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
-    "id_table": [
-      {
-        "id": 0,
-        "name": {
-          "usr": "c:@F@foo",
-          "suffix": "",
-          "namespace": [
-            {
-              "name": "test.cpp"
-            }
-          ]
-        }
-      }
-    ],
-    "linkage_table": [
-      {
-        "id": 0,
-        "linkage": { "type": "Internal" }
-      }
-    ],
-    "data": []
-  })");
-
-  EXPECT_THAT_ERROR(
-      std::move(Result),
-      FailedWithMessage(AllOf(
-          HasSubstr("reading TUSummary from file"),
-          HasSubstr("reading IdTable from field 'id_table'"),
-          HasSubstr("reading EntityIdTable entry from index '0'"),
-          HasSubstr("reading EntityName from field 'name'"),
-          HasSubstr("reading NestedBuildNamespace from field 'namespace'"),
-          HasSubstr("reading BuildNamespace from index '0'"),
-          HasSubstr("failed to read BuildNamespaceKind from field 'kind'"),
-          HasSubstr("expected JSON string"))));
-}
-
-TEST_P(TUSummaryTest, NamespaceElementInvalidKind) {
-  auto Result = readFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
-    "id_table": [
-      {
-        "id": 0,
-        "name": {
-          "usr": "c:@F@foo",
-          "suffix": "",
-          "namespace": [
-            {
-              "kind": "invalid_kind",
-              "name": "test.cpp"
-            }
-          ]
-        }
-      }
-    ],
-    "linkage_table": [
-      {
-        "id": 0,
-        "linkage": { "type": "External" }
-      }
-    ],
-    "data": []
-  })");
-
-  EXPECT_THAT_ERROR(
-      std::move(Result),
-      FailedWithMessage(AllOf(
-          HasSubstr("reading TUSummary from file"),
-          HasSubstr("reading IdTable from field 'id_table'"),
-          HasSubstr("reading EntityIdTable entry from index '0'"),
-          HasSubstr("reading EntityName from field 'name'"),
-          HasSubstr("reading NestedBuildNamespace from field 'namespace'"),
-          HasSubstr("reading BuildNamespace from index '0'"),
-          HasSubstr("reading BuildNamespaceKind from field 'kind'"),
-          HasSubstr("invalid BuildNamespaceKind value 'invalid_kind' for field "
-                    "'kind'"))));
-}
-
-TEST_P(TUSummaryTest, NamespaceElementMissingName) {
-  auto Result = readFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
-    "id_table": [
-      {
-        "id": 0,
-        "name": {
-          "usr": "c:@F@foo",
-          "suffix": "",
-          "namespace": [
-            {
-              "kind": "CompilationUnit"
-            }
-          ]
-        }
-      }
-    ],
-    "linkage_table": [
-      {
-        "id": 0,
-        "linkage": { "type": "None" }
-      }
-    ],
-    "data": []
-  })");
-
-  EXPECT_THAT_ERROR(
-      std::move(Result),
-      FailedWithMessage(AllOf(
-          HasSubstr("reading TUSummary from file"),
-          HasSubstr("reading IdTable from field 'id_table'"),
-          HasSubstr("reading EntityIdTable entry from index '0'"),
-          HasSubstr("reading EntityName from field 'name'"),
-          HasSubstr("reading NestedBuildNamespace from field 'namespace'"),
-          HasSubstr("reading BuildNamespace from index '0'"),
-          HasSubstr("failed to read BuildNamespaceName from field 'name'"),
-          HasSubstr("expected JSON string"))));
-}
-
-// ============================================================================
-// JSONFormat::entityNameFromJSON() Error Tests
+// JSONFormat::tuEntityNameFromJSON() Error Tests
 // ============================================================================
 
 TEST_P(TUSummaryTest, EntityNameMissingUSR) {
@@ -762,8 +581,7 @@ TEST_P(TUSummaryTest, EntityNameMissingUSR) {
       {
         "id": 0,
         "name": {
-          "suffix": "",
-          "namespace": []
+          "suffix": ""
         }
       }
     ],
@@ -796,8 +614,7 @@ TEST_P(TUSummaryTest, EntityNameMissingSuffix) {
       {
         "id": 0,
         "name": {
-          "usr": "c:@F@foo",
-          "namespace": []
+          "usr": "c:@F@foo"
         }
       }
     ],
@@ -820,44 +637,8 @@ TEST_P(TUSummaryTest, EntityNameMissingSuffix) {
                         HasSubstr("expected JSON string"))));
 }
 
-TEST_P(TUSummaryTest, EntityNameMissingNamespace) {
-  auto Result = readFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
-    "id_table": [
-      {
-        "id": 0,
-        "name": {
-          "usr": "c:@F@foo",
-          "suffix": ""
-        }
-      }
-    ],
-    "linkage_table": [
-      {
-        "id": 0,
-        "linkage": { "type": "None" }
-      }
-    ],
-    "data": []
-  })");
-
-  EXPECT_THAT_ERROR(
-      std::move(Result),
-      FailedWithMessage(AllOf(
-          HasSubstr("reading TUSummary from file"),
-          HasSubstr("reading IdTable from field 'id_table'"),
-          HasSubstr("reading EntityIdTable entry from index '0'"),
-          HasSubstr("reading EntityName from field 'name'"),
-          HasSubstr(
-              "failed to read NestedBuildNamespace from field 'namespace'"),
-          HasSubstr("expected JSON array"))));
-}
-
 // ============================================================================
-// JSONFormat::entityIdTableEntryFromJSON() Error Tests
+// JSONFormat::tuEntityIdTableEntryFromJSON() Error Tests
 // ============================================================================
 
 TEST_P(TUSummaryTest, IDTableEntryMissingID) {
@@ -870,8 +651,7 @@ TEST_P(TUSummaryTest, IDTableEntryMissingID) {
       {
         "name": {
           "usr": "c:@F@foo",
-          "suffix": "",
-          "namespace": []
+          "suffix": ""
         }
       }
     ],
@@ -930,8 +710,7 @@ TEST_P(TUSummaryTest, IDTableEntryIDNotUInt64) {
         "id": "not_a_number",
         "name": {
           "usr": "c:@F@foo",
-          "suffix": "",
-          "namespace": []
+          "suffix": ""
         }
       }
     ],
@@ -950,7 +729,7 @@ TEST_P(TUSummaryTest, IDTableEntryIDNotUInt64) {
 }
 
 // ============================================================================
-// JSONFormat::entityIdTableFromJSON() Error Tests
+// JSONFormat::tuEntityIdTableFromJSON() Error Tests
 // ============================================================================
 
 TEST_P(TUSummaryTest, IDTableNotArray) {
@@ -1003,26 +782,14 @@ TEST_P(TUSummaryTest, DuplicateEntity) {
         "id": 0,
         "name": {
           "usr": "c:@F@foo",
-          "suffix": "",
-          "namespace": [
-            {
-              "kind": "CompilationUnit",
-              "name": "test.cpp"
-            }
-          ]
+          "suffix": ""
         }
       },
       {
         "id": 1,
         "name": {
           "usr": "c:@F@foo",
-          "suffix": "",
-          "namespace": [
-            {
-              "kind": "CompilationUnit",
-              "name": "test.cpp"
-            }
-          ]
+          "suffix": ""
         }
       }
     ],
@@ -1618,8 +1385,7 @@ TEST_P(TUSummaryTest, DuplicateEntityIdInDataMap) {
         "id": 0,
         "name": {
           "usr": "c:@F@foo",
-          "suffix": "",
-          "namespace": []
+          "suffix": ""
         }
       }
     ],
@@ -1995,65 +1761,35 @@ TEST_P(TUSummaryTest, RoundTripWithTwoSummaryTypes) {
         "id": 3,
         "name": {
           "usr": "c:@F@qux",
-          "suffix": "",
-          "namespace": [
-            {
-              "kind": "CompilationUnit",
-              "name": "test.cpp"
-            }
-          ]
+          "suffix": ""
         }
       },
       {
         "id": 1,
         "name": {
           "usr": "c:@F@bar",
-          "suffix": "",
-          "namespace": [
-            {
-              "kind": "CompilationUnit",
-              "name": "test.cpp"
-            }
-          ]
+          "suffix": ""
         }
       },
       {
         "id": 4,
         "name": {
           "usr": "c:@F@quux",
-          "suffix": "",
-          "namespace": [
-            {
-              "kind": "CompilationUnit",
-              "name": "test.cpp"
-            }
-          ]
+          "suffix": ""
         }
       },
       {
         "id": 0,
         "name": {
           "usr": "c:@F@foo",
-          "suffix": "",
-          "namespace": [
-            {
-              "kind": "CompilationUnit",
-              "name": "test.cpp"
-            }
-          ]
+          "suffix": ""
         }
       },
       {
         "id": 2,
         "name": {
           "usr": "c:@F@baz",
-          "suffix": "",
-          "namespace": [
-            {
-              "kind": "CompilationUnit",
-              "name": "test.cpp"
-            }
-          ]
+          "suffix": ""
         }
       }
     ],
@@ -2194,13 +1930,7 @@ TEST_P(TUSummaryTest, RoundTripLinkageTableWithNoneLinkage) {
         "id": 0,
         "name": {
           "usr": "c:@F@foo",
-          "suffix": "",
-          "namespace": [
-            {
-              "kind": "CompilationUnit",
-              "name": "test.cpp"
-            }
-          ]
+          "suffix": ""
         }
       }
     ],
@@ -2225,13 +1955,7 @@ TEST_P(TUSummaryTest, RoundTripLinkageTableWithInternalLinkage) {
         "id": 0,
         "name": {
           "usr": "c:@F@bar",
-          "suffix": "",
-          "namespace": [
-            {
-              "kind": "CompilationUnit",
-              "name": "test.cpp"
-            }
-          ]
+          "suffix": ""
         }
       }
     ],
@@ -2256,13 +1980,7 @@ TEST_P(TUSummaryTest, RoundTripLinkageTableWithExternalLinkage) {
         "id": 0,
         "name": {
           "usr": "c:@F@baz",
-          "suffix": "",
-          "namespace": [
-            {
-              "kind": "CompilationUnit",
-              "name": "test.cpp"
-            }
-          ]
+          "suffix": ""
         }
       }
     ],
@@ -2287,39 +2005,21 @@ TEST_P(TUSummaryTest, RoundTripLinkageTableWithMultipleEntries) {
         "id": 0,
         "name": {
           "usr": "c:@F@foo",
-          "suffix": "",
-          "namespace": [
-            {
-              "kind": "CompilationUnit",
-              "name": "test.cpp"
-            }
-          ]
+          "suffix": ""
         }
       },
       {
         "id": 1,
         "name": {
           "usr": "c:@F@bar",
-          "suffix": "",
-          "namespace": [
-            {
-              "kind": "CompilationUnit",
-              "name": "test.cpp"
-            }
-          ]
+          "suffix": ""
         }
       },
       {
         "id": 2,
         "name": {
           "usr": "c:@F@baz",
-          "suffix": "",
-          "namespace": [
-            {
-              "kind": "CompilationUnit",
-              "name": "test.cpp"
-            }
-          ]
+          "suffix": ""
         }
       }
     ],
