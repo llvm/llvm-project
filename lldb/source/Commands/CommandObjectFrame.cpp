@@ -440,9 +440,11 @@ may even involve JITing and running code in the target program.)");
   // is too shallow, hitting enter a few times will quickly expand the data.
   std::optional<std::string> GetRepeatCommand(Args &current_command_args,
                                               uint32_t index) override {
-    uint32_t new_depth = m_varobj_options.max_depth + 1;
     std::string cmd;
     llvm::raw_string_ostream os(cmd);
+
+    uint32_t new_depth = m_varobj_options.max_depth + 1;
+    bool has_depth_option = false;
     bool skip_next = false;
     for (const auto &entry : current_command_args) {
       if (skip_next) {
@@ -454,12 +456,18 @@ may even involve JITing and running code in the target program.)");
       if (arg == "--depth" || arg == "-D") {
         skip_next = true;
         os << " " << arg << " " << new_depth;
+        has_depth_option = true;
       } else if (arg.starts_with("-D")) {
         os << "-D" << new_depth;
+        has_depth_option = true;
       } else {
         os << " " << arg;
       }
     }
+
+    if (!has_depth_option)
+      os << " --depth " << new_depth;
+
     return cmd;
   }
 

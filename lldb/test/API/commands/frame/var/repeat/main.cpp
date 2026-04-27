@@ -1,5 +1,12 @@
+struct F {
+  int leaf = 42;
+};
+
+struct E {
+  F f;
+};
 struct D {
-  int value = 42;
+  E e;
 };
 
 struct C {
@@ -16,5 +23,6 @@ struct A {
 
 int main() {
   A a;
+  (void)a;
   return 0; // break here
 }
