@@ -20,6 +20,7 @@ namespace llvm {
 
 namespace {
 using VPPatternMatchTest = VPlanTestBase;
+using namespace VPlanPatternMatch;
 
 TEST_F(VPPatternMatchTest, ScalarIVSteps) {
   VPlan &Plan = getPlan();
@@ -39,8 +40,6 @@ TEST_F(VPPatternMatchTest, ScalarIVSteps) {
   VPValue *Steps2 = Builder.createScalarIVSteps(Instruction::Add, nullptr,
                                                 CanIV, Inc2, VF, DebugLoc());
 
-  using namespace VPlanPatternMatch;
-
   ASSERT_TRUE(match(Steps, m_ScalarIVSteps(m_Specific(CanIV), m_SpecificInt(1),
                                            m_Specific(VF))));
   ASSERT_FALSE(
@@ -57,12 +56,10 @@ TEST_F(VPPatternMatchTest, CanonicalIV) {
       Plan.createLoopRegion(I64Ty, DebugLoc::getCompilerGenerated());
   VPValue *CanIV = VPR->getCanonicalIV();
 
-  using namespace VPlanPatternMatch;
-
   ASSERT_TRUE(match(CanIV, m_CanonicalIV()));
 
-  VPValue *LiveIn = Plan.getOrAddLiveIn(ConstantInt::get(I64Ty, 1));
-  ASSERT_FALSE(match(LiveIn, m_CanonicalIV()));
+  VPRegionValue OtherRegionValue(I64Ty, DebugLoc::getCompilerGenerated(), VPR);
+  ASSERT_FALSE(match(&OtherRegionValue, m_CanonicalIV()));
 }
 
 TEST_F(VPPatternMatchTest, GetElementPtr) {
@@ -79,7 +76,6 @@ TEST_F(VPPatternMatchTest, GetElementPtr) {
   VPInstruction *PtrAdd = Builder.createPtrAdd(Ptr, One);
   VPInstruction *WidePtrAdd = Builder.createWidePtrAdd(Ptr, Two);
 
-  using namespace VPlanPatternMatch;
   ASSERT_TRUE(
       match(PtrAdd, m_GetElementPtr(m_Specific(Ptr), m_SpecificInt(1))));
   ASSERT_FALSE(
