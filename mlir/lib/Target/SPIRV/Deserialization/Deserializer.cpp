@@ -92,6 +92,9 @@ LogicalResult spirv::Deserializer::deserialize() {
     }
   }
 
+  if (failed(resolveDeferredIdDecorations()))
+    return failure();
+
   attachVCETriple();
 
   LLVM_DEBUG(logger.startLine()
@@ -377,9 +380,66 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
       return res;
     break;
   }
+  case spirv::Decoration::AlignmentId:
+  case spirv::Decoration::MaxByteOffsetId:
+  case spirv::Decoration::CounterBuffer:
+    if (words.size() != 3) {
+      return emitError(unknownLoc, "OpDecorateId with ")
+             << decorationName << " needs a single <id> operand";
+    }
+    pendingIdDecorations.push_back({words[0],
+                                    static_cast<spirv::Decoration>(words[1]),
+                                    words[2], unknownLoc});
+    break;
   default:
     return emitError(unknownLoc, "unhandled Decoration : '") << decorationName;
   }
+  return success();
+}
+
+LogicalResult spirv::Deserializer::resolveDeferredIdDecorations() {
+  for (const DeferredIdDecoration &entry : pendingIdDecorations) {
+    auto decorationName = stringifyDecoration(entry.decoration);
+    StringAttr symbol = getSymbolDecoration(decorationName);
+
+    // Resolve the operand <id> to a symbol name. The operand must reference a
+    // module-scope symbol op (global variable or specialization constant).
+    StringRef operandSymName;
+    if (auto varOp = globalVariableMap.lookup(entry.operandID))
+      operandSymName = varOp.getSymName();
+    else if (auto specOp = specConstMap.lookup(entry.operandID))
+      operandSymName = specOp.getSymName();
+
+    if (operandSymName.empty()) {
+      return emitError(entry.loc, "OpDecorateId with ")
+             << decorationName << " references <id> " << entry.operandID
+             << " which is not a global variable or specialization constant";
+    }
+
+    auto symRef = FlatSymbolRefAttr::get(context, operandSymName);
+
+    // The decoration target may already be a constructed module-scope op
+    // (its decorations dict was applied at construction time, before this
+    // resolution pass runs). In that case, set the attribute directly on the
+    // op. Otherwise, fall back to the deferred `decorations` map for ops that
+    // consume it later.
+    Operation *targetOp = nullptr;
+    if (auto varOp = globalVariableMap.lookup(entry.targetID))
+      targetOp = varOp;
+    else if (auto specOp = specConstMap.lookup(entry.targetID))
+      targetOp = specOp;
+    else if (auto fnOp = funcMap.lookup(entry.targetID))
+      targetOp = fnOp;
+    else if (Value v = valueMap.lookup(entry.targetID))
+      targetOp = v.getDefiningOp();
+
+    if (targetOp) {
+      targetOp->setAttr(symbol, symRef);
+    } else {
+      decorations[entry.targetID].set(symbol, symRef);
+    }
+  }
+  pendingIdDecorations.clear();
   return success();
 }
 
