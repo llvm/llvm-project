@@ -643,6 +643,14 @@ void FactsGenerator::VisitCXXNewExpr(const CXXNewExpr *NE) {
                               ->getType()
                               ->getAs<PointerType>();
         Arg && Arg->isVoidPointerType()) {
+      // FIXME: This assumes the placement argument is a direct glvalue pointer
+      // expression with an origin list shaped like
+      // storage -> pointer value -> pointee object.
+      // The code below overwrites the pointee object origin. Since origin flow
+      // is one way, non-direct placement argument forms such as `storage.get()`
+      // or `&storage` need separate handling to find the actual storage object
+      // whose origins should be overwritten.
+
       // Use the placement argument before the implicit conversion to void*, so
       // inner origins are still available.
       const Expr *PlacementArg = NE->getPlacementArg(0)->IgnoreImpCasts();
