@@ -572,19 +572,69 @@ static bool isThreadID(const GCNSubtarget &ST, Value *V) {
   return false;
 }
 
+// Emit a DPP row_xmask operation: each lane reads from lane (self ^ XorMask)
+// within a 16-lane row. Replaces II with llvm.amdgcn.update.dpp.
+static Instruction *emitDPPRowXmask(InstCombiner &IC, IntrinsicInst &II,
+                                    Value *Val, uint64_t XorMask) {
+  IRBuilderBase &B = IC.Builder;
+  CallInst *UpdateDPP =
+      B.CreateIntrinsic(Intrinsic::amdgcn_update_dpp, Val->getType(),
+                        {PoisonValue::get(Val->getType()), Val,
+                         B.getInt32(AMDGPU::DPP::ROW_XMASK0 | XorMask),
+                         B.getInt32(0xF), B.getInt32(0xF), B.getTrue()});
+  UpdateDPP->takeName(&II);
+  UpdateDPP->copyMetadata(II);
+  return IC.replaceInstUsesWith(II, UpdateDPP);
+}
+
+// Emit a v_permlanex16 with identity lane select: each lane reads from the
+// same-numbered lane in the other 16-lane row, equivalent to XOR with 16.
+// Replaces II with llvm.amdgcn.permlanex16.
+static Instruction *emitPermLaneX16(InstCombiner &IC, IntrinsicInst &II,
+                                    Value *Val) {
+  IRBuilderBase &B = IC.Builder;
+  CallInst *PermLane = B.CreateIntrinsic(
+      Intrinsic::amdgcn_permlanex16, Val->getType(),
+      {PoisonValue::get(Val->getType()), Val, B.getInt32(0x76543210),
+       B.getInt32(0xFEDCBA98), B.getFalse(), B.getFalse()});
+  PermLane->takeName(&II);
+  PermLane->copyMetadata(II);
+  return IC.replaceInstUsesWith(II, PermLane);
+}
+
 // Attempt to capture situations where the index argument matches
-// a DPP pattern, and convert to a DPP-based mov
+// a DPP or cross-lane VALU pattern, and convert to the faster instruction.
 static std::optional<Instruction *>
 tryWaveShuffleDPP(const GCNSubtarget &ST, InstCombiner &IC, IntrinsicInst &II) {
   Value *Val = II.getArgOperand(0);
   Value *Idx = II.getArgOperand(1);
-  auto &B = IC.Builder;
 
-  // DPP16 Row Share requires known wave size, architecture support
-  if (!ST.isWaveSizeKnown() || !ST.hasDPPRowShare())
+  if (!ST.isWaveSizeKnown() || !ST.hasDPP())
     return std::nullopt;
 
   Value *Tid;
+  uint64_t XorMask;
+
+  // DPP16 Row Xmask: Idx = Tid ^ ConstMask (where ConstMask is 1-15)
+  // row_xmask:N performs XOR within each 16-lane row, which is equivalent to
+  // __shfl_xor(val, N) for N < 16 since XOR only affects the low 4 bits.
+  if (match(Idx, m_Xor(m_Value(Tid), m_ConstantInt(XorMask))) &&
+      isThreadID(ST, Tid) && XorMask >= 1 && XorMask <= 15 &&
+      ST.getGeneration() >= AMDGPUSubtarget::GFX10)
+    return emitDPPRowXmask(IC, II, Val, XorMask);
+
+  // Permlanex16: Idx = Tid ^ 16
+  // v_permlanex16 performs a gather from the other 16-lane row within each
+  // 32-lane half, which is equivalent to __shfl_xor(val, 16).
+  if (match(Idx, m_Xor(m_Value(Tid), m_SpecificInt(16))) &&
+      isThreadID(ST, Tid) && ST.hasPermLaneX16())
+    return emitPermLaneX16(IC, II, Val);
+
+  // DPP16 Row Share requires architecture support
+  if (!ST.hasDPPRowShare())
+    return std::nullopt;
+
+  IRBuilderBase &B = IC.Builder;
   uint64_t Mask;
   uint64_t RowIdx;
   bool CanDPP16RowShare = false;
@@ -633,6 +683,57 @@ tryWaveShuffleDPP(const GCNSubtarget &ST, InstCombiner &IC, IntrinsicInst &II) {
   }
 
   // No valid DPP detected
+  return std::nullopt;
+}
+
+// Match ds_bpermute((tid ^ const) << 2, val) patterns and convert to VALU
+// cross-lane operations: DPP row_xmask (masks 1-15) or v_permlanex16
+// (mask 16). InstCombine may canonicalize shl(xor(tid, N), 2) into
+// xor(shl(tid, 2), N*4), so both forms are matched.
+static std::optional<Instruction *>
+tryBPermuteToVALU(const GCNSubtarget &ST, InstCombiner &IC, IntrinsicInst &II) {
+  Value *Index = II.getArgOperand(0);
+  Value *Val = II.getArgOperand(1);
+
+  if (!ST.hasDPP() || !ST.isWaveSizeKnown())
+    return std::nullopt;
+
+  Value *Tid;
+  uint64_t XorMask = 0;
+
+  // Form A (canonical): xor(shl(tid, 2), Const) where Const = mask * 4
+  Value *ShiftedTid;
+  uint64_t XorConst;
+  if (match(Index, m_Xor(m_Value(ShiftedTid), m_ConstantInt(XorConst)))) {
+    uint64_t ShiftAmt;
+    if (match(ShiftedTid, m_Shl(m_Value(Tid), m_ConstantInt(ShiftAmt))) &&
+        ShiftAmt == 2 && isThreadID(ST, Tid) && (XorConst & 3) == 0)
+      XorMask = XorConst >> 2;
+  }
+
+  // Form B (pre-canonical): shl(xor(tid, mask), 2)
+  if (!XorMask) {
+    Value *XorResult;
+    uint64_t ShiftAmt;
+    if (match(Index, m_Shl(m_Value(XorResult), m_ConstantInt(ShiftAmt))) &&
+        ShiftAmt == 2 &&
+        match(XorResult, m_Xor(m_Value(Tid), m_ConstantInt(XorMask))) &&
+        isThreadID(ST, Tid)) {
+      // XorMask is set by the match
+    } else {
+      return std::nullopt;
+    }
+  }
+
+  // DPP row_xmask for masks 1-15
+  if (XorMask >= 1 && XorMask <= 15 &&
+      ST.getGeneration() >= AMDGPUSubtarget::GFX10)
+    return emitDPPRowXmask(IC, II, Val, XorMask);
+
+  // v_permlanex16 for mask 16
+  if (XorMask == 16 && ST.hasPermLaneX16())
+    return emitPermLaneX16(IC, II, Val);
+
   return std::nullopt;
 }
 
@@ -1572,10 +1673,17 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         simplifyDemandedLaneMaskArg(IC, II, 1))
       return &II;
 
-    // If the lane argument of bpermute is uniform, change it to readlane. This
-    // generates better code and can enable further optimizations because
-    // readlane is AlwaysUniform.
     if (IID == Intrinsic::amdgcn_ds_bpermute) {
+      // Try to convert bpermute with XOR-based lane index into VALU
+      // cross-lane ops: DPP row_xmask (masks 1-15) or v_permlanex16
+      // (mask 16).
+      if (std::optional<Instruction *> VALUResult =
+              tryBPermuteToVALU(*ST, IC, II))
+        return *VALUResult;
+
+      // If the lane argument of bpermute is uniform, change it to readlane.
+      // This generates better code and can enable further optimizations because
+      // readlane is AlwaysUniform.
       const Use &Lane = II.getArgOperandUse(0);
       if (isTriviallyUniform(Lane)) {
         Value *NewLane = IC.Builder.CreateLShr(Lane, 2);

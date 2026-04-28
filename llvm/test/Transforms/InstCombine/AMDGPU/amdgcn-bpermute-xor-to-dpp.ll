@@ -8,18 +8,12 @@
 define i32 @test_bpermute_xor1(i32 %val) {
 ; GFX1200-W32-LABEL: define i32 @test_bpermute_xor1(
 ; GFX1200-W32-SAME: i32 [[VAL:%.*]]) #[[ATTR0:[0-9]+]] {
-; GFX1200-W32-NEXT:    [[LANE_ID:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-; GFX1200-W32-NEXT:    [[XOR_LANE:%.*]] = shl nuw nsw i32 [[LANE_ID]], 2
-; GFX1200-W32-NEXT:    [[BYTE_OFFSET:%.*]] = xor i32 [[XOR_LANE]], 4
-; GFX1200-W32-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[BYTE_OFFSET]], i32 [[VAL]])
+; GFX1200-W32-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL]], i32 353, i32 15, i32 15, i1 true)
 ; GFX1200-W32-NEXT:    ret i32 [[RESULT]]
 ;
 ; GFX11-W32-LABEL: define i32 @test_bpermute_xor1(
 ; GFX11-W32-SAME: i32 [[VAL:%.*]]) #[[ATTR0:[0-9]+]] {
-; GFX11-W32-NEXT:    [[LANE_ID:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-; GFX11-W32-NEXT:    [[XOR_LANE:%.*]] = shl nuw nsw i32 [[LANE_ID]], 2
-; GFX11-W32-NEXT:    [[BYTE_OFFSET:%.*]] = xor i32 [[XOR_LANE]], 4
-; GFX11-W32-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[BYTE_OFFSET]], i32 [[VAL]])
+; GFX11-W32-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL]], i32 353, i32 15, i32 15, i1 true)
 ; GFX11-W32-NEXT:    ret i32 [[RESULT]]
 ;
 ; GFX11-W64-LABEL: define i32 @test_bpermute_xor1(
@@ -49,18 +43,12 @@ define i32 @test_bpermute_xor1(i32 %val) {
 define i32 @test_bpermute_xor2(i32 %val) {
 ; GFX1200-W32-LABEL: define i32 @test_bpermute_xor2(
 ; GFX1200-W32-SAME: i32 [[VAL:%.*]]) #[[ATTR0]] {
-; GFX1200-W32-NEXT:    [[LANE_ID:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-; GFX1200-W32-NEXT:    [[XOR_LANE:%.*]] = shl nuw nsw i32 [[LANE_ID]], 2
-; GFX1200-W32-NEXT:    [[BYTE_OFFSET:%.*]] = xor i32 [[XOR_LANE]], 8
-; GFX1200-W32-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[BYTE_OFFSET]], i32 [[VAL]])
+; GFX1200-W32-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL]], i32 354, i32 15, i32 15, i1 true)
 ; GFX1200-W32-NEXT:    ret i32 [[RESULT]]
 ;
 ; GFX11-W32-LABEL: define i32 @test_bpermute_xor2(
 ; GFX11-W32-SAME: i32 [[VAL:%.*]]) #[[ATTR0]] {
-; GFX11-W32-NEXT:    [[LANE_ID:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-; GFX11-W32-NEXT:    [[XOR_LANE:%.*]] = shl nuw nsw i32 [[LANE_ID]], 2
-; GFX11-W32-NEXT:    [[BYTE_OFFSET:%.*]] = xor i32 [[XOR_LANE]], 8
-; GFX11-W32-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[BYTE_OFFSET]], i32 [[VAL]])
+; GFX11-W32-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL]], i32 354, i32 15, i32 15, i1 true)
 ; GFX11-W32-NEXT:    ret i32 [[RESULT]]
 ;
 ; GFX11-W64-LABEL: define i32 @test_bpermute_xor2(
@@ -90,18 +78,12 @@ define i32 @test_bpermute_xor2(i32 %val) {
 define i32 @test_bpermute_xor4(i32 %val) {
 ; GFX1200-W32-LABEL: define i32 @test_bpermute_xor4(
 ; GFX1200-W32-SAME: i32 [[VAL:%.*]]) #[[ATTR0]] {
-; GFX1200-W32-NEXT:    [[LANE_ID:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-; GFX1200-W32-NEXT:    [[XOR_LANE:%.*]] = shl nuw nsw i32 [[LANE_ID]], 2
-; GFX1200-W32-NEXT:    [[BYTE_OFFSET:%.*]] = xor i32 [[XOR_LANE]], 16
-; GFX1200-W32-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[BYTE_OFFSET]], i32 [[VAL]])
+; GFX1200-W32-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL]], i32 356, i32 15, i32 15, i1 true)
 ; GFX1200-W32-NEXT:    ret i32 [[RESULT]]
 ;
 ; GFX11-W32-LABEL: define i32 @test_bpermute_xor4(
 ; GFX11-W32-SAME: i32 [[VAL:%.*]]) #[[ATTR0]] {
-; GFX11-W32-NEXT:    [[LANE_ID:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-; GFX11-W32-NEXT:    [[XOR_LANE:%.*]] = shl nuw nsw i32 [[LANE_ID]], 2
-; GFX11-W32-NEXT:    [[BYTE_OFFSET:%.*]] = xor i32 [[XOR_LANE]], 16
-; GFX11-W32-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[BYTE_OFFSET]], i32 [[VAL]])
+; GFX11-W32-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL]], i32 356, i32 15, i32 15, i1 true)
 ; GFX11-W32-NEXT:    ret i32 [[RESULT]]
 ;
 ; GFX11-W64-LABEL: define i32 @test_bpermute_xor4(
@@ -131,18 +113,12 @@ define i32 @test_bpermute_xor4(i32 %val) {
 define i32 @test_bpermute_xor8(i32 %val) {
 ; GFX1200-W32-LABEL: define i32 @test_bpermute_xor8(
 ; GFX1200-W32-SAME: i32 [[VAL:%.*]]) #[[ATTR0]] {
-; GFX1200-W32-NEXT:    [[LANE_ID:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-; GFX1200-W32-NEXT:    [[XOR_LANE:%.*]] = shl nuw nsw i32 [[LANE_ID]], 2
-; GFX1200-W32-NEXT:    [[BYTE_OFFSET:%.*]] = xor i32 [[XOR_LANE]], 32
-; GFX1200-W32-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[BYTE_OFFSET]], i32 [[VAL]])
+; GFX1200-W32-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL]], i32 360, i32 15, i32 15, i1 true)
 ; GFX1200-W32-NEXT:    ret i32 [[RESULT]]
 ;
 ; GFX11-W32-LABEL: define i32 @test_bpermute_xor8(
 ; GFX11-W32-SAME: i32 [[VAL:%.*]]) #[[ATTR0]] {
-; GFX11-W32-NEXT:    [[LANE_ID:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-; GFX11-W32-NEXT:    [[XOR_LANE:%.*]] = shl nuw nsw i32 [[LANE_ID]], 2
-; GFX11-W32-NEXT:    [[BYTE_OFFSET:%.*]] = xor i32 [[XOR_LANE]], 32
-; GFX11-W32-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[BYTE_OFFSET]], i32 [[VAL]])
+; GFX11-W32-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL]], i32 360, i32 15, i32 15, i1 true)
 ; GFX11-W32-NEXT:    ret i32 [[RESULT]]
 ;
 ; GFX11-W64-LABEL: define i32 @test_bpermute_xor8(
@@ -172,18 +148,12 @@ define i32 @test_bpermute_xor8(i32 %val) {
 define i32 @test_bpermute_xor15(i32 %val) {
 ; GFX1200-W32-LABEL: define i32 @test_bpermute_xor15(
 ; GFX1200-W32-SAME: i32 [[VAL:%.*]]) #[[ATTR0]] {
-; GFX1200-W32-NEXT:    [[LANE_ID:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-; GFX1200-W32-NEXT:    [[XOR_LANE:%.*]] = shl nuw nsw i32 [[LANE_ID]], 2
-; GFX1200-W32-NEXT:    [[BYTE_OFFSET:%.*]] = xor i32 [[XOR_LANE]], 60
-; GFX1200-W32-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[BYTE_OFFSET]], i32 [[VAL]])
+; GFX1200-W32-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL]], i32 367, i32 15, i32 15, i1 true)
 ; GFX1200-W32-NEXT:    ret i32 [[RESULT]]
 ;
 ; GFX11-W32-LABEL: define i32 @test_bpermute_xor15(
 ; GFX11-W32-SAME: i32 [[VAL:%.*]]) #[[ATTR0]] {
-; GFX11-W32-NEXT:    [[LANE_ID:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-; GFX11-W32-NEXT:    [[XOR_LANE:%.*]] = shl nuw nsw i32 [[LANE_ID]], 2
-; GFX11-W32-NEXT:    [[BYTE_OFFSET:%.*]] = xor i32 [[XOR_LANE]], 60
-; GFX11-W32-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[BYTE_OFFSET]], i32 [[VAL]])
+; GFX11-W32-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL]], i32 367, i32 15, i32 15, i1 true)
 ; GFX11-W32-NEXT:    ret i32 [[RESULT]]
 ;
 ; GFX11-W64-LABEL: define i32 @test_bpermute_xor15(
@@ -213,18 +183,12 @@ define i32 @test_bpermute_xor15(i32 %val) {
 define i32 @test_bpermute_xor16(i32 %val) {
 ; GFX1200-W32-LABEL: define i32 @test_bpermute_xor16(
 ; GFX1200-W32-SAME: i32 [[VAL:%.*]]) #[[ATTR0]] {
-; GFX1200-W32-NEXT:    [[LANE_ID:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-; GFX1200-W32-NEXT:    [[XOR_LANE:%.*]] = shl nuw nsw i32 [[LANE_ID]], 2
-; GFX1200-W32-NEXT:    [[BYTE_OFFSET:%.*]] = xor i32 [[XOR_LANE]], 64
-; GFX1200-W32-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[BYTE_OFFSET]], i32 [[VAL]])
+; GFX1200-W32-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.permlanex16.i32(i32 poison, i32 [[VAL]], i32 1985229328, i32 -19088744, i1 false, i1 false)
 ; GFX1200-W32-NEXT:    ret i32 [[RESULT]]
 ;
 ; GFX11-W32-LABEL: define i32 @test_bpermute_xor16(
 ; GFX11-W32-SAME: i32 [[VAL:%.*]]) #[[ATTR0]] {
-; GFX11-W32-NEXT:    [[LANE_ID:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-; GFX11-W32-NEXT:    [[XOR_LANE:%.*]] = shl nuw nsw i32 [[LANE_ID]], 2
-; GFX11-W32-NEXT:    [[BYTE_OFFSET:%.*]] = xor i32 [[XOR_LANE]], 64
-; GFX11-W32-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[BYTE_OFFSET]], i32 [[VAL]])
+; GFX11-W32-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.permlanex16.i32(i32 poison, i32 [[VAL]], i32 1985229328, i32 -19088744, i1 false, i1 false)
 ; GFX11-W32-NEXT:    ret i32 [[RESULT]]
 ;
 ; GFX11-W64-LABEL: define i32 @test_bpermute_xor16(
@@ -254,27 +218,17 @@ define i32 @test_bpermute_xor16(i32 %val) {
 define i32 @test_bpermute_xor4_wave64(i32 %val) {
 ; GFX1200-W32-LABEL: define i32 @test_bpermute_xor4_wave64(
 ; GFX1200-W32-SAME: i32 [[VAL:%.*]]) #[[ATTR0]] {
-; GFX1200-W32-NEXT:    [[LO:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-; GFX1200-W32-NEXT:    [[XOR_LANE:%.*]] = shl nuw nsw i32 [[LO]], 2
-; GFX1200-W32-NEXT:    [[BYTE_OFFSET:%.*]] = xor i32 [[XOR_LANE]], 16
-; GFX1200-W32-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[BYTE_OFFSET]], i32 [[VAL]])
+; GFX1200-W32-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL]], i32 356, i32 15, i32 15, i1 true)
 ; GFX1200-W32-NEXT:    ret i32 [[RESULT]]
 ;
 ; GFX11-W32-LABEL: define i32 @test_bpermute_xor4_wave64(
 ; GFX11-W32-SAME: i32 [[VAL:%.*]]) #[[ATTR0]] {
-; GFX11-W32-NEXT:    [[LO:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-; GFX11-W32-NEXT:    [[XOR_LANE:%.*]] = shl nuw nsw i32 [[LO]], 2
-; GFX11-W32-NEXT:    [[BYTE_OFFSET:%.*]] = xor i32 [[XOR_LANE]], 16
-; GFX11-W32-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[BYTE_OFFSET]], i32 [[VAL]])
+; GFX11-W32-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL]], i32 356, i32 15, i32 15, i1 true)
 ; GFX11-W32-NEXT:    ret i32 [[RESULT]]
 ;
 ; GFX11-W64-LABEL: define i32 @test_bpermute_xor4_wave64(
 ; GFX11-W64-SAME: i32 [[VAL:%.*]]) #[[ATTR0]] {
-; GFX11-W64-NEXT:    [[LO:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-; GFX11-W64-NEXT:    [[LANE_ID:%.*]] = call range(i32 0, 65) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
-; GFX11-W64-NEXT:    [[XOR_LANE:%.*]] = shl nuw nsw i32 [[LANE_ID]], 2
-; GFX11-W64-NEXT:    [[BYTE_OFFSET:%.*]] = xor i32 [[XOR_LANE]], 16
-; GFX11-W64-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[BYTE_OFFSET]], i32 [[VAL]])
+; GFX11-W64-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL]], i32 356, i32 15, i32 15, i1 true)
 ; GFX11-W64-NEXT:    ret i32 [[RESULT]]
 ;
 ; GFX9-LABEL: define i32 @test_bpermute_xor4_wave64(
@@ -298,27 +252,17 @@ define i32 @test_bpermute_xor4_wave64(i32 %val) {
 define i32 @test_bpermute_xor16_wave64(i32 %val) {
 ; GFX1200-W32-LABEL: define i32 @test_bpermute_xor16_wave64(
 ; GFX1200-W32-SAME: i32 [[VAL:%.*]]) #[[ATTR0]] {
-; GFX1200-W32-NEXT:    [[LO:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-; GFX1200-W32-NEXT:    [[XOR_LANE:%.*]] = shl nuw nsw i32 [[LO]], 2
-; GFX1200-W32-NEXT:    [[BYTE_OFFSET:%.*]] = xor i32 [[XOR_LANE]], 64
-; GFX1200-W32-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[BYTE_OFFSET]], i32 [[VAL]])
+; GFX1200-W32-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.permlanex16.i32(i32 poison, i32 [[VAL]], i32 1985229328, i32 -19088744, i1 false, i1 false)
 ; GFX1200-W32-NEXT:    ret i32 [[RESULT]]
 ;
 ; GFX11-W32-LABEL: define i32 @test_bpermute_xor16_wave64(
 ; GFX11-W32-SAME: i32 [[VAL:%.*]]) #[[ATTR0]] {
-; GFX11-W32-NEXT:    [[LO:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-; GFX11-W32-NEXT:    [[XOR_LANE:%.*]] = shl nuw nsw i32 [[LO]], 2
-; GFX11-W32-NEXT:    [[BYTE_OFFSET:%.*]] = xor i32 [[XOR_LANE]], 64
-; GFX11-W32-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[BYTE_OFFSET]], i32 [[VAL]])
+; GFX11-W32-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.permlanex16.i32(i32 poison, i32 [[VAL]], i32 1985229328, i32 -19088744, i1 false, i1 false)
 ; GFX11-W32-NEXT:    ret i32 [[RESULT]]
 ;
 ; GFX11-W64-LABEL: define i32 @test_bpermute_xor16_wave64(
 ; GFX11-W64-SAME: i32 [[VAL:%.*]]) #[[ATTR0]] {
-; GFX11-W64-NEXT:    [[LO:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-; GFX11-W64-NEXT:    [[LANE_ID:%.*]] = call range(i32 0, 65) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
-; GFX11-W64-NEXT:    [[XOR_LANE:%.*]] = shl nuw nsw i32 [[LANE_ID]], 2
-; GFX11-W64-NEXT:    [[BYTE_OFFSET:%.*]] = xor i32 [[XOR_LANE]], 64
-; GFX11-W64-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[BYTE_OFFSET]], i32 [[VAL]])
+; GFX11-W64-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.permlanex16.i32(i32 poison, i32 [[VAL]], i32 1985229328, i32 -19088744, i1 false, i1 false)
 ; GFX11-W64-NEXT:    ret i32 [[RESULT]]
 ;
 ; GFX9-LABEL: define i32 @test_bpermute_xor16_wave64(

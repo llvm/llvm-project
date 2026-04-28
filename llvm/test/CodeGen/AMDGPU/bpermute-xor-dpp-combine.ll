@@ -15,25 +15,13 @@ define float @wave_shuffle_xor1_fadd(float %val, float %other) #0 {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mbcnt_lo_u32_b32 v2, -1, 0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-NEXT:    v_xor_b32_e32 v2, 1, v2
-; GFX12-NEXT:    v_lshlrev_b32_e32 v2, 2, v2
-; GFX12-NEXT:    ds_bpermute_b32 v0, v2, v0
-; GFX12-NEXT:    s_wait_dscnt 0x0
-; GFX12-NEXT:    v_add_f32_e32 v0, v0, v1
+; GFX12-NEXT:    v_add_f32_dpp v0, v0, v1 row_xmask:1 row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: wave_shuffle_xor1_fadd:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_mbcnt_lo_u32_b32 v2, -1, 0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_xor_b32_e32 v2, 1, v2
-; GFX11-NEXT:    v_lshlrev_b32_e32 v2, 2, v2
-; GFX11-NEXT:    ds_bpermute_b32 v0, v2, v0
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_add_f32_e32 v0, v0, v1
+; GFX11-NEXT:    v_add_f32_dpp v0, v0, v1 row_xmask:1 row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
   %xor = xor i32 %tid, 1
@@ -51,25 +39,13 @@ define float @wave_shuffle_xor4_fmul(float %val, float %other) #0 {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mbcnt_lo_u32_b32 v2, -1, 0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-NEXT:    v_xor_b32_e32 v2, 4, v2
-; GFX12-NEXT:    v_lshlrev_b32_e32 v2, 2, v2
-; GFX12-NEXT:    ds_bpermute_b32 v0, v2, v0
-; GFX12-NEXT:    s_wait_dscnt 0x0
-; GFX12-NEXT:    v_mul_f32_e32 v0, v0, v1
+; GFX12-NEXT:    v_mul_f32_dpp v0, v0, v1 row_xmask:4 row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: wave_shuffle_xor4_fmul:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_mbcnt_lo_u32_b32 v2, -1, 0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_xor_b32_e32 v2, 4, v2
-; GFX11-NEXT:    v_lshlrev_b32_e32 v2, 2, v2
-; GFX11-NEXT:    ds_bpermute_b32 v0, v2, v0
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_mul_f32_e32 v0, v0, v1
+; GFX11-NEXT:    v_mul_f32_dpp v0, v0, v1 row_xmask:4 row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
   %xor = xor i32 %tid, 4
@@ -87,25 +63,13 @@ define float @bpermute_xor2_fadd(float %val, float %other) #0 {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mbcnt_lo_u32_b32 v2, -1, 0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-NEXT:    v_lshlrev_b32_e32 v2, 2, v2
-; GFX12-NEXT:    v_xor_b32_e32 v2, 8, v2
-; GFX12-NEXT:    ds_bpermute_b32 v0, v2, v0
-; GFX12-NEXT:    s_wait_dscnt 0x0
-; GFX12-NEXT:    v_add_f32_e32 v0, v1, v0
+; GFX12-NEXT:    v_add_f32_dpp v0, v0, v1 row_xmask:2 row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: bpermute_xor2_fadd:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_mbcnt_lo_u32_b32 v2, -1, 0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_lshlrev_b32_e32 v2, 2, v2
-; GFX11-NEXT:    v_xor_b32_e32 v2, 8, v2
-; GFX11-NEXT:    ds_bpermute_b32 v0, v2, v0
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_add_f32_e32 v0, v1, v0
+; GFX11-NEXT:    v_add_f32_dpp v0, v0, v1 row_xmask:2 row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
   %xor = xor i32 %tid, 2
@@ -126,25 +90,13 @@ define float @bpermute_xor8_fsub(float %val, float %other) #0 {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mbcnt_lo_u32_b32 v2, -1, 0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-NEXT:    v_lshlrev_b32_e32 v2, 2, v2
-; GFX12-NEXT:    v_xor_b32_e32 v2, 32, v2
-; GFX12-NEXT:    ds_bpermute_b32 v0, v2, v0
-; GFX12-NEXT:    s_wait_dscnt 0x0
-; GFX12-NEXT:    v_sub_f32_e32 v0, v1, v0
+; GFX12-NEXT:    v_subrev_f32_dpp v0, v0, v1 row_xmask:8 row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: bpermute_xor8_fsub:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_mbcnt_lo_u32_b32 v2, -1, 0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_lshlrev_b32_e32 v2, 2, v2
-; GFX11-NEXT:    v_xor_b32_e32 v2, 32, v2
-; GFX11-NEXT:    ds_bpermute_b32 v0, v2, v0
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_sub_f32_e32 v0, v1, v0
+; GFX11-NEXT:    v_subrev_f32_dpp v0, v0, v1 row_xmask:8 row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
   %xor = xor i32 %tid, 8
@@ -165,29 +117,17 @@ define float @wave_shuffle_xor1_fma_like(float %val, float %sign) #0 {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mbcnt_lo_u32_b32 v2, -1, 0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-NEXT:    v_xor_b32_e32 v2, 1, v2
-; GFX12-NEXT:    v_lshlrev_b32_e32 v2, 2, v2
-; GFX12-NEXT:    ds_bpermute_b32 v2, v2, v0
-; GFX12-NEXT:    v_mul_f32_e32 v0, v1, v0
-; GFX12-NEXT:    s_wait_dscnt 0x0
+; GFX12-NEXT:    v_mul_f32_e32 v1, v1, v0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_add_f32_e32 v0, v0, v2
+; GFX12-NEXT:    v_add_f32_dpp v0, v0, v1 row_xmask:1 row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: wave_shuffle_xor1_fma_like:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_mbcnt_lo_u32_b32 v2, -1, 0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_xor_b32_e32 v2, 1, v2
-; GFX11-NEXT:    v_lshlrev_b32_e32 v2, 2, v2
-; GFX11-NEXT:    ds_bpermute_b32 v2, v2, v0
-; GFX11-NEXT:    v_mul_f32_e32 v0, v1, v0
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_mul_f32_e32 v1, v1, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_add_f32_e32 v0, v0, v2
+; GFX11-NEXT:    v_add_f32_dpp v0, v0, v1 row_xmask:1 row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
   %xor = xor i32 %tid, 1
@@ -206,24 +146,19 @@ define float @wave_shuffle_xor16_fadd(float %val, float %other) #0 {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mbcnt_lo_u32_b32 v2, -1, 0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-NEXT:    v_xor_b32_e32 v2, 16, v2
-; GFX12-NEXT:    v_lshlrev_b32_e32 v2, 2, v2
-; GFX12-NEXT:    ds_bpermute_b32 v0, v2, v0
-; GFX12-NEXT:    s_wait_dscnt 0x0
+; GFX12-NEXT:    s_mov_b32 s0, 0x76543210
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    v_permlanex16_b32 v0, v0, s0, 0xfedcba98
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_add_f32_e32 v0, v0, v1
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: wave_shuffle_xor16_fadd:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_mbcnt_lo_u32_b32 v2, -1, 0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_xor_b32_e32 v2, 16, v2
-; GFX11-NEXT:    v_lshlrev_b32_e32 v2, 2, v2
-; GFX11-NEXT:    ds_bpermute_b32 v0, v2, v0
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_mov_b32 s0, 0x76543210
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_permlanex16_b32 v0, v0, s0, 0xfedcba98
 ; GFX11-NEXT:    v_add_f32_e32 v0, v0, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
