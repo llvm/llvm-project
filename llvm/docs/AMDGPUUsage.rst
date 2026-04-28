@@ -1159,7 +1159,10 @@ The memory model supported is based on the HSA memory model [HSA]_ which is
 based in turn on HRF-indirect with scope inclusion [HRF]_. The happens-before
 relation is transitive over the synchronizes-with relation independent of scope
 and synchronizes-with allows the memory scope instances to be inclusive (see
-table :ref:`amdgpu-amdhsa-llvm-sync-scopes-table`).
+table :ref:`amdgpu-amdhsa-llvm-sync-scopes-table`). Concurrent atomic operations
+only operate atomically with respect to each other if they are included in each
+other's sync scope. If a read R and the writes it may see are atomic but do not
+all have inclusive scopes, then R returns ``undef`` (see :ref:`memmodel`).
 
 This is different to the OpenCL [OpenCL]_ memory model which does not have scope
 inclusion and requires the memory scopes to exactly match. However, this
