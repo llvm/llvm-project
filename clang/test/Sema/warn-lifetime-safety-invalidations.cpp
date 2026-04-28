@@ -539,3 +539,22 @@ void function_captured_ref_invalidated() {
 }
 
 } // namespace callable_wrappers
+
+namespace ReferenceFieldToVectorElement {
+struct S {
+  std::string& in;
+
+  S(std::vector<std::string> strings)
+    : in(strings[0]) {        // expected-warning {{object whose reference is captured is later invalidated}}
+    strings.push_back("42");  // expected-note {{invalidated here}}
+    in = "use-after-invalidation"; // expected-note {{later used here}}
+  }
+
+  // FIXME: Detect invalidation of reference parameter.
+  S(std::vector<std::string>& strings, int test2)
+    : in(strings[0]) {
+    strings.push_back("42");
+    in = "use-after-invalidation";
+  }
+};
+} // namespace ReferenceFieldToVectorElement

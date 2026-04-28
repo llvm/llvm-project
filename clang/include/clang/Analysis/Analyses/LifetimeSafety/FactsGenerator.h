@@ -123,7 +123,7 @@ private:
   // (e.g. on the left-hand side of an assignment in the case of a DeclRefExpr).
   void handleUse(const Expr *E);
 
-  void markUseAsWrite(const DeclRefExpr *DRE);
+  void markUseAsWrite(const Expr *E);
 
   bool escapesViaReturn(OriginID OID) const;
 

@@ -69,6 +69,11 @@ struct CtorRefField {
   CtorRefField(Dummy<1> ok, const std::string& s, const std::string_view& v): str(s), view(v) {}
 };
 
+struct CtorRefFieldTemporary {
+  const std::string& str; // expected-note {{this field dangles}}
+  CtorRefFieldTemporary(): str(std::vector<std::string>{"abcd"}[0]) {} // expected-warning {{address of stack memory escapes to a field}}
+};
+
 struct CtorPointerField {
   const char* ptr; // expected-note {{this field dangles}}
   CtorPointerField(std::string s) : ptr(s.data()) {}  // expected-warning {{address of stack memory escapes to a field}}
@@ -77,8 +82,8 @@ struct CtorPointerField {
 };
 
 struct MemberSetters {
-  std::string_view view;  // expected-note 6 {{this field dangles}}
-  const char* p;          // expected-note 6 {{this field dangles}}
+  std::string_view view;  // expected-note 5 {{this field dangles}}
+  const char* p;          // expected-note 5 {{this field dangles}}
 
   void setWithParam(std::string s) {
     view = s;     // expected-warning {{address of stack memory escapes to a field}}
@@ -141,21 +146,21 @@ struct MemberSetters {
   void use_after_scope() {
     {
       std::string local;
-      view = local;     // expected-warning {{address of stack memory escapes to a field}}
-      p = local.data(); // expected-warning {{address of stack memory escapes to a field}}
-    }
-    (void)view;
-    (void)p;
+      view = local;     // expected-warning {{object whose reference is captured does not live long enough}}
+      p = local.data(); // expected-warning {{object whose reference is captured does not live long enough}}
+    }                   // expected-note 2 {{destroyed here}}
+    (void)view;         // expected-note {{later used here}}
+    (void)p;            // expected-note {{later used here}}
   }
 
   void use_after_scope_saved_after_reassignment() {
     {
       std::string local;
-      view = local;
-      p = local.data();
-    }
-    (void)view;
-    (void)p;
+      view = local;     // expected-warning {{object whose reference is captured does not live long enough}}
+      p = local.data(); // expected-warning {{object whose reference is captured does not live long enough}}
+    }                   // expected-note 2 {{destroyed here}}
+    (void)view;         // expected-note {{later used here}}
+    (void)p;            // expected-note {{later used here}}
 
     view = kGlobal;
     p = kGlobal.data();

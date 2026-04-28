@@ -2973,15 +2973,16 @@ struct Holder {
 } // namespace CXXDefaultInitExprTests
 
 namespace base_class_fields {
-struct X { int* x; }; // expected-note {{this field dangles}}
+struct X { int* x; };
 struct Y : X {
   int* y;
   void bar() {
     {
       int a;
-      x = &a; // expected-warning {{address of stack memory escapes to a field}}
-    }
-    (void)x;
+      x = &a; // expected-warning {{object whose reference is captured does not live long enough}}
+    } // expected-note {{destroyed here}}
+    (void)x; // expected-note {{later used here}}
+    x = nullptr;
   }
 };
 } // namespace base_class_fields
