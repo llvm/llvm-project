@@ -317,6 +317,11 @@ private:
     const AddrLabelExpr* RHSExpr;
   };
   struct ReflectionData {
+    // OperandKind will eventually have support for
+    // TypeSourceInfo, TemplateReference, NamespaceReference, DeclRefExpr.
+    // Operand stores the opaque pointer of the reflection operand.
+    // Depending on the value of OperandKind, we can perform the
+    // corresponding cast to the associated type.
     ReflectionKind OperandKind;
     const void *Operand;
   };
