@@ -119,13 +119,9 @@ struct SpillPlacement::Node {
     SumLinkWeights += w;
 
     // There can be multiple links to the same bundle, add them up.
-    auto It = Links.find(b);
-    if (It != Links.end()) {
+    auto [It, Inserted] = Links.try_emplace(b, w);
+    if (!Inserted)
       It->second += w;
-      return;
-    }
-    // This must be the first link to b.
-    Links.insert(std::make_pair(b, w));
   }
 
   /// addBias - Bias this node.
