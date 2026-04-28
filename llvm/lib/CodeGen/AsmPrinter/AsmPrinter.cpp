@@ -2440,6 +2440,36 @@ void AsmPrinter::emitFunctionBody() {
   // Emit target-specific gunk after the function body.
   emitFunctionBodyEnd();
 
+  // Tail-pad functions that want it.
+  if (F.hasFnAttribute("tail-pad-to-size")) {
+    auto *FnEndSym = createTempSymbol("tail_pad_start");
+    OutStreamer->emitLabel(FnEndSym);
+
+    uint64_t PadToSize;
+    if (F.getFnAttribute("tail-pad-to-size")
+            .getValueAsString()
+            .getAsInteger(10, PadToSize))
+      PadToSize = 0;
+    uint64_t FillValue;
+    if (!F.hasFnAttribute("tail-pad-value") ||
+        F.getFnAttribute("tail-pad-value")
+            .getValueAsString()
+            .getAsInteger(10, FillValue))
+      FillValue = 0;
+
+    // .fill ((PadToSize - FuncSize) & (PadToSize - FuncSize >= 0)) FillValue
+    const MCExpr *FuncSize = MCBinaryExpr::createSub(
+        MCSymbolRefExpr::create(FnEndSym, OutContext),
+        MCSymbolRefExpr::create(CurrentFnSymForSize, OutContext), OutContext);
+    const MCExpr *SizeConst = MCConstantExpr::create(PadToSize, OutContext);
+    const MCExpr *Zero = MCConstantExpr::create(0, OutContext);
+    const MCExpr *SubExpr =
+        MCBinaryExpr::createSub(SizeConst, FuncSize, OutContext);
+    const MCExpr *Cmp = MCBinaryExpr::createGTE(SubExpr, Zero, OutContext);
+    const MCExpr *FillExpr = MCBinaryExpr::createAnd(SubExpr, Cmp, OutContext);
+    OutStreamer->emitFill(*FillExpr, FillValue);
+  }
+
   // Even though wasm supports .type and .size in general, function symbols
   // are automatically sized.
   bool EmitFunctionSize = MAI.hasDotTypeDotSizeDirective() && !TT.isWasm();
@@ -2466,32 +2496,6 @@ void AsmPrinter::emitFunctionBody() {
     OutStreamer->emitELFSize(CurrentFnSym, SizeExp);
     if (CurrentFnBeginLocal)
       OutStreamer->emitELFSize(CurrentFnBeginLocal, SizeExp);
-
-    // Tail-pad functions that want it.
-    if (F.hasFnAttribute("tail-pad-to-size")) {
-      uint64_t PadToSize;
-      if (F.getFnAttribute("tail-pad-to-size")
-              .getValueAsString()
-              .getAsInteger(10, PadToSize))
-        PadToSize = 0;
-      uint64_t FillValue;
-      if (!F.hasFnAttribute("tail-pad-value") ||
-          F.getFnAttribute("tail-pad-value")
-              .getValueAsString()
-              .getAsInteger(10, FillValue))
-        FillValue = 0;
-
-      // Emit: .fill ((PadToSize - FuncSize) & (PadToSize - FuncSize >= 0))
-      // FillValue
-      const MCExpr *SizeConst = MCConstantExpr::create(PadToSize, OutContext);
-      const MCExpr *Zero = MCConstantExpr::create(0, OutContext);
-      const MCExpr *SubExpr =
-          MCBinaryExpr::createSub(SizeConst, SizeExp, OutContext);
-      const MCExpr *Cmp = MCBinaryExpr::createGTE(SubExpr, Zero, OutContext);
-      const MCExpr *FillExpr =
-          MCBinaryExpr::createAnd(SubExpr, Cmp, OutContext);
-      OutStreamer->emitFill(*FillExpr, FillValue);
-    }
   }
 
   // Call endBasicBlockSection on the last block now, if it wasn't already
