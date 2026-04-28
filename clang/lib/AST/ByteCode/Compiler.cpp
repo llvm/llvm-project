@@ -5312,8 +5312,19 @@ bool Compiler<Emitter>::visitAPValue(const APValue &Val, PrimType ValType,
   }
 
   if (Val.isMemberPointer()) {
-    if (const ValueDecl *MemberDecl = Val.getMemberPointerDecl())
-      return this->emitGetMemberPtr(MemberDecl, E);
+    if (const ValueDecl *MemberDecl = Val.getMemberPointerDecl()) {
+      if (!this->emitGetMemberPtr(MemberDecl, E))
+        return false;
+
+      bool IsDerived = Val.isMemberPointerToDerivedMember();
+      // Apply the member pointer path.
+      for (const CXXRecordDecl *PathEntry : Val.getMemberPointerPath()) {
+        if (!this->emitCopyMemberPtrPath(PathEntry, IsDerived, E))
+          return false;
+      }
+
+      return true;
+    }
     return this->emitNullMemberPtr(0, nullptr, E);
   }
 

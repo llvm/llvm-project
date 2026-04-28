@@ -3507,6 +3507,8 @@ inline bool GetIntPtr(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
 bool GetMemberPtr(InterpState &S, CodePtr OpPC, const ValueDecl *D);
 bool GetMemberPtrBase(InterpState &S, CodePtr OpPC);
 bool GetMemberPtrDecl(InterpState &S, CodePtr OpPC);
+bool CopyMemberPtrPath(InterpState &S, CodePtr OpPC, const RecordDecl *Entry,
+                       bool IsDerived);
 
 /// Just emit a diagnostic. The expression that caused emission of this
 /// op is not valid in a constant context.
