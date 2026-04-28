@@ -1501,6 +1501,13 @@ def SPIRV_C_Float8EXT : I32EnumAttrCase<"Float8EXT", 4212> {
   ];
 }
 
+def SPIRV_C_Float8CooperativeMatrixEXT                       : I32EnumAttrCase<"Float8CooperativeMatrixEXT", 4213> {
+  list<I32EnumAttrCase> implies = [SPIRV_C_Float8EXT, SPIRV_C_CooperativeMatrixKHR];
+  list<Availability> availability = [
+    Extension<[SPV_EXT_float8]>
+  ];
+}
+
 def SPIRV_CapabilityAttr :
     SPIRV_I32EnumAttr<"Capability", "valid SPIR-V Capability", "capability", [
       SPIRV_C_Matrix, SPIRV_C_Addresses, SPIRV_C_Linkage, SPIRV_C_Kernel, SPIRV_C_Float16,
@@ -1599,7 +1606,7 @@ def SPIRV_CapabilityAttr :
       SPIRV_C_CacheControlsINTEL, SPIRV_C_BFloat16TypeKHR,
       SPIRV_C_BFloat16DotProductKHR, SPIRV_C_BFloat16CooperativeMatrixKHR,
       SPIRV_C_TensorFloat32RoundingINTEL, SPIRV_C_MaskedGatherScatterINTEL,
-      SPIRV_C_Float8EXT
+      SPIRV_C_Float8EXT, SPIRV_C_Float8CooperativeMatrixEXT
     ]>;
 
 def SPIRV_AM_Logical                 : I32EnumAttrCase<"Logical", 0>;

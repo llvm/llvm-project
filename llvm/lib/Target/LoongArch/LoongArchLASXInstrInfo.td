@@ -1487,6 +1487,12 @@ defm : PatXrXr<rotr, "XVROTR">;
 defm : PatShiftXrXr<rotr, "XVROTR">;
 defm : PatShiftXrSplatUimm<rotr, "XVROTRI">;
 
+// XVCLO_{B/H/W/D}
+def : Pat<(ctlz (vnot v32i8:$xj)), (XVCLO_B v32i8:$xj)>;
+def : Pat<(ctlz (vnot v16i16:$xj)), (XVCLO_H v16i16:$xj)>;
+def : Pat<(ctlz (vnot v8i32:$xj)), (XVCLO_W v8i32:$xj)>;
+def : Pat<(ctlz (vnot v4i64:$xj)), (XVCLO_D v4i64:$xj)>;
+
 // XVCLZ_{B/H/W/D}
 defm : PatXr<ctlz, "XVCLZ">;
 
@@ -2089,6 +2095,10 @@ defm : VAvgrPat<srl, "XVAVGR_BU", v32i8>;
 defm : VAvgrPat<srl, "XVAVGR_HU", v16i16>;
 defm : VAvgrPat<srl, "XVAVGR_WU", v8i32>;
 defm : VAvgrPat<srl, "XVAVGR_DU", v4i64>;
+defm : PatXrXr<avgfloors, "XVAVG">;
+defm : PatXrXr<avgceils, "XVAVGR">;
+defm : PatXrXrU<avgflooru, "XVAVG">;
+defm : PatXrXrU<avgceilu, "XVAVGR">;
 
 // abs
 def : Pat<(abs v32i8:$xj), (XVSIGNCOV_B v32i8:$xj, v32i8:$xj)>;

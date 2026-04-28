@@ -14,6 +14,7 @@ Options
 The following options are described below:
 
  - :option:`MinimumVariableNameLength`, :option:`IgnoredVariableNames`
+ - :option:`MinimumBindingNameLength`, :option:`IgnoredBindingNames`
  - :option:`MinimumParameterNameLength`, :option:`IgnoredParameterNames`
  - :option:`MinimumLoopCounterNameLength`, :option:`IgnoredLoopCounterNames`
  - :option:`MinimumExceptionNameLength`,
@@ -39,6 +40,25 @@ The following options are described below:
 
     Specifies a regular expression for variable names that are
     to be ignored. The default value is empty, thus no names are ignored.
+
+.. option:: MinimumBindingNameLength
+
+    All variables introduced by structured bindings are expected to have at
+    least a length of `MinimumBindingNameLength` (default is `2`). Setting it
+    to `0` or `1` disables the check entirely.
+
+    .. code-block:: c++
+
+      auto [a] = get_result();    // warns that 'a' is too short
+
+    This check does not have any fix suggestions in the general case since
+    variable names have semantic value.
+
+.. option:: IgnoredBindingNames
+
+    Specifies a regular expression for variable names introduced by structured
+    bindings that are to be ignored. The default value is `^[_]$`, to allow the
+    use of the `_` idiom to specify that the value is discarded on purpose.
 
 .. option:: MinimumParameterNameLength
 
