@@ -19,7 +19,7 @@ namespace clang::tidy::bugprone {
 namespace {
 AST_MATCHER_P(CXXConstructExpr, hasImplicitCtorInitField,
               ast_matchers::internal::Matcher<Decl>, InnerMatcher) {
-  clang::DynTypedNodeList Parents =
+  const DynTypedNodeList Parents =
       Finder->getASTContext().getParentMapContext().getParents(Node);
   if (Parents.empty())
     return false;
