@@ -6,8 +6,9 @@
 program omp_do
   integer i, j, k
 
-  !ERROR: DO iteration variable i is not allowed in FIRSTPRIVATE clause.
+  !ERROR: Loop iteration variable with a predetermined data sharing attribute cannot appear in a FIRSTPRIVATE clause
   !$omp do firstprivate(k,i)
+  !BECAUSE: 'i' is an iteration variable of an affected loop
   do i = 1, 10
     do j = 1, 10
       print *, "Hello"

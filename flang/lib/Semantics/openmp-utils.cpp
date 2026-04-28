@@ -207,6 +207,13 @@ bool IsWholeAssumedSizeArray(const parser::OmpObject &object) {
   return false;
 }
 
+const Symbol *GetHostSymbol(const Symbol &sym) {
+  if (auto *details{sym.detailsIf<HostAssocDetails>()}) {
+    return &details->symbol();
+  }
+  return nullptr;
+}
+
 bool IsMapEnteringType(parser::OmpMapType::Value type) {
   switch (type) {
   case parser::OmpMapType::Value::Alloc:
@@ -576,7 +583,7 @@ static bool IsTransformableLoop(const parser::ExecutionPartConstruct &epc) {
 }
 
 LoopControl::LoopControl(const parser::LoopControl::Bounds &x) {
-  iv = x.Name().thing.symbol;
+  iv = x.Name().thing;
   lbound = fromParserExpr(parser::UnwrapRef<parser::Expr>(x.Lower()));
   ubound = fromParserExpr(parser::UnwrapRef<parser::Expr>(x.Upper()));
   if (auto &inc{x.Step()}) {
@@ -586,7 +593,7 @@ LoopControl::LoopControl(const parser::LoopControl::Bounds &x) {
 
 LoopControl::LoopControl(const parser::ConcurrentControl &x) {
   auto &[name, lower, upper, inc]{x.t};
-  iv = name.symbol;
+  iv = name;
   lbound = fromParserExpr(parser::UnwrapRef<parser::Expr>(lower));
   ubound = fromParserExpr(parser::UnwrapRef<parser::Expr>(upper));
   if (inc) {
@@ -605,7 +612,8 @@ std::vector<LoopControl> GetLoopControls(const parser::DoConstruct &x) {
     controls.emplace_back(std::get<parser::LoopControl::Bounds>(control.u));
   } else if (x.IsDoConcurrent()) {
     const parser::LoopControl &control{*x.GetLoopControl()};
-    auto &header{parser::UnwrapRef<parser::ConcurrentHeader>(control)};
+    auto &concurrent{std::get<parser::LoopControl::Concurrent>(control.u)};
+    auto &header{std::get<parser::ConcurrentHeader>(concurrent.t)};
     for (auto &cc : std::get<std::list<parser::ConcurrentControl>>(header.t)) {
       controls.emplace_back(cc);
     }
@@ -1776,8 +1784,8 @@ WithReason<bool> LoopSequence::isRectangular(
   SymbolVector outerIVs;
   for (auto *sequence : llvm::reverse(outer)) {
     for (auto &control : sequence->getLoopControls()) {
-      if (control.iv) {
-        outerIVs.emplace_back(*control.iv);
+      if (control.iv.symbol) {
+        outerIVs.emplace_back(*control.iv.symbol);
       }
     }
   }
@@ -1785,7 +1793,7 @@ WithReason<bool> LoopSequence::isRectangular(
   WithReason<bool> result(true);
 
   for (auto &control : getLoopControls()) {
-    if (!control.iv || !control.lbound.value || !control.ubound.value) {
+    if (!control.iv.symbol || !control.lbound.value || !control.ubound.value) {
       continue;
     }
     CheckSymbolExprOverlap(result, outerIVs, *control.lbound.value,
