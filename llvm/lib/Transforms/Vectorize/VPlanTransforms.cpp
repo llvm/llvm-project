@@ -701,10 +701,7 @@ void VPlanTransforms::replaceWidenCanonicalIVWithWidenIV(
 
   VPValue *CanonicalIV = LoopRegion->getCanonicalIV();
   auto *WideCanIV = vputils::findUserOf<VPWidenCanonicalIVRecipe>(CanonicalIV);
-  if (!WideCanIV)
-    return;
-
-  if (vputils::onlyFirstLaneUsed(WideCanIV) ||
+  if (!WideCanIV || vputils::onlyFirstLaneUsed(WideCanIV) ||
       vputils::onlyScalarValuesUsed(WideCanIV))
     return;
 
@@ -720,9 +717,9 @@ void VPlanTransforms::replaceWidenCanonicalIVWithWidenIV(
   // Bail out if the additional wide induction phi increase the expected spill
   // cost.
   VPRegisterUsage UnrolledBase =
-      calculateRegisterUsageForPlan(Plan, {VF}, TTI, ValuesToIgnore)[0];
-  for (auto &Pair : UnrolledBase.MaxLocalUsers)
-    Pair.second *= UF;
+      calculateRegisterUsageForPlan(Plan, VF, TTI, ValuesToIgnore)[0];
+  for (unsigned &NumUsers : make_second_range(UnrolledBase.MaxLocalUsers))
+    NumUsers *= UF;
   unsigned RegClass = TTI.getRegisterClassForType(/*Vector=*/true, VecTy);
   VPRegisterUsage Projected = UnrolledBase;
   Projected.MaxLocalUsers[RegClass] += 1;
@@ -730,13 +727,12 @@ void VPlanTransforms::replaceWidenCanonicalIVWithWidenIV(
       UnrolledBase.spillCost(TTI, CostKind))
     return;
 
-  Constant *Zero = ConstantInt::get(CanIVTy, 0);
+  Constant *Zero = Constant::getNullValue(CanIVTy);
   InductionDescriptor ID(Zero, InductionDescriptor::IK_IntInduction,
                          SE.getOne(CanIVTy));
-  VPIRValue *StartV = Plan.getZero(CanIVTy);
   VPValue *StepV = Plan.getConstantInt(CanIVTy, 1);
   auto *NewWideIV = new VPWidenIntOrFpInductionRecipe(
-      /*IV=*/nullptr, StartV, StepV, &Plan.getVF(), ID,
+      /*IV=*/nullptr, Plan.getOrAddLiveIn(Zero), StepV, &Plan.getVF(), ID,
       VPIRFlags::WrapFlagsTy(/*HasNUW=*/false, /*HasNSW=*/false),
       WideCanIV->getDebugLoc());
   VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
