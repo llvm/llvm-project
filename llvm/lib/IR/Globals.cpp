@@ -125,7 +125,8 @@ std::optional<GlobalValue::GUID> GlobalValue::getGUIDIfAssigned() const {
   }
 
   // Otherwise we try to look it up in the module, for cases where we've read
-  // the GUID table but not the metadata.
+  // the GUID table but not the metadata. This happens when lazy-loading a
+  // module.
   if (getParent() == nullptr)
     return {};
   const Module &M = *getParent();
