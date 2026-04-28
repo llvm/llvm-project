@@ -3460,8 +3460,20 @@ _func:
 //------------------------------------------------------------------------------
 
         hint #0
+        hint #1
+        hint #2
+        hint #3
+        hint #4
+        hint #5
+        hint #6
         hint #127
 // CHECK: nop                             // encoding: [0x1f,0x20,0x03,0xd5]
+// CHECK: yield                           // encoding: [0x3f,0x20,0x03,0xd5]
+// CHECK: wfe                             // encoding: [0x5f,0x20,0x03,0xd5]
+// CHECK: wfi                             // encoding: [0x7f,0x20,0x03,0xd5]
+// CHECK: sev                             // encoding: [0x9f,0x20,0x03,0xd5]
+// CHECK: sevl                            // encoding: [0xbf,0x20,0x03,0xd5]
+// CHECK: dgh                             // encoding: [0xdf,0x20,0x03,0xd5]
 // CHECK: hint    #{{127|0x7f}}           // encoding: [0xff,0x2f,0x03,0xd5]
 
         nop

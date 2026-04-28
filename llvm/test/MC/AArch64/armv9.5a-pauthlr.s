@@ -170,6 +170,12 @@ label1:
 // CHECK-ERROR: instruction requires: pauth-lr
 // CHECK-UNKNOWN: d65f0fe3 <unknown>
 
+  hint #39
+// CHECK-INST: hint #39
+// CHECK-DISASS: pacm
+// CHECK-ENCODING: [0xff,0x24,0x03,0xd5]
+// CHECK-UNKNOWN: d50324ff hint #39
+
   pacm
 // CHECK-INST: pacm
 // CHECK-DISASS: pacm

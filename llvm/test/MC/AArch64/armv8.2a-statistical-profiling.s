@@ -9,6 +9,9 @@
 // NO_SPE_OUT-NOT: mrs
 // NO_SPE_OUT-NOT: psb
 
+  hint #17
+// CHECK: psb csync              // encoding: [0x3f,0x22,0x03,0xd5]
+
   psb csync
 // CHECK: psb csync              // encoding: [0x3f,0x22,0x03,0xd5]
 // NO_SPE:  instruction requires: spe
