@@ -5953,7 +5953,8 @@ public:
   static void Profile(llvm::FoldingSetNodeID &ID, QualType Result,
                       param_type_iterator ArgTys, unsigned NumArgs,
                       const ExtProtoInfo &EPI, const ASTContext &Context,
-                      bool Canonical);
+                      bool Canonical,
+                      bool IgnoringUnresolvedLookupExpr = false);
 };
 
 /// The elaboration keyword that precedes a qualified type name or

@@ -1854,9 +1854,15 @@ public:
 
 private:
   /// Return a normal function type with a typed argument list.
-  QualType getFunctionTypeInternal(QualType ResultTy, ArrayRef<QualType> Args,
-                                   const FunctionProtoType::ExtProtoInfo &EPI,
-                                   bool OnlyWantCanonical) const;
+  QualType
+  getFunctionTypeInternal(QualType ResultTy, ArrayRef<QualType> Args,
+                          const FunctionProtoType::ExtProtoInfo &EPI,
+                          bool OnlyWantCanonical,
+                          bool IgnoringUnresolvedLookupExpr = false) const;
+
+  QualType getFunctionTypeWithExceptionSpecInternal(
+      QualType Orig, const FunctionProtoType::ExceptionSpecInfo &ESI,
+      bool IgnoringUnresolvedLookupExpr) const;
 
 public:
   QualType getTypeDeclType(ElaboratedTypeKeyword Keyword,

@@ -3996,7 +3996,8 @@ bool FunctionProtoType::isTemplateVariadic() const {
 void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
                                 const QualType *ArgTys, unsigned NumParams,
                                 const ExtProtoInfo &epi,
-                                const ASTContext &Context, bool Canonical) {
+                                const ASTContext &Context, bool Canonical,
+                                bool IgnoringUnresolvedLookupExpr) {
   // We have to be careful not to get ambiguous profile encodings.
   // Note that valid type pointers are never ambiguous with anything else.
   //
@@ -4035,15 +4036,14 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
     for (QualType Ex : epi.ExceptionSpec.Exceptions)
       ID.AddPointer(Ex.getAsOpaquePtr());
   } else if (isComputedNoexcept(epi.ExceptionSpec.Type)) {
-    // Make sure the profiling result of the noexcept expression
-    // won't be affected by the unresolved lookup expressions.
+    // It may be problematic if we don't ignore the unresolved lookup expr.
     // See clang/test/Modules/polluted-operator.cppm for an example
     // for it.
     //
     // ProfileLambdaExpr=false is the default value.
-    epi.ExceptionSpec.NoexceptExpr->Profile(
-        ID, Context, Canonical, /*ProfileLambdaExpr=*/false,
-        /*IgnoringUnresolvedLookupExpr=*/true);
+    epi.ExceptionSpec.NoexceptExpr->Profile(ID, Context, Canonical,
+                                            /*ProfileLambdaExpr=*/false,
+                                            IgnoringUnresolvedLookupExpr);
   } else if (epi.ExceptionSpec.Type == EST_Uninstantiated ||
              epi.ExceptionSpec.Type == EST_Unevaluated) {
     ID.AddPointer(epi.ExceptionSpec.SourceDecl->getCanonicalDecl());

@@ -3794,21 +3794,32 @@ void ASTContext::adjustDeducedFunctionResultType(FunctionDecl *FD,
 /// specified exception specification. Type sugar that can be present on a
 /// declaration of a function with an exception specification is permitted
 /// and preserved. Other type sugar (for instance, typedefs) is not.
-QualType ASTContext::getFunctionTypeWithExceptionSpec(
-    QualType Orig, const FunctionProtoType::ExceptionSpecInfo &ESI) const {
+QualType ASTContext::getFunctionTypeWithExceptionSpecInternal(
+    QualType Orig, const FunctionProtoType::ExceptionSpecInfo &ESI,
+    bool IgnoringUnresolvedLookupExpr) const {
   return adjustType(Orig, [&](QualType Ty) {
     const auto *Proto = Ty->castAs<FunctionProtoType>();
-    return getFunctionType(Proto->getReturnType(), Proto->getParamTypes(),
-                           Proto->getExtProtoInfo().withExceptionSpec(ESI));
+    return getFunctionTypeInternal(
+        Proto->getReturnType(), Proto->getParamTypes(),
+        Proto->getExtProtoInfo().withExceptionSpec(ESI),
+        /*OnlyWantCanonical=*/false, IgnoringUnresolvedLookupExpr);
   });
+}
+
+QualType ASTContext::getFunctionTypeWithExceptionSpec(
+    QualType Orig, const FunctionProtoType::ExceptionSpecInfo &ESI) const {
+  return getFunctionTypeWithExceptionSpecInternal(
+      Orig, ESI, /*IgnoringUnresolvedLookupExpr=*/false);
 }
 
 bool ASTContext::hasSameFunctionTypeIgnoringExceptionSpec(QualType T,
                                                           QualType U) const {
   return hasSameType(T, U) ||
          (getLangOpts().CPlusPlus17 &&
-          hasSameType(getFunctionTypeWithExceptionSpec(T, EST_None),
-                      getFunctionTypeWithExceptionSpec(U, EST_None)));
+          hasSameType(getFunctionTypeWithExceptionSpecInternal(
+                          T, EST_None, /*IgnoringUnresolvedLookupExpr=*/true),
+                      getFunctionTypeWithExceptionSpecInternal(
+                          U, EST_None, /*IgnoringUnresolvedLookupExpr=*/true)));
 }
 
 QualType ASTContext::getFunctionTypeWithoutPtrSizes(QualType T) {
@@ -4988,14 +4999,15 @@ static bool isCanonicalExceptionSpecification(
 
 QualType ASTContext::getFunctionTypeInternal(
     QualType ResultTy, ArrayRef<QualType> ArgArray,
-    const FunctionProtoType::ExtProtoInfo &EPI, bool OnlyWantCanonical) const {
+    const FunctionProtoType::ExtProtoInfo &EPI, bool OnlyWantCanonical,
+    bool IgnoringUnresolvedLookupExpr) const {
   size_t NumArgs = ArgArray.size();
 
   // Unique functions, to guarantee there is only one function of a particular
   // structure.
   llvm::FoldingSetNodeID ID;
   FunctionProtoType::Profile(ID, ResultTy, ArgArray.begin(), NumArgs, EPI,
-                             *this, true);
+                             *this, true, IgnoringUnresolvedLookupExpr);
 
   QualType Canonical;
   bool Unique = false;
@@ -7783,8 +7795,6 @@ bool ASTContext::isSameEntity(const NamedDecl *X, const NamedDecl *Y) const {
       auto *XFPT = XT->getAs<FunctionProtoType>();
       auto *YFPT = YT->getAs<FunctionProtoType>();
       if (getLangOpts().CPlusPlus17 && XFPT && YFPT &&
-          (isUnresolvedExceptionSpec(XFPT->getExceptionSpecType()) ||
-           isUnresolvedExceptionSpec(YFPT->getExceptionSpecType())) &&
           hasSameFunctionTypeIgnoringExceptionSpec(XT, YT))
         return true;
       return false;
