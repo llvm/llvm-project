@@ -1186,21 +1186,15 @@ class MapInfoFinalizationPass
       });
 
       func->walk([&](mlir::omp::MapInfoOp op) {
-        // If a record type is not mapped with the `close` modifier while some
-        // of its members are (e.g. descriptor maps), then in USM mode, the
-        // memory for the record will be allocated in unified memory while the
-        // the members might be allocated in device memory. This creates an
-        // inconsistent map for the record type where some of its members are
-        // allocated in different address spaces.
-        //
-        // This fixes this issue by taking a conservative approach and removing
-        // the `close` flag from members if it is not used for mapping the
-        // parent record.
+        // If a parent map is not mapped with the `close` modifier while some of
+        // its members are (e.g. implicit descriptor maps from
+        // getDescriptorMapType in USM), those members must not keep `close` —
+        // otherwise the runtime can treat unified and device placement
+        // inconsistently.
         if (op.getMembers().empty())
           return;
 
-        mlir::Type varTy = fir::unwrapRefType(op.getVarPtr().getType());
-        if (!mlir::isa<fir::RecordType>(varTy))
+        if (!moduleRequiresUSM(op->getParentOfType<mlir::ModuleOp>()))
           return;
 
         auto mapFlag = op.getMapType();

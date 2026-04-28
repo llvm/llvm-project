@@ -230,7 +230,7 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
   // Large, highly connected SCCs still lead to some amount of code bloat in
   // this model, but it is uniformly spread across all the functions in the SCC
   // and eventually they all become too large to inline, rather than
-  // incrementally maknig a single function grow in a super linear fashion.
+  // incrementally making a single function grow in a super linear fashion.
   SmallVector<CallBase *, 16> Calls;
 
   // Populate the initial list of calls in this SCC.

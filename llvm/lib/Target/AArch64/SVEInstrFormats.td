@@ -4695,10 +4695,15 @@ multiclass sve2_int_absdiff_accum_long<bits<2> opc, string asm,
   def : SVE_3_Op_Pat<nxv2i64, op, nxv2i64, nxv4i32, nxv4i32, !cast<Instruction>(NAME # _D)>;
 }
 
-multiclass sve2_int_two_way_absdiff_accum_long<bit U, string asm> {
+multiclass sve2_int_two_way_absdiff_accum_long<bit U, string asm,
+                                               SDPatternOperator op> {
   def _BtoH : sve2_int_absdiff_accum<0b001, { 0b01, U, 0b1 }, asm, ZPR16, ZPR8>;
   def _HtoS : sve2_int_absdiff_accum<0b010, { 0b01, U, 0b1 }, asm, ZPR32, ZPR16>;
   def _StoD : sve2_int_absdiff_accum<0b011, { 0b01, U, 0b1 }, asm, ZPR64, ZPR32>;
+
+  def : SVE_3_Op_Pat<nxv8i16, op, nxv8i16, nxv16i8, nxv16i8, !cast<Instruction>(NAME # _BtoH)>;
+  def : SVE_3_Op_Pat<nxv4i32, op, nxv4i32, nxv8i16, nxv8i16, !cast<Instruction>(NAME # _HtoS)>;
+  def : SVE_3_Op_Pat<nxv2i64, op, nxv2i64, nxv4i32, nxv4i32, !cast<Instruction>(NAME # _StoD)>;
 }
 
 multiclass sve2_int_addsub_long_carry<bits<2> opc, string asm,
