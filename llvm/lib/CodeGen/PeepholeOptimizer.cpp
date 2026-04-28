@@ -1189,8 +1189,7 @@ bool PeepholeOptimizer::optimizeCoalescableCopyImpl(Rewriter &&CpyRewriter,
     RewriteMapTy RewriteMap;
     // Try to find a more suitable source. If we failed to do so, or get the
     // actual source, move to the next source.
-    if (!findNextSource(DefRC, Dst.SubReg, TrackPair, RewriteMap,
-                        AcceptSubReg))
+    if (!findNextSource(DefRC, Dst.SubReg, TrackPair, RewriteMap, AcceptSubReg))
       continue;
 
     // Get the new source to rewrite. TODO: Only enable handling of multiple
