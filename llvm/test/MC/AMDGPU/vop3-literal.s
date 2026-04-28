@@ -2,12 +2,12 @@
 
 // RUN: not llvm-mc -triple=amdgcn %s -show-encoding -mcpu=gfx900 | FileCheck %s -check-prefix=GFX9
 // RUN: not llvm-mc -triple=amdgcn %s -show-encoding -mcpu=gfx1010 -mattr=+wavefrontsize64 | FileCheck %s -check-prefix=GFX10
-// RUN: not llvm-mc -triple=amdgcn %s -show-encoding -mcpu=gfx1250 -mattr=+wavefrontsize64 | FileCheck %s -check-prefix=GFX1250
-// RUN: not llvm-mc -triple=amdgcn %s -show-encoding -mcpu=gfx1250 -mattr=+wavefrontsize64 | %extract-encodings | llvm-mc -triple=amdgcn -mcpu=gfx1250 -mattr=+wavefrontsize64 -disassemble -show-encoding | FileCheck --check-prefixes=GFX1250 %s
+// RUN: not llvm-mc -triple=amdgcn %s -show-encoding -mcpu=gfx1250 -mattr=+wavefrontsize64,-real-true16 | FileCheck %s -check-prefixes=GFX1250
+// RUN: not llvm-mc -triple=amdgcn %s -show-encoding -mcpu=gfx1250 -mattr=+wavefrontsize64,-real-true16 | %extract-encodings | llvm-mc -triple=amdgcn -mcpu=gfx1250 -mattr=+wavefrontsize64,-real-true16 -disassemble -show-encoding | FileCheck --check-prefixes=GFX1250 %s
 
 // RUN: not llvm-mc -triple=amdgcn %s -filetype=null -no-warn 2>&1 -mcpu=gfx900 | FileCheck %s -implicit-check-not=error: -check-prefix=GFX9-ERR
 // RUN: not llvm-mc -triple=amdgcn %s -filetype=null -no-warn 2>&1 -mcpu=gfx1010 -mattr=+wavefrontsize64 | FileCheck %s -implicit-check-not=error: -check-prefix=GFX10-ERR
-// RUN: not llvm-mc -triple=amdgcn %s -filetype=null -no-warn 2>&1 -mcpu=gfx1250 -mattr=+wavefrontsize64 | FileCheck %s -implicit-check-not=error: -check-prefix=GFX1250-ERR
+// RUN: not llvm-mc -triple=amdgcn %s -filetype=null -no-warn 2>&1 -mcpu=gfx1250 -mattr=+wavefrontsize64,-real-true16 | FileCheck %s -implicit-check-not=error: -check-prefix=GFX1250-ERR
 
 v_bfe_u32 v0, 0x3039, v1, s1
 // GFX10: v_bfe_u32 v0, 0x3039, v1, s1            ; encoding: [0x00,0x00,0x48,0xd5,0xff,0x02,0x06,0x00,0x39,0x30,0x00,0x00]

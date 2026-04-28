@@ -1184,6 +1184,37 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
     if (Value *V = simplifyNonNullOperand(Op, /*HasDereferenceable=*/true))
       return replaceOperand(LI, 0, V);
 
+  // load(llvm.protected.field.ptr(ptr)) -> llvm.ptrauth.auth(load(ptr))
+  if (isa<PointerType>(LI.getType())) {
+    if (auto *II = dyn_cast<IntrinsicInst>(Op)) {
+      if (II->getIntrinsicID() == Intrinsic::protected_field_ptr) {
+        std::vector<OperandBundleDef> DSBundle;
+        if (auto Bundle =
+                II->getOperandBundle(LLVMContext::OB_deactivation_symbol))
+          DSBundle.push_back(OperandBundleDef(
+              "deactivation-symbol", cast<GlobalValue>(Bundle->Inputs[0])));
+
+        IRBuilderBase::InsertPointGuard Guard(Builder);
+        Builder.SetInsertPoint(&LI);
+
+        auto *NewLI = cast<LoadInst>(LI.clone());
+        NewLI->setOperand(0, II->getOperand(0));
+        Builder.Insert(NewLI);
+
+        Function *AuthIntr = Intrinsic::getOrInsertDeclaration(
+            F.getParent(), Intrinsic::ptrauth_auth, {});
+        auto *LIInt = Builder.CreatePtrToInt(NewLI, Builder.getInt64Ty());
+        Value *Auth = Builder.CreateCall(
+            AuthIntr,
+            {LIInt, Builder.getInt32(/*AArch64PACKey::DA*/ 2),
+             II->getOperand(1)},
+            DSBundle);
+        Auth = Builder.CreateIntToPtr(Auth, Builder.getPtrTy());
+        return replaceInstUsesWith(LI, Auth);
+      }
+    }
+  }
+
   return nullptr;
 }
 
@@ -1550,6 +1581,37 @@ Instruction *InstCombinerImpl::visitStoreInst(StoreInst &SI) {
   if (!NullPointerIsDefined(SI.getFunction(), SI.getPointerAddressSpace()))
     if (Value *V = simplifyNonNullOperand(Ptr, /*HasDereferenceable=*/true))
       return replaceOperand(SI, 1, V);
+
+  // store(ptr1, llvm.protected.field.ptr(ptr2)) ->
+  // store(llvm.ptrauth.sign(ptr1), ptr2)
+  if (isa<PointerType>(Val->getType())) {
+    if (auto *II = dyn_cast<IntrinsicInst>(Ptr)) {
+      if (II->getIntrinsicID() == Intrinsic::protected_field_ptr) {
+        std::vector<OperandBundleDef> DSBundle;
+        if (auto Bundle =
+                II->getOperandBundle(LLVMContext::OB_deactivation_symbol))
+          DSBundle.push_back(OperandBundleDef(
+              "deactivation-symbol", cast<GlobalValue>(Bundle->Inputs[0])));
+
+        IRBuilderBase::InsertPointGuard Guard(Builder);
+        Builder.SetInsertPoint(&SI);
+
+        Function *SignIntr = Intrinsic::getOrInsertDeclaration(
+            F.getParent(), Intrinsic::ptrauth_sign, {});
+        auto *ValInt = Builder.CreatePtrToInt(Val, Builder.getInt64Ty());
+        Value *Sign = Builder.CreateCall(
+            SignIntr,
+            {ValInt, Builder.getInt32(/*AArch64PACKey::DA*/ 2),
+             II->getOperand(1)},
+            DSBundle);
+        Sign = Builder.CreateIntToPtr(Sign, Builder.getPtrTy());
+
+        replaceOperand(SI, 0, Sign);
+        replaceOperand(SI, 1, II->getOperand(0));
+        return &SI;
+      }
+    }
+  }
 
   return nullptr;
 }

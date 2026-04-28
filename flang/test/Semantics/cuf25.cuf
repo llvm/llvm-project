@@ -20,3 +20,25 @@ contains
     r%origin = origin
   end function
 end module m
+
+program main
+  implicit none
+  integer, parameter :: nx = 400, ny = 200
+  integer :: i, j
+  type r1
+     real :: v(3)
+  end type r1
+  type(r1) :: fb(nx, ny)
+  type(r1), device :: fb_d(nx, ny)
+  
+  associate (fb => fb_d)
+  !$cuf kernel do (2) <<<*,*>>>
+  do j = 1, ny
+     do i = 1, nx                
+        fb(i,j)%v(1) = real(i)/nx
+        fb(i,j)%v(2) = real(j)/ny
+        fb(i,j)%v(3) = 0.2
+     end do
+  end do
+  end associate
+end program

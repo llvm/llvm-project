@@ -145,9 +145,12 @@ struct TypeInfo {
 
 static void emitAvailability(raw_ostream &OS, StringRef Version,
                              bool Use16Bit = false) {
-  if (Use16Bit)
-    OS << "_HLSL_16BIT_AVAILABILITY(shadermodel, " << Version << ")\n";
-  else
+  if (Use16Bit) {
+    OS << "_HLSL_16BIT_AVAILABILITY(shadermodel, " << SM6_2;
+    if (!Version.empty())
+      OS << ", " << Version;
+    OS << ")\n";
+  } else
     OS << "_HLSL_AVAILABILITY(shadermodel, " << Version << ")\n";
 }
 
@@ -397,32 +400,11 @@ static void buildWorklist(const Record *R,
       if (AvailabilityIsAtLeastSM6_2) {
         Item.Availability = Availability;
       } else {
-        Item.Availability = SM6_2;
         Item.Use16BitAvail = IsCond16Bit;
-
-        // Note: If Availability = x where x < 6.2 and a half type is used,
-        // neither _HLSL_AVAILABILITY(shadermodel, x) nor
-        // _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2) are correct:
-        //
-        //   _HLSL_AVAILABILITY(shadermodel, x) will set the availbility for the
-        //   half overload to x even when 16-bit types are enabled, but x < 6.2
-        //   and 6.2 is required for 16-bit half.
-        //
-        //   _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2) will set the
-        //   availability for the half overload to 6.2 when 16-bit types are
-        //   enabled, but there will be no availability set when 16-bit types
-        //   are not enabled.
-        //
-        // A possible solution to this is to make _HLSL_16BIT_AVAILABILITY
-        // accept 3 args: (shadermodel, X, Y) where X is the availability for
-        // the 16-bit half type overload (which will typically be 6.2), and Y is
-        // the availability for the non-16-bit half overload. However, this
-        // situation does not currently arise, so we just assert below that this
-        // case will never occur.
-        assert(
-            !(IsCond16Bit && !Availability.empty()) &&
-            "Can not handle availability for an intrinsic using half types and"
-            " which has an explicit shader model requirement older than 6.2");
+        if (IsCond16Bit)
+          Item.Availability = Availability;
+        else
+          Item.Availability = SM6_2;
       }
     } else {
       Item.Availability = Availability;
@@ -479,14 +461,15 @@ static void emitWorklistOverloads(raw_ostream &OS, const OverloadContext &Ctx,
                                   ArrayRef<int64_t> VectorSizes,
                                   ArrayRef<const Record *> MatrixDimensions) {
   bool InIfdef = false;
-  for (const TypeWorkItem &Item : Worklist) {
+  for (size_t I = 0, E = Worklist.size(); I != E; ++I) {
+    const TypeWorkItem &Item = Worklist[I];
     if (Item.NeedsIfdefGuard && !InIfdef) {
       OS << "#ifdef __HLSL_ENABLE_16_BIT\n";
       InIfdef = true;
     }
 
     auto EmitAvail = [&]() {
-      if (!Item.Availability.empty())
+      if (!Item.Availability.empty() || Item.Use16BitAvail)
         emitAvailability(OS, Item.Availability, Item.Use16BitAvail);
     };
 
@@ -505,8 +488,7 @@ static void emitWorklistOverloads(raw_ostream &OS, const OverloadContext &Ctx,
     }
 
     if (InIfdef) {
-      bool NextIsUnguarded =
-          (&Item == &Worklist.back()) || !(&Item + 1)->NeedsIfdefGuard;
+      bool NextIsUnguarded = (I + 1 == E) || !Worklist[I + 1].NeedsIfdefGuard;
       if (NextIsUnguarded) {
         OS << "#endif\n";
         InIfdef = false;

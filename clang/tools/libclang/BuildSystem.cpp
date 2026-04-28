@@ -155,5 +155,6 @@ void clang_ModuleMapDescriptor_dispose(CXModuleMapDescriptor MMD) {
 void clang_ModuleCache_prune(const char *Path, time_t PruneInterval,
                              time_t PruneAfter) {
   if (Path)
-    clang::maybePruneImpl(Path, PruneInterval, PruneAfter);
+    clang::maybePruneImpl(Path, PruneInterval, PruneAfter,
+                          /*PruneTopLevel=*/true);
 }

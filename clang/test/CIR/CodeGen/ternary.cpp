@@ -185,7 +185,7 @@ void test_cond_lvalue_assign(bool flag) {
 // OGCG: %[[A:.*]] = alloca i32
 // OGCG: %[[B:.*]] = alloca i32
 // OGCG: %[[FLAG_VAL:.*]] = load i8, ptr %[[FLAG]]
-// OGCG: %[[COND:.*]] = trunc i8 %[[FLAG_VAL]] to i1
+// OGCG: %[[COND:.*]] = icmp ne i8 %[[FLAG_VAL]], 0
 // OGCG: br i1 %[[COND]], label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]
 // OGCG: [[TRUE_BB]]:
 // OGCG:   br label %[[MERGE_BB:.*]]
@@ -237,7 +237,7 @@ int& test_cond_lvalue_ref(bool cond, int x, int y) {
 // OGCG: %[[X:.*]] = alloca i32
 // OGCG: %[[Y:.*]] = alloca i32
 // OGCG: %[[COND_VAL:.*]] = load i8, ptr %[[COND]]
-// OGCG: %[[BOOL:.*]] = trunc i8 %[[COND_VAL]] to i1
+// OGCG: %[[BOOL:.*]] = icmp ne i8 %[[COND_VAL]], 0
 // OGCG: br i1 %[[BOOL]], label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]
 // OGCG: [[TRUE_BB]]:
 // OGCG:   br label %[[MERGE_BB:.*]]
@@ -292,7 +292,7 @@ void test_cond_lvalue_compound(bool flag) {
 // OGCG: %[[A:.*]] = alloca i32
 // OGCG: %[[B:.*]] = alloca i32
 // OGCG: %[[FLAG_VAL:.*]] = load i8, ptr %[[FLAG]]
-// OGCG: %[[BOOL:.*]] = trunc i8 %[[FLAG_VAL]] to i1
+// OGCG: %[[BOOL:.*]] = icmp ne i8 %[[FLAG_VAL]], 0
 // OGCG: br i1 %[[BOOL]], label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]
 // OGCG: [[TRUE_BB]]:
 // OGCG:   br label %[[MERGE_BB:.*]]

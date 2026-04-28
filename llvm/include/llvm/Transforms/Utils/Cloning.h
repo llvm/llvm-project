@@ -18,7 +18,7 @@
 #define LLVM_TRANSFORMS_UTILS_CLONING_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -91,7 +91,7 @@ struct ClonedCodeInfo {
 
   // Cloned calls that were originally an indirect call. They may be direct or
   // indirect after cloning.
-  SmallPtrSet<const Value *, 4> OriginallyIndirectCalls;
+  SmallSetVector<const Value *, 4> OriginallyIndirectCalls;
 
   ClonedCodeInfo() = default;
 

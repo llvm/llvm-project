@@ -1,6 +1,7 @@
 ; RUN: not llc -O0 -mtriple=spirv64-unknown-unknown %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
 
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_16bit_atomics %s -o - | FileCheck %s
+; RUNx: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_16bit_atomics %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-ERROR: LLVM ERROR: 16-bit integer atomic operations require the following SPIR-V extension: SPV_INTEL_16bit_atomics
 
@@ -16,15 +17,14 @@
 ; CHECK-DAG: %[[#Const42:]] = OpConstant %[[#TyInt16]] 42{{$}}
 ; CHECK-DAG: %[[#ScopeDevice:]] = OpConstant %[[#TyInt32]] 1{{$}}
 ; CHECK-DAG: %[[#ScopeAllSvmDevices:]] = OpConstantNull %[[#TyInt32]]
-; CHECK-DAG: %[[#MemSemAcqRel:]] = OpConstant %[[#TyInt32]] 528{{$}}
-; CHECK-DAG: %[[#MemSeqCst:]] = OpConstant %[[#TyInt32]] 16{{$}}
+; CHECK-DAG: %[[#MemSem528:]] = OpConstant %[[#TyInt32]] 528{{$}}
 
 ; CHECK-DAG: %[[#Val:]] = OpVariable %[[#TyInt16Ptr]] CrossWorkgroup %[[#Const0]]
 
-; CHECK: OpAtomicLoad %[[#TyInt16]] %[[#Val]] %[[#ScopeDevice]] %[[#MemSemAcqRel]]
-; CHECK: OpAtomicStore %[[#Val]] %[[#ScopeDevice]] %[[#MemSemAcqRel]] %[[#Const42]]
-; CHECK: OpAtomicExchange %[[#TyInt16]] %[[#Val]] %[[#ScopeAllSvmDevices]] %[[#MemSeqCst]] %[[#Const42]]
-; CHECK: OpAtomicCompareExchange %[[#TyInt16]] %[[#]] %[[#ScopeAllSvmDevices]] %[[#MemSeqCst]] %[[#MemSeqCst]] %[[#Const42]] %[[#Const1]]
+; CHECK: OpAtomicLoad %[[#TyInt16]] %[[#Val]] %[[#ScopeDevice]] %[[#MemSem528]]
+; CHECK: OpAtomicStore %[[#Val]] %[[#ScopeDevice]] %[[#MemSem528]] %[[#Const42]]
+; CHECK: OpAtomicExchange %[[#TyInt16]] %[[#Val]] %[[#ScopeAllSvmDevices]] %[[#MemSem528]] %[[#Const42]]
+; CHECK: OpAtomicCompareExchange %[[#TyInt16]] %[[#]] %[[#ScopeAllSvmDevices]] %[[#MemSem528]] %[[#MemSem528]] %[[#Const42]] %[[#Const1]]
 
 
 @val = private addrspace(1) global i16 0
