@@ -14,7 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 def C1PremiumModel : SchedMachineModel {
-  let IssueWidth            =   10;
+  let IssueWidth            =  10;
   let MicroOpBufferSize     = 320; // Entries in micro-op re-order buffer.
   let LoadLatency           =   4; // Optimistic load latency.
   let MispredictPenalty     =  10; // Extra cycles for mispredicted branch.
@@ -90,137 +90,169 @@ def : WriteRes<WriteLDHi,    []> { let Latency = 4; }
 def C1PWrite_0c : SchedWriteRes<[]> { let Latency = 0; }
 
 // Define a small set of generic 1 micro-op types as placeholders.
-def C1PWrite_1c_1B          : SchedWriteRes<[C1PUnitB]>  { let Latency = 1; }
-def C1PWrite_2c_1B          : SchedWriteRes<[C1PUnitB]>  { let Latency = 2; }
-def C1PWrite_1c_1I          : SchedWriteRes<[C1PUnitI]>  { let Latency = 1; }
-def C1PWrite_1c_8I          : SchedWriteRes<[
+def C1PWrite_1c_1B      : SchedWriteRes<[C1PUnitB]>  { let Latency = 1; }
+def C1PWrite_2c_1B      : SchedWriteRes<[C1PUnitB]>  { let Latency = 2; }
+def C1PWrite_1c_1I      : SchedWriteRes<[C1PUnitI]>  { let Latency = 1; }
+def C1PWrite_1c_8I      : SchedWriteRes<[
     C1PUnitI, C1PUnitI, C1PUnitI, C1PUnitI,
     C1PUnitI, C1PUnitI, C1PUnitI, C1PUnitI
 ]>  { let Latency = 1; }
-def C1PWrite_2c_1I          : SchedWriteRes<[C1PUnitI]>  { let Latency = 2; }
-def C1PWrite_3c_1I          : SchedWriteRes<[C1PUnitI]>  { let Latency = 3; }
-def C1PWrite_2c_1I4         : SchedWriteRes<[C1PUnitI4]> { let Latency = 2; }
-def C1PWrite_1c_1M          : SchedWriteRes<[C1PUnitM]>  { let Latency = 1; }
-def C1PWrite_1c_2M          : SchedWriteRes<[C1PUnitM, C1PUnitM]>  { let Latency = 1; }
-def C1PWrite_2c_1M          : SchedWriteRes<[C1PUnitM]>  { let Latency = 2; }
-def C1PWrite_2c_1M0         : SchedWriteRes<[C1PUnitM0]> { let Latency = 2; }
-def C1PWrite_3c_1M0         : SchedWriteRes<[C1PUnitM0]> { let Latency = 3; }
-def C1PWrite_4c_1M0         : SchedWriteRes<[C1PUnitM0]> { let Latency = 4; }
-def C1PWrite_5c_1M0         : SchedWriteRes<[C1PUnitM0]> { let Latency = 5; }
-def C1PWrite_5c_1M0_5rc     : SchedWriteRes<[C1PUnitM0]>  { let Latency = 5;
-                                                            let ReleaseAtCycles = [5]; }
-def C1PWrite_12c_1M0        : SchedWriteRes<[C1PUnitM0]>  { let Latency = 12;
-                                                            let ReleaseAtCycles = [12]; }
-def C1PWrite_20c_1M0        : SchedWriteRes<[C1PUnitM0]>  { let Latency = 20;
-                                                            let ReleaseAtCycles = [20]; }
-def C1PWrite_1c_1V          : SchedWriteRes<[C1PUnitV]>  { let Latency = 1; }
-def C1PWrite_2c_1V          : SchedWriteRes<[C1PUnitV]>  { let Latency = 2; }
-def C1PWrite_2c_3V          : SchedWriteRes<[C1PUnitV, C1PUnitV, C1PUnitV]>  { let Latency = 2; }
-def C1PWrite_3c_1V          : SchedWriteRes<[C1PUnitV]>  { let Latency = 3; }
-def C1PWrite_4c_1V          : SchedWriteRes<[C1PUnitV]>  { let Latency = 4; }
-def C1PWrite_6c_1V          : SchedWriteRes<[C1PUnitV]>  { let Latency = 6; }
-def C1PWrite_6c_5V          : SchedWriteRes<[
-    C1PUnitV, C1PUnitV, C1PUnitV,
-    C1PUnitV, C1PUnitV,
-  ]>  {
-    let Latency = 6;
+def C1PWrite_2c_1I      : SchedWriteRes<[C1PUnitI]>  { let Latency = 2; }
+def C1PWrite_3c_1I      : SchedWriteRes<[C1PUnitI]>  { let Latency = 3; }
+def C1PWrite_2c_1I4     : SchedWriteRes<[C1PUnitI4]> { let Latency = 2; }
+def C1PWrite_1c_1M      : SchedWriteRes<[C1PUnitM]>  { let Latency = 1; }
+def C1PWrite_1c_2M      : SchedWriteRes<[C1PUnitM, C1PUnitM]>  { let Latency = 1; }
+def C1PWrite_2c_1M      : SchedWriteRes<[C1PUnitM]>  { let Latency = 2; }
+def C1PWrite_2c_1M0     : SchedWriteRes<[C1PUnitM0]> { let Latency = 2; }
+def C1PWrite_3c_1M0     : SchedWriteRes<[C1PUnitM0]> { let Latency = 3; }
+def C1PWrite_4c_1M0     : SchedWriteRes<[C1PUnitM0]> { let Latency = 4; }
+def C1PWrite_5c_1M0     : SchedWriteRes<[C1PUnitM0]> { let Latency = 5; }
+def C1PWrite_5c_1M0_5rc : SchedWriteRes<[C1PUnitM0]> {
+  let Latency = 5;
+  let ReleaseAtCycles = [5];
+}
+def C1PWrite_12c_1M0    : SchedWriteRes<[C1PUnitM0]> {
+  let Latency = 12;
+  let ReleaseAtCycles = [12];
+}
+def C1PWrite_20c_1M0    : SchedWriteRes<[C1PUnitM0]> {
+  let Latency = 20;
+  let ReleaseAtCycles = [20];
+}
+def C1PWrite_1c_1V      : SchedWriteRes<[C1PUnitV]>  { let Latency = 1; }
+def C1PWrite_2c_1V      : SchedWriteRes<[C1PUnitV]>  { let Latency = 2; }
+def C1PWrite_2c_3V      : SchedWriteRes<[C1PUnitV, C1PUnitV, C1PUnitV]>  { let Latency = 2; }
+def C1PWrite_3c_1V      : SchedWriteRes<[C1PUnitV]>  { let Latency = 3; }
+def C1PWrite_4c_1V      : SchedWriteRes<[C1PUnitV]>  { let Latency = 4; }
+def C1PWrite_6c_1V      : SchedWriteRes<[C1PUnitV]>  { let Latency = 6; }
+def C1PWrite_6c_5V      : SchedWriteRes<[C1PUnitV, C1PUnitV, C1PUnitV,
+                                         C1PUnitV, C1PUnitV, ]> {
+  let Latency = 6;
 }
 
-def C1PWrite_8c_1V          : SchedWriteRes<[C1PUnitV]>  { let Latency = 8; }
-def C1PWrite_1c_1V0         : SchedWriteRes<[C1PUnitV0]> { let Latency = 1; }
-def C1PWrite_2c_1V0         : SchedWriteRes<[C1PUnitV0]> { let Latency = 2; }
-def C1PWrite_4c_1V0         : SchedWriteRes<[C1PUnitV0]> { let Latency = 4; }
-def C1PWrite_6c_1V0_6rc        : SchedWriteRes<[C1PUnitV0]> { let Latency = 6; let ReleaseAtCycles = [6]; }
-def C1PWrite_10c_1V0_10rc        : SchedWriteRes<[C1PUnitV0]> { let Latency = 10; let ReleaseAtCycles = [10]; }
-def C1PWrite_12c_1V0_12rc        : SchedWriteRes<[C1PUnitV0]> { let Latency = 12; let ReleaseAtCycles = [12];}
-def C1PWrite_20c_1V0_20rc        : SchedWriteRes<[C1PUnitV0]> { let Latency = 20; let ReleaseAtCycles = [20];}
-def C1PWrite_3c_1V0_1M      : SchedWriteRes<[C1PUnitV0, C1PUnitM]> { let Latency = 3; }
-def C1PWrite_3c_1V1         : SchedWriteRes<[C1PUnitV1]> { let Latency = 3; }
-def C1PWrite_5c_1V1         : SchedWriteRes<[C1PUnitV1]> { let Latency = 5; }
-def C1PWrite_5c_1V1_8rc     : SchedWriteRes<[C1PUnitV1]> {
+def C1PWrite_8c_1V      : SchedWriteRes<[C1PUnitV]>  { let Latency = 8; }
+def C1PWrite_1c_1V0     : SchedWriteRes<[C1PUnitV0]> { let Latency = 1; }
+def C1PWrite_2c_1V0     : SchedWriteRes<[C1PUnitV0]> { let Latency = 2; }
+def C1PWrite_4c_1V0     : SchedWriteRes<[C1PUnitV0]> { let Latency = 4; }
+def C1PWrite_6c_1V0_6rc : SchedWriteRes<[C1PUnitV0]> {
+  let Latency = 6;
+  let ReleaseAtCycles = [6];
+}
+def C1PWrite_10c_1V0_10rc : SchedWriteRes<[C1PUnitV0]> {
+  let Latency = 10;
+  let ReleaseAtCycles = [10];
+}
+def C1PWrite_12c_1V0_12rc : SchedWriteRes<[C1PUnitV0]> {
+  let Latency = 12;
+  let ReleaseAtCycles = [12];
+}
+def C1PWrite_20c_1V0_20rc : SchedWriteRes<[C1PUnitV0]> {
+  let Latency = 20;
+  let ReleaseAtCycles = [20];
+}
+def C1PWrite_3c_1V0_1M  : SchedWriteRes<[C1PUnitV0, C1PUnitM]> { let Latency = 3; }
+def C1PWrite_3c_1V1     : SchedWriteRes<[C1PUnitV1]> { let Latency = 3; }
+def C1PWrite_5c_1V1     : SchedWriteRes<[C1PUnitV1]> { let Latency = 5; }
+def C1PWrite_5c_1V1_8rc : SchedWriteRes<[C1PUnitV1]> {
   let Latency = 5;
   let ReleaseAtCycles = [8];
 }
-def C1PWrite_8c_1V1         : SchedWriteRes<[C1PUnitV1]> { let Latency = 8; }
-def C1PWrite_8c_1V1_4rc     : SchedWriteRes<[C1PUnitV1]> {
+def C1PWrite_8c_1V1     : SchedWriteRes<[C1PUnitV1]> { let Latency = 8; }
+def C1PWrite_8c_1V1_4rc : SchedWriteRes<[C1PUnitV1]> {
   let Latency = 8;
   let ReleaseAtCycles = [4];
 }
-def C1PWrite_12c_1V1        : SchedWriteRes<[C1PUnitV1]> { let Latency = 12; }
-def C1PWrite_12c_1V1_2rc    : SchedWriteRes<[C1PUnitV1]> {
+def C1PWrite_12c_1V1    : SchedWriteRes<[C1PUnitV1]> { let Latency = 12; }
+def C1PWrite_12c_1V1_2rc : SchedWriteRes<[C1PUnitV1]> {
   let Latency = 12;
   let ReleaseAtCycles = [2];
 }
-def C1PWrite_2c_1V01        : SchedWriteRes<[C1PUnitV01]>  { let Latency = 2; }
-def C1PWrite_3c_1V01        : SchedWriteRes<[C1PUnitV01]>  { let Latency = 3; }
-def C1PWrite_1c_1L          : SchedWriteRes<[C1PUnitL]>  { let Latency = 1; }
-def C1PWrite_4c_1L          : SchedWriteRes<[C1PUnitL]>  { let Latency = 4; }
-def C1PWrite_4c_1L_1I       : SchedWriteRes<[C1PUnitL, C1PUnitI]>  { let Latency = 4; }
-def C1PWrite_6c_1L          : SchedWriteRes<[C1PUnitL]>  { let Latency = 6; }
-def C1PWrite_1c_1SA         : SchedWriteRes<[C1PUnitSA]> { let Latency = 1; }
+def C1PWrite_2c_1V01    : SchedWriteRes<[C1PUnitV01]>  { let Latency = 2; }
+def C1PWrite_3c_1V01    : SchedWriteRes<[C1PUnitV01]>  { let Latency = 3; }
+def C1PWrite_1c_1L      : SchedWriteRes<[C1PUnitL]>  { let Latency = 1; }
+def C1PWrite_4c_1L      : SchedWriteRes<[C1PUnitL]>  { let Latency = 4; }
+def C1PWrite_4c_1L_1I   : SchedWriteRes<[C1PUnitL, C1PUnitI]>  { let Latency = 4; }
+def C1PWrite_6c_1L      : SchedWriteRes<[C1PUnitL]>  { let Latency = 6; }
+def C1PWrite_1c_1SA     : SchedWriteRes<[C1PUnitSA]> { let Latency = 1; }
 
-def C1PWrite_1c_1SA_1D      : SchedWriteRes<[C1PUnitSA, C1PUnitD]> { let Latency = 1; }
-def C1PWrite_1c_1SA_1D_1I   : SchedWriteRes<[C1PUnitSA, C1PUnitD, C1PUnitI]> { let Latency = 1; }
-def C1PWrite_2c_1B_1I       : SchedWriteRes<[C1PUnitB, C1PUnitI]> { let Latency = 2; }
-def C1PWrite_5c_1L_1I       : SchedWriteRes<[C1PUnitL, C1PUnitI]> { let Latency = 5; }
-def C1PWrite_5c_2L_1I       : SchedWriteRes<[C1PUnitL, C1PUnitL, C1PUnitI]> { let Latency = 5; }
-def C1PWrite_6c_1L_1I       : SchedWriteRes<[C1PUnitL, C1PUnitI]> { let Latency = 6; }
-def C1PWrite_6c_2L_1I       : SchedWriteRes<[C1PUnitL, C1PUnitL, C1PUnitI]> { let Latency = 6; }
-def C1PWrite_7c_1L_1I       : SchedWriteRes<[C1PUnitL, C1PUnitI]> { let Latency = 7; }
-def C1PWrite_5c_1M0_1V      : SchedWriteRes<[C1PUnitM0, C1PUnitV]> { let Latency = 5; }
-def C1PWrite_6c_1M0_1B      : SchedWriteRes<[C1PUnitM0, C1PUnitB]> { let Latency = 6; }
-def C1PWrite_6c_1M0_1B_1I   : SchedWriteRes<[C1PUnitM0, C1PUnitB, C1PUnitI]> { let Latency = 6; }
-def C1PWrite_9c_1M0_1L      : SchedWriteRes<[C1PUnitM0, C1PUnitL]> { let Latency = 9; }
-def C1PWrite_2c_1SA_1V01    : SchedWriteRes<[C1PUnitSA, C1PUnitV01]> { let Latency = 2; }
+def C1PWrite_1c_1SA_1D    : SchedWriteRes<[C1PUnitSA, C1PUnitD]> { let Latency = 1; }
+def C1PWrite_1c_1SA_1D_1I : SchedWriteRes<[C1PUnitSA, C1PUnitD, C1PUnitI]> { let Latency = 1; }
+def C1PWrite_2c_1B_1I     : SchedWriteRes<[C1PUnitB, C1PUnitI]> { let Latency = 2; }
+def C1PWrite_5c_1L_1I     : SchedWriteRes<[C1PUnitL, C1PUnitI]> { let Latency = 5; }
+def C1PWrite_5c_2L_1I     : SchedWriteRes<[C1PUnitL, C1PUnitL, C1PUnitI]> { let Latency = 5; }
+def C1PWrite_6c_1L_1I     : SchedWriteRes<[C1PUnitL, C1PUnitI]> { let Latency = 6; }
+def C1PWrite_6c_2L_1I     : SchedWriteRes<[C1PUnitL, C1PUnitL, C1PUnitI]> { let Latency = 6; }
+def C1PWrite_7c_1L_1I     : SchedWriteRes<[C1PUnitL, C1PUnitI]> { let Latency = 7; }
+def C1PWrite_5c_1M0_1V    : SchedWriteRes<[C1PUnitM0, C1PUnitV]> { let Latency = 5; }
+def C1PWrite_6c_1M0_1B    : SchedWriteRes<[C1PUnitM0, C1PUnitB]> { let Latency = 6; }
+def C1PWrite_6c_1M0_1B_1I : SchedWriteRes<[C1PUnitM0, C1PUnitB, C1PUnitI]> { let Latency = 6; }
+def C1PWrite_9c_1M0_1L    : SchedWriteRes<[C1PUnitM0, C1PUnitL]> { let Latency = 9; }
+def C1PWrite_2c_1SA_1V01  : SchedWriteRes<[C1PUnitSA, C1PUnitV01]> { let Latency = 2; }
 
-def C1PWrite_2c_2SA_2V01    : SchedWriteRes<[
+def C1PWrite_2c_2SA_2V01 : SchedWriteRes<[
     C1PUnitSA, C1PUnitSA,
     C1PUnitV01, C1PUnitV01]> {
-    let Latency = 2;
+  let Latency = 2;
 }
 
-def C1PWrite_2c_3SA_3V01    : SchedWriteRes<[
+def C1PWrite_2c_3SA_3V01 : SchedWriteRes<[
     C1PUnitSA, C1PUnitSA, C1PUnitSA,
     C1PUnitV01, C1PUnitV01, C1PUnitV01]> {
-    let Latency = 2;
+  let Latency = 2;
 }
 
-def C1PWrite_2c_4SA_4V01    : SchedWriteRes<[
+def C1PWrite_2c_4SA_4V01 : SchedWriteRes<[
     C1PUnitSA, C1PUnitSA,
     C1PUnitSA, C1PUnitSA,
     C1PUnitV01, C1PUnitV01,
     C1PUnitV01, C1PUnitV01]> {
-    let Latency = 2;
+  let Latency = 2;
 }
 
-def C1PWrite_2c_1SA_1V01_1I : SchedWriteRes<[C1PUnitSA, C1PUnitV01, C1PUnitI]> { let Latency = 2; }
+def C1PWrite_2c_1SA_1V01_1I : SchedWriteRes<[C1PUnitSA, C1PUnitV01, C1PUnitI]> {
+  let Latency = 2;
+}
 def C1PWrite_2c_2SA_2V01_2I : SchedWriteRes<[
     C1PUnitSA, C1PUnitSA,
     C1PUnitV01, C1PUnitV01,
     C1PUnitI, C1PUnitI]> {
-    let Latency = 2;
+  let Latency = 2;
 }
 
-def C1PWrite_8c_1L_1V       : SchedWriteRes<[C1PUnitL, C1PUnitV]> { let Latency =  8; }
-def C1PWrite_7c_1M0_1V      : SchedWriteRes<[C1PUnitM0, C1PUnitV]> { let Latency = 7; }
-def C1PWrite_5c_1V_1M0      : SchedWriteRes<[C1PUnitM0, C1PUnitV]> { let Latency = 5; }
-def C1PWrite_2c_1SA_1V      : SchedWriteRes<[C1PUnitSA, C1PUnitV]> { let Latency = 2; }
-def C1PWrite_2c_1SA_2V      : SchedWriteRes<[C1PUnitSA, C1PUnitV, C1PUnitV]> { let Latency = 2; }
-def C1PWrite_4c_1SA_2V      : SchedWriteRes<[C1PUnitSA, C1PUnitV, C1PUnitV]> { let Latency = 4; }
-def C1PWrite_4c_1SA_1V      : SchedWriteRes<[C1PUnitSA, C1PUnitV]> { let Latency = 4; }
-def C1PWrite_4c_1I_1SA_2V   : SchedWriteRes<[C1PUnitI, C1PUnitSA, C1PUnitV, C1PUnitV]> { let Latency = 4; }
-def C1PWrite_4c_1I_1SA_1V   : SchedWriteRes<[C1PUnitI, C1PUnitSA, C1PUnitV]> { let Latency = 4; }
-def C1PWrite_5c_1SA_2V      : SchedWriteRes<[C1PUnitSA, C1PUnitV, C1PUnitV]> { let Latency = 5; }
-def C1PWrite_5c_1SA_1V      : SchedWriteRes<[C1PUnitSA, C1PUnitV]> { let Latency = 5; }
-def C1PWrite_5c_3SA_6V      : SchedWriteRes<[C1PUnitSA, C1PUnitSA, C1PUnitSA,
-                                             C1PUnitV, C1PUnitV, C1PUnitV,
-                                             C1PUnitV, C1PUnitV, C1PUnitV]> { let Latency = 5; }
-def C1PWrite_5c_1I_1SA_2V   : SchedWriteRes<[C1PUnitI, C1PUnitSA, C1PUnitV, C1PUnitV]> { let Latency = 5; }
-def C1PWrite_5c_1I_1SA_1V   : SchedWriteRes<[C1PUnitI, C1PUnitSA, C1PUnitV]> { let Latency = 5; }
-def C1PWrite_7c_1SA_2V      : SchedWriteRes<[C1PUnitSA, C1PUnitV, C1PUnitV]> { let Latency = 7; }
-def C1PWrite_7c_1SA_1V      : SchedWriteRes<[C1PUnitSA, C1PUnitV]> { let Latency = 7; }
-def C1PWrite_7c_1I_1SA_2V   : SchedWriteRes<[C1PUnitI, C1PUnitSA, C1PUnitV, C1PUnitV]> { let Latency = 7; }
-def C1PWrite_7c_1I_1SA_1V   : SchedWriteRes<[C1PUnitI, C1PUnitSA, C1PUnitV]> { let Latency = 7; }
+def C1PWrite_8c_1L_1V     : SchedWriteRes<[C1PUnitL, C1PUnitV]> { let Latency = 8; }
+def C1PWrite_7c_1M0_1V    : SchedWriteRes<[C1PUnitM0, C1PUnitV]> { let Latency = 7; }
+def C1PWrite_5c_1V_1M0    : SchedWriteRes<[C1PUnitM0, C1PUnitV]> { let Latency = 5; }
+def C1PWrite_2c_1SA_1V    : SchedWriteRes<[C1PUnitSA, C1PUnitV]> { let Latency = 2; }
+def C1PWrite_2c_1SA_2V    : SchedWriteRes<[C1PUnitSA, C1PUnitV, C1PUnitV]> { let Latency = 2; }
+def C1PWrite_4c_1SA_2V    : SchedWriteRes<[C1PUnitSA, C1PUnitV, C1PUnitV]> { let Latency = 4; }
+def C1PWrite_4c_1SA_1V    : SchedWriteRes<[C1PUnitSA, C1PUnitV]> { let Latency = 4; }
+def C1PWrite_4c_1I_1SA_2V : SchedWriteRes<[C1PUnitI, C1PUnitSA, C1PUnitV, C1PUnitV]> {
+  let Latency = 4;
+}
+def C1PWrite_4c_1I_1SA_1V : SchedWriteRes<[C1PUnitI, C1PUnitSA, C1PUnitV]> {
+  let Latency = 4;
+}
+def C1PWrite_5c_1SA_2V    : SchedWriteRes<[C1PUnitSA, C1PUnitV, C1PUnitV]> { let Latency = 5; }
+def C1PWrite_5c_1SA_1V    : SchedWriteRes<[C1PUnitSA, C1PUnitV]> { let Latency = 5; }
+def C1PWrite_5c_3SA_6V : SchedWriteRes<[C1PUnitSA, C1PUnitSA, C1PUnitSA,
+                                        C1PUnitV, C1PUnitV, C1PUnitV,
+                                        C1PUnitV, C1PUnitV, C1PUnitV]> {
+  let Latency = 5;
+}
+def C1PWrite_5c_1I_1SA_2V : SchedWriteRes<[C1PUnitI, C1PUnitSA, C1PUnitV, C1PUnitV]> {
+  let Latency = 5;
+}
+def C1PWrite_5c_1I_1SA_1V : SchedWriteRes<[C1PUnitI, C1PUnitSA, C1PUnitV]> {
+  let Latency = 5;
+}
+def C1PWrite_7c_1SA_2V    : SchedWriteRes<[C1PUnitSA, C1PUnitV, C1PUnitV]> { let Latency = 7; }
+def C1PWrite_7c_1SA_1V    : SchedWriteRes<[C1PUnitSA, C1PUnitV]> { let Latency = 7; }
+def C1PWrite_7c_1I_1SA_2V : SchedWriteRes<[C1PUnitI, C1PUnitSA, C1PUnitV, C1PUnitV]> {
+  let Latency = 7;
+}
+def C1PWrite_7c_1I_1SA_1V : SchedWriteRes<[C1PUnitI, C1PUnitSA, C1PUnitV]> {
+  let Latency = 7;
+}
 def C1PWrite_4c_1SA_1V01_1V : SchedWriteRes<[C1PUnitSA, C1PUnitV01, C1PUnitV]> { let Latency = 4; }
 def C1PWrite_4c_1SA_2V01_1V : SchedWriteRes<[C1PUnitSA, C1PUnitV01, C1PUnitV01, C1PUnitV]> { let Latency = 4; }
 def C1PWrite_4c_2SA_2V01_2V : SchedWriteRes<[C1PUnitSA, C1PUnitSA,
@@ -248,7 +280,7 @@ def C1PWrite_7c_2SA_2V01_8V : SchedWriteRes<[
     C1PUnitV01, C1PUnitV01,
     C1PUnitV, C1PUnitV, C1PUnitV, C1PUnitV,
     C1PUnitV, C1PUnitV, C1PUnitV, C1PUnitV]> {
-    let Latency = 7;
+  let Latency = 7;
 }
 
 def C1PWrite_7c_6SA_6V01_6V : SchedWriteRes<[
@@ -258,36 +290,46 @@ def C1PWrite_7c_6SA_6V01_6V : SchedWriteRes<[
     C1PUnitV01, C1PUnitV01, C1PUnitV01,
     C1PUnitV, C1PUnitV, C1PUnitV,
     C1PUnitV, C1PUnitV, C1PUnitV]> {
-    let Latency = 7;
+  let Latency = 7;
 }
 
-def C1PWrite_7c_1M_1M0_1V   : SchedWriteRes<[C1PUnitM, C1PUnitM0, C1PUnitV]> { let Latency = 7; }
-def C1PWrite_8c_1M0_1V1_1V  : SchedWriteRes<[C1PUnitM0, C1PUnitV1, C1PUnitV]> { let Latency = 8; }
-def C1PWrite_5c_1V1_1V      : SchedWriteRes<[C1PUnitV1, C1PUnitV]> { let Latency = 5; }
-def C1PWrite_4c_2V          : SchedWriteRes<[C1PUnitV, C1PUnitV]> { let Latency = 4; }
-def C1PWrite_4c_3V          : SchedWriteRes<[C1PUnitV, C1PUnitV, C1PUnitV]> { let Latency = 4; }
-def C1PWrite_6c_1L_1M       : SchedWriteRes<[C1PUnitL, C1PUnitM]> { let Latency = 6; }
-def C1PWrite_9c_1V_1L       : SchedWriteRes<[C1PUnitV, C1PUnitL]> { let Latency = 9; }
-def C1PWrite_9c_1I_1L_1V    : SchedWriteRes<[C1PUnitI, C1PUnitL, C1PUnitV]> { let Latency = 9; }
-def C1PWrite_9c_2I_2L_2V    : SchedWriteRes<[C1PUnitI, C1PUnitI,
-                                             C1PUnitL, C1PUnitL,
-                                             C1PUnitV, C1PUnitV]> { let Latency = 9; }
-def C1PWrite_9c_3I_3L_3V    : SchedWriteRes<[C1PUnitI, C1PUnitI, C1PUnitI,
-                                             C1PUnitL, C1PUnitL, C1PUnitL,
-                                             C1PUnitV, C1PUnitV, C1PUnitV]> { let Latency = 9; }
+def C1PWrite_7c_1M_1M0_1V : SchedWriteRes<[C1PUnitM, C1PUnitM0, C1PUnitV]> { let Latency = 7; }
+def C1PWrite_8c_1M0_1V1_1V : SchedWriteRes<[C1PUnitM0, C1PUnitV1, C1PUnitV]> {
+  let Latency = 8;
+}
+def C1PWrite_5c_1V1_1V : SchedWriteRes<[C1PUnitV1, C1PUnitV]> { let Latency = 5; }
+def C1PWrite_4c_2V     : SchedWriteRes<[C1PUnitV, C1PUnitV]> { let Latency = 4; }
+def C1PWrite_4c_3V     : SchedWriteRes<[C1PUnitV, C1PUnitV, C1PUnitV]> { let Latency = 4; }
+def C1PWrite_6c_1L_1M  : SchedWriteRes<[C1PUnitL, C1PUnitM]> { let Latency = 6; }
+def C1PWrite_9c_1V_1L  : SchedWriteRes<[C1PUnitV, C1PUnitL]> { let Latency = 9; }
+def C1PWrite_9c_1I_1L_1V : SchedWriteRes<[C1PUnitI, C1PUnitL, C1PUnitV]> {
+  let Latency = 9;
+}
+def C1PWrite_9c_2I_2L_2V : SchedWriteRes<[C1PUnitI, C1PUnitI,
+                                          C1PUnitL, C1PUnitL,
+                                          C1PUnitV, C1PUnitV]> {
+  let Latency = 9;
+}
+def C1PWrite_9c_3I_3L_3V : SchedWriteRes<[C1PUnitI, C1PUnitI, C1PUnitI,
+                                          C1PUnitL, C1PUnitL, C1PUnitL,
+                                          C1PUnitV, C1PUnitV, C1PUnitV]> {
+  let Latency = 9;
+}
 def C1PWrite_4c_2L    : SchedWriteRes<[C1PUnitL, C1PUnitL]> { let Latency = 4; }
 def C1PWrite_4c_2L_1I : SchedWriteRes<[C1PUnitL, C1PUnitL, C1PUnitI]> { let Latency = 4; }
-def C1PWrite_10c_1L_1V      : SchedWriteRes<[
+def C1PWrite_10c_1L_1V : SchedWriteRes<[
     C1PUnitL, C1PUnitV,
-C1PUnitL, C1PUnitV,
-C1PUnitL, C1PUnitV,
-C1PUnitL, C1PUnitV,
-C1PUnitL, C1PUnitV,
-C1PUnitL, C1PUnitV,
-C1PUnitL, C1PUnitV,
-C1PUnitL, C1PUnitV ]> { let Latency = 10; }
+    C1PUnitL, C1PUnitV,
+    C1PUnitL, C1PUnitV,
+    C1PUnitL, C1PUnitV,
+    C1PUnitL, C1PUnitV,
+    C1PUnitL, C1PUnitV,
+    C1PUnitL, C1PUnitV,
+    C1PUnitL, C1PUnitV]> {
+  let Latency = 10;
+}
 
-def C1PWrite_11c_8I_8L_8V    : SchedWriteRes<[
+def C1PWrite_11c_8I_8L_8V : SchedWriteRes<[
     C1PUnitI, C1PUnitL, C1PUnitV,
     C1PUnitI, C1PUnitL, C1PUnitV,
     C1PUnitI, C1PUnitL, C1PUnitV,
@@ -296,71 +338,97 @@ def C1PWrite_11c_8I_8L_8V    : SchedWriteRes<[
     C1PUnitI, C1PUnitL, C1PUnitV,
     C1PUnitI, C1PUnitL, C1PUnitV,
     C1PUnitI, C1PUnitL, C1PUnitV,
-  ]> { let Latency = 11; }
+  ]> {
+  let Latency = 11;
+}
 
-def C1PWrite_3c_1M0_1M      : SchedWriteRes<[C1PUnitM0, C1PUnitM]> { let Latency = 3; }
+def C1PWrite_3c_1M0_1M : SchedWriteRes<[C1PUnitM0, C1PUnitM]> { let Latency = 3; }
 
-def C1PWrite_8c_V1_4rc    : SchedWriteRes<[C1PUnitV1]> {
+def C1PWrite_8c_V1_4rc : SchedWriteRes<[C1PUnitV1]> {
   let Latency = 8;
   let ReleaseAtCycles = [4];
 }
 
-def C1PWrite_9c_V1_2rc    : SchedWriteRes<[C1PUnitV1]> {
+def C1PWrite_9c_V1_2rc : SchedWriteRes<[C1PUnitV1]> {
   let Latency = 9;
   let ReleaseAtCycles = [2];
 }
 
-def C1PWrite_12c_V1_8rc    : SchedWriteRes<[C1PUnitV1]> {
+def C1PWrite_12c_V1_8rc : SchedWriteRes<[C1PUnitV1]> {
   let Latency = 12;
   let ReleaseAtCycles = [8];
 }
 
-
-def C1PWrite_11c_V1_4rc    : SchedWriteRes<[C1PUnitV1]> {
+def C1PWrite_11c_V1_4rc : SchedWriteRes<[C1PUnitV1]> {
   let Latency = 11;
   let ReleaseAtCycles = [4];
 }
 
-def C1PWrite_13c_V1_2rc    : SchedWriteRes<[C1PUnitV1]> {
+def C1PWrite_13c_V1_2rc : SchedWriteRes<[C1PUnitV1]> {
   let Latency = 13;
   let ReleaseAtCycles = [2];
 }
 
-def C1PWrite_6c_4V     : SchedWriteRes<[C1PUnitV, C1PUnitV, C1PUnitV, C1PUnitV]> {
+def C1PWrite_6c_4V : SchedWriteRes<[C1PUnitV, C1PUnitV, C1PUnitV, C1PUnitV]> {
   let Latency = 6;
 }
 
-def C1PWrite_6c_2L         : SchedWriteRes<[C1PUnitL, C1PUnitL]> { let Latency = 6; }
+def C1PWrite_6c_2L : SchedWriteRes<[C1PUnitL, C1PUnitL]> { let Latency = 6; }
 
-def C1PWrite_6c_3L         : SchedWriteRes<[C1PUnitL, C1PUnitL, C1PUnitL]> { let Latency = 6; }
+def C1PWrite_6c_3L : SchedWriteRes<[C1PUnitL, C1PUnitL, C1PUnitL]> { let Latency = 6; }
 
-def C1PWrite_7c_2L         : SchedWriteRes<[C1PUnitL, C1PUnitL]> { let Latency = 7; }
-def C1PWrite_7c_4L         : SchedWriteRes<[C1PUnitL, C1PUnitL, C1PUnitL, C1PUnitL]> { let Latency = 7; }
+def C1PWrite_7c_2L : SchedWriteRes<[C1PUnitL, C1PUnitL]> { let Latency = 7; }
+def C1PWrite_7c_4L : SchedWriteRes<[C1PUnitL, C1PUnitL, C1PUnitL, C1PUnitL]> {
+  let Latency = 7;
+}
 
-def C1PWrite_8c_1L_2V      : SchedWriteRes<[C1PUnitL, C1PUnitV, C1PUnitV]> { let Latency = 8; }
+def C1PWrite_8c_1L_2V : SchedWriteRes<[C1PUnitL, C1PUnitV, C1PUnitV]> {
+  let Latency = 8;
+}
 
-def C1PWrite_8c_2L_2V      : SchedWriteRes<[C1PUnitL, C1PUnitL, C1PUnitV, C1PUnitV]> { let Latency = 8; }
-def C1PWrite_8c_3L_3V      : SchedWriteRes<[C1PUnitL, C1PUnitL, C1PUnitL,
-                                            C1PUnitV, C1PUnitV, C1PUnitV]> { let Latency = 8; }
+def C1PWrite_8c_2L_2V : SchedWriteRes<[C1PUnitL, C1PUnitL, C1PUnitV, C1PUnitV]> {
+  let Latency = 8;
+}
+def C1PWrite_8c_3L_3V : SchedWriteRes<[C1PUnitL, C1PUnitL, C1PUnitL,
+                                       C1PUnitV, C1PUnitV, C1PUnitV]> {
+  let Latency = 8;
+}
 
-def C1PWrite_9c_2L_3V      : SchedWriteRes<[C1PUnitL, C1PUnitL, C1PUnitV, C1PUnitV, C1PUnitV]> { let Latency = 9; }
+def C1PWrite_9c_2L_3V : SchedWriteRes<[C1PUnitL, C1PUnitL, C1PUnitV, C1PUnitV,
+                                       C1PUnitV]> {
+  let Latency = 9;
+}
 
-def C1PWrite_10c_3L_3V     : SchedWriteRes<[C1PUnitL, C1PUnitL, C1PUnitL, C1PUnitV, C1PUnitV, C1PUnitV]> { let Latency = 10; }
+def C1PWrite_10c_3L_3V : SchedWriteRes<[C1PUnitL, C1PUnitL, C1PUnitL,
+                                        C1PUnitV, C1PUnitV, C1PUnitV]> {
+  let Latency = 10;
+}
 
-def C1PWrite_9c_3L_3V      : SchedWriteRes<[C1PUnitL, C1PUnitL, C1PUnitL, C1PUnitV, C1PUnitV, C1PUnitV]> { let Latency = 9; }
+def C1PWrite_9c_3L_3V : SchedWriteRes<[C1PUnitL, C1PUnitL, C1PUnitL,
+                                       C1PUnitV, C1PUnitV, C1PUnitV]> {
+  let Latency = 9;
+}
 
-def C1PWrite_9c_3L_4V      : SchedWriteRes<[C1PUnitL, C1PUnitL, C1PUnitL, C1PUnitV, C1PUnitV, C1PUnitV, C1PUnitV]> { let Latency = 9; }
+def C1PWrite_9c_3L_4V : SchedWriteRes<[C1PUnitL, C1PUnitL, C1PUnitL,
+                                       C1PUnitV, C1PUnitV, C1PUnitV,
+                                       C1PUnitV]> {
+  let Latency = 9;
+}
 
-def C1PWrite_11c_6L_8V     : SchedWriteRes<[
+def C1PWrite_11c_6L_8V : SchedWriteRes<[
     C1PUnitL, C1PUnitL, C1PUnitL,
     C1PUnitL, C1PUnitL, C1PUnitL,
     C1PUnitV, C1PUnitV, C1PUnitV, C1PUnitV,
-    C1PUnitV, C1PUnitV, C1PUnitV, C1PUnitV
-  ]> { let Latency = 11; }
+    C1PUnitV, C1PUnitV, C1PUnitV, C1PUnitV]> {
+  let Latency = 11;
+}
 
-def C1PWrite_9c_4L_4V      : SchedWriteRes<[C1PUnitL, C1PUnitL, C1PUnitL, C1PUnitL, C1PUnitV, C1PUnitV, C1PUnitV, C1PUnitV]> { let Latency = 9; }
+def C1PWrite_9c_4L_4V : SchedWriteRes<[C1PUnitL, C1PUnitL, C1PUnitL, C1PUnitL,
+                                       C1PUnitV, C1PUnitV, C1PUnitV, C1PUnitV]> {
+  let Latency = 9;
+}
 
-def C1PWrite_6c_1V1         : SchedWriteRes<[C1PUnitV1, C1PUnitV1]> { let Latency = 6; }
+def C1PWrite_6c_1V1 : SchedWriteRes<[C1PUnitV1, C1PUnitV1]> { let Latency = 6; }
 
 def C1PWrite_8c_4V : SchedWriteRes<[C1PUnitV, C1PUnitV, C1PUnitV, C1PUnitV]> { let Latency = 8; }
 
@@ -381,7 +449,6 @@ def C1PWrite_13c_1V0_2rc : SchedWriteRes<[C1PUnitV0]> {
   let ReleaseAtCycles = [2];
 }
 
-
 def C1PWrite_12c_1V1_8rc : SchedWriteRes<[C1PUnitV1]> {
   let Latency = 12;
   let ReleaseAtCycles = [8];
@@ -396,7 +463,6 @@ def C1PWrite_13c_1V1_2rc : SchedWriteRes<[C1PUnitV1]> {
   let Latency = 13;
   let ReleaseAtCycles = [2];
 }
-
 
 // Predicate Controlled types
 def C1PWrite_Extr: SchedWriteVariant<[
