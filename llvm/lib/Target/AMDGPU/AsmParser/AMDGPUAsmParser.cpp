@@ -6406,6 +6406,10 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
   if (isGFX1250Plus()) {
     if (!isUInt<COMPUTE_PGM_RSRC2_GFX125_USER_SGPR_COUNT_WIDTH>(UserSGPRCount))
       return TokError("too many user SGPRs enabled");
+
+    if (UserSGPRCount > getMaxNumUserSGPRs())
+      return TokError("number of user sgpr count is out of bound");
+
     AMDGPU::MCKernelDescriptor::bits_set(
         KD.compute_pgm_rsrc2,
         MCConstantExpr::create(UserSGPRCount, getContext()),
