@@ -255,8 +255,7 @@ add_entrypoint_object(
   HDRS
     ../dsqrtf128.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.generic.sqrt
+    libc.src.__support.math.dsqrtf128
 )
 
 
