@@ -284,6 +284,7 @@
 #include "math/sqrtf.h"
 #include "math/sqrtf128.h"
 #include "math/sqrtf16.h"
+#include "math/sqrtl.h"
 #include "math/tan.h"
 #include "math/tanf.h"
 #include "math/tanf16.h"

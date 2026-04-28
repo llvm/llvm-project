@@ -3500,6 +3500,14 @@ add_header_library(
     libc.src.__support.uint128
     libc.include.llvm-libc-types.float128
 )
+add_header_library(
+  sqrtl
+  HDRS
+    sqrtl.h
+  DEPENDS
+    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.macros.config
+)
 
 add_header_library(
   tan
