@@ -144,10 +144,10 @@ define i1 @test_exit_compare_other_users() #0 {
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i1> [[TMP10]], i64 3
 ; CHECK-NEXT:    br i1 false, label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 3, %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 15, %[[VEC_EPILOG_ITER_CHECK]] ], [ 79, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi i64 [ 3, %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 15, %[[VEC_EPILOG_ITER_CHECK]] ], [ 79, %[[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL5]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], -1
 ; CHECK-NEXT:    [[BOUND_CHECK:%.*]] = icmp ne i64 [[IV]], 0
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [1 x i8], ptr @gg, i64 [[IV]]
