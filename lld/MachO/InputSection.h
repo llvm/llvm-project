@@ -377,6 +377,8 @@ constexpr const char addrSig[] = "__llvm_addrsig";
 } // namespace section_names
 
 void addInputSection(InputSection *inputSection);
+
+uint64_t resolveSymbolOffsetVA(const Symbol *sym, uint8_t type, int64_t offset);
 } // namespace macho
 
 std::string toString(const macho::InputSection *);

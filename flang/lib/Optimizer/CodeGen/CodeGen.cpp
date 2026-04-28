@@ -47,6 +47,7 @@
 #include "mlir/Conversion/MathToNVVM/MathToNVVM.h"
 #include "mlir/Conversion/MathToROCDL/MathToROCDL.h"
 #include "mlir/Conversion/OpenMPToLLVM/ConvertOpenMPToLLVM.h"
+#include "mlir/Conversion/UBToLLVM/UBToLLVM.h"
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
@@ -205,8 +206,6 @@ static std::optional<unsigned> getCUFAddrSpace(fir::GlobalOp global) {
       return static_cast<unsigned>(mlir::NVVM::NVVMMemorySpace::Constant);
     if (*dataAttr == cuf::DataAttribute::Shared)
       return static_cast<unsigned>(mlir::NVVM::NVVMMemorySpace::Shared);
-    if (*dataAttr == cuf::DataAttribute::Managed)
-      return static_cast<unsigned>(mlir::NVVM::NVVMMemorySpace::Global);
   }
   return std::nullopt;
 }
@@ -3696,6 +3695,19 @@ struct UseStmtOpConversion : public fir::FIROpConversion<fir::UseStmtOp> {
   }
 };
 
+/// Erase `fir.module_debug_imports` during LLVM lowering (debug metadata only).
+struct ModuleDebugImportsOpConversion
+    : public fir::FIROpConversion<fir::ModuleDebugImportsOp> {
+  using FIROpConversion::FIROpConversion;
+
+  llvm::LogicalResult
+  matchAndRewrite(fir::ModuleDebugImportsOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    rewriter.eraseOp(op);
+    return mlir::success();
+  }
+};
+
 static void genCondBrOp(mlir::Location loc, mlir::Value cmp, mlir::Block *dest,
                         std::optional<mlir::ValueRange> destOps,
                         mlir::ConversionPatternRewriter &rewriter,
@@ -4113,6 +4125,18 @@ struct ZeroOpConversion : public fir::FIROpConversion<fir::ZeroOp> {
                   mlir::ConversionPatternRewriter &rewriter) const override {
     mlir::Type ty = convertType(zero.getType());
     rewriter.replaceOpWithNewOp<mlir::LLVM::ZeroOp>(zero, ty);
+    return mlir::success();
+  }
+};
+
+/// convert to LLVM IR dialect `fake_use`
+struct FakeUseOpConversion : public fir::FIROpConversion<fir::FakeUseOp> {
+  using FIROpConversion::FIROpConversion;
+
+  llvm::LogicalResult
+  matchAndRewrite(fir::FakeUseOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<mlir::LLVM::FakeUseOp>(op, adaptor.getArgs());
     return mlir::success();
   }
 };
@@ -4679,6 +4703,7 @@ public:
     mlir::populateComplexToLLVMConversionPatterns(typeConverter, pattern);
     mlir::index::populateIndexToLLVMConversionPatterns(typeConverter, pattern);
     mlir::populateVectorToLLVMConversionPatterns(typeConverter, pattern);
+    mlir::ub::populateUBToLLVMConversionPatterns(typeConverter, pattern);
 
     // Flang specific overloads for OpenMP operations, to allow for special
     // handling of things like Box types.
@@ -4802,19 +4827,21 @@ void fir::populateFIRToLLVMConversionPatterns(
       DoConcurrentSpecifierOpConversion<fir::DeclareReductionOp>,
       DivcOpConversion, EmboxOpConversion, EmboxCharOpConversion,
       EmboxProcOpConversion, EqvOpConversion, ExtractValueOpConversion,
-      FieldIndexOpConversion, FirEndOpConversion, FreeMemOpConversion,
-      GlobalLenOpConversion, GlobalOpConversion, InsertOnRangeOpConversion,
-      IsPresentOpConversion, LenParamIndexOpConversion, LoadOpConversion,
-      LogicalAndOpConversion, LogicalOrOpConversion, MulcOpConversion,
-      NegcOpConversion, NeqvOpConversion, NoReassocOpConversion,
-      PrefetchOpConversion, SelectCaseOpConversion, SelectOpConversion,
-      SelectRankOpConversion, SelectTypeOpConversion, ShapeOpConversion,
-      ShapeShiftOpConversion, ShiftOpConversion, SliceOpConversion,
-      StoreOpConversion, StringLitOpConversion, SubcOpConversion,
-      TypeDescOpConversion, TypeInfoOpConversion, UnboxCharOpConversion,
-      UnboxProcOpConversion, UndefOpConversion, UnreachableOpConversion,
-      UseStmtOpConversion, XArrayCoorOpConversion, XEmboxOpConversion,
-      XReboxOpConversion, ZeroOpConversion>(converter, options);
+      FakeUseOpConversion, FieldIndexOpConversion, FirEndOpConversion,
+      FreeMemOpConversion, GlobalLenOpConversion, GlobalOpConversion,
+      InsertOnRangeOpConversion, IsPresentOpConversion,
+      LenParamIndexOpConversion, LoadOpConversion, LogicalAndOpConversion,
+      LogicalOrOpConversion, MulcOpConversion, NegcOpConversion,
+      NeqvOpConversion, NoReassocOpConversion, PrefetchOpConversion,
+      SelectCaseOpConversion, SelectOpConversion, SelectRankOpConversion,
+      SelectTypeOpConversion, ShapeOpConversion, ShapeShiftOpConversion,
+      ShiftOpConversion, SliceOpConversion, StoreOpConversion,
+      StringLitOpConversion, SubcOpConversion, TypeDescOpConversion,
+      TypeInfoOpConversion, UnboxCharOpConversion, UnboxProcOpConversion,
+      UndefOpConversion, UnreachableOpConversion, UseStmtOpConversion,
+      ModuleDebugImportsOpConversion, XArrayCoorOpConversion,
+      XEmboxOpConversion, XReboxOpConversion, ZeroOpConversion>(converter,
+                                                                options);
 
   // Patterns that are populated without a type converter do not trigger
   // target materializations for the operands of the root op.

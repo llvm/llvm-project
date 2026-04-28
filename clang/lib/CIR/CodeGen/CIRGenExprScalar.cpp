@@ -231,9 +231,9 @@ public:
   }
 
   mlir::Value VisitFixedPointLiteral(const FixedPointLiteral *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "ScalarExprEmitter: fixed point literal");
-    return {};
+    mlir::Type type = cgf.convertType(e->getType());
+    return cir::ConstantOp::create(builder, cgf.getLoc(e->getExprLoc()),
+                                   cir::IntAttr::get(type, e->getValue()));
   }
 
   mlir::Value VisitFloatingLiteral(const FloatingLiteral *e) {
@@ -1422,9 +1422,99 @@ public:
     return {};
   }
 
+  // Create cast instructions for converting MLIR value \p Src to MLIR type \p
+  // DstTy. \p Src has the same size as \p DstTy. Both are single value types
+  // but could be scalar or vectors of different lengths, and either can be
+  // pointer.
+  //
+  // There are 4 cases:
+  // 1. non-pointer -> non-pointer  : needs 1 bitcast
+  // 2. pointer -> pointer          : needs 1 bitcast or addrspacecast
+  // 3. pointer -> non-pointer
+  //   a) pointer -> intptr_t       : needs 1 ptrtoint
+  //   b) pointer -> non-intptr_t   : needs 1 ptrtoint then 1 bitcast
+  // 4. non-pointer -> pointer
+  //   a) intptr_t -> pointer       : needs 1 inttoptr
+  //   b) non-intptr_t -> pointer   : needs 1 bitcast then 1 inttoptr
+  //
+  // Note: for cases 3b and 4b two casts are required since LLVM casts do not
+  // allow casting directly between pointer types and non-integer non-pointer
+  // types.
+  mlir::Value createCastsForTypeOfSameSize(mlir::Value src, mlir::Type dstTy) {
+    mlir::Type srcTy = src.getType();
+
+    // Case 1.
+    if (!isa<cir::PointerType>(srcTy) && !isa<cir::PointerType>(dstTy))
+      return builder.createBitcast(src, dstTy);
+
+    // Case 2.
+    if (isa<cir::PointerType>(srcTy) && isa<cir::PointerType>(dstTy)) {
+      cgf.cgm.errorNYI(
+          "ScalarExprEmitter: createCastsForTypeOfSameSize Case 2");
+      return {};
+    }
+
+    // Case 3.
+    if (isa<cir::PointerType>(srcTy) && !isa<cir::PointerType>(dstTy)) {
+      if (!isa<cir::IntType>(dstTy)) {
+        cgf.cgm.errorNYI(
+            "ScalarExprEmitter: createCastsForTypeOfSameSize Case 3a");
+      }
+
+      cgf.cgm.errorNYI(
+          "ScalarExprEmitter: createCastsForTypeOfSameSize Case 3a and 3b");
+      return {};
+    }
+
+    // Case 4b.
+    if (!isa<cir::IntType>(srcTy)) {
+      cgf.cgm.errorNYI(
+          "ScalarExprEmitter: createCastsForTypeOfSameSize Case 4a");
+      return {};
+    }
+    // Cases 4a and 4b.
+    return builder.createIntToPtr(src, dstTy);
+  }
+
   mlir::Value VisitAsTypeExpr(AsTypeExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: as type");
-    return {};
+    mlir::Value src = cgf.emitScalarExpr(e->getSrcExpr());
+    mlir::Type srcTy = src.getType();
+    mlir::Type dstTy = cgf.convertType(e->getType());
+
+    unsigned numElementsSrc = isa<cir::VectorType>(srcTy)
+                                  ? cast<cir::VectorType>(srcTy).getSize()
+                                  : 0;
+    unsigned numElementsDst = isa<cir::VectorType>(dstTy)
+                                  ? cast<cir::VectorType>(dstTy).getSize()
+                                  : 0;
+
+    // Use bit vector expansion for ext_vector_type boolean vectors.
+    if (e->getType()->isExtVectorBoolType()) {
+      cgf.cgm.errorNYI(e->getSourceRange(),
+                       "ScalarExprEmitter: VisitAsTypeExpr ExtVectorBoolType");
+      return {};
+    }
+
+    // Going from vec3 to non-vec3 is a special case and requires a shuffle
+    // vector to get a vec4, then a bitcast if the target type is different.
+    if (numElementsSrc == 3 && numElementsDst != 3) {
+      cgf.cgm.errorNYI(e->getSourceRange(),
+                       "ScalarExprEmitter: VisitAsTypeExpr numElemsSrc = 3, "
+                       "numElemsDst != 3");
+      return {};
+    }
+
+    // Going from non-vec3 to vec3 is a special case and requires a bitcast
+    // to vec4 if the original type is not vec4, then a shuffle vector to
+    // get a vec3.
+    if (numElementsSrc != 3 && numElementsDst == 3) {
+      cgf.cgm.errorNYI(e->getSourceRange(),
+                       "ScalarExprEmitter: VisitAsTypeExpr numElemsSrc != 3, "
+                       "numElemsDst = 3");
+      return {};
+    }
+
+    return createCastsForTypeOfSameSize(src, dstTy);
   }
 
   mlir::Value VisitAtomicExpr(AtomicExpr *e) {
@@ -1596,11 +1686,11 @@ mlir::Value ScalarExprEmitter::emitCompoundAssign(
 }
 
 mlir::Value ScalarExprEmitter::VisitExprWithCleanups(ExprWithCleanups *e) {
-  CIRGenFunction::RunCleanupsScope cleanups(cgf);
+  CIRGenFunction::FullExprCleanupScope scope(cgf, e->getSubExpr());
   mlir::Value v = Visit(e->getSubExpr());
   // Defend against dominance problems caused by jumps out of expression
   // evaluation through the shared cleanup block.
-  cleanups.forceCleanup({&v});
+  scope.exit({&v});
   return v;
 }
 
@@ -2135,12 +2225,7 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     return cgf.performAddrSpaceCast(Visit(subExpr), convertType(destTy));
   }
 
-  case CK_AtomicToNonAtomic: {
-    cgf.getCIRGenModule().errorNYI(subExpr->getSourceRange(),
-                                   "CastExpr: ", ce->getCastKindName());
-    mlir::Location loc = cgf.getLoc(subExpr->getSourceRange());
-    return cgf.createDummyValue(loc, destTy);
-  }
+  case CK_AtomicToNonAtomic:
   case CK_NonAtomicToAtomic:
   case CK_UserDefinedConversion:
     return Visit(const_cast<Expr *>(subExpr));

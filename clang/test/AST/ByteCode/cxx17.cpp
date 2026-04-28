@@ -3,7 +3,8 @@
 
 [[clang::require_constant_initialization]] int cc = cc; // both-error {{variable does not have a constant initializer}} \
                                                         // both-note {{attribute here}} \
-                                                        // both-note {{ead of object outside its lifetime}}
+                                                        // both-note {{ead of object outside its lifetime}} \
+                                                        // both-note {{declared here}}
 
 
 struct F { int a; int b;};
@@ -173,5 +174,7 @@ template <int I> struct std::tuple_element<I, const C> {
 
 namespace ZeroInCheckInvoke {
   constexpr C foo(const C &) { return C{}; }
+#ifndef __MVS__
   thread_local const auto &[s, t, u] = foo(C{}); // both-warning {{thread_local}}
+#endif
 }

@@ -658,3 +658,165 @@ void test_vla_of_constant_array(int n) {
 // OGCG:       call void @_ZN1SD1Ev
 //
 // OGCG:       resume { ptr, i32 }
+
+void test_init_list_partial_array_cleanup() {
+    S arr[4] = { S(), S() };
+}
+
+// CIR-LABEL:     cir.func {{.*}} @_Z36test_init_list_partial_array_cleanupv()
+// CIR:       %[[ARRAY:.*]] = cir.alloca !cir.array<!rec_S x 4>, !cir.ptr<!cir.array<!rec_S x 4>>, ["arr", init]
+// CIR:       %[[END_OF_INIT:.*]] = cir.alloca !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>, ["arrayinit.endOfInit"]
+// CIR:       %[[BEGIN:.*]] = cir.cast array_to_ptrdecay %[[ARRAY]] : !cir.ptr<!cir.array<!rec_S x 4>> -> !cir.ptr<!rec_S>
+// CIR:       cir.store {{.*}} %[[BEGIN]], %[[END_OF_INIT]] : !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>
+// CIR:       cir.cleanup.scope {
+//              --- first explicit init ---
+// CIR:         cir.call @_ZN1SC1Ev(%[[BEGIN]])
+//              --- advance + update endOfInit for second element ---
+// CIR:         %[[SECOND:.*]] = cir.ptr_stride %[[BEGIN]], %{{.*}}
+// CIR:         cir.store {{.*}} %[[SECOND]], %[[END_OF_INIT]]
+//              --- second explicit init ---
+// CIR:         cir.call @_ZN1SC1Ev(%[[SECOND]])
+//              --- advance + update endOfInit for filler start ---
+// CIR:         %[[FILLER_START:.*]] = cir.ptr_stride %[[SECOND]], %{{.*}}
+// CIR:         cir.store {{.*}} %[[FILLER_START]], %[[END_OF_INIT]]
+//              --- do-while filler loop ---
+// CIR:         cir.do {
+// CIR:           %[[CUR:.*]] = cir.load {{.*}} %{{.*}} : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
+// CIR:           cir.call @_ZN1SC1Ev(%[[CUR]])
+// CIR:           %[[NEXT:.*]] = cir.ptr_stride %[[CUR]], %{{.*}}
+// CIR:           cir.store {{.*}} %[[NEXT]], %[[END_OF_INIT]]
+// CIR:           cir.yield
+// CIR:         } while {
+// CIR:           cir.condition(%{{.*}})
+// CIR:         }
+// CIR:         cir.yield
+//              --- EH cleanup: partial destruction ---
+// CIR:       } cleanup eh {
+// CIR:         %[[END_VAL:.*]] = cir.load {{.*}} %[[END_OF_INIT]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
+// CIR:         %[[NE:.*]] = cir.cmp ne %[[END_VAL]], %[[BEGIN]] : !cir.ptr<!rec_S>
+// CIR:         cir.if %[[NE]] {
+// CIR:           cir.do {
+// CIR:             %[[EL:.*]] = cir.load {{.*}} %{{.*}} : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
+// CIR:             %[[NEG1:.*]] = cir.const #cir.int<-1> : !s64i
+// CIR:             %[[PREV:.*]] = cir.ptr_stride %[[EL]], %[[NEG1]] : (!cir.ptr<!rec_S>, !s64i) -> !cir.ptr<!rec_S>
+// CIR:             cir.call @_ZN1SD1Ev(%[[PREV]])
+// CIR:             cir.yield
+// CIR:           } while {
+// CIR:             %[[EL2:.*]] = cir.load {{.*}} %{{.*}} : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
+// CIR:             %[[NE2:.*]] = cir.cmp ne %[[EL2]], %[[BEGIN]] : !cir.ptr<!rec_S>
+// CIR:             cir.condition(%[[NE2]])
+// CIR:           }
+// CIR:         }
+// CIR:         cir.yield
+// CIR:       }
+
+// LLVM-LABEL:  define dso_local void @_Z36test_init_list_partial_array_cleanupv()
+// LLVM:       %[[ARRAY:.*]] = alloca [4 x %struct.S]
+// LLVM:       %[[BEGIN:.*]] = getelementptr %struct.S, ptr %[[ARRAY]], i32 0
+// LLVM:       store ptr %[[BEGIN]], ptr %[[END_OF_INIT:.*]]
+//
+//            --- first ctor ---
+// LLVM:       invoke void @_ZN1SC1Ev(ptr {{.*}} %[[BEGIN]])
+// LLVM:         to label %[[CONT1:.*]] unwind label %[[LPAD:.*]]
+//
+//            --- second ctor ---
+// LLVM:     [[CONT1]]:
+// LLVM:       %[[SECOND:.*]] = getelementptr %struct.S, ptr %[[BEGIN]], i64 1
+// LLVM:       store ptr %[[SECOND]], ptr %[[END_OF_INIT]]
+// LLVM:       invoke void @_ZN1SC1Ev(ptr {{.*}} %[[SECOND]])
+// LLVM:         to label %{{.*}} unwind label %[[LPAD]]
+//
+//            --- filler loop with invoke ---
+// LLVM:       invoke void @_ZN1SC1Ev(ptr {{.*}})
+// LLVM:         to label %[[FILLER_CONT:.*]] unwind label %[[LPAD]]
+//
+// LLVM:     [[FILLER_CONT]]:
+// LLVM:       %[[FNEXT:.*]] = getelementptr %struct.S, ptr %{{.*}}, i64 1
+// LLVM:       store ptr %[[FNEXT]], ptr %[[END_OF_INIT]]
+//
+//            --- landing pad + cleanup guard ---
+// LLVM:     [[LPAD]]:
+// LLVM:       landingpad { ptr, i32 }
+// LLVM:         cleanup
+// LLVM:       %[[PAD_CUR:.*]] = load ptr, ptr %[[END_OF_INIT]]
+// LLVM:       %[[GUARD:.*]] = icmp ne ptr %[[PAD_CUR]], %[[BEGIN]]
+// LLVM:       br i1 %[[GUARD]], label %[[DTOR_ENTRY:.*]], label %[[EH_RESUME:.*]]
+//
+//            --- partial dtor do-while loop ---
+// LLVM:     [[DTOR_ENTRY]]:
+// LLVM:       store ptr %[[PAD_CUR]], ptr %[[DTOR_ITER:.*]]
+// LLVM:       br label %[[DTOR_BODY:.*]]
+//
+// LLVM:     [[DTOR_LOOP_COND:.*]]:
+// LLVM:       %[[DTOR_CUR:.*]] = load ptr, ptr %[[DTOR_ITER]]
+// LLVM:       %[[DTOR_CONT:.*]] = icmp ne ptr %[[DTOR_CUR]], %[[BEGIN]]
+// LLVM:       br i1 %[[DTOR_CONT]], label %[[DTOR_BODY]], label %[[DTOR_DONE:.*]]
+//
+// LLVM:     [[DTOR_BODY]]:
+// LLVM:       %[[DCUR:.*]] = load ptr, ptr %[[DTOR_ITER]]
+// LLVM:       %[[PREV:.*]] = getelementptr %struct.S, ptr %[[DCUR]], i64 -1
+// LLVM:       store ptr %[[PREV]], ptr %[[DTOR_ITER]]
+// LLVM:       call void @_ZN1SD1Ev(ptr {{.*}} %[[PREV]])
+// LLVM:       br label %[[DTOR_LOOP_COND]]
+//
+// LLVM:     [[DTOR_DONE]]:
+// LLVM:       br label %[[EH_RESUME]]
+//
+// LLVM:     [[EH_RESUME]]:
+// LLVM:       resume { ptr, i32 }
+
+// OGCG-LABEL: define dso_local void @_Z36test_init_list_partial_array_cleanupv()
+// OGCG:       %[[ARR:.*]] = alloca [4 x %struct.S]
+// OGCG:       %[[END_OF_INIT:.*]] = alloca ptr
+// OGCG:       store ptr %[[ARR]], ptr %[[END_OF_INIT]]
+//
+//            --- first explicit ctor ---
+// OGCG:       invoke void @_ZN1SC1Ev(ptr {{.*}} %[[ARR]])
+// OGCG:         to label %[[CONT1:.*]] unwind label %[[LPAD:.*]]
+//
+//            --- second explicit ctor ---
+// OGCG:     [[CONT1]]:
+// OGCG:       %[[EL1:.*]] = getelementptr inbounds %struct.S, ptr %[[ARR]], i64 1
+// OGCG:       store ptr %[[EL1]], ptr %[[END_OF_INIT]]
+// OGCG:       invoke void @_ZN1SC1Ev(ptr {{.*}} %[[EL1]])
+// OGCG:         to label %[[CONT2:.*]] unwind label %[[LPAD]]
+//
+//            --- filler loop setup ---
+// OGCG:     [[CONT2]]:
+// OGCG:       %[[FILLER_START:.*]] = getelementptr inbounds %struct.S, ptr %[[ARR]], i64 2
+// OGCG:       store ptr %[[FILLER_START]], ptr %[[END_OF_INIT]]
+// OGCG:       %[[FILLER_END:.*]] = getelementptr inbounds %struct.S, ptr %[[ARR]], i64 4
+// OGCG:       br label %[[FILLER_BODY:.*]]
+//
+//            --- filler loop body ---
+// OGCG:     [[FILLER_BODY]]:
+// OGCG:       %[[FILLER_CUR:.*]] = phi ptr [ %[[FILLER_START]], %[[CONT2]] ], [ %[[FILLER_NEXT:.*]], %[[FILLER_CONT:.*]] ]
+// OGCG:       invoke void @_ZN1SC1Ev(ptr {{.*}} %[[FILLER_CUR]])
+// OGCG:         to label %[[FILLER_CONT]] unwind label %[[LPAD]]
+//
+// OGCG:     [[FILLER_CONT]]:
+// OGCG:       %[[FILLER_NEXT]] = getelementptr inbounds %struct.S, ptr %[[FILLER_CUR]], i64 1
+// OGCG:       store ptr %[[FILLER_NEXT]], ptr %[[END_OF_INIT]]
+// OGCG:       %[[FILLER_DONE:.*]] = icmp eq ptr %[[FILLER_NEXT]], %[[FILLER_END]]
+// OGCG:       br i1 %[[FILLER_DONE]], label %{{.*}}, label %[[FILLER_BODY]]
+//
+//            --- landing pad + partial destruction ---
+// OGCG:     [[LPAD]]:
+// OGCG:       landingpad { ptr, i32 }
+// OGCG:         cleanup
+// OGCG:       %[[PAD_END:.*]] = load ptr, ptr %[[END_OF_INIT]]
+// OGCG:       %[[ISEMPTY:.*]] = icmp eq ptr %[[ARR]], %[[PAD_END]]
+// OGCG:       br i1 %[[ISEMPTY]], label %[[DTOR_DONE:.*]], label %[[DTOR_LOOP:.*]]
+//
+// OGCG:     [[DTOR_LOOP]]:
+// OGCG:       %[[DTOR_PAST:.*]] = phi ptr [ %[[PAD_END]], %[[LPAD]] ], [ %[[DTOR_PREV:.*]], %[[DTOR_LOOP]] ]
+// OGCG:       %[[DTOR_PREV]] = getelementptr inbounds %struct.S, ptr %[[DTOR_PAST]], i64 -1
+// OGCG:       call void @_ZN1SD1Ev(ptr {{.*}} %[[DTOR_PREV]])
+// OGCG:       %[[DTOR_CONT:.*]] = icmp eq ptr %[[DTOR_PREV]], %[[ARR]]
+// OGCG:       br i1 %[[DTOR_CONT]], label %[[DTOR_DONE]], label %[[DTOR_LOOP]]
+//
+// OGCG:     [[DTOR_DONE]]:
+// OGCG:       br label %[[EH_RESUME:.*]]
+//
+// OGCG:     [[EH_RESUME]]:
+// OGCG:       resume { ptr, i32 }

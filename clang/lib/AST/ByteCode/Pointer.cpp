@@ -504,44 +504,32 @@ bool Pointer::isElementAlive(unsigned Index) const {
   return IM->isElementAlive(Index);
 }
 
-void Pointer::startLifetime() const {
+void Pointer::startLifetime() const { setLifeState(Lifetime::Started); }
+
+void Pointer::endLifetime() const { setLifeState(Lifetime::Ended); }
+
+void Pointer::setLifeState(Lifetime L) const {
   if (!isBlockPointer())
     return;
   if (BS.Base < sizeof(InlineDescriptor))
     return;
 
-  if (inArray()) {
+  if (inArray() && !isArrayRoot()) {
+    assert(L == Lifetime::Started || L == Lifetime::Ended);
     const Descriptor *Desc = getFieldDesc();
     InitMapPtr &IM = getInitMap();
     if (!IM.hasInitMap())
       IM.setInitMap(new InitMap(Desc->getNumElems(), IM.allInitialized()));
 
-    IM->startElementLifetime(getIndex());
-    assert(isArrayRoot() || (this->getLifetime() == Lifetime::Started));
+    if (L == Lifetime::Ended)
+      IM->endElementLifetime(getIndex());
+    else if (L == Lifetime::Started)
+      IM->startElementLifetime(getIndex());
+    assert(isArrayRoot() || (this->getLifetime() == L));
     return;
   }
 
-  getInlineDesc()->LifeState = Lifetime::Started;
-}
-
-void Pointer::endLifetime() const {
-  if (!isBlockPointer())
-    return;
-  if (BS.Base < sizeof(InlineDescriptor))
-    return;
-
-  if (inArray()) {
-    const Descriptor *Desc = getFieldDesc();
-    InitMapPtr &IM = getInitMap();
-    if (!IM.hasInitMap())
-      IM.setInitMap(new InitMap(Desc->getNumElems(), IM.allInitialized()));
-
-    IM->endElementLifetime(getIndex());
-    assert(isArrayRoot() || (this->getLifetime() == Lifetime::Ended));
-    return;
-  }
-
-  getInlineDesc()->LifeState = Lifetime::Ended;
+  getInlineDesc()->LifeState = L;
 }
 
 void Pointer::initialize() const {
@@ -644,6 +632,7 @@ void Pointer::activate() const {
   std::function<void(Pointer &)> activate;
   activate = [&activate](Pointer &P) -> void {
     P.getInlineDesc()->IsActive = true;
+    P.startLifetime();
     if (const Record *R = P.getRecord(); R && !R->isUnion()) {
       for (const Record::Field &F : R->fields()) {
         Pointer FieldPtr = P.atField(F.Offset);
@@ -970,7 +959,8 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
     return std::nullopt;
 
   // Invalid to read from.
-  if (isDummy() || !isLive() || isPastEnd())
+  if (isDummy() || !isLive() || isPastEnd() ||
+      (isOnePastEnd() && !isZeroSizeArray()))
     return std::nullopt;
 
   // We can return these as rvalues, but we can't deref() them.
