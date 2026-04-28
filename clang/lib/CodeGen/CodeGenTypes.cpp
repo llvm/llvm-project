@@ -516,6 +516,9 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
       break;
 
     case BuiltinType::MetaInfo:
+      // FIXME(Reflection): once consteval-only types are supported,
+      // make this an llvm_unreachable instead because reflection
+      // should not reach here
       ResultType = llvm::IntegerType::get(getLLVMContext(), 64);
       break;
 
