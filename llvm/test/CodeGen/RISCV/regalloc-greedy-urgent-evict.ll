@@ -1,4 +1,4 @@
-; RUN: not llc -mtriple=riscv64 -mattr=+v,+zvfh < %s 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=riscv64 -mattr=+v,+zvfh -filetype=null %s 2>&1 | FileCheck %s
 
 ; CHECK: error: inline assembly requires more registers than available
 
