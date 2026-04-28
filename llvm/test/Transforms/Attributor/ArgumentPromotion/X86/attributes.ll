@@ -145,7 +145,7 @@ attributes #2 = { argmemonly nounwind }
 ; TUNIT: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable }
 ; TUNIT: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
 ; TUNIT: attributes #[[ATTR3]] = { nofree willreturn memory(write) }
-; TUNIT: attributes #[[ATTR4]] = { nofree nosync nounwind willreturn }
+; TUNIT: attributes #[[ATTR4]] = { nofree norecurse nosync nounwind willreturn }
 ;.
 ; CGSCC: [[META0]] = !{}
 ;.

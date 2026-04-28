@@ -617,6 +617,14 @@ llvm.func @st_matrix(%arg0: !llvm.ptr<3>, %r1: i32, %r2: i32, %r3: i32, %r4: i32
   llvm.return
 }
 
+// CHECK-LABEL: @nvvm_movmatrix
+llvm.func @nvvm_movmatrix(%src : i32) -> i32 {
+  // CHECK: call i32 @llvm.nvvm.movmatrix.sync.aligned.m8n8.trans.b16(i32 %{{.*}})
+  %dst = nvvm.movmatrix %src {shape = #nvvm.ld_st_matrix_shape<m = 8, n = 8>,
+                              eltType = #nvvm.ld_st_matrix_elt_type<b16>} : i32
+  llvm.return %dst : i32
+}
+
 // This function has the "kernel" attribute attached and should appear in the
 // NVVM annotations after conversion.
 llvm.func @kernel_func() attributes {nvvm.kernel} {

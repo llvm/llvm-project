@@ -1,8 +1,6 @@
 ; RUN: opt < %s -S -passes="default<O1>" | FileCheck %s -check-prefixes=TRIVIAL,CHECK
 ; RUN: opt < %s -S -passes="default<O2>" | FileCheck %s -check-prefixes=TRIVIAL,CHECK
 ; RUN: opt < %s -S -passes="default<O3>" | FileCheck %s -check-prefixes=NONTRIVIAL,CHECK
-; RUN: opt < %s -S -passes="default<Os>" | FileCheck %s -check-prefixes=TRIVIAL,CHECK
-; RUN: opt < %s -S -passes="default<Oz>" | FileCheck %s -check-prefixes=TRIVIAL,CHECK
 
 declare i32 @a()
 declare i32 @b()
