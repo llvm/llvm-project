@@ -1946,9 +1946,9 @@ bool LoopInterchangeTransform::transform(
     for (PHINode *CurInductionPHI : InductionPHIs) {
       Instruction *IncomingValue = dyn_cast<Instruction>(
           CurInductionPHI->getIncomingValueForBlock(InnerLoop->getLoopLatch()));
-      if (any_of(InductionPHIs, [IncomingValue](PHINode *InductionPHI) {
-            return IncomingValue == InductionPHI;
-          }))
+      assert(IncomingValue &&
+             "Incoming value from loop latch doesn't an instruction");
+      if (is_contained(InductionPHIs, IncomingValue))
         continue;
       InnerIndexVarList.push_back(IncomingValue);
     }
