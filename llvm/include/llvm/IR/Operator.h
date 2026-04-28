@@ -201,8 +201,10 @@ class FPMathOperator : public Operator {
 private:
   friend class Instruction;
 
-  unsigned short &getFMFValue();
-  unsigned short getFMFValue() const;
+  LLVM_READONLY FastMathFlags &getFMF();
+  LLVM_READONLY const FastMathFlags &getFMF() const {
+    return const_cast<FPMathOperator *>(this)->getFMF();
+  }
 
   /// 'Fast' means all bits are set.
   void setFast(bool B) {
@@ -216,59 +218,52 @@ private:
   }
 
   void setHasAllowReassoc(bool B) {
-    unsigned short &FMFValue = getFMFValue();
-    FMFValue = (FMFValue & ~FastMathFlags::AllowReassoc) |
-               (B * FastMathFlags::AllowReassoc);
+    FastMathFlags &FMF = getFMF();
+    FMF.setAllowReassoc(B);
   }
 
   void setHasNoNaNs(bool B) {
-    unsigned short &FMFValue = getFMFValue();
-    FMFValue =
-        (FMFValue & ~FastMathFlags::NoNaNs) | (B * FastMathFlags::NoNaNs);
+    FastMathFlags &FMF = getFMF();
+    FMF.setNoNaNs(B);
   }
 
   void setHasNoInfs(bool B) {
-    unsigned short &FMFValue = getFMFValue();
-    FMFValue =
-        (FMFValue & ~FastMathFlags::NoInfs) | (B * FastMathFlags::NoInfs);
+    FastMathFlags &FMF = getFMF();
+    FMF.setNoInfs(B);
   }
 
   void setHasNoSignedZeros(bool B) {
-    unsigned short &FMFValue = getFMFValue();
-    FMFValue = (FMFValue & ~FastMathFlags::NoSignedZeros) |
-               (B * FastMathFlags::NoSignedZeros);
+    FastMathFlags &FMF = getFMF();
+    FMF.setNoSignedZeros(B);
   }
 
   void setHasAllowReciprocal(bool B) {
-    unsigned short &FMFValue = getFMFValue();
-    FMFValue = (FMFValue & ~FastMathFlags::AllowReciprocal) |
-               (B * FastMathFlags::AllowReciprocal);
+    FastMathFlags &FMF = getFMF();
+    FMF.setAllowReciprocal(B);
   }
 
   void setHasAllowContract(bool B) {
-    unsigned short &FMFValue = getFMFValue();
-    FMFValue = (FMFValue & ~FastMathFlags::AllowContract) |
-               (B * FastMathFlags::AllowContract);
+    FastMathFlags &FMF = getFMF();
+    FMF.setAllowContract(B);
   }
 
   void setHasApproxFunc(bool B) {
-    unsigned short &FMFValue = getFMFValue();
-    FMFValue = (FMFValue & ~FastMathFlags::ApproxFunc) |
-               (B * FastMathFlags::ApproxFunc);
+    FastMathFlags &FMF = getFMF();
+    FMF.setApproxFunc(B);
   }
 
   /// Convenience function for setting multiple fast-math flags.
   /// FMF is a mask of the bits to set.
   void setFastMathFlags(FastMathFlags FMF) {
-    unsigned short &FMFValue = getFMFValue();
-    FMFValue |= FMF.Flags;
+    FastMathFlags &ThisFMF = getFMF();
+    ThisFMF |= FMF;
   }
 
   /// Convenience function for copying all fast-math flags.
   /// All values in FMF are transferred to this operator.
   void copyFastMathFlags(FastMathFlags FMF) {
-    unsigned short &FMFValue = getFMFValue();
-    FMFValue = FMF.Flags;
+    FastMathFlags &ThisFMF = getFMF();
+    ThisFMF = FMF;
   }
 
   /// Returns true if `Ty` is composed of a single kind of float-poing type
@@ -289,64 +284,55 @@ private:
 public:
   /// Test if this operation allows all non-strict floating-point transforms.
   bool isFast() const {
-    unsigned short FMFValue = getFMFValue();
-    return ((FMFValue & FastMathFlags::AllowReassoc) != 0 &&
-            (FMFValue & FastMathFlags::NoNaNs) != 0 &&
-            (FMFValue & FastMathFlags::NoInfs) != 0 &&
-            (FMFValue & FastMathFlags::NoSignedZeros) != 0 &&
-            (FMFValue & FastMathFlags::AllowReciprocal) != 0 &&
-            (FMFValue & FastMathFlags::AllowContract) != 0 &&
-            (FMFValue & FastMathFlags::ApproxFunc) != 0);
+    const FastMathFlags &FMF = getFMF();
+    return FMF.isFast();
   }
 
   /// Test if this operation may be simplified with reassociative transforms.
   bool hasAllowReassoc() const {
-    unsigned short FMFValue = getFMFValue();
-    return (FMFValue & FastMathFlags::AllowReassoc) != 0;
+    const FastMathFlags &FMF = getFMF();
+    return FMF.allowReassoc();
   }
 
   /// Test if this operation's arguments and results are assumed not-NaN.
   bool hasNoNaNs() const {
-    unsigned short FMFValue = getFMFValue();
-    return (FMFValue & FastMathFlags::NoNaNs) != 0;
+    const FastMathFlags &FMF = getFMF();
+    return FMF.noNaNs();
   }
 
   /// Test if this operation's arguments and results are assumed not-infinite.
   bool hasNoInfs() const {
-    unsigned short FMFValue = getFMFValue();
-    return (FMFValue & FastMathFlags::NoInfs) != 0;
+    const FastMathFlags &FMF = getFMF();
+    return FMF.noInfs();
   }
 
   /// Test if this operation can ignore the sign of zero.
   bool hasNoSignedZeros() const {
-    unsigned short FMFValue = getFMFValue();
-    return (FMFValue & FastMathFlags::NoSignedZeros) != 0;
+    const FastMathFlags &FMF = getFMF();
+    return FMF.noSignedZeros();
   }
 
   /// Test if this operation can use reciprocal multiply instead of division.
   bool hasAllowReciprocal() const {
-    unsigned short FMFValue = getFMFValue();
-    return (FMFValue & FastMathFlags::AllowReciprocal) != 0;
+    const FastMathFlags &FMF = getFMF();
+    return FMF.allowReciprocal();
   }
 
   /// Test if this operation can be floating-point contracted (FMA).
   bool hasAllowContract() const {
-    unsigned short FMFValue = getFMFValue();
-    return (FMFValue & FastMathFlags::AllowContract) != 0;
+    const FastMathFlags &FMF = getFMF();
+    return FMF.allowContract();
   }
 
   /// Test if this operation allows approximations of math library functions or
   /// intrinsics.
   bool hasApproxFunc() const {
-    unsigned short FMFValue = getFMFValue();
-    return (FMFValue & FastMathFlags::ApproxFunc) != 0;
+    const FastMathFlags &FMF = getFMF();
+    return FMF.approxFunc();
   }
 
   /// Convenience function for getting all the fast-math flags
-  FastMathFlags getFastMathFlags() const {
-    unsigned short FMFValue = getFMFValue();
-    return FastMathFlags(FMFValue);
-  }
+  FastMathFlags getFastMathFlags() const { return getFMF(); }
 
   /// Get the maximum error permitted by this operation in ULPs. An accuracy of
   /// 0.0 means that the operation should be performed with the default

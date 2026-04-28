@@ -802,7 +802,7 @@ CallInst::CallInst(const CallInst &CI, AllocInfo AllocInfo)
   std::copy(CI.bundle_op_info_begin(), CI.bundle_op_info_end(),
             bundle_op_info_begin());
   SubclassOptionalData = CI.SubclassOptionalData;
-  FMFValue = CI.FMFValue;
+  FMF = CI.FMF;
 }
 
 CallInst *CallInst::Create(CallInst *CI, ArrayRef<OperandBundleDef> OpB,
@@ -814,7 +814,7 @@ CallInst *CallInst::Create(CallInst *CI, ArrayRef<OperandBundleDef> OpB,
   NewCI->setTailCallKind(CI->getTailCallKind());
   NewCI->setCallingConv(CI->getCallingConv());
   NewCI->SubclassOptionalData = CI->SubclassOptionalData;
-  NewCI->FMFValue = CI->FMFValue;
+  NewCI->FMF = CI->FMF;
   NewCI->setAttributes(CI->getAttributes());
   NewCI->setDebugLoc(CI->getDebugLoc());
   return NewCI;
@@ -4368,7 +4368,7 @@ UnaryOperator *UnaryOperator::cloneImpl() const {
 
 FPUnaryOperator *FPUnaryOperator::cloneImpl() const {
   auto *I = static_cast<FPUnaryOperator *>(Create(getOpcode(), Op<0>()));
-  I->FMFValue = FMFValue;
+  I->FMF = FMF;
   return I;
 }
 
@@ -4381,13 +4381,13 @@ BinaryOperator *BinaryOperator::cloneImpl() const {
 FPBinaryOperator *FPBinaryOperator::cloneImpl() const {
   auto *I =
       static_cast<FPBinaryOperator *>(Create(getOpcode(), Op<0>(), Op<1>()));
-  I->FMFValue = FMFValue;
+  I->FMF = FMF;
   return I;
 }
 
 FCmpInst *FCmpInst::cloneImpl() const {
   auto *I = new FCmpInst(getPredicate(), Op<0>(), Op<1>());
-  I->FMFValue = FMFValue;
+  I->FMF = FMF;
   return I;
 }
 
@@ -4456,13 +4456,13 @@ SExtInst *SExtInst::cloneImpl() const {
 
 FPTruncInst *FPTruncInst::cloneImpl() const {
   auto *I = new FPTruncInst(getOperand(0), getType());
-  I->FMFValue = FMFValue;
+  I->FMF = FMF;
   return I;
 }
 
 FPExtInst *FPExtInst::cloneImpl() const {
   auto *I = new FPExtInst(getOperand(0), getType());
-  I->FMFValue = FMFValue;
+  I->FMF = FMF;
   return I;
 }
 
@@ -4508,18 +4508,18 @@ CallInst *CallInst::cloneImpl() const {
         getNumOperands(),
         getNumOperandBundles() * unsigned(sizeof(BundleOpInfo))};
     auto *I = new (AllocMarker) CallInst(*this, AllocMarker);
-    I->FMFValue = FMFValue;
+    I->FMF = FMF;
     return I;
   }
   IntrusiveOperandsAllocMarker AllocMarker{getNumOperands()};
   auto *I = new (AllocMarker) CallInst(*this, AllocMarker);
-  I->FMFValue = FMFValue;
+  I->FMF = FMF;
   return I;
 }
 
 SelectInst *SelectInst::cloneImpl() const {
   auto *I = SelectInst::Create(getOperand(0), getOperand(1), getOperand(2));
-  I->FMFValue = FMFValue;
+  I->FMF = FMF;
   return I;
 }
 
@@ -4541,7 +4541,7 @@ ShuffleVectorInst *ShuffleVectorInst::cloneImpl() const {
 
 PHINode *PHINode::cloneImpl() const {
   auto *I = new (AllocMarker) PHINode(*this);
-  I->FMFValue = FMFValue;
+  I->FMF = FMF;
   return I;
 }
 

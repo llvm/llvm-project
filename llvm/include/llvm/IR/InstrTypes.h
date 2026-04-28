@@ -57,7 +57,7 @@ class FastMathFlagsStorage {
   friend class FPMathOperator;
 
 protected:
-  unsigned short FMFValue = 0;
+  FastMathFlags FMF;
 };
 
 //===----------------------------------------------------------------------===//
