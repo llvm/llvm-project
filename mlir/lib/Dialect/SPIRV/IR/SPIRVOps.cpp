@@ -1851,7 +1851,7 @@ LogicalResult spirv::SpecConstantCompositeOp::verify() {
   for (auto index : llvm::seq<uint32_t>(0, constituents.size())) {
     auto constituent = cast<FlatSymbolRefAttr>(constituents[index]);
 
-    auto *constituentOp = SymbolTable::lookupNearestSymbolFrom(
+    Operation *constituentOp = SymbolTable::lookupNearestSymbolFrom(
         (*this)->getParentOp(), constituent.getAttr());
 
     if (!constituentOp)
