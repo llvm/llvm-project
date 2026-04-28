@@ -510,6 +510,8 @@ Bug Fixes in This Version
 - Fixed a crash where constexpr evaluation encountered invalid overrides. (#GH183290)
 - Fixed a crash when assigning to an element of an ``ext_vector_type`` with ``bool`` element type. (#GH189260)
 - Clang now emits an error for friend declarations of lambda members. (#GH26540)
+- Fixed a crash caused by lambda capture handling in delayed default arguments. (#GH176534)
+- Fixed a crash when parsing invalid ``static_assert`` declarations with string-literal messages (#GH187690).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -556,6 +558,7 @@ Bug Fixes to C++ Support
 - We no longer consider conversion operators when copy-initializing from the same type. This was non
   conforming and could lead to recursive constraint satisfaction checking. (#GH149443)
 - Fixed a crash in Itanium C++ name mangling for a lambda in a local class field initializer inside a constructor/destructor. (#GH176395)
+- Fixed crashes in Itanium C++ name mangling for lambdas with trailing requires-clauses involving requires-expressions. (#GH100774) (#GH123854)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
