@@ -395,44 +395,44 @@ MipsTargetAsmStreamer::MipsTargetAsmStreamer(MCStreamer &S,
     : MipsTargetStreamer(S), OS(OS) {}
 
 void MipsTargetAsmStreamer::emitDTPRel32Value(const MCExpr *Value) {
-  auto *MAI = getStreamer().getContext().getAsmInfo();
+  auto &MAI = getStreamer().getContext().getAsmInfo();
   OS << "\t.dtprelword\t";
-  MAI->printExpr(OS, *Value);
+  MAI.printExpr(OS, *Value);
   OS << '\n';
 }
 
 void MipsTargetAsmStreamer::emitDTPRel64Value(const MCExpr *Value) {
-  auto *MAI = getStreamer().getContext().getAsmInfo();
+  auto &MAI = getStreamer().getContext().getAsmInfo();
   OS << "\t.dtpreldword\t";
-  MAI->printExpr(OS, *Value);
+  MAI.printExpr(OS, *Value);
   OS << '\n';
 }
 
 void MipsTargetAsmStreamer::emitTPRel32Value(const MCExpr *Value) {
-  auto *MAI = getStreamer().getContext().getAsmInfo();
+  auto &MAI = getStreamer().getContext().getAsmInfo();
   OS << "\t.tprelword\t";
-  MAI->printExpr(OS, *Value);
+  MAI.printExpr(OS, *Value);
   OS << '\n';
 }
 
 void MipsTargetAsmStreamer::emitTPRel64Value(const MCExpr *Value) {
-  auto *MAI = getStreamer().getContext().getAsmInfo();
+  auto &MAI = getStreamer().getContext().getAsmInfo();
   OS << "\t.tpreldword\t";
-  MAI->printExpr(OS, *Value);
+  MAI.printExpr(OS, *Value);
   OS << '\n';
 }
 
 void MipsTargetAsmStreamer::emitGPRel32Value(const MCExpr *Value) {
-  auto *MAI = getStreamer().getContext().getAsmInfo();
+  auto &MAI = getStreamer().getContext().getAsmInfo();
   OS << "\t.gpword\t";
-  MAI->printExpr(OS, *Value);
+  MAI.printExpr(OS, *Value);
   OS << '\n';
 }
 
 void MipsTargetAsmStreamer::emitGPRel64Value(const MCExpr *Value) {
-  auto *MAI = getStreamer().getContext().getAsmInfo();
+  auto &MAI = getStreamer().getContext().getAsmInfo();
   OS << "\t.gpdword\t";
-  MAI->printExpr(OS, *Value);
+  MAI.printExpr(OS, *Value);
   OS << '\n';
 }
 
@@ -970,7 +970,7 @@ void MipsTargetELFStreamer::finish() {
 
       Align Alignment = Section.getAlign();
       S.switchSection(&Section);
-      if (getContext().getAsmInfo()->useCodeAlign(Section))
+      if (getContext().getAsmInfo().useCodeAlign(Section))
         S.emitCodeAlignment(Alignment, &STI, Alignment.value());
       else
         S.emitValueToAlignment(Alignment, 0, 1, Alignment.value());

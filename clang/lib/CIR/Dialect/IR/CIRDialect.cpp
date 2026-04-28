@@ -375,6 +375,12 @@ LogicalResult cir::BreakOp::verify() {
 // LocalInitOp
 //===----------------------------------------------------------------------===//
 
+LogicalResult cir::LocalInitOp::verify() {
+  if (!getOperation()->getParentOfType<FuncOp>())
+    return emitOpError("must be inside of a 'cir.func'");
+  return success();
+}
+
 LogicalResult
 cir::LocalInitOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   cir::GlobalOp global = getReferencedGlobal(symbolTable);
@@ -385,10 +391,7 @@ cir::LocalInitOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   if (getTls() && !global.getTlsModel())
     return emitOpError("access to global not marked thread local");
 
-  bool isStaticLocal = getStaticLocal();
-  bool globalIsStaticLocal = global.getStaticLocalGuard().has_value();
-
-  if (isStaticLocal != globalIsStaticLocal)
+  if (!global.getStaticLocalGuard().has_value())
     return emitOpError("static_local attribute mismatch");
 
   return success();
@@ -3366,6 +3369,20 @@ OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
         cmpResult = mlir::cast<cir::FPAttr>(lhsAttr).getValue() !=
                     mlir::cast<cir::FPAttr>(rhsAttr).getValue();
       }
+      break;
+    }
+    case cir::CmpOpKind::one: {
+      llvm::APFloat::cmpResult cr =
+          mlir::cast<cir::FPAttr>(lhsAttr).getValue().compare(
+              mlir::cast<cir::FPAttr>(rhsAttr).getValue());
+      cmpResult =
+          cr != llvm::APFloat::cmpUnordered && cr != llvm::APFloat::cmpEqual;
+      break;
+    }
+    case cir::CmpOpKind::uno: {
+      cmpResult = mlir::cast<cir::FPAttr>(lhsAttr).getValue().compare(
+                      mlir::cast<cir::FPAttr>(rhsAttr).getValue()) ==
+                  llvm::APFloat::cmpUnordered;
       break;
     }
     }

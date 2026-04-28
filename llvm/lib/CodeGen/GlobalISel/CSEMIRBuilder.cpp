@@ -285,11 +285,14 @@ MachineInstrBuilder CSEMIRBuilder::buildInstr(unsigned Opc,
   case TargetOpcode::G_CTLZ_ZERO_UNDEF:
   case TargetOpcode::G_CTTZ:
   case TargetOpcode::G_CTTZ_ZERO_UNDEF:
-  case TargetOpcode::G_CTPOP: {
+  case TargetOpcode::G_CTPOP:
+  case TargetOpcode::G_ABS:
+  case TargetOpcode::G_BSWAP:
+  case TargetOpcode::G_BITREVERSE: {
     assert(SrcOps.size() == 1 && "Expected one source");
     assert(DstOps.size() == 1 && "Expected one dest");
-    auto Csts = ConstantFoldCountOp(Opc, DstOps[0].getLLTTy(*getMRI()),
-                                    SrcOps[0].getReg(), *getMRI());
+    auto Csts = ConstantFoldUnaryIntOp(Opc, DstOps[0].getLLTTy(*getMRI()),
+                                       SrcOps[0].getReg(), *getMRI());
     if (Csts.empty())
       break;
     if (Csts.size() == 1)

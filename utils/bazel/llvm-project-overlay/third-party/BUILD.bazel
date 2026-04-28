@@ -23,7 +23,9 @@ cc_library_wrapper(
             "LLVM_ENABLE_ZSTD=1",
             "ZSTD_MULTITHREAD",
         ],
-        "//conditions:default": [],
+        "//conditions:default": [
+            "LLVM_ENABLE_ZSTD=0",
+        ],
     }),
     deps = select({
         ":llvm_zstd_enabled": [
