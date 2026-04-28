@@ -894,6 +894,9 @@ private:
   bool shouldLocalize(const MachineInstr &MI,
                       const TargetTransformInfo *TTI) const override;
 
+  bool canCombineStoreAndExtract(Type *VectorTy, Value *Idx,
+                                 unsigned &Cost) const override;
+
   bool SimplifyDemandedBitsForTargetNode(SDValue Op,
                                          const APInt &OriginalDemandedBits,
                                          const APInt &OriginalDemandedElts,

@@ -4,12 +4,9 @@
 
 ; IR-BOTH-LABEL: @simpleOneInstructionPromotion
 ; IR-BOTH: [[LOAD:%[a-zA-Z_0-9-]+]] = load <2 x i32>, ptr %addr1
-; IR-NORMAL-NEXT: [[EXTRACT:%[a-zA-Z_0-9-]+]] = extractelement <2 x i32> [[LOAD]], i32 1
-; IR-NORMAL-NEXT: [[OUT:%[a-zA-Z_0-9-]+]] = or i32 [[EXTRACT]], 1
-; IR-NORMAL-NEXT: store i32 [[OUT]], ptr %dest
-; IR-STRESS-NEXT: [[VECTOR_OR:%[a-zA-Z_0-9-]+]] = or <2 x i32> [[LOAD]], <i32 poison, i32 1>
-; IR-STRESS-NEXT: [[EXTRACT:%[a-zA-Z_0-9-]+]] = extractelement <2 x i32> [[VECTOR_OR]], i32 1
-; IR-STRESS-NEXT: store i32 [[EXTRACT]], ptr %dest
+; IR-BOTH-NEXT: [[VECTOR_OR:%[a-zA-Z_0-9-]+]] = or <2 x i32> [[LOAD]], <i32 poison, i32 1>
+; IR-BOTH-NEXT: [[EXTRACT:%[a-zA-Z_0-9-]+]] = extractelement <2 x i32> [[VECTOR_OR]], i32 1
+; IR-BOTH-NEXT: store i32 [[EXTRACT]], ptr %dest
 ; IR-BOTH-NEXT: ret
 ; ASM-LABEL: simpleOneInstructionPromotion:
 ; ASM-NOT: umov
@@ -37,16 +34,11 @@ define void @unsupportedInstructionForPromotion(ptr %addr1, i32 %in2, ptr %dest)
 
 ; IR-BOTH-LABEL: @chainOfInstructionsToPromote
 ; IR-BOTH: [[LOAD:%[a-zA-Z_0-9-]+]] = load <2 x i32>, ptr %addr1
-; IR-NORMAL-NEXT: [[EXTRACT:%[a-zA-Z_0-9-]+]] = extractelement <2 x i32> [[LOAD]], i32 0
-; IR-NORMAL-NEXT: [[OUT1:%[a-zA-Z_0-9-]+]] = or i32 [[EXTRACT]], 1
-; IR-NORMAL-NEXT: [[OUT2:%[a-zA-Z_0-9-]+]] = or i32 [[OUT1]], 1
-; IR-NORMAL-NEXT: [[OUT3:%[a-zA-Z_0-9-]+]] = or i32 [[OUT2]], 1
-; IR-NORMAL-NEXT: store i32 [[OUT3]], ptr %dest
-; IR-STRESS-NEXT: [[VECTOR_OR1:%[a-zA-Z_0-9-]+]] = or <2 x i32> [[LOAD]], <i32 1, i32 poison>
-; IR-STRESS-NEXT: [[VECTOR_OR2:%[a-zA-Z_0-9-]+]] = or <2 x i32> [[VECTOR_OR1]], <i32 1, i32 poison>
-; IR-STRESS-NEXT: [[VECTOR_OR3:%[a-zA-Z_0-9-]+]] = or <2 x i32> [[VECTOR_OR2]], <i32 1, i32 poison>
-; IR-STRESS-NEXT: [[EXTRACT:%[a-zA-Z_0-9-]+]] = extractelement <2 x i32> [[VECTOR_OR3]], i32 0
-; IR-STRESS-NEXT: store i32 [[EXTRACT]], ptr %dest
+; IR-BOTH-NEXT: [[VECTOR_OR1:%[a-zA-Z_0-9-]+]] = or <2 x i32> [[LOAD]], <i32 1, i32 poison>
+; IR-BOTH-NEXT: [[VECTOR_OR2:%[a-zA-Z_0-9-]+]] = or <2 x i32> [[VECTOR_OR1]], <i32 1, i32 poison>
+; IR-BOTH-NEXT: [[VECTOR_OR3:%[a-zA-Z_0-9-]+]] = or <2 x i32> [[VECTOR_OR2]], <i32 1, i32 poison>
+; IR-BOTH-NEXT: [[EXTRACT:%[a-zA-Z_0-9-]+]] = extractelement <2 x i32> [[VECTOR_OR3]], i32 0
+; IR-BOTH-NEXT: store i32 [[EXTRACT]], ptr %dest
 ; IR-BOTH-NEXT: ret
 define void @chainOfInstructionsToPromote(ptr %addr1, ptr %dest) {
   %in1 = load <2 x i32>, ptr %addr1, align 8

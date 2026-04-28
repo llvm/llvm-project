@@ -33214,6 +33214,37 @@ bool AArch64TargetLowering::SimplifyDemandedBitsForTargetNode(
       Op, OriginalDemandedBits, OriginalDemandedElts, Known, TLO, Depth);
 }
 
+bool AArch64TargetLowering::canCombineStoreAndExtract(Type *VectorTy,
+                                                      Value *Idx,
+                                                      unsigned &Cost) const {
+  // If we do not have NEON, fixed-width vector types are not natively
+  // supported.
+  if (!Subtarget->hasNEON())
+    return false;
+
+  // Floating point values and vector values map to the same register file.
+  // Therefore, although we could do a store extract of a vector type, this is
+  // better to leave at float as we have more freedom in the addressing mode for
+  // those.
+  if (VectorTy->isFPOrFPVectorTy() || VectorTy->isScalableTy())
+    return false;
+
+  // If the index is unknown at compile time, this is very expensive to lower
+  // and it is not possible to combine the store with the extract.
+  if (!isa<ConstantInt>(Idx))
+    return false;
+
+  assert(VectorTy->isVectorTy() && "VectorTy is not a vector type");
+  unsigned BitWidth = VectorTy->getPrimitiveSizeInBits().getFixedValue();
+  // We can do a store + vector extract on any vector that fits perfectly in a D
+  // or Q register.
+  if (BitWidth == 64 || BitWidth == 128) {
+    Cost = 0;
+    return true;
+  }
+  return false;
+}
+
 bool AArch64TargetLowering::canCreateUndefOrPoisonForTargetNode(
     SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
     bool PoisonOnly, bool ConsiderFlags, unsigned Depth) const {
