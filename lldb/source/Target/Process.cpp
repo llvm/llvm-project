@@ -1595,12 +1595,18 @@ Status Process::DisableBreakpointSiteByID(lldb::user_id_t break_id,
 Status Process::ExecuteBreakpointSiteAction(BreakpointSite &site,
                                             BreakpointAction action,
                                             bool force_now) {
+
+  auto site_sp = site.shared_from_this();
+
+  // Ignore requests that won't change the Site status.
+  if (IsBreakpointSiteEnabled(*site_sp) == (action == BreakpointAction::Enable))
+    return Status();
+
   if (!force_now && GetUseDelayedBreakpoints()) {
     m_delayed_breakpoints.Enqueue(site.shared_from_this(), action);
     return Status();
   }
 
-  auto site_sp = site.shared_from_this();
   m_delayed_breakpoints.RemoveSite(site_sp);
 
   switch (action) {
