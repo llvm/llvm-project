@@ -1,8 +1,7 @@
 // Checks that -fmodules-driver correctly handles the import of Standard library
 // modules.
 
-// https://github.com/llvm/llvm-project/pull/194475#issuecomment-4331347690
-// UNSUPPORTED: target={{.*}}aarch64{{.*}}, {{.*}}arm64{{.*}}
+// REQUIRES: x86-registered-target
 
 // The standard library modules manifest (libc++.modules.json) is discovered
 // relative to the installed C++ standard library runtime libraries
