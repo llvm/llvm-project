@@ -137,31 +137,28 @@ static bool isShortLived(const ValueDecl *Var, const SourceManager *SrcMgr,
   return false;
 }
 
-static bool shouldWarn(const ValueDecl *Var, unsigned MinNameLength,
-                       llvm::Regex const &IgnoredNames,
-                       const MatchFinder::MatchResult &Result,
-                       unsigned LineCountThreshold) {
-  if (!Var->getIdentifier())
-    return false;
-
-  const StringRef VarName = Var->getName();
-
-  if (VarName.size() >= MinNameLength || IgnoredNames.match(VarName))
-    return false;
-
-  if (isShortLived(Var, Result.SourceManager, Result.Context,
-                   LineCountThreshold))
-    return false;
-
-  return true;
-}
-
 void IdentifierLengthCheck::check(const MatchFinder::MatchResult &Result) {
+  auto ShouldWarn = [&](const ValueDecl *Var, unsigned MinNameLength,
+                        llvm::Regex const &IgnoredNames) -> bool {
+    if (!Var->getIdentifier())
+      return false;
+
+    const StringRef VarName = Var->getName();
+    if (VarName.size() >= MinNameLength || IgnoredNames.match(VarName))
+      return false;
+
+    if (isShortLived(Var, Result.SourceManager, Result.Context,
+                     LineCountThreshold))
+      return false;
+
+    return true;
+  };
+
   const auto *StandaloneVar =
       Result.Nodes.getNodeAs<ValueDecl>("standaloneVar");
   if (StandaloneVar) {
-    if (shouldWarn(StandaloneVar, MinimumVariableNameLength,
-                   IgnoredVariableNames, Result, LineCountThreshold))
+    if (ShouldWarn(StandaloneVar, MinimumVariableNameLength,
+                   IgnoredVariableNames))
       diag(StandaloneVar->getLocation(), ErrorMessage)
           << 0 << StandaloneVar << MinimumVariableNameLength;
     return;
@@ -169,8 +166,7 @@ void IdentifierLengthCheck::check(const MatchFinder::MatchResult &Result) {
 
   const auto *BindingVar = Result.Nodes.getNodeAs<ValueDecl>("bindingVar");
   if (BindingVar) {
-    if (shouldWarn(BindingVar, MinimumBindingNameLength, IgnoredBindingNames,
-                   Result, LineCountThreshold))
+    if (ShouldWarn(BindingVar, MinimumBindingNameLength, IgnoredBindingNames))
       diag(BindingVar->getLocation(), ErrorMessage)
           << 1 << BindingVar << MinimumBindingNameLength;
     return;
@@ -178,8 +174,8 @@ void IdentifierLengthCheck::check(const MatchFinder::MatchResult &Result) {
 
   auto *ExceptionVar = Result.Nodes.getNodeAs<ValueDecl>("exceptionVar");
   if (ExceptionVar) {
-    if (shouldWarn(ExceptionVar, MinimumExceptionNameLength,
-                   IgnoredExceptionVariableNames, Result, LineCountThreshold))
+    if (ShouldWarn(ExceptionVar, MinimumExceptionNameLength,
+                   IgnoredExceptionVariableNames))
       diag(ExceptionVar->getLocation(), ErrorMessage)
           << 2 << ExceptionVar << MinimumExceptionNameLength;
     return;
@@ -187,8 +183,8 @@ void IdentifierLengthCheck::check(const MatchFinder::MatchResult &Result) {
 
   const auto *LoopVar = Result.Nodes.getNodeAs<ValueDecl>("loopVar");
   if (LoopVar) {
-    if (shouldWarn(LoopVar, MinimumLoopCounterNameLength,
-                   IgnoredLoopCounterNames, Result, LineCountThreshold))
+    if (ShouldWarn(LoopVar, MinimumLoopCounterNameLength,
+                   IgnoredLoopCounterNames))
       diag(LoopVar->getLocation(), ErrorMessage)
           << 3 << LoopVar << MinimumLoopCounterNameLength;
     return;
@@ -196,8 +192,7 @@ void IdentifierLengthCheck::check(const MatchFinder::MatchResult &Result) {
 
   const auto *ParamVar = Result.Nodes.getNodeAs<ValueDecl>("paramVar");
   if (ParamVar) {
-    if (shouldWarn(ParamVar, MinimumParameterNameLength, IgnoredParameterNames,
-                   Result, LineCountThreshold))
+    if (ShouldWarn(ParamVar, MinimumParameterNameLength, IgnoredParameterNames))
       diag(ParamVar->getLocation(), ErrorMessage)
           << 4 << ParamVar << MinimumParameterNameLength;
     return;
