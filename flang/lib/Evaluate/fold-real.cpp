@@ -421,8 +421,7 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
       Scalar<T> pi{Scalar<T>::Read(piStr).value};
       Scalar<T> oneEighty{Scalar<T>::Read(oneEightyStr).value};
       Scalar<T> piOver180{pi.Divide(oneEighty).value};
-      *xExpr = std::move(*xExpr) *
-          Expr<T>{Constant<T>{std::move(piOver180)}};
+      *xExpr = std::move(*xExpr) * Expr<T>{Constant<T>{std::move(piOver180)}};
       intrinsic->name = "sin";
       return FoldIntrinsicFunction<KIND>(context, std::move(funcRef));
     }
