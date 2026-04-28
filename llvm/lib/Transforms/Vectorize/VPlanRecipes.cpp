@@ -244,9 +244,6 @@ bool VPRecipeBase::isSafeToSpeculativelyExecute() const {
       return true;
     }
   }
-  case VPVectorPointerSC:
-  case VPVectorEndPointerSC:
-    return true;
   }
 }
 
