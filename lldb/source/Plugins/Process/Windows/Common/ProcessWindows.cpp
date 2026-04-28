@@ -754,13 +754,15 @@ ProcessWindows::OnDebugException(bool first_chance,
 
     HANDLE pipe = m_pty->GetSTDOUTHandle();
     for (int consec_empty = 0; consec_empty < 3;) {
+      if (!m_stdio_communication.ReadThreadIsRunning())
+        break;
       DWORD avail = 0;
+      // PeekNamedPipe is thread safe.
       if (!::PeekNamedPipe(pipe, nullptr, 0, nullptr, &avail, nullptr))
         break;
       if (avail > 0) {
         consec_empty = 0;
-        if (m_stdio_communication.ReadThreadIsRunning())
-          m_stdio_communication.SynchronizeWithReadThread();
+        m_stdio_communication.SynchronizeWithReadThread();
       } else {
         ++consec_empty;
         if (consec_empty < 3)
