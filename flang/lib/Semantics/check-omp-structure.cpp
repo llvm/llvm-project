@@ -4735,8 +4735,20 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Device &x) {
   const parser::OmpDeviceClause &deviceClause{x.v};
   const auto &device{std::get<parser::ScalarIntExpr>(deviceClause.t)};
   unsigned version{context_.langOptions().OpenMPVersion};
-  RequiresPositiveParameter(
-      llvm::omp::Clause::OMPC_device, device, "device expression");
+  // The predefined identifiers omp_initial_device (-1) and omp_invalid_device
+  // (-2) were introduced in OpenMP 5.2. Under earlier versions the device
+  // expression must be a non-negative integer.
+  if (version >= 52) {
+    if (const auto v{GetIntValue(device)}) {
+      if (*v < -2) {
+        context_.Say(GetContext().clauseSource,
+            "The device expression of the DEVICE clause must be a non-negative integer expression, 'omp_initial_device' (-1), or 'omp_invalid_device' (-2)"_err_en_US);
+      }
+    }
+  } else {
+    RequiresPositiveParameter(
+        llvm::omp::Clause::OMPC_device, device, "device expression");
+  }
   llvm::omp::Directive dir{GetContext().directive};
 
   if (OmpVerifyModifiers(deviceClause, llvm::omp::OMPC_device,

@@ -532,6 +532,7 @@ Bug Fixes to Attribute Support
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
+- Fixed a preprocessor assertion failure triggered when parsing an invalid template-id starting with ``::template operator``. (#GH186582)
 - Fixed a crash when a function template is defined as a non-template friend with a global scope qualifier. (#GH185341)
 - Clang now rejects constant template parameters with block pointer types, since these are not implemented anyway and would lead to crashes. (#GH189247)
 - Fixed a crash on error recovery when dealing with invalid templates. (#GH183075)
