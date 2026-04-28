@@ -25,8 +25,6 @@
 #include "test/UnitTest/LibcTest.h"
 #include "test/UnitTest/Test.h"
 
-#include <sys/socket.h> // For AF_UNIX and SOCK_DGRAM
-
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 using LlvmLibcSendMsgRecvMsgTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;

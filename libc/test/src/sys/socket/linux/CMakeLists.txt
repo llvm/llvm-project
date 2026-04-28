@@ -125,10 +125,8 @@ add_libc_unittest(
   SRCS
     send_recv_test.cpp
   DEPENDS
-    libc.include.sys_socket
     libc.hdr.sys_socket_macros
     libc.src.errno.errno
-    libc.src.string.memset
     libc.src.sys.socket.socketpair
     libc.src.sys.socket.send
     libc.src.sys.socket.recv
@@ -161,7 +159,8 @@ add_libc_unittest(
   SRCS
     sendmsg_recvmsg_test.cpp
   DEPENDS
-    libc.include.sys_socket
+    libc.hdr.fcntl_macros
+    libc.hdr.sys_socket_macros
     libc.hdr.types.struct_cmsghdr
     libc.src.errno.errno
     libc.src.fcntl.fcntl

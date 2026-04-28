@@ -6,14 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/sys_socket_macros.h"
 #include "src/sys/socket/recv.h"
 #include "src/sys/socket/send.h"
 #include "src/sys/socket/socketpair.h"
 
-#include "src/string/memset.h"
 #include "src/unistd/close.h"
 
-#include "hdr/sys_socket_macros.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -52,7 +51,7 @@ TEST_F(LlvmLibcSendRecvTest, MsgFlagsTest) {
   ASSERT_THAT(LIBC_NAMESPACE::socketpair(AF_UNIX, SOCK_SEQPACKET, 0, sockpair),
               Succeeds(0));
 
-  char buffer[256];
+  char buffer[256] = {};
 
   // MSG_DONTWAIT on an empty socket returns EAGAIN
   ASSERT_THAT(
@@ -70,13 +69,14 @@ TEST_F(LlvmLibcSendRecvTest, MsgFlagsTest) {
       LIBC_NAMESPACE::recv(sockpair[1], buffer, sizeof(buffer), MSG_PEEK),
       Succeeds(static_cast<ssize_t>(MESSAGE_LEN)));
   ASSERT_STREQ(buffer, TEST_MESSAGE);
-  LIBC_NAMESPACE::memset(buffer, 0, sizeof(buffer));
 
   // Read the message again, but use a smaller buffer to test MSG_TRUNC. Return
   // value should be real length.
-  ASSERT_THAT(LIBC_NAMESPACE::recv(sockpair[1], buffer, 5, MSG_TRUNC),
+  char small_buffer[6] = {};
+  ASSERT_THAT(LIBC_NAMESPACE::recv(sockpair[1], small_buffer,
+                                   sizeof(small_buffer) - 1, MSG_TRUNC),
               Succeeds(static_cast<ssize_t>(MESSAGE_LEN)));
-  ASSERT_STREQ(buffer, "this ");
+  ASSERT_STREQ(small_buffer, "this ");
 
   // Sending with MSG_NOSIGNAL to a closed socket should fail with EPIPE
   ASSERT_THAT(LIBC_NAMESPACE::close(sockpair[1]), Succeeds(0));
