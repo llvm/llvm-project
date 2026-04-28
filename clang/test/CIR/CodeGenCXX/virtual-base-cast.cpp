@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o - | FileCheck --check-prefix=CIR %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o - | FileCheck --check-prefix=CLLVM %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix=LLVM %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o - | FileCheck --check-prefix=LLVM %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix=OGCG %s
 struct A { int a; virtual int aa(); };
 struct B { int b; virtual int bb(); };
 struct C : virtual A, virtual B { int c; virtual int aa(); virtual int bb(); };
@@ -27,93 +27,79 @@ D* x;
 // CIR:  %[[VBASE_ADDR:.*]] = cir.ptr_stride {{.*}}, %[[OFFSET]] : (!cir.ptr<!u8i>, !s64i) -> !cir.ptr<!u8i>
 // CIR:  cir.cast bitcast %[[VBASE_ADDR]] : !cir.ptr<!u8i> -> !cir.ptr<!rec_D>
 
-// CLLVM-LABEL:  @_Z1av(
-// CLLVM:         [[TMP1:%.*]] = alloca ptr, i64 1, align 8
-// CLLVM-NEXT:    [[TMP2:%.*]] = load ptr, ptr @x, align 8
-// CLLVM-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP2]], align 8
-// CLLVM-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP3]], i64 -32
-// CLLVM-NEXT:    [[TMP5:%.*]] = load i64, ptr [[TMP4]], align 8
-// CLLVM-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP2]], i64 [[TMP5]]
-// CLLVM-NEXT:    store ptr [[TMP6]], ptr [[TMP1]], align 8
-// CLLVM-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP1]], align 8
-// CLLVM-NEXT:    ret ptr [[TMP7]]
-//
-// LLVM-LABEL:  @_Z1av(
-// LLVM:       [[ENTRY:.*]]:
-// LLVM-NEXT:    [[TMP0:%.*]] = load ptr, ptr @x, align 8
-// LLVM-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[TMP0]], null
-// LLVM-NEXT:    br i1 [[TMP1]], label %[[CAST_END:.*]], label %[[CAST_NOTNULL:.*]]
-// LLVM:       [[CAST_NOTNULL]]:
-// LLVM-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
-// LLVM-NEXT:    [[VBASE_OFFSET_PTR:%.*]] = getelementptr i8, ptr [[VTABLE]], i64 -32
-// LLVM-NEXT:    [[VBASE_OFFSET:%.*]] = load i64, ptr [[VBASE_OFFSET_PTR]], align 8
-// LLVM-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 [[VBASE_OFFSET]]
-// LLVM-NEXT:    br label %[[CAST_END]]
-// LLVM:       [[CAST_END]]:
-// LLVM-NEXT:    [[CAST_RESULT:%.*]] = phi ptr [ [[ADD_PTR]], %[[CAST_NOTNULL]] ], [ null, %[[ENTRY]] ]
-// LLVM-NEXT:    ret ptr [[CAST_RESULT]]
-//
-A* a() { return x; }
-// CHECK: @_Z1av() [[NUW:#[0-9]+]]
-// CHECK: [[VBASEOFFSETPTRA:%[a-zA-Z0-9\.]+]] = getelementptr i8, ptr {{.*}}, i64 -16
-// CHECK: load i32, ptr [[VBASEOFFSETPTRA]]
-// CHECK: }
+// LLVM-LABEL: @_Z1av(
+// LLVM:       [[OBJ:%.*]] = load ptr, ptr @x
+// LLVM-NEXT:  [[VTABLE:%.*]] = load ptr, ptr [[OBJ]]
+// LLVM-NEXT:  [[VBASE_OFFSET_PTR:%.*]] = getelementptr i8, ptr [[VTABLE]], i64 -32
+// LLVM-NEXT:  [[VBASE_OFFSET:%.*]] = load i64, ptr [[VBASE_OFFSET_PTR]]
+// LLVM-NEXT:  [[ADD_PTR:%.*]] = getelementptr i8, ptr [[OBJ]], i64 [[VBASE_OFFSET]]
+// LLVM:       ret ptr
 
-// CLLVM-LABEL:  @_Z1bv(
-// CLLVM:         [[TMP1:%.*]] = alloca ptr, i64 1, align 8
-// CLLVM-NEXT:    [[TMP2:%.*]] = load ptr, ptr @x, align 8
-// CLLVM-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP2]], align 8
-// CLLVM-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP3]], i64 -40
-// CLLVM-NEXT:    [[TMP5:%.*]] = load i64, ptr [[TMP4]], align 8
-// CLLVM-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP2]], i64 [[TMP5]]
-// CLLVM-NEXT:    store ptr [[TMP6]], ptr [[TMP1]], align 8
-// CLLVM-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP1]], align 8
-// CLLVM-NEXT:    ret ptr [[TMP7]]
-//
-// LLVM-LABEL:  @_Z1bv(
-// LLVM:       [[ENTRY:.*]]:
-// LLVM-NEXT:    [[TMP0:%.*]] = load ptr, ptr @x, align 8
-// LLVM-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[TMP0]], null
-// LLVM-NEXT:    br i1 [[TMP1]], label %[[CAST_END:.*]], label %[[CAST_NOTNULL:.*]]
-// LLVM:       [[CAST_NOTNULL]]:
-// LLVM-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
-// LLVM-NEXT:    [[VBASE_OFFSET_PTR:%.*]] = getelementptr i8, ptr [[VTABLE]], i64 -40
-// LLVM-NEXT:    [[VBASE_OFFSET:%.*]] = load i64, ptr [[VBASE_OFFSET_PTR]], align 8
-// LLVM-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 [[VBASE_OFFSET]]
-// LLVM-NEXT:    br label %[[CAST_END]]
-// LLVM:       [[CAST_END]]:
-// LLVM-NEXT:    [[CAST_RESULT:%.*]] = phi ptr [ [[ADD_PTR]], %[[CAST_NOTNULL]] ], [ null, %[[ENTRY]] ]
-// LLVM-NEXT:    ret ptr [[CAST_RESULT]]
+// OGCG-LABEL:  @_Z1av(
+// OGCG:       [[ENTRY:.*]]:
+// OGCG-NEXT:    [[TMP0:%.*]] = load ptr, ptr @x, align 8
+// OGCG-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[TMP0]], null
+// OGCG-NEXT:    br i1 [[TMP1]], label %[[CAST_END:.*]], label %[[CAST_NOTNULL:.*]]
+// OGCG:       [[CAST_NOTNULL]]:
+// OGCG-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
+// OGCG-NEXT:    [[VBASE_OFFSET_PTR:%.*]] = getelementptr i8, ptr [[VTABLE]], i64 -32
+// OGCG-NEXT:    [[VBASE_OFFSET:%.*]] = load i64, ptr [[VBASE_OFFSET_PTR]], align 8
+// OGCG-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 [[VBASE_OFFSET]]
+// OGCG-NEXT:    br label %[[CAST_END]]
+// OGCG:       [[CAST_END]]:
+// OGCG-NEXT:    [[CAST_RESULT:%.*]] = phi ptr [ [[ADD_PTR]], %[[CAST_NOTNULL]] ], [ null, %[[ENTRY]] ]
+// OGCG-NEXT:    ret ptr [[CAST_RESULT]]
+A* a() { return x; }
+
+// LLVM-LABEL: @_Z1bv(
+// LLVM:       [[OBJ:%.*]] = load ptr, ptr @x
+// LLVM-NEXT:  [[VTABLE:%.*]] = load ptr, ptr [[OBJ]]
+// LLVM-NEXT:  [[VBASE_OFFSET_PTR:%.*]] = getelementptr i8, ptr [[VTABLE]], i64 -40
+// LLVM-NEXT:  [[VBASE_OFFSET:%.*]] = load i64, ptr [[VBASE_OFFSET_PTR]]
+// LLVM-NEXT:  [[ADD_PTR:%.*]] = getelementptr i8, ptr [[OBJ]], i64 [[VBASE_OFFSET]]
+// LLVM:       ret ptr
+
+// OGCG-LABEL:  @_Z1bv(
+// OGCG:       [[ENTRY:.*]]:
+// OGCG-NEXT:    [[TMP0:%.*]] = load ptr, ptr @x, align 8
+// OGCG-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[TMP0]], null
+// OGCG-NEXT:    br i1 [[TMP1]], label %[[CAST_END:.*]], label %[[CAST_NOTNULL:.*]]
+// OGCG:       [[CAST_NOTNULL]]:
+// OGCG-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
+// OGCG-NEXT:    [[VBASE_OFFSET_PTR:%.*]] = getelementptr i8, ptr [[VTABLE]], i64 -40
+// OGCG-NEXT:    [[VBASE_OFFSET:%.*]] = load i64, ptr [[VBASE_OFFSET_PTR]], align 8
+// OGCG-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 [[VBASE_OFFSET]]
+// OGCG-NEXT:    br label %[[CAST_END]]
+// OGCG:       [[CAST_END]]:
+// OGCG-NEXT:    [[CAST_RESULT:%.*]] = phi ptr [ [[ADD_PTR]], %[[CAST_NOTNULL]] ], [ null, %[[ENTRY]] ]
+// OGCG-NEXT:    ret ptr [[CAST_RESULT]]
 //
 B* b() { return x; }
 
-// CLLVM-LABEL:  @_Z1cv(
-// CLLVM:         [[TMP1:%.*]] = alloca ptr, i64 1, align 8
-// CLLVM-NEXT:    [[TMP2:%.*]] = load ptr, ptr @x, align 8
-// CLLVM-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP2]], align 8
-// CLLVM-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP3]], i64 -48
-// CLLVM-NEXT:    [[TMP5:%.*]] = load i64, ptr [[TMP4]], align 8
-// CLLVM-NEXT:    [[TMP6:%.*]] = add i64 [[TMP5]], 16
-// CLLVM-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP2]], i64 [[TMP6]]
-// CLLVM-NEXT:    store ptr [[TMP7]], ptr [[TMP1]], align 8
-// CLLVM-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[TMP1]], align 8
-// CLLVM-NEXT:    ret ptr [[TMP8]]
-//
-// LLVM-LABEL:  @_Z1cv(
-// LLVM:       [[ENTRY:.*]]:
-// LLVM-NEXT:    [[TMP0:%.*]] = load ptr, ptr @x, align 8
-// LLVM-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[TMP0]], null
-// LLVM-NEXT:    br i1 [[TMP1]], label %[[CAST_END:.*]], label %[[CAST_NOTNULL:.*]]
-// LLVM:       [[CAST_NOTNULL]]:
-// LLVM-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
-// LLVM-NEXT:    [[VBASE_OFFSET_PTR:%.*]] = getelementptr i8, ptr [[VTABLE]], i64 -48
-// LLVM-NEXT:    [[VBASE_OFFSET:%.*]] = load i64, ptr [[VBASE_OFFSET_PTR]], align 8
-// LLVM-NEXT:    [[TMP2:%.*]] = add i64 [[VBASE_OFFSET]], 16
-// LLVM-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 [[TMP2]]
-// LLVM-NEXT:    br label %[[CAST_END]]
-// LLVM:       [[CAST_END]]:
-// LLVM-NEXT:    [[CAST_RESULT:%.*]] = phi ptr [ [[ADD_PTR]], %[[CAST_NOTNULL]] ], [ null, %[[ENTRY]] ]
-// LLVM-NEXT:    ret ptr [[CAST_RESULT]]
+// LLVM-LABEL: @_Z1cv(
+// LLVM:       [[OBJ:%.*]] = load ptr, ptr @x
+// LLVM-NEXT:  [[VTABLE:%.*]] = load ptr, ptr [[OBJ]]
+// LLVM-NEXT:  [[VBASE_OFFSET_PTR:%.*]] = getelementptr i8, ptr [[VTABLE]], i64 -48
+// LLVM-NEXT:  [[VBASE_OFFSET:%.*]] = load i64, ptr [[VBASE_OFFSET_PTR]]
+// LLVM-NEXT:  [[OFFSET:%.*]] = add i64 [[VBASE_OFFSET]], 16
+// LLVM-NEXT:  [[ADD_PTR:%.*]] = getelementptr i8, ptr [[OBJ]], i64 [[OFFSET]]
+// LLVM:       ret ptr
+
+// OGCG-LABEL:  @_Z1cv(
+// OGCG:       [[ENTRY:.*]]:
+// OGCG-NEXT:    [[TMP0:%.*]] = load ptr, ptr @x, align 8
+// OGCG-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[TMP0]], null
+// OGCG-NEXT:    br i1 [[TMP1]], label %[[CAST_END:.*]], label %[[CAST_NOTNULL:.*]]
+// OGCG:       [[CAST_NOTNULL]]:
+// OGCG-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
+// OGCG-NEXT:    [[VBASE_OFFSET_PTR:%.*]] = getelementptr i8, ptr [[VTABLE]], i64 -48
+// OGCG-NEXT:    [[VBASE_OFFSET:%.*]] = load i64, ptr [[VBASE_OFFSET_PTR]], align 8
+// OGCG-NEXT:    [[TMP2:%.*]] = add i64 [[VBASE_OFFSET]], 16
+// OGCG-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 [[TMP2]]
+// OGCG-NEXT:    br label %[[CAST_END]]
+// OGCG:       [[CAST_END]]:
+// OGCG-NEXT:    [[CAST_RESULT:%.*]] = phi ptr [ [[ADD_PTR]], %[[CAST_NOTNULL]] ], [ null, %[[ENTRY]] ]
+// OGCG-NEXT:    ret ptr [[CAST_RESULT]]
 //
 BB* c() { return x; }
 
@@ -127,33 +113,31 @@ F* y;
 // CIR: %[[ADJUST:.*]] = cir.const #cir.int<16> : !s64i
 // CIR: cir.add %[[OFFSET]], %[[ADJUST]] : !s64i
 
-// CLLVM-LABEL:  @_Z1dv(
-// CLLVM:         [[TMP1:%.*]] = alloca ptr, i64 1, align 8
-// CLLVM-NEXT:    [[TMP2:%.*]] = load ptr, ptr @y, align 8
-// CLLVM-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP2]], align 8
-// CLLVM-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP3]], i64 -48
-// CLLVM-NEXT:    [[TMP5:%.*]] = load i64, ptr [[TMP4]], align 8
-// CLLVM-NEXT:    [[TMP6:%.*]] = add i64 [[TMP5]], 16
-// CLLVM-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP2]], i64 [[TMP6]]
-// CLLVM-NEXT:    store ptr [[TMP7]], ptr [[TMP1]], align 8
-// CLLVM-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[TMP1]], align 8
-// CLLVM-NEXT:    ret ptr [[TMP8]]
-//
-// LLVM-LABEL:  @_Z1dv(
-// LLVM:       [[ENTRY:.*]]:
-// LLVM-NEXT:    [[TMP0:%.*]] = load ptr, ptr @y, align 8
-// LLVM-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[TMP0]], null
-// LLVM-NEXT:    br i1 [[TMP1]], label %[[CAST_END:.*]], label %[[CAST_NOTNULL:.*]]
-// LLVM:       [[CAST_NOTNULL]]:
-// LLVM-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
-// LLVM-NEXT:    [[VBASE_OFFSET_PTR:%.*]] = getelementptr i8, ptr [[VTABLE]], i64 -48
-// LLVM-NEXT:    [[VBASE_OFFSET:%.*]] = load i64, ptr [[VBASE_OFFSET_PTR]], align 8
-// LLVM-NEXT:    [[TMP2:%.*]] = add i64 [[VBASE_OFFSET]], 16
-// LLVM-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 [[TMP2]]
-// LLVM-NEXT:    br label %[[CAST_END]]
-// LLVM:       [[CAST_END]]:
-// LLVM-NEXT:    [[CAST_RESULT:%.*]] = phi ptr [ [[ADD_PTR]], %[[CAST_NOTNULL]] ], [ null, %[[ENTRY]] ]
-// LLVM-NEXT:    ret ptr [[CAST_RESULT]]
+
+// LLVM-LABEL: @_Z1dv(
+// LLVM:       [[OBJ:%.*]] = load ptr, ptr @y
+// LLVM-NEXT:  [[VTABLE:%.*]] = load ptr, ptr [[OBJ]]
+// LLVM-NEXT:  [[VBASE_OFFSET_PTR:%.*]] = getelementptr i8, ptr [[VTABLE]], i64 -48
+// LLVM-NEXT:  [[VBASE_OFFSET:%.*]] = load i64, ptr [[VBASE_OFFSET_PTR]]
+// LLVM-NEXT:  [[OFFSET:%.*]] = add i64 [[VBASE_OFFSET]], 16
+// LLVM-NEXT:  [[ADD_PTR:%.*]] = getelementptr i8, ptr [[OBJ]], i64 [[OFFSET]]
+// LLVM:       ret ptr
+
+// OGCG-LABEL:  @_Z1dv(
+// OGCG:       [[ENTRY:.*]]:
+// OGCG-NEXT:    [[TMP0:%.*]] = load ptr, ptr @y, align 8
+// OGCG-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[TMP0]], null
+// OGCG-NEXT:    br i1 [[TMP1]], label %[[CAST_END:.*]], label %[[CAST_NOTNULL:.*]]
+// OGCG:       [[CAST_NOTNULL]]:
+// OGCG-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
+// OGCG-NEXT:    [[VBASE_OFFSET_PTR:%.*]] = getelementptr i8, ptr [[VTABLE]], i64 -48
+// OGCG-NEXT:    [[VBASE_OFFSET:%.*]] = load i64, ptr [[VBASE_OFFSET_PTR]], align 8
+// OGCG-NEXT:    [[TMP2:%.*]] = add i64 [[VBASE_OFFSET]], 16
+// OGCG-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 [[TMP2]]
+// OGCG-NEXT:    br label %[[CAST_END]]
+// OGCG:       [[CAST_END]]:
+// OGCG-NEXT:    [[CAST_RESULT:%.*]] = phi ptr [ [[ADD_PTR]], %[[CAST_NOTNULL]] ], [ null, %[[ENTRY]] ]
+// OGCG-NEXT:    ret ptr [[CAST_RESULT]]
 //
 BB* d() { return y; }
 
