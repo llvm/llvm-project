@@ -260,6 +260,11 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/pointer-arithmetic-on-polymorphic-object>` check
   by fixing a false positive when ``operator[]`` is used in a dependent context.
 
+- Improved :doc:`bugprone-random-generator-seed
+  <clang-tidy/checks/bugprone/random-generator-seed>` check by adding
+  a new note at the location of the field if the generator is implicitly
+  initialized with a default seed value.
+
 - Improved :doc:`bugprone-std-namespace-modification
   <clang-tidy/checks/bugprone/std-namespace-modification>` check by fixing
   false positives when extending the standard library with a specialization of
