@@ -1525,8 +1525,8 @@ Triple::ArchType LowerTypeTestsModule::selectJumpTableArmEncoding(
 }
 
 // Create location for each function entry which should look like this:
-// frame #0: __ubsan_check_cfi_icall_jt at sanitizer/ubsan_interface.h:0
-// frame #1: c::c() (.cfi_jt) at sanitizer/ubsan_interface.h:0:0
+// frame #0: c::c() (.cfi_jt) at sanitizer/ubsan_interface.h:0:0
+// frame #1: __ubsan_check_cfi_icall_jt at sanitizer/ubsan_interface.h:0
 // frame #2: .cfi.jumptable.81 at sanitizer/ubsan_interface.h:0:0
 static SmallVector<DILocation *>
 createJumpTableDebugInfo(Function *F, ArrayRef<GlobalTypeMember *> Functions) {
@@ -1569,8 +1569,8 @@ createJumpTableDebugInfo(Function *F, ArrayRef<GlobalTypeMember *> Functions) {
         DINode::FlagArtificial, DISubprogram::SPFlagDefinition);
 
     DILocation *EntryLoc = JTLoc;
-    EntryLoc = DILocation::get(M.getContext(), 0, 0, JumpSP, EntryLoc);
     EntryLoc = DILocation::get(M.getContext(), 0, 0, UbsanSP, EntryLoc);
+    EntryLoc = DILocation::get(M.getContext(), 0, 0, JumpSP, EntryLoc);
     Locations.push_back(EntryLoc);
   }
 
