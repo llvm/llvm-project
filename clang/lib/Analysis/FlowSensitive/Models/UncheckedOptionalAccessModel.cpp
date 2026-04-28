@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/FlowSensitive/Models/UncheckedOptionalAccessModel.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
@@ -88,6 +89,9 @@ static bool hasOptionalClassName(const CXXRecordDecl &RD) {
     return N != nullptr &&
            isFullyQualifiedNamespaceEqualTo(*N, "bdlb", "BloombergLP");
   }
+
+  if (RD.hasAttr<AnalyseAsClassAttr>())
+    return true;
 
   return false;
 }
