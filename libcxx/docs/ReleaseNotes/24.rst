@@ -38,10 +38,13 @@ What's New in Libc++ 24.0.0?
 Implemented Papers
 ------------------
 
+-`P2869R4: Remove Deprecated ``shared_ptr`` Atomic Access APIs from C++26 (`Github <https://github.com/llvm/llvm-project/issues/105412>`__)
 
 Improvements and New Features
 -----------------------------
 
+- The ``_LIBCPP_ENABLE_CXX26_REMOVED_SHARED_PTR_ATOMICS`` macro has been added to make the declarations in ``<memory>``
+  available.
 
 Deprecations and Removals
 -------------------------
