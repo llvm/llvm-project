@@ -5,8 +5,6 @@ define void @tail_folding_scalable(ptr %a, ptr noalias %b, ptr noalias %c, i32 %
 ; CHECK-LABEL: define void @tail_folding_scalable(
 ; CHECK-SAME: ptr [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]], i32 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br label %[[PH:.*]]
-; CHECK:       [[PH]]:
 ; CHECK-NEXT:    [[SMIN:%.*]] = call i32 @llvm.smin.i32(i32 [[N]], i32 1)
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[N]], [[SMIN]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
@@ -20,13 +18,13 @@ define void @tail_folding_scalable(ptr %a, ptr noalias %b, ptr noalias %c, i32 %
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 16 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[NEXT_GEP1:%.*]] = getelementptr i8, ptr [[B]], i64 [[INDEX]]
-; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[C]], i64 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr align 1 [[NEXT_GEP2]], <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i8> poison)
+; CHECK-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[C]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr align 1 [[NEXT_GEP]], <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i8> poison)
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD3:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr align 1 [[NEXT_GEP1]], <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i8> poison)
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <vscale x 16 x i8> [[WIDE_MASKED_LOAD3]], [[WIDE_MASKED_LOAD]]
-; CHECK-NEXT:    call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[TMP5]], ptr align 1 [[NEXT_GEP]], <vscale x 16 x i1> [[ACTIVE_LANE_MASK]])
+; CHECK-NEXT:    call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[TMP5]], ptr align 1 [[NEXT_GEP2]], <vscale x 16 x i1> [[ACTIVE_LANE_MASK]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP4]]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[INDEX_NEXT]], i64 [[TMP2]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
@@ -38,16 +36,13 @@ define void @tail_folding_scalable(ptr %a, ptr noalias %b, ptr noalias %c, i32 %
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  br label %ph
-
-ph:
   br label %loop
 
 loop:
-  %iv = phi i32 [ %iv.next, %loop ], [ %n, %ph ]
-  %ind.ptr.a = phi ptr [ %ind.ptr.a.next, %loop ], [ %a, %ph ]
-  %ind.ptr.b = phi ptr [ %ind.ptr.b.next, %loop ], [ %b, %ph ]
-  %ind.ptr.c = phi ptr [ %ind.ptr.c.next, %loop ], [ %c, %ph ]
+  %iv = phi i32 [ %n, %entry ], [ %iv.next, %loop ]
+  %ind.ptr.a = phi ptr [ %a, %entry ], [ %ind.ptr.a.next, %loop ]
+  %ind.ptr.b = phi ptr [ %b, %entry ], [ %ind.ptr.b.next, %loop ]
+  %ind.ptr.c = phi ptr [ %c, %entry ], [ %ind.ptr.c.next, %loop ]
   %iv.next = add nsw i32 %iv, -1
   %ind.ptr.a.next = getelementptr inbounds i8, ptr %ind.ptr.a, i32 1
   %ld.ind.a = load i8, ptr %ind.ptr.a, align 1
