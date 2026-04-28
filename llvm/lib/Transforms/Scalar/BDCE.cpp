@@ -119,7 +119,7 @@ static bool bitTrackingDCE(Function &F, DemandedBits &DB) {
       const uint32_t SrcBitSize = SE->getSrcTy()->getScalarSizeInBits();
       auto *const DstTy = SE->getDestTy();
       const uint32_t DestBitSize = DstTy->getScalarSizeInBits();
-      // Avoid incorrect replacement of self-referential
+      // Avoid incorrect replacement of self-referential values.
       if (SE != SE->getOperand(0) &&
           Demanded.countl_zero() >= (DestBitSize - SrcBitSize)) {
         clearAssumptionsOfUsers(SE, DB);
@@ -153,6 +153,7 @@ static bool bitTrackingDCE(Function &F, DemandedBits &DB) {
             break;
           }
 
+          // Avoid incorrect replacement of self-referential values.
           if (CanBeSimplified && BO != BO->getOperand(0)) {
             clearAssumptionsOfUsers(BO, DB);
             BO->replaceAllUsesWith(BO->getOperand(0));
