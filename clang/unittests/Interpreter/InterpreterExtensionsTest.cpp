@@ -35,6 +35,8 @@
 #endif
 
 using namespace clang;
+// Skip these extension tests for Emscripten builds where ORC is not available.
+#ifndef __EMSCRIPTEN__
 namespace {
 
 class InterpreterExtensionsTest : public InterpreterTestBase {
@@ -164,9 +166,9 @@ TEST_F(InterpreterExtensionsTest, CustomIncrementalExecutor) {
 
     llvm::Error cleanUp() override { return llvm::Error::success(); }
 
-    llvm::Expected<llvm::orc::ExecutorAddr>
+    llvm::Expected<clang::ExecutorAddress>
     getSymbolAddress(llvm::StringRef /*Name*/,
-                     SymbolNameKind /*NameKind*/) const override {
+             SymbolNameKind /*NameKind*/) const override {
       // Return an error here; test doesn't need a real address.
       return llvm::make_error<llvm::StringError>(
           "not implemented in test", llvm::inconvertibleErrorCode());
@@ -201,3 +203,4 @@ TEST_F(InterpreterExtensionsTest, CustomIncrementalExecutor) {
 }
 
 } // end anonymous namespace
+#endif // __EMSCRIPTEN__

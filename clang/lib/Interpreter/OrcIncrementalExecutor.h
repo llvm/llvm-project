@@ -38,21 +38,20 @@ class ThreadSafeContext;
 } // namespace llvm
 
 namespace clang {
+class ThreadSafeContext;
 
 struct PartialTranslationUnit;
 
 class OrcIncrementalExecutor : public IncrementalExecutor {
   std::unique_ptr<llvm::orc::LLJIT> Jit;
-  llvm::orc::ThreadSafeContext &TSCtx;
+  clang::ThreadSafeContext &TSCtx;
+  std::unique_ptr<llvm::orc::ThreadSafeContext> OrcTSCtx;
 
   llvm::DenseMap<const PartialTranslationUnit *, llvm::orc::ResourceTrackerSP>
       ResourceTrackers;
 
-protected:
-  OrcIncrementalExecutor(llvm::orc::ThreadSafeContext &TSC);
-
 public:
-  OrcIncrementalExecutor(llvm::orc::ThreadSafeContext &TSC,
+  OrcIncrementalExecutor(clang::ThreadSafeContext &TSC,
                          llvm::orc::LLJITBuilder &JITBuilder, llvm::Error &Err);
   ~OrcIncrementalExecutor() override;
 
@@ -60,7 +59,7 @@ public:
   llvm::Error removeModule(PartialTranslationUnit &PTU) override;
   llvm::Error runCtors() const override;
   llvm::Error cleanUp() override;
-  llvm::Expected<llvm::orc::ExecutorAddr>
+  llvm::Expected<clang::ExecutorAddress>
   getSymbolAddress(llvm::StringRef Name,
                    SymbolNameKind NameKind) const override;
   llvm::Error LoadDynamicLibrary(const char *name) override;

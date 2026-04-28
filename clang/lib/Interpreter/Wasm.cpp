@@ -164,7 +164,7 @@ llvm::Error WasmIncrementalExecutor::cleanUp() {
   return llvm::Error::success();
 }
 
-llvm::Expected<llvm::orc::ExecutorAddr>
+llvm::Expected<clang::ExecutorAddress>
 WasmIncrementalExecutor::getSymbolAddress(llvm::StringRef Name,
                                           SymbolNameKind NameKind) const {
   void *Sym = dlsym(RTLD_DEFAULT, Name.str().c_str());
@@ -174,7 +174,7 @@ WasmIncrementalExecutor::getSymbolAddress(llvm::StringRef Name,
                                                llvm::inconvertibleErrorCode());
   }
 
-  return llvm::orc::ExecutorAddr::fromPtr(Sym);
+  return clang::ExecutorAddress::fromPtr(Sym);
 }
 
 llvm::Error WasmIncrementalExecutor::LoadDynamicLibrary(const char *name) {
