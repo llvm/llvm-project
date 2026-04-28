@@ -1,4 +1,5 @@
-//===-- StripConPTYSequencesTest.cpp ---------------------------------------===//
+//===-- StripConPTYSequencesTest.cpp
+//---------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -28,9 +29,7 @@ TEST(StripConPTYSequencesTest, PassthroughPlainText) {
   EXPECT_EQ("Hello World!\r\n", Strip("Hello World!\r\n", true));
 }
 
-TEST(StripConPTYSequencesTest, EmptyInput) {
-  EXPECT_EQ("", Strip("", true));
-}
+TEST(StripConPTYSequencesTest, EmptyInput) { EXPECT_EQ("", Strip("", true)); }
 
 TEST(StripConPTYSequencesTest, StripCursorQuery) {
   EXPECT_EQ("", Strip("\x1b[6n", true));
@@ -54,7 +53,9 @@ TEST(StripConPTYSequencesTest, StripFocusEvents) {
 TEST(StripConPTYSequencesTest, StripWindowTitle) {
   EXPECT_EQ("", Strip("\x1b]0;My Title\x07", true));
   EXPECT_EQ("abc", Strip("abc\x1b]0;window\x07", true));
-  EXPECT_EQ("abc", Strip("\x1b]0;title\x07" "abc", true));
+  EXPECT_EQ("abc", Strip("\x1b]0;title\x07"
+                         "abc",
+                         true));
 }
 
 TEST(StripConPTYSequencesTest, WindowTitleWithoutBEL) {
@@ -91,12 +92,12 @@ TEST(StripConPTYSequencesTest, PreserveUnrecognizedEscape) {
 
 TEST(StripConPTYSequencesTest, TypicalConPTYInitBurst) {
   // Simulates the first read from ConPTY with PSEUDOCONSOLE_INHERIT_CURSOR.
-  std::string init = "\x1b[6n"           // cursor query
-                     "\x1b[?9001h"       // Win32 Input Mode on
-                     "\x1b[?1004h"       // focus events on
-                     "\x1b[m"            // SGR reset
+  std::string init = "\x1b[6n"            // cursor query
+                     "\x1b[?9001h"        // Win32 Input Mode on
+                     "\x1b[?1004h"        // focus events on
+                     "\x1b[m"             // SGR reset
                      "\x1b]0;C:\\app\x07" // window title
-                     "\x1b[?25h";        // show cursor
+                     "\x1b[?25h";         // show cursor
   EXPECT_EQ("", Strip(init, true));
 }
 

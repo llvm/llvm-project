@@ -15,7 +15,6 @@
 using namespace lldb;
 using namespace lldb_private;
 
-
 ConnectionConPTY::ConnectionConPTY(std::shared_ptr<PseudoConsole> pty)
     : ConnectionGenericFile(pty->GetSTDOUTHandle(), false), m_pty(pty) {}
 
