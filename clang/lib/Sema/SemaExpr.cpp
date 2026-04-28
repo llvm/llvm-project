@@ -12848,6 +12848,8 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
   if (getLangOpts().CPlusPlus && LHSStripped->getType()->isArrayType() &&
       RHSStripped->getType()->isArrayType()) {
 
+    // In an SFINAE context, don't emit an error.
+    // Just return the operands so the caller can return false.
     if (isSFINAEContext()) {
       return InvalidOperands(Loc, LHS, RHS);
     }
