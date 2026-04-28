@@ -112,7 +112,7 @@ CXXRecordDecl::DefinitionData::DefinitionData(CXXRecordDecl *D)
       IsAnyDestructorNoReturn(false), IsHLSLIntangible(false), IsPFPType(false),
       IsLambda(false), IsParsingBaseSpecifiers(false),
       ComputedVisibleConversions(false), HasODRHash(false),
-      TriviallyCopyTemplateParam(false), Definition(D) {}
+      TriviallyCopyingTemplateParam(false), Definition(D) {}
 
 CXXBaseSpecifier *CXXRecordDecl::DefinitionData::getBasesSlowCase() const {
   return Bases.get(Definition->getASTContext().getExternalSource());

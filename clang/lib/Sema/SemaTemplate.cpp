@@ -7142,7 +7142,7 @@ static bool CheckTemplateArgumentCopyEquivalence(Sema &S, NamedDecl *Param,
                                                  SourceLocation ArgLoc) {
   assert(ParamType->isRecordType() && "no need to check copy equivalence");
 
-  if (ParamType->castAsCXXRecordDecl()->isTriviallyCopyTemplateParam())
+  if (ParamType->castAsCXXRecordDecl()->isTriviallyCopyingTemplateParam())
     return false;
 
   SourceLocation ParamLoc = Param->getLocation();
@@ -7164,11 +7164,11 @@ static bool CheckTemplateArgumentCopyEquivalence(Sema &S, NamedDecl *Param,
     return S.Diag(ParamLoc, diag::note_template_arg_requires_copy);
 
   if (cast<CXXConstructExpr>(Result.get())->getConstructor()->isTrivial()) {
-    ParamType->castAsCXXRecordDecl()->setTriviallyCopyTemplateParam();
+    ParamType->castAsCXXRecordDecl()->setTriviallyCopyingTemplateParam();
     return false;
   }
 
-  Result = S.ActOnConstantExpression(Result.get());
+  Result = S.ActOnConstantExpression(Result);
   Result = S.ActOnFinishFullExpr(AssertSuccess(Result), ArgLoc,
                                  /*DiscardedValue=*/false,
                                  /*IsConstexpr=*/true,
