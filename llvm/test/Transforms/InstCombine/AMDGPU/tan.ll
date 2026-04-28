@@ -3,7 +3,8 @@
 ; Check that sin/cos is not folded to tan on amdgcn.
 
 ; GCN-LABEL: define amdgpu_ps float @llpc.shader.FS.main
-; GCN: call { float, float } @llvm.sincos.f32
+; GCN: call float @llvm.sin.f32
+; GCN: call float @llvm.cos.f32
 
 declare float @llvm.sin.f32(float) #0
 declare float @llvm.cos.f32(float) #0
