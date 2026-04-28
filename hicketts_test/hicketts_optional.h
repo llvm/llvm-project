@@ -26,11 +26,10 @@ public:
   HickettsOptional(HickettsOptional &&) = default;
 
   // Equivalent to std::optional::value()
-  //[[clang_analyse_as_method(std::optional::value)]]
-  const T &unwrap() const & { return *storage_; }
-  T &unwrap() & { return *storage_; }
-  const T &&unwrap() const && { return static_cast<const T &&>(*storage_); }
-  T &&unwrap() && { return static_cast<T &&>(*storage_); }
+  [[clang::analyse_as_method("std::optional::value")]] const T &unwrap() const & { return *storage_; }
+  [[clang::analyse_as_method("std::optional::value")]] T &unwrap() & { return *storage_; }
+  [[clang::analyse_as_method("std::optional::value")]] const T &&unwrap() const && { return static_cast<const T &&>(*storage_); }
+  [[clang::analyse_as_method("std::optional::value")]] T &&unwrap() && { return static_cast<T &&>(*storage_); }
 
   const T &value() const & { return *storage_; }
   T &value() & { return *storage_; }
@@ -38,8 +37,8 @@ public:
   T &&value() && { return static_cast<T &&>(*storage_); }
 
   // Equivalent to std::optional::operator*()
-  const T &deref() const & { return *storage_; }
-  T &deref() & { return *storage_; }
+  [[clang::analyse_as_method("std::optional::operator*")]] const T &deref() const & { return *storage_; }
+  [[clang::analyse_as_method("std::optional::operator*")]] T &deref() & { return *storage_; }
 
   // Equivalent to std::optional::operator->()
   const T* operator ->() const { return storage_; }
@@ -47,10 +46,10 @@ public:
   const T *arrow() const { return storage_; }
   T *arrow() { return storage_; }
 
-  // Equivalent to std::optional::operator bool / has_value()
+  // Equivalent to std::optional::operator bool / hasValue()
   constexpr bool hasValue() const noexcept { return storage_ != nullptr; }
   constexpr explicit operator bool() const noexcept { return storage_ != nullptr; }
-  constexpr bool isPresent() const noexcept { return storage_ != nullptr; }
+  [[clang::analyse_as_method("std::optional::hasValue")]] constexpr bool isPresent() const noexcept { return storage_ != nullptr; }
   constexpr bool isEmpty() const noexcept { return storage_ == nullptr; }
 
   // Equivalent to std::optional::value_or()

@@ -230,6 +230,20 @@ AST_MATCHER(CXXOperatorCallExpr, hasOptionalOperatorObjectType) {
   return hasReceiverTypeDesugaringToOptional(Node.getArg(0));
 }
 
+AST_MATCHER_P(NamedDecl, hasAnalyseAsMethodName, std::string, MethodName) {
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(&Node)) {
+    if (const auto *Attr = MD->getAttr<AnalyseAsMethodAttr>()) {
+      StringRef AttrValue = Attr->getMethodName();
+      auto Pos = AttrValue.rfind("::");
+      StringRef AttrMethodName = (Pos != StringRef::npos)
+          ? AttrValue.substr(Pos + 2)
+          : AttrValue;
+      return AttrMethodName == MethodName;
+    }
+  }
+  return false;
+}
+
 auto isOptionalMemberCallWithNameMatcher(
     ast_matchers::internal::Matcher<NamedDecl> matcher,
     const std::optional<StatementMatcher> &Ignorable = std::nullopt) {
@@ -982,8 +996,9 @@ ignorableOptional(const UncheckedOptionalAccessModelOptions &Options) {
 
 StatementMatcher
 valueCall(const std::optional<StatementMatcher> &IgnorableOptional) {
-  return isOptionalMemberCallWithNameMatcher(hasName("value"),
-                                             IgnorableOptional);
+  return isOptionalMemberCallWithNameMatcher(
+      anyOf(hasName("value"), hasAnalyseAsMethodName("value")),
+      IgnorableOptional);
 }
 
 StatementMatcher
