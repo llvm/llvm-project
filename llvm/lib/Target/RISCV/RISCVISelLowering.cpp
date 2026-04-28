@@ -24762,9 +24762,11 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
           // Computed value: store into the incoming indirect pointer for the
           // same-position formal parameter (musttail guarantees matching
           // prototypes, so types match). The pointer survives the tail call
-          // since it points to the caller's caller's frame.
+          // since it points to the caller's caller's frame. Use the
+          // CopyFromReg output chain so the store is sequenced after the
+          // copy that produced IncomingPtr.
           MemOpChains.push_back(
-              DAG.getStore(Chain, DL, ArgValue, IncomingPtr,
+              DAG.getStore(CopyOp.getValue(1), DL, ArgValue, IncomingPtr,
                            MachinePointerInfo::getUnknownStack(MF)));
           // Store any split parts at their respective offsets.
           unsigned ArgPartOffset = Outs[OutIdx].PartOffset;
@@ -24774,7 +24776,7 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
             SDValue Addr = DAG.getNode(ISD::ADD, DL, PtrVT, IncomingPtr,
                                        DAG.getIntPtrConstant(PartOffset, DL));
             MemOpChains.push_back(
-                DAG.getStore(Chain, DL, PartValue, Addr,
+                DAG.getStore(CopyOp.getValue(1), DL, PartValue, Addr,
                              MachinePointerInfo::getUnknownStack(MF)));
             ++i;
             ++OutIdx;
