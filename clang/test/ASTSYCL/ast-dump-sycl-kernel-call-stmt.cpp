@@ -40,7 +40,7 @@ void sycl_kernel_launch(const char *, Ts...) {}
 [[clang::sycl_kernel_entry_point(KN<1>)]]
 void skep1() {
 }
-// CHECK:      |-FunctionDecl {{.*}} skep1 'void ()'
+// CHECK:      |-FunctionDecl {{.*}} skep1 'void ()' external-linkage
 // CHECK-NEXT: | |-SYCLKernelCallStmt {{.*}}
 // CHECK-NEXT: | | |-CompoundStmt {{.*}}
 // CHECK-NEXT: | | |-CompoundStmt {{.*}}
@@ -60,10 +60,10 @@ void skep2(KT k) {
 }
 template
 void skep2<KN<2>>(K<2>);
-// CHECK:      |-FunctionTemplateDecl {{.*}} skep2
+// CHECK:      |-FunctionTemplateDecl {{.*}} skep2 external-linkage
 // CHECK-NEXT: | |-TemplateTypeParmDecl {{.*}} KNT
 // CHECK-NEXT: | |-TemplateTypeParmDecl {{.*}} KT
-// CHECK-NEXT: | |-FunctionDecl {{.*}} skep2 'void (KT)'
+// CHECK-NEXT: | |-FunctionDecl {{.*}} skep2 'void (KT)' external-linkage
 // CHECK-NEXT: | | |-ParmVarDecl {{.*}} k 'KT'
 // CHECK-NEXT: | | |-UnresolvedSYCLKernelCallStmt {{.*}}
 // CHECK-NEXT: | | | |-CompoundStmt {{.*}}
@@ -75,7 +75,7 @@ void skep2<KN<2>>(K<2>);
 // CHECK-NEXT: | | |       `-TemplateTypeParm {{.*}} 'KNT'
 // CHECK-NEXT: | | `-SYCLKernelEntryPointAttr {{.*}} KNT
 
-// CHECK-NEXT: | `-FunctionDecl {{.*}} skep2 'void (K<2>)' explicit_instantiation_definition instantiated_from 0x{{.+}}
+// CHECK-NEXT: | `-FunctionDecl {{.*}} skep2 'void (K<2>)' explicit_instantiation_definition instantiated_from 0x{{.+}} external-linkage
 // CHECK-NEXT: |   |-TemplateArgument type 'KN<2>'
 // CHECK-NEXT: |   | `-RecordType {{.*}} 'KN<2>' canonical
 // CHECK-NEXT: |   |   `-ClassTemplateSpecialization {{.*}} 'KN'
@@ -119,10 +119,10 @@ template<>
 void skep3<KN<3>>(K<3> k) {
   k();
 }
-// CHECK:      |-FunctionTemplateDecl {{.*}} skep3
+// CHECK:      |-FunctionTemplateDecl {{.*}} skep3 external-linkage
 // CHECK-NEXT: | |-TemplateTypeParmDecl {{.*}} KNT
 // CHECK-NEXT: | |-TemplateTypeParmDecl {{.*}} KT
-// CHECK-NEXT: | |-FunctionDecl {{.*}} skep3 'void (KT)'
+// CHECK-NEXT: | |-FunctionDecl {{.*}} skep3 'void (KT)' external-linkage
 // CHECK-NEXT: | | |-ParmVarDecl {{.*}} k 'KT'
 // CHECK-NEXT: | | |-UnresolvedSYCLKernelCallStmt {{.*}}
 // CHECK-NEXT: | | | |-CompoundStmt {{.*}}
@@ -135,7 +135,7 @@ void skep3<KN<3>>(K<3> k) {
 // CHECK-NEXT: | | `-SYCLKernelEntryPointAttr {{.*}} KNT
 
 // CHECK-NEXT: | `-Function {{.*}} 'skep3' 'void (K<3>)'
-// CHECK-NEXT: |-FunctionDecl {{.*}} skep3 'void (K<3>)' explicit_specialization
+// CHECK-NEXT: |-FunctionDecl {{.*}} skep3 'void (K<3>)' explicit_specialization external-linkage
 // CHECK-NEXT: | |-TemplateArgument type 'KN<3>'
 // CHECK-NEXT: | | `-RecordType {{.*}} 'KN<3>' canonical
 // CHECK-NEXT: | |   `-ClassTemplateSpecialization {{.*}} 'KN'
@@ -173,7 +173,7 @@ void skep3<KN<3>>(K<3> k) {
 void skep4(K<4> k, int p1, int p2) {
   k(p1, p2);
 }
-// CHECK:      |-FunctionDecl {{.*}} skep4 'void (K<4>, int, int)'
+// CHECK:      |-FunctionDecl {{.*}} skep4 'void (K<4>, int, int)' external-linkage
 // CHECK-NEXT: | |-ParmVarDecl {{.*}} k 'K<4>'
 // CHECK-NEXT: | |-ParmVarDecl {{.*}} p1 'int'
 // CHECK-NEXT: | |-ParmVarDecl {{.*}} p2 'int'
@@ -225,7 +225,7 @@ void skep5(int unused1, K<5> k, int unused2, int p, int unused3) {
   int lv = 4;
   k(slv, 1, p, 3, lv, 5, []{ return 6; });
 }
-// CHECK:      |-FunctionDecl {{.*}} skep5 'void (int, K<5>, int, int, int)'
+// CHECK:      |-FunctionDecl {{.*}} skep5 'void (int, K<5>, int, int, int)' external-linkage
 // CHECK-NEXT: | |-ParmVarDecl {{.*}} unused1 'int'
 // CHECK-NEXT: | |-ParmVarDecl {{.*}} used k 'K<5>'
 // CHECK-NEXT: | |-ParmVarDecl {{.*}} unused2 'int'
@@ -262,10 +262,10 @@ void skep5(int unused1, K<5> k, int unused2, int p, int unused3) {
 // CHECK-NEXT: | |   |-ImplicitParamDecl {{.*}} implicit unused3 'int'
 // CHECK-NEXT: | |   `-CompoundStmt {{.*}}
 // CHECK-NEXT: | |     |-DeclStmt {{.*}}
-// CHECK-NEXT: | |     | `-VarDecl {{.*}} used slv 'int' static cinit
+// CHECK-NEXT: | |     | `-VarDecl {{.*}} used slv 'int' static cinit no-linkage
 // CHECK-NEXT: | |     |   `-IntegerLiteral {{.*}} 'int' 0
 // CHECK-NEXT: | |     |-DeclStmt {{.*}}
-// CHECK-NEXT: | |     | `-VarDecl {{.*}} used lv 'int' cinit
+// CHECK-NEXT: | |     | `-VarDecl {{.*}} used lv 'int' cinit no-linkage
 // CHECK-NEXT: | |     |   `-IntegerLiteral {{.*}} 'int' 4
 // CHECK-NEXT: | |     `-CXXOperatorCallExpr {{.*}} 'void' '()'
 // CHECK-NEXT: | |       |-ImplicitCastExpr {{.*}} 'void (*)(int, int, int, int, int, int, (lambda {{.*}}) const' <FunctionToPointerDecay>
@@ -291,7 +291,7 @@ struct S6 {
 void skep6(const S6 &k) {
   k();
 }
-// CHECK:      |-FunctionDecl {{.*}} skep6 'void (const S6 &)'
+// CHECK:      |-FunctionDecl {{.*}} skep6 'void (const S6 &)' external-linkage
 // CHECK-NEXT: | |-ParmVarDecl {{.*}} used k 'const S6 &'
 // CHECK-NEXT: | |-SYCLKernelCallStmt {{.*}}
 // CHECK-NEXT: | | |-CompoundStmt {{.*}}
@@ -328,10 +328,10 @@ struct S7 {
 void skep7(S7 k) {
   k();
 }
-// CHECK:      |-FunctionDecl {{.*}} skep7 'void (S7)'
+// CHECK:      |-FunctionDecl {{.*}} skep7 'void (S7)' external-linkage
 // CHECK-NEXT: | |-ParmVarDecl {{.*}} k 'S7'
 // CHECK-NEXT: | `-SYCLKernelEntryPointAttr {{.*}} KN<7>
-// CHECK:      |-FunctionDecl {{.*}} prev {{.*}} skep7 'void (S7)'
+// CHECK:      |-FunctionDecl {{.*}} prev {{.*}} skep7 'void (S7)' external-linkage
 // CHECK-NEXT: | |-ParmVarDecl {{.*}} used k 'S7'
 // CHECK-NEXT: | |-SYCLKernelCallStmt {{.*}}
 // CHECK-NEXT: | | |-CompoundStmt {{.*}}
@@ -370,7 +370,7 @@ struct S8 {
 void skep8(S8 k) {
   k();
 }
-// CHECK:      |-FunctionDecl {{.*}} skep8 'void (S8)'
+// CHECK:      |-FunctionDecl {{.*}} skep8 'void (S8)' external-linkage
 // CHECK-NEXT: | |-ParmVarDecl {{.*}} used k 'S8'
 // CHECK-NEXT: | |-SYCLKernelCallStmt {{.*}}
 // CHECK-NEXT: | | |-CompoundStmt {{.*}}
@@ -401,10 +401,10 @@ void foo() {
   H.skep9<KN<9>>([=] (int a, int b) { return a+b; }, 1, 2);
 }
 
-// CHECK: | |-FunctionTemplateDecl {{.*}} skep9
+// CHECK: | |-FunctionTemplateDecl {{.*}} skep9 external-linkage
 // CHECK-NEXT: | | |-TemplateTypeParmDecl {{.*}} referenced typename depth 0 index 0 KNT
 // CHECK-NEXT: | | |-TemplateTypeParmDecl {{.*}} referenced typename depth 0 index 1 KT
-// CHECK-NEXT: | | |-CXXMethodDecl {{.*}} skep9 'void (KT, int, int)' implicit-inline
+// CHECK-NEXT: | | |-CXXMethodDecl {{.*}} skep9 'void (KT, int, int)' implicit-inline external-linkage
 // CHECK-NEXT: | | | |-ParmVarDecl {{.*}} referenced k 'KT'
 // CHECK-NEXT: | | | |-ParmVarDecl {{.*}} referenced a 'int'
 // CHECK-NEXT: | | | |-ParmVarDecl {{.*}} referenced b 'int'
@@ -470,4 +470,4 @@ void foo() {
 
 
 void the_end() {}
-// CHECK:      `-FunctionDecl {{.*}} the_end 'void ()'
+// CHECK:      `-FunctionDecl {{.*}} the_end 'void ()' external-linkage
