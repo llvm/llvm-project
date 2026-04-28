@@ -69,8 +69,7 @@ public:
 
   OmpStructureChecker(SemanticsContext &context);
 
-  using llvmOmpClause = const llvm::omp::Clause;
-
+  void Enter(const parser::ProgramUnit &);
   bool Enter(const parser::MainProgram &);
   void Leave(const parser::MainProgram &);
   bool Enter(const parser::BlockData &);
@@ -125,16 +124,16 @@ public:
 
   void Enter(const parser::OmpDeclareVariantDirective &);
   void Leave(const parser::OmpDeclareVariantDirective &);
-  void Enter(const parser::OpenMPDeclareSimdConstruct &);
-  void Leave(const parser::OpenMPDeclareSimdConstruct &);
+  void Enter(const parser::OmpDeclareSimdDirective &);
+  void Leave(const parser::OmpDeclareSimdDirective &);
   void Enter(const parser::OmpAllocateDirective &);
   void Leave(const parser::OmpAllocateDirective &);
-  void Enter(const parser::OpenMPDeclareMapperConstruct &);
-  void Leave(const parser::OpenMPDeclareMapperConstruct &);
-  void Enter(const parser::OpenMPDeclareReductionConstruct &);
-  void Leave(const parser::OpenMPDeclareReductionConstruct &);
-  void Enter(const parser::OpenMPDeclareTargetConstruct &);
-  void Leave(const parser::OpenMPDeclareTargetConstruct &);
+  void Enter(const parser::OmpDeclareMapperDirective &);
+  void Leave(const parser::OmpDeclareMapperDirective &);
+  void Enter(const parser::OmpDeclareReductionDirective &);
+  void Leave(const parser::OmpDeclareReductionDirective &);
+  void Enter(const parser::OmpDeclareTargetDirective &);
+  void Leave(const parser::OmpDeclareTargetDirective &);
   void Enter(const parser::OpenMPDepobjConstruct &);
   void Leave(const parser::OpenMPDepobjConstruct &);
   void Enter(const parser::OpenMPDispatchConstruct &);
@@ -281,7 +280,7 @@ private:
 
   // check-omp-structure.cpp
   bool IsAllowedClause(llvm::omp::Clause clauseId);
-  bool CheckAllowedClause(llvmOmpClause clause);
+  bool CheckAllowedClause(llvm::omp::Clause clause);
   void CheckVariableListItem(const SymbolSourceMap &symbols);
   void CheckDirectiveSpelling(
       parser::CharBlock spelling, llvm::omp::Directive id);
@@ -350,7 +349,7 @@ private:
   void CheckPrivateSymbolsInOuterCxt(
       SymbolSourceMap &, DirectivesClauseTriple &, const llvm::omp::Clause);
   void CheckIsLoopIvPartOfClause(
-      llvmOmpClause clause, const parser::OmpObjectList &ompObjectList);
+      llvm::omp::Clause clause, const parser::OmpObjectList &ompObjectList);
   bool CheckTargetBlockOnlyTeams(const parser::Block &);
   void CheckWorkshareBlockStmts(const parser::Block &, parser::CharBlock);
   void CheckWorkdistributeBlockStmts(const parser::Block &, parser::CharBlock);
@@ -397,7 +396,7 @@ private:
   const parser::Name *GetObjectName(const parser::OmpObject &object);
   void CheckInitOnDepobj(const parser::OpenMPDepobjConstruct &depobj,
       const parser::OmpClause &initClause);
-  void CheckAllowedRequiresClause(llvmOmpClause clause);
+  void CheckAllowedRequiresClause(llvm::omp::Clause clause);
   void AddEndDirectiveClauses(const parser::OmpClauseList &clauses);
 
   void EnterDirectiveNest(const int index) { directiveNest_[index]++; }

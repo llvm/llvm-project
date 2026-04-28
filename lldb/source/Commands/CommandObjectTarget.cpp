@@ -450,7 +450,7 @@ protected:
       }
     } else {
       result.AppendErrorWithFormat("'%s' takes exactly one executable path "
-                                   "argument, or use the --core option.",
+                                   "argument, or use the --core option",
                                    m_cmd_name.c_str());
     }
   }
@@ -1162,7 +1162,7 @@ protected:
 
       if (!llvm::to_integer(command.GetArgumentAtIndex(0), insert_idx)) {
         result.AppendErrorWithFormat(
-            "<index> parameter is not an integer: '%s'.",
+            "<index> parameter is not an integer: '%s'",
             command.GetArgumentAtIndex(0));
         return;
       }
@@ -2180,7 +2180,7 @@ public:
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     if (command.GetArgumentCount() != 1) {
-      result.AppendErrorWithFormat("'%s' takes exactly one pcm path argument.",
+      result.AppendErrorWithFormat("'%s' takes exactly one pcm path argument",
                                    m_cmd_name.c_str());
       return;
     }
@@ -3069,7 +3069,7 @@ protected:
           FileSpec *module_spec_file = module_spec.GetFileSpecPtr();
           if (module_spec_file) {
             module_spec_file->GetPath(path, sizeof(path));
-            result.AppendErrorWithFormat("invalid module '%s'.", path);
+            result.AppendErrorWithFormat("invalid module '%s'", path);
           } else
             result.AppendError("no module spec");
         }
@@ -3095,7 +3095,7 @@ protected:
           }
         } else {
           result.AppendErrorWithFormat(
-              "no modules were found  that match%s%s%s%s.",
+              "no modules were found  that match%s%s%s%s",
               path[0] ? " file=" : "", path, !uuid_str.empty() ? " uuid=" : "",
               uuid_str.c_str());
         }
@@ -3193,12 +3193,12 @@ protected:
           result.SetStatus(eReturnStatusSuccessFinishResult);
         } else {
           result.AppendErrorWithFormat(
-              "Couldn't find module matching address: 0x%" PRIx64 ".",
+              "Couldn't find module matching address: 0x%" PRIx64,
               m_options.m_module_addr);
         }
       } else {
         result.AppendErrorWithFormat(
-            "Couldn't find module containing address: 0x%" PRIx64 ".",
+            "Couldn't find module containing address: 0x%" PRIx64,
             m_options.m_module_addr);
       }
       return;
@@ -3580,7 +3580,7 @@ protected:
     }
 
     if (sc_list.GetSize() == 0) {
-      result.AppendErrorWithFormat("no unwind data found that matches '%s'.",
+      result.AppendErrorWithFormat("no unwind data found that matches '%s'",
                                    m_options.m_str.c_str());
       return;
     }
@@ -4336,7 +4336,7 @@ protected:
     if (matching_modules.GetSize() > 1) {
       result.AppendErrorWithFormat("multiple modules match symbol file '%s', "
                                    "use the --uuid option to resolve the "
-                                   "ambiguity.",
+                                   "ambiguity",
                                    symfile_path);
       return false;
     }
@@ -5118,12 +5118,12 @@ protected:
       for (size_t i = 0; i < num_args; i++) {
         lldb::user_id_t user_id;
         if (!llvm::to_integer(command.GetArgumentAtIndex(i), user_id)) {
-          result.AppendErrorWithFormat("invalid stop hook id: \"%s\".",
+          result.AppendErrorWithFormat("invalid stop hook id: \"%s\"",
                                        command.GetArgumentAtIndex(i));
           return;
         }
         if (!target.RemoveStopHookByID(user_id)) {
-          result.AppendErrorWithFormat("unknown stop hook id: \"%s\".",
+          result.AppendErrorWithFormat("unknown stop hook id: \"%s\"",
                                        command.GetArgumentAtIndex(i));
           return;
         }
@@ -5169,13 +5169,13 @@ protected:
       for (size_t i = 0; i < num_args; i++) {
         lldb::user_id_t user_id;
         if (!llvm::to_integer(command.GetArgumentAtIndex(i), user_id)) {
-          result.AppendErrorWithFormat("invalid stop hook id: \"%s\".",
+          result.AppendErrorWithFormat("invalid stop hook id: \"%s\"",
                                        command.GetArgumentAtIndex(i));
           return;
         }
         success = target.SetStopHookActiveStateByID(user_id, m_enable);
         if (!success) {
-          result.AppendErrorWithFormat("unknown stop hook id: \"%s\".",
+          result.AppendErrorWithFormat("unknown stop hook id: \"%s\"",
                                        command.GetArgumentAtIndex(i));
           return;
         }

@@ -13,13 +13,13 @@
 // However, POE and therefore protection keys are new to AArch64 so we need to
 // be able to build with a libc without support for it.
 
-static uint64_t por_read(void) {
+static uint64_t por_el0_read(void) {
   uint64_t por;
   __asm__ volatile("mrs %0, S3_3_C10_C2_4" /*POR_EL0*/ : "=r"(por));
   return por;
 }
 
-static void por_write(uint64_t por) {
+static void por_el0_write(uint64_t por) {
   __asm__ volatile("msr S3_3_C10_C2_4, %0\n" /*POR_EL0*/
                    "isb" ::"r"(por)
                    : "memory");
@@ -62,7 +62,7 @@ static inline uint64_t set_perm(uint64_t por, int pkey, uint8_t perm) {
 static void cause_write_fault(char *buffer) { buffer[0] = '?'; }
 
 int expr_function() {
-  por_write(set_perm(por_read(), 1, 0));
+  por_el0_write(set_perm(por_el0_read(), 1, 0));
   return 1;
 }
 
@@ -113,7 +113,7 @@ int main(void) {
     // pkey 0 is already set to read+write+execute, we will set all other
     // valid encodings. 0 is no access and 7 is read+write_execute.
     uint8_t perm = NUM_KEYS - i;
-    por_write(set_perm(por_read(), i, perm));
+    por_el0_write(set_perm(por_el0_read(), i, perm));
   }
 
   // This page should allow reads.

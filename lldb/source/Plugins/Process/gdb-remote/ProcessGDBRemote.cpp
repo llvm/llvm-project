@@ -1770,7 +1770,9 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
     bool queue_vars_valid, // Set to true if queue_name, queue_kind and
                            // queue_serial are valid
     LazyBool associated_with_dispatch_queue, addr_t dispatch_queue_t,
-    std::string &queue_name, QueueKind queue_kind, uint64_t queue_serial) {
+    std::string &queue_name, QueueKind queue_kind, uint64_t queue_serial,
+    std::vector<lldb::addr_t> &added_binaries,
+    StructuredData::ObjectSP &detailed_binaries_info) {
 
   if (tid == LLDB_INVALID_THREAD_ID)
     return nullptr;
@@ -1827,6 +1829,9 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
 
   if (dispatch_queue_t != LLDB_INVALID_ADDRESS)
     gdb_thread->SetQueueLibdispatchQueueAddress(dispatch_queue_t);
+
+  gdb_thread->SetNewlyAddedBinaries(added_binaries);
+  gdb_thread->SetDetailedBinariesInfo(detailed_binaries_info);
 
   // Make sure we update our thread stop reason just once, but don't overwrite
   // the stop info for threads that haven't moved:
@@ -2120,6 +2125,9 @@ ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
   static constexpr llvm::StringLiteral g_key_memory("memory");
   static constexpr llvm::StringLiteral g_key_description("description");
   static constexpr llvm::StringLiteral g_key_signal("signal");
+  static constexpr llvm::StringLiteral g_key_added_binaries("added-binaries");
+  static constexpr llvm::StringLiteral g_key_detailed_binaries_info(
+      "detailed-binaries-info");
 
   // Stop with signal and thread info
   lldb::tid_t tid = LLDB_INVALID_THREAD_ID;
@@ -2137,6 +2145,8 @@ ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
   std::string queue_name;
   QueueKind queue_kind = eQueueKindUnknown;
   uint64_t queue_serial_number = 0;
+  std::vector<addr_t> added_binaries;
+  StructuredData::ObjectSP detailed_binaries_info;
   // Iterate through all of the thread dictionary key/value pairs from the
   // structured data dictionary
 
@@ -2145,7 +2155,8 @@ ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
                         &signo, &reason, &description, &exc_type, &exc_data,
                         &thread_dispatch_qaddr, &queue_vars_valid,
                         &associated_with_dispatch_queue, &dispatch_queue_t,
-                        &queue_name, &queue_kind, &queue_serial_number](
+                        &queue_name, &queue_kind, &queue_serial_number,
+                        &added_binaries, &detailed_binaries_info](
                            llvm::StringRef key,
                            StructuredData::Object *object) -> bool {
     if (key == g_key_tid) {
@@ -2244,17 +2255,43 @@ ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
           return true; // Keep iterating through all array items
         });
       }
-
     } else if (key == g_key_signal)
       signo = object->GetUnsignedIntegerValue(LLDB_INVALID_SIGNAL_NUMBER);
+    else if (key == g_key_added_binaries) {
+      StructuredData::Array *array = object->GetAsArray();
+      if (array) {
+        array->ForEach([&added_binaries](
+                           StructuredData::Object *object) -> bool {
+          StructuredData::UnsignedInteger *addr =
+              object->GetAsUnsignedInteger();
+          if (addr) {
+            addr_t value = addr->GetUnsignedIntegerValue(LLDB_INVALID_ADDRESS);
+            if (value != LLDB_INVALID_ADDRESS)
+              added_binaries.push_back(value);
+          }
+          return true; // Keep iterating through all array items
+        });
+      }
+    } else if (key == g_key_detailed_binaries_info) {
+      // Get a string representation and then parse it into
+      // StructuredData to get a separate copy of this part of
+      // the response.  We only have an Object* here, not the
+      // original shared pointer, to increase the ref count.
+      if (object->GetAsDictionary()) {
+        StreamString json_str;
+        object->Dump(json_str);
+        detailed_binaries_info =
+            StructuredData::ParseJSON(json_str.GetString());
+      }
+    }
     return true; // Keep iterating through all dictionary key/value pairs
   });
 
-  return SetThreadStopInfo(tid, expedited_register_map, signo, thread_name,
-                           reason, description, exc_type, exc_data,
-                           thread_dispatch_qaddr, queue_vars_valid,
-                           associated_with_dispatch_queue, dispatch_queue_t,
-                           queue_name, queue_kind, queue_serial_number);
+  return SetThreadStopInfo(
+      tid, expedited_register_map, signo, thread_name, reason, description,
+      exc_type, exc_data, thread_dispatch_qaddr, queue_vars_valid,
+      associated_with_dispatch_queue, dispatch_queue_t, queue_name, queue_kind,
+      queue_serial_number, added_binaries, detailed_binaries_info);
 }
 
 StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
@@ -2286,6 +2323,8 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
     std::string thread_name;
     std::string reason;
     std::string description;
+    std::vector<addr_t> added_binaries;
+    StructuredData::ObjectSP detailed_binaries_info;
     uint32_t exc_type = 0;
     std::vector<addr_t> exc_data;
     addr_t thread_dispatch_qaddr = LLDB_INVALID_ADDRESS;
@@ -2456,6 +2495,25 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         if (!value.getAsInteger(0, addressing_bits)) {
           addressable_bits.SetHighmemAddressableBits(addressing_bits);
         }
+      } else if (key == "added-binaries") {
+        // A comma separated list of all threads in the current
+        // process that includes the thread for this stop reply packet
+        lldb::addr_t pc;
+        while (!value.empty()) {
+          llvm::StringRef pc_str;
+          std::tie(pc_str, value) = value.split(',');
+          if (pc_str.getAsInteger(16, pc))
+            pc = LLDB_INVALID_ADDRESS;
+          added_binaries.push_back(pc);
+        }
+      } else if (key == "detailed-binaries-info") {
+        StringExtractor json_extractor(value);
+        std::string json;
+        // Now convert the HEX bytes into a string value.
+        json_extractor.GetHexByteString(json);
+
+        // This JSON contains detailed information about binares.
+        detailed_binaries_info = StructuredData::ParseJSON(json);
       } else if (key.size() == 2 && ::isxdigit(key[0]) && ::isxdigit(key[1])) {
         uint32_t reg = UINT32_MAX;
         if (!key.getAsInteger(16, reg))
@@ -2492,7 +2550,8 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         tid, expedited_register_map, signo, thread_name, reason, description,
         exc_type, exc_data, thread_dispatch_qaddr, queue_vars_valid,
         associated_with_dispatch_queue, dispatch_queue_t, queue_name,
-        queue_kind, queue_serial_number);
+        queue_kind, queue_serial_number, added_binaries,
+        detailed_binaries_info);
 
     return eStateStopped;
   } break;
@@ -6045,11 +6104,34 @@ CommandObject *ProcessGDBRemote::GetPluginCommandObject() {
   return m_command_sp.get();
 }
 
-void ProcessGDBRemote::DidForkSwitchSoftwareBreakpoints(bool enable) {
-  GetBreakpointSiteList().ForEach([this, enable](BreakpointSite *bp_site) {
+void ProcessGDBRemote::DidForkSwitchSoftwareBreakpoints(
+    bool enable, bool is_expression_fork) {
+  Log *log = GetLog(GDBRLog::Process);
+
+  // Resolve the expression-return sentinel address (_start) once. This is
+  // the same address ThreadPlanCallFunction uses as the return trap.
+  lldb::addr_t entry_addr = LLDB_INVALID_ADDRESS;
+  if (!enable && is_expression_fork) {
+    if (auto entry = GetTarget().GetEntryPointAddress())
+      entry_addr = entry->GetLoadAddress(&GetTarget());
+  }
+
+  GetBreakpointSiteList().ForEach([this, enable, entry_addr,
+                                   log](BreakpointSite *bp_site) {
     if (bp_site->IsEnabled() &&
         (bp_site->GetType() == BreakpointSite::eSoftware ||
          bp_site->GetType() == BreakpointSite::eExternal)) {
+      // During expression evaluation, retain the expression-return trap
+      // at _start in the forked child so it dies deterministically on
+      // SIGTRAP rather than executing _start with a corrupted stack.
+      if (entry_addr != LLDB_INVALID_ADDRESS &&
+          bp_site->GetLoadAddress() == entry_addr) {
+        LLDB_LOG(log,
+                 "DidForkSwitchSoftwareBreakpoints: retaining expression-"
+                 "return trap at {0:x} in forked child",
+                 bp_site->GetLoadAddress());
+        return;
+      }
       m_gdb_comm.SendGDBStoppointTypePacket(
           eBreakpointSoftware, enable, bp_site->GetLoadAddress(),
           GetSoftwareBreakpointTrapOpcode(bp_site), GetInterruptTimeout());
@@ -6078,8 +6160,31 @@ void ProcessGDBRemote::DidForkSwitchHardwareTraps(bool enable) {
   }
 }
 
-void ProcessGDBRemote::DidFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {
+void ProcessGDBRemote::DidFork(lldb::pid_t child_pid, lldb::tid_t child_tid,
+                               bool is_expression_fork) {
   Log *log = GetLog(GDBRLog::Process);
+
+  // During expression evaluation, force follow-parent regardless of which
+  // thread forked. The expression is running on the parent and following the
+  // child would cause the expression thread to vanish (the child has different
+  // thread IDs). Even if a *different* thread forks, switching to the child
+  // would destroy the expression thread's process context.
+  FollowForkMode follow_fork_mode = GetFollowForkMode();
+  bool overrode_follow_mode = false;
+  if (follow_fork_mode == eFollowChild &&
+      GetModIDRef().IsRunningExpression()) {
+    if (is_expression_fork) {
+      LLDB_LOG(log, "ProcessGDBRemote::DidFork() overriding follow-fork-mode "
+                    "to parent during expression evaluation");
+    } else {
+      LLDB_LOG(log, "ProcessGDBRemote::DidFork() overriding follow-fork-mode "
+                    "to parent during expression evaluation. Child process "
+                    "{0} is available for manual attachment.",
+               child_pid);
+    }
+    follow_fork_mode = eFollowParent;
+    overrode_follow_mode = true;
+  }
 
   lldb::pid_t parent_pid = m_gdb_comm.GetCurrentProcessID();
   // Any valid TID will suffice, thread-relevant actions will set a proper TID
@@ -6089,7 +6194,7 @@ void ProcessGDBRemote::DidFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {
   lldb::pid_t follow_pid, detach_pid;
   lldb::tid_t follow_tid, detach_tid;
 
-  switch (GetFollowForkMode()) {
+  switch (follow_fork_mode) {
   case eFollowParent:
     follow_pid = parent_pid;
     follow_tid = parent_tid;
@@ -6112,11 +6217,11 @@ void ProcessGDBRemote::DidFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {
 
   // Disable all software breakpoints in the forked process.
   if (m_gdb_comm.SupportsGDBStoppointPacket(eBreakpointSoftware))
-    DidForkSwitchSoftwareBreakpoints(false);
+    DidForkSwitchSoftwareBreakpoints(false, is_expression_fork);
 
   // Remove hardware breakpoints / watchpoints from parent process if we're
   // following child.
-  if (GetFollowForkMode() == eFollowChild)
+  if (follow_fork_mode == eFollowChild)
     DidForkSwitchHardwareTraps(false);
 
   // Switch to the process that is going to be followed
@@ -6127,39 +6232,87 @@ void ProcessGDBRemote::DidFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {
   }
 
   LLDB_LOG(log, "Detaching process {0}", detach_pid);
-  Status error = m_gdb_comm.Detach(false, detach_pid);
+  // When we overrode follow-child because of a concurrent expression, try to
+  // keep the child stopped so the user can attach to it manually.
+  bool keep_stopped = overrode_follow_mode && !is_expression_fork;
+  Status error = m_gdb_comm.Detach(keep_stopped, detach_pid);
+  if (error.Fail() && keep_stopped) {
+    LLDB_LOG(log, "ProcessGDBRemote::DidFork() detach-and-stay-stopped not "
+                  "supported, falling back to normal detach");
+    keep_stopped = false;
+    error = m_gdb_comm.Detach(false, detach_pid);
+  }
   if (error.Fail()) {
     LLDB_LOG(log, "ProcessGDBRemote::DidFork() detach packet send failed: {0}",
              error.AsCString() ? error.AsCString() : "<unknown error>");
     return;
   }
 
+  // Notify the user via the async output channel when we overrode
+  // follow-fork-mode for a non-expression fork during expression evaluation.
+  if (overrode_follow_mode && !is_expression_fork) {
+    StreamUP output_up =
+        GetTarget().GetDebugger().GetAsyncOutputStream();
+    if (output_up) {
+      output_up->Printf("warning: follow-fork-mode 'child' was overridden to "
+                         "'parent' because an expression is being evaluated.\n"
+                         "Child process %" PRIu64
+                         " has been detached%s.\n"
+                         "You can attach to it with: process attach -p %" PRIu64
+                         "\n",
+                         child_pid,
+                         keep_stopped ? " and stopped" : " (running)",
+                         child_pid);
+      output_up->Flush();
+    }
+  }
+
   // Hardware breakpoints/watchpoints are not inherited implicitly,
   // so we need to readd them if we're following child.
-  if (GetFollowForkMode() == eFollowChild) {
+  if (follow_fork_mode == eFollowChild) {
     DidForkSwitchHardwareTraps(true);
     // Update our PID
     SetID(child_pid);
   }
 }
 
-void ProcessGDBRemote::DidVFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {
+void ProcessGDBRemote::DidVFork(lldb::pid_t child_pid, lldb::tid_t child_tid,
+                                bool is_expression_fork) {
   Log *log = GetLog(GDBRLog::Process);
 
   LLDB_LOG(
       log,
-      "ProcessGDBRemote::DidFork() called for child_pid: {0}, child_tid {1}",
+      "ProcessGDBRemote::DidVFork() called for child_pid: {0}, child_tid {1}",
       child_pid, child_tid);
   ++m_vfork_in_progress_count;
 
+  // See comment in DidFork(): force follow-parent during expression evaluation
+  // regardless of which thread triggered the vfork.
+  FollowForkMode follow_fork_mode = GetFollowForkMode();
+  bool overrode_follow_mode = false;
+  if (follow_fork_mode == eFollowChild &&
+      GetModIDRef().IsRunningExpression()) {
+    if (is_expression_fork) {
+      LLDB_LOG(log, "ProcessGDBRemote::DidVFork() overriding follow-fork-mode "
+                    "to parent during expression evaluation");
+    } else {
+      LLDB_LOG(log, "ProcessGDBRemote::DidVFork() overriding follow-fork-mode "
+                    "to parent during expression evaluation. Child process "
+                    "{0} is available for manual attachment.",
+               child_pid);
+    }
+    follow_fork_mode = eFollowParent;
+    overrode_follow_mode = true;
+  }
+
   // Disable all software breakpoints for the duration of vfork.
   if (m_gdb_comm.SupportsGDBStoppointPacket(eBreakpointSoftware))
-    DidForkSwitchSoftwareBreakpoints(false);
+    DidForkSwitchSoftwareBreakpoints(false, is_expression_fork);
 
   lldb::pid_t detach_pid;
   lldb::tid_t detach_tid;
 
-  switch (GetFollowForkMode()) {
+  switch (follow_fork_mode) {
   case eFollowParent:
     detach_pid = child_pid;
     detach_tid = child_tid;
@@ -6172,7 +6325,7 @@ void ProcessGDBRemote::DidVFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {
 
     // Switch to the parent process before detaching it.
     if (!m_gdb_comm.SetCurrentThread(detach_tid, detach_pid)) {
-      LLDB_LOG(log, "ProcessGDBRemote::DidFork() unable to set pid/tid");
+      LLDB_LOG(log, "ProcessGDBRemote::DidVFork() unable to set pid/tid");
       return;
     }
 
@@ -6182,22 +6335,46 @@ void ProcessGDBRemote::DidVFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {
     // Switch to the child process.
     if (!m_gdb_comm.SetCurrentThread(child_tid, child_pid) ||
         !m_gdb_comm.SetCurrentThreadForRun(child_tid, child_pid)) {
-      LLDB_LOG(log, "ProcessGDBRemote::DidFork() unable to reset pid/tid");
+      LLDB_LOG(log, "ProcessGDBRemote::DidVFork() unable to reset pid/tid");
       return;
     }
     break;
   }
 
   LLDB_LOG(log, "Detaching process {0}", detach_pid);
-  Status error = m_gdb_comm.Detach(false, detach_pid);
+  bool keep_stopped = overrode_follow_mode && !is_expression_fork;
+  Status error = m_gdb_comm.Detach(keep_stopped, detach_pid);
+  if (error.Fail() && keep_stopped) {
+    LLDB_LOG(log, "ProcessGDBRemote::DidVFork() detach-and-stay-stopped not "
+                  "supported, falling back to normal detach");
+    keep_stopped = false;
+    error = m_gdb_comm.Detach(false, detach_pid);
+  }
   if (error.Fail()) {
       LLDB_LOG(log,
-               "ProcessGDBRemote::DidFork() detach packet send failed: {0}",
+               "ProcessGDBRemote::DidVFork() detach packet send failed: {0}",
                 error.AsCString() ? error.AsCString() : "<unknown error>");
       return;
   }
 
-  if (GetFollowForkMode() == eFollowChild) {
+  if (overrode_follow_mode && !is_expression_fork) {
+    StreamUP output_up =
+        GetTarget().GetDebugger().GetAsyncOutputStream();
+    if (output_up) {
+      output_up->Printf("warning: follow-fork-mode 'child' was overridden to "
+                         "'parent' because an expression is being evaluated.\n"
+                         "Child process %" PRIu64
+                         " has been detached%s.\n"
+                         "You can attach to it with: process attach -p %" PRIu64
+                         "\n",
+                         child_pid,
+                         keep_stopped ? " and stopped" : " (running)",
+                         child_pid);
+      output_up->Flush();
+    }
+  }
+
+  if (follow_fork_mode == eFollowChild) {
     // Update our PID
     SetID(child_pid);
   }

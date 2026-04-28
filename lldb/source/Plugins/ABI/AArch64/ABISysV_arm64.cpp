@@ -893,28 +893,29 @@ ABISysV_arm64::GetMemoryPermissions(lldb_private::RegisterContext &reg_ctx,
   // Extension.
   // See Arm Architecture Reference manual "POR_EL0, Permission Overlay Register
   // 0 (EL0)".
-  const RegisterInfo *por_info = reg_ctx.GetRegisterInfoByName("por");
-  if (!por_info)
+  const RegisterInfo *por_el0_info = reg_ctx.GetRegisterInfoByName("por_el0");
+  if (!por_el0_info)
     return std::nullopt;
 
-  uint64_t por_value =
-      reg_ctx.ReadRegisterAsUnsigned(por_info, LLDB_INVALID_ADDRESS);
-  if (por_value == LLDB_INVALID_ADDRESS)
+  uint64_t por_el0_value =
+      reg_ctx.ReadRegisterAsUnsigned(por_el0_info, LLDB_INVALID_ADDRESS);
+  if (por_el0_value == LLDB_INVALID_ADDRESS)
     return std::nullopt;
 
-  // POR contains 16, 4-bit permission sets (though Linux limits this to 8
+  // por_el0 contains 16, 4-bit permission sets (though Linux limits this to 8
   // useable sets).
   if (protection_key >= 16)
     return std::nullopt;
 
   // Bit 3 - reserved, bit 2 - write, bit 1 - execute, bit 0 - read.
-  const uint64_t por_permissions = (por_value >> (protection_key * 4)) & 0xf;
+  const uint64_t por_el0_permissions =
+      (por_el0_value >> (protection_key * 4)) & 0xf;
   uint32_t overlay = 0;
-  if (por_permissions & 4)
+  if (por_el0_permissions & 4)
     overlay |= lldb::ePermissionsWritable;
-  if (por_permissions & 2)
+  if (por_el0_permissions & 2)
     overlay |= lldb::ePermissionsExecutable;
-  if (por_permissions & 1)
+  if (por_el0_permissions & 1)
     overlay |= lldb::ePermissionsReadable;
 
   uint32_t effective = original_permissions;

@@ -597,7 +597,7 @@ constexpr auto mandatoryDigits{construct<std::optional<int>>("." >> width)};
 // R1307 data-edit-desc ->
 //         I w [. m] | B w [. m] | O w [. m] | Z w [. m] | F w . d |
 //         E w . d [E e] | EN w . d [E e] | ES w . d [E e] | EX w . d [E e] |
-//         G w [. d [E e]] | L w | A [w] | D w . d |
+//         G w [. d [E e]] | L w | A [w] | AT | D w . d |
 //         DT [char-literal-constant] [( v-list )]
 // (part 1 of 2)
 TYPE_PARSER(construct<format::IntrinsicTypeDataEditDesc>(
@@ -623,6 +623,9 @@ TYPE_PARSER(construct<format::IntrinsicTypeDataEditDesc>(
         "G " >> pure(format::IntrinsicTypeDataEditDesc::Kind::G) ||
             "L " >> pure(format::IntrinsicTypeDataEditDesc::Kind::L),
         mandatoryWidth, noInt, noInt) ||
+    construct<format::IntrinsicTypeDataEditDesc>(
+        "A " >> ("T " >> pure(format::IntrinsicTypeDataEditDesc::Kind::AT)),
+        noInt, noInt, noInt) ||
     construct<format::IntrinsicTypeDataEditDesc>(
         "A " >> pure(format::IntrinsicTypeDataEditDesc::Kind::A), maybe(width),
         noInt, noInt) ||
