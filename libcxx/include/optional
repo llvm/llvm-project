@@ -895,7 +895,7 @@ private:
       is_lvalue_reference_v<_Tp> && reference_constructs_from_temporary_v<_Tp, _Up>;
 
   template <class _Up>
-  constexpr static bool __libcpp_enable_opt_ref_ctor =
+  constexpr static bool __ref_ctor_enabled =
       is_lvalue_reference_v<_Tp> && !reference_constructs_from_temporary_v<_Tp, _Up>;
 #    endif
 
@@ -1050,8 +1050,8 @@ public:
 
   // optional(optional<U>& rhs)
   template <class _Up>
-    requires __libcpp_enable_opt_ref_ctor<_Up&> && (!is_same_v<remove_cvref_t<_Tp>, optional<_Up>>) &&
-             (!is_same_v<_Tp&, _Up>) && is_constructible_v<_Tp&, _Up&>
+    requires __ref_ctor_enabled<_Up&> && (!is_same_v<remove_cvref_t<_Tp>, optional<_Up>>) && (!is_same_v<_Tp&, _Up>) &&
+             is_constructible_v<_Tp&, _Up&>
   _LIBCPP_HIDE_FROM_ABI constexpr explicit(!is_convertible_v<_Up&, _Tp&>)
       optional(optional<_Up>& __rhs) noexcept(is_nothrow_constructible_v<_Tp&, _Up&>) {
     this->__construct_from(__rhs);
@@ -1082,7 +1082,7 @@ public:
 
   // optional(const optional<U>&&)
   template <class _Up>
-    requires __libcpp_enable_opt_ref_ctor<const _Up> && (!is_same_v<remove_cvref_t<_Tp>, optional<_Up>>) &&
+    requires __ref_ctor_enabled<const _Up> && (!is_same_v<remove_cvref_t<_Tp>, optional<_Up>>) &&
              (!is_same_v<_Tp&, _Up>) && is_constructible_v<_Tp&, const _Up>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit(!is_convertible_v<const _Up, _Tp&>)
       optional(const optional<_Up>&& __v) noexcept(is_nothrow_constructible_v<_Tp&, const _Up>) {
