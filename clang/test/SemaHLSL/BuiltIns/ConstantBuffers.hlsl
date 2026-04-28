@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -x hlsl -finclude-default-header -fsyntax-only -verify %s
 
-struct S {
+struct S { // expected-note 3 {{candidate constructor}}
   float a;
   int b;
 };
@@ -53,10 +53,9 @@ ConstantBuffer<U> cb_union;
 // expected-note@* {{because 'U' does not satisfy '__is_constant_buffer_element_compatible'}}
 // expected-note@* {{because '__builtin_hlsl_is_constant_buffer_element_compatible(U)' evaluated to false}}
 
-// expected-error@+1 {{no viable overloaded '='}}
 void takes_inout_s(inout S s) {}
-// expected-note@*:* {{candidate function not viable: no known conversion from 'S' to 'const hlsl::ConstantBuffer<S>' for 1st argument}}
 
 void foo() {
+  // expected-error@+1 {{no viable constructor copying parameter of type 'hlsl_constant S'}}
   takes_inout_s(cb); // Fails because of inout writeback
 }

@@ -2286,9 +2286,15 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
     }
   }
 
-  if (getLangOpts().HLSL && Ty.getAddressSpace() == LangAS::hlsl_constant)
-    if (CGM.getHLSLRuntime().emitBufferCopy(*this, DestPtr, SrcPtr, Ty))
-      return;
+  if (getLangOpts().HLSL) {
+    unsigned ConstantAS =
+        getContext().getTargetAddressSpace(LangAS::hlsl_constant);
+    if (Ty.getAddressSpace() == LangAS::hlsl_constant ||
+        SrcPtr.getAddressSpace() == ConstantAS) {
+      if (CGM.getHLSLRuntime().emitBufferCopy(*this, DestPtr, SrcPtr, Ty))
+        return;
+    }
+  }
 
   // Aggregate assignment turns into llvm.memcpy.  This is almost valid per
   // C99 6.5.16.1p3, which states "If the value being stored in an object is

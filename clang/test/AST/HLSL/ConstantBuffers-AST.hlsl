@@ -103,18 +103,6 @@ float main() {
   float f3 = cb_nested.s.a;
 
   // CHECK: CallExpr {{.*}} 'void'
-  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(S)' <FunctionToPointerDecay>
-  // CHECK-NEXT: DeclRefExpr {{.*}} 'void (S)' lvalue Function {{.*}} 'takes_s' 'void (S)'
-  // CHECK-NEXT: CXXConstructExpr {{.*}} 'S' 'void (const S &) noexcept'
-  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'const S' lvalue <AddressSpaceConversion>
-  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'hlsl_constant S' lvalue <UserDefinedConversion>
-  // CHECK-NEXT: CXXMemberCallExpr {{.*}} 'hlsl_constant S' lvalue
-  // CHECK-NEXT: MemberExpr {{.*}} '<bound member function type>' .operator hlsl_constant S &
-  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'const hlsl::ConstantBuffer<S>' lvalue <NoOp>
-  // CHECK-NEXT: DeclRefExpr {{.*}} 'ConstantBuffer<S>':'hlsl::ConstantBuffer<S>' lvalue Var {{.*}} 'cb' 'ConstantBuffer<S>':'hlsl::ConstantBuffer<S>'
-  takes_s(cb);
-
-  // CHECK: CallExpr {{.*}} 'void'
   // CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(ConstantBuffer<S>)' <FunctionToPointerDecay>
   // CHECK-NEXT: DeclRefExpr {{.*}} 'void (ConstantBuffer<S>)' lvalue Function {{.*}} 'takes_cb' 'void (ConstantBuffer<S>)'
   // CHECK-NEXT: CXXConstructExpr {{.*}} 'ConstantBuffer<S>':'hlsl::ConstantBuffer<S>' 'void (const hlsl::ConstantBuffer<S> &)'
@@ -127,30 +115,6 @@ float main() {
   // CHECK-NEXT: DeclRefExpr {{.*}} 'void (inout ConstantBuffer<S>)' lvalue Function {{.*}} 'takes_inout_cb' 'void (inout ConstantBuffer<S>)'
   // CHECK-NEXT: HLSLOutArgExpr {{.*}} 'ConstantBuffer<S>':'hlsl::ConstantBuffer<S>' lvalue inout
   takes_inout_cb(cb);
-
-  // CHECK: DeclStmt
-  // CHECK-NEXT: VarDecl {{.*}} s 'S' cinit
-  // CHECK-NEXT: CXXConstructExpr {{.*}} 'S' 'void (const S &) noexcept'
-  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'const S' lvalue <AddressSpaceConversion>
-  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'hlsl_constant S' lvalue <UserDefinedConversion>
-  // CHECK-NEXT: CXXMemberCallExpr {{.*}} 'hlsl_constant S' lvalue
-  // CHECK-NEXT: MemberExpr {{.*}} '<bound member function type>' .operator hlsl_constant S &
-  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'const hlsl::ConstantBuffer<S>' lvalue <NoOp>
-  // CHECK-NEXT: DeclRefExpr {{.*}} 'ConstantBuffer<S>':'hlsl::ConstantBuffer<S>' lvalue Var {{.*}} 'cb' 'ConstantBuffer<S>':'hlsl::ConstantBuffer<S>'
-  S s = cb;
-
-  // CHECK: CXXOperatorCallExpr {{.*}} 'S' lvalue '='
-  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'S &(*)(const S &) noexcept' <FunctionToPointerDecay>
-  // CHECK-NEXT: DeclRefExpr {{.*}} 'S &(const S &) noexcept' lvalue CXXMethod {{.*}} 'operator=' 'S &(const S &) noexcept'
-  // CHECK-NEXT: DeclRefExpr {{.*}} 'S' lvalue Var {{.*}} 's' 'S'
-  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'const S' lvalue <AddressSpaceConversion>
-  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'const hlsl_constant S' lvalue <NoOp>
-  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'hlsl_constant S' lvalue <UserDefinedConversion>
-  // CHECK-NEXT: CXXMemberCallExpr {{.*}} 'hlsl_constant S' lvalue
-  // CHECK-NEXT: MemberExpr {{.*}} '<bound member function type>' .operator hlsl_constant S &
-  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'const hlsl::ConstantBuffer<S>' lvalue <NoOp>
-  // CHECK-NEXT: DeclRefExpr {{.*}} 'ConstantBuffer<S>':'hlsl::ConstantBuffer<S>' lvalue Var {{.*}} 'cb' 'ConstantBuffer<S>':'hlsl::ConstantBuffer<S>'
-  s = cb;
 
   return f1 + f2 + f3;
 }

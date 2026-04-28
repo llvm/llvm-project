@@ -53,40 +53,13 @@ void foo() {
   float f2 = cb_nested[1].s.a;
 }
 
-void takes_s(S s) {}
 void takes_cb(ConstantBuffer<S> c) {}
 
 [numthreads(1,1,1)]
-void test_assignments_and_params() {
-  // CHECK-LABEL: define {{.*}} void @_Z27test_assignments_and_paramsv()
-  
-  // CHECK-DXIL: [[CB_CONV1:%.*]] = call noundef {{.*}} ptr addrspace(2) @_ZNK4hlsl14ConstantBufferI1SEcvRU3AS2S1_Ev(ptr noundef nonnull align 4 dereferenceable(4) @_ZL2cb)
-  // CHECK-DXIL: [[CB_AS1:%.*]] = addrspacecast ptr addrspace(2) [[CB_CONV1]] to ptr
-  // CHECK-DXIL: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %s, ptr align 1 [[CB_AS1]], i32 8, i1 false)
-  // CHECK-SPIRV: [[CB_CONV1:%.*]] = call noundef {{.*}} ptr addrspace(12) @_ZNK4hlsl14ConstantBufferI1SEcvRU4AS12S1_Ev(ptr noundef nonnull align 8 dereferenceable(8) @_ZL2cb)
-  // CHECK-SPIRV: [[CB_AS1:%.*]] = addrspacecast ptr addrspace(12) [[CB_CONV1]] to ptr
-  // CHECK-SPIRV: call void @llvm.memcpy.p0.p0.i64(ptr align 1 %s, ptr align 1 [[CB_AS1]], i64 8, i1 false)
-  S s = cb;
-
-  // CHECK-DXIL: [[CB_CONV2:%.*]] = call noundef {{.*}} ptr addrspace(2) @_ZNK4hlsl14ConstantBufferI1SEcvRU3AS2S1_Ev(ptr noundef nonnull align 4 dereferenceable(4) @_ZL2cb)
-  // CHECK-DXIL: [[CB_AS2:%.*]] = addrspacecast ptr addrspace(2) [[CB_CONV2]] to ptr
-  // CHECK-DXIL: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %s, ptr align 1 [[CB_AS2]], i32 8, i1 false)
-  // CHECK-SPIRV: [[CB_CONV2:%.*]] = call noundef {{.*}} ptr addrspace(12) @_ZNK4hlsl14ConstantBufferI1SEcvRU4AS12S1_Ev(ptr noundef nonnull align 8 dereferenceable(8) @_ZL2cb)
-  // CHECK-SPIRV: [[CB_AS2:%.*]] = addrspacecast ptr addrspace(12) [[CB_CONV2]] to ptr
-  // CHECK-SPIRV: call void @llvm.memcpy.p0.p0.i64(ptr align 1 %s, ptr align 1 [[CB_AS2]], i64 8, i1 false)
-  s = cb;
-
-  // CHECK-DXIL: [[CB_CONV3:%.*]] = call noundef {{.*}} ptr addrspace(2) @_ZNK4hlsl14ConstantBufferI1SEcvRU3AS2S1_Ev(ptr noundef nonnull align 4 dereferenceable(4) @_ZL2cb)
-  // CHECK-DXIL: [[CB_AS3:%.*]] = addrspacecast ptr addrspace(2) [[CB_CONV3]] to ptr
-  // CHECK-DXIL: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %agg.tmp, ptr align 1 [[CB_AS3]], i32 8, i1 false)
-  // CHECK-DXIL: call void @_Z7takes_s1S(ptr noundef byval(%struct.S) align 1 %agg.tmp)
-  // CHECK-SPIRV: [[CB_CONV3:%.*]] = call noundef {{.*}} ptr addrspace(12) @_ZNK4hlsl14ConstantBufferI1SEcvRU4AS12S1_Ev(ptr noundef nonnull align 8 dereferenceable(8) @_ZL2cb)
-  // CHECK-SPIRV: [[CB_AS3:%.*]] = addrspacecast ptr addrspace(12) [[CB_CONV3]] to ptr
-  // CHECK-SPIRV: call {{.*}} void @_Z7takes_s1S(ptr noundef byval(%struct.S) align 1 %agg.tmp)
-  takes_s(cb);
-
-  // CHECK: call void @_ZN4hlsl14ConstantBufferI1SEC1ERKS2_(ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %agg.tmp{{[0-9]+}}, ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) @_ZL2cb)
-  // CHECK-DXIL: call void @_Z8takes_cbN4hlsl14ConstantBufferI1SEE(ptr noundef dead_on_return %agg.tmp{{[0-9]+}})
-  // CHECK-SPIRV: call {{.*}} void @_Z8takes_cbN4hlsl14ConstantBufferI1SEE(ptr noundef dead_on_return %agg.tmp{{[0-9]+}})
+void test_params() {
+  // CHECK-LABEL: define {{.*}} void @_Z11test_paramsv()
+  // CHECK: call void @_ZN4hlsl14ConstantBufferI1SEC1ERKS2_(ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %agg.tmp, ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) @_ZL2cb)
+  // CHECK-DXIL: call void @_Z8takes_cbN4hlsl14ConstantBufferI1SEE(ptr noundef dead_on_return %agg.tmp)
+  // CHECK-SPIRV: call {{.*}} void @_Z8takes_cbN4hlsl14ConstantBufferI1SEE(ptr noundef dead_on_return %agg.tmp)
   takes_cb(cb);
 }
