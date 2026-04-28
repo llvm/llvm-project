@@ -6508,6 +6508,10 @@ bool clang::matchUnsafePointers(const DynTypedNode &N, ASTContext &Ctx,
 #define WARNING_GADGET(name)                                                   \
   if (name##Gadget::matches(S, Ctx, Result))                                   \
     WarningGadgets.push_back(std::make_unique<name##Gadget>(Result));
+// Define WARNING_BOUNDS_SAFETY_GADGETs to be empty because they are not
+// necessarily unsafe buffer usages, e.g.,
+// SinglePointerArgument/SinglePointerAssignment
+#define WARNING_BOUNDS_SAFETY_GADGET(name)
 #define WARNING_OPTIONAL_GADGET(name)                                          \
   if (name##Gadget::matches(S, Ctx, &Handler, Result))                         \
     WarningGadgets.push_back(std::make_unique<name##Gadget>(Result));
