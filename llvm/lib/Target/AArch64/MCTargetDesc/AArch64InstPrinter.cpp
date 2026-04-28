@@ -944,33 +944,28 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
       }
     // BRB aliases.
     case 2: {
-      switch (Op1Val) {
-      default:
-        return false;
-      case 1:
+      if (Op1Val == 1) {
         if (!(STI.hasFeature(AArch64::FeatureAll) ||
               STI.hasFeature(AArch64::FeatureBRBE)))
           return false;
 
         NeedsReg = false;
-        switch (Op2Val) {
-        default:
-          return false;
-        case 4:
+        if (Op2Val == 4) {
           Ins = "brb\t";
           Name = "iall";
-          break;
-        case 5:
+        } else if (Op2Val == 5) {
           Ins = "brb\t";
           Name = "inj";
-          break;
+        } else {
+          return false;
         }
-        break;
-      case 3:
+      } else if (Op1Val == 3) {
         if (Op2Val != 7 || !(STI.hasFeature(AArch64::FeatureAll) ||
                              STI.hasFeature(AArch64::FeatureITE)))
           return false;
 
+        return false;
+      } else {
         return false;
       }
     } break;
@@ -1031,6 +1026,38 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
       Name = std::string(AT->Name);
     }
     break;
+    // GCS aliases.
+    case 7: {
+      if (!(STI.hasFeature(AArch64::FeatureAll) ||
+            STI.hasFeature(AArch64::FeatureGCS)))
+        return false;
+
+      RegSep = "\t";
+      Name = "";
+      if (Op1Val == 0) {
+        NeedsReg = false;
+        if (Op2Val == 4) {
+          Ins = "gcspushx";
+        } else if (Op2Val == 5) {
+          Ins = "gcspopcx";
+        } else if (Op2Val == 6) {
+          Ins = "gcspopx";
+        } else {
+          return false;
+        }
+      } else if (Op1Val == 3) {
+        NeedsReg = true;
+        if (Op2Val == 0) {
+          Ins = "gcspushm";
+        } else if (Op2Val == 2) {
+          Ins = "gcsss1";
+        } else {
+          return false;
+        }
+      } else {
+        return false;
+      }
+    } break;
     // Overlaps with AT and DC
     case 15: {
       const AArch64AT::AT *AT = AArch64AT::lookupATByEncoding(Encoding);
@@ -1045,48 +1072,6 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
         Name = std::string(DC->Name);
       } else {
         return false;
-      }
-    } break;
-    // GCS aliases.
-    case 7: {
-      if (!(STI.hasFeature(AArch64::FeatureAll) ||
-            STI.hasFeature(AArch64::FeatureGCS)))
-        return false;
-
-      RegSep = "\t";
-      Name = "";
-      switch (Op1Val) {
-      default:
-        return false;
-      case 0:
-        NeedsReg = false;
-        switch (Op2Val) {
-        default:
-          return false;
-        case 4:
-          Ins = "gcspushx";
-          break;
-        case 5:
-          Ins = "gcspopcx";
-          break;
-        case 6:
-          Ins = "gcspopx";
-          break;
-        }
-        break;
-      case 3:
-        NeedsReg = true;
-        switch (Op2Val) {
-        default:
-          return false;
-        case 0:
-          Ins = "gcspushm";
-          break;
-        case 2:
-          Ins = "gcsss1";
-          break;
-        }
-        break;
       }
     } break;
     }

@@ -2,6 +2,9 @@
 // RUN: FileCheck --check-prefix=ERROR %s < %t
 // RUN: not llvm-mc -triple aarch64 -show-encoding %s 2>%t
 // RUN: FileCheck --check-prefix=ERROR-NO-BRBE %s < %t
+// RUN: split-file %s %t.dir
+// RUN: llvm-mc -triple aarch64 -mattr +brbe -filetype=obj %t.dir/brb-no-brbe.s \
+// RUN:        | llvm-objdump -d --mattr=-brbe --no-print-imm-hex - | FileCheck %s --check-prefix=CHECK-UNKNOWN
 
 msr BRBCR_EL1, x0
 mrs x1, BRBCR_EL1
@@ -138,8 +141,10 @@ brb iall
 brb inj
 // CHECK: brb iall  // encoding: [0x9f,0x72,0x09,0xd5]
 // CHECK: brb inj   // encoding: [0xbf,0x72,0x09,0xd5]
-// ERROR-NO-BRBE: [[@LINE-4]]:1: error: instruction requires: brbe
-// ERROR-NO-BRBE: [[@LINE-4]]:1: error: instruction requires: brbe
+// CHECK-UNKNOWN: d509729f sys #1, c7, c2, #4
+// CHECK-UNKNOWN: d50972bf sys #1, c7, c2, #5
+// ERROR-NO-BRBE: [[@LINE-6]]:1: error: instruction requires: brbe
+// ERROR-NO-BRBE: [[@LINE-6]]:1: error: instruction requires: brbe
 
 brb IALL
 brb INJ
@@ -147,3 +152,7 @@ brb INJ
 // CHECK: brb inj   // encoding: [0xbf,0x72,0x09,0xd5]
 // ERROR-NO-BRBE: [[@LINE-4]]:1: error: instruction requires: brbe
 // ERROR-NO-BRBE: [[@LINE-4]]:1: error: instruction requires: brbe
+
+//--- brb-no-brbe.s
+brb iall
+brb inj
