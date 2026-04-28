@@ -61,11 +61,6 @@ let FunctionMapper = "AArch64_AM::getShiftType" in {
 // Generic predicates.
 
 // Check for ZR in a register operand.
-def CheckIsReg0Zero : CheckAll<
-                        [CheckIsRegOperand<0>,
-                         CheckAny<
-                           [CheckRegOperand<0, WZR>,
-                            CheckRegOperand<0, XZR>]>]>;
 foreach I = {0-3} in {
   def CheckIsReg#I#Zero : CheckAll<
                             [CheckIsRegOperand<I>,
