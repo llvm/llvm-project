@@ -403,6 +403,11 @@ defvar Operations = [
   WaveReduceOp<"fadd", "F64", f64, SGPR_64, VSrc_b64>,
   WaveReduceOp<"fsub", "F32", f32, SGPR_32, VSrc_b32>,
   WaveReduceOp<"fsub", "F64", f64, SGPR_64, VSrc_b64>,
+
+  WaveReduceOp<"umin", "U16", i16, SGPR_32, VSrc_b16>,
+  WaveReduceOp<"min", "I16", i16, SGPR_32, VSrc_b16>,
+  WaveReduceOp<"umax", "U16", i16, SGPR_32, VSrc_b16>,
+  WaveReduceOp<"max", "I16", i16, SGPR_32, VSrc_b16>
 ];
 
 foreach Op = Operations in {

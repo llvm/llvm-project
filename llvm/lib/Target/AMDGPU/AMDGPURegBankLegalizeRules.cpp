@@ -820,6 +820,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniS1, UniS32}, {{None}, {None}}}) // should be combined away
       .Any({{UniS1, UniS64}, {{None}, {None}}}) // should be combined away
       .Any({{UniS16, S32}, {{Sgpr16}, {Sgpr32}}})
+      .Any({{DivS16, DivS32}, {{Vgpr16}, {Vgpr32}}})
       .Any({{UniBRC, UniBRC}, {{SgprBRC}, {SgprBRC}}})
       .Any({{DivBRC, DivBRC}, {{VgprBRC}, {VgprBRC}}})
       .Any({{UniV2S16, V2S32}, {{SgprV2S16}, {SgprV2S32}}})
@@ -1697,6 +1698,8 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
        amdgcn_wave_reduce_or, amdgcn_wave_reduce_sub, amdgcn_wave_reduce_umax,
        amdgcn_wave_reduce_umin, amdgcn_wave_reduce_xor},
       Standard)
+      .Uni(S16, {{Sgpr32Trunc}, {IntrId, Sgpr32ZExt}})
+      .Div(S16, {{Sgpr16ToVgprDst}, {IntrId, Vgpr16}})
       .Uni(S32, {{Sgpr32}, {IntrId, Sgpr32}})
       .Div(S32, {{Sgpr32ToVgprDst}, {IntrId, VgprB32}})
       .Uni(S64, {{Sgpr64}, {IntrId, Sgpr64}})
