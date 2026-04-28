@@ -3232,10 +3232,12 @@ static bool CheckFloatRepresentation(Sema *S, SourceLocation Loc,
 static bool CheckFloatOrHalfRepresentation(Sema *S, SourceLocation Loc,
                                            int ArgOrdinal,
                                            clang::QualType PassedType) {
-  clang::QualType BaseType =
-      PassedType->isVectorType()
-          ? PassedType->castAs<clang::VectorType>()->getElementType()
-          : PassedType;
+  clang::QualType BaseType = PassedType;
+  if (PassedType->isVectorType())
+    BaseType = PassedType->castAs<clang::VectorType>()->getElementType();
+  else if (PassedType->isMatrixType())
+    BaseType = PassedType->castAs<clang::MatrixType>()->getElementType();
+
   if (!BaseType->isHalfType() && !BaseType->isFloat32Type())
     return S->Diag(Loc, diag::err_builtin_invalid_arg_type)
            << ArgOrdinal << /* scalar or vector of */ 5 << /* no int */ 0
