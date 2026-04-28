@@ -109,7 +109,7 @@ define i64 @deadcode_self_reference() {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[OR]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = trunc i32 [[OR]] to i16
-; CHECK-NEXT:    [[CALL:%.*]] = call i16 null(i16 0, i16 [[CONV]])
+; CHECK-NEXT:    [[CALL:%.*]] = call i16 @use(i16 [[CONV]])
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ;
 entry:
@@ -118,6 +118,8 @@ entry:
 loop:
   %or = or i32 %or, 0
   %conv = trunc i32 %or to i16
-  %call = call i16 null(i16 0, i16 %conv)
+  %call = call i16 @use(i16 %conv)
   br label %loop
 }
+
+declare void @use(i16)
