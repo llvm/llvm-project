@@ -702,9 +702,7 @@ public:
 
   int32_t getSectionFlags(DataRefImpl Sec) const;
   Expected<DataRefImpl> getSectionByNum(int16_t Num) const;
-  Expected<DataRefImpl>
-  getSectionByType(XCOFF::SectionTypeFlags SectType,
-                   StringRef SectionTypeName = "") const;
+  Expected<DataRefImpl> getSectionByType(XCOFF::SectionTypeFlags SectType) const;
 
   Expected<uintptr_t>
   getSectionFileOffsetToRawData(XCOFF::SectionTypeFlags SectType) const;

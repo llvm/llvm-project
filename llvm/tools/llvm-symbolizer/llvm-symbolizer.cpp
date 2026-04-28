@@ -156,11 +156,13 @@ static StringRef getSpaceDelimitedWord(StringRef &Source) {
 }
 
 // Only TEXT and DATA section types are supported in XCOFF section-relative
-// syntax since:
-// - These are the only sections mapped by the AIX process map (procmap).
-// - BSS addresses are relative to the DATA section base.
-// - Thread-local sections (TDATA, TBSS) cannot be symbolized from runtime
-//   addresses.
+// syntax. The AIX process map (procmap) maps only TEXT and DATA. BSS is
+// allocated after the non-BSS data, so BSS symbol addresses are relative to
+// the DATA section base and do not need a separate section type. TDATA and
+// TBSS are excluded because there is no demonstrated need to symbolize
+// thread-local storage from runtime addresses. Restricting to TEXT and DATA
+// also ensures there is at most one section of each type in a loadable XCOFF
+// module, keeping section-relative addresses unambiguous.
 static std::optional<XCOFF::SectionTypeFlags>
 parseXCOFFSectionType(StringRef TypeStr) {
   return StringSwitch<std::optional<XCOFF::SectionTypeFlags>>(TypeStr)
@@ -339,8 +341,8 @@ static Error parseCommand(StringRef BinaryName, bool IsAddr2Line,
 
   // If address specification is a number, treat it as a module offset.
   if (!AddrSpec.getAsInteger(IsAddr2Line ? 16 : 0, Offset)) {
-    // Module offset is an address.
     Symbol = StringRef();
+    SectionType = StringRef();
     return Error::success();
   }
 
@@ -352,6 +354,7 @@ static Error parseCommand(StringRef BinaryName, bool IsAddr2Line,
   // Otherwise it is a symbol name, potentially with an offset.
   Symbol = AddrSpec;
   Offset = 0;
+  SectionType = StringRef();
 
   // If the address specification contains '+', try treating it as
   // "symbol + offset".

@@ -810,29 +810,47 @@ Expected<DataRefImpl> XCOFFObjectFile::getSectionByNum(int16_t Num) const {
   return DRI;
 }
 
+static StringRef getSectionTypeName(XCOFF::SectionTypeFlags SectType) {
+  switch (SectType) {
+  case XCOFF::STYP_PAD:    return "PAD";
+  case XCOFF::STYP_DWARF:  return "DWARF";
+  case XCOFF::STYP_TEXT:   return "TEXT";
+  case XCOFF::STYP_DATA:   return "DATA";
+  case XCOFF::STYP_BSS:    return "BSS";
+  case XCOFF::STYP_EXCEPT: return "EXCEPT";
+  case XCOFF::STYP_INFO:   return "INFO";
+  case XCOFF::STYP_TDATA:  return "TDATA";
+  case XCOFF::STYP_TBSS:   return "TBSS";
+  case XCOFF::STYP_LOADER: return "LOADER";
+  case XCOFF::STYP_DEBUG:  return "DEBUG";
+  case XCOFF::STYP_TYPCHK: return "TYPCHK";
+  case XCOFF::STYP_OVRFLO: return "OVRFLO";
+  }
+  return "";
+}
+
 Expected<DataRefImpl>
-XCOFFObjectFile::getSectionByType(XCOFF::SectionTypeFlags SectType,
-                                  StringRef SectionTypeName) const {
+XCOFFObjectFile::getSectionByType(XCOFF::SectionTypeFlags SectType) const {
   DataRefImpl Result;
   Result.p = 0;
   auto FindSection = [&](const auto &Sections) -> Error {
     for (const auto &Sec : Sections) {
-      if (Sec.getSectionType() == SectType) {
-        if (Result.p != 0) {
-          if (!SectionTypeName.empty())
-            return createStringError("multiple '" + SectionTypeName.str() +
-                                     "' sections found in XCOFF object");
-          return createStringError(
-              "multiple XCOFF sections have type flag 0x" +
-              Twine::utohexstr(SectType));
-        }
-        Result.p = reinterpret_cast<uintptr_t>(&Sec);
+      if (Sec.getSectionType() != SectType)
+        continue;
+      if (Result.p != 0) {
+        StringRef Name = getSectionTypeName(SectType);
+        if (!Name.empty())
+          return createStringError("multiple '" + Name.str() +
+                                   "' sections found in XCOFF object");
+        return createStringError(
+            "multiple XCOFF sections have type flag 0x" +
+            Twine::utohexstr(SectType));
       }
+      Result.p = reinterpret_cast<uintptr_t>(&Sec);
     }
     return Error::success();
   };
-  if (Error E =
-          is64Bit() ? FindSection(sections64()) : FindSection(sections32()))
+  if (Error E = is64Bit() ? FindSection(sections64()) : FindSection(sections32()))
     return std::move(E);
   return Result;
 }

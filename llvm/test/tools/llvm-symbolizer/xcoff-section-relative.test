@@ -21,9 +21,11 @@
 
 ## Test 3: Symbolize third symbol using TEXT section-relative offset.
 ## my_const is at 0x100 (TEXT base) + 0x8 offset = 0x108.
+## TODO: XMC_RO should be classified as ST_Data; expect my_const once fixed.
+## ISSUE: https://github.com/llvm/llvm-project/issues/194547.
 # RUN: llvm-symbolizer --obj=%t.xcoff '(TEXT)(+0x8)' | FileCheck %s --check-prefix=TEXT-CONST
 
-# TEXT-CONST: my_const
+# TEXT-CONST: ??
 
 ## Test 4: Symbolize global variable using DATA section-relative offset.
 ## global_var is at 0x200 (DATA base) + 0x4 offset = 0x204.
@@ -69,7 +71,7 @@ Symbols:
         SymbolType:           XTY_SD
         StorageMappingClass:  XMC_PR
         SectionOrLength:      4
-  ## my_const csect (XTY_SD, XMC_PR): read-only constant in TEXT section.
+  ## my_const csect (XTY_SD, XMC_RO): read-only constant in TEXT section.
   - Name:            my_const
     Value:           0x108
     Section:         .text
@@ -78,7 +80,7 @@ Symbols:
     AuxEntries:
       - Type:                 AUX_CSECT
         SymbolType:           XTY_SD
-        StorageMappingClass:  XMC_PR
+        StorageMappingClass:  XMC_RO
         SectionOrLength:      4
   ## global_var csect at DATA+0x4 (non-zero offset to show DATA offsets work).
   - Name:            global_var

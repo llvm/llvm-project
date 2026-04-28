@@ -71,16 +71,15 @@ LLVMSymbolizer::getXCOFFSectionAddress(StringRef ModulePath,
     return createStringError(
         "section type syntax is only supported for XCOFF objects");
 
-  Expected<DataRefImpl> DRIOrErr =
-      XCOFFObj->getSectionByType(SectionTypeFlag, SectionTypeName);
+  Expected<DataRefImpl> DRIOrErr = XCOFFObj->getSectionByType(SectionTypeFlag);
   if (!DRIOrErr)
     return DRIOrErr.takeError();
-  DataRefImpl DRI = *DRIOrErr;
-  if (DRI.p == 0)
+  DataRefImpl MatchDRI = *DRIOrErr;
+  if (MatchDRI.p == 0)
     return createStringError("no '" + SectionTypeName +
                              "' section found in XCOFF object");
 
-  Entry = SectionRef(DRI, XCOFFObj).getAddress();
+  Entry = object::SectionRef(MatchDRI, XCOFFObj).getAddress();
   return Entry;
 }
 

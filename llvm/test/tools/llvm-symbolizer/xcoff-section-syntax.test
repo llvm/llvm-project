@@ -34,7 +34,7 @@
 # RUN: llvm-symbolizer --obj=%t.xcoff '(TEXT)(-10)' 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=NO-PLUS -DOFFSET=-10
 
-# NO-PLUS: error:{{.*}}section-relative offset "[[OFFSET]]" must start with '+'
+# NO-PLUS: error: ({{.*}})({{.*}}): section-relative offset "[[OFFSET]]" must start with '+'
 
 ## Test invalid offset values: '+' followed by '-', non-hex suffix, missing
 ## leading zero before 'x', non-hex character in hex literal, non-numeric.
@@ -49,7 +49,7 @@
 # RUN: llvm-symbolizer --obj=%t.xcoff '(TEXT)(+xyz)' 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=INVALID-OFFSET -DOFFSET=+xyz
 
-# INVALID-OFFSET: error:{{.*}}invalid offset "[[OFFSET]]" in section-relative address
+# INVALID-OFFSET: error: ({{.*}})({{.*}}): invalid offset "[[OFFSET]]" in section-relative address
 
 ## Test that a leading-zero value is treated as octal by getAsInteger(0,...).
 ## +010 is octal 8, so TEXT_BASE(0x100) + 8 = 0x108 = .bar.
