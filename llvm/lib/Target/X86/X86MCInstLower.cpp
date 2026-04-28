@@ -909,11 +909,8 @@ void X86AsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
   // bytes.  This assumes that patchable-function-prefix is the same for all
   // functions.
   const MachineFunction &MF = *MI.getMF();
-  int64_t PrefixNops = 0;
-  (void)MF.getFunction()
-      .getFnAttribute("patchable-function-prefix")
-      .getValueAsString()
-      .getAsInteger(10, PrefixNops);
+  int64_t PrefixNops = MF.getFunction().getFnAttributeAsParsedInteger(
+      "patchable-function-prefix");
 
   // KCFI allows indirect calls to any location that's preceded by a valid
   // type identifier. To avoid encoding the full constant into an instruction,
@@ -1310,11 +1307,7 @@ void X86AsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI,
 
   const Function &F = MF->getFunction();
   if (F.hasFnAttribute("patchable-function-entry")) {
-    unsigned Num;
-    if (F.getFnAttribute("patchable-function-entry")
-            .getValueAsString()
-            .getAsInteger(10, Num))
-      return;
+    unsigned Num = F.getFnAttributeAsParsedInteger("patchable-function-entry");
     emitX86Nops(*OutStreamer, Num, Subtarget);
     return;
   }
