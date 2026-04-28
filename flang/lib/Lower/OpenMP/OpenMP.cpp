@@ -4632,11 +4632,11 @@ private:
 };
 } // namespace
 
-static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
-                   semantics::SemanticsContext &semaCtx,
-                   lower::pft::Evaluation &eval,
-                   const parser::OmpMetadirectiveDirective &meta) {
-  const parser::OmpClauseList &clauseList = meta.v.Clauses();
+static void genMetadirective(lower::AbstractConverter &converter,
+                             lower::SymMap &symTable,
+                             semantics::SemanticsContext &semaCtx,
+                             lower::pft::Evaluation &eval,
+                             const parser::OmpClauseList &clauseList) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
   llvm::SmallVector<llvm::omp::TraitProperty, 8> constructTraits;
@@ -4781,6 +4781,13 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
+                   const parser::OmpMetadirectiveDirective &meta) {
+  genMetadirective(converter, symTable, semaCtx, eval, meta.v.Clauses());
+}
+
+static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
+                   semantics::SemanticsContext &semaCtx,
+                   lower::pft::Evaluation &eval,
                    const parser::OpenMPDeclarativeConstruct &ompDeclConstruct) {
   Fortran::common::visit(
       [&](auto &&s) { return genOMP(converter, symTable, semaCtx, eval, s); },
@@ -4920,8 +4927,8 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
                    const parser::OmpDelimitedMetadirectiveDirective &meta) {
-  TODO(converter.getCurrentLocation(),
-       "OpenMP BEGIN/END METADIRECTIVE lowering");
+  genMetadirective(converter, symTable, semaCtx, eval,
+                   meta.BeginDir().Clauses());
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,

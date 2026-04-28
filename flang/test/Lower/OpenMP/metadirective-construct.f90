@@ -28,3 +28,38 @@ subroutine test_construct_no_match()
     !$omp & default(taskyield)
   !$omp end parallel
 end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_begin_construct_parallel()
+! CHECK:         omp.parallel
+! CHECK:           omp.parallel
+! CHECK:             omp.terminator
+! CHECK:           omp.terminator
+! CHECK:         return
+subroutine test_begin_construct_parallel()
+  integer :: x
+  x = 0
+  !$omp parallel
+    !$omp begin metadirective &
+    !$omp & when(construct={parallel}: parallel) &
+    !$omp & default(nothing)
+    x = 1
+    !$omp end metadirective
+  !$omp end parallel
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_begin_construct_no_match()
+! CHECK:         omp.parallel
+! CHECK-NOT:     omp.task
+! CHECK:         omp.terminator
+! CHECK:         return
+subroutine test_begin_construct_no_match()
+  integer :: x
+  x = 0
+  !$omp parallel
+    !$omp begin metadirective &
+    !$omp & when(construct={target}: task) &
+    !$omp & default(nothing)
+    x = 1
+    !$omp end metadirective
+  !$omp end parallel
+end subroutine

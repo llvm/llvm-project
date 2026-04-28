@@ -31,3 +31,39 @@ subroutine test_condition_false()
   !$omp & default(nothing)
 #endif
 end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_begin_condition_true()
+! CHECK:         omp.parallel
+! CHECK-NOT:     fir.if
+! CHECK:         return
+subroutine test_begin_condition_true()
+  integer :: x
+  x = 0
+  !$omp begin metadirective &
+  !$omp & when(user={condition(.true.)}: parallel) &
+#ifdef OMP_52
+  !$omp & otherwise(nothing)
+#else
+  !$omp & default(nothing)
+#endif
+  x = 1
+  !$omp end metadirective
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_begin_condition_false()
+! CHECK-NOT:     omp.parallel
+! CHECK-NOT:     fir.if
+! CHECK:         return
+subroutine test_begin_condition_false()
+  integer :: x
+  x = 0
+  !$omp begin metadirective &
+  !$omp & when(user={condition(.false.)}: parallel) &
+#ifdef OMP_52
+  !$omp & otherwise(nothing)
+#else
+  !$omp & default(nothing)
+#endif
+  x = 1
+  !$omp end metadirective
+end subroutine

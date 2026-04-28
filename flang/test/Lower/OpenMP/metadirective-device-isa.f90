@@ -211,3 +211,58 @@ subroutine test_arch_no_match()
   !$omp & default(taskwait)
 #endif
 end subroutine
+
+! NEON-LABEL: func.func @_QPtest_begin_isa_neon()
+! NEON:         omp.parallel
+! SVE-LABEL: func.func @_QPtest_begin_isa_neon()
+! SVE:         omp.parallel
+! SSE-LABEL: func.func @_QPtest_begin_isa_neon()
+! SSE-NOT:     omp.parallel
+! SSE:         return
+! AVX-LABEL: func.func @_QPtest_begin_isa_neon()
+! AVX-NOT:     omp.parallel
+! AVX:         return
+! NONE-LABEL: func.func @_QPtest_begin_isa_neon()
+! NONE-NOT:     omp.parallel
+! NONE:         return
+subroutine test_begin_isa_neon()
+  integer :: x
+  x = 0
+  !$omp begin metadirective &
+  !$omp & when(device={isa("neon")}: parallel) &
+#ifdef OMP_52
+  !$omp & otherwise(nothing)
+#else
+  !$omp & default(nothing)
+#endif
+  x = 1
+  !$omp end metadirective
+end subroutine
+
+! NEON-LABEL: func.func @_QPtest_begin_isa_sse()
+! NEON-NOT:     omp.parallel
+! NEON:         return
+! SVE-LABEL: func.func @_QPtest_begin_isa_sse()
+! SVE-NOT:     omp.parallel
+! SVE:         return
+! SSE-LABEL: func.func @_QPtest_begin_isa_sse()
+! SSE:         omp.parallel
+! AVX-LABEL: func.func @_QPtest_begin_isa_sse()
+! AVX-NOT:     omp.parallel
+! AVX:         return
+! NONE-LABEL: func.func @_QPtest_begin_isa_sse()
+! NONE-NOT:     omp.parallel
+! NONE:         return
+subroutine test_begin_isa_sse()
+  integer :: x
+  x = 0
+  !$omp begin metadirective &
+  !$omp & when(device={isa("sse")}: parallel) &
+#ifdef OMP_52
+  !$omp & otherwise(nothing)
+#else
+  !$omp & default(nothing)
+#endif
+  x = 1
+  !$omp end metadirective
+end subroutine
