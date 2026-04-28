@@ -1188,12 +1188,20 @@ llvm::Expected<bool> ValueObject::GetValueAsBool() {
   CompilerType val_type = GetCompilerType();
   if (val_type.IsInteger() || val_type.IsUnscopedEnumerationType() ||
       val_type.IsPointerType()) {
-    if (auto maybe_value = llvm::expectedToOptional(GetValueAsAPSInt()))
-      return maybe_value->getBoolValue();
+    auto value_or_err = GetValueAsAPSInt();
+    if (value_or_err)
+      return value_or_err->getBoolValue();
+    else
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Types), value_or_err.takeError(),
+                     "GetValueAsAPSInt failed: {0}");
   }
   if (HasFloatingRepresentation(val_type)) {
-    if (auto maybe_value = llvm::expectedToOptional(GetValueAsAPFloat()))
-      return maybe_value->isNonZero();
+    auto value_or_err = GetValueAsAPFloat();
+    if (value_or_err)
+      return value_or_err->isNonZero();
+    else
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Types), value_or_err.takeError(),
+                     "GetValueAsAPFloat failed: {0}");
   }
   if (val_type.IsArrayType())
     return GetAddressOf().address != 0;
