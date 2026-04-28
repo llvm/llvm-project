@@ -1841,8 +1841,7 @@ bool WebAssemblyCFGStackify::fixCallUnwindMismatches(MachineFunction &MF) {
       else if (WebAssembly::WasmUseLegacyEH &&
                WebAssembly::isCatch(MI.getOpcode()))
         EHPadStack.push_back(MI.getParent());
-      else if (!WebAssembly::WasmUseLegacyEH &&
-               MI.getOpcode() == WebAssembly::END_TRY_TABLE)
+      else if (MI.getOpcode() == WebAssembly::END_TRY_TABLE)
         // In case of the legacy EH, 'catch' instruction is always an EH pad for
         // the 'try' body that precedes it. But in the standard EH, because
         // fixCatchUnwindMismatches runs before this, a new try_table's
