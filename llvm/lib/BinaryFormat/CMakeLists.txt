@@ -4,6 +4,7 @@ add_llvm_component_library(LLVMBinaryFormat
   Dwarf.cpp
   DXContainer.cpp
   ELF.cpp
+  ELFWriter.cpp
   MachO.cpp
   Magic.cpp
   MsgPackDocument.cpp

@@ -15,6 +15,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/BinaryFormat/ELFWriter.h"
 #include "llvm/DWP/DWPError.h"
 #include "llvm/Object/Decompressor.h"
 #include "llvm/Object/ELFObjectFile.h"
@@ -351,9 +352,9 @@ handleCompressedSection(std::deque<SmallString<32>> &UncompressedSections,
   return Error::success();
 }
 
-static Error buildDuplicateError(const std::pair<uint64_t, UnitIndexEntry> &PrevE,
-                                 const CompileUnitIdentifiers &ID,
-                                 StringRef DWPName) {
+static Error
+buildDuplicateError(const std::pair<uint64_t, UnitIndexEntry> &PrevE,
+                    const CompileUnitIdentifiers &ID, StringRef DWPName) {
   return make_error<DWPError>(
       std::string("duplicate DWO ID (") + utohexstr(PrevE.first) + ") in " +
       buildDWODescription(PrevE.second.Name, PrevE.second.DWPName,
@@ -451,8 +452,7 @@ writeStringsAndOffsets(DWPWriter &Out, DWPStringPool &Strings,
 
   // Fast path: when there is only one input, all strings are unique and offsets
   // don't need remapping. Copy both sections directly without any hashing.
-  if (SingleInput &&
-      StrOffsetsOptValue != Dwarf64StrOffsetsPromotion::Always) {
+  if (SingleInput && StrOffsetsOptValue != Dwarf64StrOffsetsPromotion::Always) {
     Out.switchSection(DS_Str);
     Out.emitBytes(CurStrSection);
     Out.switchSection(DS_StrOffsets);
@@ -779,10 +779,9 @@ Error write(DWPWriter &Out, ArrayRef<std::string> Inputs,
     for (const auto &Section : Obj.sections())
       if (auto Err = handleSection(
               KnownSections, Section, Out, UncompressedSections,
-              ContributionOffsets, CurEntry, CurStrSection,
-              CurStrOffsetSection, CurTypesSection, CurInfoSection,
-              AbbrevSection, CurCUIndexSection, CurTUIndexSection,
-              SectionLength))
+              ContributionOffsets, CurEntry, CurStrSection, CurStrOffsetSection,
+              CurTypesSection, CurInfoSection, AbbrevSection, CurCUIndexSection,
+              CurTUIndexSection, SectionLength))
         return Err;
 
     if (CurInfoSection.empty())
@@ -1058,7 +1057,8 @@ Error DWPWriter::writeELF(raw_pwrite_stream &OS) {
       {DS_Line, ".debug_line.dwo", ELF::SHF_EXCLUDE, 0},
       {DS_Rnglists, ".debug_rnglists.dwo", ELF::SHF_EXCLUDE, 0},
       {DS_Macro, ".debug_macro.dwo", ELF::SHF_EXCLUDE, 0},
-      {DS_Str, ".debug_str.dwo", ELF::SHF_EXCLUDE | ELF::SHF_MERGE | ELF::SHF_STRINGS, 1},
+      {DS_Str, ".debug_str.dwo",
+       ELF::SHF_EXCLUDE | ELF::SHF_MERGE | ELF::SHF_STRINGS, 1},
       {DS_StrOffsets, ".debug_str_offsets.dwo", ELF::SHF_EXCLUDE, 0},
       {DS_Info, ".debug_info.dwo", ELF::SHF_EXCLUDE, 0},
       {DS_Types, ".debug_types.dwo", ELF::SHF_EXCLUDE, 0},
@@ -1086,7 +1086,8 @@ Error DWPWriter::writeELF(raw_pwrite_stream &OS) {
     uint32_t NameOff = Strtab.size();
     Strtab.append(M.Name);
     Strtab.push_back('\0');
-    Entries.push_back({&Sections[M.Id], M.Name, M.Flags, M.EntSize, NameOff, 0});
+    Entries.push_back(
+        {&Sections[M.Id], M.Name, M.Flags, M.EntSize, NameOff, 0});
   }
 
   // Add .strtab and .symtab name entries.
@@ -1106,8 +1107,7 @@ Error DWPWriter::writeELF(raw_pwrite_stream &OS) {
   //   [padding to 8-byte align]
   //   [Section Header Table]    64 * NumSections bytes
 
-  constexpr uint64_t EhdrSize = 64;
-  constexpr uint64_t ShdrSize = 64;
+  constexpr uint64_t EhdrSize = sizeof(ELF::Elf64_Ehdr);
   constexpr uint64_t SymEntSize = 24;
 
   uint64_t Offset = EhdrSize;
@@ -1130,25 +1130,8 @@ Error DWPWriter::writeELF(raw_pwrite_stream &OS) {
   uint32_t NumSections = SymtabIdx + 1;
 
   // --- Write ELF header ---
-  OS.write(ELF::ElfMagic, 4);
-  Wr.write<uint8_t>(ELF::ELFCLASS64);
-  Wr.write<uint8_t>(ELF::ELFDATA2LSB);
-  Wr.write<uint8_t>(ELF::EV_CURRENT);
-  Wr.write<uint8_t>(ELFOSABI);
-  OS.write_zeros(8);                    // EI_ABIVERSION + padding
-  Wr.write<uint16_t>(ELF::ET_REL);            // e_type
-  Wr.write<uint16_t>(ELFMachine);         // e_machine
-  Wr.write<uint32_t>(ELF::EV_CURRENT);         // e_version
-  Wr.write<uint64_t>(0);                  // e_entry
-  Wr.write<uint64_t>(0);                  // e_phoff
-  Wr.write<uint64_t>(SHTOffset);          // e_shoff
-  Wr.write<uint32_t>(0);                  // e_flags
-  Wr.write<uint16_t>(EhdrSize);           // e_ehsize
-  Wr.write<uint16_t>(0);                  // e_phentsize
-  Wr.write<uint16_t>(0);                  // e_phnum
-  Wr.write<uint16_t>(ShdrSize);           // e_shentsize
-  Wr.write<uint16_t>(NumSections);        // e_shnum
-  Wr.write<uint16_t>(StrtabIdx);          // e_shstrndx
+  ELF::writeHeader(Wr, /*Is64Bit=*/true, ELFOSABI, /*ABIVersion=*/0, ELFMachine,
+                   /*EFlags=*/0, SHTOffset, NumSections, StrtabIdx);
 
   // --- Write section data ---
   for (const auto &E : Entries)
@@ -1165,37 +1148,23 @@ Error DWPWriter::writeELF(raw_pwrite_stream &OS) {
   uint64_t CurPos = SymtabOffset + SymEntSize;
   OS.write_zeros(SHTOffset - CurPos);
 
-  // Helper to write one section header.
-  auto writeSHdr = [&](uint32_t Name, uint32_t Type, uint64_t Flags,
-                       uint64_t FileOff, uint64_t Size, uint32_t Link,
-                       uint32_t Info, uint64_t Align, uint64_t EntSize) {
-    Wr.write<uint32_t>(Name);
-    Wr.write<uint32_t>(Type);
-    Wr.write<uint64_t>(Flags);
-    Wr.write<uint64_t>(0); // sh_addr
-    Wr.write<uint64_t>(FileOff);
-    Wr.write<uint64_t>(Size);
-    Wr.write<uint32_t>(Link);
-    Wr.write<uint32_t>(Info);
-    Wr.write<uint64_t>(Align);
-    Wr.write<uint64_t>(EntSize);
-  };
-
   // [0] ELF::SHT_NULL
-  writeSHdr(0, ELF::SHT_NULL, 0, 0, 0, 0, 0, 0, 0);
+  ELF::writeSectionHeader(Wr, true, 0, ELF::SHT_NULL, 0, 0, 0, 0, 0, 0, 0, 0);
 
   // [1..N] data sections
   for (const auto &E : Entries)
-    writeSHdr(E.NameOffset, ELF::SHT_PROGBITS, E.Flags, E.FileOffset,
-              E.Data->totalSize(), 0, 0, 1, E.EntSize);
+    ELF::writeSectionHeader(Wr, true, E.NameOffset, ELF::SHT_PROGBITS, E.Flags,
+                            0, E.FileOffset, E.Data->totalSize(), 0, 0, 1,
+                            E.EntSize);
 
   // [N+1] .strtab
-  writeSHdr(StrtabNameOff, ELF::SHT_STRTAB, 0, StrtabOffset, Strtab.size(), 0, 0, 1,
-            0);
+  ELF::writeSectionHeader(Wr, true, StrtabNameOff, ELF::SHT_STRTAB, 0, 0,
+                          StrtabOffset, Strtab.size(), 0, 0, 1, 0);
 
   // [N+2] .symtab
-  writeSHdr(SymtabNameOff, ELF::SHT_SYMTAB, 0, SymtabOffset, SymEntSize, StrtabIdx,
-            1, 8, SymEntSize);
+  ELF::writeSectionHeader(Wr, true, SymtabNameOff, ELF::SHT_SYMTAB, 0, 0,
+                          SymtabOffset, SymEntSize, StrtabIdx, 1, 8,
+                          SymEntSize);
 
   return Error::success();
 }
