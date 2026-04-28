@@ -1885,8 +1885,8 @@ static Instruction *foldNeonShift(IntrinsicInst *II, InstCombinerImpl &IC) {
 // llvm.cos(x) or llvm.sin(x) using the same argument, combine them
 // into a single llvm.sincos(x) call. Returns the result for II
 // extracted from sincos, or nullptr if no match is found.
-static Value *foldSinCosToSinCos(IntrinsicInst *II, IRBuilderBase &B,
-                                 InstCombinerImpl &IC) {
+static Value *foldSinAndCosToSinCos(IntrinsicInst *II, IRBuilderBase &B,
+                                    InstCombinerImpl &IC) {
   Intrinsic::ID IID = II->getIntrinsicID();
   bool IsSin = IID == Intrinsic::sin;
   Intrinsic::ID MatchID = IsSin ? Intrinsic::cos : Intrinsic::sin;
@@ -3241,7 +3241,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return replaceOperand(*II, 0, X);
     }
     if (IID == Intrinsic::cos) {
-      if (Value *Result = foldSinCosToSinCos(II, Builder, *this))
+      if (Value *Result = foldSinAndCosToSinCos(II, Builder, *this))
         return replaceInstUsesWith(*II, Result);
     }
     break;
@@ -3259,7 +3259,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return UnaryOperator::CreateFNegFMF(NewFunc, II);
     }
     if (IID == Intrinsic::sin) {
-      if (Value *Result = foldSinCosToSinCos(II, Builder, *this))
+      if (Value *Result = foldSinAndCosToSinCos(II, Builder, *this))
         return replaceInstUsesWith(*II, Result);
     }
     break;
