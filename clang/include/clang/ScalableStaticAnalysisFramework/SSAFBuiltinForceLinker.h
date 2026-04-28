@@ -22,7 +22,7 @@
 
 namespace clang::ssaf {
 
-#define ANCHOR(NAME) extern const volatile int NAME;
+#define ANCHOR(NAME) extern volatile int NAME;
 #include "BuiltinAnchorSources.def"
 
 // Force the linker to link in the built-in SSAF registrations.

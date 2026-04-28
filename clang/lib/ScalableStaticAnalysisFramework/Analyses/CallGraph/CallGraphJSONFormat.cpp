@@ -170,5 +170,5 @@ static llvm::Registry<JSONFormat::FormatInfo>::Add<CallGraphJSONFormatInfo>
 
 namespace clang::ssaf {
 // NOLINTNEXTLINE(misc-use-internal-linkage)
-const volatile int CallGraphJSONFormatAnchorSource = 0;
+volatile int CallGraphJSONFormatAnchorSource = 0;
 } // namespace clang::ssaf

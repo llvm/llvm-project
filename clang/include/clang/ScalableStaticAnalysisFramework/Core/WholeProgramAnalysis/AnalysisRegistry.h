@@ -18,7 +18,7 @@
 //
 //   namespace clang::ssaf {
 //   // NOLINTNEXTLINE(misc-use-internal-linkage)
-//   const volatile int MyAnalysisAnchorSource = 0;
+//   volatile int MyAnalysisAnchorSource = 0;
 //   } // namespace clang::ssaf
 //
 //   // Extend SSAFBuiltinForceLinker.h (or the relevant force-linker header)

@@ -15,7 +15,7 @@ using namespace ssaf;
 
 namespace clang::ssaf {
 // NOLINTNEXTLINE(misc-use-internal-linkage)
-const volatile int AnalysisRegistryAnchorSource = 0;
+volatile int AnalysisRegistryAnchorSource = 0;
 } // namespace clang::ssaf
 
 LLVM_DEFINE_REGISTRY(llvm::Registry<AnalysisBase>)

@@ -352,7 +352,7 @@ public:
 
 namespace clang::ssaf {
 // NOLINTNEXTLINE(misc-use-internal-linkage)
-const volatile int PointerFlowExtractorAnchorSource = 0;
+volatile int PointerFlowExtractorAnchorSource = 0;
 } // namespace clang::ssaf
 
 static TUSummaryExtractorRegistry::Add<PointerFlowTUSummaryExtractor>

@@ -95,7 +95,7 @@ void clang::ssaf::UnsafeBufferUsageTUSummaryExtractor::HandleTranslationUnit(
 }
 namespace clang::ssaf {
 // NOLINTNEXTLINE(misc-use-internal-linkage)
-const volatile int UnsafeBufferUsageExtractorAnchorSource = 0;
+volatile int UnsafeBufferUsageExtractorAnchorSource = 0;
 } // namespace clang::ssaf
 
 static clang::ssaf::TUSummaryExtractorRegistry::Add<

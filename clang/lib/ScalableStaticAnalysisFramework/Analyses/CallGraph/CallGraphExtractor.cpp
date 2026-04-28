@@ -100,5 +100,5 @@ static TUSummaryExtractorRegistry::Add<CallGraphExtractor>
 
 namespace clang::ssaf {
 // NOLINTNEXTLINE(misc-use-internal-linkage)
-const volatile int CallGraphExtractorAnchorSource = 0;
+volatile int CallGraphExtractorAnchorSource = 0;
 } // namespace clang::ssaf

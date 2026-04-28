@@ -55,7 +55,7 @@ Step 2: Register the extractor
 
   namespace clang::ssaf {
   // NOLINTNEXTLINE(misc-use-internal-linkage)
-  const volatile int MyExtractorAnchorSource = 0;
+  volatile int MyExtractorAnchorSource = 0;
   } // namespace clang::ssaf
 
   static TUSummaryExtractorRegistry::Add<MyExtractor>
@@ -127,7 +127,7 @@ Step 2: Register the format
 
   namespace clang::ssaf {
   // NOLINTNEXTLINE(misc-use-internal-linkage)
-  const volatile int MyFormatAnchorSource = 0;
+  volatile int MyFormatAnchorSource = 0;
   } // namespace clang::ssaf
 
   static SerializationFormatRegistry::Add<MyFormat>

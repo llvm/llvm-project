@@ -24,7 +24,7 @@ static SerializationFormatRegistry::Add<JSONFormat>
 namespace clang::ssaf {
 
 // NOLINTNEXTLINE(misc-use-internal-linkage)
-const volatile int JSONFormatAnchorSource = 0;
+volatile int JSONFormatAnchorSource = 0;
 
 //----------------------------------------------------------------------------
 // JSON Reader and Writer

@@ -128,5 +128,5 @@ static llvm::Registry<JSONFormat::FormatInfo>::Add<PointerFlowJSONFormatInfo>
 
 namespace clang::ssaf {
 // NOLINTNEXTLINE(misc-use-internal-linkage)
-const volatile int PointerFlowJSONFormatAnchorSource = 0;
+volatile int PointerFlowJSONFormatAnchorSource = 0;
 } // namespace clang::ssaf

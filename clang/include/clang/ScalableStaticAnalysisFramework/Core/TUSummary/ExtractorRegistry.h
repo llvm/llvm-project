@@ -11,7 +11,7 @@
 //
 //   namespace clang::ssaf {
 //   // NOLINTNEXTLINE(misc-use-internal-linkage)
-//   const volatile int MyExtractorAnchorSource = 0;
+//   volatile int MyExtractorAnchorSource = 0;
 //   } // namespace clang::ssaf
 //   static TUSummaryExtractorRegistry::Add<MyExtractor>
 //     X("MyExtractor", "My awesome extractor");

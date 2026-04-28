@@ -118,5 +118,5 @@ AnalysisRegistry::Add<PointerFlowAnalysis>
 
 namespace clang::ssaf {
 // NOLINTNEXTLINE(misc-use-internal-linkage)
-const volatile int PointerFlowAnalysisAnchorSource = 0;
+volatile int PointerFlowAnalysisAnchorSource = 0;
 } // namespace clang::ssaf

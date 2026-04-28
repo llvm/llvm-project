@@ -23,7 +23,7 @@
 //
 //   namespace clang::ssaf {
 //   // NOLINTNEXTLINE(misc-use-internal-linkage)
-//   const volatile int MyFormatAnchorSource = 0;
+//   volatile int MyFormatAnchorSource = 0;
 //   } // namespace clang::ssaf
 //   static SerializationFormatRegistry::Add<MyFormat>
 //     RegisterFormat("MyFormat", "My awesome serialization format");
