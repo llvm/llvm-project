@@ -139,6 +139,15 @@ defm : VPatBinaryW_VV<"int_riscv_vzip", "PseudoVZIP", AllZvzipVectors,
                       ExtraPreds = [HasStdExtZvzip],
                       requireMinimal = true>;
 
+// (vd (op vs2, vs1, passthru, mask, vl))
+def SDT_RISCVZip_VL : SDTypeProfile<1, 5, [SDTCisVec<0>, SDTCisVec<1>,
+                                           SDTCisSubVecOfVec<1, 0>,
+                                           SDTCisSameAs<1, 2>,
+                                           SDTCisSameAs<0, 3>,
+                                           SDTCVecEltisVT<4, i1>,
+                                           SDTCisSameNumEltsAs<1, 4>,
+                                           SDTCisVT<5, XLenVT>]>;
+
 def SDT_RISCVVecBinOp_VL : SDTypeProfile<1, 5, [SDTCisSameAs<0, 1>,
                                                 SDTCisSameAs<0, 2>,
                                                 SDTCisVec<0>,
@@ -150,8 +159,30 @@ def SDT_RISCVVecBinOp_VL : SDTypeProfile<1, 5, [SDTCisSameAs<0, 1>,
 let HasPassthruOp = true, HasMaskOp = true in {
 def vpaire_vl  : RVSDNode<"VPAIRE_VL", SDT_RISCVVecBinOp_VL>;
 def vpairo_vl  : RVSDNode<"VPAIRO_VL", SDT_RISCVVecBinOp_VL>;
+def vzip_vl    : RVSDNode<"VZIP_VL", SDT_RISCVZip_VL>;
 } // HasPassthruOp = true, HasMaskOp = true
 
+multiclass VPatVZIP<SDPatternOperator vop, string instruction_name> {
+  foreach VtiToWti = AllZvzipVectors in {
+    defvar vti = VtiToWti.Vti;
+    defvar wti = VtiToWti.Wti;
+    let Predicates = !listconcat([HasStdExtZvzip], GetVTypePredicates<vti>.Predicates) in {
+      def : Pat<(wti.Vector (vop
+                       (vti.Vector vti.RegClass:$rs1),
+                       (vti.Vector vti.RegClass:$rs2),
+                       (wti.Vector wti.RegClass:$passthru),
+                       (vti.Mask VMV0:$vm),
+                       VLOpFrag)),
+                (!cast<Instruction>(instruction_name#"_VV_"#vti.LMul.MX#"_MASK")
+                             wti.RegClass:$passthru,
+                             vti.RegClass:$rs1,
+                             vti.RegClass:$rs2,
+                             (vti.Mask VMV0:$vm), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
+    }
+  }
+}
+
+defm : VPatVZIP<vzip_vl, "PseudoVZIP">;
 defm : VPatBinaryVL_VV<vpaire_vl, "PseudoVPAIRE", AllVectors,
                        ExtraPreds = [HasStdExtZvzip],
                        requireMinimal = true>;
