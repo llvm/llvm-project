@@ -1913,3 +1913,19 @@ SourceRange ExplicitInstantiationDecl::getSourceRange() const {
   SourceLocation Begin = ExternLoc.isValid() ? ExternLoc : getLocation();
   return SourceRange(Begin, getEndLoc());
 }
+
+TemplateSpecializationKind clang::getTemplateSpecializationKind(const Decl *D) {
+  if (!D)
+    return TSK_Undeclared;
+
+  if (const auto *Record = dyn_cast<CXXRecordDecl>(D))
+    return Record->getTemplateSpecializationKind();
+  if (const auto *Function = dyn_cast<FunctionDecl>(D))
+    return Function->getTemplateSpecializationKind();
+  if (const auto *Var = dyn_cast<VarDecl>(D))
+    return Var->getTemplateSpecializationKind();
+  if (const auto *EID = dyn_cast<ExplicitInstantiationDecl>(D))
+    return EID->getTemplateSpecializationKind();
+
+  return TSK_Undeclared;
+}

@@ -4155,8 +4155,6 @@ static bool CheckTemplateSpecializationScope(Sema &S, NamedDecl *Specialized,
                                              SourceLocation Loc,
                                              bool IsPartialSpecialization);
 
-static TemplateSpecializationKind getTemplateSpecializationKind(Decl *D);
-
 static bool isTemplateArgumentTemplateParameter(const TemplateArgument &Arg,
                                                 unsigned Depth,
                                                 unsigned Index) {
@@ -8502,22 +8500,6 @@ Sema::CheckTemplateDeclScope(Scope *S, TemplateParameterList *TemplateParams) {
   return Diag(TemplateParams->getTemplateLoc(),
               diag::err_template_outside_namespace_or_class_scope)
     << TemplateParams->getSourceRange();
-}
-
-/// Determine what kind of template specialization the given declaration
-/// is.
-static TemplateSpecializationKind getTemplateSpecializationKind(Decl *D) {
-  if (!D)
-    return TSK_Undeclared;
-
-  if (CXXRecordDecl *Record = dyn_cast<CXXRecordDecl>(D))
-    return Record->getTemplateSpecializationKind();
-  if (FunctionDecl *Function = dyn_cast<FunctionDecl>(D))
-    return Function->getTemplateSpecializationKind();
-  if (VarDecl *Var = dyn_cast<VarDecl>(D))
-    return Var->getTemplateSpecializationKind();
-
-  return TSK_Undeclared;
 }
 
 /// Check whether a specialization is well-formed in the current

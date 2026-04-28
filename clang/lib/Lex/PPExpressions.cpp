@@ -1005,24 +1005,18 @@ getCXXStandardLibraryVersion(Preprocessor &PP, StringRef MacroName,
                                        0};
 }
 
-std::optional<uint64_t> Preprocessor::getStdLibCxxVersion() {
-  if (!CXXStandardLibraryVersion)
-    CXXStandardLibraryVersion = getCXXStandardLibraryVersion(
-        *this, "__GLIBCXX__", CXXStandardLibraryVersionInfo::LibStdCXX);
-  if (!CXXStandardLibraryVersion)
-    return std::nullopt;
+void Preprocessor::ComputeCXXStandardLibraryVersion() {
+  if (CXXStandardLibraryVersion)
+    return;
 
-  if (CXXStandardLibraryVersion->Lib ==
-      CXXStandardLibraryVersionInfo::LibStdCXX)
-    return CXXStandardLibraryVersion->Version;
-  return std::nullopt;
-}
+  static constexpr std::pair<StringRef, CXXStandardLibraryVersionInfo::Library>
+      VersionMacros[] = {
+          {"__GLIBCXX__", CXXStandardLibraryVersionInfo::LibStdCXX},
+          {"_MSVC_STL_UPDATE", CXXStandardLibraryVersionInfo::MsvcStl},
+      };
 
-bool Preprocessor::NeedsStdLibCxxWorkaroundBefore(uint64_t FixedVersion) {
-  assert(FixedVersion >= 2000'00'00 && FixedVersion <= 2100'00'00 &&
-         "invalid value for __GLIBCXX__");
-  std::optional<std::uint64_t> Ver = getStdLibCxxVersion();
-  if (!Ver)
-    return false;
-  return *Ver < FixedVersion;
+  for (const auto &[MacroName, Lib] : VersionMacros)
+    if (std::optional<CXXStandardLibraryVersionInfo> VersionInfo =
+            getCXXStandardLibraryVersion(*this, MacroName, Lib))
+      CXXStandardLibraryVersion = VersionInfo;
 }

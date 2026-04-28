@@ -3538,6 +3538,10 @@ public:
   static bool classofKind(Kind K) { return K == ExplicitInstantiation; }
 };
 
+/// Determine what kind of template specialization the given declaration
+/// is.
+TemplateSpecializationKind getTemplateSpecializationKind(const Decl *D);
+
 } // namespace clang
 
 #endif // LLVM_CLANG_AST_DECLTEMPLATE_H

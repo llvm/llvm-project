@@ -446,16 +446,14 @@ Decl *Parser::ParseExportDeclaration() {
 void Parser::CheckUnbracedLinkageOrExportDeclaration(
     Decl *LinkageOrExportDecl) {
   const auto *DC = cast<DeclContext>(LinkageOrExportDecl);
-  if (DC->decls_empty())
-    return;
-
+  assert(!DC->decls_empty());
   const Decl *D = *DC->decls_begin();
 
   // Nested export declarations are diagnosed elsewhere.
   if (isa<LinkageSpecDecl>(LinkageOrExportDecl) && isa<ExportDecl>(D)) {
     Diag(LinkageOrExportDecl->getLocation(),
          diag::err_invalid_decl_in_linkage_spec)
-        << 2;
+        << /*export declaration*/ 2;
     return;
   }
 
@@ -464,24 +462,13 @@ void Parser::CheckUnbracedLinkageOrExportDeclaration(
   //     The name-declaration of an export-declaration shall not declare a
   //     partial specialization.
   //
-  // There's no equivalent wording for linkage-specification.
+  // But there's no equivalent wording for linkage-specification.
   if (isa<ClassTemplatePartialSpecializationDecl,
           VarTemplatePartialSpecializationDecl>(D) &&
       isa<LinkageSpecDecl>(LinkageOrExportDecl))
     return;
 
-  TemplateSpecializationKind TSK = [&] {
-    if (const auto *EID = dyn_cast<ExplicitInstantiationDecl>(D))
-      return EID->getTemplateSpecializationKind();
-    if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(D))
-      return CTSD->getTemplateSpecializationKind();
-    if (const auto *VTSD = dyn_cast<VarTemplateSpecializationDecl>(D))
-      return VTSD->getTemplateSpecializationKind();
-    if (const auto *FD = dyn_cast<FunctionDecl>(D))
-      return FD->getTemplateSpecializationKind();
-    return TSK_Undeclared;
-  }();
-
+  TemplateSpecializationKind TSK = getTemplateSpecializationKind(D);
   if (TSK == TSK_Undeclared)
     return;
 
@@ -494,26 +481,12 @@ void Parser::CheckUnbracedLinkageOrExportDeclaration(
   }
 
   if (const auto *LS = dyn_cast<LinkageSpecDecl>(LinkageOrExportDecl)) {
-    // HACK: Old versions of the MSVC STL used to have linkage specifications
+    // Old versions of the MSVC STL used to have linkage specifications
     // on some template specializations, but it would be too disruptive to
     // reject them. This was fixed in
     // https://github.com/microsoft/STL/pull/6074, merged on 2026-02-11.
-    bool IsStandardLibrarySymbolInOldMSVCSTL = [&] {
-      const MacroInfo *MSVCSTLUpdateMacro =
-          PP.getMacroInfo(PP.getIdentifierInfo("_MSVC_STL_UPDATE"));
-
-      if (!MSVCSTLUpdateMacro || MSVCSTLUpdateMacro->getNumTokens() != 1)
-        return false;
-
-      bool Invalid;
-      std::string MSVCSTLUpdate =
-          PP.getSpelling(MSVCSTLUpdateMacro->getReplacementToken(0), &Invalid);
-      return !Invalid && MSVCSTLUpdate.size() == 7 &&
-             MSVCSTLUpdate < "202603L" &&
-             LinkageOrExportDecl->isInStdNamespace();
-    }();
-
-    if (IsStandardLibrarySymbolInOldMSVCSTL)
+    if (LinkageOrExportDecl->isInStdNamespace() &&
+        getPreprocessor().NeedsMsvcStlWorkaroundBefore(2026'03))
       return;
 
     Diag(LS->getLocation(), diag::err_invalid_decl_in_linkage_spec)
