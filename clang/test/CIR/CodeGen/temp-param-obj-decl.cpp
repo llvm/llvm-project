@@ -8,41 +8,17 @@
 struct HasMem { int x;};
 
 // CIR-DAG: cir.global "private" constant linkonce_odr comdat @_ZTAXtl6HasMemLi3EEE = #cir.const_record<{#cir.int<3> : !s32i}> : !rec_HasMem
+// CIR-DAG: cir.global external @ptr = #cir.global_view<@_ZTAXtl6HasMemLi3EEE> : !cir.ptr<!rec_HasMem>
 
 // LLVM-BOTH-DAG: @_ZTAXtl6HasMemLi1EEE = linkonce_odr constant %struct.HasMem { i32 1 }, comdat
 // LLVM-BOTH-DAG: @_ZTAXtl6HasMemLi2EEE = linkonce_odr constant %struct.HasMem { i32 2 }, comdat
 // LLVM-BOTH-DAG: @_ZTAXtl6HasMemLi3EEE = linkonce_odr constant %struct.HasMem { i32 3 }, comdat
-
-// LLVM-DAG: @ptr = global ptr null
-// OGCG-DAG: @ptr = global ptr @_ZTAXtl6HasMemLi3EEE
+// LLVM-BOTH-DAG: @ptr = global ptr @_ZTAXtl6HasMemLi3EEE
 
 template <HasMem m>
 constexpr const HasMem *get_ptr() { return &m; }
 
 const auto *ptr = get_ptr<HasMem{3}>();
-
-// CIR-LABEL: cir.func {{.*}}@_Z7get_ptrIXtl6HasMemLi3EEEEPKS0_v()
-// CIR:  %[[RET_ALLOCA:.*]] = cir.alloca !cir.ptr<!rec_HasMem>, !cir.ptr<!cir.ptr<!rec_HasMem>>
-// CIR:  %[[GET_GLOB:.*]] = cir.get_global @_ZTAXtl6HasMemLi3EEE : !cir.ptr<!rec_HasMem>
-// CIR:  cir.store %[[GET_GLOB]], %[[RET_ALLOCA]]
-// CIR:  %[[RET_LOAD:.*]] = cir.load %[[RET_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_HasMem>>, !cir.ptr<!rec_HasMem>
-// CIR:  cir.return %[[RET_LOAD]] : !cir.ptr<!rec_HasMem>
-//
-// LLVM-LABEL: define {{.*}}@_Z7get_ptrIXtl6HasMemLi3EEEEPKS0_v()
-// LLVM: %[[RET_ALLOCA:.*]] = alloca ptr
-// LLVM: store ptr @_ZTAXtl6HasMemLi3EEE, ptr %[[RET_ALLOCA]]
-// LLVM: %[[RET_LOAD:.*]] = load ptr, ptr %[[RET_ALLOCA]]
-// LLVM: ret ptr %[[RET_LOAD]]
-//
-// CIR-DAG: cir.global external @ptr = #cir.ptr<null> : !cir.ptr<!rec_HasMem>
-// CIR-LABEL: cir.func {{.*}}@__cxx_global_var_init
-// CIR:   %[[GET_GLOB:.*]] = cir.get_global @ptr : !cir.ptr<!cir.ptr<!rec_HasMem>>
-// CIR:   %[[CALL:.*]] = cir.call @_Z7get_ptrIXtl6HasMemLi3EEEEPKS0_v() : ()
-// CIR:   cir.store {{.*}}%[[CALL]], %[[GET_GLOB]] : !cir.ptr<!rec_HasMem>, !cir.ptr<!cir.ptr<!rec_HasMem>>
-//
-// LLVM-LABEL: define {{.*}}@__cxx_global_var_init
-// LLVM:   %[[CALL:.*]] = call{{.*}} @_Z7get_ptrIXtl6HasMemLi3EEEEPKS0_v()
-// LLVM:   store ptr %[[CALL]], ptr @ptr
 
 // CIR-DAG: cir.global "private" constant linkonce_odr comdat @_ZTAXtl6HasMemLi1EEE = #cir.const_record<{#cir.int<1> : !s32i}> : !rec_HasMem
 // CIR-DAG: cir.global "private" constant linkonce_odr comdat @_ZTAXtl6HasMemLi2EEE = #cir.const_record<{#cir.int<2> : !s32i}> : !rec_HasMem
