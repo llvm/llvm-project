@@ -2,7 +2,7 @@
 // modules.
 
 // https://github.com/llvm/llvm-project/pull/194475#issuecomment-4331347690
-// UNSUPPORTED: aarch64
+// UNSUPPORTED: target={{.*}}aarch64{{.*}}, {{.*}}arm64{{.*}}
 
 // The standard library modules manifest (libc++.modules.json) is discovered
 // relative to the installed C++ standard library runtime libraries
