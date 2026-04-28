@@ -69,7 +69,7 @@ int main()
 // CHECK-NEXT:    [[STOREDV:%.*]] = zext i1 [[CMP]] to i8
 // CHECK-NEXT:    store i8 [[STOREDV]], ptr [[DOTMIN_LESS_MAX_ASCAST]], align 1
 // CHECK-NEXT:    [[TMP6:%.*]] = load i8, ptr [[DOTMIN_LESS_MAX_ASCAST]], align 1
-// CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP6]] to i1
+// CHECK-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP6]], 0
 // CHECK-NEXT:    br i1 [[LOADEDV]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
 // CHECK:       cond.true:
 // CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTLB_MIN_ASCAST]], align 4
