@@ -237,6 +237,12 @@ Non-comprehensive list of changes in this release
   enabling tools such as language servers and refactoring engines to accurately
   map source locations back to explicit instantiation sites.
 
+- On all platforms excluding Windows and AIX, Clang now builds as a large shared
+  library, ``libclang-cpp``, by default. To revert to the old behavior of
+  producing and linking static libraries, pass ``-DCLANG_LINK_CLANG_DYLIB=OFF``
+  to CMake when configuring your build. The new behavior matches LLVM, which
+  also builds as a large shared library.
+
 New Compiler Flags
 ------------------
 - New option ``-fms-anonymous-structs`` / ``-fno-ms-anonymous-structs`` added
