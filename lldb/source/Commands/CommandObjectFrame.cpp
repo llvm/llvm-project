@@ -442,13 +442,13 @@ may even involve JITing and running code in the target program.)");
   std::optional<std::string> GetRepeatCommand(Args &current_command_args,
                                               uint32_t index) override {
     Args repeat_args;
-    auto increment_option = [&](llvm::StringRef option) {
+    auto increment_option =
+        [&](llvm::StringRef option) -> std::optional<std::string> {
       uint32_t num;
       bool failed = option.getAsInteger(10, num);
       if (failed)
-        return false;
-      repeat_args.AppendArgument(llvm::utostr(num + 1));
-      return true;
+        return std::nullopt;
+      return llvm::utostr(num + 1);
     };
 
     bool has_depth_option = false;
@@ -458,8 +458,10 @@ may even involve JITing and running code in the target program.)");
 
       if (increment_next_arg) {
         increment_next_arg = false;
-        if (increment_option(arg))
+        if (auto maybe_opt = increment_option(arg)) {
+          repeat_args.AppendArgument(*maybe_opt);
           continue;
+        }
       }
 
       if (arg == "--depth" || arg == "-D") {
@@ -468,9 +470,12 @@ may even involve JITing and running code in the target program.)");
         has_depth_option = true;
         continue;
       }
-      if (arg.consume_front("-D") && increment_option(arg)) {
-        has_depth_option = true;
-        continue;
+      if (arg.consume_front("-D")) {
+        if (auto maybe_opt = increment_option(arg)) {
+          repeat_args.AppendArgument(llvm::formatv("-D{0}", *maybe_opt).str());
+          has_depth_option = true;
+          continue;
+        }
       }
 
       repeat_args.AppendArgument(arg);

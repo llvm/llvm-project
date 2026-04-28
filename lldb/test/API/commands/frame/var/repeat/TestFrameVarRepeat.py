@@ -10,10 +10,14 @@ class TestCase(TestBase):
         lldbutil.run_to_source_breakpoint(
             self, "break here", lldb.SBFileSpec("main.cpp")
         )
+        self.do_test("--depth ")
+        self.do_test("-D ")
+        self.do_test("-D")
 
+    def do_test(self, depth_option):
         # Start with --depth 2, shows a, b, and c, but but not d.
         self.expect(
-            "frame variable --depth 2 a",
+            f"frame variable {depth_option}2 a",
             inHistory=True,
             patterns=[r"\(A\) a = {", "b = {", "c = {", r"(?!.*d = {)"],
         )
