@@ -274,7 +274,7 @@ void DwarfCompileUnit::addLocationAttribute(
       // 16-bit platforms like MSP430 and AVR take this path, so sink this
       // assert to platforms that use it.
       auto GetPointerSizedFormAndOp = [this]() {
-        unsigned PointerSize = Asm->MAI->getCodePointerSize();
+        unsigned PointerSize = Asm->MAI.getCodePointerSize();
         assert((PointerSize == 4 || PointerSize == 8) &&
                "Add support for other sizes if necessary");
         struct FormAndOp {

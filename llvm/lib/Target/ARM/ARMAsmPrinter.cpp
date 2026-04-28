@@ -1366,7 +1366,7 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
       PadBefore = -MI->getOperand(4).getImm() - 8;
       break;
     }
-    if (MAI->getExceptionHandlingType() == ExceptionHandling::ARM) {
+    if (MAI.getExceptionHandlingType() == ExceptionHandling::ARM) {
       if (PadBefore)
         ATS.emitPad(PadBefore);
       ATS.emitRegSave(RegList, Opc == ARM::VSTMDDB_UPD);
@@ -1417,7 +1417,7 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
         break;
       }
 
-      if (MAI->getExceptionHandlingType() == ExceptionHandling::ARM) {
+      if (MAI.getExceptionHandlingType() == ExceptionHandling::ARM) {
         if (DstReg == FramePtr && FramePtr != ARM::SP)
           // Set-up of the frame pointer. Positive values correspond to "add"
           // instruction.
