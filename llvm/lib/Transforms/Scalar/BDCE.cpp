@@ -15,7 +15,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/BDCE.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -27,7 +26,6 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;
@@ -105,11 +103,6 @@ static bool bitTrackingDCE(Function &F, DemandedBits &DB) {
     if (I.mayHaveSideEffects() && I.use_empty())
       continue;
 
-    // Avoid incorrect replacement of self-referential values in unreachable
-    // blocks.
-    if (llvm::is_contained(I.operands(), &I))
-      continue;
-
     // Remove instructions that are dead, either because they were not reached
     // during analysis or have no demanded bits.
     if (DB.isInstructionDead(&I) ||
@@ -126,7 +119,9 @@ static bool bitTrackingDCE(Function &F, DemandedBits &DB) {
       const uint32_t SrcBitSize = SE->getSrcTy()->getScalarSizeInBits();
       auto *const DstTy = SE->getDestTy();
       const uint32_t DestBitSize = DstTy->getScalarSizeInBits();
-      if (Demanded.countl_zero() >= (DestBitSize - SrcBitSize)) {
+      // Avoid incorrect replacement of self-referential
+      if (SE != SE->getOperand(0) &&
+          Demanded.countl_zero() >= (DestBitSize - SrcBitSize)) {
         clearAssumptionsOfUsers(SE, DB);
         IRBuilder<> Builder(SE);
         I.replaceAllUsesWith(
@@ -158,7 +153,7 @@ static bool bitTrackingDCE(Function &F, DemandedBits &DB) {
             break;
           }
 
-          if (CanBeSimplified) {
+          if (CanBeSimplified && BO != BO->getOperand(0)) {
             clearAssumptionsOfUsers(BO, DB);
             BO->replaceAllUsesWith(BO->getOperand(0));
             Worklist.push_back(BO);
