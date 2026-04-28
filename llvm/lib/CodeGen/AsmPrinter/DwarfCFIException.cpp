@@ -37,7 +37,7 @@ void DwarfCFIException::addPersonality(const GlobalValue *Personality) {
 /// content.
 void DwarfCFIException::endModule() {
   // SjLj uses this pass and it doesn't need this info.
-  if (!Asm->MAI->usesCFIForEH())
+  if (!Asm->MAI.usesCFIForEH())
     return;
 
   const TargetLoweringObjectFile &TLOF = Asm->getObjFileLowering();
