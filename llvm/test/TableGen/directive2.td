@@ -47,6 +47,7 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-EMPTY:
 // CHECK-NEXT:  #include "llvm/ADT/ArrayRef.h"
 // CHECK-NEXT:  #include "llvm/ADT/Sequence.h"
+// CHECK-NEXT:  #include "llvm/ADT/STLExtras.h"
 // CHECK-NEXT:  #include "llvm/ADT/StringRef.h"
 // CHECK-NEXT:  #include "llvm/Frontend/Directive/Spelling.h"
 // CHECK-NEXT:  #include "llvm/Support/Compiler.h"
@@ -118,10 +119,9 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-NEXT:    case TDLD_dira:
 // CHECK-NEXT:      return Association::Block;
 // CHECK-NEXT:    } // switch (Dir)
-// CHECK-NEXT:  #if __clang__ || !__GNUC__ || __GNUC__ >= 9
-// CHECK-NEXT:    // GCC < 9 fails to compile this.
-// CHECK-NEXT:    llvm_unreachable("Unexpected directive");
-// CHECK-NEXT:  #endif
+// CHECK-NEXT:    assert(llvm::to_underlying(Dir) >= llvm::to_underlying(Directive::First_) &&
+// CHECK-NEXT:           llvm::to_underlying(Dir) <= llvm::to_underlying(Directive::Last_) &&
+// CHECK-NEXT:           "Unexpected directive");
 // CHECK-NEXT:  }
 // CHECK-EMPTY:
 // CHECK-NEXT:  constexpr Category getDirectiveCategory(Directive Dir) {
@@ -129,10 +129,9 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-NEXT:    case TDLD_dira:
 // CHECK-NEXT:      return Category::Declarative;
 // CHECK-NEXT:    } // switch (Dir)
-// CHECK-NEXT:  #if __clang__ || !__GNUC__ || __GNUC__ >= 9
-// CHECK-NEXT:    // GCC < 9 fails to compile this.
-// CHECK-NEXT:    llvm_unreachable("Unexpected directive");
-// CHECK-NEXT:  #endif
+// CHECK-NEXT:    assert(llvm::to_underlying(Dir) >= llvm::to_underlying(Directive::First_) &&
+// CHECK-NEXT:           llvm::to_underlying(Dir) <= llvm::to_underlying(Directive::Last_) &&
+// CHECK-NEXT:           "Unexpected directive");
 // CHECK-NEXT:  }
 // CHECK-EMPTY:
 // CHECK-NEXT:  constexpr SourceLanguage getDirectiveLanguages(Directive D) {
@@ -140,10 +139,9 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-NEXT:    case TDLD_dira:
 // CHECK-NEXT:      return SourceLanguage::C | SourceLanguage::Fortran;
 // CHECK-NEXT:    } // switch(D)
-// CHECK-NEXT:  #if __clang__ || !__GNUC__ || __GNUC__ >= 9
-// CHECK-NEXT:    // GCC < 9 fails to compile this.
-// CHECK-NEXT:    llvm_unreachable("Unexpected directive");
-// CHECK-NEXT:  #endif
+// CHECK-NEXT:    assert(llvm::to_underlying(D) >= llvm::to_underlying(Directive::First_) &&
+// CHECK-NEXT:           llvm::to_underlying(D) <= llvm::to_underlying(Directive::Last_) &&
+// CHECK-NEXT:           "Unexpected directive");
 // CHECK-NEXT:  }
 // CHECK-EMPTY:
 // CHECK-NEXT:  // Enumeration helper functions
