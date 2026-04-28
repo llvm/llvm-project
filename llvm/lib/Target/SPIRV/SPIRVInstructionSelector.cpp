@@ -2598,6 +2598,36 @@ bool SPIRVInstructionSelector::selectAddrSpaceCast(Register ResVReg,
                        isGenericCastablePtr(DstSC)
                    ? static_cast<uint32_t>(SPIRV::Opcode::GenericCastToPtr)
                    : 0);
+
+    if (STI.canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers) &&
+        !SpecOpcode) {
+      if (SrcSC == SPIRV::StorageClass::CodeSectionINTEL &&
+          DstSC == SPIRV::StorageClass::Generic) {
+        SpecOpcode = static_cast<uint32_t>(SPIRV::Opcode::PtrCastToGeneric);
+      } else if (SrcSC == SPIRV::StorageClass::Generic &&
+                 DstSC == SPIRV::StorageClass::CodeSectionINTEL) {
+        SpecOpcode = static_cast<uint32_t>(SPIRV::Opcode::GenericCastToPtr);
+      } else if ((SrcSC == SPIRV::StorageClass::CodeSectionINTEL &&
+                  DstSC == SPIRV::StorageClass::CrossWorkgroup) ||
+                 (SrcSC == SPIRV::StorageClass::CrossWorkgroup &&
+                  DstSC == SPIRV::StorageClass::CodeSectionINTEL)) {
+        // For P9 <-> P1, cast through Generic via two OpSpecConstantOp
+        unsigned FirstOpcode = (SrcSC == SPIRV::StorageClass::CodeSectionINTEL)
+            ? static_cast<uint32_t>(SPIRV::Opcode::PtrCastToGeneric)
+            : static_cast<uint32_t>(SPIRV::Opcode::PtrCastToGeneric);
+        unsigned SecondOpcode = static_cast<uint32_t>(SPIRV::Opcode::GenericCastToPtr);
+
+        Register GenericTypeReg = getUcharPtrTypeReg(I, SPIRV::StorageClass::Generic);
+        Register IntermediateReg = MRI->createVirtualRegister(&SPIRV::IDRegClass);
+
+        buildSpecConstantOp(I, IntermediateReg, SrcPtr, GenericTypeReg, FirstOpcode)
+            .constrainAllUses(TII, TRI, RBI);
+        buildSpecConstantOp(I, ResVReg, IntermediateReg, getUcharPtrTypeReg(I, DstSC), SecondOpcode)
+            .constrainAllUses(TII, TRI, RBI);
+        return true;
+      }
+    }
+
     // TODO: OpConstantComposite expects i8*, so we are forced to forget a
     // correct value of ResType and use general i8* instead. Maybe this should
     // be addressed in the emit-intrinsic step to infer a correct
@@ -2663,6 +2693,54 @@ bool SPIRVInstructionSelector::selectAddrSpaceCast(Register ResVReg,
     return selectUnOp(ResVReg, ResType, I, SPIRV::OpPtrCastToGeneric);
   if (SrcSC == SPIRV::StorageClass::Generic && isUSMStorageClass(DstSC))
     return selectUnOp(ResVReg, ResType, I, SPIRV::OpGenericCastToPtr);
+
+  // Handle function pointer casts with SPV_INTEL_function_pointers extension.
+  if (STI.canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers)) {
+    // P4 <-> P9 can be handled directly
+    if (SrcSC == SPIRV::StorageClass::CodeSectionINTEL &&
+        DstSC == SPIRV::StorageClass::Generic)
+      return selectUnOp(ResVReg, ResType, I, SPIRV::OpPtrCastToGeneric);
+    if (SrcSC == SPIRV::StorageClass::Generic &&
+        DstSC == SPIRV::StorageClass::CodeSectionINTEL)
+      return selectUnOp(ResVReg, ResType, I, SPIRV::OpGenericCastToPtr);
+
+    // P1 <-> P9, cast through Generic as intermediary
+    if (SrcSC == SPIRV::StorageClass::CodeSectionINTEL &&
+        DstSC == SPIRV::StorageClass::CrossWorkgroup) {
+      SPIRVTypeInst GenericPtrTy =
+          GR.changePointerStorageClass(SrcPtrTy, SPIRV::StorageClass::Generic, I);
+      Register Tmp = createVirtualRegister(GenericPtrTy, &GR, MRI, MRI->getMF());
+      BuildMI(BB, I, DL, TII.get(SPIRV::OpPtrCastToGeneric))
+          .addDef(Tmp)
+          .addUse(GR.getSPIRVTypeID(GenericPtrTy))
+          .addUse(SrcPtr)
+          .constrainAllUses(TII, TRI, RBI);
+      BuildMI(BB, I, DL, TII.get(SPIRV::OpGenericCastToPtr))
+          .addDef(ResVReg)
+          .addUse(GR.getSPIRVTypeID(ResType))
+          .addUse(Tmp)
+          .constrainAllUses(TII, TRI, RBI);
+      return true;
+    }
+
+    if (SrcSC == SPIRV::StorageClass::CrossWorkgroup &&
+        DstSC == SPIRV::StorageClass::CodeSectionINTEL) {
+      SPIRVTypeInst GenericPtrTy =
+          GR.changePointerStorageClass(SrcPtrTy, SPIRV::StorageClass::Generic, I);
+      Register Tmp = createVirtualRegister(GenericPtrTy, &GR, MRI, MRI->getMF());
+      BuildMI(BB, I, DL, TII.get(SPIRV::OpPtrCastToGeneric))
+          .addDef(Tmp)
+          .addUse(GR.getSPIRVTypeID(GenericPtrTy))
+          .addUse(SrcPtr)
+          .constrainAllUses(TII, TRI, RBI);
+      BuildMI(BB, I, DL, TII.get(SPIRV::OpGenericCastToPtr))
+          .addDef(ResVReg)
+          .addUse(GR.getSPIRVTypeID(ResType))
+          .addUse(Tmp)
+          .constrainAllUses(TII, TRI, RBI);
+      return true;
+    }
+  }
 
   // Bitcast for pointers requires that the address spaces must match
   return false;

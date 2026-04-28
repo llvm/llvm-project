@@ -299,11 +299,30 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .unsupportedIf(typeIs(0, p9))
       .legalIf(all(typeInSet(0, allPtrs), typeInSet(1, allIntScalars)));
 
-  getActionDefinitionsBuilder(G_ADDRSPACE_CAST)
-      .unsupportedIf(
-          LegalityPredicates::any(all(typeIs(0, p9), typeIsNot(1, p9)),
-                                  all(typeIsNot(0, p9), typeIs(1, p9))))
-      .legalForCartesianProduct(allPtrs, allPtrs);
+  if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers)) {
+    // With function pointer extension: allow casts between p1 (CrossWorkgroup),
+    // p4 (Generic), and p9 (CodeSectionINTEL)
+    getActionDefinitionsBuilder(G_ADDRSPACE_CAST)
+        .unsupportedIf(LegalityPredicates::any(
+            // Disallow p9 <-> other pointers except p1, p4, p9
+            all(typeIs(0, p9),
+                LegalityPredicates::any(typeIs(1, p0), typeIs(1, p2),
+                                        typeIs(1, p3), typeIs(1, p5),
+                                        typeIs(1, p6), typeIs(1, p7),
+                                        typeIs(1, p8))),
+            all(typeIs(1, p9),
+                LegalityPredicates::any(typeIs(0, p0), typeIs(0, p2),
+                                        typeIs(0, p3), typeIs(0, p5),
+                                        typeIs(0, p6), typeIs(0, p7),
+                                        typeIs(0, p8)))))
+        .legalForCartesianProduct(allPtrs, allPtrs);
+  } else {
+    getActionDefinitionsBuilder(G_ADDRSPACE_CAST)
+        .unsupportedIf(
+            LegalityPredicates::any(all(typeIs(0, p9), typeIsNot(1, p9)),
+                                    all(typeIsNot(0, p9), typeIs(1, p9))))
+        .legalForCartesianProduct(allPtrs, allPtrs);
+  }
 
   // Should we be legalizing bad scalar sizes like s5 here instead
   // of handling them in the instruction selector?
