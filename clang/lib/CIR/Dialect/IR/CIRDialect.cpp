@@ -375,6 +375,12 @@ LogicalResult cir::BreakOp::verify() {
 // LocalInitOp
 //===----------------------------------------------------------------------===//
 
+LogicalResult cir::LocalInitOp::verify() {
+  if (!getOperation()->getParentOfType<FuncOp>())
+    return emitOpError("must be inside of a 'cir.func'");
+  return success();
+}
+
 LogicalResult
 cir::LocalInitOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   cir::GlobalOp global = getReferencedGlobal(symbolTable);
@@ -385,10 +391,7 @@ cir::LocalInitOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   if (getTls() && !global.getTlsModel())
     return emitOpError("access to global not marked thread local");
 
-  bool isStaticLocal = getStaticLocal();
-  bool globalIsStaticLocal = global.getStaticLocalGuard().has_value();
-
-  if (isStaticLocal != globalIsStaticLocal)
+  if (!global.getStaticLocalGuard().has_value())
     return emitOpError("static_local attribute mismatch");
 
   return success();
@@ -767,6 +770,11 @@ static bool isIntOrBoolCast(cir::CastOp op) {
          kind == cir::CastKind::int_to_bool || kind == cir::CastKind::integral;
 }
 
+static bool isCirFunctionPointerType(mlir::Type ty) {
+  const auto ptrTy = mlir::dyn_cast<cir::PointerType>(ty);
+  return ptrTy && mlir::isa<cir::FuncType>(ptrTy.getPointee());
+}
+
 static Value tryFoldCastChain(cir::CastOp op) {
   cir::CastOp head = op, tail = op;
 
@@ -777,21 +785,37 @@ static Value tryFoldCastChain(cir::CastOp op) {
     op = head.getSrc().getDefiningOp<cir::CastOp>();
   }
 
-  if (head == tail)
+  if (head != tail) {
+    // if bool_to_int -> ...  -> int_to_bool: take the bool
+    // as we had it was before all casts
+    if (head.getKind() == cir::CastKind::bool_to_int &&
+        tail.getKind() == cir::CastKind::int_to_bool)
+      return head.getSrc();
+
+    // if int_to_bool -> ...  -> int_to_bool: take the result
+    // of the first one, as no other casts (and ext casts as well)
+    // don't change the first result
+    if (head.getKind() == cir::CastKind::int_to_bool &&
+        tail.getKind() == cir::CastKind::int_to_bool)
+      return head.getResult();
+
     return {};
+  }
 
-  // if bool_to_int -> ...  -> int_to_bool: take the bool
-  // as we had it was before all casts
-  if (head.getKind() == cir::CastKind::bool_to_int &&
-      tail.getKind() == cir::CastKind::int_to_bool)
-    return head.getSrc();
-
-  // if int_to_bool -> ...  -> int_to_bool: take the result
-  // of the first one, as no other casts (and ext casts as well)
-  // don't change the first result
-  if (head.getKind() == cir::CastKind::int_to_bool &&
-      tail.getKind() == cir::CastKind::int_to_bool)
-    return head.getResult();
+  // Bitcast round-trip on function pointers: T0 -> T1 -> T0 (e.g. no-proto
+  // redeclaration vs. actual prototype). Restrict to function pointers so
+  // other pointer bitcast chains are unchanged.
+  if (tail.getKind() == cir::CastKind::bitcast) {
+    auto *inner = tail.getSrc().getDefiningOp();
+    if (inner && isCirFunctionPointerType(tail.getType())) {
+      auto innerCast = mlir::dyn_cast<cir::CastOp>(inner);
+      if (innerCast && innerCast.getKind() == cir::CastKind::bitcast &&
+          innerCast.getSrc().getType() == tail.getType() &&
+          innerCast.getType() == tail.getSrc().getType()) {
+        return innerCast.getSrc();
+      }
+    }
+  }
 
   return {};
 }
@@ -2178,6 +2202,23 @@ void cir::FuncOp::build(OpBuilder &builder, OperationState &result,
       GlobalLinkageKindAttr::get(builder.getContext(), linkage));
 }
 
+//===----------------------------------------------------------------------===//
+// AnnotationAttr
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+cir::AnnotationAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                            mlir::StringAttr name, mlir::ArrayAttr args) {
+  if (!args)
+    return success();
+  for (mlir::Attribute arg : args) {
+    if (!isa<mlir::StringAttr, mlir::IntegerAttr>(arg))
+      return emitError() << "annotation args must be StringAttr or IntegerAttr,"
+                         << " got " << arg;
+  }
+  return success();
+}
+
 ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   llvm::SMLoc loc = parser.getCurrentLocation();
   mlir::Builder &builder = parser.getBuilder();
@@ -2377,6 +2418,13 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
     state.addAttribute(CIRDialect::getSideEffectAttrName(), attr);
   }
 
+  // Parse optional annotations attribute (an ArrayAttr of AnnotationAttr).
+  mlir::StringAttr annotationsNameAttr = getAnnotationsAttrName(state.name);
+  mlir::ArrayAttr annotationsAttr;
+  if (parser.parseOptionalAttribute(annotationsAttr).has_value() &&
+      annotationsAttr)
+    state.addAttribute(annotationsNameAttr, annotationsAttr);
+
   // Parse the rest of the attributes.
   NamedAttrList parsedAttrs;
   if (parser.parseOptionalAttrDictWithKeyword(parsedAttrs))
@@ -2550,6 +2598,11 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
     p << " side_effect(";
     p << stringifySideEffect(*sideEffect);
     p << ")";
+  }
+
+  if (mlir::ArrayAttr annotations = getAnnotationsAttr()) {
+    p << ' ';
+    p.printAttribute(annotations);
   }
 
   function_interface_impl::printFunctionAttributes(
@@ -3049,9 +3102,6 @@ LogicalResult cir::CopyOp::verify() {
   if (!getType().getPointee().hasTrait<DataLayoutTypeInterface::Trait>())
     return emitError() << "missing data layout for pointee type";
 
-  if (getSrc() == getDst())
-    return emitError() << "source and destination are the same";
-
   if (getSkipTailPadding() &&
       !mlir::isa<cir::RecordType>(getType().getPointee()))
     return emitError()
@@ -3319,6 +3369,20 @@ OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
         cmpResult = mlir::cast<cir::FPAttr>(lhsAttr).getValue() !=
                     mlir::cast<cir::FPAttr>(rhsAttr).getValue();
       }
+      break;
+    }
+    case cir::CmpOpKind::one: {
+      llvm::APFloat::cmpResult cr =
+          mlir::cast<cir::FPAttr>(lhsAttr).getValue().compare(
+              mlir::cast<cir::FPAttr>(rhsAttr).getValue());
+      cmpResult =
+          cr != llvm::APFloat::cmpUnordered && cr != llvm::APFloat::cmpEqual;
+      break;
+    }
+    case cir::CmpOpKind::uno: {
+      cmpResult = mlir::cast<cir::FPAttr>(lhsAttr).getValue().compare(
+                      mlir::cast<cir::FPAttr>(rhsAttr).getValue()) ==
+                  llvm::APFloat::cmpUnordered;
       break;
     }
     }

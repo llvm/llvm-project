@@ -1,4 +1,5 @@
-add_llvm_component_library(LLVMDirectXPointerTypeAnalysis
+add_llvm_component_library(LLVMDirectXIRPasses
+  DXILDebugInfo.cpp
   PointerTypeAnalysis.cpp
 
   LINK_COMPONENTS

@@ -12,6 +12,7 @@
 
 #include "RISCVSubtarget.h"
 #include "GISel/RISCVCallLowering.h"
+#include "GISel/RISCVInlineAsmLowering.h"
 #include "GISel/RISCVLegalizerInfo.h"
 #include "RISCV.h"
 #include "RISCVFrameLowering.h"
@@ -129,7 +130,8 @@ const SelectionDAGTargetInfo *RISCVSubtarget::getSelectionDAGInfo() const {
 
 const InlineAsmLowering *RISCVSubtarget::getInlineAsmLowering() const {
   if (!InlineAsmLoweringInfo)
-    InlineAsmLoweringInfo.reset(new InlineAsmLowering(getTargetLowering()));
+    InlineAsmLoweringInfo.reset(
+        new RISCVInlineAsmLowering(getTargetLowering()));
   return InlineAsmLoweringInfo.get();
 }
 

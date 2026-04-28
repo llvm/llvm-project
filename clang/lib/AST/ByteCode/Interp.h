@@ -196,6 +196,12 @@ bool CheckShift(InterpState &S, CodePtr OpPC, const LT &LHS, const RT &RHS,
 /// Checks if Div/Rem operation on LHS and RHS is valid.
 template <typename T>
 bool CheckDivRem(InterpState &S, CodePtr OpPC, const T &LHS, const T &RHS) {
+
+  if constexpr (isIntegralOrPointer<T>()) {
+    if (!LHS.isNumber() || !RHS.isNumber())
+      return false;
+  }
+
   if (RHS.isZero()) {
     const auto *Op = cast<BinaryOperator>(S.Current->getExpr(OpPC));
     if constexpr (std::is_same_v<T, Floating>) {
@@ -863,6 +869,13 @@ bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   }
 
   const T &Value = Ptr.deref<T>();
+
+  // Can't inc/dec non-numbers.
+  if constexpr (isIntegralOrPointer<T>()) {
+    if (!Value.isNumber())
+      return false;
+  }
+
   T Result;
   if constexpr (needsAlloc<T>())
     Result = S.allocAP<T>(Value.bitWidth());
@@ -1978,6 +1991,9 @@ bool GetPtrFieldPop(InterpState &S, CodePtr OpPC, uint32_t Off);
 bool GetPtrBase(InterpState &S, CodePtr OpPC, uint32_t Off);
 bool GetPtrBasePop(InterpState &S, CodePtr OpPC, uint32_t Off, bool NullOK);
 
+bool GetPtrDerivedPop(InterpState &S, CodePtr OpPC, uint32_t Off, bool NullOK,
+                      const Type *TargetType);
+
 inline bool GetPtrThisField(InterpState &S, CodePtr OpPC, uint32_t Off) {
   if (S.checkingPotentialConstantExpression() && S.Current->getDepth() == 0)
     return false;
@@ -1985,40 +2001,6 @@ inline bool GetPtrThisField(InterpState &S, CodePtr OpPC, uint32_t Off) {
     return false;
   const Pointer &This = S.Current->getThis();
   S.Stk.push<Pointer>(This.atField(Off));
-  return true;
-}
-
-inline bool GetPtrDerivedPop(InterpState &S, CodePtr OpPC, uint32_t Off,
-                             bool NullOK, const Type *TargetType) {
-  const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (!NullOK && !CheckNull(S, OpPC, Ptr, CSK_Derived))
-    return false;
-
-  if (!Ptr.isBlockPointer()) {
-    // FIXME: We don't have the necessary information in integral pointers.
-    // The Descriptor only has a record, but that does of course not include
-    // the potential derived classes of said record.
-    S.Stk.push<Pointer>(Ptr);
-    return true;
-  }
-
-  if (!CheckSubobject(S, OpPC, Ptr, CSK_Derived))
-    return false;
-  if (!CheckDowncast(S, OpPC, Ptr, Off))
-    return false;
-
-  const Record *TargetRecord = Ptr.atFieldSub(Off).getRecord();
-  assert(TargetRecord);
-
-  if (TargetRecord->getDecl()->getCanonicalDecl() !=
-      TargetType->getAsCXXRecordDecl()->getCanonicalDecl()) {
-    QualType MostDerivedType = Ptr.getDeclDesc()->getType();
-    S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_invalid_downcast)
-        << MostDerivedType << QualType(TargetType, 0);
-    return false;
-  }
-
-  S.Stk.push<Pointer>(Ptr.atFieldSub(Off));
   return true;
 }
 
@@ -2604,12 +2586,15 @@ inline bool SubPtr(InterpState &S, CodePtr OpPC, bool ElemSizeIsZero) {
 
   if (LHS.pointsToLabel() || RHS.pointsToLabel()) {
     if constexpr (isIntegralOrPointer<T>()) {
-      const auto *LHSAddrExpr =
-          dyn_cast_if_present<AddrLabelExpr>(LHS.getDeclDesc()->asExpr());
-      const auto *RHSAddrExpr =
-          dyn_cast_if_present<AddrLabelExpr>(RHS.getDeclDesc()->asExpr());
-      if (!LHSAddrExpr || !RHSAddrExpr)
+      const AddrLabelExpr *LHSAddrExpr = LHS.getPointedToLabel();
+      const AddrLabelExpr *RHSAddrExpr = RHS.getPointedToLabel();
+      if (!LHSAddrExpr || !RHSAddrExpr) {
+        S.FFDiag(S.Current->getSource(OpPC),
+                 diag::note_constexpr_pointer_arith_unspecified)
+            << LHS.toDiagnosticString(S.getASTContext())
+            << RHS.toDiagnosticString(S.getASTContext());
         return false;
+      }
 
       if (LHSAddrExpr->getLabel()->getDeclContext() !=
           RHSAddrExpr->getLabel()->getDeclContext())
@@ -2697,7 +2682,7 @@ template <PrimType TIn, PrimType TOut> bool Cast(InterpState &S, CodePtr OpPC) {
   if constexpr (isIntegralOrPointer<T>()) {
     if (In.getKind() != IntegralKind::Number &&
         In.getKind() != IntegralKind::AddrLabelDiff) {
-      if (!CheckIntegralAddressCast(S, OpPC, In.bitWidth()))
+      if (!CheckIntegralAddressCast(S, OpPC, U::bitWidth()))
         return Invalid(S, OpPC);
     } else if (In.getKind() == IntegralKind::AddrLabelDiff) {
       // Allow casts of address-of-label differences if they are no-ops
@@ -2785,6 +2770,12 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool CastIntegralFloating(InterpState &S, CodePtr OpPC,
                           const llvm::fltSemantics *Sem, uint32_t FPOI) {
   const T &From = S.Stk.pop<T>();
+
+  if constexpr (isIntegralOrPointer<T>()) {
+    if (!From.isNumber())
+      return false;
+  }
+
   APSInt FromAP = From.toAPSInt();
 
   FPOptions FPO = FPOptions::getFromOpaqueInt(FPOI);
@@ -2904,7 +2895,7 @@ bool CastPointerIntegral(InterpState &S, CodePtr OpPC) {
       S.Stk.push<T>(Kind, PtrVal, /*Offset=*/0);
     } else if (Ptr.isFunctionPointer()) {
       const void *FuncDecl = Ptr.asFunctionPointer().Func->getDecl();
-      S.Stk.push<T>(IntegralKind::Address, FuncDecl, /*Offset=*/0);
+      S.Stk.push<T>(IntegralKind::FunctionAddress, FuncDecl, /*Offset=*/0);
     } else {
       S.Stk.push<T>(T::from(Ptr.getIntegerRepresentation()));
     }
@@ -3498,6 +3489,10 @@ inline bool GetIntPtr(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
 
       const Block *B = (const Block *)IntVal.getPtr();
       S.Stk.push<Pointer>(const_cast<Block *>(B));
+    } else if (IntVal.getKind() == IntegralKind::FunctionAddress) {
+      const Function *F =
+          S.P.getFunction((const FunctionDecl *)IntVal.getPtr());
+      S.Stk.push<Pointer>(F, IntVal.getOffset());
     } else {
       S.Stk.push<Pointer>(static_cast<uint64_t>(IntVal), Desc);
     }

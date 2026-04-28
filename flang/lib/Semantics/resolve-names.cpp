@@ -1752,12 +1752,12 @@ public:
     }
   }
 
-  bool Pre(const parser::OpenMPDeclareMapperConstruct &x) {
+  bool Pre(const parser::OmpDeclareMapperDirective &x) {
     AddOmpSourceRange(x.source);
     return true;
   }
 
-  bool Pre(const parser::OpenMPDeclareSimdConstruct &x) {
+  bool Pre(const parser::OmpDeclareSimdDirective &x) {
     AddOmpSourceRange(x.source);
     return true;
   }
@@ -1767,7 +1767,7 @@ public:
     return true;
   }
 
-  bool Pre(const parser::OpenMPDeclareReductionConstruct &x) {
+  bool Pre(const parser::OmpDeclareReductionDirective &x) {
     AddOmpSourceRange(x.source);
     return true;
   }
@@ -1797,7 +1797,7 @@ public:
     return true;
   }
   void Post(const parser::OpenMPThreadprivate &) { SkipImplicitTyping(false); }
-  bool Pre(const parser::OpenMPDeclareTargetConstruct &x) {
+  bool Pre(const parser::OmpDeclareTargetDirective &x) {
     auto addObjectName{[&](const parser::OmpObject &object) {
       common::visit(
           common::visitors{
@@ -1824,7 +1824,7 @@ public:
     }};
 
     for (const parser::OmpArgument &arg : x.v.Arguments().v) {
-      if (auto *object{omp::GetArgumentObject(arg)}) {
+      if (auto *object{parser::omp::GetArgumentObject(arg)}) {
         addObjectName(*object);
       }
     }
@@ -1840,7 +1840,7 @@ public:
     SkipImplicitTyping(true);
     return true;
   }
-  void Post(const parser::OpenMPDeclareTargetConstruct &) {
+  void Post(const parser::OmpDeclareTargetDirective &) {
     SkipImplicitTyping(false);
   }
   bool Pre(const parser::OmpAllocateDirective &x) {
@@ -2192,7 +2192,7 @@ void OmpVisitor::ResolveCriticalName(const parser::OmpArgument &arg) {
   }()};
 
   if (auto *object{parser::Unwrap<parser::OmpObject>(arg.u)}) {
-    if (auto *desg{omp::GetDesignatorFromObj(*object)}) {
+    if (auto *desg{parser::omp::GetDesignatorFromObj(*object)}) {
       if (auto *name{parser::GetDesignatorNameIfDataRef(*desg)}) {
         if (auto *symbol{FindInScope(globalScope, *name)}) {
           if (!symbol->test(Symbol::Flag::OmpCriticalLock)) {
