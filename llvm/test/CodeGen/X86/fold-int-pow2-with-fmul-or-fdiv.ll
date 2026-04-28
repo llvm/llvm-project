@@ -13,7 +13,7 @@ define <4 x float> @fmul_pow2_4xfloat(<4 x i32> %i) {
 ; CHECK-SSE-LABEL: fmul_pow2_4xfloat:
 ; CHECK-SSE:       # %bb.0:
 ; CHECK-SSE-NEXT:    pslld $23, %xmm0
-; CHECK-SSE-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1091567616,1091567616,1091567616,1091567616]
 ; CHECK-SSE-NEXT:    retq
 ;
 ; CHECK-AVX2-LABEL: fmul_pow2_4xfloat:
@@ -911,19 +911,19 @@ define <2 x double> @fmul_pow_shl_cnt_vec(<2 x i64> %cnt) nounwind {
 ; CHECK-SSE-LABEL: fmul_pow_shl_cnt_vec:
 ; CHECK-SSE:       # %bb.0:
 ; CHECK-SSE-NEXT:    psllq $52, %xmm0
-; CHECK-SSE-NEXT:    paddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE-NEXT:    paddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [4629137466983448576,4629137466983448576]
 ; CHECK-SSE-NEXT:    retq
 ;
 ; CHECK-AVX2-LABEL: fmul_pow_shl_cnt_vec:
 ; CHECK-AVX2:       # %bb.0:
 ; CHECK-AVX2-NEXT:    vpsllq $52, %xmm0, %xmm0
-; CHECK-AVX2-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-AVX2-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [4629137466983448576,4629137466983448576]
 ; CHECK-AVX2-NEXT:    retq
 ;
 ; CHECK-ONLY-AVX512F-LABEL: fmul_pow_shl_cnt_vec:
 ; CHECK-ONLY-AVX512F:       # %bb.0:
 ; CHECK-ONLY-AVX512F-NEXT:    vpsllq $52, %xmm0, %xmm0
-; CHECK-ONLY-AVX512F-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-ONLY-AVX512F-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [4629137466983448576,4629137466983448576]
 ; CHECK-ONLY-AVX512F-NEXT:    retq
 ;
 ; CHECK-SKX-LABEL: fmul_pow_shl_cnt_vec:
@@ -941,7 +941,7 @@ define <4 x float> @fmul_pow_shl_cnt_vec_preserve_fma(<4 x i32> %cnt, <4 x float
 ; CHECK-SSE-LABEL: fmul_pow_shl_cnt_vec_preserve_fma:
 ; CHECK-SSE:       # %bb.0:
 ; CHECK-SSE-NEXT:    pslld $23, %xmm0
-; CHECK-SSE-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1092616192,1092616192,1092616192,1092616192]
 ; CHECK-SSE-NEXT:    addps %xmm1, %xmm0
 ; CHECK-SSE-NEXT:    retq
 ;
@@ -980,7 +980,7 @@ define <4 x float> @fmul_pow_shl_cnt_vec_no_fma(<4 x i32> %cnt, <4 x float> %add
 ; CHECK-SSE-LABEL: fmul_pow_shl_cnt_vec_no_fma:
 ; CHECK-SSE:       # %bb.0:
 ; CHECK-SSE-NEXT:    pslld $23, %xmm0
-; CHECK-SSE-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1092616192,1092616192,1092616192,1092616192]
 ; CHECK-SSE-NEXT:    addps %xmm1, %xmm0
 ; CHECK-SSE-NEXT:    retq
 ;
@@ -1017,13 +1017,13 @@ define <2 x double> @fmul_pow_shl_cnt_vec_non_splat_todo(<2 x i64> %cnt) nounwin
 ; CHECK-SSE-LABEL: fmul_pow_shl_cnt_vec_non_splat_todo:
 ; CHECK-SSE:       # %bb.0:
 ; CHECK-SSE-NEXT:    psllq $52, %xmm0
-; CHECK-SSE-NEXT:    paddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE-NEXT:    paddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [4629137466983448576,4628574517030027264]
 ; CHECK-SSE-NEXT:    retq
 ;
 ; CHECK-AVX-LABEL: fmul_pow_shl_cnt_vec_non_splat_todo:
 ; CHECK-AVX:       # %bb.0:
 ; CHECK-AVX-NEXT:    vpsllq $52, %xmm0, %xmm0
-; CHECK-AVX-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-AVX-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [4629137466983448576,4628574517030027264]
 ; CHECK-AVX-NEXT:    retq
   %shl = shl nsw nuw <2 x i64> <i64 2, i64 2>, %cnt
   %conv = uitofp <2 x i64> %shl to <2 x double>
@@ -1035,13 +1035,13 @@ define <2 x double> @fmul_pow_shl_cnt_vec_non_splat2_todo(<2 x i64> %cnt) nounwi
 ; CHECK-SSE-LABEL: fmul_pow_shl_cnt_vec_non_splat2_todo:
 ; CHECK-SSE:       # %bb.0:
 ; CHECK-SSE-NEXT:    psllq $52, %xmm0
-; CHECK-SSE-NEXT:    paddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE-NEXT:    paddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [4629137466983448576,4624633867356078080]
 ; CHECK-SSE-NEXT:    retq
 ;
 ; CHECK-AVX-LABEL: fmul_pow_shl_cnt_vec_non_splat2_todo:
 ; CHECK-AVX:       # %bb.0:
 ; CHECK-AVX-NEXT:    vpsllq $52, %xmm0, %xmm0
-; CHECK-AVX-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-AVX-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [4629137466983448576,4624633867356078080]
 ; CHECK-AVX-NEXT:    retq
   %shl = shl nsw nuw <2 x i64> <i64 2, i64 1>, %cnt
   %conv = uitofp <2 x i64> %shl to <2 x double>
@@ -1056,7 +1056,7 @@ define <2 x half> @fmul_pow_shl_cnt_vec_fail_to_large(<2 x i16> %cnt) nounwind {
 ; CHECK-SSE-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-SSE-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; CHECK-SSE-NEXT:    pslld $23, %xmm0
-; CHECK-SSE-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1065353216,1065353216,1065353216,1065353216]
 ; CHECK-SSE-NEXT:    cvttps2dq %xmm0, %xmm0
 ; CHECK-SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
 ; CHECK-SSE-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [2,2,u,u,u,u,u,u]

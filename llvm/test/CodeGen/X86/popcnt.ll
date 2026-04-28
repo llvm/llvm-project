@@ -427,39 +427,39 @@ define i128 @cnt128(i128 %x) nounwind readnone {
 ; X64-BASE:       # %bb.0:
 ; X64-BASE-NEXT:    movq %rsi, %rax
 ; X64-BASE-NEXT:    shrq %rax
-; X64-BASE-NEXT:    movabsq $6148914691236517205, %r8 # imm = 0x5555555555555555
-; X64-BASE-NEXT:    andq %r8, %rax
+; X64-BASE-NEXT:    movabsq $6148914691236517205, %rdx # imm = 0x5555555555555555
+; X64-BASE-NEXT:    andq %rdx, %rax
 ; X64-BASE-NEXT:    subq %rax, %rsi
-; X64-BASE-NEXT:    movabsq $3689348814741910323, %rcx # imm = 0x3333333333333333
-; X64-BASE-NEXT:    movq %rsi, %rax
-; X64-BASE-NEXT:    andq %rcx, %rax
+; X64-BASE-NEXT:    movabsq $3689348814741910323, %rax # imm = 0x3333333333333333
+; X64-BASE-NEXT:    movq %rsi, %r8
+; X64-BASE-NEXT:    andq %rax, %r8
 ; X64-BASE-NEXT:    shrq $2, %rsi
-; X64-BASE-NEXT:    andq %rcx, %rsi
-; X64-BASE-NEXT:    addq %rsi, %rax
-; X64-BASE-NEXT:    movq %rax, %rdx
-; X64-BASE-NEXT:    shrq $4, %rdx
-; X64-BASE-NEXT:    addq %rax, %rdx
+; X64-BASE-NEXT:    andq %rax, %rsi
+; X64-BASE-NEXT:    addq %rsi, %r8
+; X64-BASE-NEXT:    movq %r8, %rcx
+; X64-BASE-NEXT:    shrq $4, %rcx
+; X64-BASE-NEXT:    addq %r8, %rcx
 ; X64-BASE-NEXT:    movabsq $1085102592571150095, %rsi # imm = 0xF0F0F0F0F0F0F0F
-; X64-BASE-NEXT:    andq %rsi, %rdx
-; X64-BASE-NEXT:    movabsq $72340172838076673, %r9 # imm = 0x101010101010101
-; X64-BASE-NEXT:    imulq %r9, %rdx
-; X64-BASE-NEXT:    shrq $56, %rdx
-; X64-BASE-NEXT:    movq %rdi, %rax
-; X64-BASE-NEXT:    shrq %rax
-; X64-BASE-NEXT:    andq %r8, %rax
-; X64-BASE-NEXT:    subq %rax, %rdi
-; X64-BASE-NEXT:    movq %rdi, %rax
-; X64-BASE-NEXT:    andq %rcx, %rax
+; X64-BASE-NEXT:    andq %rsi, %rcx
+; X64-BASE-NEXT:    movabsq $72340172838076673, %r8 # imm = 0x101010101010101
+; X64-BASE-NEXT:    imulq %r8, %rcx
+; X64-BASE-NEXT:    shrq $56, %rcx
+; X64-BASE-NEXT:    movq %rdi, %r9
+; X64-BASE-NEXT:    shrq %r9
+; X64-BASE-NEXT:    andq %rdx, %r9
+; X64-BASE-NEXT:    subq %r9, %rdi
+; X64-BASE-NEXT:    movq %rdi, %rdx
+; X64-BASE-NEXT:    andq %rax, %rdx
 ; X64-BASE-NEXT:    shrq $2, %rdi
-; X64-BASE-NEXT:    andq %rdi, %rcx
-; X64-BASE-NEXT:    addq %rax, %rcx
-; X64-BASE-NEXT:    movq %rcx, %rax
+; X64-BASE-NEXT:    andq %rax, %rdi
+; X64-BASE-NEXT:    addq %rdx, %rdi
+; X64-BASE-NEXT:    movq %rdi, %rax
 ; X64-BASE-NEXT:    shrq $4, %rax
-; X64-BASE-NEXT:    addq %rcx, %rax
+; X64-BASE-NEXT:    addq %rdi, %rax
 ; X64-BASE-NEXT:    andq %rsi, %rax
-; X64-BASE-NEXT:    imulq %r9, %rax
+; X64-BASE-NEXT:    imulq %r8, %rax
 ; X64-BASE-NEXT:    shrq $56, %rax
-; X64-BASE-NEXT:    addq %rdx, %rax
+; X64-BASE-NEXT:    addl %ecx, %eax
 ; X64-BASE-NEXT:    xorl %edx, %edx
 ; X64-BASE-NEXT:    retq
 ;
@@ -491,7 +491,7 @@ define i128 @cnt128(i128 %x) nounwind readnone {
 ; X64-POPCNT:       # %bb.0:
 ; X64-POPCNT-NEXT:    popcntq %rsi, %rcx
 ; X64-POPCNT-NEXT:    popcntq %rdi, %rax
-; X64-POPCNT-NEXT:    addq %rcx, %rax
+; X64-POPCNT-NEXT:    addl %ecx, %eax
 ; X64-POPCNT-NEXT:    xorl %edx, %edx
 ; X64-POPCNT-NEXT:    retq
 ;
@@ -525,7 +525,7 @@ define i128 @cnt128(i128 %x) nounwind readnone {
 ; X64-NDD-NEXT:    andq %rsi, %rax
 ; X64-NDD-NEXT:    imulq %r8, %rax
 ; X64-NDD-NEXT:    shrq $56, %rax
-; X64-NDD-NEXT:    addq %rdx, %rax
+; X64-NDD-NEXT:    addl %edx, %eax
 ; X64-NDD-NEXT:    xorl %edx, %edx
 ; X64-NDD-NEXT:    retq
 ;
@@ -1045,39 +1045,39 @@ define i128 @cnt128_optsize(i128 %x) nounwind readnone optsize {
 ; X64-BASE:       # %bb.0:
 ; X64-BASE-NEXT:    movq %rsi, %rax
 ; X64-BASE-NEXT:    shrq %rax
-; X64-BASE-NEXT:    movabsq $6148914691236517205, %r8 # imm = 0x5555555555555555
-; X64-BASE-NEXT:    andq %r8, %rax
+; X64-BASE-NEXT:    movabsq $6148914691236517205, %rdx # imm = 0x5555555555555555
+; X64-BASE-NEXT:    andq %rdx, %rax
 ; X64-BASE-NEXT:    subq %rax, %rsi
-; X64-BASE-NEXT:    movabsq $3689348814741910323, %rcx # imm = 0x3333333333333333
-; X64-BASE-NEXT:    movq %rsi, %rax
-; X64-BASE-NEXT:    andq %rcx, %rax
+; X64-BASE-NEXT:    movabsq $3689348814741910323, %rax # imm = 0x3333333333333333
+; X64-BASE-NEXT:    movq %rsi, %r8
+; X64-BASE-NEXT:    andq %rax, %r8
 ; X64-BASE-NEXT:    shrq $2, %rsi
-; X64-BASE-NEXT:    andq %rcx, %rsi
-; X64-BASE-NEXT:    addq %rsi, %rax
-; X64-BASE-NEXT:    movq %rax, %rdx
-; X64-BASE-NEXT:    shrq $4, %rdx
-; X64-BASE-NEXT:    addq %rax, %rdx
+; X64-BASE-NEXT:    andq %rax, %rsi
+; X64-BASE-NEXT:    addq %rsi, %r8
+; X64-BASE-NEXT:    movq %r8, %rcx
+; X64-BASE-NEXT:    shrq $4, %rcx
+; X64-BASE-NEXT:    addq %r8, %rcx
 ; X64-BASE-NEXT:    movabsq $1085102592571150095, %rsi # imm = 0xF0F0F0F0F0F0F0F
-; X64-BASE-NEXT:    andq %rsi, %rdx
-; X64-BASE-NEXT:    movabsq $72340172838076673, %r9 # imm = 0x101010101010101
-; X64-BASE-NEXT:    imulq %r9, %rdx
-; X64-BASE-NEXT:    shrq $56, %rdx
-; X64-BASE-NEXT:    movq %rdi, %rax
-; X64-BASE-NEXT:    shrq %rax
-; X64-BASE-NEXT:    andq %r8, %rax
-; X64-BASE-NEXT:    subq %rax, %rdi
-; X64-BASE-NEXT:    movq %rdi, %rax
-; X64-BASE-NEXT:    andq %rcx, %rax
+; X64-BASE-NEXT:    andq %rsi, %rcx
+; X64-BASE-NEXT:    movabsq $72340172838076673, %r8 # imm = 0x101010101010101
+; X64-BASE-NEXT:    imulq %r8, %rcx
+; X64-BASE-NEXT:    shrq $56, %rcx
+; X64-BASE-NEXT:    movq %rdi, %r9
+; X64-BASE-NEXT:    shrq %r9
+; X64-BASE-NEXT:    andq %rdx, %r9
+; X64-BASE-NEXT:    subq %r9, %rdi
+; X64-BASE-NEXT:    movq %rdi, %rdx
+; X64-BASE-NEXT:    andq %rax, %rdx
 ; X64-BASE-NEXT:    shrq $2, %rdi
-; X64-BASE-NEXT:    andq %rdi, %rcx
-; X64-BASE-NEXT:    addq %rax, %rcx
-; X64-BASE-NEXT:    movq %rcx, %rax
+; X64-BASE-NEXT:    andq %rax, %rdi
+; X64-BASE-NEXT:    addq %rdx, %rdi
+; X64-BASE-NEXT:    movq %rdi, %rax
 ; X64-BASE-NEXT:    shrq $4, %rax
-; X64-BASE-NEXT:    addq %rcx, %rax
+; X64-BASE-NEXT:    addq %rdi, %rax
 ; X64-BASE-NEXT:    andq %rsi, %rax
-; X64-BASE-NEXT:    imulq %r9, %rax
+; X64-BASE-NEXT:    imulq %r8, %rax
 ; X64-BASE-NEXT:    shrq $56, %rax
-; X64-BASE-NEXT:    addq %rdx, %rax
+; X64-BASE-NEXT:    addl %ecx, %eax
 ; X64-BASE-NEXT:    xorl %edx, %edx
 ; X64-BASE-NEXT:    retq
 ;
@@ -1110,7 +1110,7 @@ define i128 @cnt128_optsize(i128 %x) nounwind readnone optsize {
 ; X64-POPCNT:       # %bb.0:
 ; X64-POPCNT-NEXT:    popcntq %rsi, %rcx
 ; X64-POPCNT-NEXT:    popcntq %rdi, %rax
-; X64-POPCNT-NEXT:    addq %rcx, %rax
+; X64-POPCNT-NEXT:    addl %ecx, %eax
 ; X64-POPCNT-NEXT:    xorl %edx, %edx
 ; X64-POPCNT-NEXT:    retq
 ;
@@ -1144,7 +1144,7 @@ define i128 @cnt128_optsize(i128 %x) nounwind readnone optsize {
 ; X64-NDD-NEXT:    andq %rsi, %rax
 ; X64-NDD-NEXT:    imulq %r8, %rax
 ; X64-NDD-NEXT:    shrq $56, %rax
-; X64-NDD-NEXT:    addq %rdx, %rax
+; X64-NDD-NEXT:    addl %edx, %eax
 ; X64-NDD-NEXT:    xorl %edx, %edx
 ; X64-NDD-NEXT:    retq
 ;
@@ -1547,39 +1547,39 @@ define i128 @cnt128_pgso(i128 %x) nounwind readnone !prof !14 {
 ; X64-BASE:       # %bb.0:
 ; X64-BASE-NEXT:    movq %rsi, %rax
 ; X64-BASE-NEXT:    shrq %rax
-; X64-BASE-NEXT:    movabsq $6148914691236517205, %r8 # imm = 0x5555555555555555
-; X64-BASE-NEXT:    andq %r8, %rax
+; X64-BASE-NEXT:    movabsq $6148914691236517205, %rdx # imm = 0x5555555555555555
+; X64-BASE-NEXT:    andq %rdx, %rax
 ; X64-BASE-NEXT:    subq %rax, %rsi
-; X64-BASE-NEXT:    movabsq $3689348814741910323, %rcx # imm = 0x3333333333333333
-; X64-BASE-NEXT:    movq %rsi, %rax
-; X64-BASE-NEXT:    andq %rcx, %rax
+; X64-BASE-NEXT:    movabsq $3689348814741910323, %rax # imm = 0x3333333333333333
+; X64-BASE-NEXT:    movq %rsi, %r8
+; X64-BASE-NEXT:    andq %rax, %r8
 ; X64-BASE-NEXT:    shrq $2, %rsi
-; X64-BASE-NEXT:    andq %rcx, %rsi
-; X64-BASE-NEXT:    addq %rsi, %rax
-; X64-BASE-NEXT:    movq %rax, %rdx
-; X64-BASE-NEXT:    shrq $4, %rdx
-; X64-BASE-NEXT:    addq %rax, %rdx
+; X64-BASE-NEXT:    andq %rax, %rsi
+; X64-BASE-NEXT:    addq %rsi, %r8
+; X64-BASE-NEXT:    movq %r8, %rcx
+; X64-BASE-NEXT:    shrq $4, %rcx
+; X64-BASE-NEXT:    addq %r8, %rcx
 ; X64-BASE-NEXT:    movabsq $1085102592571150095, %rsi # imm = 0xF0F0F0F0F0F0F0F
-; X64-BASE-NEXT:    andq %rsi, %rdx
-; X64-BASE-NEXT:    movabsq $72340172838076673, %r9 # imm = 0x101010101010101
-; X64-BASE-NEXT:    imulq %r9, %rdx
-; X64-BASE-NEXT:    shrq $56, %rdx
-; X64-BASE-NEXT:    movq %rdi, %rax
-; X64-BASE-NEXT:    shrq %rax
-; X64-BASE-NEXT:    andq %r8, %rax
-; X64-BASE-NEXT:    subq %rax, %rdi
-; X64-BASE-NEXT:    movq %rdi, %rax
-; X64-BASE-NEXT:    andq %rcx, %rax
+; X64-BASE-NEXT:    andq %rsi, %rcx
+; X64-BASE-NEXT:    movabsq $72340172838076673, %r8 # imm = 0x101010101010101
+; X64-BASE-NEXT:    imulq %r8, %rcx
+; X64-BASE-NEXT:    shrq $56, %rcx
+; X64-BASE-NEXT:    movq %rdi, %r9
+; X64-BASE-NEXT:    shrq %r9
+; X64-BASE-NEXT:    andq %rdx, %r9
+; X64-BASE-NEXT:    subq %r9, %rdi
+; X64-BASE-NEXT:    movq %rdi, %rdx
+; X64-BASE-NEXT:    andq %rax, %rdx
 ; X64-BASE-NEXT:    shrq $2, %rdi
-; X64-BASE-NEXT:    andq %rdi, %rcx
-; X64-BASE-NEXT:    addq %rax, %rcx
-; X64-BASE-NEXT:    movq %rcx, %rax
+; X64-BASE-NEXT:    andq %rax, %rdi
+; X64-BASE-NEXT:    addq %rdx, %rdi
+; X64-BASE-NEXT:    movq %rdi, %rax
 ; X64-BASE-NEXT:    shrq $4, %rax
-; X64-BASE-NEXT:    addq %rcx, %rax
+; X64-BASE-NEXT:    addq %rdi, %rax
 ; X64-BASE-NEXT:    andq %rsi, %rax
-; X64-BASE-NEXT:    imulq %r9, %rax
+; X64-BASE-NEXT:    imulq %r8, %rax
 ; X64-BASE-NEXT:    shrq $56, %rax
-; X64-BASE-NEXT:    addq %rdx, %rax
+; X64-BASE-NEXT:    addl %ecx, %eax
 ; X64-BASE-NEXT:    xorl %edx, %edx
 ; X64-BASE-NEXT:    retq
 ;
@@ -1612,7 +1612,7 @@ define i128 @cnt128_pgso(i128 %x) nounwind readnone !prof !14 {
 ; X64-POPCNT:       # %bb.0:
 ; X64-POPCNT-NEXT:    popcntq %rsi, %rcx
 ; X64-POPCNT-NEXT:    popcntq %rdi, %rax
-; X64-POPCNT-NEXT:    addq %rcx, %rax
+; X64-POPCNT-NEXT:    addl %ecx, %eax
 ; X64-POPCNT-NEXT:    xorl %edx, %edx
 ; X64-POPCNT-NEXT:    retq
 ;
@@ -1646,7 +1646,7 @@ define i128 @cnt128_pgso(i128 %x) nounwind readnone !prof !14 {
 ; X64-NDD-NEXT:    andq %rsi, %rax
 ; X64-NDD-NEXT:    imulq %r8, %rax
 ; X64-NDD-NEXT:    shrq $56, %rax
-; X64-NDD-NEXT:    addq %rdx, %rax
+; X64-NDD-NEXT:    addl %edx, %eax
 ; X64-NDD-NEXT:    xorl %edx, %edx
 ; X64-NDD-NEXT:    retq
 ;

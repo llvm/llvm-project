@@ -966,7 +966,7 @@ define {i64, i1} @uaddoovf(i64 %a, i64 %b) {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movzbl %dil, %ecx
 ; CHECK-NEXT:    movzbl %sil, %eax
-; CHECK-NEXT:    addq %rcx, %rax
+; CHECK-NEXT:    addl %ecx, %eax
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    retq
   %1 = and i64 %a, 255
