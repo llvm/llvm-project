@@ -30,124 +30,112 @@
 #endif
 
 // CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svqrshrn_n_s8_s16_x2(
-// CHECK-SAME: <vscale x 8 x i16> [[ZN_COERCE0:%.*]], <vscale x 8 x i16> [[ZN_COERCE1:%.*]], i64 noundef [[IMM:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: <vscale x 8 x i16> [[ZN_COERCE0:%.*]], <vscale x 8 x i16> [[ZN_COERCE1:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[ZN:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
 // CHECK-NEXT:    [[ZN_ADDR:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
-// CHECK-NEXT:    [[IMM_ADDR:%.*]] = alloca i64, align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } poison, <vscale x 8 x i16> [[ZN_COERCE0]], 0
 // CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], <vscale x 8 x i16> [[ZN_COERCE1]], 1
 // CHECK-NEXT:    store { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP1]], ptr [[ZN]], align 16
 // CHECK-NEXT:    [[ZN1:%.*]] = load { <vscale x 8 x i16>, <vscale x 8 x i16> }, ptr [[ZN]], align 16
 // CHECK-NEXT:    store { <vscale x 8 x i16>, <vscale x 8 x i16> } [[ZN1]], ptr [[ZN_ADDR]], align 16
-// CHECK-NEXT:    store i64 [[IMM]], ptr [[IMM_ADDR]], align 8
 // CHECK-NEXT:    [[TMP2:%.*]] = load { <vscale x 8 x i16>, <vscale x 8 x i16> }, ptr [[ZN_ADDR]], align 16
 // CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP2]], 0
 // CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP2]], 1
 // CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.sqrshrn.x2.nxv8i16(<vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[TMP4]], i32 8)
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP5]]
 //
-// CPP-CHECK-LABEL: define dso_local <vscale x 16 x i8> @_Z25test_svqrshrn_n_s8_s16_x211svint16x2_tm(
-// CPP-CHECK-SAME: <vscale x 8 x i16> [[ZN_COERCE0:%.*]], <vscale x 8 x i16> [[ZN_COERCE1:%.*]], i64 noundef [[IMM:%.*]]) #[[ATTR0:[0-9]+]] {
+// CPP-CHECK-LABEL: define dso_local <vscale x 16 x i8> @_Z25test_svqrshrn_n_s8_s16_x211svint16x2_t(
+// CPP-CHECK-SAME: <vscale x 8 x i16> [[ZN_COERCE0:%.*]], <vscale x 8 x i16> [[ZN_COERCE1:%.*]]) #[[ATTR0:[0-9]+]] {
 // CPP-CHECK-NEXT:  [[ENTRY:.*:]]
 // CPP-CHECK-NEXT:    [[ZN:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
 // CPP-CHECK-NEXT:    [[ZN_ADDR:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
-// CPP-CHECK-NEXT:    [[IMM_ADDR:%.*]] = alloca i64, align 8
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } poison, <vscale x 8 x i16> [[ZN_COERCE0]], 0
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], <vscale x 8 x i16> [[ZN_COERCE1]], 1
 // CPP-CHECK-NEXT:    store { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP1]], ptr [[ZN]], align 16
 // CPP-CHECK-NEXT:    [[ZN1:%.*]] = load { <vscale x 8 x i16>, <vscale x 8 x i16> }, ptr [[ZN]], align 16
 // CPP-CHECK-NEXT:    store { <vscale x 8 x i16>, <vscale x 8 x i16> } [[ZN1]], ptr [[ZN_ADDR]], align 16
-// CPP-CHECK-NEXT:    store i64 [[IMM]], ptr [[IMM_ADDR]], align 8
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = load { <vscale x 8 x i16>, <vscale x 8 x i16> }, ptr [[ZN_ADDR]], align 16
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP2]], 0
 // CPP-CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP2]], 1
 // CPP-CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.sqrshrn.x2.nxv8i16(<vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[TMP4]], i32 8)
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP5]]
 //
-svint8_t test_svqrshrn_n_s8_s16_x2(svint16x2_t zn, uint64_t imm) ATTR
+svint8_t test_svqrshrn_n_s8_s16_x2(svint16x2_t zn) ATTR
 {
     return SVE_ACLE_FUNC(svqrshrn,_n,_s8,_s16_x2)(zn, 8);
 }
 
 // CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svqrshrn_n_u8_u16_x2(
-// CHECK-SAME: <vscale x 8 x i16> [[ZN_COERCE0:%.*]], <vscale x 8 x i16> [[ZN_COERCE1:%.*]], i64 noundef [[IMM:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: <vscale x 8 x i16> [[ZN_COERCE0:%.*]], <vscale x 8 x i16> [[ZN_COERCE1:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[ZN:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
 // CHECK-NEXT:    [[ZN_ADDR:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
-// CHECK-NEXT:    [[IMM_ADDR:%.*]] = alloca i64, align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } poison, <vscale x 8 x i16> [[ZN_COERCE0]], 0
 // CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], <vscale x 8 x i16> [[ZN_COERCE1]], 1
 // CHECK-NEXT:    store { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP1]], ptr [[ZN]], align 16
 // CHECK-NEXT:    [[ZN1:%.*]] = load { <vscale x 8 x i16>, <vscale x 8 x i16> }, ptr [[ZN]], align 16
 // CHECK-NEXT:    store { <vscale x 8 x i16>, <vscale x 8 x i16> } [[ZN1]], ptr [[ZN_ADDR]], align 16
-// CHECK-NEXT:    store i64 [[IMM]], ptr [[IMM_ADDR]], align 8
 // CHECK-NEXT:    [[TMP2:%.*]] = load { <vscale x 8 x i16>, <vscale x 8 x i16> }, ptr [[ZN_ADDR]], align 16
 // CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP2]], 0
 // CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP2]], 1
 // CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.uqrshrn.x2.nxv8i16(<vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[TMP4]], i32 8)
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP5]]
 //
-// CPP-CHECK-LABEL: define dso_local <vscale x 16 x i8> @_Z25test_svqrshrn_n_u8_u16_x212svuint16x2_tm(
-// CPP-CHECK-SAME: <vscale x 8 x i16> [[ZN_COERCE0:%.*]], <vscale x 8 x i16> [[ZN_COERCE1:%.*]], i64 noundef [[IMM:%.*]]) #[[ATTR0]] {
+// CPP-CHECK-LABEL: define dso_local <vscale x 16 x i8> @_Z25test_svqrshrn_n_u8_u16_x212svuint16x2_t(
+// CPP-CHECK-SAME: <vscale x 8 x i16> [[ZN_COERCE0:%.*]], <vscale x 8 x i16> [[ZN_COERCE1:%.*]]) #[[ATTR0]] {
 // CPP-CHECK-NEXT:  [[ENTRY:.*:]]
 // CPP-CHECK-NEXT:    [[ZN:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
 // CPP-CHECK-NEXT:    [[ZN_ADDR:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
-// CPP-CHECK-NEXT:    [[IMM_ADDR:%.*]] = alloca i64, align 8
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } poison, <vscale x 8 x i16> [[ZN_COERCE0]], 0
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], <vscale x 8 x i16> [[ZN_COERCE1]], 1
 // CPP-CHECK-NEXT:    store { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP1]], ptr [[ZN]], align 16
 // CPP-CHECK-NEXT:    [[ZN1:%.*]] = load { <vscale x 8 x i16>, <vscale x 8 x i16> }, ptr [[ZN]], align 16
 // CPP-CHECK-NEXT:    store { <vscale x 8 x i16>, <vscale x 8 x i16> } [[ZN1]], ptr [[ZN_ADDR]], align 16
-// CPP-CHECK-NEXT:    store i64 [[IMM]], ptr [[IMM_ADDR]], align 8
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = load { <vscale x 8 x i16>, <vscale x 8 x i16> }, ptr [[ZN_ADDR]], align 16
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP2]], 0
 // CPP-CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP2]], 1
 // CPP-CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.uqrshrn.x2.nxv8i16(<vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[TMP4]], i32 8)
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP5]]
 //
-svuint8_t test_svqrshrn_n_u8_u16_x2(svuint16x2_t zn, uint64_t imm) ATTR
+svuint8_t test_svqrshrn_n_u8_u16_x2(svuint16x2_t zn) ATTR
 {
   return SVE_ACLE_FUNC(svqrshrn,_n,_u8,_u16_x2)(zn, 8);
 }
 
 // CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svqrshrun_n_u8_s16_x2(
-// CHECK-SAME: <vscale x 8 x i16> [[ZN_COERCE0:%.*]], <vscale x 8 x i16> [[ZN_COERCE1:%.*]], i64 noundef [[IMM:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: <vscale x 8 x i16> [[ZN_COERCE0:%.*]], <vscale x 8 x i16> [[ZN_COERCE1:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[ZN:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
 // CHECK-NEXT:    [[ZN_ADDR:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
-// CHECK-NEXT:    [[IMM_ADDR:%.*]] = alloca i64, align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } poison, <vscale x 8 x i16> [[ZN_COERCE0]], 0
 // CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], <vscale x 8 x i16> [[ZN_COERCE1]], 1
 // CHECK-NEXT:    store { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP1]], ptr [[ZN]], align 16
 // CHECK-NEXT:    [[ZN1:%.*]] = load { <vscale x 8 x i16>, <vscale x 8 x i16> }, ptr [[ZN]], align 16
 // CHECK-NEXT:    store { <vscale x 8 x i16>, <vscale x 8 x i16> } [[ZN1]], ptr [[ZN_ADDR]], align 16
-// CHECK-NEXT:    store i64 [[IMM]], ptr [[IMM_ADDR]], align 8
 // CHECK-NEXT:    [[TMP2:%.*]] = load { <vscale x 8 x i16>, <vscale x 8 x i16> }, ptr [[ZN_ADDR]], align 16
 // CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP2]], 0
 // CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP2]], 1
 // CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.sqrshrun.x2.nxv8i16(<vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[TMP4]], i32 8)
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP5]]
 //
-// CPP-CHECK-LABEL: define dso_local <vscale x 16 x i8> @_Z26test_svqrshrun_n_u8_s16_x211svint16x2_tm(
-// CPP-CHECK-SAME: <vscale x 8 x i16> [[ZN_COERCE0:%.*]], <vscale x 8 x i16> [[ZN_COERCE1:%.*]], i64 noundef [[IMM:%.*]]) #[[ATTR0]] {
+// CPP-CHECK-LABEL: define dso_local <vscale x 16 x i8> @_Z26test_svqrshrun_n_u8_s16_x211svint16x2_t(
+// CPP-CHECK-SAME: <vscale x 8 x i16> [[ZN_COERCE0:%.*]], <vscale x 8 x i16> [[ZN_COERCE1:%.*]]) #[[ATTR0]] {
 // CPP-CHECK-NEXT:  [[ENTRY:.*:]]
 // CPP-CHECK-NEXT:    [[ZN:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
 // CPP-CHECK-NEXT:    [[ZN_ADDR:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
-// CPP-CHECK-NEXT:    [[IMM_ADDR:%.*]] = alloca i64, align 8
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } poison, <vscale x 8 x i16> [[ZN_COERCE0]], 0
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], <vscale x 8 x i16> [[ZN_COERCE1]], 1
 // CPP-CHECK-NEXT:    store { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP1]], ptr [[ZN]], align 16
 // CPP-CHECK-NEXT:    [[ZN1:%.*]] = load { <vscale x 8 x i16>, <vscale x 8 x i16> }, ptr [[ZN]], align 16
 // CPP-CHECK-NEXT:    store { <vscale x 8 x i16>, <vscale x 8 x i16> } [[ZN1]], ptr [[ZN_ADDR]], align 16
-// CPP-CHECK-NEXT:    store i64 [[IMM]], ptr [[IMM_ADDR]], align 8
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = load { <vscale x 8 x i16>, <vscale x 8 x i16> }, ptr [[ZN_ADDR]], align 16
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP2]], 0
 // CPP-CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP2]], 1
 // CPP-CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.sqrshrun.x2.nxv8i16(<vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[TMP4]], i32 8)
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP5]]
 //
-svuint8_t test_svqrshrun_n_u8_s16_x2(svint16x2_t zn, uint64_t imm) ATTR
+svuint8_t test_svqrshrun_n_u8_s16_x2(svint16x2_t zn) ATTR
 {
   return SVE_ACLE_FUNC(svqrshrun,_n,_u8,_s16_x2)(zn, 8);
 }
