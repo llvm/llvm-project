@@ -51,8 +51,8 @@ llvm::StringRef BreakpointIDHelpTextCallback() {
          "number (e.g. "
          "3 or 3.2 could both be valid breakpoint IDs.)\n"
          "\n"
-         "You can use . to refer to the breakpoint location(s) on which the "
-         "process is currently stopped.";
+         "You can use . to refer to the breakpoint location(s) at which the "
+         "current thread is stopped.";
 }
 
 llvm::StringRef BreakpointIDRangeHelpTextCallback() {

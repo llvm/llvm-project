@@ -59,13 +59,12 @@ bool BreakpointIDList::Contains(BreakpointID bp_id) const {
   return llvm::is_contained(m_breakpoint_ids, bp_id);
 }
 
-static std::string_view BreakpointIDForStop(StopInfoSP stop_info_sp,
-                                            uint32_t idx) {
+static std::string LocationIDForStop(StopInfoSP stop_info_sp, uint32_t idx) {
   break_id_t bp_id = stop_info_sp->GetStopReasonDataAtIndex(idx);
   break_id_t loc_id = stop_info_sp->GetStopReasonDataAtIndex(idx + 1);
   StreamString stream;
   BreakpointID::GetCanonicalReference(&stream, bp_id, loc_id);
-  return stream.GetString();
+  return stream.GetString().str();
 }
 
 //  This function takes OLD_ARGS, which is usually the result of breaking the
@@ -95,7 +94,7 @@ llvm::Error BreakpointIDList::FindAndReplaceIDRanges(
 
     current_arg = old_args[i].ref();
 
-    if (current_arg == ".") {
+    if (allow_locations && current_arg == ".") {
       Thread *thread = exe_ctx.GetThreadPtr();
       if (!thread) {
         new_args.Clear();
@@ -110,8 +109,10 @@ llvm::Error BreakpointIDList::FindAndReplaceIDRanges(
       }
 
       uint32_t data_count = stop_info_sp->GetStopReasonDataCount();
-      for (uint32_t j = 0; j < data_count; j += 2)
-        new_args.AppendArgument(BreakpointIDForStop(stop_info_sp, j));
+      for (uint32_t j = 0; j < data_count; j += 2) {
+        std::string location_id = LocationIDForStop(stop_info_sp, j);
+        new_args.AppendArgument(location_id);
+      }
 
       continue;
     }

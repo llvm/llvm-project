@@ -6,7 +6,8 @@ from lldbsuite.test import lldbutil
 
 
 class TestCase(TestBase):
-    def test_disable(self):
+
+    def test_disable_enable(self):
         self.build()
         _, _, _, bp = lldbutil.run_to_source_breakpoint(
             self, "break here", lldb.SBFileSpec("main.c")
@@ -14,15 +15,6 @@ class TestCase(TestBase):
 
         self.assertTrue(bp.FindLocationByID(1).IsEnabled())
         self.expect("breakpoint disable .", startstr="1 breakpoints disabled.")
-        self.assertFalse(bp.FindLocationByID(1).IsEnabled())
-
-    def test_enable(self):
-        self.build()
-        _, _, _, bp = lldbutil.run_to_source_breakpoint(
-            self, "break here", lldb.SBFileSpec("main.c")
-        )
-
-        bp.FindLocationByID(1).SetEnabled(False)
         self.assertFalse(bp.FindLocationByID(1).IsEnabled())
         self.expect("breakpoint enable .", startstr="1 breakpoints enabled.")
         self.assertTrue(bp.FindLocationByID(1).IsEnabled())
