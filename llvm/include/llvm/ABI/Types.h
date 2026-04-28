@@ -310,6 +310,11 @@ public:
 
   LLVM_ABI bool isEmpty() const;
 
+  /// Returns the field, base, or virtual base whose extent contains
+  /// \p OffsetInBits, or nullptr if no such element exists. Empty bases and
+  /// unnamed bitfields are skipped.
+  const FieldInfo *getElementContainingOffset(unsigned OffsetInBits) const;
+
   static bool classof(const Type *T) {
     return T->getKind() == TypeKind::Record;
   }

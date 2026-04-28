@@ -348,7 +348,8 @@ bool CodeGenModule::shouldUseLLVMABILowering() const {
     return false;
   // Only opt in for targets that have an LLVMABI implementation; others
   // continue through the legacy ABIInfo path.
-  return getTriple().isBPF();
+  const llvm::Triple &T = getTriple();
+  return T.isBPF() || (T.getArch() == llvm::Triple::x86_64 && T.isOSLinux());
 }
 
 const llvm::abi::TargetInfo &
@@ -356,10 +357,40 @@ CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
   if (TheLLVMABITargetInfo)
     return *TheLLVMABITargetInfo;
 
-  assert(getTriple().isBPF() &&
-         "LLVMABI lowering requested for an unsupported target");
-  TheLLVMABITargetInfo = llvm::abi::createBPFTargetInfo(TB);
-  return *TheLLVMABITargetInfo;
+  const llvm::Triple &T = getTriple();
+  if (T.isBPF()) {
+    TheLLVMABITargetInfo = llvm::abi::createBPFTargetInfo(TB);
+    return *TheLLVMABITargetInfo;
+  }
+
+  if (T.getArch() == llvm::Triple::x86_64) {
+    StringRef ABI = getTarget().getABI();
+    llvm::abi::X86AVXABILevel AVXLevel =
+        ABI == "avx512" ? llvm::abi::X86AVXABILevel::AVX512
+        : ABI == "avx"  ? llvm::abi::X86AVXABILevel::AVX
+                        : llvm::abi::X86AVXABILevel::None;
+
+    llvm::abi::ABICompatInfo CompatInfo;
+    LangOptions::ClangABI Compat = getLangOpts().getClangABICompat();
+    CompatInfo.ClassifyIntegerMMXAsSSE =
+        Compat > LangOptions::ClangABI::Ver3_8 && !T.isOSDarwin() &&
+        !T.isPS() && !T.isOSFreeBSD();
+    CompatInfo.HonorsRevision98 = !T.isOSDarwin();
+    CompatInfo.PassInt128VectorsInMem = Compat > LangOptions::ClangABI::Ver9 &&
+                                        (T.isOSLinux() || T.isOSNetBSD());
+    CompatInfo.ReturnCXXRecordGreaterThan128InMem =
+        Compat > LangOptions::ClangABI::Ver20;
+    CompatInfo.Clang11Compat =
+        Compat <= LangOptions::ClangABI::Ver11 || T.isPS();
+
+    bool Has64BitPointers = getTarget().getPointerWidth(LangAS::Default) == 64;
+
+    TheLLVMABITargetInfo = llvm::abi::createX8664TargetInfo(
+        TB, T, AVXLevel, Has64BitPointers, CompatInfo);
+    return *TheLLVMABITargetInfo;
+  }
+
+  llvm_unreachable("LLVMABI lowering requested for an unsupported target");
 }
 
 static void checkDataLayoutConsistency(const TargetInfo &Target,
