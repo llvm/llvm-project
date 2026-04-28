@@ -206,6 +206,7 @@
 #include "math/ldexpf128.h"
 #include "math/ldexpf16.h"
 #include "math/llogb.h"
+#include "math/llogbbf16.h"
 #include "math/llogbf.h"
 #include "math/llogbf128.h"
 #include "math/llogbf16.h"
