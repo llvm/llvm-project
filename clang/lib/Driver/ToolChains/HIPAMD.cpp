@@ -177,8 +177,8 @@ void AMDGCN::Linker::constructLinkAndEmitSpirvCommand(
     const char *Triple =
         C.getArgs().MakeArgString("-triple=spirv64-amd-amdhsa");
 
-    CmdArgs.append({"-cc1", Triple, "-emit-obj", "-disable-llvm-optzns",
-                    LinkedBCFile.getFilename(), "-o", Output.getFilename()});
+    CmdArgs.append({"-cc1", Triple, "-emit-obj", LinkedBCFile.getFilename(),
+                    "-o", Output.getFilename()});
 
     const Driver &Driver = getToolChain().getDriver();
     const char *Exec = Driver.getClangProgramPath();
@@ -274,12 +274,6 @@ void HIPAMDToolChain::addClangTargetOptions(
     // with options that match the user-supplied ones.
     if (!DriverArgs.hasArg(options::OPT_fembed_bitcode_marker))
       CC1Args.push_back("-fembed-bitcode=marker");
-    // For SPIR-V we want to retain the pristine output of Clang CodeGen, since
-    // optimizations might lose structure / information that is necessary for
-    // generating optimal concrete AMDGPU code. We duplicate this because the
-    // HIP TC doesn't invoke the base AMDGPU TC addClangTargetOptions.
-    if (!DriverArgs.hasArg(options::OPT_disable_llvm_passes))
-      CC1Args.push_back("-disable-llvm-passes");
     return; // No DeviceLibs for SPIR-V.
   }
 
