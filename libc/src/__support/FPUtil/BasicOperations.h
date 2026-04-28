@@ -200,7 +200,7 @@ LIBC_INLINE constexpr T fmaximum_num(T x, T y) {
 }
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE T fminimum_num(T x, T y) {
+LIBC_INLINE constexpr T fminimum_num(T x, T y) {
   FPBits<T> bitx(x), bity(y);
   if (bitx.is_signaling_nan() || bity.is_signaling_nan()) {
     fputil::raise_except_if_required(FE_INVALID);
