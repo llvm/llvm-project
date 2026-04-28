@@ -12847,6 +12847,10 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
   Expr *RHSStripped = RHS.get()->IgnoreParenImpCasts();
   if (getLangOpts().CPlusPlus && LHSStripped->getType()->isArrayType() &&
       RHSStripped->getType()->isArrayType()) {
+
+    if (isSFINAEContext()) {
+      return InvalidOperands(Loc, LHS, RHS);
+    }
     auto IsDeprArrayComparionIgnored =
         getDiagnostics().isIgnored(diag::warn_depr_array_comparison, Loc);
     auto DiagID = getLangOpts().CPlusPlus26 ? diag::warn_array_comparison_cxx26
