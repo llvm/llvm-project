@@ -57,7 +57,7 @@ static int64_t getInlineImmVal64(unsigned Imm);
 AMDGPUDisassembler::AMDGPUDisassembler(const MCSubtargetInfo &STI,
                                        MCContext &Ctx, MCInstrInfo const *MCII)
     : MCDisassembler(STI, Ctx), MCII(MCII), MRI(*Ctx.getRegisterInfo()),
-      MAI(*Ctx.getAsmInfo()),
+      MAI(Ctx.getAsmInfo()),
       HwModeRegClass(STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo)),
       TargetMaxInstBytes(MAI.getMaxInstLength(&STI)),
       CodeObjectVersion(AMDGPU::getDefaultAMDHSACodeObjectVersion()) {

@@ -49,6 +49,13 @@ AsyncInfoWrapperTy::AsyncInfoWrapperTy(GenericDeviceTy &Device,
     : Device(Device),
       AsyncInfoPtr(AsyncInfoPtr ? AsyncInfoPtr : &LocalAsyncInfo) {}
 
+Error AsyncInfoWrapperTy::synchronize() {
+  assert(AsyncInfoPtr && "AsyncInfoWrapperTy already finalized");
+
+  // Synchronize with the async info's operations without releasing the queue.
+  return Device.synchronize(AsyncInfoPtr, /*ReleaseQueue=*/false);
+}
+
 void AsyncInfoWrapperTy::finalize(Error &Err) {
   assert(AsyncInfoPtr && "AsyncInfoWrapperTy already finalized");
 
@@ -232,8 +239,7 @@ GenericKernelTy::prepareBlockMemory(GenericDeviceTy &GenericDevice,
 Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
                               ptrdiff_t *ArgOffsets, KernelArgsTy &KernelArgs,
                               KernelExtraArgsTy *KernelExtraArgs,
-                              AsyncInfoWrapperTy &AsyncInfoWrapper,
-                              RecordReplayTy::HandleTy *RRHandle) const {
+                              AsyncInfoWrapperTy &AsyncInfoWrapper) const {
   llvm::SmallVector<void *, 16> Args;
   llvm::SmallVector<void *, 16> Ptrs;
 
@@ -243,13 +249,17 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
   uint32_t NumBlocks[3] = {KernelArgs.NumTeams[0], KernelArgs.NumTeams[1],
                            KernelArgs.NumTeams[2]};
   if (!isBareMode()) {
+    assert(
+        NumThreads[1] == 1 && NumThreads[2] == 1 && NumBlocks[1] == 1 &&
+        NumBlocks[2] == 1 &&
+        "Non-bare mode should only use the first thread and block dimensions");
     NumThreads[0] = getNumThreads(GenericDevice, NumThreads);
     NumBlocks[0] = getNumBlocks(GenericDevice, NumBlocks, KernelArgs.Tripcount,
                                 NumThreads[0], KernelArgs.ThreadLimit[0] > 0);
   }
 
-  auto DynBlockMemConfOrErr =
-      prepareBlockMemory(GenericDevice, KernelArgs, NumBlocks[0]);
+  auto DynBlockMemConfOrErr = prepareBlockMemory(
+      GenericDevice, KernelArgs, NumBlocks[0] * NumBlocks[1] * NumBlocks[2]);
   if (!DynBlockMemConfOrErr)
     return DynBlockMemConfOrErr.takeError();
 
@@ -275,26 +285,40 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
                     Args, Ptrs, *KernelLaunchEnvOrErr, KernelArgs.Version);
   }
 
-  // Record the kernel description after we modified the argument count and num
-  // blocks/threads.
+  if (auto Err =
+          printLaunchInfo(GenericDevice, KernelArgs, NumThreads, NumBlocks))
+    return Err;
+
+  RecordReplayTy::HandleTy RRHandle;
   RecordReplayTy *RecordReplay = GenericDevice.getRecordReplay();
   if (RecordReplay) {
+    // Record replay requires synchronization of any previous operation.
+    if (auto Err = AsyncInfoWrapper.synchronize())
+      return Err;
+
+    // Record the kernel prologue data before kernel launch.
     auto RRHandleOrErr = RecordReplay->recordPrologue(
         *this, KernelArgs, KernelExtraArgs, LaunchParams, NumBlocks, NumThreads,
         DynBlockMemConf.NativeSize);
     if (!RRHandleOrErr)
       return RRHandleOrErr.takeError();
-    if (RRHandle)
-      *RRHandle = *RRHandleOrErr;
+    RRHandle = *RRHandleOrErr;
   }
 
-  if (auto Err =
-          printLaunchInfo(GenericDevice, KernelArgs, NumThreads, NumBlocks))
+  if (auto Err = launchImpl(GenericDevice, NumThreads, NumBlocks,
+                            DynBlockMemConf.NativeSize, KernelArgs,
+                            LaunchParams, AsyncInfoWrapper))
     return Err;
 
-  return launchImpl(GenericDevice, NumThreads, NumBlocks,
-                    DynBlockMemConf.NativeSize, KernelArgs, LaunchParams,
-                    AsyncInfoWrapper);
+  if (RecordReplay) {
+    // Record replay requires synchronization.
+    if (auto Err = AsyncInfoWrapper.synchronize())
+      return Err;
+
+    // Record the epilogue data after kernel synchronization.
+    return RecordReplay->recordEpilogue(*this, RRHandle);
+  }
+  return Plugin::success();
 }
 
 KernelLaunchParamsTy
@@ -1108,8 +1132,7 @@ Error GenericDeviceTy::launchKernel(void *EntryPtr, void **ArgPtrs,
                                     KernelArgsTy &KernelArgs,
                                     KernelExtraArgsTy *KernelExtraArgs,
                                     __tgt_async_info *AsyncInfo) {
-  AsyncInfoWrapperTy AsyncInfoWrapper(*this,
-                                      RecordReplay ? nullptr : AsyncInfo);
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
 
   GenericKernelTy &GenericKernel =
       *reinterpret_cast<GenericKernelTy *>(EntryPtr);
@@ -1126,16 +1149,10 @@ Error GenericDeviceTy::launchKernel(void *EntryPtr, void **ArgPtrs,
         .emplace(&GenericKernel, std::move(StackTrace), AsyncInfo);
   }
 
-  RecordReplayTy::HandleTy RRHandle;
   auto Err = GenericKernel.launch(*this, ArgPtrs, ArgOffsets, KernelArgs,
-                                  KernelExtraArgs, AsyncInfoWrapper, &RRHandle);
+                                  KernelExtraArgs, AsyncInfoWrapper);
 
-  // 'finalize' here to guarantee next record-replay actions are in-sync
   AsyncInfoWrapper.finalize(Err);
-
-  if (RecordReplay)
-    if (auto Err = RecordReplay->recordEpilogue(GenericKernel, RRHandle))
-      return Err;
 
   return Err;
 }

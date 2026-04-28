@@ -612,11 +612,11 @@ define void @mask_replication_factor3_vf8(ptr %in.maskvec, ptr %in.vec, ptr %out
 ; AVX512BW-NEXT:    vpmovm2w %k0, %zmm0
 ; AVX512BW-NEXT:    vpmovsxbw {{.*#+}} zmm1 = [0,0,0,1,1,1,2,2,2,3,3,3,4,4,4,5,5,5,6,6,6,7,7,7,0,0,0,0,0,0,0,0]
 ; AVX512BW-NEXT:    vpermw %zmm0, %zmm1, %zmm0
-; AVX512BW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512BW-NEXT:    movl $16777215, %eax # imm = 0xFFFFFF
-; AVX512BW-NEXT:    kmovd %eax, %k1
-; AVX512BW-NEXT:    vpcmpgtw %zmm0, %zmm1, %k1 {%k1}
-; AVX512BW-NEXT:    kshiftrd $16, %k1, %k2
+; AVX512BW-NEXT:    vpmovw2m %zmm0, %k1
+; AVX512BW-NEXT:    kshiftrd $16, %k1, %k0
+; AVX512BW-NEXT:    movl $255, %eax
+; AVX512BW-NEXT:    kmovd %eax, %k2
+; AVX512BW-NEXT:    kandw %k2, %k0, %k2
 ; AVX512BW-NEXT:    vmovdqa32 64(%rsi), %zmm0 {%k2} {z}
 ; AVX512BW-NEXT:    vmovdqa32 (%rsi), %zmm1 {%k1} {z}
 ; AVX512BW-NEXT:    vmovdqa64 %zmm1, (%rdx)
@@ -3157,11 +3157,11 @@ define void @mask_replication_factor5_vf4(ptr %in.maskvec, ptr %in.vec, ptr %out
 ; AVX512BW-NEXT:    vpmovm2w %k0, %zmm0
 ; AVX512BW-NEXT:    vpmovsxbw {{.*#+}} zmm1 = [0,0,0,0,0,1,1,1,1,1,2,2,2,2,2,3,3,3,3,3,0,0,0,0,0,0,0,0,0,0,0,0]
 ; AVX512BW-NEXT:    vpermw %zmm0, %zmm1, %zmm0
-; AVX512BW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512BW-NEXT:    movl $1048575, %eax # imm = 0xFFFFF
-; AVX512BW-NEXT:    kmovd %eax, %k1
-; AVX512BW-NEXT:    vpcmpgtw %zmm0, %zmm1, %k1 {%k1}
-; AVX512BW-NEXT:    kshiftrd $16, %k1, %k2
+; AVX512BW-NEXT:    vpmovw2m %zmm0, %k1
+; AVX512BW-NEXT:    kshiftrd $16, %k1, %k0
+; AVX512BW-NEXT:    movl $15, %eax
+; AVX512BW-NEXT:    kmovd %eax, %k2
+; AVX512BW-NEXT:    kandw %k2, %k0, %k2
 ; AVX512BW-NEXT:    vmovdqa32 64(%rsi), %zmm0 {%k2} {z}
 ; AVX512BW-NEXT:    vmovdqa32 (%rsi), %zmm1 {%k1} {z}
 ; AVX512BW-NEXT:    vmovdqa64 %zmm1, (%rdx)
@@ -3241,11 +3241,11 @@ define void @mask_replication_factor5_vf8(ptr %in.maskvec, ptr %in.vec, ptr %out
 ; AVX512BW-ONLY-NEXT:    vpmovm2b %k0, %zmm0
 ; AVX512BW-ONLY-NEXT:    vpbroadcastq %xmm0, %zmm0
 ; AVX512BW-ONLY-NEXT:    vpshufb {{.*#+}} zmm0 = zmm0[0,0,0,0,0,1,1,1,1,1,2,2,2,2,2,3,19,19,19,19,20,20,20,20,20,21,21,21,21,21,22,22,38,38,38,39,39,39,39,39,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u]
-; AVX512BW-ONLY-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512BW-ONLY-NEXT:    movabsq $1099511627775, %rax # imm = 0xFFFFFFFFFF
-; AVX512BW-ONLY-NEXT:    kmovq %rax, %k1
-; AVX512BW-ONLY-NEXT:    vpcmpgtb %zmm0, %zmm1, %k1 {%k1}
+; AVX512BW-ONLY-NEXT:    vpmovb2m %zmm0, %k1
+; AVX512BW-ONLY-NEXT:    movl $255, %eax
+; AVX512BW-ONLY-NEXT:    kmovq %rax, %k0
 ; AVX512BW-ONLY-NEXT:    kshiftrq $32, %k1, %k2
+; AVX512BW-ONLY-NEXT:    kandw %k0, %k2, %k2
 ; AVX512BW-ONLY-NEXT:    vmovdqa32 128(%rsi), %zmm0 {%k2} {z}
 ; AVX512BW-ONLY-NEXT:    vmovdqa32 (%rsi), %zmm1 {%k1} {z}
 ; AVX512BW-ONLY-NEXT:    kshiftrq $16, %k1, %k1
@@ -3262,11 +3262,11 @@ define void @mask_replication_factor5_vf8(ptr %in.maskvec, ptr %in.vec, ptr %out
 ; AVX512VBMI-ONLY-NEXT:    vpmovm2b %k0, %zmm0
 ; AVX512VBMI-ONLY-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [0,0,0,0,0,1,1,1,1,1,2,2,2,2,2,3,3,3,3,3,4,4,4,4,4,5,5,5,5,5,6,6,6,6,6,7,7,7,7,7,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u]
 ; AVX512VBMI-ONLY-NEXT:    vpermb %zmm0, %zmm1, %zmm0
-; AVX512VBMI-ONLY-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512VBMI-ONLY-NEXT:    movabsq $1099511627775, %rax # imm = 0xFFFFFFFFFF
-; AVX512VBMI-ONLY-NEXT:    kmovq %rax, %k1
-; AVX512VBMI-ONLY-NEXT:    vpcmpgtb %zmm0, %zmm1, %k1 {%k1}
-; AVX512VBMI-ONLY-NEXT:    kshiftrq $32, %k1, %k2
+; AVX512VBMI-ONLY-NEXT:    vpmovb2m %zmm0, %k1
+; AVX512VBMI-ONLY-NEXT:    kshiftrq $32, %k1, %k0
+; AVX512VBMI-ONLY-NEXT:    movl $255, %eax
+; AVX512VBMI-ONLY-NEXT:    kmovq %rax, %k2
+; AVX512VBMI-ONLY-NEXT:    kandw %k2, %k0, %k2
 ; AVX512VBMI-ONLY-NEXT:    vmovdqa32 128(%rsi), %zmm0 {%k2} {z}
 ; AVX512VBMI-ONLY-NEXT:    vmovdqa32 (%rsi), %zmm1 {%k1} {z}
 ; AVX512VBMI-ONLY-NEXT:    kshiftrq $16, %k1, %k1
@@ -5930,11 +5930,11 @@ define void @mask_replication_factor6_vf4(ptr %in.maskvec, ptr %in.vec, ptr %out
 ; AVX512BW-NEXT:    vpmovm2w %k0, %zmm0
 ; AVX512BW-NEXT:    vpmovsxbw {{.*#+}} zmm1 = [0,0,0,0,0,0,1,1,1,1,1,1,2,2,2,2,2,2,3,3,3,3,3,3,0,0,0,0,0,0,0,0]
 ; AVX512BW-NEXT:    vpermw %zmm0, %zmm1, %zmm0
-; AVX512BW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512BW-NEXT:    movl $16777215, %eax # imm = 0xFFFFFF
-; AVX512BW-NEXT:    kmovd %eax, %k1
-; AVX512BW-NEXT:    vpcmpgtw %zmm0, %zmm1, %k1 {%k1}
-; AVX512BW-NEXT:    kshiftrd $16, %k1, %k2
+; AVX512BW-NEXT:    vpmovw2m %zmm0, %k1
+; AVX512BW-NEXT:    kshiftrd $16, %k1, %k0
+; AVX512BW-NEXT:    movl $255, %eax
+; AVX512BW-NEXT:    kmovd %eax, %k2
+; AVX512BW-NEXT:    kandw %k2, %k0, %k2
 ; AVX512BW-NEXT:    vmovdqa32 64(%rsi), %zmm0 {%k2} {z}
 ; AVX512BW-NEXT:    vmovdqa32 (%rsi), %zmm1 {%k1} {z}
 ; AVX512BW-NEXT:    vmovdqa64 %zmm1, (%rdx)
@@ -9106,12 +9106,12 @@ define void @mask_replication_factor7_vf4(ptr %in.maskvec, ptr %in.vec, ptr %out
 ; AVX512BW-NEXT:    vpmovm2w %k0, %zmm0
 ; AVX512BW-NEXT:    vpmovsxbw {{.*#+}} zmm1 = [0,0,0,0,0,0,0,1,1,1,1,1,1,1,2,2,2,2,2,2,2,3,3,3,3,3,3,3,0,0,0,0]
 ; AVX512BW-NEXT:    vpermw %zmm0, %zmm1, %zmm0
-; AVX512BW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512BW-NEXT:    movl $268435455, %eax # imm = 0xFFFFFFF
-; AVX512BW-NEXT:    kmovd %eax, %k1
-; AVX512BW-NEXT:    vpcmpgtw %zmm0, %zmm1, %k1 {%k1}
+; AVX512BW-NEXT:    vpmovw2m %zmm0, %k1
 ; AVX512BW-NEXT:    vmovdqa32 (%rsi), %zmm0 {%k1} {z}
-; AVX512BW-NEXT:    kshiftrd $16, %k1, %k1
+; AVX512BW-NEXT:    kshiftrd $16, %k1, %k0
+; AVX512BW-NEXT:    movl $4095, %eax # imm = 0xFFF
+; AVX512BW-NEXT:    kmovd %eax, %k1
+; AVX512BW-NEXT:    kandw %k1, %k0, %k1
 ; AVX512BW-NEXT:    vmovdqa32 64(%rsi), %zmm1 {%k1} {z}
 ; AVX512BW-NEXT:    vextracti32x4 $2, %zmm1, 96(%rdx)
 ; AVX512BW-NEXT:    vmovdqa64 %zmm0, (%rdx)
@@ -9268,14 +9268,14 @@ define void @mask_replication_factor7_vf8(ptr %in.maskvec, ptr %in.vec, ptr %out
 ; AVX512BW-ONLY-NEXT:    vpmovm2b %k0, %zmm0
 ; AVX512BW-ONLY-NEXT:    vpbroadcastq %xmm0, %zmm0
 ; AVX512BW-ONLY-NEXT:    vpshufb {{.*#+}} zmm0 = zmm0[0,0,0,0,0,0,0,1,1,1,1,1,1,1,2,2,18,18,18,18,18,19,19,19,19,19,19,19,20,20,20,20,36,36,36,37,37,37,37,37,37,37,38,38,38,38,38,38,54,55,55,55,55,55,55,55,u,u,u,u,u,u,u,u]
-; AVX512BW-ONLY-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512BW-ONLY-NEXT:    movabsq $72057594037927935, %rax # imm = 0xFFFFFFFFFFFFFF
-; AVX512BW-ONLY-NEXT:    kmovq %rax, %k1
-; AVX512BW-ONLY-NEXT:    vpcmpgtb %zmm0, %zmm1, %k1 {%k1}
-; AVX512BW-ONLY-NEXT:    kshiftrq $48, %k1, %k2
-; AVX512BW-ONLY-NEXT:    vmovdqa32 192(%rsi), %zmm0 {%k2} {z}
-; AVX512BW-ONLY-NEXT:    vmovdqa32 (%rsi), %zmm1 {%k1} {z}
+; AVX512BW-ONLY-NEXT:    vpmovb2m %zmm0, %k1
+; AVX512BW-ONLY-NEXT:    movl $16777215, %eax # imm = 0xFFFFFF
+; AVX512BW-ONLY-NEXT:    kmovq %rax, %k0
 ; AVX512BW-ONLY-NEXT:    kshiftrq $32, %k1, %k2
+; AVX512BW-ONLY-NEXT:    kandd %k0, %k2, %k2
+; AVX512BW-ONLY-NEXT:    kshiftrd $16, %k2, %k3
+; AVX512BW-ONLY-NEXT:    vmovdqa32 192(%rsi), %zmm0 {%k3} {z}
+; AVX512BW-ONLY-NEXT:    vmovdqa32 (%rsi), %zmm1 {%k1} {z}
 ; AVX512BW-ONLY-NEXT:    vmovdqa32 128(%rsi), %zmm2 {%k2} {z}
 ; AVX512BW-ONLY-NEXT:    kshiftrq $16, %k1, %k1
 ; AVX512BW-ONLY-NEXT:    vmovdqa32 64(%rsi), %zmm3 {%k1} {z}
@@ -9292,14 +9292,14 @@ define void @mask_replication_factor7_vf8(ptr %in.maskvec, ptr %in.vec, ptr %out
 ; AVX512VBMI-ONLY-NEXT:    vpmovm2b %k0, %zmm0
 ; AVX512VBMI-ONLY-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [0,0,0,0,0,0,0,1,1,1,1,1,1,1,2,2,2,2,2,2,2,3,3,3,3,3,3,3,4,4,4,4,4,4,4,5,5,5,5,5,5,5,6,6,6,6,6,6,6,7,7,7,7,7,7,7,u,u,u,u,u,u,u,u]
 ; AVX512VBMI-ONLY-NEXT:    vpermb %zmm0, %zmm1, %zmm0
-; AVX512VBMI-ONLY-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512VBMI-ONLY-NEXT:    movabsq $72057594037927935, %rax # imm = 0xFFFFFFFFFFFFFF
-; AVX512VBMI-ONLY-NEXT:    kmovq %rax, %k1
-; AVX512VBMI-ONLY-NEXT:    vpcmpgtb %zmm0, %zmm1, %k1 {%k1}
-; AVX512VBMI-ONLY-NEXT:    kshiftrq $48, %k1, %k2
-; AVX512VBMI-ONLY-NEXT:    vmovdqa32 192(%rsi), %zmm0 {%k2} {z}
+; AVX512VBMI-ONLY-NEXT:    vpmovb2m %zmm0, %k1
+; AVX512VBMI-ONLY-NEXT:    kshiftrq $32, %k1, %k0
+; AVX512VBMI-ONLY-NEXT:    movl $16777215, %eax # imm = 0xFFFFFF
+; AVX512VBMI-ONLY-NEXT:    kmovq %rax, %k2
+; AVX512VBMI-ONLY-NEXT:    kandd %k2, %k0, %k2
+; AVX512VBMI-ONLY-NEXT:    kshiftrd $16, %k2, %k3
+; AVX512VBMI-ONLY-NEXT:    vmovdqa32 192(%rsi), %zmm0 {%k3} {z}
 ; AVX512VBMI-ONLY-NEXT:    vmovdqa32 (%rsi), %zmm1 {%k1} {z}
-; AVX512VBMI-ONLY-NEXT:    kshiftrq $32, %k1, %k2
 ; AVX512VBMI-ONLY-NEXT:    vmovdqa32 128(%rsi), %zmm2 {%k2} {z}
 ; AVX512VBMI-ONLY-NEXT:    kshiftrq $16, %k1, %k1
 ; AVX512VBMI-ONLY-NEXT:    vmovdqa32 64(%rsi), %zmm3 {%k1} {z}

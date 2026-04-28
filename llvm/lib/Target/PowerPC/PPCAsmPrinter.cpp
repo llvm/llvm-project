@@ -283,7 +283,7 @@ public:
 
   PPCAIXAsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
       : PPCAsmPrinter(TM, std::move(Streamer), ID) {
-    if (MAI->isLittleEndian())
+    if (MAI.isLittleEndian())
       report_fatal_error(
           "cannot create AIX PPC Assembly Printer for a little-endian target");
   }
@@ -1822,7 +1822,7 @@ void PPCLinuxAsmPrinter::emitInstruction(const MachineInstr *MI) {
         .getValueAsString()
         .getAsInteger(10, Num);
 
-    if (!MAI->isLittleEndian() || Num)
+    if (!MAI.isLittleEndian() || Num)
       break;
     MCSymbol *BeginOfSled = OutContext.createTempSymbol();
     MCSymbol *EndOfSled = OutContext.createTempSymbol();
@@ -2064,7 +2064,7 @@ void PPCLinuxAsmPrinter::emitEndOfAsmFile(Module &M) {
   if (static_cast<const PPCTargetMachine &>(TM).hasGlibcHWCAPAccess())
     OutStreamer->emitSymbolValue(
         GetExternalSymbolSymbol("__parse_hwcap_and_convert_at_platform"),
-        MAI->getCodePointerSize());
+        MAI.getCodePointerSize());
   emitGNUAttributes(M);
 
   if (!TOC.empty()) {
@@ -2286,13 +2286,13 @@ void PPCAIXAsmPrinter::emitLinkage(const GlobalValue *GV,
     // TODO: "internal" Visibility needs to go here.
     case GlobalValue::DefaultVisibility:
       if (GV->hasDLLExportStorageClass())
-        VisibilityAttr = MAI->getExportedVisibilityAttr();
+        VisibilityAttr = MAI.getExportedVisibilityAttr();
       break;
     case GlobalValue::HiddenVisibility:
-      VisibilityAttr = MAI->getHiddenVisibilityAttr();
+      VisibilityAttr = MAI.getHiddenVisibilityAttr();
       break;
     case GlobalValue::ProtectedVisibility:
-      VisibilityAttr = MAI->getProtectedVisibilityAttr();
+      VisibilityAttr = MAI.getProtectedVisibilityAttr();
       break;
     }
   }

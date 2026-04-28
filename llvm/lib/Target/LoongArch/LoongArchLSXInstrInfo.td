@@ -34,6 +34,8 @@ def SDT_LoongArchVLDREPL : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisPtrTy<1>]>;
 def SDT_LoongArchVMSKCOND : SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisVec<1>]>;
 def SDT_LoongArchVFCVT_S_D : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisFP<0>,
                                                   SDTCisVec<1>, SDTCisFP<1>, SDTCisSameAs<1, 2>]>;
+def SDT_LoongArchVFCVTLH_D_S : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisFP<0>,
+                                                    SDTCisVec<1>, SDTCisFP<1>]>;
 
 // Target nodes.
 
@@ -97,6 +99,12 @@ def loongarch_vmskeqz: SDNode<"LoongArchISD::VMSKEQZ", SDT_LoongArchVMSKCOND>;
 def loongarch_vmsknez: SDNode<"LoongArchISD::VMSKNEZ", SDT_LoongArchVMSKCOND>;
 
 def loongarch_vfcvt_s_d: SDNode<"LoongArchISD::VFCVT", SDT_LoongArchVFCVT_S_D>;
+def loongarch_vfcvtl_d_s: SDNode<"LoongArchISD::VFCVTL", SDT_LoongArchVFCVTLH_D_S>;
+def loongarch_vfcvth_d_s: SDNode<"LoongArchISD::VFCVTH", SDT_LoongArchVFCVTLH_D_S>;
+
+// Vector rounded shift
+def loongarch_vsrlr: SDNode<"LoongArchISD::VSRLR", SDT_LoongArchV2R>;
+def loongarch_vsrar: SDNode<"LoongArchISD::VSRAR", SDT_LoongArchV2R>;
 
 def immZExt1 : ImmLeaf<GRLenVT, [{return isUInt<1>(Imm);}]>;
 def immZExt2 : ImmLeaf<GRLenVT, [{return isUInt<2>(Imm);}]>;
@@ -1296,9 +1304,27 @@ def PseudoVBZ_W : VecCond<loongarch_vall_zero, v4i32>;
 def PseudoVBZ_D : VecCond<loongarch_vall_zero, v2i64>;
 def PseudoVBZ : VecCond<loongarch_vany_zero, v16i8>;
 
-let usesCustomInserter = 1 in
-def PseudoCTPOP : Pseudo<(outs GPR:$rd), (ins GPR:$rj),
-                         [(set GPR:$rd, (ctpop GPR:$rj))]>;
+let usesCustomInserter = 1 in {
+def PseudoCTPOP_B : Pseudo<(outs GPR:$rd), (ins GPR:$rj),
+                           [(set GPR:$rd, (ctpop (and GPR:$rj, 255)))]>;
+def PseudoCTPOP_H : Pseudo<(outs GPR:$rd), (ins GPR:$rj),
+                           [(set GPR:$rd, (ctpop (loongarch_bstrpick GRLenVT:$rj,
+                                              (GRLenVT 15), (GRLenVT 0))))]>;
+let Predicates = [IsLA32] in {
+def PseudoCTPOP_H_LA32 : Pseudo<(outs GPR:$rd), (ins GPR:$rj),
+                                [(set GPR:$rd, (ctpop (and GPR:$rj, 65535)))]>;
+def PseudoCTPOP_W_LA32 : Pseudo<(outs GPR:$rd), (ins GPR:$rj),
+                                [(set GPR:$rd, (ctpop GPR:$rj))]>;
+} // Predicates = [IsLA32]
+
+let Predicates = [IsLA64] in {
+def PseudoCTPOP_W : Pseudo<(outs GPR:$rd), (ins GPR:$rj),
+                           [(set GPR:$rd, (ctpop (loongarch_bstrpick i64:$rj,
+                                              (i64 31), (i64 0))))]>;
+def PseudoCTPOP_D : Pseudo<(outs GPR:$rd), (ins GPR:$rj),
+                           [(set GPR:$rd, (ctpop GPR:$rj))]>;
+} // Predicates = [IsLA64]
+} // usesCustomInserter = 1
 
 let usesCustomInserter = 1, hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 def PseudoVMSKLTZ_B : Pseudo<(outs GPR:$rd), (ins LSX128:$vj)>;
@@ -1690,15 +1716,29 @@ defm : PatShiftVrVr<srl, "VSRL">;
 defm : PatShiftVrSplatUimm<srl, "VSRLI">;
 defm : PatShiftVrUimm<loongarch_vsrli, "VSRLI">;
 
+// VSRLR[I]_{B/H/W/D}
+defm : PatVrVr<loongarch_vsrlr, "VSRLR">;
+defm : PatShiftVrSplatUimm<loongarch_vsrlr, "VSRLRI">;
+
 // VSRA[I]_{B/H/W/D}
 defm : PatVrVr<sra, "VSRA">;
 defm : PatShiftVrVr<sra, "VSRA">;
 defm : PatShiftVrSplatUimm<sra, "VSRAI">;
 
+// VSRAR[I]_{B/H/W/D}
+defm : PatVrVr<loongarch_vsrar, "VSRAR">;
+defm : PatShiftVrSplatUimm<loongarch_vsrar, "VSRARI">;
+
 // VROTR[I]_{B/H/W/D}
 defm : PatVrVr<rotr, "VROTR">;
 defm : PatShiftVrVr<rotr, "VROTR">;
 defm : PatShiftVrSplatUimm<rotr, "VROTRI">;
+
+// VCLO_{B/H/W/D}
+def : Pat<(ctlz (vnot v16i8:$vj)), (VCLO_B v16i8:$vj)>;
+def : Pat<(ctlz (vnot v8i16:$vj)), (VCLO_H v8i16:$vj)>;
+def : Pat<(ctlz (vnot v4i32:$vj)), (VCLO_W v4i32:$vj)>;
+def : Pat<(ctlz (vnot v2i64:$vj)), (VCLO_D v2i64:$vj)>;
 
 // VCLZ_{B/H/W/D}
 defm : PatVr<ctlz, "VCLZ">;
@@ -2242,6 +2282,10 @@ defm : VAvgrPat<srl, "VAVGR_BU", v16i8>;
 defm : VAvgrPat<srl, "VAVGR_HU", v8i16>;
 defm : VAvgrPat<srl, "VAVGR_WU", v4i32>;
 defm : VAvgrPat<srl, "VAVGR_DU", v2i64>;
+defm : PatVrVr<avgfloors, "VAVG">;
+defm : PatVrVr<avgceils, "VAVGR">;
+defm : PatVrVrU<avgflooru, "VAVG">;
+defm : PatVrVrU<avgceilu, "VAVGR">;
 
 // abs
 def : Pat<(abs v16i8:$vj), (VSIGNCOV_B v16i8:$vj, v16i8:$vj)>;
@@ -2615,6 +2659,11 @@ defm : PatVrF<froundeven, "VFRINTRNE">;
 
 def : Pat<(v4f32 (loongarch_vfcvt_s_d (v2f64 LSX128:$vj), (v2f64 LSX128:$vk))),
           (VFCVT_S_D LSX128:$vj, LSX128:$vk)>;
+
+def : Pat<(v2f64 (loongarch_vfcvtl_d_s (v4f32 LSX128:$vj))),
+          (VFCVTL_D_S LSX128:$vj)>;
+def : Pat<(v2f64 (loongarch_vfcvth_d_s (v4f32 LSX128:$vj))),
+          (VFCVTH_D_S LSX128:$vj)>;
 
 // load
 def : Pat<(int_loongarch_lsx_vld GPR:$rj, timm:$imm),

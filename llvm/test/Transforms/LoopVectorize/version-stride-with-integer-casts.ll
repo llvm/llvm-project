@@ -327,10 +327,10 @@ define void @test_versioned_with_non_ex_use(i32 %offset, ptr noalias %dst.1, ptr
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP10:%.*]] = mul <4 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i32> [[TMP10]], i32 0
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i32> [[TMP10]], i32 1
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x i32> [[TMP10]], i32 2
-; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <4 x i32> [[TMP10]], i32 3
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i32> [[TMP10]], i64 0
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i32> [[TMP10]], i64 1
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x i32> [[TMP10]], i64 2
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <4 x i32> [[TMP10]], i64 3
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[DST_1]], i32 [[TMP11]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[DST_1]], i32 [[TMP13]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[DST_1]], i32 [[TMP15]]
@@ -399,8 +399,6 @@ define void @zext_of_i1_stride(i1 %g, ptr %dst) mustprogress {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[G_16:%.*]] = zext i1 [[G]] to i16
 ; CHECK-NEXT:    [[G_64:%.*]] = zext i1 [[G]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = udiv i64 15, [[G_64]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i64 [[TMP0]], 1
 ; CHECK-NEXT:    br label [[VECTOR_SCEVCHECK:%.*]]
 ; CHECK:       vector.scevcheck:
 ; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i1 [[G]], true
