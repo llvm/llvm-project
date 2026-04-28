@@ -143,7 +143,6 @@ private:
   std::shared_ptr<StackFrame> m_exe_ctx_scope;
   lldb::DynamicValueType m_use_dynamic;
   bool m_use_synthetic;
-  bool m_fragile_ivar;
   bool m_check_ptr_vs_member;
   // TODO: Remove 'maybe_unused' when next PR, using this, gets submitted.
   [[maybe_unused]] bool m_allow_var_updates;

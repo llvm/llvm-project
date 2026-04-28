@@ -639,6 +639,15 @@ void NVPTXAsmPrinter::emitDeclarations(const Module &M, raw_ostream &O) {
         continue;
       if (F.getIntrinsicID())
         continue;
+      // An unrecognized intrinsic would produce an invalid PTX declaration. Let
+      // the user know that, and skip it.
+      if (F.isIntrinsic()) {
+        LLVMContext &Ctx = F.getContext();
+        Ctx.diagnose(DiagnosticInfoUnsupported(
+            F, "unknown intrinsic '" + F.getName() +
+                   "' cannot be lowered by the NVPTX backend"));
+        continue;
+      }
       emitDeclaration(&F, O);
       continue;
     }
@@ -1051,7 +1060,7 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
           AggBuffer aggBuffer(ElementSize, *this);
           bufferAggregateConstant(Initializer, &aggBuffer);
           if (aggBuffer.numSymbols()) {
-            const unsigned int ptrSize = MAI->getCodePointerSize();
+            const unsigned int ptrSize = MAI.getCodePointerSize();
             if (ElementSize % ptrSize ||
                 !aggBuffer.allSymbolsAligned(ptrSize)) {
               // Print in bytes and use the mask() operator for pointers.
@@ -1123,7 +1132,7 @@ void NVPTXAsmPrinter::AggBuffer::printSymbol(unsigned nSym, raw_ostream &os) {
 }
 
 void NVPTXAsmPrinter::AggBuffer::printBytes(raw_ostream &os) {
-  unsigned int ptrSize = AP.MAI->getCodePointerSize();
+  unsigned int ptrSize = AP.MAI.getCodePointerSize();
   // Do not emit trailing zero initializers. They will be zero-initialized by
   // ptxas. This saves on both space requirements for the generated PTX and on
   // memory use by ptxas. (See:
@@ -1165,7 +1174,7 @@ void NVPTXAsmPrinter::AggBuffer::printBytes(raw_ostream &os) {
 }
 
 void NVPTXAsmPrinter::AggBuffer::printWords(raw_ostream &os) {
-  unsigned int ptrSize = AP.MAI->getCodePointerSize();
+  unsigned int ptrSize = AP.MAI.getCodePointerSize();
   symbolPosInBuffer.push_back(Size);
   unsigned int nSym = 0;
   unsigned int nextSymbolPos = symbolPosInBuffer[nSym];
@@ -1974,7 +1983,7 @@ NVPTXAsmPrinter::lowerConstantForGV(const Constant *CV,
 }
 
 void NVPTXAsmPrinter::printMCExpr(const MCExpr &Expr, raw_ostream &OS) const {
-  OutContext.getAsmInfo()->printExpr(OS, Expr);
+  OutContext.getAsmInfo().printExpr(OS, Expr);
 }
 
 /// PrintAsmOperand - Print out an operand for an inline asm expression.

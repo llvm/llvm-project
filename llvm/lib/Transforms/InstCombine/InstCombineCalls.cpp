@@ -1084,7 +1084,7 @@ Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
     if (OrderedInvertedMask == fcInf)
       Pred = IsUnordered ? FCmpInst::FCMP_UNE : FCmpInst::FCMP_ONE;
 
-    Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, Src0);
+    Value *Fabs = Builder.CreateFAbs(Src0);
     Value *CmpInf = Builder.CreateFCmp(Pred, Fabs, Inf);
     CmpInf->takeName(&II);
     return replaceInstUsesWith(II, CmpInf);
@@ -1879,6 +1879,65 @@ static Instruction *foldNeonShift(IntrinsicInst *II, InstCombinerImpl &IC) {
   Value *Result =
       IsSigned ? B.CreateAShr(Arg0, NegAmt) : B.CreateLShr(Arg0, NegAmt);
   return IC.replaceInstUsesWith(*II, Result);
+}
+
+// If II is llvm.sin(x) or llvm.cos(x), and there is a matching
+// llvm.cos(x) or llvm.sin(x) using the same argument, combine them
+// into a single llvm.sincos(x) call. Returns the result for II
+// extracted from sincos, or nullptr if no match is found.
+static Value *foldSinAndCosToSinCos(IntrinsicInst *II, IRBuilderBase &B,
+                                    InstCombinerImpl &IC) {
+  Intrinsic::ID IID = II->getIntrinsicID();
+  bool IsSin = IID == Intrinsic::sin;
+  Intrinsic::ID MatchID = IsSin ? Intrinsic::cos : Intrinsic::sin;
+
+  Value *Arg = II->getArgOperand(0);
+
+  // Don't bother looking through uses of constants.
+  if (isa<Constant>(Arg))
+    return nullptr;
+
+  // Look for a matching cos/sin intrinsic with the same argument.
+  IntrinsicInst *Match = nullptr;
+  for (User *U : Arg->users()) {
+    if (auto *Cand = dyn_cast<IntrinsicInst>(U)) {
+      if (Cand != II && !Cand->use_empty() &&
+          Cand->getIntrinsicID() == MatchID) {
+        Match = Cand;
+        break;
+      }
+    }
+  }
+
+  if (!Match)
+    return nullptr;
+
+  // Insert sincos right after the argument definition.
+  IRBuilderBase::InsertPointGuard Guard(B);
+  if (auto *ArgInst = dyn_cast<Instruction>(Arg))
+    B.SetInsertPoint(ArgInst->getParent(), std::next(ArgInst->getIterator()));
+  else {
+    BasicBlock &EntryBB = II->getFunction()->getEntryBlock();
+    B.SetInsertPoint(&EntryBB, EntryBB.begin());
+  }
+
+  Function *SinCosFunc = Intrinsic::getOrInsertDeclaration(
+      II->getModule(), Intrinsic::sincos, Arg->getType());
+  CallInst *SinCos = B.CreateCall(SinCosFunc, Arg, "sincos");
+  // Intersect fast-math flags from the two calls.
+  SinCos->setFastMathFlags(II->getFastMathFlags() & Match->getFastMathFlags());
+  // Propagate the most-generic fpmath metadata from the two original calls.
+  if (MDNode *MD = MDNode::getMostGenericFPMath(
+          II->getMetadata(LLVMContext::MD_fpmath),
+          Match->getMetadata(LLVMContext::MD_fpmath)))
+    SinCos->setMetadata(LLVMContext::MD_fpmath, MD);
+  Value *Sin = B.CreateExtractValue(SinCos, 0, "sin");
+  Value *Cos = B.CreateExtractValue(SinCos, 1, "cos");
+
+  // Replace the matching call and erase it.
+  IC.replaceInstUsesWith(*Match, IsSin ? Cos : Sin);
+  IC.eraseInstFromFunction(*Match);
+  return IsSin ? Sin : Cos;
 }
 
 /// CallInst simplification. This mostly only handles folding of intrinsic
@@ -2938,7 +2997,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     };
 
     if (IsMinMaxOrXNegX(Arg0, Arg1) || IsMinMaxOrXNegX(Arg1, Arg0)) {
-      Value *R = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, II);
+      Value *R = Builder.CreateFAbs(X, II);
       if (IID == Intrinsic::minimum || IID == Intrinsic::minnum ||
           IID == Intrinsic::minimumnum)
         R = Builder.CreateFNegFMF(R, II);
@@ -3060,13 +3119,13 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       if (*KnownSignBit) {
         // If we know that the sign argument is negative, reduce to FNABS:
         // copysign Mag, -Sign --> fneg (fabs Mag)
-        Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, Mag, II);
+        Value *Fabs = Builder.CreateFAbs(Mag, II);
         return replaceInstUsesWith(*II, Builder.CreateFNegFMF(Fabs, II));
       }
 
       // If we know that the sign argument is positive, reduce to FABS:
       // copysign Mag, +Sign --> fabs Mag
-      Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, Mag, II);
+      Value *Fabs = Builder.CreateFAbs(Mag, II);
       return replaceInstUsesWith(*II, Fabs);
     }
 
@@ -3117,8 +3176,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Value *X;
     // fabs (-X) --> fabs (X)
     if (match(Arg, m_FNeg(m_Value(X)))) {
-        CallInst *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, II);
-        return replaceInstUsesWith(CI, Fabs);
+      CallInst *Fabs = Builder.CreateFAbs(X, II);
+      return replaceInstUsesWith(CI, Fabs);
     }
 
     if (match(Arg, m_Select(m_Value(Cond), m_Value(TVal), m_Value(FVal)))) {
@@ -3147,8 +3206,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (match(II->getArgOperand(0),
               m_CopySign(m_Value(Magnitude), m_Value(Sign)))) {
       // fabs (copysign x, y) -> (fabs x)
-      CallInst *AbsSign =
-          Builder.CreateUnaryIntrinsic(Intrinsic::fabs, Magnitude, II);
+      CallInst *AbsSign = Builder.CreateFAbs(Magnitude, II);
       return replaceInstUsesWith(*II, AbsSign);
     }
 
@@ -3182,6 +3240,10 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       // for f in {cos, cosh}
       return replaceOperand(*II, 0, X);
     }
+    if (IID == Intrinsic::cos) {
+      if (Value *Result = foldSinAndCosToSinCos(II, Builder, *this))
+        return replaceInstUsesWith(*II, Result);
+    }
     break;
   }
   case Intrinsic::sin:
@@ -3195,6 +3257,10 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       // for f in {sin, sinh, tan, tanh}
       Value *NewFunc = Builder.CreateUnaryIntrinsic(IID, X, II);
       return UnaryOperator::CreateFNegFMF(NewFunc, II);
+    }
+    if (IID == Intrinsic::sin) {
+      if (Value *Result = foldSinAndCosToSinCos(II, Builder, *this))
+        return replaceInstUsesWith(*II, Result);
     }
     break;
   }

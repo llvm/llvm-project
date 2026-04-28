@@ -3162,8 +3162,6 @@ bool Target::RunStopHooks(bool at_initial_stop) {
   if (last_natural_stop != 0 && m_latest_stop_hook_id == last_natural_stop)
     return false;
 
-  m_latest_stop_hook_id = last_natural_stop;
-
   std::vector<ExecutionContext> exc_ctx_with_reasons;
 
   ThreadList &cur_threadlist = m_process_sp->GetThreadList();
@@ -3194,6 +3192,8 @@ bool Target::RunStopHooks(bool at_initial_stop) {
       return false;
     }
   }
+
+  m_latest_stop_hook_id = last_natural_stop;
 
   StreamSP output_sp = m_debugger.GetAsyncOutputStream();
   llvm::scope_exit on_exit([output_sp] { output_sp->Flush(); });
@@ -5294,6 +5294,17 @@ bool TargetProperties::GetDebugUtilityExpression() const {
 void TargetProperties::SetDebugUtilityExpression(bool debug) {
   const uint32_t idx = ePropertyDebugUtilityExpression;
   SetPropertyAtIndex(idx, debug);
+}
+
+bool TargetProperties::GetCheckValueObjectOwnership() const {
+  const uint32_t idx = ePropertyCheckValueObjectOwnership;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_target_properties[idx].default_uint_value != 0);
+}
+
+void TargetProperties::SetCheckValueObjectOwnership(bool check) {
+  const uint32_t idx = ePropertyCheckValueObjectOwnership;
+  SetPropertyAtIndex(idx, check);
 }
 
 std::optional<LoadScriptFromSymFile>

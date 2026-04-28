@@ -30,6 +30,9 @@ class Mutex final : private RawMutex {
   pid_t owner;
   unsigned long long lock_count;
 
+  // CndVar needs to access Mutex as RawMutex
+  friend class CndVar;
+
 public:
   LIBC_INLINE constexpr Mutex(bool is_timed, bool is_recursive, bool is_robust,
                               bool is_pshared)
@@ -82,6 +85,12 @@ public:
       return MutexError::NONE;
     return MutexError::BUSY;
   }
+
+  LIBC_INLINE bool can_be_requeued() const {
+    return !this->pshared && !this->robust;
+  }
+
+  LIBC_INLINE bool is_robust() const { return this->robust; }
 };
 
 } // namespace LIBC_NAMESPACE_DECL
