@@ -1209,7 +1209,7 @@ class TruncfToOCLPattern : public OpConversionPattern<TruncfOp> {
       Value three = LLVM::ConstantOp::create(rewriter, op.getLoc(),
                                              rewriter.getI32Type(), 3);
       Value even = genDnscl(cast, zero, two, one, zero);
-      Value odd = genDnscl(cast, one, three, one, three);
+      Value odd = genDnscl(cast, one, three, one, two);
       Value firstHalf = LLVM::OrOp::create(rewriter, op.getLoc(), even, odd);
       Value four = LLVM::ConstantOp::create(rewriter, op.getLoc(),
                                             rewriter.getI32Type(), 4);
@@ -1220,7 +1220,7 @@ class TruncfToOCLPattern : public OpConversionPattern<TruncfOp> {
       Value seven = LLVM::ConstantOp::create(rewriter, op.getLoc(),
                                              rewriter.getI32Type(), 7);
       even = genDnscl(cast, four, six, one, zero);
-      odd = genDnscl(cast, five, seven, one, three);
+      odd = genDnscl(cast, five, seven, one, two);
       Value secondHalf = LLVM::OrOp::create(rewriter, op.getLoc(), even, odd);
       // Create vector<2xi32> from two i32 values and then bitcast to
       // vector<8xi8> to match the dst type.

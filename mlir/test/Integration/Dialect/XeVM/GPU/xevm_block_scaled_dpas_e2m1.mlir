@@ -28,6 +28,8 @@ module @gemm attributes {gpu.container_module} {
       %loaded_a_casted = arith.constant dense<1.0> : vector<16xf16>
       %a_trunc_partial = xevm.truncf %loaded_a_casted { src_etype = f16, dst_etype = e2m1 } : (vector<16xf16>) -> vector<8xi8>
       %a_trunc = vector.shuffle %a_trunc_partial, %a_trunc_partial [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] : vector<8xi8>, vector<8xi8>
+      // %a_trunc = arith.constant dense<0x22> : vector<16xi8>
+
       %a_trunc_casted = vector.bitcast %a_trunc : vector<16xi8> to vector<8xi16>
 
       %base_width_b = arith.constant 16 : i32
@@ -41,16 +43,16 @@ module @gemm attributes {gpu.container_module} {
             transpose=false, pack_register=true}> : (!llvm.ptr<1>, i32, i32, i32, i32, i32) -> vector<8xi32>
 
       // Note: scale is not computed. Constant values are used for simplifying the example
-      %scale_a = arith.constant 1.0 : f8E8M0FNU
-      %scale_b = arith.constant 1.0 : f8E8M0FNU
-      %scale_a_casted = arith.bitcast %scale_a : f8E8M0FNU to i8
-      %scale_b_casted = arith.bitcast %scale_b : f8E8M0FNU to i8
+      %scale_a = arith.constant dense<1.0> : vector<2xf8E8M0FNU>
+      %scale_b = arith.constant dense<1.0> : vector<2xf8E8M0FNU>
+      %scale_a_casted = vector.bitcast %scale_a : vector<2xf8E8M0FNU> to vector<2xi8>
+      %scale_b_casted = vector.bitcast %scale_b : vector<2xf8E8M0FNU> to vector<2xi8>
       // Note: c is not loaded. constant vector is used for simplifying the example
       %loaded_c_casted = arith.constant dense<0.0> : vector<8xf32>
 
       %c_result = xevm.mma_mx %a_trunc_casted, %loaded_b, %scale_a_casted, %scale_b_casted, %loaded_c_casted
-          {shape=<m=8, n=16, k=32>, types=<d=f32, a=e2m1, b=e2m1, c=f32>}
-          : (vector<8xi16>, vector<8xi32>, i8, i8, vector<8xf32>) -> vector<8xf32>
+          {shape=<m=8, n=16, k=64>, types=<d=f32, a=e2m1, b=e2m1, c=f32>}
+          : (vector<8xi16>, vector<8xi32>, vector<2xi8>, vector<2xi8>, vector<8xf32>) -> vector<8xf32>
       %c_result_casted = vector.bitcast %c_result : vector<8xf32> to vector<8xi32>
 
       %base_width_c = arith.constant 64 : i32
@@ -63,7 +65,7 @@ module @gemm attributes {gpu.container_module} {
     }
   }
 
-  func.func @test(%a : memref<8x64xf16>, %b : memref<64x16xf4E2M1FN>, %c : memref<8x16xf32>) -> memref<8x16xf32> attributes {llvm.emit_c_interface} {
+  func.func @test(%a : memref<8x64xf16>, %b : memref<32x16xi8>, %c : memref<8x16xf32>) -> memref<8x16xf32> attributes {llvm.emit_c_interface} {
     %c1 = arith.constant 1 : index
     %c16 = arith.constant 16 : index
 
@@ -74,9 +76,9 @@ module @gemm attributes {gpu.container_module} {
     %a_ptr = llvm.inttoptr %a_ptr_as_i64 : i64 to !llvm.ptr
     %a_ptr_casted = llvm.addrspacecast %a_ptr : !llvm.ptr to !llvm.ptr<1>
 
-    %memref_b = gpu.alloc() : memref<64x16xf4E2M1FN>
-    gpu.memcpy %memref_b, %b : memref<64x16xf4E2M1FN>, memref<64x16xf4E2M1FN>
-    %b_ptr_as_idx = memref.extract_aligned_pointer_as_index %memref_b : memref<64x16xf4E2M1FN> -> index
+    %memref_b = gpu.alloc() : memref<32x16xi8>
+    gpu.memcpy %memref_b, %b : memref<32x16xi8>, memref<32x16xi8>
+    %b_ptr_as_idx = memref.extract_aligned_pointer_as_index %memref_b : memref<32x16xi8> -> index
     %b_ptr_as_i64 = arith.index_cast %b_ptr_as_idx : index to i64
     %b_ptr = llvm.inttoptr %b_ptr_as_i64 : i64 to !llvm.ptr
     %b_ptr_casted = llvm.addrspacecast %b_ptr : !llvm.ptr to !llvm.ptr<1>
@@ -91,7 +93,7 @@ module @gemm attributes {gpu.container_module} {
     gpu.launch_func @kernel::@block_scaled_dpas_e2m1 blocks in (%c1, %c1, %c1) threads in (%c16, %c1, %c1)
         args(%a_ptr_casted : !llvm.ptr<1>, %b_ptr_casted : !llvm.ptr<1>, %c_ptr_casted : !llvm.ptr<1>)
     gpu.dealloc %memref_a : memref<8x64xf16>
-    gpu.dealloc %memref_b : memref<64x16xf4E2M1FN>
+    gpu.dealloc %memref_b : memref<32x16xi8>
     %res = memref.alloc() : memref<8x16xf32>
     gpu.memcpy %res, %memref_c : memref<8x16xf32>, memref<8x16xf32>
     gpu.dealloc %memref_c : memref<8x16xf32>
@@ -104,9 +106,10 @@ module @gemm attributes {gpu.container_module} {
     %c1 = arith.constant 1 : index
     %c8 = arith.constant 8 : index
     %c16 = arith.constant 16 : index
+    %c32 = arith.constant 32 : index
     %c64 = arith.constant 64 : index
     %c1f16 = arith.constant 1.0 : f16
-    %c1e2m1 = arith.constant 1.0 : f4E2M1FN
+    %c1e2m1packed = arith.constant 0x22 : i8
     %c0f32 = arith.constant 0.0 : f32
 
     %A = memref.alloc() : memref<8x64xf16>
@@ -116,10 +119,10 @@ module @gemm attributes {gpu.container_module} {
       }
     }
 
-    %B = memref.alloc() : memref<64x16xf4E2M1FN>
-    scf.for %i = %c0 to %c64 step %c1 {
+    %B = memref.alloc() : memref<32x16xi8>
+    scf.for %i = %c0 to %c32 step %c1 {
       scf.for %j = %c0 to %c16 step %c1 {
-        memref.store %c1e2m1, %B[%i, %j] : memref<64x16xf4E2M1FN>
+        memref.store %c1e2m1packed, %B[%i, %j] : memref<32x16xi8>
       }
     }
 
@@ -130,14 +133,14 @@ module @gemm attributes {gpu.container_module} {
       }
     }
 
-    %C_res = call @test(%A, %B, %C) : (memref<8x64xf16>, memref<64x16xf4E2M1FN>, memref<8x16xf32>) -> memref<8x16xf32>
+    %C_res = call @test(%A, %B, %C) : (memref<8x64xf16>, memref<32x16xi8>, memref<8x16xf32>) -> memref<8x16xf32>
     %C_cast = memref.cast %C_res : memref<8x16xf32> to memref<*xf32>
     call @printMemrefF32(%C_cast) : (memref<*xf32>) -> ()
 
     // CHECK: Unranked Memref base@ = 0x{{[0-9a-f]+}}
-    // CHECK-COUNT-8: [64,   64,   64,   64,   64,   64,   64,   64,   64,   64,   64,   64,   64,   64,   64,   64,   64,   64,   64,   64,   64,   64,   64,   64,   64,   64,   64,   64,   64,   64,   64,   64]
+    // CHECK-COUNT-8: [64,   64,   64,   64,   64,   64,   64,   64,   64,   64,   64,   64,   64,   64,   64,   64]
     memref.dealloc %A : memref<8x64xf16>
-    memref.dealloc %B : memref<64x16xf4E2M1FN>
+    memref.dealloc %B : memref<32x16xi8>
     memref.dealloc %C : memref<8x16xf32>
     memref.dealloc %C_res : memref<8x16xf32>
     return

@@ -100,7 +100,7 @@ llvm.func @truncf_f16_to_e2m1(%src: vector<16xf16>) -> vector<8xi8> {
   // CHECK-SAME: : (i32, i32, i32, i32) -> i32
   // CHECK: %[[E1:.*]] = llvm.extractelement %[[BC]][%[[C1]] : i32] : vector<8xi32>
   // CHECK: %[[E3:.*]] = llvm.extractelement %[[BC]][%[[C3]] : i32] : vector<8xi32>
-  // CHECK: %[[CALL1:.*]] = llvm.call spir_funccc @__builtin_IB_dnscl_hf16(%[[E1]], %[[E3]], %[[C1]], %[[C3]])
+  // CHECK: %[[CALL1:.*]] = llvm.call spir_funccc @__builtin_IB_dnscl_hf16(%[[E1]], %[[E3]], %[[C1]], %[[C2]])
   // CHECK-SAME: : (i32, i32, i32, i32) -> i32
   // CHECK: %[[OR0:.*]] = llvm.or %[[CALL0]], %[[CALL1]] : i32
   // CHECK: %[[E4:.*]] = llvm.extractelement %[[BC]][%[[C4]] : i32] : vector<8xi32>
@@ -109,7 +109,7 @@ llvm.func @truncf_f16_to_e2m1(%src: vector<16xf16>) -> vector<8xi8> {
   // CHECK-SAME: : (i32, i32, i32, i32) -> i32
   // CHECK: %[[E5:.*]] = llvm.extractelement %[[BC]][%[[C5]] : i32] : vector<8xi32>
   // CHECK: %[[E7:.*]] = llvm.extractelement %[[BC]][%[[C7]] : i32] : vector<8xi32>
-  // CHECK: %[[CALL3:.*]] = llvm.call spir_funccc @__builtin_IB_dnscl_hf16(%[[E5]], %[[E7]], %[[C1]], %[[C3]])
+  // CHECK: %[[CALL3:.*]] = llvm.call spir_funccc @__builtin_IB_dnscl_hf16(%[[E5]], %[[E7]], %[[C1]], %[[C2]])
   // CHECK-SAME: : (i32, i32, i32, i32) -> i32
   // CHECK: %[[OR1:.*]] = llvm.or %[[CALL2]], %[[CALL3]] : i32
   // CHECK: %[[INS0:.*]] = llvm.insertelement %[[OR0]], %[[UNDEF]][%[[C0]] : i32] : vector<2xi32>
@@ -141,7 +141,7 @@ llvm.func @truncf_bf16_to_e2m1(%src: vector<16xbf16>) -> vector<8xi8> {
   // CHECK-SAME: : (i32, i32, i32, i32) -> i32
   // CHECK: %[[E1:.*]] = llvm.extractelement %[[BC]][%[[C1]] : i32] : vector<8xi32>
   // CHECK: %[[E3:.*]] = llvm.extractelement %[[BC]][%[[C3]] : i32] : vector<8xi32>
-  // CHECK: %[[CALL1:.*]] = llvm.call spir_funccc @__builtin_IB_dnscl_bf16(%[[E1]], %[[E3]], %[[C1]], %[[C3]])
+  // CHECK: %[[CALL1:.*]] = llvm.call spir_funccc @__builtin_IB_dnscl_bf16(%[[E1]], %[[E3]], %[[C1]], %[[C2]])
   // CHECK-SAME: : (i32, i32, i32, i32) -> i32
   // CHECK: %[[OR0:.*]] = llvm.or %[[CALL0]], %[[CALL1]] : i32
   // CHECK: %[[E4:.*]] = llvm.extractelement %[[BC]][%[[C4]] : i32] : vector<8xi32>
@@ -150,7 +150,7 @@ llvm.func @truncf_bf16_to_e2m1(%src: vector<16xbf16>) -> vector<8xi8> {
   // CHECK-SAME: : (i32, i32, i32, i32) -> i32
   // CHECK: %[[E5:.*]] = llvm.extractelement %[[BC]][%[[C5]] : i32] : vector<8xi32>
   // CHECK: %[[E7:.*]] = llvm.extractelement %[[BC]][%[[C7]] : i32] : vector<8xi32>
-  // CHECK: %[[CALL3:.*]] = llvm.call spir_funccc @__builtin_IB_dnscl_bf16(%[[E5]], %[[E7]], %[[C1]], %[[C3]])
+  // CHECK: %[[CALL3:.*]] = llvm.call spir_funccc @__builtin_IB_dnscl_bf16(%[[E5]], %[[E7]], %[[C1]], %[[C2]])
   // CHECK-SAME: : (i32, i32, i32, i32) -> i32
   // CHECK: %[[OR1:.*]] = llvm.or %[[CALL2]], %[[CALL3]] : i32
   // CHECK: %[[INS0:.*]] = llvm.insertelement %[[OR0]], %[[UNDEF]][%[[C0]] : i32] : vector<2xi32>
