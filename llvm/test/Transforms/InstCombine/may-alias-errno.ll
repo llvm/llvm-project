@@ -27,7 +27,7 @@ define float @does_not_alias_errno_2(float %f) {
 ; CHECK-NEXT:    [[P:%.*]] = alloca float, align 4
 ; CHECK-NEXT:    call void @escape(ptr nonnull [[P]])
 ; CHECK-NEXT:    store float 0.000000e+00, ptr [[P]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = call float @sinf(float [[F]])
+; CHECK-NEXT:    [[TMP0:%.*]] = call float @sinf(float [[F]])
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
 entry:
@@ -47,7 +47,7 @@ define double @does_not_alias_errno_3(ptr %p, float %f) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @escape(ptr [[P]])
 ; CHECK-NEXT:    store double 0.000000e+00, ptr [[P]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = call float @sinf(float [[F]])
+; CHECK-NEXT:    [[TMP0:%.*]] = call float @sinf(float [[F]])
 ; CHECK-NEXT:    ret double 0.000000e+00
 ;
 entry:
