@@ -2877,12 +2877,6 @@ static bool isTriviallyCopyableTypeImpl(const QualType &type,
 
   QualType CanonicalType = type.getCanonicalType();
 
-  if (CanonicalType->isMatrixType()) {
-    const auto *MatrixTy = CanonicalType->getAs<MatrixType>();
-    return isTriviallyCopyableTypeImpl(MatrixTy->getElementType(), Context,
-                                       IsCopyConstructible);
-  }
-
   if (CanonicalType->isDependentType())
     return false;
 
@@ -2897,8 +2891,9 @@ static bool isTriviallyCopyableTypeImpl(const QualType &type,
   if (CanonicalType.hasAddressDiscriminatedPointerAuth())
     return false;
 
-  // As an extension, Clang treats vector types as Scalar types.
-  if (CanonicalType->isScalarType() || CanonicalType->isVectorType())
+  // As an extension, Clang treats vector and matrix types as Scalar types.
+  if (CanonicalType->isScalarType() || CanonicalType->isVectorType() 
+      || CanonicalType->isMatrixType())
     return true;
 
   // Mfloat8 type is a special case as it not scalar, but is still trivially
