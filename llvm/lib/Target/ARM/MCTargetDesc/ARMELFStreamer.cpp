@@ -276,7 +276,7 @@ void ARMTargetAsmStreamer::emitThumbFunc(MCSymbol *Symbol) {
   // Only Mach-O hasSubsectionsViaSymbols()
   if (MAI.hasSubsectionsViaSymbols()) {
     OS << '\t';
-    Symbol->print(OS, &MAI);
+    Symbol->print(OS, MAI);
   }
   OS << '\n';
 }
@@ -285,7 +285,7 @@ void ARMTargetAsmStreamer::emitThumbSet(MCSymbol *Symbol, const MCExpr *Value) {
   const MCAsmInfo &MAI = Streamer.getContext().getAsmInfo();
 
   OS << "\t.thumb_set\t";
-  Symbol->print(OS, &MAI);
+  Symbol->print(OS, MAI);
   OS << ", ";
   MAI.printExpr(OS, *Value);
   OS << '\n';
