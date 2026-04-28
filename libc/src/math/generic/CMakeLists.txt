@@ -1659,11 +1659,7 @@ add_entrypoint_object(
   HDRS
     ../ilogbbf16.h
   DEPENDS
-    libc.src.__support.common
-    libc.src.__support.FPUtil.bfloat16
-    libc.src.__support.FPUtil.manipulation_functions
-    libc.src.__support.macros.config
-    libc.src.__support.macros.properties.types
+    libc.src.__support.math.ilogbbf16
 )
 
 add_entrypoint_object(
@@ -1724,11 +1720,7 @@ add_entrypoint_object(
   HDRS
     ../llogbbf16.h
   DEPENDS
-    libc.src.__support.common
-    libc.src.__support.FPUtil.bfloat16
-    libc.src.__support.FPUtil.manipulation_functions
-    libc.src.__support.macros.config
-    libc.src.__support.macros.properties.types
+    libc.src.__support.math.llogbbf16
 )
 
 add_entrypoint_object(
@@ -5236,11 +5228,7 @@ add_entrypoint_object(
   HDRS
     ../bf16subl.h
   DEPENDS
-    libc.src.__support.common
-    libc.src.__support.FPUtil.bfloat16
-    libc.src.__support.FPUtil.generic.add_sub
-    libc.src.__support.macros.config
-    libc.src.__support.macros.properties.types
+    libc.src.__support.math.bf16subl
 )
 
 add_entrypoint_object(

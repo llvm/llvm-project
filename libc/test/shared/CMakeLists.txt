@@ -54,6 +54,7 @@ add_fp_unittest(
     libc.src.__support.math.bf16sub
     libc.src.__support.math.bf16subf
     libc.src.__support.math.bf16subf128
+    libc.src.__support.math.bf16subl
     libc.src.__support.math.canonicalize
     libc.src.__support.math.canonicalizebf16
     libc.src.__support.math.canonicalizef
@@ -193,12 +194,14 @@ add_fp_unittest(
     libc.src.__support.math.hypotbf16
     libc.src.__support.math.hypotf16
     libc.src.__support.math.ilogb
+    libc.src.__support.math.ilogbbf16
     libc.src.__support.math.ilogbf
     libc.src.__support.math.ilogbf16
     libc.src.__support.math.ilogbf128
     libc.src.__support.math.ilogbl
     libc.src.__support.math.ldexpf
     libc.src.__support.math.llogb
+    libc.src.__support.math.llogbbf16
     libc.src.__support.math.log
     libc.src.__support.math.log10
     libc.src.__support.math.log10f16
@@ -296,6 +299,7 @@ add_fp_unittest(
     shared_math_constexpr_test.cpp
   DEPENDS
     libc.src.__support.math.asinbf16
+    libc.src.__support.math.bf16subl
     libc.src.__support.math.ceil
     libc.src.__support.math.ceilbf16
     libc.src.__support.math.ceilf
@@ -336,8 +340,10 @@ add_fp_unittest(
     libc.src.__support.math.fmaximum_mag_num
     libc.src.__support.math.fmaximum_mag_numbf16
     libc.src.__support.math.fmaximum_mag_numf
+    libc.src.__support.math.llogbbf16
     libc.src.__support.math.log
     libc.src.__support.math.logbbf16
+    libc.src.__support.math.ilogbbf16
 )
 
 add_fp_unittest(

@@ -3711,6 +3711,16 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_bf16subl",
+    hdrs = ["src/__support/math/bf16subl.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_fputil_bfloat16",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_canonicalize",
     hdrs = ["src/__support/math/canonicalize.h"],
     deps = [
@@ -3933,6 +3943,26 @@ libc_support_library(
         ":__support_math_acosh_float_constants",
         ":__support_math_exp_constants",
         ":__support_number_pair",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_ilogbbf16",
+    hdrs = ["src/__support/math/ilogbbf16.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_llogbbf16",
+    hdrs = ["src/__support/math/llogbbf16.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
     ],
 )
 
@@ -7083,6 +7113,11 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "bf16subl",
+    additional_deps = [":__support_math_bf16subl"],
+)
+
+libc_math_function(
     name = "bf16fma",
     additional_deps = [":__support_math_bf16fma"],
 )
@@ -7176,6 +7211,13 @@ libc_math_function(
     name = "canonicalizef16",
     additional_deps = [
         ":__support_math_canonicalizef16",
+    ],
+)
+
+libc_math_function(
+    name = "ilogbbf16",
+    additional_deps = [
+        ":__support_math_ilogbbf16",
     ],
 )
 
@@ -8363,6 +8405,13 @@ libc_math_function(
     name = "llogb",
     additional_deps = [
         ":__support_math_llogb",
+    ],
+)
+
+libc_math_function(
+    name = "llogbbf16",
+    additional_deps = [
+        ":__support_math_llogbbf16",
     ],
 )
 
