@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <optional>
+#include <string>
 
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
@@ -136,6 +137,67 @@ struct TestVectorContractionPrepareForMMTLowering
     vector::populateVectorContractCanonicalizeMatmulToMMT(patterns);
     (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
+};
+
+static bool parentFunctionNameContains(vector::ContractionOp op,
+                                       StringRef substring) {
+  if (auto funcOp = op->getParentOfType<func::FuncOp>())
+    return funcOp.getName().contains(substring);
+  return false;
+}
+
+struct TestVectorContractLoweringComposition final
+    : public PassWrapper<TestVectorContractLoweringComposition,
+                         OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
+      TestVectorContractLoweringComposition)
+
+  TestVectorContractLoweringComposition() = default;
+  TestVectorContractLoweringComposition(
+      const TestVectorContractLoweringComposition &pass)
+      : PassWrapper(pass) {}
+
+  StringRef getArgument() const final {
+    return "test-vector-contract-lowering-composition";
+  }
+
+  StringRef getDescription() const final {
+    return "Test composable vector.contract lowering pattern population.";
+  }
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<arith::ArithDialect, vector::VectorDialect>();
+  }
+
+  void runOnOperation() override {
+    RewritePatternSet patterns(&getContext());
+    if (mode == "dot-outerproduct") {
+      populateVectorContractToDotPatterns(
+          patterns,
+          [](vector::ContractionOp op) {
+            return success(!parentFunctionNameContains(op, "dot_reject"));
+          },
+          PatternBenefit(2));
+      populateVectorContractToOuterProductPatterns(
+          patterns, acceptAllVectorContractLoweringFilter, PatternBenefit(1));
+    } else if (mode == "generic") {
+      populateVectorContractGenericLoweringPatterns(patterns);
+    } else if (mode == "parallel-arith-reject") {
+      populateVectorContractToParallelArithPatterns(
+          patterns, [](vector::ContractionOp) { return failure(); });
+    } else {
+      getOperation().emitError()
+          << "unknown contract lowering test mode: " << mode;
+      return signalPassFailure();
+    }
+
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+  }
+
+  Option<std::string> mode{
+      *this, "mode",
+      llvm::cl::desc("Contract lowering composition mode to test"),
+      llvm::cl::init("dot-outerproduct")};
 };
 
 struct TestVectorUnrollingPatterns
@@ -1052,6 +1114,8 @@ void registerTestVectorLowerings() {
   PassRegistration<TestVectorToVectorLowering>();
 
   PassRegistration<TestVectorContractionPrepareForMMTLowering>();
+
+  PassRegistration<TestVectorContractLoweringComposition>();
 
   PassRegistration<TestVectorUnrollingPatterns>();
 
