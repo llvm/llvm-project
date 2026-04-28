@@ -944,7 +944,7 @@ void test_builtin_bswapg(unsigned char uc, unsigned short us, unsigned int ui,
 #endif
   b = __builtin_bswapg(b);
   // CHECK: %{{.*}} = load i8, ptr %b.addr
-  // CHECK: %{{.*}} = trunc i8 %{{.*}} to i1
+  // CHECK: %{{.*}} = icmp ne i8 %{{.*}}, 0
   // CHECK: %{{.*}} = zext i1 %{{.*}} to i8
   // CHECK: store i8 %{{.*}}, ptr %b.addr
   uc = __builtin_bswapg(uc);
@@ -990,12 +990,12 @@ void test_builtin_bitreverseg(unsigned char uc, unsigned short us, unsigned int 
 #endif
   b = __builtin_bitreverseg(b);
   // CHECK: %{{.*}} = load i8, ptr %b.addr
-  // CHECK: %{{.*}} = trunc i8 %{{.*}} to i1
+  // CHECK: %{{.*}} = icmp ne i8 %{{.*}}, 0
   // CHECK: %{{.*}} = zext i1 %{{.*}} to i8
   // CHECK: store i8 %{{.*}}, ptr %b.addr
   bi1 = __builtin_bitreverseg(bi1);
   // CHECK: %{{.*}} = load i8, ptr %bi1.addr
-  // CHECK: %{{.*}} = trunc i8 %{{.*}} to i1
+  // CHECK: %{{.*}} = icmp ne i8 %{{.*}}, 0
   // CHECK: %{{.*}} = zext i1 %{{.*}} to i8
   // CHECK: store i8 %{{.*}}, ptr %bi1.addr
   uc = __builtin_bitreverseg(uc);

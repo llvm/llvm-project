@@ -69,6 +69,15 @@ Changes to the LLVM IR
 * The `"nooutline"` attribute is now writen as `nooutline`. Existing IR and
   bitcode will be automatically updated.
 
+* LLVM IR floating-point literals have greatly changed:
+
+  * The old hexadecimal bitwise representation is deprecated and will be removed
+    in the next revision. It is replaced with a unified `f0x` prefix.
+
+  * Hexadecimal literals akin to C99's syntax are supported.
+
+  * Special values for infinities and NaNs, including NaN payloads, are added.
+
 Changes to LLVM infrastructure
 ------------------------------
 
@@ -235,6 +244,8 @@ Changes to the Debug Info
 
 Changes to the LLVM tools
 -------------------------
+
+* `llvm-profgen` now supports ETM trace decoding using the OpenCSD library for Cortex-M targets.
 
 * `llvm-objcopy` no longer corrupts the symbol table when `--update-section` is called for ELF files.
 * `FileCheck` option `-check-prefix` now accepts a comma-separated list of

@@ -8224,8 +8224,8 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom,
                        ++UndefCnt;
                      return Idx != PoisonMaskElem && Idx != Val;
                    }) ||
-            Val >= static_cast<int>(NumParts) || UsedVals.test(Val) ||
-            UndefCnt > Sz / 2)
+            Val >= static_cast<int>(NumParts) || Val == PoisonMaskElem ||
+            UsedVals.test(Val) || UndefCnt > Sz / 2)
           return std::nullopt;
         UsedVals.set(Val);
         for (unsigned K = 0; K < NumParts; ++K) {
@@ -11281,7 +11281,7 @@ static bool tryToFindDuplicates(SmallVectorImpl<Value *> &VL,
       if (isConstant(V))
         UniquesDemandedElts.clearBit(Idx);
     InstructionCost UniquesCost =
-        (!BuildGatherOnly || R.hasSameNode(S, UniqueValues))
+        CanSkipBVCost
             ? InstructionCost(TTI::TCC_Free)
             : ::getScalarizationOverhead(TTI, ScalarTy, UniquesVecTy,
                                          UniquesDemandedElts, /*Insert=*/true,
@@ -21752,9 +21752,11 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
       }
     }
     if (!GatherShuffles.empty()) {
-      unsigned SliceSize = getPartNumElems(
-          E->Scalars.size(),
-          ::getNumberOfParts(*TTI, VecTy, ScalarTy, E->Scalars.size()));
+      unsigned SliceSize = getPartNumElems(VF, NumParts);
+      if (Mask.size() == E->Scalars.size())
+        SliceSize = getPartNumElems(
+            E->Scalars.size(),
+            ::getNumberOfParts(*TTI, VecTy, ScalarTy, E->Scalars.size()));
       SmallVector<int> VecMask(Mask.size(), PoisonMaskElem);
       for (const auto [I, TEs] : enumerate(Entries)) {
         if (TEs.empty()) {
@@ -24249,6 +24251,22 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
       auto *I = dyn_cast<Instruction>(V);
       if (!I || (HasCopyables && S.isCopyableElement(V)))
         continue;
+      // Expanded binops (e.g. shl X, 1 modeled as add X, X) double the
+      // dependency count of the duplicated operand. This non-schedulable
+      // path does not clear operand ScheduleData dependencies the way the
+      // regular scheduling path does (see CheckIfNeedToClearDeps below), so
+      // when that operand has more uses than this bundle member, the
+      // schedule's decrement count exceeds calculateDependencies' increment
+      // count and UnscheduledDeps goes negative. Bail out instead of
+      // producing an inconsistent schedule.
+      if (S.isExpandedBinOp(I) &&
+          any_of(enumerate(I->operands()), [&](const auto &P) {
+            if (S.isExpandedOperand(I, P.index()))
+              return false;
+            auto *OpI = dyn_cast<Instruction>(P.value());
+            return OpI && !OpI->hasOneUse();
+          }))
+        return std::nullopt;
       if (EI && EI.UserTE->State == TreeEntry::Vectorize &&
           EI.UserTE->getOpcode() == Instruction::PHI &&
           any_of(SLP->VectorizableTree,
