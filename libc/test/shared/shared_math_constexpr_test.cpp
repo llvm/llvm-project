@@ -64,6 +64,7 @@ static_assert(1.0L == LIBC_NAMESPACE::shared::fabsl(-1.0L));
 static_assert(1.0L == LIBC_NAMESPACE::shared::fdiml(1.0L, 0.0L));
 static_assert(0.0f == LIBC_NAMESPACE::shared::fdivl(0.0L, 1.0L));
 static_assert(0.0L == LIBC_NAMESPACE::shared::floorl(0.0L));
+static_assert(bfloat16(0.0) == LIBC_NAMESPACE::shared::bf16subl(0.0L, 0.0L));
 
 #endif
 
@@ -112,5 +113,7 @@ static_assert(bfloat16(0.0) ==
               LIBC_NAMESPACE::shared::floorbf16(bfloat16(0.0f)));
 static_assert(bfloat16(0.0) ==
               LIBC_NAMESPACE::shared::logbbf16(bfloat16(1.0f)));
+static_assert(0 == LIBC_NAMESPACE::shared::ilogbbf16(bfloat16(1.0)));
+static_assert(0L == LIBC_NAMESPACE::shared::llogbbf16(bfloat16(1.0)));
 
 TEST(LlvmLibcSharedMathTest, ConstantEvaluation) {}

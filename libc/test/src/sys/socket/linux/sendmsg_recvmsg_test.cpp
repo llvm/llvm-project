@@ -8,7 +8,6 @@
 
 #include "hdr/sys_socket_macros.h"
 #include "hdr/types/struct_cmsghdr.h"
-#include "include/llvm-libc-macros/linux/sys-socket-macros.h"
 #include "src/string/memcpy.h"
 #include "src/string/memset.h"
 #include "src/sys/socket/getsockopt.h"
@@ -119,8 +118,10 @@ TEST_F(LlvmLibcSendMsgRecvMsgTest, CmsgDetails) {
   // POSIX explicitly does not specify whether CMSG_NXTHDR returns the
   // next header if its data array would extend beyond the end of the buffer.
   // Our implementation does.
+#ifdef LIBC_FULL_BUILD
   cmsg2->cmsg_len = sizeof(struct cmsghdr) + 1;
   ASSERT_EQ(CMSG_NXTHDR(&msg, cmsg), cmsg2);
+#endif
 }
 
 TEST_F(LlvmLibcSendMsgRecvMsgTest, SendAndReceiveFileDescriptor) {
@@ -177,7 +178,9 @@ TEST_F(LlvmLibcSendMsgRecvMsgTest, SendAndReceiveFileDescriptor) {
 
   ASSERT_TRUE(cmsg != nullptr);
   ASSERT_EQ(cmsg->cmsg_level, SOL_SOCKET);
-  ASSERT_EQ(cmsg->cmsg_type, SCM_RIGHTS);
+  // Use ASSERT_TRUE, as ASSERT_EQ requires SCM_RIGHTS to be an int,
+  // which is not true on all systems (e.g. glibc).
+  ASSERT_TRUE(cmsg->cmsg_type == SCM_RIGHTS);
   ASSERT_EQ(cmsg->cmsg_len, CMSG_LEN(sizeof(int)));
   ASSERT_EQ(CMSG_NXTHDR(&msg, cmsg), nullptr);
 
@@ -189,7 +192,9 @@ TEST_F(LlvmLibcSendMsgRecvMsgTest, SendAndReceiveFileDescriptor) {
   ASSERT_THAT(LIBC_NAMESPACE::getsockopt(new_fd, SOL_SOCKET, SO_TYPE,
                                          &new_sock_type, &optlen),
               Succeeds(0));
-  ASSERT_EQ(new_sock_type, SOCK_STREAM);
+  // Use ASSERT_TRUE, as ASSERT_EQ requires SOCK_STREAM to be an int,
+  // which is not true on all systems (e.g. glibc).
+  ASSERT_TRUE(new_sock_type == SOCK_STREAM);
 
   ASSERT_THAT(LIBC_NAMESPACE::close(sockpair[0]), Succeeds(0));
   ASSERT_THAT(LIBC_NAMESPACE::close(sockpair[1]), Succeeds(0));

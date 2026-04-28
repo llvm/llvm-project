@@ -3135,7 +3135,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPCriticalConstruct &x) {
 
   auto getNameFromArg{[](const parser::OmpArgument &arg) {
     if (auto *object{parser::Unwrap<parser::OmpObject>(arg.u)}) {
-      if (auto *designator{omp::GetDesignatorFromObj(*object)}) {
+      if (auto *designator{GetDesignatorFromObj(*object)}) {
         return parser::GetDesignatorNameIfDataRef(*designator);
       }
     }
@@ -5984,8 +5984,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Affinity &x) {
 
   const auto &objects{std::get<parser::OmpObjectList>(x.v.t)};
   for (const parser::OmpObject &object : objects.v) {
-    if (const parser::Designator *designator{
-            omp::GetDesignatorFromObj(object)}) {
+    if (const parser::Designator *designator{GetDesignatorFromObj(object)}) {
       if (const auto *dataRef{GetDataRefFromObj(object)}) {
         if (const auto *arrayElement{GetArrayElementFromObj(object)}) {
           CheckArraySection(*arrayElement, GetLastName(*dataRef),
