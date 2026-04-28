@@ -2599,6 +2599,7 @@ bool SPIRVInstructionSelector::selectAddrSpaceCast(Register ResVReg,
                    ? static_cast<uint32_t>(SPIRV::Opcode::GenericCastToPtr)
                    : 0);
 
+    // Handle CodeSectionINTEL in constant context with SPV_INTEL_function_pointers.
     if (STI.canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers) &&
         !SpecOpcode) {
       if (SrcSC == SPIRV::StorageClass::CodeSectionINTEL &&
@@ -2607,22 +2608,30 @@ bool SPIRVInstructionSelector::selectAddrSpaceCast(Register ResVReg,
       } else if (SrcSC == SPIRV::StorageClass::Generic &&
                  DstSC == SPIRV::StorageClass::CodeSectionINTEL) {
         SpecOpcode = static_cast<uint32_t>(SPIRV::Opcode::GenericCastToPtr);
-      } else if ((SrcSC == SPIRV::StorageClass::CodeSectionINTEL &&
-                  DstSC == SPIRV::StorageClass::CrossWorkgroup) ||
-                 (SrcSC == SPIRV::StorageClass::CrossWorkgroup &&
-                  DstSC == SPIRV::StorageClass::CodeSectionINTEL)) {
-        // For P9 <-> P1, cast through Generic via two OpSpecConstantOp
-        unsigned FirstOpcode = (SrcSC == SPIRV::StorageClass::CodeSectionINTEL)
-            ? static_cast<uint32_t>(SPIRV::Opcode::PtrCastToGeneric)
-            : static_cast<uint32_t>(SPIRV::Opcode::PtrCastToGeneric);
-        unsigned SecondOpcode = static_cast<uint32_t>(SPIRV::Opcode::GenericCastToPtr);
-
+      } else if (SrcSC == SPIRV::StorageClass::CodeSectionINTEL &&
+                 DstSC != SPIRV::StorageClass::CodeSectionINTEL) {
+        // For P9 -> other address spaces, cast through Generic via two OpSpecConstantOp.
         Register GenericTypeReg = getUcharPtrTypeReg(I, SPIRV::StorageClass::Generic);
         Register IntermediateReg = MRI->createVirtualRegister(&SPIRV::IDRegClass);
 
-        buildSpecConstantOp(I, IntermediateReg, SrcPtr, GenericTypeReg, FirstOpcode)
+        buildSpecConstantOp(I, IntermediateReg, SrcPtr, GenericTypeReg,
+                            static_cast<uint32_t>(SPIRV::Opcode::PtrCastToGeneric))
             .constrainAllUses(TII, TRI, RBI);
-        buildSpecConstantOp(I, ResVReg, IntermediateReg, getUcharPtrTypeReg(I, DstSC), SecondOpcode)
+        buildSpecConstantOp(I, ResVReg, IntermediateReg, getUcharPtrTypeReg(I, DstSC),
+                            static_cast<uint32_t>(SPIRV::Opcode::GenericCastToPtr))
+            .constrainAllUses(TII, TRI, RBI);
+        return true;
+      } else if (DstSC == SPIRV::StorageClass::CodeSectionINTEL &&
+                 SrcSC != SPIRV::StorageClass::CodeSectionINTEL) {
+        // For other address spaces -> P9, cast through Generic via two OpSpecConstantOp.
+        Register GenericTypeReg = getUcharPtrTypeReg(I, SPIRV::StorageClass::Generic);
+        Register IntermediateReg = MRI->createVirtualRegister(&SPIRV::IDRegClass);
+
+        buildSpecConstantOp(I, IntermediateReg, SrcPtr, GenericTypeReg,
+                            static_cast<uint32_t>(SPIRV::Opcode::PtrCastToGeneric))
+            .constrainAllUses(TII, TRI, RBI);
+        buildSpecConstantOp(I, ResVReg, IntermediateReg, getUcharPtrTypeReg(I, DstSC),
+                            static_cast<uint32_t>(SPIRV::Opcode::GenericCastToPtr))
             .constrainAllUses(TII, TRI, RBI);
         return true;
       }
@@ -2696,7 +2705,7 @@ bool SPIRVInstructionSelector::selectAddrSpaceCast(Register ResVReg,
 
   // Handle function pointer casts with SPV_INTEL_function_pointers extension.
   if (STI.canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers)) {
-    // P4 <-> P9 can be handled directly
+    // P4 <-> P9 can be handled directly.
     if (SrcSC == SPIRV::StorageClass::CodeSectionINTEL &&
         DstSC == SPIRV::StorageClass::Generic)
       return selectUnOp(ResVReg, ResType, I, SPIRV::OpPtrCastToGeneric);
@@ -2704,9 +2713,9 @@ bool SPIRVInstructionSelector::selectAddrSpaceCast(Register ResVReg,
         DstSC == SPIRV::StorageClass::CodeSectionINTEL)
       return selectUnOp(ResVReg, ResType, I, SPIRV::OpGenericCastToPtr);
 
-    // P1 <-> P9, cast through Generic as intermediary
+    // Any address space <-> P9, cast through Generic as intermediary.
     if (SrcSC == SPIRV::StorageClass::CodeSectionINTEL &&
-        DstSC == SPIRV::StorageClass::CrossWorkgroup) {
+        DstSC != SPIRV::StorageClass::CodeSectionINTEL) {
       SPIRVTypeInst GenericPtrTy =
           GR.changePointerStorageClass(SrcPtrTy, SPIRV::StorageClass::Generic, I);
       Register Tmp = createVirtualRegister(GenericPtrTy, &GR, MRI, MRI->getMF());
@@ -2723,8 +2732,8 @@ bool SPIRVInstructionSelector::selectAddrSpaceCast(Register ResVReg,
       return true;
     }
 
-    if (SrcSC == SPIRV::StorageClass::CrossWorkgroup &&
-        DstSC == SPIRV::StorageClass::CodeSectionINTEL) {
+    if (DstSC == SPIRV::StorageClass::CodeSectionINTEL &&
+        SrcSC != SPIRV::StorageClass::CodeSectionINTEL) {
       SPIRVTypeInst GenericPtrTy =
           GR.changePointerStorageClass(SrcPtrTy, SPIRV::StorageClass::Generic, I);
       Register Tmp = createVirtualRegister(GenericPtrTy, &GR, MRI, MRI->getMF());

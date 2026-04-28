@@ -300,23 +300,12 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .legalIf(all(typeInSet(0, allPtrs), typeInSet(1, allIntScalars)));
 
   if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers)) {
-    // With function pointer extension: allow casts between p1 (CrossWorkgroup),
-    // p4 (Generic), and p9 (CodeSectionINTEL)
+    // With function pointer extension: allow casts between any address space
+    // and p9 (CodeSectionINTEL), with p4 (Generic) as intermediary.
     getActionDefinitionsBuilder(G_ADDRSPACE_CAST)
-        .unsupportedIf(LegalityPredicates::any(
-            // Disallow p9 <-> other pointers except p1, p4, p9
-            all(typeIs(0, p9),
-                LegalityPredicates::any(typeIs(1, p0), typeIs(1, p2),
-                                        typeIs(1, p3), typeIs(1, p5),
-                                        typeIs(1, p6), typeIs(1, p7),
-                                        typeIs(1, p8))),
-            all(typeIs(1, p9),
-                LegalityPredicates::any(typeIs(0, p0), typeIs(0, p2),
-                                        typeIs(0, p3), typeIs(0, p5),
-                                        typeIs(0, p6), typeIs(0, p7),
-                                        typeIs(0, p8)))))
         .legalForCartesianProduct(allPtrs, allPtrs);
   } else {
+    // Without extension: disallow all casts involving p9.
     getActionDefinitionsBuilder(G_ADDRSPACE_CAST)
         .unsupportedIf(
             LegalityPredicates::any(all(typeIs(0, p9), typeIsNot(1, p9)),
