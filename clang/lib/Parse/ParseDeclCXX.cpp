@@ -446,7 +446,9 @@ Decl *Parser::ParseExportDeclaration() {
 void Parser::CheckUnbracedLinkageOrExportDeclaration(
     Decl *LinkageOrExportDecl) {
   const auto *DC = cast<DeclContext>(LinkageOrExportDecl);
-  assert(!DC->decls_empty());
+  if (DC->decls_empty())
+    return;
+
   const Decl *D = *DC->decls_begin();
 
   // Nested export declarations are diagnosed elsewhere.
