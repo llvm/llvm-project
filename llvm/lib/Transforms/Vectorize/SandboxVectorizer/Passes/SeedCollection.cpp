@@ -50,9 +50,9 @@ SeedCollection::SeedCollection(StringRef Pipeline, StringRef AuxArg)
 
 static unsigned getAddressSpace(Instruction *I) {
   if (auto *LI = dyn_cast<LoadInst>(I))
-    return LI->getPointerOperand()->getType()->getPointerAddressSpace();
+    return LI->getPointerAddressSpace();
   if (auto *SI = dyn_cast<StoreInst>(I))
-    return SI->getPointerOperand()->getType()->getPointerAddressSpace();
+    return SI->getPointerAddressSpace();
   return 0;
 }
 
