@@ -21,10 +21,11 @@ define void @two_fdiv_float(float %d, float %a, float %b) {
 define void @three_fdiv_float(float %d, float %a, float %b, float %c) {
 ; CHECK-LABEL: three_fdiv_float:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vdiv.f32 s4, s1, s0
-; CHECK-NEXT:    vdiv.f32 s1, s2, s0
-; CHECK-NEXT:    vdiv.f32 s2, s3, s0
-; CHECK-NEXT:    vmov.f32 s0, s4
+; CHECK-NEXT:    vmov.f32 s4, #1.000000e+00
+; CHECK-NEXT:    vdiv.f32 s4, s4, s0
+; CHECK-NEXT:    vmul.f32 s0, s1, s4
+; CHECK-NEXT:    vmul.f32 s1, s2, s4
+; CHECK-NEXT:    vmul.f32 s2, s3, s4
 ; CHECK-NEXT:    b use3
   %div0 = fdiv arcp float %a, %d
   %div1 = fdiv arcp float %b, %d
