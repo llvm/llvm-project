@@ -5,11 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-//  This file holds Flang-specific option definitions extracted from
-//  clang/include/clang/Options/Options.td.
-//
-//===----------------------------------------------------------------------===//
 
 def flang_ignored_w_Group : OptionGroup<"<flang ignored W group>">,
   Group<W_Group>, Flags<[Ignored]>, Visibility<[FlangOption]>;
@@ -82,9 +77,9 @@ defm second_underscore : BooleanFFlag<"second-underscore">, Group<gfortran_Group
 defm sign_zero : BooleanFFlag<"sign-zero">, Group<gfortran_Group>;
 defm whole_file : BooleanFFlag<"whole-file">, Group<gfortran_Group>;
 
-// -W <arg> options unsupported by the flang compiler
-// If any of these options are passed into flang's compiler driver,
-// a warning will be raised and the argument will be claimed
+// -W <arg> options unsupported by flang.
+// If any of these options are passed to flang's driver,
+// a warning will be raised and the argument will be claimed.
 defm : FlangIgnoredDiagOpt<"extra">;
 defm : FlangIgnoredDiagOpt<"aliasing">;
 defm : FlangIgnoredDiagOpt<"ampersand">;
@@ -120,7 +115,7 @@ def static_libflangrt : Flag<["-"], "static-libflangrt">,
   Visibility<[FlangOption]>, Flags<[NoArgumentUnused]>;
 
 //===----------------------------------------------------------------------===//
-// FLangOption + NoXarchOption
+// FlangOption + NoXarchOption
 //===----------------------------------------------------------------------===//
 
 def flang_experimental_hlfir : Flag<["-"], "flang-experimental-hlfir">,
@@ -132,12 +127,12 @@ def flang_deprecated_no_hlfir : Flag<["-"], "flang-deprecated-no-hlfir">,
   HelpText<"Do not use HLFIR lowering (deprecated)">;
 
 //===----------------------------------------------------------------------===//
-// FLangOption + CoreOption + NoXarchOption
+// FlangOption + CoreOption + NoXarchOption
 //===----------------------------------------------------------------------===//
 
 def Xflang : Separate<["-"], "Xflang">,
   HelpText<"Pass <arg> to the flang compiler">, MetaVarName<"<arg>">,
-  Flags<[NoXarchOption]>, Visibility<[FlangOption, CLOption]>,
+  Flags<[NoXarchOption]>, Visibility<[FlangOption]>,
   Group<CompileOnly_Group>;
 
 //===----------------------------------------------------------------------===//
@@ -302,31 +297,22 @@ def fhermetic_module_files : Flag<["-"], "fhermetic-module-files">, Group<f_Grou
 def fdo_concurrent_to_openmp_EQ : Joined<["-"], "fdo-concurrent-to-openmp=">,
   HelpText<"Try to map `do concurrent` loops to OpenMP [none|host|device]">,
       Values<"none, host, device">;
-} // let Visibility = [FC1Option, FlangOption]
 
 def J : JoinedOrSeparate<["-"], "J">,
-  Flags<[RenderJoined]>, Visibility<[FlangOption, FC1Option]>,
-  Group<gfortran_Group>,
-  Alias<module_dir>;
+  Flags<[RenderJoined]>, Group<gfortran_Group>, Alias<module_dir>;
 
-def ffast_real_mod : Flag<["-"], "ffast-real-mod">,
-  Group<f_Group>, Visibility<[FlangOption, FC1Option]>,
+def ffast_real_mod : Flag<["-"], "ffast-real-mod">, Group<f_Group>,
   HelpText<"Enable optimization of MOD for REAL types">;
-def fno_fast_real_mod : Flag<["-"], "fno-fast-real-mod">,
-  Group<f_Group>, Visibility<[FlangOption, FC1Option]>,
+def fno_fast_real_mod : Flag<["-"], "fno-fast-real-mod">, Group<f_Group>,
   HelpText<"Disable optimization of MOD for REAL types in presence of -ffast-math">;
 
 defm init_global_zero : BoolOptionWithoutMarshalling<"f", "init-global-zero",
-  PosFlag<SetTrue, [], [FlangOption, FC1Option],
-          "Zero initialize globals without default initialization (default)">,
-  NegFlag<SetFalse, [], [FlangOption, FC1Option],
-          "Do not zero initialize globals without default initialization">>;
+  PosFlag<SetTrue, [], [], "Zero initialize globals without default initialization (default)">,
+  NegFlag<SetFalse, [], [], "Do not zero initialize globals without default initialization">>;
 
 def fno_realloc_lhs : Flag<["-"], "fno-realloc-lhs">, Group<f_Group>,
-  HelpText<"An allocatable left-hand side of an intrinsic assignment is assumed to be allocated and match the shape/type of the right-hand side">,
-  Visibility<[FlangOption, FC1Option]>;
+  HelpText<"An allocatable left-hand side of an intrinsic assignment is assumed to be allocated and match the shape/type of the right-hand side">;
 def frealloc_lhs : Flag<["-"], "frealloc-lhs">, Group<f_Group>,
-  Visibility<[FlangOption, FC1Option]>,
   HelpText<"If an allocatable left-hand side of an intrinsic assignment is unallocated or its shape/type does not match the right-hand side, then it is automatically (re)allocated">;
 
 //===----------------------------------------------------------------------===//
@@ -335,8 +321,9 @@ def frealloc_lhs : Flag<["-"], "frealloc-lhs">, Group<f_Group>,
 
 def fcoarray : Flag<["-"], "fcoarray">,
                Group<f_Group>,
-               Visibility<[FlangOption, FC1Option]>,
                HelpText<"Enable Coarray features">;
+
+} // let Visibility = [FC1Option, FlangOption]
 
 //===----------------------------------------------------------------------===//
 // FC1 Options
