@@ -155,9 +155,6 @@ std::optional<SmallVector<std::pair<unsigned, std::string>, 0>>
 collectAddressSymbols(void **AddressList, unsigned AddressCount,
                       const char *MainExecutableName,
                       const std::string &LLVMSymbolizerPath) {
-  // This function deals with temporary files for the purposes of symbolization
-  // only, not formal compiler output.
-  auto BypassSandbox = sys::sandbox::scopedDisable();
 
   BumpPtrAllocator Allocator;
   StringSaver StrPool(Allocator);
@@ -305,6 +302,10 @@ void sys::symbolizeAddresses(AddressSet &Addresses,
                              SymbolizedAddressMap &SymbolizedAddresses) {
   assert(!DisableSymbolicationFlag && !getenv(DisableSymbolizationEnv) &&
          "Debugify origin stacktraces require symbolization to be enabled.");
+
+  // This function deals with temporary files for the purposes of symbolization
+  // only, not formal compiler output.
+  auto BypassSandbox = sys::sandbox::scopedDisable();
 
   // Convert Set of Addresses to ordered list.
   SmallVector<void *, 0> AddressList(Addresses.begin(), Addresses.end());
