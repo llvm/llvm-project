@@ -537,4 +537,6 @@ TEST(LlvmLibcSharedMathTest, AllBFloat16) {
   EXPECT_FP_EQ(bfloat16(0.0),
                LIBC_NAMESPACE::shared::nexttowardbf16(bfloat16(0.0), 0.0L));
 #endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+
+  EXPECT_EQ(0, LIBC_NAMESPACE::shared::ilogbbf16(bfloat16(1.0)));
 }
