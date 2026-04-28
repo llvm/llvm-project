@@ -730,8 +730,12 @@ static void removeRedundantCanonicalIVs(VPlan &Plan) {
     }
   }
 
-  if (!vputils::onlyFirstLaneUsed(WidenNewIV))
+  if (!vputils::onlyFirstLaneUsed(WidenNewIV)) {
+    assert(!vputils::onlyScalarValuesUsed(WidenNewIV) &&
+           "Lanes other than first lane being used should imply that not just "
+           "scalars are used");
     return;
+  }
 
   // Replace the wide canonical IV with a scalar-iv-steps over the canonical
   // IV.
