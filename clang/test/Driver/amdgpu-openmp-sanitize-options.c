@@ -15,41 +15,41 @@
 // GPU ASan Enabled Test Cases
 
 // GPU ASan enabled for amdgpu-arch [gfx908:xnack+]
-// RUN:   %clang -no-canonical-prefixes -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=gfx908:xnack+ -fsanitize=address -fgpu-sanitize --rocm-path=%S/Inputs/rocm %s 2>&1 \
+// RUN:   %clang -no-canonical-prefixes -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=gfx908:xnack+ -fsanitize=address -fgpu-sanitize --rocm-path=%S/Inputs/rocm -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=HOSTSAN,GPUSAN,SAN %s
 
 // GPU ASan enabled through '-fsanitize=address' flag  without '-fgpu-sanitize' for amdgpu-arch [gfx908:xnack+]
-// RUN:   %clang -no-canonical-prefixes -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=gfx908:xnack+ -fsanitize=address --rocm-path=%S/Inputs/rocm %s 2>&1 \
+// RUN:   %clang -no-canonical-prefixes -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=gfx908:xnack+ -fsanitize=address --rocm-path=%S/Inputs/rocm -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=HOSTSAN,GPUSAN,SAN %s
 
 // GPU ASan enabled for multiple amdgpu-arch [gfx908:xnack+,gfx900:xnack+]
-// RUN:   %clang -no-canonical-prefixes -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=gfx908:xnack+ --offload-arch=gfx900:xnack+ -fsanitize=address -fgpu-sanitize --rocm-path=%S/Inputs/rocm %s 2>&1 \
+// RUN:   %clang -no-canonical-prefixes -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=gfx908:xnack+ --offload-arch=gfx900:xnack+ -fsanitize=address -fgpu-sanitize --rocm-path=%S/Inputs/rocm -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=HOSTSAN,GPUSAN,SAN %s
 
 // GPU ASan enabled  for amdgpu-arch [gfx1250,gfx1251]
-// RUN:   %clang -no-canonical-prefixes -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=gfx1250,gfx1251 -fsanitize=address -fgpu-sanitize --rocm-path=%S/Inputs/rocm %s 2>&1 \
+// RUN:   %clang -no-canonical-prefixes -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=gfx1250,gfx1251 -fsanitize=address -fgpu-sanitize --rocm-path=%S/Inputs/rocm -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=HOSTSAN,GPUSAN,SAN %s
 
 // GPU ASan Disabled Test Cases
 
 // GPU ASan disabled through '-fsanitize=address' without '-fgpu-sanitize' flag for amdgpu-arch [gfx908]
-// RUN:   %clang -no-canonical-prefixes -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=gfx908 -fsanitize=address --rocm-path=%S/Inputs/rocm %s 2>&1 \
+// RUN:   %clang -no-canonical-prefixes -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=gfx908 -fsanitize=address --rocm-path=%S/Inputs/rocm -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=NOXNACK,HOSTSAN,NOGPUSAN,SAN %s
 
 // GPU ASan disabled for amdgpu-arch [gfx908]
-// RUN:   %clang -no-canonical-prefixes -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=gfx908 -fsanitize=address -fgpu-sanitize --rocm-path=%S/Inputs/rocm %s 2>&1 \
+// RUN:   %clang -no-canonical-prefixes -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=gfx908 -fsanitize=address -fgpu-sanitize --rocm-path=%S/Inputs/rocm -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=NOXNACK,HOSTSAN,NOGPUSAN,SAN %s
 
 // GPU ASan disabled for amdgpu-arch [gfx908:xnack-]
-// RUN:   %clang -no-canonical-prefixes -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=gfx908:xnack- -fsanitize=address -fgpu-sanitize --rocm-path=%S/Inputs/rocm %s 2>&1 \
+// RUN:   %clang -no-canonical-prefixes -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=gfx908:xnack- -fsanitize=address -fgpu-sanitize --rocm-path=%S/Inputs/rocm -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=XNACKNEG,HOSTSAN,NOGPUSAN,SAN %s
 
 // GPU ASan disabled using '-fno-gpu-sanitize' for amdgpu-arch [gfx908:xnack+]
-// RUN:   %clang -no-canonical-prefixes -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=gfx908:xnack+ -fsanitize=address -fno-gpu-sanitize --rocm-path=%S/Inputs/rocm %s 2>&1 \
+// RUN:   %clang -no-canonical-prefixes -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=gfx908:xnack+ -fsanitize=address -fno-gpu-sanitize --rocm-path=%S/Inputs/rocm -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=HOSTSAN,NOGPUSAN,SAN %s
 
 // GPU ASan disabled for multiple amdgpu-arch [gfx908:xnack+,gfx900:xnack+]
-// RUN:   %clang -no-canonical-prefixes -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=gfx908:xnack+ --offload-arch=gfx900:xnack+ -fsanitize=address -fno-gpu-sanitize --rocm-path=%S/Inputs/rocm %s 2>&1 \
+// RUN:   %clang -no-canonical-prefixes -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=gfx908:xnack+ --offload-arch=gfx900:xnack+ -fsanitize=address -fno-gpu-sanitize --rocm-path=%S/Inputs/rocm -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=HOSTSAN,NOGPUSAN,SAN %s
 
 // Catch invalid combination of sanitizers regardless of their order and ignore
