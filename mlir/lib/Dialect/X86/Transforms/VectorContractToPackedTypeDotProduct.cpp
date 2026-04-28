@@ -98,15 +98,7 @@ static void packNonUnitDimOperandToVNNI(mlir::PatternRewriter &rewriter,
             });
       });
 
-  int64_t srcRank;
-  if (auto memrefTy = dyn_cast<MemRefType>(srcBuff.getType())) {
-    srcRank = memrefTy.getRank();
-  }
-
-  if (auto tensorTy = dyn_cast<RankedTensorType>(srcBuff.getType())) {
-    srcRank = tensorTy.getRank();
-  }
-
+  int64_t srcRank = (dyn_cast<ShapedType>(srcBuff.getType())).getRank();
   Value padding = ub::PoisonOp::create(rewriter, loc, elemTy);
   auto map = AffineMap::getMinorIdentityMap(srcRank, flatTy.getRank(),
                                             rewriter.getContext());
