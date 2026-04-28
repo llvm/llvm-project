@@ -119,29 +119,6 @@ std::string TryVersion(unsigned version) {
   return "try -fopenmp-version=" + std::to_string(version);
 }
 
-const parser::Designator *GetDesignatorFromObj(
-    const parser::OmpObject &object) {
-  return std::get_if<parser::Designator>(&object.u);
-}
-
-const parser::DataRef *GetDataRefFromObj(const parser::OmpObject &object) {
-  if (auto *desg{GetDesignatorFromObj(object)}) {
-    return std::get_if<parser::DataRef>(&desg->u);
-  }
-  return nullptr;
-}
-
-const parser::ArrayElement *GetArrayElementFromObj(
-    const parser::OmpObject &object) {
-  if (auto *dataRef{GetDataRefFromObj(object)}) {
-    using ElementIndirection = common::Indirection<parser::ArrayElement>;
-    if (auto *ind{std::get_if<ElementIndirection>(&dataRef->u)}) {
-      return &ind->value();
-    }
-  }
-  return nullptr;
-}
-
 const Symbol *GetObjectSymbol(const parser::OmpObject &object) {
   // Some symbols may be missing if the resolution failed, e.g. when an
   // undeclared name is used with implicit none.
@@ -154,29 +131,11 @@ const Symbol *GetObjectSymbol(const parser::OmpObject &object) {
   return nullptr;
 }
 
-std::optional<parser::CharBlock> GetObjectSource(
-    const parser::OmpObject &object) {
-  if (auto *name{std::get_if<parser::Name>(&object.u)}) {
-    return name->source;
-  } else if (auto *desg{std::get_if<parser::Designator>(&object.u)}) {
-    return GetLastName(*desg).source;
-  }
-  return std::nullopt;
-}
-
 const Symbol *GetArgumentSymbol(const parser::OmpArgument &argument) {
   if (auto *locator{std::get_if<parser::OmpLocator>(&argument.u)}) {
     if (auto *object{std::get_if<parser::OmpObject>(&locator->u)}) {
       return GetObjectSymbol(*object);
     }
-  }
-  return nullptr;
-}
-
-const parser::OmpObject *GetArgumentObject(
-    const parser::OmpArgument &argument) {
-  if (auto *locator{std::get_if<parser::OmpLocator>(&argument.u)}) {
-    return std::get_if<parser::OmpObject>(&locator->u);
   }
   return nullptr;
 }

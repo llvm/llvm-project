@@ -1710,6 +1710,16 @@ define <2 x i16> @test_ne_h(<2 x i16> %a, <2 x i16> %b) {
   ret <2 x i16> %res
 }
 
+define <2 x i16> @test_nez_h(<2 x i16> %a, <2 x i16> %b) {
+; CHECK-LABEL: test_nez_h:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pmsnez.h a0, a0
+; CHECK-NEXT:    ret
+  %cmp = icmp ne <2 x i16> %a, splat (i16 0)
+  %res = sext <2 x i1> %cmp to <2 x i16>
+  ret <2 x i16> %res
+}
+
 define <2 x i16> @test_slt_h(<2 x i16> %a, <2 x i16> %b) {
 ; CHECK-LABEL: test_slt_h:
 ; CHECK:       # %bb.0:
@@ -1748,6 +1758,17 @@ define <2 x i16> @test_sge_h(<2 x i16> %a, <2 x i16> %b) {
 ; CHECK-NEXT:    not a0, a0
 ; CHECK-NEXT:    ret
   %cmp = icmp sge <2 x i16> %a, %b
+  %res = sext <2 x i1> %cmp to <2 x i16>
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_sgez_h(<2 x i16> %a, <2 x i16> %b) {
+; CHECK-LABEL: test_sgez_h:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pmsltz.h a0, a0
+; CHECK-NEXT:    not a0, a0
+; CHECK-NEXT:    ret
+  %cmp = icmp sgt <2 x i16> %a, splat (i16 -1);
   %res = sext <2 x i1> %cmp to <2 x i16>
   ret <2 x i16> %res
 }
@@ -1979,10 +2000,10 @@ define <2 x i16> @test_select_v2i16(i1 %cond, <2 x i16> %a, <2 x i16> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB140_2
+; CHECK-NEXT:    bnez a3, .LBB142_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB140_2:
+; CHECK-NEXT:  .LBB142_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <2 x i16> %a, <2 x i16> %b
   ret <2 x i16> %res
@@ -1993,10 +2014,10 @@ define <4 x i8> @test_select_v4i8(i1 %cond, <4 x i8> %a, <4 x i8> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB141_2
+; CHECK-NEXT:    bnez a3, .LBB143_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB141_2:
+; CHECK-NEXT:  .LBB143_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <4 x i8> %a, <4 x i8> %b
   ret <4 x i8> %res

@@ -7544,6 +7544,12 @@ the configuration (without a prefix: ``Auto``).
   * ``LS_Cpp20`` (in configuration: ``c++20``)
     Parse and format as C++20.
 
+  * ``LS_Cpp23`` (in configuration: ``c++23``)
+    Parse and format as C++23.
+
+  * ``LS_Cpp26`` (in configuration: ``c++26``)
+    Parse and format as C++26.
+
   * ``LS_Latest`` (in configuration: ``Latest``)
     Parse and format using the latest supported language version.
     ``Cpp11`` is a deprecated alias for ``Latest``

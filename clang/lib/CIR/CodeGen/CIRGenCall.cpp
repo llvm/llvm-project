@@ -391,8 +391,13 @@ void CIRGenModule::constructAttributeList(
     attrs.set(cir::CIRDialect::getSideEffectAttrName(),
               cir::SideEffectAttr::get(&getMLIRContext(), sideEffect));
 
-    // TODO(cir): When doing 'return attrs' we need to cover the Restrict and
-    // ReturnsNonNull attributes here.
+    // TODO(cir): Add noalias to returns for malloc-like functions
+    // (__attribute__((malloc)) / __declspec(restrict)).
+
+    if (targetDecl->hasAttr<ReturnsNonNullAttr>() &&
+        !codeGenOpts.NullPointerIsValid)
+      retAttrs.set(mlir::LLVM::LLVMDialect::getNonNullAttrName(),
+                   mlir::UnitAttr::get(&getMLIRContext()));
     if (targetDecl->hasAttr<AnyX86NoCallerSavedRegistersAttr>())
       addUnitAttr(cir::CIRDialect::getNoCallerSavedRegsAttrName());
     // TODO(cir): Implement 'NoCFCheck' attribute here.  This requires
@@ -496,7 +501,8 @@ void CIRGenModule::constructAttributeList(
   // TODO(cir): Add loader-replaceable attribute here.
 
   constructFunctionReturnAttributes(info, targetDecl, isThunk, retAttrs);
-  constructFunctionArgumentAttributes(info, isThunk, argAttrs);
+  constructFunctionArgumentAttributes(info, targetDecl, isThunk, attrOnCallSite,
+                                      argAttrs);
 }
 
 bool CIRGenModule::hasStrictReturn(QualType retTy, const Decl *targetDecl) {
@@ -643,13 +649,11 @@ void CIRGenModule::constructFunctionReturnAttributes(
 }
 
 void CIRGenModule::constructFunctionArgumentAttributes(
-    const CIRGenFunctionInfo &info, bool isThunk,
-    llvm::MutableArrayRef<mlir::NamedAttrList> argAttrs) {
+    const CIRGenFunctionInfo &info, const Decl *targetDecl, bool isThunk,
+    bool attrOnCallSite, llvm::MutableArrayRef<mlir::NamedAttrList> argAttrs) {
   assert(!cir::MissingFeatures::abiArgInfo());
   // TODO(cir): classic codegen does a lot of work here based on the ABIArgInfo
   // to set things based on calling convention.
-  // At the moment, only nonnull, dereferenceable, align, and noundef are being
-  // implemented here, using similar logic to how we do so for return types.
 
   if (info.isInstanceMethod() && !isThunk) {
     QualType thisPtrTy = info.arguments()[0];
@@ -693,8 +697,22 @@ void CIRGenModule::constructFunctionArgumentAttributes(
   // that seems risky at the moment. At one point we should evaluate if at least
   // dereferenceable, nonnull, and align can be combined.
   const cir::CIRDataLayout &layout = getDataLayout();
-  for (const auto &[argAttrList, argCanType] :
-       llvm::zip_equal(argAttrs, info.arguments())) {
+  const auto *fd = dyn_cast_or_null<FunctionDecl>(targetDecl);
+
+  // Build a parallel array of ParmVarDecls aligned with argAttrs so we can
+  // access parameter-level attributes (e.g. restrict, nonnull) without manual
+  // index arithmetic in the loop.
+  SmallVector<const ParmVarDecl *> parmDecls;
+  parmDecls.reserve(argAttrs.size());
+  if (fd) {
+    if (info.isInstanceMethod())
+      parmDecls.push_back(nullptr);
+    parmDecls.insert(parmDecls.end(), fd->param_begin(), fd->param_end());
+  }
+  parmDecls.resize(argAttrs.size(), nullptr);
+
+  for (const auto &[argAttrList, argCanType, pvd] :
+       llvm::zip_equal(argAttrs, info.arguments(), parmDecls)) {
     assert(!cir::MissingFeatures::abiArgInfo());
     QualType argType = argCanType;
     const cir::ABIArgInfo argInfo = cir::ABIArgInfo::getDirect();
@@ -730,6 +748,24 @@ void CIRGenModule::constructFunctionArgumentAttributes(
       if (unsigned mask = getNoFPClassTestMask(getLangOpts()))
         argAttrList.set(mlir::LLVM::LLVMDialect::getNoFPClassAttrName(),
                         builder.getI64IntegerAttr(mask));
+
+    // restrict -> noalias on definitions only (not call sites).  Skip
+    // builtins: OGCG applies restrict->noalias in EmitFunctionProlog.
+    if (!attrOnCallSite && pvd && pvd->getType()->isPointerType() &&
+        pvd->getType().isRestrictQualified() && !fd->getBuiltinID())
+      argAttrList.set(mlir::LLVM::LLVMDialect::getNoAliasAttrName(),
+                      mlir::UnitAttr::get(&getMLIRContext()));
+
+    // __attribute__((nonnull)) on pointer parameters.  Checks both
+    // per-parameter and function-level nonnull attributes.
+    if (pvd && argType->isAnyPointerType() && !codeGenOpts.NullPointerIsValid) {
+      unsigned srcIdx = pvd->getFunctionScopeIndex();
+      if (pvd->hasAttr<NonNullAttr>() ||
+          (fd->getAttr<NonNullAttr>() &&
+           fd->getAttr<NonNullAttr>()->isNonNull(srcIdx)))
+        argAttrList.set(mlir::LLVM::LLVMDialect::getNonNullAttrName(),
+                        mlir::UnitAttr::get(&getMLIRContext()));
+    }
   }
 }
 
@@ -848,12 +884,6 @@ void CIRGenFunction::emitDelegateCallArg(CallArgList &args,
   Address local = getAddrOfLocalVar(param);
 
   QualType type = param->getType();
-
-  if (type->getAsCXXRecordDecl()) {
-    cgm.errorNYI(param->getSourceRange(),
-                 "emitDelegateCallArg: record argument");
-    return;
-  }
 
   // GetAddrOfLocalVar returns a pointer-to-pointer for references, but the
   // argument needs to be the original pointer.

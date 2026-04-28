@@ -539,6 +539,8 @@ template <> struct ScalarEnumerationTraits<FormatStyle::LanguageStandard> {
     IO.enumCase(Value, "c++14", FormatStyle::LS_Cpp14);
     IO.enumCase(Value, "c++17", FormatStyle::LS_Cpp17);
     IO.enumCase(Value, "c++20", FormatStyle::LS_Cpp20);
+    IO.enumCase(Value, "c++23", FormatStyle::LS_Cpp23);
+    IO.enumCase(Value, "c++26", FormatStyle::LS_Cpp26);
 
     IO.enumCase(Value, "Latest", FormatStyle::LS_Latest);
     IO.enumCase(Value, "Cpp11", FormatStyle::LS_Latest); // Legacy alias
@@ -4422,6 +4424,8 @@ LangOptions getFormattingLangOpts(const FormatStyle &Style) {
     LangOpts.CPlusPlus14 = LexingStd >= FormatStyle::LS_Cpp14;
     LangOpts.CPlusPlus17 = LexingStd >= FormatStyle::LS_Cpp17;
     LangOpts.CPlusPlus20 = SinceCpp20;
+    LangOpts.CPlusPlus23 = LexingStd >= FormatStyle::LS_Cpp23;
+    LangOpts.CPlusPlus26 = LexingStd >= FormatStyle::LS_Cpp26;
     [[fallthrough]];
   default:
     LangOpts.CPlusPlus = 1;

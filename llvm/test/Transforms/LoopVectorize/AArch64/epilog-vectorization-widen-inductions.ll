@@ -17,18 +17,18 @@ define void @test_widen_ptr_induction(ptr %ptr.start.1) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[PTR_START_1]], [[VECTOR_PH]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VECTOR_GEP:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i64> <i64 0, i64 1, i64 2, i64 3>
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x ptr> [[VECTOR_GEP]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x ptr> [[VECTOR_GEP]], i64 0
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = getelementptr i8, <4 x ptr> [[VECTOR_GEP]], <4 x i64> splat (i64 4)
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <4 x ptr> [[VECTOR_GEP]], zeroinitializer
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i1> [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i1> [[TMP2]], i32 1
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i1> [[TMP2]], i32 2
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i1> [[TMP2]], i32 3
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i1> [[TMP2]], i64 0
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i1> [[TMP2]], i64 1
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i1> [[TMP2]], i64 2
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i1> [[TMP2]], i64 3
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne <4 x ptr> [[STEP_ADD]], zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i1> [[TMP7]], i32 0
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP7]], i32 1
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i1> [[TMP7]], i32 2
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x i1> [[TMP7]], i32 3
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i1> [[TMP7]], i64 0
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP7]], i64 1
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i1> [[TMP7]], i64 2
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x i1> [[TMP7]], i64 3
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP11]])
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP12]])
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP13]])
@@ -57,10 +57,10 @@ define void @test_widen_ptr_induction(ptr %ptr.start.1) {
 ; CHECK-NEXT:    [[INDEX6:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT9:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[POINTER_PHI2:%.*]] = phi ptr [ [[BC_RESUME_VAL1]], [[VEC_EPILOG_PH]] ], [ [[PTR_IND5:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr i8, ptr [[POINTER_PHI2]], <2 x i64> <i64 0, i64 1>
-; CHECK-NEXT:    [[NEXT_GEP7:%.*]] = extractelement <2 x ptr> [[TMP20]], i32 0
+; CHECK-NEXT:    [[NEXT_GEP7:%.*]] = extractelement <2 x ptr> [[TMP20]], i64 0
 ; CHECK-NEXT:    [[TMP21:%.*]] = icmp ne <2 x ptr> [[TMP20]], zeroinitializer
-; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <2 x i1> [[TMP21]], i32 0
-; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <2 x i1> [[TMP21]], i32 1
+; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <2 x i1> [[TMP21]], i64 0
+; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <2 x i1> [[TMP21]], i64 1
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP22]])
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP23]])
 ; CHECK-NEXT:    store <2 x i8> zeroinitializer, ptr [[NEXT_GEP7]], align 1

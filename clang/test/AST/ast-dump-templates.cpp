@@ -5040,12 +5040,31 @@ namespace TestAbbreviatedTemplateDecls {
 // JSON-NEXT:        "TemplateInstantiationPattern": "0x{{.*}}"
 // JSON-NEXT:       }
 // JSON-NEXT:      ]
-// JSON-NEXT:     }
-// JSON-NEXT:    ]
-// JSON-NEXT:   },
-// JSON-NEXT:   {
-// JSON-NEXT:    "id": "0x{{.*}}",
-// JSON-NEXT:    "kind": "NamespaceDecl",
+// JSON-NEXT:     },
+// JSON-NEXT:     {
+// JSON-NEXT:      "id": "0x{{.*}}",
+// JSON-NEXT:      "kind": "ExplicitInstantiationDecl",
+// JSON-NEXT:      "loc": {
+// JSON-NEXT:       "offset": {{[0-9]+}},
+// JSON-NEXT:       "line": 102,
+// JSON-NEXT:       "col": 1,
+// JSON-NEXT:       "tokLen": 8
+// JSON-NEXT:      },
+// JSON-NEXT:      "range": {
+// JSON-NEXT:       "begin": {
+// JSON-NEXT:        "offset": {{[0-9]+}},
+// JSON-NEXT:        "col": 1,
+// JSON-NEXT:        "tokLen": 8
+// JSON-NEXT:       },
+// JSON-NEXT:       "end": {
+// JSON-NEXT:        "offset": {{[0-9]+}},
+// JSON-NEXT:        "col": 30,
+// JSON-NEXT:        "tokLen": 1
+// JSON-NEXT:       }
+// JSON-NEXT:      },
+// JSON-NEXT:      "specializationDeclId": "0x{{.*}}",
+// JSON-NEXT:      "templateSpecializationKind": "explicit_instantiation_definition",
+// JSON:    "kind": "NamespaceDecl",
 // JSON-NEXT:    "loc": {
 // JSON-NEXT:     "offset": 3310,
 // JSON-NEXT:     "line": 105,
@@ -6325,12 +6344,31 @@ namespace TestAbbreviatedTemplateDecls {
 // JSON-NEXT:        "tagUsed": "struct"
 // JSON-NEXT:       }
 // JSON-NEXT:      ]
-// JSON-NEXT:     }
-// JSON-NEXT:    ]
-// JSON-NEXT:   },
-// JSON-NEXT:   {
-// JSON-NEXT:    "id": "0x{{.*}}",
-// JSON-NEXT:    "kind": "NamespaceDecl",
+// JSON-NEXT:     },
+// JSON-NEXT:     {
+// JSON-NEXT:      "id": "0x{{.*}}",
+// JSON-NEXT:      "kind": "ExplicitInstantiationDecl",
+// JSON-NEXT:      "loc": {
+// JSON-NEXT:       "offset": {{[0-9]+}},
+// JSON-NEXT:       "line": 133,
+// JSON-NEXT:       "col": 3,
+// JSON-NEXT:       "tokLen": 8
+// JSON-NEXT:      },
+// JSON-NEXT:      "range": {
+// JSON-NEXT:       "begin": {
+// JSON-NEXT:        "offset": {{[0-9]+}},
+// JSON-NEXT:        "col": 3,
+// JSON-NEXT:        "tokLen": 8
+// JSON-NEXT:       },
+// JSON-NEXT:       "end": {
+// JSON-NEXT:        "offset": {{[0-9]+}},
+// JSON-NEXT:        "col": 22,
+// JSON-NEXT:        "tokLen": 1
+// JSON-NEXT:       }
+// JSON-NEXT:      },
+// JSON-NEXT:      "specializationDeclId": "0x{{.*}}",
+// JSON-NEXT:      "templateSpecializationKind": "explicit_instantiation_definition",
+// JSON:    "kind": "NamespaceDecl",
 // JSON-NEXT:    "loc": {
 // JSON-NEXT:     "offset": 4584,
 // JSON-NEXT:     "line": 142,

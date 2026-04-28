@@ -143,8 +143,8 @@ lldb::ValueObjectSP
 LibstdcppMapIteratorSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
   if (m_pair_address != 0 && m_pair_type) {
     if (!m_pair_sp)
-      m_pair_sp = CreateValueObjectFromAddress("pair", m_pair_address,
-                                               m_exe_ctx_ref, m_pair_type);
+      m_pair_sp = CreateChildValueObjectFromAddress("pair", m_pair_address,
+                                                    m_exe_ctx_ref, m_pair_type);
     if (m_pair_sp)
       return m_pair_sp->GetChildAtIndex(idx);
   }
@@ -210,7 +210,7 @@ lldb::ChildCacheState VectorIteratorSyntheticFrontEnd::Update() {
     return lldb::ChildCacheState::eRefetch;
   Status err;
   m_exe_ctx_ref = valobj_sp->GetExecutionContextRef();
-  m_item_sp = CreateValueObjectFromAddress(
+  m_item_sp = CreateChildValueObjectFromAddress(
       "item", item_ptr->GetValueAsUnsigned(0), m_exe_ctx_ref,
       item_ptr->GetCompilerType().GetPointeeType());
   if (err.Fail())

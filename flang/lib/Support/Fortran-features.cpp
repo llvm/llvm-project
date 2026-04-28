@@ -10,6 +10,7 @@
 #include "flang/Common/idioms.h"
 #include "flang/Parser/characters.h"
 #include "flang/Support/Fortran.h"
+#include "llvm/ADT/StringRef.h"
 #include <string>
 #include <string_view>
 
@@ -35,6 +36,26 @@ static std::vector<std::string_view> SplitCamelCase(std::string_view x) {
   return result;
 }
 
+// Compound names whose hyphenated CamelCase splitting is wrong.
+// Each entry maps the incorrect (deprecated) hyphenated form produced by
+// SplitCamelCase to the correct (canonical) form.
+static constexpr std::pair<std::string_view, std::string_view>
+    compoundNameFixups[]{{"open-mp", "openmp"}, {"open-acc", "openacc"}};
+
+// Replace all occurrences of 'from' with 'to' in 's', but only when the
+// match is at a word boundary (end of string or followed by '-') to avoid
+// e.g. "open-access" -> "openaccess".
+static void ReplaceAtWordBoundary(
+    std::string &s, std::string_view from, std::string_view to) {
+  for (size_t pos = s.find(from); pos != std::string::npos;
+      pos = s.find(from, pos + to.size())) {
+    size_t end = pos + from.size();
+    if (end == s.size() || s[end] == '-') {
+      s.replace(pos, from.size(), to);
+    }
+  }
+}
+
 // Namespace for helper functions for parsing Cli options used instead of static
 // so that there can be unit tests for this function.
 namespace details {
@@ -46,6 +67,10 @@ std::string CamelCaseToLowerCaseHyphenated(std::string_view x) {
     std::string word{parser::ToLowerCaseLetters(words[i])};
     result += i == 0 ? "" : "-";
     result += word;
+  }
+  // Fix known compound names that should not be hyphen-separated.
+  for (auto [deprecated, canonical] : compoundNameFixups) {
+    ReplaceAtWordBoundary(result, deprecated, canonical);
   }
   return result;
 }
@@ -70,12 +95,37 @@ LanguageFeatureControl::LanguageFeatureControl() {
         std::move(cliOption);
   });
 
-  // Fix CLI spellings where the auto-generated hyphenation is wrong.
-  // TODO: -Wopen-mp-* should be fixed in a central place.  See
-  // see Discourse at
-  // https://discourse.llvm.org/t/openmp-misspelling-of-wopen-mp/90196.
-  ReplaceCliCanonicalSpelling(LanguageFeature::OpenMPThreadprivateEquivalence,
-      "openmp-threadprivate-equivalence");
+  // Register deprecated "open-mp-*" and "open-acc-*" spellings as aliases.
+  // The canonical spellings are now "openmp-*" and "openacc-*".
+  auto makeDeprecatedSpelling = [](std::string_view canonical) {
+    std::string deprecated{canonical};
+    bool replaced{false};
+    for (auto [deprecatedForm, canonicalForm] : compoundNameFixups) {
+      // Reverse direction: canonical -> deprecated.
+      for (auto pos{deprecated.find(canonicalForm)}; pos != std::string::npos;
+          pos = deprecated.find(canonicalForm, pos + deprecatedForm.size())) {
+        deprecated.replace(pos, canonicalForm.size(), deprecatedForm);
+        replaced = true;
+      }
+    }
+    return std::pair{deprecated, replaced};
+  };
+  ForEachLanguageFeature([&](auto feature) {
+    std::string_view canonical{
+        languageFeatureCliCanonicalSpelling_[EnumToInt(feature)]};
+    auto [deprecated, replaced]{makeDeprecatedSpelling(canonical)};
+    if (replaced) {
+      AddDeprecatedCliSpelling(feature, deprecated, std::string{canonical});
+    }
+  });
+  ForEachUsageWarning([&](auto warning) {
+    std::string_view canonical{
+        usageWarningCliCanonicalSpelling_[EnumToInt(warning)]};
+    auto [deprecated, replaced]{makeDeprecatedSpelling(canonical)};
+    if (replaced) {
+      AddDeprecatedCliSpelling(warning, deprecated, std::string{canonical});
+    }
+  });
 
   // These features must be explicitly enabled by command line options.
   disable_.set(LanguageFeature::OldDebugLines);
@@ -162,18 +212,35 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnUsage_.set(UsageWarning::BadValueInDeadCode);
   warnUsage_.set(UsageWarning::MisplacedIgnoreTKR);
   warnUsage_.set(UsageWarning::ImpureFinalInPure);
+  warnUsage_.set(UsageWarning::IgnoredNoReallocateLHS);
   warnLanguage_.set(LanguageFeature::OpenMPThreadprivateEquivalence);
 }
 
 std::optional<LanguageControlFlag> LanguageFeatureControl::FindWarning(
     std::string_view input) {
   bool negated{false};
+  // TODO: replace with starts_with when moving to C++20
   if (input.size() > 3 && input.substr(0, 3) == "no-") {
     negated = true;
     input = input.substr(3);
   }
   if (auto it{cliOptions_.find(std::string{input})}; it != cliOptions_.end()) {
     return std::make_pair(it->second, !negated);
+  }
+  return std::nullopt;
+}
+
+std::optional<std::string_view> LanguageFeatureControl::CheckDeprecatedSpelling(
+    std::string_view input) const {
+  // Strip "no-" prefix for lookup, same as FindWarning does.
+  // TODO: Consider using std::string_view instead of llvm::StringRef
+  // when moving to C++20:
+  if (llvm::StringRef{input}.starts_with("no-")) {
+    input = input.substr(3);
+  }
+  if (auto it{deprecatedCliOptions_.find(std::string{input})};
+      it != deprecatedCliOptions_.end()) {
+    return it->second;
   }
   return std::nullopt;
 }

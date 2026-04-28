@@ -128,16 +128,16 @@ public:
 
   using TargetInstrInfo::foldMemoryOperandImpl;
   MachineInstr *foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
-                                      ArrayRef<unsigned> Ops,
-                                      MachineBasicBlock::iterator InsertPt,
-                                      int FrameIndex, MachineInstr *&CopyMI,
+                                      ArrayRef<unsigned> Ops, int FrameIndex,
+                                      MachineInstr *&CopyMI,
                                       LiveIntervals *LIS = nullptr,
                                       VirtRegMap *VRM = nullptr) const override;
 
-  MachineInstr *foldMemoryOperandImpl(
-      MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
-      MachineBasicBlock::iterator InsertPt, MachineInstr &LoadMI,
-      MachineInstr *&CopyMI, LiveIntervals *LIS = nullptr) const override;
+  MachineInstr *
+  foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
+                        ArrayRef<unsigned> Ops, MachineInstr &LoadMI,
+                        MachineInstr *&CopyMI,
+                        LiveIntervals *LIS = nullptr) const override;
 
   // Materializes the given integer Val into DstReg.
   void movImm(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
@@ -363,8 +363,6 @@ protected:
   const RISCVSubtarget &STI;
 
 private:
-  unsigned getInstBundleLength(const MachineInstr &MI) const;
-
   bool isVectorAssociativeAndCommutative(const MachineInstr &MI,
                                          bool Invert = false) const;
   bool areRVVInstsReassociable(const MachineInstr &MI1,

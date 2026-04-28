@@ -62,11 +62,13 @@ void test1(int __ob_wrap a, int __ob_trap b) {
   // DEFAULT: llvm.sadd.with.overflow.i32
   ++b;
 
+  // Despite the fact that "a" is marked as "wrapping", we still perform an
+  // overflow check: an overflowing divide has undefined behavior at the
+  // LLVM IR level (and will trap on x86).
   volatile extern int divisor;
   // DEFAULT: %[[T0:.*]] = load i32, ptr %a
   // DEFAULT-NEXT: %[[T1:.*]] = load volatile i32, ptr @divisor
-  // DEFAULT-NOT: br {{.*}} %handler.divrem_overflow
-  // DEFAULT: sdiv i32 %[[T0]], %[[T1]]
+  // DEFAULT: br {{.*}} %handler.divrem_overflow
   a/divisor;
 
   // DEFAULT: %[[T0:.*]] = load i32, ptr %b
