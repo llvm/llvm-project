@@ -894,7 +894,7 @@ bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return false;
   if (!CheckVolatile(S, OpPC, Ptr, AK_Assign))
     return false;
-  if (!S.inConstantContext() && isConstexprUnknown(Ptr))
+  if (isConstexprUnknown(Ptr))
     return false;
   return true;
 }
