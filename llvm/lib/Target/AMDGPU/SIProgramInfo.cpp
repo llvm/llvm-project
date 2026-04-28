@@ -138,10 +138,15 @@ static uint64_t getPGMRSrc1Reg(const SIProgramInfo &ProgInfo,
 
 static uint64_t getComputePGMRSrc2Reg(const GCNSubtarget &ST,
                                       const SIProgramInfo &ProgInfo) {
-  uint64_t Reg = ST.hasGFX1250Insts()
-                     ? S_00B84C_USER_SGPR_GFX1250(ProgInfo.UserSGPR)
-                     : (S_00B84C_USER_SGPR(ProgInfo.UserSGPR) |
-                        S_00B84C_TRAP_HANDLER(ProgInfo.TrapHandlerEnable));
+  uint64_t MaxNumerUserSGRPs = AMDGPU::getMaxNumUserSGPRs(ST);
+  uint64_t Reg = 0;
+  if (MaxNumerUserSGRPs == 32)
+    Reg = S_00B84C_USER_SGPR_GFX1250(ProgInfo.UserSGPR);
+  else if (MaxNumerUserSGRPs == 16)
+    Reg = (S_00B84C_USER_SGPR(ProgInfo.UserSGPR) |
+           S_00B84C_TRAP_HANDLER(ProgInfo.TrapHandlerEnable));
+  else
+    report_fatal_error("Max Number of User SGPRs are either 32 or 16");
 
   Reg |= S_00B84C_TGID_X_EN(ProgInfo.TGIdXEnable) |
          S_00B84C_TGID_Y_EN(ProgInfo.TGIdYEnable) |
