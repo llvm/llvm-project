@@ -1022,17 +1022,18 @@ LogicalResult spirv::Deserializer::processName(ArrayRef<uint32_t> operands) {
   if (operands.size() < 2) {
     return emitError(unknownLoc, "OpName needs at least 2 operands");
   }
-  if (!nameMap.lookup(operands[0]).empty()) {
-    return emitError(unknownLoc, "duplicate name found for result <id> ")
-           << operands[0];
-  }
+
   unsigned wordIndex = 1;
   StringRef name = decodeStringLiteral(operands, wordIndex);
   if (wordIndex != operands.size()) {
     return emitError(unknownLoc,
                      "unexpected trailing words in OpName instruction");
   }
-  nameMap[operands[0]] = name;
+
+  // In SPIRV it's valid for multiple OpName instructions to refer to the same
+  // <id>. Use a "last one wins" approach to resolve such cases.
+  nameMap.emplace_or_assign(operands[0], name);
+
   return success();
 }
 
@@ -1150,6 +1151,8 @@ LogicalResult spirv::Deserializer::processType(spirv::Opcode opcode,
     return processFunctionType(operands);
   case spirv::Opcode::OpTypeImage:
     return processImageType(operands);
+  case spirv::Opcode::OpTypeSampler:
+    return processSamplerType(operands);
   case spirv::Opcode::OpTypeSampledImage:
     return processSampledImageType(operands);
   case spirv::Opcode::OpTypeRuntimeArray:
@@ -1631,6 +1634,15 @@ spirv::Deserializer::processSampledImageType(ArrayRef<uint32_t> operands) {
            << operands[1];
 
   typeMap[operands[0]] = spirv::SampledImageType::get(elementTy);
+  return success();
+}
+
+LogicalResult
+spirv::Deserializer::processSamplerType(ArrayRef<uint32_t> operands) {
+  if (operands.size() != 1)
+    return emitError(unknownLoc, "OpTypeSampler must have no parameters");
+
+  typeMap[operands[0]] = spirv::SamplerType::get(context);
   return success();
 }
 
@@ -2883,10 +2895,7 @@ LogicalResult spirv::Deserializer::wireUpBlockArgument() {
 LogicalResult spirv::Deserializer::splitSelectionHeader() {
   // Create a copy, so we can modify keys in the original.
   BlockMergeInfoMap blockMergeInfoCopy = blockMergeInfo;
-  for (auto it = blockMergeInfoCopy.begin(), e = blockMergeInfoCopy.end();
-       it != e; ++it) {
-    auto &[block, mergeInfo] = *it;
-
+  for (auto [block, mergeInfo] : blockMergeInfoCopy) {
     // Skip processing loop regions. For loop regions continueBlock is non-null.
     if (mergeInfo.continueBlock)
       continue;

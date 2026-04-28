@@ -1088,12 +1088,6 @@ std::string RISCVISAInfo::getTargetFeatureForExtension(StringRef Ext) {
                                        : Name.str();
 }
 
-struct RISCVExtBit {
-  const StringLiteral ext;
-  uint8_t groupid;
-  uint8_t bitpos;
-};
-
 struct RISCVExtensionBitmask {
   const char *Name;
   unsigned GroupID;

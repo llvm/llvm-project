@@ -86,7 +86,7 @@ protected:
 
   EntityId addEntity(TUSummaryEncoding &TU, llvm::StringRef USR,
                      EntityLinkage Linkage) {
-    EntityName Name(USR, "", NestedBuildNamespace(getTUNamespace(TU)));
+    EntityName Name(USR, "", NestedBuildNamespace());
     EntityId Id = getIdTable(TU).getId(Name);
     getLinkageTable(TU).insert({Id, Linkage});
     return Id;
@@ -197,7 +197,7 @@ TEST_F(EntityLinkerTest, CreatesEmptyLinker) {
 
   EntityLinker Linker(LUNamespace);
 
-  const auto Output = std::move(Linker).getOutput();
+  const auto Output = std::move(Linker).takeOutput();
   EXPECT_EQ(getIdTable(Output).count(), 0u);
   EXPECT_EQ(getLinkageTable(Output).size(), 0u);
   EXPECT_EQ(getData(Output).size(), 0u);
@@ -214,7 +214,7 @@ TEST_F(EntityLinkerTest, LinksEmptyTranslationUnit) {
 
   EXPECT_THAT_ERROR(Linker.link(std::move(TUEmpty)), llvm::Succeeded());
 
-  const auto Output = std::move(Linker).getOutput();
+  const auto Output = std::move(Linker).takeOutput();
   EXPECT_EQ(getIdTable(Output).count(), 0u);
   EXPECT_EQ(getLinkageTable(Output).size(), 0u);
   EXPECT_EQ(getData(Output).size(), 0u);
@@ -246,7 +246,7 @@ TEST_F(EntityLinkerTest, LinksOneTranslationUnit) {
 
   ASSERT_THAT_ERROR(Linker.link(std::move(TU)), llvm::Succeeded());
 
-  const auto Output = std::move(Linker).getOutput();
+  const auto Output = std::move(Linker).takeOutput();
   const auto &IdTable = getIdTable(Output);
   const auto &Entities = getEntities(IdTable);
   const auto &LinkageTable = getLinkageTable(Output);
@@ -411,7 +411,7 @@ TEST_F(EntityLinkerTest, LinksTwoTranslationUnits) {
 
   ASSERT_THAT_ERROR(Linker.link(std::move(TU2)), llvm::Succeeded());
 
-  const auto Output = std::move(Linker).getOutput();
+  const auto Output = std::move(Linker).takeOutput();
   const auto &IdTable = getIdTable(Output);
   const auto &Entities = getEntities(IdTable);
   const auto &LinkageTable = getLinkageTable(Output);
@@ -630,6 +630,35 @@ TEST_F(EntityLinkerTest, RejectsDuplicateTUSummary) {
                     llvm::FailedWithMessage(
                         HasSubstr("failed to link TU summary: duplicate "
                                   "BuildNamespace(CompilationUnit, TU)")));
+}
+
+// Reproduces a crash when linking internal-linkage entities
+// (e.g. "static inline" functions) that share the same USR across TUs.
+TEST_F(EntityLinkerTest, InternalLinkageWithEmptyNamespaceAcrossTUs) {
+  constexpr auto LinkUnit = BuildNamespaceKind::LinkUnit;
+  constexpr auto CompilationUnit = BuildNamespaceKind::CompilationUnit;
+  EntityLinker Linker(NestedBuildNamespace{BuildNamespace(LinkUnit, "LU")});
+
+  auto TU1 = createTUSummaryEncoding(CompilationUnit, "TU1");
+  addEntity(*TU1, "some_static_inline", InternalLinkage);
+  ASSERT_THAT_ERROR(Linker.link(std::move(TU1)), llvm::Succeeded());
+
+  auto TU2 = createTUSummaryEncoding(CompilationUnit, "TU2");
+  addEntity(*TU2, "some_static_inline", InternalLinkage);
+  ASSERT_THAT_ERROR(Linker.link(std::move(TU2)), llvm::Succeeded());
+
+  // Check that the two internal symbols are not merged.
+  const auto Output = std::move(Linker).takeOutput();
+  const auto &IdTable = getIdTable(Output);
+
+  NestedBuildNamespace TU1NS{{{CompilationUnit, "TU1"}, {LinkUnit, "LU"}}};
+  NestedBuildNamespace TU2NS{{{CompilationUnit, "TU2"}, {LinkUnit, "LU"}}};
+  EntityName ExpectedTU1Name("some_static_inline", "", TU1NS);
+  EntityName ExpectedTU2Name("some_static_inline", "", TU2NS);
+
+  ASSERT_EQ(IdTable.count(), 2u);
+  EXPECT_THAT(IdTable, ContainsEntity(ExpectedTU1Name));
+  EXPECT_THAT(IdTable, ContainsEntity(ExpectedTU2Name));
 }
 
 } // namespace

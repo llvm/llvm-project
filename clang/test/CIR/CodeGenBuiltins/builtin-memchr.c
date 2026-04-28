@@ -15,7 +15,7 @@ void *test_char_memchr(const char arg[32]) {
 // CIR: {{%.*}} = cir.libc.memchr({{%.*}}, %[[PATTERN]], %[[LEN]])
 
 // LLVM-LABEL: @test_char_memchr
-// LLVM: call ptr @memchr(ptr %{{.*}}, i32 123, i64 32)
+// LLVM: call ptr @memchr(ptr noundef %{{.*}}, i32 noundef 123, i64 noundef 32)
 // LLVM: ret ptr
 
 // OGCG-LABEL: @test_char_memchr
@@ -30,7 +30,7 @@ void *test_memchr(const void *ptr, int val, unsigned long size) {
 // CIR: {{%.*}} = cir.libc.memchr({{%.*}}, {{%.*}}, {{%.*}})
 
 // LLVM-LABEL: @test_memchr
-// LLVM: call ptr @memchr(ptr %{{.*}}, i32 %{{.*}}, i64 %{{.*}})
+// LLVM: call ptr @memchr(ptr noundef %{{.*}}, i32 noundef %{{.*}}, i64 noundef %{{.*}})
 // LLVM: ret ptr
 
 // OGCG-LABEL: @test_memchr

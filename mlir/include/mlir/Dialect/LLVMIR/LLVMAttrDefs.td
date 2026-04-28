@@ -335,7 +335,7 @@ def LLVM_DIEncodingParameter : LLVM_DIParameter<
 >;
 
 def LLVM_DILanguageParameter : LLVM_DIParameter<
-  "language", /*default=*/"", "Language", /*errorCase=*/"0"
+  "language", /*default=*/"0", "Language", /*errorCase=*/"0"
 >;
 
 def LLVM_DITagParameter : LLVM_DIParameter<
@@ -417,30 +417,53 @@ def LLVM_DIBasicTypeAttr : LLVM_Attr<"DIBasicType", "di_basic_type",
 //===----------------------------------------------------------------------===//
 
 def LLVM_DICompileUnitAttr : LLVM_Attr<"DICompileUnit", "di_compile_unit",
-                                       /*traits=*/[], "DIScopeAttr"> {
+                                       [LLVM_DIRecursiveTypeAttrInterface],
+                                       "DIScopeAttr"> {
   let parameters = (ins
-    "DistinctAttr":$id,
+    // DIRecursiveTypeAttrInterface specific parameters.
+    OptionalParameter<"DistinctAttr">:$recId,
+    OptionalParameter<"bool">:$isRecSelf,
+    // DICompileUnitAttr specific parameters.
+    OptionalParameter<"DistinctAttr">:$id,
     LLVM_DILanguageParameter:$sourceLanguage,
-    "DIFileAttr":$file,
+    OptionalParameter<"DIFileAttr">:$file,
     OptionalParameter<"StringAttr">:$producer,
-    "bool":$isOptimized,
-    "DIEmissionKind":$emissionKind,
+    OptionalParameter<"bool">:$isOptimized,
+    OptionalParameter<"DIEmissionKind">:$emissionKind,
+    OptionalParameter<"bool">:$isDebugInfoForProfiling,
     OptionalParameter<"DINameTableKind">:$nameTableKind,
-    OptionalParameter<"StringAttr">:$splitDebugFilename
+    OptionalParameter<"StringAttr">:$splitDebugFilename,
+    OptionalArrayRefParameter<"DINodeAttr">:$importedEntities
   );
   let builders = [
     AttrBuilderWithInferredContext<(ins
       "DistinctAttr":$id, "unsigned":$sourceLanguage, "DIFileAttr":$file,
       "StringAttr":$producer, "bool":$isOptimized,
       "DIEmissionKind":$emissionKind,
+      CArg<"bool", "false">:$isDebugInfoForProfiling,
       CArg<"DINameTableKind", "DINameTableKind::Default">:$nameTableKind,
-      CArg<"StringAttr", "{}">:$splitDebugFilename
+      CArg<"StringAttr", "{}">:$splitDebugFilename,
+      CArg<"ArrayRef<DINodeAttr>", "{}">:$importedEntities
     ), [{
-      return $_get(id.getContext(), id, sourceLanguage, file, producer,
-                   isOptimized, emissionKind, nameTableKind, splitDebugFilename);
+      return $_get(id.getContext(), /*recId=*/nullptr, /*isRecSelf=*/false, id,
+                   sourceLanguage, file, producer, isOptimized, emissionKind,
+                   isDebugInfoForProfiling, nameTableKind, splitDebugFilename,
+                   importedEntities);
     }]>
   ];
   let assemblyFormat = "`<` struct(params) `>`";
+  let extraClassDeclaration = [{
+    /// Requirements of DIRecursiveTypeAttrInterface.
+    /// @{
+
+    /// Get a copy of this attr but with the recursive ID set to `recId`.
+    DIRecursiveTypeAttrInterface withRecId(DistinctAttr recId);
+
+    /// Build a rec-self instance using the provided `recId`.
+    static DIRecursiveTypeAttrInterface getRecSelf(DistinctAttr recId);
+
+    /// @}
+  }];
 
   // Generate mnemonic alias for the attribute.
   let genMnemonicAlias = 1;

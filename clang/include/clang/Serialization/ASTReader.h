@@ -223,8 +223,9 @@ public:
   }
 
   /// This is called for each AST file loaded.
-  virtual void visitModuleFile(StringRef Filename,
-                               serialization::ModuleKind Kind) {}
+  virtual void visitModuleFile(ModuleFileName Filename,
+                               serialization::ModuleKind Kind,
+                               bool DirectlyImported) {}
 
   /// Returns true if this \c ASTReaderListener wants to receive the
   /// input files of the AST file via \c visitInputFile, false otherwise.
@@ -313,8 +314,8 @@ public:
   void ReadCounter(const serialization::ModuleFile &M, uint32_t Value) override;
   bool needsInputFileVisitation() override;
   bool needsSystemInputFileVisitation() override;
-  void visitModuleFile(StringRef Filename,
-                       serialization::ModuleKind Kind) override;
+  void visitModuleFile(ModuleFileName Filename, serialization::ModuleKind Kind,
+                       bool DirectlyImported) override;
   bool visitInputFile(StringRef Filename, bool isSystem,
                       bool isOverridden, bool isExplicitModule) override;
   void readModuleFileExtension(
@@ -965,8 +966,14 @@ private:
   SmallVector<serialization::SelectorID, 64> ReferencedSelectorsData;
 
   /// A snapshot of Sema's weak undeclared identifier tracking, for
-  /// generating warnings.
+  /// generating warnings. Note that this vector has 3n entries, being triplets
+  /// of the form C name, alias if any, and source location.
   SmallVector<serialization::IdentifierID, 64> WeakUndeclaredIdentifiers;
+
+  /// A snapshot of Sema's #redefine_extname'd undeclared identifier tracking,
+  /// for generating warnings. Note that this vector has 3n entries, being
+  /// triplets in the order of C name, asm name, and source location.
+  SmallVector<serialization::IdentifierID, 64> ExtnameUndeclaredIdentifiers;
 
   /// The IDs of type aliases for ext_vectors that exist in the chain.
   ///
@@ -2355,6 +2362,10 @@ public:
 
   void ReadWeakUndeclaredIdentifiers(
       SmallVectorImpl<std::pair<IdentifierInfo *, WeakInfo>> &WeakIDs) override;
+
+  void ReadExtnameUndeclaredIdentifiers(
+      SmallVectorImpl<std::pair<IdentifierInfo *, AsmLabelAttr *>> &ExtnameIDs)
+      override;
 
   void ReadUsedVTables(SmallVectorImpl<ExternalVTableUse> &VTables) override;
 

@@ -10,8 +10,8 @@
 
 ; The test checks if the mask is being correctly created, reverted and used
 
-; RUN: opt -passes=loop-vectorize,dce -mtriple aarch64-linux-gnu -S \
-; RUN:   -prefer-predicate-over-epilogue=scalar-epilogue < %s | FileCheck %s
+; RUN: opt -passes=loop-vectorize -mtriple aarch64-linux-gnu -S \
+; RUN:   -tail-folding-policy=dont-fold-tail < %s | FileCheck %s
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-unknown-linux-gnu"
@@ -23,17 +23,16 @@ define void @vector_reverse_mask_nxv4i1(ptr %a, ptr %cond, i64 %N) #0 {
 ; CHECK: %[[REVERSE7:.*]] = call <vscale x 4 x double> @llvm.vector.reverse.nxv4f64(<vscale x 4 x double> %[[WIDEMSKLOAD]])
 ; CHECK: %[[FADD:.*]] = fadd <vscale x 4 x double> %[[REVERSE7]]
 ; CHECK: %[[REVERSE8:.*]] = call <vscale x 4 x double> @llvm.vector.reverse.nxv4f64(<vscale x 4 x double> %[[FADD]])
-; CHECK: %[[REVERSE9:.*]] = call <vscale x 4 x i1> @llvm.vector.reverse.nxv4i1(<vscale x 4 x i1> %{{.*}})
-; CHECK: call void @llvm.masked.store.nxv4f64.p0(<vscale x 4 x double> %[[REVERSE8]], ptr align 8 %{{.*}}, <vscale x 4 x i1> %[[REVERSE9]]
+; CHECK: call void @llvm.masked.store.nxv4f64.p0(<vscale x 4 x double> %[[REVERSE8]], ptr align 8 %{{.*}}, <vscale x 4 x i1> %[[REVERSE6]])
 
 entry:
   %cmp7 = icmp sgt i64 %N, 0
   br i1 %cmp7, label %for.body, label %for.cond.cleanup
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %i.08.in = phi i64 [ %i.08, %for.inc ], [ %N, %entry ]
   %i.08 = add nsw i64 %i.08.in, -1
   %arrayidx = getelementptr inbounds double, ptr %cond, i64 %i.08
@@ -41,14 +40,14 @@ for.body:                                         ; preds = %for.body, %entry
   %tobool = fcmp une double %0, 0.000000e+00
   br i1 %tobool, label %if.then, label %for.inc
 
-if.then:                                          ; preds = %for.body
+if.then:
   %arrayidx1 = getelementptr inbounds double, ptr %a, i64 %i.08
   %1 = load double, ptr %arrayidx1, align 8
   %add = fadd double %1, 1.000000e+00
   store double %add, ptr %arrayidx1, align 8
   br label %for.inc
 
-for.inc:                                          ; preds = %for.body, %if.then
+for.inc:
   %cmp = icmp sgt i64 %i.08.in, 1
   br i1 %cmp, label %for.body, label %for.cond.cleanup, !llvm.loop !0
 }

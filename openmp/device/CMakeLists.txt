@@ -60,7 +60,7 @@ endif()
 # Trick to combine these into a bitcode file via the linker's LTO pass.
 add_executable(libompdevice ${src_files})
 set_target_properties(libompdevice PROPERTIES
-  RUNTIME_OUTPUT_DIRECTORY "${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE}"
+  RUNTIME_OUTPUT_DIRECTORY "${LLVM_LIBRARY_OUTPUT_INTDIR}/${OPENMP_TARGET_SUBDIR}"
   LINKER_LANGUAGE CXX
   BUILD_RPATH ""
   INSTALL_RPATH ""
@@ -95,13 +95,13 @@ install(TARGETS libompdevice
 
 add_library(ompdevice.all_objs OBJECT IMPORTED)
 set_property(TARGET ompdevice.all_objs APPEND PROPERTY IMPORTED_OBJECTS
-             ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE}/libomptarget-${target_name}.bc)
+             ${LLVM_LIBRARY_OUTPUT_INTDIR}/${OPENMP_TARGET_SUBDIR}/libomptarget-${target_name}.bc)
 
 # Archive all the object files generated above into a static library
 add_library(ompdevice STATIC)
 add_dependencies(ompdevice libompdevice)
 set_target_properties(ompdevice PROPERTIES
-  ARCHIVE_OUTPUT_DIRECTORY "${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE}"
+  ARCHIVE_OUTPUT_DIRECTORY "${LLVM_LIBRARY_OUTPUT_INTDIR}/${OPENMP_TARGET_SUBDIR}"
   LINKER_LANGUAGE CXX
 )
 target_link_libraries(ompdevice PRIVATE ompdevice.all_objs)

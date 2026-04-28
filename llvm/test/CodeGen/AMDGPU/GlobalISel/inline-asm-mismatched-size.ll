@@ -53,7 +53,7 @@ define i64 @return_type_is_too_big_scalar() {
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 10 /* regdef */, implicit-def $vgpr8
+  ; CHECK-NEXT:   INLINEASM &"; def $0", sideeffect attdialect, regdef, implicit-def $vgpr8
   %reg = call i64 asm sideeffect "; def $0", "={v8}" ()
   ret i64 %reg
 }
@@ -74,7 +74,7 @@ define ptr addrspace(1) @return_type_is_too_big_pointer() {
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 10 /* regdef */, implicit-def $vgpr8
+  ; CHECK-NEXT:   INLINEASM &"; def $0", sideeffect attdialect, regdef, implicit-def $vgpr8
   %reg = call ptr addrspace(1) asm sideeffect "; def $0", "={v8}" ()
   ret ptr addrspace(1) %reg
 }
@@ -104,7 +104,7 @@ define void @use_vector_too_small(<8 x i32> %arg) {
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $vgpr7
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
   ; CHECK-NEXT:   $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[BUILD_VECTOR]](<8 x s32>)
-  ; CHECK-NEXT:   INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 9 /* reguse */, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+  ; CHECK-NEXT:   INLINEASM &"; use $0", sideeffect attdialect, reguse, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
   ; CHECK-NEXT:   SI_RETURN
   call void asm sideeffect "; use $0", "{v[0:7]}"(<8 x i32> %arg)
   ret void

@@ -1,4 +1,4 @@
-; RUN: opt -S -force-vector-width=2 -force-vector-interleave=1 -passes=loop-vectorize,simplifycfg -verify-loop-info -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck %s
+; RUN: opt -S -force-vector-width=2 -force-vector-interleave=1 -passes=loop-vectorize -verify-loop-info -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -12,7 +12,7 @@ define void @test(ptr nocapture %asd, ptr nocapture %aud,
 entry:
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %if.end
+for.cond.cleanup:
   ret void
 
 ; CHECK-LABEL: test
@@ -26,7 +26,7 @@ for.cond.cleanup:                                 ; preds = %if.end
 ; CHECK-NOT: %{{.*}} = srem <2 x i32> %{{.*}}, <i32 0, i32 0>
 ; CHECK-NOT: %{{.*}} = urem <2 x i32> %{{.*}}, <i32 0, i32 0>
 
-for.body:                                         ; preds = %if.end, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %if.end ]
   %isd = getelementptr inbounds i32, ptr %asd, i64 %indvars.iv
   %iud = getelementptr inbounds i32, ptr %aud, i64 %indvars.iv
@@ -55,7 +55,7 @@ for.body:                                         ; preds = %if.end, %entry
   %cmp1 = icmp slt i32 %lsd, 100
   br i1 %cmp1, label %if.then, label %if.end
 
-if.then:                                          ; preds = %for.body
+if.then:
   %rsd = sdiv i32 %psd, 11
   %rud = udiv i32 %pud, 13
   %rsr = srem i32 %psr, 17
@@ -66,7 +66,7 @@ if.then:                                          ; preds = %for.body
   %rur0 = urem i32 %pur0, 0
   br label %if.end
 
-if.end:                                           ; preds = %if.then, %for.body
+if.end:
   %ysd.0 = phi i32 [ %rsd, %if.then ], [ %psd, %for.body ]
   %yud.0 = phi i32 [ %rud, %if.then ], [ %pud, %for.body ]
   %ysr.0 = phi i32 [ %rsr, %if.then ], [ %psr, %for.body ]

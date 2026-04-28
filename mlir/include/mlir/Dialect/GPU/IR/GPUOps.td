@@ -426,7 +426,9 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
                        OptionalAttr<DictArrayAttr>:$private_attrib_attrs,
                        GPU_OptionalDimSizeHintAttr:$known_block_size,
                        GPU_OptionalDimSizeHintAttr:$known_grid_size,
-                       GPU_OptionalDimSizeHintAttr:$known_cluster_size);
+                       GPU_OptionalDimSizeHintAttr:$known_cluster_size,
+                       OptionalAttr<ConfinedAttr<I64Attr, [IntNonNegative]>>:$workgroup_attributions,
+                       UnitAttr:$kernel);
   let regions = (region AnyRegion:$body);
 
   let skipDefaultBuilders = 1;
@@ -440,22 +442,24 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
 
   let extraClassDeclaration = [{
     /// Returns `true` if the GPU function defined by this Op is a kernel, i.e.
-    /// it is intended to be launched from host.
+    /// it is intended to be launched from host. Also accepts legacy discardable
+    /// `gpu.kernel` for compatibility with older generic IR.
     bool isKernel() {
+      if (getKernel())
+        return true;
       return (*this)->getAttrOfType<UnitAttr>(
           GPUDialect::getKernelFuncAttrName()) != nullptr;
     }
 
     /// Returns the number of buffers located in the workgroup memory.
     unsigned getNumWorkgroupAttributions() {
-      auto attr = (*this)->getAttrOfType<IntegerAttr>(
-          getNumWorkgroupAttributionsAttrName());
-      if (!attr)
+      std::optional<int64_t> v = getWorkgroupAttributions();
+      if (!v)
         return 0;
-      int64_t value = attr.getInt();
-      assert(value >= 0 && value < std::numeric_limits<uint32_t>::max() &&
+      int64_t value = *v;
+      assert(value < std::numeric_limits<uint32_t>::max() &&
              "invalid workgroup attribution count");
-      return value;
+      return static_cast<unsigned>(value);
     }
 
     /// Return the index of the first workgroup attribution in the block argument
@@ -466,7 +470,7 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
 
     /// Returns a list of block arguments that correspond to buffers located in
     /// the workgroup memory
-    ArrayRef<BlockArgument> getWorkgroupAttributions() {
+    ArrayRef<BlockArgument> getWorkgroupAttributionBBArgs() {
       auto begin =
           std::next(getBody().args_begin(), getFirstWorkgroupAttributionIndex());
       auto end = std::next(begin, getNumWorkgroupAttributions());
@@ -546,12 +550,6 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
     void setPrivateAttributionAttr(unsigned index, StringAttr name, Attribute value);
     void setPrivateAttributionAttr(unsigned index, StringRef name, Attribute value) {
       return setPrivateAttributionAttr(index, StringAttr::get((*this)->getContext(), name), value);
-    }
-
-    /// Returns the name of the attribute containing the number of buffers
-    /// located in the workgroup memory.
-    static StringRef getNumWorkgroupAttributionsAttrName() {
-      return "workgroup_attributions";
     }
 
     /// Returns the argument types of this function.
@@ -806,7 +804,8 @@ def GPU_LaunchOp : GPU_Op<"launch", [
                Optional<Index>:$clusterSizeZ,
                Optional<I32>:$dynamicSharedMemorySize,
                OptionalAttr<FlatSymbolRefAttr>:$module,
-               OptionalAttr<FlatSymbolRefAttr>:$function)>,
+               OptionalAttr<FlatSymbolRefAttr>:$function,
+               OptionalAttr<ConfinedAttr<I64Attr, [IntNonNegative]>>:$workgroup_attributions)>,
     Results<(outs Optional<GPU_AsyncToken>:$asyncToken)> {
   let summary = "GPU kernel launch operation";
 
@@ -1004,19 +1003,17 @@ def GPU_LaunchOp : GPU_Op<"launch", [
 
     /// Returns the number of buffers located in the workgroup memory.
     unsigned getNumWorkgroupAttributions() {
-      auto attr = (*this)->getAttrOfType<IntegerAttr>(
-          getNumWorkgroupAttributionsAttrName());
-      if (!attr)
+      std::optional<int64_t> v = getWorkgroupAttributions();
+      if (!v)
         return 0;
-      int64_t value = attr.getInt();
-      assert(value >= 0 && value < std::numeric_limits<uint32_t>::max() &&
+      int64_t value = *v;
+      assert(value < std::numeric_limits<uint32_t>::max() &&
              "invalid workgroup attribution count");
-      return value;
+      return static_cast<unsigned>(value);
     }
 
-    /// Returns a list of block arguments that correspond to buffers located in
-    /// the workgroup memory
-    ArrayRef<BlockArgument> getWorkgroupAttributions() {
+    /// Block arguments for workgroup memory buffers
+    ArrayRef<BlockArgument> getWorkgroupAttributionBBArgs() {
       auto begin =
           std::next(getBody().args_begin(), getNumConfigRegionAttributes());
       auto end = std::next(begin, getNumWorkgroupAttributions());
@@ -1047,12 +1044,6 @@ def GPU_LaunchOp : GPU_Op<"launch", [
     /// Adds a new block argument that corresponds to buffers located in
     /// private memory.
     BlockArgument addPrivateAttribution(Type type, Location loc);
-
-    /// Returns the name of the attribute containing the number of buffers
-    /// located in the workgroup memory.
-    static StringRef getNumWorkgroupAttributionsAttrName() {
-      return "workgroup_attributions";
-    }
   }];
 
   let hasCanonicalizer = 1;
@@ -1828,6 +1819,7 @@ def GPU_SetDefaultDeviceOp : GPU_Op<"set_default_device",
   let assemblyFormat = "attr-dict $devIndex";
 }
 
+// Promises IndexedAccessOpInterface.
 def GPU_SubgroupMmaLoadMatrixOp : GPU_Op<"subgroup_mma_load_matrix",
     [MemoryEffects<[MemRead]>]>{
 
@@ -1844,6 +1836,9 @@ def GPU_SubgroupMmaLoadMatrixOp : GPU_Op<"subgroup_mma_load_matrix",
     `leadDimension` attribute specifies the leading dimension size of the source
     matrix which eventually allows the lowering to determine the size of each
     row.  If the `transpose` attribute is present then the op does a transposed load.
+
+    The memory indices along each dimension must be in-bounds for that dimension
+    as with an ordinary `memref.load`.
 
     For integer types, the resulting `!gpu.mma_matrix` type needs to specify the
     signedness of the data if the matrix type is an `A` or `B` operand for
@@ -1874,6 +1869,7 @@ def GPU_SubgroupMmaLoadMatrixOp : GPU_Op<"subgroup_mma_load_matrix",
   let hasVerifier = 1;
 }
 
+// Promises IndexedAccessOpInterface.
 def GPU_SubgroupMmaStoreMatrixOp : GPU_Op<"subgroup_mma_store_matrix",
     [MemoryEffects<[MemWrite]>]>{
 
@@ -1892,6 +1888,9 @@ def GPU_SubgroupMmaStoreMatrixOp : GPU_Op<"subgroup_mma_store_matrix",
 
     This op is often meant to be used along with `gpu.subgroup_mma_load_matrix` and
     `gpu.subgroup_mma_compute`.
+
+    The memory indices along each dimension must be in-bounds for that dimension
+    as with an ordinary `memref.load`.
 
     Example:
 
@@ -3286,6 +3285,27 @@ def GPU_SubgroupBroadcastOp : GPU_Op<"subgroup_broadcast",
   }];
   let hasFolder = 1;
   let hasVerifier = 1;
+}
+
+def GPU_BallotOp : GPU_Op<"ballot", [NoMemoryEffect]>,
+    Arguments<(ins I1:$predicate)>,
+    Results<(outs AnySignlessInteger:$result)> {
+  let summary = "Collects predicate values from all threads in a subgroup.";
+  let description = [{
+    The `ballot` op performs a ballot operation across all threads in a subgroup.
+    Each thread contributes its predicate value as a single bit. The result is an
+    integer where the Nth bit is set iff the Nth thread's predicate is true.
+
+    The result type must be a signless integer type. The exact supported widths
+    are target-dependent. Common GPU targets support i32 and i64.
+
+    Example:
+    ```mlir
+    %0 = gpu.ballot %pred : i32
+    %1 = gpu.ballot %pred : i64
+    ```
+  }];
+  let assemblyFormat = "$predicate attr-dict `:` type($result)";
 }
 
 #endif // GPU_OPS

@@ -1284,8 +1284,6 @@ PreservedAnalyses LoopVerifierPass::run(Function &F,
 /// visit blocks during the initial traversal.
 void LoopBlocksDFS::perform(const LoopInfo *LI) {
   LoopBlocksTraversal Traversal(*this, LI);
-  for (LoopBlocksTraversal::POTIterator POI = Traversal.begin(),
-                                        POE = Traversal.end();
-       POI != POE; ++POI)
+  for ([[maybe_unused]] BasicBlock *BB : Traversal)
     ;
 }

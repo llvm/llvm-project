@@ -7,24 +7,35 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/ScalableStaticAnalysisFramework/Analyses/UnsafeBufferUsage/UnsafeBufferUsage.h"
+#include "TestFixture.h"
+#include "clang/AST/ASTConsumer.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/Frontend/ASTUnit.h"
-#include "clang/ScalableStaticAnalysisFramework/Analyses/UnsafeBufferUsage/UnsafeBufferUsageExtractor.h"
+#include "clang/ScalableStaticAnalysisFramework/Analyses/EntityPointerLevel/EntityPointerLevel.h"
+#include "clang/ScalableStaticAnalysisFramework/Analyses/UnsafeBufferUsage/UnsafeBufferUsageTest.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/ASTEntityMapping.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityId.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityIdTable.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityName.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/ExtractorRegistry.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummary.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryBuilder.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryExtractor.h"
 #include "clang/Tooling/Tooling.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <initializer_list>
+#include <memory>
+#include <optional>
 
 using namespace clang;
 using namespace ssaf;
 using testing::UnorderedElementsAre;
 
 namespace {
-
 template <typename SomeDecl = NamedDecl>
 const SomeDecl *findDeclByName(StringRef Name, ASTContext &Ctx) {
   class NamedDeclFinder : public DynamicRecursiveASTVisitor {
@@ -35,7 +46,7 @@ const SomeDecl *findDeclByName(StringRef Name, ASTContext &Ctx) {
     NamedDeclFinder(StringRef SearchingName) : SearchingName(SearchingName) {}
 
     bool VisitDecl(Decl *D) override {
-      if (const auto *ND = dyn_cast<NamedDecl>(D)) {
+      if (const auto *ND = dyn_cast<SomeDecl>(D)) {
         if (ND->getNameAsString() == SearchingName) {
           FoundDecl = ND;
           return false;
@@ -55,54 +66,82 @@ const FunctionDecl *findFnByName(StringRef Name, ASTContext &Ctx) {
   return findDeclByName<FunctionDecl>(Name, Ctx);
 }
 
-constexpr inline auto buildEntityPointerLevel =
-    UnsafeBufferUsageTUSummaryExtractor::buildEntityPointerLevel;
-
-class UnsafeBufferUsageTest : public testing::Test {
+class UnsafeBufferUsageTest : public TestFixture {
 protected:
   TUSummary TUSum;
   TUSummaryBuilder Builder;
-  UnsafeBufferUsageTUSummaryExtractor Extractor;
+  std::unique_ptr<ASTConsumer> Extractor;
   std::unique_ptr<ASTUnit> AST;
 
   UnsafeBufferUsageTest()
       : TUSum(BuildNamespace(BuildNamespaceKind::CompilationUnit, "Mock.cpp")),
-        Builder(TUSum), Extractor(Builder) {}
+        Builder(TUSum) {}
 
-  std::unique_ptr<UnsafeBufferUsageEntitySummary>
-  setUpTest(StringRef Code, StringRef ContributorName) {
+  bool setUpTest(StringRef Code) {
     AST = tooling::buildASTFromCodeWithArgs(
-        Code, {"-Wno-unused-value -Wno-int-to-pointer-cast"});
+        Code, {"-Wno-unused-value", "-Wno-int-to-pointer-cast"});
 
-    const auto *ContributorDefn =
-        findDeclByName(ContributorName, AST->getASTContext());
-    std::optional<EntityName> EN = getEntityName(ContributorDefn);
+    Extractor =
+        makeTUSummaryExtractor(UnsafeBufferUsageEntitySummary::Name, Builder);
 
-    if (!ContributorDefn || !EN)
-      return nullptr;
+    if (!Extractor) {
+      ADD_FAILURE() << "failed to find UnsafeBufferUsageTUSummaryExtractor";
+      return false;
+    }
+    Extractor->HandleTranslationUnit(AST->getASTContext());
+    return true;
+  }
 
-    llvm::Error Error = llvm::ErrorSuccess();
-    auto Sum = Extractor.extractEntitySummary(ContributorDefn,
-                                              AST->getASTContext(), Error);
+  template <typename ContributorDecl = NamedDecl>
+  const UnsafeBufferUsageEntitySummary *
+  getEntitySummary(StringRef ContributorEntityName) {
+    auto *ContributorDefn = findDeclByName<ContributorDecl>(
+        ContributorEntityName, AST->getASTContext());
 
-    if (Error) {
-      llvm::consumeError(std::move(Error));
+    if (!ContributorDefn) {
+      ADD_FAILURE() << "failed to find Decl of \"" << ContributorEntityName
+                    << "\"";
       return nullptr;
     }
-    return Sum;
+
+    std::optional<EntityName> EN = getEntityName(ContributorDefn);
+
+    if (!EN) {
+      ADD_FAILURE() << "failed to get EntityName for contributor \""
+                    << ContributorEntityName << "\"";
+      return nullptr;
+    }
+
+    EntityId ContributorEntityId = Builder.addEntity(*EN);
+    auto &TUSumData = getData(TUSum);
+    auto EntitiesSumIter =
+        TUSumData.find(UnsafeBufferUsageEntitySummary::summaryName());
+
+    // If none entity summary was collected, it may not be an entry in
+    // `TUSumData`:
+    if (EntitiesSumIter == TUSumData.end())
+      return nullptr;
+
+    auto EntitySumIter = EntitiesSumIter->second.find(ContributorEntityId);
+
+    // If entity summary is empty, it may not exist:
+    if (EntitySumIter == EntitiesSumIter->second.end())
+      return nullptr;
+    return static_cast<const UnsafeBufferUsageEntitySummary *>(
+        EntitySumIter->second.get());
   }
 
   std::optional<EntityId> getEntityId(StringRef Name) {
     if (const auto *D = findDeclByName(Name, AST->getASTContext()))
       if (auto EntityName = getEntityName(D))
-        return Extractor.addEntity(*EntityName);
+        return Builder.addEntity(*EntityName);
     return std::nullopt;
   }
 
   std::optional<EntityId> getEntityIdForReturn(StringRef FunName) {
     if (const auto *D = findFnByName(FunName, AST->getASTContext()))
       if (auto EntityName = getEntityNameForReturn(D))
-        return Extractor.addEntity(*EntityName);
+        return Builder.addEntity(*EntityName);
     return std::nullopt;
   }
 
@@ -142,8 +181,8 @@ getSubsetOf(const EntityPointerLevelSet &Set, EntityId Entity) {
 }
 
 TEST_F(UnsafeBufferUsageTest, EntityPointerLevelComparison) {
-  EntityId E1 = Extractor.addEntity({"c:@F@foo", "", {}});
-  EntityId E2 = Extractor.addEntity({"c:@F@bar", "", {}});
+  EntityId E1 = Builder.addEntity({"c:@F@foo", "", {}});
+  EntityId E2 = Builder.addEntity({"c:@F@bar", "", {}});
 
   auto P1 = buildEntityPointerLevel(E1, 2);
   auto P2 = buildEntityPointerLevel(E1, 2);
@@ -161,9 +200,9 @@ TEST_F(UnsafeBufferUsageTest, EntityPointerLevelComparison) {
 }
 
 TEST_F(UnsafeBufferUsageTest, UnsafeBufferUsageEntityPointerLevelSetTest) {
-  EntityId E1 = Extractor.addEntity({"c:@F@foo", "", {}});
-  EntityId E2 = Extractor.addEntity({"c:@F@bar", "", {}});
-  EntityId E3 = Extractor.addEntity({"c:@F@baz", "", {}});
+  EntityId E1 = Builder.addEntity({"c:@F@foo", "", {}});
+  EntityId E2 = Builder.addEntity({"c:@F@bar", "", {}});
+  EntityId E3 = Builder.addEntity({"c:@F@baz", "", {}});
 
   auto P1 = buildEntityPointerLevel(E1, 1);
   auto P2 = buildEntityPointerLevel(E1, 2);
@@ -180,44 +219,90 @@ TEST_F(UnsafeBufferUsageTest, UnsafeBufferUsageEntityPointerLevelSetTest) {
 }
 
 //////////////////////////////////////////////////////////////
+//   (De-)Serialization Tests                               //
+//////////////////////////////////////////////////////////////
+
+TEST_F(UnsafeBufferUsageTest, UnsafeBufferUsageSerializeTest) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    void foo(int ***p, int ****q, int x) {
+      p[5][5][5];
+      q[5][5][5][5];
+    }
+  )cpp"));
+  const auto *Sum = getEntitySummary("foo");
+  ASSERT_NE(Sum, nullptr);
+  EXPECT_EQ(*Sum, makeSet(__LINE__, {{"p", 1U},
+                                     {"p", 2U},
+                                     {"p", 3U},
+                                     {"q", 1U},
+                                     {"q", 2U},
+                                     {"q", 3U},
+                                     {"q", 4U}}));
+
+  std::function<uint64_t(EntityId)> IdToIntFn = [](EntityId Id) -> uint64_t {
+    return getIndex(Id);
+  };
+  std::function<llvm::Expected<EntityId>(uint64_t)> IdFromIntFn =
+      [this](uint64_t Int) -> llvm::Expected<EntityId> {
+    std::optional<EntityId> Result = std::nullopt;
+
+    getIdTable(TUSum).forEach([&Int, &Result](const EntityName &, EntityId Id) {
+      if (getIndex(Id) == Int)
+        Result = Id;
+    });
+    if (Result)
+      return *Result;
+    return llvm::createStringError("failed to convert %d to an EntityId", Int);
+  };
+
+  auto RoundTripResult =
+      serializeDeserializeRoundTrip(*Sum, IdToIntFn, IdFromIntFn);
+
+  EXPECT_THAT_ERROR(RoundTripResult.takeError(), llvm::Succeeded());
+  ASSERT_NE(*RoundTripResult, nullptr);
+  EXPECT_EQ(*Sum, *static_cast<const UnsafeBufferUsageEntitySummary *>(
+                      RoundTripResult->get()));
+}
+
+//////////////////////////////////////////////////////////////
 //                   Extractor Tests                        //
 //////////////////////////////////////////////////////////////
 
 TEST_F(UnsafeBufferUsageTest, SimpleFunctionWithUnsafePointer) {
-  auto Sum = setUpTest(R"cpp(
+  ASSERT_TRUE(setUpTest(R"cpp(
     void foo(int *p) {
       p[5];
     }
-  )cpp",
-                       "foo");
+  )cpp"));
+  const auto *Sum = getEntitySummary("foo");
 
   EXPECT_NE(Sum, nullptr);
   EXPECT_EQ(*Sum, makeSet(__LINE__, {{"p", 1U}}));
 }
 
 TEST_F(UnsafeBufferUsageTest, PointerArithmetic) {
-  auto Sum = setUpTest(R"cpp(
+  ASSERT_TRUE(setUpTest(R"cpp(
     void foo(int *p, int *q) {
       *(p + 5);
       *(q - 3);
     }
-  )cpp",
-                       "foo");
+  )cpp"));
+  const auto *Sum = getEntitySummary("foo");
 
   EXPECT_NE(Sum, nullptr);
   EXPECT_EQ(*Sum, makeSet(__LINE__, {{"p", 1U}, {"q", 1U}}));
 }
 
 TEST_F(UnsafeBufferUsageTest, PointerIncrementDecrement) {
-  auto Sum = setUpTest(R"cpp(
+  ASSERT_TRUE(setUpTest(R"cpp(
     void foo(int *p, int *q, int *r, int *s) {
       (++p)[5];
       (q++)[5];
       (--r)[5];
       (s--)[5];
     }
-  )cpp",
-                       "foo");
+  )cpp"));
+  const auto *Sum = getEntitySummary("foo");
 
   EXPECT_NE(Sum, nullptr);
   EXPECT_EQ(*Sum,
@@ -225,40 +310,40 @@ TEST_F(UnsafeBufferUsageTest, PointerIncrementDecrement) {
 }
 
 TEST_F(UnsafeBufferUsageTest, PointerAssignment) {
-  auto Sum = setUpTest(R"cpp(
+  ASSERT_TRUE(setUpTest(R"cpp(
     void foo(int *p, int *q) {
       (p = q + 5)[5];
     }
-  )cpp",
-                       "foo");
+  )cpp"));
+  const auto *Sum = getEntitySummary("foo");
 
   EXPECT_NE(Sum, nullptr);
   EXPECT_EQ(*Sum, makeSet(__LINE__, {{"p", 1U}, {"q", 1U}}));
 }
 
 TEST_F(UnsafeBufferUsageTest, CompoundAssignment) {
-  auto Sum = setUpTest(R"cpp(
+  ASSERT_TRUE(setUpTest(R"cpp(
     void foo(int *p, int *q) {
       (p += 5)[5];
       (q -= 3)[5];
     }
-  )cpp",
-                       "foo");
+  )cpp"));
+  const auto *Sum = getEntitySummary("foo");
 
   EXPECT_NE(Sum, nullptr);
   EXPECT_EQ(*Sum, makeSet(__LINE__, {{"p", 1U}, {"q", 1U}}));
 }
 
 TEST_F(UnsafeBufferUsageTest, MultiLevelPointer) {
-  auto Sum = setUpTest(R"cpp(
+  ASSERT_TRUE(setUpTest(R"cpp(
     void foo(int **p, int **q, int **r) {
       (*p)[5];
       *(*q);
       *(q[5]);
       r[5][5];
     }
-  )cpp",
-                       "foo");
+  )cpp"));
+  const auto *Sum = getEntitySummary("foo");
 
   EXPECT_NE(Sum, nullptr);
   EXPECT_EQ(*Sum,
@@ -266,13 +351,13 @@ TEST_F(UnsafeBufferUsageTest, MultiLevelPointer) {
 }
 
 TEST_F(UnsafeBufferUsageTest, ConditionalOperator) {
-  auto Sum = setUpTest(R"cpp(
+  ASSERT_TRUE(setUpTest(R"cpp(
     void foo(int **p, int **q, int cond) {
       (cond ? *p : *q)[5];
       cond ? p[5] : q[5];
     }
-  )cpp",
-                       "foo");
+  )cpp"));
+  const auto *Sum = getEntitySummary("foo");
 
   EXPECT_NE(Sum, nullptr);
   EXPECT_EQ(*Sum,
@@ -280,86 +365,86 @@ TEST_F(UnsafeBufferUsageTest, ConditionalOperator) {
 }
 
 TEST_F(UnsafeBufferUsageTest, CastExpression) {
-  auto Sum = setUpTest(R"cpp(
+  ASSERT_TRUE(setUpTest(R"cpp(
     void foo(void *p, int q) {
       ((int*)p)[5];
       ((int*)q)[5];
     }
-  )cpp",
-                       "foo");
+  )cpp"));
+  const auto *Sum = getEntitySummary("foo");
 
   EXPECT_NE(Sum, nullptr);
   EXPECT_EQ(*Sum, makeSet(__LINE__, {{"p", 1U}}));
 }
 
 TEST_F(UnsafeBufferUsageTest, CommaOperator) {
-  auto Sum = setUpTest(R"cpp(
+  ASSERT_TRUE(setUpTest(R"cpp(
     void foo(int *p, int x) {
       (x++, p)[5];
     }
-  )cpp",
-                       "foo");
+  )cpp"));
+  const auto *Sum = getEntitySummary("foo");
 
   EXPECT_NE(Sum, nullptr);
   EXPECT_EQ(*Sum, makeSet(__LINE__, {{"p", 1U}}));
 }
 
 TEST_F(UnsafeBufferUsageTest, CommaOperator2) {
-  auto Sum = setUpTest(R"cpp(
+  ASSERT_TRUE(setUpTest(R"cpp(
     void foo(int **p, int **q, int x) {
       (p[x] = 0, q[x] = 0)[5];
     }
-  )cpp",
-                       "foo");
+  )cpp"));
+  const auto *Sum = getEntitySummary("foo");
 
   EXPECT_NE(Sum, nullptr);
   EXPECT_EQ(*Sum, makeSet(__LINE__, {{"p", 1U}, {"q", 1U}, {"q", 2U}}));
 }
 
 TEST_F(UnsafeBufferUsageTest, ParenthesizedExpression) {
-  auto Sum = setUpTest(R"cpp(
+  ASSERT_TRUE(setUpTest(R"cpp(
     void foo(int *p) {
       (((p)))[5];
     }
-  )cpp",
-                       "foo");
+  )cpp"));
+  const auto *Sum = getEntitySummary("foo");
 
   EXPECT_NE(Sum, nullptr);
   EXPECT_EQ(*Sum, makeSet(__LINE__, {{"p", 1U}}));
 }
 
 TEST_F(UnsafeBufferUsageTest, ArrayParameter) {
-  auto Sum = setUpTest(R"cpp(
+  ASSERT_TRUE(setUpTest(R"cpp(
     void foo(int arr[], int arr2[][10]) {
       int n = 5;
       arr[100];
       arr2[5][n];
     }
-  )cpp",
-                       "foo");
+  )cpp"));
+  const auto *Sum = getEntitySummary("foo");
 
   EXPECT_NE(Sum, nullptr);
   EXPECT_EQ(*Sum, makeSet(__LINE__, {{"arr", 1U}, {"arr2", 1U}, {"arr2", 2U}}));
 }
 
 TEST_F(UnsafeBufferUsageTest, FunctionCall) {
-  auto Sum = setUpTest(R"cpp(
+  ASSERT_TRUE(setUpTest(R"cpp(
     int ** (*fp)();
     int ** foo() {
       fp = &foo;
       foo()[5];
       (*fp())[5];
     }
-  )cpp",
-                       "foo");
+  )cpp"));
+  const auto *Sum = getEntitySummary("foo");
 
   EXPECT_NE(Sum, nullptr);
-  // No (foo, 2) becasue indirect calls are ignored.
+  // No (foo, 2) because indirect calls are ignored.
   EXPECT_EQ(*Sum, makeSet(__LINE__, {{"foo", 1U, true}}));
 }
 
 TEST_F(UnsafeBufferUsageTest, StructMemberAccess) {
-  auto Sum = setUpTest(R"cpp(
+  ASSERT_TRUE(setUpTest(R"cpp(
     struct S {
       int *ptr;
       int (*ptr_to_arr)[10];
@@ -369,77 +454,202 @@ TEST_F(UnsafeBufferUsageTest, StructMemberAccess) {
       obj.ptr[5];
       (*obj.ptr_to_arr)[n];
     }
-  )cpp",
-                       "foo");
+  )cpp"));
+  const auto *Sum = getEntitySummary("foo");
 
   EXPECT_NE(Sum, nullptr);
   EXPECT_EQ(*Sum, makeSet(__LINE__, {{"ptr", 1U}, {"ptr_to_arr", 2U}}));
 }
 
 TEST_F(UnsafeBufferUsageTest, StringLiteralSubscript) {
-  auto Sum = setUpTest(R"cpp(
+  ASSERT_TRUE(setUpTest(R"cpp(
     void foo() {
       "hello"[5];
     }
-  )cpp",
-                       "foo");
+  )cpp"));
+  const auto *Sum = getEntitySummary("foo");
 
-  EXPECT_NE(Sum, nullptr);
   // String literals should not generate pointer kind variables
-  EXPECT_EQ(*Sum, makeSet(__LINE__, {}));
+  EXPECT_EQ(Sum, nullptr);
 }
 
 TEST_F(UnsafeBufferUsageTest, OpaqueValueExpr) {
-  auto Sum = setUpTest(R"cpp(
+  ASSERT_TRUE(setUpTest(R"cpp(
     void foo(int *p, int *q) {
        (p ?: q)[5];
     }
-  )cpp",
-                       "foo");
+  )cpp"));
+  const auto *Sum = getEntitySummary("foo");
 
   EXPECT_NE(Sum, nullptr);
   EXPECT_EQ(*Sum, makeSet(__LINE__, {{"p", 1U}, {"q", 1U}}));
 }
 
 TEST_F(UnsafeBufferUsageTest, AddressOfOperator) {
-  auto Sum = setUpTest(R"cpp(
+  ASSERT_TRUE(setUpTest(R"cpp(
     void foo(int x) {
       (&x)[5];
     }
-  )cpp",
-                       "foo");
-
-  EXPECT_NE(Sum, nullptr);
-  // Address-of should not generate pointer kind variables for 'x'
-  EXPECT_EQ(*Sum, makeSet(__LINE__, {}));
+  )cpp"));
+  const auto *Sum = getEntitySummary("foo");
+  // Address-of should not generate pointer kind variables for 'x':
+  EXPECT_EQ(Sum, nullptr);
 }
 
 TEST_F(UnsafeBufferUsageTest, AddressOfThenDereference) {
-  auto Sum = setUpTest(R"cpp(
+  ASSERT_TRUE(setUpTest(R"cpp(
     void foo(int *p, int *q) {
       (*(&p))[5];
       (&(*q))[5];
     }
-  )cpp",
-                       "foo");
+  )cpp"));
+  const auto *Sum = getEntitySummary("foo");
 
   EXPECT_NE(Sum, nullptr);
   EXPECT_EQ(*Sum, makeSet(__LINE__, {{"p", 1}, {"q", 1}}));
 }
 
 TEST_F(UnsafeBufferUsageTest, PointerToArrayOfPointers) {
-  auto Sum = setUpTest(R"cpp(
+  ASSERT_TRUE(setUpTest(R"cpp(
     void foo() {
       int * arr[10];
-      int * (*p)[10] = arr;
+      int * (*p)[10] = &arr;
 
-      (*p)[5][5]; // '(*p)[5]' is unsafe 
+      (*p)[5][5]; // '(*p)[5]' is unsafe
                   // '(*p)' is fine because 5 < 10
     }
-  )cpp",
-                       "foo");
+  )cpp"));
+  const auto *Sum = getEntitySummary("foo");
 
   EXPECT_NE(Sum, nullptr);
   EXPECT_EQ(*Sum, makeSet(__LINE__, {{"p", 3}}));
 }
+
+TEST_F(UnsafeBufferUsageTest, UnsafePointerInGlobalVariableInitializer) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+      int *gp;
+      int x = gp[5];
+    )cpp"));
+  const auto *Sum = getEntitySummary("x");
+
+  EXPECT_NE(Sum, nullptr);
+  EXPECT_EQ(*Sum, makeSet(__LINE__, {{"gp", 1U}}));
+}
+
+TEST_F(UnsafeBufferUsageTest, UnsafePointerInFieldInitializer) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+      int *gp;
+      struct Foo {
+        int field = gp[5];
+      };
+    )cpp"));
+  const auto *Sum = getEntitySummary("Foo");
+
+  EXPECT_NE(Sum, nullptr);
+  EXPECT_EQ(*Sum, makeSet(__LINE__, {{"gp", 1U}}));
+}
+
+TEST_F(UnsafeBufferUsageTest, UnsafePointerInFieldInitializer2) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+      int *gp;
+      union Foo {
+        int field = gp[5];
+        int x;
+      };
+    )cpp"));
+  const auto *Sum = getEntitySummary("Foo");
+
+  EXPECT_NE(Sum, nullptr);
+  EXPECT_EQ(*Sum, makeSet(__LINE__, {{"gp", 1U}}));
+}
+
+TEST_F(UnsafeBufferUsageTest, InitializerList) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+      int *gp;
+      struct Foo {
+        int field;
+        int x;
+      };
+      Foo FooObj{gp[5], 0};
+    )cpp"));
+  const auto *Sum = getEntitySummary("FooObj");
+
+  EXPECT_NE(Sum, nullptr);
+  EXPECT_EQ(*Sum, makeSet(__LINE__, {{"gp", 1U}}));
+}
+
+TEST_F(UnsafeBufferUsageTest, UnsafePointerInCXXCtorInitializer) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+      struct Foo {
+        int member;
+        Foo(int *p) : member(p[5]) {}
+      };
+    )cpp"));
+  const auto *Sum = getEntitySummary<CXXConstructorDecl>("Foo");
+
+  EXPECT_NE(Sum, nullptr);
+  EXPECT_EQ(*Sum, makeSet(__LINE__, {{"p", 1U}}));
+}
+
+TEST_F(UnsafeBufferUsageTest, UnsafePointerInDefaultArg) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    int * gp;
+    void foo(int x = gp[5]);
+    )cpp"));
+  const auto *Sum = getEntitySummary("foo");
+
+  EXPECT_NE(Sum, nullptr);
+  EXPECT_EQ(*Sum, makeSet(__LINE__, {{"gp", 1U}}));
+}
+
+TEST_F(UnsafeBufferUsageTest, NestedDefinitions) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    int * a = [](){
+      struct Foo {
+        void bar(int * ptr) { ptr[3] = 0; }
+      };
+      return nullptr;
+    }();
+    )cpp"));
+  const auto *Sum = getEntitySummary("bar");
+
+  EXPECT_NE(Sum, nullptr);
+  // The closest contributor owns the fact:
+  EXPECT_EQ(*Sum, makeSet(__LINE__, {{"ptr", 1U}}));
+
+  Sum = getEntitySummary("Foo");
+
+  EXPECT_EQ(Sum, nullptr);
+
+  Sum = getEntitySummary("a");
+
+  EXPECT_EQ(Sum, nullptr);
+}
+
+TEST_F(UnsafeBufferUsageTest, NestedDefinitions2) {
+  bool SetupSuccess = setUpTest(R"cpp(
+    int main(void) {
+       struct Foo {
+          void bar(int * ptr) { ptr[3] = 0; }
+       };
+    }
+    )cpp");
+
+  ASSERT_TRUE(SetupSuccess);
+
+  const auto *Sum = getEntitySummary("bar");
+
+  EXPECT_NE(Sum, nullptr);
+  // The closest contributor owns the fact:
+  EXPECT_EQ(*Sum, makeSet(__LINE__, {{"ptr", 1U}}));
+
+  Sum = getEntitySummary("Foo");
+
+  EXPECT_EQ(Sum, nullptr);
+
+  Sum = getEntitySummary("main");
+
+  EXPECT_EQ(Sum, nullptr);
+}
+
 } // namespace

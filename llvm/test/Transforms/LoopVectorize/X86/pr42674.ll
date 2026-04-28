@@ -18,7 +18,7 @@ define zeroext i8 @sum() {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %r.010 = phi i8 [ 0, %entry ], [ %add, %for.body ]
   %arrayidx = getelementptr inbounds [128 x i8], ptr @bytes, i64 0, i64 %indvars.iv
@@ -28,7 +28,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %indvars.iv.next, 128
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
+for.end:
   %add.lcssa = phi i8 [ %add, %for.body ]
   ret i8 %add.lcssa
 }

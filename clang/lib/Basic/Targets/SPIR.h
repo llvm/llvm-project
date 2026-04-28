@@ -15,6 +15,8 @@
 
 #include "Targets.h"
 #include "clang/Basic/AddressSpaces.h"
+#include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/Support/Compiler.h"
@@ -52,6 +54,7 @@ static const unsigned SPIRDefIsPrivMap[] = {
     10, // hlsl_private
     11, // hlsl_device
     7,  // hlsl_input
+    8,  // hlsl_output
     13, // hlsl_push_constant
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
@@ -89,6 +92,7 @@ static const unsigned SPIRDefIsGenMap[] = {
     10, // hlsl_private
     11, // hlsl_device
     7,  // hlsl_input
+    8,  // hlsl_output
     13, // hlsl_push_constant
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
@@ -339,17 +343,29 @@ public:
       : BaseSPIRVTargetInfo(Triple, Opts) {
     assert(Triple.getArch() == llvm::Triple::spirv &&
            "Invalid architecture for Logical SPIR-V.");
-    assert(Triple.getOS() == llvm::Triple::Vulkan &&
-           Triple.getVulkanVersion() != llvm::VersionTuple(0) &&
-           "Logical SPIR-V requires a valid Vulkan environment.");
-    assert(Triple.getEnvironment() >= llvm::Triple::Pixel &&
-           Triple.getEnvironment() <= llvm::Triple::Amplification &&
-           "Logical SPIR-V environment must be a valid shader stage.");
     PointerWidth = PointerAlign = 64;
 
     // SPIR-V IDs are represented with a single 32-bit word.
     SizeType = TargetInfo::UnsignedInt;
+    VectorsAreElementAligned = true;
     resetDataLayout();
+  }
+
+  // SPIR-V targeting requires a fully specified Vulkan environment.
+  // SPIR-V requires the enviornment to be in a valid shader stage as well.
+  // Validate here before CreateTargetInfo() to emit a proper diagnostic.
+  bool validateTarget(DiagnosticsEngine &Diags) const override {
+    if (getTriple().getOS() != llvm::Triple::Vulkan ||
+        getTriple().getVulkanVersion() == llvm::VersionTuple(0)) {
+      Diags.Report(diag::err_target_spirv_requires_vulkan);
+      return false;
+    }
+    if (getTriple().getEnvironment() < llvm::Triple::Pixel ||
+        getTriple().getEnvironment() > llvm::Triple::Amplification) {
+      Diags.Report(diag::err_target_spirv_requires_shader_stage);
+      return false;
+    }
+    return true;
   }
 
   void getTargetDefines(const LangOptions &Opts,
@@ -475,9 +491,16 @@ public:
   void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
               const TargetInfo *Aux) override {
     TargetInfo::adjust(Diags, Opts, Aux);
+
+    AtomicOpts = AtomicOptions(Opts);
   }
 
   bool hasInt128Type() const override { return TargetInfo::hasInt128Type(); }
+
+  // This is only needed for validating arguments passed to
+  // __builtin_amdgcn_processor_is
+  bool isValidCPUName(StringRef Name) const override;
+  void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
 };
 
 class LLVM_LIBRARY_VISIBILITY SPIRV64IntelTargetInfo final

@@ -262,7 +262,7 @@ bool DoesScopeContain(const Scope *maybeAncestor, const Symbol &symbol) {
   return DoesScopeContain(maybeAncestor, symbol.owner());
 }
 
-static const Symbol &FollowHostAssoc(const Symbol &symbol) {
+const Symbol &FollowHostAssoc(const Symbol &symbol) {
   for (const Symbol *s{&symbol};;) {
     const auto *details{s->detailsIf<HostAssocDetails>()};
     if (!details) {
@@ -1146,10 +1146,8 @@ bool CanCUDASymbolBeGlobal(const Symbol &sym) {
           return false;
         }
       }
-      if (details->cudaDataAttr() &&
-          *details->cudaDataAttr() != common::CUDADataAttr::Unified) {
+      if (details->cudaDataAttr())
         return false;
-      }
     }
   }
   return true;

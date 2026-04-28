@@ -85,9 +85,9 @@ public:
   virtual void vfunc();
 };
 void test_member_ptr() {
-  __builtin_align_up(&MemPtr::data, 64);    // expected-error{{operand of type 'int MemPtr::*' where arithmetic or pointer type is required}}
-  __builtin_align_down(&MemPtr::func, 64);  // expected-error{{operand of type 'void (MemPtr::*)()' where arithmetic or pointer type is required}}
-  __builtin_is_aligned(&MemPtr::vfunc, 64); // expected-error{{operand of type 'void (MemPtr::*)()' where arithmetic or pointer type is required}}
+  __builtin_align_up(&MemPtr::data, 64);    // expected-error{{operand of type 'int MemPtr::*' where arithmetic or pointer type is required}} expected-note{{member pointers are not allowed here}}
+  __builtin_align_down(&MemPtr::func, 64);  // expected-error{{operand of type 'void (MemPtr::*)()' where arithmetic or pointer type is required}} expected-note{{member pointers are not allowed here}}
+  __builtin_is_aligned(&MemPtr::vfunc, 64); // expected-error{{operand of type 'void (MemPtr::*)()' where arithmetic or pointer type is required}} expected-note{{member pointers are not allowed here}}
 }
 
 void test_references(Foo &i) {

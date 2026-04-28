@@ -2362,6 +2362,11 @@ void OMPClauseEnqueue::VisitOMPSizesClause(const OMPSizesClause *C) {
     Visitor->AddStmt(E);
 }
 
+void OMPClauseEnqueue::VisitOMPCountsClause(const OMPCountsClause *C) {
+  for (auto E : C->getCountsRefs())
+    Visitor->AddStmt(E);
+}
+
 void OMPClauseEnqueue::VisitOMPPermutationClause(
     const OMPPermutationClause *C) {
   for (auto E : C->getArgsRefs())
@@ -6326,6 +6331,8 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("OMPInterchangeDirective");
   case CXCursor_OMPFuseDirective:
     return cxstring::createRef("OMPFuseDirective");
+  case CXCursor_OMPSplitDirective:
+    return cxstring::createRef("OMPSplitDirective");
   case CXCursor_OMPForDirective:
     return cxstring::createRef("OMPForDirective");
   case CXCursor_OMPForSimdDirective:
@@ -7257,6 +7264,7 @@ CXCursor clang_getCursorDefinition(CXCursor C) {
   case Decl::FileScopeAsm:
   case Decl::TopLevelStmt:
   case Decl::StaticAssert:
+  case Decl::ExplicitInstantiation:
   case Decl::Block:
   case Decl::OutlinedFunction:
   case Decl::Captured:
@@ -8837,6 +8845,7 @@ static CXLanguageKind getDeclLanguage(const Decl *D) {
   case Decl::NamespaceAlias:
   case Decl::NonTypeTemplateParm:
   case Decl::StaticAssert:
+  case Decl::ExplicitInstantiation:
   case Decl::TemplateTemplateParm:
   case Decl::TemplateTypeParm:
   case Decl::UnresolvedUsingTypename:
@@ -8929,7 +8938,7 @@ static void getCursorPlatformAvailabilityForDecl(
     }
 
     if (AvailabilityAttr *Avail = dyn_cast<AvailabilityAttr>(A)) {
-      AvailabilityAttrs.push_back(Avail);
+      AvailabilityAttrs.push_back(Avail->getEffectiveAttr());
       HadAvailAttr = true;
     }
   }

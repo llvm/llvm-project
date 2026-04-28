@@ -185,6 +185,25 @@ struct CallBaseDtor final : EHScopeStack::Cleanup {
   }
 };
 
+/// If the delegating constructor's body throws after the delegated-to
+/// constructor completes, destroy the object (mirrors CGClass.cpp's
+/// CallDelegatingCtorDtor).
+struct CallDelegatingCtorDtor final : EHScopeStack::Cleanup {
+  const CXXDestructorDecl *dtor;
+  Address addr;
+  CXXDtorType type;
+
+  CallDelegatingCtorDtor(const CXXDestructorDecl *dtor, Address addr,
+                         CXXDtorType type)
+      : dtor(dtor), addr(addr), type(type) {}
+
+  void emit(CIRGenFunction &cgf, Flags flags) override {
+    QualType thisTy = dtor->getFunctionObjectParameterType();
+    cgf.emitCXXDestructorCall(dtor, type, /*forVirtualBase=*/false,
+                              /*delegating=*/true, addr, thisTy);
+  }
+};
+
 /// A visitor which checks whether an initializer uses 'this' in a
 /// way which requires the vtable to be properly set.
 struct DynamicThisUseChecker
@@ -266,7 +285,9 @@ void CIRGenFunction::emitBaseInitializer(mlir::Location loc,
 
   emitAggExpr(baseInit->getInit(), aggSlot);
 
-  assert(!cir::MissingFeatures::requiresCleanups());
+  if (cgm.getLangOpts().Exceptions && !baseClassDecl->hasTrivialDestructor())
+    ehStack.pushCleanup<CallBaseDtor>(EHCleanup, baseClassDecl,
+                                      /*baseIsVirtual=*/isBaseVirtual);
 }
 
 /// This routine generates necessary code to initialize base classes and
@@ -599,8 +620,7 @@ void CIRGenFunction::emitInitializerForField(FieldDecl *field, LValue lhs,
   // Ensure that we destroy this object if an exception is thrown later in the
   // constructor.
   QualType::DestructionKind dtorKind = fieldType.isDestructedType();
-  (void)dtorKind;
-  assert(!cir::MissingFeatures::requiresCleanups());
+  pushEHDestroyIfNeeded(dtorKind, lhs.getAddress(), fieldType);
 }
 
 Address CIRGenFunction::emitCXXMemberDataPointerAddress(
@@ -716,31 +736,22 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
   // are probably legitimate places where we could assume that this
   // doesn't happen, but it's not clear that it's worth it.
 
-  auto arrayTy = mlir::cast<cir::ArrayType>(arrayBase.getElementType());
-  mlir::Type elementType = arrayTy.getElementType();
-
-  // This might be a multi-dimensional array. Find the innermost element type.
+  // Peel any array types wrapped in the address element type down to the CIR
+  // type of a single constructed object.
+  mlir::Type elementType = arrayBase.getElementType();
   while (auto maybeArrayTy = mlir::dyn_cast<cir::ArrayType>(elementType))
     elementType = maybeArrayTy.getElementType();
   cir::PointerType ptrToElmType = builder.getPointerTo(elementType);
 
-  // Optimize for a constant count.
-  if (auto constantCount = numElements.getDefiningOp<cir::ConstantOp>()) {
-    if (auto constIntAttr = constantCount.getValueAttr<cir::IntAttr>()) {
-      // Just skip out if the constant count is zero.
-      if (constIntAttr.getUInt() == 0)
-        return;
-
-      arrayTy = cir::ArrayType::get(elementType, constIntAttr.getUInt());
-      // Otherwise, emit the check.
-    }
-
-    if (constantCount.use_empty())
-      constantCount.erase();
-  } else {
-    // Otherwise, emit the check.
-    cgm.errorNYI(e->getSourceRange(),
-                 "emitCXXAggrConstructorCall: dynamic-length array expression");
+  bool useDynamicArrayCtor = true;
+  uint64_t constElementCount = 0;
+  if (auto constantOp = numElements.getDefiningOp<cir::ConstantOp>()) {
+    constElementCount = CIRGenFunction::getZExtIntValueFromConstOp(constantOp);
+    if (constElementCount == 0)
+      return;
+    if (constantOp.use_empty())
+      constantOp.erase();
+    useDynamicArrayCtor = false;
   }
 
   // Traditional LLVM codegen emits a loop here. CIR lowers to a loop as part of
@@ -756,9 +767,12 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
   CharUnits eltAlignment = arrayBase.getAlignment().alignmentOfArrayElement(
       getContext().getTypeSizeInChars(type));
 
-  // Zero initialize the storage, if requested.
-  if (zeroInitialize)
-    emitNullInitialization(*currSrcLoc, arrayBase, type);
+  mlir::Location loc = *currSrcLoc;
+
+  mlir::Value dynamicElPtr;
+  if (useDynamicArrayCtor)
+    dynamicElPtr =
+        builder.createPtrBitcast(arrayBase.getPointer(), elementType);
 
   // C++ [class.temporary]p4:
   // There are two contexts in which temporaries are destroyed at a different
@@ -770,32 +784,51 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
   {
     RunCleanupsScope scope(*this);
 
-    // Evaluate the constructor and its arguments in a regular
-    // partial-destroy cleanup.
-    if (getLangOpts().Exceptions &&
-        !ctor->getParent()->hasTrivialDestructor()) {
-      cgm.errorNYI(e->getSourceRange(), "partial array cleanups");
-    }
+    bool needsPartialArrayCleanup =
+        getLangOpts().Exceptions && !ctor->getParent()->hasTrivialDestructor();
 
-    // Emit the constructor call that will execute for every array element.
-    mlir::Value arrayOp =
-        builder.createPtrBitcast(arrayBase.getPointer(), arrayTy);
-    cir::ArrayCtor::create(
-        builder, *currSrcLoc, arrayOp,
-        [&](mlir::OpBuilder &b, mlir::Location loc) {
-          mlir::BlockArgument arg =
-              b.getInsertionBlock()->addArgument(ptrToElmType, loc);
-          Address curAddr = Address(arg, elementType, eltAlignment);
-          assert(!cir::MissingFeatures::sanitizers());
-          auto currAVS = AggValueSlot::forAddr(
-              curAddr, type.getQualifiers(), AggValueSlot::IsDestructed,
-              AggValueSlot::IsNotAliased, AggValueSlot::DoesNotOverlap,
-              AggValueSlot::IsNotZeroed);
-          emitCXXConstructorCall(ctor, Ctor_Complete,
-                                 /*ForVirtualBase=*/false,
-                                 /*Delegating=*/false, currAVS, e);
-          cir::YieldOp::create(builder, loc);
-        });
+    auto emitCtorBody = [&](mlir::OpBuilder &b, mlir::Location l) {
+      mlir::BlockArgument arg =
+          b.getInsertionBlock()->addArgument(ptrToElmType, l);
+      Address curAddr = Address(arg, elementType, eltAlignment);
+      assert(!cir::MissingFeatures::sanitizers());
+      if (zeroInitialize)
+        emitNullInitialization(l, curAddr, type);
+      auto currAVS = AggValueSlot::forAddr(
+          curAddr, type.getQualifiers(), AggValueSlot::IsDestructed,
+          AggValueSlot::IsNotAliased, AggValueSlot::DoesNotOverlap,
+          AggValueSlot::IsNotZeroed);
+      emitCXXConstructorCall(ctor, Ctor_Complete,
+                             /*ForVirtualBase=*/false,
+                             /*Delegating=*/false, currAVS, e);
+      cir::YieldOp::create(b, l);
+    };
+
+    llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>
+        emitPartialDtorBody = nullptr;
+    auto partialDtorBuilder = [&](mlir::OpBuilder &b, mlir::Location l) {
+      mlir::BlockArgument arg =
+          b.getInsertionBlock()->addArgument(ptrToElmType, l);
+      Address curAddr = Address(arg, elementType, eltAlignment);
+      emitCXXDestructorCall(ctor->getParent()->getDestructor(), Dtor_Complete,
+                            /*forVirtualBase=*/false,
+                            /*delegating=*/false, curAddr, type);
+      cir::YieldOp::create(b, l);
+    };
+    if (needsPartialArrayCleanup)
+      emitPartialDtorBody = partialDtorBuilder;
+
+    if (useDynamicArrayCtor) {
+      cir::ArrayCtor::create(builder, loc, dynamicElPtr, numElements,
+                             emitCtorBody, emitPartialDtorBody);
+    } else {
+      cir::ArrayType arrayTy =
+          cir::ArrayType::get(elementType, constElementCount);
+      mlir::Value arrayOp =
+          builder.createPtrBitcast(arrayBase.getPointer(), arrayTy);
+      cir::ArrayCtor::create(builder, loc, arrayOp, emitCtorBody,
+                             emitPartialDtorBody);
+    }
   }
 }
 
@@ -1109,9 +1142,10 @@ void CIRGenFunction::emitDelegatingCXXConstructorCall(
 
   const CXXRecordDecl *classDecl = ctor->getParent();
   if (cgm.getLangOpts().Exceptions && !classDecl->hasTrivialDestructor()) {
-    cgm.errorNYI(ctor->getSourceRange(),
-                 "emitDelegatingCXXConstructorCall: exception");
-    return;
+    CXXDtorType dtorType =
+        curGD.getCtorType() == Ctor_Complete ? Dtor_Complete : Dtor_Base;
+    ehStack.pushCleanup<CallDelegatingCtorDtor>(
+        EHCleanup, classDecl->getDestructor(), thisPtr, dtorType);
   }
 }
 
@@ -1285,30 +1319,156 @@ void CIRGenFunction::emitCXXConstructorCall(const clang::CXXConstructorDecl *d,
                                             bool delegating,
                                             AggValueSlot thisAVS,
                                             const clang::CXXConstructExpr *e) {
-  CallArgList args;
   Address thisAddr = thisAVS.getAddress();
   QualType thisType = d->getThisType();
   mlir::Value thisPtr = thisAddr.getPointer();
 
   assert(!cir::MissingFeatures::addressSpace());
 
-  args.add(RValue::get(thisPtr), thisType);
+  // If this is a trivial constructor, just emit what's needed. If this is a
+  // union copy constructor, we must emit a memcpy, because the AST does not
+  // model that copy.
+  if (d->isMemcpyEquivalentSpecialMember(getContext())) {
+    assert(e->getNumArgs() == 1 && "unexpected argcount for trivial ctor");
+    const Expr *arg = e->getArg(0);
+    LValue src = emitLValue(arg);
+    CanQualType destTy = getContext().getCanonicalTagType(d->getParent());
+    LValue dest = makeAddrLValue(thisAddr, destTy);
+    emitAggregateCopy(dest, src, src.getType(), thisAVS.mayOverlap());
+    return;
+  }
 
-  // In LLVM Codegen: If this is a trivial constructor, just emit what's needed.
-  // If this is a union copy constructor, we must emit a memcpy, because the AST
-  // does not model that copy.
-  assert(!cir::MissingFeatures::isMemcpyEquivalentSpecialMember());
+  CallArgList args;
+  args.add(RValue::get(thisPtr), thisType);
 
   const FunctionProtoType *fpt = d->getType()->castAs<FunctionProtoType>();
 
   assert(!cir::MissingFeatures::opCallArgEvaluationOrder());
 
-  emitCallArgs(args, fpt, e->arguments(), e->getConstructor(),
-               /*ParamsToSkip=*/0);
+  if (auto inherited = d->getInheritedConstructor();
+      !inherited || cgm.getTypes().inheritingCtorHasParams(inherited, type))
+    emitCallArgs(args, fpt, e->arguments(), e->getConstructor(),
+                 /*ParamsToSkip=*/0);
 
   assert(!cir::MissingFeatures::sanitizers());
   emitCXXConstructorCall(d, type, forVirtualBase, delegating, thisAddr, args,
                          e->getExprLoc());
+}
+
+static bool canEmitDelegateCallArgs(CIRGenModule &cgm, ASTContext &ctx,
+                                    const CXXConstructorDecl *d,
+                                    CXXCtorType type) {
+  // We can't forward a variadic call.
+  if (d->isVariadic())
+    return false;
+
+  if (ctx.getTargetInfo().getCXXABI().areArgsDestroyedLeftToRightInCallee()) {
+    // FIXME(CIR): It isn't clear to me that this is the right answer here,
+    // classic-codegen decides the answer is 'false' if there is an inalloca
+    // argument or if there is a param that needs destruction.
+    // When we get an understanding of what the the calling-convention code
+    // needs here, we should be able to replace this with either a 'return
+    // false' or 'return true'.
+    // Perhaps we should be checking isParamDestroyedInCallee?
+    cgm.errorNYI(d->getSourceRange(),
+                 "canEmitDelegateCallArgs: args-destroyed-L-to-R in callee");
+  }
+
+  return true;
+}
+
+void CIRGenFunction::emitInheritedCXXConstructorCall(
+    const CXXConstructorDecl *d, bool forVirtualBase, Address thisAddr,
+    bool inheritedFromVBase, const CXXInheritedCtorInitExpr *e) {
+
+  CallArgList ctorArgs;
+  CallArg thisArg(RValue::get(getAsNaturalPointerTo(
+                      thisAddr, d->getThisType()->getPointeeType())),
+                  d->getThisType());
+
+  if (inheritedFromVBase &&
+      cgm.getTarget().getCXXABI().hasConstructorVariants()) {
+    cgm.errorNYI(e->getSourceRange(), "emitInheritedCXXConstructorCall "
+                                      "inheritedFromVBase with ctor variants");
+    return;
+  } else if (!cxxInheritedCtorInitExprArgs.empty()) {
+    // The inheriting constructor was inlined; just inject its arguments.
+    assert(cxxInheritedCtorInitExprArgs.size() >= d->getNumParams() &&
+           "wrong number of parameters for inherited constructor call");
+    ctorArgs = cxxInheritedCtorInitExprArgs;
+    ctorArgs[0] = thisArg;
+  } else {
+    ctorArgs.push_back(thisArg);
+    const auto *outerCtor = cast<CXXConstructorDecl>(curCodeDecl);
+    assert(outerCtor->getNumParams() == d->getNumParams());
+    assert(!outerCtor->isVariadic() && "should have been inlined");
+
+    for (const ParmVarDecl *param : outerCtor->parameters()) {
+      assert(getContext().hasSameUnqualifiedType(
+          outerCtor->getParamDecl(param->getFunctionScopeIndex())->getType(),
+          param->getType()));
+      emitDelegateCallArg(ctorArgs, param, e->getLocation());
+
+      if (param->hasAttr<PassObjectSizeAttr>())
+        cgm.errorNYI(
+            e->getLocation(),
+            "emitInheritedCXXConstructorCall: pass object size attr argument");
+    }
+  }
+
+  emitCXXConstructorCall(d, Ctor_Base, forVirtualBase, /*delegating=*/false,
+                         thisAddr, ctorArgs, e->getLocation());
+}
+
+void CIRGenFunction::emitInlinedInheritingCXXConstructorCall(
+    SourceLocation loc, const CXXConstructorDecl *d, CXXCtorType ctorType,
+    bool forVirtualBase, bool delegating, CallArgList &args) {
+  GlobalDecl gd(d, ctorType);
+  assert(!cir::MissingFeatures::generateDebugInfo());
+  InlinedInheritingConstructorScope scope(*this, gd);
+  RunCleanupsScope RunCleanups(*this);
+
+  // Save the arguments to be passed to the inherited constructor.
+  cxxInheritedCtorInitExprArgs = args;
+
+  FunctionArgList params;
+  QualType retTy = buildFunctionArgList(gd, params);
+  // FIXME(cir): When we get to the !isVoidType NYI below, this probably is
+  // going to be important.  In the meantime, this is likely not really doing
+  // anything.
+  fnRetTy = retTy;
+
+  cgm.getCXXABI().addImplicitConstructorArgs(*this, d, ctorType, forVirtualBase,
+                                             delegating, args);
+
+  // Emit a simplified prolog. We only need to emit the implicit params.
+  assert(args.size() >= params.size() && "too few arguments for call");
+  for (auto [idx, arg, parm] :
+       llvm::zip_longest(llvm::index_range{0, args.size()}, args, params)) {
+    if (idx < params.size() && isa<ImplicitParamDecl>(*parm)) {
+      mlir::Location parmLoc = getLoc((*parm)->getSourceRange());
+      RValue argVal = arg->getRValue(*this, parmLoc);
+
+      LValue allocaVal = makeAddrLValue(
+          createTempAlloca(convertType((*parm)->getType()),
+                           getContext().getDeclAlign(*parm), parmLoc),
+          (*parm)->getType());
+
+      emitStoreThroughLValue(argVal, allocaVal, /*isInit=*/true);
+
+      setAddrOfLocalVar((*parm), allocaVal.getAddress());
+    }
+  }
+
+  // FIXME(cir): it isn't clear what it takes to get here with a constructor?
+  // Leave as an NYI until we come across a reproducer.
+  if (!retTy->isVoidType())
+    cgm.errorNYI(d->getSourceRange(),
+                 "emitInlinedInheritingCXXConstructorCall: non-void return");
+
+  cgm.getCXXABI().emitInstanceFunctionProlog(loc, *this);
+  cxxThisValue = cxxabiThisValue;
+  emitCtorPrologue(d, ctorType, params);
 }
 
 void CIRGenFunction::emitCXXConstructorCall(
@@ -1323,15 +1483,20 @@ void CIRGenFunction::emitCXXConstructorCall(
   // ctor call into trivial initialization.
   assert(!cir::MissingFeatures::isTrivialCtorOrDtor());
 
-  assert(!cir::MissingFeatures::isMemcpyEquivalentSpecialMember());
+  // Note: memcpy-equivalent special members are handled in the
+  // emitCXXConstructorCall overload that takes a CXXConstructExpr.
 
   bool passPrototypeArgs = true;
 
   // Check whether we can actually emit the constructor before trying to do so.
-  if (d->getInheritedConstructor()) {
-    cgm.errorNYI(d->getSourceRange(),
-                 "emitCXXConstructorCall: inherited constructor");
-    return;
+  if (auto inherited = d->getInheritedConstructor()) {
+    passPrototypeArgs = getTypes().inheritingCtorHasParams(inherited, type);
+    if (passPrototypeArgs &&
+        !canEmitDelegateCallArgs(cgm, cgm.getASTContext(), d, type)) {
+      emitInlinedInheritingCXXConstructorCall(loc, d, type, forVirtualBase,
+                                              delegating, args);
+      return;
+    }
   }
 
   // Insert any ABI-specific implicit constructor arguments.

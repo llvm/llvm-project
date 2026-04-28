@@ -67,8 +67,8 @@ void fn2() { C c1; c1.call_indirect(2); }
 // LLVM:   store ptr %[[THIS_ARG]], ptr %[[THIS_ADDR]]
 // LLVM:   store i32 %[[V_ARG]], ptr %[[V_ADDR]]
 // LLVM:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]]
-// LLVM:   %[[INNER:.*]] = getelementptr %class.C, ptr %[[THIS]], i32 0, i32 0
-// LLVM:   %[[INDIRECT_CALLEE_PTR:.*]] = getelementptr %class.B, ptr %[[INNER]], i32 0, i32 0
+// LLVM:   %[[INNER:.*]] = getelementptr inbounds nuw %class.C, ptr %[[THIS]], i32 0, i32 0
+// LLVM:   %[[INDIRECT_CALLEE_PTR:.*]] = getelementptr inbounds nuw %class.B, ptr %[[INNER]], i32 0, i32 0
 // LLVM:   %[[INDIRECT_CALLEE:.*]] = load ptr, ptr %[[INDIRECT_CALLEE_PTR]]
 // LLVM:   %[[V:.*]] = load i32, ptr %[[V_ADDR]]
 // LLVM:   %[[RET:.*]] = call noundef i32 %[[INDIRECT_CALLEE]](i32 noundef %[[V]])

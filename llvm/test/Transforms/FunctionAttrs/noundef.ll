@@ -214,3 +214,29 @@ define range(i8 0, 10) i8 @definitely_in_range(i8 noundef range(i8 0, 10) %v) {
 ;
   ret i8 %v
 }
+
+define nofpclass(nan) float @maybe_nofpclass(float noundef %x) {
+; CHECK-LABEL: define nofpclass(nan) float @maybe_nofpclass(
+; CHECK-SAME: float noundef returned [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    ret float [[X]]
+;
+  ret float %x
+}
+
+define nofpclass(nan) float @compute_not_nofpclass(float noundef nofpclass(nan) %x) {
+; CHECK-LABEL: define nofpclass(nan) float @compute_not_nofpclass(
+; CHECK-SAME: float noundef nofpclass(nan) [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[Y:%.*]] = fmul float [[X]], 0x7FF8000000000000
+; CHECK-NEXT:    ret float [[Y]]
+;
+  %y = fmul float %x, 0x7FF8000000000000
+  ret float %y
+}
+
+define nofpclass(nan) float @definitely_nofpclass(float noundef nofpclass(nan) %x) {
+; CHECK-LABEL: define noundef nofpclass(nan) float @definitely_nofpclass(
+; CHECK-SAME: float noundef returned nofpclass(nan) [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    ret float [[X]]
+;
+  ret float %x
+}

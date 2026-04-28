@@ -1339,6 +1339,17 @@ LogicalResult spirv::GlobalVariableOp::verify() {
            << stringifyStorageClass(storageClass) << "'";
   }
 
+  // SPIR-V spec: "A module-scope OpVariable with an Initializer operand must
+  // not be decorated with the Import Linkage Type."
+  if (std::optional<spirv::LinkageAttributesAttr> linkage =
+          getLinkageAttributes()) {
+    if (linkage->getLinkageType().getValue() == spirv::LinkageType::Import &&
+        getInitializer()) {
+      return emitOpError(
+          "with Import linkage type must not have an initializer");
+    }
+  }
+
   if (auto init = (*this)->getAttrOfType<FlatSymbolRefAttr>(
           this->getInitializerAttrName())) {
     Operation *initOp = SymbolTable::lookupNearestSymbolFrom(
@@ -1840,15 +1851,29 @@ LogicalResult spirv::SpecConstantCompositeOp::verify() {
   for (auto index : llvm::seq<uint32_t>(0, constituents.size())) {
     auto constituent = cast<FlatSymbolRefAttr>(constituents[index]);
 
-    auto constituentSpecConstOp =
-        dyn_cast<spirv::SpecConstantOp>(SymbolTable::lookupNearestSymbolFrom(
-            (*this)->getParentOp(), constituent.getAttr()));
+    Operation *constituentOp = SymbolTable::lookupNearestSymbolFrom(
+        (*this)->getParentOp(), constituent.getAttr());
 
-    if (constituentSpecConstOp.getDefaultValue().getType() !=
-        cType.getElementType(index))
+    if (!constituentOp)
+      return emitError("unknown constituent symbol ") << constituent.getAttr();
+
+    Type constituentType;
+    if (auto specConstOp = dyn_cast<spirv::SpecConstantOp>(constituentOp)) {
+      constituentType = specConstOp.getDefaultValue().getType();
+    } else if (auto specConstCompositeOp =
+                   dyn_cast<spirv::SpecConstantCompositeOp>(constituentOp)) {
+      constituentType = specConstCompositeOp.getType();
+    } else {
+      return emitError("unsupported constituent ")
+             << constituent.getAttr()
+             << ": must reference a spirv.SpecConstant or "
+                "spirv.SpecConstantComposite";
+    }
+
+    if (constituentType != cType.getElementType(index))
       return emitError("has incorrect types of operands: expected ")
              << cType.getElementType(index) << ", but provided "
-             << constituentSpecConstOp.getDefaultValue().getType();
+             << constituentType;
   }
 
   return success();

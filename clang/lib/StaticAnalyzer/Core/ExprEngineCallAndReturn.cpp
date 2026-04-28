@@ -259,7 +259,7 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
   // look up the first enclosing stack frame.
   const StackFrameContext *CallerCtx = CalleeCtx->getParent()->getStackFrame();
 
-  const Stmt *CE = CalleeCtx->getCallSite();
+  const Expr *CE = CalleeCtx->getCallSite();
   ProgramStateRef State = CEBNode->getState();
   // Find the last statement in the function and the corresponding basic block.
   auto [LastSt, Blk] = getLastStmt(CEBNode);
@@ -297,17 +297,18 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
   if (CE) {
     if (const ReturnStmt *RS = dyn_cast_or_null<ReturnStmt>(LastSt)) {
       const LocationContext *LCtx = CEBNode->getLocationContext();
-      SVal V = State->getSVal(RS, LCtx);
+
+      SVal V = UndefinedVal();
+      if (RS->getRetValue())
+        V = State->getSVal(RS->getRetValue(), LCtx);
 
       // Ensure that the return type matches the type of the returned Expr.
       if (wasDifferentDeclUsedForInlining(Call, CalleeCtx)) {
         QualType ReturnedTy =
             CallEvent::getDeclaredResultType(CalleeCtx->getDecl());
         if (!ReturnedTy.isNull()) {
-          if (const Expr *Ex = dyn_cast<Expr>(CE)) {
-            V = adjustReturnValue(V, Ex->getType(), ReturnedTy,
-                                  getStoreManager());
-          }
+          V = adjustReturnValue(V, CE->getType(), ReturnedTy,
+                                getStoreManager());
         }
       }
 
@@ -587,7 +588,7 @@ void ExprEngine::inlineCall(WorkList *WList, const CallEvent &Call,
 }
 
 static ProgramStateRef getInlineFailedState(ProgramStateRef State,
-                                            const Stmt *CallE) {
+                                            const Expr *CallE) {
   const void *ReplayState = State->get<ReplayWithoutInlining>();
   if (!ReplayState)
     return nullptr;
@@ -1225,9 +1226,6 @@ void ExprEngine::defaultEvalCall(NodeBuilder &Bldr, ExplodedNode *Pred,
     return;
   }
 
-  // Try to inline the call.
-  // The origin expression here is just used as a kind of checksum;
-  // this should still be safe even for CallEvents that don't come from exprs.
   const Expr *E = Call.getOriginExpr();
 
   ProgramStateRef InlinedFailedState = getInlineFailedState(State, E);

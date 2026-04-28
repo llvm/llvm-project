@@ -689,10 +689,14 @@ private:
   /// Return a pointer to the specified value type.
   LLVM_ABI static const EVT *getValueTypeList(MVT VT);
 
-  /// Index in worklist of DAGCombiner, or negative if the node is not in the
-  /// worklist. -1 = not in worklist; -2 = not in worklist, but has already been
-  /// combined at least once.
-  int CombinerWorklistIndex = -1;
+  union {
+    /// Index in worklist of DAGCombiner, or negative if the node is not in the
+    /// worklist. -1 = not in worklist; -2 = not in worklist, but has already
+    /// been combined at least once.
+    int CombinerWorklistIndex = -1;
+    /// Visited state in ScheduleDAGSDNodes::BuildSchedUnits.
+    bool SchedulerWorklistVisited;
+  };
 
   uint32_t CFIType = 0;
 
@@ -794,6 +798,14 @@ public:
 
   /// Set worklist index for DAGCombiner
   void setCombinerWorklistIndex(int Index) { CombinerWorklistIndex = Index; }
+
+  /// Get visited state for ScheduleDAGSDNodes::BuildSchedUnits.
+  bool getSchedulerWorklistVisited() const { return SchedulerWorklistVisited; }
+
+  /// Set visited state for ScheduleDAGSDNodes::BuildSchedUnits.
+  void setSchedulerWorklistVisited(bool Visited) {
+    SchedulerWorklistVisited = Visited;
+  }
 
   /// Return the node ordering.
   unsigned getIROrder() const { return IROrder; }

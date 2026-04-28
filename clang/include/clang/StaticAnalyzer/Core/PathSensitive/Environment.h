@@ -32,18 +32,18 @@ class SymbolReaper;
 /// This allows the environment to manage context-sensitive bindings,
 /// which is essentially for modeling recursive function analysis, among
 /// other things.
-class EnvironmentEntry : public std::pair<const Stmt *,
-                                          const StackFrameContext *> {
+class EnvironmentEntry
+    : public std::pair<const Expr *, const StackFrameContext *> {
 public:
-  EnvironmentEntry(const Stmt *s, const LocationContext *L);
+  EnvironmentEntry(const Expr *E, const LocationContext *L);
 
-  const Stmt *getStmt() const { return first; }
+  const Expr *getExpr() const { return first; }
   const LocationContext *getLocationContext() const { return second; }
 
   /// Profile an EnvironmentEntry for inclusion in a FoldingSet.
   static void Profile(llvm::FoldingSetNodeID &ID,
                       const EnvironmentEntry &E) {
-    ID.AddPointer(E.getStmt());
+    ID.AddPointer(E.getExpr());
     ID.AddPointer(E.getLocationContext());
   }
 
@@ -52,7 +52,7 @@ public:
   }
 };
 
-/// An immutable map from EnvironemntEntries to SVals.
+/// An immutable map from EnvironmentEntries to SVals.
 class Environment {
 private:
   friend class EnvironmentManager;

@@ -1,6 +1,13 @@
 header: sched.h
-header_template: sched.h.def
-macros: []
+standards:
+  - posix
+macros:
+  - macro_name: SCHED_OTHER
+    macro_header: sched-macros.h
+  - macro_name: SCHED_FIFO
+    macro_header: sched-macros.h
+  - macro_name: SCHED_RR
+    macro_header: sched-macros.h
 types:
   - type_name: struct_timespec
   - type_name: time_t

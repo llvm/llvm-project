@@ -256,8 +256,8 @@ Expected<std::vector<BenchmarkCode>> readSnippets(const LLVMState &State,
   formatted_raw_ostream InstPrinterOStream(ErrorStream);
   const std::unique_ptr<MCInstPrinter> InstPrinter(
       TM.getTarget().createMCInstPrinter(
-          TM.getTargetTriple(), TM.getMCAsmInfo()->getAssemblerDialect(),
-          *TM.getMCAsmInfo(), *TM.getMCInstrInfo(), *TM.getMCRegisterInfo()));
+          TM.getTargetTriple(), TM.getMCAsmInfo().getAssemblerDialect(),
+          TM.getMCAsmInfo(), *TM.getMCInstrInfo(), *TM.getMCRegisterInfo()));
   // The following call will take care of calling Streamer.setTargetStreamer.
   TM.getTarget().createAsmTargetStreamer(Streamer, InstPrinterOStream,
                                          InstPrinter.get());
@@ -265,15 +265,14 @@ Expected<std::vector<BenchmarkCode>> readSnippets(const LLVMState &State,
     return make_error<Failure>("cannot create target asm streamer");
 
   const std::unique_ptr<MCAsmParser> AsmParser(
-      createMCAsmParser(SM, Context, Streamer, *TM.getMCAsmInfo()));
+      createMCAsmParser(SM, Context, Streamer, TM.getMCAsmInfo()));
   if (!AsmParser)
     return make_error<Failure>("cannot create asm parser");
   AsmParser->getLexer().setCommentConsumer(&Streamer);
 
   const std::unique_ptr<MCTargetAsmParser> TargetAsmParser(
       TM.getTarget().createMCAsmParser(*TM.getMCSubtargetInfo(), *AsmParser,
-                                       *TM.getMCInstrInfo(),
-                                       MCTargetOptions()));
+                                       *TM.getMCInstrInfo()));
 
   if (!TargetAsmParser)
     return make_error<Failure>("cannot create target asm parser");

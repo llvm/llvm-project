@@ -1143,6 +1143,34 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
     return InstructionCost::getInvalid();
 
   auto *FVTy = cast<FixedVectorType>(VecTy);
+  // When gaps are only at the tail, for interleaved load, we can emit a wide
+  // masked load and shufflevectors. For interleaved store, we can emit
+  // shufflevectors and a wide masked store. The interleaved memory access pass
+  // will lower them into vlsseg/vssseg intrinsics.
+  if (UseMaskForGaps) {
+    assert(llvm::is_sorted(Indices) && "Indices must be sorted");
+    assert(llvm::adjacent_find(Indices) == Indices.end() &&
+           "Indices should not contain duplicate elements");
+    unsigned NumOfFields = Indices.size();
+    bool IsTailGapOnly = NumOfFields > 1 && (NumOfFields == Indices.back() + 1);
+    if (IsTailGapOnly &&
+        NumOfFields <= TLI->getMaxSupportedInterleaveFactor()) {
+      std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(FVTy);
+      if (LT.second.isVector() &&
+          FVTy->getElementCount().isKnownMultipleOf(Factor)) {
+        auto *SubVecTy = VectorType::get(
+            FVTy->getElementType(),
+            FVTy->getElementCount().divideCoefficientBy(Factor));
+        if (TLI->isLegalInterleavedAccessType(SubVecTy, NumOfFields, Alignment,
+                                              AddressSpace, DL)) {
+          // The cost is proportional to the total number of element accesses.
+          unsigned NumAccesses = getEstimatedVLFor(FVTy);
+          return NumAccesses * TTI::TCC_Basic;
+        }
+      }
+    }
+  }
+
   InstructionCost MemCost =
       getMemoryOpCost(Opcode, VecTy, Alignment, AddressSpace, CostKind);
   unsigned VF = FVTy->getNumElements() / Factor;
@@ -1476,7 +1504,7 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
         Op = RISCV::VSADD_VV;
         break;
       case Intrinsic::ssub_sat:
-        Op = RISCV::VSSUBU_VV;
+        Op = RISCV::VSSUB_VV;
         break;
       case Intrinsic::uadd_sat:
         Op = RISCV::VSADDU_VV;
@@ -1615,6 +1643,18 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     }
     break;
   }
+  case Intrinsic::masked_udiv:
+    return getArithmeticInstrCost(Instruction::UDiv, ICA.getReturnType(),
+                                  CostKind);
+  case Intrinsic::masked_sdiv:
+    return getArithmeticInstrCost(Instruction::SDiv, ICA.getReturnType(),
+                                  CostKind);
+  case Intrinsic::masked_urem:
+    return getArithmeticInstrCost(Instruction::URem, ICA.getReturnType(),
+                                  CostKind);
+  case Intrinsic::masked_srem:
+    return getArithmeticInstrCost(Instruction::SRem, ICA.getReturnType(),
+                                  CostKind);
   case Intrinsic::get_active_lane_mask: {
     if (ST->hasVInstructions()) {
       Type *ExpRetTy = VectorType::get(
@@ -1733,12 +1773,19 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     // Find a suitable type for a stepvector.
     ConstantRange VScaleRange(APInt(64, 1), APInt::getZero(64));
     unsigned EltWidth = getTLI()->getBitWidthForCttzElements(
-        MaskTy->getScalarType(), MaskTy->getElementCount(),
+        TLI->getVectorIdxTy(getDataLayout()), MaskTy->getElementCount(),
         /*ZeroIsPoison=*/true, &VScaleRange);
     EltWidth = std::max(EltWidth, MaskTy->getScalarSizeInBits());
     Type *StepTy = Type::getIntNTy(MaskTy->getContext(), EltWidth);
     auto *StepVecTy = VectorType::get(StepTy, ValTy->getElementCount());
     auto StepLT = getTypeLegalizationCost(StepVecTy);
+
+    // Currently expandVectorFindLastActive cannot handle step vector split.
+    // So return invalid when the type needs split.
+    // FIXME: Remove this if expandVectorFindLastActive supports split vector.
+    if (StepLT.first > 1)
+      return InstructionCost::getInvalid();
+
     InstructionCost Cost = 0;
     unsigned Opcodes[] = {RISCV::VID_V, RISCV::VREDMAXU_VS, RISCV::VMV_X_S};
 
@@ -2586,9 +2633,6 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(
     if (Index == 0)
       // We can extract/insert the first element without vslidedown/vslideup.
       SlideCost = 0;
-    else if (ST->hasVendorXRivosVisni() && isUInt<5>(Index) &&
-             Val->getScalarType()->isIntegerTy())
-      SlideCost = 0; // With ri.vinsert/ri.vextract there is no slide needed
     else if (Opcode == Instruction::InsertElement)
       SlideCost = 1; // With a constant index, we do not need to use addi.
   }
@@ -2665,6 +2709,29 @@ RISCVTTIImpl::getIndexedVectorInstrCostFromEnd(unsigned Opcode, Type *Val,
                             nullptr);
 }
 
+/// Check to see if this instruction is expected to be combined to a simpler
+/// operation during/before lowering. If so return the cost of the combined
+/// operation rather than provided one. For instance, `udiv i16 %X, 2` is likely
+/// to be combined to `lshr i16 %X, 1`, so return the cost of a `lshr` rather
+/// than the cost of a `udiv`
+std::optional<InstructionCost>
+RISCVTTIImpl::getCombinedArithmeticInstructionCost(
+    unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
+    TTI::OperandValueInfo Opd1Info, TTI::OperandValueInfo Opd2Info,
+    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
+  // Vector unsigned division/remainder will be simplified to shifts/masks.
+  if ((Opcode == Instruction::UDiv || Opcode == Instruction::URem) &&
+      Opd2Info.isConstant() && Opd2Info.isPowerOf2()) {
+    if (Opcode == Instruction::UDiv)
+      return getArithmeticInstrCost(Instruction::LShr, Ty, CostKind, Opd1Info,
+                                    Opd2Info.getNoProps());
+    // UREM
+    return getArithmeticInstrCost(Instruction::And, Ty, CostKind, Opd1Info,
+                                  Opd2Info.getNoProps());
+  }
+  return std::nullopt;
+}
+
 InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
@@ -2683,6 +2750,11 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
   if (isa<VectorType>(Ty) && Ty->getScalarSizeInBits() > ST->getELen())
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
                                          Args, CxtI);
+
+  if (std::optional<InstructionCost> CombinedCost =
+          getCombinedArithmeticInstructionCost(Opcode, Ty, CostKind, Op1Info,
+                                               Op2Info, Args, CxtI))
+    return *CombinedCost;
 
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
@@ -3636,7 +3708,7 @@ RISCVTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   if (TargetEltBW % SourceEltBW)
     return {};
   unsigned TargetScale = TargetEltBW / SourceEltBW;
-  if (VL % TargetScale)
+  if (VL % TargetScale || TargetScale == 1)
     return {};
   Type *VLTy = II.getOperand(2)->getType();
   ElementCount SourceEC = SourceVecTy->getElementCount();

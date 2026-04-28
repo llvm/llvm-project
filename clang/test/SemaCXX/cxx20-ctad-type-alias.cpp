@@ -618,3 +618,13 @@ Alias  b(42);
 // expected-error@-1 {{alias template 'Alias' requires template arguments; argument deduction only allowed for class templates or alias template}}
 // expected-note@#gh130604-alias {{template is declared here}}
 }
+
+namespace GH190517 {
+template <typename T> struct S1 {};
+template <typename T> using S2 = S1<char>;
+template <typename T> using S3 = S2<T>; // expected-note {{candidate function template not viable}} \
+                                        // expected-note {{implicit deduction guide declared}} \
+                                        // expected-note {{candidate function template not viable}} \
+                                        // expected-note {{implicit deduction guide declared}}
+S3 foo(42); // expected-error {{no viable constructor or deduction guide for deduction of template arguments of 'S3'}}
+}

@@ -25,6 +25,24 @@ mlir::Operation *mlir::acc::getEnclosingComputeOp(mlir::Region &region) {
       .getParentOfType<ACC_COMPUTE_CONSTRUCT_OPS, mlir::acc::ComputeRegionOp>();
 }
 
+mlir::Operation *mlir::acc::getACCDataClauseOpForBlockArg(mlir::Value v) {
+  auto barg = mlir::dyn_cast<mlir::BlockArgument>(v);
+  if (!barg)
+    return nullptr;
+
+  mlir::Block *block = barg.getOwner();
+  auto computeReg =
+      mlir::dyn_cast<mlir::acc::ComputeRegionOp>(block->getParentOp());
+  if (!computeReg || block != computeReg.getBody())
+    return nullptr;
+
+  mlir::Value orig = computeReg.getOperand(barg);
+  if (!orig)
+    return nullptr;
+  mlir::Operation *def = orig.getDefiningOp();
+  return mlir::isa_and_nonnull<ACC_DATA_ENTRY_OPS>(def) ? def : nullptr;
+}
+
 template <typename OpTy>
 static bool isOnlyUsedByOpClauses(mlir::Value val, mlir::Region &region) {
   auto checkIfUsedOnlyByOpInside = [&](mlir::Operation *user) {

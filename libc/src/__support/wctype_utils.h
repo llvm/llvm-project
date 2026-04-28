@@ -551,7 +551,6 @@ LIBC_INLINE constexpr bool isprint(wchar_t wch) {
   return lookup_properties(wch) & PropertyFlag::PRINT;
 #endif
 }
-
 LIBC_INLINE constexpr bool isxdigit(wchar_t wch) {
   // Hexadecimal digits are the same in C.UTF8 as in ASCII
   return ascii::isxdigit(wch);

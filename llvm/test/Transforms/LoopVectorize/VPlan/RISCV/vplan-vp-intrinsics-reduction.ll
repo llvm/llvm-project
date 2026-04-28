@@ -1,19 +1,19 @@
 ; RUN: opt -passes=loop-vectorize -debug-only=loop-vectorize \
-; RUN: -prefer-predicate-over-epilogue=predicate-else-scalar-epilogue \
+; RUN: -tail-folding-policy=prefer-fold-tail \
 ; RUN: -mtriple=riscv64 -mattr=+v -riscv-v-vector-bits-max=128 -disable-output < %s 2>&1 | FileCheck --check-prefixes=IF-EVL-OUTLOOP,IF-EVL %s
 
 ; RUN: opt -passes=loop-vectorize -debug-only=loop-vectorize \
 ; RUN: -prefer-inloop-reductions \
-; RUN: -prefer-predicate-over-epilogue=predicate-else-scalar-epilogue \
+; RUN: -tail-folding-policy=prefer-fold-tail \
 ; RUN: -mtriple=riscv64 -mattr=+v -riscv-v-vector-bits-max=128 -disable-output < %s 2>&1 | FileCheck --check-prefixes=IF-EVL-INLOOP,IF-EVL %s
 
 ; RUN: opt -passes=loop-vectorize -debug-only=loop-vectorize \
-; RUN: -prefer-predicate-over-epilogue=scalar-epilogue \
+; RUN: -tail-folding-policy=dont-fold-tail \
 ; RUN: -mtriple=riscv64 -mattr=+v -riscv-v-vector-bits-max=128 -disable-output < %s 2>&1 | FileCheck --check-prefixes=NO-VP-OUTLOOP %s
 
 ; RUN: opt -passes=loop-vectorize -debug-only=loop-vectorize \
 ; RUN: -prefer-inloop-reductions \
-; RUN: -prefer-predicate-over-epilogue=scalar-epilogue \
+; RUN: -tail-folding-policy=dont-fold-tail \
 ; RUN: -mtriple=riscv64 -mattr=+v -riscv-v-vector-bits-max=128 -disable-output < %s 2>&1 | FileCheck --check-prefixes=NO-VP-INLOOP %s
 
 
@@ -34,8 +34,9 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-OUTLOOP-NEXT: Successor(s): vector loop
 ; IF-EVL-OUTLOOP-EMPTY:
 ; IF-EVL-OUTLOOP-NEXT: <x1> vector loop: {
-; IF-EVL-OUTLOOP-NEXT:  vector.body:
-; IF-EVL-OUTLOOP-NEXT:    EMIT vp<[[IV:%[0-9]+]]> = CANONICAL-INDUCTION
+; IF-EVL-OUTLOOP-NEXT:   vp<[[IV:%[0-9]+]]> = CANONICAL-IV
+; IF-EVL-OUTLOOP-EMPTY:
+; IF-EVL-OUTLOOP-NEXT:   vector.body:
 ; IF-EVL-OUTLOOP-NEXT:    CURRENT-ITERATION-PHI vp<[[EVL_PHI:%[0-9]+]]> = phi ir<0>, vp<[[IV_NEXT:%.+]]>
 ; IF-EVL-OUTLOOP-NEXT:    WIDEN-REDUCTION-PHI ir<[[RDX_PHI:%.+]]> = phi vp<[[RDX_START]]>, vp<[[RDX_SELECT:%.+]]>
 ; IF-EVL-OUTLOOP-NEXT:    EMIT-SCALAR vp<[[AVL:%.+]]> = phi [ ir<%n>, vector.ph ], [ vp<[[AVL_NEXT:%.+]]>, vector.body ]
@@ -74,8 +75,9 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-INLOOP-NEXT: Successor(s): vector loop
 ; IF-EVL-INLOOP-EMPTY:
 ; IF-EVL-INLOOP-NEXT: <x1> vector loop: {
-; IF-EVL-INLOOP-NEXT:  vector.body:
-; IF-EVL-INLOOP-NEXT:    EMIT vp<[[IV:%[0-9]+]]> = CANONICAL-INDUCTION
+; IF-EVL-INLOOP-NEXT:   vp<[[IV:%[0-9]+]]> = CANONICAL-IV
+; IF-EVL-INLOOP-EMPTY:
+; IF-EVL-INLOOP-NEXT:   vector.body:
 ; IF-EVL-INLOOP-NEXT:    CURRENT-ITERATION-PHI vp<[[EVL_PHI:%[0-9]+]]> = phi ir<0>, vp<[[IV_NEXT:%.+]]>
 ; IF-EVL-INLOOP-NEXT:    WIDEN-REDUCTION-PHI ir<[[RDX_PHI:%.+]]> = phi vp<[[RDX_START]]>, ir<[[RDX_NEXT:%.+]]>
 ; IF-EVL-INLOOP-NEXT:    EMIT-SCALAR vp<[[AVL:%.+]]> = phi [ ir<%n>, vector.ph ], [ vp<[[AVL_NEXT:%.+]]>, vector.body ]
@@ -114,8 +116,9 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-OUTLOOP-NEXT: Successor(s): vector loop
 ; NO-VP-OUTLOOP-EMPTY:
 ; NO-VP-OUTLOOP-NEXT: <x1> vector loop: {
-; NO-VP-OUTLOOP-NEXT:  vector.body:
-; NO-VP-OUTLOOP-NEXT:    EMIT vp<[[IV:%[0-9]+]]> = CANONICAL-INDUCTION
+; NO-VP-OUTLOOP-NEXT:   vp<[[IV:%[0-9]+]]> = CANONICAL-IV
+; NO-VP-OUTLOOP-EMPTY:
+; NO-VP-OUTLOOP-NEXT:   vector.body:
 ; NO-VP-OUTLOOP-NEXT:    WIDEN-REDUCTION-PHI ir<[[RDX_PHI:%.+]]> = phi vp<[[RDX_START]]>, ir<[[RDX_NEXT:%.+]]>
 ; NO-VP-OUTLOOP-NEXT:    vp<[[ST:%[0-9]+]]> = SCALAR-STEPS vp<[[IV]]>, ir<1>, vp<[[VF]]>
 ; NO-VP-OUTLOOP-NEXT:    CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>
@@ -162,8 +165,9 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-INLOOP-NEXT: Successor(s): vector loop
 ; NO-VP-INLOOP-EMPTY:
 ; NO-VP-INLOOP-NEXT: <x1> vector loop: {
-; NO-VP-INLOOP-NEXT:  vector.body:
-; NO-VP-INLOOP-NEXT:    EMIT vp<[[IV:%[0-9]+]]> = CANONICAL-INDUCTION
+; NO-VP-INLOOP-NEXT:   vp<[[IV:%[0-9]+]]> = CANONICAL-IV
+; NO-VP-INLOOP-EMPTY:
+; NO-VP-INLOOP-NEXT:   vector.body:
 ; NO-VP-INLOOP-NEXT:    WIDEN-REDUCTION-PHI ir<[[RDX_PHI:%.+]]> = phi vp<[[RDX_START]]>, ir<[[RDX_NEXT:%.+]]>
 ; NO-VP-INLOOP-NEXT:    vp<[[ST:%[0-9]+]]> = SCALAR-STEPS vp<[[IV]]>, ir<1>, vp<[[VF]]>
 ; NO-VP-INLOOP-NEXT:    CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>

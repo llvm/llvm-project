@@ -443,7 +443,7 @@ public:
   /// G_INSERT_VECTOR_ELT, G_EXTRACT_VECTOR_ELT,
   /// G_INSERT_SUBVECTOR, and G_EXTRACT_SUBVECTOR
   LLT getVectorIdxLLT(const DataLayout &DL) const {
-    return LLT::scalar(getVectorIdxWidth(DL));
+    return LLT::integer(getVectorIdxWidth(DL));
   }
 
   /// Returns the type to be used for the EVL/AVL operand of VP nodes:
@@ -498,7 +498,7 @@ public:
 
   /// Return the minimum number of bits required to hold the maximum possible
   /// number of trailing zero vector elements.
-  unsigned getBitWidthForCttzElements(Type *RetTy, ElementCount EC,
+  unsigned getBitWidthForCttzElements(EVT RetVT, ElementCount EC,
                                       bool ZeroIsPoison,
                                       const ConstantRange *VScaleRange) const;
 
@@ -996,8 +996,9 @@ public:
   /// Return the ValueType for comparison libcalls. Comparison libcalls include
   /// floating point comparison calls, and Ordered/Unordered check calls on
   /// floating point numbers.
-  virtual
-  MVT::SimpleValueType getCmpLibcallReturnType() const;
+  virtual MVT::SimpleValueType getCmpLibcallReturnType() const {
+    return MVT::i32; // return the default value
+  }
 
   /// For targets without i1 registers, this gives the nature of the high-bits
   /// of boolean values held in types wider than i1.
@@ -1548,38 +1549,64 @@ public:
     return Action == Legal || Action == Custom;
   }
 
+  /// Returns an alternative action to use when the coarser lookups (configured
+  /// through `setTruncStoreAction` yield
+  /// `LegalizeAction::Custom`. Allows targets to use builtin behaviors (e.g.
+  /// Legal, Promote) specialized by Alignment and AddrSpace, rather than just
+  /// types.
+  virtual LegalizeAction getCustomTruncStoreAction(EVT ValVT, EVT MemVT,
+                                                   Align Alignment,
+                                                   unsigned AddrSpace) const {
+    return LegalizeAction::Custom;
+  }
+
   /// Return how this store with truncation should be treated: either it is
   /// legal, needs to be promoted to a larger size, needs to be expanded to some
   /// other code sequence, or the target has a custom expander for it.
-  LegalizeAction getTruncStoreAction(EVT ValVT, EVT MemVT) const {
-    if (ValVT.isExtended() || MemVT.isExtended()) return Expand;
-    unsigned ValI = (unsigned) ValVT.getSimpleVT().SimpleTy;
-    unsigned MemI = (unsigned) MemVT.getSimpleVT().SimpleTy;
+  LegalizeAction getTruncStoreAction(EVT ValVT, EVT MemVT, Align Alignment,
+                                     unsigned AddrSpace) const {
+    if (ValVT.isExtended() || MemVT.isExtended())
+      return Expand;
+    unsigned ValI = (unsigned)ValVT.getSimpleVT().SimpleTy;
+    unsigned MemI = (unsigned)MemVT.getSimpleVT().SimpleTy;
     assert(ValI < MVT::VALUETYPE_SIZE && MemI < MVT::VALUETYPE_SIZE &&
            "Table isn't big enough!");
-    return TruncStoreActions[ValI][MemI];
+
+    LegalizeAction Action = TruncStoreActions[ValI][MemI];
+
+    if (Action == LegalizeAction::Custom) {
+      return getCustomTruncStoreAction(ValVT, MemVT, Alignment, AddrSpace);
+    }
+
+    return Action;
   }
 
   /// Return true if the specified store with truncation is legal on this
   /// target.
-  bool isTruncStoreLegal(EVT ValVT, EVT MemVT) const {
-    return isTypeLegal(ValVT) && getTruncStoreAction(ValVT, MemVT) == Legal;
+  bool isTruncStoreLegal(EVT ValVT, EVT MemVT, Align Alignment,
+                         unsigned AddrSpace) const {
+    return isTypeLegal(ValVT) &&
+           getTruncStoreAction(ValVT, MemVT, Alignment, AddrSpace) == Legal;
   }
 
   /// Return true if the specified store with truncation has solution on this
   /// target.
-  bool isTruncStoreLegalOrCustom(EVT ValVT, EVT MemVT) const {
-    return isTypeLegal(ValVT) &&
-      (getTruncStoreAction(ValVT, MemVT) == Legal ||
-       getTruncStoreAction(ValVT, MemVT) == Custom);
+  bool isTruncStoreLegalOrCustom(EVT ValVT, EVT MemVT, Align Alignment,
+                                 unsigned AddrSpace) const {
+    if (!isTypeLegal(ValVT))
+      return false;
+
+    LegalizeAction Action =
+        getTruncStoreAction(ValVT, MemVT, Alignment, AddrSpace);
+    return (Action == Legal || Action == Custom);
   }
 
-  virtual bool canCombineTruncStore(EVT ValVT, EVT MemVT,
-                                    bool LegalOnly) const {
+  virtual bool canCombineTruncStore(EVT ValVT, EVT MemVT, Align Alignment,
+                                    unsigned AddrSpace, bool LegalOnly) const {
     if (LegalOnly)
-      return isTruncStoreLegal(ValVT, MemVT);
+      return isTruncStoreLegal(ValVT, MemVT, Alignment, AddrSpace);
 
-    return isTruncStoreLegalOrCustom(ValVT, MemVT);
+    return isTruncStoreLegalOrCustom(ValVT, MemVT, Alignment, AddrSpace);
   }
 
   /// Return how the indexed load should be treated: either it is legal, needs
@@ -2083,6 +2110,12 @@ public:
 
   /// Retuen the minimum of largest number of comparisons in BitTest.
   unsigned getMinimumBitTestCmps() const;
+
+  /// Return maximum known-legal store size, which can be guaranteed for
+  /// scalable vectors.
+  unsigned getMaximumLegalStoreInBits() const {
+    return MaximumLegalStoreInBits;
+  }
 
   /// If a physical register, this specifies the register that
   /// llvm.savestack/llvm.restorestack should save and restore.
@@ -3767,6 +3800,10 @@ private:
   /// The minimum of largest number of comparisons to use bit test for switch.
   unsigned MinimumBitTestCmps;
 
+  /// Maximum known-legal store size, which can be guaranteed for scalable
+  /// vectors.
+  unsigned MaximumLegalStoreInBits;
+
   /// This indicates if the target supports unaligned atomic operations.
   bool SupportsUnalignedAtomics;
 
@@ -4009,6 +4046,11 @@ public:
   ~TargetLowering() override;
 
   bool isPositionIndependent() const;
+
+  // If set to true, SelectionDAG nodes will be consistently processed in
+  // topological order. This is a temporary hook until sorting can be
+  // enabled globally.
+  virtual bool useTopologicalSorting() const { return false; }
 
   virtual bool isSDNodeSourceOfDivergence(const SDNode *N,
                                           FunctionLoweringInfo *FLI,
@@ -4442,6 +4484,15 @@ public:
   /// This method returns the constant pool value that will be loaded by LD.
   /// NOTE: You must check for implicit extensions of the constant by LD.
   virtual const Constant *getTargetConstantFromLoad(LoadSDNode *LD) const;
+
+  /// Determine floating-point class information for a target node. The
+  /// DemandedElts argument allows us to only collect the known FP classes
+  /// that are shared by the requested vector elements.
+  virtual void computeKnownFPClassForTargetNode(const SDValue Op,
+                                                KnownFPClass &Known,
+                                                const APInt &DemandedElts,
+                                                const SelectionDAG &DAG,
+                                                unsigned Depth = 0) const;
 
   /// If \p SNaN is false, \returns true if \p Op is known to never be any
   /// NaN. If \p sNaN is true, returns if \p Op is known to never be a signaling
@@ -5582,6 +5633,11 @@ public:
                            SDNodeFlags Flags, const SDLoc &DL,
                            SelectionDAG &DAG) const;
 
+  /// Expand FCANONICALIZE to FMUL with 1.
+  /// \param NodeNode to expand
+  /// \returns The expansion result
+  SDValue expandFCANONICALIZE(SDNode *Node, SelectionDAG &DAG) const;
+
   /// Expand CTPOP nodes. Expands vector/scalar CTPOP nodes,
   /// vector nodes can only succeed if all operations are legal/custom.
   /// \param N Node to expand
@@ -5635,6 +5691,11 @@ public:
   /// \param N Node to expand
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandVectorFindLastActive(SDNode *N, SelectionDAG &DAG) const;
+
+  /// Expand LOOP_DEPENDENCE_MASK nodes
+  /// \param N Node to expand
+  /// \returns The expansion result or SDValue() if it fails.
+  SDValue expandLoopDependenceMask(SDNode *N, SelectionDAG &DAG) const;
 
   /// Expand ABS nodes. Expands vector/scalar ABS nodes,
   /// vector nodes can only succeed if all operations are legal/custom.
@@ -5819,6 +5880,10 @@ public:
   /// Expand a vector VECTOR_COMPRESS into a sequence of extract element, store
   /// temporarily, advance store position, before re-loading the final vector.
   SDValue expandVECTOR_COMPRESS(SDNode *Node, SelectionDAG &DAG) const;
+
+  /// Expand a CTTZ_ELTS or CTTZ_ELTS_ZERO_POISON by calculating (VL - i) for
+  /// each active lane (i), getting the maximum and subtracting it from VL.
+  SDValue expandCttzElts(SDNode *Node, SelectionDAG &DAG) const;
 
   /// Expands PARTIAL_REDUCE_S/UMLA nodes to a series of simpler operations,
   /// consisting of zext/sext, extract_subvector, mul and add operations.

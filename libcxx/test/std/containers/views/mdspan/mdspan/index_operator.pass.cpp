@@ -39,30 +39,6 @@
 #include "../ConvertibleToIntegral.h"
 #include "../CustomTestLayouts.h"
 
-// Apple Clang does not support argument packs as input to operator []
-#ifdef TEST_COMPILER_APPLE_CLANG
-template <class MDS>
-constexpr auto& access(MDS mds) {
-  return mds[];
-}
-template <class MDS>
-constexpr auto& access(MDS mds, int64_t i0) {
-  return mds[i0];
-}
-template <class MDS>
-constexpr auto& access(MDS mds, int64_t i0, int64_t i1) {
-  return mds[i0, i1];
-}
-template <class MDS>
-constexpr auto& access(MDS mds, int64_t i0, int64_t i1, int64_t i2) {
-  return mds[i0, i1, i2];
-}
-template <class MDS>
-constexpr auto& access(MDS mds, int64_t i0, int64_t i1, int64_t i2, int64_t i3) {
-  return mds[i0, i1, i2, i3];
-}
-#endif
-
 template <class MDS, class... Indices>
 concept operator_constraints = requires(MDS m, Indices... idxs) {
   { std::is_same_v<decltype(m[idxs...]), typename MDS::reference> };
@@ -84,11 +60,7 @@ template <class MDS, class... Args>
 constexpr void iterate(MDS mds, Args... args) {
   constexpr int r = static_cast<int>(MDS::extents_type::rank()) - 1 - static_cast<int>(sizeof...(Args));
   if constexpr (-1 == r) {
-#ifdef TEST_COMPILER_APPLE_CLANG
-    int* ptr1 = &access(mds, args...);
-#else
     int* ptr1 = &mds[args...];
-#endif
     int* ptr2 = &(mds.accessor().access(mds.data_handle(), mds.mapping()(args...)));
     assert(ptr1 == ptr2);
 
@@ -123,8 +95,6 @@ constexpr void test_layout() {
   test_iteration(construct_mapping(Layout(), std::extents<unsigned, 7, 8>()));
   test_iteration(construct_mapping(Layout(), std::extents<signed char, D, D, D, D>(1, 1, 1, 1)));
 
-// TODO(LLVM 20): Enable this once AppleClang is upgraded
-#ifndef TEST_COMPILER_APPLE_CLANG
   int data[1];
   // Check operator constraint for number of arguments
   static_assert(check_operator_constraints(std::mdspan(data, construct_mapping(Layout(), std::extents<int, D>(1))), 0));
@@ -217,7 +187,6 @@ constexpr void test_layout() {
       assert(!check_operator_constraints(std::mdspan(data, construct_mapping(Layout(), std::extents<int, D>(1))), s));
     }
   }
-#endif // TEST_COMPILER_APPLE_CLANG
 }
 
 template <class Layout>

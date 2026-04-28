@@ -11,6 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "Context.h"
+#include "ExecutorBase.h"
+#include "Library.h"
 #include "Value.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/InlineAsm.h"
@@ -22,65 +24,6 @@
 namespace llvm::ubi {
 
 using namespace PatternMatch;
-
-enum class FrameState {
-  // It is about to enter the function.
-  // Valid transition:
-  //   -> Running
-  Entry,
-  // It is executing instructions inside the function.
-  // Valid transitions:
-  //   -> Pending (on call)
-  //   -> Exit (on return)
-  Running,
-  // It is about to enter a callee or handle return value from the callee.
-  // Valid transitions:
-  //   -> Running (after returning from callee)
-  Pending,
-  // It is about to return the control to the caller.
-  Exit,
-};
-
-/// Context for a function call.
-/// This struct maintains the state during the execution of a function,
-/// including the control flow, values of executed instructions, and stack
-/// objects.
-struct Frame {
-  Function &Func;
-  Frame *LastFrame;
-  CallBase *CallSite;
-  ArrayRef<AnyValue> Args;
-  AnyValue &RetVal;
-
-  TargetLibraryInfo TLI;
-  BasicBlock *BB;
-  BasicBlock::iterator PC;
-  FrameState State = FrameState::Entry;
-  // Stack objects allocated in this frame. They will be automatically freed
-  // when the function returns.
-  SmallVector<IntrusiveRefCntPtr<MemoryObject>> Allocas;
-  // Values of arguments and executed instructions in this function.
-  DenseMap<Value *, AnyValue> ValueMap;
-
-  // Reserved for in-flight subroutines.
-  Function *ResolvedCallee = nullptr;
-  SmallVector<AnyValue> CalleeArgs;
-  AnyValue CalleeRetVal;
-
-  Frame(Function &F, CallBase *CallSite, Frame *LastFrame,
-        ArrayRef<AnyValue> Args, AnyValue &RetVal,
-        const TargetLibraryInfoImpl &TLIImpl)
-      : Func(F), LastFrame(LastFrame), CallSite(CallSite), Args(Args),
-        RetVal(RetVal), TLI(TLIImpl, &F) {
-    assert((Args.size() == F.arg_size() ||
-            (F.isVarArg() && Args.size() >= F.arg_size())) &&
-           "Expected enough arguments to call the function.");
-    BB = &Func.getEntryBlock();
-    PC = BB->begin();
-    for (Argument &Arg : F.args())
-      ValueMap[&Arg] = Args[Arg.getArgNo()];
-  }
-};
 
 static AnyValue addNoWrap(const APInt &LHS, const APInt &RHS, bool HasNSW,
                           bool HasNUW) {
@@ -121,32 +64,12 @@ static AnyValue mulNoWrap(const APInt &LHS, const APInt &RHS, bool HasNSW,
 /// Instruction executor using the visitor pattern.
 /// Unlike the Context class that manages the global state,
 /// InstExecutor only maintains the state for call frames.
-class InstExecutor : public InstVisitor<InstExecutor, void> {
-  Context &Ctx;
+class InstExecutor : public InstVisitor<InstExecutor, void>,
+                     public ExecutorBase {
   const DataLayout &DL;
-  EventHandler &Handler;
   std::list<Frame> CallStack;
-  // Used to indicate whether the interpreter should continue execution.
-  bool Status;
-  Frame *CurrentFrame = nullptr;
   AnyValue None;
-
-  void reportImmediateUB(StringRef Msg) {
-    // Check if we have already reported an immediate UB.
-    if (!Status)
-      return;
-    Status = false;
-    // TODO: Provide stack trace information.
-    Handler.onImmediateUB(Msg);
-  }
-
-  void reportError(StringRef Msg) {
-    // Check if we have already reported an error message.
-    if (!Status)
-      return;
-    Status = false;
-    Handler.onError(Msg);
-  }
+  Library Lib;
 
   const AnyValue &getValue(Value *V) {
     if (auto *C = dyn_cast<Constant>(V))
@@ -155,8 +78,8 @@ class InstExecutor : public InstVisitor<InstExecutor, void> {
   }
 
   void setResult(Instruction &I, AnyValue V) {
-    if (Status)
-      Status &= Handler.onInstructionExecuted(I, V);
+    if (!hasProgramExited() && !Handler.onInstructionExecuted(I, V))
+      setFailed();
     CurrentFrame->ValueMap.insert_or_assign(&I, std::move(V));
   }
 
@@ -185,6 +108,17 @@ class InstExecutor : public InstVisitor<InstExecutor, void> {
         return AnyValue::poison();
       return ScalarFn(Operand.asInteger());
     });
+  }
+
+  AnyValue
+  visitIntUnOpWithResult(Instruction &I,
+                         function_ref<AnyValue(const APInt &)> ScalarFn) {
+    return computeUnOp(I.getType(), getValue(I.getOperand(0)),
+                       [&](const AnyValue &Operand) -> AnyValue {
+                         if (Operand.isPoison())
+                           return AnyValue::poison();
+                         return ScalarFn(Operand.asInteger());
+                       });
   }
 
   AnyValue computeBinOp(
@@ -219,9 +153,113 @@ class InstExecutor : public InstVisitor<InstExecutor, void> {
     });
   }
 
+  AnyValue visitIntBinOpWithResult(
+      Instruction &I,
+      function_ref<AnyValue(const APInt &, const APInt &)> ScalarFn) {
+    return computeBinOp(
+        I.getType(), getValue(I.getOperand(0)), getValue(I.getOperand(1)),
+        [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
+          if (LHS.isPoison() || RHS.isPoison())
+            return AnyValue::poison();
+          return ScalarFn(LHS.asInteger(), RHS.asInteger());
+        });
+  }
+
+  AnyValue visitOverflowIntBinOpWithResult(
+      CallBase &CB,
+      function_ref<std::pair<APInt, bool>(const APInt &, const APInt &)>
+          ScalarFn) {
+    const AnyValue &LHS = getValue(CB.getOperand(0));
+    const AnyValue &RHS = getValue(CB.getOperand(1));
+    if (!LHS.isAggregate()) {
+      if (LHS.isPoison() || RHS.isPoison())
+        return std::vector{AnyValue::poison(), AnyValue::poison()};
+      auto [Res, Overflow] = ScalarFn(LHS.asInteger(), RHS.asInteger());
+      return std::vector{AnyValue(Res), AnyValue::boolean(Overflow)};
+    }
+
+    auto &LHSVec = LHS.asAggregate();
+    auto &RHSVec = RHS.asAggregate();
+    std::vector<AnyValue> ResVec;
+    std::vector<AnyValue> OverflowVec;
+    ResVec.reserve(LHSVec.size());
+    OverflowVec.reserve(LHSVec.size());
+    for (const auto &[ScalarLHS, ScalarRHS] : zip(LHSVec, RHSVec)) {
+      if (ScalarLHS.isPoison() || ScalarRHS.isPoison()) {
+        ResVec.push_back(AnyValue::poison());
+        OverflowVec.push_back(AnyValue::poison());
+        continue;
+      }
+      auto [Res, Overflow] =
+          ScalarFn(ScalarLHS.asInteger(), ScalarRHS.asInteger());
+      ResVec.push_back(AnyValue(Res));
+      OverflowVec.push_back(AnyValue::boolean(Overflow));
+    }
+    return std::vector{AnyValue(std::move(ResVec)),
+                       AnyValue(std::move(OverflowVec))};
+  }
+
+  AnyValue
+  computeTriOp(Type *Ty, const AnyValue &Op1, const AnyValue &Op2,
+               const AnyValue &Op3,
+               function_ref<AnyValue(const AnyValue &, const AnyValue &,
+                                     const AnyValue &)>
+                   ScalarFn) {
+    if (Ty->isVectorTy()) {
+      auto &Op1Vec = Op1.asAggregate();
+      auto &Op2Vec = Op2.asAggregate();
+      auto &Op3Vec = Op3.asAggregate();
+      std::vector<AnyValue> ResVec;
+      ResVec.reserve(Op1Vec.size());
+      for (const auto &[ScalarOp1, ScalarOp2, ScalarOp3] :
+           zip(Op1Vec, Op2Vec, Op3Vec))
+        ResVec.push_back(ScalarFn(ScalarOp1, ScalarOp2, ScalarOp3));
+      return std::move(ResVec);
+    }
+    return ScalarFn(Op1, Op2, Op3);
+  }
+
+  void visitTriOp(Instruction &I,
+                  function_ref<AnyValue(const AnyValue &, const AnyValue &,
+                                        const AnyValue &)>
+                      ScalarFn) {
+    setResult(I, computeTriOp(I.getType(), getValue(I.getOperand(0)),
+                              getValue(I.getOperand(1)),
+                              getValue(I.getOperand(2)), ScalarFn));
+  }
+
+  void visitIntTriOp(
+      Instruction &I,
+      function_ref<AnyValue(const APInt &, const APInt &, const APInt &)>
+          ScalarFn) {
+    visitTriOp(I,
+               [&](const AnyValue &Op1, const AnyValue &Op2,
+                   const AnyValue &Op3) -> AnyValue {
+                 if (Op1.isPoison() || Op2.isPoison() || Op3.isPoison())
+                   return AnyValue::poison();
+                 return ScalarFn(Op1.asInteger(), Op2.asInteger(),
+                                 Op3.asInteger());
+               });
+  }
+
+  AnyValue visitIntTriOpWithResult(
+      Instruction &I,
+      function_ref<AnyValue(const APInt &, const APInt &, const APInt &)>
+          ScalarFn) {
+    return computeTriOp(
+        I.getType(), getValue(I.getOperand(0)), getValue(I.getOperand(1)),
+        getValue(I.getOperand(2)),
+        [&](const AnyValue &Op1, const AnyValue &Op2,
+            const AnyValue &Op3) -> AnyValue {
+          if (Op1.isPoison() || Op2.isPoison() || Op3.isPoison())
+            return AnyValue::poison();
+          return ScalarFn(Op1.asInteger(), Op2.asInteger(), Op3.asInteger());
+        });
+  }
+
   void jumpTo(Instruction &Terminator, BasicBlock *DestBB) {
     if (!Handler.onBBJump(Terminator, *DestBB)) {
-      Status = false;
+      setFailed();
       return;
     }
     BasicBlock *From = CurrentFrame->BB;
@@ -249,88 +287,6 @@ class InstExecutor : public InstVisitor<InstExecutor, void> {
     if (auto *Asm = dyn_cast<InlineAsm>(V))
       return Asm->getAsmString().empty() && RetTy->isVoidTy();
     return false;
-  }
-
-  /// Check if the upcoming memory access is valid. Returns the offset relative
-  /// to the underlying object if it is valid.
-  std::optional<uint64_t> verifyMemAccess(const MemoryObject &MO,
-                                          const APInt &Address,
-                                          uint64_t AccessSize, Align Alignment,
-                                          bool IsStore) {
-    // Loading from a stack object outside its lifetime is not undefined
-    // behavior and returns a poison value instead. Storing to it is still
-    // undefined behavior.
-    if (IsStore ? MO.getState() != MemoryObjectState::Alive
-                : MO.getState() == MemoryObjectState::Freed) {
-      reportImmediateUB("Try to access a dead memory object.");
-      return std::nullopt;
-    }
-
-    if (Address.countr_zero() < Log2(Alignment)) {
-      reportImmediateUB("Misaligned memory access.");
-      return std::nullopt;
-    }
-
-    if (AccessSize > MO.getSize() || Address.ult(MO.getAddress())) {
-      reportImmediateUB("Memory access is out of bounds.");
-      return std::nullopt;
-    }
-
-    APInt Offset = Address - MO.getAddress();
-
-    if (Offset.ugt(MO.getSize() - AccessSize)) {
-      reportImmediateUB("Memory access is out of bounds.");
-      return std::nullopt;
-    }
-
-    return Offset.getZExtValue();
-  }
-
-  AnyValue load(const AnyValue &Ptr, Align Alignment, Type *ValTy) {
-    if (Ptr.isPoison()) {
-      reportImmediateUB("Invalid memory access with a poison pointer.");
-      return AnyValue::getPoisonValue(Ctx, ValTy);
-    }
-    auto &PtrVal = Ptr.asPointer();
-    auto *MO = PtrVal.getMemoryObject();
-    if (!MO) {
-      reportImmediateUB(
-          "Invalid memory access via a pointer with nullary provenance.");
-      return AnyValue::getPoisonValue(Ctx, ValTy);
-    }
-    // TODO: pointer capability check
-    if (auto Offset =
-            verifyMemAccess(*MO, PtrVal.address(),
-                            Ctx.getEffectiveTypeStoreSize(ValTy), Alignment,
-                            /*IsStore=*/false)) {
-      // Load from a dead stack object yields poison value.
-      if (MO->getState() == MemoryObjectState::Dead)
-        return AnyValue::getPoisonValue(Ctx, ValTy);
-
-      return Ctx.load(*MO, *Offset, ValTy);
-    }
-    return AnyValue::getPoisonValue(Ctx, ValTy);
-  }
-
-  void store(const AnyValue &Ptr, Align Alignment, const AnyValue &Val,
-             Type *ValTy) {
-    if (Ptr.isPoison()) {
-      reportImmediateUB("Invalid memory access with a poison pointer.");
-      return;
-    }
-    auto &PtrVal = Ptr.asPointer();
-    auto *MO = PtrVal.getMemoryObject();
-    if (!MO) {
-      reportImmediateUB(
-          "Invalid memory access via a pointer with nullary provenance.");
-      return;
-    }
-    // TODO: pointer capability check
-    if (auto Offset =
-            verifyMemAccess(*MO, PtrVal.address(),
-                            Ctx.getEffectiveTypeStoreSize(ValTy), Alignment,
-                            /*IsStore=*/true))
-      Ctx.store(*MO, *Offset, Val, ValTy);
   }
 
   AnyValue computePtrAdd(const Pointer &Ptr, const APInt &Offset,
@@ -415,10 +371,19 @@ class InstExecutor : public InstVisitor<InstExecutor, void> {
     return IdxInt.sext(IndexBitWidth);
   }
 
+  // Helper function to convert BooleanKind to bool. Report an immediate UB if
+  // a poison is found.
+  bool getBooleanNonPoison(BooleanKind Boolean) {
+    if (Boolean == BooleanKind::Poison)
+      reportImmediateUB("Unexpected poison boolean value");
+    return Boolean == BooleanKind::True;
+  }
+
 public:
   InstExecutor(Context &C, EventHandler &H, Function &F,
                ArrayRef<AnyValue> Args, AnyValue &RetVal)
-      : Ctx(C), DL(Ctx.getDataLayout()), Handler(H), Status(true) {
+      : ExecutorBase(C, H), DL(Ctx.getDataLayout()),
+        Lib(Ctx, Handler, DL, static_cast<ExecutorBase &>(*this)) {
     CallStack.emplace_back(F, /*CallSite=*/nullptr, /*LastFrame=*/nullptr, Args,
                            RetVal, Ctx.getTLIImpl());
   }
@@ -427,7 +392,8 @@ public:
     if (auto *RV = RI.getReturnValue())
       CurrentFrame->RetVal = getValue(RV);
     CurrentFrame->State = FrameState::Exit;
-    Status &= Handler.onInstructionExecuted(RI, None);
+    if (!Handler.onInstructionExecuted(RI, None))
+      setFailed();
   }
 
   void visitUncondBrInst(UncondBrInst &BI) { jumpTo(BI, BI.getSuccessor()); }
@@ -472,7 +438,7 @@ public:
     }
 
     Handler.onUnrecognizedInstruction(CI);
-    Status = false;
+    setFailed();
   }
 
   void visitIndirectBrInst(IndirectBrInst &IBI) {
@@ -508,11 +474,13 @@ public:
       ++CurrentFrame->PC;
   }
 
-  AnyValue callIntrinsic(CallBase &CB) {
+  AnyValue callIntrinsic(CallBase &CB, ArrayRef<AnyValue> Args) {
     Intrinsic::ID IID = CB.getIntrinsicID();
+    Type *RetTy = CB.getType();
+
     switch (IID) {
     case Intrinsic::assume:
-      switch (getValue(CB.getArgOperand(0)).asBoolean()) {
+      switch (Args[0].asBoolean()) {
       case BooleanKind::True:
         break;
       case BooleanKind::False:
@@ -524,10 +492,10 @@ public:
       return AnyValue();
     case Intrinsic::lifetime_start:
     case Intrinsic::lifetime_end: {
-      auto *Ptr = CB.getArgOperand(0);
-      if (isa<PoisonValue>(Ptr))
+      auto Ptr = Args[0];
+      if (Ptr.isPoison())
         return AnyValue();
-      auto *MO = getValue(Ptr).asPointer().getMemoryObject();
+      auto *MO = Ptr.asPointer().getMemoryObject();
       assert(MO && "Memory object accessed by lifetime intrinsic should be "
                    "always valid.");
       if (IID == Intrinsic::lifetime_start) {
@@ -538,25 +506,210 @@ public:
       }
       return AnyValue();
     }
+    case Intrinsic::ssa_copy:
+    case Intrinsic::expect:
+    case Intrinsic::expect_with_probability:
+      return Args[0];
+    case Intrinsic::donothing:
+      return AnyValue();
+    case Intrinsic::vscale: {
+      const unsigned BitWidth = RetTy->getScalarSizeInBits();
+      const APInt VScale(64, Ctx.getVScale());
+      if (!VScale.isIntN(BitWidth))
+        return AnyValue::poison();
+      return VScale.zextOrTrunc(BitWidth);
+    }
+    case Intrinsic::abs: {
+      const bool IsIntMinPoison = getBooleanNonPoison(Args[1].asBoolean());
+      return visitIntUnOpWithResult(CB, [&](const APInt &Operand) -> AnyValue {
+        if (IsIntMinPoison && Operand.isMinSignedValue())
+          return AnyValue::poison();
+        return Operand.abs();
+      });
+    }
+    case Intrinsic::smax: {
+      return visitIntBinOpWithResult(
+          CB, [](const APInt &LHS, const APInt &RHS) -> AnyValue {
+            return APIntOps::smax(LHS, RHS);
+          });
+    }
+    case Intrinsic::smin: {
+      return visitIntBinOpWithResult(
+          CB, [](const APInt &LHS, const APInt &RHS) -> AnyValue {
+            return APIntOps::smin(LHS, RHS);
+          });
+    }
+    case Intrinsic::umax: {
+      return visitIntBinOpWithResult(
+          CB, [](const APInt &LHS, const APInt &RHS) -> AnyValue {
+            return APIntOps::umax(LHS, RHS);
+          });
+    }
+    case Intrinsic::umin: {
+      return visitIntBinOpWithResult(
+          CB, [](const APInt &LHS, const APInt &RHS) -> AnyValue {
+            return APIntOps::umin(LHS, RHS);
+          });
+    }
+    case Intrinsic::scmp:
+    case Intrinsic::ucmp: {
+      const unsigned BitWidth = RetTy->getScalarSizeInBits();
+      return visitIntBinOpWithResult(
+          CB, [&](const APInt &LHS, const APInt &RHS) -> AnyValue {
+            if (LHS == RHS)
+              return APInt::getZero(BitWidth);
+            if (IID == Intrinsic::scmp)
+              return LHS.slt(RHS) ? APInt::getAllOnes(BitWidth)
+                                  : APInt(BitWidth, 1);
+            return LHS.ult(RHS) ? APInt::getAllOnes(BitWidth)
+                                : APInt(BitWidth, 1);
+          });
+    }
+    case Intrinsic::bitreverse: {
+      return visitIntUnOpWithResult(CB, [](const APInt &Operand) -> AnyValue {
+        return Operand.reverseBits();
+      });
+    }
+    case Intrinsic::bswap: {
+      return visitIntUnOpWithResult(CB, [](const APInt &Operand) -> AnyValue {
+        return Operand.byteSwap();
+      });
+    }
+    case Intrinsic::ctpop: {
+      return visitIntUnOpWithResult(CB, [](const APInt &Operand) -> AnyValue {
+        return APInt(Operand.getBitWidth(), Operand.popcount());
+      });
+    }
+    case Intrinsic::ctlz:
+    case Intrinsic::cttz: {
+      const bool IsZeroPoison = getBooleanNonPoison(Args[1].asBoolean());
+      return visitIntUnOpWithResult(CB, [&](const APInt &Operand) -> AnyValue {
+        if (IsZeroPoison && Operand.isZero())
+          return AnyValue::poison();
+        if (IID == Intrinsic::ctlz)
+          return APInt(Operand.getBitWidth(), Operand.countl_zero());
+        return APInt(Operand.getBitWidth(), Operand.countr_zero());
+      });
+    }
+    case Intrinsic::fshl:
+    case Intrinsic::fshr: {
+      return visitIntTriOpWithResult(
+          CB,
+          [IID](const APInt &Op1, const APInt &Op2,
+                const APInt &Op3) -> AnyValue {
+            const unsigned BitWidth = Op1.getBitWidth();
+            const uint64_t ShiftAmount = Op3.urem(BitWidth);
+            const bool IsFShr = IID == Intrinsic::fshr;
+            if (ShiftAmount == 0)
+              return IsFShr ? Op2 : Op1;
+            const uint64_t LShrAmount =
+                IsFShr ? ShiftAmount : BitWidth - ShiftAmount;
+            const uint64_t ShlAmount =
+                !IsFShr ? ShiftAmount : BitWidth - ShiftAmount;
+            return Op1.shl(ShlAmount) | Op2.lshr(LShrAmount);
+          });
+    }
+    case Intrinsic::clmul: {
+      return visitIntBinOpWithResult(
+          CB, [](const APInt &LHS, const APInt &RHS) -> AnyValue {
+            return APIntOps::clmul(LHS, RHS);
+          });
+    }
+    case Intrinsic::sadd_with_overflow:
+    case Intrinsic::uadd_with_overflow:
+    case Intrinsic::ssub_with_overflow:
+    case Intrinsic::usub_with_overflow:
+    case Intrinsic::smul_with_overflow:
+    case Intrinsic::umul_with_overflow: {
+      return visitOverflowIntBinOpWithResult(
+          CB,
+          [IID](const APInt &LHS, const APInt &RHS) -> std::pair<APInt, bool> {
+            APInt Res;
+            bool Overflow = false;
+            switch (IID) {
+            case Intrinsic::sadd_with_overflow:
+              Res = LHS.sadd_ov(RHS, Overflow);
+              break;
+            case Intrinsic::uadd_with_overflow:
+              Res = LHS.uadd_ov(RHS, Overflow);
+              break;
+            case Intrinsic::ssub_with_overflow:
+              Res = LHS.ssub_ov(RHS, Overflow);
+              break;
+            case Intrinsic::usub_with_overflow:
+              Res = LHS.usub_ov(RHS, Overflow);
+              break;
+            case Intrinsic::smul_with_overflow:
+              Res = LHS.smul_ov(RHS, Overflow);
+              break;
+            case Intrinsic::umul_with_overflow:
+              Res = LHS.umul_ov(RHS, Overflow);
+              break;
+            default:
+              llvm_unreachable("Unexpected intrinsic ID");
+            }
+            return {Res, Overflow};
+          });
+    }
+    case Intrinsic::sadd_sat:
+    case Intrinsic::uadd_sat:
+    case Intrinsic::ssub_sat:
+    case Intrinsic::usub_sat:
+    case Intrinsic::sshl_sat:
+    case Intrinsic::ushl_sat: {
+      return visitIntBinOpWithResult(
+          CB, [IID](const APInt &LHS, const APInt &RHS) -> AnyValue {
+            switch (IID) {
+            case Intrinsic::sadd_sat:
+              return LHS.sadd_sat(RHS);
+            case Intrinsic::uadd_sat:
+              return LHS.uadd_sat(RHS);
+            case Intrinsic::ssub_sat:
+              return LHS.ssub_sat(RHS);
+            case Intrinsic::usub_sat:
+              return LHS.usub_sat(RHS);
+            case Intrinsic::sshl_sat: {
+              if (RHS.uge(LHS.getBitWidth()))
+                return AnyValue::poison();
+              return LHS.sshl_sat(RHS);
+            }
+            case Intrinsic::ushl_sat: {
+              if (RHS.uge(LHS.getBitWidth()))
+                return AnyValue::poison();
+              return LHS.ushl_sat(RHS);
+            }
+            default:
+              llvm_unreachable("Unexpected intrinsic ID");
+            }
+          });
+    }
     default:
       Handler.onUnrecognizedInstruction(CB);
-      Status = false;
+      setFailed();
       return AnyValue();
     }
   }
 
-  AnyValue callLibFunc(CallBase &CB, Function *ResolvedCallee) {
+  AnyValue callLibFunc(CallBase &CB, Function *ResolvedCallee,
+                       ArrayRef<AnyValue> CalleeArgs) {
     LibFunc LF;
     // Respect nobuiltin attributes on call site.
     if (CB.isNoBuiltin() ||
         !CurrentFrame->TLI.getLibFunc(*ResolvedCallee, LF)) {
       Handler.onUnrecognizedInstruction(CB);
-      Status = false;
+      setFailed();
       return AnyValue();
     }
 
+    if (auto LibCallRes =
+            Lib.executeLibcall(LF, CB.getName(), CB.getType(), CalleeArgs))
+      return *LibCallRes;
+
+    if (ExitInfo)
+      return AnyValue();
+
     Handler.onUnrecognizedInstruction(CB);
-    Status = false;
+    setFailed();
     return AnyValue();
   }
 
@@ -581,7 +734,7 @@ public:
 
       if (isa<InlineAsm>(CalledOperand)) {
         Handler.onUnrecognizedInstruction(CB);
-        Status = false;
+        setFailed();
         return;
       }
 
@@ -608,11 +761,11 @@ public:
         "Expected the callee function type to match the call site signature.");
     CurrentFrame->ResolvedCallee = Callee;
     if (Callee->isIntrinsic()) {
-      CurrentFrame->CalleeRetVal = callIntrinsic(CB);
+      CurrentFrame->CalleeRetVal = callIntrinsic(CB, CalleeArgs);
       returnFromCallee();
       return;
     } else if (Callee->isDeclaration()) {
-      CurrentFrame->CalleeRetVal = callLibFunc(CB, Callee);
+      CurrentFrame->CalleeRetVal = callLibFunc(CB, Callee, CalleeArgs);
       returnFromCallee();
       return;
     } else {
@@ -927,7 +1080,8 @@ public:
     auto Obj = Ctx.allocate(AllocSize, AI.getPointerAlignment(DL).value(),
                             AI.getName(), AI.getAddressSpace(),
                             IsInitiallyDead ? MemInitKind::Poisoned
-                                            : MemInitKind::Uninitialized);
+                                            : MemInitKind::Uninitialized,
+                            MemAllocKind::Stack);
     if (!Obj) {
       reportError("Insufficient stack space.");
       return;
@@ -1034,13 +1188,13 @@ public:
     // TODO: track volatile stores
     // TODO: handle metadata
     store(Ptr, SI.getAlign(), Val, SI.getValueOperand()->getType());
-    if (Status)
-      Status &= Handler.onInstructionExecuted(SI, AnyValue());
+    if (!hasProgramExited() && !Handler.onInstructionExecuted(SI, AnyValue()))
+      setFailed();
   }
 
   void visitInstruction(Instruction &I) {
     Handler.onUnrecognizedInstruction(I);
-    Status = false;
+    setFailed();
   }
 
   void visitExtractValueInst(ExtractValueInst &EVI) {
@@ -1127,10 +1281,10 @@ public:
   /// This function implements the main interpreter loop.
   /// It handles function calls in a non-recursive manner to avoid stack
   /// overflows.
-  bool runMainLoop() {
+  ProgramExitInfo runMainLoop() {
     uint32_t MaxSteps = Ctx.getMaxSteps();
     uint32_t Steps = 0;
-    while (Status && !CallStack.empty()) {
+    while (!hasProgramExited() && !CallStack.empty()) {
       Frame &Top = CallStack.back();
       CurrentFrame = &Top;
       if (Top.State == FrameState::Entry) {
@@ -1143,7 +1297,7 @@ public:
 
       Top.State = FrameState::Running;
       // Interpreter loop inside a function
-      while (Status) {
+      while (!hasProgramExited()) {
         assert(Top.State == FrameState::Running &&
                "Expected to be in running state.");
         if (MaxSteps != 0 && Steps >= MaxSteps) {
@@ -1154,7 +1308,7 @@ public:
 
         Instruction &I = *Top.PC;
         visit(&I);
-        if (!Status)
+        if (hasProgramExited())
           break;
 
         // A function call or return has occurred.
@@ -1168,7 +1322,7 @@ public:
           ++Top.PC;
       }
 
-      if (!Status)
+      if (hasProgramExited())
         break;
 
       if (Top.State == FrameState::Exit) {
@@ -1177,19 +1331,21 @@ public:
         Handler.onFunctionExit(Top.Func, Top.RetVal);
         // Free stack objects allocated in this frame.
         for (auto &Obj : Top.Allocas)
-          Ctx.free(Obj->getAddress());
+          Ctx.free(*Obj);
         CallStack.pop_back();
       } else {
         assert(Top.State == FrameState::Pending &&
                "Expected to enter a callee.");
       }
     }
-    return Status;
+    if (!hasProgramExited())
+      requestProgramExit(ProgramExitInfo::ProgramExitKind::Returned);
+    return *getExitInfo();
   }
 };
 
-bool Context::runFunction(Function &F, ArrayRef<AnyValue> Args,
-                          AnyValue &RetVal, EventHandler &Handler) {
+ProgramExitInfo Context::runFunction(Function &F, ArrayRef<AnyValue> Args,
+                                     AnyValue &RetVal, EventHandler &Handler) {
   InstExecutor Executor(*this, Handler, F, Args, RetVal);
   return Executor.runMainLoop();
 }
