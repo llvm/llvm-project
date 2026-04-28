@@ -15,7 +15,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/ELF.h"
-#include "llvm/BinaryFormat/ELFWriter.h"
+#include "llvm/DWP/ELFWriter.h"
 #include "llvm/DWP/DWPError.h"
 #include "llvm/Object/Decompressor.h"
 #include "llvm/Object/ELFObjectFile.h"

@@ -19,7 +19,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/ELF.h"
-#include "llvm/BinaryFormat/ELFWriter.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAssembler.h"
@@ -168,6 +167,13 @@ public:
 
   MCContext &getContext() const { return Asm.getContext(); }
 
+  void writeWord(uint64_t Word) {
+    if (is64Bit())
+      W.write<uint64_t>(Word);
+    else
+      W.write<uint32_t>(Word);
+  }
+
   template <typename T> void write(T Val) {
     W.write(Val);
   }
@@ -277,18 +283,64 @@ bool ELFWriter::is64Bit() const {
 
 // Emit the ELF header.
 void ELFWriter::writeHeader() {
+  // ELF Header
+  // ----------
+  //
+  // Note
+  // ----
+  // emitWord method behaves differently for ELF32 and ELF64, writing
+  // 4 bytes in the former and 8 in the latter.
+
+  W.OS << ELF::ElfMagic; // e_ident[EI_MAG0] to e_ident[EI_MAG3]
+
+  W.OS << char(is64Bit() ? ELF::ELFCLASS64 : ELF::ELFCLASS32); // e_ident[EI_CLASS]
+
+  // e_ident[EI_DATA]
+  W.OS << char(W.Endian == llvm::endianness::little ? ELF::ELFDATA2LSB
+                                                    : ELF::ELFDATA2MSB);
+
+  W.OS << char(ELF::EV_CURRENT);        // e_ident[EI_VERSION]
+  // e_ident[EI_OSABI]
   uint8_t OSABI = OWriter.TargetObjectWriter->getOSABI();
-  if (OSABI == ELF::ELFOSABI_NONE && OWriter.seenGnuAbi())
-    OSABI = ELF::ELFOSABI_GNU;
-  uint8_t ABIVersion = OWriter.OverrideABIVersion
-                           ? *OWriter.OverrideABIVersion
-                           : OWriter.TargetObjectWriter->getABIVersion();
+  W.OS << char(OSABI == ELF::ELFOSABI_NONE && OWriter.seenGnuAbi()
+                   ? int(ELF::ELFOSABI_GNU)
+                   : OSABI);
+  // e_ident[EI_ABIVERSION]
+  W.OS << char(OWriter.OverrideABIVersion
+                   ? *OWriter.OverrideABIVersion
+                   : OWriter.TargetObjectWriter->getABIVersion());
+
+  W.OS.write_zeros(ELF::EI_NIDENT - ELF::EI_PAD);
+
+  W.write<uint16_t>(ELF::ET_REL);             // e_type
+
+  W.write<uint16_t>(OWriter.TargetObjectWriter->getEMachine()); // e_machine = target
+
+  W.write<uint32_t>(ELF::EV_CURRENT);         // e_version
+  writeWord(0); // e_entry, no entry point in .o file
+  writeWord(0); // e_phoff, no program header for .o
+  writeWord(0); // e_shoff = sec hdr table off in bytes
+
+  // e_flags = whatever the target wants
+  W.write<uint32_t>(OWriter.getELFHeaderEFlags());
+
+  // e_ehsize = ELF header size
+  W.write<uint16_t>(is64Bit() ? sizeof(ELF::Elf64_Ehdr)
+                              : sizeof(ELF::Elf32_Ehdr));
+
+  W.write<uint16_t>(0);                  // e_phentsize = prog header entry size
+  W.write<uint16_t>(0);                  // e_phnum = # prog header entries = 0
+
+  // e_shentsize = Section header entry size
+  W.write<uint16_t>(is64Bit() ? sizeof(ELF::Elf64_Shdr)
+                              : sizeof(ELF::Elf32_Shdr));
+
+  // e_shnum     = # of section header ents
+  W.write<uint16_t>(0);
+
+  // e_shstrndx  = Section # of '.strtab'
   assert(StringTableIndex < ELF::SHN_LORESERVE);
-  // SHOff, SHNum are written as 0 here and patched later via pwrite.
-  ELF::writeHeader(W, is64Bit(), OSABI, ABIVersion,
-                   OWriter.TargetObjectWriter->getEMachine(),
-                   OWriter.getELFHeaderEFlags(),
-                   /*SHOff=*/0, /*SHNum=*/0, StringTableIndex);
+  W.write<uint16_t>(StringTableIndex);
 }
 
 uint64_t ELFWriter::symbolValue(const MCSymbol &Sym) {
@@ -719,9 +771,16 @@ void ELFWriter::writeSectionHeaderEntry(uint32_t Name, uint32_t Type,
                                         uint32_t Link, uint32_t Info,
                                         MaybeAlign Alignment,
                                         uint64_t EntrySize) {
-  ELF::writeSectionHeader(W, is64Bit(), Name, Type, Flags, Address, Offset,
-                          Size, Link, Info, Alignment ? Alignment->value() : 0,
-                          EntrySize);
+  W.write<uint32_t>(Name);        // sh_name: index into string table
+  W.write<uint32_t>(Type);        // sh_type
+  writeWord(Flags);               // sh_flags
+  writeWord(Address);             // sh_addr
+  writeWord(Offset);              // sh_offset
+  writeWord(Size);                // sh_size
+  W.write<uint32_t>(Link);        // sh_link
+  W.write<uint32_t>(Info);        // sh_info
+  writeWord(Alignment ? Alignment->value() : 0); // sh_addralign
+  writeWord(EntrySize);                          // sh_entsize
 }
 
 template <bool Is64>

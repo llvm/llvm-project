@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/BinaryFormat/ELFWriter.h"
+#include "llvm/DWP/ELFWriter.h"
 #include "llvm/BinaryFormat/ELF.h"
 
 using namespace llvm;

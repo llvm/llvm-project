@@ -1,4 +1,4 @@
-//===- llvm/BinaryFormat/ELFWriter.h - ELF structure writer -----*- C++ -*-===//
+//===- llvm/DWP/ELFWriter.h - ELF structure writer -----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_BINARYFORMAT_ELFWRITER_H
-#define LLVM_BINARYFORMAT_ELFWRITER_H
+#ifndef LLVM_DWP_ELFWRITER_H
+#define LLVM_DWP_ELFWRITER_H
 
 #include "llvm/Support/EndianStream.h"
 #include <cstdint>
@@ -34,4 +34,4 @@ void writeSectionHeader(support::endian::Writer &W, bool Is64Bit, uint32_t Name,
 } // namespace ELF
 } // namespace llvm
 
-#endif // LLVM_BINARYFORMAT_ELFWRITER_H
+#endif // LLVM_DWP_ELFWRITER_H
