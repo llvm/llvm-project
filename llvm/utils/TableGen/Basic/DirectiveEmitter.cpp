@@ -314,7 +314,7 @@ static void emitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
     std::string EnumHelperFuncs;
     generateClauseEnumVal(DirLang.getClauses(), OS, DirLang, EnumHelperFuncs);
 
-    // Emit constexpr functions
+    // Emit constexpr functions.
     emitDirectivesConstexprImpl(DirLang, OS);
 
     // Generic function signatures
