@@ -848,8 +848,9 @@ static void generateGetDirectiveAssociation(const DirectiveLanguage &DirLang,
       OS << "    return Association::" << GetAssocName(F->second) << ";\n";
     }
   }
+  OS << "  default:\n";
+  OS << "    llvm_unreachable(\"Unexpected directive\");\n";
   OS << "  } // switch (Dir)\n";
-  OS << "  llvm_unreachable(\"Unexpected directive\");\n";
   OS << "}\n";
 }
 
@@ -866,8 +867,9 @@ static void generateGetDirectiveCategory(const DirectiveLanguage &DirLang,
     OS << "    return Category::" << D.getCategory()->getValueAsString("name")
        << ";\n";
   }
+  OS << "  default:\n";
+  OS << "    llvm_unreachable(\"Unexpected directive\");\n";
   OS << "  } // switch (Dir)\n";
-  OS << "  llvm_unreachable(\"Unexpected directive\");\n";
   OS << "}\n";
 }
 
@@ -891,8 +893,9 @@ static void generateGetDirectiveLanguages(const DirectiveLanguage &DirLang,
         " | ");
     OS << ";\n";
   }
+  OS << "  default:\n";
+  OS << "    llvm_unreachable(\"Unexpected directive\");\n";
   OS << "  } // switch(D)\n";
-  OS << "  llvm_unreachable(\"Unexpected directive\");\n";
   OS << "}\n";
 }
 
