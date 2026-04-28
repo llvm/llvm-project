@@ -12,8 +12,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/ScalableStaticAnalysisFramework/Analyses/EntityPointerLevel/EntityPointerLevelFormat.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/ASTEntityMapping.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityName.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryBuilder.h"
 #include <optional>
 
 using namespace clang;
@@ -51,8 +50,23 @@ class EntityPointerLevelTranslator
                          E->getStmtClassName());
   }
 
-  EntityPointerLevel createEntityPointerLevelFor(const EntityName &Name) {
-    return EntityPointerLevel({AddEntity(Name), 1});
+  Expected<EntityPointerLevel>
+  createEntityPointerLevelFor(const NamedDecl *ND) {
+    std::optional<EntityId> Id = Builder.addEntity(ND);
+    if (!Id)
+      return makeErrAtNode(Ctx, ND, "failed to create EntityId for %s",
+                           ND->getDeclKindName());
+    return EntityPointerLevel{buildEntityPointerLevel(*Id, 1)};
+  }
+
+  Expected<EntityPointerLevel>
+  createEntityPointerLevelForReturn(const FunctionDecl *FD) {
+    std::optional<EntityId> Id = Builder.addEntityForReturn(FD);
+    if (!Id) {
+      return makeErrAtNode(Ctx, FD, "failed to create EntityId for function %s",
+                           cast<NamedDecl>(FD)->getNameAsString().c_str());
+    }
+    return EntityPointerLevel{buildEntityPointerLevel(*Id, 1)};
   }
 
   // The common helper function for Translate(*base):
@@ -68,28 +82,25 @@ class EntityPointerLevelTranslator
     return EntityPointerLevelSet{Incremented.begin(), Incremented.end()};
   }
 
-  std::function<EntityId(EntityName EN)> AddEntity;
+  TUSummaryBuilder &Builder;
   ASTContext &Ctx;
 
 public:
-  EntityPointerLevelTranslator(std::function<EntityId(EntityName EN)> AddEntity,
-                               ASTContext &Ctx)
-      : AddEntity(AddEntity), Ctx(Ctx) {}
+  EntityPointerLevelTranslator(TUSummaryBuilder &Builder, ASTContext &Ctx)
+      : Builder(Builder), Ctx(Ctx) {}
 
   Expected<EntityPointerLevelSet> translate(const Expr *E) { return Visit(E); }
   Expected<EntityPointerLevel> translate(const NamedDecl *D, bool IsRet) {
-    if (IsRet && !isa<FunctionDecl>(D))
-      return makeErrAtNode(
-          Ctx, D,
-          "attempt to call getEntityNameForReturn on a NamedDecl of %s kind",
-          D->getDeclKindName());
+    if (!IsRet)
+      return createEntityPointerLevelFor(D);
 
-    std::optional<EntityName> EN =
-        IsRet ? getEntityNameForReturn(cast<FunctionDecl>(D))
-              : getEntityName(D);
-    if (EN)
-      return createEntityPointerLevelFor(*EN);
-    return makeEntityNameErr(Ctx, D);
+    if (const auto *FD = dyn_cast<FunctionDecl>(D))
+      return createEntityPointerLevelForReturn(FD);
+
+    return makeErrAtNode(
+        Ctx, D,
+        "attempt to call getEntityNameForReturn on a NamedDecl of %s kind",
+        D->getDeclKindName());
   }
 
   static EntityPointerLevel incrementPointerLevel(const EntityPointerLevel &E) {
@@ -167,10 +178,10 @@ private:
   // Translate(f(...)) -> {} if it is an indirect call
   //                   -> {(f_return, 1)}, otherwise
   Expected<EntityPointerLevelSet> VisitCallExpr(const CallExpr *E) {
-    if (auto *FD = E->getDirectCallee())
-      if (auto FDEntityName = getEntityNameForReturn(FD))
-        return EntityPointerLevelSet{
-            createEntityPointerLevelFor(*FDEntityName)};
+    if (auto *FD = E->getDirectCallee()) {
+      if (auto ReturnId = Builder.addEntityForReturn(FD))
+        return EntityPointerLevelSet{buildEntityPointerLevel(*ReturnId, 1)};
+    }
     return EntityPointerLevelSet{};
   }
 
@@ -210,16 +221,18 @@ private:
 
   // Translate(DRE) -> {(Decl, 1)}
   Expected<EntityPointerLevelSet> VisitDeclRefExpr(const DeclRefExpr *E) {
-    if (auto EntityName = getEntityName(E->getDecl()))
-      return EntityPointerLevelSet{createEntityPointerLevelFor(*EntityName)};
-    return makeEntityNameErr(Ctx, E->getDecl());
+    auto Res = createEntityPointerLevelFor(E->getDecl());
+    if (!Res)
+      return Res.takeError();
+    return EntityPointerLevelSet{*Res};
   }
 
   // Translate({., ->}f) -> {(MemberDecl, 1)}
   Expected<EntityPointerLevelSet> VisitMemberExpr(const MemberExpr *E) {
-    if (auto EntityName = getEntityName(E->getMemberDecl()))
-      return EntityPointerLevelSet{createEntityPointerLevelFor(*EntityName)};
-    return makeEntityNameErr(Ctx, E->getMemberDecl());
+    auto Res = createEntityPointerLevelFor(E->getMemberDecl());
+    if (!Res)
+      return Res.takeError();
+    return EntityPointerLevelSet{*Res};
   }
 
   Expected<EntityPointerLevelSet>
@@ -229,19 +242,18 @@ private:
 };
 } // namespace clang::ssaf
 
-Expected<EntityPointerLevelSet> clang::ssaf::translateEntityPointerLevel(
-    const Expr *E, ASTContext &Ctx,
-    llvm::function_ref<EntityId(EntityName EN)> AddEntity) {
-  EntityPointerLevelTranslator Translator(AddEntity, Ctx);
+Expected<EntityPointerLevelSet>
+clang::ssaf::translateEntityPointerLevel(const Expr *E, ASTContext &Ctx,
+                                         TUSummaryBuilder &Builder) {
+  EntityPointerLevelTranslator Translator(Builder, Ctx);
 
   return Translator.translate(E);
 }
 
 /// Create an EntityPointerLevel from a ValueDecl of a pointer type.
 Expected<EntityPointerLevel> clang::ssaf::createEntityPointerLevel(
-    const NamedDecl *ND, llvm::function_ref<EntityId(EntityName EN)> AddEntity,
-    bool IsFunRet) {
-  EntityPointerLevelTranslator Translator(AddEntity, ND->getASTContext());
+    const NamedDecl *ND, TUSummaryBuilder &Builder, bool IsFunRet) {
+  EntityPointerLevelTranslator Translator(Builder, ND->getASTContext());
 
   return Translator.translate(ND, IsFunRet);
 }

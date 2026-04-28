@@ -7,14 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryBuilder.h"
+#include "FindDecl.h"
 #include "TestFixture.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/BuildNamespace.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityId.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityLinkage.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityName.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/SummaryName.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/Serialization/SerializationFormat.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/EntitySummary.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummary.h"
+#include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -31,11 +33,6 @@ using llvm::SmallVector;
 using testing::Field;
 using testing::Optional;
 using testing::UnorderedElementsAre;
-
-[[nodiscard]]
-static EntityId addTestEntity(TUSummaryBuilder &Builder, llvm::StringRef USR) {
-  return Builder.addEntity(EntityName(USR, /*Suffix=*/"", /*Namespace=*/{}));
-}
 
 struct SummaryResult {
   EntitySummary *Summary;
@@ -95,6 +92,11 @@ struct TUSummaryBuilderTest : ssaf::TestFixture {
       BuildNamespace(BuildNamespaceKind::CompilationUnit, "Mock.cpp")};
   TUSummaryBuilder Builder = TUSummaryBuilder(this->Summary);
 
+  [[nodiscard]] EntityId addTestEntity(llvm::StringRef USR) {
+    return getIdTable(Summary).getId(
+        EntityName(USR, /*Suffix=*/"", /*Namespace=*/{}));
+  }
+
   [[nodiscard]] static SmallVector<SummaryName>
   summaryNames(const TUSummary &Summary) {
     return llvm::to_vector(llvm::make_first_range(getData(Summary)));
@@ -128,22 +130,23 @@ TEST_F(TUSummaryBuilderTest, AddEntity) {
   EntityName EN1("c:@F@foo", "", /*Namespace=*/{});
   EntityName EN2("c:@F@bar", "", /*Namespace=*/{});
 
-  EntityId ID = Builder.addEntity(EN1);
-  EntityId IDAlias = Builder.addEntity(EN1);
+  EntityIdTable &IdTable = getIdTable(Summary);
+
+  EntityId ID = IdTable.getId(EN1);
+  EntityId IDAlias = IdTable.getId(EN1);
   EXPECT_EQ(ID, IDAlias); // Idenpotency
 
-  EntityId ID2 = Builder.addEntity(EN2);
+  EntityId ID2 = IdTable.getId(EN2);
   EXPECT_NE(ID, ID2);
   EXPECT_NE(IDAlias, ID2);
 
-  const EntityIdTable &IdTable = getIdTable(Summary);
   EXPECT_EQ(IdTable.count(), 2U);
   EXPECT_TRUE(IdTable.contains(EN1));
   EXPECT_TRUE(IdTable.contains(EN2));
 }
 
 TEST_F(TUSummaryBuilderTest, TUSummaryBuilderAddSingleSummary) {
-  EntityId ID = addTestEntity(Builder, "c:@F@foo");
+  EntityId ID = addTestEntity("c:@F@foo");
   auto [Name, Res] = addSummaryTo(Builder, ID, MockSummaryData1(10));
   ASSERT_TRUE(Res.Inserted);
   ASSERT_TRUE(Res.Summary);
@@ -157,7 +160,7 @@ TEST_F(TUSummaryBuilderTest, TUSummaryBuilderAddSingleSummary) {
 }
 
 TEST_F(TUSummaryBuilderTest, AddMultipleSummariesToSameEntity) {
-  EntityId ID = addTestEntity(Builder, "c:@F@foo");
+  EntityId ID = addTestEntity("c:@F@foo");
 
   // Add different summary types to the same entity.
   auto [Name1, Res1] = addSummaryTo(Builder, ID, MockSummaryData1(42));
@@ -188,9 +191,9 @@ TEST_F(TUSummaryBuilderTest, AddMultipleSummariesToSameEntity) {
 }
 
 TEST_F(TUSummaryBuilderTest, AddSameSummaryTypeToMultipleEntities) {
-  EntityId ID1 = addTestEntity(Builder, "c:@F@foo");
-  EntityId ID2 = addTestEntity(Builder, "c:@F@bar");
-  EntityId ID3 = addTestEntity(Builder, "c:@F@baz");
+  EntityId ID1 = addTestEntity("c:@F@foo");
+  EntityId ID2 = addTestEntity("c:@F@bar");
+  EntityId ID3 = addTestEntity("c:@F@baz");
 
   // Add the same summary type to different entities.
   auto [Name1, Res1] = addSummaryTo(Builder, ID1, MockSummaryData1(1));
@@ -220,7 +223,7 @@ TEST_F(TUSummaryBuilderTest, AddSameSummaryTypeToMultipleEntities) {
 }
 
 TEST_F(TUSummaryBuilderTest, AddConflictingSummaryToSameEntity) {
-  EntityId ID = addTestEntity(Builder, "c:@F@foo");
+  EntityId ID = addTestEntity("c:@F@foo");
 
   auto [Name, Res] = addSummaryTo(Builder, ID, MockSummaryData1(10));
   ASSERT_TRUE(Res.Inserted);
@@ -264,6 +267,51 @@ TEST_F(TUSummaryBuilderTest, AddConflictingSummaryToSameEntity) {
   EXPECT_THAT(entitiesOfSummary(Summary, Name), UnorderedElementsAre(ID));
   EXPECT_THAT(getAsEntitySummary<MockSummaryData1>(Summary, Name, ID),
               Optional(Field(&MockSummaryData1::Value, 30)));
+}
+
+struct TUSummaryBuilderLinkageTest : TUSummaryBuilderTest {
+  std::unique_ptr<ASTUnit> AST;
+
+  const FunctionDecl *findFnByName(StringRef Name) {
+    return ssaf::findFnByName(Name, AST->getASTContext());
+  }
+
+  std::optional<EntityLinkageType> getLinkageFor(std::optional<EntityId> ID) {
+    if (!ID)
+      return std::nullopt;
+    if (auto It = getLinkageTable(Summary).find(*ID);
+        It != getLinkageTable(Summary).end())
+      return It->second.getLinkage();
+    return std::nullopt;
+  }
+};
+
+TEST_F(TUSummaryBuilderLinkageTest, HasInternalLinkage) {
+  AST = tooling::buildASTFromCode("static void target() {}");
+  const FunctionDecl *Fn = findFnByName("target");
+  ASSERT_TRUE(Fn);
+  EXPECT_EQ(getLinkageFor(Builder.addEntity(Fn)), EntityLinkageType::Internal);
+}
+
+TEST_F(TUSummaryBuilderLinkageTest, HasExternalLinkage) {
+  AST = tooling::buildASTFromCode("void target() {}");
+  const FunctionDecl *Fn = findFnByName("target");
+  ASSERT_TRUE(Fn);
+  EXPECT_EQ(getLinkageFor(Builder.addEntity(Fn)), EntityLinkageType::External);
+}
+
+TEST_F(TUSummaryBuilderLinkageTest, HasExternalLinkageWithInline) {
+  AST = tooling::buildASTFromCode("inline void target() {}");
+  const FunctionDecl *Fn = findFnByName("target");
+  ASSERT_TRUE(Fn);
+  EXPECT_EQ(getLinkageFor(Builder.addEntity(Fn)), EntityLinkageType::External);
+}
+
+TEST_F(TUSummaryBuilderLinkageTest, HasInternalLinkageWithStaticInline) {
+  AST = tooling::buildASTFromCode("static inline void target() {}");
+  const FunctionDecl *Fn = findFnByName("target");
+  ASSERT_TRUE(Fn);
+  EXPECT_EQ(getLinkageFor(Builder.addEntity(Fn)), EntityLinkageType::Internal);
 }
 
 } // namespace
