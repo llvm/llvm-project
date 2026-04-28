@@ -1,8 +1,8 @@
-// Verify vec_malloc and vec_calloc interceptors on AIX.
+// Verify vec_malloc and vec_calloc interceptors
 
 // RUN: %clangxx_asan -O0 %s -o %t
-// RUN: not %run %t vec_malloc  2>&1 | FileCheck %s --check-prefix=CHECK-MALLOC
-// RUN: not %run %t vec_calloc  2>&1 | FileCheck %s --check-prefix=CHECK-CALLOC
+// RUN: not %run %t vec_malloc 2>&1 | FileCheck %s --check-prefix=CHECK-MALLOC
+// RUN: not %run %t vec_calloc 2>&1 | FileCheck %s --check-prefix=CHECK-CALLOC
 
 #include <stdlib.h>
 #include <string.h>
