@@ -629,6 +629,7 @@ public:
         if (!this->Ctx->emitDestructionPop(Local.Desc, Local.Desc->getLoc()))
           return false;
 
+        this->Ctx->fallthrough(EndLabel);
         this->Ctx->emitLabel(EndLabel);
       } else {
         if (!this->Ctx->emitGetPtrLocal(Local.Offset, E))
