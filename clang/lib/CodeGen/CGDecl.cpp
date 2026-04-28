@@ -1453,7 +1453,8 @@ static uint64_t maxFakeUseAggregateSize(const ASTContext &C) {
 // Helper function to determine whether a variable's or parameter's lifetime
 // should be extended.
 bool CodeGenFunction::shouldExtendLifetime(const ASTContext &Context,
-                                           const Decl *FuncDecl, const VarDecl &D,
+                                           const Decl *FuncDecl,
+                                           const VarDecl &D,
                                            ImplicitParamDecl *CXXABIThisDecl) {
   // When we're not inside a valid function it is unlikely that any
   // lifetime extension is useful.

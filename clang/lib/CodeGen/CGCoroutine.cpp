@@ -971,7 +971,8 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
       // an argument before we free the coroutine frame.
       if (CGM.getCodeGenOpts().getExtendVariableLiveness() ==
           CodeGenOptions::ExtendVariableLivenessKind::All) {
-        if (shouldExtendLifetime(getContext(), CurCodeDecl, *Parm, CXXABIThisDecl))
+        if (shouldExtendLifetime(getContext(), CurCodeDecl, *Parm,
+                                 CXXABIThisDecl))
           EHStack.pushCleanup<FakeUse>(NormalFakeUse, ParmAddr);
       }
     }
