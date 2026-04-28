@@ -1389,6 +1389,11 @@ private:
   vector::UnrollVectorOptions options;
 };
 
+// Unroll vector::BitCastOp into smaller tile-based bitcast operations.
+// Tiles the result vector into target shape chunks and bitcasts corresponding
+// source slices, accounting for element bitwidth ratios.
+// Example: bitcast v8f32 to v16f16 with target shape [4] unrolls into
+// multiple bitcast operations on 4-element tiles.
 struct UnrollBitCastPattern : public OpRewritePattern<vector::BitCastOp> {
   UnrollBitCastPattern(MLIRContext *context,
                        const vector::UnrollVectorOptions &options,
@@ -1407,29 +1412,20 @@ struct UnrollBitCastPattern : public OpRewritePattern<vector::BitCastOp> {
     ArrayRef<int64_t> resultShape = resultType.getShape();
     Location loc = bitCastOp.getLoc();
 
-    // Bail out if target shape rank doesn't match result rank
     if (targetShape->size() != resultShape.size())
       return rewriter.notifyMatchFailure(
           bitCastOp, "target shape rank must match result rank");
 
-    // BitCast changes element type, which may change the trailing dimension.
-    // For the source, deduce the tile shape from the result tile shape.
-    // The relationship: if result trailing dim is R and source is S,
-    // then resultBitWidth / R = sourceBitWidth / S (same bits per element).
-
     unsigned sourceElementBits = sourceType.getElementTypeBitWidth();
     unsigned resultElementBits = resultType.getElementTypeBitWidth();
 
-    // Deduce source tile shape: same as target except the trailing dimension
     SmallVector<int64_t> sourceTileShape(targetShape->begin(),
                                          targetShape->end());
     int64_t lastDim = sourceTileShape.size() - 1;
 
-    // Scale the trailing dimension by the bitwidth ratio
     sourceTileShape[lastDim] =
         ((*targetShape)[lastDim] * resultElementBits) / sourceElementBits;
 
-    // Prepare the result vector
     Value result = arith::ConstantOp::create(rewriter, loc, resultType,
                                              rewriter.getZeroAttr(resultType));
     SmallVector<int64_t> resultStrides(targetShape->size(), 1);
@@ -1438,10 +1434,8 @@ struct UnrollBitCastPattern : public OpRewritePattern<vector::BitCastOp> {
     VectorType targetType =
         VectorType::get(*targetShape, resultType.getElementType());
 
-    // Unroll the bitcast
     for (SmallVector<int64_t> resultOffsets :
          StaticTileOffsetRange(resultShape, *targetShape)) {
-      // Compute corresponding source offsets
       SmallVector<int64_t> sourceOffsets = resultOffsets;
       sourceOffsets[lastDim] =
           (resultOffsets[lastDim] * resultElementBits) / sourceElementBits;
@@ -1463,6 +1457,18 @@ private:
   vector::UnrollVectorOptions options;
 };
 
+/// Pattern to unroll vector.interleave into smaller tile-sized operations.
+/// Decomposes a large interleave into tiles by extracting slices from both
+/// input vectors, interleaving them, and inserting back into the result.
+///
+/// Example:
+///   vector.interleave %lhs, %rhs : vector<8xf32>
+///   // Unrolled with target shape [4]:
+///   %slice_lhs_0 = vector.extract_strided_slice %lhs[0] : vector<2xf32>
+///   %slice_rhs_0 = vector.extract_strided_slice %rhs[0] : vector<2xf32>
+///   %tile_0 = vector.interleave %slice_lhs_0, %slice_rhs_0 : vector<4xf32>
+///   %result = vector.insert_strided_slice %tile_0, %init[0]
+///   // ... repeat for remaining tiles
 struct UnrollInterleavePattern : public OpRewritePattern<vector::InterleaveOp> {
   UnrollInterleavePattern(MLIRContext *context,
                           const vector::UnrollVectorOptions &options,
@@ -1480,19 +1486,15 @@ struct UnrollInterleavePattern : public OpRewritePattern<vector::InterleaveOp> {
     ArrayRef<int64_t> resultShape = resultType.getShape();
     Location loc = interleaveOp.getLoc();
 
-    // Bail out if target shape rank doesn't match result rank
     if (targetShape->size() != resultShape.size())
       return rewriter.notifyMatchFailure(
           interleaveOp, "target shape rank must match result rank");
 
-    // Interleave doubles the trailing dimension: [N] -> [2*N]
-    // For source tile shape, halve the trailing dimension of target shape
     SmallVector<int64_t> sourceTileShape(targetShape->begin(),
                                          targetShape->end());
     int64_t lastDim = sourceTileShape.size() - 1;
     sourceTileShape[lastDim] = (*targetShape)[lastDim] / 2;
 
-    // Prepare the result vector
     Value result = arith::ConstantOp::create(rewriter, loc, resultType,
                                              rewriter.getZeroAttr(resultType));
     SmallVector<int64_t> resultStrides(targetShape->size(), 1);
@@ -1501,10 +1503,8 @@ struct UnrollInterleavePattern : public OpRewritePattern<vector::InterleaveOp> {
     VectorType targetType =
         VectorType::get(*targetShape, resultType.getElementType());
 
-    // Unroll the interleave
     for (SmallVector<int64_t> resultOffsets :
          StaticTileOffsetRange(resultShape, *targetShape)) {
-      // Compute corresponding source offsets
       SmallVector<int64_t> sourceOffsets = resultOffsets;
       sourceOffsets[lastDim] = resultOffsets[lastDim] / 2;
 
@@ -1528,6 +1528,21 @@ private:
   vector::UnrollVectorOptions options;
 };
 
+/// Pattern to unroll vector.deinterleave into smaller tile-sized operations.
+/// Decomposes a large deinterleave (which splits a vector into even/odd halves)
+/// by extracting source slices, deinterleaving them, and inserting into two
+/// result vectors.
+///
+/// Example:
+///   %res1, %res2 = vector.deinterleave %src : vector<8xf32>
+///   // Result: %res1 = [src[0], src[2], src[4], src[6]]
+///   //         %res2 = [src[1], src[3], src[5], src[7]]
+///   // Unrolled with target shape [2]:
+///   %slice_0 = vector.extract_strided_slice %src[0] : vector<4xf32>
+///   %tile1_0, %tile2_0 = vector.deinterleave %slice_0 : vector<2xf32>
+///   %result1 = vector.insert_strided_slice %tile1_0, %init1[0]
+///   %result2 = vector.insert_strided_slice %tile2_0, %init2[0]
+///   // ... repeat for remaining tiles
 struct UnrollDeinterleavePattern
     : public OpRewritePattern<vector::DeinterleaveOp> {
   UnrollDeinterleavePattern(MLIRContext *context,
@@ -1538,7 +1553,6 @@ struct UnrollDeinterleavePattern
 
   LogicalResult matchAndRewrite(vector::DeinterleaveOp deinterleaveOp,
                                 PatternRewriter &rewriter) const override {
-    // Get target shape based on the result type (res1)
     auto targetShape = getTargetShape(options, deinterleaveOp);
     if (!targetShape)
       return failure();
@@ -1547,19 +1561,15 @@ struct UnrollDeinterleavePattern
     ArrayRef<int64_t> resultShape = resultType.getShape();
     Location loc = deinterleaveOp.getLoc();
 
-    // Bail out if target shape rank doesn't match result rank
     if (targetShape->size() != resultShape.size())
       return rewriter.notifyMatchFailure(
           deinterleaveOp, "target shape rank must match result rank");
 
-    // Deinterleave halves the trailing dimension: [2*N] -> [N]
-    // For source tile shape, double the trailing dimension of target shape
     SmallVector<int64_t> sourceTileShape(targetShape->begin(),
                                          targetShape->end());
     int64_t lastDim = sourceTileShape.size() - 1;
     sourceTileShape[lastDim] = (*targetShape)[lastDim] * 2;
 
-    // Prepare the result vectors
     Value result1 = arith::ConstantOp::create(rewriter, loc, resultType,
                                               rewriter.getZeroAttr(resultType));
     Value result2 = arith::ConstantOp::create(rewriter, loc, resultType,
@@ -1567,10 +1577,8 @@ struct UnrollDeinterleavePattern
     SmallVector<int64_t> resultStrides(targetShape->size(), 1);
     SmallVector<int64_t> sourceStrides(sourceTileShape.size(), 1);
 
-    // Unroll the deinterleave
     for (SmallVector<int64_t> resultOffsets :
          StaticTileOffsetRange(resultShape, *targetShape)) {
-      // Compute corresponding source offsets
       SmallVector<int64_t> sourceOffsets = resultOffsets;
       sourceOffsets[lastDim] = resultOffsets[lastDim] * 2;
 
