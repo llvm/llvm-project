@@ -50,59 +50,6 @@ constexpr Chipset kGfx942 = Chipset(9, 4, 2);
 constexpr Chipset kGfx950 = Chipset(9, 5, 0);
 constexpr Chipset kGfx1250 = Chipset(12, 5, 0);
 
-// Predicates mirroring the LLVM AMDGPU `HasDot{N}Insts` features that gate
-// the `v_dot*` instructions consumed by the `amdgpu.dot` lowering.
-static bool hasDot1Insts(const Chipset &chipset) {
-  if (chipset.majorVersion == 9)
-    return chipset >= Chipset(9, 0, 6);
-  if (chipset.majorVersion == 10) {
-    if (chipset.minorVersion == 1)
-      return chipset.steppingVersion == 1u || chipset.steppingVersion == 2u;
-    return chipset.minorVersion >= 3u;
-  }
-  return false;
-}
-
-static bool hasDot2Insts(const Chipset &chipset) {
-  return hasDot1Insts(chipset);
-}
-
-static bool hasDot7Insts(const Chipset &chipset) {
-  return chipset.majorVersion >= 11 || hasDot1Insts(chipset);
-}
-
-static bool hasDot8Insts(const Chipset &chipset) {
-  return chipset.majorVersion >= 11;
-}
-
-static bool hasDot9Insts(const Chipset &chipset) {
-  if (chipset.majorVersion == 11)
-    return true;
-  return chipset.majorVersion == 12 && chipset.minorVersion == 0;
-}
-
-static bool hasDot10Insts(const Chipset &chipset) {
-  if (chipset.majorVersion == 11)
-    return true;
-  if (chipset.majorVersion == 12)
-    return chipset.minorVersion == 0;
-  return hasDot1Insts(chipset);
-}
-
-static bool hasDot11Insts(const Chipset &chipset) {
-  if (chipset.majorVersion == 11)
-    return chipset.minorVersion == 7u;
-  return chipset.majorVersion == 12 && chipset.minorVersion == 0;
-}
-
-static bool hasDot12Insts(const Chipset &chipset) {
-  if (chipset == Chipset(9, 5, 0))
-    return true;
-  if (chipset.majorVersion == 11)
-    return true;
-  return chipset.majorVersion == 12 && chipset.minorVersion == 0;
-}
-
 /// Convert an unsigned number `val` to i32.
 static Value convertUnsignedToI32(ConversionPatternRewriter &rewriter,
                                   Location loc, Value val) {

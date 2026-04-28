@@ -763,48 +763,131 @@ LogicalResult SparseWMMAOp::verify() {
 //===----------------------------------------------------------------------===//
 // DotOp
 //===----------------------------------------------------------------------===//
-LogicalResult DotOp::verify() {
-  Type aElem = cast<VectorType>(getSourceA().getType()).getElementType();
-  Type bElem = cast<VectorType>(getSourceB().getType()).getElementType();
-  Type dest = getDestC().getType();
 
+namespace {
+enum class DotTypeCompatibilityFailure {
+  SourceTypes,
+  SourceElementTypes,
+  F16Accumulator,
+  BF16Accumulator,
+  IntegerAccumulator,
+  FP8Accumulator,
+  UnsignedAttrs,
+  MixedSignI16,
+  Clamp,
+};
+} // namespace
+
+static bool isSupportedDotSourceType(VectorType sourceType) {
+  if (sourceType.getRank() != 1 || sourceType.isScalable())
+    return false;
+
+  int64_t numElements = sourceType.getNumElements();
+  Type elementType = sourceType.getElementType();
+  auto integerType = dyn_cast<IntegerType>(elementType);
+  if (numElements == 2)
+    return elementType.isF16() || elementType.isBF16() ||
+           (integerType && integerType.isSignless() &&
+            integerType.getWidth() == 16);
+  if (numElements == 4)
+    return (integerType && integerType.isSignless() &&
+            integerType.getWidth() == 8) ||
+           isa<Float8E4M3FNType, Float8E5M2Type>(elementType);
+  if (numElements == 8)
+    return integerType && integerType.isSignless() &&
+           integerType.getWidth() == 4;
+  return false;
+}
+
+static std::optional<DotTypeCompatibilityFailure>
+getDotTypeCompatibilityFailure(VectorType sourceAType, VectorType sourceBType,
+                               Type dest, bool unsignedA, bool unsignedB,
+                               bool clamp) {
+  if (!isSupportedDotSourceType(sourceAType) ||
+      !isSupportedDotSourceType(sourceBType))
+    return DotTypeCompatibilityFailure::SourceTypes;
+
+  Type aElem = sourceAType.getElementType();
+  Type bElem = sourceBType.getElementType();
   bool aIsFloat8 = aElem.isFloat(8);
   bool bIsFloat8 = bElem.isFloat(8);
   bool aIsInteger = isa<IntegerType>(aElem);
 
   bool bothFloat8 = aIsFloat8 && bIsFloat8;
   if (!bothFloat8 && aElem != bElem)
-    return emitOpError(
-        "expected source operands to have the same element type");
+    return DotTypeCompatibilityFailure::SourceElementTypes;
 
   if (aElem.isF16()) {
     if (!dest.isF32() && !dest.isF16())
-      return emitOpError("expected f32 or f16 accumulator for f16 sources");
+      return DotTypeCompatibilityFailure::F16Accumulator;
   } else if (aElem.isBF16()) {
     if (!dest.isF32() && !dest.isBF16())
-      return emitOpError("expected f32 or bf16 accumulator for bf16 sources");
+      return DotTypeCompatibilityFailure::BF16Accumulator;
   } else if (aIsInteger) {
-    if (!dest.isInteger(32))
-      return emitOpError("expected i32 accumulator for integer sources");
+    auto destIntegerType = dyn_cast<IntegerType>(dest);
+    if (!destIntegerType || !destIntegerType.isSignless() ||
+        destIntegerType.getWidth() != 32)
+      return DotTypeCompatibilityFailure::IntegerAccumulator;
   } else if (aIsFloat8) {
     if (!dest.isF32())
-      return emitOpError("expected f32 accumulator for fp8 sources");
+      return DotTypeCompatibilityFailure::FP8Accumulator;
   }
 
-  if ((getUnsignedA() || getUnsignedB()) && !aIsInteger)
-    return emitOpError(
-        "unsignedA/unsignedB are only valid for integer source types");
+  if ((unsignedA || unsignedB) && !aIsInteger)
+    return DotTypeCompatibilityFailure::UnsignedAttrs;
 
-  if (aElem.isInteger(16) && getUnsignedA() != getUnsignedB())
-    return emitOpError(
-        "mixed-sign dot is not supported for 16-bit integer sources");
+  if (aElem.isInteger(16) && unsignedA != unsignedB)
+    return DotTypeCompatibilityFailure::MixedSignI16;
 
-  if (getClamp()) {
+  if (clamp) {
     bool noClamp = (aElem.isF16() && dest.isF16()) ||
                    (aElem.isBF16() && dest.isBF16()) || aIsFloat8;
     if (noClamp)
-      return emitOpError(
-          "clamp is not supported for this (source, accumulator) combination");
+      return DotTypeCompatibilityFailure::Clamp;
+  }
+
+  return std::nullopt;
+}
+
+bool DotOp::isCompatibleTypeCombination(VectorType sourceAType,
+                                        VectorType sourceBType, Type destType,
+                                        bool unsignedA, bool unsignedB,
+                                        bool clamp) {
+  return !getDotTypeCompatibilityFailure(sourceAType, sourceBType, destType,
+                                         unsignedA, unsignedB, clamp);
+}
+
+LogicalResult DotOp::verify() {
+  auto maybeFailure = getDotTypeCompatibilityFailure(
+      cast<VectorType>(getSourceA().getType()),
+      cast<VectorType>(getSourceB().getType()), getDestC().getType(),
+      getUnsignedA(), getUnsignedB(), getClamp());
+  if (!maybeFailure)
+    return success();
+
+  switch (*maybeFailure) {
+  case DotTypeCompatibilityFailure::SourceTypes:
+    return emitOpError("expected supported dot source vector types");
+  case DotTypeCompatibilityFailure::SourceElementTypes:
+    return emitOpError(
+        "expected source operands to have the same element type");
+  case DotTypeCompatibilityFailure::F16Accumulator:
+    return emitOpError("expected f32 or f16 accumulator for f16 sources");
+  case DotTypeCompatibilityFailure::BF16Accumulator:
+    return emitOpError("expected f32 or bf16 accumulator for bf16 sources");
+  case DotTypeCompatibilityFailure::IntegerAccumulator:
+    return emitOpError("expected i32 accumulator for integer sources");
+  case DotTypeCompatibilityFailure::FP8Accumulator:
+    return emitOpError("expected f32 accumulator for fp8 sources");
+  case DotTypeCompatibilityFailure::UnsignedAttrs:
+    return emitOpError(
+        "unsignedA/unsignedB are only valid for integer source types");
+  case DotTypeCompatibilityFailure::MixedSignI16:
+    return emitOpError(
+        "mixed-sign dot is not supported for 16-bit integer sources");
+  case DotTypeCompatibilityFailure::Clamp:
+    return emitOpError(
+        "clamp is not supported for this (source, accumulator) combination");
   }
 
   return success();
