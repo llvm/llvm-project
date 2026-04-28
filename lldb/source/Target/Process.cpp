@@ -1711,12 +1711,11 @@ llvm::Error Process::FlushDelayedBreakpoints() {
   auto site_to_action = std::move(m_delayed_breakpoints.m_site_to_action);
   m_delayed_breakpoints.m_site_to_action.clear();
 
-  auto error = UpdateBreakpointSites(site_to_action);
-  return error;
+  return UpdateBreakpointSites(site_to_action);
 }
 
 llvm::Error Process::UpdateBreakpointSites(
-    const std::map<lldb::BreakpointSiteSP, BreakpointAction> &site_to_action) {
+    const BreakpointSiteToActionMap &site_to_action) {
   llvm::Error error = llvm::Error::success();
   for (auto [site, action] : site_to_action) {
     Status new_error = action == BreakpointAction::Enable

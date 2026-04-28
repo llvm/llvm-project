@@ -2260,8 +2260,19 @@ protected:
         "error: {0} does not support disabling breakpoints", GetPluginName());
   }
 
-  virtual llvm::Error UpdateBreakpointSites(
-      const std::map<lldb::BreakpointSiteSP, BreakpointAction> &site_to_action);
+  /// Compare BreakpointSiteSPs by ID, so that iteration order is independent
+  /// of pointer addresses.
+  struct SiteIDCmp {
+    bool operator()(const lldb::BreakpointSiteSP lhs,
+                    const lldb::BreakpointSiteSP &rhs) const {
+      return lhs->GetID() < rhs->GetID();
+    }
+  };
+  using BreakpointSiteToActionMap =
+      std::map<lldb::BreakpointSiteSP, BreakpointAction, SiteIDCmp>;
+
+  virtual llvm::Error
+  UpdateBreakpointSites(const BreakpointSiteToActionMap &site_to_action);
 
 public:
   Status ExecuteBreakpointSiteAction(BreakpointSite &site,
@@ -3562,16 +3573,7 @@ protected:
     }
     void Clear() { m_site_to_action.clear(); }
 
-    /// Compare BreakpointSiteSPs by ID, so that iteration order is independent
-    /// of pointer addresses.
-    struct SiteIDCmp {
-      bool operator()(const lldb::BreakpointSiteSP lhs,
-                      const lldb::BreakpointSiteSP &rhs) const {
-        return lhs->GetID() < rhs->GetID();
-      }
-    };
-    std::map<lldb::BreakpointSiteSP, BreakpointAction, SiteIDCmp>
-        m_site_to_action;
+    BreakpointSiteToActionMap m_site_to_action;
   };
 
   DelayedBreakpointCache m_delayed_breakpoints;
