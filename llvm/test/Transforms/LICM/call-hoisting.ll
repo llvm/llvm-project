@@ -396,8 +396,10 @@ exit:
   ret void
 }
 
-define void @neg_ref(ptr %loc) {
-; CHECK-LABEL: define void @neg_ref(
+;; The store can be hoisted because the its value is loop-invariant.
+;; Does not depend on values modified inside the loop.
+define void @ref(ptr %loc) {
+; CHECK-LABEL: define void @ref(
 ; CHECK-SAME: ptr [[LOC:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    call void @store(i32 0, ptr [[LOC]])

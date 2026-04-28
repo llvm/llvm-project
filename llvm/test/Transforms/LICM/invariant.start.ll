@@ -106,12 +106,12 @@ loop:
 define void @test5(i1 %cond, ptr %ptr) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i32 0, ptr [[PTR:%.*]], align 4
-; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[PTR]], align 4
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[X:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[X_INC:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    store i32 [[X]], ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    [[SCOPE:%.*]] = call ptr @llvm.invariant.start.p0(i64 4, ptr [[PTR]])
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[PTR]], align 4
 ; CHECK-NEXT:    call void @llvm.invariant.end.p0(ptr [[SCOPE]], i64 4, ptr [[PTR]])
 ; CHECK-NEXT:    [[X_INC]] = add i32 [[X]], [[VAL]]
 ; CHECK-NEXT:    br label [[LOOP]]
@@ -121,7 +121,7 @@ entry:
 
 loop:
   %x = phi i32 [ 0, %entry ], [ %x.inc, %loop ]
-  store i32 0, ptr %ptr
+  store i32 %x, ptr %ptr
   %scope = call ptr @llvm.invariant.start.p0(i64 4, ptr %ptr)
   %val = load i32, ptr %ptr
   call void @llvm.invariant.end.p0(ptr %scope, i64 4, ptr %ptr)

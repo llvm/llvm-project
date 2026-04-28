@@ -4,15 +4,15 @@
 ;; It should hoist fn_write_inaccessible_mem
 ;; because there is no conflict between inaccessible memory
 ;; fn_read_inaccessible_mem is a nice side effect
-define i32 @loop_alias(i64 %x) {
+define i32 @loop_alias(i64 %x, ptr %start) {
 ; CHECK-LABEL: define i32 @loop_alias(
-; CHECK-SAME: i64 [[X:%.*]]) {
+; CHECK-SAME: i64 [[X:%.*]], ptr [[START:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    call void @fn_write_inaccessible_mem()
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ null, %[[ENTRY]] ], [ [[GEP:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[PHI]], align 16
+; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ [[START]], %[[ENTRY]] ], [ [[GEP:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[PHI]]
 ; CHECK-NEXT:    [[VAL:%.*]] = call i32 @fn_args(i32 [[LOAD]])
 ; CHECK-NEXT:    call void @fn_read_inaccessible_mem(i32 [[LOAD]])
 ; CHECK-NEXT:    [[GEP]] = getelementptr inbounds nuw i32, ptr [[PHI]], i64 [[X]]
@@ -26,9 +26,9 @@ define i32 @loop_alias(i64 %x) {
 entry:
   br label %loop
 loop:
-  %phi = phi ptr [ null, %entry ], [ %gep, %loop ]
-  %load = load i32, ptr %phi, align 16
-  %val = call i32 @fn_args(i32  %load)
+  %phi = phi ptr [ %start, %entry ], [ %gep, %loop ]
+  %load = load i32, ptr %phi
+  %val = call i32 @fn_args(i32 %load)
   call void @fn_write_inaccessible_mem()
   call void @fn_read_inaccessible_mem(i32 %load)
   %gep = getelementptr inbounds nuw i32, ptr %phi, i64 %x
@@ -40,16 +40,16 @@ after_loop:
 }
 
 ;; It should NOT hoist fn_write_inaccessible_mem
-;; Because fn_args_2 reads same memory location
-define i32 @ne_loop_alias(i64 %x) {
+;; Because fn_read_inaccessible_mem_2 reads the same inaccessible memory
+define i32 @ne_loop_alias(i64 %x, ptr %start) {
 ; CHECK-LABEL: define i32 @ne_loop_alias(
-; CHECK-SAME: i64 [[X:%.*]]) {
+; CHECK-SAME: i64 [[X:%.*]], ptr [[START:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ null, %[[ENTRY]] ], [ [[GEP:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[PHI]], align 16
-; CHECK-NEXT:    [[VAL:%.*]] = call i32 @fn_args_2(i32 [[LOAD]])
+; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ [[START]], %[[ENTRY]] ], [ [[GEP:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[PHI]]
+; CHECK-NEXT:    [[VAL:%.*]] = call i32 @fn_read_inaccessible_mem_2(i32 [[LOAD]])
 ; CHECK-NEXT:    call void @fn_write_inaccessible_mem()
 ; CHECK-NEXT:    call void @fn_read_inaccessible_mem(i32 [[VAL]])
 ; CHECK-NEXT:    [[GEP]] = getelementptr inbounds nuw i32, ptr [[PHI]], i64 [[X]]
@@ -63,9 +63,9 @@ define i32 @ne_loop_alias(i64 %x) {
 entry:
   br label %loop
 loop:
-  %phi = phi ptr [ null, %entry ], [ %gep, %loop ]
-  %load = load i32, ptr %phi, align 16
-  %val = call i32 @fn_args_2(i32  %load)
+  %phi = phi ptr [ %start, %entry ], [ %gep, %loop ]
+  %load = load i32, ptr %phi
+  %val = call i32 @fn_read_inaccessible_mem_2(i32 %load)
   call void @fn_write_inaccessible_mem()
   call void @fn_read_inaccessible_mem(i32 %val)
   %gep = getelementptr inbounds nuw i32, ptr %phi, i64 %x
@@ -157,7 +157,7 @@ loop:
 }
 
 declare i32 @fn_args(i32) nounwind willreturn memory(argmem: read)
-declare i32 @fn_args_2(i32) nounwind willreturn memory(inaccessiblemem: read)
+declare i32 @fn_read_inaccessible_mem_2(i32) nounwind willreturn memory(inaccessiblemem: read)
 declare void @fn_write_inaccessible_mem() nounwind memory(inaccessiblemem: write)
 declare void @fn_read_inaccessible_mem(i32) nounwind memory(inaccessiblemem: read)
 declare void @fn_readwrite_inaccessible_mem() nounwind memory(inaccessiblemem: readwrite)
