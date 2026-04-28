@@ -1273,10 +1273,12 @@ TEST(MetadataTest, InlinedAtMethodsWithMultipleLevels) {
     !2 = !{i32 2, !"Debug Info Version", i32 3}
 
     ; Subprograms for each function in the call chain
-    !10 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 100, unit: !0)
-    !11 = distinct !DISubprogram(name: "inline1", scope: !1, file: !1, line: 200, unit: !0)
-    !12 = distinct !DISubprogram(name: "inline2", scope: !1, file: !1, line: 300, unit: !0)
-    !13 = distinct !DISubprogram(name: "inline3", scope: !1, file: !1, line: 400, unit: !0)
+    !10 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 100, type: !14, unit: !0)
+    !11 = distinct !DISubprogram(name: "inline1", scope: !1, file: !1, line: 200, type: !14, unit: !0)
+    !12 = distinct !DISubprogram(name: "inline2", scope: !1, file: !1, line: 300, type: !14, unit: !0)
+    !13 = distinct !DISubprogram(name: "inline3", scope: !1, file: !1, line: 400, type: !14, unit: !0)
+    !14 = !DISubroutineType(types: !15)
+    !15 = !{null}
 
     ; Location in inline3 (line 401), inlined at location !21
     !20 = !DILocation(line: 401, column: 5, scope: !13, inlinedAt: !21)

@@ -44,11 +44,13 @@ define i32 @instruction_loc(i32 %arg1) {
 !0 = !{i32 2, !"Debug Info Version", i32 3}
 !1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
 !2 = !DIFile(filename: "debug-info.ll", directory: "/")
-!3 = distinct !DISubprogram(name: "instruction_loc", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1)
-!4 = distinct !DISubprogram(name: "callee", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1)
+!3 = distinct !DISubprogram(name: "instruction_loc", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1, type: !999)
+!4 = distinct !DISubprogram(name: "callee", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1, type: !999)
 !5 = !DILocation(line: 1, column: 2, scope: !3)
 !6 = !DILocation(line: 2, column: 2, scope: !3)
 !7 = !DILocation(line: 7, column: 4, scope: !4, inlinedAt: !6)
+!999 = !DISubroutineType(types: !1000)
+!1000 = !{null}
 
 ; // -----
 
@@ -74,11 +76,13 @@ define i32 @lexical_block(i32 %arg1) {
 !0 = !{i32 2, !"Debug Info Version", i32 3}
 !1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
 !2 = !DIFile(filename: "debug-info.ll", directory: "/")
-!3 = distinct !DISubprogram(name: "lexical_block", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1)
+!3 = distinct !DISubprogram(name: "lexical_block", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1, type: !999)
 !4 = !DILexicalBlock(scope: !3)
 !5 = !DILexicalBlock(scope: !3, file: !2, line: 2, column: 2)
 !6 = !DILocation(line: 1, column: 2, scope: !4)
 !7 = !DILocation(line: 2, column: 2, scope: !5)
+!999 = !DISubroutineType(types: !1000)
+!1000 = !{null}
 
 ; // -----
 
@@ -104,11 +108,13 @@ define i32 @lexical_block_file(i32 %arg1) {
 !0 = !{i32 2, !"Debug Info Version", i32 3}
 !1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
 !2 = !DIFile(filename: "debug-info.ll", directory: "/")
-!3 = distinct !DISubprogram(name: "lexical_block_file", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1)
+!3 = distinct !DISubprogram(name: "lexical_block_file", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1, type: !999)
 !4 = !DILexicalBlockFile(scope: !3, discriminator: 0)
 !5 = !DILexicalBlockFile(scope: !3, file: !2, discriminator: 0)
 !6 = !DILocation(line: 1, column: 2, scope: !4)
 !7 = !DILocation(line: 2, column: 2, scope: !5)
+!999 = !DISubroutineType(types: !1000)
+!1000 = !{null}
 
 ; // -----
 
@@ -214,7 +220,6 @@ define void @composite_type() !dbg !3 {
 !28 = !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 32, DW_OP_deref)
 !29 = !{!25}
 
-
 ; // -----
 
 ; CHECK-DAG: #[[FILE:.+]] = #llvm.di_file<"debug-info.ll" in "/">
@@ -244,7 +249,7 @@ define void @func_loc() !dbg !3 {
   ret void
 }
 ; CHECK-DAG: #[[FILE_LOC:.+]] = loc("debug-info.ll":42:0)
-; CHECK-DAG: #[[SP:.+]] =  #llvm.di_subprogram<id = distinct[{{.*}}]<>, compileUnit = #{{.*}}, scope = #{{.*}}, name = "func_loc", file = #{{.*}}, line = 42, subprogramFlags = Definition>
+; CHECK-DAG: #[[SP:.+]] =  #llvm.di_subprogram<id = distinct[{{.*}}]<>, compileUnit = #{{.*}}, scope = #{{.*}}, name = "func_loc", file = #{{.*}}, line = 42, subprogramFlags = Definition, type = #{{.*}}>
 
 ; CHECK: loc(fused<#[[SP]]>[#[[FILE_LOC]]]
 
@@ -253,7 +258,9 @@ define void @func_loc() !dbg !3 {
 !0 = !{i32 2, !"Debug Info Version", i32 3}
 !1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
 !2 = !DIFile(filename: "debug-info.ll", directory: "/")
-!3 = distinct !DISubprogram(name: "func_loc", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1, line: 42)
+!3 = distinct !DISubprogram(name: "func_loc", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1, line: 42, type: !999)
+!999 = !DISubroutineType(types: !1000)
+!1000 = !{null}
 
 ; // -----
 
@@ -267,28 +274,28 @@ source_filename = "debug-info.ll"
 ;       preserving measures needed to import LLVM IR.
 
 ; CHECK: #[[FILE:.+]] = #llvm.di_file<
-; CHECK: #[[$SP:.+]] = #llvm.di_subprogram<
-; CHECK: #[[$LABEL:.+]] = #llvm.di_label<scope = #[[$SP]], name = "label", file = #[[FILE]], line = 42>
-; CHECK: #[[$VAR1:.+]] = #llvm.di_local_variable<scope = #[[$SP]], name = "arg">
-; CHECK: #[[$VAR0:.+]] = #llvm.di_local_variable<scope = #[[$SP]], name = "arg", file = #[[FILE]], line = 1, arg = 1, alignInBits = 32, type = #{{.*}}>
+; CHECK: #[[SP:.+]] = #llvm.di_subprogram<
+; CHECK: #[[LABEL:.+]] = #llvm.di_label<scope = #[[SP]], name = "label", file = #[[FILE]], line = 42>
+; CHECK: #[[VAR1:.+]] = #llvm.di_local_variable<scope = #[[SP]], name = "arg">
+; CHECK: #[[VAR0:.+]] = #llvm.di_local_variable<scope = #[[SP]], name = "arg", file = #[[FILE]], line = 1, arg = 1, alignInBits = 32, type = #{{.*}}>
 
 ; CHECK-LABEL: @intrinsic
 ; CHECK-SAME:  %[[ARG0:[a-zA-Z0-9]+]]
 ; CHECK-SAME:  %[[ARG1:[a-zA-Z0-9]+]]
 define void @intrinsic(i64 %0, ptr %1) {
-  ; CHECK: llvm.intr.dbg.declare #[[$VAR1]] = %[[ARG1]] : !llvm.ptr loc(#[[LOC1:.+]])
-  ; CHECK: llvm.intr.dbg.value #[[$VAR0]] #llvm.di_expression<[DW_OP_deref, DW_OP_constu(3), DW_OP_plus, DW_OP_LLVM_convert(4, DW_ATE_signed)]> = %[[ARG0]] : i64 loc(#[[LOC0:.+]])
-  ; CHECK: llvm.intr.dbg.value #[[$VAR0]] #llvm.di_expression<[DW_OP_deref, DW_OP_constu(3), DW_OP_plus, DW_OP_LLVM_fragment(3, 7)]> = %[[ARG0]] : i64 loc(#[[LOC0:.+]])
+  ; CHECK: llvm.intr.dbg.declare #di_local_variable{{[0-9]*}} = %[[ARG1]] : !llvm.ptr loc(#[[LOC1:.+]])
+  ; CHECK: llvm.intr.dbg.value #di_local_variable{{[0-9]*}} #llvm.di_expression<[DW_OP_deref, DW_OP_constu(3), DW_OP_plus, DW_OP_LLVM_convert(4, DW_ATE_signed)]> = %[[ARG0]] : i64 loc(#[[LOC0:.+]])
+  ; CHECK: llvm.intr.dbg.value #di_local_variable{{[0-9]*}} #llvm.di_expression<[DW_OP_deref, DW_OP_constu(3), DW_OP_plus, DW_OP_LLVM_fragment(3, 7)]> = %[[ARG0]] : i64 loc(#[[LOC0:.+]])
   call void @llvm.dbg.value(metadata i64 %0, metadata !5, metadata !DIExpression(DW_OP_deref, DW_OP_constu, 3, DW_OP_plus, DW_OP_LLVM_fragment, 3, 7)), !dbg !7
   call void @llvm.dbg.value(metadata i64 %0, metadata !5, metadata !DIExpression(DW_OP_deref, DW_OP_constu, 3, DW_OP_plus, DW_OP_LLVM_convert, 4, DW_ATE_signed)), !dbg !7
   call void @llvm.dbg.declare(metadata ptr %1, metadata !6, metadata !DIExpression()), !dbg !9
-  ; CHECK: llvm.intr.dbg.label #[[$LABEL]] loc(#[[LOC1:.+]])
+  ; CHECK: llvm.intr.dbg.label #di_label{{[0-9]*}} loc(#[[LOC1:.+]])
   call void @llvm.dbg.label(metadata !10), !dbg !9
   ret void
 }
 
-; CHECK: #[[LOC1]] = loc(fused<#[[$SP]]>[{{.*}}])
-; CHECK: #[[LOC0]] = loc(fused<#[[$SP]]>[{{.*}}])
+; CHECK: #[[LOC1]] = loc(fused<#di_subprogram>[{{.*}}])
+; CHECK: #[[LOC0]] = loc(fused<#di_subprogram>[{{.*}}])
 
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
@@ -299,7 +306,7 @@ declare void @llvm.dbg.label(metadata)
 !0 = !{i32 2, !"Debug Info Version", i32 3}
 !1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
 !2 = !DIFile(filename: "debug-info.ll", directory: "/")
-!3 = distinct !DISubprogram(name: "intrinsic", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1)
+!3 = distinct !DISubprogram(name: "intrinsic", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1, type: !999)
 !4 = !DIBasicType(name: "int")
 !5 = !DILocalVariable(scope: !3, name: "arg", file: !2, line: 1, arg: 1, align: 32, type: !4);
 !6 = !DILocalVariable(scope: !3, name: "arg")
@@ -307,6 +314,8 @@ declare void @llvm.dbg.label(metadata)
 !8 = !DILocation(line: 2, column: 2, scope: !3)
 !9 = !DILocation(line: 3, column: 2, scope: !3)
 !10 = !DILabel(scope: !3, name: "label", file: !2, line: 42)
+!999 = !DISubroutineType(types: !1000)
+!1000 = !{null}
 
 ; // -----
 
@@ -367,8 +376,10 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !5 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !3, flags: DIFlagArtificial | DIFlagObjectPointer)
 !6 = !DIDerivedType(tag: DW_TAG_member, name: "call_field", file: !2, baseType: !5)
 !7 = !DILocalVariable(scope: !8, name: "class_field", file: !2, type: !5);
-!8 = distinct !DISubprogram(name: "class_field", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1)
+!8 = distinct !DISubprogram(name: "class_field", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1, type: !999)
 !9 = !DILocation(line: 1, column: 2, scope: !8)
+!999 = !DISubroutineType(types: !1000)
+!1000 = !{null}
 
 ; // -----
 
@@ -408,8 +419,10 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !5 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !3, flags: DIFlagArtificial | DIFlagObjectPointer)
 !6 = !DIDerivedType(tag: DW_TAG_member, name: "call_field", file: !2, baseType: !5)
 !7 = !DILocalVariable(scope: !8, name: "var", file: !2, type: !5);
-!8 = distinct !DISubprogram(name: "dbg_use_before_def", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1)
+!8 = distinct !DISubprogram(name: "dbg_use_before_def", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1, type: !999)
 !9 = !DILocation(line: 1, column: 2, scope: !8)
+!999 = !DISubroutineType(types: !1000)
+!1000 = !{null}
 
 ; // -----
 
@@ -442,8 +455,10 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !5 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !3, flags: DIFlagArtificial | DIFlagObjectPointer)
 !6 = !DIDerivedType(tag: DW_TAG_member, name: "call_field", file: !2, baseType: !5)
 !7 = !DILocalVariable(scope: !8, name: "var", file: !2, type: !5);
-!8 = distinct !DISubprogram(name: "dbg_use_before_def", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1)
+!8 = distinct !DISubprogram(name: "dbg_use_before_def", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1, type: !999)
 !9 = !DILocation(line: 1, column: 2, scope: !8)
+!999 = !DISubroutineType(types: !1000)
+!1000 = !{null}
 
 ; // -----
 
@@ -472,8 +487,10 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
 !2 = !DIFile(filename: "debug-info.ll", directory: "/")
 !7 = !DILocalVariable(scope: !8, name: "var", file: !2);
-!8 = distinct !DISubprogram(name: "dbg_broken_dominance_invoke", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1)
+!8 = distinct !DISubprogram(name: "dbg_broken_dominance_invoke", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1, type: !999)
 !9 = !DILocation(line: 1, column: 2, scope: !8)
+!999 = !DISubroutineType(types: !1000)
+!1000 = !{null}
 
 ; // -----
 
@@ -503,8 +520,10 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
 !2 = !DIFile(filename: "debug-info.ll", directory: "/")
 !7 = !DILocalVariable(scope: !8, name: "var", file: !2);
-!8 = distinct !DISubprogram(name: "dbg_broken_dominance_invoke", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1)
+!8 = distinct !DISubprogram(name: "dbg_broken_dominance_invoke", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1, type: !999)
 !9 = !DILocation(line: 1, column: 2, scope: !8)
+!999 = !DISubroutineType(types: !1000)
+!1000 = !{null}
 
 ; // -----
 
@@ -524,9 +543,11 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
 !2 = !DIFile(filename: "debug-info.ll", directory: "/")
 !7 = !DILocalVariable(scope: !8, name: "var")
-!8 = distinct !DISubprogram(name: "namespace", scope: !10, file: !2, unit: !1);
+!8 = distinct !DISubprogram(name: "namespace", scope: !10, file: !2, unit: !1, type: !999);
 !9 = !DILocation(line: 1, column: 2, scope: !8)
 !10 = !DINamespace(name: "std", scope: null)
+!999 = !DISubroutineType(types: !1000)
+!1000 = !{null}
 
 ; // -----
 
@@ -546,12 +567,14 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
 !2 = !DIFile(filename: "debug-info.ll", directory: "/")
 !7 = !DILocalVariable(scope: !8)
-!8 = distinct !DISubprogram(name: "noname_variable", scope: !2, file: !2, unit: !1);
+!8 = distinct !DISubprogram(name: "noname_variable", scope: !2, file: !2, unit: !1, type: !999);
 !9 = !DILocation(line: 1, column: 2, scope: !8)
+!999 = !DISubroutineType(types: !1000)
+!1000 = !{null}
 
 ; // -----
 
-; CHECK: #[[SUBPROGRAM:.*]] = #llvm.di_subprogram<id = distinct[{{.*}}]<>, compileUnit = #{{.*}}, scope = #{{.*}}, file = #{{.*}}, subprogramFlags = Definition>
+; CHECK: #[[SUBPROGRAM:.*]] = #llvm.di_subprogram<id = distinct[{{.*}}]<>, compileUnit = #{{.*}}, scope = #{{.*}}, file = #{{.*}}, subprogramFlags = Definition, type = #{{.*}}>
 ; CHECK: #[[FUNC_LOC:.*]] = loc(fused<#[[SUBPROGRAM]]>[{{.*}}])
 define void @noname_subprogram(ptr %arg) !dbg !8 {
   ret void
@@ -562,7 +585,9 @@ define void @noname_subprogram(ptr %arg) !dbg !8 {
 !0 = !{i32 2, !"Debug Info Version", i32 3}
 !1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
 !2 = !DIFile(filename: "debug-info.ll", directory: "/")
-!8 = distinct !DISubprogram(scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1);
+!8 = distinct !DISubprogram(scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1, type: !999);
+!999 = !DISubroutineType(types: !1000)
+!1000 = !{null}
 
 ; // -----
 
@@ -582,8 +607,10 @@ define void @func_in_module(ptr %arg) !dbg !8 {
 !0 = !{i32 2, !"Debug Info Version", i32 3}
 !1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
 !2 = !DIFile(filename: "debug-info.ll", directory: "/")
-!8 = distinct !DISubprogram(name: "func_in_module", scope: !10, file: !2, unit: !1);
+!8 = distinct !DISubprogram(name: "func_in_module", scope: !10, file: !2, unit: !1, type: !999);
 !10 = !DIModule(scope: !2, name: "module", configMacros: "bar", includePath: "/", apinotes: "/", file: !2, line: 42, isDecl: true)
+!999 = !DISubroutineType(types: !1000)
+!1000 = !{null}
 
 ; // -----
 
@@ -606,9 +633,11 @@ define void @distinct_cu_func1() !dbg !5 {
 !1 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !2, producer: "clang")
 !2 = !DIFile(filename: "other.cpp", directory: "/")
 !3 = !{i32 2, !"Debug Info Version", i32 3}
-!4 = distinct !DISubprogram(name: "func", linkageName: "func", scope: !6, file: !6, line: 1, scopeLine: 1, flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: !0)
-!5 = distinct !DISubprogram(name: "func", linkageName: "func", scope: !6, file: !6, line: 1, scopeLine: 1, flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: !1)
+!4 = distinct !DISubprogram(name: "func", linkageName: "func", scope: !6, file: !6, line: 1, scopeLine: 1, flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: !0, type: !999)
+!5 = distinct !DISubprogram(name: "func", linkageName: "func", scope: !6, file: !6, line: 1, scopeLine: 1, flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: !1, type: !999)
 !6 = !DIFile(filename: "file.hpp", directory: "/")
+!999 = !DISubroutineType(types: !1000)
+!1000 = !{null}
 
 ; // -----
 
@@ -622,8 +651,10 @@ declare !dbg !1 void @declaration()
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 2, !"Debug Info Version", i32 3}
-!1 = !DISubprogram(name: "declaration", scope: !2, file: !2, flags: DIFlagPrototyped, spFlags: 0)
+!1 = !DISubprogram(name: "declaration", scope: !2, file: !2, flags: DIFlagPrototyped, spFlags: 0, type: !999)
 !2 = !DIFile(filename: "debug-info.ll", directory: "/")
+!999 = !DISubroutineType(types: !1000)
+!1000 = !{null}
 
 ; // -----
 
@@ -668,7 +699,9 @@ define void @class_field(ptr %arg1) !dbg !18 {
 !8 = !DIDerivedType(tag: DW_TAG_member, name: "B:B2", file: !2, baseType: !5)
 !9 = !{!7, !8}
 
-!18 = distinct !DISubprogram(name: "A", scope: !3, file: !2, spFlags: DISPFlagDefinition, unit: !1)
+!18 = distinct !DISubprogram(name: "A", scope: !3, file: !2, spFlags: DISPFlagDefinition, unit: !1, type: !999)
+!999 = !DISubroutineType(types: !1000)
+!1000 = !{null}
 
 ; // -----
 
@@ -713,7 +746,9 @@ define void @class_field(ptr %arg1) !dbg !18 {
 !9 = !{!7}
 !10 = !{!8}
 
-!18 = distinct !DISubprogram(name: "SP", scope: !3, file: !2, spFlags: DISPFlagDefinition, unit: !1)
+!18 = distinct !DISubprogram(name: "SP", scope: !3, file: !2, spFlags: DISPFlagDefinition, unit: !1, type: !999)
+!999 = !DISubroutineType(types: !1000)
+!1000 = !{null}
 
 ; // -----
 
@@ -764,7 +799,9 @@ define void @class_field(ptr %arg1) !dbg !18 {
 !10 = !{!8} ; B -> C
 !11 = !{!6, !7, !8} ; C -> A, B, C
 
-!18 = distinct !DISubprogram(name: "SP", scope: !3, file: !2, spFlags: DISPFlagDefinition, unit: !1)
+!18 = distinct !DISubprogram(name: "SP", scope: !3, file: !2, spFlags: DISPFlagDefinition, unit: !1, type: !999)
+!999 = !DISubroutineType(types: !1000)
+!1000 = !{null}
 
 ; // -----
 
@@ -885,7 +922,7 @@ define void @test() !dbg !3 {
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "alpha", scope: !2, file: !4, type: !9)
 !2 = !DICommonBlock(scope: !3, declaration: null, name: "block", file: !4, line: 3)
-!3 = distinct !DISubprogram(name: "test", scope: !4, file: !4, spFlags: DISPFlagDefinition, unit: !7)
+!3 = distinct !DISubprogram(name: "test", scope: !4, file: !4, spFlags: DISPFlagDefinition, unit: !7, type: !999)
 !4 = !DIFile(filename: "test.f90", directory: "")
 !7 = distinct !DICompileUnit(language: DW_LANG_Fortran95, file: !4)
 !9 = !DIBasicType(name: "integer", size: 32, encoding: DW_ATE_signed)
@@ -894,6 +931,8 @@ define void @test() !dbg !3 {
 ; CHECK: #[[FILE:.+]] = #llvm.di_file<"test.f90" in "">
 ; CHECK: #[[SP:.+]] = #llvm.di_subprogram<{{.*}}name = "test"{{.*}}>
 ; CHECK: #llvm.di_common_block<scope = #[[SP]], name = "block", file = #[[FILE]], line = 3>
+!999 = !DISubroutineType(types: !1000)
+!1000 = !{null}
 
 ; // -----
 

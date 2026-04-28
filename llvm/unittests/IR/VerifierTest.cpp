@@ -259,8 +259,9 @@ TEST(VerifierTest, DetectInvalidDebugInfo) {
                                Function::ExternalLinkage, "f", M);
     IRBuilder<> Builder(BasicBlock::Create(C, "", F));
     Builder.CreateUnreachable();
+    auto *SPType = DIB.createSubroutineType(DIB.getOrCreateTypeArray({}));
     F->setSubprogram(DIB.createFunction(
-        CU, "f", "f", DIB.createFile("broken.c", "/"), 1, nullptr, 1,
+        CU, "f", "f", DIB.createFile("broken.c", "/"), 1, SPType, 1,
         DINode::FlagZero,
         DISubprogram::SPFlagLocalToUnit | DISubprogram::SPFlagDefinition));
     DIB.finalize();

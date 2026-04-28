@@ -198,16 +198,20 @@ llvm.func @empty_types() {
 // -----
 
 #di_file = #llvm.di_file<"foo.mlir" in "/test/">
+#void_return = #llvm.di_null_type
+#void_type = #llvm.di_subroutine_type<types = #void_return>
 #di_subprogram = #llvm.di_subprogram<
-  scope = #di_file, name = "func_decl_with_subprogram", file = #di_file
+  scope = #di_file, name = "func_decl_with_subprogram", file = #di_file,
+  type = #void_type
 >
 
 // CHECK-LABEL: declare !dbg
 // CHECK-SAME: ![[SUBPROGRAM:.*]] i32 @func_decl_with_subprogram(
 llvm.func @func_decl_with_subprogram() -> (i32) loc(fused<#di_subprogram>["foo.mlir":2:1])
 
-// CHECK: ![[SUBPROGRAM]] = !DISubprogram(name: "func_decl_with_subprogram", scope: ![[FILE:.*]], file: ![[FILE]], spFlags: 0)
+// CHECK: ![[SUBPROGRAM]] = !DISubprogram(name: "func_decl_with_subprogram", scope: ![[FILE:.*]], file: ![[FILE]], type: ![[TYPE:.*]], spFlags: 0)
 // CHECK: ![[FILE]] = !DIFile(filename: "foo.mlir", directory: "/test/")
+// CHECK: ![[TYPE]] = !DISubroutineType
 
 // -----
 
@@ -217,13 +221,17 @@ llvm.func @func_decl_with_subprogram() -> (i32) loc(fused<#di_subprogram>["foo.m
   id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #di_file,
   producer = "MLIR", isOptimized = true, emissionKind = Full, isDebugInfoForProfiling = true
 >
+#void_return = #llvm.di_null_type
+#void_type = #llvm.di_subroutine_type<types = #void_return>
 #di_subprogram = #llvm.di_subprogram<
   compileUnit = #di_compile_unit, scope = #di_file, name = "outer_func",
-  file = #di_file, subprogramFlags = "Definition|Optimized"
+  file = #di_file, subprogramFlags = "Definition|Optimized",
+  type = #void_type
 >
 #di_subprogram1 = #llvm.di_subprogram<
   compileUnit = #di_compile_unit, scope = #di_file, name = "inner_func",
-  file = #di_file, subprogramFlags = "LocalToUnit|Definition|Optimized"
+  file = #di_file, subprogramFlags = "LocalToUnit|Definition|Optimized",
+  type = #void_type
 >
 #di_local_variable0 = #llvm.di_local_variable<scope = #di_subprogram, name = "a", file = #di_file, type = #di_basic_type>
 #di_lexical_block_file = #llvm.di_lexical_block_file<scope = #di_subprogram1, file = #di_file, discriminator = 0>
@@ -261,9 +269,11 @@ llvm.func @func_with_inlined_dbg_value(%arg0: i32) -> (i32) {
   id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #di_file,
   producer = "MLIR", isOptimized = true, emissionKind = Full, isDebugInfoForProfiling = true
 >
+#void_return = #llvm.di_null_type
+#void_type = #llvm.di_subroutine_type<types = #void_return>
 #di_subprogram = #llvm.di_subprogram<
   compileUnit = #di_compile_unit, scope = #di_file, name = "func",
-  file = #di_file, subprogramFlags = Definition>
+  file = #di_file, subprogramFlags = Definition, type = #void_type>
 #di_local_variable = #llvm.di_local_variable<scope = #di_subprogram, name = "a", file = #di_file, type = #di_basic_type>
 
 #loc = loc("foo.mlir":0:0)
@@ -279,7 +289,6 @@ llvm.func @func_without_subprogram(%0 : i32) {
 // CHECK: ![[FILE:.*]] = !DIFile(filename: "foo.mlir", directory: "/test/")
 // CHECK-DAG: ![[FUNC:.*]] = distinct !DISubprogram(name: "func", scope: ![[FILE]]
 // CHECK-DAG: ![[VAR_LOC]] = !DILocalVariable(name: "a", scope: ![[FUNC]], file: ![[FILE]]
-
 // -----
 
 // Ensures that debug intrinsics without a valid location are not exported to
@@ -290,9 +299,12 @@ llvm.func @func_without_subprogram(%0 : i32) {
   id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #di_file,
   producer = "MLIR", isOptimized = true, emissionKind = Full, isDebugInfoForProfiling = true
 >
+#void_return = #llvm.di_null_type
+#void_type = #llvm.di_subroutine_type<types = #void_return>
 #di_subprogram = #llvm.di_subprogram<
   compileUnit = #di_compile_unit, scope = #di_file, name = "outer_func",
-  file = #di_file, subprogramFlags = "Definition|Optimized"
+  file = #di_file, subprogramFlags = "Definition|Optimized",
+  type = #void_type
 >
 #di_local_variable = #llvm.di_local_variable<scope = #di_subprogram, name = "a">
 #declared_var = #llvm.di_local_variable<scope = #di_subprogram, name = "alloc">
@@ -310,7 +322,6 @@ llvm.func @dbg_intrinsics_with_no_location(%arg0: i32) -> (i32) {
   llvm.intr.dbg.label #di_label
   llvm.return %arg0 : i32
 }
-
 // -----
 
 // CHECK: @global_with_expr_1 = external global i64, !dbg {{.*}}
@@ -362,14 +373,15 @@ llvm.mlir.global external @module_global() {dbg_exprs = [#llvm.di_global_variabl
 
 #file = #llvm.di_file<"test.f90" in "existence">
 #cu = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_Fortran95, file = #file, producer = "MLIR", isOptimized = true, emissionKind = Full, isDebugInfoForProfiling = true>
+#void_return = #llvm.di_null_type
+#void_type = #llvm.di_subroutine_type<types = #void_return>
 #ty1 = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "integer", sizeInBits = 64, encoding = DW_ATE_signed>
-#sp = #llvm.di_subprogram<compileUnit = #cu, scope = #file, name = "fn_with_gl", file = #file, subprogramFlags = "Definition|Optimized">
+#sp = #llvm.di_subprogram<compileUnit = #cu, scope = #file, name = "fn_with_gl", file = #file, subprogramFlags = "Definition|Optimized", type = #void_type>
 llvm.mlir.global @func_global() {dbg_exprs = [#llvm.di_global_variable_expression<var = <scope = #sp, name = "func_global", linkageName = "func_global", file = #file, line = 121, type = #ty1, isLocalToUnit = true, isDefined = true>, expr = <>>]} : i64
 
 llvm.func @fn_with_gl() {
   llvm.return
 } loc(fused<#sp>["foo1.mlir":0:0])
-
 // -----
 
 // Test that imported entries correctly generates 'retainedNodes' in the
@@ -433,8 +445,10 @@ llvm.mlir.global external constant @".str.1"() {addr_space = 0 : i32, dbg_exprs 
 #di_compile_unit_1 = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #di_file_1, producer = "MLIR", isOptimized = true, emissionKind = LineTablesOnly, isDebugInfoForProfiling = true>
 // CHECK-DAG: ![[SCOPE1:.*]] = distinct !DICompileUnit(language: DW_LANG_C, file: ![[FILE1]], producer: "MLIR", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly, debugInfoForProfiling: true)
 #di_compile_unit_2 = #llvm.di_compile_unit<id = distinct[1]<>, sourceLanguage = DW_LANG_C, file = #di_file_2, producer = "MLIR", isOptimized = true, emissionKind = DebugDirectivesOnly, isDebugInfoForProfiling = true>
-#di_subprogram_1 = #llvm.di_subprogram<compileUnit = #di_compile_unit_1, scope = #di_file_1, name = "func1", file = #di_file_1, subprogramFlags = "Definition|Optimized">
-#di_subprogram_2 = #llvm.di_subprogram<compileUnit = #di_compile_unit_2, scope = #di_file_2, name = "func2", file = #di_file_2, subprogramFlags = "Definition|Optimized">
+#void_return = #llvm.di_null_type
+#void_type = #llvm.di_subroutine_type<types = #void_return>
+#di_subprogram_1 = #llvm.di_subprogram<compileUnit = #di_compile_unit_1, scope = #di_file_1, name = "func1", file = #di_file_1, subprogramFlags = "Definition|Optimized", type = #void_type>
+#di_subprogram_2 = #llvm.di_subprogram<compileUnit = #di_compile_unit_2, scope = #di_file_2, name = "func2", file = #di_file_2, subprogramFlags = "Definition|Optimized", type = #void_type>
 
 llvm.func @func_line_tables() {
   llvm.return
@@ -661,10 +675,12 @@ llvm.func @subranges(%arg: !llvm.ptr) {
 
 #bt = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "int", sizeInBits = 32>
 #file = #llvm.di_file<"debug-info.ll" in "/">
+#void_return = #llvm.di_null_type
+#void_type = #llvm.di_subroutine_type<types = #void_return>
 #cu = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_C,
  file = #file, isOptimized = false, emissionKind = Full, isDebugInfoForProfiling = false>
 #sp = #llvm.di_subprogram<compileUnit = #cu, scope = #file, name = "test",
- file = #file, subprogramFlags = Definition>
+ file = #file, subprogramFlags = Definition, type = #void_type>
 #var = #llvm.di_local_variable<scope = #sp, name = "string_size", type = #bt, flags = Artificial>
 #sty1 = #llvm.di_string_type<tag = DW_TAG_string_type, name = "character(*)",
  sizeInBits = 32, alignInBits = 8, stringLength = #var,
@@ -686,16 +702,17 @@ llvm.func @string_ty(%arg0: !llvm.ptr) {
 // CHECK-DAG: !DIStringType(name: "character(*)", stringLength: ![[VAR:[0-9]+]], stringLengthExpression: !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 8), stringLocationExpression: !DIExpression(DW_OP_push_object_address, DW_OP_deref), size: 32, align: 8)
 // CHECK-DAG: ![[VAR]] = !DILocalVariable(name: "string_size"{{.*}} flags: DIFlagArtificial)
 // CHECK-DAG: !DIStringType()
-
 // -----
 
 // Test translation of DICommonBlockAttr.
 #bt = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "int", sizeInBits = 32>
 #file = #llvm.di_file<"test.f90" in "">
+#void_return = #llvm.di_null_type
+#void_type = #llvm.di_subroutine_type<types = #void_return>
 #cu = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_C,
  file = #file, isOptimized = false, emissionKind = Full, isDebugInfoForProfiling = false>
 #sp = #llvm.di_subprogram<compileUnit = #cu, scope = #file, name = "test",
- file = #file, subprogramFlags = Definition>
+ file = #file, subprogramFlags = Definition, type = #void_type>
 #di_common_block = #llvm.di_common_block<scope = #sp, name = "block",
  file = #file, line = 3>
 #global_var = #llvm.di_global_variable<scope = #di_common_block, name = "a",
@@ -716,7 +733,6 @@ llvm.func @test() {
 // CHECK: !DICommonBlock(scope: ![[SCOPE:[0-9]+]], declaration: null, name: "block", file: ![[FILE:[0-9]+]], line: 3)
 // CHECK: ![[SCOPE]] = {{.*}}!DISubprogram(name: "test"{{.*}})
 // CHECK: ![[FILE]] = !DIFile(filename: "test.f90"{{.*}})
-
 // -----
 
 // Test multiple DIGlobalVariableExpression on a global.
