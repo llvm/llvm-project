@@ -2291,9 +2291,8 @@ private:
     (void)__old_mid;
     (void)__new_mid;
 #  if _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS_FOR_STRING
-    if (!__is_long())
-      return;
-    std::__annotate_contiguous_container<_Allocator>(data(), data() + capacity() + 1, __old_mid, __new_mid);
+    if (__is_long())
+      std::__annotate_contiguous_container<_Allocator>(data(), data() + capacity() + 1, __old_mid, __new_mid);
 #  endif
   }
 

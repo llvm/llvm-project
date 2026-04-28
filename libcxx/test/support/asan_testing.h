@@ -65,8 +65,8 @@ bool is_string_short(S const& s) {
   // &s    - beginning of objects memory
   // &s[0] - beginning of the buffer
   // (&s+1) - end of objects memory
-  return (void*)std::addressof(s) <= (void*)std::addressof(s[0]) &&
-         (void*)std::addressof(s[0]) < (void*)(std::addressof(s) + 1);
+  return std::less_equal<>()((void*)std::addressof(s), (void*)std::addressof(s[0])) &&
+         std::less<>()((void*)std::addressof(s[0]), (void*)(std::addressof(s) + 1));
 }
 
 template <typename ChrT, typename TraitsT, typename Alloc>
