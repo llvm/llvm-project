@@ -3585,7 +3585,11 @@ cir::GlobalOp CIRGenModule::getAddrOfUnnamedGlobalConstantDecl(
   assert(!cir::MissingFeatures::addressSpace() &&
          "emitForInitializer should take gcd->getType().getAddressSpace()");
   mlir::Attribute init = emitter.emitForInitializer(value, gcd->getType());
-  auto typedInit = cast<mlir::TypedAttr>(init);
+  auto typedInit = dyn_cast<mlir::TypedAttr>(init);
+
+  if (!typedInit)
+    errorNYI(gcd->getSourceRange(),
+             "getAddrOfUnnamedGlobalConstantDecl: non-typed initializer");
 
   assert(!cir::MissingFeatures::addressSpace());
 
@@ -3594,9 +3598,9 @@ cir::GlobalOp CIRGenModule::getAddrOfUnnamedGlobalConstantDecl(
   // one if this isn't the first.  We could probably choose a better name than
   // .constant to be unique for this type of decl, but this is consistent with
   // classic codegen.
-  std::string name = ".constant";
-  if (numEntries != 0)
-    name += '.' + std::to_string(numEntries);
+  std::string name = numEntries == 0
+                         ? ".constant"
+                         : (Twine(".constant.") + Twine(numEntries)).str();
   auto globalOp = createGlobalOp(*this, builder.getUnknownLoc(), name,
                                  typedInit.getType(), /*is_constant=*/true);
   globalOp.setLinkage(cir::GlobalLinkageKind::PrivateLinkage);

@@ -41,6 +41,10 @@ namespace std {
 // LLVM: @.str.2 = private constant [{{.*}} x i8] c"void use2
 // OGCG: @.str.2 = private unnamed_addr constant [{{.*}} x i8] c"void use2
 //
+// Note: the naming difference between LLVM and OGCG here is because of the
+// uniquification differences when we encounter duplicate names. LLVM has a
+// global counter that manages these, CIR just increments the single names, each
+// with its own counter.  As a result, .str and .constant names don't match.
 // CIR: cir.global "private" constant cir_private @".constant.1" = #cir.const_record<{#cir.global_view<@".str"> : !cir.ptr<!s8i>, #cir.global_view<@".str.2"> : !cir.ptr<!s8i>, #cir.int<{{.*}}> : !u32i, #cir.int<{{.*}}> : !u32i}> : !rec_std3A3Asource_location3A3A__impl
 // LLVM: @.constant.1 = private constant %"struct.std::source_location::__impl" { ptr @.str, ptr @.str.2, i32 {{.*}}, i32 {{.*}} }
 // OGCG: @.constant.3 = private unnamed_addr constant %"struct.std::source_location::__impl" { ptr @.str, ptr @.str.2, i32 {{.*}}, i32 {{.*}} }
@@ -67,19 +71,19 @@ void line_column() {
 
 // CIR: %[[A_ADDR:.*]] = cir.alloca !u32i, !cir.ptr<!u32i>, ["a", init]
 // CIR: %[[B_ADDR:.*]] = cir.alloca !u32i, !cir.ptr<!u32i>, ["b", init]
-// CIR: %[[CONST_9:.*]] = cir.const #cir.int<64> : !u32i
+// CIR: %[[CONST_9:.*]] = cir.const #cir.int<68> : !u32i
 // CIR: cir.store {{.*}} %[[CONST_9]], %[[A_ADDR]] : !u32i, !cir.ptr<!u32i>
 // CIR: %[[CONST_20:.*]] = cir.const #cir.int<20> : !u32i
 // CIR: cir.store {{.*}} %[[CONST_20]], %[[B_ADDR]] : !u32i, !cir.ptr<!u32i>
 
 // LLVM: %[[A_ADDR:.*]] = alloca i32, i64 1, align 4
 // LLVM: %[[B_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM: store i32 64, ptr %[[A_ADDR]], align 4
+// LLVM: store i32 68, ptr %[[A_ADDR]], align 4
 // LLVM: store i32 20, ptr %[[B_ADDR]], align 4
 
 // OGCG: %[[A_ADDR:.*]] = alloca i32, align 4
 // OGCG: %[[B_ADDR:.*]] = alloca i32, align 4
-// OGCG: store i32 64, ptr %[[A_ADDR]], align 4
+// OGCG: store i32 68, ptr %[[A_ADDR]], align 4
 // OGCG: store i32 20, ptr %[[B_ADDR]], align 4
 
 void function_file() {

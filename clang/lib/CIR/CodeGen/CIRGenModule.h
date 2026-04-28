@@ -362,7 +362,7 @@ public:
   getAddrOfTemplateParamObject(const TemplateParamObjectDecl *tpo);
   // Get the GlobalOp of a source_location object.
   cir::GlobalOp
-  getAddrOfUnnamedGlobalConstantDecl(const UnnamedGlobalConstantDecl *tpo);
+  getAddrOfUnnamedGlobalConstantDecl(const UnnamedGlobalConstantDecl *gcd);
 
   CharUnits computeNonVirtualBaseClassOffset(
       const CXXRecordDecl *derivedClass,
