@@ -5847,6 +5847,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     if (Op->getOpcode() == Instruction::UIToFP)
       Known.signBitMustBeZero();
 
+    // Only compute known bits if we can learn something useful from them.
     if (!(InterestedClasses & (fcPosZero | fcNormal | fcInf)))
       break;
 

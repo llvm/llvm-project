@@ -290,9 +290,16 @@ KnownFPClass KnownFPClass::bitcast(const fltSemantics &FltSemantics,
 static KnownFPClass itofp_impl(const KnownBits &KnownSrc,
                                const fltSemantics &FltSem, bool IsSigned) {
   KnownFPClass Known;
-  // If the integer is non-zero, the result cannot be +0.0
+  
+  Known.knownNot(fcNan);
+  Known.knownNot(fcSubnormal);
+  Known.knownNot(fcNegZero);
+    
+  if (!IsSigned)
+      Known.signBitMustBeZero();
+  
   if (KnownSrc.isNonZero())
-    Known.knownNot(fcPosZero);
+    Known.knownNot(fcZero);
 
   if (IsSigned) {
     // If the signed integer is known non-negative, the result is
