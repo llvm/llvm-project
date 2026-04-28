@@ -3,8 +3,9 @@
 ; RUN: opt < %s -passes='pgo-force-function-attrs,function(loop-mssa(simple-loop-unswitch<nontrivial>))' -pgo-kind=pgo-instr-use-pipeline -pgo-cold-func-opt=optsize -S | FileCheck %s
 ; RUN: opt < %s -passes='pgo-force-function-attrs,function(loop-mssa(simple-loop-unswitch<nontrivial>))' -pgo-kind=pgo-instr-use-pipeline -pgo-cold-func-opt=minsize -S | FileCheck %s
 
-;; Check that non-trivial loop unswitching is not applied to a cold loop in a
-;; cold loop nest.
+;; Check that trivial loop unswitching is applied to a cold loop in a
+;; cold loop nest. Another testcase, unswitch-cold-func.ll, ensures that
+;; non-trivial unswitching is not applied to a cold loop.
 
 ;; IR was generated from the following loop nest, profiled when called
 ;; with M=0 and N=0.
@@ -18,19 +19,23 @@
 
 define void @_Z11functionbiiPiS_S_(i1 %cond, i32 %M, i32 %N, ptr %A, ptr %B, ptr %C) !prof !36 {
 ; CHECK-LABEL: define void @_Z11functionbiiPiS_S_
-; CHECK-SAME: (i1 [[COND:%.*]], i32 [[M:%.*]], i32 [[N:%.*]], ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]]) {{.*}}{
+; CHECK-SAME: (i1 [[COND:%.*]], i32 [[M:%.*]], i32 [[N:%.*]], ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]]) #[[ATTR0:[0-9]+]] {{.*}}{
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP19_NOT:%.*]] = icmp eq i32 [[M]], 0
 ; CHECK-NEXT:    br i1 [[CMP19_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_COND1_PREHEADER_LR_PH:%.*]], !prof [[PROF17:![0-9]+]]
 ; CHECK:       for.cond1.preheader.lr.ph:
 ; CHECK-NEXT:    [[CMP217_NOT:%.*]] = icmp eq i32 [[N]], 0
+; CHECK-NEXT:    br i1 [[CMP217_NOT]], label [[FOR_COND_CLEANUP_LOOPEXIT_SPLIT:%.*]], label [[FOR_COND1_PREHEADER_LR_PH_SPLIT:%.*]]
+; CHECK:       for.cond1.preheader.lr.ph.split:
 ; CHECK-NEXT:    br label [[FOR_COND1_PREHEADER:%.*]]
 ; CHECK:       for.cond1.preheader:
-; CHECK-NEXT:    [[J_020:%.*]] = phi i32 [ 0, [[FOR_COND1_PREHEADER_LR_PH]] ], [ [[INC10:%.*]], [[FOR_COND_CLEANUP3:%.*]] ]
-; CHECK-NEXT:    br i1 [[CMP217_NOT]], label [[FOR_COND_CLEANUP3]], label [[FOR_BODY4_PREHEADER:%.*]]
+; CHECK-NEXT:    [[J_020:%.*]] = phi i32 [ 0, [[FOR_COND1_PREHEADER_LR_PH_SPLIT]] ], [ [[INC10:%.*]], [[FOR_COND_CLEANUP3:%.*]] ]
+; CHECK-NEXT:    br label [[FOR_BODY4_PREHEADER:%.*]]
 ; CHECK:       for.body4.preheader:
 ; CHECK-NEXT:    br label [[FOR_BODY4:%.*]]
 ; CHECK:       for.cond.cleanup.loopexit:
+; CHECK-NEXT:    br label [[FOR_COND_CLEANUP_LOOPEXIT_SPLIT]]
+; CHECK:       for.cond.cleanup.loopexit.split:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void
