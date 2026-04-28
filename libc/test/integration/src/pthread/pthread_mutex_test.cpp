@@ -201,6 +201,11 @@ void recursive_mutex_test() {
   ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_destroy(&recursive_mutex), 0);
 }
 
+[[maybe_unused]]
+static pthread_mutex_t test_initializer = PTHREAD_MUTEX_INITIALIZER;
+
+// POSIX.1 requires PTHREAD_MUTEX_INITIALIZER is consistent with
+// pthread_mutex_init(m, nullptr).
 void initializer_acts_the_same_as_null_attr() {
   pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
   pthread_mutex_t mutex_from_init;
@@ -208,6 +213,8 @@ void initializer_acts_the_same_as_null_attr() {
 
   pthread_mutex_t mutex_snapshot = snapshot_mutex(&mutex);
   pthread_mutex_t mutex_from_init_snapshot = snapshot_mutex(&mutex_from_init);
+  // Do per-field comparison. We cannot do direct bytewise comparison because
+  // the layout has padding bits and __builtin_clear_padding is not available.
   ASSERT_EQ(mutex_snapshot.__ftxw.__word,
             mutex_from_init_snapshot.__ftxw.__word);
   ASSERT_EQ(mutex_snapshot.__priority_inherit,

@@ -41,17 +41,10 @@ LLVM_LIBC_FUNCTION(int, pthread_mutex_init,
   if (get_mutexattr_robust(mutexattr) == PTHREAD_MUTEX_ROBUST)
     is_robust = true;
 
-  bool is_pshared = false;
-  switch (get_mutexattr_pshared(mutexattr)) {
-  case PTHREAD_PROCESS_PRIVATE:
-    break;
-  case PTHREAD_PROCESS_SHARED:
-    is_pshared = true;
-    break;
-  }
+  bool is_pshared = get_mutexattr_pshared(mutexattr) == PTHREAD_PROCESS_SHARED;
 
-  new (m) Mutex(/*is_priority_inherit=*/false, /*is_recursive=*/is_recursive,
-                /*is_robust=*/is_robust, /*is_pshared=*/is_pshared);
+  new (m)
+      Mutex(/*is_priority_inherit=*/false, is_recursive, is_robust, is_pshared);
   return 0;
 }
 
