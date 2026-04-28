@@ -384,19 +384,19 @@ are always external and can be intercepted.
 
     namespace LIBC_NAMESPACE_DECL {
 
-    // Allow calls with the fully qualified name.
+    // Disallow calls to the public versions with the LIBC_NAMESPACE.
     LIBC_NAMESPACE::strlen("hello");
 
     // Allow calls to compiler provided functions.
     (void)__builtin_abs(-1);
 
-    // Bare calls are allowed as long as they resolve to the correct namespace.
+    // Disallow bare calls.
     strlen("world");
 
     // Disallow calling into functions in the global namespace.
     ::strlen("!");
 
-    // Allow calling into specific global functions (explained above)
+    // Allow calling into specific global functions (explained above).
     ::malloc(10);
 
     } // namespace LIBC_NAMESPACE_DECL
