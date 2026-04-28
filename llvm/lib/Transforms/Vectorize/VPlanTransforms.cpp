@@ -655,11 +655,51 @@ static void removeRedundantInductionCasts(VPlan &Plan) {
   }
 }
 
+static VPScalarIVStepsRecipe *
+createScalarIVSteps(VPlan &Plan, InductionDescriptor::InductionKind Kind,
+                    Instruction::BinaryOps InductionOpcode,
+                    FPMathOperator *FPBinOp, Instruction *TruncI,
+                    VPIRValue *StartV, VPValue *Step, DebugLoc DL,
+                    VPBuilder &Builder) {
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
+  VPValue *CanonicalIV = LoopRegion->getCanonicalIV();
+  VPSingleDefRecipe *BaseIV = Builder.createDerivedIV(
+      Kind, FPBinOp, StartV, CanonicalIV, Step, "offset.idx");
+
+  // Truncate base induction if needed.
+  VPTypeAnalysis TypeInfo(Plan);
+  Type *ResultTy = TypeInfo.inferScalarType(BaseIV);
+  if (TruncI) {
+    Type *TruncTy = TruncI->getType();
+    assert(ResultTy->getScalarSizeInBits() > TruncTy->getScalarSizeInBits() &&
+           "Not truncating.");
+    assert(ResultTy->isIntegerTy() && "Truncation requires an integer type");
+    BaseIV = Builder.createScalarCast(Instruction::Trunc, BaseIV, TruncTy, DL);
+    ResultTy = TruncTy;
+  }
+
+  // Truncate step if needed.
+  Type *StepTy = TypeInfo.inferScalarType(Step);
+  if (ResultTy != StepTy) {
+    assert(StepTy->getScalarSizeInBits() > ResultTy->getScalarSizeInBits() &&
+           "Not truncating.");
+    assert(StepTy->isIntegerTy() && "Truncation requires an integer type");
+    auto *VecPreheader =
+        cast<VPBasicBlock>(HeaderVPBB->getSingleHierarchicalPredecessor());
+    VPBuilder::InsertPointGuard Guard(Builder);
+    Builder.setInsertPoint(VecPreheader);
+    Step = Builder.createScalarCast(Instruction::Trunc, Step, ResultTy, DL);
+  }
+  return Builder.createScalarIVSteps(InductionOpcode, FPBinOp, BaseIV, Step,
+                                     &Plan.getVF(), DL);
+}
+
 /// Try to replace VPWidenCanonicalIVRecipes with a widened canonical IV
 /// recipe, if it exists.
 static void removeRedundantCanonicalIVs(VPlan &Plan) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
-  VPValue *CanonicalIV = LoopRegion->getCanonicalIV();
+  VPRegionValue *CanonicalIV = LoopRegion->getCanonicalIV();
   auto *WidenNewIV = vputils::findUserOf<VPWidenCanonicalIVRecipe>(CanonicalIV);
 
   if (!WidenNewIV)
@@ -689,6 +729,24 @@ static void removeRedundantCanonicalIVs(VPlan &Plan) {
       return;
     }
   }
+
+  if (!vputils::onlyFirstLaneUsed(WidenNewIV) && !Plan.hasScalarVFOnly()) {
+    assert(!vputils::onlyScalarValuesUsed(WidenNewIV) &&
+           "Lanes other than first lane being used should imply that not just "
+           "scalars are used");
+    return;
+  }
+
+  // Replace the wide canonical IV with a scalar-iv-steps over the canonical
+  // IV.
+  Type *CanonicalIVTy = LoopRegion->getCanonicalIVType();
+  VPBuilder Builder(WidenNewIV);
+  WidenNewIV->replaceAllUsesWith(createScalarIVSteps(
+      Plan, InductionDescriptor::IK_IntInduction, Instruction::Add, nullptr,
+      nullptr, Plan.getZero(CanonicalIVTy),
+      Plan.getConstantInt(CanonicalIVTy, 1), CanonicalIV->getDebugLoc(),
+      Builder));
+  WidenNewIV->eraseFromParent();
 }
 
 /// Returns true if \p R is dead and can be removed.
@@ -737,46 +795,6 @@ void VPlanTransforms::removeDeadRecipes(VPlan &Plan) {
       Incoming->getDefiningRecipe()->eraseFromParent();
     }
   }
-}
-
-static VPScalarIVStepsRecipe *
-createScalarIVSteps(VPlan &Plan, InductionDescriptor::InductionKind Kind,
-                    Instruction::BinaryOps InductionOpcode,
-                    FPMathOperator *FPBinOp, Instruction *TruncI,
-                    VPIRValue *StartV, VPValue *Step, DebugLoc DL,
-                    VPBuilder &Builder) {
-  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
-  VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
-  VPValue *CanonicalIV = LoopRegion->getCanonicalIV();
-  VPSingleDefRecipe *BaseIV = Builder.createDerivedIV(
-      Kind, FPBinOp, StartV, CanonicalIV, Step, "offset.idx");
-
-  // Truncate base induction if needed.
-  VPTypeAnalysis TypeInfo(Plan);
-  Type *ResultTy = TypeInfo.inferScalarType(BaseIV);
-  if (TruncI) {
-    Type *TruncTy = TruncI->getType();
-    assert(ResultTy->getScalarSizeInBits() > TruncTy->getScalarSizeInBits() &&
-           "Not truncating.");
-    assert(ResultTy->isIntegerTy() && "Truncation requires an integer type");
-    BaseIV = Builder.createScalarCast(Instruction::Trunc, BaseIV, TruncTy, DL);
-    ResultTy = TruncTy;
-  }
-
-  // Truncate step if needed.
-  Type *StepTy = TypeInfo.inferScalarType(Step);
-  if (ResultTy != StepTy) {
-    assert(StepTy->getScalarSizeInBits() > ResultTy->getScalarSizeInBits() &&
-           "Not truncating.");
-    assert(StepTy->isIntegerTy() && "Truncation requires an integer type");
-    auto *VecPreheader =
-        cast<VPBasicBlock>(HeaderVPBB->getSingleHierarchicalPredecessor());
-    VPBuilder::InsertPointGuard Guard(Builder);
-    Builder.setInsertPoint(VecPreheader);
-    Step = Builder.createScalarCast(Instruction::Trunc, Step, ResultTy, DL);
-  }
-  return Builder.createScalarIVSteps(InductionOpcode, FPBinOp, BaseIV, Step,
-                                     &Plan.getVF(), DL);
 }
 
 static SmallVector<VPUser *> collectUsersRecursively(VPValue *V) {

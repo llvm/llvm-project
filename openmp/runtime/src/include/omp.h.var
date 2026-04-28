@@ -553,6 +553,7 @@
 
     /* OpenMP 5.2 */
     extern int __KAI_KMPC_CONVENTION omp_in_explicit_task(void);
+    #define omp_initial_device -1
     #define omp_invalid_device -2
 
     /* OpenMP 6.0 */

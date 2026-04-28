@@ -4481,7 +4481,10 @@ bool Process::ProcessEventData::ForwardEventToPendingListeners(
 
   // For state changed events, if the update state is zero, we are handling
   // this on the private state thread.  We should wait for the public event.
-  return m_update_state == 1;
+  // After the primary listener processes it in DoOnRemoval, m_update_state
+  // is incremented from 1 to 2, which is when we forward to pending
+  // (secondary) listeners.
+  return m_update_state > 1;
 }
 
 void Process::ProcessEventData::DoOnRemoval(Event *event_ptr) {
@@ -4498,12 +4501,14 @@ void Process::ProcessEventData::DoOnRemoval(Event *event_ptr) {
   // pulled off of the private process event queue, and then any number of
   // times, first when it gets pulled off of the public event queue, then other
   // times when we're pretending that this is where we stopped at the end of
-  // expression evaluation.  m_update_state is used to distinguish these three
-  // cases; it is 0 when we're just pulling it off for private handling, and >
-  // 1 for expression evaluation, and we don't want to do the breakpoint
-  // command handling then.
+  // expression evaluation.  m_update_state is used to distinguish these
+  // cases; it is 0 when we're just pulling it off for private handling, 1
+  // when the primary public listener consumes it, and > 1 after that (e.g.
+  // secondary listeners or expression evaluation) where we don't want to
+  // redo the breakpoint command handling or stop hooks.
   if (m_update_state != 1)
     return;
+  m_update_state++;
 
   process_sp->SetPublicState(
       m_state, Process::ProcessEventData::GetRestartedFromEvent(event_ptr));
