@@ -648,9 +648,8 @@ void RAGreedy::evictInterference(const LiveInterval &VirtReg,
       continue;
 
     Matrix->unassign(*Intf);
-    bool Urgent = EvictAdvisor->isUrgentEviction(VirtReg, *Intf);
-    assert((ExtraInfo->getCascade(Intf->reg()) < Cascade ||
-            (Cascade < ExtraInfo->getCascade(Intf->reg()) && Urgent) ||
+assert((ExtraInfo->getCascade(Intf->reg()) < Cascade ||
+            (Cascade < ExtraInfo->getCascade(Intf->reg()) && EvictAdvisor->isUrgentEviction(VirtReg, *Intf)) ||
             VirtReg.isSpillable() < Intf->isSpillable()) &&
            "Cannot decrease cascade number, illegal eviction");
     ExtraInfo->setCascade(Intf->reg(), Cascade);
