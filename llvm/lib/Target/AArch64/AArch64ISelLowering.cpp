@@ -9389,6 +9389,9 @@ static void analyzeCallOperands(const AArch64TargetLowering &TLI,
   if (CalleeCC == CallingConv::ARM64EC_Thunk_X64)
     CCInfo.AllocateStack(32, Align(16));
 
+  CCAssignFn *AssignFnFixed = TLI.CCAssignFnForCall(CalleeCC, false);
+  CCAssignFn *AssignFnVarArg = TLI.CCAssignFnForCall(CalleeCC, true);
+
   unsigned NumArgs = Outs.size();
   for (unsigned i = 0; i != NumArgs; ++i) {
     MVT ArgVT = Outs[i].VT;
@@ -9418,9 +9421,10 @@ static void analyzeCallOperands(const AArch64TargetLowering &TLI,
         ArgVT = MVT::i16;
     }
 
-    // FIXME: CCAssignFnForCall should be called once, for the call and not per
-    // argument. This logic should exactly mirror LowerFormalArguments.
-    CCAssignFn *AssignFn = TLI.CCAssignFnForCall(CalleeCC, UseVarArgCC);
+    // For non-Win64 vararg calls, only
+    // variadic arguments use the vararg CC, while Win64 uses vararg CC for all
+    // call arguments in vararg calls.
+    CCAssignFn *AssignFn = UseVarArgCC ? AssignFnVarArg : AssignFnFixed;
     bool Res = AssignFn(i, ArgVT, ArgVT, CCValAssign::Full, ArgFlags,
                         Outs[i].OrigTy, CCInfo);
     assert(!Res && "Call operand has unhandled type");
