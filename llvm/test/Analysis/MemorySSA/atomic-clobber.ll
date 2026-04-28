@@ -106,11 +106,11 @@ define void @seq_cst_clobber(ptr noalias %a, ptr noalias %b) {
 ; If AA gets more aggressive, we can find another way.
 ;
 ; CHECK-LABEL: define void @check_aa_is_sane
-define void @check_aa_is_sane(ptr noalias %a, ptr noalias %b) {
+define void @check_aa_is_sane(ptr noalias %a, ptr %b) {
 ; CHECK: 1 = MemoryDef(liveOnEntry)
 ; CHECK-NEXT: cmpxchg ptr %a, i32 0, i32 1 acquire acquire
   cmpxchg ptr %a, i32 0, i32 1 acquire acquire
-; CHECK: MemoryUse(liveOnEntry)
+; CHECK: MemoryUse(1)
 ; CHECK-NEXT: load i32, ptr %b, align 4
   load i32, ptr %b, align 4
 
