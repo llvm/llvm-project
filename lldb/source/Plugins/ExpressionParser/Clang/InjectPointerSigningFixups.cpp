@@ -54,7 +54,10 @@ struct ExprStep {
 struct PtrAuthFixup {
   GlobalVariable *GV;
   ConstantPtrAuth *CPA;
+  /// ConstantAggregate types are walekd via GEP indices.
   SmallVector<unsigned> GEPPath;
+  /// ConstantExpr types are traversed via ExprStep (ConstantExpr + Operand
+  /// index).
   SmallVector<ExprStep> ExprPath;
   PtrAuthFixup(GlobalVariable *GV, ConstantPtrAuth *CPA,
                const SmallVectorImpl<unsigned> &GEPPath,
@@ -65,8 +68,6 @@ struct PtrAuthFixup {
 } // namespace
 
 /// Recursively walk a constant looking for ConstantPtrAuth expressions.
-/// Aggregate types are walked via GEP indices. ContantExpr types are
-/// traversed via ExprStep (ConstantExpr + Operand index).
 static void findPtrAuth(Constant *C, GlobalVariable &GV,
                         SmallVectorImpl<unsigned> &GEPPath,
                         SmallVectorImpl<ExprStep> &ExprPath,
@@ -83,7 +84,10 @@ static void findPtrAuth(Constant *C, GlobalVariable &GV,
         GEPPath.pop_back();
       }
     }
-  } else if (auto *CE = dyn_cast<ConstantExpr>(C)) {
+    return;
+  }
+
+  if (auto *CE = dyn_cast<ConstantExpr>(C)) {
     for (unsigned I = 0, E = C->getNumOperands(); I != E; ++I) {
       if (auto *COp = dyn_cast<Constant>(C->getOperand(I))) {
         ExprPath.push_back({CE, I});
@@ -168,16 +172,9 @@ Error InjectPointerSigningFixupCode(llvm::Module &M,
       Disc = B.CreateCall(BlendIntrinsic,
                           {B.CreatePointerCast(Loc, IntPtrTy), Disc});
 
-    // If the CPA is wrapped in a ConstantExpr chain, we'll need to sign the
-    // CPA's pointer value directly and re-evaluate the expr chain. If there is
-    // no expression chain, load and sign the pointer directly.
-    if (Fixup.ExprPath.empty()) {
-      Value *RawPtr = B.CreateLoad(PtrTy, Loc);
-      Value *SignedPtr =
-          B.CreateCall(SignIntrinsic, {B.CreatePointerCast(RawPtr, IntPtrTy),
-                                       CPA->getKey(), Disc});
-      B.CreateStore(B.CreateBitOrPointerCast(SignedPtr, PtrTy), Loc);
-    } else {
+    if (!Fixup.ExprPath.empty()) {
+      // The CPA is wrapped in a ConstantExpr chain. Sign the CPA's pointer
+      // directly and re-evaluate the expr chain.
       Value *SignedPtr = B.CreateCall(
           SignIntrinsic, {B.CreatePointerCast(CPA->getPointer(), IntPtrTy),
                           CPA->getKey(), Disc});
@@ -190,6 +187,13 @@ Error InjectPointerSigningFixupCode(llvm::Module &M,
         Result = I;
       }
       B.CreateStore(Result, Loc);
+    } else {
+      // There is no expression chain. Load and sign the pointer directly.
+      Value *RawPtr = B.CreateLoad(PtrTy, Loc);
+      Value *SignedPtr =
+          B.CreateCall(SignIntrinsic, {B.CreatePointerCast(RawPtr, IntPtrTy),
+                                       CPA->getKey(), Disc});
+      B.CreateStore(B.CreateBitOrPointerCast(SignedPtr, PtrTy), Loc);
     }
     // Replace the ConstantPtrAuth in the initializer with the unsigned pointer.
     CPA->replaceAllUsesWith(CPA->getPointer());
