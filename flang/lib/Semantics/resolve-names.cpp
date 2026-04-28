@@ -10493,10 +10493,9 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
     if (!sym || !sym->has<SubprogramDetails>()) {
       Say(x.source,
           "!DIR$ INLINEALWAYS directive with name must appear in a subprogram"_err_en_US);
-    }
-    if (inlineAlways->v->ToString() != sym->name().ToString()) {
+    } else if (inlineAlways->v->ToString() != sym->name().ToString()) {
       context().Warn(common::UsageWarning::IgnoredDirective, x.source,
-          "INLINEALWAYS name %s does not match the subprogram name %s"_warn_en_US,
+          "INLINEALWAYS name '%s' does not match the subprogram name '%s'"_warn_en_US,
           inlineAlways->v->ToString(), sym->name().ToString());
     }
   } else if (context().ShouldWarn(common::UsageWarning::IgnoredDirective)) {

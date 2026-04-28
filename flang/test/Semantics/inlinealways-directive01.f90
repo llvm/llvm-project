@@ -7,11 +7,11 @@ module m
 end module
 
 subroutine test_subroutine()
-! WARNING: INLINEALWAYS name wrong_subroutine does not match the subprogram name test_subroutine [-Wignored-directive]
+! WARNING: INLINEALWAYS name 'wrong_subroutine' does not match the subprogram name 'test_subroutine' [-Wignored-directive]
   !DIR$ INLINEALWAYS wrong_subroutine
 end subroutine
 
 function test_func()
-! WARNING: INLINEALWAYS name wrong_func does not match the subprogram name test_func [-Wignored-directive]
+! WARNING: INLINEALWAYS name 'wrong_func' does not match the subprogram name 'test_func' [-Wignored-directive]
   !DIR$ INLINEALWAYS wrong_func
 end function
