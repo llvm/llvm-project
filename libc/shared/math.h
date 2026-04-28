@@ -57,6 +57,7 @@
 #include "math/bf16sub.h"
 #include "math/bf16subf.h"
 #include "math/bf16subf128.h"
+#include "math/bf16subl.h"
 #include "math/canonicalize.h"
 #include "math/canonicalizebf16.h"
 #include "math/canonicalizef.h"
