@@ -2154,13 +2154,6 @@ def sysp_crm_op : Operand<i32> {
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
-def sysp_op1 : Operand<i64>, ImmLeaf<i64, [{
-  return Imm >= 0 && Imm <= 6;
-}]> {
-  let ParserMatchClass = Imm0_7Operand;
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-
 class SystemXtI<string asm>
   : RtSystemI<0, (outs),
        (ins imm32_0_7:$op1, sys_cr_op:$Cn, sys_cr_op:$Cm, imm32_0_7:$op2,
