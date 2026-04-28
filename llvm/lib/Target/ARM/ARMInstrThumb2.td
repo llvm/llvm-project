@@ -5828,6 +5828,9 @@ let Predicates = [HasV8_1MMainline] in {
   def : T2Pat<(and (topbitsallzero32:$Rn),
                    (ARMcsinc_su (i32 0), (i32 0), imm:$cc, CPSR)),
               (t2CSEL ZR, $Rn, imm:$cc)>;
+  def : T2Pat<(or (topbitsallzero32:$Rn),
+                  (ARMcsinc_su (i32 0), (i32 0), imm:$cc, CPSR)),
+              (t2CSINC $Rn, ZR, imm:$cc)>;
 }
 
 // CS aliases.

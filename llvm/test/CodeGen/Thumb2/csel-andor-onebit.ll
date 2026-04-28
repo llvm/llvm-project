@@ -109,10 +109,9 @@ define i32 @andi32_sgt(i8 %x, i8 %y) {
 define i64 @ori64i32_eq(i64 %x, i32 %y) {
 ; CHECK-LABEL: ori64i32_eq:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    and r0, r0, #1
-; CHECK-NEXT:    cset r1, eq
-; CHECK-NEXT:    orrs r0, r1
+; CHECK-NEXT:    cmp r2, #0
+; CHECK-NEXT:    csinc r0, r0, zr, ne
 ; CHECK-NEXT:    movs r1, #0
 ; CHECK-NEXT:    bx lr
   %xa = and i64 %x, 1
@@ -127,8 +126,7 @@ define i64 @ori64i64_eq(i64 %x, i64 %y) {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    orrs.w r1, r2, r3
 ; CHECK-NEXT:    and r0, r0, #1
-; CHECK-NEXT:    cset r1, eq
-; CHECK-NEXT:    orrs r0, r1
+; CHECK-NEXT:    csinc r0, r0, zr, ne
 ; CHECK-NEXT:    movs r1, #0
 ; CHECK-NEXT:    bx lr
   %xa = and i64 %x, 1
@@ -141,10 +139,9 @@ define i64 @ori64i64_eq(i64 %x, i64 %y) {
 define i64 @ori64_eq_c(i64 %x, i32 %y) {
 ; CHECK-LABEL: ori64_eq_c:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    and r0, r0, #1
-; CHECK-NEXT:    cset r1, eq
-; CHECK-NEXT:    orrs r0, r1
+; CHECK-NEXT:    cmp r2, #0
+; CHECK-NEXT:    csinc r0, r0, zr, ne
 ; CHECK-NEXT:    movs r1, #0
 ; CHECK-NEXT:    bx lr
   %xa = and i64 %x, 1
