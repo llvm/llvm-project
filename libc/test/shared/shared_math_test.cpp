@@ -364,6 +364,8 @@ TEST(LlvmLibcSharedMathTest, AllLongDouble) {
   EXPECT_FP_EQ(1.0f16, LIBC_NAMESPACE::shared::f16sqrtl(1.0L));
   EXPECT_FP_EQ(10.0f16, LIBC_NAMESPACE::shared::f16fmal(2.0L, 3.0L, 4.0L));
 #endif // LIBC_TYPES_HAS_FLOAT16
+
+  EXPECT_FP_EQ(0.0L, LIBC_NAMESPACE::shared::sqrtl(0.0L));
 }
 
 #endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE

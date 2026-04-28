@@ -282,6 +282,7 @@ add_fp_unittest(
     libc.src.__support.math.sqrt
     libc.src.__support.math.sqrtbf16
     libc.src.__support.math.sqrtf
+    libc.src.__support.math.sqrtl
     libc.src.__support.math.tan
     libc.src.__support.math.tanf
     libc.src.__support.math.tanf16
@@ -344,6 +345,7 @@ add_fp_unittest(
     libc.src.__support.math.log
     libc.src.__support.math.logbbf16
     libc.src.__support.math.ilogbbf16
+    libc.src.__support.math.sqrtl
 )
 
 add_fp_unittest(

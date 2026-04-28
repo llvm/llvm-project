@@ -6150,6 +6150,15 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_sqrtl",
+    hdrs = ["src/__support/math/sqrtl.h"],
+    deps = [
+        ":__support_fputil_sqrt",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_logf16",
     hdrs = ["src/__support/math/logf16.h"],
     deps = [
@@ -9182,7 +9191,9 @@ libc_math_function(
 
 libc_math_function(
     name = "sqrtl",
-    additional_deps = [":__support_fputil_sqrt"],
+    additional_deps = [
+        ":__support_math_sqrtl",
+    ],
 )
 
 libc_math_function(
