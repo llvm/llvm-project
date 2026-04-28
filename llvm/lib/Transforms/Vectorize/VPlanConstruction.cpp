@@ -864,11 +864,13 @@ static bool hoistPreviousBeforeFORUsers(VPFirstOrderRecurrencePHIRecipe *FOR,
 /// fails.
 static bool tryToSinkOrHoistRecurrenceUsers(VPBasicBlock *HeaderVPBB,
                                             VPDominatorTree &VPDT) {
-  for (VPRecipeBase &R : HeaderVPBB->phis()) {
-    auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&R);
-    if (!FOR)
-      continue;
+  SmallVector<VPFirstOrderRecurrencePHIRecipe *> FORs;
 
+  for (VPRecipeBase &R : HeaderVPBB->phis())
+    if (auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&R))
+      FORs.push_back(FOR);
+
+  for (VPFirstOrderRecurrencePHIRecipe *FOR : FORs) {
     // Follow through FOR phi chains to find the actual Previous recipe.
     // Fixed-order recurrences do not contain cycles, so this loop is
     // guaranteed to terminate.
