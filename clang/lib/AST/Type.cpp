@@ -2867,10 +2867,6 @@ static bool isTriviallyCopyableTypeImpl(const QualType &type,
     return isTriviallyCopyableTypeImpl(Context.getBaseElementType(type),
                                        Context, IsCopyConstructible);
 
-  if (type->isMatrixType())
-    return isTriviallyCopyableTypeImpl(Context.getMatrixBaseElementType(type),
-                                       Context, IsCopyConstructible);
-
   if (type.hasNonTrivialObjCLifetime())
     return false;
 
@@ -2880,6 +2876,13 @@ static bool isTriviallyCopyableTypeImpl(const QualType &type,
   //   called trivially copy constructible types.
 
   QualType CanonicalType = type.getCanonicalType();
+
+  if (CanonicalType->isMatrixType()) {
+    const auto *MatrixTy = CanonicalType->getAs<MatrixType>();
+    return isTriviallyCopyableTypeImpl(MatrixTy->getElementType(), Context,
+                                       IsCopyConstructible);
+  }
+
   if (CanonicalType->isDependentType())
     return false;
 

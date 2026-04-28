@@ -8123,21 +8123,6 @@ QualType ASTContext::getBaseElementType(QualType type) const {
   return getQualifiedType(type, qs);
 }
 
-QualType ASTContext::getMatrixBaseElementType(QualType type) const {
-  Qualifiers qs;
-  while (true) {
-    SplitQualType split = type.getSplitDesugaredType();
-    const MatrixType *matrix = split.Ty->getAsMatrixTypeUnsafe();
-    if (!matrix)
-      break;
-
-    type = matrix->getElementType();
-    qs.addConsistentQualifiers(split.Quals);
-  }
-
-  return getQualifiedType(type, qs);
-}
-
 /// getConstantArrayElementCount - Returns number of constant array elements.
 uint64_t
 ASTContext::getConstantArrayElementCount(const ConstantArrayType *CA)  const {
