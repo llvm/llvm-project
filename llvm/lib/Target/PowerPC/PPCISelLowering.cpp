@@ -15890,7 +15890,7 @@ SDValue PPCTargetLowering::combineSignExtendSetCC(SDNode *N,
   SDValue X = isNullConstant(LHS) ? RHS : LHS;
   EVT XVT = X.getValueType(); // The type of x in the setcc x, 0, eq.
 
-  if (!Subtarget.isPPC64() && XVT == MVT::i64)
+  if (XVT == MVT::i64 && !Subtarget.isPPC64())
     return SDValue();
 
   // On PPC64, i32 carry operations use the full 64-bit XER register,
