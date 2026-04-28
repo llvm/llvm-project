@@ -81,7 +81,8 @@ using namespace std::chrono;
 
 void Process::DelayedBreakpointCache::Enqueue(lldb::BreakpointSiteSP site,
                                               BreakpointAction action) {
-  auto [previous, inserted] = m_site_to_action.insert({site, action});
+  auto [previous, inserted] =
+      m_site_to_action.insert({std::move(site), action});
   // New site or already enqueued for the same action.
   if (inserted || previous->second == action)
     return;
@@ -1707,11 +1708,11 @@ static addr_t ComputeConstituentLoadAddress(BreakpointLocation &constituent,
 
 llvm::Error Process::FlushDelayedBreakpoints() {
   // Clear the cache in m_delayed_breakpoints so it can't affect the actual
-  // enabling of breakpoints. For
-  // example, if `EnableSoftwareBreakpoint` is called outside of
-  // FlushDelayedBreakpoints, it needs to check the delayed breakpoints and
-  // possibly early return. However, when called from FlushDelayedBreakpoints,
-  // the queue better be empty so that no early returns take place.
+  // enabling of breakpoints. For example, if `EnableSoftwareBreakpoint` is
+  // called outside of FlushDelayedBreakpoints, it needs to check the delayed
+  // breakpoints and possibly early return. However, when called from
+  // FlushDelayedBreakpoints, the queue better be empty so that no early returns
+  // take place.
   auto site_to_action = std::move(m_delayed_breakpoints.m_site_to_action);
   m_delayed_breakpoints.m_site_to_action.clear();
 
