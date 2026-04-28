@@ -10763,11 +10763,15 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_wave_reduce_min:
   case Intrinsic::amdgcn_wave_reduce_umin:
   case Intrinsic::amdgcn_wave_reduce_max:
-  case Intrinsic::amdgcn_wave_reduce_umax: {
+  case Intrinsic::amdgcn_wave_reduce_umax:
+  case Intrinsic::amdgcn_wave_reduce_add:
+  case Intrinsic::amdgcn_wave_reduce_sub: {
     EVT SrcVT = Op.getOperand(1).getValueType();
     if (SrcVT == MVT::i16) {
       bool NeedsSignExt = IntrinsicID == Intrinsic::amdgcn_wave_reduce_min ||
-                          IntrinsicID == Intrinsic::amdgcn_wave_reduce_max;
+                          IntrinsicID == Intrinsic::amdgcn_wave_reduce_max ||
+                          IntrinsicID == Intrinsic::amdgcn_wave_reduce_add ||
+                          IntrinsicID == Intrinsic::amdgcn_wave_reduce_sub;
       unsigned ExtOpc = NeedsSignExt ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
       SDValue ExtendedSrc = DAG.getNode(ExtOpc, DL, MVT::i32, Op.getOperand(1));
       SDValue Strategy = Op.getOperand(2);
