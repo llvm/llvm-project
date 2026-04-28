@@ -517,12 +517,20 @@ void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
       if (getGlobalValue(mangledName))
         deferredAnnotations[mangledName] = fd;
     }
+
+    // Forward declarations are emitted lazily on first use.
     if (!fd->doesThisDeclarationHaveABody()) {
       if (!fd->doesDeclarationForceExternallyVisibleDefinition())
         return;
 
-      errorNYI(fd->getSourceRange(),
-               "function declaration that forces code gen");
+      StringRef mangledName = getMangledName(gd);
+
+      // Compute the function info and CIR func type.
+      const CIRGenFunctionInfo &fi = getTypes().arrangeGlobalDeclaration(gd);
+      cir::FuncType ty = getTypes().getFunctionType(fi);
+
+      getOrCreateCIRFunction(mangledName, ty, gd, /*ForVTable=*/false,
+                              /*DontDefer=*/false);
       return;
     }
   } else {
@@ -2716,7 +2724,15 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
   // represent them in dedicated ops. The correct attributes are ensured during
   // translation to LLVM. Thus, we don't need to check for them here.
 
+  // If this function has a body somewhere in the AST, we must use that
+  // definition for attributes and linkage calculation. This prevents AST 
+  // assertions when forcing inline definitions from forward declarations.
   const auto *funcDecl = cast<FunctionDecl>(globalDecl.getDecl());
+  const FunctionDecl *fdDef;
+  if (funcDecl->hasBody(fdDef)) {
+    funcDecl = fdDef;
+    globalDecl = globalDecl.getWithDecl(fdDef);
+  }
 
   if (!isIncompleteFunction)
     setCIRFunctionAttributes(globalDecl,
