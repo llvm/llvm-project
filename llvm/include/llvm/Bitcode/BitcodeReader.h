@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Bitstream/BitCodeEnums.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/Support/AMDGPUSummary.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
@@ -166,6 +167,10 @@ struct ParserCallbacks {
     LLVM_ABI Error
     readSummary(ModuleSummaryIndex &CombinedIndex, StringRef ModulePath,
                 std::function<bool(GlobalValue::GUID)> IsPrevailing = nullptr);
+
+    /// Read the AMDGPU_SUMMARY block (if present) and merge per-function
+    /// occupancy data into \p Summaries. Returns false if no block was found.
+    LLVM_ABI Expected<bool> readAMDGPUSummary(AMDGPU::SummaryMap &Summaries);
   };
 
   struct BitcodeFileContents {

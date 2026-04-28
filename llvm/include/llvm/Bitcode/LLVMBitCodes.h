@@ -63,6 +63,8 @@ enum BlockIDs {
   SYMTAB_BLOCK_ID,
 
   SYNC_SCOPE_NAMES_BLOCK_ID,
+
+  AMDGPU_SUMMARY_BLOCK_ID,
 };
 
 /// Identification block contains a string that describes the producer details,
@@ -832,6 +834,14 @@ enum StrtabCodes {
 
 enum SymtabCodes {
   SYMTAB_BLOB = 1,
+};
+
+enum AMDGPUSummaryCodes {
+  // [version]
+  AMDGPU_SUMMARY_VERSION = 1,
+  // [guid, is_entry, flat_wg_min, flat_wg_max,
+  //  waves_min, waves_max, max_wg_x, max_wg_y, max_wg_z]
+  AMDGPU_SUMMARY_ENTRY = 2,
 };
 
 } // End bitc namespace
