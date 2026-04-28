@@ -3503,30 +3503,9 @@ inline bool GetIntPtr(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
   return true;
 }
 
-inline bool GetMemberPtr(InterpState &S, CodePtr OpPC, const ValueDecl *D) {
-  S.Stk.push<MemberPointer>(D);
-  return true;
-}
-
-inline bool GetMemberPtrBase(InterpState &S, CodePtr OpPC) {
-  const auto &MP = S.Stk.pop<MemberPointer>();
-
-  if (!MP.isBaseCastPossible())
-    return false;
-
-  S.Stk.push<Pointer>(MP.getBase());
-  return true;
-}
-
-inline bool GetMemberPtrDecl(InterpState &S, CodePtr OpPC) {
-  const auto &MP = S.Stk.pop<MemberPointer>();
-
-  const auto *FD = cast<FunctionDecl>(MP.getDecl());
-  const auto *Func = S.getContext().getOrCreateFunction(FD);
-
-  S.Stk.push<Pointer>(Func);
-  return true;
-}
+bool GetMemberPtr(InterpState &S, CodePtr OpPC, const ValueDecl *D);
+bool GetMemberPtrBase(InterpState &S, CodePtr OpPC);
+bool GetMemberPtrDecl(InterpState &S, CodePtr OpPC);
 
 /// Just emit a diagnostic. The expression that caused emission of this
 /// op is not valid in a constant context.
