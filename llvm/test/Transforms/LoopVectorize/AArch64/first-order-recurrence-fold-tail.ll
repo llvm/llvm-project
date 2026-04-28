@@ -23,7 +23,7 @@ define i32 @test_phi_iterator_invalidation(ptr %A, ptr noalias %B) {
 ; CHECK:       pred.load.if:
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 [[TMP27]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i16, ptr [[TMP3]], align 2
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i16> poison, i16 [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i16> poison, i16 [[TMP4]], i64 0
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE]]
 ; CHECK:       pred.load.continue:
 ; CHECK-NEXT:    [[TMP6:%.*]] = phi <4 x i16> [ poison, [[VECTOR_BODY]] ], [ [[TMP5]], [[PRED_LOAD_IF]] ]
@@ -33,7 +33,7 @@ define i32 @test_phi_iterator_invalidation(ptr %A, ptr noalias %B) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i64> [[TMP0]], i64 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i32, ptr [[A]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i16, ptr [[TMP9]], align 2
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i16> [[TMP6]], i16 [[TMP10]], i32 1
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i16> [[TMP6]], i16 [[TMP10]], i64 1
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE2]]
 ; CHECK:       pred.load.continue2:
 ; CHECK-NEXT:    [[TMP12:%.*]] = phi <4 x i16> [ [[TMP6]], [[PRED_LOAD_CONTINUE]] ], [ [[TMP11]], [[PRED_LOAD_IF1]] ]
@@ -43,7 +43,7 @@ define i32 @test_phi_iterator_invalidation(ptr %A, ptr noalias %B) {
 ; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i64> [[TMP0]], i64 2
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i32, ptr [[A]], i64 [[TMP14]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = load i16, ptr [[TMP15]], align 2
-; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x i16> [[TMP12]], i16 [[TMP16]], i32 2
+; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x i16> [[TMP12]], i16 [[TMP16]], i64 2
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE4]]
 ; CHECK:       pred.load.continue4:
 ; CHECK-NEXT:    [[TMP18:%.*]] = phi <4 x i16> [ [[TMP12]], [[PRED_LOAD_CONTINUE2]] ], [ [[TMP17]], [[PRED_LOAD_IF3]] ]
@@ -53,7 +53,7 @@ define i32 @test_phi_iterator_invalidation(ptr %A, ptr noalias %B) {
 ; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <4 x i64> [[TMP0]], i64 3
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr i32, ptr [[A]], i64 [[TMP20]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = load i16, ptr [[TMP21]], align 2
-; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <4 x i16> [[TMP18]], i16 [[TMP22]], i32 3
+; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <4 x i16> [[TMP18]], i16 [[TMP22]], i64 3
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE6]]
 ; CHECK:       pred.load.continue6:
 ; CHECK-NEXT:    [[TMP24]] = phi <4 x i16> [ [[TMP18]], [[PRED_LOAD_CONTINUE4]] ], [ [[TMP23]], [[PRED_LOAD_IF5]] ]

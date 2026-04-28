@@ -202,7 +202,7 @@ define i64 @findlast_non_canonical_iv_with_expr(ptr %a, i64 %n) {
 ; CHECK:       [[PRED_LOAD_IF]]:
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = load i64, ptr [[TMP7]], align 8
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i64> poison, i64 [[TMP8]], i32 0
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i64> poison, i64 [[TMP8]], i64 0
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE]]
 ; CHECK:       [[PRED_LOAD_CONTINUE]]:
 ; CHECK-NEXT:    [[TMP9:%.*]] = phi <4 x i64> [ poison, %[[VECTOR_BODY]] ], [ [[TMP10]], %[[PRED_LOAD_IF]] ]
@@ -212,7 +212,7 @@ define i64 @findlast_non_canonical_iv_with_expr(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[OFFSET_IDX]], 2
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = load i64, ptr [[TMP13]], align 8
-; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x i64> [[TMP9]], i64 [[TMP14]], i32 1
+; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x i64> [[TMP9]], i64 [[TMP14]], i64 1
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE4]]
 ; CHECK:       [[PRED_LOAD_CONTINUE4]]:
 ; CHECK-NEXT:    [[TMP15:%.*]] = phi <4 x i64> [ [[TMP9]], %[[PRED_LOAD_CONTINUE]] ], [ [[TMP16]], %[[PRED_LOAD_IF3]] ]
@@ -222,7 +222,7 @@ define i64 @findlast_non_canonical_iv_with_expr(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[TMP18:%.*]] = add i64 [[OFFSET_IDX]], 4
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP18]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = load i64, ptr [[TMP19]], align 8
-; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <4 x i64> [[TMP15]], i64 [[TMP20]], i32 2
+; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <4 x i64> [[TMP15]], i64 [[TMP20]], i64 2
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE6]]
 ; CHECK:       [[PRED_LOAD_CONTINUE6]]:
 ; CHECK-NEXT:    [[TMP21:%.*]] = phi <4 x i64> [ [[TMP15]], %[[PRED_LOAD_CONTINUE4]] ], [ [[TMP22]], %[[PRED_LOAD_IF5]] ]
@@ -232,7 +232,7 @@ define i64 @findlast_non_canonical_iv_with_expr(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[TMP24:%.*]] = add i64 [[OFFSET_IDX]], 6
 ; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP24]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = load i64, ptr [[TMP25]], align 8
-; CHECK-NEXT:    [[TMP27:%.*]] = insertelement <4 x i64> [[TMP21]], i64 [[TMP26]], i32 3
+; CHECK-NEXT:    [[TMP27:%.*]] = insertelement <4 x i64> [[TMP21]], i64 [[TMP26]], i64 3
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE8]]
 ; CHECK:       [[PRED_LOAD_CONTINUE8]]:
 ; CHECK-NEXT:    [[TMP28:%.*]] = phi <4 x i64> [ [[TMP21]], %[[PRED_LOAD_CONTINUE6]] ], [ [[TMP27]], %[[PRED_LOAD_IF7]] ]

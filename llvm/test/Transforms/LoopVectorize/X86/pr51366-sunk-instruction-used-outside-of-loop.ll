@@ -19,7 +19,7 @@ define ptr @test(ptr noalias %src, ptr noalias %dst) {
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
 ; CHECK:       [[PRED_LOAD_IF]]:
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP6]], align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> poison, i32 [[TMP7]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> poison, i32 [[TMP7]], i64 0
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE]]
 ; CHECK:       [[PRED_LOAD_CONTINUE]]:
 ; CHECK-NEXT:    [[TMP9:%.*]] = phi <2 x i32> [ poison, %[[VECTOR_BODY]] ], [ [[TMP8]], %[[PRED_LOAD_IF]] ]
@@ -27,7 +27,7 @@ define ptr @test(ptr noalias %src, ptr noalias %dst) {
 ; CHECK-NEXT:    br i1 [[TMP10]], label %[[PRED_LOAD_IF1:.*]], label %[[PRED_LOAD_CONTINUE2]]
 ; CHECK:       [[PRED_LOAD_IF1]]:
 ; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <2 x i32> [[TMP9]], i32 [[TMP11]], i32 1
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <2 x i32> [[TMP9]], i32 [[TMP11]], i64 1
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE2]]
 ; CHECK:       [[PRED_LOAD_CONTINUE2]]:
 ; CHECK-NEXT:    [[TMP15:%.*]] = phi <2 x i32> [ [[TMP9]], %[[PRED_LOAD_CONTINUE]] ], [ [[TMP12]], %[[PRED_LOAD_IF1]] ]

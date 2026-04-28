@@ -2285,7 +2285,7 @@ define i32 @predicated_or_dominates_reduction(ptr %b) {
 ; CHECK:       [[PRED_LOAD_IF]]:
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [0 x [[STRUCT_E]]], ptr [[B]], i32 0, i32 [[INDEX]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = load i32, ptr [[TMP22]], align 4
-; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x i32> poison, i32 [[TMP23]], i32 0
+; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x i32> poison, i32 [[TMP23]], i64 0
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE]]
 ; CHECK:       [[PRED_LOAD_CONTINUE]]:
 ; CHECK-NEXT:    [[TMP27:%.*]] = phi <4 x i32> [ poison, %[[VECTOR_BODY]] ], [ [[TMP21]], %[[PRED_LOAD_IF]] ]
@@ -2294,7 +2294,7 @@ define i32 @predicated_or_dominates_reduction(ptr %b) {
 ; CHECK:       [[PRED_LOAD_IF1]]:
 ; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr inbounds [0 x [[STRUCT_E]]], ptr [[B]], i32 0, i32 [[TMP1]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = load i32, ptr [[TMP28]], align 4
-; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <4 x i32> [[TMP27]], i32 [[TMP29]], i32 1
+; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <4 x i32> [[TMP27]], i32 [[TMP29]], i64 1
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE2]]
 ; CHECK:       [[PRED_LOAD_CONTINUE2]]:
 ; CHECK-NEXT:    [[TMP25:%.*]] = phi <4 x i32> [ [[TMP27]], %[[PRED_LOAD_CONTINUE]] ], [ [[TMP24]], %[[PRED_LOAD_IF1]] ]
@@ -2303,7 +2303,7 @@ define i32 @predicated_or_dominates_reduction(ptr %b) {
 ; CHECK:       [[PRED_LOAD_IF3]]:
 ; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr inbounds [0 x [[STRUCT_E]]], ptr [[B]], i32 0, i32 [[TMP2]]
 ; CHECK-NEXT:    [[TMP35:%.*]] = load i32, ptr [[TMP34]], align 4
-; CHECK-NEXT:    [[TMP31:%.*]] = insertelement <4 x i32> [[TMP25]], i32 [[TMP35]], i32 2
+; CHECK-NEXT:    [[TMP31:%.*]] = insertelement <4 x i32> [[TMP25]], i32 [[TMP35]], i64 2
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE4]]
 ; CHECK:       [[PRED_LOAD_CONTINUE4]]:
 ; CHECK-NEXT:    [[TMP30:%.*]] = phi <4 x i32> [ [[TMP25]], %[[PRED_LOAD_CONTINUE2]] ], [ [[TMP31]], %[[PRED_LOAD_IF3]] ]
@@ -2312,7 +2312,7 @@ define i32 @predicated_or_dominates_reduction(ptr %b) {
 ; CHECK:       [[PRED_LOAD_IF5]]:
 ; CHECK-NEXT:    [[TMP40:%.*]] = getelementptr inbounds [0 x [[STRUCT_E]]], ptr [[B]], i32 0, i32 [[TMP3]]
 ; CHECK-NEXT:    [[TMP41:%.*]] = load i32, ptr [[TMP40]], align 4
-; CHECK-NEXT:    [[TMP36:%.*]] = insertelement <4 x i32> [[TMP30]], i32 [[TMP41]], i32 3
+; CHECK-NEXT:    [[TMP36:%.*]] = insertelement <4 x i32> [[TMP30]], i32 [[TMP41]], i64 3
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE6]]
 ; CHECK:       [[PRED_LOAD_CONTINUE6]]:
 ; CHECK-NEXT:    [[TMP43:%.*]] = phi <4 x i32> [ [[TMP30]], %[[PRED_LOAD_CONTINUE4]] ], [ [[TMP36]], %[[PRED_LOAD_IF5]] ]
@@ -2379,7 +2379,7 @@ define i32 @predicated_or_dominates_reduction(ptr %b) {
 ; CHECK-INTERLEAVED:       [[PRED_LOAD_IF]]:
 ; CHECK-INTERLEAVED-NEXT:    [[TMP43:%.*]] = getelementptr inbounds [0 x [[STRUCT_E]]], ptr [[B]], i32 0, i32 [[INDEX]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP44:%.*]] = load i32, ptr [[TMP43]], align 4
-; CHECK-INTERLEAVED-NEXT:    [[TMP45:%.*]] = insertelement <4 x i32> poison, i32 [[TMP44]], i32 0
+; CHECK-INTERLEAVED-NEXT:    [[TMP45:%.*]] = insertelement <4 x i32> poison, i32 [[TMP44]], i64 0
 ; CHECK-INTERLEAVED-NEXT:    br label %[[PRED_LOAD_CONTINUE]]
 ; CHECK-INTERLEAVED:       [[PRED_LOAD_CONTINUE]]:
 ; CHECK-INTERLEAVED-NEXT:    [[TMP37:%.*]] = phi <4 x i32> [ poison, %[[VECTOR_BODY]] ], [ [[TMP45]], %[[PRED_LOAD_IF]] ]
@@ -2388,7 +2388,7 @@ define i32 @predicated_or_dominates_reduction(ptr %b) {
 ; CHECK-INTERLEAVED:       [[PRED_LOAD_IF2]]:
 ; CHECK-INTERLEAVED-NEXT:    [[TMP49:%.*]] = getelementptr inbounds [0 x [[STRUCT_E]]], ptr [[B]], i32 0, i32 [[TMP1]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP50:%.*]] = load i32, ptr [[TMP49]], align 4
-; CHECK-INTERLEAVED-NEXT:    [[TMP48:%.*]] = insertelement <4 x i32> [[TMP37]], i32 [[TMP50]], i32 1
+; CHECK-INTERLEAVED-NEXT:    [[TMP48:%.*]] = insertelement <4 x i32> [[TMP37]], i32 [[TMP50]], i64 1
 ; CHECK-INTERLEAVED-NEXT:    br label %[[PRED_LOAD_CONTINUE3]]
 ; CHECK-INTERLEAVED:       [[PRED_LOAD_CONTINUE3]]:
 ; CHECK-INTERLEAVED-NEXT:    [[TMP42:%.*]] = phi <4 x i32> [ [[TMP37]], %[[PRED_LOAD_CONTINUE]] ], [ [[TMP48]], %[[PRED_LOAD_IF2]] ]
@@ -2397,7 +2397,7 @@ define i32 @predicated_or_dominates_reduction(ptr %b) {
 ; CHECK-INTERLEAVED:       [[PRED_LOAD_IF4]]:
 ; CHECK-INTERLEAVED-NEXT:    [[TMP55:%.*]] = getelementptr inbounds [0 x [[STRUCT_E]]], ptr [[B]], i32 0, i32 [[TMP2]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP56:%.*]] = load i32, ptr [[TMP55]], align 4
-; CHECK-INTERLEAVED-NEXT:    [[TMP46:%.*]] = insertelement <4 x i32> [[TMP42]], i32 [[TMP56]], i32 2
+; CHECK-INTERLEAVED-NEXT:    [[TMP46:%.*]] = insertelement <4 x i32> [[TMP42]], i32 [[TMP56]], i64 2
 ; CHECK-INTERLEAVED-NEXT:    br label %[[PRED_LOAD_CONTINUE5]]
 ; CHECK-INTERLEAVED:       [[PRED_LOAD_CONTINUE5]]:
 ; CHECK-INTERLEAVED-NEXT:    [[TMP52:%.*]] = phi <4 x i32> [ [[TMP42]], %[[PRED_LOAD_CONTINUE3]] ], [ [[TMP46]], %[[PRED_LOAD_IF4]] ]
@@ -2406,7 +2406,7 @@ define i32 @predicated_or_dominates_reduction(ptr %b) {
 ; CHECK-INTERLEAVED:       [[PRED_LOAD_IF6]]:
 ; CHECK-INTERLEAVED-NEXT:    [[TMP61:%.*]] = getelementptr inbounds [0 x [[STRUCT_E]]], ptr [[B]], i32 0, i32 [[TMP3]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP62:%.*]] = load i32, ptr [[TMP61]], align 4
-; CHECK-INTERLEAVED-NEXT:    [[TMP51:%.*]] = insertelement <4 x i32> [[TMP52]], i32 [[TMP62]], i32 3
+; CHECK-INTERLEAVED-NEXT:    [[TMP51:%.*]] = insertelement <4 x i32> [[TMP52]], i32 [[TMP62]], i64 3
 ; CHECK-INTERLEAVED-NEXT:    br label %[[PRED_LOAD_CONTINUE7]]
 ; CHECK-INTERLEAVED:       [[PRED_LOAD_CONTINUE7]]:
 ; CHECK-INTERLEAVED-NEXT:    [[TMP64:%.*]] = phi <4 x i32> [ [[TMP52]], %[[PRED_LOAD_CONTINUE5]] ], [ [[TMP51]], %[[PRED_LOAD_IF6]] ]
@@ -2415,7 +2415,7 @@ define i32 @predicated_or_dominates_reduction(ptr %b) {
 ; CHECK-INTERLEAVED:       [[PRED_LOAD_IF8]]:
 ; CHECK-INTERLEAVED-NEXT:    [[TMP67:%.*]] = getelementptr inbounds [0 x [[STRUCT_E]]], ptr [[B]], i32 0, i32 [[TMP4]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP68:%.*]] = load i32, ptr [[TMP67]], align 4
-; CHECK-INTERLEAVED-NEXT:    [[TMP58:%.*]] = insertelement <4 x i32> poison, i32 [[TMP68]], i32 0
+; CHECK-INTERLEAVED-NEXT:    [[TMP58:%.*]] = insertelement <4 x i32> poison, i32 [[TMP68]], i64 0
 ; CHECK-INTERLEAVED-NEXT:    br label %[[PRED_LOAD_CONTINUE9]]
 ; CHECK-INTERLEAVED:       [[PRED_LOAD_CONTINUE9]]:
 ; CHECK-INTERLEAVED-NEXT:    [[TMP57:%.*]] = phi <4 x i32> [ poison, %[[PRED_LOAD_CONTINUE7]] ], [ [[TMP58]], %[[PRED_LOAD_IF8]] ]
@@ -2424,7 +2424,7 @@ define i32 @predicated_or_dominates_reduction(ptr %b) {
 ; CHECK-INTERLEAVED:       [[PRED_LOAD_IF10]]:
 ; CHECK-INTERLEAVED-NEXT:    [[TMP73:%.*]] = getelementptr inbounds [0 x [[STRUCT_E]]], ptr [[B]], i32 0, i32 [[TMP5]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP74:%.*]] = load i32, ptr [[TMP73]], align 4
-; CHECK-INTERLEAVED-NEXT:    [[TMP63:%.*]] = insertelement <4 x i32> [[TMP57]], i32 [[TMP74]], i32 1
+; CHECK-INTERLEAVED-NEXT:    [[TMP63:%.*]] = insertelement <4 x i32> [[TMP57]], i32 [[TMP74]], i64 1
 ; CHECK-INTERLEAVED-NEXT:    br label %[[PRED_LOAD_CONTINUE11]]
 ; CHECK-INTERLEAVED:       [[PRED_LOAD_CONTINUE11]]:
 ; CHECK-INTERLEAVED-NEXT:    [[TMP69:%.*]] = phi <4 x i32> [ [[TMP57]], %[[PRED_LOAD_CONTINUE9]] ], [ [[TMP63]], %[[PRED_LOAD_IF10]] ]
@@ -2433,7 +2433,7 @@ define i32 @predicated_or_dominates_reduction(ptr %b) {
 ; CHECK-INTERLEAVED:       [[PRED_LOAD_IF12]]:
 ; CHECK-INTERLEAVED-NEXT:    [[TMP79:%.*]] = getelementptr inbounds [0 x [[STRUCT_E]]], ptr [[B]], i32 0, i32 [[TMP6]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP80:%.*]] = load i32, ptr [[TMP79]], align 4
-; CHECK-INTERLEAVED-NEXT:    [[TMP66:%.*]] = insertelement <4 x i32> [[TMP69]], i32 [[TMP80]], i32 2
+; CHECK-INTERLEAVED-NEXT:    [[TMP66:%.*]] = insertelement <4 x i32> [[TMP69]], i32 [[TMP80]], i64 2
 ; CHECK-INTERLEAVED-NEXT:    br label %[[PRED_LOAD_CONTINUE13]]
 ; CHECK-INTERLEAVED:       [[PRED_LOAD_CONTINUE13]]:
 ; CHECK-INTERLEAVED-NEXT:    [[TMP70:%.*]] = phi <4 x i32> [ [[TMP69]], %[[PRED_LOAD_CONTINUE11]] ], [ [[TMP66]], %[[PRED_LOAD_IF12]] ]
@@ -2442,7 +2442,7 @@ define i32 @predicated_or_dominates_reduction(ptr %b) {
 ; CHECK-INTERLEAVED:       [[PRED_LOAD_IF14]]:
 ; CHECK-INTERLEAVED-NEXT:    [[TMP85:%.*]] = getelementptr inbounds [0 x [[STRUCT_E]]], ptr [[B]], i32 0, i32 [[TMP7]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP86:%.*]] = load i32, ptr [[TMP85]], align 4
-; CHECK-INTERLEAVED-NEXT:    [[TMP72:%.*]] = insertelement <4 x i32> [[TMP70]], i32 [[TMP86]], i32 3
+; CHECK-INTERLEAVED-NEXT:    [[TMP72:%.*]] = insertelement <4 x i32> [[TMP70]], i32 [[TMP86]], i64 3
 ; CHECK-INTERLEAVED-NEXT:    br label %[[PRED_LOAD_CONTINUE15]]
 ; CHECK-INTERLEAVED:       [[PRED_LOAD_CONTINUE15]]:
 ; CHECK-INTERLEAVED-NEXT:    [[TMP88:%.*]] = phi <4 x i32> [ [[TMP70]], %[[PRED_LOAD_CONTINUE13]] ], [ [[TMP72]], %[[PRED_LOAD_IF14]] ]

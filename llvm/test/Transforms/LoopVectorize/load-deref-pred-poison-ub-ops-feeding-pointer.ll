@@ -20,14 +20,14 @@ define void @ptr_depends_on_sdiv(ptr noalias %dst, i16 noundef %off) {
 ; CHECK-NEXT:    br i1 false, label %[[PRED_SDIV_IF:.*]], label %[[PRED_SDIV_CONTINUE:.*]]
 ; CHECK:       [[PRED_SDIV_IF]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = sdiv i16 24316, [[OFF]]
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i16> poison, i16 [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i16> poison, i16 [[TMP2]], i64 0
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE]]
 ; CHECK:       [[PRED_SDIV_CONTINUE]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi <2 x i16> [ poison, %[[VECTOR_BODY]] ], [ [[TMP1]], %[[PRED_SDIV_IF]] ]
 ; CHECK-NEXT:    br i1 true, label %[[PRED_SDIV_IF1:.*]], label %[[PRED_SDIV_CONTINUE2:.*]]
 ; CHECK:       [[PRED_SDIV_IF1]]:
 ; CHECK-NEXT:    [[TMP18:%.*]] = sdiv i16 24316, [[OFF]]
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i16> [[TMP3]], i16 [[TMP18]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i16> [[TMP3]], i16 [[TMP18]], i64 1
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE2]]
 ; CHECK:       [[PRED_SDIV_CONTINUE2]]:
 ; CHECK-NEXT:    [[TMP8:%.*]] = phi <2 x i16> [ [[TMP3]], %[[PRED_SDIV_CONTINUE]] ], [ [[TMP4]], %[[PRED_SDIV_IF1]] ]

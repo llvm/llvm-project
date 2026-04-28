@@ -22,7 +22,7 @@ define void @cond_call(ptr readonly %src, ptr noalias %dest, i64 %N) {
 ; CHECK:       pred.call.if:
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @foo(i64 [[TMP3]]) #[[ATTR0:[0-9]+]]
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i64> poison, i64 [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i64> poison, i64 [[TMP4]], i64 0
 ; CHECK-NEXT:    br label [[PRED_CALL_CONTINUE]]
 ; CHECK:       pred.call.continue:
 ; CHECK-NEXT:    [[TMP6:%.*]] = phi <2 x i64> [ poison, [[VECTOR_BODY]] ], [ [[TMP5]], [[PRED_CALL_IF]] ]
@@ -31,7 +31,7 @@ define void @cond_call(ptr readonly %src, ptr noalias %dest, i64 %N) {
 ; CHECK:       pred.call.if1:
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i64 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @foo(i64 [[TMP8]]) #[[ATTR0]]
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i64> [[TMP6]], i64 [[TMP9]], i32 1
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i64> [[TMP6]], i64 [[TMP9]], i64 1
 ; CHECK-NEXT:    br label [[PRED_CALL_CONTINUE2]]
 ; CHECK:       pred.call.continue2:
 ; CHECK-NEXT:    [[TMP11:%.*]] = phi <2 x i64> [ [[TMP6]], [[PRED_CALL_CONTINUE]] ], [ [[TMP10]], [[PRED_CALL_IF1]] ]

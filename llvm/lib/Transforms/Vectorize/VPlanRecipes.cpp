@@ -3326,16 +3326,6 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
   scalarizeInstruction(UI, this, VPLane(0), State);
 }
 
-bool VPReplicateRecipe::shouldPack() const {
-  // Find if the recipe is used by a widened recipe via an intervening
-  // VPPredInstPHIRecipe. In this case, also pack the scalar values in a vector.
-  return any_of(users(), [](const VPUser *U) {
-    if (auto *PredR = dyn_cast<VPPredInstPHIRecipe>(U))
-      return !vputils::onlyScalarValuesUsed(PredR);
-    return false;
-  });
-}
-
 /// Returns a SCEV expression for \p Ptr if it is a pointer computation for
 /// which the legacy cost model computes a SCEV expression when computing the
 /// address cost. Computing SCEVs for VPValues is incomplete and returns
@@ -3683,7 +3673,13 @@ void VPReplicateRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
     printOperands(O, SlotTracker);
   }
 
-  if (shouldPack())
+  // Find if the recipe is used by a widened recipe via an intervening
+  // VPPredInstPHIRecipe. In this case, also pack the scalar values in a vector.
+  if (any_of(users(), [](const VPUser *U) {
+    if (auto *PredR = dyn_cast<VPPredInstPHIRecipe>(U))
+      return !vputils::onlyScalarValuesUsed(PredR);
+    return false;
+  }))
     O << " (S->V)";
 }
 #endif

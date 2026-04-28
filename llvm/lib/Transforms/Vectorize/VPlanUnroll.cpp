@@ -677,15 +677,15 @@ static void convertRecipesInRegionBlocksToSingleScalar(VPlan &Plan, Type *IdxTy,
   VPTypeAnalysis TypeInfo(Plan);
   for (VPBlockBase *VPB : vp_depth_first_shallow(Entry)) {
     for (VPRecipeBase &OldR : make_early_inc_range(cast<VPBasicBlock>(*VPB))) {
-      VPBuilder Builder(&OldR);
       assert(
           !isa<VPWidenPHIRecipe>(&OldR) &&
           !match(&OldR,
                  m_CombineOr(
                      m_InsertElement(m_VPValue(), m_VPValue(), m_VPValue()),
                      m_ExtractElement(m_VPValue(), m_VPValue()))) &&
-          "must not contain wide phis, insert or extracts before conversion");
+          "must not contain wide phis, inserts or extracts before conversion");
 
+      VPBuilder Builder(&OldR);
       DebugLoc OldDL = OldR.getDebugLoc();
       // For scalar VF, operands are already scalar; no extraction needed.
       if (!VF.isScalar()) {
@@ -766,14 +766,15 @@ static void processLaneForReplicateRegion(VPlan &Plan, Type *IdxTy,
                "extract indices must be zero");
         NewR.setOperand(1, IdxLane);
       } else if (auto *NewPhi = dyn_cast<VPPhi>(&NewR)) {
-        VPUser *SingleUser = OldR.getVPSingleValue()->getSingleUser();
-        if (SingleUser &&
-            match(SingleUser,
+          auto *OldPhi = cast<VPPhi>(&OldR);
+          assert(vputils::onlyFirstLaneUsed(OldPhi) &&
+                                 "VPPhis expected to have only first lane used");
+          auto *BVUser = dyn_cast_or_null<VPInstruction>(OldPhi->getSingleUser());
+        if (BVUser &&
+            match(BVUser,
                   m_CombineOr(m_BuildVector(), m_BuildStructVector()))) {
-          cast<VPRecipeBase>(SingleUser)->setOperand(Lane, NewPhi);
-        } else {
-          assert(vputils::onlyFirstLaneUsed(OldR.getVPSingleValue()) &&
-                 "no Build(Struct)Vector needed");
+          assert(BVUser->getOperand(0) == OldPhi && "Unexpected first operand of build vector user");
+          BVUser->setOperand(Lane, NewPhi);
         }
       }
     }
@@ -876,7 +877,7 @@ static void dissolveReplicateRegion(VPRegionBlock *Region, ElementCount VF,
       auto Builder = VPBuilder::getToInsertAfter(PredOp->getDefiningRecipe());
       auto *Insert = Builder.createNaryOp(
           Instruction::InsertElement,
-          {PrevVal, PredOp, Plan.getConstantInt(32, Idx)}, DL);
+          {PrevVal, PredOp, Plan.getConstantInt(64, Idx)}, DL);
       Builder.setInsertPoint(ScalarPhi);
       auto *NewPhi = Builder.createWidenPhi({PrevVal, Insert}, DL);
       ScalarPhi->replaceAllUsesWith(NewPhi);

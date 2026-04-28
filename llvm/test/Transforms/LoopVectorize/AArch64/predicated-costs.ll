@@ -249,7 +249,7 @@ define void @srem_sdiv_without_tail_folding(i32 %d.0, i32 %d.1, ptr %dst, i32 %e
 ; CHECK:       [[PRED_SDIV_IF]]:
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i32> [[TMP0]], i64 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = sdiv i32 [[TMP5]], [[D_1]]
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> poison, i32 [[TMP6]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> poison, i32 [[TMP6]], i64 0
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE]]
 ; CHECK:       [[PRED_SDIV_CONTINUE]]:
 ; CHECK-NEXT:    [[TMP8:%.*]] = phi <4 x i32> [ poison, %[[VECTOR_BODY]] ], [ [[TMP7]], %[[PRED_SDIV_IF]] ]
@@ -258,7 +258,7 @@ define void @srem_sdiv_without_tail_folding(i32 %d.0, i32 %d.1, ptr %dst, i32 %e
 ; CHECK:       [[PRED_SDIV_IF1]]:
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i32> [[TMP0]], i64 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = sdiv i32 [[TMP10]], [[D_1]]
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i32> [[TMP8]], i32 [[TMP11]], i32 1
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i32> [[TMP8]], i32 [[TMP11]], i64 1
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE2]]
 ; CHECK:       [[PRED_SDIV_CONTINUE2]]:
 ; CHECK-NEXT:    [[TMP13:%.*]] = phi <4 x i32> [ [[TMP8]], %[[PRED_SDIV_CONTINUE]] ], [ [[TMP12]], %[[PRED_SDIV_IF1]] ]
@@ -267,7 +267,7 @@ define void @srem_sdiv_without_tail_folding(i32 %d.0, i32 %d.1, ptr %dst, i32 %e
 ; CHECK:       [[PRED_SDIV_IF3]]:
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x i32> [[TMP0]], i64 2
 ; CHECK-NEXT:    [[TMP16:%.*]] = sdiv i32 [[TMP15]], [[D_1]]
-; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x i32> [[TMP13]], i32 [[TMP16]], i32 2
+; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x i32> [[TMP13]], i32 [[TMP16]], i64 2
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE4]]
 ; CHECK:       [[PRED_SDIV_CONTINUE4]]:
 ; CHECK-NEXT:    [[TMP18:%.*]] = phi <4 x i32> [ [[TMP13]], %[[PRED_SDIV_CONTINUE2]] ], [ [[TMP17]], %[[PRED_SDIV_IF3]] ]
@@ -276,7 +276,7 @@ define void @srem_sdiv_without_tail_folding(i32 %d.0, i32 %d.1, ptr %dst, i32 %e
 ; CHECK:       [[PRED_SDIV_IF5]]:
 ; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <4 x i32> [[TMP0]], i64 3
 ; CHECK-NEXT:    [[TMP21:%.*]] = sdiv i32 [[TMP20]], [[D_1]]
-; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <4 x i32> [[TMP18]], i32 [[TMP21]], i32 3
+; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <4 x i32> [[TMP18]], i32 [[TMP21]], i64 3
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE6]]
 ; CHECK:       [[PRED_SDIV_CONTINUE6]]:
 ; CHECK-NEXT:    [[TMP23:%.*]] = phi <4 x i32> [ [[TMP18]], %[[PRED_SDIV_CONTINUE4]] ], [ [[TMP22]], %[[PRED_SDIV_IF5]] ]

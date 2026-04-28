@@ -27,7 +27,7 @@ define void @func_21() {
 ; CHECK:       pred.load.if:
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [5 x i32], ptr @A, i64 0, i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP4]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> poison, i32 [[TMP5]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> poison, i32 [[TMP5]], i64 0
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE]]
 ; CHECK:       pred.load.continue:
 ; CHECK-NEXT:    [[TMP7:%.*]] = phi <2 x i32> [ poison, [[VECTOR_BODY]] ], [ [[TMP6]], [[PRED_LOAD_IF]] ]
@@ -36,7 +36,7 @@ define void @func_21() {
 ; CHECK:       pred.load.if1:
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [5 x i32], ptr @A, i64 0, i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[TMP9]], align 4
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x i32> [[TMP7]], i32 [[TMP10]], i32 1
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x i32> [[TMP7]], i32 [[TMP10]], i64 1
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE2]]
 ; CHECK:       pred.load.continue2:
 ; CHECK-NEXT:    [[TMP12]] = phi <2 x i32> [ [[TMP7]], [[PRED_LOAD_CONTINUE]] ], [ [[TMP11]], [[PRED_LOAD_IF1]] ]

@@ -198,7 +198,7 @@ define i16 @select_decreasing_induction_icmp_table_i16(i16 noundef %val) {
 ; IC4VF4:       [[PRED_LOAD_IF]]:
 ; IC4VF4-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 12
 ; IC4VF4-NEXT:    [[TMP7:%.*]] = load i16, ptr [[TMP6]], align 1
-; IC4VF4-NEXT:    [[TMP2:%.*]] = insertelement <4 x i16> poison, i16 [[TMP7]], i32 0
+; IC4VF4-NEXT:    [[TMP2:%.*]] = insertelement <4 x i16> poison, i16 [[TMP7]], i64 0
 ; IC4VF4-NEXT:    br label %[[PRED_LOAD_CONTINUE]]
 ; IC4VF4:       [[PRED_LOAD_CONTINUE]]:
 ; IC4VF4-NEXT:    [[TMP3:%.*]] = phi <4 x i16> [ poison, %[[VECTOR_BODY]] ], [ [[TMP2]], %[[PRED_LOAD_IF]] ]
@@ -206,7 +206,7 @@ define i16 @select_decreasing_induction_icmp_table_i16(i16 noundef %val) {
 ; IC4VF4:       [[PRED_LOAD_IF15]]:
 ; IC4VF4-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 11
 ; IC4VF4-NEXT:    [[TMP13:%.*]] = load i16, ptr [[TMP12]], align 1
-; IC4VF4-NEXT:    [[TMP8:%.*]] = insertelement <4 x i16> [[TMP3]], i16 [[TMP13]], i32 1
+; IC4VF4-NEXT:    [[TMP8:%.*]] = insertelement <4 x i16> [[TMP3]], i16 [[TMP13]], i64 1
 ; IC4VF4-NEXT:    br label %[[PRED_LOAD_CONTINUE16]]
 ; IC4VF4:       [[PRED_LOAD_CONTINUE16]]:
 ; IC4VF4-NEXT:    [[TMP9:%.*]] = phi <4 x i16> [ [[TMP3]], %[[PRED_LOAD_CONTINUE]] ], [ [[TMP8]], %[[PRED_LOAD_IF15]] ]
@@ -214,7 +214,7 @@ define i16 @select_decreasing_induction_icmp_table_i16(i16 noundef %val) {
 ; IC4VF4:       [[PRED_LOAD_IF17]]:
 ; IC4VF4-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 10
 ; IC4VF4-NEXT:    [[TMP19:%.*]] = load i16, ptr [[TMP18]], align 1
-; IC4VF4-NEXT:    [[TMP10:%.*]] = insertelement <4 x i16> [[TMP9]], i16 [[TMP19]], i32 2
+; IC4VF4-NEXT:    [[TMP10:%.*]] = insertelement <4 x i16> [[TMP9]], i16 [[TMP19]], i64 2
 ; IC4VF4-NEXT:    br label %[[PRED_LOAD_CONTINUE18]]
 ; IC4VF4:       [[PRED_LOAD_CONTINUE18]]:
 ; IC4VF4-NEXT:    [[TMP11:%.*]] = phi <4 x i16> [ [[TMP9]], %[[PRED_LOAD_CONTINUE16]] ], [ [[TMP10]], %[[PRED_LOAD_IF17]] ]
@@ -222,7 +222,7 @@ define i16 @select_decreasing_induction_icmp_table_i16(i16 noundef %val) {
 ; IC4VF4:       [[PRED_LOAD_IF19]]:
 ; IC4VF4-NEXT:    [[TMP24:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 9
 ; IC4VF4-NEXT:    [[TMP25:%.*]] = load i16, ptr [[TMP24]], align 1
-; IC4VF4-NEXT:    [[TMP14:%.*]] = insertelement <4 x i16> [[TMP11]], i16 [[TMP25]], i32 3
+; IC4VF4-NEXT:    [[TMP14:%.*]] = insertelement <4 x i16> [[TMP11]], i16 [[TMP25]], i64 3
 ; IC4VF4-NEXT:    br label %[[PRED_LOAD_CONTINUE20]]
 ; IC4VF4:       [[PRED_LOAD_CONTINUE20]]:
 ; IC4VF4-NEXT:    [[TMP27:%.*]] = phi <4 x i16> [ [[TMP11]], %[[PRED_LOAD_CONTINUE18]] ], [ [[TMP14]], %[[PRED_LOAD_IF19]] ]
@@ -230,7 +230,7 @@ define i16 @select_decreasing_induction_icmp_table_i16(i16 noundef %val) {
 ; IC4VF4:       [[PRED_LOAD_IF21]]:
 ; IC4VF4-NEXT:    [[TMP30:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 8
 ; IC4VF4-NEXT:    [[TMP31:%.*]] = load i16, ptr [[TMP30]], align 1
-; IC4VF4-NEXT:    [[TMP20:%.*]] = insertelement <4 x i16> poison, i16 [[TMP31]], i32 0
+; IC4VF4-NEXT:    [[TMP20:%.*]] = insertelement <4 x i16> poison, i16 [[TMP31]], i64 0
 ; IC4VF4-NEXT:    br label %[[PRED_LOAD_CONTINUE22]]
 ; IC4VF4:       [[PRED_LOAD_CONTINUE22]]:
 ; IC4VF4-NEXT:    [[TMP21:%.*]] = phi <4 x i16> [ poison, %[[PRED_LOAD_CONTINUE20]] ], [ [[TMP20]], %[[PRED_LOAD_IF21]] ]
@@ -238,7 +238,7 @@ define i16 @select_decreasing_induction_icmp_table_i16(i16 noundef %val) {
 ; IC4VF4:       [[PRED_LOAD_IF23]]:
 ; IC4VF4-NEXT:    [[TMP36:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 7
 ; IC4VF4-NEXT:    [[TMP37:%.*]] = load i16, ptr [[TMP36]], align 1
-; IC4VF4-NEXT:    [[TMP22:%.*]] = insertelement <4 x i16> [[TMP21]], i16 [[TMP37]], i32 1
+; IC4VF4-NEXT:    [[TMP22:%.*]] = insertelement <4 x i16> [[TMP21]], i16 [[TMP37]], i64 1
 ; IC4VF4-NEXT:    br label %[[PRED_LOAD_CONTINUE24]]
 ; IC4VF4:       [[PRED_LOAD_CONTINUE24]]:
 ; IC4VF4-NEXT:    [[TMP23:%.*]] = phi <4 x i16> [ [[TMP21]], %[[PRED_LOAD_CONTINUE22]] ], [ [[TMP22]], %[[PRED_LOAD_IF23]] ]
@@ -246,7 +246,7 @@ define i16 @select_decreasing_induction_icmp_table_i16(i16 noundef %val) {
 ; IC4VF4:       [[PRED_LOAD_IF25]]:
 ; IC4VF4-NEXT:    [[TMP42:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 6
 ; IC4VF4-NEXT:    [[TMP43:%.*]] = load i16, ptr [[TMP42]], align 1
-; IC4VF4-NEXT:    [[TMP26:%.*]] = insertelement <4 x i16> [[TMP23]], i16 [[TMP43]], i32 2
+; IC4VF4-NEXT:    [[TMP26:%.*]] = insertelement <4 x i16> [[TMP23]], i16 [[TMP43]], i64 2
 ; IC4VF4-NEXT:    br label %[[PRED_LOAD_CONTINUE26]]
 ; IC4VF4:       [[PRED_LOAD_CONTINUE26]]:
 ; IC4VF4-NEXT:    [[TMP28:%.*]] = phi <4 x i16> [ [[TMP23]], %[[PRED_LOAD_CONTINUE24]] ], [ [[TMP26]], %[[PRED_LOAD_IF25]] ]
@@ -254,7 +254,7 @@ define i16 @select_decreasing_induction_icmp_table_i16(i16 noundef %val) {
 ; IC4VF4:       [[PRED_LOAD_IF27]]:
 ; IC4VF4-NEXT:    [[TMP48:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 5
 ; IC4VF4-NEXT:    [[TMP49:%.*]] = load i16, ptr [[TMP48]], align 1
-; IC4VF4-NEXT:    [[TMP32:%.*]] = insertelement <4 x i16> [[TMP28]], i16 [[TMP49]], i32 3
+; IC4VF4-NEXT:    [[TMP32:%.*]] = insertelement <4 x i16> [[TMP28]], i16 [[TMP49]], i64 3
 ; IC4VF4-NEXT:    br label %[[PRED_LOAD_CONTINUE28]]
 ; IC4VF4:       [[PRED_LOAD_CONTINUE28]]:
 ; IC4VF4-NEXT:    [[TMP51:%.*]] = phi <4 x i16> [ [[TMP28]], %[[PRED_LOAD_CONTINUE26]] ], [ [[TMP32]], %[[PRED_LOAD_IF27]] ]
@@ -262,7 +262,7 @@ define i16 @select_decreasing_induction_icmp_table_i16(i16 noundef %val) {
 ; IC4VF4:       [[PRED_LOAD_IF29]]:
 ; IC4VF4-NEXT:    [[TMP54:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 4
 ; IC4VF4-NEXT:    [[TMP55:%.*]] = load i16, ptr [[TMP54]], align 1
-; IC4VF4-NEXT:    [[TMP34:%.*]] = insertelement <4 x i16> poison, i16 [[TMP55]], i32 0
+; IC4VF4-NEXT:    [[TMP34:%.*]] = insertelement <4 x i16> poison, i16 [[TMP55]], i64 0
 ; IC4VF4-NEXT:    br label %[[PRED_LOAD_CONTINUE30]]
 ; IC4VF4:       [[PRED_LOAD_CONTINUE30]]:
 ; IC4VF4-NEXT:    [[TMP35:%.*]] = phi <4 x i16> [ poison, %[[PRED_LOAD_CONTINUE28]] ], [ [[TMP34]], %[[PRED_LOAD_IF29]] ]
@@ -270,7 +270,7 @@ define i16 @select_decreasing_induction_icmp_table_i16(i16 noundef %val) {
 ; IC4VF4:       [[PRED_LOAD_IF31]]:
 ; IC4VF4-NEXT:    [[TMP60:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 3
 ; IC4VF4-NEXT:    [[TMP61:%.*]] = load i16, ptr [[TMP60]], align 1
-; IC4VF4-NEXT:    [[TMP38:%.*]] = insertelement <4 x i16> [[TMP35]], i16 [[TMP61]], i32 1
+; IC4VF4-NEXT:    [[TMP38:%.*]] = insertelement <4 x i16> [[TMP35]], i16 [[TMP61]], i64 1
 ; IC4VF4-NEXT:    br label %[[PRED_LOAD_CONTINUE32]]
 ; IC4VF4:       [[PRED_LOAD_CONTINUE32]]:
 ; IC4VF4-NEXT:    [[TMP39:%.*]] = phi <4 x i16> [ [[TMP35]], %[[PRED_LOAD_CONTINUE30]] ], [ [[TMP38]], %[[PRED_LOAD_IF31]] ]
@@ -278,7 +278,7 @@ define i16 @select_decreasing_induction_icmp_table_i16(i16 noundef %val) {
 ; IC4VF4:       [[PRED_LOAD_IF33]]:
 ; IC4VF4-NEXT:    [[TMP66:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 2
 ; IC4VF4-NEXT:    [[TMP67:%.*]] = load i16, ptr [[TMP66]], align 1
-; IC4VF4-NEXT:    [[TMP44:%.*]] = insertelement <4 x i16> [[TMP39]], i16 [[TMP67]], i32 2
+; IC4VF4-NEXT:    [[TMP44:%.*]] = insertelement <4 x i16> [[TMP39]], i16 [[TMP67]], i64 2
 ; IC4VF4-NEXT:    br label %[[PRED_LOAD_CONTINUE34]]
 ; IC4VF4:       [[PRED_LOAD_CONTINUE34]]:
 ; IC4VF4-NEXT:    [[TMP45:%.*]] = phi <4 x i16> [ [[TMP39]], %[[PRED_LOAD_CONTINUE32]] ], [ [[TMP44]], %[[PRED_LOAD_IF33]] ]
@@ -286,7 +286,7 @@ define i16 @select_decreasing_induction_icmp_table_i16(i16 noundef %val) {
 ; IC4VF4:       [[PRED_LOAD_IF35]]:
 ; IC4VF4-NEXT:    [[TMP72:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 1
 ; IC4VF4-NEXT:    [[TMP73:%.*]] = load i16, ptr [[TMP72]], align 1
-; IC4VF4-NEXT:    [[TMP46:%.*]] = insertelement <4 x i16> [[TMP45]], i16 [[TMP73]], i32 3
+; IC4VF4-NEXT:    [[TMP46:%.*]] = insertelement <4 x i16> [[TMP45]], i16 [[TMP73]], i64 3
 ; IC4VF4-NEXT:    br label %[[PRED_LOAD_CONTINUE36]]
 ; IC4VF4:       [[PRED_LOAD_CONTINUE36]]:
 ; IC4VF4-NEXT:    [[TMP75:%.*]] = phi <4 x i16> [ [[TMP45]], %[[PRED_LOAD_CONTINUE34]] ], [ [[TMP46]], %[[PRED_LOAD_IF35]] ]
@@ -294,7 +294,7 @@ define i16 @select_decreasing_induction_icmp_table_i16(i16 noundef %val) {
 ; IC4VF4:       [[PRED_LOAD_IF37]]:
 ; IC4VF4-NEXT:    [[TMP78:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 0
 ; IC4VF4-NEXT:    [[TMP79:%.*]] = load i16, ptr [[TMP78]], align 1
-; IC4VF4-NEXT:    [[TMP50:%.*]] = insertelement <4 x i16> poison, i16 [[TMP79]], i32 0
+; IC4VF4-NEXT:    [[TMP50:%.*]] = insertelement <4 x i16> poison, i16 [[TMP79]], i64 0
 ; IC4VF4-NEXT:    br label %[[PRED_LOAD_CONTINUE38]]
 ; IC4VF4:       [[PRED_LOAD_CONTINUE38]]:
 ; IC4VF4-NEXT:    [[TMP52:%.*]] = phi <4 x i16> [ poison, %[[PRED_LOAD_CONTINUE36]] ], [ [[TMP50]], %[[PRED_LOAD_IF37]] ]
@@ -302,7 +302,7 @@ define i16 @select_decreasing_induction_icmp_table_i16(i16 noundef %val) {
 ; IC4VF4:       [[PRED_LOAD_IF39]]:
 ; IC4VF4-NEXT:    [[TMP84:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 -1
 ; IC4VF4-NEXT:    [[TMP85:%.*]] = load i16, ptr [[TMP84]], align 1
-; IC4VF4-NEXT:    [[TMP56:%.*]] = insertelement <4 x i16> [[TMP52]], i16 [[TMP85]], i32 1
+; IC4VF4-NEXT:    [[TMP56:%.*]] = insertelement <4 x i16> [[TMP52]], i16 [[TMP85]], i64 1
 ; IC4VF4-NEXT:    br label %[[PRED_LOAD_CONTINUE40]]
 ; IC4VF4:       [[PRED_LOAD_CONTINUE40]]:
 ; IC4VF4-NEXT:    [[TMP57:%.*]] = phi <4 x i16> [ [[TMP52]], %[[PRED_LOAD_CONTINUE38]] ], [ [[TMP56]], %[[PRED_LOAD_IF39]] ]
@@ -310,7 +310,7 @@ define i16 @select_decreasing_induction_icmp_table_i16(i16 noundef %val) {
 ; IC4VF4:       [[PRED_LOAD_IF41]]:
 ; IC4VF4-NEXT:    [[TMP90:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 -2
 ; IC4VF4-NEXT:    [[TMP91:%.*]] = load i16, ptr [[TMP90]], align 1
-; IC4VF4-NEXT:    [[TMP58:%.*]] = insertelement <4 x i16> [[TMP57]], i16 [[TMP91]], i32 2
+; IC4VF4-NEXT:    [[TMP58:%.*]] = insertelement <4 x i16> [[TMP57]], i16 [[TMP91]], i64 2
 ; IC4VF4-NEXT:    br label %[[PRED_LOAD_CONTINUE42]]
 ; IC4VF4:       [[PRED_LOAD_CONTINUE42]]:
 ; IC4VF4-NEXT:    [[TMP59:%.*]] = phi <4 x i16> [ [[TMP57]], %[[PRED_LOAD_CONTINUE40]] ], [ [[TMP58]], %[[PRED_LOAD_IF41]] ]
@@ -318,7 +318,7 @@ define i16 @select_decreasing_induction_icmp_table_i16(i16 noundef %val) {
 ; IC4VF4:       [[PRED_LOAD_IF43]]:
 ; IC4VF4-NEXT:    [[TMP96:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 -3
 ; IC4VF4-NEXT:    [[TMP97:%.*]] = load i16, ptr [[TMP96]], align 1
-; IC4VF4-NEXT:    [[TMP62:%.*]] = insertelement <4 x i16> [[TMP59]], i16 [[TMP97]], i32 3
+; IC4VF4-NEXT:    [[TMP62:%.*]] = insertelement <4 x i16> [[TMP59]], i16 [[TMP97]], i64 3
 ; IC4VF4-NEXT:    br label %[[PRED_LOAD_CONTINUE44]]
 ; IC4VF4:       [[PRED_LOAD_CONTINUE44]]:
 ; IC4VF4-NEXT:    [[TMP99:%.*]] = phi <4 x i16> [ [[TMP59]], %[[PRED_LOAD_CONTINUE42]] ], [ [[TMP62]], %[[PRED_LOAD_IF43]] ]
@@ -464,7 +464,7 @@ define i16 @select_decreasing_induction_icmp_table_half(half noundef %val) {
 ; IC4VF4:       [[PRED_LOAD_IF]]:
 ; IC4VF4-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 12
 ; IC4VF4-NEXT:    [[TMP7:%.*]] = load half, ptr [[TMP6]], align 1
-; IC4VF4-NEXT:    [[TMP2:%.*]] = insertelement <4 x half> poison, half [[TMP7]], i32 0
+; IC4VF4-NEXT:    [[TMP2:%.*]] = insertelement <4 x half> poison, half [[TMP7]], i64 0
 ; IC4VF4-NEXT:    br label %[[PRED_LOAD_CONTINUE]]
 ; IC4VF4:       [[PRED_LOAD_CONTINUE]]:
 ; IC4VF4-NEXT:    [[TMP3:%.*]] = phi <4 x half> [ poison, %[[VECTOR_BODY]] ], [ [[TMP2]], %[[PRED_LOAD_IF]] ]
@@ -472,7 +472,7 @@ define i16 @select_decreasing_induction_icmp_table_half(half noundef %val) {
 ; IC4VF4:       [[PRED_LOAD_IF15]]:
 ; IC4VF4-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 11
 ; IC4VF4-NEXT:    [[TMP13:%.*]] = load half, ptr [[TMP12]], align 1
-; IC4VF4-NEXT:    [[TMP8:%.*]] = insertelement <4 x half> [[TMP3]], half [[TMP13]], i32 1
+; IC4VF4-NEXT:    [[TMP8:%.*]] = insertelement <4 x half> [[TMP3]], half [[TMP13]], i64 1
 ; IC4VF4-NEXT:    br label %[[PRED_LOAD_CONTINUE16]]
 ; IC4VF4:       [[PRED_LOAD_CONTINUE16]]:
 ; IC4VF4-NEXT:    [[TMP9:%.*]] = phi <4 x half> [ [[TMP3]], %[[PRED_LOAD_CONTINUE]] ], [ [[TMP8]], %[[PRED_LOAD_IF15]] ]
@@ -480,7 +480,7 @@ define i16 @select_decreasing_induction_icmp_table_half(half noundef %val) {
 ; IC4VF4:       [[PRED_LOAD_IF17]]:
 ; IC4VF4-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 10
 ; IC4VF4-NEXT:    [[TMP19:%.*]] = load half, ptr [[TMP18]], align 1
-; IC4VF4-NEXT:    [[TMP10:%.*]] = insertelement <4 x half> [[TMP9]], half [[TMP19]], i32 2
+; IC4VF4-NEXT:    [[TMP10:%.*]] = insertelement <4 x half> [[TMP9]], half [[TMP19]], i64 2
 ; IC4VF4-NEXT:    br label %[[PRED_LOAD_CONTINUE18]]
 ; IC4VF4:       [[PRED_LOAD_CONTINUE18]]:
 ; IC4VF4-NEXT:    [[TMP11:%.*]] = phi <4 x half> [ [[TMP9]], %[[PRED_LOAD_CONTINUE16]] ], [ [[TMP10]], %[[PRED_LOAD_IF17]] ]
@@ -488,7 +488,7 @@ define i16 @select_decreasing_induction_icmp_table_half(half noundef %val) {
 ; IC4VF4:       [[PRED_LOAD_IF19]]:
 ; IC4VF4-NEXT:    [[TMP24:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 9
 ; IC4VF4-NEXT:    [[TMP25:%.*]] = load half, ptr [[TMP24]], align 1
-; IC4VF4-NEXT:    [[TMP14:%.*]] = insertelement <4 x half> [[TMP11]], half [[TMP25]], i32 3
+; IC4VF4-NEXT:    [[TMP14:%.*]] = insertelement <4 x half> [[TMP11]], half [[TMP25]], i64 3
 ; IC4VF4-NEXT:    br label %[[PRED_LOAD_CONTINUE20]]
 ; IC4VF4:       [[PRED_LOAD_CONTINUE20]]:
 ; IC4VF4-NEXT:    [[TMP27:%.*]] = phi <4 x half> [ [[TMP11]], %[[PRED_LOAD_CONTINUE18]] ], [ [[TMP14]], %[[PRED_LOAD_IF19]] ]
@@ -496,7 +496,7 @@ define i16 @select_decreasing_induction_icmp_table_half(half noundef %val) {
 ; IC4VF4:       [[PRED_LOAD_IF21]]:
 ; IC4VF4-NEXT:    [[TMP30:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 8
 ; IC4VF4-NEXT:    [[TMP31:%.*]] = load half, ptr [[TMP30]], align 1
-; IC4VF4-NEXT:    [[TMP20:%.*]] = insertelement <4 x half> poison, half [[TMP31]], i32 0
+; IC4VF4-NEXT:    [[TMP20:%.*]] = insertelement <4 x half> poison, half [[TMP31]], i64 0
 ; IC4VF4-NEXT:    br label %[[PRED_LOAD_CONTINUE22]]
 ; IC4VF4:       [[PRED_LOAD_CONTINUE22]]:
 ; IC4VF4-NEXT:    [[TMP21:%.*]] = phi <4 x half> [ poison, %[[PRED_LOAD_CONTINUE20]] ], [ [[TMP20]], %[[PRED_LOAD_IF21]] ]
@@ -504,7 +504,7 @@ define i16 @select_decreasing_induction_icmp_table_half(half noundef %val) {
 ; IC4VF4:       [[PRED_LOAD_IF23]]:
 ; IC4VF4-NEXT:    [[TMP36:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 7
 ; IC4VF4-NEXT:    [[TMP37:%.*]] = load half, ptr [[TMP36]], align 1
-; IC4VF4-NEXT:    [[TMP22:%.*]] = insertelement <4 x half> [[TMP21]], half [[TMP37]], i32 1
+; IC4VF4-NEXT:    [[TMP22:%.*]] = insertelement <4 x half> [[TMP21]], half [[TMP37]], i64 1
 ; IC4VF4-NEXT:    br label %[[PRED_LOAD_CONTINUE24]]
 ; IC4VF4:       [[PRED_LOAD_CONTINUE24]]:
 ; IC4VF4-NEXT:    [[TMP23:%.*]] = phi <4 x half> [ [[TMP21]], %[[PRED_LOAD_CONTINUE22]] ], [ [[TMP22]], %[[PRED_LOAD_IF23]] ]
@@ -512,7 +512,7 @@ define i16 @select_decreasing_induction_icmp_table_half(half noundef %val) {
 ; IC4VF4:       [[PRED_LOAD_IF25]]:
 ; IC4VF4-NEXT:    [[TMP42:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 6
 ; IC4VF4-NEXT:    [[TMP43:%.*]] = load half, ptr [[TMP42]], align 1
-; IC4VF4-NEXT:    [[TMP26:%.*]] = insertelement <4 x half> [[TMP23]], half [[TMP43]], i32 2
+; IC4VF4-NEXT:    [[TMP26:%.*]] = insertelement <4 x half> [[TMP23]], half [[TMP43]], i64 2
 ; IC4VF4-NEXT:    br label %[[PRED_LOAD_CONTINUE26]]
 ; IC4VF4:       [[PRED_LOAD_CONTINUE26]]:
 ; IC4VF4-NEXT:    [[TMP28:%.*]] = phi <4 x half> [ [[TMP23]], %[[PRED_LOAD_CONTINUE24]] ], [ [[TMP26]], %[[PRED_LOAD_IF25]] ]
@@ -520,7 +520,7 @@ define i16 @select_decreasing_induction_icmp_table_half(half noundef %val) {
 ; IC4VF4:       [[PRED_LOAD_IF27]]:
 ; IC4VF4-NEXT:    [[TMP48:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 5
 ; IC4VF4-NEXT:    [[TMP49:%.*]] = load half, ptr [[TMP48]], align 1
-; IC4VF4-NEXT:    [[TMP32:%.*]] = insertelement <4 x half> [[TMP28]], half [[TMP49]], i32 3
+; IC4VF4-NEXT:    [[TMP32:%.*]] = insertelement <4 x half> [[TMP28]], half [[TMP49]], i64 3
 ; IC4VF4-NEXT:    br label %[[PRED_LOAD_CONTINUE28]]
 ; IC4VF4:       [[PRED_LOAD_CONTINUE28]]:
 ; IC4VF4-NEXT:    [[TMP51:%.*]] = phi <4 x half> [ [[TMP28]], %[[PRED_LOAD_CONTINUE26]] ], [ [[TMP32]], %[[PRED_LOAD_IF27]] ]
@@ -528,7 +528,7 @@ define i16 @select_decreasing_induction_icmp_table_half(half noundef %val) {
 ; IC4VF4:       [[PRED_LOAD_IF29]]:
 ; IC4VF4-NEXT:    [[TMP54:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 4
 ; IC4VF4-NEXT:    [[TMP55:%.*]] = load half, ptr [[TMP54]], align 1
-; IC4VF4-NEXT:    [[TMP34:%.*]] = insertelement <4 x half> poison, half [[TMP55]], i32 0
+; IC4VF4-NEXT:    [[TMP34:%.*]] = insertelement <4 x half> poison, half [[TMP55]], i64 0
 ; IC4VF4-NEXT:    br label %[[PRED_LOAD_CONTINUE30]]
 ; IC4VF4:       [[PRED_LOAD_CONTINUE30]]:
 ; IC4VF4-NEXT:    [[TMP35:%.*]] = phi <4 x half> [ poison, %[[PRED_LOAD_CONTINUE28]] ], [ [[TMP34]], %[[PRED_LOAD_IF29]] ]
@@ -536,7 +536,7 @@ define i16 @select_decreasing_induction_icmp_table_half(half noundef %val) {
 ; IC4VF4:       [[PRED_LOAD_IF31]]:
 ; IC4VF4-NEXT:    [[TMP60:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 3
 ; IC4VF4-NEXT:    [[TMP61:%.*]] = load half, ptr [[TMP60]], align 1
-; IC4VF4-NEXT:    [[TMP38:%.*]] = insertelement <4 x half> [[TMP35]], half [[TMP61]], i32 1
+; IC4VF4-NEXT:    [[TMP38:%.*]] = insertelement <4 x half> [[TMP35]], half [[TMP61]], i64 1
 ; IC4VF4-NEXT:    br label %[[PRED_LOAD_CONTINUE32]]
 ; IC4VF4:       [[PRED_LOAD_CONTINUE32]]:
 ; IC4VF4-NEXT:    [[TMP39:%.*]] = phi <4 x half> [ [[TMP35]], %[[PRED_LOAD_CONTINUE30]] ], [ [[TMP38]], %[[PRED_LOAD_IF31]] ]
@@ -544,7 +544,7 @@ define i16 @select_decreasing_induction_icmp_table_half(half noundef %val) {
 ; IC4VF4:       [[PRED_LOAD_IF33]]:
 ; IC4VF4-NEXT:    [[TMP66:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 2
 ; IC4VF4-NEXT:    [[TMP67:%.*]] = load half, ptr [[TMP66]], align 1
-; IC4VF4-NEXT:    [[TMP44:%.*]] = insertelement <4 x half> [[TMP39]], half [[TMP67]], i32 2
+; IC4VF4-NEXT:    [[TMP44:%.*]] = insertelement <4 x half> [[TMP39]], half [[TMP67]], i64 2
 ; IC4VF4-NEXT:    br label %[[PRED_LOAD_CONTINUE34]]
 ; IC4VF4:       [[PRED_LOAD_CONTINUE34]]:
 ; IC4VF4-NEXT:    [[TMP45:%.*]] = phi <4 x half> [ [[TMP39]], %[[PRED_LOAD_CONTINUE32]] ], [ [[TMP44]], %[[PRED_LOAD_IF33]] ]
@@ -552,7 +552,7 @@ define i16 @select_decreasing_induction_icmp_table_half(half noundef %val) {
 ; IC4VF4:       [[PRED_LOAD_IF35]]:
 ; IC4VF4-NEXT:    [[TMP72:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 1
 ; IC4VF4-NEXT:    [[TMP73:%.*]] = load half, ptr [[TMP72]], align 1
-; IC4VF4-NEXT:    [[TMP46:%.*]] = insertelement <4 x half> [[TMP45]], half [[TMP73]], i32 3
+; IC4VF4-NEXT:    [[TMP46:%.*]] = insertelement <4 x half> [[TMP45]], half [[TMP73]], i64 3
 ; IC4VF4-NEXT:    br label %[[PRED_LOAD_CONTINUE36]]
 ; IC4VF4:       [[PRED_LOAD_CONTINUE36]]:
 ; IC4VF4-NEXT:    [[TMP75:%.*]] = phi <4 x half> [ [[TMP45]], %[[PRED_LOAD_CONTINUE34]] ], [ [[TMP46]], %[[PRED_LOAD_IF35]] ]
@@ -560,7 +560,7 @@ define i16 @select_decreasing_induction_icmp_table_half(half noundef %val) {
 ; IC4VF4:       [[PRED_LOAD_IF37]]:
 ; IC4VF4-NEXT:    [[TMP78:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 0
 ; IC4VF4-NEXT:    [[TMP79:%.*]] = load half, ptr [[TMP78]], align 1
-; IC4VF4-NEXT:    [[TMP50:%.*]] = insertelement <4 x half> poison, half [[TMP79]], i32 0
+; IC4VF4-NEXT:    [[TMP50:%.*]] = insertelement <4 x half> poison, half [[TMP79]], i64 0
 ; IC4VF4-NEXT:    br label %[[PRED_LOAD_CONTINUE38]]
 ; IC4VF4:       [[PRED_LOAD_CONTINUE38]]:
 ; IC4VF4-NEXT:    [[TMP52:%.*]] = phi <4 x half> [ poison, %[[PRED_LOAD_CONTINUE36]] ], [ [[TMP50]], %[[PRED_LOAD_IF37]] ]
@@ -568,7 +568,7 @@ define i16 @select_decreasing_induction_icmp_table_half(half noundef %val) {
 ; IC4VF4:       [[PRED_LOAD_IF39]]:
 ; IC4VF4-NEXT:    [[TMP84:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 -1
 ; IC4VF4-NEXT:    [[TMP85:%.*]] = load half, ptr [[TMP84]], align 1
-; IC4VF4-NEXT:    [[TMP56:%.*]] = insertelement <4 x half> [[TMP52]], half [[TMP85]], i32 1
+; IC4VF4-NEXT:    [[TMP56:%.*]] = insertelement <4 x half> [[TMP52]], half [[TMP85]], i64 1
 ; IC4VF4-NEXT:    br label %[[PRED_LOAD_CONTINUE40]]
 ; IC4VF4:       [[PRED_LOAD_CONTINUE40]]:
 ; IC4VF4-NEXT:    [[TMP57:%.*]] = phi <4 x half> [ [[TMP52]], %[[PRED_LOAD_CONTINUE38]] ], [ [[TMP56]], %[[PRED_LOAD_IF39]] ]
@@ -576,7 +576,7 @@ define i16 @select_decreasing_induction_icmp_table_half(half noundef %val) {
 ; IC4VF4:       [[PRED_LOAD_IF41]]:
 ; IC4VF4-NEXT:    [[TMP90:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 -2
 ; IC4VF4-NEXT:    [[TMP91:%.*]] = load half, ptr [[TMP90]], align 1
-; IC4VF4-NEXT:    [[TMP58:%.*]] = insertelement <4 x half> [[TMP57]], half [[TMP91]], i32 2
+; IC4VF4-NEXT:    [[TMP58:%.*]] = insertelement <4 x half> [[TMP57]], half [[TMP91]], i64 2
 ; IC4VF4-NEXT:    br label %[[PRED_LOAD_CONTINUE42]]
 ; IC4VF4:       [[PRED_LOAD_CONTINUE42]]:
 ; IC4VF4-NEXT:    [[TMP59:%.*]] = phi <4 x half> [ [[TMP57]], %[[PRED_LOAD_CONTINUE40]] ], [ [[TMP58]], %[[PRED_LOAD_IF41]] ]
@@ -584,7 +584,7 @@ define i16 @select_decreasing_induction_icmp_table_half(half noundef %val) {
 ; IC4VF4:       [[PRED_LOAD_IF43]]:
 ; IC4VF4-NEXT:    [[TMP96:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 -3
 ; IC4VF4-NEXT:    [[TMP97:%.*]] = load half, ptr [[TMP96]], align 1
-; IC4VF4-NEXT:    [[TMP62:%.*]] = insertelement <4 x half> [[TMP59]], half [[TMP97]], i32 3
+; IC4VF4-NEXT:    [[TMP62:%.*]] = insertelement <4 x half> [[TMP59]], half [[TMP97]], i64 3
 ; IC4VF4-NEXT:    br label %[[PRED_LOAD_CONTINUE44]]
 ; IC4VF4:       [[PRED_LOAD_CONTINUE44]]:
 ; IC4VF4-NEXT:    [[TMP99:%.*]] = phi <4 x half> [ [[TMP59]], %[[PRED_LOAD_CONTINUE42]] ], [ [[TMP62]], %[[PRED_LOAD_IF43]] ]

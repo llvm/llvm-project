@@ -1963,7 +1963,7 @@ define i32 @scalarize_induction_variable_05(ptr %a, i32 %x, i1 %c, i32 %n) {
 ; CHECK:       pred.udiv.if:
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[WIDE_LOAD]], i64 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = udiv i32 [[TMP5]], [[INDEX]]
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i32> poison, i32 [[TMP6]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i32> poison, i32 [[TMP6]], i64 0
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE]]
 ; CHECK:       pred.udiv.continue:
 ; CHECK-NEXT:    [[TMP12:%.*]] = phi <2 x i32> [ poison, [[VECTOR_BODY]] ], [ [[TMP7]], [[PRED_UDIV_IF]] ]
@@ -1972,7 +1972,7 @@ define i32 @scalarize_induction_variable_05(ptr %a, i32 %x, i1 %c, i32 %n) {
 ; CHECK-NEXT:    [[TMP14:%.*]] = add i32 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i32> [[WIDE_LOAD]], i64 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = udiv i32 [[TMP8]], [[TMP14]]
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i32> [[TMP12]], i32 [[TMP9]], i32 1
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i32> [[TMP12]], i32 [[TMP9]], i64 1
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE2]]
 ; CHECK:       pred.udiv.continue2:
 ; CHECK-NEXT:    [[TMP11:%.*]] = phi <2 x i32> [ [[TMP12]], [[PRED_UDIV_CONTINUE]] ], [ [[TMP10]], [[PRED_UDIV_IF1]] ]
@@ -2179,7 +2179,7 @@ define i32 @scalarize_induction_variable_05(ptr %a, i32 %x, i1 %c, i32 %n) {
 ; UNROLL-NO-IC:       pred.udiv.if:
 ; UNROLL-NO-IC-NEXT:    [[TMP8:%.*]] = extractelement <2 x i32> [[WIDE_LOAD]], i64 0
 ; UNROLL-NO-IC-NEXT:    [[TMP9:%.*]] = udiv i32 [[TMP8]], [[INDEX]]
-; UNROLL-NO-IC-NEXT:    [[TMP10:%.*]] = insertelement <2 x i32> poison, i32 [[TMP9]], i32 0
+; UNROLL-NO-IC-NEXT:    [[TMP10:%.*]] = insertelement <2 x i32> poison, i32 [[TMP9]], i64 0
 ; UNROLL-NO-IC-NEXT:    br label [[PRED_UDIV_CONTINUE]]
 ; UNROLL-NO-IC:       pred.udiv.continue:
 ; UNROLL-NO-IC-NEXT:    [[TMP11:%.*]] = phi <2 x i32> [ poison, [[VECTOR_BODY]] ], [ [[TMP10]], [[PRED_UDIV_IF]] ]
@@ -2188,7 +2188,7 @@ define i32 @scalarize_induction_variable_05(ptr %a, i32 %x, i1 %c, i32 %n) {
 ; UNROLL-NO-IC-NEXT:    [[TMP13:%.*]] = add i32 [[INDEX]], 1
 ; UNROLL-NO-IC-NEXT:    [[TMP14:%.*]] = extractelement <2 x i32> [[WIDE_LOAD]], i64 1
 ; UNROLL-NO-IC-NEXT:    [[TMP15:%.*]] = udiv i32 [[TMP14]], [[TMP13]]
-; UNROLL-NO-IC-NEXT:    [[TMP16:%.*]] = insertelement <2 x i32> [[TMP11]], i32 [[TMP15]], i32 1
+; UNROLL-NO-IC-NEXT:    [[TMP16:%.*]] = insertelement <2 x i32> [[TMP11]], i32 [[TMP15]], i64 1
 ; UNROLL-NO-IC-NEXT:    br label [[PRED_UDIV_CONTINUE4]]
 ; UNROLL-NO-IC:       pred.udiv.continue4:
 ; UNROLL-NO-IC-NEXT:    [[TMP17:%.*]] = phi <2 x i32> [ [[TMP11]], [[PRED_UDIV_CONTINUE]] ], [ [[TMP16]], [[PRED_UDIV_IF3]] ]
@@ -2197,7 +2197,7 @@ define i32 @scalarize_induction_variable_05(ptr %a, i32 %x, i1 %c, i32 %n) {
 ; UNROLL-NO-IC-NEXT:    [[TMP19:%.*]] = add i32 [[INDEX]], 2
 ; UNROLL-NO-IC-NEXT:    [[TMP20:%.*]] = extractelement <2 x i32> [[WIDE_LOAD2]], i64 0
 ; UNROLL-NO-IC-NEXT:    [[TMP21:%.*]] = udiv i32 [[TMP20]], [[TMP19]]
-; UNROLL-NO-IC-NEXT:    [[TMP22:%.*]] = insertelement <2 x i32> poison, i32 [[TMP21]], i32 0
+; UNROLL-NO-IC-NEXT:    [[TMP22:%.*]] = insertelement <2 x i32> poison, i32 [[TMP21]], i64 0
 ; UNROLL-NO-IC-NEXT:    br label [[PRED_UDIV_CONTINUE6]]
 ; UNROLL-NO-IC:       pred.udiv.continue6:
 ; UNROLL-NO-IC-NEXT:    [[TMP23:%.*]] = phi <2 x i32> [ poison, [[PRED_UDIV_CONTINUE4]] ], [ [[TMP22]], [[PRED_UDIV_IF5]] ]
@@ -2206,7 +2206,7 @@ define i32 @scalarize_induction_variable_05(ptr %a, i32 %x, i1 %c, i32 %n) {
 ; UNROLL-NO-IC-NEXT:    [[TMP25:%.*]] = add i32 [[INDEX]], 3
 ; UNROLL-NO-IC-NEXT:    [[TMP26:%.*]] = extractelement <2 x i32> [[WIDE_LOAD2]], i64 1
 ; UNROLL-NO-IC-NEXT:    [[TMP27:%.*]] = udiv i32 [[TMP26]], [[TMP25]]
-; UNROLL-NO-IC-NEXT:    [[TMP28:%.*]] = insertelement <2 x i32> [[TMP23]], i32 [[TMP27]], i32 1
+; UNROLL-NO-IC-NEXT:    [[TMP28:%.*]] = insertelement <2 x i32> [[TMP23]], i32 [[TMP27]], i64 1
 ; UNROLL-NO-IC-NEXT:    br label [[PRED_UDIV_CONTINUE8]]
 ; UNROLL-NO-IC:       pred.udiv.continue8:
 ; UNROLL-NO-IC-NEXT:    [[TMP29:%.*]] = phi <2 x i32> [ [[TMP23]], [[PRED_UDIV_CONTINUE6]] ], [ [[TMP28]], [[PRED_UDIV_IF7]] ]
@@ -4915,7 +4915,7 @@ define i32 @PR32419(i32 %a, i16 %b) {
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[PRED_UREM_IF:%.*]], label [[PRED_UREM_CONTINUE:%.*]]
 ; CHECK:       pred.urem.if:
 ; CHECK-NEXT:    [[TMP6:%.*]] = urem i16 [[B:%.*]], [[TMP1]]
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i16> poison, i16 [[TMP6]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i16> poison, i16 [[TMP6]], i64 0
 ; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE]]
 ; CHECK:       pred.urem.continue:
 ; CHECK-NEXT:    [[TMP8:%.*]] = phi <2 x i16> [ poison, [[VECTOR_BODY]] ], [ [[TMP7]], [[PRED_UREM_IF]] ]
@@ -4924,7 +4924,7 @@ define i32 @PR32419(i32 %a, i16 %b) {
 ; CHECK:       pred.urem.if1:
 ; CHECK-NEXT:    [[TMP10:%.*]] = add i16 [[TMP1]], 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = urem i16 [[B]], [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <2 x i16> [[TMP8]], i16 [[TMP11]], i32 1
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <2 x i16> [[TMP8]], i16 [[TMP11]], i64 1
 ; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE2]]
 ; CHECK:       pred.urem.continue2:
 ; CHECK-NEXT:    [[TMP13:%.*]] = phi <2 x i16> [ [[TMP8]], [[PRED_UREM_CONTINUE]] ], [ [[TMP12]], [[PRED_UREM_IF1]] ]
@@ -5071,7 +5071,7 @@ define i32 @PR32419(i32 %a, i16 %b) {
 ; UNROLL-NO-IC-NEXT:    br i1 [[TMP6]], label [[PRED_UREM_IF:%.*]], label [[PRED_UREM_CONTINUE:%.*]]
 ; UNROLL-NO-IC:       pred.urem.if:
 ; UNROLL-NO-IC-NEXT:    [[TMP8:%.*]] = urem i16 [[B:%.*]], [[TMP1]]
-; UNROLL-NO-IC-NEXT:    [[TMP9:%.*]] = insertelement <2 x i16> poison, i16 [[TMP8]], i32 0
+; UNROLL-NO-IC-NEXT:    [[TMP9:%.*]] = insertelement <2 x i16> poison, i16 [[TMP8]], i64 0
 ; UNROLL-NO-IC-NEXT:    br label [[PRED_UREM_CONTINUE]]
 ; UNROLL-NO-IC:       pred.urem.continue:
 ; UNROLL-NO-IC-NEXT:    [[TMP10:%.*]] = phi <2 x i16> [ poison, [[VECTOR_BODY]] ], [ [[TMP9]], [[PRED_UREM_IF]] ]
@@ -5080,7 +5080,7 @@ define i32 @PR32419(i32 %a, i16 %b) {
 ; UNROLL-NO-IC:       pred.urem.if2:
 ; UNROLL-NO-IC-NEXT:    [[TMP12:%.*]] = add i16 [[TMP1]], 1
 ; UNROLL-NO-IC-NEXT:    [[TMP13:%.*]] = urem i16 [[B]], [[TMP12]]
-; UNROLL-NO-IC-NEXT:    [[TMP14:%.*]] = insertelement <2 x i16> [[TMP10]], i16 [[TMP13]], i32 1
+; UNROLL-NO-IC-NEXT:    [[TMP14:%.*]] = insertelement <2 x i16> [[TMP10]], i16 [[TMP13]], i64 1
 ; UNROLL-NO-IC-NEXT:    br label [[PRED_UREM_CONTINUE3]]
 ; UNROLL-NO-IC:       pred.urem.continue3:
 ; UNROLL-NO-IC-NEXT:    [[TMP15:%.*]] = phi <2 x i16> [ [[TMP10]], [[PRED_UREM_CONTINUE]] ], [ [[TMP14]], [[PRED_UREM_IF2]] ]
@@ -5089,7 +5089,7 @@ define i32 @PR32419(i32 %a, i16 %b) {
 ; UNROLL-NO-IC:       pred.urem.if4:
 ; UNROLL-NO-IC-NEXT:    [[TMP17:%.*]] = add i16 [[TMP1]], 2
 ; UNROLL-NO-IC-NEXT:    [[TMP18:%.*]] = urem i16 [[B]], [[TMP17]]
-; UNROLL-NO-IC-NEXT:    [[TMP19:%.*]] = insertelement <2 x i16> poison, i16 [[TMP18]], i32 0
+; UNROLL-NO-IC-NEXT:    [[TMP19:%.*]] = insertelement <2 x i16> poison, i16 [[TMP18]], i64 0
 ; UNROLL-NO-IC-NEXT:    br label [[PRED_UREM_CONTINUE5]]
 ; UNROLL-NO-IC:       pred.urem.continue5:
 ; UNROLL-NO-IC-NEXT:    [[TMP20:%.*]] = phi <2 x i16> [ poison, [[PRED_UREM_CONTINUE3]] ], [ [[TMP19]], [[PRED_UREM_IF4]] ]
@@ -5098,7 +5098,7 @@ define i32 @PR32419(i32 %a, i16 %b) {
 ; UNROLL-NO-IC:       pred.urem.if6:
 ; UNROLL-NO-IC-NEXT:    [[TMP22:%.*]] = add i16 [[TMP1]], 3
 ; UNROLL-NO-IC-NEXT:    [[TMP23:%.*]] = urem i16 [[B]], [[TMP22]]
-; UNROLL-NO-IC-NEXT:    [[TMP24:%.*]] = insertelement <2 x i16> [[TMP20]], i16 [[TMP23]], i32 1
+; UNROLL-NO-IC-NEXT:    [[TMP24:%.*]] = insertelement <2 x i16> [[TMP20]], i16 [[TMP23]], i64 1
 ; UNROLL-NO-IC-NEXT:    br label [[PRED_UREM_CONTINUE7]]
 ; UNROLL-NO-IC:       pred.urem.continue7:
 ; UNROLL-NO-IC-NEXT:    [[TMP25:%.*]] = phi <2 x i16> [ [[TMP20]], [[PRED_UREM_CONTINUE5]] ], [ [[TMP24]], [[PRED_UREM_IF6]] ]

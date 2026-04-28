@@ -188,7 +188,7 @@ define void @predicated_phi_dbg(i64 %n, ptr %x) {
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[PRED_UDIV_IF:.*]], label %[[PRED_UDIV_CONTINUE:.*]]
 ; CHECK:       [[PRED_UDIV_IF]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = udiv i64 [[N]], [[INDEX]]
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i64> poison, i64 [[TMP3]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i64> poison, i64 [[TMP3]], i64 0
 ; CHECK-NEXT:    br label %[[PRED_UDIV_CONTINUE]]
 ; CHECK:       [[PRED_UDIV_CONTINUE]]:
 ; CHECK-NEXT:    [[TMP5:%.*]] = phi <4 x i64> [ poison, %[[VECTOR_BODY]] ], [ [[TMP4]], %[[PRED_UDIV_IF]] ]
@@ -197,28 +197,28 @@ define void @predicated_phi_dbg(i64 %n, ptr %x) {
 ; CHECK:       [[PRED_UDIV_IF1]]:
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = udiv i64 [[N]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x i64> [[TMP5]], i64 [[TMP8]], i32 1
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i64> [[TMP5]], i64 [[TMP8]], i64 1
 ; CHECK-NEXT:    br label %[[PRED_UDIV_CONTINUE2]]
 ; CHECK:       [[PRED_UDIV_CONTINUE2]]:
-; CHECK-NEXT:    [[TMP10:%.*]] = phi <4 x i64> [ [[TMP5]], %[[PRED_UDIV_CONTINUE]] ], [ [[TMP9]], %[[PRED_UDIV_IF1]] ]
+; CHECK-NEXT:    [[TMP9:%.*]] = phi <4 x i64> [ [[TMP5]], %[[PRED_UDIV_CONTINUE]] ], [ [[TMP10]], %[[PRED_UDIV_IF1]] ]
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i1> [[TMP0]], i64 2
 ; CHECK-NEXT:    br i1 [[TMP11]], label %[[PRED_UDIV_IF3:.*]], label %[[PRED_UDIV_CONTINUE4:.*]]
 ; CHECK:       [[PRED_UDIV_IF3]]:
 ; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP13:%.*]] = udiv i64 [[N]], [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x i64> [[TMP10]], i64 [[TMP13]], i32 2
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x i64> [[TMP9]], i64 [[TMP13]], i64 2
 ; CHECK-NEXT:    br label %[[PRED_UDIV_CONTINUE4]]
 ; CHECK:       [[PRED_UDIV_CONTINUE4]]:
-; CHECK-NEXT:    [[TMP15:%.*]] = phi <4 x i64> [ [[TMP10]], %[[PRED_UDIV_CONTINUE2]] ], [ [[TMP14]], %[[PRED_UDIV_IF3]] ]
+; CHECK-NEXT:    [[TMP14:%.*]] = phi <4 x i64> [ [[TMP9]], %[[PRED_UDIV_CONTINUE2]] ], [ [[TMP15]], %[[PRED_UDIV_IF3]] ]
 ; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x i1> [[TMP0]], i64 3
 ; CHECK-NEXT:    br i1 [[TMP16]], label %[[PRED_UDIV_IF5:.*]], label %[[PRED_UDIV_CONTINUE6]]
 ; CHECK:       [[PRED_UDIV_IF5]]:
 ; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[TMP18:%.*]] = udiv i64 [[N]], [[TMP17]]
-; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i64> [[TMP15]], i64 [[TMP18]], i32 3
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i64> [[TMP14]], i64 [[TMP18]], i64 3
 ; CHECK-NEXT:    br label %[[PRED_UDIV_CONTINUE6]]
 ; CHECK:       [[PRED_UDIV_CONTINUE6]]:
-; CHECK-NEXT:    [[TMP20:%.*]] = phi <4 x i64> [ [[TMP15]], %[[PRED_UDIV_CONTINUE4]] ], [ [[TMP19]], %[[PRED_UDIV_IF5]] ]
+; CHECK-NEXT:    [[TMP20:%.*]] = phi <4 x i64> [ [[TMP14]], %[[PRED_UDIV_CONTINUE4]] ], [ [[TMP19]], %[[PRED_UDIV_IF5]] ]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP0]], <4 x i64> [[TMP20]], <4 x i64> zeroinitializer
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr i64, ptr [[X]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <4 x i64> [[PREDPHI]], ptr [[TMP21]], align 8
@@ -267,7 +267,7 @@ define void @predicated_phi_dbg(i64 %n, ptr %x) {
 ; DEBUGLOC-NEXT:    br i1 [[TMP1]], label %[[PRED_UDIV_IF:.*]], label %[[PRED_UDIV_CONTINUE:.*]], !dbg [[DBG54]]
 ; DEBUGLOC:       [[PRED_UDIV_IF]]:
 ; DEBUGLOC-NEXT:    [[TMP2:%.*]] = udiv i64 [[N]], [[INDEX]], !dbg [[DBG55:![0-9]+]]
-; DEBUGLOC-NEXT:    [[TMP3:%.*]] = insertelement <4 x i64> poison, i64 [[TMP2]], i32 0, !dbg [[DBG55]]
+; DEBUGLOC-NEXT:    [[TMP3:%.*]] = insertelement <4 x i64> poison, i64 [[TMP2]], i64 0, !dbg [[DBG55]]
 ; DEBUGLOC-NEXT:    br label %[[PRED_UDIV_CONTINUE]], !dbg [[DBG54]]
 ; DEBUGLOC:       [[PRED_UDIV_CONTINUE]]:
 ; DEBUGLOC-NEXT:    [[TMP4:%.*]] = phi <4 x i64> [ poison, %[[VECTOR_BODY]] ], [ [[TMP3]], %[[PRED_UDIV_IF]] ], !dbg [[DBG55]]
@@ -276,7 +276,7 @@ define void @predicated_phi_dbg(i64 %n, ptr %x) {
 ; DEBUGLOC:       [[PRED_UDIV_IF1]]:
 ; DEBUGLOC-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], 1, !dbg [[DBG53]]
 ; DEBUGLOC-NEXT:    [[TMP7:%.*]] = udiv i64 [[N]], [[TMP6]], !dbg [[DBG55]]
-; DEBUGLOC-NEXT:    [[TMP8:%.*]] = insertelement <4 x i64> [[TMP4]], i64 [[TMP7]], i32 1, !dbg [[DBG55]]
+; DEBUGLOC-NEXT:    [[TMP8:%.*]] = insertelement <4 x i64> [[TMP4]], i64 [[TMP7]], i64 1, !dbg [[DBG55]]
 ; DEBUGLOC-NEXT:    br label %[[PRED_UDIV_CONTINUE2]], !dbg [[DBG54]]
 ; DEBUGLOC:       [[PRED_UDIV_CONTINUE2]]:
 ; DEBUGLOC-NEXT:    [[TMP9:%.*]] = phi <4 x i64> [ [[TMP4]], %[[PRED_UDIV_CONTINUE]] ], [ [[TMP8]], %[[PRED_UDIV_IF1]] ], !dbg [[DBG55]]
@@ -285,7 +285,7 @@ define void @predicated_phi_dbg(i64 %n, ptr %x) {
 ; DEBUGLOC:       [[PRED_UDIV_IF3]]:
 ; DEBUGLOC-NEXT:    [[TMP11:%.*]] = add i64 [[INDEX]], 2, !dbg [[DBG53]]
 ; DEBUGLOC-NEXT:    [[TMP12:%.*]] = udiv i64 [[N]], [[TMP11]], !dbg [[DBG55]]
-; DEBUGLOC-NEXT:    [[TMP13:%.*]] = insertelement <4 x i64> [[TMP9]], i64 [[TMP12]], i32 2, !dbg [[DBG55]]
+; DEBUGLOC-NEXT:    [[TMP13:%.*]] = insertelement <4 x i64> [[TMP9]], i64 [[TMP12]], i64 2, !dbg [[DBG55]]
 ; DEBUGLOC-NEXT:    br label %[[PRED_UDIV_CONTINUE4]], !dbg [[DBG54]]
 ; DEBUGLOC:       [[PRED_UDIV_CONTINUE4]]:
 ; DEBUGLOC-NEXT:    [[TMP14:%.*]] = phi <4 x i64> [ [[TMP9]], %[[PRED_UDIV_CONTINUE2]] ], [ [[TMP13]], %[[PRED_UDIV_IF3]] ], !dbg [[DBG55]]
@@ -294,7 +294,7 @@ define void @predicated_phi_dbg(i64 %n, ptr %x) {
 ; DEBUGLOC:       [[PRED_UDIV_IF5]]:
 ; DEBUGLOC-NEXT:    [[TMP16:%.*]] = add i64 [[INDEX]], 3, !dbg [[DBG53]]
 ; DEBUGLOC-NEXT:    [[TMP17:%.*]] = udiv i64 [[N]], [[TMP16]], !dbg [[DBG55]]
-; DEBUGLOC-NEXT:    [[TMP18:%.*]] = insertelement <4 x i64> [[TMP14]], i64 [[TMP17]], i32 3, !dbg [[DBG55]]
+; DEBUGLOC-NEXT:    [[TMP18:%.*]] = insertelement <4 x i64> [[TMP14]], i64 [[TMP17]], i64 3, !dbg [[DBG55]]
 ; DEBUGLOC-NEXT:    br label %[[PRED_UDIV_CONTINUE6]], !dbg [[DBG54]]
 ; DEBUGLOC:       [[PRED_UDIV_CONTINUE6]]:
 ; DEBUGLOC-NEXT:    [[TMP19:%.*]] = phi <4 x i64> [ [[TMP14]], %[[PRED_UDIV_CONTINUE4]] ], [ [[TMP18]], %[[PRED_UDIV_IF5]] ], !dbg [[DBG55]]

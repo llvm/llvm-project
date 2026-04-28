@@ -21,14 +21,14 @@ define i16 @test_true_and_false_branch_equal() {
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[PRED_SREM_IF:%.*]], label [[PRED_SREM_CONTINUE:%.*]]
 ; CHECK:       pred.srem.if:
 ; CHECK-NEXT:    [[TMP4:%.*]] = srem i16 5786, [[TMP0]]
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i16> poison, i16 [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i16> poison, i16 [[TMP4]], i64 0
 ; CHECK-NEXT:    br label [[PRED_SREM_CONTINUE]]
 ; CHECK:       pred.srem.continue:
 ; CHECK-NEXT:    [[TMP6:%.*]] = phi <2 x i16> [ poison, [[VECTOR_BODY]] ], [ [[TMP5]], [[PRED_SREM_IF]] ]
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[PRED_SREM_IF1:%.*]], label [[PRED_SREM_CONTINUE2]]
 ; CHECK:       pred.srem.if1:
 ; CHECK-NEXT:    [[TMP8:%.*]] = srem i16 5786, [[TMP0]]
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i16> [[TMP6]], i16 [[TMP8]], i32 1
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i16> [[TMP6]], i16 [[TMP8]], i64 1
 ; CHECK-NEXT:    br label [[PRED_SREM_CONTINUE2]]
 ; CHECK:       pred.srem.continue2:
 ; CHECK-NEXT:    [[TMP10:%.*]] = phi <2 x i16> [ [[TMP6]], [[PRED_SREM_CONTINUE]] ], [ [[TMP9]], [[PRED_SREM_IF1]] ]
