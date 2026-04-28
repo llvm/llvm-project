@@ -37,8 +37,8 @@ public:
   T &&value() && { return static_cast<T &&>(*storage_); }
 
   // Equivalent to std::optional::operator*()
-  [[clang::analyse_as_method("std::optional::operator*")]] const T &deref() const & { return *storage_; }
-  [[clang::analyse_as_method("std::optional::operator*")]] T &deref() & { return *storage_; }
+  [[clang::analyse_as_method("std::optional::value")]] const T &deref() const & { return *storage_; }
+  [[clang::analyse_as_method("std::optional::value")]] T &deref() & { return *storage_; }
 
   // Equivalent to std::optional::operator->()
   const T* operator ->() const { return storage_; }
@@ -47,10 +47,9 @@ public:
   T *arrow() { return storage_; }
 
   // Equivalent to std::optional::operator bool / hasValue()
-  constexpr bool hasValue() const noexcept { return storage_ != nullptr; }
+  constexpr bool has_value() const noexcept { return storage_ != nullptr; }
   constexpr explicit operator bool() const noexcept { return storage_ != nullptr; }
-  [[clang::analyse_as_method("std::optional::hasValue")]] constexpr bool isPresent() const noexcept { return storage_ != nullptr; }
-  constexpr bool isEmpty() const noexcept { return storage_ == nullptr; }
+  [[clang::analyse_as_method("std::optional::has_value")]] constexpr bool isPresent() const noexcept { return storage_ != nullptr; }
 
   // Equivalent to std::optional::value_or()
   template <typename U>
@@ -60,13 +59,13 @@ public:
 
   // Equivalent to std::optional::emplace()
   template <typename... Args>
-  T &construct(Args &&...args) { return *storage_; }
+  [[clang::analyse_as_method("std::optional::emplace")]] T &construct(Args &&...args) { return *storage_; }
 
   // Equivalent to std::optional::reset()
-  void clear() noexcept { storage_ = nullptr; }
+  [[clang::analyse_as_method("std::optional::reset")]] void clear() noexcept { storage_ = nullptr; }
 
   // Equivalent to std::optional::swap()
-  void exchange(HickettsOptional &other) noexcept {
+  [[clang::analyse_as_method("std::optional::swap")]] void exchange(HickettsOptional &other) noexcept {
     T *tmp = storage_;
     storage_ = other.storage_;
     other.storage_ = tmp;

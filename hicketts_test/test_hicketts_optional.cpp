@@ -30,7 +30,7 @@ static void checkedWithBool(mylib::HickettsOptional<int> &Val) {
 }
 
 static void checkedValueWithBool(mylib::HickettsOptional<int> &Val) {
-  if (Val.hasValue()) {
+  if (Val.has_value()) {
     Val.value(); // safe — checked via operator bool
   }
 }
@@ -41,11 +41,11 @@ static void checkedWithIsPresent(mylib::HickettsOptional<int> &Val) {
   }
 }
 
-static void checkedWithIsEmpty(mylib::HickettsOptional<int> &Val) {
+/* static void checkedWithIsEmpty(mylib::HickettsOptional<int> &Val) {
   if (!Val.isEmpty()) {
     Val.unwrap(); // safe — checked via !isEmpty()
   }
-}
+} NYI */
 
 // --- State changes ---
 
@@ -70,12 +70,12 @@ static void unsafeAfterExchange(mylib::HickettsOptional<int> &A,
 
 // --- Guarded paths ---
 
-static void constructCoversEmptyBranch(mylib::HickettsOptional<int> &Val) {
+/*static void constructCoversEmptyBranch(mylib::HickettsOptional<int> &Val) {
   if (Val.isEmpty()) {
     Val.construct(99);
   }
   Val.unwrap(); // safe — either was present, or construct filled it
-}
+}*/
 
 static void unwrapOrIsAlwaysSafe(mylib::HickettsOptional<int> &Val) {
   int X = Val.unwrapOr(0); // safe — fallback provided

@@ -358,7 +358,7 @@ auto isValueOrStringEmptyCall() {
       callee(cxxMethodDecl(hasName("empty"))),
       onImplicitObjectArgument(ignoringImplicit(
           cxxMemberCallExpr(on(expr(unless(cxxThisExpr()))),
-                            callee(cxxMethodDecl(hasName("value_or"),
+                            callee(cxxMethodDecl(anyOf(hasName("value_or"), hasAnalyseAsMethodName("value_or")),
                                                  ofClass(optionalClass()))),
                             hasArgument(0, stringLiteral(hasSize(0))))
               .bind(ValueOrCallID))));
@@ -1071,7 +1071,8 @@ auto buildTransferMatchSwitch() {
       // will also pass for other types
       .CaseOfCFGStmt<CXXMemberCallExpr>(
           isOptionalMemberCallWithNameMatcher(
-              hasAnyName("has_value", "hasValue")),
+              anyOf(hasAnyName("has_value", "hasValue"),
+              hasAnalyseAsMethodName("has_value"))),
           transferOptionalHasValueCall)
 
       // optional::operator bool
@@ -1101,7 +1102,7 @@ auto buildTransferMatchSwitch() {
 
       // optional::emplace
       .CaseOfCFGStmt<CXXMemberCallExpr>(
-          isOptionalMemberCallWithNameMatcher(hasName("emplace")),
+          isOptionalMemberCallWithNameMatcher(anyOf(hasName("emplace"), hasAnalyseAsMethodName("emplace"))),
           [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &,
              LatticeTransferState &State) {
             if (RecordStorageLocation *Loc =
@@ -1112,7 +1113,7 @@ auto buildTransferMatchSwitch() {
 
       // optional::reset
       .CaseOfCFGStmt<CXXMemberCallExpr>(
-          isOptionalMemberCallWithNameMatcher(hasName("reset")),
+          isOptionalMemberCallWithNameMatcher(anyOf(hasName("reset"), hasAnalyseAsMethodName("reset"))),
           [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &,
              LatticeTransferState &State) {
             if (RecordStorageLocation *Loc =
@@ -1124,7 +1125,7 @@ auto buildTransferMatchSwitch() {
 
       // optional::swap
       .CaseOfCFGStmt<CXXMemberCallExpr>(
-          isOptionalMemberCallWithNameMatcher(hasName("swap")),
+          isOptionalMemberCallWithNameMatcher(anyOf(hasName("swap"), hasAnalyseAsMethodName("swap"))),
           transferSwapCall)
 
       // std::swap
