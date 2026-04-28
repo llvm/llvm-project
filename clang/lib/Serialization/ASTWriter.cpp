@@ -1568,7 +1568,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Standard C++ mod
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File size
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File timestamp
-    Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File name kind
+    Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File name raw kind
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File name len
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // Strings
     unsigned AbbrevCode = Stream.EmitAbbrev(std::move(Abbrev));
@@ -1602,14 +1602,10 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
         Record.push_back(M.Signature ? 0 : M.Size);
         Record.push_back(M.Signature ? 0 : getTimestampForOutput(M.ModTime));
 
+        Record.push_back(M.FileName.getRawKind());
+
         llvm::append_range(Blob, M.Signature);
 
-        Record.push_back(M.FileName.visitKind(
-            makeVisitor([](ModuleFileName::InMemory) { return 0u; },
-                        [](ModuleFileName::Explicit) { return 1u; },
-                        [](const ModuleFileName::Implicit &I) {
-                          return I.ImplicitModuleSuffixLength;
-                        })));
         AddPathBlob(M.FileName, Record, Blob);
       }
 

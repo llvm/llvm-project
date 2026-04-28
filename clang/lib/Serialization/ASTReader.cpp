@@ -3504,13 +3504,7 @@ ASTReader::ReadControlBlock(ModuleFile &F,
 
         StoredFile = ReadPathBlob(BaseDirectoryAsWritten, Record, Idx, Blob);
         if (ImportedFile.empty()) {
-          ImportedFile = [&]() {
-            if (FileNameKind == 0)
-              return ModuleFileName::makeInMemory(StoredFile);
-            if (FileNameKind == 1)
-              return ModuleFileName::makeExplicit(StoredFile);
-            return ModuleFileName::makeImplicit(StoredFile, FileNameKind);
-          }();
+          ImportedFile = ModuleFileName::makeFromRaw(StoredFile, FileNameKind);
         } else if (!getDiags().isIgnored(
                        diag::warn_module_file_mapping_mismatch,
                        CurrentImportLoc)) {
