@@ -309,11 +309,6 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
       assert(AMDGPU::hasNamedOperand(DPPOp, AMDGPU::OpName::src1) &&
              "dpp version of instruction missing src1");
       if (!ST->hasDPPSrc1SGPR()) {
-        if (Src1->isReg() && ST->getRegisterInfo()->isSGPRClass(
-                                 MRI->getRegClass(Src1->getReg()))) {
-          Fail = true;
-          break;
-        }
         assert(TII->getOpSize(*DPPInst, Src0Idx) ==
                    TII->getOpSize(*DPPInst, NumOperands) &&
                "Src0 and Src1 operands should have the same size");
