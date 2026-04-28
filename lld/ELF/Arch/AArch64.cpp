@@ -102,6 +102,8 @@ private:
   void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
   void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
   void relaxTlsIeToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
+  void relaxAuthTlsDescForNonPreemptibleUndefWeak(uint8_t *loc,
+                                                  const Relocation &rel) const;
 };
 
 struct AArch64Relaxer {
@@ -191,6 +193,7 @@ template <class ELFT, class RelTy>
 void AArch64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
   RelocScan rs(ctx, &sec);
   sec.relocations.reserve(rels.size());
+  SmallVector<Relocation, 0> tlsdescCallRels;
 
   for (auto it = rels.begin(); it != rels.end(); ++it) {
     const RelTy &rel = *it;
@@ -206,6 +209,20 @@ void AArch64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
     // Relocation types that only need a RelExpr set `expr` and break out of
     // the switch to reach rs.process(). Types that need special handling
     // (fast-path helpers, TLS) call a handler and use `continue`.
+
+    auto handleTlsDescAuth = [&sym, &sec, type, offset,
+                              addend](RelExpr tlsdescExpr) {
+      sym.setFlags(NEEDS_TLSDESC_AUTH);
+      if (sym.isUndefWeak() && !sym.isPreemptible) {
+        // Resolves statically to null. Handle in
+        // relaxAuthTlsDescForNonPreemptibleUndefWeak
+        sec.addReloc({R_TPREL, type, offset, addend, &sym});
+      } else {
+        sym.setFlags(NEEDS_TLSDESC);
+        sec.addReloc({tlsdescExpr, type, offset, addend, &sym});
+      }
+    };
+
     switch (type) {
     case R_AARCH64_NONE:
       continue;
@@ -340,30 +357,28 @@ void AArch64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
 
     // TLSDESC relocations:
     case R_AARCH64_TLSDESC_ADR_PAGE21:
+      sym.setFlags(NEEDS_TLSDESC_NONAUTH);
       rs.handleTlsDesc(RE_AARCH64_TLSDESC_PAGE, RE_AARCH64_GOT_PAGE_PC, type,
                        offset, addend, sym);
       continue;
     case R_AARCH64_TLSDESC_LD64_LO12:
     case R_AARCH64_TLSDESC_ADD_LO12:
+      sym.setFlags(NEEDS_TLSDESC_NONAUTH);
       rs.handleTlsDesc(R_TLSDESC, R_GOT, type, offset, addend, sym);
       continue;
     case R_AARCH64_TLSDESC_CALL:
-      sym.setFlags(NEEDS_TLSDESC_NONAUTH);
-      if (!ctx.arg.shared)
-        sec.addReloc({R_TPREL, type, offset, addend, &sym});
+      tlsdescCallRels.push_back({R_TPREL, type, offset, addend, &sym});
       continue;
 
     // AUTH TLSDESC relocations. Do not optimize to LE/IE because PAUTHELF64
     // only supports the descriptor based TLS (TLSDESC).
     // https://github.com/ARM-software/abi-aa/blob/main/pauthabielf64/pauthabielf64.rst#general-restrictions
     case R_AARCH64_AUTH_TLSDESC_ADR_PAGE21:
-      sym.setFlags(NEEDS_TLSDESC | NEEDS_TLSDESC_AUTH);
-      sec.addReloc({RE_AARCH64_TLSDESC_PAGE, type, offset, addend, &sym});
+      handleTlsDescAuth(RE_AARCH64_TLSDESC_PAGE);
       continue;
     case R_AARCH64_AUTH_TLSDESC_LD64_LO12:
     case R_AARCH64_AUTH_TLSDESC_ADD_LO12:
-      sym.setFlags(NEEDS_TLSDESC | NEEDS_TLSDESC_AUTH);
-      sec.addReloc({R_TLSDESC, type, offset, addend, &sym});
+      handleTlsDescAuth(R_TLSDESC);
       continue;
 
     default:
@@ -373,6 +388,27 @@ void AArch64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
       continue;
     }
     rs.process(expr, type, offset, sym, addend);
+  }
+
+  for (const auto &tlsdescCallRel : tlsdescCallRels) {
+    const Symbol *sym = tlsdescCallRel.sym;
+    auto flags = sym->flags.load(std::memory_order_relaxed);
+
+    if (flags & NEEDS_TLSDESC_AUTH) {
+      if (sym->isUndefWeak() && !sym->isPreemptible)
+        sec.addReloc(tlsdescCallRel);
+      continue;
+    }
+    if (flags & NEEDS_TLSDESC_NONAUTH) {
+      if (!ctx.arg.shared)
+        sec.addReloc(tlsdescCallRel);
+      continue;
+    }
+
+    Err(ctx) << getErrorLoc(ctx, sec.content().data() + tlsdescCallRel.offset)
+             << "relocation R_AARCH64_TLSDESC_CALL against '" << sym
+             << "' requires other TLSDESC or AUTH TLSDESC relocations present "
+                "against this symbol";
   }
 
   if (ctx.arg.branchToBranch)
@@ -645,11 +681,22 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
     write64(ctx, loc, val);
     break;
   case R_AARCH64_AUTH_ABS64:
-    // This is used for the addend of a .relr.auth.dyn entry,
-    // which is a 32-bit value; the upper 32 bits are used to
-    // encode the schema.
-    checkInt(ctx, loc, val, 32, rel);
-    write32(ctx, loc, val);
+    if (rel.sym->isUndefined() && !rel.sym->isPreemptible) {
+      // Undefined weak non-preemptible symbols are statically resolved to the
+      // addend. No dynamic relocation and corresponding signing schema encoding
+      // is needed.
+      //
+      // Note: at this point, binding of undefined weak non-preemptible symbols
+      // has already been changed from weak to local by computeBinding call, so
+      // just check against isUndefined().
+      write64(ctx, loc, val);
+    } else {
+      // This is used for the addend of a .relr.auth.dyn entry,
+      // which is a 32-bit value; the upper 32 bits are used to
+      // encode the schema.
+      checkInt(ctx, loc, val, 32, rel);
+      write32(ctx, loc, val);
+    }
     break;
   case R_AARCH64_TLS_DTPREL64:
     write64(ctx, loc, val);
@@ -800,6 +847,35 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
     break;
   default:
     llvm_unreachable("unknown relocation");
+  }
+}
+
+void AArch64::relaxAuthTlsDescForNonPreemptibleUndefWeak(
+    uint8_t *loc, const Relocation &rel) const {
+  // AUTH TLSDESC relocations are in the form:
+  //   adrp x0, :tlsdesc_auth:v             [R_AARCH64_AUTH_TLSDESC_ADR_PAGE21]
+  //   ldr  x16, [x0, :tlsdesc_auth_lo12:v] [R_AARCH64_AUTH_TLSDESC_LD64_LO12]
+  //   add  x0, x0, :tlsdesc_auth_lo12:v    [R_AARCH64_AUTH_TLSDESC_ADD_LO12]
+  //   .tlsdesccall v                       [R_AARCH64_TLSDESC_CALL]
+  //   blraa x16, x0
+  // And it can optimized to:
+  //   mov     x0, #0x0
+  //   nop
+  //   nop
+  //   nop
+
+  switch (rel.type) {
+  case R_AARCH64_AUTH_TLSDESC_ADD_LO12:
+  case R_AARCH64_AUTH_TLSDESC_LD64_LO12:
+  case R_AARCH64_TLSDESC_CALL:
+    write32le(loc, 0xd503201f); // nop
+    return;
+  case R_AARCH64_AUTH_TLSDESC_ADR_PAGE21:
+    write32le(loc, 0xd2800000); // mov x0, #0x0
+    return;
+  default:
+    llvm_unreachable("unsupported relocation for non-preemptible undefined "
+                     "weak AUTH TLSDESC relaxation");
   }
 }
 
@@ -1054,6 +1130,26 @@ void AArch64::relocateAlloc(InputSection &sec, uint8_t *buf) const {
       continue;
     }
 
+    auto tryRelaxTlsDesc = [this, &rel, loc, val]() {
+      assert(rel.sym->hasFlag(NEEDS_TLSDESC_NONAUTH));
+      assert(!rel.sym->hasFlag(NEEDS_TLSDESC_AUTH));
+      if (rel.expr == R_TPREL)
+        relaxTlsGdToLe(loc, rel, val);
+      else if (rel.expr == RE_AARCH64_GOT_PAGE_PC || rel.expr == R_GOT)
+        relaxTlsGdToIe(loc, rel, val);
+      else
+        relocate(loc, rel, val);
+    };
+
+    auto tryRelaxTlsDescAuth = [this, &rel, loc, val]() {
+      assert(!rel.sym->hasFlag(NEEDS_TLSDESC_NONAUTH));
+      assert(rel.sym->hasFlag(NEEDS_TLSDESC_AUTH));
+      if (rel.expr == R_TPREL)
+        relaxAuthTlsDescForNonPreemptibleUndefWeak(loc, rel);
+      else
+        relocate(loc, rel, val);
+    };
+
     switch (rel.type) {
     case R_AARCH64_ADR_GOT_PAGE:
       if (i + 1 < size &&
@@ -1073,13 +1169,18 @@ void AArch64::relocateAlloc(InputSection &sec, uint8_t *buf) const {
     case R_AARCH64_TLSDESC_ADR_PAGE21:
     case R_AARCH64_TLSDESC_LD64_LO12:
     case R_AARCH64_TLSDESC_ADD_LO12:
+      tryRelaxTlsDesc();
+      continue;
     case R_AARCH64_TLSDESC_CALL:
-      if (rel.expr == R_TPREL)
-        relaxTlsGdToLe(loc, rel, val);
-      else if (rel.expr == RE_AARCH64_GOT_PAGE_PC || rel.expr == R_GOT)
-        relaxTlsGdToIe(loc, rel, val);
+      if (rel.sym->hasFlag(NEEDS_TLSDESC_AUTH))
+        tryRelaxTlsDescAuth();
       else
-        relocate(loc, rel, val);
+        tryRelaxTlsDesc();
+      continue;
+    case R_AARCH64_AUTH_TLSDESC_ADR_PAGE21:
+    case R_AARCH64_AUTH_TLSDESC_LD64_LO12:
+    case R_AARCH64_AUTH_TLSDESC_ADD_LO12:
+      tryRelaxTlsDescAuth();
       continue;
     case R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
     case R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
