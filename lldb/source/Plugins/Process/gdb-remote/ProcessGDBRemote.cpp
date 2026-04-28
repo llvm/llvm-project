@@ -6394,8 +6394,7 @@ void ProcessGDBRemote::DidExec() {
 }
 
 llvm::Error ProcessGDBRemote::UpdateBreakpointSitesNotBatched(
-    const std::map<lldb::BreakpointSiteSP, Process::BreakpointAction>
-        &site_to_action) {
+    const BreakpointSiteToActionMap &site_to_action) {
   llvm::Error joined = llvm::Error::success();
   for (auto &[site, action] : site_to_action) {
     llvm::Error error = action == Process::BreakpointAction::Enable
@@ -6507,7 +6506,7 @@ std::string to_string(const BreakpointPacketInfo &info) {
 } // namespace
 
 llvm::Error ProcessGDBRemote::UpdateBreakpointSites(
-    const std::map<lldb::BreakpointSiteSP, BreakpointAction> &site_to_action) {
+    const BreakpointSiteToActionMap &site_to_action) {
   if (site_to_action.empty())
     return llvm::Error::success();
   if (!m_gdb_comm.GetMultiBreakpointSupported())

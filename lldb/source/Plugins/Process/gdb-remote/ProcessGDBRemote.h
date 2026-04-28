@@ -171,8 +171,7 @@ public:
   Status EnableBreakpointSite(BreakpointSite *bp_site) override;
 
   llvm::Error UpdateBreakpointSites(
-      const std::map<lldb::BreakpointSiteSP, BreakpointAction> &site_to_action)
-      override;
+      const BreakpointSiteToActionMap &site_to_action) override;
 
   Status DisableBreakpointSite(BreakpointSite *bp_site) override;
 
@@ -467,8 +466,7 @@ private:
   llvm::Error DoDisableBreakpointSite(BreakpointSite &bp_site);
 
   llvm::Error UpdateBreakpointSitesNotBatched(
-      const std::map<lldb::BreakpointSiteSP, Process::BreakpointAction>
-          &site_to_action);
+      const BreakpointSiteToActionMap &site_to_action);
 
   static bool NewThreadNotifyBreakpointHit(void *baton,
                                            StoppointCallbackContext *context,
