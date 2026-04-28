@@ -10,6 +10,8 @@ module test_use_device
   subroutine something(a)
    real(4) :: a(100)
   end subroutine
+  module subroutine test_submodule()
+  end subroutine
   end interface
 contains
   subroutine test_simple
@@ -19,6 +21,13 @@ contains
   end subroutine
   subroutine test_designator
     !$acc host_data use_device(a(i:j))
+    !$acc end host_data
+  end subroutine
+  subroutine test_shadowed
+    real :: a(100)
+    !$acc declare copy(a)
+    !$acc host_data use_device(a)
+    call something(a)
     !$acc end host_data
   end subroutine
 end module
@@ -43,3 +52,24 @@ end module
 !  CHECK:           %[[ADDRESS_OF_1:.*]] = fir.address_of(@_QMtest_use_deviceEi) : !fir.ref<i32>
 !  CHECK:           %[[ADDRESS_OF_2:.*]] = fir.address_of(@_QMtest_use_deviceEj) : !fir.ref<i32>
 !  CHECK:           acc.use_device
+
+!  CHECK-LABEL:   func.func @_QMtest_use_devicePtest_shadowed() {
+!  CHECK-NOT:      fir.address_of(@_QMtest_use_deviceEa)
+!  CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<100xf32> {bindc_name = "a", uniq_name = "_QMtest_use_deviceFtest_shadowedEa"}
+!  CHECK:           %[[DECLARE_0:.*]]:2 = hlfir.declare %[[ALLOCA_0]](
+!  CHECK-NOT:      fir.address_of(@_QMtest_use_deviceEa)
+!  CHECK:           %[[USE_DEVICE_0:.*]] = acc.use_device varPtr(%[[DECLARE_0]]#0
+
+submodule (test_use_device) some_submodule
+contains
+  module subroutine test_submodule
+    !$acc host_data use_device(a)
+    call something(a)
+    !$acc end host_data
+  end subroutine
+end submodule
+
+!  CHECK-LABEL:   func.func @_QMtest_use_devicePtest_submodule() {
+!  CHECK:           %[[ADDRESS_OF_0:.*]] = fir.address_of(@_QMtest_use_deviceEa) : !fir.ref<!fir.array<100xf32>>
+!  CHECK:           %[[DECLARE_0:.*]]:2 = hlfir.declare %[[ADDRESS_OF_0]]
+!  CHECK:           acc.use_device varPtr(%[[DECLARE_0]]#0
