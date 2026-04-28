@@ -409,6 +409,14 @@ StringRef Attribute::getValueAsString() const {
   return pImpl->getValueAsString();
 }
 
+uint64_t Attribute::getValueAsParsedInteger(uint64_t Default) const {
+  if (!isStringAttribute())
+    return Default;
+  uint64_t Result = Default;
+  getValueAsString().getAsInteger(0, Result);
+  return Result;
+}
+
 Type *Attribute::getValueAsType() const {
   if (!pImpl) return {};
   assert(isTypeAttribute() &&
@@ -2686,9 +2694,8 @@ adjustCallerStackProbeSize(Function &Caller, const Function &Callee) {
   if (CalleeAttr.isValid()) {
     Attribute CallerAttr = Caller.getFnAttribute("stack-probe-size");
     if (CallerAttr.isValid()) {
-      uint64_t CallerStackProbeSize, CalleeStackProbeSize;
-      CallerAttr.getValueAsString().getAsInteger(0, CallerStackProbeSize);
-      CalleeAttr.getValueAsString().getAsInteger(0, CalleeStackProbeSize);
+      uint64_t CallerStackProbeSize = CallerAttr.getValueAsParsedInteger();
+      uint64_t CalleeStackProbeSize = CalleeAttr.getValueAsParsedInteger();
 
       if (CallerStackProbeSize > CalleeStackProbeSize) {
         Caller.addFnAttr(CalleeAttr);
@@ -2714,9 +2721,8 @@ adjustMinLegalVectorWidth(Function &Caller, const Function &Callee) {
   if (CallerAttr.isValid()) {
     Attribute CalleeAttr = Callee.getFnAttribute("min-legal-vector-width");
     if (CalleeAttr.isValid()) {
-      uint64_t CallerVectorWidth, CalleeVectorWidth;
-      CallerAttr.getValueAsString().getAsInteger(0, CallerVectorWidth);
-      CalleeAttr.getValueAsString().getAsInteger(0, CalleeVectorWidth);
+      uint64_t CallerVectorWidth = CallerAttr.getValueAsParsedInteger();
+      uint64_t CalleeVectorWidth = CalleeAttr.getValueAsParsedInteger();
       if (CallerVectorWidth < CalleeVectorWidth)
         Caller.addFnAttr(CalleeAttr);
     } else {
@@ -2812,8 +2818,7 @@ void AttributeFuncs::updateMinLegalVectorWidthAttr(Function &Fn,
                                                    uint64_t Width) {
   Attribute Attr = Fn.getFnAttribute("min-legal-vector-width");
   if (Attr.isValid()) {
-    uint64_t OldWidth;
-    Attr.getValueAsString().getAsInteger(0, OldWidth);
+    uint64_t OldWidth = Attr.getValueAsParsedInteger();
     if (Width > OldWidth)
       Fn.addFnAttr("min-legal-vector-width", llvm::utostr(Width));
   }

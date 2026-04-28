@@ -290,6 +290,12 @@ public:
   /// attribute to be a string attribute.
   LLVM_ABI StringRef getValueAsString() const;
 
+  /// Return the attribute's value parsed as an integer. This requires the
+  /// attribute to be a string attribute.
+  ///
+  /// \returns \p Default if parsing fails.
+  LLVM_ABI uint64_t getValueAsParsedInteger(uint64_t Default = 0) const;
+
   /// Return the attribute's value as a Type. This requires the attribute to be
   /// a type attribute.
   LLVM_ABI Type *getValueAsType() const;

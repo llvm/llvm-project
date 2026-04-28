@@ -775,13 +775,11 @@ Attribute Function::getRetAttribute(Attribute::AttrKind Kind) const {
 uint64_t Function::getFnAttributeAsParsedInteger(StringRef Name,
                                                  uint64_t Default) const {
   Attribute A = getFnAttribute(Name);
+  if (!A.isStringAttribute())
+    return Default;
   uint64_t Result = Default;
-  if (A.isStringAttribute()) {
-    StringRef Str = A.getValueAsString();
-    if (Str.getAsInteger(0, Result))
-      getContext().emitError("cannot parse integer attribute " + Name);
-  }
-
+  if (A.getValueAsString().getAsInteger(0, Result))
+    getContext().emitError("cannot parse integer attribute " + Name);
   return Result;
 }
 
