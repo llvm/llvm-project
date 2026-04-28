@@ -101,7 +101,8 @@ _LIBCPP_HIDE_FROM_ABI inline void __atomic_smart_ptr_notify_all(const void* __ad
 }
 
 template <class _Poll>
-_LIBCPP_HIDE_FROM_ABI inline void __atomic_smart_ptr_wait_on_address(const void* __address, _Poll&& __poll) noexcept {
+_LIBCPP_HIDE_FROM_ABI inline void
+__atomic_smart_ptr_wait_on_address(const void* __address, const _Poll& __poll) noexcept {
   while (!__poll()) {
 #  if _LIBCPP_AVAILABILITY_HAS_NEW_SYNC
     auto __monitor_value = std::__atomic_monitor_global(__address);
@@ -132,7 +133,7 @@ struct __atomic_smart_ptr_fields {
 
   // Acquire lock bit on __ctrl_. Contended path sets notify bit and waits.
   _LIBCPP_HIDE_FROM_ABI void __lock() const noexcept {
-    _LIBCPP_ATOMIC_SP_TSAN_PRE_LOCK(&__ctrl_);
+    _LIBCPP_ATOMIC_SP_TSAN_PRE_LOCK(__builtin_addressof(__ctrl_));
     uintptr_t __expected = std::__cxx_atomic_load(__builtin_addressof(__ctrl_), memory_order_relaxed);
     for (;;) {
       if (!__atomic_smart_ptr_storage::__has_lock(__expected)) {
@@ -143,7 +144,7 @@ struct __atomic_smart_ptr_fields {
                 __desired,
                 memory_order_acquire,
                 memory_order_relaxed)) {
-          _LIBCPP_ATOMIC_SP_TSAN_POST_LOCK(&__ctrl_);
+          _LIBCPP_ATOMIC_SP_TSAN_POST_LOCK(__builtin_addressof(__ctrl_));
           return;
         }
         continue;
@@ -170,12 +171,12 @@ struct __atomic_smart_ptr_fields {
 
   // Publish new control pointer, clear bits, and notify waiters if needed.
   _LIBCPP_HIDE_FROM_ABI void __unlock(__shared_weak_count* __ctrl_to_publish) const noexcept {
-    _LIBCPP_ATOMIC_SP_TSAN_PRE_UNLOCK(&__ctrl_);
+    _LIBCPP_ATOMIC_SP_TSAN_PRE_UNLOCK(__builtin_addressof(__ctrl_));
     uintptr_t __new_word = __atomic_smart_ptr_storage::__encode(__ctrl_to_publish, 0);
     uintptr_t __previous = std::__cxx_atomic_exchange(__builtin_addressof(__ctrl_), __new_word, memory_order_release);
     if (__atomic_smart_ptr_storage::__has_notify(__previous))
       std::__atomic_smart_ptr_notify_all(__ctrl_address());
-    _LIBCPP_ATOMIC_SP_TSAN_POST_UNLOCK(&__ctrl_);
+    _LIBCPP_ATOMIC_SP_TSAN_POST_UNLOCK(__builtin_addressof(__ctrl_));
   }
 };
 
