@@ -4,8 +4,7 @@
 .text
 
 .amdhsa_kernel complete
-// user_sgpr_count range: 0-32
-// ERR: error: too many user SGPRs enabled
+// ERR: error: too many user SGPRs enabled, found 33, but only 32 are supported.
   .amdhsa_user_sgpr_count 33
 
   .amdhsa_next_free_vgpr 9

@@ -6358,7 +6358,9 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
 
   unsigned UserSGPRCount = ExplicitUserSGPRCount.value_or(ImpliedUserSGPRCount);
   if (UserSGPRCount > getMaxNumUserSGPRs())
-      return TokError("too many user SGPRs enabled");
+    return TokError("too many user SGPRs enabled, found " +
+                    Twine(UserSGPRCount) + ", but only " +
+                    Twine(getMaxNumUserSGPRs()) + " are supported.");
 
   // Consider the case where the total number of UserSGPRs with trailing
   // allocated preload SGPRs, is greater than the number of explicitly
