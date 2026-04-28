@@ -245,7 +245,8 @@ Changes to the Debug Info
 Changes to the LLVM tools
 -------------------------
 
-* `llvm-profgen` now supports ETM trace decoding using the OpenCSD library for Cortex-M targets.
+* `llvm-profgen` now supports ETM trace decoding using the OpenCSD library
+  (version 1.5.4 or newer) for Cortex-M targets.
 
 * `llvm-objcopy` no longer corrupts the symbol table when `--update-section` is called for ELF files.
 * `FileCheck` option `-check-prefix` now accepts a comma-separated list of
