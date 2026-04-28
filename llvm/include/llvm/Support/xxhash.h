@@ -38,19 +38,18 @@
 #ifndef LLVM_SUPPORT_XXHASH_H
 #define LLVM_SUPPORT_XXHASH_H
 
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
+#include <cstddef>
+#include <cstdint>
 
 namespace llvm {
 
-LLVM_ABI uint64_t xxHash64(llvm::StringRef Data);
-LLVM_ABI uint64_t xxHash64(llvm::ArrayRef<uint8_t> Data);
+// Deprecated pre-xxh3 64-bit hash.
+LLVM_ABI uint64_t xxHash64(const uint8_t *data, size_t len);
 
-LLVM_ABI uint64_t xxh3_64bits(ArrayRef<uint8_t> data);
-inline uint64_t xxh3_64bits(StringRef data) {
-  return xxh3_64bits(ArrayRef(data.bytes_begin(), data.size()));
-}
+/// XXH3's 64-bit variant. Inline ArrayRef and StringRef overloads live in
+/// llvm/ADT/ArrayRef.h and llvm/ADT/StringRef.h.
+LLVM_ABI uint64_t xxh3_64bits(const uint8_t *data, size_t len);
 
 /*-**********************************************************************
  *  XXH3 128-bit variant
@@ -72,8 +71,9 @@ struct XXH128_hash_t {
   }
 };
 
-/// XXH3's 128-bit variant.
-LLVM_ABI XXH128_hash_t xxh3_128bits(ArrayRef<uint8_t> data);
+/// XXH3's 128-bit variant. Inline ArrayRef overload lives in
+/// llvm/ADT/ArrayRef.h.
+LLVM_ABI XXH128_hash_t xxh3_128bits(const uint8_t *data, size_t len);
 
 } // namespace llvm
 

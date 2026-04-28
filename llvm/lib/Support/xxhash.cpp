@@ -100,11 +100,9 @@ static uint64_t XXH64_avalanche(uint64_t hash) {
   return hash;
 }
 
-uint64_t llvm::xxHash64(StringRef Data) {
-  size_t Len = Data.size();
+uint64_t llvm::xxHash64(const uint8_t *P, size_t Len) {
   uint64_t Seed = 0;
-  const unsigned char *P = Data.bytes_begin();
-  const unsigned char *const BEnd = Data.bytes_end();
+  const uint8_t *const BEnd = P + Len;
   uint64_t H64;
 
   if (Len >= 32) {
@@ -158,10 +156,6 @@ uint64_t llvm::xxHash64(StringRef Data) {
   }
 
   return XXH64_avalanche(H64);
-}
-
-uint64_t llvm::xxHash64(ArrayRef<uint8_t> Data) {
-  return xxHash64({(const char *)Data.data(), Data.size()});
 }
 
 constexpr size_t XXH3_SECRETSIZE_MIN = 136;
@@ -550,9 +544,7 @@ static uint64_t XXH3_hashLong_64b(const uint8_t *input, size_t len,
                         (uint64_t)len * PRIME64_1);
 }
 
-uint64_t llvm::xxh3_64bits(ArrayRef<uint8_t> data) {
-  auto *in = data.data();
-  size_t len = data.size();
+uint64_t llvm::xxh3_64bits(const uint8_t *in, size_t len) {
   if (len <= 16)
     return XXH3_len_0to16_64b(in, len, kSecret, 0);
   if (len <= 128)
@@ -1020,10 +1012,7 @@ XXH3_hashLong_128b(const uint8_t *input, size_t len, const uint8_t *secret,
   return h128;
 }
 
-llvm::XXH128_hash_t llvm::xxh3_128bits(ArrayRef<uint8_t> data) {
-  size_t len = data.size();
-  const uint8_t *input = data.data();
-
+llvm::XXH128_hash_t llvm::xxh3_128bits(const uint8_t *input, size_t len) {
   /*
    * If an action is to be taken if `secret` conditions are not respected,
    * it should be done here.
