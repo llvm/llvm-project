@@ -9255,6 +9255,23 @@ This attribute maps to the 'Location' SPIR-V decoration.
   }];
 }
 
+def HLSLMatrixLayoutDocs : Documentation {
+  let Category = DocCatVariable;
+  let Heading = "row_major, column_major";
+  let Content = [{
+The ``row_major`` and ``column_major`` keywords specify the memory layout 
+of an HLSL matrix type. 
+
+* ``row_major``: Matrices are stored in memory row-by-row.
+* ``column_major``: Matrices are stored in memory column-by-column (default).
+
+Example:
+.. code-block:: hlsl
+
+  row_major float2x2 myMatrix;
+  }];
+}
+
 def WebAssemblyFuncrefDocs : Documentation {
   let Category = DocCatType;
   let Content = [{
