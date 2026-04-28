@@ -59,13 +59,12 @@ static void rewriteUses(mlir::Value oldVal, mlir::Value newVal,
 
 // Function to convert the flat layout A or B matrix vector<32xbf16>
 // into VNNI packed layout using the vpunpack operations
-static void packNonUnitDimOperandToVNNI(mlir::PatternRewriter &rewriter,
-                                        mlir::Operation *opA,
-                                        mlir::Operation *opB,
-                                        mlir::vector::ContractionOp contractA,
-                                        mlir::vector::ContractionOp contractB,
-                                        int64_t nonUnitDimAcc,
-                                        mlir::VectorType Ty) {
+static LogicalResult
+packNonUnitDimOperandToVNNI(mlir::PatternRewriter &rewriter,
+                            mlir::Operation *opA, mlir::Operation *opB,
+                            mlir::vector::ContractionOp contractA,
+                            mlir::vector::ContractionOp contractB,
+                            int64_t nonUnitDimAcc, mlir::VectorType Ty) {
 
   bool opABeforeopB = opA->isBeforeInBlock(opB);
 
@@ -98,7 +97,22 @@ static void packNonUnitDimOperandToVNNI(mlir::PatternRewriter &rewriter,
             });
       });
 
-  auto vec1 = vector::LoadOp::create(rewriter, loc, flatTy, srcBuff, indexVals);
+  int64_t srcRank;
+  if (auto memrefTy = dyn_cast<MemRefType>(srcBuff.getType())) {
+    srcRank = memrefTy.getRank();
+  }
+
+  if (auto tensorTy = dyn_cast<RankedTensorType>(srcBuff.getType())) {
+    srcRank = tensorTy.getRank();
+  }
+
+  Value padding = ub::PoisonOp::create(rewriter, loc, elemTy);
+  auto map = AffineMap::getMinorIdentityMap(srcRank, flatTy.getRank(),
+                                            rewriter.getContext());
+  SmallVector<bool> inBounds(flatTy.getRank(), true);
+
+  auto vec1 = vector::TransferReadOp::create(rewriter, loc, flatTy, srcBuff,
+                                             indexVals, padding, map, inBounds);
 
   unsigned int offset = 1;
   if (elemTy.isSignlessInteger(8))
@@ -110,7 +124,8 @@ static void packNonUnitDimOperandToVNNI(mlir::PatternRewriter &rewriter,
                             indexVals[indexVals.size() - 2]);
   indexVals[indexVals.size() - 2] = nextIndx;
 
-  auto vec2 = vector::LoadOp::create(rewriter, loc, flatTy, srcBuff, indexVals);
+  auto vec2 = vector::TransferReadOp::create(rewriter, loc, flatTy, srcBuff,
+                                             indexVals, padding, map, inBounds);
 
   static constexpr int64_t maskLo_bf16[] = {
       0,  32, 1,  33, 2,  34, 3,  35, 8,  40, 9,  41, 10, 42, 11, 43,
@@ -160,6 +175,8 @@ static void packNonUnitDimOperandToVNNI(mlir::PatternRewriter &rewriter,
 
   rewriteUses(opA->getResult(0), newA.getResult(), contractA, rewriter);
   rewriteUses(opB->getResult(0), newB.getResult(), contractB, rewriter);
+
+  return success();
 }
 
 // Implements packed type outer product contraction as a sequence
@@ -313,6 +330,38 @@ struct VectorContractToPackedTypeDotProduct
         return rewriter.notifyMatchFailure(contractOp,
                                            "Could not find a contract pair");
 
+      if (!isNonUnitDimOperandShuffled(nonUnitDimOperand)) {
+        Value nonUnitDimOperandPairContract = rhsHasMultipleNonUnitDims
+                                                  ? pairContractOp.getRhs()
+                                                  : pairContractOp.getLhs();
+
+        // Get the non-packed A or B matrix's vector<32xbf16> elements.
+        Operation *nonUnitDimReadOp =
+            traceToVectorReadLikeParentOperation(nonUnitDimOperand);
+        Operation *nonUnitDimReadOpPairContract =
+            traceToVectorReadLikeParentOperation(nonUnitDimOperandPairContract);
+
+        if (!nonUnitDimReadOp || !nonUnitDimReadOpPairContract)
+          return rewriter.notifyMatchFailure(
+              contractOp, "Could not find a valid contract pair");
+
+        VectorType nonUnitDimTy = rhsHasMultipleNonUnitDims
+                                      ? contractOp.getRhsType()
+                                      : contractOp.getLhsType();
+
+        LogicalResult vnniPacked = packNonUnitDimOperandToVNNI(
+            rewriter, nonUnitDimReadOp, nonUnitDimReadOpPairContract,
+            contractOp, pairContractOp, blockingFactor * nonUnitDimValue,
+            nonUnitDimTy);
+
+        if (failed(vnniPacked))
+          return rewriter.notifyMatchFailure(
+              contractOp, "The input source must be MemRef type.");
+
+        nonUnitDimOperand = rhsHasMultipleNonUnitDims ? contractOp.getRhs()
+                                                      : contractOp.getLhs();
+      }
+
       // Validate and shuffle the accumulator
       if (accRead) {
         // Trace back to the load or transfer_read operations of the contract
@@ -369,34 +418,6 @@ struct VectorContractToPackedTypeDotProduct
           return rewriter.notifyMatchFailure(
               contractOp,
               "Write to accumulator is not by transfer_write or store");
-      }
-
-      if (!isNonUnitDimOperandShuffled(nonUnitDimOperand)) {
-        Value nonUnitDimOperandPairContract = rhsHasMultipleNonUnitDims
-                                                  ? pairContractOp.getRhs()
-                                                  : pairContractOp.getLhs();
-
-        // Get the non-packed A or B matrix's vector<32xbf16> elements.
-        Operation *nonUnitDimReadOp =
-            traceToVectorReadLikeParentOperation(nonUnitDimOperand);
-        Operation *nonUnitDimReadOpPairContract =
-            traceToVectorReadLikeParentOperation(nonUnitDimOperandPairContract);
-
-        if (!nonUnitDimReadOp || !nonUnitDimReadOpPairContract)
-          return rewriter.notifyMatchFailure(
-              contractOp, "Could not find a valid contract pair");
-
-        VectorType nonUnitDimTy = rhsHasMultipleNonUnitDims
-                                      ? contractOp.getRhsType()
-                                      : contractOp.getLhsType();
-
-        packNonUnitDimOperandToVNNI(
-            rewriter, nonUnitDimReadOp, nonUnitDimReadOpPairContract,
-            contractOp, pairContractOp, blockingFactor * nonUnitDimValue,
-            nonUnitDimTy);
-
-        nonUnitDimOperand = rhsHasMultipleNonUnitDims ? contractOp.getRhs()
-                                                      : contractOp.getLhs();
       }
     }
 
