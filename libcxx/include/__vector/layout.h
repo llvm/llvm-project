@@ -121,35 +121,27 @@ public:
   using const_pointer _LIBCPP_NODEBUG  = typename __alloc_traits::const_pointer;
 #ifdef _LIBCPP_ABI_SIZE_BASED_VECTOR
   using _SplitBuffer _LIBCPP_NODEBUG    = __split_buffer<_Tp, _Allocator, __split_buffer_size_layout>;
-  using __boundary_type _LIBCPP_NODEBUG = size_type;
+  using __bound_type _LIBCPP_NODEBUG = size_type;
 #else
   using _SplitBuffer _LIBCPP_NODEBUG    = __split_buffer<_Tp, _Allocator, __split_buffer_pointer_layout>;
-  using __boundary_type _LIBCPP_NODEBUG = pointer;
+  using __bound_type _LIBCPP_NODEBUG = pointer;
 #endif
 
   // Cannot be defaulted, since `_LIBCPP_COMPRESSED_PAIR` isn't an aggregate before C++14.
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __vector_layout()
       _NOEXCEPT_(is_nothrow_default_constructible<allocator_type>::value)
-      : __capacity_{} {}
+      : __capacity_(__bound_type()) {}
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI explicit __vector_layout(allocator_type const& __a)
       _NOEXCEPT_(is_nothrow_copy_constructible<allocator_type>::value)
-      : __capacity_{}, __alloc_(__a) {}
+      : __capacity_(__bound_type()), __alloc_(__a) {}
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI explicit __vector_layout(allocator_type&& __a)
       _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value)
-      : __capacity_{}, __alloc_(std::move(__a)) {}
+      : __capacity_(__bound_type()), __alloc_(std::move(__a)) {}
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __vector_layout(__vector_layout&& __other)
-      _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value)
-      : __begin_(std::move(__other.__begin_)),
-        __boundary_(std::move(__other.__boundary_)),
-        __capacity_(std::move(__other.__capacity_)),
-        __alloc_(std::move(__other.__alloc_)) {
-    __other.__begin_    = nullptr;
-    __other.__boundary_ = {};
-    __other.__capacity_ = {};
-  }
+      _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value);
 
   /// Returns a reference to the stored allocator.
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI allocator_type& __alloc() _NOEXCEPT {
@@ -184,83 +176,38 @@ public:
 
   /// Returns the value that the layout uses to determine the vector's size.
   ///
-  /// `__boundary_representation()` should only be used when directly operating on the layout from
+  /// `__bound_representation()` should only be used when directly operating on the layout from
   /// outside `__vector_layout`. Its result must be used with type deduction to avoid compile-time
   /// failures.
-  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __boundary_type
-  __boundary_representation() const _NOEXCEPT {
-    return __boundary_;
-  }
-
-  /// Returns the value that the layout uses to determine the vector's capacity.
-  ///
-  /// `__capacity_representation()` should only be used when directly operating on the layout from
-  /// outside `__vector_layout`. Its result must be used with type deduction to avoid compile-time
-  /// failures.
-  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __boundary_type
-  __capacity_representation() const _NOEXCEPT {
-    return __capacity_;
-  }
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __bound_type
+  __bound_representation() const _NOEXCEPT;
 
   /// Returns how many elements can be added before a reallocation occurs.
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI size_type
-  __remaining_capacity() const _NOEXCEPT {
-    return __capacity_ - __boundary_;
-  }
+  __remaining_capacity() const _NOEXCEPT;
 
   /// Determines if a reallocation is necessary.
-  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI bool __is_full() const _NOEXCEPT {
-    return __boundary_ == __capacity_;
-  }
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI bool __is_full() const _NOEXCEPT;
 
+  /// Sets the member pointing to the first element in the vector to `__new_begin`, the member used
+  /// to obtain the vector's bound to the equivalent of `__new_size`, and the member that represents
+  /// the vector's capacity to the equivalent to `__new_capacity`.
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
-  __set_layout(pointer __new_begin, size_type __new_size, size_type __new_capacity) _NOEXCEPT {
-    __begin_ = __new_begin;
-    __set_boundary_using_integer(__new_size);
-    __set_capacity_using_integer(__new_capacity);
-  }
+  __set_layout(pointer __new_begin, size_type __new_size, size_type __new_capacity) _NOEXCEPT;
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __reset_without_allocator() _NOEXCEPT {
-    __begin_ = nullptr;
-    __boundary_ = {};
-    __capacity_ = {};
-  }
+  /// Sets the member used to obtain the vector's bound to the equivalent of `__ptr`.
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_bound_using_pointer(pointer __ptr) _NOEXCEPT;
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void swap(__vector_layout& __other) _NOEXCEPT {
-    std::swap(__begin_, __other.__begin_);
-    std::swap(__boundary_, __other.__boundary_);
-    std::swap(__capacity_, __other.__capacity_);
-    std::__swap_allocator(__alloc_, __other.__alloc_);
-  }
-
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __swap_layouts(_SplitBuffer& __other) _NOEXCEPT {
-    __other.__swap_layouts(__begin_, __boundary_, __capacity_);
-  }
-
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __reset_without_allocator() _NOEXCEPT {}
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void swap(__vector_layout& __other) _NOEXCEPT;
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __swap_layouts(_SplitBuffer& __other) _NOEXCEPT;
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
-  __move_assign_without_allocator(__vector_layout& __other) _NOEXCEPT {
-    __begin_    = __other.__begin_;
-    __boundary_ = __other.__boundary_;
-    __capacity_ = __other.__capacity_;
+  __move_assign_without_allocator(__vector_layout& __other) _NOEXCEPT;
 
-    __other.__reset_without_allocator();
-  }
-
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __relocate(_SplitBuffer& __buffer) {
-    __annotate_delete();
-    __buffer.__relocate(__begin_, __boundary_, __capacity_);
-    __annotate_new(__size());
-  }
-
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __relocate(_SplitBuffer& __buffer);
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer
-  __relocate_with_pivot(_SplitBuffer& __buffer, pointer __pivot) {
-    __annotate_delete();
-    auto __result = __buffer.__relocate_with_pivot(__pivot, __begin_, __boundary_, __capacity_);
-    __annotate_new(__size());
-    return __result;
-  }
+  __relocate_with_pivot(_SplitBuffer& __buffer, pointer __pivot);
 
-  // Methods below this line must be implemented per vector layout.
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI size_type __size() const _NOEXCEPT;
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI size_type __capacity() const _NOEXCEPT;
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI bool __empty() const _NOEXCEPT;
@@ -271,20 +218,16 @@ public:
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer __capacity_ptr() _NOEXCEPT;
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_pointer __capacity_ptr() const _NOEXCEPT;
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI bool __invariants() const _NOEXCEPT;
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_boundary_using_integer(size_type __n) _NOEXCEPT;
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_boundary_using_pointer(pointer __ptr) _NOEXCEPT;
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_capacity_using_integer(size_type __n) _NOEXCEPT;
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_capacity_using_pointer(pointer __ptr) _NOEXCEPT;
 
 private:
   pointer __begin_ = nullptr;
 
 #ifdef _LIBCPP_ABI_SIZE_BASED_VECTOR
-  size_type __boundary_ = 0;
+  size_type __size_ = 0;
   size_type __capacity_ = 0;
   [[no_unique_address]] allocator_type __alloc_;
 #else
-  pointer __boundary_ = nullptr;
+  pointer __end_ = nullptr;
   _LIBCPP_COMPRESSED_PAIR(pointer, __capacity_, allocator_type, __alloc_);
 #endif
 
@@ -303,10 +246,98 @@ private:
 };
 
 #ifdef _LIBCPP_ABI_SIZE_BASED_VECTOR
+template<class _Tp, class _Alloc>
+_LIBCPP_CONSTEXPR_SINCE_CXX20 __vector_layout<_Tp, _Alloc>::__vector_layout(__vector_layout&& __other)
+  _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value)
+  : __begin_(std::exchange(__other.__begin_)),
+    __size_(std::move(__other.__size_)),
+    __capacity_(std::move(__other.__capacity_)),
+    __alloc_(std::move(__other.__alloc_)) {
+  __other.__begin_    = nullptr;
+  __other.__size_ = 0;
+  __other.__capacity_ = 0;
+}
+
+template<class _Tp, class _Alloc>
+_LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::__bound_type
+__vector_layout<_Tp, _Alloc>::__bound_representation() const _NOEXCEPT {
+  return __size_;
+}
+
+template<class _Tp, class _Alloc>
+_LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::size_type __vector_layout<_Tp, _Alloc>::__remaining_capacity() const _NOEXCEPT {
+  return __capacity_ - __size_;
+}
+
+template<class _Tp, class _Alloc>
+_LIBCPP_CONSTEXPR_SINCE_CXX20 bool __vector_layout<_Tp, _Alloc>::__is_full() const _NOEXCEPT {
+  return __size_ == __capacity_;
+}
+
+template<class _Tp, class _Alloc>
+_LIBCPP_CONSTEXPR_SINCE_CXX20 void
+__vector_layout<_Tp, _Alloc>::__set_layout(pointer __new_begin, size_type __new_size, size_type __new_capacity) _NOEXCEPT {
+  __begin_ = __new_begin;
+  __size_ = __new_size;
+  __capacity_ = __new_capacity;
+}
+
+template <class _Tp, class _Alloc>
+_LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::__set_bound_using_pointer(pointer __ptr) _NOEXCEPT {
+  __size_ = static_cast<size_type>(__ptr - __begin_);
+}
+
+template<class _Tp, class _Alloc>
+_LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::__reset_without_allocator() _NOEXCEPT {
+  __begin_ = nullptr;
+  __size_ = 0;
+  __capacity_ = 0;
+}
+
+template<class _Tp, class _Alloc>
+_LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::swap(__vector_layout& __other) _NOEXCEPT {
+  using std::swap;
+  swap(__begin_, __other.__begin_);
+  swap(__size_, __other.__size_);
+  swap(__capacity_, __other.__capacity_);
+  std::__swap_allocator(__alloc_, __other.__alloc_);
+}
+
+template<class _Tp, class _Alloc>
+_LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::__swap_layouts(_SplitBuffer& __other) _NOEXCEPT {
+  __other.__swap_layouts(__begin_, __size_, __capacity_);
+}
+
+template<class _Tp, class _Alloc>
+_LIBCPP_CONSTEXPR_SINCE_CXX20 void
+__vector_layout<_Tp, _Alloc>::__move_assign_without_allocator(__vector_layout& __other) _NOEXCEPT {
+  __begin_    = __other.__begin_;
+  __size_ = __other.__size_;
+  __capacity_ = __other.__capacity_;
+
+  __other.__reset_without_allocator();
+}
+
+template<class _Tp, class _Alloc>
+_LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::__relocate(_SplitBuffer& __buffer) {
+  __annotate_delete();
+  __buffer.__relocate(__begin_, __size_, __capacity_);
+  __annotate_new(__size_);
+}
+
+template<class _Tp, class _Alloc>
+_LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::pointer
+__vector_layout<_Tp, _Alloc>::__relocate_with_pivot(_SplitBuffer& __buffer, pointer __pivot) {
+  __annotate_delete();
+  auto __result = __buffer.__relocate_with_pivot(__pivot, __begin_, __size_, __capacity_);
+  __annotate_new(__size_);
+  return __result;
+}
+
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20
 typename __vector_layout<_Tp, _Alloc>::size_type __vector_layout<_Tp, _Alloc>::__size() const _NOEXCEPT {
-  return __boundary_;
+  return __size_;
 }
 
 template <class _Tp, class _Alloc>
@@ -317,35 +348,35 @@ __vector_layout<_Tp, _Alloc>::__capacity() const _NOEXCEPT {
 
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __vector_layout<_Tp, _Alloc>::__empty() const _NOEXCEPT {
-  return __boundary_ == 0;
+  return __size_ == 0;
 }
 
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp& __vector_layout<_Tp, _Alloc>::__back() _NOEXCEPT {
-  return __begin_[__boundary_ - 1];
+  return __begin_[__size_ - 1];
 }
 
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp const& __vector_layout<_Tp, _Alloc>::__back() const _NOEXCEPT {
-  return __begin_[__boundary_ - 1];
+  return __begin_[__size_ - 1];
 }
 
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::pointer
 __vector_layout<_Tp, _Alloc>::__end_ptr() _NOEXCEPT {
-  return __begin_ + __boundary_;
+  return __begin_ + __size_;
 }
 
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::const_pointer
 __vector_layout<_Tp, _Alloc>::__end_ptr() const _NOEXCEPT {
-  return __begin_ + __boundary_;
+  return __begin_ + __size_;
 }
 
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::pointer
 __vector_layout<_Tp, _Alloc>::__capacity_ptr() _NOEXCEPT {
-  return __begin_ + __capacity_;
+  return __begin_ + __size_;
 }
 
 template <class _Tp, class _Alloc>
@@ -357,34 +388,102 @@ __vector_layout<_Tp, _Alloc>::__capacity_ptr() const _NOEXCEPT {
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __vector_layout<_Tp, _Alloc>::__invariants() const _NOEXCEPT {
   if (__begin_ == nullptr)
-    return __boundary_ == 0 && __capacity_ == 0;
-  return !(__boundary_ > __capacity_);
-}
-
-template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::__set_boundary_using_integer(size_type __n) _NOEXCEPT {
-  __boundary_ = __n;
-}
-
-template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::__set_boundary_using_pointer(pointer __ptr) _NOEXCEPT {
-  __boundary_ = static_cast<size_type>(__ptr - __begin_);
-}
-
-template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::__set_capacity_using_integer(size_type __n) _NOEXCEPT {
-  __capacity_ = __n;
-}
-
-template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::__set_capacity_using_pointer(pointer __ptr) _NOEXCEPT {
-  __capacity_ = static_cast<size_type>(__ptr - __begin_);
+    return __size_ == 0 && __capacity_ == 0;
+  return __size_ <= __capacity_;
 }
 #else
+template<class _Tp, class _Alloc>
+_LIBCPP_CONSTEXPR_SINCE_CXX20 __vector_layout<_Tp, _Alloc>::__vector_layout(__vector_layout&& __other)
+  _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value)
+  : __begin_(std::move(__other.__begin_)),
+    __end_(std::move(__other.__end_)),
+    __capacity_(std::move(__other.__capacity_)),
+    __alloc_(std::move(__other.__alloc_)) {
+  __other.__begin_    = nullptr;
+  __other.__end_ = nullptr;
+  __other.__capacity_ = nullptr;
+}
+
+template<class _Tp, class _Alloc>
+_LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::__bound_type
+__vector_layout<_Tp, _Alloc>::__bound_representation() const _NOEXCEPT {
+  return __end_;
+}
+
+template<class _Tp, class _Alloc>
+_LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::size_type __vector_layout<_Tp, _Alloc>::__remaining_capacity() const _NOEXCEPT {
+  return __capacity_ - __end_;
+}
+
+template<class _Tp, class _Alloc>
+[[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __vector_layout<_Tp, _Alloc>::__is_full() const _NOEXCEPT {
+  return __end_ == __capacity_;
+}
+
+template<class _Tp, class _Alloc>
+_LIBCPP_CONSTEXPR_SINCE_CXX20 void
+__vector_layout<_Tp, _Alloc>::__set_layout(pointer __new_begin, size_type __new_size, size_type __new_capacity) _NOEXCEPT {
+  __begin_ = __new_begin;
+  __end_ = __new_begin + __new_size;
+  __capacity_ = __new_begin + __new_capacity;
+}
+
+template <class _Tp, class _Alloc>
+_LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::__set_bound_using_pointer(pointer __ptr) _NOEXCEPT {
+  __end_ = __ptr;
+}
+
+template<class _Tp, class _Alloc>
+_LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::__reset_without_allocator() _NOEXCEPT {
+  __begin_ = nullptr;
+  __end_ = nullptr;
+  __capacity_ = nullptr;
+}
+
+template<class _Tp, class _Alloc>
+_LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::swap(__vector_layout& __other) _NOEXCEPT {
+  using std::swap;
+  swap(__begin_, __other.__begin_);
+  swap(__end_, __other.__end_);
+  swap(__capacity_, __other.__capacity_);
+  std::__swap_allocator(__alloc_, __other.__alloc_);
+}
+
+template<class _Tp, class _Alloc>
+_LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::__swap_layouts(_SplitBuffer& __other) _NOEXCEPT {
+  __other.__swap_layouts(__begin_, __end_, __capacity_);
+}
+
+template<class _Tp, class _Alloc>
+_LIBCPP_CONSTEXPR_SINCE_CXX20 void
+__vector_layout<_Tp, _Alloc>::__move_assign_without_allocator(__vector_layout& __other) _NOEXCEPT {
+  __begin_    = __other.__begin_;
+  __end_ = __other.__end_;
+  __capacity_ = __other.__capacity_;
+
+  __other.__reset_without_allocator();
+}
+
+template<class _Tp, class _Alloc>
+_LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::__relocate(_SplitBuffer& __buffer) {
+  __annotate_delete();
+  __buffer.__relocate(__begin_, __end_, __capacity_);
+  __annotate_new(__size());
+}
+
+template<class _Tp, class _Alloc>
+_LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::pointer
+__vector_layout<_Tp, _Alloc>::__relocate_with_pivot(_SplitBuffer& __buffer, pointer __pivot) {
+  __annotate_delete();
+  auto __result = __buffer.__relocate_with_pivot(__pivot, __begin_, __end_, __capacity_);
+  __annotate_new(__size());
+  return __result;
+}
+
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20
 typename __vector_layout<_Tp, _Alloc>::size_type __vector_layout<_Tp, _Alloc>::__size() const _NOEXCEPT {
-  return static_cast<size_type>(__boundary_ - __begin_);
+  return static_cast<size_type>(__end_ - __begin_);
 }
 
 template <class _Tp, class _Alloc>
@@ -395,29 +494,29 @@ __vector_layout<_Tp, _Alloc>::__capacity() const _NOEXCEPT {
 
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __vector_layout<_Tp, _Alloc>::__empty() const _NOEXCEPT {
-  return __begin_ == __boundary_;
+  return __begin_ == __end_;
 }
 
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp& __vector_layout<_Tp, _Alloc>::__back() _NOEXCEPT {
-  return __boundary_[-1];
+  return __end_[-1];
 }
 
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp const& __vector_layout<_Tp, _Alloc>::__back() const _NOEXCEPT {
-  return __boundary_[-1];
+  return __end_[-1];
 }
 
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::pointer
 __vector_layout<_Tp, _Alloc>::__end_ptr() _NOEXCEPT {
-  return __boundary_;
+  return __end_;
 }
 
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::const_pointer
 __vector_layout<_Tp, _Alloc>::__end_ptr() const _NOEXCEPT {
-  return __boundary_;
+  return __end_;
 }
 
 template <class _Tp, class _Alloc>
@@ -435,32 +534,12 @@ __vector_layout<_Tp, _Alloc>::__capacity_ptr() const _NOEXCEPT {
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __vector_layout<_Tp, _Alloc>::__invariants() const _NOEXCEPT {
   if (__begin_ == nullptr)
-    return __boundary_ == 0 && __capacity_ == 0;
-  if (__begin_ > __boundary_)
+    return __end_ == nullptr && __capacity_ == nullptr;
+  if (__begin_ > __end_)
     return false;
   if (__begin_ == __capacity_)
     return false;
-  return !(__boundary_ > __capacity_);
-}
-
-template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::__set_boundary_using_integer(size_type __n) _NOEXCEPT {
-  __boundary_ = __begin_ + __n;
-}
-
-template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::__set_boundary_using_pointer(pointer __ptr) _NOEXCEPT {
-  __boundary_ = __ptr;
-}
-
-template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::__set_capacity_using_integer(size_type __n) _NOEXCEPT {
-  __capacity_ = __begin_ + __n;
-}
-
-template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::__set_capacity_using_pointer(pointer __ptr) _NOEXCEPT {
-  __capacity_ = __ptr;
+  return __end_ <= __capacity_;
 }
 #endif // _LIBCPP_ABI_SIZE_BASED_VECTOR
 

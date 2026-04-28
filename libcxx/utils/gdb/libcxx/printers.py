@@ -363,26 +363,25 @@ class StdVectorPrinter(object):
         else:
             layout = self.val["__layout_"]
             if layout:
+                fields = layout.type.fields()
                 begin = layout["__begin_"]
-                boundary = layout["__boundary_"]
-                capacity = layout["__capacity_"]
+                bound = layout[fields[1]]
+
+                # We test for integers because `vector<T>::size_type` is required to
+                # be an unsigned integer, whereas `vector<T>::pointer` can be any
+                # type that satisfies the Cpp17NullablePointer requirements.
+                if bound.type.strip_typedefs().code == gdb.TYPE_CODE_INT:
+                    self.length = layout["__size_"]
+                    self.capacity = layout["__capacity_"]
+                else:
+                    self.length = layout["__end_"] - begin
+                    self.capacity = layout["__capacity_"] - begin
             else:
                 begin = self.val["__begin_"]
-                boundary = self.val["__end_"]
-                capacity = self.val["__cap_"]
+                self.length = self.val["__end_"] - begin
+                self.capacity = self.val["__cap_"] - begin
 
-            # We test for integers because `vector<T>::size_type` is required to
-            # be an unsigned integer, whereas `vector<T>::pointer` can be any
-            # type that satisfies the Cpp17NullablePointer requirements.
-            if boundary.type.strip_typedefs().code == gdb.TYPE_CODE_INT:
-                self.length = boundary
-                self.capacity = capacity
-                end = begin + boundary
-            else:
-                end = boundary
-                self.length = end - begin
-                self.capacity = capacity - begin
-
+            end = begin + self.length
             self.iterator = self._VectorIterator(begin, end)
 
     def to_string(self):

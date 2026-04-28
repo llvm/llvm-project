@@ -88,7 +88,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Tp, class _Allocator /* = allocator<_Tp> */>
 class vector {
   using __base_type _LIBCPP_NODEBUG     = __vector_layout<_Tp, _Allocator>;
-  using __boundary_type _LIBCPP_NODEBUG = typename __base_type::__boundary_type;
+  using __bound_type _LIBCPP_NODEBUG = typename __base_type::__bound_type;
   using _SplitBuffer _LIBCPP_NODEBUG    = typename __base_type::_SplitBuffer;
 
 public:
@@ -729,7 +729,7 @@ private:
   }
 
   template <class... _Args>
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI inline __boundary_type
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI inline __bound_type
   __emplace_back_slow_path(_Args&&... __args);
 
   // The following functions are no-ops outside of AddressSanitizer mode.
@@ -768,7 +768,7 @@ private:
     }
 
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI ~_ConstructTransaction() {
-      __v_.__layout_.__set_boundary_using_pointer(__pos_);
+      __v_.__layout_.__set_bound_using_pointer(__pos_);
       if (__pos_ != __new_end_) {
         __v_.__annotate_shrink(__new_end_ - __v_.__layout_.__begin_ptr());
       }
@@ -786,7 +786,7 @@ private:
     pointer __soon_to_be_end = __layout_.__end_ptr();
     while (__new_last != __soon_to_be_end)
       __alloc_traits::destroy(this->__layout_.__alloc(), std::__to_address(--__soon_to_be_end));
-    __layout_.__set_boundary_using_pointer(__new_last);
+    __layout_.__set_bound_using_pointer(__new_last);
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __copy_assign_alloc(const vector& __c) {
@@ -1055,7 +1055,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::shrink_to_fit() _NOE
 
 template <class _Tp, class _Allocator>
 template <class... _Args>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<_Tp, _Allocator>::__boundary_type
+_LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<_Tp, _Allocator>::__bound_type
 vector<_Tp, _Allocator>::__emplace_back_slow_path(_Args&&... __args) {
   _SplitBuffer __v(__recommend(size() + 1), size(), this->__layout_.__alloc());
   //    __v.emplace_back(std::forward<_Args>(__args)...);
@@ -1063,7 +1063,7 @@ vector<_Tp, _Allocator>::__emplace_back_slow_path(_Args&&... __args) {
   __alloc_traits::construct(this->__layout_.__alloc(), std::__to_address(__end), std::forward<_Args>(__args)...);
   __v.__set_sentinel(++__end);
   __layout_.__relocate(__v);
-  return __layout_.__boundary_representation();
+  return __layout_.__bound_representation();
 }
 
 // This makes the compiler inline `__else()` if `__cond` is known to be false. Currently LLVM doesn't do that without
@@ -1245,7 +1245,7 @@ vector<_Tp, _Allocator>::__insert_with_sentinel(const_iterator __position, _Inpu
     __guard.__complete(); // Release the guard once objects in [__old_last_, __layout_.__end_ptr()) have been
                           // successfully relocated.
     __merged.__set_sentinel(__merged.end() + (__layout_.__end_ptr() - __old_last));
-    __layout_.__set_boundary_using_pointer(__old_last);
+    __layout_.__set_bound_using_pointer(__old_last);
     std::__uninitialized_allocator_relocate(
         __layout_.__alloc(),
         std::__to_address(__v.begin()),
