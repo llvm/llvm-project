@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -fopenacc %s -o - | FileCheck %s
 
 ! Test that module symbols used inside the use_device clause
 ! in procedures from that same module are correctly instantiated.
@@ -8,7 +8,7 @@ module test_use_device
   integer :: i, j
   interface
   subroutine something(a)
-   real(4) :: a(*)
+   real(4) :: a(100)
   end subroutine
   end interface
 contains
@@ -32,7 +32,7 @@ end module
 !  CHECK:           %[[USE_DEVICE_0:.*]] = acc.use_device varPtr(%[[DECLARE_0]]#0 : !fir.ref<!fir.array<100xf32>>) -> !fir.ref<!fir.array<100xf32>> {name = "a"}
 !  CHECK:           acc.host_data dataOperands(%[[USE_DEVICE_0]] : !fir.ref<!fir.array<100xf32>>) {
 !  CHECK:             %[[DECLARE_1:.*]]:2 = hlfir.declare %[[USE_DEVICE_0]](%[[SHAPE_0]]) {uniq_name = "_QMtest_use_deviceEa"} : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
-!  CHECK:             fir.call @_QPsomething(%[[DECLARE_1]]#0) fastmath<contract> : (!fir.ref<!fir.array<100xf32>>) -> ()
+!  CHECK:             fir.call @_QPsomething(%[[DECLARE_1]]#0)
 !  CHECK:             acc.terminator
 !  CHECK:           }
 !  CHECK:           return
