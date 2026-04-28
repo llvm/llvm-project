@@ -2104,14 +2104,14 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // arguments to begin at SP+0. Completely unused for non-tail calls.
   int SPDiff = 0;
 
+  MaybeAlign StackAlign = DAG.getDataLayout().getStackAlignment();
+  assert(StackAlign && "data layout string is missing stack alignment");
   if (isTailCall && !isSibCall) {
     auto FuncInfo = MF.getInfo<ARMFunctionInfo>();
     unsigned NumReusableBytes = FuncInfo->getArgumentStackSize();
 
     // Since callee will pop argument stack as a tail call, we must keep the
-    // popped size 16-byte aligned.
-    MaybeAlign StackAlign = DAG.getDataLayout().getStackAlignment();
-    assert(StackAlign && "data layout string is missing stack alignment");
+    // popped size aligned with the stack.
     NumBytes = alignTo(NumBytes, *StackAlign);
 
     // SPDiff will be negative if this tail call requires more space than we
@@ -2652,8 +2652,9 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // pop its own argument stack on return. But this call is *not* a tail call so
   // we need to undo that after it returns to restore the status-quo.
   bool TailCallOpt = getTargetMachine().Options.GuaranteedTailCallOpt;
-  uint64_t CalleePopBytes =
-      canGuaranteeTCO(CallConv, TailCallOpt) ? alignTo(NumBytes, 16) : -1U;
+  uint64_t CalleePopBytes = canGuaranteeTCO(CallConv, TailCallOpt)
+                                ? alignTo(NumBytes, *StackAlign)
+                                : -1U;
 
   Chain = DAG.getCALLSEQ_END(Chain, NumBytes, CalleePopBytes, InGlue, dl);
   if (!Ins.empty())
