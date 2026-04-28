@@ -14,6 +14,11 @@
 #include "llvm/ADT/StableHashing.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -101,6 +106,12 @@ static bool shouldPrintIR(Any IR) {
     return sccContainsFilterPrintFunc(*C);
   if (const auto *L = unwrapIR<Loop>(IR))
     return isFunctionInPrintList(L->getHeader()->getParent()->getName());
+  return false;
+}
+
+static bool shouldPrintMIR(Any IR) {
+  if (const auto *MF = unwrapIR<MachineFunction>(IR))
+    return isFunctionInPrintList(MF->getName());
   return false;
 }
 
@@ -262,6 +273,78 @@ static void writeOptimizationInfo(raw_ostream &OS, const User *U) {
   }
 }
 
+static stable_hash hashMachineOperand(const MachineOperand &MO) {
+  stable_hash H = stable_hash_combine(static_cast<stable_hash>(MO.getType()));
+  if (MO.isReg()) {
+    H = stable_hash_combine(H, static_cast<stable_hash>(MO.getReg().id()));
+    H = stable_hash_combine(H, static_cast<stable_hash>(MO.isDef()),
+                            static_cast<stable_hash>(MO.isImplicit()),
+                            static_cast<stable_hash>(MO.isDead()));
+    H = stable_hash_combine(H, static_cast<stable_hash>(MO.isKill()));
+    if (MO.getSubReg())
+      H = stable_hash_combine(H, static_cast<stable_hash>(MO.getSubReg()));
+    return H;
+  }
+  if (MO.isImm())
+    return stable_hash_combine(H, static_cast<stable_hash>(MO.getImm()));
+  if (MO.isCImm())
+    return stable_hash_combine(
+        H, static_cast<stable_hash>(hash_value(MO.getCImm()->getValue())));
+  if (MO.isFPImm())
+    return stable_hash_combine(
+        H, static_cast<stable_hash>(
+               hash_value(MO.getFPImm()->getValueAPF().bitcastToAPInt())));
+  if (MO.isMBB())
+    return stable_hash_combine(
+        H, static_cast<stable_hash>(MO.getMBB()->getNumber()));
+  if (MO.isGlobal())
+    return stable_hash_combine(
+        H, static_cast<stable_hash>(hash_value(MO.getGlobal()->getName())),
+        static_cast<stable_hash>(MO.getOffset()),
+        static_cast<stable_hash>(MO.getTargetFlags()));
+  if (MO.isSymbol())
+    return stable_hash_combine(
+        H, static_cast<stable_hash>(hash_value(MO.getSymbolName())),
+        static_cast<stable_hash>(MO.getOffset()),
+        static_cast<stable_hash>(MO.getTargetFlags()));
+  if (MO.isBlockAddress())
+    return stable_hash_combine(
+        H,
+        static_cast<stable_hash>(
+            hash_value(MO.getBlockAddress()->getFunction()->getName())),
+        static_cast<stable_hash>(MO.getOffset()),
+        static_cast<stable_hash>(MO.getTargetFlags()));
+  if (MO.isFI())
+    return stable_hash_combine(H, static_cast<stable_hash>(MO.getIndex()));
+  if (MO.isCPI())
+    return stable_hash_combine(H, static_cast<stable_hash>(MO.getIndex()),
+                               static_cast<stable_hash>(MO.getOffset()),
+                               static_cast<stable_hash>(MO.getTargetFlags()));
+  if (MO.isJTI())
+    return stable_hash_combine(H, static_cast<stable_hash>(MO.getIndex()),
+                               static_cast<stable_hash>(MO.getTargetFlags()));
+  if (MO.isTargetIndex())
+    return stable_hash_combine(H, static_cast<stable_hash>(MO.getIndex()),
+                               static_cast<stable_hash>(MO.getOffset()),
+                               static_cast<stable_hash>(MO.getTargetFlags()));
+  if (MO.isMetadata())
+    return stable_hash_combine(
+        H, static_cast<stable_hash>(hash_value(MO.getMetadata())));
+  if (MO.isMCSymbol())
+    return stable_hash_combine(
+        H, static_cast<stable_hash>(hash_value(MO.getMCSymbol()->getName())));
+  return H;
+}
+
+static stable_hash hashMachineInstr(const MachineInstr &MI) {
+  stable_hash H =
+      stable_hash_combine(static_cast<stable_hash>(MI.getOpcode()),
+                          static_cast<stable_hash>(MI.getNumOperands()));
+  for (const MachineOperand &MO : MI.operands())
+    H = stable_hash_combine(H, hashMachineOperand(MO));
+  return H;
+}
+
 /// Compute the hash that identifies "this source point" for tracker-ID
 /// interning.
 ///
@@ -376,6 +459,17 @@ class IRTrackerRecorder {
   /// across passes.
   DenseMap<const Function *, SmallVector<SmallVector<unsigned>>> BlockTempIDs;
 
+  /// Per-MachineFunction MIR state. Kept separate from the IR Function maps
+  /// because MIR passes are per-machine-function and may run after all IR
+  /// snapshots have already been recorded.
+  DenseSet<const MachineFunction *> MIRInitialCaptured;
+  DenseMap<const MachineFunction *, stable_hash> MIRFunctionHashes;
+  DenseMap<const MachineFunction *, SmallVector<stable_hash>> MIRBlockHashes;
+  DenseMap<const MachineFunction *, SmallVector<SmallVector<stable_hash>>>
+      MIRBlockInstHashes;
+  DenseMap<const MachineFunction *, SmallVector<SmallVector<unsigned>>>
+      MIRBlockTempIDs;
+
   /// Intern table from a source-point hash (hashTrackerIdentity) to the
   /// compact integer tracker ID. First time a source point is seen, a
   /// fresh ID is allocated; subsequent sightings of the same source
@@ -395,11 +489,12 @@ class IRTrackerRecorder {
   /// Emit one P (pass) row. P rows delimit the per-pass instruction
   /// records that follow.
   ///
-  /// Format: ``P\t<seq>\t<phase>\t<pass_name>\t<ir_unit>``.
+  /// Format: ``P\t<seq>\t<kind>\t<phase>\t<pass_name>\t<ir_unit>``.
   ///
   /// * ``seq``: monotonically increasing pass index. 0 is the initial
   ///   capture, 1..N are normal passes, and one final "phase=final"
   ///   record is emitted at teardown.
+  /// * ``kind``: ``ir`` or ``mir``.
   /// * ``phase``: ``initial``, ``after``, or ``final``.
   /// * ``pass_name``: pass class name as resolved by
   ///   PassInstrumentationCallbacks::getPassNameForClassName.
@@ -408,13 +503,13 @@ class IRTrackerRecorder {
   ///
   /// Example output:
   ///
-  ///   P\t0\tinitial\t<initial>\t[module]
-  ///   P\t1\tafter\tmemprof-remove-attributes\t[module]
-  ///   P\t5\tafter\tsroa\tcli_wcwidth
-  void writePassRecord(unsigned Seq, StringRef Phase, StringRef PassName,
-                       StringRef IRUnit) {
-    *OS << "P\t" << Seq << '\t' << Phase << '\t' << PassName << '\t' << IRUnit
-        << '\n';
+  ///   P\t0\tir\tinitial\t<initial>\t[module]
+  ///   P\t1\tir\tafter\tmemprof-remove-attributes\t[module]
+  ///   P\t5\tmir\tafter\tgreedy\tcli_wcwidth
+  void writePassRecord(unsigned Seq, StringRef Kind, StringRef Phase,
+                       StringRef PassName, StringRef IRUnit) {
+    *OS << "P\t" << Seq << '\t' << Kind << '\t' << Phase << '\t' << PassName
+        << '\t' << IRUnit << '\n';
   }
 
   /// Emit one T (tracker-metadata) row, at most once per tracker ID over
@@ -923,6 +1018,163 @@ class IRTrackerRecorder {
     PrevBlkH = std::move(NewBlkH);
   }
 
+  void writeMachineInstructions(const MachineFunction &MF, bool SkipUnchanged) {
+    if (!isFunctionInPrintList(MF.getName()))
+      return;
+
+    auto &PrevBlkH = MIRBlockHashes[&MF];
+    auto &PrevInstH = MIRBlockInstHashes[&MF];
+    auto &PrevTempIDs = MIRBlockTempIDs[&MF];
+    SmallVector<stable_hash> NewBlkH;
+    SmallVector<unsigned> ChangedBlocks;
+    stable_hash FuncH = 0;
+
+    unsigned BlkIdx = 0;
+    for (const MachineBasicBlock &MBB : MF) {
+      stable_hash BlkH = 0;
+      for (const MachineInstr &MI : MBB)
+        BlkH = stable_hash_combine(BlkH, hashMachineInstr(MI));
+      NewBlkH.push_back(BlkH);
+      FuncH = stable_hash_combine(FuncH, BlkH);
+      if (!SkipUnchanged || BlkIdx >= PrevBlkH.size() ||
+          PrevBlkH[BlkIdx] != BlkH)
+        ChangedBlocks.push_back(BlkIdx);
+      ++BlkIdx;
+    }
+
+    if (SkipUnchanged) {
+      auto It = MIRFunctionHashes.find(&MF);
+      if (It != MIRFunctionHashes.end() && It->second == FuncH)
+        return;
+      MIRFunctionHashes[&MF] = FuncH;
+    } else {
+      MIRFunctionHashes[&MF] = FuncH;
+    }
+
+    if (ChangedBlocks.empty()) {
+      PrevBlkH = std::move(NewBlkH);
+      return;
+    }
+
+    const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
+    ModuleSlotTracker MST(MF.getFunction().getParent());
+    MST.incorporateFunction(MF.getFunction());
+    SmallString<256> InstBuf;
+
+    BlkIdx = 0;
+    unsigned ChangedBlockPos = 0;
+    for (const MachineBasicBlock &MBB : MF) {
+      bool BlockChanged = ChangedBlockPos < ChangedBlocks.size() &&
+                          ChangedBlocks[ChangedBlockPos] == BlkIdx;
+      if (BlockChanged) {
+        ++ChangedBlockPos;
+        SmallVector<stable_hash> CurInstH;
+        SmallVector<unsigned> CurTempIDs;
+        auto *OldInstH = (SkipUnchanged && BlkIdx < PrevInstH.size())
+                             ? &PrevInstH[BlkIdx]
+                             : nullptr;
+        auto *OldTempIDs = (SkipUnchanged && BlkIdx < PrevTempIDs.size())
+                               ? &PrevTempIDs[BlkIdx]
+                               : nullptr;
+        SmallVector<bool> UsedOldTempIDs;
+        if (OldTempIDs)
+          UsedOldTempIDs.assign(OldTempIDs->size(), false);
+
+        std::string MBBName;
+        raw_string_ostream MBBOS(MBBName);
+        MBB.printName(MBBOS, /*PrintNameFlags=*/0, &MST);
+
+        unsigned InstSeq = 0;
+        unsigned InstIdx = 0;
+        for (const MachineInstr &MI : MBB) {
+          stable_hash CurH = hashMachineInstr(MI);
+          CurInstH.push_back(CurH);
+
+          const DILocation *Loc =
+              MI.getDebugLoc() ? MI.getDebugLoc().get() : nullptr;
+          unsigned CurID = getOrCreateTrackerID(Loc);
+          if (CurID == 0) {
+            int MatchedIdx = -1;
+            if (OldTempIDs && OldInstH) {
+              if (InstIdx < OldTempIDs->size() && InstIdx < OldInstH->size() &&
+                  (*OldTempIDs)[InstIdx] != 0 && !UsedOldTempIDs[InstIdx] &&
+                  (*OldInstH)[InstIdx] == CurH) {
+                MatchedIdx = InstIdx;
+              } else {
+                int BestIdx = -1;
+                int BestDist = std::numeric_limits<int>::max();
+                bool AmbiguousBest = false;
+                for (size_t J = 0,
+                            E = std::min(OldTempIDs->size(), OldInstH->size());
+                     J != E; ++J) {
+                  if ((*OldTempIDs)[J] == 0 || UsedOldTempIDs[J] ||
+                      (*OldInstH)[J] != CurH)
+                    continue;
+                  int Dist =
+                      std::abs(static_cast<int>(J) - static_cast<int>(InstIdx));
+                  if (Dist < BestDist) {
+                    BestDist = Dist;
+                    BestIdx = static_cast<int>(J);
+                    AmbiguousBest = false;
+                  } else if (Dist == BestDist) {
+                    AmbiguousBest = true;
+                  }
+                }
+                if (BestIdx >= 0 && !AmbiguousBest)
+                  MatchedIdx = BestIdx;
+              }
+            }
+            if (MatchedIdx >= 0) {
+              CurID = (*OldTempIDs)[MatchedIdx];
+              UsedOldTempIDs[MatchedIdx] = true;
+            } else {
+              CurID = NextTrackerID++;
+            }
+          }
+          CurTempIDs.push_back(CurID);
+
+          bool InstChanged = true;
+          auto It = TrackerIDToPrevHash.find(CurID);
+          InstChanged = It == TrackerIDToPrevHash.end() || It->second != CurH;
+          if (InstChanged) {
+            InstBuf.clear();
+            raw_svector_ostream IOS(InstBuf);
+            MI.print(IOS, MST, /*IsStandalone=*/true, /*SkipOpers=*/false,
+                     /*SkipDebugLoc=*/true, /*AddNewLine=*/false, TII);
+
+            writeTrackerRecord(CurID, Loc);
+
+            StringRef OpcodeName = TII ? TII->getName(MI.getOpcode()) : "";
+            if (OpcodeName.empty())
+              OpcodeName = "<unknown>";
+            *OS << "I\t" << MF.getName() << '\t' << MBBName << '\t' << InstSeq
+                << '\t' << OpcodeName << '\t' << CurID << '\t' << InstBuf
+                << '\n';
+          }
+          TrackerIDToPrevHash[CurID] = CurH;
+          ++InstSeq;
+          ++InstIdx;
+        }
+
+        if (BlkIdx >= PrevInstH.size())
+          PrevInstH.resize(BlkIdx + 1);
+        PrevInstH[BlkIdx] = std::move(CurInstH);
+        if (BlkIdx >= PrevTempIDs.size())
+          PrevTempIDs.resize(BlkIdx + 1);
+        PrevTempIDs[BlkIdx] = std::move(CurTempIDs);
+      }
+      ++BlkIdx;
+    }
+
+    PrevBlkH = std::move(NewBlkH);
+  }
+
+  void writeMIR(const MachineFunction &MF, unsigned Seq, StringRef Phase,
+                StringRef PassName, bool SkipUnchanged) {
+    writePassRecord(Seq, "mir", Phase, PassName, MF.getName());
+    writeMachineInstructions(MF, SkipUnchanged);
+  }
+
   /// Emit one P row for the pass and dispatch the per-function recording
   /// work to writeInstructionsInFunction for every function reachable
   /// from the IR unit.
@@ -944,7 +1196,7 @@ class IRTrackerRecorder {
   ///     -> P row, then writeInstructionsInFunction(foo)
   void writeIR(Any IR, unsigned Seq, StringRef Phase, StringRef PassName,
                StringRef IRUnit, bool SkipUnchanged) {
-    writePassRecord(Seq, Phase, PassName, IRUnit);
+    writePassRecord(Seq, "ir", Phase, PassName, IRUnit);
     if (const auto *M = unwrapIR<Module>(IR)) {
       for (const Function &F : *M)
         writeInstructionsInFunction(F, SkipUnchanged);
@@ -997,6 +1249,8 @@ class IRTrackerRecorder {
     }
     if (const auto *L = unwrapIR<Loop>(IR))
       return FunctionHashes.count(L->getHeader()->getParent());
+    if (const auto *MF = unwrapIR<MachineFunction>(IR))
+      return MIRFunctionHashes.count(MF);
     return false;
   }
 
@@ -1030,7 +1284,7 @@ public:
     BlockInstHashes.clear();
     BlockTempIDs.clear();
     TrackerIDToPrevHash.clear();
-    writePassRecord(NextSeq++, "final", "<final>", "[module]");
+    writePassRecord(NextSeq++, "ir", "final", "<final>", "[module]");
     for (const Function &F : *LastModule)
       writeInstructionsInFunction(F, /*SkipUnchanged=*/false);
   }
@@ -1064,6 +1318,16 @@ public:
   /// stream has a baseline against which subsequent per-pass diffs make
   /// sense; subsequent invocations are no-ops.
   void beforePass(StringRef PassID, Any IR) {
+    if (const auto *MF = unwrapIR<MachineFunction>(IR)) {
+      if (isIgnored(PassID) || !shouldPrintMIR(IR))
+        return;
+      if (!MIRInitialCaptured.insert(MF).second)
+        return;
+      writeMIR(*MF, NextSeq++, "initial", "<initial>",
+               /*SkipUnchanged=*/false);
+      return;
+    }
+
     if (isIgnored(PassID) || !shouldPrintIR(IR))
       return;
     ensureSyntheticLocs(IR);
@@ -1083,6 +1347,23 @@ public:
   /// of changed functions show up as I rows.
   void afterPass(StringRef PassID, Any IR, PassInstrumentationCallbacks &PIC,
                  const PreservedAnalyses &PA) {
+    if (const auto *MF = unwrapIR<MachineFunction>(IR)) {
+      if (isIgnored(PassID) || !shouldPrintMIR(IR))
+        return;
+
+      StringRef PassName = PIC.getPassNameForClassName(PassID);
+      if (PassName.empty())
+        PassName = PassID;
+
+      if (PA.areAllPreserved() && allFunctionsKnown(IR)) {
+        writePassRecord(NextSeq++, "mir", "after", PassName, MF->getName());
+        return;
+      }
+
+      writeMIR(*MF, NextSeq++, "after", PassName, /*SkipUnchanged=*/true);
+      return;
+    }
+
     if (isIgnored(PassID) || !shouldPrintIR(IR))
       return;
 
@@ -1104,7 +1385,7 @@ public:
       PassName = PassID;
 
     if (PA.areAllPreserved() && allFunctionsKnown(IR)) {
-      writePassRecord(NextSeq++, "after", PassName, getIRName(IR));
+      writePassRecord(NextSeq++, "ir", "after", PassName, getIRName(IR));
       return;
     }
 

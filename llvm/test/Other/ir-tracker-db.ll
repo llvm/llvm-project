@@ -87,50 +87,50 @@ entry:
 ; Output is the cost-improvement TSV form: P/T/I rows. T rows carry source
 ; locations once per tracker ID; I rows reference tracker IDs.
 
-; ALL: P{{	}}0{{	}}initial{{	}}<initial>{{	}}f
+; ALL: P{{	}}0{{	}}ir{{	}}initial{{	}}<initial>{{	}}f
 ; ALL-NEXT: T{{	}}{{[0-9]+}}{{	}}/tmp{{[/\\]}}ir-tracker.c{{	}}8{{	}}3
 ; ALL-NEXT: I{{	}}f{{	}}entry{{	}}0{{	}}add{{	}}{{[0-9]+}}{{	}}%add = add i32 %x, 1
 ; ALL-NEXT: T{{	}}{{[0-9]+}}{{	}}/tmp{{[/\\]}}ir-tracker.c{{	}}9{{	}}3
 ; ALL-NEXT: I{{	}}f{{	}}entry{{	}}1{{	}}ret{{	}}{{[0-9]+}}{{	}}ret i32 %add
-; ALL: P{{	}}1{{	}}after{{	}}instcombine{{	}}f
-; ALL: P{{	}}2{{	}}after{{	}}instcombine{{	}}g
+; ALL: P{{	}}1{{	}}ir{{	}}after{{	}}instcombine{{	}}f
+; ALL: P{{	}}2{{	}}ir{{	}}after{{	}}instcombine{{	}}g
 ; ALL-NEXT: T{{	}}{{[0-9]+}}{{	}}/tmp{{[/\\]}}ir-tracker.c{{	}}14{{	}}3
 ; ALL-NEXT: I{{	}}g{{	}}entry{{	}}0{{	}}shl{{	}}{{[0-9]+}}{{	}}%mul = shl i32 %x, 1
 ; ALL-NEXT: T{{	}}{{[0-9]+}}{{	}}/tmp{{[/\\]}}ir-tracker.c{{	}}15{{	}}3
 ; ALL-NEXT: I{{	}}g{{	}}entry{{	}}1{{	}}ret{{	}}{{[0-9]+}}{{	}}ret i32 %mul
-; CROSS: P{{	}}0{{	}}initial{{	}}<initial>{{	}}f
+; CROSS: P{{	}}0{{	}}ir{{	}}initial{{	}}<initial>{{	}}f
 ; CROSS-NEXT: T{{	}}{{[0-9]+}}{{	}}/tmp{{[/\\]}}ir-tracker.c{{	}}8{{	}}3
 ; CROSS-NEXT: I{{	}}f{{	}}entry{{	}}0{{	}}add{{	}}{{[0-9]+}}{{	}}%add = add i32 %x, 1
 ; CROSS-NEXT: T{{	}}{{[0-9]+}}{{	}}/tmp{{[/\\]}}ir-tracker.c{{	}}9{{	}}3
 ; CROSS-NEXT: I{{	}}f{{	}}entry{{	}}1{{	}}ret{{	}}{{[0-9]+}}{{	}}ret i32 %add
-; CROSS: P{{	}}2{{	}}after{{	}}instcombine{{	}}h
+; CROSS: P{{	}}2{{	}}ir{{	}}after{{	}}instcombine{{	}}h
 ; CROSS-NEXT: T{{	}}{{[0-9]+}}{{	}}/tmp{{[/\\]}}ir-tracker-other.c{{	}}8{{	}}3
 ; CROSS-NEXT: I{{	}}h{{	}}entry{{	}}0{{	}}add{{	}}{{[0-9]+}}{{	}}%add = add i32 %x, 1
 ; CROSS-NEXT: T{{	}}{{[0-9]+}}{{	}}/tmp{{[/\\]}}ir-tracker-other.c{{	}}9{{	}}3
 ; CROSS-NEXT: I{{	}}h{{	}}entry{{	}}1{{	}}ret{{	}}{{[0-9]+}}{{	}}ret i32 %add
 
-; MID: P{{	}}0{{	}}initial{{	}}<initial>{{	}}mid
+; MID: P{{	}}0{{	}}ir{{	}}initial{{	}}<initial>{{	}}mid
 ; MID-NEXT: T{{	}}{{[0-9]+}}{{	}}/tmp{{[/\\]}}ir-tracker.c{{	}}20{{	}}3
 ; MID-NEXT: I{{	}}mid{{	}}entry{{	}}0{{	}}freeze{{	}}{{[0-9]+}}{{	}}%a = freeze i32 %x
 ; MID-NEXT: T{{	}}{{[0-9]+}}{{	}}/tmp{{[/\\]}}ir-tracker.c{{	}}21{{	}}3
 ; MID-NEXT: I{{	}}mid{{	}}entry{{	}}1{{	}}mul{{	}}{{[0-9]+}}{{	}}%b = mul i32 %a, 2
 ; MID-NEXT: T{{	}}{{[0-9]+}}{{	}}/tmp{{[/\\]}}ir-tracker.c{{	}}22{{	}}3
 ; MID-NEXT: I{{	}}mid{{	}}entry{{	}}2{{	}}ret{{	}}{{[0-9]+}}{{	}}ret i32 %b
-; MID: P{{	}}1{{	}}after{{	}}instcombine{{	}}mid
+; MID: P{{	}}1{{	}}ir{{	}}after{{	}}instcombine{{	}}mid
 ; MID-NEXT: I{{	}}mid{{	}}entry{{	}}1{{	}}shl{{	}}{{[0-9]+}}{{	}}%b = shl i32 %a, 1
 
-; SSA: P{{	}}0{{	}}initial{{	}}<initial>{{	}}ssa
+; SSA: P{{	}}0{{	}}ir{{	}}initial{{	}}<initial>{{	}}ssa
 ; SSA: I{{	}}ssa{{	}}entry{{	}}2{{	}}ret{{	}}{{[0-9]+}}{{	}}ret i32 %b
-; SSA: P{{	}}1{{	}}after{{	}}instcombine{{	}}ssa
+; SSA: P{{	}}1{{	}}ir{{	}}after{{	}}instcombine{{	}}ssa
 ; SSA-NEXT: I{{	}}ssa{{	}}entry{{	}}1{{	}}ret{{	}}{{[0-9]+}}{{	}}ret i32 %a
 
-; FILTER: P{{	}}0{{	}}initial{{	}}<initial>{{	}}f
+; FILTER: P{{	}}0{{	}}ir{{	}}initial{{	}}<initial>{{	}}f
 ; FILTER: I{{	}}f{{	}}entry{{	}}0{{	}}add
 ; FILTER: I{{	}}f{{	}}entry{{	}}1{{	}}ret
 ; FILTER-NOT: I{{	}}g{{	}}
 ; FILTER-NOT: ir_unit{{[" :]+}}g
 
-; FLAGS: P{{	}}0{{	}}initial{{	}}<initial>{{	}}flags
+; FLAGS: P{{	}}0{{	}}ir{{	}}initial{{	}}<initial>{{	}}flags
 ; FLAGS: I{{	}}flags{{	}}entry{{	}}0{{	}}add{{	}}{{[0-9]+}}{{	}}%add = add nsw i32 %x, %y
 ; FLAGS: I{{	}}flags{{	}}entry{{	}}1{{	}}udiv{{	}}{{[0-9]+}}{{	}}%div = udiv exact i32 %add, 2
 ; FLAGS: I{{	}}flags{{	}}entry{{	}}2{{	}}icmp{{	}}{{[0-9]+}}{{	}}%cmp = icmp samesign slt i1 %div, %y

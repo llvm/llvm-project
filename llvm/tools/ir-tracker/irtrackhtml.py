@@ -212,8 +212,9 @@ def _functions(con: sqlite3.Connection) -> List[Tuple[str, str, int, int, str]]:
         f"SELECT i.function AS function, f.path AS file_path, "
         f"COUNT(*) AS n_insts, COUNT(DISTINCT i.pass_id) AS n_passes "
         f"FROM {irtrackdb.T_INSTR} i "
+        f"JOIN {irtrackdb.T_PASSES} p ON i.pass_id = p.id "
         f"JOIN {irtrackdb.T_FILES} f ON i.file_id = f.id "
-        f"WHERE i.function != '' "
+        f"WHERE i.function != '' AND p.kind = 'ir' "
         f"GROUP BY i.function, f.id "
         f"ORDER BY f.path, i.function"
     ).fetchall()
@@ -239,7 +240,7 @@ def _initial_seq(con: sqlite3.Connection, function: str) -> int:
         f"SELECT MIN(p.seq) AS s "
         f"FROM {irtrackdb.T_INSTR} i "
         f"JOIN {irtrackdb.T_PASSES} p ON i.pass_id = p.id "
-        f"WHERE i.function = ? AND p.phase <> 'final'",
+        f"WHERE i.function = ? AND p.kind = 'ir' AND p.phase <> 'final'",
         (function,),
     ).fetchone()
     return -1 if row is None or row["s"] is None else int(row["s"])
@@ -253,7 +254,7 @@ def _final_seq(con: sqlite3.Connection, function: str) -> int:
         f"SELECT MAX(p.seq) AS s "
         f"FROM {irtrackdb.T_INSTR} i "
         f"JOIN {irtrackdb.T_PASSES} p ON i.pass_id = p.id "
-        f"WHERE i.function = ? AND p.phase = 'final'",
+        f"WHERE i.function = ? AND p.kind = 'ir' AND p.phase = 'final'",
         (function,),
     ).fetchone()
     return -1 if row is None or row["s"] is None else int(row["s"])
@@ -268,7 +269,7 @@ def _final_ir_rows(
         f"FROM {irtrackdb.T_INSTR} i "
         f"JOIN {irtrackdb.T_PASSES} p ON i.pass_id = p.id "
         f"JOIN {irtrackdb.T_FILES} f ON i.file_id = f.id "
-        f"WHERE i.function = ? AND p.seq = ? "
+        f"WHERE i.function = ? AND p.kind = 'ir' AND p.seq = ? "
         f"ORDER BY i.id",
         (function, seq),
     ).fetchall()
@@ -288,7 +289,7 @@ def _initial_ir(con: sqlite3.Connection, function: str, seq: int) -> List[sqlite
         f"FROM {irtrackdb.T_INSTR} i "
         f"JOIN {irtrackdb.T_PASSES} p ON i.pass_id = p.id "
         f"JOIN {irtrackdb.T_FILES} f ON i.file_id = f.id "
-        f"WHERE i.function = ? AND p.seq = ? "
+        f"WHERE i.function = ? AND p.kind = 'ir' AND p.seq = ? "
         f"ORDER BY i.id",
         (function, seq),
     ).fetchall()
@@ -303,7 +304,7 @@ def _history(
         f"FROM {irtrackdb.T_INSTR} i "
         f"JOIN {irtrackdb.T_PASSES} p ON i.pass_id = p.id "
         f"JOIN {irtrackdb.T_FILES} f ON i.file_id = f.id "
-        f"WHERE i.function = ? "
+        f"WHERE i.function = ? AND p.kind = 'ir' "
         f"ORDER BY i.line, i.col, p.seq, i.basicblock, i.inst_seq",
         (function,),
     ).fetchall()
@@ -314,7 +315,7 @@ def _history(
         f"SELECT MAX(p.seq) AS s "
         f"FROM {irtrackdb.T_INSTR} i "
         f"JOIN {irtrackdb.T_PASSES} p ON i.pass_id = p.id "
-        f"WHERE i.function = ?",
+        f"WHERE i.function = ? AND p.kind = 'ir'",
         (function,),
     ).fetchone()
     func_max_seq = (
@@ -663,10 +664,16 @@ def generate_html(
         return 1
 
     pass_count = int(
-        con.execute(f"SELECT COUNT(*) AS c FROM {irtrackdb.T_PASSES}").fetchone()["c"]
+        con.execute(
+            f"SELECT COUNT(*) AS c FROM {irtrackdb.T_PASSES} WHERE kind = 'ir'"
+        ).fetchone()["c"]
     )
     inst_count = int(
-        con.execute(f"SELECT COUNT(*) AS c FROM {irtrackdb.T_INSTR}").fetchone()["c"]
+        con.execute(
+            f"SELECT COUNT(*) AS c FROM {irtrackdb.T_INSTR} i "
+            f"JOIN {irtrackdb.T_PASSES} p ON i.pass_id = p.id "
+            f"WHERE p.kind = 'ir'"
+        ).fetchone()["c"]
     )
 
     with open(os.path.join(output_dir, "style.css"), "w", encoding="utf-8") as f:

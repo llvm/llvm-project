@@ -8,11 +8,13 @@ Overview
 ========
 
 The **IR tracker** records how LLVM IR evolves through the new pass manager into a
-compact tab-separated file. A small Python tool can then post-process that TSV
-output into a SQLite database for indexed queries. Each instruction row is tied
-to a tracker ID, which maps to a ``DILocation`` when one exists. If an input
-module has no debug information, the recorder synthesizes locations first so the
-tool can still track IR evolution through the pipeline.
+compact tab-separated file. It can also record MIR snapshots from new-PM CodeGen
+pipelines that use ``MachineFunction`` pass instrumentation. A small Python tool
+can then post-process that TSV output into a SQLite database for indexed
+queries. Each instruction row is tied to a tracker ID, which maps to a
+``DILocation`` when one exists. If an input module has no debug information, the
+recorder synthesizes locations first so the tool can still track IR evolution
+through the pipeline.
 
 Real source locations are only needed when you want to map tracked instructions
 back to the original source file and line. For that workflow, compile with
@@ -21,7 +23,9 @@ back to the original source file and line. For that workflow, compile with
 Recording is enabled with the hidden LLVM option
 ``-ir-tracker-output=/absolute/path.tsv``. The hooks live in
 ``StandardInstrumentations`` and therefore apply to any tool that runs the new
-pass manager with that instrumentation (``opt``, ``clang``, etc.).
+pass manager with that instrumentation (``opt``, ``clang``, etc.). MIR tracking
+is currently limited to new-PM CodeGen; default legacy-PM ``llc`` pipelines do
+not emit MIR tracker rows.
 
 The stream uses ``P`` rows for pass snapshots, ``T`` rows for tracker-ID source
 locations, and ``I`` rows for instruction snapshots.
@@ -55,6 +59,20 @@ locations so later ``trace`` / ``show`` queries can use source file and line
 numbers. ``-O1`` (or another ``-O`` level) selects the usual optimization
 pipeline that ``opt`` would run for that tier.
 
+Recording MIR with new-PM ``llc``
+=================================
+
+MIR tracking uses the same hidden option, but requires the new CodeGen pass
+manager:
+
+.. code-block:: bash
+
+  llc -enable-new-pm -filetype=null -ir-tracker-output=/tmp/pipeline.tsv input.ll
+
+The final MIR snapshots are often close enough to assembly to debug instruction
+selection, register allocation, spills, and late machine optimizations. The
+tracker does not record final assembly text or MC streamer directives.
+
 SQLite build step
 =================
 
@@ -65,14 +83,14 @@ The Python driver can convert the TSV output into a SQLite database:
   python3 llvm/tools/ir-tracker/ir-tracker.py build \
     --input /tmp/pipeline.tsv --db /tmp/pipeline.db
 
-The resulting database uses ``schema_version = 1`` in ``ir_tracker_meta``. The
+The resulting database uses ``schema_version = 2`` in ``ir_tracker_meta``. The
 main tables are:
 
 * ``ir_tracker_meta`` — key/value metadata (including ``schema_version``)
 * ``ir_tracker_files`` — deduplicated paths from ``DIFile`` (often a basename
   such as ``sum.c``)
-* ``ir_tracker_passes`` — one row per snapshot: ``seq``, ``phase`` (``initial``
-  or ``after``), ``pass_class``, ``ir_unit``
+* ``ir_tracker_passes`` — one row per snapshot: ``seq``, ``kind`` (``ir`` or
+  ``mir``), ``phase`` (``initial`` or ``after``), ``pass_class``, ``ir_unit``
 * ``ir_tracker_instructions`` — instruction text and opcode per pass, keyed by
   ``file_id``, ``line``, ``col``
 
@@ -85,13 +103,14 @@ is enabled). It can build the SQLite DB from tracker TSV output and then query
 that DB. Subcommands:
 
 * ``build`` — convert tracker TSV output into a SQLite database
-* ``passes`` — list recorded passes in ``seq`` order
+* ``passes`` — list recorded passes in ``seq`` order; use ``--kind ir``,
+  ``--kind mir``, or ``--kind all`` to filter representations
 * ``trace`` — summarize the first and last pass that still have instructions
-  matching a source location
+  matching a source location; defaults to ``--kind ir``
 * ``show`` — print the instructions matching ``--file`` / ``--line`` (and
   optional ``--col`` / ``--opcode``) across passes; by default only passes where
-  the printed IR **changed** are shown; use ``--all-passes`` for every pass, or
-  ``--seq N`` for one pass
+  the printed IR **changed** are shown; use ``--kind mir`` for MIR rows,
+  ``--all-passes`` for every pass, or ``--seq N`` for one pass
 * ``html`` — generate a static HTML report with one page per function
 * ``sql`` — run a single read-only SQL statement
 
