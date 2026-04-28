@@ -2876,7 +2876,6 @@ static bool isTriviallyCopyableTypeImpl(const QualType &type,
   //   called trivially copy constructible types.
 
   QualType CanonicalType = type.getCanonicalType();
-
   if (CanonicalType->isDependentType())
     return false;
 
@@ -2892,8 +2891,8 @@ static bool isTriviallyCopyableTypeImpl(const QualType &type,
     return false;
 
   // As an extension, Clang treats vector and matrix types as Scalar types.
-  if (CanonicalType->isScalarType() || CanonicalType->isVectorType() 
-      || CanonicalType->isMatrixType())
+  if (CanonicalType->isScalarType() || CanonicalType->isVectorType() ||
+      CanonicalType->isMatrixType())
     return true;
 
   // Mfloat8 type is a special case as it not scalar, but is still trivially
