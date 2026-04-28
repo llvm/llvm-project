@@ -127,7 +127,7 @@ jobs:
       artifact_run_id: ${{ inputs.artifact_run_id }}
       amdgpu_families: ${{ inputs.amdgpu_families }}
       test_runs_on: ${{ inputs.test_runs_on }}
-      platform: ${{ needs.configure_test_matrix.outputs.platform }}
+      platform: 'linux'
 
   test_components:
     name: 'Test ${{ matrix.components.job_name }}'
