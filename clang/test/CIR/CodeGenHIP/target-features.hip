@@ -16,8 +16,6 @@
 
 // Verify that with extra target-features differing from the CPU baseline,
 // only the delta (differing features) is emitted on cir.target-features.
-// gfx900 supports xnack but defaults to off, so +xnack is a clean one-feature
-// delta that exercises getFeatureDeltaFromDefault.
 
 // RUN: %clang_cc1 -triple=amdgcn-amd-amdhsa -x hip -fclangir \
 // RUN:            -fcuda-is-device -target-cpu gfx900 -target-feature +xnack \
