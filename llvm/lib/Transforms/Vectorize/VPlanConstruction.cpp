@@ -1763,9 +1763,10 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
 
     // If there's a header mask, the backedge select will not be the find-last
     // select.
-    if (HeaderMask && !match(BackedgeSelect,
-                             m_Select(m_Specific(HeaderMask),
-                                      m_VPValue(CondSelect), m_Specific(PhiR))))
+    if (HeaderMask &&
+        !match(BackedgeSelect,
+               m_SelectLike(m_Specific(HeaderMask), m_VPValue(CondSelect),
+                            m_Specific(PhiR))))
       return false;
 
     VPValue *Cond = nullptr, *Op1 = nullptr, *Op2 = nullptr;

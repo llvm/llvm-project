@@ -3005,14 +3005,14 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
       return new VPInterleaveEVLRecipe(*Interleave, EVL, Mask);
 
   VPValue *LHS, *RHS;
-  if (match(&CurRecipe,
-            m_Select(m_Specific(HeaderMask), m_VPValue(LHS), m_VPValue(RHS))))
+  if (match(&CurRecipe, m_SelectLike(m_Specific(HeaderMask), m_VPValue(LHS),
+                                     m_VPValue(RHS))))
     return new VPWidenIntrinsicRecipe(
         Intrinsic::vp_merge, {Plan->getTrue(), LHS, RHS, &EVL},
         TypeInfo.inferScalarType(LHS), {}, {}, DL);
 
-  if (match(&CurRecipe, m_Select(m_RemoveMask(HeaderMask, Mask), m_VPValue(LHS),
-                                 m_VPValue(RHS))))
+  if (match(&CurRecipe, m_SelectLike(m_RemoveMask(HeaderMask, Mask),
+                                     m_VPValue(LHS), m_VPValue(RHS))))
     return new VPWidenIntrinsicRecipe(
         Intrinsic::vp_merge, {Mask, LHS, RHS, &EVL},
         TypeInfo.inferScalarType(LHS), {}, {}, DL);
@@ -3175,8 +3175,8 @@ static void fixupVFUsersForEVL(VPlan &Plan, VPValue &EVL) {
   // in the vector loop, not the middle block, since EVL tail folding can have
   // tail elements in the penultimate iteration.
   assert(all_of(*Plan.getMiddleBlock(), [&Plan, HeaderMask](VPRecipeBase &R) {
-    if (match(&R, m_ComputeReductionResult(m_Select(m_Specific(HeaderMask),
-                                                    m_VPValue(), m_VPValue()))))
+    if (match(&R, m_ComputeReductionResult(m_SelectLike(
+                      m_Specific(HeaderMask), m_VPValue(), m_VPValue()))))
       return R.getOperand(0)->getDefiningRecipe()->getRegion() ==
              Plan.getVectorLoopRegion();
     return true;
@@ -5708,20 +5708,20 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
     VPValue *BackedgeVal = PhiR->getBackedgeValue();
     auto *FindLastSelect = cast<VPSingleDefRecipe>(BackedgeVal);
     if (HeaderMask &&
-        !match(BackedgeVal,
-               m_Select(m_Specific(HeaderMask),
-                        m_VPSingleDefRecipe(FindLastSelect), m_Specific(PhiR))))
+        !match(BackedgeVal, m_SelectLike(m_Specific(HeaderMask),
+                                         m_VPSingleDefRecipe(FindLastSelect),
+                                         m_Specific(PhiR))))
       continue;
 
     // Get the find-last expression from the find-last select of the reduction
     // phi. The find-last select should be a select between the phi and the
     // find-last expression.
     VPValue *Cond, *FindLastExpression;
-    if (!match(FindLastSelect, m_Select(m_VPValue(Cond), m_Specific(PhiR),
-                                        m_VPValue(FindLastExpression))) &&
+    if (!match(FindLastSelect, m_SelectLike(m_VPValue(Cond), m_Specific(PhiR),
+                                            m_VPValue(FindLastExpression))) &&
         !match(FindLastSelect,
-               m_Select(m_VPValue(Cond), m_VPValue(FindLastExpression),
-                        m_Specific(PhiR))))
+               m_SelectLike(m_VPValue(Cond), m_VPValue(FindLastExpression),
+                            m_Specific(PhiR))))
       continue;
 
     // Check if FindLastExpression is a simple expression of a widened IV. If
@@ -6075,9 +6075,9 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
   // Check if WidenRecipe is the final result of the reduction. If so look
   // through selects for predicated reductions.
   VPValue *Cond = nullptr;
-  VPValue *ExitValue = cast_or_null<VPInstruction>(vputils::findUserOf(
-      WidenRecipe,
-      m_Select(m_VPValue(Cond), m_Specific(WidenRecipe), m_Specific(RdxPhi))));
+  VPValue *ExitValue = cast_or_null<VPSingleDefRecipe>(vputils::findUserOf(
+      WidenRecipe, m_SelectLike(m_VPValue(Cond), m_Specific(WidenRecipe),
+                                m_Specific(RdxPhi))));
   bool IsLastInChain = RdxPhi->getBackedgeValue() == WidenRecipe ||
                        RdxPhi->getBackedgeValue() == ExitValue;
   assert((!ExitValue || IsLastInChain) &&
@@ -6314,7 +6314,8 @@ getScaledReductions(VPReductionPHIRecipe *RedPhiR, VPCostContext &CostCtx,
   if (!RdxResult)
     return std::nullopt;
   VPValue *ExitValue = RdxResult->getOperand(0);
-  match(ExitValue, m_Select(m_VPValue(), m_VPValue(ExitValue), m_VPValue()));
+  match(ExitValue,
+        m_SelectLike(m_VPValue(), m_VPValue(ExitValue), m_VPValue()));
 
   VPTypeAnalysis &TypeInfo = CostCtx.Types;
   SmallVector<VPPartialReductionChain> Chain;
@@ -6449,8 +6450,9 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
         return Chain.ScaleFactor == ScaledReductionMap.lookup_or(R, 0) ||
                match(R, m_ComputeReductionResult(
                             m_Specific(Chain.ReductionBinOp))) ||
-               match(R, m_Select(m_VPValue(), m_Specific(Chain.ReductionBinOp),
-                                 m_Specific(RedPhiR)));
+               match(R,
+                     m_SelectLike(m_VPValue(), m_Specific(Chain.ReductionBinOp),
+                                  m_Specific(RedPhiR)));
       };
       if (!all_of(Chain.ReductionBinOp->users(), UseIsValid)) {
         Chains.clear();

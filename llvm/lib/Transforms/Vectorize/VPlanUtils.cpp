@@ -802,7 +802,7 @@ VPInstruction *vputils::findComputeReductionResult(VPReductionPHIRecipe *PhiR) {
 
   // Look through selects inserted for tail folding or predicated reductions.
   VPRecipeBase *SelR = vputils::findUserOf(
-      BackedgeVal, m_Select(m_VPValue(), m_VPValue(), m_VPValue()));
+      BackedgeVal, m_SelectLike(m_VPValue(), m_VPValue(), m_VPValue()));
   if (!SelR)
     return nullptr;
   return vputils::findUserOf<VPInstruction::ComputeReductionResult>(

@@ -6979,17 +6979,6 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     Type *PhiTy = TypeInfo.inferScalarType(PhiR);
 
     // Convert a VPBlendRecipe backedge to a select.
-    if (auto *Blend = dyn_cast<VPBlendRecipe>(PhiR->getBackedgeValue())) {
-      if (Blend->getNumIncomingValues() == 2 &&
-          Blend->getMask(0) == HeaderMask) {
-        auto *Sel = VPBuilder(Blend).createSelect(
-            Blend->getMask(0), Blend->getIncomingValue(0),
-            Blend->getIncomingValue(1), {}, "", *Blend);
-        Blend->replaceAllUsesWith(Sel);
-        Blend->eraseFromParent();
-      }
-    }
-
     auto *OrigExitingVPV = PhiR->getBackedgeValue();
     auto *NewExitingVPV = PhiR->getBackedgeValue();
 
@@ -6997,7 +6986,7 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     VPValue *V;
     if (!CM.usePredicatedReductionSelect(RecurrenceKind) &&
         match(PhiR->getBackedgeValue(),
-              m_Select(m_Specific(HeaderMask), m_VPValue(V), m_Specific(PhiR))))
+              m_SelectLike(m_Specific(HeaderMask), m_VPValue(V), m_Specific(PhiR))))
       PhiR->setBackedgeValue(V);
 
     // We want code in the middle block to appear to execute on the location of
