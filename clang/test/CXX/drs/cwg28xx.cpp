@@ -7,6 +7,16 @@
 // RUN: %clang_cc1 -std=c++2c -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx20,since-cxx23,since-cxx26 %s
 
 
+namespace cwg2810 { // cwg2810: yes
+
+template <typename>
+void f() {
+  int i = 1.5;
+  // expected-warning@-1 {{implicit conversion from 'double' to 'int' changes value from 1.5 to 1}}
+}
+
+} // namespace cwg2810
+
 int main() {} // required for cwg2811
 
 namespace cwg2811 { // cwg2811: 3.5
