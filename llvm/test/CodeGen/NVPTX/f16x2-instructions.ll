@@ -1794,33 +1794,15 @@ define <2 x half> @test_fma(<2 x half> %a, <2 x half> %b, <2 x half> %c) #0 {
 }
 
 define <2 x half> @test_fabs(<2 x half> %a) #0 {
-; CHECK-F16-LABEL: test_fabs(
-; CHECK-F16:       {
-; CHECK-F16-NEXT:    .reg .b32 %r<3>;
-; CHECK-F16-EMPTY:
-; CHECK-F16-NEXT:  // %bb.0:
-; CHECK-F16-NEXT:    ld.param.b32 %r1, [test_fabs_param_0];
-; CHECK-F16-NEXT:    and.b32 %r2, %r1, 2147450879;
-; CHECK-F16-NEXT:    st.param.b32 [func_retval0], %r2;
-; CHECK-F16-NEXT:    ret;
-;
-; CHECK-NOF16-LABEL: test_fabs(
-; CHECK-NOF16:       {
-; CHECK-NOF16-NEXT:    .reg .b16 %rs<5>;
-; CHECK-NOF16-NEXT:    .reg .b32 %r<7>;
-; CHECK-NOF16-EMPTY:
-; CHECK-NOF16-NEXT:  // %bb.0:
-; CHECK-NOF16-NEXT:    ld.param.b32 %r1, [test_fabs_param_0];
-; CHECK-NOF16-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; CHECK-NOF16-NEXT:    cvt.f32.f16 %r2, %rs2;
-; CHECK-NOF16-NEXT:    abs.f32 %r3, %r2;
-; CHECK-NOF16-NEXT:    cvt.rn.f16.f32 %rs3, %r3;
-; CHECK-NOF16-NEXT:    cvt.f32.f16 %r4, %rs1;
-; CHECK-NOF16-NEXT:    abs.f32 %r5, %r4;
-; CHECK-NOF16-NEXT:    cvt.rn.f16.f32 %rs4, %r5;
-; CHECK-NOF16-NEXT:    mov.b32 %r6, {%rs4, %rs3};
-; CHECK-NOF16-NEXT:    st.param.b32 [func_retval0], %r6;
-; CHECK-NOF16-NEXT:    ret;
+; CHECK-LABEL: test_fabs(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [test_fabs_param_0];
+; CHECK-NEXT:    and.b32 %r2, %r1, 2147450879;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ret;
   %r = call <2 x half> @llvm.fabs.f16(<2 x half> %a)
   ret <2 x half> %r
 }
