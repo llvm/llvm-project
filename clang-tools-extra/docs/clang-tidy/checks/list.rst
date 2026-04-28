@@ -193,6 +193,7 @@ Clang-Tidy Checks
    :doc:`cppcoreguidelines-avoid-goto <cppcoreguidelines/avoid-goto>`,
    :doc:`cppcoreguidelines-avoid-non-const-global-variables <cppcoreguidelines/avoid-non-const-global-variables>`,
    :doc:`cppcoreguidelines-avoid-reference-coroutine-parameters <cppcoreguidelines/avoid-reference-coroutine-parameters>`,
+   :doc:`cppcoreguidelines-explicit-constructor <cppcoreguidelines/explicit-constructor>`,
    :doc:`cppcoreguidelines-init-variables <cppcoreguidelines/init-variables>`, "Yes"
    :doc:`cppcoreguidelines-interfaces-global-init <cppcoreguidelines/interfaces-global-init>`,
    :doc:`cppcoreguidelines-macro-usage <cppcoreguidelines/macro-usage>`,
@@ -230,7 +231,7 @@ Clang-Tidy Checks
    :doc:`google-build-explicit-make-pair <google/build-explicit-make-pair>`,
    :doc:`google-build-using-namespace <google/build-using-namespace>`,
    :doc:`google-default-arguments <google/default-arguments>`,
-   :doc:`google-explicit-constructor <google/explicit-constructor>`, "Yes"
+   :doc:`google-explicit-constructor <google/explicit-constructor>`,
    :doc:`google-global-names-in-headers <google/global-names-in-headers>`,
    :doc:`google-objc-avoid-nsobject-new <google/objc-avoid-nsobject-new>`,
    :doc:`google-objc-avoid-throwing-exception <google/objc-avoid-throwing-exception>`,
@@ -265,6 +266,7 @@ Clang-Tidy Checks
    :doc:`misc-const-correctness <misc/const-correctness>`, "Yes"
    :doc:`misc-coroutine-hostile-raii <misc/coroutine-hostile-raii>`,
    :doc:`misc-definitions-in-headers <misc/definitions-in-headers>`, "Yes"
+   :doc:`misc-explicit-constructor <misc/explicit-constructor>`, "Yes"
    :doc:`misc-header-include-cycle <misc/header-include-cycle>`,
    :doc:`misc-include-cleaner <misc/include-cleaner>`, "Yes"
    :doc:`misc-misleading-bidirectional <misc/misleading-bidirectional>`,
@@ -606,7 +608,7 @@ Check aliases
    :doc:`hicpp-braces-around-statements <hicpp/braces-around-statements>`, :doc:`readability-braces-around-statements <readability/braces-around-statements>`, "Yes"
    :doc:`hicpp-deprecated-headers <hicpp/deprecated-headers>`, :doc:`modernize-deprecated-headers <modernize/deprecated-headers>`, "Yes"
    :doc:`hicpp-exception-baseclass <hicpp/exception-baseclass>`, :doc:`bugprone-std-exception-baseclass <bugprone/std-exception-baseclass>`,
-   :doc:`hicpp-explicit-conversions <hicpp/explicit-conversions>`, :doc:`google-explicit-constructor <google/explicit-constructor>`, "Yes"
+   :doc:`hicpp-explicit-conversions <hicpp/explicit-conversions>`, :doc:`misc-explicit-constructor <misc/explicit-constructor>`, "Yes"
    :doc:`hicpp-function-size <hicpp/function-size>`, :doc:`readability-function-size <readability/function-size>`,
    :doc:`hicpp-ignored-remove-result <hicpp/ignored-remove-result>`, :doc:`bugprone-unused-return-value <bugprone/unused-return-value>`,
    :doc:`hicpp-invalid-access-moved <hicpp/invalid-access-moved>`, :doc:`bugprone-use-after-move <bugprone/use-after-move>`,
