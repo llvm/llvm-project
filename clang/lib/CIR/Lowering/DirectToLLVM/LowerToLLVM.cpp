@@ -677,6 +677,13 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::ZeroAttr attr) {
                                     converter->convertType(attr.getType()));
 }
 
+/// TokenNoneAttr visitor.
+mlir::Value CIRAttrToValue::visitCirAttr(cir::TokenNoneAttr attr) {
+  mlir::Location loc = parentOp->getLoc();
+  return mlir::LLVM::NoneTokenOp::create(
+      rewriter, loc, converter->convertType(attr.getType()));
+}
+
 // This class handles rewriting initializer attributes for types that do not
 // require region initialization.
 class GlobalInitAttrRewriter {

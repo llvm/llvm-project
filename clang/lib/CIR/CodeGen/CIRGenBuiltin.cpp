@@ -847,41 +847,6 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   return RValue::getIgnored();
 }
 
-// FIXME: Remove cgf parameter when all descriptor kinds are implemented
-static mlir::Type
-decodeFixedType(CIRGenFunction &cgf,
-                ArrayRef<llvm::Intrinsic::IITDescriptor> &infos,
-                mlir::MLIRContext *context) {
-  using namespace llvm::Intrinsic;
-
-  IITDescriptor descriptor = infos.front();
-  infos = infos.slice(1);
-
-  switch (descriptor.Kind) {
-  case IITDescriptor::Void:
-    return cir::VoidType::get(context);
-  // If the intrinsic expects unsigned integers, the signedness is corrected in
-  // correctIntegerSignedness()
-  case IITDescriptor::Integer:
-    return cir::IntType::get(context, descriptor.IntegerWidth,
-                             /*isSigned=*/true);
-  case IITDescriptor::Vector: {
-    mlir::Type elementType = decodeFixedType(cgf, infos, context);
-    unsigned numElements = descriptor.VectorWidth.getFixedValue();
-    return cir::VectorType::get(elementType, numElements);
-  }
-  case IITDescriptor::Pointer: {
-    mlir::Builder builder(context);
-    auto addrSpace = cir::TargetAddressSpaceAttr::get(
-        context, descriptor.PointerAddressSpace);
-    return cir::PointerType::get(cir::VoidType::get(context), addrSpace);
-  }
-  default:
-    cgf.cgm.errorNYI("Unimplemented intrinsic type descriptor");
-    return cir::VoidType::get(context);
-  }
-}
-
 /// Helper function to correct integer signedness for intrinsic arguments and
 /// return type. IIT always returns signed integers, but the actual intrinsic
 /// may expect unsigned integers based on the AST FunctionDecl parameter types.
@@ -913,37 +878,6 @@ static mlir::Value getCorrectedPtr(mlir::Value argValue, mlir::Type expectedTy,
   }
 
   return builder.createBitcast(argValue, expectedTy);
-}
-
-static cir::FuncType getIntrinsicType(CIRGenFunction &cgf,
-                                      mlir::MLIRContext *context,
-                                      llvm::Intrinsic::ID id) {
-  using namespace llvm::Intrinsic;
-
-  SmallVector<IITDescriptor, 8> table;
-  getIntrinsicInfoTableEntries(id, table);
-
-  ArrayRef<IITDescriptor> tableRef = table;
-  mlir::Type resultTy = decodeFixedType(cgf, tableRef, context);
-
-  SmallVector<mlir::Type, 8> argTypes;
-  bool isVarArg = false;
-  while (!tableRef.empty()) {
-    llvm::Intrinsic::IITDescriptor::IITDescriptorKind kind =
-        tableRef.front().Kind;
-    if (kind == IITDescriptor::VarArg) {
-      isVarArg = true;
-      break; // VarArg is last
-    }
-    argTypes.push_back(decodeFixedType(cgf, tableRef, context));
-  }
-
-  // CIR convention: no explicit void return type
-  if (isa<cir::VoidType>(resultTy))
-    return cir::FuncType::get(context, argTypes, /*optionalReturnType=*/nullptr,
-                              isVarArg);
-
-  return cir::FuncType::get(context, argTypes, resultTy, isVarArg);
 }
 
 RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
@@ -2365,8 +2299,10 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     assert(name.starts_with("llvm.") && "expected llvm. prefix");
     name = name.drop_front(/*strlen("llvm.")=*/5);
 
+    IntrinsicTypeOptions opts;
+    opts.addAddrSpace = true;
     cir::FuncType intrinsicType =
-        getIntrinsicType(*this, &getMLIRContext(), intrinsicID);
+        getIntrinsicType(&getMLIRContext(), intrinsicID, opts);
 
     SmallVector<mlir::Value> args;
     const FunctionDecl *fd = e->getDirectCallee();

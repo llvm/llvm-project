@@ -76,6 +76,8 @@ bool isCXXABIAttributeLegal(const mlir::TypeConverter &tc,
           [&tc](cir::ZeroAttr za) { return tc.isLegal(za.getType()); })
       .Case<cir::PoisonAttr>(
           [&tc](cir::PoisonAttr pa) { return tc.isLegal(pa.getType()); })
+      .Case<cir::TokenNoneAttr>(
+          [&tc](cir::TokenNoneAttr tka) { return tc.isLegal(tka.getType()); })
       .Case<cir::UndefAttr>(
           [&tc](cir::UndefAttr uda) { return tc.isLegal(uda.getType()); })
       .Case<mlir::TypeAttr>(
@@ -156,6 +158,9 @@ mlir::Attribute rewriteAttribute(const mlir::TypeConverter &tc,
       })
       .Case<cir::PoisonAttr>([&tc](cir::PoisonAttr pa) {
         return cir::PoisonAttr::get(tc.convertType(pa.getType()));
+      })
+      .Case<cir::TokenNoneAttr>([&tc](cir::TokenNoneAttr tkn) {
+        return cir::TokenNoneAttr::get(tc.convertType(tkn.getType()));
       })
       .Case<cir::UndefAttr>([&tc](cir::UndefAttr uda) {
         return cir::UndefAttr::get(tc.convertType(uda.getType()));

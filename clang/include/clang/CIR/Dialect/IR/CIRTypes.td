@@ -843,6 +843,18 @@ def CIR_CatchTokenType : CIR_Type<"CatchToken", "catch_token"> {
 }
 
 //===----------------------------------------------------------------------===//
+//  Token Types
+//===----------------------------------------------------------------------===//
+
+def CIR_TokenType : CIR_Type<"Token", "token"> {
+  let summary = "CIR token type";
+  let description = [{
+    The Token type is an opaque type used to represent dependencies between
+    operations, without carrying meaningful data.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // Global type constraints
 //===----------------------------------------------------------------------===//
 
@@ -850,7 +862,7 @@ def CIR_AnyType : AnyTypeOf<[
   CIR_VoidType, CIR_BoolType, CIR_ArrayType, CIR_VectorType, CIR_IntType,
   CIR_AnyFloatType, CIR_PointerType, CIR_FuncType, CIR_RecordType,
   CIR_ComplexType, CIR_VPtrType, CIR_DataMemberType, CIR_MethodType,
-  CIR_EhTokenType, CIR_CleanupTokenType, CIR_CatchTokenType
+  CIR_EhTokenType, CIR_CleanupTokenType, CIR_CatchTokenType, CIR_TokenType
 ]>;
 
 #endif // CLANG_CIR_DIALECT_IR_CIRTYPES_TD

@@ -1640,4 +1640,80 @@ Address CIRGenFunction::emitVAListRef(const Expr *e) {
   return emitLValue(e).getAddress();
 }
 
+cir::FuncType
+CIRGenFunction::getIntrinsicType(mlir::MLIRContext *context,
+                                 llvm::Intrinsic::ID id,
+                                 const IntrinsicTypeOptions &opts) {
+  using namespace llvm::Intrinsic;
+
+  SmallVector<IITDescriptor, 8> table;
+  getIntrinsicInfoTableEntries(id, table);
+
+  ArrayRef<IITDescriptor> tableRef = table;
+  mlir::Type resultTy = decodeFixedType(tableRef, context, opts);
+
+  SmallVector<mlir::Type, 8> argTypes;
+  bool isVarArg = false;
+  while (!tableRef.empty()) {
+    llvm::Intrinsic::IITDescriptor::IITDescriptorKind kind =
+        tableRef.front().Kind;
+    if (kind == IITDescriptor::VarArg) {
+      isVarArg = true;
+      break; // VarArg is last
+    }
+    argTypes.push_back(decodeFixedType(tableRef, context, opts));
+  }
+
+  // CIR convention: no explicit void return type
+  if (isa<cir::VoidType>(resultTy))
+    return cir::FuncType::get(context, argTypes, /*optionalReturnType=*/nullptr,
+                              isVarArg);
+
+  return cir::FuncType::get(context, argTypes, resultTy, isVarArg);
+}
+
+mlir::Type
+CIRGenFunction::decodeFixedType(ArrayRef<llvm::Intrinsic::IITDescriptor> &infos,
+                                mlir::MLIRContext *context,
+                                const IntrinsicTypeOptions &opts) {
+  using namespace llvm::Intrinsic;
+
+  IITDescriptor descriptor = infos.front();
+  infos = infos.slice(1);
+
+  switch (descriptor.Kind) {
+  case IITDescriptor::Void:
+    return cir::VoidType::get(context);
+  // If the intrinsic expects unsigned integers, the signedness is corrected in
+  // correctIntegerSignedness()
+  case IITDescriptor::Integer: {
+    unsigned width = descriptor.IntegerWidth;
+
+    if (opts.treatInt1AsBool && width == 1)
+      return cir::BoolType::get(context);
+
+    return cir::IntType::get(context, width, opts.isSigned);
+  }
+  case IITDescriptor::Vector: {
+    mlir::Type elementType = decodeFixedType(infos, context, opts);
+    unsigned numElements = descriptor.VectorWidth.getFixedValue();
+    return cir::VectorType::get(elementType, numElements);
+  }
+  case IITDescriptor::Pointer: {
+
+    if (opts.addAddrSpace) {
+      auto addrSpace = cir::TargetAddressSpaceAttr::get(
+          context, descriptor.PointerAddressSpace);
+      return cir::PointerType::get(cir::VoidType::get(context), addrSpace);
+    }
+    return voidPtrTy;
+  }
+  case IITDescriptor::Token:
+    return tokenTy;
+  default:
+    cgm.errorNYI("Unimplemented intrinsic type descriptor");
+    return voidTy;
+  }
+}
+
 } // namespace clang::CIRGen

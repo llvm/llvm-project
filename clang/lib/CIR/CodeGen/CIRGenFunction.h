@@ -1672,7 +1672,8 @@ public:
   void emitConstructorBody(FunctionArgList &args);
 
   mlir::LogicalResult emitCoroutineBody(const CoroutineBodyStmt &s);
-  cir::CallOp emitCoroEndBuiltinCall(mlir::Location loc, mlir::Value nullPtr);
+  cir::CallOp emitCoroEndBuiltinCall(mlir::Location loc, mlir::Value nullPtr,
+                                     cir::ConstantOp unwind);
   cir::CallOp emitCoroIDBuiltinCall(mlir::Location loc, mlir::Value nullPtr);
   cir::CallOp emitCoroAllocBuiltinCall(mlir::Location loc);
   cir::CallOp emitCoroBeginBuiltinCall(mlir::Location loc,
@@ -2286,6 +2287,23 @@ public:
       cgm.errorNYI("Global op addrspace cast");
     return builder.createAddrSpaceCast(v, destTy);
   }
+  /// ----------------------
+  /// Intrinsic helpers
+  /// -
+public:
+  struct IntrinsicTypeOptions {
+    bool treatInt1AsBool = false;
+    bool addAddrSpace = false;
+    bool isSigned = true;
+  };
+
+  cir::FuncType getIntrinsicType(mlir::MLIRContext *context,
+                                 llvm::Intrinsic::ID id,
+                                 const IntrinsicTypeOptions &opts);
+
+  mlir::Type decodeFixedType(ArrayRef<llvm::Intrinsic::IITDescriptor> &infos,
+                             mlir::MLIRContext *context,
+                             const IntrinsicTypeOptions &opts);
 
   //===--------------------------------------------------------------------===//
   //                         OpenMP Emission

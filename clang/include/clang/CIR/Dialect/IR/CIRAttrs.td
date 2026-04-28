@@ -283,6 +283,18 @@ def CIR_PoisonAttr : CIR_TypedAttr<"Poison", "poison"> {
 }
 
 //===----------------------------------------------------------------------===//
+// TokenNone
+//===----------------------------------------------------------------------===//
+
+def CIR_TokenNoneAttr : CIR_TypedAttr<"TokenNone", "token_none"> {
+  let summary = "Represents an empty token constant";
+  let description = [{
+    The TokenNoneAttr represents an empty token constant. It corresponds to
+    LLVM's 'none' token and must have token type.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // IntegerAttr
 //===----------------------------------------------------------------------===//
 

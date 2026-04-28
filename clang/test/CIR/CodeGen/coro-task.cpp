@@ -138,10 +138,10 @@ co_invoke_fn co_invoke;
 // CIR: module {{.*}} {
 // CIR-NEXT: cir.global external @_ZN5folly4coro9co_invokeE = #cir.zero : !rec_folly3A3Acoro3A3Aco_invoke_fn
 
-// CIR: cir.func builtin private @__builtin_coro_id(!u32i, !cir.ptr<!void>, !cir.ptr<!void>, !cir.ptr<!void>) -> !u32i
-// CIR:  cir.func builtin private @__builtin_coro_alloc(!u32i) -> !cir.bool
+// CIR: cir.func builtin private @__builtin_coro_id(!u32i, !cir.ptr<!void>, !cir.ptr<!void>, !cir.ptr<!void>) -> !cir.token
+// CIR:  cir.func builtin private @__builtin_coro_alloc(!cir.token) -> !cir.bool
 // CIR:  cir.func builtin private @__builtin_coro_size() -> !u64i
-// CIR:  cir.func builtin private @__builtin_coro_begin(!u32i, !cir.ptr<!void>) -> !cir.ptr<!void>
+// CIR:  cir.func builtin private @__builtin_coro_begin(!cir.token, !cir.ptr<!void>) -> !cir.ptr<!void>
 
 using VoidTask = folly::coro::Task<void>;
 
@@ -172,7 +172,7 @@ VoidTask silly_task() {
 // Perform allocation calling operator 'new' depending on __builtin_coro_alloc and
 // call __builtin_coro_begin for the final coroutine frame address.
 
-// CIR: %[[ShouldAlloc:.*]] = cir.call @__builtin_coro_alloc(%[[CoroId]]) : (!u32i) -> !cir.bool
+// CIR: %[[ShouldAlloc:.*]] = cir.call @__builtin_coro_alloc(%[[CoroId]]) : (!cir.token) -> !cir.bool
 // CIR: cir.store{{.*}} %[[NullPtr]], %[[SavedFrameAddr]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
 // CIR: cir.if %[[ShouldAlloc]] {
 // CIR:   %[[CoroSize:.*]] = cir.call @__builtin_coro_size() : () -> (!u64i {llvm.noundef})
@@ -334,9 +334,10 @@ VoidTask silly_task() {
 
 // Call builtin coro end and return
 
-// CIR: %[[CoroEndArg0:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!void>
-// CIR: %[[CoroEndArg1:.*]] = cir.const #false
-// CIR: = cir.call @__builtin_coro_end(%[[CoroEndArg0]], %[[CoroEndArg1]])
+// CIR-DAG: %[[CoroEndArg0:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!void>
+// CIR-DAG: %[[CoroEndArg1:.*]] = cir.const #false
+// CIR-DAG: %[[CoroEndArg2:.*]] = cir.const #cir.token_none : !cir.token
+// CIR: cir.call @__builtin_coro_end(%[[CoroEndArg0]], %[[CoroEndArg1]], %[[CoroEndArg2]])
 
 // CIR: %[[Tmp1:.*]] = cir.load{{.*}} %[[VoidTaskAddr]]
 // CIR: cir.return %[[Tmp1]]
@@ -524,7 +525,7 @@ folly::coro::Task<void> yield1() {
 // CIR:   cir.yield
 // CIR: } cleanup  normal {
 // CIR: }
-// CIR: = cir.call @__builtin_coro_end(%{{.*}}, %{{.*}}){{.*}}
+// CIR: cir.call @__builtin_coro_end(%{{.*}}, %{{.*}}, %{{.*}}){{.*}}
 // CIR: %[[RETLOAD:.*]] = cir.load{{.*}} %[[RETVAL]]
 // CIR: cir.return %[[RETLOAD]]
 // CIR: }
