@@ -960,6 +960,10 @@ private:
            _CheckOptionalLikeConstructor<_QualUp>,
            __check_tuple_constructor_fail >;
 
+  template <class, bool>
+  friend struct __optional_storage_base;
+  using __base::__get;
+
 public:
   _LIBCPP_HIDE_FROM_ABI constexpr optional() noexcept {}
   _LIBCPP_HIDE_FROM_ABI constexpr optional(const optional&) = default;
@@ -1172,7 +1176,6 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr explicit operator bool() const noexcept { return has_value(); }
 
-  using __base::__get;
   using __base::has_value;
   using __base::value;
 

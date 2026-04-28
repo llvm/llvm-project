@@ -71,6 +71,8 @@ Deprecations and Removals
 - In ``__bit_reference`` (the proxy ``reference`` type of ``bitset`` and ``vector<bool>``), the overloaded ``operator&``
   is removed as it is non-standard and causes non-conforming behavior.
 
+- In ``optional``, an internal ``__get()`` method was mistakenly exposed, and has been moved to private.
+
 Potentially breaking changes
 ----------------------------
 
