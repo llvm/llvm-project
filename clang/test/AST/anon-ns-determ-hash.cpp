@@ -1,5 +1,8 @@
 // Check anonymous namespace deterministic hash generation.
-// RUN: %clang_cc1 -std=c++2a -ast-dump=json -fmacro-prefix-map=%p=/static-path %s | FileCheck %s
+// NOTE: applies to *-msvc targets only.
+
+// RUN: %clang_cc1 -triple=x86_64-pc-windows-msvc -std=c++2a -ast-dump=json -fmacro-prefix-map=%p=/static-path %s | FileCheck %s
+// REQUIRES: x86-registered-target
 
 namespace {
     int internal_ns_var = 0;
