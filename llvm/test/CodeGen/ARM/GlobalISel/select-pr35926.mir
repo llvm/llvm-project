@@ -34,13 +34,13 @@ body:             |
     ; CHECK: [[VFNMSD:%[0-9]+]]:dpr = nofpexcept VFNMSD [[COPY2]], [[COPY1]], [[COPY]], 14 /* CC::al */, $noreg, implicit $fpscr
     ; CHECK: $d0 = COPY [[VFNMSD]]
     ; CHECK: MOVPCLR 14 /* CC::al */, $noreg, implicit $d0
-    %0:fprb(s64) = COPY $d0
-    %1:fprb(s64) = COPY $d1
-    %2:fprb(s64) = COPY $d2
-    %3:fprb(s64) = G_FNEG %1
-    %4:fprb(s64) = G_FMA %0, %3, %2
-    %5:fprb(s64) = G_FNEG %4
-    $d0 = COPY %5(s64)
+    %0:fprb(f64) = COPY $d0
+    %1:fprb(f64) = COPY $d1
+    %2:fprb(f64) = COPY $d2
+    %3:fprb(f64) = G_FNEG %1
+    %4:fprb(f64) = G_FMA %0, %3, %2
+    %5:fprb(f64) = G_FNEG %4
+    $d0 = COPY %5(f64)
     MOVPCLR 14, $noreg, implicit $d0
 
 
