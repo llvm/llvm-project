@@ -1411,12 +1411,17 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
       }
     }
 
-    // Classic codegen handles MSGuidDecl,UnnamedGlobalConstantDecl, and
-    // TemplateParamObjectDecl, but it can also fall through from VarDecl,
-    // in which case it silently returns nullptr. For now, let's emit an
-    // error to see what cases we need to handle.
-    cgm.errorNYI(d->getSourceRange(),
-                 "ConstantLValueEmitter: unhandled value decl");
+    if (isa<MSGuidDecl>(d))
+      cgm.errorNYI(d->getSourceRange(), "ConstantLValueEmitter: MSGuidDecl");
+
+    if (isa<UnnamedGlobalConstantDecl>(d))
+      cgm.errorNYI(d->getSourceRange(),
+                   "ConstantLValueEmitter: Unnamed global constant");
+
+    if (const auto *tpo = dyn_cast<TemplateParamObjectDecl>(d))
+      return cgm.getBuilder().getGlobalViewAttr(
+          cgm.getAddrOfTemplateParamObject(tpo));
+
     return {};
   }
 
