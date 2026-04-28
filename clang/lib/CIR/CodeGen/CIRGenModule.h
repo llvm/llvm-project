@@ -358,7 +358,7 @@ public:
   cir::GlobalViewAttr getAddrOfGlobalVarAttr(const VarDecl *d);
 
   /// Get the GlobalOp of a template parameter object.
-  cir::GetGlobalOp
+  cir::GlobalOp
   getAddrOfTemplateParamObject(const TemplateParamObjectDecl *tpo);
 
   CharUnits computeNonVirtualBaseClassOffset(
