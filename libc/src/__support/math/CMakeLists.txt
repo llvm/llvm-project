@@ -819,6 +819,17 @@ add_header_library(
     libc.src.__support.macros.config
     libc.src.__support.number_pair
 )
+
+add_header_library(
+  llogbbf16
+  HDRS
+    llogbbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
+)
+
 add_header_library(
   ilogbbf16
   HDRS

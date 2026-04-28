@@ -201,6 +201,7 @@ add_fp_unittest(
     libc.src.__support.math.ilogbl
     libc.src.__support.math.ldexpf
     libc.src.__support.math.llogb
+    libc.src.__support.math.llogbbf16
     libc.src.__support.math.log
     libc.src.__support.math.log10
     libc.src.__support.math.log10f16
@@ -339,6 +340,7 @@ add_fp_unittest(
     libc.src.__support.math.fmaximum_mag_num
     libc.src.__support.math.fmaximum_mag_numbf16
     libc.src.__support.math.fmaximum_mag_numf
+    libc.src.__support.math.llogbbf16
     libc.src.__support.math.log
     libc.src.__support.math.logbbf16
     libc.src.__support.math.ilogbbf16
