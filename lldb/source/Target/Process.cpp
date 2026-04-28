@@ -1563,7 +1563,8 @@ Process::GetBreakpointSiteList() const {
 
 void Process::DisableAllBreakpointSites() {
   m_breakpoint_site_list.ForEach([this](BreakpointSite *bp_site) -> void {
-    ExecuteBreakpointSiteAction(*bp_site, BreakpointAction::Disable);
+    llvm::consumeError(
+        ExecuteBreakpointSiteAction(*bp_site, BreakpointAction::Disable));
   });
 }
 
@@ -1581,8 +1582,8 @@ Status Process::DisableBreakpointSiteByID(lldb::user_id_t break_id) {
   BreakpointSiteSP bp_site_sp = m_breakpoint_site_list.FindByID(break_id);
   if (bp_site_sp) {
     if (IsBreakpointSiteEnabled(*bp_site_sp))
-      error =
-          ExecuteBreakpointSiteAction(*bp_site_sp, BreakpointAction::Disable);
+      error = Status::FromError(
+          ExecuteBreakpointSiteAction(*bp_site_sp, BreakpointAction::Disable));
   } else {
     error = Status::FromErrorStringWithFormat(
         "invalid breakpoint site ID: %" PRIu64, break_id);
@@ -1591,26 +1592,26 @@ Status Process::DisableBreakpointSiteByID(lldb::user_id_t break_id) {
   return error;
 }
 
-Status Process::ExecuteBreakpointSiteAction(BreakpointSite &site,
-                                            BreakpointAction action) {
+llvm::Error Process::ExecuteBreakpointSiteAction(BreakpointSite &site,
+                                                 BreakpointAction action) {
   auto site_sp = site.shared_from_this();
 
   // Ignore requests that won't change the Site status.
   if (IsBreakpointSiteEnabled(*site_sp) == (action == BreakpointAction::Enable))
-    return Status();
+    return llvm::Error::success();
 
   if (!GetUseDelayedBreakpoints()) {
     m_delayed_breakpoints.Enqueue(site.shared_from_this(), action);
-    return Status();
+    return llvm::Error::success();
   }
 
   m_delayed_breakpoints.RemoveSite(site_sp);
 
   switch (action) {
   case BreakpointAction::Enable:
-    return EnableBreakpointSite(site_sp.get());
+    return EnableBreakpointSite(site_sp.get()).takeError();
   case BreakpointAction::Disable:
-    return DisableBreakpointSite(site_sp.get());
+    return DisableBreakpointSite(site_sp.get()).takeError();
   }
 
   llvm_unreachable("Unhandled BreakpointAction");
@@ -1621,8 +1622,8 @@ Status Process::EnableBreakpointSiteByID(lldb::user_id_t break_id) {
   BreakpointSiteSP bp_site_sp = m_breakpoint_site_list.FindByID(break_id);
   if (bp_site_sp) {
     if (!IsBreakpointSiteEnabled(*bp_site_sp))
-      error =
-          ExecuteBreakpointSiteAction(*bp_site_sp, BreakpointAction::Enable);
+      error = Status::FromError(
+          ExecuteBreakpointSiteAction(*bp_site_sp, BreakpointAction::Enable));
   } else {
     error = Status::FromErrorStringWithFormat(
         "invalid breakpoint site ID: %" PRIu64, break_id);
@@ -1773,7 +1774,8 @@ void Process::RemoveConstituentFromBreakpointSite(
   if (num_constituents == 0) {
     // Don't try to disable the site if we don't have a live process anymore.
     if (IsAlive())
-      ExecuteBreakpointSiteAction(*bp_site_sp, BreakpointAction::Disable);
+      llvm::consumeError(
+          ExecuteBreakpointSiteAction(*bp_site_sp, BreakpointAction::Disable));
     m_breakpoint_site_list.RemoveByAddress(bp_site_sp->GetLoadAddress());
   }
 }
