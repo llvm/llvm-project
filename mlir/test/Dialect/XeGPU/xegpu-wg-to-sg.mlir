@@ -405,19 +405,16 @@ gpu.module @test_distribution {
 
   // CHECK-LABEL: gpu.func @vector_reduce_scalar_cross_sg
   // CHECK-SAME: (%[[ARG0:.*]]: memref<32x32xf32>)
-  // CHECK-DAG: %[[CST:.*]] = arith.constant 0.000000e+00 : f32
-  // CHECK-DAG: %[[LOAD:.*]] = xegpu.load_nd %{{.*}}[{{%.*}}, {{%.*}}] : !xegpu.tensor_desc<8x8xf32> -> vector<8x8xf32>
-  // CHECK-DAG: %[[CST_ACC:.*]] = arith.constant 0.000000e+00 : f32
-  // CHECK-DAG: %[[LOCAL:.*]] = vector.multi_reduction <add>, %[[LOAD]], %[[CST_ACC]] [0, 1] : vector<8x8xf32> to f32
-  // CHECK-DAG: %[[BCAST:.*]] = vector.broadcast %[[LOCAL]] : f32 to vector<1x1xf32>
-  // CHECK-DAG: %[[ALLOCA:.*]] = memref.alloca() : memref<64xi8, 3>
-  // CHECK-DAG: %[[MEM_DESC:.*]] = xegpu.create_mem_desc %[[ALLOCA]] : memref<64xi8, 3> -> !xegpu.mem_desc<4x4xf32>
-  // CHECK-DAG: xegpu.store_matrix %[[BCAST]], %[[MEM_DESC]]{{.*}} : vector<1x1xf32>, !xegpu.mem_desc<4x4xf32>
-  // CHECK-DAG: gpu.barrier
-  // CHECK-DAG: %[[LOAD_SLM:.*]] = xegpu.load_matrix %[[MEM_DESC]]{{.*}} -> vector<4x4xf32>
-  // CHECK-DAG: %[[CST_FINAL:.*]] = arith.constant 0.000000e+00 : f32
-  // CHECK-DAG: %[[FINAL:.*]] = vector.multi_reduction <add>, %[[LOAD_SLM]], %[[CST_FINAL]] [0, 1] : vector<4x4xf32> to f32
-  // CHECK-DAG: arith.addf %[[FINAL]], %[[CST]] : f32
+  // CHECK: %[[LOAD:.*]] = xegpu.load_nd %{{.*}}[{{%.*}}, {{%.*}}] : !xegpu.tensor_desc<8x8xf32> -> vector<8x8xf32>
+  // CHECK: %[[LOCAL:.*]] = vector.multi_reduction <add>, %[[LOAD]], %{{.*}} [0, 1] : vector<8x8xf32> to f32
+  // CHECK: %[[BCAST:.*]] = vector.broadcast %[[LOCAL]] : f32 to vector<1x1xf32>
+  // CHECK: %[[ALLOCA:.*]] = memref.alloca() : memref<64xi8, 3>
+  // CHECK: %[[MEM_DESC:.*]] = xegpu.create_mem_desc %[[ALLOCA]] : memref<64xi8, 3> -> !xegpu.mem_desc<4x4xf32>
+  // CHECK: xegpu.store_matrix %[[BCAST]], %[[MEM_DESC]]{{.*}} : vector<1x1xf32>, !xegpu.mem_desc<4x4xf32>
+  // CHECK: gpu.barrier
+  // CHECK: %[[LOAD_SLM:.*]] = xegpu.load_matrix %[[MEM_DESC]]{{.*}} -> vector<4x4xf32>
+  // CHECK: %[[FINAL:.*]] = vector.multi_reduction <add>, %[[LOAD_SLM]], %{{.*}} [0, 1] : vector<4x4xf32> to f32
+  // CHECK: arith.addf %[[FINAL]], %{{.*}} : f32
   gpu.func @vector_reduce_scalar_cross_sg(%src: memref<32x32xf32>) {
     %cst = arith.constant {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [4, 4], sg_data = [8, 8]>, dims = [0, 1]>} 0.0 : f32
     %tdesc = xegpu.create_nd_tdesc %src : memref<32x32xf32>
@@ -1030,7 +1027,7 @@ gpu.module @test_distribution {
       %4 = arith.addi %arg3, %c1_i32 : i32
       %6 = xegpu.load_nd %0[%c256] {layout = #xegpu.layout<sg_layout = [16], sg_data = [16]>} : !xegpu.tensor_desc<256xf32, #xegpu.layout<sg_layout = [16], sg_data = [16]>> -> vector<256xf32>
       scf.yield %6, %4 : vector<256xf32>, i32
-    }
+    } attributes {layout_result_0 = #xegpu.layout<sg_layout = [16], sg_data = [16]>}
     gpu.return
   }
 

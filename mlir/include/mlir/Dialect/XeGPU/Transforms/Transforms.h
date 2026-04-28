@@ -67,6 +67,12 @@ void populateXeGPUPeepHoleOptimizerPatterns(RewritePatternSet &patterns);
 void populateXeGPUSubgroupDistributePatterns(RewritePatternSet &patterns);
 /// Appends patterns for moving function body into gpu.warp_execute_on_lane0 op.
 void populateXeGPUMoveFuncBodyToWarpOpPatterns(RewritePatternSet &patterns);
+/// Define the type conversions needed for XeGPU workgroup to subgroup
+/// distribution. This includes a context-aware 1:N conversion for VectorType
+/// (using the distribute layout attribute on the Value) and a 1:N conversion
+/// for TensorDescType.
+void populateXeGPUWgToSgDistributeTypeConversions(TypeConverter &converter,
+                                                  Operation *topLevelOp);
 /// Appends patterns for XeGPU workgroup to subgroup distribution into
 /// `patterns`.
 void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns);

@@ -12,8 +12,12 @@
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
+#include "llvm/ADT/SetVector.h"
+#include <functional>
+
 namespace mlir {
 
+class UnrealizedConversionCastOp;
 class VectorType;
 class OpOperand;
 class OpResult;
@@ -93,17 +97,6 @@ SmallVector<Value> extractVectorsWithShapeFromValue(OpBuilder &builder,
 Value createVectorWithShapeFromValues(OpBuilder &builder, Location loc,
                                       ValueRange values,
                                       ArrayRef<int64_t> shape);
-
-/// Do type conversion for SCF structural ops, e.g., scf.for using SCF structure
-/// type convertion patterns. Since VectorType cannot carry the layout
-/// attribute, which is needed to guide the type conversion for XeGPU, they are
-/// first converted into RankedTensorType, where the layout attribute can be
-/// attached. And then upstream SCF structural type conversion patterns are
-/// applied with the provided converter.
-/// TODO: This is a temporary solution. We should refactor it when context-aware
-/// type conversion is available.
-void doSCFStructuralTypeConversionWithTensorType(Operation *op,
-                                                 TypeConverter converter);
 
 /// Retrieves the chip string from the XeVM target attribute of the parent
 /// GPU module operation. Returns the chip identifier if found, or nullopt
@@ -233,6 +226,35 @@ bool matchUnitDimExpansion(ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
 // is split into one or more consecutive dimensions in dst
 bool matchSplitDimExpansion(ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
                             SmallVector<SmallVector<int64_t>> &splitDimGroups);
+
+/// Callback type for computing sub-shape and count for 1:N VectorType
+/// conversion. Given a VectorType and its DistributeLayoutAttr, returns
+/// (subShape, count). A count <= 0 means no conversion is needed.
+using SubShapeAndCountFn = std::function<std::pair<SmallVector<int64_t>, int>(
+    VectorType, DistributeLayoutAttr)>;
+
+/// Adds source (N:1) and target (1:1) materializations using
+/// UnrealizedConversionCastOp to the given TypeConverter.
+void addSCFStructuralMaterializations(TypeConverter &converter);
+
+/// Pre-computes block argument type mappings for SCF loop ops and adds a
+/// context-aware 1:N VectorType conversion to the TypeConverter.
+/// Pre-computation is needed because during structural type conversion
+/// (especially scf.while), blocks may be detached from their parent region,
+/// making Block::getParent() crash (LLVM ilist assertion). The
+/// `getSubShapeAndCount` callback computes (subShape, count) for a VectorType
+/// and its layout; count <= 0 means no conversion needed.
+void addContextAwareVectorTypeConversion(
+    TypeConverter &converter, Operation *topLevelOp,
+    SubShapeAndCountFn getSubShapeAndCount);
+
+/// Cleans up UnrealizedConversionCastOps inserted during SCF structural type
+/// conversion. Folds cancelling N:1->1:N and 1:N->N:1 cast chains (inserting
+/// vector.shape_cast when shapes differ but element counts match), and
+/// erases dead casts. Casts in `existingCasts` are preserved.
+void cleanupUnrealizedConversionCasts(
+    Operation *root,
+    const llvm::SmallSetVector<UnrealizedConversionCastOp, 8> &existingCasts);
 
 } // namespace xegpu
 

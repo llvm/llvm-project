@@ -304,7 +304,7 @@ gpu.module @test_distribution {
       %4 = arith.addi %arg3, %c1_i32 : i32
       %6 = xegpu.load_nd %0[%c256] {layout =  #xegpu.layout<sg_layout = [8], sg_data = [16]>} : !xegpu.tensor_desc<256xf32, #xegpu.layout<sg_layout = [8], sg_data = [16]>> -> vector<256xf32>
       scf.yield %6, %4 : vector<256xf32>, i32
-    }
+    } attributes {layout_result_0 = #xegpu.layout<sg_layout = [8], sg_data = [16]>}
     gpu.return
   }
 

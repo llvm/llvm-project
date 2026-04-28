@@ -1529,19 +1529,11 @@ void XeGPUSgToWiDistributeExperimentalPass::runOnOperation() {
   // Perform a structural type conversion to convert structural ops to have WI
   // types. This will insert UnrealizedConversionCastOps to make the IR
   // valid.
-  auto materializeCast = [&](mlir::OpBuilder &builder, mlir::Type type,
-                             mlir::ValueRange inputs,
-                             mlir::Location loc) -> mlir::Value {
-    UnrealizedConversionCastOp castOp =
-        UnrealizedConversionCastOp::create(builder, loc, type, inputs);
-    return castOp.getResult(0);
-  };
   {
     ConversionTarget target(getContext());
     TypeConverter typeConverter;
     RewritePatternSet patterns(&getContext());
-    typeConverter.addSourceMaterialization(materializeCast);
-    typeConverter.addTargetMaterialization(materializeCast);
+    xegpu::addSCFStructuralMaterializations(typeConverter);
     xegpu::populateXeGPUSgToWiDistributeTypeConversions(typeConverter);
     scf::populateSCFStructuralTypeConversionsAndLegality(typeConverter,
                                                          patterns, target);
@@ -1550,67 +1542,8 @@ void XeGPUSgToWiDistributeExperimentalPass::runOnOperation() {
     target.addLegalOp<UnrealizedConversionCastOp>();
     (void)applyPartialConversion(root, target, std::move(patterns));
   }
-  // Structural type conversion can generate some redundant
-  // UnrealizedConversionCastOps to materialize the SG type from type converted
-  // WI type. These are redundant at this point and can be eliminated by
-  // inserting shape casts instead.
-  // Example:
-  // %1 = UnrealizedConversionCastOp %0 : vector<16x1xf32> to vector<16x16xf32>
-  // %2 = UnrealizedConversionCastOp %1 : vector<16x16xf32> to vector<16xf32>
-  // This can be replaced with:
-  // %2 = vector.shape_cast %0 : vector<16x1xf32> to vector<16xf32>
-  OpBuilder builder(root);
-  root->walk([&](UnrealizedConversionCastOp op) {
-    // If this op existed before, nothing to do.
-    if (existingCasts.contains(op))
-      return;
-    // number of inputs and outputs must be 1.
-    if (op.getNumOperands() != 1 || op.getNumResults() != 1)
-      return;
-    // Both input and output types must be vector types.
-    auto singleInput = op.getInputs()[0];
-    auto inputTy = dyn_cast<VectorType>(singleInput.getType());
-    auto outputTy = dyn_cast<VectorType>(op.getResult(0).getType());
-    if (!inputTy || !outputTy)
-      return;
-
-    // Check if the defining op of the input is also an
-    // UnrealizedConversionCastOp and it has a single user (which is this
-    // op).
-    auto definingOp = singleInput.getDefiningOp<UnrealizedConversionCastOp>();
-    if (!definingOp || !definingOp->hasOneUse())
-      return;
-    auto inputOfDefiningOp = definingOp.getInputs()[0];
-    // If the input of the defining op and output type are both vector types
-    // have same number of elements, insert a shape cast.
-    auto inputOfDefiningOpTy =
-        dyn_cast<VectorType>(inputOfDefiningOp.getType());
-    if (inputOfDefiningOpTy &&
-        inputOfDefiningOpTy.getNumElements() == outputTy.getNumElements()) {
-      builder.setInsertionPoint(op);
-      auto shapeCast = vector::ShapeCastOp::create(builder, op.getLoc(),
-                                                   outputTy, inputOfDefiningOp);
-      op.replaceAllUsesWith(ValueRange{shapeCast.getResult()});
-      return;
-    }
-  });
-  // At this point, we will have some dead UnrealizedConversionCastOps. Just
-  // erase them.
-  bool changed = true;
-  while (changed) {
-    changed = false;
-    root->walk([&](UnrealizedConversionCastOp op) {
-      // Skip existing casts.
-      if (existingCasts.contains(op))
-        return;
-      if (op.use_empty()) {
-        op.erase();
-        changed = true;
-      }
-    });
-  }
-
-  xegpu::removeTemporaryLayoutAttrs(getOperation());
+  // Fold cancelling cast chains and erase dead casts.
+  xegpu::cleanupUnrealizedConversionCasts(root, existingCasts);
 }
 
 void xegpu::populateXeGPUSgToWiDistributeTypeConversions(
