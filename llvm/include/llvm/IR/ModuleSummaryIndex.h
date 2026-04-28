@@ -600,8 +600,8 @@ public:
   bool wasPromoted() const { return Flags.Promoted; }
 
   void promote() {
-    assert(!GlobalValue::isExternalLinkage(linkage()) &&
-           "unexpected (re-)promotion of external symbol");
+    assert(GlobalValue::isLocalLinkage(linkage()) &&
+           "unexpected (re-)promotion of non-local symbol");
     assert(!Flags.Promoted);
     Flags.Promoted = true;
     Flags.Linkage = GlobalValue::LinkageTypes::ExternalLinkage;

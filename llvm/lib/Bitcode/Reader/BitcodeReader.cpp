@@ -7342,7 +7342,7 @@ void ModuleSummaryIndexBitcodeReader::setValueGUID(
   GlobalValue::GUID ValueGUID = 0;
   if (ValueID < DefinedGUIDs.size())
     ValueGUID = DefinedGUIDs[ValueID];
-  if (ValueGUID == 0)
+  else
     ValueGUID = GlobalValue::getGUIDAssumingExternalLinkage(
         GlobalValue::getGlobalIdentifier(ValueName, Linkage, SourceFileName));
 
