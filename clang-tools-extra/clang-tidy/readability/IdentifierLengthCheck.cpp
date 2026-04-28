@@ -139,7 +139,7 @@ static bool isShortLived(const ValueDecl *Var, const SourceManager *SrcMgr,
 
 void IdentifierLengthCheck::check(const MatchFinder::MatchResult &Result) {
   auto ShouldWarn = [&](const ValueDecl *Var, unsigned MinNameLength,
-                        llvm::Regex const &IgnoredNames) -> bool {
+                        const llvm::Regex &IgnoredNames) -> bool {
     if (!Var->getIdentifier())
       return false;
 
