@@ -320,3 +320,39 @@ func.func @rejection_non_iv_init(%arg0: !fir.ref<!fir.array<100xf32>>) {
 // CHECK:         fir.result %{{.*}} : i32
 // CHECK:       }
 // CHECK:       return
+
+// -----
+
+// Test 8: Loop attributes preserved across rewrite.
+// `unordered` (independence hint) and `loopAnnotation` (user pragmas such as
+// `!dir$ unroll`, `!$omp simd`) must survive removal of the shadow iter_args.
+#loop_unroll = #llvm.loop_unroll<disable = false, full = true>
+#loop_annotation = #llvm.loop_annotation<unroll = #loop_unroll>
+func.func @preserves_attributes(%arg0: !fir.ref<!fir.array<100xf32>>, %arg1: !fir.ref<!fir.array<100xf32>>) {
+  %c1 = arith.constant 1 : index
+  %c100 = arith.constant 100 : index
+  %0 = fir.shape %c100 : (index) -> !fir.shape<1>
+  %1 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFEi"}
+  %2 = fir.declare %1 {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %3 = fir.convert %c1 : (index) -> i32
+  %4 = fir.do_loop %arg2 = %c1 to %c100 step %c1 unordered iter_args(%arg3 = %3) -> (i32) attributes {loopAnnotation = #loop_annotation} {
+    fir.store %arg3 to %2 : !fir.ref<i32>
+    %5 = fir.load %2 : !fir.ref<i32>
+    %6 = fir.convert %5 : (i32) -> i64
+    %7 = fir.array_coor %arg0(%0) %6 : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, i64) -> !fir.ref<f32>
+    %8 = fir.load %7 : !fir.ref<f32>
+    %9 = fir.array_coor %arg1(%0) %6 : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, i64) -> !fir.ref<f32>
+    fir.store %8 to %9 : !fir.ref<f32>
+    %10 = fir.load %2 : !fir.ref<i32>
+    %11 = arith.addi %10, %3 overflow<nsw> : i32
+    fir.result %11 : i32
+  }
+  fir.store %4 to %2 : !fir.ref<i32>
+  return
+}
+
+// CHECK-LABEL: func.func @preserves_attributes(
+// iter_args must be removed but `unordered` and `loopAnnotation` must survive:
+// CHECK:       fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} unordered
+// CHECK-NOT:     iter_args
+// CHECK-SAME:    attributes {loopAnnotation = #loop_annotation}

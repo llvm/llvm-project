@@ -299,6 +299,36 @@ private:
                    op->dump(); acoOp.dump(););
         return false;
       }
+      // TODO: Support fir.array_coor with a fir.slice operand. The current
+      // promotion path only inspects acoOp.getShape() and silently ignores
+      // acoOp.getSlice(). Reject these loops until full slice
+      // support is implemented.
+      if (acoOp.getSlice()) {
+        LLVM_DEBUG(llvm::dbgs() << "AffineLoopAnalysis: cannot promote loop, "
+                                   "fir.array_coor has a fir.slice operand "
+                                   "(not yet supported)\n";
+                   op->dump(); acoOp.dump(););
+        return false;
+      }
+
+
+      // Reject element types that `mlir::MemRefType` cannot hold (e.g.
+      // `!fir.char`) — promotion
+      // would later build an invalid `MemRefType`.
+      fir::SequenceType seqType;
+      mlir::Type baseTy = acoOp.getMemref().getType();
+      if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(baseTy))
+        seqType = mlir::dyn_cast<fir::SequenceType>(refTy.getEleTy());
+      else if (auto heapTy = mlir::dyn_cast<fir::HeapType>(baseTy))
+        seqType = mlir::dyn_cast<fir::SequenceType>(heapTy.getEleTy());
+      if (!seqType ||
+          !mlir::MemRefType::isValidElementType(seqType.getEleTy())) {
+        LLVM_DEBUG(llvm::dbgs()
+                       << "AffineLoopAnalysis: array element type is not a "
+                          "valid MemRef element type, cannot promote\n";
+                   op->dump(); acoOp.dump(););
+        return false;
+      }
       bool canPromote = true;
       for (auto coordinate : acoOp.getIndices())
         canPromote = canPromote && isAffineIndex(coordinate, outermost);
@@ -554,7 +584,7 @@ createMultiDimAffineOps(mlir::Value arrayRef, mlir::PatternRewriter &rewriter,
     seqType = mlir::dyn_cast<fir::SequenceType>(heapType.getEleTy());
 
   // need change because memref is row major order but fir.array is column major
-  // order]=
+  // order
   SmallVector<int64_t> reversedShape(seqType.getShape().rbegin(),
                                      seqType.getShape().rend());
 

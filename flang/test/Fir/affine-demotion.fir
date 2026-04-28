@@ -170,3 +170,55 @@ module {
 // CHECK:         }
 // CHECK:       }
 // CHECK:       return
+
+// -----
+
+// Test: box-based demotion (allocatable / assumed-shape dummy).
+// When only a `fir.box` is available (case 3 of findShapeForBase), the
+// element address must be computed through the box rather than assuming
+// a 1-based lower bound. AffineDemotion is expected to:
+//   * read each dimension's runtime lower bound via `fir.box_dims`,
+//   * pack those bounds into a `fir.shift`,
+//   * pass the shift to `fir.array_coor`, and
+//   * shift the 0-based affine indices by lb to get user-visible
+//     Fortran indices.
+#map_box = affine_map<()[s0] -> (s0 + 1)>
+#map_box_id = affine_map<(d0) -> (d0 - 1)>
+module {
+  func.func @box_path(%arg0: !fir.box<!fir.array<?xf32>>) {
+    %c1 = arith.constant 1 : index
+    %c100 = arith.constant 100 : index
+    %base = fir.box_addr %arg0 : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
+    %m = fir.convert %base : (!fir.ref<!fir.array<?xf32>>) -> memref<?xf32>
+    affine.for %arg1 = %c1 to #map_box()[%c100] {
+      %i = affine.apply #map_box_id(%arg1)
+      %v = affine.load %m[%i] : memref<?xf32>
+      affine.store %v, %m[%i] : memref<?xf32>
+    }
+    return
+  }
+}
+
+// CHECK-LABEL: func @box_path(
+// CHECK-SAME:    %[[BOX:.*]]: !fir.box<!fir.array<?xf32>>)
+// CHECK:       %[[BASE:.*]] = fir.box_addr %[[BOX]]
+// fir.convert is removed by the pass; affine.load/store on the box
+// path must read each dim's lb from the box and pass an explicit shift.
+// CHECK:       affine.for %[[IV:.*]] = 1 to 101 {
+// CHECK:         %[[IDX0:.*]] = affine.apply #{{.*}}(%[[IV]])
+// Load: read lb from box, build shift, address through array_coor.
+// CHECK:         %[[LD_DIM:.*]] = arith.constant 0 : i32
+// CHECK:         %[[LD_DIMS:.*]]:3 = fir.box_dims %[[BOX]], %[[LD_DIM]] : (!fir.box<!fir.array<?xf32>>, i32) -> (index, index, index)
+// CHECK:         %[[LD_SHIFT:.*]] = fir.shift %[[LD_DIMS]]#0 : (index) -> !fir.shift<1>
+// CHECK:         %[[LD_FI:.*]] = arith.addi %[[IDX0]], %[[LD_DIMS]]#0 : index
+// CHECK:         %[[LD_COOR:.*]] = fir.array_coor %[[BOX]](%[[LD_SHIFT]]) %[[LD_FI]] : (!fir.box<!fir.array<?xf32>>, !fir.shift<1>, index) -> !fir.ref<f32>
+// CHECK:         %[[V:.*]] = fir.load %[[LD_COOR]] : !fir.ref<f32>
+// Store: same pattern.
+// CHECK:         %[[ST_DIM:.*]] = arith.constant 0 : i32
+// CHECK:         %[[ST_DIMS:.*]]:3 = fir.box_dims %[[BOX]], %[[ST_DIM]] : (!fir.box<!fir.array<?xf32>>, i32) -> (index, index, index)
+// CHECK:         %[[ST_SHIFT:.*]] = fir.shift %[[ST_DIMS]]#0 : (index) -> !fir.shift<1>
+// CHECK:         %[[ST_FI:.*]] = arith.addi %[[IDX0]], %[[ST_DIMS]]#0 : index
+// CHECK:         %[[ST_COOR:.*]] = fir.array_coor %[[BOX]](%[[ST_SHIFT]]) %[[ST_FI]] : (!fir.box<!fir.array<?xf32>>, !fir.shift<1>, index) -> !fir.ref<f32>
+// CHECK:         fir.store %[[V]] to %[[ST_COOR]] : !fir.ref<f32>
+// CHECK:       }
+// CHECK:       return

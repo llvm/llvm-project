@@ -221,11 +221,6 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
 
     pm.addPass(fir::createPromoteToAffinePass());
 
-    // Use remove-dead-values instead of canonicalize between promotion and
-    // demotion to avoid folding fir.convert chains.  Canonicalize can merge
-    // a linearisation convert (ref<NxM> -> ref<N*M>) with the promotion
-    // convert (ref<N*M> -> memref<N*M>) into a single ref<NxM> -> memref<N*M>,
-    // which would cause a rank mismatch in AffineDemotion.
     pm.addPass(mlir::createRemoveDeadValuesPass());
     pm.addPass(mlir::createCSEPass());
 
@@ -233,7 +228,10 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
       mlir::affine::registerAffineLoopTiling();
       std::string pipeline = "func.func(affine-loop-tile{tile-size=" +
                              std::to_string(affineLoopOptTileSize) + "})";
-      (void)mlir::parsePassPipeline(pipeline, pm);
+      if (mlir::failed(mlir::parsePassPipeline(pipeline, pm)))
+        llvm::report_fatal_error(
+            "failed to parse affine-loop-tile pipeline: '" +
+            llvm::Twine(pipeline) + "'");
     } else {
       pm.addNestedPass<mlir::func::FuncOp>(
           mlir::affine::createLoopTilingPass());

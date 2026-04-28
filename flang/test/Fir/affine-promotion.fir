@@ -315,3 +315,31 @@ func.func @triangular_promotion(%a: !fir.ref<!fir.array<100x100xf32>>, %b: !fir.
 // CHECK:         }
 // CHECK:       }
 // CHECK:       return
+
+// -----
+
+// Test 6: Loop over an array whose element type is not a valid MLIR
+// MemRef element type (e.g. `!fir.logical<n>`, `!fir.char<...>`,
+// derived `!fir.type<...>`) must NOT be promoted. Promotion would
+// otherwise build a `MemRefType` with an unsupported element type and
+// trip the verifier in `mlir::MemRefType::get`.
+func.func @rejects_invalid_memref_element(%arg0: !fir.ref<!fir.array<100x!fir.logical<4>>>) {
+  %c1 = arith.constant 1 : index
+  %c100 = arith.constant 100 : index
+  %true = arith.constant true
+  %tlog = fir.convert %true : (i1) -> !fir.logical<4>
+  %0 = fir.shape %c100 : (index) -> !fir.shape<1>
+  fir.do_loop %i = %c1 to %c100 step %c1 {
+    %1 = fir.array_coor %arg0(%0) %i : (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.shape<1>, index) -> !fir.ref<!fir.logical<4>>
+    fir.store %tlog to %1 : !fir.ref<!fir.logical<4>>
+  }
+  return
+}
+
+// CHECK-LABEL: func @rejects_invalid_memref_element(
+// Element type !fir.logical<4> is not accepted by MemRefType, so the
+// loop must stay as fir.do_loop and never become affine.for:
+// CHECK-NOT:   affine.for
+// CHECK:       fir.do_loop
+// CHECK-NOT:   affine.for
+// CHECK:       return

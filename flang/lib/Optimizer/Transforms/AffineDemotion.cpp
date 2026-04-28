@@ -89,6 +89,45 @@ toFortranIndices(mlir::Value shape, ArrayRef<Value> zeroBasedIndices,
   return result;
 }
 
+/// Build a `fir.array_coor` that addresses a box-typed array from
+/// 0-based affine indices, honoring the descriptor's lower bounds.
+///
+/// Each dimension's `lb` is read at runtime via `fir.box_dims`, 
+/// packed into a `fir.shift`, and added to the 0-based affine index to  
+/// form the Fortran-visible index.
+static fir::ArrayCoorOp
+buildBoxArrayCoor(mlir::Location loc, ConversionPatternRewriter &rewriter,
+                  mlir::Type resultRefTy, mlir::Value boxBase,
+                  mlir::ArrayRef<mlir::Value> zeroBasedIndices) {
+  auto idxTy = rewriter.getIndexType();
+  unsigned rank = zeroBasedIndices.size();
+
+  SmallVector<mlir::Value> lbs;
+  lbs.reserve(rank);
+  for (unsigned k = 0; k < rank; ++k) {
+    auto dim = arith::ConstantOp::create(rewriter, loc,
+                                         rewriter.getI32IntegerAttr(k));
+    auto boxDims = fir::BoxDimsOp::create(rewriter, loc, idxTy, idxTy, idxTy,
+                                          boxBase, dim);
+    lbs.push_back(boxDims.getLowerBound());
+  }
+
+  auto shiftTy = fir::ShiftType::get(rewriter.getContext(), rank);
+  auto shiftOp = fir::ShiftOp::create(rewriter, loc, shiftTy, lbs);
+
+  SmallVector<mlir::Value> fortranIndices;
+  fortranIndices.reserve(rank);
+  for (unsigned k = 0; k < rank; ++k)
+    fortranIndices.push_back(arith::AddIOp::create(rewriter, loc,
+                                                    zeroBasedIndices[k],
+                                                    lbs[k]));
+
+  return fir::ArrayCoorOp::create(rewriter, loc, resultRefTy, boxBase,
+                                  /*shape=*/shiftOp.getResult(),
+                                  /*slice=*/mlir::Value{}, fortranIndices,
+                                  /*typeparams=*/mlir::ValueRange{});
+}
+
 /// Walk backwards from `base` to locate the `fir.shape` (or shapeshift)
 /// that carries the runtime dimension sizes.
 ///
@@ -98,7 +137,8 @@ toFortranIndices(mlir::Value shape, ArrayRef<Value> zeroBasedIndices,
 ///      fir.embox that wraps it and recover the shape from there.
 ///   3. Allocatable dummy / module arrays: base is from fir.box_addr →
 ///      use the original fir.box directly with fir.array_coor (the box
-///      carries all shape info).  In this case `outBoxBase` is set to the
+///      carries all shape info) pass fir.shift by reading the box discriptor 
+///      using fir.box_dims. In this case `outBoxBase` is set to the
 ///      box value and the returned shape is null.
 static mlir::Value findShapeForBase(mlir::Value base, mlir::Value &outBoxBase) {
   outBoxBase = mlir::Value{};
@@ -180,17 +220,9 @@ public:
             /*typeparams=*/mlir::ValueRange{});
         rewriter.replaceOpWithNewOp<fir::LoadOp>(op, arrayCoorOp.getResult());
       } else if (boxBase) {
-        // Case 3: box carries shape — use box directly; lb=1 assumed
-        auto one = arith::ConstantIndexOp::create(rewriter, op.getLoc(), 1);
-        SmallVector<Value> oneBasedIndices;
-        for (auto idx : expandedIndices)
-          oneBasedIndices.push_back(
-              arith::AddIOp::create(rewriter, op.getLoc(), idx, one));
-        auto arrayCoorOp = fir::ArrayCoorOp::create(
-            rewriter, op.getLoc(), resultRefTy, boxBase,
-            /*shape=*/mlir::Value{},
-            /*slice=*/mlir::Value{}, oneBasedIndices,
-            /*typeparams=*/mlir::ValueRange{});
+        
+        auto arrayCoorOp = buildBoxArrayCoor(op.getLoc(), rewriter, resultRefTy,
+                                             boxBase, expandedIndices);
         rewriter.replaceOpWithNewOp<fir::LoadOp>(op, arrayCoorOp.getResult());
       } else {
         return op.emitError(
@@ -255,16 +287,9 @@ public:
         rewriter.replaceOpWithNewOp<fir::StoreOp>(op, adaptor.getValue(),
                                                   arrayCoorOp.getResult());
       } else if (boxBase) {
-        auto one = arith::ConstantIndexOp::create(rewriter, op.getLoc(), 1);
-        SmallVector<Value> oneBasedIndices;
-        for (auto idx : expandedIndices)
-          oneBasedIndices.push_back(
-              arith::AddIOp::create(rewriter, op.getLoc(), idx, one));
-        auto arrayCoorOp = fir::ArrayCoorOp::create(
-            rewriter, op.getLoc(), resultRefTy, boxBase,
-            /*shape=*/mlir::Value{},
-            /*slice=*/mlir::Value{}, oneBasedIndices,
-            /*typeparams=*/mlir::ValueRange{});
+       
+        auto arrayCoorOp = buildBoxArrayCoor(op.getLoc(), rewriter, resultRefTy,
+                                             boxBase, expandedIndices);
         rewriter.replaceOpWithNewOp<fir::StoreOp>(op, adaptor.getValue(),
                                                   arrayCoorOp.getResult());
       } else {

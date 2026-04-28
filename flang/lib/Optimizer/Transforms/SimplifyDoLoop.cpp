@@ -623,9 +623,17 @@ static fir::DoLoopOp transformOneLoop(fir::DoLoopOp loop,
     incrementOp->erase();
 
   // --- Rebuild loop without iter_args ---
+  // Preserve `unordered` and `loopAnnotation`.  `finalValue` is dropped —
+  // the final IV is now handled by an explicit post-loop store.
   builder.setInsertionPoint(loop);
-  auto newLoop = fir::DoLoopOp::create(builder, loc, loop.getLowerBound(),
-                                       loop.getUpperBound(), loop.getStep());
+  auto newLoop =
+      fir::DoLoopOp::create(builder, loc, loop.getLowerBound(),
+                            loop.getUpperBound(), loop.getStep(),
+                            /*unordered=*/loop.getUnordered().has_value(),
+                            /*finalCountValue=*/false,
+                            /*iterArgs=*/mlir::ValueRange{});
+  if (auto annotation = loop.getLoopAnnotationAttr())
+    newLoop.setLoopAnnotationAttr(annotation);
   loop.getInductionVar().replaceAllUsesWith(newLoop.getInductionVar());
 
   auto &oldOps = loop.getBody()->getOperations();
