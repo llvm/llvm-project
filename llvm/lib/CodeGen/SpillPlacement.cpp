@@ -28,6 +28,7 @@
 
 #include "llvm/CodeGen/SpillPlacement.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/CodeGen/EdgeBundles.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
@@ -81,11 +82,9 @@ struct SpillPlacement::Node {
   /// variable should go in a register through this bundle.
   int Value;
 
-  using LinkVector = SmallVector<std::pair<BlockFrequency, unsigned>, 4>;
-
-  /// Links - (Weight, BundleNo) for all transparent blocks connecting to other
+  /// Links - (BundleNo, Weight) for all transparent blocks connecting to other
   /// bundles. The weights are all positive block frequencies.
-  LinkVector Links;
+  SmallMapVector<unsigned, BlockFrequency, 4> Links;
 
   /// SumLinkWeights - Cached sum of the weights of all links + ThresHold.
   BlockFrequency SumLinkWeights;
@@ -120,13 +119,9 @@ struct SpillPlacement::Node {
     SumLinkWeights += w;
 
     // There can be multiple links to the same bundle, add them up.
-    for (std::pair<BlockFrequency, unsigned> &L : Links)
-      if (L.second == b) {
-        L.first += w;
-        return;
-      }
-    // This must be the first link to b.
-    Links.push_back(std::make_pair(w, b));
+    auto [It, Inserted] = Links.try_emplace(b, w);
+    if (!Inserted)
+      It->second += w;
   }
 
   /// addBias - Bias this node.
@@ -152,11 +147,11 @@ struct SpillPlacement::Node {
     // Compute the weighted sum of inputs.
     BlockFrequency SumN = BiasN;
     BlockFrequency SumP = BiasP;
-    for (std::pair<BlockFrequency, unsigned> &L : Links) {
-      if (nodes[L.second].Value == -1)
-        SumN += L.first;
-      else if (nodes[L.second].Value == 1)
-        SumP += L.first;
+    for (auto [BundleNo, Weight] : Links) {
+      if (nodes[BundleNo].Value == -1)
+        SumN += Weight;
+      else if (nodes[BundleNo].Value == 1)
+        SumP += Weight;
     }
 
     // Each weighted sum is going to be less than the total frequency of the
@@ -179,12 +174,11 @@ struct SpillPlacement::Node {
 
   void getDissentingNeighbors(SparseSet<unsigned> &List,
                               const Node nodes[]) const {
-    for (const auto &Elt : Links) {
-      unsigned n = Elt.second;
+    for (auto [BundleNo, _] : Links) {
       // Neighbors that already have the same value are not going to
       // change because of this node changing.
-      if (Value != nodes[n].Value)
-        List.insert(n);
+      if (Value != nodes[BundleNo].Value)
+        List.insert(BundleNo);
     }
   }
 };
