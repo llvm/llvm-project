@@ -1,0 +1,60 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx950 -run-pass=machine-scheduler -amdgpu-sched-strategy=coexec -verify-misched %s -o - | FileCheck %s
+
+# The test exersices MFMA and VALU interleaving. The coexec scheduler should pack VALUs into
+# MFMA's shadow until the XDL pipe frees up for the next MFMA2.
+
+--- |
+  define void @mfma_shadow_fill() #0 { ret void }
+  attributes #0 = { "amdgpu-waves-per-eu"="1,1" }
+...
+
+---
+name: mfma_shadow_fill
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: mfma_shadow_fill
+    ; CHECK: V_MFMA_F32_32X32X16_F16_e64
+    ; CHECK-COUNT-7: V_ADD_F32_e32
+    ; CHECK: V_MFMA_F32_32X32X16_F16_e64
+    ; CHECK-COUNT-5: V_ADD_F32_e32
+    ; CHECK: S_ENDPGM
+    %0:vreg_128_align2 = IMPLICIT_DEF
+    %1:vreg_128_align2 = IMPLICIT_DEF
+    %2:areg_512_align2 = IMPLICIT_DEF
+    %3:vreg_128_align2 = IMPLICIT_DEF
+    %4:vreg_128_align2 = IMPLICIT_DEF
+    %5:areg_512_align2 = IMPLICIT_DEF
+
+    %m0:areg_512_align2 = V_MFMA_F32_32X32X16_F16_e64 %0, %1, %2, 0, 0, 0, implicit $mode, implicit $exec
+    %m1:areg_512_align2 = V_MFMA_F32_32X32X16_F16_e64 %3, %4, %5, 0, 0, 0, implicit $mode, implicit $exec
+
+    %v0:vgpr_32 = IMPLICIT_DEF
+    %v1:vgpr_32 = IMPLICIT_DEF
+    %v2:vgpr_32 = IMPLICIT_DEF
+    %v3:vgpr_32 = IMPLICIT_DEF
+    %v4:vgpr_32 = IMPLICIT_DEF
+    %v5:vgpr_32 = IMPLICIT_DEF
+    %v6:vgpr_32 = IMPLICIT_DEF
+    %v7:vgpr_32 = IMPLICIT_DEF
+    %v8:vgpr_32 = IMPLICIT_DEF
+    %v9:vgpr_32 = IMPLICIT_DEF
+    %v10:vgpr_32 = IMPLICIT_DEF
+    %v11:vgpr_32 = IMPLICIT_DEF
+    %v12:vgpr_32 = IMPLICIT_DEF
+
+    %a0:vgpr_32 = V_ADD_F32_e32 %v0, %v1, implicit $mode, implicit $exec
+    %a1:vgpr_32 = V_ADD_F32_e32 %v1, %v2, implicit $mode, implicit $exec
+    %a2:vgpr_32 = V_ADD_F32_e32 %v2, %v3, implicit $mode, implicit $exec
+    %a3:vgpr_32 = V_ADD_F32_e32 %v3, %v4, implicit $mode, implicit $exec
+    %a4:vgpr_32 = V_ADD_F32_e32 %v4, %v5, implicit $mode, implicit $exec
+    %a5:vgpr_32 = V_ADD_F32_e32 %v5, %v6, implicit $mode, implicit $exec
+    %a6:vgpr_32 = V_ADD_F32_e32 %v6, %v7, implicit $mode, implicit $exec
+    %a7:vgpr_32 = V_ADD_F32_e32 %v7, %v8, implicit $mode, implicit $exec
+    %a8:vgpr_32 = V_ADD_F32_e32 %v8, %v9, implicit $mode, implicit $exec
+    %a9:vgpr_32 = V_ADD_F32_e32 %v9, %v10, implicit $mode, implicit $exec
+    %a10:vgpr_32 = V_ADD_F32_e32 %v10, %v11, implicit $mode, implicit $exec
+    %a11:vgpr_32 = V_ADD_F32_e32 %v11, %v12, implicit $mode, implicit $exec
+
+    S_ENDPGM 0, implicit %m0, implicit %m1, implicit %a0, implicit %a1, implicit %a2, implicit %a3, implicit %a4, implicit %a5, implicit %a6, implicit %a7, implicit %a8, implicit %a9, implicit %a10, implicit %a11
+...

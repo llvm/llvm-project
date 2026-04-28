@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUCoExecSchedStrategy.h"
+#include "GCNSubtarget.h"
 #include "llvm/Support/Debug.h"
 
 using namespace llvm;
@@ -410,6 +411,7 @@ AMDGPUCoExecSchedStrategy::AMDGPUCoExecSchedStrategy(
     const MachineSchedContext *C)
     : GCNSchedStrategy(C) {
   SchedStages.push_back(GCNSchedStageID::ILPInitialSchedule);
+  SchedStages.push_back(GCNSchedStageID::RewriteMFMAForm);
   SchedStages.push_back(GCNSchedStageID::PreRARematerialize);
   // Use more accurate GCN pressure trackers.
   UseGCNTrackers = true;
@@ -424,6 +426,12 @@ void AMDGPUCoExecSchedStrategy::initPolicy(MachineBasicBlock::iterator Begin,
          "coexec scheduler only supports top-down scheduling");
   RegionPolicy.OnlyTopDown = true;
   RegionPolicy.OnlyBottomUp = false;
+
+  // Enable lane-mask tracking so reaching-def queries used by the coexec
+  // heuristics see the correct sub-lane liveness after vgpr<->agpr conversions.
+  // Only needed on subtargets that actually have MAI/AGPR instructions.
+  if (Context->MF->getSubtarget<GCNSubtarget>().hasMAIInsts())
+    RegionPolicy.ShouldTrackLaneMasks = true;
 }
 
 void AMDGPUCoExecSchedStrategy::initialize(ScheduleDAGMI *DAG) {
