@@ -10,7 +10,6 @@ add_llvm_component_library(LLVMDWP
 
   LINK_COMPONENTS
   DebugInfoDWARF
-  MC
   Object
   Support
   )
