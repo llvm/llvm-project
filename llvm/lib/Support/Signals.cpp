@@ -155,6 +155,10 @@ std::optional<SmallVector<std::pair<unsigned, std::string>, 0>>
 collectAddressSymbols(void **AddressList, unsigned AddressCount,
                       const char *MainExecutableName,
                       const std::string &LLVMSymbolizerPath) {
+  // This function deals with temporary files for the purposes of symbolization
+  // only, not formal compiler output.
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   BumpPtrAllocator Allocator;
   StringSaver StrPool(Allocator);
   SmallVector<const char *, 0> Modules(AddressCount, nullptr);
