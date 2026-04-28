@@ -60,6 +60,8 @@ bool BreakpointIDList::Contains(BreakpointID bp_id) const {
 }
 
 static std::string LocationIDForStop(StopInfoSP stop_info_sp, uint32_t idx) {
+  assert(stop_info_sp->GetStopReason() == lldb::eStopReasonBreakpoint &&
+         "expected breakpoint stop");
   break_id_t bp_id = stop_info_sp->GetStopReasonDataAtIndex(idx);
   break_id_t loc_id = stop_info_sp->GetStopReasonDataAtIndex(idx + 1);
   StreamString stream;
