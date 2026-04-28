@@ -328,6 +328,8 @@ define i1 @copysign_unknown_sign_no_fold(float %x, float %y) nounwind {
   %r = call float @llvm.copysign.f32(float %x, float %y)
   %res = call i1 @llvm.is.fpclass.f32(float %r, i32 60) ; 0x3C = any negative
   ret i1 %res
+}
+
 define <vscale x 4 x i1> @extract_subvec_scalable_isneg_false(<vscale x 8 x float> %a0) {
 ; CHECK-LABEL: extract_subvec_scalable_isneg_false:
 ; CHECK:       # %bb.0:
