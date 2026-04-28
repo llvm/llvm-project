@@ -108,6 +108,11 @@ public:
 
   void emitBytes(StringRef Data) override;
 
+  void emitValueImpl(const MCExpr *Value, unsigned Size,
+                     SMLoc Loc = SMLoc()) override;
+
+  void emitIntValue(uint64_t Value, unsigned Size) override;
+
   void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
 
   bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;

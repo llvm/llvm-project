@@ -106,6 +106,63 @@ void NVPTXAsmStreamer::switchSection(MCSection *Section, uint32_t Subsection) {
   MCStreamer::switchSection(Section, Subsection);
 }
 
+void NVPTXAsmStreamer::emitIntValue(uint64_t Value, unsigned Size) {
+  emitValue(MCConstantExpr::create(Value, getContext()), Size);
+}
+
+static bool isDebugSection(const MCSection *Sec) {
+  StringRef Name = Sec->getName();
+  return Name.starts_with(".debug_") || Name.starts_with(".zdebug_") ||
+         Name.contains("debug");
+}
+
+void NVPTXAsmStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
+                                     SMLoc Loc) {
+  assert(Size <= 8 && "Invalid size");
+  MCSection *CurrSec = getCurrentSectionOnly();
+  assert(CurrSec && "Cannot emit contents before setting section!");
+
+  if (isDebugSection(CurrSec)) {
+    const char *Directive = nullptr;
+    switch (Size) {
+    default:
+      break;
+    case 1:
+      Directive = MAI->getData8bitsDirective();
+      break;
+    case 4:
+      Directive = MAI->getData32bitsDirective();
+      break;
+    case 8:
+      Directive = MAI->getData64bitsDirective();
+      break;
+    }
+
+    if (!Directive) {
+      assert(Size == 2 && "Expected 16-bit values here.");
+
+      int64_t IntValue;
+      if (!Value->evaluateAsAbsolute(IntValue))
+        report_fatal_error("Don't know how to emit this value.");
+
+      // Break down Int16 value into two Int8 values and emit them. TODO:
+      // Current use-case is only for debug_info sections, investigate if this
+      // needs to be uplifted outside isDebugSection check.
+      for (unsigned I = 0; I < 2; I++) {
+        uint64_t Int8ValueToEmit = IntValue >> (I * 8);
+        Int8ValueToEmit &= ~0ULL >> 56;
+        emitInt8(Int8ValueToEmit);
+      }
+      return;
+    }
+
+    OS << Directive;
+  }
+
+  MCTargetStreamer *TS = getTargetStreamer();
+  TS->emitValue(Value);
+}
+
 void NVPTXAsmStreamer::emitBytes(StringRef Data) {
   MCTargetStreamer *TS = getTargetStreamer();
   TS->emitRawBytes(Data);
