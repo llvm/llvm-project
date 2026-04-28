@@ -81,6 +81,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strncpy
     libc.src.string.strndup
     libc.src.string.strnlen
+    libc.src.string.strnlen_s
     libc.src.string.strpbrk
     libc.src.string.strrchr
     libc.src.string.strsep
@@ -305,12 +306,13 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.stat.mkdir
     libc.src.sys.stat.mkdirat
     libc.src.sys.stat.stat
+    libc.src.sys.stat.utimensat
 
     # sys/statvfs.h
     libc.src.sys.statvfs.fstatvfs
     libc.src.sys.statvfs.statvfs
 
-    # sys/utimes.h entrypoints
+    # sys/time.h entrypoints
     libc.src.sys.time.utimes
 
     # sys/utsname.h entrypoints
@@ -397,7 +399,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.wchar.wmemset
     libc.src.wchar.wcschr
     libc.src.wchar.wcsncmp
+    libc.src.wchar.wcsxfrm
     libc.src.wchar.wcscmp
+    libc.src.wchar.wcscoll
     libc.src.wchar.wcspbrk
     libc.src.wchar.wcsrchr
     libc.src.wchar.wcsspn
@@ -438,6 +442,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.wctype.iswxdigit
     libc.src.wctype.iswpunct
     libc.src.wctype.iswprint
+    libc.src.wctype.iswctype
+    libc.src.wctype.wctype
 
     # sys/uio.h entrypoints
     libc.src.sys.uio.writev
@@ -496,6 +502,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.asin
     libc.src.math.asinf
     libc.src.math.asinhf
+    libc.src.math.asinpi
     libc.src.math.asinpif
     libc.src.math.atan2
     libc.src.math.atan2f
@@ -758,6 +765,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.coshf16
     libc.src.math.cospif16
     libc.src.math.erff16
+    libc.src.math.erfcf16
     libc.src.math.exp10f16
     libc.src.math.exp10m1f16
     libc.src.math.exp2f16
@@ -812,6 +820,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.log10f16
     libc.src.math.log10p1f16
     libc.src.math.log2f16
+    libc.src.math.log2p1f16
     libc.src.math.logbf16
     libc.src.math.logf16
     libc.src.math.lrintf16
@@ -946,6 +955,7 @@ endif()
 list(APPEND TARGET_LIBM_ENTRYPOINTS
   # bfloat16 entrypoints
   libc.src.math.atanbf16
+  libc.src.math.asinbf16
   libc.src.math.bf16add
   libc.src.math.bf16addf
   libc.src.math.bf16addl
@@ -1181,6 +1191,13 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_condattr_init
     libc.src.pthread.pthread_condattr_setclock
     libc.src.pthread.pthread_condattr_setpshared
+    libc.src.pthread.pthread_cond_broadcast
+    libc.src.pthread.pthread_cond_clockwait
+    libc.src.pthread.pthread_cond_destroy
+    libc.src.pthread.pthread_cond_init
+    libc.src.pthread.pthread_cond_signal
+    libc.src.pthread.pthread_cond_timedwait
+    libc.src.pthread.pthread_cond_wait
     libc.src.pthread.pthread_create
     libc.src.pthread.pthread_detach
     libc.src.pthread.pthread_equal
@@ -1196,6 +1213,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_mutex_destroy
     libc.src.pthread.pthread_mutex_init
     libc.src.pthread.pthread_mutex_lock
+    libc.src.pthread.pthread_mutex_trylock
     libc.src.pthread.pthread_mutex_unlock
     libc.src.pthread.pthread_mutexattr_destroy
     libc.src.pthread.pthread_mutexattr_getpshared
@@ -1244,6 +1262,10 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.setjmp.siglongjmp
     libc.src.setjmp.sigsetjmp
 
+    # ucontext.h entrypoints
+    libc.src.ucontext.getcontext
+    libc.src.ucontext.setcontext
+
     # stdio.h entrypoints
     libc.src.stdio.clearerr
     libc.src.stdio.clearerr_unlocked
@@ -1280,6 +1302,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.putc
     libc.src.stdio.putchar
     libc.src.stdio.puts
+    libc.src.stdio.rewind
     libc.src.stdio.setbuf
     libc.src.stdio.setvbuf
     libc.src.stdio.stderr
@@ -1331,6 +1354,12 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.search.lfind
     libc.src.search.lsearch
     libc.src.search.remque
+    libc.src.search.tdelete
+    libc.src.search.tdestroy
+    libc.src.search.tfind
+    libc.src.search.tsearch
+    libc.src.search.twalk
+    libc.src.search.twalk_r
 
     # threads.h entrypoints
     libc.src.threads.call_once
@@ -1401,9 +1430,16 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.sys.select.select
 
     # sys/socket.h entrypoints
+    libc.src.sys.socket.accept
+    libc.src.sys.socket.accept4
     libc.src.sys.socket.socket
     libc.src.sys.socket.bind
+    libc.src.sys.socket.connect
+    libc.src.sys.socket.getsockopt
+    libc.src.sys.socket.listen
+    libc.src.sys.socket.shutdown
     libc.src.sys.socket.socketpair
+    libc.src.sys.socket.setsockopt
     libc.src.sys.socket.send
     libc.src.sys.socket.sendto
     libc.src.sys.socket.sendmsg

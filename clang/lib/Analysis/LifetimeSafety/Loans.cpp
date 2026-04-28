@@ -10,21 +10,34 @@
 
 namespace clang::lifetimes::internal {
 
-void PathLoan::dump(llvm::raw_ostream &OS) const {
+void AccessPath::dump(llvm::raw_ostream &OS) const {
+  switch (K) {
+  case Kind::ValueDecl:
+    if (const clang::ValueDecl *VD = getAsValueDecl())
+      OS << VD->getNameAsString();
+    break;
+  case Kind::MaterializeTemporary:
+    if (const clang::MaterializeTemporaryExpr *MTE =
+            getAsMaterializeTemporaryExpr())
+      OS << "MaterializeTemporaryExpr at " << MTE;
+    break;
+  case Kind::PlaceholderParam:
+    if (const auto *PVD = getAsPlaceholderParam())
+      OS << "$" << PVD->getNameAsString();
+    break;
+  case Kind::PlaceholderThis:
+    OS << "$this";
+    break;
+  case Kind::NewAllocation:
+    if (const auto *E = getAsNewAllocation())
+      OS << "NewAllocation at " << E;
+    break;
+  }
+}
+
+void Loan::dump(llvm::raw_ostream &OS) const {
   OS << getID() << " (Path: ";
-  if (const clang::ValueDecl *VD = Path.getAsValueDecl())
-    OS << VD->getNameAsString();
-  else if (const clang::MaterializeTemporaryExpr *MTE =
-               Path.getAsMaterializeTemporaryExpr())
-    // No nice "name" for the temporary, so deferring to LLVM default
-    OS << "MaterializeTemporaryExpr at " << MTE;
-  else
-    llvm_unreachable("access path is not one of any supported types");
+  Path.dump(OS);
   OS << ")";
 }
-
-void PlaceholderLoan::dump(llvm::raw_ostream &OS) const {
-  OS << getID() << " (Placeholder loan)";
-}
-
 } // namespace clang::lifetimes::internal

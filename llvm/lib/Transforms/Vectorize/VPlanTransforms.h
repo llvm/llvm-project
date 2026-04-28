@@ -134,8 +134,11 @@ struct VPlanTransforms {
   /// Replace VPPhi recipes in \p Plan's header with corresponding
   /// VPHeaderPHIRecipe subclasses for inductions, reductions, and
   /// fixed-order recurrences. This processes all header phis and creates
-  /// the appropriate widened recipe for each one.
-  static void createHeaderPhiRecipes(
+  /// the appropriate widened recipe for each one. For fixed-order
+  /// recurrences, also creates FirstOrderRecurrenceSplice instructions and
+  /// sinks/hoists users as needed. Returns false if any fixed-order
+  /// recurrence cannot be handled.
+  static bool createHeaderPhiRecipes(
       VPlan &Plan, PredicatedScalarEvolution &PSE, Loop &OrigLoop,
       const MapVector<PHINode *, InductionDescriptor> &Inductions,
       const MapVector<PHINode *, RecurrenceDescriptor> &Reductions,
@@ -163,18 +166,29 @@ struct VPlanTransforms {
   LLVM_ABI_FOR_TEST static void addMiddleCheck(VPlan &Plan, bool TailFolded);
 
   // Create a check to \p Plan to see if the vector loop should be executed.
+  // If \p CheckBlock is non-null, the compare and branch are placed there;
+  // ExpandSCEV recipes are always placed in Entry.
   static void addMinimumIterationCheck(
       VPlan &Plan, ElementCount VF, unsigned UF,
       ElementCount MinProfitableTripCount, bool RequiresScalarEpilogue,
       bool TailFolded, Loop *OrigLoop, const uint32_t *MinItersBypassWeights,
-      DebugLoc DL, PredicatedScalarEvolution &PSE);
+      DebugLoc DL, PredicatedScalarEvolution &PSE,
+      VPBasicBlock *CheckBlock = nullptr);
+
+  /// Add a new check block before the vector preheader to \p Plan to check if
+  /// the main vector loop should be executed (TC >= VF * UF).
+  static void
+  addIterationCountCheckBlock(VPlan &Plan, ElementCount VF, unsigned UF,
+                              bool RequiresScalarEpilogue, Loop *OrigLoop,
+                              const uint32_t *MinItersBypassWeights,
+                              DebugLoc DL, PredicatedScalarEvolution &PSE);
 
   /// Add a check to \p Plan to see if the epilogue vector loop should be
   /// executed.
   static void addMinimumVectorEpilogueIterationCheck(
-      VPlan &Plan, Value *TripCount, Value *VectorTripCount,
-      bool RequiresScalarEpilogue, ElementCount EpilogueVF, unsigned EpilogueUF,
-      unsigned MainLoopStep, unsigned EpilogueLoopStep, ScalarEvolution &SE);
+      VPlan &Plan, Value *VectorTripCount, bool RequiresScalarEpilogue,
+      ElementCount EpilogueVF, unsigned EpilogueUF, unsigned MainLoopStep,
+      unsigned EpilogueLoopStep, ScalarEvolution &SE);
 
   /// Replace loops in \p Plan's flat CFG with VPRegionBlocks, turning \p Plan's
   /// flat CFG into a hierarchical CFG.
@@ -201,16 +215,6 @@ struct VPlanTransforms {
                                        OptimizationRemarkEmitter *ORE,
                                        Loop *TheLoop);
 
-  /// Try to have all users of fixed-order recurrences appear after the recipe
-  /// defining their previous value, by either sinking users or hoisting recipes
-  /// defining their previous value (and its operands). Then introduce
-  /// FirstOrderRecurrenceSplice VPInstructions to combine the value from the
-  /// recurrence phis and previous values.
-  /// \returns true if all users of fixed-order recurrences could be re-arranged
-  /// as needed or false if it is not possible. In the latter case, \p Plan is
-  /// not valid.
-  static bool adjustFixedOrderRecurrences(VPlan &Plan, VPBuilder &Builder);
-
   /// Check if \p Plan contains any FMaxNum or FMinNum reductions. If they do,
   /// try to update the vector loop to exit early if any input is NaN and resume
   /// executing in the scalar loop to handle the NaNs there. Return false if
@@ -230,10 +234,11 @@ struct VPlanTransforms {
   /// Explicitly unroll \p Plan by \p UF.
   static void unrollByUF(VPlan &Plan, unsigned UF);
 
-  /// Replace each replicating VPReplicateRecipe and VPInstruction outside of
-  /// any replicate region in \p Plan with \p VF single-scalar recipes.
-  /// TODO: Also replicate VPScalarIVSteps and VPReplicateRecipes inside
-  /// replicate regions, thereby dissolving the latter.
+  /// Replace replicating VPReplicateRecipe, VPScalarIVStepsRecipe and
+  /// VPInstruction in \p Plan with \p VF single-scalar recipes. Replicate
+  /// regions are dissolved by replicating their blocks and their recipes \p VF
+  /// times.
+  /// TODO: Also dissolve replicate regions with live outs.
   static void replicateByVF(VPlan &Plan, ElementCount VF);
 
   /// Optimize \p Plan based on \p BestVF and \p BestUF. This may restrict the
@@ -242,10 +247,19 @@ struct VPlanTransforms {
                                  unsigned BestUF,
                                  PredicatedScalarEvolution &PSE);
 
+  /// Try to simplify VPInstruction::ExplicitVectorLength recipes when the AVL
+  /// is known to be <= VF, replacing them with the AVL directly.
+  static bool simplifyKnownEVL(VPlan &Plan, ElementCount VF,
+                               PredicatedScalarEvolution &PSE);
+
   /// Apply VPlan-to-VPlan optimizations to \p Plan, including induction recipe
   /// optimizations, dead recipe removal, replicate region optimizations and
   /// block merging.
   LLVM_ABI_FOR_TEST static void optimize(VPlan &Plan);
+
+  /// Remove redundant VPBasicBlocks by merging them into their single
+  /// predecessor if the latter has a single successor.
+  static bool mergeBlocksIntoPredecessors(VPlan &Plan);
 
   /// Wrap predicated VPReplicateRecipes with a mask operand in an if-then
   /// region block and remove the mask operand. Optimize the created regions by
@@ -289,10 +303,9 @@ struct VPlanTransforms {
       const std::function<bool(BasicBlock *)> &BlockNeedsPredication);
 
   /// Add a VPCurrentIterationPHIRecipe and related recipes to \p Plan and
-  /// replaces all uses except the canonical IV increment of
-  /// VPCanonicalIVPHIRecipe with a VPCurrentIterationPHIRecipe.
-  /// VPCanonicalIVPHIRecipe is only used to control the loop after
-  /// this transformation.
+  /// replaces all uses of the canonical IV except for the canonical IV
+  /// increment with a VPCurrentIterationPHIRecipe. The canonical IV is only
+  /// used to control the loop after this transformation.
   static void
   addExplicitVectorLength(VPlan &Plan,
                           const std::optional<unsigned> &MaxEVLSafeElements);
@@ -313,7 +326,7 @@ struct VPlanTransforms {
       VPlan &Plan,
       const SmallPtrSetImpl<const InterleaveGroup<Instruction> *>
           &InterleaveGroups,
-      VPRecipeBuilder &RecipeBuilder, const bool &ScalarEpilogueAllowed);
+      VPRecipeBuilder &RecipeBuilder, const bool &EpilogueAllowed);
 
   /// Remove dead recipes from \p Plan.
   static void removeDeadRecipes(VPlan &Plan);
@@ -363,8 +376,9 @@ struct VPlanTransforms {
   static void simplifyRecipes(VPlan &Plan);
 
   /// Remove BranchOnCond recipes with true or false conditions together with
-  /// removing dead edges to their successors.
-  static void removeBranchOnConst(VPlan &Plan);
+  /// removing dead edges to their successors. If \p OnlyLatches is true, only
+  /// process loop latches.
+  static void removeBranchOnConst(VPlan &Plan, bool OnlyLatches = false);
 
   /// Perform common-subexpression-elimination on \p Plan.
   static void cse(VPlan &Plan);
@@ -406,11 +420,12 @@ struct VPlanTransforms {
 
   /// Materialize vector trip count computations to a set of VPInstructions.
   /// \p Step is used as the step value for the trip count computation.
-  static void materializeVectorTripCount(VPlan &Plan,
-                                         VPBasicBlock *VectorPHVPBB,
-                                         bool TailByMasking,
-                                         bool RequiresScalarEpilogue,
-                                         VPValue *Step);
+  /// \p MaxRuntimeStep is the maximum possible runtime value of Step, used to
+  /// prove the trip count is divisible by the step for scalable VFs.
+  static void materializeVectorTripCount(
+      VPlan &Plan, VPBasicBlock *VectorPHVPBB, bool TailByMasking,
+      bool RequiresScalarEpilogue, VPValue *Step,
+      std::optional<uint64_t> MaxRuntimeStep = std::nullopt);
 
   /// Materialize the backedge-taken count to be computed explicitly using
   /// VPInstructions.
@@ -494,11 +509,11 @@ struct VPlanTransforms {
   addBranchWeightToMiddleTerminator(VPlan &Plan, ElementCount VF,
                                     std::optional<unsigned> VScaleForTuning);
 
-  /// Handle users in the exit block for first order reductions in the original
-  /// exit block. The penultimate value of recurrences is fed to their LCSSA phi
-  /// users in the original exit block using the VPIRInstruction wrapping to the
-  /// LCSSA phi.
-  static void addExitUsersForFirstOrderRecurrences(VPlan &Plan, VFRange &Range);
+  /// Adjust first-order recurrence users in the middle block: create
+  /// penultimate element extracts for LCSSA phi users, and handle penultimate
+  /// extracts of the last active lane edge.
+  static void adjustFirstOrderRecurrenceMiddleUsers(VPlan &Plan,
+                                                    VFRange &Range);
 
   /// Optimize FindLast reductions selecting IVs (or expressions of IVs) by
   /// converting them to FindIV reductions, if their IV range excludes a
@@ -512,6 +527,11 @@ struct VPlanTransforms {
   /// are only valid for a subset of VFs in Range, Range.End is updated.
   static void createPartialReductions(VPlan &Plan, VPCostContext &CostCtx,
                                       VFRange &Range);
+
+  /// Convert load/store VPInstructions in \p Plan into widened or replicate
+  /// recipes. Non load/store input instructions are left unchanged.
+  static void makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
+                                         VPRecipeBuilder &RecipeBuilder);
 };
 
 } // namespace llvm

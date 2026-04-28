@@ -1477,6 +1477,114 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::ChipStar, T.getOS());
 }
 
+TEST(TripleTest, EnumConstructor) {
+  {
+    Triple T(Triple::amdgcn, Triple::NoSubArch, Triple::AMD, Triple::AMDHSA);
+    EXPECT_EQ(T.getArch(), Triple::amdgcn);
+    EXPECT_EQ(T.getVendor(), Triple::AMD);
+    EXPECT_EQ(T.getOS(), Triple::AMDHSA);
+    EXPECT_EQ(T.getEnvironment(), Triple::UnknownEnvironment);
+    EXPECT_EQ(T.getObjectFormat(), Triple::ELF);
+    EXPECT_EQ(T.str(), "amdgcn-amd-amdhsa");
+  }
+
+  {
+    Triple T(Triple::amdgcn, Triple::NoSubArch, Triple::AMD, Triple::AMDHSA,
+             Triple::LLVM, Triple::ELF);
+    EXPECT_EQ(T.getArch(), Triple::amdgcn);
+    EXPECT_EQ(T.getVendor(), Triple::AMD);
+    EXPECT_EQ(T.getOS(), Triple::AMDHSA);
+    EXPECT_EQ(T.getEnvironment(), Triple::LLVM);
+    EXPECT_EQ(T.getObjectFormat(), Triple::ELF);
+    EXPECT_EQ(T.str(), "amdgcn-amd-amdhsa-llvm-elf");
+  }
+
+  {
+    Triple T(Triple::amdgcn, Triple::NoSubArch, Triple::AMD, Triple::AMDHSA,
+             Triple::LLVM);
+    EXPECT_EQ(T.getArch(), Triple::amdgcn);
+    EXPECT_EQ(T.getVendor(), Triple::AMD);
+    EXPECT_EQ(T.getOS(), Triple::AMDHSA);
+    EXPECT_EQ(T.getEnvironment(), Triple::LLVM);
+    EXPECT_EQ(T.getObjectFormat(), Triple::ELF);
+    EXPECT_EQ(T.str(), "amdgcn-amd-amdhsa-llvm");
+  }
+
+  {
+    Triple T(Triple::arm, Triple::ARMSubArch_v9_7a, Triple::PC, Triple::Linux,
+             Triple::GNU, Triple::COFF);
+    EXPECT_EQ(T.getArch(), Triple::arm);
+    EXPECT_EQ(T.getVendor(), Triple::PC);
+    EXPECT_EQ(T.getOS(), Triple::Linux);
+    EXPECT_EQ(T.getEnvironment(), Triple::GNU);
+    EXPECT_EQ(T.getObjectFormat(), Triple::COFF);
+    EXPECT_EQ(T.str(), "arm-pc-linux-gnu-coff");
+  }
+
+  {
+    Triple T(Triple::arm, Triple::ARMSubArch_v9_7a);
+    EXPECT_EQ(T.getArch(), Triple::arm);
+    EXPECT_EQ(T.getVendor(), Triple::UnknownVendor);
+    EXPECT_EQ(T.getOS(), Triple::UnknownOS);
+    EXPECT_EQ(T.getEnvironment(), Triple::UnknownEnvironment);
+    EXPECT_EQ(T.getObjectFormat(), Triple::ELF);
+    EXPECT_EQ(T.str(), "arm-unknown-unknown");
+  }
+
+  {
+    Triple T(Triple::x86_64);
+    EXPECT_EQ(T.getArch(), Triple::x86_64);
+    EXPECT_EQ(T.getVendor(), Triple::UnknownVendor);
+    EXPECT_EQ(T.getOS(), Triple::UnknownOS);
+    EXPECT_EQ(T.getEnvironment(), Triple::UnknownEnvironment);
+    EXPECT_EQ(T.getObjectFormat(), Triple::ELF);
+    EXPECT_EQ(T.str(), "x86_64-unknown-unknown");
+  }
+
+  {
+    Triple T(Triple::dxil);
+    EXPECT_EQ(T.getArch(), Triple::dxil);
+    EXPECT_EQ(T.getVendor(), Triple::UnknownVendor);
+    EXPECT_EQ(T.getOS(), Triple::UnknownOS);
+    EXPECT_EQ(T.getEnvironment(), Triple::UnknownEnvironment);
+    EXPECT_EQ(T.getObjectFormat(), Triple::DXContainer);
+    EXPECT_EQ(T.str(), "dxilv1.0-unknown-unknown");
+  }
+
+  {
+    Triple T(Triple::x86_64, Triple::NoSubArch, Triple::UnknownVendor,
+             Triple::UnknownOS, Triple::MSVC);
+    EXPECT_EQ(T.getArch(), Triple::x86_64);
+    EXPECT_EQ(T.getVendor(), Triple::UnknownVendor);
+    EXPECT_EQ(T.getOS(), Triple::UnknownOS);
+    EXPECT_EQ(T.getEnvironment(), Triple::MSVC);
+    EXPECT_EQ(T.getObjectFormat(), Triple::ELF);
+    EXPECT_EQ(T.str(), "x86_64-unknown-unknown-msvc");
+  }
+
+  {
+    Triple T(Triple::x86, Triple::NoSubArch, Triple::UnknownVendor,
+             Triple::Win32);
+    EXPECT_EQ(T.getArch(), Triple::x86);
+    EXPECT_EQ(T.getVendor(), Triple::UnknownVendor);
+    EXPECT_EQ(T.getOS(), Triple::Win32);
+    EXPECT_EQ(T.getEnvironment(), Triple::UnknownEnvironment);
+    EXPECT_EQ(T.getObjectFormat(), Triple::COFF);
+    EXPECT_EQ(T.str(), "i386-unknown-windows");
+  }
+
+  {
+    Triple T(Triple::x86, Triple::NoSubArch, Triple::PC, Triple::Win32,
+             Triple::MSVC);
+    EXPECT_EQ(T.getArch(), Triple::x86);
+    EXPECT_EQ(T.getVendor(), Triple::PC);
+    EXPECT_EQ(T.getOS(), Triple::Win32);
+    EXPECT_EQ(T.getEnvironment(), Triple::MSVC);
+    EXPECT_EQ(T.getObjectFormat(), Triple::COFF);
+    EXPECT_EQ(T.str(), "i386-pc-windows-msvc");
+  }
+}
+
 static std::string Join(StringRef A, StringRef B, StringRef C) {
   std::string Str = std::string(A);
   Str += '-';

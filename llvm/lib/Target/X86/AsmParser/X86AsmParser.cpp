@@ -1302,9 +1302,8 @@ public:
   };
 
   X86AsmParser(const MCSubtargetInfo &sti, MCAsmParser &Parser,
-               const MCInstrInfo &mii, const MCTargetOptions &Options)
-      : MCTargetAsmParser(Options, sti, mii),  InstInfo(nullptr),
-        Code16GCC(false) {
+               const MCInstrInfo &mii)
+      : MCTargetAsmParser(sti, mii), InstInfo(nullptr), Code16GCC(false) {
 
     Parser.addAliasForDirective(".word", ".2byte");
 
@@ -3849,7 +3848,7 @@ static bool convertSSEToAVX(MCInst &Inst) {
 }
 
 bool X86AsmParser::processInstruction(MCInst &Inst, const OperandVector &Ops) {
-  if (MCOptions.X86Sse2Avx && convertSSEToAVX(Inst))
+  if (getTargetOptions().X86Sse2Avx && convertSSEToAVX(Inst))
     return true;
 
   if (ForcedOpcodePrefix != OpcodePrefix_VEX3 &&
@@ -4877,7 +4876,7 @@ bool X86AsmParser::parseDirectiveEven(SMLoc L) {
 
   const MCSection *Section = getStreamer().getCurrentSectionOnly();
   if (!Section) {
-    getStreamer().initSections(false, getSTI());
+    getStreamer().initSections(getSTI());
     Section = getStreamer().getCurrentSectionOnly();
   }
   if (getContext().getAsmInfo()->useCodeAlign(*Section))

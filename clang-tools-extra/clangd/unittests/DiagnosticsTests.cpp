@@ -1091,6 +1091,18 @@ void foo(int *x);
               NullabilityKind::NonNull);
 }
 
+TEST(DiagnosticsTest, PreamblePragmaDiagnosticPushPop) {
+  auto TU = TestTU::withCode(R"cpp(
+#pragma clang diagnostic push
+int main() {
+   return 0;
+}
+#pragma clang diagnostic pop
+)cpp");
+  auto AST = TU.build();
+  EXPECT_THAT(AST.getDiagnostics(), IsEmpty());
+}
+
 TEST(DiagnosticsTest, PreambleHeaderWithBadPragmaAssumeNonnull) {
   Annotations Header(R"cpp(
 #pragma clang assume_nonnull begin  // error-ok

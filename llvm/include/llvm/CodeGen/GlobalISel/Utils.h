@@ -319,12 +319,12 @@ LLVM_ABI std::optional<APFloat>
 ConstantFoldIntToFloat(unsigned Opcode, LLT DstTy, Register Src,
                        const MachineRegisterInfo &MRI);
 
-/// Tries to constant fold a counting-zero operation (G_CTLZ or G_CTTZ) on \p
-/// Src. If \p Src is a vector then it tries to do an element-wise constant
-/// fold.
-LLVM_ABI std::optional<SmallVector<unsigned>>
-ConstantFoldCountZeros(Register Src, const MachineRegisterInfo &MRI,
-                       std::function<unsigned(APInt)> CB);
+/// Tries to constant fold a bit-counting operation (G_CTLZ, G_CTTZ, G_CTPOP
+/// and their _ZERO_UNDEF variants) on \p Src. If \p Src is a vector then it
+/// tries to do an element-wise constant fold.
+LLVM_ABI SmallVector<APInt> ConstantFoldCountOp(unsigned Opcode, LLT DstTy,
+                                                Register Src,
+                                                const MachineRegisterInfo &MRI);
 
 LLVM_ABI std::optional<SmallVector<APInt>>
 ConstantFoldICmp(unsigned Pred, const Register Op1, const Register Op2,
@@ -337,16 +337,6 @@ ConstantFoldICmp(unsigned Pred, const Register Op1, const Register Op2,
 LLVM_ABI bool
 isKnownToBeAPowerOfTwo(Register Val, const MachineRegisterInfo &MRI,
                        GISelValueTracking *ValueTracking = nullptr);
-
-/// Returns true if \p Val can be assumed to never be a NaN. If \p SNaN is true,
-/// this returns if \p Val can be assumed to never be a signaling NaN.
-LLVM_ABI bool isKnownNeverNaN(Register Val, const MachineRegisterInfo &MRI,
-                              bool SNaN = false);
-
-/// Returns true if \p Val can be assumed to never be a signaling NaN.
-inline bool isKnownNeverSNaN(Register Val, const MachineRegisterInfo &MRI) {
-  return isKnownNeverNaN(Val, MRI, true);
-}
 
 LLVM_ABI Align inferAlignFromPtrInfo(MachineFunction &MF,
                                      const MachinePointerInfo &MPO);

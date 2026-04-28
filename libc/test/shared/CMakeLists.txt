@@ -16,10 +16,12 @@ add_fp_unittest(
     libc.src.__support.math.acospif
     libc.src.__support.math.acospif16
     libc.src.__support.math.asin
+    libc.src.__support.math.asinbf16
     libc.src.__support.math.asinf
     libc.src.__support.math.asinf16
     libc.src.__support.math.asinhf
     libc.src.__support.math.asinhf16
+    libc.src.__support.math.asinpi
     libc.src.__support.math.asinpif
     libc.src.__support.math.asinpif16
     libc.src.__support.math.atan
@@ -59,6 +61,7 @@ add_fp_unittest(
     libc.src.__support.math.canonicalizef16
     libc.src.__support.math.canonicalizel
     libc.src.__support.math.cbrt
+    libc.src.__support.math.cbrtbf16
     libc.src.__support.math.cbrtf
     libc.src.__support.math.ceil
     libc.src.__support.math.ceilbf16
@@ -66,6 +69,12 @@ add_fp_unittest(
     libc.src.__support.math.ceilf128
     libc.src.__support.math.ceilf16
     libc.src.__support.math.ceill
+    libc.src.__support.math.copysign
+    libc.src.__support.math.copysignbf16
+    libc.src.__support.math.copysignf
+    libc.src.__support.math.copysignf128
+    libc.src.__support.math.copysignf16
+    libc.src.__support.math.copysignl
     libc.src.__support.math.cos
     libc.src.__support.math.cosf
     libc.src.__support.math.cosf16
@@ -75,11 +84,18 @@ add_fp_unittest(
     libc.src.__support.math.cospif16
     libc.src.__support.math.daddf128
     libc.src.__support.math.daddl
+    libc.src.__support.math.ddivf128
+    libc.src.__support.math.ddivl
     libc.src.__support.math.dfmaf128
     libc.src.__support.math.dfmal
+    libc.src.__support.math.dmulf128
+    libc.src.__support.math.dmull
     libc.src.__support.math.dsqrtl
+    libc.src.__support.math.dsubf128
+    libc.src.__support.math.dsubl
     libc.src.__support.math.exp10m1f
     libc.src.__support.math.exp10m1f16
+    libc.src.__support.math.erfcf16
     libc.src.__support.math.erff
     libc.src.__support.math.erff16
     libc.src.__support.math.exp
@@ -120,6 +136,12 @@ add_fp_unittest(
     libc.src.__support.math.f16subf
     libc.src.__support.math.f16subf128
     libc.src.__support.math.f16subl
+    libc.src.__support.math.fabs
+    libc.src.__support.math.fabsbf16
+    libc.src.__support.math.fabsf
+    libc.src.__support.math.fabsf128
+    libc.src.__support.math.fabsf16
+    libc.src.__support.math.fabsl
     libc.src.__support.math.fadd
     libc.src.__support.math.faddf128
     libc.src.__support.math.faddl
@@ -129,6 +151,9 @@ add_fp_unittest(
     libc.src.__support.math.fdimf128
     libc.src.__support.math.fdimf16
     libc.src.__support.math.fdiml
+    libc.src.__support.math.fdiv
+    libc.src.__support.math.fdivf128
+    libc.src.__support.math.fdivl
     libc.src.__support.math.ffma
     libc.src.__support.math.ffmaf128
     libc.src.__support.math.ffmal
@@ -147,6 +172,9 @@ add_fp_unittest(
     libc.src.__support.math.fmaxf
     libc.src.__support.math.fmaxf128
     libc.src.__support.math.fmaxf16
+    libc.src.__support.math.fmaximum_mag_num
+    libc.src.__support.math.fmaximum_mag_numbf16
+    libc.src.__support.math.fmaximum_mag_numf
     libc.src.__support.math.fmaxl
     libc.src.__support.math.frexpf
     libc.src.__support.math.frexpf128
@@ -174,6 +202,7 @@ add_fp_unittest(
     libc.src.__support.math.log
     libc.src.__support.math.log10
     libc.src.__support.math.log10f16
+    libc.src.__support.math.log10p1f16
     libc.src.__support.math.log10f
     libc.src.__support.math.log1p
     libc.src.__support.math.log1pf
@@ -181,7 +210,9 @@ add_fp_unittest(
     libc.src.__support.math.logb
     libc.src.__support.math.log2f
     libc.src.__support.math.log2f16
+    libc.src.__support.math.log2p1f16
     libc.src.__support.math.logbf
+    libc.src.__support.math.logbbf16
     libc.src.__support.math.logbf128
     libc.src.__support.math.logbf16
     libc.src.__support.math.logf
@@ -256,3 +287,83 @@ add_fp_unittest(
     libc.src.__support.math.tanpif
     libc.src.__support.math.tanpif16
 )
+
+add_fp_unittest(
+  shared_math_constexpr_test
+  SUITE
+    libc-shared-tests
+  SRCS
+    shared_math_constexpr_test.cpp
+  DEPENDS
+    libc.src.__support.math.asinbf16
+    libc.src.__support.math.ceil
+    libc.src.__support.math.ceilbf16
+    libc.src.__support.math.ceilf
+    libc.src.__support.math.ceilf128
+    libc.src.__support.math.ceilf16
+    libc.src.__support.math.ceill
+    libc.src.__support.math.copysign
+    libc.src.__support.math.copysignbf16
+    libc.src.__support.math.copysignf
+    libc.src.__support.math.copysignf128
+    libc.src.__support.math.copysignf16
+    libc.src.__support.math.copysignl
+    libc.src.__support.math.ddivf128
+    libc.src.__support.math.ddivl
+    libc.src.__support.math.dmulf128
+    libc.src.__support.math.dmull
+    libc.src.__support.math.fdim
+    libc.src.__support.math.fdimbf16
+    libc.src.__support.math.fdimf
+    libc.src.__support.math.fdimf128
+    libc.src.__support.math.fdimf16
+    libc.src.__support.math.fdiml
+    libc.src.__support.math.fdiv
+    libc.src.__support.math.fdivf128
+    libc.src.__support.math.fdivl
+    libc.src.__support.math.floor
+    libc.src.__support.math.floorbf16
+    libc.src.__support.math.floorf
+    libc.src.__support.math.floorf128
+    libc.src.__support.math.floorf16
+    libc.src.__support.math.floorl
+    libc.src.__support.math.fabs
+    libc.src.__support.math.fabsbf16
+    libc.src.__support.math.fabsf
+    libc.src.__support.math.fabsf128
+    libc.src.__support.math.fabsf16
+    libc.src.__support.math.fabsl
+    libc.src.__support.math.fmaximum_mag_num
+    libc.src.__support.math.fmaximum_mag_numbf16
+    libc.src.__support.math.fmaximum_mag_numf
+    libc.src.__support.math.log
+    libc.src.__support.math.logbbf16
+)
+
+add_fp_unittest(
+  shared_str_to_num_test
+  SUITE
+    libc-shared-tests
+  SRCS
+    shared_str_to_num_test.cpp
+  DEPENDS
+    libc.src.__support.str_to_float
+    libc.src.__support.str_to_integer
+)
+
+# FIXME: The LLVM libc full build does not support 'system' yet.
+if(NOT LLVM_LIBC_FULL_BUILD)
+add_libc_test(
+  shared_rpc_test
+  UNIT_TEST_ONLY
+  SUITE
+    libc-shared-tests
+  SRCS
+    shared_rpc_test.cpp
+  DEPENDS
+    libc.src.stdio.printf_core.converter
+    libc.src.stdio.printf_core.parser
+    libc.src.stdio.printf_core.writer
+    libc.src.__support.arg_list
+)
+endif()

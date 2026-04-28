@@ -102,7 +102,7 @@ static lldb_private::RegisterInfo g_register_infos_gcs[] = {
     DEFINE_EXTENSION_REG(gcs_features_locked), DEFINE_EXTENSION_REG(gcspr_el0)};
 
 static lldb_private::RegisterInfo g_register_infos_poe[] = {
-    DEFINE_EXTENSION_REG(por)};
+    DEFINE_EXTENSION_REG(por_el0)};
 
 // Number of register sets provided by this context.
 enum {
@@ -584,6 +584,10 @@ bool RegisterInfoPOSIX_arm64::IsSVERegVG(unsigned reg) const {
   return sve_vg == reg;
 }
 
+bool RegisterInfoPOSIX_arm64::IsSVERegFFR(unsigned reg) const {
+  return sve_ffr == reg;
+}
+
 bool RegisterInfoPOSIX_arm64::IsSMERegZA(unsigned reg) const {
   return reg == m_sme_regnum_collection[2];
 }
@@ -629,6 +633,8 @@ uint32_t RegisterInfoPOSIX_arm64::GetRegNumSVEFFR() const { return sve_ffr; }
 uint32_t RegisterInfoPOSIX_arm64::GetRegNumFPCR() const { return fpu_fpcr; }
 
 uint32_t RegisterInfoPOSIX_arm64::GetRegNumFPSR() const { return fpu_fpsr; }
+
+uint32_t RegisterInfoPOSIX_arm64::GetRegNumFPV0() const { return fpu_v0; }
 
 uint32_t RegisterInfoPOSIX_arm64::GetRegNumSVEVG() const { return sve_vg; }
 

@@ -24,7 +24,8 @@ int array2[recurse2]; // both-warning {{variable length arrays in C++}} \
                       // ref-warning {{variable length array folded to constant array as an extension}}
 
 constexpr int b = b; // both-error {{must be initialized by a constant expression}} \
-                     // both-note {{read of object outside its lifetime is not allowed in a constant expression}}
+                     // both-note {{read of object outside its lifetime is not allowed in a constant expression}} \
+                     // both-note {{declared here}}
 
 
 [[clang::require_constant_initialization]] int c = c; // both-error {{variable does not have a constant initializer}} \
@@ -345,6 +346,16 @@ namespace ReadMutableInCopyCtor {
                        // both-note {{in call to 'G(g1)'}}
 }
 
+namespace ReadAnonUnionInCopyCtor {
+  struct G {
+    struct X {};
+    union U { X a; };
+    union {X a; };
+  };
+  constexpr G g1 = {};
+  constexpr G g2 = g1;
+}
+
 namespace GH150709 {
   struct C { };
   struct D : C {
@@ -353,7 +364,7 @@ namespace GH150709 {
   struct E : C { };
   struct F : D { };
   struct G : E { };
-  
+
   constexpr C c1, c2[2];
   constexpr D d1, d2[2];
   constexpr E e1, e2[2];
@@ -422,4 +433,16 @@ namespace DummyToGlobalBlockMove {
   const AP Bar::m = {0, &Bar::_m[0]};
   Baz Bar::_m[] = {{0}};
   const AP m = {&Bar ::m};
+}
+
+namespace AddSubMulNonNumber {
+#define fold(x) (__builtin_constant_p(x) ? (x) : (x))
+
+  typedef decltype(sizeof(int)) LabelDiffTy;
+  constexpr LabelDiffTy mulBy3(LabelDiffTy x) { return x * 3; } // both-note {{subexpression}}
+  void LabelDiffTest() {
+    static_assert(mulBy3(fold((LabelDiffTy)&&a-(LabelDiffTy)&&b)) == 3, ""); // both-error {{constant expression}} \
+                                                                             // both-note {{call to 'mulBy3(&&a - &&b)'}}
+    a:b:return;
+  }
 }

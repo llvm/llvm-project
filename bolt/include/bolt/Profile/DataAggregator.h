@@ -87,6 +87,7 @@ private:
   friend raw_ostream &operator<<(raw_ostream &OS, const LBREntry &);
 
   friend struct PerfSpeEventsTestHelper;
+  friend struct PreAggregatedTestHelper;
 
   struct PerfBranchSample {
     SmallVector<LBREntry, 32> LBR;
@@ -145,6 +146,10 @@ private:
   std::unordered_map<uint64_t, bool> Returns;
   std::unordered_map<uint64_t, uint64_t> BasicSamples;
   std::vector<PerfMemSample> MemSamples;
+
+  /// Filter pre-aggregated entries belonging to a DSO with this buildid.
+  /// Set when processing a shared library, empty implies main binary.
+  StringRef FilterBuildID;
 
   template <typename T> void clear(T &Container) {
     T TempContainer;

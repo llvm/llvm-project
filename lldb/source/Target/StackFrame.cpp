@@ -65,7 +65,7 @@ StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
     : m_thread_wp(thread_sp), m_frame_index(frame_idx),
       m_concrete_frame_index(unwind_frame_index), m_reg_context_sp(),
       m_id(pc, cfa, nullptr, thread_sp->GetProcess().get()),
-      m_frame_code_addr(pc), m_sc(), m_flags(), m_frame_base(),
+      m_frame_code_addr(Address(pc)), m_sc(), m_flags(), m_frame_base(),
       m_frame_base_error(), m_cfa_is_valid(cfa_is_valid),
       m_stack_frame_kind(kind), m_artificial(artificial),
       m_behaves_like_zeroth_frame(behaves_like_zeroth_frame),
@@ -93,7 +93,7 @@ StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
       m_concrete_frame_index(unwind_frame_index),
       m_reg_context_sp(reg_context_sp),
       m_id(pc, cfa, nullptr, thread_sp->GetProcess().get()),
-      m_frame_code_addr(pc), m_sc(), m_flags(), m_frame_base(),
+      m_frame_code_addr(Address(pc)), m_sc(), m_flags(), m_frame_base(),
       m_frame_base_error(), m_cfa_is_valid(true),
       m_stack_frame_kind(StackFrame::Kind::Regular), m_artificial(false),
       m_behaves_like_zeroth_frame(behaves_like_zeroth_frame),
@@ -237,7 +237,7 @@ Address StackFrame::GetFrameCodeAddressForSymbolication() {
 
   addr_t offset = lookup_addr.GetOffset();
   if (offset > 0) {
-    lookup_addr.SetOffset(offset - 1);
+    lookup_addr.Slide(-1);
   } else {
     // lookup_addr is the start of a section.  We need do the math on the
     // actual load address and re-compute the section.  We're working with
@@ -439,7 +439,11 @@ StackFrame::GetSymbolContext(SymbolContextItem resolve_scope) {
 }
 
 VariableList *StackFrame::GetVariableList(bool get_file_globals,
+                                          bool include_synthetic_vars,
                                           Status *error_ptr) {
+  // We don't have 'synthetic variables' in the base stack frame.
+  (void)include_synthetic_vars;
+
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (m_flags.IsClear(RESOLVED_VARIABLES)) {
     m_flags.Set(RESOLVED_VARIABLES);
@@ -490,7 +494,11 @@ VariableList *StackFrame::GetVariableList(bool get_file_globals,
 
 VariableListSP
 StackFrame::GetInScopeVariableList(bool get_file_globals,
+                                   bool include_synthetic_vars,
                                    bool must_have_valid_location) {
+  // We don't have synthetic variables in the base stack frame.
+  (void)include_synthetic_vars;
+
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   // We can't fetch variable information for a history stack frame.
   if (IsHistorical())
@@ -541,39 +549,30 @@ ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
     uint32_t options, lldb::VariableSP &var_sp, Status &error,
     lldb::DILMode mode) {
 
-  const bool check_ptr_vs_member =
-      (options & eExpressionPathOptionCheckPtrVsMember) != 0;
-  const bool no_fragile_ivar =
-      (options & eExpressionPathOptionsNoFragileObjcIvar) != 0;
-  const bool no_synth_child =
-      (options & eExpressionPathOptionsNoSyntheticChildren) != 0;
-
   // Lex the expression.
   auto lex_or_err = dil::DILLexer::Create(var_expr, mode);
   if (!lex_or_err) {
     error = Status::FromError(lex_or_err.takeError());
-    return ValueObjectConstResult::Create(nullptr, std::move(error));
+    return ValueObjectConstResult::Create(nullptr, error.Clone());
   }
 
   // Parse the expression.
   auto tree_or_error = dil::DILParser::Parse(
-      var_expr, std::move(*lex_or_err), shared_from_this(), use_dynamic,
-      !no_synth_child, !no_fragile_ivar, check_ptr_vs_member);
+      var_expr, std::move(*lex_or_err), shared_from_this(), use_dynamic, mode);
   if (!tree_or_error) {
     error = Status::FromError(tree_or_error.takeError());
-    return ValueObjectConstResult::Create(nullptr, std::move(error));
+    return ValueObjectConstResult::Create(nullptr, error.Clone());
   }
 
   // Evaluate the parsed expression.
   lldb::TargetSP target = this->CalculateTarget();
   dil::Interpreter interpreter(target, var_expr, shared_from_this(),
-                               use_dynamic, !no_synth_child, !no_fragile_ivar,
-                               check_ptr_vs_member);
+                               use_dynamic, options);
 
   auto valobj_or_error = interpreter.Evaluate(**tree_or_error);
   if (!valobj_or_error) {
     error = Status::FromError(valobj_or_error.takeError());
-    return ValueObjectConstResult::Create(nullptr, std::move(error));
+    return ValueObjectConstResult::Create(nullptr, error.Clone());
   }
 
   var_sp = (*valobj_or_error)->GetVariable();
@@ -596,12 +595,8 @@ ValueObjectSP StackFrame::LegacyGetValueForVariableExpressionPath(
 
   const bool check_ptr_vs_member =
       (options & eExpressionPathOptionCheckPtrVsMember) != 0;
-  const bool no_fragile_ivar =
-      (options & eExpressionPathOptionsNoFragileObjcIvar) != 0;
   const bool no_synth_child =
       (options & eExpressionPathOptionsNoSyntheticChildren) != 0;
-  // const bool no_synth_array = (options &
-  // eExpressionPathOptionsNoSyntheticArrayRange) != 0;
   error.Clear();
   bool deref = false;
   bool address_of = false;
@@ -707,19 +702,6 @@ ValueObjectSP StackFrame::LegacyGetValueForVariableExpressionPath(
       expr_is_ptr = true;
       if (var_expr.size() >= 2 && var_expr[1] != '>')
         return ValueObjectSP();
-
-      if (no_fragile_ivar) {
-        // Make sure we aren't trying to deref an objective
-        // C ivar if this is not allowed
-        const uint32_t pointer_type_flags =
-            valobj_sp->GetCompilerType().GetTypeInfo(nullptr);
-        if ((pointer_type_flags & eTypeIsObjC) &&
-            (pointer_type_flags & eTypeIsPointer)) {
-          // This was an objective C object pointer and it was requested we
-          // skip any fragile ivars so return nothing here
-          return ValueObjectSP();
-        }
-      }
 
       // If we have a non-pointer type with a synthetic value then lets check if
       // we have a synthetic dereference specified.
@@ -1182,7 +1164,7 @@ llvm::Error StackFrame::GetFrameBaseValue(Scalar &frame_base) {
       if (!expr_value)
         m_frame_base_error = Status::FromError(expr_value.takeError());
       else
-        m_frame_base = expr_value->ResolveValue(&exe_ctx);
+        m_frame_base = expr_value->GetScalar();
     } else {
       m_frame_base_error =
           Status::FromErrorString("No function in symbol context.");
@@ -1236,7 +1218,8 @@ StackFrame::GetValueObjectForFrameVariable(const VariableSP &variable_sp,
     if (IsHistorical()) {
       return valobj_sp;
     }
-    VariableList *var_list = GetVariableList(true, nullptr);
+    VariableList *var_list = GetVariableList(
+        /*get_file_globals=*/true, /*include_synthetic_vars=*/true, nullptr);
     if (var_list) {
       // Make sure the variable is a frame variable
       const uint32_t var_idx =
@@ -1309,7 +1292,7 @@ const char *StackFrame::GetFunctionName() {
       const InlineFunctionInfo *inlined_info =
           inlined_block->GetInlinedFunctionInfo();
       if (inlined_info)
-        name = inlined_info->GetName().AsCString();
+        name = inlined_info->GetName().AsCString(nullptr);
     }
   }
 
@@ -1336,7 +1319,7 @@ const char *StackFrame::GetDisplayFunctionName() {
       const InlineFunctionInfo *inlined_info =
           inlined_block->GetInlinedFunctionInfo();
       if (inlined_info)
-        name = inlined_info->GetDisplayName().AsCString();
+        name = inlined_info->GetDisplayName().AsCString(nullptr);
     }
   }
 
@@ -1419,8 +1402,8 @@ GetBaseExplainingValue(const Instruction::Operand &operand,
     return base_and_offset;
   }
   case Instruction::Operand::Type::Register: {
-    const RegisterInfo *info =
-        register_context.GetRegisterInfoByName(operand.m_register.AsCString());
+    const RegisterInfo *info = register_context.GetRegisterInfoByName(
+        operand.m_register.AsCString(nullptr));
     if (!info) {
       return std::make_pair(nullptr, 0);
     }
@@ -1662,7 +1645,7 @@ lldb::ValueObjectSP DoGuessValueAt(StackFrame &frame, ConstString reg,
   using namespace OperandMatchers;
 
   const RegisterInfo *reg_info =
-      frame.GetRegisterContext()->GetRegisterInfoByName(reg.AsCString());
+      frame.GetRegisterContext()->GetRegisterInfoByName(reg.AsCString(nullptr));
   if (!reg_info) {
     return ValueObjectSP();
   }
@@ -1857,7 +1840,12 @@ lldb::ValueObjectSP StackFrame::GuessValueForRegisterAndOffset(ConstString reg,
   }
 
   const bool get_file_globals = false;
-  VariableList *variables = GetVariableList(get_file_globals, nullptr);
+  // Keep this as 'false' here because if we're inspecting a register, it's
+  // HIGHLY unlikely that we have an synthetic variable. Indeed, since we're not
+  // in a synthetic frame, it's probably actually impossible here.
+  const bool include_synthetic_vars = false;
+  VariableList *variables =
+      GetVariableList(get_file_globals, include_synthetic_vars, nullptr);
 
   if (!variables) {
     return ValueObjectSP();

@@ -57,6 +57,52 @@ define i1 @fcmp_trunc_zero(double %0) {
   ret i1 %result
 }
 
+define i1 @fcmp_trunc_uno(double %0) {
+; CHECK-LABEL: define i1 @fcmp_trunc_uno(
+; CHECK-SAME: double [[TMP0:%.*]]) {
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp uno double [[TMP0]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[RESULT]]
+;
+  %trunc = fptrunc double %0 to float
+  %result = fcmp uno float %trunc, 0.000000e+00
+  ret i1 %result
+}
+
+define i1 @fcmp_trunc_ord_inf(double %0) {
+; CHECK-LABEL: define i1 @fcmp_trunc_ord_inf(
+; CHECK-SAME: double [[TMP0:%.*]]) {
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp ord double [[TMP0]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[RESULT]]
+;
+  %trunc = fptrunc double %0 to float
+  %result = fcmp ord float %trunc, 0x7FF0000000000000
+  ret i1 %result
+}
+
+define i1 @fcmp_trunc_pair_uno(double %x, double %y) {
+; CHECK-LABEL: define i1 @fcmp_trunc_pair_uno(
+; CHECK-SAME: double [[X:%.*]], double [[Y:%.*]]) {
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp uno double [[X]], [[Y]]
+; CHECK-NEXT:    ret i1 [[RESULT]]
+;
+  %tx = fptrunc double %x to float
+  %ty = fptrunc double %y to float
+  %result = fcmp uno float %tx, %ty
+  ret i1 %result
+}
+
+define i1 @fcmp_trunc_pair_ord(double %x, double %y) {
+; CHECK-LABEL: define i1 @fcmp_trunc_pair_ord(
+; CHECK-SAME: double [[X:%.*]], double [[Y:%.*]]) {
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp ord double [[X]], [[Y]]
+; CHECK-NEXT:    ret i1 [[RESULT]]
+;
+  %tx = fptrunc double %x to float
+  %ty = fptrunc double %y to float
+  %result = fcmp ord float %tx, %ty
+  ret i1 %result
+}
+
 define i1 @fcmp_trunc_with_nnan(double %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_with_nnan(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
@@ -104,7 +150,7 @@ define i1 @fcmp_trunc_with_reassoc(double %0) {
 define i1 @fcmp_trunc_with_fast(double %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_with_fast(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp fast oge double [[TMP0]], 0x4058FFFFF0000000 
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp fast oge double [[TMP0]], 0x4058FFFFF0000000
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc double %0 to float
@@ -327,8 +373,7 @@ define i1 @fcmp_trunc_literal_positive_inf(double %0) {
 define i1 @fcmp_trunc_literal_negative_inf(double %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_literal_negative_inf(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc double [[TMP0]] to float
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp uno float [[TRUNC]], 0.000000e+00
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp uno double [[TMP0]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc double %0 to float

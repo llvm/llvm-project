@@ -181,8 +181,27 @@ void setCriticalLock(omp_lock_t *Lock) { setLock(Lock); }
 ///}
 
 #if defined(__SPIRV__)
-void namedBarrierInit() { __builtin_trap(); } // TODO
-void namedBarrier() { __builtin_trap(); }     // TODO
+
+[[clang::loader_uninitialized]] Local<uint32_t> namedBarrierTracker;
+
+void namedBarrierInit() {
+  atomic::store(&namedBarrierTracker, 0u, atomic::seq_cst, atomic::workgroup);
+}
+
+void namedBarrier() {
+  uint32_t NumThreads = omp_get_num_threads();
+  uint32_t load =
+      atomic::add(&namedBarrierTracker, 1, atomic::seq_cst, atomic::workgroup);
+
+  if (load >= NumThreads - 1) {
+    atomic::store(&namedBarrierTracker, 0u, atomic::seq_cst, atomic::workgroup);
+  } else {
+    do {
+      load = atomic::load(&namedBarrierTracker, atomic::seq_cst,
+                          atomic::workgroup);
+    } while (load != 0);
+  }
+}
 
 void unsetLock(omp_lock_t *Lock) {
   atomic::store((int32_t *)Lock, 0, atomic::seq_cst);
@@ -194,13 +213,7 @@ void initLock(omp_lock_t *Lock) { unsetLock(Lock); }
 void destroyLock(omp_lock_t *Lock) { unsetLock(Lock); }
 void setLock(omp_lock_t *Lock) {
   int32_t *Lock_ptr = (int32_t *)Lock;
-  bool Acquired = false;
-  int32_t Expected;
-  while (!Acquired) {
-    Expected = 0;
-    if (Expected == atomic::load(Lock_ptr, atomic::seq_cst))
-      Acquired =
-          atomic::cas(Lock_ptr, Expected, 1, atomic::seq_cst, atomic::seq_cst);
+  while (!atomic::cas(Lock_ptr, 0, 1, atomic::seq_cst, atomic::seq_cst)) {
   }
 }
 

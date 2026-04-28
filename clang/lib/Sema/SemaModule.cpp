@@ -465,9 +465,6 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
 
   getASTContext().setCurrentNamedModule(Mod);
 
-  if (auto *Listener = getASTMutationListener())
-    Listener->EnteringModulePurview();
-
   // We already potentially made an implicit import (in the case of a module
   // implementation unit importing its interface).  Make this module visible
   // and return the import decl to be added to the current TU.
@@ -938,7 +935,7 @@ static bool checkExportedDecl(Sema &S, Decl *D, SourceLocation BlockStart) {
   // HLSL: export declaration is valid only on functions
   if (S.getLangOpts().HLSL) {
     // Export-within-export was already diagnosed in ActOnStartExportDecl
-    if (!isa<FunctionDecl, ExportDecl>(D)) {
+    if (!isa<FunctionDecl, ExportDecl, ExplicitInstantiationDecl>(D)) {
       S.Diag(D->getBeginLoc(), diag::err_hlsl_export_not_on_function);
       D->setInvalidDecl();
       return false;
@@ -1477,7 +1474,7 @@ public:
     if (DRE->isNonOdrUse() && (L == Linkage::Internal || L == Linkage::None))
       if (auto *VD = dyn_cast<VarDecl>(Referenced);
           VD && VD->getInit() && !VD->getInit()->isValueDependent() &&
-          VD->getInit()->isConstantInitializer(Context, /*IsForRef=*/false))
+          VD->getInit()->isConstantInitializer(Context))
         return true;
 
     Callback(DRE, Referenced);

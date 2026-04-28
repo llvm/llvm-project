@@ -1435,10 +1435,10 @@ define float @v_test_sitofp_i64_byte_to_f32(i64 %arg0) {
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v1, 0xff
-; SI-NEXT:    v_mov_b32_e32 v2, 0
 ; SI-NEXT:    v_and_b32_e32 v1, 0xff, v0
 ; SI-NEXT:    v_ffbh_i32_e32 v0, 0
 ; SI-NEXT:    v_add_i32_e32 v0, vcc, -1, v0
+; SI-NEXT:    v_mov_b32_e32 v2, 0
 ; SI-NEXT:    v_min_u32_e32 v3, 32, v0
 ; SI-NEXT:    v_lshl_b64 v[0:1], v[1:2], v3
 ; SI-NEXT:    v_min_u32_e32 v0, 1, v0
@@ -1452,10 +1452,10 @@ define float @v_test_sitofp_i64_byte_to_f32(i64 %arg0) {
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v1, 0xff
-; VI-NEXT:    v_mov_b32_e32 v2, 0
 ; VI-NEXT:    v_and_b32_e32 v1, 0xff, v0
 ; VI-NEXT:    v_ffbh_i32_e32 v0, 0
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, -1, v0
+; VI-NEXT:    v_mov_b32_e32 v2, 0
 ; VI-NEXT:    v_min_u32_e32 v3, 32, v0
 ; VI-NEXT:    v_lshlrev_b64 v[0:1], v3, v[1:2]
 ; VI-NEXT:    v_min_u32_e32 v0, 1, v0
@@ -1474,9 +1474,9 @@ define float @v_test_uitofp_i64_byte_to_f32(i64 %arg0) {
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v1, 0xff
-; SI-NEXT:    v_mov_b32_e32 v2, 0
 ; SI-NEXT:    v_and_b32_e32 v1, 0xff, v0
 ; SI-NEXT:    v_ffbh_u32_e32 v0, 0
+; SI-NEXT:    v_mov_b32_e32 v2, 0
 ; SI-NEXT:    v_min_u32_e32 v3, 32, v0
 ; SI-NEXT:    v_lshl_b64 v[0:1], v[1:2], v3
 ; SI-NEXT:    v_min_u32_e32 v0, 1, v0
@@ -1490,9 +1490,9 @@ define float @v_test_uitofp_i64_byte_to_f32(i64 %arg0) {
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v1, 0xff
-; VI-NEXT:    v_mov_b32_e32 v2, 0
 ; VI-NEXT:    v_and_b32_e32 v1, 0xff, v0
 ; VI-NEXT:    v_ffbh_u32_e32 v0, 0
+; VI-NEXT:    v_mov_b32_e32 v2, 0
 ; VI-NEXT:    v_min_u32_e32 v3, 32, v0
 ; VI-NEXT:    v_lshlrev_b64 v[0:1], v3, v[1:2]
 ; VI-NEXT:    v_min_u32_e32 v0, 1, v0
