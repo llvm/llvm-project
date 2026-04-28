@@ -423,6 +423,12 @@ def FuseOp : Op<Transform_Dialect, "structured.fuse",
     and loop interchange permutation can be provided as either static
     attributes or dynamic values (transform parameters or payload handles).
 
+    Additionally, tile sizes can also be provided as a single handle containing
+    variadic number of values. In that case, the number of loops generated is
+    determined at runtime from the number of values in the packed handle.
+    For each target, created loops are appended to the single return handle in
+    the same order as the target operations.
+
     If `apply_cleanup` is true then slice canonicalization is applied between
     fusion steps. If `use_forall` is true then tiling method generates a
     `scf.forall` loop instead of `scf.for` loops.
