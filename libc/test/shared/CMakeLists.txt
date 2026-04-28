@@ -54,6 +54,7 @@ add_fp_unittest(
     libc.src.__support.math.bf16sub
     libc.src.__support.math.bf16subf
     libc.src.__support.math.bf16subf128
+    libc.src.__support.math.bf16subl
     libc.src.__support.math.canonicalize
     libc.src.__support.math.canonicalizebf16
     libc.src.__support.math.canonicalizef
@@ -296,6 +297,7 @@ add_fp_unittest(
     shared_math_constexpr_test.cpp
   DEPENDS
     libc.src.__support.math.asinbf16
+    libc.src.__support.math.bf16subl
     libc.src.__support.math.ceil
     libc.src.__support.math.ceilbf16
     libc.src.__support.math.ceilf

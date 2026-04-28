@@ -631,6 +631,15 @@ add_header_library(
     libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.generic.add_sub
 )
+add_header_library(
+  bf16subl
+  HDRS
+    bf16subl.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.macros.config
+)
 
 add_header_library(
   canonicalize
