@@ -34,7 +34,7 @@ define i8 @PR34687(i1 %c, i32 %x, i32 %n, i32 %divisor) {
 ; CHECK-NEXT:    [[PREDPHI1:%.*]] = select i1 [[C]], <4 x i32> [[TMP6]], <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i8 @llvm.vector.reduce.add.v4i8(<4 x i8> [[TMP3]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext i8 [[TMP7]] to i32
-; CHECK-NEXT:    [[PREDPHI:%.*]] = extractelement <4 x i32> [[PREDPHI1]], i32 3
+; CHECK-NEXT:    [[PREDPHI:%.*]] = extractelement <4 x i32> [[PREDPHI1]], i64 3
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:

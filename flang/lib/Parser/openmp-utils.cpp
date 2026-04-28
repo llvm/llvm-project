@@ -25,6 +25,24 @@
 
 namespace Fortran::parser::omp {
 
+const OmpDirectiveSpecification &GetOmpDirectiveSpecification(
+    const OpenMPConstruct &x) {
+  return std::visit(
+      [](auto &&s) -> decltype(auto) {
+        return detail::DirectiveSpecificationScope::GetODS(s);
+      },
+      x.u);
+}
+
+const OmpDirectiveSpecification &GetOmpDirectiveSpecification(
+    const OpenMPDeclarativeConstruct &x) {
+  return std::visit(
+      [](auto &&s) -> decltype(auto) {
+        return detail::DirectiveSpecificationScope::GetODS(s);
+      },
+      x.u);
+}
+
 std::string GetUpperName(llvm::omp::Clause id, unsigned version) {
   llvm::StringRef name{llvm::omp::getOpenMPClauseName(id, version)};
   return parser::ToUpperCaseLetters(name);

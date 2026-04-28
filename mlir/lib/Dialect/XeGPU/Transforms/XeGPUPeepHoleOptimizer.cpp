@@ -598,16 +598,7 @@ struct XeGPUPeepHoleOptimizerPass final
     RewritePatternSet emptyPatterns(ctx);
     (void)applyPatternsGreedily(getOperation(), std::move(emptyPatterns));
 
-    // Remove the temporary layout after all patterns are applied.
-    getOperation()->walk([](Operation *op) {
-      SmallVector<StringAttr> attrsToRemove;
-      for (auto namedAttr : op->getDiscardableAttrs()) {
-        if (isa<xegpu::DistributeLayoutAttr>(namedAttr.getValue()))
-          attrsToRemove.push_back(namedAttr.getName());
-      }
-      for (auto attrName : attrsToRemove)
-        op->removeDiscardableAttr(attrName);
-    });
+    xegpu::removeTemporaryLayoutAttrs(getOperation());
   }
 };
 

@@ -1,11 +1,11 @@
 ; REQUIRES: asserts
 ; RUN: opt -passes=loop-vectorize -mcpu=neoverse-v1 -disable-output %s -debug \
-; RUN:   -prefer-predicate-over-epilogue=scalar-epilogue 2>&1 | FileCheck %s
+; RUN:   -tail-folding-policy=dont-fold-tail 2>&1 | FileCheck %s
 
 target triple="aarch64--linux-gnu"
 
 ; CHECK: LV: Checking a loop in 'gather_nxv4i32_loaded_index'
-; CHECK: LV: Found an estimated cost of 81 for VF vscale x 4 For instruction:   %1 = load float, ptr %arrayidx3, align 4
+; CHECK: Cost of 81 for VF vscale x 4: WIDEN ir<%1> = load ir<%arrayidx3>
 define void @gather_nxv4i32_loaded_index(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b, ptr noalias nocapture %c, i64 %n) #0 {
 entry:
   br label %for.body
@@ -27,7 +27,7 @@ for.cond.cleanup:
 }
 
 ; CHECK: LV: Checking a loop in 'scatter_nxv4i32_loaded_index'
-; CHECK: LV: Found an estimated cost of 81 for VF vscale x 4 For instruction:   store float %1, ptr %arrayidx5, align 4
+; CHECK: Cost of 81 for VF vscale x 4: WIDEN store ir<%arrayidx5>, ir<%1>
 define void @scatter_nxv4i32_loaded_index(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b, ptr noalias nocapture %c, i64 %n) #0 {
 entry:
   br label %for.body
@@ -51,7 +51,7 @@ for.cond.cleanup:
 ; NOTE: For runtime-determined strides the vectoriser versions the loop and adds SCEV checks
 ; to ensure the stride value is always 1. Therefore, it can assume a contiguous load and a cost of 1.
 ; CHECK: LV: Checking a loop in 'gather_nxv4i32_unknown_stride'
-; CHECK: LV: Found an estimated cost of 1 for VF vscale x 4 For instruction:   %0 = load float, ptr %arrayidx, align 4
+; CHECK: Cost of 1 for VF vscale x 4: WIDEN ir<%0> = load vp<{{.+}}>
 define void @gather_nxv4i32_unknown_stride(ptr noalias nocapture readonly %a, ptr noalias nocapture %b, i64 %stride, i64 %n) #0 {
 entry:
   br label %for.body
@@ -74,7 +74,7 @@ for.cond.cleanup:
 ; NOTE: For runtime-determined strides the vectoriser versions the loop and adds SCEV checks
 ; to ensure the stride value is always 1. Therefore, it can assume a contiguous load and cost is 1.
 ; CHECK: LV: Checking a loop in 'scatter_nxv4i32_unknown_stride'
-; CHECK: LV: Found an estimated cost of 1 for VF vscale x 4 For instruction:   store float %0, ptr %arrayidx2, align 4
+; CHECK: Cost of 1 for VF vscale x 4: WIDEN store vp<{{.+}}>, ir<%0>
 define void @scatter_nxv4i32_unknown_stride(ptr noalias nocapture readonly %a, ptr noalias nocapture %b, i64 %stride, i64 %n) #0 {
 entry:
   br label %for.body
@@ -95,7 +95,7 @@ for.cond.cleanup:
 }
 
 ; CHECK: LV: Checking a loop in 'gather_nxv4i32_stride2'
-; CHECK: LV: Found an estimated cost of 2 for VF vscale x 4 For instruction:   %0 = load float, ptr %arrayidx, align 4
+; CHECK: Cost of 2 for VF vscale x 4: INTERLEAVE-GROUP with factor 2 at %0, ir<%arrayidx>
 define void @gather_nxv4i32_stride2(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b, i64 %n) #0 {
 entry:
   br label %for.body
@@ -116,7 +116,7 @@ for.cond.cleanup:
 }
 
 ; CHECK: LV: Checking a loop in 'scatter_nxv4i32_stride2'
-; CHECK: LV: Found an estimated cost of 81 for VF vscale x 4 For instruction:   store float %0, ptr %arrayidx2, align 4
+; CHECK: Cost of 81 for VF vscale x 4: WIDEN store ir<%arrayidx2>, ir<%0>
 define void @scatter_nxv4i32_stride2(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b, i64 %n) #0 {
 entry:
   br label %for.body
@@ -138,7 +138,7 @@ for.cond.cleanup:
 
 
 ; CHECK: LV: Checking a loop in 'gather_nxv4i32_stride64'
-; CHECK: LV: Found an estimated cost of 81 for VF vscale x 4 For instruction:   %0 = load float, ptr %arrayidx, align 4
+; CHECK: Cost of 81 for VF vscale x 4: WIDEN ir<%0> = load ir<%arrayidx>
 define void @gather_nxv4i32_stride64(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b, i64 %n) #0 {
 entry:
   br label %for.body
@@ -159,7 +159,7 @@ for.cond.cleanup:
 }
 
 ; CHECK: LV: Checking a loop in 'scatter_nxv4i32_stride64'
-; CHECK: LV: Found an estimated cost of 81 for VF vscale x 4 For instruction:   store float %0, ptr %arrayidx2, align 4
+; CHECK: Cost of 81 for VF vscale x 4: WIDEN store ir<%arrayidx2>, ir<%0>
 define void @scatter_nxv4i32_stride64(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b, i64 %n) #0 {
 entry:
   br label %for.body

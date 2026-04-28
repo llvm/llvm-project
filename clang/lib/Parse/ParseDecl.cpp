@@ -1067,7 +1067,8 @@ void Parser::ParseOpenCLQualifiers(ParsedAttributes &Attrs) {
 }
 
 bool Parser::isHLSLQualifier(const Token &Tok) const {
-  return Tok.is(tok::kw_groupshared);
+  return Tok.is(tok::kw_groupshared) || Tok.is(tok::kw_row_major) ||
+         Tok.is(tok::kw_column_major);
 }
 
 void Parser::ParseHLSLQualifiers(ParsedAttributes &Attrs) {
@@ -2160,7 +2161,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
       ;
 
   if (Tok.is(tok::kw_requires))
-    ParseTrailingRequiresClause(D);
+    ParseTrailingRequiresClauseWithScope(D);
 
   // Save late-parsed attributes for now; they need to be parsed in the
   // appropriate function scope after the function Decl has been constructed.
@@ -2413,7 +2414,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
       //	      declarator initializer[opt]
       //        declarator requires-clause
       if (Tok.is(tok::kw_requires))
-        ParseTrailingRequiresClause(D);
+        ParseTrailingRequiresClauseWithScope(D);
       Decl *ThisDecl = ParseDeclarationAfterDeclarator(D, TemplateInfo);
       D.complete(ThisDecl);
       if (ThisDecl)
@@ -4631,7 +4632,8 @@ void Parser::ParseDeclarationSpecifiers(
     case tok::kw___read_write:
       ParseOpenCLQualifiers(DS.getAttributes());
       break;
-
+    case tok::kw_row_major:
+    case tok::kw_column_major:
     case tok::kw_groupshared:
     case tok::kw_in:
     case tok::kw_inout:
@@ -5076,7 +5078,11 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
                          (AllowEnumSpecifier == AllowDefiningTypeSpec::Yes ||
                           CanBeOpaqueEnumDeclaration);
 
-  CXXScopeSpec &SS = DS.getTypeSpecScope();
+  // We use a temporary scope when parsing the name specifier for a
+  // declaration with additional invalid type specifiers.
+  CXXScopeSpec InvalidDeclScope;
+  CXXScopeSpec &SS =
+      DS.hasTypeSpecifier() ? InvalidDeclScope : DS.getTypeSpecScope();
   if (getLangOpts().CPlusPlus) {
     // "enum foo : bar;" is not a potential typo for "enum foo::bar;".
     ColonProtectionRAIIObject X(*this);
@@ -5748,6 +5754,8 @@ bool Parser::isTypeSpecifierQualifier(const Token &Tok) {
   case tok::kw_in:
   case tok::kw_inout:
   case tok::kw_out:
+  case tok::kw_row_major:
+  case tok::kw_column_major:
     return getLangOpts().HLSL;
   }
 }
@@ -6025,6 +6033,10 @@ bool Parser::isDeclarationSpecifier(
   case tok::kw___funcref:
   case tok::kw_groupshared:
     return true;
+
+  case tok::kw_row_major:
+  case tok::kw_column_major:
+    return getLangOpts().HLSL;
 
   case tok::kw_private:
     return getLangOpts().OpenCL;

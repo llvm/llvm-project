@@ -169,7 +169,7 @@ void link(const LinkerInput &LI, llvm::TimerGroup &TG) {
 
     llvm::TimeRegion _(Time ? &TWrite : nullptr);
 
-    auto Output = std::move(EL).getOutput();
+    auto Output = std::move(EL).takeOutput();
     if (auto Err = LI.OutputFile.Format->writeLUSummaryEncoding(
             Output, LI.OutputFile.Path)) {
       fail(std::move(Err));

@@ -635,6 +635,9 @@ def err_modules_driver_named_module_redefinition : Error<
 def remark_printing_module_graph : Remark<
   "printing module dependency graph">,
   InGroup<ModulesDriver>;
+def err_module_defined_outside_of_module_source : Error<
+  "module '%0' is defined in file '%1', but module declarations are only "
+  "allowed in C++ module inputs; use the '.cppm' extension or '-x c++module'">;
 
 def warn_drv_delayed_template_parsing_after_cxx20 : Warning<
   "-fdelayed-template-parsing is deprecated after C++20">,

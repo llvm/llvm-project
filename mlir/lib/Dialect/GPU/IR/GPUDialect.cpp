@@ -42,6 +42,7 @@
 #include "llvm/Support/StringSaver.h"
 #include <cassert>
 #include <numeric>
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::gpu;
@@ -262,8 +263,10 @@ bool GPUDialect::hasConstantMemoryAddressSpace(MemRefType type) {
 }
 
 bool GPUDialect::isKernel(Operation *op) {
-  UnitAttr isKernelAttr = op->getAttrOfType<UnitAttr>(getKernelFuncAttrName());
-  return static_cast<bool>(isKernelAttr);
+  if (auto gpuFunc = dyn_cast<GPUFuncOp>(op))
+    return gpuFunc.isKernel();
+  return static_cast<bool>(
+      op->getAttrOfType<UnitAttr>(getKernelFuncAttrName()));
 }
 
 namespace {
@@ -301,6 +304,9 @@ void GPUDialect::initialize() {
                             BlockDimOp, BlockIdOp, GridDimOp, ThreadIdOp,
                             LaneIdOp, SubgroupIdOp, GlobalIdOp, NumSubgroupsOp,
                             SubgroupSizeOp, LaunchOp, SubgroupBroadcastOp>();
+  declarePromisedInterfaces<memref::IndexedAccessOpInterface,
+                            SubgroupMmaLoadMatrixOp,
+                            SubgroupMmaStoreMatrixOp>();
 }
 
 static std::string getSparseHandleKeyword(SparseHandleKind kind) {
@@ -710,10 +716,10 @@ void LaunchOp::build(OpBuilder &builder, OperationState &result,
                      FlatSymbolRefAttr module, FlatSymbolRefAttr function) {
   OpBuilder::InsertionGuard g(builder);
 
-  // Add a WorkGroup attribution attribute. This attribute is required to
-  // identify private attributions in the list of block argguments.
-  result.addAttribute(getNumWorkgroupAttributionsAttrName(),
-                      builder.getI64IntegerAttr(workgroupAttributions.size()));
+  if (!workgroupAttributions.empty())
+    result.addAttribute(
+        getWorkgroupAttributionsAttrName(result.name),
+        builder.getI64IntegerAttr(workgroupAttributions.size()));
 
   // Add Op operands.
   result.addOperands(asyncDependencies);
@@ -839,7 +845,7 @@ LogicalResult LaunchOp::verifyRegions() {
   }
 
   // Verify Attributions Address Spaces.
-  if (failed(verifyAttributions(getOperation(), getWorkgroupAttributions(),
+  if (failed(verifyAttributions(getOperation(), getWorkgroupAttributionBBArgs(),
                                 GPUDialect::getWorkgroupAddressSpace())) ||
       failed(verifyAttributions(getOperation(), getPrivateAttributions(),
                                 GPUDialect::getPrivateAddressSpace())))
@@ -918,7 +924,7 @@ void LaunchOp::print(OpAsmPrinter &p) {
     p << ')';
   }
 
-  printAttributions(p, getWorkgroupKeyword(), getWorkgroupAttributions());
+  printAttributions(p, getWorkgroupKeyword(), getWorkgroupAttributionBBArgs());
   printAttributions(p, getPrivateKeyword(), getPrivateAttributions());
 
   p << ' ';
@@ -926,7 +932,7 @@ void LaunchOp::print(OpAsmPrinter &p) {
   p.printRegion(getBody(), /*printEntryBlockArgs=*/false);
   p.printOptionalAttrDict((*this)->getAttrs(), /*elidedAttrs=*/{
                               LaunchOp::getOperandSegmentSizeAttr(),
-                              getNumWorkgroupAttributionsAttrName(),
+                              getWorkgroupAttributionsAttrName(),
                               moduleAttrName, functionAttrName});
 }
 
@@ -1069,12 +1075,9 @@ ParseResult LaunchOp::parse(OpAsmParser &parser, OperationState &result) {
       return failure();
   }
 
-  // Create the region arguments, it has kNumConfigRegionAttributes arguments
-  // that correspond to block/thread identifiers and grid/block sizes, all
-  // having `index` type, a variadic number of WorkGroup Attributions and
-  // a variadic number of Private Attributions. The number of WorkGroup
-  // Attributions is stored in the attr with name:
-  // LaunchOp::getNumWorkgroupAttributionsAttrName().
+  // Create the region arguments: fixed launch-config args (`index`), then
+  // workgroup / private attribution args. The workgroup count is stored in the
+  // inherent `workgroup_attributions` attribute when non-zero.
   Type index = parser.getBuilder().getIndexType();
   SmallVector<Type, LaunchOp::kNumConfigRegionAttributes> dataTypes(
       LaunchOp::kNumConfigRegionAttributes + 6, index);
@@ -1098,8 +1101,9 @@ ParseResult LaunchOp::parse(OpAsmParser &parser, OperationState &result) {
   unsigned numWorkgroupAttrs = regionArguments.size() -
                                LaunchOp::kNumConfigRegionAttributes -
                                (hasCluster ? 6 : 0);
-  result.addAttribute(LaunchOp::getNumWorkgroupAttributionsAttrName(),
-                      builder.getI64IntegerAttr(numWorkgroupAttrs));
+  if (numWorkgroupAttrs != 0)
+    result.addAttribute(LaunchOp::getWorkgroupAttributionsAttrName(result.name),
+                        builder.getI64IntegerAttr(numWorkgroupAttrs));
 
   // Parse private memory attributions.
   if (failed(parseAttributions(parser, LaunchOp::getPrivateKeyword(),
@@ -1173,12 +1177,10 @@ void LaunchOp::getCanonicalizationPatterns(RewritePatternSet &rewrites,
 /// Adds a new block argument that corresponds to buffers located in
 /// workgroup memory.
 BlockArgument LaunchOp::addWorkgroupAttribution(Type type, Location loc) {
-  auto attrName = getNumWorkgroupAttributionsAttrName();
-  auto attr = (*this)->getAttrOfType<IntegerAttr>(attrName);
-  (*this)->setAttr(attrName,
-                   IntegerAttr::get(attr.getType(), attr.getValue() + 1));
+  int64_t cur = getWorkgroupAttributions().value_or(0);
+  setWorkgroupAttributions(std::optional<int64_t>(cur + 1));
   return getBody().insertArgument(
-      LaunchOp::getNumConfigRegionAttributes() + attr.getInt(), type, loc);
+      getNumConfigRegionAttributes() + static_cast<unsigned>(cur), type, loc);
 }
 
 /// Adds a new block argument that corresponds to buffers located in
@@ -1388,8 +1390,7 @@ LaunchFuncOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
     return diag;
   }
 
-  if (!kernelFunc->getAttrOfType<mlir::UnitAttr>(
-          GPUDialect::getKernelFuncAttrName()))
+  if (!GPUDialect::isKernel(kernelFunc))
     return launchOp.emitOpError("kernel function is missing the '")
            << GPUDialect::getKernelFuncAttrName() << "' attribute";
 
@@ -1573,12 +1574,10 @@ void BarrierOp::build(OpBuilder &builder, OperationState &odsState,
 /// Adds a new block argument that corresponds to buffers located in
 /// workgroup memory.
 BlockArgument GPUFuncOp::addWorkgroupAttribution(Type type, Location loc) {
-  auto attrName = getNumWorkgroupAttributionsAttrName();
-  auto attr = (*this)->getAttrOfType<IntegerAttr>(attrName);
-  (*this)->setAttr(attrName,
-                   IntegerAttr::get(attr.getType(), attr.getValue() + 1));
+  int64_t cur = getWorkgroupAttributions().value_or(0);
+  setWorkgroupAttributions(std::optional<int64_t>(cur + 1));
   return getBody().insertArgument(
-      getFunctionType().getNumInputs() + attr.getInt(), type, loc);
+      getFunctionType().getNumInputs() + static_cast<unsigned>(cur), type, loc);
 }
 
 /// Adds a new block argument that corresponds to buffers located in
@@ -1600,7 +1599,7 @@ void GPUFuncOp::build(OpBuilder &builder, OperationState &result,
                       builder.getStringAttr(name));
   result.addAttribute(getFunctionTypeAttrName(result.name),
                       TypeAttr::get(type));
-  result.addAttribute(getNumWorkgroupAttributionsAttrName(),
+  result.addAttribute(getWorkgroupAttributionsAttrName(result.name),
                       builder.getI64IntegerAttr(workgroupAttributions.size()));
   result.addAttributes(attrs);
   Region *body = result.addRegion();
@@ -1709,8 +1708,10 @@ ParseResult GPUFuncOp::parse(OpAsmParser &parser, OperationState &result) {
   // Store the number of operands we just parsed as the number of workgroup
   // memory attributions.
   unsigned numWorkgroupAttrs = entryArgs.size() - type.getNumInputs();
-  result.addAttribute(GPUFuncOp::getNumWorkgroupAttributionsAttrName(),
-                      builder.getI64IntegerAttr(numWorkgroupAttrs));
+  if (numWorkgroupAttrs != 0)
+    result.addAttribute(
+        GPUFuncOp::getWorkgroupAttributionsAttrName(result.name),
+        builder.getI64IntegerAttr(numWorkgroupAttrs));
   if (workgroupAttributionAttrs)
     result.addAttribute(GPUFuncOp::getWorkgroupAttribAttrsAttrName(result.name),
                         workgroupAttributionAttrs);
@@ -1726,7 +1727,7 @@ ParseResult GPUFuncOp::parse(OpAsmParser &parser, OperationState &result) {
 
   // Parse the kernel attribute if present.
   if (succeeded(parser.parseOptionalKeyword(GPUFuncOp::getKernelKeyword())))
-    result.addAttribute(GPUDialect::getKernelFuncAttrName(),
+    result.addAttribute(GPUFuncOp::getKernelAttrName(result.name),
                         builder.getUnitAttr());
 
   // Parse attributes.
@@ -1748,7 +1749,7 @@ void GPUFuncOp::print(OpAsmPrinter &p) {
                                                   /*isVariadic=*/false,
                                                   type.getResults());
 
-  printAttributions(p, getWorkgroupKeyword(), getWorkgroupAttributions(),
+  printAttributions(p, getWorkgroupKeyword(), getWorkgroupAttributionBBArgs(),
                     getWorkgroupAttribAttrs().value_or(nullptr));
   printAttributions(p, getPrivateKeyword(), getPrivateAttributions(),
                     getPrivateAttribAttrs().value_or(nullptr));
@@ -1757,7 +1758,7 @@ void GPUFuncOp::print(OpAsmPrinter &p) {
 
   function_interface_impl::printFunctionAttributes(
       p, *this,
-      {getNumWorkgroupAttributionsAttrName(),
+      {getWorkgroupAttributionsAttrName(), getKernelAttrName(),
        GPUDialect::getKernelFuncAttrName(), getFunctionTypeAttrName(),
        getArgAttrsAttrName(), getResAttrsAttrName(),
        getWorkgroupAttribAttrsAttrName(), getPrivateAttribAttrsAttrName()});
@@ -1911,7 +1912,7 @@ LogicalResult GPUFuncOp::verifyBody() {
                            << blockArgType;
   }
 
-  if (failed(verifyAttributions(getOperation(), getWorkgroupAttributions(),
+  if (failed(verifyAttributions(getOperation(), getWorkgroupAttributionBBArgs(),
                                 GPUDialect::getWorkgroupAddressSpace())) ||
       failed(verifyAttributions(getOperation(), getPrivateAttributions(),
                                 GPUDialect::getPrivateAddressSpace())))

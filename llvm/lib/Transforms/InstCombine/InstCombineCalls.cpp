@@ -1084,7 +1084,7 @@ Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
     if (OrderedInvertedMask == fcInf)
       Pred = IsUnordered ? FCmpInst::FCMP_UNE : FCmpInst::FCMP_ONE;
 
-    Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, Src0);
+    Value *Fabs = Builder.CreateFAbs(Src0);
     Value *CmpInf = Builder.CreateFCmp(Pred, Fabs, Inf);
     CmpInf->takeName(&II);
     return replaceInstUsesWith(II, CmpInf);
@@ -2938,7 +2938,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     };
 
     if (IsMinMaxOrXNegX(Arg0, Arg1) || IsMinMaxOrXNegX(Arg1, Arg0)) {
-      Value *R = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, II);
+      Value *R = Builder.CreateFAbs(X, II);
       if (IID == Intrinsic::minimum || IID == Intrinsic::minnum ||
           IID == Intrinsic::minimumnum)
         R = Builder.CreateFNegFMF(R, II);
@@ -3060,13 +3060,13 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       if (*KnownSignBit) {
         // If we know that the sign argument is negative, reduce to FNABS:
         // copysign Mag, -Sign --> fneg (fabs Mag)
-        Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, Mag, II);
+        Value *Fabs = Builder.CreateFAbs(Mag, II);
         return replaceInstUsesWith(*II, Builder.CreateFNegFMF(Fabs, II));
       }
 
       // If we know that the sign argument is positive, reduce to FABS:
       // copysign Mag, +Sign --> fabs Mag
-      Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, Mag, II);
+      Value *Fabs = Builder.CreateFAbs(Mag, II);
       return replaceInstUsesWith(*II, Fabs);
     }
 
@@ -3117,8 +3117,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Value *X;
     // fabs (-X) --> fabs (X)
     if (match(Arg, m_FNeg(m_Value(X)))) {
-        CallInst *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, II);
-        return replaceInstUsesWith(CI, Fabs);
+      CallInst *Fabs = Builder.CreateFAbs(X, II);
+      return replaceInstUsesWith(CI, Fabs);
     }
 
     if (match(Arg, m_Select(m_Value(Cond), m_Value(TVal), m_Value(FVal)))) {
@@ -3147,8 +3147,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (match(II->getArgOperand(0),
               m_CopySign(m_Value(Magnitude), m_Value(Sign)))) {
       // fabs (copysign x, y) -> (fabs x)
-      CallInst *AbsSign =
-          Builder.CreateUnaryIntrinsic(Intrinsic::fabs, Magnitude, II);
+      CallInst *AbsSign = Builder.CreateFAbs(Magnitude, II);
       return replaceInstUsesWith(*II, AbsSign);
     }
 

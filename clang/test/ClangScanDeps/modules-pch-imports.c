@@ -51,14 +51,14 @@
 [{
   "file": "DIR/prefix.h",
   "directory": "DIR",
-  "command": "clang -x c-header DIR/prefix.h -o DIR/prefix.h.pch -fmodules -fimplicit-modules -fimplicit-module-maps -fmodules-cache-path=DIR/module-cache"
+  "command": "clang -nostdinc -x c-header DIR/prefix.h -o DIR/prefix.h.pch -fmodules -fimplicit-modules -fimplicit-module-maps -fmodules-cache-path=DIR/module-cache"
 }]
 
 //--- cdb.json.template
 [{
   "file": "DIR/tu.c",
   "directory": "DIR",
-  "command": "clang -fsyntax-only DIR/tu.c -include DIR/prefix.h -fmodule-name=C -fmodules -fimplicit-modules -fimplicit-module-maps -fmodules-cache-path=DIR/module-cache"
+  "command": "clang -nostdinc -fsyntax-only DIR/tu.c -include DIR/prefix.h -fmodule-name=C -fmodules -fimplicit-modules -fimplicit-module-maps -fmodules-cache-path=DIR/module-cache"
 }]
 
 //--- module.modulemap

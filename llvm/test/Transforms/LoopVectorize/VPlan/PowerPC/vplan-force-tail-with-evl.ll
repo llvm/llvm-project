@@ -1,6 +1,6 @@
 ; RUN: opt -passes=loop-vectorize -vplan-print-after=printOptimizedVPlan \
 ; RUN: -force-tail-folding-style=data-with-evl \
-; RUN: -prefer-predicate-over-epilogue=predicate-dont-vectorize \
+; RUN: -tail-folding-policy=must-fold-tail \
 ; RUN: -mtriple=powerpc64le-unknown-linux-gnu \
 ; RUN: -mcpu=pwr10 -disable-output < %s 2>&1 | FileCheck %s
 

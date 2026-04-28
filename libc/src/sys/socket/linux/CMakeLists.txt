@@ -39,6 +39,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  accept4
+  SRCS
+    accept4.cpp
+  HDRS
+    ../accept4.h
+  DEPENDS
+    libc.include.sys_socket
+    libc.src.__support.OSUtil.osutil
+    libc.hdr.types.struct_sockaddr
+    libc.hdr.types.socklen_t
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   connect
   SRCS
     connect.cpp
@@ -186,6 +200,18 @@ add_entrypoint_object(
     libc.include.sys_syscall
     libc.hdr.types.struct_msghdr
     libc.src.__support.macros.sanitizer
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  shutdown
+  SRCS
+    shutdown.cpp
+  HDRS
+    ../shutdown.h
+  DEPENDS
+    libc.include.sys_socket
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )

@@ -1775,10 +1775,10 @@ auto OmpDirectiveSpecificationParser::Parse(ParseState &state) const
   return std::nullopt;
 }
 
-static bool IsStandaloneOrdered(const OmpDirectiveSpecification &dirSpec) {
+static bool IsStandaloneOrdered(const OmpDirectiveSpecification &spec) {
   // An ORDERED construct is standalone if it has DOACROSS or DEPEND clause.
-  return dirSpec.DirId() == llvm::omp::Directive::OMPD_ordered &&
-      llvm::any_of(dirSpec.Clauses().v, [](const OmpClause &clause) {
+  return spec.DirId() == llvm::omp::Directive::OMPD_ordered &&
+      llvm::any_of(spec.Clauses().v, [](const OmpClause &clause) {
         llvm::omp::Clause id{clause.Id()};
         return id == llvm::omp::Clause::OMPC_depend ||
             id == llvm::omp::Clause::OMPC_doacross;
@@ -1836,8 +1836,14 @@ struct NonBlockDoConstructParser {
     // Keep parsing ExecutionPartConstructs until the set of open label-do
     // statements becomes empty, or until the EPC parser fails.
     auto processEpc{[&](ExecutionPartConstruct &&epc) {
+      // The parsed epc may be a construct. In such case, get the final
+      // label from it.
       if (auto &&label{GetStatementLabel(epc)}) {
         labels.erase(*label);
+      } else if (auto *omp{Unwrap<OpenMPConstruct>(epc)}) {
+        if (auto &&label{GetFinalLabel(*omp)}) {
+          labels.erase(*label);
+        }
       }
       if (auto *labelDo{Unwrap<LabelDoStmt>(epc)}) {
         labels.insert(std::get<Label>(labelDo->t));
@@ -1947,13 +1953,13 @@ struct OmpEndDirectiveParser {
   std::optional<resultType> Parse(ParseState &state) const {
     if (startOmpLine.Parse(state)) {
       if (auto endToken{verbatim("END"_sptok).Parse(state)}) {
-        if (auto &&dirSpec{OmpBeginDirectiveParser(dirs_).Parse(state)}) {
+        if (auto &&spec{OmpBeginDirectiveParser(dirs_).Parse(state)}) {
           // Extend the "source" on both the OmpDirectiveName and the
           // OmpDirectiveNameSpecification.
-          CharBlock &nameSource{std::get<OmpDirectiveName>(dirSpec->t).source};
+          CharBlock &nameSource{std::get<OmpDirectiveName>(spec->t).source};
           nameSource.ExtendToCover(endToken->source);
-          dirSpec->source.ExtendToCover(endToken->source);
-          return std::move(*dirSpec);
+          spec->source.ExtendToCover(endToken->source);
+          return std::move(*spec);
         }
       }
     }
@@ -2042,26 +2048,26 @@ struct OmpLoopConstructParser {
       if (assoc == llvm::omp::Association::LoopNest) {
         if (auto &&item{attempt(loopItem).Parse(state)}) {
           auto end{maybe(OmpEndDirectiveParser{loopDir}).Parse(state)};
-          return OpenMPLoopConstruct{OmpBeginLoopDirective(std::move(*begin)),
+          return OpenMPLoopConstruct{OmpBeginDirective(std::move(*begin)),
               std::move(*item),
               llvm::transformOptional(std::move(*end),
-                  [](auto &&s) { return OmpEndLoopDirective(std::move(s)); })};
+                  [](auto &&s) { return OmpEndDirective(std::move(s)); })};
         } else if (auto &&empty{pure<Block>().Parse(state)}) {
           // Allow empty body.
           auto end{maybe(OmpEndDirectiveParser{loopDir}).Parse(state)};
-          return OpenMPLoopConstruct{OmpBeginLoopDirective(std::move(*begin)),
+          return OpenMPLoopConstruct{OmpBeginDirective(std::move(*begin)),
               std::move(*empty),
               llvm::transformOptional(std::move(*end),
-                  [](auto &&s) { return OmpEndLoopDirective(std::move(s)); })};
+                  [](auto &&s) { return OmpEndDirective(std::move(s)); })};
         }
       } else if (assoc == llvm::omp::Association::LoopSeq) {
         // Parse loop sequence as a block.
         if (auto &&body{validBlock.Parse(state)}) {
           auto end{maybe(OmpEndDirectiveParser{loopDir}).Parse(state)};
-          return OpenMPLoopConstruct{OmpBeginLoopDirective(std::move(*begin)),
+          return OpenMPLoopConstruct{OmpBeginDirective(std::move(*begin)),
               std::move(*body),
               llvm::transformOptional(std::move(*end),
-                  [](auto &&s) { return OmpEndLoopDirective(std::move(s)); })};
+                  [](auto &&s) { return OmpEndDirective(std::move(s)); })};
         }
       } else {
         llvm_unreachable("Unexpected association");
@@ -2147,8 +2153,8 @@ struct OmpAtomicConstructParser {
     }
     recursing_ = true;
 
-    auto dirSpec{OmpDirectiveSpecificationParser{}.Parse(state)};
-    if (!dirSpec || dirSpec->DirId() != llvm::omp::Directive::OMPD_atomic) {
+    auto spec{OmpDirectiveSpecificationParser{}.Parse(state)};
+    if (!spec || spec->DirId() != llvm::omp::Directive::OMPD_atomic) {
       recursing_ = false;
       return std::nullopt;
     }
@@ -2166,7 +2172,7 @@ struct OmpAtomicConstructParser {
         }
       }
       recursing_ = false;
-      return OpenMPAtomicConstruct{OmpBeginDirective(std::move(*dirSpec)),
+      return OpenMPAtomicConstruct{OmpBeginDirective(std::move(*spec)),
           std::move(tail.first),
           llvm::transformOptional(std::move(tail.second),
               [](auto &&s) { return OmpEndDirective(std::move(s)); })};
@@ -2313,13 +2319,13 @@ TYPE_PARSER(sourced(construct<OmpDeclareVariantDirective>(
     OmpDirectiveSpecificationParser{})))
 
 // 2.16 Declare Reduction Construct
-TYPE_PARSER(sourced(construct<OpenMPDeclareReductionConstruct>(
+TYPE_PARSER(sourced(construct<OmpDeclareReductionDirective>(
     predicated(Parser<OmpDirectiveName>{},
         IsDirective(llvm::omp::Directive::OMPD_declare_reduction)) >=
     OmpStylizedInstanceCreator(OmpDirectiveSpecificationParser{}))))
 
 // 2.10.6 Declare Target Construct
-TYPE_PARSER(sourced(construct<OpenMPDeclareTargetConstruct>(
+TYPE_PARSER(sourced(construct<OmpDeclareTargetDirective>(
     predicated(Parser<OmpDirectiveName>{},
         IsDirective(llvm::omp::Directive::OMPD_declare_target)) >=
     OmpDirectiveSpecificationParser{})))
@@ -2349,7 +2355,7 @@ TYPE_PARSER(applyFunction<OmpMapperSpecifier>(ConstructOmpMapperSpecifier,
     maybe(name / ":" / !":"_tok), typeSpec / "::", name))
 
 // OpenMP 5.2: 5.8.8 Declare Mapper Construct
-TYPE_PARSER(sourced(construct<OpenMPDeclareMapperConstruct>(
+TYPE_PARSER(sourced(construct<OmpDeclareMapperDirective>(
     predicated(Parser<OmpDirectiveName>{},
         IsDirective(llvm::omp::Directive::OMPD_declare_mapper)) >=
     OmpDirectiveSpecificationParser{})))
@@ -2361,7 +2367,7 @@ TYPE_PARSER(sourced(construct<OpenMPCriticalConstruct>(
     OmpBlockConstructParser{llvm::omp::Directive::OMPD_critical})))
 
 // 2.8.2 Declare Simd construct
-TYPE_PARSER(sourced(construct<OpenMPDeclareSimdConstruct>(
+TYPE_PARSER(sourced(construct<OmpDeclareSimdDirective>(
     predicated(Parser<OmpDirectiveName>{},
         IsDirective(llvm::omp::Directive::OMPD_declare_simd)) >=
     OmpDirectiveSpecificationParser{})))
@@ -2397,13 +2403,13 @@ TYPE_PARSER(
                         sourced(construct<OpenMPDeclarativeConstruct>(
                                     Parser<OpenMPDeclarativeAssumes>{}) ||
                             construct<OpenMPDeclarativeConstruct>(
-                                Parser<OpenMPDeclareReductionConstruct>{}) ||
+                                Parser<OmpDeclareReductionDirective>{}) ||
                             construct<OpenMPDeclarativeConstruct>(
-                                Parser<OpenMPDeclareMapperConstruct>{}) ||
+                                Parser<OmpDeclareMapperDirective>{}) ||
                             construct<OpenMPDeclarativeConstruct>(
-                                Parser<OpenMPDeclareSimdConstruct>{}) ||
+                                Parser<OmpDeclareSimdDirective>{}) ||
                             construct<OpenMPDeclarativeConstruct>(
-                                Parser<OpenMPDeclareTargetConstruct>{}) ||
+                                Parser<OmpDeclareTargetDirective>{}) ||
                             construct<OpenMPDeclarativeConstruct>(
                                 Parser<OmpDeclareVariantDirective>{}) ||
                             construct<OpenMPDeclarativeConstruct>(
@@ -2524,6 +2530,7 @@ static constexpr DirectiveSet GetLoopDirectives() {
       unsigned(Directive::OMPD_master_taskloop_simd),
       unsigned(Directive::OMPD_parallel_do),
       unsigned(Directive::OMPD_parallel_do_simd),
+      unsigned(Directive::OMPD_parallel_loop),
       unsigned(Directive::OMPD_parallel_masked_taskloop),
       unsigned(Directive::OMPD_parallel_masked_taskloop_simd),
       unsigned(Directive::OMPD_parallel_master_taskloop),

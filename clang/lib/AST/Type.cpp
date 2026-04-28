@@ -129,6 +129,41 @@ const IdentifierInfo *QualType::getBaseTypeIdentifier() const {
   return nullptr;
 }
 
+bool QualType::hasPostfixDeclaratorSyntax() const {
+  QualType QT = *this;
+  while (true) {
+    const Type *T = QT.getTypePtr();
+    switch (T->getTypeClass()) {
+    default:
+      return false;
+    case Type::Pointer:
+      QT = cast<PointerType>(T)->getPointeeType();
+      break;
+    case Type::BlockPointer:
+      QT = cast<BlockPointerType>(T)->getPointeeType();
+      break;
+    case Type::MemberPointer:
+      QT = cast<MemberPointerType>(T)->getPointeeType();
+      break;
+    case Type::LValueReference:
+    case Type::RValueReference:
+      QT = cast<ReferenceType>(T)->getPointeeType();
+      break;
+    case Type::PackExpansion:
+      QT = cast<PackExpansionType>(T)->getPattern();
+      break;
+    case Type::Paren:
+    case Type::ConstantArray:
+    case Type::DependentSizedArray:
+    case Type::IncompleteArray:
+    case Type::VariableArray:
+    case Type::FunctionProto:
+    case Type::FunctionNoProto:
+      return true;
+    }
+  }
+}
+
 bool QualType::mayBeDynamicClass() const {
   const auto *ClassDecl = getTypePtr()->getPointeeCXXRecordDecl();
   return ClassDecl && ClassDecl->mayBeDynamicClass();

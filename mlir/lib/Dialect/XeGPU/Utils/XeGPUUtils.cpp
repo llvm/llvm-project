@@ -191,13 +191,27 @@ xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
     if (idx == 0)
       return layout;
 
-    // For store operations (StoreScatterOp, StoreNdOp, StoreMatrixOp),
+    // For StoreNdOp and StoreMatrixOp,
     // the layout is valid for the first two operands: value and memref/tdesc.
-    // For other operations, the layout applies to the first operand only.
-    if (isa<xegpu::StoreScatterOp, xegpu::StoreNdOp, xegpu::StoreMatrixOp>(
-            op) &&
-        (idx < 2))
+    if (isa<xegpu::StoreNdOp, xegpu::StoreMatrixOp>(op) && (idx < 2))
       return layout;
+
+    if (isa<xegpu::StoreScatterOp>(op)) {
+      xegpu::StoreScatterOp store(op);
+      int chunkSize = store.getChunkSize().value_or(1);
+      if (layout && idx >= 2 && chunkSize > 1)
+        return layout.dropDims(llvm::to_vector(
+            llvm::seq<int64_t>(layout.getRank() - 1, layout.getRank())));
+      return layout;
+    }
+    if (isa<xegpu::LoadGatherOp>(op)) {
+      xegpu::LoadGatherOp load(op);
+      int chunkSize = load.getChunkSize().value_or(1);
+      if (layout && idx >= 1 && chunkSize > 1)
+        return layout.dropDims(llvm::to_vector(
+            llvm::seq<int64_t>(layout.getRank() - 1, layout.getRank())));
+      return layout;
+    }
   }
 
   std::string layoutName = xegpu::getTemporaryLayoutName(opr);

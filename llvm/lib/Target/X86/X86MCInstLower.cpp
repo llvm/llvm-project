@@ -145,7 +145,7 @@ void X86AsmPrinter::EmitAndCountInstruction(MCInst &Inst) {
 X86MCInstLower::X86MCInstLower(const MachineFunction &mf,
                                X86AsmPrinter &asmprinter)
     : Ctx(asmprinter.OutContext), MF(mf), TM(mf.getTarget()),
-      MAI(*TM.getMCAsmInfo()), AsmPrinter(asmprinter) {}
+      MAI(TM.getMCAsmInfo()), AsmPrinter(asmprinter) {}
 
 MachineModuleInfoMachO &X86MCInstLower::getMachOMMI() const {
   return AsmPrinter.MMI->getObjFileInfo<MachineModuleInfoMachO>();
@@ -572,7 +572,7 @@ void X86AsmPrinter::LowerTlsAddr(X86MCInstLower &MCInstLowering,
   // only using GOT when GOTPCRELX is enabled.
   // TODO Delete the workaround when rustc no longer relies on the hack
   bool UseGot = MMI->getModule()->getRtLibUseGOT() &&
-                Ctx.getTargetOptions()->X86RelaxRelocations;
+                Ctx.getTargetOptions().X86RelaxRelocations;
 
   if (Specifier == X86::S_TLSDESC) {
     const MCSymbolRefExpr *Expr = MCSymbolRefExpr::create(

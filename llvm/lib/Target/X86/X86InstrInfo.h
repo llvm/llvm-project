@@ -493,18 +493,18 @@ public:
   ///
   /// \returns true on success.
   MachineInstr *foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
-                                      ArrayRef<unsigned> Ops,
-                                      MachineBasicBlock::iterator InsertPt,
-                                      int FrameIndex, MachineInstr *&CopyMI,
+                                      ArrayRef<unsigned> Ops, int FrameIndex,
+                                      MachineInstr *&CopyMI,
                                       LiveIntervals *LIS = nullptr,
                                       VirtRegMap *VRM = nullptr) const override;
 
   /// Same as the previous version except it allows folding of any load and
   /// store from / to any address, not just from a specific stack slot.
-  MachineInstr *foldMemoryOperandImpl(
-      MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
-      MachineBasicBlock::iterator InsertPt, MachineInstr &LoadMI,
-      MachineInstr *&CopyMI, LiveIntervals *LIS = nullptr) const override;
+  MachineInstr *
+  foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
+                        ArrayRef<unsigned> Ops, MachineInstr &LoadMI,
+                        MachineInstr *&CopyMI,
+                        LiveIntervals *LIS = nullptr) const override;
 
   bool
   unfoldMemoryOperand(MachineFunction &MF, MachineInstr &MI, Register Reg,
