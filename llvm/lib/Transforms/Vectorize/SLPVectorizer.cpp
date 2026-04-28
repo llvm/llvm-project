@@ -17662,15 +17662,23 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
   // If the tree contains only phis, buildvectors, split nodes and
   // small nodes with reuses, we can skip it.
   SmallVector<const TreeEntry *> StoreLoadNodes;
+  SmallVector<const TreeEntry *> VectorNodes;
   unsigned NumGathers = 0;
-  constexpr int LimitTreeSize = 36;
+  constexpr unsigned LimitTreeSize = 36;
   if (!ForReduction && !SLPCostThreshold.getNumOccurrences() &&
+      VectorizableTree.size() > LimitTreeSize &&
       all_of(VectorizableTree,
              [&](const std::unique_ptr<TreeEntry> &TE) {
                if (!TE->isGather() && TE->hasState() &&
                    (TE->getOpcode() == Instruction::Load ||
                     TE->getOpcode() == Instruction::Store)) {
                  StoreLoadNodes.push_back(TE.get());
+                 return true;
+               }
+               if (!TE->isGather() && TE->hasState() &&
+                   TE->State != TreeEntry::SplitVectorize &&
+                   TE->getOpcode() != Instruction::PHI) {
+                 VectorNodes.push_back(TE.get());
                  return true;
                }
                if (TE->isGather())
@@ -17691,8 +17699,18 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
                           !TE->ReorderIndices.empty() || TE->isAltShuffle()) &&
                          TE->Scalars.size() == 2)));
              }) &&
-      (StoreLoadNodes.empty() ||
-       (VectorizableTree.size() > LimitTreeSize * StoreLoadNodes.size() &&
+      ((StoreLoadNodes.empty() && VectorNodes.empty()) ||
+       (VectorNodes.size() <= 1 && StoreLoadNodes.size() <= 1 &&
+        (VectorizableTree.size() >
+             LimitTreeSize * (StoreLoadNodes.size() + VectorNodes.size()) ||
+         (StoreLoadNodes.empty() &&
+          (VectorNodes.empty() ||
+           (VectorNodes.size() == 1 &&
+            VectorNodes.front()->getOpcode() == Instruction::GetElementPtr)) &&
+          VectorizableTree.size() >
+              LimitTreeSize * (StoreLoadNodes.size() + VectorNodes.size())))) ||
+       (VectorNodes.empty() &&
+        VectorizableTree.size() > LimitTreeSize * StoreLoadNodes.size() &&
         (NumGathers > 0 || none_of(StoreLoadNodes, [&](const TreeEntry *TE) {
            return TE->getOpcode() == Instruction::Store ||
                   all_of(TE->Scalars, [&](Value *V) {
