@@ -2985,9 +2985,13 @@ void FuncResultStack::CompleteFunctionResultType() {
   if (info && &info->scope == &scopeHandler_.currScope() &&
       info->resultSymbol) {
     if (info->parsedType) {
+      // Clear parsedType first to avoid re-entrance via ConvertToObjectEntity
+      // when the type-spec references the function result name.
+      const auto *savedParsedType{info->parsedType};
+      info->parsedType = nullptr;
       scopeHandler_.messageHandler().set_currStmtSource(info->source);
       if (const auto *type{
-              scopeHandler_.ProcessTypeSpec(*info->parsedType, true)}) {
+              scopeHandler_.ProcessTypeSpec(*savedParsedType, true)}) {
         Symbol &symbol{*info->resultSymbol};
         if (!scopeHandler_.context().HasError(symbol)) {
           if (symbol.GetType()) {
@@ -2999,7 +3003,6 @@ void FuncResultStack::CompleteFunctionResultType() {
           }
         }
       }
-      info->parsedType = nullptr;
     }
     if (TypesMismatchIfNonNull(
             info->resultSymbol->GetType(), info->previousImplicitType)) {
