@@ -64,14 +64,14 @@ size_t ConnectionConPTY::Read(void *dst, size_t dst_len,
                               const Timeout<std::micro> &timeout,
                               lldb::ConnectionStatus &status,
                               Status *error_ptr) {
-  std::unique_lock<std::mutex> guard(m_pty->GetMutex());
-  if (m_pty->IsStopping())
-    m_pty->GetCV().wait(guard, [this] { return !m_pty->IsStopping(); });
-  guard.unlock();
-
-  if (!m_pty->IsConnected()) {
-    status = eConnectionStatusEndOfFile;
-    return 0;
+  {
+    std::unique_lock<std::mutex> guard(m_pty->GetMutex());
+    if (m_pty->IsStopping())
+      m_pty->GetCV().wait(guard, [this] { return !m_pty->IsStopping(); });
+    if (!m_pty->IsConnected()) {
+      status = eConnectionStatusEndOfFile;
+      return 0;
+    }
   }
 
   size_t bytes_read =
