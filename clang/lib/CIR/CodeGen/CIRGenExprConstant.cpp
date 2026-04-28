@@ -375,7 +375,8 @@ bool ConstantAggregateBuilder::split(size_t index, CharUnits hint) {
     auto arrayTy = mlir::cast<cir::ArrayType>(constArray.getType());
     CharUnits elemSize = getSize(arrayTy.getElementType());
 
-    if (auto arrayAttr = mlir::dyn_cast<mlir::ArrayAttr>(constArray.getElts())) {
+    if (auto arrayAttr =
+            mlir::dyn_cast<mlir::ArrayAttr>(constArray.getElts())) {
       // Array with explicit elements (plus possible trailing zeros).
       SmallVector<Element> newElems;
       unsigned numExplicit = arrayAttr.size();
@@ -471,9 +472,43 @@ ConstantAggregateBuilder::buildFrom(CIRGenModule &cgm, ArrayRef<Element> elems,
 
   // If we want an array type, see if all the elements are the same type and
   // appropriately spaced.
-  if (mlir::isa<cir::ArrayType>(desiredTy)) {
-    cgm.errorNYI("array aggregate constants");
-    return {};
+  if (auto arrTy = mlir::dyn_cast<cir::ArrayType>(desiredTy)) {
+    mlir::Type eltTy = arrTy.getElementType();
+    uint64_t numElements = arrTy.getSize();
+    CharUnits eltSize = utils.getSize(eltTy);
+
+    // Check if all elements have the correct type and are at stride offsets.
+    SmallVector<mlir::Attribute> arrayElts(numElements);
+    bool canBuildArray = true;
+
+    for (const auto &[element, offset] : elems) {
+      CharUnits relOffset = offset - startOffset;
+      if (relOffset % eltSize != CharUnits::Zero() ||
+          element.getType() != eltTy) {
+        canBuildArray = false;
+        break;
+      }
+      uint64_t idx = relOffset / eltSize;
+      if (idx >= numElements) {
+        canBuildArray = false;
+        break;
+      }
+      arrayElts[idx] = element;
+    }
+
+    if (canBuildArray) {
+      // Fill gaps with zero.
+      for (uint64_t i = 0; i < numElements; ++i) {
+        if (!arrayElts[i])
+          arrayElts[i] = cir::ZeroAttr::get(eltTy);
+      }
+      CIRGenBuilderTy &builder = cgm.getBuilder();
+      return cir::ConstArrayAttr::get(
+          arrTy, mlir::ArrayAttr::get(builder.getContext(), arrayElts));
+    }
+
+    // Elements don't form a clean array layout; fall through to struct-based
+    // packing below.
   }
 
   // The size of the constant we plan to generate. This is usually just the size
@@ -769,6 +804,9 @@ bool ConstRecordBuilder::build(InitListExpr *ile, bool allowOverwrite) {
                          cgm.getTypes().convertTypeForMem(field->getType()));
         continue;
       }
+      // For non-InitListExpr inits (e.g. a compound literal or other
+      // expression that evaluates to the whole field value), fall through
+      // to normal emission below. This matches classic codegen behavior.
     }
 
     mlir::Attribute eltInitAttr =
@@ -981,7 +1019,9 @@ static bool emitDesignatedInitUpdater(ConstantEmitter &emitter,
           emitter.tryEmitPrivateForMemory(filler, elemType);
       if (!result)
         return false;
-      fillC = mlir::cast<mlir::TypedAttr>(result);
+      fillC = mlir::dyn_cast<mlir::TypedAttr>(result);
+      if (!fillC)
+        return false;
     }
   }
 
@@ -1007,7 +1047,10 @@ static bool emitDesignatedInitUpdater(ConstantEmitter &emitter,
       mlir::Attribute val = emitter.tryEmitPrivateForMemory(init, elemType);
       if (!val)
         return false;
-      if (!constant.add(mlir::cast<mlir::TypedAttr>(val), offset, true))
+      auto typedVal = mlir::dyn_cast<mlir::TypedAttr>(val);
+      if (!typedVal)
+        return false;
+      if (!constant.add(typedVal, offset, true))
         return false;
     }
   }
@@ -1221,8 +1264,12 @@ public:
     if (!c)
       return {};
 
+    auto typedC = mlir::dyn_cast<mlir::TypedAttr>(c);
+    if (!typedC)
+      return {};
+
     ConstantAggregateBuilder constant(cgm);
-    constant.add(mlir::cast<mlir::TypedAttr>(c), CharUnits::Zero(), false);
+    constant.add(typedC, CharUnits::Zero(), false);
 
     if (!emitDesignatedInitUpdater(emitter, constant, CharUnits::Zero(),
                                    destType, e->getUpdater()))

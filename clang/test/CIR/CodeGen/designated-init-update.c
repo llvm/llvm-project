@@ -48,3 +48,14 @@ struct P g4 = { (struct S){1, 2, 3}, 4, .s.b = 9 };
 // CIR: cir.global external @g4 = #cir.const_record<{#cir.const_record<{#cir.int<1> : !s32i, #cir.int<9> : !s32i, #cir.int<3> : !s32i}> : !rec_S, #cir.int<4> : !s32i}> : !rec_P
 // LLVM: @g4 = global %struct.P { %struct.S { i32 1, i32 9, i32 3 }, i32 4 }
 // OGCG: @g4 = global %struct.P { %struct.S { i32 1, i32 9, i32 3 }, i32 4 }
+
+// Array element override via compound literal — exercises the array path
+// of emitDesignatedInitUpdater and buildFrom for cir::ArrayType.
+struct Inner { int arr[4]; };
+struct ArrOuter { struct Inner in; int x; };
+
+struct ArrOuter g5 = { (struct Inner){{10, 20, 30, 40}}, 5, .in.arr[1] = 99 };
+
+// CIR: cir.global external @g5 = #cir.const_record<{#cir.const_record<{#cir.const_array<[#cir.int<10> : !s32i, #cir.int<99> : !s32i, #cir.int<30> : !s32i, #cir.int<40> : !s32i]> : !cir.array<!s32i x 4>}> : !rec_Inner, #cir.int<5> : !s32i}> : !rec_ArrOuter
+// LLVM: @g5 = global %struct.ArrOuter { %struct.Inner { [4 x i32] [i32 10, i32 99, i32 30, i32 40] }, i32 5 }
+// OGCG: @g5 = global %struct.ArrOuter { %struct.Inner { [4 x i32] [i32 10, i32 99, i32 30, i32 40] }, i32 5 }
