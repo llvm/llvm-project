@@ -144,7 +144,7 @@ bool WebAssemblyFrameLowering::needsSPForLocalFrame(
 // restoring __stack_pointer after an exception is caught.
 bool WebAssemblyFrameLowering::needsPrologForEH(
     const MachineFunction &MF) const {
-  auto EHType = MF.getTarget().getMCAsmInfo()->getExceptionHandlingType();
+  auto EHType = MF.getTarget().getMCAsmInfo().getExceptionHandlingType();
   return EHType == ExceptionHandling::Wasm &&
          MF.getFunction().hasPersonalityFn() && MF.getFrameInfo().hasCalls();
 }

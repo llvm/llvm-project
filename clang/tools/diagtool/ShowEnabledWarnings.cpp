@@ -58,7 +58,8 @@ static IntrusiveRefCntPtr<DiagnosticsEngine>
 createDiagnostics(unsigned int argc, char **argv) {
   // Buffer diagnostics from argument parsing so that we can output them using a
   // well formed diagnostic object.
-  TextDiagnosticBuffer *DiagsBuffer = new TextDiagnosticBuffer;
+  std::unique_ptr<TextDiagnosticBuffer> DiagsBuffer =
+      std::make_unique<TextDiagnosticBuffer>();
 
   // Try to build the diagnostics parser
   SmallVector<const char *, 4> Args;

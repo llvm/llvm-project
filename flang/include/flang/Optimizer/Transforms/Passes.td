@@ -266,8 +266,10 @@ def AddDebugInfo : Pass<"add-debug-info", "mlir::ModuleOp"> {
            "Name of the split dwarf file">,
     Option<"dwarfDebugFlags", "dwarf-debug-flags",
            "std::string", /*default=*/"std::string{}",
-           "Command-line flags to append to DWARF producer">
-
+           "Command-line flags to append to DWARF producer">,
+    Option<"emitFakeUseForArguments", "emit-fake-use-for-arguments",
+           "bool", /*default=*/"false",
+           "Emit fake use for function arguments to extend their lifetime">
   ];
 }
 
@@ -511,6 +513,11 @@ def CUFDeviceGlobal :
   let summary = "Flag globals used in device function with data attribute";
   let dependentDialects = [
     "cuf::CUFDialect", "mlir::gpu::GPUDialect", "mlir::NVVM::NVVMDialect"
+  ];
+  let options = [
+    Option<"skipDeadDeclares", "skip-dead-declares", "bool",
+           /*default=*/"true",
+           "Skip globals whose only use is a dead fir.declare">
   ];
 }
 

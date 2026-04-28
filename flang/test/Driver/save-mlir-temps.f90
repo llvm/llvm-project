@@ -10,7 +10,7 @@
 ! currently being invoked with the `-Q` flag, that is not supported on arm64.
 ! UNSUPPORTED: system-windows, system-darwin
 ! TODO Remove after -fno-integrated-as properly sets DisableIntegratedAS
-! XFAIL: *
+! UNSUPPORTED: true
 
 !--------------------------
 ! Invalid output directory

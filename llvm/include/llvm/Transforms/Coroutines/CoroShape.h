@@ -82,8 +82,7 @@ struct Shape {
   // Scan the function and collect the above intrinsics for later processing
   LLVM_ABI void analyze(Function &F,
                         SmallVectorImpl<CoroFrameInst *> &CoroFrames,
-                        SmallVectorImpl<CoroSaveInst *> &UnusedCoroSaves,
-                        CoroPromiseInst *&CoroPromise);
+                        SmallVectorImpl<CoroSaveInst *> &UnusedCoroSaves);
   // If for some reason, we were not able to find coro.begin, bailout.
   LLVM_ABI void
   invalidateCoroutine(Function &F,
@@ -91,9 +90,9 @@ struct Shape {
   // Perform ABI related initial transformation
   LLVM_ABI void initABI();
   // Remove orphaned and unnecessary intrinsics
-  LLVM_ABI void cleanCoroutine(SmallVectorImpl<CoroFrameInst *> &CoroFrames,
-                               SmallVectorImpl<CoroSaveInst *> &UnusedCoroSaves,
-                               CoroPromiseInst *CoroPromise);
+  LLVM_ABI void
+  cleanCoroutine(SmallVectorImpl<CoroFrameInst *> &CoroFrames,
+                 SmallVectorImpl<CoroSaveInst *> &UnusedCoroSaves);
 
   coro::ABI ABI;
 
@@ -254,14 +253,13 @@ struct Shape {
   explicit Shape(Function &F) {
     SmallVector<CoroFrameInst *, 8> CoroFrames;
     SmallVector<CoroSaveInst *, 2> UnusedCoroSaves;
-    CoroPromiseInst *CoroPromise = nullptr;
 
-    analyze(F, CoroFrames, UnusedCoroSaves, CoroPromise);
+    analyze(F, CoroFrames, UnusedCoroSaves);
     if (!CoroBegin) {
       invalidateCoroutine(F, CoroFrames);
       return;
     }
-    cleanCoroutine(CoroFrames, UnusedCoroSaves, CoroPromise);
+    cleanCoroutine(CoroFrames, UnusedCoroSaves);
   }
 };
 

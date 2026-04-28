@@ -24,25 +24,22 @@ bb5:                                              ; preds = %bb4, %bb1, %bb
 
 ; CHECK-LABEL: @dummy_caller
 ; CHECK-LABEL: bb:
-; CHECK-NEXT:  [[CALL26LOC:%.*]] = alloca ptr
 ; CHECK-LABEL: codeRepl.i:
-; CHECK-NEXT:   call void @llvm.lifetime.start.p0(ptr [[CALL26LOC]])
-; CHECK-NEXT:   call void @bar.1.bb1(ptr [[CALL26LOC]])
-; CHECK-NEXT:   %call26.reload.i = load ptr, ptr [[CALL26LOC]]
-; CHECK-NEXT:   call void @llvm.lifetime.end.p0(ptr [[CALL26LOC]])
+; CHECK-NEXT:   call ptr @bar.1.bb1()
 define ptr @dummy_caller(i32 %arg) {
 bb:
   %tmp = tail call ptr @bar(i32 %arg)
   ret ptr %tmp
 }
 
-; CHECK-LABEL: define internal void @bar.1.bb1
+; CHECK-LABEL: define internal ptr @bar.1.bb1
 ; CHECK-LABEL: bb1:
 ; CHECK-NEXT:    %call26 = invoke ptr @invoke_callee()
 ; CHECK-NEXT:            to label %cont unwind label %lpad
 ; CHECK-LABEL: cont:
-; CHECK-NEXT:    store ptr %call26, ptr %call26.out
 ; CHECK-NEXT:    br label %bb5.exitStub
+; CHECK-LABEL: bb5.exitStub:
+; CHECK-NEXT:    ret ptr %call26
 
 ; Function Attrs: nobuiltin
 declare dso_local noalias nonnull ptr @invoke_callee() local_unnamed_addr #1
