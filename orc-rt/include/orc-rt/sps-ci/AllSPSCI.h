@@ -14,7 +14,7 @@
 #ifndef ORC_RT_SPS_CI_ALLSPSCI_H
 #define ORC_RT_SPS_CI_ALLSPSCI_H
 
-#include "orc-rt/sps-ci/SimpleNativeMemoryMapSPSCI.h"
+#include "orc-rt/SimpleSymbolTable.h"
 
 namespace orc_rt::sps_ci {
 
