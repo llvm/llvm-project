@@ -1247,6 +1247,16 @@ uptr GetMaxVirtualAddress() {
   // loongarch64 also has multiple address space layouts: default is 47-bit.
   // RISC-V 64 also has multiple address space layouts: 39, 48 and 57-bit.
   return (1ULL << (MostSignificantSetBitIndex(GET_CURRENT_FRAME()) + 1)) - 1;
+#    elif SANITIZER_ALPHA
+  // Linux/Alpha uses a 42-bit user VAS (TASK_SIZE = 0x40000000000).  With
+  // fixed shadow offset 0x10000000000 (1 TiB) the layout is:
+  //   LowMem:    [0x000000000000, 0x00ffffffffff]  (1 TiB)
+  //   LowShadow: [0x010000000000, 0x011fffffffff]  (128 GiB)
+  //   ShadowGap: [0x012000000000, 0x012fffffffff]
+  //   HighShadow:[0x013000000000, 0x017fffffffff]  (256 GiB)
+  //   HighMem:   [0x018000000000, 0x03ffffffffff]  (2.5 TiB, stack near top)
+  // Capping at TASK_SIZE - 1 avoids treating kernel addresses as HighMem.
+  return (1ULL << 42) - 1;  // TASK_SIZE - 1
 #    elif SANITIZER_MIPS64
   return (1ULL << 40) - 1;  // 0x000000ffffffffffUL;
 #    elif defined(__s390x__)
