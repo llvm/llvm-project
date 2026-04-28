@@ -2247,9 +2247,7 @@ add_entrypoint_object(
   HDRS
     ../fmaximum_num.h
   DEPENDS
-    libc.src.__support.FPUtil.basic_operations
-  FLAGS
-    MISC_MATH_BASIC_OPS_OPT
+    libc.src.__support.math.fmaximum_num
 )
 
 add_entrypoint_object(
@@ -2259,9 +2257,7 @@ add_entrypoint_object(
   HDRS
     ../fmaximum_numf.h
   DEPENDS
-    libc.src.__support.FPUtil.basic_operations
-  FLAGS
-    MISC_MATH_BASIC_OPS_OPT
+    libc.src.__support.math.fmaximum_numf
 )
 
 add_entrypoint_object(
@@ -2271,7 +2267,7 @@ add_entrypoint_object(
   HDRS
     ../fmaximum_numl.h
   DEPENDS
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.math.fmaximum_numl
 )
 
 add_entrypoint_object(
@@ -2281,10 +2277,7 @@ add_entrypoint_object(
   HDRS
     ../fmaximum_numf16.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.basic_operations
-  FLAGS
-    MISC_MATH_BASIC_OPS_OPT
+    libc.src.__support.math.fmaximum_numf16
 )
 
 add_entrypoint_object(
@@ -2294,8 +2287,7 @@ add_entrypoint_object(
   HDRS
     ../fmaximum_numf128.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.math.fmaximum_numf128
 )
 
 add_entrypoint_object(
@@ -2305,12 +2297,7 @@ add_entrypoint_object(
   HDRS
     ../fmaximum_numbf16.h
   DEPENDS
-    libc.src.__support.FPUtil.basic_operations
-    libc.src.__support.FPUtil.bfloat16
-    libc.src.__support.macros.config
-    libc.src.__support.macros.properties.types
-  FLAGS
-    MISC_MATH_BASIC_OPS_OPT
+    libc.src.__support.math.fmaximum_numbf16
 )
 
 add_entrypoint_object(
@@ -2509,9 +2496,7 @@ add_entrypoint_object(
   HDRS
     ../fminimum_num.h
   DEPENDS
-    libc.src.__support.FPUtil.basic_operations
-  FLAGS
-    MISC_MATH_BASIC_OPS_OPT
+    libc.src.__support.math.fminimum_num
 )
 
 add_entrypoint_object(
@@ -2521,9 +2506,7 @@ add_entrypoint_object(
   HDRS
     ../fminimum_numf.h
   DEPENDS
-    libc.src.__support.FPUtil.basic_operations
-  FLAGS
-    MISC_MATH_BASIC_OPS_OPT
+    libc.src.__support.math.fminimum_numf
 )
 
 add_entrypoint_object(
@@ -2533,7 +2516,7 @@ add_entrypoint_object(
   HDRS
     ../fminimum_numl.h
   DEPENDS
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.math.fminimum_numl
 )
 
 add_entrypoint_object(
@@ -2543,10 +2526,7 @@ add_entrypoint_object(
   HDRS
     ../fminimum_numf16.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.basic_operations
-  FLAGS
-    MISC_MATH_BASIC_OPS_OPT
+    libc.src.__support.math.fminimum_numf16
 )
 
 add_entrypoint_object(
@@ -2556,8 +2536,7 @@ add_entrypoint_object(
   HDRS
     ../fminimum_numf128.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.math.fminimum_numf128
 )
 
 add_entrypoint_object(
@@ -2567,12 +2546,7 @@ add_entrypoint_object(
   HDRS
     ../fminimum_numbf16.h
   DEPENDS
-    libc.src.__support.FPUtil.basic_operations
-    libc.src.__support.FPUtil.bfloat16
-    libc.src.__support.macros.config
-    libc.src.__support.macros.properties.types
-  FLAGS
-    MISC_MATH_BASIC_OPS_OPT
+    libc.src.__support.math.fminimum_numbf16
 )
 
 add_entrypoint_object(
