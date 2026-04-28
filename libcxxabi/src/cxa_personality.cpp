@@ -1116,6 +1116,8 @@ __gxx_personality_seh0(PEXCEPTION_RECORD ms_exc, void *this_frame,
 
 #else
 
+extern "C" _Unwind_Reason_Code __gnu_unwind_frame(_Unwind_Exception*, _Unwind_Context*);
+
 // Helper function to unwind one frame.
 // ARM EHABI 7.3 and 7.4: If the personality function returns _URC_CONTINUE_UNWIND, the
 // personality routine should update the virtual register set (VRS) according to the

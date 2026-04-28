@@ -23,6 +23,7 @@
 
 using namespace llvm;
 using namespace llvm::offloading;
+using namespace llvm::offloading::sycl;
 
 StructType *offloading::getEntryTy(Module &M) {
   LLVMContext &C = M.getContext();
@@ -423,4 +424,32 @@ Error offloading::intel::containerizeOpenMPSPIRVImage(
   return containerizeImage(Binary, Triple, object::ImageKind::IMG_SPIRV,
                            object::OffloadKind::OFK_OpenMP, /*ImageFlags=*/0,
                            MetaData);
+}
+
+void sycl::writeSymbolTable(ArrayRef<StringRef> Names, SmallString<0> &Out) {
+  uint32_t Count = Names.size();
+
+  // Compute the byte offset where string data begins: right after the header
+  // and the entry array.
+  uint32_t StringDataOffset =
+      sizeof(SymbolTableHeader) + Count * sizeof(SymbolTableEntry);
+
+  // Pre-size the output to hold the header and entry array; string data is
+  // appended below.
+  Out.resize(StringDataOffset);
+
+  // Write the header.
+  auto *Header = reinterpret_cast<SymbolTableHeader *>(Out.data());
+  Header->Count = Count;
+
+  // Write each entry and append the corresponding null-terminated name.
+  auto *Entries = reinterpret_cast<SymbolTableEntry *>(Header + 1);
+  uint32_t CurrentOffset = StringDataOffset;
+  for (uint32_t I = 0; I < Count; ++I) {
+    Entries[I].OffsetToSymbol = CurrentOffset;
+    Entries[I].SymbolSize = Names[I].size();
+    Out.append(Names[I]);
+    Out.push_back('\0');
+    CurrentOffset += Names[I].size() + 1;
+  }
 }

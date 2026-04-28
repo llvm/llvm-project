@@ -1042,4 +1042,33 @@ namespace NoTrivialCtor {
   }
   static_assert(foo() == 10);
 }
+
+namespace Revive {
+  struct S { int p; };
+  struct A { S s;};
+  union U { A a; };
+
+  constexpr int g() {
+    U u;
+    u.a.s.p = 3;
+    u.a.~A();
+    u.a.s.p = 4; // Start lifetime of 'a' again.
+    int r = u.a.s.p;
+    u.a.~A();
+    return r;
+  }
+  static_assert(g() == 4);
+
+  constexpr int h() {
+    A a; // both-note {{declared here}}
+    a.s.p = 10;
+
+    a.s.~S();
+    a.s.p = 20; // both-note {{assignment to object outside its lifetime}}
+    int r = a.s.p;
+    return r;
+  }
+  static_assert(h() == 20); // both-error {{not an integral constant expression}} \
+                            // both-note {{in call to}}
+}
 #endif

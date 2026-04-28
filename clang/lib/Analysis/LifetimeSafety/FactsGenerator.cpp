@@ -632,7 +632,7 @@ void FactsGenerator::VisitCXXNewExpr(const CXXNewExpr *NE) {
 
   NewList = NewList->peelOuterOrigin();
 
-  if (!NewList)
+  if (!NewList || !NE->getInitializer())
     return;
 
   // FIXME: OriginList is null for `new[]` initializers. Remove this `Init`

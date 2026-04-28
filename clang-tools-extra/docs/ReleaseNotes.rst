@@ -491,6 +491,18 @@ Changes in existing checks
   now uses separate note diagnostics for each uninitialized enumerator, making
   it easier to see which specific enumerators need explicit initialization.
 
+- Improved :doc:`readability-identifier-length
+  <clang-tidy/checks/readability/identifier-length>` check:
+
+  - A new option, named `LineCountThreshold`, is added to silence warnings for
+    short-lived variables, based on distance between declaration and last use.
+
+  - Support for structured bindings is added. Two new options, named
+    `MinimumBindingNameLength` and `IgnoredBindingNames` respectively, are
+    added to configure the behavior of the check regarding this new identifier
+    kind. By default, names with at least 2 characters are required and the
+    only exception allowed is `_`.
+
 - Improved :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check:
 
@@ -563,6 +575,8 @@ Improvements to include-fixer
 
 Improvements to clang-include-fixer
 -----------------------------------
+
+- Fixed crashes when command-line argument parsing failed at unknown tool options.
 
 Improvements to modularize
 --------------------------
