@@ -319,6 +319,10 @@ private:
   void visitDpasOp(xegpu::DpasOp dpas, ArrayRef<LayoutInfoLattice *> operands,
                    ArrayRef<const LayoutInfoLattice *> results);
 
+  void visitDpasMxOp(xegpu::DpasMxOp dpasMx,
+                     ArrayRef<LayoutInfoLattice *> operands,
+                     ArrayRef<const LayoutInfoLattice *> results);
+
   void visitStoreNdOp(xegpu::StoreNdOp store,
                       ArrayRef<LayoutInfoLattice *> operands,
                       ArrayRef<const LayoutInfoLattice *> results);
@@ -342,10 +346,6 @@ private:
   void visitVectorBitcastOp(vector::BitCastOp bitcast,
                             ArrayRef<LayoutInfoLattice *> operands,
                             ArrayRef<const LayoutInfoLattice *> results);
-
-  void visitUpdateNdOffsetOp(xegpu::UpdateNdOffsetOp updateNdOffset,
-                             ArrayRef<LayoutInfoLattice *> operands,
-                             ArrayRef<const LayoutInfoLattice *> results);
 
   void visitPrefetchNdOp(xegpu::PrefetchNdOp prefetch,
                          ArrayRef<LayoutInfoLattice *> operands,
@@ -429,6 +429,9 @@ LogicalResult LayoutInfoPropagation::visitOperation(
   TypeSwitch<Operation *>(op)
       .Case(
           [&](xegpu::DpasOp dpasOp) { visitDpasOp(dpasOp, operands, results); })
+      .Case([&](xegpu::DpasMxOp dpasMxOp) {
+        visitDpasMxOp(dpasMxOp, operands, results);
+      })
       .Case([&](xegpu::StoreNdOp storeNdOp) {
         visitStoreNdOp(storeNdOp, operands, results);
       })
@@ -440,9 +443,6 @@ LogicalResult LayoutInfoPropagation::visitOperation(
       })
       .Case([&](xegpu::LoadGatherOp loadGatherOp) {
         visitLoadGatherOp(loadGatherOp, operands, results);
-      })
-      .Case([&](xegpu::UpdateNdOffsetOp updateNdOffsetOp) {
-        visitUpdateNdOffsetOp(updateNdOffsetOp, operands, results);
       })
       .Case([&](xegpu::PrefetchNdOp prefetchNdOp) {
         visitPrefetchNdOp(prefetchNdOp, operands, results);
@@ -736,20 +736,6 @@ void LayoutInfoPropagation::visitShapeCastOp(
   propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(srcLayoutAttr)));
 }
 
-/// Propagate the layout of the result tensor to the source tensor descriptor
-/// in UpdateNdOffsetOp.
-void LayoutInfoPropagation::visitUpdateNdOffsetOp(
-    xegpu::UpdateNdOffsetOp updateNdOffset,
-    ArrayRef<LayoutInfoLattice *> operands,
-    ArrayRef<const LayoutInfoLattice *> results) {
-  // The layout of the result must be present.
-  LayoutInfo resultLayout = results[0]->getValue();
-  if (!resultLayout.isAssigned())
-    return;
-  // Propagate the layout to the source operand.
-  propagateIfChanged(operands[0], operands[0]->meet(resultLayout));
-}
-
 /// Set the layouts for DPAS A, B, and C operands.
 void LayoutInfoPropagation::visitDpasOp(
     xegpu::DpasOp dpas, ArrayRef<LayoutInfoLattice *> operands,
@@ -817,6 +803,134 @@ void LayoutInfoPropagation::visitDpasOp(
   propagateIfChanged(operands[1], operands[1]->meet(dpasBLayout));
   if (operands.size() > 2)
     propagateIfChanged(operands[2], operands[2]->meet(dpasCDLayout));
+}
+
+/// Propagate layout for DpasMxOp operands using the layout attributes.
+/// DpasMxOp has operands: a, b, acc (optional), scale_a (optional), scale_b
+/// (optional)
+void LayoutInfoPropagation::visitDpasMxOp(
+    xegpu::DpasMxOp dpasMx, ArrayRef<LayoutInfoLattice *> operands,
+    ArrayRef<const LayoutInfoLattice *> results) {
+
+  // Initialize layout variables
+  LayoutInfo dpasMxALayout, dpasMxBLayout, dpasMxCDLayout;
+  LayoutInfo dpasMxAScaleLayout, dpasMxBScaleLayout;
+
+  // Get existing layout attributes from the operation
+  xegpu::DistributeLayoutAttr anchorLayoutA = dpasMx.getLayoutAAttr();
+  xegpu::DistributeLayoutAttr anchorLayoutB = dpasMx.getLayoutBAttr();
+  xegpu::DistributeLayoutAttr anchorLayoutCD = dpasMx.getLayoutCdAttr();
+
+  // Check if all layouts are already set
+  if (anchorLayoutA && anchorLayoutB && anchorLayoutCD &&
+      hasParamsOfLayoutKind(anchorLayoutA) &&
+      hasParamsOfLayoutKind(anchorLayoutB) &&
+      hasParamsOfLayoutKind(anchorLayoutCD)) {
+    dpasMxALayout = LayoutInfo(anchorLayoutA);
+    dpasMxBLayout = LayoutInfo(anchorLayoutB);
+    dpasMxCDLayout = LayoutInfo(anchorLayoutCD);
+
+    // Get scale layouts if available
+    xegpu::DistributeLayoutAttr anchorLayoutAScale =
+        dpasMx.getLayoutAScaleAttr();
+    xegpu::DistributeLayoutAttr anchorLayoutBScale =
+        dpasMx.getLayoutBScaleAttr();
+    if (anchorLayoutAScale)
+      dpasMxAScaleLayout = LayoutInfo(anchorLayoutAScale);
+    if (anchorLayoutBScale)
+      dpasMxBScaleLayout = LayoutInfo(anchorLayoutBScale);
+  } else {
+    // Need to compute layouts
+    const uArch *uArch = getUArch(getChipStr(dpasMx).value_or(""));
+    if (!uArch)
+      return;
+
+    VectorType aTy = dpasMx.getAType();
+    VectorType bTy = dpasMx.getBType();
+    VectorType cdTy = dpasMx.getResultType();
+
+    // Get scale types if present
+    VectorType aScaleTy;
+    VectorType bScaleTy;
+    Value scaleA = dpasMx.getScaleA();
+    Value scaleB = dpasMx.getScaleB();
+    if (scaleA)
+      aScaleTy = dyn_cast<VectorType>(scaleA.getType());
+    if (scaleB)
+      bScaleTy = dyn_cast<VectorType>(scaleB.getType());
+
+    xegpu::DistributeLayoutAttr consumerLayoutAttr = nullptr;
+    xegpu::DistributeLayoutAttr requiredCDLayoutAttr, requiredALayout,
+        requiredBLayout, requiredAScaleLayout, requiredBScaleLayout;
+
+    int numSg = 0;
+    if (layoutKind == xegpu::LayoutKind::Subgroup) {
+      LayoutInfo consumerLayout = results[0]->getValue();
+      if (!consumerLayout.isAssigned())
+        return;
+      consumerLayoutAttr =
+          dyn_cast<xegpu::DistributeLayoutAttr>(consumerLayout.get());
+      auto numSgOrErr = getNumSg(dpasMx, uArch->getSubgroupSize());
+      if (failed(numSgOrErr)) {
+        dpasMx.emitWarning(
+            "Unable to determine the number of subgroups for the operation.");
+        return;
+      }
+      numSg = numSgOrErr.value();
+    }
+
+    auto layouts =
+        xegpu::setupDpasMxLayout(layoutKind, aTy, bTy, cdTy, aScaleTy, bScaleTy,
+                                 consumerLayoutAttr, numSg, uArch);
+    if (!layouts.has_value()) {
+      dpasMx.emitWarning(
+          "Failed to determine required layouts for DPAS_MX operands.");
+      return;
+    }
+
+    std::tie(requiredALayout, requiredBLayout, requiredCDLayoutAttr,
+             requiredAScaleLayout, requiredBScaleLayout) = *layouts;
+
+    dpasMx.setLayoutAAttr(requiredALayout);
+    dpasMx.setLayoutBAttr(requiredBLayout);
+    dpasMx.setLayoutCdAttr(requiredCDLayoutAttr);
+    if (requiredAScaleLayout)
+      dpasMx.setLayoutAScaleAttr(requiredAScaleLayout);
+    if (requiredBScaleLayout)
+      dpasMx.setLayoutBScaleAttr(requiredBScaleLayout);
+
+    dpasMxALayout = LayoutInfo(requiredALayout);
+    dpasMxBLayout = LayoutInfo(requiredBLayout);
+    dpasMxCDLayout = LayoutInfo(requiredCDLayoutAttr);
+    if (requiredAScaleLayout)
+      dpasMxAScaleLayout = LayoutInfo(requiredAScaleLayout);
+    if (requiredBScaleLayout)
+      dpasMxBScaleLayout = LayoutInfo(requiredBScaleLayout);
+  }
+
+  // Propagate layouts to operands. Because acc, scale_a, scale_b are all
+  // optional (AttrSizedOperandSegments), the index of each present operand in
+  // `operands` depends on which optionals are actually supplied. Use the
+  // op's accessors to determine the correct positional index.
+  propagateIfChanged(operands[0], operands[0]->meet(dpasMxALayout));
+  propagateIfChanged(operands[1], operands[1]->meet(dpasMxBLayout));
+  unsigned idx = 2;
+  if (dpasMx.getAcc()) {
+    propagateIfChanged(operands[idx], operands[idx]->meet(dpasMxCDLayout));
+    ++idx;
+  }
+  if (dpasMx.getScaleA()) {
+    if (dpasMxAScaleLayout.isAssigned())
+      propagateIfChanged(operands[idx],
+                         operands[idx]->meet(dpasMxAScaleLayout));
+    ++idx;
+  }
+  if (dpasMx.getScaleB()) {
+    if (dpasMxBScaleLayout.isAssigned())
+      propagateIfChanged(operands[idx],
+                         operands[idx]->meet(dpasMxBScaleLayout));
+    ++idx;
+  }
 }
 
 /// Set the layout for the value and tensor descriptor operands in StoreNdOp.

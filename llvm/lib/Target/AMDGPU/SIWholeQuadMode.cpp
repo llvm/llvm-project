@@ -195,7 +195,8 @@ private:
                    std::vector<WorkItem> &Worklist);
   void markInstructionUses(const MachineInstr &MI, char Flag,
                            std::vector<WorkItem> &Worklist);
-  char scanInstructions(MachineFunction &MF, std::vector<WorkItem> &Worklist);
+  char scanInstructions(MachineFunction &MF, std::vector<WorkItem> &Worklist,
+                        SmallVector<MachineInstr *> &ExeczSideEffectInstrs);
   void propagateInstruction(MachineInstr &MI, std::vector<WorkItem> &Worklist);
   void propagateBlock(MachineBasicBlock &MBB, std::vector<WorkItem> &Worklist);
   char analyzeFunction(MachineFunction &MF);
@@ -482,8 +483,9 @@ void SIWholeQuadMode::markInstructionUses(const MachineInstr &MI, char Flag,
 
 // Scan instructions to determine which ones require an Exact execmask and
 // which ones seed WQM requirements.
-char SIWholeQuadMode::scanInstructions(MachineFunction &MF,
-                                       std::vector<WorkItem> &Worklist) {
+char SIWholeQuadMode::scanInstructions(
+    MachineFunction &MF, std::vector<WorkItem> &Worklist,
+    SmallVector<MachineInstr *> &ExeczSideEffectInstrs) {
   char GlobalFlags = 0;
   bool WQMOutputs = MF.getFunction().hasFnAttribute("amdgpu-ps-wqm-outputs");
   SmallVector<MachineInstr *, 4> SoftWQMInstrs;
@@ -607,6 +609,18 @@ char SIWholeQuadMode::scanInstructions(MachineFunction &MF,
         }
       }
 
+      if (TII->hasUnwantedEffectsWhenEXECEmpty(MI)) {
+        for (auto &Op : MI.uses()) {
+          if (!Op.isReg())
+            continue;
+          if (!TRI->isVectorRegister(*MRI, Op.getReg()))
+            continue;
+
+          ExeczSideEffectInstrs.push_back(&MI);
+          break;
+        }
+      }
+
       if (Flags) {
         markInstruction(MI, Flags, Worklist);
         GlobalFlags |= Flags;
@@ -715,7 +729,8 @@ void SIWholeQuadMode::propagateBlock(MachineBasicBlock &MBB,
 
 char SIWholeQuadMode::analyzeFunction(MachineFunction &MF) {
   std::vector<WorkItem> Worklist;
-  char GlobalFlags = scanInstructions(MF, Worklist);
+  SmallVector<MachineInstr *> ExeczSideEffectInstrs;
+  char GlobalFlags = scanInstructions(MF, Worklist, ExeczSideEffectInstrs);
 
   while (!Worklist.empty()) {
     WorkItem WI = Worklist.back();
@@ -725,6 +740,22 @@ char SIWholeQuadMode::analyzeFunction(MachineFunction &MF) {
       propagateInstruction(*WI.MI, Worklist);
     else
       propagateBlock(*WI.MBB, Worklist);
+
+    if (Worklist.empty()) {
+      // Currently we let the instructions having sideeffect when execz to run
+      // under wqm, this avoids unwanted side-effect with exact mode if only
+      // helper lanes execute the parent block. At the same time, the wqm
+      // property should be back-propagated along the data-flow of their sources
+      // to ensure their sources have correct data for helper lanes.
+      for (auto *MI : ExeczSideEffectInstrs) {
+        InstrInfo II = Instructions[MI];
+        if (II.OutNeeds & StateWQM)
+          markInstructionUses(*MI, StateWQM, Worklist);
+      }
+      // The side-effect backward propagation should not expand the wqm-region.
+      // So we only need to run the propagation once.
+      ExeczSideEffectInstrs.clear();
+    }
   }
 
   return GlobalFlags;

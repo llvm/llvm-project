@@ -54,6 +54,7 @@ add_fp_unittest(
     libc.src.__support.math.bf16sub
     libc.src.__support.math.bf16subf
     libc.src.__support.math.bf16subf128
+    libc.src.__support.math.bf16subl
     libc.src.__support.math.canonicalize
     libc.src.__support.math.canonicalizebf16
     libc.src.__support.math.canonicalizef
@@ -90,6 +91,7 @@ add_fp_unittest(
     libc.src.__support.math.dfmal
     libc.src.__support.math.dmulf128
     libc.src.__support.math.dmull
+    libc.src.__support.math.dsqrtf128
     libc.src.__support.math.dsqrtl
     libc.src.__support.math.dsubf128
     libc.src.__support.math.dsubl
@@ -151,6 +153,9 @@ add_fp_unittest(
     libc.src.__support.math.fdimf128
     libc.src.__support.math.fdimf16
     libc.src.__support.math.fdiml
+    libc.src.__support.math.fdiv
+    libc.src.__support.math.fdivf128
+    libc.src.__support.math.fdivl
     libc.src.__support.math.ffma
     libc.src.__support.math.ffmaf128
     libc.src.__support.math.ffmal
@@ -169,7 +174,40 @@ add_fp_unittest(
     libc.src.__support.math.fmaxf
     libc.src.__support.math.fmaxf128
     libc.src.__support.math.fmaxf16
+    libc.src.__support.math.fmaximum
+    libc.src.__support.math.fmaximum_mag_num
+    libc.src.__support.math.fmaximum_mag_numbf16
+    libc.src.__support.math.fmaximum_mag_numf
+    libc.src.__support.math.fmaximum_num
+    libc.src.__support.math.fmaximum_numbf16
+    libc.src.__support.math.fmaximum_numf
+    libc.src.__support.math.fmaximum_numf128
+    libc.src.__support.math.fmaximum_numf16
+    libc.src.__support.math.fmaximum_numl
+    libc.src.__support.math.fmaximumbf16
+    libc.src.__support.math.fmaximumf
+    libc.src.__support.math.fmaximumf128
+    libc.src.__support.math.fmaximumf16
+    libc.src.__support.math.fmaximuml
     libc.src.__support.math.fmaxl
+    libc.src.__support.math.fmin
+    libc.src.__support.math.fminbf16
+    libc.src.__support.math.fminf
+    libc.src.__support.math.fminf128
+    libc.src.__support.math.fminf16
+    libc.src.__support.math.fminimum
+    libc.src.__support.math.fminimum_num
+    libc.src.__support.math.fminimum_numbf16
+    libc.src.__support.math.fminimum_numf
+    libc.src.__support.math.fminimum_numf128
+    libc.src.__support.math.fminimum_numf16
+    libc.src.__support.math.fminimum_numl
+    libc.src.__support.math.fminimumbf16
+    libc.src.__support.math.fminimumf
+    libc.src.__support.math.fminimumf128
+    libc.src.__support.math.fminimumf16
+    libc.src.__support.math.fminimuml
+    libc.src.__support.math.fminl
     libc.src.__support.math.frexpf
     libc.src.__support.math.frexpf128
     libc.src.__support.math.frexpf16
@@ -187,12 +225,14 @@ add_fp_unittest(
     libc.src.__support.math.hypotbf16
     libc.src.__support.math.hypotf16
     libc.src.__support.math.ilogb
+    libc.src.__support.math.ilogbbf16
     libc.src.__support.math.ilogbf
     libc.src.__support.math.ilogbf16
     libc.src.__support.math.ilogbf128
     libc.src.__support.math.ilogbl
     libc.src.__support.math.ldexpf
     libc.src.__support.math.llogb
+    libc.src.__support.math.llogbbf16
     libc.src.__support.math.log
     libc.src.__support.math.log10
     libc.src.__support.math.log10f16
@@ -273,6 +313,7 @@ add_fp_unittest(
     libc.src.__support.math.sqrt
     libc.src.__support.math.sqrtbf16
     libc.src.__support.math.sqrtf
+    libc.src.__support.math.sqrtl
     libc.src.__support.math.tan
     libc.src.__support.math.tanf
     libc.src.__support.math.tanf16
@@ -290,6 +331,7 @@ add_fp_unittest(
     shared_math_constexpr_test.cpp
   DEPENDS
     libc.src.__support.math.asinbf16
+    libc.src.__support.math.bf16subl
     libc.src.__support.math.ceil
     libc.src.__support.math.ceilbf16
     libc.src.__support.math.ceilf
@@ -306,6 +348,16 @@ add_fp_unittest(
     libc.src.__support.math.ddivl
     libc.src.__support.math.dmulf128
     libc.src.__support.math.dmull
+    libc.src.__support.math.dsqrtf128
+    libc.src.__support.math.fdim
+    libc.src.__support.math.fdimbf16
+    libc.src.__support.math.fdimf
+    libc.src.__support.math.fdimf128
+    libc.src.__support.math.fdimf16
+    libc.src.__support.math.fdiml
+    libc.src.__support.math.fdiv
+    libc.src.__support.math.fdivf128
+    libc.src.__support.math.fdivl
     libc.src.__support.math.floor
     libc.src.__support.math.floorbf16
     libc.src.__support.math.floorf
@@ -318,8 +370,44 @@ add_fp_unittest(
     libc.src.__support.math.fabsf128
     libc.src.__support.math.fabsf16
     libc.src.__support.math.fabsl
+    libc.src.__support.math.fmaximum
+    libc.src.__support.math.fmaximum_mag_num
+    libc.src.__support.math.fmaximum_mag_numbf16
+    libc.src.__support.math.fmaximum_mag_numf
+    libc.src.__support.math.fmaximum_num
+    libc.src.__support.math.fmaximum_numbf16
+    libc.src.__support.math.fmaximum_numf
+    libc.src.__support.math.fmaximum_numf128
+    libc.src.__support.math.fmaximum_numf16
+    libc.src.__support.math.fmaximum_numl
+    libc.src.__support.math.fmaximumbf16
+    libc.src.__support.math.fmaximumf
+    libc.src.__support.math.fmaximumf128
+    libc.src.__support.math.fmaximumf16
+    libc.src.__support.math.fmaximuml
+    libc.src.__support.math.fmin
+    libc.src.__support.math.fminbf16
+    libc.src.__support.math.fminf
+    libc.src.__support.math.fminf128
+    libc.src.__support.math.fminf16
+    libc.src.__support.math.fminimum
+    libc.src.__support.math.fminimum_num
+    libc.src.__support.math.fminimum_numbf16
+    libc.src.__support.math.fminimum_numf
+    libc.src.__support.math.fminimum_numf128
+    libc.src.__support.math.fminimum_numf16
+    libc.src.__support.math.fminimum_numl
+    libc.src.__support.math.fminimumbf16
+    libc.src.__support.math.fminimumf
+    libc.src.__support.math.fminimumf128
+    libc.src.__support.math.fminimumf16
+    libc.src.__support.math.fminimuml
+    libc.src.__support.math.fminl
+    libc.src.__support.math.llogbbf16
     libc.src.__support.math.log
     libc.src.__support.math.logbbf16
+    libc.src.__support.math.ilogbbf16
+    libc.src.__support.math.sqrtl
 )
 
 add_fp_unittest(

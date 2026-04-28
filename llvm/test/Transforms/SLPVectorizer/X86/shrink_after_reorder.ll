@@ -57,11 +57,10 @@ define internal i32 @ipvideo_decode_block_opcode_0xD_16() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi <8 x i16> [ undef, [[ENTRY:%.*]] ], [ [[TMP2:%.*]], [[IF_END:%.*]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi <8 x i16> [ undef, [[ENTRY:%.*]] ], [ [[TMP1]], [[IF_END:%.*]] ]
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    store <8 x i16> [[TMP1]], ptr undef, align 2
-; CHECK-NEXT:    [[TMP2]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> poison, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 4, i32 4, i32 4, i32 4>
 ; CHECK-NEXT:    br label [[FOR_BODY]]
 ;
 entry:

@@ -514,6 +514,21 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
     }
     emitAndUpdateRetAlloca(returnType, getLoc(bodyEndLoc),
                            getContext().getTypeAlignInChars(returnType));
+
+    // If this is an implicit-return-zero function, initialize the return
+    // value. This mirrors the implicit-return-zero handling in classic
+    // codegen's EmitFunctionProlog (CGCall.cpp). It is done here, after
+    // emitAndUpdateRetAlloca, because in CIR the return slot is created
+    // after the prolog (the opposite of classic codegen, where ReturnValue
+    // is set up before EmitFunctionProlog runs).
+    // TODO(cir): Align prolog handling with classic codegen.
+    if (fd && fd->hasImplicitReturnZero()) {
+      mlir::Type cirRetTy = convertType(returnType.getUnqualifiedType());
+      mlir::Location bodyBeginMLIRLoc = getLoc(bodyBeginLoc);
+      mlir::Value zero = builder.getNullValue(cirRetTy, bodyBeginMLIRLoc);
+      builder.CIRBaseBuilderTy::createStore(bodyBeginMLIRLoc, zero,
+                                            returnValue.getPointer());
+    }
   }
 
   if (isa_and_nonnull<CXXMethodDecl>(d) &&
@@ -683,6 +698,7 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
       builder.setInsertionPoint(fn);
       clone = cir::FuncOp::create(builder, fn.getLoc(), fdInlineName,
                                   fn.getFunctionType());
+      cgm.insertGlobalSymbol(clone);
       clone.setLinkage(cir::GlobalLinkageKind::InternalLinkage);
       clone.setSymVisibility("private");
       clone.setInlineKind(cir::InlineKind::AlwaysInline);
@@ -707,6 +723,7 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
                   .replaceAllSymbolUses(fn.getSymNameAttr(), cgm.getModule())
                   .failed())
             llvm_unreachable("Failed to replace inline builtin symbol uses");
+          cgm.eraseGlobalSymbol(inlineFn);
           inlineFn.erase();
         }
         break;

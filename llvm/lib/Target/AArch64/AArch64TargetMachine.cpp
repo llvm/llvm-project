@@ -266,7 +266,7 @@ LLVMInitializeAArch64Target() {
   initializeFalkorHWPFFixPass(PR);
   initializeFalkorMarkStridedAccessesLegacyPass(PR);
   initializeLDTLSCleanupPass(PR);
-  initializeKCFIPass(PR);
+  initializeMachineKCFILegacyPass(PR);
   initializeMachineSMEABIPass(PR);
   initializeAArch64SRLTDefineSuperRegsPass(PR);
   initializeSMEPeepholeOptPass(PR);
@@ -359,7 +359,7 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
     this->Options.NoTrapAfterNoreturn = true;
   }
 
-  if (getMCAsmInfo()->usesWindowsCFI()) {
+  if (getMCAsmInfo().usesWindowsCFI()) {
     // Unwinding can get confused if the last instruction in an
     // exception-handling region (function, funclet, try block, etc.)
     // is a call.
@@ -409,7 +409,7 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
   setSupportsDebugEntryValues(true);
 
   // AArch64 supports fixing up the DWARF unwind information.
-  if (!getMCAsmInfo()->usesWindowsCFI())
+  if (!getMCAsmInfo().usesWindowsCFI())
     setCFIFixup(true);
 }
 

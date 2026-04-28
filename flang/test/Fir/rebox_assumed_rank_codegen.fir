@@ -41,6 +41,12 @@ func.func @test_poly_to_nonepoly(%arg0: !fir.class<!fir.array<*:!sometype>>) {
   return
 }
 
+func.func @test_optional(%arg0: !fir.box<!fir.array<*:f32>>) {
+  %1 = fir.rebox_assumed_rank %arg0 lbs ones optional : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>
+  fir.call @somefunc(%1) : (!fir.box<!fir.array<*:f32>>) -> ()
+  return
+}
+
 func.func private @somefunc(!fir.box<!fir.array<*:f32>>)
 func.func private @somefuncalloc(!fir.box<!fir.heap<!fir.array<*:f32>>>)
 func.func private @somefuncpointer(!fir.box<!fir.ptr<!fir.array<*:f32>>>)
@@ -120,5 +126,19 @@ func.func private @takes_assumed_rank_t(!fir.box<!fir.array<*:!sometype>>)
 // CHECK:           %[[VAL_4:.*]] = fir.type_desc !fir.type<sometype{i:i32}>
 // CHECK:           %[[VAL_7:.*]] = fir.convert %[[VAL_4]] : (!fir.tdesc<!fir.type<sometype{i:i32}>>) -> !fir.ref<none>
 // CHECK:           fir.call @_FortranACopyAndUpdateDescriptor(%{{.*}}, %{{.*}}, %[[VAL_7]],
+
+// CHECK-LABEL:   func.func @test_optional(
+// CHECK-SAME:                             %[[VAL_0:.*]]: !fir.box<!fir.array<*:f32>>) {
+// CHECK:           %[[IS_PRESENT:.*]] = fir.is_present %[[VAL_0]] : (!fir.box<!fir.array<*:f32>>) -> i1
+// CHECK:           %[[RES:.*]] = fir.if %[[IS_PRESENT]] -> (!fir.box<!fir.array<*:f32>>) {
+// CHECK:             fir.call @_FortranACopyAndUpdateDescriptor(
+// CHECK:             %[[LOADED:.*]] = fir.load
+// CHECK:             %[[CAST:.*]] = fir.convert %[[LOADED]]
+// CHECK:             fir.result %[[CAST]] : !fir.box<!fir.array<*:f32>>
+// CHECK:           } else {
+// CHECK:             %[[ABSENT:.*]] = fir.absent !fir.box<!fir.array<*:f32>>
+// CHECK:             fir.result %[[ABSENT]] : !fir.box<!fir.array<*:f32>>
+// CHECK:           }
+// CHECK:           fir.call @somefunc(%[[RES]]) : (!fir.box<!fir.array<*:f32>>) -> ()
 
 // CHECK:         func.func private @_FortranACopyAndUpdateDescriptor(!fir.ref<!fir.box<none>> {llvm.nocapture}, !fir.box<none> {llvm.nocapture}, !fir.ref<none>, i8, i32) attributes {fir.runtime}

@@ -6632,18 +6632,21 @@ private:
 
     Fortran::lower::AggregateStoreMap storeMap;
 
-    // Map all containing submodule and module equivalences and variables, in
-    // case they are referenced. It might be better to limit this to variables
-    // that are actually referenced, although that is more complicated when
-    // there are equivalenced variables.
-    auto &scopeVariableListMap =
-        Fortran::lower::pft::getScopeVariableListMap(funit);
-    for (auto *scp = &scope.parent(); !scp->IsGlobal(); scp = &scp->parent())
-      if (scp->kind() == Fortran::semantics::Scope::Kind::Module)
-        for (const auto &var : Fortran::lower::pft::getScopeVariableList(
-                 *scp, scopeVariableListMap))
-          if (!var.isRuntimeTypeInfoData())
-            instantiateVar(var, storeMap);
+    // Map containing [sub]module equivalences and variables that are
+    // referenced in this function-like unit. Only referenced host module
+    // variables are instantiated to avoid generating IR for unused module
+    // variables. Equivalenced variables are handled via the aggregate store
+    // analysis performed on the host [sub]module scopes.
+    const bool hasHostModuleScope = [&]() {
+      for (auto *scp = &scope.parent(); !scp->IsGlobal(); scp = &scp->parent())
+        if (scp->kind() == Fortran::semantics::Scope::Kind::Module)
+          return true;
+      return false;
+    }();
+    if (hasHostModuleScope)
+      for (const auto &var :
+           Fortran::lower::pft::getHostModuleVariableList(funit))
+        instantiateVar(var, storeMap);
 
     // Map function equivalences and variables.
     mlir::Value primaryFuncResultStorage;
