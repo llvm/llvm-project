@@ -3947,6 +3947,16 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_ilogbbf16",
+    hdrs = ["src/__support/math/ilogbbf16.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_sincos_integer_utils",
     hdrs = ["src/__support/math/sincos_integer_utils.h"],
     deps = [
@@ -7191,6 +7201,13 @@ libc_math_function(
     name = "canonicalizef16",
     additional_deps = [
         ":__support_math_canonicalizef16",
+    ],
+)
+
+libc_math_function(
+    name = "ilogbbf16",
+    additional_deps = [
+        ":__support_math_ilogbbf16",
     ],
 )
 
