@@ -66,7 +66,7 @@ def CheckIsReg0Zero : CheckAll<
                          CheckAny<
                            [CheckRegOperand<0, WZR>,
                             CheckRegOperand<0, XZR>]>]>;
-foreach I = {1-3} in {
+foreach I = {0-3} in {
   def CheckIsReg#I#Zero : CheckAll<
                             [CheckIsRegOperand<I>,
                              CheckAny<

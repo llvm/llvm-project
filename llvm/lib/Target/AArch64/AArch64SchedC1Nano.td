@@ -308,16 +308,6 @@ def : InstRW<[C1NanoWriteExtrRORImm], (instrs EXTRWrri, EXTRXrri)>;
 // FP conditional compare
 def : InstRW<[C1NanoMCWrite<5, 5, C1NanoUnitVALU_B>], (instregex "FCCMP")>;
 
-// ASIMD FP compare
-def : InstRW<[C1NanoWrite<3, C1NanoUnitVALU>],
-             (instregex "^(FACGE|FACGT|FCMEQ|FCMGE|FCMGT|FCMLE|FCMLT)(v|16|32|64)")>;
-
-// ASIMD reverse bits.
-def : InstRW<[C1NanoWrite<3, C1NanoUnitVALU>], (instregex "RBITv")>;
-
-// ASIMD count
-def : InstRW<[C1NanoWrite<3, C1NanoUnitVALU>], (instregex "^(CLS|CLZ|CNT)v")>;
-
 def C1NanoWriteISReg : SchedWriteVariant<[
        SchedVar<RegShiftedPred, [WriteISReg]>,
        SchedVar<NoSchedPred, [WriteI]>]>;
@@ -331,6 +321,16 @@ def : InstRW<[C1NanoWrite<2, C1NanoUnitMAC>], (instregex "[SU]M(ADD|SUB)L")>;
 
 // Multiply high
 def : InstRW<[C1NanoMCWrite<6, 4, C1NanoUnitMAC>], (instregex "[SU]MULHr")>;
+
+// ASIMD FP compare
+def : InstRW<[C1NanoWrite<3, C1NanoUnitVALU>],
+             (instregex "^(FACGE|FACGT|FCMEQ|FCMGE|FCMGT|FCMLE|FCMLT)(v|16|32|64)")>;
+
+// ASIMD reverse bits.
+def : InstRW<[C1NanoWrite<3, C1NanoUnitVALU>], (instregex "RBITv")>;
+
+// ASIMD count
+def : InstRW<[C1NanoWrite<3, C1NanoUnitVALU>], (instregex "^(CLS|CLZ|CNT)v")>;
 
 // ASIMD scalar DUP (asm mnemonic is "mov", e.g. "mov b0, v0.b[1]").
 def : InstRW<[C1NanoWrite<3, C1NanoUnitVALU>], (instregex "DUPi")>;
