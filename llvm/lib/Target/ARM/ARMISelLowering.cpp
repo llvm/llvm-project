@@ -1506,9 +1506,8 @@ EVT ARMTargetLowering::getSetCCResultType(const DataLayout &DL, LLVMContext &C,
     return getPointerTy(DL);
 
   // MVE has a predicate register.
-  if ((Subtarget->hasMVEIntegerOps() && VT.isInteger()) ||
-      (Subtarget->hasMVEFloatOps() && VT.isFloatingPoint()))
-    return VT.changeElementType(C, MVT::i1);
+  if (Subtarget->hasMVEIntegerOps())
+    return EVT::getVectorVT(C, MVT::i1, VT.getVectorElementCount());
 
   return VT.changeVectorElementTypeToInteger();
 }
@@ -17739,6 +17738,17 @@ SDValue ARMTargetLowering::PerformIntrinsicCombine(SDNode *N,
   }
 
   return SDValue();
+}
+
+bool ARMTargetLowering::hasAndNot(SDValue Y) const {
+  EVT VT = Y.getValueType();
+  if (!VT.isVector())
+    return hasAndNotCompare(Y);
+  if (Subtarget->hasMVEIntegerOps())
+    return VT.is128BitVector();
+  if (Subtarget->hasNEON())
+    return VT.is64BitVector() || VT.is128BitVector();
+  return false;
 }
 
 /// PerformShiftCombine - Checks for immediate versions of vector shifts and

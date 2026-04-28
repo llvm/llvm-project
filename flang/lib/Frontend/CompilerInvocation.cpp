@@ -1048,14 +1048,27 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   // this has to change when other -W<opt>'s are supported.
   if (args.hasArg(clang::options::OPT_W_Joined)) {
     const auto &wArgs = args.getAllArgValues(clang::options::OPT_W_Joined);
-    for (const auto &wArg : wArgs) {
+    // TODO: Consider using std::string_view instead of llvm::StringRef
+    // when moving to C++20:
+    for (const llvm::StringRef wArg : wArgs) {
       if (wArg == "error") {
         res.setWarnAsErr(true);
         // -Wfatal-errors
       } else if (wArg == "fatal-errors") {
         res.setMaxErrors(1);
         // -W[no-]<feature>
-      } else if (!features.EnableWarning(wArg)) {
+      } else if (features.EnableWarning(wArg)) {
+        if (auto canonical{features.CheckDeprecatedSpelling(wArg)}) {
+          std::string suggestion{*canonical};
+          if (wArg.starts_with("no-")) {
+            suggestion = "no-" + suggestion;
+          }
+          const unsigned diagID =
+              diags.getCustomDiagID(clang::DiagnosticsEngine::Warning,
+                                    "-W%0 is deprecated; use -W%1 instead");
+          diags.Report(diagID) << wArg << suggestion;
+        }
+      } else {
         const unsigned diagID = diags.getCustomDiagID(
             clang::DiagnosticsEngine::Error, "Unknown diagnostic option: -W%0");
         diags.Report(diagID) << wArg;

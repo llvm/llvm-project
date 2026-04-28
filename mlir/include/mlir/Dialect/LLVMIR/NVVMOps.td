@@ -521,8 +521,8 @@ def NVVM_RcpApproxFtzF32Op : NVVM_IntrOp<"rcp.approx.ftz.f", [Pure], 1> {
 //===----------------------------------------------------------------------===//
 // NVVM transcendental op definitions
 //===----------------------------------------------------------------------===//
-// PTX provides only fast approximations for sin/cos/lg2/ex2/tanh. Exposing
-// these as plain `nvvm.{sin,cos,lg2,ex2,tanh}` (without a `.approx` suffix)
+// PTX provides only fast approximations for sin/cos/log2/ex2/tanh. Exposing
+// these as plain `nvvm.{sin,cos,log2,ex2,tanh}` (without a `.approx` suffix)
 // keeps the NVVM dialect self-contained -- users don't need to reach for
 // `math.*` ops for something that already has a PTX instruction.
 
@@ -551,6 +551,20 @@ def NVVM_CosOp : NVVM_SingleResultIntrinsicOp<"cos",
     Computes a fast approximation of the cosine of the input value (in
     radians). The `ftz` attribute, when set, flushes subnormal inputs
     and results to sign-preserving zero.
+  }];
+  let arguments = (ins F32:$src,
+                       DefaultValuedAttr<BoolAttr, "false">:$ftz);
+  let results = (outs F32:$res);
+  let assemblyFormat = "$src attr-dict `:` type($src)";
+}
+
+def NVVM_Log2Op : NVVM_SingleResultIntrinsicOp<"log2",
+    [Pure, SameOperandsAndResultType]> {
+  let summary = "Base-2 logarithm (fast approximation)";
+  let description = [{
+    Computes a fast approximation of the base-2 logarithm of the input
+    value. The `ftz` attribute, when set, flushes subnormal inputs and
+    results to sign-preserving zero.
   }];
   let arguments = (ins F32:$src,
                        DefaultValuedAttr<BoolAttr, "false">:$ftz);

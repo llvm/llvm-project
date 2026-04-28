@@ -450,6 +450,7 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &d,
 
   cir::GlobalOp gv = builder.createVersionedGlobal(
       getModule(), getLoc(d.getLocation()), name, lty, false, linkage);
+  insertGlobalSymbol(gv);
   // TODO(cir): infer visibility from linkage in global op builder.
   gv.setVisibility(getMLIRVisibilityFromCIRLinkage(linkage));
   gv.setInitialValueAttr(init);
@@ -459,7 +460,7 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &d,
     gv.setComdat(true);
 
   if (d.getTLSKind())
-    errorNYI(d.getSourceRange(), "getOrCreateStaticVarDecl: TLS");
+    setTLSMode(gv, d);
 
   setGVProperties(gv, &d);
 
@@ -545,6 +546,7 @@ Address CIRGenModule::createUnnamedGlobalFrom(const VarDecl &d,
     cir::GlobalOp gv = builder.createVersionedGlobal(
         getModule(), getLoc(d.getLocation()), name, ty, isConstant,
         cir::GlobalLinkageKind::PrivateLinkage);
+    insertGlobalSymbol(gv);
     // TODO(cir): infer visibility from linkage in global op builder.
     gv.setVisibility(getMLIRVisibilityFromCIRLinkage(
         cir::GlobalLinkageKind::PrivateLinkage));
@@ -642,7 +644,8 @@ void CIRGenFunction::emitStaticVarDecl(const VarDecl &d,
   cir::GlobalOp globalOp = cgm.getOrCreateStaticVarDecl(d, linkage);
   // TODO(cir): we should have a way to represent global ops as values without
   // having to emit a get global op. Sometimes these emissions are not used.
-  mlir::Value addr = builder.createGetGlobal(globalOp);
+  mlir::Value addr =
+      builder.createGetGlobal(globalOp, d.getTLSKind() != VarDecl::TLS_None);
   auto getAddrOp = addr.getDefiningOp<cir::GetGlobalOp>();
   assert(getAddrOp && "expected cir::GetGlobalOp");
 
