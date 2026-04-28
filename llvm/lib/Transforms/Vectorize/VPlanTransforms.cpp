@@ -704,25 +704,11 @@ void VPlanTransforms::replaceWidenCanonicalIVWithWidenIV(
   if (!WideCanIV)
     return;
 
-  // If a canonical VPWidenIntOrFpInductionRecipe already exists, reuse it.
-  VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
-  for (VPRecipeBase &Phi : Header->phis()) {
-    auto *WideIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
-    if (!WideIV || !WideIV->isCanonical())
-      continue;
-    // The canonical wide IV is used to compute the header mask, hence all
-    // lanes will be used. Drop poison-generating flags.
-    WideIV->dropPoisonGeneratingFlags();
-    WideCanIV->replaceAllUsesWith(WideIV);
-    WideCanIV->eraseFromParent();
-    return;
-  }
-
-  // Otherwise, introduce a new VPWidenIntOrFpInductionRecipe if profitable.
   if (vputils::onlyFirstLaneUsed(WideCanIV) ||
       vputils::onlyScalarValuesUsed(WideCanIV))
     return;
 
+  // Introduce a new VPWidenIntOrFpInductionRecipe if profitable.
   Type *CanIVTy = LoopRegion->getCanonicalIVType();
   auto *VecTy = VectorType::get(CanIVTy, VF);
   InstructionCost BroadcastCost = TTI.getShuffleCost(
@@ -753,6 +739,7 @@ void VPlanTransforms::replaceWidenCanonicalIVWithWidenIV(
       /*IV=*/nullptr, StartV, StepV, &Plan.getVF(), ID,
       VPIRFlags::WrapFlagsTy(/*HasNUW=*/false, /*HasNSW=*/false),
       WideCanIV->getDebugLoc());
+  VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
   NewWideIV->insertBefore(&*Header->getFirstNonPhi());
   WideCanIV->replaceAllUsesWith(NewWideIV);
   WideCanIV->eraseFromParent();
