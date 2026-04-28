@@ -7,7 +7,7 @@
 // RUN: %clang_cc1 -std=c++2c -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx20,since-cxx23,since-cxx26 %s
 
 
-namespace cwg2810 { // cwg2810: yes
+namespace cwg2810 { // cwg2810: 2.7
 
 template <typename>
 void f() {
