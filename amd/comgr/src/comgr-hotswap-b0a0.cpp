@@ -518,7 +518,7 @@ amd_comgr_status_t retargetCodeObjectB0A0(const void *ElfData, size_t ElfSize,
     if (!fixupTrampolineBranches(Deferred, Text, Elf.textSize(), LS))
       log() << "hotswap: error: some trampolines could not be fixed up\n";
 
-    Result = Elf.growWithTrampolines(Deferred);
+    Result = Elf.growWithTrampolines(Deferred, LS.SNopBytes);
     if (!Result) {
       log() << "hotswap: error: retargetCodeObjectB0A0: "
             << "ElfView::growWithTrampolines returned null with "

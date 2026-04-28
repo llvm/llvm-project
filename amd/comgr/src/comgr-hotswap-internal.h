@@ -193,12 +193,13 @@ public:
   /// Grow the ELF by inserting trampoline bytes after `.text` and adjusting
   /// all section and program headers. Returns a null unique_ptr on failure.
   ///
-  /// Invariant: `.text` must be the last SHF_ALLOC section in its load
-  /// segment. Any loaded section appearing past `.text` in the file causes
-  /// the function to refuse (with a diagnostic through log()) rather than
-  /// silently emit stale virtual addresses.
+  /// SHF_ALLOC sections after `.text` (e.g. `.dynamic` in clang/lld-produced
+  /// HSACOs) are handled: their file offsets, virtual addresses (sh_addr,
+  /// p_vaddr, p_paddr), and segment sizes are shifted by the total
+  /// trampoline size to keep the ELF layout consistent.
   std::unique_ptr<llvm::WritableMemoryBuffer>
-  growWithTrampolines(llvm::ArrayRef<Trampoline> Trampolines) const;
+  growWithTrampolines(llvm::ArrayRef<Trampoline> Trampolines,
+                      llvm::ArrayRef<uint8_t> SNopBytes) const;
 
 private:
   ElfView(ELFFileT File, ELFT::ShdrRange Sections,
