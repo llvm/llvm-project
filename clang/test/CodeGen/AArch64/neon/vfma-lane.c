@@ -31,10 +31,10 @@
 // CIR-LABEL: @test_vfma_lane_f32(
 float32x2_t test_vfma_lane_f32(float32x2_t a, float32x2_t b, float32x2_t v) {
 // CIR:      [[LANE:%.*]] = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<2 x !cir.float>) [#cir.int<1> : !s32i, #cir.int<1> : !s32i] : !cir.vector<2 x !cir.float>
-// CIR-NEXT: [[RES:%.*]] = cir.call_llvm_intrinsic "fma" %{{.*}}, [[LANE]], %{{.*}} : (!cir.vector<2 x !cir.float>, !cir.vector<2 x !cir.float>, !cir.vector<2 x !cir.float>) -> !cir.vector<2 x !cir.float>
+// CIR-NEXT: {{%.*}} = cir.call_llvm_intrinsic "fma" %{{.*}}, [[LANE]], %{{.*}} : (!cir.vector<2 x !cir.float>, !cir.vector<2 x !cir.float>, !cir.vector<2 x !cir.float>) -> !cir.vector<2 x !cir.float>
 
-// CIRLLVM:      shufflevector <2 x float> {{.*}} <i32 1, i32 1>
-// CIRLLVM-NEXT: {{.*}}call <2 x float> @llvm.fma.v2f32({{.*}}
+// CIRLLVM:      [[LANE:%.*]] = shufflevector <2 x float> {{.*}} <i32 1, i32 1>
+// CIRLLVM-NEXT: {{%.*}} = call <2 x float> @llvm.fma.v2f32(<2 x float> {{.*}}, <2 x float> [[LANE]], <2 x float> {{.*}})
 
 // LLVM-SAME: <2 x float> {{.*}} [[A:%.*]], <2 x float> {{.*}} [[B:%.*]], <2 x float> {{.*}} [[V:%.*]]) {{.*}} {
 // LLVM:         [[TMP0:%.*]] = bitcast <2 x float> [[A]] to <2 x i32>
@@ -57,10 +57,10 @@ float32x2_t test_vfma_lane_f32(float32x2_t a, float32x2_t b, float32x2_t v) {
 // CIR-LABEL: @test_vfmaq_lane_f32(
 float32x4_t test_vfmaq_lane_f32(float32x4_t a, float32x4_t b, float32x2_t v) {
 // CIR:      [[LANE:%.*]] = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<2 x !cir.float>) [#cir.int<1> : !s32i, #cir.int<1> : !s32i, #cir.int<1> : !s32i, #cir.int<1> : !s32i] : !cir.vector<4 x !cir.float>
-// CIR-NEXT: [[RES:%.*]] = cir.call_llvm_intrinsic "fma" %{{.*}}, [[LANE]], %{{.*}} : (!cir.vector<4 x !cir.float>, !cir.vector<4 x !cir.float>, !cir.vector<4 x !cir.float>) -> !cir.vector<4 x !cir.float>
+// CIR-NEXT: {{%.*}} = cir.call_llvm_intrinsic "fma" %{{.*}}, [[LANE]], %{{.*}} : (!cir.vector<4 x !cir.float>, !cir.vector<4 x !cir.float>, !cir.vector<4 x !cir.float>) -> !cir.vector<4 x !cir.float>
 
-// CIRLLVM:      shufflevector <2 x float> {{.*}} <i32 1, i32 1, i32 1, i32 1>
-// CIRLLVM-NEXT: {{.*}}call <4 x float> @llvm.fma.v4f32({{.*}}
+// CIRLLVM:      [[LANE:%.*]] = shufflevector <2 x float> {{.*}} <i32 1, i32 1, i32 1, i32 1>
+// CIRLLVM-NEXT: {{%.*}} = call <4 x float> @llvm.fma.v4f32(<4 x float> {{.*}}, <4 x float> [[LANE]], <4 x float> {{.*}})
 
 // LLVM-SAME: <4 x float> {{.*}} [[A:%.*]], <4 x float> {{.*}} [[B:%.*]], <2 x float> {{.*}} [[V:%.*]]) {{.*}} {
 // LLVM:         [[TMP0:%.*]] = bitcast <4 x float> [[A]] to <4 x i32>
@@ -83,10 +83,10 @@ float32x4_t test_vfmaq_lane_f32(float32x4_t a, float32x4_t b, float32x2_t v) {
 // CIR-LABEL: @test_vfma_laneq_f32(
 float32x2_t test_vfma_laneq_f32(float32x2_t a, float32x2_t b, float32x4_t v) {
 // CIR:      [[LANE:%.*]] = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<4 x !cir.float>) [#cir.int<3> : !s32i, #cir.int<3> : !s32i] : !cir.vector<2 x !cir.float>
-// CIR-NEXT: [[RES:%.*]] = cir.call_llvm_intrinsic "fma" %{{.*}}, [[LANE]], %{{.*}} : (!cir.vector<2 x !cir.float>, !cir.vector<2 x !cir.float>, !cir.vector<2 x !cir.float>) -> !cir.vector<2 x !cir.float>
+// CIR-NEXT: {{%.*}} = cir.call_llvm_intrinsic "fma" %{{.*}}, [[LANE]], %{{.*}} : (!cir.vector<2 x !cir.float>, !cir.vector<2 x !cir.float>, !cir.vector<2 x !cir.float>) -> !cir.vector<2 x !cir.float>
 
-// CIRLLVM:      shufflevector <4 x float> {{.*}} <i32 3, i32 3>
-// CIRLLVM-NEXT: {{.*}}call <2 x float> @llvm.fma.v2f32({{.*}}
+// CIRLLVM:      [[LANE:%.*]] = shufflevector <4 x float> {{.*}} <i32 3, i32 3>
+// CIRLLVM-NEXT: {{%.*}} = call <2 x float> @llvm.fma.v2f32(<2 x float> {{.*}}, <2 x float> [[LANE]], <2 x float> {{.*}})
 
 // LLVM-SAME: <2 x float> {{.*}} [[A:%.*]], <2 x float> {{.*}} [[B:%.*]], <4 x float> {{.*}} [[V:%.*]]) {{.*}} {
 // LLVM:         [[TMP0:%.*]] = bitcast <2 x float> [[A]] to <2 x i32>
@@ -109,10 +109,10 @@ float32x2_t test_vfma_laneq_f32(float32x2_t a, float32x2_t b, float32x4_t v) {
 // CIR-LABEL: @test_vfmaq_laneq_f32(
 float32x4_t test_vfmaq_laneq_f32(float32x4_t a, float32x4_t b, float32x4_t v) {
 // CIR:      [[LANE:%.*]] = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<4 x !cir.float>) [#cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i] : !cir.vector<4 x !cir.float>
-// CIR-NEXT: [[RES:%.*]] = cir.call_llvm_intrinsic "fma" %{{.*}}, [[LANE]], %{{.*}} : (!cir.vector<4 x !cir.float>, !cir.vector<4 x !cir.float>, !cir.vector<4 x !cir.float>) -> !cir.vector<4 x !cir.float>
+// CIR-NEXT: {{%.*}} = cir.call_llvm_intrinsic "fma" %{{.*}}, [[LANE]], %{{.*}} : (!cir.vector<4 x !cir.float>, !cir.vector<4 x !cir.float>, !cir.vector<4 x !cir.float>) -> !cir.vector<4 x !cir.float>
 
-// CIRLLVM:      shufflevector <4 x float> {{.*}} <i32 3, i32 3, i32 3, i32 3>
-// CIRLLVM-NEXT: {{.*}}call <4 x float> @llvm.fma.v4f32({{.*}}
+// CIRLLVM:      [[LANE:%.*]] = shufflevector <4 x float> {{.*}} <i32 3, i32 3, i32 3, i32 3>
+// CIRLLVM-NEXT: {{%.*}} = call <4 x float> @llvm.fma.v4f32(<4 x float> {{.*}}, <4 x float> [[LANE]], <4 x float> {{.*}})
 
 // LLVM-SAME: <4 x float> {{.*}} [[A:%.*]], <4 x float> {{.*}} [[B:%.*]], <4 x float> {{.*}} [[V:%.*]]) {{.*}} {
 // LLVM:         [[TMP0:%.*]] = bitcast <4 x float> [[A]] to <4 x i32>
@@ -135,10 +135,10 @@ float32x4_t test_vfmaq_laneq_f32(float32x4_t a, float32x4_t b, float32x4_t v) {
 // CIR-LABEL: @test_vfma_lane_f64(
 float64x1_t test_vfma_lane_f64(float64x1_t a, float64x1_t b, float64x1_t v) {
 // CIR:      [[LANE:%.*]] = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<1 x !cir.double>) [#cir.int<0> : !s32i] : !cir.vector<1 x !cir.double>
-// CIR-NEXT: [[RES:%.*]] = cir.call_llvm_intrinsic "fma" %{{.*}}, [[LANE]], %{{.*}} : (!cir.vector<1 x !cir.double>, !cir.vector<1 x !cir.double>, !cir.vector<1 x !cir.double>) -> !cir.vector<1 x !cir.double>
+// CIR-NEXT: {{%.*}} = cir.call_llvm_intrinsic "fma" %{{.*}}, [[LANE]], %{{.*}} : (!cir.vector<1 x !cir.double>, !cir.vector<1 x !cir.double>, !cir.vector<1 x !cir.double>) -> !cir.vector<1 x !cir.double>
 
-// CIRLLVM:      shufflevector <1 x double> {{.*}} zeroinitializer
-// CIRLLVM-NEXT: {{.*}}call <1 x double> @llvm.fma.v1f64({{.*}}
+// CIRLLVM:      [[LANE:%.*]] = shufflevector <1 x double> {{.*}} zeroinitializer
+// CIRLLVM-NEXT: {{%.*}} = call <1 x double> @llvm.fma.v1f64(<1 x double> {{.*}}, <1 x double> [[LANE]], <1 x double> {{.*}})
 
 // LLVM-SAME: <1 x double> {{.*}} [[A:%.*]], <1 x double> {{.*}} [[B:%.*]], <1 x double> {{.*}} [[V:%.*]]) {{.*}} {
 // LLVM:         [[TMP0:%.*]] = bitcast <1 x double> [[A]] to i64
@@ -164,10 +164,10 @@ float64x1_t test_vfma_lane_f64(float64x1_t a, float64x1_t b, float64x1_t v) {
 // CIR-LABEL: @test_vfmaq_lane_f64(
 float64x2_t test_vfmaq_lane_f64(float64x2_t a, float64x2_t b, float64x1_t v) {
 // CIR:      [[LANE:%.*]] = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<1 x !cir.double>) [#cir.int<0> : !s32i, #cir.int<0> : !s32i] : !cir.vector<2 x !cir.double>
-// CIR-NEXT: [[RES:%.*]] = cir.call_llvm_intrinsic "fma" %{{.*}}, [[LANE]], %{{.*}} : (!cir.vector<2 x !cir.double>, !cir.vector<2 x !cir.double>, !cir.vector<2 x !cir.double>) -> !cir.vector<2 x !cir.double>
+// CIR-NEXT: {{%.*}} = cir.call_llvm_intrinsic "fma" %{{.*}}, [[LANE]], %{{.*}} : (!cir.vector<2 x !cir.double>, !cir.vector<2 x !cir.double>, !cir.vector<2 x !cir.double>) -> !cir.vector<2 x !cir.double>
 
-// CIRLLVM:      shufflevector <1 x double> {{.*}} <2 x i32> zeroinitializer
-// CIRLLVM-NEXT: {{.*}}call <2 x double> @llvm.fma.v2f64({{.*}}
+// CIRLLVM:      [[LANE:%.*]] = shufflevector <1 x double> {{.*}} <2 x i32> zeroinitializer
+// CIRLLVM-NEXT: {{%.*}} = call <2 x double> @llvm.fma.v2f64(<2 x double> {{.*}}, <2 x double> [[LANE]], <2 x double> {{.*}})
 
 // LLVM-SAME: <2 x double> {{.*}} [[A:%.*]], <2 x double> {{.*}} [[B:%.*]], <1 x double> {{.*}} [[V:%.*]]) {{.*}} {
 // LLVM:         [[TMP0:%.*]] = bitcast <2 x double> [[A]] to <2 x i64>
@@ -191,10 +191,10 @@ float64x2_t test_vfmaq_lane_f64(float64x2_t a, float64x2_t b, float64x1_t v) {
 // CIR-LABEL: @test_vfma_laneq_f64(
 float64x1_t test_vfma_laneq_f64(float64x1_t a, float64x1_t b, float64x2_t v) {
 // CIR:      [[EXTRACT:%.*]] = cir.vec.extract %{{.*}}[%{{.*}} : !s32i] : !cir.vector<2 x !cir.double>
-// CIR-NEXT: [[RES:%.*]] = cir.call_llvm_intrinsic "fma" %{{.*}}, [[EXTRACT]], %{{.*}} : (!cir.double, !cir.double, !cir.double) -> !cir.double
+// CIR-NEXT: {{%.*}} = cir.call_llvm_intrinsic "fma" %{{.*}}, [[EXTRACT]], %{{.*}} : (!cir.double, !cir.double, !cir.double) -> !cir.double
 
-// CIRLLVM:      extractelement <2 x double> {{.*}}, i32 1
-// CIRLLVM-NEXT: {{.*}}call double @llvm.fma.f64({{.*}}
+// CIRLLVM:      [[EXTRACT:%.*]] = extractelement <2 x double> {{.*}}, i32 1
+// CIRLLVM-NEXT: {{%.*}} = call double @llvm.fma.f64(double {{.*}}, double [[EXTRACT]], double {{.*}})
 
 // LLVM-SAME: <1 x double> {{.*}} [[A:%.*]], <1 x double> {{.*}} [[B:%.*]], <2 x double> {{.*}} [[V:%.*]]) {{.*}} {
 // LLVM:         [[TMP0:%.*]] = bitcast <1 x double> [[A]] to i64
@@ -220,10 +220,10 @@ float64x1_t test_vfma_laneq_f64(float64x1_t a, float64x1_t b, float64x2_t v) {
 // CIR-LABEL: @test_vfmaq_laneq_f64(
 float64x2_t test_vfmaq_laneq_f64(float64x2_t a, float64x2_t b, float64x2_t v) {
 // CIR:      [[LANE:%.*]] = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<2 x !cir.double>) [#cir.int<1> : !s32i, #cir.int<1> : !s32i] : !cir.vector<2 x !cir.double>
-// CIR-NEXT: [[RES:%.*]] = cir.call_llvm_intrinsic "fma" %{{.*}}, [[LANE]], %{{.*}} : (!cir.vector<2 x !cir.double>, !cir.vector<2 x !cir.double>, !cir.vector<2 x !cir.double>) -> !cir.vector<2 x !cir.double>
+// CIR-NEXT: {{%.*}} = cir.call_llvm_intrinsic "fma" %{{.*}}, [[LANE]], %{{.*}} : (!cir.vector<2 x !cir.double>, !cir.vector<2 x !cir.double>, !cir.vector<2 x !cir.double>) -> !cir.vector<2 x !cir.double>
 
-// CIRLLVM:      shufflevector <2 x double> {{.*}} <i32 1, i32 1>
-// CIRLLVM-NEXT: {{.*}}call <2 x double> @llvm.fma.v2f64({{.*}}
+// CIRLLVM:      [[LANE:%.*]] = shufflevector <2 x double> {{.*}} <i32 1, i32 1>
+// CIRLLVM-NEXT: {{%.*}} = call <2 x double> @llvm.fma.v2f64(<2 x double> {{.*}}, <2 x double> [[LANE]], <2 x double> {{.*}})
 
 // LLVM-SAME: <2 x double> {{.*}} [[A:%.*]], <2 x double> {{.*}} [[B:%.*]], <2 x double> {{.*}} [[V:%.*]]) {{.*}} {
 // LLVM:         [[TMP0:%.*]] = bitcast <2 x double> [[A]] to <2 x i64>

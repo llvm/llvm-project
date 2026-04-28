@@ -31,10 +31,10 @@
 // CIR-LABEL: @test_vfmas_lane_f32(
 float32_t test_vfmas_lane_f32(float32_t a, float32_t b, float32x2_t c) {
 // CIR:      [[EXTRACT:%.*]] = cir.vec.extract %{{.*}}[%{{.*}} : !s32i] : !cir.vector<2 x !cir.float>
-// CIR-NEXT: [[RES:%.*]] = cir.call_llvm_intrinsic "fma" %{{.*}}, [[EXTRACT]], %{{.*}} : (!cir.float, !cir.float, !cir.float) -> !cir.float
+// CIR-NEXT: {{%.*}} = cir.call_llvm_intrinsic "fma" %{{.*}}, [[EXTRACT]], %{{.*}} : (!cir.float, !cir.float, !cir.float) -> !cir.float
 
 // CIRLLVM:      [[EXTRACT:%.*]] = extractelement <2 x float> {{.*}}, i32 1
-// CIRLLVM-NEXT: [[RES:%.*]] = call float @llvm.fma.f32(float {{.*}}, float [[EXTRACT]], float {{.*}})
+// CIRLLVM-NEXT: {{%.*}} = call float @llvm.fma.f32(float {{.*}}, float [[EXTRACT]], float {{.*}})
 
 // LLVM-SAME: float {{.*}} [[A:%.*]], float {{.*}} [[B:%.*]], <2 x float> {{.*}} [[C:%.*]]) {{.*}} {
 // LLVM:         [[EXTRACT:%.*]] = extractelement <2 x float> [[C]], i32 1
@@ -48,10 +48,10 @@ float32_t test_vfmas_lane_f32(float32_t a, float32_t b, float32x2_t c) {
 // CIR-LABEL: @test_vfmas_laneq_f32(
 float32_t test_vfmas_laneq_f32(float32_t a, float32_t b, float32x4_t c) {
 // CIR:      [[EXTRACT:%.*]] = cir.vec.extract %{{.*}}[%{{.*}} : !s32i] : !cir.vector<4 x !cir.float>
-// CIR-NEXT: [[RES:%.*]] = cir.call_llvm_intrinsic "fma" %{{.*}}, [[EXTRACT]], %{{.*}} : (!cir.float, !cir.float, !cir.float) -> !cir.float
+// CIR-NEXT: {{%.*}} = cir.call_llvm_intrinsic "fma" %{{.*}}, [[EXTRACT]], %{{.*}} : (!cir.float, !cir.float, !cir.float) -> !cir.float
 
 // CIRLLVM:      [[EXTRACT:%.*]] = extractelement <4 x float> {{.*}}, i32 3
-// CIRLLVM-NEXT: [[RES:%.*]] = call float @llvm.fma.f32(float {{.*}}, float [[EXTRACT]], float {{.*}})
+// CIRLLVM-NEXT: {{%.*}} = call float @llvm.fma.f32(float {{.*}}, float [[EXTRACT]], float {{.*}})
 
 // LLVM-SAME: float {{.*}} [[A:%.*]], float {{.*}} [[B:%.*]], <4 x float> {{.*}} [[C:%.*]]) {{.*}} {
 // LLVM:         [[EXTRACT:%.*]] = extractelement <4 x float> [[C]], i32 3
@@ -65,10 +65,10 @@ float32_t test_vfmas_laneq_f32(float32_t a, float32_t b, float32x4_t c) {
 // CIR-LABEL: @test_vfmad_lane_f64(
 float64_t test_vfmad_lane_f64(float64_t a, float64_t b, float64x1_t c) {
 // CIR:      [[EXTRACT:%.*]] = cir.vec.extract %{{.*}}[%{{.*}} : !s32i] : !cir.vector<1 x !cir.double>
-// CIR-NEXT: [[RES:%.*]] = cir.call_llvm_intrinsic "fma" %{{.*}}, [[EXTRACT]], %{{.*}} : (!cir.double, !cir.double, !cir.double) -> !cir.double
+// CIR-NEXT: {{%.*}} = cir.call_llvm_intrinsic "fma" %{{.*}}, [[EXTRACT]], %{{.*}} : (!cir.double, !cir.double, !cir.double) -> !cir.double
 
 // CIRLLVM:      [[EXTRACT:%.*]] = extractelement <1 x double> {{.*}}, i32 0
-// CIRLLVM-NEXT: [[RES:%.*]] = call double @llvm.fma.f64(double {{.*}}, double [[EXTRACT]], double {{.*}})
+// CIRLLVM-NEXT: {{%.*}} = call double @llvm.fma.f64(double {{.*}}, double [[EXTRACT]], double {{.*}})
 
 // LLVM-SAME: double {{.*}} [[A:%.*]], double {{.*}} [[B:%.*]], <1 x double> {{.*}} [[C:%.*]]) {{.*}} {
 // LLVM:         [[EXTRACT:%.*]] = extractelement <1 x double> [[C]], i32 0
@@ -82,10 +82,10 @@ float64_t test_vfmad_lane_f64(float64_t a, float64_t b, float64x1_t c) {
 // CIR-LABEL: @test_vfmad_laneq_f64(
 float64_t test_vfmad_laneq_f64(float64_t a, float64_t b, float64x2_t c) {
 // CIR:      [[EXTRACT:%.*]] = cir.vec.extract %{{.*}}[%{{.*}} : !s32i] : !cir.vector<2 x !cir.double>
-// CIR-NEXT: [[RES:%.*]] = cir.call_llvm_intrinsic "fma" %{{.*}}, [[EXTRACT]], %{{.*}} : (!cir.double, !cir.double, !cir.double) -> !cir.double
+// CIR-NEXT: {{%.*}} = cir.call_llvm_intrinsic "fma" %{{.*}}, [[EXTRACT]], %{{.*}} : (!cir.double, !cir.double, !cir.double) -> !cir.double
 
 // CIRLLVM:      [[EXTRACT:%.*]] = extractelement <2 x double> {{.*}}, i32 1
-// CIRLLVM-NEXT: [[RES:%.*]] = call double @llvm.fma.f64(double {{.*}}, double [[EXTRACT]], double {{.*}})
+// CIRLLVM-NEXT: {{%.*}} = call double @llvm.fma.f64(double {{.*}}, double [[EXTRACT]], double {{.*}})
 
 // LLVM-SAME: double {{.*}} [[A:%.*]], double {{.*}} [[B:%.*]], <2 x double> {{.*}} [[C:%.*]]) {{.*}} {
 // LLVM:         [[EXTRACT:%.*]] = extractelement <2 x double> [[C]], i32 1
