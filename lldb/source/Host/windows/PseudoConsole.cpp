@@ -166,11 +166,11 @@ llvm::Error PseudoConsole::OpenPseudoConsole() {
   // Write the cursor position response to the input pipe so ConPTY can read it
   // and initialize without clearing the screen or overwriting LLDB's prompt.
   {
-    char response[32];
-    int len = snprintf(response, sizeof(response), "\x1b[%d;%dR", cursorRow,
-                       cursorCol);
+    llvm::SmallString<32> response =
+        llvm::formatv("\x1b[{0};{1}R", cursorRow, cursorCol).sstr<32>();
     DWORD nwritten = 0;
-    WriteFile(m_conpty_input, response, len, &nwritten, NULL);
+    WriteFile(m_conpty_input, response.data(), response.size(), &nwritten,
+              NULL);
   }
 
   return llvm::Error::success();

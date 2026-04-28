@@ -32,6 +32,18 @@ class ConPTYTestCase(TestBase):
             os.environ["LLDB_LAUNCH_FLAG_USE_PIPES"] = self._saved_pipes_flag
         TestBase.tearDown(self)
 
+    @staticmethod
+    def _strip_output(text: str) -> str:
+        """
+        Strip VT sequences that ConPTY injects around the inferior's output
+        (CSI sequences like SGR resets, mode switches, cursor queries; and
+        OSC sequences like window-title sets) so the assertion only checks
+        the inferior's actual stdout content.
+        """
+        import re
+
+        return re.sub(r"\x1b(?:\[[0-9;?]*[A-Za-z]|\][^\x07]*\x07)", "", text)
+
     def _run_to_exit(self, mode):
         """Build, launch with *mode* as argv[1], run to exit, return stdout."""
         self.build()
@@ -56,7 +68,7 @@ class ConPTYTestCase(TestBase):
         import re
 
         output = self._run_to_exit("basic")
-        output = re.sub(r"\x1b(?:\[[0-9;?]*[A-Za-z]|\][^\x07]*\x07)", "", output)
+        output = self._strip_output(output)
         self.assertIn("Hello from ConPTY\r\n", output)
 
     @skipUnlessWindows
@@ -66,7 +78,7 @@ class ConPTYTestCase(TestBase):
         import re
 
         output = self._run_to_exit("large")
-        output = re.sub(r"\x1b(?:\[[0-9;?]*[A-Za-z]|\][^\x07]*\x07)", "", output)
+        output = self._strip_output(output)
         output_lines = output.split("\r\n")[:-1]
 
         self.assertEqual(
