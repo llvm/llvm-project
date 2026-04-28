@@ -110,8 +110,7 @@ define void @store_float_release(ptr addrspace(1) %ptr, float %val) {
 ; CHECK-LABEL: OpFunction %[[#]]
 ; CHECK:       %[[#ptr:]] = OpFunctionParameter %[[#]]
 ; CHECK:       %[[#val:]] = OpFunctionParameter %[[#Float]]
-; CHECK:       %[[#cast:]] = OpBitcast %[[#Int32]] %[[#val]]
-; CHECK:       OpAtomicStore %[[#ptr]] %[[#Const0]] %[[#Const516]] %[[#cast]]
+; CHECK:       OpAtomicStore %[[#ptr]] %[[#Const0]] %[[#Const516]] %[[#val]]
 ; CHECK:       OpReturn
   store atomic float %val, ptr addrspace(1) %ptr release, align 8
   ret void
