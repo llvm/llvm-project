@@ -6125,7 +6125,6 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
             AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel) != -1;
         bool hasOMod =
             AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::omod) != -1;
-
         BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::V_READLANE_B32),
                 LaneValueReg)
             .addReg(SrcReg)

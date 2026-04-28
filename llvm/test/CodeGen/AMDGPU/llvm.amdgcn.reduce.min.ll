@@ -7,11 +7,14 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -global-isel=1 -new-reg-bank-select -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GFX10GISEL,GFX1064GISEL %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -global-isel=0 < %s | FileCheck -check-prefixes=GFX10DAGISEL,GFX1032DAGISEL %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -global-isel=1 -new-reg-bank-select < %s | FileCheck -check-prefixes=GFX10GISEL,GFX1032GISEL %s
-; RUN: llc -mtriple=amdgcn -mattr=-real-true16 -mcpu=gfx1100 -global-isel=0 -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GFX1164DAGISEL %s
-; RUN: llc -mtriple=amdgcn -mattr=-real-true16 -mcpu=gfx1100 -global-isel=1 -new-reg-bank-select -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GFX1164GISEL %s
-; RUN: llc -mtriple=amdgcn -mattr=-real-true16 -mcpu=gfx1100 -global-isel=0 < %s | FileCheck -check-prefixes=GFX1132DAGISEL %s
-; RUN: llc -mtriple=amdgcn -mattr=-real-true16 -mcpu=gfx1100 -global-isel=1 -new-reg-bank-select < %s | FileCheck -check-prefixes=GFX1132GISEL %s
-
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -global-isel=0 -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GFX1164DAGISEL,GFX1164DAGISEL-FAKE16 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -global-isel=1 -new-reg-bank-select -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GFX1164GISEL,GFX1164GISEL-FAKE16 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -global-isel=0 < %s | FileCheck -check-prefixes=GFX1132DAGISEL,GFX1132DAGISEL-FAKE16 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -global-isel=1 -new-reg-bank-select < %s | FileCheck -check-prefixes=GFX1132GISEL,GFX1132GISEL-FAKE16 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 -global-isel=0 -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GFX1164DAGISEL,GFX1164DAGISEL-TRUE16 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 -global-isel=1 -new-reg-bank-select -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GFX1164GISEL,GFX1164GISEL-TRUE16 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 -global-isel=0 < %s | FileCheck -check-prefixes=GFX1132DAGISEL,GFX1132DAGISEL-TRUE16 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 -global-isel=1 -new-reg-bank-select < %s | FileCheck -check-prefixes=GFX1132GISEL,GFX1132GISEL-TRUE16 %s
 define amdgpu_kernel void @uniform_value_i16(ptr addrspace(1) %out, i16 %in) {
 ; GFX8DAGISEL-LABEL: uniform_value_i16:
 ; GFX8DAGISEL:       ; %bb.0: ; %entry
@@ -96,18 +99,18 @@ define amdgpu_kernel void @uniform_value_i16(ptr addrspace(1) %out, i16 %in) {
 ; GFX1164DAGISEL-NEXT:    global_store_b16 v0, v1, s[0:1]
 ; GFX1164DAGISEL-NEXT:    s_endpgm
 ;
-; GFX1164GISEL-LABEL: uniform_value_i16:
-; GFX1164GISEL:       ; %bb.0: ; %entry
-; GFX1164GISEL-NEXT:    s_clause 0x1
-; GFX1164GISEL-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; GFX1164GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX1164GISEL-NEXT:    v_mov_b32_e32 v1, 0
-; GFX1164GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1164GISEL-NEXT:    s_sext_i32_i16 s2, s2
-; GFX1164GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1164GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; GFX1164GISEL-NEXT:    global_store_b16 v1, v0, s[0:1]
-; GFX1164GISEL-NEXT:    s_endpgm
+; GFX1164GISEL-FAKE16-LABEL: uniform_value_i16:
+; GFX1164GISEL-FAKE16:       ; %bb.0: ; %entry
+; GFX1164GISEL-FAKE16-NEXT:    s_clause 0x1
+; GFX1164GISEL-FAKE16-NEXT:    s_load_b32 s2, s[4:5], 0x2c
+; GFX1164GISEL-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1164GISEL-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX1164GISEL-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1164GISEL-FAKE16-NEXT:    s_sext_i32_i16 s2, s2
+; GFX1164GISEL-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1164GISEL-FAKE16-NEXT:    v_mov_b32_e32 v0, s2
+; GFX1164GISEL-FAKE16-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX1164GISEL-FAKE16-NEXT:    s_endpgm
 ;
 ; GFX1132DAGISEL-LABEL: uniform_value_i16:
 ; GFX1132DAGISEL:       ; %bb.0: ; %entry
@@ -121,18 +124,44 @@ define amdgpu_kernel void @uniform_value_i16(ptr addrspace(1) %out, i16 %in) {
 ; GFX1132DAGISEL-NEXT:    global_store_b16 v0, v1, s[0:1]
 ; GFX1132DAGISEL-NEXT:    s_endpgm
 ;
-; GFX1132GISEL-LABEL: uniform_value_i16:
-; GFX1132GISEL:       ; %bb.0: ; %entry
-; GFX1132GISEL-NEXT:    s_clause 0x1
-; GFX1132GISEL-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; GFX1132GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX1132GISEL-NEXT:    v_mov_b32_e32 v1, 0
-; GFX1132GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1132GISEL-NEXT:    s_sext_i32_i16 s2, s2
-; GFX1132GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1132GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; GFX1132GISEL-NEXT:    global_store_b16 v1, v0, s[0:1]
-; GFX1132GISEL-NEXT:    s_endpgm
+; GFX1132GISEL-FAKE16-LABEL: uniform_value_i16:
+; GFX1132GISEL-FAKE16:       ; %bb.0: ; %entry
+; GFX1132GISEL-FAKE16-NEXT:    s_clause 0x1
+; GFX1132GISEL-FAKE16-NEXT:    s_load_b32 s2, s[4:5], 0x2c
+; GFX1132GISEL-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1132GISEL-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX1132GISEL-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1132GISEL-FAKE16-NEXT:    s_sext_i32_i16 s2, s2
+; GFX1132GISEL-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1132GISEL-FAKE16-NEXT:    v_mov_b32_e32 v0, s2
+; GFX1132GISEL-FAKE16-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX1132GISEL-FAKE16-NEXT:    s_endpgm
+;
+; GFX1164GISEL-TRUE16-LABEL: uniform_value_i16:
+; GFX1164GISEL-TRUE16:       ; %bb.0: ; %entry
+; GFX1164GISEL-TRUE16-NEXT:    s_clause 0x1
+; GFX1164GISEL-TRUE16-NEXT:    s_load_b32 s2, s[4:5], 0x2c
+; GFX1164GISEL-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1164GISEL-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX1164GISEL-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1164GISEL-TRUE16-NEXT:    s_sext_i32_i16 s2, s2
+; GFX1164GISEL-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1164GISEL-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s2
+; GFX1164GISEL-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX1164GISEL-TRUE16-NEXT:    s_endpgm
+;
+; GFX1132GISEL-TRUE16-LABEL: uniform_value_i16:
+; GFX1132GISEL-TRUE16:       ; %bb.0: ; %entry
+; GFX1132GISEL-TRUE16-NEXT:    s_clause 0x1
+; GFX1132GISEL-TRUE16-NEXT:    s_load_b32 s2, s[4:5], 0x2c
+; GFX1132GISEL-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1132GISEL-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX1132GISEL-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1132GISEL-TRUE16-NEXT:    s_sext_i32_i16 s2, s2
+; GFX1132GISEL-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1132GISEL-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s2
+; GFX1132GISEL-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX1132GISEL-TRUE16-NEXT:    s_endpgm
 entry:
   %result = call i16 @llvm.amdgcn.wave.reduce.min.i16(i16 %in, i32 1)
   store i16 %result, ptr addrspace(1) %out
@@ -3691,3 +3720,8 @@ endif:
   store i64 %combine, ptr addrspace(1) %out
   ret void
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; GFX1132DAGISEL-FAKE16: {{.*}}
+; GFX1132DAGISEL-TRUE16: {{.*}}
+; GFX1164DAGISEL-FAKE16: {{.*}}
+; GFX1164DAGISEL-TRUE16: {{.*}}
