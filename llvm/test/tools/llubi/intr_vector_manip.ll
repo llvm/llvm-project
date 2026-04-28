@@ -17,7 +17,7 @@ define void @main() {
 
   %splice_left = call <4 x i32> @llvm.vector.splice.left.v4i32(<4 x i32> <i32 0, i32 1, i32 2, i32 3>, <4 x i32> <i32 10, i32 11, i32 12, i32 13>, i32 2)
   %splice_left_poison_lane = call <4 x i32> @llvm.vector.splice.left.v4i32(<4 x i32> <i32 0, i32 poison, i32 2, i32 3>, <4 x i32> <i32 10, i32 11, i32 12, i32 13>, i32 1)
-  %splice_left_poison = call <4 x i32> @llvm.vector.splice.left.v4i32(<4 x i32> <i32 0, i32 poison, i32 2, i32 3>, <4 x i32> <i32 10, i32 11, i32 12, i32 13>, i32 4)
+  %splice_left_poison = call <4 x i32> @llvm.vector.splice.left.v4i32(<4 x i32> <i32 0, i32 poison, i32 2, i32 3>, <4 x i32> <i32 10, i32 11, i32 12, i32 13>, i32 5)
 
   %splice_right = call <4 x i32> @llvm.vector.splice.right.v4i32(<4 x i32> <i32 0, i32 1, i32 2, i32 3>, <4 x i32> <i32 10, i32 11, i32 12, i32 13>, i32 1)
   %splice_right_full_rhs = call <4 x i32> @llvm.vector.splice.right.v4i32(<4 x i32> <i32 0, i32 1, i32 2, i32 3>, <4 x i32> <i32 10, i32 11, i32 12, i32 13>, i32 0)
@@ -44,7 +44,7 @@ define void @main() {
 ; CHECK-NEXT:   %reverse_poison = call <4 x i32> @llvm.vector.reverse.v4i32(<4 x i32> <i32 0, i32 poison, i32 2, i32 3>) => { i32 3, i32 2, poison, i32 0 }
 ; CHECK-NEXT:   %splice_left = call <4 x i32> @llvm.vector.splice.left.v4i32(<4 x i32> <i32 0, i32 1, i32 2, i32 3>, <4 x i32> <i32 10, i32 11, i32 12, i32 13>, i32 2) => { i32 2, i32 3, i32 10, i32 11 }
 ; CHECK-NEXT:   %splice_left_poison_lane = call <4 x i32> @llvm.vector.splice.left.v4i32(<4 x i32> <i32 0, i32 poison, i32 2, i32 3>, <4 x i32> <i32 10, i32 11, i32 12, i32 13>, i32 1) => { poison, i32 2, i32 3, i32 10 }
-; CHECK-NEXT:   %splice_left_poison = call <4 x i32> @llvm.vector.splice.left.v4i32(<4 x i32> <i32 0, i32 poison, i32 2, i32 3>, <4 x i32> <i32 10, i32 11, i32 12, i32 13>, i32 4) => poison
+; CHECK-NEXT:   %splice_left_poison = call <4 x i32> @llvm.vector.splice.left.v4i32(<4 x i32> <i32 0, i32 poison, i32 2, i32 3>, <4 x i32> <i32 10, i32 11, i32 12, i32 13>, i32 5) => poison
 ; CHECK-NEXT:   %splice_right = call <4 x i32> @llvm.vector.splice.right.v4i32(<4 x i32> <i32 0, i32 1, i32 2, i32 3>, <4 x i32> <i32 10, i32 11, i32 12, i32 13>, i32 1) => { i32 3, i32 10, i32 11, i32 12 }
 ; CHECK-NEXT:   %splice_right_full_rhs = call <4 x i32> @llvm.vector.splice.right.v4i32(<4 x i32> <i32 0, i32 1, i32 2, i32 3>, <4 x i32> <i32 10, i32 11, i32 12, i32 13>, i32 0) => { i32 10, i32 11, i32 12, i32 13 }
 ; CHECK-NEXT:   %splice_right_poison = call <4 x i32> @llvm.vector.splice.right.v4i32(<4 x i32> <i32 0, i32 1, i32 2, i32 3>, <4 x i32> <i32 10, i32 11, i32 12, i32 13>, i32 5) => poison

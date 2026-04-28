@@ -763,7 +763,8 @@ public:
       const auto &Vec = Args[0].asAggregate();
       const auto &Idx = Args[1].asInteger();
       const uint64_t Offset = Idx.getZExtValue();
-      const uint64_t DstSize = cast<FixedVectorType>(RetTy)->getNumElements();
+      const uint64_t DstSize =
+          Ctx.getEVL(cast<VectorType>(RetTy)->getElementCount());
       if (Offset + DstSize > Vec.size())
         return AnyValue::poison();
       return std::vector(Vec.begin() + Offset, Vec.begin() + Offset + DstSize);
@@ -787,8 +788,8 @@ public:
       std::vector<std::vector<AnyValue>> Res(Factor);
       for (auto &SubVec : Res)
         SubVec.reserve(Vec.size() / Factor);
-      for (const auto &[I, V] : enumerate(Vec))
-        Res[I % Factor].push_back(V);
+      for (size_t I = 0, E = Vec.size(); I != E; ++I)
+        Res[I % Factor].push_back(Vec[I]);
 
       std::vector<AnyValue> AggRes;
       AggRes.reserve(Factor);
@@ -822,7 +823,7 @@ public:
       const auto &RHS = Args[1].asAggregate();
       const auto &Off = Args[2].asInteger();
       const size_t Len = LHS.size();
-      if (Off.uge(Len))
+      if (Off.ugt(Len))
         return AnyValue::poison();
       uint64_t Offset = Off.getZExtValue();
       std::vector<AnyValue> Res;
