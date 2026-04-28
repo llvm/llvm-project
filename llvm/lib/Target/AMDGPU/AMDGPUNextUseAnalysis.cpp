@@ -2085,6 +2085,10 @@ public:
   AMDGPUNextUseAnalysisImpl(const MachineFunction *, const MachineLoopInfo *);
   ~AMDGPUNextUseAnalysisImpl() { clearTables(); }
 
+  static MachineFunctionProperties getRequiredProperties() {
+    return MachineFunctionProperties().setIsSSA();
+  }
+
   AMDGPUNextUseAnalysis::Config getConfig() const { return Cfg; }
   void setConfig(AMDGPUNextUseAnalysis::Config NewCfg) {
     Cfg = NewCfg;
@@ -2125,9 +2129,6 @@ AMDGPUNextUseAnalysisImpl::AMDGPUNextUseAnalysisImpl(
   TII = ST.getInstrInfo();
   TRI = &TII->getRegisterInfo();
   MRI = &MF->getRegInfo();
-
-  assert(MRI->isSSA() && "amdgpu-next-use-analysis is only supported for "
-                         "machine functions in SSA form.");
 
   // FIXME: Hopefully we will soon converge on a single way of calculating
   // next-use distance and remove these presets.
@@ -2284,12 +2285,23 @@ void AMDGPUNextUseAnalysis::getReachableUses(
 //------------------------------------------------------------------------------
 AMDGPUNextUseAnalysisLegacyPass::AMDGPUNextUseAnalysisLegacyPass()
     : MachineFunctionPass(ID) {}
+
+StringRef AMDGPUNextUseAnalysisLegacyPass::name() {
+  return "AMDGPU Next Use Analysis";
+}
+
 StringRef AMDGPUNextUseAnalysisLegacyPass::getPassName() const {
-  return "Next Use Analysis";
+  return name();
+}
+
+MachineFunctionProperties
+AMDGPUNextUseAnalysisLegacyPass::getRequiredProperties() const {
+  return AMDGPUNextUseAnalysisImpl::getRequiredProperties();
 }
 
 bool AMDGPUNextUseAnalysisLegacyPass::runOnMachineFunction(
     MachineFunction &MF) {
+  MFPropsModifier _(*this, MF);
   const MachineLoopInfo *MLI =
       &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   NUA.reset(new AMDGPUNextUseAnalysis(&MF, MLI));
@@ -2322,9 +2334,15 @@ FunctionPass *llvm::createAMDGPUNextUseAnalysisLegacyPass() {
 //------------------------------------------------------------------------------
 AnalysisKey AMDGPUNextUseAnalysisPass::Key;
 
+MachineFunctionProperties
+AMDGPUNextUseAnalysisPass::getRequiredProperties() const {
+  return AMDGPUNextUseAnalysisImpl::getRequiredProperties();
+}
+
 AMDGPUNextUseAnalysisPass::Result
 AMDGPUNextUseAnalysisPass::run(MachineFunction &MF,
                                MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
   const MachineLoopInfo &MLI = MFAM.getResult<MachineLoopAnalysis>(MF);
   return AMDGPUNextUseAnalysis(&MF, &MLI);
 }
@@ -2555,12 +2573,22 @@ void printAsJson(raw_ostream &FallbackOS, TimerGroup &JsonTimerGroup,
 AMDGPUNextUseAnalysisPrinterLegacyPass::AMDGPUNextUseAnalysisPrinterLegacyPass()
     : MachineFunctionPass(ID) {}
 
-StringRef AMDGPUNextUseAnalysisPrinterLegacyPass::getPassName() const {
+StringRef AMDGPUNextUseAnalysisPrinterLegacyPass::name() {
   return "AMDGPU Next Use Analysis Printer";
+}
+
+StringRef AMDGPUNextUseAnalysisPrinterLegacyPass::getPassName() const {
+  return name();
+}
+
+MachineFunctionProperties
+AMDGPUNextUseAnalysisPrinterLegacyPass::getRequiredProperties() const {
+  return AMDGPUNextUseAnalysisImpl::getRequiredProperties();
 }
 
 bool AMDGPUNextUseAnalysisPrinterLegacyPass::runOnMachineFunction(
     MachineFunction &MF) {
+  MFPropsModifier _(*this, MF);
   TimerGroup JsonTimerGroup("amdgpu-next-use-analysis-json",
                             "AMDGPU Next Use Analysis JSON Printer", false);
   Timer JsonTimer("json", "Total time spent generating json", JsonTimerGroup);
@@ -2608,10 +2636,15 @@ FunctionPass *llvm::createAMDGPUNextUseAnalysisPrinterLegacyPass() {
 //------------------------------------------------------------------------------
 // New Pass Manager Printer Pass
 //------------------------------------------------------------------------------
+MachineFunctionProperties
+AMDGPUNextUseAnalysisPrinterPass::getRequiredProperties() const {
+  return AMDGPUNextUseAnalysisImpl::getRequiredProperties();
+}
+
 PreservedAnalyses
 AMDGPUNextUseAnalysisPrinterPass::run(MachineFunction &MF,
                                       MachineFunctionAnalysisManager &MFAM) {
-
+  MFPropsModifier _(*this, MF);
   TimerGroup JsonTimerGroup("amdgpu-next-use-analysis-json",
                             "AMDGPU Next Use Analysis JSON Printer", false);
   Timer JsonTimer("json", "Total time spent generating json", JsonTimerGroup);

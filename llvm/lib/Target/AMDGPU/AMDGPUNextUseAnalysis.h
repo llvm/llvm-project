@@ -314,9 +314,12 @@ public:
   static char ID;
 
   AMDGPUNextUseAnalysisLegacyPass();
+  MachineFunctionProperties getRequiredProperties() const override;
 
   AMDGPUNextUseAnalysis &getNextUseAnalysis() { return *NUA; }
   const AMDGPUNextUseAnalysis &getNextUseAnalysis() const { return *NUA; }
+
+  static StringRef name();
   StringRef getPassName() const override;
 
 protected:
@@ -333,6 +336,8 @@ class AMDGPUNextUseAnalysisPass
   static AnalysisKey Key;
 
 public:
+  MachineFunctionProperties getRequiredProperties() const;
+
   using Result = AMDGPUNextUseAnalysis;
   Result run(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
 };
@@ -347,7 +352,9 @@ public:
   static char ID;
 
   AMDGPUNextUseAnalysisPrinterLegacyPass();
+  MachineFunctionProperties getRequiredProperties() const override;
 
+  static StringRef name();
   StringRef getPassName() const override;
 
 protected:
@@ -360,6 +367,8 @@ class AMDGPUNextUseAnalysisPrinterPass
   raw_ostream &OS;
 
 public:
+  MachineFunctionProperties getRequiredProperties() const;
+
   explicit AMDGPUNextUseAnalysisPrinterPass(raw_ostream &OS) : OS(OS) {}
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
