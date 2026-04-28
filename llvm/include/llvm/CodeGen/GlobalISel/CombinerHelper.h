@@ -760,6 +760,10 @@ public:
   /// return expressions that implements it by shifting.
   void applyUDivByPow2(MachineInstr &MI) const;
 
+  /// Combine G_SREM x, (+/-2^k) to a bias-and-mask sequence.
+  bool matchAbsPow2(Register Reg) const;
+  void applySimplifySRemByPow2(MachineInstr &MI) const;
+
   // G_UMULH x, (1 << c)) -> x >> (bitwidth - c)
   bool matchUMulHToLShr(MachineInstr &MI) const;
   void applyUMulHToLShr(MachineInstr &MI) const;

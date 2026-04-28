@@ -1349,7 +1349,14 @@ def srem_by_const : GICombineRule<
    [{ return Helper.matchSDivOrSRemByConst(*${root}); }]),
   (apply [{ Helper.applySDivOrSRemByConst(*${root}); }])>;
 
-def intrem_combines : GICombineGroup<[urem_by_const, srem_by_const]>;
+def srem_pow2_to_mask : GICombineRule<
+  (defs root:$root),
+  (match (G_SREM $dst, $x, $y):$root,
+   [{ return Helper.matchAbsPow2(${y}.getReg()); }]),
+  (apply [{ Helper.applySimplifySRemByPow2(*${root}); }])>;
+
+def intrem_combines : GICombineGroup<[srem_pow2_to_mask, urem_by_const,
+                                      srem_by_const]>;
 
 def reassoc_ptradd : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$matchinfo),

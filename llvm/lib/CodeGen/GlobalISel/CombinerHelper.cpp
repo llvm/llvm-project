@@ -6104,6 +6104,58 @@ void CombinerHelper::applyUDivByPow2(MachineInstr &MI) const {
   MI.eraseFromParent();
 }
 
+/// \p Reg is known to be +/- a power of 2.
+bool CombinerHelper::matchAbsPow2(Register Reg) const {
+  // Known bits only work for positive powers of 2.
+  if (isKnownToBeAPowerOfTwo(Reg, MRI, VT))
+    return true;
+
+  // Otherwise accept any constant whose absolute value is a power of 2.
+  auto MatchAbsPow2 = [](const Constant *C) {
+    auto *CI = dyn_cast<ConstantInt>(C);
+    return CI &&
+           (CI->getValue().isPowerOf2() || CI->getValue().isNegatedPowerOf2());
+  };
+  return matchUnaryPredicate(MRI, Reg, MatchAbsPow2, /*AllowUndefs=*/false);
+}
+
+void CombinerHelper::applySimplifySRemByPow2(MachineInstr &MI) const {
+  assert(MI.getOpcode() == TargetOpcode::G_SREM && "Expected SREM");
+  auto &SRem = cast<GenericMachineInstr>(MI);
+  Register Dst = SRem.getReg(0);
+  Register LHS = SRem.getReg(1);
+  Register RHS = SRem.getReg(2);
+  LLT Ty = MRI.getType(Dst);
+  LLT ShiftAmtTy = getTargetLowering().getPreferredShiftAmountTy(Ty);
+
+  // Effectively we want to lower G_SREM %lhs, %rhs, where %rhs is +/- a power
+  // of 2, to the following branch-free bias-and-mask version:
+  //
+  // %abs = G_ABS %rhs
+  // %mask = G_SUB %abs, 1
+  // %sign = G_ASHR %lhs, $(bitwidth - 1)
+  // %bias = G_AND %sign, %mask
+  // %biased = G_ADD %lhs, %bias
+  // %masked = G_AND %biased, %mask
+  // %res = G_SUB %masked, %bias
+  //
+  // The bias adds (|%rhs| - 1) for negative %lhs, correcting rounding towards
+  // zero (instead of towards -inf that a plain mask would give). Constant
+  // divisors collapse %mask to a single G_CONSTANT via the CSEMIRBuilder folds
+  // for G_ABS and G_SUB.
+
+  unsigned BitWidth = Ty.getScalarSizeInBits();
+  auto AbsRHS = Builder.buildAbs(Ty, RHS);
+  auto Mask = Builder.buildSub(Ty, AbsRHS, Builder.buildConstant(Ty, 1));
+  auto BWMinusOne = Builder.buildConstant(ShiftAmtTy, BitWidth - 1);
+  auto Sign = Builder.buildAShr(Ty, LHS, BWMinusOne);
+  auto Bias = Builder.buildAnd(Ty, Sign, Mask);
+  auto Biased = Builder.buildAdd(Ty, LHS, Bias);
+  auto Masked = Builder.buildAnd(Ty, Biased, Mask);
+  Builder.buildSub(Dst, Masked, Bias);
+  MI.eraseFromParent();
+}
+
 bool CombinerHelper::matchUMulHToLShr(MachineInstr &MI) const {
   assert(MI.getOpcode() == TargetOpcode::G_UMULH);
   Register RHS = MI.getOperand(2).getReg();
