@@ -20,6 +20,7 @@
 #include "SIDefines.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
@@ -724,7 +725,7 @@ static std::optional<unsigned> evalLaneExpr(Value *V, unsigned Lane,
                                             const GCNSubtarget &ST,
                                             const DataLayout &DL,
                                             unsigned Depth = 0) {
-  if (Depth > 16)
+  if (Depth >= MaxAnalysisRecursionDepth)
     return std::nullopt;
 
   if (isThreadID(ST, V))
@@ -894,17 +895,23 @@ static Value *createPermlane16(IRBuilderBase &B, Value *Val, uint32_t Lo,
                             B.getInt32(Hi), B.getFalse(), B.getFalse()});
 }
 
-static Value *createDsSwizzle(IRBuilderBase &B, Value *Val, unsigned Offset) {
+static Value *createDsSwizzle(IRBuilderBase &B, Value *Val, unsigned Offset,
+                              const DataLayout &DL) {
   Type *OrigTy = Val->getType();
-  assert(OrigTy->getPrimitiveSizeInBits() == 32 &&
+  assert(DL.getTypeSizeInBits(OrigTy) == 32 &&
          "ds_swizzle only supports 32-bit operands");
+  IntegerType *I32Ty = B.getInt32Ty();
   Value *Src = Val;
-  if (!OrigTy->isIntegerTy(32))
-    Src = B.CreateBitCast(Src, B.getInt32Ty());
+  if (OrigTy->isPointerTy())
+    Src = B.CreatePtrToInt(Src, I32Ty);
+  else if (!OrigTy->isIntegerTy(32))
+    Src = B.CreateBitCast(Src, I32Ty);
   Value *Result = B.CreateIntrinsic(Intrinsic::amdgcn_ds_swizzle, {},
                                     {Src, B.getInt32(Offset)});
+  if (OrigTy->isPointerTy())
+    return B.CreateIntToPtr(Result, OrigTy);
   if (!OrigTy->isIntegerTy(32))
-    Result = B.CreateBitCast(Result, OrigTy);
+    return B.CreateBitCast(Result, OrigTy);
   return Result;
 }
 
@@ -916,11 +923,12 @@ static Value *createPermlane64(IRBuilderBase &B, Value *Val) {
 /// Given a shuffle map, try to emit the best hardware intrinsic.
 static Value *matchShuffleToHWIntrinsic(IRBuilderBase &B, Value *Src,
                                         ArrayRef<uint8_t> Ids,
-                                        const GCNSubtarget &ST) {
+                                        const GCNSubtarget &ST,
+                                        const DataLayout &DL) {
   if (std::optional<unsigned> QP = matchQuadPermPattern(Ids)) {
     if (ST.hasDPP())
       return createUpdateDpp(B, Src, *QP);
-    return createDsSwizzle(B, Src, AMDGPU::Swizzle::QUAD_PERM_ENC | *QP);
+    return createDsSwizzle(B, Src, AMDGPU::Swizzle::QUAD_PERM_ENC | *QP, DL);
   }
 
   if (ST.hasDPP()) {
@@ -951,7 +959,7 @@ static Value *matchShuffleToHWIntrinsic(IRBuilderBase &B, Value *Src,
 
   // DS_SWIZZLE bitmask-mode fallback for targets without DPP8/permlane16.
   if (std::optional<unsigned> Offset = matchHalfRowSharePattern(Ids))
-    return createDsSwizzle(B, Src, *Offset);
+    return createDsSwizzle(B, Src, *Offset, DL);
 
   if (ST.hasPermLane64() && matchHalfWaveSwapPattern(Ids))
     return createPermlane64(B, Src);
@@ -964,7 +972,8 @@ static Value *matchShuffleToHWIntrinsic(IRBuilderBase &B, Value *Src,
 static std::optional<Instruction *>
 tryOptimizeShufflePattern(InstCombiner &IC, IntrinsicInst &II,
                           const GCNSubtarget &ST) {
-  if (II.getType()->getPrimitiveSizeInBits() != 32)
+  const DataLayout &DL = IC.getDataLayout();
+  if (DL.getTypeSizeInBits(II.getType()) != 32)
     return std::nullopt;
 
   if (!ST.isWaveSizeKnown())
@@ -979,18 +988,17 @@ tryOptimizeShufflePattern(InstCombiner &IC, IntrinsicInst &II,
   if (IsBpermute) {
     Ids.resize(WaveSize);
     for (unsigned Lane = 0; Lane < WaveSize; ++Lane) {
-      std::optional<unsigned> Val =
-          evalLaneExpr(Index, Lane, ST, IC.getDataLayout());
+      std::optional<unsigned> Val = evalLaneExpr(Index, Lane, ST, DL);
       if (!Val || (*Val & 3) || (*Val >> 2) >= WaveSize)
         return std::nullopt;
       Ids[Lane] = static_cast<uint8_t>(*Val >> 2);
     }
   } else {
-    if (!tryBuildShuffleMap(Index, ST, Ids, IC.getDataLayout()))
+    if (!tryBuildShuffleMap(Index, ST, Ids, DL))
       return std::nullopt;
   }
 
-  Value *Result = matchShuffleToHWIntrinsic(IC.Builder, Src, Ids, ST);
+  Value *Result = matchShuffleToHWIntrinsic(IC.Builder, Src, Ids, ST, DL);
   if (!Result)
     return std::nullopt;
 

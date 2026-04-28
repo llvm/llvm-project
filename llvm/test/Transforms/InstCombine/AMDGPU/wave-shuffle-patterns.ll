@@ -7,6 +7,7 @@ declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32)
 declare i32 @llvm.amdgcn.mbcnt.hi(i32, i32)
 declare i32 @llvm.amdgcn.wave.shuffle.i32(i32, i32)
 declare float @llvm.amdgcn.wave.shuffle.f32(float, i32)
+declare ptr addrspace(3) @llvm.amdgcn.wave.shuffle.p3(ptr addrspace(3), i32)
 declare i32 @llvm.amdgcn.ds.bpermute(i32, i32)
 
 ; Quad perm: lane ^ 1 swaps adjacent pairs.
@@ -315,6 +316,31 @@ define float @test_quad_perm_xor1_float_w32(float %val) {
   %idx = xor i32 %lane, 1
   %result = call float @llvm.amdgcn.wave.shuffle.f32(float %val, i32 %idx)
   ret float %result
+}
+
+; LDS (32-bit) pointer should optimize the same as i32: the gate must not
+; reject 32-bit pointer types via Type::getPrimitiveSizeInBits().
+define ptr addrspace(3) @test_quad_perm_xor1_ptr3_w32(ptr addrspace(3) %val) {
+; GFX11-LABEL: @test_quad_perm_xor1_ptr3_w32(
+; GFX11-NEXT:    [[RESULT:%.*]] = call ptr addrspace(3) @llvm.amdgcn.update.dpp.p3(ptr addrspace(3) poison, ptr addrspace(3) [[VAL:%.*]], i32 177, i32 15, i32 15, i1 true)
+; GFX11-NEXT:    ret ptr addrspace(3) [[RESULT]]
+;
+; GFX11-W64-LABEL: @test_quad_perm_xor1_ptr3_w32(
+; GFX11-W64-NEXT:    [[LANE:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX11-W64-NEXT:    [[IDX:%.*]] = xor i32 [[LANE]], 1
+; GFX11-W64-NEXT:    [[RESULT:%.*]] = call ptr addrspace(3) @llvm.amdgcn.wave.shuffle.p3(ptr addrspace(3) [[VAL:%.*]], i32 [[IDX]])
+; GFX11-W64-NEXT:    ret ptr addrspace(3) [[RESULT]]
+;
+; GFX9-LABEL: @test_quad_perm_xor1_ptr3_w32(
+; GFX9-NEXT:    [[LANE:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX9-NEXT:    [[IDX:%.*]] = xor i32 [[LANE]], 1
+; GFX9-NEXT:    [[RESULT:%.*]] = call ptr addrspace(3) @llvm.amdgcn.wave.shuffle.p3(ptr addrspace(3) [[VAL:%.*]], i32 [[IDX]])
+; GFX9-NEXT:    ret ptr addrspace(3) [[RESULT]]
+;
+  %lane = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+  %idx = xor i32 %lane, 1
+  %result = call ptr addrspace(3) @llvm.amdgcn.wave.shuffle.p3(ptr addrspace(3) %val, i32 %idx)
+  ret ptr addrspace(3) %result
 }
 
 ; Negative: non-constant index, should not be optimized.
