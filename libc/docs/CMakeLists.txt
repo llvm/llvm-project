@@ -11,7 +11,7 @@ if (SPHINX_FOUND)
               "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}"
 
       COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-              "${CMAKE_CURRENT_SOURCE_DIR}/../Maintainers.rst"
+              "${CMAKE_CURRENT_SOURCE_DIR}/../Maintainers.md"
               "${CMAKE_CURRENT_BINARY_DIR}"
       )
 
@@ -45,8 +45,10 @@ if (SPHINX_FOUND)
       cpio
       ctype
       dirent
+      dlfcn
       endian
       errno
+      fcntl
       fenv
       float
       glob
@@ -54,6 +56,7 @@ if (SPHINX_FOUND)
       locale
       net/if
       netinet/in
+      poll
       pthread
       setjmp
       signal
@@ -64,9 +67,13 @@ if (SPHINX_FOUND)
       strings
       sys/mman
       sys/resource
+      sys/select
+      sys/sem
+      sys/socket
       sys/stat
       sys/statvfs
       sys/time
+      sys/uio
       sys/utsname
       sys/wait
       termios

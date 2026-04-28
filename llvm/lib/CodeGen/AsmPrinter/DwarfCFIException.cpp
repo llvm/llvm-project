@@ -91,7 +91,7 @@ void DwarfCFIException::beginFunction(const MachineFunction *MF) {
   shouldEmitLSDA = shouldEmitPersonality &&
     LSDAEncoding != dwarf::DW_EH_PE_omit;
 
-  const MCAsmInfo &MAI = *MF->getContext().getAsmInfo();
+  const MCAsmInfo &MAI = MF->getContext().getAsmInfo();
   if (MAI.getExceptionHandlingType() != ExceptionHandling::None)
     shouldEmitCFI =
         MAI.usesCFIForEH() && (shouldEmitPersonality || shouldEmitMoves);

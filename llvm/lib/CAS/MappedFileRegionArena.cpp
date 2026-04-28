@@ -240,7 +240,13 @@ Expected<MappedFileRegionArena> MappedFileRegionArena::create(
 
   // If the size is smaller than capacity, we need to resize the file.
   if (FileSize->Size < Capacity) {
-    assert(MainFile->Locked == sys::fs::LockKind::Exclusive);
+    // Acquire the exclusive lock before resizing the file. In the rare case
+    // when opening a large CAS using a small requested size, a shared lock
+    // needs to switch to an exclusive lock here.
+    if (MainFile->Locked != sys::fs::LockKind::Exclusive) {
+      if (Error E = MainFile->switchLock(sys::fs::LockKind::Exclusive))
+        return std::move(E);
+    }
     if (std::error_code EC =
             sys::fs::resize_file_sparse(MainFile->FD, Capacity))
       return createFileError(Result.Path, EC);
@@ -252,8 +258,17 @@ Expected<MappedFileRegionArena> MappedFileRegionArena::create(
   // Create the mapped region.
   {
     std::error_code EC;
+    const char *Name = nullptr;
+#ifdef _WIN32
+    // Give the file mapping a name to ensure the same mappings are
+    // shared across processes.
+    std::string MapName = Result.Path;
+    std::replace(MapName.begin(), MapName.end(), '\\', '/');
+    MapName = "Local\\" + MapName;
+    Name = MapName.c_str();
+#endif
     sys::fs::mapped_file_region Map(
-        File, sys::fs::mapped_file_region::readwrite, Capacity, 0, EC);
+        File, sys::fs::mapped_file_region::readwrite, Capacity, 0, EC, Name);
     if (EC)
       return createFileError(Result.Path, EC);
     Result.Region = std::move(Map);
