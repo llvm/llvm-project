@@ -76,7 +76,8 @@ struct ConvertMemRefToEmitCPass
     module.walk([&](mlir::emitc::CallOpaqueOp callOp) {
       StringRef expectedHeader;
       if (callOp.getCallee() == alignedAllocFunctionName ||
-          callOp.getCallee() == mallocFunctionName)
+          callOp.getCallee() == mallocFunctionName ||
+          callOp.getCallee() == freeFunctionName)
         expectedHeader = options.lowerToCpp ? cppStandardLibraryHeader
                                             : cStandardLibraryHeader;
       else if (callOp.getCallee() == memcpyFunctionName)
