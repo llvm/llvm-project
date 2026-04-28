@@ -730,7 +730,7 @@ static void removeRedundantCanonicalIVs(VPlan &Plan) {
     }
   }
 
-  if (!vputils::onlyFirstLaneUsed(WidenNewIV)) {
+  if (!vputils::onlyFirstLaneUsed(WidenNewIV) && !Plan.hasScalarVFOnly()) {
     assert(!vputils::onlyScalarValuesUsed(WidenNewIV) &&
            "Lanes other than first lane being used should imply that not just "
            "scalars are used");
