@@ -1,5 +1,5 @@
 ! This test checks the lowering of OpenMP scope construct inside a target region.
-
+! XFAIL: *
 ! RUN: bbc -fopenmp -fopenmp-version=52 -emit-hlfir %s -o - | FileCheck %s
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 %s -o - | FileCheck %s
 

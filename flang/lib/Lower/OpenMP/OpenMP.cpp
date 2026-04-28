@@ -2698,7 +2698,8 @@ genScopeOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
     dsp.emplace(converter, semaCtx, item->clauses, eval,
                 lower::omp::isLastItemInQueue(item, queue),
                 /*useDelayedPrivatization=*/true, symTable);
-    dsp->processStep1(&clauseOps);
+    dsp->processStep1();
+    dsp->processStep2(&clauseOps);
   }
 
   EntryBlockArgs args;
