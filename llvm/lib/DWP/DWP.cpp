@@ -15,11 +15,12 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/ELF.h"
-#include "llvm/DWP/ELFWriter.h"
 #include "llvm/DWP/DWPError.h"
+#include "llvm/DWP/ELFWriter.h"
 #include "llvm/Object/Decompressor.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/EndianStream.h"
+#include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
 #include <limits>
 
@@ -752,11 +753,13 @@ Error write(DWPWriter &Out, ArrayRef<std::string> Inputs,
     auto &Obj = *ErrOrObj->getBinary();
     Objects.push_back(std::move(*ErrOrObj));
 
-    // Set the ELF machine type from the first input file.
+    // Set output format metadata from the first input file.
     if (!MachineSet) {
       if (auto *ELFObj = dyn_cast<ELFObjectFileBase>(&Obj)) {
         Out.setMachine(ELFObj->getEMachine());
         Out.setOSABI(ELFObj->getOS());
+      } else if (Obj.isWasm()) {
+        Out.setIsWASM(true);
       }
       MachineSet = true;
     }
@@ -1031,7 +1034,7 @@ Error write(DWPWriter &Out, ArrayRef<std::string> Inputs,
   // Write ELF output while input data is still alive (zero-copy chunks
   // reference mmap'd input data held by the Objects vector above).
   if (OutputOS)
-    return Out.writeELF(*OutputOS);
+    return Out.write(*OutputOS);
 
   return Error::success();
 }
@@ -1165,6 +1168,66 @@ Error DWPWriter::writeELF(raw_pwrite_stream &OS) {
   ELF::writeSectionHeader(Wr, true, SymtabNameOff, ELF::SHT_SYMTAB, 0, 0,
                           SymtabOffset, SymEntSize, StrtabIdx, 1, 8,
                           SymEntSize);
+
+  return Error::success();
+}
+
+//===----------------------------------------------------------------------===//
+// DWPWriter::writeWASM — produce a minimal WASM object with custom sections.
+//===----------------------------------------------------------------------===//
+
+Error DWPWriter::writeWASM(raw_pwrite_stream &OS) {
+  // Section name table (same names as ELF but without SHF_EXCLUDE flags).
+  static constexpr struct {
+    DWPSectionId Id;
+    const char *Name;
+  } Meta[] = {
+      {DS_Loclists, ".debug_loclists.dwo"},
+      {DS_Loc, ".debug_loc.dwo"},
+      {DS_Abbrev, ".debug_abbrev.dwo"},
+      {DS_Line, ".debug_line.dwo"},
+      {DS_Rnglists, ".debug_rnglists.dwo"},
+      {DS_Macro, ".debug_macro.dwo"},
+      {DS_Str, ".debug_str.dwo"},
+      {DS_StrOffsets, ".debug_str_offsets.dwo"},
+      {DS_Info, ".debug_info.dwo"},
+      {DS_Types, ".debug_types.dwo"},
+      {DS_TUIndex, ".debug_tu_index"},
+      {DS_CUIndex, ".debug_cu_index"},
+  };
+
+  // WASM magic and version.
+  OS.write("\0asm", 4);
+  const uint8_t Version[] = {0x01, 0x00, 0x00, 0x00};
+  OS.write(reinterpret_cast<const char *>(Version), 4);
+
+  // Emit each non-empty section as a WASM custom section (id=0).
+  for (const auto &M : Meta) {
+    const SectionData &SD = Sections[M.Id];
+    if (SD.empty())
+      continue;
+
+    size_t NameLen = strlen(M.Name);
+    uint64_t PayloadSize = SD.totalSize();
+
+    // Custom section payload = ULEB128(name_len) + name + data.
+    uint8_t NameLenEncoded[10];
+    unsigned NameLenSize = encodeULEB128(NameLen, NameLenEncoded);
+    uint64_t SectionPayloadSize = NameLenSize + NameLen + PayloadSize;
+
+    // Section header: id byte + ULEB128(section_payload_size).
+    OS.write(0x00); // Custom section id
+    uint8_t SizeEncoded[10];
+    unsigned SizeLen = encodeULEB128(SectionPayloadSize, SizeEncoded);
+    OS.write(reinterpret_cast<const char *>(SizeEncoded), SizeLen);
+
+    // Name
+    OS.write(reinterpret_cast<const char *>(NameLenEncoded), NameLenSize);
+    OS.write(M.Name, NameLen);
+
+    // Data
+    SD.writeTo(OS);
+  }
 
   return Error::success();
 }

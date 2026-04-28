@@ -14,6 +14,10 @@
 #include <deque>
 #include <vector>
 
+namespace llvm::object {
+class ObjectFile;
+}
+
 namespace llvm {
 class raw_pwrite_stream;
 
@@ -54,10 +58,27 @@ enum DWPSectionId : unsigned {
 /// through the MC infrastructure (MCContext, MCAssembler, MCDataFragment
 /// allocation, layout, etc.).
 class LLVM_ABI DWPWriter {
-  /// Per-section storage: zero-copy chunks + inline buffer for small writes.
+  /// Per-section storage: ordered sequence of zero-copy chunks and inline
+  /// data. emitBytes() adds zero-copy StringRef references, emitIntValue()
+  /// appends to an inline buffer. When emitBytes() is called with pending
+  /// inline data, the buffer is flushed to an owned block first to preserve
+  /// the correct interleaving order in the output.
   struct SectionData {
-    SmallVector<StringRef, 4> Chunks; // zero-copy refs to input data
-    SmallVector<char, 0> Buffer;      // for emitIntValue / constructed data
+    SmallVector<StringRef, 4> Chunks; // ordered segments (refs + flushed bufs)
+    SmallVector<char, 0> Buffer;      // pending inline data (emitIntValue)
+    // Heap storage for flushed buffers. Uses std::deque so that push_back
+    // does not invalidate existing elements (StringRefs point into these).
+    std::deque<SmallVector<char, 0>> OwnedBuffers;
+
+    /// Flush pending Buffer data into Chunks as an owned block.
+    void flushBuffer() {
+      if (!Buffer.empty()) {
+        OwnedBuffers.push_back(std::move(Buffer));
+        auto &B = OwnedBuffers.back();
+        Chunks.push_back(StringRef(B.data(), B.size()));
+        Buffer = SmallVector<char, 0>();
+      }
+    }
 
     uint64_t totalSize() const {
       uint64_t Size = 0;
@@ -81,12 +102,14 @@ class LLVM_ABI DWPWriter {
   DWPSectionId CurrentSection = DS_Info;
   uint16_t ELFMachine = 0;
   uint8_t ELFOSABI = 0;
+  bool IsWASM = false;
 
 public:
   DWPWriter() = default;
 
   void setMachine(uint16_t Machine) { ELFMachine = Machine; }
   void setOSABI(uint8_t OSABI) { ELFOSABI = OSABI; }
+  void setIsWASM(bool V) { IsWASM = V; }
 
   SmallVectorImpl<char> &getSectionBuffer(DWPSectionId Id) {
     return Sections[Id].Buffer;
@@ -95,9 +118,13 @@ public:
   void switchSection(DWPSectionId Id) { CurrentSection = Id; }
 
   /// Zero-copy: stores a reference to the input data without copying.
+  /// Flushes any pending inline data first to preserve output order.
   void emitBytes(StringRef Data) {
-    if (!Data.empty())
-      Sections[CurrentSection].Chunks.push_back(Data);
+    if (!Data.empty()) {
+      auto &SD = Sections[CurrentSection];
+      SD.flushBuffer();
+      SD.Chunks.push_back(Data);
+    }
   }
 
   void emitIntValue(uint64_t Value, unsigned Size) {
@@ -109,6 +136,10 @@ public:
   }
 
   Error writeELF(raw_pwrite_stream &OS);
+  Error writeWASM(raw_pwrite_stream &OS);
+  Error write(raw_pwrite_stream &OS) {
+    return IsWASM ? writeWASM(OS) : writeELF(OS);
+  }
 };
 
 struct UnitIndexEntry {
