@@ -1744,21 +1744,24 @@ mlir::Attribute ConstantEmitter::emitNullForMemory(mlir::Location loc,
 
 mlir::Attribute ConstantEmitter::emitForMemory(mlir::Attribute c,
                                                QualType destType) {
-  // For an _Atomic-qualified constant, we may need to add tail padding.
-  if (destType->getAs<AtomicType>()) {
-    cgm.errorNYI("emitForMemory: atomic type");
-    return {};
-  }
-
-  return c;
+  return emitForMemory(cgm, c, destType);
 }
 
 mlir::Attribute ConstantEmitter::emitForMemory(CIRGenModule &cgm,
                                                mlir::Attribute c,
                                                QualType destType) {
   // For an _Atomic-qualified constant, we may need to add tail padding.
-  if (destType->getAs<AtomicType>()) {
-    cgm.errorNYI("atomic constants");
+  if (const auto *at = destType->getAs<AtomicType>()) {
+    QualType destValueType = at->getValueType();
+    c = emitForMemory(cgm, c, destValueType);
+
+    uint64_t innerSize = cgm.getASTContext().getTypeSize(destValueType);
+    uint64_t outerSize = cgm.getASTContext().getTypeSize(destType);
+    if (innerSize == outerSize)
+      return c;
+
+    assert(innerSize < outerSize && "emitted over-large constant for atomic");
+    cgm.errorNYI("emitForMemory: tail padding in atomic initializer");
   }
 
   return c;

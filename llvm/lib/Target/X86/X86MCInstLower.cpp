@@ -1938,6 +1938,27 @@ static void addConstantComments(const MachineInstr *MI,
     break;
   }
 
+  case X86::GF2P8AFFINEQBrmi:
+  case X86::VGF2P8AFFINEQBrmi:
+  case X86::VGF2P8AFFINEQBYrmi:
+  case X86::VGF2P8AFFINEQBZrmi:
+  case X86::VGF2P8AFFINEQBZ128rmi:
+  case X86::VGF2P8AFFINEQBZ256rmi: {
+    // TODO: Add predicate / broadcast handling with test coverage.
+    unsigned SrcIdx = getSrcIdx(MI, 1);
+    if (auto *C = X86::getConstantFromPool(*MI, SrcIdx + 1)) {
+      std::string Comment;
+      raw_string_ostream CS(Comment);
+      unsigned VectorWidth =
+          X86::getVectorRegisterWidth(MI->getDesc().operands()[0]);
+      CS << "[";
+      printConstant(C, VectorWidth, CS);
+      CS << "]";
+      OutStreamer.AddComment(CS.str());
+    }
+    break;
+  }
+
 #define INSTR_CASE(Prefix, Instr, Suffix, Postfix)                             \
   case X86::Prefix##Instr##Suffix##rm##Postfix:
 
@@ -2743,8 +2764,8 @@ void X86AsmPrinter::maybeEmitNopAfterCallForWindowsEH(const MachineInstr *MI) {
   // We only need to insert NOPs after CALLs when targeting Windows on AMD64.
   // (Don't let the name fool you: Itanium refers to table-based exception
   // handling, not the Itanium architecture.)
-  if (MAI->getExceptionHandlingType() != ExceptionHandling::WinEH ||
-      MAI->getWinEHEncodingType() != WinEH::EncodingType::Itanium) {
+  if (MAI.getExceptionHandlingType() != ExceptionHandling::WinEH ||
+      MAI.getWinEHEncodingType() != WinEH::EncodingType::Itanium) {
     return;
   }
 

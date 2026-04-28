@@ -33,8 +33,11 @@ public:
   ///
   /// Before reading, check if the ConPTY is closing and wait for it to close
   /// before reading. This prevents race conditions when closing the ConPTY
-  /// during a read. After reading, remove the ConPTY VT init sequence if
-  /// present.
+  /// during a read.
+  /// After reading, remove the ConPTY VT init sequence if present. On the first
+  /// read that contains ConPTY management sequences (cursor query, Win32 Input
+  /// Mode, focus events, window title), strips them in-place and sets
+  /// m_conpty_sequences_stripped to skip scanning on all subsequent reads.
   size_t Read(void *dst, size_t dst_len, const Timeout<std::micro> &timeout,
               lldb::ConnectionStatus &status, Status *error_ptr) override;
 
@@ -43,7 +46,7 @@ public:
 
 protected:
   std::shared_ptr<PseudoConsole> m_pty;
-  bool m_pty_vt_sequence_was_stripped = false;
+  bool m_conpty_sequences_stripped = false;
 };
 } // namespace lldb_private
 
