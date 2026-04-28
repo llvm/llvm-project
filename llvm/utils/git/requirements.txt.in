@@ -11,14 +11,3 @@ PyGithub==2.4.0 # >=1.59.1 For WorkflowRun.name
 GitPython>=3.1.32  # https://security.snyk.io/vuln/SNYK-PYTHON-GITPYTHON-5840584
 lit>=18.1.8  # No entry on snyk as of 2026-12-01
 pynacl>=1.6.2 # I had trouble installing 1.5.0 on ARM Windows.
-
-# These are transitive dependencies of the packages above, demanding higher
-# versions than their dependents require. This is in response to CVE alerts.
-# TODO: remove these if/when the parent packages start requesting CVE-safe versions
-# of these packages.
-pyjwt>=2.12.0  # https://nvd.nist.gov/vuln/detail/CVE-2026-32597
-               # brought by 'pygithub'
-cryptography>=46.0.5  # https://nvd.nist.gov/vuln/detail/CVE-2026-26007
-                    # brought by 'pyjwt[crypto]'
-urllib3>=2.6.3  # https://nvd.nist.gov/vuln/detail/CVE-2026-21441
-                # brought by 'pygithub'
