@@ -6480,6 +6480,29 @@ static void handleAbiTagAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
                  AbiTagAttr(S.Context, AL, Tags.data(), Tags.size()));
 }
 
+// for now this only handles std::optional (POC)
+static bool isValidAnalyseAsClassAttr(Decl *D, StringRef Tag) {
+  if (Tag == "std::optional")
+    return true;
+  return false;
+}
+
+static void handleAnalyseAsClass(Sema &S, Decl *D, const ParsedAttr &AL) {
+  StringRef Str;
+  if (!S.checkStringLiteralArgumentAttr(AL, 0, Str))
+    return;
+  if (D->hasAttr<AnalyseAsClassAttr>()) {
+    S.Diag(AL.getLoc(), diag::err_duplicate_attribute) << AL;
+    return;
+  }
+  if (!isValidAnalyseAsClassAttr(D, Str)) {
+    S.Diag(AL.getLoc(), diag::warn_attribute_type_not_supported) << AL;
+    return;
+  }
+
+  D->addAttr(::new (S.Context) AnalyseAsClassAttr(S.Context, AL, Str));
+}
+
 static bool hasBTFDeclTagAttr(Decl *D, StringRef Tag) {
   for (const auto *I : D->specific_attrs<BTFDeclTagAttr>()) {
     if (I->getBTFDeclTag() == Tag)
@@ -7568,6 +7591,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_BPFPreserveStaticOffset:
     handleSimpleAttribute<BPFPreserveStaticOffsetAttr>(S, D, AL);
+    break;
+  case ParsedAttr::AT_AnalyseAsClass:
+    handleAnalyseAsClass(S, D, AL);
     break;
   case ParsedAttr::AT_BTFDeclTag:
     handleBTFDeclTagAttr(S, D, AL);
