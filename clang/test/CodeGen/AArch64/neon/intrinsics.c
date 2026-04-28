@@ -28,8 +28,19 @@
 // 2.1.1.13 Maximum across vector
 //===------------------------------------------------------===//
 
+// LLVM-LABEL: @test_vmaxvq_f32(
+// CIR-LABEL: @vmaxvq_f32(
+float32_t test_vmaxvq_f32(float32x4_t a) {
+// CIR:   {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.fmaxv" {{%.*}}
+
+// LLVM-SAME: <4 x float> {{.*}}[[A:%.*]])
+// LLVM:      [[VMAXVQ_F32_I:%.*]] = call float @llvm.aarch64.neon.fmaxv.f32.v4f32(<4 x float> [[A]])
+// LLVM:      ret float [[VMAXVQ_F32_I]]
+  return vmaxvq_f32(a);
+}
+
 // LLVM-LABEL: @test_vmaxv_s8(
-// CIR-LABEL: @test_vmaxv_s8(
+// CIR-LABEL: @vmaxv_s8(
 int8_t test_vmaxv_s8(int8x8_t a) {
 // CIR: {{%.*}} = cir.call @vmaxv_s8({{%.*}}) : (!cir.vector<8 x !s8i> {{.*}}) -> !s8i
 
@@ -40,7 +51,7 @@ int8_t test_vmaxv_s8(int8x8_t a) {
 }
 
 // LLVM-LABEL: @test_vmaxvq_s8(
-// CIR-LABEL: @test_vmaxvq_s8(
+// CIR-LABEL: @vmaxvq_s8(
 int8_t test_vmaxvq_s8(int8x16_t a) {
 // CIR: {{%.*}} = cir.call @vmaxvq_s8({{%.*}}) : (!cir.vector<16 x !s8i> {{.*}}) -> !s8i
 
@@ -51,7 +62,7 @@ int8_t test_vmaxvq_s8(int8x16_t a) {
 }
 
 // LLVM-LABEL: @test_vmaxv_s16(
-// CIR-LABEL: @test_vmaxv_s16(
+// CIR-LABEL: @vmaxv_s16(
 int16_t test_vmaxv_s16(int16x4_t a) {
 // CIR: {{%.*}} = cir.call @vmaxv_s16({{%.*}}) : (!cir.vector<4 x !s16i> {{.*}}) -> !s16i
 
@@ -62,7 +73,7 @@ int16_t test_vmaxv_s16(int16x4_t a) {
 }
 
 // LLVM-LABEL: @test_vmaxvq_s16(
-// CIR-LABEL: @test_vmaxvq_s16(
+// CIR-LABEL: @vmaxvq_s16(
 int16_t test_vmaxvq_s16(int16x8_t a) {
 // CIR: {{%.*}} = cir.call @vmaxvq_s16({{%.*}}) : (!cir.vector<8 x !s16i> {{.*}}) -> !s16i
 
@@ -73,7 +84,7 @@ int16_t test_vmaxvq_s16(int16x8_t a) {
 }
 
 // LLVM-LABEL: @test_vmaxvq_s32(
-// CIR-LABEL: @test_vmaxvq_s32(
+// CIR-LABEL: @vmaxvq_s32(
 int32_t test_vmaxvq_s32(int32x4_t a) {
 // CIR: {{%.*}} = cir.call @vmaxvq_s32({{%.*}}) : (!cir.vector<4 x !s32i> {{.*}}) -> !s32i
 
@@ -84,7 +95,7 @@ int32_t test_vmaxvq_s32(int32x4_t a) {
 }
 
 // LLVM-LABEL: @test_vmaxv_u8(
-// CIR-LABEL: @test_vmaxv_u8(
+// CIR-LABEL: @vmaxv_u8(
 uint8_t test_vmaxv_u8(uint8x8_t a) {
 // CIR: {{%.*}} = cir.call @vmaxv_u8({{%.*}}) : (!cir.vector<8 x !u8i> {{.*}}) -> !u8i
 
@@ -95,7 +106,7 @@ uint8_t test_vmaxv_u8(uint8x8_t a) {
 }
 
 // LLVM-LABEL: @test_vmaxvq_u8(
-// CIR-LABEL: @test_vmaxvq_u8(
+// CIR-LABEL: @vmaxvq_u8(
 uint8_t test_vmaxvq_u8(uint8x16_t a) {
 // CIR: {{%.*}} = cir.call @vmaxvq_u8({{%.*}}) : (!cir.vector<16 x !u8i> {{.*}}) -> !u8i
 
@@ -106,7 +117,7 @@ uint8_t test_vmaxvq_u8(uint8x16_t a) {
 }
 
 // LLVM-LABEL: @test_vmaxv_u16(
-// CIR-LABEL: @test_vmaxv_u16(
+// CIR-LABEL: @vmaxv_u16(
 uint16_t test_vmaxv_u16(uint16x4_t a) {
 // CIR: {{%.*}} = cir.call @vmaxv_u16({{%.*}}) : (!cir.vector<4 x !u16i> {{.*}}) -> !u16i
 
@@ -117,7 +128,7 @@ uint16_t test_vmaxv_u16(uint16x4_t a) {
 }
 
 // LLVM-LABEL: @test_vmaxvq_u16(
-// CIR-LABEL: @test_vmaxvq_u16(
+// CIR-LABEL: @vmaxvq_u16(
 uint16_t test_vmaxvq_u16(uint16x8_t a) {
 // CIR: {{%.*}} = cir.call @vmaxvq_u16({{%.*}}) : (!cir.vector<8 x !u16i> {{.*}}) -> !u16i
 
@@ -128,7 +139,7 @@ uint16_t test_vmaxvq_u16(uint16x8_t a) {
 }
 
 // LLVM-LABEL: @test_vmaxvq_u32(
-// CIR-LABEL: @test_vmaxvq_u32(
+// CIR-LABEL: @vmaxvq_u32(
 uint32_t test_vmaxvq_u32(uint32x4_t a) {
 // CIR: {{%.*}} = cir.call @vmaxvq_u32({{%.*}}) : (!cir.vector<4 x !u32i> {{.*}}) -> !u32i
 
@@ -139,7 +150,7 @@ uint32_t test_vmaxvq_u32(uint32x4_t a) {
 }
 
 //LLVM-LABEL: @test_vmaxvq_f64(
-//CIR-LABEL : @test_vmaxvq_f64(
+//CIR-LABEL : @vmaxvq_f64(
 float64_t test_vmaxvq_f64(float64x2_t a) {
 // CIR:   {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.fmaxv" {{%.*}}
     
@@ -150,7 +161,7 @@ float64_t test_vmaxvq_f64(float64x2_t a) {
 }
 
 //LLVM-LABEL: @test_vmaxv_f32
-//CIR-LABEL : @test_vmaxv_f32
+//CIR-LABEL : @vmaxv_f32
 float32_t test_vmaxv_f32(float32x2_t a) {
 // CIR:   {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.fmaxv" {{%.*}}
     
@@ -161,7 +172,7 @@ float32_t test_vmaxv_f32(float32x2_t a) {
 }
 
 //LLVM-LABEL: @test_vmaxv_u32(
-//CIR-LABEL : @test_vmaxv_u32(
+//CIR-LABEL : @vmaxv_u32(
 uint32_t test_vmaxv_u32(uint32x2_t a) {
 // CIR:   {{%.*}} = cir.call_llvm_intrinsic "vector.reduce.umax" {{%.*}}
     
@@ -172,7 +183,7 @@ uint32_t test_vmaxv_u32(uint32x2_t a) {
 }
 
 //LLVM-LABEL: @test_vmaxv_s32
-//CIR-LABEL : @test_vmaxv_s32
+//CIR-LABEL : @vmaxv_s32
 int32_t test_vmaxv_s32(int32x2_t a) {
 // CIR:   {{%.*}} = cir.call_llvm_intrinsic "vector.reduce.smax" {{%.*}}
     
