@@ -65,7 +65,7 @@ void UndefBranchChecker::checkBranchCondition(const Stmt *Condition,
   if (isa<ObjCForCollectionStmt>(Condition))
     return;
 
-  const Expr *Ex = dyn_cast<Expr>(Condition);
+  const auto *Ex = cast<Expr>(Condition);
   if (!Ctx.getSVal(Ex).isUndef())
     return;
 
