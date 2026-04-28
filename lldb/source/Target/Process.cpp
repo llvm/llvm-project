@@ -342,6 +342,13 @@ bool ProcessProperties::GetSteppingRunsAllThreads() const {
       idx, g_process_properties[idx].default_uint_value != 0);
 }
 
+Args ProcessProperties::GetAlwaysRunThreadNames() const {
+  Args args;
+  const uint32_t idx = ePropertyAlwaysRunThreadNames;
+  m_collection_sp->GetPropertyAtIndexAsArgs(idx, args);
+  return args;
+}
+
 bool ProcessProperties::GetOSPluginReportsAllThreads() const {
   const bool fail_value = true;
   const Property *exp_property =
@@ -4474,7 +4481,10 @@ bool Process::ProcessEventData::ForwardEventToPendingListeners(
 
   // For state changed events, if the update state is zero, we are handling
   // this on the private state thread.  We should wait for the public event.
-  return m_update_state == 1;
+  // After the primary listener processes it in DoOnRemoval, m_update_state
+  // is incremented from 1 to 2, which is when we forward to pending
+  // (secondary) listeners.
+  return m_update_state > 1;
 }
 
 void Process::ProcessEventData::DoOnRemoval(Event *event_ptr) {
@@ -4491,12 +4501,14 @@ void Process::ProcessEventData::DoOnRemoval(Event *event_ptr) {
   // pulled off of the private process event queue, and then any number of
   // times, first when it gets pulled off of the public event queue, then other
   // times when we're pretending that this is where we stopped at the end of
-  // expression evaluation.  m_update_state is used to distinguish these three
-  // cases; it is 0 when we're just pulling it off for private handling, and >
-  // 1 for expression evaluation, and we don't want to do the breakpoint
-  // command handling then.
+  // expression evaluation.  m_update_state is used to distinguish these
+  // cases; it is 0 when we're just pulling it off for private handling, 1
+  // when the primary public listener consumes it, and > 1 after that (e.g.
+  // secondary listeners or expression evaluation) where we don't want to
+  // redo the breakpoint command handling or stop hooks.
   if (m_update_state != 1)
     return;
+  m_update_state++;
 
   process_sp->SetPublicState(
       m_state, Process::ProcessEventData::GetRestartedFromEvent(event_ptr));
@@ -5396,6 +5408,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
     // still succeed.
     bool miss_first_event = true;
 #endif
+    bool pending_stop_on_vfork_done = false;
 
     // If we spawned an override PST, mark the current (original) PST so
     // GetStackFrameList returns parent frames during event processing.
@@ -5556,13 +5569,71 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
                 do_resume = false;
                 handle_running_event = true;
               } else {
-                const bool handle_interrupts = true;
-                return_value = *HandleStoppedEvent(
-                    expr_thread_id, thread_plan_sp, thread_plan_restorer,
-                    event_sp, event_to_broadcast_sp, options,
-                    handle_interrupts);
-                if (return_value == eExpressionThreadVanished)
-                  keep_going = false;
+                // Check for fork/vfork/vforkdone stop reasons. DidFork /
+                // DidVFork / DidVForkDone have already been called by
+                // PerformAction (via DoOnRemoval).
+                bool handled_fork = false;
+                if (ThreadSP fork_thread_sp =
+                        GetThreadList().FindThreadByID(expr_thread_id)) {
+                  if (StopInfoSP stop_info_sp = fork_thread_sp->GetStopInfo()) {
+                    StopReason reason = stop_info_sp->GetStopReason();
+                    if (reason == eStopReasonFork ||
+                        reason == eStopReasonVFork ||
+                        reason == eStopReasonVForkDone) {
+                      handled_fork = true;
+                      if (reason == eStopReasonFork &&
+                          options.GetStopOnFork()) {
+                        // Fork + stop-on-fork: DidFork already ran via
+                        // PerformAction. Parent breakpoints are unaffected.
+                        LLDB_LOGF(log, "Process::RunThreadPlan(): stopped for "
+                                       "fork, stop-on-fork is set.");
+                        return_value = eExpressionInterrupted;
+                      } else if (reason == eStopReasonVFork &&
+                                 options.GetStopOnFork()) {
+                        // VFork + stop-on-fork: DidVFork already disabled
+                        // software breakpoints (parent and child share
+                        // address space). Interrupting now would leave the
+                        // user with non-functional breakpoints. Defer the
+                        // stop until vforkdone, when DidVForkDone restores
+                        // breakpoint state.
+                        LLDB_LOGF(log,
+                                  "Process::RunThreadPlan(): got vfork with "
+                                  "stop-on-fork, deferring stop to "
+                                  "vforkdone.");
+                        pending_stop_on_vfork_done = true;
+                        keep_going = true;
+                        do_resume = true;
+                        handle_running_event = true;
+                      } else if (reason == eStopReasonVForkDone &&
+                                 pending_stop_on_vfork_done) {
+                        // Deferred vfork stop: the vfork cycle has
+                        // completed. DidVForkDone has re-enabled software
+                        // breakpoints and decremented
+                        // m_vfork_in_progress_count.
+                        LLDB_LOGF(log, "Process::RunThreadPlan(): vfork cycle "
+                                       "complete, stop-on-fork is set.");
+                        pending_stop_on_vfork_done = false;
+                        return_value = eExpressionInterrupted;
+                      } else {
+                        LLDB_LOGF(log, "Process::RunThreadPlan(): got fork "
+                                       "event, continuing.");
+                        keep_going = true;
+                        do_resume = true;
+                        handle_running_event = true;
+                      }
+                    }
+                  }
+                }
+
+                if (!handled_fork) {
+                  const bool handle_interrupts = true;
+                  return_value = *HandleStoppedEvent(
+                      expr_thread_id, thread_plan_sp, thread_plan_restorer,
+                      event_sp, event_to_broadcast_sp, options,
+                      handle_interrupts);
+                  if (return_value == eExpressionThreadVanished)
+                    keep_going = false;
+                }
               }
             } break;
 
@@ -6347,12 +6418,12 @@ size_t Process::AddImageToken(lldb::addr_t image_ptr) {
 lldb::addr_t Process::GetImagePtrFromToken(size_t token) const {
   if (token < m_image_tokens.size())
     return m_image_tokens[token];
-  return LLDB_INVALID_IMAGE_TOKEN;
+  return LLDB_INVALID_ADDRESS;
 }
 
 void Process::ResetImageToken(size_t token) {
   if (token < m_image_tokens.size())
-    m_image_tokens[token] = LLDB_INVALID_IMAGE_TOKEN;
+    m_image_tokens[token] = LLDB_INVALID_ADDRESS;
 }
 
 Address

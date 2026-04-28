@@ -2510,10 +2510,6 @@ bool hasXNACK(const MCSubtargetInfo &STI) {
   return STI.hasFeature(AMDGPU::FeatureXNACK);
 }
 
-bool hasSRAMECC(const MCSubtargetInfo &STI) {
-  return STI.hasFeature(AMDGPU::FeatureSRAMECC);
-}
-
 bool hasMIMG_R128(const MCSubtargetInfo &STI) {
   return STI.hasFeature(AMDGPU::FeatureMIMG_R128) &&
          !STI.hasFeature(AMDGPU::FeatureR128A16);

@@ -571,6 +571,7 @@ let Predicates = [HasStdExtP, IsRV64] in {
   def PSSLAI_W : RVPShiftW_ri<0b101, 0b010, "psslai.w">;
 } // Predicates = [HasStdExtP, IsRV64]
 
+let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
 let Predicates = [HasStdExtP] in
 def PLI_H : PLI_i<0b1011000, "pli.h", simm10_pli_h>;
 let Predicates = [HasStdExtP, IsRV64] in
@@ -584,7 +585,8 @@ let Predicates = [HasStdExtP] in {
     let Inst{23-16} = imm8;
     let Inst{15}    = 0b0;
   }
-}
+} // Predicates = [HasStdExtP]
+} // isReMaterializable = 1, isAsCheapAsAMove = 1
 
 let Predicates = [HasStdExtP] in {
   def PSEXT_H_B : RVPUnary_ri<0b00, 0b00100, "psext.h.b">;
@@ -599,10 +601,12 @@ let Predicates = [HasStdExtP, IsRV64] in {
   def PSEXT_W_H : RVPUnary_ri<0b01, 0b00101, "psext.w.h">;
 } // Predicates = [HasStdExtP, IsRV64]
 
+let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
 let Predicates = [HasStdExtP] in
 def PLUI_H : PLUI_i<0b1111000, "plui.h">;
 let Predicates = [HasStdExtP, IsRV64] in
 def PLUI_W : PLUI_i<0b1111001, "plui.w">;
+}
 
 let Predicates = [HasStdExtP] in {
   def PSLL_HS   : RVPBinaryScalar_rr<0b000, 0b00, 0b010, "psll.hs">;

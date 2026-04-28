@@ -383,9 +383,8 @@ public:
 
   using TargetInstrInfo::foldMemoryOperandImpl;
   MachineInstr *foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
-                                      ArrayRef<unsigned> Ops,
-                                      MachineBasicBlock::iterator InsertPt,
-                                      int FrameIndex, MachineInstr *&CopyMI,
+                                      ArrayRef<unsigned> Ops, int FrameIndex,
+                                      MachineInstr *&CopyMI,
                                       LiveIntervals *LIS = nullptr,
                                       VirtRegMap *VRM = nullptr) const override;
 
@@ -599,8 +598,6 @@ protected:
   isCopyLikeInstrImpl(const MachineInstr &MI) const override;
 
 private:
-  unsigned getInstBundleLength(const MachineInstr &MI) const;
-
   /// Sets the offsets on outlined instructions in \p MBB which use SP
   /// so that they will be valid post-outlining.
   ///
@@ -878,6 +875,7 @@ enum DestructiveInstType {
   Destructive2xRegImmUnpred     = TSFLAG_DESTRUCTIVE_INST_TYPE(0x9),
   DestructiveUnaryPassthru      = TSFLAG_DESTRUCTIVE_INST_TYPE(0xa),
   DestructivePredicate          = TSFLAG_DESTRUCTIVE_INST_TYPE(0xb),
+  DestructiveBinaryImmUnpred    = TSFLAG_DESTRUCTIVE_INST_TYPE(0xc),
 };
 
 enum FalseLaneType {

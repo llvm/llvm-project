@@ -140,7 +140,11 @@ lldb::addr_t IRMemoryMap::FindSpace(size_t size) {
         err = process_sp->GetMemoryRegionInfo(
             region_info.GetRange().GetRangeEnd(), region_info);
         if (err.Fail()) {
-          lldbassert(0 && "GetMemoryRegionInfo() succeeded, then failed");
+          // The target can't describe memory beyond this point (e.g.
+          // WebAssembly linear memory). Treat the remaining address space
+          // as unmapped.
+          if (ret + size < end_of_memory)
+            return ret;
           ret = LLDB_INVALID_ADDRESS;
           break;
         }

@@ -8634,8 +8634,8 @@ LegalizerHelper::lowerFPTRUNC_F64_TO_F16(MachineInstr &MI) {
   const LLT S32 = LLT::scalar(32);
 
   auto [Dst, Src] = MI.getFirst2Regs();
-  assert(MRI.getType(Dst).getScalarType() == LLT::scalar(16) &&
-         MRI.getType(Src).getScalarType() == LLT::scalar(64));
+  assert(MRI.getType(Dst).getScalarType() == LLT::float16() &&
+         MRI.getType(Src).getScalarType() == LLT::float64());
 
   if (MRI.getType(Src).isVector()) // TODO: Handle vectors directly.
     return UnableToLegalize;
@@ -8743,14 +8743,55 @@ LegalizerHelper::lowerFPTRUNC_F64_TO_F16(MachineInstr &MI) {
   return Legalized;
 }
 
+// f32 -> bf16 conversion using round-to-nearest-even rounding mode.
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerFPTRUNC_F32_TO_BF16(MachineInstr &MI) {
+  auto [DstReg, DstTy, SrcReg, SrcTy] = MI.getFirst2RegLLTs();
+  assert(DstTy.getScalarType() == LLT::bfloat16() &&
+         SrcTy.getScalarType() == LLT::float32());
+
+  LLT I1Ty = SrcTy.changeElementType(LLT::integer(1));
+  LLT I16Ty = SrcTy.changeElementType(LLT::integer(16));
+  LLT I32Ty = SrcTy.changeElementType(LLT::integer(32));
+
+  auto IsNaN = MIRBuilder.buildFCmp(CmpInst::FCMP_UNO, I1Ty, SrcReg,
+                                    MIRBuilder.buildFConstant(SrcTy, 0));
+  auto SrcI = MIRBuilder.buildBitcast(I32Ty, SrcReg);
+
+  // Conversions should set NaN's quiet bit. This also prevents NaNs from
+  // turning into infinities.
+  auto NaN = MIRBuilder.buildOr(I32Ty, SrcI,
+                                MIRBuilder.buildConstant(I32Ty, 0x400000));
+
+  // Factor in the contribution of the low 16 bits.
+  auto Lsb =
+      MIRBuilder.buildLShr(I32Ty, SrcI, MIRBuilder.buildConstant(I32Ty, 16));
+  Lsb = MIRBuilder.buildAnd(I32Ty, Lsb, MIRBuilder.buildConstant(I32Ty, 1));
+  auto RoundingBias =
+      MIRBuilder.buildAdd(I32Ty, Lsb, MIRBuilder.buildConstant(I32Ty, 0x7fff));
+  auto Add = MIRBuilder.buildAdd(I32Ty, SrcI, RoundingBias);
+
+  // Don't round if we had a NaN, we don't want to turn 0x7fffffff into
+  // 0x80000000.
+  auto Sel = MIRBuilder.buildSelect(I32Ty, IsNaN, NaN, Add);
+
+  // Now that we have rounded, shift the bits into position.
+  auto Srl =
+      MIRBuilder.buildLShr(I32Ty, Sel, MIRBuilder.buildConstant(I32Ty, 16));
+  auto Trunc = MIRBuilder.buildTrunc(I16Ty, Srl);
+  MIRBuilder.buildBitcast(DstReg, Trunc);
+  MI.eraseFromParent();
+  return Legalized;
+}
+
 LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerFPTRUNC(MachineInstr &MI) {
   auto [DstTy, SrcTy] = MI.getFirst2LLTs();
-  const LLT S64 = LLT::scalar(64);
-  const LLT S16 = LLT::scalar(16);
-
-  if (DstTy.getScalarType() == S16 && SrcTy.getScalarType() == S64)
+  if (DstTy.getScalarType().isFloat16() && SrcTy.getScalarType().isFloat64())
     return lowerFPTRUNC_F64_TO_F16(MI);
+
+  if (DstTy.getScalarType().isBFloat16() && SrcTy.getScalarType().isFloat32())
+    return lowerFPTRUNC_F32_TO_BF16(MI);
 
   return UnableToLegalize;
 }
@@ -8769,6 +8810,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerFMODF(MachineInstr &MI) {
   auto [DstFrac, DstInt, Src] = MI.getFirst3Regs();
   LLT Ty = MRI.getType(Src);
   auto Flags = MI.getFlags();
+  const LLT CondTy = Ty.changeElementType(LLT::integer(1));
 
   auto IntPart = MIRBuilder.buildIntrinsicTrunc(Ty, Src, Flags);
   auto FracPart = MIRBuilder.buildFSub(Ty, Src, IntPart, Flags);
@@ -8780,8 +8822,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerFMODF(MachineInstr &MI) {
     auto Abs = MIRBuilder.buildFAbs(Ty, Src, Flags);
     const fltSemantics &Semantics = getFltSemanticForLLT(Ty.getScalarType());
     auto Inf = MIRBuilder.buildFConstant(Ty, APFloat::getInf(Semantics));
-    auto IsInf = MIRBuilder.buildFCmp(CmpInst::FCMP_OEQ,
-                                      Ty.changeElementSize(1), Abs, Inf);
+    auto IsInf = MIRBuilder.buildFCmp(CmpInst::FCMP_OEQ, CondTy, Abs, Inf);
     auto Zero = MIRBuilder.buildFConstant(Ty, 0.0);
     auto Select = MIRBuilder.buildSelect(Ty, IsInf, Zero, FracPart);
     FracToUse = Select.getReg(0);
@@ -8987,7 +9028,7 @@ LegalizerHelper::lowerFMinimumMaximum(MachineInstr &MI) {
   unsigned Opc = MI.getOpcode();
   auto [Dst, Src0, Src1] = MI.getFirst3Regs();
   LLT Ty = MRI.getType(Dst);
-  LLT CmpTy = Ty.changeElementSize(1);
+  const LLT CmpTy = Ty.changeElementType(LLT::integer(1));
 
   bool IsMax = (Opc == TargetOpcode::G_FMAXIMUM);
   unsigned OpcIeee =
@@ -9071,7 +9112,7 @@ LegalizerHelper::lowerIntrinsicRound(MachineInstr &MI) {
   auto [DstReg, X] = MI.getFirst2Regs();
   const unsigned Flags = MI.getFlags();
   const LLT Ty = MRI.getType(DstReg);
-  const LLT CondTy = Ty.changeElementSize(1);
+  const LLT CondTy = Ty.changeElementType(LLT::integer(1));
 
   // round(x) =>
   //  t = trunc(x);
@@ -9104,7 +9145,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerFFloor(MachineInstr &MI) {
   auto [DstReg, SrcReg] = MI.getFirst2Regs();
   unsigned Flags = MI.getFlags();
   LLT Ty = MRI.getType(DstReg);
-  const LLT CondTy = Ty.changeElementSize(1);
+  const LLT CondTy = Ty.changeElementType(LLT::integer(1));
 
   // result = trunc(src);
   // if (src < 0.0 && src != result)
@@ -9665,18 +9706,24 @@ LegalizerHelper::lowerSADDO_SSUBO(MachineInstr &MI) {
 
   auto Zero = MIRBuilder.buildConstant(Ty, 0);
 
-  // For an addition, the result should be less than one of the operands (LHS)
-  // if and only if the other operand (RHS) is negative, otherwise there will
-  // be overflow.
-  // For a subtraction, the result should be less than one of the operands
-  // (LHS) if and only if the other operand (RHS) is (non-zero) positive,
-  // otherwise there will be overflow.
-  auto ResultLowerThanLHS =
-      MIRBuilder.buildICmp(CmpInst::ICMP_SLT, BoolTy, NewDst0, LHS);
-  auto ConditionRHS = MIRBuilder.buildICmp(
-      IsAdd ? CmpInst::ICMP_SLT : CmpInst::ICMP_SGT, BoolTy, RHS, Zero);
-
-  MIRBuilder.buildXor(Dst1, ConditionRHS, ResultLowerThanLHS);
+  if (IsAdd) {
+    // For an addition, the result should be less than one of the operands (LHS)
+    // if and only if the other operand (RHS) is negative, otherwise there will
+    // be overflow.
+    auto ResultLowerThanLHS =
+        MIRBuilder.buildICmp(CmpInst::ICMP_SLT, BoolTy, NewDst0, LHS);
+    auto RHSNegative =
+        MIRBuilder.buildICmp(CmpInst::ICMP_SLT, BoolTy, RHS, Zero);
+    MIRBuilder.buildXor(Dst1, RHSNegative, ResultLowerThanLHS);
+  } else {
+    // For subtraction, overflow occurs when the signed comparison of operands
+    // doesn't match the sign of the result.
+    auto LHSLessThanRHS =
+        MIRBuilder.buildICmp(CmpInst::ICMP_SLT, BoolTy, LHS, RHS);
+    auto ResultNegative =
+        MIRBuilder.buildICmp(CmpInst::ICMP_SLT, BoolTy, NewDst0, Zero);
+    MIRBuilder.buildXor(Dst1, LHSLessThanRHS, ResultNegative);
+  }
 
   MIRBuilder.buildCopy(Dst0, NewDst0);
   MI.eraseFromParent();

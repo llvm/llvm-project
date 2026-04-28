@@ -318,10 +318,6 @@ cir::ReturnOp CIRGenFunction::LexicalScope::emitReturn(mlir::Location loc) {
   auto fn = dyn_cast<cir::FuncOp>(cgf.curFn);
   assert(fn && "emitReturn from non-function");
 
-  // If we are on a coroutine, add the coro_end builtin call.
-  if (fn.getCoroutine())
-    cgf.emitCoroEndBuiltinCall(loc,
-                               builder.getNullPtr(builder.getVoidPtrTy(), loc));
   if (!fn.getFunctionType().hasVoidReturn()) {
     // Load the value from `__retval` and return it via the `cir.return` op.
     auto value = cir::LoadOp::create(
@@ -568,6 +564,24 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
     assert(!cir::MissingFeatures::sanitizers());
     assert(!cir::MissingFeatures::emitTypeCheck());
   }
+
+  // If any of the arguments have a variably modified type, make sure to
+  // emit the type size, but only if the function is not naked. Naked functions
+  // have no prolog to run this evaluation.
+  if (!fd || !fd->hasAttr<NakedAttr>()) {
+    for (const VarDecl *vd : args) {
+      // Dig out the type as written from ParmVarDecls; it's unclear whether
+      // the standard (C99 6.9.1p10) requires this, but we're following the
+      // precedent set by gcc.
+      QualType ty;
+      if (const auto *pvd = dyn_cast<ParmVarDecl>(vd))
+        ty = pvd->getOriginalType();
+      else
+        ty = vd->getType();
+      if (ty->isVariablyModifiedType())
+        emitVariablyModifiedType(ty);
+    }
+  }
 }
 
 void CIRGenFunction::resolveBlockAddresses() {
@@ -669,6 +683,7 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
       builder.setInsertionPoint(fn);
       clone = cir::FuncOp::create(builder, fn.getLoc(), fdInlineName,
                                   fn.getFunctionType());
+      cgm.insertGlobalSymbol(clone);
       clone.setLinkage(cir::GlobalLinkageKind::InternalLinkage);
       clone.setSymVisibility("private");
       clone.setInlineKind(cir::InlineKind::AlwaysInline);
@@ -693,6 +708,7 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
                   .replaceAllSymbolUses(fn.getSymNameAttr(), cgm.getModule())
                   .failed())
             llvm_unreachable("Failed to replace inline builtin symbol uses");
+          cgm.eraseGlobalSymbol(inlineFn);
           inlineFn.erase();
         }
         break;
@@ -1194,6 +1210,11 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     return emitInitListLValue(cast<InitListExpr>(e));
   case Expr::PseudoObjectExprClass:
     return emitPseudoObjectLValue(cast<PseudoObjectExpr>(e));
+  case Expr::CXXDefaultInitExprClass: {
+    auto *die = cast<CXXDefaultInitExpr>(e);
+    CXXDefaultInitExprScope scope(*this, die);
+    return emitLValue(die->getExpr());
+  }
   }
 }
 

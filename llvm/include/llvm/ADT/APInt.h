@@ -1268,6 +1268,14 @@ public:
     return isSubsetOfSlowCase(RHS);
   }
 
+  /// This operation checks if all bits are set in either this or RHS.
+  bool isInverseOf(const APInt &RHS) const {
+    assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
+    if (isSingleWord())
+      return (U.VAL ^ RHS.U.VAL) == llvm::maskTrailingOnes<WordType>(BitWidth);
+    return isInverseOfSlowCase(RHS);
+  }
+
   /// @}
   /// \name Resizing Operators
   /// @{
@@ -2093,6 +2101,9 @@ private:
 
   /// out-of-line slow case for isSubsetOf.
   LLVM_ABI bool isSubsetOfSlowCase(const APInt &RHS) const LLVM_READONLY;
+
+  /// out-of-line slow case for isInverseOf.
+  LLVM_ABI bool isInverseOfSlowCase(const APInt &RHS) const LLVM_READONLY;
 
   /// out-of-line slow case for setBits.
   LLVM_ABI void setBitsSlowCase(unsigned loBit, unsigned hiBit);

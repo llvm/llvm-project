@@ -2082,18 +2082,12 @@ static void computeKnownBitsFromOperator(const Operator *I,
         if (!match(I->getOperand(2), m_APInt(SA)))
           break;
 
-        // Normalize to funnel shift left.
-        uint64_t ShiftAmt = SA->urem(BitWidth);
-        if (II->getIntrinsicID() == Intrinsic::fshr)
-          ShiftAmt = BitWidth - ShiftAmt;
-
         KnownBits Known3(BitWidth);
         computeKnownBits(I->getOperand(0), DemandedElts, Known2, Q, Depth + 1);
         computeKnownBits(I->getOperand(1), DemandedElts, Known3, Q, Depth + 1);
-
-        Known2 <<= ShiftAmt;
-        Known3 >>= BitWidth - ShiftAmt;
-        Known = Known2.unionWith(Known3);
+        Known = II->getIntrinsicID() == Intrinsic::fshl
+                    ? KnownBits::fshl(Known2, Known3, *SA)
+                    : KnownBits::fshr(Known2, Known3, *SA);
         break;
       }
       case Intrinsic::clmul:
@@ -7377,7 +7371,7 @@ llvm::computeConstantRangeIncludingKnownBits(const WithCache<const Value *> &V,
                                              const SimplifyQuery &SQ) {
   ConstantRange CR1 =
       ConstantRange::fromKnownBits(V.getKnownBits(SQ), ForSigned);
-  ConstantRange CR2 = computeConstantRange(V, ForSigned, SQ.IIQ.UseInstrInfo);
+  ConstantRange CR2 = computeConstantRange(V, ForSigned, SQ);
   ConstantRange::PreferredRangeType RangeType =
       ForSigned ? ConstantRange::Signed : ConstantRange::Unsigned;
   return CR1.intersectWith(CR2, RangeType);
@@ -9670,12 +9664,12 @@ isImpliedCondICmps(CmpPredicate LPred, const Value *L0, const Value *L1,
     // further constraint the constant ranges. At the moment this leads to
     // several regressions related to not transforming `multi_use(A + C0) eq/ne
     // C1` (see discussion: D58633).
-    ConstantRange LCR = computeConstantRange(
-        L1, ICmpInst::isSigned(LPred), /* UseInstrInfo=*/true, /*AC=*/nullptr,
-        /*CxtI=*/nullptr, /*DT=*/nullptr, MaxAnalysisRecursionDepth - 1);
-    ConstantRange RCR = computeConstantRange(
-        R1, ICmpInst::isSigned(RPred), /* UseInstrInfo=*/true, /*AC=*/nullptr,
-        /*CxtI=*/nullptr, /*DT=*/nullptr, MaxAnalysisRecursionDepth - 1);
+    SimplifyQuery SQ(DL);
+    ConstantRange LCR = computeConstantRange(L1, ICmpInst::isSigned(LPred), SQ,
+                                             MaxAnalysisRecursionDepth - 1);
+    ConstantRange RCR = computeConstantRange(R1, ICmpInst::isSigned(RPred), SQ,
+                                             MaxAnalysisRecursionDepth - 1);
+
     // Even if L1/R1 are not both constant, we can still sometimes deduce
     // relationship from a single constant. For example X u> Y implies X != 0.
     if (auto R = isImpliedCondCommonOperandWithCR(LPred, LCR, RPred, RCR))
@@ -10404,9 +10398,7 @@ static void setLimitForFPToI(const Instruction *I, APInt &Lower, APInt &Upper) {
 }
 
 ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
-                                         bool UseInstrInfo, AssumptionCache *AC,
-                                         const Instruction *CtxI,
-                                         const DominatorTree *DT,
+                                         const SimplifyQuery &SQ,
                                          unsigned Depth) {
   assert(V->getType()->isIntOrIntVectorTy() && "Expected integer instruction");
 
@@ -10417,23 +10409,26 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
     return C->toConstantRange();
 
   unsigned BitWidth = V->getType()->getScalarSizeInBits();
-  InstrInfoQuery IIQ(UseInstrInfo);
   ConstantRange CR = ConstantRange::getFull(BitWidth);
   if (auto *BO = dyn_cast<BinaryOperator>(V)) {
     APInt Lower = APInt(BitWidth, 0);
     APInt Upper = APInt(BitWidth, 0);
     // TODO: Return ConstantRange.
-    setLimitsForBinOp(*BO, Lower, Upper, IIQ, ForSigned);
+    setLimitsForBinOp(*BO, Lower, Upper, SQ.IIQ, ForSigned);
     CR = ConstantRange::getNonEmpty(Lower, Upper);
   } else if (auto *II = dyn_cast<IntrinsicInst>(V))
-    CR = getRangeForIntrinsic(*II, UseInstrInfo);
+    CR = getRangeForIntrinsic(*II, SQ.IIQ.UseInstrInfo);
   else if (auto *SI = dyn_cast<SelectInst>(V)) {
-    ConstantRange CRTrue = computeConstantRange(
-        SI->getTrueValue(), ForSigned, UseInstrInfo, AC, CtxI, DT, Depth + 1);
-    ConstantRange CRFalse = computeConstantRange(
-        SI->getFalseValue(), ForSigned, UseInstrInfo, AC, CtxI, DT, Depth + 1);
+    ConstantRange CRTrue =
+        computeConstantRange(SI->getTrueValue(), ForSigned, SQ, Depth + 1);
+    ConstantRange CRFalse =
+        computeConstantRange(SI->getFalseValue(), ForSigned, SQ, Depth + 1);
     CR = CRTrue.unionWith(CRFalse);
-    CR = CR.intersectWith(getRangeForSelectPattern(*SI, IIQ));
+    CR = CR.intersectWith(getRangeForSelectPattern(*SI, SQ.IIQ));
+  } else if (auto *TI = dyn_cast<TruncInst>(V)) {
+    ConstantRange SrcCR =
+        computeConstantRange(TI->getOperand(0), ForSigned, SQ, Depth + 1);
+    CR = SrcCR.truncate(BitWidth);
   } else if (isa<FPToUIInst>(V) || isa<FPToSIInst>(V)) {
     APInt Lower = APInt(BitWidth, 0);
     APInt Upper = APInt(BitWidth, 0);
@@ -10445,7 +10440,7 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
       CR = *Range;
 
   if (auto *I = dyn_cast<Instruction>(V)) {
-    if (auto *Range = IIQ.getMetadata(I, LLVMContext::MD_range))
+    if (auto *Range = SQ.IIQ.getMetadata(I, LLVMContext::MD_range))
       CR = CR.intersectWith(getConstantRangeFromMetadata(*Range));
 
     Value *FrexpSrc;
@@ -10459,9 +10454,6 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
       // It should be possible to implement this for any type, but this logic
       // only computes the range assuming standard subnormal handling.
       if (APFloat::isIEEELikeFP(FltSem)) {
-        const DataLayout &DL = I->getFunction()->getDataLayout();
-        SimplifyQuery SQ(DL, nullptr, DT, AC, CtxI, UseInstrInfo);
-
         KnownFPClass KnownSrc =
             computeKnownFPClass(FrexpSrc, fcSubnormal, SQ, Depth + 1);
 
@@ -10481,18 +10473,18 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
     }
   }
 
-  if (CtxI && AC) {
+  if (SQ.CxtI && SQ.AC) {
     // Try to restrict the range based on information from assumptions.
-    for (auto &AssumeVH : AC->assumptionsFor(V)) {
+    for (auto &AssumeVH : SQ.AC->assumptionsFor(V)) {
       if (!AssumeVH)
         continue;
       CallInst *I = cast<CallInst>(AssumeVH);
-      assert(I->getParent()->getParent() == CtxI->getParent()->getParent() &&
+      assert(I->getParent()->getParent() == SQ.CxtI->getParent()->getParent() &&
              "Got assumption for the wrong function!");
       assert(I->getIntrinsicID() == Intrinsic::assume &&
              "must be an assume intrinsic");
 
-      if (!isValidAssumeForContext(I, CtxI, DT))
+      if (!isValidAssumeForContext(I, SQ.CxtI, SQ.DT))
         continue;
       Value *Arg = I->getArgOperand(0);
       ICmpInst *Cmp = dyn_cast<ICmpInst>(Arg);
@@ -10501,10 +10493,10 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
         continue;
       // TODO: Set "ForSigned" parameter via Cmp->isSigned()?
       ConstantRange RHS =
-          computeConstantRange(Cmp->getOperand(1), /* ForSigned */ false,
-                               UseInstrInfo, AC, I, DT, Depth + 1);
+          computeConstantRange(Cmp->getOperand(1), /*ForSigned=*/false,
+                               SQ.getWithInstruction(I), Depth + 1);
       CR = CR.intersectWith(
-          ConstantRange::makeAllowedICmpRegion(Cmp->getPredicate(), RHS));
+          ConstantRange::makeAllowedICmpRegion(Cmp->getCmpPredicate(), RHS));
     }
   }
 

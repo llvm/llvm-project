@@ -645,7 +645,7 @@ Register SPIRVGlobalRegistry::getOrCreateConstVector(const APInt &Val,
       ConstantVector::getSplat(LLVMVecTy->getElementCount(), ConstVal);
   unsigned BW = getScalarOrVectorBitWidth(SpvType);
   return getOrCreateCompositeOrNull(ConstVal, I, SpvType, TII, ConstVec, BW,
-                                    SpvType->getOperand(2).getImm(),
+                                    getScalarOrVectorComponentCount(SpvType),
                                     ZeroAsNull);
 }
 
@@ -664,7 +664,7 @@ Register SPIRVGlobalRegistry::getOrCreateConstVector(APFloat Val,
       ConstantVector::getSplat(LLVMVecTy->getElementCount(), ConstVal);
   unsigned BW = getScalarOrVectorBitWidth(SpvType);
   return getOrCreateCompositeOrNull(ConstVal, I, SpvType, TII, ConstVec, BW,
-                                    SpvType->getOperand(2).getImm(),
+                                    getScalarOrVectorComponentCount(SpvType),
                                     ZeroAsNull);
 }
 
@@ -745,9 +745,9 @@ Register SPIRVGlobalRegistry::getOrCreateConsIntVector(
   auto ConstVec =
       ConstantVector::getSplat(LLVMVecTy->getElementCount(), ConstInt);
   unsigned BW = getScalarOrVectorBitWidth(SpvType);
-  return getOrCreateIntCompositeOrNull(Val, MIRBuilder, SpvType, EmitIR,
-                                       ConstVec, BW,
-                                       SpvType->getOperand(2).getImm());
+  return getOrCreateIntCompositeOrNull(
+      Val, MIRBuilder, SpvType, EmitIR, ConstVec, BW,
+      getScalarOrVectorComponentCount(SpvType));
 }
 
 Register
@@ -1448,14 +1448,11 @@ SPIRVGlobalRegistry::getScalarOrVectorComponentType(SPIRVTypeInst Type) const {
 unsigned
 SPIRVGlobalRegistry::getScalarOrVectorBitWidth(SPIRVTypeInst Type) const {
   assert(Type && "Invalid Type pointer");
-  if (Type->getOpcode() == SPIRV::OpTypeVector) {
-    auto EleTypeReg = Type->getOperand(1).getReg();
-    Type = getSPIRVTypeForVReg(EleTypeReg);
-  }
-  if (Type->getOpcode() == SPIRV::OpTypeInt ||
-      Type->getOpcode() == SPIRV::OpTypeFloat)
-    return Type->getOperand(1).getImm();
-  if (Type->getOpcode() == SPIRV::OpTypeBool)
+  SPIRVTypeInst ScalarType = getScalarOrVectorComponentType(Type);
+  if (ScalarType->getOpcode() == SPIRV::OpTypeInt ||
+      ScalarType->getOpcode() == SPIRV::OpTypeFloat)
+    return ScalarType->getOperand(1).getImm();
+  if (ScalarType->getOpcode() == SPIRV::OpTypeBool)
     return 1;
   llvm_unreachable("Attempting to get bit width of non-integer/float type.");
 }
@@ -1463,22 +1460,19 @@ SPIRVGlobalRegistry::getScalarOrVectorBitWidth(SPIRVTypeInst Type) const {
 unsigned SPIRVGlobalRegistry::getNumScalarOrVectorTotalBitWidth(
     SPIRVTypeInst Type) const {
   assert(Type && "Invalid Type pointer");
-  unsigned NumElements = 1;
-  if (Type->getOpcode() == SPIRV::OpTypeVector) {
-    NumElements = static_cast<unsigned>(Type->getOperand(2).getImm());
-    Type = getSPIRVTypeForVReg(Type->getOperand(1).getReg());
-  }
-  return Type->getOpcode() == SPIRV::OpTypeInt ||
-                 Type->getOpcode() == SPIRV::OpTypeFloat
-             ? NumElements * Type->getOperand(1).getImm()
+  unsigned NumElements = getScalarOrVectorComponentCount(Type);
+  SPIRVTypeInst ScalarType = getScalarOrVectorComponentType(Type);
+  return ScalarType->getOpcode() == SPIRV::OpTypeInt ||
+                 ScalarType->getOpcode() == SPIRV::OpTypeFloat
+             ? NumElements * ScalarType->getOperand(1).getImm()
              : 0;
 }
 
 SPIRVTypeInst
 SPIRVGlobalRegistry::retrieveScalarOrVectorIntType(SPIRVTypeInst Type) const {
-  if (Type && Type->getOpcode() == SPIRV::OpTypeVector)
-    Type = getSPIRVTypeForVReg(Type->getOperand(1).getReg());
-  return Type && Type->getOpcode() == SPIRV::OpTypeInt ? Type : nullptr;
+  SPIRVTypeInst ScalarType = getScalarOrVectorComponentType(Type);
+  return ScalarType && ScalarType->getOpcode() == SPIRV::OpTypeInt ? ScalarType
+                                                                   : nullptr;
 }
 
 bool SPIRVGlobalRegistry::isScalarOrVectorSigned(SPIRVTypeInst Type) const {
@@ -2099,8 +2093,7 @@ SPIRVGlobalRegistry::getRegClass(SPIRVTypeInst SpvType) const {
   case SPIRV::OpTypePointer:
     return &SPIRV::pIDRegClass;
   case SPIRV::OpTypeVector: {
-    SPIRVTypeInst ElemType =
-        getSPIRVTypeForVReg(SpvType->getOperand(1).getReg());
+    SPIRVTypeInst ElemType = getScalarOrVectorComponentType(SpvType);
     unsigned ElemOpcode = ElemType ? ElemType->getOpcode() : 0;
     if (ElemOpcode == SPIRV::OpTypeFloat)
       return &SPIRV::vfIDRegClass;
@@ -2128,8 +2121,7 @@ LLT SPIRVGlobalRegistry::getRegType(SPIRVTypeInst SpvType) const {
   case SPIRV::OpTypePointer:
     return LLT::pointer(getAS(SpvType), getPointerSize());
   case SPIRV::OpTypeVector: {
-    SPIRVTypeInst ElemType =
-        getSPIRVTypeForVReg(SpvType->getOperand(1).getReg());
+    SPIRVTypeInst ElemType = getScalarOrVectorComponentType(SpvType);
     LLT ET;
     switch (ElemType ? ElemType->getOpcode() : 0) {
     case SPIRV::OpTypePointer:
@@ -2143,8 +2135,7 @@ LLT SPIRVGlobalRegistry::getRegType(SPIRVTypeInst SpvType) const {
     default:
       ET = LLT::scalar(64);
     }
-    return LLT::fixed_vector(
-        static_cast<unsigned>(SpvType->getOperand(2).getImm()), ET);
+    return LLT::fixed_vector(getScalarOrVectorComponentCount(SpvType), ET);
   }
   }
   return LLT::scalar(64);

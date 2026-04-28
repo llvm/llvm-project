@@ -25,6 +25,87 @@
 
 namespace Fortran::parser::omp {
 
+const parser::Designator *GetDesignatorFromObj(
+    const parser::OmpObject &object) {
+  return std::get_if<parser::Designator>(&object.u);
+}
+
+const parser::DataRef *GetDataRefFromObj(const parser::OmpObject &object) {
+  if (auto *desg{GetDesignatorFromObj(object)}) {
+    return std::get_if<parser::DataRef>(&desg->u);
+  }
+  return nullptr;
+}
+
+const parser::ArrayElement *GetArrayElementFromObj(
+    const parser::OmpObject &object) {
+  if (auto *dataRef{GetDataRefFromObj(object)}) {
+    using ElementIndirection = common::Indirection<parser::ArrayElement>;
+    if (auto *ind{std::get_if<ElementIndirection>(&dataRef->u)}) {
+      return &ind->value();
+    }
+  }
+  return nullptr;
+}
+
+std::optional<parser::CharBlock> GetObjectSource(
+    const parser::OmpObject &object) {
+  if (auto *name{std::get_if<parser::Name>(&object.u)}) {
+    return name->source;
+  } else if (auto *desg{std::get_if<parser::Designator>(&object.u)}) {
+    return GetLastName(*desg).source;
+  }
+  return std::nullopt;
+}
+
+const parser::OmpObject *GetArgumentObject(
+    const parser::OmpArgument &argument) {
+  if (auto *locator{std::get_if<parser::OmpLocator>(&argument.u)}) {
+    return std::get_if<parser::OmpObject>(&locator->u);
+  }
+  return nullptr;
+}
+
+namespace detail {
+struct DirectiveSpecificationScope {
+  using ODS = OmpDirectiveSpecification;
+  template <typename T> static const ODS &GetODS(const T &x) {
+    if constexpr ( //
+        std::is_base_of_v<OmpBlockConstruct, T> ||
+        std::is_same_v<OpenMPSectionsConstruct, T>) {
+      return x.BeginDir();
+    } else if constexpr (WrapperTrait<T>) {
+      return GetODS(x.v);
+    } else if constexpr (UnionTrait<T>) {
+      return std::visit(
+          [](auto &&s) -> decltype(auto) { return GetODS(s); }, x.u);
+    } else {
+      static_assert(std::is_same_v<OpenMPSectionConstruct, T>);
+      llvm_unreachable("This function does not work for SECTION");
+    }
+  }
+  static inline const ODS &GetODS(const ODS &x) { return x; }
+};
+} // namespace detail
+
+const OmpDirectiveSpecification &GetOmpDirectiveSpecification(
+    const OpenMPConstruct &x) {
+  return std::visit(
+      [](auto &&s) -> decltype(auto) {
+        return detail::DirectiveSpecificationScope::GetODS(s);
+      },
+      x.u);
+}
+
+const OmpDirectiveSpecification &GetOmpDirectiveSpecification(
+    const OpenMPDeclarativeConstruct &x) {
+  return std::visit(
+      [](auto &&s) -> decltype(auto) {
+        return detail::DirectiveSpecificationScope::GetODS(s);
+      },
+      x.u);
+}
+
 std::string GetUpperName(llvm::omp::Clause id, unsigned version) {
   llvm::StringRef name{llvm::omp::getOpenMPClauseName(id, version)};
   return parser::ToUpperCaseLetters(name);

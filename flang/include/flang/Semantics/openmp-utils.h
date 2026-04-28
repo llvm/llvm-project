@@ -86,15 +86,8 @@ SourcedActionStmt GetActionStmt(const parser::Block &block);
 std::string ThisVersion(unsigned version);
 std::string TryVersion(unsigned version);
 
-const parser::Designator *GetDesignatorFromObj(const parser::OmpObject &object);
-const parser::DataRef *GetDataRefFromObj(const parser::OmpObject &object);
-const parser::ArrayElement *GetArrayElementFromObj(
-    const parser::OmpObject &object);
 const Symbol *GetObjectSymbol(const parser::OmpObject &object);
-std::optional<parser::CharBlock> GetObjectSource(
-    const parser::OmpObject &object);
 const Symbol *GetArgumentSymbol(const parser::OmpArgument &argument);
-const parser::OmpObject *GetArgumentObject(const parser::OmpArgument &argument);
 
 bool IsCommonBlock(const Symbol &sym);
 bool IsExtendedListItem(const Symbol &sym);

@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/ScalableStaticAnalysisFramework/Analyses/UnsafeBufferUsage/UnsafeBufferUsage.h"
+#include "SSAFAnalysesCommon.h"
+#include "clang/ScalableStaticAnalysisFramework/Analyses/EntityPointerLevel/EntityPointerLevel.h"
+#include "clang/ScalableStaticAnalysisFramework/Analyses/EntityPointerLevel/EntityPointerLevelFormat.h"
 #include "clang/ScalableStaticAnalysisFramework/Analyses/UnsafeBufferUsage/UnsafeBufferUsageTest.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityId.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Serialization/JSONFormat.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
@@ -37,8 +39,7 @@ static Object serialize(const EntitySummary &S,
   Array UnsafeBuffersData;
 
   for (const auto &EPL : getUnsafeBuffers(SS))
-    UnsafeBuffersData.push_back(
-        Array{Fn(EPL.getEntity()), EPL.getPointerLevel()});
+    UnsafeBuffersData.push_back(entityPointerLevelToJSON(EPL, Fn));
   return Object{{SummarySerializationKey.data(), std::move(UnsafeBuffersData)}};
 }
 
@@ -48,28 +49,18 @@ deserializeImpl(const Object &Data, JSONFormat::EntityIdFromJSONFn Fn) {
       Data.getArray(SummarySerializationKey.data());
 
   if (!UnsafeBuffersData)
-    return llvm::createStringError("expected a json::Object with a key %s",
+    return makeSawButExpectedError(Object(Data), "an Object with a key %s",
                                    SummarySerializationKey.data());
 
   EntityPointerLevelSet EPLs;
 
   for (const auto &EltData : *UnsafeBuffersData) {
-    const Array *EltDataAsArr = EltData.getAsArray();
+    llvm::Expected<EntityPointerLevel> EPL =
+        entityPointerLevelFromJSON(EltData, Fn);
 
-    if (!EltDataAsArr || EltDataAsArr->size() != 2)
-      return llvm::createStringError("expected a json::Array of size 2");
-
-    const Object *IdData = (*EltDataAsArr)[0].getAsObject();
-    std::optional<uint64_t> PtrLvData = (*EltDataAsArr)[1].getAsInteger();
-
-    if (!IdData || !PtrLvData)
-      return llvm::createStringError("expected a json::Value of integer type");
-
-    llvm::Expected<EntityId> Id = Fn(*IdData);
-
-    if (!Id)
-      return Id.takeError();
-    EPLs.insert(buildEntityPointerLevel(Id.get(), *PtrLvData));
+    if (!EPL)
+      return EPL.takeError();
+    EPLs.insert(*EPL);
   }
   return std::make_unique<UnsafeBufferUsageEntitySummary>(
       buildUnsafeBufferUsageEntitySummary(std::move(EPLs)));

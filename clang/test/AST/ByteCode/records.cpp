@@ -466,7 +466,14 @@ namespace ConditionalInit {
 
   static_assert(getS(true).a == 12, "");
   static_assert(getS(false).a == 13, "");
-};
+
+  struct T {
+    virtual ~T() = default;
+  };
+  struct D : T {};
+  void foo() { const T &t = true ? (const T)(D()) : D(); }
+}
+
 namespace DeclRefs {
   struct A{ int m; const int &f = m; };
 
@@ -1327,12 +1334,27 @@ namespace pr18633 {
   }
 }
 
-namespace {
+namespace MemberExprOnStatic {
   struct F {
     static constexpr int Z = 12;
   };
   F f;
   static_assert(f.Z == 12, "");
+
+  template<int I>
+  struct S {
+    static constexpr const auto &k = I;
+    int a;
+  };
+
+  S<10> s{12};
+  static_assert(s.k == 10, "");
+
+  constexpr int foo() {
+    S<100> s{12};
+    return s.k;
+  }
+  static_assert(foo() == 100, "");
 }
 
 namespace UnnamedBitFields {
@@ -1928,4 +1950,17 @@ namespace ErroneousVoidDecl {
                                                                          // ref-error {{not an integral constant expression}} \
                                                                          // ref-note {{in call to}}
 #endif
+}
+
+namespace FieldLifetimeNotStarted {
+  struct R { // both-note {{during field initialization in the implicit default constructor}}
+    struct Inner { constexpr int f() const { return 0; } };
+    int a = b.f(); // both-warning {{field 'b' is uninitialized when used here}} \
+                   // both-note {{member call on object outside its lifetime}}
+    Inner b;
+  };
+  constexpr R r; // both-error {{constant expression}} \
+                 // both-note {{in call to}} \
+                 // both-note {{declared here}} \
+                 // both-note {{in implicit default constructor for 'FieldLifetimeNotStarted::R' first required here}}
 }
