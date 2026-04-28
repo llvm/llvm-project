@@ -14370,6 +14370,55 @@ static SDValue CombineANDShift(SDNode *N,
   return SDValue();
 }
 
+// Return true if V is a boolean set-like value:
+//   CMOV(0, 1, CC, Flags) or CSINC(0, 0, CC, Flags).
+// In both cases, C == 1 when Cond is true, 0 otherwise.
+static bool getSetLikeCondAndFlags(SDValue V, SelectionDAG &DAG, SDValue &Cond,
+                                   SDValue &Flags) {
+  if (V.getOpcode() == ARMISD::CMOV && isNullConstant(V.getOperand(0)) &&
+      isOneConstant(V.getOperand(1))) {
+    Cond = V.getOperand(2);
+    Flags = V.getOperand(3);
+    return true;
+  }
+  if (V.getOpcode() == ARMISD::CSINC && isNullConstant(V.getOperand(0)) &&
+      isNullConstant(V.getOperand(1))) {
+    ARMCC::CondCodes CC = (ARMCC::CondCodes)V.getConstantOperandVal(2);
+    Cond =
+        DAG.getConstant(ARMCC::getOppositeCondition(CC), SDLoc(V), MVT::i32);
+    Flags = V.getOperand(3);
+    return true;
+  }
+  return false;
+}
+
+// Given a tree of and/or(setlike(cc0), setlike(cc1)), fold to a CMOV chain
+// without materializing the intermediate and/or:
+//
+// OR(CSET cc0 cmp0, CSET cc1 cmp1)  -> CMOV(CSET cc1 cmp1, 1, cc0, cmp0)
+// AND(CSET cc0 cmp0, CSET cc1 cmp1) -> CMOV(0, CSET cc1 cmp1, cc0, cmp0)
+static SDValue performANDORCMOVCombine(SDNode *N, SelectionDAG &DAG) {
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::i32)
+    return SDValue();
+
+  SDValue Set0 = N->getOperand(0);
+  SDValue Set1 = N->getOperand(1);
+  SDValue Cond0, Flags0;
+  if (!getSetLikeCondAndFlags(Set0, DAG, Cond0, Flags0))
+    return SDValue();
+  SDValue UnusedCond, UnusedFlags;
+  if (!getSetLikeCondAndFlags(Set1, DAG, UnusedCond, UnusedFlags))
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue Zero = DAG.getConstant(0, DL, VT);
+  SDValue One = DAG.getConstant(1, DL, VT);
+  if (N->getOpcode() == ISD::OR)
+    return DAG.getNode(ARMISD::CMOV, DL, VT, Set1, One, Cond0, Flags0);
+  return DAG.getNode(ARMISD::CMOV, DL, VT, Zero, Set1, Cond0, Flags0);
+}
+
 static SDValue PerformANDCombine(SDNode *N,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  const ARMSubtarget *Subtarget) {
@@ -14382,6 +14431,12 @@ static SDValue PerformANDCombine(SDNode *N,
   if (!DAG.getTargetLoweringInfo().isTypeLegal(VT) || VT == MVT::v2i1 ||
       VT == MVT::v4i1 || VT == MVT::v8i1 || VT == MVT::v16i1)
     return SDValue();
+
+  // Akin to AArch64's ANDS handling, only do this when the AND value itself is
+  // dead, to avoid perturbing value-producing uses just for flag consumers.
+  if (!N->hasAnyUseOfValue(0))
+    if (SDValue Result = performANDORCMOVCombine(N, DAG))
+      return Result;
 
   APInt SplatBits, SplatUndef;
   unsigned SplatBitSize;
@@ -14721,6 +14776,9 @@ static SDValue PerformORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
 
   if (!DAG.getTargetLoweringInfo().isTypeLegal(VT))
     return SDValue();
+
+  if (SDValue Result = performANDORCMOVCombine(N, DAG))
+    return Result;
 
   if (Subtarget->hasMVEIntegerOps() && (VT == MVT::v2i1 || VT == MVT::v4i1 ||
                                         VT == MVT::v8i1 || VT == MVT::v16i1))

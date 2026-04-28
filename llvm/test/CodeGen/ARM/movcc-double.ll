@@ -54,15 +54,14 @@ define i32 @select_or(i32 %a0, i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a5) {
 define i32 @select_noopt(i32 %a0, i32 %a1, i32 %a2, i32 %a3, i32 %a4) {
 ; CHECK-LABEL: select_noopt:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    cmp r1, r2
-; CHECK-NEXT:    mov r2, #0
-; CHECK-NEXT:    movlo r2, #1
-; CHECK-NEXT:    cmp r0, r1
-; CHECK-NEXT:    ldr r1, .LCPI2_0
 ; CHECK-NEXT:    mov r12, #0
+; CHECK-NEXT:    cmp r1, r2
 ; CHECK-NEXT:    movlo r12, #1
-; CHECK-NEXT:    orrs r0, r12, r2
-; CHECK-NEXT:    str r0, [r1]
+; CHECK-NEXT:    cmp r0, r1
+; CHECK-NEXT:    ldr r0, .LCPI2_0
+; CHECK-NEXT:    movlo r12, #1
+; CHECK-NEXT:    cmp r12, #0
+; CHECK-NEXT:    str r12, [r0]
 ; CHECK-NEXT:    ldr r0, [sp]
 ; CHECK-NEXT:    movne r0, r3
 ; CHECK-NEXT:    mov pc, lr
