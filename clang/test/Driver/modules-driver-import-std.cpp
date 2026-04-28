@@ -1,6 +1,9 @@
 // Checks that -fmodules-driver correctly handles the import of Standard library
 // modules.
 
+// https://github.com/llvm/llvm-project/pull/194475#issuecomment-4331347690
+// UNSUPPORTED: aarch64
+
 // The standard library modules manifest (libc++.modules.json) is discovered
 // relative to the installed C++ standard library runtime libraries
 // We need to create them in order for Clang to find the manifest.
