@@ -1,12 +1,9 @@
-"""Test breakpoint '.' ID - the current stopped breakpoint."""
-
 import lldb
 from lldbsuite.test.lldbtest import TestBase
 from lldbsuite.test import lldbutil
 
 
 class TestCase(TestBase):
-
     def test_disable_enable(self):
         self.build()
         _, _, _, bp = lldbutil.run_to_source_breakpoint(
