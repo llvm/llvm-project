@@ -24,15 +24,15 @@ entry:
   ret i8 %conv2
 }
 
-define i32 @compare2(i64 %conv1) {
-; CHECK-32BIT-LABEL: compare2:
+define i32 @compare32(i64 %conv1) {
+; CHECK-32BIT-LABEL: compare32:
 ; CHECK-32BIT:       # %bb.0: # %entry
 ; CHECK-32BIT-NEXT:    or r3, r4, r3
 ; CHECK-32BIT-NEXT:    addic r3, r3, -1
 ; CHECK-32BIT-NEXT:    subfe r3, r3, r3
 ; CHECK-32BIT-NEXT:    blr
 ;
-; CHECK-64BIT-LABEL: compare2:
+; CHECK-64BIT-LABEL: compare32:
 ; CHECK-64BIT:       # %bb.0: # %entry
 ; CHECK-64BIT-NEXT:    addic r3, r3, -1
 ; CHECK-64BIT-NEXT:    subfe r3, r3, r3
@@ -42,3 +42,24 @@ entry:
   %cond = sext i1 %tobool2.not to i32
   ret i32 %cond
 }
+
+define i64 @compare64(i32 %conv1) {
+; CHECK-32BIT-LABEL: compare64:
+; CHECK-32BIT:       # %bb.0: # %entry
+; CHECK-32BIT-NEXT:    addic r3, r3, -1
+; CHECK-32BIT-NEXT:    subfe r3, r3, r3
+; CHECK-32BIT-NEXT:    mr r4, r3
+; CHECK-32BIT-NEXT:    blr
+;
+; CHECK-64BIT-LABEL: compare64:
+; CHECK-64BIT:       # %bb.0: # %entry
+; CHECK-64BIT-NEXT:    clrldi r3, r3, 32
+; CHECK-64BIT-NEXT:    addic r3, r3, -1
+; CHECK-64BIT-NEXT:    subfe r3, r3, r3
+; CHECK-64BIT-NEXT:    blr
+entry:
+  %tobool2.not = icmp eq i32 %conv1, 0
+  %cond = sext i1 %tobool2.not to i64
+  ret i64 %cond
+}
+
