@@ -26,6 +26,7 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;
@@ -201,10 +202,14 @@ static bool bitTrackingDCE(Function &F, DemandedBits &DB) {
 
 PreservedAnalyses BDCEPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &DB = AM.getResult<DemandedBitsAnalysis>(F);
-  if (!bitTrackingDCE(F, DB))
+
+  // Avoid incorrect replacement of non-SSA values in unreachable blocks.
+  bool CFGChanged = EliminateUnreachableBlocks(F);
+  if (!CFGChanged && !bitTrackingDCE(F, DB))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
-  PA.preserveSet<CFGAnalyses>();
+  if (!CFGChanged)
+    PA.preserveSet<CFGAnalyses>();
   return PA;
 }

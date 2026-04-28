@@ -101,3 +101,18 @@ define void @dead_use_invalidation(i32 %a) {
   ret void
 }
 declare void @dummy(i32)
+
+define i64 @deadcode_self_reference() {
+; CHECK-LABEL: @deadcode_self_reference(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i64 0
+;
+entry:
+  ret i64 0
+
+loop:
+  %or = or i32 %or, 0
+  %conv = trunc i32 %or to i16
+  %call = call i16 null(i16 0, i16 %conv)
+  br label %loop
+}
