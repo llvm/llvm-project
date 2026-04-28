@@ -18,15 +18,16 @@
 using namespace llvm;
 
 void InstructionCost::print(raw_ostream &OS) const {
+  using UnsignedCostType = std::make_unsigned_t<CostType>;
   if (isValid()) {
-    UnsignedCostType AbsValue = (Value == MinValue)
-                                    ? ((UnsignedCostType)(-(Value + 1)) + 1)
-                                    : std::abs(Value);
-    CostType WholeNumber = AbsValue / CostGranularity;
-    CostType Remainder = AbsValue % CostGranularity;
+    UnsignedCostType AbsValue = (Value < 0)
+                                    ? -((std::make_unsigned_t<CostType>)(Value))
+                                    : ((std::make_unsigned_t<CostType>)(Value));
+    UnsignedCostType WholeNumber = AbsValue / CostGranularity;
+    UnsignedCostType Remainder = AbsValue % CostGranularity;
     if (Value < 0)
       OS << "-";
-    CostType RemainderHundreds = (Remainder * 100) / CostGranularity;
+    UnsignedCostType RemainderHundreds = (Remainder * 100) / CostGranularity;
     while (RemainderHundreds % 10 == 0 && RemainderHundreds)
       RemainderHundreds /= 10;
     OS << WholeNumber;
