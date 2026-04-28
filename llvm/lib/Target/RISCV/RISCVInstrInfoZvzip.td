@@ -166,18 +166,12 @@ multiclass VPatVZIP<SDPatternOperator vop, string instruction_name> {
   foreach VtiToWti = AllZvzipVectors in {
     defvar vti = VtiToWti.Vti;
     defvar wti = VtiToWti.Wti;
-    let Predicates = !listconcat([HasStdExtZvzip], GetVTypePredicates<vti>.Predicates) in {
-      def : Pat<(wti.Vector (vop
-                       (vti.Vector vti.RegClass:$rs1),
-                       (vti.Vector vti.RegClass:$rs2),
-                       (wti.Vector wti.RegClass:$passthru),
-                       (vti.Mask VMV0:$vm),
-                       VLOpFrag)),
-                (!cast<Instruction>(instruction_name#"_VV_"#vti.LMul.MX#"_MASK")
-                             wti.RegClass:$passthru,
-                             vti.RegClass:$rs1,
-                             vti.RegClass:$rs2,
-                             (vti.Mask VMV0:$vm), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
+    let Predicates = !listconcat([HasStdExtZvzip],
+                                 GetVTypeMinimalPredicates<vti>.Predicates) in {
+      def : VPatBinaryVL_V<vop, instruction_name, "VV",
+                           wti.Vector, vti.Vector, vti.Vector, vti.Mask,
+                           vti.Log2SEW, vti.LMul, wti.RegClass, vti.RegClass,
+                           vti.RegClass>;
     }
   }
 }
