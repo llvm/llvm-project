@@ -1,5 +1,6 @@
 {'is_defined': False, 'name': '__cxa_atexit@LIBC', 'type': 'FUNC'}
 {'is_defined': False, 'name': '__cxa_finalize@LIBC', 'type': 'FUNC'}
+{'is_defined': False, 'name': '__cxa_thread_atexit_impl@LIBC', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt10bad_typeid4whatEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt11logic_error4whatEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt12bad_any_cast4whatEv', 'type': 'FUNC'}
