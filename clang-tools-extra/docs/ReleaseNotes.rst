@@ -195,21 +195,9 @@ New checks
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
-- New alias :doc:`cert-exp45-c <clang-tidy/checks/cert/exp45-c>`
+- Renamed :doc:`cert-exp45-c <clang-tidy/checks/cert/exp45-c>`
   to :doc:`bugprone-assignment-in-selection-statement
   <clang-tidy/checks/bugprone/assignment-in-selection-statement>`.
-
-- Renamed :doc:`hicpp-exception-baseclass
-  <clang-tidy/checks/hicpp/exception-baseclass>`
-  to :doc:`bugprone-std-exception-baseclass
-  <clang-tidy/checks/bugprone/std-exception-baseclass>`.
-  The `hicpp-exception-baseclass` name is kept as an alias.
-
-- Renamed :doc:`hicpp-ignored-remove-result
-  <clang-tidy/checks/hicpp/ignored-remove-result>`
-  to :doc:`bugprone-unused-return-value
-  <clang-tidy/checks/bugprone/unused-return-value>`.
-  The `hicpp-ignored-remove-result` name is kept as an alias.
 
 - Renamed :doc:`hicpp-no-assembler <clang-tidy/checks/hicpp/no-assembler>`
   to :doc:`portability-no-assembler
@@ -337,9 +325,9 @@ Changes in existing checks
 
 - Improved :doc:`cppcoreguidelines-missing-std-forward
   <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check:
-  
+
   - Fixed false positive for constrained template parameters
-  
+
   - Fixed false positive with ``std::forward`` in brace-init and paren-init
     lambda captures such as ``[t{std::forward<T>(t)}]``.
 
@@ -508,7 +496,7 @@ Changes in existing checks
 
   - Fixed incorrect naming style application to C++17 structured bindings.
 
-  - Fixed a false positive where function templates could be diagnosed as generic 
+  - Fixed a false positive where function templates could be diagnosed as generic
     identifiers when `DefaultCase` was enabled.
 
 - Improved :doc:`readability-implicit-bool-conversion
