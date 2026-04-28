@@ -586,8 +586,16 @@ RTLIB::Libcall RTLIB::getSINCOS(EVT RetVT) {
     switch (RetVT.getSimpleVT().SimpleTy) {
     case MVT::v4f32:
       return RTLIB::SINCOS_V4F32;
+    case MVT::v8f32:
+      return RTLIB::SINCOS_V8F32;
+    case MVT::v16f32:
+      return RTLIB::SINCOS_V16F32;
     case MVT::v2f64:
       return RTLIB::SINCOS_V2F64;
+    case MVT::v4f64:
+      return RTLIB::SINCOS_V4F64;
+    case MVT::v8f64:
+      return RTLIB::SINCOS_V8F64;
     case MVT::nxv4f32:
       return RTLIB::SINCOS_NXV4F32;
     case MVT::nxv2f64:
