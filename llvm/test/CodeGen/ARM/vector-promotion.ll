@@ -400,9 +400,9 @@ define void @simpleOneInstructionPromotion4x32(ptr %addr1, ptr %dest) {
 ; MVE only supports the Q-register (128-bit) case for this combine.
 ; IR-MVE-LABEL: @simpleOneInstructionPromotionMVE4x32
 ; IR-MVE: [[LOAD:%[a-zA-Z_0-9-]+]] = load <4 x i32>, ptr %addr1
-; IR-MVE-NEXT: [[EXTRACT:%[a-zA-Z_0-9-]+]] = extractelement <4 x i32> [[LOAD]], i32 1
-; IR-MVE-NEXT: [[OUT:%[a-zA-Z_0-9-]+]] = or i32 [[EXTRACT]], 1
-; IR-MVE-NEXT: store i32 [[OUT]], ptr %dest
+; IR-MVE-NEXT: [[VECTOR_OR:%[a-zA-Z_0-9-]+]] = or <4 x i32> [[LOAD]], <i32 poison, i32 1, i32 poison, i32 poison>
+; IR-MVE-NEXT: [[EXTRACT:%[a-zA-Z_0-9-]+]] = extractelement <4 x i32> [[VECTOR_OR]], i32 1
+; IR-MVE-NEXT: store i32 [[EXTRACT]], ptr %dest
 ; IR-MVE-NEXT: ret
 ; IR-MVE-STRESS-LABEL: @simpleOneInstructionPromotionMVE4x32
 ; IR-MVE-STRESS: [[LOAD:%[a-zA-Z_0-9-]+]] = load <4 x i32>, ptr %addr1
