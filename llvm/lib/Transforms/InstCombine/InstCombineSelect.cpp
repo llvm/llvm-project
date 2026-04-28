@@ -2154,6 +2154,15 @@ static Instruction *foldSelectICmpEq(SelectInst &SI, ICmpInst *ICI,
   if (Pred == ICmpInst::ICMP_NE)
     std::swap(TrueVal, FalseVal);
 
+  /// `A == MIN_INT ? MAX_INT : 0 - A` --> `ssub_sat 0, A`
+  if (match(CmpRHS, m_MinSignedValue()) && match(TrueVal, m_MaxSignedValue()) &&
+      match(FalseVal, m_Sub(m_ZeroInt(), m_Specific(CmpLHS)))) {
+    return IC.replaceInstUsesWith(
+        SI, IC.Builder.CreateBinaryIntrinsic(
+                Intrinsic::ssub_sat,
+                ConstantInt::getNullValue(CmpLHS->getType()), CmpLHS));
+  }
+
   if (Instruction *Res =
           foldSelectWithExtremeEqCond(CmpLHS, CmpRHS, TrueVal, FalseVal))
     return Res;

@@ -510,6 +510,19 @@ inline api_pred_ty<is_maxsignedvalue> m_MaxSignedValue(const APInt *&V) {
   return V;
 }
 
+struct is_minsignedvalue {
+  bool isValue(const APInt &C) const { return C.isMinSignedValue(); }
+};
+/// Match an integer or vector with values having only the high bit set and
+/// all other bits cleared (0x80...).
+/// For vectors, this includes constants with undefined elements.
+inline cst_pred_ty<is_minsignedvalue> m_MinSignedValue() {
+  return cst_pred_ty<is_minsignedvalue>();
+}
+inline api_pred_ty<is_minsignedvalue> m_MinSignedValue(const APInt *&V) {
+  return V;
+}
+
 struct is_negative {
   bool isValue(const APInt &C) const { return C.isNegative(); }
 };
