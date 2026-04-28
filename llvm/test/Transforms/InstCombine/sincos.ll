@@ -330,4 +330,92 @@ define float @sincos_fmf_one_unset(float %x) {
   ret float %res
 }
 
+; Vector sin+cos intrinsics with the same operand should be combined into a
+; single vector sincos intrinsic.
+define <4 x float> @sincos_v4f32(<4 x float> %x) {
+; CHECK-LABEL: @sincos_v4f32(
+; CHECK-NEXT:    [[SINCOS:%.*]] = call { <4 x float>, <4 x float> } @llvm.sincos.v4f32(<4 x float> [[X:%.*]])
+; CHECK-NEXT:    [[SIN:%.*]] = extractvalue { <4 x float>, <4 x float> } [[SINCOS]], 0
+; CHECK-NEXT:    [[COS:%.*]] = extractvalue { <4 x float>, <4 x float> } [[SINCOS]], 1
+; CHECK-NEXT:    [[RES:%.*]] = fadd <4 x float> [[SIN]], [[COS]]
+; CHECK-NEXT:    ret <4 x float> [[RES]]
+;
+; CHECK-SHRINK-LABEL: @sincos_v4f32(
+; CHECK-SHRINK-NEXT:    [[SINCOS:%.*]] = call { <4 x float>, <4 x float> } @llvm.sincos.v4f32(<4 x float> [[X:%.*]])
+; CHECK-SHRINK-NEXT:    [[SIN:%.*]] = extractvalue { <4 x float>, <4 x float> } [[SINCOS]], 0
+; CHECK-SHRINK-NEXT:    [[COS:%.*]] = extractvalue { <4 x float>, <4 x float> } [[SINCOS]], 1
+; CHECK-SHRINK-NEXT:    [[RES:%.*]] = fadd <4 x float> [[SIN]], [[COS]]
+; CHECK-SHRINK-NEXT:    ret <4 x float> [[RES]]
+;
+  %s = call <4 x float> @llvm.sin.v4f32(<4 x float> %x)
+  %c = call <4 x float> @llvm.cos.v4f32(<4 x float> %x)
+  %res = fadd <4 x float> %s, %c
+  ret <4 x float> %res
+}
+
+define <2 x double> @sincos_v2f64(<2 x double> %x) {
+; CHECK-LABEL: @sincos_v2f64(
+; CHECK-NEXT:    [[SINCOS:%.*]] = call { <2 x double>, <2 x double> } @llvm.sincos.v2f64(<2 x double> [[X:%.*]])
+; CHECK-NEXT:    [[SIN:%.*]] = extractvalue { <2 x double>, <2 x double> } [[SINCOS]], 0
+; CHECK-NEXT:    [[COS:%.*]] = extractvalue { <2 x double>, <2 x double> } [[SINCOS]], 1
+; CHECK-NEXT:    [[RES:%.*]] = fadd <2 x double> [[SIN]], [[COS]]
+; CHECK-NEXT:    ret <2 x double> [[RES]]
+;
+; CHECK-SHRINK-LABEL: @sincos_v2f64(
+; CHECK-SHRINK-NEXT:    [[SINCOS:%.*]] = call { <2 x double>, <2 x double> } @llvm.sincos.v2f64(<2 x double> [[X:%.*]])
+; CHECK-SHRINK-NEXT:    [[SIN:%.*]] = extractvalue { <2 x double>, <2 x double> } [[SINCOS]], 0
+; CHECK-SHRINK-NEXT:    [[COS:%.*]] = extractvalue { <2 x double>, <2 x double> } [[SINCOS]], 1
+; CHECK-SHRINK-NEXT:    [[RES:%.*]] = fadd <2 x double> [[SIN]], [[COS]]
+; CHECK-SHRINK-NEXT:    ret <2 x double> [[RES]]
+;
+  %s = call <2 x double> @llvm.sin.v2f64(<2 x double> %x)
+  %c = call <2 x double> @llvm.cos.v2f64(<2 x double> %x)
+  %res = fadd <2 x double> %s, %c
+  ret <2 x double> %res
+}
+
+; Same for scalable vectors.
+define <vscale x 4 x float> @sincos_nxv4f32(<vscale x 4 x float> %x) {
+; CHECK-LABEL: @sincos_nxv4f32(
+; CHECK-NEXT:    [[SINCOS:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.sincos.nxv4f32(<vscale x 4 x float> [[X:%.*]])
+; CHECK-NEXT:    [[SIN:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[SINCOS]], 0
+; CHECK-NEXT:    [[COS:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[SINCOS]], 1
+; CHECK-NEXT:    [[RES:%.*]] = fadd <vscale x 4 x float> [[SIN]], [[COS]]
+; CHECK-NEXT:    ret <vscale x 4 x float> [[RES]]
+;
+; CHECK-SHRINK-LABEL: @sincos_nxv4f32(
+; CHECK-SHRINK-NEXT:    [[SINCOS:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.sincos.nxv4f32(<vscale x 4 x float> [[X:%.*]])
+; CHECK-SHRINK-NEXT:    [[SIN:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[SINCOS]], 0
+; CHECK-SHRINK-NEXT:    [[COS:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[SINCOS]], 1
+; CHECK-SHRINK-NEXT:    [[RES:%.*]] = fadd <vscale x 4 x float> [[SIN]], [[COS]]
+; CHECK-SHRINK-NEXT:    ret <vscale x 4 x float> [[RES]]
+;
+  %s = call <vscale x 4 x float> @llvm.sin.nxv4f32(<vscale x 4 x float> %x)
+  %c = call <vscale x 4 x float> @llvm.cos.nxv4f32(<vscale x 4 x float> %x)
+  %res = fadd <vscale x 4 x float> %s, %c
+  ret <vscale x 4 x float> %res
+}
+
+; FMF flags should still be intersected for vector sin/cos.
+define <4 x float> @sincos_v4f32_fmf_intersect(<4 x float> %x) {
+; CHECK-LABEL: @sincos_v4f32_fmf_intersect(
+; CHECK-NEXT:    [[SINCOS:%.*]] = call nnan ninf { <4 x float>, <4 x float> } @llvm.sincos.v4f32(<4 x float> [[X:%.*]])
+; CHECK-NEXT:    [[SIN:%.*]] = extractvalue { <4 x float>, <4 x float> } [[SINCOS]], 0
+; CHECK-NEXT:    [[COS:%.*]] = extractvalue { <4 x float>, <4 x float> } [[SINCOS]], 1
+; CHECK-NEXT:    [[RES:%.*]] = fadd <4 x float> [[SIN]], [[COS]]
+; CHECK-NEXT:    ret <4 x float> [[RES]]
+;
+; CHECK-SHRINK-LABEL: @sincos_v4f32_fmf_intersect(
+; CHECK-SHRINK-NEXT:    [[SINCOS:%.*]] = call nnan ninf { <4 x float>, <4 x float> } @llvm.sincos.v4f32(<4 x float> [[X:%.*]])
+; CHECK-SHRINK-NEXT:    [[SIN:%.*]] = extractvalue { <4 x float>, <4 x float> } [[SINCOS]], 0
+; CHECK-SHRINK-NEXT:    [[COS:%.*]] = extractvalue { <4 x float>, <4 x float> } [[SINCOS]], 1
+; CHECK-SHRINK-NEXT:    [[RES:%.*]] = fadd <4 x float> [[SIN]], [[COS]]
+; CHECK-SHRINK-NEXT:    ret <4 x float> [[RES]]
+;
+  %s = call nnan ninf nsz <4 x float> @llvm.sin.v4f32(<4 x float> %x)
+  %c = call nnan ninf arcp <4 x float> @llvm.cos.v4f32(<4 x float> %x)
+  %res = fadd <4 x float> %s, %c
+  ret <4 x float> %res
+}
+
 attributes #0 = { nounwind memory(none) }
