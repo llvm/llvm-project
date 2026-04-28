@@ -11,8 +11,8 @@ namespace cwg2810 { // cwg2810: yes
 
 template <typename>
 void f() {
-  int i = 1.5;
-  // expected-warning@-1 {{implicit conversion from 'double' to 'int' changes value from 1.5 to 1}}
+  0xC0FFEE;
+  // expected-warning@-1 {{expression result unused}}
 }
 
 } // namespace cwg2810
