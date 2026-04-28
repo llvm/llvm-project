@@ -7,11 +7,22 @@
 
 struct HasMem { int x;};
 
-// CIR: cir.global "private" constant linkonce_odr comdat @_ZTAXtl6HasMemLi1EEE = #cir.const_record<{#cir.int<1> : !s32i}> : !rec_HasMem
-// CIR: cir.global "private" constant linkonce_odr comdat @_ZTAXtl6HasMemLi2EEE = #cir.const_record<{#cir.int<2> : !s32i}> : !rec_HasMem
+// CIR-DAG: cir.global "private" constant linkonce_odr comdat @_ZTAXtl6HasMemLi3EEE = #cir.const_record<{#cir.int<3> : !s32i}> : !rec_HasMem
+// CIR-DAG: cir.global external @ptr = #cir.global_view<@_ZTAXtl6HasMemLi3EEE> : !cir.ptr<!rec_HasMem>
 
-// LLVM-BOTH: @_ZTAXtl6HasMemLi1EEE = linkonce_odr constant %struct.HasMem { i32 1 }, comdat
-// LLVM-BOTH: @_ZTAXtl6HasMemLi2EEE = linkonce_odr constant %struct.HasMem { i32 2 }, comdat
+// LLVM-BOTH-DAG: @_ZTAXtl6HasMemLi1EEE = linkonce_odr constant %struct.HasMem { i32 1 }, comdat
+// LLVM-BOTH-DAG: @_ZTAXtl6HasMemLi2EEE = linkonce_odr constant %struct.HasMem { i32 2 }, comdat
+// LLVM-BOTH-DAG: @_ZTAXtl6HasMemLi3EEE = linkonce_odr constant %struct.HasMem { i32 3 }, comdat
+// LLVM-BOTH-DAG: @ptr = global ptr @_ZTAXtl6HasMemLi3EEE
+
+template <HasMem m>
+constexpr const HasMem *get_ptr() { return &m; }
+
+const auto *ptr = get_ptr<HasMem{3}>();
+
+// CIR-DAG: cir.global "private" constant linkonce_odr comdat @_ZTAXtl6HasMemLi1EEE = #cir.const_record<{#cir.int<1> : !s32i}> : !rec_HasMem
+// CIR-DAG: cir.global "private" constant linkonce_odr comdat @_ZTAXtl6HasMemLi2EEE = #cir.const_record<{#cir.int<2> : !s32i}> : !rec_HasMem
+
 template<HasMem m>
 int get_x() { return m.x; }
 // CIR-LABEL: cir.func {{.*}}@_Z5get_xIXtl6HasMemLi1EEEEiv()
