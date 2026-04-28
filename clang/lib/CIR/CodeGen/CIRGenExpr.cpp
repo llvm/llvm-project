@@ -1008,10 +1008,20 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
     auto iter = localDeclMap.find(vd);
     if (iter != localDeclMap.end()) {
       addr = iter->second;
-    } else {
+
+    } else if (vd->isStaticLocal()) {
       // Otherwise, it might be static local we haven't emitted yet for some
       // reason; most likely, because it's in an outer function.
-      cgm.errorNYI(e->getSourceRange(), "emitDeclRefLValue: static local");
+      cir::GlobalOp var =
+          cgm.getOrCreateStaticVarDecl(*vd, cgm.getCIRLinkageVarDefinition(vd));
+      mlir::Value getGlobVal = builder.createGetGlobal(var);
+      auto getGlob = getGlobVal.getDefiningOp<cir::GetGlobalOp>();
+      getGlob.setStaticLocal(var.getStaticLocalGuard().has_value());
+      getGlob.setTls(vd->getTLSKind() != VarDecl::TLS_None);
+      addr = Address(getGlob, convertTypeForMem(vd->getType()),
+                     getContext().getDeclAlign(vd));
+    } else {
+      llvm_unreachable("DeclRefExpr for Decl not entered in localDeclMap?");
     }
 
     // Drill into reference types.
@@ -1031,9 +1041,8 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
 
   if (const auto *bd = dyn_cast<BindingDecl>(nd)) {
     if (e->refersToEnclosingVariableOrCapture()) {
-      assert(!cir::MissingFeatures::lambdaCaptures());
-      cgm.errorNYI(e->getSourceRange(), "emitDeclRefLValue: lambda captures");
-      return LValue();
+      FieldDecl *fd = lambdaCaptureFields.lookup(bd);
+      return emitCapturedFieldLValue(*this, fd, cxxabiThisValue);
     }
     return emitLValue(bd->getBinding());
   }
@@ -1047,9 +1056,23 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
 
     return lv;
   }
+  if (isa<MSGuidDecl>(nd))
+    cgm.errorNYI(e->getSourceRange(),
+                 "emitDeclRefLValue: unhandled MS Guid Decl");
 
-  cgm.errorNYI(e->getSourceRange(), "emitDeclRefLValue: unhandled decl type");
-  return LValue();
+  if (const auto *tpo = dyn_cast<TemplateParamObjectDecl>(nd)) {
+    CharUnits alignment = cgm.getNaturalTypeAlignment(tpo->getType());
+    cir::GetGlobalOp atpo =
+        builder.createGetGlobal(cgm.getAddrOfTemplateParamObject(tpo));
+    assert(!MissingFeatures::addressSpace() &&
+           "Do an address space conversion if necessary");
+
+    return makeAddrLValue(
+        Address(atpo, convertTypeForMem(tpo->getType()), alignment), ty,
+        AlignmentSource::Decl);
+  }
+
+  llvm_unreachable("Unhandled DeclRefExpr");
 }
 
 mlir::Value CIRGenFunction::evaluateExprAsBool(const Expr *e) {
@@ -2068,6 +2091,7 @@ CIRGenCallee CIRGenFunction::emitDirectCallee(const GlobalDecl &gd) {
 
         clone = cir::FuncOp::create(builder, calleeFunc.getLoc(), fdInlineName,
                                     calleeFunc.getFunctionType());
+        cgm.insertGlobalSymbol(clone);
         clone.setLinkageAttr(cir::GlobalLinkageKindAttr::get(
             &cgm.getMLIRContext(), cir::GlobalLinkageKind::InternalLinkage));
         clone.setSymVisibility("private");
