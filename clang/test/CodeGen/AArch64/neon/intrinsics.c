@@ -24,6 +24,46 @@
 
 #include <arm_neon.h>
 
+//===------------------------------------------------------===//
+// 2.1.3.2 Vector Saturating Shift Left
+// 
+// TODO: Implement the remaining intrinsics from this group.
+//===------------------------------------------------------===//
+
+// ALL-LABEL: @test_vqshlud_n_s64(
+int64_t test_vqshlud_n_s64(int64_t a) {
+// CIR:   [[CONST:%.*]] = cir.const #cir.int<63> : !s64i
+// CIR:   {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.sqshlu" {{%.*}}, [[CONST]] : (!s64i, !s64i) -> !s64i
+
+// LLVM-SAME: i64 {{.*}}[[A:%.*]])
+// LLVM:      [[VQSHLU_N:%.*]] = call i64 @llvm.aarch64.neon.sqshlu.i64(i64 [[A]], i64 63)
+// LLVM:      ret i64 [[VQSHLU_N]]
+  return (int64_t)vqshlud_n_s64(a, 63);
+}
+
+// ALL-LABEL: @test_vqshld_n_u64(
+uint64_t test_vqshld_n_u64(uint64_t a) {
+// CIR:   [[CONST:%.*]] = cir.const #cir.int<63> : !s64i
+// CIR:   [[CAST:%.*]] = cir.cast bitcast [[CONST]] : !s64i -> !u64i
+// CIR:   {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.uqshl" {{%.*}}, [[CAST]] : (!u64i, !u64i) -> !u64i
+
+// LLVM-SAME: i64 {{.*}}[[A:%.*]])
+// LLVM:      [[VQSHLD_N_U64:%.*]] = call i64 @llvm.aarch64.neon.uqshl.i64(i64 [[A]], i64 63)
+// LLVM:      ret i64 [[VQSHLD_N_U64]]
+  return vqshld_n_u64(a, 63);
+}
+
+// ALL-LABEL: @test_vqshld_n_s64(
+int64_t test_vqshld_n_s64(int64_t a) {
+// CIR:   [[CONST:%.*]] = cir.const #cir.int<63> : !s64i
+// CIR:   {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.sqshl" {{%.*}}, [[CONST]] : (!s64i, !s64i) -> !s64i
+
+// LLVM-SAME: i64 {{.*}}[[A:%.*]])
+// LLVM:      [[VQSHL_N:%.*]] = call i64 @llvm.aarch64.neon.sqshl.i64(i64 [[A]], i64 63)
+// LLVM:      ret i64 [[VQSHL_N]]
+  return (int64_t)vqshld_n_s64(a, 63);
+}
+
 // LLVM-LABEL: @test_vnegd_s64
 // CIR-LABEL: @vnegd_s64
 int64_t test_vnegd_s64(int64_t a) {
