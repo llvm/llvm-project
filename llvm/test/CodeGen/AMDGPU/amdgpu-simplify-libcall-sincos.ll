@@ -1266,6 +1266,54 @@ entry:
   ret float %sin2
 }
 
+; Test that sin and cos with different loads from the same pointer are merged.
+; Before CSE, sin and cos may receive different SSA values that are loads from
+; the same address. The pass should recognize these as equivalent arguments.
+define void @sincos_f32_equivalent_load_args(ptr addrspace(1) %x_ptr, ptr addrspace(1) nocapture writeonly %sin_out, ptr addrspace(1) nocapture writeonly %cos_out) {
+; CHECK-LABEL: define void @sincos_f32_equivalent_load_args
+; CHECK-SAME: (ptr addrspace(1) readonly captures(none) [[X_PTR:%.*]], ptr addrspace(1) writeonly captures(none) initializes((0, 4)) [[SIN_OUT:%.*]], ptr addrspace(1) writeonly captures(none) initializes((0, 4)) [[COS_OUT:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca float, align 4, addrspace(5)
+; CHECK-NEXT:    [[X1:%.*]] = load float, ptr addrspace(1) [[X_PTR]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = call contract float @_Z6sincosfPU3AS5f(float [[X1]], ptr addrspace(5) [[__SINCOS_]])
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(5) [[__SINCOS_]], align 4
+; CHECK-NEXT:    store float [[TMP0]], ptr addrspace(1) [[SIN_OUT]], align 4
+; CHECK-NEXT:    store float [[TMP1]], ptr addrspace(1) [[COS_OUT]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %x1 = load float, ptr addrspace(1) %x_ptr, align 4
+  %call_sin = tail call contract float @_Z3sinf(float %x1)
+  store float %call_sin, ptr addrspace(1) %sin_out, align 4
+  %x2 = load float, ptr addrspace(1) %x_ptr, align 4
+  %call_cos = tail call contract float @_Z3cosf(float %x2)
+  store float %call_cos, ptr addrspace(1) %cos_out, align 4
+  ret void
+}
+
+; Same as above but with double type
+define void @sincos_f64_equivalent_load_args(ptr addrspace(1) %x_ptr, ptr addrspace(1) nocapture writeonly %sin_out, ptr addrspace(1) nocapture writeonly %cos_out) {
+; CHECK-LABEL: define void @sincos_f64_equivalent_load_args
+; CHECK-SAME: (ptr addrspace(1) readonly captures(none) [[X_PTR:%.*]], ptr addrspace(1) writeonly captures(none) initializes((0, 8)) [[SIN_OUT:%.*]], ptr addrspace(1) writeonly captures(none) initializes((0, 8)) [[COS_OUT:%.*]]) local_unnamed_addr #[[ATTR4]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca double, align 8, addrspace(5)
+; CHECK-NEXT:    [[X1:%.*]] = load double, ptr addrspace(1) [[X_PTR]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = call contract double @_Z6sincosdPU3AS5d(double [[X1]], ptr addrspace(5) [[__SINCOS_]])
+; CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(5) [[__SINCOS_]], align 8
+; CHECK-NEXT:    store double [[TMP0]], ptr addrspace(1) [[SIN_OUT]], align 8
+; CHECK-NEXT:    store double [[TMP1]], ptr addrspace(1) [[COS_OUT]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  %x1 = load double, ptr addrspace(1) %x_ptr, align 8
+  %call_sin = tail call contract double @_Z3sind(double %x1)
+  store double %call_sin, ptr addrspace(1) %sin_out, align 8
+  %x2 = load double, ptr addrspace(1) %x_ptr, align 8
+  %call_cos = tail call contract double @_Z3cosd(double %x2)
+  store double %call_cos, ptr addrspace(1) %cos_out, align 8
+  ret void
+}
+
 declare void @llvm.dbg.value(metadata, metadata, metadata) #0
 
 attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
