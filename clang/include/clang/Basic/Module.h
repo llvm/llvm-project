@@ -66,6 +66,8 @@ using ModuleId = SmallVector<std::pair<std::string, SourceLocation>, 2>;
 /// This uses \c FileManager's inode-based canonicalization of the user-provided
 /// module file path. Because input explicitly-built modules do not change
 /// during the lifetime of the compiler, inode recycling is not of concern here.
+///
+/// For in-memory modules, this is the \c MemoryBuffer in InMemoryModuleCache.
 class ModuleFileKey {
   /// The entity used for deduplication.
   const void *Ptr;
@@ -97,18 +99,35 @@ public:
 /// path and the module file name with the (optional) context hash. For all
 /// other types of module files, this is just the file system path.
 class ModuleFileName {
+public:
+  struct InMemory {};
+  struct Explicit {};
+  struct Implicit {
+    unsigned ImplicitModuleSuffixLength = 0;
+  };
+
+private:
   std::string Path;
-  unsigned ImplicitModuleSuffixLength = 0;
+  std::variant<InMemory, Explicit, Implicit> Kind;
 
 public:
   /// Creates an empty module file name.
   ModuleFileName() = default;
 
+  /// Creates a file name for an in-memory module.
+  static ModuleFileName makeInMemory(StringRef Name) {
+    ModuleFileName Result;
+    Result.Path = Name;
+    Result.Kind = InMemory{};
+    return Result;
+  }
+
   /// Creates a file name for an explicit module.
   static ModuleFileName makeExplicit(std::string Name) {
-    ModuleFileName File;
-    File.Path = std::move(Name);
-    return File;
+    ModuleFileName Result;
+    Result.Path = Name;
+    Result.Kind = Explicit{};
+    return Result;
   }
 
   /// Creates a file name for an explicit module.
@@ -123,7 +142,7 @@ public:
            "Suffix for implicit module file name out-of-bounds");
     ModuleFileName File;
     File.Path = std::move(Name);
-    File.ImplicitModuleSuffixLength = SuffixLength;
+    File.Kind = Implicit{SuffixLength};
     return File;
   }
 
@@ -133,9 +152,19 @@ public:
   }
 
   /// Returns the suffix length for an implicit module name, zero otherwise.
-  unsigned getImplicitModuleSuffixLength() const {
-    return ImplicitModuleSuffixLength;
+  template <class FnTy>
+  auto visitKind(FnTy &&Fn) const {
+    return std::visit(std::forward<FnTy>(Fn), Kind);
   }
+
+  /// Returns the suffix length for an implicit module name, zero otherwise.
+  unsigned getImplicitModuleSuffixLength() const {
+    if (const Implicit *I = std::get_if<Implicit>(&Kind))
+      return I->ImplicitModuleSuffixLength;
+    return 0;
+  }
+
+  bool isInMemory() const { return std::holds_alternative<InMemory>(Kind); }
 
   /// Returns the plain module file name.
   StringRef str() const { return Path; }
