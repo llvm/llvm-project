@@ -2276,8 +2276,7 @@ protected:
 
 public:
   Status ExecuteBreakpointSiteAction(BreakpointSite &site,
-                                     Process::BreakpointAction action,
-                                     bool force_now = false);
+                                     Process::BreakpointAction action);
 
   // This is implemented completely using the lldb::Process API. Subclasses
   // don't need to implement this function unless the standard flow of read
@@ -2303,8 +2302,7 @@ public:
   lldb::break_id_t CreateBreakpointSite(const lldb::BreakpointLocationSP &owner,
                                         bool use_hardware);
 
-  Status DisableBreakpointSiteByID(lldb::user_id_t break_id,
-                                   bool force_now = false);
+  Status DisableBreakpointSiteByID(lldb::user_id_t break_id);
 
   Status EnableBreakpointSiteByID(lldb::user_id_t break_id);
 

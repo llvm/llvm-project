@@ -1568,7 +1568,7 @@ void Process::DisableAllBreakpointSites() {
 }
 
 Status Process::ClearBreakpointSiteByID(lldb::user_id_t break_id) {
-  Status error(DisableBreakpointSiteByID(break_id, /*force_now=*/true));
+  Status error(DisableBreakpointSiteByID(break_id));
 
   if (error.Success())
     m_breakpoint_site_list.Remove(break_id);
@@ -1576,14 +1576,13 @@ Status Process::ClearBreakpointSiteByID(lldb::user_id_t break_id) {
   return error;
 }
 
-Status Process::DisableBreakpointSiteByID(lldb::user_id_t break_id,
-                                          bool force_now) {
+Status Process::DisableBreakpointSiteByID(lldb::user_id_t break_id) {
   Status error;
   BreakpointSiteSP bp_site_sp = m_breakpoint_site_list.FindByID(break_id);
   if (bp_site_sp) {
     if (IsBreakpointSiteEnabled(*bp_site_sp))
-      error = ExecuteBreakpointSiteAction(*bp_site_sp,
-                                          BreakpointAction::Disable, force_now);
+      error =
+          ExecuteBreakpointSiteAction(*bp_site_sp, BreakpointAction::Disable);
   } else {
     error = Status::FromErrorStringWithFormat(
         "invalid breakpoint site ID: %" PRIu64, break_id);
@@ -1593,16 +1592,14 @@ Status Process::DisableBreakpointSiteByID(lldb::user_id_t break_id,
 }
 
 Status Process::ExecuteBreakpointSiteAction(BreakpointSite &site,
-                                            BreakpointAction action,
-                                            bool force_now) {
-
+                                            BreakpointAction action) {
   auto site_sp = site.shared_from_this();
 
   // Ignore requests that won't change the Site status.
   if (IsBreakpointSiteEnabled(*site_sp) == (action == BreakpointAction::Enable))
     return Status();
 
-  if (!force_now && GetUseDelayedBreakpoints()) {
+  if (!GetUseDelayedBreakpoints()) {
     m_delayed_breakpoints.Enqueue(site.shared_from_this(), action);
     return Status();
   }
@@ -1776,8 +1773,7 @@ void Process::RemoveConstituentFromBreakpointSite(
   if (num_constituents == 0) {
     // Don't try to disable the site if we don't have a live process anymore.
     if (IsAlive())
-      ExecuteBreakpointSiteAction(*bp_site_sp, BreakpointAction::Disable,
-                                  /*force_now=*/true);
+      ExecuteBreakpointSiteAction(*bp_site_sp, BreakpointAction::Disable);
     m_breakpoint_site_list.RemoveByAddress(bp_site_sp->GetLoadAddress());
   }
 }
