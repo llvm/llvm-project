@@ -21,16 +21,16 @@ entry:
   %cmp25 = icmp sgt i32 %number, 0, !dbg !10
   br i1 %cmp25, label %for.body.preheader, label %for.end15, !dbg !10, !llvm.loop !12
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body, !dbg !14
 
-for.cond5.preheader:                              ; preds = %for.body
+for.cond5.preheader:
   br i1 %cmp25, label %for.body7.preheader, label %for.end15, !dbg !16, !llvm.loop !18
 
-for.body7.preheader:                              ; preds = %for.cond5.preheader
+for.body7.preheader:
   br label %for.body7, !dbg !20
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %indvars.iv27 = phi i64 [ %indvars.iv.next28, %for.body ], [ 0, %for.body.preheader ]
   %arrayidx = getelementptr inbounds i32, ptr %B, i64 %indvars.iv27, !dbg !14
   %0 = load i32, ptr %arrayidx, align 4, !dbg !14, !tbaa !22
@@ -44,7 +44,7 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond30 = icmp eq i32 %lftr.wideiv29, %number, !dbg !10
   br i1 %exitcond30, label %for.cond5.preheader, label %for.body, !dbg !10, !llvm.loop !12
 
-for.body7:                                        ; preds = %for.body7.preheader, %for.body7
+for.body7:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body7 ], [ 0, %for.body7.preheader ]
   %arrayidx9 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv, !dbg !20
   %2 = load i32, ptr %arrayidx9, align 4, !dbg !20, !tbaa !22
@@ -58,16 +58,15 @@ for.body7:                                        ; preds = %for.body7.preheader
   %exitcond = icmp eq i32 %lftr.wideiv, %number, !dbg !16
   br i1 %exitcond, label %for.end15.loopexit, label %for.body7, !dbg !16, !llvm.loop !18
 
-for.end15.loopexit:                               ; preds = %for.body7
+for.end15.loopexit:
   br label %for.end15
 
-for.end15:                                        ; preds = %for.end15.loopexit, %entry, %for.cond5.preheader
+for.end15:
   ret void, !dbg !26
 }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!7, !8}
-!llvm.ident = !{!9}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0", isOptimized: true, emissionKind: LineTablesOnly, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "no_array_bounds.cpp", directory: ".")
@@ -77,7 +76,6 @@ for.end15:                                        ; preds = %for.end15.loopexit,
 !6 = !DISubroutineType(types: !2)
 !7 = !{i32 2, !"Dwarf Version", i32 2}
 !8 = !{i32 2, !"Debug Info Version", i32 3}
-!9 = !{!"clang version 3.5.0"}
 !10 = !DILocation(line: 4, column: 8, scope: !11)
 !11 = distinct !DILexicalBlock(line: 4, column: 3, file: !1, scope: !4)
 !12 = !{!12, !13}

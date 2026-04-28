@@ -1183,14 +1183,10 @@ struct AAPointerInfoImpl
     auto HasKernelLifetime = [&](Value *V, Module &M) {
       if (!AA::isGPU(M))
         return false;
-      switch (AA::GPUAddressSpace(V->getType()->getPointerAddressSpace())) {
-      case AA::GPUAddressSpace::Shared:
-      case AA::GPUAddressSpace::Constant:
-      case AA::GPUAddressSpace::Local:
-        return true;
-      default:
-        return false;
-      };
+      unsigned VAS = V->getType()->getPointerAddressSpace();
+      return AA::isGPUSharedAddressSpace(M, VAS) ||
+             AA::isGPUConstantAddressSpace(M, VAS) ||
+             AA::isGPULocalAddressSpace(M, VAS);
     };
 
     // The IsLiveInCalleeCB will be used by the AA::isPotentiallyReachable query
@@ -2955,8 +2951,8 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
     const size_t NoUBPrevSize = AssumedNoUBInsts.size();
 
     auto InspectMemAccessInstForUB = [&](Instruction &I) {
-      // Lang ref now states volatile store is not UB, let's skip them.
-      if (I.isVolatile() && I.mayWriteToMemory())
+      // Volatile accesses on null are not necessarily UB.
+      if (I.isVolatile())
         return true;
 
       // Skip instructions that are already saved.
@@ -3347,6 +3343,17 @@ struct AAWillReturnImpl : public AAWillReturn {
     bool UsedAssumedInformation = false;
     if (!A.checkForAllCallLikeInstructions(CheckForWillReturn, *this,
                                            UsedAssumedInformation))
+      return indicatePessimisticFixpoint();
+
+    auto CheckForVolatile = [&](Instruction &I) {
+      // Volatile operations are not willreturn.
+      return !I.isVolatile();
+    };
+    if (!A.checkForAllInstructions(CheckForVolatile, *this,
+                                   {Instruction::Load, Instruction::Store,
+                                    Instruction::AtomicCmpXchg,
+                                    Instruction::AtomicRMW},
+                                   UsedAssumedInformation))
       return indicatePessimisticFixpoint();
 
     return ChangeStatus::UNCHANGED;
@@ -4145,6 +4152,9 @@ struct AAIsDeadValueImpl : public AAIsDead {
   /// Determine if \p I is assumed to be side-effect free.
   bool isAssumedSideEffectFree(Attributor &A, Instruction *I) {
     if (!I || wouldInstructionBeTriviallyDead(I))
+      return true;
+
+    if (!I->isTerminator() && !I->mayHaveSideEffects())
       return true;
 
     auto *CB = dyn_cast<CallBase>(I);
@@ -8704,11 +8714,12 @@ void AAMemoryLocationImpl::categorizePtrValue(
 
     // Filter accesses to constant (GPU) memory if we have an AS at the access
     // site or the object is known to actually have the associated AS.
-    if ((AccessAS == (unsigned)AA::GPUAddressSpace::Constant ||
-         (ObjectAS == (unsigned)AA::GPUAddressSpace::Constant &&
-          isIdentifiedObject(&Obj))) &&
-        AA::isGPU(*I.getModule()))
-      return true;
+    if (AA::isGPU(A.getModule())) {
+      if (AA::isGPUConstantAddressSpace(A.getModule(), AccessAS) ||
+          (AA::isGPUConstantAddressSpace(A.getModule(), ObjectAS) &&
+           isIdentifiedObject(&Obj)))
+        return true;
+    }
 
     if (isa<UndefValue>(&Obj))
       return true;

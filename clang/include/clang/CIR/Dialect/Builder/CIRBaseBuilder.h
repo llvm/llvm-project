@@ -354,15 +354,16 @@ public:
     return getGlobalViewAttr(type, globalOp, arAttr);
   }
 
-  mlir::Value createGetGlobal(mlir::Location loc, cir::GlobalOp global,
-                              bool threadLocal = false) {
+  cir::GetGlobalOp createGetGlobal(mlir::Location loc, cir::GlobalOp global,
+                                   bool threadLocal = false) {
     assert(!cir::MissingFeatures::addressSpace());
     return cir::GetGlobalOp::create(*this, loc,
                                     getPointerTo(global.getSymType()),
                                     global.getSymNameAttr(), threadLocal);
   }
 
-  mlir::Value createGetGlobal(cir::GlobalOp global, bool threadLocal = false) {
+  cir::GetGlobalOp createGetGlobal(cir::GlobalOp global,
+                                   bool threadLocal = false) {
     return createGetGlobal(global.getLoc(), global, threadLocal);
   }
 
@@ -751,6 +752,16 @@ public:
   mlir::Value createShiftRight(mlir::Location loc, mlir::Value lhs,
                                mlir::Value rhs) {
     return createShift(loc, lhs, rhs, false);
+  }
+
+  /// Returns `void (T...)` as a cir::FuncType.
+  cir::FuncType getVoidFnTy(mlir::TypeRange argTypes = {}) {
+    return cir::FuncType::get(llvm::to_vector(argTypes), getVoidTy());
+  }
+
+  /// Returns `void (*)(T...)` as a cir::PointerType.
+  cir::PointerType getVoidFnPtrTy(mlir::TypeRange argTypes = {}) {
+    return getPointerTo(getVoidFnTy(argTypes));
   }
 
   //

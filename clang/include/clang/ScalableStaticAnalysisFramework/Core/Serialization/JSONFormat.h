@@ -109,19 +109,30 @@ private:
   Array nestedBuildNamespaceToJSON(const NestedBuildNamespace &NBN) const;
 
   llvm::Expected<EntityName>
-  entityNameFromJSON(const Object &EntityNameObject) const;
-  Object entityNameToJSON(const EntityName &EN) const;
+  tuEntityNameFromJSON(const Object &EntityNameObject) const;
+  Object tuEntityNameToJSON(const EntityName &EN) const;
+
+  llvm::Expected<EntityName>
+  luEntityNameFromJSON(const Object &EntityNameObject) const;
+  Object luEntityNameToJSON(const EntityName &EN) const;
 
   llvm::Expected<EntityLinkage>
   entityLinkageFromJSON(const Object &EntityLinkageObject) const;
   Object entityLinkageToJSON(const EntityLinkage &EL) const;
 
   llvm::Expected<std::pair<EntityName, EntityId>>
-  entityIdTableEntryFromJSON(const Object &EntityIdTableEntryObject) const;
+  tuEntityIdTableEntryFromJSON(const Object &EntityIdTableEntryObject) const;
   llvm::Expected<EntityIdTable>
-  entityIdTableFromJSON(const Array &EntityIdTableArray) const;
-  Object entityIdTableEntryToJSON(const EntityName &EN, EntityId EI) const;
-  Array entityIdTableToJSON(const EntityIdTable &IdTable) const;
+  tuEntityIdTableFromJSON(const Array &EntityIdTableArray) const;
+  Object tuEntityIdTableEntryToJSON(const EntityName &EN, EntityId EI) const;
+  Array tuEntityIdTableToJSON(const EntityIdTable &IdTable) const;
+
+  llvm::Expected<std::pair<EntityName, EntityId>>
+  luEntityIdTableEntryFromJSON(const Object &EntityIdTableEntryObject) const;
+  llvm::Expected<EntityIdTable>
+  luEntityIdTableFromJSON(const Array &EntityIdTableArray) const;
+  Object luEntityIdTableEntryToJSON(const EntityName &EN, EntityId EI) const;
+  Array luEntityIdTableToJSON(const EntityIdTable &IdTable) const;
 
   llvm::Expected<std::pair<EntityId, EntityLinkage>>
   linkageTableEntryFromJSON(const Object &LinkageTableEntryObject) const;

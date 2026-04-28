@@ -1,5 +1,5 @@
 ; RUN: opt -passes=loop-vectorize -debug-only=loop-vectorize \
-; RUN: -prefer-predicate-over-epilogue=predicate-else-scalar-epilogue \
+; RUN: -tail-folding-policy=prefer-fold-tail \
 ; RUN: -mtriple=riscv64 -mattr=+v -riscv-v-vector-bits-max=128 -disable-output < %s 2>&1 | FileCheck --check-prefix=IF-EVL %s
 
 define void @first_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
@@ -20,8 +20,9 @@ define void @first_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; IF-EVL-NEXT: Successor(s): vector loop
 ; IF-EVL-EMPTY:
 ; IF-EVL: <x1> vector loop: {
+; IF-EVL-NEXT:   vp<[[IV:%[0-9]+]]> = CANONICAL-IV
+; IF-EVL-EMPTY:
 ; IF-EVL-NEXT:   vector.body:
-; IF-EVL-NEXT:     EMIT vp<[[IV:%[0-9]+]]> = CANONICAL-INDUCTION
 ; IF-EVL-NEXT:     CURRENT-ITERATION-PHI vp<[[EVL_PHI:%[0-9]+]]> = phi ir<0>, vp<[[IV_NEXT:%.+]]>
 ; IF-EVL-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<[[FOR_PHI:%.+]]> = phi ir<33>, ir<[[LD:%.+]]>
 ; IF-EVL-NEXT:     EMIT-SCALAR vp<[[AVL:%.+]]> = phi [ ir<%TC>, vector.ph ], [ vp<[[AVL_NEXT:%.+]]>, vector.body ]

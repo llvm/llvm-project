@@ -2566,11 +2566,12 @@ RegionStoreManager::setImplicitDefaultValue(LimitedRegionBindingsConstRef B,
   if (B.hasExhaustedBindingLimit())
     return B;
 
-  // Prefer to keep the previous default binding if we had one; that is likely a
-  // better choice than setting some arbitrary new default value.
-  // This isn't ideal (more of a hack), but better than dropping the more
-  // accurate default binding.
-  if (B.getDefaultBinding(R).has_value()) {
+  // Preserve an existing aggregate default binding. This handles partially
+  // initialized union-containing aggregates where bindAggregate() may already
+  // have installed a more precise default value at offset 0. Still allow
+  // implicit defaults for scalars and pointers so regular zero-initialization
+  // continues to work, e.g. for `new int[10]{}`.
+  if (T->isAggregateType() && B.getDefaultBinding(R).has_value()) {
     return B;
   }
 

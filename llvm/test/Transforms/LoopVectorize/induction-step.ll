@@ -76,7 +76,7 @@ entry:
   %0 = load i32, ptr @int_inc, align 4
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %x.05 = phi i32 [ %init, %entry ], [ %add, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %iv
