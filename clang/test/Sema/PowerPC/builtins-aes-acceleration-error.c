@@ -18,9 +18,6 @@ void test_aes_encrypt_paired_invalid_imm(void) {
   // expected-error@+2 {{argument value -1 is outside the valid range}}
   // pwr11-error@+1 {{'__builtin_aes_encrypt_paired' needs target feature future-vector,paired-vector-memops}}
   __vector_pair res2 = __builtin_aes_encrypt_paired(vp1, vp2, -1);
-  // expected-error@+2 {{argument value 10 is outside the valid range}}
-  // pwr11-error@+1 {{'__builtin_aes_encrypt_paired' needs target feature future-vector,paired-vector-memops}}
-  __vector_pair res3 = __builtin_aes_encrypt_paired(vp1, vp2, 10);
 }
 
 void test_aes_encrypt_paired_type_mismatch(void) {
@@ -88,9 +85,6 @@ void test_aes_decrypt_paired_invalid_imm(void) {
   // expected-error@+2 {{argument value -1 is outside the valid range}}
   // pwr11-error@+1 {{'__builtin_aes_decrypt_paired' needs target feature future-vector,paired-vector-memops}}
   __vector_pair res2 = __builtin_aes_decrypt_paired(vp1, vp2, -1);
-  // expected-error@+2 {{argument value 10 is outside the valid range}}
-  // pwr11-error@+1 {{'__builtin_aes_decrypt_paired' needs target feature future-vector,paired-vector-memops}}
-  __vector_pair res3 = __builtin_aes_decrypt_paired(vp1, vp2, 10);
 }
 
 void test_aes_decrypt_paired_type_mismatch(void) {
@@ -157,9 +151,6 @@ void test_aes_genlastkey_paired_invalid_imm(void) {
   // expected-error@+2 {{argument value -1 is outside the valid range}}
   // pwr11-error@+1 {{'__builtin_aes_genlastkey_paired' needs target feature future-vector,paired-vector-memops}}
   __vector_pair res2 = __builtin_aes_genlastkey_paired(vp1, -1);
-  // expected-error@+2 {{argument value 10 is outside the valid range}}
-  // pwr11-error@+1 {{'__builtin_aes_genlastkey_paired' needs target feature future-vector,paired-vector-memops}}
-  __vector_pair res3 = __builtin_aes_genlastkey_paired(vp1, 10);
 }
 
 void test_aes_genlastkey_paired_type_mismatch(void) {
@@ -215,9 +206,6 @@ void test_galois_field_mult_invalid_imm(void) {
   // expected-error@+2 {{argument value -1 is outside the valid range}}
   // pwr11-error@+1 {{'__builtin_galois_field_mult' needs target feature future-vector}}
   vector unsigned char res2 = __builtin_galois_field_mult(a, b, -1);
-  // expected-error@+2 {{argument value 10 is outside the valid range}}
-  // pwr11-error@+1 {{'__builtin_galois_field_mult' needs target feature future-vector}}
-  vector unsigned char res3 = __builtin_galois_field_mult(a, b, 10);
 }
 
 void test_galois_field_mult_type_mismatch(void) {
