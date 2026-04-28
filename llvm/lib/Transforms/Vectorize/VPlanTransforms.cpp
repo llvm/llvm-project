@@ -6420,12 +6420,11 @@ void VPlanTransforms::makeScalarizationDecisions(VPlan &Plan, VFRange &Range) {
         continue;
 
       // For now we (effectively) only scalarize to first-lane-only address
-      // computation chain for the memory operations such that
-      // MemOp->usesFirstLaneOnly(MemOpAddressOperand).
+      // computation chain for the memory operations.
 
       auto *I = cast_or_null<Instruction>(VPI->getUnderlyingValue());
+      // Wouldn't be able to create a `VPReplicateRecipe` anyway.
       if (!I)
-        // Wouldn't be able to create a `VPReplicateRecipe` anyway.
         continue;
 
       // If "executing" other lanes produces side-effects we can't avoid them.
@@ -6446,9 +6445,9 @@ void VPlanTransforms::makeScalarizationDecisions(VPlan &Plan, VFRange &Range) {
       if (!vputils::onlyFirstLaneUsed(VPI))
         continue;
 
-      auto *Recipe =
-          new VPReplicateRecipe(I, VPI->operandsWithoutMask(), true, nullptr,
-                                *VPI, *VPI, VPI->getDebugLoc());
+      auto *Recipe = new VPReplicateRecipe(
+          I, VPI->operandsWithoutMask(), /*IsSingleScalar=*/true,
+          /*Mask=*/nullptr, *VPI, *VPI, VPI->getDebugLoc());
       Recipe->insertBefore(VPI);
       VPI->replaceAllUsesWith(Recipe);
       VPI->eraseFromParent();
