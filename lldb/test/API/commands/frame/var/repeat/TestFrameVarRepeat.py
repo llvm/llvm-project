@@ -11,6 +11,7 @@ class TestCase(TestBase):
             self, "break here", lldb.SBFileSpec("main.cpp")
         )
         self.do_test("--depth ")
+        self.do_test("--de ")
         self.do_test("-D ")
         self.do_test("-D")
 

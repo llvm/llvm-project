@@ -441,6 +441,8 @@ may even involve JITing and running code in the target program.)");
   // is too shallow, hitting enter a few times will quickly expand the data.
   std::optional<std::string> GetRepeatCommand(Args &current_command_args,
                                               uint32_t index) override {
+    llvm::StringRef depth_opt = "--depth";
+
     Args repeat_args;
     auto increment_option =
         [&](llvm::StringRef option) -> std::optional<std::string> {
@@ -456,6 +458,11 @@ may even involve JITing and running code in the target program.)");
     for (const auto &entry : current_command_args) {
       llvm::StringRef arg = entry.ref();
 
+      if (arg == "-" || arg == "--") {
+        repeat_args.AppendArgument(arg);
+        continue;
+      }
+
       if (increment_next_arg) {
         increment_next_arg = false;
         if (auto maybe_opt = increment_option(arg)) {
@@ -464,7 +471,7 @@ may even involve JITing and running code in the target program.)");
         }
       }
 
-      if (arg == "--depth" || arg == "-D") {
+      if (depth_opt.starts_with(arg) || arg == "-D") {
         repeat_args.AppendArgument(arg);
         increment_next_arg = true;
         has_depth_option = true;
