@@ -1547,15 +1547,15 @@ createJumpTableDebugInfo(Function *F, ArrayRef<GlobalTypeMember *> Functions) {
 
   DISubroutineType *DIFnTy = DIB.createSubroutineType(nullptr);
 
-  DISubprogram *JTSP = DIB.createFunction(File, F->getName(), StringRef(), File,
-                                          0, DIFnTy, 0, DINode::FlagArtificial,
+  DISubprogram *JTSP = DIB.createFunction(CU, F->getName(), {}, File, 0, DIFnTy,
+                                          0, DINode::FlagArtificial,
                                           DISubprogram::SPFlagDefinition);
   F->setSubprogram(JTSP);
 
   DILocation *JTLoc = DILocation::get(M.getContext(), 0, 0, JTSP);
 
   DISubprogram *UbsanSP = DIB.createFunction(
-      File, "__ubsan_check_cfi_icall_jt", StringRef(), File, 0, DIFnTy, 0,
+      CU, "__ubsan_check_cfi_icall_jt", {}, File, 0, DIFnTy, 0,
       DINode::FlagArtificial, DISubprogram::SPFlagDefinition);
 
   SmallVector<DILocation *> Locations;
@@ -1565,7 +1565,7 @@ createJumpTableDebugInfo(Function *F, ArrayRef<GlobalTypeMember *> Functions) {
     StringRef FuncName = Func->getGlobal()->getName();
     FuncName.consume_back(".cfi");
     DISubprogram *JumpSP = DIB.createFunction(
-        File, (FuncName + ".cfi_jt").str(), StringRef(), File, 0, DIFnTy, 0,
+        CU, (FuncName + ".cfi_jt").str(), {}, File, 0, DIFnTy, 0,
         DINode::FlagArtificial, DISubprogram::SPFlagDefinition);
 
     DILocation *EntryLoc = JTLoc;
