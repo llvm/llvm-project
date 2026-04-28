@@ -7342,7 +7342,9 @@ void ModuleSummaryIndexBitcodeReader::setValueGUID(
   GlobalValue::GUID ValueGUID = 0;
   if (ValueID < DefinedGUIDs.size())
     ValueGUID = DefinedGUIDs[ValueID];
-  else
+  if (ValueGUID == 0)
+    // DefinedGUIDs is a sparse array and can contain zero entries, so this
+    // can't just be an `else`.
     ValueGUID = GlobalValue::getGUIDAssumingExternalLinkage(
         GlobalValue::getGlobalIdentifier(ValueName, Linkage, SourceFileName));
 
