@@ -442,35 +442,53 @@ may even involve JITing and running code in the target program.)");
   std::optional<std::string> GetRepeatCommand(Args &current_command_args,
                                               uint32_t index) override {
     Args repeat_args;
-    bool has_depth_option = false;
-    auto new_depth = m_varobj_options.max_depth + 1;
-    auto increment_depth_option = [&]() {
-      repeat_args.AppendArgument("--depth");
-      repeat_args.AppendArgument(llvm::utostr(new_depth));
-      has_depth_option = true;
+    auto increment_option = [&](llvm::StringRef option) {
+      uint32_t num;
+      bool failed = option.getAsInteger(10, num);
+      if (failed)
+        return false;
+      repeat_args.AppendArgument(llvm::utostr(num + 1));
+      return true;
     };
 
-    bool skip_next = false;
+    bool has_depth_option = false;
+    bool increment_next_arg = false;
     for (const auto &entry : current_command_args) {
-      if (skip_next) {
-        skip_next = false;
+      llvm::StringRef arg = entry.ref();
+
+      if (increment_next_arg) {
+        increment_next_arg = false;
+        if (increment_option(arg))
+          continue;
+      }
+
+      if (arg == "--depth" || arg == "-D") {
+        repeat_args.AppendArgument(arg);
+        increment_next_arg = true;
+        has_depth_option = true;
+        continue;
+      }
+      if (arg.consume_front("-D") && increment_option(arg)) {
+        has_depth_option = true;
         continue;
       }
 
-      llvm::StringRef arg = entry.ref();
-      if (arg == "--depth" || arg == "-D") {
-        skip_next = true;
-        increment_depth_option();
-      } else if (arg.starts_with("-D")) {
-        increment_depth_option();
-      } else {
-        repeat_args.AppendArgument(arg);
-      }
+      repeat_args.AppendArgument(arg);
     }
 
-    if (!has_depth_option)
-      // Default depth was used.
-      increment_depth_option();
+    if (!has_depth_option) {
+      // Access the default max-depth from the target. This is because
+      // GetRepeatCommand is called before ParseOptions, which is when
+      // m_varobj_options.max_depth becomes assigned.
+      if (auto target_sp = GetDebugger().GetSelectedTarget()) {
+        auto [default_depth, _] =
+            target_sp->GetMaximumDepthOfChildrenToDisplay();
+        // Insert the depth after `frame variable`, before positional args.
+        assert(repeat_args[0].ref() == "frame" && "expects resolved command");
+        repeat_args.InsertArgumentAtIndex(2, "--depth");
+        repeat_args.InsertArgumentAtIndex(3, llvm::utostr(default_depth + 1));
+      }
+    }
 
     std::string repeat_command;
     if (!repeat_args.GetQuotedCommandString(repeat_command))
