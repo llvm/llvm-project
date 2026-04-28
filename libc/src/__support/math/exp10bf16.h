@@ -56,7 +56,7 @@ namespace math {
 LIBC_INLINE_VAR constexpr float LOG2F_10 = 0x1.a934fp1;
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-constexpr fputil::ExceptValues<bfloat16, 4> EXP10BF16_EXCEPTS{
+LIBC_INLINE_VAR constexpr fputil::ExceptValues<bfloat16, 4> EXP10BF16_EXCEPTS{
     {// {inputs, RZ output, RU offset, RD offset, RN offset}
      // x = -0x1.6ep-7, exp10bf16(x) = 0x1.f2p-1 (RN)
      {0xBC37U, 0x3F79U, 1U, 0U, 0U},
@@ -90,9 +90,8 @@ LIBC_INLINE constexpr bfloat16 exp10bf16(bfloat16 x) {
 
   // exp10bf16(x) = +INF
   if (x_bits.is_pos() && x_u >= 0x421bU) { // x >= 0x1.36p+5
-    if (x_bits.is_inf()) {
+    if (x_bits.is_inf())
       return FPBits::inf().get_val();
-    }
 
     switch (fputil::quick_get_round()) {
     case FE_TONEAREST:
