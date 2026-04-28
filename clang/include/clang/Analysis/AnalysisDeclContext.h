@@ -46,6 +46,10 @@ class StackFrameContext;
 class Stmt;
 class VarDecl;
 
+namespace ento {
+class BlockDataRegion;
+}
+
 /// The base class of a hierarchy of objects representing analyses tied
 /// to AnalysisDeclContext.
 class ManagedAnalysis {
@@ -299,6 +303,9 @@ public:
 class StackFrameContext : public LocationContext {
   friend class LocationContextManager;
 
+  // Extra data for BlockInvocations
+  const ento::BlockDataRegion *BlockInvocationData;
+
   // The call site where this stack frame is established.
   const Expr *CallSite;
 
@@ -314,9 +321,9 @@ class StackFrameContext : public LocationContext {
   const unsigned Index;
 
   StackFrameContext(AnalysisDeclContext *ADC, const LocationContext *ParentLC,
-                    const Expr *E, const CFGBlock *Block, unsigned BlockCount,
+                    const ento::BlockDataRegion *BlockInvocationData, const Expr *E, const CFGBlock *Block, unsigned BlockCount,
                     unsigned Index, int64_t ID)
-      : LocationContext(StackFrame, ADC, ParentLC, ID), CallSite(E),
+      : LocationContext(StackFrame, ADC, ParentLC, ID), BlockInvocationData(BlockInvocationData), CallSite(E),
         Block(Block), BlockCount(BlockCount), Index(Index) {}
 
 public:
@@ -335,10 +342,11 @@ public:
   void Profile(llvm::FoldingSetNodeID &ID) override;
 
   static void Profile(llvm::FoldingSetNodeID &ID, AnalysisDeclContext *ADC,
-                      const LocationContext *ParentLC, const Expr *E,
+                      const LocationContext *ParentLC, const ento::BlockDataRegion *BlockInvocationData, const Expr *E,
                       const CFGBlock *Block, unsigned BlockCount,
                       unsigned Index) {
     ProfileCommon(ID, StackFrame, ADC, ParentLC, E);
+    ID.AddPointer(BlockInvocationData);
     ID.AddPointer(Block);
     ID.AddInteger(BlockCount);
     ID.AddInteger(Index);
