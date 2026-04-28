@@ -13791,22 +13791,25 @@ bool ARMTargetLowering::preferIncOfAddToSubOfNot(EVT VT) const {
 
 bool ARMTargetLowering::shouldConvertFpToSat(unsigned Op, EVT FPVT,
                                              EVT VT) const {
-  if (!isOperationLegalOrCustom(Op, VT) || !FPVT.isSimple())
+  if (FPVT == MVT::f16 && !Subtarget->hasVFP2Base())
     return false;
 
-  switch (FPVT.getSimpleVT().SimpleTy) {
-  case MVT::f16:
-    return Subtarget->hasVFP2Base();
-  case MVT::f32:
-    return Subtarget->hasVFP2Base();
-  case MVT::f64:
-    return Subtarget->hasFP64();
-  case MVT::v4f32:
-  case MVT::v8f16:
-    return Subtarget->hasMVEFloatOps();
-  default:
+  if (FPVT == MVT::f32 && !Subtarget->hasVFP2Base())
     return false;
-  }
+
+  if (FPVT == MVT::f64 && !Subtarget->hasFP64())
+    return false;
+
+  if (FPVT == MVT::v4f16 && !Subtarget->hasFullFP16())
+    return false;
+
+  if (FPVT == MVT::v4f32 && !Subtarget->hasMVEFloatOps())
+    return false;
+
+  if (FPVT == MVT::v8f16 && !Subtarget->hasMVEFloatOps())
+    return false;
+
+  return TargetLowering::shouldConvertFpToSat(Op, FPVT, VT);
 }
 
 static SDValue PerformSHLSimplify(SDNode *N,
