@@ -2502,7 +2502,7 @@ mlir::Speculation::Speculatability fir::EmboxOp::getSpeculatability() {
   // attribute, otherwise it is not safe to evaluate if the input may
   // be absent.
   if (getOptional())
-    return mlir::Speculation::NotSpeculatable;
+    return mlir::Speculation::Speculatable;
   return (getSourceBox() && mayBeAbsentBox(getSourceBox()))
              ? mlir::Speculation::NotSpeculatable
              : mlir::Speculation::Speculatable;
@@ -3818,7 +3818,7 @@ mlir::Speculation::Speculatability fir::ReboxOp::getSpeculatability() {
   // attribute, otherwise it is not safe to evaluate if the input may
   // be absent.
   if (getOptional())
-    return mlir::Speculation::NotSpeculatable;
+    return mlir::Speculation::Speculatable;
   return mayBeAbsentBox(getBox()) ? mlir::Speculation::NotSpeculatable
                                   : mlir::Speculation::Speculatable;
 }
