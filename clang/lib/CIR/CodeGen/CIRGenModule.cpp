@@ -530,7 +530,7 @@ void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
       cir::FuncType ty = getTypes().getFunctionType(fi);
 
       getOrCreateCIRFunction(mangledName, ty, gd, /*ForVTable=*/false,
-                              /*DontDefer=*/false);
+                             /*DontDefer=*/false);
       return;
     }
   } else {
@@ -2725,7 +2725,7 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
   // translation to LLVM. Thus, we don't need to check for them here.
 
   // If this function has a body somewhere in the AST, we must use that
-  // definition for attributes and linkage calculation. This prevents AST 
+  // definition for attributes and linkage calculation. This prevents AST
   // assertions when forcing inline definitions from forward declarations.
   const auto *funcDecl = cast<FunctionDecl>(globalDecl.getDecl());
   const FunctionDecl *fdDef;
