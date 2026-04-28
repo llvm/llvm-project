@@ -324,7 +324,7 @@ void TextOutputSection::finalize() {
   }
 
   if (!thunks.empty())
-    log("Created " + Twine(thunks.size()) + " (" +
+    log(name + ": Created " + Twine(thunks.size()) + " (" +
         Twine(thunks.size() * target->thunkSize / 1024) +
         " KB) thunks and updated " + Twine(thunkCallCount) + " branch targets");
 }
