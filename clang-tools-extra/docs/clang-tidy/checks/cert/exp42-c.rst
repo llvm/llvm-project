@@ -1,3 +1,5 @@
+.. title:: clang-tidy - cert-exp42-c
+
 cert-exp42-c
 ============
 

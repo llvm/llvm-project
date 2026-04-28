@@ -1,3 +1,5 @@
+.. title:: clang-tidy - cert-flp37-c
+
 cert-flp37-c
 ============
 
