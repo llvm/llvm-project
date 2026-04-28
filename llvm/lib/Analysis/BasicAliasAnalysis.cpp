@@ -197,9 +197,10 @@ static bool areBothVScale(const Value *V1, const Value *V2) {
 
 CaptureAnalysis::~CaptureAnalysis() = default;
 
-CaptureComponents SimpleCaptureAnalysis::getCapturesBefore(const Value *Object,
-                                                           const Instruction *I,
-                                                           bool OrAt) {
+CaptureComponents
+SimpleCaptureAnalysis::getCapturesBefore(const Value *Object,
+                                         const Instruction *I, bool OrAt,
+                                         bool * /*IsNotCapturedBeforeOrAt*/) {
   if (!isIdentifiedFunctionLocal(Object))
     return CaptureComponents::Provenance;
 
@@ -228,7 +229,8 @@ static bool isNotInCycle(const Instruction *I, const DominatorTree *DT,
 
 CaptureComponents
 EarliestEscapeAnalysis::getCapturesBefore(const Value *Object,
-                                          const Instruction *I, bool OrAt) {
+                                          const Instruction *I, bool OrAt,
+                                          bool * /*IsNotCapturedBeforeOrAt*/) {
   if (!isIdentifiedFunctionLocal(Object))
     return CaptureComponents::Provenance;
 
@@ -273,6 +275,48 @@ void EarliestEscapeAnalysis::removeInstruction(Instruction *I) {
       EarliestEscapes.erase(Obj);
     Inst2Obj.erase(I);
   }
+}
+
+CaptureComponents
+CapturesBeforeAnalysis::getCapturesBefore(const Value *Object,
+                                          const Instruction *I, bool OrAt,
+                                          bool *IsNotCapturedBeforeOrAt) {
+  assert(I && "CapturesBeforeAnalysis requires a context instruction.");
+  if (!isIdentifiedFunctionLocal(Object))
+    return CaptureComponents::Provenance;
+
+  CaptureComponents CC = PointerMayBeCapturedBefore(
+      Object, /* ReturnCaptures */ true, I, &DT, /* IncludeI */ true,
+      CaptureComponents::Provenance, capturesAnything, LI);
+  if (IsNotCapturedBeforeOrAt && capturesNothing(CC))
+    *IsNotCapturedBeforeOrAt = true;
+  return CC;
+}
+
+CaptureComponents
+ChainedCaptureAnalysis::getCapturesBefore(const Value *Object,
+                                          const Instruction *I, bool OrAt,
+                                          bool *IsNotCapturedBeforeOrAt) {
+  CaptureComponents CC = EEA.getCapturesBefore(Object, I, OrAt);
+  if (!capturesAnyProvenance(CC)) {
+    // The provenance may or may not be captured, depending on OrAt. If
+    // required, we should determine whether IsNotCapturedBeforeOrAt also holds.
+    if (IsNotCapturedBeforeOrAt && I) {
+      CaptureComponents CCAt = EEA.getCapturesBefore(Object, I, true);
+      if (!capturesAnyProvenance(CCAt))
+        *IsNotCapturedBeforeOrAt = true;
+      else
+        CBA.getCapturesBefore(Object, I, OrAt, IsNotCapturedBeforeOrAt);
+    }
+  }
+  return CC;
+
+  if (!I)
+    return CC;
+
+  // EEA could not provide an accurate answer, try the precise analysis (OrAt is
+  // not taken into account).
+  return CBA.getCapturesBefore(Object, I, OrAt, IsNotCapturedBeforeOrAt);
 }
 
 //===----------------------------------------------------------------------===//
@@ -969,10 +1013,11 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
   // objects, to model any accesses that may occur prior to the second return.
   // As an exception, ignore allocas, as setjmp is not required to preserve
   // non-volatile stores for them.
+  bool ProvenanceNotCapturedBeforeOrAtCall = false;
   if (isModOrRefSet(OtherMR) && !isa<Constant>(Object) && Call != Object &&
       (isa<AllocaInst>(Object) || !Call->hasFnAttr(Attribute::ReturnsTwice))) {
-    CaptureComponents CC =
-        AAQI.CA->getCapturesBefore(Object, Call, /*OrAt=*/false);
+    CaptureComponents CC = AAQI.CA->getCapturesBefore(
+        Object, Call, /*OrAt=*/false, &ProvenanceNotCapturedBeforeOrAtCall);
     if (capturesNothing(CC))
       OtherMR = ModRefInfo::NoModRef;
     else if (capturesReadProvenanceOnly(CC))
@@ -989,6 +1034,25 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
       if (!Arg->getType()->isPointerTy())
         continue;
       unsigned ArgIdx = Call->getDataOperandNo(&U);
+
+      if (ProvenanceNotCapturedBeforeOrAtCall) {
+        // If we have previously established that the object's provenance is not
+        // captured before or at the call-site, then any argument that captures
+        // provenance through non-return paths cannot alias the object memory
+        // location; otherwise the call would be capturing the object's
+        // provenance, contradicting our premise.
+        //
+        // getModRefInfo may leverage previous capture information to refine
+        // mod/ref, so long as the user is interested into knowing only whether
+        // the provenance is captured; meaning that the refinement would not be
+        // correct if the call were to capture address. Though, for AA purposes,
+        // only provenance captures should be relevant. Note that this is only
+        // used during call-slot optimization.
+        CaptureInfo ArgCaptures = Call->getCaptureInfo(ArgIdx);
+        if (capturesAnyProvenance(ArgCaptures.getOtherComponents()))
+          continue;
+      }
+
       MemoryLocation ArgLoc =
           Call->isArgOperand(&U)
               ? MemoryLocation::getForArgument(Call, ArgIdx, TLI)
