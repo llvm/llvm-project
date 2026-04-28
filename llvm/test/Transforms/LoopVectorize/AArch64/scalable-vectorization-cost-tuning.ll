@@ -17,7 +17,7 @@
 
 ; RUN: opt -mtriple=aarch64 -mcpu=neoverse-n2 \
 ; RUN:     -force-target-instruction-cost=1 -passes=loop-vectorize -S -debug-only=loop-vectorize --disable-output < %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=VSCALEFORTUNING1
+; RUN:     | FileCheck %s --check-prefixes=NEOVERSEV2
 
 ; RUN: opt -mtriple=aarch64 -mcpu=neoverse-v2 \
 ; RUN:     -force-target-instruction-cost=1 -passes=loop-vectorize -S -debug-only=loop-vectorize --disable-output < %s 2>&1 \
