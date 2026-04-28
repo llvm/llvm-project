@@ -48,7 +48,7 @@ ModuleManager::makeKey(const ModuleFileName &Name) const {
     StringRef ImplicitModuleSuffix = StringRef(Name).take_back(SuffixLen);
     if (auto *ModuleCacheDir = ModCache.getDirectoryPtr(ModuleCachePath))
       return ModuleFileKey(ModuleCacheDir, ImplicitModuleSuffix);
-  } if (Name.isInMemory()) {
+  } else if (Name.isInMemory()) {
     off_t Size;
     time_t ModTime;
     if (auto *Buf =

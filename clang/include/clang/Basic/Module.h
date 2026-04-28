@@ -157,12 +157,6 @@ public:
   }
 
   /// Returns the suffix length for an implicit module name, zero otherwise.
-  template <class FnTy>
-  auto visitKind(FnTy &&Fn) const {
-    return std::visit(std::forward<FnTy>(Fn), Kind);
-  }
-
-  /// Returns the suffix length for an implicit module name, zero otherwise.
   unsigned getImplicitModuleSuffixLength() const {
     return Kind >= 2 ? Kind : 0;
   }
