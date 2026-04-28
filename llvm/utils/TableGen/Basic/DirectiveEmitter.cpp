@@ -850,8 +850,10 @@ static void generateGetDirectiveAssociation(const DirectiveLanguage &DirLang,
     }
   }
   OS << "  } // switch (Dir)\n";
-  OS << "  assert(llvm::to_underlying(Dir) >= llvm::to_underlying(Directive::First_) &&\n";
-  OS << "         llvm::to_underlying(Dir) <= llvm::to_underlying(Directive::Last_) &&\n";
+  OS << "  assert(llvm::to_underlying(Dir) >= "
+        "llvm::to_underlying(Directive::First_) &&\n";
+  OS << "         llvm::to_underlying(Dir) <= "
+        "llvm::to_underlying(Directive::Last_) &&\n";
   OS << "         \"Unexpected directive\");\n";
   OS << "}\n";
 }
@@ -870,8 +872,10 @@ static void generateGetDirectiveCategory(const DirectiveLanguage &DirLang,
        << ";\n";
   }
   OS << "  } // switch (Dir)\n";
-  OS << "  assert(llvm::to_underlying(Dir) >= llvm::to_underlying(Directive::First_) &&\n";
-  OS << "         llvm::to_underlying(Dir) <= llvm::to_underlying(Directive::Last_) &&\n";
+  OS << "  assert(llvm::to_underlying(Dir) >= "
+        "llvm::to_underlying(Directive::First_) &&\n";
+  OS << "         llvm::to_underlying(Dir) <= "
+        "llvm::to_underlying(Directive::Last_) &&\n";
   OS << "         \"Unexpected directive\");\n";
   OS << "}\n";
 }
@@ -897,8 +901,10 @@ static void generateGetDirectiveLanguages(const DirectiveLanguage &DirLang,
     OS << ";\n";
   }
   OS << "  } // switch(D)\n";
-  OS << "  assert(llvm::to_underlying(D) >= llvm::to_underlying(Directive::First_) &&\n";
-  OS << "         llvm::to_underlying(D) <= llvm::to_underlying(Directive::Last_) &&\n";
+  OS << "  assert(llvm::to_underlying(D) >= "
+        "llvm::to_underlying(Directive::First_) &&\n";
+  OS << "         llvm::to_underlying(D) <= "
+        "llvm::to_underlying(Directive::Last_) &&\n";
   OS << "         \"Unexpected directive\");\n";
   OS << "}\n";
 }
