@@ -1,6 +1,6 @@
 ! RUN: not %flang_fc1 -emit-hlfir -fcoarray %s -o - 2>&1 | FileCheck %s
 
-!CHECK: not yet implemented: Coarray with an allocatable direct component and/or requiring finalization.
+!CHECK: not yet implemented: Coarray with a pointer/allocatable direct component and/or requiring finalization.
 
 module m_test
     implicit none
@@ -8,6 +8,7 @@ module m_test
     type :: test_type
         integer :: id
         real, allocatable :: arr(:)
+        real, pointer :: ptr
     contains
         final :: finalize_func
     end type test_type
