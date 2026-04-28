@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/BDCE.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -102,6 +103,11 @@ static bool bitTrackingDCE(Function &F, DemandedBits &DB) {
     // skip it. This way we avoid computing known bits on an instruction
     // that will not help us.
     if (I.mayHaveSideEffects() && I.use_empty())
+      continue;
+
+    // Avoid incorrect replacement of self-referential values in unreachable
+    // blocks.
+    if (llvm::is_contained(I.operands(), &I))
       continue;
 
     // Remove instructions that are dead, either because they were not reached
@@ -203,13 +209,10 @@ static bool bitTrackingDCE(Function &F, DemandedBits &DB) {
 PreservedAnalyses BDCEPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &DB = AM.getResult<DemandedBitsAnalysis>(F);
 
-  // Avoid incorrect replacement of non-SSA values in unreachable blocks.
-  bool CFGChanged = EliminateUnreachableBlocks(F);
-  if (!CFGChanged && !bitTrackingDCE(F, DB))
+  if (!bitTrackingDCE(F, DB))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
-  if (!CFGChanged)
-    PA.preserveSet<CFGAnalyses>();
+  PA.preserveSet<CFGAnalyses>();
   return PA;
 }

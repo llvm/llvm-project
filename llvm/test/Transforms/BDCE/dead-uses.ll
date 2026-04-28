@@ -106,6 +106,11 @@ define i64 @deadcode_self_reference() {
 ; CHECK-LABEL: @deadcode_self_reference(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret i64 0
+; CHECK:       loop:
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[OR]], 0
+; CHECK-NEXT:    [[CONV:%.*]] = trunc i32 [[OR]] to i16
+; CHECK-NEXT:    [[CALL:%.*]] = call i16 null(i16 0, i16 [[CONV]])
+; CHECK-NEXT:    br label [[LOOP:%.*]]
 ;
 entry:
   ret i64 0
