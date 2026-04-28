@@ -154,9 +154,8 @@ void IdentifierLengthCheck::check(const MatchFinder::MatchResult &Result) {
     return true;
   };
 
-  const auto *StandaloneVar =
-      Result.Nodes.getNodeAs<ValueDecl>("standaloneVar");
-  if (StandaloneVar) {
+  if (const auto *StandaloneVar =
+          Result.Nodes.getNodeAs<ValueDecl>("standaloneVar")) {
     if (ShouldWarn(StandaloneVar, MinimumVariableNameLength,
                    IgnoredVariableNames))
       diag(StandaloneVar->getLocation(), ErrorMessage)
@@ -164,16 +163,16 @@ void IdentifierLengthCheck::check(const MatchFinder::MatchResult &Result) {
     return;
   }
 
-  const auto *BindingVar = Result.Nodes.getNodeAs<ValueDecl>("bindingVar");
-  if (BindingVar) {
+  if (const auto *BindingVar =
+          Result.Nodes.getNodeAs<ValueDecl>("bindingVar")) {
     if (ShouldWarn(BindingVar, MinimumBindingNameLength, IgnoredBindingNames))
       diag(BindingVar->getLocation(), ErrorMessage)
           << 1 << BindingVar << MinimumBindingNameLength;
     return;
   }
 
-  auto *ExceptionVar = Result.Nodes.getNodeAs<ValueDecl>("exceptionVar");
-  if (ExceptionVar) {
+  if (const auto *ExceptionVar =
+          Result.Nodes.getNodeAs<ValueDecl>("exceptionVar")) {
     if (ShouldWarn(ExceptionVar, MinimumExceptionNameLength,
                    IgnoredExceptionVariableNames))
       diag(ExceptionVar->getLocation(), ErrorMessage)
@@ -181,8 +180,7 @@ void IdentifierLengthCheck::check(const MatchFinder::MatchResult &Result) {
     return;
   }
 
-  const auto *LoopVar = Result.Nodes.getNodeAs<ValueDecl>("loopVar");
-  if (LoopVar) {
+  if (const auto *LoopVar = Result.Nodes.getNodeAs<ValueDecl>("loopVar")) {
     if (ShouldWarn(LoopVar, MinimumLoopCounterNameLength,
                    IgnoredLoopCounterNames))
       diag(LoopVar->getLocation(), ErrorMessage)
@@ -190,8 +188,7 @@ void IdentifierLengthCheck::check(const MatchFinder::MatchResult &Result) {
     return;
   }
 
-  const auto *ParamVar = Result.Nodes.getNodeAs<ValueDecl>("paramVar");
-  if (ParamVar) {
+  if (const auto *ParamVar = Result.Nodes.getNodeAs<ValueDecl>("paramVar")) {
     if (ShouldWarn(ParamVar, MinimumParameterNameLength, IgnoredParameterNames))
       diag(ParamVar->getLocation(), ErrorMessage)
           << 4 << ParamVar << MinimumParameterNameLength;
