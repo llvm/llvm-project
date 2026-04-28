@@ -16,6 +16,7 @@
 #include "CIRGenBuilder.h"
 #include "CIRGenCUDARuntime.h"
 #include "CIRGenCall.h"
+#include "CIRGenOpenMPRuntime.h"
 #include "CIRGenTypeCache.h"
 #include "CIRGenTypes.h"
 #include "CIRGenVTables.h"
@@ -34,6 +35,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -95,6 +97,9 @@ private:
   /// Holds the CUDA runtime
   std::unique_ptr<CIRGenCUDARuntime> cudaRuntime;
 
+  /// Holds the OpenMP runtime
+  std::unique_ptr<CIRGenOpenMPRuntime> openMPRuntime;
+
   /// Per-function codegen information. Updated everytime emitCIR is called
   /// for FunctionDecls's.
   CIRGenFunction *curCGF = nullptr;
@@ -130,6 +135,7 @@ private:
   std::vector<const CXXRecordDecl *> opportunisticVTables;
 
   void createCUDARuntime();
+  void createOpenMPRuntime();
 
   /// A helper for constructAttributeList that handles return attributes.
   void constructFunctionReturnAttributes(const CIRGenFunctionInfo &info,
@@ -221,7 +227,30 @@ public:
   llvm::DenseMap<const Decl *, cir::GlobalOp> staticLocalDeclMap;
   llvm::DenseMap<const VarDecl *, cir::GlobalOp> initializerConstants;
 
+  /// Cache for O(1) symbol lookups by name, replacing the O(N) linear scan
+  /// in SymbolTable::lookupSymbolIn that getGlobalValue used previously.
+  llvm::StringMap<mlir::Operation *> symbolLookupCache;
+
   mlir::Operation *getGlobalValue(llvm::StringRef ref);
+
+  /// O(1) lookup of a FuncOp by name in the symbol cache.
+  /// Returns nullptr if the name is not found or is not a FuncOp.
+  cir::FuncOp lookupFuncOp(llvm::StringRef name) {
+    auto *op = getGlobalValue(name);
+    return op ? mlir::dyn_cast<cir::FuncOp>(op) : cir::FuncOp{};
+  }
+
+  void insertGlobalSymbol(mlir::Operation *op) {
+    if (auto sym = mlir::dyn_cast<mlir::SymbolOpInterface>(op))
+      symbolLookupCache[sym.getName()] = op;
+  }
+  void eraseGlobalSymbol(mlir::Operation *op) {
+    if (auto sym = mlir::dyn_cast<mlir::SymbolOpInterface>(op)) {
+      auto it = symbolLookupCache.find(sym.getName());
+      if (it != symbolLookupCache.end() && it->second == op)
+        symbolLookupCache.erase(it);
+    }
+  }
 
   cir::GlobalOp getStaticLocalDeclAddress(const VarDecl *d) {
     return staticLocalDeclMap[d];
@@ -327,6 +356,10 @@ public:
 
   /// Return the mlir::GlobalViewAttr for the address of the given global.
   cir::GlobalViewAttr getAddrOfGlobalVarAttr(const VarDecl *d);
+
+  /// Get the GlobalOp of a template parameter object.
+  cir::GlobalOp
+  getAddrOfTemplateParamObject(const TemplateParamObjectDecl *tpo);
 
   CharUnits computeNonVirtualBaseClassOffset(
       const CXXRecordDecl *derivedClass,
@@ -739,6 +772,11 @@ public:
   CIRGenCUDARuntime &getCUDARuntime() {
     assert(cudaRuntime != nullptr);
     return *cudaRuntime;
+  }
+
+  CIRGenOpenMPRuntime &getOpenMPRuntime() {
+    assert(openMPRuntime != nullptr);
+    return *openMPRuntime;
   }
 
   mlir::IntegerAttr getSize(CharUnits size) {
