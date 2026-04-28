@@ -1,4 +1,6 @@
 // REQUIRES: system-windows
+// mklink /j does not support forward slashes.
+// REQUIRES: !windows-prefer-forward-slash
 // RUN: rm -rf %t.dir
 // RUN: mkdir -p %t.dir\real
 // RUN: cmd /c mklink /j %t.dir\junc %t.dir\real
