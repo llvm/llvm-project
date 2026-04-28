@@ -30,6 +30,8 @@ macros:
     macro_header: pthread-macros.h
   - macro_name: "PTHREAD_MUTEX_INITIALIZER"
     macro_header: pthread-macros.h
+  - macro_name: "PTHREAD_COND_INITIALIZER"
+    macro_header: pthread-macros.h
   - macro_name: "PTHREAD_RWLOCK_INITIALIZER"
     macro_header: pthread-macros.h
   - macro_name: "PTHREAD_STACK_MIN"
@@ -56,6 +58,7 @@ types:
   - type_name: pthread_barrier_t
   - type_name: pthread_barrierattr_t
   - type_name: pthread_key_t
+  - type_name: pthread_cond_t
   - type_name: pthread_condattr_t
   - type_name: pthread_rwlock_t
   - type_name: pthread_rwlockattr_t
@@ -156,6 +159,41 @@ functions:
     arguments:
       - type: pthread_condattr_t *
       - type: int
+  - name: pthread_cond_broadcast
+    return_type: int
+    arguments:
+      - type: pthread_cond_t *
+  - name: pthread_cond_clockwait
+    return_type: int
+    arguments:
+      - type: pthread_cond_t *__restrict
+      - type: pthread_mutex_t *__restrict
+      - type: clockid_t
+      - type: const struct timespec *__restrict
+  - name: pthread_cond_destroy
+    return_type: int
+    arguments:
+      - type: pthread_cond_t *
+  - name: pthread_cond_init
+    return_type: int
+    arguments:
+      - type: pthread_cond_t *__restrict
+      - type: const pthread_condattr_t *__restrict
+  - name: pthread_cond_signal
+    return_type: int
+    arguments:
+      - type: pthread_cond_t *
+  - name: pthread_cond_timedwait
+    return_type: int
+    arguments:
+      - type: pthread_cond_t *__restrict
+      - type: pthread_mutex_t *__restrict
+      - type: const struct timespec *__restrict
+  - name: pthread_cond_wait
+    return_type: int
+    arguments:
+      - type: pthread_cond_t *__restrict
+      - type: pthread_mutex_t *__restrict
   - name: pthread_create
     return_type: int
     arguments:
@@ -218,6 +256,10 @@ functions:
       - type: pthread_mutex_t *__restrict
       - type: const pthread_mutexattr_t *__restrict
   - name: pthread_mutex_lock
+    return_type: int
+    arguments:
+      - type: pthread_mutex_t *
+  - name: pthread_mutex_trylock
     return_type: int
     arguments:
       - type: pthread_mutex_t *

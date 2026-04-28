@@ -611,8 +611,8 @@ void foo24() {
 
 // CIR: %[[ARR:.*]] = cir.alloca !cir.array<!cir.complex<!s32i> x 2>, !cir.ptr<!cir.array<!cir.complex<!s32i> x 2>>, ["arr"]
 // CIR: %[[RESULT:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["r", init]
-// CIR: %[[IDX:.*]] = cir.const #cir.int<1> : !s32i
-// CIR: %[[RESULT_VAL:.*]] = cir.get_element %[[ARR]][%[[IDX]] : !s32i] : !cir.ptr<!cir.array<!cir.complex<!s32i> x 2>> -> !cir.ptr<!cir.complex<!s32i>>
+// CIR: %[[IDX:.*]] = cir.const #cir.int<1> : !s64i
+// CIR: %[[RESULT_VAL:.*]] = cir.get_element %[[ARR]][%[[IDX]] : !s64i] : !cir.ptr<!cir.array<!cir.complex<!s32i> x 2>> -> !cir.ptr<!cir.complex<!s32i>>
 // CIR: %[[TMP:.*]] = cir.load{{.*}} %[[RESULT_VAL]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
 // CIR: cir.store{{.*}} %[[TMP]], %[[RESULT]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
 
@@ -721,7 +721,7 @@ void foo27(bool cond, int _Complex a, int _Complex b) {
 // OGCG: %[[COND:.*]] = alloca i8, align 1
 // OGCG: %[[RESULT:.*]] = alloca { i32, i32 }, align 4
 // OGCG: %[[TMP_COND:.*]] = load i8, ptr %[[COND]], align 1
-// OGCG: %[[COND_VAL:.*]] = trunc i8 %[[TMP_COND]] to i1
+// OGCG: %[[COND_VAL:.*]] = icmp ne i8 %[[TMP_COND]], 0
 // OGCG: br i1 %[[COND_VAL]], label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]
 // OGCG: [[TRUE_BB]]:
 // OGCG:  %[[A_REAL_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[COMPLEX_A]], i32 0, i32 0
@@ -816,7 +816,7 @@ void foo31() {
 
 // LLVM: %[[W_ADDR:.*]] = alloca %struct.Wrapper, i64 1, align 4
 // LLVM: %[[REAL_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM: %[[ELEM_PTR:.*]] = getelementptr %struct.Wrapper, ptr %[[W_ADDR]], i32 0, i32 0
+// LLVM: %[[ELEM_PTR:.*]] = getelementptr inbounds nuw %struct.Wrapper, ptr %[[W_ADDR]], i32 0, i32 0
 // LLVM: %[[TMP_ELEM_PTR:.*]] = load { i32, i32 }, ptr %[[ELEM_PTR]], align 4
 // LLVM: %[[REAL:.*]] = extractvalue { i32, i32 } %[[TMP_ELEM_PTR]], 0
 // LLVM: store i32 %[[REAL]], ptr %[[REAL_ADDR]], align 4
@@ -1387,7 +1387,7 @@ void real_on_scalar_bool() {
 // OGCG: %[[A_ADDR:.*]] = alloca i8, align 1
 // OGCG: %[[B_ADDR:.*]] = alloca i8, align 1
 // OGCG: %[[TMP_A:.*]] = load i8, ptr %[[A_ADDR]], align 1
-// OGCG: %[[TMP_A_I1:.*]] = trunc i8 %[[TMP_A]] to i1
+// OGCG: %[[TMP_A_I1:.*]] = icmp ne i8 %[[TMP_A]], 0
 // OGCG: %[[TMP_A_I8:.*]] = zext i1 %[[TMP_A_I1]] to i8
 // OGCG: store i8 %[[TMP_A_I8]], ptr %[[B_ADDR]], align 1
 

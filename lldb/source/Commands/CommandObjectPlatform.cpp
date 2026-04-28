@@ -297,7 +297,7 @@ protected:
           result.AppendError(error.AsCString());
         }
       } else {
-        result.AppendErrorWithFormat("%s\n", error.AsCString());
+        result.AppendErrorWithFormat("%s", error.AsCString());
       }
     } else {
       result.AppendError("no platform is currently selected\n");
@@ -1242,8 +1242,8 @@ protected:
                                    m_options.show_args, m_options.verbose);
           result.SetStatus(eReturnStatusSuccessFinishResult);
         } else {
-          result.AppendErrorWithFormat(
-              "no process found with pid = %" PRIu64 "\n", pid);
+          result.AppendErrorWithFormat("no process found with pid = %" PRIu64,
+                                       pid);
         }
       } else {
         ProcessInstanceInfoList proc_infos;
@@ -1288,10 +1288,11 @@ protected:
           result.AppendMessageWithFormatv(
               "{0} matching process{1} found on \"{2}\"", matches,
               matches > 1 ? "es were" : " was", platform_sp->GetName());
+          Stream &strm = result.GetOutputStream();
           if (match_desc)
-            result.AppendMessageWithFormat(" whose name %s \"%s\"", match_desc,
-                                           match_name);
-          result.AppendMessageWithFormat("\n");
+            strm << llvm::formatv(" whose name {0} \"{1}\"", match_desc,
+                                  match_name);
+          strm.PutChar('\n');
           ProcessInstanceInfo::DumpTableHeader(ostrm, m_options.show_args,
                                                m_options.verbose);
           for (uint32_t i = 0; i < matches; ++i) {

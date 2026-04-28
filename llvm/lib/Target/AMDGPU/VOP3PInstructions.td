@@ -404,8 +404,8 @@ let SubtargetPredicate = HasMadMixInsts in {
 let OtherPredicates = [NoFP32Denormals] in {
 
 // These are VOP3a-like opcodes which accept no omod.
-// Size of src arguments (16/32) is controlled by op_sel.
-// For 16-bit src arguments their location (hi/lo) are controlled by op_sel_hi.
+// Size of src arguments (16/32) is controlled by op_sel_hi.
+// For 16-bit src arguments their location (hi/lo) are controlled by op_sel.
 let isCommutable = 1, mayRaiseFPException = 0 in {
 let isReMaterializable = 1 in
 defm V_MAD_MIX_F32 : VOP3_VOP3PInst<"v_mad_mix_f32", VOP3P_Mix_Profile<VOP_F32_F16_F16_F16, VOP3_OPSEL>>;
@@ -476,7 +476,7 @@ defm : MadFmaMixFP32Pats<fma, V_FMA_MIX_F32_BF16, bf16>;
 let True16Predicate = NotUseRealTrue16Insts in
 defm : MadFmaMixFP16Pats<fma, V_FMA_MIXLO_BF16, V_FMA_MIXHI_BF16, bf16, v2bf16>;
 let True16Predicate = UseRealTrue16Insts in
-defm : MadFmaMixFP16Pats_t16<fma, V_FMA_MIX_BF16_t16>;
+defm : MadFmaMixFP16Pats_t16<fma, V_FMA_MIX_BF16_t16, bf16, v2bf16>;
 } // End SubtargetPredicate = HasFmaMixBF16Insts
 
 def PK_ADD_MINMAX_Profile : VOP3P_Profile<VOP_V2I16_V2I16_V2I16_V2I16, VOP3_PACKED> {
