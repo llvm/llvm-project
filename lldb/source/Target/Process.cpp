@@ -82,7 +82,7 @@ using namespace std::chrono;
 void Process::DelayedBreakpointCache::Enqueue(lldb::BreakpointSiteSP site,
                                               BreakpointAction action) {
   auto [previous, inserted] = m_site_to_action.insert({site, action});
-  // New site or already enqueued for the same action
+  // New site or already enqueued for the same action.
   if (inserted || previous->second == action)
     return;
   // Previously enqueued for the opposite action, don't update the site.

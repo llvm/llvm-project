@@ -2263,7 +2263,7 @@ protected:
   /// Compare BreakpointSiteSPs by ID, so that iteration order is independent
   /// of pointer addresses.
   struct SiteIDCmp {
-    bool operator()(const lldb::BreakpointSiteSP lhs,
+    bool operator()(const lldb::BreakpointSiteSP &lhs,
                     const lldb::BreakpointSiteSP &rhs) const {
       return lhs->GetID() < rhs->GetID();
     }
