@@ -141,7 +141,7 @@ template <> LIBC_INLINE constexpr double min(double x, double y) {
 } // namespace internal
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE T fmin(T x, T y) {
+LIBC_INLINE constexpr T fmin(T x, T y) {
   const FPBits<T> bitx(x), bity(y);
 
   if (bitx.is_nan())
