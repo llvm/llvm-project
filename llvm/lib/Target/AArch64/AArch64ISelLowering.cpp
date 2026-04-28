@@ -1931,9 +1931,12 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::MULHU, VT, Custom);
     }
 
-    // NEON doesn't support 64-bit vector integer muls, but SVE does.
+    // NEON doesn't support 64-bit vector integer mul and ctlz operations, but
+    // SVE does.
     setOperationAction(ISD::MUL, MVT::v1i64, Custom);
     setOperationAction(ISD::MUL, MVT::v2i64, Custom);
+    setOperationAction(ISD::CTLZ, MVT::v1i64, Custom);
+    setOperationAction(ISD::CTLZ, MVT::v2i64, Custom);
 
     // With SVE2 we can try lowering these to pairwise operations (e.g. smaxp).
     if (Subtarget->hasSVE2() || Subtarget->isStreamingSVEAvailable()) {
@@ -1970,8 +1973,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
       // These operations are not supported on NEON but SVE can do them.
       setOperationAction(ISD::BITREVERSE, MVT::v1i64, Custom);
-      setOperationAction(ISD::CTLZ, MVT::v1i64, Custom);
-      setOperationAction(ISD::CTLZ, MVT::v2i64, Custom);
       setOperationAction(ISD::CTTZ, MVT::v1i64, Custom);
       setOperationAction(ISD::SMAX, MVT::v1i64, Custom);
       setOperationAction(ISD::SMAX, MVT::v2i64, Custom);
