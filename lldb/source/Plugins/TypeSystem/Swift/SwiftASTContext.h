@@ -301,15 +301,15 @@ public:
   /// Add a list of Clang arguments to the ClangImporter options and
   /// apply the working directory to any relative paths.
   void AddExtraClangArgs(
-      const std::vector<std::string> &ExtraArgs,
-      const std::vector<std::pair<std::string, bool>> module_search_paths,
-      const std::vector<std::pair<std::string, bool>> framework_search_paths,
+      llvm::ArrayRef<std::string> ExtraArgs,
+      llvm::ArrayRef<std::pair<std::string, bool>> module_search_paths,
+      llvm::ArrayRef<std::pair<std::string, bool>> framework_search_paths,
       llvm::StringRef overrideOpts = "");
 
   void AddExtraClangCC1Args(
-      const std::vector<std::string> &source,
-      const std::vector<std::pair<std::string, bool>> module_search_paths,
-      const std::vector<std::pair<std::string, bool>> framework_search_paths,
+      llvm::ArrayRef<std::string> source,
+      llvm::ArrayRef<std::pair<std::string, bool>> module_search_paths,
+      llvm::ArrayRef<std::pair<std::string, bool>> framework_search_paths,
       std::vector<std::string> &dest);
   static void AddExtraClangArgs(const std::vector<std::string>& source,
                                 std::vector<std::string>& dest);
