@@ -44,28 +44,6 @@ std::optional<parser::CharBlock> GetObjectSource(
     const parser::OmpObject &object);
 const parser::OmpObject *GetArgumentObject(const parser::OmpArgument &argument);
 
-namespace detail {
-struct DirectiveSpecificationScope {
-  using ODS = OmpDirectiveSpecification;
-  template <typename T> static const ODS &GetODS(const T &x) {
-    if constexpr ( //
-        std::is_base_of_v<OmpBlockConstruct, T> ||
-        std::is_same_v<OpenMPSectionsConstruct, T>) {
-      return x.BeginDir();
-    } else if constexpr (WrapperTrait<T>) {
-      return GetODS(x.v);
-    } else if constexpr (UnionTrait<T>) {
-      return std::visit(
-          [](auto &&s) -> decltype(auto) { return GetODS(s); }, x.u);
-    } else {
-      static_assert(std::is_same_v<OpenMPSectionConstruct, T>);
-      llvm_unreachable("This function does not work for SECTION");
-    }
-  }
-  static inline const ODS &GetODS(const ODS &x) { return x; }
-};
-} // namespace detail
-
 const OmpDirectiveSpecification &GetOmpDirectiveSpecification(
     const OpenMPConstruct &x);
 const OmpDirectiveSpecification &GetOmpDirectiveSpecification(

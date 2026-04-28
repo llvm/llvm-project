@@ -516,7 +516,7 @@ define <vscale x 2 x float> @vpselect_vpsitofp(<vscale x 2 x float> %passthru, <
 define <vscale x 2 x i32> @vpselect_vpzext(<vscale x 2 x i32> %passthru, <vscale x 2 x i8> %x, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vpselect_vpzext:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
 ; CHECK-NEXT:    vzext.vf4 v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %a = call <vscale x 2 x i32> @llvm.vp.zext.nxv2i32.nxv2i8(<vscale x 2 x i8> %x, <vscale x 2 x i1> splat (i1 -1), i32 %vl)

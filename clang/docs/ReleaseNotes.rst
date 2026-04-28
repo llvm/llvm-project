@@ -532,6 +532,7 @@ Bug Fixes to Attribute Support
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
+- Fixed a preprocessor assertion failure triggered when parsing an invalid template-id starting with ``::template operator``. (#GH186582)
 - Fixed a crash when a function template is defined as a non-template friend with a global scope qualifier. (#GH185341)
 - Clang now rejects constant template parameters with block pointer types, since these are not implemented anyway and would lead to crashes. (#GH189247)
 - Fixed a crash on error recovery when dealing with invalid templates. (#GH183075)
@@ -587,6 +588,8 @@ Miscellaneous Clang Crashes Fixed
 - Fixed a crash related to missing source locations (#GH186655)
 - Fixed a crash when casting a parenthesized unresolved template-id or array section. (#GH183505)
 - Fixed a crash when initializing a ``constexpr`` pointer with a floating-point literal in C23. (#GH180313)
+- Fixed a lack of diagnostic for substitution failures in base classes when using `std::void_t`-like types.
+- Fixed a crash when emitting debug info for base classes with instantiation-dependent-only types (#GH193932)
 - Fixed an assertion when diagnosing address-space qualified ``new``/``delete`` in language-defined address spaces such as OpenCL ``__local``. (#GH178319)
 - Fixed an assertion failure in ObjC++ ARC when binding a rvalue reference to reference with different lifetimes (#GH178524)
 - Fixed a crash when subscripting a vector type with large unsigned integer values. (#GH180563)

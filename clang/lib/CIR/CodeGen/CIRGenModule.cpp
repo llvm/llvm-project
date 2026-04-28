@@ -3570,6 +3570,49 @@ CIRGenModule::getAddrOfGlobalTemporary(const MaterializeTemporaryExpr *mte,
   return cv;
 }
 
+cir::GlobalOp
+CIRGenModule::getAddrOfTemplateParamObject(const TemplateParamObjectDecl *tpo) {
+  StringRef name = getMangledName(tpo);
+  CharUnits alignment = getNaturalTypeAlignment(tpo->getType());
+
+  if (auto globalOp =
+          mlir::dyn_cast_or_null<cir::GlobalOp>(getGlobalValue(name)))
+    return globalOp;
+
+  ConstantEmitter emitter(*this);
+  assert(!cir::MissingFeatures::addressSpace() &&
+         "emitForInitializer should take tpo->getType().getAddressSpace()");
+  mlir::Attribute init =
+      emitter.emitForInitializer(tpo->getValue(), tpo->getType());
+
+  if (!init) {
+    errorUnsupported(tpo, "template parameter object");
+    return {};
+  }
+
+  mlir::TypedAttr typedInit = cast<mlir::TypedAttr>(init);
+
+  cir::GlobalLinkageKind linkage =
+      isExternallyVisible(tpo->getLinkageAndVisibility().getLinkage())
+          ? cir::GlobalLinkageKind::LinkOnceODRLinkage
+          : cir::GlobalLinkageKind::InternalLinkage;
+
+  assert(!cir::MissingFeatures::addressSpace());
+  auto globalOp = createGlobalOp(*this, builder.getUnknownLoc(), name,
+                                 typedInit.getType(), /*is_constant=*/true);
+  globalOp.setLinkage(linkage);
+  globalOp.setAlignment(alignment.getAsAlign().value());
+  globalOp.setComdat(supportsCOMDAT() &&
+                     linkage == cir::GlobalLinkageKind::LinkOnceODRLinkage);
+
+  CIRGenModule::setInitializer(globalOp, init);
+  emitter.finalize(globalOp);
+
+  insertGlobalSymbol(globalOp);
+
+  return globalOp;
+}
+
 //===----------------------------------------------------------------------===//
 // Annotations
 //===----------------------------------------------------------------------===//

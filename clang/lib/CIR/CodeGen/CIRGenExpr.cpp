@@ -1056,9 +1056,23 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
 
     return lv;
   }
+  if (isa<MSGuidDecl>(nd))
+    cgm.errorNYI(e->getSourceRange(),
+                 "emitDeclRefLValue: unhandled MS Guid Decl");
 
-  cgm.errorNYI(e->getSourceRange(), "emitDeclRefLValue: unhandled decl type");
-  return LValue();
+  if (const auto *tpo = dyn_cast<TemplateParamObjectDecl>(nd)) {
+    CharUnits alignment = cgm.getNaturalTypeAlignment(tpo->getType());
+    cir::GetGlobalOp atpo =
+        builder.createGetGlobal(cgm.getAddrOfTemplateParamObject(tpo));
+    assert(!MissingFeatures::addressSpace() &&
+           "Do an address space conversion if necessary");
+
+    return makeAddrLValue(
+        Address(atpo, convertTypeForMem(tpo->getType()), alignment), ty,
+        AlignmentSource::Decl);
+  }
+
+  llvm_unreachable("Unhandled DeclRefExpr");
 }
 
 mlir::Value CIRGenFunction::evaluateExprAsBool(const Expr *e) {

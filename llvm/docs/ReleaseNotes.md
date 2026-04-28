@@ -257,6 +257,11 @@ Changes to LLDB
 * A new ``webinspector-wasm`` platform was added to list and attach to WebAssembly processes in Safari.
 * The default for `load-script-from-symbol-file` was changed from `warn` to `trusted`. This means that scripts from
   code signed dSYM bundles are now loaded automatically, while untrusted bundles continue to produce a warning.
+* Pressing enter after `frame variable` repeats the command with an incremented `--depth` option, allowing quick
+  expansion of nested data.
+* Breakpoint commands now accept `.` to refer to the location(s) at which the current thread is stopped. For
+  example, `breakpoint disable .` disables the just-hit breakpoint location. Another usage is to automate a
+  command to run at the current location: `breakpoint command add -o 'p my_var' .`.
 
 ### Deprecated APIs
 
