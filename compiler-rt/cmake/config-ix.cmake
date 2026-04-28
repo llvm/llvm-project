@@ -482,6 +482,7 @@ if(APPLE)
   set(ORC_SUPPORTED_OS)
   set(UBSAN_SUPPORTED_OS osx)
   set(LSAN_SUPPORTED_OS osx)
+  set(DSAN_SUPPORTED_OS osx)
   set(STATS_SUPPORTED_OS osx)
 
   # FIXME: Support a general COMPILER_RT_ENABLE_OSX to match other platforms.
@@ -579,6 +580,7 @@ if(APPLE)
           list(APPEND ORC_SUPPORTED_OS ${platform}sim)
           list(APPEND UBSAN_SUPPORTED_OS ${platform}sim)
           list(APPEND LSAN_SUPPORTED_OS ${platform}sim)
+          list(APPEND DSAN_SUPPORTED_OS ${platform}sim)
           list(APPEND STATS_SUPPORTED_OS ${platform}sim)
         endif()
         foreach(arch ${DARWIN_${platform}sim_ARCHS})
@@ -614,6 +616,7 @@ if(APPLE)
           list(APPEND UBSAN_SUPPORTED_OS ${platform})
           list(APPEND TYSAN_SUPPORTED_OS ${platform})
           list(APPEND LSAN_SUPPORTED_OS ${platform})
+          list(APPEND DSAN_SUPPORTED_OS ${platform})
           list(APPEND STATS_SUPPORTED_OS ${platform})
         endif()
         foreach(arch ${DARWIN_${platform}_ARCHS})
@@ -636,6 +639,7 @@ if(APPLE)
     COMPILER_RT_SUPPORTED_ARCH
     )
   set(LSAN_COMMON_SUPPORTED_ARCH ${SANITIZER_COMMON_SUPPORTED_ARCH})
+  set(DSAN_COMMON_SUPPORTED_ARCH ${SANITIZER_COMMON_SUPPORTED_ARCH})
   set(UBSAN_COMMON_SUPPORTED_ARCH ${SANITIZER_COMMON_SUPPORTED_ARCH})
   set(ASAN_ABI_SUPPORTED_ARCH ${ALL_ASAN_ABI_SUPPORTED_ARCH})
   list_intersect(ASAN_SUPPORTED_ARCH
@@ -652,6 +656,9 @@ if(APPLE)
     SANITIZER_COMMON_SUPPORTED_ARCH)
   list_intersect(LSAN_SUPPORTED_ARCH
     ALL_LSAN_SUPPORTED_ARCH
+    SANITIZER_COMMON_SUPPORTED_ARCH)
+  list_intersect(DSAN_SUPPORTED_ARCH
+    ALL_DSAN_SUPPORTED_ARCH
     SANITIZER_COMMON_SUPPORTED_ARCH)
   list_intersect(MSAN_SUPPORTED_ARCH
     ALL_MSAN_SUPPORTED_ARCH
@@ -713,6 +720,8 @@ else()
   # supported by other sanitizers (even if they build into dummy object files).
   filter_available_targets(LSAN_COMMON_SUPPORTED_ARCH
     ${SANITIZER_COMMON_SUPPORTED_ARCH})
+  filter_available_targets(DSAN_COMMON_SUPPORTED_ARCH
+    ${SANITIZER_COMMON_SUPPORTED_ARCH})
   filter_available_targets(UBSAN_COMMON_SUPPORTED_ARCH
     ${ALL_UBSAN_SUPPORTED_ARCH})
   filter_available_targets(ASAN_SUPPORTED_ARCH ${ALL_ASAN_SUPPORTED_ARCH})
@@ -720,6 +729,7 @@ else()
   filter_available_targets(FUZZER_SUPPORTED_ARCH ${ALL_FUZZER_SUPPORTED_ARCH})
   filter_available_targets(DFSAN_SUPPORTED_ARCH ${ALL_DFSAN_SUPPORTED_ARCH})
   filter_available_targets(LSAN_SUPPORTED_ARCH ${ALL_LSAN_SUPPORTED_ARCH})
+  filter_available_targets(DSAN_SUPPORTED_ARCH ${ALL_DSAN_SUPPORTED_ARCH})
   filter_available_targets(MSAN_SUPPORTED_ARCH ${ALL_MSAN_SUPPORTED_ARCH})
   filter_available_targets(HWASAN_SUPPORTED_ARCH ${ALL_HWASAN_SUPPORTED_ARCH})
   filter_available_targets(MEMPROF_SUPPORTED_ARCH ${ALL_MEMPROF_SUPPORTED_ARCH})
@@ -830,6 +840,13 @@ if (COMPILER_RT_HAS_SANITIZER_COMMON AND LSAN_SUPPORTED_ARCH AND
   set(COMPILER_RT_HAS_LSAN TRUE)
 else()
   set(COMPILER_RT_HAS_LSAN FALSE)
+endif()
+
+if (COMPILER_RT_HAS_SANITIZER_COMMON AND DSAN_SUPPORTED_ARCH AND
+    OS_NAME MATCHES "Android|Darwin|Linux|NetBSD|Fuchsia")
+  set(COMPILER_RT_HAS_DSAN TRUE)
+else()
+  set(COMPILER_RT_HAS_DSAN FALSE)
 endif()
 
 if (COMPILER_RT_HAS_SANITIZER_COMMON AND MSAN_SUPPORTED_ARCH AND

@@ -1760,6 +1760,8 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
     }
     if (Sanitize.needsLsanRt())
       AddLinkSanitizerLibArgs(Args, CmdArgs, "lsan");
+    if (Sanitize.needsDsanRt())
+      AddLinkSanitizerLibArgs(Args, CmdArgs, "dsan");
     if (Sanitize.needsUbsanRt()) {
       assert(Sanitize.needsSharedRt() &&
              "Static sanitizer runtimes not supported");
@@ -4064,6 +4066,7 @@ Darwin::getSupportedSanitizers(BoundArch BA,
   Res |= SanitizerKind::PointerSubtract;
   Res |= SanitizerKind::Realtime;
   Res |= SanitizerKind::Leak;
+  Res |= SanitizerKind::DoubleFree;
   Res |= SanitizerKind::Fuzzer;
   Res |= SanitizerKind::FuzzerNoLink;
   Res |= SanitizerKind::ObjCCast;

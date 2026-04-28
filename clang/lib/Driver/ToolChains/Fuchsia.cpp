@@ -483,6 +483,7 @@ Fuchsia::getSupportedSanitizers(BoundArch BA,
   Res |= SanitizerKind::Fuzzer;
   Res |= SanitizerKind::FuzzerNoLink;
   Res |= SanitizerKind::Leak;
+  Res |= SanitizerKind::DoubleFree;
   Res |= SanitizerKind::Scudo;
   Res |= SanitizerKind::Thread;
   if (getTriple().getArch() == llvm::Triple::x86_64 ||
