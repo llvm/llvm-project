@@ -11,8 +11,66 @@
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
+
+static void appendTemplateParam(const DWARFDie &Param, raw_string_ostream &OS) {
+  bool Wrote = false;
+  if (DWARFDie TypeDie =
+          Param.getAttributeValueAsReferencedDie(dwarf::DW_AT_type)) {
+    if (const char *TypeName = TypeDie.getShortName()) {
+      OS << TypeName;
+      Wrote = true;
+    }
+  }
+  if (Param.getTag() == dwarf::DW_TAG_template_value_parameter) {
+    if (auto Val = dwarf::toUnsigned(Param.find(dwarf::DW_AT_const_value))) {
+      OS << ':' << *Val;
+      Wrote = true;
+    } else if (auto Val =
+                   dwarf::toSigned(Param.find(dwarf::DW_AT_const_value))) {
+      OS << ':' << *Val;
+      Wrote = true;
+    }
+  }
+  if (!Wrote)
+    OS << '?';
+}
+
+static std::optional<std::string>
+makeSimpleTemplateNameWithParams(StringRef Name, const DWARFDie &DIE) {
+  std::string Result = (Name + "<").str();
+  raw_string_ostream OS(Result);
+  bool HasParams = false;
+  bool First = true;
+  for (const DWARFDie &Child : DIE.children()) {
+    dwarf::Tag Tag = Child.getTag();
+    if (Tag == dwarf::DW_TAG_GNU_template_parameter_pack) {
+      for (const DWARFDie &PackChild : Child.children()) {
+        HasParams = true;
+        if (!First)
+          OS << ", ";
+        First = false;
+        appendTemplateParam(PackChild, OS);
+      }
+      continue;
+    }
+    if (Tag != dwarf::DW_TAG_template_type_parameter &&
+        Tag != dwarf::DW_TAG_template_value_parameter &&
+        Tag != dwarf::DW_TAG_GNU_template_template_param)
+      continue;
+    HasParams = true;
+    if (!First)
+      OS << ", ";
+    First = false;
+    appendTemplateParam(Child, OS);
+  }
+  if (!HasParams)
+    return std::nullopt;
+  OS << '>';
+  return Result;
+}
 
 using namespace dwarf_linker;
 using namespace dwarf_linker::classic;
@@ -88,10 +146,22 @@ DeclContextTree::getChildDeclContext(DeclContext &Context, const DWARFDie &DIE,
   StringRef NameForUniquing;
   StringRef FileRef;
 
-  if (const char *LinkageName = DIE.getLinkageName())
+  if (const char *LinkageName = DIE.getLinkageName()) {
     NameForUniquing = StringPool.internString(LinkageName);
-  else if (!Name.empty())
-    NameForUniquing = StringPool.internString(Name);
+  } else if (!Name.empty()) {
+    // With -gsimple-template-names, DW_AT_name omits template parameters
+    // ("vector" instead of "vector<int>"). Reconstruct them from child
+    // DW_TAG_template_*_parameter DIEs so different specializations get
+    // distinct uniquing names.
+    // This heuristic would also (incorrectly) match names like "operator>" but
+    // those are subprograms with linkage names handled above.
+    bool HasTemplateParamsInName =
+        Name.ends_with(">") && !Name.ends_with("<=>") && Name.contains('<');
+    std::optional<std::string> FullName;
+    if (!HasTemplateParamsInName)
+      FullName = makeSimpleTemplateNameWithParams(Name, DIE);
+    NameForUniquing = StringPool.internString(FullName ? *FullName : Name);
+  }
 
   bool IsAnonymousNamespace =
       NameForUniquing.empty() && Tag == dwarf::DW_TAG_namespace;
