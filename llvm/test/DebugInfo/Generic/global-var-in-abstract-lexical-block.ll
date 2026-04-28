@@ -51,7 +51,7 @@ entry:
 !5 = !DISubroutineType(types: !6)
 !6 = !{!7, !8}
 !7 = !DIBasicType(tag: DW_TAG_unspecified_type, name: "void")
-!8 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !9, size: 64, align: 64, dwarfAddressSpace: 12)
+!8 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !9, size: 64, align: 64, addressSpace: 12)
 !9 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 !10 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, producer: "lgenfe: EDG 6.8", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, globals: !11)
 !11 = !{!0}

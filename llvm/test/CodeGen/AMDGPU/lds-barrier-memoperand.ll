@@ -9,6 +9,10 @@ define void @test_ds_atomic_barrier_arrive_rtn_b64(i64 %data, ptr addrspace(3) %
   ; GCN: bb.0.entry:
   ; GCN-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2
   ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr0
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr1
   ; GCN-NEXT:   dead renamable $vgpr0_vgpr1 = DS_ATOMIC_BARRIER_ARRIVE_RTN_B64 killed renamable $vgpr2, killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec :: (load store monotonic (s64) on %ir.bar, addrspace 3)
   ; GCN-NEXT:   S_SETPC_B64_return undef $sgpr30_sgpr31
 entry:
@@ -21,6 +25,8 @@ define void @test_ds_atomic_async_barrier_arrive_b64(ptr addrspace(3) %bar) {
   ; GCN: bb.0.entry:
   ; GCN-NEXT:   liveins: $vgpr0
   ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
   ; GCN-NEXT:   DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 killed renamable $vgpr0, 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt :: (load store monotonic (s64) on %ir.bar, addrspace 3)
   ; GCN-NEXT:   S_SETPC_B64_return undef $sgpr30_sgpr31
 entry:

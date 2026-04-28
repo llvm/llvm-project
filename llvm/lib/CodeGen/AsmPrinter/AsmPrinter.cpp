@@ -996,7 +996,7 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   // Emit both original and sanitized symbols after alignment
   if (SanitizedSym) {
     OutStreamer->emitLabel(EmittedInitSym);
-    if (MAI->hasDotTypeDotSizeDirective())
+    if (MAI.hasDotTypeDotSizeDirective())
       OutStreamer->emitELFSize(EmittedInitSym,
                                MCConstantExpr::create(ActualSize, OutContext));
     EmittedInitSym = SanitizedSym;
