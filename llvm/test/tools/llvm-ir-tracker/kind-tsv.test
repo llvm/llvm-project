@@ -1,0 +1,17 @@
+RUN: rm -f %t.tsv %t.db
+RUN: printf 'P\t0\tir\tinitial\t<initial>\tf\nT\t1\t/tmp/kind.c\t8\t3\nI\tf\tentry\t0\tadd\t1\tadd i32 1, 2\nP\t1\tmir\tinitial\t<initial>\tf\nI\tf\tbb.0\t0\tADD32ri\t1\tv0 = ADD32ri v1, 1\n' > %t.tsv
+RUN: %ir-tracker build --input %t.tsv --db %t.db | FileCheck %s --check-prefix=BUILD
+RUN: %ir-tracker passes --db %t.db | FileCheck %s --check-prefix=PASSES
+RUN: %ir-tracker show --db %t.db --file kind.c --line 8 --kind ir | FileCheck %s --check-prefix=SHOW-IR
+RUN: %ir-tracker show --db %t.db --file kind.c --line 8 --kind mir | FileCheck %s --check-prefix=SHOW-MIR
+
+BUILD: built {{.*}} 2 pass snapshots, 2 instruction rows
+PASSES: 0  id={{[0-9]+}}  initial  '<initial>'  on 'f'
+PASSES: 1  id={{[0-9]+}}  [mir]  initial  '<initial>'  on 'f'
+PASSES: total passes recorded: 2
+SHOW-IR: seq=0 '<initial>' on 'f'
+SHOW-IR-NEXT:   function f, block entry:
+SHOW-IR-NEXT:     add i32 1, 2
+SHOW-MIR: seq=1 [mir] '<initial>' on 'f'
+SHOW-MIR-NEXT:   function f, block bb.0:
+SHOW-MIR-NEXT:     v0 = ADD32ri v1, 1

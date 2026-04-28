@@ -23,7 +23,7 @@ def cmd_passes(args: argparse.Namespace) -> int:
     if not con:
         return 1
     try:
-        return irtrackdb.run_passes(con)
+        return irtrackdb.run_passes(con, args.kind)
     finally:
         con.close()
 
@@ -34,7 +34,7 @@ def cmd_trace(args: argparse.Namespace) -> int:
         return 1
     try:
         return irtrackdb.run_trace(
-            con, args.file, args.line, args.col, args.opcode or ""
+            con, args.file, args.line, args.col, args.opcode or "", args.kind
         )
     finally:
         con.close()
@@ -53,6 +53,7 @@ def cmd_show(args: argparse.Namespace) -> int:
             args.opcode or "",
             args.seq,
             args.all_passes,
+            args.kind,
         )
     finally:
         con.close()
@@ -100,6 +101,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     passes = sub.add_parser("passes", help="List recorded passes")
     passes.add_argument("--db", required=True)
+    passes.add_argument("--kind", choices=["ir", "mir", "all"], default="all")
     passes.set_defaults(func=cmd_passes)
 
     trace = sub.add_parser("trace", help="Find first/final pass for a source line")
@@ -108,6 +110,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     trace.add_argument("--line", required=True)
     trace.add_argument("--col", type=int, default=None)
     trace.add_argument("--opcode", default="")
+    trace.add_argument("--kind", choices=["ir", "mir", "all"], default="ir")
     trace.set_defaults(func=cmd_trace)
 
     show = sub.add_parser("show", help="Show tracked instructions for a source line")
@@ -118,6 +121,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     show.add_argument("--opcode", default="")
     show.add_argument("--seq", type=int, default=-1)
     show.add_argument("--all-passes", action="store_true")
+    show.add_argument("--kind", choices=["ir", "mir", "all"], default="ir")
     show.set_defaults(func=cmd_show)
 
     html_p = sub.add_parser(

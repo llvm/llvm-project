@@ -14,7 +14,8 @@ T_FILES = "ir_tracker_files"
 T_INSTR = "ir_tracker_instructions"
 T_META = "ir_tracker_meta"
 T_PASSES = "ir_tracker_passes"
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
+VALID_KINDS = {"ir", "mir", "all"}
 
 
 def open_db_readonly(path: str) -> Optional[sqlite3.Connection]:
@@ -58,6 +59,7 @@ def init_schema(con: sqlite3.Connection) -> None:
         CREATE TABLE {T_PASSES} (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           seq INTEGER NOT NULL,
+          kind TEXT NOT NULL,
           phase TEXT NOT NULL,
           pass_class TEXT NOT NULL,
           ir_unit TEXT NOT NULL
@@ -103,13 +105,18 @@ def _get_or_create_file_id(
 
 
 def _insert_pass(
-    con: sqlite3.Connection, seq: int, phase: str, pass_name: str, ir_unit: str
+    con: sqlite3.Connection,
+    seq: int,
+    kind: str,
+    phase: str,
+    pass_name: str,
+    ir_unit: str,
 ) -> int:
     return int(
         con.execute(
-            f"INSERT INTO {T_PASSES}(seq, phase, pass_class, ir_unit) "
-            f"VALUES(?, ?, ?, ?)",
-            (seq, phase, pass_name, ir_unit),
+            f"INSERT INTO {T_PASSES}(seq, kind, phase, pass_class, ir_unit) "
+            f"VALUES(?, ?, ?, ?, ?)",
+            (seq, kind, phase, pass_name, ir_unit),
         ).lastrowid
     )
 
@@ -173,18 +180,35 @@ def _build_db_from_tsv(con: sqlite3.Connection, input_path: str) -> tuple[int, i
             tag = line[0]
             if tag == "P":
                 parts = line.split("\t")
-                if len(parts) != 5:
+                if len(parts) == 5:
+                    seq_s, kind, phase, pass_name, ir_unit = (
+                        parts[1],
+                        "ir",
+                        parts[2],
+                        parts[3],
+                        parts[4],
+                    )
+                elif len(parts) == 6:
+                    seq_s, kind, phase, pass_name, ir_unit = parts[1:]
+                else:
                     print(
                         f"ir-tracker: malformed pass row at line {line_no}",
                         file=sys.stderr,
                     )
                     raise ValueError("malformed pass row")
+                if kind not in {"ir", "mir"}:
+                    print(
+                        f"ir-tracker: invalid pass kind at line {line_no}: {kind!r}",
+                        file=sys.stderr,
+                    )
+                    raise ValueError("invalid pass kind")
                 current_pass_id = _insert_pass(
                     con,
-                    _parse_int("pass sequence", parts[1], line_no),
-                    parts[2],
-                    parts[3],
-                    parts[4],
+                    _parse_int("pass sequence", seq_s, line_no),
+                    kind,
+                    phase,
+                    pass_name,
+                    ir_unit,
                 )
                 n_passes += 1
                 continue
@@ -306,15 +330,35 @@ def resolve_file_ids(con: sqlite3.Connection, file_pat: str) -> List[int]:
     return ids
 
 
-def run_passes(con: sqlite3.Connection) -> int:
+def _check_kind(kind: str) -> bool:
+    if kind not in VALID_KINDS:
+        print("ir-tracker: --kind must be one of ir, mir, all", file=sys.stderr)
+        return False
+    return True
+
+
+def _kind_clause(kind: str, table_alias: str = "p") -> tuple[str, List[object]]:
+    if kind == "all":
+        return "", []
+    return f" AND {table_alias}.kind = ?", [kind]
+
+
+def run_passes(con: sqlite3.Connection, kind: str) -> int:
+    if not _check_kind(kind):
+        return 1
+    where_sql, params = _kind_clause(kind)
+    if where_sql:
+        where_sql = "WHERE" + where_sql[4:]
     rows = con.execute(
-        f"SELECT id, seq, phase, pass_class, ir_unit FROM {T_PASSES} ORDER BY seq"
+        f"SELECT id, seq, kind, phase, pass_class, ir_unit FROM {T_PASSES} "
+        f"{where_sql} ORDER BY seq",
+        params,
     ).fetchall()
     for row in rows:
-        print(
-            f"{int(row['seq']):5d}  id={int(row['id']):<6}  "
-            f"{row['phase']}  '{row['pass_class']}'  on '{row['ir_unit']}'"
-        )
+        prefix = f"{int(row['seq']):5d}  id={int(row['id']):<6}  "
+        if row["kind"] != "ir":
+            prefix += f"[{row['kind']}]  "
+        print(f"{prefix}{row['phase']}  '{row['pass_class']}'  on '{row['ir_unit']}'")
     print(f"total passes recorded: {len(rows)}")
     return 0
 
@@ -348,9 +392,12 @@ def run_trace(
     line_s: str,
     trace_col: Optional[int],
     trace_opcode: str,
+    kind: str,
 ) -> int:
     if get_schema_version(con) < 1:
         print("ir-tracker: unsupported schema version", file=sys.stderr)
+        return 1
+    if not _check_kind(kind):
         return 1
 
     file_ids = resolve_file_ids(con, file_pat)
@@ -364,12 +411,13 @@ def run_trace(
         return 1
 
     where_sql, params = _filter_clause(file_ids, line, trace_col, trace_opcode)
+    kind_sql, kind_params = _kind_clause(kind)
 
     row = con.execute(
         f"SELECT MAX(p.seq) AS max_seq "
         f"FROM {T_INSTR} i JOIN {T_PASSES} p ON i.pass_id = p.id "
-        f"WHERE {where_sql}",
-        params,
+        f"WHERE {where_sql}{kind_sql}",
+        [*params, *kind_params],
     ).fetchone()
     if not row or row["max_seq"] is None:
         print("ir-tracker: no matching instructions found", file=sys.stderr)
@@ -379,8 +427,8 @@ def run_trace(
     count_row = con.execute(
         f"SELECT COUNT(*) AS c "
         f"FROM {T_INSTR} i JOIN {T_PASSES} p ON i.pass_id = p.id "
-        f"WHERE p.seq = ? AND {where_sql}",
-        [max_seq, *params],
+        f"WHERE p.seq = ? AND {where_sql}{kind_sql}",
+        [max_seq, *params, *kind_params],
     ).fetchone()
     print(
         f"Matches at final pass (seq={max_seq}): {int(count_row['c'])} "
@@ -388,22 +436,25 @@ def run_trace(
     )
 
     first_row = con.execute(
-        f"SELECT p.seq, p.pass_class, p.ir_unit, COUNT(*) AS c "
+        f"SELECT p.seq, p.kind, p.pass_class, p.ir_unit, COUNT(*) AS c "
         f"FROM {T_INSTR} i JOIN {T_PASSES} p ON i.pass_id = p.id "
-        f"WHERE {where_sql} GROUP BY p.id ORDER BY p.seq ASC LIMIT 1",
-        params,
+        f"WHERE {where_sql}{kind_sql} GROUP BY p.id ORDER BY p.seq ASC LIMIT 1",
+        [*params, *kind_params],
     ).fetchone()
     if first_row:
+        pass_text = f"{first_row['pass_class']} on {first_row['ir_unit']}"
+        if first_row["kind"] != "ir":
+            pass_text = f"[{first_row['kind']}] {pass_text}"
         print(
             f"First pass with any matching instruction: seq={int(first_row['seq'])} "
-            f"{first_row['pass_class']} on {first_row['ir_unit']} "
-            f"({int(first_row['c'])} row(s))"
+            f"{pass_text} ({int(first_row['c'])} row(s))"
         )
     return 0
 
 
 class ShowInstRow(NamedTuple):
     seq: int
+    kind: str
     pass_class: str
     ir_unit: str
     function: str
@@ -415,7 +466,8 @@ def _print_group(rows: Sequence[ShowInstRow]) -> None:
     if not rows:
         return
     head = rows[0]
-    print(f"seq={head.seq} '{head.pass_class}' on '{head.ir_unit}'")
+    kind_text = "" if head.kind == "ir" else f" [{head.kind}]"
+    print(f"seq={head.seq}{kind_text} '{head.pass_class}' on '{head.ir_unit}'")
     current_func = ""
     current_bb = ""
     for row in rows:
@@ -434,9 +486,12 @@ def run_show(
     trace_opcode: str,
     seq: int,
     show_all_passes: bool,
+    kind: str,
 ) -> int:
     if get_schema_version(con) < 1:
         print("ir-tracker: unsupported schema version", file=sys.stderr)
+        return 1
+    if not _check_kind(kind):
         return 1
     if show_all_passes and seq >= 0:
         print(
@@ -455,28 +510,30 @@ def run_show(
         return 1
 
     where_sql, params = _filter_clause(file_ids, line, trace_col, trace_opcode)
+    kind_sql, kind_params = _kind_clause(kind)
     seq_sql = ""
     if seq >= 0:
         seq_sql = " AND p.seq = ?"
-        params = [*params, seq]
+        kind_params = [*kind_params, seq]
 
     query = (
-        f"SELECT p.seq, p.pass_class, p.ir_unit, i.function, i.basicblock, "
+        f"SELECT p.seq, p.kind, p.pass_class, p.ir_unit, i.function, i.basicblock, "
         f"i.inst_seq, i.inst_text "
         f"FROM {T_INSTR} i JOIN {T_PASSES} p ON i.pass_id = p.id "
-        f"WHERE {where_sql}{seq_sql} "
+        f"WHERE {where_sql}{kind_sql}{seq_sql} "
         f"ORDER BY p.seq ASC, i.function ASC, i.basicblock ASC, i.inst_seq ASC"
     )
     rows = [
         ShowInstRow(
             int(row["seq"]),
+            row["kind"] or "",
             row["pass_class"] or "",
             row["ir_unit"] or "",
             row["function"] or "",
             row["basicblock"] or "",
             row["inst_text"] or "",
         )
-        for row in con.execute(query, params)
+        for row in con.execute(query, [*params, *kind_params])
     ]
     if not rows:
         print("ir-tracker: no matching instructions found", file=sys.stderr)
