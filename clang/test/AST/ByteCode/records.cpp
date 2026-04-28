@@ -466,7 +466,14 @@ namespace ConditionalInit {
 
   static_assert(getS(true).a == 12, "");
   static_assert(getS(false).a == 13, "");
-};
+
+  struct T {
+    virtual ~T() = default;
+  };
+  struct D : T {};
+  void foo() { const T &t = true ? (const T)(D()) : D(); }
+}
+
 namespace DeclRefs {
   struct A{ int m; const int &f = m; };
 
