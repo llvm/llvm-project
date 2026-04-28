@@ -64,11 +64,14 @@ struct FEnv {
 #endif
 #endif
 
+  // These FPCR masks match the controllable FPCR bit definitions exposed by
+  // Darwin's arm64 <fenv.h>: __fpcr_trap_* and __fpcr_flush_to_zero.
   static constexpr uint32_t __fpcr_trap_invalid = 0x100;
-  static constexpr uint32_t __fpcr_trap_overflow = 0x200;
-  static constexpr uint32_t __fpcr_trap_underflow = 0x400;
-  static constexpr uint32_t __fpcr_trap_divbyzero = 0x800;
+  static constexpr uint32_t __fpcr_trap_divbyzero = 0x200;
+  static constexpr uint32_t __fpcr_trap_overflow = 0x400;
+  static constexpr uint32_t __fpcr_trap_underflow = 0x800;
   static constexpr uint32_t __fpcr_trap_inexact = 0x1000;
+  static constexpr uint32_t __fpcr_trap_denormal = 0x8000;
   static constexpr uint32_t __fpcr_flush_to_zero = 0x1000000;
 
   static constexpr uint32_t TONEAREST = 0x0;
@@ -93,10 +96,9 @@ struct FEnv {
   static constexpr uint32_t ROUNDING_CONTROL_BIT_POSITION = 22;
 
   // In addition to the 5 floating point exceptions, macOS on arm64 defines
-  // another floating point exception: FE_FLUSHTOZERO, which is controlled by
-  // __fpcr_flush_to_zero bit in the FPCR register.  This control bit is
-  // located in a different place from FE_FLUSHTOZERO status bit relative to
-  // the other exceptions.
+  // another floating point exception: FE_FLUSHTOZERO, also called the input
+  // denormal exception. Its trap-enable bit is __fpcr_trap_denormal, while
+  // __fpcr_flush_to_zero is a separate FPCR mode control.
   LIBC_INLINE static uint32_t exception_value_from_status(uint32_t status) {
     return ((status & FE_INVALID) ? EX_INVALID : 0) |
            ((status & FE_DIVBYZERO) ? EX_DIVBYZERO : 0) |
@@ -112,7 +114,7 @@ struct FEnv {
            ((control & __fpcr_trap_overflow) ? EX_OVERFLOW : 0) |
            ((control & __fpcr_trap_underflow) ? EX_UNDERFLOW : 0) |
            ((control & __fpcr_trap_inexact) ? EX_INEXACT : 0) |
-           ((control & __fpcr_flush_to_zero) ? EX_FLUSHTOZERO : 0);
+           ((control & __fpcr_trap_denormal) ? EX_FLUSHTOZERO : 0);
   }
 
   LIBC_INLINE static uint32_t exception_value_to_status(uint32_t excepts) {
@@ -130,7 +132,7 @@ struct FEnv {
            ((excepts & EX_OVERFLOW) ? __fpcr_trap_overflow : 0) |
            ((excepts & EX_UNDERFLOW) ? __fpcr_trap_underflow : 0) |
            ((excepts & EX_INEXACT) ? __fpcr_trap_inexact : 0) |
-           ((excepts & EX_FLUSHTOZERO) ? __fpcr_flush_to_zero : 0);
+           ((excepts & EX_FLUSHTOZERO) ? __fpcr_trap_denormal : 0);
   }
 
   LIBC_INLINE static uint32_t get_control_word() { return __arm_rsr("fpcr"); }
