@@ -232,8 +232,8 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
 
       return handleFMFFlags(Result, FMF, /*IsInput=*/false);
     });
-  }  
-    
+  }
+
   AnyValue
   visitIntUnOpWithResult(Instruction &I,
                          function_ref<AnyValue(const APInt &)> ScalarFn) {
@@ -315,8 +315,8 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
       APFloat Result = FResult.asFloat();
       return applyNaNPropagation(Result, {&FLHS, &FRHS});
     });
-  }  
-    
+  }
+
   AnyValue visitIntBinOpWithResult(
       Instruction &I,
       function_ref<AnyValue(const APInt &, const APInt &)> ScalarFn) {
@@ -546,8 +546,8 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
   DenormalMode getCurrentDenormalMode(Instruction &I) {
     return CurrentFrame->Func.getDenormalMode(
         I.getOperand(0)->getType()->getScalarType()->getFltSemantics());
-  }  
-    
+  }
+
   // Helper function to convert BooleanKind to bool. Report an immediate UB if
   // a poison is found.
   bool getBooleanNonPoison(BooleanKind Boolean) {
