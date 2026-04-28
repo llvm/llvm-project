@@ -2470,7 +2470,7 @@ int main (int argc, char **argv) {
 // CHECK21-NEXT:    [[STOREDV:%.*]] = zext i1 [[TOBOOL]] to i8
 // CHECK21-NEXT:    store i8 [[STOREDV]], ptr [[DOTCAPTURE_EXPR_]], align 1
 // CHECK21-NEXT:    [[TMP2:%.*]] = load i8, ptr [[DOTCAPTURE_EXPR_]], align 1
-// CHECK21-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP2]] to i1
+// CHECK21-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP2]], 0
 // CHECK21-NEXT:    [[STOREDV1:%.*]] = zext i1 [[LOADEDV]] to i8
 // CHECK21-NEXT:    store i8 [[STOREDV1]], ptr [[DOTCAPTURE_EXPR__CASTED]], align 1
 // CHECK21-NEXT:    [[TMP3:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR__CASTED]], align 8
@@ -2518,7 +2518,7 @@ int main (int argc, char **argv) {
 // CHECK21-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTOMP_LB]], align 4
 // CHECK21-NEXT:    store i32 [[TMP5]], ptr [[DOTOMP_IV]], align 4
 // CHECK21-NEXT:    [[TMP6:%.*]] = load i8, ptr [[DOTCAPTURE_EXPR__ADDR]], align 1
-// CHECK21-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP6]] to i1
+// CHECK21-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP6]], 0
 // CHECK21-NEXT:    br i1 [[LOADEDV]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK21:       omp_if.then:
 // CHECK21-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
@@ -2706,7 +2706,7 @@ int main (int argc, char **argv) {
 // CHECK23-NEXT:    [[STOREDV:%.*]] = zext i1 [[TOBOOL]] to i8
 // CHECK23-NEXT:    store i8 [[STOREDV]], ptr [[DOTCAPTURE_EXPR_]], align 1
 // CHECK23-NEXT:    [[TMP2:%.*]] = load i8, ptr [[DOTCAPTURE_EXPR_]], align 1
-// CHECK23-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP2]] to i1
+// CHECK23-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP2]], 0
 // CHECK23-NEXT:    [[STOREDV1:%.*]] = zext i1 [[LOADEDV]] to i8
 // CHECK23-NEXT:    store i8 [[STOREDV1]], ptr [[DOTCAPTURE_EXPR__CASTED]], align 1
 // CHECK23-NEXT:    [[TMP3:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR__CASTED]], align 4
@@ -2754,7 +2754,7 @@ int main (int argc, char **argv) {
 // CHECK23-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTOMP_LB]], align 4
 // CHECK23-NEXT:    store i32 [[TMP5]], ptr [[DOTOMP_IV]], align 4
 // CHECK23-NEXT:    [[TMP6:%.*]] = load i8, ptr [[DOTCAPTURE_EXPR__ADDR]], align 1
-// CHECK23-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP6]] to i1
+// CHECK23-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP6]], 0
 // CHECK23-NEXT:    br i1 [[LOADEDV]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK23:       omp_if.then:
 // CHECK23-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
@@ -2973,7 +2973,7 @@ int main (int argc, char **argv) {
 // CHECK29-NEXT:    [[TMP1:%.*]] = load i32, ptr [[DOTOMP_LB]], align 4
 // CHECK29-NEXT:    store i32 [[TMP1]], ptr [[DOTOMP_IV]], align 4
 // CHECK29-NEXT:    [[TMP2:%.*]] = load i8, ptr [[DOTCAPTURE_EXPR_]], align 1
-// CHECK29-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP2]] to i1
+// CHECK29-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP2]], 0
 // CHECK29-NEXT:    br i1 [[LOADEDV]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK29:       omp_if.then:
 // CHECK29-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
@@ -3073,7 +3073,7 @@ int main (int argc, char **argv) {
 // CHECK31-NEXT:    [[TMP1:%.*]] = load i32, ptr [[DOTOMP_LB]], align 4
 // CHECK31-NEXT:    store i32 [[TMP1]], ptr [[DOTOMP_IV]], align 4
 // CHECK31-NEXT:    [[TMP2:%.*]] = load i8, ptr [[DOTCAPTURE_EXPR_]], align 1
-// CHECK31-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP2]] to i1
+// CHECK31-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP2]], 0
 // CHECK31-NEXT:    br i1 [[LOADEDV]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK31:       omp_if.then:
 // CHECK31-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
@@ -4131,7 +4131,7 @@ int main (int argc, char **argv) {
 // CHECK37-NEXT:    [[STOREDV:%.*]] = zext i1 [[TOBOOL]] to i8
 // CHECK37-NEXT:    store i8 [[STOREDV]], ptr [[DOTCAPTURE_EXPR_]], align 1
 // CHECK37-NEXT:    [[TMP3:%.*]] = load i8, ptr [[DOTCAPTURE_EXPR_]], align 1
-// CHECK37-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP3]] to i1
+// CHECK37-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP3]], 0
 // CHECK37-NEXT:    [[STOREDV1:%.*]] = zext i1 [[LOADEDV]] to i8
 // CHECK37-NEXT:    store i8 [[STOREDV1]], ptr [[DOTCAPTURE_EXPR__CASTED]], align 1
 // CHECK37-NEXT:    [[TMP4:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR__CASTED]], align 8
@@ -4203,7 +4203,7 @@ int main (int argc, char **argv) {
 // CHECK37-NEXT:    [[TMP13:%.*]] = load i32, ptr [[DOTOMP_LB]], align 4
 // CHECK37-NEXT:    store i32 [[TMP13]], ptr [[DOTOMP_IV]], align 4
 // CHECK37-NEXT:    [[TMP14:%.*]] = load i8, ptr [[DOTCAPTURE_EXPR__ADDR]], align 1
-// CHECK37-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP14]] to i1
+// CHECK37-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP14]], 0
 // CHECK37-NEXT:    br i1 [[LOADEDV]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK37:       omp_if.then:
 // CHECK37-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
@@ -4611,7 +4611,7 @@ int main (int argc, char **argv) {
 // CHECK39-NEXT:    [[STOREDV:%.*]] = zext i1 [[TOBOOL]] to i8
 // CHECK39-NEXT:    store i8 [[STOREDV]], ptr [[DOTCAPTURE_EXPR_]], align 1
 // CHECK39-NEXT:    [[TMP3:%.*]] = load i8, ptr [[DOTCAPTURE_EXPR_]], align 1
-// CHECK39-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP3]] to i1
+// CHECK39-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP3]], 0
 // CHECK39-NEXT:    [[STOREDV1:%.*]] = zext i1 [[LOADEDV]] to i8
 // CHECK39-NEXT:    store i8 [[STOREDV1]], ptr [[DOTCAPTURE_EXPR__CASTED]], align 1
 // CHECK39-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR__CASTED]], align 4
@@ -4683,7 +4683,7 @@ int main (int argc, char **argv) {
 // CHECK39-NEXT:    [[TMP13:%.*]] = load i32, ptr [[DOTOMP_LB]], align 4
 // CHECK39-NEXT:    store i32 [[TMP13]], ptr [[DOTOMP_IV]], align 4
 // CHECK39-NEXT:    [[TMP14:%.*]] = load i8, ptr [[DOTCAPTURE_EXPR__ADDR]], align 1
-// CHECK39-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP14]] to i1
+// CHECK39-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP14]], 0
 // CHECK39-NEXT:    br i1 [[LOADEDV]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK39:       omp_if.then:
 // CHECK39-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
@@ -5253,7 +5253,7 @@ int main (int argc, char **argv) {
 // CHECK45-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_LB]], align 4
 // CHECK45-NEXT:    store i32 [[TMP8]], ptr [[DOTOMP_IV]], align 4
 // CHECK45-NEXT:    [[TMP9:%.*]] = load i8, ptr [[DOTCAPTURE_EXPR_]], align 1
-// CHECK45-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP9]] to i1
+// CHECK45-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP9]], 0
 // CHECK45-NEXT:    br i1 [[LOADEDV]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK45:       omp_if.then:
 // CHECK45-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
@@ -5421,7 +5421,7 @@ int main (int argc, char **argv) {
 // CHECK47-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_LB]], align 4
 // CHECK47-NEXT:    store i32 [[TMP7]], ptr [[DOTOMP_IV]], align 4
 // CHECK47-NEXT:    [[TMP8:%.*]] = load i8, ptr [[DOTCAPTURE_EXPR_]], align 1
-// CHECK47-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP8]] to i1
+// CHECK47-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP8]], 0
 // CHECK47-NEXT:    br i1 [[LOADEDV]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK47:       omp_if.then:
 // CHECK47-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]

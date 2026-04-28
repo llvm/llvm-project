@@ -385,7 +385,9 @@ namespace call_with_explicit_temporary_obj {
 namespace call_with_adopt_ref {
   void foo() {
     [adoptNS(provide()).get() doWork];
+    [adoptNSNullable(provide()).get() doWork];
     CFArrayAppendValue(adoptCF(provide_cf()).get(), nullptr);
+    CFArrayAppendValue(adoptCFNullable(provide_cf()).get(), nullptr);
     consume_dispatch(adoptOSObject(provide_dispatch()).get());
   }
 }

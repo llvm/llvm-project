@@ -22,7 +22,7 @@ with `dbg.value` intrinsics representing debug info records, it would instead be
 
 The debug records are not instructions, do not appear in the instruction list, and won't appear in your optimisation passes unless you go digging for them deliberately.
 
-# Great, what do I need to do!
+## Great, what do I need to do!
 
 We've largely completed the migration. The remaining rough edge is that going forwards, instructions must be inserted into basic blocks using iterators rather than instruction pointers. In almost all circumstances you can just call `getIterator` on an instruction pointer -- however, if you call a function that returns the start of a basic block, such as:
 
@@ -32,7 +32,7 @@ We've largely completed the migration. The remaining rough edge is that going fo
 
 Then you must past that iterator into the insertion function without modification (the iterator carries a debug-info bit). That's all! Read on for a more detailed explanation.
 
-## API Changes
+### API Changes
 
 There are two significant changes to be aware of. Firstly, we're adding a single bit of debug relevant data to the `BasicBlock::iterator` class (it's so that we can determine whether ranges intend on including debug info at the beginning of a block or not). That means when writing passes that insert LLVM IR instructions, you need to identify positions with `BasicBlock::iterator` rather than just a bare `Instruction *`. Most of the time this means that after identifying where you intend on inserting something, you must also call `getIterator` on the instruction position -- however when inserting at the start of a block you _must_ use `getFirstInsertionPt`, `getFirstNonPHIIt` or `begin` and use that iterator to insert, rather than just fetching a pointer to the first instruction.
 
@@ -40,7 +40,7 @@ The second matter is that if you transfer sequences of instructions from one pla
 
 For a more in-depth overview of how to update existing code to support debug records, see [the guide below](#how-to-update-existing-code).
 
-## Textual IR Changes
+### Textual IR Changes
 
 As we change from using debug intrinsics to debug records, any tools that depend on parsing IR produced by LLVM will need to handle the new format. For the most part, the difference between the printed form of a debug intrinsic call and a debug record is trivial:
 
@@ -58,7 +58,7 @@ Following these rules, we have this example of a debug intrinsic and the equival
     #dbg_value(i32 %add, !10, !DIExpression(), !20)
 ```
 
-### Test updates
+#### Test updates
 
 Any tests downstream of the main LLVM repo that test the IR output of LLVM may break as a result of the change to using records. Updating an individual test to expect records instead of intrinsics should be trivial, given the update rules above. Updating many tests may be burdensome however; to update the lit tests in the main repository, the following steps were used:
 
@@ -141,7 +141,7 @@ Any tests downstream of the main LLVM repo that test the IR output of LLVM may b
     ```
 6. Some tests may have failed - the update scripts are simplistic and preserve no context across lines, and so there are cases that they will not handle; the remaining cases must be manually updated (or handled by further scripts).
 
-# C-API changes
+## C-API changes
 
 Some new functions that have been added are temporary and will be deprecated in the future. The intention is that they'll help downstream projects adapt during the transition period.
 
@@ -200,11 +200,11 @@ for (DbgRec = LLVMGetLastDbgRecord(Inst); DbgRec;
 }
 ````
 
-# The new "Debug Record" model
+## The new "Debug Record" model
 
 Below is a brief overview of the new representation that replaces debug intrinsics; for an instructive guide on updating old code, see [here](#how-to-update-existing-code).
 
-## What exactly have you replaced debug intrinsics with?
+### What exactly have you replaced debug intrinsics with?
 
 We're using a dedicated C++ class called `DbgRecord` to store debug info, with a one-to-one relationship between each instance of a debug intrinsic and each `DbgRecord` object in any LLVM IR program; these `DbgRecord`s are represented in the IR as non-instruction debug records, as described in the [Source Level Debugging](project:SourceLevelDebugging.rst#Debug Records) document. This class has a set of subclasses that store exactly the same information as is stored in debugging intrinsics. Each one also has almost entirely the same set of methods, that behave in the same way:
 
@@ -214,7 +214,7 @@ We're using a dedicated C++ class called `DbgRecord` to store debug info, with a
 
 This allows you to treat a `DbgVariableRecord` as if it's a `dbg.value`/`dbg.declare`/`dbg.assign` intrinsic most of the time, for example in generic (auto-param) lambdas, and the same for `DbgLabelRecord` and `dbg.label`s.
 
-## How do these `DbgRecords` fit into the instruction stream?
+### How do these `DbgRecords` fit into the instruction stream?
 
 Like so:
 
@@ -244,7 +244,7 @@ Not shown are the links from DbgRecord to other parts of the `Value`/`Metadata` 
 
 The various kinds of debug intrinsic (value, declare, assign, label) are all stored in `DbgRecord` subclasses, with a "RecordKind" field distinguishing `DbgLabelRecord`s from `DbgVariableRecord`s, and a `LocationType` field in the `DbgVariableRecord` class further disambiguating the various debug variable intrinsics it can represent.
 
-# How to update existing code
+## How to update existing code
 
 Any existing code that interacts with debug intrinsics in some way will need to be updated to interact with debug records in the same way. A few quick rules to keep in mind when updating code:
 
@@ -265,11 +265,11 @@ Any existing code that interacts with debug intrinsics in some way will need to 
 
 Below is a rough guide on how existing code that currently supports debug intrinsics can be updated to support debug records.
 
-## Creating debug records
+### Creating debug records
 
 Debug records will automatically be created by the `DIBuilder` class when the new format is enabled. As with instructions, it is also possible to call `DbgRecord::clone` to create an unattached copy of an existing record.
 
-## Skipping debug records, ignoring debug-uses of `Values`, stably counting instructions, etc.
+### Skipping debug records, ignoring debug-uses of `Values`, stably counting instructions, etc.
 
 This will all happen transparently without needing to think about it!
 
@@ -283,7 +283,7 @@ for (Instruction &I : BB) {
 }
 ```
 
-## Finding debug records
+### Finding debug records
 
 Utilities such as `findDbgUsers` and the like now have an optional argument that will return the set of `DbgVariableRecord` records that refer to a `Value`. You should be able to treat them the same as intrinsics.
 
@@ -307,7 +307,7 @@ Utilities such as `findDbgUsers` and the like now have an optional argument that
       DVR->replaceVariableLocationOp(V, New);
 ```
 
-## Examining debug records at positions
+### Examining debug records at positions
 
 Call `Instruction::getDbgRecordRange()` to get the range of `DbgRecord` objects that are attached to an instruction.
 
@@ -355,7 +355,7 @@ for (Instruction &I : BB) {
 }
 ```
 
-## Processing individual debug records
+### Processing individual debug records
 
 In most cases, any code that operates on debug intrinsics can be extracted to a template function or auto lambda (if it is not already in one) that can be applied to both debug intrinsics and debug records - though keep in mind the main exception that `isa`/`cast`/`dyn_cast` do not apply to `DbgVariableRecord` types.
 
@@ -409,7 +409,7 @@ void processDbgInfoInBlock(BasicBlock &BB,
 }
 ```
 
-## Moving and deleting debug records
+### Moving and deleting debug records
 
 You can use `DbgRecord::removeFromParent` to unlink a `DbgRecord` from it's marker, and then `BasicBlock::insertDbgRecordBefore` or `BasicBlock::insertDbgRecordAfter` to re-insert the `DbgRecord` somewhere else. You cannot insert a `DbgRecord` at an arbitary point in a list of `DbgRecord`s (if you're doing this with `llvm.dbg.value`s then it's unlikely to be correct).
 
@@ -441,7 +441,7 @@ void moveDbgRecordToStart(DbgVariableRecord *DVR) {
 }
 ```
 
-## What about dangling debug records?
+### What about dangling debug records?
 
 If you have a block like so:
 
@@ -456,6 +456,6 @@ your optimisation pass may wish to erase the terminator and then do something to
 
 This can technically lead to trouble in the vanishingly rare scenario where an optimisation pass erases a terminator and then decides to erase the whole block. (We recommend not doing that).
 
-## Anything else?
+### Anything else?
 
 The above guide does not comprehensively cover every pattern that could apply to debug intrinsics; as mentioned at the [start of the guide](#how-to-update-existing-code), you can temporarily convert the target module from debug records to intrinsics as a stopgap measure. Most operations that can be performed on debug intrinsics have exact equivalents for debug records, but if you encounter any exceptions, reading the class docs (linked [here](#what-exactly-have-you-replaced-debug-intrinsics-with)) may give some insight, there may be examples in the existing codebase, and you can always ask for help on the [forums](https://discourse.llvm.org/tag/debuginfo).

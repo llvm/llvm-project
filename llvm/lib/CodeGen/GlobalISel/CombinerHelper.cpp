@@ -5320,11 +5320,11 @@ bool CombinerHelper::matchConstantFoldCastOp(MachineInstr &MI,
   return false;
 }
 
-bool CombinerHelper::matchConstantFoldCountOp(MachineInstr &MI,
-                                              BuildFnTy &MatchInfo) const {
+bool CombinerHelper::matchConstantFoldUnaryIntOp(MachineInstr &MI,
+                                                 BuildFnTy &MatchInfo) const {
   Register Dst = MI.getOperand(0).getReg();
-  auto Csts = ConstantFoldCountOp(MI.getOpcode(), MRI.getType(Dst),
-                                  MI.getOperand(1).getReg(), MRI);
+  auto Csts = ConstantFoldUnaryIntOp(MI.getOpcode(), MRI.getType(Dst),
+                                     MI.getOperand(1).getReg(), MRI);
   if (Csts.empty())
     return false;
 

@@ -189,7 +189,7 @@ let SchedModel = P7Model in {
     NEG, NEG8, NEG8_rec, NEG_rec, NEG8O, NEGO,
     ANDI_rec, ANDIS_rec, AND, AND8, AND_rec, AND8_rec,
     NAND, NAND8, NAND_rec, NAND8_rec, NOR, NOR8, NOR_rec, NOR8_rec,
-    EQV, EQV_rec, ANDC, ANDC8, ANDC_rec, ANDC8_rec,
+    EQV, EQV8, EQV_rec, EQV8_rec, ANDC, ANDC8, ANDC_rec, ANDC8_rec,
     ORC, ORC8, ORC_rec, ORC8_rec
   )>;
 

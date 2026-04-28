@@ -486,22 +486,112 @@ TEST_F(AArch64GISelMITest, BuildExtractSubvector) {
   if (!TM)
     GTEST_SKIP();
 
-  LLT VecTy = LLT::fixed_vector(4, 32);
-  LLT SubVecTy = LLT::fixed_vector(2, 32);
-  auto Vec = B.buildUndef(VecTy);
-  B.buildExtractSubvector(SubVecTy, Vec, 0);
+  LLT Vec4x32 = LLT::fixed_vector(4, 32);
+  LLT Vec2x32 = LLT::fixed_vector(2, 32);
+  LLT Vec2x64 = LLT::fixed_vector(2, 64);
+  LLT SVec4x32 = LLT::scalable_vector(4, 32);
+  LLT SVec2x32 = LLT::scalable_vector(2, 32);
 
-  VecTy = LLT::scalable_vector(4, 32);
-  SubVecTy = LLT::scalable_vector(2, 32);
-  Vec = B.buildUndef(VecTy);
-  B.buildExtractSubvector(SubVecTy, Vec, 0);
+  // Fixed-length: extract <2 x s32> from <4 x s32> at index 0.
+  auto BigVec = B.buildUndef(Vec4x32);
+  B.buildExtractSubvector(Vec2x32, BigVec, 0);
+
+  // Scalable: extract <vscale x 2 x s32> from <vscale x 4 x s32> at index 0.
+  auto SBigVec = B.buildUndef(SVec4x32);
+  B.buildExtractSubvector(SVec2x32, SBigVec, 0);
 
   auto CheckStr = R"(
   ; CHECK: [[DEF:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
-  ; CHECK: [[EXTRACT_SUBVECTOR:%[0-9]+]]:_(<2 x s32>) = G_EXTRACT_SUBVECTOR [[DEF]]:_(<4 x s32>), 0
-  ; CHECK: [[DEF1:%[0-9]+]]:_(<vscale x 4 x s32>) = G_IMPLICIT_DEF
-  ; CHECK: [[EXTRACT_SUBVECTOR1:%[0-9]+]]:_(<vscale x 2 x s32>) = G_EXTRACT_SUBVECTOR [[DEF1]]:_(<vscale x 4 x s32>), 0
+  ; CHECK: [[EXTRACT:%[0-9]+]]:_(<2 x s32>) = G_EXTRACT_SUBVECTOR [[DEF]]:_(<4 x s32>), 0
+  ; CHECK: [[SDEF:%[0-9]+]]:_(<vscale x 4 x s32>) = G_IMPLICIT_DEF
+  ; CHECK: [[SEXTRACT:%[0-9]+]]:_(<vscale x 2 x s32>) = G_EXTRACT_SUBVECTOR [[SDEF]]:_(<vscale x 4 x s32>), 0
   )";
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+
+  // Different element types between result and source.
+  EXPECT_DEBUG_DEATH(B.buildExtractSubvector(Vec2x64, BigVec, 0),
+                     "Extract subvector VTs must have the same element type!");
+
+  // Cannot extract a scalable subvector from a fixed-length vector.
+  EXPECT_DEBUG_DEATH(
+      B.buildExtractSubvector(SVec2x32, BigVec, 0),
+      "Cannot extract a scalable vector from a fixed length vector!");
+
+  // Result must not be larger than the source.
+  EXPECT_DEBUG_DEATH(
+      B.buildExtractSubvector(Vec4x32, B.buildUndef(Vec2x32), 0),
+      "Extract subvector must be from larger vector to smaller vector!");
+
+  // Extraction index causes overflow (2 + 4 > 4).
+  EXPECT_DEBUG_DEATH(B.buildExtractSubvector(Vec2x32, BigVec, 4),
+                     "Extract subvector overflow!");
+
+  // Index must be a multiple of the result vector length (1 % 2 != 0).
+  EXPECT_DEBUG_DEATH(
+      B.buildExtractSubvector(Vec2x32, BigVec, 1),
+      "Extract index is not a multiple of the output vector length");
+}
+
+TEST_F(AArch64GISelMITest, BuildInsertSubvector) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+
+  LLT Vec4x32 = LLT::fixed_vector(4, 32);
+  LLT Vec2x32 = LLT::fixed_vector(2, 32);
+  LLT Vec2x64 = LLT::fixed_vector(2, 64);
+  LLT SVec4x32 = LLT::scalable_vector(4, 32);
+  LLT SVec2x32 = LLT::scalable_vector(2, 32);
+
+  // Fixed-length: insert <2 x s32> into <4 x s32> at index 0 and 2.
+  auto BigVec = B.buildUndef(Vec4x32);
+  auto SubVec = B.buildUndef(Vec2x32);
+  B.buildInsertSubvector(Vec4x32, BigVec, SubVec, 0);
+  B.buildInsertSubvector(Vec4x32, BigVec, SubVec, 2);
+
+  // Scalable: insert <vscale x 2 x s32> into <vscale x 4 x s32> at index 0.
+  auto SBigVec = B.buildUndef(SVec4x32);
+  auto SSubVec = B.buildUndef(SVec2x32);
+  B.buildInsertSubvector(SVec4x32, SBigVec, SSubVec, 0);
+
+  auto CheckStr = R"(
+  ; CHECK: [[DEF0:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
+  ; CHECK: [[DEF1:%[0-9]+]]:_(<2 x s32>) = G_IMPLICIT_DEF
+  ; CHECK: {{%[0-9]+}}:_(<4 x s32>) = G_INSERT_SUBVECTOR [[DEF0]]:_, [[DEF1]]:_(<2 x s32>), 0
+  ; CHECK: {{%[0-9]+}}:_(<4 x s32>) = G_INSERT_SUBVECTOR [[DEF0]]:_, [[DEF1]]:_(<2 x s32>), 2
+  ; CHECK: [[SDEF0:%[0-9]+]]:_(<vscale x 4 x s32>) = G_IMPLICIT_DEF
+  ; CHECK: [[SDEF1:%[0-9]+]]:_(<vscale x 2 x s32>) = G_IMPLICIT_DEF
+  ; CHECK: {{%[0-9]+}}:_(<vscale x 4 x s32>) = G_INSERT_SUBVECTOR [[SDEF0]]:_, [[SDEF1]]:_(<vscale x 2 x s32>), 0
+  )";
+
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+
+  // Dst type must match the BigVec (Src0) type.
+  EXPECT_DEBUG_DEATH(B.buildInsertSubvector(Vec2x32, BigVec, SubVec, 0),
+                     "Dest and insert subvector source types must match!");
+
+  // Different element types between dst and subvec.
+  EXPECT_DEBUG_DEATH(
+      B.buildInsertSubvector(Vec4x32, BigVec, B.buildUndef(Vec2x64), 0),
+      "Insert subvector VTs must have the same element type!");
+
+  // Cannot insert a scalable subvector into a fixed-length vector.
+  EXPECT_DEBUG_DEATH(
+      B.buildInsertSubvector(Vec4x32, BigVec, B.buildUndef(SVec2x32), 0),
+      "Cannot insert a scalable vector into a fixed length vector!");
+
+  // Subvector must not be larger than the destination.
+  EXPECT_DEBUG_DEATH(
+      B.buildInsertSubvector(Vec2x32, B.buildUndef(Vec2x32),
+                             B.buildUndef(Vec4x32), 0),
+      "Insert subvector must be from smaller vector to larger vector!");
+
+  // Insertion index causes overflow (2 + 4 > 4).
+  EXPECT_DEBUG_DEATH(B.buildInsertSubvector(Vec4x32, BigVec, SubVec, 4),
+                     "Insert subvector overflow!");
+
+  // Index must be a multiple of the subvector length (1 % 2 != 0).
+  EXPECT_DEBUG_DEATH(B.buildInsertSubvector(Vec4x32, BigVec, SubVec, 1),
+                     "Insert index is not a multiple of the subvector length");
 }

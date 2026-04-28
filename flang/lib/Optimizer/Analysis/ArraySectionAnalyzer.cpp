@@ -79,15 +79,29 @@ bool ArraySectionAnalyzer::areDisjointSections(const SectionDesc &desc1,
   return false;
 }
 
-bool ArraySectionAnalyzer::areIdenticalSections(const SectionDesc &desc1,
-                                                const SectionDesc &desc2) {
+bool ArraySectionAnalyzer::areIdenticalSections(
+    const SectionDesc &desc1, const SectionDesc &desc2,
+    ValueEquivalenceCallback areKnownEquivalent) {
   if (desc1 == desc2)
     return true;
-  return false;
+  if (!areKnownEquivalent)
+    return false;
+  // Compare each component, falling back on the user-provided callback when
+  // the SSA values differ. Null values must compare equal to null only.
+  auto valuesMatch = [&](mlir::Value v1, mlir::Value v2) {
+    if (v1 == v2)
+      return true;
+    if (!v1 || !v2)
+      return false;
+    return areKnownEquivalent(v1, v2);
+  };
+  return valuesMatch(desc1.lb, desc2.lb) && valuesMatch(desc1.ub, desc2.ub) &&
+         valuesMatch(desc1.stride, desc2.stride);
 }
 
 ArraySectionAnalyzer::SlicesOverlapKind
-ArraySectionAnalyzer::analyze(mlir::Value ref1, mlir::Value ref2) {
+ArraySectionAnalyzer::analyze(mlir::Value ref1, mlir::Value ref2,
+                              ValueEquivalenceCallback areKnownEquivalent) {
   if (ref1 == ref2)
     return SlicesOverlapKind::DefinitelyIdentical;
 
@@ -138,7 +152,7 @@ ArraySectionAnalyzer::analyze(mlir::Value ref1, mlir::Value ref2) {
     if (areDisjointSections(desc1, desc2))
       return SlicesOverlapKind::DefinitelyDisjoint;
 
-    if (!areIdenticalSections(desc1, desc2)) {
+    if (!areIdenticalSections(desc1, desc2, areKnownEquivalent)) {
       if (isTriplet1 || isTriplet2) {
         // For example:
         //   hlfir.designate %6#0 (%c2:%c7999:%c1, %c1:%c120:%c1, %0)

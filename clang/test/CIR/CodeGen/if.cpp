@@ -50,7 +50,7 @@ int if0(bool a) {
 // OGCG:   %[[STOREDV:.*]] = zext i1 %a to i8
 // OGCG:   store i8 %[[STOREDV]], ptr %[[A_ADDR]], align 1
 // OGCG:   %[[LOADTMP:.*]] = load i8, ptr %[[A_ADDR]], align 1
-// OGCG:   %[[LOADEDV:.*]] = trunc i8 %[[LOADTMP]] to i1
+// OGCG:   %[[LOADEDV:.*]] = icmp ne i8 %[[LOADTMP]], 0
 // OGCG:   br i1 %[[LOADEDV]], label %[[THEN_LABEL:.*]], label %[[END_LABEL:.*]]
 // OGCG: [[THEN_LABEL]]:
 // OGCG:   store i32 2, ptr %[[RETVAL]], align 4
@@ -232,8 +232,8 @@ void if2(int a, bool b, bool c) {
 // OGCG: [[IF_THEN]]:
 // OGCG:   store i32 3, ptr %[[X]], align 4
 // OGCG:   %[[B_LOAD:.*]] = load i8, ptr %[[B_ADDR]], align 1
-// OGCG:   %[[B_TRUNC:.*]] = trunc i8 %[[B_LOAD]] to i1
-// OGCG:   br i1 %[[B_TRUNC]], label %[[IF_THEN2:.*]], label %[[IF_END:.*]]
+// OGCG:   %[[B_BOOL:.*]] = icmp ne i8 %[[B_LOAD]], 0
+// OGCG:   br i1 %[[B_BOOL]], label %[[IF_THEN2:.*]], label %[[IF_END:.*]]
 // OGCG: [[IF_THEN2]]:
 // OGCG:   store i32 8, ptr %[[X]], align 4
 // OGCG:   br label %[[IF_END]]
@@ -241,8 +241,8 @@ void if2(int a, bool b, bool c) {
 // OGCG:   br label %[[IF_END6:.*]]
 // OGCG: [[IF_ELSE]]:
 // OGCG:   %[[C_LOAD:.*]] = load i8, ptr %[[C_ADDR]], align 1
-// OGCG:   %[[C_TRUNC:.*]] = trunc i8 %[[C_LOAD]] to i1
-// OGCG:   br i1 %[[C_TRUNC]], label %[[IF_THEN4:.*]], label %[[IF_END5:.*]]
+// OGCG:   %[[C_BOOL:.*]] = icmp ne i8 %[[C_LOAD]], 0
+// OGCG:   br i1 %[[C_BOOL]], label %[[IF_THEN4:.*]], label %[[IF_END5:.*]]
 // OGCG: [[IF_THEN4]]:
 // OGCG:   store i32 14, ptr %[[X]], align 4
 // OGCG:   br label %[[IF_END5]]

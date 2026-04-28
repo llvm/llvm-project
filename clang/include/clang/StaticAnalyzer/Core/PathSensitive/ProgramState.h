@@ -377,10 +377,10 @@ public:
   /// Get the lvalue for an array index.
   SVal getLValue(QualType ElementType, SVal Idx, SVal Base) const;
 
-  /// Returns the SVal bound to the statement 'S' in the state's environment.
-  SVal getSVal(const Stmt *S, const LocationContext *LCtx) const;
+  /// Returns the SVal bound to the expression \p E in the state's environment.
+  SVal getSVal(const Expr *E, const LocationContext *LCtx) const;
 
-  SVal getSValAsScalarOrLoc(const Stmt *Ex, const LocationContext *LCtx) const;
+  SVal getSValAsScalarOrLoc(const Expr *E, const LocationContext *LCtx) const;
 
   /// Return the value bound to the specified location.
   /// Returns UnknownVal() if none found.
@@ -792,22 +792,17 @@ inline SVal ProgramState::getLValue(QualType ElementType, SVal Idx, SVal Base) c
   return UnknownVal();
 }
 
-inline SVal ProgramState::getSVal(const Stmt *Ex,
-                                  const LocationContext *LCtx) const{
-  return Env.getSVal(EnvironmentEntry(Ex, LCtx),
-                     *getStateManager().svalBuilder);
+inline SVal ProgramState::getSVal(const Expr *E,
+                                  const LocationContext *LCtx) const {
+  return Env.getSVal(EnvironmentEntry(E, LCtx), *getStateManager().svalBuilder);
 }
 
 inline SVal
-ProgramState::getSValAsScalarOrLoc(const Stmt *S,
+ProgramState::getSValAsScalarOrLoc(const Expr *E,
                                    const LocationContext *LCtx) const {
-  if (const Expr *Ex = dyn_cast<Expr>(S)) {
-    QualType T = Ex->getType();
-    if (Ex->isGLValue() || Loc::isLocType(T) ||
-        T->isIntegralOrEnumerationType())
-      return getSVal(S, LCtx);
-  }
-
+  QualType T = E->getType();
+  if (E->isGLValue() || Loc::isLocType(T) || T->isIntegralOrEnumerationType())
+    return getSVal(E, LCtx);
   return UnknownVal();
 }
 

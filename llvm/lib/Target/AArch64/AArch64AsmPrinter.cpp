@@ -1321,7 +1321,7 @@ void AArch64AsmPrinter::PrintDebugValueComment(const MachineInstr *MI,
                                                raw_ostream &OS) {
   unsigned NOps = MI->getNumOperands();
   assert(NOps == 4);
-  OS << '\t' << MAI->getCommentString() << "DEBUG_VALUE: ";
+  OS << '\t' << MAI.getCommentString() << "DEBUG_VALUE: ";
   // cast away const; DIetc do not take const operands for some reason.
   OS << MI->getDebugVariable()->getName();
   OS << " <- ";
@@ -3259,20 +3259,20 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     return;
 
   case AArch64::EMITBKEY: {
-      ExceptionHandling ExceptionHandlingType = MAI->getExceptionHandlingType();
-      if (ExceptionHandlingType != ExceptionHandling::DwarfCFI &&
-          ExceptionHandlingType != ExceptionHandling::ARM)
-        return;
-
-      if (getFunctionCFISectionType(*MF) == CFISection::None)
-        return;
-
-      OutStreamer->emitCFIBKeyFrame();
+    ExceptionHandling ExceptionHandlingType = MAI.getExceptionHandlingType();
+    if (ExceptionHandlingType != ExceptionHandling::DwarfCFI &&
+        ExceptionHandlingType != ExceptionHandling::ARM)
       return;
+
+    if (getFunctionCFISectionType(*MF) == CFISection::None)
+      return;
+
+    OutStreamer->emitCFIBKeyFrame();
+    return;
   }
 
   case AArch64::EMITMTETAGGED: {
-    ExceptionHandling ExceptionHandlingType = MAI->getExceptionHandlingType();
+    ExceptionHandling ExceptionHandlingType = MAI.getExceptionHandlingType();
     if (ExceptionHandlingType != ExceptionHandling::DwarfCFI &&
         ExceptionHandlingType != ExceptionHandling::ARM)
       return;

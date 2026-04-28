@@ -3819,9 +3819,7 @@ def CIR_FuncOp : CIR_Op<"func", [
 //===----------------------------------------------------------------------===//
 
 def CIR_LocalInitOp : CIR_Op<"local_init", [
-  DeclareOpInterfaceMethods<SymbolUserOpInterface>, NoRegionArguments,
-  ParentOneOf<["cir::FuncOp"]>,
-  HasAtMostOneOfAttrs<["tls", "static_local"]>
+  DeclareOpInterfaceMethods<SymbolUserOpInterface>, NoRegionArguments
 ]> {
   let summary = "initialize a static or thread local object";
   let description = [{
@@ -3830,8 +3828,13 @@ def CIR_LocalInitOp : CIR_Op<"local_init", [
     variable. This will be handled during lowering-prepare to include the
     guard variables correctly for the variable.
 
+    This operation may also represent a static local thread local variable,
+    which would be indicated by the 'tls' flag.
+
     Example:
     ```
+    // Note: despite this always being static_local, we print it anyway to be
+    // visually consistent with get_global, and as a 'counter' to 'tls'.
     cir.local_init static_local @GlobalName ctor {
       %4 = cir.get_global static_local @GlobalName : !cir.ptr<!rec_CtorDtor>
       %5 = cir.call @_Z5get_iv() : () -> !s32i
@@ -3846,8 +3849,7 @@ def CIR_LocalInitOp : CIR_Op<"local_init", [
   }];
   let arguments = (ins
     FlatSymbolRefAttr : $globalName,
-    UnitAttr : $tls,
-    UnitAttr : $static_local
+    UnitProp : $tls
   );
 
   let regions = (region
@@ -3856,8 +3858,7 @@ def CIR_LocalInitOp : CIR_Op<"local_init", [
   );
 
   let assemblyFormat = [{
-    (`thread_local` $tls^)?
-    (`static_local` $static_local^)?
+    (`thread_local` $tls^) : (`static_local`)?
     $globalName attr-dict
     (`ctor` $ctorRegion^)?
     (`dtor` $dtorRegion^)?
@@ -3873,6 +3874,7 @@ def CIR_LocalInitOp : CIR_Op<"local_init", [
 }
 }];
 
+  let hasVerifier = 1;
   let hasLLVMLowering = false;
 }
 

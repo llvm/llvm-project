@@ -862,15 +862,17 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(G_FPTRUNC)
       .legalFor(
           {{f16, f32}, {f16, f64}, {f32, f64}, {v4f16, v4f32}, {v2f32, v2f64}})
+      .legalFor(ST.hasBF16(), {{bf16, f32}, {v4bf16, v4f32}})
       .libcallFor({{f16, f128}, {f32, f128}, {f64, f128}})
       .moreElementsToNextPow2(1)
       .customIf([](const LegalityQuery &Q) {
         LLT DstTy = Q.Types[0];
         LLT SrcTy = Q.Types[1];
         return SrcTy.isFixedVector() && DstTy.isFixedVector() &&
-               SrcTy.getScalarSizeInBits() == 64 &&
-               DstTy.getScalarSizeInBits() == 16;
+               SrcTy.getScalarType().isFloat64() &&
+               DstTy.getScalarType().isFloat16();
       })
+      .lowerFor({{bf16, f32}, {v4bf16, v4f32}})
       // Clamp based on input
       .clampNumElements(1, v4s32, v4s32)
       .clampNumElements(1, v2s64, v2s64)
@@ -998,6 +1000,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                  {v2f64, v2i64}})
       .legalFor(HasFP16,
                 {{f16, i32}, {f16, i64}, {v4f16, v4i16}, {v8f16, v8i16}})
+      .unsupportedIf([&](const LegalityQuery &Query) {
+        return Query.Types[0].getScalarType().isBFloat16();
+      })
       .scalarizeIf(scalarOrEltWiderThan(1, 64), 1)
       .scalarizeIf(scalarOrEltWiderThan(0, 64), 0)
       .moreElementsToNextPow2(1)
@@ -1008,11 +1013,6 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                Query.Types[1].getScalarSizeInBits() == 64 &&
                Query.Types[0].getScalarSizeInBits() == 16;
       })
-      .widenScalarIf(
-          [=](const LegalityQuery &Query) {
-            return Query.Types[0].getScalarType() == bf16;
-          },
-          changeElementTo(0, f32))
       .widenScalarOrEltToNextPow2OrMinSize(0, /*MinSize=*/HasFP16 ? 16 : 32)
       .scalarizeIf(
           // v2i64->v2f32 needs to scalarize to avoid double-rounding issues.

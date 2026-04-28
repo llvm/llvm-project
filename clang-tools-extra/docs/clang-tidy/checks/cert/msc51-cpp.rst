@@ -1,6 +1,4 @@
 .. title:: clang-tidy - cert-msc51-cpp
-.. meta::
-   :http-equiv=refresh: 5;URL=../bugprone/random-generator-seed.html
 
 cert-msc51-cpp
 ==============

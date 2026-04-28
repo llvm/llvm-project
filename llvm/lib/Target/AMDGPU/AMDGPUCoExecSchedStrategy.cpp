@@ -424,6 +424,7 @@ void AMDGPUCoExecSchedStrategy::initPolicy(MachineBasicBlock::iterator Begin,
          "coexec scheduler only supports top-down scheduling");
   RegionPolicy.OnlyTopDown = true;
   RegionPolicy.OnlyBottomUp = false;
+  RegionPolicy.ShouldTrackLaneMasks = true;
 }
 
 void AMDGPUCoExecSchedStrategy::initialize(ScheduleDAGMI *DAG) {

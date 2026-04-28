@@ -968,6 +968,57 @@ spirv.module Logical GLSL450 {
   spirv.SpecConstantComposite @scc (@sc1, @sc2, @sc3) : vector<3xf32>
 }
 
+// -----
+
+// Nested composite: array of arrays
+spirv.module Logical GLSL450 {
+  spirv.SpecConstant @sc1 = 1.5 : f32
+  spirv.SpecConstant @sc2 = 2.5 : f32
+  spirv.SpecConstantComposite @scc_inner (@sc1, @sc2) : !spirv.array<2 x f32>
+  // CHECK: spirv.SpecConstantComposite @scc_nested (@scc_inner, @scc_inner) : !spirv.array<2 x !spirv.array<2 x f32>>
+  spirv.SpecConstantComposite @scc_nested (@scc_inner, @scc_inner) : !spirv.array<2 x !spirv.array<2 x f32>>
+}
+
+// -----
+
+// Struct with composite and scalar constituents
+spirv.module Logical GLSL450 {
+  spirv.SpecConstant @sc1 = 1 : i32
+  spirv.SpecConstant @sc2 = 2.5 : f32
+  spirv.SpecConstant @sc3 = 3.5 : f32
+  spirv.SpecConstantComposite @scc_vec (@sc2, @sc3) : vector<2xf32>
+  // CHECK: spirv.SpecConstantComposite @scc_struct (@sc1, @scc_vec) : !spirv.struct<(i32, vector<2xf32>)>
+  spirv.SpecConstantComposite @scc_struct (@sc1, @scc_vec) : !spirv.struct<(i32, vector<2xf32>)>
+}
+
+// -----
+
+// Type mismatch with composite constituent
+spirv.module Logical GLSL450 {
+  spirv.SpecConstant @sc1 = 1.5 : f32
+  spirv.SpecConstant @sc2 = 2.5 : f32
+  spirv.SpecConstantComposite @scc_inner (@sc1, @sc2) : !spirv.array<2 x f32>
+  // expected-error @+1 {{has incorrect types of operands: expected '!spirv.array<3 x f32>', but provided '!spirv.array<2 x f32>'}}
+  spirv.SpecConstantComposite @scc_bad (@scc_inner) : !spirv.array<1 x !spirv.array<3 x f32>>
+}
+
+// -----
+
+// Unsupported constituent (not a SpecConstant or SpecConstantComposite)
+spirv.module Logical GLSL450 {
+  spirv.GlobalVariable @gv : !spirv.ptr<f32, Private>
+  // expected-error @+1 {{unsupported constituent "gv": must reference a spirv.SpecConstant or spirv.SpecConstantComposite}}
+  spirv.SpecConstantComposite @scc (@gv) : !spirv.array<1 x f32>
+}
+
+// -----
+
+// Unknown constituent symbol
+spirv.module Logical GLSL450 {
+  // expected-error @+1 {{unknown constituent symbol "does_not_exist"}}
+  spirv.SpecConstantComposite @scc (@does_not_exist) : !spirv.array<1 x f32>
+}
+
 //===----------------------------------------------------------------------===//
 // spirv.SpecConstantComposite (spirv.KHR.coopmatrix)
 //===----------------------------------------------------------------------===//

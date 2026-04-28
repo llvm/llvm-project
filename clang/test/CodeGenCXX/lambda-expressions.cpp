@@ -78,7 +78,7 @@ int e(E a, E b, bool cond) { return [a,b,cond](){ return (cond ? a : b).x; }(); 
 // CHECK: call void @"_ZZ1e1ES_bEN3$_0D1Ev"
 
 // CHECK-LABEL: define internal noundef i32 @"_ZZ1e1ES_bENK3$_0clEv"
-// CHECK: trunc i8
+// CHECK: icmp ne i8
 // CHECK: load i32, ptr
 // CHECK: ret i32
 

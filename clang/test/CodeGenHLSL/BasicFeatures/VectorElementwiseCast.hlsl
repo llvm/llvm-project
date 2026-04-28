@@ -198,11 +198,11 @@ export void call8(int3x1 M) {
 // CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i1>, ptr [[FLATCAST_TMP]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr [[MATRIX_GEP]], align 4
 // CHECK-NEXT:    [[MATRIXEXT:%.*]] = extractelement <2 x i32> [[TMP3]], i32 0
-// CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i32 [[MATRIXEXT]] to i1
+// CHECK-NEXT:    [[LOADEDV:%.*]] = icmp ne i32 [[MATRIXEXT]], 0
 // CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i1> [[TMP2]], i1 [[LOADEDV]], i64 0
 // CHECK-NEXT:    [[TMP5:%.*]] = load <2 x i32>, ptr [[MATRIX_GEP]], align 4
 // CHECK-NEXT:    [[MATRIXEXT1:%.*]] = extractelement <2 x i32> [[TMP5]], i32 1
-// CHECK-NEXT:    [[LOADEDV2:%.*]] = trunc i32 [[MATRIXEXT1]] to i1
+// CHECK-NEXT:    [[LOADEDV2:%.*]] = icmp ne i32 [[MATRIXEXT1]], 0
 // CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i1> [[TMP4]], i1 [[LOADEDV2]], i64 1
 // CHECK-NEXT:    [[TMP7:%.*]] = zext <2 x i1> [[TMP6]] to <2 x i32>
 // CHECK-NEXT:    store <2 x i32> [[TMP7]], ptr [[V]], align 4
@@ -225,11 +225,11 @@ struct BoolVecStruct {
 // CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i1>, ptr [[FLATCAST_TMP]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[VECTOR_GEP]], align 4
 // CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-// CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i32 [[VECEXT]] to i1
+// CHECK-NEXT:    [[LOADEDV:%.*]] = icmp ne i32 [[VECEXT]], 0
 // CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i1> [[TMP0]], i1 [[LOADEDV]], i64 0
 // CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr [[VECTOR_GEP]], align 4
 // CHECK-NEXT:    [[VECEXT1:%.*]] = extractelement <2 x i32> [[TMP3]], i32 1
-// CHECK-NEXT:    [[LOADEDV2:%.*]] = trunc i32 [[VECEXT1]] to i1
+// CHECK-NEXT:    [[LOADEDV2:%.*]] = icmp ne i32 [[VECEXT1]], 0
 // CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i1> [[TMP2]], i1 [[LOADEDV2]], i64 1
 // CHECK-NEXT:    [[TMP5:%.*]] = zext <2 x i1> [[TMP4]] to <2 x i32>
 // CHECK-NEXT:    store <2 x i32> [[TMP5]], ptr [[V]], align 4

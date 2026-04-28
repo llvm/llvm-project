@@ -15,7 +15,7 @@ void test_uint4(uint Idx, uint Val) {
 
 // Test local vector element store for bool.
 // CHECK: [[COND1:%.*]] = load i32, ptr addrspace(3) @Cond, align 4
-// CHECK: [[COND2:%.*]] = trunc i32 [[COND1]] to i1
+// CHECK: [[COND2:%.*]] = icmp ne i32 [[COND1]], 0
 // CHECK: [[IDX:%.*]] = load i32, ptr %Idx.addr, align 4
 // CHECK: [[COND3:%.*]] = zext i1 [[COND2]] to i32
 // CHECK: [[PTR:%.*]] = getelementptr <3 x i32>, ptr %Val, i32 0, i32 [[IDX]]

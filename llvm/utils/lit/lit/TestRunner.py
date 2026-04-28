@@ -475,8 +475,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                     stderr=stderr,
                     env=cmd_shenv.env,
                     close_fds=kUseCloseFDs,
-                    universal_newlines=True,
-                    errors="replace",
+                    text=False,
                 )
             )
             if old_umask != -1:
@@ -521,11 +520,11 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         if procs[i].stdout is not None:
             out = procs[i].stdout.read()
         else:
-            out = ""
+            out = b""
         if procs[i].stderr is not None:
             err = procs[i].stderr.read()
         else:
-            err = ""
+            err = b""
         procData[i] = (out, err)
 
     # Read stderr out of the temp files.
@@ -568,7 +567,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         output_files = []
         if res != 0:
             for (name, mode, f, path) in sorted(opened_files):
-                if path is not None and mode in ("w", "a"):
+                if path is not None and mode in ("wb", "ab"):
                     try:
                         with open(path, "rb") as f:
                             data = f.read()

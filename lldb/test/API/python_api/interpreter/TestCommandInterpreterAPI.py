@@ -162,7 +162,7 @@ class CommandInterpreterAPICase(TestBase):
                 "command": "an-unknown-command",
                 # Unresolved commands don't have "commandName"/"commandArguments"
                 "output": "",
-                "error": "error: 'an-unknown-command' is not a valid command.\n",
+                "error": "error: 'an-unknown-command' is not a valid command\n",
             },
         )
 

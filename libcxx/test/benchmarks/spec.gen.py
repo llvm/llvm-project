@@ -76,7 +76,7 @@ for benchmark in spec_benchmarks:
     print(f'RUN: %{{spec_dir}}/bin/runcpu --config %{{temp}}/spec-config.cfg --action build --output_root %{{temp}} {benchmark}')
 
     # Run the benchmark
-    print(f'RUN: /usr/bin/time -l -o %{{temp}}/time.txt %{{spec_dir}}/bin/runcpu --config %{{temp}}/spec-config.cfg --action run --size train --output_root %{{temp}} {benchmark}')
+    print(f'RUN: /usr/bin/time -l -o %{{temp}}/time.txt %{{spec_dir}}/bin/runcpu --config %{{temp}}/spec-config.cfg --action run --size ref --output_root %{{temp}} {benchmark}')
 
     # Clean up, since there can be lots of content created
     print(f'RUN: rm -rf %{{temp}}/benchspec')
@@ -84,10 +84,10 @@ for benchmark in spec_benchmarks:
     # The `runcpu` command above doesn't fail even if the benchmark fails to run. To determine failure, parse the CSV
     # results and ensure there are no compilation errors or runtime errors in the status row. Also print the logs and
     # fail if there are no CSV files at all, which implies a SPEC error.
-    print(f'RUN: %{{libcxx-dir}}/utils/parse-spec-results --extract "Base Status" --keep-failed %{{temp}}/result/*.train.csv > %{{temp}}/status || ! cat %{{temp}}/result/*.log')
+    print(f'RUN: %{{libcxx-dir}}/utils/parse-spec-results --extract "Base Status" --keep-failed %{{temp}}/result/*.refrate.csv > %{{temp}}/status || ! cat %{{temp}}/result/*.log')
     print(f'RUN: ! grep -E "CE|RE" %{{temp}}/status || ! cat %{{temp}}/result/*.log')
 
     # If there were no errors, parse the SPEC results and the `time` output into LNT-compatible format and print them.
-    print(f'RUN: %{{libcxx-dir}}/utils/parse-spec-results %{{temp}}/result/*.train.csv --output-format=lnt > %{{temp}}/results.lnt')
+    print(f'RUN: %{{libcxx-dir}}/utils/parse-spec-results %{{temp}}/result/*.refrate.csv --output-format=lnt > %{{temp}}/results.lnt')
     print(f'RUN: %{{libcxx-dir}}/utils/parse-time-output %{{temp}}/time.txt --benchmark {benchmark.replace(".", "_")} --extract instructions max_rss cycles peak_memory >> %{{temp}}/results.lnt')
     print(f'RUN: cat %{{temp}}/results.lnt')

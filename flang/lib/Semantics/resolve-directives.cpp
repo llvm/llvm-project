@@ -588,7 +588,7 @@ public:
   bool Pre(const parser::OmpDeclareSimdDirective &x) {
     PushContext(x.source, llvm::omp::Directive::OMPD_declare_simd);
     for (const parser::OmpArgument &arg : x.v.Arguments().v) {
-      if (auto *object{omp::GetArgumentObject(arg)}) {
+      if (auto *object{parser::omp::GetArgumentObject(arg)}) {
         ResolveOmpObject(*object, Symbol::Flag::OmpDeclareSimd);
       }
     }
@@ -2181,7 +2181,7 @@ bool OmpAttributeVisitor::Pre(const parser::OmpDeclareTargetDirective &x) {
   PushContext(x.source, llvm::omp::Directive::OMPD_declare_target);
 
   for (const parser::OmpArgument &arg : x.v.Arguments().v) {
-    if (auto *object{omp::GetArgumentObject(arg)}) {
+    if (auto *object{parser::omp::GetArgumentObject(arg)}) {
       ResolveOmpObject(*object, Symbol::Flag::OmpDeclareTarget);
     }
   }
@@ -2212,7 +2212,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPThreadprivate &x) {
   PushContext(dirName.source, dirName.v);
 
   for (const parser::OmpArgument &arg : x.v.Arguments().v) {
-    if (auto *object{omp::GetArgumentObject(arg)}) {
+    if (auto *object{parser::omp::GetArgumentObject(arg)}) {
       ResolveOmpObject(*object, Symbol::Flag::OmpThreadprivate);
     }
   }
@@ -2230,7 +2230,7 @@ bool OmpAttributeVisitor::Pre(const parser::OmpAllocateDirective &x) {
   parser::omp::OmpAllocateInfo info{parser::omp::SplitOmpAllocate(x)};
   for (const parser::OmpAllocateDirective *ad : info.dirs) {
     for (const parser::OmpArgument &arg : ad->BeginDir().Arguments().v) {
-      if (auto *object{omp::GetArgumentObject(arg)}) {
+      if (auto *object{parser::omp::GetArgumentObject(arg)}) {
         ResolveOmpObject(*object, ompFlag);
       }
     }

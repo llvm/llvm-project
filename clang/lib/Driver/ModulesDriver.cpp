@@ -21,6 +21,7 @@
 #include "clang/Driver/Job.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
+#include "clang/Driver/Types.h"
 #include "clang/Frontend/StandaloneDiagnostic.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/DepthFirstIterator.h"
@@ -46,6 +47,14 @@ using namespace llvm::opt;
 using namespace clang;
 using namespace driver;
 using namespace modules;
+
+void driver::modules::diagnoseModulesDriverArgs(llvm::opt::DerivedArgList &DAL,
+                                                DiagnosticsEngine &Diags) {
+  if (!DAL.hasFlag(options::OPT_fmodules_reduced_bmi,
+                   options::OPT_fno_modules_reduced_bmi, true)) {
+    Diags.Report(diag::err_drv_modules_driver_requires_reduced_bmi);
+  }
+}
 
 namespace clang::driver::modules {
 static bool fromJSON(const llvm::json::Value &Params,
@@ -1252,6 +1261,16 @@ static SmallVector<JobNode *> createNodesForUnusedStdlibModuleJobs(
   return StdlibModuleNodesToPrune;
 }
 
+// Returns the derived argument list for the tool chain responsible
+// for creating \p Job.
+static const DerivedArgList &getToolChainArgs(Compilation &C,
+                                              const Command &Job) {
+  const auto &TC = Job.getCreator().getToolChain();
+  const auto &SourceAction = Job.getSource();
+  return C.getArgsForToolChain(&TC, SourceAction.getOffloadingArch(),
+                               SourceAction.getOffloadingDeviceKind());
+}
+
 /// Creates a job for the Clang module described by \p MD.
 static std::unique_ptr<Command>
 createClangModulePrecompileJob(Compilation &C, const Command &ImportingJob,
@@ -1263,9 +1282,7 @@ createClangModulePrecompileJob(Compilation &C, const Command &ImportingJob,
   Action *PA = C.MakeAction<PrecompileJobAction>(IA, types::ID::TY_ModuleFile);
   PA->propagateOffloadInfo(&ImportingJob.getSource());
 
-  const auto &TC = ImportingJob.getCreator().getToolChain();
-  const auto &TCArgs = C.getArgsForToolChain(&TC, PA->getOffloadingArch(),
-                                             PA->getOffloadingDeviceKind());
+  const auto &TCArgs = getToolChainArgs(C, ImportingJob);
 
   const auto &BuildArgs = MD.getBuildArguments();
   ArgStringList JobArgs;
@@ -1319,12 +1336,7 @@ installScanCommandLines(Compilation &C,
     ArgStringList JobArgs;
     JobArgs.reserve(BuildArgs.size());
 
-    const auto &SourceAction = Job.getSource();
-    const auto &TC = Job.getCreator().getToolChain();
-    auto &TCArgs =
-        C.getArgsForToolChain(&TC, SourceAction.getOffloadingArch(),
-                              SourceAction.getOffloadingDeviceKind());
-
+    auto &TCArgs = getToolChainArgs(C, Job);
     for (const auto &Arg : BuildArgs)
       JobArgs.push_back(TCArgs.MakeArgString(Arg));
 
@@ -1527,6 +1539,73 @@ static void createAndConnectRoot(CompilationGraph &Graph) {
   }
 }
 
+/// Creates a temporary output path for \p ModuleName.
+static std::string createModuleOutputPath(const Compilation &C,
+                                          StringRef ModuleName) {
+  // Sanitize the ':' included in parition names. It is illegal for filenames on
+  // Windows.
+  SmallString<32> SanitizedModuleName(ModuleName);
+  llvm::replace(SanitizedModuleName, ':', '-');
+  auto ModuleOutputPath = C.getDriver().GetTemporaryPath(
+      SanitizedModuleName, types::getTypeTempSuffix(types::TY_ModuleFile));
+  return ModuleOutputPath;
+}
+
+/// Adds the '-fmodule-output=' argument for the module produced by \p Node.
+static void configureNamedModuleOutputArg(Compilation &C,
+                                          NamedModuleJobNode &Node,
+                                          StringRef ModuleOutputPath) {
+  auto &Job = *Node.Job;
+  const auto &TCArgs = getToolChainArgs(C, Job);
+  auto JobArgs = Job.getArguments();
+  JobArgs.push_back(
+      TCArgs.MakeArgString("-fmodule-output=" + ModuleOutputPath));
+  Job.replaceArguments(std::move(JobArgs));
+}
+
+/// Propagates the '-fmodule-file=' mapping for the named module described by
+/// \p Node to each dependent job.
+static void propagateModuleFileMappingArg(Compilation &C,
+                                          NamedModuleJobNode &Node,
+                                          StringRef ModuleOutputPath) {
+  const StringRef ModuleName = Node.InputDeps.ModuleName;
+
+  auto DependentNodes = llvm::drop_begin(llvm::depth_first<CGNode *>(&Node));
+  auto DependentScannedNodes = llvm::map_range(
+      llvm::make_filter_range(DependentNodes, llvm::IsaPred<ScannedJobNode>),
+      llvm::CastTo<ScannedJobNode>);
+
+  for (ScannedJobNode *DependentNode : DependentScannedNodes) {
+    auto &DependentJob = *DependentNode->Job;
+    const auto &TCArgs = getToolChainArgs(C, DependentJob);
+    auto JobArgs = DependentJob.getArguments();
+    JobArgs.push_back(TCArgs.MakeArgString("-fmodule-file=" + ModuleName + "=" +
+                                           ModuleOutputPath));
+    DependentJob.replaceArguments(std::move(JobArgs));
+  }
+}
+
+/// Finalizes command lines for C++20 named module dependencies.
+///
+/// The command lines produced by dependency scanning are only adjusted to
+/// handle discovered Clang modules. For C++20 named modules, we update the
+/// command-lines here.
+static void fixupNamedModuleCommandLines(Compilation &C,
+                                         CompilationGraph &Graph) {
+  const auto NamedModuleNodes = llvm::map_range(
+      llvm::make_filter_range(Graph, llvm::IsaPred<NamedModuleJobNode>),
+      llvm::CastTo<NamedModuleJobNode>);
+
+  for (NamedModuleJobNode *Node : NamedModuleNodes) {
+    const StringRef ModuleName = Node->InputDeps.ModuleName;
+    const auto ModuleOutputPath = createModuleOutputPath(C, ModuleName);
+    C.addTempFile(C.getArgs().MakeArgString(ModuleOutputPath));
+
+    configureNamedModuleOutputArg(C, *Node, ModuleOutputPath);
+    propagateModuleFileMappingArg(C, *Node, ModuleOutputPath);
+  }
+}
+
 /// Moves jobs from \p Graph into \p C in the graph's topological order.
 static void feedJobsBackIntoCompilation(Compilation &C,
                                         CompilationGraph &&Graph) {
@@ -1600,7 +1679,6 @@ void driver::modules::runModulesDriver(
   if (!Diags.isLastDiagnosticIgnored())
     llvm::WriteGraph<const CompilationGraph *>(llvm::errs(), &Graph);
 
-  // TODO: Fix-up command-lines for named module imports.
-
+  fixupNamedModuleCommandLines(C, Graph);
   feedJobsBackIntoCompilation(C, std::move(Graph));
 }

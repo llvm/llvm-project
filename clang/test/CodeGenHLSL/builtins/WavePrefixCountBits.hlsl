@@ -16,7 +16,7 @@ int test_int(bool expr) {
   // CHECK: %[[STOREDVAL:.*]] = zext i1 %[[EXPR]] to i32
   // CHECK: store i32 %[[STOREDVAL]], ptr %[[EXPRADDR]], align 4
   // CHECK: %[[LOADEDVAL:.*]] = load i32, ptr %[[EXPRADDR]], align 4
-  // CHECK: %[[TRUNCLOADEDVAL:.*]] = trunc i32 %[[LOADEDVAL]] to i1
+  // CHECK: %[[TRUNCLOADEDVAL:.*]] = icmp ne i32 %[[LOADEDVAL]], 0
 
   // CHECK-SPIRV:  %[[RET:.*]] = call spir_func [[TY:.*]] @llvm.spv.subgroup.prefix.bit.count(i1 %[[TRUNCLOADEDVAL]])
   // CHECK-DXIL:  %[[RET:.*]] = call [[TY:.*]] @llvm.dx.wave.prefix.bit.count(i1 %[[TRUNCLOADEDVAL]])

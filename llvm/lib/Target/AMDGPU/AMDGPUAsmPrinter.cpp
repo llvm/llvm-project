@@ -581,7 +581,7 @@ SmallString<128> AMDGPUAsmPrinter::getMCExprStr(const MCExpr *Value) {
   auto &Streamer = getTargetStreamer()->getStreamer();
   auto &Context = Streamer.getContext();
   const MCExpr *New = foldAMDGPUMCExpr(Value, Context);
-  printAMDGPUMCExpr(New, OSS, MAI);
+  printAMDGPUMCExpr(New, OSS, &MAI);
   return Str;
 }
 

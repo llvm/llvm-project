@@ -1461,6 +1461,10 @@ static SVEIntrinsicInfo constructSVEIntrinsicInfo(IntrinsicInst &II) {
   case Intrinsic::aarch64_sve_fcvtzu_i32f64:
   case Intrinsic::aarch64_sve_fcvtzu_i64f16:
   case Intrinsic::aarch64_sve_fcvtzu_i64f32:
+  case Intrinsic::aarch64_sve_revb:
+  case Intrinsic::aarch64_sve_revh:
+  case Intrinsic::aarch64_sve_revw:
+  case Intrinsic::aarch64_sve_revd:
   case Intrinsic::aarch64_sve_scvtf:
   case Intrinsic::aarch64_sve_scvtf_f16i32:
   case Intrinsic::aarch64_sve_scvtf_f16i64:

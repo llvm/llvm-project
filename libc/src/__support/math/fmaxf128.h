@@ -19,7 +19,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE float128 fmaxf128(float128 x, float128 y) {
+LIBC_INLINE constexpr float128 fmaxf128(float128 x, float128 y) {
   return fputil::fmax(x, y);
 }
 

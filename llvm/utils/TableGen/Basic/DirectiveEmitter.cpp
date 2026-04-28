@@ -34,6 +34,9 @@ namespace {
 enum class Frontend { LLVM, Flang, Clang };
 } // namespace
 
+static void emitDirectivesConstexprImpl(const DirectiveLanguage &DirLang,
+                                        raw_ostream &OS);
+
 static StringRef getFESpelling(Frontend FE) {
   switch (FE) {
   case Frontend::LLVM:
@@ -311,7 +314,11 @@ static void emitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
     std::string EnumHelperFuncs;
     generateClauseEnumVal(DirLang.getClauses(), OS, DirLang, EnumHelperFuncs);
 
+    // Emit constexpr functions.
+    emitDirectivesConstexprImpl(DirLang, OS);
+
     // Generic function signatures
+    OS << "\n";
     OS << "// Enumeration helper functions\n";
 
     OS << "LLVM_ABI std::pair<Directive, directive::VersionRange> get" << Lang
@@ -346,9 +353,6 @@ static void emitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
     OS << "\n";
     OS << "constexpr std::size_t getMaxLeafCount() { return "
        << getMaxLeafCount(DirLang) << "; }\n";
-    OS << "LLVM_ABI Association getDirectiveAssociation(Directive D);\n";
-    OS << "LLVM_ABI Category getDirectiveCategory(Directive D);\n";
-    OS << "LLVM_ABI SourceLanguage getDirectiveLanguages(Directive D);\n";
     OS << EnumHelperFuncs;
   } // close DirLangNS
 
@@ -834,13 +838,9 @@ static void generateGetDirectiveAssociation(const DirectiveLanguage &DirLang,
   for (const Record *R : DirLang.getDirectives())
     CompAssocImpl(R, CompAssocImpl); // Updates AsMap.
 
-  OS << '\n';
-
   StringRef Prefix = DirLang.getDirectivePrefix();
-  std::string Qual = getQualifier(DirLang);
 
-  OS << Qual << "Association " << Qual << "getDirectiveAssociation(" << Qual
-     << "Directive Dir) {\n";
+  OS << "constexpr Association getDirectiveAssociation(Directive Dir) {\n";
   OS << "  switch (Dir) {\n";
   for (const Record *R : DirLang.getDirectives()) {
     if (auto F = AsMap.find(R); F != AsMap.end()) {
@@ -855,11 +855,7 @@ static void generateGetDirectiveAssociation(const DirectiveLanguage &DirLang,
 
 static void generateGetDirectiveCategory(const DirectiveLanguage &DirLang,
                                          raw_ostream &OS) {
-  std::string Qual = getQualifier(DirLang);
-
-  OS << '\n';
-  OS << Qual << "Category " << Qual << "getDirectiveCategory(" << Qual
-     << "Directive Dir) {\n";
+  OS << "constexpr Category getDirectiveCategory(Directive Dir) {\n";
   OS << "  switch (Dir) {\n";
 
   StringRef Prefix = DirLang.getDirectivePrefix();
@@ -877,11 +873,7 @@ static void generateGetDirectiveCategory(const DirectiveLanguage &DirLang,
 
 static void generateGetDirectiveLanguages(const DirectiveLanguage &DirLang,
                                           raw_ostream &OS) {
-  std::string Qual = getQualifier(DirLang);
-
-  OS << '\n';
-  OS << Qual << "SourceLanguage " << Qual << "getDirectiveLanguages(" << Qual
-     << "Directive D) {\n";
+  OS << "constexpr SourceLanguage getDirectiveLanguages(Directive D) {\n";
   OS << "  switch (D) {\n";
 
   StringRef Prefix = DirLang.getDirectivePrefix();
@@ -1310,6 +1302,17 @@ static void generateClauseClassMacro(const DirectiveLanguage &DirLang,
   OS << "#undef CLAUSE\n";
 }
 
+static void emitDirectivesConstexprImpl(const DirectiveLanguage &DirLang,
+                                        raw_ostream &OS) {
+  OS << "// Constexpr functions.\n";
+  OS << "\n";
+  generateGetDirectiveAssociation(DirLang, OS);
+  OS << "\n";
+  generateGetDirectiveCategory(DirLang, OS);
+  OS << "\n";
+  generateGetDirectiveLanguages(DirLang, OS);
+}
+
 // Generate the implemenation for the enumeration in the directive
 // language. This code can be included in library.
 void emitDirectivesBasicImpl(const DirectiveLanguage &DirLang,
@@ -1343,15 +1346,6 @@ void emitDirectivesBasicImpl(const DirectiveLanguage &DirLang,
 
   // isAllowedClauseForDirective(Directive D, Clause C, unsigned Version)
   generateIsAllowedClause(DirLang, OS);
-
-  // getDirectiveAssociation(Directive D)
-  generateGetDirectiveAssociation(DirLang, OS);
-
-  // getDirectiveCategory(Directive D)
-  generateGetDirectiveCategory(DirLang, OS);
-
-  // getDirectiveLanguages(Directive D)
-  generateGetDirectiveLanguages(DirLang, OS);
 
   // Leaf table for getLeafConstructs, etc.
   emitLeafTable(DirLang, OS, "LeafConstructTable");

@@ -3,6 +3,7 @@
 
 ; CHECK: OpMemoryModel Logical GLSL450
 
+;CHECK-DAG: %[[#int_8:]] = OpTypeInt 8
 ;CHECK-DAG: %[[#int_16:]] = OpTypeInt 16
 ;CHECK-DAG: %[[#int_32:]] = OpTypeInt 32
 ;CHECK-DAG: %[[#int_64:]] = OpTypeInt 64
@@ -27,6 +28,17 @@ entry:
 ; CHECK-NOT: OpShiftRightLogical 
   %elt.bitreverse = call i32 @llvm.bitreverse.i32(i32 %a)
   ret i32 %elt.bitreverse
+}
+
+define noundef i8 @reversebits_i8(i8 noundef %a) {
+entry:
+; CHECK: %[[#param:]] = OpFunctionParameter %[[#int_8]]
+; CHECK: %[[#conversion:]] = OpUConvert %[[#int_32]] %[[#param]]
+; CHECK-NEXT: %[[#bitrev:]] = OpBitReverse %[[#int_32]] %[[#conversion]]
+; CHECK-NEXT: %[[#shift:]] = OpShiftRightLogical %[[#int_32]] %[[#bitrev]] %[[#const_16]]
+; CHECK-NEXT: %[[#]] = OpUConvert %[[#int_8]] %[[#shift]]
+  %elt.bitreverse = call i8 @llvm.bitreverse.i8(i8 %a)
+  ret i8 %elt.bitreverse
 }
 
 define noundef i16 @reversebits_i16(i16 noundef %a) {

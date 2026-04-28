@@ -1195,7 +1195,7 @@ bool SystemZAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     SystemZMCInstLower Lower(MF->getContext(), *this);
     MCOp = Lower.lowerOperand(MO);
   }
-  printOperand(MCOp, MAI, OS);
+  printOperand(MCOp, &MAI, OS);
   return false;
 }
 
@@ -1214,11 +1214,11 @@ bool SystemZAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
       OS << MI->getOperand(OpNo + 1).getImm();
       return false;
     case 'R':
-      ::printReg(MI->getOperand(OpNo).getReg(), MAI, OS);
+      ::printReg(MI->getOperand(OpNo).getReg(), &MAI, OS);
       return false;
     }
   }
-  printAddress(MAI, MI->getOperand(OpNo).getReg(),
+  printAddress(&MAI, MI->getOperand(OpNo).getReg(),
                MCOperand::createImm(MI->getOperand(OpNo + 1).getImm()),
                MI->getOperand(OpNo + 2).getReg(), OS);
   return false;

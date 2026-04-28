@@ -2935,6 +2935,34 @@ LogicalResult SectionsOp::verifyRegions() {
 }
 
 //===----------------------------------------------------------------------===//
+// ScopeOp
+//===----------------------------------------------------------------------===//
+
+void ScopeOp::build(OpBuilder &builder, OperationState &state,
+                    const ScopeOperands &clauses) {
+  MLIRContext *ctx = builder.getContext();
+  ScopeOp::build(builder, state, clauses.allocateVars, clauses.allocatorVars,
+                 clauses.nowait, clauses.privateVars,
+                 makeArrayAttr(ctx, clauses.privateSyms),
+                 clauses.privateNeedsBarrier, clauses.reductionMod,
+                 clauses.reductionVars,
+                 makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
+                 makeArrayAttr(ctx, clauses.reductionSyms));
+}
+
+LogicalResult ScopeOp::verify() {
+  if (getAllocateVars().size() != getAllocatorVars().size())
+    return emitError(
+        "expected equal sizes for allocate and allocator variables");
+
+  if (failed(verifyPrivateVarList(*this)))
+    return failure();
+
+  return verifyReductionVarList(*this, getReductionSyms(), getReductionVars(),
+                                getReductionByref());
+}
+
+//===----------------------------------------------------------------------===//
 // SingleOp
 //===----------------------------------------------------------------------===//
 

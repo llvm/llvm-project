@@ -214,7 +214,7 @@ public:
     if constexpr (!std::is_integral_v<T>) {
       OS << Name << " = ";
       const MCExpr *Value = C.*ptr;
-      Helper(Value, OS, Ctx.getAsmInfo());
+      Helper(Value, OS, &Ctx.getAsmInfo());
     } else {
       OS << Name << " = " << (int)(C.*ptr);
     }
@@ -253,7 +253,7 @@ getPrinterTable(AMDGPUMCKernelCodeT::PrintHelper Helper) {
       Value =                                                                  \
           maskShiftGet(C.compute_pgm_resource2_registers, Mask, Shift, Ctx);   \
     }                                                                          \
-    Helper(Value, OS, Ctx.getAsmInfo());                                       \
+    Helper(Value, OS, &Ctx.getAsmInfo());                                      \
   }
 #define RECORD(name, altName, print, parse) print
 #include "Utils/AMDKernelCodeTInfo.h"
@@ -445,7 +445,7 @@ void AMDGPUMCKernelCodeT::EmitKernelCodeT(raw_ostream &OS, MCContext &Ctx,
     if (hasMCExprVersionTable()[i]) {
       OS << get_amd_kernel_code_t_FldNames()[i + 1] << " = ";
       const MCExpr *Value = getMCExprForIndex(i);
-      Helper(Value, OS, Ctx.getAsmInfo());
+      Helper(Value, OS, &Ctx.getAsmInfo());
     } else {
       printAmdKernelCodeField(*this, i, OS, Ctx, Helper);
     }

@@ -135,6 +135,32 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-NEXT:  constexpr auto TDLCV_valb = AKind::TDLCV_valb;
 // CHECK-NEXT:  constexpr auto TDLCV_valc = AKind::TDLCV_valc;
 // CHECK-EMPTY:
+// CHECK-NEXT:  // Constexpr functions.
+// CHECK-EMPTY:
+// CHECK-NEXT:  constexpr Association getDirectiveAssociation(Directive Dir) {
+// CHECK-NEXT:    switch (Dir) {
+// CHECK-NEXT:    case TDLD_dira:
+// CHECK-NEXT:      return Association::None;
+// CHECK-NEXT:    } // switch (Dir)
+// CHECK-NEXT:    llvm_unreachable("Unexpected directive");
+// CHECK-NEXT:  }
+// CHECK-EMPTY:
+// CHECK-NEXT:  constexpr Category getDirectiveCategory(Directive Dir) {
+// CHECK-NEXT:    switch (Dir) {
+// CHECK-NEXT:    case TDLD_dira:
+// CHECK-NEXT:      return Category::Executable;
+// CHECK-NEXT:    } // switch (Dir)
+// CHECK-NEXT:    llvm_unreachable("Unexpected directive");
+// CHECK-NEXT:  }
+// CHECK-EMPTY:
+// CHECK-NEXT:  constexpr SourceLanguage getDirectiveLanguages(Directive D) {
+// CHECK-NEXT:    switch (D) {
+// CHECK-NEXT:    case TDLD_dira:
+// CHECK-NEXT:      return SourceLanguage::C | SourceLanguage::Fortran;
+// CHECK-NEXT:    } // switch(D)
+// CHECK-NEXT:    llvm_unreachable("Unexpected directive");
+// CHECK-NEXT:  }
+// CHECK-EMPTY:
 // CHECK-NEXT:  // Enumeration helper functions
 // CHECK-NEXT:  LLVM_ABI std::pair<Directive, directive::VersionRange> getTdlDirectiveKindAndVersions(StringRef Str);
 // CHECK-NEXT:  inline Directive getTdlDirectiveKind(StringRef Str) {
@@ -155,9 +181,6 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-NEXT:  LLVM_ABI bool isAllowedClauseForDirective(Directive D, Clause C, unsigned Version);
 // CHECK-EMPTY:
 // CHECK-NEXT:  constexpr std::size_t getMaxLeafCount() { return 0; }
-// CHECK-NEXT:  LLVM_ABI Association getDirectiveAssociation(Directive D);
-// CHECK-NEXT:  LLVM_ABI Category getDirectiveCategory(Directive D);
-// CHECK-NEXT:  LLVM_ABI SourceLanguage getDirectiveLanguages(Directive D);
 // CHECK-NEXT:  LLVM_ABI AKind getAKind(StringRef Str);
 // CHECK-NEXT:  LLVM_ABI StringRef getTdlAKindName(AKind x);
 // CHECK-EMPTY:
@@ -429,30 +452,6 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // IMPL-NEXT:        break;
 // IMPL-NEXT:    }
 // IMPL-NEXT:    llvm_unreachable("Invalid Tdl Directive kind");
-// IMPL-NEXT:  }
-// IMPL-EMPTY:
-// IMPL-NEXT:  llvm::tdl::Association llvm::tdl::getDirectiveAssociation(llvm::tdl::Directive Dir) {
-// IMPL-NEXT:    switch (Dir) {
-// IMPL-NEXT:    case TDLD_dira:
-// IMPL-NEXT:      return Association::None;
-// IMPL-NEXT:    } // switch (Dir)
-// IMPL-NEXT:    llvm_unreachable("Unexpected directive");
-// IMPL-NEXT:  }
-// IMPL-EMPTY:
-// IMPL-NEXT:  llvm::tdl::Category llvm::tdl::getDirectiveCategory(llvm::tdl::Directive Dir) {
-// IMPL-NEXT:    switch (Dir) {
-// IMPL-NEXT:    case TDLD_dira:
-// IMPL-NEXT:      return Category::Executable;
-// IMPL-NEXT:    } // switch (Dir)
-// IMPL-NEXT:    llvm_unreachable("Unexpected directive");
-// IMPL-NEXT:  }
-// IMPL-EMPTY:
-// IMPL-NEXT:  llvm::tdl::SourceLanguage llvm::tdl::getDirectiveLanguages(llvm::tdl::Directive D) {
-// IMPL-NEXT:    switch (D) {
-// IMPL-NEXT:    case TDLD_dira:
-// IMPL-NEXT:      return SourceLanguage::C | SourceLanguage::Fortran;
-// IMPL-NEXT:    } // switch(D)
-// IMPL-NEXT:    llvm_unreachable("Unexpected directive");
 // IMPL-NEXT:  }
 // IMPL-EMPTY:
 // IMPL-NEXT:  static_assert(sizeof(llvm::tdl::Directive) == sizeof(int));

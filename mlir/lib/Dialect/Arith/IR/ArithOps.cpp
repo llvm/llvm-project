@@ -611,10 +611,8 @@ arith::MulSIExtendedOp::fold(FoldAdaptor adaptor,
           adaptor.getOperands(),
           [](const APInt &a, const APInt &b) { return a * b; })) {
     // Invoke the constant fold helper again to calculate the 'high' result.
-    Attribute highAttr = constFoldBinaryOp<IntegerAttr>(
-        adaptor.getOperands(), [](const APInt &a, const APInt &b) {
-          return llvm::APIntOps::mulhs(a, b);
-        });
+    Attribute highAttr = constFoldBinaryOp<IntegerAttr>(adaptor.getOperands(),
+                                                        llvm::APIntOps::mulhs);
     assert(highAttr && "Unexpected constant-folding failure");
 
     results.push_back(lowAttr);
@@ -666,10 +664,8 @@ arith::MulUIExtendedOp::fold(FoldAdaptor adaptor,
           adaptor.getOperands(),
           [](const APInt &a, const APInt &b) { return a * b; })) {
     // Invoke the constant fold helper again to calculate the 'high' result.
-    Attribute highAttr = constFoldBinaryOp<IntegerAttr>(
-        adaptor.getOperands(), [](const APInt &a, const APInt &b) {
-          return llvm::APIntOps::mulhu(a, b);
-        });
+    Attribute highAttr = constFoldBinaryOp<IntegerAttr>(adaptor.getOperands(),
+                                                        llvm::APIntOps::mulhu);
     assert(highAttr && "Unexpected constant-folding failure");
 
     results.push_back(lowAttr);
@@ -1180,9 +1176,7 @@ OpFoldResult arith::MaximumFOp::fold(FoldAdaptor adaptor) {
   if (matchPattern(adaptor.getRhs(), m_NegInfFloat()))
     return getLhs();
 
-  return constFoldBinaryOp<FloatAttr>(
-      adaptor.getOperands(),
-      [](const APFloat &a, const APFloat &b) { return llvm::maximum(a, b); });
+  return constFoldBinaryOp<FloatAttr>(adaptor.getOperands(), llvm::maximum);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1221,9 +1215,7 @@ OpFoldResult MaxSIOp::fold(FoldAdaptor adaptor) {
   }
 
   return constFoldBinaryOp<IntegerAttr>(adaptor.getOperands(),
-                                        [](const APInt &a, const APInt &b) {
-                                          return llvm::APIntOps::smax(a, b);
-                                        });
+                                        llvm::APIntOps::smax);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1246,9 +1238,7 @@ OpFoldResult MaxUIOp::fold(FoldAdaptor adaptor) {
   }
 
   return constFoldBinaryOp<IntegerAttr>(adaptor.getOperands(),
-                                        [](const APInt &a, const APInt &b) {
-                                          return llvm::APIntOps::umax(a, b);
-                                        });
+                                        llvm::APIntOps::umax);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1264,9 +1254,7 @@ OpFoldResult arith::MinimumFOp::fold(FoldAdaptor adaptor) {
   if (matchPattern(adaptor.getRhs(), m_PosInfFloat()))
     return getLhs();
 
-  return constFoldBinaryOp<FloatAttr>(
-      adaptor.getOperands(),
-      [](const APFloat &a, const APFloat &b) { return llvm::minimum(a, b); });
+  return constFoldBinaryOp<FloatAttr>(adaptor.getOperands(), llvm::minimum);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1282,9 +1270,7 @@ OpFoldResult arith::MinNumFOp::fold(FoldAdaptor adaptor) {
   if (matchPattern(adaptor.getRhs(), m_NaNFloat()))
     return getLhs();
 
-  return constFoldBinaryOp<FloatAttr>(
-      adaptor.getOperands(),
-      [](const APFloat &a, const APFloat &b) { return llvm::minnum(a, b); });
+  return constFoldBinaryOp<FloatAttr>(adaptor.getOperands(), llvm::minnum);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1307,9 +1293,7 @@ OpFoldResult MinSIOp::fold(FoldAdaptor adaptor) {
   }
 
   return constFoldBinaryOp<IntegerAttr>(adaptor.getOperands(),
-                                        [](const APInt &a, const APInt &b) {
-                                          return llvm::APIntOps::smin(a, b);
-                                        });
+                                        llvm::APIntOps::smin);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1332,9 +1316,7 @@ OpFoldResult MinUIOp::fold(FoldAdaptor adaptor) {
   }
 
   return constFoldBinaryOp<IntegerAttr>(adaptor.getOperands(),
-                                        [](const APInt &a, const APInt &b) {
-                                          return llvm::APIntOps::umin(a, b);
-                                        });
+                                        llvm::APIntOps::umin);
 }
 
 //===----------------------------------------------------------------------===//

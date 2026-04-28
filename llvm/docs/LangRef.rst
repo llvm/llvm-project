@@ -3927,7 +3927,8 @@ Given that definition, R\ :sub:`byte` is defined as follows:
 -  Otherwise, if R is atomic, and all the writes R\ :sub:`byte` may
    see are atomic, it chooses one of the values written. See the :ref:`Atomic
    Memory Ordering Constraints <ordering>` section for additional
-   constraints on how the choice is made.
+   constraints on how the choice is made. Targets may impose additional
+   requirements on R and the writes it may see based on their ``syncscope``.
 -  Otherwise R\ :sub:`byte` returns ``undef``.
 
 R returns the value composed of the series of bytes it read. This

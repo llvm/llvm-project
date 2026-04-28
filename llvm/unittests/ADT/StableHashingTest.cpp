@@ -15,18 +15,10 @@ using namespace llvm;
 namespace {
 
 TEST(StableHashingTest, Combine) {
-  if (sys::IsBigEndianHost) {
-    // FIXME: These must be the same as little endian.
-    EXPECT_EQ(stable_hash_combine(1, 2), 14160562377131761837ull);
-    EXPECT_EQ(stable_hash_combine(3, 4, -5), 13569741953061510203ull);
-    EXPECT_EQ(stable_hash_combine(6, -7, 8), 16774590225610094836ull);
-    EXPECT_EQ(stable_hash_combine(-1, 2, -3), 12566458790238354772ull);
-  } else {
-    EXPECT_EQ(stable_hash_combine(1, 2), 571542372673154031ull);
-    EXPECT_EQ(stable_hash_combine(3, 4, -5), 3517313901589336150ull);
-    EXPECT_EQ(stable_hash_combine(6, -7, 8), 10626452633692653625ull);
-    EXPECT_EQ(stable_hash_combine(-1, 2, -3), 6515876682951611945ull);
-  }
+  EXPECT_EQ(stable_hash_combine(1, 2), 571542372673154031ull);
+  EXPECT_EQ(stable_hash_combine(3, 4, -5), 3517313901589336150ull);
+  EXPECT_EQ(stable_hash_combine(6, -7, 8), 10626452633692653625ull);
+  EXPECT_EQ(stable_hash_combine(-1, 2, -3), 6515876682951611945ull);
 }
 
 TEST(StructuralHashTest, Name) {

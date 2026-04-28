@@ -6070,7 +6070,7 @@ bool MasmParser::parseMSInlineAsm(
         OS << "]";
       break;
     case AOK_Label:
-      OS << Ctx.getAsmInfo()->getPrivateLabelPrefix() << AR.Label;
+      OS << Ctx.getAsmInfo().getPrivateLabelPrefix() << AR.Label;
       break;
     case AOK_Input:
       OS << '$' << InputIdx++;
@@ -6100,7 +6100,7 @@ bool MasmParser::parseMSInlineAsm(
       // MS alignment directives are measured in bytes. If the native assembler
       // measures alignment in bytes, we can pass it straight through.
       OS << ".align";
-      if (getContext().getAsmInfo()->getAlignmentIsInBytes())
+      if (getContext().getAsmInfo().getAlignmentIsInBytes())
         break;
 
       // Alignment is in log2 form, so print that instead and skip the original

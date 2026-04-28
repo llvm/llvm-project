@@ -2013,24 +2013,6 @@ bool WebAssemblyCFGStackify::fixCallUnwindMismatches(MachineFunction &MF) {
   return true;
 }
 
-// Returns the single destination of try_table, if there is one. All try_table
-// we generate in this pass has a single destination, i.e., a single catch
-// clause.
-static MachineBasicBlock *getSingleUnwindDest(const MachineInstr *TryTable) {
-  if (TryTable->getOperand(1).getImm() != 1)
-    return nullptr;
-  switch (TryTable->getOperand(2).getImm()) {
-  case wasm::WASM_OPCODE_CATCH:
-  case wasm::WASM_OPCODE_CATCH_REF:
-    return TryTable->getOperand(4).getMBB();
-  case wasm::WASM_OPCODE_CATCH_ALL:
-  case wasm::WASM_OPCODE_CATCH_ALL_REF:
-    return TryTable->getOperand(3).getMBB();
-  default:
-    llvm_unreachable("try_table: Invalid catch clause\n");
-  }
-}
-
 bool WebAssemblyCFGStackify::fixCatchUnwindMismatches(MachineFunction &MF) {
   // This function is used for both the legacy EH and the standard (exnref) EH,
   // and the reason we have unwind mismatches is the same for the both of them,
@@ -2141,24 +2123,12 @@ bool WebAssemblyCFGStackify::fixCatchUnwindMismatches(MachineFunction &MF) {
 
   for (auto &MBB : reverse(MF)) {
     for (auto &MI : reverse(MBB)) {
-      if (MI.getOpcode() == WebAssembly::TRY)
+      if (WebAssembly::isTry(MI.getOpcode())) {
         EHPadStack.pop_back();
-      else if (MI.getOpcode() == WebAssembly::TRY_TABLE) {
-        // We want to exclude try_tables created in fixCallUnwindMismatches.
-        // Check if the try_table's unwind destination matches the EH pad stack
-        // top. If it is created in fixCallUnwindMismatches, it wouldn't.
-        if (getSingleUnwindDest(&MI) == EHPadStack.back())
-          EHPadStack.pop_back();
-      } else if (MI.getOpcode() == WebAssembly::DELEGATE)
+      } else if (MI.getOpcode() == WebAssembly::DELEGATE) {
         EHPadStack.push_back(&MBB);
-      else if (WebAssembly::isCatch(MI.getOpcode())) {
+      } else if (WebAssembly::isCatch(MI.getOpcode())) {
         auto *EHPad = &MBB;
-
-        // If the BB has a catch pseudo instruction but is not marked as an EH
-        // pad, it's a trampoline BB we created in fixCallUnwindMismatches. Skip
-        // it.
-        if (!EHPad->isEHPad())
-          continue;
 
         // catch_all always catches an exception, so we don't need to do
         // anything

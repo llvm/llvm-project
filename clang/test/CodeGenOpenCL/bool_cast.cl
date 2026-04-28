@@ -9,14 +9,14 @@ void kernel ker() {
   bool t = true;
   int4 vec4 = (int4)t;
 // CHECK: {{%.*}} = load i8, ptr %t, align 1
-// CHECK: {{%.*}} = trunc i8 {{%.*}} to i1
+// CHECK: {{%.*}} = icmp ne i8 {{%.*}}, 0
 // CHECK: {{%.*}} = sext i1 {{%.*}} to i32
 // CHECK: {{%.*}} = insertelement <4 x i32> poison, i32 {{%.*}}, i64 0
 // CHECK: {{%.*}} = shufflevector <4 x i32> {{%.*}}, <4 x i32> poison, <4 x i32> zeroinitializer
 // CHECK: store <4 x i32> {{%.*}}, ptr %vec4, align 16
   int i = (int)t;
 // CHECK: {{%.*}} = load i8, ptr %t, align 1
-// CHECK: {{%.*}} = trunc i8 {{%.*}} to i1
+// CHECK: {{%.*}} = icmp ne i8 {{%.*}}, 0
 // CHECK: {{%.*}} = zext i1 {{%.*}} to i32
 // CHECK: store i32 {{%.*}}, ptr %i, align 4
 

@@ -3711,6 +3711,16 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_bf16subl",
+    hdrs = ["src/__support/math/bf16subl.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_fputil_bfloat16",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_canonicalize",
     hdrs = ["src/__support/math/canonicalize.h"],
     deps = [
@@ -3933,6 +3943,321 @@ libc_support_library(
         ":__support_math_acosh_float_constants",
         ":__support_math_exp_constants",
         ":__support_number_pair",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_dsqrtf128",
+    hdrs = ["src/__support/math/dsqrtf128.h"],
+    deps = [
+        ":__support_fputil_sqrt",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fmaximum",
+    hdrs = ["src/__support/math/fmaximum.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fmaximumbf16",
+    hdrs = ["src/__support/math/fmaximumbf16.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_fputil_bfloat16",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fmaximumf",
+    hdrs = ["src/__support/math/fmaximumf.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fmaximumf128",
+    hdrs = ["src/__support/math/fmaximumf128.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fmaximumf16",
+    hdrs = ["src/__support/math/fmaximumf16.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fmaximuml",
+    hdrs = ["src/__support/math/fmaximuml.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fmaximum_num",
+    hdrs = ["src/__support/math/fmaximum_num.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fmaximum_numbf16",
+    hdrs = ["src/__support/math/fmaximum_numbf16.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_fputil_bfloat16",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fmaximum_numf",
+    hdrs = ["src/__support/math/fmaximum_numf.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fmaximum_numf128",
+    hdrs = ["src/__support/math/fmaximum_numf128.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fmaximum_numf16",
+    hdrs = ["src/__support/math/fmaximum_numf16.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fmaximum_numl",
+    hdrs = ["src/__support/math/fmaximum_numl.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fmin",
+    hdrs = ["src/__support/math/fmin.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fminbf16",
+    hdrs = ["src/__support/math/fminbf16.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_fputil_bfloat16",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fminf",
+    hdrs = ["src/__support/math/fminf.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fminf128",
+    hdrs = ["src/__support/math/fminf128.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fminf16",
+    hdrs = ["src/__support/math/fminf16.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fminimum",
+    hdrs = ["src/__support/math/fminimum.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fminimumbf16",
+    hdrs = ["src/__support/math/fminimumbf16.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_fputil_bfloat16",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fminimumf",
+    hdrs = ["src/__support/math/fminimumf.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fminimumf128",
+    hdrs = ["src/__support/math/fminimumf128.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fminimumf16",
+    hdrs = ["src/__support/math/fminimumf16.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fminimuml",
+    hdrs = ["src/__support/math/fminimuml.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fminimum_num",
+    hdrs = ["src/__support/math/fminimum_num.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fminimum_numbf16",
+    hdrs = ["src/__support/math/fminimum_numbf16.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_fputil_bfloat16",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fminimum_numf",
+    hdrs = ["src/__support/math/fminimum_numf.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fminimum_numf128",
+    hdrs = ["src/__support/math/fminimum_numf128.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fminimum_numf16",
+    hdrs = ["src/__support/math/fminimum_numf16.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fminimum_numl",
+    hdrs = ["src/__support/math/fminimum_numl.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fminl",
+    hdrs = ["src/__support/math/fminl.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_ilogbbf16",
+    hdrs = ["src/__support/math/ilogbbf16.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_llogbbf16",
+    hdrs = ["src/__support/math/llogbbf16.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
     ],
 )
 
@@ -6120,6 +6445,15 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_sqrtl",
+    hdrs = ["src/__support/math/sqrtl.h"],
+    deps = [
+        ":__support_fputil_sqrt",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_logf16",
     hdrs = ["src/__support/math/logf16.h"],
     deps = [
@@ -7083,6 +7417,11 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "bf16subl",
+    additional_deps = [":__support_math_bf16subl"],
+)
+
+libc_math_function(
     name = "bf16fma",
     additional_deps = [":__support_math_bf16fma"],
 )
@@ -7176,6 +7515,48 @@ libc_math_function(
     name = "canonicalizef16",
     additional_deps = [
         ":__support_math_canonicalizef16",
+    ],
+)
+
+libc_math_function(
+    name = "fmaximumbf16",
+    additional_deps = [
+        ":__support_math_fmaximumbf16",
+    ],
+)
+
+libc_math_function(
+    name = "fmaximum_numbf16",
+    additional_deps = [
+        ":__support_math_fmaximum_numbf16",
+    ],
+)
+
+libc_math_function(
+    name = "fminbf16",
+    additional_deps = [
+        ":__support_math_fminbf16",
+    ],
+)
+
+libc_math_function(
+    name = "fminimumbf16",
+    additional_deps = [
+        ":__support_math_fminimumbf16",
+    ],
+)
+
+libc_math_function(
+    name = "fminimum_numbf16",
+    additional_deps = [
+        ":__support_math_fminimum_numbf16",
+    ],
+)
+
+libc_math_function(
+    name = "ilogbbf16",
+    additional_deps = [
+        ":__support_math_ilogbbf16",
     ],
 )
 
@@ -7414,7 +7795,7 @@ libc_math_function(
 libc_math_function(
     name = "dsqrtf128",
     additional_deps = [
-        ":__support_fputil_sqrt",
+        ":__support_math_dsqrtf128",
     ],
 )
 
@@ -7971,18 +8352,39 @@ libc_math_function(
     ],
 )
 
-libc_math_function(name = "fmaximum")
+libc_math_function(
+    name = "fmaximum",
+    additional_deps = [
+        ":__support_math_fmaximum",
+    ],
+)
 
-libc_math_function(name = "fmaximumf")
+libc_math_function(
+    name = "fmaximumf",
+    additional_deps = [
+        ":__support_math_fmaximumf",
+    ],
+)
 
-libc_math_function(name = "fmaximuml")
+libc_math_function(
+    name = "fmaximuml",
+    additional_deps = [
+        ":__support_math_fmaximuml",
+    ],
+)
 
 libc_math_function(
     name = "fmaximumf128",
+    additional_deps = [
+        ":__support_math_fmaximumf128",
+    ],
 )
 
 libc_math_function(
     name = "fmaximumf16",
+    additional_deps = [
+        ":__support_math_fmaximumf16",
+    ],
 )
 
 libc_math_function(name = "fmaximum_mag")
@@ -8030,46 +8432,109 @@ libc_math_function(
     name = "fmaximum_mag_numf16",
 )
 
-libc_math_function(name = "fmaximum_num")
+libc_math_function(
+    name = "fmaximum_num",
+    additional_deps = [
+        ":__support_math_fmaximum_num",
+    ],
+)
 
-libc_math_function(name = "fmaximum_numf")
+libc_math_function(
+    name = "fmaximum_numf",
+    additional_deps = [
+        ":__support_math_fmaximum_numf",
+    ],
+)
 
-libc_math_function(name = "fmaximum_numl")
+libc_math_function(
+    name = "fmaximum_numl",
+    additional_deps = [
+        ":__support_math_fmaximum_numl",
+    ],
+)
 
 libc_math_function(
     name = "fmaximum_numf128",
+    additional_deps = [
+        ":__support_math_fmaximum_numf128",
+    ],
 )
 
 libc_math_function(
     name = "fmaximum_numf16",
+    additional_deps = [
+        ":__support_math_fmaximum_numf16",
+    ],
 )
 
-libc_math_function(name = "fmin")
+libc_math_function(
+    name = "fmin",
+    additional_deps = [
+        ":__support_math_fmin",
+    ],
+)
 
-libc_math_function(name = "fminf")
+libc_math_function(
+    name = "fminf",
+    additional_deps = [
+        ":__support_math_fminf",
+    ],
+)
 
-libc_math_function(name = "fminl")
+libc_math_function(
+    name = "fminl",
+    additional_deps = [
+        ":__support_math_fminl",
+    ],
+)
 
 libc_math_function(
     name = "fminf128",
+    additional_deps = [
+        ":__support_math_fminf128",
+    ],
 )
 
 libc_math_function(
     name = "fminf16",
+    additional_deps = [
+        ":__support_math_fminf16",
+    ],
 )
 
-libc_math_function(name = "fminimum")
+libc_math_function(
+    name = "fminimum",
+    additional_deps = [
+        ":__support_math_fminimum",
+    ],
+)
 
-libc_math_function(name = "fminimumf")
+libc_math_function(
+    name = "fminimumf",
+    additional_deps = [
+        ":__support_math_fminimumf",
+    ],
+)
 
-libc_math_function(name = "fminimuml")
+libc_math_function(
+    name = "fminimuml",
+    additional_deps = [
+        ":__support_math_fminimuml",
+    ],
+)
 
 libc_math_function(
     name = "fminimumf128",
+    additional_deps = [
+        ":__support_math_fminimumf128",
+    ],
 )
 
 libc_math_function(
     name = "fminimumf16",
+    additional_deps = [
+        ":__support_math_fminimumf16",
+    ],
 )
 
 libc_math_function(name = "fminimum_mag")
@@ -8100,18 +8565,39 @@ libc_math_function(
     name = "fminimum_mag_numf16",
 )
 
-libc_math_function(name = "fminimum_num")
+libc_math_function(
+    name = "fminimum_num",
+    additional_deps = [
+        ":__support_math_fminimum_num",
+    ],
+)
 
-libc_math_function(name = "fminimum_numf")
+libc_math_function(
+    name = "fminimum_numf",
+    additional_deps = [
+        ":__support_math_fminimum_numf",
+    ],
+)
 
-libc_math_function(name = "fminimum_numl")
+libc_math_function(
+    name = "fminimum_numl",
+    additional_deps = [
+        ":__support_math_fminimum_numl",
+    ],
+)
 
 libc_math_function(
     name = "fminimum_numf128",
+    additional_deps = [
+        ":__support_math_fminimum_numf128",
+    ],
 )
 
 libc_math_function(
     name = "fminimum_numf16",
+    additional_deps = [
+        ":__support_math_fminimum_numf16",
+    ],
 )
 
 libc_math_function(
@@ -8363,6 +8849,13 @@ libc_math_function(
     name = "llogb",
     additional_deps = [
         ":__support_math_llogb",
+    ],
+)
+
+libc_math_function(
+    name = "llogbbf16",
+    additional_deps = [
+        ":__support_math_llogbbf16",
     ],
 )
 
@@ -9133,7 +9626,9 @@ libc_math_function(
 
 libc_math_function(
     name = "sqrtl",
-    additional_deps = [":__support_fputil_sqrt"],
+    additional_deps = [
+        ":__support_math_sqrtl",
+    ],
 )
 
 libc_math_function(

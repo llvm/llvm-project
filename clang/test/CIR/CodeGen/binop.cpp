@@ -632,22 +632,22 @@ void b1(bool a, bool b) {
 // OGCG: %[[ZEXT1:.*]] = zext i1 %[[ARG1]] to i8
 // OGCG: store i8 %[[ZEXT1]], ptr %[[B_ADDR]]
 // OGCG: %[[A_VAL:.*]] = load i8, ptr %[[A_ADDR]]
-// OGCG: %[[A_BOOL:.*]] = trunc i8 %[[A_VAL]] to i1
+// OGCG: %[[A_BOOL:.*]] = icmp ne i8 %[[A_VAL]], 0
 // OGCG: br i1 %[[A_BOOL]], label %[[AND_TRUE:.+]], label %[[AND_MERGE:.+]]
 // OGCG: [[AND_TRUE]]:
 // OGCG: %[[B_VAL:.*]] = load i8, ptr %[[B_ADDR]]
-// OGCG: %[[B_BOOL:.*]] = trunc i8 %[[B_VAL]] to i1
+// OGCG: %[[B_BOOL:.*]] = icmp ne i8 %[[B_VAL]], 0
 // OGCG: br label %[[AND_MERGE:.+]]
 // OGCG: [[AND_MERGE]]:
 // OGCG: %[[AND_PHI:.*]] = phi i1 [ false, %[[ENTRY]] ], [ %[[B_BOOL]], %[[AND_TRUE]] ]
 // OGCG: %[[ZEXT_AND:.*]] = zext i1 %[[AND_PHI]] to i8
 // OGCG: store i8 %[[ZEXT_AND]], ptr %[[X]]
 // OGCG: %[[X_VAL:.*]] = load i8, ptr %[[X]]
-// OGCG: %[[X_BOOL:.*]] = trunc i8 %[[X_VAL]] to i1
+// OGCG: %[[X_BOOL:.*]] = icmp ne i8 %[[X_VAL]], 0
 // OGCG: br i1 %[[X_BOOL]], label %[[OR_MERGE:.+]], label %[[OR_FALSE:.+]]
 // OGCG: [[OR_FALSE]]:
 // OGCG: %[[B_VAL2:.*]] = load i8, ptr %[[B_ADDR]]
-// OGCG: %[[B_BOOL2:.*]] = trunc i8 %[[B_VAL2]] to i1
+// OGCG: %[[B_BOOL2:.*]] = icmp ne i8 %[[B_VAL2]], 0
 // OGCG: br label %[[OR_MERGE]]
 // OGCG: [[OR_MERGE]]:
 // OGCG: %[[OR_PHI:.*]] = phi i1 [ true, %[[AND_MERGE]] ], [ %[[B_BOOL2]], %[[OR_FALSE]] ]

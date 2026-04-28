@@ -50,7 +50,8 @@ def CodeGenRewrite : Pass<"cg-rewrite", "mlir::ModuleOp"> {
     Fuse specific subgraphs into single Ops for code generation.
   }];
   let dependentDialects = [
-    "fir::FIROpsDialect", "fir::FIRCodeGenDialect"
+    "fir::FIROpsDialect", "fir::FIRCodeGenDialect",
+    "mlir::cf::ControlFlowDialect"
   ];
   let options = [
     Option<"preserveDeclare", "preserve-declare", "bool", /*default=*/"false",

@@ -222,7 +222,7 @@ static kmp_depnode_list_t *__kmp_add_node(kmp_info_t *thread,
 static inline void __kmp_track_dependence(kmp_int32 gtid, kmp_depnode_t *source,
                                           kmp_depnode_t *sink,
                                           kmp_task_t *sink_task) {
-#if OMPX_TASKGRAPH
+#if OMP_TASKGRAPH_EXPERIMENTAL
   kmp_taskdata_t *task_source = KMP_TASK_TO_TASKDATA(source->dn.task);
   kmp_taskdata_t *task_sink = KMP_TASK_TO_TASKDATA(sink_task);
   if (source->dn.task && sink_task) {
@@ -311,7 +311,7 @@ __kmp_depnode_link_successor(kmp_int32 gtid, kmp_info_t *thread,
   // link node as successor of list elements
   for (kmp_depnode_list_t *p = plist; p; p = p->next) {
     kmp_depnode_t *dep = p->node;
-#if OMPX_TASKGRAPH
+#if OMP_TASKGRAPH_EXPERIMENTAL
     kmp_tdg_status tdg_status = KMP_TDG_NONE;
     if (task) {
       kmp_taskdata_t *td = KMP_TASK_TO_TASKDATA(task);
@@ -325,7 +325,7 @@ __kmp_depnode_link_successor(kmp_int32 gtid, kmp_info_t *thread,
       KMP_ACQUIRE_DEPNODE(gtid, dep);
       if (dep->dn.task) {
         if (!dep->dn.successors || dep->dn.successors->node != node) {
-#if OMPX_TASKGRAPH
+#if OMP_TASKGRAPH_EXPERIMENTAL
           if (!(__kmp_tdg_is_recording(tdg_status)) && task)
 #endif
             __kmp_track_dependence(gtid, dep, node, task);
@@ -352,7 +352,7 @@ static inline kmp_int32 __kmp_depnode_link_successor(kmp_int32 gtid,
   if (!sink)
     return 0;
   kmp_int32 npredecessors = 0;
-#if OMPX_TASKGRAPH
+#if OMP_TASKGRAPH_EXPERIMENTAL
   kmp_tdg_status tdg_status = KMP_TDG_NONE;
   kmp_taskdata_t *td = KMP_TASK_TO_TASKDATA(task);
   if (task) {
@@ -367,7 +367,7 @@ static inline kmp_int32 __kmp_depnode_link_successor(kmp_int32 gtid,
     KMP_ACQUIRE_DEPNODE(gtid, sink);
     if (sink->dn.task) {
       if (!sink->dn.successors || sink->dn.successors->node != source) {
-#if OMPX_TASKGRAPH
+#if OMP_TASKGRAPH_EXPERIMENTAL
         if (!(__kmp_tdg_is_recording(tdg_status)) && task)
 #endif
           __kmp_track_dependence(gtid, sink, source, task);
@@ -376,7 +376,7 @@ static inline kmp_int32 __kmp_depnode_link_successor(kmp_int32 gtid,
                     "%p\n",
                     gtid, KMP_TASK_TO_TASKDATA(sink->dn.task),
                     KMP_TASK_TO_TASKDATA(task)));
-#if OMPX_TASKGRAPH
+#if OMP_TASKGRAPH_EXPERIMENTAL
         if (__kmp_tdg_is_recording(tdg_status)) {
           kmp_taskdata_t *tdd = KMP_TASK_TO_TASKDATA(sink->dn.task);
           if (tdd->is_taskgraph) {
@@ -694,7 +694,7 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
   kmp_info_t *thread = __kmp_threads[gtid];
   kmp_taskdata_t *current_task = thread->th.th_current_task;
 
-#if OMPX_TASKGRAPH
+#if OMP_TASKGRAPH_EXPERIMENTAL
   // record TDG with deps
   if (new_taskdata->is_taskgraph &&
       __kmp_tdg_is_recording(new_taskdata->tdg->tdg_status)) {

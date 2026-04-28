@@ -1,6 +1,4 @@
 .. title:: clang-tidy - hicpp-use-emplace
-.. meta::
-   :http-equiv=refresh: 5;URL=../modernize/use-emplace.html
 
 hicpp-use-emplace
 =================

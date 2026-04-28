@@ -873,8 +873,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VP_REDUCE_OR,   ISD::VP_REDUCE_XOR,  ISD::VP_REDUCE_SMAX,
         ISD::VP_REDUCE_SMIN, ISD::VP_REDUCE_UMAX, ISD::VP_REDUCE_UMIN,
         ISD::VP_MERGE,
-        ISD::VP_SIGN_EXTEND,
-        ISD::VP_ZERO_EXTEND, ISD::VP_TRUNCATE,
+        ISD::VP_TRUNCATE,
         ISD::EXPERIMENTAL_VP_REVERSE, ISD::EXPERIMENTAL_VP_SPLICE,
         ISD::VP_CTTZ_ELTS,   ISD::VP_CTTZ_ELTS_ZERO_UNDEF};
 
@@ -6161,8 +6160,8 @@ static SDValue tryWidenMaskForShuffle(SDValue Op, SelectionDAG &DAG) {
   return DAG.getBitcast(VT, DAG.getVectorShuffle(NewVT, DL, V0, V1, NewMask));
 }
 
-static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
-                                   const RISCVSubtarget &Subtarget) {
+SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
+                                                 SelectionDAG &DAG) const {
   SDValue V1 = Op.getOperand(0);
   SDValue V2 = Op.getOperand(1);
   SDLoc DL(Op);
@@ -6189,7 +6188,7 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
                         ISD::SETNE);
   }
 
-  MVT ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
+  MVT ContainerVT = getContainerForFixedLengthVector(VT);
 
   // Store the return value in a single variable instead of structured bindings
   // so that we can pass it to GetSlide below, which cannot capture structured
@@ -7574,10 +7573,6 @@ static unsigned getRISCVVLOp(SDValue Op) {
     return RISCVISD::SRA_VL;
   case ISD::VP_SRL:
     return RISCVISD::SRL_VL;
-  case ISD::VP_SIGN_EXTEND:
-    return RISCVISD::VSEXT_VL;
-  case ISD::VP_ZERO_EXTEND:
-    return RISCVISD::VZEXT_VL;
   case ISD::FMINNUM:
   case ISD::FMINIMUMNUM:
     return RISCVISD::VFMIN_VL;
@@ -8413,7 +8408,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return SDValue();
   }
   case ISD::VECTOR_SHUFFLE:
-    return lowerVECTOR_SHUFFLE(Op, DAG, Subtarget);
+    return lowerVECTOR_SHUFFLE(Op, DAG);
   case ISD::CONCAT_VECTORS: {
     // Split CONCAT_VECTORS into a series of INSERT_SUBVECTOR nodes. This is
     // better than going through the stack, as the default expansion does.
@@ -8961,11 +8956,6 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::VP_SRA:
   case ISD::VP_SRL:
   case ISD::VP_SHL:
-    return lowerVPOp(Op, DAG);
-  case ISD::VP_SIGN_EXTEND:
-  case ISD::VP_ZERO_EXTEND:
-    if (Op.getOperand(0).getSimpleValueType().getVectorElementType() == MVT::i1)
-      return lowerVPExtMaskOp(Op, DAG);
     return lowerVPOp(Op, DAG);
   case ISD::VP_TRUNCATE:
     return lowerVectorTruncLike(Op, DAG);
@@ -13872,39 +13862,6 @@ SDValue RISCVTargetLowering::lowerVPOp(SDValue Op, SelectionDAG &DAG) const {
   SDValue VPOp = DAG.getNode(RISCVISDOpc, DL, ContainerVT, Ops, Op->getFlags());
 
   return convertFromScalableVector(VT, VPOp, DAG, Subtarget);
-}
-
-SDValue RISCVTargetLowering::lowerVPExtMaskOp(SDValue Op,
-                                              SelectionDAG &DAG) const {
-  SDLoc DL(Op);
-  MVT VT = Op.getSimpleValueType();
-
-  SDValue Src = Op.getOperand(0);
-  // NOTE: Mask is dropped.
-  SDValue VL = Op.getOperand(2);
-
-  MVT ContainerVT = VT;
-  if (VT.isFixedLengthVector()) {
-    ContainerVT = getContainerForFixedLengthVector(VT);
-    MVT SrcVT = MVT::getVectorVT(MVT::i1, ContainerVT.getVectorElementCount());
-    Src = convertToScalableVector(SrcVT, Src, DAG, Subtarget);
-  }
-
-  MVT XLenVT = Subtarget.getXLenVT();
-  SDValue Zero = DAG.getConstant(0, DL, XLenVT);
-  SDValue ZeroSplat = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, ContainerVT,
-                                  DAG.getUNDEF(ContainerVT), Zero, VL);
-
-  SDValue SplatValue = DAG.getSignedConstant(
-      Op.getOpcode() == ISD::VP_ZERO_EXTEND ? 1 : -1, DL, XLenVT);
-  SDValue Splat = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, ContainerVT,
-                              DAG.getUNDEF(ContainerVT), SplatValue, VL);
-
-  SDValue Result = DAG.getNode(RISCVISD::VMERGE_VL, DL, ContainerVT, Src, Splat,
-                               ZeroSplat, DAG.getUNDEF(ContainerVT), VL);
-  if (!VT.isFixedLengthVector())
-    return Result;
-  return convertFromScalableVector(VT, Result, DAG, Subtarget);
 }
 
 SDValue RISCVTargetLowering::lowerVPMergeMask(SDValue Op,
@@ -19322,8 +19279,7 @@ static SDValue performVP_TRUNCATECombine(SDNode *N, SelectionDAG &DAG,
 
   // Make sure the other 2 operands can be promoted from the result type.
   for (SDValue Op : drop_end(Operands)) {
-    if (Op.getOpcode() != ISD::VP_ZERO_EXTEND || Op.getOperand(1) != Mask ||
-        Op.getOperand(2) != VL)
+    if (Op.getOpcode() != ISD::ZERO_EXTEND)
       return SDValue();
     // Input must be the same size or smaller than our result.
     if (Op.getOperand(0).getScalarValueSizeInBits() > VT.getScalarSizeInBits())
@@ -19332,10 +19288,10 @@ static SDValue performVP_TRUNCATECombine(SDNode *N, SelectionDAG &DAG,
 
   // Pattern is detected.
   // Rebuild the zero extends in case the inputs are smaller than our result.
-  SDValue NewOp0 = DAG.getNode(ISD::VP_ZERO_EXTEND, SDLoc(Operands[0]), VT,
-                               Operands[0].getOperand(0), Mask, VL);
-  SDValue NewOp1 = DAG.getNode(ISD::VP_ZERO_EXTEND, SDLoc(Operands[1]), VT,
-                               Operands[1].getOperand(0), Mask, VL);
+  SDValue NewOp0 = DAG.getNode(ISD::ZERO_EXTEND, SDLoc(Operands[0]), VT,
+                               Operands[0].getOperand(0));
+  SDValue NewOp1 = DAG.getNode(ISD::ZERO_EXTEND, SDLoc(Operands[1]), VT,
+                               Operands[1].getOperand(0));
   // Build a AVGCEILU_VL which will be selected as a VAADDU with RNU rounding
   // mode.
   SDLoc DL(N);
@@ -26258,7 +26214,8 @@ bool RISCVTargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
 
       return false;
     }
-    if (II->getIntrinsicID() == Intrinsic::vector_extract)
+    if (II->getIntrinsicID() == Intrinsic::vector_extract ||
+        II->getIntrinsicID() == Intrinsic::vector_insert)
       return false;
   }
 

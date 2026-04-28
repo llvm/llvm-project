@@ -1,4 +1,4 @@
-! RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=51
+! RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=52
 ! Check OpenMP clause validity for the following directives:
 !     2.10 Device constructs
 program main
@@ -151,11 +151,23 @@ program main
   enddo
   !$omp end target data
 
-  !ERROR: The device expression of the DEVICE clause must be a positive integer expression
+  ! -2 is the reserved value omp_invalid_device (OpenMP 5.2+), so it is valid.
   !$omp target enter data map(alloc:A) device(-2)
 
-  !ERROR: The device expression of the DEVICE clause must be a positive integer expression
+  ! -2 is the reserved value omp_invalid_device (OpenMP 5.2+), so it is valid.
   !$omp target exit data map(delete:A) device(-2)
+
+  ! -1 is the reserved value omp_initial_device (OpenMP 5.2+), so it is valid.
+  !$omp target enter data map(alloc:A) device(-1)
+
+  ! -1 is the reserved value omp_initial_device (OpenMP 5.2+), so it is valid.
+  !$omp target exit data map(delete:A) device(-1)
+
+  !ERROR: The device expression of the DEVICE clause must be a non-negative integer expression, 'omp_initial_device' (-1), or 'omp_invalid_device' (-2)
+  !$omp target enter data map(alloc:A) device(-3)
+
+  !ERROR: The device expression of the DEVICE clause must be a non-negative integer expression, 'omp_initial_device' (-1), or 'omp_invalid_device' (-2)
+  !$omp target exit data map(delete:A) device(-3)
 
   !ERROR: At most one IF clause can appear on the TARGET ENTER DATA directive
   !$omp target enter data map(to:a) if(.true.) if(.false.)

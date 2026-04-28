@@ -1,6 +1,4 @@
 .. title:: clang-tidy - cert-oop57-cpp
-.. meta::
-   :http-equiv=refresh: 5;URL=../bugprone/raw-memory-call-on-non-trivial-type.html
 
 cert-oop57-cpp
 ==============

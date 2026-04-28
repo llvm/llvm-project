@@ -91,7 +91,7 @@ void main() {
 // CHECK-NEXT:    [[D:%.*]] = alloca double, align 8
 // CHECK-NEXT:    [[E:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(10) @_ZL10bool_const, align 4
-// CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i32 [[TMP1]] to i1
+// CHECK-NEXT:    [[LOADEDV:%.*]] = icmp ne i32 [[TMP1]], 0
 // CHECK-NEXT:    [[STOREDV:%.*]] = zext i1 [[LOADEDV]] to i32
 // CHECK-NEXT:    store i32 [[STOREDV]], ptr [[B]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr addrspace(10) @_ZL11short_const, align 2

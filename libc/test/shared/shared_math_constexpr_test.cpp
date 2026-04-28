@@ -23,6 +23,12 @@ static_assert(0.0f == LIBC_NAMESPACE::shared::fdiv(0.0, 1.0));
 static_assert(1.0 == LIBC_NAMESPACE::shared::floor(1.2));
 static_assert(2.0 == LIBC_NAMESPACE::shared::fmaximum_mag_num(1.0, 2.0));
 static_assert(0.0 == LIBC_NAMESPACE::shared::log(1.0));
+static_assert(0.0 == LIBC_NAMESPACE::shared::fmaximum(0.0, 0.0));
+static_assert(0.0 == LIBC_NAMESPACE::shared::fminimum(0.0, 0.0));
+static_assert(0.0 == LIBC_NAMESPACE::shared::fmin(0.0, 0.0));
+static_assert(0.0 == LIBC_NAMESPACE::shared::fmax(0.0, 0.0));
+static_assert(0.0 == LIBC_NAMESPACE::shared::fmaximum_num(0.0, 0.0));
+static_assert(0.0 == LIBC_NAMESPACE::shared::fminimum_num(0.0, 0.0));
 
 //===----------------------------------------------------------------------===//
 //                       Float Tests
@@ -34,6 +40,12 @@ static_assert(1.0f == LIBC_NAMESPACE::shared::fabsf(-1.0f));
 static_assert(1.0f == LIBC_NAMESPACE::shared::fdimf(1.0f, 0.0f));
 static_assert(2.0f == LIBC_NAMESPACE::shared::fmaximum_mag_numf(1.0f, 2.0f));
 static_assert(0.0f == LIBC_NAMESPACE::shared::floorf(0.0f));
+static_assert(0.0f == LIBC_NAMESPACE::shared::fmaximumf(0.0f, 0.0f));
+static_assert(0.0f == LIBC_NAMESPACE::shared::fminimumf(0.0f, 0.0f));
+static_assert(0.0f == LIBC_NAMESPACE::shared::fminf(0.0f, 0.0f));
+static_assert(0.0f == LIBC_NAMESPACE::shared::fmaxf(0.0f, 0.0f));
+static_assert(0.0f == LIBC_NAMESPACE::shared::fmaximum_numf(0.0f, 0.0f));
+static_assert(0.0f == LIBC_NAMESPACE::shared::fminimum_numf(0.0f, 0.0f));
 
 //===----------------------------------------------------------------------===//
 //                       Float16 Tests
@@ -46,6 +58,14 @@ static_assert(0.0f16 == LIBC_NAMESPACE::shared::copysignf16(0.0f16, 0.0f16));
 static_assert(1.0f16 == LIBC_NAMESPACE::shared::fabsf16(-1.0f16));
 static_assert(1.0f16 == LIBC_NAMESPACE::shared::fdimf16(1.0f16, 0.0f16));
 static_assert(3.0f16 == LIBC_NAMESPACE::shared::floorf16(3.7f16));
+static_assert(0.0f16 == LIBC_NAMESPACE::shared::fmaximumf16(0.0f16, 0.0f16));
+static_assert(0.0f16 == LIBC_NAMESPACE::shared::fminimumf16(0.0f16, 0.0f16));
+static_assert(0.0f16 == LIBC_NAMESPACE::shared::fminf16(0.0f16, 0.0f16));
+static_assert(0.0f16 == LIBC_NAMESPACE::shared::fmaxf16(0.0f16, 0.0f16));
+static_assert(0.0f16 ==
+              LIBC_NAMESPACE::shared::fmaximum_numf16(0.0f16, 0.0f16));
+static_assert(0.0f16 ==
+              LIBC_NAMESPACE::shared::fminimum_numf16(0.0f16, 0.0f16));
 
 #endif // LIBC_TYPES_HAS_FLOAT16
 
@@ -64,6 +84,14 @@ static_assert(1.0L == LIBC_NAMESPACE::shared::fabsl(-1.0L));
 static_assert(1.0L == LIBC_NAMESPACE::shared::fdiml(1.0L, 0.0L));
 static_assert(0.0f == LIBC_NAMESPACE::shared::fdivl(0.0L, 1.0L));
 static_assert(0.0L == LIBC_NAMESPACE::shared::floorl(0.0L));
+static_assert(bfloat16(0.0) == LIBC_NAMESPACE::shared::bf16subl(0.0L, 0.0L));
+static_assert(0.0L == LIBC_NAMESPACE::shared::sqrtl(0.0L));
+static_assert(0.0L == LIBC_NAMESPACE::shared::fmaximuml(0.0L, 0.0L));
+static_assert(0.0L == LIBC_NAMESPACE::shared::fminimuml(0.0L, 0.0L));
+static_assert(0.0L == LIBC_NAMESPACE::shared::fminl(0.0L, 0.0L));
+static_assert(0.0L == LIBC_NAMESPACE::shared::fmaxl(0.0L, 0.0L));
+static_assert(0.0L == LIBC_NAMESPACE::shared::fmaximum_numl(0.0L, 0.0L));
+static_assert(0.0L == LIBC_NAMESPACE::shared::fminimum_numl(0.0L, 0.0L));
 
 #endif
 
@@ -89,6 +117,24 @@ static_assert(0.0f ==
               LIBC_NAMESPACE::shared::fdivf128(float128(0.0), float128(1.0)));
 static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::floorf128(float128(0.0)));
+static_assert(float128(0.0) ==
+              LIBC_NAMESPACE::shared::fmaximumf128(float128(0.0),
+                                                   float128(0.0)));
+static_assert(float128(0.0) ==
+              LIBC_NAMESPACE::shared::fminimumf128(float128(0.0),
+                                                   float128(0.0)));
+static_assert(float128(0.0) ==
+              LIBC_NAMESPACE::shared::fminf128(float128(0.0), float128(0.0)));
+static_assert(0.0 == LIBC_NAMESPACE::shared::dsqrtf128(float128(0.0)));
+
+static_assert(float128(0.0) ==
+              LIBC_NAMESPACE::shared::fmaxf128(float128(0.0), float128(0.0)));
+static_assert(float128(0.0) ==
+              LIBC_NAMESPACE::shared::fmaximum_numf128(float128(0.0),
+                                                       float128(0.0)));
+static_assert(float128(0.0) ==
+              LIBC_NAMESPACE::shared::fminimum_numf128(float128(0.0),
+                                                       float128(0.0)));
 
 #endif // LIBC_TYPES_HAS_FLOAT128
 
@@ -112,5 +158,23 @@ static_assert(bfloat16(0.0) ==
               LIBC_NAMESPACE::shared::floorbf16(bfloat16(0.0f)));
 static_assert(bfloat16(0.0) ==
               LIBC_NAMESPACE::shared::logbbf16(bfloat16(1.0f)));
+static_assert(0 == LIBC_NAMESPACE::shared::ilogbbf16(bfloat16(1.0)));
+static_assert(0L == LIBC_NAMESPACE::shared::llogbbf16(bfloat16(1.0)));
+static_assert(bfloat16(0.0) ==
+              LIBC_NAMESPACE::shared::fmaximumbf16(bfloat16(0.0),
+                                                   bfloat16(0.0)));
+static_assert(bfloat16(0.0) ==
+              LIBC_NAMESPACE::shared::fminimumbf16(bfloat16(0.0),
+                                                   bfloat16(0.0)));
+static_assert(bfloat16(0.0) ==
+              LIBC_NAMESPACE::shared::fminbf16(bfloat16(0.0), bfloat16(0.0)));
+static_assert(bfloat16(0.0) ==
+              LIBC_NAMESPACE::shared::fmaxbf16(bfloat16(0.0), bfloat16(0.0)));
+static_assert(bfloat16(0.0) ==
+              LIBC_NAMESPACE::shared::fmaximum_numbf16(bfloat16(0.0),
+                                                       bfloat16(0.0)));
+static_assert(bfloat16(0.0) ==
+              LIBC_NAMESPACE::shared::fminimum_numbf16(bfloat16(0.0),
+                                                       bfloat16(0.0)));
 
 TEST(LlvmLibcSharedMathTest, ConstantEvaluation) {}

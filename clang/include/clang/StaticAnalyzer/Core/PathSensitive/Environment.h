@@ -32,23 +32,18 @@ class SymbolReaper;
 /// This allows the environment to manage context-sensitive bindings,
 /// which is essentially for modeling recursive function analysis, among
 /// other things.
-/// FIXME: Use 'Expr' instead of 'Stmt' because associating a result with a
-/// non-expression statement does not make sense. Currently the environment
-/// only containts 'Expr's; and there is only one easy-to-eliminate hack in
-/// 'processCallExit' and 'Environment::getSVal' that constructs and handles
-/// 'EnvironmentEntry' instances with a 'ReturnStmt' as the 'first' part.
-class EnvironmentEntry : public std::pair<const Stmt *,
-                                          const StackFrameContext *> {
+class EnvironmentEntry
+    : public std::pair<const Expr *, const StackFrameContext *> {
 public:
-  EnvironmentEntry(const Stmt *s, const LocationContext *L);
+  EnvironmentEntry(const Expr *E, const LocationContext *L);
 
-  const Stmt *getStmt() const { return first; }
+  const Expr *getExpr() const { return first; }
   const LocationContext *getLocationContext() const { return second; }
 
   /// Profile an EnvironmentEntry for inclusion in a FoldingSet.
   static void Profile(llvm::FoldingSetNodeID &ID,
                       const EnvironmentEntry &E) {
-    ID.AddPointer(E.getStmt());
+    ID.AddPointer(E.getExpr());
     ID.AddPointer(E.getLocationContext());
   }
 

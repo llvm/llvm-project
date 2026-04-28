@@ -15,6 +15,9 @@ from lit.llvm.subst import FindTool
 
 # Configuration file for the 'lit' test runner.
 
+if lit.util.pythonize_bool(lit_config.params.get("use_normalized_slashes")):
+    config.available_features.add("windows-prefer-forward-slash")
+
 # name: The name of this test suite.
 config.name = "Clang"
 

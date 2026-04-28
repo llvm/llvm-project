@@ -731,12 +731,12 @@ protected:
           result.SetStatus(eReturnStatusSuccessContinuingNoResult);
         }
       } else {
-        result.AppendErrorWithFormat("Failed to resume process: %s.",
+        result.AppendErrorWithFormat("Failed to resume process: %s",
                                      error.AsCString());
       }
     } else {
       result.AppendErrorWithFormat(
-          "Process cannot be continued from its current state (%s).",
+          "Process cannot be continued from its current state (%s)",
           StateAsCString(state));
     }
   }
@@ -1178,7 +1178,7 @@ protected:
         signo = process->GetUnixSignals()->GetSignalNumberFromName(signal_name);
 
       if (signo == LLDB_INVALID_SIGNAL_NUMBER) {
-        result.AppendErrorWithFormat("Invalid signal argument '%s'.",
+        result.AppendErrorWithFormat("Invalid signal argument '%s'",
                                      command.GetArgumentAtIndex(0));
       } else {
         Status error(process->Signal(signo));

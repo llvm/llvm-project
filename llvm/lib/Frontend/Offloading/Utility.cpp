@@ -23,6 +23,7 @@
 
 using namespace llvm;
 using namespace llvm::offloading;
+using namespace llvm::offloading::sycl;
 
 StructType *offloading::getEntryTy(Module &M) {
   LLVMContext &C = M.getContext();
@@ -83,12 +84,29 @@ offloading::getOffloadingEntryInitializer(Module &M, object::OffloadKind Kind,
   return {EntryInitializer, Str};
 }
 
-GlobalVariable *
-offloading::emitOffloadingEntry(Module &M, object::OffloadKind Kind,
-                                Constant *Addr, StringRef Name, uint64_t Size,
-                                uint32_t Flags, uint64_t Data,
-                                Constant *AuxAddr, StringRef SectionName) {
+StringRef offloading::getOffloadEntrySection(Module &M) {
+  return M.getTargetTriple().isOSBinFormatMachO() ? "__LLVM,offload_entries"
+                                                  : "llvm_offload_entries";
+}
+
+/// Returns the start/end symbol names for iterating offloading entries in a
+/// given section. Mach-O uses \1section$start$/\1section$end$ convention;
+/// ELF/COFF use __start_/__stop_ prefixes.
+static std::pair<std::string, std::string>
+getOffloadEntryBoundarySymbols(const Triple &T, StringRef SectionName) {
+  if (T.isOSBinFormatMachO()) {
+    std::string SymSection = SectionName.str();
+    std::replace(SymSection.begin(), SymSection.end(), ',', '$');
+    return {"\1section$start$" + SymSection, "\1section$end$" + SymSection};
+  }
+  return {("__start_" + SectionName).str(), ("__stop_" + SectionName).str()};
+}
+
+GlobalVariable *offloading::emitOffloadingEntry(
+    Module &M, object::OffloadKind Kind, Constant *Addr, StringRef Name,
+    uint64_t Size, uint32_t Flags, uint64_t Data, Constant *AuxAddr) {
   const llvm::Triple &Triple = M.getTargetTriple();
+  StringRef SectionName = getOffloadEntrySection(M);
 
   auto [EntryInitializer, NameGV] = getOffloadingEntryInitializer(
       M, Kind, Addr, Name, Size, Flags, Data, AuxAddr);
@@ -111,8 +129,9 @@ offloading::emitOffloadingEntry(Module &M, object::OffloadKind Kind,
 }
 
 std::pair<GlobalVariable *, GlobalVariable *>
-offloading::getOffloadEntryArray(Module &M, StringRef SectionName) {
+offloading::getOffloadEntryArray(Module &M) {
   const llvm::Triple &Triple = M.getTargetTriple();
+  StringRef SectionName = getOffloadEntrySection(M);
 
   auto *ZeroInitilaizer =
       ConstantAggregateZero::get(ArrayType::get(getEntryTy(M), 0u));
@@ -121,13 +140,14 @@ offloading::getOffloadEntryArray(Module &M, StringRef SectionName) {
   auto Linkage = Triple.isOSBinFormatCOFF() ? GlobalValue::WeakODRLinkage
                                             : GlobalValue::ExternalLinkage;
 
-  auto *EntriesB =
-      new GlobalVariable(M, EntryType, /*isConstant=*/true, Linkage, EntryInit,
-                         "__start_" + SectionName);
+  auto [StartName, StopName] =
+      getOffloadEntryBoundarySymbols(Triple, SectionName);
+
+  auto *EntriesB = new GlobalVariable(M, EntryType, /*isConstant=*/true,
+                                      Linkage, EntryInit, StartName);
   EntriesB->setVisibility(GlobalValue::HiddenVisibility);
-  auto *EntriesE =
-      new GlobalVariable(M, EntryType, /*isConstant=*/true, Linkage, EntryInit,
-                         "__stop_" + SectionName);
+  auto *EntriesE = new GlobalVariable(M, EntryType, /*isConstant=*/true,
+                                      Linkage, EntryInit, StopName);
   EntriesE->setVisibility(GlobalValue::HiddenVisibility);
 
   if (Triple.isOSBinFormatELF()) {
@@ -135,6 +155,15 @@ offloading::getOffloadEntryArray(Module &M, StringRef SectionName) {
     // be defined by the linker. This is done whenever a section name with a
     // valid C-identifier is present. We define a dummy variable here to force
     // the linker to always provide these symbols.
+    auto *DummyEntry = new GlobalVariable(
+        M, ZeroInitilaizer->getType(), true, GlobalVariable::InternalLinkage,
+        ZeroInitilaizer, "__dummy." + SectionName);
+    DummyEntry->setSection(SectionName);
+    DummyEntry->setAlignment(Align(object::OffloadBinary::getAlignment()));
+    appendToCompilerUsed(M, DummyEntry);
+  } else if (Triple.isOSBinFormatMachO()) {
+    // Mach-O needs a dummy variable in the section (like ELF) to ensure the
+    // linker provides the section boundary symbols.
     auto *DummyEntry = new GlobalVariable(
         M, ZeroInitilaizer->getType(), true, GlobalVariable::InternalLinkage,
         ZeroInitilaizer, "__dummy." + SectionName);
@@ -423,4 +452,32 @@ Error offloading::intel::containerizeOpenMPSPIRVImage(
   return containerizeImage(Binary, Triple, object::ImageKind::IMG_SPIRV,
                            object::OffloadKind::OFK_OpenMP, /*ImageFlags=*/0,
                            MetaData);
+}
+
+void sycl::writeSymbolTable(ArrayRef<StringRef> Names, SmallString<0> &Out) {
+  uint32_t Count = Names.size();
+
+  // Compute the byte offset where string data begins: right after the header
+  // and the entry array.
+  uint32_t StringDataOffset =
+      sizeof(SymbolTableHeader) + Count * sizeof(SymbolTableEntry);
+
+  // Pre-size the output to hold the header and entry array; string data is
+  // appended below.
+  Out.resize(StringDataOffset);
+
+  // Write the header.
+  auto *Header = reinterpret_cast<SymbolTableHeader *>(Out.data());
+  Header->Count = Count;
+
+  // Write each entry and append the corresponding null-terminated name.
+  auto *Entries = reinterpret_cast<SymbolTableEntry *>(Header + 1);
+  uint32_t CurrentOffset = StringDataOffset;
+  for (uint32_t I = 0; I < Count; ++I) {
+    Entries[I].OffsetToSymbol = CurrentOffset;
+    Entries[I].SymbolSize = Names[I].size();
+    Out.append(Names[I]);
+    Out.push_back('\0');
+    CurrentOffset += Names[I].size() + 1;
+  }
 }

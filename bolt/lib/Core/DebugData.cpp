@@ -966,7 +966,7 @@ static inline void emitBinaryDwarfLineTable(
   unsigned Discriminator = 0;
   uint64_t LastAddress = InvalidAddress;
   uint64_t PrevEndOfSequence = InvalidAddress;
-  const MCAsmInfo *AsmInfo = MCOS->getContext().getAsmInfo();
+  const MCAsmInfo &AsmInfo = MCOS->getContext().getAsmInfo();
 
   auto emitEndOfSequence = [&](uint64_t Address) {
     MCDwarfLineAddr::Emit(MCOS, Params, INT64_MAX, Address - LastAddress);
@@ -1037,7 +1037,7 @@ static inline void emitBinaryDwarfLineTable(
       } else {
         if (LastAddress == InvalidAddress)
           emitDwarfSetLineAddrAbs(*MCOS, Params, LineDelta, Address,
-                                  AsmInfo->getCodePointerSize());
+                                  AsmInfo.getCodePointerSize());
         else
           MCDwarfLineAddr::Emit(MCOS, Params, LineDelta, Address - LastAddress);
 
@@ -1068,13 +1068,13 @@ static inline void emitDwarfLineTable(
   unsigned Isa = 0;
   unsigned Discriminator = 0;
   MCSymbol *LastLabel = nullptr;
-  const MCAsmInfo *AsmInfo = MCOS->getContext().getAsmInfo();
+  const MCAsmInfo &AsmInfo = MCOS->getContext().getAsmInfo();
 
   // Loop through each MCDwarfLineEntry and encode the dwarf line number table.
   for (const MCDwarfLineEntry &LineEntry : LineEntries) {
     if (LineEntry.getFlags() & DWARF2_FLAG_END_SEQUENCE) {
       MCOS->emitDwarfAdvanceLineAddr(INT64_MAX, LastLabel, LineEntry.getLabel(),
-                                     AsmInfo->getCodePointerSize());
+                                     AsmInfo.getCodePointerSize());
       FileNum = 1;
       LastLine = 1;
       Column = 0;
@@ -1128,7 +1128,7 @@ static inline void emitDwarfLineTable(
     // in line numbers and the increment of the address from the previous
     // Label and the current Label.
     MCOS->emitDwarfAdvanceLineAddr(LineDelta, LastLabel, Label,
-                                   AsmInfo->getCodePointerSize());
+                                   AsmInfo.getCodePointerSize());
     Discriminator = 0;
     LastLine = LineEntry.getLine();
     LastLabel = Label;

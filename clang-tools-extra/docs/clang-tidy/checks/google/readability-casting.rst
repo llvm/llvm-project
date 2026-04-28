@@ -1,6 +1,4 @@
 .. title:: clang-tidy - google-readability-casting
-.. meta::
-   :http-equiv=refresh: 5;URL=../modernize/avoid-c-style-cast.html
 
 google-readability-casting
 ==========================

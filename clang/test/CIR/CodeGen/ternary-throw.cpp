@@ -56,7 +56,7 @@ const int& test_cond_throw_false(bool flag) {
 // OGCG: %[[A:.*]] = alloca i32
 // OGCG: store i32 10, ptr %[[A]]
 // OGCG: %{{.*}} = load i8, ptr %{{.*}}
-// OGCG: %[[BOOL:.*]] = trunc i8 %{{.*}} to i1
+// OGCG: %[[BOOL:.*]] = icmp ne i8 %{{.*}}, 0
 // OGCG: br i1 %[[BOOL]], label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]
 // OGCG: [[TRUE_BB]]:
 // OGCG:   br label %[[END:.*]]
@@ -119,7 +119,7 @@ const int& test_cond_throw_true(bool flag) {
 // OGCG: %[[A:.*]] = alloca i32
 // OGCG: store i32 10, ptr %[[A]]
 // OGCG: %{{.*}} = load i8, ptr %{{.*}}
-// OGCG: %[[BOOL:.*]] = trunc i8 %{{.*}} to i1
+// OGCG: %[[BOOL:.*]] = icmp ne i8 %{{.*}}, 0
 // OGCG: br i1 %[[BOOL]], label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]
 // OGCG: [[TRUE_BB]]:
 // OGCG:   %{{.*}} = call{{.*}} ptr @__cxa_allocate_exception
@@ -291,7 +291,7 @@ int test_agg_cond_throw_false(bool flag, struct s6 a1, struct s6 a2) {
 // OGCG: %[[A2:.*]] = alloca %struct.s6
 // OGCG: %{{.*}} = alloca i8
 // OGCG: %[[LOAD:.*]] = load i8, ptr %{{.*}}
-// OGCG: %[[BOOL:.*]] = trunc i8 %[[LOAD]] to i1
+// OGCG: %[[BOOL:.*]] = icmp ne i8 %[[LOAD]], 0
 // OGCG: br i1 %[[BOOL]], label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]
 // OGCG: [[TRUE_BB]]:
 // OGCG:   br label %[[END:.*]]
@@ -356,7 +356,7 @@ int test_agg_cond_throw_true(bool flag, struct s6 a1, struct s6 a2) {
 // OGCG: %[[A2:.*]] = alloca %struct.s6
 // OGCG: %{{.*}} = alloca i8
 // OGCG: %[[LOAD:.*]] = load i8, ptr %{{.*}}
-// OGCG: %[[BOOL:.*]] = trunc i8 %[[LOAD]] to i1
+// OGCG: %[[BOOL:.*]] = icmp ne i8 %[[LOAD]], 0
 // OGCG: br i1 %[[BOOL]], label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]
 // OGCG: [[TRUE_BB]]:
 // OGCG:   %[[EXC:.*]] = call{{.*}} ptr @__cxa_allocate_exception

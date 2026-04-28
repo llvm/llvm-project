@@ -35,6 +35,9 @@ page](https://llvm.org/releases/).
 
 ## New Compiler Flags
 
+- The warning flags with prefixes -Wopen-mp and -Wopen-acc have been deprecated in favor of corrected spellings with the respective prefixes -Wopenmp and -Wopenacc. Removal of the deprecated options is planned for LLVM 25 (July 2027).
+
+
 ## Windows Support
 
 ## Fortran Language Changes in Flang
