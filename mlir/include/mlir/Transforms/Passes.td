@@ -48,7 +48,17 @@ def CanonicalizerPass : Pass<"canonicalize"> {
     Option<"maxNumRewrites", "max-num-rewrites", "int64_t", /*default=*/"-1",
            "Max. number of pattern rewrites within an iteration">,
     Option<"testConvergence", "test-convergence", "bool", /*default=*/"false",
-           "Test only: Fail pass on non-convergence to detect cyclic pattern">
+           "Test only: Fail pass on non-convergence to detect cyclic pattern">,
+    Option<"cseBetweenIterations", "cse-between-iterations", "bool",
+           /*default=*/"false",
+           "Run full CSE between each pattern-application iteration. "
+           "CSE-driven changes trigger extra iterations, so this may push "
+           "the iteration count up to max-iterations and affect convergence "
+           "under test-convergence.">,
+    ListOption<"filterDialects", "filter-dialects", "std::string",
+               "If non-empty, only collect canonicalization patterns from the"
+               " dialects with the given namespaces. The listed dialects are"
+               " force-loaded into the context as dependent dialects.">
   ] # RewritePassUtils.options;
 }
 
@@ -106,12 +116,7 @@ def RemoveDeadValuesPass : Pass<"remove-dead-values"> {
     (C) Removes unneccesary operands, results, region arguments, and region
     terminator operands of region branch ops, and,
     (D) Removes simple and region branch ops that have all non-live results and
-    don't affect memory in any way,
-
-    iff
-
-    the IR doesn't have any non-function symbol ops, non-call symbol user ops
-    and branch ops.
+    don't affect memory in any way.
 
     Here, a "simple op" refers to an op that isn't a symbol op, symbol-user op,
     region branch op, branch op, region branch terminator op, or return-like.
@@ -373,17 +378,14 @@ def Mem2Reg : Pass<"mem2reg"> {
   let description = [{
     This pass removes loads out of and stores into a memory slot, and turns
     them into direct uses of SSA values. This is done generically using the
-    `PromotableAllocationOpInterface`, `PromotableOpInterface` and
-    `PromotableMemOpInterface` interfaces.
+    `PromotableAllocationOpInterface`, `PromotableOpInterface`,
+    `PromotableMemOpInterface` and `PromotableRegionOpInterface` interfaces.
 
     This pass will attempt to compute which definitions of the content of
     the memory slot reach operations that use the memory slot pointer. It
     will rewire or remove operations that use the slot pointer so they no
     longer use it. If any of this is not possible, the IR will be left
     without mutation.
-
-    This pass only supports unstructured control-flow. Promotion of operations
-    within subregions will not happen.
   }];
 
   let options = [

@@ -174,16 +174,22 @@ inline static unsigned getXSfmmWiden(unsigned VType) {
   return 1 << (TWiden - 1);
 }
 
-static inline bool isValidXSfmmVType(unsigned VTypeI) {
-  return (VTypeI & ~0x738) == 0 && RISCVVType::hasXSfmmWiden(VTypeI) &&
-         RISCVVType::getSEW(VTypeI) * RISCVVType::getXSfmmWiden(VTypeI) <= 64;
-}
-
 inline static bool isTailAgnostic(unsigned VType) { return VType & 0x40; }
 
 inline static bool isMaskAgnostic(unsigned VType) { return VType & 0x80; }
 
 inline static bool isAltFmt(unsigned VType) { return VType & 0x100; }
+
+inline static bool isValidVType(unsigned VType) {
+  return getSEW(VType) <= 64 && getVLMUL(VType) != LMUL_RESERVED &&
+         (!isAltFmt(VType) || getSEW(VType) < 32);
+}
+
+static inline bool isValidXSfmmVType(unsigned VTypeI) {
+  return (VTypeI & ~0x738) == 0 && RISCVVType::hasXSfmmWiden(VTypeI) &&
+         RISCVVType::getSEW(VTypeI) * RISCVVType::getXSfmmWiden(VTypeI) <= 64 &&
+         isValidVType(VTypeI);
+}
 
 LLVM_ABI void printVType(unsigned VType, raw_ostream &OS);
 

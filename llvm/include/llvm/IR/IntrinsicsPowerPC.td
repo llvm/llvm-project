@@ -1363,6 +1363,40 @@ def int_ppc_altivec_vmulhuw : PowerPC_Vec_WWW_Intrinsic<"vmulhuw">;
 def int_ppc_altivec_vmulhsd : PowerPC_Vec_DDD_Intrinsic<"vmulhsd">;
 def int_ppc_altivec_vmulhud : PowerPC_Vec_DDD_Intrinsic<"vmulhud">;
 
+// Deeply Compressed Weights Intrinsics.
+def int_ppc_altivec_vucmprhn : PowerPC_Vec_BBB_Intrinsic<"vucmprhn">;
+def int_ppc_altivec_vucmprln : PowerPC_Vec_BBB_Intrinsic<"vucmprln">;
+def int_ppc_altivec_vucmprhb : PowerPC_Vec_BBB_Intrinsic<"vucmprhb">;
+def int_ppc_altivec_vucmprlb : PowerPC_Vec_BBB_Intrinsic<"vucmprlb">;
+def int_ppc_altivec_vucmprhh : PowerPC_Vec_BBB_Intrinsic<"vucmprhh">;
+def int_ppc_altivec_vucmprlh : PowerPC_Vec_BBB_Intrinsic<"vucmprlh">;
+def int_ppc_altivec_vupkhsntob :
+    PowerPC_Vec_Intrinsic<"vupkhsntob", [llvm_v16i8_ty],
+                          [llvm_v16i8_ty], [IntrNoMem]>;
+def int_ppc_altivec_vupklsntob :
+    PowerPC_Vec_Intrinsic<"vupklsntob", [llvm_v16i8_ty],
+                          [llvm_v16i8_ty], [IntrNoMem]>;
+def int_ppc_altivec_vupkint4tobf16 :
+    PowerPC_Vec_Intrinsic<"vupkint4tobf16", [llvm_v16i8_ty],
+                          [llvm_v16i8_ty, llvm_i32_ty],
+                          [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+def int_ppc_altivec_vupkint8tobf16 :
+    PowerPC_Vec_Intrinsic<"vupkint8tobf16", [llvm_v16i8_ty],
+                          [llvm_v16i8_ty, llvm_i32_ty],
+                          [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+def int_ppc_altivec_vupkint4tofp32 :
+    PowerPC_Vec_Intrinsic<"vupkint4tofp32", [llvm_v16i8_ty],
+                          [llvm_v16i8_ty, llvm_i32_ty],
+                          [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+def int_ppc_altivec_vupkint8tofp32 :
+    PowerPC_Vec_Intrinsic<"vupkint8tofp32", [llvm_v16i8_ty],
+                          [llvm_v16i8_ty, llvm_i32_ty],
+                          [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+
+// Post Quantum Cryptography Acceleration.
+def int_ppc_altivec_vmulhsh : PowerPC_Vec_HHH_Intrinsic<"vmulhsh">;
+def int_ppc_altivec_vmulhuh : PowerPC_Vec_HHH_Intrinsic<"vmulhuh">;
+
 //===----------------------------------------------------------------------===//
 // PowerPC VSX Intrinsic Definitions.
 
@@ -1918,33 +1952,29 @@ let TargetPrefix = "ppc" in {
   def int_ppc_iospace_eieio : ClangBuiltin<"__builtin_ppc_iospace_eieio">,
                               Intrinsic<[],[],[]>;
   def int_ppc_lbarx :
-    Intrinsic<[llvm_i32_ty], [llvm_ptr_ty],
-              [IntrReadMem, IntrArgMemOnly]>;
+    Intrinsic<[llvm_i32_ty], [llvm_ptr_ty], [IntrInaccessibleMemOrArgMemOnly]>;
   def int_ppc_lharx :
-    Intrinsic<[llvm_i32_ty],[llvm_ptr_ty],
-              [IntrReadMem, IntrArgMemOnly]>;
+    Intrinsic<[llvm_i32_ty],[llvm_ptr_ty], [IntrInaccessibleMemOrArgMemOnly]>;
   def int_ppc_lwarx :
-    Intrinsic<[llvm_i32_ty], [llvm_ptr_ty],
-              [IntrReadMem, IntrArgMemOnly]>;
+    Intrinsic<[llvm_i32_ty], [llvm_ptr_ty], [IntrInaccessibleMemOrArgMemOnly]>;
   def int_ppc_ldarx :
-    Intrinsic<[llvm_i64_ty],[llvm_ptr_ty],
-              [IntrReadMem, IntrArgMemOnly]>;
+    Intrinsic<[llvm_i64_ty],[llvm_ptr_ty], [IntrInaccessibleMemOrArgMemOnly]>;
 
   def int_ppc_stdcx :
     ClangBuiltin<"__builtin_ppc_stdcx">,
     Intrinsic<[llvm_i32_ty], [llvm_ptr_ty, llvm_i64_ty],
-              [IntrWriteMem, IntrArgMemOnly, IntrNoDuplicate]>;
+              [IntrInaccessibleMemOrArgMemOnly, IntrNoDuplicate]>;
   def int_ppc_stwcx :
     ClangBuiltin<"__builtin_ppc_stwcx">,
     Intrinsic<[llvm_i32_ty], [llvm_ptr_ty, llvm_i32_ty],
-              [IntrWriteMem, IntrArgMemOnly]>;
+              [IntrInaccessibleMemOrArgMemOnly, IntrNoDuplicate]>;
   def int_ppc_sthcx :
     Intrinsic<[llvm_i32_ty], [ llvm_ptr_ty, llvm_i32_ty],
-              [IntrWriteMem, IntrArgMemOnly, IntrNoDuplicate]>;
+              [IntrInaccessibleMemOrArgMemOnly, IntrNoDuplicate]>;
   def int_ppc_stbcx :
     ClangBuiltin<"__builtin_ppc_stbcx">,
     Intrinsic<[llvm_i32_ty], [llvm_ptr_ty, llvm_i32_ty],
-              [IntrWriteMem, IntrArgMemOnly, IntrNoDuplicate]>;
+              [IntrInaccessibleMemOrArgMemOnly, IntrNoDuplicate]>;
   def int_ppc_dcbtstt : ClangBuiltin<"__builtin_ppc_dcbtstt">,
                         Intrinsic<[], [llvm_ptr_ty],
                                   [IntrArgMemOnly, NoCapture<ArgIndex<0>>]>;
@@ -2200,4 +2230,95 @@ let TargetPrefix = "ppc" in {
     DefaultAttrsIntrinsic<[llvm_i64_ty],[llvm_ptr_ty,
                            llvm_i64_ty, llvm_i64_ty],
                           [IntrArgMemOnly]>;
+
+  // Elliptic Curve Cryptography Intrinsics
+  def int_ppc_xxmulmul : ClangBuiltin<"__builtin_xxmulmul">,
+      DefaultAttrsIntrinsic<[llvm_v16i8_ty],
+                            [llvm_v16i8_ty, llvm_v16i8_ty, llvm_i32_ty],
+                            [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+  def int_ppc_xxmulmulhiadd : ClangBuiltin<"__builtin_xxmulmulhiadd">,
+      DefaultAttrsIntrinsic<[llvm_v16i8_ty],
+                            [llvm_v16i8_ty, llvm_v16i8_ty, llvm_i32_ty,
+                             llvm_i32_ty, llvm_i32_ty],
+                            [IntrNoMem, ImmArg<ArgIndex<2>>,
+                             ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>]>;
+  def int_ppc_xxmulmulloadd : ClangBuiltin<"__builtin_xxmulmulloadd">,
+      DefaultAttrsIntrinsic<[llvm_v16i8_ty],
+                            [llvm_v16i8_ty, llvm_v16i8_ty, llvm_i32_ty,
+                             llvm_i32_ty],
+                            [IntrNoMem, ImmArg<ArgIndex<2>>,
+                             ImmArg<ArgIndex<3>>]>;
+  def int_ppc_xxssumudm : ClangBuiltin<"__builtin_xxssumudm">,
+      DefaultAttrsIntrinsic<[llvm_v16i8_ty],
+                            [llvm_v16i8_ty, llvm_v16i8_ty, llvm_i32_ty],
+                            [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+  def int_ppc_xxssumudmc : ClangBuiltin<"__builtin_xxssumudmc">,
+      DefaultAttrsIntrinsic<[llvm_v16i8_ty],
+                            [llvm_v16i8_ty, llvm_v16i8_ty, llvm_i32_ty],
+                            [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+  def int_ppc_xxssumudmcext : ClangBuiltin<"__builtin_xxssumudmcext">,
+      DefaultAttrsIntrinsic<[llvm_v16i8_ty],
+                            [llvm_v16i8_ty, llvm_v16i8_ty, llvm_v16i8_ty,
+                             llvm_i32_ty],
+                            [IntrNoMem, ImmArg<ArgIndex<3>>]>;
+  def int_ppc_xsaddadduqm : ClangBuiltin<"__builtin_xsaddadduqm">,
+      DefaultAttrsIntrinsic<[llvm_v16i8_ty],
+                            [llvm_v16i8_ty, llvm_v16i8_ty],
+                            [IntrNoMem]>;
+  def int_ppc_xsaddaddsuqm : ClangBuiltin<"__builtin_xsaddaddsuqm">,
+      DefaultAttrsIntrinsic<[llvm_v16i8_ty],
+                            [llvm_v16i8_ty, llvm_v16i8_ty],
+                            [IntrNoMem]>;
+  def int_ppc_xsaddsubuqm : ClangBuiltin<"__builtin_xsaddsubuqm">,
+      DefaultAttrsIntrinsic<[llvm_v16i8_ty],
+                            [llvm_v16i8_ty, llvm_v16i8_ty],
+                            [IntrNoMem]>;
+  def int_ppc_xsaddsubsuqm : ClangBuiltin<"__builtin_xsaddsubsuqm">,
+      DefaultAttrsIntrinsic<[llvm_v16i8_ty],
+                            [llvm_v16i8_ty, llvm_v16i8_ty],
+                            [IntrNoMem]>;
+  def int_ppc_xsmerge2t1uqm : ClangBuiltin<"__builtin_xsmerge2t1uqm">,
+      DefaultAttrsIntrinsic<[llvm_v16i8_ty],
+                            [llvm_v16i8_ty, llvm_v16i8_ty],
+                            [IntrNoMem]>;
+  def int_ppc_xsmerge2t2uqm : ClangBuiltin<"__builtin_xsmerge2t2uqm">,
+      DefaultAttrsIntrinsic<[llvm_v16i8_ty],
+                            [llvm_v16i8_ty, llvm_v16i8_ty],
+                            [IntrNoMem]>;
+  def int_ppc_xsmerge2t3uqm : ClangBuiltin<"__builtin_xsmerge2t3uqm">,
+      DefaultAttrsIntrinsic<[llvm_v16i8_ty],
+                            [llvm_v16i8_ty, llvm_v16i8_ty],
+                            [IntrNoMem]>;
+  def int_ppc_xsmerge3t1uqm : ClangBuiltin<"__builtin_xsmerge3t1uqm">,
+      DefaultAttrsIntrinsic<[llvm_v16i8_ty],
+                            [llvm_v16i8_ty, llvm_v16i8_ty],
+                            [IntrNoMem]>;
+  def int_ppc_xsrebase2t1uqm : ClangBuiltin<"__builtin_xsrebase2t1uqm">,
+      DefaultAttrsIntrinsic<[llvm_v16i8_ty],
+                            [llvm_v16i8_ty, llvm_v16i8_ty],
+                            [IntrNoMem]>;
+  def int_ppc_xsrebase2t2uqm : ClangBuiltin<"__builtin_xsrebase2t2uqm">,
+      DefaultAttrsIntrinsic<[llvm_v16i8_ty],
+                            [llvm_v16i8_ty, llvm_v16i8_ty],
+                            [IntrNoMem]>;
+  def int_ppc_xsrebase2t3uqm : ClangBuiltin<"__builtin_xsrebase2t3uqm">,
+      DefaultAttrsIntrinsic<[llvm_v16i8_ty],
+                            [llvm_v16i8_ty, llvm_v16i8_ty],
+                            [IntrNoMem]>;
+  def int_ppc_xsrebase2t4uqm : ClangBuiltin<"__builtin_xsrebase2t4uqm">,
+      DefaultAttrsIntrinsic<[llvm_v16i8_ty],
+                            [llvm_v16i8_ty, llvm_v16i8_ty],
+                            [IntrNoMem]>;
+  def int_ppc_xsrebase3t1uqm : ClangBuiltin<"__builtin_xsrebase3t1uqm">,
+      DefaultAttrsIntrinsic<[llvm_v16i8_ty],
+                            [llvm_v16i8_ty, llvm_v16i8_ty],
+                            [IntrNoMem]>;
+  def int_ppc_xsrebase3t2uqm : ClangBuiltin<"__builtin_xsrebase3t2uqm">,
+      DefaultAttrsIntrinsic<[llvm_v16i8_ty],
+                            [llvm_v16i8_ty, llvm_v16i8_ty],
+                            [IntrNoMem]>;
+  def int_ppc_xsrebase3t3uqm : ClangBuiltin<"__builtin_xsrebase3t3uqm">,
+      DefaultAttrsIntrinsic<[llvm_v16i8_ty],
+                            [llvm_v16i8_ty, llvm_v16i8_ty],
+                            [IntrNoMem]>;
 }

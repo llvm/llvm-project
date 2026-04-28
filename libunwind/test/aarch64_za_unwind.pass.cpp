@@ -14,18 +14,44 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#if defined(__APPLE__)
+#include <sys/sysctl.h>
+#endif
+#if defined(_LIBUNWIND_HAVE_GETAUXVAL) || defined(_LIBUNWIND_HAVE_ELF_AUX_INFO)
 #include <sys/auxv.h>
+#endif
 
 // Basic test of unwinding with SME lazy saves. This tests libunwind disables ZA
 // (and commits a lazy save of ZA) before resuming from unwinding.
 
 // Note: This test requires SME (and is setup to pass on targets without SME).
-
+#if defined(__APPLE__)
+static bool checkHasSME() {
+  int has_sme = 0;
+  size_t size = sizeof(has_sme);
+  if (!sysctlbyname("hw.optional.arm.FEAT_SME", &has_sme, &size, NULL, 0))
+    return false;
+  return has_sme != 0;
+}
+#elif defined(_LIBUNWIND_HAVE_GETAUXVAL)
 static bool checkHasSME() {
   constexpr int hwcap2_sme = (1 << 23);
   unsigned long hwcap2 = getauxval(AT_HWCAP2);
   return (hwcap2 & hwcap2_sme) != 0;
 }
+#elif defined(_LIBUNWIND_HAVE_ELF_AUX_INFO)
+static bool checkHasSME() {
+  constexpr int hwcap2_sme = (1 << 23);
+  unsigned long hwcap2 = 0;
+  elf_aux_info(AT_HWCAP2, &hwcap2, sizeof(hwcap2));
+  return (hwcap2 & hwcap2_sme) != 0;
+}
+#else
+static bool checkHasSME() {
+  // TODO: Support other platforms.
+  return false;
+}
+#endif
 
 struct TPIDR2Block {
   void *za_save_buffer;

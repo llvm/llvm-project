@@ -190,6 +190,7 @@ if(FUCHSIA_ENABLE_PGO)
     stage2-install-toolchain-distribution-toolchain
     stage2-check-all
     stage2-check-clang
+    stage2-check-clang-extra
     stage2-check-lld
     stage2-check-llvm
     stage2-check-polly
@@ -207,6 +208,7 @@ else()
  set(_FUCHSIA_BOOTSTRAP_TARGETS
    check-all
    check-clang
+   check-clang-extra
    check-lld
    check-llvm
    check-polly

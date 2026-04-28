@@ -146,8 +146,7 @@ mlir::Attribute CIRGenVTables::getVTableComponent(
 
   switch (component.getKind()) {
   case VTableComponent::CK_UnusedFunctionPointer:
-    cgm.errorNYI("getVTableComponent: UnusedFunctionPointer");
-    return mlir::Attribute();
+    return builder.getConstNullPtrAttr(builder.getUInt8PtrTy());
 
   case VTableComponent::CK_VCallOffset:
     return builder.getConstPtrAttr(builder.getUInt8PtrTy(),
@@ -213,7 +212,7 @@ mlir::Attribute CIRGenVTables::getVTableComponent(
       assert(!cir::MissingFeatures::pointerAuthentication());
     } else {
       // Otherwise we can use the method definition directly.
-      cir::FuncType fnTy = cgm.getTypes().getFunctionTypeForVTable(gd);
+      cir::FuncType fnTy = cgm.getTypes().getFunctionType(gd);
       fnPtr = cgm.getAddrOfFunction(gd, fnTy, /*ForVTable=*/true);
     }
 
@@ -327,6 +326,9 @@ cir::GlobalOp CIRGenVTables::generateConstructionVTable(
   return vtable;
 }
 
+static bool shouldEmitAvailableExternallyVTable(const CIRGenModule &cgm,
+                                                const CXXRecordDecl *rd);
+
 /// Compute the required linkage of the vtable for the given class.
 ///
 /// Note that we only call this at the end of the translation unit.
@@ -370,7 +372,8 @@ cir::GlobalLinkageKind CIRGenModule::getVTableLinkage(const CXXRecordDecl *rd) {
       return cir::GlobalLinkageKind::WeakODRLinkage;
 
     case TSK_ExplicitInstantiationDeclaration:
-      llvm_unreachable("Should not have been asked to emit this");
+      return !def ? cir::GlobalLinkageKind::AvailableExternallyLinkage
+                  : cir::GlobalLinkageKind::ExternalLinkage;
     }
   }
   // -fapple-kext mode does not support weak linkage, so we must use
@@ -396,11 +399,14 @@ cir::GlobalLinkageKind CIRGenModule::getVTableLinkage(const CXXRecordDecl *rd) {
   case TSK_ImplicitInstantiation:
     return discardableODRLinkage;
 
-  case TSK_ExplicitInstantiationDeclaration: {
-    errorNYI(rd->getSourceRange(),
-             "getVTableLinkage: explicit instantiation declaration");
-    return cir::GlobalLinkageKind::ExternalLinkage;
-  }
+  case TSK_ExplicitInstantiationDeclaration:
+    // Explicit instantiations in MSVC do not provide vtables, so we must emit
+    // our own.
+    if (getTarget().getCXXABI().isMicrosoft())
+      return discardableODRLinkage;
+    return shouldEmitAvailableExternallyVTable(*this, rd)
+               ? cir::GlobalLinkageKind::AvailableExternallyLinkage
+               : cir::GlobalLinkageKind::ExternalLinkage;
 
   case TSK_ExplicitInstantiationDefinition:
     return nonDiscardableODRLinkage;
@@ -560,26 +566,41 @@ uint64_t CIRGenVTables::getSecondaryVirtualPointerIndex(const CXXRecordDecl *rd,
 
 static RValue performReturnAdjustment(CIRGenFunction &cgf, QualType resultType,
                                       RValue rv, const ThunkInfo &thunk) {
-  // Emit the return adjustment.
+  // Emit the return adjustment.  For non-reference pointer returns, match
+  // classic codegen: skip the adjustment when the returned pointer is null.
   bool nullCheckValue = !resultType->isReferenceType();
-
   mlir::Value returnValue = rv.getValue();
-
-  if (nullCheckValue)
-    cgf.cgm.errorNYI(
-        "return adjustment with null check for non-reference types");
 
   const CXXRecordDecl *classDecl =
       resultType->getPointeeType()->getAsCXXRecordDecl();
   CharUnits classAlign = cgf.cgm.getClassPointerAlignment(classDecl);
   mlir::Type pointeeType = cgf.convertTypeForMem(resultType->getPointeeType());
-  returnValue = cgf.cgm.getCXXABI().performReturnAdjustment(
-      cgf, Address(returnValue, pointeeType, classAlign), classDecl,
-      thunk.Return);
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Location loc = returnValue.getLoc();
 
-  if (nullCheckValue)
-    cgf.cgm.errorNYI(
-        "return adjustment with null check for non-reference types");
+  if (!nullCheckValue) {
+    returnValue = cgf.cgm.getCXXABI().performReturnAdjustment(
+        cgf, Address(returnValue, pointeeType, classAlign), classDecl,
+        thunk.Return);
+    return RValue::get(returnValue);
+  }
+
+  mlir::Value isNotNull = builder.createPtrIsNotNull(returnValue);
+  returnValue =
+      cir::TernaryOp::create(
+          builder, loc, isNotNull,
+          [&](mlir::OpBuilder &, mlir::Location) {
+            mlir::Value adjusted = cgf.cgm.getCXXABI().performReturnAdjustment(
+                cgf, Address(returnValue, pointeeType, classAlign), classDecl,
+                thunk.Return);
+            builder.createYield(loc, adjusted);
+          },
+          [&](mlir::OpBuilder &, mlir::Location) {
+            mlir::Value nullVal =
+                builder.getNullPtr(returnValue.getType(), loc).getResult();
+            builder.createYield(loc, nullVal);
+          })
+          .getResult();
 
   return RValue::get(returnValue);
 }
@@ -744,8 +765,33 @@ void CIRGenFunction::emitCallAndReturnForThunk(cir::FuncOp callee,
 void CIRGenFunction::emitMustTailThunk(GlobalDecl gd,
                                        mlir::Value adjustedThisPtr,
                                        cir::FuncOp callee) {
-  assert(!cir::MissingFeatures::opCallMustTail());
-  cgm.errorNYI("musttail thunk");
+  // Forward all function arguments, replacing 'this' with the adjusted pointer.
+  // The call is marked musttail so varargs are forwarded correctly.
+  mlir::Block *entryBlock = getCurFunctionEntryBlock();
+  SmallVector<mlir::Value> args;
+  for (mlir::BlockArgument arg : entryBlock->getArguments())
+    args.push_back(arg);
+
+  // Replace the 'this' argument (first arg) with the adjusted pointer.
+  assert(!args.empty() && "thunk must have at least 'this' argument");
+  if (adjustedThisPtr.getType() != args[0].getType())
+    adjustedThisPtr = builder.createBitcast(adjustedThisPtr, args[0].getType());
+  args[0] = adjustedThisPtr;
+
+  mlir::Location loc = curFn->getLoc();
+  cir::FuncType calleeTy = callee.getFunctionType();
+  mlir::Type retTy = calleeTy.getReturnType();
+
+  cir::CallOp call = builder.createCallOp(loc, callee, args);
+  call->setAttr(cir::CIRDialect::getMustTailAttrName(),
+                mlir::UnitAttr::get(builder.getContext()));
+
+  if (isa<cir::VoidType>(retTy))
+    cir::ReturnOp::create(builder, loc);
+  else
+    cir::ReturnOp::create(builder, loc, call->getResult(0));
+
+  finishThunk();
 }
 
 void CIRGenFunction::generateThunk(cir::FuncOp fn,
@@ -828,7 +874,7 @@ cir::FuncOp CIRGenVTables::maybeEmitThunk(GlobalDecl gd,
       mCtx.mangleThunk(md, thunkAdjustments, /*elideOverrideInfo=*/true, out);
   }
 
-  cir::FuncType thunkVTableTy = cgm.getTypes().getFunctionTypeForVTable(gd);
+  cir::FuncType thunkVTableTy = cgm.getTypes().getFunctionType(gd);
   cir::FuncOp thunk = cgm.getAddrOfThunk(name, thunkVTableTy, gd);
 
   // If we don't need to emit a definition, return this declaration as is.
@@ -854,10 +900,12 @@ cir::FuncOp CIRGenVTables::maybeEmitThunk(GlobalDecl gd,
     assert(oldThunkFn.isDeclaration() && "Shouldn't replace non-declaration");
 
     // Remove the name from the old thunk function and get a new thunk.
+    cgm.eraseGlobalSymbol(oldThunkFn);
     oldThunkFn.setName(StringRef());
     thunkFn =
         cir::FuncOp::create(cgm.getBuilder(), thunk->getLoc(), name.str(),
                             thunkFnTy, cir::GlobalLinkageKind::ExternalLinkage);
+    cgm.insertGlobalSymbol(thunkFn);
     cgm.setCIRFunctionAttributes(md, fnInfo, thunkFn, /*isThunk=*/false);
 
     if (!oldThunkFn->use_empty())

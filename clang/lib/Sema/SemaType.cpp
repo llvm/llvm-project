@@ -2288,6 +2288,12 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
         return QualType();
       }
       if (ConstVal == 0 && !T.isWebAssemblyReferenceType()) {
+        if (getLangOpts().OpenCL) {
+          Diag(ArraySize->getBeginLoc(), diag::err_typecheck_zero_array_size)
+              << 3 << ArraySize->getSourceRange();
+          return QualType();
+        }
+
         // GCC accepts zero sized static arrays. We allow them when
         // we're not in a SFINAE context.
         Diag(ArraySize->getBeginLoc(),
@@ -4401,7 +4407,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
   }
 
   // Determine whether we should infer _Nonnull on pointer types.
-  std::optional<NullabilityKind> inferNullability;
+  NullabilityKindOrNone inferNullability = std::nullopt;
   bool inferNullabilityCS = false;
   bool inferNullabilityInnerOnly = false;
   bool inferNullabilityInnerOnlyComplete = false;

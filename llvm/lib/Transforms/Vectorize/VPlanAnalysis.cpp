@@ -27,14 +27,11 @@ using namespace VPlanPatternMatch;
 VPTypeAnalysis::VPTypeAnalysis(const VPlan &Plan)
     : Ctx(Plan.getContext()), DL(Plan.getDataLayout()) {
   if (auto LoopRegion = Plan.getVectorLoopRegion()) {
-    if (const auto *CanIV = dyn_cast<VPCanonicalIVPHIRecipe>(
-            &LoopRegion->getEntryBasicBlock()->front())) {
-      CanonicalIVTy = CanIV->getScalarType();
-      return;
-    }
+    CanonicalIVTy = LoopRegion->getCanonicalIVType();
+    return;
   }
 
-  // If there's no canonical IV, retrieve the type from the trip count
+  // If there's no loop region, retrieve the type from the trip count
   // expression.
   auto *TC = Plan.getTripCount();
   if (auto *TCIRV = dyn_cast<VPIRValue>(TC)) {
@@ -106,8 +103,6 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
                inferScalarType(R->getOperand(1)) &&
            "different types inferred for different operands");
     return IntegerType::get(Ctx, 1);
-  case VPInstruction::ComputeAnyOfResult:
-    return inferScalarType(R->getOperand(1));
   case VPInstruction::ExplicitVectorLength:
     return Type::getIntNTy(Ctx, 32);
   case VPInstruction::FirstOrderRecurrenceSplice:
@@ -139,6 +134,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case VPInstruction::BranchOnTwoConds:
   case VPInstruction::BranchOnCount:
   case Instruction::Store:
+  case Instruction::Switch:
     return Type::getVoidTy(Ctx);
   case Instruction::Load:
     return cast<LoadInst>(R->getUnderlyingValue())->getType();
@@ -288,18 +284,20 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
     return CanonicalIVTy;
   }
 
+  if (auto *RegionV = dyn_cast<VPRegionValue>(V))
+    return RegionV->getType();
+
   Type *ResultTy =
       TypeSwitch<const VPRecipeBase *, Type *>(V->getDefiningRecipe())
-          .Case<VPActiveLaneMaskPHIRecipe, VPCanonicalIVPHIRecipe,
-                VPFirstOrderRecurrencePHIRecipe, VPReductionPHIRecipe,
-                VPWidenPointerInductionRecipe, VPCurrentIterationPHIRecipe>(
-              [this](const auto *R) {
-                // Handle header phi recipes, except VPWidenIntOrFpInduction
-                // which needs special handling due it being possibly truncated.
-                // TODO: consider inferring/caching type of siblings, e.g.,
-                // backedge value, here and in cases below.
-                return inferScalarType(R->getStartValue());
-              })
+          .Case<VPActiveLaneMaskPHIRecipe, VPFirstOrderRecurrencePHIRecipe,
+                VPReductionPHIRecipe, VPWidenPointerInductionRecipe,
+                VPCurrentIterationPHIRecipe>([this](const auto *R) {
+            // Handle header phi recipes, except VPWidenIntOrFpInduction
+            // which needs special handling due it being possibly truncated.
+            // TODO: consider inferring/caching type of siblings, e.g.,
+            // backedge value, here and in cases below.
+            return inferScalarType(R->getStartValue());
+          })
           .Case<VPWidenIntOrFpInductionRecipe, VPDerivedIVRecipe>(
               [](const auto *R) { return R->getScalarType(); })
           .Case<VPReductionRecipe, VPPredInstPHIRecipe, VPWidenPHIRecipe,
@@ -391,45 +389,29 @@ bool VPDominatorTree::properlyDominates(const VPRecipeBase *A,
   if (ParentA == ParentB)
     return LocalComesBefore(A, B);
 
-#ifndef NDEBUG
-  auto GetReplicateRegion = [](VPRecipeBase *R) -> VPRegionBlock * {
-    VPRegionBlock *Region = R->getRegion();
-    if (Region && Region->isReplicator()) {
-      assert(Region->getNumSuccessors() == 1 &&
-             Region->getNumPredecessors() == 1 && "Expected SESE region!");
-      assert(R->getParent()->size() == 1 &&
-             "A recipe in an original replicator region must be the only "
-             "recipe in its block");
-      return Region;
-    }
-    return nullptr;
-  };
-  assert(!GetReplicateRegion(const_cast<VPRecipeBase *>(A)) &&
-         "No replicate regions expected at this point");
-  assert(!GetReplicateRegion(const_cast<VPRecipeBase *>(B)) &&
-         "No replicate regions expected at this point");
-#endif
   return Base::properlyDominates(ParentA, ParentB);
 }
 
-InstructionCost VPRegisterUsage::spillCost(VPCostContext &Ctx,
-                                           unsigned OverrideMaxNumRegs) const {
+InstructionCost
+VPRegisterUsage::spillCost(const TargetTransformInfo &TTI,
+                           TargetTransformInfo::TargetCostKind CostKind,
+                           unsigned OverrideMaxNumRegs) const {
   InstructionCost Cost;
   for (const auto &[RegClass, MaxUsers] : MaxLocalUsers) {
     unsigned AvailableRegs = OverrideMaxNumRegs > 0
                                  ? OverrideMaxNumRegs
-                                 : Ctx.TTI.getNumberOfRegisters(RegClass);
+                                 : TTI.getNumberOfRegisters(RegClass);
     if (MaxUsers > AvailableRegs) {
       // Assume that for each register used past what's available we get one
       // spill and reload.
       unsigned Spills = MaxUsers - AvailableRegs;
       InstructionCost SpillCost =
-          Ctx.TTI.getRegisterClassSpillCost(RegClass, Ctx.CostKind) +
-          Ctx.TTI.getRegisterClassReloadCost(RegClass, Ctx.CostKind);
+          TTI.getRegisterClassSpillCost(RegClass, CostKind) +
+          TTI.getRegisterClassReloadCost(RegClass, CostKind);
       InstructionCost TotalCost = Spills * SpillCost;
       LLVM_DEBUG(dbgs() << "LV(REG): Cost of " << TotalCost << " from "
                         << Spills << " spills of "
-                        << Ctx.TTI.getRegisterClassName(RegClass) << "\n");
+                        << TTI.getRegisterClassName(RegClass) << "\n");
       Cost += TotalCost;
     }
   }
@@ -528,6 +510,11 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
     return TTICapture.getRegUsageForType(VectorType::get(Ty, VF));
   };
 
+  VPValue *CanIV = LoopRegion->getCanonicalIV();
+  // Note: canonical IVs are retained even if they have no users.
+  if (CanIV->getNumUsers() != 0)
+    OpenIntervals.insert(CanIV);
+
   // We scan the instructions linearly and record each time that a new interval
   // starts, by placing it in a set. If we find this value in TransposEnds then
   // we remove it from the set. The max register usage is the maximum register
@@ -576,7 +563,7 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
           continue;
 
         if (VFs[J].isScalar() ||
-            isa<VPCanonicalIVPHIRecipe, VPReplicateRecipe, VPDerivedIVRecipe,
+            isa<VPRegionValue, VPReplicateRecipe, VPDerivedIVRecipe,
                 VPCurrentIterationPHIRecipe, VPScalarIVStepsRecipe>(VPV) ||
             (isa<VPInstruction>(VPV) && vputils::onlyScalarValuesUsed(VPV)) ||
             (isa<VPReductionPHIRecipe>(VPV) &&

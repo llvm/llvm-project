@@ -1,3 +1,5 @@
+.. _undefined_behavior:
+
 ===========================
 Defining Undefined Behavior
 ===========================
@@ -94,6 +96,16 @@ Unrecognized ``clockid_t`` values for ``pthread_rwlock_clock*`` APIs
 POSIX.1-2024 only demands support for ``CLOCK_REALTIME`` and ``CLOCK_MONOTONIC``. Currently,
 as in LLVM libc, if other clock ids are used, they will be treated as monotonic clocks.
 
+Invalid condition variable attributes for ``pthread_cond_init``
+---------------------------------------------------------------
+POSIX.1-2024 specifies that ``pthread_cond_init`` returns an error number on
+failure, but it does not specify the behavior when the provided
+``pthread_condattr_t`` contains an unsupported clock value or an unrecognized
+process-shared flag. LLVM's libc returns ``EINVAL`` for unsupported clock values
+and for process-shared flags other than ``PTHREAD_PROCESS_PRIVATE`` and
+``PTHREAD_PROCESS_SHARED``. This returns the error number directly and does not
+set ``errno``.
+
 PThread SpinLock Destroy
 ------------------------
 POSIX.1 Issue 7 updates the spinlock destroy behavior description such that the return code for
@@ -157,3 +169,14 @@ The current implementation of the `inet_aton` function utilizes the same code
 as `strtol` to parse IPv4 numbers-and-dots notations. This approach may permit
 the use of binary integers (prefixed with 0b), which is not supported by the
 standard.
+
+`tdelete` on Non-existent Key
+------------------------------
+The return value of `tdelete` is unspecified if the key is not found in the tree.
+For LLVM-libc, `tdelete` returns bit-casted `uintptr_t`'s maximum value.
+
+`twalk/twalk_r/tdestroy` with Null Function Pointer
+------------------------------------------------------
+The standard requires that ``twalk``, ``twalk_r``, and ``tdestroy``
+to be used with a valid function pointer. LLVM-libc follows the behavior of
+configured via the `LIBC_ADD_NULL_CHECKS` option.

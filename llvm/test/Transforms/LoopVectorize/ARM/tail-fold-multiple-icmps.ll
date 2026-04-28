@@ -56,13 +56,13 @@ entry:
   %cmp26.not = icmp eq i32 %N, 0
   br i1 %cmp26.not, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   %max.0.lcssa = phi i32 [ -2147483648, %entry ], [ %cond, %for.body ]
   %min.0.lcssa = phi i32 [ 2147483647, %entry ], [ %cond9, %for.body ]
   store i32 %min.0.lcssa, ptr %minp, align 4
   ret i32 %max.0.lcssa
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.029 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %min.028 = phi i32 [ %cond9, %for.body ], [ 2147483647, %entry ]
   %max.027 = phi i32 [ %cond, %for.body ], [ -2147483648, %entry ]

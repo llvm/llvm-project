@@ -21,11 +21,15 @@ static_library("Core") {
     "Serialization/JSONFormat/LUSummaryEncoding.cpp",
     "Serialization/JSONFormat/TUSummary.cpp",
     "Serialization/JSONFormat/TUSummaryEncoding.cpp",
+    "Serialization/JSONFormat/WPASuite.cpp",
     "Serialization/SerializationFormatRegistry.cpp",
     "SummaryData/LUSummaryConsumer.cpp",
     "SummaryData/SummaryDataBuilderRegistry.cpp",
     "Support/ErrorBuilder.cpp",
     "TUSummary/ExtractorRegistry.cpp",
     "TUSummary/TUSummaryBuilder.cpp",
+    "WholeProgramAnalysis/AnalysisDriver.cpp",
+    "WholeProgramAnalysis/AnalysisName.cpp",
+    "WholeProgramAnalysis/AnalysisRegistry.cpp",
   ]
 }

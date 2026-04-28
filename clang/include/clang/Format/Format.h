@@ -268,6 +268,41 @@ struct FormatStyle {
     }
   };
 
+  /// Style of aligning consecutive assignments.
+  ///
+  /// ``Consecutive`` will result in formattings like:
+  /// \code
+  ///   int a            = 1;
+  ///   int somelongname = 2;
+  ///   double c         = 3;
+  /// \endcode
+  /// \version 3.8
+  AlignConsecutiveStyle AlignConsecutiveAssignments;
+
+  /// Style of aligning consecutive bit fields.
+  ///
+  /// ``Consecutive`` will align the bitfield separators of consecutive lines.
+  /// This will result in formattings like:
+  /// \code
+  ///   int aaaa : 1;
+  ///   int b    : 12;
+  ///   int ccc  : 8;
+  /// \endcode
+  /// \version 11
+  AlignConsecutiveStyle AlignConsecutiveBitFields;
+
+  /// Style of aligning consecutive declarations.
+  ///
+  /// ``Consecutive`` will align the declaration names of consecutive lines.
+  /// This will result in formattings like:
+  /// \code
+  ///   int         aaaa = 12;
+  ///   float       b = 23;
+  ///   std::string ccc;
+  /// \endcode
+  /// \version 3.8
+  AlignConsecutiveStyle AlignConsecutiveDeclarations;
+
   /// Style of aligning consecutive macro definitions.
   ///
   /// ``Consecutive`` will result in formattings like:
@@ -280,38 +315,6 @@ struct FormatStyle {
   /// \endcode
   /// \version 9
   AlignConsecutiveStyle AlignConsecutiveMacros;
-  /// Style of aligning consecutive assignments.
-  ///
-  /// ``Consecutive`` will result in formattings like:
-  /// \code
-  ///   int a            = 1;
-  ///   int somelongname = 2;
-  ///   double c         = 3;
-  /// \endcode
-  /// \version 3.8
-  AlignConsecutiveStyle AlignConsecutiveAssignments;
-  /// Style of aligning consecutive bit fields.
-  ///
-  /// ``Consecutive`` will align the bitfield separators of consecutive lines.
-  /// This will result in formattings like:
-  /// \code
-  ///   int aaaa : 1;
-  ///   int b    : 12;
-  ///   int ccc  : 8;
-  /// \endcode
-  /// \version 11
-  AlignConsecutiveStyle AlignConsecutiveBitFields;
-  /// Style of aligning consecutive declarations.
-  ///
-  /// ``Consecutive`` will align the declaration names of consecutive lines.
-  /// This will result in formattings like:
-  /// \code
-  ///   int         aaaa = 12;
-  ///   float       b = 23;
-  ///   std::string ccc;
-  /// \endcode
-  /// \version 3.8
-  AlignConsecutiveStyle AlignConsecutiveDeclarations;
 
   /// Alignment options.
   ///
@@ -1295,24 +1298,9 @@ struct FormatStyle {
   /// \version 12
   std::vector<std::string> AttributeMacros;
 
-  /// If ``false``, a function call's arguments will either be all on the
-  /// same line or will have one line each.
-  /// \code
-  ///   true:
-  ///   void f() {
-  ///     f(aaaaaaaaaaaaaaaaaaaa, aaaaaaaaaaaaaaaaaaaa,
-  ///       aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);
-  ///   }
-  ///
-  ///   false:
-  ///   void f() {
-  ///     f(aaaaaaaaaaaaaaaaaaaa,
-  ///       aaaaaaaaaaaaaaaaaaaa,
-  ///       aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);
-  ///   }
-  /// \endcode
+  /// This option is **deprecated**. See ``BinPack`` of ``PackArguments``.
   /// \version 3.7
-  bool BinPackArguments;
+  // bool BinPackArguments;
 
   /// If ``BinPackLongBracedList`` is ``true`` it overrides
   /// ``BinPackArguments`` if there are 20 or more items in a braced
@@ -1330,36 +1318,9 @@ struct FormatStyle {
   /// \version 21
   bool BinPackLongBracedList;
 
-  /// Different way to try to fit all parameters on a line.
-  enum BinPackParametersStyle : int8_t {
-    /// Bin-pack parameters.
-    /// \code
-    ///    void f(int a, int bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb,
-    ///           int ccccccccccccccccccccccccccccccccccccccccccc);
-    /// \endcode
-    BPPS_BinPack,
-    /// Put all parameters on the current line if they fit.
-    /// Otherwise, put each one on its own line.
-    /// \code
-    ///    void f(int a, int b, int c);
-    ///
-    ///    void f(int a,
-    ///           int b,
-    ///           int ccccccccccccccccccccccccccccccccccccc);
-    /// \endcode
-    BPPS_OnePerLine,
-    /// Always put each parameter on its own line.
-    /// \code
-    ///    void f(int a,
-    ///           int b,
-    ///           int c);
-    /// \endcode
-    BPPS_AlwaysOnePerLine,
-  };
-
-  /// The bin pack parameters style to use.
+  /// This option is **deprecated**. See ``BinPack`` of ``PackParameters``.
   /// \version 3.7
-  BinPackParametersStyle BinPackParameters;
+  // BinPackParametersStyle BinPackParameters;
 
   /// Styles for adding spacing around ``:`` in bitfield definitions.
   enum BitFieldColonSpacingStyle : int8_t {
@@ -4200,6 +4161,10 @@ struct FormatStyle {
   /// one line. If it matches a comment that is the only token of a line,
   /// clang-format skips the comment and the next line. Otherwise, clang-format
   /// skips lines containing a matched token.
+  /// \note
+  ///  This option does not apply to ``IntegerLiteralSeparator`` and
+  ///  ``NumericLiteralCase``.
+  /// \endnote
   /// \code
   ///    // OneLineFormatOffRegex: ^(// NOLINT|logger$)
   ///    // results in the output below:
@@ -4216,6 +4181,72 @@ struct FormatStyle {
   /// \endcode
   /// \version 21
   std::string OneLineFormatOffRegex;
+
+  /// Different ways to try to fit all arguments on a line.
+  enum BinPackArgumentsStyle : int8_t {
+    /// Bin-pack arguments.
+    /// \code
+    ///   void f() {
+    ///     f(aaaaaaaaaaaaaaaaaaaa, aaaaaaaaaaaaaaaaaaaa,
+    ///       aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);
+    ///   }
+    /// \endcode
+    BPAS_BinPack,
+    /// Put all arguments on the current line if they fit.
+    /// Otherwise, put each one on its own line.
+    /// \code
+    ///   void f() {
+    ///     f(aaaaaaaaaaaaaaaaaaaa,
+    ///       aaaaaaaaaaaaaaaaaaaa,
+    ///       aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);
+    ///   }
+    /// \endcode
+    BPAS_OnePerLine,
+    /// Use the ``BreakAfter`` option to handle argument packing instead.
+    /// If the ``BreakAfter`` limit is not exceeded, behave like ``BinPack``.
+    BPAS_UseBreakAfter
+  };
+
+  /// Options related to packing arguments of function calls.
+  struct PackArgumentsStyle {
+
+    /// The bin pack arguments style to use.
+    /// \version 3.7
+    BinPackArgumentsStyle BinPack;
+
+    /// An argument list with more arguments than the specified number will be
+    /// formatted with one argument per line. This option must be used with
+    /// ``BinPack: UseBreakAfter``.
+    /// \code
+    ///   PackArguments:
+    ///     BinPack: UseBreakAfter
+    ///     BreakAfter: 3
+    ///
+    ///   void f() {
+    ///     foo(1);
+    ///
+    ///     bar(1, 2, 3);
+    ///
+    ///     baz(1,
+    ///         2,
+    ///         3,
+    ///         4);
+    ///   }
+    /// \endcode
+    /// \version 23
+    unsigned BreakAfter;
+
+    bool operator==(const PackArgumentsStyle &R) const {
+      return BinPack == R.BinPack && BreakAfter == R.BreakAfter;
+    }
+    bool operator!=(const PackArgumentsStyle &R) const {
+      return !operator==(R);
+    }
+  };
+
+  /// Options related to packing arguments of function calls.
+  /// \version 23
+  PackArgumentsStyle PackArguments;
 
   /// Different ways to try to fit all constructor initializers on a line.
   enum PackConstructorInitializersStyle : int8_t {
@@ -4278,6 +4309,77 @@ struct FormatStyle {
   /// The pack constructor initializers style to use.
   /// \version 14
   PackConstructorInitializersStyle PackConstructorInitializers;
+
+  /// Different ways to try to fit all parameters on a line.
+  enum BinPackParametersStyle : int8_t {
+    /// Bin-pack parameters.
+    /// \code
+    ///    void f(int a, int bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb,
+    ///           int ccccccccccccccccccccccccccccccccccccccccccc);
+    /// \endcode
+    BPPS_BinPack,
+    /// Put all parameters on the current line if they fit.
+    /// Otherwise, put each one on its own line.
+    /// \code
+    ///    void f(int a, int b, int c);
+    ///
+    ///    void f(int a,
+    ///           int b,
+    ///           int ccccccccccccccccccccccccccccccccccccc);
+    /// \endcode
+    BPPS_OnePerLine,
+    /// Always put each parameter on its own line.
+    /// \code
+    ///    void f(int a,
+    ///           int b,
+    ///           int c);
+    /// \endcode
+    BPPS_AlwaysOnePerLine,
+    /// Use the ``BreakAfter`` option to handle parameter packing instead.
+    /// If the ``BreakAfter`` limit is not exceeded, behave like ``BinPack``.
+    BPPS_UseBreakAfter
+  };
+
+  /// Options related to packing parameters of function declarations and
+  /// definitions.
+  struct PackParametersStyle {
+
+    /// The bin pack parameters style to use.
+    /// \version 3.7
+    BinPackParametersStyle BinPack;
+
+    /// A parameter list with more parameters than the specified number will be
+    /// formatted with one parameter per line. This option must be used with
+    /// ``BinPack: UseBreakAfter``.
+    /// \code
+    ///   PackParameters:
+    ///     BinPack: UseBreakAfter
+    ///     BreakAfter: 3
+    ///
+    ///   void foo(int a);
+    ///
+    ///   void bar(int a, int b, int c);
+    ///
+    ///   void baz(int a,
+    ///            int b,
+    ///            int c,
+    ///            int d);
+    /// \endcode
+    /// \version 23
+    unsigned BreakAfter;
+
+    bool operator==(const PackParametersStyle &R) const {
+      return BinPack == R.BinPack && BreakAfter == R.BreakAfter;
+    }
+    bool operator!=(const PackParametersStyle &R) const {
+      return !operator==(R);
+    }
+  };
+
+  /// Options related to packing parameters of function declarations and
+  /// definitions.
+  /// \version 23
+  PackParametersStyle PackParameters;
 
   /// The penalty for breaking around an assignment operator.
   /// \version 5
@@ -5117,6 +5219,14 @@ struct FormatStyle {
   /// \version 7
   bool SpaceBeforeCtorInitializerColon;
 
+  /// If ``false``, spaces will be removed before enum underlying type colon.
+  /// \code
+  ///    true:                                  false:
+  ///    enum E : int {}                        enum E: int {}
+  /// \endcode
+  /// \version 23
+  bool SpaceBeforeEnumUnderlyingTypeColon;
+
   /// If ``false``, spaces will be removed before inheritance colon.
   /// \code
   ///    true:                                  false:
@@ -5658,6 +5768,10 @@ struct FormatStyle {
     LS_Cpp17, // c++17
     /// Parse and format as C++20.
     LS_Cpp20, // c++20
+    /// Parse and format as C++23.
+    LS_Cpp23, // c++23
+    /// Parse and format as C++26.
+    LS_Cpp26, // c++26
     /// Parse and format using the latest supported language version.
     /// ``Cpp11`` is a deprecated alias for ``Latest``
     LS_Latest,
@@ -5937,9 +6051,7 @@ struct FormatStyle {
            AlwaysBreakBeforeMultilineStrings ==
                R.AlwaysBreakBeforeMultilineStrings &&
            AttributeMacros == R.AttributeMacros &&
-           BinPackArguments == R.BinPackArguments &&
            BinPackLongBracedList == R.BinPackLongBracedList &&
-           BinPackParameters == R.BinPackParameters &&
            BitFieldColonSpacing == R.BitFieldColonSpacing &&
            BracedInitializerIndentWidth == R.BracedInitializerIndentWidth &&
            BreakAdjacentStringLiterals == R.BreakAdjacentStringLiterals &&
@@ -6032,7 +6144,9 @@ struct FormatStyle {
            ObjCSpaceAfterProperty == R.ObjCSpaceAfterProperty &&
            ObjCSpaceBeforeProtocolList == R.ObjCSpaceBeforeProtocolList &&
            OneLineFormatOffRegex == R.OneLineFormatOffRegex &&
+           PackArguments == R.PackArguments &&
            PackConstructorInitializers == R.PackConstructorInitializers &&
+           PackParameters == R.PackParameters &&
            PenaltyBreakAssignment == R.PenaltyBreakAssignment &&
            PenaltyBreakBeforeFirstCallParameter ==
                R.PenaltyBreakBeforeFirstCallParameter &&

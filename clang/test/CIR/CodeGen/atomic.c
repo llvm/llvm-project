@@ -5,6 +5,17 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
 
+_Atomic int g1;
+_Atomic int g2 = 42;
+// CIR: cir.global external @g2 = #cir.int<42> : !s32i {alignment = 4 : i64}
+// CIR: cir.global external @g1 = #cir.int<0> : !s32i {alignment = 4 : i64}
+
+// LLVM: @g2 = global i32 42, align 4
+// LLVM: @g1 = global i32 0, align 4
+
+// OGCG: @g2 = global i32 42, align 4
+// OGCG: @g1 = global i32 0, align 4
+
 void f1(void) {
   _Atomic(int) x = 42;
 }
@@ -71,6 +82,22 @@ void f4(_Atomic(float) *p) {
 
 // OGCG-LABEL: @f4
 // OGCG: store atomic float 0x40091EB860000000, ptr %{{.+}} seq_cst, align 4
+
+void atomic_to_non_atomic(_Atomic int *ptr, _Atomic volatile int *vptr) {
+  // CIR-LABEL: @atomic_to_non_atomic
+  // LLVM-LABEL: @atomic_to_non_atomic
+  // OGCG-LABEL: @atomic_to_non_atomic
+
+  int a = *ptr;
+  // CIR: %{{.+}} = cir.load align(4) atomic(seq_cst) %{{.+}} : !cir.ptr<!s32i>, !s32i
+  // LLVM: %{{.+}} = load atomic i32, ptr %{{.+}} seq_cst, align 4
+  // OGCG: %{{.+}} = load atomic i32, ptr %{{.+}} seq_cst, align 4
+
+  int b = *vptr;
+  // CIR: %{{.+}} = cir.load volatile align(4) atomic(seq_cst) %{{.+}} : !cir.ptr<!s32i>, !s32i
+  // LLVM: %{{.+}} = load atomic volatile i32, ptr %{{.+}} seq_cst, align 4
+  // OGCG: %{{.+}} = load atomic volatile i32, ptr %{{.+}} seq_cst, align 4
+}
 
 void load(int *ptr) {
   int x;
@@ -2950,4 +2977,34 @@ int atomic_load_and_store_dynamic_order(int *ptr, int order) {
   // OGCG-NEXT:   br label %[[CONTINUE_BLK]]
   // OGCG:      [[CONTINUE_BLK]]:
   // OGCG-NEXT:   %{{.+}} = load i32, ptr %[[RES_SLOT]], align 4
+}
+
+int atomic_fetch_uinc(int *ptr, int value) {
+  // CIR-LABEL: @atomic_fetch_uinc
+  // LLVM-LABEL: @atomic_fetch_uinc
+  // OGCG-LABEL: @atomic_fetch_uinc
+
+  return __atomic_fetch_uinc(ptr, value, __ATOMIC_SEQ_CST);
+  // CIR: %{{.+}} = cir.atomic.fetch uinc_wrap seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+
+  // LLVM:      %[[RES:.+]] = atomicrmw uinc_wrap ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+  // LLVM-NEXT: store i32 %[[RES]], ptr %{{.+}}, align 4
+
+  // OGCG:      %[[RES:.+]] = atomicrmw uinc_wrap ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+  // OGCG-NEXT: store i32 %[[RES]], ptr %{{.+}}, align 4
+}
+
+int atomic_fetch_udec(int *ptr, int value) {
+  // CIR-LABEL: @atomic_fetch_udec
+  // LLVM-LABEL: @atomic_fetch_udec
+  // OGCG-LABEL: @atomic_fetch_udec
+
+  return __atomic_fetch_udec(ptr, value, __ATOMIC_SEQ_CST);
+  // CIR: %{{.+}} = cir.atomic.fetch udec_wrap seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+
+  // LLVM:      %[[RES:.+]] = atomicrmw udec_wrap ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+  // LLVM-NEXT: store i32 %[[RES]], ptr %{{.+}}, align 4
+
+  // OGCG:      %[[RES:.+]] = atomicrmw udec_wrap ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+  // OGCG-NEXT: store i32 %[[RES]], ptr %{{.+}}, align 4
 }

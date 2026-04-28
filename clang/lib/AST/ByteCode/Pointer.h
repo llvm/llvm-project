@@ -370,7 +370,7 @@ public:
     if (isIntegralPointer()) {
       if (!Int.Desc)
         return 1;
-      return Int.Desc->getElemSize();
+      return Int.Desc->getElemDataSize();
     }
 
     if (BS.Base == RootPtrMark)
@@ -716,10 +716,20 @@ public:
     return *reinterpret_cast<T *>(BS.Pointee->rawData() + ReadOffset);
   }
 
+  bool isConstexprUnknown() const {
+    if (!isBlockPointer())
+      return false;
+    return getDeclDesc()->IsConstexprUnknown;
+  }
+
   /// Whether this block can be read from at all. This is only true for
   /// block pointers that point to a valid location inside that block.
   bool isDereferencable() const {
     if (!isBlockPointer())
+      return false;
+    if (isDummy())
+      return false;
+    if (isConstexprUnknown())
       return false;
     if (isPastEnd())
       return false;
@@ -779,6 +789,7 @@ public:
   /// InlineDescriptor as well as primitive array elements. This function is
   /// used by std::destroy_at.
   void endLifetime() const;
+  void setLifeState(Lifetime L) const;
 
   /// Strip base casts from this Pointer.
   /// The result is either a root pointer or something
@@ -817,6 +828,14 @@ public:
   /// i.e. a non-MaterializeTemporaryExpr Expr.
   bool pointsToLiteral() const;
   bool pointsToStringLiteral() const;
+  /// Whether this points to a block created for an AddrLabelExpr.
+  bool pointsToLabel() const;
+  /// Returns the AddrLabelExpr the Pointer points to, if any.
+  const AddrLabelExpr *getPointedToLabel() const {
+    if (const Descriptor *Desc = getDeclDesc())
+      return dyn_cast_if_present<AddrLabelExpr>(Desc->asExpr());
+    return nullptr;
+  }
 
   /// Prints the pointer.
   void print(llvm::raw_ostream &OS) const;
@@ -875,6 +894,9 @@ private:
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Pointer &P) {
   P.print(OS);
   OS << ' ';
+  if (P.isZero())
+    return OS;
+
   if (const Descriptor *D = P.getFieldDesc())
     D->dump(OS);
   if (P.isArrayElement()) {
@@ -882,7 +904,9 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Pointer &P) {
       OS << " one-past-the-end";
     else
       OS << " index " << P.getIndex();
-  }
+  } else if (P.isArrayRoot())
+    OS << " arrayroot";
+
   if (P.isBlockPointer() && P.block() && P.block()->isDummy())
     OS << " dummy";
   if (!P.isLive())

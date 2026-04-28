@@ -45,6 +45,29 @@
     fprintf(stderr, "'%s' failed with '%s'\n", #expr, name);                   \
   }(expr)
 
+/// Helper to check if a CUDA error is due to the context being destroyed
+/// during program shutdown. Both CUDA_ERROR_DEINITIALIZED and
+/// CUDA_ERROR_CONTEXT_IS_DESTROYED indicate that the CUDA context has been
+/// torn down and any associated resources are already freed.
+static bool isCudaContextShutdownError(CUresult result) {
+  return result == CUDA_ERROR_DEINITIALIZED ||
+         result == CUDA_ERROR_CONTEXT_IS_DESTROYED;
+}
+
+/// Like CUDA_REPORT_IF_ERROR, but silences errors caused by CUDA context
+/// shutdown. These errors are benign when they occur during program exit,
+/// as all resources are freed with the context.
+#define CUDA_REPORT_IF_ERROR_IGNORE_SHUTDOWN(expr)                             \
+  [](CUresult result) {                                                        \
+    if (!result || isCudaContextShutdownError(result))                         \
+      return;                                                                  \
+    const char *name = nullptr;                                                \
+    cuGetErrorName(result, &name);                                             \
+    if (!name)                                                                 \
+      name = "<unknown>";                                                      \
+    fprintf(stderr, "'%s' failed with '%s'\n", #expr, name);                   \
+  }(expr)
+
 #define CUSPARSE_REPORT_IF_ERROR(expr)                                         \
   {                                                                            \
     cusparseStatus_t status = (expr);                                          \
@@ -124,8 +147,8 @@ mgpuModuleLoad(void *data, size_t /*gpuBlobSize*/) {
   return module;
 }
 
-extern "C" MLIR_CUDA_WRAPPERS_EXPORT CUmodule mgpuModuleLoadJIT(void *data,
-                                                                int optLevel) {
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT CUmodule
+mgpuModuleLoadJIT(void *data, int optLevel, size_t /*assmeblySize*/) {
   ScopedContext scopedContext;
   CUmodule module = nullptr;
   char jitErrorBuffer[4096] = {0};
@@ -146,7 +169,7 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT CUmodule mgpuModuleLoadJIT(void *data,
 }
 
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuModuleUnload(CUmodule module) {
-  CUDA_REPORT_IF_ERROR(cuModuleUnload(module));
+  CUDA_REPORT_IF_ERROR_IGNORE_SHUTDOWN(cuModuleUnload(module));
 }
 
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT CUfunction
@@ -199,7 +222,7 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT CUstream mgpuStreamCreate() {
 }
 
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuStreamDestroy(CUstream stream) {
-  CUDA_REPORT_IF_ERROR(cuStreamDestroy(stream));
+  CUDA_REPORT_IF_ERROR_IGNORE_SHUTDOWN(cuStreamDestroy(stream));
 }
 
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void
@@ -209,7 +232,8 @@ mgpuStreamSynchronize(CUstream stream) {
 
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuStreamWaitEvent(CUstream stream,
                                                               CUevent event) {
-  CUDA_REPORT_IF_ERROR(cuStreamWaitEvent(stream, event, /*flags=*/0));
+  CUDA_REPORT_IF_ERROR_IGNORE_SHUTDOWN(
+      cuStreamWaitEvent(stream, event, /*flags=*/0));
 }
 
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT CUevent mgpuEventCreate() {
@@ -220,11 +244,11 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT CUevent mgpuEventCreate() {
 }
 
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuEventDestroy(CUevent event) {
-  CUDA_REPORT_IF_ERROR(cuEventDestroy(event));
+  CUDA_REPORT_IF_ERROR_IGNORE_SHUTDOWN(cuEventDestroy(event));
 }
 
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuEventSynchronize(CUevent event) {
-  CUDA_REPORT_IF_ERROR(cuEventSynchronize(event));
+  CUDA_REPORT_IF_ERROR_IGNORE_SHUTDOWN(cuEventSynchronize(event));
 }
 
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuEventRecord(CUevent event,

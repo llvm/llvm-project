@@ -692,24 +692,24 @@ define amdgpu_kernel void @v2i16_arg(ptr addrspace(1) %out, <2 x i16> %in) {
 ; EG-LABEL: v2i16_arg:
 ; EG:       ; %bb.0: ; %entry
 ; EG-NEXT:    ALU 2, @4, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T1.X, 1
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T1.X, T0.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
 ; EG-NEXT:    ALU clause starting at 4:
-; EG-NEXT:     MOV T0.X, KC0[2].Z,
-; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
+; EG-NEXT:     LSHR T0.X, KC0[2].Y, literal.x,
+; EG-NEXT:     MOV * T1.X, KC0[2].Z,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ;
 ; CM-LABEL: v2i16_arg:
 ; CM:       ; %bb.0: ; %entry
 ; CM-NEXT:    ALU 2, @4, KC0[CB0:0-32], KC1[]
-; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T0.X, T1.X
+; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T1.X, T0.X
 ; CM-NEXT:    CF_END
 ; CM-NEXT:    PAD
 ; CM-NEXT:    ALU clause starting at 4:
-; CM-NEXT:     MOV * T0.X, KC0[2].Z,
-; CM-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
+; CM-NEXT:     LSHR * T0.X, KC0[2].Y, literal.x,
 ; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
+; CM-NEXT:     MOV * T1.X, KC0[2].Z,
 entry:
   store <2 x i16> %in, ptr addrspace(1) %out
   ret void
@@ -1293,24 +1293,24 @@ define amdgpu_kernel void @v4i8_arg(ptr addrspace(1) %out, <4 x i8> %in) {
 ; EG-LABEL: v4i8_arg:
 ; EG:       ; %bb.0: ; %entry
 ; EG-NEXT:    ALU 2, @4, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T1.X, 1
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T1.X, T0.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
 ; EG-NEXT:    ALU clause starting at 4:
-; EG-NEXT:     MOV T0.X, KC0[2].Z,
-; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
+; EG-NEXT:     LSHR T0.X, KC0[2].Y, literal.x,
+; EG-NEXT:     MOV * T1.X, KC0[2].Z,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ;
 ; CM-LABEL: v4i8_arg:
 ; CM:       ; %bb.0: ; %entry
 ; CM-NEXT:    ALU 2, @4, KC0[CB0:0-32], KC1[]
-; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T0.X, T1.X
+; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T1.X, T0.X
 ; CM-NEXT:    CF_END
 ; CM-NEXT:    PAD
 ; CM-NEXT:    ALU clause starting at 4:
-; CM-NEXT:     MOV * T0.X, KC0[2].Z,
-; CM-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
+; CM-NEXT:     LSHR * T0.X, KC0[2].Y, literal.x,
 ; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
+; CM-NEXT:     MOV * T1.X, KC0[2].Z,
 entry:
   store <4 x i8> %in, ptr addrspace(1) %out
   ret void

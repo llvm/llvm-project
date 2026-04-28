@@ -2044,9 +2044,17 @@ let SubtargetPredicate = UseRealTrue16Insts in
 def : ClampPat<V_MAX_F16_t16_e64, f16>;
 let SubtargetPredicate = UseFakeTrue16Insts in
 def : ClampPat<V_MAX_F16_fake16_e64, f16>;
-// FIXME-TRUE16: Pseudo expansion of this won't work with True16.
 let True16Predicate = UseFakeTrue16Insts in
 def : ClampPat<V_MAX_BF16_PSEUDO_e64, bf16>;
+let True16Predicate = UseRealTrue16Insts,
+    SubtargetPredicate = HasBF16PackedInsts in
+  def : GCNPat<(bf16 (AMDGPUclamp (VOP3Mods bf16:$src0, i32:$src0_modifiers))),
+  (EXTRACT_SUBREG
+    (V_PK_MAX_NUM_BF16
+      $src0_modifiers, (REG_SEQUENCE VGPR_32, $src0, lo16, (bf16 (IMPLICIT_DEF)), hi16),
+      $src0_modifiers, (REG_SEQUENCE VGPR_32, $src0, lo16, (bf16 (IMPLICIT_DEF)), hi16),
+      DSTCLAMP.ENABLE), lo16)
+  >;
 
 let SubtargetPredicate = HasVOP3PInsts in {
 def : GCNPat <
@@ -3805,6 +3813,23 @@ def : GCNPat <
 def : GCNPat <
   (v2f16 (DivergentBinFrag<build_vector> (f16 VGPR_32:$src1), (f16 fpimm_pos_zero))),
   (v2f16 (V_AND_B32_e64 (i32 (V_MOV_B32_e32 (i32 0xffff))), VGPR_32:$src1))
+>;
+}
+
+let True16Predicate = UseRealTrue16Insts in {
+def : GCNPat <
+  (v2i16 (DivergentBinFrag<build_vector> (i16 0), (i16 VGPR_16:$src1))),
+  (v2i16 (V_LSHLREV_B32_e64 (i16 16), VGPR_16:$src1))
+>;
+
+def : GCNPat <
+  (v2i16 (DivergentBinFrag<build_vector> (i16 VGPR_16:$src1), (i16 0))),
+  (v2i16 (V_CVT_U32_U16_t16_e64 SRCMODS.NONE, VGPR_16:$src1))
+>;
+
+def : GCNPat <
+  (v2f16 (DivergentBinFrag<build_vector> (f16 VGPR_16:$src1), (f16 fpimm_pos_zero))),
+  (v2f16 (V_CVT_U32_U16_t16_e64 SRCMODS.NONE, VGPR_16:$src1))
 >;
 }
 

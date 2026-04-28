@@ -63,7 +63,10 @@ static mlir::Attribute convertToAttribute(
                             {value.ToUInt64(), value.SHIFTR(64).ToUInt64()}));
     }
   } else if constexpr (TC == Fortran::common::TypeCategory::Logical) {
-    return builder.getIntegerAttr(type, value.IsTrue());
+    if (value.IsCanonical())
+      return builder.getIntegerAttr(type, value.IsTrue());
+    else
+      return builder.getIntegerAttr(type, value.word().ToInt64());
   } else {
     auto getFloatAttr = [&](const auto &value, mlir::Type type) {
       std::string str = value.DumpHexadecimal();
@@ -262,7 +265,15 @@ static mlir::Value genScalarLit(
     }
     return builder.createIntegerConstant(loc, ty, value.ToInt64());
   } else if constexpr (TC == Fortran::common::TypeCategory::Logical) {
-    return builder.createBool(loc, value.IsTrue());
+    if (value.IsCanonical())
+      return builder.createBool(loc, value.IsTrue());
+    mlir::Type logicalType = Fortran::lower::getFIRType(
+        builder.getContext(), Fortran::common::TypeCategory::Logical, KIND, {});
+    mlir::Type intType = Fortran::lower::getFIRType(
+        builder.getContext(), Fortran::common::TypeCategory::Integer, KIND, {});
+    mlir::Value integer =
+        builder.createIntegerConstant(loc, intType, value.word().ToInt64());
+    return fir::BitcastOp::create(builder, loc, logicalType, integer);
   } else if constexpr (TC == Fortran::common::TypeCategory::Real) {
     std::string str = value.DumpHexadecimal();
     if constexpr (KIND == 2) {

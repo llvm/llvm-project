@@ -170,6 +170,7 @@
 // CHECK-NEXT:     xandesvpackfph       5.0       'XAndesVPackFPH' (Andes Vector Packed FP16 Extension)
 // CHECK-NEXT:     xandesvsinth         5.0       'XAndesVSIntH' (Andes Vector Small INT Handling Extension)
 // CHECK-NEXT:     xandesvsintload      5.0       'XAndesVSIntLoad' (Andes Vector INT4 Load Extension)
+// CHECK-NEXT:     xcheriot             1.0       'XCheriot' (CHERIoT extension)
 // CHECK-NEXT:     xcvalu               1.0       'XCValu' (CORE-V ALU Operations)
 // CHECK-NEXT:     xcvbi                1.0       'XCVbi' (CORE-V Immediate Branching)
 // CHECK-NEXT:     xcvbitmanip          1.0       'XCVbitmanip' (CORE-V Bit Manipulation)
@@ -241,7 +242,7 @@
 // CHECK-NEXT:     xwchc                2.2       'Xwchc' (WCH/QingKe additional compressed opcodes)
 // CHECK-EMPTY:
 // CHECK-NEXT: Experimental extensions
-// CHECK-NEXT:     p                    0.19      'P' ('Base P' (Packed SIMD))
+// CHECK-NEXT:     p                    0.21      'P' ('Base P' (Packed SIMD))
 // CHECK-NEXT:     y                    0.96      'Y' ('Base Y' (CHERI))
 // CHECK-NEXT:     zibi                 0.1       'Zibi' (Branch with Immediate)
 // CHECK-NEXT:     zicfilp              1.0       'Zicfilp' (Landing pad)
@@ -255,7 +256,6 @@
 // CHECK-NEXT:     zvzip                0.1       'Zvzip' (Vector Reordering Structured Data)
 // CHECK-NEXT:     smpmpmt              0.6       'Smpmpmt' (PMP-based Memory Types Extension)
 // CHECK-NEXT:     svukte               0.3       'Svukte' (Address-Independent Latency of User-Mode Faults to Supervisor Addresses)
-// CHECK-NEXT:     xrivosvisni          0.1       'XRivosVisni' (Rivos Vector Integer Small New)
 // CHECK-NEXT:     xrivosvizip          0.1       'XRivosVizip' (Rivos Vector Register Zips)
 // CHECK-NEXT:     xsfmclic             0.1       'XSfmclic' (SiFive CLIC Machine-mode CSRs)
 // CHECK-NEXT:     xsfsclic             0.1       'XSfsclic' (SiFive CLIC Supervisor-mode CSRs)

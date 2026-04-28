@@ -35,6 +35,7 @@
 #include "llvm/Debuginfod/BuildIDFetcher.h"
 #include "llvm/Debuginfod/Debuginfod.h"
 #include "llvm/Demangle/Demangle.h"
+#include "llvm/HTTP/HTTPClient.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCRelocationInfo.h"
@@ -65,7 +66,6 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/HTTP/HTTPClient.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
@@ -340,7 +340,6 @@ static bool PrettyPGOAnalysisMap;
 static bool DynamicSymbolTable;
 std::string objdump::TripleName;
 bool objdump::UnwindInfo;
-static bool Wide;
 std::string objdump::Prefix;
 uint32_t objdump::PrefixStrip;
 
@@ -525,7 +524,7 @@ static const Target *getTarget(const ObjectFile *Obj) {
   const Target *TheTarget =
       TargetRegistry::lookupTarget(ArchName, TheTriple, Error);
   if (!TheTarget)
-    reportError(Obj->getFileName(), "can't find target: " + Error);
+    reportError(Obj->getFileName(), "cannot find target: " + Error);
 
   // Update the triple name and return the found target.
   TripleName = TheTriple.getTriple();
@@ -1187,8 +1186,8 @@ DisassemblerTarget::DisassemblerTarget(const Target *TheTarget, ObjectFile &Obj,
   if (!InstrInfo)
     reportError(Obj.getFileName(),
                 "no instruction info for target " + TripleName);
-  Context = std::make_shared<MCContext>(
-      TheTriple, AsmInfo.get(), RegisterInfo.get(), SubtargetInfo.get());
+  Context = std::make_shared<MCContext>(TheTriple, *AsmInfo, RegisterInfo.get(),
+                                        SubtargetInfo.get());
 
   // FIXME: for now initialize MCObjectFileInfo with default values
   ObjectFileInfo.reset(
@@ -2252,13 +2251,13 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
           do {
             StringRef Line;
             std::tie(Line, ErrMsg) = ErrMsg.split('\n');
-            OS << DT->Context->getAsmInfo()->getCommentString()
+            OS << DT->Context->getAsmInfo().getCommentString()
                << " error decoding " << SymNamesHere[SHI] << ": " << Line
                << '\n';
           } while (!ErrMsg.empty());
 
           if (Size) {
-            OS << DT->Context->getAsmInfo()->getCommentString()
+            OS << DT->Context->getAsmInfo().getCommentString()
                << " decoding failed region as bytes\n";
             for (uint64_t I = 0; I < Size; ++I)
               OS << "\t.byte\t " << format_hex(Bytes[I], 1, /*Upper=*/true)
@@ -2622,8 +2621,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
           }
         }
 
-        assert(DT->Context->getAsmInfo());
-        DT->Printer->emitPostInstructionInfo(FOS, *DT->Context->getAsmInfo(),
+        DT->Printer->emitPostInstructionInfo(FOS, DT->Context->getAsmInfo(),
                                              *DT->SubtargetInfo,
                                              CommentStream.str(), LEP);
         Comments.clear();
@@ -3661,6 +3659,7 @@ static void parseOtoolOptions(const llvm::opt::InputArgList &InputArgs) {
   ArchName = InputArgs.getLastArgValue(OTOOL_arch).str();
   if (!ArchName.empty())
     ArchFlags.push_back(ArchName);
+  ArchiveHeaders = InputArgs.hasArg(OTOOL_a);
   LinkOptHints = InputArgs.hasArg(OTOOL_C);
   if (InputArgs.hasArg(OTOOL_d))
     FilterSections.push_back("__DATA,__data");
@@ -3764,7 +3763,6 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
   DynamicSymbolTable = InputArgs.hasArg(OBJDUMP_dynamic_syms);
   TripleName = InputArgs.getLastArgValue(OBJDUMP_triple_EQ).str();
   UnwindInfo = InputArgs.hasArg(OBJDUMP_unwind_info);
-  Wide = InputArgs.hasArg(OBJDUMP_wide);
   Prefix = InputArgs.getLastArgValue(OBJDUMP_prefix).str();
   parseIntArg(InputArgs, OBJDUMP_prefix_strip, PrefixStrip);
   if (const opt::Arg *A = InputArgs.getLastArg(OBJDUMP_debug_vars_EQ)) {

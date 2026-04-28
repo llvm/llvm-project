@@ -490,7 +490,7 @@ define nofpclass(nzero) half @inferred_nan_output__fadd__no_pinf_no_nan__no_nan(
 define nofpclass(nzero) half @inferred_nan_output__fadd__no_pinf_no_nan__no_pinf_no_nan(half nofpclass(nan pinf) %x, half nofpclass(nan pinf) %y) {
 ; CHECK-LABEL: define nofpclass(nzero) half @inferred_nan_output__fadd__no_pinf_no_nan__no_pinf_no_nan(
 ; CHECK-SAME: half nofpclass(nan pinf) [[X:%.*]], half nofpclass(nan pinf) [[Y:%.*]]) {
-; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[X]], [[Y]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd nnan half [[X]], [[Y]]
 ; CHECK-NEXT:    ret half [[ADD]]
 ;
   %add = fadd half %x, %y
@@ -500,7 +500,7 @@ define nofpclass(nzero) half @inferred_nan_output__fadd__no_pinf_no_nan__no_pinf
 define nofpclass(nzero) half @inferred_nan_output__fadd__no_ninf_no_nan__no_ninf_no_nan(half nofpclass(nan ninf) %x, half nofpclass(nan ninf) %y) {
 ; CHECK-LABEL: define nofpclass(nzero) half @inferred_nan_output__fadd__no_ninf_no_nan__no_ninf_no_nan(
 ; CHECK-SAME: half nofpclass(nan ninf) [[X:%.*]], half nofpclass(nan ninf) [[Y:%.*]]) {
-; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[X]], [[Y]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd nnan half [[X]], [[Y]]
 ; CHECK-NEXT:    ret half [[ADD]]
 ;
   %add = fadd half %x, %y

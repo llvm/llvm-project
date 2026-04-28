@@ -2635,7 +2635,7 @@ bool X86FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
     return false;
   case Intrinsic::frameaddress: {
     MachineFunction *MF = FuncInfo.MF;
-    if (MF->getTarget().getMCAsmInfo()->usesWindowsCFI())
+    if (MF->getTarget().getMCAsmInfo().usesWindowsCFI())
       return false;
 
     Type *RetTy = II->getCalledFunction()->getReturnType();
@@ -3992,9 +3992,10 @@ bool X86FastISel::tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
   SmallVector<MachineOperand, 8> AddrOps;
   AM.getFullAddress(AddrOps);
 
+  MachineInstr *CopyMI = nullptr;
   MachineInstr *Result = XII.foldMemoryOperandImpl(
       *FuncInfo.MF, *MI, OpNo, AddrOps, FuncInfo.InsertPt, Size, LI->getAlign(),
-      /*AllowCommute=*/true);
+      /*AllowCommute=*/true, CopyMI);
   if (!Result)
     return false;
 

@@ -705,12 +705,11 @@ Instruction *InstCombinerImpl::foldPHIArgLoadIntoPHI(PHINode &PN) {
 
   // FIXME: This is overconservative; this transform is allowed in some cases
   // for atomic operations.
-  if (FirstLI->isAtomic())
+  if (!FirstLI->isSimple())
     return nullptr;
 
-  // When processing loads, we need to propagate two bits of information to the
-  // sunk load: whether it is volatile, and what its alignment is.
-  bool IsVolatile = FirstLI->isVolatile();
+  // When processing loads, we need to propagate the alignment and address
+  // space of the load.
   Align LoadAlignment = FirstLI->getAlign();
   const unsigned LoadAddrSpace = FirstLI->getPointerAddressSpace();
 
@@ -720,23 +719,15 @@ Instruction *InstCombinerImpl::foldPHIArgLoadIntoPHI(PHINode &PN) {
       !isSafeAndProfitableToSinkLoad(FirstLI))
     return nullptr;
 
-  // If the PHI is of volatile loads and the load block has multiple
-  // successors, sinking it would remove a load of the volatile value from
-  // the path through the other successor.
-  if (IsVolatile &&
-      FirstLI->getParent()->getTerminator()->getNumSuccessors() != 1)
-    return nullptr;
-
   for (auto Incoming : drop_begin(zip(PN.blocks(), PN.incoming_values()))) {
     BasicBlock *InBB = std::get<0>(Incoming);
     Value *InVal = std::get<1>(Incoming);
     LoadInst *LI = dyn_cast<LoadInst>(InVal);
-    if (!LI || !LI->hasOneUser() || LI->isAtomic())
+    if (!LI || !LI->hasOneUser() || !LI->isSimple())
       return nullptr;
 
     // Make sure all arguments are the same type of operation.
-    if (LI->isVolatile() != IsVolatile ||
-        LI->getPointerAddressSpace() != LoadAddrSpace)
+    if (LI->getPointerAddressSpace() != LoadAddrSpace)
       return nullptr;
 
     if (!canReplaceOperandWithVariable(LI, 0))
@@ -748,12 +739,6 @@ Instruction *InstCombinerImpl::foldPHIArgLoadIntoPHI(PHINode &PN) {
       return nullptr;
 
     LoadAlignment = std::min(LoadAlignment, LI->getAlign());
-
-    // If the PHI is of volatile loads and the load block has multiple
-    // successors, sinking it would remove a load of the volatile value from
-    // the path through the other successor.
-    if (IsVolatile && LI->getParent()->getTerminator()->getNumSuccessors() != 1)
-      return nullptr;
   }
 
   // Okay, they are all the same operation.  Create a new PHI node of the
@@ -764,8 +749,8 @@ Instruction *InstCombinerImpl::foldPHIArgLoadIntoPHI(PHINode &PN) {
 
   Value *InVal = FirstLI->getOperand(0);
   NewPN->addIncoming(InVal, PN.getIncomingBlock(0));
-  LoadInst *NewLI =
-      new LoadInst(FirstLI->getType(), NewPN, "", IsVolatile, LoadAlignment);
+  LoadInst *NewLI = new LoadInst(FirstLI->getType(), NewPN, "",
+                                 /*IsVolatile=*/false, LoadAlignment);
   NewLI->copyMetadata(*FirstLI);
 
   // Add all operands to the new PHI and combine TBAA metadata.
@@ -788,13 +773,6 @@ Instruction *InstCombinerImpl::foldPHIArgLoadIntoPHI(PHINode &PN) {
   } else {
     InsertNewInstBefore(NewPN, PN.getIterator());
   }
-
-  // If this was a volatile load that we are merging, make sure to loop through
-  // and mark all the input loads as non-volatile.  If we don't do this, we will
-  // insert a new volatile load and the old ones will not be deletable.
-  if (IsVolatile)
-    for (Value *IncValue : PN.incoming_values())
-      cast<LoadInst>(IncValue)->setVolatile(false);
 
   PHIArgMergedDebugLoc(NewLI, PN);
   return NewLI;
@@ -1227,14 +1205,12 @@ Instruction *InstCombinerImpl::SliceUpIllegalIntegerPHI(PHINode &FirstPhi) {
           continue;
         }
 
-        if (PHINode *InPHI = dyn_cast<PHINode>(PN)) {
-          // If the incoming value was a PHI, and if it was one of the PHIs we
-          // already rewrote it, just use the lowered value.
-          if (Value *Res = ExtractedVals[LoweredPHIRecord(InPHI, Offset, Ty)]) {
-            PredVal = Res;
-            EltPHI->addIncoming(PredVal, Pred);
-            continue;
-          }
+        // If the incoming value was a PHI, and if it was one of the PHIs we
+        // already rewrote it, just use the lowered value.
+        if (Value *Res = ExtractedVals[LoweredPHIRecord(PN, Offset, Ty)]) {
+          PredVal = Res;
+          EltPHI->addIncoming(PredVal, Pred);
+          continue;
         }
 
         // Otherwise, do an extract in the predecessor.

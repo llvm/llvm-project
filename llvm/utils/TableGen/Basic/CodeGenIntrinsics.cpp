@@ -422,6 +422,8 @@ void CodeGenIntrinsic::setProperty(const Record *R) {
     isStrictFP = true;
   else if (R->getName() == "IntrNoCreateUndefOrPoison")
     isNoCreateUndefOrPoison = true;
+  else if (R->getName() == "IntrTriviallyScalarizable")
+    isTriviallyScalarizable = true;
   else if (R->isSubClassOf("NoCapture")) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
     addArgAttribute(ArgNo, NoCapture);

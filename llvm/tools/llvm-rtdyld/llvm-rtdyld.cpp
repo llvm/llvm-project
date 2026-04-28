@@ -805,7 +805,7 @@ static int linkAndVerify() {
   if (!MAI)
     ErrorAndExit("Unable to create target asm info!");
 
-  MCContext Ctx(TheTriple, MAI.get(), MRI.get(), STI.get());
+  MCContext Ctx(TheTriple, *MAI, MRI.get(), STI.get());
 
   std::unique_ptr<MCDisassembler> Disassembler(
     TheTarget->createMCDisassembler(*STI, Ctx));

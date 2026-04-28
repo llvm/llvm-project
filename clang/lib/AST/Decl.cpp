@@ -1193,6 +1193,7 @@ static bool isExportedFromModuleInterfaceUnit(const NamedDecl *D) {
   case Decl::ModuleOwnershipKind::Unowned:
   case Decl::ModuleOwnershipKind::ReachableWhenImported:
   case Decl::ModuleOwnershipKind::ModulePrivate:
+  case Decl::ModuleOwnershipKind::VisiblePromoted:
     return false;
   case Decl::ModuleOwnershipKind::Visible:
   case Decl::ModuleOwnershipKind::VisibleWhenImported:
@@ -2063,48 +2064,12 @@ SourceLocation DeclaratorDecl::getOuterLocStart() const {
   return getTemplateOrInnerLocStart(this);
 }
 
-// Helper function: returns true if QT is or contains a type
-// having a postfix component.
-static bool typeIsPostfix(QualType QT) {
-  while (true) {
-    const Type* T = QT.getTypePtr();
-    switch (T->getTypeClass()) {
-    default:
-      return false;
-    case Type::Pointer:
-      QT = cast<PointerType>(T)->getPointeeType();
-      break;
-    case Type::BlockPointer:
-      QT = cast<BlockPointerType>(T)->getPointeeType();
-      break;
-    case Type::MemberPointer:
-      QT = cast<MemberPointerType>(T)->getPointeeType();
-      break;
-    case Type::LValueReference:
-    case Type::RValueReference:
-      QT = cast<ReferenceType>(T)->getPointeeType();
-      break;
-    case Type::PackExpansion:
-      QT = cast<PackExpansionType>(T)->getPattern();
-      break;
-    case Type::Paren:
-    case Type::ConstantArray:
-    case Type::DependentSizedArray:
-    case Type::IncompleteArray:
-    case Type::VariableArray:
-    case Type::FunctionProto:
-    case Type::FunctionNoProto:
-      return true;
-    }
-  }
-}
-
 SourceRange DeclaratorDecl::getSourceRange() const {
   SourceLocation RangeEnd = getLocation();
   if (TypeSourceInfo *TInfo = getTypeSourceInfo()) {
     // If the declaration has no name or the type extends past the name take the
     // end location of the type.
-    if (!getDeclName() || typeIsPostfix(TInfo->getType()))
+    if (!getDeclName() || TInfo->getType().hasPostfixDeclaratorSyntax())
       RangeEnd = TInfo->getTypeLoc().getSourceRange().getEnd();
   }
   return SourceRange(getOuterLocStart(), RangeEnd);
@@ -5827,7 +5792,7 @@ TypeAliasDecl *TypeAliasDecl::CreateDeserialized(ASTContext &C,
 SourceRange TypedefDecl::getSourceRange() const {
   SourceLocation RangeEnd = getLocation();
   if (TypeSourceInfo *TInfo = getTypeSourceInfo()) {
-    if (typeIsPostfix(TInfo->getType()))
+    if (TInfo->getType().hasPostfixDeclaratorSyntax())
       RangeEnd = TInfo->getTypeLoc().getSourceRange().getEnd();
   }
   return SourceRange(getBeginLoc(), RangeEnd);

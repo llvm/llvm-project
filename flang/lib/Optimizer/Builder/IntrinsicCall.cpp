@@ -182,6 +182,8 @@ static constexpr IntrinsicHandler handlers[]{
      {{{"c_ptr_1", asAddr}, {"c_ptr_2", asAddr, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"c_devloc", &I::genCDevLoc, {{{"x", asBox}}}, /*isElemental=*/false},
+    {"c_devptr_eq", &I::genCPtrCompare<mlir::arith::CmpIPredicate::eq>},
+    {"c_devptr_ne", &I::genCPtrCompare<mlir::arith::CmpIPredicate::ne>},
     {"c_f_pointer",
      &I::genCFPointer,
      {{{"cptr", asValue},
@@ -764,6 +766,13 @@ static constexpr IntrinsicHandler handlers[]{
      /*isElemental=*/false},
     {"sleep", &I::genSleep, {{{"seconds", asValue}}}, /*isElemental=*/false},
     {"spacing", &I::genSpacing},
+    {"split",
+     &I::genSplit,
+     {{{"string", asAddr},
+       {"set", asAddr},
+       {"pos", asAddr},
+       {"back", asValue, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"spread",
      &I::genSpread,
      {{{"source", asBox}, {"dim", asValue}, {"ncopies", asValue}}},
@@ -3373,7 +3382,7 @@ IntrinsicLibrary::genCLoc(mlir::Type resultType,
   return genCLocOrCFunLoc(builder, loc, resultType, args);
 }
 
-// C_PTR_EQ and C_PTR_NE
+// C_PTR_EQ / C_PTR_NE and C_DEVPTR_EQ / C_DEVPTR_NE
 template <mlir::arith::CmpIPredicate pred>
 fir::ExtendedValue
 IntrinsicLibrary::genCPtrCompare(mlir::Type resultType,
@@ -6821,6 +6830,7 @@ mlir::Value IntrinsicLibrary::genModulo(mlir::Type resultType,
 void IntrinsicLibrary::genMoveAlloc(llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 4);
 
+  // TODO: Handling coarray deallocation.
   const fir::ExtendedValue &from = args[0];
   const fir::ExtendedValue &to = args[1];
   const fir::ExtendedValue &status = args[2];
@@ -8538,6 +8548,39 @@ void IntrinsicLibrary::genSleep(llvm::ArrayRef<fir::ExtendedValue> args) {
   fir::runtime::genSleep(builder, loc, fir::getBase(args[0]));
 }
 
+// SPLIT
+void IntrinsicLibrary::genSplit(llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 4);
+
+  mlir::Value stringBase = fir::getBase(args[0]);
+  mlir::Value stringLen = fir::getLen(args[0]);
+  mlir::Value setBase = fir::getBase(args[1]);
+  mlir::Value setLen = fir::getLen(args[1]);
+  mlir::Value posAddr = fir::getBase(args[2]);
+
+  fir::KindTy kind =
+      fir::factory::CharacterExprHelper{builder, loc}.getCharacterKind(
+          stringBase.getType());
+
+  // BACK is optional and defaults to .FALSE. when absent.
+  mlir::Value back =
+      isStaticallyAbsent(args[3])
+          ? builder.createIntegerConstant(loc, builder.getI1Type(), 0)
+          : fir::getBase(args[3]);
+
+  mlir::Type posRefTy = fir::dyn_cast_ptrEleTy(posAddr.getType());
+  mlir::Value posValue = fir::LoadOp::create(builder, loc, posRefTy, posAddr);
+  mlir::Type indexTy = builder.getIndexType();
+  mlir::Value posIndex = builder.createConvert(loc, indexTy, posValue);
+
+  mlir::Value newPos =
+      fir::runtime::genSplit(builder, loc, kind, stringBase, stringLen, setBase,
+                             setLen, posIndex, back);
+
+  mlir::Value newPosConverted = builder.createConvert(loc, posRefTy, newPos);
+  fir::StoreOp::create(builder, loc, newPosConverted, posAddr);
+}
+
 // TOKENIZE
 void IntrinsicLibrary::genTokenize(llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 4 && "TOKENIZE requires 3 or 4 arguments");
@@ -8640,6 +8683,39 @@ IntrinsicLibrary::genTransfer(mlir::Type resultType,
 
   assert(args.size() >= 2); // args.size() == 2 when size argument is omitted.
 
+  bool absentSize = (args.size() == 2);
+
+  // Inline scalar-to-scalar transfers when the result is a trivial type
+  // (integer, real, etc.) and both source and result have the same storage
+  // size.
+  if (absentSize && fir::isa_trivial(resultType)) {
+    mlir::Value sourceBase = fir::getBase(args[0]);
+    mlir::Type sourceType = fir::unwrapRefType(sourceBase.getType());
+    mlir::Type moldType = fir::unwrapRefType(fir::getBase(args[1]).getType());
+    if (fir::isa_ref_type(sourceBase.getType()) &&
+        (fir::isa_trivial(sourceType) ||
+         mlir::isa<fir::RecordType>(sourceType)) &&
+        fir::isa_trivial(moldType)) {
+      auto sourceSizeAndAlign = fir::getTypeSizeAndAlignment(
+          loc, sourceType, builder.getDataLayout(), builder.getKindMap());
+      auto resultSizeAndAlign = fir::getTypeSizeAndAlignment(
+          loc, resultType, builder.getDataLayout(), builder.getKindMap());
+      if (sourceSizeAndAlign && resultSizeAndAlign &&
+          sourceSizeAndAlign->first == resultSizeAndAlign->first) {
+        if (sourceType.isSignlessIntOrFloat() &&
+            resultType.isSignlessIntOrFloat()) {
+          mlir::Value val = fir::LoadOp::create(builder, loc, sourceBase);
+          if (sourceType != resultType)
+            val = mlir::arith::BitcastOp::create(builder, loc, resultType, val);
+          return val;
+        }
+        mlir::Type refTy = builder.getRefType(resultType);
+        mlir::Value cast = builder.createConvert(loc, refTy, sourceBase);
+        return fir::LoadOp::create(builder, loc, cast);
+      }
+    }
+  }
+
   // Handle source argument
   mlir::Value source = builder.createBox(loc, args[0]);
 
@@ -8647,8 +8723,6 @@ IntrinsicLibrary::genTransfer(mlir::Type resultType,
   mlir::Value mold = builder.createBox(loc, args[1]);
   fir::BoxValue moldTmp = mold;
   unsigned moldRank = moldTmp.rank();
-
-  bool absentSize = (args.size() == 2);
 
   // Create mutable fir.box to be passed to the runtime for the result.
   mlir::Type type = (moldRank == 0 && absentSize)

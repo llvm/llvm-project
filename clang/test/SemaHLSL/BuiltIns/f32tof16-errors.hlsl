@@ -3,13 +3,13 @@
 uint builtin_f32tof16_too_few_arg() {
   return __builtin_hlsl_elementwise_f32tof16();
   // expected-error@-1 {{too few arguments to function call, expected 1, have 0}}
-  // expected-note@hlsl/hlsl_alias_intrinsics.h:* 4 {{candidate function not viable: requires 1 argument, but 0 were provided}}
+  // expected-note@hlsl/hlsl_alias_intrinsics_gen.inc:* 4 {{candidate function not viable: requires 1 argument, but 0 were provided}}
 }
 
 uint builtin_f32tof16_too_many_arg(uint p0) {
   return __builtin_hlsl_elementwise_f32tof16(p0, p0);
   // expected-error@-1 {{too many arguments to function call, expected 1, have 2}}
-  // expected-note@hlsl/hlsl_alias_intrinsics.h:* 4 {{candidate function not viable: requires 1 argument, but 2 were provided}}
+  // expected-note@hlsl/hlsl_alias_intrinsics_gen.inc:* 4 {{candidate function not viable: requires 1 argument, but 2 were provided}}
 }
 
 uint builtin_f32tof16_bool(bool p0) {

@@ -48,9 +48,9 @@ ENUM_CLASS(Intent, Default, In, Out, InOut)
 // Union of specifiers for all I/O statements.
 ENUM_CLASS(IoSpecKind, Access, Action, Advance, Asynchronous, Blank, Decimal,
     Delim, Direct, Encoding, End, Eor, Err, Exist, File, Fmt, Form, Formatted,
-    Id, Iomsg, Iostat, Name, Named, Newunit, Nextrec, Nml, Number, Opened, Pad,
-    Pending, Pos, Position, Read, Readwrite, Rec, Recl, Round, Sequential, Sign,
-    Size, Status, Stream, Unformatted, Unit, Write,
+    Id, Iomsg, Iostat, Leading_Zero, Name, Named, Newunit, Nextrec, Nml, Number,
+    Opened, Pad, Pending, Pos, Position, Read, Readwrite, Rec, Recl, Round,
+    Sequential, Sign, Size, Status, Stream, Unformatted, Unit, Write,
     Carriagecontrol, // nonstandard
     Convert, // nonstandard
     Dispose, // nonstandard
@@ -65,8 +65,8 @@ using Label = std::uint64_t;
 ENUM_CLASS(CUDASubprogramAttrs, Host, Device, HostDevice, Global, Grid_Global)
 
 // CUDA data attributes; mutually exclusive
-ENUM_CLASS(
-    CUDADataAttr, Constant, Device, Managed, Pinned, Shared, Texture, Unified)
+ENUM_CLASS(CUDADataAttr, Constant, Device, Managed, Pinned, Shared, Texture,
+    Unified, Value)
 
 // OpenACC device types
 ENUM_CLASS(
@@ -88,7 +88,7 @@ ENUM_CLASS(IgnoreTKR,
     Kind, // K - don't check kind
     Rank, // R - don't check ranks
     Device, // D - don't check host/device residence
-    Managed, // M - don't check managed storage
+    Managed, // M - don't check managed/unified storage
     Contiguous, // C - don't check for storage sequence association with a
                 // potentially non-contiguous object
     Pointer) // P - ignore pointer and allocatable matching

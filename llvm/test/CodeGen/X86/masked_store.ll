@@ -992,9 +992,8 @@ define void @store_v8f32_i8(<8 x float> %x, ptr %ptr, <8 x float> %y, i8 %trigge
 ; AVX512F-LABEL: store_v8f32_i8:
 ; AVX512F:       ## %bb.0:
 ; AVX512F-NEXT:    ## kill: def $ymm0 killed $ymm0 def $zmm0
-; AVX512F-NEXT:    kmovw %esi, %k0
-; AVX512F-NEXT:    kshiftlw $8, %k0, %k0
-; AVX512F-NEXT:    kshiftrw $8, %k0, %k1
+; AVX512F-NEXT:    movzbl %sil, %eax
+; AVX512F-NEXT:    kmovw %eax, %k1
 ; AVX512F-NEXT:    vmovups %zmm0, (%rdi) {%k1}
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
@@ -7270,10 +7269,10 @@ define void @undefshuffle(<8 x i1> %i0, ptr %src, ptr %dst) nounwind {
 ; AVX512VLBW-LABEL: undefshuffle:
 ; AVX512VLBW:       ## %bb.0:
 ; AVX512VLBW-NEXT:    vpsllw $15, %xmm0, %xmm0
-; AVX512VLBW-NEXT:    vpmovw2m %xmm0, %k0
+; AVX512VLBW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512VLBW-NEXT:    movl $15, %eax
 ; AVX512VLBW-NEXT:    kmovd %eax, %k1
-; AVX512VLBW-NEXT:    kandd %k1, %k0, %k1
+; AVX512VLBW-NEXT:    vpcmpgtw %xmm0, %xmm1, %k1 {%k1}
 ; AVX512VLBW-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX512VLBW-NEXT:    vmovdqu32 %ymm0, (%rsi) {%k1}
 ; AVX512VLBW-NEXT:    vzeroupper
@@ -7282,11 +7281,11 @@ define void @undefshuffle(<8 x i1> %i0, ptr %src, ptr %dst) nounwind {
 ; X86-AVX512-LABEL: undefshuffle:
 ; X86-AVX512:       ## %bb.0:
 ; X86-AVX512-NEXT:    vpsllw $15, %xmm0, %xmm0
-; X86-AVX512-NEXT:    vpmovw2m %xmm0, %k0
 ; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X86-AVX512-NEXT:    movl $15, %ecx
 ; X86-AVX512-NEXT:    kmovd %ecx, %k1
-; X86-AVX512-NEXT:    kandd %k1, %k0, %k1
+; X86-AVX512-NEXT:    vpcmpgtw %xmm0, %xmm1, %k1 {%k1}
 ; X86-AVX512-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; X86-AVX512-NEXT:    vmovdqu32 %ymm0, (%eax) {%k1}
 ; X86-AVX512-NEXT:    vzeroupper

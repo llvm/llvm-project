@@ -363,12 +363,15 @@ private:
 
   bool reportInvalidCandidate(Statistic &Stat) const {
     using namespace ore;
-    assert(L && Preheader && "Fusion candidate not initialized properly!");
+    ORE.emit(OptimizationRemarkAnalysis(DEBUG_TYPE, "InvalidCandidate",
+                                        L->getStartLoc(), L->getHeader())
+             << "Loop is not a candidate for fusion");
+
 #if LLVM_ENABLE_STATS
     ++Stat;
     ORE.emit(OptimizationRemarkAnalysis(DEBUG_TYPE, Stat.getName(),
-                                        L->getStartLoc(), Preheader)
-             << "[" << Preheader->getParent()->getName() << "]: "
+                                        L->getStartLoc(), L->getHeader())
+             << "[" << L->getHeader()->getParent()->getName() << "]: "
              << "Loop is not a candidate for fusion: " << Stat.getDesc());
 #endif
     return false;
@@ -1319,14 +1322,12 @@ private:
         if (!dependencesAllowFusion(FC0, FC1, *WriteL0, *WriteL1,
                                     /* AnyDep */ false,
                                     FusionDependenceAnalysis)) {
-          InvalidDependencies++;
           return false;
         }
       for (Instruction *ReadL1 : FC1.MemReads)
         if (!dependencesAllowFusion(FC0, FC1, *WriteL0, *ReadL1,
                                     /* AnyDep */ false,
                                     FusionDependenceAnalysis)) {
-          InvalidDependencies++;
           return false;
         }
     }
@@ -1336,14 +1337,12 @@ private:
         if (!dependencesAllowFusion(FC0, FC1, *WriteL0, *WriteL1,
                                     /* AnyDep */ false,
                                     FusionDependenceAnalysis)) {
-          InvalidDependencies++;
           return false;
         }
       for (Instruction *ReadL0 : FC0.MemReads)
         if (!dependencesAllowFusion(FC0, FC1, *ReadL0, *WriteL1,
                                     /* AnyDep */ false,
                                     FusionDependenceAnalysis)) {
-          InvalidDependencies++;
           return false;
         }
     }
@@ -1355,7 +1354,6 @@ private:
         for (auto &Op : I.operands())
           if (Instruction *Def = dyn_cast<Instruction>(Op))
             if (FC0.L->contains(Def->getParent())) {
-              InvalidDependencies++;
               return false;
             }
 
@@ -1484,7 +1482,7 @@ private:
   /// Move instructions from FC0.Latch to FC1.Latch. If FC0.Latch has an unique
   /// successor, then merge FC0.Latch with its unique successor.
   void mergeLatch(const FusionCandidate &FC0, const FusionCandidate &FC1) {
-    moveInstructionsToTheBeginning(*FC0.Latch, *FC1.Latch, DT, PDT, DI);
+    moveInstructionsToTheBeginning(*FC0.Latch, *FC1.Latch, DT, PDT, DI, SE);
     if (BasicBlock *Succ = FC0.Latch->getUniqueSuccessor()) {
       MergeBlockIntoPredecessor(Succ, &DTU, &LI);
       DTU.flush();
@@ -1529,7 +1527,7 @@ private:
 
     // Move instructions from the preheader of FC1 to the end of the preheader
     // of FC0.
-    moveInstructionsToTheEnd(*FC1.Preheader, *FC0.Preheader, DT, PDT, DI);
+    moveInstructionsToTheEnd(*FC1.Preheader, *FC0.Preheader, DT, PDT, DI, SE);
 
     // Fusing guarded loops is handled slightly differently than non-guarded
     // loops and has been broken out into a separate method instead of trying to
@@ -1681,19 +1679,6 @@ private:
     SE.forgetLoop(FC1.L);
     SE.forgetLoop(FC0.L);
 
-    // Move instructions from FC0.Latch to FC1.Latch.
-    // Note: mergeLatch requires an updated DT.
-    mergeLatch(FC0, FC1);
-
-    // Forget block dispositions as well, so that there are no dangling
-    // pointers to erased/free'ed blocks. It should be done after mergeLatch()
-    // since merging the latches may affect the dispositions.
-    SE.forgetBlockAndLoopDispositions();
-
-    // Forget the cached SCEV values including the induction variable that may
-    // have changed after the fusion.
-    SE.forgetLoop(FC0.L);
-
     // Merge the loops.
     SmallVector<BasicBlock *, 8> Blocks(FC1.L->blocks());
     for (BasicBlock *BB : Blocks) {
@@ -1712,6 +1697,15 @@ private:
 
     // Delete the now empty loop L1.
     LI.erase(FC1.L);
+
+    // Forget block dispositions as well, so that there are no dangling
+    // pointers to erased/free'ed blocks. It should be done after mergeLatch()
+    // since merging the latches may affect the dispositions.
+    SE.forgetBlockAndLoopDispositions();
+
+    // Move instructions from FC0.Latch to FC1.Latch.
+    // Note: mergeLatch requires an updated DT.
+    mergeLatch(FC0, FC1);
 
 #ifndef NDEBUG
     assert(!verifyFunction(*FC0.Header->getParent(), &errs()));
@@ -1786,11 +1780,11 @@ private:
     // of the FC0 Exit block to the beginning of the exit block of FC1.
     moveInstructionsToTheBeginning(
         (FC0.Peeled ? *FC0ExitBlockSuccessor : *FC0.ExitBlock), *FC1.ExitBlock,
-        DT, PDT, DI);
+        DT, PDT, DI, SE);
 
     // Move instructions from the guard block of FC1 to the end of the guard
     // block of FC0.
-    moveInstructionsToTheEnd(*FC1GuardBlock, *FC0GuardBlock, DT, PDT, DI);
+    moveInstructionsToTheEnd(*FC1GuardBlock, *FC0GuardBlock, DT, PDT, DI, SE);
 
     assert(FC0NonLoopBlock == FC1GuardBlock && "Loops are not adjacent");
 
@@ -1983,15 +1977,6 @@ private:
     SE.forgetLoop(FC1.L);
     SE.forgetLoop(FC0.L);
 
-    // Move instructions from FC0.Latch to FC1.Latch.
-    // Note: mergeLatch requires an updated DT.
-    mergeLatch(FC0, FC1);
-
-    // Forget block dispositions as well, so that there are no dangling
-    // pointers to erased/free'ed blocks. It should be done after mergeLatch()
-    // since merging the latches may affect the dispositions.
-    SE.forgetBlockAndLoopDispositions();
-
     // Merge the loops.
     SmallVector<BasicBlock *, 8> Blocks(FC1.L->blocks());
     for (BasicBlock *BB : Blocks) {
@@ -2010,6 +1995,15 @@ private:
 
     // Delete the now empty loop L1.
     LI.erase(FC1.L);
+
+    // Forget block dispositions as well, so that there are no dangling
+    // pointers to erased/free'ed blocks. It should be done after mergeLatch()
+    // since merging the latches may affect the dispositions.
+    SE.forgetBlockAndLoopDispositions();
+
+    // Move instructions from FC0.Latch to FC1.Latch.
+    // Note: mergeLatch requires an updated DT.
+    mergeLatch(FC0, FC1);
 
 #ifndef NDEBUG
     assert(!verifyFunction(*FC0.Header->getParent(), &errs()));

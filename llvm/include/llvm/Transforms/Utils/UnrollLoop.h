@@ -115,6 +115,7 @@ LLVM_ABI void simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
                                       ScalarEvolution *SE, DominatorTree *DT,
                                       AssumptionCache *AC,
                                       const TargetTransformInfo *TTI,
+                                      ArrayRef<BasicBlock *> Blocks,
                                       AAResults *AA = nullptr);
 
 LLVM_ABI MDNode *GetUnrollMetadata(MDNode *LoopID, StringRef Name);
@@ -160,8 +161,10 @@ public:
                                const SmallPtrSetImpl<const Value *> &EphValues,
                                unsigned BEInsns);
 
-  /// Whether it is legal to unroll this loop.
-  LLVM_ABI bool canUnroll() const;
+  /// Whether it is legal to unroll this loop. If \p ORE and \p L are provided,
+  /// emit an optimization remark on failure.
+  LLVM_ABI bool canUnroll(OptimizationRemarkEmitter *ORE = nullptr,
+                          const Loop *L = nullptr) const;
 
   uint64_t getRolledLoopSize() const { return LoopSize.getValue(); }
 

@@ -28,10 +28,10 @@ define void @step_direction_unknown(i32 %arg, ptr %dst) {
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP8:%.*]] = mul <4 x i32> [[BROADCAST_SPLAT]], [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = zext <4 x i32> [[TMP8]] to <4 x i64>
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i64> [[TMP9]], i32 0
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i64> [[TMP9]], i32 1
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i64> [[TMP9]], i32 2
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i64> [[TMP9]], i32 3
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i64> [[TMP9]], i64 0
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i64> [[TMP9]], i64 1
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i64> [[TMP9]], i64 2
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i64> [[TMP9]], i64 3
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP10]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP11]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP12]]
@@ -102,7 +102,7 @@ entry:
   %mul = shl i32 %x, 1
   br label %for.cond
 
-for.cond:                                         ; preds = %for.body, %entry
+for.cond:
   %iv = phi i32 [ 30, %entry ], [ %inc, %for.cond ]
   %p.0 = phi ptr [ %start, %entry ], [ %add.ptr, %for.cond ]
   %add.ptr = getelementptr i8, ptr %p.0, i32 %mul
@@ -112,7 +112,7 @@ for.cond:                                         ; preds = %for.body, %entry
   %tobool.not = icmp eq i32 %iv, 1024
   br i1 %tobool.not, label %for.end, label %for.cond
 
-for.end:                                          ; preds = %for.cond
+for.end:
   ret void
 }
 

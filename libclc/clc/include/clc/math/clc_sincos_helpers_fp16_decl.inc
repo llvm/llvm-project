@@ -15,5 +15,8 @@ typedef struct __CLC_XCONCAT(__clc_sincos_ret_, __CLC_GENTYPE) {
 _CLC_DEF _CLC_OVERLOAD __CLC_SINCOS_RET_GENTYPE
 __clc_sincos_reduced_eval(__CLC_HALFN x);
 
+_CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_SINCOS_RET_GENTYPE
+__clc_sincospi_reduced_eval(__CLC_HALFN x);
+
 _CLC_DEF _CLC_OVERLOAD __CLC_INTN __clc_argReductionS(private __CLC_HALFN *r,
                                                       __CLC_HALFN x);

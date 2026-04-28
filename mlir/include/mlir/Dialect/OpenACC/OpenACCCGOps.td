@@ -249,7 +249,7 @@ def OpenACC_ParWidthOp
   }];
   let arguments = (ins Optional<Index>:$launchArg,
                        OpenACC_GPUParallelDimAttr:$par_dim);
-  let results = (outs OpenACC_ParWidthType:$output);
+  let results = (outs Index:$output);
   let assemblyFormat = [{
     ($launchArg^)? attr-dict
   }];
@@ -284,10 +284,10 @@ def OpenACC_ComputeRegionOp
     The operation is `IsolatedFromAbove`: all values used inside the
     region must be explicitly captured. Values are captured in two ways:
 
-    - Launch arguments (`launch`): Results of operations that define
-      the parallel launch configuration. These are `!acc.par_width`-typed
-      and become block arguments representing the parallel width for each
-      dimension.
+    - Launch arguments (`launch`): Results of `acc.par_width`
+      operations that define the parallel launch configuration. These
+      become `index`-typed block arguments representing the parallel
+      width for each dimension.
 
     - Input arguments (`ins`): Arbitrary values captured from outside
       the region (data pointers, scalars, etc.). These become block
@@ -296,6 +296,11 @@ def OpenACC_ComputeRegionOp
     The `origin` attribute records which construct produced this compute
     region (e.g., `"acc.parallel"`, `"acc.kernels"`). This is intended to
     be solely informational.
+
+    Canonicalization may simplify `ins` captures: duplicate `ins` operands
+    (same SSA value threaded more than once) are merged by reusing the first
+    block argument, and unused `ins` operands (block arguments with no uses)
+    are removed. `launch` operands are never merged or dropped.
 
     Example:
 
@@ -316,7 +321,7 @@ def OpenACC_ComputeRegionOp
     ```
   }];
 
-  let arguments = (ins Variadic<OpenACC_ParWidthType>:$launchArgs,
+  let arguments = (ins Variadic<Index>:$launchArgs,
                        Variadic<AnyType>:$inputArgs,
                        Optional<OpenACC_GPUAsyncTokenType>:$stream,
                        StrAttr:$origin,
@@ -326,6 +331,8 @@ def OpenACC_ComputeRegionOp
   let results = (outs Variadic<AnyType>:$results);
 
   let regions = (region AnyRegion:$region);
+
+  let hasCanonicalizer = 1;
 
   let extraClassDeclaration = [{
     /// Look up the par_width op for the given dimension among launch args.
@@ -343,6 +350,16 @@ def OpenACC_ComputeRegionOp
     /// Add a new input argument, appending to both the operand list and
     /// the region block arguments. Returns the new block argument.
     ::mlir::BlockArgument appendInputArg(::mlir::Value);
+
+    /// After hoisting `value`'s defining op, wire it into this region: append it
+    /// as an `ins` operand, add the matching body entry argument, and replace
+    /// uses under this region with that argument (excluding this op's own `ins`
+    /// operand uses).
+    ///
+    /// Requires that `value` is defined outside `getRegion()` and is still used
+    /// inside the region. Otherwise returns `std::nullopt`.
+    std::optional<::mlir::BlockArgument>
+    wireHoistedValueThroughIns(::mlir::Value value);
 
     /// Check whether all parallel dimensions have width 1.
     bool isEffectivelySerial();
@@ -365,9 +382,17 @@ def OpenACC_ComputeRegionOp
       return &getRegion().back().back();
     }
 
-    /// Map a block argument back to its corresponding operand
-    /// ($launchArgs or $inputArgs).
+    /// Return the `launch` or `ins` operand threaded to `blockArg`, or a null
+    /// `Value` if `blockArg` is not an argument of `getBody()` or its index is
+    /// out of range for this op's `launch` and `ins` operands.
     ::mlir::Value getOperand(::mlir::BlockArgument blockArg);
+
+    /// If `value` is a launch or input operand, return the body block argument
+    /// it is threaded through; otherwise `std::nullopt`. If `value` matches
+    /// more than one `ins` operand, the first match is returned (canonicalization
+    /// may merge duplicate `ins` values). Duplicate `launch` operands are not
+    /// folded.
+    std::optional<::mlir::BlockArgument> getBlockArg(::mlir::Value value);
   }];
 
   let hasVerifier = 1;

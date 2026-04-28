@@ -13,7 +13,6 @@ target triple = "x86_64-apple-macosx10.11.0"
 @a = external global i32, align 4
 @b = external global i64, align 8
 
-; Function Attrs: norecurse nounwind ssp uwtable
 define void @_Z3fn1v() #0 {
 ; CHECK-LABEL: define void @_Z3fn1v(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
@@ -67,9 +66,6 @@ define void @_Z3fn1v() #0 {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP6]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[FOR_COND_CLEANUP_LOOPEXIT99:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
-; CHECK-NEXT:    [[TMP64:%.*]] = mul i64 [[N_VEC]], 2
-; CHECK-NEXT:    [[IND_END9:%.*]] = add i64 8, [[TMP64]]
-; CHECK-NEXT:    [[IND_END12:%.*]] = mul i64 [[N_VEC]], 2
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 8
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
@@ -110,8 +106,8 @@ define void @_Z3fn1v() #0 {
 ; CHECK-NEXT:    [[CMP_N23:%.*]] = icmp eq i64 [[TMP6]], [[N_VEC7]]
 ; CHECK-NEXT:    br i1 [[CMP_N23]], label %[[FOR_COND_CLEANUP_LOOPEXIT99]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL17:%.*]] = phi i64 [ [[IND_END8]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END9]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 8, %[[ITER_CHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL18:%.*]] = phi i64 [ [[IND_END11]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END12]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL17:%.*]] = phi i64 [ [[IND_END8]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 8, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL18:%.*]] = phi i64 [ [[IND_END11]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END4]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[ITER_CHECK22]]:
 ; CHECK-NEXT:    [[TMP26:%.*]] = add nsw i64 [[TMP3]], -9
@@ -156,9 +152,6 @@ define void @_Z3fn1v() #0 {
 ; CHECK-NEXT:    [[CMP_N40:%.*]] = icmp eq i64 [[TMP28]], [[N_VEC32]]
 ; CHECK-NEXT:    br i1 [[CMP_N40]], label %[[FOR_COND_CLEANUP_LOOPEXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK43:.*]]
 ; CHECK:       [[VEC_EPILOG_ITER_CHECK43]]:
-; CHECK-NEXT:    [[TMP42:%.*]] = mul i64 [[N_VEC32]], 2
-; CHECK-NEXT:    [[IND_END55:%.*]] = add i64 8, [[TMP42]]
-; CHECK-NEXT:    [[IND_END58:%.*]] = mul i64 [[N_VEC32]], 2
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK50:%.*]] = icmp ult i64 [[N_MOD_VF31]], 8
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK50]], label %[[VEC_EPILOG_SCALAR_PH42]], label %[[VEC_EPILOG_PH45]], !prof [[PROF3]]
 ; CHECK:       [[VEC_EPILOG_PH45]]:
@@ -204,8 +197,8 @@ define void @_Z3fn1v() #0 {
 ; CHECK-NEXT:    [[CMP_N65:%.*]] = icmp eq i64 [[TMP28]], [[N_VEC53]]
 ; CHECK-NEXT:    br i1 [[CMP_N65]], label %[[FOR_COND_CLEANUP_LOOPEXIT]], label %[[VEC_EPILOG_SCALAR_PH42]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH42]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL65:%.*]] = phi i64 [ [[IND_END54]], %[[VEC_EPILOG_MIDDLE_BLOCK63]] ], [ [[IND_END55]], %[[VEC_EPILOG_ITER_CHECK43]] ], [ 8, %[[ITER_CHECK22]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL66:%.*]] = phi i64 [ [[IND_END57]], %[[VEC_EPILOG_MIDDLE_BLOCK63]] ], [ [[IND_END58]], %[[VEC_EPILOG_ITER_CHECK43]] ], [ 0, %[[ITER_CHECK22]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL65:%.*]] = phi i64 [ [[IND_END54]], %[[VEC_EPILOG_MIDDLE_BLOCK63]] ], [ [[IND_END41]], %[[VEC_EPILOG_ITER_CHECK43]] ], [ 8, %[[ITER_CHECK22]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL66:%.*]] = phi i64 [ [[IND_END57]], %[[VEC_EPILOG_MIDDLE_BLOCK63]] ], [ [[IND_END43]], %[[VEC_EPILOG_ITER_CHECK43]] ], [ 0, %[[ITER_CHECK22]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY_US:.*]]
 ; CHECK:       [[FOR_BODY_US]]:
 ; CHECK-NEXT:    [[INDVARS_IV78:%.*]] = phi i64 [ [[INDVARS_IV_NEXT79:%.*]], %[[FOR_COND_CLEANUP4_US_LCSSA_US_US:.*]] ], [ [[BC_RESUME_VAL65]], %[[VEC_EPILOG_SCALAR_PH42]] ]
@@ -262,7 +255,7 @@ entry:
   %cmp34 = icmp sgt i32 %0, 8
   br i1 %cmp34, label %for.body.lr.ph, label %for.cond.cleanup
 
-for.body.lr.ph:                                   ; preds = %entry
+for.body.lr.ph:
   %1 = load i32, ptr @a, align 4
   %tobool = icmp eq i32 %1, 0
   %2 = load i64, ptr @b, align 8
@@ -271,13 +264,13 @@ for.body.lr.ph:                                   ; preds = %entry
   %3 = sext i32 %0 to i64
   br i1 %tobool, label %for.body.us.preheader, label %for.body.preheader
 
-for.body.preheader:                               ; preds = %for.body.lr.ph
+for.body.preheader:
   br label %for.body
 
-for.body.us.preheader:                            ; preds = %for.body.lr.ph
+for.body.us.preheader:
   br label %for.body.us
 
-for.body.us:                                      ; preds = %for.body.us.preheader, %for.cond.cleanup4.us-lcssa.us.us
+for.body.us:
   %indvars.iv78 = phi i64 [ %indvars.iv.next79, %for.cond.cleanup4.us-lcssa.us.us ], [ 8, %for.body.us.preheader ]
   %indvars.iv70 = phi i64 [ %indvars.iv.next71, %for.cond.cleanup4.us-lcssa.us.us ], [ 0, %for.body.us.preheader ]
   %4 = sub nsw i64 8, %indvars.iv78
@@ -286,7 +279,7 @@ for.body.us:                                      ; preds = %for.body.us.prehead
   %arraydecay.us.us.us = getelementptr inbounds [10 x i32], ptr %add.ptr.us, i64 %5, i64 0
   br i1 %tobool6, label %for.body5.us.us.us.preheader, label %for.body5.us.us48.preheader
 
-for.body5.us.us48.preheader:                      ; preds = %for.body.us
+for.body5.us.us48.preheader:
   store i32 8, ptr %arraydecay.us.us.us, align 16
   %indvars.iv.next66 = or disjoint i64 %indvars.iv70, 1
   %6 = add nsw i64 %4, %indvars.iv.next66
@@ -294,7 +287,7 @@ for.body5.us.us48.preheader:                      ; preds = %for.body.us
   store i32 8, ptr %arraydecay.us.us55.1, align 8
   br label %for.cond.cleanup4.us-lcssa.us.us
 
-for.body5.us.us.us.preheader:                     ; preds = %for.body.us
+for.body5.us.us.us.preheader:
   store i32 7, ptr %arraydecay.us.us.us, align 16
   %indvars.iv.next73 = or disjoint i64 %indvars.iv70, 1
   %7 = add nsw i64 %4, %indvars.iv.next73
@@ -302,22 +295,22 @@ for.body5.us.us.us.preheader:                     ; preds = %for.body.us
   store i32 7, ptr %arraydecay.us.us.us.1, align 8
   br label %for.cond.cleanup4.us-lcssa.us.us
 
-for.cond.cleanup4.us-lcssa.us.us:                 ; preds = %for.body5.us.us48.preheader, %for.body5.us.us.us.preheader
+for.cond.cleanup4.us-lcssa.us.us:
   %indvars.iv.next79 = add nuw nsw i64 %indvars.iv78, 2
   %cmp.us = icmp slt i64 %indvars.iv.next79, %3
   %indvars.iv.next71 = add nuw nsw i64 %indvars.iv70, 2
   br i1 %cmp.us, label %for.body.us, label %for.cond.cleanup.loopexit
 
-for.cond.cleanup.loopexit:                        ; preds = %for.cond.cleanup4.us-lcssa.us.us
+for.cond.cleanup.loopexit:
   br label %for.cond.cleanup
 
-for.cond.cleanup.loopexit99:                      ; preds = %for.body
+for.cond.cleanup.loopexit99:
   br label %for.cond.cleanup
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit99, %for.cond.cleanup.loopexit, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %indvars.iv95 = phi i64 [ %indvars.iv.next96, %for.body ], [ 8, %for.body.preheader ]
   %indvars.iv87 = phi i64 [ %indvars.iv.next88, %for.body ], [ 0, %for.body.preheader ]
   %8 = sub nsw i64 8, %indvars.iv95
@@ -335,4 +328,4 @@ for.body:                                         ; preds = %for.body.preheader,
   br i1 %cmp, label %for.body, label %for.cond.cleanup.loopexit99
 }
 
-attributes #0 = { norecurse nounwind ssp uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="broadwell" "target-features"="+adx,+aes,+avx,+avx2,+avx512cd,+avx512f,+bmi,+bmi2,+cx16,+f16c,+fma,+fsgsbase,+fxsr,+evex512,+lzcnt,+mmx,+movbe,+pclmul,+popcnt,+rdrnd,+rdseed,+rtm,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave,+xsaveopt,-vzeroupper" "use-soft-float"="false" }
+attributes #0 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="broadwell" "target-features"="+adx,+aes,+avx,+avx2,+avx512cd,+avx512f,+bmi,+bmi2,+cx16,+f16c,+fma,+fsgsbase,+fxsr,+evex512,+lzcnt,+mmx,+movbe,+pclmul,+popcnt,+rdrnd,+rdseed,+rtm,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave,+xsaveopt,-vzeroupper" "use-soft-float"="false" }

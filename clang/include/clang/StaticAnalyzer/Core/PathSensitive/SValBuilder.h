@@ -345,10 +345,11 @@ public:
   /// space.
   /// \param type pointer type.
   loc::ConcreteInt makeNullWithType(QualType type) {
+    type =
+        type->isAtomicType() ? type->getAs<AtomicType>()->getValueType() : type;
+
     // We cannot use the `isAnyPointerType()`.
-    assert((type->isPointerType() || type->isObjCObjectPointerType() ||
-            type->isBlockPointerType() || type->isNullPtrType() ||
-            type->isReferenceType()) &&
+    assert((type->isObjCObjectPointerType() || Loc::isLocType(type)) &&
            "makeNullWithType must use pointer type");
 
     // The `sizeof(T&)` is `sizeof(T)`, thus we replace the reference with a

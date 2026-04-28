@@ -8,6 +8,7 @@
 
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
+#include "clang/AST/DeclCXX.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 
@@ -75,6 +76,62 @@ bool AMDGPUABIInfo::isHomogeneousAggregateSmallEnough(
 
   // Homogeneous Aggregates may occupy at most 16 registers.
   return Members * NumRegs <= MaxNumRegsForArgsRet;
+}
+
+/// Check if all fields in an aggregate type contain only sub-32-bit integer
+/// types. Such aggregates should be packed into i32 registers rather than
+/// passed as individual elements. Aggregates containing floats or full-sized
+/// integer types (i32, i64) should preserve their original types.
+static bool containsOnlyPackableIntegerTypes(const RecordDecl *RD,
+                                             const ASTContext &Context) {
+  for (const FieldDecl *Field : RD->fields()) {
+    QualType FieldTy = Field->getType();
+
+    // For bitfields, they are always integer types so they're always packable.
+    // A bitfield like "unsigned a : 4" should be packable even though
+    // 'unsigned' is 32 bits. Similarly, larger bitfields that fill into
+    // wider ints (like i64) should also be packed.
+    if (Field->isBitField()) {
+      continue;
+    }
+
+    // Recursively check nested structs
+    if (const RecordDecl *NestedRD = FieldTy->getAsRecordDecl()) {
+      if (!containsOnlyPackableIntegerTypes(NestedRD, Context))
+        return false;
+      continue;
+    }
+
+    // Arrays - check the element type
+    if (const ConstantArrayType *AT = Context.getAsConstantArrayType(FieldTy)) {
+      QualType EltTy = AT->getElementType();
+      if (const RecordDecl *NestedRD = EltTy->getAsRecordDecl()) {
+        if (!containsOnlyPackableIntegerTypes(NestedRD, Context))
+          return false;
+        continue;
+      }
+      // For non-struct array elements, check if they're packable integers
+      if (!EltTy->isIntegerType())
+        return false;
+      uint64_t EltSize = Context.getTypeSize(EltTy);
+      if (EltSize >= 32)
+        return false;
+      continue;
+    }
+
+    // Floating point types should not be packed into integers
+    if (FieldTy->isFloatingType())
+      return false;
+
+    // Only integer types that are smaller than 32 bits should be packed
+    if (!FieldTy->isIntegerType())
+      return false;
+
+    uint64_t FieldSize = Context.getTypeSize(FieldTy);
+    if (FieldSize >= 32)
+      return false;
+  }
+  return true;
 }
 
 /// Estimate number of registers the type will use when passed in registers.
@@ -155,17 +212,27 @@ ABIArgInfo AMDGPUABIInfo::classifyReturnType(QualType RetTy) const {
           RD && RD->hasFlexibleArrayMember())
         return DefaultABIInfo::classifyReturnType(RetTy);
 
-      // Pack aggregates <= 4 bytes into single VGPR or pair.
+      // Pack aggregates <= 8 bytes into single VGPR or pair, but only if they
+      // contain sub-32-bit integer types. Aggregates with floats or full-sized
+      // integers should preserve their original types.
       uint64_t Size = getContext().getTypeSize(RetTy);
-      if (Size <= 16)
-        return ABIArgInfo::getDirect(llvm::Type::getInt16Ty(getVMContext()));
-
-      if (Size <= 32)
-        return ABIArgInfo::getDirect(llvm::Type::getInt32Ty(getVMContext()));
-
       if (Size <= 64) {
-        llvm::Type *I32Ty = llvm::Type::getInt32Ty(getVMContext());
-        return ABIArgInfo::getDirect(llvm::ArrayType::get(I32Ty, 2));
+        const RecordDecl *RD = RetTy->getAsRecordDecl();
+        bool ShouldPackToInt =
+            RD && containsOnlyPackableIntegerTypes(RD, getContext());
+
+        if (ShouldPackToInt) {
+          if (Size <= 16)
+            return ABIArgInfo::getDirect(
+                llvm::Type::getInt16Ty(getVMContext()));
+
+          if (Size <= 32)
+            return ABIArgInfo::getDirect(
+                llvm::Type::getInt32Ty(getVMContext()));
+
+          llvm::Type *I32Ty = llvm::Type::getInt32Ty(getVMContext());
+          return ABIArgInfo::getDirect(llvm::ArrayType::get(I32Ty, 2));
+        }
       }
 
       if (numRegsForType(RetTy) <= MaxNumRegsForArgsRet)
@@ -246,21 +313,28 @@ ABIArgInfo AMDGPUABIInfo::classifyArgumentType(QualType Ty, bool Variadic,
         RD && RD->hasFlexibleArrayMember())
       return DefaultABIInfo::classifyArgumentType(Ty);
 
-    // Pack aggregates <= 8 bytes into single VGPR or pair.
+    // Pack aggregates <= 8 bytes into single VGPR or pair, but only if they
+    // contain sub-32-bit integer types. Aggregates with floats or full-sized
+    // integers (i32, i64) should preserve their original types.
     uint64_t Size = getContext().getTypeSize(Ty);
     if (Size <= 64) {
-      unsigned NumRegs = (Size + 31) / 32;
-      NumRegsLeft -= std::min(NumRegsLeft, NumRegs);
+      const RecordDecl *RD = Ty->getAsRecordDecl();
+      bool ShouldPackToInt =
+          RD && containsOnlyPackableIntegerTypes(RD, getContext());
 
-      if (Size <= 16)
-        return ABIArgInfo::getDirect(llvm::Type::getInt16Ty(getVMContext()));
+      if (ShouldPackToInt) {
+        unsigned NumRegs = (Size + 31) / 32;
+        NumRegsLeft -= std::min(NumRegsLeft, NumRegs);
 
-      if (Size <= 32)
-        return ABIArgInfo::getDirect(llvm::Type::getInt32Ty(getVMContext()));
+        if (Size <= 16)
+          return ABIArgInfo::getDirect(llvm::Type::getInt16Ty(getVMContext()));
 
-      // XXX: Should this be i64 instead, and should the limit increase?
-      llvm::Type *I32Ty = llvm::Type::getInt32Ty(getVMContext());
-      return ABIArgInfo::getDirect(llvm::ArrayType::get(I32Ty, 2));
+        if (Size <= 32)
+          return ABIArgInfo::getDirect(llvm::Type::getInt32Ty(getVMContext()));
+
+        llvm::Type *I32Ty = llvm::Type::getInt32Ty(getVMContext());
+        return ABIArgInfo::getDirect(llvm::ArrayType::get(I32Ty, 2));
+      }
     }
 
     if (NumRegsLeft > 0) {
@@ -308,6 +382,9 @@ public:
     return getLangASFromTargetAS(
         getABIInfo().getDataLayout().getAllocaAddrSpace());
   }
+
+  LangAS getSRetAddrSpace(const CXXRecordDecl *RD) const override;
+
   LangAS getGlobalVarAddressSpace(CodeGenModule &CGM,
                                   const VarDecl *D) const override;
   StringRef getLLVMSyncScopeStr(const LangOptions &LangOpts, SyncScope Scope,
@@ -465,6 +542,15 @@ llvm::Constant *AMDGPUTargetCodeGenInfo::getNullPointer(
       PT->getContext(), Ctx.getTargetAddressSpace(LangAS::opencl_generic));
   return llvm::ConstantExpr::getAddrSpaceCast(
       llvm::ConstantPointerNull::get(NPT), PT);
+}
+
+LangAS
+AMDGPUTargetCodeGenInfo::getSRetAddrSpace(const CXXRecordDecl *RD) const {
+  // Types with no viable copy/move must be constructed in-place , use the
+  // default AS so the sret pointer matches the "this" convention.
+  if (RD && !RD->canPassInRegisters())
+    return LangAS::Default;
+  return getASTAllocaAddressSpace();
 }
 
 LangAS

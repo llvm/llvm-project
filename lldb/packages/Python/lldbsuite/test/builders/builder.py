@@ -24,8 +24,7 @@ class Builder:
         compiler = lldbutil.which(compiler)
         return os.path.abspath(compiler)
 
-    def getTriple(self, arch):
-        """Returns the triple for the given architecture or None."""
+    def getTriple(self):
         return configuration.triple
 
     def getExtraMakeArgs(self):
@@ -35,11 +34,15 @@ class Builder:
         """
         return []
 
-    def getArchCFlags(self, architecture):
-        """Returns the ARCH_CFLAGS for the make system."""
-        triple = self.getTriple(architecture)
+    def getTripleSpec(self):
+        """Returns the TRIPLE for the make system."""
+        triple = self.getTriple()
         if triple:
-            return ["ARCH_CFLAGS=-target {}".format(triple)]
+            return ["TRIPLE=" + triple]
+        return []
+
+    def getArchCFlags(self):
+        """Returns the ARCH_CFLAGS for the make system."""
         return []
 
     def getMake(self, test_subdir, test_name):
@@ -95,13 +98,6 @@ class Builder:
 
         return cmdline
 
-    def getArchSpec(self, architecture):
-        """
-        Helper function to return the key-value string to specify the architecture
-        used for the make system.
-        """
-        return ["ARCH=" + architecture] if architecture else []
-
     def getToolchainSpec(self, compiler):
         """
         Helper function to return the key-value strings to specify the toolchain
@@ -138,7 +134,7 @@ class Builder:
         cc_type = cc_name
         # A triple prefix of compiler name: <armv7-none-linux-gnu->gcc
         cc_prefix = ""
-        if not "clang-cl" in cc_name and not "llvm-gcc" in cc_name:
+        if "clang-cl" not in cc_name:
             cc_name_parts = cc_name.split("-")
             cc_type = cc_name_parts[-1]
             if len(cc_name_parts) > 1:
@@ -147,12 +143,16 @@ class Builder:
         # A kind of C++ compiler.
         cxx_types = {
             "icc": "icpc",
-            "llvm-gcc": "llvm-g++",
             "gcc": "g++",
             "cc": "c++",
             "clang": "clang++",
+            "xcrun clang": "xcrun clang++",
         }
-        cxx_type = cxx_types.get(cc_type, cc_type)
+        # Determine the C++ compiler based on the given compiler path/command.
+        cxx_type = cxx_types.get(compiler)
+        if cxx_type is None:
+            # If that did not work, then use the inferred cc_type.
+            cxx_type = cxx_types.get(cc_type, cxx_type)
 
         cc_dir = cc_path.parent
 
@@ -290,8 +290,8 @@ class Builder:
             self.getMake(testdir, testname),
             debug_info_args,
             make_targets,
-            self.getArchCFlags(architecture),
-            self.getArchSpec(architecture),
+            self.getArchCFlags(),
+            self.getTripleSpec(),
             self.getToolchainSpec(compiler),
             self.getExtraMakeArgs(),
             self.getSDKRootSpec(),

@@ -170,7 +170,7 @@ CodeGenTargetMachineImpl::createMCStreamer(raw_pwrite_stream &Out,
                                            CodeGenFileType FileType,
                                            MCContext &Context) {
   const MCSubtargetInfo &STI = *getMCSubtargetInfo();
-  const MCAsmInfo &MAI = *getMCAsmInfo();
+  const MCAsmInfo &MAI = getMCAsmInfo();
   const MCRegisterInfo &MRI = *getMCRegisterInfo();
   const MCInstrInfo &MII = *getMCInstrInfo();
 
@@ -179,9 +179,7 @@ CodeGenTargetMachineImpl::createMCStreamer(raw_pwrite_stream &Out,
   switch (FileType) {
   case CodeGenFileType::AssemblyFile: {
     std::unique_ptr<MCInstPrinter> InstPrinter(getTarget().createMCInstPrinter(
-        getTargetTriple(),
-        Options.MCOptions.OutputAsmVariant.value_or(MAI.getAssemblerDialect()),
-        MAI, MII, MRI));
+        getTargetTriple(), MAI.getOutputAssemblerDialect(), MAI, MII, MRI));
     for (StringRef Opt : Options.MCOptions.InstPrinterOptions)
       if (!InstPrinter->applyTargetSpecificCLOption(Opt))
         return createStringError("invalid InstPrinter option '" + Opt + "'");

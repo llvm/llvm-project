@@ -72,49 +72,6 @@ def XeGPU_BlockTensorDescAttr: XeGPU_TensorDescAttr<"BlockTensorDesc", "block_td
 
 }
 
-def XeGPU_ScatterTensorDescAttr: XeGPU_TensorDescAttr<"ScatterTensorDesc", "scatter_tdesc_attr"> {
-  let summary = [{a composite attribute for `TensorDescType`}];
-  let description = [{
-    `ScatterTensorDesc` is a composite attribute defined for `TensorDescType`
-    for describing following properties of a `TensorDesc`:
-
-    1. `memory_space`: It describes where the data block described by the
-        TensorDesc is located, `Global` device memory or `Shared` local memory.
-        It is default to `Global`.
-
-    2. `chunk_size`: Specifies the number of contiguous elements accessed per offset.
-      The default value is 1.
-  }];
-
-  let parameters = (ins
-    DefaultValuedParameter<
-      "MemorySpaceAttr",
-      "MemorySpaceAttr::get($_ctxt, xegpu::MemorySpace::Global)",
-      "Data memory location"
-    >: $memory_space,
-    DefaultValuedParameter<
-      "IntegerAttr",
-      "IntegerAttr::get(IntegerType::get($_ctxt, 64), 1)",
-      "Number of contiguous elements"
-    >: $chunk_size
-  );
-
-  let builders = [
-    AttrBuilder<(ins
-      CArg<"xegpu::MemorySpace", "xegpu::MemorySpace::Global">:$memory_space,
-      CArg<"int", "1">: $chunk_size
-    )>
-  ];
-
-  let extraClassDeclaration = [{
-    int64_t getChunkSizeAsInt() {
-      return getChunkSize().getInt();
-    }
-  }];
-
-  let genVerifyDecl = 1;
- }
-
 //===----------------------------------------------------------------------===//
 // XeGPU Memory Scope Enums.
 //===----------------------------------------------------------------------===//
@@ -188,17 +145,15 @@ def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
     InterfaceMethod<"Check the availability of subgroup level layouts",
                     "bool",
                     "isForSubgroup">,
+    InterfaceMethod<"Check the availability of lane level layouts",
+                    "bool",
+                    "isForLane">,
     InterfaceMethod<"Get the rank of attribute",
                     "int64_t",
                     "getRank">,
     InterfaceMethod<"Get the num of effective subgroups",
                     "int64_t",
-                    "getNumSubgroups", (ins), [{
-                        std::optional<SmallVector<int64_t>> sgLayout = llvm::cast<ConcreteAttr>(tablegen_opaque_val).getEffectiveSgLayoutAsInt();
-                        if (sgLayout.has_value())
-                          return computeProduct(*sgLayout);
-                        return 0;
-                    }], [{}]>,
+                    "getNumSubgroups">,
     InterfaceMethod<"Get the order of the layout attribute",
                     "DenseI32ArrayAttr",
                     "getOrder">,
@@ -270,6 +225,94 @@ def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
                     "FailureOr<SmallVector<SmallVector<Value>>>",
                     "computeDistributedCoords",
                     (ins "OpBuilder &": $builder, "Location":$loc, "Value":$linearId, "ArrayRef<int64_t>":$shape)>,
+    InterfaceMethod<[{Statically computes multidimensional coordinates for all dist units
+                      assigned to a compute unit identified by `linearId`. This is the
+                      compile-time counterpart of `computeDistributedCoords`: it performs
+                      the same delinearization and round-robin enumeration but operates
+                      entirely on static integer values. Returns a list of coordinate
+                      vectors, one per dist unit.}],
+                    /*retTy=*/"SmallVector<SmallVector<int64_t>>",
+                    /*methodName=*/"computeStaticDistributedCoords",
+                    /*args=*/(ins "int64_t":$linearId, "ArrayRef<int64_t>":$shape)>,
+    InterfaceMethod<[{Computes the distributed shape for each compute unit by dividing each
+                      dimension of `shape` by the corresponding layout factor (sg_layout or
+                      lane_layout).
+                      The distributed shape represents the per-compute-unit tile. Each
+                      distribution unit is defined as the combination of layout factors and
+                      per-unit data (`subshape`, e.g., sg_data or lane_data). When `shape`
+                      spans multiple distribution units, the distributed shape may contain
+                      multiple such units.
+                      For wrap-around dimensions where the division is uneven, the tensor tile
+                      is broadcast to all subgroups/lanes.}],
+                    /*retTy=*/"FailureOr<SmallVector<int64_t>>",
+                    /*methodName=*/"computeDistributedShape",
+                    /*args=*/(ins "SmallVector<int64_t>":$shape),
+                    /*methodBody=*/[{
+                      SmallVector<int64_t> layout;
+                      SmallVector<int64_t> subShape;
+                      if ($_self.isForWorkgroup()) {
+                        layout = $_self.getEffectiveSgLayoutAsInt();
+                        subShape = $_self.getEffectiveSgDataAsInt();
+                      } else if ($_self.isForSubgroup()) {
+                        layout = $_self.getEffectiveLaneLayoutAsInt();
+                        subShape = $_self.getEffectiveLaneDataAsInt();
+                      } else {
+                        return failure();
+                      }
+                      // sgdata or lanedata cannot be empty for distributed shape computation
+                      if (subShape.empty())
+                        return failure();
+                      SmallVector<int64_t> distributedShape(shape.size());
+                      for (auto [i, dim] : llvm::enumerate(shape)) {
+                        int64_t distriUnit = layout[i]*subShape[i];
+                        if ((dim % distriUnit) == 0) {
+                          // Evenly divisible case, divide the dimension by the layout factor.
+                          distributedShape[i] = dim / layout[i];
+                          if (distributedShape[i] % subShape[i] != 0)
+                            return failure();
+                        } else {
+                          // wrap around case, the dimension size must be equal to subShape value
+                          if(dim != subShape[i])
+                            return failure();
+                          distributedShape[i] = dim;
+                        }
+                      }
+                      return distributedShape;
+                    }]>,
+    InterfaceMethod<[{Checks if the given shape can be distributed by the layout}],
+                    /*retTy=*/"bool",
+                    /*methodName=*/"isDistributable",
+                    /*args=*/(ins "SmallVector<int64_t>":$shape),
+                    /*methodBody=*/[{
+                        DistributeLayoutAttr curLayoutAttr = $_self;
+                        SmallVector<int64_t> curShape = shape;
+                        // Phase 1: Distribute across subgroups (sg_layout + sg_data).
+                        if (curLayoutAttr.isForWorkgroup()) {
+                          auto maybeSgShape = curLayoutAttr.computeDistributedShape(curShape);
+                          if (failed(maybeSgShape))
+                            return false;
+                          curShape = maybeSgShape.value();
+                          curLayoutAttr = curLayoutAttr.dropSgLayoutAndData();
+                          if (!curLayoutAttr)
+                            return true;
+                        }
+                        // Phase 2: Distribute across instruction data (inst_data).
+                        if (curLayoutAttr.isForSubgroup() && !curLayoutAttr.isForLane()) {
+                          SmallVector<int64_t> instData = curLayoutAttr.getEffectiveInstDataAsInt();
+                          for (size_t i = 0; i < curShape.size(); ++i) {
+                            if (curShape[i] % instData[i] != 0)
+                              return false;
+                          }
+                          // inst_data becomes the new shape for next phase
+                          curShape = instData;
+                          curLayoutAttr = curLayoutAttr.dropInstData();
+                          if (!curLayoutAttr)
+                            return true;
+                        }
+                        // Phase 3: Distribute across lanes (lane_layout + lane_data).
+                        auto maybeLaneShape = curLayoutAttr.computeDistributedShape(curShape);
+                        return succeeded(maybeLaneShape);
+                      }]>,
     InterfaceMethod</*desc=*/[{Check if this layout is a slice of another layout.}],
                     /*retTy=*/"bool",
                     /*methodName=*/"isSliceOf",
@@ -282,28 +325,12 @@ def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
                                   "ArrayRef<int64_t>": $perm,
                                   "xegpu::LayoutKind": $kind)>,
     InterfaceMethod</*desc=*/[{Check if this layout is compatible with another layout
-                     at a specific level of the layout hierarchy. Unlike isEqualTo,
-                     this compares only the effective (non-sliced) fields at the
-                     requested level.}],
+                     at a specific level of the layout hierarchy regarding a given shape. }],
                     /*retTy=*/"bool",
                     /*methodName=*/"isCompatibleWith",
                     /*args=*/(ins "const xegpu::DistributeLayoutAttr&": $other,
-                                  "xegpu::LayoutKind": $level),
-                    /*methodBody=*/[{
-                      if (!other)
-                        return false;
-                      switch (level) {
-                        case xegpu::LayoutKind::Subgroup:
-                          return $_self.getEffectiveSgLayoutAsInt() == other.getEffectiveSgLayoutAsInt() &&
-                                 $_self.getEffectiveSgDataAsInt() == other.getEffectiveSgDataAsInt();
-                        case xegpu::LayoutKind::InstData:
-                          return $_self.getEffectiveInstDataAsInt() == other.getEffectiveInstDataAsInt();
-                        case xegpu::LayoutKind::Lane:
-                          return $_self.getEffectiveLaneLayoutAsInt() == other.getEffectiveLaneLayoutAsInt() &&
-                                 $_self.getEffectiveLaneDataAsInt() == other.getEffectiveLaneDataAsInt();
-                      }
-                      return false;
-                    }]>,
+                                  "SmallVector<int64_t>": $shape,
+                                  "xegpu::LayoutKind": $level)>,
     InterfaceMethod</*desc=*/[{Check if this layout is equal to another layout.
                      For LayoutAttr, this compares all fields.
                      For SliceAttr, this requires the same parent and same sliced dims.}],
@@ -454,6 +481,10 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
       return !isForWorkgroup();
     }
 
+    bool isForLane() {
+      return !isForWorkgroup() && (getInstData() == nullptr);
+    }
+
     int64_t getRank() const {
       if (auto attr = getSgLayout())
         return attr.size();
@@ -461,6 +492,13 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
         return attr.size();
       if (auto attr = getLaneLayout())
         return attr.size();
+      return 0;
+    }
+
+    int64_t getNumSubgroups() const {
+      auto sgLayout = getEffectiveSgLayoutAsInt();
+      if (!sgLayout.empty())
+        return computeProduct(sgLayout);
       return 0;
     }
 
@@ -559,11 +597,23 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
     FailureOr<SmallVector<SmallVector<Value>>>
     computeDistributedCoords(OpBuilder &builder, Location loc, Value linearId, ArrayRef<int64_t> shape);
 
+    ///Statically computes multidimensional coordinates for all dist units
+    ///assigned to a compute unit identified by `linearId`. This is the
+    ///compile-time counterpart of `computeDistributedCoords`.
+    SmallVector<SmallVector<int64_t>>
+    computeStaticDistributedCoords(int64_t linearId, ArrayRef<int64_t> shape);
+
     /// Check if this is slice of some other layout.
     bool isSliceOf(const xegpu::DistributeLayoutAttr &other) { return false; }
 
     /// Check if this layout is equal to another layout.
     bool isEqualTo(const xegpu::DistributeLayoutAttr &other);
+
+    /// Check if this layout is compatible with another layout 
+    /// at a specific level of the layout hierarchy regarding a given shape.
+    bool isCompatibleWith(const xegpu::DistributeLayoutAttr &other,
+                                  SmallVector<int64_t> shape,
+                                  xegpu::LayoutKind level);
 
     /// Check if this layout is a transpose of another layout.
     bool isTransposeOf(const xegpu::DistributeLayoutAttr &other, ArrayRef<int64_t> perm, const xegpu::LayoutKind kind);
@@ -613,6 +663,10 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
       return parent.getRank() - attr.getDims().size();
     }
 
+    int64_t getNumSubgroups() const {
+      return getParent().getNumSubgroups();
+    }
+
     DenseI32ArrayAttr getOrder() const {
       SliceAttr attr = flatten();
       auto parent = dyn_cast<LayoutAttr>(attr.getParent());
@@ -629,6 +683,11 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
       SliceAttr attr = flatten();
       auto parent = dyn_cast<LayoutAttr>(attr.getParent());
       return parent.isForSubgroup();
+    }
+
+    bool isForLane() const {
+      auto parent = dyn_cast<LayoutAttr>(getParent());
+      return parent.isForLane();
     }
 
     /// Returns the SgLayout of the attribute, computed by applying
@@ -772,15 +831,26 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
     /// assigned to a subgroup identified by linearId. The shape parameter
     /// represents the workgroup-level problem size. Each subgroup may access
     /// multiple blocks according to round-robin distribution rules.
-
     FailureOr<SmallVector<SmallVector<Value>>>
     computeDistributedCoords(OpBuilder &builder, Location loc, Value linearId, ArrayRef<int64_t> shape);
+
+    ///Statically computes multidimensional coordinates for all dist units
+    ///assigned to a compute unit identified by `linearId`. This is the
+    ///compile-time counterpart of `computeDistributedCoords`.
+    SmallVector<SmallVector<int64_t>>
+    computeStaticDistributedCoords(int64_t linearId, ArrayRef<int64_t> shape);
 
     /// Check if this is slice of some other layout.
     bool isSliceOf(const xegpu::DistributeLayoutAttr &other);
 
     /// Check if this layout is equal to another layout.
     bool isEqualTo(const xegpu::DistributeLayoutAttr &other);
+
+    /// Check if this layout is compatible with another layout 
+    /// at a specific level of the layout hierarchy regarding a given shape.
+    bool isCompatibleWith(const xegpu::DistributeLayoutAttr &other,
+                                  SmallVector<int64_t> shape,
+                                  xegpu::LayoutKind level);
 
     /// Check if this layout is a transpose of another layout.
     bool isTransposeOf(const xegpu::DistributeLayoutAttr &other, ArrayRef<int64_t> perm, const xegpu::LayoutKind kind);

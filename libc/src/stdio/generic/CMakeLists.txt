@@ -105,7 +105,11 @@ add_generic_entrypoint_object(
     libc.hdr.types.FILE
     libc.src.__support.File.file
     libc.src.__support.File.platform_file
+    libc.src.stdio.stdin
+    libc.src.stdio.stdout
+    libc.src.stdio.stderr
 )
+
 
 add_generic_entrypoint_object(
   fseek
@@ -117,6 +121,19 @@ add_generic_entrypoint_object(
     libc.src.errno.errno
     libc.src.__support.File.file
     libc.src.__support.File.platform_file
+)
+
+add_generic_entrypoint_object(
+  rewind
+  SRCS
+    rewind.cpp
+  HDRS
+    ../rewind.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+    libc.src.__support.macros.null_check
 )
 
 add_generic_entrypoint_object(

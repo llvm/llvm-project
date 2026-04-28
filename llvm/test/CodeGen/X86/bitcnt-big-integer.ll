@@ -707,17 +707,14 @@ define <2 x i32> @load_ctpop_v2i256_v2i32(ptr %p0) nounwind {
 ; AVX512POPCNT:       # %bb.0:
 ; AVX512POPCNT-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX512POPCNT-NEXT:    vmovdqa 32(%rdi), %ymm1
-; AVX512POPCNT-NEXT:    vpopcntq %zmm0, %zmm0
-; AVX512POPCNT-NEXT:    vpmovqb %zmm0, %xmm0
-; AVX512POPCNT-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512POPCNT-NEXT:    vpsadbw %xmm2, %xmm0, %xmm0
 ; AVX512POPCNT-NEXT:    vpopcntq %zmm1, %zmm1
 ; AVX512POPCNT-NEXT:    vpmovqb %zmm1, %xmm1
+; AVX512POPCNT-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512POPCNT-NEXT:    vpsadbw %xmm2, %xmm1, %xmm1
-; AVX512POPCNT-NEXT:    vmovq {{.*#+}} xmm2 = [0,24,0,0]
-; AVX512POPCNT-NEXT:    vinserti32x4 $2, %xmm1, %zmm0, %zmm1
-; AVX512POPCNT-NEXT:    vpermt2d %zmm1, %zmm2, %zmm0
-; AVX512POPCNT-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512POPCNT-NEXT:    vpopcntq %zmm0, %zmm0
+; AVX512POPCNT-NEXT:    vpmovqb %zmm0, %xmm0
+; AVX512POPCNT-NEXT:    vpsadbw %xmm2, %xmm0, %xmm0
+; AVX512POPCNT-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; AVX512POPCNT-NEXT:    retq
 ;
 ; AVX512VL-LABEL: load_ctpop_v2i256_v2i32:
@@ -745,17 +742,14 @@ define <2 x i32> @load_ctpop_v2i256_v2i32(ptr %p0) nounwind {
 ;
 ; AVX512VLPOPCNT-LABEL: load_ctpop_v2i256_v2i32:
 ; AVX512VLPOPCNT:       # %bb.0:
-; AVX512VLPOPCNT-NEXT:    vpopcntq (%rdi), %ymm0
+; AVX512VLPOPCNT-NEXT:    vpopcntq 32(%rdi), %ymm0
 ; AVX512VLPOPCNT-NEXT:    vpmovqb %ymm0, %xmm0
 ; AVX512VLPOPCNT-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512VLPOPCNT-NEXT:    vpopcntq 32(%rdi), %ymm2
-; AVX512VLPOPCNT-NEXT:    vpmovqb %ymm2, %xmm2
 ; AVX512VLPOPCNT-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
+; AVX512VLPOPCNT-NEXT:    vpopcntq (%rdi), %ymm2
+; AVX512VLPOPCNT-NEXT:    vpmovqb %ymm2, %xmm2
 ; AVX512VLPOPCNT-NEXT:    vpsadbw %xmm1, %xmm2, %xmm1
-; AVX512VLPOPCNT-NEXT:    vmovq {{.*#+}} xmm2 = [0,24,0,0]
-; AVX512VLPOPCNT-NEXT:    vinserti32x4 $2, %xmm1, %zmm0, %zmm1
-; AVX512VLPOPCNT-NEXT:    vpermt2d %zmm1, %zmm2, %zmm0
-; AVX512VLPOPCNT-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512VLPOPCNT-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; AVX512VLPOPCNT-NEXT:    vzeroupper
 ; AVX512VLPOPCNT-NEXT:    retq
   %a0 = load <2 x i256>, ptr %p0
@@ -842,12 +836,11 @@ define <2 x i64> @load_ctpop_v2i256_v2i64(ptr %p0) nounwind {
 ; AVX512POPCNT-NEXT:    vmovdqa 32(%rdi), %ymm1
 ; AVX512POPCNT-NEXT:    vpopcntq %zmm1, %zmm1
 ; AVX512POPCNT-NEXT:    vpmovqb %zmm1, %xmm1
-; AVX512POPCNT-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512POPCNT-NEXT:    vpsadbw %xmm2, %xmm1, %xmm1
 ; AVX512POPCNT-NEXT:    vpopcntq %zmm0, %zmm0
 ; AVX512POPCNT-NEXT:    vpmovqb %zmm0, %xmm0
-; AVX512POPCNT-NEXT:    vpsadbw %xmm2, %xmm0, %xmm0
 ; AVX512POPCNT-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX512POPCNT-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512POPCNT-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; AVX512POPCNT-NEXT:    retq
 ;
 ; AVX512VL-LABEL: load_ctpop_v2i256_v2i64:
@@ -878,12 +871,11 @@ define <2 x i64> @load_ctpop_v2i256_v2i64(ptr %p0) nounwind {
 ; AVX512VLPOPCNT:       # %bb.0:
 ; AVX512VLPOPCNT-NEXT:    vpopcntq 32(%rdi), %ymm0
 ; AVX512VLPOPCNT-NEXT:    vpmovqb %ymm0, %xmm0
+; AVX512VLPOPCNT-NEXT:    vpopcntq (%rdi), %ymm1
+; AVX512VLPOPCNT-NEXT:    vpmovqb %ymm1, %xmm1
+; AVX512VLPOPCNT-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; AVX512VLPOPCNT-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512VLPOPCNT-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; AVX512VLPOPCNT-NEXT:    vpopcntq (%rdi), %ymm2
-; AVX512VLPOPCNT-NEXT:    vpmovqb %ymm2, %xmm2
-; AVX512VLPOPCNT-NEXT:    vpsadbw %xmm1, %xmm2, %xmm1
-; AVX512VLPOPCNT-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; AVX512VLPOPCNT-NEXT:    vzeroupper
 ; AVX512VLPOPCNT-NEXT:    retq
   %a0 = load <2 x i256>, ptr %p0
@@ -2026,7 +2018,7 @@ define i32 @load_ctlz_i256(ptr %p0) nounwind {
 ; AVX512F-NEXT:    vpbroadcastq {{.*#+}} ymm0 = [256,256,256,256]
 ; AVX512F-NEXT:    vpermq {{.*#+}} ymm1 = mem[3,2,1,0]
 ; AVX512F-NEXT:    vplzcntq %zmm1, %zmm2
-; AVX512F-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2
+; AVX512F-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2 # [0,64,128,192]
 ; AVX512F-NEXT:    vptestmq %zmm1, %zmm1, %k0
 ; AVX512F-NEXT:    kshiftlw $12, %k0, %k0
 ; AVX512F-NEXT:    kshiftrw $12, %k0, %k1
@@ -2039,7 +2031,7 @@ define i32 @load_ctlz_i256(ptr %p0) nounwind {
 ; AVX512POPCNT-NEXT:    vpbroadcastq {{.*#+}} ymm0 = [256,256,256,256]
 ; AVX512POPCNT-NEXT:    vpermq {{.*#+}} ymm1 = mem[3,2,1,0]
 ; AVX512POPCNT-NEXT:    vplzcntq %zmm1, %zmm2
-; AVX512POPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2
+; AVX512POPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2 # [0,64,128,192]
 ; AVX512POPCNT-NEXT:    vptestmq %zmm1, %zmm1, %k0
 ; AVX512POPCNT-NEXT:    kshiftlw $12, %k0, %k0
 ; AVX512POPCNT-NEXT:    kshiftrw $12, %k0, %k1
@@ -2051,7 +2043,7 @@ define i32 @load_ctlz_i256(ptr %p0) nounwind {
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpermq {{.*#+}} ymm0 = mem[3,2,1,0]
 ; AVX512VL-NEXT:    vplzcntq %ymm0, %ymm1
-; AVX512VL-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
+; AVX512VL-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1 # [0,64,128,192]
 ; AVX512VL-NEXT:    vptestmq %ymm0, %ymm0, %k1
 ; AVX512VL-NEXT:    vpbroadcastq {{.*#+}} ymm0 = [256,256,256,256]
 ; AVX512VL-NEXT:    vpcompressq %ymm1, %ymm0 {%k1}
@@ -2063,7 +2055,7 @@ define i32 @load_ctlz_i256(ptr %p0) nounwind {
 ; AVX512VLPOPCNT:       # %bb.0:
 ; AVX512VLPOPCNT-NEXT:    vpermq {{.*#+}} ymm0 = mem[3,2,1,0]
 ; AVX512VLPOPCNT-NEXT:    vplzcntq %ymm0, %ymm1
-; AVX512VLPOPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
+; AVX512VLPOPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1 # [0,64,128,192]
 ; AVX512VLPOPCNT-NEXT:    vptestmq %ymm0, %ymm0, %k1
 ; AVX512VLPOPCNT-NEXT:    vpbroadcastq {{.*#+}} ymm0 = [256,256,256,256]
 ; AVX512VLPOPCNT-NEXT:    vpcompressq %ymm1, %ymm0 {%k1}
@@ -2134,7 +2126,7 @@ define i32 @vector_ctlz_i256(<8 x i32> %v0) nounwind {
 ; AVX512F-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [256,256,256,256]
 ; AVX512F-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[3,2,1,0]
 ; AVX512F-NEXT:    vplzcntq %zmm0, %zmm2
-; AVX512F-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2
+; AVX512F-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2 # [0,64,128,192]
 ; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kshiftlw $12, %k0, %k0
 ; AVX512F-NEXT:    kshiftrw $12, %k0, %k1
@@ -2147,7 +2139,7 @@ define i32 @vector_ctlz_i256(<8 x i32> %v0) nounwind {
 ; AVX512POPCNT-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [256,256,256,256]
 ; AVX512POPCNT-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[3,2,1,0]
 ; AVX512POPCNT-NEXT:    vplzcntq %zmm0, %zmm2
-; AVX512POPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2
+; AVX512POPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2 # [0,64,128,192]
 ; AVX512POPCNT-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; AVX512POPCNT-NEXT:    kshiftlw $12, %k0, %k0
 ; AVX512POPCNT-NEXT:    kshiftrw $12, %k0, %k1
@@ -2159,7 +2151,7 @@ define i32 @vector_ctlz_i256(<8 x i32> %v0) nounwind {
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[3,2,1,0]
 ; AVX512VL-NEXT:    vplzcntq %ymm0, %ymm1
-; AVX512VL-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
+; AVX512VL-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1 # [0,64,128,192]
 ; AVX512VL-NEXT:    vptestmq %ymm0, %ymm0, %k1
 ; AVX512VL-NEXT:    vpbroadcastq {{.*#+}} ymm0 = [256,256,256,256]
 ; AVX512VL-NEXT:    vpcompressq %ymm1, %ymm0 {%k1}
@@ -2171,7 +2163,7 @@ define i32 @vector_ctlz_i256(<8 x i32> %v0) nounwind {
 ; AVX512VLPOPCNT:       # %bb.0:
 ; AVX512VLPOPCNT-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[3,2,1,0]
 ; AVX512VLPOPCNT-NEXT:    vplzcntq %ymm0, %ymm1
-; AVX512VLPOPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
+; AVX512VLPOPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1 # [0,64,128,192]
 ; AVX512VLPOPCNT-NEXT:    vptestmq %ymm0, %ymm0, %k1
 ; AVX512VLPOPCNT-NEXT:    vpbroadcastq {{.*#+}} ymm0 = [256,256,256,256]
 ; AVX512VLPOPCNT-NEXT:    vpcompressq %ymm1, %ymm0 {%k1}
@@ -2308,7 +2300,7 @@ define i32 @test_ctlz_i512(i512 %a0) nounwind {
 ; AVX512F-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
 ; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512F-NEXT:    vplzcntq %zmm0, %zmm0
-; AVX512F-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; AVX512F-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [0,64,128,192,256,320,384,448]
 ; AVX512F-NEXT:    vpbroadcastq {{.*#+}} zmm1 = [512,512,512,512,512,512,512,512]
 ; AVX512F-NEXT:    vpcompressq %zmm0, %zmm1 {%k1}
 ; AVX512F-NEXT:    vmovd %xmm1, %eax
@@ -2331,7 +2323,7 @@ define i32 @test_ctlz_i512(i512 %a0) nounwind {
 ; AVX512POPCNT-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
 ; AVX512POPCNT-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512POPCNT-NEXT:    vplzcntq %zmm0, %zmm0
-; AVX512POPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; AVX512POPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [0,64,128,192,256,320,384,448]
 ; AVX512POPCNT-NEXT:    vpbroadcastq {{.*#+}} zmm1 = [512,512,512,512,512,512,512,512]
 ; AVX512POPCNT-NEXT:    vpcompressq %zmm0, %zmm1 {%k1}
 ; AVX512POPCNT-NEXT:    vmovd %xmm1, %eax
@@ -2353,7 +2345,7 @@ define i32 @test_ctlz_i512(i512 %a0) nounwind {
 ; AVX512VL-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
 ; AVX512VL-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
 ; AVX512VL-NEXT:    vplzcntq %zmm0, %zmm1
-; AVX512VL-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1
+; AVX512VL-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1 # [0,64,128,192,256,320,384,448]
 ; AVX512VL-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512VL-NEXT:    vpbroadcastq {{.*#+}} zmm0 = [512,512,512,512,512,512,512,512]
 ; AVX512VL-NEXT:    vpcompressq %zmm1, %zmm0 {%k1}
@@ -2377,7 +2369,7 @@ define i32 @test_ctlz_i512(i512 %a0) nounwind {
 ; AVX512VLPOPCNT-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
 ; AVX512VLPOPCNT-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
 ; AVX512VLPOPCNT-NEXT:    vplzcntq %zmm0, %zmm1
-; AVX512VLPOPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1
+; AVX512VLPOPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1 # [0,64,128,192,256,320,384,448]
 ; AVX512VLPOPCNT-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512VLPOPCNT-NEXT:    vpbroadcastq {{.*#+}} zmm0 = [512,512,512,512,512,512,512,512]
 ; AVX512VLPOPCNT-NEXT:    vpcompressq %zmm1, %zmm0 {%k1}
@@ -2494,7 +2486,7 @@ define i32 @load_ctlz_i512(ptr %p0) nounwind {
 ; AVX512F-NEXT:    vpermq (%rdi), %zmm0, %zmm0
 ; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512F-NEXT:    vplzcntq %zmm0, %zmm0
-; AVX512F-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; AVX512F-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [0,64,128,192,256,320,384,448]
 ; AVX512F-NEXT:    vpbroadcastq {{.*#+}} zmm1 = [512,512,512,512,512,512,512,512]
 ; AVX512F-NEXT:    vpcompressq %zmm0, %zmm1 {%k1}
 ; AVX512F-NEXT:    vmovd %xmm1, %eax
@@ -2506,7 +2498,7 @@ define i32 @load_ctlz_i512(ptr %p0) nounwind {
 ; AVX512POPCNT-NEXT:    vpermq (%rdi), %zmm0, %zmm0
 ; AVX512POPCNT-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512POPCNT-NEXT:    vplzcntq %zmm0, %zmm0
-; AVX512POPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; AVX512POPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [0,64,128,192,256,320,384,448]
 ; AVX512POPCNT-NEXT:    vpbroadcastq {{.*#+}} zmm1 = [512,512,512,512,512,512,512,512]
 ; AVX512POPCNT-NEXT:    vpcompressq %zmm0, %zmm1 {%k1}
 ; AVX512POPCNT-NEXT:    vmovd %xmm1, %eax
@@ -2517,7 +2509,7 @@ define i32 @load_ctlz_i512(ptr %p0) nounwind {
 ; AVX512VL-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [7,6,5,4,3,2,1,0]
 ; AVX512VL-NEXT:    vpermq (%rdi), %zmm0, %zmm0
 ; AVX512VL-NEXT:    vplzcntq %zmm0, %zmm1
-; AVX512VL-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1
+; AVX512VL-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1 # [0,64,128,192,256,320,384,448]
 ; AVX512VL-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512VL-NEXT:    vpbroadcastq {{.*#+}} zmm0 = [512,512,512,512,512,512,512,512]
 ; AVX512VL-NEXT:    vpcompressq %zmm1, %zmm0 {%k1}
@@ -2530,7 +2522,7 @@ define i32 @load_ctlz_i512(ptr %p0) nounwind {
 ; AVX512VLPOPCNT-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [7,6,5,4,3,2,1,0]
 ; AVX512VLPOPCNT-NEXT:    vpermq (%rdi), %zmm0, %zmm0
 ; AVX512VLPOPCNT-NEXT:    vplzcntq %zmm0, %zmm1
-; AVX512VLPOPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1
+; AVX512VLPOPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1 # [0,64,128,192,256,320,384,448]
 ; AVX512VLPOPCNT-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512VLPOPCNT-NEXT:    vpbroadcastq {{.*#+}} zmm0 = [512,512,512,512,512,512,512,512]
 ; AVX512VLPOPCNT-NEXT:    vpcompressq %zmm1, %zmm0 {%k1}
@@ -2651,7 +2643,7 @@ define i32 @vector_ctlz_i512(<16 x i32> %v0) nounwind {
 ; AVX512F-NEXT:    vpermq %zmm0, %zmm1, %zmm0
 ; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512F-NEXT:    vplzcntq %zmm0, %zmm0
-; AVX512F-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; AVX512F-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [0,64,128,192,256,320,384,448]
 ; AVX512F-NEXT:    vpbroadcastq {{.*#+}} zmm1 = [512,512,512,512,512,512,512,512]
 ; AVX512F-NEXT:    vpcompressq %zmm0, %zmm1 {%k1}
 ; AVX512F-NEXT:    vmovd %xmm1, %eax
@@ -2663,7 +2655,7 @@ define i32 @vector_ctlz_i512(<16 x i32> %v0) nounwind {
 ; AVX512POPCNT-NEXT:    vpermq %zmm0, %zmm1, %zmm0
 ; AVX512POPCNT-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512POPCNT-NEXT:    vplzcntq %zmm0, %zmm0
-; AVX512POPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; AVX512POPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [0,64,128,192,256,320,384,448]
 ; AVX512POPCNT-NEXT:    vpbroadcastq {{.*#+}} zmm1 = [512,512,512,512,512,512,512,512]
 ; AVX512POPCNT-NEXT:    vpcompressq %zmm0, %zmm1 {%k1}
 ; AVX512POPCNT-NEXT:    vmovd %xmm1, %eax
@@ -2674,7 +2666,7 @@ define i32 @vector_ctlz_i512(<16 x i32> %v0) nounwind {
 ; AVX512VL-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [7,6,5,4,3,2,1,0]
 ; AVX512VL-NEXT:    vpermq %zmm0, %zmm1, %zmm0
 ; AVX512VL-NEXT:    vplzcntq %zmm0, %zmm1
-; AVX512VL-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1
+; AVX512VL-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1 # [0,64,128,192,256,320,384,448]
 ; AVX512VL-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512VL-NEXT:    vpbroadcastq {{.*#+}} zmm0 = [512,512,512,512,512,512,512,512]
 ; AVX512VL-NEXT:    vpcompressq %zmm1, %zmm0 {%k1}
@@ -2687,7 +2679,7 @@ define i32 @vector_ctlz_i512(<16 x i32> %v0) nounwind {
 ; AVX512VLPOPCNT-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [7,6,5,4,3,2,1,0]
 ; AVX512VLPOPCNT-NEXT:    vpermq %zmm0, %zmm1, %zmm0
 ; AVX512VLPOPCNT-NEXT:    vplzcntq %zmm0, %zmm1
-; AVX512VLPOPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1
+; AVX512VLPOPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1 # [0,64,128,192,256,320,384,448]
 ; AVX512VLPOPCNT-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512VLPOPCNT-NEXT:    vpbroadcastq {{.*#+}} zmm0 = [512,512,512,512,512,512,512,512]
 ; AVX512VLPOPCNT-NEXT:    vpcompressq %zmm1, %zmm0 {%k1}
@@ -3651,7 +3643,7 @@ define i32 @load_ctlz_undef_i256(ptr %p0) nounwind {
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpermq {{.*#+}} ymm0 = mem[3,2,1,0]
 ; AVX512F-NEXT:    vplzcntq %zmm0, %zmm1
-; AVX512F-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
+; AVX512F-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1 # [0,64,128,192]
 ; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kshiftlw $12, %k0, %k0
 ; AVX512F-NEXT:    kshiftrw $12, %k0, %k1
@@ -3663,7 +3655,7 @@ define i32 @load_ctlz_undef_i256(ptr %p0) nounwind {
 ; AVX512POPCNT:       # %bb.0:
 ; AVX512POPCNT-NEXT:    vpermq {{.*#+}} ymm0 = mem[3,2,1,0]
 ; AVX512POPCNT-NEXT:    vplzcntq %zmm0, %zmm1
-; AVX512POPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
+; AVX512POPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1 # [0,64,128,192]
 ; AVX512POPCNT-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; AVX512POPCNT-NEXT:    kshiftlw $12, %k0, %k0
 ; AVX512POPCNT-NEXT:    kshiftrw $12, %k0, %k1
@@ -3676,7 +3668,7 @@ define i32 @load_ctlz_undef_i256(ptr %p0) nounwind {
 ; AVX512VL-NEXT:    vpermq {{.*#+}} ymm0 = mem[3,2,1,0]
 ; AVX512VL-NEXT:    vptestmq %ymm0, %ymm0, %k1
 ; AVX512VL-NEXT:    vplzcntq %ymm0, %ymm0
-; AVX512VL-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX512VL-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [0,64,128,192]
 ; AVX512VL-NEXT:    vpcompressq %ymm0, %ymm0 {%k1} {z}
 ; AVX512VL-NEXT:    vmovd %xmm0, %eax
 ; AVX512VL-NEXT:    vzeroupper
@@ -3687,7 +3679,7 @@ define i32 @load_ctlz_undef_i256(ptr %p0) nounwind {
 ; AVX512VLPOPCNT-NEXT:    vpermq {{.*#+}} ymm0 = mem[3,2,1,0]
 ; AVX512VLPOPCNT-NEXT:    vptestmq %ymm0, %ymm0, %k1
 ; AVX512VLPOPCNT-NEXT:    vplzcntq %ymm0, %ymm0
-; AVX512VLPOPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX512VLPOPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [0,64,128,192]
 ; AVX512VLPOPCNT-NEXT:    vpcompressq %ymm0, %ymm0 {%k1} {z}
 ; AVX512VLPOPCNT-NEXT:    vmovd %xmm0, %eax
 ; AVX512VLPOPCNT-NEXT:    vzeroupper
@@ -3754,7 +3746,7 @@ define i32 @vector_ctlz_undef_i256(<8 x i32> %v0) nounwind {
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[3,2,1,0]
 ; AVX512F-NEXT:    vplzcntq %zmm0, %zmm1
-; AVX512F-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
+; AVX512F-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1 # [0,64,128,192]
 ; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kshiftlw $12, %k0, %k0
 ; AVX512F-NEXT:    kshiftrw $12, %k0, %k1
@@ -3766,7 +3758,7 @@ define i32 @vector_ctlz_undef_i256(<8 x i32> %v0) nounwind {
 ; AVX512POPCNT:       # %bb.0:
 ; AVX512POPCNT-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[3,2,1,0]
 ; AVX512POPCNT-NEXT:    vplzcntq %zmm0, %zmm1
-; AVX512POPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
+; AVX512POPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1 # [0,64,128,192]
 ; AVX512POPCNT-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; AVX512POPCNT-NEXT:    kshiftlw $12, %k0, %k0
 ; AVX512POPCNT-NEXT:    kshiftrw $12, %k0, %k1
@@ -3779,7 +3771,7 @@ define i32 @vector_ctlz_undef_i256(<8 x i32> %v0) nounwind {
 ; AVX512VL-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[3,2,1,0]
 ; AVX512VL-NEXT:    vptestmq %ymm0, %ymm0, %k1
 ; AVX512VL-NEXT:    vplzcntq %ymm0, %ymm0
-; AVX512VL-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX512VL-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [0,64,128,192]
 ; AVX512VL-NEXT:    vpcompressq %ymm0, %ymm0 {%k1} {z}
 ; AVX512VL-NEXT:    vmovd %xmm0, %eax
 ; AVX512VL-NEXT:    vzeroupper
@@ -3790,7 +3782,7 @@ define i32 @vector_ctlz_undef_i256(<8 x i32> %v0) nounwind {
 ; AVX512VLPOPCNT-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[3,2,1,0]
 ; AVX512VLPOPCNT-NEXT:    vptestmq %ymm0, %ymm0, %k1
 ; AVX512VLPOPCNT-NEXT:    vplzcntq %ymm0, %ymm0
-; AVX512VLPOPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX512VLPOPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [0,64,128,192]
 ; AVX512VLPOPCNT-NEXT:    vpcompressq %ymm0, %ymm0 {%k1} {z}
 ; AVX512VLPOPCNT-NEXT:    vmovd %xmm0, %eax
 ; AVX512VLPOPCNT-NEXT:    vzeroupper
@@ -3924,7 +3916,7 @@ define i32 @test_ctlz_undef_i512(i512 %a0) nounwind {
 ; AVX512F-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
 ; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512F-NEXT:    vplzcntq %zmm0, %zmm0
-; AVX512F-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; AVX512F-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [0,64,128,192,256,320,384,448]
 ; AVX512F-NEXT:    vpcompressq %zmm0, %zmm0 {%k1} {z}
 ; AVX512F-NEXT:    vmovd %xmm0, %eax
 ; AVX512F-NEXT:    retq
@@ -3946,7 +3938,7 @@ define i32 @test_ctlz_undef_i512(i512 %a0) nounwind {
 ; AVX512POPCNT-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
 ; AVX512POPCNT-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512POPCNT-NEXT:    vplzcntq %zmm0, %zmm0
-; AVX512POPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; AVX512POPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [0,64,128,192,256,320,384,448]
 ; AVX512POPCNT-NEXT:    vpcompressq %zmm0, %zmm0 {%k1} {z}
 ; AVX512POPCNT-NEXT:    vmovd %xmm0, %eax
 ; AVX512POPCNT-NEXT:    retq
@@ -3968,7 +3960,7 @@ define i32 @test_ctlz_undef_i512(i512 %a0) nounwind {
 ; AVX512VL-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
 ; AVX512VL-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512VL-NEXT:    vplzcntq %zmm0, %zmm0
-; AVX512VL-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; AVX512VL-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [0,64,128,192,256,320,384,448]
 ; AVX512VL-NEXT:    vpcompressq %zmm0, %zmm0 {%k1} {z}
 ; AVX512VL-NEXT:    vmovd %xmm0, %eax
 ; AVX512VL-NEXT:    vzeroupper
@@ -3991,7 +3983,7 @@ define i32 @test_ctlz_undef_i512(i512 %a0) nounwind {
 ; AVX512VLPOPCNT-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
 ; AVX512VLPOPCNT-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512VLPOPCNT-NEXT:    vplzcntq %zmm0, %zmm0
-; AVX512VLPOPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; AVX512VLPOPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [0,64,128,192,256,320,384,448]
 ; AVX512VLPOPCNT-NEXT:    vpcompressq %zmm0, %zmm0 {%k1} {z}
 ; AVX512VLPOPCNT-NEXT:    vmovd %xmm0, %eax
 ; AVX512VLPOPCNT-NEXT:    vzeroupper
@@ -4107,7 +4099,7 @@ define i32 @load_ctlz_undef_i512(ptr %p0) nounwind {
 ; AVX512F-NEXT:    vpermq (%rdi), %zmm0, %zmm0
 ; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512F-NEXT:    vplzcntq %zmm0, %zmm0
-; AVX512F-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; AVX512F-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [0,64,128,192,256,320,384,448]
 ; AVX512F-NEXT:    vpcompressq %zmm0, %zmm0 {%k1} {z}
 ; AVX512F-NEXT:    vmovd %xmm0, %eax
 ; AVX512F-NEXT:    retq
@@ -4118,7 +4110,7 @@ define i32 @load_ctlz_undef_i512(ptr %p0) nounwind {
 ; AVX512POPCNT-NEXT:    vpermq (%rdi), %zmm0, %zmm0
 ; AVX512POPCNT-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512POPCNT-NEXT:    vplzcntq %zmm0, %zmm0
-; AVX512POPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; AVX512POPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [0,64,128,192,256,320,384,448]
 ; AVX512POPCNT-NEXT:    vpcompressq %zmm0, %zmm0 {%k1} {z}
 ; AVX512POPCNT-NEXT:    vmovd %xmm0, %eax
 ; AVX512POPCNT-NEXT:    retq
@@ -4129,7 +4121,7 @@ define i32 @load_ctlz_undef_i512(ptr %p0) nounwind {
 ; AVX512VL-NEXT:    vpermq (%rdi), %zmm0, %zmm0
 ; AVX512VL-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512VL-NEXT:    vplzcntq %zmm0, %zmm0
-; AVX512VL-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; AVX512VL-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [0,64,128,192,256,320,384,448]
 ; AVX512VL-NEXT:    vpcompressq %zmm0, %zmm0 {%k1} {z}
 ; AVX512VL-NEXT:    vmovd %xmm0, %eax
 ; AVX512VL-NEXT:    vzeroupper
@@ -4141,7 +4133,7 @@ define i32 @load_ctlz_undef_i512(ptr %p0) nounwind {
 ; AVX512VLPOPCNT-NEXT:    vpermq (%rdi), %zmm0, %zmm0
 ; AVX512VLPOPCNT-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512VLPOPCNT-NEXT:    vplzcntq %zmm0, %zmm0
-; AVX512VLPOPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; AVX512VLPOPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [0,64,128,192,256,320,384,448]
 ; AVX512VLPOPCNT-NEXT:    vpcompressq %zmm0, %zmm0 {%k1} {z}
 ; AVX512VLPOPCNT-NEXT:    vmovd %xmm0, %eax
 ; AVX512VLPOPCNT-NEXT:    vzeroupper
@@ -4259,7 +4251,7 @@ define i32 @vector_ctlz_undef_i512(<16 x i32> %v0) nounwind {
 ; AVX512F-NEXT:    vpermq %zmm0, %zmm1, %zmm0
 ; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512F-NEXT:    vplzcntq %zmm0, %zmm0
-; AVX512F-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; AVX512F-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [0,64,128,192,256,320,384,448]
 ; AVX512F-NEXT:    vpcompressq %zmm0, %zmm0 {%k1} {z}
 ; AVX512F-NEXT:    vmovd %xmm0, %eax
 ; AVX512F-NEXT:    retq
@@ -4270,7 +4262,7 @@ define i32 @vector_ctlz_undef_i512(<16 x i32> %v0) nounwind {
 ; AVX512POPCNT-NEXT:    vpermq %zmm0, %zmm1, %zmm0
 ; AVX512POPCNT-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512POPCNT-NEXT:    vplzcntq %zmm0, %zmm0
-; AVX512POPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; AVX512POPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [0,64,128,192,256,320,384,448]
 ; AVX512POPCNT-NEXT:    vpcompressq %zmm0, %zmm0 {%k1} {z}
 ; AVX512POPCNT-NEXT:    vmovd %xmm0, %eax
 ; AVX512POPCNT-NEXT:    retq
@@ -4281,7 +4273,7 @@ define i32 @vector_ctlz_undef_i512(<16 x i32> %v0) nounwind {
 ; AVX512VL-NEXT:    vpermq %zmm0, %zmm1, %zmm0
 ; AVX512VL-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512VL-NEXT:    vplzcntq %zmm0, %zmm0
-; AVX512VL-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; AVX512VL-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [0,64,128,192,256,320,384,448]
 ; AVX512VL-NEXT:    vpcompressq %zmm0, %zmm0 {%k1} {z}
 ; AVX512VL-NEXT:    vmovd %xmm0, %eax
 ; AVX512VL-NEXT:    vzeroupper
@@ -4293,7 +4285,7 @@ define i32 @vector_ctlz_undef_i512(<16 x i32> %v0) nounwind {
 ; AVX512VLPOPCNT-NEXT:    vpermq %zmm0, %zmm1, %zmm0
 ; AVX512VLPOPCNT-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512VLPOPCNT-NEXT:    vplzcntq %zmm0, %zmm0
-; AVX512VLPOPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; AVX512VLPOPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [0,64,128,192,256,320,384,448]
 ; AVX512VLPOPCNT-NEXT:    vpcompressq %zmm0, %zmm0 {%k1} {z}
 ; AVX512VLPOPCNT-NEXT:    vmovd %xmm0, %eax
 ; AVX512VLPOPCNT-NEXT:    vzeroupper
@@ -5219,7 +5211,7 @@ define i32 @load_cttz_i256(ptr %p0) nounwind {
 ; AVX512POPCNT-NEXT:    vpaddq %ymm2, %ymm0, %ymm2
 ; AVX512POPCNT-NEXT:    vpandn %ymm2, %ymm0, %ymm2
 ; AVX512POPCNT-NEXT:    vpopcntq %zmm2, %zmm2
-; AVX512POPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2
+; AVX512POPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2 # [0,64,128,192]
 ; AVX512POPCNT-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; AVX512POPCNT-NEXT:    kshiftlw $12, %k0, %k0
 ; AVX512POPCNT-NEXT:    kshiftrw $12, %k0, %k1
@@ -5250,7 +5242,7 @@ define i32 @load_cttz_i256(ptr %p0) nounwind {
 ; AVX512VLPOPCNT-NEXT:    vpaddq %ymm1, %ymm0, %ymm1
 ; AVX512VLPOPCNT-NEXT:    vpandn %ymm1, %ymm0, %ymm1
 ; AVX512VLPOPCNT-NEXT:    vpopcntq %ymm1, %ymm1
-; AVX512VLPOPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
+; AVX512VLPOPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1 # [0,64,128,192]
 ; AVX512VLPOPCNT-NEXT:    vptestmq %ymm0, %ymm0, %k1
 ; AVX512VLPOPCNT-NEXT:    vpbroadcastq {{.*#+}} ymm0 = [256,256,256,256]
 ; AVX512VLPOPCNT-NEXT:    vpcompressq %ymm1, %ymm0 {%k1}
@@ -5337,7 +5329,7 @@ define i32 @vector_cttz_i256(<8 x i32> %v0) nounwind {
 ; AVX512POPCNT-NEXT:    vpaddq %ymm2, %ymm0, %ymm2
 ; AVX512POPCNT-NEXT:    vpandn %ymm2, %ymm0, %ymm2
 ; AVX512POPCNT-NEXT:    vpopcntq %zmm2, %zmm2
-; AVX512POPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2
+; AVX512POPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2 # [0,64,128,192]
 ; AVX512POPCNT-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; AVX512POPCNT-NEXT:    kshiftlw $12, %k0, %k0
 ; AVX512POPCNT-NEXT:    kshiftrw $12, %k0, %k1
@@ -5366,7 +5358,7 @@ define i32 @vector_cttz_i256(<8 x i32> %v0) nounwind {
 ; AVX512VLPOPCNT-NEXT:    vpaddq %ymm1, %ymm0, %ymm1
 ; AVX512VLPOPCNT-NEXT:    vpandn %ymm1, %ymm0, %ymm1
 ; AVX512VLPOPCNT-NEXT:    vpopcntq %ymm1, %ymm1
-; AVX512VLPOPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
+; AVX512VLPOPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1 # [0,64,128,192]
 ; AVX512VLPOPCNT-NEXT:    vptestmq %ymm0, %ymm0, %k1
 ; AVX512VLPOPCNT-NEXT:    vpbroadcastq {{.*#+}} ymm0 = [256,256,256,256]
 ; AVX512VLPOPCNT-NEXT:    vpcompressq %ymm1, %ymm0 {%k1}
@@ -5514,7 +5506,7 @@ define i32 @test_cttz_i512(i512 %a0) nounwind {
 ; AVX512POPCNT-NEXT:    vpaddq %zmm1, %zmm0, %zmm1
 ; AVX512POPCNT-NEXT:    vpandnq %zmm1, %zmm0, %zmm1
 ; AVX512POPCNT-NEXT:    vpopcntq %zmm1, %zmm1
-; AVX512POPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1
+; AVX512POPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1 # [0,64,128,192,256,320,384,448]
 ; AVX512POPCNT-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512POPCNT-NEXT:    vpbroadcastq {{.*#+}} zmm0 = [512,512,512,512,512,512,512,512]
 ; AVX512POPCNT-NEXT:    vpcompressq %zmm1, %zmm0 {%k1}
@@ -5566,7 +5558,7 @@ define i32 @test_cttz_i512(i512 %a0) nounwind {
 ; AVX512VLPOPCNT-NEXT:    vpaddq %zmm1, %zmm0, %zmm1
 ; AVX512VLPOPCNT-NEXT:    vpandnq %zmm1, %zmm0, %zmm1
 ; AVX512VLPOPCNT-NEXT:    vpopcntq %zmm1, %zmm1
-; AVX512VLPOPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1
+; AVX512VLPOPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1 # [0,64,128,192,256,320,384,448]
 ; AVX512VLPOPCNT-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512VLPOPCNT-NEXT:    vpbroadcastq {{.*#+}} zmm0 = [512,512,512,512,512,512,512,512]
 ; AVX512VLPOPCNT-NEXT:    vpcompressq %zmm1, %zmm0 {%k1}
@@ -5691,7 +5683,7 @@ define i32 @load_cttz_i512(ptr %p0) nounwind {
 ; AVX512POPCNT-NEXT:    vpaddq %zmm1, %zmm0, %zmm1
 ; AVX512POPCNT-NEXT:    vpandnq %zmm1, %zmm0, %zmm1
 ; AVX512POPCNT-NEXT:    vpopcntq %zmm1, %zmm1
-; AVX512POPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1
+; AVX512POPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1 # [0,64,128,192,256,320,384,448]
 ; AVX512POPCNT-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512POPCNT-NEXT:    vpbroadcastq {{.*#+}} zmm0 = [512,512,512,512,512,512,512,512]
 ; AVX512POPCNT-NEXT:    vpcompressq %zmm1, %zmm0 {%k1}
@@ -5721,7 +5713,7 @@ define i32 @load_cttz_i512(ptr %p0) nounwind {
 ; AVX512VLPOPCNT-NEXT:    vpaddq %zmm1, %zmm0, %zmm1
 ; AVX512VLPOPCNT-NEXT:    vpandnq %zmm1, %zmm0, %zmm1
 ; AVX512VLPOPCNT-NEXT:    vpopcntq %zmm1, %zmm1
-; AVX512VLPOPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1
+; AVX512VLPOPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1 # [0,64,128,192,256,320,384,448]
 ; AVX512VLPOPCNT-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512VLPOPCNT-NEXT:    vpbroadcastq {{.*#+}} zmm0 = [512,512,512,512,512,512,512,512]
 ; AVX512VLPOPCNT-NEXT:    vpcompressq %zmm1, %zmm0 {%k1}
@@ -5848,7 +5840,7 @@ define i32 @vector_cttz_i512(<16 x i32> %v0) nounwind {
 ; AVX512POPCNT-NEXT:    vpaddq %zmm1, %zmm0, %zmm1
 ; AVX512POPCNT-NEXT:    vpandnq %zmm1, %zmm0, %zmm1
 ; AVX512POPCNT-NEXT:    vpopcntq %zmm1, %zmm1
-; AVX512POPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1
+; AVX512POPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1 # [0,64,128,192,256,320,384,448]
 ; AVX512POPCNT-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512POPCNT-NEXT:    vpbroadcastq {{.*#+}} zmm0 = [512,512,512,512,512,512,512,512]
 ; AVX512POPCNT-NEXT:    vpcompressq %zmm1, %zmm0 {%k1}
@@ -5876,7 +5868,7 @@ define i32 @vector_cttz_i512(<16 x i32> %v0) nounwind {
 ; AVX512VLPOPCNT-NEXT:    vpaddq %zmm1, %zmm0, %zmm1
 ; AVX512VLPOPCNT-NEXT:    vpandnq %zmm1, %zmm0, %zmm1
 ; AVX512VLPOPCNT-NEXT:    vpopcntq %zmm1, %zmm1
-; AVX512VLPOPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1
+; AVX512VLPOPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1 # [0,64,128,192,256,320,384,448]
 ; AVX512VLPOPCNT-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512VLPOPCNT-NEXT:    vpbroadcastq {{.*#+}} zmm0 = [512,512,512,512,512,512,512,512]
 ; AVX512VLPOPCNT-NEXT:    vpcompressq %zmm1, %zmm0 {%k1}
@@ -6842,7 +6834,7 @@ define i32 @load_cttz_undef_i256(ptr %p0) nounwind {
 ; AVX512POPCNT-NEXT:    vpaddq %ymm1, %ymm0, %ymm1
 ; AVX512POPCNT-NEXT:    vpandn %ymm1, %ymm0, %ymm1
 ; AVX512POPCNT-NEXT:    vpopcntq %zmm1, %zmm1
-; AVX512POPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
+; AVX512POPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1 # [0,64,128,192]
 ; AVX512POPCNT-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; AVX512POPCNT-NEXT:    kshiftlw $12, %k0, %k0
 ; AVX512POPCNT-NEXT:    kshiftrw $12, %k0, %k1
@@ -6872,7 +6864,7 @@ define i32 @load_cttz_undef_i256(ptr %p0) nounwind {
 ; AVX512VLPOPCNT-NEXT:    vpaddq %ymm1, %ymm0, %ymm1
 ; AVX512VLPOPCNT-NEXT:    vpandn %ymm1, %ymm0, %ymm1
 ; AVX512VLPOPCNT-NEXT:    vpopcntq %ymm1, %ymm1
-; AVX512VLPOPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
+; AVX512VLPOPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1 # [0,64,128,192]
 ; AVX512VLPOPCNT-NEXT:    vptestmq %ymm0, %ymm0, %k1
 ; AVX512VLPOPCNT-NEXT:    vpcompressq %ymm1, %ymm0 {%k1} {z}
 ; AVX512VLPOPCNT-NEXT:    vmovd %xmm0, %eax
@@ -6955,7 +6947,7 @@ define i32 @vector_cttz_undef_i256(<8 x i32> %v0) nounwind {
 ; AVX512POPCNT-NEXT:    vpaddq %ymm1, %ymm0, %ymm1
 ; AVX512POPCNT-NEXT:    vpandn %ymm1, %ymm0, %ymm1
 ; AVX512POPCNT-NEXT:    vpopcntq %zmm1, %zmm1
-; AVX512POPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
+; AVX512POPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1 # [0,64,128,192]
 ; AVX512POPCNT-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; AVX512POPCNT-NEXT:    kshiftlw $12, %k0, %k0
 ; AVX512POPCNT-NEXT:    kshiftrw $12, %k0, %k1
@@ -6983,7 +6975,7 @@ define i32 @vector_cttz_undef_i256(<8 x i32> %v0) nounwind {
 ; AVX512VLPOPCNT-NEXT:    vpaddq %ymm1, %ymm0, %ymm1
 ; AVX512VLPOPCNT-NEXT:    vpandn %ymm1, %ymm0, %ymm1
 ; AVX512VLPOPCNT-NEXT:    vpopcntq %ymm1, %ymm1
-; AVX512VLPOPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
+; AVX512VLPOPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1 # [0,64,128,192]
 ; AVX512VLPOPCNT-NEXT:    vptestmq %ymm0, %ymm0, %k1
 ; AVX512VLPOPCNT-NEXT:    vpcompressq %ymm1, %ymm0 {%k1} {z}
 ; AVX512VLPOPCNT-NEXT:    vmovd %xmm0, %eax
@@ -7128,7 +7120,7 @@ define i32 @test_cttz_undef_i512(i512 %a0) nounwind {
 ; AVX512POPCNT-NEXT:    vpaddq %zmm1, %zmm0, %zmm1
 ; AVX512POPCNT-NEXT:    vpandnq %zmm1, %zmm0, %zmm1
 ; AVX512POPCNT-NEXT:    vpopcntq %zmm1, %zmm1
-; AVX512POPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1
+; AVX512POPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1 # [0,64,128,192,256,320,384,448]
 ; AVX512POPCNT-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512POPCNT-NEXT:    vpcompressq %zmm1, %zmm0 {%k1} {z}
 ; AVX512POPCNT-NEXT:    vmovd %xmm0, %eax
@@ -7178,7 +7170,7 @@ define i32 @test_cttz_undef_i512(i512 %a0) nounwind {
 ; AVX512VLPOPCNT-NEXT:    vpaddq %zmm1, %zmm0, %zmm1
 ; AVX512VLPOPCNT-NEXT:    vpandnq %zmm1, %zmm0, %zmm1
 ; AVX512VLPOPCNT-NEXT:    vpopcntq %zmm1, %zmm1
-; AVX512VLPOPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1
+; AVX512VLPOPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1 # [0,64,128,192,256,320,384,448]
 ; AVX512VLPOPCNT-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512VLPOPCNT-NEXT:    vpcompressq %zmm1, %zmm0 {%k1} {z}
 ; AVX512VLPOPCNT-NEXT:    vmovd %xmm0, %eax
@@ -7302,7 +7294,7 @@ define i32 @load_cttz_undef_i512(ptr %p0) nounwind {
 ; AVX512POPCNT-NEXT:    vpaddq %zmm1, %zmm0, %zmm1
 ; AVX512POPCNT-NEXT:    vpandnq %zmm1, %zmm0, %zmm1
 ; AVX512POPCNT-NEXT:    vpopcntq %zmm1, %zmm1
-; AVX512POPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1
+; AVX512POPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1 # [0,64,128,192,256,320,384,448]
 ; AVX512POPCNT-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512POPCNT-NEXT:    vpcompressq %zmm1, %zmm0 {%k1} {z}
 ; AVX512POPCNT-NEXT:    vmovd %xmm0, %eax
@@ -7330,7 +7322,7 @@ define i32 @load_cttz_undef_i512(ptr %p0) nounwind {
 ; AVX512VLPOPCNT-NEXT:    vpaddq %zmm1, %zmm0, %zmm1
 ; AVX512VLPOPCNT-NEXT:    vpandnq %zmm1, %zmm0, %zmm1
 ; AVX512VLPOPCNT-NEXT:    vpopcntq %zmm1, %zmm1
-; AVX512VLPOPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1
+; AVX512VLPOPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1 # [0,64,128,192,256,320,384,448]
 ; AVX512VLPOPCNT-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512VLPOPCNT-NEXT:    vpcompressq %zmm1, %zmm0 {%k1} {z}
 ; AVX512VLPOPCNT-NEXT:    vmovd %xmm0, %eax
@@ -7454,7 +7446,7 @@ define i32 @vector_cttz_undef_i512(<16 x i32> %v0) nounwind {
 ; AVX512POPCNT-NEXT:    vpaddq %zmm1, %zmm0, %zmm1
 ; AVX512POPCNT-NEXT:    vpandnq %zmm1, %zmm0, %zmm1
 ; AVX512POPCNT-NEXT:    vpopcntq %zmm1, %zmm1
-; AVX512POPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1
+; AVX512POPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1 # [0,64,128,192,256,320,384,448]
 ; AVX512POPCNT-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512POPCNT-NEXT:    vpcompressq %zmm1, %zmm0 {%k1} {z}
 ; AVX512POPCNT-NEXT:    vmovd %xmm0, %eax
@@ -7480,7 +7472,7 @@ define i32 @vector_cttz_undef_i512(<16 x i32> %v0) nounwind {
 ; AVX512VLPOPCNT-NEXT:    vpaddq %zmm1, %zmm0, %zmm1
 ; AVX512VLPOPCNT-NEXT:    vpandnq %zmm1, %zmm0, %zmm1
 ; AVX512VLPOPCNT-NEXT:    vpopcntq %zmm1, %zmm1
-; AVX512VLPOPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1
+; AVX512VLPOPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1 # [0,64,128,192,256,320,384,448]
 ; AVX512VLPOPCNT-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512VLPOPCNT-NEXT:    vpcompressq %zmm1, %zmm0 {%k1} {z}
 ; AVX512VLPOPCNT-NEXT:    vmovd %xmm0, %eax

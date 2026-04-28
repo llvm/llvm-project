@@ -81,6 +81,10 @@ DwarfCompileUnit::DwarfCompileUnit(unsigned UID, const DICompileUnit *Node,
     : DwarfUnit(GetCompileUnitType(Kind, DW), Node, A, DW, DWU, UID) {
   insertDIE(Node, &getUnitDie());
   MacroLabelBegin = Asm->createTempSymbol("cu_macro_begin");
+  assert(CUNode);
+  for (auto *GVE : CUNode->getGlobalVariables())
+    if (auto *GV = GVE->getVariable())
+      GlobalVarScopes.insert(GV->getScope());
 }
 
 /// addLabelAddress - Add a dwarf label attribute data and value using
@@ -274,7 +278,7 @@ void DwarfCompileUnit::addLocationAttribute(
       // 16-bit platforms like MSP430 and AVR take this path, so sink this
       // assert to platforms that use it.
       auto GetPointerSizedFormAndOp = [this]() {
-        unsigned PointerSize = Asm->MAI->getCodePointerSize();
+        unsigned PointerSize = Asm->MAI.getCodePointerSize();
         assert((PointerSize == 4 || PointerSize == 8) &&
                "Add support for other sizes if necessary");
         struct FormAndOp {
@@ -776,8 +780,126 @@ DIE *DwarfCompileUnit::constructVariableDIE(DbgVariable &DV, bool Abstract) {
   return VariableDie;
 }
 
+static const DIType *resolveTypeQualifiers(const DIType *Ty) {
+  while (const auto *DT = dyn_cast_or_null<DIDerivedType>(Ty)) {
+    switch (DT->getTag()) {
+    case dwarf::DW_TAG_typedef:
+    case dwarf::DW_TAG_const_type:
+    case dwarf::DW_TAG_volatile_type:
+    case dwarf::DW_TAG_restrict_type:
+    case dwarf::DW_TAG_atomic_type:
+      Ty = DT->getBaseType();
+      continue;
+    default:
+      return Ty;
+    }
+  }
+  return Ty;
+}
+
+bool DwarfCompileUnit::emitImplicitPointerLocation(const Loc::Single &Single,
+                                                   const DbgVariable &DV,
+                                                   DIE &VariableDie) {
+  const DIExpression *Expr = Single.getExpr();
+  if (!Expr)
+    return false;
+
+  // Only handle the simple case where DW_OP_LLVM_implicit_pointer is the
+  // sole operation (or followed only by DW_OP_LLVM_fragment).
+  //
+  // Multi-level implicit pointers (e.g., int **pp where both levels are
+  // optimized away) would require stacking multiple implicit_pointer ops
+  // in one expression and unwinding them into a chain of artificial DIEs.
+  // This is left for future work.
+  //
+  // Location list support (Loc::Multi) is not yet handled.
+  auto ExprOps = Expr->expr_ops();
+  auto FirstOp = ExprOps.begin();
+  if (FirstOp == ExprOps.end() ||
+      FirstOp->getOp() != dwarf::DW_OP_LLVM_implicit_pointer)
+    return false;
+
+  if (DD->getDwarfVersion() < 4)
+    return false;
+
+  const DbgValueLoc &DVal = Single.getValueLoc();
+  if (DVal.isVariadic())
+    return false;
+
+  assert(!DVal.getLocEntries().empty() &&
+         "Non-variadic value must have one entry");
+  const DbgValueLocEntry &Entry = DVal.getLocEntries()[0];
+
+  // Resolve the variable's type, stripping qualifiers and typedefs,
+  // to find the pointer or reference type underneath.
+  // The verifier rejects cyclic type references, so this loop terminates.
+  const DIDerivedType *PtrTy =
+      dyn_cast_or_null<DIDerivedType>(resolveTypeQualifiers(DV.getType()));
+  if (!PtrTy)
+    return false;
+
+  if (PtrTy->getTag() != dwarf::DW_TAG_pointer_type &&
+      PtrTy->getTag() != dwarf::DW_TAG_reference_type &&
+      PtrTy->getTag() != dwarf::DW_TAG_rvalue_reference_type)
+    return false;
+
+  const DIType *PointeeTy = PtrTy->getBaseType();
+
+  // Try to reuse an existing artificial DIE for constant integer values.
+  // This avoids duplicate DIEs when multiple pointer variables reference
+  // the same constant (e.g., after ArgumentPromotion promotes the same
+  // struct member for two different pointer parameters).
+  DIE *ArtificialDIEPtr = nullptr;
+  if (Entry.isInt() && PointeeTy) {
+    auto It = ImplicitPointerDIEs.find({PointeeTy, Entry.getInt()});
+    if (It != ImplicitPointerDIEs.end())
+      ArtificialDIEPtr = It->second;
+  }
+
+  if (!ArtificialDIEPtr) {
+    DIE &ProcDIE = createAndAddDIE(dwarf::DW_TAG_dwarf_procedure, getUnitDie());
+
+    if (Entry.isLocation()) {
+      addAddress(ProcDIE, dwarf::DW_AT_location, Entry.getLoc());
+    } else if (Entry.isInt()) {
+      if (PointeeTy)
+        addConstantValue(ProcDIE, Entry.getInt(), PointeeTy);
+    } else if (Entry.isConstantFP()) {
+      addConstantFPValue(ProcDIE, Entry.getConstantFP());
+    } else {
+      return false;
+    }
+
+    ArtificialDIEPtr = &ProcDIE;
+
+    // Cache constant entries for de-duplication.
+    if (Entry.isInt() && PointeeTy)
+      ImplicitPointerDIEs.insert(
+          {{PointeeTy, Entry.getInt()}, ArtificialDIEPtr});
+  }
+
+  auto *Loc = new (DIEValueAllocator) DIELoc;
+
+  const unsigned ImplicitPtrOp = DD->getDwarfVersion() >= 5
+                                     ? dwarf::DW_OP_implicit_pointer
+                                     : dwarf::DW_OP_GNU_implicit_pointer;
+  addUInt(*Loc, dwarf::DW_FORM_data1, ImplicitPtrOp);
+
+  Loc->addValue(DIEValueAllocator, static_cast<dwarf::Attribute>(0),
+                dwarf::DW_FORM_ref_addr, DIEEntry(*ArtificialDIEPtr));
+
+  addSInt(*Loc, dwarf::DW_FORM_sdata, 0);
+
+  addBlock(VariableDie, dwarf::DW_AT_location, Loc);
+  return true;
+}
+
 void DwarfCompileUnit::applyConcreteDbgVariableAttributes(
     const Loc::Single &Single, const DbgVariable &DV, DIE &VariableDie) {
+  // Handle DW_OP_LLVM_implicit_pointer before normal location emission.
+  if (emitImplicitPointerLocation(Single, DV, VariableDie))
+    return;
+
   const DbgValueLoc *DVal = &Single.getValueLoc();
   if (!Single.getExpr())
     DD->addTargetVariableAttributes(*this, VariableDie, std::nullopt,
@@ -1104,6 +1226,10 @@ DIE &DwarfCompileUnit::constructSubprogramScopeDIE(const DISubprogram *Sub,
   return ScopeDIE;
 }
 
+bool DwarfCompileUnit::hasGlobalVariableInScope(const DILocalScope *ScopeNode) {
+  return GlobalVarScopes.contains(ScopeNode);
+}
+
 DIE *DwarfCompileUnit::createAndAddScopeChildren(LexicalScope *Scope,
                                                  DIE &ScopeDIE) {
   DIE *ObjectPointer = nullptr;
@@ -1134,6 +1260,12 @@ DIE *DwarfCompileUnit::createAndAddScopeChildren(LexicalScope *Scope,
   auto skipLexicalScope = [this](LexicalScope *S) -> bool {
     if (isa<DISubprogram>(S->getScopeNode()))
       return false;
+    // Don't skip abstract lexical blocks that are scope targets for global
+    // variables (e.g., function-scope statics). Those globals are emitted
+    // later in endModule() and need to find the block via
+    // getOrCreateContextDIE().
+    if (S->isAbstractScope() && hasGlobalVariableInScope(S->getScopeNode()))
+      return false;
     auto Vars = DU->getScopeVariables().lookup(S);
     if (!Vars.Args.empty() || !Vars.Locals.empty())
       return false;
@@ -1141,8 +1273,9 @@ DIE *DwarfCompileUnit::createAndAddScopeChildren(LexicalScope *Scope,
            DD->getLocalDeclsForScope(S->getScopeNode()).empty();
   };
   for (LexicalScope *LS : Scope->getChildren()) {
-    // If the lexical block doesn't have non-scope children, skip
-    // its emission and put its children directly to the parent scope.
+    // If the lexical block doesn't have non-scope children or global
+    // variables scoped to it, skip its emission and put its children directly
+    // to the parent scope.
     if (skipLexicalScope(LS))
       createAndAddScopeChildren(LS, ScopeDIE);
     else
@@ -1535,6 +1668,9 @@ void DwarfCompileUnit::emitHeader(bool UseOffsets) {
 }
 
 bool DwarfCompileUnit::hasDwarfPubSections() const {
+  if (!DD->shouldEmitDwarfPubSections())
+    return false;
+
   switch (CUNode->getNameTableKind()) {
   case DICompileUnit::DebugNameTableKind::None:
     return false;

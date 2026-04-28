@@ -25,35 +25,97 @@ functions.
 libclc currently supports PTX, AMDGPU, SPIRV and CLSPV targets, but support for
 more targets is welcome.
 
-## Compiling and installing
+## Configure, build, and install
 
-(in the following instructions you can use `make` or `ninja`)
+libclc is built as part of an LLVM runtimes build.
 
-For an in-tree build, Clang must also be built at the same time:
+Select the targets to build with `LLVM_RUNTIME_TARGETS`, and enable libclc for
+each selected target with the matching
+`RUNTIMES_<target-triple>_LLVM_ENABLE_RUNTIMES` cache entry.
+
+#### Configure for the AMDGPU target
 ```
-$ cmake <path-to>/llvm-project/llvm/CMakeLists.txt -DLLVM_ENABLE_PROJECTS="clang" \
-    -DLLVM_ENABLE_RUNTIMES="libclc" -DCMAKE_BUILD_TYPE=Release -G Ninja
-$ ninja
+cd llvm-project
+mkdir build
+cd build
+cmake ../llvm -G Ninja -DLLVM_ENABLE_PROJECTS="clang" -DCMAKE_BUILD_TYPE=Release \
+  -DRUNTIMES_amdgcn-amd-amdhsa-llvm_LLVM_ENABLE_RUNTIMES=libclc \
+  -DLLVM_RUNTIME_TARGETS="amdgcn-amd-amdhsa-llvm"
 ```
-Then install:
+
+#### Configure for the NVPTX64 target
 ```
-$ ninja install
+cmake ../llvm -G Ninja -DLLVM_ENABLE_PROJECTS="clang" -DCMAKE_BUILD_TYPE=Release \
+  -DRUNTIMES_nvptx64-nvidia-cuda_LLVM_ENABLE_RUNTIMES=libclc \
+  -DLLVM_RUNTIME_TARGETS="nvptx64-nvidia-cuda"
 ```
+
+#### Configure for CLSPV targets
+```
+cmake ../llvm -G Ninja -DLLVM_ENABLE_PROJECTS="clang" -DCMAKE_BUILD_TYPE=Release \
+  -DRUNTIMES_clspv--_LLVM_ENABLE_RUNTIMES=libclc \
+  -DRUNTIMES_clspv64--_LLVM_ENABLE_RUNTIMES=libclc \
+  -DLLVM_RUNTIME_TARGETS="clspv--;clspv64--"
+```
+
+#### Configure for SPIR-V targets
+```
+cmake ../llvm -G Ninja -DLLVM_ENABLE_PROJECTS="clang" -DCMAKE_BUILD_TYPE=Release \
+  -DRUNTIMES_spirv-mesa3d-_LLVM_ENABLE_RUNTIMES=libclc \
+  -DRUNTIMES_spirv64-mesa3d-_LLVM_ENABLE_RUNTIMES=libclc \
+  -DLLVM_RUNTIME_TARGETS="spirv-mesa3d-;spirv64-mesa3d-"
+```
+
+To build multiple targets, pass them as a semicolon-separated list in
+`LLVM_RUNTIME_TARGETS` and provide a matching
+`RUNTIMES_<target-triple>_LLVM_ENABLE_RUNTIMES=libclc` entry for each target.
+
+#### Build
+```
+ninja
+```
+
+#### Install
+```
+ninja install
+```
+
 Note you can use the `DESTDIR` Makefile variable to do staged installs.
 ```
-$ DESTDIR=/path/for/staged/install ninja install
+DESTDIR=/path/for/staged/install ninja install
 ```
+
+## Testing
+libclc utilizes the LLVM testing infrastructure.
+#### Run all tests
+To execute all per-target tests for libclc.
+```
+ninja check-libclc
+```
+`check-libclc` is a top-level target that aggregates all per-target tests.
+
+#### Run target-specific tests
+If you are working on a specific target, you can run tests for just that target triple:
+```
+ninja check-libclc-<target-triple>
+```
+Alternatively, you can run target-specific tests via the runtimes build by
+pointing to the target-specific build directory:
+```
+ninja -C runtimes/runtimes-<target-triple>-bins check-libclc
+```
+
+## Out-of-tree build
+
 To build out of tree, or in other words, against an existing LLVM build or install:
 ```
-$ cmake <path-to>/llvm-project/libclc/CMakeLists.txt -DCMAKE_BUILD_TYPE=Release \
-  -G Ninja -DLLVM_DIR=$(<path-to>/llvm-config --cmakedir)
+CC=$(<path-to>/llvm-config --bindir)/clang cmake \
+  <path-to>/llvm-project/libclc/CMakeLists.txt -DCMAKE_BUILD_TYPE=Release \
+  -G Ninja -DLLVM_DIR=$(<path-to>/llvm-config --cmakedir) \
+  -DLLVM_RUNTIMES_TARGET=<target-triple>
 $ ninja
 ```
 Then install as before.
-
-In both cases this will include all supported targets. You can choose which
-targets are enabled by passing `-DLIBCLC_TARGETS_TO_BUILD` to CMake. The default
-is `all`.
 
 In both cases, the LLVM used must include the targets you want libclc support for
 (`AMDGPU` and `NVPTX` are enabled in LLVM by default). Apart from `SPIRV` where you do

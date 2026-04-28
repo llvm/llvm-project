@@ -1,6 +1,19 @@
 header: netinet/in.h
-header_template: in.h.def
-macros: []
+standards:
+  - posix
+macros:
+  - macro_name: IPPROTO_IP
+    macro_header: netinet-in-macros.h
+  - macro_name: IPPROTO_ICMP
+    macro_header: netinet-in-macros.h
+  - macro_name: IPPROTO_TCP
+    macro_header: netinet-in-macros.h
+  - macro_name: IPPROTO_UDP
+    macro_header: netinet-in-macros.h
+  - macro_name: IPPROTO_IPV6
+    macro_header: netinet-in-macros.h
+  - macro_name: IPPROTO_RAW
+    macro_header: netinet-in-macros.h
 types: []
 enums: []
 objects: []
