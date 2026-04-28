@@ -12,6 +12,7 @@
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Printable.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/TargetParser.h"
 
@@ -121,13 +122,20 @@ public:
     return Wait;
   }
 
+  Printable getPrintable(raw_ostream &OS, bool HasExtendedWaitcnts) const {
+    return Printable([HasExtendedWaitcnts, this](raw_ostream &OS) {
+      ListSeparator LS;
+      for (InstCounterType T : inst_counter_types())
+        OS << LS << getInstCounterName(T, HasExtendedWaitcnts) << ": "
+           << Cnt[T];
+      if (LS.unused())
+        OS << "none";
+      OS << '\n';
+    });
+  }
+
   void print(raw_ostream &OS, bool HasExtendedWaitcnts) const {
-    ListSeparator LS;
-    for (InstCounterType T : inst_counter_types())
-      OS << LS << getInstCounterName(T, HasExtendedWaitcnts) << ": " << Cnt[T];
-    if (LS.unused())
-      OS << "none";
-    OS << '\n';
+    OS << getPrintable(OS, HasExtendedWaitcnts);
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

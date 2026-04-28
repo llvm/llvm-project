@@ -1552,8 +1552,9 @@ AMDGPU::Waitcnt WaitcntBrackets::determineAsyncWait(unsigned N) {
   });
   AsyncMarks.erase(AsyncMarks.begin(), AsyncMarks.begin() + MarkIndex + 1);
 
-  LLVM_DEBUG(dbgs() << "Waits to add: ";
-             Wait.print(dbgs(), Context->ST.hasExtendedWaitCounts()););
+  LLVM_DEBUG(
+      dbgs() << "Waits to add: "
+             << Wait.getPrintable(dbgs(), Context->ST.hasExtendedWaitCounts()));
   return Wait;
 }
 
@@ -1776,13 +1777,15 @@ bool WaitcntGeneratorPreGFX12::applyPreexistingWaitcnt(
     } else if (Opcode == AMDGPU::S_WAITCNT_lds_direct) {
       assert(ST.hasVMemToLDSLoad());
       LLVM_DEBUG(
-          dbgs() << "Processing S_WAITCNT_lds_direct: " << II << "Before: ";
-          Wait.print(dbgs(), /*HasExtendedWaitcnts=*/false); dbgs() << '\n';);
+          dbgs() << "Processing S_WAITCNT_lds_direct: " << II << "Before: "
+                 << Wait.getPrintable(dbgs(), /*HasExtendedWaitcnts=*/false)
+                 << '\n');
       ScoreBrackets.determineWaitForLDSDMA(AMDGPU::LOAD_CNT, LDSDMA_BEGIN,
                                            Wait);
-      LLVM_DEBUG(dbgs() << "After: ";
-                 Wait.print(dbgs(), /*HasExtendedWaitcnts=*/false);
-                 dbgs() << '\n';);
+      LLVM_DEBUG(
+          dbgs() << "After: "
+                 << Wait.getPrintable(dbgs(), /*HasExtendedWaitcnts=*/false)
+                 << '\n');
 
       // It is possible (but unlikely) that this is the only wait instruction,
       // in which case, we exit this loop without a WaitcntInstr to consume

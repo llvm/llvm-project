@@ -50,8 +50,7 @@ StringLiteral getInstCounterName(InstCounterType T, bool HasExtendedWaitcnts) {
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void Waitcnt::dump(bool HasExtendedWaitcnts) const {
-  print(dbgs(), HasExtendedWaitcnts);
-  dbgs() << '\n';
+  dbgs() << getPrintable(dbgs(), HasExtendedWaitcnts) << '\n';
 }
 #endif
 
