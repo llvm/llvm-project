@@ -469,7 +469,7 @@ unreachable:                                      ; preds = %rethrow
 ; }
 ;
 ; ~Temp() generates cleanupret, which is lowered to a 'throw_ref' later. That
-; hrow_ref's argument should correctly rethrow the exception caught by the
+; throw_ref's argument should correctly rethrow the exception caught by the
 ; top-level cleanuppad (catch_all_ref). This is a regression test for the bug
 ; where we did not compute throw_ref's argument correctly.
 
