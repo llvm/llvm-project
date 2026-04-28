@@ -80,24 +80,24 @@ void takes_inout_cb(inout ConstantBuffer<S> c) {}
 
 float main() {
   // CHECK: FunctionDecl {{.*}} main
-  // CHECK: MemberExpr {{.*}} 'hlsl_constant float' lvalue .a
-  // CHECK-NEXT: CXXMemberCallExpr {{.*}} 'hlsl_constant S' lvalue
-  // CHECK-NEXT: MemberExpr {{.*}} '<bound member function type>' .operator hlsl_constant S &
+  // CHECK: MemberExpr {{.*}} 'const hlsl_constant float' lvalue .a
+  // CHECK-NEXT: CXXMemberCallExpr {{.*}} 'const hlsl_constant S' lvalue
+  // CHECK-NEXT: MemberExpr {{.*}} '<bound member function type>' .operator const hlsl_constant S &
   // CHECK-NEXT: ImplicitCastExpr {{.*}} 'const hlsl::ConstantBuffer<S>' lvalue <NoOp>
   // CHECK-NEXT: DeclRefExpr {{.*}} 'ConstantBuffer<S>':'hlsl::ConstantBuffer<S>' lvalue Var {{.*}} 'cb' 'ConstantBuffer<S>':'hlsl::ConstantBuffer<S>'
   float f1 = cb.a;
 
-  // CHECK: MemberExpr {{.*}} 'hlsl_constant float' lvalue .b
-  // CHECK-NEXT: CXXMemberCallExpr {{.*}} 'hlsl_constant Nested' lvalue
-  // CHECK-NEXT: MemberExpr {{.*}} '<bound member function type>' .operator hlsl_constant Nested &
+  // CHECK: MemberExpr {{.*}} 'const hlsl_constant float' lvalue .b
+  // CHECK-NEXT: CXXMemberCallExpr {{.*}} 'const hlsl_constant Nested' lvalue
+  // CHECK-NEXT: MemberExpr {{.*}} '<bound member function type>' .operator const hlsl_constant Nested &
   // CHECK-NEXT: ImplicitCastExpr {{.*}} 'const hlsl::ConstantBuffer<Nested>' lvalue <NoOp>
   // CHECK-NEXT: DeclRefExpr {{.*}} 'ConstantBuffer<Nested>':'hlsl::ConstantBuffer<Nested>' lvalue Var {{.*}} 'cb_nested' 'ConstantBuffer<Nested>':'hlsl::ConstantBuffer<Nested>'
   float f2 = cb_nested.b;
 
-  // CHECK: MemberExpr {{.*}} 'hlsl_constant float' lvalue .a
-  // CHECK-NEXT: MemberExpr {{.*}} 'hlsl_constant S' lvalue .s
-  // CHECK-NEXT: CXXMemberCallExpr {{.*}} 'hlsl_constant Nested' lvalue
-  // CHECK-NEXT: MemberExpr {{.*}} '<bound member function type>' .operator hlsl_constant Nested &
+  // CHECK: MemberExpr {{.*}} 'const hlsl_constant float' lvalue .a
+  // CHECK-NEXT: MemberExpr {{.*}} 'const hlsl_constant S' lvalue .s
+  // CHECK-NEXT: CXXMemberCallExpr {{.*}} 'const hlsl_constant Nested' lvalue
+  // CHECK-NEXT: MemberExpr {{.*}} '<bound member function type>' .operator const hlsl_constant Nested &
   // CHECK-NEXT: ImplicitCastExpr {{.*}} 'const hlsl::ConstantBuffer<Nested>' lvalue <NoOp>
   // CHECK-NEXT: DeclRefExpr {{.*}} 'ConstantBuffer<Nested>':'hlsl::ConstantBuffer<Nested>' lvalue Var {{.*}} 'cb_nested' 'ConstantBuffer<Nested>':'hlsl::ConstantBuffer<Nested>'
   float f3 = cb_nested.s.a;

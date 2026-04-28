@@ -56,6 +56,7 @@ ConstantBuffer<U> cb_union;
 void takes_inout_s(inout S s) {}
 
 void foo() {
-  // expected-error@+1 {{no viable constructor copying parameter of type 'hlsl_constant S'}}
-  takes_inout_s(cb); // Fails because of inout writeback
+  // This case should fail because we cannot writeback to `cb` after the call.
+  // expected-error@+1 {{no viable constructor copying parameter of type 'const hlsl_constant S'}}
+  takes_inout_s(cb);
 }

@@ -1254,7 +1254,7 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
                 InnerType.getCanonicalType().getNonReferenceType();
             QualType AddrSpaceType =
                 S.Context.getCanonicalType(S.Context.getAddrSpaceQualType(
-                    CanonType, LangAS::hlsl_constant));
+                    CanonType.withConst(), LangAS::hlsl_constant));
             QualType ReturnTy = S.Context.getCanonicalType(
                 S.Context.getLValueReferenceType(AddrSpaceType));
 

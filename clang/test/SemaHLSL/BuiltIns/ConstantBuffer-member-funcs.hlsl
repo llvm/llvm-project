@@ -3,11 +3,11 @@
 struct S {
     float a;
     
-    float foo() {
+    float foo() const {
         return a;
     };
 
-    void bar() {
+    void bar() { // expected-note {{'bar' declared here}}
         a = 1.0;
     }
 };
@@ -16,9 +16,12 @@ ConstantBuffer<S> CB;
 
 [numthreads(4,1,1)]
 void main() {
-    // Calling non-const member function is allowed for parity with DXC.
-    float tmp = CB.foo(); // expected-error {{cannot initialize object parameter of type 'S' with an expression of type 'hlsl_constant S'}}
+    // Calling non-const member function is allowed, but not  implemented yet.
+    // https://github.com/llvm/llvm-project/issues/153055
+    // expected-error@+1 {{cannot initialize object parameter of type 'const S' with an expression of type 'const hlsl_constant S'}}
+    float tmp = CB.foo();
 
-    // Even if it modifies the buffer, it's allowed in Sema (backended/validations will catch it).
-    CB.bar(); // expected-error {{cannot initialize object parameter of type 'S' with an expression of type 'hlsl_constant S'}}
+    // Calling non-const member function is not allowed.
+    // expected-error@+1 {{'this' argument to member function 'bar' has type 'const hlsl_constant S', but function is not marked const}}
+    CB.bar();
 }

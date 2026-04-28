@@ -1067,7 +1067,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addConversionToType() {
 
   QualType ElemTy = getHandleElementType();
   QualType AddrSpaceElemTy = AST.getCanonicalType(
-      AST.getAddrSpaceQualType(ElemTy, LangAS::hlsl_constant));
+      AST.getAddrSpaceQualType(ElemTy.withConst(), LangAS::hlsl_constant));
   QualType ReturnTy =
       AST.getCanonicalType(AST.getLValueReferenceType(AddrSpaceElemTy));
 

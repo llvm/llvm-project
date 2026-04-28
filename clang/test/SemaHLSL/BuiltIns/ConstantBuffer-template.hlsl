@@ -15,6 +15,9 @@ void foo(Tm t) {
 
 [numthreads(1,1,1)]
 void main() {
-    T t = c; // expected-error {{no viable constructor copying variable of type 'hlsl_constant T'}}
-    foo(c);
+  // An implicit conversion from ConstantBuffer<T> to T should work.
+  // It is not implemented yet
+  // (https://github.com/llvm/llvm-project/issues/153055).
+  // expected-error@+1 {{no viable constructor copying variable of type 'const hlsl_constant T'}}
+  T t = c;
 }
