@@ -197,6 +197,7 @@
 #include "math/hypotf.h"
 #include "math/hypotf16.h"
 #include "math/ilogb.h"
+#include "math/ilogbbf16.h"
 #include "math/ilogbf.h"
 #include "math/ilogbf128.h"
 #include "math/ilogbf16.h"
