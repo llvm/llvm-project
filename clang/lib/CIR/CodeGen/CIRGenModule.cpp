@@ -726,6 +726,9 @@ bool CIRGenModule::getCPUAndFeaturesAttributes(
   llvm::StringRef targetCPU = getTarget().getTargetOpts().CPU;
   llvm::StringRef tuneCPU = getTarget().getTargetOpts().TuneCPU;
   std::vector<std::string> features;
+  // `fd` may be null when emitting attributes for globals that don't have a
+  // FunctionDecl. The AMDGPU branch below handles
+  // the null case via initFeatureMap.
   const auto *fd = dyn_cast_or_null<FunctionDecl>(gd.getDecl());
   fd = fd ? fd->getMostRecentDecl() : fd;
   const auto *td = fd ? fd->getAttr<TargetAttr>() : nullptr;
@@ -762,12 +765,16 @@ bool CIRGenModule::getCPUAndFeaturesAttributes(
   }
   if (!features.empty() && setTargetFeatures) {
     llvm::erase_if(features, [&](const std::string &f) {
+      assert(!f.empty() && (f[0] == '+' || f[0] == '-') &&
+             "feature string must start with '+' or '-'");
       return getTarget().isReadOnlyFeature(f.substr(1));
     });
     llvm::sort(features);
     attrs["cir.target-features"] = llvm::join(features, ",");
     addedAttr = true;
   }
+  // TODO(cir): add metadata for AArch64 Function Multi Versioning.
+  assert(!cir::MissingFeatures::opFuncMultiVersioning());
   return addedAttr;
 }
 
@@ -785,6 +792,9 @@ void CIRGenModule::setNonAliasAttributes(GlobalDecl gd, mlir::Operation *op) {
       if (auto func = dyn_cast<cir::FuncOp>(op)) {
         llvm::StringMap<std::string> attrs;
         if (getCPUAndFeaturesAttributes(gd, attrs)) {
+          // TODO(cir): Classic codegen removes the existing target-cpu,
+          // target-features, tune-cpu and fmv-features attributes here
+          // before adding the new ones.
           for (const auto &[key, val] : attrs)
             func->setAttr(key, builder.getStringAttr(val));
         }
