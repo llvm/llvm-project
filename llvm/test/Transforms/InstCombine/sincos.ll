@@ -418,4 +418,55 @@ define <4 x float> @sincos_v4f32_fmf_intersect(<4 x float> %x) {
   ret <4 x float> %res
 }
 
+; When the shared argument is a PHI but the block has more PHIs after it,
+; the sincos call must be placed after all PHIs, not next to the argument.
+; Otherwise it would be sandwiched between PHIs and produce malformed IR.
+define float @sincos_arg_is_phi_with_following_phi(i1 %cond, float %a, float %b, float %c) {
+; CHECK-LABEL: @sincos_arg_is_phi_with_following_phi(
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[X:%.*]] = phi float [ [[A:%.*]], [[THEN]] ], [ [[B:%.*]], [[ELSE]] ]
+; CHECK-NEXT:    [[Y:%.*]] = phi float [ [[B]], [[THEN]] ], [ [[C:%.*]], [[ELSE]] ]
+; CHECK-NEXT:    [[SINCOS:%.*]] = call { float, float } @llvm.sincos.f32(float [[X]])
+; CHECK-NEXT:    [[SIN:%.*]] = extractvalue { float, float } [[SINCOS]], 0
+; CHECK-NEXT:    [[COS:%.*]] = extractvalue { float, float } [[SINCOS]], 1
+; CHECK-NEXT:    [[SUM:%.*]] = fadd float [[SIN]], [[COS]]
+; CHECK-NEXT:    [[RES:%.*]] = fadd float [[SUM]], [[Y]]
+; CHECK-NEXT:    ret float [[RES]]
+;
+; CHECK-SHRINK-LABEL: @sincos_arg_is_phi_with_following_phi(
+; CHECK-SHRINK-NEXT:    br i1 [[COND:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK-SHRINK:       then:
+; CHECK-SHRINK-NEXT:    br label [[MERGE:%.*]]
+; CHECK-SHRINK:       else:
+; CHECK-SHRINK-NEXT:    br label [[MERGE]]
+; CHECK-SHRINK:       merge:
+; CHECK-SHRINK-NEXT:    [[X:%.*]] = phi float [ [[A:%.*]], [[THEN]] ], [ [[B:%.*]], [[ELSE]] ]
+; CHECK-SHRINK-NEXT:    [[Y:%.*]] = phi float [ [[B]], [[THEN]] ], [ [[C:%.*]], [[ELSE]] ]
+; CHECK-SHRINK-NEXT:    [[SINCOS:%.*]] = call { float, float } @llvm.sincos.f32(float [[X]])
+; CHECK-SHRINK-NEXT:    [[SIN:%.*]] = extractvalue { float, float } [[SINCOS]], 0
+; CHECK-SHRINK-NEXT:    [[COS:%.*]] = extractvalue { float, float } [[SINCOS]], 1
+; CHECK-SHRINK-NEXT:    [[SUM:%.*]] = fadd float [[SIN]], [[COS]]
+; CHECK-SHRINK-NEXT:    [[RES:%.*]] = fadd float [[SUM]], [[Y]]
+; CHECK-SHRINK-NEXT:    ret float [[RES]]
+;
+  br i1 %cond, label %then, label %else
+then:
+  br label %merge
+else:
+  br label %merge
+merge:
+  %x = phi float [ %a, %then ], [ %b, %else ]
+  %y = phi float [ %b, %then ], [ %c, %else ]
+  %s = call float @llvm.sin.f32(float %x)
+  %c0 = call float @llvm.cos.f32(float %x)
+  %sum = fadd float %s, %c0
+  %res = fadd float %sum, %y
+  ret float %res
+}
+
 attributes #0 = { nounwind memory(none) }
