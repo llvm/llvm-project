@@ -91,6 +91,7 @@ add_fp_unittest(
     libc.src.__support.math.dfmal
     libc.src.__support.math.dmulf128
     libc.src.__support.math.dmull
+    libc.src.__support.math.dsqrtf128
     libc.src.__support.math.dsqrtl
     libc.src.__support.math.dsubf128
     libc.src.__support.math.dsubl
@@ -335,6 +336,7 @@ add_fp_unittest(
     libc.src.__support.math.ddivl
     libc.src.__support.math.dmulf128
     libc.src.__support.math.dmull
+    libc.src.__support.math.dsqrtf128
     libc.src.__support.math.fdim
     libc.src.__support.math.fdimbf16
     libc.src.__support.math.fdimf
