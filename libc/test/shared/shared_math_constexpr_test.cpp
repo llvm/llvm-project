@@ -26,6 +26,7 @@ static_assert(0.0 == LIBC_NAMESPACE::shared::log(1.0));
 static_assert(0.0 == LIBC_NAMESPACE::shared::fmaximum(0.0, 0.0));
 static_assert(0.0 == LIBC_NAMESPACE::shared::fminimum(0.0, 0.0));
 static_assert(0.0 == LIBC_NAMESPACE::shared::fmin(0.0, 0.0));
+static_assert(0.0 == LIBC_NAMESPACE::shared::fmax(0.0, 0.0));
 
 //===----------------------------------------------------------------------===//
 //                       Float Tests
@@ -40,6 +41,7 @@ static_assert(0.0f == LIBC_NAMESPACE::shared::floorf(0.0f));
 static_assert(0.0f == LIBC_NAMESPACE::shared::fmaximumf(0.0f, 0.0f));
 static_assert(0.0f == LIBC_NAMESPACE::shared::fminimumf(0.0f, 0.0f));
 static_assert(0.0f == LIBC_NAMESPACE::shared::fminf(0.0f, 0.0f));
+static_assert(0.0f == LIBC_NAMESPACE::shared::fmaxf(0.0f, 0.0f));
 
 //===----------------------------------------------------------------------===//
 //                       Float16 Tests
@@ -55,6 +57,7 @@ static_assert(3.0f16 == LIBC_NAMESPACE::shared::floorf16(3.7f16));
 static_assert(0.0f16 == LIBC_NAMESPACE::shared::fmaximumf16(0.0f16, 0.0f16));
 static_assert(0.0f16 == LIBC_NAMESPACE::shared::fminimumf16(0.0f16, 0.0f16));
 static_assert(0.0f16 == LIBC_NAMESPACE::shared::fminf16(0.0f16, 0.0f16));
+static_assert(0.0f16 == LIBC_NAMESPACE::shared::fmaxf16(0.0f16, 0.0f16));
 
 #endif // LIBC_TYPES_HAS_FLOAT16
 
@@ -78,6 +81,7 @@ static_assert(0.0L == LIBC_NAMESPACE::shared::sqrtl(0.0L));
 static_assert(0.0L == LIBC_NAMESPACE::shared::fmaximuml(0.0L, 0.0L));
 static_assert(0.0L == LIBC_NAMESPACE::shared::fminimuml(0.0L, 0.0L));
 static_assert(0.0L == LIBC_NAMESPACE::shared::fminl(0.0L, 0.0L));
+static_assert(0.0L == LIBC_NAMESPACE::shared::fmaxl(0.0L, 0.0L));
 
 #endif
 
@@ -112,6 +116,9 @@ static_assert(float128(0.0) ==
 static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::fminf128(float128(0.0), float128(0.0)));
 
+static_assert(float128(0.0) ==
+              LIBC_NAMESPACE::shared::fmaxf128(float128(0.0), float128(0.0)));
+
 #endif // LIBC_TYPES_HAS_FLOAT128
 
 //===----------------------------------------------------------------------===//
@@ -144,5 +151,7 @@ static_assert(bfloat16(0.0) ==
                                                    bfloat16(0.0)));
 static_assert(bfloat16(0.0) ==
               LIBC_NAMESPACE::shared::fminbf16(bfloat16(0.0), bfloat16(0.0)));
+static_assert(bfloat16(0.0) ==
+              LIBC_NAMESPACE::shared::fmaxbf16(bfloat16(0.0), bfloat16(0.0)));
 
 TEST(LlvmLibcSharedMathTest, ConstantEvaluation) {}
