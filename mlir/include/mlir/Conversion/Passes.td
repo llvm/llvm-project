@@ -1437,6 +1437,14 @@ def TosaToSPIRVTosa : Pass<"tosa-to-spirv-tosa"> {
     lowering supported TOSA ops to `spirv.Tosa.*`, and rewriting TOSA tensor
     and shape types to the corresponding SPIR-V ARM tensor types.
   }];
+  let options = [
+    ListOption<"customOpDomainToOpcode", "custom-op-domain-to-opcode",
+               "std::pair<std::string, int32_t>",
+               "Map TOSA custom op domains to spirv.ExperimentalML.Call "
+               "opcodes. Entries use <domain>:<opcode>. The option can be "
+               "specified multiple times; if a domain appears more than once, "
+               "the last mapping wins.">
+  ];
 
   let constructor = "tosa::createTosaToSPIRVTosa()";
 }
