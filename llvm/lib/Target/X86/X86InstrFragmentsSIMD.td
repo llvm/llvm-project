@@ -1193,15 +1193,6 @@ def X86vcvtph2hf8 : SDNode<"X86ISD::VCVTPH2HF8",
                              SDTAVX10CONVERT_I8F16>;
 def X86vcvtph2hf8s : SDNode<"X86ISD::VCVTPH2HF8S",
                               SDTAVX10CONVERT_I8F16>;
-
-def X86vmcvtbiasph2bf8 : SDNode<"X86ISD::VMCVTBIASPH2BF8",
-                         SDTAVX10CONVERT_2I8F16_MASK>;
-def X86vmcvtbiasph2bf8s : SDNode<"X86ISD::VMCVTBIASPH2BF8S",
-                          SDTAVX10CONVERT_2I8F16_MASK>;
-def X86vmcvtbiasph2hf8 : SDNode<"X86ISD::VMCVTBIASPH2HF8",
-                         SDTAVX10CONVERT_2I8F16_MASK>;
-def X86vmcvtbiasph2hf8s : SDNode<"X86ISD::VMCVTBIASPH2HF8S",
-                          SDTAVX10CONVERT_2I8F16_MASK>;
 def X86vmcvtph2bf8 : SDNode<"X86ISD::VMCVTPH2BF8",
                        SDTAVX10CONVERT_I8F16_MASK>;
 def X86vmcvtph2bf8s : SDNode<"X86ISD::VMCVTPH2BF8S",

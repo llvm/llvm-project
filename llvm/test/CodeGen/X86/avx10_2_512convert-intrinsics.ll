@@ -91,7 +91,7 @@ define <32 x i8> @test_int_x86_avx10_vcvtbiasph2bf8512(<64 x i8> %A, <32 x half>
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvtbiasph2bf8 %zmm1, %zmm0, %ymm0 # encoding: [0x62,0xf2,0x7c,0x48,0x74,0xc1]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %ret = call <32 x i8> @llvm.x86.avx10.mask.vcvtbiasph2bf8512(<64 x i8> %A, <32 x half> %B, <32 x i8> undef, i32 -1)
+  %ret = call <32 x i8> @llvm.x86.avx10.vcvtbiasph2bf8512(<64 x i8> %A, <32 x half> %B)
   ret <32 x i8> %ret
 }
 
@@ -107,11 +107,13 @@ define <32 x i8> @test_int_x86_avx10_mask_vcvtbiasph2bf8512(<32 x i8> %W, i32 %U
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
 ; X86-NEXT:    vcvtbiasph2bf8 %zmm2, %zmm1, %ymm0 {%k1} # encoding: [0x62,0xf2,0x74,0x49,0x74,0xc2]
 ; X86-NEXT:    retl # encoding: [0xc3]
-  %ret = call <32 x i8> @llvm.x86.avx10.mask.vcvtbiasph2bf8512(<64 x i8> %A, <32 x half> %B, <32 x i8> %W, i32 %U)
+  %conv = call <32 x i8> @llvm.x86.avx10.vcvtbiasph2bf8512(<64 x i8> %A, <32 x half> %B)
+  %ret = call <32 x i8> @llvm.x86.avx512.select.v32i8(i32 %U, <32 x i8> %conv, <32 x i8> %W)
   ret <32 x i8> %ret
 }
 
-declare <32 x i8> @llvm.x86.avx10.mask.vcvtbiasph2bf8512(<64 x i8> %A, <32 x half> %B, <32 x i8> %W, i32 %U)
+declare <32 x i8> @llvm.x86.avx10.vcvtbiasph2bf8512(<64 x i8> %A, <32 x half> %B)
+declare <32 x i8> @llvm.x86.avx512.select.v32i8(i32, <32 x i8>, <32 x i8>)
 
 define <32 x i8> @test_int_x86_avx10_maskz_vcvtbiasph2bf8512(<64 x i8> %A, <32 x half> %B, i32 %U) nounwind {
 ; X64-LABEL: test_int_x86_avx10_maskz_vcvtbiasph2bf8512:
@@ -125,7 +127,8 @@ define <32 x i8> @test_int_x86_avx10_maskz_vcvtbiasph2bf8512(<64 x i8> %A, <32 x
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
 ; X86-NEXT:    vcvtbiasph2bf8 %zmm1, %zmm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf2,0x7c,0xc9,0x74,0xc1]
 ; X86-NEXT:    retl # encoding: [0xc3]
-  %ret = call <32 x i8> @llvm.x86.avx10.mask.vcvtbiasph2bf8512(<64 x i8> %A, <32 x half> %B, <32 x i8> zeroinitializer, i32 %U)
+  %conv = call <32 x i8> @llvm.x86.avx10.vcvtbiasph2bf8512(<64 x i8> %A, <32 x half> %B)
+  %ret = call <32 x i8> @llvm.x86.avx512.select.v32i8(i32 %U, <32 x i8> %conv, <32 x i8> zeroinitializer)
   ret <32 x i8> %ret
 }
 
