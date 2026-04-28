@@ -36,13 +36,20 @@ template <typename T> constexpr auto addr_if(const std::optional<T> &x) {
   return x ? &*x : nullptr;
 }
 
+const parser::Designator *GetDesignatorFromObj(const parser::OmpObject &object);
+const parser::DataRef *GetDataRefFromObj(const parser::OmpObject &object);
+const parser::ArrayElement *GetArrayElementFromObj(
+    const parser::OmpObject &object);
+std::optional<parser::CharBlock> GetObjectSource(
+    const parser::OmpObject &object);
+const parser::OmpObject *GetArgumentObject(const parser::OmpArgument &argument);
+
 namespace detail {
 struct DirectiveSpecificationScope {
   using ODS = OmpDirectiveSpecification;
   template <typename T> static const ODS &GetODS(const T &x) {
     if constexpr ( //
         std::is_base_of_v<OmpBlockConstruct, T> ||
-        std::is_same_v<OpenMPLoopConstruct, T> ||
         std::is_same_v<OpenMPSectionsConstruct, T>) {
       return x.BeginDir();
     } else if constexpr (WrapperTrait<T>) {
@@ -76,10 +83,6 @@ struct DirectiveNameScope {
 
   static OmpDirectiveName GetOmpDirectiveName(const OmpDirectiveName &x) {
     return x;
-  }
-
-  static OmpDirectiveName GetOmpDirectiveName(const OmpBeginLoopDirective &x) {
-    return x.DirName();
   }
 
   static OmpDirectiveName GetOmpDirectiveName(const OpenMPSectionConstruct &x) {

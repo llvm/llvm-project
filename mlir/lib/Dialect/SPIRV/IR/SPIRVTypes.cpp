@@ -307,9 +307,18 @@ void TypeExtensionVisitor::addConcrete(CooperativeMatrixType type) {
 }
 
 void TypeCapabilityVisitor::addConcrete(CooperativeMatrixType type) {
-  add(type.getElementType());
+  Type elementType = type.getElementType();
+  add(elementType);
   static constexpr auto caps = Capability::CooperativeMatrixKHR;
   capabilities.push_back(caps);
+  if (elementType.isBF16()) {
+    static constexpr auto caps = Capability::BFloat16CooperativeMatrixKHR;
+    capabilities.push_back(caps);
+  }
+  if (elementType.isF8E4M3FN() || elementType.isF8E5M2()) {
+    static constexpr auto caps = Capability::Float8CooperativeMatrixEXT;
+    capabilities.push_back(caps);
+  }
 }
 
 //===----------------------------------------------------------------------===//

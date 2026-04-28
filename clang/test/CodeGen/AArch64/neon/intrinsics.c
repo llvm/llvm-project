@@ -24,6 +24,46 @@
 
 #include <arm_neon.h>
 
+//===------------------------------------------------------===//
+// 2.1.3.2 Vector Saturating Shift Left
+// 
+// TODO: Implement the remaining intrinsics from this group.
+//===------------------------------------------------------===//
+
+// ALL-LABEL: @test_vqshlud_n_s64(
+int64_t test_vqshlud_n_s64(int64_t a) {
+// CIR:   [[CONST:%.*]] = cir.const #cir.int<63> : !s64i
+// CIR:   {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.sqshlu" {{%.*}}, [[CONST]] : (!s64i, !s64i) -> !s64i
+
+// LLVM-SAME: i64 {{.*}}[[A:%.*]])
+// LLVM:      [[VQSHLU_N:%.*]] = call i64 @llvm.aarch64.neon.sqshlu.i64(i64 [[A]], i64 63)
+// LLVM:      ret i64 [[VQSHLU_N]]
+  return (int64_t)vqshlud_n_s64(a, 63);
+}
+
+// ALL-LABEL: @test_vqshld_n_u64(
+uint64_t test_vqshld_n_u64(uint64_t a) {
+// CIR:   [[CONST:%.*]] = cir.const #cir.int<63> : !s64i
+// CIR:   [[CAST:%.*]] = cir.cast bitcast [[CONST]] : !s64i -> !u64i
+// CIR:   {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.uqshl" {{%.*}}, [[CAST]] : (!u64i, !u64i) -> !u64i
+
+// LLVM-SAME: i64 {{.*}}[[A:%.*]])
+// LLVM:      [[VQSHLD_N_U64:%.*]] = call i64 @llvm.aarch64.neon.uqshl.i64(i64 [[A]], i64 63)
+// LLVM:      ret i64 [[VQSHLD_N_U64]]
+  return vqshld_n_u64(a, 63);
+}
+
+// ALL-LABEL: @test_vqshld_n_s64(
+int64_t test_vqshld_n_s64(int64_t a) {
+// CIR:   [[CONST:%.*]] = cir.const #cir.int<63> : !s64i
+// CIR:   {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.sqshl" {{%.*}}, [[CONST]] : (!s64i, !s64i) -> !s64i
+
+// LLVM-SAME: i64 {{.*}}[[A:%.*]])
+// LLVM:      [[VQSHL_N:%.*]] = call i64 @llvm.aarch64.neon.sqshl.i64(i64 [[A]], i64 63)
+// LLVM:      ret i64 [[VQSHL_N]]
+  return (int64_t)vqshld_n_s64(a, 63);
+}
+
 // LLVM-LABEL: @test_vnegd_s64
 // CIR-LABEL: @vnegd_s64
 int64_t test_vnegd_s64(int64_t a) {
@@ -3621,6 +3661,94 @@ float64x1_t test_vcvt_n_f64_u64(uint64x1_t a) {
 // LLVM:    [[VCVT_N1:%.*]] = call <1 x double> @llvm.aarch64.neon.vcvtfxu2fp.v1f64.v1i64(<1 x i64> [[VCVT_N]], i32 64)
 // LLVM:    ret <1 x double> [[VCVT_N1]]
   return vcvt_n_f64_u64(a, 64);
+}
+
+// ALL-LABEL: @test_vcvts_n_f32_s32(
+float32_t test_vcvts_n_f32_s32(int32_t a) {
+// CIR:     [[CST:%.*]] = cir.const #cir.int<1>
+// CIR:     cir.call_llvm_intrinsic "aarch64.neon.vcvtfxs2fp" %{{.*}}, [[CST]]
+
+// LLVM-SAME: i32 {{.*}} [[A:%.*]])
+// LLVM:    [[VCVTS_N_F32_S32:%.*]] = call float @llvm.aarch64.neon.vcvtfxs2fp.f32.i32(i32 [[A]], i32 1)
+// LLVM:    ret float [[VCVTS_N_F32_S32]]
+  return vcvts_n_f32_s32(a, 1);
+}
+
+// ALL-LABEL: @test_vcvts_n_f32_u32(
+float32_t test_vcvts_n_f32_u32(uint32_t a) {
+// CIR:     [[CST:%.*]] = cir.const #cir.int<32>
+// CIR:     cir.call_llvm_intrinsic "aarch64.neon.vcvtfxu2fp" %{{.*}}, [[CST]]
+
+// LLVM-SAME: i32 {{.*}} [[A:%.*]])
+// LLVM:    [[VCVTS_N_F32_U32:%.*]] = call float @llvm.aarch64.neon.vcvtfxu2fp.f32.i32(i32 [[A]], i32 32)
+// LLVM:    ret float [[VCVTS_N_F32_U32]]
+  return vcvts_n_f32_u32(a, 32);
+}
+
+// ALL-LABEL: @test_vcvts_n_s32_f32(
+int32_t test_vcvts_n_s32_f32(float32_t a) {
+// CIR:     [[CST:%.*]] = cir.const #cir.int<1>
+// CIR:     cir.call_llvm_intrinsic "aarch64.neon.vcvtfp2fxs" %{{.*}}, [[CST]]
+
+// LLVM-SAME: float {{.*}} [[A:%.*]])
+// LLVM:    [[VCVTS_N_S32_F32:%.*]] = call i32 @llvm.aarch64.neon.vcvtfp2fxs.i32.f32(float [[A]], i32 1)
+// LLVM:    ret i32 [[VCVTS_N_S32_F32]]
+  return (int32_t)vcvts_n_s32_f32(a, 1);
+}
+
+// ALL-LABEL: @test_vcvts_n_u32_f32(
+uint32_t test_vcvts_n_u32_f32(float32_t a) {
+// CIR:     [[CST:%.*]] = cir.const #cir.int<32>
+// CIR:     cir.call_llvm_intrinsic "aarch64.neon.vcvtfp2fxu" %{{.*}}, [[CST]]
+
+// LLVM-SAME: float {{.*}} [[A:%.*]])
+// LLVM:    [[VCVTS_N_U32_F32:%.*]] = call i32 @llvm.aarch64.neon.vcvtfp2fxu.i32.f32(float [[A]], i32 32)
+// LLVM:    ret i32 [[VCVTS_N_U32_F32]]
+  return (uint32_t)vcvts_n_u32_f32(a, 32);
+}
+
+// ALL-LABEL: @test_vcvtd_n_f64_s64(
+float64_t test_vcvtd_n_f64_s64(int64_t a) {
+// CIR:     [[CST:%.*]] = cir.const #cir.int<1>
+// CIR:     cir.call_llvm_intrinsic "aarch64.neon.vcvtfxs2fp" %{{.*}}, [[CST]]
+
+// LLVM-SAME: i64 {{.*}} [[A:%.*]])
+// LLVM:    [[VCVTD_N_F64_S64:%.*]] = call double @llvm.aarch64.neon.vcvtfxs2fp.f64.i64(i64 [[A]], i32 1)
+// LLVM:    ret double [[VCVTD_N_F64_S64]]
+  return vcvtd_n_f64_s64(a, 1);
+}
+
+// ALL-LABEL: @test_vcvtd_n_f64_u64(
+float64_t test_vcvtd_n_f64_u64(uint64_t a) {
+// CIR:     [[CST:%.*]] = cir.const #cir.int<64>
+// CIR:     cir.call_llvm_intrinsic "aarch64.neon.vcvtfxu2fp" %{{.*}}, [[CST]]
+
+// LLVM-SAME: i64 {{.*}} [[A:%.*]])
+// LLVM:    [[VCVTD_N_F64_U64:%.*]] = call double @llvm.aarch64.neon.vcvtfxu2fp.f64.i64(i64 [[A]], i32 64)
+// LLVM:    ret double [[VCVTD_N_F64_U64]]
+  return vcvtd_n_f64_u64(a, 64);
+}
+
+// ALL-LABEL: @test_vcvtd_n_s64_f64(
+int64_t test_vcvtd_n_s64_f64(float64_t a) {
+// CIR:     [[CST:%.*]] = cir.const #cir.int<1>
+// CIR:     cir.call_llvm_intrinsic "aarch64.neon.vcvtfp2fxs" %{{.*}}, [[CST]]
+
+// LLVM-SAME: double {{.*}}[[A:%.*]])
+// LLVM:    [[VCVTD_N_S64_F64:%.*]] = call i64 @llvm.aarch64.neon.vcvtfp2fxs.i64.f64(double [[A]], i32 1)
+// LLVM:    ret i64 [[VCVTD_N_S64_F64]]
+  return (int64_t)vcvtd_n_s64_f64(a, 1);
+}
+
+// ALL-LABEL: @test_vcvtd_n_u64_f64(
+uint64_t test_vcvtd_n_u64_f64(float64_t a) {
+// CIR:     [[CST:%.*]] = cir.const #cir.int<64>
+// CIR:     cir.call_llvm_intrinsic "aarch64.neon.vcvtfp2fxu" %{{.*}}, [[CST]]
+
+// LLVM-SAME: double {{.*}} [[A:%.*]])
+// LLVM:    [[VCVTD_N_U64_F64:%.*]] = call i64 @llvm.aarch64.neon.vcvtfp2fxu.i64.f64(double [[A]], i32 64)
+// LLVM:    ret i64 [[VCVTD_N_U64_F64]]
+  return (uint64_t)vcvtd_n_u64_f64(a, 64);
 }
 
 //===------------------------------------------------------===//
