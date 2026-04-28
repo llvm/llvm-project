@@ -195,6 +195,9 @@ export namespace std {
 #endif // _LIBCPP_STD_VER >= 23
 
 #if _LIBCPP_HAS_THREADS
+
+#  if _LIBCPP_STD_VER < 26 || defined(_LIBCPP_ENABLE_CXX26_REMOVED_SHARED_PTR_ATOMICS)
+
   // [depr.util.smartptr.shared.atomic]
   using std::atomic_is_lock_free;
 
@@ -211,5 +214,8 @@ export namespace std {
   using std::atomic_compare_exchange_strong_explicit;
   using std::atomic_compare_exchange_weak;
   using std::atomic_compare_exchange_weak_explicit;
+
+#  endif // _LIBCPP_STD_VER < 26 || defined(_LIBCPP_ENABLE_CXX26_REMOVED_SHARED_PTR_ATOMICS)
+
 #endif // _LIBCPP_HAS_THREADS
 } // namespace std

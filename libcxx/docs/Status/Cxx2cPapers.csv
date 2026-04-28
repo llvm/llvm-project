@@ -48,7 +48,7 @@
 "","","","","","",""
 "`P2875R4 <https://wg21.link/P2875R4>`__","Undeprecate ``polymorphic_allocator::destroy`` for C++26","2024-03 (Tokyo)","|Complete|","15","`#105410 <https://github.com/llvm/llvm-project/issues/105410>`__",""
 "`P2867R2 <https://wg21.link/P2867R2>`__","Remove Deprecated ``strstreams`` From C++26","2024-03 (Tokyo)","|Complete|","19","`#105411 <https://github.com/llvm/llvm-project/issues/105411>`__",""
-"`P2869R4 <https://wg21.link/P2869R4>`__","Remove Deprecated ``shared_ptr`` Atomic Access APIs from C++26","2024-03 (Tokyo)","","","`#105412 <https://github.com/llvm/llvm-project/issues/105412>`__",""
+"`P2869R4 <https://wg21.link/P2869R4>`__","Remove Deprecated ``shared_ptr`` Atomic Access APIs from C++26","2024-03 (Tokyo)","|Complete|","23","`#105412 <https://github.com/llvm/llvm-project/issues/105412>`__",""
 "`P2872R3 <https://wg21.link/P2872R3>`__","Remove ``wstring_convert`` From C++26","2024-03 (Tokyo)","|Complete|","19","`#105413 <https://github.com/llvm/llvm-project/issues/105413>`__",""
 "`P3107R5 <https://wg21.link/P3107R5>`__","Permit an efficient implementation of ``std::print``","2024-03 (Tokyo)","","","`#105414 <https://github.com/llvm/llvm-project/issues/105414>`__",""
 "`P3142R0 <https://wg21.link/P3142R0>`__","Printing Blank Lines with ``println``","2024-03 (Tokyo)","|Complete|","19","`#105415 <https://github.com/llvm/llvm-project/issues/105415>`__","Implemented as a DR against C++23. (MSVC STL and libstdc++ will do the same.)"
