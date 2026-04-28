@@ -35,9 +35,7 @@ public:
     DCHECK_LE(Size, capacity());
     if (Size == capacity()) {
       const uptr NewCapacity = roundUpPowerOfTwo(Size + 1);
-      if (!reallocate(NewCapacity)) {
-        return;
-      }
+      RAW_CHECK_MSG(reallocate(NewCapacity), "Vector reallocate failed");
     }
     memcpy(&Data[Size++], &Element, sizeof(T));
   }
@@ -61,9 +59,7 @@ public:
   }
   void resize(uptr NewSize) {
     if (NewSize > Size) {
-      if (!reserve(NewSize)) {
-        return;
-      }
+      RAW_CHECK_MSG(reserve(NewSize), "Vector resize failed");
       memset(&Data[Size], 0, sizeof(T) * (NewSize - Size));
     }
     Size = NewSize;

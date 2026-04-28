@@ -159,9 +159,9 @@ TEST(ScudoStringsTest, CapacityIncreaseFails) {
   }
 
   // Attempt to append past the end of the current capacity.
-  Str.append("%d", 12345678);
+  EXPECT_DEATH(Str.append("%d", 12345678), "Vector reallocate failed");
   EXPECT_EQ(MaxSize, Str.capacity());
-  EXPECT_STREQ("B12345", &Str.data()[MaxSize - 6]);
+  EXPECT_STREQ("B", &Str.data()[MaxSize - 6]);
 
   EXPECT_EQ(0, setrlimit(RLIMIT_AS, &Limit));
 }

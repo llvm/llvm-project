@@ -33,6 +33,16 @@ TEST(ScudoVectorTest, Stride) {
     EXPECT_EQ(V[I], I);
 }
 
+TEST(ScudoVectorTest, ResizeGrowSuccessful) {
+  scudo::Vector<int, 32U> V;
+  EXPECT_EQ(V.capacity(), 32U);
+  V.resize(100);
+  EXPECT_EQ(V.size(), 100U);
+  EXPECT_GE(V.capacity(), 100U);
+  for (scudo::uptr I = 0; I < 100; I++)
+    EXPECT_EQ(V[I], 0);
+}
+
 TEST(ScudoVectorTest, ResizeReduction) {
   scudo::Vector<int, 64U> V;
   V.push_back(0);
@@ -77,11 +87,34 @@ TEST(ScudoVectorTest, ReallocateFails) {
 
   // Now try to do a push back and verify that the size does not change.
   scudo::uptr Size = V.size();
-  V.push_back('2');
+  EXPECT_DEATH(V.push_back('2'), "Vector reallocate failed");
   EXPECT_EQ(Size, V.size());
   // Verify that the last element in the vector did not change.
   EXPECT_EQ('\0', V.back());
 
+  EXPECT_EQ(0, setrlimit(RLIMIT_AS, &Limit));
+}
+
+TEST(ScudoVectorTest, ResizeFails) {
+  scudo::Vector<char, 256U> V;
+  scudo::uptr capacity = V.capacity();
+
+  rlimit Limit = {};
+  EXPECT_EQ(0, getrlimit(RLIMIT_AS, &Limit));
+
+  rlimit EmptyLimit = {.rlim_cur = 0, .rlim_max = Limit.rlim_max};
+  EXPECT_EQ(0, setrlimit(RLIMIT_AS, &EmptyLimit));
+
+  scudo::MemMapT MemMap;
+  if (MemMap.map(/*Addr=*/0U, scudo::getPageSizeCached(), "scudo:test",
+                 MAP_ALLOWNOMEM)) {
+    MemMap.unmap();
+    setrlimit(RLIMIT_AS, &Limit);
+    TEST_SKIP("Limiting address space does not prevent mmap.");
+  }
+
+  V.resize(capacity);
+  EXPECT_DEATH(V.resize(capacity + 1000), "Vector resize failed");
   EXPECT_EQ(0, setrlimit(RLIMIT_AS, &Limit));
 }
 #endif
