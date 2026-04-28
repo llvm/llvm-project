@@ -810,14 +810,11 @@ define void @rt_stride_mul_scev(ptr %pl, i64 %base_stride, ptr %ps) {
 ; CHECK-LABEL: define void @rt_stride_mul_scev(
 ; CHECK-SAME: ptr [[PL:%.*]], i64 [[BASE_STRIDE:%.*]], ptr [[PS:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[STRIDE:%.*]] = mul i64 [[BASE_STRIDE]], 2
+; CHECK-NEXT:    [[STRIDE0:%.*]] = mul nsw i64 [[STRIDE]], 0
+; CHECK-NEXT:    [[GEP_L0:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 [[STRIDE0]]
 ; CHECK-NEXT:    [[GEP_S0:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i64> poison, i64 [[STRIDE]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i64> [[TMP1]], <8 x i64> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nsw <8 x i64> [[TMP2]], <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x ptr> poison, ptr [[PL]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x ptr> [[TMP4]], <8 x ptr> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, <8 x ptr> [[TMP5]], <8 x i64> [[TMP3]]
-; CHECK-NEXT:    [[TMP7:%.*]] = call <8 x i8> @llvm.masked.gather.v8i8.v8p0(<8 x ptr> align 1 [[TMP6]], <8 x i1> splat (i1 true), <8 x i8> poison)
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[STRIDE]], 1
+; CHECK-NEXT:    [[TMP7:%.*]] = call <8 x i8> @llvm.experimental.vp.strided.load.v8i8.p0.i64(ptr align 1 [[GEP_L0]], i64 [[TMP1]], <8 x i1> splat (i1 true), i32 8)
 ; CHECK-NEXT:    store <8 x i8> [[TMP7]], ptr [[GEP_S0]], align 1
 ; CHECK-NEXT:    ret void
 ;
