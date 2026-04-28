@@ -53,11 +53,12 @@
 // CHECK-NOLIBSYCL-NOT: error:
 // CHECK-NOLIBSYCL-NOT: "-defaultlib:LLVMSYCL
 
-/// Test 10: Explicit /MD doesn't cause duplicate flag
+/// Test 10: Explicit /MD results in correct libraries
 // RUN: %clang_cl -### -fsycl /MD --target=x86_64-pc-windows-msvc %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=CHECK-NO-DUP %s
-// CHECK-NO-DUP: "/MD"
-// CHECK-NO-DUP-NOT: "/MD"{{.*}}"/MD"
+// RUN:   | FileCheck -check-prefix=CHECK-EXPLICIT-MD %s
+// CHECK-EXPLICIT-MD: clang-linker-wrapper"
+// CHECK-EXPLICIT-MD-SAME: "-defaultlib:LLVMSYCL.lib"
+// CHECK-EXPLICIT-MD-SAME: "-defaultlib:msvcrt"
 
 /// Test 11: Library search path is added
 // RUN: %clang_cl -### -fsycl --target=x86_64-pc-windows-msvc %s 2>&1 \
