@@ -1205,12 +1205,10 @@ void SIWholeQuadMode::toExact(MachineBasicBlock &MBB,
                               Register SaveWQM) {
   assert(LiveMaskReg.isVirtual());
 
-  MachineBasicBlock::iterator MBBE = MBB.end();
-  bool IsTerminator = Before == MBBE;
+  bool IsTerminator = Before == MBB.end();
   if (!IsTerminator) {
     auto FirstTerm = MBB.getFirstTerminator();
-    if (FirstTerm != MBBE) {
-      Before = skipDebugInstructionsForward(Before, MBBE);
+    if (FirstTerm != MBB.end()) {
       SlotIndex FirstTermIdx = LIS->getInstructionIndex(*FirstTerm);
       SlotIndex BeforeIdx = LIS->getInstructionIndex(*Before);
       IsTerminator = BeforeIdx > FirstTermIdx;
@@ -1470,7 +1468,7 @@ void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, BlockInfo &BI,
             assert(!SavedWQMReg);
             SavedWQMReg = MRI->createVirtualRegister(BoolRC);
           }
-
+          Before = skipDebugInstructionsForward(Before, MBB.end());
           toExact(MBB, Before, SavedWQMReg);
           State = StateExact;
         } else if (ExactToWQM) {
