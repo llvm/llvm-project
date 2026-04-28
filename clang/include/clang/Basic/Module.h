@@ -113,26 +113,26 @@ public:
 
   /// Creates a file name from the raw kind value.
   static ModuleFileName makeFromRaw(StringRef Name, unsigned RawKind) {
-    ModuleFileName Result;
-    Result.Path = Name;
-    Result.Kind = RawKind;
-    return Result;
+    ModuleFileName File;
+    File.Path = Name;
+    File.Kind = RawKind;
+    return File;
   }
 
   /// Creates a file name for an in-memory module.
   static ModuleFileName makeInMemory(StringRef Name) {
-    ModuleFileName Result;
-    Result.Path = Name;
-    Result.Kind = 0;
-    return Result;
+    ModuleFileName File;
+    File.Path = Name;
+    File.Kind = 0;
+    return File;
   }
 
   /// Creates a file name for an explicit module.
   static ModuleFileName makeExplicit(std::string Name) {
-    ModuleFileName Result;
-    Result.Path = std::move(Name);
-    Result.Kind = 1;
-    return Result;
+    ModuleFileName File;
+    File.Path = std::move(Name);
+    File.Kind = 1;
+    return File;
   }
 
   /// Creates a file name for an explicit module.
