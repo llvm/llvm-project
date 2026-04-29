@@ -635,25 +635,10 @@ createMultiDimAffineOps(mlir::Value arrayRef, mlir::PatternRewriter &rewriter,
           affine::AffineApplyOp::create(rewriter, loc, map, operands);
       adjustedIndices.push_back(adjusted.getResult());
     }
-  } else if (auto sliceOp = acoOp.getShape().getDefiningOp<SliceOp>()) {
-    auto triples = sliceOp.getTriples();
-    for (unsigned i = 0; i < indices.size(); ++i) {
-      AffineIndexBuilder builder(context, outermost);
-      auto expr = builder.build(indices[i]);
-      assert(expr && "analysis guaranteed index is affine");
-      unsigned extraSymBase = builder.syms.size();
-      auto lbSym = mlir::getAffineSymbolExpr(extraSymBase, context);
-      auto strideSym = mlir::getAffineSymbolExpr(extraSymBase + 1, context);
-      auto adjustedExpr = (*expr - lbSym).floorDiv(strideSym);
-      auto map = mlir::AffineMap::get(builder.dims.size(),
-                                      builder.syms.size() + 2, adjustedExpr);
-      auto operands = buildOperands(builder);
-      operands.push_back(triples[i * 3]);
-      operands.push_back(triples[i * 3 + 2]);
-      auto adjusted =
-          affine::AffineApplyOp::create(rewriter, loc, map, operands);
-      adjustedIndices.push_back(adjusted.getResult());
-    }
+  } else {
+    llvm::report_fatal_error(
+        "unsupported fir.array_coor shape kind; "
+        "AffineLoopAnalysis::analyzeReference should have rejected this");
   }
 
   // need reverse because memref is row major order but fir.array is column
