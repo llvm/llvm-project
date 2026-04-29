@@ -863,6 +863,16 @@ def skipIfLinux(func):
     return skipIfPlatform(["linux"])(func)
 
 
+def skipIfWasm(func):
+    """Decorate the item to skip tests that should be skipped on WebAssembly."""
+    return skipIfPlatform(["wasip1", "wasi"])(func)
+
+
+def skipIfNoSignals(func):
+    """Decorate the item to skip tests on platforms without signal support."""
+    return skipIfPlatform(["windows", "wasip1", "wasi"])(func)
+
+
 def skipIfWindows(func=None, windows_version=None):
     """Decorate the item to skip tests that should be skipped on Windows."""
 
@@ -992,6 +1002,15 @@ def skipIfTargetDoesNotSupportThreads():
     return unittest.skipIf(
         no_threads,
         "threads are not supported on %s" % platform,
+    )
+
+
+def skipIfTargetDoesNotSupportSharedLibraries():
+    """Skip tests that require shared library (dylib/so) support."""
+    platform = lldbplatformutil.getPlatform()
+    return unittest.skipIf(
+        platform.startswith("wasi"),
+        "shared libraries are not supported on %s" % platform,
     )
 
 

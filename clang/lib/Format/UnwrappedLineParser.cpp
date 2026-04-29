@@ -2604,11 +2604,12 @@ bool UnwrappedLineParser::parseBracedList(bool IsAngleBracket, bool IsEnum) {
 }
 
 /// Parses a pair of parentheses (and everything between them).
-/// \param AmpAmpTokenType If different than TT_Unknown sets this type for all
-/// double ampersands. This applies for all nested scopes as well.
+/// \param StarAndAmpTokenType If different than TT_Unknown sets this type for
+/// all (double) ampersands and stars. This applies for all nested scopes as
+/// well.
 ///
 /// Returns whether there is a `=` token between the parentheses.
-bool UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType,
+bool UnwrappedLineParser::parseParens(TokenType StarAndAmpTokenType,
                                       bool InMacroCall) {
   assert(FormatTok->is(tok::l_paren) && "'(' expected.");
   auto *LParen = FormatTok;
@@ -2623,7 +2624,7 @@ bool UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType,
   do {
     switch (FormatTok->Tok.getKind()) {
     case tok::l_paren:
-      if (parseParens(AmpAmpTokenType, InMacroCall))
+      if (parseParens(StarAndAmpTokenType, InMacroCall))
         SeenEqual = true;
       if (Style.isJava() && FormatTok->is(tok::l_brace))
         parseChildBlock();
@@ -2741,9 +2742,11 @@ bool UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType,
     case tok::kw_requires:
       parseRequiresExpression();
       break;
+    case tok::star:
+    case tok::amp:
     case tok::ampamp:
-      if (AmpAmpTokenType != TT_Unknown)
-        FormatTok->setFinalizedType(AmpAmpTokenType);
+      if (StarAndAmpTokenType != TT_Unknown)
+        FormatTok->setFinalizedType(StarAndAmpTokenType);
       [[fallthrough]];
     default:
       nextToken();

@@ -3702,7 +3702,10 @@ gentbl_cc_library(
     name = "webassembly_isel_target_gen",
     strip_include_prefix = "lib/Target/WebAssembly",
     tbl_outs = {
-        "lib/Target/WebAssembly/WebAssemblyGenGlobalISel.inc": ["-gen-global-isel"],
+        "lib/Target/WebAssembly/WebAssemblyGenGlobalISel.inc": [
+            "-gen-global-isel",
+            "-gisel-extended-llt",
+        ],
         "lib/Target/WebAssembly/WebAssemblyGenPreLegalizeGICombiner.inc": [
             "-gen-global-isel-combiner",
             "-combiners=WebAssemblyPreLegalizerCombiner",

@@ -1,0 +1,168 @@
+# Test hook add/list/delete/enable/disable commands.
+#
+# RUN: %lldb -b -s %s 2>&1 | FileCheck %s
+
+# Adding hooks assigns incrementing IDs.
+target hook add -L -o "script print('hook1')"
+# CHECK: Hook #1 added.
+target hook add -L -o "script print('hook2')"
+# CHECK: Hook #2 added.
+target hook add -L -o "script print('hook3')"
+# CHECK: Hook #3 added.
+
+# List all hooks.
+target hook list
+# CHECK: (lldb) target hook list
+# CHECK: Hook: 1
+# CHECK:   State: enabled
+# CHECK:   Triggers: load
+# CHECK:   Commands:
+# CHECK:       script print('hook1')
+# CHECK: Hook: 2
+# CHECK:   State: enabled
+# CHECK:   Triggers: load
+# CHECK:   Commands:
+# CHECK:       script print('hook2')
+# CHECK: Hook: 3
+# CHECK:   State: enabled
+# CHECK:   Triggers: load
+# CHECK:   Commands:
+# CHECK:       script print('hook3')
+
+# Disable a hook.
+target hook disable 2
+target hook list
+# CHECK: (lldb) target hook list
+# CHECK: Hook: 1
+# CHECK:   State: enabled
+# CHECK: Hook: 2
+# CHECK:   State: disabled
+# CHECK: Hook: 3
+# CHECK:   State: enabled
+
+# Re-enable the hook.
+target hook enable 2
+target hook list
+# CHECK: (lldb) target hook list
+# CHECK: Hook: 1
+# CHECK:   State: enabled
+# CHECK: Hook: 2
+# CHECK:   State: enabled
+# CHECK: Hook: 3
+# CHECK:   State: enabled
+
+# Delete a hook in the middle.
+target hook delete 2
+target hook list
+# CHECK: (lldb) target hook list
+# CHECK:     Hook: 1
+# CHECK-NOT: Hook: 2
+# CHECK:     Hook: 3
+
+# New hook gets a new ID (not reused).
+target hook add -L -o "script print('hook4')"
+# CHECK: Hook #4 added.
+target hook list
+# CHECK: (lldb) target hook list
+# CHECK:     Hook: 1
+# CHECK-NOT: Hook: 2
+# CHECK:     Hook: 3
+# CHECK:     Hook: 4
+
+# Delete all hooks.
+settings set auto-confirm true
+target hook delete
+target hook list
+# CHECK: (lldb) target hook list
+# CHECK: No hooks.
+
+# Add a hook with --on-load and --on-unload.
+target hook add -L -u -o "script print('load+unload')"
+# CHECK: Hook #5 added.
+target hook list
+# CHECK: (lldb) target hook list
+# CHECK: Hook: 5
+# CHECK:   State: enabled
+# CHECK:   Triggers: load, unload
+# CHECK:   Commands:
+# CHECK:       script print('load+unload')
+
+# Add a hook with multiple one-liner commands.
+target hook add -L -o "script print('first')" -o "script print('second')"
+# CHECK: Hook #6 added.
+target hook list
+# CHECK: Hook: 6
+# CHECK:   State: enabled
+# CHECK:   Triggers: load
+# CHECK:   Commands:
+# CHECK:       script print('first')
+# CHECK:       script print('second')
+
+# Disable all hooks.
+target hook disable
+target hook list
+# CHECK: (lldb) target hook list
+# CHECK: Hook: 5
+# CHECK:   State: disabled
+# CHECK: Hook: 6
+# CHECK:   State: disabled
+
+# Enable all hooks.
+target hook enable
+target hook list
+# CHECK: (lldb) target hook list
+# CHECK: Hook: 5
+# CHECK:   State: enabled
+# CHECK: Hook: 6
+# CHECK:   State: enabled
+
+# Add a hook with --on-stop only.
+target hook delete
+target hook add -S -o "bt"
+# CHECK: Hook #7 added.
+target hook list
+# CHECK: (lldb) target hook list
+# CHECK: Hook: 7
+# CHECK:   State: enabled
+# CHECK:   Triggers: stop
+# CHECK:   Commands:
+# CHECK:       bt
+
+# Add a hook with all triggers.
+target hook add -L -u -S -o "script print('all events')"
+# CHECK: Hook #8 added.
+target hook list
+# CHECK: Hook: 8
+# CHECK:   State: enabled
+# CHECK:   Triggers: load, unload, stop
+
+# Add a hook with --on-stop and inline filter.
+target hook delete
+target hook add -S -s mylib.so -o "bt"
+# CHECK: Hook #9 added.
+target hook list
+# CHECK: (lldb) target hook list
+# CHECK: Hook: 9
+# CHECK:   State: enabled
+# CHECK:   Triggers: stop
+# CHECK:   Commands:
+# CHECK:       bt
+# CHECK:   Specifier:
+# CHECK:     Module: mylib.so
+
+# Per-trigger disable: remove stop from hook #9 using modify.
+target hook modify --disable-trigger stop 9
+target hook list
+# CHECK: (lldb) target hook list
+# CHECK: Hook: 9
+# CHECK:   State: enabled
+# CHECK-NOT: Triggers: stop
+# CHECK:   Commands:
+
+# Per-trigger enable: re-add stop to hook #9 using modify.
+target hook modify --enable-trigger stop 9
+target hook list
+# CHECK: (lldb) target hook list
+# CHECK: Hook: 9
+# CHECK:   State: enabled
+# CHECK:   Triggers: stop

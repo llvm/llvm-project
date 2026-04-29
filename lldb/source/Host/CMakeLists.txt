@@ -17,6 +17,7 @@ macro(add_host_subdirectory group)
 endmacro()
 
 add_host_subdirectory(common
+  common/ConPTYUtils.cpp
   common/DiagnosticsRendering.cpp
   common/FileAction.cpp
   common/FileCache.cpp

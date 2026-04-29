@@ -28,10 +28,9 @@ int Barrier::init(Barrier *b,
   new (&b->entering) CndVar(attr ? attr->pshared : false);
   new (&b->exiting) CndVar(attr ? attr->pshared : false);
 
-  auto mutex_err = Mutex::init(&b->m, false, false, false,
-                               /*pshared=*/attr ? attr->pshared : false);
-  if (mutex_err != MutexError::NONE)
-    return EAGAIN;
+  new (&b->m) Mutex(/*is_priority_inherit=*/false, /*is_recursive=*/false,
+                    /*is_robust=*/false,
+                    /*is_pshared=*/attr ? attr->pshared : false);
 
   return 0;
 }

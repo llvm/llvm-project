@@ -298,14 +298,14 @@ multiclass SiFive7ProcResources<bit dualVALU = false> {
     // instruction at a time and remain busy for the number of cycles associated
     // with that instruction.
     def VCQ       : ProcResource<1>; // Vector Command Queue
+
+    def PipeAB : ProcResGroup<[!cast<ProcResource>(NAME#"PipeA"),
+                               !cast<ProcResource>(NAME#"PipeB")]>;
+
+    if dualVALU then
+    def VA1OrVA2 : ProcResGroup<[!cast<ProcResource>(NAME#"VA1"),
+                                 !cast<ProcResource>(NAME#"VA2")]>;
   }
-
-  def PipeAB : ProcResGroup<[!cast<ProcResource>(NAME#"PipeA"),
-                             !cast<ProcResource>(NAME#"PipeB")]>;
-
-  if dualVALU then
-  def VA1OrVA2 : ProcResGroup<[!cast<ProcResource>(NAME#"VA1"),
-                               !cast<ProcResource>(NAME#"VA2")]>;
 }
 
 multiclass SiFive7WriteResBase<int VLEN,

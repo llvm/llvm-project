@@ -193,7 +193,7 @@ define void @test_non_unit_step_resume_values(ptr %p) #1 {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP0]], 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP0]], 12
@@ -219,7 +219,7 @@ define void @test_non_unit_step_resume_values(ptr %p) #1 {
 ; CHECK-NEXT:    store <4 x double> [[TMP11]], ptr [[TMP7]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 96
-; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br i1 false, label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
@@ -229,7 +229,7 @@ define void @test_non_unit_step_resume_values(ptr %p) #1 {
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX9:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT12:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX9]], 4
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX9]], 2
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr double, ptr [[P]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_LOAD10:%.*]] = load <4 x double>, ptr [[TMP13]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD11:%.*]] = load <4 x double>, ptr [[TMP13]], align 8
@@ -237,7 +237,7 @@ define void @test_non_unit_step_resume_values(ptr %p) #1 {
 ; CHECK-NEXT:    store <4 x double> [[TMP14]], ptr [[TMP13]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT12]] = add nuw i64 [[INDEX9]], 1
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT12]], 99
-; CHECK-NEXT:    br i1 [[TMP15]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP15]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br i1 true, label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
@@ -266,7 +266,7 @@ define void @test_non_unit_step_resume_values(ptr %p) #1 {
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 4
 ; CHECK-NEXT:    [[CNT_NEXT]] = add i64 [[CNT]], -1
 ; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[CNT_NEXT]], 0
-; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;

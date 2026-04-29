@@ -23,6 +23,7 @@ from lldbsuite.test import lldbutil
 # }
 
 
+@skipIfWasm  # no expression evaluation
 class UnicodeLiteralsTestCase(TestBase):
     def test_expr1(self):
         """Test that the expression parser returns proper Unicode strings."""

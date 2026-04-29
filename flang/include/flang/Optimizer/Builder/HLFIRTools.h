@@ -614,6 +614,10 @@ bool designatePreservesContinuity(hlfir::DesignateOp op);
 /// and it can be used on pure FIR representation as well as on HLFIR.
 bool isSimplyContiguous(mlir::Value base, bool checkWhole = true);
 
+/// Return true if \p region belongs to a sub-expression of an hlfir.where
+/// that is subject to the WHERE mask control.
+bool isInsideHlfirWhereMaskedExpression(mlir::Region &region);
+
 } // namespace hlfir
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_HLFIRTOOLS_H

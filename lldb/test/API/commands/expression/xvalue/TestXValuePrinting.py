@@ -4,6 +4,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfWasm  # no expression evaluation
 class ExprXValuePrintingTestCase(TestBase):
     def test(self):
         """Printing an xvalue should work."""

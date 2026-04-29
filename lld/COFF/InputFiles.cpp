@@ -150,15 +150,15 @@ static bool fixupDllMain(COFFLinkerContext &ctx, llvm::object::Archive *file,
   return false;
 }
 
-ArchiveFile::ArchiveFile(COFFLinkerContext &ctx, MemoryBufferRef m)
-    : InputFile(ctx.symtab, ArchiveKind, m) {}
+ArchiveFile::ArchiveFile(COFFLinkerContext &ctx, MemoryBufferRef m,
+                         std::unique_ptr<Archive> &f)
+    : InputFile(ctx.symtab, ArchiveKind, m) {
+  file.swap(f);
+}
 
 void ArchiveFile::parse() {
   COFFLinkerContext &ctx = symtab.ctx;
   SymbolTable *archiveSymtab = &symtab;
-
-  // Parse a MemoryBufferRef as an archive file.
-  file = CHECK(Archive::create(mb), this);
 
   // Try to read symbols from ECSYMBOLS section on ARM64EC.
   if (ctx.symtab.isEC()) {

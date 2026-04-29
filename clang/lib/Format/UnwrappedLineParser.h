@@ -145,7 +145,7 @@ private:
                               bool *HasLabel = nullptr);
   bool tryToParseBracedList();
   bool parseBracedList(bool IsAngleBracket = false, bool IsEnum = false);
-  bool parseParens(TokenType AmpAmpTokenType = TT_Unknown,
+  bool parseParens(TokenType StarAndAmpTokenType = TT_Unknown,
                    bool InMacroCall = false);
   void parseSquare(bool LambdaIntroducer = false);
   void keepAncestorBraces();

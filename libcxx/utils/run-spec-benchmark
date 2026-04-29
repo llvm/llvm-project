@@ -1,0 +1,145 @@
+#!/usr/bin/env python3
+# ===----------------------------------------------------------------------===##
+#
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+#
+# ===----------------------------------------------------------------------===##
+
+import argparse
+import glob
+import pathlib
+import subprocess
+import sys
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        prog="run-spec-benchmark",
+        description="Build and run a SPEC CPU benchmark using a given compiler, then output results in LNT flat format.",
+    )
+    parser.add_argument(
+        "--spec-dir",
+        type=str,
+        required=True,
+        help="Path to the SPEC CPU installation directory.",
+    )
+    parser.add_argument(
+        "--benchmark",
+        type=str,
+        required=True,
+        help="Name of the SPEC benchmark to run (e.g. 520.omnetpp_r).",
+    )
+    parser.add_argument(
+        "--temp-dir",
+        type=str,
+        required=True,
+        help="Temporary directory for build artifacts and results.",
+    )
+    parser.add_argument(
+        "--clean",
+        action="store_true",
+        help="Clean up build artifacts after running. Useful to save disk space when running multiple benchmarks.",
+    )
+    parser.add_argument(
+        "compiler_and_flags",
+        nargs="+",
+        help="The C++ compiler followed by all flags (passed after --).",
+    )
+    args = parser.parse_args()
+
+    spec_dir = pathlib.Path(args.spec_dir)
+    temp_dir = pathlib.Path(args.temp_dir)
+    utils_dir = pathlib.Path(__file__).resolve().parent
+
+    cxx_and_flags = " ".join(args.compiler_and_flags)
+
+    # Generate the SPEC configuration file. We force C++17 since SPEC doesn't
+    # compile with newer standards.
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    spec_config = temp_dir / "spec-config.cfg"
+    spec_config.write_text(
+        f"""\
+default:
+    ignore_errors        = 1
+    iterations           = 1
+    label                = spec-stdlib
+    log_line_width       = 4096
+    makeflags            = --jobs=8
+    mean_anyway          = 1
+    output_format        = csv
+    preenv               = 0
+    reportable           = 0
+    tune                 = base
+    copies               = 1
+    threads              = 1
+    CC                   = cc -O3 -std=c18 -Wno-implicit-function-declaration
+    CXX                  = {cxx_and_flags} -std=c++17 -w # we don't care about warnings in SPEC
+    CC_VERSION_OPTION    = --version
+    CXX_VERSION_OPTION   = --version
+    EXTRA_PORTABILITY    = -DSPEC_NO_CXX17_SPECIAL_MATH_FUNCTIONS # libc++ doesn't implement the special math functions yet
+"""
+    )
+
+    runcpu = str(spec_dir / "bin" / "runcpu")
+    config_flag = f"--config={spec_config}"
+    output_root_flag = f"--output_root={temp_dir}"
+
+    # Build the benchmark.
+    subprocess.check_call([runcpu, config_flag, "--action=build", output_root_flag, args.benchmark])
+
+    # Run the benchmark. Wrap in /usr/bin/time to collect resource usage.
+    time_output = temp_dir / "time.txt"
+    subprocess.check_call(["/usr/bin/time", "-l", "-o", str(time_output),
+                                runcpu, config_flag, "--action=run", "--size=ref", output_root_flag, args.benchmark])
+
+    # Validate results: runcpu doesn't exit with an error code on build/run errors, so we
+    # need to check the CSV output for CE (Compilation Error) or RE (Runtime Error).
+    result_dir = temp_dir / "result"
+    csv_files = sorted(glob.glob(str(result_dir / "*.refrate.csv")))
+    log_files = sorted(glob.glob(str(result_dir / "*.log")))
+
+    if not csv_files:
+        for log_file in log_files:
+            print(pathlib.Path(log_file).read_text(), file=sys.stderr)
+        print("No SPEC CSV result files found -- this indicates a SPEC error.", file=sys.stderr)
+        sys.exit(1)
+
+    # Check for compilation or runtime errors in the results.
+    status_check = subprocess.run([str(utils_dir / "parse-spec-results"), "--extract=Base Status", "--keep-failed"] + csv_files,
+                                   capture_output=True, text=True,)
+    if status_check.returncode != 0:
+        for log_file in log_files:
+            print(pathlib.Path(log_file).read_text(), file=sys.stderr)
+        print("Failed to parse SPEC results.", file=sys.stderr)
+        sys.exit(1)
+
+    for line in status_check.stdout.splitlines():
+        if "CE" in line or "RE" in line:
+            for log_file in log_files:
+                print(pathlib.Path(log_file).read_text(), file=sys.stderr)
+            print(f"SPEC benchmark {args.benchmark} had a compilation or runtime error.", file=sys.stderr)
+            sys.exit(1)
+
+    # Parse results into LNT format and print to stdout.
+    benchmark_name = args.benchmark.replace(".", "_")
+    spec_results = subprocess.run([str(utils_dir / "parse-spec-results"), "--output-format=lnt"] + csv_files,
+                                   capture_output=True, text=True, check=True)
+    sys.stdout.write(spec_results.stdout)
+
+    time_results = subprocess.run([str(utils_dir / "parse-time-output"), str(time_output), f"--benchmark={benchmark_name}",
+                                    "--extract", "instructions", "max_rss", "cycles", "peak_memory"],
+                                    capture_output=True, text=True, check=True)
+    sys.stdout.write(time_results.stdout)
+
+    # Clean up build artifacts since they can be very large.
+    if args.clean:
+        benchspec_dir = temp_dir / "benchspec"
+        if benchspec_dir.exists():
+            import shutil
+            shutil.rmtree(benchspec_dir)
+
+
+if __name__ == "__main__":
+    main()

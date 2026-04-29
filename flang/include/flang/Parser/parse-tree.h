@@ -5082,7 +5082,7 @@ struct OmpClauseList {
 // --- Directives and constructs
 
 struct OmpDirectiveSpecification {
-  ENUM_CLASS(Flag, DeprecatedSyntax, CrossesLabelDo)
+  ENUM_CLASS(Flag, DeprecatedSyntax, CrossesLabelDo, ExplicitBegin)
   using Flags = common::EnumSet<Flag, Flag_enumSize>;
 
   TUPLE_CLASS_BOILERPLATE(OmpDirectiveSpecification);
@@ -5131,6 +5131,11 @@ struct OmpBlockConstruct {
 struct OmpMetadirectiveDirective {
   WRAPPER_CLASS_BOILERPLATE(
       OmpMetadirectiveDirective, OmpDirectiveSpecification);
+};
+
+struct OmpDelimitedMetadirectiveDirective : public OmpBlockConstruct {
+  INHERITED_TUPLE_CLASS_BOILERPLATE(
+      OmpDelimitedMetadirectiveDirective, OmpBlockConstruct);
 };
 
 // Ref: [5.1:89-90], [5.2:216]
@@ -5468,7 +5473,7 @@ struct OpenMPConstruct {
       OpenMPSectionConstruct, OpenMPLoopConstruct, OmpBlockConstruct,
       OpenMPAtomicConstruct, OmpAllocateDirective, OpenMPDispatchConstruct,
       OpenMPUtilityConstruct, OpenMPAllocatorsConstruct, OpenMPAssumeConstruct,
-      OpenMPCriticalConstruct>
+      OpenMPCriticalConstruct, OmpDelimitedMetadirectiveDirective>
       u;
 };
 

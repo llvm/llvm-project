@@ -117,8 +117,10 @@ struct LLVM_EXTERNAL_VISIBILITY SIProgramInfo {
                             MCContext &Ctx) const;
 
   /// Compute the value of the ComputePGMRsrc2 register.
-  const MCExpr *getComputePGMRSrc2(MCContext &Ctx) const;
-  const MCExpr *getPGMRSrc2(CallingConv::ID CC, MCContext &Ctx) const;
+  const MCExpr *getComputePGMRSrc2(const GCNSubtarget &ST,
+                                   MCContext &Ctx) const;
+  const MCExpr *getPGMRSrc2(CallingConv::ID CC, const GCNSubtarget &ST,
+                            MCContext &Ctx) const;
 };
 
 } // namespace llvm

@@ -1139,7 +1139,7 @@ MachineMemOperand::MachineMemOperand(MachinePointerInfo ptrinfo, Flags F,
                                      AtomicOrdering FailureOrdering)
     : MachineMemOperand(
           ptrinfo, F,
-          !TS.hasValue() ? LLT()
+          !TS.isPrecise() ? LLT()
           : TS.isScalable()
               ? LLT::scalable_vector(1, 8 * TS.getValue().getKnownMinValue())
               : LLT::scalar(8 * TS.getValue().getKnownMinValue()),

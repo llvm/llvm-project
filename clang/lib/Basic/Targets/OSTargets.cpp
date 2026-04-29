@@ -294,5 +294,16 @@ void addWindowsDefines(const llvm::Triple &Triple, const LangOptions &Opts,
     addVisualCDefines(Opts, Builder);
 }
 
+void getFuchsiaDefines(MacroBuilder &Builder, const LangOptions &Opts,
+                       const llvm::Triple &Triple) {
+  Builder.defineMacro("__Fuchsia__");
+  if (Opts.POSIXThreads)
+    Builder.defineMacro("_REENTRANT");
+  // Required by the libc++ locale support.
+  if (Opts.CPlusPlus)
+    Builder.defineMacro("_GNU_SOURCE");
+  Builder.defineMacro("__Fuchsia_API_level__", Twine(Opts.FuchsiaAPILevel));
+}
+
 } // namespace targets
 } // namespace clang

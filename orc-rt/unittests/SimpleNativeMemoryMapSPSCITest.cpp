@@ -113,7 +113,6 @@ read_value_sps_allocaction(const char *ArgData, size_t ArgSize) {
 class SimpleNativeMemoryMapSPSCITest : public ::testing::Test {
 protected:
   void SetUp() override {
-    cantFail(sps_ci::addSimpleNativeMemoryMap(CI));
     S = std::make_unique<Session>(mockExecutorProcessInfo(),
                                   std::make_unique<NoDispatcher>(), noErrors);
     SNMM = cantFail(SimpleNativeMemoryMap::Create(*S, CI));

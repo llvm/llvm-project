@@ -88,10 +88,8 @@ void ompd_init() {
   int ret = dladdr((void *)ompd_init, &dl_info);
   if (!ret) {
     fprintf(stderr, "%s\n", dlerror());
-  }
-  int lib_path_length;
-  if (strrchr(dl_info.dli_fname, '/')) {
-    lib_path_length = strrchr(dl_info.dli_fname, '/') - dl_info.dli_fname;
+  } else if (strrchr(dl_info.dli_fname, '/')) {
+    int lib_path_length = strrchr(dl_info.dli_fname, '/') - dl_info.dli_fname;
     libname =
         (char *)malloc(lib_path_length + 12 /*for '/libompd.so' and '\0'*/);
     strncpy(libname, dl_info.dli_fname, lib_path_length);

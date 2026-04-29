@@ -52,11 +52,11 @@ static uint32_t gpu_irregular_simd_reduce(void *reduce_data,
   __kmpc_impl_lanemask_t lanemask_gt = mapping::lanemaskGT();
   do {
     Liveness = mapping::activemask();
-    remote_id = utils::ffs(Liveness & lanemask_gt);
+    remote_id = utils::ctz(Liveness & lanemask_gt);
     size = utils::popc(Liveness);
     logical_lane_id /= 2;
     shflFct(reduce_data, /*LaneId =*/logical_lane_id,
-            /*Offset=*/remote_id - 1 - physical_lane_id, /*AlgoVersion=*/2);
+            /*Offset=*/remote_id - physical_lane_id, /*AlgoVersion=*/2);
   } while (logical_lane_id % 2 == 0 && size > 1);
   return (logical_lane_id == 0);
 }

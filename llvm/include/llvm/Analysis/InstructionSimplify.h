@@ -195,6 +195,7 @@ LLVM_ABI Value *simplifyCastInst(unsigned CastOpc, Value *Op, Type *Ty,
                                  const SimplifyQuery &Q);
 
 /// Given operands for a BinaryIntrinsic, fold the result or return null.
+/// The \p `Call` argument is optional and may be null.
 LLVM_ABI Value *simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
                                         Value *Op0, Value *Op1,
                                         const SimplifyQuery &Q,

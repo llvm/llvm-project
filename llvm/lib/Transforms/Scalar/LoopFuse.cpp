@@ -1818,6 +1818,8 @@ private:
         DominatorTree::Insert, FC0GuardBlock, FC1NonLoopBlock));
 
     if (FC0.Peeled) {
+      TreeUpdates.emplace_back(DominatorTree::UpdateType(
+          DominatorTree::Delete, FC0.ExitBlock, FC0ExitBlockSuccessor));
       // Remove the Block after the ExitBlock of FC0
       TreeUpdates.emplace_back(DominatorTree::UpdateType(
           DominatorTree::Delete, FC0ExitBlockSuccessor, FC1GuardBlock));

@@ -72,6 +72,7 @@ class TargetDependentsTestCase(TestBase):
         self.runCmd("target create  -d " + exe, CURRENT_EXECUTABLE_SET)
         self.has_exactly_one_image(True)
 
+    @skipIfTargetDoesNotSupportSharedLibraries()
     @expectedFailureAndroid  # android will return mutiple images
     def test_dependents_implicit_default_lib(self):
         dylibName = self.platformContext.getFullLibName("load_a")
@@ -79,18 +80,21 @@ class TargetDependentsTestCase(TestBase):
         self.runCmd("target create " + lib, CURRENT_EXECUTABLE_SET)
         self.has_exactly_one_image(True)
 
+    @skipIfTargetDoesNotSupportSharedLibraries()
     def test_dependents_explicit_default_lib(self):
         dylibName = self.platformContext.getFullLibName("load_a")
         lib = self.getBuildArtifact(dylibName)
         self.runCmd("target create -ddefault " + lib, CURRENT_EXECUTABLE_SET)
         self.has_exactly_one_image(True)
 
+    @skipIfTargetDoesNotSupportSharedLibraries()
     def test_dependents_explicit_true_lib(self):
         dylibName = self.platformContext.getFullLibName("load_a")
         lib = self.getBuildArtifact(dylibName)
         self.runCmd("target create -dtrue " + lib, CURRENT_EXECUTABLE_SET)
         self.has_exactly_one_image(True)
 
+    @skipIfTargetDoesNotSupportSharedLibraries()
     @expectedFailureAll(
         oslist=["freebsd", "linux", "netbsd"],
         bugnumber="llvm.org/pr48372",
@@ -102,6 +106,7 @@ class TargetDependentsTestCase(TestBase):
         self.runCmd("target create -dfalse " + lib, CURRENT_EXECUTABLE_SET)
         self.has_exactly_one_image(False)
 
+    @skipIfTargetDoesNotSupportSharedLibraries()
     def test_dependents_implicit_false_lib(self):
         dylibName = self.platformContext.getFullLibName("load_a")
         lib = self.getBuildArtifact(dylibName)

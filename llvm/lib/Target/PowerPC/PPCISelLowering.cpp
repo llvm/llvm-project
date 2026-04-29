@@ -15861,7 +15861,8 @@ SDValue PPCTargetLowering::combineSignExtendSetCC(SDNode *N,
   if (Subtarget.isISA3_1())
     return SDValue();
 
-  if (N->getValueType(0) != MVT::i32 && N->getValueType(0) != MVT::i64)
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::i32 && VT != MVT::i64)
     return SDValue();
 
   SDValue N0 = N->getOperand(0);
@@ -15878,20 +15879,20 @@ SDValue PPCTargetLowering::combineSignExtendSetCC(SDNode *N,
 
   SDLoc dl(N);
   SelectionDAG &DAG = DCI.DAG;
-  EVT VT = N->getValueType(0);
   SDValue X = isNullConstant(LHS) ? RHS : LHS;
   EVT XVT = X.getValueType(); // The type of x in the setcc x, 0, eq.
+
+  if ((XVT == MVT::i64 || VT == MVT::i64) && !Subtarget.isPPC64())
+    return SDValue();
 
   // On PPC64, i32 carry operations use the full 64-bit XER register,
   // so we must use i64 operations to avoid incorrect results.
   // Use i64 operations and truncate the result if needed.
-  EVT OpVT = VT;
-  if (Subtarget.isPPC64() && VT == MVT::i32)
-    OpVT = MVT::i64;
+  if (XVT != MVT::i64 && Subtarget.isPPC64())
+    // Zero-extend if input type is not 64bits.
+    X = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i64, X);
 
-  // Zero-extend if input type differs from operation type.
-  if (XVT != OpVT)
-    X = DAG.getNode(ISD::ZERO_EXTEND, dl, OpVT, X);
+  EVT OpVT = Subtarget.isPPC64() ? MVT::i64 : MVT::i32;
 
   // Generate: SUBFE(ADDC(X, -1)).
   SDValue MinusOne = DAG.getAllOnesConstant(dl, OpVT);
@@ -15902,7 +15903,7 @@ SDValue PPCTargetLowering::combineSignExtendSetCC(SDNode *N,
                              Addc, Addc, Carry);
 
   // Truncate back to i32 if we used i64 operations.
-  if (OpVT != VT)
+  if (OpVT == MVT::i64 && VT == MVT::i32)
     return DAG.getNode(ISD::TRUNCATE, dl, VT, Sube);
 
   return Sube;

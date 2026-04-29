@@ -344,15 +344,6 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
       SrcToUnwindDest[getMBB(Src)] = getMBB(Dest);
     }
     EHInfo.SrcToUnwindDest = std::move(SrcToUnwindDest);
-    DenseMap<BBOrMBB, SmallPtrSet<BBOrMBB, 4>> UnwindDestToSrcs;
-    for (auto &KV : EHInfo.UnwindDestToSrcs) {
-      const auto *Dest = cast<const BasicBlock *>(KV.first);
-      MachineBasicBlock *DestMBB = getMBB(Dest);
-      auto &Srcs = UnwindDestToSrcs[DestMBB];
-      for (const auto P : KV.second)
-        Srcs.insert(getMBB(cast<const BasicBlock *>(P)));
-    }
-    EHInfo.UnwindDestToSrcs = std::move(UnwindDestToSrcs);
   }
 }
 

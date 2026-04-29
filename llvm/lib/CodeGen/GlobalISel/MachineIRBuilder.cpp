@@ -1437,9 +1437,9 @@ MachineIRBuilder::buildInstr(unsigned Opc, ArrayRef<DstOp> DstOps,
   case TargetOpcode::G_INSERT_SUBVECTOR: {
     assert(DstOps.size() == 1 && "Invalid Dst");
     assert(SrcOps.size() == 3 && "Invalid Srcs");
-    LLT DstTy = DstOps[0].getLLTTy(*getMRI());
-    LLT BigVecTy = SrcOps[0].getLLTTy(*getMRI());
-    LLT SubVecTy = SrcOps[1].getLLTTy(*getMRI());
+    [[maybe_unused]] LLT DstTy = DstOps[0].getLLTTy(*getMRI());
+    [[maybe_unused]] LLT BigVecTy = SrcOps[0].getLLTTy(*getMRI());
+    [[maybe_unused]] LLT SubVecTy = SrcOps[1].getLLTTy(*getMRI());
     assert(DstTy == BigVecTy &&
            "Dest and insert subvector source types must match!");
     assert(DstTy.isVector() && SubVecTy.isVector() &&
@@ -1468,8 +1468,8 @@ MachineIRBuilder::buildInstr(unsigned Opc, ArrayRef<DstOp> DstOps,
   case TargetOpcode::G_EXTRACT_SUBVECTOR: {
     assert(DstOps.size() == 1 && "Invalid Dst");
     assert(SrcOps.size() == 2 && "Invalid Srcs");
-    LLT DstTy = DstOps[0].getLLTTy(*getMRI());
-    LLT SrcVecTy = SrcOps[0].getLLTTy(*getMRI());
+    [[maybe_unused]] LLT DstTy = DstOps[0].getLLTTy(*getMRI());
+    [[maybe_unused]] LLT SrcVecTy = SrcOps[0].getLLTTy(*getMRI());
     assert(DstTy.isVector() && SrcVecTy.isVector() &&
            "Extract subvector VTs must be vectors!");
     assert(DstTy.getElementType() == SrcVecTy.getElementType() &&

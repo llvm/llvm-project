@@ -1081,7 +1081,7 @@ define void @replicated_load_wide_store_derived_iv_zext_and(ptr noalias %src, pt
 ; I64-NEXT:    [[TMP13:%.*]] = or i1 [[TMP12]], [[TMP11]]
 ; I64-NEXT:    br i1 [[TMP13]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; I64:       [[VECTOR_PH]]:
-; I64-NEXT:    [[TMP14:%.*]] = mul i32 128, [[STEP]]
+; I64-NEXT:    [[TMP14:%.*]] = shl i32 [[STEP]], 7
 ; I64-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; I64:       [[VECTOR_BODY]]:
 ; I64-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -1203,7 +1203,7 @@ define void @replicated_load_wide_store_derived_iv_zext_and2(ptr noalias %dst, p
 ; I64-NEXT:    [[TMP5:%.*]] = or i1 [[TMP3]], [[IDENT_CHECK]]
 ; I64-NEXT:    br i1 [[TMP5]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; I64:       [[VECTOR_PH]]:
-; I64-NEXT:    [[TMP6:%.*]] = mul i32 128, [[STEP]]
+; I64-NEXT:    [[TMP6:%.*]] = shl i32 [[STEP]], 7
 ; I64-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; I64:       [[VECTOR_BODY]]:
 ; I64-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]

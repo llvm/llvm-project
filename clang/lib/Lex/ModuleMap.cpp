@@ -2006,6 +2006,13 @@ void ModuleMapLoader::handleExternModuleDecl(
   if (llvm::sys::path::is_relative(FileNameRef)) {
     ModuleMapFileName += Directory.getName();
     llvm::sys::path::append(ModuleMapFileName, EMD.Path);
+    // As extern module declarations are parsed recursively, relative paths
+    // to those modules can become arbitrarily long.
+    // If the OS name length limit is exceeded when trying to get the file ref
+    // we can silently fail to find an extern module that exists.
+    // To mitigate this, collapse relative paths containing '../' for when
+    // constructing the name of each module file referenced as an extern module.
+    llvm::sys::path::remove_dots(ModuleMapFileName, /*remove_dot_dot=*/true);
     FileNameRef = ModuleMapFileName;
   }
   if (auto File = SourceMgr.getFileManager().getOptionalFileRef(FileNameRef))

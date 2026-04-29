@@ -6113,7 +6113,7 @@ void ProcessGDBRemote::DidForkSwitchSoftwareBreakpoints(
   lldb::addr_t entry_addr = LLDB_INVALID_ADDRESS;
   if (!enable && is_expression_fork) {
     if (auto entry = GetTarget().GetEntryPointAddress())
-      entry_addr = entry->GetLoadAddress(&GetTarget());
+      entry_addr = entry->GetOpcodeLoadAddress(&GetTarget());
   }
 
   GetBreakpointSiteList().ForEach([this, enable, entry_addr,

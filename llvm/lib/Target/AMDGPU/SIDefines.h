@@ -1211,6 +1211,10 @@ enum {
 #define   G_00B84C_EXCP_EN(x)                                         (((x) >> 24) & 0x7F)
 #define   C_00B84C_EXCP_EN                                            0x80FFFFFF
 
+#define   S_00B84C_USER_SGPR_GFX1250(x)                               (((x) & 0x3F) << 1)
+#define   G_00B84C_USER_SGPR_GFX1250(x)                               (((x) >> 1) & 0x3F)
+#define   C_00B84C_USER_SGPR_GFX1250                                  0xFFFFFF81
+
 #define R_0286CC_SPI_PS_INPUT_ENA                                       0x0286CC
 #define R_0286D0_SPI_PS_INPUT_ADDR                                      0x0286D0
 

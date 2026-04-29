@@ -77,7 +77,7 @@ body:             |
   ; CHECK-NEXT:   $vgpr1_vgpr2 = V_LSHL_B64_e64 $vgpr0_vgpr1, 3, implicit $exec
   ; CHECK-NEXT:   $sgpr7 = S_MOV_B32 61440
   ; CHECK-NEXT:   $sgpr6 = S_MOV_B32 0
-  ; CHECK-NEXT:   S_WAITCNT 127
+  ; CHECK-NEXT:   S_WAITCNT .Lgkmcnt_0
   ; CHECK-NEXT:   $vgpr1_vgpr2 = BUFFER_LOAD_DWORDX2_ADDR64 killed $vgpr1_vgpr2, $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 1, 0, implicit $exec :: (volatile load (s64) from %ir.tid.gep, addrspace 1)
   ; CHECK-NEXT:   S_WAITCNT_soft 3952
   ; CHECK-NEXT:   $vgpr0 = V_XOR_B32_e32 1, killed $vgpr0, implicit $exec
@@ -94,9 +94,9 @@ body:             |
   ; CHECK-NEXT:   dead $vgpr0 = V_MOV_B32_e32 -1, implicit $exec
   ; CHECK-NEXT:   dead $vgpr0 = V_MOV_B32_e32 61440, implicit $exec
   ; CHECK-NEXT:   $sgpr4_sgpr5 = S_MOV_B64 0
-  ; CHECK-NEXT:   S_WAITCNT 127
+  ; CHECK-NEXT:   S_WAITCNT .Lgkmcnt_0
   ; CHECK-NEXT:   $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
-  ; CHECK-NEXT:   S_WAITCNT 3952
+  ; CHECK-NEXT:   S_WAITCNT .Vmcnt_0
   ; CHECK-NEXT:   S_WAITCNT_soft 3952
   ; CHECK-NEXT:   BUFFER_ATOMIC_SMAX_ADDR64 killed $vgpr0, killed $vgpr1_vgpr2, killed $sgpr4_sgpr5_sgpr6_sgpr7, 0, 400, 0, implicit $exec :: (volatile load syncscope("one-as") seq_cst (s32) from %ir.gep, addrspace 1)
   ; CHECK-NEXT:   S_WAITCNT_soft 3952

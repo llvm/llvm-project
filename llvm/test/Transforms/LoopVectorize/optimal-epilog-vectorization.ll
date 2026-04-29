@@ -787,7 +787,7 @@ define void @multiple_ivs_wide(ptr %dst) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <8 x i32> [ <i32 -64, i32 -62, i32 -60, i32 -58, i32 -56, i32 -54, i32 -52, i32 -50>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = mul i32 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i32 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP0]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[TMP0]], 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[TMP0]], 6
@@ -838,7 +838,7 @@ define void @multiple_ivs_wide(ptr %dst) {
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX1:%.*]] = phi i32 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT4:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND2:%.*]] = phi <4 x i32> [ [[INDUCTION]], %[[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT3:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i32 [[INDEX1]], 2
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i32 [[INDEX1]], 1
 ; CHECK-NEXT:    [[TMP16:%.*]] = add i32 [[OFFSET_IDX]], 2
 ; CHECK-NEXT:    [[TMP17:%.*]] = add i32 [[OFFSET_IDX]], 4
 ; CHECK-NEXT:    [[TMP18:%.*]] = add i32 [[OFFSET_IDX]], 6

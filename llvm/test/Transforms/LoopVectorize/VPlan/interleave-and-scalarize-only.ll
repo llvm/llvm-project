@@ -136,9 +136,8 @@ define void @test_scalarize_with_branch_cond(ptr %src, ptr %dst) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %pred.store.continue4 ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[INDEX]] to i1
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i1 false, [[TMP0]]
-; CHECK-NEXT:    [[INDUCTION3:%.*]] = add i1 [[OFFSET_IDX]], true
-; CHECK-NEXT:    br i1 [[OFFSET_IDX]], label %pred.store.if, label %pred.store.continue
+; CHECK-NEXT:    [[INDUCTION3:%.*]] = add i1 [[TMP0]], true
+; CHECK-NEXT:    br i1 [[TMP0]], label %pred.store.if, label %pred.store.continue
 ; CHECK:       pred.store.if:
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr %src, i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP3]], align 4
@@ -388,7 +387,7 @@ define void @pr179671(ptr align 8 dereferenceable(120) %p, ptr %a, i32 %b) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = mul i32 [[DOTCAST1]], 3
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i32 %b, [[TMP10]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = add i32 [[OFFSET_IDX]], 3
-; CHECK-NEXT:    [[OFFSET_IDX2:%.*]] = mul i64 [[INDEX]], 128
+; CHECK-NEXT:    [[OFFSET_IDX2:%.*]] = shl i64 [[INDEX]], 7
 ; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[OFFSET_IDX2]], 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[OFFSET_IDX2]], 128
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr null, i64 [[TMP15]]

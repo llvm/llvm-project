@@ -1506,9 +1506,64 @@ unreachable:                                      ; preds = %rethrow, %entry
   unreachable
 }
 
+; A regression test for the case where fixCatchUnwindMismatches generates a
+; single trampoline BB targeted by multiple try_tables. This should not crash.
+define i32 @shared_trampoline(ptr %arg, i1 %arg1) personality ptr @__gxx_wasm_personality_v0 {
+bb:
+  br i1 %arg1, label %bb2, label %bb10
+
+bb2:                                              ; preds = %bb
+  invoke void @f1(ptr null, ptr null)
+          to label %bb3 unwind label %bb8
+
+bb3:                                              ; preds = %bb2
+  %i = invoke ptr @f2(ptr null, ptr null)
+          to label %bb4 unwind label %bb6
+
+bb4:                                              ; preds = %bb3
+  %i5 = invoke ptr @f3(ptr null, ptr null)
+          to label %common.ret unwind label %bb8
+
+common.ret:                                       ; preds = %bb21, %bb18, %bb13, %bb6, %bb4
+  %common.ret.op = phi i32 [ 0, %bb18 ], [ 0, %bb6 ], [ 0, %bb13 ], [ 0, %bb21 ], [ 0, %bb4 ]
+  ret i32 %common.ret.op
+
+bb6:                                              ; preds = %bb3
+  %i7 = cleanuppad within none []
+  br label %common.ret
+
+bb8:                                              ; preds = %bb4, %bb2
+  %i9 = cleanuppad within none []
+  cleanupret from %i9 unwind to caller
+
+bb10:                                             ; preds = %bb
+  invoke void @f4(ptr null)
+          to label %bb21 unwind label %bb11
+
+bb11:                                             ; preds = %bb10
+  %i12 = catchswitch within none [label %bb13] unwind to caller
+
+bb13:                                             ; preds = %bb11
+  %i14 = catchpad within %i12 [ptr null]
+  %i15 = tail call ptr @llvm.wasm.get.exception(token %i14)
+  br label %common.ret
+
+bb16:                                             ; preds = %bb21
+  %i17 = catchswitch within none [label %bb18] unwind to caller
+
+bb18:                                             ; preds = %bb16
+  %i19 = catchpad within %i17 [ptr null]
+  %i20 = tail call ptr @llvm.wasm.get.exception(token %i19)
+  br label %common.ret
+
+bb21:                                             ; preds = %bb10
+  %i22 = invoke i32 @f5(ptr null)
+          to label %common.ret unwind label %bb16
+}
+
 ; Check if the unwind destination mismatch stats are correct
 ; NOSORT: 25 wasm-cfg-stackify    - Number of call unwind mismatches found
-; NOSORT:  4 wasm-cfg-stackify    - Number of catch unwind mismatches found
+; NOSORT:  5 wasm-cfg-stackify    - Number of catch unwind mismatches found
 
 declare void @foo()
 declare void @bar()
@@ -1516,6 +1571,11 @@ declare i32 @baz()
 declare i32 @qux(i32)
 declare void @quux(i32)
 declare void @fun(i32)
+declare void @f1(ptr, ptr)
+declare ptr @f2(ptr, ptr)
+declare ptr @f3(ptr, ptr)
+declare void @f4(ptr)
+declare i32 @f5(ptr)
 ; Function Attrs: nounwind
 declare void @nothrow(i32) #0
 ; Function Attrs: nounwind

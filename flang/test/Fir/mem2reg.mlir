@@ -215,3 +215,21 @@ func.func @loop_conditional_update(%arg0: i32, %cdt: i1) -> i32 {
   %result = fir.load %declare : !fir.ref<i32>
   return %result : i32
 }
+
+// -----
+
+// Make sure we do not generate fir.declare_value for a replaced value
+// fir.declare with dummy_scope. This can result in the declare_value being
+// inserted before the dummy_scope it uses as would be the case here.
+
+// CHECK-LABEL: func.func @dummy_scope(
+// CHECK-NOT: fir.declare_value
+func.func @dummy_scope(%arg : i32) {
+  %alloca = fir.alloca i32 {adapt.valuebyref}
+  fir.store %arg to %alloca : !fir.ref<i32>
+  %scope = fir.dummy_scope : !fir.dscope
+  %declare = fir.declare %alloca dummy_scope %scope arg 1 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "foo"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %result = fir.load %declare : !fir.ref<i32>
+  fir.call @use(%result) : (i32) -> ()
+  return
+}

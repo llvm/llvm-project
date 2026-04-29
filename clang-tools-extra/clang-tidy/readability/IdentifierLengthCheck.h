@@ -32,19 +32,19 @@ private:
   const unsigned MinimumExceptionNameLength;
   const unsigned MinimumParameterNameLength;
 
-  std::string IgnoredVariableNamesInput;
+  StringRef IgnoredVariableNamesInput;
   llvm::Regex IgnoredVariableNames;
 
-  std::string IgnoredBindingNamesInput;
+  StringRef IgnoredBindingNamesInput;
   llvm::Regex IgnoredBindingNames;
 
-  std::string IgnoredLoopCounterNamesInput;
+  StringRef IgnoredLoopCounterNamesInput;
   llvm::Regex IgnoredLoopCounterNames;
 
-  std::string IgnoredExceptionVariableNamesInput;
+  StringRef IgnoredExceptionVariableNamesInput;
   llvm::Regex IgnoredExceptionVariableNames;
 
-  std::string IgnoredParameterNamesInput;
+  StringRef IgnoredParameterNamesInput;
   llvm::Regex IgnoredParameterNames;
 
   const unsigned LineCountThreshold;

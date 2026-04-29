@@ -272,6 +272,7 @@ static void emitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
     OS << "#include \"llvm/ADT/BitmaskEnum.h\"\n";
 
   OS << "#include \"llvm/ADT/Sequence.h\"\n";
+  OS << "#include \"llvm/ADT/STLExtras.h\"\n";
   OS << "#include \"llvm/ADT/StringRef.h\"\n";
   OS << "#include \"llvm/Frontend/Directive/Spelling.h\"\n";
   OS << "#include \"llvm/Support/Compiler.h\"\n";
@@ -849,7 +850,11 @@ static void generateGetDirectiveAssociation(const DirectiveLanguage &DirLang,
     }
   }
   OS << "  } // switch (Dir)\n";
-  OS << "  llvm_unreachable(\"Unexpected directive\");\n";
+  OS << "  assert(llvm::to_underlying(Dir) >= "
+        "llvm::to_underlying(Directive::First_) &&\n";
+  OS << "         llvm::to_underlying(Dir) <= "
+        "llvm::to_underlying(Directive::Last_) &&\n";
+  OS << "         \"Unexpected directive\");\n";
   OS << "}\n";
 }
 
@@ -867,7 +872,11 @@ static void generateGetDirectiveCategory(const DirectiveLanguage &DirLang,
        << ";\n";
   }
   OS << "  } // switch (Dir)\n";
-  OS << "  llvm_unreachable(\"Unexpected directive\");\n";
+  OS << "  assert(llvm::to_underlying(Dir) >= "
+        "llvm::to_underlying(Directive::First_) &&\n";
+  OS << "         llvm::to_underlying(Dir) <= "
+        "llvm::to_underlying(Directive::Last_) &&\n";
+  OS << "         \"Unexpected directive\");\n";
   OS << "}\n";
 }
 
@@ -892,7 +901,11 @@ static void generateGetDirectiveLanguages(const DirectiveLanguage &DirLang,
     OS << ";\n";
   }
   OS << "  } // switch(D)\n";
-  OS << "  llvm_unreachable(\"Unexpected directive\");\n";
+  OS << "  assert(llvm::to_underlying(D) >= "
+        "llvm::to_underlying(Directive::First_) &&\n";
+  OS << "         llvm::to_underlying(D) <= "
+        "llvm::to_underlying(Directive::Last_) &&\n";
+  OS << "         \"Unexpected directive\");\n";
   OS << "}\n";
 }
 

@@ -23,22 +23,22 @@ public:
   ~CommandObjectMultiwordBreakpoint() override;
 
   static void VerifyBreakpointOrLocationIDs(
-      Args &args, Target &target, CommandReturnObject &result,
+      Args &args, ExecutionContext &exe_ctx, CommandReturnObject &result,
       BreakpointIDList *valid_ids,
       BreakpointName::Permissions ::PermissionKinds purpose) {
-    VerifyIDs(args, target, true, result, valid_ids, purpose);
+    VerifyIDs(args, exe_ctx, true, result, valid_ids, purpose);
   }
 
   static void
-  VerifyBreakpointIDs(Args &args, Target &target, CommandReturnObject &result,
-                      BreakpointIDList *valid_ids,
+  VerifyBreakpointIDs(Args &args, ExecutionContext &exe_ctx,
+                      CommandReturnObject &result, BreakpointIDList *valid_ids,
                       BreakpointName::Permissions::PermissionKinds purpose) {
-    VerifyIDs(args, target, false, result, valid_ids, purpose);
+    VerifyIDs(args, exe_ctx, false, result, valid_ids, purpose);
   }
 
 private:
-  static void VerifyIDs(Args &args, Target &target, bool allow_locations,
-                        CommandReturnObject &result,
+  static void VerifyIDs(Args &args, ExecutionContext &exe_ctx,
+                        bool allow_locations, CommandReturnObject &result,
                         BreakpointIDList *valid_ids,
                         BreakpointName::Permissions::PermissionKinds purpose);
 };

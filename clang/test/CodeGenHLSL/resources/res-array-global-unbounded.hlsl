@@ -31,7 +31,7 @@ void main(uint GI : SV_GroupIndex) {
   // CHECK: @hlsl::RWBuffer<float>::__createFromBinding(unsigned int, unsigned int, int, unsigned int, char const*)
   // CHECK-SAME: (ptr {{.*}} sret(%"class.hlsl::RWBuffer.0") align {{(4|8)}} %[[Tmp0]],
   // CHECK-SAME: i32 noundef 10, i32 noundef 1, i32 noundef 0, i32 noundef 100, ptr noundef @A.str)
-  // CHECK-NEXT: %[[BufPtr:.*]] = call {{.*}} ptr{{.*}} @hlsl::RWBuffer<float>::operator[](unsigned int)(ptr {{.*}} %[[Tmp0]], i32 noundef 0)
+  // CHECK-NEXT: %[[BufPtr:.*]] = call {{.*}} ptr{{.*}} @hlsl::RWBuffer<float>::operator[](unsigned int) const(ptr {{.*}} %[[Tmp0]], i32 noundef 0)
   // CHECK-NEXT: %[[Value1:.*]] = load float, ptr{{.*}} %[[BufPtr]], align 4
   // CHECK-NEXT: store float %[[Value1]], ptr %a, align 4
   float a = A[100][0];

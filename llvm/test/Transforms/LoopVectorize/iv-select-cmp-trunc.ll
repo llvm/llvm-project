@@ -619,8 +619,7 @@ define i32 @select_icmp_truncated_unsigned_iv_range(ptr %a) {
 ; CHECK-VF1IC4-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 1
 ; CHECK-VF1IC4-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 2
 ; CHECK-VF1IC4-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], 3
-; CHECK-VF1IC4-NEXT:    [[OFFSET_IDX4:%.*]] = add i64 2147483646, [[INDEX]]
-; CHECK-VF1IC4-NEXT:    [[TMP3:%.*]] = trunc i64 [[OFFSET_IDX4]] to i32
+; CHECK-VF1IC4-NEXT:    [[TMP3:%.*]] = trunc i64 [[OFFSET_IDX]] to i32
 ; CHECK-VF1IC4-NEXT:    [[TMP4:%.*]] = add i32 [[TMP3]], 1
 ; CHECK-VF1IC4-NEXT:    [[TMP5:%.*]] = add i32 [[TMP3]], 2
 ; CHECK-VF1IC4-NEXT:    [[TMP6:%.*]] = add i32 [[TMP3]], 3
@@ -1322,8 +1321,7 @@ define i32 @not_vectorized_select_icmp_truncated_iv_out_of_bound(ptr %a) {
 ; CHECK-VF1IC4-NEXT:    [[TMP4:%.*]] = add i64 [[IV]], 1
 ; CHECK-VF1IC4-NEXT:    [[TMP5:%.*]] = add i64 [[IV]], 2
 ; CHECK-VF1IC4-NEXT:    [[TMP6:%.*]] = add i64 [[IV]], 3
-; CHECK-VF1IC4-NEXT:    [[OFFSET_IDX4:%.*]] = add i64 4294967294, [[INDEX]]
-; CHECK-VF1IC4-NEXT:    [[TMP7:%.*]] = trunc i64 [[OFFSET_IDX4]] to i32
+; CHECK-VF1IC4-NEXT:    [[TMP7:%.*]] = trunc i64 [[IV]] to i32
 ; CHECK-VF1IC4-NEXT:    [[TMP8:%.*]] = add i32 [[TMP7]], 0
 ; CHECK-VF1IC4-NEXT:    [[TMP9:%.*]] = add i32 [[TMP7]], 1
 ; CHECK-VF1IC4-NEXT:    [[TMP10:%.*]] = add i32 [[TMP7]], 2

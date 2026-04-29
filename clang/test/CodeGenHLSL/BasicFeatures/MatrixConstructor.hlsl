@@ -24,12 +24,12 @@ RWStructuredBuffer<float> In;
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) <6 x float> @_Z5case2v(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[CALL:%.*]] = call noundef nonnull align 4 dereferenceable(4) ptr @_ZN4hlsl18RWStructuredBufferIfEixEj(ptr noundef nonnull align 4 dereferenceable(8) @_ZL2In, i32 noundef 0) #[[ATTR4:[0-9]+]]
-// CHECK-NEXT:    [[CALL1:%.*]] = call noundef nonnull align 4 dereferenceable(4) ptr @_ZN4hlsl18RWStructuredBufferIfEixEj(ptr noundef nonnull align 4 dereferenceable(8) @_ZL2In, i32 noundef 1) #[[ATTR4]]
-// CHECK-NEXT:    [[CALL2:%.*]] = call noundef nonnull align 4 dereferenceable(4) ptr @_ZN4hlsl18RWStructuredBufferIfEixEj(ptr noundef nonnull align 4 dereferenceable(8) @_ZL2In, i32 noundef 2) #[[ATTR4]]
-// CHECK-NEXT:    [[CALL3:%.*]] = call noundef nonnull align 4 dereferenceable(4) ptr @_ZN4hlsl18RWStructuredBufferIfEixEj(ptr noundef nonnull align 4 dereferenceable(8) @_ZL2In, i32 noundef 3) #[[ATTR4]]
-// CHECK-NEXT:    [[CALL4:%.*]] = call noundef nonnull align 4 dereferenceable(4) ptr @_ZN4hlsl18RWStructuredBufferIfEixEj(ptr noundef nonnull align 4 dereferenceable(8) @_ZL2In, i32 noundef 4) #[[ATTR4]]
-// CHECK-NEXT:    [[CALL5:%.*]] = call noundef nonnull align 4 dereferenceable(4) ptr @_ZN4hlsl18RWStructuredBufferIfEixEj(ptr noundef nonnull align 4 dereferenceable(8) @_ZL2In, i32 noundef 5) #[[ATTR4]]
+// CHECK-NEXT:    [[CALL:%.*]] = call noundef nonnull align 4 dereferenceable(4) ptr @_ZNK4hlsl18RWStructuredBufferIfEixEj(ptr noundef nonnull align 4 dereferenceable(8) @_ZL2In, i32 noundef 0) #[[ATTR4:[0-9]+]]
+// CHECK-NEXT:    [[CALL1:%.*]] = call noundef nonnull align 4 dereferenceable(4) ptr @_ZNK4hlsl18RWStructuredBufferIfEixEj(ptr noundef nonnull align 4 dereferenceable(8) @_ZL2In, i32 noundef 1) #[[ATTR4]]
+// CHECK-NEXT:    [[CALL2:%.*]] = call noundef nonnull align 4 dereferenceable(4) ptr @_ZNK4hlsl18RWStructuredBufferIfEixEj(ptr noundef nonnull align 4 dereferenceable(8) @_ZL2In, i32 noundef 2) #[[ATTR4]]
+// CHECK-NEXT:    [[CALL3:%.*]] = call noundef nonnull align 4 dereferenceable(4) ptr @_ZNK4hlsl18RWStructuredBufferIfEixEj(ptr noundef nonnull align 4 dereferenceable(8) @_ZL2In, i32 noundef 3) #[[ATTR4]]
+// CHECK-NEXT:    [[CALL4:%.*]] = call noundef nonnull align 4 dereferenceable(4) ptr @_ZNK4hlsl18RWStructuredBufferIfEixEj(ptr noundef nonnull align 4 dereferenceable(8) @_ZL2In, i32 noundef 4) #[[ATTR4]]
+// CHECK-NEXT:    [[CALL5:%.*]] = call noundef nonnull align 4 dereferenceable(4) ptr @_ZNK4hlsl18RWStructuredBufferIfEixEj(ptr noundef nonnull align 4 dereferenceable(8) @_ZL2In, i32 noundef 5) #[[ATTR4]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[CALL]], align 4
 // CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <6 x float> poison, float [[TMP0]], i32 0
 // CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[CALL1]], align 4

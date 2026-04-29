@@ -80,12 +80,16 @@ TEST_F(SocketTest, DecodeHostAndPort) {
 TEST_F(SocketTest, CreatePair) {
   std::vector<std::optional<Socket::SocketProtocol>> functional_protocols = {
       std::nullopt,
-      Socket::ProtocolTcp,
-#if LLDB_ENABLE_POSIX
-      Socket::ProtocolUnixDomain,
-      Socket::ProtocolUnixAbstract,
-#endif
   };
+  if (HostSupportsIPv4() || HostSupportsIPv6())
+    functional_protocols.push_back(Socket::ProtocolTcp);
+#if LLDB_ENABLE_POSIX
+  if (HostSupportsDomainSockets()) {
+    functional_protocols.push_back(Socket::ProtocolUnixDomain);
+    functional_protocols.push_back(Socket::ProtocolUnixAbstract);
+  }
+#endif
+
   for (auto p : functional_protocols) {
     auto expected_socket_pair = Socket::CreatePair(p);
     ASSERT_THAT_EXPECTED(expected_socket_pair, llvm::Succeeded());
@@ -114,6 +118,9 @@ TEST_F(SocketTest, CreatePair) {
 
 #if LLDB_ENABLE_POSIX
 TEST_F(SocketTest, DomainListenConnectAccept) {
+  if (!HostSupportsDomainSockets())
+    GTEST_SKIP() << "Domain sockets unavailable";
+
   llvm::SmallString<64> Path;
   std::error_code EC =
       llvm::sys::fs::createUniqueDirectory("DomainListenConnectAccept", Path);
@@ -130,6 +137,9 @@ TEST_F(SocketTest, DomainListenConnectAccept) {
 }
 
 TEST_F(SocketTest, DomainListenGetListeningConnectionURI) {
+  if (!HostSupportsDomainSockets())
+    GTEST_SKIP() << "Domain sockets unavailable";
+
   llvm::SmallString<64> Path;
   std::error_code EC =
       llvm::sys::fs::createUniqueDirectory("DomainListenConnectAccept", Path);
@@ -152,6 +162,9 @@ TEST_F(SocketTest, DomainListenGetListeningConnectionURI) {
 }
 
 TEST_F(SocketTest, DomainMainLoopAccept) {
+  if (!HostSupportsDomainSockets())
+    GTEST_SKIP() << "Domain sockets unavailable";
+
   llvm::SmallString<64> Path;
   std::error_code EC =
       llvm::sys::fs::createUniqueDirectory("DomainListenConnectAccept", Path);
@@ -356,6 +369,9 @@ TEST_P(SocketTest, UDPGetConnectURI) {
 
 #if LLDB_ENABLE_POSIX
 TEST_F(SocketTest, DomainGetConnectURI) {
+  if (!HostSupportsDomainSockets())
+    GTEST_SKIP() << "Domain sockets unavailable";
+
   llvm::SmallString<64> domain_path;
   std::error_code EC = llvm::sys::fs::createUniqueDirectory(
       "DomainListenConnectAccept", domain_path);
@@ -378,6 +394,9 @@ TEST_F(SocketTest, DomainGetConnectURI) {
 }
 
 TEST_F(SocketTest, DomainSocketFromBoundNativeSocket) {
+  if (!HostSupportsDomainSockets())
+    GTEST_SKIP() << "Domain sockets unavailable";
+
   // Generate a name for the domain socket.
   llvm::SmallString<64> name;
   std::error_code EC = llvm::sys::fs::createUniqueDirectory(

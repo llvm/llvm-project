@@ -30,7 +30,7 @@ body:             |
     ; GCN-NEXT: $m0 = S_MOV_B32 0
     ; GCN-NEXT: BUNDLE implicit $vgpr0, implicit $m0, implicit $exec {
     ; GCN-NEXT:   DS_GWS_INIT $vgpr0, 11, implicit $m0, implicit $exec :: (store (s32))
-    ; GCN-NEXT:   S_WAITCNT 0
+    ; GCN-NEXT:   S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
     ; GCN-NEXT: }
     ; GCN-NEXT: DS_WRITE_B32_gfx9 [[V_MOV_B32_e32_1]], [[V_MOV_B32_e32_2]], 0, 0, implicit $exec :: (store (s32), addrspace 3)
     ; GCN-NEXT: S_ENDPGM 0

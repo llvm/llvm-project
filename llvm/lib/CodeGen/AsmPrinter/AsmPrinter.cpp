@@ -1083,14 +1083,10 @@ void AsmPrinter::emitFunctionHeader() {
 
   // Emit M NOPs for -fpatchable-function-entry=N,M where M>0. We arbitrarily
   // place prefix data before NOPs.
-  unsigned PatchableFunctionPrefix = 0;
-  unsigned PatchableFunctionEntry = 0;
-  (void)F.getFnAttribute("patchable-function-prefix")
-      .getValueAsString()
-      .getAsInteger(10, PatchableFunctionPrefix);
-  (void)F.getFnAttribute("patchable-function-entry")
-      .getValueAsString()
-      .getAsInteger(10, PatchableFunctionEntry);
+  unsigned PatchableFunctionPrefix =
+      F.getFnAttributeAsParsedInteger("patchable-function-prefix");
+  unsigned PatchableFunctionEntry =
+      F.getFnAttributeAsParsedInteger("patchable-function-entry");
   if (PatchableFunctionPrefix) {
     CurrentPatchableFunctionEntrySym =
         OutContext.createLinkerPrivateTempSymbol();
@@ -5101,13 +5097,10 @@ void AsmPrinter::recordSled(MCSymbol *Sled, const MachineInstr &MI,
 
 void AsmPrinter::emitPatchableFunctionEntries() {
   const Function &F = MF->getFunction();
-  unsigned PatchableFunctionPrefix = 0, PatchableFunctionEntry = 0;
-  (void)F.getFnAttribute("patchable-function-prefix")
-      .getValueAsString()
-      .getAsInteger(10, PatchableFunctionPrefix);
-  (void)F.getFnAttribute("patchable-function-entry")
-      .getValueAsString()
-      .getAsInteger(10, PatchableFunctionEntry);
+  unsigned PatchableFunctionPrefix =
+      F.getFnAttributeAsParsedInteger("patchable-function-prefix");
+  unsigned PatchableFunctionEntry =
+      F.getFnAttributeAsParsedInteger("patchable-function-entry");
   if (!PatchableFunctionPrefix && !PatchableFunctionEntry)
     return;
   const unsigned PointerSize = getPointerSize();

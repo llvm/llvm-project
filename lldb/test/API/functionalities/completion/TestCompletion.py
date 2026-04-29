@@ -96,6 +96,7 @@ class CommandLineCompletionTestCase(TestBase):
         )
         self.complete_from_to("process load Makef", "process load Makefile")
 
+    @skipIfTargetDoesNotSupportSharedLibraries()
     @skipUnlessPlatform(["linux"])
     def test_process_unload(self):
         """Test the completion for "process unload <index>" """
@@ -916,6 +917,7 @@ class CommandLineCompletionTestCase(TestBase):
         """Test completing a subcommand of an ambiguous command"""
         self.complete_from_to("settings s ta", [])
 
+    @skipIfTargetDoesNotSupportSharedLibraries()
     def test_shlib_name(self):
         self.build()
         error = lldb.SBError()

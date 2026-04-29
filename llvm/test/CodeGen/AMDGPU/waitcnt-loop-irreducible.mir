@@ -15,11 +15,11 @@
 
 # GCN-LABEL: name: irreducible_loop{{$}}
 # GCN: S_LOAD_DWORDX4_IMM
-# GFX8: S_WAITCNT 127{{$}}
-# GFX9: S_WAITCNT 49279{{$}}
+# GFX8: S_WAITCNT .Lgkmcnt_0{{$}}
+# GFX9: S_WAITCNT .Lgkmcnt_0{{$}}
 # GCN: S_BUFFER_LOAD_DWORD_IMM
-# GFX8: S_WAITCNT 127{{$}}
-# GFX9: S_WAITCNT 49279{{$}}
+# GFX8: S_WAITCNT .Lgkmcnt_0{{$}}
+# GFX9: S_WAITCNT .Lgkmcnt_0{{$}}
 # GCN: S_CMP_GE_I32
 name:            irreducible_loop
 body:             |
@@ -55,17 +55,17 @@ body:             |
 # GCN-LABEL: name: irreducible_loop_extended
 
 # GCN: S_LOAD_DWORDX4_IMM
-# GFX8: S_WAITCNT 127{{$}}
-# GFX9: S_WAITCNT 49279{{$}}
+# GFX8: S_WAITCNT .Lgkmcnt_0{{$}}
+# GFX9: S_WAITCNT .Lgkmcnt_0{{$}}
 # GCN: BUFFER_STORE_DWORD_OFFEN_exact
-# GFX8: S_WAITCNT 127{{$}}
-# GFX9: S_WAITCNT 49279{{$}}
+# GFX8: S_WAITCNT .Lgkmcnt_0{{$}}
+# GFX9: S_WAITCNT .Lgkmcnt_0{{$}}
 # GCN: BUFFER_STORE_DWORD_OFFEN_exact
 # GCN: S_LOAD_DWORDX4_IMM
-# GFX8: S_WAITCNT 127{{$}}
-# GFX9: S_WAITCNT 49279{{$}}
+# GFX8: S_WAITCNT .Lgkmcnt_0{{$}}
+# GFX9: S_WAITCNT .Lgkmcnt_0{{$}}
 # GCN: BUFFER_ATOMIC_ADD_OFFSET_RTN
-# GCN: S_WAITCNT 3952
+# GCN: S_WAITCNT .Vmcnt_0
 # GCN: FLAT_STORE_DWORD
 # GCN: S_ENDPGM 0
 name: irreducible_loop_extended

@@ -938,13 +938,9 @@ void SystemZAsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(
 
   // If patchable-function-entry is set, emit in-function nops here.
   if (F.hasFnAttribute("patchable-function-entry")) {
-    unsigned Num;
     // get M-N from function attribute (CodeGenFunction subtracts N
     // from M to yield the correct patchable-function-entry).
-    if (F.getFnAttribute("patchable-function-entry")
-            .getValueAsString()
-            .getAsInteger(10, Num))
-      return;
+    unsigned Num = F.getFnAttributeAsParsedInteger("patchable-function-entry");
     // Emit M-N 2-byte nops. Use getNop() here instead of emitNops()
     // to keep it aligned with the common code implementation emitting
     // the prefix nops.

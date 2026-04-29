@@ -534,6 +534,45 @@ void OmpStructureChecker::CheckTraitSimd(
   }
 }
 
+void OmpStructureChecker::Enter(const parser::OmpDirectiveSpecification &x) {
+  // OmpDirectiveSpecification exists on its own only in clauses on
+  // METADIRECTIVE.
+  // In other cases it's a part of other constructs that handle directive
+  // context stack by themselves.
+  if (!GetDirectiveNest(MetadirectiveNest)) {
+    return;
+  }
+
+  llvm::omp::Directive dirId{x.DirId()};
+  if (const parser::OpenMPConstruct *meta{GetCurrentConstruct()}) {
+    if (parser::Unwrap<parser::OmpDelimitedMetadirectiveDirective>(meta->u)) {
+      unsigned version{context_.langOptions().OpenMPVersion};
+      switch (llvm::omp::getDirectiveAssociation(dirId)) {
+      case llvm::omp::Association::Block:
+      case llvm::omp::Association::LoopNest:
+      case llvm::omp::Association::LoopSeq:
+        break;
+      default:
+        if (dirId != llvm::omp::Directive::OMPD_nothing) {
+          context_.Say(x.DirName().source,
+              "A directive in BEGIN %s should have a corresponding end-directive"_err_en_US,
+              parser::omp::GetUpperName(
+                  llvm::omp::Directive::OMPD_metadirective, version));
+        }
+      }
+    }
+  }
+
+  PushContextAndClauseSets(
+      std::get<parser::OmpDirectiveName>(x.t).source, dirId);
+}
+
+void OmpStructureChecker::Leave(const parser::OmpDirectiveSpecification &x) {
+  if (GetDirectiveNest(MetadirectiveNest)) {
+    dirContext_.pop_back();
+  }
+}
+
 void OmpStructureChecker::Enter(const parser::OmpMetadirectiveDirective &x) {
   EnterDirectiveNest(MetadirectiveNest);
   PushContextAndClauseSets(
@@ -542,6 +581,16 @@ void OmpStructureChecker::Enter(const parser::OmpMetadirectiveDirective &x) {
 
 void OmpStructureChecker::Leave(const parser::OmpMetadirectiveDirective &) {
   ExitDirectiveNest(MetadirectiveNest);
+  dirContext_.pop_back();
+}
+
+void OmpStructureChecker::Enter(
+    const parser::OmpDelimitedMetadirectiveDirective &x) {
+  PushContextAndClauseSets(x.source, llvm::omp::Directive::OMPD_metadirective);
+}
+
+void OmpStructureChecker::Leave(
+    const parser::OmpDelimitedMetadirectiveDirective &) {
   dirContext_.pop_back();
 }
 

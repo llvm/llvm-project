@@ -705,3 +705,17 @@ module attributes {gpu.container_module} {
     return
   }
 }
+
+// -----
+
+// CHECK-LABEL: func @launch_cooperative
+func.func @launch_cooperative() {
+  %cst = arith.constant 8 : index
+  // CHECK: gpu.launch_func @launch_cooperative_kernel::@launch_cooperative_kernel blocks in (%{{.*}}, %{{.*}}, %{{.*}}) threads in (%{{.*}}, %{{.*}}, %{{.*}}) cooperative
+  gpu.launch blocks(%bx, %by, %bz) in (%gx = %cst, %gy = %cst, %gz = %cst)
+             threads(%tx, %ty, %tz) in (%bxs = %cst, %bys = %cst, %bzs = %cst)
+             cooperative {
+    gpu.terminator
+  }
+  return
+}

@@ -93,15 +93,8 @@ public:
     return Empty;
   }
 
-  /// Called once before the first add() call. Override for initialization.
-  virtual llvm::Error initialize() override { return llvm::Error::success(); }
-
   /// Called once per matching entity. Implement to accumulate data.
   virtual llvm::Error add(EntityId Id, const EntitySummaryT &Summary) = 0;
-
-  /// Called after all entities have been processed.
-  /// Override for post-processing.
-  virtual llvm::Error finalize() override { return llvm::Error::success(); }
 
 protected:
   /// Read-only access to the result being built.

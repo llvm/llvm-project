@@ -8,8 +8,6 @@ on:
     paths:
      - .github/workflows/prune-branches.yml
      - .github/workflows/prune-unused-branches.py
-  schedule:
-    - cron: '0 8 * * *' # Runs daily at 08:00 UTC.
 
 jobs:
   prune-branches:

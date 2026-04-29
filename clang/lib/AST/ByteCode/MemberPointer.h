@@ -151,6 +151,12 @@ public:
                          DeclAndIsDerivedMember.getInt());
   }
 
+  MemberPointer withPath(uint8_t PathLength, const CXXRecordDecl **Path,
+                         bool IsDerived) const {
+    return MemberPointer(this->Base, DeclAndIsDerivedMember.getPointer(),
+                         PtrOffset, PathLength, Path, IsDerived);
+  }
+
   APValue toAPValue(const ASTContext &) const;
 
   void print(llvm::raw_ostream &OS) const {

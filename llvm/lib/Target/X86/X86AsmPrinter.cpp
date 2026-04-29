@@ -153,11 +153,8 @@ void X86AsmPrinter::EmitKCFITypePadding(const MachineFunction &MF,
                                         bool HasType) {
   // Keep the function entry aligned, taking patchable-function-prefix into
   // account if set.
-  int64_t PrefixBytes = 0;
-  (void)MF.getFunction()
-      .getFnAttribute("patchable-function-prefix")
-      .getValueAsString()
-      .getAsInteger(10, PrefixBytes);
+  int64_t PrefixBytes = MF.getFunction().getFnAttributeAsParsedInteger(
+      "patchable-function-prefix");
 
   // Also take the type identifier into account if we're emitting
   // one. Otherwise, just pad with nops. The X86::MOV32ri instruction emitted
