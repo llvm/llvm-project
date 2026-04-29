@@ -946,6 +946,29 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
     return emitHLSLConstructAggregate(DestType, Elements, E);
   }
 
+  case CK_ToUnion: {
+    const FieldDecl *UnionField = E->getTargetUnionField();
+    const Record *R = this->getRecord(E->getType());
+    assert(R);
+    const Record::Field *RF = R->getField(UnionField);
+    QualType FieldType = RF->Decl->getType();
+
+    if (OptPrimType PT = classify(FieldType)) {
+      if (!this->visit(SubExpr))
+        return false;
+      if (RF->isBitField())
+        return this->emitInitBitFieldActivate(*PT, RF->Offset, RF->bitWidth(),
+                                              E);
+      return this->emitInitFieldActivate(*PT, RF->Offset, E);
+    }
+
+    if (!this->emitGetPtrField(RF->Offset, E))
+      return false;
+    if (!this->emitActivate(E))
+      return false;
+    return this->visitInitializerPop(SubExpr);
+  }
+
   default:
     return this->emitInvalid(E);
   }
@@ -2095,9 +2118,7 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
       if (Activate && !this->emitActivate(E))
         return false;
 
-      if (!this->visitInitializer(Init))
-        return false;
-      return this->emitPopPtr(E);
+      return this->visitInitializerPop(Init);
     };
 
     if (R->isUnion()) {
@@ -2143,10 +2164,7 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
           if (!this->emitGetPtrBase(B->Offset, Init))
             return false;
 
-          if (!this->visitInitializer(Init))
-            return false;
-
-          if (!this->emitFinishInitPop(E))
+          if (!this->visitInitializerPop(Init))
             return false;
           // Base initializers don't increase InitIndex, since they don't count
           // into the Record's fields.
@@ -2324,9 +2342,7 @@ bool Compiler<Emitter>::visitArrayElemInit(unsigned ElemIndex, const Expr *Init,
     return false;
   if (!this->emitArrayElemPtrUint32(Init))
     return false;
-  if (!this->visitInitializer(Init))
-    return false;
-  return this->emitFinishInitPop(Init);
+  return this->visitInitializerPop(Init);
 }
 
 template <class Emitter>
@@ -2409,17 +2425,19 @@ bool Compiler<Emitter>::VisitSubstNonTypeTemplateParmExpr(
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitConstantExpr(const ConstantExpr *E) {
-  OptPrimType T = classify(E->getType());
-  if (T && E->hasAPValueResult()) {
+  if (!E->hasAPValueResult())
+    return this->delegate(E->getSubExpr());
+
+  if (OptPrimType T = classify(E)) {
     // Try to emit the APValue directly, without visiting the subexpr.
     // This will only fail if we can't emit the APValue, so won't emit any
     // diagnostics or any double values.
     if (DiscardResult)
       return true;
-
-    if (this->visitAPValue(E->getAPValueResult(), *T, E))
-      return true;
+    return this->visitAPValue(E->getAPValueResult(), *T, E);
   }
+
+  // Fall back to the subexpr for non-primitive APValues.
   return this->delegate(E->getSubExpr());
 }
 
@@ -2608,22 +2626,16 @@ bool Compiler<Emitter>::VisitMemberExpr(const MemberExpr *E) {
   if (DiscardResult)
     return this->discard(Base);
 
-  // MemberExprs are almost always lvalues, in which case we don't need to
-  // do the load. But sometimes they aren't.
-  const auto maybeLoadValue = [&]() -> bool {
-    if (E->isGLValue())
-      return true;
-    if (OptPrimType T = classify(E))
-      return this->emitLoadPop(*T, E);
-    return false;
-  };
-
   if (const auto *VD = dyn_cast<VarDecl>(Member)) {
     // I am almost confident in saying that a var decl must be static
-    // and therefore registered as a global variable. But this will probably
-    // turn out to be wrong some time in the future, as always.
-    if (auto GlobalIndex = P.getGlobal(VD))
-      return this->emitGetPtrGlobal(*GlobalIndex, E) && maybeLoadValue();
+    // and therefore registered as a global variable.
+    if (auto GlobalIndex = P.getGlobal(VD)) {
+      if (!this->emitGetPtrGlobal(*GlobalIndex, E))
+        return false;
+      if (Member->getType()->isReferenceType())
+        return this->emitLoadPopPtr(E);
+      return true;
+    }
     return false;
   }
 
@@ -2644,6 +2656,17 @@ bool Compiler<Emitter>::VisitMemberExpr(const MemberExpr *E) {
   if (!R)
     return false;
   const Record::Field *F = R->getField(FD);
+
+  // MemberExprs are almost always lvalues, in which case we don't need to
+  // do the load. But sometimes they aren't.
+  const auto maybeLoadValue = [&]() -> bool {
+    if (E->isGLValue())
+      return true;
+    if (OptPrimType T = classify(E))
+      return this->emitLoadPop(*T, E);
+    return false;
+  };
+
   // Leave a pointer to the field on the stack.
   if (F->Decl->getType()->isReferenceType())
     return this->emitGetFieldPop(PT_Ptr, F->Offset, E) && maybeLoadValue();
@@ -3248,7 +3271,7 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
 
     if (!this->emitGetPtrLocal(*LocalIndex, E))
       return false;
-    return this->visitInitializer(Inner) && this->emitFinishInit(E);
+    return this->visitInitializer(Inner);
   }
   return false;
 }
@@ -3280,7 +3303,7 @@ bool Compiler<Emitter>::VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
 
   if (Initializing) {
     // We already have a value, just initialize that.
-    return this->visitInitializer(Init) && this->emitFinishInit(E);
+    return this->visitInitializer(Init);
   }
 
   OptPrimType T = classify(E->getType());
@@ -3307,7 +3330,7 @@ bool Compiler<Emitter>::VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
       return this->emitInitGlobal(*T, *GlobalIndex, E);
     }
 
-    return this->visitInitializer(Init) && this->emitFinishInit(E);
+    return this->visitInitializer(Init);
   }
 
   // Otherwise, use a local variable.
@@ -3329,7 +3352,7 @@ bool Compiler<Emitter>::VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
 
   if (T)
     return this->visit(Init) && this->emitInit(*T, E);
-  return this->visitInitializer(Init) && this->emitFinishInit(E);
+  return this->visitInitializer(Init);
 }
 
 template <class Emitter>
@@ -3381,10 +3404,7 @@ bool Compiler<Emitter>::VisitLambdaExpr(const LambdaExpr *E) {
       if (!this->emitGetPtrField(F.Offset, E))
         return false;
 
-      if (!this->visitInitializer(Init))
-        return false;
-
-      if (!this->emitPopPtr(E))
+      if (!this->visitInitializerPop(Init))
         return false;
     }
   }
@@ -3584,7 +3604,7 @@ bool Compiler<Emitter>::VisitCXXConstructExpr(const CXXConstructExpr *E) {
 
     if (DiscardResult)
       return this->emitPopPtr(E);
-    return this->emitFinishInit(E);
+    return true;
   }
 
   if (T->isArrayType()) {
@@ -4045,9 +4065,7 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
             if (!this->emitStorePop(*InitT, E))
               return false;
           } else {
-            if (!this->visitInitializer(DynamicInit))
-              return false;
-            if (!this->emitPopPtr(E))
+            if (!this->visitInitializerPop(DynamicInit))
               return false;
           }
         } else if (ElemT) {
@@ -4603,7 +4621,16 @@ bool Compiler<Emitter>::visitInitializer(const Expr *E) {
 
   OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/false,
                              /*NewInitializing=*/true, /*ToLValue=*/false);
-  return this->Visit(E);
+  return this->Visit(E) && this->emitFinishInit(E);
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::visitInitializerPop(const Expr *E) {
+  assert(!canClassify(E->getType()));
+
+  OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/false,
+                             /*NewInitializing=*/true, /*ToLValue=*/false);
+  return this->Visit(E) && this->emitFinishInitPop(E);
 }
 
 template <class Emitter> bool Compiler<Emitter>::visitAsLValue(const Expr *E) {
@@ -5074,9 +5101,6 @@ bool Compiler<Emitter>::visitExpr(const Expr *E, bool DestroyToplevelScope) {
 
     if (!visitInitializer(E))
       return false;
-
-    if (!this->emitFinishInit(E))
-      return false;
     // We are destroying the locals AFTER the Ret op.
     // The Ret op needs to copy the (alive) values, but the
     // destructors may still turn the entire expression invalid.
@@ -5264,10 +5288,7 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD,
     if (!this->emitGetPtrLocal(*Offset, Init))
       return false;
 
-    if (!visitInitializer(Init))
-      return false;
-
-    return this->emitFinishInitPop(Init);
+    return visitInitializerPop(Init);
   }
   return false;
 }
@@ -5283,18 +5304,74 @@ bool Compiler<Emitter>::visitAPValue(const APValue &Val, PrimType ValType,
     return this->emitFloat(F, E);
   }
 
+  if (Val.isMemberPointer()) {
+    if (const ValueDecl *MemberDecl = Val.getMemberPointerDecl()) {
+      if (!this->emitGetMemberPtr(MemberDecl, E))
+        return false;
+
+      bool IsDerived = Val.isMemberPointerToDerivedMember();
+      // Apply the member pointer path.
+      for (const CXXRecordDecl *PathEntry : Val.getMemberPointerPath()) {
+        if (!this->emitCopyMemberPtrPath(PathEntry, IsDerived, E))
+          return false;
+      }
+
+      return true;
+    }
+    return this->emitNullMemberPtr(0, nullptr, E);
+  }
+
   if (Val.isLValue()) {
     if (Val.isNullPointer())
       return this->emitNull(ValType, 0, nullptr, E);
+
     APValue::LValueBase Base = Val.getLValueBase();
+    ArrayRef<APValue::LValuePathEntry> Path = Val.getLValuePath();
+
     if (const Expr *BaseExpr = Base.dyn_cast<const Expr *>())
       return this->visit(BaseExpr);
-    if (const auto *VD = Base.dyn_cast<const ValueDecl *>())
-      return this->visitDeclRef(VD, E);
-  } else if (Val.isMemberPointer()) {
-    if (const ValueDecl *MemberDecl = Val.getMemberPointerDecl())
-      return this->emitGetMemberPtr(MemberDecl, E);
-    return this->emitNullMemberPtr(0, nullptr, E);
+    if (const auto *VD = Base.dyn_cast<const ValueDecl *>()) {
+      if (!this->visitDeclRef(VD, E))
+        return false;
+
+      QualType EntryType = VD->getType();
+      for (auto &Entry : Path) {
+        if (EntryType->isArrayType()) {
+          uint64_t Index = Entry.getAsArrayIndex();
+          QualType ElemType =
+              EntryType->getAsArrayTypeUnsafe()->getElementType();
+          if (!this->emitConst(Index, PT_Uint64, E))
+            return false;
+          if (!this->emitArrayElemPtrPop(PT_Uint64, E))
+            return false;
+          EntryType = ElemType;
+        } else {
+          assert(EntryType->isRecordType());
+          const Record *EntryRecord = getRecord(EntryType);
+          if (!EntryRecord) {
+            assert(false);
+
+            return false;
+          }
+
+          const Decl *BaseOrMember = Entry.getAsBaseOrMember().getPointer();
+          if (const auto *FD = dyn_cast<FieldDecl>(BaseOrMember)) {
+            unsigned EntryOffset = EntryRecord->getField(FD)->Offset;
+            if (!this->emitGetPtrFieldPop(EntryOffset, E))
+              return false;
+            EntryType = FD->getType();
+          } else {
+            const auto *Base = cast<CXXRecordDecl>(BaseOrMember);
+            unsigned BaseOffset = EntryRecord->getBase(Base)->Offset;
+            if (!this->emitGetPtrBasePop(BaseOffset, /*NullOK=*/false, E))
+              return false;
+            EntryType = Ctx.getASTContext().getCanonicalTagType(Base);
+          }
+        }
+      }
+
+      return true;
+    }
   }
 
   return false;
@@ -5311,6 +5388,7 @@ bool Compiler<Emitter>::visitAPValueInitializer(const APValue &Val,
       const Record::Field *RF = R->getField(I);
       QualType FieldType = RF->Decl->getType();
 
+      // Fields.
       if (OptPrimType PT = classify(FieldType)) {
         if (!this->visitAPValue(F, *PT, E))
           return false;
@@ -5321,10 +5399,25 @@ bool Compiler<Emitter>::visitAPValueInitializer(const APValue &Val,
           return false;
         if (!this->visitAPValueInitializer(F, E, FieldType))
           return false;
-        if (!this->emitPopPtr(E))
+        if (!this->emitFinishInitPop(E))
           return false;
       }
     }
+
+    // Bases.
+    for (unsigned I = 0, N = Val.getStructNumBases(); I != N; ++I) {
+      const APValue &B = Val.getStructBase(I);
+      const Record::Base *RB = R->getBase(I);
+      QualType BaseType = Ctx.getASTContext().getCanonicalTagType(RB->Decl);
+
+      if (!this->emitGetPtrBase(RB->Offset, E))
+        return false;
+      if (!this->visitAPValueInitializer(B, E, BaseType))
+        return false;
+      if (!this->emitFinishInitPop(E))
+        return false;
+    }
+
     return true;
   }
   if (Val.isUnion()) {
@@ -5994,9 +6087,7 @@ bool Compiler<Emitter>::visitReturnStmt(const ReturnStmt *RS) {
       // RVO - construct the value in the return location.
       if (!this->emitRVOPtr(RE))
         return false;
-      if (!this->visitInitializer(RE))
-        return false;
-      if (!this->emitPopPtr(RE))
+      if (!this->visitInitializerPop(RE))
         return false;
 
       this->emitCleanup();
@@ -6639,6 +6730,10 @@ template <class Emitter>
 bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
   assert(!ReturnType);
 
+  // Only start the lifetime of the instance pointer.
+  if (!this->emitStartThisLifetime1(Ctor))
+    return false;
+
   auto emitFieldInitializer = [&](const Record::Field *F, unsigned FieldOffset,
                                   const Expr *InitExpr,
                                   bool Activate = false) -> bool {
@@ -6667,10 +6762,7 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
     if (Activate && !this->emitActivate(InitExpr))
       return false;
 
-    if (!this->visitInitializer(InitExpr))
-      return false;
-
-    return this->emitFinishInitPop(InitExpr);
+    return this->visitInitializerPop(InitExpr);
   };
 
   const RecordDecl *RD = Ctor->getParent();
@@ -6696,6 +6788,7 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
            this->emitRetVoid(Ctor);
   }
 
+  unsigned FieldInits = 0;
   InitLinkScope<Emitter> InitScope(this, InitLink::This());
   for (const auto *Init : Ctor->inits()) {
     // Scope needed for the initializers.
@@ -6709,6 +6802,7 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
                                     initNeedsOverridenLoc(Init));
       if (!emitFieldInitializer(F, F->Offset, InitExpr, IsUnion))
         return false;
+      ++FieldInits;
     } else if (const Type *Base = Init->getBaseClass()) {
       const auto *BaseDecl = Base->getAsCXXRecordDecl();
       assert(BaseDecl);
@@ -6730,9 +6824,7 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
       if (IsUnion && !this->emitActivate(InitExpr))
         return false;
 
-      if (!this->visitInitializer(InitExpr))
-        return false;
-      if (!this->emitFinishInitPop(InitExpr))
+      if (!this->visitInitializerPop(InitExpr))
         return false;
     } else if (const IndirectFieldDecl *IFD = Init->getIndirectMember()) {
       LocOverrideScope<Emitter> LOS(this, SourceInfo{},
@@ -6785,13 +6877,18 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
       assert(Init->isDelegatingInitializer());
       if (!this->emitThis(InitExpr))
         return false;
-      if (!this->visitInitializer(Init->getInit()))
-        return false;
-      if (!this->emitPopPtr(InitExpr))
+      if (!this->visitInitializerPop(Init->getInit()))
         return false;
     }
 
     if (!Scope.destroyLocals())
+      return false;
+  }
+
+  if (FieldInits != R->getNumFields()) {
+    assert(FieldInits < R->getNumFields());
+    // Start the lifetime of all members.
+    if (!this->emitStartThisLifetime(Ctor))
       return false;
   }
 
@@ -6877,6 +6974,9 @@ bool Compiler<Emitter>::compileUnionAssignmentOperator(
 
 template <class Emitter>
 bool Compiler<Emitter>::visitFunc(const FunctionDecl *F) {
+  if (F->getReturnType()->isDependentType())
+    return false;
+
   // Classify the return type.
   ReturnType = this->classify(F->getReturnType());
 
@@ -7409,13 +7509,14 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
   }
   if (const auto *TPOD = dyn_cast<TemplateParamObjectDecl>(D)) {
     if (UnsignedOrNone Index = P.getOrCreateGlobal(D)) {
-      if (!this->emitGetPtrGlobal(*Index, E))
-        return false;
-      if (OptPrimType T = classify(E->getType())) {
+      if (OptPrimType T = classify(D->getType())) {
         if (!this->visitAPValue(TPOD->getValue(), *T, E))
           return false;
         return this->emitInitGlobal(*T, *Index, E);
       }
+
+      if (!this->emitGetPtrGlobal(*Index, E))
+        return false;
       if (!this->visitAPValueInitializer(TPOD->getValue(), E, TPOD->getType()))
         return false;
       return this->emitFinishInit(E);

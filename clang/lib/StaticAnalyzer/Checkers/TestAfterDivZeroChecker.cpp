@@ -242,7 +242,7 @@ void TestAfterDivZeroChecker::checkBranchCondition(const Stmt *Condition,
     if (hasDivZeroMap(Val, C))
       reportBug(Val, C);
     else {
-      SVal Val = C.getSVal(Condition);
+      SVal Val = C.getSVal(IE);
 
       if (hasDivZeroMap(Val, C))
         reportBug(Val, C);

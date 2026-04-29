@@ -145,7 +145,7 @@ void XCoreAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
     report_fatal_error("TLS is not supported by this target!");
   }
   unsigned Size = DL.getTypeAllocSize(C->getType());
-  if (MAI->hasDotTypeDotSizeDirective()) {
+  if (MAI.hasDotTypeDotSizeDirective()) {
     OutStreamer->emitSymbolAttribute(GVSym, MCSA_ELF_TypeObject);
     OutStreamer->emitELFSize(GVSym, MCConstantExpr::create(Size, OutContext));
   }

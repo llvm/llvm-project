@@ -1983,7 +1983,7 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
       Opcode == TargetOpcode::INLINEASM_BR) {
     const MachineFunction &MF = *MI.getParent()->getParent();
     return getInlineAsmLength(MI.getOperand(0).getSymbolName(),
-                              *MF.getTarget().getMCAsmInfo());
+                              MF.getTarget().getMCAsmInfo());
   }
 
   if (requiresNTLHint(MI)) {
@@ -1996,7 +1996,7 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   }
 
   if (Opcode == TargetOpcode::BUNDLE)
-    return getInstBundleLength(MI);
+    return getInstBundleSize(MI);
 
   if (MI.getParent() && MI.getParent()->getParent()) {
     if (isCompressibleInst(MI, STI))
@@ -2086,12 +2086,8 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     const Function &F = MF.getFunction();
     if (Opcode == TargetOpcode::PATCHABLE_FUNCTION_ENTER &&
         F.hasFnAttribute("patchable-function-entry")) {
-      unsigned Num;
-      if (F.getFnAttribute("patchable-function-entry")
-              .getValueAsString()
-              .getAsInteger(10, Num))
-        return get(Opcode).getSize();
-
+      unsigned Num =
+          F.getFnAttributeAsParsedInteger("patchable-function-entry");
       // Number of C.NOP or NOP
       return (STI.hasStdExtZca() ? 2 : 4) * Num;
     }
@@ -2102,17 +2098,6 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   default:
     return get(Opcode).getSize();
   }
-}
-
-unsigned RISCVInstrInfo::getInstBundleLength(const MachineInstr &MI) const {
-  unsigned Size = 0;
-  MachineBasicBlock::const_instr_iterator I = MI.getIterator();
-  MachineBasicBlock::const_instr_iterator E = MI.getParent()->instr_end();
-  while (++I != E && I->isInsideBundle()) {
-    assert(!I->isBundle() && "No nested bundle!");
-    Size += getInstSizeInBytes(*I);
-  }
-  return Size;
 }
 
 bool RISCVInstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
