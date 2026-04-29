@@ -1321,7 +1321,6 @@ namespace {
     const MultiLevelTemplateArgumentList &TemplateArgs;
     SourceLocation Loc;
     DeclarationName Entity;
-
     // Whether to evaluate the C++20 constraints or simply substitute into them.
     bool EvaluateConstraints = true;
     // Whether Substitution was Incomplete, that is, we tried to substitute in
@@ -2832,7 +2831,8 @@ TemplateInstantiator::TransformNestedRequirement(
 
 TypeSourceInfo *Sema::SubstType(TypeSourceInfo *T,
                                 const MultiLevelTemplateArgumentList &Args,
-                                SourceLocation Loc, DeclarationName Entity,
+                                SourceLocation Loc,
+                                DeclarationName Entity,
                                 bool AllowDeducedTST) {
   assert(!CodeSynthesisContexts.empty() &&
          "Cannot perform an instantiation without some context on the "
@@ -2849,7 +2849,8 @@ TypeSourceInfo *Sema::SubstType(TypeSourceInfo *T,
 
 TypeSourceInfo *Sema::SubstType(TypeLoc TL,
                                 const MultiLevelTemplateArgumentList &Args,
-                                SourceLocation Loc, DeclarationName Entity) {
+                                SourceLocation Loc,
+                                DeclarationName Entity) {
   assert(!CodeSynthesisContexts.empty() &&
          "Cannot perform an instantiation without some context on the "
          "instantiation stack");
@@ -2921,10 +2922,13 @@ static bool NeedsInstantiationAsFunctionType(TypeSourceInfo *T) {
   return false;
 }
 
-TypeSourceInfo *Sema::SubstFunctionDeclType(
-    TypeSourceInfo *T, const MultiLevelTemplateArgumentList &Args,
-    SourceLocation Loc, DeclarationName Entity, CXXRecordDecl *ThisContext,
-    Qualifiers ThisTypeQuals, bool EvaluateConstraints) {
+TypeSourceInfo *Sema::SubstFunctionDeclType(TypeSourceInfo *T,
+                                const MultiLevelTemplateArgumentList &Args,
+                                SourceLocation Loc,
+                                DeclarationName Entity,
+                                CXXRecordDecl *ThisContext,
+                                Qualifiers ThisTypeQuals,
+                                bool EvaluateConstraints) {
   assert(!CodeSynthesisContexts.empty() &&
          "Cannot perform an instantiation without some context on the "
          "instantiation stack");
@@ -3149,7 +3153,7 @@ Sema::SubstParmVarDecl(ParmVarDecl *OldParm,
     }
   } else {
     NewTSI = SubstType(OldTSI, TemplateArgs, OldParm->getLocation(),
-                       OldParm->getDeclName(), /*AllowDeducedTST=*/false);
+                       OldParm->getDeclName());
   }
 
   if (!NewTSI)
