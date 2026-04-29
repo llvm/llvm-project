@@ -180,6 +180,9 @@ static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
   // IntrinsicInstr with target-generic LLVM IR.
   const SimplifyAction Action = [II, RetTy]() -> SimplifyAction {
     Type *ScalarTy = RetTy->getScalarType();
+    const bool IsHalfOrBFloat = ScalarTy->isHalfTy() || ScalarTy->isBFloatTy();
+    const FtzRequirementTy NonF32FtzReq =
+        ScalarTy->isDoubleTy() ? FTZ_Any : FTZ_MustBeOff;
     switch (II->getIntrinsicID()) {
     // NVVM intrinsics that map directly to LLVM intrinsics.
     case Intrinsic::nvvm_ceil_d:
@@ -213,29 +216,21 @@ static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
     case Intrinsic::nvvm_fma_rn_bf16x2:
       return {Intrinsic::fma, FTZ_MustBeOff, true};
     case Intrinsic::nvvm_fmax:
-      return {Intrinsic::maximumnum,
-              ScalarTy->isDoubleTy() ? FTZ_Any : FTZ_MustBeOff,
-              ScalarTy->isHalfTy() || ScalarTy->isBFloatTy()};
+      return {Intrinsic::maximumnum, NonF32FtzReq, IsHalfOrBFloat};
     case Intrinsic::nvvm_fmax_ftz:
-      return {Intrinsic::maximumnum, FTZ_MustBeOn, ScalarTy->isHalfTy() || ScalarTy->isBFloatTy()};
+      return {Intrinsic::maximumnum, FTZ_MustBeOn, IsHalfOrBFloat};
     case Intrinsic::nvvm_fmax_nan:
-      return {Intrinsic::maximum,
-              ScalarTy->isDoubleTy() ? FTZ_Any : FTZ_MustBeOff,
-              ScalarTy->isHalfTy() || ScalarTy->isBFloatTy()};
+      return {Intrinsic::maximum, NonF32FtzReq, IsHalfOrBFloat};
     case Intrinsic::nvvm_fmax_ftz_nan:
-      return {Intrinsic::maximum, FTZ_MustBeOn, ScalarTy->isHalfTy() || ScalarTy->isBFloatTy()};
+      return {Intrinsic::maximum, FTZ_MustBeOn, IsHalfOrBFloat};
     case Intrinsic::nvvm_fmin:
-      return {Intrinsic::minimumnum,
-              ScalarTy->isDoubleTy() ? FTZ_Any : FTZ_MustBeOff,
-              ScalarTy->isHalfTy() || ScalarTy->isBFloatTy()};
+      return {Intrinsic::minimumnum, NonF32FtzReq, IsHalfOrBFloat};
     case Intrinsic::nvvm_fmin_ftz:
-      return {Intrinsic::minimumnum, FTZ_MustBeOn, ScalarTy->isHalfTy() || ScalarTy->isBFloatTy()};
+      return {Intrinsic::minimumnum, FTZ_MustBeOn, IsHalfOrBFloat};
     case Intrinsic::nvvm_fmin_nan:
-      return {Intrinsic::minimum,
-              ScalarTy->isDoubleTy() ? FTZ_Any : FTZ_MustBeOff,
-              ScalarTy->isHalfTy() || ScalarTy->isBFloatTy()};
+      return {Intrinsic::minimum, NonF32FtzReq, IsHalfOrBFloat};
     case Intrinsic::nvvm_fmin_ftz_nan:
-      return {Intrinsic::minimum, FTZ_MustBeOn, ScalarTy->isHalfTy() || ScalarTy->isBFloatTy()};
+      return {Intrinsic::minimum, FTZ_MustBeOn, IsHalfOrBFloat};
     case Intrinsic::nvvm_sqrt_rn_d:
       return {Intrinsic::sqrt, FTZ_Any};
     case Intrinsic::nvvm_sqrt_f:

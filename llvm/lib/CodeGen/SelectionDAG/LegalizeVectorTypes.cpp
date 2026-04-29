@@ -3769,8 +3769,10 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_INTERLEAVE(SDNode *N) {
 
 void DAGTypeLegalizer::SplitVecRes_INTRINSIC(SDNode *N, SDValue &Lo,
                                              SDValue &Hi) {
-  if (!CanSplitVectorIntrinsic(N))
+  if (!CanSplitVectorIntrinsic(N)) {
+    Lo = Hi = SDValue();
     return;
+  }
 
   SmallVector<SDValue> Operands1, Operands2;
   for (auto [I, Op] : enumerate(N->ops())) {
