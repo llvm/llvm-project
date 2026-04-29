@@ -1,22 +1,22 @@
 ! Test metadirective with device={isa(...)} trait selectors.
 
-! RUN: %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=50 -target-feature +neon %s -o - | FileCheck --check-prefix=NEON %s
-! RUN: %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=50 -target-feature +neon -target-feature +sve %s -o - | FileCheck --check-prefix=SVE %s
-! RUN: %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=50 -target-feature +sse %s -o - | FileCheck --check-prefix=SSE %s
-! RUN: %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=50 -target-feature +avx %s -o - | FileCheck --check-prefix=AVX %s
-! RUN: %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=50 %s -o - | FileCheck --check-prefix=NONE %s
+! RUN: %if aarch64-registered-target %{ %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=50 -triple aarch64-unknown-linux-gnu -target-feature +neon %s -o - | FileCheck --check-prefix=NEON %s %}
+! RUN: %if aarch64-registered-target %{ %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=50 -triple aarch64-unknown-linux-gnu -target-feature +neon -target-feature +sve %s -o - | FileCheck --check-prefix=SVE %s %}
+! RUN: %if x86-registered-target %{ %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=50 -triple x86_64-unknown-linux-gnu -target-feature +sse %s -o - | FileCheck --check-prefix=SSE %s %}
+! RUN: %if x86-registered-target %{ %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=50 -triple x86_64-unknown-linux-gnu -target-feature +avx %s -o - | FileCheck --check-prefix=AVX %s %}
+! RUN: %if x86-registered-target %{ %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=50 -triple x86_64-unknown-linux-gnu %s -o - | FileCheck --check-prefix=NONE %s %}
 
-! RUN: %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=51 -target-feature +neon %s -o - | FileCheck --check-prefix=NEON %s
-! RUN: %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=51 -target-feature +neon -target-feature +sve %s -o - | FileCheck --check-prefix=SVE %s
-! RUN: %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=51 -target-feature +sse %s -o - | FileCheck --check-prefix=SSE %s
-! RUN: %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=51 -target-feature +avx %s -o - | FileCheck --check-prefix=AVX %s
-! RUN: %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=51 %s -o - | FileCheck --check-prefix=NONE %s
+! RUN: %if aarch64-registered-target %{ %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=51 -triple aarch64-unknown-linux-gnu -target-feature +neon %s -o - | FileCheck --check-prefix=NEON %s %}
+! RUN: %if aarch64-registered-target %{ %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=51 -triple aarch64-unknown-linux-gnu -target-feature +neon -target-feature +sve %s -o - | FileCheck --check-prefix=SVE %s %}
+! RUN: %if x86-registered-target %{ %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=51 -triple x86_64-unknown-linux-gnu -target-feature +sse %s -o - | FileCheck --check-prefix=SSE %s %}
+! RUN: %if x86-registered-target %{ %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=51 -triple x86_64-unknown-linux-gnu -target-feature +avx %s -o - | FileCheck --check-prefix=AVX %s %}
+! RUN: %if x86-registered-target %{ %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=51 -triple x86_64-unknown-linux-gnu %s -o - | FileCheck --check-prefix=NONE %s %}
 
-! RUN: %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=52 -cpp -DOMP_52 -target-feature +neon %s -o - | FileCheck --check-prefix=NEON %s
-! RUN: %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=52 -cpp -DOMP_52 -target-feature +neon -target-feature +sve %s -o - | FileCheck --check-prefix=SVE %s
-! RUN: %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=52 -cpp -DOMP_52 -target-feature +sse %s -o - | FileCheck --check-prefix=SSE %s
-! RUN: %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=52 -cpp -DOMP_52 -target-feature +avx %s -o - | FileCheck --check-prefix=AVX %s
-! RUN: %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=52 -cpp -DOMP_52 %s -o - | FileCheck --check-prefix=NONE %s
+! RUN: %if aarch64-registered-target %{ %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=52 -cpp -DOMP_52 -triple aarch64-unknown-linux-gnu -target-feature +neon %s -o - | FileCheck --check-prefix=NEON %s %}
+! RUN: %if aarch64-registered-target %{ %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=52 -cpp -DOMP_52 -triple aarch64-unknown-linux-gnu -target-feature +neon -target-feature +sve %s -o - | FileCheck --check-prefix=SVE %s %}
+! RUN: %if x86-registered-target %{ %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=52 -cpp -DOMP_52 -triple x86_64-unknown-linux-gnu -target-feature +sse %s -o - | FileCheck --check-prefix=SSE %s %}
+! RUN: %if x86-registered-target %{ %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=52 -cpp -DOMP_52 -triple x86_64-unknown-linux-gnu -target-feature +avx %s -o - | FileCheck --check-prefix=AVX %s %}
+! RUN: %if x86-registered-target %{ %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=52 -cpp -DOMP_52 -triple x86_64-unknown-linux-gnu %s -o - | FileCheck --check-prefix=NONE %s %}
 
 ! NEON-LABEL: func.func @_QPtest_isa_neon()
 ! NEON:         omp.barrier
@@ -161,57 +161,6 @@ subroutine test_isa_no_match_default()
 #endif
 end subroutine
 
-! Test device={arch()} selector. Arch properties without a known TraitProperty
-! mapping are matched against target features, like ISA traits.
-
-! NEON-LABEL: func.func @_QPtest_arch_neon()
-! NEON:         omp.barrier
-! SVE-LABEL: func.func @_QPtest_arch_neon()
-! SVE:         omp.barrier
-! SSE-LABEL: func.func @_QPtest_arch_neon()
-! SSE-NOT:     omp.barrier
-! SSE:         return
-! AVX-LABEL: func.func @_QPtest_arch_neon()
-! AVX-NOT:     omp.barrier
-! AVX:         return
-! NONE-LABEL: func.func @_QPtest_arch_neon()
-! NONE-NOT:     omp.barrier
-! NONE:         return
-subroutine test_arch_neon()
-  !$omp metadirective &
-  !$omp & when(device={arch("neon")}: barrier) &
-#ifdef OMP_52
-  !$omp & otherwise(nothing)
-#else
-  !$omp & default(nothing)
-#endif
-end subroutine
-
-! NEON-LABEL: func.func @_QPtest_arch_no_match()
-! NEON-NOT:     omp.barrier
-! NEON:         omp.taskwait
-! SVE-LABEL: func.func @_QPtest_arch_no_match()
-! SVE-NOT:     omp.barrier
-! SVE:         omp.taskwait
-! SSE-LABEL: func.func @_QPtest_arch_no_match()
-! SSE-NOT:     omp.barrier
-! SSE:         omp.taskwait
-! AVX-LABEL: func.func @_QPtest_arch_no_match()
-! AVX-NOT:     omp.barrier
-! AVX:         omp.taskwait
-! NONE-LABEL: func.func @_QPtest_arch_no_match()
-! NONE-NOT:     omp.barrier
-! NONE:         omp.taskwait
-subroutine test_arch_no_match()
-  !$omp metadirective &
-  !$omp & when(device={arch("unknown_arch")}: barrier) &
-#ifdef OMP_52
-  !$omp & otherwise(taskwait)
-#else
-  !$omp & default(taskwait)
-#endif
-end subroutine
-
 ! NEON-LABEL: func.func @_QPtest_begin_isa_neon()
 ! NEON:         omp.parallel
 ! SVE-LABEL: func.func @_QPtest_begin_isa_neon()
@@ -228,12 +177,13 @@ end subroutine
 subroutine test_begin_isa_neon()
   integer :: x
   x = 0
+#ifdef OMP_52
   !$omp begin metadirective &
   !$omp & when(device={isa("neon")}: parallel) &
-#ifdef OMP_52
   !$omp & otherwise(nothing)
 #else
-  !$omp & default(nothing)
+  !$omp begin metadirective &
+  !$omp & when(device={isa("neon")}: parallel)
 #endif
   x = 1
   !$omp end metadirective
@@ -256,12 +206,13 @@ end subroutine
 subroutine test_begin_isa_sse()
   integer :: x
   x = 0
+#ifdef OMP_52
   !$omp begin metadirective &
   !$omp & when(device={isa("sse")}: parallel) &
-#ifdef OMP_52
   !$omp & otherwise(nothing)
 #else
-  !$omp & default(nothing)
+  !$omp begin metadirective &
+  !$omp & when(device={isa("sse")}: parallel)
 #endif
   x = 1
   !$omp end metadirective

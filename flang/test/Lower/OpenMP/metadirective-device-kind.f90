@@ -22,13 +22,13 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_begin_device_kind_host()
 ! CHECK:         omp.parallel
+! CHECK:           omp.terminator
 ! CHECK:         return
 subroutine test_begin_device_kind_host()
   integer :: x
   x = 0
   !$omp begin metadirective &
-  !$omp & when(device={kind(host)}: parallel) &
-  !$omp & default(nothing)
+  !$omp & when(device={kind(host)}: parallel)
   x = 1
   !$omp end metadirective
 end subroutine
@@ -40,14 +40,14 @@ subroutine test_begin_device_kind_nohost()
   integer :: x
   x = 0
   !$omp begin metadirective &
-  !$omp & when(device={kind(nohost)}: parallel) &
-  !$omp & default(nothing)
+  !$omp & when(device={kind(nohost)}: parallel)
   x = 1
   !$omp end metadirective
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_begin_multiple_when()
 ! CHECK:         omp.parallel
+! CHECK:           omp.terminator
 ! CHECK-NOT:     omp.task
 ! CHECK:         return
 subroutine test_begin_multiple_when()
@@ -55,8 +55,7 @@ subroutine test_begin_multiple_when()
   x = 0
   !$omp begin metadirective &
   !$omp & when(implementation={vendor("amd")}: task) &
-  !$omp & when(device={kind(host)}: parallel) &
-  !$omp & default(nothing)
+  !$omp & when(device={kind(host)}: parallel)
   x = 1
   !$omp end metadirective
 end subroutine

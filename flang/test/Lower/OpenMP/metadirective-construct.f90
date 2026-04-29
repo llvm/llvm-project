@@ -40,8 +40,7 @@ subroutine test_begin_construct_parallel()
   x = 0
   !$omp parallel
     !$omp begin metadirective &
-    !$omp & when(construct={parallel}: parallel) &
-    !$omp & default(nothing)
+    !$omp & when(construct={parallel}: parallel)
     x = 1
     !$omp end metadirective
   !$omp end parallel
@@ -57,8 +56,7 @@ subroutine test_begin_construct_no_match()
   x = 0
   !$omp parallel
     !$omp begin metadirective &
-    !$omp & when(construct={target}: task) &
-    !$omp & default(nothing)
+    !$omp & when(construct={target}: task)
     x = 1
     !$omp end metadirective
   !$omp end parallel

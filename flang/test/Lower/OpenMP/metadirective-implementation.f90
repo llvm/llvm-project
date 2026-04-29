@@ -122,16 +122,18 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_begin_vendor_llvm()
 ! CHECK:         omp.parallel
+! CHECK:           omp.terminator
 ! CHECK:         return
 subroutine test_begin_vendor_llvm()
   integer :: x
   x = 0
+#ifdef OMP_52
   !$omp begin metadirective &
   !$omp & when(implementation={vendor(llvm)}: parallel) &
-#ifdef OMP_52
   !$omp & otherwise(nothing)
 #else
-  !$omp & default(nothing)
+  !$omp begin metadirective &
+  !$omp & when(implementation={vendor(llvm)}: parallel)
 #endif
   x = 1
   !$omp end metadirective
@@ -143,29 +145,13 @@ end subroutine
 subroutine test_begin_vendor_no_match()
   integer :: x
   x = 0
+#ifdef OMP_52
   !$omp begin metadirective &
   !$omp & when(implementation={vendor("unknown")}: parallel) &
-#ifdef OMP_52
   !$omp & otherwise(nothing)
 #else
-  !$omp & default(nothing)
-#endif
-  x = 1
-  !$omp end metadirective
-end subroutine
-
-! CHECK-LABEL: func.func @_QPtest_begin_nothing_variant()
-! CHECK-NOT:     omp.parallel
-! CHECK:         return
-subroutine test_begin_nothing_variant()
-  integer :: x
-  x = 0
   !$omp begin metadirective &
-  !$omp & when(implementation={vendor(llvm)}: nothing) &
-#ifdef OMP_52
-  !$omp & otherwise(parallel)
-#else
-  !$omp & default(parallel)
+  !$omp & when(implementation={vendor("unknown")}: parallel)
 #endif
   x = 1
   !$omp end metadirective
@@ -173,18 +159,21 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_begin_multiple_when_first_match()
 ! CHECK:         omp.parallel
+! CHECK:           omp.terminator
 ! CHECK-NOT:     omp.task
 ! CHECK:         return
 subroutine test_begin_multiple_when_first_match()
   integer :: x
   x = 0
+#ifdef OMP_52
   !$omp begin metadirective &
   !$omp & when(implementation={vendor(llvm)}: parallel) &
   !$omp & when(user={condition(.false.)}: task) &
-#ifdef OMP_52
   !$omp & otherwise(nothing)
 #else
-  !$omp & default(nothing)
+  !$omp begin metadirective &
+  !$omp & when(implementation={vendor(llvm)}: parallel) &
+  !$omp & when(user={condition(.false.)}: task)
 #endif
   x = 1
   !$omp end metadirective
@@ -193,6 +182,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPtest_begin_multiple_when_fallback()
 ! CHECK-NOT:     omp.task
 ! CHECK:         omp.parallel
+! CHECK:           omp.terminator
 ! CHECK:         return
 subroutine test_begin_multiple_when_fallback()
   integer :: x

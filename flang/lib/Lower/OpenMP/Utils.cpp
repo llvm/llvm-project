@@ -1205,9 +1205,18 @@ static void processTraitProperties(
       continue;
     }
 
-    // Treat unknown properties as ISA-like raw strings.
-    vmi.addTrait(set, llvm::omp::TraitProperty::device_isa___ANY, name->v,
-                 scorePtr);
+    if (selector == llvm::omp::TraitSelector::device_isa) {
+      vmi.addTrait(set, llvm::omp::TraitProperty::device_isa___ANY, name->v,
+                   scorePtr);
+    } else if (selector == llvm::omp::TraitSelector::target_device_isa) {
+      vmi.addTrait(set, llvm::omp::TraitProperty::target_device_isa___ANY,
+                   name->v, scorePtr);
+    } else {
+      // For non-ISA selectors (arch, kind, vendor, etc.), unknown properties
+      // mean the variant cannot match. Add an invalid trait to ensure it is
+      // not selected.
+      vmi.addTrait(llvm::omp::TraitProperty::invalid, name->v, scorePtr);
+    }
   }
 }
 
@@ -1312,11 +1321,10 @@ void makeVariantMatchInfo(llvm::omp::VariantMatchInfo &vmi,
           std::get<std::optional<parser::OmpTraitSelector::Properties>>(
               trait.t);
 
-      // device_num requires runtime target device queries not yet supported.
-      if (const auto *val =
-              std::get_if<parser::OmpTraitSelectorName::Value>(&selectorName.u);
-          val && *val == parser::OmpTraitSelectorName::Value::Device_Num)
-        TODO(loc, "target_device={device_num()} selector in METADIRECTIVE");
+      // target_device selectors require runtime target device queries not yet
+      // supported.
+      if (set == llvm::omp::TraitSet::target_device)
+        TODO(loc, "target_device selector in METADIRECTIVE");
 
       if (selector == llvm::omp::TraitSelector::user_condition) {
         processUserConditionTrait(vmi, props, semaCtx, dynamicCondExpr);
