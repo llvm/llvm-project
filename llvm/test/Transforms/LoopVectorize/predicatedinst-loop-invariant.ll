@@ -149,7 +149,7 @@ define void @loop_invariant_srem(ptr %p, i64 %a, i8 %b) {
 ; CHECK:       [[PRED_STORE_CONTINUE10]]:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i8> [[VEC_IND1]], splat (i8 4)
-; CHECK-NEXT:    [[VEC_IND_NEXT10]] = add <4 x i8> [[VEC_IND3]], splat (i8 4)
+; CHECK-NEXT:    [[VEC_IND_NEXT10]] = add nuw <4 x i8> [[VEC_IND3]], splat (i8 4)
 ; CHECK-NEXT:    [[TMP26:%.*]] = icmp eq i32 [[INDEX_NEXT]], 12
 ; CHECK-NEXT:    br i1 [[TMP26]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

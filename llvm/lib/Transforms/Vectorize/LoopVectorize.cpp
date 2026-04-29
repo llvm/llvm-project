@@ -6267,7 +6267,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   if (BestVPlan.hasEarlyExit())
     ++LoopsEarlyExitVectorized;
 
-  VPlanTransforms::replaceWidenCanonicalIVWithWidenIV(
+  VPlanTransforms::replaceWideCanonicalIVWithWideIV(
       BestVPlan, *PSE.getSE(), CM.TTI, Config.CostKind, BestVF, BestUF,
       CM.ValuesToIgnore);
   // TODO: Move to VPlan transform stage once the transition to the VPlan-based

@@ -247,7 +247,7 @@ define void @test2(ptr noalias nocapture %points, i32 %numPoints, ptr noalias no
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP5:%.*]] = and <16 x i1> [[INTERLEAVED_MASK]], <i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false>
 ; ENABLED_MASKED_STRIDED-NEXT:    call void @llvm.masked.store.v16i16.p0(<16 x i16> [[INTERLEAVED_VEC]], ptr align 2 [[GEP]], <16 x i1> [[TMP5]])
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; ENABLED_MASKED_STRIDED-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IV]], splat (i64 4)
+; ENABLED_MASKED_STRIDED-NEXT:    [[VEC_IND_NEXT]] = add nuw <4 x i64> [[VEC_IV]], splat (i64 4)
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP6]], label [[FOR_END_LOOPEXIT:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; ENABLED_MASKED_STRIDED:       for.end.loopexit:

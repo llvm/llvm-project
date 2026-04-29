@@ -749,7 +749,7 @@ static void removeRedundantCanonicalIVs(VPlan &Plan) {
   WidenNewIV->eraseFromParent();
 }
 
-void VPlanTransforms::replaceWidenCanonicalIVWithWidenIV(
+void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
     VPlan &Plan, ScalarEvolution &SE, const TargetTransformInfo &TTI,
     TargetTransformInfo::TargetCostKind CostKind, ElementCount VF, unsigned UF,
     const SmallPtrSetImpl<const Value *> &ValuesToIgnore) {
@@ -785,13 +785,13 @@ void VPlanTransforms::replaceWidenCanonicalIVWithWidenIV(
       UnrolledBase.spillCost(TTI, CostKind))
     return;
 
-  Constant *Zero = Constant::getNullValue(CanIVTy);
-  InductionDescriptor ID(Zero, InductionDescriptor::IK_IntInduction,
-                         SE.getOne(CanIVTy));
+  InductionDescriptor ID =
+      InductionDescriptor::getCanonicalIntInduction(CanIVTy, SE);
   VPValue *StepV = Plan.getConstantInt(CanIVTy, 1);
   auto *NewWideIV = new VPWidenIntOrFpInductionRecipe(
-      /*IV=*/nullptr, Plan.getOrAddLiveIn(Zero), StepV, &Plan.getVF(), ID,
-      VPIRFlags::WrapFlagsTy(/*HasNUW=*/false, /*HasNSW=*/false),
+      /*IV=*/nullptr, Plan.getZero(CanIVTy), StepV, &Plan.getVF(), ID,
+      VPIRFlags::WrapFlagsTy(/*HasNUW=*/LoopRegion->hasCanonicalIVNUW(),
+                             /*HasNSW=*/false),
       WideCanIV->getDebugLoc());
   VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
   NewWideIV->insertBefore(&*Header->getFirstNonPhi());

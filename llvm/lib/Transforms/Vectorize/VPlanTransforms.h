@@ -504,14 +504,10 @@ struct VPlanTransforms {
   /// \p Plan.
   static void introduceMasksAndLinearize(VPlan &Plan);
 
-  /// If \p Plan contains a VPWidenCanonicalIVRecipe, try to replace it with a
-  /// VPWidenIntOrFpInductionRecipe. If a canonical
-  /// VPWidenIntOrFpInductionRecipe is already present in the plan, it is
-  /// reused. Otherwise, a cost-based decision determines whether to introduce a
-  /// new VPWidenIntOrFpInductionRecipe or keep the VPWidenCanonicalIVRecipe;
-  /// the introduction is only performed when it does not cause additional
+  /// Replace a VPWidenCanonicalIVRecipe if it is present in \p Plan, with a
+  /// VPWidenIntOrFpInductionRecipe, provided it would not cause additional
   /// spills for \p VF at unroll factor \p UF.
-  static void replaceWidenCanonicalIVWithWidenIV(
+  static void replaceWideCanonicalIVWithWideIV(
       VPlan &Plan, ScalarEvolution &SE, const TargetTransformInfo &TTI,
       TargetTransformInfo::TargetCostKind CostKind, ElementCount VF,
       unsigned UF, const SmallPtrSetImpl<const Value *> &ValuesToIgnore);

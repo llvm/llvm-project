@@ -31,7 +31,7 @@ define i1 @fn(ptr %nno) #0 {
 ; CHECK-NEXT:    [[TMP11]] = or <4 x i32> [[PREDPHI]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nsw <4 x i64> [[VEC_IND]], splat (i64 -4)
-; CHECK-NEXT:    [[VEC_IND_NEXT3]] = add <4 x i8> [[VEC_IND1]], splat (i8 4)
+; CHECK-NEXT:    [[VEC_IND_NEXT3]] = add nuw <4 x i8> [[VEC_IND1]], splat (i8 4)
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], 12
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:

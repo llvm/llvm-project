@@ -23,7 +23,7 @@ define void @tail_folding_enabled(ptr noalias nocapture %A, ptr noalias nocaptur
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    call void @llvm.masked.store.v8i32.p0(<8 x i32> [[TMP6]], ptr align 4 [[TMP7]], <8 x i1> [[TMP1]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <8 x i16> [[VEC_IND]], splat (i16 8)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw <8 x i16> [[VEC_IND]], splat (i16 8)
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 432
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
@@ -71,7 +71,7 @@ define void @tail_folding_disabled(ptr noalias nocapture %A, ptr noalias nocaptu
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    call void @llvm.masked.store.v8i32.p0(<8 x i32> [[TMP6]], ptr align 4 [[TMP7]], <8 x i1> [[TMP1]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <8 x i16> [[VEC_IND]], splat (i16 8)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw <8 x i16> [[VEC_IND]], splat (i16 8)
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 432
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       middle.block:

@@ -54,7 +54,7 @@ define i16 @reverse_interleave_load_fold_mask() optsize {
 ; CHECK-NEXT:    [[TMP24:%.*]] = add nsw <2 x i16> [[TMP22]], [[TMP23]]
 ; CHECK-NEXT:    [[TMP25]] = add <2 x i16> [[VEC_PHI]], [[TMP24]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i8> [[VEC_IND]], splat (i8 2)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw <2 x i8> [[VEC_IND]], splat (i8 2)
 ; CHECK-NEXT:    [[TMP27:%.*]] = icmp eq i32 [[INDEX_NEXT]], 42
 ; CHECK-NEXT:    br i1 [[TMP27]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:

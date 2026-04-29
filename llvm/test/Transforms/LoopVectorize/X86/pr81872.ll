@@ -33,7 +33,7 @@ define void @test(ptr noundef align 8 dereferenceable_or_null(16) %arr) #0 {
 ; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 1), ptr align 8 [[TMP8]], <4 x i1> [[REVERSE]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nsw <4 x i64> [[VEC_IND]], splat (i64 -4)
-; CHECK-NEXT:    [[VEC_IND_NEXT2]] = add <4 x i8> [[VEC_IND1]], splat (i8 4)
+; CHECK-NEXT:    [[VEC_IND_NEXT2]] = add nuw <4 x i8> [[VEC_IND1]], splat (i8 4)
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 12
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !prof [[PROF0:![0-9]+]], !llvm.loop [[LOOP1:![0-9]+]]
 ; CHECK:       middle.block:

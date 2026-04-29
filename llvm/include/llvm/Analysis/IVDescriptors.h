@@ -380,9 +380,10 @@ public:
   /// Default constructor - creates an invalid induction.
   InductionDescriptor() = default;
 
-  LLVM_ABI InductionDescriptor(Value *Start, InductionKind K, const SCEV *Step,
-                               BinaryOperator *InductionBinOp = nullptr,
-                               SmallVectorImpl<Instruction *> *Casts = nullptr);
+  /// Returns the canonical integer induction for type \p Ty with start = 0
+  /// and step = 1.
+  LLVM_ABI static InductionDescriptor
+  getCanonicalIntInduction(Type *Ty, ScalarEvolution &SE);
 
   Value *getStartValue() const { return StartValue; }
   InductionKind getKind() const { return IK; }
@@ -444,6 +445,12 @@ public:
   ArrayRef<Instruction *> getCastInsts() const { return RedundantCasts; }
 
 private:
+  /// Private constructor - used by \c isInductionPHI and
+  /// \c getCanonicalIntInduction.
+  InductionDescriptor(Value *Start, InductionKind K, const SCEV *Step,
+                      BinaryOperator *InductionBinOp = nullptr,
+                      SmallVectorImpl<Instruction *> *Casts = nullptr);
+
   /// Start value.
   TrackingVH<Value> StartValue;
   /// Induction kind.

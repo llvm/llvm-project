@@ -1095,7 +1095,7 @@ define void @unconditional_strided1_optsize_unknown_tc(ptr noalias nocapture rea
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[Q:%.*]], i32 [[INDEX]]
 ; ENABLED_MASKED_STRIDED-NEXT:    call void @llvm.masked.store.v8i8.p0(<8 x i8> [[STRIDED_VEC]], ptr align 1 [[TMP4]], <8 x i1> [[TMP0]])
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
-; ENABLED_MASKED_STRIDED-NEXT:    [[VEC_IND_NEXT]] = add <8 x i32> [[VEC_IV]], splat (i32 8)
+; ENABLED_MASKED_STRIDED-NEXT:    [[VEC_IND_NEXT]] = add nuw <8 x i32> [[VEC_IV]], splat (i32 8)
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP5]], label [[FOR_END]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; ENABLED_MASKED_STRIDED:       for.end:
@@ -3023,7 +3023,7 @@ define void @unconditional_masked_strided2_unknown_tc(ptr noalias nocapture read
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x i8> [[TMP4]], <8 x i8> [[TMP5]], <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
 ; ENABLED_MASKED_STRIDED-NEXT:    call void @llvm.masked.store.v16i8.p0(<16 x i8> [[INTERLEAVED_VEC]], ptr align 1 [[TMP6]], <16 x i1> [[INTERLEAVED_MASK]])
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
-; ENABLED_MASKED_STRIDED-NEXT:    [[VEC_IND_NEXT]] = add <8 x i32> [[VEC_IV]], splat (i32 8)
+; ENABLED_MASKED_STRIDED-NEXT:    [[VEC_IND_NEXT]] = add nuw <8 x i32> [[VEC_IV]], splat (i32 8)
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP8]], label [[FOR_END]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; ENABLED_MASKED_STRIDED:       for.end:
