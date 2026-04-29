@@ -21,12 +21,12 @@ define void @test1(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) 
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[TMP6]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x float>, ptr [[TMP6]], align 4
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <vscale x 2 x float> [[WIDE_LOAD]], i64 0
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 2 x float>, ptr [[TMP9]], align 4
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <vscale x 2 x float> [[WIDE_LOAD1]], i64 0
-; CHECK-NEXT:    [[FCMP1:%.*]] = fcmp ogt float [[TMP10]], 1.000000e+02
-; CHECK-NEXT:    [[FCMP2:%.*]] = fcmp ogt float [[TMP12]], 1.000000e+02
+; CHECK-NEXT:    [[TMP7:%.*]] = fcmp ogt <vscale x 2 x float> [[WIDE_LOAD]], splat (float 1.000000e+02)
+; CHECK-NEXT:    [[TMP8:%.*]] = fcmp ogt <vscale x 2 x float> [[WIDE_LOAD1]], splat (float 1.000000e+02)
+; CHECK-NEXT:    [[FCMP1:%.*]] = extractelement <vscale x 2 x i1> [[TMP7]], i64 0
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[FCMP1]])
+; CHECK-NEXT:    [[FCMP2:%.*]] = extractelement <vscale x 2 x i1> [[TMP8]], i64 0
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[FCMP2]])
 ; CHECK-NEXT:    [[TMP14:%.*]] = fadd <vscale x 2 x float> [[WIDE_LOAD]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    [[TMP15:%.*]] = fadd <vscale x 2 x float> [[WIDE_LOAD1]], splat (float 1.000000e+00)

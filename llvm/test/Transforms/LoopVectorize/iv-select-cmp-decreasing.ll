@@ -1125,8 +1125,8 @@ define i64 @select_decreasing_induction_icmp_non_const_start(ptr %a, ptr %b, i64
 ; IC1VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ [[TMP3]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; IC1VF4-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ splat (i64 9223372036854775807), %[[VECTOR_PH]] ], [ [[TMP13:%.*]], %[[VECTOR_BODY]] ]
 ; IC1VF4-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP12:%.*]], %[[VECTOR_BODY]] ]
-; IC1VF4-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 [[N]], [[INDEX]]
-; IC1VF4-NEXT:    [[TMP4:%.*]] = add nsw i64 [[OFFSET_IDX]], -1
+; IC1VF4-NEXT:    [[TMP6:%.*]] = add nsw <4 x i64> [[VEC_IND]], splat (i64 -1)
+; IC1VF4-NEXT:    [[TMP4:%.*]] = extractelement <4 x i64> [[TMP6]], i64 0
 ; IC1VF4-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP4]]
 ; IC1VF4-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[TMP5]], i64 -3
 ; IC1VF4-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP7]], align 8
@@ -1200,8 +1200,8 @@ define i64 @select_decreasing_induction_icmp_non_const_start(ptr %a, ptr %b, i64
 ; IC4VF4-NEXT:    [[STEP_ADD:%.*]] = sub <4 x i64> [[VEC_IND]], splat (i64 4)
 ; IC4VF4-NEXT:    [[STEP_ADD_2:%.*]] = sub <4 x i64> [[STEP_ADD]], splat (i64 4)
 ; IC4VF4-NEXT:    [[STEP_ADD_3:%.*]] = sub <4 x i64> [[STEP_ADD_2]], splat (i64 4)
-; IC4VF4-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 [[N]], [[INDEX]]
-; IC4VF4-NEXT:    [[TMP4:%.*]] = add nsw i64 [[OFFSET_IDX]], -1
+; IC4VF4-NEXT:    [[TMP7:%.*]] = add nsw <4 x i64> [[VEC_IND]], splat (i64 -1)
+; IC4VF4-NEXT:    [[TMP4:%.*]] = extractelement <4 x i64> [[TMP7]], i64 0
 ; IC4VF4-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP4]]
 ; IC4VF4-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[TMP5]], i64 -3
 ; IC4VF4-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[TMP5]], i64 -7

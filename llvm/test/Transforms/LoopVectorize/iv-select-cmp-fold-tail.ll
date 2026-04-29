@@ -84,12 +84,12 @@ define i64 @select_decreasing_induction_icmp_non_const_start(ptr %a, ptr %b, i64
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ [[TMP3]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ splat (i64 9223372036854775807), %[[VECTOR_PH]] ], [ [[TMP52:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP50:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 [[N]], [[INDEX]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT4:%.*]] = insertelement <4 x i64> poison, i64 [[INDEX]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT5:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT4]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[VEC_IV:%.*]] = add <4 x i64> [[BROADCAST_SPLAT5]], <i64 0, i64 1, i64 2, i64 3>
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule <4 x i64> [[VEC_IV]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP38:%.*]] = add nsw i64 [[OFFSET_IDX]], -1
+; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <4 x i64> [[VEC_IND]], splat (i64 -1)
+; CHECK-NEXT:    [[TMP38:%.*]] = extractelement <4 x i64> [[TMP4]], i64 0
 ; CHECK-NEXT:    [[TMP39:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP38]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr [[TMP39]], i64 -3
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i1> [[TMP2]], <4 x i1> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>

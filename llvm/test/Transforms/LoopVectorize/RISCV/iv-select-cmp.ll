@@ -73,7 +73,6 @@ define i64 @select_decreasing_induction_icmp_non_const_start(ptr %a, ptr %b, i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub nsw <vscale x 4 x i64> [[BROADCAST_SPLAT]], [[TMP2]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 4 x i64> [ [[TMP3]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i64> [ splat (i64 9223372036854775807), %[[VECTOR_PH]] ], [ [[TMP18:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP19:%.*]], %[[VECTOR_BODY]] ]
@@ -83,8 +82,8 @@ define i64 @select_decreasing_induction_icmp_non_const_start(ptr %a, ptr %b, i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub nsw i64 0, [[TMP5]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP7]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT2]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 [[N]], [[INDEX]]
-; CHECK-NEXT:    [[TMP38:%.*]] = add nsw i64 [[OFFSET_IDX]], -1
+; CHECK-NEXT:    [[TMP8:%.*]] = add nsw <vscale x 4 x i64> [[VEC_IND]], splat (i64 -1)
+; CHECK-NEXT:    [[TMP38:%.*]] = extractelement <vscale x 4 x i64> [[TMP8]], i64 0
 ; CHECK-NEXT:    [[TMP39:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP38]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = sub nuw nsw i64 [[TMP5]], 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = sub i64 0, [[TMP9]]
@@ -98,7 +97,6 @@ define i64 @select_decreasing_induction_icmp_non_const_start(ptr %a, ptr %b, i64
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp sgt <vscale x 4 x i64> [[TMP12]], [[TMP15]]
 ; CHECK-NEXT:    [[TMP18]] = call <vscale x 4 x i64> @llvm.vp.merge.nxv4i64(<vscale x 4 x i1> [[TMP16]], <vscale x 4 x i64> [[VEC_IND]], <vscale x 4 x i64> [[VEC_PHI]], i32 [[TMP4]])
 ; CHECK-NEXT:    [[TMP19]] = call <vscale x 4 x i1> @llvm.vp.merge.nxv4i1(<vscale x 4 x i1> [[TMP16]], <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i1> [[VEC_PHI1]], i32 [[TMP4]])
-; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP5]], [[INDEX]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP5]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nsw <vscale x 4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT3]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[AVL_NEXT]], 0

@@ -857,17 +857,12 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
       auto *RepR = dyn_cast<VPReplicateRecipe>(U);
       // Skip recipes that shouldn't be narrowed.
       if (!Def || !isa<VPReplicateRecipe, VPWidenRecipe>(Def) ||
-          Def->getNumUsers() == 0 || !Def->getUnderlyingValue() ||
+          !Def->getUnderlyingValue() ||
           (RepR && (RepR->isSingleScalar() || RepR->isPredicated())))
         continue;
 
-      // Skip recipes that may have other lanes than their first used.
-      if (!vputils::isSingleScalar(Def) && !vputils::onlyFirstLaneUsed(Def))
-        continue;
-
-      // TODO: Support scalarizing ExtractValue.
-      if (match(Def,
-                m_Binary<Instruction::ExtractValue>(m_VPValue(), m_VPValue())))
+      // Skip recipes that are not single scalar.
+      if (!vputils::isSingleScalar(Def))
         continue;
 
       auto *Clone = new VPReplicateRecipe(Def->getUnderlyingInstr(),
