@@ -20,7 +20,7 @@ def testUnknown():
     gc.collect()
     # CHECK: unknown str: loc(unknown)
     print("unknown str:", str(loc))
-    # CHECK: unknown repr: loc(unknown)
+    # CHECK: unknown repr: UnknownLoc(loc(unknown))
     print("unknown repr:", repr(loc))
 
     assert isinstance(loc, UnknownLoc)
@@ -63,11 +63,11 @@ def testFileLineCol():
 
     # CHECK: file str: loc("foo1.txt":123:56)
     print("file str:", str(loc))
-    # CHECK: file repr: loc("foo1.txt":123:56)
+    # CHECK: file repr: FileLineColLoc(loc("foo1.txt":123:56))
     print("file repr:", repr(loc))
     # CHECK: file range str: loc("foo2.txt":123:56 to 124:100)
     print("file range str:", str(range))
-    # CHECK: file range repr: loc("foo2.txt":123:56 to 124:100)
+    # CHECK: file range repr: FileLineColLoc(loc("foo2.txt":123:56 to 124:100))
     print("file range repr:", repr(range))
 
     assert isinstance(loc, FileLineColLoc)
@@ -130,11 +130,11 @@ def testName():
 
     # CHECK: name str: loc("nombre")
     print("name str:", str(loc))
-    # CHECK: name repr: loc("nombre")
+    # CHECK: name repr: NameLoc(loc("nombre"))
     print("name repr:", repr(loc))
     # CHECK: name str: loc("naam"("nombre"))
     print("name str:", str(loc_with_child_loc))
-    # CHECK: name repr: loc("naam"("nombre"))
+    # CHECK: name repr: NameLoc(loc("naam"("nombre")))
     print("name repr:", repr(loc_with_child_loc))
 
     assert isinstance(loc, NameLoc)
@@ -168,7 +168,7 @@ def testCallSite():
     ctx = None
     # CHECK: callsite str: loc(callsite("foo.text":123:45 at callsite("util.foo":379:21 at "main.foo":100:63))
     print("callsite str:", str(loc))
-    # CHECK: callsite repr: loc(callsite("foo.text":123:45 at callsite("util.foo":379:21 at "main.foo":100:63))
+    # CHECK: callsite repr: CallSiteLoc(loc(callsite("foo.text":123:45 at callsite("util.foo":379:21 at "main.foo":100:63)))
     print("callsite repr:", repr(loc))
 
     assert isinstance(loc, CallSiteLoc)
@@ -208,15 +208,15 @@ def testFused():
     assert isinstance(loc_single, NameLoc)
     # CHECK: fused str: loc("apple")
     print("fused str:", str(loc_single))
-    # CHECK: fused repr: loc("apple")
+    # CHECK: fused repr: NameLoc(loc("apple"))
     print("fused repr:", repr(loc_single))
 
     assert isinstance(loc, FusedLoc)
     # CHECK: fused str: loc(fused["apple", "banana"])
     print("fused str:", str(loc))
-    # CHECK: fused repr: loc(fused["apple", "banana"])
+    # CHECK: fused repr: FusedLoc(loc(fused["apple", "banana"]))
     print("fused repr:", repr(loc))
-    # CHECK: fused locations: [loc("apple"), loc("banana")]
+    # CHECK: fused locations: [NameLoc(loc("apple")), NameLoc(loc("banana"))]
     print("fused locations:", loc.locations)
     # CHECK: fused metadata: None
     print("fused metadata:", loc.metadata)
@@ -226,32 +226,32 @@ def testFused():
     print("fused metadata:", loc_attr.metadata)
     # CHECK: fused str: loc(fused<"sauteed">["carrot", "potatoes"])
     print("fused str:", str(loc_attr))
-    # CHECK: fused repr: loc(fused<"sauteed">["carrot", "potatoes"])
+    # CHECK: fused repr: FusedLoc(loc(fused<"sauteed">["carrot", "potatoes"]))
     print("fused repr:", repr(loc_attr))
-    # CHECK: fused locations: [loc("carrot"), loc("potatoes")]
+    # CHECK: fused locations: [NameLoc(loc("carrot")), NameLoc(loc("potatoes"))]
     print("fused locations:", loc_attr.locations)
 
     assert not isinstance(loc_empty, FusedLoc)
     assert isinstance(loc_empty, UnknownLoc)
     # CHECK: fused str: loc(unknown)
     print("fused str:", str(loc_empty))
-    # CHECK: fused repr: loc(unknown)
+    # CHECK: fused repr: UnknownLoc(loc(unknown))
     print("fused repr:", repr(loc_empty))
 
     assert isinstance(loc_empty_attr, FusedLoc)
     # CHECK: fused str: loc(fused<"sauteed">[unknown])
     print("fused str:", str(loc_empty_attr))
-    # CHECK: fused repr: loc(fused<"sauteed">[unknown])
+    # CHECK: fused repr: FusedLoc(loc(fused<"sauteed">[unknown]))
     print("fused repr:", repr(loc_empty_attr))
-    # CHECK: fused locations: [loc(unknown)]
+    # CHECK: fused locations: [UnknownLoc(loc(unknown))]
     print("fused locations:", loc_empty_attr.locations)
 
     assert isinstance(loc_single_attr, FusedLoc)
     # CHECK: fused str: loc(fused<"sauteed">["apple"])
     print("fused str:", str(loc_single_attr))
-    # CHECK: fused repr: loc(fused<"sauteed">["apple"])
+    # CHECK: fused repr: FusedLoc(loc(fused<"sauteed">["apple"]))
     print("fused repr:", repr(loc_single_attr))
-    # CHECK: fused locations: [loc("apple")]
+    # CHECK: fused locations: [NameLoc(loc("apple"))]
     print("fused locations:", loc_single_attr.locations)
 
 

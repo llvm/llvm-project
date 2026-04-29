@@ -3745,6 +3745,15 @@ void populateIRCore(nb::module_ &m) {
             Args:
               message: The error message to emit.)")
       .def(
+          "__str__",
+          [](PyLocation &self) {
+            PyPrintAccumulator printAccum;
+            mlirLocationPrint(self, printAccum.getCallback(),
+                              printAccum.getUserData());
+            return printAccum.join();
+          },
+          "Returns the assembly form of the Location.")
+      .def(
           "__repr__",
           [](PyLocation &self) {
             PyPrintAccumulator printAccum;

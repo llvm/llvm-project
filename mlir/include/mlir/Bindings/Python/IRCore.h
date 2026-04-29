@@ -1210,6 +1210,15 @@ public:
       throw nanobind::attribute_error(
           (DerivedTy::pyClassName + std::string(" has no typeid.")).c_str());
     });
+    cls.def("__repr__", [](DerivedTy &self) {
+      PyPrintAccumulator printAccum;
+      printAccum.parts.append(DerivedTy::pyClassName);
+      printAccum.parts.append("(");
+      mlirLocationPrint(self, printAccum.getCallback(),
+                        printAccum.getUserData());
+      printAccum.parts.append(")");
+      return printAccum.join();
+    });
     if (DerivedTy::getTypeIdFunction) {
       PyGlobals::get().registerTypeCaster(
           DerivedTy::getTypeIdFunction(),
