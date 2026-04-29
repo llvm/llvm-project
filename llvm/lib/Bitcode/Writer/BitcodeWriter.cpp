@@ -4263,6 +4263,7 @@ void IndexBitcodeWriter::writeModStrings() {
     auto ModuleId = ModuleIdMap.size();
     ModuleIdMap[Key] = ModuleId;
     Vals.push_back(ModuleId);
+    // Use bytes_begin/end() for unsigned char iteration.
     Vals.append(Key.bytes_begin(), Key.bytes_end());
 
     // Emit the finished record.
