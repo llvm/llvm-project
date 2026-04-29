@@ -14928,6 +14928,23 @@ buildMemcpyForAssignmentOp(Sema &S, SourceLocation Loc, QualType T,
       S.Context, To, UO_AddrOf, S.Context.getPointerType(To->getType()),
       VK_PRValue, OK_Ordinary, Loc, false, S.CurFPFeatureOverrides());
 
+  // If this is restrict qualified, the call to memcpy will fail as this ends up
+  // being an illegal pointer cast (as it has non-local qualifiers in
+  // difference). Sema rules prevent us from calling this with anything other
+  // than the restrict qualifiers as far as I can tell(fields cant have an AS,
+  // copy is deleted if it is const, OBJC can't get here, pointer-auth can't be
+  // applied to any problematic things). In order to avoid that problem, we can
+  // just insert a cast directly to const void * / void *.
+  if (T.isRestrictQualified()) {
+    From = ImplicitCastExpr::Create(
+        S.Context, S.Context.getPointerType(S.Context.VoidTy.withConst()),
+        CK_BitCast, From, /*BasePath=*/nullptr, VK_PRValue,
+        FPOptionsOverride());
+    To = ImplicitCastExpr::Create(
+        S.Context, S.Context.VoidPtrTy, CK_BitCast, To,
+        /*BasePath=*/nullptr, VK_PRValue, FPOptionsOverride());
+  }
+
   bool NeedsCollectableMemCpy = false;
   if (auto *RD = T->getBaseElementTypeUnsafe()->getAsRecordDecl())
     NeedsCollectableMemCpy = RD->hasObjectMember();
