@@ -63,10 +63,16 @@ def sync_test_dir(local_dir: str, remote_dir: str) -> None:
         if not os.path.islink(local_file) and os.path.isfile(local_file):
             run_adb_sync_command(["adb", "push", "--sync", local_file,
                                   remote_file])
+            run_adb_sync_command(["adb", "shell", "chmod", "777", REMOTE_BASE_DIR])
+            run_adb_sync_command(["adb", "shell", "chmod", "777", os.path.dirname(remote_dir)])
+            run_adb_sync_command(["adb", "shell", "chmod", "777", remote_dir])
             return
 
     assert os.path.basename(local_dir) == os.path.basename(remote_dir)
     run_adb_sync_command(["adb", "shell", "mkdir", "-p", remote_dir])
+    run_adb_sync_command(["adb", "shell", "chmod", "777", REMOTE_BASE_DIR])
+    run_adb_sync_command(["adb", "shell", "chmod", "777", os.path.dirname(remote_dir)])
+    run_adb_sync_command(["adb", "shell", "chmod", "777", remote_dir])
     run_adb_sync_command(["adb", "push", "--sync", local_dir,
                           os.path.dirname(remote_dir)])
 
