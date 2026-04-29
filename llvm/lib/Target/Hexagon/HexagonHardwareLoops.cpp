@@ -115,6 +115,7 @@ namespace {
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addRequired<MachineDominatorTreeWrapperPass>();
       AU.addRequired<MachineLoopInfoWrapperPass>();
+      AU.addRequired<MachineOptimizationRemarkEmitterPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
 
@@ -386,8 +387,7 @@ bool HexagonHardwareLoops::runOnMachineFunction(MachineFunction &MF) {
   TII = HST.getInstrInfo();
   TRI = HST.getRegisterInfo();
 
-  MachineOptimizationRemarkEmitter ORE(MF, nullptr);
-  MORE = &ORE;
+  MORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
 
   for (auto &L : *MLI)
     if (L->isOutermost()) {
