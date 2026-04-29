@@ -162,8 +162,9 @@ MODULE_PASS("rtsan", RealtimeSanitizerPass())
 MODULE_PASS("sample-profile", SampleProfileLoaderPass())
 MODULE_PASS("sancov-module", SanitizerCoveragePass())
 MODULE_PASS("sanmd-module", SanitizerBinaryMetadataPass())
+// TODO: Rename (or parameterize by optimization level)
 MODULE_PASS("scc-oz-module-inliner",
-            buildInlinerPipeline(OptimizationLevel::Oz,
+            buildInlinerPipeline(OptimizationLevel::O2,
                                  ThinOrFullLTOPhase::None))
 MODULE_PASS("shadow-stack-gc-lowering", ShadowStackGCLoweringPass())
 MODULE_PASS("strip", StripSymbolsPass())
