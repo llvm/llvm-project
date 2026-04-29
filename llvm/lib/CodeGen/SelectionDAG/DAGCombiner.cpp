@@ -12143,7 +12143,7 @@ SDValue DAGCombiner::visitBSWAP(SDNode *N) {
   // to the mirror byte.
   unsigned TZ = alignDown(Known.countMinTrailingZeros(), 8);
   unsigned LZ = alignDown(Known.countMinLeadingZeros(), 8);
-  if (BW - LZ - TZ == 8) {
+  if (BW - (LZ + TZ) == 8) {
     unsigned Opc = LZ > TZ ? ISD::SHL : ISD::SRL;
     // Skip if the target would re-expand the produced shift post-legalize.
     // Targets that custom-lower byte-multiple shifts via bswap (e.g. MSP430
