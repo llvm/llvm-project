@@ -330,6 +330,8 @@ class StackFrameContext : public LocationContext {
 public:
   ~StackFrameContext() override = default;
 
+  const ento::BlockDataRegion* getBlockInvocationData() const { return BlockInvocationData; }
+
   const Expr *getCallSite() const { return CallSite; }
 
   const CFGBlock *getCallSiteBlock() const { return Block; }
