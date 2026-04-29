@@ -117,6 +117,8 @@ void CodeMetrics::collectEphemeralValues(
 /// unreachable and all predecessors are statically known condiational branches
 /// to not go to the branch.
 static bool isDeadBlock(const BasicBlock *BB) {
+  if (BB->isEntryBlock())
+    return false;
   if (!isa<UnreachableInst>(BB->getTerminator()))
     return false;
   for (const BasicBlock *Pred : predecessors(BB)) {
