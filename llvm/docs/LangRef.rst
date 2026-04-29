@@ -30249,13 +30249,15 @@ FP Arithmetic Intrinsics
 ------------------------
 
 These intrinsics are call-instruction equivalents of the standard
-floating-point instructions.  They accept the same
-:ref:`fast-math flags <fastmath>` as the corresponding instruction and
-lower to it in the common case (no operand bundles).  Clients that need
-to express non-default FP environment behavior (such as a specific
-rounding mode or exception-handling policy) can attach operand bundles
-to these calls; when such bundles are present the call may no longer be
-``memory(none)`` or speculatable.
+floating-point instructions, accepting the same
+:ref:`fast-math flags <fastmath>`.  Expressing a floating-point
+operation as a call allows clients to attach metadata and to refer to
+the result value like any other value (without resorting to
+``extractvalue`` or similar workarounds).  Without operand bundles they
+lower identically to the corresponding instruction.
+
+Note: ``llvm.fcmps`` is an exception -- see its entry below for
+details.
 
 .. _int_fadd:
 
@@ -30293,9 +30295,8 @@ The arguments and return value are floating-point numbers of the same type.
 Semantics:
 """"""""""
 
-Equivalent to the :ref:`fadd <i_fadd>` instruction.  Without operand
-bundles that change FP environment behavior, always ``memory(none)``
-and speculatable.
+Equivalent to the :ref:`fadd <i_fadd>` instruction.  Always
+``memory(none)`` and speculatable.
 
 Example:
 """"""""
@@ -30340,9 +30341,8 @@ The arguments and return value are floating-point numbers of the same type.
 Semantics:
 """"""""""
 
-Equivalent to the :ref:`fsub <i_fsub>` instruction.  Without operand
-bundles that change FP environment behavior, always ``memory(none)``
-and speculatable.
+Equivalent to the :ref:`fsub <i_fsub>` instruction.  Always
+``memory(none)`` and speculatable.
 
 Example:
 """"""""
@@ -30387,9 +30387,8 @@ The arguments and return value are floating-point numbers of the same type.
 Semantics:
 """"""""""
 
-Equivalent to the :ref:`fmul <i_fmul>` instruction.  Without operand
-bundles that change FP environment behavior, always ``memory(none)``
-and speculatable.
+Equivalent to the :ref:`fmul <i_fmul>` instruction.  Always
+``memory(none)`` and speculatable.
 
 Example:
 """"""""
@@ -30434,9 +30433,8 @@ The arguments and return value are floating-point numbers of the same type.
 Semantics:
 """"""""""
 
-Equivalent to the :ref:`fdiv <i_fdiv>` instruction.  Without operand
-bundles that change FP environment behavior, always ``memory(none)``
-and speculatable.
+Equivalent to the :ref:`fdiv <i_fdiv>` instruction.  Always
+``memory(none)`` and speculatable.
 
 Example:
 """"""""
@@ -30481,9 +30479,8 @@ The arguments and return value are floating-point numbers of the same type.
 Semantics:
 """"""""""
 
-Equivalent to the :ref:`frem <i_frem>` instruction.  Without operand
-bundles that change FP environment behavior, always ``memory(none)``
-and speculatable.
+Equivalent to the :ref:`frem <i_frem>` instruction.  Always
+``memory(none)`` and speculatable.
 
 Example:
 """"""""
@@ -30528,9 +30525,8 @@ The argument and return value are floating-point numbers of the same type.
 Semantics:
 """"""""""
 
-Equivalent to the :ref:`fneg <i_fneg>` instruction.  Without operand
-bundles that change FP environment behavior, always ``memory(none)``
-and speculatable.
+Equivalent to the :ref:`fneg <i_fneg>` instruction.  Always
+``memory(none)`` and speculatable.
 
 Example:
 """"""""
@@ -30582,8 +30578,7 @@ Semantics:
 """"""""""
 
 The comparison semantics :ref:`follow those of the fcmp instruction
-<fcmp_md_cc_sem>`.  Without operand bundles that enable FP exceptions,
-always ``memory(none)`` and speculatable.
+<fcmp_md_cc_sem>`.  Always ``memory(none)`` and speculatable.
 
 Example:
 """"""""
@@ -30618,9 +30613,14 @@ Overview:
 """""""""
 
 Performs a **signaling** floating-point comparison.  Unlike
-:ref:`llvm.fcmp <int_fcmp>`, a signaling comparison raises an FP Invalid
-Operation exception whenever either operand is any NaN -- including quiet NaNs
-(qNaN).  There is no corresponding plain instruction; the closest equivalent is
+:ref:`llvm.fcmp <int_fcmp>`, ``llvm.fcmps`` signals the FP Invalid Operation
+exception for any NaN operand (including quiet NaNs), whereas
+:ref:`llvm.fcmp <int_fcmp>` signals only for sNaN operands.  The difference
+is only observable when FP exception tracking is active (e.g. via
+``strictfp`` or a future operand bundle); in the default LLVM FP model,
+both intrinsics produce the same result.
+
+There is no corresponding plain instruction; the closest equivalent is
 :ref:`fcmp <i_fcmp>`.  For vector types the return type is a vector of ``i1``
 with the same number of elements as the operands.
 
@@ -30675,8 +30675,7 @@ floating-point type. The source type must be larger than the destination type.
 Semantics:
 """"""""""
 
-Equivalent to the :ref:`fptrunc <i_fptrunc>` instruction.  Without
-operand bundles that change FP environment behavior, always
+Equivalent to the :ref:`fptrunc <i_fptrunc>` instruction.  Always
 ``memory(none)`` and speculatable.
 
 Example:
@@ -30718,8 +30717,7 @@ floating-point type. The source type must be smaller than the destination type.
 Semantics:
 """"""""""
 
-Equivalent to the :ref:`fpext <i_fpext>` instruction.  Without
-operand bundles that change FP environment behavior, always
+Equivalent to the :ref:`fpext <i_fpext>` instruction.  Always
 ``memory(none)`` and speculatable.
 
 Example:
@@ -30763,8 +30761,7 @@ Semantics:
 
 Equivalent to the ``sitofp`` instruction.  If the integer value cannot be
 represented exactly in the destination type, it is rounded using the default
-rounding mode.  Without operand bundles that change FP environment behavior,
-always ``memory(none)`` and speculatable.
+rounding mode.  Always ``memory(none)`` and speculatable.
 
 Example:
 """"""""
@@ -30807,8 +30804,7 @@ Semantics:
 
 Equivalent to the ``uitofp`` instruction.  If the integer value cannot be
 represented exactly in the destination type, it is rounded using the default
-rounding mode.  Without operand bundles that change FP environment behavior,
-always ``memory(none)`` and speculatable.
+rounding mode.  Always ``memory(none)`` and speculatable.
 
 Example:
 """"""""
@@ -30851,8 +30847,7 @@ Semantics:
 
 Equivalent to the ``fptosi`` instruction.  If the floating-point value cannot
 be represented in the destination integer type, the result is a
-:ref:`poison value <poisonvalues>`.  Without operand bundles that change FP
-environment behavior, always ``memory(none)`` and speculatable.
+:ref:`poison value <poisonvalues>`.  Always ``memory(none)`` and speculatable.
 
 Example:
 """"""""
@@ -30895,8 +30890,7 @@ Semantics:
 
 Equivalent to the ``fptoui`` instruction.  If the floating-point value cannot
 be represented in the destination integer type, the result is a
-:ref:`poison value <poisonvalues>`.  Without operand bundles that change FP
-environment behavior, always ``memory(none)`` and speculatable.
+:ref:`poison value <poisonvalues>`.  Always ``memory(none)`` and speculatable.
 
 Example:
 """"""""
