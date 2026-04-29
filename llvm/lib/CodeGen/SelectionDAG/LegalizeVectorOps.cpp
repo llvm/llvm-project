@@ -2143,12 +2143,13 @@ SDValue VectorLegalizer::ExpandFCOPYSIGN(SDNode *Node) {
   //      a. Vector only has 1 element and target knows how to handle scalar
   //         FOPYSIGN(either legal or custom expand or promote).
   //      b. Vector has more than 1 element and target supports scalar
-  //         FCOPYSIGN natively and vector length <= 3(2 AND + 1 OR).
+  //         FCOPYSIGN natively and vector length <= 6(2 AND + 1 OR + 2 LUI + 1
+  //         ADDI).
   if (VT.isFixedLengthVector()) {
     EVT EltVT = VT.getVectorElementType();
     if ((VT.getVectorNumElements() == 1 &&
          TLI.isOperationLegalOrCustomOrPromote(ISD::FCOPYSIGN, EltVT)) ||
-        (VT.getVectorNumElements() < 4 &&
+        (VT.getVectorNumElements() < 7 &&
          TLI.isOperationLegal(ISD::FCOPYSIGN, EltVT) &&
          TLI.isExtractVecEltCheap(VT, 0)))
       return SDValue();
