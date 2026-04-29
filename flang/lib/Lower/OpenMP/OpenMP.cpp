@@ -4630,6 +4630,21 @@ private:
 
   mlir::LLVM::TargetFeaturesAttr targetFeatures;
 };
+
+struct MetadirectiveVariant {
+  const parser::OmpDirectiveSpecification *spec = nullptr;
+  bool isExplicit = false;
+};
+
+struct MetadirectiveCandidate {
+  MetadirectiveCandidate(const parser::OmpDirectiveSpecification *spec,
+                         llvm::omp::VariantMatchInfo vmi, bool isExplicit)
+      : spec(spec), vmi(vmi), isExplicit(isExplicit) {}
+
+  const parser::OmpDirectiveSpecification *spec = nullptr;
+  llvm::omp::VariantMatchInfo vmi;
+  bool isExplicit = false;
+};
 } // namespace
 
 static void genMetadirective(lower::AbstractConverter &converter,
@@ -4666,8 +4681,7 @@ static void genMetadirective(lower::AbstractConverter &converter,
   std::reverse(constructTraits.begin(), constructTraits.end());
   TargetOMPContext ompCtx(builder.getModule(), constructTraits);
 
-  llvm::SmallVector<const parser::OmpDirectiveSpecification *> candidates;
-  llvm::SmallVector<llvm::omp::VariantMatchInfo, 4> vmis;
+  llvm::SmallVector<MetadirectiveCandidate, 4> candidates;
   // A null directive specification represents either the implicit `nothing`
   // variant or the absence of an explicit otherwise/default clause.
   const parser::OmpDirectiveSpecification *fallback = nullptr;
@@ -4685,12 +4699,14 @@ static void genMetadirective(lower::AbstractConverter &converter,
     return nullptr;
   };
 
-  auto getDirectiveVariant = [](const parser::OmpClause::When &whenClause)
-      -> const parser::OmpDirectiveSpecification * {
+  auto getDirectiveVariant =
+      [](const parser::OmpClause::When &whenClause) -> MetadirectiveVariant {
     const auto &opt = std::get<1>(whenClause.v.t);
-    if (!opt || opt->value().DirId() == llvm::omp::Directive::OMPD_nothing)
-      return nullptr;
-    return &opt->value();
+    if (!opt)
+      return {};
+    if (opt->value().DirId() == llvm::omp::Directive::OMPD_nothing)
+      return {nullptr, true};
+    return {&opt->value(), true};
   };
 
   // Return the directive spec pointer, or nullptr for "nothing".
@@ -4705,12 +4721,12 @@ static void genMetadirective(lower::AbstractConverter &converter,
     if (const auto *whenClause =
             std::get_if<parser::OmpClause::When>(&clause.u)) {
       const auto *ctxSel = getContextSelector(*whenClause);
-      const auto *variant = getDirectiveVariant(*whenClause);
+      MetadirectiveVariant variant = getDirectiveVariant(*whenClause);
 
       // Always match when there is no context selector.
       if (!ctxSel) {
-        candidates.push_back(variant);
-        vmis.emplace_back();
+        candidates.emplace_back(variant.spec, llvm::omp::VariantMatchInfo(),
+                                variant.isExplicit);
         continue;
       }
 
@@ -4726,8 +4742,7 @@ static void genMetadirective(lower::AbstractConverter &converter,
       if (!llvm::omp::isVariantApplicableInContext(vmi, ompCtx))
         continue;
 
-      candidates.push_back(variant);
-      vmis.push_back(vmi);
+      candidates.emplace_back(variant.spec, vmi, variant.isExplicit);
     } else if (const auto *otherwiseClause =
                    std::get_if<parser::OmpClause::Otherwise>(&clause.u)) {
       if (otherwiseClause->v && otherwiseClause->v->v)
@@ -4766,13 +4781,30 @@ static void genMetadirective(lower::AbstractConverter &converter,
 
   const parser::OmpDirectiveSpecification *selected = fallback;
   if (candidates.size() == 1) {
-    selected = candidates.front();
+    selected = candidates.front().spec;
   } else if (!candidates.empty()) {
-    int bestIdx = llvm::omp::getBestVariantMatchForContext(vmis, ompCtx);
+    // The OpenMP context scorer preserves input order for tied candidates.
+    // Put explicit variants first so they take precedence over implicit
+    // `nothing`, as required by metadirective selection.
+    llvm::SmallVector<unsigned, 4> candidateOrder;
+    candidateOrder.reserve(candidates.size());
+    for (auto [idx, candidate] : llvm::enumerate(candidates))
+      if (candidate.isExplicit)
+        candidateOrder.push_back(idx);
+    for (auto [idx, candidate] : llvm::enumerate(candidates))
+      if (!candidate.isExplicit)
+        candidateOrder.push_back(idx);
+
+    llvm::SmallVector<llvm::omp::VariantMatchInfo, 4> orderedVMIs;
+    orderedVMIs.reserve(candidates.size());
+    for (unsigned idx : candidateOrder)
+      orderedVMIs.push_back(candidates[idx].vmi);
+
+    int bestIdx = llvm::omp::getBestVariantMatchForContext(orderedVMIs, ompCtx);
     if (bestIdx >= 0) {
-      assert(static_cast<size_t>(bestIdx) < candidates.size() &&
+      assert(static_cast<size_t>(bestIdx) < candidateOrder.size() &&
              "best variant index out of range");
-      selected = candidates[bestIdx];
+      selected = candidates[candidateOrder[bestIdx]].spec;
     }
   }
   genVariant(selected);

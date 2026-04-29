@@ -120,6 +120,15 @@ subroutine test_multiple_when_fallback()
 #endif
 end subroutine
 
+! CHECK-LABEL: func.func @_QPtest_implicit_nothing_tie_break()
+! CHECK:         omp.barrier
+! CHECK:         return
+subroutine test_implicit_nothing_tie_break()
+  !$omp metadirective &
+  !$omp & when(implementation={vendor(llvm)}:) &
+  !$omp & when(implementation={vendor(llvm)}: barrier)
+end subroutine
+
 ! CHECK-LABEL: func.func @_QPtest_begin_vendor_llvm()
 ! CHECK:         omp.parallel
 ! CHECK:           omp.terminator
@@ -175,6 +184,20 @@ subroutine test_begin_multiple_when_first_match()
   !$omp & when(implementation={vendor(llvm)}: parallel) &
   !$omp & when(user={condition(.false.)}: task)
 #endif
+  x = 1
+  !$omp end metadirective
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_begin_implicit_nothing_tie_break()
+! CHECK:         omp.parallel
+! CHECK:           omp.terminator
+! CHECK:         return
+subroutine test_begin_implicit_nothing_tie_break()
+  integer :: x
+  x = 0
+  !$omp begin metadirective &
+  !$omp & when(implementation={vendor(llvm)}:) &
+  !$omp & when(implementation={vendor(llvm)}: parallel)
   x = 1
   !$omp end metadirective
 end subroutine
