@@ -12,6 +12,7 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Transforms/IPO/Attributor.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -519,6 +520,48 @@ TEST(DynamicDebugging, DiscardableGlobal) {
   // Expect to see @llvm.compiler.used = appending global [1 x ptr] [ptr @discardable_used].
   EXPECT_EQ(CompilerUsedArr->getNumOperands(), 1u);
   EXPECT_TRUE(llvm::find(CompilerUsedArr->operands(), DiscardableUsed));
+}
+
+TEST(DynamicDebugging, UnnamedGlobal) {
+  StringRef IR = R"(
+    @0 = internal global i32 1, align 4
+    @1 = internal global i32 1, align 4
+
+    define internal void @use() {
+      %1 = load i32, ptr @0, align 4
+      %2 = load i32, ptr @1, align 4
+      ret void
+    }
+
+    !llvm.dbg.cu = !{!0}
+    !llvm.module.flags = !{!2, !3}
+
+    !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 23.0.0git", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
+    !1 = !DIFile(filename: "test.cpp", directory: "/")
+    !2 = !{i32 7, !"Dwarf Version", i32 5}
+    !3 = !{i32 2, !"Debug Info Version", i32 3}
+  )";
+
+  LLVMContext Context;
+  SMDiagnostic Error;
+  std::unique_ptr<Module> M = parseAssemblyString(IR, Error, Context);
+  ASSERT_TRUE(M != nullptr) << Error.getMessage();
+  for (GlobalVariable &GV : M->globals())
+    EXPECT_FALSE(GV.hasName());
+
+  std::unique_ptr<Module> UnoptM =
+      prepareForDynamicDebugging(M.get(), ".promo");
+  EXPECT_FALSE(verifyModule(*M));
+  EXPECT_FALSE(verifyModule(*UnoptM));
+
+  EXPECT_TRUE(M->getGlobalVariable("__unnamed", /*AllowInternal=*/true));
+  EXPECT_TRUE(M->getGlobalVariable("__unnamed.1", /*AllowInternal=*/true));
+
+  EXPECT_TRUE(M->getNamedAlias("__unnamed.promo"));
+  EXPECT_TRUE(M->getNamedAlias("__unnamed.1.promo"));
+
+  EXPECT_TRUE(UnoptM->getNamedGlobal("__unnamed.promo"));
+  EXPECT_TRUE(UnoptM->getNamedGlobal("__unnamed.1.promo"));
 }
 
 } // namespace

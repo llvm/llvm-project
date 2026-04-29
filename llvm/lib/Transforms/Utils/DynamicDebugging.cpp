@@ -118,6 +118,9 @@ llvm::prepareForDynamicDebugging(Module *M, StringRef PromotionSuffix) {
     if (GV.isDiscardableIfUnused()) {
       if (GV.getNumUses()) {
         GlobalsToPreserve.push_back(&GV);
+        // Name unnamed globals. Compiler-used expects named globals only.
+        if (GV.getName().empty())
+          GV.setName("__unnamed");
       } else {
         // No uses, so the inner module doesn't need a reference nor do we need
         // to produce an alias.
