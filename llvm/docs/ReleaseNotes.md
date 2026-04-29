@@ -69,6 +69,15 @@ Changes to the LLVM IR
 * The `"nooutline"` attribute is now writen as `nooutline`. Existing IR and
   bitcode will be automatically updated.
 
+* LLVM IR floating-point literals have greatly changed:
+
+  * The old hexadecimal bitwise representation is deprecated and will be removed
+    in the next revision. It is replaced with a unified `f0x` prefix.
+
+  * Hexadecimal literals akin to C99's syntax are supported.
+
+  * Special values for infinities and NaNs, including NaN payloads, are added.
+
 Changes to LLVM infrastructure
 ------------------------------
 
@@ -248,6 +257,11 @@ Changes to LLDB
 * A new ``webinspector-wasm`` platform was added to list and attach to WebAssembly processes in Safari.
 * The default for `load-script-from-symbol-file` was changed from `warn` to `trusted`. This means that scripts from
   code signed dSYM bundles are now loaded automatically, while untrusted bundles continue to produce a warning.
+* Pressing enter after `frame variable` repeats the command with an incremented `--depth` option, allowing quick
+  expansion of nested data.
+* Breakpoint commands now accept `.` to refer to the location(s) at which the current thread is stopped. For
+  example, `breakpoint disable .` disables the just-hit breakpoint location. Another usage is to automate a
+  command to run at the current location: `breakpoint command add -o 'p my_var' .`.
 
 ### Deprecated APIs
 

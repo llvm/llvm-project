@@ -24,6 +24,7 @@
 #include "clang/AST/DeclOpenACC.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/AST/RecordLayout.h"
+#include "clang/AST/StmtOpenMP.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
@@ -150,6 +151,8 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
 
   if (langOpts.CUDA)
     createCUDARuntime();
+  if (langOpts.OpenMP)
+    createOpenMPRuntime();
 
   // Set the module name to be the name of the main file. TranslationUnitDecl
   // often contains invalid source locations and isn't a reliable source for the
@@ -181,6 +184,10 @@ CIRGenModule::~CIRGenModule() = default;
 
 void CIRGenModule::createCUDARuntime() {
   cudaRuntime.reset(createNVCUDARuntime(*this));
+}
+
+void CIRGenModule::createOpenMPRuntime() {
+  openMPRuntime = std::make_unique<CIRGenOpenMPRuntime>(*this);
 }
 
 /// FIXME: this could likely be a common helper and not necessarily related
@@ -373,8 +380,7 @@ void CIRGenModule::emitGlobalDecl(const clang::GlobalDecl &d) {
   // TODO: Not sure what to map this to for MLIR
   mlir::Operation *globalValueOp = op;
   if (auto gv = dyn_cast<cir::GetGlobalOp>(op)) {
-    globalValueOp =
-        mlir::SymbolTable::lookupSymbolIn(getModule(), gv.getNameAttr());
+    globalValueOp = getGlobalValue(gv.getName());
     assert(globalValueOp && "expected a valid global op");
   }
 
@@ -455,12 +461,6 @@ void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
     return;
   }
 
-  // TODO(OMP): The logic in this function for the 'rest' of the OpenMP
-  // declarative declarations is complicated and needs to be done on a per-kind
-  // basis, so all of that needs to be added when we implement the individual
-  // global-allowed declarations. See uses of `cir::MissingFeatures::openMP
-  // throughout this function.
-
   const auto *global = cast<ValueDecl>(gd.getDecl());
 
   // If this is CUDA, be selective about which declarations we emit.
@@ -491,6 +491,22 @@ void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
     } else if (!global->hasAttr<CUDAHostAttr>() &&
                global->hasAttr<CUDADeviceAttr>())
       return;
+  }
+
+  if (langOpts.OpenMP) {
+    // If this is OpenMP, check if it is legal to emit this global normally.
+    if (openMPRuntime && openMPRuntime->emitTargetGlobal(gd))
+      return;
+    if (auto *drd = dyn_cast<OMPDeclareReductionDecl>(global)) {
+      if (mustBeEmitted(global))
+        emitOMPDeclareReduction(drd);
+      return;
+    }
+    if (auto *dmd = dyn_cast<OMPDeclareMapperDecl>(global)) {
+      if (mustBeEmitted(global))
+        emitOMPDeclareMapper(dmd);
+      return;
+    }
   }
 
   if (const auto *fd = dyn_cast<FunctionDecl>(global)) {
@@ -601,6 +617,9 @@ void CIRGenModule::emitGlobalFunctionDefinition(clang::GlobalDecl gd,
 
   if (funcDecl->getAttr<AnnotateAttr>())
     deferredAnnotations[getMangledName(gd)] = funcDecl;
+
+  if (getLangOpts().OpenMP && funcDecl->hasAttr<OMPDeclareTargetDeclAttr>())
+    getOpenMPRuntime().emitDeclareTargetFunction(funcDecl, funcOp);
 }
 
 /// Track functions to be called before main() runs.
@@ -643,7 +662,8 @@ void CIRGenModule::handleCXXStaticMemberVarInstantiation(VarDecl *vd) {
 }
 
 mlir::Operation *CIRGenModule::getGlobalValue(StringRef name) {
-  return mlir::SymbolTable::lookupSymbolIn(theModule, name);
+  auto it = symbolLookupCache.find(name);
+  return it != symbolLookupCache.end() ? it->second : nullptr;
 }
 
 cir::GlobalOp
@@ -679,6 +699,7 @@ CIRGenModule::createGlobalOp(CIRGenModule &cgm, mlir::Location loc,
     mlir::SymbolTable::setSymbolVisibility(
         g, mlir::SymbolTable::Visibility::Private);
   }
+  cgm.symbolLookupCache[g.getSymNameAttr()] = g;
   return g;
 }
 
@@ -924,6 +945,7 @@ void CIRGenModule::replaceGlobal(cir::GlobalOp oldGV, cir::GlobalOp newGV) {
   // erased) operation, which would leave them detached from the module.
   if (lastGlobalOp == oldGV)
     lastGlobalOp = newGV;
+  eraseGlobalSymbol(oldGV);
   oldGV.erase();
 }
 
@@ -1578,6 +1600,7 @@ void CIRGenModule::applyReplacements() {
       llvm_unreachable("internal error, cannot RAUW symbol");
     if (newF) {
       newF->moveBefore(oldF);
+      eraseGlobalSymbol(oldF);
       oldF->erase();
     }
   }
@@ -1586,8 +1609,7 @@ void CIRGenModule::applyReplacements() {
 cir::GlobalOp CIRGenModule::createOrReplaceCXXRuntimeVariable(
     mlir::Location loc, StringRef name, mlir::Type ty,
     cir::GlobalLinkageKind linkage, clang::CharUnits alignment) {
-  auto gv = mlir::dyn_cast_or_null<cir::GlobalOp>(
-      mlir::SymbolTable::lookupSymbolIn(theModule, name));
+  auto gv = mlir::dyn_cast_or_null<cir::GlobalOp>(getGlobalValue(name));
 
   if (gv) {
     // Check if the variable has the right type.
@@ -1908,7 +1930,7 @@ std::string CIRGenModule::getUniqueGlobalName(const std::string &baseName) {
   std::string result =
       baseName + "." + std::to_string(cgGlobalNames[baseName]++);
   // There should not be any symbol with this name in the module.
-  assert(!mlir::SymbolTable::lookupSymbolIn(theModule, result));
+  assert(!getGlobalValue(result));
   return result;
 }
 
@@ -2837,11 +2859,21 @@ cir::FuncOp CIRGenModule::getOrCreateCIRFunction(
   const Decl *d = gd.getDecl();
 
   if (const auto *fd = cast_or_null<FunctionDecl>(d)) {
-    // For the device mark the function as one that should be emitted.
-    if (getLangOpts().OpenMPIsTargetDevice && fd->isDefined() && !dontDefer &&
-        !isForDefinition)
-      errorNYI(fd->getSourceRange(),
-               "getOrCreateCIRFunction: OpenMP target function");
+    // For the device, mark the function as one that should be emitted.
+    if (getLangOpts().OpenMPIsTargetDevice && openMPRuntime &&
+        !getOpenMPRuntime().markAsGlobalTarget(gd) && fd->isDefined() &&
+        !dontDefer && !isForDefinition) {
+      if (const FunctionDecl *fdDef = fd->getDefinition()) {
+        GlobalDecl gdDef;
+        if (const auto *cd = dyn_cast<CXXConstructorDecl>(fdDef))
+          gdDef = GlobalDecl(cd, gd.getCtorType());
+        else if (const auto *dd = dyn_cast<CXXDestructorDecl>(fdDef))
+          gdDef = GlobalDecl(dd, gd.getDtorType());
+        else
+          gdDef = GlobalDecl(fdDef);
+        emitGlobal(gdDef);
+      }
+    }
 
     // Any attempts to use a MultiVersion function should result in retrieving
     // the iFunc instead. Name mangling will handle the rest of the changes.
@@ -2924,6 +2956,7 @@ cir::FuncOp CIRGenModule::getOrCreateCIRFunction(
       replaceUsesOfNonProtoTypeWithRealFunction(entry, funcOp);
 
     // Obliterate no-proto declaration.
+    eraseGlobalSymbol(entry);
     entry->erase();
   }
 
@@ -3005,6 +3038,8 @@ CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
       builder.setInsertionPoint(cgf->curFn);
 
     func = cir::FuncOp::create(builder, loc, name, funcType);
+
+    symbolLookupCache[func.getSymNameAttr()] = func;
 
     assert(!cir::MissingFeatures::opFuncAstDeclAttr());
 
@@ -3282,6 +3317,7 @@ void CIRGenModule::emitAliasForGlobal(StringRef mangledName,
     // function declaration.
     assert(cast<cir::FuncOp>(op).getFunctionType() == alias.getFunctionType() &&
            "declaration exists with different type");
+    eraseGlobalSymbol(op);
     op->erase();
   } else {
     // Name already set by createCIRFunction
@@ -3526,11 +3562,55 @@ CIRGenModule::getAddrOfGlobalTemporary(const MaterializeTemporaryExpr *mte,
   mlir::Operation *&entry = materializedGlobalTemporaryMap[mte];
   if (entry) {
     entry->replaceAllUsesWith(cv);
+    eraseGlobalSymbol(entry);
     entry->erase();
   }
   entry = cv;
 
   return cv;
+}
+
+cir::GlobalOp
+CIRGenModule::getAddrOfTemplateParamObject(const TemplateParamObjectDecl *tpo) {
+  StringRef name = getMangledName(tpo);
+  CharUnits alignment = getNaturalTypeAlignment(tpo->getType());
+
+  if (auto globalOp =
+          mlir::dyn_cast_or_null<cir::GlobalOp>(getGlobalValue(name)))
+    return globalOp;
+
+  ConstantEmitter emitter(*this);
+  assert(!cir::MissingFeatures::addressSpace() &&
+         "emitForInitializer should take tpo->getType().getAddressSpace()");
+  mlir::Attribute init =
+      emitter.emitForInitializer(tpo->getValue(), tpo->getType());
+
+  if (!init) {
+    errorUnsupported(tpo, "template parameter object");
+    return {};
+  }
+
+  mlir::TypedAttr typedInit = cast<mlir::TypedAttr>(init);
+
+  cir::GlobalLinkageKind linkage =
+      isExternallyVisible(tpo->getLinkageAndVisibility().getLinkage())
+          ? cir::GlobalLinkageKind::LinkOnceODRLinkage
+          : cir::GlobalLinkageKind::InternalLinkage;
+
+  assert(!cir::MissingFeatures::addressSpace());
+  auto globalOp = createGlobalOp(*this, builder.getUnknownLoc(), name,
+                                 typedInit.getType(), /*is_constant=*/true);
+  globalOp.setLinkage(linkage);
+  globalOp.setAlignment(alignment.getAsAlign().value());
+  globalOp.setComdat(supportsCOMDAT() &&
+                     linkage == cir::GlobalLinkageKind::LinkOnceODRLinkage);
+
+  CIRGenModule::setInitializer(globalOp, init);
+  emitter.finalize(globalOp);
+
+  insertGlobalSymbol(globalOp);
+
+  return globalOp;
 }
 
 //===----------------------------------------------------------------------===//
