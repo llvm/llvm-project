@@ -273,7 +273,7 @@ Changes in existing checks
   definition in the warning message if the macro is defined on command line.
 
 - Improved :doc:`bugprone-move-forwarding-reference
-  <clang-tidy/checks/bugprone/move-forwarding-reference>` check by removing some
+  <clang-tidy/checks/bugprone/move-forwarding-reference>` check by fixing some
   false positives in the context of moved lambda captures.
 
 - Improved :doc:`bugprone-narrowing-conversions
