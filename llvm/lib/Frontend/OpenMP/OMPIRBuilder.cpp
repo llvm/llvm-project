@@ -1653,6 +1653,9 @@ static void targetParallelCallback(
   Value *Cond =
       IfCondition ? Builder.CreateSExtOrTrunc(IfCondition, OMPIRBuilder->Int32)
                   : Builder.getInt32(1);
+  Value *NumThreadsArg =
+      NumThreads ? Builder.CreateZExtOrTrunc(NumThreads, OMPIRBuilder->Int32)
+                 : Builder.getInt32(-1);
 
   // If this is not a Generic kernel, we can skip generating the wrapper.
   Value *WrapperFn;
@@ -1666,7 +1669,7 @@ static void targetParallelCallback(
       /* identifier*/ Ident,
       /* global thread num*/ ThreadID,
       /* if expression */ Cond,
-      /* number of threads */ NumThreads ? NumThreads : Builder.getInt32(-1),
+      /* number of threads */ NumThreadsArg,
       /* Proc bind */ Builder.getInt32(-1),
       /* outlined function */ &OutlinedFn,
       /* wrapper function */ WrapperFn,

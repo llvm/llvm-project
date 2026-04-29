@@ -46,7 +46,7 @@ bool BPFAsmPrinter::doInitialization(Module &M) {
   AsmPrinter::doInitialization(M);
 
   // Only emit BTF when debuginfo available.
-  if (MAI->doesSupportDebugInformation() && !M.debug_compile_units().empty()) {
+  if (MAI.doesSupportDebugInformation() && !M.debug_compile_units().empty()) {
     BTF = new BTFDebug(this);
     Handlers.push_back(std::unique_ptr<BTFDebug>(BTF));
   }

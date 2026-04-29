@@ -6141,6 +6141,14 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
     Known.fabs();
     break;
   }
+  case ISD::FCOPYSIGN: {
+    Known = computeKnownFPClass(Op.getOperand(0), DemandedElts,
+                                InterestedClasses, Depth + 1);
+    KnownFPClass KnownSign = computeKnownFPClass(Op.getOperand(1), DemandedElts,
+                                                 InterestedClasses, Depth + 1);
+    Known.copysign(KnownSign);
+    break;
+  }
   case ISD::AssertNoFPClass: {
     Known = computeKnownFPClass(Op.getOperand(0), DemandedElts,
                                 InterestedClasses, Depth + 1);
