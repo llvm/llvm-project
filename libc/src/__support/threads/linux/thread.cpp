@@ -17,6 +17,7 @@
 #include "src/__support/libc_errno.h" // For error macros
 #include "src/__support/macros/config.h"
 #include "src/__support/threads/linux/futex_utils.h" // For FutexWordType
+#include <cerrno>
 
 #ifdef LIBC_TARGET_ARCH_IS_AARCH64
 #include <arm_acle.h>
@@ -340,6 +341,16 @@ int Thread::run(ThreadStyle style, ThreadRunner runner, void *arg, void *stack,
 }
 
 int Thread::join(ThreadReturnValue &retval) {
+  if (self.attrib) {
+    // reject self join or invalid thread
+    if (self.attrib == attrib)
+      return EDEADLK;
+
+    // reject mutual join
+    if (attrib->joiner.exchange(self.attrib) == self.attrib->joiner)
+      return EDEADLK;
+  }
+
   wait();
 
   if (attrib->style == ThreadStyle::POSIX)
