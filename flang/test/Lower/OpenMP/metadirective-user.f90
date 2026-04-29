@@ -180,6 +180,56 @@ subroutine test_dynamic_static_mismatch(flag)
 #endif
 end subroutine
 
+! Dynamic candidates must still satisfy non-user static traits. This construct
+! selector does not match outside a parallel construct, so the fallback wins.
+! CHECK-LABEL: func.func @_QPtest_dynamic_construct_mismatch(
+! CHECK-NOT:     fir.if
+! CHECK-NOT:     omp.barrier
+! CHECK:         omp.taskwait
+! CHECK:         return
+subroutine test_dynamic_construct_mismatch(flag)
+  logical, intent(in) :: flag
+  !$omp metadirective &
+  !$omp & when(construct={parallel}, user={condition(flag)}: barrier) &
+#ifdef OMP_52
+  !$omp & otherwise(taskwait)
+#else
+  !$omp & default(taskwait)
+#endif
+end subroutine
+
+! A higher-scored static candidate is selected before a lower-scored dynamic
+! candidate, even when the dynamic condition could be true at runtime.
+! CHECK-LABEL: func.func @_QPtest_dynamic_static_score_order(
+! CHECK-NOT:     fir.if
+! CHECK-NOT:     omp.barrier
+! CHECK:         omp.taskwait
+! CHECK:         return
+subroutine test_dynamic_static_score_order(flag)
+  logical, intent(in) :: flag
+  !$omp metadirective &
+  !$omp & when(user={condition(flag)}: barrier) &
+  !$omp & when(device={kind(host)}: taskwait) &
+#ifdef OMP_52
+  !$omp & otherwise(nothing)
+#else
+  !$omp & default(nothing)
+#endif
+end subroutine
+
+! The explicit directive variant wins this tie over the earlier implicit
+! nothing candidate.
+! CHECK-LABEL: func.func @_QPtest_dynamic_implicit_nothing_tie_break(
+! CHECK-NOT:     fir.if
+! CHECK:         omp.barrier
+! CHECK:         return
+subroutine test_dynamic_implicit_nothing_tie_break(flag)
+  logical, intent(in) :: flag
+  !$omp metadirective &
+  !$omp & when(implementation={vendor(llvm)}, user={condition(flag)}:) &
+  !$omp & when(implementation={vendor(llvm)}: barrier)
+end subroutine
+
 ! CHECK-LABEL: func.func @_QPtest_two_dynamic(
 ! CHECK-SAME:    %[[ARG0:[^,]*]]: !fir.ref<!fir.logical<4>>
 ! CHECK-SAME:    %[[ARG1:.*]]: !fir.ref<!fir.logical<4>>
