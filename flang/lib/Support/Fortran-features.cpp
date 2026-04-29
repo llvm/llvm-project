@@ -324,10 +324,8 @@ std::vector<const char *> LanguageFeatureControl::GetNames(
 }
 
 void LanguageFeatureControl::WarnOnAllNonstandard(bool yes) {
-  warnAllLanguage_ = yes;
   warnLanguage_.reset();
   if (yes) {
-    disableAllWarnings_ = false;
     warnLanguage_.flip();
     // These three features do not need to be warned about,
     // but we do want their feature flags.
@@ -337,12 +335,40 @@ void LanguageFeatureControl::WarnOnAllNonstandard(bool yes) {
   }
 }
 
-void LanguageFeatureControl::WarnOnAllUsage(bool yes) {
-  warnAllUsage_ = yes;
+void LanguageFeatureControl::WarnOnAllUsage(
+    clang::FlangPedanticVersionTy version) {
   warnUsage_.reset();
-  if (yes) {
-    disableAllWarnings_ = false;
-    warnUsage_.flip();
+  using FlangPedanticVersionTy = clang::FlangPedanticVersionTy;
+  if (version != FlangPedanticVersionTy::NoPedantic) {
+    warnUsage_ |= commonWarnings;
+    switch (version) {
+    case FlangPedanticVersionTy::NoPedantic:
+      break;
+    case FlangPedanticVersionTy::f77:
+      warnUsage_ |= f77Warnings;
+      break;
+    case FlangPedanticVersionTy::f90:
+      warnUsage_ |= f90Warnings;
+      break;
+    case FlangPedanticVersionTy::f95:
+      warnUsage_ |= f95Warnings;
+      break;
+    case FlangPedanticVersionTy::f2003:
+      warnUsage_ |= f2003Warnings;
+      break;
+    case FlangPedanticVersionTy::f2008:
+      warnUsage_ |= f2008Warnings;
+      break;
+    case FlangPedanticVersionTy::f2018:
+      warnUsage_ |= f2018Warnings;
+      break;
+    case FlangPedanticVersionTy::f2023:
+      warnUsage_ |= f2023Warnings;
+      break;
+    case FlangPedanticVersionTy::f202Y:
+      warnUsage_ |= f202YWarnings;
+      break;
+    }
   }
 }
 } // namespace Fortran::common

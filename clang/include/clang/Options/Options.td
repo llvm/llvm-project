@@ -6321,7 +6321,8 @@ def no_canonical_prefixes : Flag<["-"], "no-canonical-prefixes">,
   HelpText<"Use relative paths for invoking subcommands">;
 def no_cpp_precomp : Flag<["-"], "no-cpp-precomp">, Group<clang_ignored_f_Group>;
 def no_integrated_cpp : Flag<["-", "--"], "no-integrated-cpp">;
-def no_pedantic : Flag<["-", "--"], "no-pedantic">, Group<pedantic_Group>;
+def no_pedantic : Flag<["-", "--"], "no-pedantic">, Group<pedantic_Group>,
+  Visibility<[FlangOption, FC1Option]>;
 def no__dead__strip__inits__and__terms : Flag<["-"], "no_dead_strip_inits_and_terms">;
 def nobuiltininc : Flag<["-"], "nobuiltininc">,
   Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>,
@@ -6403,6 +6404,15 @@ def pedantic_errors : Flag<["-", "--"], "pedantic-errors">, Group<pedantic_Group
 def pedantic : Flag<["-", "--"], "pedantic">, Group<pedantic_Group>,
   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Warn on language extensions">, MarshallingInfoFlag<DiagnosticOpts<"Pedantic">>;
+def pedantic_EQ : Joined<["-", "--"], "pedantic=">, Group<pedantic_Group>,
+  Visibility<[FlangOption, FC1Option]>,
+  HelpText<"Set the Fortran standard to be used for language extensions">,
+  Values<"f77,f1977,f90,f1990,f95,f1995,f03,f2003,f08,f2008,f18,f2018,f23,f2023,f2Y,f202Y">,
+  NormalizedValuesScope<"clang::FlangPedanticVersionTy">,
+  NormalizedValues<["f77", "f77", "f90", "f90", "f95", "f95", "f2003", "f2003",
+                    "f2008", "f2008", "f2018", "f2018", "f2023", "f2023",
+                    "f202Y", "f202Y"]>,
+  MarshallingInfoEnum<DiagnosticOpts<"FlangPedanticVersion">, "NoPedantic">;
 def p : Flag<["-"], "p">, HelpText<"Enable mcount instrumentation with prof">;
 def pg : Flag<["-"], "pg">, HelpText<"Enable mcount instrumentation">,
   Visibility<[ClangOption, CC1Option]>,

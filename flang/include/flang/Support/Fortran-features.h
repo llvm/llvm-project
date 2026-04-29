@@ -11,6 +11,7 @@
 
 #include "Fortran.h"
 #include "flang/Common/enum-set.h"
+#include "clang/Basic/DiagnosticOptions.h"
 #include <string_view>
 #include <vector>
 
@@ -62,6 +63,9 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     OpenMPThreadprivateEquivalence, RelaxedCLoc)
 
 // Portability and suspicious usage warnings
+// When adding a new UsageWarning, add it to commonWarnings if it should be
+//   enabled by -pedantic. Or if it is specific to a Fortran standard, add it
+//   to the applicable f**Warnings.
 ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
     NonTargetPassedToTarget, PointerToPossibleNoncontiguous,
     ShortCharacterActual, ShortArrayActual, ImplicitInterfaceActual,
@@ -85,13 +89,94 @@ ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
     RealConstantWidening, VolatileOrAsynchronousTemporary, UnusedVariable,
     UsedUndefinedVariable, BadValueInDeadCode, AssumedTypeSizeDummy,
     MisplacedIgnoreTKR, NamelistParameter, ImpureFinalInPure,
-    IgnoredNoReallocateLHS, CLoc)
+    IgnoredNoReallocateLHS, CLoc, SystemClockNotIntrinsic,
+    SystemClockArgsOnlyInteger, SystemClockIntArgsOnlyDefault,
+    SystemClockIntArgsSameKind, SystemClockMinSize)
 
 using LanguageFeatures = EnumSet<LanguageFeature, LanguageFeature_enumSize>;
 using UsageWarnings = EnumSet<UsageWarning, UsageWarning_enumSize>;
 using LanguageFeatureOrWarning = std::variant<LanguageFeature, UsageWarning>;
 using LanguageControlFlag =
     std::pair<LanguageFeatureOrWarning, /*shouldEnable=*/bool>;
+
+// Usage Warnings that are not limited to specific Fortran standards
+static inline UsageWarnings commonWarnings = {UsageWarning::Portability,
+    UsageWarning::PointerToUndefinable, UsageWarning::NonTargetPassedToTarget,
+    UsageWarning::PointerToPossibleNoncontiguous,
+    UsageWarning::ShortCharacterActual, UsageWarning::ShortArrayActual,
+    UsageWarning::ImplicitInterfaceActual, UsageWarning::PolymorphicTransferArg,
+    UsageWarning::PointerComponentTransferArg,
+    UsageWarning::TransferSizePresence,
+    UsageWarning::F202XAllocatableBreakingChange,
+    UsageWarning::OptionalMustBePresent, UsageWarning::CommonBlockPadding,
+    UsageWarning::LogicalVsCBool, UsageWarning::BindCCharLength,
+    UsageWarning::ProcDummyArgShapes, UsageWarning::ExternalNameConflict,
+    UsageWarning::FoldingException, UsageWarning::FoldingAvoidsRuntimeCrash,
+    UsageWarning::FoldingValueChecks, UsageWarning::FoldingFailure,
+    UsageWarning::FoldingLimit, UsageWarning::Interoperability,
+    UsageWarning::CharacterInteroperability, UsageWarning::Bounds,
+    UsageWarning::Preprocessing, UsageWarning::Scanning,
+    UsageWarning::OpenAccUsage, UsageWarning::ProcPointerCompatibility,
+    UsageWarning::VoidMold, UsageWarning::KnownBadImplicitInterface,
+    UsageWarning::EmptyCase, UsageWarning::CaseOverflow,
+    UsageWarning::CUDAUsage, UsageWarning::IgnoreTKRUsage,
+    UsageWarning::ExternalInterfaceMismatch, UsageWarning::DefinedOperatorArgs,
+    UsageWarning::Final, UsageWarning::ZeroDoStep,
+    UsageWarning::UnusedForallIndex, UsageWarning::OpenMPUsage,
+    UsageWarning::DataLength, UsageWarning::IgnoredDirective,
+    UsageWarning::HomonymousSpecific, UsageWarning::HomonymousResult,
+    UsageWarning::IgnoredIntrinsicFunctionType, UsageWarning::PreviousScalarUse,
+    UsageWarning::RedeclaredInaccessibleComponent, UsageWarning::ImplicitShared,
+    UsageWarning::IndexVarRedefinition,
+    UsageWarning::IncompatibleImplicitInterfaces,
+    UsageWarning::VectorSubscriptFinalization,
+    UsageWarning::UndefinedFunctionResult, UsageWarning::UselessIomsg,
+    UsageWarning::MismatchingDummyProcedure,
+    UsageWarning::SubscriptedEmptyArray,
+    UsageWarning::UnsignedLiteralTruncation,
+    UsageWarning::CompatibleDeclarationsFromDistinctModules,
+    UsageWarning::ConstantIsContiguous,
+    UsageWarning::NullActualForDefaultIntentAllocatable,
+    UsageWarning::UseAssociationIntoSameNameSubprogram,
+    UsageWarning::HostAssociatedIntentOutInSpecExpr,
+    UsageWarning::NonVolatilePointerToVolatile,
+    UsageWarning::RealConstantWidening,
+    UsageWarning::VolatileOrAsynchronousTemporary, UsageWarning::UnusedVariable,
+    UsageWarning::UsedUndefinedVariable, UsageWarning::BadValueInDeadCode,
+    UsageWarning::AssumedTypeSizeDummy, UsageWarning::MisplacedIgnoreTKR,
+    UsageWarning::NamelistParameter, UsageWarning::ImpureFinalInPure,
+    UsageWarning::IgnoredNoReallocateLHS, UsageWarning::CLoc};
+
+// Usage Warnings for f77
+static inline UsageWarnings f77Warnings = {
+    UsageWarning::SystemClockNotIntrinsic};
+
+// Usage Warnings for f90
+static inline UsageWarnings f90Warnings = {
+    UsageWarning::SystemClockArgsOnlyInteger,
+    UsageWarning::SystemClockIntArgsOnlyDefault};
+
+// Usage Warnings for f95
+static inline UsageWarnings f95Warnings = {
+    UsageWarning::SystemClockArgsOnlyInteger,
+    UsageWarning::SystemClockIntArgsOnlyDefault};
+
+// Usage Warnings for f2003
+static inline UsageWarnings f2003Warnings = {};
+
+// Usage Warnings for f2008
+static inline UsageWarnings f2008Warnings = {};
+
+// Usage Warnings for f2018
+static inline UsageWarnings f2018Warnings = {};
+
+// Usage Warnings for f2023
+static inline UsageWarnings f2023Warnings = {
+    UsageWarning::SystemClockIntArgsSameKind, UsageWarning::SystemClockMinSize};
+
+// Usage Warnings for f202Y
+static inline UsageWarnings f202YWarnings = {
+    UsageWarning::SystemClockIntArgsSameKind, UsageWarning::SystemClockMinSize};
 
 class LanguageFeatureControl {
 public:
@@ -113,23 +198,14 @@ public:
     }
   }
   void WarnOnAllNonstandard(bool yes = true);
-  bool IsWarnOnAllNonstandard() const { return warnAllLanguage_; }
-  void WarnOnAllUsage(bool yes = true);
-  bool IsWarnOnAllUsage() const { return warnAllUsage_; }
-  void DisableAllNonstandardWarnings() {
-    warnAllLanguage_ = false;
-    warnLanguage_.clear();
-  }
-  void DisableAllUsageWarnings() {
-    warnAllUsage_ = false;
-    warnUsage_.clear();
-  }
+  void WarnOnAllUsage(clang::FlangPedanticVersionTy version =
+                          clang::FlangPedanticVersionTy::f2018);
+  void DisableAllNonstandardWarnings() { warnLanguage_.clear(); }
+  void DisableAllUsageWarnings() { warnUsage_.clear(); }
   void DisableAllWarnings() {
-    disableAllWarnings_ = true;
     DisableAllNonstandardWarnings();
     DisableAllUsageWarnings();
   }
-  bool AreWarningsDisabled() const { return disableAllWarnings_; }
   bool IsEnabled(LanguageFeature f) const { return !disable_.test(f); }
   bool ShouldWarn(LanguageFeature f) const { return warnLanguage_.test(f); }
   bool ShouldWarn(UsageWarning w) const { return warnUsage_.test(w); }
@@ -189,10 +265,7 @@ private:
       usageWarningCliCanonicalSpelling_;
   LanguageFeatures disable_;
   LanguageFeatures warnLanguage_;
-  bool warnAllLanguage_{false};
   UsageWarnings warnUsage_;
-  bool warnAllUsage_{false};
-  bool disableAllWarnings_{false};
 };
 } // namespace Fortran::common
 #endif // FORTRAN_SUPPORT_FORTRAN_FEATURES_H_

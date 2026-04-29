@@ -37,6 +37,7 @@ page](https://llvm.org/releases/).
 
 - The warning flags with prefixes -Wopen-mp and -Wopen-acc have been deprecated in favor of corrected spellings with the respective prefixes -Wopenmp and -Wopenacc. Removal of the deprecated options is planned for LLVM 25 (July 2027).
 
+- The pedantic flag now takes an optional argument, a Fortran standard: f77, f90, f95, f2003, f2008, f2018, f2023, and f202Y. The behavior of the pedantic flag without an argument remains unchanged. The pedantic flag with an argument warns on all of the same things that the pedantic flag without an argument warns. Additionally, when passed a standard as an argument, the pedantic flag warns about code not conforming to that standard. Currently, the only additional warnings are for the different versions of `SYSTEM_CLOCK` in the various standards.
 
 ## Windows Support
 
