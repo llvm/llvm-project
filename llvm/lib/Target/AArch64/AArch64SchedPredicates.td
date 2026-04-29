@@ -470,6 +470,5 @@ def SMESchedPred : FeatureSchedPredicate<FeatureSME>;
 def MCStreamingSchedPred : FeatureSchedPredicate<FeatureMCAStreamingSched>;
 
 // Check whether the subtarget enables SME and is in streaming mode.
-def SMEStreamingSchedPred : SchedPredicate<[{STI->hasSME() && STI->isStreaming()}]>;
 def SMEMCStreamingSchedPred : AllOfSchedPreds<[SMESchedPred,
                                                MCStreamingSchedPred]>;

@@ -676,7 +676,6 @@ def C1URd_Pred    : SchedReadAdvance<1, [C1UWr_Pred]>;
 
 class C1UStreamingSchedWrite<SchedWrite StreamingWrite, SchedWrite BaseWrite>
     : SchedWriteVariant<[
-        SchedVar<SMEStreamingSchedPred,  [StreamingWrite]>,
         SchedVar<SMEMCStreamingSchedPred, [StreamingWrite]>,
         SchedVar<NoSchedPred,            [BaseWrite]>
       ]>;
@@ -684,7 +683,6 @@ class C1UStreamingSchedWrite<SchedWrite StreamingWrite, SchedWrite BaseWrite>
 class C1USMEStreamingSchedWrite<SchedWrite StreamingWrite,
                                 SchedWrite SMEWrite>
     : SchedWriteVariant<[
-        SchedVar<SMEStreamingSchedPred,   [StreamingWrite]>,
         SchedVar<SMEMCStreamingSchedPred, [StreamingWrite]>,
         SchedVar<SMESchedPred,            [SMEWrite]>,
         SchedVar<NoSchedPred,             [C1UWrite_0c]>
