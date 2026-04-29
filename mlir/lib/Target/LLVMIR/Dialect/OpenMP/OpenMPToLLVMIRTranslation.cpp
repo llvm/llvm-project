@@ -7597,8 +7597,11 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
 
   Value dynGroupPrivateSize = targetOp.getDynGroupprivateSize();
   llvm::Value *dynSizeVal = nullptr;
-  if (dynGroupPrivateSize)
+  if (dynGroupPrivateSize) {
     dynSizeVal = moduleTranslation.lookupValue(dynGroupPrivateSize);
+    dynSizeVal = builder.CreateIntCast(dynSizeVal, builder.getInt32Ty(),
+                                       /*isSigned=*/false);
+  }
 
   llvm::omp::OMPDynGroupprivateFallbackType fallbackType =
       getDynGroupprivateFallbackType(targetOp.getDynGroupprivateFallbackAttr());
