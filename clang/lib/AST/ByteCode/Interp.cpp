@@ -819,10 +819,10 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return false;
   if (!CheckActive(S, OpPC, Ptr, AK))
     return false;
-  if (!CheckLifetime(S, OpPC, Ptr, AK))
-    return false;
   if (!Ptr.isInitialized())
     return DiagnoseUninitialized(S, OpPC, Ptr, AK);
+  if (!CheckLifetime(S, OpPC, Ptr, AK))
+    return false;
   if (!CheckTemporary(S, OpPC, Ptr.block(), AK))
     return false;
 
@@ -894,18 +894,21 @@ bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return false;
   if (!CheckVolatile(S, OpPC, Ptr, AK_Assign))
     return false;
-  if (!S.inConstantContext() && isConstexprUnknown(Ptr))
+  if (isConstexprUnknown(Ptr))
     return false;
   return true;
 }
 
-static bool CheckInvoke(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+static bool CheckInvoke(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                        bool IsCtorDtor = false) {
   if (!Ptr.isDummy() && !isConstexprUnknown(Ptr)) {
     if (!CheckLive(S, OpPC, Ptr, AK_MemberCall))
       return false;
     if (!CheckExtern(S, OpPC, Ptr))
       return false;
     if (!CheckRange(S, OpPC, Ptr, AK_MemberCall))
+      return false;
+    if (!IsCtorDtor && !CheckLifetime(S, OpPC, Ptr, AK_MemberCall))
       return false;
   }
   return true;
@@ -1300,7 +1303,7 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
 
     // Remove base casts.
     QualType InitialType = Ptr.getType();
-    Ptr = Ptr.stripBaseCasts();
+    Ptr = Ptr.expand().stripBaseCasts();
 
     Source = Ptr.getDeclDesc()->asExpr();
     BlockToDelete = Ptr.block();
@@ -1515,11 +1518,50 @@ static bool getBase(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
 bool GetPtrBase(InterpState &S, CodePtr OpPC, uint32_t Off) {
   const auto &Ptr = S.Stk.peek<Pointer>();
-  return getBase(S, OpPC, Ptr, Off, /*NullOK=*/true);
+  return getBase(S, OpPC, Ptr.narrow(), Off, /*NullOK=*/true);
 }
 bool GetPtrBasePop(InterpState &S, CodePtr OpPC, uint32_t Off, bool NullOK) {
   const auto &Ptr = S.Stk.pop<Pointer>();
-  return getBase(S, OpPC, Ptr, Off, NullOK);
+  return getBase(S, OpPC, Ptr.narrow(), Off, NullOK);
+}
+
+bool GetPtrDerivedPop(InterpState &S, CodePtr OpPC, uint32_t Off, bool NullOK,
+                      const Type *TargetType) {
+  const Pointer &Ptr = S.Stk.pop<Pointer>().narrow();
+  if (!NullOK && !CheckNull(S, OpPC, Ptr, CSK_Derived))
+    return false;
+
+  if (!Ptr.isBlockPointer()) {
+    // FIXME: We don't have the necessary information in integral pointers.
+    // The Descriptor only has a record, but that does of course not include
+    // the potential derived classes of said record.
+    S.Stk.push<Pointer>(Ptr);
+    return true;
+  }
+
+  if (!CheckSubobject(S, OpPC, Ptr, CSK_Derived))
+    return false;
+  if (!CheckDowncast(S, OpPC, Ptr, Off))
+    return false;
+
+  if (!Ptr.getFieldDesc()->isRecord()) {
+    S.Stk.push<Pointer>(Ptr);
+    return true;
+  }
+
+  const Record *TargetRecord = Ptr.atFieldSub(Off).getRecord();
+  assert(TargetRecord);
+
+  if (TargetRecord->getDecl()->getCanonicalDecl() !=
+      TargetType->getAsCXXRecordDecl()->getCanonicalDecl()) {
+    QualType MostDerivedType = Ptr.getDeclDesc()->getType();
+    S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_invalid_downcast)
+        << MostDerivedType << QualType(TargetType, 0);
+    return false;
+  }
+
+  S.Stk.push<Pointer>(Ptr.atFieldSub(Off));
+  return true;
 }
 
 static bool checkConstructor(InterpState &S, CodePtr OpPC, const Function *Func,
@@ -1736,7 +1778,8 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
         Func->isLambdaCallOperator()) {
       assert(ThisPtr.isZero());
     } else {
-      if (!CheckInvoke(S, OpPC, ThisPtr))
+      if (!CheckInvoke(S, OpPC, ThisPtr,
+                       Func->isConstructor() || Func->isDestructor()))
         return cleanup();
       if (!Func->isConstructor() && !Func->isDestructor() &&
           !CheckActive(S, OpPC, ThisPtr, AK_MemberCall))
@@ -1984,27 +2027,47 @@ bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
 static void startLifetimeRecurse(const Pointer &Ptr) {
   if (const Record *R = Ptr.getRecord()) {
     Ptr.startLifetime();
-    for (const Record::Field &Fi : R->fields())
-      startLifetimeRecurse(Ptr.atField(Fi.Offset));
+
+    for (const Record::Field &Fi : R->fields()) {
+      Pointer FP = Ptr.atField(Fi.Offset);
+      if (FP.getLifetime() != Lifetime::Started)
+        startLifetimeRecurse(FP);
+    }
     return;
   }
 
   if (const Descriptor *FieldDesc = Ptr.getFieldDesc();
       FieldDesc->isCompositeArray()) {
-    assert(Ptr.getLifetime() == Lifetime::Started);
-    for (unsigned I = 0; I != FieldDesc->getNumElems(); ++I)
-      startLifetimeRecurse(Ptr.atIndex(I).narrow());
+    for (unsigned I = 0; I != FieldDesc->getNumElems(); ++I) {
+      Pointer EP = Ptr.atIndex(I).narrow();
+      if (EP.getLifetime() != Lifetime::Started)
+        startLifetimeRecurse(EP);
+    }
     return;
   }
 
   Ptr.startLifetime();
 }
 
-bool StartLifetime(InterpState &S, CodePtr OpPC) {
-  const auto &Ptr = S.Stk.peek<Pointer>();
-  if (Ptr.isBlockPointer() && !CheckDummy(S, OpPC, Ptr.block(), AK_Destroy))
+bool StartThisLifetime(InterpState &S, CodePtr OpPC) {
+  if (S.checkingPotentialConstantExpression())
+    return true;
+
+  const auto &Ptr = S.Current->getThis();
+  if (!Ptr.isBlockPointer())
     return false;
-  startLifetimeRecurse(Ptr.narrow());
+  startLifetimeRecurse(Ptr);
+  return true;
+}
+
+bool StartThisLifetime1(InterpState &S, CodePtr OpPC) {
+  if (S.checkingPotentialConstantExpression())
+    return true;
+
+  const auto &Ptr = S.Current->getThis();
+  if (!Ptr.isBlockPointer())
+    return false;
+  Ptr.startLifetime();
   return true;
 }
 
@@ -2234,13 +2297,15 @@ bool CheckPointerToIntegralCast(InterpState &S, CodePtr OpPC,
   if (Ptr.isIntegralPointer())
     return true;
 
-  if (Ptr.isDummy())
+  if (Ptr.isDummy()) {
+    if (!CheckIntegralAddressCast(S, OpPC, BitWidth))
+      return false;
     return Ptr.getIndex() == 0;
+  }
 
   if (!Ptr.isZero()) {
     // Only allow based lvalue casts if they are lossless.
-    if (S.getASTContext().getTargetInfo().getPointerWidth(LangAS::Default) !=
-        BitWidth)
+    if (!CheckIntegralAddressCast(S, OpPC, BitWidth))
       return Invalid(S, OpPC);
   }
   return true;
@@ -2637,6 +2702,64 @@ bool CastMemberPtrDerivedPop(InterpState &S, CodePtr OpPC, int32_t Off,
   }
 
   return castBackMemberPointer(S, Ptr, Off, BaseDecl);
+}
+
+bool GetMemberPtr(InterpState &S, CodePtr OpPC, const ValueDecl *D) {
+  S.Stk.push<MemberPointer>(D);
+  return true;
+}
+
+bool GetMemberPtrBase(InterpState &S, CodePtr OpPC) {
+  const auto &MP = S.Stk.pop<MemberPointer>();
+
+  if (!MP.isBaseCastPossible())
+    return false;
+
+  S.Stk.push<Pointer>(MP.getBase());
+  return true;
+}
+
+bool GetMemberPtrDecl(InterpState &S, CodePtr OpPC) {
+  const auto &MP = S.Stk.pop<MemberPointer>();
+
+  const ValueDecl *D = MP.getDecl();
+  const auto *FD = dyn_cast_if_present<FunctionDecl>(D);
+  if (!FD)
+    return false;
+
+  const auto *Method = dyn_cast<CXXMethodDecl>(FD);
+  if (!Method)
+    return false;
+
+  const Pointer &Base = MP.getBase();
+  // The method must be accessible via the base of the MemberPointer.
+  const CXXRecordDecl *MethodParent = Method->getParent();
+  if (!Base.getRecord() || Base.getRecord()->getDecl() != MethodParent)
+    return false;
+
+  const auto *Func = S.getContext().getOrCreateFunction(FD);
+  if (!Func)
+    return false;
+  S.Stk.push<Pointer>(Func);
+  return true;
+}
+
+/// Just append the given Entry to the MemberPointer's path.
+/// This is used to re-inject APValues into the bytecode interpreter.
+bool CopyMemberPtrPath(InterpState &S, CodePtr OpPC, const RecordDecl *Entry,
+                       bool IsDerived) {
+  const auto &MemberPtr = S.Stk.pop<MemberPointer>();
+
+  unsigned OldPathLength = MemberPtr.getPathLength();
+  unsigned NewPathLength = OldPathLength + 1;
+
+  auto NewPath = S.allocMemberPointerPath(NewPathLength);
+  std::copy_n(MemberPtr.path(), OldPathLength, NewPath);
+  NewPath[OldPathLength] = cast<CXXRecordDecl>(Entry);
+
+  S.Stk.push<MemberPointer>(
+      MemberPtr.withPath(NewPathLength, NewPath, IsDerived));
+  return true;
 }
 
 // FIXME: Would be nice to generate this instead of hardcoding it here.

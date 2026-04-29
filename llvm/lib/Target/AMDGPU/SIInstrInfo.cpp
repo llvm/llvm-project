@@ -9976,7 +9976,7 @@ unsigned SIInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   case TargetOpcode::INLINEASM_BR: {
     const MachineFunction *MF = MI.getMF();
     const char *AsmStr = MI.getOperand(0).getSymbolName();
-    return getInlineAsmLength(AsmStr, *MF->getTarget().getMCAsmInfo(), &ST);
+    return getInlineAsmLength(AsmStr, MF->getTarget().getMCAsmInfo(), &ST);
   }
   default:
     if (MI.isMetaInstruction())
@@ -10000,6 +10000,13 @@ unsigned SIInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
 
     return DescSize;
   }
+}
+
+TargetInstrInfo::InstSizeVerifyMode
+SIInstrInfo::getInstSizeVerifyMode(const MachineInstr &MI) const {
+  if (MI.isBranch() && ST.hasOffset3fBug())
+    return InstSizeVerifyMode::NoVerify;
+  return InstSizeVerifyMode::ExactSize;
 }
 
 bool SIInstrInfo::mayAccessFlatAddressSpace(const MachineInstr &MI) const {

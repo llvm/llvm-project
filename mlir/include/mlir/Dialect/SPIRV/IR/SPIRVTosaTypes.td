@@ -115,6 +115,14 @@ def SPIRV_I32_1DTensorArmOfLength3Attr : ConfinedAttr<RankedI32ElementsAttr<[3]>
 def SPIRV_I32_1DTensorArmOfLength4Attr : ConfinedAttr<RankedI32ElementsAttr<[4]>, [SPIRV_DenseElementAttrsWithTensorArmType]>;
 def SPIRV_I32_1DTensorArmOfLength5Attr : ConfinedAttr<RankedI32ElementsAttr<[5]>, [SPIRV_DenseElementAttrsWithTensorArmType]>;
 def SPIRV_I32_1DTensorArmOfLength6Attr : ConfinedAttr<RankedI32ElementsAttr<[6]>, [SPIRV_DenseElementAttrsWithTensorArmType]>;
+class IntElementsAttrAllValuesAtLeast<int minValue> : AttrConstraint<
+  CPred<"::llvm::all_of(::llvm::cast<::mlir::DenseElementsAttr>($_self).getValues<::llvm::APInt>(), "
+        "[](const ::llvm::APInt &value) { return value.getSExtValue() >= " #
+        minValue # "; })">,
+  "all values must be >= " # minValue>;
+
+def SPIRV_PositiveInt32_1DTensorArmOfLength2Attr : ConfinedAttr<RankedI32ElementsAttr<[2]>, [SPIRV_DenseElementAttrsWithTensorArmType, IntElementsAttrAllValuesAtLeast<1>]>;
+def SPIRV_NonNegativeInt32_1DTensorArmOfLength4Attr : ConfinedAttr<RankedI32ElementsAttr<[4]>, [SPIRV_DenseElementAttrsWithTensorArmType, IntElementsAttrAllValuesAtLeast<0>]>;
 
 class Is1DTensorArmAttrOfLength<list<int> allowedLengths> :
   AttrConstraint<And<[CPred<[{::llvm::cast<::mlir::spirv::TensorArmType>(::llvm::cast<::mlir::DenseElementsAttr>($_self).getType()).getShape().size() == 1 }]>,
@@ -216,6 +224,29 @@ class ValuesIndicesShapesMatch<string values, string indices, string tensor>:
       SameDimsOrDynamicPred<indices, 1, tensor, 1>,
       SameDimsOrDynamicPred<values, 2, tensor, 2>
     ]>>;
+
+// The tensor shapes are [N,H,W,C] where N,H,W,C are the dimension values.
+class NHWCInputOutputShapeMatch<string input, string output>:
+  PredOpTrait<"shapes of " # input # " and " # output #
+                  " must satisfy [N,*,*,C] and [N,*,*,C]",
+    And<[
+      SameDimsOrDynamicPred<input, 0, output, 0>,
+      SameDimsOrDynamicPred<input, 3, output, 3>
+    ]>>;
+
+class FetchNthIntElementsAttr<string attrName, int idx> :
+  StrFunc<"get" # snakeCaseToCamelCase<attrName>.ret # "().getValues<APInt>()[" # idx # "].getSExtValue()">;
+
+class ElementsAttrValueLessThan<string leftAttrName, int leftIdx,string rightAttrName, int rightIdx> :
+   CPred<FetchNthIntElementsAttr<leftAttrName, leftIdx>.result # " < " # FetchNthIntElementsAttr<rightAttrName, rightIdx>.result>;
+
+class Pool2DPadValuesLessThanKernel<string padAttr, string kernelAttr> :
+    PredOpTrait<"op pad values must satisfy pad_top/pad_bottom < kernel_y and pad_left/pad_right < kernel_x",
+    And<[ElementsAttrValueLessThan<padAttr, 0, kernelAttr, 0>,
+         ElementsAttrValueLessThan<padAttr, 1, kernelAttr, 0>,
+         ElementsAttrValueLessThan<padAttr, 2, kernelAttr, 1>,
+         ElementsAttrValueLessThan<padAttr, 3, kernelAttr, 1>]
+    >>;
 
 class TableSizeConstraint<string input, Type type, int size>:
   PredOpTrait<"table must have size " # size # " if " # input # " has element type " # type.summary,

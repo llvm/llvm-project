@@ -29,7 +29,7 @@ program omp_examples
 !CHECK: !$OMP DECLARE REDUCTION(+:tt: omp_out%r = omp_out%r + omp_in%r) INITIALIZER(om&
 !CHECK-NEXT: !$OMP&p_priv%r = 0)
 
-!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareReductionConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpDeclareReductionDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare reduction
 !PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpReductionSpecifier
 !PARSE-TREE: | | OmpReductionIdentifier -> DefinedOperator -> IntrinsicOperator = Add
@@ -69,7 +69,7 @@ program omp_examples
 !CHECK-NEXT: !$OMP DECLARE REDUCTION(*:tt: omp_out%r = omp_out%r * omp_in%r) INITIALIZER(om&
 !CHECK-NEXT: !$OMP&p_priv%r = 1)
 
-!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareReductionConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpDeclareReductionDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare reduction
 !PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpReductionSpecifier
 !PARSE-TREE: | | OmpReductionIdentifier -> DefinedOperator -> IntrinsicOperator = Multiply
@@ -109,7 +109,7 @@ program omp_examples
 !CHECK-NEXT: !$OMP DECLARE REDUCTION(max:tt: omp_out = mymax(omp_out, omp_in)) INITIALIZER(&
 !CHECK-NEXT: !$OMP&omp_priv%r = 0)
 
-!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareReductionConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpDeclareReductionDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare reduction
 !PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpReductionSpecifier
 !PARSE-TREE: | | OmpReductionIdentifier -> ProcedureDesignator -> Name = 'max'
@@ -146,7 +146,7 @@ program omp_examples
 !CHECK-NEXT: !$OMP DECLARE REDUCTION(min:tt: omp_out%r = min(omp_out%r, omp_in%r)) INITIALI&
 !CHECK-NEXT: !$OMP&ZER(omp_priv%r = 1)
 
-!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareReductionConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpDeclareReductionDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare reduction
 !PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpReductionSpecifier
 !PARSE-TREE: | | OmpReductionIdentifier -> ProcedureDesignator -> Name = 'min'

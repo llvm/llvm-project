@@ -36,7 +36,7 @@ concurrency:
 jobs:
   stage1:
     if: github.repository_owner == 'llvm'
-    runs-on: llvm-premerge-libcxx-runners
+    runs-on: llvm-premerge-libcxx-next-runners
     continue-on-error: false
     strategy:
       fail-fast: false
@@ -79,7 +79,7 @@ jobs:
             **/crash_diagnostics/*
   stage2:
     if: github.repository_owner == 'llvm'
-    runs-on: llvm-premerge-libcxx-runners
+    runs-on: llvm-premerge-libcxx-next-runners
     needs: [ stage1 ]
     continue-on-error: false
     strategy:
@@ -130,7 +130,7 @@ jobs:
             **/crash_diagnostics/*
   stage3:
     if: github.repository_owner == 'llvm'
-    runs-on: llvm-premerge-libcxx-runners
+    runs-on: llvm-premerge-libcxx-next-runners
     needs: [ stage2 ]
     continue-on-error: false
     strategy:
@@ -228,7 +228,6 @@ jobs:
         with:
           # https://github.com/actions/runner-images/blob/main/images/macos/macos-15-Readme.md
           xcode-version: '26.0'
-      - uses: seanmiddleditch/gha-setup-ninja@3b1f8f94a2f8254bd26914c4ab9474d4f0015f67 # v6
       - name: Build and test
         run: |
           python3 -m venv .venv

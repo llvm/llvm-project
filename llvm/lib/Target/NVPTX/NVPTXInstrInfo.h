@@ -67,6 +67,8 @@ public:
                         MachineBasicBlock *FBB, ArrayRef<MachineOperand> Cond,
                         const DebugLoc &DL,
                         int *BytesAdded = nullptr) const override;
+  bool
+  reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const override;
 };
 
 } // namespace llvm

@@ -252,7 +252,6 @@ define void @const_stride_2_with_reordering(ptr %pl, ptr %ps) {
 ; CHECK-NEXT:    [[GEP_L0:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 0
 ; CHECK-NEXT:    [[GEP_S0:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <31 x i8> @llvm.masked.load.v31i8.p0(ptr align 1 [[GEP_L0]], <31 x i1> <i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true>, <31 x i8> poison)
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <31 x i8> [[TMP1]], <31 x i8> poison, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <31 x i8> [[TMP1]], <31 x i8> poison, <16 x i32> <i32 2, i32 0, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
 ; CHECK-NEXT:    store <16 x i8> [[TMP2]], ptr [[GEP_S0]], align 1
 ; CHECK-NEXT:    ret void
@@ -905,29 +904,79 @@ define void @rt_stride_widen_no_reordering(ptr %pl, i64 %stride, ptr %ps) {
   ret void
 }
 
+define void @rt_stride_mul_scev(ptr %pl, i64 %base_stride, ptr %ps) {
+; CHECK-LABEL: define void @rt_stride_mul_scev(
+; CHECK-SAME: ptr [[PL:%.*]], i64 [[BASE_STRIDE:%.*]], ptr [[PS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[STRIDE:%.*]] = mul i64 [[BASE_STRIDE]], 2
+; CHECK-NEXT:    [[GEP_S0:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i64> poison, i64 [[STRIDE]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i64> [[TMP1]], <8 x i64> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nsw <8 x i64> [[TMP2]], <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x ptr> poison, ptr [[PL]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x ptr> [[TMP4]], <8 x ptr> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, <8 x ptr> [[TMP5]], <8 x i64> [[TMP3]]
+; CHECK-NEXT:    [[TMP7:%.*]] = call <8 x i8> @llvm.masked.gather.v8i8.v8p0(<8 x ptr> align 1 [[TMP6]], <8 x i1> splat (i1 true), <8 x i8> poison)
+; CHECK-NEXT:    store <8 x i8> [[TMP7]], ptr [[GEP_S0]], align 1
+; CHECK-NEXT:    ret void
+;
+  %stride = mul i64 %base_stride,2
+  %stride0  = mul nsw i64 %stride, 0
+  %stride1  = mul nsw i64 %stride, 1
+  %stride2  = mul nsw i64 %stride, 2
+  %stride3  = mul nsw i64 %stride, 3
+  %stride4  = mul nsw i64 %stride, 4
+  %stride5  = mul nsw i64 %stride, 5
+  %stride6  = mul nsw i64 %stride, 6
+  %stride7  = mul nsw i64 %stride, 7
+
+  %gep_l0 = getelementptr inbounds i8, ptr %pl, i64 %stride0
+  %gep_l1 = getelementptr inbounds i8, ptr %pl, i64 %stride1
+  %gep_l2 = getelementptr inbounds i8, ptr %pl, i64 %stride2
+  %gep_l3 = getelementptr inbounds i8, ptr %pl, i64 %stride3
+  %gep_l4 = getelementptr inbounds i8, ptr %pl, i64 %stride4
+  %gep_l5 = getelementptr inbounds i8, ptr %pl, i64 %stride5
+  %gep_l6 = getelementptr inbounds i8, ptr %pl, i64 %stride6
+  %gep_l7 = getelementptr inbounds i8, ptr %pl, i64 %stride7
+
+  %load0  = load i8, ptr %gep_l0 , align 1
+  %load1  = load i8, ptr %gep_l1 , align 1
+  %load2  = load i8, ptr %gep_l2 , align 1
+  %load3  = load i8, ptr %gep_l3 , align 1
+  %load4  = load i8, ptr %gep_l4 , align 1
+  %load5  = load i8, ptr %gep_l5 , align 1
+  %load6  = load i8, ptr %gep_l6 , align 1
+  %load7  = load i8, ptr %gep_l7 , align 1
+
+  %gep_s0 = getelementptr inbounds i8, ptr %ps, i64 0
+  %gep_s1 = getelementptr inbounds i8, ptr %ps, i64 1
+  %gep_s2 = getelementptr inbounds i8, ptr %ps, i64 2
+  %gep_s3 = getelementptr inbounds i8, ptr %ps, i64 3
+  %gep_s4 = getelementptr inbounds i8, ptr %ps, i64 4
+  %gep_s5 = getelementptr inbounds i8, ptr %ps, i64 5
+  %gep_s6 = getelementptr inbounds i8, ptr %ps, i64 6
+  %gep_s7 = getelementptr inbounds i8, ptr %ps, i64 7
+
+  store i8 %load0, ptr %gep_s0, align 1
+  store i8 %load1, ptr %gep_s1, align 1
+  store i8 %load2, ptr %gep_s2, align 1
+  store i8 %load3, ptr %gep_s3, align 1
+  store i8 %load4, ptr %gep_s4, align 1
+  store i8 %load5, ptr %gep_s5, align 1
+  store i8 %load6, ptr %gep_s6, align 1
+  store i8 %load7, ptr %gep_s7, align 1
+
+  ret void
+}
+
 define void @rt_stride_widen_no_reordering_i16(ptr %pl, i64 %stride, ptr %ps) {
 ; CHECK-LABEL: define void @rt_stride_widen_no_reordering_i16(
 ; CHECK-SAME: ptr [[PL:%.*]], i64 [[STRIDE:%.*]], ptr [[PS:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[OFFSET0:%.*]] = mul nsw i64 [[STRIDE]], 0
-; CHECK-NEXT:    [[OFFSET4:%.*]] = mul nsw i64 [[STRIDE]], 1
-; CHECK-NEXT:    [[OFFSET8:%.*]] = mul nsw i64 [[STRIDE]], 2
-; CHECK-NEXT:    [[OFFSET12:%.*]] = mul nsw i64 [[STRIDE]], 3
 ; CHECK-NEXT:    [[GEP_L0:%.*]] = getelementptr inbounds i16, ptr [[PL]], i64 [[OFFSET0]]
-; CHECK-NEXT:    [[GEP_L4:%.*]] = getelementptr inbounds i16, ptr [[PL]], i64 [[OFFSET4]]
-; CHECK-NEXT:    [[GEP_L8:%.*]] = getelementptr inbounds i16, ptr [[PL]], i64 [[OFFSET8]]
-; CHECK-NEXT:    [[GEP_L12:%.*]] = getelementptr inbounds i16, ptr [[PL]], i64 [[OFFSET12]]
 ; CHECK-NEXT:    [[GEP_S0:%.*]] = getelementptr inbounds i16, ptr [[PS]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr [[GEP_L0]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i16>, ptr [[GEP_L4]], align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i16>, ptr [[GEP_L8]], align 1
-; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i16>, ptr [[GEP_L12]], align 1
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i16> [[TMP1]], <4 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i16> [[TMP2]], <4 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i16> [[TMP1]], <4 x i16> [[TMP2]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i16> [[TMP3]], <4 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <16 x i16> [[TMP7]], <16 x i16> [[TMP8]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x i16> [[TMP4]], <4 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <16 x i16> [[TMP9]], <16 x i16> [[TMP10]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 16, i32 17, i32 18, i32 19>
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[STRIDE]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i64> @llvm.experimental.vp.strided.load.v4i64.p0.i64(ptr align 1 [[GEP_L0]], i64 [[TMP1]], <4 x i1> splat (i1 true), i32 4)
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <4 x i64> [[TMP2]] to <16 x i16>
 ; CHECK-NEXT:    store <16 x i16> [[TMP11]], ptr [[GEP_S0]], align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -1015,6 +1064,31 @@ define void @rt_stride_widen_no_reordering_i16(ptr %pl, i64 %stride, ptr %ps) {
   store i16 %load13, ptr %gep_s13, align 1
   store i16 %load14, ptr %gep_s14, align 1
   store i16 %load15, ptr %gep_s15, align 1
+
+  ret void
+}
+
+define void @two_wide(ptr %pl, ptr %ps, i64 %stride) {
+; CHECK-LABEL: define void @two_wide(
+; CHECK-SAME: ptr [[PL:%.*]], ptr [[PS:%.*]], i64 [[STRIDE:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[GEP_L0:%.*]] = getelementptr i8, ptr [[PL]], i64 0
+; CHECK-NEXT:    [[GEP_S0:%.*]] = getelementptr i8, ptr [[PS]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[STRIDE]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i8> @llvm.experimental.vp.strided.load.v2i8.p0.i64(ptr align 1 [[GEP_L0]], i64 [[TMP1]], <2 x i1> splat (i1 true), i32 2)
+; CHECK-NEXT:    store <2 x i8> [[TMP2]], ptr [[GEP_S0]], align 1
+; CHECK-NEXT:    ret void
+;
+  %gep_l0 = getelementptr i8, ptr %pl, i64 0
+  %gep_l1 = getelementptr i8, ptr %pl, i64 %stride
+
+  %load0  = load i8, ptr %gep_l0
+  %load1  = load i8, ptr %gep_l1
+
+  %gep_s0 = getelementptr i8, ptr %ps, i64 0
+  %gep_s1 = getelementptr i8, ptr %ps, i64 1
+
+  store i8 %load0, ptr %gep_s0
+  store i8 %load1, ptr %gep_s1
 
   ret void
 }
