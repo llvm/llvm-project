@@ -2143,8 +2143,9 @@ SDValue VectorLegalizer::ExpandFCOPYSIGN(SDNode *Node) {
   //      a. Vector only has 1 element and target knows how to handle scalar
   //         FCOPYSIGN(either legal or custom expand or promote).
   //      b. Vector has more than 1 element and target supports scalar
-  //         FCOPYSIGN natively and vector length <= 5(2 AND + 1 OR + 1 LUI + 1
-  //         ADDI).
+  //         FCOPYSIGN natively and vector length <= 5(2 AND + 1 OR + 2 CONST).
+  // FIXME: Scalar construction instruction count varies in every architecture,
+  // here we assume 1 instruction for now.
   if (VT.isFixedLengthVector()) {
     EVT EltVT = VT.getVectorElementType();
     if ((VT.getVectorNumElements() == 1 &&
