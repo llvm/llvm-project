@@ -8906,7 +8906,6 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
                   options::OPT__SLASH_d1nodatetime, false)) {
    CmdArgs.push_back("-Wno-builtin-macro-redefined");
  }
-
 }
 
 const char *Clang::getBaseInputName(const ArgList &Args,
