@@ -1,0 +1,82 @@
+// Tests for clang-ssaf-analyzer.
+
+// REQUIRES: plugins
+
+// RUN: rm -rf %t
+// RUN: mkdir -p %t
+
+// ============================================================================
+// CLI error: no arguments
+// ============================================================================
+
+// RUN: not clang-ssaf-analyzer 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=NO-ARGS
+// NO-ARGS: clang-ssaf-analyzer: Not enough positional command line arguments specified!
+
+// ============================================================================
+// CLI error: missing -o
+// ============================================================================
+
+// RUN: not clang-ssaf-analyzer %S/Inputs/lu.json -a Foo 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=NO-OUTPUT
+// NO-OUTPUT: clang-ssaf-analyzer: for the -o option: must be specified at least once!
+
+// ============================================================================
+// Error: unknown analysis name
+// ============================================================================
+
+// RUN: not %ssaf-analyzer-with-plugin %S/Inputs/lu.json \
+// RUN:   -o %t/unknown.json -a NoSuchAnalysis 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=UNKNOWN
+// UNKNOWN: no analysis registered for 'AnalysisName(NoSuchAnalysis)'
+
+// ============================================================================
+// Success: run TagsAnalysisResult only
+// ============================================================================
+
+// RUN: %ssaf-analyzer-with-plugin %S/Inputs/lu.json \
+// RUN:   -o %t/tags.json -a TagsAnalysisResult
+// RUN: diff %S/Outputs/tags.json %t/tags.json
+
+// ============================================================================
+// Success: run PairsAnalysisResult only
+// ============================================================================
+
+// RUN: %ssaf-analyzer-with-plugin %S/Inputs/lu.json \
+// RUN:   -o %t/pairs.json -a PairsAnalysisResult
+// RUN: diff %S/Outputs/pairs.json %t/pairs.json
+
+// ============================================================================
+// Success: run both summary analyses
+// ============================================================================
+
+// RUN: %ssaf-analyzer-with-plugin %S/Inputs/lu.json \
+// RUN:   -o %t/both.json -a TagsAnalysisResult -a PairsAnalysisResult
+// RUN: diff %S/Outputs/both.json %t/both.json
+
+// ============================================================================
+// Success: run derived analysis (pulls dependencies automatically)
+// ============================================================================
+
+// RUN: %ssaf-analyzer-with-plugin %S/Inputs/lu.json \
+// RUN:   -o %t/all.json -a TagsPairsAnalysisResult
+// RUN: diff %S/Outputs/all.json %t/all.json
+
+// ============================================================================
+// Success: run all analyses (no -a flag)
+// ============================================================================
+
+// RUN: %ssaf-analyzer-with-plugin %S/Inputs/lu.json \
+// RUN:   -o %t/all-default.json \
+// RUN:   -a TagsAnalysisResult -a PairsAnalysisResult -a TagsPairsAnalysisResult
+// RUN: diff %S/Outputs/all.json %t/all-default.json
+
+// ============================================================================
+// Round-trip: analyze then read back with ssaf-format
+// ============================================================================
+
+// RUN: %ssaf-analyzer-with-plugin %S/Inputs/lu.json \
+// RUN:   -o %t/roundtrip.json -a TagsPairsAnalysisResult
+// RUN: clang-ssaf-format --type wpa --load %llvmshlibdir/SSAFExamplePlugin%pluginext \
+// RUN:   %t/roundtrip.json -o %t/roundtrip-copy.json
+// RUN: diff %S/Outputs/all.json %t/roundtrip-copy.json
