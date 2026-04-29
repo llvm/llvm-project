@@ -1570,6 +1570,17 @@ compileModuleBehindLockOrRead(CompilerInstance &ImportingInstance,
       return CompileOrReadResult::Compiled;
     }
     if (Owned) {
+      // If another thread finished building the module before we acquired the
+      // lock, but after our initial cache miss, try to read it from the cache
+      // instead of rebuilding.
+      bool OutOfDate = false;
+      bool Missing = false;
+      if (readASTAfterCompileModule(ImportingInstance, ImportLoc, ModuleNameLoc,
+                                    Module, ModuleFileName, &OutOfDate,
+                                    &Missing))
+        return CompileOrReadResult::Read;
+      if (!OutOfDate && !Missing)
+        return CompileOrReadResult::FailedToRead;
       // We're responsible for building the module ourselves.
       if (!compileModuleImpl(ImportingInstance, ImportLoc, ModuleNameLoc,
                              Module, ModuleFileName))
