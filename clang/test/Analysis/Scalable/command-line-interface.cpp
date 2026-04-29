@@ -20,3 +20,9 @@ void empty() {}
 // NO-EXTRACTORS-ENABLED:    error: must enable some summary extractors using the '--ssaf-extract-summaries=' option [-Wscalable-static-analysis-framework]
 // NO-EXTRACTOR-WITH-NAME:   error: no summary extractor was registered with name: extractor1 [-Wscalable-static-analysis-framework]
 // NO-EXTRACTORS-WITH-NAME:  error: no summary extractors were registered with name: extractor1, extractor2 [-Wscalable-static-analysis-framework]
+
+// RUN: not %clang_cc1 -fsyntax-only %s --ssaf-apply-source-pass=X --ssaf-load-wpa-result=foo.unknownfmt 2>&1 | %{filecheck}=UNKNOWN-WPA-INPUT-FORMAT
+// RUN: not %clang_cc1 -fsyntax-only %s --ssaf-apply-source-pass=SomeAnalysis                            2>&1 | %{filecheck}=NO-WPA-FILE
+
+// UNKNOWN-WPA-INPUT-FORMAT: error: unknown WPA file format 'unknownfmt' specified by '--ssaf-load-wpa-result=foo.unknownfmt' [-Wscalable-static-analysis-framework]
+// NO-WPA-FILE:              error: failed to parse the value of '--ssaf-load-wpa-result=' the value must follow the '<path>.<format>' pattern [-Wscalable-static-analysis-framework]

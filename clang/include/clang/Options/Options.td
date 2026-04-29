@@ -969,6 +969,20 @@ def _ssaf_list_formats :
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Display the list of available SSAF serialization formats">,
   MarshallingInfoFlag<FrontendOpts<"SSAFShowFormats">>;
+def _ssaf_apply_source_pass :
+  CommaJoined<["--"], "ssaf-apply-source-pass=">,
+  MetaVarName<"<analysis-names>">,
+  Group<SSAF_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Comma-separated list of source-pass analysis names to apply">,
+  MarshallingInfoStringVector<FrontendOpts<"SSAFApplySourcePass">>;
+def _ssaf_load_wpa_result :
+  Joined<["--"], "ssaf-load-wpa-result=">,
+  MetaVarName<"<path>.<format>">,
+  Group<SSAF_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"The WPA result file to load. The extension selects which file format to use.">,
+  MarshallingInfoString<FrontendOpts<"SSAFLoadWPAResult">>;
 def Xarch__
     : JoinedAndSeparate<["-"], "Xarch_">,
       Flags<[NoXarchOption]>,

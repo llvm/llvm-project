@@ -400,6 +400,16 @@ def warn_profile_data_misexpect : Warning<
   BackendInfo, InGroup<MisExpect>;
 } // end of instrumentation issue category
 
+def warn_ssaf_load_wpa_result_unknown_file_path_format :
+  Warning<"failed to parse the value of '--ssaf-load-wpa-result=%0' "
+  "the value must follow the '<path>.<format>' pattern">,
+  InGroup<ScalableStaticAnalysisFramework>, DefaultError;
+
+def warn_ssaf_load_wpa_result_unknown_file_data_format :
+  Warning<"unknown WPA file format '%0' "
+  "specified by '--ssaf-load-wpa-result=%1'">,
+  InGroup<ScalableStaticAnalysisFramework>, DefaultError;
+
 def warn_ssaf_extract_tu_summary_file_unknown_output_format :
   Warning<"unknown output summary file format '%0' "
   "specified by '--ssaf-tu-summary-file=%1'">,

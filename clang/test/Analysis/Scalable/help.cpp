@@ -3,10 +3,14 @@
 // RUN: %clang     --help 2>&1 | %{filecheck}=HELP
 // RUN: %clang_cc1 --help 2>&1 | %{filecheck}=HELP
 
-// HELP:       --ssaf-extract-summaries=<summary-names>
+// HELP:       --ssaf-apply-source-pass=<analysis-names>
+// HELP-NEXT:    Comma-separated list of source-pass analysis names to apply
+// HELP-NEXT:  --ssaf-extract-summaries=<summary-names>
 // HELP-NEXT:    Comma-separated list of summary names to extract
 // HELP-NEXT:  --ssaf-list-extractors  Display the list of available SSAF summary extractors
 // HELP-NEXT:  --ssaf-list-formats     Display the list of available SSAF serialization formats
+// HELP-NEXT:  --ssaf-load-wpa-result=<path>.<format>
+// HELP-NEXT:    The WPA result file to load. The extension selects which file format to use.
 // HELP-NEXT:  --ssaf-tu-summary-file=<path>.<format>
 // HELP-NEXT:    The output file for the extracted summaries. The extension selects which file format to use.
 

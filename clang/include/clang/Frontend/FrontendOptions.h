@@ -558,6 +558,12 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned SSAFShowFormats : 1;
 
+  /// List of SSAF source-pass analysis names to apply.
+  std::vector<std::string> SSAFApplySourcePass;
+
+  /// The WPA result file to load, with file extension selecting the format.
+  std::string SSAFLoadWPAResult;
+
 public:
   FrontendOptions()
       : DisableFree(false), RelocatablePCH(false), ShowHelp(false),
