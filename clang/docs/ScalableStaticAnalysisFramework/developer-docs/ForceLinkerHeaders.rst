@@ -33,26 +33,29 @@ constructors unconditionally.
 The solution: anchor symbols
 ****************************
 
-Each registration translation unit defines a ``volatile int`` **anchor symbol**:
+Each registration translation unit defines a ``const volatile int`` **anchor symbol**:
 
 .. code-block:: c++
 
-  // In MyExtractor.cpp — next to the registry Add<> object
+  // In MyExtractor.cpp - next to the registry Add<> object in the ``clang::ssaf`` namespace
   // NOLINTNEXTLINE(misc-use-internal-linkage)
-  volatile int SSAFMyExtractorAnchorSource = 0;
+  const volatile int MyExtractorAnchorSource = 0;
 
-A **force-linker header** declares the symbol as ``extern`` and reads it into a
-``[[maybe_unused]] static int`` destination:
+For **in-tree** anchors, add a single ``ANCHOR(...)`` entry to
+``BuiltinAnchorSources.def`` (in alphabetical order):
 
 .. code-block:: c++
 
-  // In SSAFBuiltinForceLinker.h
-  extern volatile int SSAFMyExtractorAnchorSource;
-  [[maybe_unused]] static int SSAFMyExtractorAnchorDestination =
-      SSAFMyExtractorAnchorSource;
+  // In clang/include/clang/ScalableStaticAnalysisFramework/BuiltinAnchorSources.def
+  ANCHOR(JSONFormatAnchorSource)
+  ANCHOR(MyExtractorAnchorSource) // <-- Add here, in alphabetical order
+
+``SSAFBuiltinForceLinker.h`` includes this ``.def`` file automatically to
+generate the ``extern`` declarations and the ``AnchorSources`` array — there is
+no need to edit that header directly.
 
 Any translation unit that ``#include``\s this header now has a reference to
-``SSAFMyExtractorAnchorSource``, which forces the linker to pull in
+``MyExtractorAnchorSource``, which forces the linker to pull in
 ``MyExtractor.o`` — and with it, the static ``Add<>`` registration object.
 
 The ``volatile`` qualifier is essential: without it the compiler could
@@ -85,11 +88,14 @@ point of a binary that uses ``clangScalableStaticAnalysisFrameworkCore``:
 Naming convention
 =================
 
-Anchor symbols follow the pattern ``SSAF<Component>AnchorSource`` and
-``SSAF<Component>AnchorDestination``.  For example:
+Anchor symbols follow the pattern ``<Component>AnchorSource`` in the ``clang::ssaf`` namespace.
+For example:
 
-- ``SSAFJSONFormatAnchorSource`` / ``SSAFJSONFormatAnchorDestination``
-- ``SSAFMyExtractorAnchorSource`` / ``SSAFMyExtractorAnchorDestination``
+- ``JSONFormatAnchorSource``
+- ``MyExtractorAnchorSource``
+
+All anchor sources are aggregated into a single ``BuiltinAnchorDestination``
+lambda in the force-linker header (see ``SSAFBuiltinForceLinker.h``).
 
 Considered alternatives
 ***********************

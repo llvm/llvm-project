@@ -13,11 +13,12 @@
 using namespace clang;
 using namespace ssaf;
 
-using RegistryT = llvm::Registry<AnalysisBase>;
-
+namespace clang::ssaf {
 // NOLINTNEXTLINE(misc-use-internal-linkage)
-volatile int SSAFAnalysisRegistryAnchorSource = 0;
-LLVM_INSTANTIATE_REGISTRY(RegistryT)
+const volatile int AnalysisRegistryAnchorSource = 0;
+} // namespace clang::ssaf
+
+LLVM_INSTANTIATE_REGISTRY(llvm::Registry<AnalysisBase>)
 
 std::vector<AnalysisName> &AnalysisRegistry::getAnalysisNames() {
   static std::vector<AnalysisName> Names;
@@ -34,7 +35,7 @@ const std::vector<AnalysisName> &AnalysisRegistry::names() {
 
 llvm::Expected<std::unique_ptr<AnalysisBase>>
 AnalysisRegistry::instantiate(const AnalysisName &Name) {
-  for (const auto &Entry : RegistryT::entries()) {
+  for (const auto &Entry : llvm::Registry<AnalysisBase>::entries()) {
     if (Entry.getName() == Name.str()) {
       return std::unique_ptr<AnalysisBase>(Entry.instantiate());
     }

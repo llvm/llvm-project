@@ -84,9 +84,6 @@ static llvm::Registry<JSONFormat::FormatInfo>::Add<
         UnsafeBufferUsageEntitySummary::Name,
         "JSON Format info for UnsafeBufferUsageEntitySummary");
 
-// NOLINTNEXTLINE(misc-use-internal-linkage)
-volatile int UnsafeBufferUsageSSAFJSONFormatAnchorSource = 0;
-
 // For unit test:
 llvm::Expected<std::unique_ptr<EntitySummary>>
 ssaf::serializeDeserializeRoundTrip(
@@ -108,3 +105,8 @@ ssaf::serializeDeserializeRoundTrip(
 
   return deserializeImpl(serialize(S, IdToJson), IdFromJson);
 }
+
+namespace clang::ssaf {
+// NOLINTNEXTLINE(misc-use-internal-linkage)
+const volatile int UnsafeBufferUsageJSONFormatAnchorSource = 0;
+} // namespace clang::ssaf
