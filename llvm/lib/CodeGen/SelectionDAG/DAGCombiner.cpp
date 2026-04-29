@@ -16492,10 +16492,18 @@ SDValue DAGCombiner::reduceLoadWidth(SDNode *N) {
   if (FreezeNode && !FreezeNode.hasOneUse())
     DAG.ReplaceAllUsesOfValueWith(N0.getValue(0), Load.getValue(0));
 
-  // If we looked through a freeze, rewrap the narrowed result.
+  // If we looked through a freeze, rewrap the narrowed result and add an
+  // Assert node so downstream analyses can see the range.
   SDValue Result = Load;
-  if (FreezeNode)
+  if (FreezeNode) {
     Result = DAG.getNode(ISD::FREEZE, DL, VT, Result);
+    if (ExtType == ISD::ZEXTLOAD)
+      Result = DAG.getNode(ISD::AssertZext, DL, VT, Result,
+                           DAG.getValueType(ExtVT));
+    else if (ExtType == ISD::SEXTLOAD)
+      Result = DAG.getNode(ISD::AssertSext, DL, VT, Result,
+                           DAG.getValueType(ExtVT));
+  }
 
   // Shift the result left, if we've swallowed a left shift.
   if (ShLeftAmt != 0) {
