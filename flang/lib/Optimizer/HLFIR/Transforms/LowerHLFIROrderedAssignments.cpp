@@ -1325,27 +1325,36 @@ void OrderedAssignmentRewriter::saveLeftHandSide(
 
 void OrderedAssignmentRewriter::canonicalizeExactlyOnceInsideWhere(
     hlfir::WhereOp whereOp) {
-  auto getDefinition = [](mlir::Value v) -> mlir::Operation * {
+  auto getDefinition = [](mlir::Value v) {
     mlir::Operation *op = v.getDefiningOp();
-    assert(op && "expected value with a defining operation");
-    assert(op->getNumRegions() == 0 &&
-           "cannot pull an operation with regions into hlfir.exactly_once");
+    bool isValid = true;
+    if (!op) {
+      LLVM_DEBUG(
+          llvm::dbgs()
+          << "Value live into hlfir.exactly_once has no defining operation: "
+          << v << "\n");
+      isValid = false;
+    }
+    if (op->getNumRegions() != 0) {
+      LLVM_DEBUG(
+          llvm::dbgs()
+          << "Cannot pull an operation with regions into hlfir.exactly_once"
+          << *op << "\n");
+      isValid = false;
+    }
     auto effects = mlir::getEffectsRecursively(op);
-    assert(effects && effects->empty() &&
-           "side effects on operation with result live into "
-           "hlfir.exactly_once");
+    if (!effects || !effects->empty()) {
+      LLVM_DEBUG(llvm::dbgs() << "Side effects on operation with result live "
+                                 "into hlfir.exactly_once"
+                              << *op << "\n");
+      isValid = false;
+    }
+    assert(isValid && "invalid live-in");
+    (void)isValid;
     return op;
   };
   mlir::Liveness liveness(whereOp.getOperation());
   whereOp->walk([&](hlfir::ExactlyOnceOp op) {
-    // Skip canonicalization for hlfir.exactly_once operations nested inside
-    // hlfir.elemental ops. These are part of the elemental tree and their
-    // live-in values include block arguments (e.g. implied-do loop indices)
-    // that cannot be pulled into the exactly_once region. The exactly_once
-    // wrapper will be inlined when the elemental body is expanded (in
-    // inlineElementalOp).
-    if (op->getParentOfType<hlfir::ElementalOp>())
-      return;
     std::unordered_set<mlir::Operation *> liveInSet;
     LLVM_DEBUG(llvm::dbgs() << "Canonicalizing:\n" << op << "\n");
     auto &liveIns = liveness.getLiveIn(&op.getBody().front());
@@ -1354,11 +1363,6 @@ void OrderedAssignmentRewriter::canonicalizeExactlyOnceInsideWhere(
     // Note that the liveIns set is not ordered.
     for (mlir::Value liveIn : liveIns) {
       if (!dominanceInfo.properlyDominates(liveIn, whereOp)) {
-        // Block arguments (e.g. implied-do loop variables) have no defining
-        // operation and cannot be pulled into the hlfir.exactly_once region.
-        // They are already handled by the existing lowering infrastructure.
-        if (mlir::isa<mlir::BlockArgument>(liveIn))
-          continue;
         LLVM_DEBUG(llvm::dbgs()
                    << "Does not dominate top-level where: " << liveIn << "\n");
         liveInSet.insert(getDefinition(liveIn));
@@ -1375,8 +1379,6 @@ void OrderedAssignmentRewriter::canonicalizeExactlyOnceInsideWhere(
       mlir::Operation *current = workList.pop_back_val();
       for (mlir::Value operand : current->getOperands()) {
         if (dominanceInfo.properlyDominates(operand, whereOp))
-          continue;
-        if (mlir::isa<mlir::BlockArgument>(operand))
           continue;
         mlir::Operation *def = getDefinition(operand);
         if (cloneSet.count(def))

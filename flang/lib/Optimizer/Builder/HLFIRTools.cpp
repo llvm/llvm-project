@@ -946,21 +946,8 @@ hlfir::inlineElementalOp(mlir::Location loc, fir::FirOpBuilder &builder,
   mlir::IRMapping mapper;
   mapper.map(elemental.getIndices(), oneBasedIndices);
   mlir::Operation *newOp;
-  for (auto &op : elemental.getRegion().back().getOperations()) {
-    if (auto exactlyOnce = mlir::dyn_cast<hlfir::ExactlyOnceOp>(op)) {
-      for (auto &subOp : exactlyOnce.getBody().back().without_terminator())
-        newOp = builder.clone(subOp, mapper);
-      auto yield = mlir::cast<hlfir::YieldOp>(
-          exactlyOnce.getBody().back().getTerminator());
-      mapper.map(exactlyOnce.getResult(),
-                 mapper.lookupOrDefault(yield.getEntity()));
-      if (!yield.getCleanup().empty())
-        for (auto &cleanupOp : yield.getCleanup().front().without_terminator())
-          newOp = builder.clone(cleanupOp, mapper);
-      continue;
-    }
+  for (auto &op : elemental.getRegion().back().getOperations())
     newOp = builder.clone(op, mapper);
-  }
   auto yield = mlir::dyn_cast_or_null<hlfir::YieldElementOp>(newOp);
   assert(yield && "last ElementalOp operation must be am hlfir.yield_element");
   return yield;
@@ -992,18 +979,6 @@ mlir::Value hlfir::inlineElementalOp(
           mapper.map(apply.getResult(), inlined);
           continue;
         }
-    if (auto exactlyOnce = mlir::dyn_cast<hlfir::ExactlyOnceOp>(op)) {
-      for (auto &subOp : exactlyOnce.getBody().back().without_terminator())
-        (void)builder.clone(subOp, mapper);
-      auto yield = mlir::cast<hlfir::YieldOp>(
-          exactlyOnce.getBody().back().getTerminator());
-      mapper.map(exactlyOnce.getResult(),
-                 mapper.lookupOrDefault(yield.getEntity()));
-      if (!yield.getCleanup().empty())
-        for (auto &cleanupOp : yield.getCleanup().front().without_terminator())
-          (void)builder.clone(cleanupOp, mapper);
-      continue;
-    }
     (void)builder.clone(op, mapper);
   }
   return mapper.lookupOrDefault(elemental.getElementEntity());
