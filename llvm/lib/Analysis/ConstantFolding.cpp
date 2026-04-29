@@ -1611,6 +1611,20 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
                                })))
     return false;
 
+  // FP instruction intrinsics without operand bundles use the default rounding
+  // and exception behavior, so they can be folded.  If operand bundles are
+  // present the FP environment may differ from the default.
+  switch (F->getIntrinsicID()) {
+  case Intrinsic::fadd:
+  case Intrinsic::fsub:
+  case Intrinsic::fmul:
+  case Intrinsic::fdiv:
+  case Intrinsic::frem:
+    return !Call->hasOperandBundles();
+  default:
+    break;
+  }
+
   switch (F->getIntrinsicID()) {
   // Operations that do not operate floating-point numbers and do not depend on
   // FP environment can be folded even in strictfp functions.
@@ -1945,14 +1959,6 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::nearbyint:
   case Intrinsic::rint:
   case Intrinsic::canonicalize:
-
-  // FP instruction intrinsics: without operand bundles they use default
-  // rounding and exception behavior, so they can always be folded.
-  case Intrinsic::fadd:
-  case Intrinsic::fsub:
-  case Intrinsic::fmul:
-  case Intrinsic::fdiv:
-  case Intrinsic::frem:
 
   // Constrained intrinsics can be folded if FP environment is known
   // to compiler.

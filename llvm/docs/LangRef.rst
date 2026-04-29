@@ -10459,8 +10459,6 @@ This instruction can also take any number of :ref:`fast-math
 flags <fastmath>`, which are optimization hints to enable otherwise
 unsafe floating-point optimizations:
 
-See also the :ref:`llvm.fneg <int_fneg>` intrinsic, which is a intrinsic variant of this instruction.
-
 Example:
 """"""""
 
@@ -10566,8 +10564,6 @@ This instruction can also take any number of :ref:`fast-math
 flags <fastmath>`, which are optimization hints to enable otherwise
 unsafe floating-point optimizations:
 
-See also the :ref:`llvm.fadd <int_fadd>` intrinsic, which is a intrinsic variant of this instruction.
-
 Example:
 """"""""
 
@@ -10663,8 +10659,6 @@ environment <floatenv>`.
 This instruction can also take any number of :ref:`fast-math
 flags <fastmath>`, which are optimization hints to enable otherwise
 unsafe floating-point optimizations:
-
-See also the :ref:`llvm.fsub <int_fsub>` intrinsic, which is a intrinsic variant of this instruction.
 
 Example:
 """"""""
@@ -10762,8 +10756,6 @@ environment <floatenv>`.
 This instruction can also take any number of :ref:`fast-math
 flags <fastmath>`, which are optimization hints to enable otherwise
 unsafe floating-point optimizations:
-
-See also the :ref:`llvm.fmul <int_fmul>` intrinsic, which is a intrinsic variant of this instruction.
 
 Example:
 """"""""
@@ -10902,8 +10894,6 @@ environment <floatenv>`.
 This instruction can also take any number of :ref:`fast-math
 flags <fastmath>`, which are optimization hints to enable otherwise
 unsafe floating-point optimizations:
-
-See also the :ref:`llvm.fdiv <int_fdiv>` intrinsic, which is a intrinsic variant of this instruction.
 
 Example:
 """"""""
@@ -11060,8 +11050,6 @@ environment <floatenv>`.
 This instruction can also take any number of :ref:`fast-math
 flags <fastmath>`, which are optimization hints to enable otherwise
 unsafe floating-point optimizations:
-
-See also the :ref:`llvm.frem <int_frem>` intrinsic, which is a intrinsic variant of this instruction.
 
 Example:
 """"""""
@@ -12727,9 +12715,6 @@ This instruction can also take any number of :ref:`fast-math
 flags <fastmath>`, which are optimization hints to enable otherwise
 unsafe floating-point optimizations.
 
-See also the :ref:`llvm.fptrunc <int_fptrunc_intr>` intrinsic, which is a
-intrinsic variant of this instruction.
-
 Example:
 """"""""
 
@@ -12781,9 +12766,6 @@ This instruction can also take any number of :ref:`fast-math
 flags <fastmath>`, which are optimization hints to enable otherwise
 unsafe floating-point optimizations.
 
-See also the :ref:`llvm.fpext <int_fpext_intr>` intrinsic, which is a
-intrinsic variant of this instruction.
-
 Example:
 """"""""
 
@@ -12824,9 +12806,6 @@ The '``fptoui``' instruction converts its :ref:`floating-point
 <t_floating>` operand into the nearest (rounding towards zero)
 unsigned integer value. If the value cannot fit in ``ty2``, the result
 is a :ref:`poison value <poisonvalues>`.
-
-See also the :ref:`llvm.fptoui <int_fptoui_intr>` intrinsic, which is a
-intrinsic variant of this instruction.
 
 Example:
 """"""""
@@ -12869,9 +12848,6 @@ The '``fptosi``' instruction converts its :ref:`floating-point
 <t_floating>` operand into the nearest (rounding towards zero)
 signed integer value. If the value cannot fit in ``ty2``, the result
 is a :ref:`poison value <poisonvalues>`.
-
-See also the :ref:`llvm.fptosi <int_fptosi_intr>` intrinsic, which is a
-intrinsic variant of this instruction.
 
 Example:
 """"""""
@@ -12922,9 +12898,6 @@ the default rounding mode.
 If the ``nneg`` flag is set, and the ``uitofp`` argument is negative,
 the result is a poison value.
 
-See also the :ref:`llvm.uitofp <int_uitofp_intr>` intrinsic, which is a
-intrinsic variant of this instruction.
-
 Example:
 """"""""
 
@@ -12968,9 +12941,6 @@ The '``sitofp``' instruction interprets its operand as a signed integer
 quantity and converts it to the corresponding floating-point value. If the
 value cannot be exactly represented, it is rounded using the default rounding
 mode.
-
-See also the :ref:`llvm.sitofp <int_sitofp_intr>` intrinsic, which is a
-intrinsic variant of this instruction.
 
 Example:
 """"""""
@@ -13507,10 +13477,6 @@ Any set of fast-math flags are legal on an ``fcmp`` instruction, but the
 only flags that have any effect on its semantics are those that allow
 assumptions to be made about the values of input arguments; namely
 ``nnan``, ``ninf``, and ``reassoc``. See :ref:`fastmath` for more information.
-
-See also the :ref:`llvm.fcmp <int_fcmp>` intrinsic (quiet comparison, intrinsic
-variant of this instruction) and the :ref:`llvm.fcmps <int_fcmps>` intrinsic
-(signaling comparison that always raises on NaN operands).
 
 Example:
 """"""""
@@ -30282,17 +30248,14 @@ would and handles error conditions in the same way.
 FP Arithmetic Intrinsics
 ------------------------
 
-These intrinsics are intrinsic variants of the standard floating-point
-instructions (:ref:`fadd <i_fadd>`, :ref:`fsub <i_fsub>`, :ref:`fmul <i_fmul>`,
-:ref:`fdiv <i_fdiv>`, :ref:`frem <i_frem>`, :ref:`fneg <i_fneg>`,
-:ref:`fcmp <i_fcmp>`, :ref:`fptrunc <i_fptrunc>`, :ref:`fpext <i_fpext>`,
-and the ``fptoui``, ``fptosi``, ``uitofp``, ``sitofp`` conversion instructions).
-They behave identically to the corresponding instruction and accept the same
-:ref:`fast-math flags <fastmath>`.
-
-``llvm.fcmps`` is always ``memory(inaccessiblemem: readwrite)`` and not
-speculatable because a signaling comparison raises an FP Invalid Operation
-exception whenever either operand is any NaN, including quiet NaNs.
+These intrinsics are call-instruction equivalents of the standard
+floating-point instructions.  They accept the same
+:ref:`fast-math flags <fastmath>` as the corresponding instruction and
+lower to it in the common case (no operand bundles).  Clients that need
+to express non-default FP environment behavior (such as a specific
+rounding mode or exception-handling policy) can attach operand bundles
+to these calls; when such bundles are present the call may no longer be
+``memory(none)`` or speculatable.
 
 .. _int_fadd:
 
@@ -30330,7 +30293,8 @@ The arguments and return value are floating-point numbers of the same type.
 Semantics:
 """"""""""
 
-Equivalent to the :ref:`fadd <i_fadd>` instruction.  Always ``memory(none)``
+Equivalent to the :ref:`fadd <i_fadd>` instruction.  Without operand
+bundles that change FP environment behavior, always ``memory(none)``
 and speculatable.
 
 Example:
@@ -30376,7 +30340,8 @@ The arguments and return value are floating-point numbers of the same type.
 Semantics:
 """"""""""
 
-Equivalent to the :ref:`fsub <i_fsub>` instruction.  Always ``memory(none)``
+Equivalent to the :ref:`fsub <i_fsub>` instruction.  Without operand
+bundles that change FP environment behavior, always ``memory(none)``
 and speculatable.
 
 Example:
@@ -30422,7 +30387,8 @@ The arguments and return value are floating-point numbers of the same type.
 Semantics:
 """"""""""
 
-Equivalent to the :ref:`fmul <i_fmul>` instruction.  Always ``memory(none)``
+Equivalent to the :ref:`fmul <i_fmul>` instruction.  Without operand
+bundles that change FP environment behavior, always ``memory(none)``
 and speculatable.
 
 Example:
@@ -30468,7 +30434,8 @@ The arguments and return value are floating-point numbers of the same type.
 Semantics:
 """"""""""
 
-Equivalent to the :ref:`fdiv <i_fdiv>` instruction.  Always ``memory(none)``
+Equivalent to the :ref:`fdiv <i_fdiv>` instruction.  Without operand
+bundles that change FP environment behavior, always ``memory(none)``
 and speculatable.
 
 Example:
@@ -30514,7 +30481,8 @@ The arguments and return value are floating-point numbers of the same type.
 Semantics:
 """"""""""
 
-Equivalent to the :ref:`frem <i_frem>` instruction.  Always ``memory(none)``
+Equivalent to the :ref:`frem <i_frem>` instruction.  Without operand
+bundles that change FP environment behavior, always ``memory(none)``
 and speculatable.
 
 Example:
@@ -30560,7 +30528,8 @@ The argument and return value are floating-point numbers of the same type.
 Semantics:
 """"""""""
 
-Equivalent to the :ref:`fneg <i_fneg>` instruction.  Always ``memory(none)``
+Equivalent to the :ref:`fneg <i_fneg>` instruction.  Without operand
+bundles that change FP environment behavior, always ``memory(none)``
 and speculatable.
 
 Example:
@@ -30613,7 +30582,8 @@ Semantics:
 """"""""""
 
 The comparison semantics :ref:`follow those of the fcmp instruction
-<fcmp_md_cc_sem>`.  Always ``memory(none)`` and speculatable.
+<fcmp_md_cc_sem>`.  Without operand bundles that enable FP exceptions,
+always ``memory(none)`` and speculatable.
 
 Example:
 """"""""
@@ -30705,7 +30675,8 @@ floating-point type. The source type must be larger than the destination type.
 Semantics:
 """"""""""
 
-Equivalent to the :ref:`fptrunc <i_fptrunc>` instruction.  Always
+Equivalent to the :ref:`fptrunc <i_fptrunc>` instruction.  Without
+operand bundles that change FP environment behavior, always
 ``memory(none)`` and speculatable.
 
 Example:
@@ -30747,7 +30718,8 @@ floating-point type. The source type must be smaller than the destination type.
 Semantics:
 """"""""""
 
-Equivalent to the :ref:`fpext <i_fpext>` instruction.  Always
+Equivalent to the :ref:`fpext <i_fpext>` instruction.  Without
+operand bundles that change FP environment behavior, always
 ``memory(none)`` and speculatable.
 
 Example:
@@ -30791,7 +30763,8 @@ Semantics:
 
 Equivalent to the ``sitofp`` instruction.  If the integer value cannot be
 represented exactly in the destination type, it is rounded using the default
-rounding mode.  Always ``memory(none)`` and speculatable.
+rounding mode.  Without operand bundles that change FP environment behavior,
+always ``memory(none)`` and speculatable.
 
 Example:
 """"""""
@@ -30834,7 +30807,8 @@ Semantics:
 
 Equivalent to the ``uitofp`` instruction.  If the integer value cannot be
 represented exactly in the destination type, it is rounded using the default
-rounding mode.  Always ``memory(none)`` and speculatable.
+rounding mode.  Without operand bundles that change FP environment behavior,
+always ``memory(none)`` and speculatable.
 
 Example:
 """"""""
@@ -30877,7 +30851,8 @@ Semantics:
 
 Equivalent to the ``fptosi`` instruction.  If the floating-point value cannot
 be represented in the destination integer type, the result is a
-:ref:`poison value <poisonvalues>`.  Always ``memory(none)`` and speculatable.
+:ref:`poison value <poisonvalues>`.  Without operand bundles that change FP
+environment behavior, always ``memory(none)`` and speculatable.
 
 Example:
 """"""""
@@ -30920,7 +30895,8 @@ Semantics:
 
 Equivalent to the ``fptoui`` instruction.  If the floating-point value cannot
 be represented in the destination integer type, the result is a
-:ref:`poison value <poisonvalues>`.  Always ``memory(none)`` and speculatable.
+:ref:`poison value <poisonvalues>`.  Without operand bundles that change FP
+environment behavior, always ``memory(none)`` and speculatable.
 
 Example:
 """"""""
