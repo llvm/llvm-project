@@ -138,60 +138,52 @@ static bool isShortLived(const ValueDecl *Var, const SourceManager *SrcMgr,
 }
 
 void IdentifierLengthCheck::check(const MatchFinder::MatchResult &Result) {
-  auto ShouldWarn = [&](const ValueDecl *Var, unsigned MinNameLength,
-                        const llvm::Regex &IgnoredNames) -> bool {
+  auto WarnIfTooShort = [&](const ValueDecl *Var, unsigned MinNameLength,
+                            const llvm::Regex &IgnoredNames, unsigned VarKind) {
     if (!Var->getIdentifier())
-      return false;
+      return;
 
     const StringRef VarName = Var->getName();
     if (VarName.size() >= MinNameLength || IgnoredNames.match(VarName))
-      return false;
+      return;
 
     if (isShortLived(Var, Result.SourceManager, Result.Context,
                      LineCountThreshold))
-      return false;
+      return;
 
-    return true;
+    diag(Var->getLocation(), ErrorMessage) << VarKind << Var << MinNameLength;
   };
 
   if (const auto *StandaloneVar =
           Result.Nodes.getNodeAs<ValueDecl>("standaloneVar")) {
-    if (ShouldWarn(StandaloneVar, MinimumVariableNameLength,
-                   IgnoredVariableNames))
-      diag(StandaloneVar->getLocation(), ErrorMessage)
-          << 0 << StandaloneVar << MinimumVariableNameLength;
+    WarnIfTooShort(StandaloneVar, MinimumVariableNameLength,
+                   IgnoredVariableNames, 0);
     return;
   }
 
   if (const auto *BindingVar =
           Result.Nodes.getNodeAs<ValueDecl>("bindingVar")) {
-    if (ShouldWarn(BindingVar, MinimumBindingNameLength, IgnoredBindingNames))
-      diag(BindingVar->getLocation(), ErrorMessage)
-          << 1 << BindingVar << MinimumBindingNameLength;
+    WarnIfTooShort(BindingVar, MinimumBindingNameLength, IgnoredBindingNames,
+                   1);
     return;
   }
 
   if (const auto *ExceptionVar =
           Result.Nodes.getNodeAs<ValueDecl>("exceptionVar")) {
-    if (ShouldWarn(ExceptionVar, MinimumExceptionNameLength,
-                   IgnoredExceptionVariableNames))
-      diag(ExceptionVar->getLocation(), ErrorMessage)
-          << 2 << ExceptionVar << MinimumExceptionNameLength;
+    WarnIfTooShort(ExceptionVar, MinimumExceptionNameLength,
+                   IgnoredExceptionVariableNames, 2);
     return;
   }
 
   if (const auto *LoopVar = Result.Nodes.getNodeAs<ValueDecl>("loopVar")) {
-    if (ShouldWarn(LoopVar, MinimumLoopCounterNameLength,
-                   IgnoredLoopCounterNames))
-      diag(LoopVar->getLocation(), ErrorMessage)
-          << 3 << LoopVar << MinimumLoopCounterNameLength;
+    WarnIfTooShort(LoopVar, MinimumLoopCounterNameLength,
+                   IgnoredLoopCounterNames, 3);
     return;
   }
 
   if (const auto *ParamVar = Result.Nodes.getNodeAs<ValueDecl>("paramVar")) {
-    if (ShouldWarn(ParamVar, MinimumParameterNameLength, IgnoredParameterNames))
-      diag(ParamVar->getLocation(), ErrorMessage)
-          << 4 << ParamVar << MinimumParameterNameLength;
+    WarnIfTooShort(ParamVar, MinimumParameterNameLength, IgnoredParameterNames,
+                   4);
     return;
   }
 }
