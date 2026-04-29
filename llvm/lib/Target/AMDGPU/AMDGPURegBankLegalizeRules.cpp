@@ -1913,8 +1913,10 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S16, {{UniInVgprS16}, {IntrId, Vgpr16}}, !hasPST)
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32}})
       .Uni(S32, {{Sgpr32}, {IntrId, Sgpr32}}, hasPST)
-      .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32}}, !hasPST);
-
+      .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32}}, !hasPST)
+      .Div(S64, {{Vgpr64}, {IntrId, Vgpr64}})
+      .Uni(S64, {{UniInVgprS64}, {IntrId, Vgpr64}});
+      
   addRulesForIOpcs({amdgcn_ds_atomic_async_barrier_arrive_b64})
       .Any({{}, {{}, {IntrId, VgprP3}}});
 
