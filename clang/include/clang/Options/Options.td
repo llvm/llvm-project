@@ -7768,9 +7768,10 @@ defm unsafe_cray_pointers : BoolOptionWithoutMarshalling<"f", "unsafe-cray-point
 def fhermetic_module_files : Flag<["-"], "fhermetic-module-files">, Group<f_Group>,
   HelpText<"Emit hermetic module files (no nested USE association)">;
 
-def fdo_concurrent_to_openmp_EQ : Joined<["-"], "fdo-concurrent-to-openmp=">,
+def fdo_concurrent_EQ : Joined<["-"], "fdo-concurrent=">,
   HelpText<"Try to map `do concurrent` loops to OpenMP [none|host|device]">,
       Values<"none, host, device">;
+def fdo_concurrent_to_openmp_EQ : Joined<["-"], "fdo-concurrent-to-openmp=">, Flags<[HelpHidden]>, HelpText<"Alias for -fdo-concurrent">, Alias<fdo_concurrent_EQ>;
 } // let Visibility = [FC1Option, FlangOption]
 
 def J : JoinedOrSeparate<["-"], "J">,
