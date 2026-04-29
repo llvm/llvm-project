@@ -1,4 +1,4 @@
-//===---- ABITypeMapper.cpp - Maps LLVM ABI Types to LLVM IR Types ------===//
+//===---- IRTypeMapper.cpp - Maps LLVM ABI Types to LLVM IR Types -------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ABI/ABITypeMapper.h"
+#include "llvm/ABI/IRTypeMapper.h"
 #include "llvm/ABI/Types.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/SmallVector.h"
@@ -16,9 +16,8 @@
 
 using namespace llvm::abi;
 
-llvm::Type *ABITypeMapper::convertType(const abi::Type *ABIType) {
-  if (!ABIType)
-    return nullptr;
+llvm::Type *IRTypeMapper::convertType(const abi::Type *ABIType) {
+  assert(ABIType && "convertType requires a non-null ABI type");
 
   auto It = TypeCache.find(ABIType);
   if (It != TypeCache.end())
@@ -63,15 +62,12 @@ llvm::Type *ABITypeMapper::convertType(const abi::Type *ABIType) {
     break;
   }
 
-  if (Result)
-    TypeCache[ABIType] = Result;
+  TypeCache[ABIType] = Result;
   return Result;
 }
 
-llvm::Type *ABITypeMapper::convertArrayType(const abi::ArrayType *AT) {
+llvm::Type *IRTypeMapper::convertArrayType(const abi::ArrayType *AT) {
   llvm::Type *ElementType = convertType(AT->getElementType());
-  if (!ElementType)
-    return nullptr;
   uint64_t NumElements = AT->getNumElements();
   if (AT->isMatrixType())
     return llvm::VectorType::get(ElementType,
@@ -79,28 +75,24 @@ llvm::Type *ABITypeMapper::convertArrayType(const abi::ArrayType *AT) {
   return llvm::ArrayType::get(ElementType, NumElements);
 }
 
-llvm::Type *ABITypeMapper::convertVectorType(const abi::VectorType *VT) {
+llvm::Type *IRTypeMapper::convertVectorType(const abi::VectorType *VT) {
   llvm::Type *ElementType = convertType(VT->getElementType());
-  if (!ElementType)
-    return nullptr;
   return llvm::VectorType::get(ElementType, VT->getNumElements());
 }
 
-llvm::Type *ABITypeMapper::convertRecordType(const abi::RecordType *RT) {
+llvm::Type *IRTypeMapper::convertRecordType(const abi::RecordType *RT) {
   return createStructFromFields(RT->getFields(), RT->getSizeInBits(),
                                 RT->getAlignment(), RT->isUnion());
 }
 
-llvm::Type *ABITypeMapper::convertComplexType(const abi::ComplexType *CT) {
+llvm::Type *IRTypeMapper::convertComplexType(const abi::ComplexType *CT) {
   llvm::Type *ElementType = convertType(CT->getElementType());
-  if (!ElementType)
-    return nullptr;
   llvm::Type *Fields[] = {ElementType, ElementType};
   return llvm::StructType::get(Context, Fields, /*isPacked=*/false);
 }
 
 llvm::Type *
-ABITypeMapper::convertMemberPointerType(const abi::MemberPointerType *MPT) {
+IRTypeMapper::convertMemberPointerType(const abi::MemberPointerType *MPT) {
   llvm::Type *IntPtrTy = DL.getIntPtrType(Context);
   if (MPT->isFunctionPointer()) {
     llvm::Type *Fields[] = {IntPtrTy, IntPtrTy};
@@ -109,19 +101,19 @@ ABITypeMapper::convertMemberPointerType(const abi::MemberPointerType *MPT) {
   return IntPtrTy;
 }
 
-llvm::Type *ABITypeMapper::createPaddingType(uint64_t PaddingBits) {
+llvm::Type *IRTypeMapper::createPaddingType(uint64_t PaddingBits) {
   if (PaddingBits == 0)
     return nullptr;
-  if (PaddingBits % 8 == 0)
-    return llvm::ArrayType::get(llvm::IntegerType::get(Context, 8),
-                                PaddingBits / 8);
-  return llvm::IntegerType::get(Context, PaddingBits);
+  assert(PaddingBits % 8 == 0 &&
+         "sub-byte padding cannot be expressed as an llvm::Type");
+  return llvm::ArrayType::get(llvm::IntegerType::get(Context, 8),
+                              PaddingBits / 8);
 }
 
 llvm::StructType *
-ABITypeMapper::createStructFromFields(ArrayRef<abi::FieldInfo> Fields,
-                                      TypeSize Size, Align Alignment,
-                                      bool IsUnion) {
+IRTypeMapper::createStructFromFields(ArrayRef<abi::FieldInfo> Fields,
+                                     TypeSize Size, Align Alignment,
+                                     bool IsUnion) {
   SmallVector<llvm::Type *, 16> FieldTypes;
 
   if (IsUnion) {
@@ -129,9 +121,7 @@ ABITypeMapper::createStructFromFields(ArrayRef<abi::FieldInfo> Fields,
     uint64_t LargestFieldSize = 0;
     for (const auto &Field : Fields) {
       llvm::Type *FieldType = convertType(Field.FieldType);
-      if (!FieldType)
-        continue;
-      uint64_t FieldSize = DL.getTypeSizeInBits(FieldType);
+      uint64_t FieldSize = Field.FieldType->getSizeInBits().getFixedValue();
       if (FieldSize > LargestFieldSize) {
         LargestFieldSize = FieldSize;
         LargestFieldType = FieldType;
@@ -156,14 +146,12 @@ ABITypeMapper::createStructFromFields(ArrayRef<abi::FieldInfo> Fields,
         CurrentOffset = Field.OffsetInBits;
       }
       llvm::Type *FieldType = convertType(Field.FieldType);
-      if (!FieldType)
-        continue;
       if (Field.IsBitField && Field.BitFieldWidth > 0) {
         FieldType = llvm::IntegerType::get(Context, Field.BitFieldWidth);
         CurrentOffset += Field.BitFieldWidth;
       } else {
         FieldTypes.push_back(FieldType);
-        CurrentOffset += DL.getTypeSizeInBits(FieldType);
+        CurrentOffset += Field.FieldType->getSizeInBits().getFixedValue();
       }
     }
     uint64_t TotalSizeBits = Size.getFixedValue();

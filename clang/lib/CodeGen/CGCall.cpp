@@ -827,12 +827,9 @@ const CGFunctionInfo &CodeGenTypes::arrangeCall(const CGFunctionInfo &signature,
 namespace clang {
 namespace CodeGen {
 void computeSPIRKernelABIInfo(CodeGenModule &CGM, CGFunctionInfo &FI);
-}
+} // namespace CodeGen
 } // namespace clang
 
-/// Arrange the argument and result information for an abstract value
-/// of a given function type.  This is the method which all of the
-/// above functions ultimately defer to.
 ABIArgInfo CodeGenTypes::convertABIArgInfo(const llvm::abi::ArgInfo &AbiInfo,
                                            QualType Type) {
   switch (AbiInfo.getKind()) {
@@ -869,6 +866,9 @@ ABIArgInfo CodeGenTypes::convertABIArgInfo(const llvm::abi::ArgInfo &AbiInfo,
   llvm_unreachable("Unexpected llvm::abi::ArgInfo kind");
 }
 
+/// Arrange the argument and result information for an abstract value
+/// of a given function type.  This is the method which all of the
+/// above functions ultimately defer to.
 const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
     CanQualType resultType, FnInfoOpts opts, ArrayRef<CanQualType> argTypes,
     FunctionType::ExtInfo info,
@@ -905,11 +905,6 @@ const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
   assert(inserted && "Recursively being processed?");
 
   // Compute ABI information.
-  bool UseLLVMABI =
-      CGM.shouldUseLLVMABILowering() && info.getCC() != CC_Swift &&
-      info.getCC() != CC_SwiftAsync &&
-      !(info.getCC() == CC_DeviceKernel &&
-        (CC == llvm::CallingConv::SPIR_KERNEL || CC == llvm::CallingConv::C));
   if (info.getCC() == CC_DeviceKernel &&
       (CC == llvm::CallingConv::SPIR_KERNEL || CC == llvm::CallingConv::C)) {
     // Force target independent argument handling for the host visible
@@ -920,7 +915,7 @@ const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
     computeSPIRKernelABIInfo(CGM, *FI);
   } else if (info.getCC() == CC_Swift || info.getCC() == CC_SwiftAsync) {
     swiftcall::computeABIInfo(CGM, *FI);
-  } else if (UseLLVMABI) {
+  } else if (CGM.shouldUseLLVMABILowering()) {
     SmallVector<const llvm::abi::Type *, 8> MappedArgTypes;
     MappedArgTypes.reserve(argTypes.size());
     for (CanQualType ArgType : argTypes)
@@ -938,13 +933,9 @@ const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
     FI->getReturnInfo() =
         convertABIArgInfo(AbiFI->getReturnInfo(), FI->getReturnType());
 
-    auto AbiArgs = AbiFI->arguments();
-    unsigned ArgIdx = 0;
-    for (auto &CGArg : FI->arguments()) {
-      assert(ArgIdx < AbiArgs.size() && "ABI arg count mismatch");
-      CGArg.info = convertABIArgInfo(AbiArgs[ArgIdx].Info, CGArg.type);
-      ++ArgIdx;
-    }
+    for (auto [CGArg, AbiArg] :
+         llvm::zip_equal(FI->arguments(), AbiFI->arguments()))
+      CGArg.info = convertABIArgInfo(AbiArg.Info, CGArg.type);
   } else {
     CGM.getABIInfo().computeInfo(*FI);
   }

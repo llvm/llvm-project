@@ -17,8 +17,8 @@
 #include "QualTypeMapper.h"
 #include "clang/Basic/ABI.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
-#include "llvm/ABI/ABITypeMapper.h"
 #include "llvm/ABI/FunctionInfo.h"
+#include "llvm/ABI/IRTypeMapper.h"
 #include "llvm/ABI/Types.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/Module.h"
@@ -103,7 +103,7 @@ class CodeGenTypes {
   /// caches stay empty when the flag is off.
   mutable llvm::BumpPtrAllocator AbiAlloc;
   mutable QualTypeMapper AbiMapper;
-  llvm::abi::ABITypeMapper AbiReverseMapper;
+  llvm::abi::IRTypeMapper AbiReverseMapper;
 
 public:
   CodeGenTypes(CodeGenModule &cgm);

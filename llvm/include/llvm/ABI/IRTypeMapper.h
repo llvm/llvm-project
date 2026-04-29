@@ -1,4 +1,4 @@
-//===---- ABITypeMapper.h - Maps LLVM ABI Types to LLVM IR Types --------===//
+//===---- IRTypeMapper.h - Maps LLVM ABI Types to LLVM IR Types ---------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,8 +14,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_ABI_ABITYPEMAPPER_H
-#define LLVM_ABI_ABITYPEMAPPER_H
+#ifndef LLVM_ABI_IRTYPEMAPPER_H
+#define LLVM_ABI_IRTYPEMAPPER_H
 
 #include "llvm/ABI/Types.h"
 #include "llvm/ADT/DenseMap.h"
@@ -28,10 +28,9 @@ class DataLayout;
 
 namespace abi {
 
-class ABITypeMapper {
+class IRTypeMapper {
 public:
-  ABITypeMapper(LLVMContext &Ctx, const DataLayout &DL)
-      : Context(Ctx), DL(DL) {}
+  IRTypeMapper(LLVMContext &Ctx, const DataLayout &DL) : Context(Ctx), DL(DL) {}
 
   llvm::Type *convertType(const abi::Type *ABIType);
 

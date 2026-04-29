@@ -31,8 +31,7 @@ CODEGENOPT(DisableIntegratedAS, 1, 0, Benign) ///< -no-integrated-as
 CODEGENOPT(ExperimentalABILowering, 1, 0, Benign) ///< -fexperimental-abi-lowering:
                                                   ///< route function ABI lowering
                                                   ///< through the in-tree LLVMABI
-                                                  ///< library where supported
-                                                  ///< (currently BPF only).
+                                                  ///< library where supported.
 CODEGENOPT(Crel, 1, 0, Benign) ///< -Wa,--crel
 ENUM_CODEGENOPT(RelocSectionSym, RelocSectionSymType, 2,
                 RelocSectionSymType::All, Benign) ///< -Wa,--reloc-section-sym=

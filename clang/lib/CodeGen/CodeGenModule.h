@@ -889,7 +889,7 @@ public:
 
   /// Lazily build and return the LLVMABI library's TargetInfo for the current
   /// target. Used by the experimental ABI lowering path
-  /// (-fexperimental-abi-lowering); only BPF is wired up today.
+  /// (-fexperimental-abi-lowering).
   const llvm::abi::TargetInfo &getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB);
 
   /// True when -fexperimental-abi-lowering is in effect AND the active target

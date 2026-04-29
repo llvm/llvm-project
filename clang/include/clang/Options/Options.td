@@ -3589,10 +3589,7 @@ def experimental_modules_reduced_bmi : Flag<["-"], "fexperimental-modules-reduce
   Group<f_Group>, Visibility<[ClangOption, CC1Option]>, Alias<fmodules_reduced_bmi>;
 
 def fexperimental_abi_lowering : Flag<["-"], "fexperimental-abi-lowering">,
-  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Use the in-tree LLVMABI library to lower function call ABIs "
-           "instead of the legacy clang lowering. Currently only effective "
-           "for BPF targets.">,
+  Group<f_Group>, Visibility<[CC1Option]>,
   MarshallingInfoFlag<CodeGenOpts<"ExperimentalABILowering">>;
 
 def fmodules_embed_all_files : Joined<["-"], "fmodules-embed-all-files">,

@@ -340,7 +340,8 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
 bool CodeGenModule::shouldUseLLVMABILowering() const {
   if (!CodeGenOpts.ExperimentalABILowering)
     return false;
-  // BPF is the only target wired to the LLVMABI library at the moment.
+  // Only opt in for targets that have an LLVMABI implementation; others
+  // continue through the legacy ABIInfo path.
   return getTriple().isBPF();
 }
 
