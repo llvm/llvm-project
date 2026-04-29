@@ -526,8 +526,8 @@ def SPIRV_CLLdexpOp : SPIRV_CLOp<"ldexp", 34, [Pure, AllTypesMatch<["x", "y"]>]>
     #### Example:
 
     ```mlir
-    %y = spirv.CL.ldexp %x : f32, %exp : i32 -> f32
-    %y = spirv.CL.ldexp %x : vector<3xf32>, %exp : vector<3xi32> -> vector<3xf32>
+    %y = spirv.CL.ldexp %x, %exp : f32, i32 -> f32
+    %y = spirv.CL.ldexp %x, %exp : vector<3xf32>, vector<3xi32> -> vector<3xf32>
     ```
   }];
 
@@ -541,7 +541,7 @@ def SPIRV_CLLdexpOp : SPIRV_CLOp<"ldexp", 34, [Pure, AllTypesMatch<["x", "y"]>]>
   );
 
   let assemblyFormat = [{
-    attr-dict $x `:` type($x) `,` $exp `:` type($exp) `->` type($y)
+    attr-dict $x `,` $exp `:` type($x) `,` type($exp) `->` type($y)
   }];
 }
 
@@ -631,8 +631,8 @@ def SPIRV_CLPownOp : SPIRV_CLOp<"pown", 49, [Pure, AllTypesMatch<["x", "result"]
     #### Example:
 
     ```mlir
-    %2 = spirv.CL.pown %0 : f32, %1 : i32 -> f32
-    %2 = spirv.CL.pown %0 : vector<3xf32>, %1 : vector<3xi32> -> vector<3xf32>
+    %2 = spirv.CL.pown %0, %1 : f32, i32 -> f32
+    %2 = spirv.CL.pown %0, %1 : vector<3xf32>, vector<3xi32> -> vector<3xf32>
     ```
   }];
 
@@ -646,7 +646,7 @@ def SPIRV_CLPownOp : SPIRV_CLOp<"pown", 49, [Pure, AllTypesMatch<["x", "result"]
   );
 
   let assemblyFormat = [{
-    attr-dict $x `:` type($x) `,` $y `:` type($y) `->` type($result)
+    attr-dict $x `,` $y `:` type($x) `,` type($y) `->` type($result)
   }];
 }
 
@@ -694,8 +694,8 @@ def SPIRV_CLRootnOp : SPIRV_CLOp<"rootn", 54, [Pure, AllTypesMatch<["x", "result
     #### Example:
 
     ```mlir
-    %2 = spirv.CL.rootn %0 : f32, %1 : i32 -> f32
-    %2 = spirv.CL.rootn %0 : vector<3xf32>, %1 : vector<3xi32> -> vector<3xf32>
+    %2 = spirv.CL.rootn %0, %1 : f32, i32 -> f32
+    %2 = spirv.CL.rootn %0, %1 : vector<3xf32>, vector<3xi32> -> vector<3xf32>
     ```
   }];
 
@@ -709,7 +709,7 @@ def SPIRV_CLRootnOp : SPIRV_CLOp<"rootn", 54, [Pure, AllTypesMatch<["x", "result
   );
 
   let assemblyFormat = [{
-    attr-dict $x `:` type($x) `,` $n `:` type($n) `->` type($result)
+    attr-dict $x `,` $n `:` type($x) `,` type($n) `->` type($result)
   }];
 }
 
