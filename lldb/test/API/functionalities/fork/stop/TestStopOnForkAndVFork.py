@@ -26,7 +26,9 @@ class TestStopOnForkAndVFork(TestBase):
 
         process.Continue()
         self.assertState(
-            process.GetState(), lldb.eStateStopped, f"Process should be stopped at {fork}"
+            process.GetState(),
+            lldb.eStateStopped,
+            f"Process should be stopped at {fork}",
         )
         threads = lldbutil.get_stopped_threads(
             process, lldb.eStopReasonVFork if fork == "vfork" else lldb.eStopReasonFork
