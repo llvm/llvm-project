@@ -1960,18 +1960,19 @@ static void addConstantComments(const MachineInstr *MI,
   case X86::VGF2P8AFFINEQBZrmi:
   case X86::VGF2P8AFFINEQBZ128rmi:
   case X86::VGF2P8AFFINEQBZ256rmi: {
+    // TODO: Add predicate handling with test coverage.
     unsigned SrcIdx = getSrcIdx(MI, 1);
-    unsigned VectorWidth =
-        X86::getVectorRegisterWidth(MI->getDesc().operands()[0]);
-    addConstantComment(MI, OutStreamer, SrcIdx + 1, VectorWidth);
+    unsigned Width = X86::getVectorRegisterWidth(MI->getDesc().operands()[0]);
+    addConstantComment(MI, OutStreamer, SrcIdx + 1, Width);
     break;
   }
 
   case X86::VGF2P8AFFINEQBZ128rmbi:
   case X86::VGF2P8AFFINEQBZ256rmbi:
   case X86::VGF2P8AFFINEQBZrmbi: {
+    unsigned SrcIdx = getSrcIdx(MI, 1);
     unsigned Width = X86::getVectorRegisterWidth(MI->getDesc().operands()[0]);
-    addConstantComment(MI, OutStreamer, getSrcIdx(MI, 1) + 1, 64, Width / 64);
+    addConstantComment(MI, OutStreamer, SrcIdx + 1, 64, Width / 64);
     break;
   }
 
