@@ -18,6 +18,7 @@
 #ifndef LLVM_ADT_STABLEHASHING_H
 #define LLVM_ADT_STABLEHASHING_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/xxhash.h"
 

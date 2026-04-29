@@ -1106,3 +1106,10 @@ func.func @test_logical_ops(%l1: !fir.logical<4>, %l2: !fir.logical<4>, %i1: i32
   %7 = fir.neqv %i1, %i2 : i32
   return
 }
+
+// CHECK-LABEL: fir.module_debug_imports "debug_mod"
+// CHECK-NEXT: fir.use_stmt "used_mod"
+// CHECK-NEXT: }
+fir.module_debug_imports "debug_mod" {
+  fir.use_stmt "used_mod"
+}

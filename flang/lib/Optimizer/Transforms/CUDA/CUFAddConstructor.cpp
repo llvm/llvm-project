@@ -118,6 +118,20 @@ struct CUFAddConstructor
 
     auto gpuMod = symTab.lookup<mlir::gpu::GPUModuleOp>(cudaDeviceModuleName);
     if (gpuMod) {
+      bool hasKernel = false;
+      for (auto func : gpuMod.getOps<mlir::gpu::GPUFuncOp>()) {
+        if (func.isKernel()) {
+          hasKernel = true;
+          break;
+        }
+      }
+      if (!hasKernel) {
+        // No kernels means no GPU binary to register. This happens for host
+        // TUs that USE a kernel module but don't define any device code.
+        mlir::LLVM::ReturnOp::create(builder, loc, mlir::ValueRange{});
+        return;
+      }
+
       auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(ctx);
       auto registeredMod = cuf::RegisterModuleOp::create(
           builder, loc, llvmPtrTy,
@@ -137,10 +151,13 @@ struct CUFAddConstructor
       }
 
       // Register variables
+      mlir::SymbolTable gpuSymTable(gpuMod);
       bool hasNonAllocManagedGlobal = false;
       for (fir::GlobalOp globalOp : mod.getOps<fir::GlobalOp>()) {
         auto attr = globalOp.getDataAttrAttr();
         if (!attr)
+          continue;
+        if (!gpuSymTable.lookup(globalOp.getSymName()))
           continue;
 
         bool isNonAllocManagedGlobal =

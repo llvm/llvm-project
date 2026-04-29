@@ -1,8 +1,8 @@
-; RUN: opt -S -passes=loop-vectorize,instcombine -force-vector-interleave=1 -mattr=+sve -mtriple aarch64-unknown-linux-gnu \
-; RUN:     -prefer-predicate-over-epilogue=scalar-epilogue -pass-remarks-missed=loop-vectorize < %s 2>%t | FileCheck %s
+; RUN: opt -S -passes=loop-vectorize -force-vector-interleave=1 -mattr=+sve -mtriple aarch64-unknown-linux-gnu \
+; RUN:     -tail-folding-policy=dont-fold-tail -pass-remarks-missed=loop-vectorize < %s 2>%t | FileCheck %s
 ; RUN: cat %t | FileCheck %s --check-prefix=CHECK-REMARKS
-; RUN: opt -S -passes=loop-vectorize,instcombine -force-vector-interleave=1 -force-target-instruction-cost=1 -mattr=+sve -mtriple aarch64-unknown-linux-gnu \
-; RUN:     -prefer-predicate-over-epilogue=scalar-epilogue -pass-remarks-missed=loop-vectorize < %s 2>%t | FileCheck %s
+; RUN: opt -S -passes=loop-vectorize -force-vector-interleave=1 -force-target-instruction-cost=1 -mattr=+sve -mtriple aarch64-unknown-linux-gnu \
+; RUN:     -tail-folding-policy=dont-fold-tail -pass-remarks-missed=loop-vectorize < %s 2>%t | FileCheck %s
 ; RUN: cat %t | FileCheck %s --check-prefix=CHECK-REMARKS
 
 define void @vec_load(i64 %N, ptr nocapture %a, ptr nocapture readonly %b) {

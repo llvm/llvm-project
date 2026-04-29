@@ -1110,6 +1110,8 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
     if (R.isVirtual()) {
       LiveInterval &LI = LIS.getInterval(R);
       LIS.shrinkToUses(&LI);
+    } else {
+      assert(MRI.isReserved(R) && "Unexpected PhysReg in source operand!");
     }
   }
 

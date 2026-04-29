@@ -3680,7 +3680,7 @@ RISCVTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   if (TargetEltBW % SourceEltBW)
     return {};
   unsigned TargetScale = TargetEltBW / SourceEltBW;
-  if (VL % TargetScale)
+  if (VL % TargetScale || TargetScale == 1)
     return {};
   Type *VLTy = II.getOperand(2)->getType();
   ElementCount SourceEC = SourceVecTy->getElementCount();

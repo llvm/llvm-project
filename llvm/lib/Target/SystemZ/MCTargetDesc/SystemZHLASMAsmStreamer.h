@@ -65,10 +65,7 @@ public:
       setAllowAutoPadding(Assembler->getBackend().allowAutoPadding());
 
     Context.setUseNamesOnTempLabels(true);
-    auto *TO = Context.getTargetOptions();
-    if (!TO)
-      return;
-    IsVerboseAsm = TO->AsmVerbose;
+    IsVerboseAsm = Context.getTargetOptions().AsmVerbose;
     if (IsVerboseAsm)
       InstPrinter->setCommentStream(CommentStream);
   }

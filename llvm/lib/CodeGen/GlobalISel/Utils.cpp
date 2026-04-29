@@ -940,36 +940,46 @@ llvm::ConstantFoldIntToFloat(unsigned Opcode, LLT DstTy, Register Src,
   return std::nullopt;
 }
 
-std::optional<SmallVector<unsigned>>
-llvm::ConstantFoldCountZeros(Register Src, const MachineRegisterInfo &MRI,
-                             std::function<unsigned(APInt)> CB) {
-  LLT Ty = MRI.getType(Src);
-  SmallVector<unsigned> FoldedCTLZs;
-  auto tryFoldScalar = [&](Register R) -> std::optional<unsigned> {
-    auto MaybeCst = getIConstantVRegVal(R, MRI);
-    if (!MaybeCst)
-      return std::nullopt;
-    return CB(*MaybeCst);
+SmallVector<APInt> llvm::ConstantFoldCountOp(unsigned Opcode, LLT DstTy,
+                                             Register Src,
+                                             const MachineRegisterInfo &MRI) {
+  unsigned EltBits = DstTy.getScalarSizeInBits();
+  auto Count = [Opcode, EltBits](const APInt &V) -> APInt {
+    switch (Opcode) {
+    case TargetOpcode::G_CTLZ:
+    case TargetOpcode::G_CTLZ_ZERO_UNDEF:
+      return APInt(EltBits, V.countl_zero());
+    case TargetOpcode::G_CTTZ:
+    case TargetOpcode::G_CTTZ_ZERO_UNDEF:
+      return APInt(EltBits, V.countr_zero());
+    case TargetOpcode::G_CTPOP:
+      return APInt(EltBits, V.popcount());
+    }
+    llvm_unreachable("unexpected opcode in ConstantFoldCountOp");
   };
-  if (Ty.isVector()) {
-    // Try to constant fold each element.
+
+  auto tryFoldScalar = [&](Register R) -> std::optional<APInt> {
+    if (auto MaybeCst = getIConstantVRegVal(R, MRI))
+      return Count(*MaybeCst);
+    return std::nullopt;
+  };
+  if (MRI.getType(Src).isVector()) {
     auto *BV = getOpcodeDef<GBuildVector>(Src, MRI);
     if (!BV)
-      return std::nullopt;
+      return {};
+    SmallVector<APInt> Folded;
     for (unsigned SrcIdx = 0; SrcIdx < BV->getNumSources(); ++SrcIdx) {
       if (auto MaybeFold = tryFoldScalar(BV->getSourceReg(SrcIdx))) {
-        FoldedCTLZs.emplace_back(*MaybeFold);
+        Folded.emplace_back(std::move(*MaybeFold));
         continue;
       }
-      return std::nullopt;
+      return {};
     }
-    return FoldedCTLZs;
+    return Folded;
   }
-  if (auto MaybeCst = tryFoldScalar(Src)) {
-    FoldedCTLZs.emplace_back(*MaybeCst);
-    return FoldedCTLZs;
-  }
-  return std::nullopt;
+  if (auto MaybeCst = tryFoldScalar(Src))
+    return {std::move(*MaybeCst)};
+  return {};
 }
 
 std::optional<SmallVector<APInt>>

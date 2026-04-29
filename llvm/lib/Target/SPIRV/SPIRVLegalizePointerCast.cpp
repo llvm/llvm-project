@@ -42,6 +42,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SPIRVLegalizePointerCast.h"
 #include "SPIRV.h"
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
@@ -56,7 +57,7 @@
 using namespace llvm;
 
 namespace {
-class SPIRVLegalizePointerCast : public FunctionPass {
+class SPIRVLegalizePointerCastImpl {
 
   // Builds the `spv_assign_type` assigning |Ty| to |Value| at the current
   // builder position.
@@ -531,10 +532,10 @@ class SPIRVLegalizePointerCast : public FunctionPass {
   }
 
 public:
-  SPIRVLegalizePointerCast(SPIRVTargetMachine *TM) : FunctionPass(ID), TM(TM) {}
+  SPIRVLegalizePointerCastImpl(const SPIRVTargetMachine &TM) : TM(TM) {}
 
-  bool runOnFunction(Function &F) override {
-    const SPIRVSubtarget &ST = TM->getSubtarget<SPIRVSubtarget>(F);
+  bool run(Function &F) {
+    const SPIRVSubtarget &ST = TM.getSubtarget<SPIRVSubtarget>(F);
     GR = ST.getSPIRVGlobalRegistry();
     DeadInstructions.clear();
 
@@ -557,19 +558,36 @@ public:
   }
 
 private:
-  SPIRVTargetMachine *TM = nullptr;
+  const SPIRVTargetMachine &TM;
   SPIRVGlobalRegistry *GR = nullptr;
   std::vector<Instruction *> DeadInstructions;
+};
 
+class SPIRVLegalizePointerCastLegacy : public FunctionPass {
 public:
   static char ID;
+  SPIRVLegalizePointerCastLegacy(const SPIRVTargetMachine &TM)
+      : FunctionPass(ID), TM(TM) {}
+
+  bool runOnFunction(Function &F) override {
+    return SPIRVLegalizePointerCastImpl(TM).run(F);
+  }
+
+private:
+  const SPIRVTargetMachine &TM;
 };
 } // namespace
 
-char SPIRVLegalizePointerCast::ID = 0;
-INITIALIZE_PASS(SPIRVLegalizePointerCast, "spirv-legalize-bitcast",
-                "SPIRV legalize bitcast pass", false, false)
+PreservedAnalyses SPIRVLegalizePointerCast::run(Function &F,
+                                                FunctionAnalysisManager &AM) {
+  return SPIRVLegalizePointerCastImpl(TM).run(F) ? PreservedAnalyses::none()
+                                                 : PreservedAnalyses::all();
+}
+
+char SPIRVLegalizePointerCastLegacy::ID = 0;
+INITIALIZE_PASS(SPIRVLegalizePointerCastLegacy, "spirv-legalize-pointer-cast",
+                "SPIRV legalize pointer cast pass", false, false)
 
 FunctionPass *llvm::createSPIRVLegalizePointerCastPass(SPIRVTargetMachine *TM) {
-  return new SPIRVLegalizePointerCast(TM);
+  return new SPIRVLegalizePointerCastLegacy(*TM);
 }

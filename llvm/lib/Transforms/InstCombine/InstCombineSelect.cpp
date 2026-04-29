@@ -3245,11 +3245,11 @@ static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
          isKnownNeverNaN(X, IC.getSimplifyQuery().getWithInstruction(
                                 cast<Instruction>(CondVal))))) {
       if (!Swap && (Pred == FCmpInst::FCMP_OLE || Pred == FCmpInst::FCMP_ULE)) {
-        Value *Fabs = IC.Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, &SI);
+        Value *Fabs = IC.Builder.CreateFAbs(X, &SI);
         return IC.replaceInstUsesWith(SI, Fabs);
       }
       if (Swap && (Pred == FCmpInst::FCMP_OGT || Pred == FCmpInst::FCMP_UGT)) {
-        Value *Fabs = IC.Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, &SI);
+        Value *Fabs = IC.Builder.CreateFAbs(X, &SI);
         return IC.replaceInstUsesWith(SI, Fabs);
       }
     }
@@ -3303,11 +3303,11 @@ static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
                     Pred == FCmpInst::FCMP_UGT || Pred == FCmpInst::FCMP_UGE;
 
     if (IsLTOrLE) {
-      Value *Fabs = IC.Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, &SI);
+      Value *Fabs = IC.Builder.CreateFAbs(X, &SI);
       return IC.replaceInstUsesWith(SI, Fabs);
     }
     if (IsGTOrGE) {
-      Value *Fabs = IC.Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, &SI);
+      Value *Fabs = IC.Builder.CreateFAbs(X, &SI);
       Instruction *NewFNeg = UnaryOperator::CreateFNeg(Fabs);
       NewFNeg->setFastMathFlags(SI.getFastMathFlags());
       return NewFNeg;
@@ -3338,7 +3338,7 @@ static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
 
     // Fold (IsNeg ? -X : X) or (!IsNeg ? X : -X) to fabs(X)
     // Fold (IsNeg ? X : -X) or (!IsNeg ? -X : X) to -fabs(X)
-    Value *Fabs = IC.Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, &SI);
+    Value *Fabs = IC.Builder.CreateFAbs(X, &SI);
     if (Swap != TrueIfSigned)
       return IC.replaceInstUsesWith(SI, Fabs);
     return UnaryOperator::CreateFNegFMF(Fabs, &SI);

@@ -123,6 +123,45 @@ class TestStatusline(PExpectTest):
         self.child.expect(re.escape("\x1b[1;19r"))
         self.child.expect("(lldb)")
 
+    @skipUnlessPlatform(["linux"])
+    def test_target_symbols_add(self):
+        """Regression test: adding symbols while the statusline is enabled
+        should not crash. The bug was a stale Symbol pointer in the cached
+        execution context after Symtab reallocation; best caught under ASAN."""
+        import shutil
+        import subprocess
+
+        self.build()
+        symfile = self.getBuildArtifact("a.out")
+        stripped_exe = self.getBuildArtifact("stripped.out")
+        shutil.copy2(symfile, stripped_exe)
+        subprocess.check_call(["strip", "--strip-debug", stripped_exe])
+        self.launch(timeout=self.TIMEOUT)
+
+        self.expect(
+            "target create {}".format(stripped_exe),
+            substrs=["Current executable set to"],
+        )
+        self.expect("breakpoint set -n main", substrs=["Breakpoint 1"])
+        self.expect("run", substrs=["stop reason"])
+        self.resize()
+
+        self.expect('set set separator "| "')
+        self.expect(
+            "set set show-statusline true",
+            ["stripped.out | breakpoint 1.1"],
+        )
+
+        # Adding symbols triggers Process::Flush() which (with the fix)
+        # clears the statusline's cached execution context. The expect()
+        # helper waits for the (lldb) prompt, which triggers a statusline
+        # redraw via Redraw(std::nullopt) using the cached (now cleared)
+        # context. Under ASAN, a stale Symbol* here would crash.
+        self.expect(
+            "target symbols add -s {} {}".format(stripped_exe, symfile),
+            ["has been added to"],
+        )
+
     @skipIfRemote
     @skipIfWindows
     @skipIfDarwin
