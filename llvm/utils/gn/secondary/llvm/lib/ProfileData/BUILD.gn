@@ -11,7 +11,6 @@ static_library("ProfileData") {
   ]
   sources = [
     "DataAccessProf.cpp",
-    "ETMTraceDecoder.cpp",
     "GCOV.cpp",
     "IndexedMemProfData.cpp",
     "InstrProf.cpp",

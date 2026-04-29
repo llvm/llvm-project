@@ -469,8 +469,19 @@ public:
   }
 
   template <typename A> void Walk(const A &x) { parser::Walk(x, *this); }
-  template <typename A> bool Pre(const A &) { return true; }
-  template <typename A> void Post(const A &) {}
+  // Normally the catch-all Pre/Post functions are templates taking
+  // "const T &". For a class D derived from B, and an explicit overload
+  // of Pre(const B &), a call to Pre(D) will select the template instead
+  // of the base clase overload.
+  // Force user-defined conversion from any const-reference, to make sure
+  // that the Pre(AbsorbAnyReference) and Post(AbsorbAnyReference) overloads
+  // will be worse than derived-to-base conversions. This will, for example,
+  // invoke Pre(const OmpBlockConstruct &) for directives derived from it.
+  struct AbsorbAnyReference {
+    template <typename T> AbsorbAnyReference(const T &) {}
+  };
+  bool Pre(AbsorbAnyReference) { return true; }
+  void Post(AbsorbAnyReference) {}
 
   bool Pre(const parser::SpecificationPart &) {
     partStack_.push_back(PartKind::SpecificationPart);

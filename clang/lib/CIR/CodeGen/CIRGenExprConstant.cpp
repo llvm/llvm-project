@@ -1414,9 +1414,9 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
     if (isa<MSGuidDecl>(d))
       cgm.errorNYI(d->getSourceRange(), "ConstantLValueEmitter: MSGuidDecl");
 
-    if (isa<UnnamedGlobalConstantDecl>(d))
-      cgm.errorNYI(d->getSourceRange(),
-                   "ConstantLValueEmitter: Unnamed global constant");
+    if (const auto *gcd = dyn_cast<UnnamedGlobalConstantDecl>(d))
+      return cgm.getBuilder().getGlobalViewAttr(
+          cgm.getAddrOfUnnamedGlobalConstantDecl(gcd));
 
     if (const auto *tpo = dyn_cast<TemplateParamObjectDecl>(d))
       return cgm.getBuilder().getGlobalViewAttr(

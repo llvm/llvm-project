@@ -195,6 +195,7 @@ ProfiledBinary::ProfiledBinary(const StringRef ExeBinPath,
   SymbolizerPath = DebugBinPath.empty() ? ExeBinPath : DebugBinPath;
   if (InferMissingFrames)
     MissingContextInferrer = std::make_unique<MissingFrameInferrer>(this);
+  load();
 }
 
 ProfiledBinary::~ProfiledBinary() = default;
@@ -227,9 +228,9 @@ void ProfiledBinary::warnNoFuncEntry() {
                      "inconsistent name from symbol table and dwarf info.");
 }
 
-void ProfiledBinary::load(StringRef TripleStr) {
+void ProfiledBinary::load() {
   // Attempt to open the binary.
-  OBinary = unwrapOrError(createBinary(Path), Path);
+  OwningBinary<Binary> OBinary = unwrapOrError(createBinary(Path), Path);
   Binary &ExeBinary = *OBinary.getBinary();
 
   IsCOFF = isa<COFFObjectFile>(&ExeBinary);
@@ -237,10 +238,7 @@ void ProfiledBinary::load(StringRef TripleStr) {
     exitWithError("not a valid ELF/COFF image", Path);
 
   auto *Obj = cast<ObjectFile>(&ExeBinary);
-  if (!TripleStr.empty())
-    TheTriple = Triple(TripleStr);
-  else
-    TheTriple = Obj->makeTriple();
+  TheTriple = Obj->makeTriple();
 
   LLVM_DEBUG(dbgs() << "Loading " << Path << "\n");
 

@@ -217,7 +217,7 @@ define fastcc i32 @foo() {
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr93
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr94
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr95
-  ; CHECK-NEXT:   S_WAITCNT 0
+  ; CHECK-NEXT:   S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
   ; CHECK-NEXT:   $sgpr16 = S_MOV_B32 $sgpr33
   ; CHECK-NEXT:   $sgpr33 = S_MOV_B32 $sgpr32
   ; CHECK-NEXT:   $sgpr17 = S_OR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
@@ -240,7 +240,7 @@ define fastcc i32 @foo() {
   ; CHECK-NEXT:   BUFFER_GL1_INV implicit $exec
   ; CHECK-NEXT:   BUFFER_GL0_INV implicit $exec
   ; CHECK-NEXT:   renamable $sgpr16_sgpr17 = S_LOAD_DWORDX2_IMM killed renamable $sgpr16_sgpr17, 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
-  ; CHECK-NEXT:   S_WAITCNT 49279
+  ; CHECK-NEXT:   S_WAITCNT .Lgkmcnt_0
   ; CHECK-NEXT:   dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr16_sgpr17, @bar, csr_amdgpu, implicit killed $sgpr4_sgpr5, implicit killed $sgpr6_sgpr7, implicit killed $sgpr8_sgpr9, implicit killed $sgpr10_sgpr11, implicit killed $sgpr12, implicit killed $sgpr13, implicit killed $sgpr14, implicit killed $sgpr15, implicit killed $vgpr31, implicit $sgpr0_sgpr1_sgpr2_sgpr3
   ; CHECK-NEXT:   $vcc_lo = S_MOV_B32 $exec_lo
   ; CHECK-NEXT: {{  $}}
@@ -260,7 +260,7 @@ define fastcc i32 @foo() {
   ; CHECK-NEXT:   $exec_lo = S_MOV_B32 killed $sgpr5
   ; CHECK-NEXT:   frame-destroy CFI_INSTRUCTION def_cfa_register $sgpr32
   ; CHECK-NEXT:   $sgpr33 = S_MOV_B32 killed $sgpr4
-  ; CHECK-NEXT:   S_WAITCNT 16240
+  ; CHECK-NEXT:   S_WAITCNT .Vmcnt_0
   ; CHECK-NEXT:   S_SETPC_B64_return undef $sgpr30_sgpr31, implicit undef $vgpr0
   fence acquire
   call fastcc void @bar()
