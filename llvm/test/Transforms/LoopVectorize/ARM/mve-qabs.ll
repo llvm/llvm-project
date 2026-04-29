@@ -115,15 +115,13 @@ define void @arm_abs_q15(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[N_VEC]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[PSRC]], i32 [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[BLOCKSIZE]], 7
-; CHECK-NEXT:    [[TMP4:%.*]] = shl i32 [[N_VEC]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[PDST]], i32 [[TMP4]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[PDST]], i32 [[TMP1]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i32 [[INDEX]], 1
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PSRC]], i32 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[OFFSET_IDX3:%.*]] = shl i32 [[INDEX]], 1
-; CHECK-NEXT:    [[NEXT_GEP4:%.*]] = getelementptr i8, ptr [[PDST]], i32 [[OFFSET_IDX3]]
+; CHECK-NEXT:    [[NEXT_GEP4:%.*]] = getelementptr i8, ptr [[PDST]], i32 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i16>, ptr [[NEXT_GEP]], align 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp sgt <8 x i16> [[WIDE_LOAD]], zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq <8 x i16> [[WIDE_LOAD]], splat (i16 -32768)
@@ -139,13 +137,13 @@ define void @arm_abs_q15(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[WHILE_END]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[TMP2]], %[[MIDDLE_BLOCK]] ], [ [[PSRC]], %[[WHILE_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi i32 [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ [[BLOCKSIZE]], %[[WHILE_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL6:%.*]] = phi ptr [ [[TMP5]], %[[MIDDLE_BLOCK]] ], [ [[PDST]], %[[WHILE_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL4:%.*]] = phi i32 [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ [[BLOCKSIZE]], %[[WHILE_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi ptr [ [[TMP4]], %[[MIDDLE_BLOCK]] ], [ [[PDST]], %[[WHILE_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[WHILE_BODY:.*]]
 ; CHECK:       [[WHILE_BODY]]:
 ; CHECK-NEXT:    [[PSRC_ADDR_023:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], %[[WHILE_BODY]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[BLKCNT_022:%.*]] = phi i32 [ [[DEC:%.*]], %[[WHILE_BODY]] ], [ [[BC_RESUME_VAL5]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[PDST_ADDR_021:%.*]] = phi ptr [ [[INCDEC_PTR13:%.*]], %[[WHILE_BODY]] ], [ [[BC_RESUME_VAL6]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[BLKCNT_022:%.*]] = phi i32 [ [[DEC:%.*]], %[[WHILE_BODY]] ], [ [[BC_RESUME_VAL4]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[PDST_ADDR_021:%.*]] = phi ptr [ [[INCDEC_PTR13:%.*]], %[[WHILE_BODY]] ], [ [[BC_RESUME_VAL5]], %[[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds nuw i8, ptr [[PSRC_ADDR_023]], i32 2
 ; CHECK-NEXT:    [[TMP12:%.*]] = load i16, ptr [[PSRC_ADDR_023]], align 2
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i16 [[TMP12]], 0
@@ -211,15 +209,13 @@ define void @arm_abs_q31(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[N_VEC]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[PSRC]], i32 [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[BLOCKSIZE]], 3
-; CHECK-NEXT:    [[TMP4:%.*]] = shl i32 [[N_VEC]], 2
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[PDST]], i32 [[TMP4]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[PDST]], i32 [[TMP1]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PSRC]], i32 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[OFFSET_IDX3:%.*]] = shl i32 [[INDEX]], 2
-; CHECK-NEXT:    [[NEXT_GEP4:%.*]] = getelementptr i8, ptr [[PDST]], i32 [[OFFSET_IDX3]]
+; CHECK-NEXT:    [[NEXT_GEP4:%.*]] = getelementptr i8, ptr [[PDST]], i32 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[NEXT_GEP]], align 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp sgt <4 x i32> [[WIDE_LOAD]], zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], splat (i32 -2147483648)
@@ -235,13 +231,13 @@ define void @arm_abs_q31(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[WHILE_END]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[TMP2]], %[[MIDDLE_BLOCK]] ], [ [[PSRC]], %[[WHILE_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi i32 [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ [[BLOCKSIZE]], %[[WHILE_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL6:%.*]] = phi ptr [ [[TMP5]], %[[MIDDLE_BLOCK]] ], [ [[PDST]], %[[WHILE_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL4:%.*]] = phi i32 [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ [[BLOCKSIZE]], %[[WHILE_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi ptr [ [[TMP4]], %[[MIDDLE_BLOCK]] ], [ [[PDST]], %[[WHILE_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[WHILE_BODY:.*]]
 ; CHECK:       [[WHILE_BODY]]:
 ; CHECK-NEXT:    [[PSRC_ADDR_017:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], %[[WHILE_BODY]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[BLKCNT_016:%.*]] = phi i32 [ [[DEC:%.*]], %[[WHILE_BODY]] ], [ [[BC_RESUME_VAL5]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[PDST_ADDR_015:%.*]] = phi ptr [ [[INCDEC_PTR7:%.*]], %[[WHILE_BODY]] ], [ [[BC_RESUME_VAL6]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[BLKCNT_016:%.*]] = phi i32 [ [[DEC:%.*]], %[[WHILE_BODY]] ], [ [[BC_RESUME_VAL4]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[PDST_ADDR_015:%.*]] = phi ptr [ [[INCDEC_PTR7:%.*]], %[[WHILE_BODY]] ], [ [[BC_RESUME_VAL5]], %[[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds nuw i8, ptr [[PSRC_ADDR_017]], i32 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[PSRC_ADDR_017]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[TMP12]], 0
