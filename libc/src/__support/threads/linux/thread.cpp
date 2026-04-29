@@ -343,11 +343,11 @@ int Thread::run(ThreadStyle style, ThreadRunner runner, void *arg, void *stack,
 
 int Thread::join(ThreadReturnValue &retval) {
   if (self.attrib) {
-    // reject self join
+    // Reject self join.
     if (self.attrib == attrib)
       return EDEADLK;
 
-    // A best-effort check of concurrent/repeated join
+    // Do a best-effort check of concurrent/repeated join.
     ThreadAttributes *expected = nullptr;
     if (!attrib->joiner.compare_exchange_strong(expected, self.attrib,
                                                 cpp::MemoryOrder::ACQ_REL))

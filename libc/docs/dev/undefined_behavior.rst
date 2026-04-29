@@ -183,7 +183,7 @@ configured via the `LIBC_ADD_NULL_CHECKS` option.
 
 Invalid Thread Joining Behavior
 ------------------------------------------------------
-POSIX standard does not demand accurate deadlock detection and leaves 
+POSIX standard does not demand accurate deadlock detection and leaves
 repeated/concurrent joining as undefined behavior. In the following, 
 we discuss the related behaviors explicitly.
 
