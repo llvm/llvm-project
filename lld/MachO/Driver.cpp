@@ -53,6 +53,8 @@
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TextAPI/Architecture.h"
 #include "llvm/TextAPI/PackedVersion.h"
+#include "llvm/TextAPI/Target.h"
+#include "llvm/TextAPI/TextAPIWriter.h"
 
 #if !_WIN32
 #include <sys/mman.h>
@@ -554,7 +556,7 @@ static InputFile *processFile(std::optional<MemoryBufferRef> buffer,
   if (newFile && !isa<DylibFile>(newFile)) {
     if ((isa<ObjFile>(newFile) || isa<BitcodeFile>(newFile)) && newFile->lazy &&
         config->forceLoadObjC) {
-      for (Symbol *sym : newFile->symbols)
+      for (lld::macho::Symbol *sym : newFile->symbols)
         if (sym && sym->getName().starts_with(objc::symbol_names::klass)) {
           extract(*newFile, "-ObjC");
           break;
@@ -773,7 +775,7 @@ static bool compileBitcodeFiles() {
 static void replaceCommonSymbols() {
   TimeTraceScope timeScope("Replace common symbols");
   ConcatOutputSection *osec = nullptr;
-  for (Symbol *sym : symtab->getSymbols()) {
+  for (lld::macho::Symbol *sym : symtab->getSymbols()) {
     auto *common = dyn_cast<CommonSymbol>(sym);
     if (common == nullptr)
       continue;
@@ -1551,7 +1553,7 @@ static void foldIdenticalLiterals() {
 static void addSynthenticMethnames() {
   std::string &data = *make<std::string>();
   llvm::raw_string_ostream os(data);
-  for (Symbol *sym : symtab->getSymbols())
+  for (lld::macho::Symbol *sym : symtab->getSymbols())
     if (isa<Undefined>(sym))
       if (ObjCStubsSection::isObjCStubSymbol(sym))
         os << ObjCStubsSection::getMethname(sym) << '\0';
@@ -1638,7 +1640,8 @@ static void handleExplicitExports() {
   static constexpr int kMaxWarnings = 3;
   if (config->hasExplicitExports) {
     std::atomic<uint64_t> warningsCount{0};
-    parallelForEach(symtab->getSymbols(), [&warningsCount](Symbol *sym) {
+    parallelForEach(symtab->getSymbols(), [&warningsCount](
+                                              lld::macho::Symbol *sym) {
       if (auto *defined = dyn_cast<Defined>(sym)) {
         if (config->exportedSymbols.match(sym->getName())) {
           if (defined->privateExtern) {
@@ -1668,7 +1671,7 @@ static void handleExplicitExports() {
       warn("<... " + Twine(warningsCount - kMaxWarnings) +
            " more similar warnings...>");
   } else if (!config->unexportedSymbols.empty()) {
-    parallelForEach(symtab->getSymbols(), [](Symbol *sym) {
+    parallelForEach(symtab->getSymbols(), [](lld::macho::Symbol *sym) {
       if (auto *defined = dyn_cast<Defined>(sym))
         if (config->unexportedSymbols.match(defined->getName()))
           defined->privateExtern = true;
@@ -1704,6 +1707,73 @@ static SmallVector<StringRef, 0> getAllowableClients(opt::InputArgList &args) {
       vals.push_back(val);
   }
   return vals;
+}
+
+static void resolveBitcodeProvidedSymbolsForTBDGeneration() {
+  auto *lto = make<BitcodeCompiler>();
+  for (InputFile *file : inputFiles)
+    if (auto *bitcodeFile = dyn_cast<BitcodeFile>(file))
+      if (!file->lazy)
+        lto->add(*bitcodeFile, /* forTBDGeneration */ true);
+}
+
+static void writeTBD(const StringRef outputPath) {
+  std::error_code errorCode;
+  llvm::raw_fd_ostream os(outputPath, errorCode, llvm::sys::fs::OF_Text);
+  if (errorCode) {
+    error("Failed to open stream to write tbd to: '" + outputPath + "' " +
+          errorCode.message());
+    return;
+  }
+
+  Triple targetTriple =
+      Triple(getTargetTripleName(config->platformInfo.target));
+  std::shared_ptr<MachO::RecordsSlice> records =
+      std::make_shared<MachO::RecordsSlice>(targetTriple);
+  auto &binaryAttributes = records->getBinaryAttrs();
+  binaryAttributes.InstallName = config->installName;
+  binaryAttributes.AppExtensionSafe = config->applicationExtension;
+  binaryAttributes.TwoLevelNamespace =
+      config->namespaceKind == NamespaceKind::twolevel;
+
+  for (const lld::macho::Symbol *symbol : symtab->getSymbols()) {
+    if (const lld::macho::Defined *definedSymbol = dyn_cast<Defined>(symbol)) {
+      MachO::RecordLinkage symbolLinkage = MachO::RecordLinkage::Unknown;
+      MachO::SymbolFlags symbolFlags = MachO::SymbolFlags::None;
+
+      if (definedSymbol->weakDefCanBeHidden)
+        continue;
+
+      if (!definedSymbol->isExternal())
+        continue;
+
+      if (!definedSymbol->includeInSymtab)
+        continue;
+
+      if (definedSymbol->privateExtern)
+        continue;
+
+      symbolLinkage = MachO::RecordLinkage::Exported;
+
+      if (definedSymbol->isTlv())
+        symbolFlags |= MachO::SymbolFlags::ThreadLocalValue;
+      else if (definedSymbol->isWeakDef())
+        symbolFlags |= MachO::SymbolFlags::WeakDefined;
+
+      records->addRecord(definedSymbol->getName(), symbolFlags,
+                         MachO::GlobalRecord::Kind::Unknown, symbolLinkage);
+    }
+  }
+
+  std::unique_ptr<MachO::InterfaceFile> interface =
+      MachO::convertToInterfaceFile({records});
+  Error e = MachO::TextAPIWriter::writeToStream(os, *interface,
+                                                MachO::FileType::TBD_V4);
+  if (e) {
+    error("Failed to write resulting tbd to: '" + outputPath +
+          "': " + toString(std::move(e)));
+    return;
+  }
 }
 
 namespace lld {
@@ -1938,6 +2008,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   config->thinLTOIndexOnly = args.hasArg(OPT_thinlto_index_only) ||
                              args.hasArg(OPT_thinlto_index_only_eq);
   config->thinLTOIndexOnlyArg = args.getLastArgValue(OPT_thinlto_index_only_eq);
+  config->emitTBDPath = args.getLastArgValue(OPT_emit_tbd_only_eq);
   config->thinLTOObjectSuffixReplace =
       getOldNewOptions(args, OPT_thinlto_object_suffix_replace_eq);
   std::tie(config->thinLTOPrefixReplaceOld, config->thinLTOPrefixReplaceNew,
@@ -2392,6 +2463,16 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     // optimize.
     handleExplicitExports();
 
+    if (!config->emitTBDPath.empty()) {
+      // If we want to write a TBD, we need to finalize the symbol table before
+      // we do so.
+      resolveBitcodeProvidedSymbolsForTBDGeneration();
+      handleExplicitExports();
+      replaceCommonSymbols();
+      writeTBD(config->emitTBDPath);
+      return errorCount() == 0;
+    }
+
     bool didCompileBitcodeFiles = compileBitcodeFiles();
 
     resolveLCLinkerOptions();
@@ -2495,5 +2576,6 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
   return errorCount() == 0;
 }
+
 } // namespace macho
 } // namespace lld

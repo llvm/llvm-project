@@ -118,7 +118,7 @@ BitcodeCompiler::BitcodeCompiler() {
   ltoObj = std::make_unique<lto::LTO>(createConfig(), backend);
 }
 
-void BitcodeCompiler::add(BitcodeFile &f) {
+void BitcodeCompiler::add(BitcodeFile &f, bool forTBDGeneration) {
   lto::InputFile &obj = *f.obj;
 
   if (config->thinLTOEmitIndexFiles)
@@ -159,9 +159,65 @@ void BitcodeCompiler::add(BitcodeFile &f) {
 
     // Un-define the symbol so that we don't get duplicate symbol errors when we
     // load the ObjFile emitted by LTO compilation.
-    if (r.Prevailing)
-      replaceSymbol<Undefined>(sym, sym->getName(), sym->getFile(),
-                               RefState::Strong, /*wasBitcodeSymbol=*/true);
+    if (r.Prevailing) {
+      // Symbol resolution for bitcode provided symbols works slightly
+      // differently from symbol resolution for native symbols. For
+      // every symbol occurence (the same symbol name may occur multiple times),
+      // a prevailing copy is chosen. In an ordinary LTO link, we remove this
+      // symbol from the symbol table below, replacing it with an undefined
+      // reference. We then compile each bitcode file, and once we have native
+      // object files, we add those symbols back into the symbol table at that
+      // time. At that point, each symbol name is unique as non-prevailing
+      // copies will be dropped by the LTO backend. For the purposes of
+      // generating a TBD, we want the symbol table to appear as it would after
+      // LTO is complete, without actually performing LTO. If we are generating
+      // a TBD, instead of replacing prevailing symbols with an undefined
+      // reference, we insert into the symbol table a symbol with attributes
+      // derived from the prevailing IR symbol. Note that this is slightly
+      // different from how native symbol resolution works amid ODR violations.
+      // In such case symbol attributes such as weakness and visibility
+      // can be "merged" (ie. the symbol is strong if any copy is strong).
+      // This is not how LTO symbol resolution works, we choose a prevailing
+      // copy, and take all its attributes wholesale, there is no merging of
+      // attributes with non-prevailing copies.
+      if (forTBDGeneration) {
+        bool isPrivateExtern = false;
+        switch (objSym.getVisibility()) {
+        case GlobalValue::HiddenVisibility:
+          isPrivateExtern = true;
+          break;
+        case GlobalValue::ProtectedVisibility:
+          error(sym->getName() +
+                " has protected visibility, which is not supported by Mach-O");
+          break;
+        case GlobalValue::DefaultVisibility:
+          break;
+        }
+        isPrivateExtern = isPrivateExtern ||
+                          objSym.canBeOmittedFromSymbolTable() || f.forceHidden;
+
+        if (const auto *defined = dyn_cast<Defined>(sym)) {
+
+          bool interposable = config->namespaceKind == NamespaceKind::flat &&
+                              config->outputType != MachO::MH_EXECUTE &&
+                              !isPrivateExtern;
+
+          replaceSymbol<Defined>(
+              sym, defined->getName(), &f, /*isec*/ nullptr, /*value*/ 0,
+              /*size*/ 0, objSym.isWeak(), /*isExternal*/ true, isPrivateExtern,
+              /* includeInSymtab */ true,
+              /* isReferencedDynamically */ false, /* noDeadStrip */ false,
+              /* canOverrideWeakDef */ false, /* isWeakDefCanBeHidden */ false,
+              interposable, /* isTlv */ objSym.isTLS());
+        } else if (const auto *common = dyn_cast<CommonSymbol>(sym)) {
+          replaceSymbol<CommonSymbol>(
+              sym, common->getName(), &f, objSym.getCommonSize(),
+              objSym.getCommonAlignment(), isPrivateExtern);
+        }
+      } else
+        replaceSymbol<Undefined>(sym, sym->getName(), sym->getFile(),
+                                 RefState::Strong, /*wasBitcodeSymbol=*/true);
+    }
 
     // TODO: set the other resolution configs properly
   }

@@ -177,6 +177,7 @@ struct Configuration {
   llvm::CachePruningPolicy thinLTOCachePolicy;
   llvm::StringRef thinLTOCacheDir;
   llvm::StringRef thinLTOIndexOnlyArg;
+  llvm::StringRef emitTBDPath;
   std::pair<llvm::StringRef, llvm::StringRef> thinLTOObjectSuffixReplace;
   llvm::StringRef thinLTOPrefixReplaceOld;
   llvm::StringRef thinLTOPrefixReplaceNew;

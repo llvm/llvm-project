@@ -118,7 +118,7 @@ public:
           uint64_t size, bool isWeakDef, bool isExternal, bool isPrivateExtern,
           bool includeInSymtab, bool isReferencedDynamically, bool noDeadStrip,
           bool canOverrideWeakDef = false, bool isWeakDefCanBeHidden = false,
-          bool interposable = false);
+          bool interposable = false, bool isTlv = false);
 
   bool isWeakDef() const override { return weakDef; }
   bool isExternalWeakDef() const {
@@ -194,6 +194,9 @@ public:
   uint64_t size;
   // This can be a subsection of either __compact_unwind or __eh_frame.
   ConcatInputSection *originalUnwindEntry = nullptr;
+
+private:
+  const bool tlv : 1;
 };
 
 // This enum does double-duty: as a symbol property, it indicates whether & how

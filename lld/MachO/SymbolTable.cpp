@@ -104,7 +104,7 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
                                  uint64_t size, bool isWeakDef,
                                  bool isPrivateExtern,
                                  bool isReferencedDynamically, bool noDeadStrip,
-                                 bool isWeakDefCanBeHidden) {
+                                 bool isWeakDefCanBeHidden, bool isTlv) {
   bool overridesWeakDef = false;
   auto [s, wasInserted] = insert(name, file);
 
@@ -211,7 +211,7 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
   Defined *defined = replaceSymbol<Defined>(
       s, name, file, isec, value, size, isWeakDef, /*isExternal=*/true,
       isPrivateExtern, /*includeInSymtab=*/true, isReferencedDynamically,
-      noDeadStrip, overridesWeakDef, isWeakDefCanBeHidden, interposable);
+      noDeadStrip, overridesWeakDef, isWeakDefCanBeHidden, interposable, isTlv);
   return defined;
 }
 

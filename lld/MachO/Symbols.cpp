@@ -21,7 +21,7 @@ static_assert(sizeof(void *) != 8 || sizeof(Symbol) == 56,
 // The Microsoft ABI doesn't support using parent class tail padding for child
 // members, hence the _MSC_VER check.
 #if !defined(_MSC_VER)
-static_assert(sizeof(void *) != 8 || sizeof(Defined) == 88,
+static_assert(sizeof(void *) != 8 || sizeof(Defined) == 96,
               "Try to minimize Defined's size; we create many instances");
 #endif
 
@@ -57,14 +57,14 @@ Defined::Defined(StringRef name, InputFile *file, InputSection *isec,
                  bool isPrivateExtern, bool includeInSymtab,
                  bool isReferencedDynamically, bool noDeadStrip,
                  bool canOverrideWeakDef, bool isWeakDefCanBeHidden,
-                 bool interposable)
+                 bool interposable, bool isTlv)
     : Symbol(DefinedKind, name, file), overridesWeakDef(canOverrideWeakDef),
       privateExtern(isPrivateExtern), includeInSymtab(includeInSymtab),
       identicalCodeFoldingKind(ICFFoldKind::None),
       referencedDynamically(isReferencedDynamically), noDeadStrip(noDeadStrip),
       interposable(interposable), weakDefCanBeHidden(isWeakDefCanBeHidden),
       weakDef(isWeakDef), external(isExternal), originalIsec(isec),
-      value(value), size(size) {
+      value(value), size(size), tlv(isTlv) {
   if (isec) {
     isec->symbols.push_back(this);
     // Maintain sorted order.
@@ -82,7 +82,11 @@ Defined::Defined(StringRef name, InputFile *file, InputSection *isec,
 }
 
 bool Defined::isTlv() const {
-  return !isAbsolute() && isThreadLocalVariables(originalIsec->getFlags());
+  if (!isAbsolute()) {
+    return isThreadLocalVariables(originalIsec->getFlags());
+  }
+
+  return tlv;
 }
 
 uint64_t Defined::getVA() const {

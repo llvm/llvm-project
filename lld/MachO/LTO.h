@@ -30,7 +30,7 @@ class BitcodeCompiler {
 public:
   BitcodeCompiler();
 
-  void add(BitcodeFile &f);
+  void add(BitcodeFile &f, bool forTBDGeneration = false);
   std::vector<ObjFile *> compile();
 
 private:

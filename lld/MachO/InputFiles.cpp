@@ -2342,7 +2342,8 @@ static macho::Symbol *createBitcodeSymbol(const lto::InputFile::Symbol &objSym,
                             /*size=*/0, objSym.isWeak(), isPrivateExtern,
                             /*isReferencedDynamically=*/false,
                             /*noDeadStrip=*/false,
-                            /*isWeakDefCanBeHidden=*/false);
+                            /*isWeakDefCanBeHidden=*/false,
+                            /*isTlv*/ objSym.isTLS());
 }
 
 BitcodeFile::BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
