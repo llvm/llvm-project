@@ -43,7 +43,7 @@ struct HexagonHVXSaveRemark : public MachineFunctionPass {
   HexagonHVXSaveRemark() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
-    MachineOptimizationRemarkEmitter MORE(MF, nullptr);
+    auto &MORE = getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
     if (!MORE.allowExtraAnalysis(DEBUG_TYPE))
       return false;
 
@@ -99,6 +99,7 @@ struct HexagonHVXSaveRemark : public MachineFunctionPass {
   StringRef getPassName() const override { return "Hexagon HVX Save Remarks"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<MachineOptimizationRemarkEmitterPass>();
     AU.setPreservesAll();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
