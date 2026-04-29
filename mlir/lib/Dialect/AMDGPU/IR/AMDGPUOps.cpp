@@ -103,7 +103,7 @@ static FailureOr<MemRefType> getFatRawBufferTypeLike(MemRefType source,
 
 LogicalResult FatRawBufferCastOp::inferReturnTypes(
     MLIRContext *context, std::optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
+    DictionaryAttr attributes, PropertyRef properties, RegionRange regions,
     SmallVectorImpl<Type> &inferredReturnTypes) {
   Adaptor adaptor(operands, attributes, properties, regions);
   auto sourceType =
@@ -627,32 +627,51 @@ LogicalResult SparseMFMAOp::verify() {
     return emitOpError(
         "expected source operands to have the same element type");
 
-  // When CBSZ == 0, ABID selects the index set within the sparse index VGPR.
-  // When CBSZ != 0, the first index set is always used (ABID ignored).
+  // Classify the sparse MFMA variant. The three flavors differ in CBSZ/ABID
+  // handling and in the sparse-index layout:
+  //   - gfx942 16-bit:              max ABID = 3, sparse idx = vector<4xi8>
+  //   - gfx950 16-bit / gfx942 8-bit: max ABID = 1, sparse idx = vector<2xi16>
+  //   - gfx950 8-bit:  CBSZ/ABID ignored by hw,   sparse idx = i32
+  uint32_t m = getM(), k = getK();
   bool is8BitSource = sparseElem.isFloat(8) || sparseElem.isInteger(8);
-  // 8-bit source: ABID selects one of two 16-bit index sets.
-  if (getCbsz() == 0 && is8BitSource && getAbid() > 1)
-    return emitOpError("ABID must be 0 or 1 for 8-bit source data");
-  // 16-bit source: ABID selects one of four 8-bit index sets (0-3 all valid).
-  if (getCbsz() == 0 && !is8BitSource && getAbid() > 3)
-    return emitOpError("ABID must be between 0 and 3 for 16-bit source data");
+  bool is16BitGfx942 =
+      !is8BitSource && ((m == 16 && k == 32) || (m == 32 && k == 16));
+  bool is8BitGfx950 =
+      is8BitSource && ((m == 16 && k == 128) || (m == 32 && k == 64));
 
-  // Validate sparseIdx type matches source element type.
-  auto sparseIdxType = cast<VectorType>(getSparseIdx().getType());
-  if (is8BitSource) {
-    // 8-bit source data requires vector<2xi16> sparse indices.
-    if (sparseIdxType.getNumElements() != 2 ||
-        !sparseIdxType.getElementType().isInteger(16))
-      return emitOpError("expected vector<2xi16> sparse indices for 8-bit "
-                         "source data, but got ")
-             << getSparseIdx().getType();
+  // CBSZ/ABID range check. On gfx950 8-bit the hardware always uses the first
+  // set and ignores these fields, so require zeros in IR. Otherwise ABID is
+  // only meaningful when CBSZ == 0 (when CBSZ != 0 the first set is always
+  // used and ABID is irrelevant, so the verifier accepts any value).
+  if (is8BitGfx950) {
+    if (getCbsz() != 0)
+      return emitOpError(
+          "CBSZ must be 0 for this variant (field is ignored by hardware)");
+    if (getAbid() != 0)
+      return emitOpError(
+          "ABID must be 0 for this variant (field is ignored by hardware)");
+  } else if (getCbsz() == 0) {
+    unsigned maxAbid = is16BitGfx942 ? 3u : 1u;
+    if (getAbid() > maxAbid)
+      return emitOpError("ABID must be in [0, ")
+             << maxAbid << "] for this variant";
+  }
+
+  Type sparseIdxType = getSparseIdx().getType();
+  if (is8BitGfx950) {
+    if (!sparseIdxType.isInteger(32))
+      return emitOpError("expected i32 sparse indices for this variant "
+                         "(no internal set structure), but got ")
+             << sparseIdxType;
   } else {
-    // 16-bit source data requires vector<4xi8> sparse indices.
-    if (sparseIdxType.getNumElements() != 4 ||
-        !sparseIdxType.getElementType().isInteger(8))
-      return emitOpError("expected vector<4xi8> sparse indices for 16-bit "
-                         "source data, but got ")
-             << getSparseIdx().getType();
+    unsigned expectedIdxElems = is16BitGfx942 ? 4 : 2;
+    unsigned expectedIdxBits = is16BitGfx942 ? 8 : 16;
+    auto vecType = dyn_cast<VectorType>(sparseIdxType);
+    if (!vecType || vecType.getNumElements() != expectedIdxElems ||
+        !vecType.getElementType().isInteger(expectedIdxBits))
+      return emitOpError("expected vector<")
+             << expectedIdxElems << "xi" << expectedIdxBits
+             << "> sparse indices for this variant, but got " << sparseIdxType;
   }
 
   int64_t expectedSourceElems = (getM() * getK()) / waveSize;
@@ -666,6 +685,127 @@ LogicalResult SparseMFMAOp::verify() {
     return emitOpError("expected " + Twine(expectedDestElems) +
                        " result values for this operation but got " +
                        Twine(destLen));
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// SparseWMMAOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult SparseWMMAOp::verify() {
+  auto sparseType = cast<VectorType>(getSourceA().getType());
+  auto denseType = cast<VectorType>(getSourceB().getType());
+  auto destType = cast<VectorType>(getDestC().getType());
+
+  Type sparseElem = sparseType.getElementType();
+  Type denseElem = denseType.getElementType();
+  Type destElem = destType.getElementType();
+  int64_t sparseLen = sparseType.getNumElements();
+  int64_t denseLen = denseType.getNumElements();
+  int64_t destLen = destType.getNumElements();
+
+  uint32_t m = getM(), n = getN(), k = getK();
+  if ((m != 16) || (n != 16))
+    return emitOpError("expected MxN to be exactly 16x16");
+
+  const bool isWavesize64 = getWave64();
+  const bool isInt4Input = sparseElem.isInteger(4) && denseElem.isInteger(4);
+  const bool isEqualLengthAllowed = isWavesize64 && isInt4Input && k == 32;
+
+  if ((denseLen != 2 * sparseLen) && !isEqualLengthAllowed)
+    return emitOpError("expected dense source operand to have exactly double "
+                       "the number of elements of the sparse source operand");
+
+  if (isEqualLengthAllowed && (denseLen != sparseLen))
+    return emitOpError("expected dense source operand to have exactly the "
+                       "same the number of elements");
+
+  if (destElem.isInteger()) {
+    if (!(sparseElem.isInteger() && denseElem.isInteger())) {
+      return emitOpError("source operand and destination operands must all be "
+                         "either integer or float types");
+    }
+  }
+
+  if (destElem.isFloat()) {
+    if (!(sparseElem.isFloat() && denseElem.isFloat())) {
+      return emitOpError("source operand and destination operands must all be "
+                         "either integer or float types");
+    }
+  }
+
+  // Check that source element types are compatible.
+  // For fp8/bf8 mixed operations, element types can differ (e.g., fp8 * bf8).
+  // For other types, element types must match exactly.
+  bool bothFloat8 = sparseElem.isFloat(8) && denseElem.isFloat(8);
+  if (!bothFloat8 && sparseElem != denseElem)
+    return emitOpError(
+        "expected source operands to have the same element type");
+
+  const int64_t waveSize = isWavesize64 ? 64 : 32;
+
+  int64_t expectedSourceElems = (getM() * getK()) / waveSize;
+  if (denseLen != expectedSourceElems)
+    return emitOpError("expected " + Twine(expectedSourceElems) +
+                       " source values for this operation but got " +
+                       Twine(denseLen));
+
+  int64_t expectedDestElems = (getM() * getN()) / waveSize;
+  if (destLen != expectedDestElems)
+    return emitOpError("expected " + Twine(expectedDestElems) +
+                       " result values for this operation but got " +
+                       Twine(destLen));
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// DotOp
+//===----------------------------------------------------------------------===//
+LogicalResult DotOp::verify() {
+  Type aElem = cast<VectorType>(getSourceA().getType()).getElementType();
+  Type bElem = cast<VectorType>(getSourceB().getType()).getElementType();
+  Type dest = getDestC().getType();
+
+  bool aIsFloat8 = aElem.isFloat(8);
+  bool bIsFloat8 = bElem.isFloat(8);
+  bool aIsInteger = isa<IntegerType>(aElem);
+
+  bool bothFloat8 = aIsFloat8 && bIsFloat8;
+  if (!bothFloat8 && aElem != bElem)
+    return emitOpError(
+        "expected source operands to have the same element type");
+
+  if (aElem.isF16()) {
+    if (!dest.isF32() && !dest.isF16())
+      return emitOpError("expected f32 or f16 accumulator for f16 sources");
+  } else if (aElem.isBF16()) {
+    if (!dest.isF32() && !dest.isBF16())
+      return emitOpError("expected f32 or bf16 accumulator for bf16 sources");
+  } else if (aIsInteger) {
+    if (!dest.isInteger(32))
+      return emitOpError("expected i32 accumulator for integer sources");
+  } else if (aIsFloat8) {
+    if (!dest.isF32())
+      return emitOpError("expected f32 accumulator for fp8 sources");
+  }
+
+  if ((getUnsignedA() || getUnsignedB()) && !aIsInteger)
+    return emitOpError(
+        "unsignedA/unsignedB are only valid for integer source types");
+
+  if (aElem.isInteger(16) && getUnsignedA() != getUnsignedB())
+    return emitOpError(
+        "mixed-sign dot is not supported for 16-bit integer sources");
+
+  if (getClamp()) {
+    bool noClamp = (aElem.isF16() && dest.isF16()) ||
+                   (aElem.isBF16() && dest.isBF16()) || aIsFloat8;
+    if (noClamp)
+      return emitOpError(
+          "clamp is not supported for this (source, accumulator) combination");
+  }
 
   return success();
 }
@@ -870,6 +1010,37 @@ struct FoldGatherToLDSOfCast final : OpRewritePattern<GatherToLDSOp> {
 void GatherToLDSOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                 MLIRContext *context) {
   results.add<FoldGatherToLDSOfCast>(context);
+}
+
+//===----------------------------------------------------------------------===//
+// GlobalLoadAsyncToLDSOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult GlobalLoadAsyncToLDSOp::verify() {
+  MemRefType srcType = cast<MemRefType>(getSrc().getType());
+  MemRefType dstType = cast<MemRefType>(getDst().getType());
+
+  if (srcType.getElementType() != dstType.getElementType())
+    return emitOpError("source and destination element types must match");
+
+  Type transferType = getTransferType();
+  int transferSize;
+  if (auto vectorTransfer = dyn_cast<VectorType>(transferType)) {
+    transferSize = vectorTransfer.getNumElements() *
+                   vectorTransfer.getElementTypeBitWidth();
+  } else {
+    transferSize = transferType.getIntOrFloatBitWidth();
+  }
+  if (!llvm::is_contained({8, 32, 64, 128}, transferSize))
+    return emitOpError("transfer type size must be 8, 32, 64, or 128 bits");
+
+  if (!hasGlobalMemorySpace(srcType.getMemorySpace()))
+    return emitOpError("source memory address space must be global");
+
+  if (!hasWorkgroupMemorySpace(dstType.getMemorySpace()))
+    return emitOpError("destination memory address space must be Workgroup");
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1229,6 +1400,53 @@ LogicalResult DsAsyncBarrierArriveOp::verify() {
 
 LogicalResult DsBarrierArriveOp::verify() {
   return verifyDsBarrierOpCommon(*this);
+}
+
+//===----------------------------------------------------------------------===//
+// GlobalPrefetchOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult GlobalPrefetchOp::verify() {
+  auto src = cast<MemRefType>(getSrc().getType());
+
+  Attribute memSpace = src.getMemorySpace();
+  if (!memSpace)
+    return this->emitOpError("the source must have address space attribute");
+  if (!hasGlobalMemorySpace(memSpace))
+    return this->emitOpError("the source must reside in global address space");
+
+  ArrayRef<int64_t> srcShape = src.getShape();
+  const size_t numIndices = getIndices().size();
+  if (srcShape.size() != numIndices)
+    return this->emitOpError(
+        "the number of indices must match the source shape size");
+
+  const LoadTemporalHint temporalHint = getTemporalHint();
+  const Scope scope = getCacheScope();
+  const bool isSpeculative = getSpeculative();
+
+  // See GFX1250 SPG for a detail explanation
+  if (isSpeculative && scope == Scope::WGP)
+    return this->emitOpError(
+        "does not support speculative prefetch in WGP scope");
+
+  // Note that temporal hints are shared between load, store,
+  // prefetch, etc. instructions. However, some instructions
+  // operate only with a subset of hints according to the ISA
+  // documentation. In case of global prefetch, non-temporal (NT)
+  // and last-use (LU) hints are not used. The extra bits of encoding
+  // are used to encode speculative or non-speculative instruction behavior
+  if (llvm::is_contained({LoadTemporalHint::NT, LoadTemporalHint::LU},
+                         temporalHint))
+    return this->emitOpError("does not support NT and LU modes");
+
+  if (llvm::is_contained({LoadTemporalHint::NT_RT, LoadTemporalHint::RT_NT,
+                          LoadTemporalHint::NT_HT},
+                         temporalHint) &&
+      !isSpeculative) {
+    return this->emitOpError("operates only in the speculative mode");
+  }
+  return success();
 }
 
 #define GET_OP_CLASSES

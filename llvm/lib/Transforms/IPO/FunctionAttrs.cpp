@@ -57,6 +57,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/KnownFPClass.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -1740,8 +1741,16 @@ static void addNoUndefAttrs(const SCCNodeSet &SCCNodes,
             Attribute Attr = Attrs.getRetAttr(Attribute::Range);
             if (Attr.isValid() &&
                 !Attr.getRange().contains(
-                    computeConstantRange(RetVal, /*ForSigned=*/false)))
+                    computeConstantRange(RetVal, /*ForSigned=*/false,
+                                         SimplifyQuery(F->getDataLayout()))))
               return false;
+
+            FPClassTest AttrFPClass = Attrs.getRetNoFPClass();
+            if (AttrFPClass != fcNone) {
+              KnownFPClass ComputedFPClass = computeKnownFPClass(RetVal, DL);
+              if (!ComputedFPClass.isKnownNever(AttrFPClass))
+                return false;
+            }
           }
           return true;
         })) {
@@ -2092,7 +2101,7 @@ static void inferAttrsFromFunctionBodies(const SCCNodeSet &SCCNodes,
 static bool mayHaveRecursiveCallee(Function &F,
                                    bool AnyFunctionsAddressIsTaken = true) {
   for (const auto &BB : F) {
-    for (const auto &I : BB.instructionsWithoutDebug()) {
+    for (const auto &I : BB) {
       if (const auto *CB = dyn_cast<CallBase>(&I)) {
         const Function *Callee = CB->getCalledFunction();
         if (!Callee || Callee == &F)

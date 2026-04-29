@@ -131,6 +131,11 @@ const Name &GetFirstName(const EntityDecl &x) {
   return std::get<ObjectName>(x.t);
 }
 
+const Name &GetFirstName(const AccObject &x) {
+  return common::visit(
+      [](const auto &y) -> const Name & { return GetFirstName(y); }, x.u);
+}
+
 const CoindexedNamedObject *GetCoindexedNamedObject(const DataRef &base) {
   return common::visit(
       common::visitors{
@@ -186,6 +191,86 @@ bool CheckForSingleVariableOnRHS(const AssignmentStmt &assignmentStmt) {
 const Name *GetDesignatorNameIfDataRef(const Designator &designator) {
   const auto *dataRef{std::get_if<DataRef>(&designator.u)};
   return dataRef ? std::get_if<Name>(&dataRef->u) : nullptr;
+}
+
+// Get the Label from a Statement<...> contained in an ExecutionPartConstruct,
+// or std::nullopt, if there is no Statement<...> contained in there.
+template <typename T>
+static std::optional<Label> GetStatementLabelHelper(const T &stmt) {
+  if constexpr (IsStatement<T>::value) {
+    return stmt.label;
+  } else if constexpr (WrapperTrait<T>) {
+    return GetStatementLabelHelper(stmt.v);
+  } else if constexpr (UnionTrait<T>) {
+    return common::visit(
+        [&](auto &&s) { return GetStatementLabelHelper(s); }, stmt.u);
+  }
+  return std::nullopt;
+}
+
+std::optional<Label> GetStatementLabel(const ExecutionPartConstruct &x) {
+  return GetStatementLabelHelper(x);
+}
+
+std::optional<Label> GetFinalLabel(const Block &x) {
+  if (!x.empty()) {
+    const ExecutionPartConstruct &last{x.back()};
+    if (auto *omp{Unwrap<OpenMPConstruct>(last)}) {
+      return GetFinalLabel(*omp);
+    } else if (auto *doLoop{Unwrap<DoConstruct>(last)}) {
+      return GetFinalLabel(std::get<Block>(doLoop->t));
+    } else {
+      return GetStatementLabel(x.back());
+    }
+  } else {
+    return std::nullopt;
+  }
+}
+
+std::optional<Label> GetFinalLabel(const OpenMPConstruct &x) {
+  return common::visit(
+      [](auto &&s) -> std::optional<Label> {
+        using TypeS = llvm::remove_cvref_t<decltype(s)>;
+        if constexpr (std::is_same_v<TypeS, OpenMPSectionsConstruct>) {
+          auto &list{std::get<std::list<OpenMPConstruct>>(s.t)};
+          if (!list.empty()) {
+            return GetFinalLabel(list.back());
+          } else {
+            return std::nullopt;
+          }
+        } else if constexpr ( //
+            std::is_same_v<TypeS, OpenMPLoopConstruct> ||
+            std::is_same_v<TypeS, OpenMPSectionConstruct> ||
+            std::is_base_of_v<OmpBlockConstruct, TypeS>) {
+          return GetFinalLabel(std::get<Block>(s.t));
+        } else {
+          return std::nullopt;
+        }
+      },
+      x.u);
+}
+
+std::optional<Label> GetFinalLabel(const OpenACCConstruct &x) {
+  return common::visit(
+      common::visitors{
+          [](const OpenACCBlockConstruct &x) -> std::optional<Label> {
+            return GetFinalLabel(std::get<Block>(x.t));
+          },
+          [](const OpenACCAtomicConstruct &x) -> std::optional<Label> {
+            return common::visit(
+                common::visitors{
+                    [](const auto &x) { // AtomicRead, AtomicWrite, AtomicUpdate
+                      return std::get<Statement<AssignmentStmt>>(x.t).label;
+                    },
+                    [](const AccAtomicCapture &x) {
+                      return std::get<AccAtomicCapture::Stmt2>(x.t).v.label;
+                    },
+                },
+                x.u);
+          },
+          [](const auto &) -> std::optional<Label> { return std::nullopt; },
+      },
+      x.u);
 }
 
 } // namespace Fortran::parser

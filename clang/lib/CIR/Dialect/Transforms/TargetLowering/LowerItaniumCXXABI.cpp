@@ -106,6 +106,18 @@ public:
 
   mlir::Value lowerDynamicCast(cir::DynamicCastOp op,
                                mlir::OpBuilder &builder) const override;
+  mlir::Value lowerVTableGetTypeInfo(cir::VTableGetTypeInfoOp op,
+                                     mlir::OpBuilder &builder) const override;
+
+  clang::CharUnits
+  getArrayCookieSizeImpl(mlir::Type elementType,
+                         const mlir::DataLayout &dataLayout) const override;
+
+  mlir::Value readArrayCookieImpl(mlir::Location loc, mlir::Value allocPtr,
+                                  clang::CharUnits cookieSize,
+                                  clang::CharUnits cookieAlignment,
+                                  const mlir::DataLayout &dataLayout,
+                                  CIRBaseBuilderTy &builder) const override;
 };
 
 } // namespace
@@ -329,8 +341,8 @@ void LowerItaniumCXXABI::lowerGetMethod(
   // points to a virtual function.
   mlir::Value methodPtrField =
       cir::ExtractMemberOp::create(locBuilder, ptrdiffCIRTy, loweredMethod, 0);
-  mlir::Value virtualBit = cir::BinOp::create(
-      rewriter, op.getLoc(), cir::BinOpKind::And, methodPtrField, ptrdiffOne);
+  mlir::Value virtualBit =
+      cir::AndOp::create(rewriter, op.getLoc(), methodPtrField, ptrdiffOne);
   mlir::Value isVirtual;
   if (useARMMethodPtrABI)
     llvm_unreachable("ARM method ptr abi NYI");
@@ -362,8 +374,8 @@ void LowerItaniumCXXABI::lowerGetMethod(
     // Get the vtable offset.
     mlir::Value vtableOffset = methodPtrField;
     assert(!useARMMethodPtrABI && "ARM method ptr abi NYI");
-    vtableOffset = cir::BinOp::create(b, loc, cir::BinOpKind::Sub, vtableOffset,
-                                      ptrdiffOne);
+    vtableOffset = cir::SubOp::create(b, loc, vtableOffset.getType(),
+                                      vtableOffset, ptrdiffOne);
 
     assert(!cir::MissingFeatures::emitCFICheck());
     assert(!cir::MissingFeatures::emitVFEInfo());
@@ -417,10 +429,16 @@ static mlir::Value lowerDataMemberCast(mlir::Operation *op,
                                    nullValue);
 
   cir::ConstantOp offsetValue = getConstantInt(offset);
-  auto binOpKind = isDerivedToBase ? cir::BinOpKind::Sub : cir::BinOpKind::Add;
-  cir::BinOp adjustedPtr =
-      cir::BinOp::create(builder, loc, ty, binOpKind, loweredSrc, offsetValue);
-  adjustedPtr.setNoSignedWrap(true);
+  mlir::Value adjustedPtr;
+  if (isDerivedToBase) {
+    auto subOp = cir::SubOp::create(builder, loc, ty, loweredSrc, offsetValue);
+    subOp.setNoSignedWrap(true);
+    adjustedPtr = subOp;
+  } else {
+    auto addOp = cir::AddOp::create(builder, loc, ty, loweredSrc, offsetValue);
+    addOp.setNoSignedWrap(true);
+    adjustedPtr = addOp;
+  }
 
   return cir::SelectOp::create(builder, loc, ty, isNull, loweredSrc,
                                adjustedPtr);
@@ -455,10 +473,18 @@ static mlir::Value lowerMethodCast(mlir::Operation *op, mlir::Value loweredSrc,
 
   auto offsetValue = cir::ConstantOp::create(
       builder, op->getLoc(), cir::IntAttr::get(ptrdiffCIRTy, offset));
-  auto binOpKind = isDerivedToBase ? cir::BinOpKind::Sub : cir::BinOpKind::Add;
-  auto adjustedAdjField = cir::BinOp::create(
-      builder, op->getLoc(), ptrdiffCIRTy, binOpKind, adjField, offsetValue);
-  adjustedAdjField.setNoSignedWrap(true);
+  mlir::Value adjustedAdjField;
+  if (isDerivedToBase) {
+    auto subOp = cir::SubOp::create(builder, op->getLoc(), ptrdiffCIRTy,
+                                    adjField, offsetValue);
+    subOp.setNoSignedWrap(true);
+    adjustedAdjField = subOp;
+  } else {
+    auto addOp = cir::AddOp::create(builder, op->getLoc(), ptrdiffCIRTy,
+                                    adjField, offsetValue);
+    addOp.setNoSignedWrap(true);
+    adjustedAdjField = addOp;
+  }
 
   return cir::InsertMemberOp::create(builder, op->getLoc(), loweredSrc, 1,
                                      adjustedAdjField);
@@ -517,10 +543,10 @@ mlir::Value LowerItaniumCXXABI::lowerMethodCmp(cir::CmpOp op,
       cir::CmpOp::create(locBuilder, op.getKind(), lhsAdjField, rhsAdjField);
 
   auto create_and = [&](mlir::Value lhs, mlir::Value rhs) {
-    return cir::BinOp::create(locBuilder, cir::BinOpKind::And, lhs, rhs);
+    return cir::AndOp::create(locBuilder, lhs.getType(), lhs, rhs);
   };
   auto create_or = [&](mlir::Value lhs, mlir::Value rhs) {
-    return cir::BinOp::create(locBuilder, cir::BinOpKind::Or, lhs, rhs);
+    return cir::OrOp::create(locBuilder, lhs.getType(), lhs, rhs);
   };
 
   mlir::Value result;
@@ -743,6 +769,65 @@ LowerItaniumCXXABI::lowerDynamicCast(cir::DynamicCastOp op,
                cir::YieldOp::create(builder, loc, null);
              })
       .getResult();
+}
+mlir::Value
+LowerItaniumCXXABI::lowerVTableGetTypeInfo(cir::VTableGetTypeInfoOp op,
+                                           mlir::OpBuilder &builder) const {
+  mlir::Location loc = op->getLoc();
+  auto offset = cir::ConstantOp::create(
+      builder, op->getLoc(), cir::IntAttr::get(getPtrDiffCIRTy(lm), -1));
+
+  // Cast the vptr to type_info-ptr, so that we can go backwards 1 pointer.
+  auto vptrCast = cir::CastOp::create(builder, loc, op.getType(),
+                                      cir::CastKind::bitcast, op.getVptr());
+
+  return cir::PtrStrideOp::create(builder, loc, vptrCast.getType(), vptrCast,
+                                  offset)
+      .getResult();
+}
+
+clang::CharUnits LowerItaniumCXXABI::getArrayCookieSizeImpl(
+    mlir::Type elementType, const mlir::DataLayout &dataLayout) const {
+  // The array cookie is a size_t; pad that up to the element alignment.
+  // The cookie is actually right-justified in that space.
+  clang::CharUnits sizeOfSizeT =
+      clang::CharUnits::fromQuantity(getPtrSizeInBits() / 8);
+  clang::CharUnits eltAlign = clang::CharUnits::fromQuantity(
+      dataLayout.getTypePreferredAlignment(elementType));
+  return std::max(sizeOfSizeT, eltAlign);
+}
+
+mlir::Value LowerItaniumCXXABI::readArrayCookieImpl(
+    mlir::Location loc, mlir::Value allocPtr, clang::CharUnits cookieSize,
+    clang::CharUnits cookieAlignment, const mlir::DataLayout &dataLayout,
+    CIRBaseBuilderTy &builder) const {
+  unsigned ptrSizeInBits = getPtrSizeInBits();
+  auto u8PtrTy = builder.getPointerTo(builder.getUIntNTy(8));
+  auto ptrDiffTy = builder.getSIntNTy(ptrSizeInBits);
+  auto sizeTy = builder.getUIntNTy(ptrSizeInBits);
+
+  // The element count is right-justified in the cookie.
+  clang::CharUnits sizeOfSizeT =
+      clang::CharUnits::fromQuantity(ptrSizeInBits / 8);
+  clang::CharUnits countOffset = cookieSize - sizeOfSizeT;
+
+  mlir::Value countBytePtr = allocPtr;
+  clang::CharUnits countAlignment = cookieAlignment;
+  if (!countOffset.isZero()) {
+    mlir::Value offsetVal = cir::ConstantOp::create(
+        builder, loc, cir::IntAttr::get(ptrDiffTy, countOffset.getQuantity()));
+    countBytePtr =
+        cir::PtrStrideOp::create(builder, loc, u8PtrTy, allocPtr, offsetVal);
+    countAlignment = cookieAlignment.alignmentAtOffset(countOffset);
+  }
+
+  auto countPtrTy = cir::PointerType::get(sizeTy);
+  mlir::Value countPtr = cir::CastOp::create(
+      builder, loc, countPtrTy, cir::CastKind::bitcast, countBytePtr);
+  return cir::LoadOp::create(
+      builder, loc, countPtr, /*isDeref=*/false, /*isVolatile=*/false,
+      builder.getI64IntegerAttr(countAlignment.getQuantity()),
+      cir::SyncScopeKindAttr(), cir::MemOrderAttr());
 }
 
 } // namespace cir

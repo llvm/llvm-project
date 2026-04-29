@@ -292,16 +292,16 @@ public:
                                    bool Invert) const override;
   std::optional<unsigned> getInverseOpcode(unsigned Opcode) const override;
 
+  MachineInstr *foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
+                                      ArrayRef<unsigned> Ops, int FrameIndex,
+                                      MachineInstr *&CopyMI,
+                                      LiveIntervals *LIS = nullptr,
+                                      VirtRegMap *VRM = nullptr) const override;
   MachineInstr *
   foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
-                        ArrayRef<unsigned> Ops,
-                        MachineBasicBlock::iterator InsertPt, int FrameIndex,
-                        LiveIntervals *LIS = nullptr,
-                        VirtRegMap *VRM = nullptr) const override;
-  MachineInstr *foldMemoryOperandImpl(
-      MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
-      MachineBasicBlock::iterator InsertPt, MachineInstr &LoadMI,
-      LiveIntervals *LIS = nullptr) const override;
+                        ArrayRef<unsigned> Ops, MachineInstr &LoadMI,
+                        MachineInstr *&CopyMI,
+                        LiveIntervals *LIS = nullptr) const override;
   bool expandPostRAPseudo(MachineInstr &MBBI) const override;
   bool reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const
     override;
@@ -351,6 +351,17 @@ public:
   unsigned getFusedCompare(unsigned Opcode,
                            SystemZII::FusedCompareType Type,
                            const MachineInstr *MI = nullptr) const;
+
+  // Return true if this is a load and test which can be optimized the
+  // same way as compare instruction.
+  bool isLoadAndTestAsCmp(const MachineInstr &MI) const;
+
+  // Return true if Compare is a comparison against zero.
+  bool isCompareZero(const MachineInstr &Compare) const;
+
+  // Return the source register of Compare, which is the unknown value
+  // being tested.
+  Register getCompareSourceReg(const MachineInstr &Compare) const;
 
   // Try to find all CC users of the compare instruction (MBBI) and update
   // all of them to maintain equivalent behavior after swapping the compare

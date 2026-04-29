@@ -5,8 +5,8 @@
 ;  for (int i = N-1; i >= 0; --i)
 ;    a[i] = b[i] + 1.0;
 
-; RUN: opt -passes=loop-vectorize,dce,instcombine -mtriple aarch64-linux-gnu -S \
-; RUN:   -prefer-predicate-over-epilogue=scalar-epilogue < %s | FileCheck %s
+; RUN: opt -passes=loop-vectorize,instcombine -mtriple aarch64-linux-gnu -S \
+; RUN:   -tail-folding-policy=dont-fold-tail < %s | FileCheck %s
 
 define void @vector_reverse_f64(i64 %N, ptr noalias %a, ptr noalias %b) #0{
 ; CHECK-LABEL: @vector_reverse_f64(
@@ -29,18 +29,18 @@ define void @vector_reverse_f64(i64 %N, ptr noalias %a, ptr noalias %b) #0{
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP7:%.*]] = xor i64 [[INDEX]], -1
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[N]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds double, ptr [[B:%.*]], i64 [[TMP8]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [8 x i8], ptr [[B:%.*]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = sub i64 1, [[TMP5]]
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds double, ptr [[TMP9]], i64 [[TMP12]]
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP9]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = sub i64 [[TMP12]], [[TMP5]]
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds double, ptr [[TMP9]], i64 [[TMP22]]
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP9]], i64 [[TMP22]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x double>, ptr [[TMP14]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 8 x double>, ptr [[TMP15]], align 8
 ; CHECK-NEXT:    [[TMP16:%.*]] = fadd <vscale x 8 x double> [[WIDE_LOAD]], splat (double 1.000000e+00)
 ; CHECK-NEXT:    [[TMP17:%.*]] = fadd <vscale x 8 x double> [[WIDE_LOAD1]], splat (double 1.000000e+00)
-; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds double, ptr [[A:%.*]], i64 [[TMP8]]
-; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds double, ptr [[TMP23]], i64 [[TMP12]]
-; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds double, ptr [[TMP23]], i64 [[TMP22]]
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [8 x i8], ptr [[A:%.*]], i64 [[TMP8]]
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP18]], i64 [[TMP12]]
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP18]], i64 [[TMP22]]
 ; CHECK-NEXT:    store <vscale x 8 x double> [[TMP16]], ptr [[TMP20]], align 8
 ; CHECK-NEXT:    store <vscale x 8 x double> [[TMP17]], ptr [[TMP24]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP6]]
@@ -55,10 +55,10 @@ entry:
   %cmp7 = icmp sgt i64 %N, 0
   br i1 %cmp7, label %for.body, label %for.cond.cleanup
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.08.in = phi i64 [ %i.08, %for.body ], [ %N, %entry ]
   %i.08 = add nsw i64 %i.08.in, -1
   %arrayidx = getelementptr inbounds double, ptr %b, i64 %i.08
@@ -100,18 +100,18 @@ define void @vector_reverse_i64(i64 %N, ptr %a, ptr %b) #0 {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP10:%.*]] = xor i64 [[INDEX]], -1
 ; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[N]], [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP11]]
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [8 x i8], ptr [[B]], i64 [[TMP11]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = sub i64 1, [[TMP8]]
-; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i64, ptr [[TMP12]], i64 [[TMP15]]
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP12]], i64 [[TMP15]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = sub i64 [[TMP15]], [[TMP8]]
-; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i64, ptr [[TMP12]], i64 [[TMP25]]
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP12]], i64 [[TMP25]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i64>, ptr [[TMP17]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <vscale x 8 x i64>, ptr [[TMP18]], align 8
 ; CHECK-NEXT:    [[TMP19:%.*]] = add <vscale x 8 x i64> [[WIDE_LOAD]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP20:%.*]] = add <vscale x 8 x i64> [[WIDE_LOAD3]], splat (i64 1)
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP11]]
-; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i64, ptr [[TMP26]], i64 [[TMP15]]
-; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i64, ptr [[TMP26]], i64 [[TMP25]]
+; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [8 x i8], ptr [[A]], i64 [[TMP11]]
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP21]], i64 [[TMP15]]
+; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP21]], i64 [[TMP25]]
 ; CHECK-NEXT:    store <vscale x 8 x i64> [[TMP19]], ptr [[TMP23]], align 8
 ; CHECK-NEXT:    store <vscale x 8 x i64> [[TMP20]], ptr [[TMP27]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP9]]
@@ -126,10 +126,10 @@ entry:
   %cmp8 = icmp sgt i64 %N, 0
   br i1 %cmp8, label %for.body, label %for.cond.cleanup
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.09.in = phi i64 [ %i.09, %for.body ], [ %N, %entry ]
   %i.09 = add nsw i64 %i.09.in, -1
   %arrayidx = getelementptr inbounds i64, ptr %b, i64 %i.09

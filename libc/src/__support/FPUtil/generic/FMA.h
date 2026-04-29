@@ -198,8 +198,13 @@ fma(InType x, InType y, InType z) {
 
   if (LIBC_UNLIKELY(x_exp == InFPBits::MAX_BIASED_EXPONENT ||
                     y_exp == InFPBits::MAX_BIASED_EXPONENT ||
-                    z_exp == InFPBits::MAX_BIASED_EXPONENT))
+                    z_exp == InFPBits::MAX_BIASED_EXPONENT)) {
+    if (LIBC_UNLIKELY(x_exp != InFPBits::MAX_BIASED_EXPONENT &&
+                      y_exp != InFPBits::MAX_BIASED_EXPONENT &&
+                      z_bits.is_inf()))
+      return cast<OutType>(z);
     return cast<OutType>(x * y + z);
+  }
 
   // Extract mantissa and append hidden leading bits.
   InStorageType x_mant = x_bits.get_explicit_mantissa();
@@ -270,7 +275,7 @@ fma(InType x, InType y, InType z) {
   if (prod_mant == 0) {
     // When there is exact cancellation, i.e., x*y == -z exactly, return -0.0 if
     // rounding downward and +0.0 for other rounding modes.
-    if (quick_get_round() == FE_DOWNWARD)
+    if (fputil::quick_get_round() == FE_DOWNWARD)
       prod_sign = Sign::NEG;
     else
       prod_sign = Sign::POS;

@@ -1,3 +1,7 @@
+module BoundsUnsafe {
+  header "BoundsUnsafe.h"
+}
+
 module ExternCtx {
   header "ExternCtx.h"
 }
@@ -60,4 +64,9 @@ module SwiftImportAs {
 
 module SwiftReturnOwnershipForObjC {
   header "SwiftReturnOwnershipForObjC.h"
+}
+
+module UnsafeBufferUsage {
+  header "UnsafeBufferUsage.h"
+  export *
 }

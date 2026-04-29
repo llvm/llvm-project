@@ -69,8 +69,13 @@ FunctionPass *createX86FPStackifierLegacyPass();
 
 /// This pass inserts AVX vzeroupper instructions before each call to avoid
 /// transition penalty between functions encoded with AVX and SSE.
-FunctionPass *createX86IssueVZeroUpperPass();
+class X86InsertVZeroUpperPass : public PassInfoMixin<X86InsertVZeroUpperPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
 
+FunctionPass *createX86InsertVZeroUpperLegacyPass();
 /// This pass inserts ENDBR instructions before indirect jump/call
 /// destinations as part of CET IBT mechanism.
 class X86IndirectBranchTrackingPass
@@ -391,7 +396,14 @@ InstructionSelector *createX86InstructionSelector(const X86TargetMachine &TM,
                                                   const X86Subtarget &,
                                                   const X86RegisterBankInfo &);
 
-FunctionPass *createX86PostLegalizerCombiner();
+class X86PostLegalizerCombinerPass
+    : public PassInfoMixin<X86PostLegalizerCombinerPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86PostLegalizerCombinerLegacy();
 FunctionPass *createX86PreLegalizerCombiner();
 
 class X86LoadValueInjectionLoadHardeningPass
@@ -478,7 +490,7 @@ void initializeX86SuppressAPXForRelocationLegacyPass(PassRegistry &);
 void initializeX86TileConfigLegacyPass(PassRegistry &);
 void initializeX86WinEHUnwindV2LegacyPass(PassRegistry &);
 void initializeX86PreLegalizerCombinerPass(PassRegistry &);
-void initializeX86PostLegalizerCombinerPass(PassRegistry &);
+void initializeX86PostLegalizerCombinerLegacyPass(PassRegistry &);
 
 namespace X86AS {
 enum : unsigned {

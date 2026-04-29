@@ -33,6 +33,8 @@ ENUM_CODEGENOPT(ProfileUse, llvm::driver::ProfileInstrKind, 2, llvm::driver::Pro
 CODEGENOPT(InstrumentFunctions, 1, 0) ///< Set when -finstrument_functions is
                                       ///< enabled on the compile step.
 
+CODEGENOPT(DisableIntegratedAS, 1, 0) ///< -no-integrated-as
+
 CODEGENOPT(IsPIE, 1, 0) ///< PIE level is the same as PIC Level.
 CODEGENOPT(PICLevel, 2, 0) ///< PIC level of the LLVM module.
 CODEGENOPT(PrepareForFatLTO , 1, 0) ///<  Set when -ffat-lto-objects is enabled.
@@ -42,6 +44,7 @@ CODEGENOPT(PrepareForThinLTO , 1, 0) ///< Set when -flto=thin is enabled on the
                                      ///< compile step.
 CODEGENOPT(ProtectParens, 1, 1) ///< -fprotect-parens (enable parenthesis protection)
 CODEGENOPT(StackArrays, 1, 0) ///< -fstack-arrays (enable the stack-arrays pass)
+CODEGENOPT(EnableSafeTrampoline, 1, 0) ///< -fsafe-trampoline (W^X compliant trampoline pool)
 CODEGENOPT(VectorizeLoop, 1, 0) ///< Enable loop vectorization.
 CODEGENOPT(VectorizeSLP, 1, 0) ///< Enable SLP vectorization.
 CODEGENOPT(InterchangeLoops, 1, 0) ///< Enable loop interchange.
@@ -50,8 +53,10 @@ CODEGENOPT(LoopVersioning, 1, 0) ///< Enable loop versioning.
 CODEGENOPT(UnrollLoops, 1, 0) ///< Enable loop unrolling
 CODEGENOPT(AliasAnalysis, 1, 0) ///< Enable alias analysis pass
 CODEGENOPT(DwarfVersion, 3, 0) ///< Dwarf version
+CODEGENOPT(DebugInfoForProfiling, 1, 0)  ///< Emit extra debug info to make sample profile more accurate.
 
 CODEGENOPT(Underscoring, 1, 1)
+ENUM_CODEGENOPT(FPMaxminBehavior, Fortran::common::FPMaxminBehavior, 2, Fortran::common::FPMaxminBehavior::Legacy)
 ENUM_CODEGENOPT(RelocationModel, llvm::Reloc::Model, 3, llvm::Reloc::PIC_) ///< Name of the relocation model to use.
 ENUM_CODEGENOPT(DebugInfo,  llvm::codegenoptions::DebugInfoKind, 4,  llvm::codegenoptions::NoDebugInfo) ///< Level of debug info to generate
 ENUM_CODEGENOPT(VecLib, llvm::driver::VectorLibrary, 4, llvm::driver::VectorLibrary::NoLibrary) ///< Vector functions library to use

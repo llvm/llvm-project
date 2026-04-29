@@ -529,6 +529,11 @@ private:
   /// that we don't re-emit the initializer.
   llvm::DenseMap<const Decl*, unsigned> DelayedCXXInitPosition;
 
+  /// To remember which types did require a vector deleting destructor body.
+  /// This set basically contains classes that have virtual destructor and new[]
+  /// was emitted for the class.
+  llvm::SmallPtrSet<const CXXRecordDecl *, 16> RequireVectorDeletingDtor;
+
   typedef std::pair<OrderGlobalInitsOrStermFinalizers, llvm::Function *>
       GlobalInitData;
 
@@ -717,33 +722,37 @@ public:
   /// Return true iff an Objective-C runtime has been configured.
   bool hasObjCRuntime() { return !!ObjCRuntime; }
 
-  /// Check if a direct method should use precondition thunks (exposed symbols).
-  /// This applies to ALL direct methods (including variadic).
-  /// Returns false if OMD is null or not a direct method.
+  /// Check if the precondition thunk optimization is enabled.
+  /// This checks runtime support and codegen options, but does NOT check
+  /// whether a specific method is eligible for thunks or inline preconditions.
   ///
-  /// Also checks the runtime family, currently we only support NeXT.
-  /// TODO: Add support for GNUStep as well.
-  bool usePreconditionThunk(const ObjCMethodDecl *OMD) const {
-    return OMD && OMD->isDirectMethod() &&
-           getLangOpts().ObjCRuntime.allowsDirectDispatch() &&
+  /// TODO: Add support for GNUStep as well, currently only supports NeXT
+  /// family.
+  bool isObjCDirectPreconditionThunkEnabled() const {
+    return getLangOpts().ObjCRuntime.allowsDirectDispatch() &&
            getLangOpts().ObjCRuntime.isNeXTFamily() &&
            getCodeGenOpts().ObjCDirectPreconditionThunk;
   }
 
   /// Check if a direct method should use precondition thunks at call sites.
-  /// This applies only to non-variadic direct methods.
-  /// Returns false if OMD is null or not eligible for thunks (variadic
-  /// methods).
+  /// Returns false if OMD is null, not a direct method, or variadic.
+  ///
+  /// Variadic methods use inline preconditions instead of thunks to avoid
+  /// musttail complexity across different architectures.
   bool shouldHavePreconditionThunk(const ObjCMethodDecl *OMD) const {
-    return OMD && usePreconditionThunk(OMD) && !OMD->isVariadic();
+    return OMD && OMD->isDirectMethod() && !OMD->isVariadic() &&
+           isObjCDirectPreconditionThunkEnabled();
   }
 
   /// Check if a direct method should have inline precondition checks at call
-  /// sites. This applies to direct methods that cannot use thunks (variadic
-  /// methods). These methods get exposed symbols but need inline precondition
-  /// checks instead of thunks. Returns false if OMD is null or not eligible.
+  /// sites.
+  /// Returns false if OMD is null, not a direct method, or not variadic.
+  ///
+  /// Variadic direct methods use inline preconditions rather than thunks
+  /// to avoid musttail complexity across different architectures.
   bool shouldHavePreconditionInline(const ObjCMethodDecl *OMD) const {
-    return OMD && usePreconditionThunk(OMD) && OMD->isVariadic();
+    return OMD && OMD->isDirectMethod() && OMD->isVariadic() &&
+           isObjCDirectPreconditionThunkEnabled();
   }
 
   const std::string &getModuleNameHash() const { return ModuleNameHash; }
@@ -1578,6 +1587,13 @@ public:
   /// are emitted lazily.
   void EmitGlobal(GlobalDecl D);
 
+  /// Record that new[] was called for the class, transform vector deleting
+  /// destructor definition in a form of alias to the actual definition.
+  void requireVectorDestructorDefinition(const CXXRecordDecl *RD);
+
+  /// Check that class need vector deleting destructor body.
+  bool classNeedsVectorDestructor(const CXXRecordDecl *RD);
+
   bool TryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D);
   void EmitDefinitionAsAlias(GlobalDecl Alias, GlobalDecl Target);
 
@@ -1861,7 +1877,7 @@ public:
   // Helper to get the alignment for a variable.
   unsigned getVtableGlobalVarAlignment(const VarDecl *D = nullptr) {
     LangAS AS = GetGlobalVarAddressSpace(D);
-    unsigned PAlign = getItaniumVTableContext().isRelativeLayout()
+    unsigned PAlign = Context.getLangOpts().RelativeCXXABIVTables
                           ? 32
                           : getTarget().getPointerAlign(AS);
     return PAlign;

@@ -2268,7 +2268,7 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
       // Jump to label or value in register.
       if (RetOpcode == ARM::TCRETURNdi) {
         MachineFunction *MF = MBB.getParent();
-        bool NeedsWinCFI = MF->getTarget().getMCAsmInfo()->usesWindowsCFI() &&
+        bool NeedsWinCFI = MF->getTarget().getMCAsmInfo().usesWindowsCFI() &&
                            MF->getFunction().needsUnwindTableEntry();
         unsigned TCOpcode =
             STI->isThumb()
@@ -2532,7 +2532,7 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
       case ARM::t2MOVCClsr: NewOpc = ARM::t2LSRri; break;
       case ARM::t2MOVCCasr: NewOpc = ARM::t2ASRri; break;
       case ARM::t2MOVCCror: NewOpc = ARM::t2RORri; break;
-      default: llvm_unreachable("unexpeced conditional move");
+      default: llvm_unreachable("unexpected conditional move");
       }
       BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(NewOpc),
               MI.getOperand(1).getReg())

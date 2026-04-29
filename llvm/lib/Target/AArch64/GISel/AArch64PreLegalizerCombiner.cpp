@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AArch64.h"
 #include "AArch64GlobalISelUtils.h"
 #include "AArch64TargetMachine.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
@@ -22,12 +23,15 @@
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/CodeGen/LibcallLoweringInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Instructions.h"
+#include <memory>
 
 #define GET_GICOMBINER_DEPS
 #include "AArch64GenPreLegalizeGICombiner.inc"
@@ -38,11 +42,11 @@
 using namespace llvm;
 using namespace MIPatternMatch;
 
-namespace {
-
 #define GET_GICOMBINER_TYPES
 #include "AArch64GenPreLegalizeGICombiner.inc"
 #undef GET_GICOMBINER_TYPES
+
+namespace {
 
 /// Try to match a G_ICMP of a G_TRUNC with zero, in which the truncated bits
 /// are sign bits. In this case, we can transform the G_ICMP to directly compare
@@ -320,10 +324,10 @@ void applyExtAddvToDotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
   unsigned NumOfDotMI;
   if (SrcTy.getNumElements() % 16 == 0) {
     NumOfDotMI = SrcTy.getNumElements() / 16;
-    MidTy = LLT::fixed_vector(4, 32);
+    MidTy = LLT::fixed_vector(4, LLT::integer(32));
   } else if (SrcTy.getNumElements() % 8 == 0) {
     NumOfDotMI = SrcTy.getNumElements() / 8;
-    MidTy = LLT::fixed_vector(2, 32);
+    MidTy = LLT::fixed_vector(2, LLT::integer(32));
   } else {
     llvm_unreachable("Source type number of elements is not multiple of 8");
   }
@@ -343,7 +347,7 @@ void applyExtAddvToDotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
       SmallVector<Register> Leftover2;
 
       // Split the elements into v16i8 and v8i8
-      LLT MainTy = LLT::fixed_vector(16, 8);
+      LLT MainTy = LLT::fixed_vector(16, LLT::integer(8));
       LLT LeftoverTy1, LeftoverTy2;
       if ((!extractParts(Ext1SrcReg, MRI.getType(Ext1SrcReg), MainTy,
                          LeftoverTy1, Ext1UnmergeReg, Leftover1, Builder,
@@ -361,22 +365,22 @@ void applyExtAddvToDotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
 
       Ext1UnmergeReg.push_back(
           Builder
-              .buildMergeLikeInstr(LLT::fixed_vector(16, 8),
+              .buildMergeLikeInstr(LLT::fixed_vector(16, LLT::integer(8)),
                                    {Leftover1[0], v8Zeroes})
               .getReg(0));
       Ext2UnmergeReg.push_back(
           Builder
-              .buildMergeLikeInstr(LLT::fixed_vector(16, 8),
+              .buildMergeLikeInstr(LLT::fixed_vector(16, LLT::integer(8)),
                                    {Leftover2[0], v8Zeroes})
               .getReg(0));
 
     } else {
       // Unmerge the source vectors to v16i8
       unsigned SrcNumElts = SrcTy.getNumElements();
-      extractParts(Ext1SrcReg, LLT::fixed_vector(16, 8), SrcNumElts / 16,
-                   Ext1UnmergeReg, Builder, MRI);
-      extractParts(Ext2SrcReg, LLT::fixed_vector(16, 8), SrcNumElts / 16,
-                   Ext2UnmergeReg, Builder, MRI);
+      extractParts(Ext1SrcReg, LLT::fixed_vector(16, LLT::integer(8)),
+                   SrcNumElts / 16, Ext1UnmergeReg, Builder, MRI);
+      extractParts(Ext2SrcReg, LLT::fixed_vector(16, LLT::integer(8)),
+                   SrcNumElts / 16, Ext2UnmergeReg, Builder, MRI);
     }
 
     // Build the UDOT instructions
@@ -386,10 +390,10 @@ void applyExtAddvToDotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
       LLT ZeroesLLT;
       // Check if it is 16 or 8 elements. Set Zeroes to the according size
       if (MRI.getType(Ext1UnmergeReg[i]).getNumElements() == 16) {
-        ZeroesLLT = LLT::fixed_vector(4, 32);
+        ZeroesLLT = LLT::fixed_vector(4, LLT::integer(32));
         NumElements += 4;
       } else {
-        ZeroesLLT = LLT::fixed_vector(2, 32);
+        ZeroesLLT = LLT::fixed_vector(2, LLT::integer(32));
         NumElements += 2;
       }
       auto Zeroes = Builder.buildConstant(ZeroesLLT, 0)->getOperand(0).getReg();
@@ -401,8 +405,8 @@ void applyExtAddvToDotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
     }
 
     // Merge the output
-    auto ConcatMI =
-        Builder.buildConcatVectors(LLT::fixed_vector(NumElements, 32), DotReg);
+    auto ConcatMI = Builder.buildConcatVectors(
+        LLT::fixed_vector(NumElements, LLT::integer(32)), DotReg);
 
     // Put it through a vector reduction
     Builder.buildVecReduceAdd(MI.getOperand(0).getReg(),
@@ -462,7 +466,7 @@ void applyExtUaddvToUaddlv(MachineInstr &MI, MachineRegisterInfo &MRI,
   LLT DstTy = MRI.getType(DstReg);
 
   // If SrcTy has more elements than expected, split them into multiple
-  // insructions and sum the results
+  // instructions and sum the results
   LLT MainTy;
   SmallVector<Register, 1> WorkingRegisters;
   unsigned SrcScalSize = SrcTy.getScalarSizeInBits();
@@ -474,11 +478,11 @@ void applyExtUaddvToUaddlv(MachineInstr &MI, MachineRegisterInfo &MRI,
     LLT LeftoverTy;
     SmallVector<Register, 4> LeftoverRegs;
     if (SrcScalSize == 8)
-      MainTy = LLT::fixed_vector(16, 8);
+      MainTy = LLT::fixed_vector(16, LLT::integer(8));
     else if (SrcScalSize == 16)
-      MainTy = LLT::fixed_vector(8, 16);
+      MainTy = LLT::fixed_vector(8, LLT::integer(16));
     else if (SrcScalSize == 32)
-      MainTy = LLT::fixed_vector(4, 32);
+      MainTy = LLT::fixed_vector(4, LLT::integer(32));
     else
       llvm_unreachable("Source's Scalar Size not supported");
 
@@ -493,8 +497,8 @@ void applyExtUaddvToUaddlv(MachineInstr &MI, MachineRegisterInfo &MRI,
   }
 
   unsigned MidScalarSize = MainTy.getScalarSizeInBits() * 2;
-  LLT MidScalarLLT = LLT::scalar(MidScalarSize);
-  Register ZeroReg = B.buildConstant(LLT::scalar(64), 0).getReg(0);
+  LLT MidScalarLLT = LLT::integer(MidScalarSize);
+  Register ZeroReg = B.buildConstant(LLT::integer(64), 0).getReg(0);
   for (unsigned I = 0; I < WorkingRegisters.size(); I++) {
     // If the number of elements is too small to build an instruction, extend
     // its size before applying addlv
@@ -504,14 +508,15 @@ void applyExtUaddvToUaddlv(MachineInstr &MI, MachineRegisterInfo &MRI,
       WorkingRegisters[I] =
           B.buildInstr(std::get<1>(MatchInfo) ? TargetOpcode::G_SEXT
                                               : TargetOpcode::G_ZEXT,
-                       {LLT::fixed_vector(4, 16)}, {WorkingRegisters[I]})
+                       {LLT::fixed_vector(4, LLT::integer(16))},
+                       {WorkingRegisters[I]})
               .getReg(0);
     }
 
     // Generate the {U/S}ADDLV instruction, whose output is always double of the
     // Src's Scalar size
-    LLT AddlvTy = MidScalarSize <= 32 ? LLT::fixed_vector(4, 32)
-                                      : LLT::fixed_vector(2, 64);
+    LLT AddlvTy = MidScalarSize <= 32 ? LLT::fixed_vector(4, LLT::integer(32))
+                                      : LLT::fixed_vector(2, LLT::integer(64));
     Register AddlvReg =
         B.buildInstr(Opc, {AddlvTy}, {WorkingRegisters[I]}).getReg(0);
 
@@ -525,9 +530,10 @@ void applyExtUaddvToUaddlv(MachineInstr &MI, MachineRegisterInfo &MRI,
                                          {MidScalarLLT}, {AddlvReg, ZeroReg})
                                 .getReg(0);
     } else {
-      Register ExtractReg = B.buildInstr(AArch64::G_EXTRACT_VECTOR_ELT,
-                                         {LLT::scalar(32)}, {AddlvReg, ZeroReg})
-                                .getReg(0);
+      Register ExtractReg =
+          B.buildInstr(AArch64::G_EXTRACT_VECTOR_ELT, {LLT::integer(32)},
+                       {AddlvReg, ZeroReg})
+              .getReg(0);
       WorkingRegisters[I] =
           B.buildTrunc({MidScalarLLT}, {ExtractReg}).getReg(0);
     }
@@ -733,8 +739,8 @@ protected:
 
 public:
   AArch64PreLegalizerCombinerImpl(
-      MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
-      GISelValueTracking &VT, GISelCSEInfo *CSEInfo,
+      MachineFunction &MF, CombinerInfo &CInfo, GISelValueTracking &VT,
+      GISelCSEInfo *CSEInfo,
       const AArch64PreLegalizerCombinerImplRuleConfig &RuleConfig,
       const AArch64Subtarget &STI, const LibcallLoweringInfo &Libcalls,
       MachineDominatorTree *MDT, const LegalizerInfo *LI);
@@ -756,12 +762,12 @@ private:
 #undef GET_GICOMBINER_IMPL
 
 AArch64PreLegalizerCombinerImpl::AArch64PreLegalizerCombinerImpl(
-    MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
-    GISelValueTracking &VT, GISelCSEInfo *CSEInfo,
+    MachineFunction &MF, CombinerInfo &CInfo, GISelValueTracking &VT,
+    GISelCSEInfo *CSEInfo,
     const AArch64PreLegalizerCombinerImplRuleConfig &RuleConfig,
     const AArch64Subtarget &STI, const LibcallLoweringInfo &Libcalls,
     MachineDominatorTree *MDT, const LegalizerInfo *LI)
-    : Combiner(MF, CInfo, TPC, &VT, CSEInfo),
+    : Combiner(MF, CInfo, &VT, CSEInfo),
       Helper(Observer, B, /*IsPreLegalize*/ true, &VT, MDT, LI),
       RuleConfig(RuleConfig), STI(STI), Libcalls(Libcalls),
 #define GET_GICOMBINER_CONSTRUCTOR_INITS
@@ -801,14 +807,38 @@ bool AArch64PreLegalizerCombinerImpl::tryCombineAll(MachineInstr &MI) const {
   return false;
 }
 
+bool runCombiner(MachineFunction &MF, GISelCSEInfo *CSEInfo,
+                 GISelValueTracking *VT, MachineDominatorTree *MDT,
+                 const LibcallLoweringInfo &Libcalls,
+                 const AArch64PreLegalizerCombinerImplRuleConfig &RuleConfig,
+                 bool EnableOpt) {
+  const AArch64Subtarget &ST = MF.getSubtarget<AArch64Subtarget>();
+  const auto *LI = ST.getLegalizerInfo();
+
+  const Function &F = MF.getFunction();
+
+  CombinerInfo CInfo(/*AllowIllegalOps=*/true, /*ShouldLegalizeIllegal=*/false,
+                     /*LegalizerInfo=*/nullptr, EnableOpt, F.hasOptSize(),
+                     F.hasMinSize());
+  // Disable fixed-point iteration to reduce compile-time
+  CInfo.MaxIterations = 1;
+  CInfo.ObserverLvl = CombinerInfo::ObserverLevel::SinglePass;
+  // This is the first Combiner, so the input IR might contain dead
+  // instructions.
+  CInfo.EnableFullDCE = true;
+  AArch64PreLegalizerCombinerImpl Impl(MF, CInfo, *VT, CSEInfo, RuleConfig, ST,
+                                       Libcalls, MDT, LI);
+  return Impl.combineMachineInstrs();
+}
+
 // Pass boilerplate
 // ================
 
-class AArch64PreLegalizerCombiner : public MachineFunctionPass {
+class AArch64PreLegalizerCombinerLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  AArch64PreLegalizerCombiner();
+  AArch64PreLegalizerCombinerLegacy();
 
   StringRef getPassName() const override {
     return "AArch64PreLegalizerCombiner";
@@ -823,8 +853,8 @@ private:
 };
 } // end anonymous namespace
 
-void AArch64PreLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<TargetPassConfig>();
+void AArch64PreLegalizerCombinerLegacy::getAnalysisUsage(
+    AnalysisUsage &AU) const {
   AU.setPreservesCFG();
   getSelectionDAGFallbackAnalysisUsage(AU);
   AU.addRequired<GISelValueTrackingAnalysisLegacy>();
@@ -837,65 +867,95 @@ void AArch64PreLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-AArch64PreLegalizerCombiner::AArch64PreLegalizerCombiner()
+AArch64PreLegalizerCombinerLegacy::AArch64PreLegalizerCombinerLegacy()
     : MachineFunctionPass(ID) {
   if (!RuleConfig.parseCommandLineOption())
     report_fatal_error("Invalid rule identifier");
 }
 
-bool AArch64PreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
+bool AArch64PreLegalizerCombinerLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
   if (MF.getProperties().hasFailedISel())
     return false;
-  auto &TPC = getAnalysis<TargetPassConfig>();
-
   // Enable CSE.
   GISelCSEAnalysisWrapper &Wrapper =
       getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
-  auto *CSEInfo = &Wrapper.get(TPC.getCSEConfig());
+  auto *CSEInfo =
+      &Wrapper.get(getStandardCSEConfigForOpt(MF.getTarget().getOptLevel()));
 
   const AArch64Subtarget &ST = MF.getSubtarget<AArch64Subtarget>();
-  const auto *LI = ST.getLegalizerInfo();
-
-  const Function &F = MF.getFunction();
-
   const LibcallLoweringInfo &Libcalls =
       getAnalysis<LibcallLoweringInfoWrapper>().getLibcallLowering(
-          *F.getParent(), ST);
+          *MF.getFunction().getParent(), ST);
 
-  bool EnableOpt =
-      MF.getTarget().getOptLevel() != CodeGenOptLevel::None && !skipFunction(F);
   GISelValueTracking *VT =
       &getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
   MachineDominatorTree *MDT =
       &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  CombinerInfo CInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
-                     /*LegalizerInfo*/ nullptr, EnableOpt, F.hasOptSize(),
-                     F.hasMinSize());
-  // Disable fixed-point iteration to reduce compile-time
-  CInfo.MaxIterations = 1;
-  CInfo.ObserverLvl = CombinerInfo::ObserverLevel::SinglePass;
-  // This is the first Combiner, so the input IR might contain dead
-  // instructions.
-  CInfo.EnableFullDCE = true;
-  AArch64PreLegalizerCombinerImpl Impl(MF, CInfo, &TPC, *VT, CSEInfo,
-                                       RuleConfig, ST, Libcalls, MDT, LI);
-  return Impl.combineMachineInstrs();
+  bool EnableOpt = MF.getTarget().getOptLevel() != CodeGenOptLevel::None &&
+                   !skipFunction(MF.getFunction());
+  return runCombiner(MF, CSEInfo, VT, MDT, Libcalls, RuleConfig, EnableOpt);
 }
 
-char AArch64PreLegalizerCombiner::ID = 0;
-INITIALIZE_PASS_BEGIN(AArch64PreLegalizerCombiner, DEBUG_TYPE,
+char AArch64PreLegalizerCombinerLegacy::ID = 0;
+INITIALIZE_PASS_BEGIN(AArch64PreLegalizerCombinerLegacy, DEBUG_TYPE,
                       "Combine AArch64 machine instrs before legalization",
                       false, false)
-INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysisLegacy)
 INITIALIZE_PASS_DEPENDENCY(GISelCSEAnalysisWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LibcallLoweringInfoWrapper)
-INITIALIZE_PASS_END(AArch64PreLegalizerCombiner, DEBUG_TYPE,
+INITIALIZE_PASS_END(AArch64PreLegalizerCombinerLegacy, DEBUG_TYPE,
                     "Combine AArch64 machine instrs before legalization", false,
                     false)
 
+AArch64PreLegalizerCombinerPass::AArch64PreLegalizerCombinerPass()
+    : RuleConfig(
+          std::make_unique<AArch64PreLegalizerCombinerImplRuleConfig>()) {
+  if (!RuleConfig->parseCommandLineOption())
+    reportFatalUsageError("invalid rule identifier");
+}
+
+AArch64PreLegalizerCombinerPass::AArch64PreLegalizerCombinerPass(
+    AArch64PreLegalizerCombinerPass &&) = default;
+
+AArch64PreLegalizerCombinerPass::~AArch64PreLegalizerCombinerPass() = default;
+
+PreservedAnalyses
+AArch64PreLegalizerCombinerPass::run(MachineFunction &MF,
+                                     MachineFunctionAnalysisManager &MFAM) {
+  if (MF.getProperties().hasFailedISel())
+    return PreservedAnalyses::all();
+
+  auto *CSEInfo = MFAM.getResult<GISelCSEAnalysis>(MF).get();
+  GISelValueTracking &VT = MFAM.getResult<GISelValueTrackingAnalysis>(MF);
+  MachineDominatorTree &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+
+  const AArch64Subtarget &ST = MF.getSubtarget<AArch64Subtarget>();
+  auto &MAMProxy =
+      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF);
+  const LibcallLoweringModuleAnalysisResult *LibcallResult =
+      MAMProxy.getCachedResult<LibcallLoweringModuleAnalysis>(
+          *MF.getFunction().getParent());
+  if (!LibcallResult)
+    reportFatalUsageError("LibcallLoweringModuleAnalysis result not available");
+
+  const LibcallLoweringInfo &Libcalls = LibcallResult->getLibcallLowering(ST);
+
+  bool EnableOpt = MF.getTarget().getOptLevel() != CodeGenOptLevel::None;
+
+  if (!runCombiner(MF, CSEInfo, &VT, &MDT, Libcalls, *RuleConfig, EnableOpt))
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  PA.preserve<GISelValueTrackingAnalysis>();
+  PA.preserve<MachineDominatorTreeAnalysis>();
+  PA.preserve<GISelCSEAnalysis>();
+  return PA;
+}
+
 namespace llvm {
 FunctionPass *createAArch64PreLegalizerCombiner() {
-  return new AArch64PreLegalizerCombiner();
+  return new AArch64PreLegalizerCombinerLegacy();
 }
 } // end namespace llvm

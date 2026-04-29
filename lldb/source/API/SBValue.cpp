@@ -219,7 +219,7 @@ const char *SBValue::GetObjectDescription() {
     llvm::consumeError(str.takeError());
     return nullptr;
   }
-  return ConstString(*str).AsCString();
+  return ConstString(*str).AsCString(nullptr);
 }
 
 SBType SBValue::GetType() {
@@ -434,7 +434,7 @@ lldb::SBValue SBValue::CreateValueFromExpression(const char *name,
   lldb::ValueObjectSP new_value_sp;
   if (value_sp) {
     ExecutionContext exe_ctx(value_sp->GetExecutionContextRef());
-    new_value_sp = ValueObject::CreateValueObjectFromExpression(
+    new_value_sp = value_sp->CreateChildValueObjectFromExpression(
         name, expression, exe_ctx, options.ref());
     if (new_value_sp)
       new_value_sp->SetName(ConstString(name));
@@ -456,8 +456,8 @@ lldb::SBValue SBValue::CreateValueFromAddress(const char *name,
   if (value_sp && type_impl_sp) {
     CompilerType ast_type(type_impl_sp->GetCompilerType(true));
     ExecutionContext exe_ctx(value_sp->GetExecutionContextRef());
-    new_value_sp = ValueObject::CreateValueObjectFromAddress(name, address,
-                                                             exe_ctx, ast_type);
+    new_value_sp = value_sp->CreateChildValueObjectFromAddress(
+        name, address, exe_ctx, ast_type);
   }
   sb_value.SetSP(new_value_sp);
   return sb_value;
@@ -474,7 +474,7 @@ lldb::SBValue SBValue::CreateValueFromData(const char *name, SBData data,
   lldb::TypeImplSP type_impl_sp(sb_type.GetSP());
   if (value_sp && type_impl_sp) {
     ExecutionContext exe_ctx(value_sp->GetExecutionContextRef());
-    new_value_sp = ValueObject::CreateValueObjectFromData(
+    new_value_sp = value_sp->CreateChildValueObjectFromData(
         name, **data, exe_ctx, type_impl_sp->GetCompilerType(true));
     new_value_sp->SetAddressTypeOfChildren(eAddressTypeLoad);
   }
@@ -486,15 +486,32 @@ lldb::SBValue SBValue::CreateBoolValue(const char *name, bool value) {
   LLDB_INSTRUMENT_VA(this, name);
 
   lldb::SBValue sb_value;
-  lldb::ValueObjectSP new_value_sp;
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
-  lldb::TargetSP target_sp = m_opaque_sp->GetTargetSP();
-  if (value_sp && target_sp) {
-    new_value_sp =
-        ValueObject::CreateValueObjectFromBool(target_sp, value, name);
-  }
-  sb_value.SetSP(new_value_sp);
+
+  auto get_new_value = [&]() -> lldb::ValueObjectSP {
+    if (!value_sp)
+      return {};
+
+    lldb::TargetSP target_sp = value_sp->GetTargetSP();
+    if (!target_sp)
+      return {};
+
+    lldb::LanguageType language = lldb::eLanguageTypeC;
+    ExecutionContext exe_ctx(value_sp->GetExecutionContextRef());
+    if (StackFrame *frame = exe_ctx.GetFramePtr())
+      language = frame->GuessLanguage().AsLanguageType();
+    auto type_system_or_err =
+        target_sp->GetScratchTypeSystemForLanguage(language);
+    if (!type_system_or_err) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Types), type_system_or_err.takeError(),
+                     "cannot get a type system: {0}");
+      return {};
+    }
+    return value_sp->CreateChildValueObjectFromBool(
+        exe_ctx, *type_system_or_err, value, name);
+  };
+  sb_value.SetSP(get_new_value());
   return sb_value;
 }
 

@@ -1104,7 +1104,7 @@ protected:
         if (!func_regexp.empty()) {
           if (func_regexp[0] == '*' || func_regexp[0] == '?')
             result.AppendWarning(
-                "Function name regex does not accept glob patterns.");
+                "function name regex does not accept glob patterns");
         }
         return;
       }
@@ -1911,7 +1911,7 @@ protected:
           if (m_options.m_func_regexp[0] == '*' ||
               m_options.m_func_regexp[0] == '?')
             result.AppendWarning(
-                "Function name regex does not accept glob patterns.");
+                "function name regex does not accept glob patterns");
         }
         return;
       }
@@ -2073,7 +2073,7 @@ protected:
     BreakpointIDList valid_bp_ids;
 
     CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-        command, target, result, &valid_bp_ids,
+        command, m_exe_ctx, result, &valid_bp_ids,
         BreakpointName::Permissions::PermissionKinds::disablePerm);
 
     if (result.Succeeded()) {
@@ -2146,15 +2146,14 @@ protected:
     if (command.empty()) {
       // No breakpoint selected; enable all currently set breakpoints.
       target.EnableAllowedBreakpoints();
-      result.AppendMessageWithFormat("All breakpoints enabled. (%" PRIu64
-                                     " breakpoints)\n",
-                                     (uint64_t)num_breakpoints);
+      result.AppendMessageWithFormatv(
+          "All breakpoints enabled. ({0} breakpoints)", num_breakpoints);
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
     } else {
       // Particular breakpoint selected; enable that breakpoint.
       BreakpointIDList valid_bp_ids;
       CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-          command, target, result, &valid_bp_ids,
+          command, m_exe_ctx, result, &valid_bp_ids,
           BreakpointName::Permissions::PermissionKinds::disablePerm);
 
       if (result.Succeeded()) {
@@ -2183,8 +2182,8 @@ protected:
             }
           }
         }
-        result.AppendMessageWithFormat("%d breakpoints enabled.\n",
-                                       enable_count + loc_count);
+        result.AppendMessageWithFormatv("{0} breakpoints enabled.",
+                                        enable_count + loc_count);
         result.SetStatus(eReturnStatusSuccessFinishNoResult);
       }
     }
@@ -2254,16 +2253,15 @@ protected:
     if (command.empty()) {
       // No breakpoint selected; disable all currently set breakpoints.
       target.DisableAllowedBreakpoints();
-      result.AppendMessageWithFormat("All breakpoints disabled. (%" PRIu64
-                                     " breakpoints)\n",
-                                     (uint64_t)num_breakpoints);
+      result.AppendMessageWithFormatv(
+          "All breakpoints disabled. ({0} breakpoints)\n", num_breakpoints);
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
     } else {
       // Particular breakpoint selected; disable that breakpoint.
       BreakpointIDList valid_bp_ids;
 
       CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-          command, target, result, &valid_bp_ids,
+          command, m_exe_ctx, result, &valid_bp_ids,
           BreakpointName::Permissions::PermissionKinds::disablePerm);
 
       if (result.Succeeded()) {
@@ -2292,8 +2290,8 @@ protected:
             }
           }
         }
-        result.AppendMessageWithFormat("%d breakpoints disabled.\n",
-                                       disable_count + loc_count);
+        result.AppendMessageWithFormatv("{0} breakpoints disabled.",
+                                        disable_count + loc_count);
         result.SetStatus(eReturnStatusSuccessFinishNoResult);
       }
     }
@@ -2408,7 +2406,7 @@ protected:
       // Particular breakpoints selected; show info about that breakpoint.
       BreakpointIDList valid_bp_ids;
       CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-          command, target, result, &valid_bp_ids,
+          command, m_exe_ctx, result, &valid_bp_ids,
           BreakpointName::Permissions::PermissionKinds::listPerm);
 
       if (result.Succeeded()) {
@@ -2669,9 +2667,9 @@ protected:
         result.AppendMessage("Operation cancelled...");
       } else {
         target.RemoveAllowedBreakpoints();
-        result.AppendMessageWithFormat(
-            "All breakpoints removed. (%" PRIu64 " breakpoint%s)\n",
-            (uint64_t)num_breakpoints, num_breakpoints > 1 ? "s" : "");
+        result.AppendMessageWithFormatv(
+            "All breakpoints removed. ({0} breakpoint{1})", num_breakpoints,
+            num_breakpoints > 1 ? "s" : "");
       }
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
       return;
@@ -2687,7 +2685,7 @@ protected:
 
       if (!command.empty()) {
         CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-            command, target, result, &excluded_bp_ids,
+            command, m_exe_ctx, result, &excluded_bp_ids,
             BreakpointName::Permissions::PermissionKinds::deletePerm);
         if (!result.Succeeded())
           return;
@@ -2706,7 +2704,7 @@ protected:
       }
     } else {
       CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-          command, target, result, &valid_bp_ids,
+          command, m_exe_ctx, result, &valid_bp_ids,
           BreakpointName::Permissions::PermissionKinds::deletePerm);
       if (!result.Succeeded())
         return;
@@ -2739,8 +2737,8 @@ protected:
         }
       }
     }
-    result.AppendMessageWithFormat(
-        "%d breakpoints deleted; %d breakpoint locations disabled.\n",
+    result.AppendMessageWithFormatv(
+        "{0} breakpoints deleted; {1} breakpoint locations disabled.",
         delete_count, disable_count);
     result.SetStatus(eReturnStatusSuccessFinishNoResult);
   }
@@ -3017,7 +3015,7 @@ protected:
     // Particular breakpoint selected; disable that breakpoint.
     BreakpointIDList valid_bp_ids;
     CommandObjectMultiwordBreakpoint::VerifyBreakpointIDs(
-        command, target, result, &valid_bp_ids,
+        command, m_exe_ctx, result, &valid_bp_ids,
         BreakpointName::Permissions::PermissionKinds::listPerm);
 
     if (result.Succeeded()) {
@@ -3091,7 +3089,7 @@ protected:
     // Particular breakpoint selected; disable that breakpoint.
     BreakpointIDList valid_bp_ids;
     CommandObjectMultiwordBreakpoint::VerifyBreakpointIDs(
-        command, target, result, &valid_bp_ids,
+        command, m_exe_ctx, result, &valid_bp_ids,
         BreakpointName::Permissions::PermissionKinds::deletePerm);
 
     if (result.Succeeded()) {
@@ -3156,7 +3154,7 @@ protected:
             target.FindBreakpointName(ConstString(name), false, error);
         if (bp_name) {
           StreamString s;
-          result.AppendMessageWithFormat("Name: %s\n", name);
+          result.AppendMessageWithFormatv("Name: {0}", name);
           if (bp_name->GetDescription(&s, eDescriptionLevelFull)) {
             result.AppendMessage(s.GetString());
           }
@@ -3178,7 +3176,7 @@ protected:
           if (!any_set)
             result.AppendMessage("No breakpoints using this name.");
         } else {
-          result.AppendMessageWithFormat("Name: %s not found.\n", name);
+          result.AppendMessageWithFormatv("Name: {0} not found.", name);
         }
       }
     }
@@ -3564,7 +3562,7 @@ protected:
     BreakpointIDList valid_bp_ids;
     if (!command.empty()) {
       CommandObjectMultiwordBreakpoint::VerifyBreakpointIDs(
-          command, target, result, &valid_bp_ids,
+          command, m_exe_ctx, result, &valid_bp_ids,
           BreakpointName::Permissions::PermissionKinds::listPerm);
 
       if (!result.Succeeded()) {
@@ -3577,7 +3575,7 @@ protected:
     Status error = target.SerializeBreakpointsToFile(file_spec, valid_bp_ids,
                                                      m_options.m_append);
     if (!error.Success()) {
-      result.AppendErrorWithFormat("error serializing breakpoints: %s.",
+      result.AppendErrorWithFormat("error serializing breakpoints: %s",
                                    error.AsCString());
     }
   }
@@ -3650,7 +3648,7 @@ CommandObjectMultiwordBreakpoint::CommandObjectMultiwordBreakpoint(
 CommandObjectMultiwordBreakpoint::~CommandObjectMultiwordBreakpoint() = default;
 
 void CommandObjectMultiwordBreakpoint::VerifyIDs(
-    Args &args, Target &target, bool allow_locations,
+    Args &args, ExecutionContext &exe_ctx, bool allow_locations,
     CommandReturnObject &result, BreakpointIDList *valid_ids,
     BreakpointName::Permissions ::PermissionKinds purpose) {
   // args can be strings representing 1). integers (for breakpoint ids)
@@ -3664,6 +3662,7 @@ void CommandObjectMultiwordBreakpoint::VerifyIDs(
   // If args is empty, we will use the last created breakpoint (if there is
   // one.)
 
+  Target &target = exe_ctx.GetTargetRef();
   Args temp_args;
 
   if (args.empty()) {
@@ -3685,7 +3684,7 @@ void CommandObjectMultiwordBreakpoint::VerifyIDs(
   // into TEMP_ARGS.
 
   if (llvm::Error err = BreakpointIDList::FindAndReplaceIDRanges(
-          args, &target, allow_locations, purpose, temp_args)) {
+          args, exe_ctx, allow_locations, purpose, temp_args)) {
     result.SetError(std::move(err));
     return;
   }
@@ -3719,13 +3718,13 @@ void CommandObjectMultiwordBreakpoint::VerifyIDs(
             &id_str, cur_bp_id.GetBreakpointID(), cur_bp_id.GetLocationID());
         i = valid_ids->GetSize() + 1;
         result.AppendErrorWithFormat(
-            "'%s' is not a currently valid breakpoint/location id.\n",
+            "'%s' is not a currently valid breakpoint/location id",
             id_str.GetData());
       }
     } else {
       i = valid_ids->GetSize() + 1;
       result.AppendErrorWithFormat(
-          "'%d' is not a currently valid breakpoint ID.\n",
+          "'%d' is not a currently valid breakpoint ID",
           cur_bp_id.GetBreakpointID());
     }
   }

@@ -659,6 +659,11 @@ ExprResult CheckVarType(SemaOpenACC &S, OpenACCClauseKind CK, Expr *VarExpr,
     return CheckVarType(S, CK, VarExpr, InnerLoc, ArrTy->getElementType());
   }
 
+  if (S.SemaRef.RequireCompleteType(InnerLoc, InnerTy,
+                                    Sema::CompleteTypeKind::Normal,
+                                    diag::err_incomplete_type))
+    return ExprError();
+
   auto *RD = InnerTy->getAsCXXRecordDecl();
 
   // if this isn't a C++ record decl, we can create/copy/destroy this thing at
@@ -991,11 +996,13 @@ ExprResult SemaOpenACC::ActOnArraySectionExpr(Expr *Base, SourceLocation LBLoc,
     }
   }
 
-  // Adding two APSInts requires matching sign, so extract that here.
+  // Adding two APSInts requires matching sign and width, so extract those here.
   auto AddAPSInt = [](llvm::APSInt LHS, llvm::APSInt RHS) -> llvm::APSInt {
-    if (LHS.isSigned() == RHS.isSigned())
+    if (LHS.isSigned() == RHS.isSigned() &&
+        LHS.getBitWidth() == RHS.getBitWidth())
       return LHS + RHS;
 
+    // Width is + 1 so that unsigned->signed conversion just works.
     unsigned Width = std::max(LHS.getBitWidth(), RHS.getBitWidth()) + 1;
     return llvm::APSInt(LHS.sext(Width) + RHS.sext(Width), /*Signed=*/true);
   };
@@ -1231,7 +1238,7 @@ const ValueDecl *getDeclFromExpr(const Expr *E) {
   if (!E)
     return nullptr;
   if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
-    return dyn_cast<ValueDecl>(DRE->getDecl());
+    return DRE->getDecl();
 
   if (const auto *ME = dyn_cast<MemberExpr>(E))
     if (isa<CXXThisExpr>(ME->getBase()->IgnoreParenImpCasts()))
@@ -2416,35 +2423,38 @@ void SemaOpenACC::CheckRoutineDecl(SourceLocation DirLoc,
   }
 
   auto BindItr = llvm::find_if(Clauses, llvm::IsaPred<OpenACCBindClause>);
-  for (auto *A : NextParsedFDecl->attrs()) {
-    // OpenACC 3.3 2.15:
-    // If a procedure has a bind clause on both the declaration and definition
-    // than they both must bind to the same name.
-    if (auto *RA = dyn_cast<OpenACCRoutineDeclAttr>(A)) {
-      auto OtherBindItr =
-          llvm::find_if(RA->Clauses, llvm::IsaPred<OpenACCBindClause>);
-      if (OtherBindItr != RA->Clauses.end() &&
-          (*cast<OpenACCBindClause>(*BindItr)) !=
-              (*cast<OpenACCBindClause>(*OtherBindItr))) {
-        Diag((*BindItr)->getBeginLoc(), diag::err_acc_duplicate_unnamed_bind);
-        Diag((*OtherBindItr)->getEndLoc(), diag::note_acc_previous_clause_here)
-            << (*BindItr)->getClauseKind();
+  if (BindItr != Clauses.end()) {
+    for (auto *A : NextParsedFDecl->attrs()) {
+      // OpenACC 3.3 2.15:
+      // If a procedure has a bind clause on both the declaration and definition
+      // than they both must bind to the same name.
+      if (auto *RA = dyn_cast<OpenACCRoutineDeclAttr>(A)) {
+        auto OtherBindItr =
+            llvm::find_if(RA->Clauses, llvm::IsaPred<OpenACCBindClause>);
+        if (OtherBindItr != RA->Clauses.end() &&
+            (*cast<OpenACCBindClause>(*BindItr)) !=
+                (*cast<OpenACCBindClause>(*OtherBindItr))) {
+          Diag((*BindItr)->getBeginLoc(), diag::err_acc_duplicate_unnamed_bind);
+          Diag((*OtherBindItr)->getEndLoc(),
+               diag::note_acc_previous_clause_here)
+              << (*BindItr)->getClauseKind();
+          return;
+        }
+      }
+
+      // OpenACC 3.3 2.15:
+      // A bind clause may not bind to a routine name that has a visible bind
+      // clause.
+      // We take the combo of these two 2.15 restrictions to mean that the
+      // 'declaration'/'definition' quote is an exception to this. So we're
+      // going to disallow mixing of the two types entirely.
+      if (auto *RA = dyn_cast<OpenACCRoutineAnnotAttr>(A);
+          RA && RA->getRange().getEnd().isValid()) {
+        Diag((*BindItr)->getBeginLoc(), diag::err_acc_duplicate_bind);
+        Diag(RA->getRange().getEnd(), diag::note_acc_previous_clause_here)
+            << "bind";
         return;
       }
-    }
-
-    // OpenACC 3.3 2.15:
-    // A bind clause may not bind to a routine name that has a visible bind
-    // clause.
-    // We take the combo of these two 2.15 restrictions to mean that the
-    // 'declaration'/'definition' quote is an exception to this. So we're going
-    // to disallow mixing of the two types entirely.
-    if (auto *RA = dyn_cast<OpenACCRoutineAnnotAttr>(A);
-        RA && RA->getRange().getEnd().isValid()) {
-      Diag((*BindItr)->getBeginLoc(), diag::err_acc_duplicate_bind);
-      Diag(RA->getRange().getEnd(), diag::note_acc_previous_clause_here)
-          << "bind";
-      return;
     }
   }
 

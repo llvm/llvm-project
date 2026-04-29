@@ -25,6 +25,7 @@
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 
@@ -39,15 +40,17 @@ class VPSlotTracker;
 class VPUser;
 class VPRecipeBase;
 class VPPhiAccessors;
+class VPRegionValue;
+class VPRegionBlock;
 
 /// This is the base class of the VPlan Def/Use graph, used for modeling the
 /// data flow into, within and out of the VPlan. VPValues can stand for live-ins
 /// coming from the input IR, symbolic values and values defined by recipes.
 class LLVM_ABI_FOR_TEST VPValue {
-  friend class VPlan;
   friend struct VPIRValue;
   friend struct VPSymbolicValue;
   friend class VPRecipeValue;
+  friend class VPRegionValue;
 
   const unsigned char SubclassID; ///< Subclass identifier (for isa/dyn_cast).
 
@@ -79,6 +82,8 @@ public:
     VPVIRValueSC,     /// A live-in VPValue wrapping an IR Value.
     VPVSymbolicSC,    /// A symbolic live-in VPValue without IR backing.
     VPVRecipeValueSC, /// A VPValue defined by a recipe.
+    VPRegionValueSC,  /// A VPValue sub-class that is defined by a region, like
+                      /// the canonical IV of a loop region.
   };
 
   VPValue(const VPValue &) = delete;
@@ -101,11 +106,24 @@ public:
   void dump() const;
 #endif
 
-  unsigned getNumUsers() const { return Users.size(); }
-  void addUser(VPUser &User) { Users.push_back(&User); }
+  /// Assert that this VPValue has not been materialized, if it is a
+  /// VPSymbolicValue.
+  void assertNotMaterialized() const;
+
+  unsigned getNumUsers() const {
+    if (Users.empty())
+      return 0;
+    assertNotMaterialized();
+    return Users.size();
+  }
+  void addUser(VPUser &User) {
+    assertNotMaterialized();
+    Users.push_back(&User);
+  }
 
   /// Remove a single \p User from the list of users.
   void removeUser(VPUser &User) {
+    assertNotMaterialized();
     // The same user can be added multiple times, e.g. because the same VPValue
     // is used twice by the same VPUser. Remove a single one.
     auto *I = find(Users, &User);
@@ -118,10 +136,22 @@ public:
   typedef iterator_range<user_iterator> user_range;
   typedef iterator_range<const_user_iterator> const_user_range;
 
-  user_iterator user_begin() { return Users.begin(); }
-  const_user_iterator user_begin() const { return Users.begin(); }
-  user_iterator user_end() { return Users.end(); }
-  const_user_iterator user_end() const { return Users.end(); }
+  user_iterator user_begin() {
+    assertNotMaterialized();
+    return Users.begin();
+  }
+  const_user_iterator user_begin() const {
+    assertNotMaterialized();
+    return Users.begin();
+  }
+  user_iterator user_end() {
+    assertNotMaterialized();
+    return Users.end();
+  }
+  const_user_iterator user_end() const {
+    assertNotMaterialized();
+    return Users.end();
+  }
   user_range users() { return user_range(user_begin(), user_end()); }
   const_user_range users() const {
     return const_user_range(user_begin(), user_end());
@@ -172,6 +202,33 @@ public:
   void setUnderlyingValue(Value *Val) {
     assert(!UnderlyingVal && "Underlying Value is already set.");
     UnderlyingVal = Val;
+  }
+};
+
+/// VPValues defined by a VPRegionBlock, like the canonical IV.
+class VPRegionValue : public VPValue {
+  VPRegionBlock *DefiningRegion;
+  Type *Ty;
+  DebugLoc DL;
+
+public:
+  VPRegionValue(Type *Ty, DebugLoc DL, VPRegionBlock *Region)
+      : VPValue(VPValue::VPRegionValueSC), DefiningRegion(Region), Ty(Ty),
+        DL(DL) {}
+
+  ~VPRegionValue() override = default;
+
+  /// Returns the region that defines this value.
+  VPRegionBlock *getDefiningRegion() const { return DefiningRegion; }
+
+  /// Returns the type of the VPRegionValue.
+  Type *getType() const { return Ty; }
+
+  /// Returns the debug location of the VPRegionValue.
+  DebugLoc getDebugLoc() const { return DL; }
+
+  static inline bool classof(const VPValue *V) {
+    return V->getVPValueID() == VPValue::VPRegionValueSC;
   }
 };
 
@@ -226,6 +283,20 @@ struct VPSymbolicValue : public VPValue {
   static bool classof(const VPValue *V) {
     return V->getVPValueID() == VPVSymbolicSC;
   }
+
+  /// Returns true if this symbolic value has been materialized.
+  bool isMaterialized() const { return Materialized; }
+
+  /// Mark this symbolic value as materialized.
+  void markMaterialized() {
+    assert(!Materialized && "VPSymbolicValue already materialized");
+    Materialized = true;
+  }
+
+private:
+  /// Track whether this symbolic value has been materialized (replaced).
+  /// After materialization, accessing users should trigger an assertion.
+  bool Materialized = false;
 };
 
 /// A VPValue defined by a recipe that produces one or more values.
@@ -426,6 +497,12 @@ public:
   /// Returns the number of values defined by the VPDef.
   unsigned getNumDefinedValues() const { return DefinedValues.size(); }
 };
+
+inline void VPValue::assertNotMaterialized() const {
+  assert((!isa<VPSymbolicValue>(this) ||
+          !cast<VPSymbolicValue>(this)->isMaterialized()) &&
+         "accessing materialized symbolic value");
+}
 
 } // namespace llvm
 

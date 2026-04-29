@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir -hlfir=false -o - %s | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -o - %s | FileCheck %s
 ! UNSUPPORTED: system-windows
 
    character*10 :: exx
@@ -161,7 +161,7 @@ end
 subroutine impliedformat
   ! CHECK: BeginExternalListInput
   ! CHECK: InputReal32
-  ! CHECK: EndIoStatement(%3) {{.*}}: (!fir.ref<i8>) -> i32
+  ! CHECK: EndIoStatement(
   read*, x
   ! CHECK: BeginExternalListOutput
   ! CHECK: OutputReal32

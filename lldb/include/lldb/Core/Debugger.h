@@ -76,6 +76,19 @@ struct TestingProperties : public Properties {
   TestingProperties();
   bool GetInjectVarLocListError() const;
   static TestingProperties &GetGlobalTestingProperties();
+
+  /// Overwrites the testing.safe-auto-load-paths settings.
+  void SetSafeAutoLoadPaths(FileSpecList paths);
+
+  /// Appends a path to the testing.safe-auto-load-paths setting.
+  void AppendSafeAutoLoadPaths(FileSpec path);
+
+private:
+  friend Target;
+
+  /// Callers should use Debugger::GetSafeAutoLoadPaths since it
+  /// accounts for default paths configured via CMake.
+  FileSpecList GetSafeAutoLoadPaths() const;
 };
 #endif
 
@@ -99,10 +112,6 @@ public:
   static lldb::DebuggerSP
   CreateInstance(lldb::LogOutputCallback log_callback = nullptr,
                  void *baton = nullptr);
-
-  static lldb::TargetSP FindTargetWithProcessID(lldb::pid_t pid);
-
-  static lldb::TargetSP FindTargetWithProcess(Process *process);
 
   static void Initialize(LoadPluginCallbackType load_plugin_callback);
 
@@ -192,13 +201,17 @@ public:
   }
 
   /// Get the execution context representing the selected entities in the
-  /// selected target.
-  ExecutionContext GetSelectedExecutionContext();
+  /// selected target. If no target is selected, the execution context will
+  /// contain the dummy target if adopt_dummy_target is true.
+  ///
+  // Ideally, adopt_dummy_target would be the default. However, there are a
+  // bunch of operations that don't make sense on the dummy target but we lack
+  // a mechanism to enforce that. The explicit argument forces the caller to
+  // consider the dummy target.
+  ExecutionContext GetSelectedExecutionContext(bool adopt_dummy_target);
 
-  /// Similar to GetSelectedExecutionContext but returns a
-  /// ExecutionContextRef, and will hold the dummy target if no target is
-  /// currently selected.
-  ExecutionContextRef GetSelectedExecutionContextRef();
+  /// Like GetSelectedExecutionContext but returns an ExecutionContextRef.
+  ExecutionContextRef GetSelectedExecutionContextRef(bool adopt_dummy_target);
 
   /// Get accessor for the target list.
   ///
@@ -441,6 +454,9 @@ public:
   /// Redraw the statusline if enabled.
   void RedrawStatusline(std::optional<ExecutionContextRef> exe_ctx_ref);
 
+  /// Flush cached state (e.g. stale execution context in the statusline).
+  void FlushStatusLine();
+
   /// This is the correct way to query the state of Interruption.
   /// If you are on the RunCommandInterpreter thread, it will check the
   /// command interpreter state, and if it is on another thread it will
@@ -635,6 +651,8 @@ public:
     std::string message;
   };
   std::optional<ProgressReport> GetCurrentProgressReport() const;
+
+  static const FileSpecList &GetDefaultSafeAutoLoadPaths();
 
 protected:
   friend class CommandInterpreter;

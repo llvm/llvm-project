@@ -63,9 +63,9 @@ static MCAsmInfo *createRISCVMCAsmInfo(const MCRegisterInfo &MRI,
                                        const MCTargetOptions &Options) {
   MCAsmInfo *MAI = nullptr;
   if (TT.isOSBinFormatELF())
-    MAI = new RISCVMCAsmInfo(TT);
+    MAI = new RISCVMCAsmInfo(TT, Options);
   else if (TT.isOSBinFormatMachO())
-    MAI = new RISCVMCAsmInfoDarwin();
+    MAI = new RISCVMCAsmInfoDarwin(Options);
   else
     reportFatalUsageError("unsupported object format");
 
@@ -259,7 +259,8 @@ public:
 
   void resetState() override { GPRValidMask.reset(); }
 
-  void updateState(const MCInst &Inst, uint64_t Addr) override {
+  void updateState(const MCInst &Inst, const MCSubtargetInfo *STI,
+                   uint64_t Addr) override {
     // Terminators mark the end of a basic block which means the sequentially
     // next instruction will be the first of another basic block and the current
     // state will typically not be valid anymore. For calls, we assume all

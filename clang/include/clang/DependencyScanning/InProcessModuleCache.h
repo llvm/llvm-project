@@ -13,20 +13,42 @@
 #include "llvm/ADT/StringMap.h"
 
 #include <atomic>
+#include <condition_variable>
+#include <memory>
 #include <mutex>
-#include <shared_mutex>
+
+namespace llvm {
+class MemoryBuffer;
+} // namespace llvm
 
 namespace clang {
 namespace dependencies {
 
 struct ModuleCacheEntry {
-  std::shared_mutex CompilationMutex;
+  std::mutex Mutex;
+  std::condition_variable CondVar;
+  bool Locked = false;
+  unsigned Generation = 0;
+
   std::atomic<std::time_t> Timestamp = 0;
+
+  enum {
+    S_Unknown,
+    S_Read,
+    S_Written,
+  } State = S_Unknown;
+  /// The buffer that we've either read from disk or written in-process.
+  std::unique_ptr<llvm::MemoryBuffer> Buffer;
+  /// The modification time of the entry.
+  time_t ModTime = 0;
 };
 
 struct ModuleCacheEntries {
   std::mutex Mutex;
   llvm::StringMap<std::unique_ptr<ModuleCacheEntry>> Map;
+
+  /// Flushes all PCMs built in-process to disk.
+  void flush();
 };
 
 std::shared_ptr<ModuleCache>

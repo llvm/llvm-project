@@ -24,26 +24,40 @@ class DAPTestCaseBase(TestBase):
     DEFAULT_TIMEOUT: Final[float] = dap_server.DEFAULT_TIMEOUT
     NO_DEBUG_INFO_TESTCASE = True
 
+    def setUp(self):
+        self.dap_server_count = 0
+        super().setUp()
+
     def create_debug_adapter(
         self,
         lldbDAPEnv: Optional[dict[str, str]] = None,
         connection: Optional[str] = None,
+        connection_timeout: Optional[int] = None,
         additional_args: Optional[list[str]] = None,
     ):
         """Create the Visual Studio Code debug adapter"""
         self.assertTrue(
             is_exe(self.lldbDAPExec), "lldb-dap must exist and be executable"
         )
-        log_file_path = self.getBuildArtifact("dap.log")
+        if self.dap_server_count:
+            log_file_path = (
+                self.getLogBasenameForCurrentTest()
+                + f"-dap-{self.dap_server_count}.log"
+            )
+        else:
+            log_file_path = self.getLogBasenameForCurrentTest() + "-dap.log"
+        self.dap_server_count += 1
         self.dap_server = dap_server.DebugAdapterServer(
             executable=self.lldbDAPExec,
             connection=connection,
+            connection_timeout=connection_timeout,
             init_commands=self.setUpCommands(),
             log_file=log_file_path,
             env=lldbDAPEnv,
-            additional_args=additional_args or [],
+            additional_args=additional_args,
             spawn_helper=self.spawnSubprocess,
         )
+        self.log_files.append(log_file_path)
 
     def build_and_create_debug_adapter(
         self,
@@ -241,11 +255,13 @@ class DAPTestCaseBase(TestBase):
     def verify_stop_on_entry(self) -> None:
         """Waits for the process to be stopped and then verifies at least one
         thread has the stop reason 'entry'."""
+        if not self.dap_server.configuration_done_sent:
+            self.verify_configuration_done()
         self.dap_server.wait_for_stopped()
         self.assertIn(
             "entry",
             (t["reason"] for t in self.dap_server.thread_stop_reasons.values()),
-            "Expected at least one thread to report stop reason 'entry' in {self.dap_server.thread_stop_reasons}",
+            f"Expected at least one thread to report stop reason 'entry' in {self.dap_server.thread_stop_reasons}",
         )
 
     def verify_commands(self, flavor: str, output: str, commands: List[str]):

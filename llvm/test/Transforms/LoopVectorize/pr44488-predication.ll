@@ -21,19 +21,19 @@ define i16 @test_true_and_false_branch_equal() {
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[PRED_SREM_IF:%.*]], label [[PRED_SREM_CONTINUE:%.*]]
 ; CHECK:       pred.srem.if:
 ; CHECK-NEXT:    [[TMP4:%.*]] = srem i16 5786, [[TMP0]]
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i16> poison, i16 [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i16> poison, i16 [[TMP4]], i64 0
 ; CHECK-NEXT:    br label [[PRED_SREM_CONTINUE]]
 ; CHECK:       pred.srem.continue:
 ; CHECK-NEXT:    [[TMP6:%.*]] = phi <2 x i16> [ poison, [[VECTOR_BODY]] ], [ [[TMP5]], [[PRED_SREM_IF]] ]
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[PRED_SREM_IF1:%.*]], label [[PRED_SREM_CONTINUE2]]
 ; CHECK:       pred.srem.if1:
 ; CHECK-NEXT:    [[TMP8:%.*]] = srem i16 5786, [[TMP0]]
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i16> [[TMP6]], i16 [[TMP8]], i32 1
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i16> [[TMP6]], i16 [[TMP8]], i64 1
 ; CHECK-NEXT:    br label [[PRED_SREM_CONTINUE2]]
 ; CHECK:       pred.srem.continue2:
 ; CHECK-NEXT:    [[TMP10:%.*]] = phi <2 x i16> [ [[TMP6]], [[PRED_SREM_CONTINUE]] ], [ [[TMP9]], [[PRED_SREM_IF1]] ]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[TMP3]], <2 x i16> [[TMP10]], <2 x i16> splat (i16 5786)
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i16> [[PREDPHI]], i32 1
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i16> [[PREDPHI]], i64 1
 ; CHECK-NEXT:    store i16 [[TMP11]], ptr @v_39, align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[INDEX_NEXT]], 12
@@ -47,28 +47,28 @@ define i16 @test_true_and_false_branch_equal() {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.latch
+for.body:
   %i.07 = phi i16 [ 99, %entry ], [ %inc7, %for.latch ]
   %lv = load i16, ptr @v_38, align 1
   %cmp1 = icmp eq i16 %lv, 32767
   br i1 %cmp1, label %cond.end, label %cond.end
 
-cond.end:                                         ; preds = %for.body, %for.body
+cond.end:
   %cmp2 = icmp eq i16 %lv, 0
   br i1 %cmp2, label %for.latch, label %cond.false4
 
-cond.false4:                                      ; preds = %cond.end
+cond.false4:
   %rem = srem i16 5786, %lv
   br label %for.latch
 
-for.latch:                                        ; preds = %cond.end, %cond.false4
+for.latch:
   %cond6 = phi i16 [ %rem, %cond.false4 ], [ 5786, %cond.end ]
   store i16 %cond6, ptr @v_39, align 1
   %inc7 = add nsw i16 %i.07, 1
   %cmp = icmp slt i16 %inc7, 111
   br i1 %cmp, label %for.body, label %exit
 
-exit:                                 ; preds = %for.latch
+exit:
   %rv = load i16, ptr @v_39, align 1
   ret i16 %rv
 }

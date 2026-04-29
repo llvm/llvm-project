@@ -3,6 +3,7 @@ if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_ARCHITECTURE})
 endif()
 
 add_subdirectory(${LIBC_TARGET_ARCHITECTURE})
+add_subdirectory(syscall_wrappers)
 
 add_object_library(
   linux_util
@@ -30,23 +31,11 @@ add_header_library(
     auxv.h
   DEPENDS
     libc.hdr.fcntl_macros
+    libc.hdr.sys_auxv_macros
     libc.src.__support.OSUtil.osutil
     libc.src.__support.common
     libc.src.__support.CPP.optional
     libc.src.__support.threads.callonce
-)
-
-add_header_library(
-  getrandom
-  HDRS
-    getrandom.h
-  DEPENDS
-    libc.src.__support.OSUtil.osutil
-    libc.src.__support.common
-    libc.src.__support.error_or
-    libc.src.__support.macros.config
-    libc.hdr.types.ssize_t
-    libc.include.sys_syscall
 )
 
 add_header_library(

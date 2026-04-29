@@ -938,7 +938,8 @@ def SMFMACOutTypes : AnyTypeOf<[
 
 def SMFMACIdxTypes : AnyTypeOf<[
     FixedVectorOfLengthAndType<[4], [I8]>,
-    FixedVectorOfLengthAndType<[2], [I16]>
+    FixedVectorOfLengthAndType<[2], [I16]>,
+    I32
 ]>;
 
 // scaled_mfma
@@ -1070,6 +1071,8 @@ def AMDGPU_WMMAOp :
     The `clamp` flag is used to saturate the output of type T to `numeric_limits<T>::max()`
     in case of overflow.
 
+    The `wave64`attribute indicates whether an op is designed for 64 threads wavefont.
+
     Example:
     ```mlir
       %0 = amdgpu.wmma 16x16x16 %matA * %matB + %matC : vector<8xf16>, vector<8xf16>, vector<8xf16>
@@ -1085,6 +1088,63 @@ def AMDGPU_WMMAOp :
     custom<MNKDimensionList>($m, $n, $k) $sourceA `*` $sourceB `+` $destC
     attr-dict
     `:` type($sourceA) `,` type($sourceB) `,` type($destC)
+  }];
+  let hasVerifier = 1;
+}
+
+def DotInTypes : AnyTypeOf<[VectorOfLengthAndType<[2], [F16, BF16, I16]>,
+                            VectorOfLengthAndType<[4], [I8, F8E4M3FN, F8E5M2]>,
+                            VectorOfLengthAndType<[8], [I<4>]>]>;
+
+def DotOutTypes : AnyTypeOf<[F32, F16, BF16, I32]>;
+
+def AMDGPU_DotOp :
+    AMDGPU_Op<"dot", [AllTypesMatch<["destC", "destD"]>, Pure]>,
+    Arguments<(ins DotInTypes:$sourceA,
+                   DotInTypes:$sourceB,
+                   DotOutTypes:$destC,
+                   UnitAttr:$unsignedA,
+                   UnitAttr:$unsignedB,
+                   UnitAttr:$clamp)>,
+    Results<(outs DotOutTypes:$destD)> {
+  let summary = "MLIR wrapper for AMDGPU v_dot* intrinsics";
+  let description = [{
+    The `amdgpu.dot` op is an MLIR wrapper over the `v_dot*` family of intrinsics,
+    which compute `D = sum_i A[i] * B[i] + C`. 
+
+    Variants (source, dest, signedness, chipset -> intrinsic).
+
+    ```text
+    | A elem   | B elem   | destC | signedness | chipset                   | ROCDL op                     |
+    |----------|----------|-------|------------|---------------------------|------------------------------|
+    | f16      | f16      | f32   | n/a        | gfx906+                   | fdot2                        |
+    | f16      | f16      | f16   | n/a        | gfx11+                    | fdot2.f16.f16                |
+    | bf16     | bf16     | f32   | n/a        | gfx11+, gfx950+           | fdot2.f32.bf16               |
+    | bf16     | bf16     | bf16  | n/a        | gfx11+                    | fdot2.bf16.bf16              |
+    | i16      | i16      | i32   | s / u      | gfx906+, no gfx11+/gfx12+ | sdot2 / udot2                |
+    | i8       | i8       | i32   | s / u      | gfx906+                   | sdot4 / udot4                |
+    | i8       | i8       | i32   | mixed      | gfx11+                    | sudot4                       |
+    | i4       | i4       | i32   | s / u      | gfx906+                   | sdot8 / udot8                |
+    | i4       | i4       | i32   | mixed      | gfx11+                    | sudot8                       |
+    | fp8/bf8  | fp8/bf8  | f32   | n/a        | gfx11.7, gfx12+           | dot4.f32.{fp8,bf8}.{fp8,bf8} |
+    ```
+
+    Example:
+    ```mlir
+    %r0 = amdgpu.dot %a * %b + %c : vector<4xi8>, vector<4xi8>, i32
+    %r1 = amdgpu.dot %a * %b + %c {unsignedA, unsignedB, clamp}
+        : vector<8xi4>, vector<8xi4>, i32
+    %r2 = amdgpu.dot %a * %b + %c {unsignedB}
+        : vector<4xi8>, vector<4xi8>, i32
+    %r3 = amdgpu.dot %a * %b + %c : vector<2xf16>, vector<2xf16>, f32
+    %r4 = amdgpu.dot %a * %b + %c : vector<2xf16>, vector<2xf16>, f16
+    %r5 = amdgpu.dot %a * %b + %c
+        : vector<4xf8E4M3FN>, vector<4xf8E5M2>, f32
+    ```
+  }];
+  let assemblyFormat = [{
+    $sourceA `*` $sourceB `+` $destC attr-dict
+      `:` type($sourceA) `,` type($sourceB) `,` type($destC)
   }];
   let hasVerifier = 1;
 }
@@ -1118,14 +1178,24 @@ def AMDGPU_SparseMFMAOp :
       - M=N=16, K=64 and M=N=32, K=32 for f16 and bf16 sources
       - M=N=16, K=128 and M=N=32, K=64 for i8 and fp8 sources
 
-    The `sparseIdx` parameter contains packed indices identifying the positions
-    of non-zero elements in the 2:4 sparse matrix A. For 16-bit source data,
-    use `vector<4xi8>` (four 8-bit indices). For 8-bit source data, use
-    `vector<2xi16>` (two 16-bit indices).
+    The `sparseIdx` parameter contains packed 2-bit indices identifying which
+    of every 4 dense-K positions are non-zero in the 2:4 sparse matrix A.
+    The required `sparseIdx` type depends on the variant:
+      - gfx942 16-bit (`(m,k)` in `{(16,32), (32,16)}`): 8 bits per lane,
+        carried as `vector<4xi8>` (one 8-bit set per i8 element).
+      - gfx942 8-bit (`(m,k)` in `{(16,64), (32,32)}`) and gfx950 16-bit
+        (`(m,k)` in `{(16,64), (32,32)}`): 16 bits per lane, carried as
+        `vector<2xi16>` (one 16-bit set per i16 element).
+      - gfx950 8-bit (`(m,k)` in `{(16,128), (32,64)}`): 32 bits per lane (a
+        full VGPR with no internal set structure), carried as `i32`.
 
-    The `cbsz` and `abid` parameters are repurposed to select the index set.
-    If `cbsz == 0`, then `abid[1:0]` selects which index set to use.
-    If `cbsz != 0`, then the very first is selected.
+    The `cbsz` and `abid` parameters select which index set within the VGPR is
+    used:
+      - gfx942 16-bit: `cbsz == 0` selects one of four 8-bit sets via
+        `abid[1:0]` (range `[0, 3]`); `cbsz != 0` selects the first set.
+      - gfx942 8-bit and gfx950 16-bit: `cbsz == 0` selects one of two 16-bit
+        sets via `abid[0]` (range `[0, 1]`); `cbsz != 0` selects the first set.
+      - gfx950 8-bit: hardware ignores both `cbsz` and `abid`; both must be 0.
 
     Example:
     ```mlir
@@ -1137,6 +1207,105 @@ def AMDGPU_SparseMFMAOp :
 
       %2 = amdgpu.sparse_mfma 16x16x64 %matA * %matB + %matC sparse(%idx : vector<2xi16>)
         { cbsz = 0 : i32, abid = 1 : i32 }
+        : vector<8xf8E4M3FNUZ>, vector<16xf8E4M3FNUZ>, vector<4xf32>
+
+      %3 = amdgpu.sparse_mfma 16x16x128 %matA * %matB + %matC sparse(%idx : i32)
+        : vector<16xf8E4M3FN>, vector<32xf8E4M3FN>, vector<4xf32>
+    ```
+  }];
+  let assemblyFormat = [{
+    custom<MNKDimensionList>($m, $n, $k) $sourceA `*` $sourceB `+` $destC
+    `sparse` `(` $sparseIdx `:` type($sparseIdx) `)`
+    attr-dict
+    `:` type($sourceA) `,` type($sourceB) `,` type($destC)
+  }];
+  let hasVerifier = 1;
+}
+
+// sparse_wmma (swmmac)
+def SWMMACSparseInTypes : AnyTypeOf<[
+    VectorOfLengthAndType<[4, 8, 16], [F16]>,
+    VectorOfLengthAndType<[4, 8, 16], [BF16]>,
+    VectorOfLengthAndType<[4, 8, 32], [I8]>,
+    VectorOfLengthAndType<[8, 16], [I<4>]>,
+    VectorOfLengthAndType<[4, 8, 16, 32], [F8E4M3FN, F8E5M2]>,
+    VectorOfLengthAndType<[4, 8, 16, 32], [F8E4M3FNUZ, F8E5M2FNUZ]>
+]>;
+
+def SWMMACDenseInTypes : AnyTypeOf<[
+    VectorOfLengthAndType<[8, 16, 32], [F16]>,
+    VectorOfLengthAndType<[8, 16, 32], [BF16]>,
+    VectorOfLengthAndType<[4, 8, 16, 64], [I8]>,
+    VectorOfLengthAndType<[8, 16, 32], [I<4>]>,
+    VectorOfLengthAndType<[4, 8, 16, 64], [F8E4M3FN, F8E5M2]>,
+    VectorOfLengthAndType<[4, 8, 16, 64], [F8E4M3FNUZ, F8E5M2FNUZ]>
+]>;
+
+def SWMMACOutTypes : AnyTypeOf<[
+    VectorOfLengthAndType<[4, 8, 16], [F32]>,
+    VectorOfLengthAndType<[4, 8], [F16]>,
+    VectorOfLengthAndType<[4, 8], [BF16]>,
+    VectorOfLengthAndType<[4, 8], [I32]>
+]>;
+
+def SWMMACIdxTypes : AnyTypeOf<[
+    FixedVectorOfLengthAndType<[4], [I8]>,
+]>;
+
+
+def AMDGPU_SparseWMMAOp :
+    AMDGPU_Op<"sparse_wmma", [AllTypesMatch<["destC", "destD"]>,
+                              Pure]>,
+    Arguments<(ins
+                   ConfinedAttr<I32Attr, [IntIsOneOf<[16]>]>:$m,
+                   ConfinedAttr<I32Attr, [IntIsOneOf<[16]>]>:$n,
+                   ConfinedAttr<I32Attr, [IntIsOneOf<[32, 64, 128]>]>:$k,
+                   SWMMACSparseInTypes:$sourceA,
+                   SWMMACDenseInTypes:$sourceB,
+                   SWMMACOutTypes:$destC,
+                   SWMMACIdxTypes:$sparseIdx,
+                   UnitAttr:$unsignedA,
+                   UnitAttr:$unsignedB,
+                   UnitAttr:$reuseA,
+                   UnitAttr:$reuseB,
+                   UnitAttr:$clamp,
+                   UnitAttr:$wave64)>,
+    Results<(outs SWMMACOutTypes: $destD)> {
+  let summary = "MLIR wrapper for gfx12+ sparse wmma instructions";
+  let description = [{
+    The `amdgpu.sparse_wmma` op is an MLIR wrapper around intrinsics for various
+    `swmmac` instructions in the AMDGPU architecture, which perform matrix
+    multiply-accumulate operations using 2:4 structured sparsity on matrix A
+    with dense matrices B, C, and D.
+
+    On gfx12, swmmac intrinsics support:
+      - M=N=16, K=32 and M=N=32, K=16 for f16, bf16, i8 and i4 sources
+      - M=N=16, K=64 for i4 sources
+
+    On gfx1250, swmmac intrinsics additionally support:
+      - M=N=16, K=64 for f16 and bf16 sources
+      - M=N=16, K=128 for f16, bf16 and i8 sources
+
+    The `sparseIdx` parameter contains packed indices identifying the positions
+    of non-zero elements in the 2:4 sparse matrix A. For 16-bit source data,
+    use `vector<4xi8>` (four 8-bit indices). For 8-bit source data, use
+    `vector<2xi16>` (two 16-bit indices).
+
+    `unsignedA` and `unsignedB` flag that the `int8` LLVM inputs are unsigned.
+
+    The `clamp` flag is used to saturate the output of type T to `numeric_limits<T>::max()`
+    in case of overflow.
+
+    Example:
+    ```mlir
+      %0 = amdgpu.sparse_wmma 16x16x32 %matA * %matB + %matC sparse(%idx : vector<4xi8>)
+        : vector<4xf16>, vector<8xf16>, vector<4xf32>
+
+      %1 = amdgpu.sparse_wmma 16x16x64 %matA * %matB + %matC sparse(%idx : vector<2xi16>)
+        : vector<8xi8>, vector<16xi8>, vector<4xi32>
+
+      %2 = amdgpu.sparse_wmma 16x16x64 %matA * %matB + %matC sparse(%idx : vector<2xi16>)
+        { unsignedA = 0 : i1, unsignedB = 1 : i1, clamp = 0 : i1 }
         : vector<8xf8E4M3FNUZ>, vector<16xf8E4M3FNUZ>, vector<4xf32>
     ```
   }];
@@ -1195,6 +1364,55 @@ def AMDGPU_GatherToLDSOp :
   }];
   let hasVerifier = 1;
   let hasCanonicalizer = 1;
+}
+
+def AMDGPU_GlobalLoadAsyncToLDSOp :
+    AMDGPU_Op<"global_load_async_to_lds", [AttrSizedOperandSegments]>,
+    Arguments<(ins
+                   Arg<AnyMemRef, "global memory to load from", [MemRead]>:$src,
+                   Variadic<Index>:$srcIndices,
+                   Arg<AnyMemRef, "LDS memory to write to", [MemWrite]>:$dst,
+                   Variadic<Index>:$dstIndices,
+                   TypeAttr:$transferType,
+                   Optional<I1>: $mask
+                   )>,
+    Results<(outs)> {
+  let summary = "MLIR wrapper for async global load to lds instructions";
+  let description = [{
+    AMDGPU wrapper for `global.load.async.to.lds` instructions, which performs
+    asynchronous load of data from global memory into LDS while bypassing VGPRs.
+
+    * `$src`: global memory memref to read from (global addrspace only, no fat buffer).
+    * `$srcIndices`: indices into `$src` for this thread's global read location.
+    * `$dst`: LDS memref to write to (workgroup addrspace).
+    * `$dstIndices`: indices into `$dst` for this thread's LDS write location.
+    * `$transferType`: type of data to be transferred. Must be 8, 32, 64 or 128 bit scalar
+     or vector type.
+    * `$mask`: optional per-thread mask. When false, the thread's LDS write
+      is masked off. The global read still occurs for all threads regardless of mask.
+
+    Note: only supported on gfx1250 and later.
+
+    Examples:
+    ```mlir
+      amdgpu.global_load_async_to_lds %src[%i, %j], %dst[%k, %l]
+        : f32, memref<128x64xf32, #gpu.address_space<global>>,
+          memref<64x64xf32, #gpu.address_space<workgroup>>
+
+      amdgpu.global_load_async_to_lds %src[%i, %j], %dst[%k, %l]
+        : vector<4xf32>, memref<128x64xf32, #gpu.address_space<global>>,
+          memref<64x64xf32, #gpu.address_space<workgroup>>
+
+      amdgpu.global_load_async_to_lds %src[%i], %dst[%j]
+        : i8, memref<512xi8, #gpu.address_space<global>>,
+          memref<256xi8, #gpu.address_space<workgroup>>
+    ```
+  }];
+  let assemblyFormat = [{
+    $src `[` $srcIndices `]` `,` $dst `[` $dstIndices `]`  (`,` $mask^)?
+    attr-dict `:` $transferType `,` type($src) `,` type($dst)
+  }];
+  let hasVerifier = 1;
 }
 
 def AMDGPU_TransposeLoadOp :
@@ -1852,6 +2070,39 @@ def AMDGPU_DsBarrierStatePhaseParity :
   let assemblyFormat = [{
     $state attr-dict `:` type($state) `->` type($res)
   }];
+}
+
+def AMDGPU_GlobalPrefetchOp :
+    AMDGPU_Op<"global_prefetch", [MemoryEffects<[MemWrite, MemRead]>]>,
+    Arguments<(ins AnyMemRef:$src,
+               Variadic<I64>:$indices,
+               AMDGPU_LoadTemporalHintAttr:$temporalHint,
+               AMDGPU_CacheScopeAttr:$cacheScope,
+               UnitAttr:$speculative)>,
+    Results<(outs)> {
+
+  let summary = "Prefetch data to caches.";
+  let description = [{
+    Prefetches a cache line to high-level caches using the aligned address of
+    the source `memref` and an offset provided by the indices of the element
+    containing the cache line. This provides temporal hints (e.g., regular
+    or high-priority). Note that out-of-bounds access is allowed in
+    speculative mode. The provided memref must be in the global address space
+    (`#gpu.address_space<global>` or 1).
+
+    This operation was introduced in gfx1250.
+
+    Example:
+    ```mlir
+    amdgpu.global_prefetch %src[%i, %j] RT SE speculative : memref<64x64xf16, #gpu.address_space<global>>
+    ```
+  }];
+
+  let assemblyFormat = [{
+    $src `[` $indices `]` $temporalHint $cacheScope (`speculative` $speculative^)? attr-dict `:` qualified(type($src))
+  }];
+
+  let hasVerifier = 1;
 }
 
 #endif // MLIR_DIALECT_AMDGPU_IR_AMDGPUOPS_TD

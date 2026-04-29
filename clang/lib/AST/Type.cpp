@@ -101,6 +101,7 @@ bool Qualifiers::isTargetAddressSpaceSupersetOf(LangAS A, LangAS B,
          (A == LangAS::Default && B == LangAS::hlsl_private) ||
          (A == LangAS::Default && B == LangAS::hlsl_device) ||
          (A == LangAS::Default && B == LangAS::hlsl_input) ||
+         (A == LangAS::Default && B == LangAS::hlsl_output) ||
          (A == LangAS::Default && B == LangAS::hlsl_push_constant) ||
          // Conversions from target specific address spaces may be legal
          // depending on the target information.
@@ -126,6 +127,41 @@ const IdentifierInfo *QualType::getBaseTypeIdentifier() const {
   if (ND)
     return ND->getIdentifier();
   return nullptr;
+}
+
+bool QualType::hasPostfixDeclaratorSyntax() const {
+  QualType QT = *this;
+  while (true) {
+    const Type *T = QT.getTypePtr();
+    switch (T->getTypeClass()) {
+    default:
+      return false;
+    case Type::Pointer:
+      QT = cast<PointerType>(T)->getPointeeType();
+      break;
+    case Type::BlockPointer:
+      QT = cast<BlockPointerType>(T)->getPointeeType();
+      break;
+    case Type::MemberPointer:
+      QT = cast<MemberPointerType>(T)->getPointeeType();
+      break;
+    case Type::LValueReference:
+    case Type::RValueReference:
+      QT = cast<ReferenceType>(T)->getPointeeType();
+      break;
+    case Type::PackExpansion:
+      QT = cast<PackExpansionType>(T)->getPattern();
+      break;
+    case Type::Paren:
+    case Type::ConstantArray:
+    case Type::DependentSizedArray:
+    case Type::IncompleteArray:
+    case Type::VariableArray:
+    case Type::FunctionProto:
+    case Type::FunctionNoProto:
+      return true;
+    }
+  }
 }
 
 bool QualType::mayBeDynamicClass() const {
@@ -1327,11 +1363,11 @@ public:
     if (deducedType.isNull())
       return {};
 
-    if (deducedType.getAsOpaquePtr() == T->getDeducedType().getAsOpaquePtr())
+    if (deducedType == T->getDeducedType())
       return QualType(T, 0);
 
-    return Ctx.getAutoType(deducedType, T->getKeyword(), T->isDependentType(),
-                           /*IsPack=*/false, T->getTypeConstraintConcept(),
+    return Ctx.getAutoType(T->getDeducedKind(), deducedType, T->getKeyword(),
+                           T->getTypeConstraintConcept(),
                            T->getTypeConstraintArguments());
   }
 
@@ -2274,8 +2310,20 @@ bool Type::isSignedIntegerOrEnumerationType() const {
 bool Type::hasSignedIntegerRepresentation() const {
   if (const auto *VT = dyn_cast<VectorType>(CanonicalType))
     return VT->getElementType()->isSignedIntegerOrEnumerationType();
-  else
-    return isSignedIntegerOrEnumerationType();
+
+  if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType)) {
+    switch (BT->getKind()) {
+#define SVE_VECTOR_TYPE_INT(Name, MangledName, Id, SingletonId, NumEls,        \
+                            ElBits, NF, IsSigned)                              \
+  case BuiltinType::Id:                                                        \
+    return IsSigned;
+#include "clang/Basic/AArch64ACLETypes.def"
+    default:
+      break;
+    }
+  }
+
+  return isSignedIntegerOrEnumerationType();
 }
 
 /// isUnsignedIntegerType - Return true if this is an integer type that is
@@ -2584,6 +2632,8 @@ bool Type::isSizelessBuiltinType() const {
       // HLSL intangible types
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
+      // AMDGPU feature predicate type
+    case BuiltinType::AMDGPUFeaturePredicate:
       return true;
     default:
       return false;
@@ -2934,6 +2984,9 @@ bool QualType::isBitwiseCloneableType(const ASTContext &Context) const {
   if (!RD)
     return true;
 
+  if (RD->isInvalidDecl())
+    return false;
+
   // Never allow memcpy when we're adding poisoned padding bits to the struct.
   // Accessing these posioned bits will trigger false alarms on
   // SanitizeAddressFieldPadding etc.
@@ -3083,6 +3136,10 @@ bool Type::isLiteralType(const ASTContext &Ctx) const {
   // literal types.
   if (BaseTy->isScalarType() || BaseTy->isVectorType() ||
       BaseTy->isAnyComplexType())
+    return true;
+  // Matrices with constant numbers of rows and columns are also literal types
+  // in HLSL.
+  if (Ctx.getLangOpts().HLSL && BaseTy->isConstantMatrixType())
     return true;
   //    -- a reference type; or
   if (BaseTy->isReferenceType())
@@ -5087,7 +5144,7 @@ LinkageInfo Type::getLinkageAndVisibility() const {
   return LinkageComputer{}.getTypeLinkageAndVisibility(this);
 }
 
-std::optional<NullabilityKind> Type::getNullability() const {
+NullabilityKindOrNone Type::getNullability() const {
   QualType Type(this, 0);
   while (const auto *AT = Type->getAs<AttributedType>()) {
     // Check whether this is an attributed type with nullability
@@ -5253,7 +5310,7 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
   llvm_unreachable("bad type kind!");
 }
 
-std::optional<NullabilityKind> AttributedType::getImmediateNullability() const {
+NullabilityKindOrNone AttributedType::getImmediateNullability() const {
   if (getAttrKind() == attr::TypeNonNull)
     return NullabilityKind::NonNull;
   if (getAttrKind() == attr::TypeNullable)
@@ -5265,8 +5322,7 @@ std::optional<NullabilityKind> AttributedType::getImmediateNullability() const {
   return std::nullopt;
 }
 
-std::optional<NullabilityKind>
-AttributedType::stripOuterNullability(QualType &T) {
+NullabilityKindOrNone AttributedType::stripOuterNullability(QualType &T) {
   QualType AttrTy = T;
   if (auto MacroTy = dyn_cast<MacroQualifiedType>(T))
     AttrTy = MacroTy->getUnderlyingType();
@@ -5538,46 +5594,74 @@ void clang::FixedPointValueToString(SmallVectorImpl<char> &Str,
   llvm::APFixedPoint(Val, FXSema).toString(Str);
 }
 
-AutoType::AutoType(QualType DeducedAsType, AutoTypeKeyword Keyword,
-                   TypeDependence ExtraDependence, QualType Canon,
-                   TemplateDecl *TypeConstraintConcept,
+DeducedType::DeducedType(TypeClass TC, DeducedKind DK,
+                         QualType DeducedAsTypeOrCanon)
+    : Type(TC, /*canon=*/DK == DeducedKind::Deduced
+                   ? DeducedAsTypeOrCanon.getCanonicalType()
+                   : DeducedAsTypeOrCanon,
+           TypeDependence::None) {
+  DeducedTypeBits.Kind = llvm::to_underlying(DK);
+  switch (DK) {
+  case DeducedKind::Undeduced:
+    break;
+  case DeducedKind::Deduced:
+    assert(!DeducedAsTypeOrCanon.isNull() && "Deduced type cannot be null");
+    addDependence(DeducedAsTypeOrCanon->getDependence() &
+                  ~TypeDependence::VariablyModified);
+    DeducedAsType = DeducedAsTypeOrCanon;
+    break;
+  case DeducedKind::DeducedAsPack:
+    addDependence(TypeDependence::UnexpandedPack);
+    [[fallthrough]];
+  case DeducedKind::DeducedAsDependent:
+    addDependence(TypeDependence::DependentInstantiation);
+    break;
+  }
+  assert(getDeducedKind() == DK && "DeducedKind does not match the type state");
+}
+
+AutoType::AutoType(DeducedKind DK, QualType DeducedAsTypeOrCanon,
+                   AutoTypeKeyword Keyword, TemplateDecl *TypeConstraintConcept,
                    ArrayRef<TemplateArgument> TypeConstraintArgs)
-    : DeducedType(Auto, DeducedAsType, ExtraDependence, Canon) {
+    : DeducedType(Auto, DK, DeducedAsTypeOrCanon) {
   AutoTypeBits.Keyword = llvm::to_underlying(Keyword);
   AutoTypeBits.NumArgs = TypeConstraintArgs.size();
   this->TypeConstraintConcept = TypeConstraintConcept;
   assert(TypeConstraintConcept || AutoTypeBits.NumArgs == 0);
   if (TypeConstraintConcept) {
-    if (isa<TemplateTemplateParmDecl>(TypeConstraintConcept))
-      addDependence(TypeDependence::DependentInstantiation);
+    auto Dep = TypeDependence::None;
+    if (const auto *TTP =
+            dyn_cast<TemplateTemplateParmDecl>(TypeConstraintConcept))
+      Dep = TypeDependence::DependentInstantiation |
+            (TTP->isParameterPack() ? TypeDependence::UnexpandedPack
+                                    : TypeDependence::None);
 
     auto *ArgBuffer =
         const_cast<TemplateArgument *>(getTypeConstraintArguments().data());
     for (const TemplateArgument &Arg : TypeConstraintArgs) {
-      // We only syntactically depend on the constraint arguments. They don't
-      // affect the deduced type, only its validity.
-      addDependence(
-          toSyntacticDependence(toTypeDependence(Arg.getDependence())));
-
+      Dep |= toTypeDependence(Arg.getDependence());
       new (ArgBuffer++) TemplateArgument(Arg);
     }
+    // A deduced AutoType only syntactically depends on its constraints.
+    if (DK == DeducedKind::Deduced)
+      Dep = toSyntacticDependence(Dep);
+    addDependence(Dep);
   }
 }
 
 void AutoType::Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
-                       QualType Deduced, AutoTypeKeyword Keyword,
-                       bool IsDependent, TemplateDecl *CD,
+                       DeducedKind DK, QualType Deduced,
+                       AutoTypeKeyword Keyword, TemplateDecl *CD,
                        ArrayRef<TemplateArgument> Arguments) {
-  ID.AddPointer(Deduced.getAsOpaquePtr());
-  ID.AddInteger((unsigned)Keyword);
-  ID.AddBoolean(IsDependent);
+  DeducedType::Profile(ID, DK, Deduced);
+  ID.AddInteger(llvm::to_underlying(Keyword));
   ID.AddPointer(CD);
   for (const TemplateArgument &Arg : Arguments)
     Arg.Profile(ID, Context);
 }
 
 void AutoType::Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context) {
-  Profile(ID, Context, getDeducedType(), getKeyword(), isDependentType(),
+  Profile(ID, Context, getDeducedKind(), getDeducedType(), getKeyword(),
           getTypeConstraintConcept(), getTypeConstraintArguments());
 }
 

@@ -26,15 +26,15 @@ define void @blend_uniform_iv_trunc(i1 %c) {
 entry:
   br label %loop.header
 
-loop.header:                                      ; preds = %loop.latch, %entry
+loop.header:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
   %iv.trunc.2 = trunc i64 %iv to i16
   br i1 %c, label %loop.next, label %loop.latch
 
-loop.next:                                        ; preds = %loop.header
+loop.next:
   br label %loop.latch
 
-loop.latch:                                       ; preds = %loop.next, %loop.header
+loop.latch:
   %blend = phi i16 [ %iv.trunc.2, %loop.header ], [ %iv.trunc.2, %loop.next ]
   %dst.ptr = getelementptr inbounds [32 x i16], ptr @dst, i16 0, i16 %blend
   store i16 0, ptr %dst.ptr
@@ -42,7 +42,7 @@ loop.latch:                                       ; preds = %loop.next, %loop.he
   %cmp439 = icmp ult i64 %iv, 31
   br i1 %cmp439, label %loop.header, label %exit
 
-exit:                                             ; preds = %loop.latch
+exit:
   ret void
 }
 
@@ -69,14 +69,14 @@ define void @blend_uniform_iv(i1 %c) {
 entry:
   br label %loop.header
 
-loop.header:                                      ; preds = %loop.latch, %entry
+loop.header:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
   br i1 %c, label %loop.next, label %loop.latch
 
-loop.next:                                        ; preds = %loop.header
+loop.next:
   br label %loop.latch
 
-loop.latch:                                       ; preds = %loop.next, %loop.header
+loop.latch:
   %blend = phi i64 [ %iv, %loop.header ], [ %iv, %loop.next ]
   %dst.ptr = getelementptr inbounds [32 x i16], ptr @dst, i16 0, i64 %blend
   store i16 0, ptr %dst.ptr
@@ -84,7 +84,7 @@ loop.latch:                                       ; preds = %loop.next, %loop.he
   %cmp439 = icmp ult i64 %iv, 31
   br i1 %cmp439, label %loop.header, label %exit
 
-exit:                                             ; preds = %loop.latch
+exit:
   ret void
 }
 
@@ -97,11 +97,10 @@ define void @blend_chain_iv(i1 %c) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], 3
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [32 x i16], ptr @dst, i16 0, i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [32 x i16], ptr @dst, i16 0, i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [32 x i16], ptr @dst, i16 0, i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [32 x i16], ptr @dst, i16 0, i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [32 x i16], ptr @dst, i16 0, i64 [[TMP7]]
@@ -121,11 +120,11 @@ define void @blend_chain_iv(i1 %c) {
 entry:
   br label %loop.header
 
-loop.header:                                      ; preds = %loop.latch, %entry
+loop.header:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
   br i1 %c, label %loop.next, label %loop.latch
 
-loop.next:                                        ; preds = %loop.header
+loop.next:
   br i1 %c, label %loop.next.2, label %loop.next.3
 
 loop.next.2:
@@ -135,7 +134,7 @@ loop.next.3:
   %blend.1 = phi i64 [ %iv, %loop.next ], [ %iv, %loop.next.2 ]
   br label %loop.latch
 
-loop.latch:                                       ; preds = %loop.next, %loop.header
+loop.latch:
   %blend = phi i64 [ %iv, %loop.header ], [ %blend.1, %loop.next.3 ]
   %dst.ptr = getelementptr inbounds [32 x i16], ptr @dst, i16 0, i64 %blend
   store i16 0, ptr %dst.ptr
@@ -143,7 +142,7 @@ loop.latch:                                       ; preds = %loop.next, %loop.he
   %cmp439 = icmp ult i64 %iv, 31
   br i1 %cmp439, label %loop.header, label %exit
 
-exit:                                             ; preds = %loop.latch
+exit:
   ret void
 }
 
@@ -155,65 +154,64 @@ define void @redundant_branch_and_blends_without_mask(ptr %A) {
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 2
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 3
-; CHECK-NEXT:    [[TMP35:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP5]], i32 0
+; CHECK-NEXT:    [[TMP35:%.*]] = insertelement <4 x ptr> poison, ptr [[A]], i32 0
 ; CHECK-NEXT:    [[TMP36:%.*]] = insertelement <4 x ptr> [[TMP35]], ptr [[TMP6]], i32 1
 ; CHECK-NEXT:    [[TMP37:%.*]] = insertelement <4 x ptr> [[TMP36]], ptr [[TMP7]], i32 2
 ; CHECK-NEXT:    [[TMP38:%.*]] = insertelement <4 x ptr> [[TMP37]], ptr [[TMP8]], i32 3
 ; CHECK-NEXT:    br i1 true, label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
 ; CHECK:       [[PRED_LOAD_IF]]:
-; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[TMP5]], align 4
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> poison, i32 [[TMP10]], i32 0
+; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i32> poison, i32 [[TMP10]], i64 0
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE]]
 ; CHECK:       [[PRED_LOAD_CONTINUE]]:
-; CHECK-NEXT:    [[TMP12:%.*]] = phi <4 x i32> [ poison, %[[VECTOR_BODY]] ], [ [[TMP11]], %[[PRED_LOAD_IF]] ]
+; CHECK-NEXT:    [[TMP9:%.*]] = phi <4 x i32> [ poison, %[[VECTOR_BODY]] ], [ [[TMP13]], %[[PRED_LOAD_IF]] ]
 ; CHECK-NEXT:    br i1 true, label %[[PRED_LOAD_IF1:.*]], label %[[PRED_LOAD_CONTINUE2:.*]]
 ; CHECK:       [[PRED_LOAD_IF1]]:
 ; CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr [[TMP6]], align 4
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x i32> [[TMP12]], i32 [[TMP14]], i32 1
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> [[TMP9]], i32 [[TMP14]], i64 1
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE2]]
 ; CHECK:       [[PRED_LOAD_CONTINUE2]]:
-; CHECK-NEXT:    [[TMP16:%.*]] = phi <4 x i32> [ [[TMP12]], %[[PRED_LOAD_CONTINUE]] ], [ [[TMP15]], %[[PRED_LOAD_IF1]] ]
+; CHECK-NEXT:    [[TMP12:%.*]] = phi <4 x i32> [ [[TMP9]], %[[PRED_LOAD_CONTINUE]] ], [ [[TMP11]], %[[PRED_LOAD_IF1]] ]
 ; CHECK-NEXT:    br i1 false, label %[[PRED_LOAD_IF3:.*]], label %[[PRED_LOAD_CONTINUE4:.*]]
 ; CHECK:       [[PRED_LOAD_IF3]]:
 ; CHECK-NEXT:    [[TMP18:%.*]] = load i32, ptr [[TMP7]], align 4
-; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i32> [[TMP16]], i32 [[TMP18]], i32 2
+; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x i32> [[TMP12]], i32 [[TMP18]], i64 2
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE4]]
 ; CHECK:       [[PRED_LOAD_CONTINUE4]]:
-; CHECK-NEXT:    [[TMP20:%.*]] = phi <4 x i32> [ [[TMP16]], %[[PRED_LOAD_CONTINUE2]] ], [ [[TMP19]], %[[PRED_LOAD_IF3]] ]
+; CHECK-NEXT:    [[TMP15:%.*]] = phi <4 x i32> [ [[TMP12]], %[[PRED_LOAD_CONTINUE2]] ], [ [[TMP16]], %[[PRED_LOAD_IF3]] ]
 ; CHECK-NEXT:    br i1 false, label %[[PRED_LOAD_IF5:.*]], label %[[PRED_LOAD_CONTINUE6:.*]]
 ; CHECK:       [[PRED_LOAD_IF5]]:
 ; CHECK-NEXT:    [[TMP22:%.*]] = load i32, ptr [[TMP8]], align 4
-; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <4 x i32> [[TMP20]], i32 [[TMP22]], i32 3
+; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x i32> [[TMP15]], i32 [[TMP22]], i64 3
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE6]]
 ; CHECK:       [[PRED_LOAD_CONTINUE6]]:
-; CHECK-NEXT:    [[TMP24:%.*]] = phi <4 x i32> [ [[TMP20]], %[[PRED_LOAD_CONTINUE4]] ], [ [[TMP23]], %[[PRED_LOAD_IF5]] ]
+; CHECK-NEXT:    [[TMP24:%.*]] = phi <4 x i32> [ [[TMP15]], %[[PRED_LOAD_CONTINUE4]] ], [ [[TMP17]], %[[PRED_LOAD_IF5]] ]
 ; CHECK-NEXT:    [[TMP25:%.*]] = add <4 x i32> [[TMP24]], splat (i32 10)
 ; CHECK-NEXT:    [[TMP26:%.*]] = add <4 x i32> [[TMP24]], [[TMP25]]
 ; CHECK-NEXT:    br i1 true, label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
-; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <4 x i32> [[TMP26]], i32 0
-; CHECK-NEXT:    store i32 [[TMP28]], ptr [[TMP5]], align 4
+; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <4 x i32> [[TMP26]], i64 0
+; CHECK-NEXT:    store i32 [[TMP28]], ptr [[A]], align 4
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
 ; CHECK-NEXT:    br i1 true, label %[[PRED_STORE_IF7:.*]], label %[[PRED_STORE_CONTINUE8:.*]]
 ; CHECK:       [[PRED_STORE_IF7]]:
-; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <4 x i32> [[TMP26]], i32 1
+; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <4 x i32> [[TMP26]], i64 1
 ; CHECK-NEXT:    store i32 [[TMP30]], ptr [[TMP6]], align 4
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE8]]
 ; CHECK:       [[PRED_STORE_CONTINUE8]]:
 ; CHECK-NEXT:    br i1 false, label %[[PRED_STORE_IF9:.*]], label %[[PRED_STORE_CONTINUE10:.*]]
 ; CHECK:       [[PRED_STORE_IF9]]:
-; CHECK-NEXT:    [[TMP32:%.*]] = extractelement <4 x i32> [[TMP26]], i32 2
+; CHECK-NEXT:    [[TMP32:%.*]] = extractelement <4 x i32> [[TMP26]], i64 2
 ; CHECK-NEXT:    store i32 [[TMP32]], ptr [[TMP7]], align 4
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE10]]
 ; CHECK:       [[PRED_STORE_CONTINUE10]]:
 ; CHECK-NEXT:    br i1 false, label %[[PRED_STORE_IF11:.*]], label %[[PRED_STORE_CONTINUE12:.*]]
 ; CHECK:       [[PRED_STORE_IF11]]:
-; CHECK-NEXT:    [[TMP34:%.*]] = extractelement <4 x i32> [[TMP26]], i32 3
+; CHECK-NEXT:    [[TMP34:%.*]] = extractelement <4 x i32> [[TMP26]], i64 3
 ; CHECK-NEXT:    store i32 [[TMP34]], ptr [[TMP8]], align 4
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE12]]
 ; CHECK:       [[PRED_STORE_CONTINUE12]]:

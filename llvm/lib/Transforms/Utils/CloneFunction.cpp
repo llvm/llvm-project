@@ -433,7 +433,7 @@ struct PruningFunctionCloner {
   ValueToValueMapTy &VMap;
   bool ModuleLevelChanges;
   const char *NameSuffix;
-  ClonedCodeInfo *CodeInfo;
+  ClonedCodeInfo &CodeInfo;
   bool HostFuncIsStrictFP;
 
   Instruction *cloneInstruction(BasicBlock::const_iterator II);
@@ -441,7 +441,7 @@ struct PruningFunctionCloner {
 public:
   PruningFunctionCloner(Function *newFunc, const Function *oldFunc,
                         ValueToValueMapTy &valueMap, bool moduleLevelChanges,
-                        const char *nameSuffix, ClonedCodeInfo *codeInfo)
+                        const char *nameSuffix, ClonedCodeInfo &codeInfo)
       : NewFunc(newFunc), OldFunc(oldFunc), VMap(valueMap),
         ModuleLevelChanges(moduleLevelChanges), NameSuffix(nameSuffix),
         CodeInfo(codeInfo) {
@@ -475,8 +475,8 @@ PruningFunctionCloner::cloneInstruction(BasicBlock::const_iterator II) {
       for (unsigned I = 0, E = Descriptor.size(); I != E; ++I) {
         Intrinsic::IITDescriptor Operand = Descriptor[I];
         switch (Operand.Kind) {
-        case Intrinsic::IITDescriptor::Argument:
-          if (Operand.getArgumentKind() !=
+        case Intrinsic::IITDescriptor::Overloaded:
+          if (Operand.getOverloadKind() !=
               Intrinsic::IITDescriptor::AK_MatchType) {
             if (I == 0)
               TParams.push_back(OldInst.getType());
@@ -484,7 +484,7 @@ PruningFunctionCloner::cloneInstruction(BasicBlock::const_iterator II) {
               TParams.push_back(OldInst.getOperand(I - 1)->getType());
           }
           break;
-        case Intrinsic::IITDescriptor::SameVecWidthArgument:
+        case Intrinsic::IITDescriptor::SameVecWidth:
           ++I;
           break;
         default:
@@ -615,6 +615,9 @@ void PruningFunctionCloner::CloneBlock(
       }
     }
 
+    if (auto *CB = dyn_cast<CallBase>(II); CB && CB->isIndirectCall())
+      CodeInfo.OriginallyIndirectCalls.insert(NewInst);
+
     if (II->hasName())
       NewInst->setName(II->getName() + NameSuffix);
     VMap[&*II] = NewInst; // Add instruction map to value.
@@ -626,12 +629,10 @@ void PruningFunctionCloner::CloneBlock(
 
     CloneDbgRecordsToHere(NewInst, II);
 
-    if (CodeInfo) {
-      CodeInfo->OrigVMap[&*II] = NewInst;
-      if (auto *CB = dyn_cast<CallBase>(&*II))
-        if (CB->hasOperandBundles())
-          CodeInfo->OperandBundleCallSites.push_back(NewInst);
-    }
+    CodeInfo.OrigVMap[&*II] = NewInst;
+    if (auto *CB = dyn_cast<CallBase>(&*II))
+      if (CB->hasOperandBundles())
+        CodeInfo.OperandBundleCallSites.push_back(NewInst);
 
     if (const AllocaInst *AI = dyn_cast<AllocaInst>(II)) {
       if (isa<ConstantInt>(AI->getArraySize()))
@@ -644,25 +645,23 @@ void PruningFunctionCloner::CloneBlock(
   // Finally, clone over the terminator.
   const Instruction *OldTI = BB->getTerminator();
   bool TerminatorDone = false;
-  if (const BranchInst *BI = dyn_cast<BranchInst>(OldTI)) {
-    if (BI->isConditional()) {
-      // If the condition was a known constant in the callee...
-      ConstantInt *Cond = dyn_cast<ConstantInt>(BI->getCondition());
-      // Or is a known constant in the caller...
-      if (!Cond) {
-        Value *V = VMap.lookup(BI->getCondition());
-        Cond = dyn_cast_or_null<ConstantInt>(V);
-      }
+  if (const CondBrInst *BI = dyn_cast<CondBrInst>(OldTI)) {
+    // If the condition was a known constant in the callee...
+    ConstantInt *Cond = dyn_cast<ConstantInt>(BI->getCondition());
+    // Or is a known constant in the caller...
+    if (!Cond) {
+      Value *V = VMap.lookup(BI->getCondition());
+      Cond = dyn_cast_or_null<ConstantInt>(V);
+    }
 
-      // Constant fold to uncond branch!
-      if (Cond) {
-        BasicBlock *Dest = BI->getSuccessor(!Cond->getZExtValue());
-        auto *NewBI = BranchInst::Create(Dest, NewBB);
-        NewBI->setDebugLoc(BI->getDebugLoc());
-        VMap[OldTI] = NewBI;
-        ToClone.push_back(Dest);
-        TerminatorDone = true;
-      }
+    // Constant fold to uncond branch!
+    if (Cond) {
+      BasicBlock *Dest = BI->getSuccessor(!Cond->getZExtValue());
+      auto *NewBI = UncondBrInst::Create(Dest, NewBB);
+      NewBI->setDebugLoc(BI->getDebugLoc());
+      VMap[OldTI] = NewBI;
+      ToClone.push_back(Dest);
+      TerminatorDone = true;
     }
   } else if (const SwitchInst *SI = dyn_cast<SwitchInst>(OldTI)) {
     // If switching on a value known constant in the caller.
@@ -674,7 +673,7 @@ void PruningFunctionCloner::CloneBlock(
     if (Cond) { // Constant fold to uncond branch!
       SwitchInst::ConstCaseHandle Case = *SI->findCaseValue(Cond);
       BasicBlock *Dest = const_cast<BasicBlock *>(Case.getCaseSuccessor());
-      auto *NewBI = BranchInst::Create(Dest, NewBB);
+      auto *NewBI = UncondBrInst::Create(Dest, NewBB);
       NewBI->setDebugLoc(SI->getDebugLoc());
       VMap[OldTI] = NewBI;
       ToClone.push_back(Dest);
@@ -692,12 +691,10 @@ void PruningFunctionCloner::CloneBlock(
 
     VMap[OldTI] = NewInst; // Add instruction map to value.
 
-    if (CodeInfo) {
-      CodeInfo->OrigVMap[OldTI] = NewInst;
-      if (auto *CB = dyn_cast<CallBase>(OldTI))
-        if (CB->hasOperandBundles())
-          CodeInfo->OperandBundleCallSites.push_back(NewInst);
-    }
+    CodeInfo.OrigVMap[OldTI] = NewInst;
+    if (auto *CB = dyn_cast<CallBase>(OldTI))
+      if (CB->hasOperandBundles())
+        CodeInfo.OperandBundleCallSites.push_back(NewInst);
 
     // Recursively clone any reachable successor blocks.
     append_range(ToClone, successors(BB->getTerminator()));
@@ -710,13 +707,11 @@ void PruningFunctionCloner::CloneBlock(
     CloneDbgRecordsToHere(NewInst, OldTI->getIterator());
   }
 
-  if (CodeInfo) {
-    CodeInfo->ContainsCalls |= hasCalls;
-    CodeInfo->ContainsMemProfMetadata |= hasMemProfMetadata;
-    CodeInfo->ContainsDynamicAllocas |= hasDynamicAllocas;
-    CodeInfo->ContainsDynamicAllocas |=
-        hasStaticAllocas && BB != &BB->getParent()->front();
-  }
+  CodeInfo.ContainsCalls |= hasCalls;
+  CodeInfo.ContainsMemProfMetadata |= hasMemProfMetadata;
+  CodeInfo.ContainsDynamicAllocas |= hasDynamicAllocas;
+  CodeInfo.ContainsDynamicAllocas |=
+      hasStaticAllocas && BB != &BB->getParent()->front();
 }
 
 /// This works like CloneAndPruneFunctionInto, except that it does not clone the
@@ -728,7 +723,7 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
                                      bool ModuleLevelChanges,
                                      SmallVectorImpl<ReturnInst *> &Returns,
                                      const char *NameSuffix,
-                                     ClonedCodeInfo *CodeInfo) {
+                                     ClonedCodeInfo &CodeInfo) {
   assert(NameSuffix && "NameSuffix cannot be null!");
 
   ValueMapTypeRemapper *TypeMapper = nullptr;
@@ -959,13 +954,13 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
   // uncond branches, and this code folds them.
   Function::iterator I = Begin;
   while (I != NewFunc->end()) {
-    BranchInst *BI = dyn_cast<BranchInst>(I->getTerminator());
-    if (!BI || BI->isConditional()) {
+    UncondBrInst *BI = dyn_cast<UncondBrInst>(I->getTerminator());
+    if (!BI) {
       ++I;
       continue;
     }
 
-    BasicBlock *Dest = BI->getSuccessor(0);
+    BasicBlock *Dest = BI->getSuccessor();
     if (!Dest->getSinglePredecessor() || Dest->hasAddressTaken()) {
       ++I;
       continue;
@@ -1008,10 +1003,12 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
 /// constant arguments cause a significant amount of code in the callee to be
 /// dead.  Since this doesn't produce an exact copy of the input, it can't be
 /// used for things like CloneFunction or CloneModule.
-void llvm::CloneAndPruneFunctionInto(
-    Function *NewFunc, const Function *OldFunc, ValueToValueMapTy &VMap,
-    bool ModuleLevelChanges, SmallVectorImpl<ReturnInst *> &Returns,
-    const char *NameSuffix, ClonedCodeInfo *CodeInfo) {
+void llvm::CloneAndPruneFunctionInto(Function *NewFunc, const Function *OldFunc,
+                                     ValueToValueMapTy &VMap,
+                                     bool ModuleLevelChanges,
+                                     SmallVectorImpl<ReturnInst *> &Returns,
+                                     const char *NameSuffix,
+                                     ClonedCodeInfo &CodeInfo) {
   CloneAndPruneIntoFromInst(NewFunc, OldFunc, &OldFunc->front().front(), VMap,
                             ModuleLevelChanges, Returns, NameSuffix, CodeInfo);
 }

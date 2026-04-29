@@ -11,11 +11,8 @@
 // expected-error@#func {{return type cannot be qualified with address space}}
 auto func() -> groupshared void; // #func
 
-// expected-error@#func_gs {{parameter may not be qualified with an address space}}
 auto func(float groupshared) -> void; // #func_gs
 
-
-// expected-error@#l {{parameter may not be qualified with an address space}}
 // expected-warning@#l {{lambdas are a clang HLSL extension}}
 auto l = [](groupshared float ) {}; // #l
 

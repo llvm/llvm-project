@@ -21,7 +21,7 @@ RUN apt-get update && \
 
 RUN wget https://apt.llvm.org/llvm.sh && \
     chmod +x llvm.sh && \
-    sudo ./llvm.sh 21 && \
+    sudo ./llvm.sh 23 && \
     rm llvm.sh
     
 # Debian has a multilib setup, so we need to symlink the asm directory.

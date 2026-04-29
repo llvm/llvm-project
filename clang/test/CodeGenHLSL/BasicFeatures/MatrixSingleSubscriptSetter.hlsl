@@ -6,11 +6,11 @@
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[INDEX_ADDR:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x float>, align 16
+// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x float>, align 4
 // CHECK-NEXT:    store ptr [[M]], ptr [[M_ADDR]], align 4
 // CHECK-NEXT:    store i32 [[INDEX]], ptr [[INDEX_ADDR]], align 4
-// CHECK-NEXT:    store <4 x float> [[V]], ptr [[V_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[V_ADDR]], align 16
+// CHECK-NEXT:    store <4 x float> [[V]], ptr [[V_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[V_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[M_ADDR]], align 4, !nonnull [[META3:![0-9]+]], !align [[META4:![0-9]+]]
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[INDEX_ADDR]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = add i32 0, [[TMP2]]
@@ -64,13 +64,13 @@ void setMatrixScalar(out float2x1 M, int index, float S) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[INDEX_ADDR:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x i32>, align 16
+// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x i32>, align 4
 // CHECK-NEXT:    store ptr [[M]], ptr [[M_ADDR]], align 4
 // CHECK-NEXT:    store i32 [[INDEX]], ptr [[INDEX_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = zext <4 x i1> [[V]] to <4 x i32>
-// CHECK-NEXT:    store <4 x i32> [[TMP0]], ptr [[V_ADDR]], align 16
-// CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[V_ADDR]], align 16
-// CHECK-NEXT:    [[LOADEDV:%.*]] = trunc <4 x i32> [[TMP1]] to <4 x i1>
+// CHECK-NEXT:    store <4 x i32> [[TMP0]], ptr [[V_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[V_ADDR]], align 4
+// CHECK-NEXT:    [[LOADEDV:%.*]] = icmp ne <4 x i32> [[TMP1]], zeroinitializer
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[M_ADDR]], align 4, !nonnull [[META3]], !align [[META4]]
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[INDEX_ADDR]], align 4
 // CHECK-NEXT:    [[TMP4:%.*]] = zext <4 x i1> [[LOADEDV]] to <4 x i32>
@@ -107,7 +107,7 @@ void setBoolMatrix(out bool4x4 M, int index, bool4 V) {
 // CHECK-NEXT:    [[STOREDV:%.*]] = zext i1 [[S]] to i32
 // CHECK-NEXT:    store i32 [[STOREDV]], ptr [[S_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[S_ADDR]], align 4
-// CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i32 [[TMP0]] to i1
+// CHECK-NEXT:    [[LOADEDV:%.*]] = icmp ne i32 [[TMP0]], 0
 // CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <1 x i1> poison, i1 [[LOADEDV]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <1 x i1> [[SPLAT_SPLATINSERT]], <1 x i1> poison, <1 x i32> zeroinitializer
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[M_ADDR]], align 4, !nonnull [[META3]], !align [[META4]]

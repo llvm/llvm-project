@@ -237,6 +237,13 @@ mlir::Value integerCast(const fir::LLVMTypeConverter &converter,
                         mlir::Location loc,
                         mlir::ConversionPatternRewriter &rewriter,
                         mlir::Type ty, mlir::Value val, bool fold = false);
+
+/// Check if the given operation result is a new allocation
+/// as specified by the MemoryEffects of the operation.
+/// The function returns true iff it is a new allocation,
+/// it return false iff it is not a new allocation,
+/// otherwise it returns std::nullopt.
+std::optional<bool> isNewAllocationResult(mlir::OpResult result);
 } // namespace fir
 
 #endif // FORTRAN_OPTIMIZER_SUPPORT_UTILS_H

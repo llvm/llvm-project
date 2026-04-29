@@ -5,6 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the declaration of the PlatformImpl class, which
+/// implements sycl::platform functionality.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef _LIBSYCL_PLATFORM_IMPL
 #define _LIBSYCL_PLATFORM_IMPL
@@ -29,6 +35,7 @@ _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace detail {
 
 class DeviceImpl;
+class ContextImpl;
 
 using PlatformImplUPtr = std::unique_ptr<PlatformImpl>;
 using DeviceImplUPtr = std::unique_ptr<DeviceImpl>;
@@ -52,8 +59,6 @@ public:
 
   ~PlatformImpl() = default;
 
-  /// Returns the backend associated with this platform.
-  ///
   /// \returns sycl::backend associated with this platform.
   backend getBackend() const noexcept { return MBackend; }
 
@@ -70,7 +75,9 @@ public:
   /// within its lifetime.
   ///
   /// \return a raw offload platform handle.
-  const ol_platform_handle_t &getHandleRef() const { return MOffloadPlatform; }
+  const ol_platform_handle_t &getOLHandleRef() const {
+    return MOffloadPlatform;
+  }
 
   /// Queries the cache to get the implementation for specified offloading RT
   /// platform. All platform implementation objects are created at first
@@ -121,15 +128,25 @@ public:
   void iterateDevices(info::device_type DeviceType,
                       std::function<void(DeviceImpl *)> callback) const;
 
+  // TODO: liboffload doesn't support context now, l0 plugin creates default
+  // context for all devices on its level. This method should be removed or
+  // reimplemented once native context support is added to liboffload.
+  /// \return the default context that represents all devices in platform.
+  ContextImpl &getDefaultContext();
+
 private:
+  /// \return reference to collection of root devices for platform
   const std::vector<DeviceImplUPtr> &getRootDevices() const;
 
-  ol_platform_handle_t MOffloadPlatform{};
-  size_t MOffloadPlatformIndex{};
+  const ol_platform_handle_t MOffloadPlatform{};
+  const size_t MOffloadPlatformIndex{};
+
   ol_platform_backend_t MOffloadBackend{OL_PLATFORM_BACKEND_UNKNOWN};
   backend MBackend{};
 
   std::vector<DeviceImplUPtr> MRootDevices;
+
+  std::shared_ptr<ContextImpl> MDefaultContext;
 };
 
 } // namespace detail

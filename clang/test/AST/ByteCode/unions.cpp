@@ -121,7 +121,7 @@ namespace SimpleActivate {
         float x,y;
       } a;
       int b;
-    } Z;
+    } Z; // both-note {{declared here}}
 
     Z.a.y = 10;
 
@@ -410,7 +410,7 @@ namespace UnionInBase {
   static_assert(read_wrong_member_indirect() == 1); // both-error {{not an integral constant expression}} \
                                                     // both-note {{in call to}}
   constexpr int read_uninitialized() {
-    B b = {.b = 1};
+    B b = {.b = 1}; // both-note {{declared here}}
     int *p = &b.a.y;
     b.a.x = 1;
     return *p; // both-note {{read of uninitialized object}}
@@ -1006,5 +1006,69 @@ namespace NonTrivialUnionCtor {
   }
   static_assert(j()); // both-error {{not an integral constant expression}} \
                       // both-note {{in call to}}
+}
+
+/// u.a should not implicitly get activated when assigning to it, since A
+/// does not have a non-deleted trivial default constructor.
+namespace NoTrivialCtor {
+  struct A {
+   int i;
+   constexpr A() : i(0) {}
+   constexpr A(int i) : i(i) {}
+  };
+
+  constexpr auto test() {
+   union U {
+    int i;
+    A a;
+   } u{.i = 0};
+
+   u.a = {123}; // both-note {{member call on member 'a' of union with active member 'i'}}
+   return u.a.i;
+  }
+
+  constexpr auto r = test(); // both-error {{must be initialized by a constant expression}} \
+                             // both-note {{in call to}}
+
+  /// Should still work if the LHS is not a record type.
+  enum byte {};
+  constexpr byte operator|=(byte a, byte b) {
+    return byte{};
+  }
+  constexpr int foo() {
+    byte b{};
+    b |= byte{};
+    return 10;
+  }
+  static_assert(foo() == 10);
+}
+
+namespace Revive {
+  struct S { int p; };
+  struct A { S s;};
+  union U { A a; };
+
+  constexpr int g() {
+    U u;
+    u.a.s.p = 3;
+    u.a.~A();
+    u.a.s.p = 4; // Start lifetime of 'a' again.
+    int r = u.a.s.p;
+    u.a.~A();
+    return r;
+  }
+  static_assert(g() == 4);
+
+  constexpr int h() {
+    A a; // both-note {{declared here}}
+    a.s.p = 10;
+
+    a.s.~S();
+    a.s.p = 20; // both-note {{assignment to object outside its lifetime}}
+    int r = a.s.p;
+    return r;
+  }
+  static_assert(h() == 20); // both-error {{not an integral constant expression}} \
+                            // both-note {{in call to}}
 }
 #endif

@@ -152,6 +152,7 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
   case Stmt::SEHExceptStmtClass:
   case Stmt::SEHFinallyStmtClass:
   case Stmt::MSDependentExistsStmtClass:
+  case Stmt::UnresolvedSYCLKernelCallStmtClass:
     llvm_unreachable("invalid statement class to emit generically");
   case Stmt::BreakStmtClass:
   case Stmt::NullStmtClass:
@@ -402,6 +403,8 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
     return emitOMPGenericLoopDirective(cast<OMPGenericLoopDirective>(*s));
   case Stmt::OMPReverseDirectiveClass:
     return emitOMPReverseDirective(cast<OMPReverseDirective>(*s));
+  case Stmt::OMPSplitDirectiveClass:
+    return emitOMPSplitDirective(cast<OMPSplitDirective>(*s));
   case Stmt::OMPInterchangeDirectiveClass:
     return emitOMPInterchangeDirective(cast<OMPInterchangeDirective>(*s));
   case Stmt::OMPAssumeDirectiveClass:
@@ -487,8 +490,8 @@ mlir::LogicalResult CIRGenFunction::emitLabelStmt(const clang::LabelStmt &s) {
 }
 
 // Add a terminating yield on a body region if no other terminators are used.
-static void terminateBody(CIRGenBuilderTy &builder, mlir::Region &r,
-                          mlir::Location loc) {
+void CIRGenFunction::terminateStructuredRegionBody(mlir::Region &r,
+                                                   mlir::Location loc) {
   if (r.empty())
     return;
 
@@ -651,37 +654,33 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
   if (!createNewScope) {
     handleReturnVal();
   } else {
-    mlir::Location scopeLoc =
-        getLoc(rv ? rv->getSourceRange() : s.getSourceRange());
-    // First create cir.scope and later emit it's body. Otherwise all CIRGen
-    // dispatched by `handleReturnVal()` might needs to manipulate blocks and
-    // look into parents, which are all unlinked.
-    mlir::OpBuilder::InsertPoint scopeBody;
-    cir::ScopeOp::create(builder, scopeLoc, /*scopeBuilder=*/
-                         [&](mlir::OpBuilder &b, mlir::Location loc) {
-                           scopeBody = b.saveInsertionPoint();
-                         });
-    {
-      mlir::OpBuilder::InsertionGuard guard(builder);
-      builder.restoreInsertionPoint(scopeBody);
-      CIRGenFunction::LexicalScope lexScope{*this, scopeLoc,
-                                            builder.getInsertionBlock()};
-      handleReturnVal();
-    }
+    FullExprCleanupScope fullExprScope(*this, rv);
+    handleReturnVal();
   }
 
   cleanupScope.forceCleanup();
 
-  // In CIR we might have returns in different scopes.
-  // FIXME(cir): cleanup code is handling actual return emission, the logic
-  // should try to match traditional codegen more closely (to the extent which
-  // is possible).
-  auto *retBlock = curLexScope->getOrCreateRetBlock(*this, loc);
-  emitBranchThroughCleanup(loc, returnBlock(retBlock));
+  // Classic codegen emits a branch through any cleanups before continuing to
+  // a shared return block. Because CIR handles branching through cleanups
+  // during the CFG flattening phase, we can just emit the return statement
+  // directly.
+  // TODO(cir): Eliminate this redundant load and the store above when we can.
+  if (fnRetAlloca) {
+    // Load the value from `__retval` and return it via the `cir.return` op.
+    cir::AllocaOp retAlloca =
+        mlir::cast<cir::AllocaOp>(fnRetAlloca->getDefiningOp());
+    auto value = cir::LoadOp::create(builder, loc, retAlloca.getAllocaType(),
+                                     *fnRetAlloca);
 
-  // Insert the new block to continue codegen after branch to ret block.
+    cir::ReturnOp::create(builder, loc, {value});
+  } else {
+    cir::ReturnOp::create(builder, loc);
+  }
+
+  // Insert the new block to continue codegen after the return statement.
+  // This will get deleted if we don't populate it. This handles the case of
+  // unreachable statements below a return.
   builder.createBlock(builder.getBlock()->getParent());
-
   return mlir::success();
 }
 
@@ -749,7 +748,6 @@ mlir::LogicalResult CIRGenFunction::emitLabel(const clang::LabelDecl &d) {
                                                   label.getLabelAttr()),
                       label);
   //  FIXME: emit debug info for labels, incrementProfileCounter
-  assert(!cir::MissingFeatures::ehstackBranches());
   assert(!cir::MissingFeatures::incrementProfileCounter());
   assert(!cir::MissingFeatures::generateDebugInfo());
   return mlir::success();
@@ -919,7 +917,7 @@ CIRGenFunction::emitCXXForRangeStmt(const CXXForRangeStmt &s,
     // scope, create a block to stage a loop exit along.
     // We probably already do the right thing because of ScopeOp, but make
     // sure we handle all cases.
-    assert(!cir::MissingFeatures::requiresCleanups());
+    assert(!cir::MissingFeatures::loopSpecificCleanupHandling());
 
     forOp = builder.createFor(
         getLoc(s.getSourceRange()),
@@ -968,7 +966,7 @@ CIRGenFunction::emitCXXForRangeStmt(const CXXForRangeStmt &s,
   if (res.failed())
     return res;
 
-  terminateBody(builder, forOp.getBody(), getLoc(s.getEndLoc()));
+  terminateStructuredRegionBody(forOp.getBody(), getLoc(s.getEndLoc()));
   return mlir::success();
 }
 
@@ -987,7 +985,7 @@ mlir::LogicalResult CIRGenFunction::emitForStmt(const ForStmt &s) {
     // loop-exit scope, a block is created to stage the loop exit. We probably
     // already do the right thing because of ScopeOp, but we need more testing
     // to be sure we handle all cases.
-    assert(!cir::MissingFeatures::requiresCleanups());
+    assert(!cir::MissingFeatures::loopSpecificCleanupHandling());
 
     forOp = builder.createFor(
         getLoc(s.getSourceRange()),
@@ -1040,7 +1038,7 @@ mlir::LogicalResult CIRGenFunction::emitForStmt(const ForStmt &s) {
   if (res.failed())
     return res;
 
-  terminateBody(builder, forOp.getBody(), getLoc(s.getEndLoc()));
+  terminateStructuredRegionBody(forOp.getBody(), getLoc(s.getEndLoc()));
   return mlir::success();
 }
 
@@ -1055,7 +1053,7 @@ mlir::LogicalResult CIRGenFunction::emitDoStmt(const DoStmt &s) {
     // scope, create a block to stage a loop exit along.
     // We probably already do the right thing because of ScopeOp, but make
     // sure we handle all cases.
-    assert(!cir::MissingFeatures::requiresCleanups());
+    assert(!cir::MissingFeatures::loopSpecificCleanupHandling());
 
     doWhileOp = builder.createDoWhile(
         getLoc(s.getSourceRange()),
@@ -1091,7 +1089,7 @@ mlir::LogicalResult CIRGenFunction::emitDoStmt(const DoStmt &s) {
   if (res.failed())
     return res;
 
-  terminateBody(builder, doWhileOp.getBody(), getLoc(s.getEndLoc()));
+  terminateStructuredRegionBody(doWhileOp.getBody(), getLoc(s.getEndLoc()));
   return mlir::success();
 }
 
@@ -1106,7 +1104,7 @@ mlir::LogicalResult CIRGenFunction::emitWhileStmt(const WhileStmt &s) {
     // scope, create a block to stage a loop exit along.
     // We probably already do the right thing because of ScopeOp, but make
     // sure we handle all cases.
-    assert(!cir::MissingFeatures::requiresCleanups());
+    assert(!cir::MissingFeatures::loopSpecificCleanupHandling());
 
     whileOp = builder.createWhile(
         getLoc(s.getSourceRange()),
@@ -1147,7 +1145,7 @@ mlir::LogicalResult CIRGenFunction::emitWhileStmt(const WhileStmt &s) {
   if (res.failed())
     return res;
 
-  terminateBody(builder, whileOp.getBody(), getLoc(s.getEndLoc()));
+  terminateStructuredRegionBody(whileOp.getBody(), getLoc(s.getEndLoc()));
   return mlir::success();
 }
 
@@ -1242,8 +1240,8 @@ mlir::LogicalResult CIRGenFunction::emitSwitchStmt(const clang::SwitchStmt &s) {
   llvm::SmallVector<CaseOp> cases;
   swop.collectCases(cases);
   for (auto caseOp : cases)
-    terminateBody(builder, caseOp.getCaseRegion(), caseOp.getLoc());
-  terminateBody(builder, swop.getBody(), swop.getLoc());
+    terminateStructuredRegionBody(caseOp.getCaseRegion(), caseOp.getLoc());
+  terminateStructuredRegionBody(swop.getBody(), swop.getLoc());
 
   swop.setAllEnumCasesCovered(s.isAllEnumCasesCovered());
 
@@ -1261,9 +1259,17 @@ void CIRGenFunction::emitReturnOfRValue(mlir::Location loc, RValue rv,
   } else {
     cgm.errorNYI(loc, "emitReturnOfRValue: complex return type");
   }
-  mlir::Block *retBlock = curLexScope->getOrCreateRetBlock(*this, loc);
-  assert(!cir::MissingFeatures::emitBranchThroughCleanup());
-  cir::BrOp::create(builder, loc, retBlock);
-  if (ehStack.stable_begin() != currentCleanupStackDepth)
-    cgm.errorNYI(loc, "return of r-value with cleanup stack");
+
+  // Classic codegen emits a branch through any cleanups before continuing to
+  // a shared return block. Because CIR handles branching through cleanups
+  // during the CFG flattening phase, we can just emit the return statement
+  // directly.
+  // TODO(cir): Eliminate this redundant load and the store above when we can.
+  // Load the value from `__retval` and return it via the `cir.return` op.
+  cir::AllocaOp retAlloca =
+      mlir::cast<cir::AllocaOp>(fnRetAlloca->getDefiningOp());
+  auto value = cir::LoadOp::create(builder, loc, retAlloca.getAllocaType(),
+                                   *fnRetAlloca);
+
+  cir::ReturnOp::create(builder, loc, {value});
 }

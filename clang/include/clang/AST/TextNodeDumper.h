@@ -343,6 +343,7 @@ public:
   void VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType *T);
   void
   VisitSubstTemplateTypeParmPackType(const SubstTemplateTypeParmPackType *T);
+  void VisitDeducedType(const DeducedType *T);
   void VisitAutoType(const AutoType *T);
   void VisitDeducedTemplateSpecializationType(
       const DeducedTemplateSpecializationType *T);
@@ -394,6 +395,7 @@ public:
   void VisitLinkageSpecDecl(const LinkageSpecDecl *D);
   void VisitAccessSpecDecl(const AccessSpecDecl *D);
   void VisitFriendDecl(const FriendDecl *D);
+  void VisitExplicitInstantiationDecl(const ExplicitInstantiationDecl *D);
   void VisitObjCIvarDecl(const ObjCIvarDecl *D);
   void VisitObjCMethodDecl(const ObjCMethodDecl *D);
   void VisitObjCTypeParamDecl(const ObjCTypeParamDecl *D);

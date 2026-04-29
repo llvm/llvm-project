@@ -36,34 +36,34 @@ define i32 @test(ptr %arr, i64 %n) {
 ; CHECK-NEXT:    [[VEC_IV:%.*]] = add <4 x i64> [[BROADCAST_SPLAT2]], <i64 0, i64 1, i64 2, i64 3>
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp ule <4 x i64> [[VEC_IV]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = add nsw <4 x i64> [[VEC_IND]], splat (i64 -1)
-; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x i1> [[TMP11]], i32 0
+; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x i1> [[TMP11]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP24]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
-; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <4 x i64> [[TMP21]], i32 0
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <4 x i64> [[TMP21]], i64 0
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, ptr [[ARR]], i64 [[TMP17]]
 ; CHECK-NEXT:    store i32 65, ptr [[TMP18]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; CHECK:       pred.store.continue:
-; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <4 x i1> [[TMP11]], i32 1
+; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <4 x i1> [[TMP11]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP25]], label [[PRED_STORE_IF3:%.*]], label [[PRED_STORE_CONTINUE4:%.*]]
 ; CHECK:       pred.store.if3:
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i64> [[TMP21]], i32 1
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i64> [[TMP21]], i64 1
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[ARR]], i64 [[TMP13]]
 ; CHECK-NEXT:    store i32 65, ptr [[TMP14]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE4]]
 ; CHECK:       pred.store.continue4:
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x i1> [[TMP11]], i32 2
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x i1> [[TMP11]], i64 2
 ; CHECK-NEXT:    br i1 [[TMP15]], label [[PRED_STORE_IF5:%.*]], label [[PRED_STORE_CONTINUE6:%.*]]
 ; CHECK:       pred.store.if5:
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x i64> [[TMP21]], i32 2
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x i64> [[TMP21]], i64 2
 ; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i32, ptr [[ARR]], i64 [[TMP16]]
 ; CHECK-NEXT:    store i32 65, ptr [[TMP26]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE6]]
 ; CHECK:       pred.store.continue6:
-; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <4 x i1> [[TMP11]], i32 3
+; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <4 x i1> [[TMP11]], i64 3
 ; CHECK-NEXT:    br i1 [[TMP27]], label [[PRED_STORE_IF7:%.*]], label [[PRED_STORE_CONTINUE8]]
 ; CHECK:       pred.store.if7:
-; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <4 x i64> [[TMP21]], i32 3
+; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <4 x i64> [[TMP21]], i64 3
 ; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr inbounds i32, ptr [[ARR]], i64 [[TMP19]]
 ; CHECK-NEXT:    store i32 65, ptr [[TMP28]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE8]]

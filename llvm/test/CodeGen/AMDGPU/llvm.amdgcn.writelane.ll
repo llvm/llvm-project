@@ -3,9 +3,9 @@
 ; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx1010 < %s | FileCheck -check-prefixes=GFX1010-SDAG %s
 ; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx1100 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GFX1100-SDAG %s
 
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx802 -global-isel -global-isel-abort=2 < %s | FileCheck -check-prefixes=GFX802-GISEL %s
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx1010 -global-isel -global-isel-abort=2 < %s | FileCheck -check-prefixes=GFX1010-GISEL %s
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx1100 -amdgpu-enable-vopd=0 -global-isel -global-isel-abort=2 < %s | FileCheck -check-prefixes=GFX1100-GISEL %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx802 -global-isel -new-reg-bank-select -global-isel-abort=2 < %s | FileCheck -check-prefixes=GFX802-GISEL %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx1010 -global-isel -new-reg-bank-select -global-isel-abort=2 < %s | FileCheck -check-prefixes=GFX1010-GISEL %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx1100 -amdgpu-enable-vopd=0 -global-isel -new-reg-bank-select -global-isel-abort=2 < %s | FileCheck -check-prefixes=GFX1100-GISEL %s
 
 declare i32 @llvm.amdgcn.writelane(i32, i32, i32) #0
 declare i64 @llvm.amdgcn.writelane.i64(i64, i32, i64) #0

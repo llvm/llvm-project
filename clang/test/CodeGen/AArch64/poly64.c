@@ -61,44 +61,6 @@ uint64x2_t test_vtstq_p64(poly64x2_t a, poly64x2_t b) {
   return vtstq_p64(a, b);
 }
 
-// CHECK-LABEL: define dso_local <1 x i64> @test_vbsl_p64(
-// CHECK-SAME: <1 x i64> noundef [[A:%.*]], <1 x i64> noundef [[B:%.*]], <1 x i64> noundef [[C:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[A]] to <8 x i8>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[B]] to <8 x i8>
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <1 x i64> [[C]] to <8 x i8>
-// CHECK-NEXT:    [[VBSL_I:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
-// CHECK-NEXT:    [[VBSL1_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x i64>
-// CHECK-NEXT:    [[VBSL2_I:%.*]] = bitcast <8 x i8> [[TMP2]] to <1 x i64>
-// CHECK-NEXT:    [[VBSL3_I:%.*]] = and <1 x i64> [[VBSL_I]], [[VBSL1_I]]
-// CHECK-NEXT:    [[TMP3:%.*]] = xor <1 x i64> [[VBSL_I]], splat (i64 -1)
-// CHECK-NEXT:    [[VBSL4_I:%.*]] = and <1 x i64> [[TMP3]], [[VBSL2_I]]
-// CHECK-NEXT:    [[VBSL5_I:%.*]] = or <1 x i64> [[VBSL3_I]], [[VBSL4_I]]
-// CHECK-NEXT:    ret <1 x i64> [[VBSL5_I]]
-//
-poly64x1_t test_vbsl_p64(poly64x1_t a, poly64x1_t b, poly64x1_t c) {
-  return vbsl_p64(a, b, c);
-}
-
-// CHECK-LABEL: define dso_local <2 x i64> @test_vbslq_p64(
-// CHECK-SAME: <2 x i64> noundef [[A:%.*]], <2 x i64> noundef [[B:%.*]], <2 x i64> noundef [[C:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[A]] to <16 x i8>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[B]] to <16 x i8>
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[C]] to <16 x i8>
-// CHECK-NEXT:    [[VBSL_I:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
-// CHECK-NEXT:    [[VBSL1_I:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x i64>
-// CHECK-NEXT:    [[VBSL2_I:%.*]] = bitcast <16 x i8> [[TMP2]] to <2 x i64>
-// CHECK-NEXT:    [[VBSL3_I:%.*]] = and <2 x i64> [[VBSL_I]], [[VBSL1_I]]
-// CHECK-NEXT:    [[TMP3:%.*]] = xor <2 x i64> [[VBSL_I]], splat (i64 -1)
-// CHECK-NEXT:    [[VBSL4_I:%.*]] = and <2 x i64> [[TMP3]], [[VBSL2_I]]
-// CHECK-NEXT:    [[VBSL5_I:%.*]] = or <2 x i64> [[VBSL3_I]], [[VBSL4_I]]
-// CHECK-NEXT:    ret <2 x i64> [[VBSL5_I]]
-//
-poly64x2_t test_vbslq_p64(poly64x2_t a, poly64x2_t b, poly64x2_t c) {
-  return vbslq_p64(a, b, c);
-}
-
 // CHECK-LABEL: define dso_local i64 @test_vget_lane_p64(
 // CHECK-SAME: <1 x i64> noundef [[V:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -551,26 +513,6 @@ poly64x1_t test_vext_p64(poly64x1_t a, poly64x1_t b) {
 //
 poly64x2_t test_vextq_p64(poly64x2_t a, poly64x2_t b) {
   return vextq_p64(a, b, 1);
-}
-
-// CHECK-LABEL: define dso_local <2 x i64> @test_vzip1q_p64(
-// CHECK-SAME: <2 x i64> noundef [[A:%.*]], <2 x i64> noundef [[B:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <2 x i64> [[A]], <2 x i64> [[B]], <2 x i32> <i32 0, i32 2>
-// CHECK-NEXT:    ret <2 x i64> [[SHUFFLE_I]]
-//
-poly64x2_t test_vzip1q_p64(poly64x2_t a, poly64x2_t b) {
-  return vzip1q_p64(a, b);
-}
-
-// CHECK-LABEL: define dso_local <2 x i64> @test_vzip2q_p64(
-// CHECK-SAME: <2 x i64> noundef [[A:%.*]], <2 x i64> noundef [[B:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <2 x i64> [[A]], <2 x i64> [[B]], <2 x i32> <i32 1, i32 3>
-// CHECK-NEXT:    ret <2 x i64> [[SHUFFLE_I]]
-//
-poly64x2_t test_vzip2q_p64(poly64x2_t a, poly64x2_t b) {
-  return vzip2q_u64(a, b);
 }
 
 // CHECK-LABEL: define dso_local <2 x i64> @test_vuzp1q_p64(

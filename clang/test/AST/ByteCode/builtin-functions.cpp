@@ -889,6 +889,9 @@ namespace bswap {
   int h15 = __builtin_bswapg((_BitInt(24))0x1234) == (_BitInt(24))0x3412 ? 1 : f();
   // expected-error@-1 {{_BitInt type '_BitInt(24)' (24 bits) must be a multiple of 16 bits for byte swapping}}
   // ref-error@-2 {{_BitInt type '_BitInt(24)' (24 bits) must be a multiple of 16 bits for byte swapping}}
+  int h16 = __builtin_bswapg((_BitInt(5))0x1) == (_BitInt(5))0x1 ? 1 : f();
+  // expected-error@-1 {{_BitInt type '_BitInt(5)' (5 bits) must be a multiple of 16 bits for byte swapping}}
+  // ref-error@-2 {{_BitInt type '_BitInt(5)' (5 bits) must be a multiple of 16 bits for byte swapping}}
 #endif
 
   constexpr const int const_expr = 0x1234;
@@ -1213,7 +1216,7 @@ namespace shufflevector {
 #if __cplusplus >= 202002L
   constexpr int discarded3() {
     int i = 0;
-    vector4char a;
+    vector4char a; // both-note {{declared here}}
     __builtin_shufflevector((++i, a), a, 0); // both-note {{read of uninitialized object}} \
                                              // both-warning {{expression result unused}}
     return i;
@@ -1960,6 +1963,53 @@ namespace I128Mul {
   static_assert(mul() == 1);
 }
 #endif
+
+namespace OverflowOps {
+  constexpr bool add_bool() {
+    bool r = false;
+    return __builtin_add_overflow(1u, 1u, &r) && r == false;
+  }
+  static_assert(add_bool());
+
+  constexpr bool add_bool_non_overflow_true() {
+    bool r = false;
+    return !__builtin_add_overflow(1u, 0u, &r) && r == true;
+  }
+  static_assert(add_bool_non_overflow_true());
+
+  constexpr bool add_bool_non_overflow_false() {
+    bool r = true;
+    return !__builtin_add_overflow(0u, 0u, &r) && r == false;
+  }
+  static_assert(add_bool_non_overflow_false());
+
+  constexpr bool sub_bool() {
+    bool r = false;
+    return __builtin_sub_overflow(0u, 1u, &r) && r == true;
+  }
+  static_assert(sub_bool());
+
+  constexpr bool sub_bool_non_overflow_true() {
+    bool r = false;
+    return !__builtin_sub_overflow(1u, 0u, &r) && r == true;
+  }
+  static_assert(sub_bool_non_overflow_true());
+
+  constexpr bool sub_bool_non_overflow_false() {
+    bool r = true;
+    return !__builtin_sub_overflow(1u, 1u, &r) && r == false;
+  }
+  static_assert(sub_bool_non_overflow_false());
+
+  constexpr int add_sub() {
+    int r = 0;
+    int s = 0;
+    __builtin_add_overflow(10, 20, &r);
+    __builtin_sub_overflow(10, 3, &s);
+    return r + s;
+  }
+  static_assert(add_sub() == 37);
+}
 
 namespace InitParam {
   constexpr int foo(int a) {

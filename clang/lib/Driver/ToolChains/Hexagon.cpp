@@ -11,6 +11,8 @@
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/InputInfo.h"
+#include "clang/Driver/MultilibBuilder.h"
+#include "clang/Driver/SanitizerArgs.h"
 #include "clang/Options/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
@@ -273,11 +275,11 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
   //----------------------------------------------------------------------------
   bool IsStatic = Args.hasArg(options::OPT_static);
   bool IsShared = Args.hasArg(options::OPT_shared);
-  bool IsPIE = Args.hasArg(options::OPT_pie);
+  bool IsPIE = Args.hasFlag(options::OPT_pie, options::OPT_no_pie,
+                            HTC.isPIEDefault(Args));
   bool IncStdLib = !Args.hasArg(options::OPT_nostdlib);
   bool IncStartFiles = !Args.hasArg(options::OPT_nostartfiles);
   bool IncDefLibs = !Args.hasArg(options::OPT_nodefaultlibs);
-  bool UseG0 = false;
   bool UseLLD = false;
   const char *Exec = Args.MakeArgString(HTC.GetLinkerPath(&UseLLD));
   UseLLD = UseLLD || llvm::sys::path::filename(Exec).ends_with("ld.lld") ||
@@ -324,13 +326,11 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
   if (IsStatic)
     CmdArgs.push_back("-static");
 
-  if (IsPIE && !IsShared)
+  if (IsPIE && !IsShared && !Args.hasArg(options::OPT_r))
     CmdArgs.push_back("-pie");
 
-  if (auto G = toolchains::HexagonToolChain::getSmallDataThreshold(Args)) {
+  if (auto G = toolchains::HexagonToolChain::getSmallDataThreshold(Args))
     CmdArgs.push_back(Args.MakeArgString("-G" + Twine(*G)));
-    UseG0 = *G == 0;
-  }
 
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
@@ -346,11 +346,21 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
              !Args.hasArg(options::OPT_nostartfiles, options::OPT_nostdlib))
       CmdArgs.push_back(Args.MakeArgString(D.SysRoot + "/usr/lib/crti.o"));
 
+    if (!HTC.getSelectedMultilibs().empty() &&
+        !HTC.getSelectedMultilibs().back().isDefault()) {
+      CmdArgs.push_back(
+          Args.MakeArgString(StringRef("-L") + D.SysRoot + "/usr/lib" +
+                             HTC.getSelectedMultilibs().back().gccSuffix()));
+    }
     CmdArgs.push_back(
         Args.MakeArgString(StringRef("-L") + D.SysRoot + "/usr/lib"));
     Args.addAllArgs(CmdArgs, {options::OPT_T_Group, options::OPT_s,
                               options::OPT_t, options::OPT_u_Group});
     AddLinkerInputs(HTC, Inputs, Args, CmdArgs, JA);
+
+    if (D.isUsingLTO())
+      addLTOOptions(HTC, Args, CmdArgs, Output, Inputs,
+                    D.getLTOMode() == LTOK_Thin);
 
     ToolChain::UnwindLibType UNW = HTC.GetUnwindLibType(Args);
 
@@ -397,35 +407,31 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
   //----------------------------------------------------------------------------
   // Start Files
   //----------------------------------------------------------------------------
-  const std::string MCpuSuffix = "/" + CpuVer.str();
-  const std::string MCpuG0Suffix = MCpuSuffix + "/G0";
-  const std::string RootDir =
-      HTC.getHexagonTargetDir(D.Dir, D.PrefixDirs) + "/";
-  const std::string StartSubDir =
-      "hexagon/lib" + (UseG0 ? MCpuG0Suffix : MCpuSuffix);
-
-  auto Find = [&HTC] (const std::string &RootDir, const std::string &SubDir,
-                      const char *Name) -> std::string {
-    std::string RelName = SubDir + Name;
-    std::string P = HTC.GetFilePath(RelName.c_str());
-    if (llvm::sys::fs::exists(P))
-      return P;
-    return RootDir + RelName;
-  };
+  SmallString<128> LibraryDir;
+  HTC.getLibraryDir(Args, LibraryDir);
 
   if (IncStdLib && IncStartFiles) {
     if (!IsShared) {
-      if (HasStandalone) {
-        std::string Crt0SA = Find(RootDir, StartSubDir, "/crt0_standalone.o");
-        CmdArgs.push_back(Args.MakeArgString(Crt0SA));
+      if (HTC.GetCStdlibType(Args) == ToolChain::CST_Picolibc) {
+        SmallString<128> Crt0 = LibraryDir;
+        llvm::sys::path::append(Crt0, "crt0-semihost.o");
+        CmdArgs.push_back(Args.MakeArgString(Crt0));
+      } else {
+        if (HasStandalone) {
+          SmallString<128> Crt0SA = LibraryDir;
+          llvm::sys::path::append(Crt0SA, "crt0_standalone.o");
+          CmdArgs.push_back(Args.MakeArgString(Crt0SA));
+        }
+        SmallString<128> Crt0 = LibraryDir;
+        llvm::sys::path::append(Crt0, "crt0.o");
+        CmdArgs.push_back(Args.MakeArgString(Crt0));
       }
-      std::string Crt0 = Find(RootDir, StartSubDir, "/crt0.o");
-      CmdArgs.push_back(Args.MakeArgString(Crt0));
     }
-    std::string Init = UseShared
-          ? Find(RootDir, StartSubDir + "/pic", "/initS.o")
-          : Find(RootDir, StartSubDir, "/init.o");
-    CmdArgs.push_back(Args.MakeArgString(Init));
+    if (HTC.GetCStdlibType(Args) != ToolChain::CST_Picolibc) {
+      SmallString<128> Init = LibraryDir;
+      llvm::sys::path::append(Init, UseShared ? "initS.o" : "init.o");
+      CmdArgs.push_back(Args.MakeArgString(Init));
+    }
   }
 
   //----------------------------------------------------------------------------
@@ -444,6 +450,10 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
 
   AddLinkerInputs(HTC, Inputs, Args, CmdArgs, JA);
 
+  if (D.isUsingLTO())
+    addLTOOptions(HTC, Args, CmdArgs, Output, Inputs,
+                  D.getLTOMode() == LTOK_Thin);
+
   //----------------------------------------------------------------------------
   // Libraries
   //----------------------------------------------------------------------------
@@ -457,12 +467,23 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("--start-group");
 
     if (!IsShared) {
-      for (StringRef Lib : OsLibs)
-        CmdArgs.push_back(Args.MakeArgString("-l" + Lib));
+      if (HTC.GetCStdlibType(Args) == ToolChain::CST_Picolibc) {
+        CmdArgs.push_back("-lsemihost");
+      } else {
+        for (StringRef Lib : OsLibs)
+          CmdArgs.push_back(Args.MakeArgString("-l" + Lib));
+      }
       if (!Args.hasArg(options::OPT_nolibc))
         CmdArgs.push_back("-lc");
     }
-    CmdArgs.push_back("-lgcc");
+    if (HTC.GetCStdlibType(Args) == ToolChain::CST_Picolibc) {
+      if (HTC.GetRuntimeLibType(Args) == ToolChain::RLT_CompilerRT)
+        CmdArgs.push_back("-lclang_rt.builtins");
+      else
+        CmdArgs.push_back("-lgcc");
+    } else {
+      CmdArgs.push_back("-lgcc");
+    }
 
     CmdArgs.push_back("--end-group");
   }
@@ -471,10 +492,11 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
   // End files
   //----------------------------------------------------------------------------
   if (IncStdLib && IncStartFiles) {
-    std::string Fini = UseShared
-          ? Find(RootDir, StartSubDir + "/pic", "/finiS.o")
-          : Find(RootDir, StartSubDir, "/fini.o");
-    CmdArgs.push_back(Args.MakeArgString(Fini));
+    if (HTC.GetCStdlibType(Args) != ToolChain::CST_Picolibc) {
+      SmallString<128> Fini = LibraryDir;
+      llvm::sys::path::append(Fini, UseShared ? "finiS.o" : "fini.o");
+      CmdArgs.push_back(Args.MakeArgString(Fini));
+    }
   }
 }
 
@@ -509,10 +531,69 @@ std::string HexagonToolChain::getHexagonTargetDir(
     if (D.getVFS().exists(I))
       return I;
 
-  if (getVFS().exists(InstallRelDir = InstalledDir + "/../target"))
-    return InstallRelDir;
+  SmallString<128> Dir(InstalledDir);
+  llvm::sys::path::append(Dir, "..", "target");
+  return std::string(Dir);
+}
 
-  return InstalledDir;
+SmallString<128>
+HexagonToolChain::getEffectiveSysRoot(const ArgList &Args) const {
+  const Driver &D = getDriver();
+  // The user-specified `--sysroot` always takes precedence.
+  if (!D.SysRoot.empty())
+    return SmallString<128>(D.SysRoot);
+  SmallString<128> Dir(getHexagonTargetDir(D.Dir, D.PrefixDirs));
+  // For Picolibc, use picolibc/<triple> with no fallback.
+  if (GetCStdlibType(Args) == ToolChain::CST_Picolibc) {
+    llvm::sys::path::append(Dir, "picolibc", getTriple().normalize());
+    return Dir;
+  }
+  // Otherwise, try a triple subdirectory first, then fall back to "hexagon".
+  llvm::sys::path::append(Dir, getTriple().normalize());
+  if (getVFS().exists(Dir))
+    return Dir;
+  Dir = getHexagonTargetDir(D.Dir, D.PrefixDirs);
+  llvm::sys::path::append(Dir, "hexagon");
+  return Dir;
+}
+
+void HexagonToolChain::getLibraryDir(const ArgList &Args,
+                                     llvm::SmallString<128> &Dir) const {
+  bool IsLinuxMusl = getTriple().isMusl() && getTriple().isOSLinux();
+  const llvm::SmallString<128> SysRoot = getEffectiveSysRoot(Args);
+  // Linux toolchain uses "usr/lib" but it also should accept "lib" in case an
+  // external sysroot is used. Similar logic is for include paths.
+  if (IsLinuxMusl) {
+    Dir = SysRoot;
+    llvm::sys::path::append(Dir, "usr", "lib");
+  }
+  if (!IsLinuxMusl || !getVFS().exists(Dir)) {
+    Dir = SysRoot;
+    llvm::sys::path::append(Dir, "lib");
+  }
+  std::string CpuVer = GetTargetCPUVersion(Args).str();
+  llvm::sys::path::append(Dir, CpuVer);
+  if (auto G = toolchains::HexagonToolChain::getSmallDataThreshold(Args))
+    if (*G == 0)
+      llvm::sys::path::append(Dir, "G0");
+  bool IsStatic = Args.hasArg(options::OPT_static);
+  bool IsShared = Args.hasArg(options::OPT_shared);
+  if (IsShared && !IsStatic)
+    llvm::sys::path::append(Dir, "pic");
+}
+
+void HexagonToolChain::getBaseIncludeDir(const ArgList &Args,
+                                         llvm::SmallString<128> &Dir) const {
+  bool IsLinuxMusl = getTriple().isMusl() && getTriple().isOSLinux();
+  const llvm::SmallString<128> SysRoot = getEffectiveSysRoot(Args);
+  if (IsLinuxMusl) {
+    Dir = SysRoot;
+    llvm::sys::path::append(Dir, "usr", "include");
+  }
+  if (!IsLinuxMusl || !getVFS().exists(Dir)) {
+    Dir = SysRoot;
+    llvm::sys::path::append(Dir, "include");
+  }
 }
 
 std::optional<unsigned>
@@ -558,9 +639,9 @@ void HexagonToolChain::getHexagonLibraryPaths(const ArgList &Args,
   std::copy(D.PrefixDirs.begin(), D.PrefixDirs.end(),
             std::back_inserter(RootDirs));
 
-  std::string TargetDir = getHexagonTargetDir(D.Dir, D.PrefixDirs);
-  if (!llvm::is_contained(RootDirs, TargetDir))
-    RootDirs.push_back(TargetDir);
+  std::string SysRoot(getEffectiveSysRoot(Args));
+  if (!llvm::is_contained(RootDirs, SysRoot))
+    RootDirs.push_back(SysRoot);
 
   bool HasPIC = Args.hasArg(options::OPT_fpic, options::OPT_fPIC);
   // Assume G0 with -shared.
@@ -570,7 +651,7 @@ void HexagonToolChain::getHexagonLibraryPaths(const ArgList &Args,
 
   const std::string CpuVer = GetTargetCPUVersion(Args).str();
   for (auto &Dir : RootDirs) {
-    std::string LibDir = Dir + "/hexagon/lib";
+    std::string LibDir = Dir + "/lib";
     std::string LibDirCpu = LibDir + '/' + CpuVer;
     if (HasG0) {
       if (HasPIC)
@@ -585,14 +666,6 @@ void HexagonToolChain::getHexagonLibraryPaths(const ArgList &Args,
 HexagonToolChain::HexagonToolChain(const Driver &D, const llvm::Triple &Triple,
                                    const llvm::opt::ArgList &Args)
     : Linux(D, Triple, Args) {
-  const std::string TargetDir = getHexagonTargetDir(D.Dir, D.PrefixDirs);
-
-  // Note: Generic_GCC::Generic_GCC adds InstalledDir and getDriver().Dir to
-  // program paths
-  const std::string BinDir(TargetDir + "/bin");
-  if (D.getVFS().exists(BinDir))
-    getProgramPaths().push_back(BinDir);
-
   ToolChain::path_list &LibPaths = getFilePaths();
 
   // Remove paths added by Linux toolchain. Currently Hexagon_TC really targets
@@ -600,6 +673,34 @@ HexagonToolChain::HexagonToolChain(const Driver &D, const llvm::Triple &Triple,
   // support 'linux' we'll need to fix this up
   LibPaths.clear();
   getHexagonLibraryPaths(Args, LibPaths);
+
+  if (getTriple().isMusl()) {
+    Multilibs.push_back(Multilib());
+    Multilibs.push_back(MultilibBuilder("msan", {}, {})
+                            .flag("-fsanitize=memory")
+                            .makeMultilib());
+    Multilibs.push_back(MultilibBuilder("asan", {}, {})
+                            .flag("-fsanitize=address")
+                            .makeMultilib());
+
+    Multilib::flags_list Flags;
+    addMultilibFlag(getSanitizerArgs(Args).needsMsanRt(), "-fsanitize=memory",
+                    Flags);
+    addMultilibFlag(getSanitizerArgs(Args).needsAsanRt(), "-fsanitize=address",
+                    Flags);
+
+    if (Multilibs.select(D, Flags, SelectedMultilibs)) {
+      Multilib LastSelected = SelectedMultilibs.back();
+      SelectedMultilibs = {LastSelected};
+
+      if (!SelectedMultilibs.back().isDefault()) {
+        SmallString<128> SanLibPath(D.SysRoot);
+        llvm::sys::path::append(SanLibPath, "usr", "lib");
+        SanLibPath += SelectedMultilibs.back().gccSuffix();
+        LibPaths.insert(LibPaths.begin(), std::string(SanLibPath));
+      }
+    }
+  }
 }
 
 HexagonToolChain::~HexagonToolChain() {}
@@ -692,74 +793,71 @@ void HexagonToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   if (DriverArgs.hasArg(options::OPT_nostdinc))
     return;
 
-  const bool IsELF = !getTriple().isMusl() && !getTriple().isOSLinux();
-  const bool IsLinuxMusl = getTriple().isMusl() && getTriple().isOSLinux();
-
   const Driver &D = getDriver();
-  SmallString<128> ResourceDirInclude(D.ResourceDir);
-  if (!IsELF) {
+  const bool UseBuiltins = !DriverArgs.hasArg(options::OPT_nobuiltininc);
+  if (UseBuiltins) {
+    SmallString<128> ResourceDirInclude(D.ResourceDir);
     llvm::sys::path::append(ResourceDirInclude, "include");
-    if (!DriverArgs.hasArg(options::OPT_nobuiltininc) &&
-        (!IsLinuxMusl || DriverArgs.hasArg(options::OPT_nostdlibinc)))
-      addSystemInclude(DriverArgs, CC1Args, ResourceDirInclude);
+    addSystemInclude(DriverArgs, CC1Args, ResourceDirInclude);
   }
-  if (DriverArgs.hasArg(options::OPT_nostdlibinc))
-    return;
-
-  const bool HasSysRoot = !D.SysRoot.empty();
-  if (HasSysRoot) {
-    SmallString<128> P(D.SysRoot);
-    if (IsLinuxMusl)
-      llvm::sys::path::append(P, "usr/include");
-    else
-      llvm::sys::path::append(P, "include");
-
-    addExternCSystemInclude(DriverArgs, CC1Args, P.str());
-    // LOCAL_INCLUDE_DIR
-    addSystemInclude(DriverArgs, CC1Args, P + "/usr/local/include");
+  if (!DriverArgs.hasArg(options::OPT_nostdlibinc)) {
+    SmallString<128> CIncludeDir;
+    getBaseIncludeDir(DriverArgs, CIncludeDir);
+    addExternCSystemInclude(DriverArgs, CC1Args, std::string(CIncludeDir));
+    bool IsLinuxMusl = getTriple().isMusl() && getTriple().isOSLinux();
+    if (IsLinuxMusl) {
+      SmallString<128> LocalIncludeDir = getEffectiveSysRoot(DriverArgs);
+      llvm::sys::path::append(LocalIncludeDir, "usr", "local", "include");
+      addSystemInclude(DriverArgs, CC1Args, LocalIncludeDir);
+    }
     // TOOL_INCLUDE_DIR
     AddMultilibIncludeArgs(DriverArgs, CC1Args);
   }
-
-  if (!DriverArgs.hasArg(options::OPT_nobuiltininc) && IsLinuxMusl)
-    addSystemInclude(DriverArgs, CC1Args, ResourceDirInclude);
-
-  if (HasSysRoot)
-    return;
-  std::string TargetDir = getHexagonTargetDir(D.Dir, D.PrefixDirs);
-  addExternCSystemInclude(DriverArgs, CC1Args, TargetDir + "/hexagon/include");
 }
 
 void HexagonToolChain::addLibCxxIncludePaths(
     const llvm::opt::ArgList &DriverArgs,
     llvm::opt::ArgStringList &CC1Args) const {
-  const Driver &D = getDriver();
-  if (!D.SysRoot.empty() && getTriple().isMusl())
-    addLibStdCXXIncludePaths(D.SysRoot + "/usr/include/c++/v1", "", "",
-                             DriverArgs, CC1Args);
-  else if (getTriple().isMusl())
-    addLibStdCXXIncludePaths("/usr/include/c++/v1", "", "", DriverArgs,
-                             CC1Args);
-  else {
-    std::string TargetDir = getHexagonTargetDir(D.Dir, D.PrefixDirs);
-    addLibStdCXXIncludePaths(TargetDir + "/hexagon/include/c++/v1", "", "",
-                             DriverArgs, CC1Args);
-  }
+  SmallString<128> Dir;
+  getBaseIncludeDir(DriverArgs, Dir);
+  llvm::sys::path::append(Dir, "c++", "v1");
+  addLibStdCXXIncludePaths(Dir, "", "", DriverArgs, CC1Args);
 }
+
 void HexagonToolChain::addLibStdCxxIncludePaths(
     const llvm::opt::ArgList &DriverArgs,
     llvm::opt::ArgStringList &CC1Args) const {
-  const Driver &D = getDriver();
-  std::string TargetDir = getHexagonTargetDir(D.Dir, D.PrefixDirs);
-  addLibStdCXXIncludePaths(TargetDir + "/hexagon/include/c++", "", "",
-                           DriverArgs, CC1Args);
+  SmallString<128> Dir;
+  getBaseIncludeDir(DriverArgs, Dir);
+  llvm::sys::path::append(Dir, "c++");
+  addLibStdCXXIncludePaths(Dir, "", "", DriverArgs, CC1Args);
+}
+
+ToolChain::RuntimeLibType
+HexagonToolChain::GetRuntimeLibType(const ArgList &Args) const {
+  if (GetCStdlibType(Args) == ToolChain::CST_Picolibc) {
+    if (Args.getLastArg(options::OPT_rtlib_EQ))
+      return ToolChain::GetRuntimeLibType(Args);
+    return ToolChain::RLT_CompilerRT;
+  }
+  return ToolChain::GetRuntimeLibType(Args);
+}
+
+ToolChain::UnwindLibType
+HexagonToolChain::GetUnwindLibType(const ArgList &Args) const {
+  if (GetCStdlibType(Args) == ToolChain::CST_Picolibc) {
+    if (Args.getLastArg(options::OPT_unwindlib_EQ))
+      return ToolChain::GetUnwindLibType(Args);
+    return ToolChain::UNW_CompilerRT;
+  }
+  return ToolChain::GetUnwindLibType(Args);
 }
 
 ToolChain::CXXStdlibType
 HexagonToolChain::GetCXXStdlibType(const ArgList &Args) const {
   Arg *A = Args.getLastArg(options::OPT_stdlib_EQ);
   if (!A) {
-    if (getTriple().isMusl())
+    if (getTriple().isMusl() || GetCStdlibType(Args) == ToolChain::CST_Picolibc)
       return ToolChain::CST_Libcxx;
     else
       return ToolChain::CST_Libstdcxx;

@@ -100,6 +100,18 @@ func.func @elementwise_conflict() -> vector<32x32xf16> {
   return %2 : vector<32x32xf16>
 }
 
+// CHECK-LABEL: func.func @elementwise_conflict_uniform
+// CHECK-DAG:     %[[V0:.*]] = "some_op"() : () -> vector<2xf16>
+// CHECK-DAG:     %[[V1:.*]] = "some_op"() : () -> vector<2xf16>
+// CHECK:         %[[ADD:.*]] = arith.addf %[[V0]], %[[V1]] : vector<2xf16>
+// CHECK:         return %[[ADD]] : vector<2xf16>
+func.func @elementwise_conflict_uniform() -> vector<2xf16> {
+  %0 = "some_op"() : () -> vector<2xf16>
+  %1 = "some_op"() : () -> vector<2xf16>
+  %non_tensor_data_vec = arith.addf %0, %1 : vector<2xf16>
+  return %non_tensor_data_vec : vector<2xf16>
+}
+
 // CHECK-LABEL: func.func @broadcast_source_conflict
 // CHECK:         %[[V0:.*]] = "some_op"() {layout_result_0 = #xegpu.layout<inst_data = [16]>} : () -> vector<16xf16>
 // CHECK:         %[[CVT:.*]] = xegpu.convert_layout %[[V0]]
@@ -240,4 +252,29 @@ func.func @conflict_postop() -> vector<16x16xf16> {
   return %1 : vector<16x16xf16>
 }
 
+// CHECK-LABEL: func.func @convert_layout
+// CHECK: %[[V0:.*]] = xegpu.convert_layout %[[CST:.*]] <{input_layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [4, 32]>, target_layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [4, 32]>}> : vector<32x128xf32>
+// CHECK: %[[V1:.*]] = xegpu.convert_layout %[[V0]]  <{input_layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [4, 32]>, target_layout = #xegpu.layout<sg_layout = [4, 8], sg_data = [8, 16]>}> : vector<32x128xf32>
+func.func @convert_layout() {
+  %src0 = arith.constant
+    {layout_result_0 = #xegpu.layout<sg_layout=[8, 4], sg_data=[4, 32]>}
+      dense<0.000000e+00>
+     : vector<32x128xf32>
+  %src0_cvt = xegpu.convert_layout %src0
+    <{input_layout = #xegpu.layout<sg_layout=[8, 4], sg_data=[4, 32]>,
+     target_layout = #xegpu.layout<sg_layout=[8, 4], sg_data=[4, 32]>}>
+    : vector<32x128xf32>
+  %src1 = arith.constant
+    {layout_result_0 = #xegpu.layout<sg_layout = [4, 8], sg_data = [8, 16]>}
+    dense<1.000000e+00>
+    : vector<32x128xf32>
+  %dest = arith.addf %src0_cvt, %src1
+    {layout_result_0 = #xegpu.layout<sg_layout = [4, 8], sg_data = [8, 16]>}
+    : vector<32x128xf32>
+  %desc_cvt = xegpu.convert_layout %dest
+     <{input_layout = #xegpu.layout<sg_layout=[4, 8], sg_data=[8, 16]>,
+      target_layout = #xegpu.layout<sg_layout=[4, 8], sg_data=[8, 16]>}>
+     : vector<32x128xf32>
+  return
+}
 }

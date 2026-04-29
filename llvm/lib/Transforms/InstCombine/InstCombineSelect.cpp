@@ -608,7 +608,8 @@ Instruction *InstCombinerImpl::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
     // have preserved the exact NaN bit-pattern.
     // Avoid the folding if the false value might be a NaN.
     if (isa<FPMathOperator>(&SI) &&
-        !computeKnownFPClass(FalseVal, FMF, fcNan, &SI).isKnownNeverNaN())
+        !computeKnownFPClass(FalseVal, FMF, fcNan, SQ.getWithInstruction(&SI))
+             .isKnownNeverNaN())
       return nullptr;
 
     Value *NewSel = Builder.CreateSelect(SI.getCondition(), Swapped ? C : OOp,
@@ -3244,11 +3245,11 @@ static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
          isKnownNeverNaN(X, IC.getSimplifyQuery().getWithInstruction(
                                 cast<Instruction>(CondVal))))) {
       if (!Swap && (Pred == FCmpInst::FCMP_OLE || Pred == FCmpInst::FCMP_ULE)) {
-        Value *Fabs = IC.Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, &SI);
+        Value *Fabs = IC.Builder.CreateFAbs(X, &SI);
         return IC.replaceInstUsesWith(SI, Fabs);
       }
       if (Swap && (Pred == FCmpInst::FCMP_OGT || Pred == FCmpInst::FCMP_UGT)) {
-        Value *Fabs = IC.Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, &SI);
+        Value *Fabs = IC.Builder.CreateFAbs(X, &SI);
         return IC.replaceInstUsesWith(SI, Fabs);
       }
     }
@@ -3302,11 +3303,11 @@ static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
                     Pred == FCmpInst::FCMP_UGT || Pred == FCmpInst::FCMP_UGE;
 
     if (IsLTOrLE) {
-      Value *Fabs = IC.Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, &SI);
+      Value *Fabs = IC.Builder.CreateFAbs(X, &SI);
       return IC.replaceInstUsesWith(SI, Fabs);
     }
     if (IsGTOrGE) {
-      Value *Fabs = IC.Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, &SI);
+      Value *Fabs = IC.Builder.CreateFAbs(X, &SI);
       Instruction *NewFNeg = UnaryOperator::CreateFNeg(Fabs);
       NewFNeg->setFastMathFlags(SI.getFastMathFlags());
       return NewFNeg;
@@ -3337,13 +3338,87 @@ static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
 
     // Fold (IsNeg ? -X : X) or (!IsNeg ? X : -X) to fabs(X)
     // Fold (IsNeg ? X : -X) or (!IsNeg ? -X : X) to -fabs(X)
-    Value *Fabs = IC.Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, &SI);
+    Value *Fabs = IC.Builder.CreateFAbs(X, &SI);
     if (Swap != TrueIfSigned)
       return IC.replaceInstUsesWith(SI, Fabs);
     return UnaryOperator::CreateFNegFMF(Fabs, &SI);
   }
 
   return ChangedFMF ? &SI : nullptr;
+}
+
+// Fold a select of an ordered fcmp using fabs of a NaN-scrubbed value:
+//   %s   = select i1 (isnotnan T %x), T %x, T %y
+//   %a   = call T @llvm.fabs.T(T %s)
+//   %c   = fcmp <ordered-pred> T %a, %k
+//   %r   = select i1 %c, T %s, T %y
+//     =>
+//   %a2  = call T @llvm.fabs.T(T %x)
+//   %c2  = fcmp <ordered-pred> T %a2, %k
+//   %r2  = select i1 %c2, T %x, T %y
+static Instruction *
+foldSelectOfOrderedFAbsCmpOfNaNScrubbedValue(SelectInst &SI,
+                                             InstCombinerImpl &IC) {
+  Instruction *OuterCmpI;
+  Value *Cmp0, *Cmp1;
+  if (!match(SI.getCondition(),
+             m_OneUse(m_Instruction(OuterCmpI,
+                                    m_FCmp(m_Value(Cmp0), m_Value(Cmp1))))))
+    return nullptr;
+
+  auto *OuterCmp = cast<FCmpInst>(OuterCmpI);
+  CmpInst::Predicate Pred = OuterCmp->getPredicate();
+  if (!FCmpInst::isOrdered(Pred))
+    return nullptr;
+
+  Value *Y = SI.getFalseValue();
+  Value *InnerSel = SI.getTrueValue();
+
+  // Match a select that returns X when X is not NaN, and Y otherwise:
+  //   select (fcmp ord X, 0.0), X, Y
+  Value *X;
+  if (!match(InnerSel,
+             m_Select(m_OneUse(m_SpecificFCmp(FCmpInst::FCMP_ORD, m_Value(X),
+                                              m_AnyZeroFP())),
+                      m_Deferred(X), m_Specific(Y))))
+    return nullptr;
+
+  Instruction *FAbsI;
+  auto MatchFAbsOfInnerSel = [&](Value *V) {
+    return match(V,
+                 m_OneUse(m_Instruction(FAbsI, m_FAbs(m_Specific(InnerSel)))));
+  };
+
+  if (!MatchFAbsOfInnerSel(Cmp0)) {
+    if (!MatchFAbsOfInnerSel(Cmp1))
+      return nullptr;
+
+    std::swap(Cmp0, Cmp1);
+    Pred = CmpInst::getSwappedPredicate(Pred);
+  }
+
+  FastMathFlags FAbsFMF = FAbsI->getFastMathFlags();
+  FastMathFlags CmpFMF = OuterCmp->getFastMathFlags();
+
+  FastMathFlags CommonRewriteFMF =
+      FastMathFlags::intersectRewrite(FAbsFMF, CmpFMF);
+
+  // unionValue with FastMathFlags() drops all rewriter based flags
+  FastMathFlags NewFAbsFMF =
+      CommonRewriteFMF | FastMathFlags::unionValue(FAbsFMF, FastMathFlags());
+  FastMathFlags NewCmpFMF =
+      CommonRewriteFMF | FastMathFlags::unionValue(CmpFMF, FastMathFlags());
+
+  // When X is NaN, the old code evaluated fabs(Y), while the new code evaluates
+  // fabs(X). Do not preserve nnan on either newly-created instruction.
+  NewFAbsFMF.setNoNaNs(false);
+  NewCmpFMF.setNoNaNs(false);
+
+  Value *NewAbs = IC.Builder.CreateFAbs(X, FMFSource(NewFAbsFMF));
+  Value *NewCmp =
+      IC.Builder.CreateFCmpFMF(Pred, NewAbs, Cmp1, FMFSource(NewCmpFMF));
+  Value *NewSel = IC.Builder.CreateSelectFMF(NewCmp, X, Y, &SI);
+  return IC.replaceInstUsesWith(SI, NewSel);
 }
 
 // Match the following IR pattern:
@@ -3594,11 +3669,11 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
     if (match(CondVal, m_OneUse(m_Select(m_Value(A), m_One(), m_Value(B)))) &&
         impliesPoisonOrCond(FalseVal, B, /*Expected=*/false)) {
       // (A || B) || C --> A || (B | C)
-      return replaceInstUsesWith(
-          SI, Builder.CreateLogicalOr(A, Builder.CreateOr(B, FalseVal), "",
-                                      ProfcheckDisableMetadataFixes
-                                          ? nullptr
-                                          : cast<SelectInst>(CondVal)));
+      Value *LOr = Builder.CreateLogicalOr(A, Builder.CreateOr(B, FalseVal));
+      if (auto *I = dyn_cast<Instruction>(LOr)) {
+        setExplicitlyUnknownBranchWeightsIfProfiled(*I, DEBUG_TYPE);
+      }
+      return replaceInstUsesWith(SI, LOr);
     }
 
     // (A && B) || (C && B) --> (A || C) && B
@@ -3610,11 +3685,12 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
       auto AndFactorization = [&](Value *Common, Value *InnerCond,
                                   Value *InnerVal,
                                   bool SelFirst = false) -> Instruction * {
-        Value *InnerSel = Builder.CreateSelect(InnerCond, One, InnerVal);
+        Value *InnerSel = Builder.CreateSelectWithUnknownProfile(
+            InnerCond, One, InnerVal, DEBUG_TYPE);
         if (SelFirst)
           std::swap(Common, InnerSel);
         if (FalseLogicAnd || (CondLogicAnd && Common == A))
-          return SelectInst::Create(Common, InnerSel, Zero);
+          return createSelectInstWithUnknownProfile(Common, InnerSel, Zero);
         else
           return BinaryOperator::CreateAnd(Common, InnerSel);
       };
@@ -3639,11 +3715,11 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
     if (match(CondVal, m_OneUse(m_Select(m_Value(A), m_Value(B), m_Zero()))) &&
         impliesPoisonOrCond(TrueVal, B, /*Expected=*/true)) {
       // (A && B) && C --> A && (B & C)
-      return replaceInstUsesWith(
-          SI, Builder.CreateLogicalAnd(A, Builder.CreateAnd(B, TrueVal), "",
-                                       ProfcheckDisableMetadataFixes
-                                           ? nullptr
-                                           : cast<SelectInst>(CondVal)));
+      Value *LAnd = Builder.CreateLogicalAnd(A, Builder.CreateAnd(B, TrueVal));
+      if (auto *I = dyn_cast<Instruction>(LAnd)) {
+        setExplicitlyUnknownBranchWeightsIfProfiled(*I, DEBUG_TYPE);
+      }
+      return replaceInstUsesWith(SI, LAnd);
     }
 
     // (A || B) && (C || B) --> (A && C) || B
@@ -3655,11 +3731,12 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
       auto OrFactorization = [&](Value *Common, Value *InnerCond,
                                  Value *InnerVal,
                                  bool SelFirst = false) -> Instruction * {
-        Value *InnerSel = Builder.CreateSelect(InnerCond, InnerVal, Zero);
+        Value *InnerSel = Builder.CreateSelectWithUnknownProfile(
+            InnerCond, InnerVal, Zero, DEBUG_TYPE);
         if (SelFirst)
           std::swap(Common, InnerSel);
         if (TrueLogicOr || (CondLogicOr && Common == A))
-          return SelectInst::Create(Common, One, InnerSel);
+          return createSelectInstWithUnknownProfile(Common, One, InnerSel);
         else
           return BinaryOperator::CreateOr(Common, InnerSel);
       };
@@ -3737,28 +3814,36 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
   // select (~a | c), a, b -> select a, (select c, true, b), false
   if (match(CondVal,
             m_OneUse(m_c_Or(m_Not(m_Specific(TrueVal)), m_Value(C))))) {
-    Value *OrV = Builder.CreateSelect(C, One, FalseVal);
-    return SelectInst::Create(TrueVal, OrV, Zero);
+    // TODO(#183864): We could improve the profile if P(~a | c) < 0.5, which
+    // implies strong bounds on both operands (P(a) is high, P(c) is low).
+    Value *OrV =
+        Builder.CreateSelectWithUnknownProfile(C, One, FalseVal, DEBUG_TYPE);
+    return createSelectInstWithUnknownProfile(TrueVal, OrV, Zero);
   }
   // select (c & b), a, b -> select b, (select ~c, true, a), false
   if (match(CondVal, m_OneUse(m_c_And(m_Value(C), m_Specific(FalseVal))))) {
     if (Value *NotC = getFreelyInverted(C, C->hasOneUse(), &Builder)) {
-      Value *OrV = Builder.CreateSelect(NotC, One, TrueVal);
-      return SelectInst::Create(FalseVal, OrV, Zero);
+      Value *OrV = Builder.CreateSelectWithUnknownProfile(NotC, One, TrueVal,
+                                                          DEBUG_TYPE);
+      return createSelectInstWithUnknownProfile(FalseVal, OrV, Zero);
     }
   }
   // select (a | c), a, b -> select a, true, (select ~c, b, false)
   if (match(CondVal, m_OneUse(m_c_Or(m_Specific(TrueVal), m_Value(C))))) {
     if (Value *NotC = getFreelyInverted(C, C->hasOneUse(), &Builder)) {
-      Value *AndV = Builder.CreateSelect(NotC, FalseVal, Zero);
-      return SelectInst::Create(TrueVal, One, AndV);
+      // TODO(#183864): We could improve the profile if P(a | c) < 0.5, which
+      // implies strong bounds on both operands (both P(a) and P(c) are low).
+      Value *AndV = Builder.CreateSelectWithUnknownProfile(NotC, FalseVal, Zero,
+                                                           DEBUG_TYPE);
+      return createSelectInstWithUnknownProfile(TrueVal, One, AndV);
     }
   }
   // select (c & ~b), a, b -> select b, true, (select c, a, false)
   if (match(CondVal,
             m_OneUse(m_c_And(m_Value(C), m_Not(m_Specific(FalseVal)))))) {
-    Value *AndV = Builder.CreateSelect(C, TrueVal, Zero);
-    return SelectInst::Create(FalseVal, One, AndV);
+    Value *AndV =
+        Builder.CreateSelectWithUnknownProfile(C, TrueVal, Zero, DEBUG_TYPE);
+    return createSelectInstWithUnknownProfile(FalseVal, One, AndV);
   }
 
   if (match(FalseVal, m_Zero()) || match(TrueVal, m_One())) {
@@ -4114,7 +4199,8 @@ Instruction *InstCombinerImpl::foldSelectToCmp(SelectInst &SI) {
 
 bool InstCombinerImpl::fmulByZeroIsZero(Value *MulVal, FastMathFlags FMF,
                                         const Instruction *CtxI) const {
-  KnownFPClass Known = computeKnownFPClass(MulVal, FMF, fcNegative, CtxI);
+  KnownFPClass Known =
+      computeKnownFPClass(MulVal, FMF, fcNegative, SQ.getWithInstruction(CtxI));
 
   return Known.isKnownNeverNaN() && Known.isKnownNeverInfinity() &&
          (FMF.noSignedZeros() || Known.signBitIsZeroOrNaN());
@@ -4423,6 +4509,105 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
           matchFMulByZeroIfResultEqZero(*this, Cmp0, Cmp1, MatchCmp1, MatchCmp0,
                                         SI, SIFPOp->hasNoSignedZeros()))
         return replaceInstUsesWith(SI, Cmp0);
+
+      Type *EltTy = SelType->getScalarType();
+
+      // TODO: Generalize to any ordered / unordered compare.
+      if ((Pred == CmpInst::FCMP_ORD || Pred == CmpInst::FCMP_UNO) &&
+          match(Cmp1, m_PosZeroFP()) && EltTy->isIEEELikeFPTy()) {
+        // Fold out only-canonicalize-non-nans pattern. This implements a
+        // wrapper around llvm.canonicalize which is not required to quiet
+        // signaling nans or preserve nan payload bits.
+        //
+        //   %hard.canonical = call @llvm.canonicalize(%x)
+        //   %soft.canonical = fdiv 1.0, %x
+        //   %ord = fcmp ord %x, 0.0
+        //   %x.canon = select i1 %ord, %hard.canonical, %soft.canonical
+        //
+        // With known IEEE handling:
+        //   => %x
+        //
+        // With other denormal behaviors:
+        //   => llvm.canonicalize(%x)
+        //
+        // Note the fdiv could be any value preserving, potentially
+        // canonicalizing floating-point operation such as fmul by 1.0. However,
+        // since in the llvm model canonicalization is not mandatory, the fmul
+        // would have been dropped by the time we reached here. The trick here
+        // is to use a reciprocal fdiv. It's not a droppable no-op, as it could
+        // return an infinity if %x were sufficiently small, but in this pattern
+        // we're only using the output for nan values.
+
+        if (Pred == CmpInst::FCMP_ORD) {
+          MatchCmp0 = TrueVal;
+          MatchCmp1 = FalseVal;
+        } else {
+          MatchCmp0 = FalseVal;
+          MatchCmp1 = TrueVal;
+        }
+
+        bool RcpIfNan = match(MatchCmp1, m_FDiv(m_FPOne(), m_Specific(Cmp0)));
+        bool CanonicalizeIfNotNan =
+            match(MatchCmp0, m_FCanonicalize(m_Specific(Cmp0)));
+
+        if (RcpIfNan || CanonicalizeIfNotNan) {
+          const fltSemantics &FPSem = EltTy->getFltSemantics();
+          DenormalMode Mode = F.getDenormalMode(FPSem);
+
+          if (RcpIfNan) {
+            if (Mode == DenormalMode::getIEEE()) {
+              // Special case for the other select operand. Otherwise, we may
+              // need to insert freeze on Cmp0 in the compare and select.
+              if (CanonicalizeIfNotNan)
+                return replaceInstUsesWith(SI, Cmp0);
+
+              if (isGuaranteedNotToBeUndef(Cmp0, &AC, &SI, &DT)) {
+                // select (fcmp ord x, 0), y, (fdiv 1, x)
+                //   => select (fcmp ord x, 0), y, x
+                //
+                // select (fcmp uno x, 0), (fdiv 1, x), y
+                //   => select (fcmp uno x, 0), x, y
+                replaceOperand(SI, Pred == CmpInst::FCMP_ORD ? 2 : 1, Cmp0);
+                return &SI;
+              }
+
+              auto *FrCmp0 = InsertNewInstBefore(
+                  new FreezeInst(Cmp0, Cmp0->getName() + ".fr"),
+                  FCmp->getIterator());
+
+              replaceOperand(*FCmp, 0, FrCmp0);
+              return replaceOperand(SI, Pred == CmpInst::FCMP_ORD ? 2 : 1,
+                                    FrCmp0);
+            }
+          }
+
+          if (CanonicalizeIfNotNan) {
+            // IEEE handling does not have non-canonical values, so the
+            // canonicalize can be dropped for direct replacement without
+            // looking for the intermediate maybe-canonicalizing operation.
+            if (Mode == DenormalMode::getIEEE()) {
+              // select (fcmp ord x, 0), canonicalize(x), y
+              //  => select (fcmp ord x, 0), x, y
+
+              replaceOperand(SI, Pred == CmpInst::FCMP_ORD ? 1 : 2, Cmp0);
+              return &SI;
+            }
+
+            // If denormals may be flushed, we need to retain the canonicalize
+            // call. This introduces a canonicalization on the nan path, which
+            // we are not free to do as that could change the sign bit or
+            // payload bits. We can only do this if there were a no-op like
+            // floating-point instruction which may have changed the nan bits
+            // anyway.
+
+            // Leave the dynamic mode case alone. This would introduce new
+            // constraints if the mode may be refined later.
+            if (RcpIfNan && (Mode.inputsAreZero() || Mode.outputsAreZero()))
+              return replaceInstUsesWith(SI, MatchCmp0);
+            assert(RcpIfNan || Mode != DenormalMode::getIEEE());
+          }
+        }
+      }
     }
   }
 
@@ -4487,6 +4672,9 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   // Fold selecting to fabs.
   if (Instruction *Fabs = foldSelectWithFCmpToFabs(SI, *this))
     return Fabs;
+
+  if (Instruction *I = foldSelectOfOrderedFAbsCmpOfNaNScrubbedValue(SI, *this))
+    return I;
 
   // See if we are selecting two values based on a comparison of the two values.
   if (CmpInst *CI = dyn_cast<CmpInst>(CondVal))
@@ -4863,9 +5051,11 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     // Is (select B, T, F) a SPF?
     if (CondVal->hasOneUse() && SelType->isIntOrIntVectorTy()) {
       if (ICmpInst *Cmp = dyn_cast<ICmpInst>(B))
-        if (Value *V = canonicalizeSPF(*Cmp, TrueVal, FalseVal, *this))
-          return SelectInst::Create(A, IsAnd ? V : TrueVal,
-                                    IsAnd ? FalseVal : V);
+        if (Value *V = canonicalizeSPF(*Cmp, TrueVal, FalseVal, *this)) {
+          return SelectInst::Create(
+              A, IsAnd ? V : TrueVal, IsAnd ? FalseVal : V, "", nullptr,
+              ProfcheckDisableMetadataFixes ? nullptr : &SI);
+        }
     }
 
     return nullptr;

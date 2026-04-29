@@ -207,6 +207,7 @@ enum Kind {
   kw_readwrite,
   kw_argmem,
   kw_inaccessiblemem,
+  kw_target_mem,
   kw_target_mem0,
   kw_target_mem1,
   kw_errnomem,
@@ -291,6 +292,8 @@ enum Kind {
   kw_fmin,
   kw_fmaximum,
   kw_fminimum,
+  kw_fmaximumnum,
+  kw_fminimumnum,
   kw_uinc_wrap,
   kw_udec_wrap,
   kw_usub_cond,
@@ -404,6 +407,7 @@ enum Kind {
   kw_importType,
   kw_definition,
   kw_declaration,
+  kw_noRenameOnPromotion,
   kw_function,
   kw_insts,
   kw_funcFlags,
@@ -519,12 +523,14 @@ enum Kind {
   ChecksumKind,        // CSK_foo
   DbgRecordType,       // dbg_foo
   DwarfEnumKind,       // DW_APPLE_ENUM_KIND_foo
+  FloatLiteral,        // Unparsed float literal
 
   // Type valued tokens (TyVal).
   Type,
 
-  APFloat, // APFloatVal
-  APSInt   // APSInt
+  FloatHexLiteral, // f0x..., stored as APSInt
+  APFloat,         // APFloatVal
+  APSInt           // APSInt
 };
 } // end namespace lltok
 } // end namespace llvm

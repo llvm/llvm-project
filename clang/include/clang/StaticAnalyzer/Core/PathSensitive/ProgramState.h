@@ -70,7 +70,7 @@ template <typename T> struct ProgramStateTrait {
 ///  values will never change.
 class ProgramState : public llvm::FoldingSetNode {
 public:
-  typedef llvm::ImmutableMap<void*, void*>                 GenericDataMap;
+  typedef llvm::ImmutableMap<const void *, void *> GenericDataMap;
 
 private:
   void operator=(const ProgramState& R) = delete;
@@ -278,9 +278,9 @@ public:
   // Binding and retrieving values to/from the environment and symbolic store.
   //==---------------------------------------------------------------------==//
 
-  /// Create a new state by binding the value 'V' to the statement 'S' in the
-  /// state's environment.
-  [[nodiscard]] ProgramStateRef BindExpr(const Stmt *S,
+  /// Create a new state by binding the value \p V to the expression \p E in
+  /// the state's environment.
+  [[nodiscard]] ProgramStateRef BindExpr(const Expr *E,
                                          const LocationContext *LCtx, SVal V,
                                          bool Invalidate = true) const;
 
@@ -377,10 +377,10 @@ public:
   /// Get the lvalue for an array index.
   SVal getLValue(QualType ElementType, SVal Idx, SVal Base) const;
 
-  /// Returns the SVal bound to the statement 'S' in the state's environment.
-  SVal getSVal(const Stmt *S, const LocationContext *LCtx) const;
+  /// Returns the SVal bound to the expression \p E in the state's environment.
+  SVal getSVal(const Expr *E, const LocationContext *LCtx) const;
 
-  SVal getSValAsScalarOrLoc(const Stmt *Ex, const LocationContext *LCtx) const;
+  SVal getSValAsScalarOrLoc(const Expr *E, const LocationContext *LCtx) const;
 
   /// Return the value bound to the specified location.
   /// Returns UnknownVal() if none found.
@@ -423,7 +423,7 @@ public:
   // Accessing the Generic Data Map (GDM).
   //==---------------------------------------------------------------------==//
 
-  void *const* FindGDM(void *K) const;
+  void *const *FindGDM(const void *K) const;
 
   template <typename T>
   [[nodiscard]] ProgramStateRef
@@ -512,7 +512,8 @@ private:
 
   ProgramState::GenericDataMap::Factory     GDMFactory;
 
-  typedef llvm::DenseMap<void*,std::pair<void*,void (*)(void*)> > GDMContextsTy;
+  typedef llvm::DenseMap<const void *, std::pair<void *, void (*)(void *)>>
+      GDMContextsTy;
   GDMContextsTy GDMContexts;
 
   /// StateSet - FoldingSet containing all the states created for analyzing
@@ -595,8 +596,8 @@ public:
   }
 
   // Methods that manipulate the GDM.
-  ProgramStateRef addGDM(ProgramStateRef St, void *Key, void *Data);
-  ProgramStateRef removeGDM(ProgramStateRef state, void *Key);
+  ProgramStateRef addGDM(ProgramStateRef St, const void *Key, void *Data);
+  ProgramStateRef removeGDM(ProgramStateRef state, const void *Key);
 
   // Methods that query & manipulate the Store.
 
@@ -677,9 +678,9 @@ public:
     return removeGDM(st, ProgramStateTrait<T>::GDMIndex());
   }
 
-  void *FindGDMContext(void *index,
-                       void *(*CreateContext)(llvm::BumpPtrAllocator&),
-                       void  (*DeleteContext)(void*));
+  void *FindGDMContext(const void *index,
+                       void *(*CreateContext)(llvm::BumpPtrAllocator &),
+                       void (*DeleteContext)(void *));
 
   template <typename T>
   typename ProgramStateTrait<T>::context_type get_context() {
@@ -791,22 +792,17 @@ inline SVal ProgramState::getLValue(QualType ElementType, SVal Idx, SVal Base) c
   return UnknownVal();
 }
 
-inline SVal ProgramState::getSVal(const Stmt *Ex,
-                                  const LocationContext *LCtx) const{
-  return Env.getSVal(EnvironmentEntry(Ex, LCtx),
-                     *getStateManager().svalBuilder);
+inline SVal ProgramState::getSVal(const Expr *E,
+                                  const LocationContext *LCtx) const {
+  return Env.getSVal(EnvironmentEntry(E, LCtx), *getStateManager().svalBuilder);
 }
 
 inline SVal
-ProgramState::getSValAsScalarOrLoc(const Stmt *S,
+ProgramState::getSValAsScalarOrLoc(const Expr *E,
                                    const LocationContext *LCtx) const {
-  if (const Expr *Ex = dyn_cast<Expr>(S)) {
-    QualType T = Ex->getType();
-    if (Ex->isGLValue() || Loc::isLocType(T) ||
-        T->isIntegralOrEnumerationType())
-      return getSVal(S, LCtx);
-  }
-
+  QualType T = E->getType();
+  if (E->isGLValue() || Loc::isLocType(T) || T->isIntegralOrEnumerationType())
+    return getSVal(E, LCtx);
   return UnknownVal();
 }
 

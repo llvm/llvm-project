@@ -8,9 +8,15 @@
 ; RUN: echo 't 1,1' >> %t
 ; RUN: echo 't 2,1' >> %t
 ; RUN: echo 't 3,0' >> %t
+; RUN: echo 't 3,1' >> %t
+; RUN: echo 'i 3,0 bar,0,0' >> %t
+; RUN: echo 'i 2,1 foo,1,0' >> %t
+; RUN: echo 'i 1,1 extfunc,5,5' >> %t
+; RUN: echo 'i 1,1 bar,0,0' >> %t
 ; RUN: echo 'f bar' >> %t
 ; RUN: echo 't 0,0' >> %t
 ; RUN: echo 't 21,1' >> %t
+; RUN: echo 'i 0,1 foo,0,0' >> %t
 ; RUN: echo 'f qux' >> %t
 ; RUN: echo 't 0,0' >> %t
 ; RUN: echo 't 0,1' >> %t
@@ -31,6 +37,10 @@ cond.true:                                           ; preds = %1
 ; CHECK-NEXT:   callq bar@PLT
 ; CHECK-NEXT:   .globl __llvm_prefetch_target_foo_1_1
 ; CHECK-NEXT: __llvm_prefetch_target_foo_1_1:
+; CHECK-NEXT:   prefetchit1     __llvm_prefetch_target_extfunc_5_5(%rip)
+; CHECK-NEXT:   .weak __llvm_prefetch_target_extfunc_5_5
+; CHECK-NEXT: __llvm_prefetch_target_extfunc_5_5:
+; CHECK-NEXT:   prefetchit1	__llvm_prefetch_target_bar_0_0(%rip)
 
 cond.false:                                          ; preds = %1
   call i32 @baz()
@@ -38,21 +48,28 @@ cond.false:                                          ; preds = %1
 ; CHECK:        callq baz@PLT
 ; CHECK-NEXT:   .globl __llvm_prefetch_target_foo_2_1
 ; CHECK-NEXT: __llvm_prefetch_target_foo_2_1:
+; CHECK-NEXT:   prefetchit1	__llvm_prefetch_target_foo_1_0(%rip)
 
 end:                                             ; preds = %11, %9
   ret void
 ; CHECK:      .LBB0_3:
 ; CHECK-NEXT:   .globl	__llvm_prefetch_target_foo_3_0
 ; CHECK-NEXT: __llvm_prefetch_target_foo_3_0:
+; CHECK-NEXT:   prefetchit1	__llvm_prefetch_target_bar_0_0(%rip)
+; CHECK:        .globl	__llvm_prefetch_target_foo_3_1
+; CHECK-NEXT: __llvm_prefetch_target_foo_3_1:
 }
 
 define weak i32 @bar() nounwind {
   %call = call i32 @baz()
   ret i32 %call
 ; CHECK:      bar:
+; CHECK-NEXT:   .weak __llvm_prefetch_target_bar_21_1
+; CHECK-NEXT: __llvm_prefetch_target_bar_21_1:
 ; CHECK-NEXT:   .weak __llvm_prefetch_target_bar_0_0
 ; CHECK-NEXT: __llvm_prefetch_target_bar_0_0:
 ; CHECK:        callq baz@PLT
+; CHECK-NEXT:   prefetchit1	__llvm_prefetch_target_foo_0_0(%rip)
 }
 
 define internal i32 @qux() nounwind {
@@ -67,4 +84,3 @@ define internal i32 @qux() nounwind {
 }
 
 declare i32 @baz()
-declare i32 @dummy()

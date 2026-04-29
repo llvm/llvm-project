@@ -104,14 +104,63 @@ struct unordered_map {
   iterator erase(iterator);
 };
 
+template<class Key>
+struct set {
+  using iterator = __gnu_cxx::basic_iterator<const Key>;
+  iterator begin();
+  iterator end();
+  void insert(const Key& key);
+  iterator erase(iterator);
+  void extract(iterator);
+  void clear();
+};
+
+template<class Key>
+struct multiset {
+  using iterator = __gnu_cxx::basic_iterator<const Key>;
+  iterator begin();
+  iterator end();
+  void insert(const Key& key);
+  void clear();
+};
+
+template<class Key, class T>
+struct map {
+  using iterator = __gnu_cxx::basic_iterator<std::pair<const Key, T>>;
+  T& operator[](const Key& key);
+  iterator begin();
+  iterator end();
+  void insert(const std::pair<const Key, T>& value);
+  template<class... Args>
+  void emplace(Args&&... args);
+  iterator erase(iterator);
+  void clear();
+};
+
+template<class Key, class T>
+struct multimap {
+  using iterator = __gnu_cxx::basic_iterator<std::pair<const Key, T>>;
+  iterator begin();
+  iterator end();
+  void insert(const std::pair<const Key, T>& value);
+  void clear();
+};
+
 template<typename T>
 struct basic_string_view {
   basic_string_view();
   basic_string_view(const T *);
   const T *begin() const;
   const T *data() const;
+  int size() const;
 };
 using string_view = basic_string_view<char>;
+
+template<typename T>
+struct span {
+  span();
+  span(const vector<T>&);
+};
 
 template<class _Mystr> struct iter {
     iter& operator-=(int);
@@ -132,6 +181,11 @@ struct basic_string {
   basic_string& operator=(const basic_string&);
   basic_string& operator+=(const basic_string&);
   basic_string& operator+=(const T*);
+  void push_back(T);
+
+  template<class StringViewLike> basic_string& insert(size_t index, const StringViewLike&);
+
+  void clear();
   const T *c_str() const;
   operator basic_string_view<T> () const;
   using const_iterator = iter<T>;
@@ -142,11 +196,36 @@ using string = basic_string<char>;
 template<typename T>
 struct unique_ptr {
   unique_ptr();
+  explicit unique_ptr(T*);
   unique_ptr(unique_ptr<T>&&);
+  unique_ptr& operator=(unique_ptr<T>&&);
   ~unique_ptr();
   T* release();
   T &operator*();
+  T *operator->();
   T *get() const;
+};
+
+template<typename T, typename... Args>
+unique_ptr<T> make_unique(Args&&... args) {
+  return unique_ptr<T>(new T(args...));
+}
+
+template<typename T>
+struct shared_ptr {
+  shared_ptr();
+  explicit shared_ptr(T*);
+  shared_ptr(const shared_ptr<T>&);
+  shared_ptr(shared_ptr<T>&&);
+  
+  template<typename U>
+  shared_ptr(unique_ptr<U>&& up) : ptr_(up.get()) { up.release(); }
+
+  ~shared_ptr();
+  T &operator*();
+  T *operator->();
+  T *get() const;
+  T* ptr_;
 };
 
 template<typename T>
@@ -162,6 +241,7 @@ struct optional {
   template<typename U>
   optional(optional<U>&& __t);
 
+  T *operator->();
   T &operator*() &;
   T &&operator*() &&;
   T &value() &;
@@ -211,4 +291,21 @@ struct true_type {
 template<class T> struct is_pointer : false_type {};
 template<class T> struct is_pointer<T*> : true_type {};
 template<class T> struct is_pointer<T* const> : true_type {};
+
+template<class> class function;
+template<class R, class... Args>
+class function<R(Args...)> {
+public:
+  template<class F> function(F) {}
+  function(const function&) {}
+  function(function&&) {}
+  template<class F> function& operator=(F) { return *this; }
+  function& operator=(const function&) { return *this; }
+  function& operator=(function&&) { return *this; }
+  ~function();
+};
+
 }
+
+void *operator new(std::size_t, void *) noexcept;
+void *operator new[](std::size_t, void *) noexcept;
