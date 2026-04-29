@@ -1198,8 +1198,7 @@ CIRGenItaniumRTTIBuilder::getAddrOfExternalRTTIDescriptor(mlir::Location loc,
   CIRGenBuilderTy &builder = cgm.getBuilder();
 
   // Look for an existing global.
-  cir::GlobalOp gv = dyn_cast_or_null<cir::GlobalOp>(
-      mlir::SymbolTable::lookupSymbolIn(cgm.getModule(), name));
+  cir::GlobalOp gv = dyn_cast_or_null<cir::GlobalOp>(cgm.getGlobalValue(name));
 
   if (!gv) {
     // Create a new global variable.
@@ -1428,8 +1427,7 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(mlir::Location loc,
   llvm::raw_svector_ostream out(name);
   cgm.getCXXABI().getMangleContext().mangleCXXRTTI(ty, out);
 
-  auto oldGV = dyn_cast_or_null<cir::GlobalOp>(
-      mlir::SymbolTable::lookupSymbolIn(cgm.getModule(), name));
+  auto oldGV = dyn_cast_or_null<cir::GlobalOp>(cgm.getGlobalValue(name));
 
   if (oldGV && !oldGV.isDeclaration()) {
     assert(!oldGV.hasAvailableExternallyLinkage() &&
@@ -1604,8 +1602,7 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(
   cgm.getCXXABI().getMangleContext().mangleCXXRTTI(ty, out);
 
   // Create new global and search for an existing global.
-  auto oldGV = dyn_cast_or_null<cir::GlobalOp>(
-      mlir::SymbolTable::lookupSymbolIn(cgm.getModule(), name));
+  auto oldGV = dyn_cast_or_null<cir::GlobalOp>(cgm.getGlobalValue(name));
 
   cir::GlobalOp gv =
       CIRGenModule::createGlobalOp(cgm, loc, name, init.getType(),
@@ -1627,6 +1624,7 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(
       cgm.errorNYI("buildTypeInfo: old GV !use_empty");
       return {};
     }
+    cgm.eraseGlobalSymbol(oldGV);
     oldGV->erase();
   }
 
@@ -1762,11 +1760,6 @@ void CIRGenItaniumCXXABI::registerGlobalDtor(const VarDecl *vd,
                                              mlir::Value addr) {
   if (vd->isNoDestroy(cgm.getASTContext()))
     return;
-
-  if (vd->getTLSKind()) {
-    cgm.errorNYI(vd->getSourceRange(), "registerGlobalDtor: TLS");
-    return;
-  }
 
   // HLSL doesn't support atexit.
   if (cgm.getLangOpts().HLSL) {

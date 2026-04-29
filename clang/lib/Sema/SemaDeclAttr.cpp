@@ -1526,6 +1526,20 @@ static void handleOwnershipAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     Module = &S.PP.getIdentifierTable().get(ModuleName);
   }
 
+  // Check if the new ownership_returns attribute does not contain
+  // an index, but previous attributes do.
+  if (K == OwnershipAttr::Returns && AL.getNumArgs() == 1) {
+    for (const auto *I : D->specific_attrs<OwnershipAttr>()) {
+      if (I->getOwnKind() == OwnershipAttr::Returns && I->args_size() > 0) {
+        S.Diag(I->getLocation(), diag::err_ownership_returns_index_mismatch)
+            << I->args_begin()->getSourceIndex() << 0;
+        S.Diag(AL.getLoc(), diag::note_ownership_returns_index_mismatch)
+            << 0 << 1;
+        return;
+      }
+    }
+  }
+
   SmallVector<ParamIdx, 8> OwnershipArgs;
   for (unsigned i = 1; i < AL.getNumArgs(); ++i) {
     Expr *Ex = AL.getArgAsExpr(i);
@@ -1558,21 +1572,25 @@ static void handleOwnershipAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       // Cannot have two ownership attributes of different kinds for the same
       // index.
       if (I->getOwnKind() != K && llvm::is_contained(I->args(), Idx)) {
-          S.Diag(AL.getLoc(), diag::err_attributes_are_not_compatible)
-              << AL << I
-              << (AL.isRegularKeywordAttribute() ||
-                  I->isRegularKeywordAttribute());
-          return;
-      } else if (K == OwnershipAttr::Returns &&
-                 I->getOwnKind() == OwnershipAttr::Returns) {
-        // A returns attribute conflicts with any other returns attribute using
-        // a different index.
-        if (!llvm::is_contained(I->args(), Idx)) {
+        S.Diag(AL.getLoc(), diag::err_attributes_are_not_compatible)
+            << AL << I
+            << (AL.isRegularKeywordAttribute() ||
+                I->isRegularKeywordAttribute());
+        return;
+      }
+
+      if (K == OwnershipAttr::Returns &&
+          I->getOwnKind() == OwnershipAttr::Returns) {
+        bool IHasArgs = I->args_size() > 0;
+
+        if (!IHasArgs || !llvm::is_contained(I->args(), Idx)) {
+          unsigned IIdx = IHasArgs ? I->args_begin()->getSourceIndex() : 0;
+
           S.Diag(I->getLocation(), diag::err_ownership_returns_index_mismatch)
-              << I->args_begin()->getSourceIndex();
-          if (I->args_size())
-            S.Diag(AL.getLoc(), diag::note_ownership_returns_index_mismatch)
-                << Idx.getSourceIndex() << Ex->getSourceRange();
+              << IIdx << (IHasArgs ? 0 : 1);
+
+          S.Diag(AL.getLoc(), diag::note_ownership_returns_index_mismatch)
+              << Idx.getSourceIndex() << 0 << Ex->getSourceRange();
           return;
         }
       } else if (K == OwnershipAttr::Takes &&
@@ -8090,6 +8108,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_HLSLParamModifier:
     S.HLSL().handleParamModifierAttr(D, AL);
+    break;
+  case ParsedAttr::AT_HLSLMatrixLayout:
+    S.HLSL().handleMatrixLayoutAttr(D, AL);
     break;
   case ParsedAttr::AT_HLSLUnparsedSemantic:
     S.HLSL().handleSemanticAttr(D, AL);

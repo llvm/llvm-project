@@ -580,7 +580,7 @@ void X86PassConfig::addPreEmitPass() {
 
 void X86PassConfig::addPreEmitPass2() {
   const Triple &TT = TM->getTargetTriple();
-  const MCAsmInfo *MAI = TM->getMCAsmInfo();
+  const MCAsmInfo &MAI = TM->getMCAsmInfo();
 
   // The X86 Speculative Execution Pass must run after all control
   // flow graph modifying passes. As a result it was listed to run right before
@@ -605,7 +605,7 @@ void X86PassConfig::addPreEmitPass2() {
   // instructions.
   if (!TT.isOSDarwin() &&
       (!TT.isOSWindows() ||
-       MAI->getExceptionHandlingType() == ExceptionHandling::DwarfCFI))
+       MAI.getExceptionHandlingType() == ExceptionHandling::DwarfCFI))
     addPass(createCFIInstrInserter());
 
   if (TT.isOSWindows()) {

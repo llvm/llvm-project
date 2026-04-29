@@ -1983,7 +1983,7 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
       Opcode == TargetOpcode::INLINEASM_BR) {
     const MachineFunction &MF = *MI.getParent()->getParent();
     return getInlineAsmLength(MI.getOperand(0).getSymbolName(),
-                              *MF.getTarget().getMCAsmInfo());
+                              MF.getTarget().getMCAsmInfo());
   }
 
   if (requiresNTLHint(MI)) {

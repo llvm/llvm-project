@@ -1,8 +1,3 @@
-[project]
-name = "LLVM"
-version = "23.0.0"
-requires-python = ">=3.8"
-
 [tool.black]
 extend-exclude = '''
 (
@@ -13,9 +8,4 @@ extend-exclude = '''
 [tool.pyright]
 executionEnvironments = [
   { root = "lldb/packages/Python", pythonVersion = "3.8" }
-]
-
-[dependency-groups]
-dev = [
-    "psutil>=7.2.2",
 ]

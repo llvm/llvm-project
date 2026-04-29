@@ -9228,6 +9228,7 @@ cc_library(
         ":LLVMDialect",
         ":OpenMPCommon",
         ":OpenMPDialect",
+        ":OpenMPUtils",
         ":SideEffectInterfaces",
         ":Support",
         ":ToLLVMIRTranslation",
@@ -10677,6 +10678,22 @@ gentbl_cc_library(
 )
 
 cc_library(
+    name = "OpenMPUtils",
+    srcs = glob(["lib/Dialect/OpenMP/Utils/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/OpenMP/Utils/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":AtomicInterfaces",
+        ":CallOpInterfaces",
+        ":IR",
+        ":LLVMDialect",
+        ":OpenMPDialect",
+        ":Support",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "OpenMPTransforms",
     srcs = glob(
         [
@@ -10687,12 +10704,15 @@ cc_library(
     includes = ["include"],
     deps = [
         ":Analysis",
+        ":AtomicInterfaces",
         ":FuncDialect",
         ":FunctionInterfaces",
         ":IR",
         ":LLVMDialect",
+        ":OpenACCMPOpsInterfacesIncGen",
         ":OpenMPDialect",
         ":OpenMPPassIncGen",
+        ":OpenMPUtils",
         ":Pass",
         ":Support",
         ":Transforms",
