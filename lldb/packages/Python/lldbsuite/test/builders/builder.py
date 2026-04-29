@@ -272,14 +272,7 @@ class Builder:
         return []
 
     def getLLDBObjRoot(self):
-        if configuration.lldb_obj_root:
-            return [f"LLDB_OBJ_ROOT={configuration.lldb_obj_root}"]
-        return []
-
-    def getResourceDirArgs(self):
-        if configuration.resource_dir:
-            return [f"RESOURCE_DIR={configuration.resource_dir}"]
-        return []
+        return ["LLDB_OBJ_ROOT={}".format(configuration.lldb_obj_root)]
 
     def _getDebugInfoArgs(self, debug_info):
         if debug_info is None:
@@ -336,7 +329,6 @@ class Builder:
             self.getLibCxxArgs(),
             self.getLLDBSwiftLibs(),
             self.getLLDBObjRoot(),
-            self.getResourceDirArgs(),
             self.getCmdLine(dictionary),
         ]
         command = list(itertools.chain(*command_parts))
