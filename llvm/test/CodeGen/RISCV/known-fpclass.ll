@@ -70,3 +70,164 @@ define <vscale x 4 x i1> @test_no_overlap_nan_vs_pinf(<vscale x 4 x float> nofpc
   %class = call <vscale x 4 x i1> @llvm.is.fpclass.nxv4f32(<vscale x 4 x float> %a, i32 512)
   ret <vscale x 4 x i1> %class
 }
+
+; Scalable vector vselect tests
+define <vscale x 4 x i1> @vselect_both_nevernan(<vscale x 4 x i1> %cond, <vscale x 4 x float> nofpclass(nan) %a, <vscale x 4 x float> nofpclass(nan) %b) {
+; CHECK-LABEL: vselect_both_nevernan:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vmerge.vvm v8, v10, v8, v0
+; CHECK-NEXT:    vfclass.v v8, v8
+; CHECK-NEXT:    li a0, 768
+; CHECK-NEXT:    vand.vx v8, v8, a0
+; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    ret
+  %sel = select <vscale x 4 x i1> %cond, <vscale x 4 x float> %a, <vscale x 4 x float> %b
+  %class = call <vscale x 4 x i1> @llvm.is.fpclass.nxv4f32(<vscale x 4 x float> %sel, i32 3)  ; 0x3 = "nan"
+  ret <vscale x 4 x i1> %class
+}
+
+define <vscale x 2 x i1> @vselect_both_neverzero(<vscale x 2 x i1> %cond, <vscale x 2 x double> nofpclass(zero) %a, <vscale x 2 x double> nofpclass(zero) %b) {
+; CHECK-LABEL: vselect_both_neverzero:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
+; CHECK-NEXT:    vmerge.vvm v8, v10, v8, v0
+; CHECK-NEXT:    vfclass.v v8, v8
+; CHECK-NEXT:    li a0, 24
+; CHECK-NEXT:    vand.vx v8, v8, a0
+; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    ret
+  %sel = select <vscale x 2 x i1> %cond, <vscale x 2 x double> %a, <vscale x 2 x double> %b
+  %class = call <vscale x 2 x i1> @llvm.is.fpclass.nxv2f64(<vscale x 2 x double> %sel, i32 96)  ; 0x60 = "zero"
+  ret <vscale x 2 x i1> %class
+}
+define <vscale x 4 x i1> @vselect_both_neverinf(<vscale x 4 x i1> %cond, <vscale x 4 x float> nofpclass(inf) %a, <vscale x 4 x float> nofpclass(inf) %b) {
+; CHECK-LABEL: vselect_both_neverinf:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vmerge.vvm v8, v10, v8, v0
+; CHECK-NEXT:    vfclass.v v8, v8
+; CHECK-NEXT:    li a0, 129
+; CHECK-NEXT:    vand.vx v8, v8, a0
+; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    ret
+  %sel = select <vscale x 4 x i1> %cond, <vscale x 4 x float> %a, <vscale x 4 x float> %b
+  %class = call <vscale x 4 x i1> @llvm.is.fpclass.nxv4f32(<vscale x 4 x float> %sel, i32 516)  ; 0x204 = "inf"
+  ret <vscale x 4 x i1> %class
+}
+
+define <vscale x 4 x i1> @vselect_both_nevernan_query_naninf(<vscale x 4 x i1> %cond, <vscale x 4 x float> nofpclass(nan) %a, <vscale x 4 x float> nofpclass(nan) %b) {
+; CHECK-LABEL: vselect_both_nevernan_query_naninf:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vmerge.vvm v8, v10, v8, v0
+; CHECK-NEXT:    vfclass.v v8, v8
+; CHECK-NEXT:    li a0, 897
+; CHECK-NEXT:    vand.vx v8, v8, a0
+; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    ret
+  %sel = select <vscale x 4 x i1> %cond, <vscale x 4 x float> %a, <vscale x 4 x float> %b
+  %class = call <vscale x 4 x i1> @llvm.is.fpclass.nxv4f32(<vscale x 4 x float> %sel, i32 519)  ; 0x207 = "nan|inf"
+  ret <vscale x 4 x i1> %class
+}
+
+define <vscale x 4 x i1> @vselect_asymmetric_nevernan_neverinf_query_nan(<vscale x 4 x i1> %cond, <vscale x 4 x float> nofpclass(nan) %a, <vscale x 4 x float> nofpclass(inf) %b) {
+; CHECK-LABEL: vselect_asymmetric_nevernan_neverinf_query_nan:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vmerge.vvm v8, v10, v8, v0
+; CHECK-NEXT:    vfclass.v v8, v8
+; CHECK-NEXT:    li a0, 768
+; CHECK-NEXT:    vand.vx v8, v8, a0
+; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    ret
+  %sel = select <vscale x 4 x i1> %cond, <vscale x 4 x float> %a, <vscale x 4 x float> %b
+  %class = call <vscale x 4 x i1> @llvm.is.fpclass.nxv4f32(<vscale x 4 x float> %sel, i32 3)  ; 0x3 = "nan"
+  ret <vscale x 4 x i1> %class
+}
+
+; Scalar select tests
+define i1 @select_both_nevernan(i1 %cond, float nofpclass(nan) %a, float nofpclass(nan) %b) {
+; CHECK-LABEL: select_both_nevernan:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi a0, a0, 1
+; CHECK-NEXT:    bnez a0, .LBB11_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    fmv.s fa0, fa1
+; CHECK-NEXT:  .LBB11_2:
+; CHECK-NEXT:    fclass.s a0, fa0
+; CHECK-NEXT:    andi a0, a0, 768
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    ret
+  %sel = select i1 %cond, float %a, float %b
+  %class = call i1 @llvm.is.fpclass.f32(float %sel, i32 3)  ; 0x3 = "nan"
+  ret i1 %class
+}
+
+define i1 @select_both_neverinf(i1 %cond, float nofpclass(inf) %a, float nofpclass(inf) %b) {
+; CHECK-LABEL: select_both_neverinf:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi a0, a0, 1
+; CHECK-NEXT:    bnez a0, .LBB12_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    fmv.s fa0, fa1
+; CHECK-NEXT:  .LBB12_2:
+; CHECK-NEXT:    fclass.s a0, fa0
+; CHECK-NEXT:    andi a0, a0, 129
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    ret
+  %sel = select i1 %cond, float %a, float %b
+  %class = call i1 @llvm.is.fpclass.f32(float %sel, i32 516)  ; 0x204 = "inf"
+  ret i1 %class
+}
+
+define i1 @select_both_neverzero(i1 %cond, float nofpclass(zero) %a, float nofpclass(zero) %b) {
+; CHECK-LABEL: select_both_neverzero:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi a0, a0, 1
+; CHECK-NEXT:    bnez a0, .LBB13_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    fmv.s fa0, fa1
+; CHECK-NEXT:  .LBB13_2:
+; CHECK-NEXT:    fclass.s a0, fa0
+; CHECK-NEXT:    andi a0, a0, 24
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    ret
+  %sel = select i1 %cond, float %a, float %b
+  %class = call i1 @llvm.is.fpclass.f32(float %sel, i32 96)  ; 0x60 = "zero"
+  ret i1 %class
+}
+
+define i1 @select_asymmetric_nevernan_neverinf_query_nan(i1 %cond, float nofpclass(nan) %a, float nofpclass(inf) %b) {
+; CHECK-LABEL: select_asymmetric_nevernan_neverinf_query_nan:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi a0, a0, 1
+; CHECK-NEXT:    bnez a0, .LBB14_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    fmv.s fa0, fa1
+; CHECK-NEXT:  .LBB14_2:
+; CHECK-NEXT:    fclass.s a0, fa0
+; CHECK-NEXT:    andi a0, a0, 768
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    ret
+  %sel = select i1 %cond, float %a, float %b
+  %class = call i1 @llvm.is.fpclass.f32(float %sel, i32 3)  ; 0x3 = "nan"
+  ret i1 %class
+}
+
+define i1 @select_asymmetric_nevernan_neverinf_query_inf(i1 %cond, float nofpclass(nan) %a, float nofpclass(inf) %b) {
+; CHECK-LABEL: select_asymmetric_nevernan_neverinf_query_inf:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi a0, a0, 1
+; CHECK-NEXT:    bnez a0, .LBB15_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    fmv.s fa0, fa1
+; CHECK-NEXT:  .LBB15_2:
+; CHECK-NEXT:    fclass.s a0, fa0
+; CHECK-NEXT:    andi a0, a0, 129
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    ret
+  %sel = select i1 %cond, float %a, float %b
+  %class = call i1 @llvm.is.fpclass.f32(float %sel, i32 516)  ; 0x204 = "inf"
+  ret i1 %class
+}
