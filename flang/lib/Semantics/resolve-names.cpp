@@ -1637,15 +1637,7 @@ Symbol *AccVisitor::CopyUseDeviceSymbol(const Symbol &symbol) {
         hostAssoc && copy->owner().kind() == Scope::Kind::OpenACCConstruct) {
       Scope &hostScope{currScope().parent()};
       if (!FindInScope(hostScope, ultimate.name())) {
-        auto pair{hostScope.try_emplace(
-            ultimate.name(), HostAssocDetails{hostAssoc->symbol()})};
-        Symbol &hostCopy{*pair.first->second};
-        hostCopy.attrs() = hostAssoc->symbol().attrs();
-        hostCopy.implicitAttrs() =
-            hostCopy.attrs() & Attrs{Attr::ASYNCHRONOUS, Attr::VOLATILE};
-        hostCopy.implicitAttrs() |=
-            hostAssoc->symbol().implicitAttrs() & Attrs{Attr::SAVE};
-        hostCopy.flags() = hostAssoc->symbol().flags();
+        hostScope.CopySymbol(ultimate);
       }
     }
     if (const auto *object{ultimate.detailsIf<ObjectEntityDetails>()}) {
