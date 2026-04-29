@@ -77,6 +77,11 @@ def FTZFlag : OperandWithDefaultOps<i1, (ops (getFTZFlag (i1 0)))> {
   let PrintMethod = "printFTZFlag";
 }
 
+// Flag to indicate predicate negation (@!p) for conditional branches.
+def BranchFlag : OperandWithDefaultOps<i1, (ops (i1 0))> {
+  let PrintMethod = "printNegatedPredicate";
+}
+
 // Compare modes
 // These must match the enum in NVPTX.h
 def CmpEQ : PatLeaf<(i32 0)>;
@@ -2450,8 +2455,9 @@ let isTerminator=1 in {
       def Return : BasicNVPTXInst<(outs), (ins), "ret", [(retglue)]>;
 
   let isBranch=1 in {
-    def CBranch : NVPTXInst<(outs), (ins B1:$a, brtarget:$target),
-                              "@$a bra \t$target;",
+    def CBranch : NVPTXInst<(outs),
+                              (ins B1:$a, brtarget:$target, BranchFlag:$not),
+                              "@${not}$a bra \t$target;",
                               [(brcond i1:$a, bb:$target)]>;
 
     let isBarrier=1 in
