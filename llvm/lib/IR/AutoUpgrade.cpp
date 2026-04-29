@@ -1710,8 +1710,8 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
                         Intrinsic::nvvm_fmin_ftz_nan_xorsign_abs)
                   .Default(Intrinsic::not_intrinsic);
           if (IID != Intrinsic::not_intrinsic) {
-            NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID,
-                                                      {NewTy});
+            NewFn =
+                Intrinsic::getOrInsertDeclaration(F->getParent(), IID, {NewTy});
             return true;
           }
         }
