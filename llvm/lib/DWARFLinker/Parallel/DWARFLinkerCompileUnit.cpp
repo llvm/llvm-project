@@ -1453,7 +1453,8 @@ DIE *CompileUnit::allocateTypeDie(TypeEntryBody *TypeDescriptor,
 
   if (!IsDeclaration && !IsParentDeclaration) {
     // Definition: lowest priority wins.
-    if (Priority < TypeDescriptor->DiePriority.load(std::memory_order_relaxed)) {
+    if (Priority <
+        TypeDescriptor->DiePriority.load(std::memory_order_relaxed)) {
       TypeDescriptor->DiePriority.store(Priority, std::memory_order_relaxed);
       Result = TypeDIEGenerator.createDIE(DieTag, 0);
       TypeDescriptor->Die.store(Result, std::memory_order_relaxed);
