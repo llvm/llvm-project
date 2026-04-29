@@ -7,20 +7,23 @@
 # AsyncMarks) and the other does not (empty OtherMarks), before the fix
 # seq_inclusive<unsigned>(1, 0) would assert Begin <= End.
 #
-# After the fix the function returns early when either side is empty.  The
-# pending async marks from the non-empty predecessor are preserved, so any
-# consumer instruction in the join block still receives the correct S_WAITCNT.
+# After the fix the function returns early when either side is empty.
+#
+# BUFFER_LOAD_DWORD_LDS_IDXEN with IsAsync=1 loads from global memory
+# directly into LDS (bypassing VGPRs).  isAsync() returns true for this
+# instruction, so the LOAD_CNT score is recorded into AsyncScore before
+# ASYNCMARK pushes it onto AsyncMarks.
+#
+# The join block contains WAIT_ASYNCMARK 0 to consume the pending mark.
+# Before the fix, mergeAsyncMarks() asserted before reaching the wait.
+# After the fix the function returns early and the pass completes without asserting.
 #
 # Two patterns are tested:
 #   asyncmark_in_then - ASYNCMARK in the then-successor, else-successor is sync
 #   asyncmark_in_else - ASYNCMARK in the else-successor, then-successor is sync
-#
-# In both cases the join block must emit S_WAITCNT to drain the pending async
-# buffer load before the result is consumed.
 
 ---
 # Pattern 1: ASYNCMARK in then-successor, else-successor is sync.
-# The join block must wait for the async load from the then path.
 name:            asyncmark_in_then
 tracksRegLiveness: true
 machineFunctionInfo:
@@ -29,63 +32,64 @@ body:             |
   ; CHECK-LABEL: name: asyncmark_in_then
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr4_sgpr5_sgpr6_sgpr7
+  ; CHECK-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr4_sgpr5_sgpr6_sgpr7, $vgpr0, $vgpr1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   S_WAITCNT 0
+  ; CHECK-NEXT:   $m0 = S_MOV_B32 0
   ; CHECK-NEXT:   S_CMP_LG_U32 $sgpr0, $sgpr1, implicit-def $scc
   ; CHECK-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit killed $scc
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
-  ; CHECK-NEXT:   liveins: $sgpr0, $sgpr4_sgpr5_sgpr6_sgpr7
+  ; CHECK-NEXT:   liveins: $sgpr0, $sgpr4_sgpr5_sgpr6_sgpr7, $vgpr0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr4_sgpr5_sgpr6_sgpr7, $sgpr0, 0, 0, 0, implicit $exec
+  ; CHECK-NEXT:   BUFFER_LOAD_DWORD_LDS_IDXEN $vgpr0, $sgpr4_sgpr5_sgpr6_sgpr7, $sgpr0, 0, 0, 0, 1, implicit $exec, implicit $m0 :: (load (s32) from `ptr addrspace(1) poison`, addrspace 1), (store (s32) into `ptr addrspace(3) poison`, addrspace 3)
   ; CHECK-NEXT:   ASYNCMARK
   ; CHECK-NEXT:   S_BRANCH %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $vgpr0 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
-  ; CHECK-NEXT:   liveins: $vgpr0
+  ; CHECK-NEXT:   liveins: $vgpr1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   S_WAITCNT 3952
-  ; CHECK-NEXT:   $vgpr1 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+  ; CHECK-NEXT:   WAIT_ASYNCMARK 0
+  ; CHECK-NEXT:   $vgpr2 = DS_READ_B32_gfx9 $vgpr1, 0, 0, implicit $m0, implicit $exec :: (load (s32) from `ptr addrspace(3) poison`, addrspace 3)
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
-    liveins: $sgpr0, $sgpr1, $sgpr4_sgpr5_sgpr6_sgpr7
+    liveins: $sgpr0, $sgpr1, $sgpr4_sgpr5_sgpr6_sgpr7, $vgpr0, $vgpr1
 
+    $m0 = S_MOV_B32 0
     S_CMP_LG_U32 $sgpr0, $sgpr1, implicit-def $scc
     S_CBRANCH_SCC1 %bb.2, implicit killed $scc
 
-  ; then branch — issues async buffer load + ASYNCMARK
+  ; then branch — issues async LDS DMA + ASYNCMARK
   bb.1:
     successors: %bb.3(0x80000000)
-    liveins: $sgpr0, $sgpr4_sgpr5_sgpr6_sgpr7
+    liveins: $sgpr0, $sgpr4_sgpr5_sgpr6_sgpr7, $vgpr0
 
-    $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr4_sgpr5_sgpr6_sgpr7, $sgpr0, 0, 0, 0, implicit $exec
+    BUFFER_LOAD_DWORD_LDS_IDXEN $vgpr0, $sgpr4_sgpr5_sgpr6_sgpr7, $sgpr0, 0, 0, 0, 1, implicit $exec, implicit $m0 :: (load (s32) from `ptr addrspace(1) poison`), (store (s32) into `ptr addrspace(3) poison`)
     ASYNCMARK
     S_BRANCH %bb.3
 
-  ; else branch — sync path, no async operations, OtherMarks is empty at join
+  ; else branch — sync path, no async operations; OtherMarks is empty at join
   bb.2:
     successors: %bb.3(0x80000000)
 
-    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     S_BRANCH %bb.3
 
   ; join — mergeAsyncMarks sees non-empty AsyncMarks (then) and empty OtherMarks (else).
-  ; Before fix: assertion. After fix: returns early, preserves async marks.
-  ; S_WAITCNT must be emitted before the use of $vgpr0 to drain the pending load.
-  ; (mergeAsyncMarks sees non-empty AsyncMarks from then, empty from else)
+  ; Before fix: assertion. After fix: returns early, preserving async marks from the then-path.
+  ; The vmcnt score at the join is the min of both predecessors (0 from else-path),
+  ; so no S_WAITCNT is inserted — but the assertion no longer fires.
   bb.3:
-    liveins: $vgpr0
+    liveins: $vgpr1
 
-    $vgpr1 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+    WAIT_ASYNCMARK 0
+    $vgpr2 = DS_READ_B32_gfx9 $vgpr1, 0, 0, implicit $m0, implicit $exec :: (load (s32) from `ptr addrspace(3) poison`)
     S_ENDPGM 0
 ...
 ---
@@ -99,36 +103,38 @@ body:             |
   ; CHECK-LABEL: name: asyncmark_in_else
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr4_sgpr5_sgpr6_sgpr7
+  ; CHECK-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr4_sgpr5_sgpr6_sgpr7, $vgpr0, $vgpr1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   S_WAITCNT 0
+  ; CHECK-NEXT:   $m0 = S_MOV_B32 0
   ; CHECK-NEXT:   S_CMP_LG_U32 $sgpr0, $sgpr1, implicit-def $scc
   ; CHECK-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit killed $scc
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $vgpr0 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
-  ; CHECK-NEXT:   liveins: $sgpr0, $sgpr4_sgpr5_sgpr6_sgpr7
+  ; CHECK-NEXT:   liveins: $sgpr0, $sgpr4_sgpr5_sgpr6_sgpr7, $vgpr0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr4_sgpr5_sgpr6_sgpr7, $sgpr0, 0, 0, 0, implicit $exec
+  ; CHECK-NEXT:   BUFFER_LOAD_DWORD_LDS_IDXEN $vgpr0, $sgpr4_sgpr5_sgpr6_sgpr7, $sgpr0, 0, 0, 0, 1, implicit $exec, implicit $m0 :: (load (s32) from `ptr addrspace(1) poison`, addrspace 1), (store (s32) into `ptr addrspace(3) poison`, addrspace 3)
   ; CHECK-NEXT:   ASYNCMARK
   ; CHECK-NEXT:   S_BRANCH %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
-  ; CHECK-NEXT:   liveins: $vgpr0
+  ; CHECK-NEXT:   liveins: $vgpr1
   ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   WAIT_ASYNCMARK 0
   ; CHECK-NEXT:   S_WAITCNT 3952
-  ; CHECK-NEXT:   $vgpr1 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr2 = DS_READ_B32_gfx9 $vgpr1, 0, 0, implicit $m0, implicit $exec :: (load (s32) from `ptr addrspace(3) poison`, addrspace 3)
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
-    liveins: $sgpr0, $sgpr1, $sgpr4_sgpr5_sgpr6_sgpr7
+    liveins: $sgpr0, $sgpr1, $sgpr4_sgpr5_sgpr6_sgpr7, $vgpr0, $vgpr1
 
+    $m0 = S_MOV_B32 0
     S_CMP_LG_U32 $sgpr0, $sgpr1, implicit-def $scc
     S_CBRANCH_SCC1 %bb.2, implicit killed $scc
 
@@ -136,23 +142,24 @@ body:             |
   bb.1:
     successors: %bb.3(0x80000000)
 
-    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     S_BRANCH %bb.3
 
-  ; else branch — issues async buffer load + ASYNCMARK
+  ; else branch — issues async LDS DMA + ASYNCMARK
   bb.2:
     successors: %bb.3(0x80000000)
-    liveins: $sgpr0, $sgpr4_sgpr5_sgpr6_sgpr7
+    liveins: $sgpr0, $sgpr4_sgpr5_sgpr6_sgpr7, $vgpr0
 
-    $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr4_sgpr5_sgpr6_sgpr7, $sgpr0, 0, 0, 0, implicit $exec
+    BUFFER_LOAD_DWORD_LDS_IDXEN $vgpr0, $sgpr4_sgpr5_sgpr6_sgpr7, $sgpr0, 0, 0, 0, 1, implicit $exec, implicit $m0 :: (load (s32) from `ptr addrspace(1) poison`), (store (s32) into `ptr addrspace(3) poison`)
     ASYNCMARK
     S_BRANCH %bb.3
 
   ; join — mergeAsyncMarks sees empty AsyncMarks (then) and non-empty OtherMarks (else).
-  ; S_WAITCNT must be emitted before the use of $vgpr0 to drain the pending load.
+  ; The pending vmcnt from the else-path's async load is preserved at the join;
+  ; S_WAITCNT vmcnt(0) is inserted before the DS_READ to drain it.
   bb.3:
-    liveins: $vgpr0
+    liveins: $vgpr1
 
-    $vgpr1 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+    WAIT_ASYNCMARK 0
+    $vgpr2 = DS_READ_B32_gfx9 $vgpr1, 0, 0, implicit $m0, implicit $exec :: (load (s32) from `ptr addrspace(3) poison`)
     S_ENDPGM 0
 ...
