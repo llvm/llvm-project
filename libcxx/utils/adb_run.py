@@ -63,19 +63,20 @@ def sync_test_dir(local_dir: str, remote_dir: str) -> None:
         if not os.path.islink(local_file) and os.path.isfile(local_file):
             run_adb_sync_command(["adb", "push", "--sync", local_file,
                                   remote_file])
-            run_adb_sync_command(["adb", "shell", "chmod", "777", REMOTE_BASE_DIR])
-            run_adb_sync_command(["adb", "shell", "chmod", "777", os.path.dirname(remote_dir)])
-            run_adb_sync_command(["adb", "shell", "chmod", "777", remote_dir])
             return
 
     assert os.path.basename(local_dir) == os.path.basename(remote_dir)
     run_adb_sync_command(["adb", "shell", "mkdir", "-p", remote_dir])
-    run_adb_sync_command(["adb", "shell", "chmod", "777", REMOTE_BASE_DIR])
-    run_adb_sync_command(["adb", "shell", "chmod", "777", os.path.dirname(remote_dir)])
-    run_adb_sync_command(["adb", "shell", "chmod", "777", remote_dir])
     run_adb_sync_command(["adb", "push", "--sync", local_dir,
                           os.path.dirname(remote_dir)])
 
+    # Android M (API 23) x86 emulator doesn't have permissions to write to
+    # /data/local/tmp, so we need to change the permissions of the
+    # directory.
+    run_adb_sync_command(["adb", "shell", "chmod", "777", REMOTE_BASE_DIR])
+    run_adb_sync_command(["adb", "shell", "chmod", "777",
+                          os.path.dirname(remote_dir)])
+    run_adb_sync_command(["adb", "shell", "chmod", "777", remote_dir])
 
 def build_env_arg(env_args: List[str], prepend_path_args: List[Tuple[str, str]]) -> str:
     components = []
@@ -210,7 +211,14 @@ def run_command(args: argparse.Namespace) -> int:
                              f"  output: {output}\n")
             return 1
 
-        sys.stderr.write(match.group(1))
+        # Android M (API 23) will print a warning for DT_FLAGS_1=0x8000001
+        # because they were not set in the dynamic flags since Android N.
+        stderr_content = match.group(1)
+        stderr_content = re.sub(
+            r"^WARNING: linker: .*unsupported flags DT_FLAGS_1=.*\n?", "",
+            stderr_content, flags=re.MULTILINE)
+
+        sys.stderr.write(stderr_content)
         sys.stdout.write(match.group(2))
         return int(match.group(3))
 
