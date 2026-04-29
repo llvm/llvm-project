@@ -3948,7 +3948,8 @@ void RISCVInstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
   if (TRI.isGeneralPurposeRegister(MF, Reg)) {
     BuildMI(MBB, Iter, DL, get(RISCV::PseudoLI), Reg).addImm(0);
   } else {
-    llvm_unreachable("Implement buildClearRegister for non-GPR registers");
+    llvm::report_fatal_error(
+        "buildClearRegister is not implemented for non-GPR registers");
   }
 }
 

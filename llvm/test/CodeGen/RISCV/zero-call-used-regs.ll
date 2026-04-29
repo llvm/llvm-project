@@ -3,7 +3,7 @@
 
 target triple = "riscv64-unknown-linux-gnu"
 
-define dso_local i32 @skip(i32 noundef %a, i32 noundef %b, i32 noundef %c) local_unnamed_addr #0 "zero-call-used-regs"="skip" {
+define i32 @skip(i32 noundef %a, i32 noundef %b, i32 noundef %c) #0 "zero-call-used-regs"="skip" {
 ; CHECK-LABEL: skip:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mul{{w?}} a0, a1, a0
@@ -16,7 +16,7 @@ entry:
   ret i32 %or
 }
 
-define dso_local i32 @used_gpr_arg(i32 noundef %a, i32 noundef %b, i32 noundef %c) local_unnamed_addr #0 noinline optnone "zero-call-used-regs"="used-gpr-arg" {
+define i32 @used_gpr_arg(i32 noundef %a, i32 noundef %b, i32 noundef %c) #0 "zero-call-used-regs"="used-gpr-arg" {
 ; CHECK-LABEL: used_gpr_arg:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mul{{w?}} a0, a1, a0
@@ -31,7 +31,7 @@ entry:
   ret i32 %or
 }
 
-define dso_local i32 @used_gpr(i32 noundef %a, i32 noundef %b, i32 noundef %c) local_unnamed_addr #0 noinline optnone "zero-call-used-regs"="used-gpr" {
+define i32 @used_gpr(i32 noundef %a, i32 noundef %b, i32 noundef %c) #0 "zero-call-used-regs"="used-gpr" {
 ; CHECK-LABEL: used_gpr:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mul{{w?}} a0, a1, a0
@@ -46,7 +46,7 @@ entry:
   ret i32 %or
 }
 
-define dso_local i32 @used_arg(i32 noundef %a, i32 noundef %b, i32 noundef %c) local_unnamed_addr #0 noinline optnone "zero-call-used-regs"="used-arg" {
+define i32 @used_arg(i32 noundef %a, i32 noundef %b, i32 noundef %c) #0 "zero-call-used-regs"="used-arg" {
 ; CHECK-LABEL: used_arg:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mul{{w?}} a0, a1, a0
@@ -61,7 +61,7 @@ entry:
   ret i32 %or
 }
 
-define dso_local i32 @used(i32 noundef %a, i32 noundef %b, i32 noundef %c) local_unnamed_addr #0 noinline optnone "zero-call-used-regs"="used" {
+define i32 @used(i32 noundef %a, i32 noundef %b, i32 noundef %c) #0 "zero-call-used-regs"="used" {
 ; CHECK-LABEL: used:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mul{{w?}} a0, a1, a0
@@ -76,7 +76,7 @@ entry:
   ret i32 %or
 }
 
-define dso_local i32 @all_gpr_arg(i32 noundef %a, i32 noundef %b, i32 noundef %c) local_unnamed_addr #0 "zero-call-used-regs"="all-gpr-arg" {
+define i32 @all_gpr_arg(i32 noundef %a, i32 noundef %b, i32 noundef %c) #0 "zero-call-used-regs"="all-gpr-arg" {
 ; CHECK-LABEL: all_gpr_arg:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mul{{w?}} a0, a1, a0
@@ -96,7 +96,7 @@ entry:
   ret i32 %or
 }
 
-define dso_local i32 @all_gpr(i32 noundef %a, i32 noundef %b, i32 noundef %c) local_unnamed_addr #0 "zero-call-used-regs"="all-gpr" {
+define i32 @all_gpr(i32 noundef %a, i32 noundef %b, i32 noundef %c) #0 "zero-call-used-regs"="all-gpr" {
 ; CHECK-LABEL: all_gpr:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mul{{w?}} a0, a1, a0
@@ -123,7 +123,7 @@ entry:
   ret i32 %or
 }
 
-define dso_local double @skip_float(double noundef %a, float noundef %b) local_unnamed_addr #0 "zero-call-used-regs"="skip" {
+define double @skip_float(double noundef %a, float noundef %b) #0 "zero-call-used-regs"="skip" {
 ; CHECK-LABEL: skip_float:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    fcvt.d.s fa5, fa1
@@ -136,7 +136,7 @@ entry:
   ret double %mul
 }
 
-define dso_local double @used_gpr_arg_float(double noundef %a, float noundef %b) local_unnamed_addr #0 noinline optnone "zero-call-used-regs"="used-gpr-arg" {
+define double @used_gpr_arg_float(double noundef %a, float noundef %b) #0 "zero-call-used-regs"="used-gpr-arg" {
 ; CHECK-LABEL: used_gpr_arg_float:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    fcvt.d.s fa5, fa1
@@ -149,7 +149,7 @@ entry:
   ret double %mul
 }
 
-define dso_local double @used_gpr_float(double noundef %a, float noundef %b) local_unnamed_addr #0 noinline optnone "zero-call-used-regs"="used-gpr" {
+define double @used_gpr_float(double noundef %a, float noundef %b) #0 "zero-call-used-regs"="used-gpr" {
 ; CHECK-LABEL: used_gpr_float:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    fcvt.d.s fa5, fa1
@@ -162,7 +162,7 @@ entry:
   ret double %mul
 }
 
-define dso_local double @all_gpr_arg_float(double noundef %a, float noundef %b) local_unnamed_addr #0 noinline optnone "zero-call-used-regs"="all-gpr-arg" {
+define double @all_gpr_arg_float(double noundef %a, float noundef %b) #0 "zero-call-used-regs"="all-gpr-arg" {
 ; CHECK-LABEL: all_gpr_arg_float:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    fcvt.d.s fa5, fa1
@@ -183,7 +183,7 @@ entry:
   ret double %mul
 }
 
-define dso_local double @all_gpr_float(double noundef %a, float noundef %b) local_unnamed_addr #0 noinline optnone "zero-call-used-regs"="all-gpr" {
+define double @all_gpr_float(double noundef %a, float noundef %b) #0 "zero-call-used-regs"="all-gpr" {
 ; CHECK-LABEL: all_gpr_float:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    fcvt.d.s fa5, fa1
@@ -212,7 +212,7 @@ entry:
 }
 
 ; Don't emit zeroing registers in "main" function.
-define dso_local i32 @main() local_unnamed_addr #0 {
+define i32 @main() #0 {
 ; CHECK-LABEL: main:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li a0, 0
@@ -222,4 +222,4 @@ entry:
   ret i32 0
 }
 
-attributes #0 = { mustprogress nofree norecurse nosync nounwind readnone willreturn uwtable "frame-pointer"="non-leaf" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+m,+f,+d" }
+attributes #0 = { "target-cpu"="generic" "target-features"="+m,+f,+d" }

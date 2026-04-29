@@ -4967,7 +4967,7 @@ defm raw_string_literals : BoolFOption<"raw-string-literals",
 def fzero_call_used_regs_EQ
     : Joined<["-"], "fzero-call-used-regs=">, Group<f_Group>,
     Visibility<[ClangOption, CC1Option]>,
-      HelpText<"Clear call-used registers upon function return (AArch64/RISCV/x86 only)">,
+      HelpText<"Clear call-used registers upon function return (AArch64/RISC-V/x86 only)">,
       Values<"skip,used-gpr-arg,used-gpr,used-arg,used,all-gpr-arg,all-gpr,all-arg,all">,
       NormalizedValues<["Skip", "UsedGPRArg", "UsedGPR", "UsedArg", "Used",
                         "AllGPRArg", "AllGPR", "AllArg", "All"]>,

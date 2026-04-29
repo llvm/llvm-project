@@ -1445,7 +1445,7 @@ void RISCVFrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
 
   const MachineFunction &MF = *MBB.getParent();
   const RISCVSubtarget &STI = MF.getSubtarget<RISCVSubtarget>();
-  const RISCVRegisterInfo &TRI = STI.getTargetABI();
+  const RISCVRegisterInfo &TRI = *STI.getRegisterInfo();
   const RISCVInstrInfo &TII = *STI.getInstrInfo();
 
   for (MCRegister Reg : RegsToZero.set_bits()) {
