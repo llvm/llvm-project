@@ -202,13 +202,11 @@ def GPR64common : RegisterClass<"AArch64", [i64], 64,
 def GPR32 : RegisterClass<"AArch64", [i32], 32, (add GPR32common, WZR)> {
   let AltOrders = [(rotl GPR32, 8)];
   let AltOrderSelect = [{ return 1; }];
-  let BaseClassOrder = 0;
   let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::GPR32RegClassID, 0, 32>";
 }
 def GPR64 : RegisterClass<"AArch64", [i64], 64, (add GPR64common, XZR)> {
   let AltOrders = [(rotl GPR64, 8)];
   let AltOrderSelect = [{ return 1; }];
-  let BaseClassOrder = 0;
   let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::GPR64RegClassID, 0, 32>";
 }
 
@@ -216,13 +214,11 @@ def GPR64 : RegisterClass<"AArch64", [i64], 64, (add GPR64common, XZR)> {
 def GPR32sp : RegisterClass<"AArch64", [i32], 32, (add GPR32common, WSP)> {
   let AltOrders = [(rotl GPR32sp, 8)];
   let AltOrderSelect = [{ return 1; }];
-  let BaseClassOrder = 1;
   let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::GPR32spRegClassID, 0, 32>";
 }
 def GPR64sp : RegisterClass<"AArch64", [i64], 64, (add GPR64common, SP)> {
   let AltOrders = [(rotl GPR64sp, 8)];
   let AltOrderSelect = [{ return 1; }];
-  let BaseClassOrder = 1;
   let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::GPR64spRegClassID,0, 32>";
 }
 
@@ -504,12 +500,10 @@ def Q31   : AArch64Reg<31, "q31", [D31, D31_HI], ["v31", ""]>, DwarfRegAlias<B31
 
 def FPR8  : RegisterClass<"AArch64", [i8, aarch64mfp8], 8, (sequence "B%u", 0, 31)> {
   let Size = 8;
-  let BaseClassOrder = 0;
   let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::FPR8RegClassID, 0, 32>";
 }
 def FPR16 : RegisterClass<"AArch64", [f16, bf16, i16], 16, (sequence "H%u", 0, 31)> {
   let Size = 16;
-  let BaseClassOrder = 0;
   let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::FPR16RegClassID, 0, 32>";
 }
 
@@ -517,13 +511,11 @@ def FPR16_lo : RegisterClass<"AArch64", [f16], 16, (trunc FPR16, 16)> {
   let Size = 16;
 }
 def FPR32 : RegisterClass<"AArch64", [f32, i32], 32,(sequence "S%u", 0, 31)> {
-  let BaseClassOrder = 0;
   let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::FPR32RegClassID, 0, 32>";
 }
 def FPR64 : RegisterClass<"AArch64", [f64, i64, v2f32, v1f64, v8i8, v4i16, v2i32,
                                       v1i64, v4f16, v4bf16],
                                      64, (sequence "D%u", 0, 31)> {
-  let BaseClassOrder = 0;
   let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::FPR64RegClassID, 0, 32>";
 }
 def FPR64_lo : RegisterClass<"AArch64",
@@ -538,7 +530,6 @@ def FPR128 : RegisterClass<"AArch64",
                            [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64, f128,
                             v8f16, v8bf16],
                            128, (sequence "Q%u", 0, 31)> {
-  let BaseClassOrder = 0;
   let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::FPR128RegClassID, 0, 32>";
 }
 
@@ -996,7 +987,6 @@ class PPRClass<int firstreg, int lastreg, int step = 1> : RegisterClass<"AArch64
 }
 
 def PPR    : PPRClass<0, 15> {
-  let BaseClassOrder = 0;
   let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::PPRRegClassID, 0, 16>";
 }
 def PPR_3b : PPRClass<0, 7> { // Restricted 3 bit SVE predicate register class.
@@ -1200,7 +1190,6 @@ def ZPRMul2_Lo : ZPRClass<0,  14, 2>;
 def ZPRMul2_Hi : ZPRClass<16, 30, 2>;
 
 def ZPR    : ZPRClass<0, 31> {
-  let BaseClassOrder = 0;
   let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::ZPRRegClassID, 0, 32>";
 }
 def ZPR_4b : ZPRClass<0, 15> { // Restricted 4 bit SVE vector register class.
@@ -2021,7 +2010,5 @@ let isAllocatable = 0, GeneratePressureSet = 0 in {
 
 def GeneralPurposeRegisters : RegisterCategory<[GPR64, GPR32]>;
 
-def FIXED_REGS : RegisterClass<"AArch64", [i64], 64, (add FP, SP, VG, FFR)> {
-  let BaseClassOrder = 2;
-}
+def FIXED_REGS : RegisterClass<"AArch64", [i64], 64, (add FP, SP, VG, FFR)>;
 def FixedRegisters : RegisterCategory<[CCR, FIXED_REGS]>;

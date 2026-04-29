@@ -263,6 +263,10 @@ getCommonMinimalPhysRegClass(const TargetRegisterInfo *TRI, MCRegister Reg1,
 
 const TargetRegisterClass *
 TargetRegisterInfo::getMinimalPhysRegClass(MCRegister Reg, MVT VT) const {
+  if (VT == MVT::Other) {
+    if (const TargetRegisterClass *RC = getDefaultMinimalPhysRegClass(Reg))
+      return RC;
+  }
   return ::getMinimalPhysRegClass(this, Reg, VT);
 }
 

@@ -2623,7 +2623,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   unsigned PPRCSStackSize = 0;
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   for (unsigned Reg : SavedRegs.set_bits()) {
-    auto *RC = TRI->getPhysRegBaseClass(MCRegister(Reg));
+    auto *RC = TRI->getMinimalPhysRegClass(MCRegister(Reg));
     assert(RC && "expected register class!");
     auto SpillSize = TRI->getSpillSize(*RC);
     bool IsZPR = AArch64::ZPRRegClass.contains(Reg);
@@ -2804,7 +2804,7 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
   int HazardSlotIndex = std::numeric_limits<int>::max();
   for (auto &CS : CSI) {
     MCRegister Reg = CS.getReg();
-    const TargetRegisterClass *RC = RegInfo->getPhysRegBaseClass(Reg);
+    const TargetRegisterClass *RC = RegInfo->getMinimalPhysRegClass(Reg);
 
     // Create a hazard slot as we switch between GPR and FPR CSRs.
     if (AFI->isStackHazardIncludedInCalleeSaveArea() &&
