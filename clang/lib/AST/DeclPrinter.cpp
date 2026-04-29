@@ -890,19 +890,15 @@ void DeclPrinter::VisitFriendDecl(FriendDecl *D) {
   if (TypeSourceInfo *TSI = D->getFriendType()) {
     Out << "friend ";
     Out << TSI->getType().getAsString(Policy);
-  }
-  else if (FunctionDecl *FD =
-      dyn_cast<FunctionDecl>(D->getFriendDecl())) {
+  } else if (FunctionDecl *FD = dyn_cast<FunctionDecl>(D->getFriendDecl())) {
     Out << "friend ";
     VisitFunctionDecl(FD);
-  }
-  else if (FunctionTemplateDecl *FTD =
-           dyn_cast<FunctionTemplateDecl>(D->getFriendDecl())) {
+  } else if (FunctionTemplateDecl *FTD =
+                 dyn_cast<FunctionTemplateDecl>(D->getFriendDecl())) {
     Out << "friend ";
     VisitFunctionTemplateDecl(FTD);
-  }
-  else if (ClassTemplateDecl *CTD =
-           dyn_cast<ClassTemplateDecl>(D->getFriendDecl())) {
+  } else if (ClassTemplateDecl *CTD =
+                 dyn_cast<ClassTemplateDecl>(D->getFriendDecl())) {
     Out << "friend ";
     VisitRedeclarableTemplateDecl(CTD);
   }
