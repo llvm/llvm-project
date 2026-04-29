@@ -16,9 +16,9 @@ define i8 @test_ret_i8() {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $arguments
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
-  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:i32(s32) = G_ANYEXT [[C]](s8)
-  ; CHECK-NEXT:   RETURN [[ANYEXT]](s32), implicit-def $arguments
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i8) = G_CONSTANT i8 0
+  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:i32(i32) = G_ANYEXT [[C]](i8)
+  ; CHECK-NEXT:   RETURN [[ANYEXT]](i32), implicit-def $arguments
   ret i8 0
 }
 
@@ -27,9 +27,9 @@ define zeroext i8 @test_ret_i8_zeroext() {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $arguments
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 -1
-  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:i32(s32) = G_ZEXT [[C]](s8)
-  ; CHECK-NEXT:   RETURN [[ZEXT]](s32), implicit-def $arguments
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i8) = G_CONSTANT i8 -1
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:i32(i32) = G_ZEXT [[C]](i8)
+  ; CHECK-NEXT:   RETURN [[ZEXT]](i32), implicit-def $arguments
   ret i8 -1
 }
 
@@ -38,9 +38,9 @@ define signext i8 @test_ret_i8_signext() {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $arguments
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 -1
-  ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:i32(s32) = G_SEXT [[C]](s8)
-  ; CHECK-NEXT:   RETURN [[SEXT]](s32), implicit-def $arguments
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i8) = G_CONSTANT i8 -1
+  ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:i32(i32) = G_SEXT [[C]](i8)
+  ; CHECK-NEXT:   RETURN [[SEXT]](i32), implicit-def $arguments
   ret i8 -1
 }
 
@@ -50,9 +50,9 @@ define i16 @test_ret_i16() {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $arguments
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 0
-  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:i32(s32) = G_ANYEXT [[C]](s16)
-  ; CHECK-NEXT:   RETURN [[ANYEXT]](s32), implicit-def $arguments
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i16) = G_CONSTANT i16 0
+  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:i32(i32) = G_ANYEXT [[C]](i16)
+  ; CHECK-NEXT:   RETURN [[ANYEXT]](i32), implicit-def $arguments
   ret i16 0
 }
 
@@ -61,8 +61,8 @@ define i32 @test_ret_i32() {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $arguments
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   RETURN [[C]](s32), implicit-def $arguments
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+  ; CHECK-NEXT:   RETURN [[C]](i32), implicit-def $arguments
   ret i32 0
 }
 
@@ -71,8 +71,8 @@ define i64 @test_ret_i64() {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $arguments
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-  ; CHECK-NEXT:   RETURN [[C]](s64), implicit-def $arguments
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+  ; CHECK-NEXT:   RETURN [[C]](i64), implicit-def $arguments
   ret i64 0
 }
 
@@ -98,9 +98,9 @@ define half @test_ret_f16() {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $arguments
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH0000
-  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:i32(s32) = G_ANYEXT [[C]](s16)
-  ; CHECK-NEXT:   RETURN [[ANYEXT]](s32), implicit-def $arguments
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(f16) = G_FCONSTANT half 0xH0000
+  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:i32(i32) = G_ANYEXT [[C]](f16)
+  ; CHECK-NEXT:   RETURN [[ANYEXT]](i32), implicit-def $arguments
   ret half 0.0
 }
 
@@ -109,8 +109,8 @@ define float @test_ret_f32() {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $arguments
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0.000000e+00
-  ; CHECK-NEXT:   RETURN [[C]](s32), implicit-def $arguments
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(f32) = G_FCONSTANT float 0.000000e+00
+  ; CHECK-NEXT:   RETURN [[C]](f32), implicit-def $arguments
   ret float 0.0
 }
 
@@ -119,8 +119,8 @@ define double @test_ret_f64() {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $arguments
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 0.000000e+00
-  ; CHECK-NEXT:   RETURN [[C]](s64), implicit-def $arguments
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(f64) = G_FCONSTANT double 0.000000e+00
+  ; CHECK-NEXT:   RETURN [[C]](f64), implicit-def $arguments
   ret double 0.0
 }
 

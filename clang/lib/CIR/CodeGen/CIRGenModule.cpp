@@ -3570,6 +3570,50 @@ CIRGenModule::getAddrOfGlobalTemporary(const MaterializeTemporaryExpr *mte,
   return cv;
 }
 
+cir::GlobalOp CIRGenModule::getAddrOfUnnamedGlobalConstantDecl(
+    const UnnamedGlobalConstantDecl *gcd) {
+  unsigned numEntries = unnamedGlobalConstantDeclMap.size();
+  cir::GlobalOp *globalOpEntry = &unnamedGlobalConstantDeclMap[gcd];
+
+  if (*globalOpEntry)
+    return *globalOpEntry;
+
+  ConstantEmitter emitter(*this);
+
+  const APValue &value = gcd->getValue();
+  assert(!value.isAbsent());
+  assert(!cir::MissingFeatures::addressSpace() &&
+         "emitForInitializer should take gcd->getType().getAddressSpace()");
+  mlir::Attribute init = emitter.emitForInitializer(value, gcd->getType());
+  auto typedInit = dyn_cast<mlir::TypedAttr>(init);
+
+  if (!typedInit)
+    errorNYI(gcd->getSourceRange(),
+             "getAddrOfUnnamedGlobalConstantDecl: non-typed initializer");
+
+  assert(!cir::MissingFeatures::addressSpace());
+
+  // Classic codegen always creates these with .constant, then counts on the
+  // auto-addition of '.#'. CIR global doesn't have this, so we'll just auto-add
+  // one if this isn't the first.  We could probably choose a better name than
+  // .constant to be unique for this type of decl, but this is consistent with
+  // classic codegen.
+  std::string name = numEntries == 0
+                         ? ".constant"
+                         : (Twine(".constant.") + Twine(numEntries)).str();
+  auto globalOp = createGlobalOp(*this, builder.getUnknownLoc(), name,
+                                 typedInit.getType(), /*is_constant=*/true);
+  globalOp.setLinkage(cir::GlobalLinkageKind::PrivateLinkage);
+
+  CharUnits alignment = getASTContext().getTypeAlignInChars(gcd->getType());
+  globalOp.setAlignment(alignment.getAsAlign().value());
+  CIRGenModule::setInitializer(globalOp, init);
+
+  emitter.finalize(globalOp);
+  *globalOpEntry = globalOp;
+  return globalOp;
+}
+
 cir::GlobalOp
 CIRGenModule::getAddrOfTemplateParamObject(const TemplateParamObjectDecl *tpo) {
   StringRef name = getMangledName(tpo);
