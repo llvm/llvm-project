@@ -505,12 +505,12 @@ def SPIRV_CLFmaOp : SPIRV_CLTernaryArithmeticOp<"fma", 26, SPIRV_Float> {
 
 // -----
 
-def SPIRV_CLLdexpOp : SPIRV_CLOp<"ldexp", 34, [Pure]> {
+def SPIRV_CLLdexpOp : SPIRV_CLOp<"ldexp", 34, [Pure, AllTypesMatch<["x", "y"]>]> {
   let summary = "Builds y such that y = significand * 2^exponent.";
 
   let description = [{
     Builds a floating-point number from x and the corresponding
-    integral exponent of two in n:
+    integral exponent of two in exp:
 
     significand * 2^exponent
 
@@ -613,7 +613,7 @@ def SPIRV_CLPowOp : SPIRV_CLBinaryArithmeticOp<"pow", 48, SPIRV_Float> {
 
 // -----
 
-def SPIRV_CLPownOp : SPIRV_CLOp<"pown", 49, [Pure]> {
+def SPIRV_CLPownOp : SPIRV_CLOp<"pown", 49, [Pure, AllTypesMatch<["x", "result"]>]> {
   let summary = "Compute x to the power y, where y is an integer.";
 
   let description = [{
@@ -676,7 +676,7 @@ def SPIRV_CLRintOp : SPIRV_CLUnaryArithmeticOp<"rint", 53, SPIRV_Float> {
 
 // -----
 
-def SPIRV_CLRootnOp : SPIRV_CLOp<"rootn", 54, [Pure]> {
+def SPIRV_CLRootnOp : SPIRV_CLOp<"rootn", 54, [Pure, AllTypesMatch<["x", "result"]>]> {
   let summary = "Compute the n-th root of x, where n is an integer.";
 
   let description = [{
