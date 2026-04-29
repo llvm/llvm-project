@@ -23,42 +23,42 @@ define i32 @unused_blend_after_unrolling(ptr %p, i32 %a, i1 %c.1, i16 %x, i16 %y
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_SDIV_CONTINUE17:.*]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP24:%.*]], %[[PRED_SDIV_CONTINUE17]] ]
 ; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP25:%.*]], %[[PRED_SDIV_CONTINUE17]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i1> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i1> [[TMP0]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[PRED_SDIV_IF:.*]], label %[[PRED_SDIV_CONTINUE:.*]]
 ; CHECK:       [[PRED_SDIV_IF]]:
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE]]
 ; CHECK:       [[PRED_SDIV_CONTINUE]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i1> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i1> [[TMP0]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[PRED_SDIV_IF4:.*]], label %[[PRED_SDIV_CONTINUE5:.*]]
 ; CHECK:       [[PRED_SDIV_IF4]]:
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE5]]
 ; CHECK:       [[PRED_SDIV_CONTINUE5]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i1> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i1> [[TMP0]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[PRED_SDIV_IF6:.*]], label %[[PRED_SDIV_CONTINUE7:.*]]
 ; CHECK:       [[PRED_SDIV_IF6]]:
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE7]]
 ; CHECK:       [[PRED_SDIV_CONTINUE7]]:
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i1> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i1> [[TMP0]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[PRED_SDIV_IF8:.*]], label %[[PRED_SDIV_CONTINUE9:.*]]
 ; CHECK:       [[PRED_SDIV_IF8]]:
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE9]]
 ; CHECK:       [[PRED_SDIV_CONTINUE9]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP0]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[PRED_SDIV_IF10:.*]], label %[[PRED_SDIV_CONTINUE11:.*]]
 ; CHECK:       [[PRED_SDIV_IF10]]:
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE11]]
 ; CHECK:       [[PRED_SDIV_CONTINUE11]]:
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i1> [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i1> [[TMP0]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP10]], label %[[PRED_SDIV_IF12:.*]], label %[[PRED_SDIV_CONTINUE13:.*]]
 ; CHECK:       [[PRED_SDIV_IF12]]:
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE13]]
 ; CHECK:       [[PRED_SDIV_CONTINUE13]]:
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i1> [[TMP0]], i32 2
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i1> [[TMP0]], i64 2
 ; CHECK-NEXT:    br i1 [[TMP14]], label %[[PRED_SDIV_IF14:.*]], label %[[PRED_SDIV_CONTINUE15:.*]]
 ; CHECK:       [[PRED_SDIV_IF14]]:
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE15]]
 ; CHECK:       [[PRED_SDIV_CONTINUE15]]:
-; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <4 x i1> [[TMP0]], i32 3
+; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <4 x i1> [[TMP0]], i64 3
 ; CHECK-NEXT:    br i1 [[TMP18]], label %[[PRED_SDIV_IF16:.*]], label %[[PRED_SDIV_CONTINUE17]]
 ; CHECK:       [[PRED_SDIV_IF16]]:
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE17]]
@@ -71,8 +71,8 @@ define i32 @unused_blend_after_unrolling(ptr %p, i32 %a, i1 %c.1, i16 %x, i16 %y
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = or <4 x i1> [[TMP25]], [[TMP24]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[BIN_RDX]])
-; CHECK-NEXT:    [[TMP28:%.*]] = freeze i1 [[TMP27]]
-; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[TMP28]], i32 0, i32 0
+; CHECK-NEXT:    [[TMP15:%.*]] = freeze i1 [[TMP27]]
+; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[TMP15]], i32 1, i32 0
 ; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
@@ -85,7 +85,7 @@ define i32 @unused_blend_after_unrolling(ptr %p, i32 %a, i1 %c.1, i16 %x, i16 %y
 ; CHECK-NEXT:    br label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    [[BLEND:%.*]] = phi i16 [ [[DIV]], %[[THEN]] ], [ 0, %[[LOOP_HEADER]] ]
-; CHECK-NEXT:    [[SEL]] = select i1 [[C]], i32 [[B]], i32 0
+; CHECK-NEXT:    [[SEL]] = select i1 [[C]], i32 [[B]], i32 1
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV]], 100
 ; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP3:![0-9]+]]
@@ -110,7 +110,7 @@ then:
 
 loop.latch:
   %blend = phi i16 [ %div, %then ], [ 0, %loop.header ]
-  %sel = select i1 %c, i32 %b, i32 0
+  %sel = select i1 %c, i32 %b, i32 1
   %iv.next = add i32 %iv, 1
   %ec = icmp eq i32 %iv, 100
   br i1 %ec, label %exit, label %loop.header

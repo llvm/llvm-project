@@ -9,7 +9,7 @@ tablegen(LLVM AArch64GenCallingConv.inc -gen-callingconv)
 tablegen(LLVM AArch64GenDAGISel.inc -gen-dag-isel)
 tablegen(LLVM AArch64GenDisassemblerTables.inc -gen-disassembler)
 tablegen(LLVM AArch64GenFastISel.inc -gen-fast-isel)
-tablegen(LLVM AArch64GenGlobalISel.inc -gen-global-isel)
+tablegen(LLVM AArch64GenGlobalISel.inc -gen-global-isel -gisel-extended-llt)
 tablegen(LLVM AArch64GenO0PreLegalizeGICombiner.inc -gen-global-isel-combiner
               -combiners="AArch64O0PreLegalizerCombiner")
 tablegen(LLVM AArch64GenPreLegalizeGICombiner.inc -gen-global-isel-combiner
@@ -88,7 +88,6 @@ add_llvm_target(AArch64CodeGen
   AArch64TargetMachine.cpp
   AArch64TargetObjectFile.cpp
   AArch64TargetTransformInfo.cpp
-  SMEABIPass.cpp
   SMEPeepholeOpt.cpp
   SVEIntrinsicOpts.cpp
   MachineSMEABIPass.cpp

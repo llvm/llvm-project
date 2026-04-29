@@ -664,10 +664,7 @@ ConstraintSatisfactionChecker::SubstitutionInTemplateArguments(
     return std::nullopt;
 
   TemplateArgumentListInfo SubstArgs;
-  Sema::ArgPackSubstIndexRAII SubstIndex(
-      S, Constraint.getPackSubstitutionIndex()
-             ? Constraint.getPackSubstitutionIndex()
-             : PackSubstitutionIndex);
+  Sema::ArgPackSubstIndexRAII SubstIndex(S, getOuterPackIndex(Constraint));
 
   llvm::SaveAndRestore PushTemplateArgsCache(S.CurrentCachedTemplateArgs,
                                              &CachedTemplateArgs);
@@ -812,11 +809,11 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
 
   unsigned Size = Satisfaction.Details.size();
   llvm::FoldingSetNodeID ID;
+  UnsignedOrNone OuterPackSubstIndex = getOuterPackIndex(Constraint);
+
   ID.AddPointer(Constraint.getConstraintExpr());
-  ID.AddInteger(
-      Constraint.getPackSubstitutionIndex().toInternalRepresentation());
-  ID.AddInteger(PackSubstitutionIndex.toInternalRepresentation());
-  HashParameterMapping(S, MLTAL, ID, getOuterPackIndex(Constraint))
+  ID.AddInteger(OuterPackSubstIndex.toInternalRepresentation());
+  HashParameterMapping(S, MLTAL, ID, OuterPackSubstIndex)
       .VisitConstraint(Constraint);
 
   if (auto Iter = S.UnsubstitutedConstraintSatisfactionCache.find(ID);
@@ -908,8 +905,8 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
                                       UnsignedOrNone(I), Satisfaction,
                                       /*BuildExpression=*/false)
             .Evaluate(Constraint.getNormalizedPattern(), *SubstitutedArgs);
-    if (BuildExpression && Expr.isUsable()) {
-      if (Out.isUnset())
+    if (BuildExpression) {
+      if (Out.isUnset() || !Expr.isUsable())
         Out = Expr;
       else
         Out = BinaryOperator::Create(S.Context, Out.get(), Expr.get(),
@@ -918,8 +915,6 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
                                      S.Context.BoolTy, VK_PRValue, OK_Ordinary,
                                      Constraint.getBeginLoc(),
                                      FPOptionsOverride{});
-    } else {
-      assert(!BuildExpression || !Satisfaction.IsSatisfied);
     }
     if (!Conjunction && Satisfaction.IsSatisfied) {
       Satisfaction.Details.erase(Satisfaction.Details.begin() +
@@ -982,10 +977,7 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
     return ExprError();
   }
 
-  Sema::ArgPackSubstIndexRAII SubstIndex(
-      S, Constraint.getPackSubstitutionIndex()
-             ? Constraint.getPackSubstitutionIndex()
-             : PackSubstitutionIndex);
+  Sema::ArgPackSubstIndexRAII SubstIndex(S, getOuterPackIndex(Constraint));
 
   const ASTTemplateArgumentListInfo *Ori =
       ConceptId->getTemplateArgsAsWritten();
@@ -1078,12 +1070,11 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
   if (Satisfaction.IsSatisfied)
     return E;
 
+  UnsignedOrNone OuterPackSubstIndex = getOuterPackIndex(Constraint);
   llvm::FoldingSetNodeID ID;
   ID.AddPointer(Constraint.getConceptId());
-  ID.AddInteger(
-      Constraint.getPackSubstitutionIndex().toInternalRepresentation());
-  ID.AddInteger(PackSubstitutionIndex.toInternalRepresentation());
-  HashParameterMapping(S, MLTAL, ID, getOuterPackIndex(Constraint))
+  ID.AddInteger(OuterPackSubstIndex.toInternalRepresentation());
+  HashParameterMapping(S, MLTAL, ID, OuterPackSubstIndex)
       .VisitConstraint(Constraint);
 
   if (auto Iter = S.UnsubstitutedConstraintSatisfactionCache.find(ID);
@@ -2114,6 +2105,27 @@ void SubstituteParameterMappings::buildParameterMapping(
       SemaRef.MarkUsedTemplateParameters(Args->arguments(),
                                          /*Depth=*/0, OccurringIndices);
   }
+
+  // If a parameter is only referenced in a default template argument,
+  // we need to add it to the mapping explicitly.
+  {
+    llvm::SmallVector<TemplateArgument> DefaultArgs;
+    for (unsigned I = TemplateParams->getMinRequiredArguments();
+         I < TemplateParams->size(); ++I) {
+      const NamedDecl *Param = TemplateParams->getParam(I);
+      if (Param->isParameterPack())
+        break;
+      const TemplateArgument *Arg =
+          SemaRef.getASTContext().getDefaultTemplateArgumentOrNone(Param);
+      assert(Arg && "expected a default argument");
+      DefaultArgs.emplace_back(std::move(*Arg));
+    }
+    SemaRef.MarkUsedTemplateParameters(DefaultArgs, /*Depth=*/0,
+                                       OccurringIndices);
+    SemaRef.MarkUsedTemplateParameters(DefaultArgs, /*Depth=*/0,
+                                       OccurringIndicesForSubsumption);
+  }
+
   unsigned Size = OccurringIndices.count();
   // When the constraint is independent of any template parameters,
   // we build an empty mapping so that we can distinguish these cases

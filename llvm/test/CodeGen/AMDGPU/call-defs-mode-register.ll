@@ -67,7 +67,7 @@ define float @asm_changes_mode(float %x, float %y) #0 {
   ; SDAG-NEXT: {{  $}}
   ; SDAG-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; SDAG-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-  ; SDAG-NEXT:   INLINEASM &"; maybe defs mode", 1 /* sideeffect attdialect */, !0, implicit-def $mode
+  ; SDAG-NEXT:   INLINEASM &"; maybe defs mode", sideeffect attdialect, !0, implicit-def $mode
   ; SDAG-NEXT:   [[V_ADD_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, [[COPY1]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
   ; SDAG-NEXT:   $vgpr0 = COPY [[V_ADD_F32_e64_]]
   ; SDAG-NEXT:   SI_RETURN implicit $vgpr0
@@ -78,7 +78,7 @@ define float @asm_changes_mode(float %x, float %y) #0 {
   ; GISEL-NEXT: {{  $}}
   ; GISEL-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GISEL-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-  ; GISEL-NEXT:   INLINEASM &"; maybe defs mode", 1 /* sideeffect attdialect */, !0, implicit-def $mode
+  ; GISEL-NEXT:   INLINEASM &"; maybe defs mode", sideeffect attdialect, !0, implicit-def $mode
   ; GISEL-NEXT:   [[V_ADD_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
   ; GISEL-NEXT:   $vgpr0 = COPY [[V_ADD_F32_e64_]]
   ; GISEL-NEXT:   SI_RETURN implicit $vgpr0

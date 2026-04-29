@@ -203,6 +203,7 @@ Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr,
     case CK_NullToMemberPointer:
     case CK_NullToPointer:
     case CK_ReinterpretMemberPointer:
+    case CK_UserDefinedConversion:
       // Common pointer conversions, nothing to do here.
       // TODO: Is there any reason to treat base-to-derived conversions
       // specially?
@@ -254,10 +255,16 @@ Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr,
     case CK_PointerToIntegral:
     case CK_ToUnion:
     case CK_ToVoid:
-    case CK_UserDefinedConversion:
     case CK_VectorSplat:
     case CK_ZeroToOCLOpaqueType:
-      llvm_unreachable("unexpected cast for emitPointerWithAlignment");
+      // Classic codegen has a default that does nothing. In CIR, we are issuing
+      // a diagnostic so we can examine casts that are reached here to be sure
+      // no action is needed. If nothing is needed, the cast can be moved to the
+      // group above that does nothing.
+      cgm.errorNYI(ce->getSourceRange(),
+                   "unexpected cast for emitPointerWithAlignment: ",
+                   ce->getCastKindName());
+      break;
     }
   }
 
@@ -669,7 +676,7 @@ mlir::Value CIRGenFunction::emitLoadOfScalar(Address addr, bool isVolatile,
   assert(!cir::MissingFeatures::opLoadStoreTbaa());
   LValue atomicLValue = LValue::makeAddr(addr, ty, baseInfo);
   if (ty->isAtomicType() || isLValueSuitableForInlineAtomic(atomicLValue))
-    cgm.errorNYI("emitLoadOfScalar: load atomic");
+    return emitAtomicLoad(atomicLValue, loc).getValue();
 
   if (mlir::isa<cir::VoidType>(eltTy))
     cgm.errorNYI(loc, "emitLoadOfScalar: void type");
@@ -912,7 +919,7 @@ static bool canEmitSpuriousReferenceToVariable(CIRGenFunction &cgf,
   // We can emit a spurious reference only if the linkage implies that we'll
   // be emitting a non-interposable symbol that will be retained until link
   // time.
-  switch (cgf.cgm.getCIRLinkageVarDefinition(vd, /*IsConstant=*/false)) {
+  switch (cgf.cgm.getCIRLinkageVarDefinition(vd)) {
   case cir::GlobalLinkageKind::ExternalLinkage:
   case cir::GlobalLinkageKind::LinkOnceODRLinkage:
   case cir::GlobalLinkageKind::WeakODRLinkage:
@@ -982,6 +989,16 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
     }
   }
 
+  // FIXME: We should be able to assert this for FunctionDecls as well!
+  // FIXME: We should be able to assert this for all DeclRefExprs, not just
+  // those with a valid source location.
+  assert((nd->isUsed(false) || !isa<VarDecl>(nd) || e->isNonOdrUse() ||
+          !e->getLocation().isValid()) &&
+         "Should not use decl without marking it used!");
+
+  if (nd->hasAttr<WeakRefAttr>())
+    cgm.errorNYI(nd->getSourceRange(), "emitGlobal: WeakRefAttr");
+
   if (const auto *vd = dyn_cast<VarDecl>(nd)) {
     // Checks for omitted feature handling
     assert(!cir::MissingFeatures::opAllocaStaticLocal());
@@ -1001,10 +1018,20 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
     auto iter = localDeclMap.find(vd);
     if (iter != localDeclMap.end()) {
       addr = iter->second;
-    } else {
+
+    } else if (vd->isStaticLocal()) {
       // Otherwise, it might be static local we haven't emitted yet for some
       // reason; most likely, because it's in an outer function.
-      cgm.errorNYI(e->getSourceRange(), "emitDeclRefLValue: static local");
+      cir::GlobalOp var =
+          cgm.getOrCreateStaticVarDecl(*vd, cgm.getCIRLinkageVarDefinition(vd));
+      mlir::Value getGlobVal = builder.createGetGlobal(var);
+      auto getGlob = getGlobVal.getDefiningOp<cir::GetGlobalOp>();
+      getGlob.setStaticLocal(var.getStaticLocalGuard().has_value());
+      getGlob.setTls(vd->getTLSKind() != VarDecl::TLS_None);
+      addr = Address(getGlob, convertTypeForMem(vd->getType()),
+                     getContext().getDeclAlign(vd));
+    } else {
+      llvm_unreachable("DeclRefExpr for Decl not entered in localDeclMap?");
     }
 
     // Drill into reference types.
@@ -1024,9 +1051,8 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
 
   if (const auto *bd = dyn_cast<BindingDecl>(nd)) {
     if (e->refersToEnclosingVariableOrCapture()) {
-      assert(!cir::MissingFeatures::lambdaCaptures());
-      cgm.errorNYI(e->getSourceRange(), "emitDeclRefLValue: lambda captures");
-      return LValue();
+      FieldDecl *fd = lambdaCaptureFields.lookup(bd);
+      return emitCapturedFieldLValue(*this, fd, cxxabiThisValue);
     }
     return emitLValue(bd->getBinding());
   }
@@ -1040,9 +1066,23 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
 
     return lv;
   }
+  if (isa<MSGuidDecl>(nd))
+    cgm.errorNYI(e->getSourceRange(),
+                 "emitDeclRefLValue: unhandled MS Guid Decl");
 
-  cgm.errorNYI(e->getSourceRange(), "emitDeclRefLValue: unhandled decl type");
-  return LValue();
+  if (const auto *tpo = dyn_cast<TemplateParamObjectDecl>(nd)) {
+    CharUnits alignment = cgm.getNaturalTypeAlignment(tpo->getType());
+    cir::GetGlobalOp atpo =
+        builder.createGetGlobal(cgm.getAddrOfTemplateParamObject(tpo));
+    assert(!MissingFeatures::addressSpace() &&
+           "Do an address space conversion if necessary");
+
+    return makeAddrLValue(
+        Address(atpo, convertTypeForMem(tpo->getType()), alignment), ty,
+        AlignmentSource::Decl);
+  }
+
+  llvm_unreachable("Unhandled DeclRefExpr");
 }
 
 mlir::Value CIRGenFunction::evaluateExprAsBool(const Expr *e) {
@@ -1241,13 +1281,28 @@ CIRGenFunction::emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e) {
          "index was neither LHS nor RHS");
 
   auto emitIdxAfterBase = [&](bool promote) -> mlir::Value {
-    const mlir::Value idx = emitScalarExpr(e->getIdx());
+    mlir::Value idx = emitScalarExpr(e->getIdx());
 
-    // Extend or truncate the index type to 32 or 64-bits.
-    auto ptrTy = mlir::dyn_cast<cir::PointerType>(idx.getType());
-    if (promote && ptrTy && ptrTy.isPtrTo<cir::IntType>())
-      cgm.errorNYI(e->getSourceRange(),
-                   "emitArraySubscriptExpr: index type cast");
+    assert(!cir::MissingFeatures::sanitizers());
+
+    // Extend or truncate the index type to pointer-sized integer.
+    if (promote) {
+      // Choose the type we extend or truncate to based on the signedness of the
+      // index type.
+      mlir::Type desiredIdxTy =
+          e->getIdx()->getType()->isSignedIntegerOrEnumerationType()
+              ? ptrDiffTy
+              : uIntPtrTy;
+
+      if (idx.getType() != desiredIdxTy) {
+        cir::CastKind kind = mlir::isa<cir::BoolType>(idx.getType())
+                                 ? cir::CastKind::bool_to_int
+                                 : cir::CastKind::integral;
+        idx = builder.createOrFold<cir::CastOp>(idx.getLoc(), desiredIdxTy,
+                                                kind, idx);
+      }
+    }
+
     return idx;
   };
 
@@ -1498,22 +1553,27 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
   }
 
   // These are never l-values; just use the aggregate emission code.
-  case CK_NonAtomicToAtomic:
-  case CK_AtomicToNonAtomic:
   case CK_ToUnion:
-  case CK_ObjCObjectLValueCast:
-  case CK_VectorSplat:
+    return emitAggExprToLValue(e);
+
   case CK_ConstructorConversion:
   case CK_UserDefinedConversion:
   case CK_CPointerToObjCPointerCast:
   case CK_BlockPointerToObjCPointerCast:
-  case CK_LValueToRValue: {
+  case CK_LValueToRValue:
+    return emitLValue(e->getSubExpr());
+
+  case CK_NonAtomicToAtomic:
+  case CK_AtomicToNonAtomic:
+  case CK_ObjCObjectLValueCast:
+  case CK_VectorSplat: {
     cgm.errorNYI(e->getSourceRange(),
                  std::string("emitCastLValue for unhandled cast kind: ") +
                      e->getCastKindName());
 
     return {};
   }
+
   case CK_AddressSpaceConversion: {
     LValue lv = emitLValue(e->getSubExpr());
     QualType destTy = getContext().getPointerType(e->getType());
@@ -1558,9 +1618,21 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
       Address v = lv.getAddress();
       if (v.isValid()) {
         mlir::Type ty = convertTypeForMem(e->getType());
-        if (v.getElementType() != ty)
-          cgm.errorNYI(e->getSourceRange(),
-                       "emitCastLValue: NoOp needs bitcast");
+        if (v.getElementType() != ty) {
+          // We have only inspected/reproduced this with complete to incomplete
+          // array types, so we do an NYI for other cases, so we can make sure
+          // we're doing a conversion we want to be making.
+          auto fromTy = dyn_cast<cir::ArrayType>(v.getElementType());
+          auto toTy = dyn_cast<cir::ArrayType>(ty);
+          if (!fromTy || !toTy ||
+              fromTy.getElementType() != toTy.getElementType() ||
+              toTy.getSize() != 0)
+            cgm.errorNYI(e->getSourceRange(),
+                         "emitCastLValue NoOp not array-shrink case");
+
+          lv = makeAddrLValue(v.withElementType(builder, ty), e->getType(),
+                              lv.getBaseInfo());
+        }
       }
     }
     return lv;
@@ -1710,8 +1782,16 @@ static Address createReferenceTemporary(CIRGenFunction &cgf,
         extDeclAlloca = extDeclAddrIter->second.getDefiningOp<cir::AllocaOp>();
     }
     mlir::OpBuilder::InsertPoint ip;
-    if (extDeclAlloca)
+    if (extDeclAlloca) {
       ip = {extDeclAlloca->getBlock(), extDeclAlloca->getIterator()};
+    } else if (cgf.isInConditionalBranch() &&
+               m->getStorageDuration() == SD_FullExpression) {
+      // Place in the function entry block so the alloca dominates both
+      // regions of any enclosing cir.cleanup.scope.  The default path
+      // would use curLexScope which may be a ternary branch.
+      ip = cgf.getBuilder().getBestAllocaInsertPoint(
+          cgf.getCurFunctionEntryBlock());
+    }
     return cgf.createMemTemp(ty, cgf.getLoc(m->getSourceRange()),
                              cgf.getCounterRefTmpAsString(), /*alloca=*/nullptr,
                              ip);
@@ -2021,6 +2101,7 @@ CIRGenCallee CIRGenFunction::emitDirectCallee(const GlobalDecl &gd) {
 
         clone = cir::FuncOp::create(builder, calleeFunc.getLoc(), fdInlineName,
                                     calleeFunc.getFunctionType());
+        cgm.insertGlobalSymbol(clone);
         clone.setLinkageAttr(cir::GlobalLinkageKindAttr::get(
             &cgm.getMLIRContext(), cir::GlobalLinkageKind::InternalLinkage));
         clone.setSymVisibility("private");

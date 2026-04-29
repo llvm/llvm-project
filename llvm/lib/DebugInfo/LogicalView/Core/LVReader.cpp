@@ -71,21 +71,21 @@ bool checkIntegrityScopesTree(LVScope *Root) {
 
     auto PrintIndex = [](unsigned Index) {
       if (Index)
-        dbgs() << format("%8d: ", Index);
+        dbgs() << formatv("{0,8}: ", Index);
       else
-        dbgs() << format("%8c: ", ' ');
+        dbgs() << formatv("{0,8}: ", ' ');
     };
     auto PrintElement = [&](LVElement *Element, unsigned Index = 0) {
       PrintIndex(Index);
       std::string ElementName(Element->getName());
-      dbgs() << format("%15s ID=0x%08x '%s'\n", Element->kind(),
-                       Element->getID(), ElementName.c_str());
+      dbgs() << formatv("{0,15} ID={1:x8} '{2}'\n", Element->kind(),
+                        Element->getID(), ElementName);
     };
 
     std::string RootName(Root->getName());
     dbgs() << formatv("{0}\n", fmt_repeat('=', 72));
-    dbgs() << format("Root: '%s'\nDuplicated elements: %d\n", RootName.c_str(),
-                     Duplicate.size());
+    dbgs() << formatv("Root: '{0}'\nDuplicated elements: {1}\n", RootName,
+                      Duplicate.size());
     dbgs() << formatv("{0}\n", fmt_repeat('=', 72));
 
     unsigned Index = 0;

@@ -894,12 +894,23 @@ func.func @invalid_memref_cast() {
 
 // -----
 
-// unranked to unranked
+// unranked incompatible element types
 func.func @invalid_memref_cast() {
   %0 = memref.alloc() : memref<2x5xf32, 0>
   %1 = memref.cast %0 : memref<2x5xf32, 0> to memref<*xf32, 0>
-  // expected-error@+1 {{operand type 'memref<*xf32>' and result type 'memref<*xf32>' are cast incompatible}}
-  %2 = memref.cast %1 : memref<*xf32, 0> to memref<*xf32, 0>
+  // expected-error@+1 {{operand type 'memref<*xf32>' and result type 'memref<*xi32>' are cast incompatible}}
+  %2 = memref.cast %1 : memref<*xf32, 0> to memref<*xi32, 0>
+  return
+}
+
+// -----
+
+// unranked incompatible memory space
+func.func @invalid_memref_cast() {
+  %0 = memref.alloc() : memref<2x5xf32, 0>
+  %1 = memref.cast %0 : memref<2x5xf32, 0> to memref<*xf32, 0>
+  // expected-error@+1 {{operand type 'memref<*xf32>' and result type 'memref<*xf32, 1>' are cast incompatible}}
+  %2 = memref.cast %1 : memref<*xf32, 0> to memref<*xf32, 1>
   return
 }
 

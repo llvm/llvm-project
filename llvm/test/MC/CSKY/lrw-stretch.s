@@ -2,9 +2,10 @@
 # RUN: llvm-objdump --mattr=+e2 --no-show-raw-insn -M no-aliases -d %t | FileCheck %s
 
 ## The two "br16 external" relax from 2-byte to 4-byte (unresolved symbol).
-## The cumulative size growth must not cause the lrw16 instructions to appear
-## misaligned and spuriously relax to 4-byte lrw32. The .p2align 2 before the
-## constant pool absorbs the upstream growth, keeping the targets 4-byte aligned.
+## During the fused relaxation+layout pass, the cumulative Stretch must not
+## cause the lrw16 instructions to appear misaligned and spuriously relax to
+## 4-byte lrw32. The .p2align 2 before the constant pool absorbs the upstream
+## growth, keeping the targets 4-byte aligned.
 
 # CHECK-LABEL: <fn>:
 # CHECK:       10: lrw16 r0,

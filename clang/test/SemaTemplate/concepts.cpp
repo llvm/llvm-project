@@ -849,7 +849,7 @@ template<typename T, typename U> concept C = true;
 template<typename T> auto L = []<C<T> U>() {};
 
 struct Q {
-  template<C<int> U> friend constexpr auto decltype(L<int>)::operator()() const;
+  template<C<int> U> friend constexpr auto decltype(L<int>)::operator()() const; // expected-error {{a member of a lambda should not be the target of a friend declaration}}
 };
 
 template <class T>
@@ -1835,3 +1835,48 @@ namespace GH191016 {
   };
   void test(){ S<int> s; }
 }
+
+
+namespace GH188640 {
+
+namespace Ex1 {
+template <typename T> constexpr bool CC = true;
+
+template <typename V, typename U = V>
+concept C = CC<U>;
+
+template <typename T>
+constexpr int f()
+    requires C<T> && C<T *>
+{
+    return 21;
+}
+
+template <typename T>
+void f()
+    requires C<T>;
+
+void g() { static_assert(f<void>() == 21); }
+
+} // namespace Ex1
+
+namespace VAR {
+template <auto N> constexpr bool CC = true;
+template <auto V, auto U = V>
+concept C = CC<U>;
+
+template <auto V>
+constexpr int f()
+    requires C<V> && C<V + 1>
+{
+    return 42;
+}
+
+template <auto N>
+int f()
+    requires C<N>;
+
+void g() { static_assert(f<1>() == 42); }
+} // namespace VAR
+
+} // namespace GH188640

@@ -519,6 +519,17 @@
 // CHECK351-NOT:  "-pie"
 
 // -----------------------------------------------------------------------------
+// Test that -pie is not set by default
+// -----------------------------------------------------------------------------
+// RUN: %clang -### --target=hexagon-unknown-elf \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   %s 2>&1 | FileCheck -check-prefix=CHECK357 %s
+// CHECK357:      "-cc1"
+// CHECK357:      {{hexagon-link|ld}}
+// CHECK357-NOT:  "-pie"
+
+// -----------------------------------------------------------------------------
 // Test Assembler related args
 // -----------------------------------------------------------------------------
 // RUN: %clang -### --target=hexagon-unknown-elf -fno-integrated-as    \
@@ -598,3 +609,15 @@
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 %s 2>&1 | FileCheck -check-prefix=CHECK384 %s
 // CHECK384:          "-fno-use-init-array"
+// -----------------------------------------------------------------------------
+// ThinLTO passes LTO options to the linker
+// -----------------------------------------------------------------------------
+// RUN: touch %t.o
+// RUN: %clang -### --target=hexagon-unknown-elf \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   -fuse-ld=lld \
+// RUN:   -flto=thin -fenable-matrix \
+// RUN:   %t.o 2>&1 | FileCheck -check-prefix=CHECK-LTO %s
+// CHECK-LTO: "-plugin-opt=thinlto"
+// CHECK-LTO: "-plugin-opt=-enable-matrix"

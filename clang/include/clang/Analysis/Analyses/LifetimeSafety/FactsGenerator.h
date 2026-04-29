@@ -36,11 +36,12 @@ public:
   void VisitDeclStmt(const DeclStmt *DS);
   void VisitDeclRefExpr(const DeclRefExpr *DRE);
   void VisitCXXConstructExpr(const CXXConstructExpr *CCE);
+  void VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *DIE);
   void VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE);
   void VisitMemberExpr(const MemberExpr *ME);
   void VisitCallExpr(const CallExpr *CE);
   void VisitCXXNullPtrLiteralExpr(const CXXNullPtrLiteralExpr *N);
-  void VisitImplicitCastExpr(const ImplicitCastExpr *ICE);
+  void VisitCastExpr(const CastExpr *CE);
   void VisitUnaryOperator(const UnaryOperator *UO);
   void VisitReturnStmt(const ReturnStmt *RS);
   void VisitBinaryOperator(const BinaryOperator *BO);
@@ -52,6 +53,8 @@ public:
   void VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *MTE);
   void VisitLambdaExpr(const LambdaExpr *LE);
   void VisitArraySubscriptExpr(const ArraySubscriptExpr *ASE);
+  void VisitCXXNewExpr(const CXXNewExpr *NE);
+  void VisitCXXDeleteExpr(const CXXDeleteExpr *DE);
 
 private:
   OriginList *getOriginsList(const ValueDecl &D);
@@ -73,6 +76,10 @@ private:
   void handleFullExprCleanup(const CFGFullExprCleanup &FullExprCleanup);
 
   void handleExitBlock();
+
+  /// Mark all fields of the implicit object as used for an instance method
+  /// call, since the callee may access any part of the object.
+  void handleImplicitObjectFieldUses(const Expr *Call, const FunctionDecl *FD);
 
   void handleGSLPointerConstruction(const CXXConstructExpr *CCE);
 
@@ -134,6 +141,7 @@ private:
   // corresponding to the left-hand side is updated to be a "write", thereby
   // exempting it from the check.
   llvm::DenseMap<const Expr *, UseFact *> UseFacts;
+  const CFGBlock *CurrentBlock;
 };
 
 } // namespace clang::lifetimes::internal

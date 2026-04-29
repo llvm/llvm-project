@@ -207,6 +207,7 @@ PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
          "available.");
 
   llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile> file_specs;
+  const FileSpec original_module_spec = module_spec;
   while (module_spec.GetFilename()) {
     ScriptInterpreter::SanitizedScriptingModuleName sanitized_name =
         target.GetDebugger()
@@ -237,7 +238,7 @@ PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
 
     if (FileSystem::Instance().Exists(script_fspec)) {
       LoadScriptFromSymFile load_style =
-          Platform::GetScriptLoadStyleForModule(script_fspec, target);
+          Platform::GetScriptLoadStyleForModule(original_module_spec, target);
       file_specs.try_emplace(std::move(script_fspec), load_style);
       break;
     }
@@ -1562,4 +1563,39 @@ PlatformDarwin::ResolveSDKPathFromDebugInfo(CompileUnit &unit) {
                       llvm::toString(path_or_err.takeError())));
 
   return path_or_err->str();
+}
+
+llvm::Expected<FileSpecList>
+PlatformDarwin::GetSafeAutoLoadPaths(const Target &target) const {
+  Log *log = GetLog(LLDBLog::Modules | LLDBLog::Platform);
+
+  XcodeSDK::Type sdk_type =
+      XcodeSDK::GetSDKTypeForTriple(target.GetArchitecture().GetTriple());
+  XcodeSDK::Info info;
+  info.type = sdk_type;
+  XcodeSDK sdk(info);
+
+  auto sdk_root_or_err = HostInfo::GetSDKRoot(HostInfo::SDKOptions{sdk});
+  if (!sdk_root_or_err) {
+    LLDB_LOG_ERROR(log, sdk_root_or_err.takeError(),
+                   "Failed to resolve SDK root for triple '{1}': {0}",
+                   target.GetArchitecture().GetTriple().str());
+
+    // Fall back to any macOS SDK.
+    sdk = XcodeSDK::GetAnyMacOS();
+    LLDB_LOG(log, "Falling back to SDK '{0}'", sdk.GetString());
+    sdk_root_or_err = HostInfo::GetSDKRoot(HostInfo::SDKOptions{sdk});
+  }
+
+  if (!sdk_root_or_err)
+    return sdk_root_or_err.takeError();
+
+  // $SDKROOT/usr/share/lldb is an auto-loadable path.
+  llvm::SmallString<256> resolved(*sdk_root_or_err);
+  llvm::sys::path::append(resolved, "usr", "share", "lldb");
+
+  FileSpecList fspecs;
+  fspecs.Append(FileSpec(resolved));
+
+  return fspecs;
 }

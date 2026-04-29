@@ -481,7 +481,9 @@ Parser::ParseRHSOfBinaryExpression(ExprResult LHS, prec::Level MinPrec) {
     else
       RHS = ParseCastExpression(CastParseKind::AnyCastExpr);
 
-    if (RHS.isInvalid()) {
+    // We preserve the LHS only if we hit a clear statement boundary (tok::semi)
+    // to avoid additional bogus diagnostics.
+    if (RHS.isInvalid() && Tok.isNot(tok::semi)) {
       LHS = ExprError();
     }
 
@@ -513,7 +515,7 @@ Parser::ParseRHSOfBinaryExpression(ExprResult LHS, prec::Level MinPrec) {
                             static_cast<prec::Level>(ThisPrec + !isRightAssoc));
       RHSIsInitList = false;
 
-      if (RHS.isInvalid()) {
+      if (RHS.isInvalid() && Tok.isNot(tok::semi)) {
         LHS = ExprError();
       }
 
@@ -540,7 +542,11 @@ Parser::ParseRHSOfBinaryExpression(ExprResult LHS, prec::Level MinPrec) {
 
     if (!LHS.isInvalid()) {
       // Combine the LHS and RHS into the LHS (e.g. build AST).
-      if (TernaryMiddle.isInvalid()) {
+      if (RHS.isInvalid()) {
+        LHS = Actions.CreateRecoveryExpr(LHS.get()->getBeginLoc(),
+                                         PrevTokLocation,
+                                         {LHS.get()});
+      } else if (TernaryMiddle.isInvalid()) {
         // If we're using '>>' as an operator within a template
         // argument list (in C++98), suggest the addition of
         // parentheses so that the code remains well-formed in C++0x.
@@ -857,8 +863,7 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
   case tok::annot_non_type_dependent:
   case tok::annot_non_type_undeclared: {
     CXXScopeSpec SS;
-    Token Replacement;
-    Res = tryParseCXXIdExpression(SS, isAddressOfOperand, Replacement);
+    Res = tryParseCXXIdExpression(SS, isAddressOfOperand);
     assert(!Res.isUnset() &&
            "should not perform typo correction on annotation token");
     break;
@@ -1023,7 +1028,6 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
     UnqualifiedId Name;
     CXXScopeSpec ScopeSpec;
     SourceLocation TemplateKWLoc;
-    Token Replacement;
     CastExpressionIdValidator Validator(Tok, CorrectionBehavior);
     Validator.IsAddressOfOperand = isAddressOfOperand;
     if (Tok.isOneOf(tok::periodstar, tok::arrowstar)) {
@@ -1033,17 +1037,10 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
       Validator.WantRemainingKeywords = Tok.isNot(tok::r_paren);
     }
     Name.setIdentifier(&II, ILoc);
-    Res = Actions.ActOnIdExpression(
-        getCurScope(), ScopeSpec, TemplateKWLoc, Name, Tok.is(tok::l_paren),
-        isAddressOfOperand, &Validator,
-        /*IsInlineAsmIdentifier=*/false,
-        Tok.is(tok::r_paren) ? nullptr : &Replacement);
-    if (!Res.isInvalid() && Res.isUnset()) {
-      UnconsumeToken(Replacement);
-      return ParseCastExpression(
-          ParseKind, isAddressOfOperand, NotCastExpr, CorrectionBehavior,
-          /*isVectorLiteral=*/false, NotPrimaryExpression);
-    }
+    Res = Actions.ActOnIdExpression(getCurScope(), ScopeSpec, TemplateKWLoc,
+                                    Name, Tok.is(tok::l_paren),
+                                    isAddressOfOperand, &Validator,
+                                    /*IsInlineAsmIdentifier=*/false);
     Res = tryParseCXXPackIndexingExpression(Res);
     if (!Res.isInvalid() && Tok.is(tok::less))
       checkPotentialAngleBracket(Res);

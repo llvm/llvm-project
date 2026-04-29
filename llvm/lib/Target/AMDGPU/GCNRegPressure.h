@@ -250,6 +250,10 @@ public:
   /// towards achieving the RP target.
   bool isSaveBeneficial(Register Reg) const;
 
+  /// Returns whether the benefit that saving \p SaveRP represents will be
+  /// beneficial towards achieving the RP target.
+  bool isSaveBeneficial(const GCNRegPressure &SaveRP) const;
+
   /// Saves virtual register \p Reg with lanemask \p Mask.
   void saveReg(Register Reg, LaneBitmask Mask, const MachineRegisterInfo &MRI) {
     RP.inc(Reg, Mask, LaneBitmask::getNone(), MRI);

@@ -560,6 +560,7 @@ static Value *getUnwindDestToken(Instruction *EHPad,
 /// nodes in that block with the values specified in InvokeDestPHIValues.
 static BasicBlock *HandleCallsInBlockInlinedThroughInvoke(
     BasicBlock *BB, BasicBlock *UnwindEdge,
+    SmallSetVector<const Value *, 4> &OriginallyIndirectCalls,
     UnwindDestMemoTy *FuncletUnwindMap = nullptr) {
   for (Instruction &I : llvm::make_early_inc_range(*BB)) {
     // We only need to check for function calls: inlined invoke
@@ -605,7 +606,10 @@ static BasicBlock *HandleCallsInBlockInlinedThroughInvoke(
 #endif // NDEBUG
     }
 
+    bool WasIndirect = OriginallyIndirectCalls.remove(CI);
     changeToInvokeAndSplitBasicBlock(CI, UnwindEdge);
+    if (WasIndirect)
+      OriginallyIndirectCalls.insert(BB->getTerminator());
     return BB;
   }
   return nullptr;
@@ -651,7 +655,8 @@ static void HandleInlinedLandingPad(InvokeInst *II, BasicBlock *FirstNewBlock,
        BB != E; ++BB) {
     if (InlinedCodeInfo.ContainsCalls)
       if (BasicBlock *NewBB = HandleCallsInBlockInlinedThroughInvoke(
-              &*BB, Invoke.getOuterResumeDest()))
+              &*BB, Invoke.getOuterResumeDest(),
+              InlinedCodeInfo.OriginallyIndirectCalls))
         // Update any PHI nodes in the exceptional block to indicate that there
         // is now a new entry in them.
         Invoke.addIncomingPHIValuesFor(NewBB);
@@ -785,7 +790,8 @@ static void HandleInlinedEHPad(InvokeInst *II, BasicBlock *FirstNewBlock,
                             E = Caller->end();
          BB != E; ++BB)
       if (BasicBlock *NewBB = HandleCallsInBlockInlinedThroughInvoke(
-              &*BB, UnwindDest, &FuncletUnwindMap))
+              &*BB, UnwindDest, InlinedCodeInfo.OriginallyIndirectCalls,
+              &FuncletUnwindMap))
         // Update any PHI nodes in the exceptional block to indicate that there
         // is now a new entry in them.
         UpdatePHINodes(NewBB);

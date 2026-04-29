@@ -21,7 +21,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/InitLLVM.h"
@@ -30,15 +29,11 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <system_error>
 
 using namespace llvm;
 using namespace clang::ssaf;
 
 namespace {
-
-namespace fs = llvm::sys::fs;
-namespace path = llvm::sys::path;
 
 //===----------------------------------------------------------------------===//
 // Summary Type
@@ -70,7 +65,7 @@ cl::opt<SummaryType> Type(
 cl::opt<std::string> InputPath(cl::Positional, cl::desc("<input file>"),
                                cl::cat(SsafFormatCategory));
 
-cl::opt<std::string> OutputPath("o", cl::desc("Output summary path"),
+cl::opt<std::string> OutputPath("o", cl::desc("Output file path"),
                                 cl::value_desc("path"),
                                 cl::cat(SsafFormatCategory));
 
@@ -83,19 +78,6 @@ cl::opt<bool> ListFormats("list",
                           cl::desc("List registered serialization formats and "
                                    "analyses, then exit"),
                           cl::init(false), cl::cat(SsafFormatCategory));
-
-//===----------------------------------------------------------------------===//
-// Error Messages
-//===----------------------------------------------------------------------===//
-
-namespace LocalErrorMessages {
-
-constexpr const char *OutputFileAlreadyExists = "Output file already exists";
-
-constexpr const char *InputOutputSamePath =
-    "Input and Output resolve to the same path";
-
-} // namespace LocalErrorMessages
 
 //===----------------------------------------------------------------------===//
 // Format Listing
@@ -231,8 +213,8 @@ void listFormats() {
 //===----------------------------------------------------------------------===//
 
 struct FormatInput {
-  SummaryFile InputFile;
-  std::optional<SummaryFile> OutputFile;
+  FormatFile InputFile;
+  std::optional<FormatFile> OutputFile;
 };
 
 FormatInput validateInput() {
@@ -252,49 +234,14 @@ FormatInput validateInput() {
       fail("no input file specified");
     }
 
-    llvm::SmallString<256> RealInputPath;
-    std::error_code EC =
-        fs::real_path(InputPath, RealInputPath, /*expand_tilde=*/true);
-    if (EC) {
-      fail(ErrorMessages::CannotValidateSummary, InputPath, EC.message());
-    }
-
-    FI.InputFile = SummaryFile::fromPath(RealInputPath);
+    FI.InputFile = FormatFile::fromInputPath(InputPath);
   }
 
   // Validate the output path.
   if (!OutputPath.empty()) {
-    llvm::StringRef ParentDir = path::parent_path(OutputPath);
-    llvm::StringRef DirToCheck = ParentDir.empty() ? "." : ParentDir;
-
-    if (!fs::exists(DirToCheck)) {
-      fail(ErrorMessages::CannotValidateSummary, OutputPath,
-           ErrorMessages::OutputDirectoryMissing);
-    }
-
-    // Reconstruct the real output path from the real parent directory and the
-    // output filename. The output file does not exist yet so real_path cannot
-    // be called on the full output path directly.
-    llvm::SmallString<256> RealParentDir;
-    if (std::error_code EC = fs::real_path(DirToCheck, RealParentDir)) {
-      fail(ErrorMessages::CannotValidateSummary, OutputPath, EC.message());
-    }
-
-    llvm::SmallString<256> RealOutputPath = RealParentDir;
-    path::append(RealOutputPath, path::filename(OutputPath));
-
-    if (RealOutputPath == FI.InputFile.Path) {
-      fail(ErrorMessages::CannotValidateSummary, OutputPath,
-           LocalErrorMessages::InputOutputSamePath);
-    }
-
-    if (fs::exists(RealOutputPath)) {
-      fail(ErrorMessages::CannotValidateSummary, OutputPath,
-           LocalErrorMessages::OutputFileAlreadyExists);
-    }
-
-    FI.OutputFile = SummaryFile::fromPath(RealOutputPath);
+    FI.OutputFile = FormatFile::fromOutputPath(OutputPath);
   }
+
   return FI;
 }
 

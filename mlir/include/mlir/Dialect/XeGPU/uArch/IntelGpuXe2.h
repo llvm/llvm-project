@@ -209,6 +209,56 @@ struct SubgroupMatrixMultiplyAcc : public Instruction,
 
   unsigned getPackedFormatBitSizeA() const { return packedFormatBitSizeA; }
   unsigned getPackedFormatBitSizeB() const { return packedFormatBitSizeB; }
+  bool isLaneLayoutRowMajorOrder() const override { return true; }
+
+protected:
+  const unsigned packedFormatBitSizeA;
+  const unsigned packedFormatBitSizeB;
+};
+
+struct SubgroupScaledMatrixMultiplyAcc : public Instruction,
+                                         public MMAInstructionInterface {
+  SubgroupScaledMatrixMultiplyAcc(unsigned packedFormatBitSizeA,
+                                  unsigned packedFormatBitSizeB)
+      : Instruction(InstructionKind::SubgroupScaledMatrixMultiplyAcc,
+                    InstructionScope::Subgroup),
+        packedFormatBitSizeA(packedFormatBitSizeA),
+        packedFormatBitSizeB(packedFormatBitSizeB) {}
+  static bool classof(const Instruction *B) {
+    return B->getInstructionKind() ==
+           InstructionKind::SubgroupScaledMatrixMultiplyAcc;
+  }
+  // Source:
+  // https://github.com/intel/llvm/blob/sycl/sycl/doc/design/spirv-extensions/SPV_INTEL_subgroup_scaled_matrix_multiply_accumulate.asciidoc
+
+  // Override all virtuals from MatrixOpInterface
+  virtual llvm::SmallVector<std::pair<uint32_t, uint32_t>, 16>
+  getSupportedShapes(Type dataType, MMAOpndKind matrixType) override;
+  virtual llvm::SmallVector<Type, 8>
+  getSupportedTypes(MLIRContext &context, MMAOpndKind matrixType) override;
+  virtual bool
+  checkSupportedShapesAndTypes(std::pair<uint32_t, uint32_t> AShape,
+                               std::pair<uint32_t, uint32_t> BShape,
+                               std::pair<uint32_t, uint32_t> CShape,
+                               std::pair<uint32_t, uint32_t> DShape, Type AType,
+                               Type BType, Type CType, Type DType) override;
+  virtual bool checkSupportedTypes(Type AType, Type BType, Type CType,
+                                   Type DType) override;
+  virtual bool validate(std::pair<uint32_t, uint32_t> AShape,
+                        std::pair<uint32_t, uint32_t> BShape,
+                        std::pair<uint32_t, uint32_t> CShape,
+                        std::pair<uint32_t, uint32_t> DShape, Type AType,
+                        Type BType, Type CType, Type DType) override;
+  virtual llvm::SmallVector<uint32_t, 8>
+  getSupportedM(Type type) const override;
+  virtual llvm::SmallVector<uint32_t, 8>
+  getSupportedK(Type type) const override;
+  virtual llvm::SmallVector<uint32_t, 8>
+  getSupportedN(Type type) const override;
+
+  unsigned getPackedFormatBitSizeA() const { return packedFormatBitSizeA; }
+  unsigned getPackedFormatBitSizeB() const { return packedFormatBitSizeB; }
+  bool isLaneLayoutRowMajorOrder() const override { return true; }
 
 protected:
   const unsigned packedFormatBitSizeA;
@@ -279,11 +329,42 @@ struct BMGuArch : public Xe2Plus {
   }
 };
 
+struct CRIuArch : public Xe2Plus {
+  static llvm::ArrayRef<const Instruction *> getInstructionRegistryArr() {
+    static const SubgroupMatrixMultiplyAcc dpasInst{16, 32};
+    static const SubgroupScaledMatrixMultiplyAcc dpasMxInst{16, 32};
+    static const Subgroup2DBlockLoadInstruction loadNdInst;
+    static const Subgroup2DBlockStoreInstruction storeNdInst;
+    static const Subgroup2DBlockPrefetchInstruction prefetchNdInst;
+    static const SpirvStoreScatterInstruction storeScatterInst;
+    static const SpirvLoadGatherInstruction loadGatherInst;
+    static const Instruction *arr[] = {
+        &dpasInst,       &dpasMxInst,       &loadNdInst,    &storeNdInst,
+        &prefetchNdInst, &storeScatterInst, &loadGatherInst};
+    return arr;
+  }
+
+  CRIuArch()
+      : Xe2Plus("cri",                          // archName
+                "Crescent Island Architecture", // archDescription
+                getInstructionRegistryArr(),
+                // Using bmg config as placeholder
+                // TODO: Update to actual XeCore and SharedMemory config
+                XeCoreInfo(8, SharedMemory(256 * 1024, 4), 8, 8) // xeCore
+        ) {}
+  static const uArch *getInstance() {
+    static const CRIuArch instance;
+    return reinterpret_cast<const uArch *>(&instance);
+  }
+};
+
 inline const uArch *getUArch(llvm::StringRef archName) {
   if (archName.equals_insensitive("pvc"))
     return PVCuArch::getInstance();
   if (archName.equals_insensitive("bmg"))
     return BMGuArch::getInstance();
+  if (archName.equals_insensitive("cri"))
+    return CRIuArch::getInstance();
   return nullptr;
 }
 
@@ -444,6 +525,148 @@ SubgroupMatrixMultiplyAcc::getSupportedK(Type type) const {
 
 inline llvm::SmallVector<uint32_t, 8>
 SubgroupMatrixMultiplyAcc::getSupportedN(Type type) const {
+  return {16};
+}
+
+//===----------------------------------------------------------------------===//
+// SubgroupScaledMatrixMultiplyAcc implementations
+//===----------------------------------------------------------------------===//
+
+inline llvm::SmallVector<std::pair<uint32_t, uint32_t>, 16>
+SubgroupScaledMatrixMultiplyAcc::getSupportedShapes(Type dataType,
+                                                    MMAOpndKind matrixType) {
+  auto combineVectors = [](const llvm::SmallVector<uint32_t, 8> &a,
+                           const llvm::SmallVector<uint32_t, 8> &b)
+      -> llvm::SmallVector<std::pair<uint32_t, uint32_t>, 16> {
+    llvm::SmallVector<std::pair<uint32_t, uint32_t>, 16> result;
+    for (unsigned x : a) {
+      for (unsigned y : b) {
+        result.emplace_back(x, y);
+      }
+    }
+    return result;
+  };
+
+  // Avoid calling getSupportedK for C/D types (which are f32/bf16
+  // and not valid for the K-dimension bit-width calculation).
+  switch (matrixType) {
+  case MMAOpndKind::MatrixA:
+    return combineVectors(getSupportedM(dataType), getSupportedK(dataType));
+  case MMAOpndKind::MatrixB:
+    return combineVectors(getSupportedK(dataType), getSupportedN(dataType));
+  case MMAOpndKind::MatrixC:
+  case MMAOpndKind::MatrixD:
+    return combineVectors(getSupportedM(dataType), getSupportedN(dataType));
+  }
+  return {};
+}
+
+inline llvm::SmallVector<Type, 8>
+SubgroupScaledMatrixMultiplyAcc::getSupportedTypes(MLIRContext &context,
+                                                   MMAOpndKind matrixType) {
+  Type f8E4M3FNType = Float8E4M3FNType::get(&context);
+  Type f8E5M2Type = Float8E5M2Type::get(&context);
+  Type f4E2M1FNType = Float4E2M1FNType::get(&context);
+  Type bf16Type = BFloat16Type::get(&context);
+  Type f32Type = Float32Type::get(&context);
+
+  switch (matrixType) {
+  case MMAOpndKind::MatrixA:
+    return {f8E4M3FNType, f8E5M2Type, f4E2M1FNType};
+  case MMAOpndKind::MatrixB:
+    return {f8E4M3FNType, f8E5M2Type, f4E2M1FNType};
+  case MMAOpndKind::MatrixC:
+    return {bf16Type, f32Type};
+  case MMAOpndKind::MatrixD:
+    return {bf16Type, f32Type};
+  }
+  return {};
+}
+
+inline bool SubgroupScaledMatrixMultiplyAcc::checkSupportedTypes(Type AType,
+                                                                 Type BType,
+                                                                 Type CType,
+                                                                 Type DType) {
+  auto isSupportedLowPrecision = [](Type t) {
+    return t.isF8E4M3FN() || t.isF8E5M2() || llvm::isa<Float4E2M1FNType>(t);
+  };
+  auto isSupportedAccum = [](Type t) { return t.isF32() || t.isBF16(); };
+
+  if (!isSupportedLowPrecision(AType) || !isSupportedLowPrecision(BType)) {
+    LDBG() << "Unsupported scaled dpas: A and B must be FP8 or FP4 types.";
+    return false;
+  }
+
+  // A and B must have the same bit width for K dimension compatibility.
+  if (AType.getIntOrFloatBitWidth() != BType.getIntOrFloatBitWidth()) {
+    LDBG() << "Unsupported scaled dpas: A and B must have the same bit width.";
+    return false;
+  }
+
+  if (CType && !isSupportedAccum(CType)) {
+    LDBG() << "Unsupported scaled dpas: C must be f32 or bf16.";
+    return false;
+  }
+
+  if (!isSupportedAccum(DType)) {
+    LDBG() << "Unsupported scaled dpas: D must be f32 or bf16.";
+    return false;
+  }
+
+  return true;
+}
+
+inline bool SubgroupScaledMatrixMultiplyAcc::checkSupportedShapesAndTypes(
+    std::pair<uint32_t, uint32_t> AShape, std::pair<uint32_t, uint32_t> BShape,
+    std::pair<uint32_t, uint32_t> CShape, std::pair<uint32_t, uint32_t> DShape,
+    Type AType, Type BType, Type CType, Type DType) {
+  auto supportedAShapes = getSupportedShapes(AType, MMAOpndKind::MatrixA);
+  auto supportedBShapes = getSupportedShapes(BType, MMAOpndKind::MatrixB);
+  auto supportedCShapes = getSupportedShapes(CType, MMAOpndKind::MatrixC);
+  auto supportedDShapes = getSupportedShapes(DType, MMAOpndKind::MatrixD);
+  return llvm::is_contained(supportedAShapes, AShape) &&
+         llvm::is_contained(supportedBShapes, BShape) &&
+         llvm::is_contained(supportedCShapes, CShape) &&
+         llvm::is_contained(supportedDShapes, DShape) &&
+         checkSupportedTypes(AType, BType, CType, DType);
+}
+
+inline bool SubgroupScaledMatrixMultiplyAcc::validate(
+    std::pair<uint32_t, uint32_t> AShape, std::pair<uint32_t, uint32_t> BShape,
+    std::pair<uint32_t, uint32_t> CShape, std::pair<uint32_t, uint32_t> DShape,
+    Type AType, Type BType, Type CType, Type DType) {
+  return checkSupportedShapesAndTypes(AShape, BShape, CShape, DShape, AType,
+                                      BType, CType, DType);
+}
+
+inline llvm::SmallVector<uint32_t, 8>
+SubgroupScaledMatrixMultiplyAcc::getSupportedM(Type type) const {
+  return {8};
+}
+
+inline llvm::SmallVector<uint32_t, 8>
+SubgroupScaledMatrixMultiplyAcc::getSupportedK(Type type) const {
+  assert(type.isIntOrFloat() && "Matrix type must be int or float");
+  auto bitWidth = type.getIntOrFloatBitWidth();
+  uint32_t kSize = 0;
+  switch (bitWidth) {
+  case 4:
+    kSize = 64; // FP4: scale K by 4 (base 16-bit K=16 -> 64)
+    break;
+  case 8:
+    kSize = 32; // FP8: scale K by 2 (base 16-bit K=16 -> 32)
+    break;
+  default:
+    // Scaled dpas only supports FP8 (8-bit) and FP4 (4-bit) types for A/B
+    // matrices. Return empty so callers can gracefully reject unsupported
+    // types instead of aborting.
+    return {};
+  }
+  return {kSize};
+}
+
+inline llvm::SmallVector<uint32_t, 8>
+SubgroupScaledMatrixMultiplyAcc::getSupportedN(Type type) const {
   return {16};
 }
 

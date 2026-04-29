@@ -2675,8 +2675,9 @@ void objdump::parseInputMachO(MachOUniversalBinary *UB) {
     return;
   }
   // No architecture flags were specified so if this contains a slice that
-  // matches the host architecture dump only that.
-  if (!ArchAll) {
+  // matches the host architecture dump only that. For otool -a dump all
+  // architectures to match classic otool behaviour.
+  if (!ArchAll && !(IsOtool && ArchiveHeaders)) {
     for (MachOUniversalBinary::object_iterator I = UB->begin_objects(),
                                                 E = UB->end_objects();
           I != E; ++I) {
@@ -7327,7 +7328,7 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
   std::unique_ptr<const MCSubtargetInfo> STI(
       TheTarget->createMCSubtargetInfo(TheTriple, MachOMCPU, FeaturesStr));
   CHECK_TARGET_INFO_CREATION(STI);
-  MCContext Ctx(TheTriple, AsmInfo.get(), MRI.get(), STI.get());
+  MCContext Ctx(TheTriple, *AsmInfo, MRI.get(), STI.get());
   std::unique_ptr<MCDisassembler> DisAsm(
       TheTarget->createMCDisassembler(*STI, Ctx));
   CHECK_TARGET_INFO_CREATION(DisAsm);
@@ -7381,8 +7382,8 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
     ThumbSTI.reset(ThumbTarget->createMCSubtargetInfo(ThumbTriple, MachOMCPU,
                                                       FeaturesStr));
     CHECK_THUMB_TARGET_INFO_CREATION(ThumbSTI);
-    ThumbCtx.reset(new MCContext(ThumbTriple, ThumbAsmInfo.get(),
-                                 ThumbMRI.get(), ThumbSTI.get()));
+    ThumbCtx.reset(new MCContext(ThumbTriple, *ThumbAsmInfo, ThumbMRI.get(),
+                                 ThumbSTI.get()));
     ThumbDisAsm.reset(ThumbTarget->createMCDisassembler(*ThumbSTI, *ThumbCtx));
     CHECK_THUMB_TARGET_INFO_CREATION(ThumbDisAsm);
     MCContext *PtrThumbCtx = ThumbCtx.get();

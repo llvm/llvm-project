@@ -697,8 +697,7 @@ TEST(ControllerAccessTest, Basics) {
   std::deque<std::unique_ptr<Task>> Tasks;
   Session S(mockExecutorProcessInfo(),
             std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
-  auto CA = std::make_shared<MockControllerAccess>(S);
-  S.attach(CA, BootstrapInfo(S));
+  S.attach<MockControllerAccess>(BootstrapInfo(S), S);
 
   EnqueueingDispatcher::runTasksFromFront(Tasks);
 }
@@ -718,8 +717,7 @@ TEST(ControllerAccessTest, ValidCallToController) {
   std::deque<std::unique_ptr<Task>> Tasks;
   Session S(mockExecutorProcessInfo(),
             std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
-  auto CA = std::make_shared<MockControllerAccess>(S);
-  S.attach(CA, BootstrapInfo(S));
+  S.attach<MockControllerAccess>(BootstrapInfo(S), S);
 
   int32_t Result = 0;
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
@@ -754,8 +752,7 @@ TEST(ControllerAccessTest, CallToControllerAfterDetach) {
   std::deque<std::unique_ptr<Task>> Tasks;
   Session S(mockExecutorProcessInfo(),
             std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
-  auto CA = std::make_shared<MockControllerAccess>(S);
-  S.attach(CA, BootstrapInfo(S));
+  S.attach<MockControllerAccess>(BootstrapInfo(S), S);
 
   S.detach();
 

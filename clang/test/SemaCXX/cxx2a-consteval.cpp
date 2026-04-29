@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++2a -emit-llvm-only -Wno-unused-value -Wno-vla %s -verify
+// RUN: %clang_cc1 -std=c++2a -emit-llvm-only -Wno-unused-value -Wno-vla %s -verify -fexperimental-new-constant-interpreter
 
 typedef __SIZE_TYPE__ size_t;
 

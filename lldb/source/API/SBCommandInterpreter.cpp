@@ -215,7 +215,7 @@ void SBCommandInterpreter::HandleCommandsFromFile(
   if (!file.IsValid()) {
     SBStream s;
     file.GetDescription(s);
-    result->AppendErrorWithFormat("File is not valid: %s.", s.GetData());
+    result->AppendErrorWithFormat("File is not valid: %s", s.GetData());
   }
 
   FileSpec tmp_spec = file.ref();

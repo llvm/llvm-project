@@ -782,9 +782,21 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
     case Intrinsic::objc_sync_exit:
       Changed |= lowerObjCCall(F, RTLIB::impl_objc_sync_exit);
       break;
+    case Intrinsic::acos:
+    case Intrinsic::asin:
+    case Intrinsic::atan:
+    case Intrinsic::cos:
+    case Intrinsic::cosh:
     case Intrinsic::exp:
     case Intrinsic::exp2:
+    case Intrinsic::exp10:
     case Intrinsic::log:
+    case Intrinsic::log2:
+    case Intrinsic::log10:
+    case Intrinsic::sin:
+    case Intrinsic::sinh:
+    case Intrinsic::tan:
+    case Intrinsic::tanh:
       Changed |= forEachCall(F, [&](CallInst *CI) {
         Type *Ty = CI->getArgOperand(0)->getType();
         if (!TM || !isa<ScalableVectorType>(Ty))

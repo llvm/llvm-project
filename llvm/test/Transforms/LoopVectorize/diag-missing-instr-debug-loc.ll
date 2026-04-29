@@ -40,10 +40,10 @@ for.body:
   %a.addr.08 = phi i32 [ %0, %for.body ], [ %a, %for.body.preheader ]
 
   %arrayidx = getelementptr inbounds [0 x i32], ptr @out, i64 0, i64 %indvars.iv, !dbg !10
-  store i32 %a.addr.08, ptr %arrayidx, align 4, !dbg !12, !tbaa !13
+  store i32 %a.addr.08, ptr %arrayidx, align 4, !dbg !12
   %idxprom1 = sext i32 %a.addr.08 to i64, !dbg !17
   %arrayidx2 = getelementptr inbounds [0 x i32], ptr @map, i64 0, i64 %idxprom1, !dbg !17
-  %0 = load i32, ptr %arrayidx2, align 4, !dbg !17, !tbaa !13
+  %0 = load i32, ptr %arrayidx2, align 4, !dbg !17
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1, !dbg !9
   %exitcond = icmp eq i64 %indvars.iv.next, %wide.trip.count, !dbg !9
   br i1 %exitcond, label %for.cond.cleanup, label %for.body, !dbg !9, !llvm.loop !18
@@ -53,14 +53,12 @@ attributes #0 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}
-!llvm.ident = !{!5}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 4.0.0 (trunk 281293) (llvm/trunk 281290)", isOptimized: true, runtimeVersion: 0, emissionKind: NoDebug, enums: !2)
 !1 = !DIFile(filename: "/tmp/s.c", directory: "/tmp")
 !2 = !{}
 !3 = !{i32 2, !"Debug Info Version", i32 3}
 !4 = !{i32 1, !"PIC Level", i32 2}
-!5 = !{!"clang version 4.0.0 (trunk 281293) (llvm/trunk 281290)"}
 !6 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 4, type: !7, isLocal: false, isDefinition: true, scopeLine: 4, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !2)
 !7 = !DISubroutineType(types: !2)
 !8 = !DILocation(line: 5, column: 21, scope: !6)
@@ -68,9 +66,5 @@ attributes #0 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-
 !10 = !DILocation(line: 6, column: 5, scope: !6)
 !11 = !DILocation(line: 9, column: 1, scope: !6)
 !12 = !DILocation(line: 6, column: 12, scope: !6)
-!13 = !{!14, !14, i64 0}
-!14 = !{!"int", !15, i64 0}
-!15 = !{!"omnipotent char", !16, i64 0}
-!16 = !{!"Simple C/C++ TBAA"}
 !17 = !DILocation(line: 7, column: 9, scope: !6)
 !18 = distinct !{!18, !9}

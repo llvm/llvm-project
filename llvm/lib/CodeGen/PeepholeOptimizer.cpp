@@ -1865,8 +1865,9 @@ bool PeepholeOptimizer::run(MachineFunction &MF) {
             // we need it for markUsesInDebugValueAsUndef().
             Register FoldedReg = FoldAsLoadDefReg;
             MachineInstr *DefMI = nullptr;
-            if (MachineInstr *FoldMI =
-                    TII->optimizeLoadInstr(*MI, MRI, FoldAsLoadDefReg, DefMI)) {
+            MachineInstr *CopyMI = nullptr;
+            if (MachineInstr *FoldMI = TII->optimizeLoadInstr(
+                    *MI, MRI, FoldAsLoadDefReg, DefMI, CopyMI)) {
               // Update LocalMIs since we replaced MI with FoldMI and deleted
               // DefMI.
               LLVM_DEBUG(dbgs() << "Replacing: " << *MI);
@@ -1874,6 +1875,8 @@ bool PeepholeOptimizer::run(MachineFunction &MF) {
               LocalMIs.erase(MI);
               LocalMIs.erase(DefMI);
               LocalMIs.insert(FoldMI);
+              if (CopyMI)
+                LocalMIs.insert(CopyMI);
               // Update the call info.
               if (MI->shouldUpdateAdditionalCallInfo())
                 MI->getMF()->moveAdditionalCallInfo(MI, FoldMI);

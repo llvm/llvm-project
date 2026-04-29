@@ -33,6 +33,13 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(OwnedPtr<CommentInfo>)
 namespace llvm {
 namespace yaml {
 
+template <typename T> struct SequenceTraits<llvm::ArrayRef<T>> {
+  static size_t size(IO &io, llvm::ArrayRef<T> &seq) { return seq.size(); }
+  static T &element(IO &io, llvm::ArrayRef<T> &seq, size_t index) {
+    return const_cast<T &>(seq[index]);
+  }
+};
+
 // Enumerations to YAML output.
 
 template <> struct ScalarEnumerationTraits<clang::AccessSpecifier> {

@@ -481,6 +481,10 @@ class TargetRegisterInfo;
     /// edge occurs first.
     LLVM_ABI void biasCriticalPath();
 
+    LLVM_ABI bool isClustered() const {
+      return ParentClusterIdx != InvalidClusterId;
+    }
+
     LLVM_ABI void dumpAttributes() const;
 
   private:

@@ -586,6 +586,12 @@ This may contain false-positives, e.g. when the borrowed storage is potentially 
   }];
 }
 
+def LifetimeSafetyUseAfterFree : DiagGroup<"lifetime-safety-use-after-free"> {
+    code Documentation = [{
+Warning to detect use-after-free, introduced by freeing an object and later using it.
+    }];
+}
+
 // Dangling-Field (aka Escape-To-Field)
 def LifetimeSafetyDanglingField : DiagGroup<"lifetime-safety-dangling-field"> {
   code Documentation = [{
@@ -622,14 +628,16 @@ def LifetimeSafetyPermissive : DiagGroup<"lifetime-safety-permissive",
                                          [LifetimeSafetyUseAfterScope,
                                          LifetimeSafetyReturnStackAddr,
                                          LifetimeSafetyDanglingField,
-                                         LifetimeSafetyDanglingGlobal]>;
+                                         LifetimeSafetyDanglingGlobal,
+                                         LifetimeSafetyUseAfterFree]>;
 
 def LifetimeSafetyStrict : DiagGroup<"lifetime-safety-strict",
                                     [LifetimeSafetyUseAfterScopeMoved,
                                     LifetimeSafetyReturnStackAddrMoved,
                                     LifetimeSafetyDanglingFieldMoved,
                                     LifetimeSafetyDanglingGlobal,
-                                    LifetimeSafetyInvalidation]>;
+                                    LifetimeSafetyInvalidation,
+                                    LifetimeSafetyUseAfterFree]>;
 
 def LifetimeSafety : DiagGroup<"lifetime-safety",
                                [LifetimeSafetyPermissive, LifetimeSafetyStrict]> {
@@ -1881,6 +1889,9 @@ def HLSLExplicitBinding : DiagGroup<"hlsl-explicit-binding">;
 
 // Warnings for DXIL validation
 def DXILValidation : DiagGroup<"dxil-validation">;
+
+// Warnings for SPIRV validation
+def SPIRVValidation : DiagGroup<"spirv-validation">;
 
 // Warning for HLSL API availability
 def HLSLAvailability : DiagGroup<"hlsl-availability">;
