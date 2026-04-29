@@ -93,10 +93,77 @@ protected:
     YieldOp::create(regionBuilder, loc);
   }
 
+  /// Build a single `acc.compute_region` with the given launch arguments.
+  ComputeRegionOp makeComputeRegion(HostContext &host, ValueRange launchArgs) {
+    Region sourceRegion;
+    populateSourceRegionSingleBlock(sourceRegion, context, loc, std::nullopt,
+                                    false);
+    IRMapping mapping;
+    // Setting an empty origin since it should not be relevant for the tests.
+    ComputeRegionOp cr = buildComputeRegion(
+        loc, launchArgs, {}, "", sourceRegion, host.rewriter, mapping);
+    return cr;
+  }
+
   MLIRContext context;
   OpBuilder b;
   Location loc;
 };
+
+//===----------------------------------------------------------------------===//
+// ComputeRegionOp::isEffectivelySerial
+//===----------------------------------------------------------------------===//
+
+TEST_F(OpenACCCGOpsTest, IsEffectivelySerialNoLaunchArgs) {
+  HostContext host(context, loc, b);
+  ComputeRegionOp cr = makeComputeRegion(host, {});
+  EXPECT_TRUE(cr.isEffectivelySerial());
+  EXPECT_TRUE(succeeded(host.module->verify()));
+}
+
+TEST_F(OpenACCCGOpsTest, IsEffectivelySerialSparseDimsConstantOne) {
+  HostContext host(context, loc, b);
+  Value c1 = arith::ConstantIndexOp::create(host.rewriter, loc, 1);
+  Value pwBx = ParWidthOp::create(host.rewriter, loc, c1,
+                                  GPUParallelDimAttr::blockXDim(&context));
+  Value pwTy = ParWidthOp::create(host.rewriter, loc, c1,
+                                  GPUParallelDimAttr::threadYDim(&context));
+  Value pwTx = ParWidthOp::create(host.rewriter, loc, c1,
+                                  GPUParallelDimAttr::threadXDim(&context));
+  ComputeRegionOp cr = makeComputeRegion(host, {pwBx, pwTy, pwTx});
+  EXPECT_TRUE(cr.isEffectivelySerial());
+  EXPECT_TRUE(succeeded(host.module->verify()));
+}
+
+TEST_F(OpenACCCGOpsTest,
+       IsEffectivelySerialFalseWhenThreadXWidthGreaterThanOne) {
+  HostContext host(context, loc, b);
+  Value c2 = arith::ConstantIndexOp::create(host.rewriter, loc, 2);
+  Value pwTx = ParWidthOp::create(host.rewriter, loc, c2,
+                                  GPUParallelDimAttr::threadXDim(&context));
+  ComputeRegionOp cr = makeComputeRegion(host, pwTx);
+  EXPECT_FALSE(cr.isEffectivelySerial());
+  EXPECT_TRUE(succeeded(host.module->verify()));
+}
+
+TEST_F(OpenACCCGOpsTest, IsEffectivelySerialFalseWhenLaunchWidthUnknown) {
+  HostContext host(context, loc, b);
+  Value pwTx = ParWidthOp::create(host.rewriter, loc, Value(),
+                                  GPUParallelDimAttr::threadXDim(&context));
+  ComputeRegionOp cr = makeComputeRegion(host, pwTx);
+  EXPECT_FALSE(cr.isEffectivelySerial());
+  EXPECT_TRUE(succeeded(host.module->verify()));
+}
+
+TEST_F(OpenACCCGOpsTest, IsEffectivelySerialTrueWhenSeqLaunchPresent) {
+  HostContext host(context, loc, b);
+  Value c7 = arith::ConstantIndexOp::create(host.rewriter, loc, 7);
+  Value pwSeq = ParWidthOp::create(host.rewriter, loc, c7,
+                                   GPUParallelDimAttr::seqDim(&context));
+  ComputeRegionOp cr = makeComputeRegion(host, pwSeq);
+  EXPECT_TRUE(cr.isEffectivelySerial());
+  EXPECT_TRUE(succeeded(host.module->verify()));
+}
 
 //===----------------------------------------------------------------------===//
 // ComputeRegionOp::wireHoistedValueThroughIns

@@ -506,6 +506,10 @@ bool ComputeRegionOp::isEffectivelySerial() {
     return true;
 
   auto checkDim = [&](GPUParallelDimAttr dim) -> bool {
+    // Launch dimensions without an explicit `acc.par_width` for that dimension
+    // means that no such parallelism is assigned and thus defaults to width 1.
+    if (!getLaunchArg(dim))
+      return true;
     auto val = getKnownConstantLaunchArg(dim);
     return val && *val == 1;
   };
