@@ -114,8 +114,8 @@ void CodeMetrics::collectEphemeralValues(
 }
 
 /// Check if a block is dead. A block is determined dead if it is terminated by
-/// unreachable and all predecessors are statically known condiational branches
-/// to not go to the branch.
+/// unreachable and all predecessors are statically known conditional branches
+/// that do not branch to the block.
 static bool isDeadBlock(const BasicBlock *BB) {
   if (BB->isEntryBlock())
     return false;
