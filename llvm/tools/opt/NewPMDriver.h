@@ -20,7 +20,6 @@
 #ifndef LLVM_TOOLS_OPT_NEWPMDRIVER_H
 #define LLVM_TOOLS_OPT_NEWPMDRIVER_H
 
-#include "llvm/IR/DiagnosticHandler.h"
 #include "llvm/Support/CommandLine.h"
 
 namespace llvm {
@@ -31,15 +30,6 @@ class PassPlugin;
 class TargetMachine;
 class ToolOutputFile;
 class TargetLibraryInfoImpl;
-
-/// A custom diagnostic handler for opt that consumes diagnostics so that the
-/// default LLVMContext::diagnose() does not call exit() on the first error.
-/// opt can then drain remaining diagnostics from a single pass run and report
-/// them all, mirroring llc's behavior so that opt remains a faithful test
-/// driver for passes that report errors via LLVMContext::emitError.
-struct OptDiagnosticHandler : public DiagnosticHandler {
-  bool handleDiagnostics(const DiagnosticInfo &DI) override;
-};
 
 extern cl::opt<bool> DebugifyEach;
 extern cl::opt<std::string> DebugifyExport;

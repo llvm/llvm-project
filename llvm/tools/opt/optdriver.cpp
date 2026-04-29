@@ -538,10 +538,6 @@ optMain(int argc, char **argv,
   if (!DisableDITypeMap)
     Context.enableDebugTypeODRUniquing();
 
-  // Set a diagnostic handler that doesn't exit on the first error so that opt
-  // can drain remaining diagnostics from a single pass run, mirroring llc.
-  Context.setDiagnosticHandler(std::make_unique<OptDiagnosticHandler>());
-
   Expected<LLVMRemarkFileHandle> RemarksFileOrErr =
       setupLLVMOptimizationRemarks(Context, RemarksFilename, RemarksPasses,
                                    RemarksFormat, RemarksWithHotness,

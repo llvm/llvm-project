@@ -1,11 +1,8 @@
-; Verify that opt's diagnostic handler does not exit on the first error
-; reported via LLVMContext::emitError. opt should continue to run remaining
-; passes (so the print-module pass at the end of the pipeline still emits
-; the module to stdout), then return a non-zero exit status.
-;
-; Without the OptDiagnosticHandler, the first emitError would invoke
-; exit(1) from LLVMContext::diagnose() and the print-module pass would
-; never run, so stdout would be empty.
+; Verify that LLVMContext's default diagnostic handler does not exit on
+; the first error reported via LLVMContext::emitError. opt should continue
+; to run remaining passes (so the print-module pass at the end of the
+; pipeline still emits the module to stdout), then return a non-zero exit
+; status because the handler's HasErrors flag was set.
 
 ; RUN: not opt -S -passes='module(sancov-module),print<module-debuginfo>' \
 ; RUN:     -sanitizer-coverage-level=1 -sanitizer-coverage-stack-depth %s \
