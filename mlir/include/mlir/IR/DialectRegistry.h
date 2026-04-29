@@ -17,8 +17,11 @@
 #include "mlir/Support/TypeID.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/LogicalResult.h"
 
 #include <map>
+#include <string>
 #include <tuple>
 
 namespace mlir {
@@ -136,6 +139,14 @@ bool hasPromisedInterface(Dialect &dialect) {
 /// "available" from the dialects loaded in the Context. The parser in
 /// particular will lazily load dialects in the Context as operations are
 /// encountered.
+///
+/// In addition to allocator-backed registrations, the registry can also carry
+/// a set of dialect *names* that some caller has asked to be preloaded into
+/// the context (see `addDialectToPreload(StringRef)`). The registry itself
+/// does not load those dialects — it merely records the request; the
+/// allocator is expected to live in the MLIRContext's own registry, and
+/// actually loading them is the caller's responsibility via
+/// `preloadSelectDialects(MLIRContext *)`.
 class DialectRegistry {
   using MapTy =
       std::map<std::string, std::pair<TypeID, DialectAllocatorFunction>,
@@ -172,6 +183,13 @@ public:
   void insert(TypeID typeID, StringRef name,
               const DialectAllocatorFunction &ctor);
 
+  /// Request that the dialect with the given name be preloaded into the
+  /// MLIRContext, without providing an allocator. Useful when a caller knows a
+  /// dialect is required but expects its allocator to be available in the
+  /// MLIRContext's own registry at load time (e.g. a pass learning dialect
+  /// names from string-valued options).
+  void addDialectToPreload(StringRef name);
+
   /// Add a new dynamic dialect constructor in the registry. The constructor
   /// provides as argument the created dynamic dialect, and is expected to
   /// register the dialect types, attributes, and ops, using the
@@ -190,18 +208,40 @@ public:
       destination.insert(nameAndRegistrationIt.second.first,
                          nameAndRegistrationIt.first,
                          nameAndRegistrationIt.second.second);
+    for (const std::string &name : dialectsToPreload)
+      destination.addDialectToPreload(StringRef(name));
     // Merge the extensions.
     for (const auto &extension : extensions)
       destination.extensions.try_emplace(extension.first,
                                          extension.second->clone());
   }
 
-  /// Return the names of dialects known to this registry.
-  auto getDialectNames() const {
-    return llvm::map_range(
-        registry,
-        [](const MapTy::value_type &item) -> StringRef { return item.first; });
+  /// Return the names of dialects registered in this registry with an
+  /// allocator function. Does not include preload-only entries added via
+  /// `addDialectToPreload(StringRef)` — use `getDialectsToPreload()` for those.
+  SmallVector<StringRef> getRegisteredDialectNames() const {
+    SmallVector<StringRef> names;
+    names.reserve(registry.size());
+    for (const auto &item : registry)
+      names.push_back(item.first);
+    return names;
   }
+
+  /// Return the names of dialects that should be preloaded into the context
+  /// but whose allocator is expected to be resolved from the context's own
+  /// registry (added via `addDialectToPreload(StringRef)`).
+  ArrayRef<std::string> getDialectsToPreload() const {
+    return dialectsToPreload;
+  }
+
+  /// Load into `ctx` every dialect previously added via
+  /// `addDialectToPreload(StringRef)`. The allocator is resolved from the
+  /// context's own registry. On failure, if `emitError` is provided, it is
+  /// invoked to produce a diagnostic naming the offending dialect; otherwise
+  /// the failure is silent.
+  LogicalResult preloadSelectDialects(
+      MLIRContext *ctx,
+      function_ref<InFlightDiagnostic()> emitError = {}) const;
 
   /// Apply any held extensions that require the given dialect. Users are not
   /// expected to call this directly.
@@ -261,6 +301,11 @@ public:
 
 private:
   MapTy registry;
+  /// Names of dialects that should be preloaded into the MLIRContext but for
+  /// which no allocator has been registered here. The allocator is expected
+  /// to be resolved from the MLIRContext's own registry when the dialect is
+  /// loaded (e.g. via MLIRContext::getOrLoadDialect).
+  SmallVector<std::string> dialectsToPreload;
   llvm::MapVector<TypeID, std::unique_ptr<DialectExtensionBase>> extensions;
 };
 

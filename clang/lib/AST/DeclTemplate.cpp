@@ -1218,7 +1218,7 @@ SourceRange ClassTemplatePartialSpecializationDecl::getSourceRange() const {
     return MT->getSourceRange();
   SourceRange Range = ClassTemplateSpecializationDecl::getSourceRange();
   if (const TemplateParameterList *TPL = getTemplateParameters();
-      TPL && !getNumTemplateParameterLists())
+      TPL && getTemplateParameterLists().empty())
     Range.setBegin(TPL->getTemplateLoc());
   return Range;
 }
@@ -1584,7 +1584,7 @@ SourceRange VarTemplatePartialSpecializationDecl::getSourceRange() const {
     return MT->getSourceRange();
   SourceRange Range = VarTemplateSpecializationDecl::getSourceRange();
   if (const TemplateParameterList *TPL = getTemplateParameters();
-      TPL && !getNumTemplateParameterLists())
+      TPL && getTemplateParameterLists().empty())
     Range.setBegin(TPL->getTemplateLoc());
   return Range;
 }

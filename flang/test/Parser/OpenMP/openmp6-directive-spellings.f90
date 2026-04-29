@@ -54,7 +54,7 @@ end
 !UNPARSE: !$OMP DECLARE_MAPPER(t::v) MAP(v%x)
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareMapperConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpDeclareMapperDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare mapper
 !PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpMapperSpecifier
 !PARSE-TREE: | | string = 't_omp_default_mapper'
@@ -82,7 +82,7 @@ end
 !UNPARSE: !$OMP DECLARE_REDUCTION(+:t: omp_out%x = omp_out%x + omp_in%x)
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareReductionConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpDeclareReductionDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare reduction
 !PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpReductionSpecifier
 !PARSE-TREE: | | OmpReductionIdentifier -> DefinedOperator -> IntrinsicOperator = Add
@@ -117,7 +117,7 @@ end
 !UNPARSE: !$OMP DECLARE_SIMD
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: OpenMPDeclarativeConstruct -> OpenMPDeclareSimdConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: OpenMPDeclarativeConstruct -> OmpDeclareSimdDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare simd
 !PARSE-TREE: | OmpClauseList ->
 !PARSE-TREE: | Flags = {}
@@ -130,7 +130,7 @@ end
 !UNPARSE: !$OMP DECLARE_TARGET
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: OpenMPDeclarativeConstruct -> OpenMPDeclareTargetConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: OpenMPDeclarativeConstruct -> OmpDeclareTargetDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare target
 !PARSE-TREE: | OmpClauseList ->
 !PARSE-TREE: | Flags = {}

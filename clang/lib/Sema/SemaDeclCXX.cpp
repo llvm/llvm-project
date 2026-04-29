@@ -3527,6 +3527,18 @@ Sema::ActOnCXXMemberDeclarator(Scope *S, AccessSpecifier AS, Declarator &D,
     }
   }
 
+  // HLSL prohibits user defined constructors and destructors.
+  if (getLangOpts().HLSL) {
+    switch (Name.getNameKind()) {
+    case DeclarationName::CXXConstructorName:
+    case DeclarationName::CXXDestructorName:
+      Diag(Loc, diag::err_hlsl_cstor_dstor);
+      return nullptr;
+    default:
+      break;
+    }
+  }
+
   // C++ 9.2p6: A member shall not be declared to have automatic storage
   // duration (auto, register) or with the extern storage-class-specifier.
   // C++ 7.1.1p8: The mutable specifier can be applied only to names of class
@@ -10968,8 +10980,8 @@ Sema::ActOnReenterTemplateScope(Decl *D,
   DeclContext *LookupDC = dyn_cast<DeclContext>(D);
 
   if (DeclaratorDecl *DD = dyn_cast<DeclaratorDecl>(D)) {
-    for (unsigned i = 0; i < DD->getNumTemplateParameterLists(); ++i)
-      ParameterLists.push_back(DD->getTemplateParameterList(i));
+    for (TemplateParameterList *TPL : DD->getTemplateParameterLists())
+      ParameterLists.push_back(TPL);
 
     if (FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
       if (FunctionTemplateDecl *FTD = FD->getDescribedFunctionTemplate())
@@ -10983,8 +10995,8 @@ Sema::ActOnReenterTemplateScope(Decl *D,
         ParameterLists.push_back(PSD->getTemplateParameters());
     }
   } else if (TagDecl *TD = dyn_cast<TagDecl>(D)) {
-    for (unsigned i = 0; i < TD->getNumTemplateParameterLists(); ++i)
-      ParameterLists.push_back(TD->getTemplateParameterList(i));
+    for (TemplateParameterList *TPL : TD->getTemplateParameterLists())
+      ParameterLists.push_back(TPL);
 
     if (CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(TD)) {
       if (ClassTemplateDecl *CTD = RD->getDescribedClassTemplate())

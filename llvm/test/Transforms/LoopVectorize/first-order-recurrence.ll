@@ -2720,11 +2720,11 @@ define i32 @sink_into_replication_region(i32 %y) {
 ; UNROLL-NO-VF:       pred.udiv.continue:
 ; UNROLL-NO-VF-NEXT:    [[TMP6:%.*]] = phi i32 [ poison, [[VECTOR_BODY]] ], [ [[TMP5]], [[PRED_UDIV_IF]] ]
 ; UNROLL-NO-VF-NEXT:    br i1 [[TMP3]], label [[PRED_UDIV_IF3:%.*]], label [[PRED_UDIV_CONTINUE4]]
-; UNROLL-NO-VF:       pred.udiv.if3:
+; UNROLL-NO-VF:       pred.udiv.if2:
 ; UNROLL-NO-VF-NEXT:    [[TMP7:%.*]] = add i32 [[OFFSET_IDX]], -1
 ; UNROLL-NO-VF-NEXT:    [[TMP8:%.*]] = udiv i32 219220132, [[TMP7]]
 ; UNROLL-NO-VF-NEXT:    br label [[PRED_UDIV_CONTINUE4]]
-; UNROLL-NO-VF:       pred.udiv.continue4:
+; UNROLL-NO-VF:       pred.udiv.continue3:
 ; UNROLL-NO-VF-NEXT:    [[TMP9]] = phi i32 [ poison, [[PRED_UDIV_CONTINUE]] ], [ [[TMP8]], [[PRED_UDIV_IF3]] ]
 ; UNROLL-NO-VF-NEXT:    [[TMP10]] = add i32 [[VEC_PHI]], [[VECTOR_RECUR]]
 ; UNROLL-NO-VF-NEXT:    [[TMP11]] = add i32 [[VEC_PHI1]], [[TMP6]]

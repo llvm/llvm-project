@@ -1942,6 +1942,10 @@ module std [system] {
       header "__ranges/split_view.h"
       export std.functional.bind_back
     }
+    module stride_view {
+      header "__ranges/stride_view.h"
+      export std.functional.bind_back
+    }
     module subrange {
       header "__ranges/subrange.h"
       export std.ranges.subrange_fwd
