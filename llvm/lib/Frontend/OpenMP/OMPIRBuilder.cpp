@@ -4731,12 +4731,22 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
                                              &LHSPtr, &RHSPtr, CurFunc));
 
       // Fix the CallBack code genereated to use the correct Values for the LHS
-      // and RHS
-      LHSPtr->replaceUsesWithIf(RedValue, [ReductionFunc](const Use &U) {
+      // and RHS. Cast to match types before replacing (necessary to handle SPIRV address
+      // spaces).
+      Value *CastRedValue = RedValue;
+      if (LHSPtr->getType() != RedValue->getType())
+        CastRedValue = Builder.CreatePointerBitCastOrAddrSpaceCast(
+            RedValue, LHSPtr->getType());
+      Value *CastRHS = RHS;
+      if (RHSPtr->getType() != RHS->getType())
+        CastRHS =
+            Builder.CreatePointerBitCastOrAddrSpaceCast(RHS, RHSPtr->getType());
+
+      LHSPtr->replaceUsesWithIf(CastRedValue, [ReductionFunc](const Use &U) {
         return cast<Instruction>(U.getUser())->getParent()->getParent() ==
                ReductionFunc;
       });
-      RHSPtr->replaceUsesWithIf(RHS, [ReductionFunc](const Use &U) {
+      RHSPtr->replaceUsesWithIf(CastRHS, [ReductionFunc](const Use &U) {
         return cast<Instruction>(U.getUser())->getParent()->getParent() ==
                ReductionFunc;
       });
