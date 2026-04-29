@@ -1850,7 +1850,7 @@ llvm.mlir.alias external @y5 : i32 {
 module {
   llvm.func @foo()
 
-  // expected-error@below {{only integer and string values are currently supported}}
+  // expected-error@below {{only integer, string, and string-array values are currently supported for unknown key '"yolo"'}}
   llvm.module_flags [#llvm.mlir.module_flag<error, "yolo", @foo>]
 }
 

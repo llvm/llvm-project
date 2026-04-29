@@ -381,6 +381,10 @@ public:
                                         const CXXNewExpr *e,
                                         QualType elementType) = 0;
 
+  /// Return true if the given member pointer can be zero-initialized
+  /// (in the C++ sense).
+  virtual bool isZeroInitializable(const MemberPointerType *mpt) = 0;
+
 protected:
   /// Returns the extra size required in order to store the array
   /// cookie for the given type.  Assumes that an array cookie is

@@ -118,6 +118,7 @@
 ; GCN-O0-NEXT:        SI Whole Quad Mode
 ; GCN-O0-NEXT:        AMDGPU Pre-RA Long Branch Reg
 ; GCN-O0-NEXT:        Fast Register Allocator
+; GCN-O0-NEXT:        Machine Cycle Info Analysis
 ; GCN-O0-NEXT:        SI lower SGPR spill instructions
 ; GCN-O0-NEXT:        Slot index numbering
 ; GCN-O0-NEXT:        Live Interval Analysis
@@ -225,13 +226,6 @@
 ; GCN-O1-NEXT:        Canonicalize Freeze Instructions in Loops
 ; GCN-O1-NEXT:        Induction Variable Users
 ; GCN-O1-NEXT:        Loop Strength Reduction
-; GCN-O1-NEXT:      Basic Alias Analysis (stateless AA impl)
-; GCN-O1-NEXT:      Function Alias Analysis Results
-; GCN-O1-NEXT:      Merge contiguous icmps into a memcmp
-; GCN-O1-NEXT:      Natural Loop Information
-; GCN-O1-NEXT:      Lazy Branch Probability Analysis
-; GCN-O1-NEXT:      Lazy Block Frequency Analysis
-; GCN-O1-NEXT:      Expand memcmp() to load/stores
 ; GCN-O1-NEXT:      Remove unreachable blocks from the CFG
 ; GCN-O1-NEXT:      Natural Loop Information
 ; GCN-O1-NEXT:      Post-Dominator Tree Construction
@@ -384,6 +378,7 @@
 ; GCN-O1-NEXT:        Greedy Register Allocator
 ; GCN-O1-NEXT:        Virtual Register Rewriter
 ; GCN-O1-NEXT:        Stack Slot Coloring
+; GCN-O1-NEXT:        Machine Cycle Info Analysis
 ; GCN-O1-NEXT:        SI lower SGPR spill instructions
 ; GCN-O1-NEXT:        Virtual Register Map
 ; GCN-O1-NEXT:        Live Register Matrix
@@ -535,13 +530,6 @@
 ; GCN-O1-OPTS-NEXT:        Canonicalize Freeze Instructions in Loops
 ; GCN-O1-OPTS-NEXT:        Induction Variable Users
 ; GCN-O1-OPTS-NEXT:        Loop Strength Reduction
-; GCN-O1-OPTS-NEXT:      Basic Alias Analysis (stateless AA impl)
-; GCN-O1-OPTS-NEXT:      Function Alias Analysis Results
-; GCN-O1-OPTS-NEXT:      Merge contiguous icmps into a memcmp
-; GCN-O1-OPTS-NEXT:      Natural Loop Information
-; GCN-O1-OPTS-NEXT:      Lazy Branch Probability Analysis
-; GCN-O1-OPTS-NEXT:      Lazy Block Frequency Analysis
-; GCN-O1-OPTS-NEXT:      Expand memcmp() to load/stores
 ; GCN-O1-OPTS-NEXT:      Remove unreachable blocks from the CFG
 ; GCN-O1-OPTS-NEXT:      Natural Loop Information
 ; GCN-O1-OPTS-NEXT:      Post-Dominator Tree Construction
@@ -708,6 +696,7 @@
 ; GCN-O1-OPTS-NEXT:        Greedy Register Allocator
 ; GCN-O1-OPTS-NEXT:        Virtual Register Rewriter
 ; GCN-O1-OPTS-NEXT:        Stack Slot Coloring
+; GCN-O1-OPTS-NEXT:        Machine Cycle Info Analysis
 ; GCN-O1-OPTS-NEXT:        SI lower SGPR spill instructions
 ; GCN-O1-OPTS-NEXT:        Virtual Register Map
 ; GCN-O1-OPTS-NEXT:        Live Register Matrix
@@ -862,13 +851,6 @@
 ; GCN-O2-NEXT:        Canonicalize Freeze Instructions in Loops
 ; GCN-O2-NEXT:        Induction Variable Users
 ; GCN-O2-NEXT:        Loop Strength Reduction
-; GCN-O2-NEXT:      Basic Alias Analysis (stateless AA impl)
-; GCN-O2-NEXT:      Function Alias Analysis Results
-; GCN-O2-NEXT:      Merge contiguous icmps into a memcmp
-; GCN-O2-NEXT:      Natural Loop Information
-; GCN-O2-NEXT:      Lazy Branch Probability Analysis
-; GCN-O2-NEXT:      Lazy Block Frequency Analysis
-; GCN-O2-NEXT:      Expand memcmp() to load/stores
 ; GCN-O2-NEXT:      Remove unreachable blocks from the CFG
 ; GCN-O2-NEXT:      Natural Loop Information
 ; GCN-O2-NEXT:      Post-Dominator Tree Construction
@@ -1037,6 +1019,7 @@
 ; GCN-O2-NEXT:        Greedy Register Allocator
 ; GCN-O2-NEXT:        Virtual Register Rewriter
 ; GCN-O2-NEXT:        Stack Slot Coloring
+; GCN-O2-NEXT:        Machine Cycle Info Analysis
 ; GCN-O2-NEXT:        SI lower SGPR spill instructions
 ; GCN-O2-NEXT:        Virtual Register Map
 ; GCN-O2-NEXT:        Live Register Matrix
@@ -1197,13 +1180,6 @@
 ; GCN-O3-NEXT:        Canonicalize Freeze Instructions in Loops
 ; GCN-O3-NEXT:        Induction Variable Users
 ; GCN-O3-NEXT:        Loop Strength Reduction
-; GCN-O3-NEXT:      Basic Alias Analysis (stateless AA impl)
-; GCN-O3-NEXT:      Function Alias Analysis Results
-; GCN-O3-NEXT:      Merge contiguous icmps into a memcmp
-; GCN-O3-NEXT:      Natural Loop Information
-; GCN-O3-NEXT:      Lazy Branch Probability Analysis
-; GCN-O3-NEXT:      Lazy Block Frequency Analysis
-; GCN-O3-NEXT:      Expand memcmp() to load/stores
 ; GCN-O3-NEXT:      Remove unreachable blocks from the CFG
 ; GCN-O3-NEXT:      Natural Loop Information
 ; GCN-O3-NEXT:      Post-Dominator Tree Construction
@@ -1379,6 +1355,7 @@
 ; GCN-O3-NEXT:        Greedy Register Allocator
 ; GCN-O3-NEXT:        Virtual Register Rewriter
 ; GCN-O3-NEXT:        Stack Slot Coloring
+; GCN-O3-NEXT:        Machine Cycle Info Analysis
 ; GCN-O3-NEXT:        SI lower SGPR spill instructions
 ; GCN-O3-NEXT:        Virtual Register Map
 ; GCN-O3-NEXT:        Live Register Matrix

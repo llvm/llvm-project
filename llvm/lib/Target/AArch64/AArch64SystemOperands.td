@@ -411,30 +411,24 @@ def : PRFM<"pld", 0b00, "l2",  0b01, "keep", 0b0>;
 def : PRFM<"pld", 0b00, "l2",  0b01, "strm", 0b1>;
 def : PRFM<"pld", 0b00, "l3",  0b10, "keep", 0b0>;
 def : PRFM<"pld", 0b00, "l3",  0b10, "strm", 0b1>;
-let Requires = [{ {AArch64::FeaturePRFM_SLC} }] in {
 def : PRFM<"pld", 0b00, "slc", 0b11, "keep", 0b0>;
 def : PRFM<"pld", 0b00, "slc", 0b11, "strm", 0b1>;
-}
 def : PRFM<"pli", 0b01, "l1",  0b00, "keep", 0b0>;
 def : PRFM<"pli", 0b01, "l1",  0b00, "strm", 0b1>;
 def : PRFM<"pli", 0b01, "l2",  0b01, "keep", 0b0>;
 def : PRFM<"pli", 0b01, "l2",  0b01, "strm", 0b1>;
 def : PRFM<"pli", 0b01, "l3",  0b10, "keep", 0b0>;
 def : PRFM<"pli", 0b01, "l3",  0b10, "strm", 0b1>;
-let Requires = [{ {AArch64::FeaturePRFM_SLC} }] in {
 def : PRFM<"pli", 0b01, "slc", 0b11, "keep", 0b0>;
 def : PRFM<"pli", 0b01, "slc", 0b11, "strm", 0b1>;
-}
 def : PRFM<"pst", 0b10, "l1",  0b00, "keep", 0b0>;
 def : PRFM<"pst", 0b10, "l1",  0b00, "strm", 0b1>;
 def : PRFM<"pst", 0b10, "l2",  0b01, "keep", 0b0>;
 def : PRFM<"pst", 0b10, "l2",  0b01, "strm", 0b1>;
 def : PRFM<"pst", 0b10, "l3",  0b10, "keep", 0b0>;
 def : PRFM<"pst", 0b10, "l3",  0b10, "strm", 0b1>;
-let Requires = [{ {AArch64::FeaturePRFM_SLC} }] in {
 def : PRFM<"pst", 0b10, "slc", 0b11, "keep", 0b0>;
 def : PRFM<"pst", 0b10, "slc", 0b11, "strm", 0b1>;
-}
 def : PRFM<"ir",  0b11, "",    0b00, "",     0b0>;
 
 //===----------------------------------------------------------------------===//
@@ -886,14 +880,17 @@ class TLBIEntry<string name, bits<3> op1, bits<4> crm, bits<3> op2, bit nxs,
   : TLBICommon<name, op1, crm, op2, nxs, reguse>;
 
 class TLBIPEntry<string name, bits<3> op1, bits<4> crm, bits<3> op2, bit nxs,
-                RegValue reguse>
-  : TLBICommon<name, op1, crm, op2, nxs, reguse>;
+                 RegValue reguse>
+  : TLBICommon<name, op1, crm, op2, nxs, reguse> {
+  // TLBIP insns matching regex below allow either FEAT_D128 or FEAT_TLBID.
+  bit AllowWithTLBID = !match(name, ".*E[12][IO]S.*");
+}
 
-multiclass TLBITableBase {
+multiclass TLBITableBase<list<string> fields> {
   def NAME # Table : GenericTable {
     let FilterClass = NAME # "Entry";
     let CppTypeName = NAME;
-    let Fields = ["Name", "Encoding", "RegUse", "RequiresStr"];
+    let Fields = fields;
     string TypeOf_RegUse = "SysAliasRegUse";
     let PrimaryKey = ["Encoding"];
     let PrimaryKeyName = "lookup" # NAME # "ByEncoding";
@@ -904,8 +901,10 @@ multiclass TLBITableBase {
   }
 }
 
-defm TLBI  : TLBITableBase;
-defm TLBIP : TLBITableBase;
+defm TLBI : TLBITableBase<
+    ["Name", "Encoding", "RegUse", "RequiresStr"]>;
+defm TLBIP : TLBITableBase<
+    ["Name", "Encoding", "RegUse", "RequiresStr", "AllowWithTLBID"]>;
 
 class TLBI<string name, bits<3> op1, bits<4> crm, bits<3> op2,
            RegValue reguse, bit hasTLBIP = 0> {
@@ -961,10 +960,9 @@ foreach I = TLBIBase in {
   }
 
   if I.HasTLBIP then {
-    let Requires = ["AArch64::FeatureD128"] in {
-      def : TLBIPEntry<I.Name, I.Op1, I.CRm, I.Op2, 0, I.RegUse>;
-      def : TLBIPEntry<!strconcat(I.Name, "nXS"), I.Op1, I.CRm, I.Op2, 1, I.RegUse>;
-    }
+    def : TLBIPEntry<I.Name, I.Op1, I.CRm, I.Op2, 0, I.RegUse>;
+    def : TLBIPEntry<!strconcat(I.Name, "nXS"), I.Op1, I.CRm, I.Op2, 1,
+                     I.RegUse>;
   }
 }
 
@@ -1029,10 +1027,9 @@ foreach I = TLBIRMI in {
   }
 
   if I.HasTLBIP then {
-    let Requires = ["AArch64::FeatureD128"] in {
-      def : TLBIPEntry<I.Name, I.Op1, I.CRm, I.Op2, 0, I.RegUse>;
-      def : TLBIPEntry<!strconcat(I.Name, "nXS"), I.Op1, I.CRm, I.Op2, 1, I.RegUse>;
-    }
+    def : TLBIPEntry<I.Name, I.Op1, I.CRm, I.Op2, 0, I.RegUse>;
+    def : TLBIPEntry<!strconcat(I.Name, "nXS"), I.Op1, I.CRm, I.Op2, 1,
+                     I.RegUse>;
   }
 }
 
@@ -2416,9 +2413,6 @@ def : RWSysReg<"MPAMCTL_EL1",   0b11, 0b000, 0b1010, 0b0101, 0b010>;
 def : RWSysReg<"MPAMCTL_EL12",  0b11, 0b101, 0b1010, 0b0101, 0b010>;
 def : RWSysReg<"MPAMCTL_EL2",   0b11, 0b100, 0b1010, 0b0101, 0b010>;
 def : RWSysReg<"MPAMCTL_EL3",   0b11, 0b110, 0b1010, 0b0101, 0b010>;
-def : RWSysReg<"MPAMVIDCR_EL2", 0b11, 0b100, 0b1010, 0b0111, 0b000>;
-def : RWSysReg<"MPAMVIDSR_EL2", 0b11, 0b100, 0b1010, 0b0111, 0b001>;
-def : RWSysReg<"MPAMVIDSR_EL3", 0b11, 0b110, 0b1010, 0b0111, 0b001>;
 
 // v9.7a General Improvements
 //                                        Op0   Op1    CRn     CRm     Op2
@@ -2529,39 +2523,6 @@ foreach n = 0-3 in {
 
 def : ROSysReg<"TLBIDIDR_EL1",      0b11,  0b000, 0b1010, 0b0100, 0b110>;
 
-// MPAM Lookaside Buffer Invalidate (MLBI) instructions
-class MLBI<string name, bits<3> op1, bits<4> crn, bits<4> crm, bits<3> op2, bit needsreg> {
-  string Name = name;
-  bits<14> Encoding;
-  let Encoding{13-11} = op1;
-  let Encoding{10-7} = crn;
-  let Encoding{6-3} = crm;
-  let Encoding{2-0} = op2;
-  bit NeedsReg = needsreg;
-  string RequiresStr = [{ {AArch64::FeatureMPAMv2} }];
-}
-
-def MLBITable : GenericTable {
-  let FilterClass = "MLBI";
-  let CppTypeName = "MLBI";
-  let Fields = ["Name", "Encoding", "NeedsReg", "RequiresStr"];
-
-  let PrimaryKey = ["Encoding"];
-  let PrimaryKeyName = "lookupMLBIByEncoding";
-}
-
-def lookupMLBIByName : SearchIndex {
-  let Table = MLBITable;
-  let Key = ["Name"];
-}
-
-//                     Op1    CRn     CRm     Op2    needsReg
-def : MLBI<"ALLE1",    0b100, 0b0111, 0b0000, 0b100, 0>;
-def : MLBI<"VMALLE1",  0b100, 0b0111, 0b0000, 0b101, 0>;
-def : MLBI<"VPIDE1",   0b100, 0b0111, 0b0000, 0b110, 1>;
-def : MLBI<"VPMGE1",   0b100, 0b0111, 0b0000, 0b111, 1>;
-
-
 // v9.7-A GICv5 (FEAT_GCIE)
 // CPU Interface Registers
 //                                        Op0   Op1    CRn     CRm     Op2
@@ -2639,6 +2600,7 @@ foreach n=0-1 in {
 def : RWSysReg<"ICH_PPI_ACTIVER"#n#"_EL2",   0b11, 0b100, 0b1100, 0b1010, {0b11,nb}>;
 def : RWSysReg<"ICH_PPI_DVIR"#n#"_EL2",      0b11, 0b100, 0b1100, 0b1010, {0b00,nb}>;
 def : RWSysReg<"ICH_PPI_ENABLER"#n#"_EL2",   0b11, 0b100, 0b1100, 0b1010, {0b01,nb}>;
+def : RWSysReg<"ICH_PPI_HVIR"#n#"_EL2",      0b11, 0b100, 0b1100, 0b0111, {0b00,nb}>;
 def : RWSysReg<"ICH_PPI_PENDR"#n#"_EL2",     0b11, 0b100, 0b1100, 0b1010, {0b10,nb}>;
 }
 

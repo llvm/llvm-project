@@ -108,16 +108,17 @@ public:
   BuiltinTypeDeclBuilder &addSampleLevelMethods(ResourceDimension Dim);
   BuiltinTypeDeclBuilder &addSampleCmpMethods(ResourceDimension Dim);
   BuiltinTypeDeclBuilder &addSampleCmpLevelZeroMethods(ResourceDimension Dim);
+  BuiltinTypeDeclBuilder &addCalculateLodMethods(ResourceDimension Dim);
   BuiltinTypeDeclBuilder &addGatherMethods(ResourceDimension Dim);
   BuiltinTypeDeclBuilder &addGatherCmpMethods(ResourceDimension Dim);
   BuiltinTypeDeclBuilder &addIncrementCounterMethod();
   BuiltinTypeDeclBuilder &addDecrementCounterMethod();
   BuiltinTypeDeclBuilder &addHandleAccessFunction(DeclarationName &Name,
-                                                  bool IsConst, bool IsRef,
-                                                  QualType IndexTy,
+                                                  bool IsConstReturn,
+                                                  bool IsRef, QualType IndexTy,
                                                   QualType ElemTy = QualType());
   BuiltinTypeDeclBuilder &
-  addLoadWithStatusFunction(DeclarationName &Name, bool IsConst,
+  addLoadWithStatusFunction(DeclarationName &Name,
                             QualType ReturnTy = QualType());
   BuiltinTypeDeclBuilder &addStoreFunction(DeclarationName &Name, bool IsConst,
                                            QualType ValueType);
@@ -125,6 +126,7 @@ public:
   BuiltinTypeDeclBuilder &addConsumeMethod();
 
   BuiltinTypeDeclBuilder &addGetDimensionsMethodForBuffer();
+  BuiltinTypeDeclBuilder &addGetDimensionsMethods(ResourceDimension Dim);
   BuiltinTypeDeclBuilder &addMipsMember(ResourceDimension Dim);
 
 private:

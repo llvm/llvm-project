@@ -371,6 +371,7 @@ CUresult cuEventRecord(CUevent, CUstream);
 CUresult cuEventQuery(CUevent);
 CUresult cuStreamWaitEvent(CUstream, CUevent, unsigned int);
 CUresult cuEventSynchronize(CUevent);
+CUresult cuEventElapsedTime(float *, CUevent, CUevent);
 CUresult cuEventDestroy(CUevent);
 
 CUresult cuMemUnmap(CUdeviceptr ptr, size_t size);

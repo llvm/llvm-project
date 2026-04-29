@@ -168,7 +168,7 @@ define void @extract_4xi64_idx(ptr %src, ptr %dst, i32 %idx) nounwind {
 ; LA32-LABEL: extract_4xi64_idx:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    xvld $xr0, $a0, 0
-; LA32-NEXT:    add.w $a0, $a2, $a2
+; LA32-NEXT:    slli.w $a0, $a2, 1
 ; LA32-NEXT:    addi.w $a2, $a0, 1
 ; LA32-NEXT:    xvreplgr2vr.w $xr1, $a2
 ; LA32-NEXT:    xvperm.w $xr1, $xr0, $xr1

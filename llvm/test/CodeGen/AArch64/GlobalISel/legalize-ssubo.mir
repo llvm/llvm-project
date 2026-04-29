@@ -10,7 +10,7 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
-    ; CHECK-NEXT: [[USUBO:%[0-9]+]]:_(s64), [[USUBO1:%[0-9]+]]:_(s32) = G_USUBO [[COPY]], [[COPY2]]
+    ; CHECK-NEXT: [[USUBO:%[0-9]+]]:_(s64), [[USUBO1:%[0-9]+]]:_(i32) = G_USUBO [[COPY]], [[COPY2]]
     ; CHECK-NEXT: [[SSUBE:%[0-9]+]]:_(s64), [[SSUBE1:%[0-9]+]]:_(s32) = G_SSUBE [[COPY1]], [[COPY3]], [[USUBO1]]
     ; CHECK-NEXT: %carry_out_ext:_(s64) = G_ANYEXT [[SSUBE1]](s32)
     ; CHECK-NEXT: $x0 = COPY [[USUBO]](s64)
@@ -39,8 +39,8 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
-    ; CHECK-NEXT: [[USUBO:%[0-9]+]]:_(s64), [[USUBO1:%[0-9]+]]:_(s32) = G_USUBO [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: [[USUBE:%[0-9]+]]:_(s64), [[USUBE1:%[0-9]+]]:_(s32) = G_USUBE [[COPY1]], [[COPY2]], [[USUBO1]]
+    ; CHECK-NEXT: [[USUBO:%[0-9]+]]:_(s64), [[USUBO1:%[0-9]+]]:_(i32) = G_USUBO [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: [[USUBE:%[0-9]+]]:_(s64), [[USUBE1:%[0-9]+]]:_(i32) = G_USUBE [[COPY1]], [[COPY2]], [[USUBO1]]
     ; CHECK-NEXT: [[SSUBE:%[0-9]+]]:_(s64), [[SSUBE1:%[0-9]+]]:_(s32) = G_SSUBE [[COPY2]], [[COPY3]], [[USUBE1]]
     ; CHECK-NEXT: %carry_out_ext:_(s64) = G_ANYEXT [[SSUBE1]](s32)
     ; CHECK-NEXT: $x0 = COPY [[USUBO]](s64)

@@ -782,7 +782,20 @@ void AMDGPUSwLowerLDS::lowerKernelLDSAccesses(Function *Func,
   // Create WIdBlock block which has instructions related to selection of
   // {0,0,0} indiex work item in the work group.
   auto *WIdBlock = BasicBlock::Create(Ctx, "WId", Func, MallocBlock);
-  IRB.SetInsertPoint(WIdBlock, WIdBlock->begin());
+
+  // Move constant-size allocas from the original entry block to the new entry
+  // block (WIdBlock) so they remain static allocas. Splice the leading cluster
+  // in bulk, then move any stragglers that are interleaved with other
+  // instructions.
+  auto SplitIt = PrevEntryBlock->getFirstNonPHIOrDbgOrAlloca();
+  WIdBlock->splice(WIdBlock->end(), PrevEntryBlock, PrevEntryBlock->begin(),
+                   SplitIt);
+  for (Instruction &I : make_early_inc_range(*PrevEntryBlock))
+    if (auto *AI = dyn_cast<AllocaInst>(&I))
+      if (isa<ConstantInt>(AI->getArraySize()))
+        AI->moveBefore(*WIdBlock, WIdBlock->end());
+
+  IRB.SetInsertPoint(WIdBlock, WIdBlock->end());
   DebugLoc FirstDL =
       getOrCreateDebugLoc(&*PrevEntryBlock->begin(), Func->getSubprogram());
   IRB.SetCurrentDebugLocation(FirstDL);

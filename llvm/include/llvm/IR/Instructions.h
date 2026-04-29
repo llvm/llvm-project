@@ -3699,8 +3699,17 @@ public:
   SwitchInstProfUpdateWrapper(SwitchInst &SI) : SI(SI) { init(); }
 
   ~SwitchInstProfUpdateWrapper() {
-    if (Changed && Weights.has_value() && Weights->size() >= 2)
-      setBranchWeights(SI, Weights.value(), /*IsExpected=*/false);
+    if (Changed && Weights.has_value()) {
+      if (Weights->size() >= 2) {
+        setBranchWeights(SI, Weights.value(), /*IsExpected=*/false);
+        return;
+      }
+      // In some cases while simplifying switch instructions, we end up with
+      // degenerate switch instructions (e.g., only contains the default case).
+      // We drop profile metadata in such cases rather than updating given it
+      // does not convey anything.
+      SI.setMetadata(LLVMContext::MD_prof, nullptr);
+    }
   }
 
   /// Delegate the call to the underlying SwitchInst::removeCase() and remove

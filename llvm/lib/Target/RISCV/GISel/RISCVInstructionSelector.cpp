@@ -54,9 +54,6 @@ public:
   static const char *getName() { return DEBUG_TYPE; }
 
 private:
-  const TargetRegisterClass *
-  getRegClassForTypeOnBank(LLT Ty, const RegisterBank &RB) const;
-
   static constexpr unsigned MaxRecursionDepth = 6;
 
   bool hasAllNBitUsers(const MachineInstr &MI, unsigned Bits,
@@ -100,7 +97,7 @@ private:
   bool selectIntrinsicWithSideEffects(MachineInstr &I) const;
   bool selectIntrinsic(MachineInstr &I) const;
   bool selectExtractSubvector(MachineInstr &MI) const;
-
+  bool selectInsertSubVector(MachineInstr &I) const;
   ComplexRendererFns selectShiftMask(MachineOperand &Root,
                                      unsigned ShiftWidth) const;
   ComplexRendererFns selectShiftMaskXLen(MachineOperand &Root) const {
@@ -1102,6 +1099,64 @@ bool RISCVInstructionSelector::selectExtractSubvector(MachineInstr &MI) const {
   return true;
 }
 
+bool RISCVInstructionSelector::selectInsertSubVector(MachineInstr &MI) const {
+  assert(MI.getOpcode() == TargetOpcode::G_INSERT_SUBVECTOR);
+
+  Register DstReg = MI.getOperand(0).getReg();
+  Register VecReg = MI.getOperand(1).getReg();
+  Register SubVecReg = MI.getOperand(2).getReg();
+
+  LLT VecTy = MRI->getType(VecReg);
+  LLT SubVecTy = MRI->getType(SubVecReg);
+
+  MVT VecMVT = getMVTForLLT(VecTy);
+  MVT SubVecMVT = getMVTForLLT(SubVecTy);
+
+  unsigned Idx = static_cast<unsigned>(MI.getOperand(3).getImm());
+
+  unsigned SubRegIdx;
+  std::tie(SubRegIdx, Idx) =
+      RISCVTargetLowering::decomposeSubvectorInsertExtractToSubRegs(
+          VecMVT, SubVecMVT, Idx, &TRI);
+
+  // If the Idx hasn't been completely eliminated then this is a subvector
+  // insert which doesn't naturally align to a vector register. These must
+  // be handled using instructions to manipulate the vector registers.
+  if (Idx != 0)
+    return false;
+
+  // Constrain dst
+  unsigned DstRegClassID = RISCVTargetLowering::getRegClassIDForVecVT(VecMVT);
+  const TargetRegisterClass *DstRC = TRI.getRegClass(DstRegClassID);
+  if (!RBI.constrainGenericRegister(DstReg, *DstRC, *MRI))
+    return false;
+
+  // If we haven't set a SubRegIdx, then we must be going between
+  // equally-sized LMUL groups (e.g. VR -> VR). This can be done as a copy.
+  if (SubRegIdx == RISCV::NoSubRegister) {
+    assert(RISCVTargetLowering::getRegClassIDForVecVT(SubVecMVT) ==
+               DstRegClassID &&
+           "Unexpected subvector insert");
+    BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII.get(TargetOpcode::COPY),
+            DstReg)
+        .addReg(SubVecReg);
+    MI.eraseFromParent();
+    return true;
+  }
+
+  // Use INSERT_SUBREG to insert the subvector into the vector at the
+  // appropriate subregister index.
+  MachineInstr *Ins = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+                              TII.get(TargetOpcode::INSERT_SUBREG), DstReg)
+                          .addReg(VecReg)
+                          .addReg(SubVecReg)
+                          .addImm(SubRegIdx);
+
+  MI.eraseFromParent();
+  constrainSelectedInstRegOperands(*Ins, TII, TRI, RBI);
+  return true;
+}
+
 bool RISCVInstructionSelector::select(MachineInstr &MI) {
   preISelLower(MI);
   const unsigned Opc = MI.getOpcode();
@@ -1123,7 +1178,7 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
         }
 
         const RegisterBank &RB = *cast<const RegisterBank *>(RegClassOrBank);
-        DefRC = getRegClassForTypeOnBank(DefTy, RB);
+        DefRC = TRI.getRegClassForTypeOnBank(DefTy, RB, STI.is64Bit());
         if (!DefRC) {
           LLVM_DEBUG(dbgs() << "PHI operand has unexpected size/bank\n");
           return false;
@@ -1389,6 +1444,8 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     return selectIntrinsic(MI);
   case TargetOpcode::G_EXTRACT_SUBVECTOR:
     return selectExtractSubvector(MI);
+  case TargetOpcode::G_INSERT_SUBVECTOR:
+    return selectInsertSubVector(MI);
   default:
     return false;
   }
@@ -1541,39 +1598,6 @@ void RISCVInstructionSelector::renderAddiPairImmLarge(MachineInstrBuilder &MIB,
   MIB.addImm(Imm);
 }
 
-const TargetRegisterClass *RISCVInstructionSelector::getRegClassForTypeOnBank(
-    LLT Ty, const RegisterBank &RB) const {
-  if (RB.getID() == RISCV::GPRBRegBankID) {
-    if (Ty.getSizeInBits() <= 32 || (STI.is64Bit() && Ty.getSizeInBits() == 64))
-      return &RISCV::GPRRegClass;
-  }
-
-  if (RB.getID() == RISCV::FPRBRegBankID) {
-    if (Ty.getSizeInBits() == 16)
-      return &RISCV::FPR16RegClass;
-    if (Ty.getSizeInBits() == 32)
-      return &RISCV::FPR32RegClass;
-    if (Ty.getSizeInBits() == 64)
-      return &RISCV::FPR64RegClass;
-  }
-
-  if (RB.getID() == RISCV::VRBRegBankID) {
-    if (Ty.getSizeInBits().getKnownMinValue() <= 64)
-      return &RISCV::VRRegClass;
-
-    if (Ty.getSizeInBits().getKnownMinValue() == 128)
-      return &RISCV::VRM2RegClass;
-
-    if (Ty.getSizeInBits().getKnownMinValue() == 256)
-      return &RISCV::VRM4RegClass;
-
-    if (Ty.getSizeInBits().getKnownMinValue() == 512)
-      return &RISCV::VRM8RegClass;
-  }
-
-  return nullptr;
-}
-
 bool RISCVInstructionSelector::isRegInGprb(Register Reg) const {
   return RBI.getRegBank(Reg, *MRI, TRI)->getID() == RISCV::GPRBRegBankID;
 }
@@ -1583,13 +1607,15 @@ bool RISCVInstructionSelector::isRegInFprb(Register Reg) const {
 }
 
 bool RISCVInstructionSelector::selectCopy(MachineInstr &MI) const {
+  MachineOperand Dst = MI.getOperand(0);
   Register DstReg = MI.getOperand(0).getReg();
 
   if (DstReg.isPhysical())
     return true;
 
-  const TargetRegisterClass *DstRC = getRegClassForTypeOnBank(
-      MRI->getType(DstReg), *RBI.getRegBank(DstReg, *MRI, TRI));
+  const TargetRegisterClass *DstRC =
+      TRI.getConstrainedRegClassForOperand(Dst, *MRI);
+
   assert(DstRC &&
          "Register class not available for LLT, register bank combination");
 
@@ -1610,8 +1636,8 @@ bool RISCVInstructionSelector::selectImplicitDef(MachineInstr &MI) const {
   assert(MI.getOpcode() == TargetOpcode::G_IMPLICIT_DEF);
 
   const Register DstReg = MI.getOperand(0).getReg();
-  const TargetRegisterClass *DstRC = getRegClassForTypeOnBank(
-      MRI->getType(DstReg), *RBI.getRegBank(DstReg, *MRI, TRI));
+  const TargetRegisterClass *DstRC = TRI.getRegClassForTypeOnBank(
+      MRI->getType(DstReg), *RBI.getRegBank(DstReg, *MRI, TRI), STI.is64Bit());
 
   assert(DstRC &&
          "Register class not available for LLT, register bank combination");
@@ -1922,29 +1948,38 @@ bool RISCVInstructionSelector::selectFPCompare(MachineInstr &MI) const {
     constrainSelectedInstRegOperands(*Or, TII, TRI, RBI);
   } else if (Pred == CmpInst::FCMP_ORD || Pred == CmpInst::FCMP_UNO) {
     // fcmp ord LHS, RHS => (AND (FEQ LHS, LHS), (FEQ RHS, RHS))
-    // FIXME: If LHS and RHS are the same we can use a single FEQ.
+    // If LHS and RHS are the same, a single FEQ suffices.
     NeedInvert = Pred == CmpInst::FCMP_UNO;
-    Register Cmp1Reg = MRI->createVirtualRegister(&RISCV::GPRRegClass);
-    MachineInstr *Cmp1 =
-        BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
-                TII.get(getFCmpOpcode(CmpInst::FCMP_OEQ, Size)), Cmp1Reg)
-            .addReg(LHS)
-            .addReg(LHS);
-    constrainSelectedInstRegOperands(*Cmp1, TII, TRI, RBI);
-    Register Cmp2Reg = MRI->createVirtualRegister(&RISCV::GPRRegClass);
-    MachineInstr *Cmp2 =
-        BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
-                TII.get(getFCmpOpcode(CmpInst::FCMP_OEQ, Size)), Cmp2Reg)
-            .addReg(RHS)
-            .addReg(RHS);
-    constrainSelectedInstRegOperands(*Cmp2, TII, TRI, RBI);
     if (NeedInvert)
       TmpReg = MRI->createVirtualRegister(&RISCV::GPRRegClass);
-    MachineInstr *And = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
-                                TII.get(RISCV::AND), TmpReg)
-                            .addReg(Cmp1Reg)
-                            .addReg(Cmp2Reg);
-    constrainSelectedInstRegOperands(*And, TII, TRI, RBI);
+    if (LHS == RHS) {
+      MachineInstr *Cmp =
+          BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+                  TII.get(getFCmpOpcode(CmpInst::FCMP_OEQ, Size)), TmpReg)
+              .addReg(LHS)
+              .addReg(LHS);
+      constrainSelectedInstRegOperands(*Cmp, TII, TRI, RBI);
+    } else {
+      Register Cmp1Reg = MRI->createVirtualRegister(&RISCV::GPRRegClass);
+      MachineInstr *Cmp1 =
+          BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+                  TII.get(getFCmpOpcode(CmpInst::FCMP_OEQ, Size)), Cmp1Reg)
+              .addReg(LHS)
+              .addReg(LHS);
+      constrainSelectedInstRegOperands(*Cmp1, TII, TRI, RBI);
+      Register Cmp2Reg = MRI->createVirtualRegister(&RISCV::GPRRegClass);
+      MachineInstr *Cmp2 =
+          BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+                  TII.get(getFCmpOpcode(CmpInst::FCMP_OEQ, Size)), Cmp2Reg)
+              .addReg(RHS)
+              .addReg(RHS);
+      constrainSelectedInstRegOperands(*Cmp2, TII, TRI, RBI);
+      MachineInstr *And = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+                                  TII.get(RISCV::AND), TmpReg)
+                              .addReg(Cmp1Reg)
+                              .addReg(Cmp2Reg);
+      constrainSelectedInstRegOperands(*And, TII, TRI, RBI);
+    }
   } else
     llvm_unreachable("Unhandled predicate");
 

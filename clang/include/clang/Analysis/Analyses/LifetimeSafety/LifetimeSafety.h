@@ -28,6 +28,7 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/MovedLoans.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
+#include "llvm/ADT/PointerUnion.h"
 #include <cstddef>
 #include <memory>
 
@@ -60,9 +61,9 @@ public:
   LifetimeSafetySemaHelper() = default;
   virtual ~LifetimeSafetySemaHelper() = default;
 
-  virtual void reportUseAfterFree(const Expr *IssueExpr, const Expr *UseExpr,
-                                  const Expr *MovedExpr,
-                                  SourceLocation FreeLoc) {}
+  virtual void reportUseAfterScope(const Expr *IssueExpr, const Expr *UseExpr,
+                                   const Expr *MovedExpr,
+                                   SourceLocation FreeLoc) {}
 
   virtual void reportUseAfterReturn(const Expr *IssueExpr,
                                     const Expr *ReturnExpr,
@@ -88,10 +89,13 @@ public:
                                           const Expr *UseExpr,
                                           const Expr *InvalidationExpr) {}
 
-  // Suggests lifetime bound annotations for function paramters.
+  using EscapingTarget =
+      llvm::PointerUnion<const Expr *, const FieldDecl *, const VarDecl *>;
+
+  // Suggests lifetime bound annotations for function parameters.
   virtual void suggestLifetimeboundToParmVar(SuggestionScope Scope,
                                              const ParmVarDecl *ParmToAnnotate,
-                                             const Expr *EscapeExpr) {}
+                                             EscapingTarget Target) {}
 
   // Reports misuse of [[clang::noescape]] when parameter escapes through return
   virtual void reportNoescapeViolation(const ParmVarDecl *ParmWithNoescape,

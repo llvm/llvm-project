@@ -55,18 +55,6 @@ mlir::xegpu::getDistributedVectorType(xegpu::TensorDescType tdescTy) {
   // e.g. for 1D layout, sgSize = laneLayout[0]
   int64_t sgSize = llvm::product_of(laneLayout);
 
-  // Case 1: regular loads/stores
-  auto scatterAttr = tdescTy.getEncodingOfType<ScatterTensorDescAttr>();
-  if (scatterAttr) {
-    auto chunkSize = scatterAttr.getChunkSize().getInt();
-    // Verify if the first dimension of the tensor descriptor shape is
-    // distributable.
-    assert(tdescShape[0] == laneLayout[0] &&
-           "tensor descriptor shape is not distributable");
-    return VectorType::get({chunkSize}, elementType);
-  }
-
-  // Case 2: block loads/stores
   // Check if the tensor descriptor shape is distributable.
   int64_t tensorSize = 1;
   for (auto [tdescDim, laneDim, laneDataDim] :
@@ -110,29 +98,27 @@ xegpu::getDistVecTypeBasedOnLaneLayout(xegpu::DistributeLayoutAttr layout,
     return failure();
   assert((isa<xegpu::LayoutAttr>(layout) || isa<xegpu::SliceAttr>(layout)) &&
          "Expecting a valid layout.");
-  SmallVector<int64_t> effectiveLaneLayout =
-      layout.getEffectiveLaneLayoutAsInt();
-  assert(static_cast<size_t>(originalType.getRank()) >=
-             effectiveLaneLayout.size() &&
-         "Rank of the original vector type should be greater or equal to the "
-         "size of the lane layout to distribute the vector type.");
-  // TODO: replace the implementation with
-  //   auto distributedShape = layout.computeDistributedShape(
-  //       SmallVector<int64_t>(originalType.getShape()));
-  SmallVector<int64_t> distributedShape(originalType.getShape());
-  // Only distribute the last `laneLayout.size()` dimensions. The remaining
-  // dimensions are not distributed.
-  unsigned distributionStart =
-      originalType.getRank() - effectiveLaneLayout.size();
-  for (auto [i, dim] : llvm::enumerate(originalType.getShape())) {
-    if (i < distributionStart)
-      continue;
-    // Check if the dimension can be distributed evenly.
-    if (dim % effectiveLaneLayout[i - distributionStart] != 0)
-      return failure();
-    distributedShape[i] = dim / effectiveLaneLayout[i - distributionStart];
-  }
-  return VectorType::get(distributedShape, originalType.getElementType());
+
+  int64_t vectorRank = originalType.getRank();
+  int64_t layoutRank = layout.getRank();
+  assert(vectorRank >= layoutRank && "Vector rank must be >= layout rank.");
+
+  // When the vector has more dimensions than the layout, only the trailing
+  // dimensions are distributed. Leading dimensions are preserved as-is.
+  int64_t offset = vectorRank - layoutRank;
+  ArrayRef<int64_t> fullShape = originalType.getShape();
+  SmallVector<int64_t> trailingShape(fullShape.begin() + offset,
+                                     fullShape.end());
+  auto distributedShapeOrFailure =
+      layout.computeDistributedShape(trailingShape);
+  if (failed(distributedShapeOrFailure))
+    return failure();
+
+  SmallVector<int64_t> resultShape(fullShape.begin(),
+                                   fullShape.begin() + offset);
+  resultShape.append(distributedShapeOrFailure->begin(),
+                     distributedShapeOrFailure->end());
+  return VectorType::get(resultShape, originalType.getElementType());
 }
 
 std::string xegpu::getTemporaryLayoutName(const OpOperand &operand) {
@@ -205,13 +191,27 @@ xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
     if (idx == 0)
       return layout;
 
-    // For store operations (StoreScatterOp, StoreNdOp, StoreMatrixOp),
+    // For StoreNdOp and StoreMatrixOp,
     // the layout is valid for the first two operands: value and memref/tdesc.
-    // For other operations, the layout applies to the first operand only.
-    if (isa<xegpu::StoreScatterOp, xegpu::StoreNdOp, xegpu::StoreMatrixOp>(
-            op) &&
-        (idx < 2))
+    if (isa<xegpu::StoreNdOp, xegpu::StoreMatrixOp>(op) && (idx < 2))
       return layout;
+
+    if (isa<xegpu::StoreScatterOp>(op)) {
+      xegpu::StoreScatterOp store(op);
+      int chunkSize = store.getChunkSize().value_or(1);
+      if (layout && idx >= 2 && chunkSize > 1)
+        return layout.dropDims(llvm::to_vector(
+            llvm::seq<int64_t>(layout.getRank() - 1, layout.getRank())));
+      return layout;
+    }
+    if (isa<xegpu::LoadGatherOp>(op)) {
+      xegpu::LoadGatherOp load(op);
+      int chunkSize = load.getChunkSize().value_or(1);
+      if (layout && idx >= 1 && chunkSize > 1)
+        return layout.dropDims(llvm::to_vector(
+            llvm::seq<int64_t>(layout.getRank() - 1, layout.getRank())));
+      return layout;
+    }
   }
 
   std::string layoutName = xegpu::getTemporaryLayoutName(opr);
@@ -692,6 +692,8 @@ Value xegpu::lowerToVectorReductions(TypedValue<VectorType> src,
   Value reductionResult = arith::ConstantOp::create(
       rewriter, loc, acc.getType(),
       DenseElementsAttr::get(acc.getType(), zeroAttr));
+  // TODO: Remove these get/setTemporaryLayout calls after we deprecate the old
+  // XeGPUSubgroupDistribute pass.
   auto srcLayout = xegpu::getTemporaryLayout(dyn_cast<OpResult>(src));
   auto accLayout = xegpu::getTemporaryLayout(dyn_cast<OpResult>(acc));
   // Reduction result should have the same layout as the accumulator.
@@ -881,7 +883,7 @@ template int
 xegpu::getLargestDivisor<unsigned>(unsigned dim, ArrayRef<unsigned> candidates,
                                    ArrayRef<unsigned> candidateMultiples);
 
-bool xegpu::requirePacked(const xegpu::LayoutAttr layout) {
+bool xegpu::requirePacked(const xegpu::DistributeLayoutAttr layout) {
   if (!layout)
     return false;
   auto laneData = layout.getEffectiveLaneDataAsInt();
@@ -890,7 +892,7 @@ bool xegpu::requirePacked(const xegpu::LayoutAttr layout) {
   return laneData[0] != 1;
 }
 
-bool xegpu::requireTranspose(const xegpu::LayoutAttr layout,
+bool xegpu::requireTranspose(const xegpu::DistributeLayoutAttr layout,
                              const xegpu::uArch::uArch *uArch) {
   // Return false for unsupported targets.
   // TODO: Add more support or move to target info.

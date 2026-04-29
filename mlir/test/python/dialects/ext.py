@@ -23,12 +23,12 @@ def testMyInt():
 
     class ConstantOp(MyInt.Operation, name="constant"):
         value: IntegerAttr
-        cst: Result[i32] = result(infer_type=True)
+        cst: Result[i32] = infer_result()
 
     class AddOp(Operation, dialect=MyInt, name="add"):
         lhs: Operand[i32]
         rhs: Operand[i32]
-        res: Result[i32] = result(infer_type=True)
+        res: Result[i32] = infer_result()
 
     # CHECK: irdl.dialect @myint {
     # CHECK:   irdl.operation @constant {
@@ -575,9 +575,9 @@ def testExtDialectWithType():
         arr: Result[Array]
 
     class MakeArray3Op(TestType.Operation, name="make_array3"):
-        arr: Result[Array[IntegerType[32], IntegerAttr[IntegerType[32], 3]]] = result(
-            infer_type=True
-        )
+        arr: Result[
+            Array[IntegerType[32], IntegerAttr[IntegerType[32], 3]]
+        ] = infer_result()
 
     with Context(), Location.unknown():
         TestType.load()
@@ -738,7 +738,7 @@ def testExtDialectWithInvalidOp():
         class InferTypeBeforePositionalOp(
             TestInvalid.Operation, name="infer_before_pos"
         ):
-            res: Result[IntegerType[32]] = result(infer_type=True)
+            res: Result[IntegerType[32]] = infer_result()
             a: Operand[IntegerType[32]]
 
     except ValueError as e:
@@ -770,7 +770,7 @@ def testExtDialectWithInvalidOp():
     try:
 
         class CannotInferTypeOp(TestInvalid.Operation, name="cannot_infer_type"):
-            a: Result[IntegerType] = result(infer_type=True)
+            a: Result[IntegerType] = infer_result()
 
     except TypeError as e:
         # CHECK: unsupported type for inferring
@@ -852,7 +852,7 @@ def testExtDialectFieldSpecifiers():
 
     class ResultSpecifierOp(TestFieldSpecifiers.Operation, name="result_specifier"):
         a: Result[IntegerType[32]] = result()
-        b: Result[IntegerType[16]] = result(infer_type=True)
+        b: Result[IntegerType[16]] = infer_result()
         c: Result[IntegerType] = result(
             default_factory=lambda: IntegerType.get_signless(8)
         )

@@ -107,9 +107,15 @@ MlirLogicalResult mlirInferTypeOpInterfaceInferReturnTypes(
       unwrapRegions(nRegions, regions);
 
   SmallVector<Type> inferredTypes;
+  // The C API passes an opaque void*; we trust the caller to pass the correct
+  // properties type for this operation.
+  // TODO: Create a C API that's more type-safe.
+  PropertyRef propertyRef =
+      properties ? PropertyRef(info->getOpPropertiesTypeID(), properties)
+                 : PropertyRef();
   if (failed(info->getInterface<InferTypeOpInterface>()->inferReturnTypes(
           unwrap(context), maybeLocation, unwrappedOperands, attributeDict,
-          properties, unwrappedRegions, inferredTypes)))
+          propertyRef, unwrappedRegions, inferredTypes)))
     return mlirLogicalResultFailure();
 
   SmallVector<MlirType> wrappedInferredTypes;
@@ -141,11 +147,16 @@ MlirLogicalResult mlirInferShapedTypeOpInterfaceInferReturnTypes(
       unwrapRegions(nRegions, regions);
 
   SmallVector<ShapedTypeComponents> inferredTypeComponents;
+  // The C API passes an opaque void*; we trust the caller to pass the correct
+  // properties type for this operation.
+  PropertyRef propertyRef =
+      properties ? PropertyRef(info->getOpPropertiesTypeID(), properties)
+                 : PropertyRef();
   if (failed(info->getInterface<InferShapedTypeOpInterface>()
                  ->inferReturnTypeComponents(
                      unwrap(context), maybeLocation,
                      mlir::ValueRange(llvm::ArrayRef(unwrappedOperands)),
-                     attributeDict, properties, unwrappedRegions,
+                     attributeDict, propertyRef, unwrappedRegions,
                      inferredTypeComponents)))
     return mlirLogicalResultFailure();
 

@@ -2,36 +2,31 @@
 ; RUN: llc -mtriple=aarch64-none-elf -mattr=+aes < %s | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc -mtriple=aarch64-none-elf -mattr=+aes -global-isel -global-isel-abort=2 2>&1 < %s | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:      warning: Instruction selection used fallback path for sqdmulh_1s
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmls_2s
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmls_4s
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmls_2d
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmls_commuted_neg_2s
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmls_commuted_neg_4s
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmls_commuted_neg_2d
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmls_indexed_2s
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmls_indexed_4s
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmls_indexed_2d
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmls_indexed_2s_strict
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmls_indexed_4s_strict
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmls_indexed_2d_strict
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmla_indexed_scalar_2s_strict
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmla_indexed_scalar_4s_strict
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmla_indexed_scalar_2d_strict
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for sqdmulh_lane_1s
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for test_vqdmulls_lane_s32
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for sqdmlal_lane_1d
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for sqdmlsl_lane_1d
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for scalar_fmls_from_extract_v4f32
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for scalar_fmls_from_extract_v2f32
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for scalar_fmls_from_extract_v2f64
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmls_with_fneg_before_extract_v2f32
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmls_with_fneg_before_extract_v2f32_1
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmls_with_fneg_before_extract_v4f32
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmls_with_fneg_before_extract_v4f32_1
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmls_with_fneg_before_extract_v2f64
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for sqdmlal_d
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for sqdmlsl_d
+; CHECK-GI:       warning: Instruction selection used fallback path for sqdmulh_1s
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_2s
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_4s
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_2d
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_commuted_neg_2s
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_commuted_neg_4s
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_commuted_neg_2d
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_indexed_2s
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_indexed_4s
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_indexed_2d
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_indexed_2s_strict
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_indexed_4s_strict
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_indexed_2d_strict
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmla_indexed_scalar_2s_strict
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmla_indexed_scalar_4s_strict
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmla_indexed_scalar_2d_strict
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqdmulh_lane_1s
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for scalar_fmls_from_extract_v4f32
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for scalar_fmls_from_extract_v2f32
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for scalar_fmls_from_extract_v2f64
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_with_fneg_before_extract_v2f32
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_with_fneg_before_extract_v2f32_1
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_with_fneg_before_extract_v4f32
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_with_fneg_before_extract_v4f32_1
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_with_fneg_before_extract_v2f64
 
 define <8 x i16> @smull8h(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: smull8h:
@@ -1794,45 +1789,72 @@ define i32 @sqsub_lane1_sqdmull4s(i32 %A, <4 x i16> %B, <4 x i16> %C) nounwind {
 }
 
 define i64 @test_vqdmulls_lane_s32(i32 noundef %a, <2 x i32> noundef %b) {
-; CHECK-LABEL: test_vqdmulls_lane_s32:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov s1, w0
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    sqdmull d0, s1, v0.s[1]
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: test_vqdmulls_lane_s32:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    fmov s1, w0
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    sqdmull d0, s1, v0.s[1]
+; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_vqdmulls_lane_s32:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    fmov s1, w0
+; CHECK-GI-NEXT:    mov s0, v0.s[1]
+; CHECK-GI-NEXT:    sqdmull d0, s1, s0
+; CHECK-GI-NEXT:    fmov x0, d0
+; CHECK-GI-NEXT:    ret
 entry:
   %vget_lane = extractelement <2 x i32> %b, i64 1
   %vqdmulls_s32.i = tail call i64 @llvm.aarch64.neon.sqdmulls.scalar(i32 %a, i32 %vget_lane)
   ret i64 %vqdmulls_s32.i
 }
 
-define i64 @sqdmlal_lane_1d(i64 %A, i32 %B, <2 x i32> %C) nounwind {
-; CHECK-LABEL: sqdmlal_lane_1d:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov s1, w1
-; CHECK-NEXT:    fmov d2, x0
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    sqdmlal d2, s1, v0.s[1]
-; CHECK-NEXT:    fmov x0, d2
-; CHECK-NEXT:    ret
+define i64 @sqdmlal_lane_1d_v2i32(i64 %A, i32 %B, <2 x i32> %C) nounwind {
+; CHECK-SD-LABEL: sqdmlal_lane_1d_v2i32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fmov s1, w1
+; CHECK-SD-NEXT:    fmov d2, x0
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    sqdmlal d2, s1, v0.s[1]
+; CHECK-SD-NEXT:    fmov x0, d2
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sqdmlal_lane_1d_v2i32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    fmov s1, w1
+; CHECK-GI-NEXT:    fmov d2, x0
+; CHECK-GI-NEXT:    mov s0, v0.s[1]
+; CHECK-GI-NEXT:    sqdmlal d2, s1, s0
+; CHECK-GI-NEXT:    fmov x0, d2
+; CHECK-GI-NEXT:    ret
   %rhs = extractelement <2 x i32> %C, i32 1
   %prod = call i64 @llvm.aarch64.neon.sqdmulls.scalar(i32 %B, i32 %rhs)
   %res = call i64 @llvm.aarch64.neon.sqadd.i64(i64 %A, i64 %prod)
   ret i64 %res
 }
-declare i64 @llvm.aarch64.neon.sqdmulls.scalar(i32, i32)
-declare i64 @llvm.aarch64.neon.sqadd.i64(i64, i64)
 
-define i64 @sqdmlsl_lane_1d(i64 %A, i32 %B, <2 x i32> %C) nounwind {
-; CHECK-LABEL: sqdmlsl_lane_1d:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov s1, w1
-; CHECK-NEXT:    fmov d2, x0
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    sqdmlsl d2, s1, v0.s[1]
-; CHECK-NEXT:    fmov x0, d2
-; CHECK-NEXT:    ret
+define i64 @sqdmlsl_lane_1d_v2i32(i64 %A, i32 %B, <2 x i32> %C) nounwind {
+; CHECK-SD-LABEL: sqdmlsl_lane_1d_v2i32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fmov s1, w1
+; CHECK-SD-NEXT:    fmov d2, x0
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    sqdmlsl d2, s1, v0.s[1]
+; CHECK-SD-NEXT:    fmov x0, d2
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sqdmlsl_lane_1d_v2i32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    fmov s1, w1
+; CHECK-GI-NEXT:    fmov d2, x0
+; CHECK-GI-NEXT:    mov s0, v0.s[1]
+; CHECK-GI-NEXT:    sqdmlsl d2, s1, s0
+; CHECK-GI-NEXT:    fmov x0, d2
+; CHECK-GI-NEXT:    ret
   %rhs = extractelement <2 x i32> %C, i32 1
   %prod = call i64 @llvm.aarch64.neon.sqdmulls.scalar(i32 %B, i32 %rhs)
   %res = call i64 @llvm.aarch64.neon.sqsub.i64(i64 %A, i64 %prod)
@@ -1840,6 +1862,33 @@ define i64 @sqdmlsl_lane_1d(i64 %A, i32 %B, <2 x i32> %C) nounwind {
 }
 declare i64 @llvm.aarch64.neon.sqsub.i64(i64, i64)
 
+define i64 @sqdmlal_lane_1d_v4i32(i64 %A, i32 %B, <4 x i32> %C) nounwind {
+; CHECK-LABEL: sqdmlal_lane_1d_v4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov s1, w1
+; CHECK-NEXT:    fmov d2, x0
+; CHECK-NEXT:    sqdmlal d2, s1, v0.s[1]
+; CHECK-NEXT:    fmov x0, d2
+; CHECK-NEXT:    ret
+  %rhs = extractelement <4 x i32> %C, i32 1
+  %prod = call i64 @llvm.aarch64.neon.sqdmulls.scalar(i32 %B, i32 %rhs)
+  %res = call i64 @llvm.aarch64.neon.sqadd.i64(i64 %A, i64 %prod)
+  ret i64 %res
+}
+
+define i64 @sqdmlsl_lane_1d_v4i32(i64 %A, i32 %B, <4 x i32> %C) nounwind {
+; CHECK-LABEL: sqdmlsl_lane_1d_v4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov s1, w1
+; CHECK-NEXT:    fmov d2, x0
+; CHECK-NEXT:    sqdmlsl d2, s1, v0.s[1]
+; CHECK-NEXT:    fmov x0, d2
+; CHECK-NEXT:    ret
+  %rhs = extractelement <4 x i32> %C, i32 1
+  %prod = call i64 @llvm.aarch64.neon.sqdmulls.scalar(i32 %B, i32 %rhs)
+  %res = call i64 @llvm.aarch64.neon.sqsub.i64(i64 %A, i64 %prod)
+  ret i64 %res
+}
 
 define <4 x i32> @umlal_lane_4s(<4 x i16> %A, <4 x i16> %B, <4 x i32> %C) nounwind {
 ; CHECK-LABEL: umlal_lane_4s:
@@ -3216,14 +3265,23 @@ define i32 @sqdmlal_s(i16 %A, i16 %B, i32 %C) nounwind {
 }
 
 define i64 @sqdmlal_d(i32 %A, i32 %B, i64 %C) nounwind {
-; CHECK-LABEL: sqdmlal_d:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov s0, w1
-; CHECK-NEXT:    fmov s1, w0
-; CHECK-NEXT:    fmov d2, x2
-; CHECK-NEXT:    sqdmlal d2, s1, s0
-; CHECK-NEXT:    fmov x0, d2
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sqdmlal_d:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fmov s0, w1
+; CHECK-SD-NEXT:    fmov s1, w0
+; CHECK-SD-NEXT:    fmov d2, x2
+; CHECK-SD-NEXT:    sqdmlal d2, s1, s0
+; CHECK-SD-NEXT:    fmov x0, d2
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sqdmlal_d:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fmov s0, w0
+; CHECK-GI-NEXT:    fmov s1, w1
+; CHECK-GI-NEXT:    fmov d2, x2
+; CHECK-GI-NEXT:    sqdmlal d2, s0, s1
+; CHECK-GI-NEXT:    fmov x0, d2
+; CHECK-GI-NEXT:    ret
   %tmp4 = call i64 @llvm.aarch64.neon.sqdmulls.scalar(i32 %A, i32 %B)
   %tmp5 = call i64 @llvm.aarch64.neon.sqadd.i64(i64 %C, i64 %tmp4)
   ret i64 %tmp5
@@ -3256,14 +3314,23 @@ define i32 @sqdmlsl_s(i16 %A, i16 %B, i32 %C) nounwind {
 }
 
 define i64 @sqdmlsl_d(i32 %A, i32 %B, i64 %C) nounwind {
-; CHECK-LABEL: sqdmlsl_d:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov s0, w1
-; CHECK-NEXT:    fmov s1, w0
-; CHECK-NEXT:    fmov d2, x2
-; CHECK-NEXT:    sqdmlsl d2, s1, s0
-; CHECK-NEXT:    fmov x0, d2
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sqdmlsl_d:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fmov s0, w1
+; CHECK-SD-NEXT:    fmov s1, w0
+; CHECK-SD-NEXT:    fmov d2, x2
+; CHECK-SD-NEXT:    sqdmlsl d2, s1, s0
+; CHECK-SD-NEXT:    fmov x0, d2
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sqdmlsl_d:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fmov s0, w0
+; CHECK-GI-NEXT:    fmov s1, w1
+; CHECK-GI-NEXT:    fmov d2, x2
+; CHECK-GI-NEXT:    sqdmlsl d2, s0, s1
+; CHECK-GI-NEXT:    fmov x0, d2
+; CHECK-GI-NEXT:    ret
   %tmp4 = call i64 @llvm.aarch64.neon.sqdmulls.scalar(i32 %A, i32 %B)
   %tmp5 = call i64 @llvm.aarch64.neon.sqsub.i64(i64 %C, i64 %tmp4)
   ret i64 %tmp5
@@ -3559,3 +3626,311 @@ define <2 x i64> @sqdmlsl2_lane_2d_lib(<2 x i64> %dst, <4 x i32> %v1, <4 x i32> 
   %sum = call <2 x i64> @llvm.ssub.sat.v2i64(<2 x i64> %dst, <2 x i64> %tmp2)
   ret <2 x i64> %sum
 }
+
+define <16 x i16> @or_sext_v16i8_i16(<16 x i8> %s0, <16 x i8> %s1, <16 x i16> %b) {
+; CHECK-SD-LABEL: or_sext_v16i8_i16:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    smull v4.8h, v0.8b, v1.8b
+; CHECK-SD-NEXT:    smull2 v0.8h, v0.16b, v1.16b
+; CHECK-SD-NEXT:    orr v1.16b, v0.16b, v3.16b
+; CHECK-SD-NEXT:    orr v0.16b, v4.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: or_sext_v16i8_i16:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    smull v4.8h, v0.8b, v1.8b
+; CHECK-GI-NEXT:    smull2 v1.8h, v0.16b, v1.16b
+; CHECK-GI-NEXT:    orr v0.16b, v4.16b, v2.16b
+; CHECK-GI-NEXT:    orr v1.16b, v1.16b, v3.16b
+; CHECK-GI-NEXT:    ret
+entry:
+  %s0s = sext <16 x i8> %s0 to <16 x i16>
+  %s1s = sext <16 x i8> %s1 to <16 x i16>
+  %m = mul <16 x i16> %s0s, %s1s
+  %a = or disjoint <16 x i16> %m, %b
+  ret <16 x i16> %a
+}
+
+define <16 x i16> @or_zext_v16i8_i16(<16 x i8> %s0, <16 x i8> %s1, <16 x i16> %b) {
+; CHECK-SD-LABEL: or_zext_v16i8_i16:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    umull v4.8h, v0.8b, v1.8b
+; CHECK-SD-NEXT:    umull2 v0.8h, v0.16b, v1.16b
+; CHECK-SD-NEXT:    orr v1.16b, v0.16b, v3.16b
+; CHECK-SD-NEXT:    orr v0.16b, v4.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: or_zext_v16i8_i16:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    umull v4.8h, v0.8b, v1.8b
+; CHECK-GI-NEXT:    umull2 v1.8h, v0.16b, v1.16b
+; CHECK-GI-NEXT:    orr v0.16b, v4.16b, v2.16b
+; CHECK-GI-NEXT:    orr v1.16b, v1.16b, v3.16b
+; CHECK-GI-NEXT:    ret
+entry:
+  %s0s = zext <16 x i8> %s0 to <16 x i16>
+  %s1s = zext <16 x i8> %s1 to <16 x i16>
+  %m = mul <16 x i16> %s0s, %s1s
+  %a = or disjoint <16 x i16> %m, %b
+  ret <16 x i16> %a
+}
+
+define <16 x i16> @or_sext_idx_v16i8_i16(<16 x i8> %s0, <16 x i8> %s1, <16 x i16> %b) {
+; CHECK-SD-LABEL: or_sext_idx_v16i8_i16:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    dup v0.16b, v0.b[3]
+; CHECK-SD-NEXT:    smull v4.8h, v0.8b, v1.8b
+; CHECK-SD-NEXT:    smull2 v0.8h, v0.16b, v1.16b
+; CHECK-SD-NEXT:    orr v1.16b, v0.16b, v3.16b
+; CHECK-SD-NEXT:    orr v0.16b, v4.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: or_sext_idx_v16i8_i16:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    dup v0.8b, v0.b[3]
+; CHECK-GI-NEXT:    mov d4, v1.d[1]
+; CHECK-GI-NEXT:    smull v1.8h, v0.8b, v1.8b
+; CHECK-GI-NEXT:    smull v4.8h, v0.8b, v4.8b
+; CHECK-GI-NEXT:    orr v0.16b, v1.16b, v2.16b
+; CHECK-GI-NEXT:    orr v1.16b, v4.16b, v3.16b
+; CHECK-GI-NEXT:    ret
+entry:
+  %s0a = shufflevector <16 x i8> %s0, <16 x i8> poison, <16 x i32> splat (i32 3)
+  %s0s = sext <16 x i8> %s0a to <16 x i16>
+  %s1s = sext <16 x i8> %s1 to <16 x i16>
+  %m = mul <16 x i16> %s0s, %s1s
+  %a = or disjoint <16 x i16> %m, %b
+  ret <16 x i16> %a
+}
+
+define <16 x i16> @or_zext_idx_v16i8_i16(<16 x i8> %s0, <16 x i8> %s1, <16 x i16> %b) {
+; CHECK-SD-LABEL: or_zext_idx_v16i8_i16:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    dup v0.16b, v0.b[3]
+; CHECK-SD-NEXT:    umull v4.8h, v0.8b, v1.8b
+; CHECK-SD-NEXT:    umull2 v0.8h, v0.16b, v1.16b
+; CHECK-SD-NEXT:    orr v1.16b, v0.16b, v3.16b
+; CHECK-SD-NEXT:    orr v0.16b, v4.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: or_zext_idx_v16i8_i16:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    dup v0.8b, v0.b[3]
+; CHECK-GI-NEXT:    mov d4, v1.d[1]
+; CHECK-GI-NEXT:    umull v1.8h, v0.8b, v1.8b
+; CHECK-GI-NEXT:    umull v4.8h, v0.8b, v4.8b
+; CHECK-GI-NEXT:    orr v0.16b, v1.16b, v2.16b
+; CHECK-GI-NEXT:    orr v1.16b, v4.16b, v3.16b
+; CHECK-GI-NEXT:    ret
+entry:
+  %s0a = shufflevector <16 x i8> %s0, <16 x i8> poison, <16 x i32> splat (i32 3)
+  %s0s = zext <16 x i8> %s0a to <16 x i16>
+  %s1s = zext <16 x i8> %s1 to <16 x i16>
+  %m = mul <16 x i16> %s0s, %s1s
+  %a = or disjoint <16 x i16> %m, %b
+  ret <16 x i16> %a
+}
+
+
+define <8 x i32> @or_sext_v8i8_i32(<8 x i8> %s0, <8 x i8> %s1, <8 x i32> %b) {
+; CHECK-SD-LABEL: or_sext_v8i8_i32:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    smull v0.8h, v0.8b, v1.8b
+; CHECK-SD-NEXT:    sshll v4.4s, v0.4h, #0
+; CHECK-SD-NEXT:    sshll2 v0.4s, v0.8h, #0
+; CHECK-SD-NEXT:    orr v1.16b, v0.16b, v3.16b
+; CHECK-SD-NEXT:    orr v0.16b, v4.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: or_sext_v8i8_i32:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    smull v0.8h, v0.8b, v1.8b
+; CHECK-GI-NEXT:    sshll v1.4s, v0.4h, #0
+; CHECK-GI-NEXT:    sshll2 v4.4s, v0.8h, #0
+; CHECK-GI-NEXT:    orr v0.16b, v1.16b, v2.16b
+; CHECK-GI-NEXT:    orr v1.16b, v4.16b, v3.16b
+; CHECK-GI-NEXT:    ret
+entry:
+  %s0s = sext <8 x i8> %s0 to <8 x i32>
+  %s1s = sext <8 x i8> %s1 to <8 x i32>
+  %m = mul <8 x i32> %s0s, %s1s
+  %a = or disjoint <8 x i32> %m, %b
+  ret <8 x i32> %a
+}
+
+define <8 x i32> @or_zext_v8i16_i32(<8 x i16> %s0, <8 x i16> %s1, <8 x i32> %b) {
+; CHECK-SD-LABEL: or_zext_v8i16_i32:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    umull v4.4s, v0.4h, v1.4h
+; CHECK-SD-NEXT:    umull2 v0.4s, v0.8h, v1.8h
+; CHECK-SD-NEXT:    orr v1.16b, v0.16b, v3.16b
+; CHECK-SD-NEXT:    orr v0.16b, v4.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: or_zext_v8i16_i32:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    umull v4.4s, v0.4h, v1.4h
+; CHECK-GI-NEXT:    umull2 v1.4s, v0.8h, v1.8h
+; CHECK-GI-NEXT:    orr v0.16b, v4.16b, v2.16b
+; CHECK-GI-NEXT:    orr v1.16b, v1.16b, v3.16b
+; CHECK-GI-NEXT:    ret
+entry:
+  %s0s = zext <8 x i16> %s0 to <8 x i32>
+  %s1s = zext <8 x i16> %s1 to <8 x i32>
+  %m = mul <8 x i32> %s0s, %s1s
+  %a = or disjoint <8 x i32> %m, %b
+  ret <8 x i32> %a
+}
+
+define <8 x i32> @or_sext_idx_v8i16_i32(<8 x i16> %s0, <8 x i16> %s1, <8 x i32> %b) {
+; CHECK-SD-LABEL: or_sext_idx_v8i16_i32:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    smull v4.4s, v1.4h, v0.h[3]
+; CHECK-SD-NEXT:    smull2 v0.4s, v1.8h, v0.h[3]
+; CHECK-SD-NEXT:    orr v1.16b, v0.16b, v3.16b
+; CHECK-SD-NEXT:    orr v0.16b, v4.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: or_sext_idx_v8i16_i32:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov d4, v1.d[1]
+; CHECK-GI-NEXT:    smull v1.4s, v1.4h, v0.h[3]
+; CHECK-GI-NEXT:    smull v4.4s, v4.4h, v0.h[3]
+; CHECK-GI-NEXT:    orr v0.16b, v1.16b, v2.16b
+; CHECK-GI-NEXT:    orr v1.16b, v4.16b, v3.16b
+; CHECK-GI-NEXT:    ret
+entry:
+  %s0a = shufflevector <8 x i16> %s0, <8 x i16> poison, <8 x i32> splat (i32 3)
+  %s0s = sext <8 x i16> %s0a to <8 x i32>
+  %s1s = sext <8 x i16> %s1 to <8 x i32>
+  %m = mul <8 x i32> %s0s, %s1s
+  %a = or disjoint <8 x i32> %m, %b
+  ret <8 x i32> %a
+}
+
+define <8 x i32> @or_zext_idx_v8i16_i32(<8 x i16> %s0, <8 x i16> %s1, <8 x i32> %b) {
+; CHECK-SD-LABEL: or_zext_idx_v8i16_i32:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    umull v4.4s, v1.4h, v0.h[3]
+; CHECK-SD-NEXT:    umull2 v0.4s, v1.8h, v0.h[3]
+; CHECK-SD-NEXT:    orr v1.16b, v0.16b, v3.16b
+; CHECK-SD-NEXT:    orr v0.16b, v4.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: or_zext_idx_v8i16_i32:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov d4, v1.d[1]
+; CHECK-GI-NEXT:    umull v1.4s, v1.4h, v0.h[3]
+; CHECK-GI-NEXT:    umull v4.4s, v4.4h, v0.h[3]
+; CHECK-GI-NEXT:    orr v0.16b, v1.16b, v2.16b
+; CHECK-GI-NEXT:    orr v1.16b, v4.16b, v3.16b
+; CHECK-GI-NEXT:    ret
+entry:
+  %s0a = shufflevector <8 x i16> %s0, <8 x i16> poison, <8 x i32> splat (i32 3)
+  %s0s = zext <8 x i16> %s0a to <8 x i32>
+  %s1s = zext <8 x i16> %s1 to <8 x i32>
+  %m = mul <8 x i32> %s0s, %s1s
+  %a = or disjoint <8 x i32> %m, %b
+  ret <8 x i32> %a
+}
+
+define <4 x i64> @or_sext_v4i32_i64(<4 x i32> %s0, <4 x i32> %s1, <4 x i64> %b) {
+; CHECK-SD-LABEL: or_sext_v4i32_i64:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    smull v4.2d, v0.2s, v1.2s
+; CHECK-SD-NEXT:    smull2 v0.2d, v0.4s, v1.4s
+; CHECK-SD-NEXT:    orr v1.16b, v0.16b, v3.16b
+; CHECK-SD-NEXT:    orr v0.16b, v4.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: or_sext_v4i32_i64:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    smull v4.2d, v0.2s, v1.2s
+; CHECK-GI-NEXT:    smull2 v1.2d, v0.4s, v1.4s
+; CHECK-GI-NEXT:    orr v0.16b, v4.16b, v2.16b
+; CHECK-GI-NEXT:    orr v1.16b, v1.16b, v3.16b
+; CHECK-GI-NEXT:    ret
+entry:
+  %s0s = sext <4 x i32> %s0 to <4 x i64>
+  %s1s = sext <4 x i32> %s1 to <4 x i64>
+  %m = mul <4 x i64> %s0s, %s1s
+  %a = or disjoint <4 x i64> %m, %b
+  ret <4 x i64> %a
+}
+
+define <4 x i64> @or_zext_v4i32_i64(<4 x i32> %s0, <4 x i32> %s1, <4 x i64> %b) {
+; CHECK-SD-LABEL: or_zext_v4i32_i64:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    umull v4.2d, v0.2s, v1.2s
+; CHECK-SD-NEXT:    umull2 v0.2d, v0.4s, v1.4s
+; CHECK-SD-NEXT:    orr v1.16b, v0.16b, v3.16b
+; CHECK-SD-NEXT:    orr v0.16b, v4.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: or_zext_v4i32_i64:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    umull v4.2d, v0.2s, v1.2s
+; CHECK-GI-NEXT:    umull2 v1.2d, v0.4s, v1.4s
+; CHECK-GI-NEXT:    orr v0.16b, v4.16b, v2.16b
+; CHECK-GI-NEXT:    orr v1.16b, v1.16b, v3.16b
+; CHECK-GI-NEXT:    ret
+entry:
+  %s0s = zext <4 x i32> %s0 to <4 x i64>
+  %s1s = zext <4 x i32> %s1 to <4 x i64>
+  %m = mul <4 x i64> %s0s, %s1s
+  %a = or disjoint <4 x i64> %m, %b
+  ret <4 x i64> %a
+}
+
+define <4 x i64> @or_sext_idx_v4i32_i64(<4 x i32> %s0, <4 x i32> %s1, <4 x i64> %b) {
+; CHECK-SD-LABEL: or_sext_idx_v4i32_i64:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    smull v4.2d, v1.2s, v0.s[3]
+; CHECK-SD-NEXT:    smull2 v0.2d, v1.4s, v0.s[3]
+; CHECK-SD-NEXT:    orr v1.16b, v0.16b, v3.16b
+; CHECK-SD-NEXT:    orr v0.16b, v4.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: or_sext_idx_v4i32_i64:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov d4, v1.d[1]
+; CHECK-GI-NEXT:    smull v1.2d, v1.2s, v0.s[3]
+; CHECK-GI-NEXT:    smull v4.2d, v4.2s, v0.s[3]
+; CHECK-GI-NEXT:    orr v0.16b, v1.16b, v2.16b
+; CHECK-GI-NEXT:    orr v1.16b, v4.16b, v3.16b
+; CHECK-GI-NEXT:    ret
+entry:
+  %s0a = shufflevector <4 x i32> %s0, <4 x i32> poison, <4 x i32> splat (i32 3)
+  %s0s = sext <4 x i32> %s0a to <4 x i64>
+  %s1s = sext <4 x i32> %s1 to <4 x i64>
+  %m = mul <4 x i64> %s0s, %s1s
+  %a = or disjoint <4 x i64> %m, %b
+  ret <4 x i64> %a
+}
+
+define <4 x i64> @or_zext_idx_v4i32_i64(<4 x i32> %s0, <4 x i32> %s1, <4 x i64> %b) {
+; CHECK-SD-LABEL: or_zext_idx_v4i32_i64:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    umull v4.2d, v1.2s, v0.s[3]
+; CHECK-SD-NEXT:    umull2 v0.2d, v1.4s, v0.s[3]
+; CHECK-SD-NEXT:    orr v1.16b, v0.16b, v3.16b
+; CHECK-SD-NEXT:    orr v0.16b, v4.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: or_zext_idx_v4i32_i64:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov d4, v1.d[1]
+; CHECK-GI-NEXT:    umull v1.2d, v1.2s, v0.s[3]
+; CHECK-GI-NEXT:    umull v4.2d, v4.2s, v0.s[3]
+; CHECK-GI-NEXT:    orr v0.16b, v1.16b, v2.16b
+; CHECK-GI-NEXT:    orr v1.16b, v4.16b, v3.16b
+; CHECK-GI-NEXT:    ret
+entry:
+  %s0a = shufflevector <4 x i32> %s0, <4 x i32> poison, <4 x i32> splat (i32 3)
+  %s0s = zext <4 x i32> %s0a to <4 x i64>
+  %s1s = zext <4 x i32> %s1 to <4 x i64>
+  %m = mul <4 x i64> %s0s, %s1s
+  %a = or disjoint <4 x i64> %m, %b
+  ret <4 x i64> %a
+}
+

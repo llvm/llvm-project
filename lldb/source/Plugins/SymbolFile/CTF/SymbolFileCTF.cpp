@@ -372,7 +372,7 @@ llvm::Expected<lldb::TypeSP>
 SymbolFileCTF::CreateModifier(const CTFModifier &ctf_modifier) {
   Type *ref_type = ResolveTypeUID(ctf_modifier.type);
   if (!ref_type)
-    return llvm::createStringErrorV("Could not find modified type: {0}",
+    return llvm::createStringErrorV("could not find modified type: {0}",
                                     ctf_modifier.type);
 
   CompilerType compiler_type;
@@ -406,7 +406,7 @@ SymbolFileCTF::CreateTypedef(const CTFTypedef &ctf_typedef) {
   Type *underlying_type = ResolveTypeUID(ctf_typedef.type);
   if (!underlying_type)
     return llvm::createStringErrorV(
-        "Could not find typedef underlying type: {0}", ctf_typedef.type);
+        "could not find typedef underlying type: {0}", ctf_typedef.type);
 
   CompilerType target_ast_type = underlying_type->GetFullCompilerType();
   clang::DeclContext *decl_ctx = m_ast->GetTranslationUnitDecl();
@@ -423,7 +423,7 @@ llvm::Expected<lldb::TypeSP>
 SymbolFileCTF::CreateArray(const CTFArray &ctf_array) {
   Type *element_type = ResolveTypeUID(ctf_array.type);
   if (!element_type)
-    return llvm::createStringErrorV("Could not find array element type: {0}",
+    return llvm::createStringErrorV("could not find array element type: {0}",
                                     ctf_array.type);
 
   auto element_size_or_err = element_type->GetByteSize(nullptr);
@@ -472,7 +472,7 @@ SymbolFileCTF::CreateFunction(const CTFFunction &ctf_function) {
 
   Type *ret_type = ResolveTypeUID(ctf_function.return_type);
   if (!ret_type)
-    return llvm::createStringErrorV("Could not find function return type: {0}",
+    return llvm::createStringErrorV("could not find function return type: {0}",
                                     ctf_function.return_type);
 
   CompilerType func_type = m_ast->CreateFunctionType(
@@ -850,7 +850,7 @@ static DWARFExpression CreateDWARFExpression(ModuleSP module_sp,
   ByteOrder byte_order = architecture.GetByteOrder();
   uint32_t address_size = architecture.GetAddressByteSize();
 
-  StreamBuffer<32> stream(Stream::eBinary, address_size, byte_order);
+  StreamBuffer<32> stream(Stream::eBinary, byte_order);
   stream.PutHex8(llvm::dwarf::DW_OP_addr);
   stream.PutMaxHex64(symbol.GetFileAddress(), address_size, byte_order);
 
@@ -902,9 +902,10 @@ size_t SymbolFileCTF::ParseObjects(CompileUnit &comp_unit) {
 
       lldb::user_id_t variable_type_uid = m_variables.size();
       m_variables.emplace_back(std::make_shared<Variable>(
-          variable_type_uid, symbol->GetName().AsCString(),
-          symbol->GetName().AsCString(), type_sp, eValueTypeVariableGlobal,
-          m_comp_unit_sp.get(), ranges, &decl, location, symbol->IsExternal(),
+          variable_type_uid, symbol->GetName().AsCString(nullptr),
+          symbol->GetName().AsCString(nullptr), type_sp,
+          eValueTypeVariableGlobal, m_comp_unit_sp.get(), ranges, &decl,
+          location, symbol->IsExternal(),
           /*artificial=*/false,
           /*location_is_constant_data*/ false));
     }

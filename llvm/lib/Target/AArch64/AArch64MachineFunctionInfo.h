@@ -37,11 +37,6 @@ struct AArch64FunctionInfo;
 class AArch64Subtarget;
 class MachineInstr;
 
-struct TPIDR2Object {
-  int FrameIndex = std::numeric_limits<int>::max();
-  unsigned Uses = 0;
-};
-
 /// Condition of signing the return address in a function.
 ///
 /// Corresponds to possible values of "sign-return-address" function attribute.
@@ -245,19 +240,6 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   // support).
   Register EarlyAllocSMESaveBuffer = AArch64::NoRegister;
 
-  // Holds the spill slot for ZT0.
-  int ZT0SpillSlotIndex = std::numeric_limits<int>::max();
-
-  // Note: The following properties are only used for the old SME ABI lowering:
-  /// The frame-index for the TPIDR2 object used for lazy saves.
-  TPIDR2Object TPIDR2;
-  // Holds a pointer to a buffer that is large enough to represent
-  // all SME ZA state and any additional state required by the
-  // __arm_sme_save/restore support routines.
-  Register SMESaveBufferAddr = MCRegister::NoRegister;
-  // true if SMESaveBufferAddr is used.
-  bool SMESaveBufferUsed = false;
-
 public:
   AArch64FunctionInfo(const Function &F, const AArch64Subtarget *STI);
 
@@ -273,22 +255,6 @@ public:
   Register getEarlyAllocSMESaveBuffer() const {
     return EarlyAllocSMESaveBuffer;
   }
-
-  void setZT0SpillSlotIndex(int FI) { ZT0SpillSlotIndex = FI; }
-  int getZT0SpillSlotIndex() const {
-    assert(hasZT0SpillSlotIndex() && "ZT0 spill slot index not set!");
-    return ZT0SpillSlotIndex;
-  }
-  bool hasZT0SpillSlotIndex() const {
-    return ZT0SpillSlotIndex != std::numeric_limits<int>::max();
-  }
-
-  // Old SME ABI lowering state getters/setters:
-  Register getSMESaveBufferAddr() const { return SMESaveBufferAddr; };
-  void setSMESaveBufferAddr(Register Reg) { SMESaveBufferAddr = Reg; };
-  unsigned isSMESaveBufferUsed() const { return SMESaveBufferUsed; };
-  void setSMESaveBufferUsed(bool Used = true) { SMESaveBufferUsed = Used; };
-  TPIDR2Object &getTPIDR2Obj() { return TPIDR2; }
 
   void setPredicateRegForFillSpill(unsigned Reg) {
     PredicateRegForFillSpill = Reg;

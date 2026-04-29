@@ -59,6 +59,18 @@ gpu.func @load_nd_transpose() {
   gpu.return
 }
 
+// CHECK-LABEL: gpu.func @load_nd_array_length
+// CHECK: %[[C0:.*]] = arith.constant 0 : index
+// CHECK: %[[LOAD:.*]] = xegpu.load_nd %{{.*}}[%[[C0]], %[[C0]]] : !xegpu.tensor_desc<32x16xf16, #xegpu.block_tdesc_attr<array_length = 2 : i64>> -> vector<64xf16>
+// CHECK: %[[CAST:.*]] = vector.shape_cast %[[LOAD]] : vector<64xf16> to vector<2x32x1xf16>
+gpu.func @load_nd_array_length() {
+  %c0 = arith.constant 0 : index
+  %0 = "some_op"() : () -> !xegpu.tensor_desc<32x16xf16, #xegpu.block_tdesc_attr<array_length = 2>, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
+  %1 = xegpu.load_nd %0[%c0, %c0] {layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+    : !xegpu.tensor_desc<32x16xf16, #xegpu.block_tdesc_attr<array_length = 2>, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>> -> vector<2x32x16xf16>
+  gpu.return
+}
+
 // CHECK-LABEL: gpu.func @store_nd
 // CHECK: %[[C0:.*]] = arith.constant 0 : index
 // CHECK: %[[LOAD:.*]] = xegpu.load_nd %{{.*}}[%[[C0]], %[[C0]]] : !xegpu.tensor_desc<16x16xf16> -> vector<16xf16>
@@ -124,6 +136,11 @@ gpu.func @elementwise() {
   %3 = arith.addf %0, %2
     {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
     : vector<16x16xf32>
+  %cl3 = xegpu.convert_layout %3
+    <{
+      input_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
+      target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
+    }> : vector<16x16xf32>
   gpu.return
 }
 
@@ -133,6 +150,11 @@ gpu.func @elementwise() {
 gpu.func @arith_constant() {
   %0 = arith.constant  {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
     dense<1.0> : vector<16x16xf32>
+  %cl0 = xegpu.convert_layout %0
+    <{
+      input_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
+      target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
+    }> : vector<16x16xf32>
   gpu.return
 }
 
@@ -351,6 +373,11 @@ gpu.func @vector_multi_reduction_dim1_distributed_dim1_reduction(%laneid: index)
         layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [1]>
       }
       [1] : vector<2x16xf32> to vector<2xf32>
+  %cl1 = xegpu.convert_layout %1
+    <{
+      input_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [1]>,
+      target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [1]>
+    }> : vector<2xf32>
   gpu.return
 }
 
@@ -416,13 +443,22 @@ gpu.func @vector_multi_reduction_dim0_distributed_dim0_reduction(%laneid: index)
         layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>, dims = [0]>
       }
       [0] : vector<16x2xf32> to vector<2xf32>
+  %cl1 = xegpu.convert_layout %1
+    <{
+      input_layout = #xegpu.slice<#xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>, dims = [0]>,
+      target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>, dims = [0]>
+    }> : vector<2xf32>
   gpu.return
 }
 
 // CHECK-LABEL: gpu.func @vector_multi_reduction_dim1_distributed_dim0_reduction
-// CHECK:         %[[CST:.*]] = arith.constant dense<0.000000e+00> : vector<4x1xf32>
-// CHECK:         %[[CST_0:.*]] = arith.constant dense<0.000000e+00> : vector<1xf32>
-// CHECK:         %[[RED:.*]] = vector.multi_reduction <add>, %[[CST]], %[[CST_0]] [0] : vector<4x1xf32> to vector<1xf32>
+// CHECK-DAG:     %[[SRC:.*]] = arith.constant dense<0.000000e+00> : vector<4x1xf32>
+// CHECK-DAG:     %[[ACC:.*]] = arith.constant dense<0.000000e+00> : vector<1xf32>
+// CHECK:         %[[SLICE:.*]] = vector.extract_strided_slice %[[SRC]] {offsets = [0, 0], sizes = [4, 1], strides = [1, 1]} : vector<4x1xf32> to vector<4x1xf32>
+// CHECK:         %[[FLAT:.*]] = vector.shape_cast %[[SLICE]] : vector<4x1xf32> to vector<4xf32>
+// CHECK:         %[[ACC_EL:.*]] = vector.extract %[[ACC]][0] : f32 from vector<1xf32>
+// CHECK:         %[[RED:.*]] = vector.reduction <add>, %[[FLAT]], %[[ACC_EL]] : vector<4xf32> into f32
+// CHECK:         vector.insert %[[RED]], %{{.*}} [0] : f32 into vector<1xf32>
 // CHECK:         gpu.return
 gpu.func @vector_multi_reduction_dim1_distributed_dim0_reduction(%laneid: index) {
   %c0 = arith.constant 0 : index
@@ -437,13 +473,22 @@ gpu.func @vector_multi_reduction_dim1_distributed_dim0_reduction(%laneid: index)
         layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>
       }
       [0] : vector<4x16xf32> to vector<16xf32>
+  %cl1 = xegpu.convert_layout %1
+    <{
+      input_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>,
+      target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>
+    }> : vector<16xf32>
   gpu.return
 }
 
 // CHECK-LABEL: gpu.func @vector_multi_reduction_dim0_distributed_dim1_reduction
-// CHECK:         %[[CST:.*]] = arith.constant dense<0.000000e+00> : vector<1x12xf32>
-// CHECK:         %[[CST_0:.*]] = arith.constant dense<0.000000e+00> : vector<1xf32>
-// CHECK:         %[[RED:.*]] = vector.multi_reduction <add>, %[[CST]], %[[CST_0]] [1] : vector<1x12xf32> to vector<1xf32>
+// CHECK-DAG:     %[[SRC:.*]] = arith.constant dense<0.000000e+00> : vector<1x12xf32>
+// CHECK-DAG:     %[[ACC:.*]] = arith.constant dense<0.000000e+00> : vector<1xf32>
+// CHECK:         %[[SLICE:.*]] = vector.extract_strided_slice %[[SRC]] {offsets = [0, 0], sizes = [1, 12], strides = [1, 1]} : vector<1x12xf32> to vector<1x12xf32>
+// CHECK:         %[[FLAT:.*]] = vector.shape_cast %[[SLICE]] : vector<1x12xf32> to vector<12xf32>
+// CHECK:         %[[ACC_EL:.*]] = vector.extract %[[ACC]][0] : f32 from vector<1xf32>
+// CHECK:         %[[RED:.*]] = vector.reduction <add>, %[[FLAT]], %[[ACC_EL]] : vector<12xf32> into f32
+// CHECK:         vector.insert %[[RED]], %{{.*}} [0] : f32 into vector<1xf32>
 // CHECK:         gpu.return
 gpu.func @vector_multi_reduction_dim0_distributed_dim1_reduction(%laneid: index) {
   %c0 = arith.constant 0 : index
@@ -458,6 +503,11 @@ gpu.func @vector_multi_reduction_dim0_distributed_dim1_reduction(%laneid: index)
         layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>, dims = [1]>
       }
       [1] : vector<16x12xf32> to vector<16xf32>
+  %cl1 = xegpu.convert_layout %1
+    <{
+      input_layout = #xegpu.slice<#xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>, dims = [1]>,
+      target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>, dims = [1]>
+    }> : vector<16xf32>
   gpu.return
 }
 
@@ -475,6 +525,11 @@ gpu.func @vector_transpose() {
       layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
     }
     : vector<16x2xf32> to vector<2x16xf32>
+  %transpose2 = xegpu.convert_layout %transpose
+    <{
+      input_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
+      target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
+    }> : vector<2x16xf32>
   gpu.return
 }
 
@@ -507,6 +562,11 @@ gpu.func @create_mask_1d(%m0: index) {
   %mask = vector.create_mask %m0
     {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>}
     : vector<16xi1>
+  %mask_cl = xegpu.convert_layout %mask
+    <{
+      input_layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>,
+      target_layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>
+    }> : vector<16xi1>
   gpu.return
 }
 
@@ -522,6 +582,11 @@ gpu.func @constant_mask_1d() {
   %mask = vector.constant_mask [4]
     {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>}
     : vector<16xi1>
+  %mask_cl = xegpu.convert_layout %mask
+    <{
+      input_layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>,
+      target_layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>
+    }> : vector<16xi1>
   gpu.return
 }
 
@@ -543,6 +608,11 @@ gpu.func @create_mask_2d(%m0: index, %m1: index) {
   %mask = vector.create_mask %m0, %m1
     {layout_result_0 = #xegpu.layout<lane_layout = [8, 2], lane_data = [1, 1]>}
     : vector<8x4xi1>
+  %mask_cl = xegpu.convert_layout %mask
+    <{
+      input_layout = #xegpu.layout<lane_layout = [8, 2], lane_data = [1, 1]>,
+      target_layout = #xegpu.layout<lane_layout = [8, 2], lane_data = [1, 1]>
+    }> : vector<8x4xi1>
   gpu.return
 }
 
@@ -565,14 +635,28 @@ gpu.func @constant_mask_2d() {
   %mask = vector.constant_mask [2, 3]
     {layout_result_0 = #xegpu.layout<lane_layout = [8, 2], lane_data = [1, 1]>}
     : vector<8x4xi1>
+      %mask_cl = xegpu.convert_layout %mask
+        <{
+          input_layout = #xegpu.layout<lane_layout = [8, 2], lane_data = [1, 1]>,
+          target_layout = #xegpu.layout<lane_layout = [8, 2], lane_data = [1, 1]>
+        }> : vector<8x4xi1>
       gpu.return
 }
 
 
 // CHECK-LABEL: gpu.func @vector_multi_reduction_3d_leading_unit_dim_lane_local
-// CHECK:         %[[CST:.*]] = arith.constant dense<0.000000e+00> : vector<1x16x2xf32>
-// CHECK:         %[[CST_0:.*]] = arith.constant dense<0.000000e+00> : vector<1x2xf32>
-// CHECK:         %[[RED:.*]] = vector.multi_reduction <add>, %[[CST]], %[[CST_0]] [1] : vector<1x16x2xf32> to vector<1x2xf32>
+// CHECK-DAG:     %[[SRC:.*]] = arith.constant dense<0.000000e+00> : vector<1x16x2xf32>
+// CHECK-DAG:     %[[ACC:.*]] = arith.constant dense<0.000000e+00> : vector<1x2xf32>
+// CHECK:         %[[S0:.*]] = vector.extract_strided_slice %[[SRC]] {offsets = [0, 0, 0], sizes = [1, 16, 1], strides = [1, 1, 1]} : vector<1x16x2xf32> to vector<1x16x1xf32>
+// CHECK:         %[[F0:.*]] = vector.shape_cast %[[S0]] : vector<1x16x1xf32> to vector<16xf32>
+// CHECK:         %[[A0:.*]] = vector.extract %[[ACC]][0, 0] : f32 from vector<1x2xf32>
+// CHECK:         %[[R0:.*]] = vector.reduction <add>, %[[F0]], %[[A0]] : vector<16xf32> into f32
+// CHECK:         %[[I0:.*]] = vector.insert %[[R0]], %{{.*}} [0, 0] : f32 into vector<1x2xf32>
+// CHECK:         %[[S1:.*]] = vector.extract_strided_slice %[[SRC]] {offsets = [0, 0, 1], sizes = [1, 16, 1], strides = [1, 1, 1]} : vector<1x16x2xf32> to vector<1x16x1xf32>
+// CHECK:         %[[F1:.*]] = vector.shape_cast %[[S1]] : vector<1x16x1xf32> to vector<16xf32>
+// CHECK:         %[[A1:.*]] = vector.extract %[[ACC]][0, 1] : f32 from vector<1x2xf32>
+// CHECK:         %[[R1:.*]] = vector.reduction <add>, %[[F1]], %[[A1]] : vector<16xf32> into f32
+// CHECK:         vector.insert %[[R1]], %[[I0]] [0, 1] : f32 into vector<1x2xf32>
 // CHECK:         gpu.return
 gpu.func @vector_multi_reduction_3d_leading_unit_dim_lane_local() {
     %src = arith.constant
@@ -586,6 +670,11 @@ gpu.func @vector_multi_reduction_3d_leading_unit_dim_lane_local() {
         layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>, dims = [1]>
       }
       [1] : vector<1x16x32xf32> to vector<1x32xf32>
+  %cl1 = xegpu.convert_layout %1
+    <{
+      input_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>, dims = [1]>,
+      target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>, dims = [1]>
+    }> : vector<1x32xf32>
   gpu.return
 }
 
@@ -619,6 +708,11 @@ gpu.func @vector_multi_reduction_3d_leading_unit_dim_cross_lane() {
         layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16, 1], lane_data = [1, 1, 1]>, dims = [1]>
       }
       [1] : vector<1x16x2xf32> to vector<1x2xf32>
+  %cl1 = xegpu.convert_layout %1
+    <{
+      input_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16, 1], lane_data = [1, 1, 1]>, dims = [1]>,
+      target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16, 1], lane_data = [1, 1, 1]>, dims = [1]>
+    }> : vector<1x2xf32>
   gpu.return
 }
 
@@ -631,6 +725,11 @@ gpu.func @vector_extract_from_2d() {
   %0 = vector.extract %src[0]
     {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>}
     : vector<16xf32> from vector<4x16xf32>
+  %cl0 = xegpu.convert_layout %0
+    <{
+      input_layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>,
+      target_layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>
+    }> : vector<16xf32>
   gpu.return
 }
 
@@ -643,6 +742,11 @@ gpu.func @vector_extract_from_2d_offset2() {
   %0 = vector.extract %src[2]
     {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>}
     : vector<16xf32> from vector<8x16xf32>
+  %cl0 = xegpu.convert_layout %0
+    <{
+      input_layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>,
+      target_layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>
+    }> : vector<16xf32>
   gpu.return
 }
 
@@ -658,6 +762,11 @@ gpu.func @vector_insert_into_2d() {
   %0 = vector.insert %val, %dst[0]
     {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
     : vector<16xf32> into vector<4x16xf32>
+  %cl0 = xegpu.convert_layout %0
+    <{
+      input_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
+      target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
+    }> : vector<4x16xf32>
   gpu.return
 }
 
@@ -673,6 +782,11 @@ gpu.func @vector_insert_into_2d_offset2() {
   %0 = vector.insert %val, %dst[2]
     {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
     : vector<16xf32> into vector<8x16xf32>
+  %cl0 = xegpu.convert_layout %0
+    <{
+      input_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
+      target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
+    }> : vector<8x16xf32>
   gpu.return
 }
 
@@ -686,6 +800,11 @@ gpu.func @vector_extract_strided_slice_distributed_dim_fully_extracted() {
       layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
     }
     : vector<24x16xf32> to vector<8x16xf32>
+  %cl1 = xegpu.convert_layout %1
+    <{
+      input_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
+      target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
+    }> : vector<8x16xf32>
   gpu.return
 }
 
@@ -699,6 +818,11 @@ gpu.func @vector_extract_strided_slice_inner_distributed() {
       layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
     }
     : vector<24x64xf32> to vector<8x16xf32>
+  %cl1 = xegpu.convert_layout %1
+    <{
+      input_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
+      target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
+    }> : vector<8x16xf32>
   gpu.return
 }
 
@@ -712,6 +836,11 @@ gpu.func @vector_extract_strided_slice_outer_distributed() {
       layout_result_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>
     }
     : vector<32x16xf32> to vector<16x16xf32>
+  %cl1 = xegpu.convert_layout %1
+    <{
+      input_layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>,
+      target_layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>
+    }> : vector<16x16xf32>
   gpu.return
 }
 
@@ -725,6 +854,11 @@ gpu.func @vector_extract_strided_slice_1d() {
       layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>
     }
     : vector<64xf32> to vector<32xf32>
+  %cl1 = xegpu.convert_layout %1
+    <{
+      input_layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>,
+      target_layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>
+    }> : vector<32xf32>
   gpu.return
 }
 
@@ -738,6 +872,11 @@ gpu.func @vector_extract_strided_slice_partial_offsets() {
       layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
     }
     : vector<24x16xf32> to vector<8x16xf32>
+  %cl1 = xegpu.convert_layout %1
+    <{
+      input_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
+      target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
+    }> : vector<8x16xf32>
   gpu.return
 }
 
@@ -754,6 +893,11 @@ gpu.func @vector_insert_strided_slice_distributed_dim_fully_inserted() {
       layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
     }
     : vector<16x16xf32> into vector<64x16xf32>
+  %cl2 = xegpu.convert_layout %2
+    <{
+      input_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
+      target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
+    }> : vector<64x16xf32>
   gpu.return
 }
 
@@ -770,6 +914,11 @@ gpu.func @vector_insert_strided_slice_inner_distributed() {
       layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
     }
     : vector<16x16xf32> into vector<64x32xf32>
+  %cl2 = xegpu.convert_layout %2
+    <{
+      input_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
+      target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
+    }> : vector<64x32xf32>
   gpu.return
 }
 
@@ -786,6 +935,11 @@ gpu.func @vector_insert_strided_slice_outer_distributed() {
       layout_result_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>
     }
     : vector<16x16xf32> into vector<48x32xf32>
+  %cl2 = xegpu.convert_layout %2
+    <{
+      input_layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>,
+      target_layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>
+    }> : vector<48x32xf32>
   gpu.return
 }
 
@@ -802,6 +956,11 @@ gpu.func @vector_insert_strided_slice_1d() {
       layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>
     }
     : vector<16xf32> into vector<48xf32>
+  %cl2 = xegpu.convert_layout %2
+    <{
+      input_layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>,
+      target_layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>
+    }> : vector<48xf32>
   gpu.return
 }
 
@@ -818,6 +977,11 @@ gpu.func @vector_insert_strided_slice_different_ranks() {
       layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
     }
     : vector<16xf32> into vector<64x16xf32>
+  %cl2 = xegpu.convert_layout %2
+    <{
+      input_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
+      target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
+    }> : vector<64x16xf32>
   gpu.return
 }
 
@@ -842,6 +1006,21 @@ gpu.func @convert_layout_removed_when_compatible() {
     <{input_layout = #xegpu.layout<lane_layout = [1], lane_data = [1]>,
     target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>, dims = [0, 1]>}> 
     : vector<1xf32>
+  gpu.return
+}
+}
+
+// -----
+gpu.module @xevm_module {
+// CHECK-LABEL: gpu.func @convert_layout_scalar
+// CHECK-NOT: xegpu.convert_layout
+gpu.func @convert_layout_scalar() {
+  %0 = "some_op"() : () -> f32
+  %1 = xegpu.convert_layout %0
+    <{input_layout = #xegpu.slice<#xegpu.layout<lane_layout = [16], lane_data = [1]>, dims = [0]>,
+    target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [16], lane_data = [1]>, dims = [0]>}>
+    : f32
+  "some_use"(%1) : (f32) -> ()
   gpu.return
 }
 }
@@ -912,6 +1091,26 @@ gpu.func @load_store_matrix_3(%arg0: !xegpu.mem_desc<32x32xf32, #xegpu.mem_layou
 
 // -----
 gpu.module @xevm_module {
+// CHECK-LABEL: gpu.func @elementwise_wrap_around_dim
+// CHECK: %[[SRC:.*]] = "some_op"()
+// CHECK: %[[NEG:.*]] = arith.negf %[[SRC]] : vector<16x1xf16>
+// CHECK: gpu.return
+gpu.func @elementwise_wrap_around_dim() {
+  %0 = "some_op"() {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+    : () -> vector<16x1xf16>
+  %1 = arith.negf %0 {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+    : vector<16x1xf16>
+   %cl1 = xegpu.convert_layout %1
+     <{
+       input_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
+       target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
+     }> : vector<16x1xf16>
+   gpu.return
+}
+}
+
+// -----
+gpu.module @xevm_module {
 // CHECK-LABEL: gpu.func @vector_step_slice
 // CHECK:         %[[LANE_ID:.*]] = gpu.lane_id
 // CHECK-DAG:     %[[C16:.*]] = arith.constant 16 : index
@@ -920,6 +1119,11 @@ gpu.module @xevm_module {
 // CHECK:         %[[VEC:.*]] = vector.from_elements %[[REM2]] : vector<1xindex>
 gpu.func @vector_step_slice() {
   %0 = vector.step {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 1, 1, 16], lane_data = [1, 1, 1, 1]>, dims = [0, 1, 2]>} : vector<16xindex>
+  %cl0 = xegpu.convert_layout %0
+    <{
+      input_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 1, 1, 16], lane_data = [1, 1, 1, 1]>, dims = [0, 1, 2]>,
+      target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 1, 1, 16], lane_data = [1, 1, 1, 1]>, dims = [0, 1, 2]>
+    }> : vector<16xindex>
   gpu.return
 }
 }
@@ -930,6 +1134,11 @@ gpu.module @xevm_module {
 // CHECK:         %[[VEC:.*]] = vector.from_elements %{{.*}} : vector<1xindex>
 gpu.func @vector_step_slice_unit() {
   %0 = vector.step {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 1, 1, 16], lane_data = [1, 1, 1, 1]>, dims = [0, 1, 3]>} : vector<1xindex>
+  %cl0 = xegpu.convert_layout %0
+    <{
+      input_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 1, 1, 16], lane_data = [1, 1, 1, 1]>, dims = [0, 1, 3]>,
+      target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 1, 1, 16], lane_data = [1, 1, 1, 1]>, dims = [0, 1, 3]>
+    }> : vector<1xindex>
   gpu.return
 }
 }
@@ -947,6 +1156,11 @@ gpu.module @xevm_module {
 // CHECK:         %[[VEC:.*]] = vector.from_elements %[[V0]], %[[V1]], %[[V2]], %[[V3]] : vector<4xindex>
 gpu.func @vector_step_slice_multi_dist() {
   %0 = vector.step {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [2, 4, 2], lane_data = [1, 2, 1]>, dims = [0, 2]>} : vector<16xindex>
+  %cl0 = xegpu.convert_layout %0
+    <{
+      input_layout = #xegpu.slice<#xegpu.layout<lane_layout = [2, 4, 2], lane_data = [1, 2, 1]>, dims = [0, 2]>,
+      target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [2, 4, 2], lane_data = [1, 2, 1]>, dims = [0, 2]>
+    }> : vector<16xindex>
   gpu.return
 }
 }
@@ -964,6 +1178,11 @@ gpu.func @vector_shapecast_rank_increasing() {
       layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
     }
     : vector<16xf32> to vector<1x16xf32>
+  %cast_cl = xegpu.convert_layout %cast
+    <{
+      input_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
+      target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
+    }> : vector<1x16xf32>
   gpu.return
 }
 }
@@ -981,6 +1200,11 @@ gpu.func @vector_shapecast_rank_reducing() {
       layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>
     }
     : vector<1x16xf32> to vector<16xf32>
+  %cast_cl = xegpu.convert_layout %cast
+    <{
+      input_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>,
+      target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>
+    }> : vector<16xf32>
   gpu.return
 }
 }
@@ -998,6 +1222,11 @@ gpu.func @vector_shapecast_rank_increasing_without_slicing_layout() {
       layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
     }
     : vector<16xf32> to vector<1x16xf32>
+  %cast_cl = xegpu.convert_layout %cast
+    <{
+      input_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
+      target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
+    }> : vector<1x16xf32>
   gpu.return
 }
 }
@@ -1012,6 +1241,23 @@ gpu.func @vector_broadcast_1d_to_2d(%laneid: index) {
   %0 = "some_op"() {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>} : () -> vector<16xf16>
   %1 = vector.broadcast %0 {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} : vector<16xf16> to vector<16x16xf16>
   "some_use"(%1) : (vector<16x16xf16>) -> ()
+  gpu.return
+}
+}
+
+// -----
+gpu.module @xevm_module {
+// CHECK-LABEL: gpu.func @constant_wrap_around_dim
+// CHECK: %[[CST:.*]] = arith.constant dense<1.000000e+00> : vector<16x1xf16>
+// CHECK: gpu.return
+gpu.func @constant_wrap_around_dim() {
+  %0 = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+    dense<1.0> : vector<16x1xf16>
+  %cl0 = xegpu.convert_layout %0
+    <{
+      input_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
+      target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
+    }> : vector<16x1xf16>
   gpu.return
 }
 }
@@ -1038,7 +1284,8 @@ gpu.module @xevm_module {
 gpu.func @vector_broadcast_2d_to_2d_noop(%laneid: index) {
   %0 = "some_op"() {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} : () -> vector<16x1xf16>
   %1 = vector.broadcast %0 {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} : vector<16x1xf16> to vector<16x16xf16>
-  "some_use"(%1) : (vector<16x16xf16>) -> ()
+  %2 = xegpu.convert_layout %1 <{input_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}> : vector<16x16xf16>
+  "some_use"(%2) : (vector<16x16xf16>) -> ()
   gpu.return
 }
 }
@@ -1068,6 +1315,43 @@ gpu.func @vector_broadcast_scalar_to_vector_uniform(%laneid: index) {
   %0 = "some_op"() : () -> f16
   %1 = vector.broadcast %0 : f16 to vector<16x16xf16>
   "some_use"(%1) : (vector<16x16xf16>) -> ()
+  gpu.return
+}
+}
+
+// -----
+gpu.module @xevm_module {
+// CHECK-LABEL: gpu.func @vector_multi_reduction_1d_to_scalar
+// CHECK:     %[[SRC:.*]] = "some_op"() {{.*}} : () -> vector<32xf32>
+// CHECK:     %[[DIST:.*]] = builtin.unrealized_conversion_cast %[[SRC]] : vector<32xf32> to vector<2xf32>
+// CHECK:     %[[ACC:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK:     %[[LANE_RED:.*]] = vector.reduction <add>, %[[DIST]] : vector<2xf32> into f32
+// CHECK:     %[[SHFL1:.*]], %{{.*}} = gpu.shuffle xor %[[LANE_RED]], %[[C1:.*]], %[[C32:.*]] : f32
+// CHECK:     %[[ADD1:.*]] = arith.addf %[[LANE_RED]], %[[SHFL1]] : f32
+// CHECK:     %[[SHFL2:.*]], %{{.*}} = gpu.shuffle xor %[[ADD1]], %[[C2:.*]], %[[C32:.*]] : f32
+// CHECK:     %[[ADD2:.*]] = arith.addf %[[ADD1]], %[[SHFL2]] : f32
+// CHECK:     %[[SHFL3:.*]], %{{.*}} = gpu.shuffle xor %[[ADD2]], %[[C4:.*]], %[[C32:.*]] : f32
+// CHECK:     %[[ADD3:.*]] = arith.addf %[[ADD2]], %[[SHFL3]] : f32
+// CHECK:     %[[SHFL4:.*]], %{{.*}} = gpu.shuffle xor %[[ADD3]], %[[C8:.*]], %[[C32:.*]] : f32
+// CHECK:     %[[ADD4:.*]] = arith.addf %[[ADD3]], %[[SHFL4]] : f32
+// CHECK:     %[[SHFL5:.*]], %{{.*}} = gpu.shuffle xor %[[ADD4]], %[[C16:.*]], %[[C32:.*]] : f32
+// CHECK:     %[[ADD5:.*]] = arith.addf %[[ADD4]], %[[SHFL5]] : f32
+// CHECK:     %[[FINAL:.*]] = arith.addf %[[ADD5]], %[[ACC]] : f32
+gpu.func @vector_multi_reduction_1d_to_scalar() {
+    %src = "some_op"()
+      {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>}
+      : () -> vector<32xf32>
+    %acc = arith.constant 0.0 : f32
+    %1 = vector.multi_reduction <add>, %src, %acc
+      {
+        layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [16], lane_data = [1]>, dims = [0]>
+      }
+      [0] : vector<32xf32> to f32
+  %cl1 = xegpu.convert_layout %1
+    <{
+      input_layout = #xegpu.slice<#xegpu.layout<lane_layout = [16], lane_data = [1]>, dims = [0]>,
+      target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [16], lane_data = [1]>, dims = [0]>
+    }> : f32
   gpu.return
 }
 }

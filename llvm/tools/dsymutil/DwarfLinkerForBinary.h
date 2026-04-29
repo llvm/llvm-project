@@ -275,6 +275,8 @@ private:
 
   Error copySwiftInterfaces(StringRef Architecture) const;
 
+  Error copyEmbeddedResources() const;
+
   void copySwiftReflectionMetadata(
       const llvm::dsymutil::DebugMapObject *Obj,
       classic::DwarfStreamer *Streamer,

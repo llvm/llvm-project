@@ -20,7 +20,7 @@ subroutine loop_transformation_construct1
   end do
   !$omp end fuse
 
-  !ERROR: This construct requires a sequence of 6 loops, but the loop sequence has a length of 2
+  !ERROR: This construct requires a sequence of at least 6 loops, but the loop sequence has a length of 2
   !BECAUSE: LOOPRANGE clause was specified with a count of 2 starting at loop 5
   !$omp fuse looprange(5,2)
   do x = 1, i

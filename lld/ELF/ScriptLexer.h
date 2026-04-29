@@ -14,7 +14,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MemoryBufferRef.h"
-#include <vector>
 
 namespace lld::elf {
 struct Ctx;
@@ -34,9 +33,9 @@ protected:
     Buffer(Ctx &ctx, MemoryBufferRef mb);
   };
   Ctx &ctx;
-  // The current buffer and parent buffers due to INCLUDE.
+  // The currently lexed buffer. INCLUDE runs a nested parse on a new `Buffer`,
+  // similar to a call stack frame.
   Buffer curBuf;
-  SmallVector<Buffer, 0> buffers;
 
   // Used to detect INCLUDE() cycles.
   llvm::DenseSet<StringRef> activeFilenames;
@@ -80,9 +79,6 @@ public:
   void expect(StringRef expect);
   Token till(StringRef tok);
   std::string getCurrentLocation();
-  MemoryBufferRef getCurrentMB();
-
-  std::vector<MemoryBufferRef> mbs;
 
 private:
   StringRef getLine();

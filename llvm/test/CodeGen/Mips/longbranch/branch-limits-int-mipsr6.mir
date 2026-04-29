@@ -183,7 +183,7 @@ body:             |
   ; R6:   BC %bb.3
   ; R6: bb.2.iftrue:
   ; R6:   successors: %bb.3(0x80000000)
-  ; R6:   INLINEASM &".space 131068", 1
+  ; R6:   INLINEASM &".space 131068", sideeffect attdialect
   ; R6: bb.3.tail:
   ; R6:   JIC undef $ra, 0, implicit-def $at
   ; PIC-LABEL: name: expand_BEQC
@@ -206,7 +206,7 @@ body:             |
   ; PIC:   JIC $at, 0, implicit-def $at
   ; PIC: bb.3.iftrue:
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   INLINEASM &".space 131068", 1
+  ; PIC:   INLINEASM &".space 131068", sideeffect attdialect
   ; PIC: bb.4.tail:
   ; PIC:   JIC undef $ra, 0, implicit-def $at
   bb.0 (%ir-block.0):
@@ -219,7 +219,7 @@ body:             |
   bb.1.iftrue:
     successors: %bb.2(0x80000000)
 
-    INLINEASM &".space 131068", 1
+    INLINEASM &".space 131068", sideeffect attdialect
 
   bb.2.tail:
     PseudoReturn undef $ra
@@ -270,7 +270,7 @@ body:             |
   ; R6:   BC %bb.3
   ; R6: bb.2.iftrue:
   ; R6:   successors: %bb.3(0x80000000)
-  ; R6:   INLINEASM &".space 131068", 1
+  ; R6:   INLINEASM &".space 131068", sideeffect attdialect
   ; R6: bb.3.tail:
   ; R6:   JIC undef $ra, 0, implicit-def $at
   ; PIC-LABEL: name: expand_BNEC
@@ -293,7 +293,7 @@ body:             |
   ; PIC:   JIC $at, 0, implicit-def $at
   ; PIC: bb.3.iftrue:
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   INLINEASM &".space 131068", 1
+  ; PIC:   INLINEASM &".space 131068", sideeffect attdialect
   ; PIC: bb.4.tail:
   ; PIC:   JIC undef $ra, 0, implicit-def $at
   bb.0 (%ir-block.0):
@@ -306,7 +306,7 @@ body:             |
   bb.1.iftrue:
     successors: %bb.2(0x80000000)
 
-    INLINEASM &".space 131068", 1
+    INLINEASM &".space 131068", sideeffect attdialect
 
   bb.2.tail:
     PseudoReturn undef $ra
@@ -357,7 +357,7 @@ body:             |
   ; R6:   BC %bb.3
   ; R6: bb.2.iftrue:
   ; R6:   successors: %bb.3(0x80000000)
-  ; R6:   INLINEASM &".space 131068", 1
+  ; R6:   INLINEASM &".space 131068", sideeffect attdialect
   ; R6: bb.3.tail:
   ; R6:   JIC undef $ra, 0, implicit-def $at
   ; PIC-LABEL: name: expand_BGEC
@@ -380,7 +380,7 @@ body:             |
   ; PIC:   JIC $at, 0, implicit-def $at
   ; PIC: bb.3.iftrue:
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   INLINEASM &".space 131068", 1
+  ; PIC:   INLINEASM &".space 131068", sideeffect attdialect
   ; PIC: bb.4.tail:
   ; PIC:   JIC undef $ra, 0, implicit-def $at
   bb.0 (%ir-block.0):
@@ -393,7 +393,7 @@ body:             |
   bb.1.iftrue:
     successors: %bb.2(0x80000000)
 
-    INLINEASM &".space 131068", 1
+    INLINEASM &".space 131068", sideeffect attdialect
 
   bb.2.tail:
     PseudoReturn undef $ra
@@ -444,7 +444,7 @@ body:             |
   ; R6:   BC %bb.3
   ; R6: bb.2.iftrue:
   ; R6:   successors: %bb.3(0x80000000)
-  ; R6:   INLINEASM &".space 131068", 1
+  ; R6:   INLINEASM &".space 131068", sideeffect attdialect
   ; R6: bb.3.tail:
   ; R6:   JIC undef $ra, 0, implicit-def $at
   ; PIC-LABEL: name: expand_BGEUC
@@ -467,7 +467,7 @@ body:             |
   ; PIC:   JIC $at, 0, implicit-def $at
   ; PIC: bb.3.iftrue:
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   INLINEASM &".space 131068", 1
+  ; PIC:   INLINEASM &".space 131068", sideeffect attdialect
   ; PIC: bb.4.tail:
   ; PIC:   JIC undef $ra, 0, implicit-def $at
   bb.0 (%ir-block.0):
@@ -480,7 +480,7 @@ body:             |
   bb.1.iftrue:
     successors: %bb.2(0x80000000)
 
-    INLINEASM &".space 131068", 1
+    INLINEASM &".space 131068", sideeffect attdialect
 
   bb.2.tail:
     PseudoReturn undef $ra
@@ -531,7 +531,7 @@ body:             |
   ; R6:   BC %bb.3
   ; R6: bb.2.iftrue:
   ; R6:   successors: %bb.3(0x80000000)
-  ; R6:   INLINEASM &".space 131068", 1
+  ; R6:   INLINEASM &".space 131068", sideeffect attdialect
   ; R6: bb.3.tail:
   ; R6:   JIC undef $ra, 0, implicit-def $at
   ; PIC-LABEL: name: expand_BGEZC
@@ -554,7 +554,7 @@ body:             |
   ; PIC:   JIC $at, 0, implicit-def $at
   ; PIC: bb.3.iftrue:
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   INLINEASM &".space 131068", 1
+  ; PIC:   INLINEASM &".space 131068", sideeffect attdialect
   ; PIC: bb.4.tail:
   ; PIC:   JIC undef $ra, 0, implicit-def $at
   bb.0 (%ir-block.0):
@@ -567,7 +567,7 @@ body:             |
   bb.1.iftrue:
     successors: %bb.2(0x80000000)
 
-    INLINEASM &".space 131068", 1
+    INLINEASM &".space 131068", sideeffect attdialect
 
   bb.2.tail:
     PseudoReturn undef $ra
@@ -618,7 +618,7 @@ body:             |
   ; R6:   BC %bb.3
   ; R6: bb.2.iftrue:
   ; R6:   successors: %bb.3(0x80000000)
-  ; R6:   INLINEASM &".space 131068", 1
+  ; R6:   INLINEASM &".space 131068", sideeffect attdialect
   ; R6: bb.3.tail:
   ; R6:   JIC undef $ra, 0, implicit-def $at
   ; PIC-LABEL: name: expand_BGTZC
@@ -641,7 +641,7 @@ body:             |
   ; PIC:   JIC $at, 0, implicit-def $at
   ; PIC: bb.3.iftrue:
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   INLINEASM &".space 131068", 1
+  ; PIC:   INLINEASM &".space 131068", sideeffect attdialect
   ; PIC: bb.4.tail:
   ; PIC:   JIC undef $ra, 0, implicit-def $at
   bb.0 (%ir-block.0):
@@ -654,7 +654,7 @@ body:             |
   bb.1.iftrue:
     successors: %bb.2(0x80000000)
 
-    INLINEASM &".space 131068", 1
+    INLINEASM &".space 131068", sideeffect attdialect
 
   bb.2.tail:
     PseudoReturn undef $ra
@@ -705,7 +705,7 @@ body:             |
   ; R6:   BC %bb.3
   ; R6: bb.2.iftrue:
   ; R6:   successors: %bb.3(0x80000000)
-  ; R6:   INLINEASM &".space 131068", 1
+  ; R6:   INLINEASM &".space 131068", sideeffect attdialect
   ; R6: bb.3.tail:
   ; R6:   JIC undef $ra, 0, implicit-def $at
   ; PIC-LABEL: name: expand_BLEZC
@@ -728,7 +728,7 @@ body:             |
   ; PIC:   JIC $at, 0, implicit-def $at
   ; PIC: bb.3.iftrue:
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   INLINEASM &".space 131068", 1
+  ; PIC:   INLINEASM &".space 131068", sideeffect attdialect
   ; PIC: bb.4.tail:
   ; PIC:   JIC undef $ra, 0, implicit-def $at
   bb.0 (%ir-block.0):
@@ -741,7 +741,7 @@ body:             |
   bb.1.iftrue:
     successors: %bb.2(0x80000000)
 
-    INLINEASM &".space 131068", 1
+    INLINEASM &".space 131068", sideeffect attdialect
 
   bb.2.tail:
     PseudoReturn undef $ra
@@ -792,7 +792,7 @@ body:             |
   ; R6:   BC %bb.3
   ; R6: bb.2.iftrue:
   ; R6:   successors: %bb.3(0x80000000)
-  ; R6:   INLINEASM &".space 131068", 1
+  ; R6:   INLINEASM &".space 131068", sideeffect attdialect
   ; R6: bb.3.tail:
   ; R6:   JIC undef $ra, 0, implicit-def $at
   ; PIC-LABEL: name: expand_BLTC
@@ -815,7 +815,7 @@ body:             |
   ; PIC:   JIC $at, 0, implicit-def $at
   ; PIC: bb.3.iftrue:
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   INLINEASM &".space 131068", 1
+  ; PIC:   INLINEASM &".space 131068", sideeffect attdialect
   ; PIC: bb.4.tail:
   ; PIC:   JIC undef $ra, 0, implicit-def $at
   bb.0 (%ir-block.0):
@@ -828,7 +828,7 @@ body:             |
   bb.1.iftrue:
     successors: %bb.2(0x80000000)
 
-    INLINEASM &".space 131068", 1
+    INLINEASM &".space 131068", sideeffect attdialect
 
   bb.2.tail:
     PseudoReturn undef $ra
@@ -879,7 +879,7 @@ body:             |
   ; R6:   BC %bb.3
   ; R6: bb.2.iftrue:
   ; R6:   successors: %bb.3(0x80000000)
-  ; R6:   INLINEASM &".space 131068", 1
+  ; R6:   INLINEASM &".space 131068", sideeffect attdialect
   ; R6: bb.3.tail:
   ; R6:   JIC undef $ra, 0, implicit-def $at
   ; PIC-LABEL: name: expand_BLTUC
@@ -902,7 +902,7 @@ body:             |
   ; PIC:   JIC $at, 0, implicit-def $at
   ; PIC: bb.3.iftrue:
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   INLINEASM &".space 131068", 1
+  ; PIC:   INLINEASM &".space 131068", sideeffect attdialect
   ; PIC: bb.4.tail:
   ; PIC:   JIC undef $ra, 0, implicit-def $at
   bb.0 (%ir-block.0):
@@ -915,7 +915,7 @@ body:             |
   bb.1.iftrue:
     successors: %bb.2(0x80000000)
 
-    INLINEASM &".space 131068", 1
+    INLINEASM &".space 131068", sideeffect attdialect
 
   bb.2.tail:
     PseudoReturn undef $ra
@@ -966,7 +966,7 @@ body:             |
   ; R6:   BC %bb.3
   ; R6: bb.2.iftrue:
   ; R6:   successors: %bb.3(0x80000000)
-  ; R6:   INLINEASM &".space 131068", 1
+  ; R6:   INLINEASM &".space 131068", sideeffect attdialect
   ; R6: bb.3.tail:
   ; R6:   JIC undef $ra, 0, implicit-def $at
   ; PIC-LABEL: name: expand_BLTZC
@@ -989,7 +989,7 @@ body:             |
   ; PIC:   JIC $at, 0, implicit-def $at
   ; PIC: bb.3.iftrue:
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   INLINEASM &".space 131068", 1
+  ; PIC:   INLINEASM &".space 131068", sideeffect attdialect
   ; PIC: bb.4.tail:
   ; PIC:   JIC undef $ra, 0, implicit-def $at
   bb.0 (%ir-block.0):
@@ -1002,7 +1002,7 @@ body:             |
   bb.1.iftrue:
     successors: %bb.2(0x80000000)
 
-    INLINEASM &".space 131068", 1
+    INLINEASM &".space 131068", sideeffect attdialect
 
   bb.2.tail:
     PseudoReturn undef $ra
@@ -1053,7 +1053,7 @@ body:             |
   ; R6:   BC %bb.3
   ; R6: bb.2.iftrue:
   ; R6:   successors: %bb.3(0x80000000)
-  ; R6:   INLINEASM &".space 8388608", 1
+  ; R6:   INLINEASM &".space 8388608", sideeffect attdialect
   ; R6: bb.3.tail:
   ; R6:   JIC undef $ra, 0, implicit-def $at
   ; PIC-LABEL: name: expand_BEQZC
@@ -1076,7 +1076,7 @@ body:             |
   ; PIC:   JIC $at, 0, implicit-def $at
   ; PIC: bb.3.iftrue:
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   INLINEASM &".space 8388608", 1
+  ; PIC:   INLINEASM &".space 8388608", sideeffect attdialect
   ; PIC: bb.4.tail:
   ; PIC:   JIC undef $ra, 0, implicit-def $at
   bb.0 (%ir-block.0):
@@ -1089,7 +1089,7 @@ body:             |
   bb.1.iftrue:
     successors: %bb.2(0x80000000)
 
-    INLINEASM &".space 8388608", 1
+    INLINEASM &".space 8388608", sideeffect attdialect
 
   bb.2.tail:
     PseudoReturn undef $ra
@@ -1140,7 +1140,7 @@ body:             |
   ; R6:   BC %bb.3
   ; R6: bb.2.iftrue:
   ; R6:   successors: %bb.3(0x80000000)
-  ; R6:   INLINEASM &".space 8388608", 1
+  ; R6:   INLINEASM &".space 8388608", sideeffect attdialect
   ; R6: bb.3.tail:
   ; R6:   JIC undef $ra, 0, implicit-def $at
   ; PIC-LABEL: name: expand_BNEZC
@@ -1163,7 +1163,7 @@ body:             |
   ; PIC:   JIC $at, 0, implicit-def $at
   ; PIC: bb.3.iftrue:
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   INLINEASM &".space 8388608", 1
+  ; PIC:   INLINEASM &".space 8388608", sideeffect attdialect
   ; PIC: bb.4.tail:
   ; PIC:   JIC undef $ra, 0, implicit-def $at
   bb.0 (%ir-block.0):
@@ -1176,7 +1176,7 @@ body:             |
   bb.1.iftrue:
     successors: %bb.2(0x80000000)
 
-    INLINEASM &".space 8388608", 1
+    INLINEASM &".space 8388608", sideeffect attdialect
 
   bb.2.tail:
     PseudoReturn undef $ra

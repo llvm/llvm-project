@@ -1,4 +1,4 @@
-;RUN: opt < %s -passes=loop-vectorize,instcombine -force-vector-width=4 -force-vector-interleave=1 -S | FileCheck %s
+;RUN: opt < %s -passes=loop-vectorize -force-vector-width=4 -force-vector-interleave=1 -S | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -11,7 +11,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; CHECK-LABEL: @consecutive_no_gep(
 ; CHECK: vector.body
 ; CHECK: %[[index:.*]] = phi i64 [ 0, %vector.ph ]
-; CHECK: %[[offset:.*]] = shl i64 %[[index]], 2
+; CHECK: %[[offset:.*]] = mul i64 %[[index]], 4
 ; CHECK: getelementptr i8, ptr %{{.*}}, i64 %[[offset]]
 ; CHECK: load <4 x float>
 
@@ -20,10 +20,10 @@ entry:
   %cmp2 = icmp sgt i32 %len, 0
   br i1 %cmp2, label %for.body.preheader, label %for.end
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %i.05 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ]
   %from.addr.04 = phi ptr [ %incdec.ptr, %for.body ], [ %from, %for.body.preheader ]
   %to.addr.03 = phi ptr [ %incdec.ptr1, %for.body ], [ %to, %for.body.preheader ]
@@ -35,9 +35,9 @@ for.body:                                         ; preds = %for.body.preheader,
   %cmp = icmp slt i32 %inc, %len
   br i1 %cmp, label %for.body, label %for.end.loopexit
 
-for.end.loopexit:                                 ; preds = %for.body
+for.end.loopexit:
   br label %for.end
 
-for.end:                                          ; preds = %for.end.loopexit, %entry
+for.end:
   ret void
 }

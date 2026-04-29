@@ -70,6 +70,11 @@ public:
 
   StringRef getPassName() const override { return "RISC-V Assembly Printer"; }
 
+  RISCVTargetStreamer &getTargetStreamer() const {
+    return static_cast<RISCVTargetStreamer &>(
+        *OutStreamer->getTargetStreamer());
+  }
+
   void LowerSTACKMAP(MCStreamer &OutStreamer, StackMaps &SM,
                      const MachineInstr &MI);
 
@@ -155,7 +160,7 @@ void RISCVAsmPrinter::LowerSTACKMAP(MCStreamer &OutStreamer, StackMaps &SM,
         MII->getOpcode() == TargetOpcode::STACKMAP)
       break;
     ++MII;
-    NumNOPBytes -= 4;
+    NumNOPBytes -= NOPBytes;
   }
 
   // Emit nops.
@@ -333,12 +338,8 @@ void RISCVAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case TargetOpcode::PATCHABLE_FUNCTION_ENTER: {
     const Function &F = MI->getParent()->getParent()->getFunction();
     if (F.hasFnAttribute("patchable-function-entry")) {
-      unsigned Num;
-      [[maybe_unused]] bool Result =
-          F.getFnAttribute("patchable-function-entry")
-              .getValueAsString()
-              .getAsInteger(10, Num);
-      assert(!Result && "Enforced by the verifier");
+      unsigned Num =
+          F.getFnAttributeAsParsedInteger("patchable-function-entry");
       emitNops(Num);
       return;
     }
@@ -439,7 +440,7 @@ bool RISCVAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
   if (Offset.isImm())
     OS << MCO.getImm();
   else if (Offset.isGlobal() || Offset.isBlockAddress() || Offset.isMCSymbol())
-    MAI->printExpr(OS, *MCO.getExpr());
+    MAI.printExpr(OS, *MCO.getExpr());
 
   if (Offset.isMCSymbol())
     MMI->getContext().registerInlineAsmLabel(Offset.getMCSymbol());
@@ -454,8 +455,7 @@ bool RISCVAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
 }
 
 bool RISCVAsmPrinter::emitDirectiveOptionArch() {
-  RISCVTargetStreamer &RTS =
-      static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
+  RISCVTargetStreamer &RTS = getTargetStreamer();
   SmallVector<RISCVOptionArchArg> NeedEmitStdOptionArgs;
   const MCSubtargetInfo &MCSTI = *TM.getMCSubtargetInfo();
   for (const auto &Feature : RISCVFeatureKV) {
@@ -480,8 +480,7 @@ bool RISCVAsmPrinter::emitDirectiveOptionArch() {
 
 bool RISCVAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   STI = &MF.getSubtarget<RISCVSubtarget>();
-  RISCVTargetStreamer &RTS =
-      static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
+  RISCVTargetStreamer &RTS = getTargetStreamer();
 
   bool EmittedOptionArch = emitDirectiveOptionArch();
 
@@ -552,8 +551,7 @@ void RISCVAsmPrinter::emitSled(const MachineInstr *MI, SledKind Kind) {
 void RISCVAsmPrinter::emitStartOfAsmFile(Module &M) {
   assert(OutStreamer->getTargetStreamer() &&
          "target streamer is uninitialized");
-  RISCVTargetStreamer &RTS =
-      static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
+  RISCVTargetStreamer &RTS = getTargetStreamer();
   if (const MDString *ModuleTargetABI =
           dyn_cast_or_null<MDString>(M.getModuleFlag("target-abi")))
     RTS.setTargetABI(RISCVABI::getTargetABI(ModuleTargetABI->getString()));
@@ -586,8 +584,7 @@ void RISCVAsmPrinter::emitStartOfAsmFile(Module &M) {
 }
 
 void RISCVAsmPrinter::emitEndOfAsmFile(Module &M) {
-  RISCVTargetStreamer &RTS =
-      static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
+  RISCVTargetStreamer &RTS = getTargetStreamer();
 
   if (TM.getTargetTriple().isOSBinFormatELF()) {
     RTS.finishAttributeSection();
@@ -597,8 +594,7 @@ void RISCVAsmPrinter::emitEndOfAsmFile(Module &M) {
 }
 
 void RISCVAsmPrinter::emitAttributes(const MCSubtargetInfo &SubtargetInfo) {
-  RISCVTargetStreamer &RTS =
-      static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
+  RISCVTargetStreamer &RTS = getTargetStreamer();
   // Use MCSubtargetInfo from TargetMachine. Individual functions may have
   // attributes that differ from other functions in the module and we have no
   // way to know which function is correct.
@@ -608,8 +604,7 @@ void RISCVAsmPrinter::emitAttributes(const MCSubtargetInfo &SubtargetInfo) {
 void RISCVAsmPrinter::emitFunctionEntryLabel() {
   const auto *RMFI = MF->getInfo<RISCVMachineFunctionInfo>();
   if (RMFI->isVectorCall()) {
-    auto &RTS =
-        static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
+    RISCVTargetStreamer &RTS = getTargetStreamer();
     RTS.emitDirectiveVariantCC(*CurrentFnSym);
   }
   return AsmPrinter::emitFunctionEntryLabel();
@@ -682,12 +677,9 @@ void RISCVAsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
     // Adjust the offset for patchable-function-prefix. This assumes that
     // patchable-function-prefix is the same for all functions.
     int NopSize = STI->hasStdExtZca() ? 2 : 4;
-    int64_t PrefixNops = 0;
-    (void)MI.getMF()
-        ->getFunction()
-        .getFnAttribute("patchable-function-prefix")
-        .getValueAsString()
-        .getAsInteger(10, PrefixNops);
+    int64_t PrefixNops =
+        MI.getMF()->getFunction().getFnAttributeAsParsedInteger(
+            "patchable-function-prefix");
 
     // Load the target function type hash.
     EmitToStreamer(*OutStreamer, MCInstBuilder(RISCV::LW)
@@ -744,8 +736,7 @@ void RISCVAsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
       OutContext.getOrCreateSymbol("__hwasan_tag_mismatch_v2");
   // Annotate symbol as one having incompatible calling convention, so
   // run-time linkers can instead eagerly bind this function.
-  auto &RTS =
-      static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
+  RISCVTargetStreamer &RTS = getTargetStreamer();
   RTS.emitDirectiveVariantCC(*HwasanTagMismatchV2Sym);
 
   const MCSymbolRefExpr *HwasanTagMismatchV2Ref =
@@ -958,8 +949,7 @@ void RISCVAsmPrinter::emitNoteGnuProperty(const Module &M) {
   assert(TM.getTargetTriple().isOSBinFormatELF() && "invalid binary format");
   if (const Metadata *const Flag = M.getModuleFlag("cf-protection-return");
       Flag && !mdconst::extract<ConstantInt>(Flag)->isZero()) {
-    RISCVTargetELFStreamer &RTS = static_cast<RISCVTargetELFStreamer &>(
-        *OutStreamer->getTargetStreamer());
+    auto &RTS = static_cast<RISCVTargetELFStreamer &>(getTargetStreamer());
     RTS.emitNoteGnuPropertySection(ELF::GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS);
   }
 }

@@ -612,7 +612,7 @@ std::error_code rename(const Twine &from, const Twine &to) {
 std::error_code resize_file(int FD, uint64_t Size) {
   // Use ftruncate as a fallback. It may or may not allocate space. At least on
   // OS X with HFS+ it does.
-  if (::ftruncate(FD, Size) == -1)
+  if (sys::RetryAfterSignal(-1, ::ftruncate, FD, Size) == -1)
     return errnoAsErrorCode();
 
   return std::error_code();
@@ -860,8 +860,8 @@ std::error_code setLastAccessAndModificationTime(int FD, TimePoint<> AccessTime,
 #endif
 }
 
-std::error_code mapped_file_region::init(int FD, uint64_t Offset,
-                                         mapmode Mode) {
+std::error_code mapped_file_region::init(int FD, uint64_t Offset, mapmode Mode,
+                                         const char *Name) {
   assert(Size != 0);
 
   int flags = (Mode == readwrite) ? MAP_SHARED : MAP_PRIVATE;
@@ -896,12 +896,13 @@ std::error_code mapped_file_region::init(int FD, uint64_t Offset,
 }
 
 mapped_file_region::mapped_file_region(int fd, mapmode mode, size_t length,
-                                       uint64_t offset, std::error_code &ec)
+                                       uint64_t offset, std::error_code &ec,
+                                       const char *name)
     : Size(length), Mode(mode) {
   sandbox::violationIfEnabled();
 
   (void)Mode;
-  ec = init(fd, offset, mode);
+  ec = init(fd, offset, mode, name);
   if (ec)
     copyFrom(mapped_file_region());
 }
@@ -912,7 +913,7 @@ void mapped_file_region::unmapImpl() {
 }
 
 std::error_code mapped_file_region::sync() const {
-  if (int Res = ::msync(Mapping, Size, MS_SYNC))
+  if (int Res = sys::RetryAfterSignal(-1, ::msync, Mapping, Size, MS_SYNC))
     return std::error_code(Res, std::generic_category());
   return std::error_code();
 }
@@ -1339,7 +1340,7 @@ std::error_code lockFile(int FD, LockKind Kind) {
   Lock.l_whence = SEEK_SET;
   Lock.l_start = 0;
   Lock.l_len = 0;
-  if (::fcntl(FD, F_SETLKW, &Lock) != -1)
+  if (sys::RetryAfterSignal(-1, ::fcntl, FD, F_SETLKW, &Lock) != -1)
     return std::error_code();
   return errnoAsErrorCode();
 }
@@ -1350,7 +1351,7 @@ std::error_code unlockFile(int FD) {
   Lock.l_whence = SEEK_SET;
   Lock.l_start = 0;
   Lock.l_len = 0;
-  if (::fcntl(FD, F_SETLK, &Lock) != -1)
+  if (sys::RetryAfterSignal(-1, ::fcntl, FD, F_SETLK, &Lock) != -1)
     return std::error_code();
   return errnoAsErrorCode();
 }

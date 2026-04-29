@@ -2919,11 +2919,11 @@ define amdgpu_kernel void @fma_v2_v_unfoldable_lit(ptr addrspace(1) %a) {
 ; PACKED-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; PACKED-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; PACKED-SDAG-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
-; PACKED-SDAG-NEXT:    s_mov_b32 s2, 4.0
 ; PACKED-SDAG-NEXT:    v_mov_b32_e32 v2, 1.0
+; PACKED-SDAG-NEXT:    v_mov_b32_e32 v3, 2.0
 ; PACKED-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; PACKED-SDAG-NEXT:    global_load_dwordx2 v[0:1], v4, s[0:1]
-; PACKED-SDAG-NEXT:    v_mov_b32_e32 v3, 2.0
+; PACKED-SDAG-NEXT:    s_mov_b32 s2, 4.0
 ; PACKED-SDAG-NEXT:    s_mov_b32 s3, 0x40400000
 ; PACKED-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; PACKED-SDAG-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], s[2:3], v[2:3]
@@ -2936,10 +2936,10 @@ define amdgpu_kernel void @fma_v2_v_unfoldable_lit(ptr addrspace(1) %a) {
 ; GFX90A-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX90A-GISEL-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
 ; GFX90A-GISEL-NEXT:    s_mov_b32 s4, 1.0
-; GFX90A-GISEL-NEXT:    s_mov_b32 s2, 4.0
+; GFX90A-GISEL-NEXT:    s_mov_b32 s5, 2.0
 ; GFX90A-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-GISEL-NEXT:    global_load_dwordx2 v[0:1], v4, s[0:1]
-; GFX90A-GISEL-NEXT:    s_mov_b32 s5, 2.0
+; GFX90A-GISEL-NEXT:    s_mov_b32 s2, 4.0
 ; GFX90A-GISEL-NEXT:    s_mov_b32 s3, 0x40400000
 ; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[2:3], s[4:5], s[4:5] op_sel:[0,1]
 ; GFX90A-GISEL-NEXT:    s_waitcnt vmcnt(0)
@@ -2953,10 +2953,10 @@ define amdgpu_kernel void @fma_v2_v_unfoldable_lit(ptr addrspace(1) %a) {
 ; GFX942-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
 ; GFX942-GISEL-NEXT:    s_mov_b32 s4, 1.0
-; GFX942-GISEL-NEXT:    s_mov_b32 s2, 4.0
+; GFX942-GISEL-NEXT:    s_mov_b32 s5, 2.0
 ; GFX942-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-GISEL-NEXT:    global_load_dwordx2 v[0:1], v4, s[0:1]
-; GFX942-GISEL-NEXT:    s_mov_b32 s5, 2.0
+; GFX942-GISEL-NEXT:    s_mov_b32 s2, 4.0
 ; GFX942-GISEL-NEXT:    s_mov_b32 s3, 0x40400000
 ; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[4:5]
 ; GFX942-GISEL-NEXT:    s_waitcnt vmcnt(0)

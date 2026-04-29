@@ -491,6 +491,16 @@ LLVM_ABI Value *getOrderedReduction(IRBuilderBase &Builder, Value *Acc,
                                     Value *Src, unsigned Op,
                                     RecurKind MinMaxKind = RecurKind::None);
 
+/// Expand a scalable vector reduction into a runtime loop that applies
+/// \p RdxOpcode element by element, starting from \p Acc as the initial
+/// accumulator value (typically the reduction identity).
+/// If \p DT and/or \p LI are provided, they are updated to reflect the
+/// new basic blocks.
+LLVM_ABI Value *expandReductionViaLoop(IRBuilderBase &Builder, Value *Vec,
+                                       unsigned RdxOpcode, Value *Acc,
+                                       DominatorTree *DT = nullptr,
+                                       LoopInfo *LI = nullptr);
+
 /// Generates a vector reduction using shufflevectors to reduce the value.
 /// Fast-math-flags are propagated using the IRBuilder's setting.
 LLVM_ABI Value *getShuffleReduction(IRBuilderBase &Builder, Value *Src,

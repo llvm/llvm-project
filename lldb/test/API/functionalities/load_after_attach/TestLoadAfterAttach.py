@@ -15,8 +15,7 @@ class TestCase(TestBase):
             self, "process_ready"
         )
 
-        ctx = self.platformContext
-        lib_name = ctx.shlib_prefix + "lib_b." + ctx.shlib_extension
+        lib_name = self.platformContext.getFullLibName("lib_b")
 
         exe = self.getBuildArtifact("a.out")
         lib = self.getBuildArtifact(lib_name)

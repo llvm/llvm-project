@@ -85,4 +85,5 @@ void testStructDefInArgument() {
   d.a = 1;
   d.b = 0;
   clang_analyzer_eval(structInProto(&d) == 0); // expected-warning{{TRUE}} expected-warning{{FALSE}}
+  // expected-warning@-1{{import of an external symbol for CTU failed: Failed to import the definition.}}
 }

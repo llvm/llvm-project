@@ -1,5 +1,5 @@
-; RUN: opt -mtriple aarch64-linux-gnu -mattr=+sve -passes=loop-vectorize,dce,instcombine -S \
-; RUN:   -prefer-predicate-over-epilogue=scalar-epilogue <%s | FileCheck %s
+; RUN: opt -mtriple aarch64-linux-gnu -mattr=+sve -passes=loop-vectorize,instcombine -S \
+; RUN:   -tail-folding-policy=dont-fold-tail <%s | FileCheck %s
 
 define void @stride7_i32(ptr noalias nocapture %dst, i64 %n) #0 {
 ; CHECK-LABEL: @stride7_i32(
@@ -13,7 +13,7 @@ define void @stride7_i32(ptr noalias nocapture %dst, i64 %n) #0 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.05 = phi i64 [ %inc, %for.body ], [ 0, %entry ]
   %mul = mul nuw nsw i64 %i.05, 7
   %arrayidx = getelementptr inbounds i32, ptr %dst, i64 %mul
@@ -24,7 +24,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, %n
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
 
-for.end:                                          ; preds = %for.end.loopexit, %entry
+for.end:
   ret void
 }
 
@@ -40,7 +40,7 @@ define void @stride7_f64(ptr noalias nocapture %dst, i64 %n) #0 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.05 = phi i64 [ %inc, %for.body ], [ 0, %entry ]
   %mul = mul nuw nsw i64 %i.05, 7
   %arrayidx = getelementptr inbounds double, ptr %dst, i64 %mul
@@ -51,7 +51,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, %n
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !6
 
-for.end:                                          ; preds = %for.end.loopexit, %entry
+for.end:
   ret void
 }
 
@@ -67,14 +67,14 @@ define void @cond_stride7_f64(ptr noalias nocapture %dst, ptr noalias nocapture 
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.inc
+for.body:
   %i.07 = phi i64 [ %inc, %for.inc ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i64, ptr %cond, i64 %i.07
   %0 = load i64, ptr %arrayidx, align 8
   %tobool.not = icmp eq i64 %0, 0
   br i1 %tobool.not, label %for.inc, label %if.then
 
-if.then:                                          ; preds = %for.body
+if.then:
   %mul = mul nsw i64 %i.07, 7
   %arrayidx1 = getelementptr inbounds double, ptr %dst, i64 %mul
   %1 = load double, ptr %arrayidx1, align 8
@@ -82,12 +82,12 @@ if.then:                                          ; preds = %for.body
   store double %add, ptr %arrayidx1, align 8
   br label %for.inc
 
-for.inc:                                          ; preds = %for.body, %if.then
+for.inc:
   %inc = add nuw nsw i64 %i.07, 1
   %exitcond.not = icmp eq i64 %inc, %n
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !6
 
-for.end:                                          ; preds = %for.end.loopexit, %entry
+for.end:
   ret void
 }
 

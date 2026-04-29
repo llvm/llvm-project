@@ -6,7 +6,7 @@
 ; CHECK-DAG: %[[#Int:]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[#Bool:]] = OpTypeBool
 ; CHECK-DAG: %[[#PointerType:]] = OpTypePointer CrossWorkgroup %[[#Int]]
-; CHECK-DAG: %[[#MemSem_SequentiallyConsistent:]] = OpConstant %[[#Int]] 16
+; CHECK-DAG: %[[#MemSem_SequentiallyConsistent:]] = OpConstant %[[#Int]] 528
 ; CHECK-DAG: %[[#Value:]] = OpConstant %[[#Int]] 42
 ; CHECK-DAG: %[[#One:]] = OpConstant %[[#Int]] 1
 ; CHECK-DAG: %[[#Scope_CrossDevice:]] = OpConstantNull %[[#Int]]
