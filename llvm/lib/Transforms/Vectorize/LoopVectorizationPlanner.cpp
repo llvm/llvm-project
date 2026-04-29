@@ -563,12 +563,12 @@ bool VFSelectionContext::runtimeChecksRequired() {
   return false;
 }
 
+void VFSelectionContext::computeMinimalBitwidths() {
+  MinBWs = computeMinimumValueSizes(TheLoop->getBlocks(), *DB, &TTI);
+}
+
 const MapVector<Instruction *, uint64_t> &
-VFSelectionContext::getMinimalBitwidths() {
-  if (!MinBWsComputed) {
-    MinBWs = computeMinimumValueSizes(TheLoop->getBlocks(), *DB, &TTI);
-    MinBWsComputed = true;
-  }
+VFSelectionContext::getMinimalBitwidths() const {
   return MinBWs;
 }
 
