@@ -739,7 +739,7 @@ func.func @interleave_1d(%V: vector<16xi32>, %arg1: vector<16xi32>) -> vector<32
 // -----
 
 // Test DeinterleaveOp unrolling - target shape [4]
-func.func @deinterleave_1d(%V: vector<16xi32>) -> (vector<8xi32>, vector<8xi32>) {
+func.func @deinterleave_1d(%v: vector<16xi32>) -> (vector<8xi32>, vector<8xi32>) {
   %0, %1 = vector.deinterleave %v : vector<16xi32> -> vector<8xi32>
   return %0, %1 : vector<8xi32>, vector<8xi32>
 }
