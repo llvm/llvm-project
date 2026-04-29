@@ -1236,8 +1236,8 @@ END PROGRAM
 ### Non-Standard Intrinsics: TIMEF
 
 #### Description
-`TIMEF` returns the number of seconds that have elapsed since the first time TIMEF was called.
-The first time it is called, TIMEF returns 0.
+`TIMEF` returns the CPU time in number of seconds that have elapsed since 
+the first time TIMEF was called. The first time it is called, TIMEF returns 0.
 
 By default, the behaviour matches that of ifort and classic-flang. To match the
 behaviour of XLF and nvfortran, set `FLANG_TIMEF_IN_MILLISECONDS=1` in your environment.
