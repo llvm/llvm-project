@@ -1559,6 +1559,8 @@ createJumpTableDebugInfo(Function *F, ArrayRef<GlobalTypeMember *> Functions) {
       CU, "__ubsan_check_cfi_icall_jt", {}, File, 0, DIFnTy, 0,
       DINode::FlagArtificial, DISubprogram::SPFlagDefinition);
 
+  DILocation *UbsanLoc = DILocation::get(M.getContext(), 0, 0, UbsanSP, JTLoc);
+
   SmallVector<DILocation *> Locations;
   Locations.reserve(Functions.size());
 
@@ -1569,9 +1571,9 @@ createJumpTableDebugInfo(Function *F, ArrayRef<GlobalTypeMember *> Functions) {
         CU, (FuncName + ".cfi_jt").str(), {}, File, 0, DIFnTy, 0,
         DINode::FlagArtificial, DISubprogram::SPFlagDefinition);
 
-    DILocation *EntryLoc = JTLoc;
-    EntryLoc = DILocation::get(M.getContext(), 0, 0, UbsanSP, EntryLoc);
-    EntryLoc = DILocation::get(M.getContext(), 0, 0, JumpSP, EntryLoc);
+    DILocation *EntryLoc =
+        DILocation::get(M.getContext(), 0, 0, JumpSP, UbsanLoc);
+
     Locations.push_back(EntryLoc);
   }
 
