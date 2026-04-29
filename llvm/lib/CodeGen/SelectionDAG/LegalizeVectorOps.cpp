@@ -2067,12 +2067,14 @@ SDValue VectorLegalizer::ExpandFNEG(SDNode *Node) {
   //      a. Vector only has 1 element and target knows how to handle scalar
   //         FNEG (either legal or custom expand or promote).
   //      b. Vector has more than 1 element and target supports scalar
-  //         FNEG natively and vector length <= 3 (2 AND + 1 OR).
+  //         FNEG natively and vector length <= 2(1 XOR + 1 CONST).
+  // FIXME: Scalar construction instruction count varies in every architecture,
+  // here we assume 1 instruction for now.
   if (VT.isFixedLengthVector()) {
     EVT EltVT = VT.getVectorElementType();
     if ((VT.getVectorNumElements() == 1 &&
          TLI.isOperationLegalOrCustomOrPromote(ISD::FNEG, EltVT)) ||
-        (VT.getVectorNumElements() < 4 &&
+        (VT.getVectorNumElements() < 3 &&
          TLI.isOperationLegal(ISD::FNEG, EltVT) &&
          TLI.isExtractVecEltCheap(VT, 0)))
       return SDValue();
