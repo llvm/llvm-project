@@ -594,22 +594,28 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
 
   std::optional<int> LatchIdx = std::nullopt;
   if (FullUnswitch && L.getUniqueLatchExitBlock() != nullptr) {
-    if (BI.getSuccessor(0) == L.getLoopLatch() && L.contains(BI.getSuccessor(1))) {
+    if (BI.getSuccessor(0) == L.getLoopLatch() &&
+        L.contains(BI.getSuccessor(1))) {
       LatchIdx = 0;
     }
-    if (BI.getSuccessor(1) == L.getLoopLatch() && L.contains(BI.getSuccessor(0))) {
+    if (BI.getSuccessor(1) == L.getLoopLatch() &&
+        L.contains(BI.getSuccessor(0))) {
       LatchIdx = 1;
     }
   }
 
   bool ModifiedBranch = false;
   if (LatchIdx &&
-      areLoopExitPHIsLoopInvariant(L, *L.getLoopLatch(), *L.getUniqueLatchExitBlock()) &&
-      !llvm::any_of(*L.getLoopLatch(), [](Instruction &I) { return I.mayHaveSideEffects(); })) {
+      areLoopExitPHIsLoopInvariant(L, *L.getLoopLatch(),
+                                   *L.getUniqueLatchExitBlock()) &&
+      !llvm::any_of(*L.getLoopLatch(),
+                    [](Instruction &I) { return I.mayHaveSideEffects(); })) {
 
     SmallVector<cfg::Update<BasicBlock *>, 2> Updates;
-    Updates.push_back({cfg::UpdateKind::Delete, BI.getParent(), BI.getSuccessor(*LatchIdx)});
-    Updates.push_back({cfg::UpdateKind::Insert,  BI.getParent(), L.getUniqueLatchExitBlock()});
+    Updates.push_back(
+        {cfg::UpdateKind::Delete, BI.getParent(), BI.getSuccessor(*LatchIdx)});
+    Updates.push_back(
+        {cfg::UpdateKind::Insert, BI.getParent(), L.getUniqueLatchExitBlock()});
     BI.setSuccessor(*LatchIdx, L.getUniqueLatchExitBlock());
     for (PHINode &PN : L.getUniqueLatchExitBlock()->phis()) {
       Value *V = PN.getIncomingValueForBlock(L.getLoopLatch());
@@ -620,7 +626,6 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
       MSSAU->applyUpdates(Updates, DT);
     ModifiedBranch = true;
   }
-
 
   // Check that one of the branch's successors exits, and which one.
   bool ExitDirection = true;
@@ -637,7 +642,8 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
   }
   auto *ContinueBB = BI.getSuccessor(1 - LoopExitSuccIdx);
   auto *ParentBB = BI.getParent();
-  if (!ModifiedBranch && !areLoopExitPHIsLoopInvariant(L, *ParentBB, *LoopExitBB)) {
+  if (!ModifiedBranch &&
+      !areLoopExitPHIsLoopInvariant(L, *ParentBB, *LoopExitBB)) {
     LLVM_DEBUG(dbgs() << "   Loop exit PHI's aren't loop-invariant!\n");
     return false;
   }
