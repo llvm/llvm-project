@@ -225,6 +225,8 @@ public:
     for (auto &F : *this) {
       F.convertToNewDbgValues();
     }
+
+    removeDebugIntrinsicDeclarations();
   }
 
   /// \see BasicBlock::convertFromNewDbgValues.
