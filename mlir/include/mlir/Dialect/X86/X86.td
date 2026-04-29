@@ -1000,20 +1000,21 @@ def TileMulFOp : AMX_Op<"tile_mulf", [Pure,
       auto elementTypeRhs =
         getRhsTileType().getElementType();
 
-      intr += elementType.isF16()  ? "fp16" :
-              elementType.isBF16() ? "bf16" :
-              (elementType.isF8E4M3FN() || elementType.isF8E5M2())
-                  ? (
-                        (elementType.isF8E4M3FN() ? "b" : "h") +
-                        std::string(elementType != elementTypeRhs
-                                        ? (elementTypeRhs.isF8E4M3FN() ? "b" : "h")
-                                        : "") +
-                        "f8"
-                    )
-                  : "";
+      if (elementType.isF16()) {
+        intr += "fp16";
+      } else if (elementType.isBF16()) {
+        intr += "bf16";
+      } else if (elementType.isF8E4M3FN() || elementType.isF8E5M2()) {
+        intr += elementType.isF8E4M3FN() ? "b" : "h";
+        if (elementType != elementTypeRhs)
+          intr += elementTypeRhs.isF8E4M3FN() ? "b" : "h";
+        intr += "f8";
+      }
+
       intr += "ps.internal";
       return intr;
     }
+
     SmallVector<Value> getIntrinsicOperands(
         ::mlir::ArrayRef<Value> operands,
         const ::mlir::LLVMTypeConverter &typeConverter,
