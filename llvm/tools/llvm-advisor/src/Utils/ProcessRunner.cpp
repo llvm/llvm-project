@@ -1,4 +1,4 @@
-//===-------------------- ProcessRunner.cpp - LLVM Advisor ----------------===//
+//===------------------- ProcessRunner.cpp - LLVM Advisor -------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,98 +6,119 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This is the ProcessRunner code generator driver. It provides a convenient
-// command-line interface for generating an assembly file or a relocatable file,
-// given LLVM bitcode.
+// Safe, allowlisted subprocess execution for external_fallback capabilities.
 //
 //===----------------------------------------------------------------------===//
 
-#include "ProcessRunner.h"
-#include "llvm/ADT/STLExtras.h"
+#include "Utils/ProcessRunner.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
-#include <optional>
-#include <vector>
 
-namespace llvm {
-namespace advisor {
+#include <chrono>
 
-/// Run \p program with \p args, optionally overriding the child environment
-/// with \p envOverride (pass std::nullopt to inherit the parent environment).
-/// stdout and stderr are captured into the returned ProcessResult.
-static llvm::Expected<ProcessRunner::ProcessResult>
-runImpl(llvm::StringRef Program, const llvm::SmallVector<std::string, 8> &Args,
-        std::optional<llvm::ArrayRef<llvm::StringRef>> EnvOverride,
-        int TimeoutSeconds) {
-  auto ProgramPath = llvm::sys::findProgramByName(Program);
-  if (!ProgramPath)
-    return llvm::createStringError(ProgramPath.getError(),
-                                   "Tool not found: " + Program.str());
+using namespace llvm;
+using namespace llvm::advisor;
 
-  // argv[0] is the resolved executable path; remaining entries are the args.
-  llvm::SmallVector<llvm::StringRef, 16> ExecArgs;
-  ExecArgs.push_back(*ProgramPath);
-  for (const auto &Arg : Args)
-    ExecArgs.push_back(Arg);
+namespace {
 
-  llvm::SmallString<128> StdoutPath, StderrPath;
-  if (auto EC =
-          llvm::sys::fs::createTemporaryFile("advisor-out", "tmp", StdoutPath))
-    return llvm::createStringError(EC,
-                                   "Failed to create temporary stdout file");
-  if (auto EC =
-          llvm::sys::fs::createTemporaryFile("advisor-err", "tmp", StderrPath))
-    return llvm::createStringError(EC,
-                                   "Failed to create temporary stderr file");
+/// RAII guard that removes a temporary file on destruction.
+struct TempFileGuard {
+  StringRef Path;
+  explicit TempFileGuard(StringRef Path) : Path(Path) {}
+  ~TempFileGuard() { sys::fs::remove(Path); }
+};
 
-  std::optional<llvm::StringRef> Redirects[] = {
-      std::nullopt,                // stdin  — inherit
-      llvm::StringRef(StdoutPath), // stdout — captured
-      llvm::StringRef(StderrPath)  // stderr — captured
+} // namespace
+
+void ProcessRunner::allow(StringRef Program) {
+  ToolPolicy &Policy = AllowList[Program];
+  Policy.AllowAll = true;
+  Policy.Flags.clear();
+}
+
+void ProcessRunner::allow(StringRef Program, ArrayRef<StringRef> Flags) {
+  ToolPolicy &Policy = AllowList[Program];
+  Policy.AllowAll = false;
+  Policy.Flags.clear();
+  for (StringRef Flag : Flags)
+    Policy.Flags.insert(Flag);
+}
+
+bool ProcessRunner::isAllowedArg(StringRef Program, StringRef Arg) const {
+  if (Arg.empty() || Arg.contains('\0') || Arg.contains('\n') ||
+      Arg.contains('\r'))
+    return false;
+  if (!Arg.starts_with("-"))
+    return true;
+
+  StringMap<ToolPolicy>::const_iterator I = AllowList.find(Program);
+  if (I == AllowList.end())
+    return false;
+  if (I->second.AllowAll)
+    return true;
+  if (I->second.Flags.empty())
+    return false;
+  if (I->second.Flags.contains(Arg))
+    return true;
+
+  StringRef Name = Arg.take_until([](char C) { return C == '='; });
+  return I->second.Flags.contains(Name);
+}
+
+Expected<ProcessResult> ProcessRunner::run(StringRef Program,
+                                           ArrayRef<std::string> Arguments,
+                                           unsigned TimeoutSeconds) const {
+  if (!AllowList.contains(Program))
+    return createStringError(inconvertibleErrorCode(),
+                             "program not allowlisted: %s",
+                             Program.str().c_str());
+
+  ErrorOr<std::string> Resolved = sys::findProgramByName(Program);
+  if (!Resolved)
+    return createStringError(Resolved.getError(), "cannot find program: %s",
+                             Program.str().c_str());
+
+  SmallVector<StringRef, 16> Args;
+  Args.push_back(*Resolved);
+  for (const auto &Arg : Arguments) {
+    if (!isAllowedArg(Program, Arg))
+      return createStringError(inconvertibleErrorCode(),
+                               "argument not allowlisted: %s", Arg.c_str());
+    Args.push_back(Arg);
+  }
+
+  SmallString<128> StdoutPath, StderrPath;
+  if (auto EC = sys::fs::createTemporaryFile("advisor-out", "tmp", StdoutPath))
+    return createStringError(EC, "failed to create stdout temp file");
+  TempFileGuard StdoutGuard(StdoutPath);
+
+  if (auto EC = sys::fs::createTemporaryFile("advisor-err", "tmp", StderrPath))
+    return createStringError(EC, "failed to create stderr temp file");
+  TempFileGuard StderrGuard(StderrPath);
+
+  std::optional<StringRef> Redirects[] = {
+      std::nullopt,          // stdin
+      StringRef(StdoutPath), // stdout
+      StringRef(StderrPath)  // stderr
   };
 
-  int ExitCode =
-      llvm::sys::ExecuteAndWait(*ProgramPath, ExecArgs, EnvOverride, Redirects,
-                                static_cast<unsigned>(TimeoutSeconds));
+  auto StartTime = std::chrono::steady_clock::now();
+  int ExitCode = sys::ExecuteAndWait(*Resolved, Args, std::nullopt, Redirects,
+                                     TimeoutSeconds);
+  auto EndTime = std::chrono::steady_clock::now();
 
-  ProcessRunner::ProcessResult Result;
-  Result.exitCode = ExitCode;
-  Result.executionTime = 0.0;
+  ProcessResult Result;
+  Result.ExitCode = ExitCode;
+  Result.WallTimeNs =
+      std::chrono::duration_cast<std::chrono::nanoseconds>(EndTime - StartTime)
+          .count();
 
-  if (auto Buf = llvm::MemoryBuffer::getFile(StdoutPath))
-    Result.stdout = (*Buf)->getBuffer().str();
-  if (auto Buf = llvm::MemoryBuffer::getFile(StderrPath))
-    Result.stderr = (*Buf)->getBuffer().str();
-
-  llvm::sys::fs::remove(StdoutPath);
-  llvm::sys::fs::remove(StderrPath);
+  if (auto Buf = MemoryBuffer::getFile(StdoutPath))
+    Result.Stdout = (*Buf)->getBuffer().str();
+  if (auto Buf = MemoryBuffer::getFile(StderrPath))
+    Result.Stderr = (*Buf)->getBuffer().str();
 
   return Result;
 }
-
-Expected<ProcessRunner::ProcessResult>
-ProcessRunner::run(llvm::StringRef Program,
-                   const llvm::SmallVector<std::string, 8> &Args,
-                   int TimeoutSeconds) {
-  return runImpl(Program, Args, /*envOverride=*/std::nullopt, TimeoutSeconds);
-}
-
-Expected<ProcessRunner::ProcessResult> ProcessRunner::runWithEnv(
-    llvm::StringRef Program, const llvm::SmallVector<std::string, 8> &Args,
-    const llvm::SmallVector<std::string, 8> &Env, int TimeoutSeconds) {
-  // Convert the environment strings to StringRef so we can pass them directly
-  // to ExecuteAndWait.  This sets the *child* environment without touching the
-  // parent process, which is the correct and thread-safe approach.
-  llvm::SmallVector<llvm::StringRef, 16> EnvRefs;
-  EnvRefs.reserve(Env.size());
-  for (const auto &E : Env)
-    EnvRefs.push_back(E);
-
-  return runImpl(Program, Args, llvm::ArrayRef<llvm::StringRef>(EnvRefs),
-                 TimeoutSeconds);
-}
-
-} // namespace advisor
-} // namespace llvm

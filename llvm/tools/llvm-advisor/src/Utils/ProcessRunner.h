@@ -6,40 +6,59 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This is the ProcessRunner code generator driver. It provides a convenient
-// command-line interface for generating an assembly file or a relocatable file,
-// given LLVM bitcode.
+// Safe, allowlisted subprocess execution for external_fallback capabilities.
+// The only file in the entire codebase that may spawn child processes.
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_ADVISOR_PROCESS_RUNNER_H
-#define LLVM_ADVISOR_PROCESS_RUNNER_H
 
-#include "llvm/ADT/SmallVector.h"
+#pragma once
+
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Error.h"
+
 #include <string>
 
-namespace llvm {
-namespace advisor {
+namespace llvm::advisor {
 
-class ProcessRunner {
-public:
-  struct ProcessResult {
-    int exitCode;
-    std::string stdout;
-    std::string stderr;
-    double executionTime;
-  };
-
-  static Expected<ProcessResult>
-  run(llvm::StringRef program, const llvm::SmallVector<std::string, 8> &args,
-      int timeoutSeconds = 60);
-
-  static Expected<ProcessResult> runWithEnv(
-      llvm::StringRef program, const llvm::SmallVector<std::string, 8> &args,
-      const llvm::SmallVector<std::string, 8> &env, int timeoutSeconds = 60);
+/// Result of an external process invocation.
+struct ProcessResult {
+  int ExitCode = -1;
+  std::string Stdout;
+  std::string Stderr;
+  uint64_t WallTimeNs = 0;
 };
 
-} // namespace advisor
-} // namespace llvm
+/// Runs external tools with an explicit allowlist.
+///
+/// Programs and their arguments must be registered before execution.
+/// Any argument not in the allowlist causes the run to fail.
+class ProcessRunner {
+public:
+  /// Allow all arguments for a given program.
+  void allow(StringRef Program);
 
-#endif
+  /// Allow only specific flags for a given program.
+  /// Overrides any previous allow-all setting.
+  void allow(StringRef Program, ArrayRef<StringRef> Flags);
+
+  /// Execute a program with the given arguments.
+  ///
+  /// Fails if the program or any argument is not allowlisted.
+  /// If TimeoutSeconds is zero, no timeout is applied.
+  Expected<ProcessResult> run(StringRef Program,
+                              ArrayRef<std::string> Arguments,
+                              unsigned TimeoutSeconds = 0) const;
+
+private:
+  struct ToolPolicy {
+    StringSet<> Flags;
+    bool AllowAll = false;
+  };
+
+  bool isAllowedArg(StringRef Program, StringRef Arg) const;
+  StringMap<ToolPolicy> AllowList;
+};
+
+} // namespace llvm::advisor
