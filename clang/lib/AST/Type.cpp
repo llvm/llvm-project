@@ -2405,6 +2405,12 @@ bool Type::isUnsignedIntegerOrEnumerationType() const {
   return false;
 }
 
+bool Type::isUnsignedIntegerOrVectorType() const {
+  if (const auto *VT = getAs<VectorType>())
+    return VT->getElementType()->isUnsignedIntegerType();
+  return isUnsignedIntegerType();
+}
+
 bool Type::hasUnsignedIntegerRepresentation() const {
   if (const auto *VT = dyn_cast<VectorType>(CanonicalType))
     return VT->getElementType()->isUnsignedIntegerOrEnumerationType();

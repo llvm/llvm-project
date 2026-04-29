@@ -483,10 +483,35 @@ int test26(short n) {
 #endif
 
 typedef unsigned long __attribute__((__vector_size__(8))) W;
+
 void test27(void) {
   int i;
   W g;
-  // We expect no assertion failures here.
-  W w1 = i == (-g); // expected-warning {{}}
-  W w2 = i == (~g); // expected-warning {{}}
+
+  W w1 = i == (-g);
+  // expected-warning@-1 {{}}
+  
+  W w3 = i == (+g);
+  // expected-warning@-1 {{}}
+  
+  W w2 = i == (~g);
+  // expected-warning@-1 {{}}
+
+  W w4 = i == (!g);
+  // expected-error@-1 {{}}
+
+  W w5 = i == (++g);
+  // expected-error@-1 {{}}
+
+  W w6 = i == (g++);
+  // expected-error@-1 {{}}
+
+  W w7 = i == (--g);
+  // expected-error@-1 {{}}
+
+  W w8 = i == (g--);
+  // expected-error@-1 {{}}
+
+  W w9 = i == (*g);
+  // expected-error@-1 {{}}
 }
