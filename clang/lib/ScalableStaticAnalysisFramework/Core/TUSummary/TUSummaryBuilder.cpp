@@ -17,7 +17,10 @@ using namespace clang;
 using namespace ssaf;
 
 EntityId TUSummaryBuilder::addEntity(const EntityName &E) {
-  return Summary.IdTable.getId(E);
+  auto Id = Summary.IdTable.getId(E);
+  Summary.LinkageTable.try_emplace(Id,
+                                   EntityLinkage(EntityLinkageType::External));
+  return Id;
 }
 
 std::pair<EntitySummary *, bool>

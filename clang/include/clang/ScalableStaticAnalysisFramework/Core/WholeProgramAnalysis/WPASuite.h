@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_WHOLEPROGRAMANALYSIS_WPASUITE_H
 #define LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_WHOLEPROGRAMANALYSIS_WPASUITE_H
 
+#include "clang/ScalableStaticAnalysisFramework/Core/Model/BuildNamespace.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityIdTable.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Support/ErrorBuilder.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/WholeProgramAnalysis/AnalysisName.h"
@@ -39,12 +40,16 @@ class WPASuite {
   friend class SerializationFormat;
   friend class TestFixture;
 
+  NestedBuildNamespace LUNamespace;
   EntityIdTable IdTable;
   std::map<AnalysisName, std::unique_ptr<AnalysisResult>> Data;
 
   WPASuite() = default;
 
 public:
+  /// Returns the LU namespace that qualifies entity names in the IdTable.
+  const NestedBuildNamespace &getLUNamespace() const { return LUNamespace; }
+
   /// Returns the EntityIdTable that maps EntityId values to their symbolic
   /// names.
   const EntityIdTable &getIdTable() const { return IdTable; }

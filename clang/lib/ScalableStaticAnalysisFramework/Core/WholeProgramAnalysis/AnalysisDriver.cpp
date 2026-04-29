@@ -167,6 +167,7 @@ llvm::Expected<WPASuite> AnalysisDriver::execute(
     EntityIdTable IdTable,
     llvm::ArrayRef<std::unique_ptr<AnalysisBase>> Sorted) const {
   WPASuite Suite;
+  Suite.LUNamespace = LU->LUNamespace;
   Suite.IdTable = std::move(IdTable);
 
   for (auto &Analysis : Sorted) {

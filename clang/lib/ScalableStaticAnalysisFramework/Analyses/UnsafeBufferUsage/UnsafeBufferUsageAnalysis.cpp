@@ -13,18 +13,27 @@
 
 #include "clang/ScalableStaticAnalysisFramework/Analyses/UnsafeBufferUsage/UnsafeBufferUsageAnalysis.h"
 #include "SSAFAnalysesCommon.h"
+#include "clang/AST/ASTConsumer.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/ScalableStaticAnalysisFramework/Analyses/EntityPointerLevel/EntityPointerLevel.h"
 #include "clang/ScalableStaticAnalysisFramework/Analyses/EntityPointerLevel/EntityPointerLevelFormat.h"
 #include "clang/ScalableStaticAnalysisFramework/Analyses/PointerFlow/PointerFlowAnalysis.h"
 #include "clang/ScalableStaticAnalysisFramework/Analyses/UnsafeBufferUsage/UnsafeBufferUsage.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/ASTEntityMapping.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/Model/BuildNamespace.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Serialization/JSONFormat.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/SourcePassAnalysis/SourcePassAnalysis.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/SourcePassAnalysis/SourcePassAnalysisRegistry.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/WholeProgramAnalysis/AnalysisName.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/WholeProgramAnalysis/AnalysisRegistry.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/WholeProgramAnalysis/SummaryAnalysis.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
+#include <cstddef>
 #include <memory>
 
-using namespace clang::ssaf;
+using namespace clang;
+using namespace ssaf;
 using namespace llvm;
 
 namespace {
@@ -189,6 +198,99 @@ public:
 AnalysisRegistry::Add<UnsafeBufferReachableAnalysis>
     RegisterUnsafeBufferReachableAnalysis(
         "Reachable pointers from unsafe buffer usage in pointer flow graph");
+
+void prettyPrint(const ASTContext &Ctx, const NamedDecl *Decl,
+                 const EntityPointerLevel &EPL, llvm::raw_ostream &OS) {
+  std::string Name;
+  if (const auto *FD = dyn_cast<FieldDecl>(Decl)) {
+    Name = FD->getQualifiedNameAsString();
+  } else
+    Name = Decl->getNameAsString();
+  OS << "(" << Name << ", " << EPL.getPointerLevel() << ")";
+}
+
+class UnsafeBufferReachableDebugAnalysis
+    : public SourcePassAnalysis<void, UnsafeBufferReachableAnalysisResult> {
+
+  std::unique_ptr<WPASuite> Suite;
+
+public:
+  using SourcePassAnalysis::SourcePassAnalysis;
+
+  static AnalysisName analysisName() {
+    return AnalysisName("UnsafeBufferReachableDebugAnalysis");
+  }
+
+  void HandleTranslationUnit(ASTContext &Ctx) override;
+};
+
+void UnsafeBufferReachableDebugAnalysis::HandleTranslationUnit(
+    ASTContext &Ctx) {
+  auto ResultOrErr = getDependentWPAResult();
+
+  if (!ResultOrErr) {
+    llvm::report_fatal_error(ResultOrErr.takeError());
+    return;
+  }
+
+  const auto &WPAResult = *ResultOrErr;
+  auto &IdTable = getEntityIdTable();
+  NestedBuildNamespace NS = getLUNamespace();
+
+  std::vector<const NamedDecl *> Contributors;
+  std::set<const NamedDecl *> AllTUDecls;
+  EntityPointerLevelSet TUReachables;
+  findContributors(Ctx, Contributors);
+
+  // Populate TUReachables & AllTUDecls:
+  AllTUDecls.insert(Contributors.begin(), Contributors.end());
+  for (const auto *C : Contributors) {
+    auto ContributorName = getEntityName(C);
+
+    if (!ContributorName)
+      continue;
+
+    EntityId CId = IdTable.getId(ContributorName->makeQualified(NS));
+    auto It = WPAResult.Reachables.find(CId);
+
+    if (It == WPAResult.Reachables.end())
+      continue;
+    TUReachables.insert(It->second.begin(), It->second.end());
+
+    auto MatchAction = [&AllTUDecls](const DynTypedNode &Node) {
+      if (const auto *DRE = Node.get<DeclRefExpr>())
+        AllTUDecls.insert(DRE->getDecl());
+      if (const auto *ME = Node.get<MemberExpr>())
+        AllTUDecls.insert(ME->getMemberDecl());
+    };
+
+    findMatchesIn(C, MatchAction);
+  }
+
+  unsigned NumPrinted = 0;
+
+  for (auto *Decl : AllTUDecls) {
+    auto Name = getEntityName(Decl);
+
+    if (!Name)
+      continue;
+
+    EntityId Id = IdTable.getId(Name->makeQualified(NS));
+
+    for (auto &EPL : llvm::make_range(TUReachables.equal_range(Id))) {
+      llvm::errs() << "unsafe pointer level:";
+      prettyPrint(Ctx, Decl, EPL, llvm::errs());
+      llvm::errs() << "\n";
+      ++NumPrinted;
+    }
+  }
+  llvm::errs() << "#unsafe pointer level: " << NumPrinted << "\n";
+}
+
+SourcePassAnalysisRegistry::Add<UnsafeBufferReachableDebugAnalysis, void,
+                                UnsafeBufferReachableAnalysisResult>
+    RegisterUnsafeBufferReachableDebugAnalysis(
+        "Apply UnsafeBufferReachableAnalysisResult to AST for pretty-printing");
 
 } // namespace
 

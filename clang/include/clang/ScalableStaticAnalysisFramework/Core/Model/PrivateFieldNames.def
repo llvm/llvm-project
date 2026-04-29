@@ -44,5 +44,6 @@ FIELD(TUSummaryEncoding, LinkageTable)
 FIELD(TUSummaryEncoding, TUNamespace)
 FIELD(WPASuite, Data)
 FIELD(WPASuite, IdTable)
+FIELD(WPASuite, LUNamespace)
 
 #undef FIELD

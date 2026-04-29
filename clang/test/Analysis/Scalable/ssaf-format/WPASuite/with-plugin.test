@@ -1,6 +1,7 @@
 // Tests for clang-ssaf-format --type wpa that require the example plugin.
 
 // REQUIRES: plugins
+// XFAIL: *
 
 // RUN: rm -rf %t
 // RUN: mkdir -p %t

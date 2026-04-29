@@ -1,5 +1,6 @@
 {
   "id_table": [],
+  "lu_namespace": [],
   "results": [
     {
       "analysis_name": "PointerFlowAnalysisResult",

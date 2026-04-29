@@ -141,6 +141,29 @@ llvm::Expected<WPASuite> JSONFormat::readWPASuite(llvm::StringRef Path) {
   WPASuite Suite = makeWPASuite();
 
   {
+    const Array *LUNamespaceArray = RootObject.getArray("lu_namespace");
+    if (!LUNamespaceArray) {
+      return ErrorBuilder::create(std::errc::invalid_argument,
+                                  ErrorMessages::FailedToReadObjectAtField,
+                                  "NestedBuildNamespace", "lu_namespace",
+                                  "array")
+          .context(ErrorMessages::ReadingFromFile, "WPASuite", Path)
+          .build();
+    }
+
+    auto ExpectedLUNamespace = nestedBuildNamespaceFromJSON(*LUNamespaceArray);
+    if (!ExpectedLUNamespace) {
+      return ErrorBuilder::wrap(ExpectedLUNamespace.takeError())
+          .context(ErrorMessages::ReadingFromField, "NestedBuildNamespace",
+                   "lu_namespace")
+          .context(ErrorMessages::ReadingFromFile, "WPASuite", Path)
+          .build();
+    }
+
+    getLUNamespace(Suite) = std::move(*ExpectedLUNamespace);
+  }
+
+  {
     const Array *IdTableArray = RootObject.getArray("id_table");
     if (!IdTableArray) {
       return ErrorBuilder::create(std::errc::invalid_argument,
@@ -188,6 +211,9 @@ llvm::Expected<WPASuite> JSONFormat::readWPASuite(llvm::StringRef Path) {
 llvm::Error JSONFormat::writeWPASuite(const WPASuite &Suite,
                                       llvm::StringRef Path) {
   Object RootObject;
+
+  RootObject["lu_namespace"] =
+      nestedBuildNamespaceToJSON(getLUNamespace(Suite));
 
   RootObject["id_table"] = luEntityIdTableToJSON(getIdTable(Suite));
 

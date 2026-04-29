@@ -60,6 +60,8 @@ protected:
     // provide a lookupId() method:
     return const_cast<EntityIdTable &>(WPAResult->getIdTable());
   }
+
+  NestedBuildNamespace getLUNamespace() { return WPAResult->getLUNamespace(); }
 };
 
 } // namespace clang::ssaf

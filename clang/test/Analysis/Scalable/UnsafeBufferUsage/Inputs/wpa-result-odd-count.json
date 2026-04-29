@@ -14,6 +14,7 @@
       }
     }
   ],
+  "lu_namespace": [],
   "results": [
     {
       "analysis_name": "UnsafeBufferUsageAnalysisResult",
