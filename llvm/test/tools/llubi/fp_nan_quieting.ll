@@ -11,6 +11,6 @@ define void @main() {
 ; CHECK: Entering function: main
 ; CHECK-NEXT:   %qnan_zero_payload = fadd double 1.000000e+00, 0x7FF8000000000000 => double NaN
 ; CHECK-NEXT:   %qnan_nonzero_payload = fadd double 1.000000e+00, 0x7FF8000000000001 => double 0xFFF8000000000001
-; CHECK-NEXT:   %snan = fadd double 1.000000e+00, 0x7FF0000000000001 => double 0xFFF8000000000001
+; CHECK-NEXT:   %snan = fadd double 1.000000e+00, 0x7FF0000000000001 => double 0x7FF8000000000001
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

@@ -28,6 +28,6 @@ define void @main() {
 ; CHECK-NEXT:   %p1 = fadd x86_fp80 0xK3FFF8000000000000000, poison => poison
 ; CHECK-NEXT:   %p2 = fneg x86_fp80 poison => poison
 ; CHECK-NEXT:   %inf = fdiv x86_fp80 0xK3FFF8000000000000000, 0xK00000000000000000000 => x86_fp80 +Inf
-; CHECK-NEXT:   %nan = fdiv x86_fp80 0xK00000000000000000000, 0xK00000000000000000000 => x86_fp80 0xFFFFC000000000000000
+; CHECK-NEXT:   %nan = fdiv x86_fp80 0xK00000000000000000000, 0xK00000000000000000000 => x86_fp80 NaN
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

@@ -14,12 +14,15 @@
 #include "ExecutorBase.h"
 #include "Library.h"
 #include "Value.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace llvm::ubi {
 
@@ -84,10 +87,10 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
   }
 
   APFloat handleDenormal(APFloat Val, DenormalMode::DenormalModeKind Mode,
-                         bool NonDet = false) {
+                         bool IsInput = false) {
     if (!Val.isDenormal())
       return Val;
-    if (NonDet) {
+    if (IsInput) {
       // Non-deterministically choose between flushing or preserving the
       // denormal value.
       if (Ctx.getRandomBool())
@@ -126,22 +129,46 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     return Val;
   }
 
-  NaNPropagationBehavior resolveNaNPropagationBehavior() {
-    NaNPropagationBehavior Choice = Ctx.getNaNPropagationBehavior();
-    if (Choice == NaNPropagationBehavior::NonDeterministic) {
-      uint64_t NonDetChoice = Ctx.getRandomUInt64() % 4 + 1;
-      Choice = static_cast<NaNPropagationBehavior>(NonDetChoice);
-    }
-    return Choice;
+  void addNaNCandidate(SmallVectorImpl<APFloat> &Candidates,
+                       APFloat Candidate) {
+    APInt Bits = Candidate.bitcastToAPInt();
+    if (any_of(Candidates, [&](const APFloat &Existing) {
+          return Existing.bitcastToAPInt() == Bits;
+        }))
+      return;
+    Candidates.push_back(std::move(Candidate));
   }
 
-  const APFloat &pickNaNSource(ArrayRef<const APFloat *> Inputs,
-                               const APFloat &Fallback) {
+  APFloat pickNaNCandidate(ArrayRef<APFloat> Candidates) {
+    assert(!Candidates.empty() && "Need at least one NaN candidate.");
+    return Candidates[Ctx.getRandomUInt64() % Candidates.size()];
+  }
+
+  APInt getRandomNaNPayload(const fltSemantics &Sem) {
+    const unsigned NumBits = Sem.precision - 1;
+    SmallVector<APInt::WordType, 2> RandomWords;
+    const unsigned NumWords = APInt::getNumWords(NumBits);
+    RandomWords.reserve(NumWords);
+    for (unsigned I = 0; I != NumWords; ++I)
+      RandomWords.push_back(Ctx.getRandomUInt64());
+    return APInt(NumBits, RandomWords);
+  }
+
+  bool isPreferredNaN(const APFloat &Val) {
+    assert(Val.isNaN() && "Expected NaN.");
+    const APFloat Preferred =
+        APFloat::getQNaN(Val.getSemantics(), Val.isNegative());
+    return Val.bitcastToAPInt() == Preferred.bitcastToAPInt();
+  }
+
+  bool wasmMayProduceExtraNaNPayload(ArrayRef<const APFloat *> Inputs) {
     for (const APFloat *Input : Inputs) {
-      if (Input->isNaN())
-        return *Input;
+      if (!Input->isNaN())
+        continue;
+      if (Input->isSignaling() || !isPreferredNaN(*Input))
+        return true;
     }
-    return Fallback;
+    return false;
   }
 
   APFloat propagateInputNaN(const APFloat &InputNaN, const fltSemantics &DstSem,
@@ -156,30 +183,75 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     return Res;
   }
 
+  void addPropagatedNaNCandidates(SmallVectorImpl<APFloat> &Candidates,
+                                  ArrayRef<const APFloat *> Inputs,
+                                  const fltSemantics &DstSem, bool QuietingMode,
+                                  bool SignChoice) {
+    for (const APFloat *Input : Inputs) {
+      if (!Input->isNaN())
+        continue;
+      addNaNCandidate(Candidates, propagateInputNaN(*Input, DstSem,
+                                                    QuietingMode, SignChoice));
+    }
+  }
+
+  void addTargetSpecificNaNCandidates(SmallVectorImpl<APFloat> &Candidates,
+                                      const APFloat &Result,
+                                      ArrayRef<const APFloat *> Inputs,
+                                      bool SignChoice) {
+    const Triple &TT = Ctx.getTargetTriple();
+    if (TT.isWasm()) {
+      if (!wasmMayProduceExtraNaNPayload(Inputs))
+        return;
+      APInt Payload = getRandomNaNPayload(Result.getSemantics());
+      addNaNCandidate(Candidates, APFloat::getQNaN(Result.getSemantics(),
+                                                   SignChoice, &Payload));
+      return;
+    }
+
+    if (TT.isSPARC32() || TT.isSPARC64()) {
+      APInt Payload = APInt::getAllOnes(Result.getSemantics().precision - 1);
+      addNaNCandidate(Candidates, APFloat::getQNaN(Result.getSemantics(),
+                                                   SignChoice, &Payload));
+    }
+  }
+
   APFloat applyNaNPropagation(const APFloat &Result,
                               ArrayRef<const APFloat *> Inputs) {
     if (!Result.isNaN())
       return Result;
 
-    NaNPropagationBehavior Choice = resolveNaNPropagationBehavior();
+    const NaNPropagationBehavior Choice =
+        Ctx.getEffectiveNaNPropagationBehavior();
     const bool SignChoice = Ctx.getRandomBool();
+    const fltSemantics &ResultSem = Result.getSemantics();
+    auto PreferredNaN = [&]() {
+      return APFloat::getQNaN(ResultSem, SignChoice);
+    };
+
+    SmallVector<APFloat, 4> Candidates;
     switch (Choice) {
     case NaNPropagationBehavior::PreferredNaN:
-      return APFloat::getQNaN(Result.getSemantics(), SignChoice);
+      return PreferredNaN();
     case NaNPropagationBehavior::QuietingNaN:
-      return propagateInputNaN(pickNaNSource(Inputs, Result),
-                               Result.getSemantics(), /*QuietingMode=*/true,
-                               SignChoice);
+      addPropagatedNaNCandidates(Candidates, Inputs, ResultSem,
+                                 /*QuietingMode=*/true, SignChoice);
+      return Candidates.empty() ? PreferredNaN() : pickNaNCandidate(Candidates);
     case NaNPropagationBehavior::UnchangedNaN:
-      return propagateInputNaN(pickNaNSource(Inputs, Result),
-                               Result.getSemantics(), /*QuietingMode=*/false,
-                               SignChoice);
-    case NaNPropagationBehavior::TargetSpecificNaN: {
-      APInt Payload(64, Ctx.getRandomUInt64());
-      return APFloat::getQNaN(Result.getSemantics(), SignChoice, &Payload);
-    }
+      addPropagatedNaNCandidates(Candidates, Inputs, ResultSem,
+                                 /*QuietingMode=*/false, SignChoice);
+      return Candidates.empty() ? PreferredNaN() : pickNaNCandidate(Candidates);
+    case NaNPropagationBehavior::TargetSpecificNaN:
+      addTargetSpecificNaNCandidates(Candidates, Result, Inputs, SignChoice);
+      return Candidates.empty() ? PreferredNaN() : pickNaNCandidate(Candidates);
     case NaNPropagationBehavior::NonDeterministic:
-      llvm_unreachable("NonDeterministic should be resolved earlier.");
+      addNaNCandidate(Candidates, PreferredNaN());
+      addPropagatedNaNCandidates(Candidates, Inputs, ResultSem,
+                                 /*QuietingMode=*/true, SignChoice);
+      addPropagatedNaNCandidates(Candidates, Inputs, ResultSem,
+                                 /*QuietingMode=*/false, SignChoice);
+      addTargetSpecificNaNCandidates(Candidates, Result, Inputs, SignChoice);
+      return pickNaNCandidate(Candidates);
     }
     llvm_unreachable("Unhandled NaN propagation behavior.");
   }
@@ -306,7 +378,7 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
 
       // Flush output denormals and handle fast-math flags.
       AnyValue FResult = handleFMFFlags(
-          handleDenormal(RawResult, DenormMode.Output, /*NonDet=*/true), FMF,
+          handleDenormal(RawResult, DenormMode.Output, /*IsInput=*/true), FMF,
           /*IsInput=*/false);
 
       if (FResult.isPoison())

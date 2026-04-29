@@ -28,6 +28,6 @@ define void @main() {
 ; CHECK-NEXT:   %p1 = fadd half 0xH3C00, poison => poison
 ; CHECK-NEXT:   %p2 = fneg half poison => poison
 ; CHECK-NEXT:   %inf = fdiv half 0xH3C00, 0xH0000 => half +Inf
-; CHECK-NEXT:   %nan = fdiv half 0xH0000, 0xH0000 => half 0xFE00
+; CHECK-NEXT:   %nan = fdiv half 0xH0000, 0xH0000 => half NaN
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

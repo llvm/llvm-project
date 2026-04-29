@@ -141,13 +141,14 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
       return AnyValue::poison();
     }
     uint8_t RandomBits = 0;
-    if (UndefBehavior == UndefValueBehavior::NonDeterministic &&
+    if (getEffectiveUndefValueBehavior() ==
+            UndefValueBehavior::NonDeterministic &&
         (~LogicalByte.ConcreteMask & Mask)) {
       // This byte contains undef bits.
       // We don't use std::uniform_int_distribution here because it produces
       // different results across different library implementations. Instead,
       // we directly use the low bits from Rng.
-      RandomBits = static_cast<uint8_t>(Rng());
+      RandomBits = static_cast<uint8_t>(getRandomUInt64());
     }
     uint8_t ActualBits = ((LogicalByte.Value & LogicalByte.ConcreteMask) |
                           (RandomBits & ~LogicalByte.ConcreteMask)) &
@@ -380,7 +381,7 @@ void Context::freeze(AnyValue &Val, Type *Ty) {
   if (Val.isPoison()) {
     uint32_t Bits = DL.getTypeSizeInBits(Ty);
     APInt RandomVal = APInt::getZero(Bits);
-    if (UndefBehavior == UndefValueBehavior::NonDeterministic) {
+    if (mayUseNonDeterminism()) {
       SmallVector<APInt::WordType> RandomWords;
       uint32_t NumWords = APInt::getNumWords(Bits);
       RandomWords.reserve(NumWords);
@@ -388,7 +389,7 @@ void Context::freeze(AnyValue &Val, Type *Ty) {
                         std::numeric_limits<APInt::WordType>::digits,
                     "Unexpected Rng result type.");
       for (uint32_t I = 0; I != NumWords; ++I)
-        RandomWords.push_back(static_cast<APInt::WordType>(Rng()));
+        RandomWords.push_back(static_cast<APInt::WordType>(getRandomUInt64()));
       RandomVal = APInt(Bits, RandomWords);
     }
     if (Ty->isIntegerTy())
@@ -523,15 +524,27 @@ bool Context::isDefaultFPEnv() const {
   return isDefaultFPEnvironment(CurrentExceptionBehavior, CurrentRoundingMode);
 }
 
+UndefValueBehavior Context::getEffectiveUndefValueBehavior() const {
+  if (isDeterministic())
+    return UndefValueBehavior::Zero;
+  return UndefBehavior;
+}
+
+NaNPropagationBehavior Context::getEffectiveNaNPropagationBehavior() const {
+  if (isDeterministic())
+    return NaNPropagationBehavior::PreferredNaN;
+  return NaNBehavior;
+}
+
 bool Context::getRandomBool() {
   // We use the lowest bit of the raw bits from RNG as the result:
-  if (UndefBehavior == UndefValueBehavior::NonDeterministic)
+  if (mayUseNonDeterminism())
     return static_cast<bool>(Rng() & 1);
   return false;
 }
 
 uint64_t Context::getRandomUInt64() {
-  if (UndefBehavior == UndefValueBehavior::NonDeterministic)
+  if (mayUseNonDeterminism())
     return Rng();
   return 0;
 }

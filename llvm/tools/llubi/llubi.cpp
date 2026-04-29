@@ -79,6 +79,11 @@ static cl::opt<unsigned>
          cl::desc("Random seed for non-deterministic behavior (default = 0)"),
          cl::value_desc("N"), cl::init(0), cl::cat(InterpreterCategory));
 
+static cl::opt<bool>
+    Deterministic("deterministic",
+                  cl::desc("Disable interpreter-introduced non-determinism."),
+                  cl::init(false), cl::cat(InterpreterCategory));
+
 cl::opt<ubi::UndefValueBehavior> UndefBehavior(
     "", cl::desc("Choose undef value behavior:"),
     cl::values(clEnumVal(ubi::UndefValueBehavior::NonDeterministic,
@@ -91,8 +96,8 @@ cl::opt<ubi::NaNPropagationBehavior> NaNPropagationBehavior(
     "", cl::desc("Choose NaN propagation behavior:"),
     cl::values(
         clEnumValN(ubi::NaNPropagationBehavior::NonDeterministic, "nan-nodet",
-                   "Non-deterministically choose from 4 cases as specified by "
-                   "language reference."),
+                   "Non-deterministically choose from valid NaN results as "
+                   "specified by language reference."),
         clEnumValN(ubi::NaNPropagationBehavior::PreferredNaN, "nan-preferred",
                    "The quiet bit is set and the payload is all-zero."),
         clEnumValN(
@@ -104,9 +109,9 @@ cl::opt<ubi::NaNPropagationBehavior> NaNPropagationBehavior(
                    "that is a NaN"),
         clEnumValN(ubi::NaNPropagationBehavior::TargetSpecificNaN,
                    "nan-target-specific",
-                   "The quiet bit is set and the payload is picked from a"
-                   "target-specific set of “extra” possible NaN payloads."
-                   "Implemented by filling payload with random values")),
+                   "The quiet bit is set and the payload is picked from a "
+                   "known target-specific set of \"extra\" possible NaN "
+                   "payloads.")),
     cl::init(ubi::NaNPropagationBehavior::NonDeterministic));
 
 class VerboseEventHandler : public ubi::EventHandler {
@@ -219,6 +224,7 @@ int main(int argc, char **argv) {
   Ctx.setVScale(VScale);
   Ctx.setMaxSteps(MaxSteps);
   Ctx.setMaxStackDepth(MaxStackDepth);
+  Ctx.setDeterministic(Deterministic);
   Ctx.setUndefValueBehavior(UndefBehavior);
   Ctx.setNaNPropagationBehavior(NaNPropagationBehavior);
   Ctx.reseed(Seed);

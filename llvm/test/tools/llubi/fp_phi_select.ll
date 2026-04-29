@@ -20,13 +20,13 @@ phi.test:
   ret void
 }
 ; CHECK: Entering function: main
-; CHECK-NEXT:   %nan = fdiv float 0.000000e+00, 0.000000e+00 => float 0xFFC00000
+; CHECK-NEXT:   %nan = fdiv float 0.000000e+00, 0.000000e+00 => float NaN
 ; CHECK-NEXT:   %inf = fdiv float 1.000000e+00, 0.000000e+00 => float +Inf
-; CHECK-NEXT:   %safe_sel = select i1 true, float %nan, float 1.000000e+00 => float 0xFFC00000
+; CHECK-NEXT:   %safe_sel = select i1 true, float %nan, float 1.000000e+00 => float NaN
 ; CHECK-NEXT:   %bad_sel_nan = select nnan i1 true, float %nan, float 1.000000e+00 => poison
 ; CHECK-NEXT:   %bad_sel_inf = select ninf i1 false, float 1.000000e+00, float %inf => poison
 ; CHECK-NEXT:   br label %phi.test jump to %phi.test
-; CHECK-NEXT:   %safe_phi = phi float [ %nan, %entry ] => float 0xFFC00000
+; CHECK-NEXT:   %safe_phi = phi float [ %nan, %entry ] => float NaN
 ; CHECK-NEXT:   %bad_phi_nan = phi nnan float [ %nan, %entry ] => poison
 ; CHECK-NEXT:   %bad_phi_inf = phi ninf float [ %inf, %entry ] => poison
 ; CHECK-NEXT:   ret void
