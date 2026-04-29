@@ -222,14 +222,14 @@ class TestSuite:
     A test suite groups together a set of logically related tests.
     """
 
-    def __init__(self, name, source_root, exec_root, config):
+    def __init__(self, name, source_root, exec_root, config, lit_config=None):
         self.name = name
         self.source_root = source_root
         self.exec_root = exec_root
         # The test suite configuration.
         self.config = config
 
-        self.test_times = read_test_times(self)
+        self.test_times = read_test_times(self, lit_config)
 
     def getSourcePath(self, components):
         return os.path.join(self.source_root, *components)

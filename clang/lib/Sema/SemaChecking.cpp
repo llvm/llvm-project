@@ -336,10 +336,15 @@ static bool BuiltinAlignment(Sema &S, CallExpr *TheCall, unsigned ID) {
   }
   if ((!SrcTy->isPointerType() && !IsValidIntegerType(SrcTy)) ||
       SrcTy->isFunctionPointerType()) {
-    // FIXME: this is not quite the right error message since we don't allow
-    // floating point types, or member pointers.
     S.Diag(Source->getExprLoc(), diag::err_typecheck_expect_scalar_operand)
         << SrcTy;
+    if (SrcTy->isFloatingType())
+      S.Diag(Source->getExprLoc(), diag::note_alignment_invalid_type);
+    else if (SrcTy->isMemberPointerType())
+      S.Diag(Source->getExprLoc(), diag::note_alignment_invalid_member_pointer);
+    else if (SrcTy->isFunctionPointerType())
+      S.Diag(Source->getExprLoc(),
+             diag::note_alignment_invalid_function_pointer);
     return true;
   }
 

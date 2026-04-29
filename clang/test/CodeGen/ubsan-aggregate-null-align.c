@@ -91,6 +91,7 @@ __attribute__((noinline)) void test_nested_member_plain_deref_ptr(struct Contain
 // Misaligned aggregate access
 
 // SHARED-LABEL: define {{[^@]*}}@test_misaligned_access
+// SHARED: %[[P:.*]] = load ptr, ptr %p
 // SHARED-NOT: call void @__ubsan_handle_type_mismatch_v1_abort
 // SHARED: call void @llvm.memcpy
 __attribute__((noinline)) void test_misaligned_access(struct Small *dest, char *buf) {

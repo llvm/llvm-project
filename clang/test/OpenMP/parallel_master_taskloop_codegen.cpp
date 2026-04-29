@@ -90,7 +90,7 @@ struct S {
 // CHECK1-NEXT:    [[TMP8:%.*]] = load i32, ptr [[ARGC_ADDR]], align 4
 // CHECK1-NEXT:    store i32 [[TMP8]], ptr [[DOTCAPTURE_EXPR_4]], align 4
 // CHECK1-NEXT:    [[TMP9:%.*]] = load i8, ptr [[DOTCAPTURE_EXPR_3]], align 1
-// CHECK1-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP9]] to i1
+// CHECK1-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP9]], 0
 // CHECK1-NEXT:    [[STOREDV6:%.*]] = zext i1 [[LOADEDV]] to i8
 // CHECK1-NEXT:    store i8 [[STOREDV6]], ptr [[DOTCAPTURE_EXPR__CASTED5]], align 1
 // CHECK1-NEXT:    [[TMP10:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR__CASTED5]], align 8
@@ -98,7 +98,7 @@ struct S {
 // CHECK1-NEXT:    store i32 [[TMP11]], ptr [[DOTCAPTURE_EXPR__CASTED7]], align 4
 // CHECK1-NEXT:    [[TMP12:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR__CASTED7]], align 8
 // CHECK1-NEXT:    [[TMP13:%.*]] = load i8, ptr [[DOTCAPTURE_EXPR_3]], align 1
-// CHECK1-NEXT:    [[LOADEDV8:%.*]] = trunc i8 [[TMP13]] to i1
+// CHECK1-NEXT:    [[LOADEDV8:%.*]] = icmp ne i8 [[TMP13]], 0
 // CHECK1-NEXT:    br i1 [[LOADEDV8]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK1:       omp_if.then:
 // CHECK1-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 4, ptr @main.omp_outlined.4, ptr [[ARGC_ADDR]], ptr [[ARGV_ADDR]], i64 [[TMP10]], i64 [[TMP12]])
@@ -412,7 +412,7 @@ struct S {
 // CHECK1-NEXT:    [[TMP22:%.*]] = load ptr, ptr [[TMP21]], align 8
 // CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP22]], ptr align 8 [[AGG_CAPTURED]], i64 16, i1 false)
 // CHECK1-NEXT:    [[TMP23:%.*]] = load i8, ptr [[DOTCAPTURE_EXPR__ADDR]], align 1
-// CHECK1-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP23]] to i1
+// CHECK1-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP23]], 0
 // CHECK1-NEXT:    [[TMP24:%.*]] = sext i1 [[LOADEDV]] to i32
 // CHECK1-NEXT:    [[TMP25:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T]], ptr [[TMP20]], i32 0, i32 5
 // CHECK1-NEXT:    store i64 0, ptr [[TMP25]], align 8
@@ -752,7 +752,7 @@ struct S {
 // CHECK1-NEXT:    [[STOREDV:%.*]] = zext i1 [[TOBOOL]] to i8
 // CHECK1-NEXT:    store i8 [[STOREDV]], ptr [[DOTCAPTURE_EXPR_]], align 1
 // CHECK1-NEXT:    [[TMP1:%.*]] = load i8, ptr [[DOTCAPTURE_EXPR_]], align 1
-// CHECK1-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP1]] to i1
+// CHECK1-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP1]], 0
 // CHECK1-NEXT:    [[STOREDV2:%.*]] = zext i1 [[LOADEDV]] to i8
 // CHECK1-NEXT:    store i8 [[STOREDV2]], ptr [[DOTCAPTURE_EXPR__CASTED]], align 1
 // CHECK1-NEXT:    [[TMP2:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR__CASTED]], align 8
@@ -792,7 +792,7 @@ struct S {
 // CHECK1-NEXT:    store ptr [[TMP1]], ptr [[TMP7]], align 8
 // CHECK1-NEXT:    call void @__kmpc_taskgroup(ptr @[[GLOB1]], i32 [[TMP3]])
 // CHECK1-NEXT:    [[TMP8:%.*]] = load i8, ptr [[DOTCAPTURE_EXPR__ADDR]], align 1
-// CHECK1-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP8]] to i1
+// CHECK1-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP8]], 0
 // CHECK1-NEXT:    store ptr [[TMP]], ptr [[_TMP1]], align 8
 // CHECK1-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP1]], align 4
 // CHECK1-NEXT:    store i32 [[TMP9]], ptr [[DOTCAPTURE_EXPR_2]], align 4

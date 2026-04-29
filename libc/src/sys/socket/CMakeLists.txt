@@ -17,6 +17,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  accept4
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.accept4
+)
+
+add_entrypoint_object(
   bind
   ALIAS
   DEPENDS
@@ -98,4 +105,11 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.recvmsg
+)
+
+add_entrypoint_object(
+  shutdown
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.shutdown
 )

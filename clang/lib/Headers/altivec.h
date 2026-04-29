@@ -6404,6 +6404,18 @@ vec_mulh(vector unsigned long long __a, vector unsigned long long __b) {
 }
 #endif
 
+#ifdef __FUTURE_VECTOR__
+static __inline__ vector signed short
+    __ATTRS_o_ai vec_mulh(vector signed short __a, vector signed short __b) {
+  return __builtin_altivec_vmulhsh(__a, __b);
+}
+
+static __inline__ vector unsigned short __ATTRS_o_ai
+vec_mulh(vector unsigned short __a, vector unsigned short __b) {
+  return __builtin_altivec_vmulhuh(__a, __b);
+}
+#endif
+
 /* vec_mulo */
 
 static __inline__ vector short __ATTRS_o_ai vec_mulo(vector signed char __a,

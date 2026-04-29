@@ -54,4 +54,7 @@ LIBC_CONFIGURE_OPTIONS = [
 
     # Documentation in libc/src/__support/libc_errno.h
     "LIBC_ERRNO_MODE=LIBC_ERRNO_MODE_SYSTEM_INLINE",
+
+    # Documentation in libc/src/__support/time/monotonicity.h
+    "LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY",
 ]

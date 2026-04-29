@@ -11,6 +11,7 @@
 #ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_RECORDREPLAY_H
 #define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_RECORDREPLAY_H
 
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
@@ -49,6 +50,15 @@ public:
 
   /// Describes the format of the recording and replaying.
   enum FormatTy { Native = 0 };
+
+  /// Describes the file types that can be recorded.
+  enum FileTy {
+    PrologueSnapshot = 0,
+    EpilogueSnapshot,
+    Descriptor,
+    Globals,
+    Program
+  };
 
   struct HandleTy {
     const InstanceTy *Instance = nullptr;
@@ -103,17 +113,37 @@ protected:
     size_t KernelHash = 0;
     size_t LaunchConfigHash = 0;
 
+    /// When replaying, the entity requesting the replay may also need further
+    /// information about the the kernel's replay, such as the snapshot file.
+    KernelReplayOutcomeTy *ReplayOutcome = nullptr;
+
+    /// The begin and end time points of the kernel execution.
+    using ClockTy = std::chrono::steady_clock;
+    mutable std::chrono::time_point<ClockTy> BeginTime, EndTime;
+
     /// The number of occurrences during the execution.
     mutable size_t Occurrences = 0;
 
     InstanceTy(const GenericKernelTy &Kernel, uint32_t NumTeams,
-               uint32_t NumThreads, uint32_t SharedMemorySize);
+               uint32_t NumThreads, uint32_t SharedMemorySize,
+               KernelReplayOutcomeTy *ReplayOutcome);
 
     bool operator==(const InstanceTy &Other) const {
       return (KernelHash == Other.KernelHash &&
               LaunchConfigHash == Other.LaunchConfigHash &&
               NumTeams == Other.NumTeams && NumThreads == Other.NumThreads &&
               SharedMemorySize == Other.SharedMemorySize);
+    }
+
+    /// Record the begin and ending of the kernel execution.
+    void recordBeginTime() const { BeginTime = ClockTy::now(); }
+    void recordEndTime() const { EndTime = ClockTy::now(); }
+
+    /// Get the kernel execution time in nanoseconds.
+    uint64_t getRecordedTimeNs() const {
+      using DurationNsTy = std::chrono::duration<uint64_t, std::nano>;
+      return std::chrono::duration_cast<DurationNsTy>(EndTime - BeginTime)
+          .count();
     }
   };
 
@@ -170,6 +200,7 @@ public:
   /// instance is registered.
   Expected<HandleTy>
   recordPrologue(const GenericKernelTy &Kernel, const KernelArgsTy &KernelArgs,
+                 const KernelExtraArgsTy *KernelExtraArgs,
                  const KernelLaunchParamsTy &LaunchParams, uint32_t NumTeams[3],
                  uint32_t NumThreads[3], uint32_t SharedMemorySize);
 
@@ -178,9 +209,9 @@ public:
   Error recordEpilogue(const GenericKernelTy &Kernel, HandleTy Handle);
 
   /// Get a string with the filename.
-  std::string getFilename(const InstanceTy &Instance, StringRef Suffix,
-                          bool IncludeDirectory = true) {
-    return getFilenameImpl(Instance, Suffix, IncludeDirectory);
+  SmallString<128> getFilename(const InstanceTy &Instance, FileTy FileType,
+                               bool IncludeDirectory = true) {
+    return getFilenameImpl(Instance, FileType, IncludeDirectory);
   }
 
   /// Allocates device memory from the record replay space.
@@ -192,7 +223,17 @@ private:
   /// as a new instance.
   std::pair<const InstanceTy &, bool>
   registerInstance(const GenericKernelTy &Kernel, uint32_t NumTeams,
-                   uint32_t NumThreads, uint32_t SharedMemorySize);
+                   uint32_t NumThreads, uint32_t SharedMemorySize,
+                   KernelReplayOutcomeTy *ReplayOutcome);
+
+  /// Unregister an instance once it has been replayed. Instances during
+  /// recording cannot be unregistered. Accessing the instance beyond this point
+  /// is invalid.
+  Error unregisterInstance(const InstanceTy &Instance);
+
+  /// Populate the replay outcome struct to forward some replay information.
+  void populateReplayOutcome(const InstanceTy &Instance,
+                             KernelReplayOutcomeTy &Outcome);
 
   /// Record the prologue data.
   virtual Error
@@ -211,9 +252,9 @@ private:
                                const KernelLaunchParamsTy &LaunchParams) = 0;
 
   /// Get a string with the filename.
-  virtual std::string getFilenameImpl(const InstanceTy &Instance,
-                                      StringRef Suffix,
-                                      bool IncludeDirectory) = 0;
+  virtual SmallString<128> getFilenameImpl(const InstanceTy &Instance,
+                                           FileTy FileType,
+                                           bool IncludeDirectory) = 0;
 };
 
 /// The native kernel record replay support.
@@ -237,17 +278,20 @@ private:
                        const KernelLaunchParamsTy &LaunchParams) override;
 
   /// Get a string with the filename.
-  std::string getFilenameImpl(const InstanceTy &Instance, StringRef Suffix,
-                              bool IncludeDirectory) override;
+  SmallString<128> getFilenameImpl(const InstanceTy &Instance, FileTy FileType,
+                                   bool IncludeDirectory) override;
+
+  /// Get the extension for a recording file type.
+  StringRef getExtension(FileTy FileType);
 
   /// Record a memory snapshot to a file.
-  Error recordSnapshot(const std::string &Filename);
+  Error recordSnapshot(StringRef Filename);
 
   /// Record the globals to a file.
-  Error recordGlobals(const std::string &Filename);
+  Error recordGlobals(StringRef Filename);
 
   /// Record the device image to a file.
-  Error recordImage(const GenericKernelTy &Kernel, const std::string &Filename);
+  Error recordImage(const GenericKernelTy &Kernel, StringRef Filename);
 };
 
 } // namespace plugin

@@ -229,6 +229,9 @@ def : F<"build-id">, Alias<build_id>, HelpText<"Alias for --build-id=">;
 def functionpadmin: J<"functionpadmin=">, HelpText<"Prepares an image for hotpatching">,
   MetaVarName<"<arg>">;
 def : F<"functionpadmin">, Alias<functionpadmin>, HelpText<"Alias for --functionpadmin=">;
+defm native_def
+    : EEq<"native-def",
+          "Use a module-definition file for the native view in a hybrid image">;
 
 // Alias
 def alias_Bdynamic_call_shared: Flag<["-"], "call_shared">, Alias<Bdynamic>;
