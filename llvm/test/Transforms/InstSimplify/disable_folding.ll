@@ -13,7 +13,7 @@ define float @test_fmax_ftz_nan_xorsign_abs_f() {
 ; FOLDING_DISABLED-NEXT:    [[RES:%.*]] = call float @llvm.nvvm.fmax.ftz.nan.xorsign.abs.f32(float 1.250000e+00, float -2.000000e+00)
 ; FOLDING_DISABLED-NEXT:    ret float [[RES]]
 ;
-  %res = call float @llvm.nvvm.fmax.ftz.nan.xorsign.abs.f32(float 1.25, float -2.0)
+  %res = call float @llvm.nvvm.fmax.ftz.nan.xorsign.abs.f(float 1.25, float -2.0)
   ret float %res
 }
 
@@ -36,7 +36,7 @@ define float @test_fmax_ftz_nan_f_strictfp() {
 ; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.nvvm.fmax.ftz.nan.f32(float 1.250000e+00, float -2.000000e+00) #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    ret float [[RES]]
 ;
-  %res = call float @llvm.nvvm.fmax.ftz.nan.f32(float 1.25, float -2.0) #1
+  %res = call float @llvm.nvvm.fmax.ftz.nan.f(float 1.25, float -2.0) #1
   ret float %res
 }
 

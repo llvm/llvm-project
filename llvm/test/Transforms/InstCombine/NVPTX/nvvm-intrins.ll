@@ -105,42 +105,42 @@ define float @fma_float_ftz(float %a, float %b, float %c) #0 {
 ; CHECK-LABEL: @fmax_double
 define double @fmax_double(double %a, double %b) #0 {
 ; CHECK: call double @llvm.maximumnum.f64
-  %ret = call double @llvm.nvvm.fmax.f64(double %a, double %b)
+  %ret = call double @llvm.nvvm.fmax.d(double %a, double %b)
   ret double %ret
 }
 ; CHECK-LABEL: @fmax_float
 define float @fmax_float(float %a, float %b) #0 {
 ; NOFTZ: call float @llvm.maximumnum.f32
 ; FTZ: call float @llvm.nvvm.fmax.f32
-  %ret = call float @llvm.nvvm.fmax.f32(float %a, float %b)
+  %ret = call float @llvm.nvvm.fmax.f(float %a, float %b)
   ret float %ret
 }
 ; CHECK-LABEL: @fmax_float_ftz
 define float @fmax_float_ftz(float %a, float %b) #0 {
 ; NOFTZ: call float @llvm.nvvm.fmax.ftz.f32
 ; FTZ: call float @llvm.maximumnum.f32
-  %ret = call float @llvm.nvvm.fmax.ftz.f32(float %a, float %b)
+  %ret = call float @llvm.nvvm.fmax.ftz.f(float %a, float %b)
   ret float %ret
 }
 
 ; CHECK-LABEL: @fmin_double
 define double @fmin_double(double %a, double %b) #0 {
 ; CHECK: call double @llvm.minimumnum.f64
-  %ret = call double @llvm.nvvm.fmin.f64(double %a, double %b)
+  %ret = call double @llvm.nvvm.fmin.d(double %a, double %b)
   ret double %ret
 }
 ; CHECK-LABEL: @fmin_float
 define float @fmin_float(float %a, float %b) #0 {
 ; NOFTZ: call float @llvm.minimumnum.f32
 ; FTZ: call float @llvm.nvvm.fmin.f32
-  %ret = call float @llvm.nvvm.fmin.f32(float %a, float %b)
+  %ret = call float @llvm.nvvm.fmin.f(float %a, float %b)
   ret float %ret
 }
 ; CHECK-LABEL: @fmin_float_ftz
 define float @fmin_float_ftz(float %a, float %b) #0 {
 ; NOFTZ: call float @llvm.nvvm.fmin.ftz.f32
 ; FTZ: call float @llvm.minimumnum.f32
-  %ret = call float @llvm.nvvm.fmin.ftz.f32(float %a, float %b)
+  %ret = call float @llvm.nvvm.fmin.ftz.f(float %a, float %b)
   ret float %ret
 }
 
@@ -475,12 +475,12 @@ declare float @llvm.nvvm.floor.ftz.f(float)
 declare double @llvm.nvvm.fma.rn.d(double, double, double)
 declare float @llvm.nvvm.fma.rn.f(float, float, float)
 declare float @llvm.nvvm.fma.rn.ftz.f(float, float, float)
-declare double @llvm.nvvm.fmax.f64(double, double)
-declare float @llvm.nvvm.fmax.f32(float, float)
-declare float @llvm.nvvm.fmax.ftz.f32(float, float)
-declare double @llvm.nvvm.fmin.f64(double, double)
-declare float @llvm.nvvm.fmin.f32(float, float)
-declare float @llvm.nvvm.fmin.ftz.f32(float, float)
+declare double @llvm.nvvm.fmax.d(double, double)
+declare float @llvm.nvvm.fmax.f(float, float)
+declare float @llvm.nvvm.fmax.ftz.f(float, float)
+declare double @llvm.nvvm.fmin.d(double, double)
+declare float @llvm.nvvm.fmin.f(float, float)
+declare float @llvm.nvvm.fmin.ftz.f(float, float)
 declare double @llvm.nvvm.i2d.rn(i32)
 declare float @llvm.nvvm.i2f.rn(i32)
 declare double @llvm.nvvm.ll2d.rn(i64)
