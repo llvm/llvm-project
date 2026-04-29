@@ -497,7 +497,7 @@ public:
     Symbol *resultSymbol{nullptr};
     bool inFunctionStmt{false}; // true between Pre/Post of FunctionStmt
     // re-entrancy guard for CompleteFunctionResultType
-    bool completingType{false}; 
+    bool completingType{false};
     // Functions with previous implicitly-typed references get those types
     // checked against their later definitions.
     const DeclTypeSpec *previousImplicitType{nullptr};
