@@ -1341,7 +1341,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::swap(vector& __x)
       __alloc_traits::propagate_on_container_swap::value || __layout_.__alloc() == __x.__layout_.__alloc(),
       "vector::swap: Either propagate_on_container_swap must be true"
       " or the allocators must compare equal");
-  __layout_.swap(__x.__layout_);
+  __layout_.__swap(__x.__layout_);
 }
 
 #if _LIBCPP_STD_VER >= 20

@@ -199,7 +199,7 @@ public:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_bound_using_pointer(pointer __ptr) _NOEXCEPT;
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __reset_without_allocator() _NOEXCEPT;
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void swap(__vector_layout& __other) _NOEXCEPT;
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __swap(__vector_layout& __other) _NOEXCEPT;
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __swap_layouts(_SplitBuffer& __other) _NOEXCEPT;
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
   __move_assign_without_allocator(__vector_layout& __other) _NOEXCEPT;
@@ -295,7 +295,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::__reset_without
 }
 
 template<class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::swap(__vector_layout& __other) _NOEXCEPT {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::__swap(__vector_layout& __other) _NOEXCEPT {
   using std::swap;
   swap(__begin_, __other.__begin_);
   swap(__size_, __other.__size_);
@@ -441,7 +441,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::__reset_without
 }
 
 template<class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::swap(__vector_layout& __other) _NOEXCEPT {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::__swap(__vector_layout& __other) _NOEXCEPT {
   using std::swap;
   swap(__begin_, __other.__begin_);
   swap(__end_, __other.__end_);
