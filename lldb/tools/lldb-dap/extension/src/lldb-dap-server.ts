@@ -60,16 +60,23 @@ export class LLDBDapServer implements vscode.Disposable {
       return this.serverInfo;
     }
 
-    this.serverInfo = new Promise((resolve, reject) => {
-      if (os.platform() === "win32") {
-        const pythonCheckProcess = child_process.spawnSync(dapPath, ["--check-python"]);
-        if (pythonCheckProcess.stderr) {
-          vscode.window.showErrorMessage(
-            `Python is not installed correctly. Please install it to use lldb-dap.\n${pythonCheckProcess.stderr}`
-          );
-          return;
-        }
+    if (os.platform() === "win32") {
+      const pythonCheckProcess = child_process.spawnSync(dapPath, [
+        "--check-python",
+      ]);
+      if (pythonCheckProcess.status !== 0) {
+        await vscode.window.showErrorMessage(
+          "Python is not installed correctly. Please install it to use lldb-dap.",
+          {
+            modal: true,
+            detail: pythonCheckProcess.stderr?.toString() ?? "",
+          },
+        );
+        return undefined;
       }
+    }
+
+    this.serverInfo = new Promise((resolve, reject) => {
       const process = child_process.spawn(dapPath, dapArgs, options);
       process.on("error", (error) => {
         reject(error);
