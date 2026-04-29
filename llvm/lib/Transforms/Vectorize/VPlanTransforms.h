@@ -17,6 +17,7 @@
 #include "VPlanVerifier.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Regex.h"
@@ -502,6 +503,14 @@ struct VPlanTransforms {
   /// Predicate and linearize the control-flow in the only loop region of
   /// \p Plan.
   static void introduceMasksAndLinearize(VPlan &Plan);
+
+  /// Replace a VPWidenCanonicalIVRecipe if it is present in \p Plan, with a
+  /// VPWidenIntOrFpInductionRecipe, provided it would not cause additional
+  /// spills for \p VF at unroll factor \p UF.
+  static void replaceWideCanonicalIVWithWideIV(
+      VPlan &Plan, ScalarEvolution &SE, const TargetTransformInfo &TTI,
+      TargetTransformInfo::TargetCostKind CostKind, ElementCount VF,
+      unsigned UF, const SmallPtrSetImpl<const Value *> &ValuesToIgnore);
 
   /// Add branch weight metadata, if the \p Plan's middle block is terminated by
   /// a BranchOnCond recipe.

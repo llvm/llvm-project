@@ -347,6 +347,7 @@ Attribute Changes in Clang
   are used. Use ``amdgpu_waves_per_eu`` instead to control SGPR and VGPR
   usage.
 
+- Clang now allows GNU attributes between a member declarator and bit-field width. (#GH184954)
 - Clang now disallows use of the ``selectany`` attribute on non-global-variable declarations. (#GH189141)
 
 Improvements to Clang's diagnostics
