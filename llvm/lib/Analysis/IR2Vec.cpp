@@ -632,34 +632,30 @@ Expected<Vocabulary> Vocabulary::fromFile(StringRef VocabFilePath,
 // IR2VecVocabAnalysis
 //===----------------------------------------------------------------------===//
 
-void IR2VecVocabAnalysis::emitError(Error Err, LLVMContext &Ctx) {
+void IR2VecVocabAnalysis::emitError(Error Err) {
   handleAllErrors(std::move(Err), [&](const ErrorInfoBase &EI) {
-    Ctx.emitError("Error reading vocabulary: " + EI.message());
+    reportFatalUsageError(Twine("Error reading vocabulary: ") + EI.message());
   });
 }
 
 IR2VecVocabAnalysis::Result
 IR2VecVocabAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
-  auto Ctx = &M.getContext();
   // If vocabulary is already populated by the constructor, use it.
   if (Vocab.has_value())
     return Vocabulary(std::move(Vocab.value()));
 
   // Otherwise, try to read from the vocabulary file specified via CLI.
-  if (VocabFile.empty()) {
+  if (VocabFile.empty())
     // FIXME: Use default vocabulary
-    Ctx->emitError("IR2Vec vocabulary file path not specified; You may need to "
-                   "set it using --ir2vec-vocab-path");
-    return Vocabulary(); // Return invalid result
-  }
+    reportFatalUsageError(
+        "IR2Vec vocabulary file path not specified; You may need to "
+        "set it using --ir2vec-vocab-path");
 
   // Use the static factory method to load the vocabulary.
   auto VocabOrErr =
       Vocabulary::fromFile(VocabFile, OpcWeight, TypeWeight, ArgWeight);
-  if (!VocabOrErr) {
-    emitError(VocabOrErr.takeError(), *Ctx);
-    return Vocabulary();
-  }
+  if (!VocabOrErr)
+    emitError(VocabOrErr.takeError());
 
   return std::move(*VocabOrErr);
 }
@@ -671,8 +667,7 @@ IR2VecVocabAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
 PreservedAnalyses IR2VecPrinterPass::run(Module &M,
                                          ModuleAnalysisManager &MAM) {
   auto &Vocabulary = MAM.getResult<IR2VecVocabAnalysis>(M);
-  if (!Vocabulary.isValid())
-    return PreservedAnalyses::all();
+  assert(Vocabulary.isValid() && "IR2Vec Vocabulary is invalid");
 
   for (Function &F : M) {
     auto Emb = Embedder::create(IR2VecEmbeddingKind, F, Vocabulary);
