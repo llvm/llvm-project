@@ -40,13 +40,13 @@ __device__ double global_double;
 // SPIRV-NEXT:    [[RESULT_ASCAST:%.*]] = addrspacecast ptr [[RESULT]] to ptr addrspace(4)
 // SPIRV-NEXT:    store ptr addrspace(4) [[PTR]], ptr addrspace(4) [[PTR_ADDR_ASCAST]], align 8
 // SPIRV-NEXT:    store float [[VAL]], ptr addrspace(4) [[VAL_ADDR_ASCAST]], align 4
-// SPIRV-NEXT:    [[TMP0:%.*]] = load i1, ptr addrspace(1) @llvm.amdgcn.has.gfx940-insts, align 1
+// SPIRV-NEXT:    [[TMP0:%.*]] = call addrspace(4) i1 @llvm.spv.named.boolean.spec.constant(i32 -1, i1 false, metadata [[META4:![0-9]+]])
 // SPIRV-NEXT:    br i1 [[TMP0]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
 // SPIRV:       [[IF_THEN]]:
 // SPIRV-NEXT:    [[TMP1:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[PTR_ADDR_ASCAST]], align 8
 // SPIRV-NEXT:    [[TMP2:%.*]] = addrspacecast ptr addrspace(4) [[TMP1]] to ptr
 // SPIRV-NEXT:    [[TMP3:%.*]] = load float, ptr addrspace(4) [[VAL_ADDR_ASCAST]], align 4
-// SPIRV-NEXT:    [[TMP4:%.*]] = atomicrmw fadd ptr [[TMP2]], float [[TMP3]] syncscope("device") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META4:![0-9]+]], !amdgpu.ignore.denormal.mode [[META4]]
+// SPIRV-NEXT:    [[TMP4:%.*]] = atomicrmw fadd ptr [[TMP2]], float [[TMP3]] syncscope("device") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META5:![0-9]+]], !amdgpu.ignore.denormal.mode [[META5]]
 // SPIRV-NEXT:    store float [[TMP4]], ptr addrspace(4) [[RESULT_ASCAST]], align 4
 // SPIRV-NEXT:    br label %[[IF_END]]
 // SPIRV:       [[IF_END]]:
@@ -85,13 +85,13 @@ __device__ void test_flat_atomic_fadd_f32_flat(float *ptr, float val) {
 // SPIRV-NEXT:    [[RESULT_ASCAST:%.*]] = addrspacecast ptr [[RESULT]] to ptr addrspace(4)
 // SPIRV-NEXT:    store ptr addrspace(4) [[PTR]], ptr addrspace(4) [[PTR_ADDR_ASCAST]], align 8
 // SPIRV-NEXT:    store double [[VAL]], ptr addrspace(4) [[VAL_ADDR_ASCAST]], align 8
-// SPIRV-NEXT:    [[TMP0:%.*]] = load i1, ptr addrspace(1) @llvm.amdgcn.has.gfx90a-insts, align 1
+// SPIRV-NEXT:    [[TMP0:%.*]] = call addrspace(4) i1 @llvm.spv.named.boolean.spec.constant(i32 -1, i1 false, metadata [[META6:![0-9]+]])
 // SPIRV-NEXT:    br i1 [[TMP0]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
 // SPIRV:       [[IF_THEN]]:
 // SPIRV-NEXT:    [[TMP1:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[PTR_ADDR_ASCAST]], align 8
 // SPIRV-NEXT:    [[TMP2:%.*]] = addrspacecast ptr addrspace(4) [[TMP1]] to ptr
 // SPIRV-NEXT:    [[TMP3:%.*]] = load double, ptr addrspace(4) [[VAL_ADDR_ASCAST]], align 8
-// SPIRV-NEXT:    [[TMP4:%.*]] = atomicrmw fadd ptr [[TMP2]], double [[TMP3]] syncscope("device") monotonic, align 8, !amdgpu.no.fine.grained.memory [[META4]]
+// SPIRV-NEXT:    [[TMP4:%.*]] = atomicrmw fadd ptr [[TMP2]], double [[TMP3]] syncscope("device") monotonic, align 8, !amdgpu.no.fine.grained.memory [[META5]]
 // SPIRV-NEXT:    store double [[TMP4]], ptr addrspace(4) [[RESULT_ASCAST]], align 8
 // SPIRV-NEXT:    br label %[[IF_END]]
 // SPIRV:       [[IF_END]]:
@@ -130,13 +130,13 @@ __device__ void test_flat_atomic_fadd_f64_flat(double *ptr, double val) {
 // SPIRV-NEXT:    [[RESULT_ASCAST:%.*]] = addrspacecast ptr [[RESULT]] to ptr addrspace(4)
 // SPIRV-NEXT:    store ptr addrspace(4) [[PTR]], ptr addrspace(4) [[PTR_ADDR_ASCAST]], align 8
 // SPIRV-NEXT:    store float [[VAL]], ptr addrspace(4) [[VAL_ADDR_ASCAST]], align 4
-// SPIRV-NEXT:    [[TMP0:%.*]] = load i1, ptr addrspace(1) @llvm.amdgcn.has.gfx940-insts, align 1
+// SPIRV-NEXT:    [[TMP0:%.*]] = call addrspace(4) i1 @llvm.spv.named.boolean.spec.constant(i32 -1, i1 false, metadata [[META4]])
 // SPIRV-NEXT:    br i1 [[TMP0]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
 // SPIRV:       [[IF_THEN]]:
 // SPIRV-NEXT:    [[TMP1:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[PTR_ADDR_ASCAST]], align 8
 // SPIRV-NEXT:    [[TMP2:%.*]] = addrspacecast ptr addrspace(4) [[TMP1]] to ptr
 // SPIRV-NEXT:    [[TMP3:%.*]] = load float, ptr addrspace(4) [[VAL_ADDR_ASCAST]], align 4
-// SPIRV-NEXT:    [[TMP4:%.*]] = atomicrmw fadd ptr [[TMP2]], float [[TMP3]] syncscope("device") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.ignore.denormal.mode [[META4]]
+// SPIRV-NEXT:    [[TMP4:%.*]] = atomicrmw fadd ptr [[TMP2]], float [[TMP3]] syncscope("device") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META5]], !amdgpu.ignore.denormal.mode [[META5]]
 // SPIRV-NEXT:    store float [[TMP4]], ptr addrspace(4) [[RESULT_ASCAST]], align 4
 // SPIRV-NEXT:    br label %[[IF_END]]
 // SPIRV:       [[IF_END]]:
@@ -175,13 +175,13 @@ __device__ void test_flat_atomic_fadd_f32_shared(__shared__ float *ptr, float va
 // SPIRV-NEXT:    [[RESULT_ASCAST:%.*]] = addrspacecast ptr [[RESULT]] to ptr addrspace(4)
 // SPIRV-NEXT:    store ptr addrspace(4) [[PTR]], ptr addrspace(4) [[PTR_ADDR_ASCAST]], align 8
 // SPIRV-NEXT:    store double [[VAL]], ptr addrspace(4) [[VAL_ADDR_ASCAST]], align 8
-// SPIRV-NEXT:    [[TMP0:%.*]] = load i1, ptr addrspace(1) @llvm.amdgcn.has.gfx90a-insts, align 1
+// SPIRV-NEXT:    [[TMP0:%.*]] = call addrspace(4) i1 @llvm.spv.named.boolean.spec.constant(i32 -1, i1 false, metadata [[META6]])
 // SPIRV-NEXT:    br i1 [[TMP0]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
 // SPIRV:       [[IF_THEN]]:
 // SPIRV-NEXT:    [[TMP1:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[PTR_ADDR_ASCAST]], align 8
 // SPIRV-NEXT:    [[TMP2:%.*]] = addrspacecast ptr addrspace(4) [[TMP1]] to ptr
 // SPIRV-NEXT:    [[TMP3:%.*]] = load double, ptr addrspace(4) [[VAL_ADDR_ASCAST]], align 8
-// SPIRV-NEXT:    [[TMP4:%.*]] = atomicrmw fadd ptr [[TMP2]], double [[TMP3]] syncscope("device") monotonic, align 8, !amdgpu.no.fine.grained.memory [[META4]]
+// SPIRV-NEXT:    [[TMP4:%.*]] = atomicrmw fadd ptr [[TMP2]], double [[TMP3]] syncscope("device") monotonic, align 8, !amdgpu.no.fine.grained.memory [[META5]]
 // SPIRV-NEXT:    store double [[TMP4]], ptr addrspace(4) [[RESULT_ASCAST]], align 8
 // SPIRV-NEXT:    br label %[[IF_END]]
 // SPIRV:       [[IF_END]]:
@@ -213,11 +213,11 @@ __device__ void test_flat_atomic_fadd_f64_shared(__shared__ double *ptr, double 
 // SPIRV-NEXT:    [[VAL_ADDR_ASCAST:%.*]] = addrspacecast ptr [[VAL_ADDR]] to ptr addrspace(4)
 // SPIRV-NEXT:    [[RESULT_ASCAST:%.*]] = addrspacecast ptr [[RESULT]] to ptr addrspace(4)
 // SPIRV-NEXT:    store float [[VAL]], ptr addrspace(4) [[VAL_ADDR_ASCAST]], align 4
-// SPIRV-NEXT:    [[TMP0:%.*]] = load i1, ptr addrspace(1) @llvm.amdgcn.has.gfx940-insts, align 1
+// SPIRV-NEXT:    [[TMP0:%.*]] = call addrspace(4) i1 @llvm.spv.named.boolean.spec.constant(i32 -1, i1 false, metadata [[META4]])
 // SPIRV-NEXT:    br i1 [[TMP0]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
 // SPIRV:       [[IF_THEN]]:
 // SPIRV-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(4) [[VAL_ADDR_ASCAST]], align 4
-// SPIRV-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspacecast (ptr addrspace(1) @const_float to ptr), float [[TMP1]] syncscope("device") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.ignore.denormal.mode [[META4]]
+// SPIRV-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspacecast (ptr addrspace(1) @const_float to ptr), float [[TMP1]] syncscope("device") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META5]], !amdgpu.ignore.denormal.mode [[META5]]
 // SPIRV-NEXT:    store float [[TMP2]], ptr addrspace(4) [[RESULT_ASCAST]], align 4
 // SPIRV-NEXT:    br label %[[IF_END]]
 // SPIRV:       [[IF_END]]:
@@ -249,11 +249,11 @@ __device__ void test_flat_atomic_fadd_f32_constant(float val) {
 // SPIRV-NEXT:    [[VAL_ADDR_ASCAST:%.*]] = addrspacecast ptr [[VAL_ADDR]] to ptr addrspace(4)
 // SPIRV-NEXT:    [[RESULT_ASCAST:%.*]] = addrspacecast ptr [[RESULT]] to ptr addrspace(4)
 // SPIRV-NEXT:    store double [[VAL]], ptr addrspace(4) [[VAL_ADDR_ASCAST]], align 8
-// SPIRV-NEXT:    [[TMP0:%.*]] = load i1, ptr addrspace(1) @llvm.amdgcn.has.gfx90a-insts, align 1
+// SPIRV-NEXT:    [[TMP0:%.*]] = call addrspace(4) i1 @llvm.spv.named.boolean.spec.constant(i32 -1, i1 false, metadata [[META6]])
 // SPIRV-NEXT:    br i1 [[TMP0]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
 // SPIRV:       [[IF_THEN]]:
 // SPIRV-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(4) [[VAL_ADDR_ASCAST]], align 8
-// SPIRV-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspacecast (ptr addrspace(1) @const_double to ptr), double [[TMP1]] syncscope("device") monotonic, align 8, !amdgpu.no.fine.grained.memory [[META4]]
+// SPIRV-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspacecast (ptr addrspace(1) @const_double to ptr), double [[TMP1]] syncscope("device") monotonic, align 8, !amdgpu.no.fine.grained.memory [[META5]]
 // SPIRV-NEXT:    store double [[TMP2]], ptr addrspace(4) [[RESULT_ASCAST]], align 8
 // SPIRV-NEXT:    br label %[[IF_END]]
 // SPIRV:       [[IF_END]]:
@@ -285,11 +285,11 @@ __device__ void test_flat_atomic_fadd_f64_constant(double val) {
 // SPIRV-NEXT:    [[VAL_ADDR_ASCAST:%.*]] = addrspacecast ptr [[VAL_ADDR]] to ptr addrspace(4)
 // SPIRV-NEXT:    [[RESULT_ASCAST:%.*]] = addrspacecast ptr [[RESULT]] to ptr addrspace(4)
 // SPIRV-NEXT:    store float [[VAL]], ptr addrspace(4) [[VAL_ADDR_ASCAST]], align 4
-// SPIRV-NEXT:    [[TMP0:%.*]] = load i1, ptr addrspace(1) @llvm.amdgcn.has.gfx940-insts, align 1
+// SPIRV-NEXT:    [[TMP0:%.*]] = call addrspace(4) i1 @llvm.spv.named.boolean.spec.constant(i32 -1, i1 false, metadata [[META4]])
 // SPIRV-NEXT:    br i1 [[TMP0]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
 // SPIRV:       [[IF_THEN]]:
 // SPIRV-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(4) [[VAL_ADDR_ASCAST]], align 4
-// SPIRV-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspacecast (ptr addrspace(1) @global_float to ptr), float [[TMP1]] syncscope("device") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.ignore.denormal.mode [[META4]]
+// SPIRV-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspacecast (ptr addrspace(1) @global_float to ptr), float [[TMP1]] syncscope("device") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META5]], !amdgpu.ignore.denormal.mode [[META5]]
 // SPIRV-NEXT:    store float [[TMP2]], ptr addrspace(4) [[RESULT_ASCAST]], align 4
 // SPIRV-NEXT:    br label %[[IF_END]]
 // SPIRV:       [[IF_END]]:
@@ -321,11 +321,11 @@ __device__ void test_flat_atomic_fadd_f32_global(float val) {
 // SPIRV-NEXT:    [[VAL_ADDR_ASCAST:%.*]] = addrspacecast ptr [[VAL_ADDR]] to ptr addrspace(4)
 // SPIRV-NEXT:    [[RESULT_ASCAST:%.*]] = addrspacecast ptr [[RESULT]] to ptr addrspace(4)
 // SPIRV-NEXT:    store double [[VAL]], ptr addrspace(4) [[VAL_ADDR_ASCAST]], align 8
-// SPIRV-NEXT:    [[TMP0:%.*]] = load i1, ptr addrspace(1) @llvm.amdgcn.has.gfx90a-insts, align 1
+// SPIRV-NEXT:    [[TMP0:%.*]] = call addrspace(4) i1 @llvm.spv.named.boolean.spec.constant(i32 -1, i1 false, metadata [[META6]])
 // SPIRV-NEXT:    br i1 [[TMP0]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
 // SPIRV:       [[IF_THEN]]:
 // SPIRV-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(4) [[VAL_ADDR_ASCAST]], align 8
-// SPIRV-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspacecast (ptr addrspace(1) @global_double to ptr), double [[TMP1]] syncscope("device") monotonic, align 8, !amdgpu.no.fine.grained.memory [[META4]]
+// SPIRV-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspacecast (ptr addrspace(1) @global_double to ptr), double [[TMP1]] syncscope("device") monotonic, align 8, !amdgpu.no.fine.grained.memory [[META5]]
 // SPIRV-NEXT:    store double [[TMP2]], ptr addrspace(4) [[RESULT_ASCAST]], align 8
 // SPIRV-NEXT:    br label %[[IF_END]]
 // SPIRV:       [[IF_END]]:
@@ -338,5 +338,7 @@ __device__ void test_flat_atomic_fadd_f64_global(double val) {
 //.
 // CHECK: [[META3]] = !{}
 //.
-// SPIRV: [[META4]] = !{}
+// SPIRV: [[META4]] = !{!"has.gfx940-insts"}
+// SPIRV: [[META5]] = !{}
+// SPIRV: [[META6]] = !{!"has.gfx90a-insts"}
 //.

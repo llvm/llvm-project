@@ -446,6 +446,9 @@ bool SPIRVPrepareFunctionsImpl::substituteIntrinsicCalls(Function *F) {
       if (!CF || !CF->isIntrinsic())
         continue;
       auto *II = cast<IntrinsicInst>(Call);
+      if (Intrinsic::isTargetIntrinsic(II->getIntrinsicID()) &&
+          II->getCalledOperand()->getName().starts_with("llvm.spv"))
+        continue;
       switch (II->getIntrinsicID()) {
       case Intrinsic::memset:
       case Intrinsic::bswap:

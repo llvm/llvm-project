@@ -16,6 +16,7 @@
 #include "SPIRVUtils.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Debug.h"
 
@@ -129,6 +130,16 @@ bool SPIRVPrepareGlobalsImpl::runOnModule(Module &M) {
   for (GlobalAlias &GA : make_early_inc_range(M.aliases())) {
     Changed |= tryReplaceAliasWithAliasee(GA);
   }
+
+  if (M.getTargetTriple().getVendor() != Triple::AMD)
+    return Changed;
+
+  // TODO: Currently, for AMDGCN flavoured SPIR-V, the symbol can only be
+  //       inserted via feature predicate use, but in the future this will need
+  //       revisiting if we start making more liberal use of the intrinsic.
+  if (Function *F = Intrinsic::getDeclarationIfExists(
+          &M, Intrinsic::spv_named_boolean_spec_constant))
+    Changed |= tryAssignPredicateSpecConstIDs(M, F);
 
   return Changed;
 }

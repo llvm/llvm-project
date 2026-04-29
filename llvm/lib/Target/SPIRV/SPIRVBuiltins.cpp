@@ -2544,11 +2544,6 @@ static bool generateSpecConstantInst(const SPIRV::IncomingCall *Call,
 
   switch (Opcode) {
   case SPIRV::OpSpecConstant: {
-    // Build the SpecID decoration.
-    unsigned SpecId =
-        static_cast<unsigned>(getIConstVal(Call->Arguments[0], MRI));
-    buildOpDecorate(Call->ReturnRegister, MIRBuilder, SPIRV::Decoration::SpecId,
-                    {SpecId});
     // Determine the constant MI.
     Register ConstRegister = Call->Arguments[1];
     const MachineInstr *Const = getDefInstrMaybeConstant(ConstRegister, MRI);
@@ -2574,6 +2569,11 @@ static bool generateSpecConstantInst(const SPIRV::IncomingCall *Call,
       else
         addNumImm(ConstOperand.getFPImm()->getValueAPF().bitcastToAPInt(), MIB);
     }
+    // Build the SpecID decoration.
+    unsigned SpecId =
+        static_cast<unsigned>(getIConstVal(Call->Arguments[0], MRI));
+    buildOpDecorate(Call->ReturnRegister, MIRBuilder, SPIRV::Decoration::SpecId,
+                    {SpecId});
     return true;
   }
   case SPIRV::OpSpecConstantComposite: {

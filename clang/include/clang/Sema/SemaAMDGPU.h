@@ -24,6 +24,7 @@ class ParsedAttr;
 
 class SemaAMDGPU : public SemaBase {
   llvm::SmallPtrSet<Expr *, 32> ExpandedPredicates;
+  llvm::SmallPtrSet<FunctionDecl *, 32> PotentiallyUnguardedBuiltinUsers;
 
 public:
   SemaAMDGPU(Sema &S);
@@ -82,8 +83,13 @@ public:
 
   /// Expand a valid use of the feature identification builtins into its
   /// corresponding sequence of instructions.
-  Expr *ExpandAMDGPUPredicateBI(CallExpr *CE);
+  Expr *ExpandAMDGPUPredicateBuiltIn(Expr *E);
   bool IsPredicate(Expr *E) const;
+  /// Diagnose unguarded usages of AMDGPU builtins and recommend guarding with
+  /// __builtin_amdgcn_is_invocable
+  void AddPotentiallyUnguardedBuiltinUser(FunctionDecl *FD);
+  bool HasPotentiallyUnguardedBuiltinUsage(FunctionDecl *FD) const;
+  void DiagnoseUnguardedBuiltinUsage(FunctionDecl *FD);
 };
 } // namespace clang
 
