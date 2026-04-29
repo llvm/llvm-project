@@ -465,10 +465,10 @@ void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
   const auto *global = cast<ValueDecl>(gd.getDecl());
 
   if (global->hasAttr<WeakRefAttr>())
-    cgm.errorNYI(global->getSourceRange(), "emitGlobal: WeakRefAttr");
+    errorNYI(global->getSourceRange(), "emitGlobal: WeakRefAttr");
 
   if (global->hasAttr<AliasAttr>())
-    cgm.errorNYI(global->getSourceRange(), "emitGlobal: AliasAttr");
+    errorNYI(global->getSourceRange(), "emitGlobal: AliasAttr");
 
   // If this is CUDA, be selective about which declarations we emit.
   // Non-constexpr non-lambda implicit host device functions are not emitted

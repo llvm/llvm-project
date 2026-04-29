@@ -997,7 +997,7 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
          "Should not use decl without marking it used!");
 
   if (nd->hasAttr<WeakRefAttr>())
-    cgm.errorNYI(global->getSourceRange(), "emitGlobal: WeakRefAttr");
+    cgm.errorNYI(nd->getSourceRange(), "emitGlobal: WeakRefAttr");
 
   if (const auto *vd = dyn_cast<VarDecl>(nd)) {
     // Checks for omitted feature handling
