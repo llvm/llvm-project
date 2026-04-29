@@ -1654,7 +1654,7 @@ def demote_t : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
 def demote_zero : SDNode<"WebAssemblyISD::DEMOTE_ZERO", demote_t>;
 defm "" : SIMDConvert<F32x4, F64x2, demote_zero,
                       "demote_f64x2_zero", 0x5e>;
-defm "" : HalfPrecisionConvert<F16x8, F32x4, demote_zero, "demote_f32x4_zero", 0x14c>;
+defm "" : HalfPrecisionConvert<F16x8, F32x4, demote_zero, "demote_f32x4_zero", 0x149>;
 
 def promote_t : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
 def promote_low : SDNode<"WebAssemblyISD::PROMOTE_LOW", promote_t>;

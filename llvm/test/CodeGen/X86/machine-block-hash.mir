@@ -1,8 +1,5 @@
 # RUN: llc -mtriple=x86_64-pc-linux -passes="print<machine-block-hash>" -filetype=null %s 2>&1 | FileCheck %s --check-prefix=HASH
 
-# FIXME: `stable_hash_combine` is not stable across different endianness.
-# XFAIL: host-byteorder-big-endian
-
 name:            foo
 body:             |
   ; HASH-LABEL: Machine Block Hash Info for function: foo

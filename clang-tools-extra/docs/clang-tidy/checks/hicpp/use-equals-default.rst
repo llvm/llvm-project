@@ -1,6 +1,4 @@
 .. title:: clang-tidy - hicpp-use-equals-defaults
-.. meta::
-   :http-equiv=refresh: 5;URL=../modernize/use-equals-default.html
 
 hicpp-use-equals-default
 ========================
