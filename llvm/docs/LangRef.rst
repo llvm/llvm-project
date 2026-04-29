@@ -30251,9 +30251,8 @@ FP Arithmetic Intrinsics
 These intrinsics are call-instruction equivalents of the standard
 floating-point instructions, accepting the same
 :ref:`fast-math flags <fastmath>`.  Expressing a floating-point
-operation as a call allows clients to attach metadata and to refer to
-the result value like any other value (without resorting to
-``extractvalue`` or similar workarounds).  Without operand bundles they
+operation as a call allows clients to attach metadata and to use the
+result value like any other call result.  Without operand bundles they
 lower identically to the corresponding instruction.
 
 Note: ``llvm.fcmps`` is an exception -- see its entry below for
