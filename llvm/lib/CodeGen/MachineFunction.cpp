@@ -20,6 +20,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
@@ -162,6 +163,21 @@ static inline Align getFnStackAlignment(const TargetSubtargetInfo &STI,
   return STI.getFrameLowering()->getStackAlign();
 }
 
+static FramePointerKind getFramePointerPolicy(const Function &F) {
+  Attribute FPAttr = F.getFnAttribute("frame-pointer");
+  if (!FPAttr.isValid())
+    return FramePointerKind::None;
+
+  StringRef FP = FPAttr.getValueAsString();
+  return StringSwitch<FramePointerKind>(FP)
+      .Case("all", FramePointerKind::All)
+      .Case("non-leaf", FramePointerKind::NonLeaf)
+      .Case("non-leaf-no-reserve", FramePointerKind::NonLeafNoReserve)
+      .Case("reserved", FramePointerKind::Reserved)
+      .Case("none", FramePointerKind::None)
+      .Default(FramePointerKind::None);
+}
+
 MachineFunction::MachineFunction(Function &F, const TargetMachine &Target,
                                  const TargetSubtargetInfo &STI, MCContext &Ctx,
                                  unsigned FunctionNum)
@@ -203,6 +219,7 @@ void MachineFunction::init() {
   FrameInfo = new (Allocator) MachineFrameInfo(
       getFnStackAlignment(STI, F), /*StackRealignable=*/CanRealignSP,
       /*ForcedRealign=*/ForceRealignSP && CanRealignSP);
+  FrameInfo->setFramePointerPolicy(getFramePointerPolicy(F));
 
   setUnsafeStackSize(F, *FrameInfo);
 

@@ -5,6 +5,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 
+@skipIfTargetDoesNotSupportThreads()
 class TestPartialResume(gdbremote_testcase.GdbRemoteTestCaseBase):
     THREAD_MATCH_RE = re.compile(r"thread ([0-9a-f]+) running")
 

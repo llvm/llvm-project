@@ -33,6 +33,30 @@ llvm.mlir.global internal @float_global(0.0: f32) : f32
 // CHECK: @float_global_array = internal global [1 x float] [float -5.000000e+00]
 llvm.mlir.global internal @float_global_array(dense<[-5.0]> : vector<1xf32>) : !llvm.array<1 x f32>
 
+// CHECK: @splat_float_global_array = internal global [4 x float] [float 4.200000e+01, float 4.200000e+01, float 4.200000e+01, float 4.200000e+01]
+llvm.mlir.global internal @splat_float_global_array(dense<42.0> : tensor<4xf32>) : !llvm.array<4 x f32>
+
+// CHECK: @splat_double_global_array = internal global [3 x double] [double 4.200000e+01, double 4.200000e+01, double 4.200000e+01]
+llvm.mlir.global internal @splat_double_global_array(dense<42.0> : tensor<3xf64>) : !llvm.array<3 x f64>
+
+// CHECK: @splat_neg_float_global_array = internal global [4 x float] [float -1.350000e+01, float -1.350000e+01, float -1.350000e+01, float -1.350000e+01]
+llvm.mlir.global internal @splat_neg_float_global_array(dense<-13.5> : tensor<4xf32>) : !llvm.array<4 x f32>
+
+// CHECK: @splat_neg_double_global_array = internal global [3 x double] [double -1.350000e+01, double -1.350000e+01, double -1.350000e+01]
+llvm.mlir.global internal @splat_neg_double_global_array(dense<-13.5> : tensor<3xf64>) : !llvm.array<3 x f64>
+
+// CHECK: @splat_half_global_array = internal global [4 x half] [half 0xH5140, half 0xH5140, half 0xH5140, half 0xH5140]
+llvm.mlir.global internal @splat_half_global_array(dense<42.0> : tensor<4xf16>) : !llvm.array<4 x f16>
+
+// CHECK: @splat_bfloat_global_array = internal global [3 x bfloat] [bfloat 0xR4228, bfloat 0xR4228, bfloat 0xR4228]
+llvm.mlir.global internal @splat_bfloat_global_array(dense<42.0> : tensor<3xbf16>) : !llvm.array<3 x bf16>
+
+// CHECK: @splat_neg_half_global_array = internal global [4 x half] [half 0xHCAC0, half 0xHCAC0, half 0xHCAC0, half 0xHCAC0]
+llvm.mlir.global internal @splat_neg_half_global_array(dense<-13.5> : tensor<4xf16>) : !llvm.array<4 x f16>
+
+// CHECK: @splat_neg_bfloat_global_array = internal global [3 x bfloat] [bfloat 0xRC158, bfloat 0xRC158, bfloat 0xRC158]
+llvm.mlir.global internal @splat_neg_bfloat_global_array(dense<-13.5> : tensor<3xbf16>) : !llvm.array<3 x bf16>
+
 // CHECK: @string_const = internal constant [6 x i8] c"foobar"
 llvm.mlir.global internal constant @string_const("foobar") : !llvm.array<6 x i8>
 

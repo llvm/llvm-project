@@ -95,6 +95,7 @@ set(LIBSYCL_SOURCES
     "usm_functions.cpp"
     "detail/context_impl.cpp"
     "detail/event_impl.cpp"
+    "detail/device_image_wrapper.cpp"
     "detail/device_impl.cpp"
     "detail/global_objects.cpp"
     "detail/platform_impl.cpp"
@@ -111,6 +112,6 @@ add_sycl_rt_library(${LIBSYCL_LIB_NAME}
     ${LIBSYCL_SOURCES})
 
 install(TARGETS ${LIBSYCL_RT_LIBS}
-  ARCHIVE DESTINATION "lib${LLVM_LIBDIR_SUFFIX}" COMPONENT libsycl
-  LIBRARY DESTINATION "lib${LLVM_LIBDIR_SUFFIX}" COMPONENT libsycl
+  ARCHIVE DESTINATION ${LIBSYCL_INSTALL_LIBRARY_DIR} COMPONENT libsycl
+  LIBRARY DESTINATION ${LIBSYCL_INSTALL_LIBRARY_DIR} COMPONENT libsycl
   RUNTIME DESTINATION "bin" COMPONENT libsycl)

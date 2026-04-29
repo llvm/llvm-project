@@ -849,7 +849,7 @@ template<typename T, typename U> concept C = true;
 template<typename T> auto L = []<C<T> U>() {};
 
 struct Q {
-  template<C<int> U> friend constexpr auto decltype(L<int>)::operator()() const;
+  template<C<int> U> friend constexpr auto decltype(L<int>)::operator()() const; // expected-error {{a member of a lambda should not be the target of a friend declaration}}
 };
 
 template <class T>

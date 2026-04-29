@@ -164,6 +164,11 @@ bool ScriptedThread::LoadArtificialStackFrames() {
         error, LLDBLog::Thread);
 
   size_t arr_size = arr_sp->GetSize();
+  if (!arr_size)
+    return ScriptedInterface::ErrorWithMessage<bool>(
+        LLVM_PRETTY_FUNCTION, "StackFrame array is empty.", error,
+        LLDBLog::Thread);
+
   if (arr_size > std::numeric_limits<uint32_t>::max())
     return ScriptedInterface::ErrorWithMessage<bool>(
         LLVM_PRETTY_FUNCTION,

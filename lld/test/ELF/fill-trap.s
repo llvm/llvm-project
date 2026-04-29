@@ -39,7 +39,7 @@
 # CHECK-NEXT:   ]
 
 ## Check that executable page is filled with traps at its end.
-# FILL: 001ff0 cccc cccc cccc cccc cccc cccc cccc cccc
+# FILL: {{001ff0|001FF0}} cccc cccc cccc cccc cccc cccc cccc cccc
 
 ## There is a single RWX segment. Test that p_memsz is not truncated to p_filesz.
 # RUN: ld.lld a.o bss.o -z separate-loadable-segments -T rwx.lds -z max-page-size=64 -o rwx

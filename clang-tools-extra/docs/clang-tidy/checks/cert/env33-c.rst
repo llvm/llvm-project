@@ -1,6 +1,4 @@
 .. title:: clang-tidy - cert-env33-c
-.. meta::
-   :http-equiv=refresh: 5;URL=../bugprone/command-processor.html
 
 cert-env33-c
 ============

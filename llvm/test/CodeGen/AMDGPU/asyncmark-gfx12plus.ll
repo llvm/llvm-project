@@ -319,9 +319,9 @@ define amdgpu_kernel void @test_pipelined_loop_with_global(ptr addrspace(1) %foo
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-NEXT:    v_dual_mov_b32 v3, 4 :: v_dual_mov_b32 v4, s11
 ; SDAG-NEXT:    s_load_b32 s11, s[4:5], 0x44 nv
+; SDAG-NEXT:    s_clause 0x2
 ; SDAG-NEXT:    global_load_async_to_lds_b32 v1, v0, s[8:9] offset:4 nv
 ; SDAG-NEXT:    ; asyncmark
-; SDAG-NEXT:    s_clause 0x1
 ; SDAG-NEXT:    global_load_b32 v1, v0, s[8:9] offset:4
 ; SDAG-NEXT:    global_load_b32 v2, v0, s[0:1] offset:4
 ; SDAG-NEXT:    s_wait_xcnt 0x0
@@ -338,6 +338,7 @@ define amdgpu_kernel void @test_pipelined_loop_with_global(ptr addrspace(1) %foo
 ; SDAG-NEXT:    ; asyncmark
 ; SDAG-NEXT:  .LBB2_1: ; %loop_body
 ; SDAG-NEXT:    ; =>This Inner Loop Header: Depth=1
+; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-NEXT:    s_add_co_i32 s12, s9, 8
 ; SDAG-NEXT:    s_wait_loadcnt 0x0
 ; SDAG-NEXT:    v_dual_mov_b32 v7, v4 :: v_dual_mov_b32 v9, s12
@@ -404,9 +405,9 @@ define amdgpu_kernel void @test_pipelined_loop_with_global(ptr addrspace(1) %foo
 ; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GISEL-NEXT:    v_dual_mov_b32 v4, 4 :: v_dual_mov_b32 v3, s6
 ; GISEL-NEXT:    s_mov_b64 s[6:7], s[2:3]
+; GISEL-NEXT:    s_clause 0x2
 ; GISEL-NEXT:    global_load_async_to_lds_b32 v1, v0, s[8:9] offset:4 nv
 ; GISEL-NEXT:    ; asyncmark
-; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_load_b32 v1, v0, s[8:9] offset:4
 ; GISEL-NEXT:    global_load_b32 v2, v0, s[0:1] offset:4
 ; GISEL-NEXT:    s_wait_xcnt 0x0

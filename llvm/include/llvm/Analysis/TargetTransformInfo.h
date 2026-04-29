@@ -1039,8 +1039,6 @@ public:
   /// convention.
   LLVM_ABI bool useFastCCForInternalCall(Function &F) const;
 
-  LLVM_ABI bool isTargetIntrinsicTriviallyScalarizable(Intrinsic::ID ID) const;
-
   /// Identifies if the vector form of the intrinsic has a scalar operand.
   LLVM_ABI bool isTargetIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
                                                    unsigned ScalarOpdIdx) const;

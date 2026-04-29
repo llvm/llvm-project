@@ -130,7 +130,7 @@ void TargetLoweringObjectFileELF::Initialize(MCContext &Ctx,
   case Triple::armeb:
   case Triple::thumb:
   case Triple::thumbeb:
-    if (Ctx.getAsmInfo()->getExceptionHandlingType() == ExceptionHandling::ARM)
+    if (Ctx.getAsmInfo().getExceptionHandlingType() == ExceptionHandling::ARM)
       break;
     // Fallthrough if not using EHABI
     [[fallthrough]];
@@ -727,8 +727,8 @@ calcUniqueIDUpdateFlagsAndSize(const GlobalObject *GO, StringRef SectionName,
   if (Retain) {
     if (TM.getTargetTriple().isOSSolaris())
       Flags |= ELF::SHF_SUNW_NODISCARD;
-    else if (Ctx.getAsmInfo()->useIntegratedAssembler() ||
-             Ctx.getAsmInfo()->binutilsIsAtLeast(2, 36))
+    else if (Ctx.getAsmInfo().useIntegratedAssembler() ||
+             Ctx.getAsmInfo().binutilsIsAtLeast(2, 36))
       Flags |= ELF::SHF_GNU_RETAIN;
     return NextUniqueID++;
   }
@@ -739,8 +739,8 @@ calcUniqueIDUpdateFlagsAndSize(const GlobalObject *GO, StringRef SectionName,
   // the same name. Doing so relies on the ",unique ," assembly feature. This
   // feature is not available until binutils version 2.35
   // (https://sourceware.org/bugzilla/show_bug.cgi?id=25380).
-  const bool SupportsUnique = Ctx.getAsmInfo()->useIntegratedAssembler() ||
-                              Ctx.getAsmInfo()->binutilsIsAtLeast(2, 35);
+  const bool SupportsUnique = Ctx.getAsmInfo().useIntegratedAssembler() ||
+                              Ctx.getAsmInfo().binutilsIsAtLeast(2, 35);
   if (!SupportsUnique) {
     Flags &= ~ELF::SHF_MERGE;
     EntrySize = 0;
@@ -866,8 +866,8 @@ static MCSection *selectExplicitSectionGlobal(const GlobalObject *GO,
   assert(Section->getLinkedToSymbol() == LinkedToSym &&
          "Associated symbol mismatch between sections");
 
-  if (!(Ctx.getAsmInfo()->useIntegratedAssembler() ||
-        Ctx.getAsmInfo()->binutilsIsAtLeast(2, 35))) {
+  if (!(Ctx.getAsmInfo().useIntegratedAssembler() ||
+        Ctx.getAsmInfo().binutilsIsAtLeast(2, 35))) {
     // If we are using GNU as before 2.35, then this symbol might have
     // been placed in an incompatible mergeable section. Emit an error if this
     // is the case to avoid creating broken output.
@@ -935,8 +935,8 @@ static MCSection *selectELFSectionForGlobal(
     if (TM.getTargetTriple().isOSSolaris()) {
       EmitUniqueSection = true;
       Flags |= ELF::SHF_SUNW_NODISCARD;
-    } else if (Ctx.getAsmInfo()->useIntegratedAssembler() ||
-               Ctx.getAsmInfo()->binutilsIsAtLeast(2, 36)) {
+    } else if (Ctx.getAsmInfo().useIntegratedAssembler() ||
+               Ctx.getAsmInfo().binutilsIsAtLeast(2, 36)) {
       EmitUniqueSection = true;
       Flags |= ELF::SHF_GNU_RETAIN;
     }
@@ -1027,8 +1027,8 @@ MCSection *TargetLoweringObjectFileELF::getSectionForLSDA(
   // Use SHF_LINK_ORDER to facilitate --gc-sections if we can use GNU ld>=2.36
   // or LLD, which support mixed SHF_LINK_ORDER & non-SHF_LINK_ORDER.
   if (TM.getFunctionSections() &&
-      (getContext().getAsmInfo()->useIntegratedAssembler() &&
-       getContext().getAsmInfo()->binutilsIsAtLeast(2, 36))) {
+      (getContext().getAsmInfo().useIntegratedAssembler() &&
+       getContext().getAsmInfo().binutilsIsAtLeast(2, 36))) {
     Flags |= ELF::SHF_LINK_ORDER;
     LinkedToSym = static_cast<const MCSymbolELF *>(&FnSym);
   }
@@ -1653,8 +1653,7 @@ void TargetLoweringObjectFileMachO::getNameWithPrefix(
   if (auto *GO = GV->getAliaseeObject()) {
     SectionKind GOKind = TargetLoweringObjectFile::getKindForGlobal(GO, TM);
     const MCSection *TheSection = SectionForGlobal(GO, GOKind, TM);
-    CannotUsePrivateLabel =
-        !canUsePrivateLabel(*TM.getMCAsmInfo(), *TheSection);
+    CannotUsePrivateLabel = !canUsePrivateLabel(TM.getMCAsmInfo(), *TheSection);
   }
   getMangler().getNameWithPrefix(OutName, GV, CannotUsePrivateLabel);
 }
@@ -2180,7 +2179,7 @@ MCSection *TargetLoweringObjectFileCOFF::getSectionForConstant(
     const DataLayout &DL, SectionKind Kind, const Constant *C, Align &Alignment,
     const Function *F) const {
   if (Kind.isMergeableConst() && C &&
-      getContext().getAsmInfo()->hasCOFFComdatConstants()) {
+      getContext().getAsmInfo().hasCOFFComdatConstants()) {
     // This creates comdat sections with the given symbol name, but unless
     // AsmPrinter::GetCPISymbol actually makes the symbol global, the symbol
     // will be created with a null storage class, which makes GNU binutils

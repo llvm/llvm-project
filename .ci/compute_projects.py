@@ -23,6 +23,7 @@ PROJECT_DEPENDENCIES = {
     "bolt": {"clang", "lld", "llvm"},
     "clang-tools-extra": {"clang", "llvm"},
     "compiler-rt": {"clang", "lld"},
+    "cross-project-tests": {"clang", "lldb", "lld"},
     "libc": {"clang", "lld"},
     "openmp": {"clang", "lld"},
     "flang": {"llvm", "clang"},
@@ -48,6 +49,7 @@ DEPENDENTS_TO_TEST = {
         "mlir",
         "polly",
         "flang",
+        "cross-project-tests",
     },
     "lld": {"bolt", "cross-project-tests"},
     "clang": {"clang-tools-extra", "cross-project-tests", "lldb"},
@@ -94,7 +96,6 @@ DEPENDENT_RUNTIMES_TO_TEST_NEEDS_RECONFIG = {
 }
 
 EXCLUDE_LINUX = {
-    "cross-project-tests",  # TODO(issues/132796): Tests are failing.
     "openmp",  # https://github.com/google/llvm-premerge-checks/issues/410
 }
 

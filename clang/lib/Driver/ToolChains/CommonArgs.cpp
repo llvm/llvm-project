@@ -1796,7 +1796,7 @@ bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
   }
   // If there is a static runtime with no dynamic list, force all the symbols
   // to be dynamic to be sure we export sanitizer interface functions.
-  if (AddExportDynamic)
+  if (AddExportDynamic && !TC.getTriple().isNVPTX())
     CmdArgs.push_back("--export-dynamic");
 
   if (SanArgs.hasCrossDsoCfi() && !AddExportDynamic)

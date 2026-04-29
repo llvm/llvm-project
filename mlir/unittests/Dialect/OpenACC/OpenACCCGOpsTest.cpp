@@ -167,9 +167,9 @@ TEST_F(OpenACCCGOpsTest, WireHoistedValueThroughInsDefinedInside) {
                                   /*mapArgType=*/std::nullopt,
                                   /*addSelfAddi=*/false);
   IRMapping mapping;
-  auto cr = buildComputeRegion(loc, ValueRange(pw), /*inputArgs=*/{},
-                               ParallelOp::getOperationName(), sourceRegion,
-                               host.rewriter, mapping);
+  auto cr = buildComputeRegion(loc, ValueRange(pw.getResult()),
+                               /*inputArgs=*/{}, ParallelOp::getOperationName(),
+                               sourceRegion, host.rewriter, mapping);
   ASSERT_TRUE(cr);
 
   BlockArgument launchArg = cr.getRegion().front().getArgument(0);
