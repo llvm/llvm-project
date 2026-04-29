@@ -85,6 +85,7 @@ static const OmpDirectiveSet topParallelSet{
     Directive::OMPD_parallel_loop,
     Directive::OMPD_parallel_masked_taskloop,
     Directive::OMPD_parallel_masked_taskloop_simd,
+    Directive::OMPD_parallel_master,
     Directive::OMPD_parallel_master_taskloop,
     Directive::OMPD_parallel_master_taskloop_simd,
     Directive::OMPD_parallel_sections,
