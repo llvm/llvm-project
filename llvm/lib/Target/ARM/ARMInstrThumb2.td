@@ -5819,12 +5819,18 @@ let Predicates = [HasV8_1MMainline] in {
                 (Insn GPRwithZR:$tval, GPRwithZR:$fval,
                          (i32 (inv_cond_XFORM imm:$cc)))>;
   }
-  defm : ModifiedV8_1CSEL<t2CSINC, (add rGPR:$fval, 1)>;
+  defm : ModifiedV8_1CSEL<t2CSINC, (add_like rGPR:$fval, 1)>;
   defm : ModifiedV8_1CSEL<t2CSINV, (xor rGPR:$fval, -1)>;
   defm : ModifiedV8_1CSEL<t2CSNEG, (sub 0, rGPR:$fval)>;
 
   def : T2Pat<(ARMcmov (topbitsallzero32:$Rn), (i32 1), imm:$cc, CPSR),
               (t2CSINC $Rn, ZR, (inv_cond_XFORM imm:$cc))>;
+  def : T2Pat<(add_like rGPR:$Rn,
+                   (ARMcsinc_su (i32 0), (i32 0), imm:$cc, CPSR)),
+              (t2CSINC $Rn, $Rn, imm:$cc)>;
+  def : T2Pat<(or (topbitsallzero32:$Rn),
+                  (ARMcsinc_su (i32 0), (i32 0), imm:$cc, CPSR)),
+              (t2CSINC $Rn, ZR, imm:$cc)>;
   def : T2Pat<(and (topbitsallzero32:$Rn),
                    (ARMcsinc_su (i32 0), (i32 0), imm:$cc, CPSR)),
               (t2CSEL ZR, $Rn, imm:$cc)>;
