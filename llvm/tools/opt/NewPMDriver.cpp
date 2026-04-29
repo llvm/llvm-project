@@ -23,6 +23,8 @@
 #include "llvm/Bitcode/BitcodeWriterPass.h"
 #include "llvm/CodeGen/LibcallLoweringInfo.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -237,6 +239,22 @@ static cl::opt<bool> PseudoProbeForProfiling(
 static cl::opt<bool> DisableLoopUnrolling(
     "disable-loop-unrolling",
     cl::desc("Disable loop unrolling in all relevant passes"), cl::init(false));
+
+bool OptDiagnosticHandler::handleDiagnostics(const DiagnosticInfo &DI) {
+  DiagnosticHandler::handleDiagnostics(DI);
+  // Mirror the filtering performed by LLVMContext::diagnose's default path:
+  // optimization remarks are gated by the -pass-remarks* flags (isEnabled),
+  // and verbose remarks additionally require hotness data.
+  if (auto *Remark = dyn_cast<DiagnosticInfoOptimizationBase>(&DI))
+    if (!Remark->isEnabled() || (Remark->isVerbose() && !Remark->getHotness()))
+      return true;
+
+  DiagnosticPrinterRawOStream DP(errs());
+  errs() << LLVMContext::getDiagnosticMessagePrefix(DI.getSeverity()) << ": ";
+  DI.print(DP);
+  errs() << "\n";
+  return true;
+}
 
 template <typename PassManagerT>
 bool tryParsePipelineText(PassBuilder &PB,
@@ -572,6 +590,12 @@ bool llvm::runPassPipeline(
 
   // Now that we have all of the passes ready, run them.
   MPM.run(M, MAM);
+
+  // If a pass reported an error via LLVMContext::emitError, fail without
+  // writing the output module.
+  if (auto *DH = M.getContext().getDiagHandlerPtr())
+    if (DH->HasErrors)
+      return false;
 
   // Declare success.
   if (OK != OK_NoOutput) {

@@ -671,7 +671,8 @@ IR2VecVocabAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
 PreservedAnalyses IR2VecPrinterPass::run(Module &M,
                                          ModuleAnalysisManager &MAM) {
   auto &Vocabulary = MAM.getResult<IR2VecVocabAnalysis>(M);
-  assert(Vocabulary.isValid() && "IR2Vec Vocabulary is invalid");
+  if (!Vocabulary.isValid())
+    return PreservedAnalyses::all();
 
   for (Function &F : M) {
     auto Emb = Embedder::create(IR2VecEmbeddingKind, F, Vocabulary);

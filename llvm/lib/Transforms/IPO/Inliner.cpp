@@ -163,14 +163,18 @@ InlinerPass::getAdvisor(const ModuleAnalysisManagerCGSCCProxy::Result &MAM,
         InlineContext{LTOPhase, InlinePass::CGSCCInliner});
 
     if (!CGSCCInlineReplayFile.empty())
-      OwnedAdvisor = getReplayInlineAdvisor(
-          M, FAM, M.getContext(), std::move(OwnedAdvisor),
-          ReplayInlinerSettings{CGSCCInlineReplayFile,
-                                CGSCCInlineReplayScope,
-                                CGSCCInlineReplayFallback,
-                                {CGSCCInlineReplayFormat}},
-          /*EmitRemarks=*/true,
-          InlineContext{LTOPhase, InlinePass::ReplayCGSCCInliner});
+      if (auto ReplayAdvisor = getReplayInlineAdvisor(
+              M, FAM, M.getContext(),
+              std::make_unique<DefaultInlineAdvisor>(
+                  M, FAM, getInlineParams(),
+                  InlineContext{LTOPhase, InlinePass::CGSCCInliner}),
+              ReplayInlinerSettings{CGSCCInlineReplayFile,
+                                    CGSCCInlineReplayScope,
+                                    CGSCCInlineReplayFallback,
+                                    {CGSCCInlineReplayFormat}},
+              /*EmitRemarks=*/true,
+              InlineContext{LTOPhase, InlinePass::ReplayCGSCCInliner}))
+        OwnedAdvisor = std::move(ReplayAdvisor);
 
     return *OwnedAdvisor;
   }
