@@ -3923,9 +3923,11 @@ static SDValue combineOrOfSetCCToUSUBOCarry(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   EVT IntVT = A.getValueType();
-  if (!TLI.isOperationLegalOrCustom(
-          ISD::USUBO_CARRY,
-          TLI.getLegalTypeToTransformTo(*DAG.getContext(), IntVT)))
+  // Skip vectors: USUBO_CARRY on a vector type has no legalization path and
+  // would crash.
+  if (IntVT.isVector() || !TLI.isOperationLegalOrCustom(
+                              ISD::USUBO_CARRY, TLI.getLegalTypeToTransformTo(
+                                                    *DAG.getContext(), IntVT)))
     return SDValue();
 
   SDLoc DL(N);
