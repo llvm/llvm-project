@@ -920,13 +920,26 @@ LTO::addModule(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
 // in the regular LTO module without this cleanup.
 static void
 handleNonPrevailingComdat(GlobalValue &GV,
-                          std::set<const Comdat *> &NonPrevailingComdats) {
+                          std::set<const Comdat *> &NonPrevailingComdats,
+                          const DenseSet<GlobalObject *> &AliasedGlobals) {
   Comdat *C = GV.getComdat();
   if (!C)
     return;
 
   if (!NonPrevailingComdats.count(C))
     return;
+
+  // Don't convert aliasee globals to available_externally. An alias must
+  // point to a definition; if we drop the definition, any surviving alias
+  // (e.g. kept alive by -export-dynamic) would point to a declaration,
+  // which is invalid IR. This can happen when different TUs place the same
+  // symbol in different comdat groups (e.g. C++ D0/D2 destructors in
+  // unified vs separate comdats due to ODR differences).
+  if (auto *GO = dyn_cast<GlobalObject>(&GV))
+    if (AliasedGlobals.count(GO)) {
+      GO->setComdat(nullptr);
+      return;
+    }
 
   // Additionally need to drop all global values from the comdat to
   // available_externally, to satisfy the COMDAT requirement that all members
@@ -1096,7 +1109,7 @@ LTO::addRegularLTO(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
 
   if (!M.getComdatSymbolTable().empty())
     for (GlobalValue &GV : M.global_values())
-      handleNonPrevailingComdat(GV, NonPrevailingComdats);
+      handleNonPrevailingComdat(GV, NonPrevailingComdats, AliasedGlobals);
 
   // Prepend ".lto_discard <sym>, <sym>*" directive to each module inline asm
   // block.
