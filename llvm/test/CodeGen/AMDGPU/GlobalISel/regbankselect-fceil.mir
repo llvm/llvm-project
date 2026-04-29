@@ -44,3 +44,96 @@ body: |
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = G_FCEIL %0
 ...
+
+---
+name: fceil_s16_s
+legalized: true
+
+body: |
+  bb.0:
+    liveins: $sgpr0
+    ; FIJI-LABEL: name: fceil_s16_s
+    ; FIJI: liveins: $sgpr0
+    ; FIJI-NEXT: {{  $}}
+    ; FIJI-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; FIJI-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s16) = G_TRUNC [[COPY]](s32)
+    ; FIJI-NEXT: [[COPY1:%[0-9]+]]:vgpr(s16) = COPY [[TRUNC]](s16)
+    ; FIJI-NEXT: [[FCEIL:%[0-9]+]]:vgpr(s16) = G_FCEIL [[COPY1]]
+    ; GFX12-LABEL: name: fceil_s16_s
+    ; GFX12: liveins: $sgpr0
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; GFX12-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s16) = G_TRUNC [[COPY]](s32)
+    ; GFX12-NEXT: [[FCEIL:%[0-9]+]]:sgpr(s16) = G_FCEIL [[TRUNC]]
+    %0:_(s32) = COPY $sgpr0
+    %1:_(s16) = G_TRUNC %0
+    %2:_(s16) = G_FCEIL %1
+...
+
+---
+name: fceil_s16_v
+legalized: true
+
+body: |
+  bb.0:
+    liveins: $vgpr0
+    ; FIJI-LABEL: name: fceil_s16_v
+    ; FIJI: liveins: $vgpr0
+    ; FIJI-NEXT: {{  $}}
+    ; FIJI-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; FIJI-NEXT: [[TRUNC:%[0-9]+]]:vgpr(s16) = G_TRUNC [[COPY]](s32)
+    ; FIJI-NEXT: [[FCEIL:%[0-9]+]]:vgpr(s16) = G_FCEIL [[TRUNC]]
+    ; GFX12-LABEL: name: fceil_s16_v
+    ; GFX12: liveins: $vgpr0
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; GFX12-NEXT: [[TRUNC:%[0-9]+]]:vgpr(s16) = G_TRUNC [[COPY]](s32)
+    ; GFX12-NEXT: [[FCEIL:%[0-9]+]]:vgpr(s16) = G_FCEIL [[TRUNC]]
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s16) = G_TRUNC %0
+    %2:_(s16) = G_FCEIL %1
+...
+
+---
+name: fceil_s64_s
+legalized: true
+
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+    ; FIJI-LABEL: name: fceil_s64_s
+    ; FIJI: liveins: $sgpr0_sgpr1
+    ; FIJI-NEXT: {{  $}}
+    ; FIJI-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
+    ; FIJI-NEXT: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY [[COPY]](s64)
+    ; FIJI-NEXT: [[FCEIL:%[0-9]+]]:vgpr(s64) = G_FCEIL [[COPY1]]
+    ; GFX12-LABEL: name: fceil_s64_s
+    ; GFX12: liveins: $sgpr0_sgpr1
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
+    ; GFX12-NEXT: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY [[COPY]](s64)
+    ; GFX12-NEXT: [[FCEIL:%[0-9]+]]:vgpr(s64) = G_FCEIL [[COPY1]]
+    %0:_(s64) = COPY $sgpr0_sgpr1
+    %1:_(s64) = G_FCEIL %0
+...
+
+---
+name: fceil_s64_v
+legalized: true
+
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+    ; FIJI-LABEL: name: fceil_s64_v
+    ; FIJI: liveins: $vgpr0_vgpr1
+    ; FIJI-NEXT: {{  $}}
+    ; FIJI-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
+    ; FIJI-NEXT: [[FCEIL:%[0-9]+]]:vgpr(s64) = G_FCEIL [[COPY]]
+    ; GFX12-LABEL: name: fceil_s64_v
+    ; GFX12: liveins: $vgpr0_vgpr1
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
+    ; GFX12-NEXT: [[FCEIL:%[0-9]+]]:vgpr(s64) = G_FCEIL [[COPY]]
+    %0:_(s64) = COPY $vgpr0_vgpr1
+    %1:_(s64) = G_FCEIL %0
+...

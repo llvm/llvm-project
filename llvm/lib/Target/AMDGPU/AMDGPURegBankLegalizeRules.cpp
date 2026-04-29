@@ -1601,6 +1601,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   addRulesForGOpcs({G_INTRINSIC_TRUNC, G_FFLOOR, G_FCEIL}, Standard)
       .Uni(S16, {{UniInVgprS16}, {Vgpr16}})
+      .Uni(S16, {{Sgpr16}, {Sgpr16}}, hasSALUFloat)
       .Div(S16, {{Vgpr16}, {Vgpr16}})
       .Uni(S32, {{UniInVgprS32}, {Vgpr32}})
       .Uni(S32, {{Sgpr32}, {Sgpr32}}, hasSALUFloat)
