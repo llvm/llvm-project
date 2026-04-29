@@ -62,6 +62,29 @@ private:
   void finalizeFlags(InputSection *input);
 };
 
+// We maintain one ThunkInfo per real function.
+//
+// The "active thunk" is represented by the sym/isec pair that
+// turns-over during finalize(): as the call-site address advances,
+// the active thunk goes out of branch-range, and we create a new
+// thunk to take its place.
+//
+// The remaining members -- bools and counters -- apply to the
+// collection of thunks associated with the real function.
+
+struct ThunkInfo {
+  // These denote the active thunk:
+  Defined *sym = nullptr;             // private-extern symbol for active thunk
+  ConcatInputSection *isec = nullptr; // input section for active thunk
+
+  /// Before this thunk is created, this contains the set of branches with the
+  /// same target that could trigger this thunk's creation.
+  llvm::DenseSet<const Relocation *> pendingBranches;
+
+  // The following value is cumulative across all thunks on this function
+  uint8_t sequence = 0; // how many thunks created so-far?
+};
+
 // ConcatOutputSections that contain code (text) require special handling to
 // support thunk insertion.
 class TextOutputSection : public ConcatOutputSection {
@@ -98,29 +121,14 @@ private:
   bool isTargetStubsAndInRange(const ConcatInputSection &isec,
                                const Relocation &r,
                                uint64_t estimatedStubsEnd) const;
+  /// Mark the branch at \p r as resolved and possibly decrement
+  /// numPendingThunkTargets.
+  void markBranchAsResolved(ThunkInfo &thunkInfo, const Relocation *r);
   /// The number of relocations updated to point to thunks.
   size_t thunkCallCount = 0;
-};
-
-// We maintain one ThunkInfo per real function.
-//
-// The "active thunk" is represented by the sym/isec pair that
-// turns-over during finalize(): as the call-site address advances,
-// the active thunk goes out of branch-range, and we create a new
-// thunk to take its place.
-//
-// The remaining members -- bools and counters -- apply to the
-// collection of thunks associated with the real function.
-
-struct ThunkInfo {
-  // These denote the active thunk:
-  Defined *sym = nullptr;             // private-extern symbol for active thunk
-  ConcatInputSection *isec = nullptr; // input section for active thunk
-
-  llvm::DenseSet<const Relocation *> pendingBranches;
-
-  // The following value is cumulative across all thunks on this function
-  uint8_t sequence = 0;        // how many thunks created so-far?
+  /// The number of new thunks that could be created from our current list of
+  /// pending branches.
+  unsigned numPendingThunkTargets = 0;
 };
 
 NamePair maybeRenameSection(NamePair key);
