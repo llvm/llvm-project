@@ -227,6 +227,25 @@ define i1 @no_subcarry_signed(i64 %x0, i64 %x1, i64 %y0, i64 %y1) nounwind {
   ret i1 %br
 }
 
+; Negative test: vector types are not a borrow chain.
+define <4 x i1> @no_subcarry_vector(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %y0, <4 x i32> %y1) nounwind {
+; CHECK-LABEL: no_subcarry_vector:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmeq v4.4s, v1.4s, v3.4s
+; CHECK-NEXT:    cmhi v0.4s, v2.4s, v0.4s
+; CHECK-NEXT:    cmhi v1.4s, v3.4s, v1.4s
+; CHECK-NEXT:    and v0.16b, v0.16b, v4.16b
+; CHECK-NEXT:    orr v0.16b, v1.16b, v0.16b
+; CHECK-NEXT:    xtn v0.4h, v0.4s
+; CHECK-NEXT:    ret
+  %b0 = icmp ult <4 x i32> %x0, %y0
+  %b1 = icmp ult <4 x i32> %x1, %y1
+  %e1 = icmp eq <4 x i32> %x1, %y1
+  %bp = and <4 x i1> %b0, %e1
+  %br = or <4 x i1> %b1, %bp
+  ret <4 x i1> %br
+}
+
 ; Verify insertion point for multi-BB.
 
 declare void @call(i1)
@@ -234,12 +253,12 @@ declare void @call(i1)
 define i1 @usubo_ult_sub_dominates_i64(i64 %x, i64 %y, ptr %p, i1 %cond) nounwind {
 ; CHECK-LABEL: usubo_ult_sub_dominates_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    tbz w3, #0, .LBB13_2
+; CHECK-NEXT:    tbz w3, #0, .LBB14_2
 ; CHECK-NEXT:  // %bb.1: // %t
 ; CHECK-NEXT:    subs x8, x0, x1
 ; CHECK-NEXT:    cset w3, lo
 ; CHECK-NEXT:    str x8, [x2]
-; CHECK-NEXT:  .LBB13_2: // %common.ret
+; CHECK-NEXT:  .LBB14_2: // %common.ret
 ; CHECK-NEXT:    and w0, w3, #0x1
 ; CHECK-NEXT:    ret
 entry:
@@ -265,7 +284,7 @@ define i1 @usubo_ult_cmp_dominates_i64(i64 %x, i64 %y, ptr %p, i1 %cond) nounwin
 ; CHECK-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov w19, w3
 ; CHECK-NEXT:    stp x22, x21, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    tbz w3, #0, .LBB14_3
+; CHECK-NEXT:    tbz w3, #0, .LBB15_3
 ; CHECK-NEXT:  // %bb.1: // %t
 ; CHECK-NEXT:    cmp x0, x1
 ; CHECK-NEXT:    mov x22, x0
@@ -275,11 +294,11 @@ define i1 @usubo_ult_cmp_dominates_i64(i64 %x, i64 %y, ptr %p, i1 %cond) nounwin
 ; CHECK-NEXT:    mov w0, w21
 ; CHECK-NEXT:    bl call
 ; CHECK-NEXT:    subs x8, x22, x23
-; CHECK-NEXT:    b.hs .LBB14_3
+; CHECK-NEXT:    b.hs .LBB15_3
 ; CHECK-NEXT:  // %bb.2: // %end
 ; CHECK-NEXT:    mov w19, w21
 ; CHECK-NEXT:    str x8, [x20]
-; CHECK-NEXT:  .LBB14_3: // %common.ret
+; CHECK-NEXT:  .LBB15_3: // %common.ret
 ; CHECK-NEXT:    and w0, w19, #0x1
 ; CHECK-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp x22, x21, [sp, #16] // 16-byte Folded Reload
