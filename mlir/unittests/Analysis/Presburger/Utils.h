@@ -153,6 +153,8 @@ inline void expectComputedVolumeIsValidOverapprox(
 inline void expectComputedVolumeIsValidOverapprox(
     const std::optional<DynamicAPInt> &computedVolume,
     std::optional<int64_t> trueVolume, std::optional<int64_t> resultBound) {
+  // Wrapping dynamicAPIntFromInt64 in a lambda, turning the indirect call into
+  // a direct call that the compiler can inline at the call site.
   auto getDynamicAPInt = [](int64_t x) { return dynamicAPIntFromInt64(x); };
   expectComputedVolumeIsValidOverapprox(
       computedVolume, llvm::transformOptional(trueVolume, getDynamicAPInt),
