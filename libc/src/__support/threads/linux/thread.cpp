@@ -347,11 +347,17 @@ int Thread::join(ThreadReturnValue &retval) {
     if (self.attrib == attrib)
       return EDEADLK;
 
-    attrib->joiner.store(self.attrib);
-    
+    // A best-effort check of concurrent/repeated join
+    ThreadAttributes *expected = nullptr;
+    if (!attrib->joiner.compare_exchange_strong(expected, self.attrib,
+                                                cpp::MemoryOrder::ACQ_REL))
+      return EINVAL;
+
     // Reject mutual join.
-    if (self.attrib->joiner.load() == attrib)
+    if (self.attrib->joiner.load(cpp::MemoryOrder::ACQUIRE) == attrib) {
+      attrib->joiner.store(nullptr, cpp::MemoryOrder::RELEASE);
       return EDEADLK;
+    }
   }
 
   wait();

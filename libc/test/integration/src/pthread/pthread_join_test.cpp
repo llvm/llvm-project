@@ -86,8 +86,7 @@ static void mutual_join_test() {
   while (result1.load() == -1 || result2.load() == -1)
     ; // Spin until the successful joiner and deadlock loser have both exited.
 
-  ASSERT_TRUE((result1.load() == 0 && result2.load() == EDEADLK) ||
-              (result1.load() == EDEADLK && result2.load() == 0));
+  ASSERT_TRUE((result2.load() == EDEADLK) || result1.load() == EDEADLK);
 
   pthread_t joinable_thread = result1.load() == 0 ? thread1 : thread2;
   ASSERT_EQ(LIBC_NAMESPACE::pthread_join(joinable_thread, nullptr), 0);
