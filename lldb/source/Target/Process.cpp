@@ -1563,7 +1563,7 @@ Status Process::DisableBreakpointSiteByID(lldb::user_id_t break_id) {
   Status error;
   BreakpointSiteSP bp_site_sp = m_breakpoint_site_list.FindByID(break_id);
   if (bp_site_sp) {
-    if (IsBreakpointSiteEnabled(bp_site_sp))
+    if (IsBreakpointSiteEnabled(*bp_site_sp))
       error = DisableBreakpointSite(bp_site_sp.get());
   } else {
     error = Status::FromErrorStringWithFormat(
@@ -1577,7 +1577,7 @@ Status Process::EnableBreakpointSiteByID(lldb::user_id_t break_id) {
   Status error;
   BreakpointSiteSP bp_site_sp = m_breakpoint_site_list.FindByID(break_id);
   if (bp_site_sp) {
-    if (!IsBreakpointSiteEnabled(bp_site_sp))
+    if (!IsBreakpointSiteEnabled(*bp_site_sp))
       error = EnableBreakpointSite(bp_site_sp.get());
   } else {
     error = Status::FromErrorStringWithFormat(
@@ -1586,14 +1586,8 @@ Status Process::EnableBreakpointSiteByID(lldb::user_id_t break_id) {
   return error;
 }
 
-bool Process::IsBreakpointSiteEnabled(const lldb::BreakpointSiteSP &site) {
-  assert(site);
-  return site->m_enabled;
-}
-
-bool Process::IsBreakpointSiteEnabled(BreakpointSite *site) {
-  assert(site);
-  return site->m_enabled;
+bool Process::IsBreakpointSiteEnabled(const BreakpointSite &site) {
+  return site.m_enabled;
 }
 
 static bool ShouldShowError(Process &process) {
@@ -1748,7 +1742,7 @@ Status Process::EnableSoftwareBreakpoint(BreakpointSite *bp_site) {
   LLDB_LOGF(
       log, "Process::EnableSoftwareBreakpoint (site_id = %d) addr = 0x%" PRIx64,
       bp_site->GetID(), (uint64_t)bp_addr);
-  if (IsBreakpointSiteEnabled(bp_site)) {
+  if (IsBreakpointSiteEnabled(*bp_site)) {
     LLDB_LOGF(
         log,
         "Process::EnableSoftwareBreakpoint (site_id = %d) addr = 0x%" PRIx64
@@ -1834,7 +1828,7 @@ Status Process::DisableSoftwareBreakpoint(BreakpointSite *bp_site) {
   if (bp_site->IsHardware()) {
     error =
         Status::FromErrorString("Breakpoint site is a hardware breakpoint.");
-  } else if (IsBreakpointSiteEnabled(bp_site)) {
+  } else if (IsBreakpointSiteEnabled(*bp_site)) {
     const size_t break_op_size = bp_site->GetByteSize();
     const uint8_t *const break_op = bp_site->GetTrapOpcodeBytes();
     if (break_op_size > 0) {

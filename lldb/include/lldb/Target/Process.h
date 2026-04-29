@@ -2284,8 +2284,7 @@ public:
 
   Status EnableBreakpointSiteByID(lldb::user_id_t break_id);
 
-  bool IsBreakpointSiteEnabled(const lldb::BreakpointSiteSP &site);
-  bool IsBreakpointSiteEnabled(BreakpointSite *site);
+  bool IsBreakpointSiteEnabled(const BreakpointSite &site);
 
   // BreakpointLocations use RemoveConstituentFromBreakpointSite to remove
   // themselves from the constituent's list of this breakpoint sites.
