@@ -3,8 +3,8 @@ name: "Check LLVM ABI annotations"
 # TODO(https://github.com/llvm/llvm-project/issues/109483): Re-enable on pull
 # requests once the workflow is less diruptive.
 on:
-  # pull_request:
-  workflow_dispatch:
+  pull_request:
+  # workflow_dispatch:
 
 permissions:
   contents: read
@@ -18,16 +18,9 @@ jobs:
     if: github.repository_owner == 'llvm'
     name: Check LLVM_ABI annotations with ids
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 30
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          persist-credentials: false
-          repository: compnerd/ids
-          path: ${{ github.workspace }}/ids
-          ref: b3bf35dd13d7ff244a6a6d106fe58d0eedb5743e # main
-
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
@@ -46,7 +39,16 @@ jobs:
 
       - name: Install dependencies
         run: |
-          sudo apt install -y clang-19 ninja-build libclang-19-dev
+          # Pull a recent clang from LLVM's apt repo so idt's parser stays in
+          # sync with the C++ language features used by current LLVM source.
+          sudo install -d -m 0755 /etc/apt/keyrings
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key \
+            | sudo gpg --dearmor -o /etc/apt/keyrings/llvm.gpg
+          echo "deb [signed-by=/etc/apt/keyrings/llvm.gpg] http://apt.llvm.org/noble/ llvm-toolchain-noble-22 main" \
+            | sudo tee /etc/apt/sources.list.d/llvm.list
+          sudo apt update
+          # oprofile provides opagent.h, used by llvm/ExecutionEngine/OProfileWrapper.h
+          sudo apt install -y clang-22 lld-22 ninja-build libclang-22-dev oprofile
           pip install --require-hashes -r ${{ github.workspace }}/llvm-project/llvm/utils/git/requirements.txt
 
       - name: Configure and build minimal LLVM for use by ids
@@ -54,33 +56,54 @@ jobs:
           cmake -B ${{ github.workspace }}/llvm-project/build/ \
                 -S ${{ github.workspace }}/llvm-project/llvm/ \
                 -D CMAKE_BUILD_TYPE=Release \
-                -D CMAKE_C_COMPILER=clang \
-                -D CMAKE_CXX_COMPILER=clang++ \
+                -D CMAKE_C_COMPILER=clang-22 \
+                -D CMAKE_CXX_COMPILER=clang++-22 \
                 -D LLVM_ENABLE_PROJECTS=clang \
                 -D LLVM_TARGETS_TO_BUILD="host" \
+                -D LLVM_INCLUDE_TESTS=OFF \
+                -D LLVM_INCLUDE_BENCHMARKS=OFF \
                 -D CMAKE_EXPORT_COMPILE_COMMANDS=ON \
+                -D CMAKE_DISABLE_PRECOMPILE_HEADERS=ON \
                 -G Ninja
-          cd ${{ github.workspace }}/llvm-project/build/
-          ninja -t targets all | grep "CommonTableGen: phony$" | grep -v "/" | sed 's/:.*//'
 
-      - name: Configure ids
+          # Build the generated-header prerequisites that idt needs to parse
+          # LLVM source.
+          BUILD_DIR=${{ github.workspace }}/llvm-project/build
+          ninja -C "$BUILD_DIR" \
+            llvm_vcsrevision_h \
+            intrinsics_gen omp_gen acc_gen analysis_gen target_parser_gen vt_gen \
+            DllOptionsTableGen LibOptionsTableGen \
+            clang-tablegen-targets \
+            lib/ExecutionEngine/JITLink/COFFOptions.inc
+
+          # Build per-target tablegen output for every enabled target.
+          # Each enabled target exposes a top-level `<Target>CommonTableGen`
+          # phony rule (e.g. `X86CommonTableGen`); discover them from the
+          # ninja graph.
+          TABLEGEN_TARGETS=$(ninja -C "$BUILD_DIR" -t targets all \
+            | awk -F: '
+                $2 ~ /phony/ &&            # phony rules only
+                $1 !~ /\// &&              # top-level (skip nested paths)
+                $1 ~ /CommonTableGen$/ {   # per-target tablegen aggregator
+                  print $1
+                }')
+          ninja -C "$BUILD_DIR" $TABLEGEN_TARGETS
+
+      - name: Configure and build idt
         run: |
-          cmake -B ${{ github.workspace }}/ids/build/ \
-                -S ${{ github.workspace }}/ids/ \
+          # idt lives in-tree under llvm/utils/idt as a vendored standalone
+          # CMake project. It links against the apt-installed libclang-22-dev,
+          # not the just-configured LLVM build, so the build is small.
+          IDT_SRC=${{ github.workspace }}/llvm-project/llvm/utils/idt
+          cmake -B "$IDT_SRC/build" -S "$IDT_SRC" \
                 -D CMAKE_BUILD_TYPE=Release \
-                -D CMAKE_C_COMPILER=clang \
-                -D CMAKE_CXX_COMPILER=clang++ \
+                -D CMAKE_C_COMPILER=clang-22 \
+                -D CMAKE_CXX_COMPILER=clang++-22 \
                 -D CMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld \
-                -D LLVM_DIR=/usr/lib/llvm-19/lib/cmake/llvm/ \
-                -D Clang_DIR=/usr/lib/llvm-19/lib/cmake/clang/ \
-                -D FILECHECK_EXECUTABLE=$(which FileCheck-19) \
-                -D LIT_EXECUTABLE=$(which lit) \
+                -D LLVM_DIR=/usr/lib/llvm-22/lib/cmake/llvm/ \
+                -D Clang_DIR=/usr/lib/llvm-22/lib/cmake/clang/ \
                 -G Ninja
-
-      # TODO: Use an image with a prebuilt idt.
-      - name: Build ids
-        run: |
-          ninja -C ${{ github.workspace }}/ids/build/ all
+          ninja -C "$IDT_SRC/build"
 
       - name: Run ids check
         env:
@@ -92,7 +115,7 @@ jobs:
           python llvm/utils/git/ids-check-helper.py \
             --token ${{ secrets.GITHUB_TOKEN }} \
             --issue-number $GITHUB_PR_NUMBER \
-            --idt-path ${{ github.workspace }}/ids/build/bin/idt \
+            --idt-path ${{ github.workspace }}/llvm-project/llvm/utils/idt/build/bin/idt \
             --compile-commands ${{ github.workspace }}/llvm-project/build/compile_commands.json \
             --start-rev HEAD~1 \
             --end-rev HEAD \

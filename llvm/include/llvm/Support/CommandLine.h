@@ -206,8 +206,8 @@ private:
   StringRef Description;
 
 protected:
-  LLVM_ABI void registerSubCommand();
-  LLVM_ABI void unregisterSubCommand();
+  void registerSubCommand();
+  void unregisterSubCommand();
 
 public:
   SubCommand(StringRef Name, StringRef Description = "")
