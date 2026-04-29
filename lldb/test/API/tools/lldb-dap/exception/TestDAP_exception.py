@@ -9,7 +9,6 @@ import lldbdap_testcase
 
 @skipIfNoSignals
 class TestDAP_exception(lldbdap_testcase.DAPTestCaseBase):
-    @skipIfWindows
     def test_stopped_description(self):
         """
         Test that exception description is shown correctly in stopped
