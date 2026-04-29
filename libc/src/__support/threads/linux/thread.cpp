@@ -22,8 +22,8 @@
 #include <arm_acle.h>
 #endif
 
-#include "hdr/fcntl_macros.h"
 #include "hdr/errno_macros.h"
+#include "hdr/fcntl_macros.h"
 #include "hdr/stdint_proxy.h"
 #include <linux/param.h> // For EXEC_PAGESIZE.
 #include <linux/prctl.h> // For PR_SET_NAME
