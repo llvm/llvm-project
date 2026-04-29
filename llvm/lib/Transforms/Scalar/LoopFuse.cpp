@@ -53,7 +53,6 @@
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/ScalarEvolution.h"
-#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Verifier.h"
@@ -101,23 +100,6 @@ STATISTIC(OnlySecondCandidateIsGuarded,
 STATISTIC(NumHoistedInsts, "Number of hoisted preheader instructions.");
 STATISTIC(NumSunkInsts, "Number of hoisted preheader instructions.");
 STATISTIC(NumDA, "DA checks passed");
-
-enum FusionDependenceAnalysisChoice {
-  FUSION_DEPENDENCE_ANALYSIS_SCEV,
-  FUSION_DEPENDENCE_ANALYSIS_DA,
-  FUSION_DEPENDENCE_ANALYSIS_ALL,
-};
-
-static cl::opt<FusionDependenceAnalysisChoice> FusionDependenceAnalysis(
-    "loop-fusion-dependence-analysis",
-    cl::desc("Which dependence analysis should loop fusion use?"),
-    cl::values(clEnumValN(FUSION_DEPENDENCE_ANALYSIS_SCEV, "scev",
-                          "Use the scalar evolution interface"),
-               clEnumValN(FUSION_DEPENDENCE_ANALYSIS_DA, "da",
-                          "Use the dependence analysis interface"),
-               clEnumValN(FUSION_DEPENDENCE_ANALYSIS_ALL, "all",
-                          "Use all available analyses")),
-    cl::Hidden, cl::init(FUSION_DEPENDENCE_ANALYSIS_DA));
 
 static cl::opt<unsigned> FusionPeelMaxCount(
     "loop-fusion-peel-max-count", cl::init(0), cl::Hidden,
@@ -1123,190 +1105,82 @@ private:
     return true;
   }
 
-  /// Rewrite all additive recurrences in a SCEV to use a new loop.
-  class AddRecLoopReplacer : public SCEVRewriteVisitor<AddRecLoopReplacer> {
-  public:
-    AddRecLoopReplacer(ScalarEvolution &SE, const Loop &OldL, const Loop &NewL,
-                       bool UseMax = true)
-        : SCEVRewriteVisitor(SE), Valid(true), UseMax(UseMax), OldL(OldL),
-          NewL(NewL) {}
-
-    const SCEV *visitAddRecExpr(const SCEVAddRecExpr *Expr) {
-      const Loop *ExprL = Expr->getLoop();
-      SmallVector<SCEVUse, 2> Operands;
-      if (ExprL == &OldL) {
-        append_range(Operands, Expr->operands());
-        return SE.getAddRecExpr(Operands, &NewL, Expr->getNoWrapFlags());
-      }
-
-      if (OldL.contains(ExprL)) {
-        bool Pos = SE.isKnownPositive(Expr->getStepRecurrence(SE));
-        if (!UseMax || !Pos || !Expr->isAffine()) {
-          Valid = false;
-          return Expr;
-        }
-        return visit(Expr->getStart());
-      }
-
-      for (SCEVUse Op : Expr->operands())
-        Operands.push_back(visit(Op));
-      return SE.getAddRecExpr(Operands, ExprL, Expr->getNoWrapFlags());
-    }
-
-    bool wasValidSCEV() const { return Valid; }
-
-  private:
-    bool Valid, UseMax;
-    const Loop &OldL, &NewL;
-  };
-
-  /// Return false if the access functions of \p I0 and \p I1 could cause
-  /// a negative dependence.
-  bool accessDiffIsPositive(const Loop &L0, const Loop &L1, Instruction &I0,
-                            Instruction &I1, bool EqualIsInvalid) {
-    Value *Ptr0 = getLoadStorePointerOperand(&I0);
-    Value *Ptr1 = getLoadStorePointerOperand(&I1);
-    if (!Ptr0 || !Ptr1)
-      return false;
-
-    const SCEV *SCEVPtr0 = SE.getSCEVAtScope(Ptr0, &L0);
-    const SCEV *SCEVPtr1 = SE.getSCEVAtScope(Ptr1, &L1);
-#ifndef NDEBUG
-    if (VerboseFusionDebugging)
-      LLVM_DEBUG(dbgs() << "    Access function check: " << *SCEVPtr0 << " vs "
-                        << *SCEVPtr1 << "\n");
-#endif
-    AddRecLoopReplacer Rewriter(SE, L0, L1);
-    SCEVPtr0 = Rewriter.visit(SCEVPtr0);
-#ifndef NDEBUG
-    if (VerboseFusionDebugging)
-      LLVM_DEBUG(dbgs() << "    Access function after rewrite: " << *SCEVPtr0
-                        << " [Valid: " << Rewriter.wasValidSCEV() << "]\n");
-#endif
-    if (!Rewriter.wasValidSCEV())
-      return false;
-
-    // TODO: isKnownPredicate doesnt work well when one SCEV is loop carried (by
-    //       L0) and the other is not. We could check if it is monotone and test
-    //       the beginning and end value instead.
-
-    BasicBlock *L0Header = L0.getHeader();
-    auto HasNonLinearDominanceRelation = [&](const SCEV *S) {
-      const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(S);
-      if (!AddRec)
-        return false;
-      return !DT.dominates(L0Header, AddRec->getLoop()->getHeader()) &&
-             !DT.dominates(AddRec->getLoop()->getHeader(), L0Header);
-    };
-    if (SCEVExprContains(SCEVPtr1, HasNonLinearDominanceRelation))
-      return false;
-
-    ICmpInst::Predicate Pred =
-        EqualIsInvalid ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_SGE;
-    bool IsAlwaysGE = SE.isKnownPredicate(Pred, SCEVPtr0, SCEVPtr1);
-#ifndef NDEBUG
-    if (VerboseFusionDebugging)
-      LLVM_DEBUG(dbgs() << "    Relation: " << *SCEVPtr0
-                        << (IsAlwaysGE ? "  >=  " : "  may <  ") << *SCEVPtr1
-                        << "\n");
-#endif
-    return IsAlwaysGE;
-  }
-
   /// Return true if the dependences between @p I0 (in @p L0) and @p I1 (in
-  /// @p L1) allow loop fusion of @p L0 and @p L1. The dependence analyses
-  /// specified by @p DepChoice are used to determine this.
+  /// @p L1) allow loop fusion of @p L0 and @p L1.
   bool dependencesAllowFusion(const FusionCandidate &FC0,
                               const FusionCandidate &FC1, Instruction &I0,
-                              Instruction &I1, bool AnyDep,
-                              FusionDependenceAnalysisChoice DepChoice) {
+                              Instruction &I1) {
 #ifndef NDEBUG
     if (VerboseFusionDebugging) {
-      LLVM_DEBUG(dbgs() << "Check dep: " << I0 << " vs " << I1 << " : "
-                        << DepChoice << "\n");
+      LLVM_DEBUG(dbgs() << "Check dep: " << I0 << " vs " << I1 << "\n");
     }
 #endif
-    switch (DepChoice) {
-    case FUSION_DEPENDENCE_ANALYSIS_SCEV:
-      return accessDiffIsPositive(*FC0.L, *FC1.L, I0, I1, AnyDep);
-    case FUSION_DEPENDENCE_ANALYSIS_DA: {
-      auto DepResult = DI.depends(&I0, &I1);
-      if (!DepResult)
-        return true;
+    auto DepResult = DI.depends(&I0, &I1);
+    if (!DepResult)
+      return true;
 #ifndef NDEBUG
-      if (VerboseFusionDebugging) {
-        LLVM_DEBUG(dbgs() << "DA res: "; DepResult->dump(dbgs());
-                   dbgs() << " [#l: " << DepResult->getLevels() << "][Ordered: "
-                          << (DepResult->isOrdered() ? "true" : "false")
-                          << "]\n");
-        LLVM_DEBUG(dbgs() << "DepResult Levels: " << DepResult->getLevels()
-                          << "\n");
-      }
+    if (VerboseFusionDebugging) {
+      LLVM_DEBUG(dbgs() << "DA res: "; DepResult->dump(dbgs());
+                 dbgs() << " [#l: " << DepResult->getLevels() << "][Ordered: "
+                        << (DepResult->isOrdered() ? "true" : "false")
+                        << "]\n");
+      LLVM_DEBUG(dbgs() << "DepResult Levels: " << DepResult->getLevels()
+                        << "\n");
+    }
 #endif
-      unsigned Levels = DepResult->getLevels();
-      unsigned SameSDLevels = DepResult->getSameSDLevels();
-      unsigned CurLoopLevel = FC0.L->getLoopDepth();
+    unsigned Levels = DepResult->getLevels();
+    unsigned SameSDLevels = DepResult->getSameSDLevels();
+    unsigned CurLoopLevel = FC0.L->getLoopDepth();
 
-      // Check if DA is missing info regarding the current loop level
-      if (CurLoopLevel > Levels + SameSDLevels)
-        return false;
-
-      // Iterating over the outer levels.
-      for (unsigned Level = 1; Level <= std::min(CurLoopLevel - 1, Levels);
-           ++Level) {
-        unsigned Direction = DepResult->getDirection(Level, false);
-
-        // Check if the direction vector does not include equality. If an outer
-        // loop has a non-equal direction, outer indicies are different and it
-        // is safe to fuse.
-        if (!(Direction & Dependence::DVEntry::EQ)) {
-          LLVM_DEBUG(dbgs() << "Safe to fuse due to non-equal acceses in the "
-                               "outer loops\n");
-          NumDA++;
-          return true;
-        }
-      }
-
-      assert(CurLoopLevel > Levels && "Fusion candidates are not separated");
-
-      if (DepResult->isScalar(CurLoopLevel, true) && !DepResult->isAnti()) {
-        LLVM_DEBUG(dbgs() << "Safe to fuse due to a loop-invariant non-anti "
-                             "dependency\n");
-        NumDA++;
-        return true;
-      }
-
-      unsigned CurDir = DepResult->getDirection(CurLoopLevel, true);
-
-      // Check if the direction vector does not include greater direction. In
-      // that case, the dependency is not a backward loop-carried and is legal
-      // to fuse. For example here we have a forward dependency
-      //    for (int i = 0; i < n; i++)
-      //        A[i] = ...;
-      //    for (int i = 0; i < n; i++)
-      //        ... = A[i-1];
-      if (!(CurDir & Dependence::DVEntry::GT)) {
-        LLVM_DEBUG(dbgs() << "Safe to fuse with no backward loop-carried "
-                             "dependency\n");
-        NumDA++;
-        return true;
-      }
-
-      if (DepResult->getNextPredecessor() || DepResult->getNextSuccessor())
-        LLVM_DEBUG(
-            dbgs() << "TODO: Implement pred/succ dependence handling!\n");
-
+    // Check if DA is missing info regarding the current loop level
+    if (CurLoopLevel > Levels + SameSDLevels)
       return false;
+
+    // Iterating over the outer levels.
+    for (unsigned Level = 1; Level <= std::min(CurLoopLevel - 1, Levels);
+         ++Level) {
+      unsigned Direction = DepResult->getDirection(Level, false);
+
+      // Check if the direction vector does not include equality. If an outer
+      // loop has a non-equal direction, outer indicies are different and it
+      // is safe to fuse.
+      if (!(Direction & Dependence::DVEntry::EQ)) {
+        LLVM_DEBUG(dbgs() << "Safe to fuse due to non-equal acceses in the "
+                             "outer loops\n");
+        NumDA++;
+        return true;
+      }
     }
 
-    case FUSION_DEPENDENCE_ANALYSIS_ALL:
-      return dependencesAllowFusion(FC0, FC1, I0, I1, AnyDep,
-                                    FUSION_DEPENDENCE_ANALYSIS_SCEV) ||
-             dependencesAllowFusion(FC0, FC1, I0, I1, AnyDep,
-                                    FUSION_DEPENDENCE_ANALYSIS_DA);
+    assert(CurLoopLevel > Levels && "Fusion candidates are not separated");
+
+    if (DepResult->isScalar(CurLoopLevel, true) && !DepResult->isAnti()) {
+      LLVM_DEBUG(dbgs() << "Safe to fuse due to a loop-invariant non-anti "
+                           "dependency\n");
+      NumDA++;
+      return true;
     }
 
-    llvm_unreachable("Unknown fusion dependence analysis choice!");
+    unsigned CurDir = DepResult->getDirection(CurLoopLevel, true);
+
+    // Check if the direction vector does not include greater direction. In
+    // that case, the dependency is not a backward loop-carried and is legal
+    // to fuse. For example here we have a forward dependency
+    //    for (int i = 0; i < n; i++)
+    //        A[i] = ...;
+    //    for (int i = 0; i < n; i++)
+    //        ... = A[i-1];
+    if (!(CurDir & Dependence::DVEntry::GT)) {
+      LLVM_DEBUG(dbgs() << "Safe to fuse with no backward loop-carried "
+                           "dependency\n");
+      NumDA++;
+      return true;
+    }
+
+    if (DepResult->getNextPredecessor() || DepResult->getNextSuccessor())
+      LLVM_DEBUG(dbgs() << "TODO: Implement pred/succ dependence handling!\n");
+
+    return false;
   }
 
   /// Perform a dependence check and return if @p FC0 and @p FC1 can be fused.
@@ -1319,30 +1193,22 @@ private:
 
     for (Instruction *WriteL0 : FC0.MemWrites) {
       for (Instruction *WriteL1 : FC1.MemWrites)
-        if (!dependencesAllowFusion(FC0, FC1, *WriteL0, *WriteL1,
-                                    /* AnyDep */ false,
-                                    FusionDependenceAnalysis)) {
+        if (!dependencesAllowFusion(FC0, FC1, *WriteL0, *WriteL1)) {
           return false;
         }
       for (Instruction *ReadL1 : FC1.MemReads)
-        if (!dependencesAllowFusion(FC0, FC1, *WriteL0, *ReadL1,
-                                    /* AnyDep */ false,
-                                    FusionDependenceAnalysis)) {
+        if (!dependencesAllowFusion(FC0, FC1, *WriteL0, *ReadL1)) {
           return false;
         }
     }
 
     for (Instruction *WriteL1 : FC1.MemWrites) {
       for (Instruction *WriteL0 : FC0.MemWrites)
-        if (!dependencesAllowFusion(FC0, FC1, *WriteL0, *WriteL1,
-                                    /* AnyDep */ false,
-                                    FusionDependenceAnalysis)) {
+        if (!dependencesAllowFusion(FC0, FC1, *WriteL0, *WriteL1)) {
           return false;
         }
       for (Instruction *ReadL0 : FC0.MemReads)
-        if (!dependencesAllowFusion(FC0, FC1, *ReadL0, *WriteL1,
-                                    /* AnyDep */ false,
-                                    FusionDependenceAnalysis)) {
+        if (!dependencesAllowFusion(FC0, FC1, *ReadL0, *WriteL1)) {
           return false;
         }
     }
