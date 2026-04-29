@@ -14,6 +14,8 @@ volatile vector signed long long vsl;
 volatile vector unsigned long long vul;
 volatile vector bool long long vbl;
 volatile vector double vd;
+volatile vector double vd1;
+volatile vector double vd2;
 
 volatile double d;
 
@@ -50,9 +52,9 @@ void test_core(void) {
   vd = vec_reve(vd);
   // CHECK-ASM: {{vperm|vpdi}}
 
-  vd = vec_sel(vd, vd, vul);
+  vd = vec_sel(vd, vd1, vul);
   // CHECK-ASM: vsel
-  vd = vec_sel(vd, vd, vbl);
+  vd = vec_sel(vd, vd1, vbl);
   // CHECK-ASM: vsel
 
   vd = vec_gather_element(vd, vul, cptrd, 0);
@@ -65,19 +67,6 @@ void test_core(void) {
   vec_scatter_element(vd, vul, ptrd, 1);
   // CHECK-ASM: vsceg %{{.*}}, 0(%{{.*}},%{{.*}}), 1
 
-  vd = vec_xl(idx, cptrd);
-  // CHECK-ASM-NEXT: lgf     %r5, 0(%r3)
-  // CHECK-ASM-NEXT: lg      %r13, 0(%r4)
-  // CHECK-ASM-NEXT: vl      %v0, 0(%r5,%r13){{$}}
-  // CHECK-ASM-NEXT: vst
-
-  vd = vec_xld2(idx, cptrd);
-  // CHECK-ASM:      vst
-
-  vec_xst(vd, idx, ptrd);
-
-  vec_xstd2(vd, idx, ptrd);
-
   vd = vec_splat(vd, 0);
   // CHECK: shufflevector <2 x double> %{{.*}}, <2 x double> poison, <2 x i32> zeroinitializer
   // CHECK-ASM: vrepg
@@ -89,11 +78,11 @@ void test_core(void) {
   // CHECK: shufflevector <2 x double> %{{.*}}, <2 x double> poison, <2 x i32> zeroinitializer
   // CHECK-ASM: vlrepg
 
-  vd = vec_mergeh(vd, vd);
+  vd = vec_mergeh(vd, vd1);
   // shufflevector <2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x i32> <i32 0, i32 2>
   // CHECK-ASM: vmrhg
 
-  vd = vec_mergel(vd, vd);
+  vd = vec_mergel(vd, vd1);
   // shufflevector <2 x double> %{{.*}}, <2 x double> %{{.*}}, <i32 1, i32 3>
   // CHECK-ASM: vmrlg
 }
@@ -101,48 +90,48 @@ void test_core(void) {
 void test_compare(void) {
   // CHECK-ASM-LABEL: test_compare
 
-  vbl = vec_cmpeq(vd, vd);
+  vbl = vec_cmpeq(vd, vd1);
   // CHECK: call <2 x i1> @llvm.experimental.constrained.fcmp.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, metadata !"oeq", metadata !{{.*}})
   // CHECK-ASM: vfcedb
 
-  vbl = vec_cmpge(vd, vd);
+  vbl = vec_cmpge(vd, vd1);
   // CHECK: call <2 x i1> @llvm.experimental.constrained.fcmps.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, metadata !"oge", metadata !{{.*}})
   // CHECK-ASM: kdbr
   // CHECK-ASM: kdbr
   // CHECK-ASM: vst
 
-  vbl = vec_cmpgt(vd, vd);
+  vbl = vec_cmpgt(vd, vd1);
   // CHECK: call <2 x i1> @llvm.experimental.constrained.fcmps.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, metadata !"ogt", metadata !{{.*}})
   // CHECK-ASM: kdbr
   // CHECK-ASM: kdbr
   // CHECK-ASM: vst
 
-  vbl = vec_cmple(vd, vd);
+  vbl = vec_cmple(vd, vd1);
   // CHECK: call <2 x i1> @llvm.experimental.constrained.fcmps.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, metadata !"ole", metadata !{{.*}})
   // CHECK-ASM: kdbr
   // CHECK-ASM: kdbr
   // CHECK-ASM: vst
 
-  vbl = vec_cmplt(vd, vd);
+  vbl = vec_cmplt(vd, vd1);
   // CHECK: call <2 x i1> @llvm.experimental.constrained.fcmps.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, metadata !"olt", metadata !{{.*}})
   // CHECK-ASM: kdbr
   // CHECK-ASM: kdbr
   // CHECK-ASM: vst
 
-  idx = vec_all_lt(vd, vd);
+  idx = vec_all_lt(vd, vd1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vfchdbs(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   // CHECK-ASM: vfchdbs
 
-  idx = vec_all_nge(vd, vd);
+  idx = vec_all_nge(vd, vd1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vfchedbs(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   // CHECK-ASM: vfchedbs
-  idx = vec_all_ngt(vd, vd);
+  idx = vec_all_ngt(vd, vd1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vfchdbs(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   // CHECK-ASM: vfchdbs
-  idx = vec_all_nle(vd, vd);
+  idx = vec_all_nle(vd, vd1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vfchedbs(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   // CHECK-ASM: vfchedbs
-  idx = vec_all_nlt(vd, vd);
+  idx = vec_all_nlt(vd, vd1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vfchdbs(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   // CHECK-ASM: vfchdbs
 
@@ -153,40 +142,40 @@ void test_compare(void) {
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vftcidb(<2 x double> %{{.*}}, i32 15)
   // CHECK-ASM: vftcidb
 
-  idx = vec_any_eq(vd, vd);
+  idx = vec_any_eq(vd, vd1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vfcedbs(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   // CHECK-ASM: vfcedbs
 
-  idx = vec_any_ne(vd, vd);
+  idx = vec_any_ne(vd, vd1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vfcedbs(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   // CHECK-ASM: vfcedbs
 
-  idx = vec_any_ge(vd, vd);
+  idx = vec_any_ge(vd, vd1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vfchedbs(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   // CHECK-ASM: vfchedbs
 
-  idx = vec_any_gt(vd, vd);
+  idx = vec_any_gt(vd, vd1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vfchdbs(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   // CHECK-ASM: vfchdbs
 
-  idx = vec_any_le(vd, vd);
+  idx = vec_any_le(vd, vd1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vfchedbs(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   // CHECK-ASM: vfchedbs
 
-  idx = vec_any_lt(vd, vd);
+  idx = vec_any_lt(vd, vd1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vfchdbs(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   // CHECK-ASM: vfchdbs
 
-  idx = vec_any_nge(vd, vd);
+  idx = vec_any_nge(vd, vd1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vfchedbs(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   // CHECK-ASM: vfchedbs
-  idx = vec_any_ngt(vd, vd);
+  idx = vec_any_ngt(vd, vd1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vfchdbs(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   // CHECK-ASM: vfchdbs
-  idx = vec_any_nle(vd, vd);
+  idx = vec_any_nle(vd, vd1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vfchedbs(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   // CHECK-ASM: vfchedbs
-  idx = vec_any_nlt(vd, vd);
+  idx = vec_any_nlt(vd, vd1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vfchdbs(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   // CHECK-ASM: vfchdbs
 
@@ -210,10 +199,10 @@ void test_float(void) {
   // CHECK-NEXT: fneg <2 x double> [[ABS]]
   // CHECK-ASM: vflndb
 
-  vd = vec_madd(vd, vd, vd);
+  vd = vec_madd(vd, vd1, vd2);
   // CHECK: call <2 x double> @llvm.experimental.constrained.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}}, metadata !{{.*}})
   // CHECK-ASM: vfmadb
-  vd = vec_msub(vd, vd, vd);
+  vd = vec_msub(vd, vd1, vd2);
   // CHECK: [[NEG:%[^ ]+]] = fneg <2 x double> %{{.*}}
   // CHECK: call <2 x double> @llvm.experimental.constrained.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> [[NEG]], metadata !{{.*}})
   // CHECK-ASM: vfmsdb

@@ -507,7 +507,7 @@ func.func @sparse_mfma_mismatched_source_types(%a: vector<4xf16>, %b: vector<8xb
 // -----
 
 func.func @sparse_mfma_abid_invalid_for_8bit(%a: vector<8xi8>, %b: vector<16xi8>, %c: vector<4xi32>, %idx: vector<2xi16>) -> vector<4xi32> {
-  // expected-error@+1 {{'amdgpu.sparse_mfma' op ABID must be 0 or 1 for 8-bit source data}}
+  // expected-error@+1 {{'amdgpu.sparse_mfma' op ABID must be in [0, 1] for this variant}}
   %d = amdgpu.sparse_mfma 16x16x64 %a * %b + %c sparse(%idx : vector<2xi16>) { abid = 2 : i32, cbsz = 0 : i32 } : vector<8xi8>, vector<16xi8>, vector<4xi32>
   func.return %d : vector<4xi32>
 }
@@ -515,15 +515,47 @@ func.func @sparse_mfma_abid_invalid_for_8bit(%a: vector<8xi8>, %b: vector<16xi8>
 // -----
 
 func.func @sparse_mfma_abid_invalid_for_16bit(%a: vector<4xf16>, %b: vector<8xf16>, %c: vector<4xf32>, %idx: vector<4xi8>) -> vector<4xf32> {
-  // expected-error@+1 {{'amdgpu.sparse_mfma' op ABID must be between 0 and 3 for 16-bit source data}}
+  // expected-error@+1 {{'amdgpu.sparse_mfma' op ABID must be in [0, 3] for this variant}}
   %d = amdgpu.sparse_mfma 16x16x32 %a * %b + %c sparse(%idx : vector<4xi8>) { abid = 4 : i32, cbsz = 0 : i32 } : vector<4xf16>, vector<8xf16>, vector<4xf32>
   func.return %d : vector<4xf32>
 }
 
 // -----
 
+func.func @sparse_mfma_abid_invalid_for_gfx950_16bit(%a: vector<8xf16>, %b: vector<16xf16>, %c: vector<4xf32>, %idx: vector<2xi16>) -> vector<4xf32> {
+  // expected-error@+1 {{'amdgpu.sparse_mfma' op ABID must be in [0, 1] for this variant}}
+  %d = amdgpu.sparse_mfma 16x16x64 %a * %b + %c sparse(%idx : vector<2xi16>) { abid = 2 : i32, cbsz = 0 : i32 } : vector<8xf16>, vector<16xf16>, vector<4xf32>
+  func.return %d : vector<4xf32>
+}
+
+// -----
+
+func.func @sparse_mfma_gfx950_8bit_nonzero_cbsz(%a: vector<16xi8>, %b: vector<32xi8>, %c: vector<4xi32>, %idx: i32) -> vector<4xi32> {
+  // expected-error@+1 {{'amdgpu.sparse_mfma' op CBSZ must be 0 for this variant (field is ignored by hardware)}}
+  %d = amdgpu.sparse_mfma 16x16x128 %a * %b + %c sparse(%idx : i32) { abid = 0 : i32, cbsz = 1 : i32 } : vector<16xi8>, vector<32xi8>, vector<4xi32>
+  func.return %d : vector<4xi32>
+}
+
+// -----
+
+func.func @sparse_mfma_gfx950_8bit_nonzero_abid(%a: vector<16xi8>, %b: vector<32xi8>, %c: vector<4xi32>, %idx: i32) -> vector<4xi32> {
+  // expected-error@+1 {{'amdgpu.sparse_mfma' op ABID must be 0 for this variant (field is ignored by hardware)}}
+  %d = amdgpu.sparse_mfma 16x16x128 %a * %b + %c sparse(%idx : i32) { abid = 1 : i32, cbsz = 0 : i32 } : vector<16xi8>, vector<32xi8>, vector<4xi32>
+  func.return %d : vector<4xi32>
+}
+
+// -----
+
+func.func @sparse_mfma_wrong_idx_type_for_gfx950_8bit(%a: vector<16xi8>, %b: vector<32xi8>, %c: vector<4xi32>, %idx: vector<2xi16>) -> vector<4xi32> {
+  // expected-error@+1 {{'amdgpu.sparse_mfma' op expected i32 sparse indices for this variant (no internal set structure), but got 'vector<2xi16>'}}
+  %d = amdgpu.sparse_mfma 16x16x128 %a * %b + %c sparse(%idx : vector<2xi16>) : vector<16xi8>, vector<32xi8>, vector<4xi32>
+  func.return %d : vector<4xi32>
+}
+
+// -----
+
 func.func @sparse_mfma_wrong_idx_type_for_8bit(%a: vector<8xi8>, %b: vector<16xi8>, %c: vector<4xi32>, %idx: vector<4xi8>) -> vector<4xi32> {
-  // expected-error@+1 {{'amdgpu.sparse_mfma' op expected vector<2xi16> sparse indices for 8-bit source data, but got 'vector<4xi8>'}}
+  // expected-error@+1 {{'amdgpu.sparse_mfma' op expected vector<2xi16> sparse indices for this variant, but got 'vector<4xi8>'}}
   %d = amdgpu.sparse_mfma 16x16x64 %a * %b + %c sparse(%idx : vector<4xi8>) : vector<8xi8>, vector<16xi8>, vector<4xi32>
   func.return %d : vector<4xi32>
 }
@@ -531,16 +563,24 @@ func.func @sparse_mfma_wrong_idx_type_for_8bit(%a: vector<8xi8>, %b: vector<16xi
 // -----
 
 func.func @sparse_mfma_wrong_idx_type_for_16bit(%a: vector<4xf16>, %b: vector<8xf16>, %c: vector<4xf32>, %idx: vector<2xi16>) -> vector<4xf32> {
-  // expected-error@+1 {{'amdgpu.sparse_mfma' op expected vector<4xi8> sparse indices for 16-bit source data, but got 'vector<2xi16>'}}
+  // expected-error@+1 {{'amdgpu.sparse_mfma' op expected vector<4xi8> sparse indices for this variant, but got 'vector<2xi16>'}}
   %d = amdgpu.sparse_mfma 16x16x32 %a * %b + %c sparse(%idx : vector<2xi16>) : vector<4xf16>, vector<8xf16>, vector<4xf32>
   func.return %d : vector<4xf32>
 }
 
 // -----
 
-func.func @sparse_mfma_wrong_source_count(%a: vector<4xf16>, %b: vector<8xf16>, %c: vector<16xf32>, %idx: vector<4xi8>) -> vector<16xf32> {
+func.func @sparse_mfma_wrong_idx_type_for_gfx950_16bit(%a: vector<8xf16>, %b: vector<16xf16>, %c: vector<4xf32>, %idx: vector<4xi8>) -> vector<4xf32> {
+  // expected-error@+1 {{'amdgpu.sparse_mfma' op expected vector<2xi16> sparse indices for this variant, but got 'vector<4xi8>'}}
+  %d = amdgpu.sparse_mfma 16x16x64 %a * %b + %c sparse(%idx : vector<4xi8>) : vector<8xf16>, vector<16xf16>, vector<4xf32>
+  func.return %d : vector<4xf32>
+}
+
+// -----
+
+func.func @sparse_mfma_wrong_source_count(%a: vector<4xf16>, %b: vector<8xf16>, %c: vector<16xf32>, %idx: vector<2xi16>) -> vector<16xf32> {
   // expected-error@+1 {{'amdgpu.sparse_mfma' op expected 16 source values for this operation but got 8}}
-  %d = amdgpu.sparse_mfma 32x32x32 %a * %b + %c sparse(%idx : vector<4xi8>) : vector<4xf16>, vector<8xf16>, vector<16xf32>
+  %d = amdgpu.sparse_mfma 32x32x32 %a * %b + %c sparse(%idx : vector<2xi16>) : vector<4xf16>, vector<8xf16>, vector<16xf32>
   func.return %d : vector<16xf32>
 }
 
@@ -776,4 +816,103 @@ func.func @global_prefetch_nt_ht_not_speculative(%src: memref<64x64xf16, #gpu.ad
   // expected-error@+1 {{'amdgpu.global_prefetch' op operates only in the speculative mode}}
   amdgpu.global_prefetch %src[%i, %j] NT_HT DEV : memref<64x64xf16, #gpu.address_space<global>>
   func.return
+}
+
+// -----
+
+// DotOp: unsignedA is invalid on a float source.
+func.func @dot_float_source_unsigned_a(%a: vector<2xf16>, %b: vector<2xf16>, %c: f32) -> f32 {
+  // expected-error@+1 {{'amdgpu.dot' op unsignedA/unsignedB are only valid for integer source types}}
+  %r = amdgpu.dot %a * %b + %c {unsignedA} : vector<2xf16>, vector<2xf16>, f32
+  func.return %r : f32
+}
+
+// -----
+
+// DotOp: unsignedB is invalid on a float source.
+func.func @dot_float_source_unsigned_b(%a: vector<2xbf16>, %b: vector<2xbf16>, %c: f32) -> f32 {
+  // expected-error@+1 {{'amdgpu.dot' op unsignedA/unsignedB are only valid for integer source types}}
+  %r = amdgpu.dot %a * %b + %c {unsignedB} : vector<2xbf16>, vector<2xbf16>, f32
+  func.return %r : f32
+}
+
+// -----
+
+// DotOp: integer source requires i32 accumulator.
+func.func @dot_integer_bad_accumulator(%a: vector<4xi8>, %b: vector<4xi8>, %c: f32) -> f32 {
+  // expected-error@+1 {{'amdgpu.dot' op expected i32 accumulator for integer sources}}
+  %r = amdgpu.dot %a * %b + %c : vector<4xi8>, vector<4xi8>, f32
+  func.return %r : f32
+}
+
+// -----
+
+// DotOp: source element types must match for non-fp8 sources.
+func.func @dot_cross_float_elems(%a: vector<2xf16>, %b: vector<2xbf16>, %c: f32) -> f32 {
+  // expected-error@+1 {{'amdgpu.dot' op expected source operands to have the same element type}}
+  %r = amdgpu.dot %a * %b + %c : vector<2xf16>, vector<2xbf16>, f32
+  func.return %r : f32
+}
+
+// -----
+
+// DotOp: fp8 and non-fp8 sources cannot be mixed.
+func.func @dot_fp8_mixed_with_int(%a: vector<4xf8E4M3FN>, %b: vector<4xi8>, %c: f32) -> f32 {
+  // expected-error@+1 {{'amdgpu.dot' op expected source operands to have the same element type}}
+  %r = amdgpu.dot %a * %b + %c : vector<4xf8E4M3FN>, vector<4xi8>, f32
+  func.return %r : f32
+}
+
+// -----
+
+// DotOp: fp8 source requires f32 accumulator.
+func.func @dot_fp8_bad_accumulator(%a: vector<4xf8E4M3FN>, %b: vector<4xf8E4M3FN>, %c: f16) -> f16 {
+  // expected-error@+1 {{'amdgpu.dot' op expected f32 accumulator for fp8 sources}}
+  %r = amdgpu.dot %a * %b + %c : vector<4xf8E4M3FN>, vector<4xf8E4M3FN>, f16
+  func.return %r : f16
+}
+
+// -----
+
+// DotOp: clamp is illegal for (f16, f16) — no clamp bit in fdot2.f16.f16.
+func.func @dot_clamp_f16_f16(%a: vector<2xf16>, %b: vector<2xf16>, %c: f16) -> f16 {
+  // expected-error@+1 {{'amdgpu.dot' op clamp is not supported for this (source, accumulator) combination}}
+  %r = amdgpu.dot %a * %b + %c {clamp} : vector<2xf16>, vector<2xf16>, f16
+  func.return %r : f16
+}
+
+// -----
+
+// DotOp: clamp is illegal for (bf16, bf16) — no clamp bit in fdot2.bf16.bf16.
+func.func @dot_clamp_bf16_bf16(%a: vector<2xbf16>, %b: vector<2xbf16>, %c: bf16) -> bf16 {
+  // expected-error@+1 {{'amdgpu.dot' op clamp is not supported for this (source, accumulator) combination}}
+  %r = amdgpu.dot %a * %b + %c {clamp} : vector<2xbf16>, vector<2xbf16>, bf16
+  func.return %r : bf16
+}
+
+// -----
+
+// DotOp: clamp is illegal for any fp8 variant — no clamp bit in dot4.f32.*.
+func.func @dot_clamp_fp8(%a: vector<4xf8E4M3FN>, %b: vector<4xf8E4M3FN>, %c: f32) -> f32 {
+  // expected-error@+1 {{'amdgpu.dot' op clamp is not supported for this (source, accumulator) combination}}
+  %r = amdgpu.dot %a * %b + %c {clamp} : vector<4xf8E4M3FN>, vector<4xf8E4M3FN>, f32
+  func.return %r : f32
+}
+
+// -----
+
+// DotOp: clamp is illegal for bf8 (F8E5M2) sources as well.
+func.func @dot_clamp_bf8(%a: vector<4xf8E5M2>, %b: vector<4xf8E5M2>, %c: f32) -> f32 {
+  // expected-error@+1 {{'amdgpu.dot' op clamp is not supported for this (source, accumulator) combination}}
+  %r = amdgpu.dot %a * %b + %c {clamp} : vector<4xf8E5M2>, vector<4xf8E5M2>, f32
+  func.return %r : f32
+}
+
+// -----
+
+// DotOp: mixed-sign i16 dot has no hardware support (no sudot2 intrinsic).
+func.func @dot_mixed_sign_i16(%a: vector<2xi16>, %b: vector<2xi16>, %c: i32) -> i32 {
+  // expected-error@+1 {{'amdgpu.dot' op mixed-sign dot is not supported for 16-bit integer sources}}
+  %r = amdgpu.dot %a * %b + %c {unsignedA} : vector<2xi16>, vector<2xi16>, i32
+  func.return %r : i32
 }

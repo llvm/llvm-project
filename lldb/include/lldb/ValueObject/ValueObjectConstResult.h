@@ -35,39 +35,54 @@ class ValueObjectConstResult : public ValueObject {
 public:
   ~ValueObjectConstResult() override;
 
-  static lldb::ValueObjectSP
-  Create(ExecutionContextScope *exe_scope, lldb::ByteOrder byte_order,
-         uint32_t addr_byte_size, lldb::addr_t address = LLDB_INVALID_ADDRESS);
+  /// These routines create ValueObjectConstResult ValueObjects from
+  /// various data sources.  To create a root ValueObject, don't change
+  /// the defaulted manager parameter.  For the most part, that is the
+  /// only client-level use.  The manager parameter is used when creating
+  /// child ValueObjects, but that functionality is wrapped in the
+  /// CreateChildValueObject*** API's and code implementing particular
+  /// Synthetic child providers should use those API's instead.
+  /// See the comments in ValueObject.h at CreateValueObjectFrom*** for
+  /// more details.
+  static lldb::ValueObjectSP Create(ExecutionContextScope *exe_scope,
+                                    lldb::ByteOrder byte_order,
+                                    uint32_t addr_byte_size,
+                                    lldb::addr_t address = LLDB_INVALID_ADDRESS,
+                                    ValueObjectManager *manager = nullptr);
 
-  static lldb::ValueObjectSP
-  Create(ExecutionContextScope *exe_scope, const CompilerType &compiler_type,
-         ConstString name, const DataExtractor &data,
-         lldb::addr_t address = LLDB_INVALID_ADDRESS);
+  static lldb::ValueObjectSP Create(ExecutionContextScope *exe_scope,
+                                    const CompilerType &compiler_type,
+                                    ConstString name, const DataExtractor &data,
+                                    lldb::addr_t address = LLDB_INVALID_ADDRESS,
+                                    ValueObjectManager *manager = nullptr);
 
   static lldb::ValueObjectSP
   Create(ExecutionContextScope *exe_scope, const CompilerType &compiler_type,
          ConstString name, const lldb::DataBufferSP &result_data_sp,
          lldb::ByteOrder byte_order, uint32_t addr_size,
-         lldb::addr_t address = LLDB_INVALID_ADDRESS);
+         lldb::addr_t address = LLDB_INVALID_ADDRESS,
+         ValueObjectManager *manager = nullptr);
 
-  static lldb::ValueObjectSP Create(ExecutionContextScope *exe_scope,
-                                    const CompilerType &compiler_type,
-                                    ConstString name, lldb::addr_t address,
-                                    AddressType address_type,
-                                    uint32_t addr_byte_size);
+  static lldb::ValueObjectSP
+  Create(ExecutionContextScope *exe_scope, const CompilerType &compiler_type,
+         ConstString name, lldb::addr_t address, AddressType address_type,
+         uint32_t addr_byte_size, ValueObjectManager *manager = nullptr);
 
   static lldb::ValueObjectSP Create(ExecutionContextScope *exe_scope,
                                     Value &value, ConstString name,
-                                    Module *module = nullptr);
+                                    Module *module = nullptr,
+                                    ValueObjectManager *manager = nullptr);
 
   static lldb::ValueObjectSP Create(ExecutionContextScope *exe_scope,
                                     const CompilerType &compiler_type,
                                     Scalar &scalar, ConstString name,
-                                    Module *module = nullptr);
+                                    Module *module = nullptr,
+                                    ValueObjectManager *manager = nullptr);
 
   // When an expression fails to evaluate, we return an error
   static lldb::ValueObjectSP Create(ExecutionContextScope *exe_scope,
-                                    Status &&error);
+                                    Status &&error,
+                                    ValueObjectManager *manager = nullptr);
 
   llvm::Expected<uint64_t> GetByteSize() override;
 
@@ -158,6 +173,16 @@ private:
 
   ValueObjectConstResult(ExecutionContextScope *exe_scope,
                          ValueObjectManager &manager, Status &&error);
+
+  static std::shared_ptr<ValueObjectManager>
+  CreateManagerIfEmpty(ValueObjectManager *&manager) {
+    std::shared_ptr<ValueObjectManager> manager_sp;
+    if (!manager) {
+      manager_sp = ValueObjectManager::Create();
+      manager = manager_sp.get();
+    }
+    return manager_sp;
+  }
 
   ValueObject *CreateChildAtIndex(size_t idx) override {
     return m_impl.CreateChildAtIndex(idx);

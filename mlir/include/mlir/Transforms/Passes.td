@@ -54,7 +54,11 @@ def CanonicalizerPass : Pass<"canonicalize"> {
            "Run full CSE between each pattern-application iteration. "
            "CSE-driven changes trigger extra iterations, so this may push "
            "the iteration count up to max-iterations and affect convergence "
-           "under test-convergence.">
+           "under test-convergence.">,
+    ListOption<"filterDialects", "filter-dialects", "std::string",
+               "If non-empty, only collect canonicalization patterns from the"
+               " dialects with the given namespaces. The listed dialects are"
+               " force-loaded into the context as dependent dialects.">
   ] # RewritePassUtils.options;
 }
 

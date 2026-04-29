@@ -273,10 +273,10 @@ class WebAssemblyAsmParser final : public MCTargetAsmParser {
 
 public:
   WebAssemblyAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
-                       const MCInstrInfo &MII, const MCTargetOptions &Options)
-      : MCTargetAsmParser(Options, STI, MII), Parser(Parser),
-        Lexer(Parser.getLexer()), Is64(STI.getTargetTriple().isArch64Bit()),
-        TC(Parser, MII, Is64), SkipTypeCheck(Options.MCNoTypeCheck) {
+                       const MCInstrInfo &MII)
+      : MCTargetAsmParser(STI, MII), Parser(Parser), Lexer(Parser.getLexer()),
+        Is64(STI.getTargetTriple().isArch64Bit()), TC(Parser, MII, Is64),
+        SkipTypeCheck(Parser.getContext().getTargetOptions().MCNoTypeCheck) {
     FeatureBitset FBS = ComputeAvailableFeatures(STI.getFeatureBits());
 
     // bulk-memory implies bulk-memory-opt

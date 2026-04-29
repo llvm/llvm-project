@@ -118,7 +118,7 @@ define void @metadata(ptr nocapture readonly %ptr, i32 %size, ptr %pos) {
 ; FORCED-TF-NEXT:    [[BROADCAST_SPLAT5:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT4]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; FORCED-TF-NEXT:    [[VEC_IV:%.*]] = add <4 x i32> [[BROADCAST_SPLAT5]], <i32 0, i32 1, i32 2, i32 3>
 ; FORCED-TF-NEXT:    [[TMP8:%.*]] = icmp ule <4 x i32> [[VEC_IV]], [[BROADCAST_SPLAT]]
-; FORCED-TF-NEXT:    [[TMP17:%.*]] = extractelement <4 x i1> [[TMP8]], i32 0
+; FORCED-TF-NEXT:    [[TMP17:%.*]] = extractelement <4 x i1> [[TMP8]], i64 0
 ; FORCED-TF-NEXT:    br i1 [[TMP17]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; FORCED-TF:       pred.store.if:
 ; FORCED-TF-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[NEXT_GEP]], i32 1
@@ -126,7 +126,7 @@ define void @metadata(ptr nocapture readonly %ptr, i32 %size, ptr %pos) {
 ; FORCED-TF-NEXT:    store i8 [[TMP18]], ptr [[NEXT_GEP]], align 1
 ; FORCED-TF-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; FORCED-TF:       pred.store.continue:
-; FORCED-TF-NEXT:    [[TMP19:%.*]] = extractelement <4 x i1> [[TMP8]], i32 1
+; FORCED-TF-NEXT:    [[TMP19:%.*]] = extractelement <4 x i1> [[TMP8]], i64 1
 ; FORCED-TF-NEXT:    br i1 [[TMP19]], label [[PRED_STORE_IF6:%.*]], label [[PRED_STORE_CONTINUE7:%.*]]
 ; FORCED-TF:       pred.store.if6:
 ; FORCED-TF-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[NEXT_GEP1]], i32 1
@@ -134,7 +134,7 @@ define void @metadata(ptr nocapture readonly %ptr, i32 %size, ptr %pos) {
 ; FORCED-TF-NEXT:    store i8 [[TMP20]], ptr [[NEXT_GEP1]], align 1
 ; FORCED-TF-NEXT:    br label [[PRED_STORE_CONTINUE7]]
 ; FORCED-TF:       pred.store.continue7:
-; FORCED-TF-NEXT:    [[TMP21:%.*]] = extractelement <4 x i1> [[TMP8]], i32 2
+; FORCED-TF-NEXT:    [[TMP21:%.*]] = extractelement <4 x i1> [[TMP8]], i64 2
 ; FORCED-TF-NEXT:    br i1 [[TMP21]], label [[PRED_STORE_IF8:%.*]], label [[PRED_STORE_CONTINUE9:%.*]]
 ; FORCED-TF:       pred.store.if8:
 ; FORCED-TF-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[NEXT_GEP2]], i32 1
@@ -142,7 +142,7 @@ define void @metadata(ptr nocapture readonly %ptr, i32 %size, ptr %pos) {
 ; FORCED-TF-NEXT:    store i8 [[TMP22]], ptr [[NEXT_GEP2]], align 1
 ; FORCED-TF-NEXT:    br label [[PRED_STORE_CONTINUE9]]
 ; FORCED-TF:       pred.store.continue9:
-; FORCED-TF-NEXT:    [[TMP23:%.*]] = extractelement <4 x i1> [[TMP8]], i32 3
+; FORCED-TF-NEXT:    [[TMP23:%.*]] = extractelement <4 x i1> [[TMP8]], i64 3
 ; FORCED-TF-NEXT:    br i1 [[TMP23]], label [[PRED_STORE_IF10:%.*]], label [[PRED_STORE_CONTINUE11]]
 ; FORCED-TF:       pred.store.if10:
 ; FORCED-TF-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr [[NEXT_GEP3]], i32 1
@@ -185,7 +185,7 @@ define void @metadata(ptr nocapture readonly %ptr, i32 %size, ptr %pos) {
 ; CHECK-NEXT:    [[BROADCAST_SPLAT5:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT4]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[VEC_IV:%.*]] = add <4 x i32> [[BROADCAST_SPLAT5]], <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ule <4 x i32> [[VEC_IV]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <4 x i1> [[TMP8]], i32 0
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <4 x i1> [[TMP8]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP17]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[NEXT_GEP]], i32 1
@@ -193,7 +193,7 @@ define void @metadata(ptr nocapture readonly %ptr, i32 %size, ptr %pos) {
 ; CHECK-NEXT:    store i8 [[TMP18]], ptr [[NEXT_GEP]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; CHECK:       pred.store.continue:
-; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <4 x i1> [[TMP8]], i32 1
+; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <4 x i1> [[TMP8]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP19]], label [[PRED_STORE_IF6:%.*]], label [[PRED_STORE_CONTINUE7:%.*]]
 ; CHECK:       pred.store.if6:
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[NEXT_GEP1]], i32 1
@@ -201,7 +201,7 @@ define void @metadata(ptr nocapture readonly %ptr, i32 %size, ptr %pos) {
 ; CHECK-NEXT:    store i8 [[TMP20]], ptr [[NEXT_GEP1]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE7]]
 ; CHECK:       pred.store.continue7:
-; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <4 x i1> [[TMP8]], i32 2
+; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <4 x i1> [[TMP8]], i64 2
 ; CHECK-NEXT:    br i1 [[TMP21]], label [[PRED_STORE_IF8:%.*]], label [[PRED_STORE_CONTINUE9:%.*]]
 ; CHECK:       pred.store.if8:
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[NEXT_GEP2]], i32 1
@@ -209,7 +209,7 @@ define void @metadata(ptr nocapture readonly %ptr, i32 %size, ptr %pos) {
 ; CHECK-NEXT:    store i8 [[TMP22]], ptr [[NEXT_GEP2]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE9]]
 ; CHECK:       pred.store.continue9:
-; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <4 x i1> [[TMP8]], i32 3
+; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <4 x i1> [[TMP8]], i64 3
 ; CHECK-NEXT:    br i1 [[TMP23]], label [[PRED_STORE_IF10:%.*]], label [[PRED_STORE_CONTINUE11]]
 ; CHECK:       pred.store.if10:
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr [[NEXT_GEP3]], i32 1

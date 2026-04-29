@@ -429,8 +429,7 @@ private:
     Value *XFinite =
         NoInfs || (SQ && isKnownNeverInfinity(X, *SQ))
             ? B.getTrue()
-            : B.CreateFCmpULT(B.CreateUnaryIntrinsic(Intrinsic::fabs, X),
-                              ConstantFP::getInfinity(FremTy));
+            : B.CreateFCmpULT(B.CreateFAbs(X), ConstantFP::getInfinity(FremTy));
     Ret = B.CreateSelect(XFinite, Ret, Nan);
 
     return Ret;
@@ -465,8 +464,8 @@ Value *FRemExpander::buildFRem(Value *X, Value *Y,
   //   { ret = x or 0 with sign of x }
   //   Adjust ret to NaN/inf in input
   //   return ret
-  Value *Ax = B.CreateUnaryIntrinsic(Intrinsic::fabs, X, {}, "ax");
-  Value *Ay = B.CreateUnaryIntrinsic(Intrinsic::fabs, Y, {}, "ay");
+  Value *Ax = B.CreateFAbs(X, {}, "ax");
+  Value *Ay = B.CreateFAbs(Y, {}, "ay");
   if (ComputeFpTy != X->getType()) {
     Ax = B.CreateFPExt(Ax, ComputeFpTy, "ax");
     Ay = B.CreateFPExt(Ay, ComputeFpTy, "ay");

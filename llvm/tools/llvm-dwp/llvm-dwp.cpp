@@ -288,7 +288,7 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
   if (!MSTI)
     return error("no subtarget info for target " + TripleName, Context);
 
-  MCContext MC(*ErrOrTriple, MAI.get(), MRI.get(), MSTI.get());
+  MCContext MC(*ErrOrTriple, *MAI, MRI.get(), MSTI.get());
   std::unique_ptr<MCObjectFileInfo> MOFI(
       TheTarget->createMCObjectFileInfo(MC, /*PIC=*/false));
   MC.setObjectFileInfo(MOFI.get());
