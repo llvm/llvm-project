@@ -147,11 +147,11 @@ struct SpillPlacement::Node {
     // Compute the weighted sum of inputs.
     BlockFrequency SumN = BiasN;
     BlockFrequency SumP = BiasP;
-    for (std::pair<unsigned int, llvm::BlockFrequency> &L : Links) {
-      if (nodes[L.first].Value == -1)
-        SumN += L.second;
-      else if (nodes[L.first].Value == 1)
-        SumP += L.second;
+    for (auto [BundleNo, Weight] : Links) {
+      if (nodes[BundleNo].Value == -1)
+        SumN += Weight;
+      else if (nodes[BundleNo].Value == 1)
+        SumP += Weight;
     }
 
     // Each weighted sum is going to be less than the total frequency of the
