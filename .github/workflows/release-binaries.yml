@@ -52,7 +52,7 @@ jobs:
     name: Prepare to build binaries
     environment:
       deployment: false
-      environment: ${{ case( github.event_name == 'pull_request', null, 'release') }}
+      name: ${{ case( github.event_name == 'pull_request', null, 'release') }}
     runs-on: ${{ inputs.runs-on }}
     if: github.repository_owner == 'llvm'
     outputs:
