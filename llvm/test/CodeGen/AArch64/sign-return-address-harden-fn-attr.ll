@@ -8,7 +8,7 @@
 
 declare i32 @foo(i32)
 
-define i32 @f0(i32 %a) #0 {
+define i32 @f0(i32 %a) "sign-return-address"="all" "sign-return-address-harden"="load-return-address" "sign-return-address-key"="a_key" {
 ; CHECK-NO-PAUTH-LABEL: f0:
 ; CHECK-NO-PAUTH:       // %bb.0: // %entry
 ; CHECK-NO-PAUTH-NEXT:    hint #25
@@ -35,7 +35,7 @@ entry:
   ret i32 %add
 }
 
-define i32 @f1(i32 %a) #1 {
+define i32 @f1(i32 %a) "sign-return-address"="all" "sign-return-address-harden"="load-return-address" "sign-return-address-key"="b_key" {
 ; CHECK-NO-PAUTH-LABEL: f1:
 ; CHECK-NO-PAUTH:       // %bb.0: // %entry
 ; CHECK-NO-PAUTH-NEXT:    .cfi_b_key_frame
@@ -64,7 +64,7 @@ entry:
   ret i32 %add
 }
 
-define i32 @f2(i32 %a) #2 {
+define i32 @f2(i32 %a) "sign-return-address"="non-leaf" "sign-return-address-harden"="load-return-address" "sign-return-address-key"="a_key" {
 ; CHECK-NO-PAUTH-LABEL: f2:
 ; CHECK-NO-PAUTH:       // %bb.0: // %entry
 ; CHECK-NO-PAUTH-NEXT:    hint #25
@@ -99,7 +99,7 @@ entry:
   ret i32 %call
 }
 
-define i32 @f3(i32 %a) #3 {
+define i32 @f3(i32 %a) "sign-return-address"="non-leaf" "sign-return-address-harden"="load-return-address" "sign-return-address-key"="b_key" {
 ; CHECK-NO-PAUTH-LABEL: f3:
 ; CHECK-NO-PAUTH:       // %bb.0: // %entry
 ; CHECK-NO-PAUTH-NEXT:    .cfi_b_key_frame
@@ -136,7 +136,7 @@ entry:
   ret i32 %call
 }
 
-define i32 @f4(i32 %a) #4 {
+define i32 @f4(i32 %a) "sign-return-address"="non-leaf" "sign-return-address-harden"="none" "sign-return-address-key"="a_key" {
 ; CHECK-NO-PAUTH-LABEL: f4:
 ; CHECK-NO-PAUTH:       // %bb.0: // %entry
 ; CHECK-NO-PAUTH-NEXT:    hint #25
@@ -164,7 +164,7 @@ entry:
   ret i32 %call
 }
 
-define i32 @f5(i32 %a) #5 {
+define i32 @f5(i32 %a) "sign-return-address"="non-leaf" "sign-return-address-harden"="none" "sign-return-address-key"="b_key" {
 ; CHECK-NO-PAUTH-LABEL: f5:
 ; CHECK-NO-PAUTH:       // %bb.0: // %entry
 ; CHECK-NO-PAUTH-NEXT:    .cfi_b_key_frame
@@ -196,7 +196,7 @@ entry:
 
 ; Check that we don't harden functions which "return" with a
 ; branch rather than a ret instruction.
-define i32 @f6(i32 %a) #0 {
+define i32 @f6(i32 %a) "sign-return-address"="all" "sign-return-address-harden"="load-return-address" "sign-return-address-key"="a_key" {
 ; CHECK-NO-PAUTH-LABEL: f6:
 ; CHECK-NO-PAUTH:       // %bb.0: // %entry
 ; CHECK-NO-PAUTH-NEXT:    hint #25
@@ -215,7 +215,7 @@ entry:
   ret i32 %call
 }
 
-define i32 @f7(ptr %fnptr) #0 {
+define i32 @f7(ptr %fnptr) "sign-return-address"="all" "sign-return-address-harden"="load-return-address" "sign-return-address-key"="a_key" {
 ; CHECK-NO-PAUTH-LABEL: f7:
 ; CHECK-NO-PAUTH:       // %bb.0: // %entry
 ; CHECK-NO-PAUTH-NEXT:    hint #25
@@ -235,7 +235,7 @@ entry:
 }
 
 ; Check to see if pac-ret hardening is compatible with stack protection
-define void @stackprotector() #6 {
+define void @stackprotector() sspreq "sign-return-address"="all" "sign-return-address-harden"="load-return-address" "sign-return-address-key"="a_key" {
 ; CHECK-NO-PAUTH-LABEL: stackprotector:
 ; CHECK-NO-PAUTH:       // %bb.0:
 ; CHECK-NO-PAUTH-NEXT:    hint #25
@@ -288,7 +288,7 @@ define void @stackprotector() #6 {
   ret void
 }
 
-define i32 @f8(i32 %a) #7 {
+define i32 @f8(i32 %a) "ptrauth-returns" "sign-return-address-harden"="load-return-address" {
 ; CHECK-NO-PAUTH-LABEL: f8:
 ; CHECK-NO-PAUTH:       // %bb.0: // %entry
 ; CHECK-NO-PAUTH-NEXT:    .cfi_b_key_frame
@@ -325,7 +325,7 @@ entry:
   ret i32 %call
 }
 
-define i32 @f9(i32 %a) #8 {
+define i32 @f9(i32 %a) "ptrauth-returns" "sign-return-address-harden"="none" {
 ; CHECK-NO-PAUTH-LABEL: f9:
 ; CHECK-NO-PAUTH:       // %bb.0: // %entry
 ; CHECK-NO-PAUTH-NEXT:    .cfi_b_key_frame
@@ -355,7 +355,7 @@ entry:
   ret i32 %call
 }
 
-define i32 @f10(i32 %a) #2 {
+define i32 @f10(i32 %a) "sign-return-address"="non-leaf" "sign-return-address-harden"="load-return-address" "sign-return-address-key"="a_key" {
 ; CHECK-NO-PAUTH-LABEL: f10:
 ; CHECK-NO-PAUTH:       // %bb.0: // %entry
 ; CHECK-NO-PAUTH-NEXT:    add w0, w0, #1
@@ -369,17 +369,3 @@ entry:
   %add = add nsw i32 %a, 1
   ret i32 %add
 }
-
-attributes #0 = { "sign-return-address"="all" "sign-return-address-harden"="load-return-address" "sign-return-address-key"="a_key" }
-attributes #1 = { "sign-return-address"="all" "sign-return-address-harden"="load-return-address" "sign-return-address-key"="b_key" }
-
-attributes #2 = { "sign-return-address"="non-leaf" "sign-return-address-harden"="load-return-address" "sign-return-address-key"="a_key" }
-attributes #3 = { "sign-return-address"="non-leaf" "sign-return-address-harden"="load-return-address" "sign-return-address-key"="b_key" }
-
-attributes #4 = { "sign-return-address"="non-leaf" "sign-return-address-harden"="none" "sign-return-address-key"="a_key" }
-attributes #5 = { "sign-return-address"="non-leaf" "sign-return-address-harden"="none" "sign-return-address-key"="b_key" }
-
-attributes #6 = { sspreq "sign-return-address"="all" "sign-return-address-harden"="load-return-address" "sign-return-address-key"="a_key" }
-
-attributes #7 = { "ptrauth-returns" "sign-return-address-harden"="load-return-address" }
-attributes #8 = { "ptrauth-returns" "sign-return-address-harden"="none" }

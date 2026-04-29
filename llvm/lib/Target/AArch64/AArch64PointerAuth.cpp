@@ -188,6 +188,10 @@ void AArch64PointerAuth::authenticateLR(
                                 TI->getOpcode() == AArch64::RET &&
                                 !MFnI->shouldHardenSignReturnAddress();
 
+  assert((MBBI->getOpcode() != AArch64::RET ||
+          MBBI->getOperand(0).getReg() == AArch64::LR) &&
+         "Return instruction must be returning via LR");
+
   MCSymbol *PACSym = MFnI->getSigningInstrLabel();
 
   if (Subtarget->hasPAuth() && TerminatorIsCombinable && !NeedsWinCFI &&
@@ -308,7 +312,10 @@ bool AArch64PointerAuth::emitSignReturnAddressHardening(MachineFunction &MF) {
     if (MBBI == MBB.end() || MBBI->getOpcode() != AArch64::RET)
       continue;
 
-    RS.enterBasicBlockEnd(*MBBI->getParent());
+    assert(MBBI->getOperand(0).getReg() == AArch64::LR &&
+           "Return instruction must be returning via LR");
+
+    RS.enterBasicBlockEnd(MBB);
     Register XReg = RS.scavengeRegisterBackwards(
         AArch64::GPR64RegClass, MBBI,
         /*RestoreAfter=*/false, /*SPAdj=*/0, /*AllowSpill=*/false);
