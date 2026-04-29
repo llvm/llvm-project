@@ -3193,6 +3193,29 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
     D->setTypeSourceInfo(TSI);
   }
 
+  SmallVector<ParmVarDecl *, 4> Params;
+  TypeSourceInfo *TInfo = SubstFunctionType(D, Params);
+  if (!TInfo)
+    return nullptr;
+  QualType T = adjustFunctionTypeForInstantiation(SemaRef.Context, D, TInfo);
+
+  if (TemplateParams && TemplateParams->size()) {
+    auto *LastParam =
+        dyn_cast<TemplateTypeParmDecl>(TemplateParams->asArray().back());
+    if (LastParam && LastParam->isImplicit() &&
+        LastParam->hasTypeConstraint()) {
+      // In abbreviated templates, the type-constraints of invented template
+      // type parameters are instantiated with the function type, invalidating
+      // the TemplateParameterList which relied on the template type parameter
+      // not having a type constraint. Recreate the TemplateParameterList with
+      // the updated parameter list.
+      TemplateParams = TemplateParameterList::Create(
+          SemaRef.Context, TemplateParams->getTemplateLoc(),
+          TemplateParams->getLAngleLoc(), TemplateParams->asArray(),
+          TemplateParams->getRAngleLoc(), TemplateParams->getRequiresClause());
+    }
+  }
+
   NestedNameSpecifierLoc QualifierLoc = D->getQualifierLoc();
   if (QualifierLoc) {
     QualifierLoc = SemaRef.SubstNestedNameSpecifierLoc(QualifierLoc,
@@ -3223,39 +3246,14 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
 
   DeclarationNameInfo NameInfo
     = SemaRef.SubstDeclarationNameInfo(D->getNameInfo(), TemplateArgs);
-  if (!NameInfo.getName())
-    return nullptr;
-
-  CXXMethodDecl *Method = nullptr;
-  SourceLocation StartLoc = D->getInnerLocStart();
-
-  SmallVector<ParmVarDecl *, 4> Params;
-  TypeSourceInfo *TInfo = SubstFunctionType(D, Params);
-  if (!TInfo)
-    return nullptr;
-
-  QualType T = adjustFunctionTypeForInstantiation(SemaRef.Context, D, TInfo);
-
-  if (TemplateParams && TemplateParams->size()) {
-    auto *LastParam =
-        dyn_cast<TemplateTypeParmDecl>(TemplateParams->asArray().back());
-    if (LastParam && LastParam->isImplicit() &&
-        LastParam->hasTypeConstraint()) {
-      // In abbreviated templates, the type-constraints of invented template
-      // type parameters are instantiated with the function type, invalidating
-      // the TemplateParameterList which relied on the template type parameter
-      // not having a type constraint. Recreate the TemplateParameterList with
-      // the updated parameter list.
-      TemplateParams = TemplateParameterList::Create(
-          SemaRef.Context, TemplateParams->getTemplateLoc(),
-          TemplateParams->getLAngleLoc(), TemplateParams->asArray(),
-          TemplateParams->getRAngleLoc(), TemplateParams->getRequiresClause());
-    }
-  }
 
   if (FunctionRewriteKind != RewriteKind::None)
     adjustForRewrite(FunctionRewriteKind, D, T, TInfo, NameInfo);
 
+  // Build the instantiated method declaration.
+  CXXMethodDecl *Method = nullptr;
+
+  SourceLocation StartLoc = D->getInnerLocStart();
   if (CXXConstructorDecl *Constructor = dyn_cast<CXXConstructorDecl>(D)) {
     Method = CXXConstructorDecl::Create(
         SemaRef.Context, Record, StartLoc, NameInfo, T, TInfo,
@@ -5136,8 +5134,9 @@ TemplateDeclInstantiator::InstantiateVarTemplatePartialSpecialization(
   return InstPartialSpec;
 }
 
-TypeSourceInfo *TemplateDeclInstantiator::SubstFunctionType(
-    FunctionDecl *D, SmallVectorImpl<ParmVarDecl *> &Params) {
+TypeSourceInfo*
+TemplateDeclInstantiator::SubstFunctionType(FunctionDecl *D,
+                              SmallVectorImpl<ParmVarDecl *> &Params) {
   TypeSourceInfo *OldTInfo = D->getTypeSourceInfo();
   assert(OldTInfo && "substituting function without type source info");
   assert(Params.empty() && "parameter vector is non-empty at start");
