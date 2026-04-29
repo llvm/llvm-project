@@ -8013,4 +8013,15 @@ void testReassignIncompatible() {
   mu.Unlock();
 }
 
+// A function pointer attribute may reference the pointer's own parameter.
+void (*lock_param_fn)(Mutex *m) EXCLUSIVE_LOCK_FUNCTION(m);
+void (*req_param_fn)(Mutex *m) EXCLUSIVE_LOCKS_REQUIRED(m);
+
+void test_attr_refers_to_param(Mutex *m) {
+  req_param_fn(m); // expected-warning {{calling function 'req_param_fn' requires holding mutex 'm' exclusively}}
+  lock_param_fn(m);
+  req_param_fn(m);
+  m->Unlock();
+}
+
 } // namespace FunctionPointers

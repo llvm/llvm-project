@@ -14248,7 +14248,7 @@ public:
 
   /// Recheck instantiated thread-safety attributes that could not be validated
   /// on the dependent pattern declaration.
-  bool checkInstantiatedThreadSafetyAttrs(Decl *D, const Attr *A);
+  bool checkInstantiatedThreadSafetyAttrs(const Decl *D, const Attr *A);
 
   void InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
                         const Decl *Pattern, Decl *Inst,

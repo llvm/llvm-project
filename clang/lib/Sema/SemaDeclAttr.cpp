@@ -436,12 +436,18 @@ static void checkAttrArgsAreCapabilityObjs(Sema &S, Decl *D,
   }
 }
 
+/// True if T (or its pointee, after stripping a top-level reference) is a
+/// function pointer or dependent.
+static bool isFunctionPointerOrDependent(QualType T) {
+  T = T.getNonReferenceType();
+  return T->isDependentType() || T->isFunctionPointerType();
+}
+
 /// Checks that thread-safety attributes on variables or fields apply only to
 /// function pointer types.
 static bool checkThreadSafetyValueDeclIsFunPtr(Sema &S, const ValueDecl *VD,
                                                const AttributeCommonInfo &A) {
-  if (VD->getType()->isDependentType() ||
-      VD->getType()->isFunctionPointerType())
+  if (isFunctionPointerOrDependent(VD->getType()))
     return true;
   S.Diag(A.getLoc(), diag::warn_thread_attribute_not_on_fun_ptr)
       << A << (isa<FieldDecl>(VD) ? 1 : 0);
@@ -470,14 +476,18 @@ static bool checkThreadSafetyAttrSubject(Sema &S, Decl *D, const ParsedAttr &AL,
     return true;
 
   if (CheckParmVar) {
-    if (const auto *ParmDecl = dyn_cast<ParmVarDecl>(VD))
-      return checkFunParamsAreScopedLockable(S, ParmDecl, AL);
+    if (const auto *PVD = dyn_cast<ParmVarDecl>(VD)) {
+      // A function-pointer parameter is also valid here.
+      if (isFunctionPointerOrDependent(PVD->getType()))
+        return true;
+      return checkFunParamsAreScopedLockable(S, PVD, AL);
+    }
   }
 
   return checkThreadSafetyValueDeclIsFunPtr(S, VD, AL);
 }
 
-bool Sema::checkInstantiatedThreadSafetyAttrs(Decl *D, const Attr *A) {
+bool Sema::checkInstantiatedThreadSafetyAttrs(const Decl *D, const Attr *A) {
   if (!isa<AssertCapabilityAttr, AcquireCapabilityAttr,
            TryAcquireCapabilityAttr, ReleaseCapabilityAttr,
            RequiresCapabilityAttr, LocksExcludedAttr>(A))
@@ -489,8 +499,11 @@ bool Sema::checkInstantiatedThreadSafetyAttrs(Decl *D, const Attr *A) {
 
   // Parameters of template functions need to be re-checked during
   // instantiation because their types might have been dependent.
-  if (const auto *PVD = dyn_cast<ParmVarDecl>(VD))
+  if (const auto *PVD = dyn_cast<ParmVarDecl>(VD)) {
+    if (isFunctionPointerOrDependent(PVD->getType()))
+      return true;
     return checkFunParamsAreScopedLockable(*this, PVD, *A);
+  }
 
   if (isa<FunctionDecl>(VD))
     return true;

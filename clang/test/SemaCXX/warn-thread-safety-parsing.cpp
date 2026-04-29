@@ -810,7 +810,7 @@ class EXCLUSIVE_TRYLOCK_FUNCTION(1) EtfTestClass { // \
 };
 
 void etf_fun_params(int lvar EXCLUSIVE_TRYLOCK_FUNCTION(1)); // \
-  // expected-warning {{'exclusive_trylock_function' attribute only applies to functions, variables, and non-static data members}}
+  // expected-warning {{'exclusive_trylock_function' attribute on a variable requires the variable to be of function pointer type}}
 
 // Check argument parsing.
 
@@ -893,7 +893,7 @@ int stf_test_var SHARED_TRYLOCK_FUNCTION(1); // \
   // expected-warning {{'shared_trylock_function' attribute on a variable requires the variable to be of function pointer type}}
 
 void stf_fun_params(int lvar SHARED_TRYLOCK_FUNCTION(1)); // \
-  // expected-warning {{'shared_trylock_function' attribute only applies to functions, variables, and non-static data members}}
+  // expected-warning {{'shared_trylock_function' attribute on a variable requires the variable to be of function pointer type}}
 
 
 class StfFoo {
@@ -1778,12 +1778,31 @@ struct FPFields {
   void (*requires_mu)(void) EXCLUSIVE_LOCKS_REQUIRED(mu1);
 };
 
+// Function pointer parameters and references-to-function-pointer.
+void fp_param(void (*pf)(void) EXCLUSIVE_LOCK_FUNCTION(mu1));
+void fp_param_assert(void (*pf)(void) ASSERT_EXCLUSIVE_LOCK(mu1));
+void fp_param_try(bool (*pf)(void) EXCLUSIVE_TRYLOCK_FUNCTION(true, mu1));
+void fp_ref(void (*&rf)(void) EXCLUSIVE_LOCKS_REQUIRED(mu1));
+
 int bad_fp_var EXCLUSIVE_LOCK_FUNCTION(mu1); // \
   // expected-warning {{'exclusive_lock_function' attribute on a variable requires the variable to be of function pointer type}}
 struct BadFPFields {
   int bad_field EXCLUSIVE_LOCKS_REQUIRED(mu1); // \
     // expected-warning {{'exclusive_locks_required' attribute on a field requires the field to be of function pointer type}}
 };
+
+// Compound types (array of, pointer/reference to array of function pointers)
+// are not analyzed; a plain function pointer is required.
+void (*fp_array[4])(void) EXCLUSIVE_LOCK_FUNCTION(mu1); // \
+  // expected-warning {{'exclusive_lock_function' attribute on a variable requires the variable to be of function pointer type}}
+void (*(*fp_ptr_to_array)[4])(void) EXCLUSIVE_LOCK_FUNCTION(mu1); // \
+  // expected-warning {{'exclusive_lock_function' attribute on a variable requires the variable to be of function pointer type}}
+void (*(&fp_ref_to_array)[4])(void) EXCLUSIVE_LOCK_FUNCTION(mu1) = fp_array; // \
+  // expected-warning {{'exclusive_lock_function' attribute on a variable requires the variable to be of function pointer type}}
+
+// C++11 spelling at the declaration prefix so attribute applies to variable.
+[[clang::acquire_capability(mu1)]] void (*fp_cxx11)(void);
+[[clang::requires_capability(mu1)]] void (*fp_cxx11_req)(void);
 
 template <typename FuncPtr>
 struct DependentFPFields {
