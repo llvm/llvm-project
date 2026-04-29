@@ -325,7 +325,7 @@ class PipelineSolver {
 
   /// This class is used to build the edge set implied by an
   /// assignment of an SUnit to a SchedGroup and to compute the cost
-  /// (edges than cannot be assigned without introducing cycles) of
+  /// (edges that cannot be assigned without introducing cycles) of
   /// the assignment.
   class EdgeSetBuilder {
     SUnit *SU;
@@ -575,7 +575,7 @@ int PipelineSolver::EdgeSetBuilder::buildImpl(
   // predecessor of SUnits after SG.  In each case, the cycle check
   // requires reachability information for the opposing direction.
 
-  // Nodes U reachable from SU (U ~> SU).
+  // Nodes U that can reach SU (U ~> SU).
   // Will be extended as new edges are added and hence cannot be
   // shared between calls to this function, in contrast to Succs.
   DenseSet<SUnit *> Preds = InitialPreds;
