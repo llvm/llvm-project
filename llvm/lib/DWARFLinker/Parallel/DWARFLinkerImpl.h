@@ -177,7 +177,7 @@ protected:
 
     /// Index of this object file in the link order (used for deterministic
     /// type DIE allocation).
-    unsigned ObjectFileIdx = 0;
+    uint64_t ObjectFileIdx = 0;
 
     /// Size of Debug info before optimizing.
     uint64_t OriginalDebugInfoSize = 0;
@@ -199,7 +199,7 @@ protected:
     std::atomic<size_t> &UniqueUnitID;
 
     LinkContext(LinkingGlobalData &GlobalData, DWARFFile &File,
-                unsigned ObjFileIdx, StringMap<uint64_t> &ClangModules,
+                uint64_t ObjFileIdx, StringMap<uint64_t> &ClangModules,
                 std::atomic<size_t> &UniqueUnitID);
 
     /// Check whether specified \p CUDie is a Clang module reference.

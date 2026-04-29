@@ -27,7 +27,7 @@ DWARFLinkerImpl::DWARFLinkerImpl(MessageHandlerTy ErrorHandler,
 }
 
 DWARFLinkerImpl::LinkContext::LinkContext(LinkingGlobalData &GlobalData,
-                                          DWARFFile &File, unsigned ObjFileIdx,
+                                          DWARFFile &File, uint64_t ObjFileIdx,
                                           StringMap<uint64_t> &ClangModules,
                                           std::atomic<size_t> &UniqueUnitID)
     : OutputSections(GlobalData), InputDWARFFile(File),
@@ -454,7 +454,7 @@ Error DWARFLinkerImpl::LinkContext::link(TypeUnit *ArtificialTypeUnit) {
   InputDWARFFile.Dwarf->getDebugMacro();
 
   // Assign deterministic priorities to module CUs for type DIE allocation.
-  unsigned LocalCUIdx = 0;
+  uint64_t LocalCUIdx = 0;
   for (auto &Mod : ModulesCompileUnits) {
     if (Error E = Mod.Unit->setPriority(ObjectFileIdx, LocalCUIdx++))
       return E;
