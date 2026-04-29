@@ -159,6 +159,9 @@ public:
                                              const Target &target,
                                              const FileSpec &symfile_spec);
 
+  llvm::Expected<FileSpecList>
+  GetSafeAutoLoadPaths(const Target &target) const override;
+
 protected:
   static const char *GetCompatibleArch(ArchSpec::Core core, size_t idx);
 

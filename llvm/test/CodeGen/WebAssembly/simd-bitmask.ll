@@ -309,3 +309,701 @@ define i64 @manual_bitmask_v64i8(<64 x i8> %v) {
   %2 = bitcast <64 x i1> %1 to i64
   ret i64 %2
 }
+
+define i32 @bitmask_v32i16(<32 x i16> %v) {
+; CHECK-LABEL: bitmask_v32i16:
+; CHECK:         .functype bitmask_v32i16 (v128, v128, v128, v128) -> (i32)
+; CHECK-NEXT:    .local v128
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.const 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    local.tee 4
+; CHECK-NEXT:    i16x8.eq
+; CHECK-NEXT:    i16x8.bitmask
+; CHECK-NEXT:    i32.const 24
+; CHECK-NEXT:    i32.shl
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 4
+; CHECK-NEXT:    i16x8.eq
+; CHECK-NEXT:    i16x8.bitmask
+; CHECK-NEXT:    i32.const 16
+; CHECK-NEXT:    i32.shl
+; CHECK-NEXT:    i32.or
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    local.get 4
+; CHECK-NEXT:    i16x8.eq
+; CHECK-NEXT:    i16x8.bitmask
+; CHECK-NEXT:    i32.const 8
+; CHECK-NEXT:    i32.shl
+; CHECK-NEXT:    i32.or
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 4
+; CHECK-NEXT:    i16x8.eq
+; CHECK-NEXT:    i16x8.bitmask
+; CHECK-NEXT:    i32.or
+; CHECK-NEXT:    # fallthrough-return
+  %cmp = icmp eq <32 x i16> %v, zeroinitializer
+  %bitmask = bitcast <32 x i1> %cmp to i32
+  ret i32 %bitmask
+}
+
+define i32 @bitmask_v32i32(<32 x i32> %v) {
+; CHECK-LABEL: bitmask_v32i32:
+; CHECK:         .functype bitmask_v32i32 (v128, v128, v128, v128, v128, v128, v128, v128) -> (i32)
+; CHECK-NEXT:    .local v128
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.const 0, 0, 0, 0
+; CHECK-NEXT:    local.tee 8
+; CHECK-NEXT:    i32x4.eq
+; CHECK-NEXT:    i32x4.bitmask
+; CHECK-NEXT:    i32.const 12
+; CHECK-NEXT:    i32.shl
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    i32x4.eq
+; CHECK-NEXT:    i32x4.bitmask
+; CHECK-NEXT:    i32.const 8
+; CHECK-NEXT:    i32.shl
+; CHECK-NEXT:    i32.or
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    i32x4.eq
+; CHECK-NEXT:    i32x4.bitmask
+; CHECK-NEXT:    i32.const 4
+; CHECK-NEXT:    i32.shl
+; CHECK-NEXT:    i32.or
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    i32x4.eq
+; CHECK-NEXT:    i32x4.bitmask
+; CHECK-NEXT:    i32.or
+; CHECK-NEXT:    i32.const 8
+; CHECK-NEXT:    i32.shl
+; CHECK-NEXT:    local.get 4
+; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    i32x4.eq
+; CHECK-NEXT:    i32x4.bitmask
+; CHECK-NEXT:    i32.const 4
+; CHECK-NEXT:    i32.shl
+; CHECK-NEXT:    i32.or
+; CHECK-NEXT:    local.get 5
+; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    i32x4.eq
+; CHECK-NEXT:    i32x4.bitmask
+; CHECK-NEXT:    i32.or
+; CHECK-NEXT:    i32.const 8
+; CHECK-NEXT:    i32.shl
+; CHECK-NEXT:    local.get 6
+; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    i32x4.eq
+; CHECK-NEXT:    i32x4.bitmask
+; CHECK-NEXT:    i32.const 4
+; CHECK-NEXT:    i32.shl
+; CHECK-NEXT:    i32.or
+; CHECK-NEXT:    local.get 7
+; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    i32x4.eq
+; CHECK-NEXT:    i32x4.bitmask
+; CHECK-NEXT:    i32.or
+; CHECK-NEXT:    # fallthrough-return
+  %cmp = icmp eq <32 x i32> %v, zeroinitializer
+  %bitmask = bitcast <32 x i1> %cmp to i32
+  ret i32 %bitmask
+}
+
+define i32 @bitmask_v32i64(<32 x i64> %v) {
+; CHECK-LABEL: bitmask_v32i64:
+; CHECK:         .functype bitmask_v32i64 (v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128) -> (i32)
+; CHECK-NEXT:    .local v128
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.const 0, 0
+; CHECK-NEXT:    local.tee 16
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    i64x2.bitmask
+; CHECK-NEXT:    i32.const 6
+; CHECK-NEXT:    i32.shl
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 16
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    i64x2.bitmask
+; CHECK-NEXT:    i32.const 4
+; CHECK-NEXT:    i32.shl
+; CHECK-NEXT:    i32.or
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    local.get 16
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    i64x2.bitmask
+; CHECK-NEXT:    i32.const 2
+; CHECK-NEXT:    i32.shl
+; CHECK-NEXT:    i32.or
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 16
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    i64x2.bitmask
+; CHECK-NEXT:    i32.or
+; CHECK-NEXT:    i32.const 4
+; CHECK-NEXT:    i32.shl
+; CHECK-NEXT:    local.get 4
+; CHECK-NEXT:    local.get 16
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    i64x2.bitmask
+; CHECK-NEXT:    i32.const 2
+; CHECK-NEXT:    i32.shl
+; CHECK-NEXT:    i32.or
+; CHECK-NEXT:    local.get 5
+; CHECK-NEXT:    local.get 16
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    i64x2.bitmask
+; CHECK-NEXT:    i32.or
+; CHECK-NEXT:    i32.const 4
+; CHECK-NEXT:    i32.shl
+; CHECK-NEXT:    local.get 6
+; CHECK-NEXT:    local.get 16
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    i64x2.bitmask
+; CHECK-NEXT:    i32.const 2
+; CHECK-NEXT:    i32.shl
+; CHECK-NEXT:    i32.or
+; CHECK-NEXT:    local.get 7
+; CHECK-NEXT:    local.get 16
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    i64x2.bitmask
+; CHECK-NEXT:    i32.or
+; CHECK-NEXT:    i32.const 4
+; CHECK-NEXT:    i32.shl
+; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    local.get 16
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    i64x2.bitmask
+; CHECK-NEXT:    i32.const 2
+; CHECK-NEXT:    i32.shl
+; CHECK-NEXT:    i32.or
+; CHECK-NEXT:    local.get 9
+; CHECK-NEXT:    local.get 16
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    i64x2.bitmask
+; CHECK-NEXT:    i32.or
+; CHECK-NEXT:    i32.const 4
+; CHECK-NEXT:    i32.shl
+; CHECK-NEXT:    local.get 10
+; CHECK-NEXT:    local.get 16
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    i64x2.bitmask
+; CHECK-NEXT:    i32.const 2
+; CHECK-NEXT:    i32.shl
+; CHECK-NEXT:    i32.or
+; CHECK-NEXT:    local.get 11
+; CHECK-NEXT:    local.get 16
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    i64x2.bitmask
+; CHECK-NEXT:    i32.or
+; CHECK-NEXT:    i32.const 4
+; CHECK-NEXT:    i32.shl
+; CHECK-NEXT:    local.get 12
+; CHECK-NEXT:    local.get 16
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    i64x2.bitmask
+; CHECK-NEXT:    i32.const 2
+; CHECK-NEXT:    i32.shl
+; CHECK-NEXT:    i32.or
+; CHECK-NEXT:    local.get 13
+; CHECK-NEXT:    local.get 16
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    i64x2.bitmask
+; CHECK-NEXT:    i32.or
+; CHECK-NEXT:    i32.const 4
+; CHECK-NEXT:    i32.shl
+; CHECK-NEXT:    local.get 14
+; CHECK-NEXT:    local.get 16
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    i64x2.bitmask
+; CHECK-NEXT:    i32.const 2
+; CHECK-NEXT:    i32.shl
+; CHECK-NEXT:    i32.or
+; CHECK-NEXT:    local.get 15
+; CHECK-NEXT:    local.get 16
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    i64x2.bitmask
+; CHECK-NEXT:    i32.or
+; CHECK-NEXT:    # fallthrough-return
+  %cmp = icmp eq <32 x i64> %v, zeroinitializer
+  %bitmask = bitcast <32 x i1> %cmp to i32
+  ret i32 %bitmask
+}
+
+define i64 @bitmask_v64i16(<64 x i16> %v) {
+; CHECK-LABEL: bitmask_v64i16:
+; CHECK:         .functype bitmask_v64i16 (v128, v128, v128, v128, v128, v128, v128, v128) -> (i64)
+; CHECK-NEXT:    .local v128
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.const 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    local.tee 8
+; CHECK-NEXT:    i16x8.eq
+; CHECK-NEXT:    i16x8.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.const 24
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    i16x8.eq
+; CHECK-NEXT:    i16x8.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.const 16
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    i16x8.eq
+; CHECK-NEXT:    i16x8.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.const 8
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    i16x8.eq
+; CHECK-NEXT:    i16x8.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    i64.const 16
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    local.get 4
+; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    i16x8.eq
+; CHECK-NEXT:    i16x8.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.const 8
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    local.get 5
+; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    i16x8.eq
+; CHECK-NEXT:    i16x8.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    i64.const 16
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    local.get 6
+; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    i16x8.eq
+; CHECK-NEXT:    i16x8.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.const 8
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    local.get 7
+; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    i16x8.eq
+; CHECK-NEXT:    i16x8.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    # fallthrough-return
+  %cmp = icmp eq <64 x i16> %v, zeroinitializer
+  %bitmask = bitcast <64 x i1> %cmp to i64
+  ret i64 %bitmask
+}
+
+define i64 @bitmask_v64i32(<64 x i32> %v) {
+; CHECK-LABEL: bitmask_v64i32:
+; CHECK:         .functype bitmask_v64i32 (v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128) -> (i64)
+; CHECK-NEXT:    .local v128
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.const 0, 0, 0, 0
+; CHECK-NEXT:    local.tee 16
+; CHECK-NEXT:    i32x4.eq
+; CHECK-NEXT:    i32x4.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.const 12
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 16
+; CHECK-NEXT:    i32x4.eq
+; CHECK-NEXT:    i32x4.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.const 8
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    local.get 16
+; CHECK-NEXT:    i32x4.eq
+; CHECK-NEXT:    i32x4.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.const 4
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 16
+; CHECK-NEXT:    i32x4.eq
+; CHECK-NEXT:    i32x4.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    i64.const 8
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    local.get 4
+; CHECK-NEXT:    local.get 16
+; CHECK-NEXT:    i32x4.eq
+; CHECK-NEXT:    i32x4.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.const 4
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    local.get 5
+; CHECK-NEXT:    local.get 16
+; CHECK-NEXT:    i32x4.eq
+; CHECK-NEXT:    i32x4.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    i64.const 8
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    local.get 6
+; CHECK-NEXT:    local.get 16
+; CHECK-NEXT:    i32x4.eq
+; CHECK-NEXT:    i32x4.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.const 4
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    local.get 7
+; CHECK-NEXT:    local.get 16
+; CHECK-NEXT:    i32x4.eq
+; CHECK-NEXT:    i32x4.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    i64.const 8
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    local.get 16
+; CHECK-NEXT:    i32x4.eq
+; CHECK-NEXT:    i32x4.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.const 4
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    local.get 9
+; CHECK-NEXT:    local.get 16
+; CHECK-NEXT:    i32x4.eq
+; CHECK-NEXT:    i32x4.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    i64.const 8
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    local.get 10
+; CHECK-NEXT:    local.get 16
+; CHECK-NEXT:    i32x4.eq
+; CHECK-NEXT:    i32x4.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.const 4
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    local.get 11
+; CHECK-NEXT:    local.get 16
+; CHECK-NEXT:    i32x4.eq
+; CHECK-NEXT:    i32x4.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    i64.const 8
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    local.get 12
+; CHECK-NEXT:    local.get 16
+; CHECK-NEXT:    i32x4.eq
+; CHECK-NEXT:    i32x4.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.const 4
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    local.get 13
+; CHECK-NEXT:    local.get 16
+; CHECK-NEXT:    i32x4.eq
+; CHECK-NEXT:    i32x4.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    i64.const 8
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    local.get 14
+; CHECK-NEXT:    local.get 16
+; CHECK-NEXT:    i32x4.eq
+; CHECK-NEXT:    i32x4.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.const 4
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    local.get 15
+; CHECK-NEXT:    local.get 16
+; CHECK-NEXT:    i32x4.eq
+; CHECK-NEXT:    i32x4.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    # fallthrough-return
+  %cmp = icmp eq <64 x i32> %v, zeroinitializer
+  %bitmask = bitcast <64 x i1> %cmp to i64
+  ret i64 %bitmask
+}
+
+define i64 @bitmask_v64i64(<64 x i64> %v) {
+; CHECK-LABEL: bitmask_v64i64:
+; CHECK:         .functype bitmask_v64i64 (v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128) -> (i64)
+; CHECK-NEXT:    .local v128
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.const 0, 0
+; CHECK-NEXT:    local.tee 32
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    i64x2.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.const 6
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 32
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    i64x2.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.const 4
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    local.get 32
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    i64x2.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.const 2
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 32
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    i64x2.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    i64.const 4
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    local.get 4
+; CHECK-NEXT:    local.get 32
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    i64x2.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.const 2
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    local.get 5
+; CHECK-NEXT:    local.get 32
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    i64x2.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    i64.const 4
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    local.get 6
+; CHECK-NEXT:    local.get 32
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    i64x2.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.const 2
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    local.get 7
+; CHECK-NEXT:    local.get 32
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    i64x2.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    i64.const 4
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    local.get 32
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    i64x2.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.const 2
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    local.get 9
+; CHECK-NEXT:    local.get 32
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    i64x2.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    i64.const 4
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    local.get 10
+; CHECK-NEXT:    local.get 32
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    i64x2.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.const 2
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    local.get 11
+; CHECK-NEXT:    local.get 32
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    i64x2.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    i64.const 4
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    local.get 12
+; CHECK-NEXT:    local.get 32
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    i64x2.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.const 2
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    local.get 13
+; CHECK-NEXT:    local.get 32
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    i64x2.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    i64.const 4
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    local.get 14
+; CHECK-NEXT:    local.get 32
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    i64x2.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.const 2
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    local.get 15
+; CHECK-NEXT:    local.get 32
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    i64x2.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    i64.const 4
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    local.get 16
+; CHECK-NEXT:    local.get 32
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    i64x2.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.const 2
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    local.get 17
+; CHECK-NEXT:    local.get 32
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    i64x2.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    i64.const 4
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    local.get 18
+; CHECK-NEXT:    local.get 32
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    i64x2.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.const 2
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    local.get 19
+; CHECK-NEXT:    local.get 32
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    i64x2.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    i64.const 4
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    local.get 20
+; CHECK-NEXT:    local.get 32
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    i64x2.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.const 2
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    local.get 21
+; CHECK-NEXT:    local.get 32
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    i64x2.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    i64.const 4
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    local.get 22
+; CHECK-NEXT:    local.get 32
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    i64x2.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.const 2
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    local.get 23
+; CHECK-NEXT:    local.get 32
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    i64x2.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    i64.const 4
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    local.get 24
+; CHECK-NEXT:    local.get 32
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    i64x2.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.const 2
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    local.get 25
+; CHECK-NEXT:    local.get 32
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    i64x2.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    i64.const 4
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    local.get 26
+; CHECK-NEXT:    local.get 32
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    i64x2.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.const 2
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    local.get 27
+; CHECK-NEXT:    local.get 32
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    i64x2.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    i64.const 4
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    local.get 28
+; CHECK-NEXT:    local.get 32
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    i64x2.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.const 2
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    local.get 29
+; CHECK-NEXT:    local.get 32
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    i64x2.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    i64.const 4
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    local.get 30
+; CHECK-NEXT:    local.get 32
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    i64x2.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.const 2
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    local.get 31
+; CHECK-NEXT:    local.get 32
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    i64x2.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.or
+; CHECK-NEXT:    # fallthrough-return
+  %cmp = icmp eq <64 x i64> %v, zeroinitializer
+  %bitmask = bitcast <64 x i1> %cmp to i64
+  ret i64 %bitmask
+}

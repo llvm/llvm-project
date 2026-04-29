@@ -1,12 +1,12 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
-; RUNx: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-SPIRV-DAG: %[[#RetID:]] = OpImageSampleExplicitLod %[[#RetType:]] %[[#]] %[[#]] Lod %[[#]]
 ; CHECK-SPIRV-DAG: %[[#RetType]] = OpTypeVector %[[#]] 4
 ; CHECK-SPIRV:     %[[#]] = OpCompositeExtract %[[#]] %[[#RetID]] 0
 
-define spir_kernel void @sample_kernel(target("spirv.Image", void, 1, 1, 0, 0, 0, 0, 0) %input, i32 %imageSampler, ptr addrspace(1) %xOffsets, ptr addrspace(1) %yOffsets, ptr addrspace(1) %results) {
+define spir_kernel void @sample_kernel(target("spirv.Image", void, 1, 1, 0, 0, 0, 0, 0) %input, target("spirv.Sampler") %imageSampler, ptr addrspace(1) %xOffsets, ptr addrspace(1) %yOffsets, ptr addrspace(1) %results) {
 entry:
   %call = call spir_func i32 @_Z13get_global_idj(i32 0)
   %call1 = call spir_func i32 @_Z13get_global_idj(i32 1)
@@ -22,13 +22,13 @@ entry:
   %1 = load float, ptr addrspace(1) %arrayidx3, align 4
   %conv4 = fptosi float %1 to i32
   %vecinit5 = insertelement <2 x i32> %vecinit, i32 %conv4, i32 1
-  %call6.tmp.tmp = call spir_func float @_Z11read_imagef20ocl_image2d_depth_ro11ocl_samplerDv2_i(target("spirv.Image", void, 1, 1, 0, 0, 0, 0, 0) %input, i32 %imageSampler, <2 x i32> %vecinit5)
+  %call6.tmp.tmp = call spir_func float @_Z11read_imagef20ocl_image2d_depth_ro11ocl_samplerDv2_i(target("spirv.Image", void, 1, 1, 0, 0, 0, 0, 0) %input, target("spirv.Sampler") %imageSampler, <2 x i32> %vecinit5)
   %arrayidx7 = getelementptr inbounds float, ptr addrspace(1) %results, i32 %add
   store float %call6.tmp.tmp, ptr addrspace(1) %arrayidx7, align 4
   ret void
 }
 
-declare spir_func float @_Z11read_imagef20ocl_image2d_depth_ro11ocl_samplerDv2_i(target("spirv.Image", void, 1, 1, 0, 0, 0, 0, 0), i32, <2 x i32>)
+declare spir_func float @_Z11read_imagef20ocl_image2d_depth_ro11ocl_samplerDv2_i(target("spirv.Image", void, 1, 1, 0, 0, 0, 0, 0), target("spirv.Sampler"), <2 x i32>)
 
 declare spir_func i32 @_Z13get_global_idj(i32)
 

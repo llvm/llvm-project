@@ -881,7 +881,7 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
         self.match("register read rdx", ["rdx = 0x1817161514131211"])
         # edx should not be added
         self.match(
-            "register read edx", ["error: Invalid register name 'edx'."], error=True
+            "register read edx", ["error: Invalid register name 'edx'"], error=True
         )
 
     @skipIfXmlSupportMissing
@@ -954,7 +954,7 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
         self.match("register read ecx", ["ecx = 0x14131211"])
         # dx should not be added
         self.match(
-            "register read cx", ["error: Invalid register name 'cx'."], error=True
+            "register read cx", ["error: Invalid register name 'cx'"], error=True
         )
 
     @skipIfXmlSupportMissing
@@ -1049,5 +1049,5 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
         self.match("register read x1", ["x1 = 0x1817161514131211"])
         # w1 should not be added
         self.match(
-            "register read w1", ["error: Invalid register name 'w1'."], error=True
+            "register read w1", ["error: Invalid register name 'w1'"], error=True
         )

@@ -82,20 +82,22 @@ public:
   hash_code() = default;
 
   /// Form a hash code directly from a numerical value.
-  hash_code(size_t value) : value(value) {}
+  constexpr hash_code(size_t value) : value(value) {}
 
   /// Convert the hash code to its numerical value for use.
-  /*explicit*/ operator size_t() const { return value; }
+  /*explicit*/ constexpr operator size_t() const { return value; }
 
-  friend bool operator==(const hash_code &lhs, const hash_code &rhs) {
+  friend constexpr bool operator==(const hash_code &lhs, const hash_code &rhs) {
     return lhs.value == rhs.value;
   }
-  friend bool operator!=(const hash_code &lhs, const hash_code &rhs) {
+  friend constexpr bool operator!=(const hash_code &lhs, const hash_code &rhs) {
     return lhs.value != rhs.value;
   }
 
   /// Allow a hash_code to be directly run through hash_value.
-  friend size_t hash_value(const hash_code &code) { return code.value; }
+  friend constexpr size_t hash_value(const hash_code &code) {
+    return code.value;
+  }
 };
 
 /// Compute a hash_code for any integer value.
@@ -159,16 +161,14 @@ static constexpr uint64_t k3 = 0xc949d7c7509e6557ULL;
 /// Bitwise right rotate.
 /// Normally this will compile to a single instruction, especially if the
 /// shift is a manifest constant.
-inline uint64_t rotate(uint64_t val, size_t shift) {
+constexpr uint64_t rotate(uint64_t val, size_t shift) {
   // Avoid shifting by 64: doing so yields an undefined result.
   return shift == 0 ? val : ((val >> shift) | (val << (64 - shift)));
 }
 
-inline uint64_t shift_mix(uint64_t val) {
-  return val ^ (val >> 47);
-}
+constexpr uint64_t shift_mix(uint64_t val) { return val ^ (val >> 47); }
 
-inline uint64_t hash_16_bytes(uint64_t low, uint64_t high) {
+constexpr uint64_t hash_16_bytes(uint64_t low, uint64_t high) {
   // Murmur-inspired hashing.
   const uint64_t kMul = 0x9ddfea08eb382d69ULL;
   uint64_t a = (low ^ high) * kMul;
@@ -179,7 +179,7 @@ inline uint64_t hash_16_bytes(uint64_t low, uint64_t high) {
   return b;
 }
 
-inline uint64_t hash_1to3_bytes(const char *s, size_t len, uint64_t seed) {
+constexpr uint64_t hash_1to3_bytes(const char *s, size_t len, uint64_t seed) {
   uint8_t a = s[0];
   uint8_t b = s[len >> 1];
   uint8_t c = s[len - 1];
@@ -301,7 +301,7 @@ struct hash_state {
 
   /// Compute the final 64-bit hash code value based on the current
   /// state and the length of bytes hashed.
-  uint64_t finalize(size_t length) {
+  constexpr uint64_t finalize(size_t length) {
     return hash_16_bytes(hash_16_bytes(h3, h5) + shift_mix(h1) * k1 + h2,
                          hash_16_bytes(h4, h6) + shift_mix(length) * k1 + h0);
   }
@@ -654,12 +654,14 @@ template <typename T> hash_code hash_value(const std::optional<T> &arg) {
 }
 
 template <> struct DenseMapInfo<hash_code, void> {
-  static inline hash_code getEmptyKey() { return hash_code(-1); }
-  static inline hash_code getTombstoneKey() { return hash_code(-2); }
-  static unsigned getHashValue(hash_code val) {
+  static constexpr hash_code getEmptyKey() { return hash_code(-1); }
+  static constexpr hash_code getTombstoneKey() { return hash_code(-2); }
+  static constexpr unsigned getHashValue(hash_code val) {
     return static_cast<unsigned>(size_t(val));
   }
-  static bool isEqual(hash_code LHS, hash_code RHS) { return LHS == RHS; }
+  static constexpr bool isEqual(hash_code LHS, hash_code RHS) {
+    return LHS == RHS;
+  }
 };
 
 } // namespace llvm
@@ -669,9 +671,7 @@ namespace std {
 
 template<>
 struct hash<llvm::hash_code> {
-  size_t operator()(llvm::hash_code const& Val) const {
-    return Val;
-  }
+  constexpr size_t operator()(llvm::hash_code const &Val) const { return Val; }
 };
 
 } // namespace std;

@@ -398,10 +398,11 @@ defm SPV_EXT_image_raw10_raw12 :ExtensionOperand<133, [EnvOpenCL, EnvVulkan]>;
 defm SPV_ALTERA_arbitrary_precision_floating_point: ExtensionOperand<134, [EnvOpenCL]>;
 defm SPV_KHR_fma : ExtensionOperand<135, [EnvVulkan, EnvOpenCL]>;
 defm SPV_INTEL_masked_gather_scatter : ExtensionOperand<136, [EnvOpenCL]>;
+defm SPV_AMD_weak_linkage : ExtensionOperand<137, [EnvOpenCL]>;
 // SPV_KHR_abort is currently only supported in the OpenCL environment.
 // Vulkan/Shader support requires emitting explicit layout decorations on the
 // Message Type, which is not yet implemented.
-defm SPV_KHR_abort : ExtensionOperand<137, [EnvOpenCL]>;
+defm SPV_KHR_abort : ExtensionOperand<138, [EnvOpenCL]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Capabilities enum values and at the same time
@@ -1263,6 +1264,7 @@ multiclass LinkageTypeOperand<bits<32> value, list<Capability> reqCapabilities> 
 defm Export : LinkageTypeOperand<0, [Linkage]>;
 defm Import : LinkageTypeOperand<1, [Linkage]>;
 defm LinkOnceODR : LinkageTypeOperand<2, [Linkage]>;
+defm Weak : LinkageTypeOperand<3, [Linkage]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define AccessQualifier enum values and at the same time

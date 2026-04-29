@@ -101,9 +101,8 @@ public:
 DWARFExpressionCopyBytesTest::StreamerContext
 DWARFExpressionCopyBytesTest::createStreamer(raw_pwrite_stream &OS) {
   StreamerContext Res;
-  Res.Ctx =
-      std::make_unique<MCContext>(Triple(TripleName), MAI.get(), MRI.get(),
-                                  /*MSTI=*/nullptr);
+  Res.Ctx = std::make_unique<MCContext>(Triple(TripleName), *MAI, MRI.get(),
+                                        /*MSTI=*/nullptr);
   Res.MOFI.reset(TheTarget->createMCObjectFileInfo(*Res.Ctx,
                                                    /*PIC=*/false));
   Res.Ctx->setObjectFileInfo(Res.MOFI.get());
@@ -191,7 +190,7 @@ void DWARFExpressionCopyBytesTest::testExpr(ArrayRef<uint8_t> ExprData) {
   if (!MRI)
     GTEST_SKIP();
 
-  DataExtractor DE(ExprData, true, 8);
+  DataExtractor DE(ExprData, true);
   DWARFExpression Expr(DE, 8);
 
   // Copy this expression into the CFI of a binary and check that we are able to

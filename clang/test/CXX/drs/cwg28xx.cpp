@@ -6,6 +6,26 @@
 // RUN: %clang_cc1 -std=c++23 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,cxx11-23,since-cxx20,since-cxx23 %s
 // RUN: %clang_cc1 -std=c++2c -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx20,since-cxx23,since-cxx26 %s
 
+namespace cwg2807 { // cwg2807: 11
+
+#if __cplusplus >= 202002L
+struct s {
+  consteval ~s() {}
+  // since-cxx20-error@-1 {{destructor cannot be declared consteval}}
+};
+#endif
+
+} // namespace cwg2807
+
+namespace cwg2810 { // cwg2810: 2.7
+
+template <typename>
+void f() {
+  0xC0FFEE;
+  // expected-warning@-1 {{expression result unused}}
+}
+
+} // namespace cwg2810
 
 int main() {} // required for cwg2811
 

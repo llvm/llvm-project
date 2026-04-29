@@ -670,6 +670,8 @@ void SemaAMDGPU::handleAMDGPUWavesPerEUAttr(Decl *D, const ParsedAttr &AL) {
 }
 
 void SemaAMDGPU::handleAMDGPUNumSGPRAttr(Decl *D, const ParsedAttr &AL) {
+  Diag(AL.getLoc(), diag::warn_amdgpu_num_reg_attr_deprecated) << AL;
+
   uint32_t NumSGPR = 0;
   Expr *NumSGPRExpr = AL.getArgAsExpr(0);
   if (!SemaRef.checkUInt32Argument(AL, NumSGPRExpr, NumSGPR))
@@ -680,6 +682,8 @@ void SemaAMDGPU::handleAMDGPUNumSGPRAttr(Decl *D, const ParsedAttr &AL) {
 }
 
 void SemaAMDGPU::handleAMDGPUNumVGPRAttr(Decl *D, const ParsedAttr &AL) {
+  Diag(AL.getLoc(), diag::warn_amdgpu_num_reg_attr_deprecated) << AL;
+
   uint32_t NumVGPR = 0;
   Expr *NumVGPRExpr = AL.getArgAsExpr(0);
   if (!SemaRef.checkUInt32Argument(AL, NumVGPRExpr, NumVGPR))
@@ -1020,7 +1024,9 @@ bool DiagnoseUnguardedBuiltins::VisitCallExpr(CallExpr *CE) {
       for (auto &&F : llvm::split(BInfo.getRequiredFeatures(GID), ','))
         FeatureMap[F] = true;
   } else {
-    static const llvm::Triple AMDGCN("amdgcn-amd-amdhsa");
+    static const llvm::Triple AMDGCN(llvm::Triple::amdgcn,
+                                     llvm::Triple::NoSubArch, llvm::Triple::AMD,
+                                     llvm::Triple::AMDHSA);
     llvm::AMDGPU::fillAMDGPUFeatureMap(CurrentGFXIP.back().second, AMDGCN,
                                        FeatureMap);
   }

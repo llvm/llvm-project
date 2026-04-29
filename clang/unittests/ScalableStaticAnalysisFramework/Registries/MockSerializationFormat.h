@@ -65,8 +65,6 @@ public:
 
   using FormatInfo = FormatInfoEntry<SerializerFn, DeserializerFn>;
   std::map<SummaryName, FormatInfo> FormatInfos;
-
-  static char ID;
 };
 
 } // namespace clang::ssaf

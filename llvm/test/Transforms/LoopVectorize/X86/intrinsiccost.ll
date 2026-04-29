@@ -25,19 +25,17 @@ define void @uaddsat(ptr nocapture readonly %pSrc, i16 signext %offset, ptr noca
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[DOTCAST1:%.*]] = trunc i64 [[N_VEC]] to i32
 ; CHECK-NEXT:    [[IND_END10:%.*]] = sub i32 [[BLOCKSIZE]], [[DOTCAST1]]
-; CHECK-NEXT:    [[TMP12:%.*]] = mul i64 [[N_VEC]], 2
+; CHECK-NEXT:    [[TMP12:%.*]] = shl i64 [[N_VEC]], 1
 ; CHECK-NEXT:    [[IND_END12:%.*]] = getelementptr i8, ptr [[PSRC:%.*]], i64 [[TMP12]]
-; CHECK-NEXT:    [[TMP13:%.*]] = mul i64 [[N_VEC]], 2
-; CHECK-NEXT:    [[IND_END15:%.*]] = getelementptr i8, ptr [[PDST:%.*]], i64 [[TMP13]]
+; CHECK-NEXT:    [[IND_END15:%.*]] = getelementptr i8, ptr [[PDST:%.*]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i16> poison, i16 [[OFFSET:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i16> [[BROADCAST_SPLATINSERT]], <16 x i16> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PSRC]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[OFFSET_IDX2:%.*]] = mul i64 [[INDEX]], 2
-; CHECK-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[PDST]], i64 [[OFFSET_IDX2]]
+; CHECK-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[PDST]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i16, ptr [[NEXT_GEP]], i64 16
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i16, ptr [[NEXT_GEP]], i64 32
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i16, ptr [[NEXT_GEP]], i64 48
@@ -71,19 +69,17 @@ define void @uaddsat(ptr nocapture readonly %pSrc, i16 signext %offset, ptr noca
 ; CHECK-NEXT:    [[N_VEC8:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF6]]
 ; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC8]] to i32
 ; CHECK-NEXT:    [[IND_END:%.*]] = sub i32 [[BLOCKSIZE]], [[DOTCAST]]
-; CHECK-NEXT:    [[TMP14:%.*]] = mul i64 [[N_VEC8]], 2
+; CHECK-NEXT:    [[TMP14:%.*]] = shl i64 [[N_VEC8]], 1
 ; CHECK-NEXT:    [[IND_END11:%.*]] = getelementptr i8, ptr [[PSRC]], i64 [[TMP14]]
-; CHECK-NEXT:    [[TMP15:%.*]] = mul i64 [[N_VEC8]], 2
-; CHECK-NEXT:    [[IND_END14:%.*]] = getelementptr i8, ptr [[PDST]], i64 [[TMP15]]
+; CHECK-NEXT:    [[IND_END14:%.*]] = getelementptr i8, ptr [[PDST]], i64 [[TMP14]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT23:%.*]] = insertelement <8 x i16> poison, i16 [[OFFSET]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT24:%.*]] = shufflevector <8 x i16> [[BROADCAST_SPLATINSERT23]], <8 x i16> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; CHECK:       vec.epilog.vector.body:
 ; CHECK-NEXT:    [[INDEX17:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT25:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX18:%.*]] = mul i64 [[INDEX17]], 2
+; CHECK-NEXT:    [[OFFSET_IDX18:%.*]] = shl i64 [[INDEX17]], 1
 ; CHECK-NEXT:    [[NEXT_GEP19:%.*]] = getelementptr i8, ptr [[PSRC]], i64 [[OFFSET_IDX18]]
-; CHECK-NEXT:    [[OFFSET_IDX20:%.*]] = mul i64 [[INDEX17]], 2
-; CHECK-NEXT:    [[NEXT_GEP21:%.*]] = getelementptr i8, ptr [[PDST]], i64 [[OFFSET_IDX20]]
+; CHECK-NEXT:    [[NEXT_GEP21:%.*]] = getelementptr i8, ptr [[PDST]], i64 [[OFFSET_IDX18]]
 ; CHECK-NEXT:    [[WIDE_LOAD22:%.*]] = load <8 x i16>, ptr [[NEXT_GEP19]], align 2
 ; CHECK-NEXT:    [[TMP16:%.*]] = call <8 x i16> @llvm.uadd.sat.v8i16(<8 x i16> [[WIDE_LOAD22]], <8 x i16> [[BROADCAST_SPLAT24]])
 ; CHECK-NEXT:    store <8 x i16> [[TMP16]], ptr [[NEXT_GEP21]], align 2
