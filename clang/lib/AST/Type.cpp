@@ -2317,6 +2317,7 @@ bool Type::hasSignedIntegerRepresentation() const {
   case BuiltinType::Id:                                                        \
     return IsSigned;
 #include "clang/Basic/AArch64ACLETypes.def"
+#undef RVV_VECTOR_TYPE_INT
 #define SVE_VECTOR_TYPE_INT(Name, MangledName, Id, SingletonId, NumEls,        \
                             ElBits, NF, IsSigned)                              \
   case BuiltinType::Id:                                                        \
@@ -2393,6 +2394,7 @@ bool Type::hasUnsignedIntegerRepresentation() const {
   case BuiltinType::Id:                                                        \
     return !IsSigned;
 #include "clang/Basic/RISCVVTypes.def"
+#undef RVV_VECTOR_TYPE_INT
     default:
       break;
     }
