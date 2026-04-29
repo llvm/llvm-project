@@ -88,7 +88,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Tp, class _Allocator /* = allocator<_Tp> */>
 class vector {
   using __base_type _LIBCPP_NODEBUG     = __vector_layout<_Tp, _Allocator>;
-  using __bound_type _LIBCPP_NODEBUG = typename __base_type::__bound_type;
+  using __bound_type _LIBCPP_NODEBUG    = typename __base_type::__bound_type;
   using _SplitBuffer _LIBCPP_NODEBUG    = typename __base_type::_SplitBuffer;
 
 public:
@@ -258,6 +258,7 @@ private:
   };
 
   using __emplace_back_result_t = _If<(_LIBCPP_STD_VER < 17), void, reference>;
+
 public:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI ~vector() { __destroy_vector (*this)(); }
 
@@ -470,13 +471,12 @@ public:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __emplace_back_result_t emplace_back(_Args&&... __args) {
     if (!__layout_.__is_full()) [[likely]] {
       __emplace_back_assume_capacity(std::forward<_Args>(__args)...);
-    }
-    else {
+    } else {
       __emplace_back_slow_path(std::forward<_Args>(__args)...);
     }
-  #if _LIBCPP_STD_VER >= 17
+#if _LIBCPP_STD_VER >= 17
     return back();
-  #endif
+#endif
   }
 
   template <class... _Args>
@@ -729,8 +729,7 @@ private:
   }
 
   template <class... _Args>
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI inline __bound_type
-  __emplace_back_slow_path(_Args&&... __args);
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI inline __bound_type __emplace_back_slow_path(_Args&&... __args);
 
   // The following functions are no-ops outside of AddressSanitizer mode.
   // We call annotations for every allocator, unless explicitly disabled.
@@ -1083,7 +1082,6 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void __if_likely_else(bool _
       __else();
   }
 }
-
 
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI typename vector<_Tp, _Allocator>::iterator
