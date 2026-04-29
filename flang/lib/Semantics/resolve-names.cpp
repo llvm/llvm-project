@@ -10492,11 +10492,11 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
     Symbol *sym{currScope().symbol()};
     if (!sym || !sym->has<SubprogramDetails>()) {
       Say(x.source,
-          "!DIR$ INLINEALWAYS directive with name must appear in a subroutine or function"_err_en_US);
-    }
-    if (inlineAlways->v->ToString() != sym->name().ToString()) {
+          "!DIR$ INLINEALWAYS directive with name must appear in a subprogram"_err_en_US);
+    } else if (inlineAlways->v->ToString() != sym->name().ToString()) {
       context().Warn(common::UsageWarning::IgnoredDirective, x.source,
-          "INLINEALWAYS name does not match the subroutine or function name"_warn_en_US);
+          "INLINEALWAYS name '%s' does not match the subprogram name '%s'"_warn_en_US,
+          inlineAlways->v->ToString(), sym->name().ToString());
     }
   } else if (context().ShouldWarn(common::UsageWarning::IgnoredDirective)) {
     Say(x.source, "Unrecognized compiler directive was ignored"_warn_en_US)

@@ -55,8 +55,7 @@ entry:
 define <4 x i32> @bitseti_v8i16_v4i32(<4 x i32> %a) nounwind {
 ; CHECK-LABEL: bitseti_v8i16_v4i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vrepli.h $vr1, 4
-; CHECK-NEXT:    vor.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vbitseti.h $vr0, $vr0, 2
 ; CHECK-NEXT:    ret
 entry:
     %0 = or <4 x i32> %a, splat (i32 262148)
@@ -76,8 +75,7 @@ entry:
 define <2 x i64> @bitseti_v8i16_v2i64(<2 x i64> %a) nounwind {
 ; CHECK-LABEL: bitseti_v8i16_v2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vrepli.h $vr1, 4
-; CHECK-NEXT:    vor.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vbitseti.h $vr0, $vr0, 2
 ; CHECK-NEXT:    ret
 entry:
     %0 = or <2 x i64> %a, splat (i64 1125917086973956)
@@ -87,8 +85,7 @@ entry:
 define <2 x i64> @bitseti_v4i32_v2i64(<2 x i64> %a) nounwind {
 ; CHECK-LABEL: bitseti_v4i32_v2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vrepli.w $vr1, 4
-; CHECK-NEXT:    vor.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vbitseti.w $vr0, $vr0, 2
 ; CHECK-NEXT:    ret
 entry:
     %0 = or <2 x i64> %a, splat (i64 17179869188)

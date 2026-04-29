@@ -55,8 +55,7 @@ entry:
 define <8 x i32> @bitclri_v16i16_v8i32(<8 x i32> %a) nounwind {
 ; CHECK-LABEL: bitclri_v16i16_v8i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvrepli.h $xr1, -5
-; CHECK-NEXT:    xvand.v $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvbitclri.h $xr0, $xr0, 2
 ; CHECK-NEXT:    ret
 entry:
     %0 = and <8 x i32> %a, splat (i32 -262149)
@@ -76,8 +75,7 @@ entry:
 define <4 x i64> @bitclri_v16i16_v4i64(<4 x i64> %a) nounwind {
 ; CHECK-LABEL: bitclri_v16i16_v4i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvrepli.h $xr1, -5
-; CHECK-NEXT:    xvand.v $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvbitclri.h $xr0, $xr0, 2
 ; CHECK-NEXT:    ret
 entry:
     %0 = and <4 x i64> %a, splat (i64 -1125917086973957)
@@ -87,8 +85,7 @@ entry:
 define <4 x i64> @bitclri_v8i32_v4i64(<4 x i64> %a) nounwind {
 ; CHECK-LABEL: bitclri_v8i32_v4i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvrepli.w $xr1, -5
-; CHECK-NEXT:    xvand.v $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvbitclri.w $xr0, $xr0, 2
 ; CHECK-NEXT:    ret
 entry:
     %0 = and <4 x i64> %a, splat (i64 -17179869189)
