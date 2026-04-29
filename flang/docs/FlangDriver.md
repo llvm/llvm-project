@@ -113,9 +113,8 @@ in terms of Clang's driver library, `clangDriver`. This approach allows us to:
   as linkers and assemblers.
 One implication of this dependency on Clang is that all of Flang's compiler
 options are defined inside the Clang subproject. Flang-only options are in
-``clang/include/clang/Options/FlangOptions.td`. For options that are common for both
-Flang and Clang, the corresponding definitions are shared in
-`clang/include/clang/Options/Options.td`.
+`clang/include/clang/Options/FlangOptions.td`. Options that are common to both
+Flang and Clang are defined in `clang/include/clang/Options/Options.td`.
 
 Internally, a `clangDriver` based compiler driver works by creating actions
 that correspond to various compilation phases, e.g. `PreprocessJobClass`,
@@ -244,8 +243,8 @@ Adding a new compiler option in Flang consists of two steps:
 
 ### Option Definition
 All of Flang's compiler and frontend driver options are defined in
-`clang/include/clang/Options/FlangOptions.td` and `clang/include/clang/Options/Options.td`
-in Clang. When adding a new option to Flang, you will either:
+`clang/include/clang/Options/FlangOptions.td` and `clang/include/clang/Options/Options.td`.
+When adding a new option to Flang, you will either:
   * extend the existing definition for an option that is already available
     in one of Clang's drivers (e.g.  `clang`), but not yet available in Flang, or
   * add a completely new definition if the option that you are adding has not
