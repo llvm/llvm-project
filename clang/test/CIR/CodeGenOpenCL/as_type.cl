@@ -52,3 +52,25 @@ int f6(char4 x) {
 // OGCG: define {{.*}} i32 @f6
 // OGCG:  %[[RET:.*]] = bitcast <4 x i8> %{{.*}} to i32
 // OGCG:  ret i32 %[[RET]]
+
+int* int_to_ptr(int x) {
+  return __builtin_astype(x, int*);
+}
+
+// CIR: cir.func {{.*}} @int_to_ptr
+// CIR:   %[[X_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init]
+// CIR:   %[[RET_ADDR:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["__retval"]
+// CIR:   cir.store %{{.*}}, %[[X_ADDR]] : !s32i, !cir.ptr<!s32i>
+// CIR:   %[[TMP_X:.*]] = cir.load {{.*}} %[[X_ADDR]] : !cir.ptr<!s32i>, !s32i
+// CIR:   %[[X_PTR:.*]] = cir.cast int_to_ptr %[[TMP_X]] : !s32i -> !cir.ptr<!s32i>
+// CIR:   cir.store %[[X_PTR]], %[[RET_ADDR]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+// CIR:   %[[TMP_RET]] = cir.load %[[RET_ADDR]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+// CIR:   cir.return %[[TMP_RET]] : !cir.ptr<!s32i>
+
+// LLVM: define {{.*}} ptr @int_to_ptr
+// LLVM:   %[[INT_TO_PTR:.*]] = inttoptr i32 %{{.*}} to ptr
+// LLVM:   ret ptr %[[INT_TO_PTR]]
+
+// OGCG: define {{.*}} ptr @int_to_ptr
+// OGCG:   %[[INT_TO_PTR:.*]] = inttoptr i32 %{{.*}} to ptr
+// OGCG:   ret ptr %[[INT_TO_PTR]]

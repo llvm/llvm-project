@@ -164,7 +164,7 @@ bool LoongArchAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
   else if (OffsetMO.isGlobal() || OffsetMO.isBlockAddress() ||
            OffsetMO.isMCSymbol() || OffsetMO.isCPI()) {
     OS << ", ";
-    MAI->printExpr(OS, *MCO.getExpr());
+    MAI.printExpr(OS, *MCO.getExpr());
   } else
     return true;
 

@@ -124,3 +124,11 @@ define void @storenested(i32 %index, i32 %data0, <4 x float> %data1, <3 x half> 
 
   ret void
 }
+
+; CHECK: declare %dx.types.Handle @dx.op.createHandle(i32, i8, i32, i32, i1) #[[#ATTR0:]]
+; CHECK-DAG: declare void @dx.op.bufferStore.i32(i32, %dx.types.Handle, i32, i32, i32, i32, i32, i32, i8) #[[#ATTR1:]]
+; CHECK-DAG: declare void @dx.op.bufferStore.f16(i32, %dx.types.Handle, i32, i32, half, half, half, half, i8) #[[#ATTR1]]
+; CHECK-DAG: declare void @dx.op.bufferStore.f32(i32, %dx.types.Handle, i32, i32, float, float, float, float, i8) #[[#ATTR1]]
+
+; CHECK-DAG: attributes #[[#ATTR0]] = { nounwind memory(read) }
+; CHECK-DAG: attributes #[[#ATTR1]] = { nounwind }

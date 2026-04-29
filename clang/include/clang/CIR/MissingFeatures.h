@@ -114,9 +114,6 @@ struct MissingFeatures {
   static bool opCallChain() { return false; }
   static bool opCallExceptionAttr() { return false; }
 
-  // CXXNewExpr
-  static bool exprNewNullCheck() { return false; }
-
   // FnInfoOpts -- This is used to track whether calls are chain calls or
   // instance methods. Classic codegen uses chain call to track and extra free
   // register for x86 and uses instance method as a condition for a thunk
@@ -173,6 +170,7 @@ struct MissingFeatures {
   static bool atomicUseLibCall() { return false; }
   static bool atomicMicrosoftVolatile() { return false; }
   static bool atomicOpenMP() { return false; }
+  static bool atomicInitTailPadding() { return false; }
 
   // Global ctor handling
   static bool globalCtorLexOrder() { return false; }
@@ -287,7 +285,6 @@ struct MissingFeatures {
   static bool intrinsicElementTypeSupport() { return false; }
   static bool intrinsics() { return false; }
   static bool isTrivialCtorOrDtor() { return false; }
-  static bool lambdaCaptures() { return false; }
   static bool loopInfoStack() { return false; }
   static bool lowerAggregateLoadStore() { return false; }
   static bool lowerModeOptLevel() { return false; }
