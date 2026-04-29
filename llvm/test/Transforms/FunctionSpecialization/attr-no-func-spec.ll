@@ -3,7 +3,7 @@
 
 ; Check the attribute "no-func-spec" blocks function specialization. 'do_spec'
 ; gets specialized but 'no_spec' which is identical except for the attribute
-; shouldn't (--implicit-check-not) .
+; shouldn't (--implicit-check-not).
 
 ; CHECK: %call = tail call i32 @do_spec.specialized.1(i32 noundef 0)
 ; CHECK: define internal i32 @do_spec.specialized.1(i32 noundef %a)
