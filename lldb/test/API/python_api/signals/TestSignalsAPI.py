@@ -10,6 +10,7 @@ from lldbsuite.test import lldbutil
 from lldbsuite.test.lldbutil import get_stopped_thread, state_type_to_str
 
 
+@skipIfNoSignals
 class SignalsAPITestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
