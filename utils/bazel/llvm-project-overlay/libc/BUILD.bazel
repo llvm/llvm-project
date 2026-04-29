@@ -2258,6 +2258,16 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_threads_identifier",
+    hdrs = ["src/__support/threads/identifier.h"],
+    deps = [
+        ":__support_macros_optimization",
+        ":__support_osutil_syscall",
+        ":types_pid_t",
+    ],
+)
+
+libc_support_library(
     name = "__support_threads_mutex_common",
     hdrs = ["src/__support/threads/mutex_common.h"],
     deps = [":__support_macros_config"],
@@ -2271,12 +2281,16 @@ libc_support_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
+        ":__support_cpp_atomic",
         ":__support_cpp_optional",
         ":__support_libc_assert",
         ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_threads_identifier",
         ":__support_threads_mutex_common",
         ":__support_threads_raw_mutex",
         ":types_pid_t",
+        ":types_size_t",
     ],
 )
 
