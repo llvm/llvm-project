@@ -238,8 +238,7 @@ void AMDGPUAsmPrinter::emitFunctionBodyStart() {
 static const MCExpr *setBits(const MCExpr *Dst, const MCExpr *Value,
                              uint32_t Mask, uint32_t Shift, MCContext &Ctx) {
   const auto *Shft = MCConstantExpr::create(Shift, Ctx);
-  const auto *Msk = MCConstantExpr::create(Mask, Ctx);
-  Dst = MCBinaryExpr::createAnd(Dst, MCUnaryExpr::createNot(Msk, Ctx), Ctx);
+  Dst = MCBinaryExpr::createAnd(Dst, MCConstantExpr::create(~Mask, Ctx), Ctx);
   Dst = MCBinaryExpr::createOr(Dst, MCBinaryExpr::createShl(Value, Shft, Ctx),
                                Ctx);
   return Dst;
