@@ -20,7 +20,6 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/Utils.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
-#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
 #include <cstdint>
@@ -236,7 +235,7 @@ public:
 
 class UseFact : public Fact {
   const Expr *UseExpr;
-  const OriginList *OList;
+  const OriginNode *ONode;
   // True if this use is a write operation (e.g., left-hand side of assignment).
   // Write operations are exempted from use-after-free checks.
   bool IsWritten = false;
@@ -244,11 +243,11 @@ class UseFact : public Fact {
 public:
   static bool classof(const Fact *F) { return F->getKind() == Kind::Use; }
 
-  UseFact(const Expr *UseExpr, const OriginList *OList)
-      : Fact(Kind::Use), UseExpr(UseExpr), OList(OList) {}
+  UseFact(const Expr *UseExpr, const OriginNode *ONode)
+      : Fact(Kind::Use), UseExpr(UseExpr), ONode(ONode) {}
 
-  const OriginList *getUsedOrigins() const { return OList; }
-  void setUsedOrigins(const OriginList *NewList) { OList = NewList; }
+  const OriginNode *getUsedOrigins() const { return ONode; }
+  void setUsedOrigins(const OriginNode *NewONode) { ONode = NewONode; }
   const Expr *getUseExpr() const { return UseExpr; }
   void markAsWritten() { IsWritten = true; }
   bool isWritten() const { return IsWritten; }

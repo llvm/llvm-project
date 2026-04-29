@@ -36,7 +36,7 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, OriginID ID) {
 ///
 /// Each Origin corresponds to a single level of indirection. For complex types
 /// with multiple levels of indirection (e.g., `int**`), multiple Origins are
-/// organized into an OriginList structure (see below).
+/// organized into a tree structure (see below).
 struct Origin {
   OriginID ID;
   /// A pointer to the AST node that this origin represents. This union
@@ -92,30 +92,40 @@ struct Origin {
 ///
 /// The list structure enables the analysis to track how loans flow through
 /// different levels of indirection when assignments and dereferences occur.
-class OriginList {
+///
+/// TODO: Currently list-shaped (each node has at most one pointee child).
+/// Will become tree-shaped once field children are added to support
+/// origin trees for records whose fields have origins.
+class OriginNode {
 public:
-  OriginList(OriginID OID) : OuterOID(OID) {}
+  OriginNode(OriginID OID) : OID(OID) {}
 
-  OriginList *peelOuterOrigin() const { return InnerList; }
-  OriginID getOuterOriginID() const { return OuterOID; }
+  OriginNode *getPointeeChild() const {
+    return Children.empty() ? nullptr : Children[0];
+  }
 
-  void setInnerOriginList(OriginList *Inner) { InnerList = Inner; }
+  OriginID getOriginID() const { return OID; }
 
-  // Used for assertion checks only (to ensure origin lists have matching
+  void setChildren(llvm::ArrayRef<OriginNode *> NewChildren) {
+    assert(Children.empty() && "children must be set at most once");
+    Children = NewChildren;
+  }
+
+  // Used for assertion checks only (to ensure pointee chains have matching
   // lengths).
   size_t getLength() const {
     size_t Length = 1;
-    const OriginList *T = this;
-    while (T->InnerList) {
-      T = T->InnerList;
+    const OriginNode *T = this;
+    while (auto *ON = T->getPointeeChild()) {
+      T = ON;
       Length++;
     }
     return Length;
   }
 
 private:
-  OriginID OuterOID;
-  OriginList *InnerList = nullptr;
+  OriginID OID;
+  llvm::ArrayRef<OriginNode *> Children;
 };
 
 bool doesDeclHaveStorage(const ValueDecl *D);
@@ -126,31 +136,31 @@ class OriginManager {
 public:
   explicit OriginManager(const AnalysisDeclContext &AC);
 
-  /// Gets or creates the OriginList for a given ValueDecl.
+  /// Gets or creates the OriginNode for a given ValueDecl.
   ///
   /// Creates a list structure mirroring the levels of indirection in the
   /// declaration's type (e.g., `int** p` creates list of size 2).
   ///
-  /// \returns The OriginList, or nullptr if the type is not pointer-like.
-  OriginList *getOrCreateList(const ValueDecl *D);
+  /// \returns The OriginNode, or nullptr if the type is not pointer-like.
+  OriginNode *getOrCreateNode(const ValueDecl *D);
 
-  /// Gets or creates the OriginList for a given Expr.
+  /// Gets or creates the OriginNode for a given Expr.
   ///
   /// Creates a list based on the expression's type and value category:
   /// - Lvalues get an implicit reference level (modeling addressability)
   /// - Rvalues of non-pointer type return nullptr (no trackable origin)
   /// - DeclRefExpr may reuse the underlying declaration's list
   ///
-  /// \returns The OriginList, or nullptr for non-pointer rvalues.
-  OriginList *getOrCreateList(const Expr *E);
+  /// \returns The OriginNode, or nullptr for non-pointer rvalues.
+  OriginNode *getOrCreateNode(const Expr *E);
 
-  /// Wraps an existing OriginID in a new single-element OriginList, so a fact
-  /// can refer to a single level of an existing OriginList.
-  OriginList *createSingleOriginList(OriginID OID);
+  /// Wraps an existing OriginID in a new single-element OriginNode, so a fact
+  /// can refer to a single level of an existing OriginNode.
+  OriginNode *createSingleOriginNode(OriginID OID);
 
-  /// Returns the OriginList for the implicit 'this' parameter if the current
+  /// Returns the OriginNode for the implicit 'this' parameter if the current
   /// declaration is an instance method.
-  std::optional<OriginList *> getThisOrigins() const { return ThisOrigins; }
+  std::optional<OriginNode *> getThisOrigins() const { return ThisOrigins; }
 
   const Origin &getOrigin(OriginID ID) const;
 
@@ -169,11 +179,13 @@ public:
 private:
   OriginID getNextOriginID() { return NextOriginID++; }
 
-  OriginList *createNode(const ValueDecl *D, QualType QT);
-  OriginList *createNode(const Expr *E, QualType QT);
+  OriginNode *createNode(const ValueDecl *D, QualType QT);
+  OriginNode *createNode(const Expr *E, QualType QT);
+
+  void attachPointeeChild(OriginNode *Parent, OriginNode *Pointee);
 
   template <typename T>
-  OriginList *buildListForType(QualType QT, const T *Node);
+  OriginNode *buildNodeForType(QualType QT, const T *Node);
 
   void initializeThisOrigins(const Decl *D);
 
@@ -188,10 +200,10 @@ private:
   /// TODO(opt): Profile and evaluate the usefulness of small buffer
   /// optimisation.
   llvm::SmallVector<Origin> AllOrigins;
-  llvm::BumpPtrAllocator ListAllocator;
-  llvm::DenseMap<const clang::ValueDecl *, OriginList *> DeclToList;
-  llvm::DenseMap<const clang::Expr *, OriginList *> ExprToList;
-  std::optional<OriginList *> ThisOrigins;
+  llvm::BumpPtrAllocator Allocator;
+  llvm::DenseMap<const clang::ValueDecl *, OriginNode *> DeclToNode;
+  llvm::DenseMap<const clang::Expr *, OriginNode *> ExprToNode;
+  std::optional<OriginNode *> ThisOrigins;
   /// Types that are not inherently pointer-like but require origin tracking
   /// because of lifetime annotations (currently [[clang::lifetimebound]]) on
   /// functions that return them.

@@ -57,13 +57,13 @@ public:
   void VisitCXXDeleteExpr(const CXXDeleteExpr *DE);
 
 private:
-  OriginList *getOriginsList(const ValueDecl &D);
-  OriginList *getOriginsList(const Expr &E);
+  OriginNode *getOriginNode(const ValueDecl &D);
+  OriginNode *getOriginNode(const Expr &E);
 
   bool hasOrigins(QualType QT) const;
   bool hasOrigins(const Expr *E) const;
 
-  void flow(OriginList *Dst, OriginList *Src, bool Kill);
+  void flow(OriginNode *Dst, OriginNode *Src, bool Kill);
 
   /// Handles assignment for both BinaryOperator and CXXOperatorCallExpr.
   ///
@@ -76,7 +76,7 @@ private:
 
   void handlePointerArithmetic(const BinaryOperator *BO);
 
-  void handlePlacementNew(const CXXNewExpr *NE, OriginList *NewList);
+  void handlePlacementNew(const CXXNewExpr *NE, OriginNode *NewNode);
 
   void handleCXXCtorInitializer(const CXXCtorInitializer *CII);
 
@@ -124,12 +124,12 @@ private:
 
   template <typename Destination, typename Source>
   void flowOrigin(const Destination &D, const Source &S) {
-    flow(getOriginsList(D), getOriginsList(S), /*Kill=*/false);
+    flow(getOriginNode(D), getOriginNode(S), /*Kill=*/false);
   }
 
   template <typename Destination, typename Source>
   void killAndFlowOrigin(const Destination &D, const Source &S) {
-    flow(getOriginsList(D), getOriginsList(S), /*Kill=*/true);
+    flow(getOriginNode(D), getOriginNode(S), /*Kill=*/true);
   }
 
   /// Checks if the expression is a `void("__lifetime_test_point_...")` cast.

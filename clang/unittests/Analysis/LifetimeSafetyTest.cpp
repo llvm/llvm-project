@@ -108,14 +108,14 @@ public:
     // This assumes the OriginManager's `get` can find an existing origin.
     // We might need a `find` method on OriginManager to avoid `getOrCreate`
     // logic in a const-query context if that becomes an issue.
-    OriginList *List =
+    OriginNode *List =
         const_cast<OriginManager &>(Analysis.getFactManager().getOriginMgr())
-            .getOrCreateList(VD);
+            .getOrCreateNode(VD);
     if (!List) {
       ADD_FAILURE() << "No origin list found for Var '" << VarName << "'";
       return std::nullopt;
     }
-    return List->getOuterOriginID();
+    return List->getOriginID();
   }
 
   std::vector<LoanID> getLoansForVar(llvm::StringRef VarName) {
