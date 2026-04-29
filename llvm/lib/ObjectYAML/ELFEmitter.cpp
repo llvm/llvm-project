@@ -436,7 +436,7 @@ ELFState<ELFT>::ELFState(ELFYAML::Object &D, yaml::ErrorHandler EH)
   // are real sections, .strtab is still needed even with NoHeaders.
   // Also check that all program headers use Content (not section references),
   // there are no symbols, and no DWARF data that would need sections.
-  bool AllPhdrsUseContent =
+  bool AllPhdrsHaveContent =
       !Doc.ProgramHeaders.empty() &&
       llvm::all_of(Doc.ProgramHeaders, [](const ELFYAML::ProgramHeader &PH) {
         return PH.Content.has_value() || (!PH.FirstSec && !PH.LastSec);
@@ -445,7 +445,7 @@ ELFState<ELFT>::ELFState(ELFYAML::Object &D, yaml::ErrorHandler EH)
       !HasRealSections && !Doc.Symbols && !Doc.DynamicSymbols && !Doc.DWARF;
   bool SuppressImplicitSections =
       NoSectionDataNeeded &&
-      (AllPhdrsUseContent ||
+      (AllPhdrsHaveContent ||
        (SecHdrTable && SecHdrTable->NoHeaders.value_or(false)));
   if (!SuppressImplicitSections) {
     // TODO: Only create the .strtab here if any symbols have been requested.
