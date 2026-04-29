@@ -126,7 +126,7 @@ PointerFlowMatcher::addEdges(Expected<EntityPointerLevelSet> &&LHS,
 ///                            ctor's body will be visited separately.
 /// XF(T var = e)           := XF(Var = e)
 /// XF(T var = init-list)   := see \ref
-///                            PointerAssignmentMatcher::matchInitializerList
+///                            PointerFlowMatcher::matchInitializerList
 llvm::Error PointerFlowMatcher::matches(const DynTypedNode &DynNode,
                                         const NamedDecl *RootDecl) {
   if (const Stmt *S = DynNode.get<Stmt>())
