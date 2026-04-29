@@ -53285,28 +53285,49 @@ static SDValue combineOrWithGF2P8AFFINEQB(SDNode *N, const SDLoc &DL,
   using namespace SDPatternMatch;
   assert(N->getOpcode() == ISD::OR && "Expected OR node");
 
-  if (!N->getFlags().hasDisjoint() &&
-      !DAG.haveNoCommonBitsSet(N->getOperand(0), N->getOperand(1)))
+  SDValue LHS = N->getOperand(0), RHS = N->getOperand(1);
+
+  SDValue X, Matrix, SplatOp;
+  APInt Imm;
+  if (!sd_match(N, m_Or(m_OneUse(m_TernaryOp(X86ISD::GF2P8AFFINEQB, m_Value(X),
+                                             m_Value(Matrix), m_ConstInt(Imm))),
+                        m_Value(SplatOp))))
     return SDValue();
 
-  SDValue X, Y, SplatOp;
-  APInt Imm, SplatVal;
+  APInt SplatVal;
+  if (!X86::isConstantSplat(SplatOp, SplatVal, /*AllowPartialUndefs=*/false))
+    return SDValue();
 
-  // Fold: (GF2P8AFFINEQB(X, Y, Imm) or_disjoint SplatVal)
-  //     -> GF2P8AFFINEQB(X, Y, Imm ^ SplatVal)
-  // When OR is disjoint (no common bits), the splat constant can be folded
-  //  directly into the GF2P8AFFINEQB immediate via XOR.
-
-  if (sd_match(N, m_Or(m_OneUse(m_TernaryOp(X86ISD::GF2P8AFFINEQB, m_Value(X),
-                                            m_Value(Y), m_ConstInt(Imm))),
-                       m_Value(SplatOp))) &&
-      X86::isConstantSplat(SplatOp, SplatVal, /*AllowPartialUndefs=*/false)) {
+  if (N->getFlags().hasDisjoint() || DAG.haveNoCommonBitsSet(LHS, RHS)) {
+    // Fold: (GF2P8AFFINEQB(X, Matrix, Imm) or_disjoint SplatVal)
+    //     -> GF2P8AFFINEQB(X, Matrix, Imm ^ SplatVal)
+    // When OR is disjoint (no common bits), the splat constant can be folded
+    // directly into the GF2P8AFFINEQB immediate via XOR.
     uint64_t NewImm = (Imm.getZExtValue() ^ SplatVal.getZExtValue()) & 0xFF;
-    return DAG.getNode(X86ISD::GF2P8AFFINEQB, DL, VT, X, Y,
+    return DAG.getNode(X86ISD::GF2P8AFFINEQB, DL, VT, X, Matrix,
                        DAG.getTargetConstant(NewImm, DL, MVT::i8));
   }
 
-  return SDValue();
+  APInt UndefElts;
+  SmallVector<APInt, 16> OldMatrix;
+  if (!getTargetConstantBitsFromNode(Matrix, 8, UndefElts, OldMatrix,
+                                     /*AllowWholeUndefs=*/false,
+                                     /*AllowPartialUndefs=*/false))
+    return SDValue();
+
+  uint8_t Mask8 = SplatVal.getZExtValue() & 0xFF;
+  uint8_t NewImm = Imm.getZExtValue() | Mask8;
+  SmallVector<SDValue, 64> MaskOps;
+  for (unsigned I = 0, E = VT.getVectorNumElements(); I != E; ++I) {
+    unsigned OutBit = 7 - (I & 7);
+    uint8_t Keep = ((Mask8 >> OutBit) & 1) ? 0x00 : 0xFF;
+    MaskOps.push_back(DAG.getConstant(Keep, DL, MVT::i8));
+  }
+
+  SDValue KeepMask = DAG.getBuildVector(VT, DL, MaskOps);
+  SDValue NewMatrix = DAG.getNode(ISD::AND, DL, VT, Matrix, KeepMask);
+  return DAG.getNode(X86ISD::GF2P8AFFINEQB, DL, VT, X, NewMatrix,
+                     DAG.getTargetConstant(NewImm, DL, MVT::i8));
 }
 
 static SDValue combineOrXorWithSETCC(unsigned Opc, const SDLoc &DL, EVT VT,
@@ -53514,6 +53535,9 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
   }
 
   if (SDValue R = combineOrXorWithSETCC(N->getOpcode(), dl, VT, N0, N1, DAG))
+    return R;
+
+  if (SDValue R = combineOrWithGF2P8AFFINEQB(N, dl, DAG, VT))
     return R;
 
   return SDValue();
