@@ -1764,6 +1764,16 @@ mlir::Attribute ConstantEmitter::emitForMemory(CIRGenModule &cgm,
     cgm.errorNYI("emitForMemory: tail padding in atomic initializer");
   }
 
+  // In HLSL bool vectors are stored in memory as a vector of i32
+  if (destType->isExtVectorBoolType() &&
+      !destType->isPackedVectorBoolType(cgm.getASTContext())) {
+    cgm.errorNYI("emitForMemory: zero-extend HLSL bool vectors");
+  }
+
+  if (destType->isBitIntType()) {
+    cgm.errorNYI("emitForMemory: _BitInt type");
+  }
+
   return c;
 }
 
