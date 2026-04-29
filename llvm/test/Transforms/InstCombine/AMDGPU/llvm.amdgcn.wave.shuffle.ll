@@ -35,12 +35,12 @@ define i32 @test_wave_shuffle_self_select(i32 %val) {
 define i32 @test_wave_shuffle_dpp_row_share_0(i32 %val) {
 ; CHECK-W32-LABEL: define i32 @test_wave_shuffle_dpp_row_share_0(
 ; CHECK-W32-SAME: i32 [[VAL:%.*]]) #[[ATTR0]] {
-; CHECK-W32-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL]], i32 336, i32 15, i32 15, i1 false)
+; CHECK-W32-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL]], i32 336, i32 15, i32 15, i1 true)
 ; CHECK-W32-NEXT:    ret i32 [[RES]]
 ;
 ; CHECK-W64-LABEL: define i32 @test_wave_shuffle_dpp_row_share_0(
 ; CHECK-W64-SAME: i32 [[VAL:%.*]]) #[[ATTR0]] {
-; CHECK-W64-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL]], i32 336, i32 15, i32 15, i1 false)
+; CHECK-W64-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL]], i32 336, i32 15, i32 15, i1 true)
 ; CHECK-W64-NEXT:    ret i32 [[RES]]
 ;
 ; CHECK-NO-WAVE-SIZE-LABEL: define i32 @test_wave_shuffle_dpp_row_share_0(
@@ -62,12 +62,12 @@ define i32 @test_wave_shuffle_dpp_row_share_0(i32 %val) {
 define i32 @test_wave_shuffle_dpp_row_share_0_no_or(i32 %val) {
 ; CHECK-W32-LABEL: define i32 @test_wave_shuffle_dpp_row_share_0_no_or(
 ; CHECK-W32-SAME: i32 [[VAL:%.*]]) #[[ATTR0]] {
-; CHECK-W32-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL]], i32 336, i32 15, i32 15, i1 false)
+; CHECK-W32-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL]], i32 336, i32 15, i32 15, i1 true)
 ; CHECK-W32-NEXT:    ret i32 [[RES]]
 ;
 ; CHECK-W64-LABEL: define i32 @test_wave_shuffle_dpp_row_share_0_no_or(
 ; CHECK-W64-SAME: i32 [[VAL:%.*]]) #[[ATTR0]] {
-; CHECK-W64-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL]], i32 336, i32 15, i32 15, i1 false)
+; CHECK-W64-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL]], i32 336, i32 15, i32 15, i1 true)
 ; CHECK-W64-NEXT:    ret i32 [[RES]]
 ;
 ; CHECK-NO-WAVE-SIZE-LABEL: define i32 @test_wave_shuffle_dpp_row_share_0_no_or(
@@ -88,12 +88,12 @@ define i32 @test_wave_shuffle_dpp_row_share_0_no_or(i32 %val) {
 define i32 @test_wave_shuffle_dpp_row_share_7(i32 %val) {
 ; CHECK-W32-LABEL: define i32 @test_wave_shuffle_dpp_row_share_7(
 ; CHECK-W32-SAME: i32 [[VAL:%.*]]) #[[ATTR0]] {
-; CHECK-W32-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL]], i32 343, i32 15, i32 15, i1 false)
+; CHECK-W32-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL]], i32 343, i32 15, i32 15, i1 true)
 ; CHECK-W32-NEXT:    ret i32 [[RES]]
 ;
 ; CHECK-W64-LABEL: define i32 @test_wave_shuffle_dpp_row_share_7(
 ; CHECK-W64-SAME: i32 [[VAL:%.*]]) #[[ATTR0]] {
-; CHECK-W64-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL]], i32 343, i32 15, i32 15, i1 false)
+; CHECK-W64-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL]], i32 343, i32 15, i32 15, i1 true)
 ; CHECK-W64-NEXT:    ret i32 [[RES]]
 ;
 ; CHECK-NO-WAVE-SIZE-LABEL: define i32 @test_wave_shuffle_dpp_row_share_7(
@@ -145,7 +145,7 @@ define i32 @test_wave_shuffle_dpp_row_share_7_no_mask(i32 %val) {
 define i32 @test_wave_shuffle_dpp_row_share_7_lo_only(i32 %val) {
 ; CHECK-W32-LABEL: define i32 @test_wave_shuffle_dpp_row_share_7_lo_only(
 ; CHECK-W32-SAME: i32 [[VAL:%.*]]) #[[ATTR0]] {
-; CHECK-W32-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL]], i32 343, i32 15, i32 15, i1 false)
+; CHECK-W32-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL]], i32 343, i32 15, i32 15, i1 true)
 ; CHECK-W32-NEXT:    ret i32 [[RES]]
 ;
 ; CHECK-W64-LABEL: define i32 @test_wave_shuffle_dpp_row_share_7_lo_only(
@@ -177,7 +177,7 @@ define i32 @test_wave_shuffle_dpp_row_share_7_lo_only(i32 %val) {
 define i32 @test_wave_shuffle_dpp_row_share_w32_mask(i32 %val) {
 ; CHECK-W32-LABEL: define i32 @test_wave_shuffle_dpp_row_share_w32_mask(
 ; CHECK-W32-SAME: i32 [[VAL:%.*]]) #[[ATTR0]] {
-; CHECK-W32-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL]], i32 343, i32 15, i32 15, i1 false)
+; CHECK-W32-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL]], i32 343, i32 15, i32 15, i1 true)
 ; CHECK-W32-NEXT:    ret i32 [[RES]]
 ;
 ; CHECK-W64-LABEL: define i32 @test_wave_shuffle_dpp_row_share_w32_mask(

@@ -575,70 +575,6 @@ static bool isThreadID(const GCNSubtarget &ST, Value *V) {
   return false;
 }
 
-// Attempt to capture situations where the index argument matches
-// a DPP pattern, and convert to a DPP-based mov
-static std::optional<Instruction *>
-tryWaveShuffleDPP(const GCNSubtarget &ST, InstCombiner &IC, IntrinsicInst &II) {
-  Value *Val = II.getArgOperand(0);
-  Value *Idx = II.getArgOperand(1);
-  auto &B = IC.Builder;
-
-  // DPP16 Row Share requires known wave size, architecture support
-  if (!ST.isWaveSizeKnown() || !ST.hasDPPRowShare())
-    return std::nullopt;
-
-  Value *Tid;
-  uint64_t Mask;
-  uint64_t RowIdx;
-  bool CanDPP16RowShare = false;
-
-  // wave32 requires Mask & 0x1F == 0x10
-  // wave64 requires Mask & 0x3F == 0x30
-  uint64_t MaskCheck = (1UL << ST.getWavefrontSizeLog2()) - 1;
-  uint64_t MaskTarget = MaskCheck & 0xF0;
-
-  // DPP16 Row Share 0: Idx = Tid & Mask
-  auto RowShare0Pred = m_And(m_Value(Tid), m_ConstantInt(Mask));
-
-  // DPP16 Row Share (0 < Row < 15): Idx = (Tid & Mask) | RowIdx
-  auto RowSharePred =
-      m_Or(m_And(m_Value(Tid), m_ConstantInt(Mask)), m_ConstantInt(RowIdx));
-
-  // DPP16 Row Share 15: Idx = Tid | 0xF
-  auto RowShare15Pred = m_Or(m_Value(Tid), m_ConstantInt<0xF>());
-
-  if (match(Idx, RowShare0Pred) && isThreadID(ST, Tid)) {
-    if ((Mask & MaskCheck) != MaskTarget)
-      return std::nullopt;
-
-    RowIdx = 0;
-    CanDPP16RowShare = true;
-  } else if (match(Idx, RowSharePred) && isThreadID(ST, Tid) && RowIdx < 15 &&
-             RowIdx > 0) {
-    if ((Mask & MaskCheck) != MaskTarget)
-      return std::nullopt;
-
-    CanDPP16RowShare = true;
-  } else if (match(Idx, RowShare15Pred) && isThreadID(ST, Tid)) {
-    RowIdx = 15;
-    CanDPP16RowShare = true;
-  }
-
-  if (CanDPP16RowShare) {
-    CallInst *UpdateDPP =
-        B.CreateIntrinsic(Intrinsic::amdgcn_update_dpp, Val->getType(),
-                          {PoisonValue::get(Val->getType()), Val,
-                           B.getInt32(AMDGPU::DPP::ROW_SHARE0 | RowIdx),
-                           B.getInt32(0xF), B.getInt32(0xF), B.getFalse()});
-    UpdateDPP->takeName(&II);
-    UpdateDPP->copyMetadata(II);
-    return IC.replaceInstUsesWith(II, UpdateDPP);
-  }
-
-  // No valid DPP detected
-  return std::nullopt;
-}
-
 Instruction *
 GCNTTIImpl::hoistLaneIntrinsicThroughOperand(InstCombiner &IC,
                                              IntrinsicInst &II) const {
@@ -770,14 +706,23 @@ static bool tryBuildShuffleMap(Value *Index, const GCNSubtarget &ST,
   return true;
 }
 
+/// Lanes are partitioned into groups of Period; each group is a translated
+/// copy of the first: Ids[i] = Ids[i % Period] + (i & ~(Period - 1)).
+template <unsigned Period>
+static bool hasPeriodicLayout(ArrayRef<uint8_t> Ids) {
+  static_assert(Period > 0 && (Period & (Period - 1)) == 0,
+                "Period must be a power of two");
+  for (unsigned i = Period, E = Ids.size(); i < E; ++i)
+    if (Ids[i] != Ids[i % Period] + (i & ~(Period - 1)))
+      return false;
+  return true;
+}
+
 template <unsigned N> static bool isRowPattern(ArrayRef<uint8_t> Ids) {
   for (unsigned i = 0; i < N; ++i)
     if (Ids[i] >= N)
       return false;
-  for (unsigned i = N, E = Ids.size(); i < E; ++i)
-    if (Ids[i] != Ids[i % N] + (i & ~(N - 1)))
-      return false;
-  return true;
+  return hasPeriodicLayout<N>(Ids);
 }
 
 static constexpr auto isQuadPattern = isRowPattern<4>;
@@ -875,6 +820,19 @@ static bool matchHalfWaveSwapPattern(ArrayRef<uint8_t> Ids) {
   return true;
 }
 
+// Detects a cross-row shuffle pattern suitable for v_permlanex16
+static bool isCrossRowPattern(ArrayRef<uint8_t> Ids) {
+  if (Ids.size() < 32 || !hasPeriodicLayout<32>(Ids))
+    return false;
+  for (unsigned j = 0; j < 16; ++j) {
+    if (Ids[j] < 16 || Ids[j] >= 32)
+      return false;
+    if (Ids[j + 16] != Ids[j] - 16)
+      return false;
+  }
+  return true;
+}
+
 static Value *createUpdateDpp(IRBuilderBase &B, Value *Val, unsigned Ctrl) {
   Type *Ty = Val->getType();
   return B.CreateIntrinsic(Intrinsic::amdgcn_update_dpp, {Ty},
@@ -891,6 +849,14 @@ static Value *createPermlane16(IRBuilderBase &B, Value *Val, uint32_t Lo,
                                uint32_t Hi) {
   Type *Ty = Val->getType();
   return B.CreateIntrinsic(Intrinsic::amdgcn_permlane16, {Ty},
+                           {PoisonValue::get(Ty), Val, B.getInt32(Lo),
+                            B.getInt32(Hi), B.getFalse(), B.getFalse()});
+}
+
+static Value *createPermlaneX16(IRBuilderBase &B, Value *Val, uint32_t Lo,
+                                uint32_t Hi) {
+  Type *Ty = Val->getType();
+  return B.CreateIntrinsic(Intrinsic::amdgcn_permlanex16, {Ty},
                            {PoisonValue::get(Ty), Val, B.getInt32(Lo),
                             B.getInt32(Hi), B.getFalse(), B.getFalse()});
 }
@@ -940,9 +906,13 @@ static Value *matchShuffleToHWIntrinsic(IRBuilderBase &B, Value *Src,
       return createUpdateDpp(B, Src, AMDGPU::DPP::ROW_ROR_FIRST + *Amt - 1);
   }
 
-  if (ST.hasDPP() && ST.hasGFX10Insts()) {
+  // row_share is supported on GFX90A and GFX10+; row_xmask is GFX10+ only.
+  if (ST.hasDPPRowShare()) {
     if (std::optional<unsigned> Lane = matchRowSharePattern(Ids))
       return createUpdateDpp(B, Src, AMDGPU::DPP::ROW_SHARE_FIRST + *Lane);
+  }
+
+  if (ST.hasDPP() && ST.hasGFX10Insts()) {
     if (std::optional<unsigned> Mask = matchRowXMaskPattern(Ids))
       return createUpdateDpp(B, Src, AMDGPU::DPP::ROW_XMASK_FIRST + *Mask);
   }
@@ -952,9 +922,16 @@ static Value *matchShuffleToHWIntrinsic(IRBuilderBase &B, Value *Src,
       return createMovDpp8(B, Src, *Sel);
   }
 
-  if (ST.hasPermLaneX16() && isFullRowPattern(Ids)) {
-    auto [Lo, Hi] = computePermlane16Masks(Ids);
-    return createPermlane16(B, Src, Lo, Hi);
+  if (ST.hasPermLaneX16()) {
+    if (isFullRowPattern(Ids)) {
+      auto [Lo, Hi] = computePermlane16Masks(Ids);
+      return createPermlane16(B, Src, Lo, Hi);
+    }
+    // Cross-row shuffles (e.g. XOR 16..31) — covered by permlanex16.
+    if (isCrossRowPattern(Ids)) {
+      auto [Lo, Hi] = computePermlane16Masks(Ids);
+      return createPermlaneX16(B, Src, Lo, Hi);
+    }
   }
 
   // DS_SWIZZLE bitmask-mode fallback for targets without DPP8/permlane16.
@@ -1846,12 +1823,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     return IC.replaceOperand(II, 0, PoisonValue::get(VDstIn->getType()));
   }
-  case Intrinsic::amdgcn_wave_shuffle: {
-    if (ST->hasDPP())
-      if (std::optional<Instruction *> R = tryWaveShuffleDPP(*ST, IC, II))
-        return R;
+  case Intrinsic::amdgcn_wave_shuffle:
     return tryOptimizeShufflePattern(IC, II, *ST);
-  }
   case Intrinsic::amdgcn_permlane64:
   case Intrinsic::amdgcn_readfirstlane:
   case Intrinsic::amdgcn_readlane:
