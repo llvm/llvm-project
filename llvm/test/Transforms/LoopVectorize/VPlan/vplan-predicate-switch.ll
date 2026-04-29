@@ -17,7 +17,7 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK-NEXT:  vector.ph:
 ; CHECK-NEXT:    EMIT vp<%n.mod.vf> = urem ir<%0>, ir<2>
 ; CHECK-NEXT:    EMIT vp<%n.vec> = sub ir<%0>, vp<%n.mod.vf>
-; CHECK-NEXT:    vp<[[VP3:%[0-9]+]]> = DERIVED-IV ir<%start> + vp<%n.vec> * ir<1>
+; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = ptradd ir<%start>, vp<%n.vec>
 ; CHECK-NEXT:  Successor(s): vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.body:

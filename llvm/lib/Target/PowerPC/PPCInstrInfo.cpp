@@ -3023,10 +3023,7 @@ unsigned PPCInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   case TargetOpcode::PATCHABLE_FUNCTION_ENTER: {
     const MachineFunction *MF = MI.getParent()->getParent();
     const Function &F = MF->getFunction();
-    unsigned Num = 0;
-    (void)F.getFnAttribute("patchable-function-entry")
-        .getValueAsString()
-        .getAsInteger(10, Num);
+    unsigned Num = F.getFnAttributeAsParsedInteger("patchable-function-entry");
     if (Num || MF->getTarget().getTargetTriple().isOSAIX() ||
         !MF->getTarget().getTargetTriple().isLittleEndian())
       return Num * 4;

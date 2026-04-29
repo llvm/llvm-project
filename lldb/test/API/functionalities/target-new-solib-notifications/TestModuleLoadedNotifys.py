@@ -9,6 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfTargetDoesNotSupportSharedLibraries()
 @skipUnlessPlatform(["linux"] + lldbplatformutil.getDarwinOSTriples())
 class ModuleLoadedNotifysTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
