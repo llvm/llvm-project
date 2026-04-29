@@ -16498,11 +16498,11 @@ SDValue DAGCombiner::reduceLoadWidth(SDNode *N) {
   if (FreezeNode) {
     Result = DAG.getNode(ISD::FREEZE, DL, VT, Result);
     if (ExtType == ISD::ZEXTLOAD)
-      Result = DAG.getNode(ISD::AssertZext, DL, VT, Result,
-                           DAG.getValueType(ExtVT));
+      Result =
+          DAG.getNode(ISD::AssertZext, DL, VT, Result, DAG.getValueType(ExtVT));
     else if (ExtType == ISD::SEXTLOAD)
-      Result = DAG.getNode(ISD::AssertSext, DL, VT, Result,
-                           DAG.getValueType(ExtVT));
+      Result =
+          DAG.getNode(ISD::AssertSext, DL, VT, Result, DAG.getValueType(ExtVT));
   }
 
   // Shift the result left, if we've swallowed a left shift.
