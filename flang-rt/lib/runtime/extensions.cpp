@@ -416,17 +416,16 @@ double RTNAME(Dsecnds)(double *refTime, const char *sourceFile, int line) {
 std::int64_t RTNAME(time)() { return time(nullptr); }
 
 // Extension function TIMEF().
-// By default, it returns number of seconds that have
-// elapsed since the first time TIMEF was called.
-// For the first call, it returns 0.
-// FLANG_TIMEF_IN_MILLISECONDS=1 sets the resolution to
-// milliseconds
+// By default, it returns number of seconds that have elapsed since the first
+// time TIMEF was called. For the first call, it returns 0.
+// FLANG_TIMEF_IN_MILLISECONDS=1 sets the resolution to milliseconds.
 double RTNAME(Timef)() {
 #ifndef _WIN32
   // posix-compliant
-  static clock_t start = (clock_t)-1;
+  static clock_t start = static_cast<clock_t>(-1);
   static long ticks_per_sec = 0;
   static Lock timef_lock;
+  static bool isInit{false};
 
   struct tms b;
   clock_t current;
@@ -445,7 +444,8 @@ double RTNAME(Timef)() {
 
     current = b.tms_utime + b.tms_stime;
 
-    if (start == static_cast<clock_t>(-1)) {
+    if (!isInit) {
+      isInit = true;
       start = current;
       return 0.0;
     }

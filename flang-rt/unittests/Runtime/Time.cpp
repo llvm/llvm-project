@@ -38,11 +38,11 @@ TEST(TimeIntrinsics, Timef) {
   double start{RTNAME(Timef)()}, end{0.0};
   ASSERT_GE(start, 0.0);
 
-  // Loop until we get a different value from CpuTime. If we don't get one
+  // Loop until we get a different value from Timef. If we don't get one
   // before we time out, then we should probably look into an implementation
-  // for CpuTime with a better timer resolution.
+  // for Timef with a better timer resolution.
   // By default, this loop should burn for 1 second.
-  for (double end = start; end == start; end = RTNAME(Timef)()) {
+  for (end = start; end == start; end = RTNAME(Timef)()) {
     ASSERT_GE(end, 0.0);
     ASSERT_GE(end, start);
   }
