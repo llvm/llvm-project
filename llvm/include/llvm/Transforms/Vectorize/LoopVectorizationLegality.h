@@ -235,7 +235,7 @@ public:
       ExactFPMathInst = I;
   }
 
-  Instruction *getExactFPInst() { return ExactFPMathInst; }
+  Instruction *getExactFPInst() const { return ExactFPMathInst; }
 
 private:
   Instruction *ExactFPMathInst = nullptr;
@@ -320,7 +320,7 @@ public:
   void prepareToFoldTailByMasking();
 
   /// Returns the primary induction variable.
-  PHINode *getPrimaryInduction() { return PrimaryInduction; }
+  PHINode *getPrimaryInduction() const { return PrimaryInduction; }
 
   /// Returns the reduction variables found in the loop.
   const ReductionList &getReductionVars() const { return Reductions; }
@@ -340,7 +340,7 @@ public:
   RecurrenceSet &getFixedOrderRecurrences() { return FixedOrderRecurrences; }
 
   /// Returns the widest induction type.
-  IntegerType *getWidestInductionType() { return WidestIndTy; }
+  IntegerType *getWidestInductionType() const { return WidestIndTy; }
 
   /// Returns True if given store is a final invariant store of one of the
   /// reductions found in the loop.
