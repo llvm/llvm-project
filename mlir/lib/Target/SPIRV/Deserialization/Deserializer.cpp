@@ -439,7 +439,6 @@ LogicalResult spirv::Deserializer::resolveDeferredIdDecorations() {
 
     targetOp->setAttr(symbol, symRef);
   }
-  pendingIdDecorations.clear();
   return success();
 }
 
