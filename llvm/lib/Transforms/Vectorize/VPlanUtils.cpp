@@ -383,9 +383,16 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
   if (isa<VPIRValue, VPSymbolicValue, VPRegionValue>(VPV))
     return true;
 
-  if (auto *Rep = dyn_cast<VPReplicateRecipe>(VPV))
+  if (auto *Rep = dyn_cast<VPReplicateRecipe>(VPV)) {
+    const VPRegionBlock *RegionOfR = Rep->getRegion();
+    // Don't consider recipes in replicate regions as uniform yet; their first
+    // lane cannot be accessed when executing the replicate region for other
+    // lanes.
+    if (RegionOfR && RegionOfR->isReplicator())
+      return false;
     return Rep->isSingleScalar() || (preservesUniformity(Rep->getOpcode()) &&
                                      all_of(Rep->operands(), isSingleScalar));
+  }
   if (isa<VPWidenGEPRecipe, VPBlendRecipe>(VPV))
     return all_of(VPV->getDefiningRecipe()->operands(), isSingleScalar);
   if (auto *WidenR = dyn_cast<VPWidenRecipe>(VPV)) {
