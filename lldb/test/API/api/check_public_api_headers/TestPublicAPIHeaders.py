@@ -11,7 +11,7 @@ from lldbsuite.test import lldbutil
 @skipIfNoSBHeaders
 @skipIfRemote
 @skipUnlessDarwin
-@skipIf(archs=["arm64e"])
+@skipUnlessLLDBFrameworkArchMatches
 class SBDirCheckerCase(TestBase):
     SHARED_BUILD_TESTCASE = False
     NO_DEBUG_INFO_TESTCASE = True
