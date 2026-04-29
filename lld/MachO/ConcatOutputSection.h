@@ -79,9 +79,27 @@ public:
   }
 
 private:
-  uint64_t estimateBranchTargetThresholdVA(size_t callIdx) const;
-
   std::vector<ConcatInputSection *> thunks;
+  /// \return true if the target in \p r is in range from the location in \p
+  /// isec. If the target isec is not finalized, \return false.
+  bool isTargetKnownInRange(const ConcatInputSection &isec,
+                            const Relocation &r) const;
+  /// If there exists a thunk in range of the target in \p r, \return that
+  /// thunk.
+  Defined *getThunkInRange(const ConcatInputSection &isec,
+                           const Relocation &r) const;
+  /// Update \p r to target \p thunk which is guaranteed to be in range.
+  void updateBranchTargetToThunk(Relocation &r, Defined *thunk);
+  /// Create a new thunk and update \p r to target the new thunk.
+  void createThunk(const ConcatInputSection &isec, Relocation &r);
+  /// \return true if the target in \p r is in __stubs or __objc_stubs and in
+  /// range from the location in \p isec. \p estimatedStubsEnd is the estimated
+  /// VA of the end of the last stubs section.
+  bool isTargetStubsAndInRange(const ConcatInputSection &isec,
+                               const Relocation &r,
+                               uint64_t estimatedStubsEnd) const;
+  /// The number of relocations updated to point to thunks.
+  size_t thunkCallCount = 0;
 };
 
 // We maintain one ThunkInfo per real function.

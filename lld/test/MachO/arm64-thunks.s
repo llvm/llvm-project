@@ -69,6 +69,8 @@
 
 # CHECK: Disassembly of section __TEXT,__text:
 
+# CHECK: [[#%.13x, FOLD_LOW_PAGE:]][[#%.3x, FOLD_LOW_OFFSET:]] <_fold_func_low_addr>:
+
 # CHECK: [[#%.13x, A_PAGE:]][[#%.3x, A_OFFSET:]] <_a>:
 # CHECK:  bl 0x[[#%x, A:]] <_a>
 # CHECK:  bl 0x[[#%x, B:]] <_b>
@@ -168,7 +170,7 @@
 # CHECK:  bl 0x[[#%x, F]] <_f>
 # CHECK:  bl 0x[[#%x, G]] <_g>
 # CHECK:  bl 0x[[#%x, H]] <_h>
-# CHECK:  bl 0x[[#%x, STUBS:]]
+# CHECK:  bl 0x[[#%x, NAN:]]
 
 # CHECK: [[#%x, A_THUNK_0]] <_a.thunk.0>:
 # CHECK:  adrp x16, 0x[[#%x, A_PAGE]]000
@@ -187,7 +189,7 @@
 # CHECK:  bl 0x[[#%x, F]] <_f>
 # CHECK:  bl 0x[[#%x, G]] <_g>
 # CHECK:  bl 0x[[#%x, H]] <_h>
-# CHECK:  bl 0x[[#%x, STUBS]]
+# CHECK:  bl 0x[[#%x, NAN]]
 
 # CHECK: <_main>:
 # CHECK:  bl 0x[[#%x, A_THUNK_0]] <_a.thunk.0>
@@ -198,7 +200,14 @@
 # CHECK:  bl 0x[[#%x, F_THUNK_1:]] <_f.thunk.1>
 # CHECK:  bl 0x[[#%x, G]] <_g>
 # CHECK:  bl 0x[[#%x, H]] <_h>
-# CHECK:  bl 0x[[#%x, STUBS]]
+# CHECK:  bl 0x[[#%x, FOLD_LOW_THUNK_0:]] <_fold_func_low_addr.thunk.0>
+# CHECK:  bl 0x[[#%x, FOLD_HIGH:]] <_fold_func_high_addr>
+# CHECK:  bl 0x[[#%x, NAN]]
+# CHECK:  bl 0x[[#%x, FOO:]] <_objc_msgSend$foo>
+# CHECK:  bl 0x[[#%x, BAR:]] <_objc_msgSend$bar>
+
+# CHECK: [[#%x, FOLD_HIGH]] <_fold_func_high_addr>:
+# CHECK:  b 0x[[#%x, FOLD_LOW_THUNK_0]] <_fold_func_low_addr.thunk.0>
 
 # CHECK: [[#%x, C_THUNK_0]] <_c.thunk.0>:
 # CHECK:  adrp x16, 0x[[#%x, C_PAGE]]000
@@ -216,6 +225,10 @@
 # CHECK:  adrp x16, 0x[[#%x, F_PAGE]]
 # CHECK:  add  x16, x16, #[[#F_OFFSET]]
 
+# CHECK: [[#%x, FOLD_LOW_THUNK_0]] <_fold_func_low_addr.thunk.0>:
+# CHECK:  adrp x16, 0x[[#%x, FOLD_LOW_PAGE]]000
+# CHECK:  add  x16, x16, #[[#%d, FOLD_LOW_OFFSET]]
+
 # CHECK: Disassembly of section __TEXT,__lcxx_override:
 # CHECK: <_z>:
 # CHECK:  bl 0x[[#%x, A_THUNK_0]] <_a.thunk.0>
@@ -223,6 +236,11 @@
 # CHECK: Disassembly of section __TEXT,__stubs:
 
 # CHECK: [[#%x, NAN_PAGE + NAN_OFFSET]] <__stubs>:
+
+# CHECK: Disassembly of section __TEXT,__objc_stubs:
+
+# CHECK: <_objc_msgSend$bar>:
+# CHECK: <_objc_msgSend$foo>:
 
 .section  __TEXT,__objc_methname,cstring_literals
 lselref1:
