@@ -695,17 +695,6 @@ void ScalarEnumerationTraits<dxbc::ComparisonFunc>::enumeration(
 
 } // namespace yaml
 
-// Map a version-dependent field as required when the version includes it,
-// or as optional when reading YAML for an older version.
-template <typename T>
-static void mapRequiredOrOptional(yaml::IO &IO, bool Required, const char *Key,
-                                  T &Val) {
-  if (Required)
-    IO.mapRequired(Key, Val);
-  else
-    IO.mapOptional(Key, Val);
-}
-
 void DXContainerYAML::PSVInfo::mapInfoForVersion(yaml::IO &IO) {
   dxbc::PipelinePSVInfo &StageInfo = Info.StageInfo;
   Triple::EnvironmentType Stage = dxbc::getShaderStage(Info.ShaderStage);
@@ -784,17 +773,17 @@ void DXContainerYAML::PSVInfo::mapInfoForVersion(yaml::IO &IO) {
   MutableArrayRef<uint8_t> Vec(Info.SigOutputVectors);
   IO.mapRequired("SigOutputVectors", Vec);
 
-  if (IO.outputting() && Version == 1)
+  if (Version == 1)
     return;
 
-  mapRequiredOrOptional(IO, Version > 1, "NumThreadsX", Info.NumThreadsX);
-  mapRequiredOrOptional(IO, Version > 1, "NumThreadsY", Info.NumThreadsY);
-  mapRequiredOrOptional(IO, Version > 1, "NumThreadsZ", Info.NumThreadsZ);
+  IO.mapRequired("NumThreadsX", Info.NumThreadsX);
+  IO.mapRequired("NumThreadsY", Info.NumThreadsY);
+  IO.mapRequired("NumThreadsZ", Info.NumThreadsZ);
 
-  if (IO.outputting() && Version == 2)
+  if (Version == 2)
     return;
 
-  mapRequiredOrOptional(IO, Version > 2, "EntryName", EntryName);
+  IO.mapRequired("EntryName", EntryName);
 }
 
 } // namespace llvm
