@@ -1607,6 +1607,12 @@ xegpu::inferSourceLayoutFromResult(OpOperand &operand,
 
 xegpu::DistributeLayoutAttr xegpu::getConsumerLayoutAt(OpOperand &operand) {
   Operation *op = operand.getOwner();
+  // xegpu.convert_layout explicitly states its expected operand layout via
+  // the input_layout attribute. Use it directly so that ResolveLayoutConflicts
+  // sees the real expectation (and inserts a bridge convert_layout) when the
+  // producer's layout differs from this stated input layout.
+  if (auto convertOp = dyn_cast<xegpu::ConvertLayoutOp>(op))
+    return convertOp.getInputLayoutAttr();
   xegpu::DistributeLayoutAttr resLayout;
   if (op->getNumResults() == 1)
     resLayout = xegpu::getDistributeLayoutAttr(op->getResult(0));

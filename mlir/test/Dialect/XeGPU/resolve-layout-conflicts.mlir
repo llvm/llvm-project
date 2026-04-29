@@ -278,3 +278,29 @@ func.func @convert_layout() {
   return
 }
 }
+
+// -----
+
+// Producer carries a layout that differs from the input_layout declared on a
+// downstream xegpu.convert_layout consumer. ResolveLayoutConflicts must insert
+// a bridging convert_layout between the producer and the existing
+// convert_layout so the consumer's stated input_layout is honored.
+// CHECK-LABEL: func.func @convert_layout_bridge_input_mismatch
+// CHECK:         %[[V0:.*]] = "some_op"() {layout_result_0 = #xegpu.layout<inst_data = [8, 16]>} : () -> vector<32x32xf16>
+// CHECK-NEXT:    %[[BRIDGE:.*]] = xegpu.convert_layout %[[V0]]
+// CHECK-SAME:      <{input_layout = #xegpu.layout<inst_data = [8, 16]>, target_layout = #xegpu.layout<inst_data = [16, 16]>}>
+// CHECK-SAME:      : vector<32x32xf16>
+// CHECK-NEXT:    %[[CVT:.*]] = xegpu.convert_layout %[[BRIDGE]]
+// CHECK-SAME:      <{input_layout = #xegpu.layout<inst_data = [16, 16]>, target_layout = #xegpu.layout<inst_data = [32, 16]>}>
+// CHECK-SAME:      : vector<32x32xf16>
+// CHECK-NEXT:    return %[[CVT]] : vector<32x32xf16>
+gpu.module @test_convert_layout_bridge {
+func.func @convert_layout_bridge_input_mismatch() -> vector<32x32xf16> {
+  %0 = "some_op"() {layout_result_0 = #xegpu.layout<inst_data = [8, 16]>} : () -> vector<32x32xf16>
+  %1 = xegpu.convert_layout %0
+     <{input_layout = #xegpu.layout<inst_data = [16, 16]>,
+       target_layout = #xegpu.layout<inst_data = [32, 16]>}>
+     : vector<32x32xf16>
+  return %1 : vector<32x32xf16>
+}
+}
