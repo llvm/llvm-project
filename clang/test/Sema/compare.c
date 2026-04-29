@@ -489,29 +489,29 @@ void test27(void) {
   W g;
 
   W w1 = i == (-g);
-  // expected-warning@-1 {{}}
-  
+  // expected-warning@-1 {{comparison of integers of different signs: 'int' and 'W'}}
+
   W w3 = i == (+g);
-  // expected-warning@-1 {{}}
-  
+  // expected-warning@-1 {{comparison of integers of different signs: 'int' and 'W'}}
+
   W w2 = i == (~g);
-  // expected-warning@-1 {{}}
+  // expected-warning@-1 {{comparison of integers of different signs: 'int' and 'W'}}
 
   W w4 = i == (!g);
-  // expected-error@-1 {{}}
+  // expected-error@-1 {{invalid argument type 'W' (vector of 1 'unsigned long' value) to unary expression}}
 
   W w5 = i == (++g);
-  // expected-error@-1 {{}}
+  // expected-error@-1 {{cannot increment value of type 'W'}}
 
   W w6 = i == (g++);
-  // expected-error@-1 {{}}
+  // expected-error@-1 {{cannot increment value of type 'W'}}
 
   W w7 = i == (--g);
-  // expected-error@-1 {{}}
+  // expected-error@-1 {{cannot decrement value of type 'W'}}
 
   W w8 = i == (g--);
-  // expected-error@-1 {{}}
+  // expected-error@-1 {{cannot decrement value of type 'W'}}
 
   W w9 = i == (*g);
-  // expected-error@-1 {{}}
+  // expected-error@-1 {{indirection requires pointer operand ('W' (vector of 1 'unsigned long' value) invalid)}}
 }
