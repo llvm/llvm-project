@@ -153,7 +153,7 @@ static void propagateResultsToRegularOperands(Operation *op) {
 
   for (OpOperand &opr : op->getOpOperands()) {
     xegpu::DistributeLayoutAttr operandLayout =
-        xegpu::inferSourceLayoutFromResult(opr, resLayout);
+        xegpu::inferSourceLayoutFromResultForNonAnchorOp(opr, resLayout);
     if (isa<VectorType>(opr.get().getType()) && operandLayout)
       xegpu::setTemporaryLayout(opr, operandLayout);
   }
@@ -1523,9 +1523,8 @@ xegpu::setupDpasMxLayout(xegpu::LayoutKind layoutKind, VectorType aTy,
   return std::nullopt;
 }
 
-xegpu::DistributeLayoutAttr
-xegpu::inferSourceLayoutFromResult(OpOperand &operand,
-                                   xegpu::DistributeLayoutAttr resLayout) {
+xegpu::DistributeLayoutAttr xegpu::inferSourceLayoutFromResultForNonAnchorOp(
+    OpOperand &operand, xegpu::DistributeLayoutAttr resLayout) {
   if (!resLayout)
     return nullptr;
   Operation *op = operand.getOwner();
@@ -1607,19 +1606,15 @@ xegpu::inferSourceLayoutFromResult(OpOperand &operand,
 
 xegpu::DistributeLayoutAttr xegpu::getConsumerLayoutAt(OpOperand &operand) {
   Operation *op = operand.getOwner();
-  // xegpu.convert_layout explicitly states its expected operand layout via
-  // the input_layout attribute. Use it directly so that ResolveLayoutConflicts
-  // sees the real expectation (and inserts a bridge convert_layout) when the
-  // producer's layout differs from this stated input layout.
-  if (auto convertOp = dyn_cast<xegpu::ConvertLayoutOp>(op))
-    return convertOp.getInputLayoutAttr();
+  // Anchor ops declare the layout they
+  // require on each operand. Trust that declaration directly so that
+  // ResolveLayoutConflicts compares producer-vs-declared
+  if (isa<xegpu::AnchorLayoutInterface>(op))
+    return xegpu::getDistributeLayoutAttr(operand);
+  // For non-anchor ops, derive the operand layout from the op's result
+  // layout via op-specific semantics.
   xegpu::DistributeLayoutAttr resLayout;
   if (op->getNumResults() == 1)
     resLayout = xegpu::getDistributeLayoutAttr(op->getResult(0));
-  auto inferredOperandLayout = inferSourceLayoutFromResult(operand, resLayout);
-  if (inferredOperandLayout)
-    return inferredOperandLayout;
-  // By default, assume no layout conflict and return the current layout of
-  // the operand.
-  return xegpu::getDistributeLayoutAttr(operand.get());
+  return inferSourceLayoutFromResultForNonAnchorOp(operand, resLayout);
 }
