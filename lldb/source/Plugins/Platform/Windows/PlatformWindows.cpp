@@ -27,6 +27,8 @@
 #include "lldb/Expression/UserExpression.h"
 #include "lldb/Expression/UtilityFunction.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Symbol/CompileUnit.h"
+#include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/Status.h"
@@ -816,4 +818,76 @@ extern "C" {
     return value->GetError().Clone();
 
   return Status();
+}
+
+llvm::Expected<std::pair<XcodeSDKPath, bool>>
+PlatformWindows::GetSDKPathFromDebugInfo(Module &module) {
+  SymbolFile *sym_file = module.GetSymbolFile();
+  if (!sym_file)
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        llvm::formatv("No symbol file available for module '{0}'",
+                      module.GetFileSpec().GetFilename().AsCString("")));
+
+  if (sym_file->GetNumCompileUnits() == 0)
+    return llvm::createStringError(
+        llvm::formatv("Could not resolve SDK for module '{0}'. Symbol file has "
+                      "no compile units.",
+                      module.GetFileSpec()));
+
+  bool found_public_sdk = false;
+  bool found_internal_sdk = false;
+  XcodeSDKPath merged_sdk_path;
+  for (unsigned i = 0; i < sym_file->GetNumCompileUnits(); ++i) {
+    if (auto cu_sp = sym_file->GetCompileUnitAtIndex(i)) {
+      auto cu_sdk = sym_file->ParseXcodeSDK(*cu_sp);
+      bool is_internal_sdk = cu_sdk.IsAppleInternalSDK();
+      found_public_sdk |= !is_internal_sdk;
+      found_internal_sdk |= is_internal_sdk;
+      merged_sdk_path.Merge(cu_sdk);
+    }
+  }
+
+  const bool found_mismatch = found_internal_sdk && found_public_sdk;
+  return std::pair{std::move(merged_sdk_path), found_mismatch};
+}
+
+llvm::Expected<std::string>
+PlatformWindows::ResolveSDKPathFromDebugInfo(Module &module) {
+  auto sdk_or_err = GetSDKPathFromDebugInfo(module);
+  if (!sdk_or_err)
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        llvm::formatv("Failed to parse SDK path from debug-info: {0}",
+                      llvm::toString(sdk_or_err.takeError())));
+
+  auto [sdk_path, _] = std::move(*sdk_or_err);
+  return sdk_path.GetSysroot().GetPath();
+}
+
+llvm::Expected<XcodeSDKPath>
+PlatformWindows::GetSDKPathFromDebugInfo(CompileUnit &unit) {
+  ModuleSP module_sp = unit.CalculateSymbolContextModule();
+  if (!module_sp)
+    return llvm::createStringError("compile unit has no module");
+  SymbolFile *sym_file = module_sp->GetSymbolFile();
+  if (!sym_file)
+    return llvm::createStringError(
+        llvm::formatv("No symbol file available for module '{0}'",
+                      module_sp->GetFileSpec().GetFilename()));
+
+  return sym_file->ParseXcodeSDK(unit);
+}
+
+llvm::Expected<std::string>
+PlatformWindows::ResolveSDKPathFromDebugInfo(CompileUnit &unit) {
+  auto sdk_or_err = GetSDKPathFromDebugInfo(unit);
+  if (!sdk_or_err)
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        llvm::formatv("Failed to parse SDK path from debug-info: {0}",
+                      llvm::toString(sdk_or_err.takeError())));
+
+  auto sdk = std::move(*sdk_or_err);
+  return sdk.GetSysroot().GetPath();
 }

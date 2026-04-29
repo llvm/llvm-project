@@ -80,7 +80,6 @@ public:
   llvm::VersionTuple GetVersion() const;
   Type GetType() const;
   llvm::StringRef GetString() const;
-  const FileSpec &GetSysroot() const;
   /// Whether this Xcode SDK supports Swift.
   bool SupportsSwift() const;
 

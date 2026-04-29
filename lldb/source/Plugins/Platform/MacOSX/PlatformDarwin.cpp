@@ -1120,7 +1120,7 @@ ResolveSDKPathFromDebugInfo(lldb_private::Target *target) {
         "Failed to resolve SDK for target: executable's symbol file has no "
         "compile units");
 
-  XcodeSDK merged_sdk;
+  XcodeSDKPath merged_sdk;
   for (unsigned i = 0; i < sym_file->GetNumCompileUnits(); ++i) {
     if (auto cu_sp = sym_file->GetCompileUnitAtIndex(i)) {
       auto cu_sdk = sym_file->ParseXcodeSDK(*cu_sp);
@@ -1134,7 +1134,7 @@ ResolveSDKPathFromDebugInfo(lldb_private::Target *target) {
   if (FileSystem::Instance().Exists(sdk_path)) {
     return sdk_path;
   }
-  auto path_or_err = HostInfo::GetSDKRoot(HostInfo::SDKOptions{merged_sdk});
+  auto path_or_err = HostInfo::GetSDKRoot(HostInfo::SDKOptions{merged_sdk.TakeSDK()});
   if (!path_or_err)
     return llvm::createStringError(
         llvm::formatv("Failed to resolve SDK path: {0}",

@@ -26,3 +26,7 @@ XcodeSDK XcodeSDKPath::TakeSDK() const { return std::move(m_sdk); }
 bool XcodeSDKPath::operator==(const XcodeSDKPath &other) const {
   return m_sdk == other.m_sdk && m_sysroot == other.m_sysroot;
 }
+
+bool XcodeSDKPath::operator!=(const XcodeSDKPath &other) const {
+  return !(*this == other);
+}
