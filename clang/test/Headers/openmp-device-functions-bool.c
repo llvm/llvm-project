@@ -35,7 +35,7 @@ typedef _Bool ockl_bool;
 // CHECK-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[B_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[C_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[S_ADDR_ASCAST]], align 1
-// CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP3]] to i1
+// CHECK-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP3]], 0
 // CHECK-NEXT:    [[CALL:%.*]] = call float @__ockl_fdot2(<2 x half> noundef [[TMP0]], <2 x half> noundef [[TMP1]], float noundef [[TMP2]], i1 noundef zeroext [[LOADEDV]]) #[[ATTR2:[0-9]+]]
 // CHECK-NEXT:    ret float [[CALL]]
 //

@@ -469,8 +469,19 @@ public:
   }
 
   template <typename A> void Walk(const A &x) { parser::Walk(x, *this); }
-  template <typename A> bool Pre(const A &) { return true; }
-  template <typename A> void Post(const A &) {}
+  // Normally the catch-all Pre/Post functions are templates taking
+  // "const T &". For a class D derived from B, and an explicit overload
+  // of Pre(const B &), a call to Pre(D) will select the template instead
+  // of the base clase overload.
+  // Force user-defined conversion from any const-reference, to make sure
+  // that the Pre(AbsorbAnyReference) and Post(AbsorbAnyReference) overloads
+  // will be worse than derived-to-base conversions. This will, for example,
+  // invoke Pre(const OmpBlockConstruct &) for directives derived from it.
+  struct AbsorbAnyReference {
+    template <typename T> AbsorbAnyReference(const T &) {}
+  };
+  bool Pre(AbsorbAnyReference) { return true; }
+  void Post(AbsorbAnyReference) {}
 
   bool Pre(const parser::SpecificationPart &) {
     partStack_.push_back(PartKind::SpecificationPart);
@@ -588,7 +599,7 @@ public:
   bool Pre(const parser::OmpDeclareSimdDirective &x) {
     PushContext(x.source, llvm::omp::Directive::OMPD_declare_simd);
     for (const parser::OmpArgument &arg : x.v.Arguments().v) {
-      if (auto *object{omp::GetArgumentObject(arg)}) {
+      if (auto *object{parser::omp::GetArgumentObject(arg)}) {
         ResolveOmpObject(*object, Symbol::Flag::OmpDeclareSimd);
       }
     }
@@ -2181,7 +2192,7 @@ bool OmpAttributeVisitor::Pre(const parser::OmpDeclareTargetDirective &x) {
   PushContext(x.source, llvm::omp::Directive::OMPD_declare_target);
 
   for (const parser::OmpArgument &arg : x.v.Arguments().v) {
-    if (auto *object{omp::GetArgumentObject(arg)}) {
+    if (auto *object{parser::omp::GetArgumentObject(arg)}) {
       ResolveOmpObject(*object, Symbol::Flag::OmpDeclareTarget);
     }
   }
@@ -2212,7 +2223,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPThreadprivate &x) {
   PushContext(dirName.source, dirName.v);
 
   for (const parser::OmpArgument &arg : x.v.Arguments().v) {
-    if (auto *object{omp::GetArgumentObject(arg)}) {
+    if (auto *object{parser::omp::GetArgumentObject(arg)}) {
       ResolveOmpObject(*object, Symbol::Flag::OmpThreadprivate);
     }
   }
@@ -2230,7 +2241,7 @@ bool OmpAttributeVisitor::Pre(const parser::OmpAllocateDirective &x) {
   parser::omp::OmpAllocateInfo info{parser::omp::SplitOmpAllocate(x)};
   for (const parser::OmpAllocateDirective *ad : info.dirs) {
     for (const parser::OmpArgument &arg : ad->BeginDir().Arguments().v) {
-      if (auto *object{omp::GetArgumentObject(arg)}) {
+      if (auto *object{parser::omp::GetArgumentObject(arg)}) {
         ResolveOmpObject(*object, ompFlag);
       }
     }

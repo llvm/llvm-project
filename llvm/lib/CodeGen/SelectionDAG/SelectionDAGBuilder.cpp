@@ -4963,7 +4963,8 @@ void SelectionDAGBuilder::visitMaskedStore(const CallInst &I,
 
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(PtrOperand), MMOFlags,
-      LocationSize::beforeOrAfterPointer(), Alignment, I.getAAMetadata());
+      LocationSize::upperBound(VT.getStoreSize()), Alignment,
+      I.getAAMetadata());
 
   const auto &TLI = DAG.getTargetLoweringInfo();
 

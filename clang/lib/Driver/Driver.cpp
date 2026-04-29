@@ -1837,6 +1837,8 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   if (UseModulesDriver) {
     Diags.Report(diag::remark_performing_driver_managed_module_build);
 
+    modules::diagnoseModulesDriverArgs(C->getArgs(), Diags);
+
     // Read the Standard library module manifest and, if available, add all
     // discovered modules to this Compilation. Jobs for modules specified in
     // the manifest that are not required by any command-line input are pruned
