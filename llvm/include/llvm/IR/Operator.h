@@ -201,7 +201,7 @@ class FPMathOperator : public Operator {
 private:
   friend class Instruction;
 
-  LLVM_READONLY FastMathFlags &getFMF();
+  LLVM_ABI LLVM_READONLY FastMathFlags &getFMF();
   LLVM_READONLY const FastMathFlags &getFMF() const {
     return const_cast<FPMathOperator *>(this)->getFMF();
   }
