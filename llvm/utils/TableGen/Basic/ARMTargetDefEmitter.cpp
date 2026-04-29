@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Format.h"
@@ -58,34 +59,35 @@ static bool allowInAArch64AsmParserDirective(const Record *Rec) {
   // The generated asm parser extension table is used for both directive lookup
   // and required-feature diagnostics. Some extensions still need to appear in
   // diagnostics, but must not be accepted by .arch/.arch_extension/.cpu.
-  return StringSwitch<bool>(Rec->getName())
-      .Case("FeaturePerfMon", false)
-      .Case("FeatureSpecRestrict", false)
-      .Case("FeatureVH", false)
-      .Case("FeatureEnhancedCounterVirtualization", false)
-      .Case("FeaturePsUAO", false)
-      .Case("FeatureFPAC", false)
-      .Case("FeatureCCIDX", false)
-      .Case("FeatureNV", false)
-      .Case("FeatureLSE2", false)
-      .Case("FeatureMPAM", false)
-      .Case("FeatureTRACEV8_4", false)
-      .Case("FeatureAM", false)
-      .Case("FeatureSEL2", false)
-      .Case("FeatureRCPC_IMMO", false)
-      .Case("FeatureAltFPCmp", false)
-      .Case("FeatureFRInt3264", false)
-      .Case("FeatureAMVS", false)
-      .Case("FeatureFineGrainedTraps", false)
-      .Case("FeatureHCX", false)
-      .Case("FeatureSPE_EEF", false)
-      .Case("FeatureNMI", false)
-      .Case("FeatureCLRBHB", false)
-      .Case("FeaturePRFM_SLC", false)
-      .Case("FeatureTRBE", false)
-      .Case("FeatureETE", false)
-      .Case("FeatureCHK", false)
-      .Default(true);
+  static const SmallDenseSet<StringRef, 32> DisallowedExtensionNames = {
+      "FeatureAltFPCmp",
+      "FeatureAM",
+      "FeatureAMVS",
+      "FeatureCCIDX",
+      "FeatureCHK",
+      "FeatureCLRBHB",
+      "FeatureEnhancedCounterVirtualization",
+      "FeatureETE",
+      "FeatureFineGrainedTraps",
+      "FeatureFPAC",
+      "FeatureFRInt3264",
+      "FeatureHCX",
+      "FeatureLSE2",
+      "FeatureMPAM",
+      "FeatureNMI",
+      "FeatureNV",
+      "FeaturePerfMon",
+      "FeaturePRFM_SLC",
+      "FeaturePsUAO",
+      "FeatureRCPC_IMMO",
+      "FeatureSEL2",
+      "FeatureSPE_EEF",
+      "FeatureSpecRestrict",
+      "FeatureTRACEV8_4",
+      "FeatureTRBE",
+      "FeatureVH",
+  };
+  return !DisallowedExtensionNames.contains(Rec->getName());
 }
 
 static StringRef getAArch64AsmParserPrimaryName(const Record *Rec) {
