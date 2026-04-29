@@ -35,9 +35,27 @@ nanobind_add_module(ir2vec MODULE PyIR2Vec.cpp)
 # but Python bindings are compiled separately with these features enabled.
 # This follows the pattern established by MLIR Python bindings
 # (see mlir/cmake/modules/AddMLIRPython.cmake).
-target_compile_options(ir2vec PRIVATE -fexceptions -frtti)
+target_compile_options(ir2vec PRIVATE
+  -fexceptions
+  -frtti
+
+  -Wno-cast-qual
+  -Wno-zero-length-array
+  -Wno-covered-switch-default
+)
 
 target_link_libraries(ir2vec PRIVATE LLVMEmbUtils)
 target_include_directories(ir2vec PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
+
+# nanobind's own sources use patterns that are valid C++ but incompatible with
+# LLVM's strict -Werror warning policy (-Wcast-qual, -Wzero-length-array).
+# Suppress these warnings only on the nanobind library target, not on our code.
+if(TARGET nanobind-static)
+  target_compile_options(nanobind-static PRIVATE
+    -Wno-cast-qual
+    -Wno-zero-length-array
+    -Wno-covered-switch-default
+  )
+endif()
 
 message(STATUS "Python bindings for llvm-ir2vec will be built with nanobind")
