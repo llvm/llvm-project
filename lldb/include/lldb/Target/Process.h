@@ -1567,7 +1567,8 @@ public:
   ///
   /// \return
   ///   The arguments that created the core dump.
-  ///   If this process is a live debug session, returns a std::nullopt.
+  ///   If this process is a live debug session, or the core dump contained no
+  ///   arguments, returns a std::nullopt.
   virtual std::optional<CoreArgs> GetCoreFileArgs() { return std::nullopt; }
 
   /// Before lldb detaches from a process, it warns the user that they are
