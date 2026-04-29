@@ -3235,7 +3235,7 @@ public:
                               VPCostContext &Ctx) const override;
 
   bool isSingleScalar() const { return IsSingleScalar; }
-
+  void markSingleScalar() { IsSingleScalar = true; }
   bool isPredicated() const { return IsPredicated; }
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
