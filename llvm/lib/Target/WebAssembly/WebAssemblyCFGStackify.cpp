@@ -2179,8 +2179,7 @@ bool WebAssemblyCFGStackify::fixCatchUnwindMismatches(MachineFunction &MF) {
   auto HasUnwindDest = [&](const MachineBasicBlock *EHPad) {
     assert(!EHPad->pred_empty() && "EHPad has no predecessors");
     auto *InvokeBB = *EHPad->pred_begin();
-    for (auto I = InvokeBB->succ_begin(), E = InvokeBB->succ_end(); I != E;
-         ++I)
+    for (auto I = InvokeBB->succ_begin(), E = InvokeBB->succ_end(); I != E; ++I)
       if (*I == EHPad)
         return std::next(I) != E;
     llvm_unreachable("EHPad not found in its predecessor's successors");
