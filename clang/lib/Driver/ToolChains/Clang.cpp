@@ -8896,6 +8896,17 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
     CmdArgs.push_back(Args.MakeArgString(
         Twine("-loader-replaceable-function=") + FuncOverride));
   }
+
+ if (Args.hasFlag(options::OPT__SLASH_experemental_deterministic,
+                  options::OPT__SLASH_experemental_deterministic, false)) {
+   CmdArgs.push_back("-Wdate-time");
+ }
+
+ if (Args.hasFlag(options::OPT__SLASH_d1nodatetime,
+                  options::OPT__SLASH_d1nodatetime, false)) {
+   CmdArgs.push_back("-Wno-builtin-macro-redefined");
+ }
+
 }
 
 const char *Clang::getBaseInputName(const ArgList &Args,
