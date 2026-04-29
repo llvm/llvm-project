@@ -16,7 +16,7 @@
 /// GCNScheduleDAGMILive::runSchedStages.
 
 /// Generally, the reason for having multiple scheduling stages is to account
-/// for the kernel-wide effect of register usage on occupancy.  Usually, only a
+/// for the kernel-wide effect of register usage on occupancy. Usually, only a
 /// few scheduling regions will have register pressure high enough to limit
 /// occupancy for the kernel, so constraints can be relaxed to improve ILP in
 /// other regions.
@@ -124,7 +124,7 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
       Context->RegClassInfo->getNumAllocatableRegs(&AMDGPU::VGPR_32RegClass);
 
   SIMachineFunctionInfo &MFI = *MF->getInfo<SIMachineFunctionInfo>();
-  // Set the initial TargetOccupnacy to the maximum occupancy that we can
+  // Set the initial TargetOccupancy to the maximum occupancy that we can
   // achieve for this function. This effectively sets a lower bound on the
   // 'Critical' register limits in the scheduler.
   // Allow for lower occupancy targets if kernel is wave limited or memory
@@ -339,7 +339,7 @@ void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
   // If two instructions increase the pressure of different register sets
   // by the same amount, the generic scheduler will prefer to schedule the
   // instruction that increases the set with the least amount of registers,
-  // which in our case would be SGPRs.  This is rarely what we want, so
+  // which in our case would be SGPRs. This is rarely what we want, so
   // when we report excess/critical register pressure, we do it either
   // only for VGPRs or only for SGPRs.
 
@@ -349,7 +349,7 @@ void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
   bool ShouldTrackSGPRs = !ShouldTrackVGPRs && SGPRPressure >= SGPRExcessLimit;
 
   // FIXME: We have to enter REG-EXCESS before we reach the actual threshold
-  // to increase the likelihood we don't go over the limits.  We should improve
+  // to increase the likelihood we don't go over the limits. We should improve
   // the analysis to look through dependencies to find the path with the least
   // register pressure.
 
@@ -370,7 +370,7 @@ void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
   }
 
   // Register pressure is considered 'CRITICAL' if it is approaching a value
-  // that would reduce the wave occupancy for the execution unit.  When
+  // that would reduce the wave occupancy for the execution unit. When
   // register pressure is 'CRITICAL', increasing SGPR and VGPR pressure both
   // has the same cost, so we don't need to prefer one over the other.
 
@@ -848,8 +848,8 @@ GCNMaxMemoryClauseSchedStrategy::GCNMaxMemoryClauseSchedStrategy(
 
 /// GCNMaxMemoryClauseSchedStrategy tries best to clause memory instructions as
 /// much as possible. This is achieved by:
-//  1. Prioritize clustered operations before stall latency heuristic.
-//  2. Prioritize long-latency-load before stall latency heuristic.
+/// 1. Prioritize clustered operations before stall latency heuristic.
+/// 2. Prioritize long-latency-load before stall latency heuristic.
 ///
 /// \param Cand provides the policy and current best candidate.
 /// \param TryCand refers to the next SUnit candidate, otherwise uninitialized.
@@ -1445,7 +1445,7 @@ Printable PreRARematStage::ScoredRemat::print() const {
 
 bool PreRARematStage::initGCNSchedStage() {
   // FIXME: This pass will invalidate cached BBLiveInMap and MBBLiveIns for
-  // regions inbetween the defs and region we sinked the def to. Will need to be
+  // regions in between the defs and region we sunk the def to. Will need to be
   // fixed if there is another pass after this pass.
   assert(!S.hasNextStage());
 
@@ -1454,7 +1454,7 @@ bool PreRARematStage::initGCNSchedStage() {
 
   // Maps all MIs (except lone terminators, which are not part of any region) to
   // their parent region. Non-lone terminators are considered part of the region
-  // they delimitate.
+  // they delimit.
   DenseMap<MachineInstr *, unsigned> MIRegion(MF.getInstructionCount());
 
   // Before performing any IR modification record the parent region of each MI
@@ -1560,7 +1560,7 @@ bool PreRARematStage::initGCNSchedStage() {
   });
 
   // Rematerialize registers in successive rounds until all RP targets are
-  // satisifed or until we run out of rematerialization candidates.
+  // satisfied or until we run out of rematerialization candidates.
   BitVector RecomputeRP(DAG.Regions.size());
   for (;;) {
     RecomputeRP.reset();
@@ -1820,9 +1820,9 @@ bool UnclusteredHighRPStage::initGCNRegion() {
 bool ClusteredLowOccStage::initGCNRegion() {
   // We may need to reschedule this region if it wasn't rescheduled in the last
   // stage, or if we found it was testing critical register pressure limits in
-  // the unclustered reschedule stage. The later is because we may not have been
-  // able to raise the min occupancy in the previous stage so the region may be
-  // overly constrained even if it was already rescheduled.
+  // the unclustered reschedule stage. The latter is because we may not have
+  // been able to raise the min occupancy in the previous stage so the region
+  // may be overly constrained even if it was already rescheduled.
   if (!DAG.RegionsWithHighRP[RegionIdx])
     return false;
 
@@ -2266,10 +2266,8 @@ void RewriteMFMAFormStage::resetRewriteCandsToVGPR(
     // Have to get src types separately since subregs may cause C and D
     // registers to be different types even though the actual operand is
     // the same size.
-    const TargetRegisterClass *AUseRC =
-        DAG.MRI.getRegClass(Src2->getReg());
-    const TargetRegisterClass *VUseRC =
-        SRI->getEquivalentVGPRClass(AUseRC);
+    const TargetRegisterClass *AUseRC = DAG.MRI.getRegClass(Src2->getReg());
+    const TargetRegisterClass *VUseRC = SRI->getEquivalentVGPRClass(AUseRC);
     DAG.MRI.setRegClass(Src2->getReg(), VUseRC);
   }
 }
@@ -2387,7 +2385,7 @@ int64_t RewriteMFMAFormStage::getRewriteCost(
 
   // Reset the classes that were changed to AGPR for better RB analysis.
   // We must do rewriting after copy-insertion, as some defs of the register
-  // may require VGPR.  Additionally, if we bail out and don't perform the
+  // may require VGPR. Additionally, if we bail out and don't perform the
   // rewrite then these need to be restored anyway.
   for (unsigned Region = 0; Region < DAG.Regions.size(); Region++) {
     if (!RegionsWithExcessArchVGPR[Region])
@@ -2660,7 +2658,7 @@ bool RewriteMFMAFormStage::rewrite(
       // If none exists, create a copy from this reaching def.
       // We may have inserted a copy already in an earlier iteration.
       for (MachineInstr *RD : DstUseDefsReplace) {
-        // Do not create reundant copies.
+        // Do not create redundant copies.
         if (ReachingDefCopyMap[DstReg].insert(RD).second) {
           MachineInstrBuilder VGPRCopy =
               BuildMI(*RD->getParent(), std::next(RD->getIterator()),
@@ -2870,7 +2868,7 @@ bool PreRARematStage::collectRematRegs(
   // regions containing rematerializable instructions.
   DAG.RegionLiveOuts.buildLiveRegMap();
 
-  // Set of registers already marked for potential remterialization; used to
+  // Set of registers already marked for potential rematerialization; used to
   // avoid rematerialization chains.
   SmallSet<Register, 4> MarkedRegs;
   auto IsMarkedForRemat = [&MarkedRegs](const MachineOperand &MO) -> bool {
@@ -2915,7 +2913,7 @@ bool PreRARematStage::collectRematRegs(
           llvm::any_of(DefMI.operands(), IsMarkedForRemat))
         continue;
 
-      // Do not rematerialize an instruction it it uses registers that aren't
+      // Do not rematerialize an instruction if it uses registers that aren't
       // available at its use. This ensures that we are not extending any live
       // range while rematerializing.
       SlotIndex UseIdx = DAG.LIS->getInstructionIndex(*UseMI).getRegSlot(true);
@@ -3109,7 +3107,7 @@ PreRARematStage::ScoredRemat::rematerialize(GCNScheduleDAGMILive &DAG) const {
 }
 
 void PreRARematStage::commitRematerializations() const {
-  REMAT_DEBUG(dbgs() << "Commiting all rematerializations\n");
+  REMAT_DEBUG(dbgs() << "Committing all rematerializations\n");
   for (const RollbackInfo &Rollback : Rollbacks)
     DAG.deleteMI(Rollback.Remat->DefRegion, Rollback.Remat->DefMI);
 }

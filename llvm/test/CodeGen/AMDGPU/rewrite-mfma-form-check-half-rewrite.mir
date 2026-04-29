@@ -66,11 +66,10 @@ body: |
     %6:vreg_1024 = IMPLICIT_DEF
     %7:vreg_1024 = IMPLICIT_DEF
     %8:vreg_1024 = IMPLICIT_DEF
-
-    %9:av_128_align2   = IMPLICIT_DEF
-    %10:av_128_align2  = IMPLICIT_DEF
+    %9:av_128_align2 = IMPLICIT_DEF
+    %10:av_128_align2 = IMPLICIT_DEF
     %11:vreg_64_align2 = IMPLICIT_DEF
-    %12:vgpr_32        = IMPLICIT_DEF
+    %12:vgpr_32 = IMPLICIT_DEF
 
     SCHED_BARRIER 0
 
