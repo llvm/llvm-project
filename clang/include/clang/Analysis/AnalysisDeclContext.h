@@ -36,7 +36,6 @@ namespace clang {
 class AnalysisDeclContextManager;
 class ASTContext;
 class BlockDecl;
-class BlockInvocationContext;
 class CFGReverseBlockReachabilityAnalysis;
 class ImplicitParamDecl;
 class LocationContext;
@@ -182,15 +181,10 @@ public:
   const ImplicitParamDecl *getSelfDecl() const;
 
   /// \copydoc LocationContextManager::getStackFrame()
-  const StackFrameContext *getStackFrame(LocationContext const *ParentLC,
-                                         const ento::BlockDataRegion *BlockInvocationData,
-                                         const Expr *E, const CFGBlock *Blk,
-                                         unsigned BlockCount, unsigned Index);
-
-  /// \copydoc LocationContextManager::getBlockInvocationContext()
-  const BlockInvocationContext *
-  getBlockInvocationContext(const LocationContext *ParentLC,
-                            const BlockDecl *BD, const void *Data);
+  const StackFrameContext *
+  getStackFrame(LocationContext const *ParentLC,
+                const ento::BlockDataRegion *BlockInvocationData, const Expr *E,
+                const CFGBlock *Blk, unsigned BlockCount, unsigned Index);
 
   /// \returns The specified analysis object, lazily running the analysis if
   /// necessary or nullptr if the analysis could not run.
@@ -219,7 +213,7 @@ private:
 /// model entering, leaving or inlining function calls.
 class LocationContext : public llvm::FoldingSetNode {
 public:
-  enum ContextKind { StackFrame, Block };
+  enum ContextKind { StackFrame };
 
 private:
   ContextKind Kind;
@@ -322,15 +316,19 @@ class StackFrameContext : public LocationContext {
   const unsigned Index;
 
   StackFrameContext(AnalysisDeclContext *ADC, const LocationContext *ParentLC,
-                    const ento::BlockDataRegion *BlockInvocationData, const Expr *E, const CFGBlock *Block, unsigned BlockCount,
+                    const ento::BlockDataRegion *BlockInvocationData,
+                    const Expr *E, const CFGBlock *Block, unsigned BlockCount,
                     unsigned Index, int64_t ID)
-      : LocationContext(StackFrame, ADC, ParentLC, ID), BlockInvocationData(BlockInvocationData), CallSite(E),
-        Block(Block), BlockCount(BlockCount), Index(Index) {}
+      : LocationContext(StackFrame, ADC, ParentLC, ID),
+        BlockInvocationData(BlockInvocationData), CallSite(E), Block(Block),
+        BlockCount(BlockCount), Index(Index) {}
 
 public:
   ~StackFrameContext() override = default;
 
-  const ento::BlockDataRegion* getBlockInvocationData() const { return BlockInvocationData; }
+  const ento::BlockDataRegion *getBlockInvocationData() const {
+    return BlockInvocationData;
+  }
 
   const Expr *getCallSite() const { return CallSite; }
 
@@ -345,8 +343,9 @@ public:
   void Profile(llvm::FoldingSetNodeID &ID) override;
 
   static void Profile(llvm::FoldingSetNodeID &ID, AnalysisDeclContext *ADC,
-                      const LocationContext *ParentLC, const ento::BlockDataRegion *BlockInvocationData, const Expr *E,
-                      const CFGBlock *Block, unsigned BlockCount,
+                      const LocationContext *ParentLC,
+                      const ento::BlockDataRegion *BlockInvocationData,
+                      const Expr *E, const CFGBlock *Block, unsigned BlockCount,
                       unsigned Index) {
     ProfileCommon(ID, StackFrame, ADC, ParentLC, E);
     ID.AddPointer(BlockInvocationData);
@@ -357,41 +356,6 @@ public:
 
   static bool classof(const LocationContext *LC) {
     return LC->getKind() == StackFrame;
-  }
-};
-
-/// It represents a block invocation (based on BlockCall).
-class BlockInvocationContext : public LocationContext {
-  friend class LocationContextManager;
-
-  const BlockDecl *BD;
-
-  // FIXME: Come up with a more type-safe way to model context-sensitivity.
-  const void *Data;
-
-  BlockInvocationContext(AnalysisDeclContext *ADC,
-                         const LocationContext *ParentLC, const BlockDecl *BD,
-                         const void *Data, int64_t ID)
-      : LocationContext(Block, ADC, ParentLC, ID), BD(BD), Data(Data) {}
-
-public:
-  ~BlockInvocationContext() override = default;
-
-  const BlockDecl *getBlockDecl() const { return BD; }
-
-  const void *getData() const { return Data; }
-
-  void Profile(llvm::FoldingSetNodeID &ID) override;
-
-  static void Profile(llvm::FoldingSetNodeID &ID, AnalysisDeclContext *ADC,
-                      const LocationContext *ParentLC, const BlockDecl *BD,
-                      const void *Data) {
-    ProfileCommon(ID, Block, ADC, ParentLC, BD);
-    ID.AddPointer(Data);
-  }
-
-  static bool classof(const LocationContext *LC) {
-    return LC->getKind() == Block;
   }
 };
 
@@ -407,7 +371,8 @@ public:
   /// Obtain a context of the call stack using its parent context.
   ///
   /// \param ADC                 The AnalysisDeclContext.
-  /// \param ParentLC            The parent context of this newly created context.
+  /// \param ParentLC            The parent context of this newly created
+  /// context.
   /// \param BlockInvocationData Extra data in case this StackFrameContext is
   ///                            created for a BlockInvocation.
   /// \param E                   The call expression.
@@ -416,22 +381,10 @@ public:
   /// \param StmtIdx             The index of the call expression \p E among the
   ///                            statements of the CFGBlock \p Block.
   /// \returns The stack frame context corresponding to the call.
-  const StackFrameContext *getStackFrame(AnalysisDeclContext *ADC,
-                                         const LocationContext *ParentLC,
-                                         const ento::BlockDataRegion *BlockInvocationData,
-                                         const Expr *E, const CFGBlock *Block,
-                                         unsigned BlockCount, unsigned StmtIdx);
-
-  /// Obtain a context of the block invocation using its parent context.
-  ///
-  /// \param ADC      The AnalysisDeclContext.
-  /// \param ParentLC The parent context of this newly created context.
-  /// \param BD       The BlockDecl.
-  /// \param Data     The raw data to store as part of the context.
-  const BlockInvocationContext *
-  getBlockInvocationContext(AnalysisDeclContext *ADC,
-                            const LocationContext *ParentLC,
-                            const BlockDecl *BD, const void *Data);
+  const StackFrameContext *
+  getStackFrame(AnalysisDeclContext *ADC, const LocationContext *ParentLC,
+                const ento::BlockDataRegion *BlockInvocationData, const Expr *E,
+                const CFGBlock *Block, unsigned BlockCount, unsigned StmtIdx);
 
   /// Discard all previously created LocationContext objects.
   void clear();
@@ -483,8 +436,8 @@ public:
   ///
   /// \returns The top level stack frame for \p D.
   const StackFrameContext *getStackFrame(const Decl *D) {
-    return LocCtxMgr.getStackFrame(getContext(D), nullptr, nullptr, nullptr, nullptr, 0,
-                                   0);
+    return LocCtxMgr.getStackFrame(getContext(D), nullptr, nullptr, nullptr,
+                                   nullptr, 0, 0);
   }
 
   BodyFarm &getBodyFarm();

@@ -540,7 +540,8 @@ void ExprEngine::inlineCall(WorkList *WList, const CallEvent &Call,
   if (Call.getKind() == CE_Block &&
       !cast<BlockCall>(Call).isConversionFromLambda()) {
     BlockInvocationData = cast<BlockCall>(Call).getBlockRegion();
-    assert(BlockInvocationData && "If we have the block definition we should have its region");
+    assert(BlockInvocationData &&
+           "If we have the block definition we should have its region");
     AnalysisDeclContext *BlockCtx = AMgr.getAnalysisDeclContext(D);
     ParentOfCallee = CallerSFC;
   }
@@ -550,9 +551,9 @@ void ExprEngine::inlineCall(WorkList *WList, const CallEvent &Call,
 
   // Construct a new stack frame for the callee.
   AnalysisDeclContext *CalleeADC = AMgr.getAnalysisDeclContext(D);
-  const StackFrameContext *CalleeSFC =
-      CalleeADC->getStackFrame(ParentOfCallee, BlockInvocationData, CallE, getCurrBlock(),
-                               getNumVisitedCurrent(), currStmtIdx);
+  const StackFrameContext *CalleeSFC = CalleeADC->getStackFrame(
+      ParentOfCallee, BlockInvocationData, CallE, getCurrBlock(),
+      getNumVisitedCurrent(), currStmtIdx);
 
   CallEnter Loc(CallE, CalleeSFC, CurLC);
 

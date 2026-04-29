@@ -1012,7 +1012,7 @@ getStackOrCaptureRegionForDeclContext(const LocationContext *LC,
             if (VR->getDecl() == VD)
               return cast<VarRegion>(Var.getCapturedRegion());
           }
-        } 
+        }
       }
     }
 
