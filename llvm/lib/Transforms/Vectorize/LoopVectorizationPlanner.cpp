@@ -567,11 +567,6 @@ void VFSelectionContext::computeMinimalBitwidths() {
   MinBWs = computeMinimumValueSizes(TheLoop->getBlocks(), *DB, &TTI);
 }
 
-const MapVector<Instruction *, uint64_t> &
-VFSelectionContext::getMinimalBitwidths() const {
-  return MinBWs;
-}
-
 void VFSelectionContext::collectInLoopReductions() {
   // Avoid duplicating work finding in-loop reductions.
   if (!InLoopReductions.empty())

@@ -5847,11 +5847,14 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
   assert(OrigLoop->isInnermost() && "Inner loop expected.");
   CM.collectValuesToIgnore();
   Config.collectElementTypesForWidening(&CM.ValuesToIgnore);
-  Config.computeMinimalBitwidths();
 
   FixedScalableVFPair MaxFactors = CM.computeMaxVF(UserVF, UserIC);
   if (!MaxFactors) // Cases that should not to be vectorized nor interleaved.
     return;
+
+  // Compute the minimal bitwidths required for integer operations in the loop
+  // for later use by the cost model.
+  Config.computeMinimalBitwidths();
 
   // Invalidate interleave groups if all blocks of loop will be predicated.
   if (CM.blockNeedsPredicationForAnyReason(OrigLoop->getHeader()) &&

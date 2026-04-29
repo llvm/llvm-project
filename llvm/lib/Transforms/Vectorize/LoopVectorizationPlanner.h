@@ -696,12 +696,15 @@ public:
   /// for size, returning true here aborts vectorization.
   bool runtimeChecksRequired();
 
+  /// Compute smallest bitwidth each instruction can be represented with.
+  /// The vector equivalents of these instructions should be truncated to this
+  /// type.
   void computeMinimalBitwidths();
 
   /// \returns The smallest bitwidth each instruction can be represented with.
-  /// The vector equivalents of these instructions should be truncated to this
-  /// type.
-  const MapVector<Instruction *, uint64_t> &getMinimalBitwidths() const;
+  const MapVector<Instruction *, uint64_t> &getMinimalBitwidths() const {
+    return MinBWs;
+  }
 };
 
 /// Planner drives the vectorization process after having passed
