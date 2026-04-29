@@ -342,7 +342,7 @@ int Thread::run(ThreadStyle style, ThreadRunner runner, void *arg, void *stack,
 
 int Thread::join(ThreadReturnValue &retval) {
   if (self.attrib) {
-    // reject self join or invalid thread
+    // reject self join
     if (self.attrib == attrib)
       return EDEADLK;
 
