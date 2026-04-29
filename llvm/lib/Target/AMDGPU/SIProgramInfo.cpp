@@ -146,7 +146,7 @@ static uint64_t getComputePGMRSrc2Reg(const GCNSubtarget &ST,
     Reg = (S_00B84C_USER_SGPR(ProgInfo.UserSGPR) |
            S_00B84C_TRAP_HANDLER(ProgInfo.TrapHandlerEnable));
   } else {
-    report_fatal_error("Max Number of User SGPRs are either 32 or 16");
+    llvm_unreachable("max Number of User SGPRs are either 32 or 16");
   }
 
   Reg |= S_00B84C_TGID_X_EN(ProgInfo.TGIdXEnable) |
