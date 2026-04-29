@@ -314,4 +314,22 @@ TEST_F(TUSummaryBuilderLinkageTest, HasInternalLinkageWithStaticInline) {
   EXPECT_EQ(getLinkageFor(Builder.addEntity(Fn)), EntityLinkageType::Internal);
 }
 
+TEST_F(TUSummaryBuilderLinkageTest, ConstVolatileGlobalHasExternalLinkage) {
+  AST = tooling::buildASTFromCode("namespace ns {\n"
+                                  "  const volatile int glob = 0;\n"
+                                  "}");
+  const auto *VD = findDeclByName<VarDecl>("glob", AST->getASTContext());
+  ASSERT_TRUE(VD);
+  EXPECT_EQ(getLinkageFor(Builder.addEntity(VD)), EntityLinkageType::External);
+}
+
+TEST_F(TUSummaryBuilderLinkageTest, ConstGlobalHasInternalLinkage) {
+  AST = tooling::buildASTFromCode("namespace ns {\n"
+                                  "  const int glob = 0;\n"
+                                  "}");
+  const auto *VD = findDeclByName<VarDecl>("glob", AST->getASTContext());
+  ASSERT_TRUE(VD);
+  EXPECT_EQ(getLinkageFor(Builder.addEntity(VD)), EntityLinkageType::Internal);
+}
+
 } // namespace
