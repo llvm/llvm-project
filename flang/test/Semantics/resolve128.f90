@@ -21,6 +21,6 @@ integer(f3) function f3()
 end function
 
 !ERROR: 'f4' is already declared in this scoping unit
-character*(f4) function bb() result(f4) ! ERROR
+character*(f4) function bb() result(f4)
 f4 = "a"
 end
