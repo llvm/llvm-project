@@ -50,7 +50,9 @@ permissions:
 jobs:
   prepare:
     name: Prepare to build binaries
-    environment: release
+    environment:
+      deployment: false
+      environment: ${{ case( github.event_name == 'pull_request', null, 'release') }}
     runs-on: ${{ inputs.runs-on }}
     if: github.repository_owner == 'llvm'
     outputs:
