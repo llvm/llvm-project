@@ -59,7 +59,7 @@ define void @foo(i32 %iCount, i32 %c, i32 %jCount) {
 ; CHECK-NEXT:    [[TMP6]] = add nsw <4 x i32> [[TMP5]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP7]] = add nuw nsw <4 x i64> [[TMP2]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq <4 x i64> [[TMP7]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP8]], i32 0
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP8]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[FOR_COND1_FOR_INC9_CRIT_EDGE6:.*]], label %[[FOR_BODY34]]
 ; CHECK:       [[FOR_COND1_FOR_INC9_CRIT_EDGE6]]:
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> [[TMP6]], <4 x ptr> align 4 [[TMP0]], <4 x i1> splat (i1 true))

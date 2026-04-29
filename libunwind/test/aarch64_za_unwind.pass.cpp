@@ -16,7 +16,8 @@
 #include <string.h>
 #if defined(__APPLE__)
 #include <sys/sysctl.h>
-#else
+#endif
+#if defined(_LIBUNWIND_HAVE_GETAUXVAL) || defined(_LIBUNWIND_HAVE_ELF_AUX_INFO)
 #include <sys/auxv.h>
 #endif
 
@@ -32,11 +33,23 @@ static bool checkHasSME() {
     return false;
   return has_sme != 0;
 }
-#else
+#elif defined(_LIBUNWIND_HAVE_GETAUXVAL)
 static bool checkHasSME() {
   constexpr int hwcap2_sme = (1 << 23);
   unsigned long hwcap2 = getauxval(AT_HWCAP2);
   return (hwcap2 & hwcap2_sme) != 0;
+}
+#elif defined(_LIBUNWIND_HAVE_ELF_AUX_INFO)
+static bool checkHasSME() {
+  constexpr int hwcap2_sme = (1 << 23);
+  unsigned long hwcap2 = 0;
+  elf_aux_info(AT_HWCAP2, &hwcap2, sizeof(hwcap2));
+  return (hwcap2 & hwcap2_sme) != 0;
+}
+#else
+static bool checkHasSME() {
+  // TODO: Support other platforms.
+  return false;
 }
 #endif
 

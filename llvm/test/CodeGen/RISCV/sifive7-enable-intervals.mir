@@ -39,9 +39,9 @@ body:             |
 # CHECK-NEXT:      SiFive7PipeAB |    | x  |    |    |    |    |    |    |    |    |    |    |    |    |    |    |    |
 # CHECK-NEXT: SU(4)              |    |    | i  |    |    |    |    |    |    |    |    |    |    |    |    |    |    |
 # CHECK-NEXT:      SiFive7PipeAB |    |    | x  |    |    |    |    |    |    |    |    |    |    |    |    |    |    |
-# CHECK-NEXT: SU(5)              |    |    | i  |    |    |    |    |    |    |    |    |    |    |    |    |    |    |
-# CHECK-NEXT:       SiFive7PipeA |    |    | x  |    |    |    |    |    |    |    |    |    |    |    |    |    |    |
-# CHECK-NEXT:      SiFive7PipeAB |    |    | x  |    |    |    |    |    |    |    |    |    |    |    |    |    |    |
+# CHECK-NEXT: SU(5)              |    |    |    | i  |    |    |    |    |    |    |    |    |    |    |    |    |    |
+# CHECK-NEXT:      SiFive7PipeA  |    |    |    | x  |    |    |    |    |    |    |    |    |    |    |    |    |    |
+# CHECK-NEXT:      SiFive7PipeAB |    |    |    | x  |    |    |    |    |    |    |    |    |    |    |    |    |    |
 # CHECK-NEXT: SU(7)              |    |    |    |    | i  |    |    |    |    |    |    |    |    |    |    |    |    |
 # CHECK-NEXT:         SiFive7VCQ |    |    |    |    | x  |    |    |    |    |    |    |    |    |    |    |    |    |
 # CHECK-NEXT:         SiFive7VA1 |    |    |    |    |    | x  | x  | x  | x  |    |    |    |    |    |    |    |    |

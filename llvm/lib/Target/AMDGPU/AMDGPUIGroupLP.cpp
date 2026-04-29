@@ -78,8 +78,9 @@ enum class SchedGroupMask {
   DS_READ = 1u << 8,
   DS_WRITE = 1u << 9,
   TRANS = 1u << 10,
+  LDSDMA = 1u << 11,
   ALL = ALU | VALU | SALU | MFMA | VMEM | VMEM_READ | VMEM_WRITE | DS |
-        DS_READ | DS_WRITE | TRANS,
+        DS_READ | DS_WRITE | TRANS | LDSDMA,
   LLVM_MARK_AS_BITMASK_ENUM(/* LargestFlag = */ ALL)
 };
 
@@ -2450,7 +2451,8 @@ bool SchedGroup::canAddMI(const MachineInstr &MI) const {
     Result = !MI.mayLoadOrStore();
 
   else if (((SGMask & SchedGroupMask::VALU) != SchedGroupMask::NONE) &&
-           TII->isVALU(MI) && !TII->isMFMAorWMMA(MI) && !TII->isTRANS(MI)) {
+           TII->isVALU(MI) && !TII->isMFMAorWMMA(MI) && !TII->isTRANS(MI) &&
+           !TII->isLDSDMA(MI)) {
     // Some memory instructions may be marked as VALU (e.g. BUFFER_LOAD_*_LDS).
     // For our purposes, these shall not be classified as VALU as this results
     // in unexpected behavior.
@@ -2466,7 +2468,7 @@ bool SchedGroup::canAddMI(const MachineInstr &MI) const {
     Result = true;
 
   else if (((SGMask & SchedGroupMask::VMEM) != SchedGroupMask::NONE) &&
-           TII->isVMEM(MI))
+           (TII->isVMEM(MI) || TII->isLDSDMA(MI)))
     Result = true;
 
   else if (((SGMask & SchedGroupMask::VMEM_READ) != SchedGroupMask::NONE) &&
@@ -2478,7 +2480,7 @@ bool SchedGroup::canAddMI(const MachineInstr &MI) const {
     Result = true;
 
   else if (((SGMask & SchedGroupMask::DS) != SchedGroupMask::NONE) &&
-           TII->isDS(MI))
+           (TII->isDS(MI) || TII->isLDSDMA(MI)))
     Result = true;
 
   else if (((SGMask & SchedGroupMask::DS_READ) != SchedGroupMask::NONE) &&
@@ -2491,6 +2493,10 @@ bool SchedGroup::canAddMI(const MachineInstr &MI) const {
 
   else if (((SGMask & SchedGroupMask::TRANS) != SchedGroupMask::NONE) &&
            TII->isTRANS(MI))
+    Result = true;
+
+  else if (((SGMask & SchedGroupMask::LDSDMA) != SchedGroupMask::NONE) &&
+           TII->isLDSDMA(MI))
     Result = true;
 
   LLVM_DEBUG(
@@ -2658,17 +2664,21 @@ IGroupLPDAGMutation::invertSchedBarrierMask(SchedGroupMask Mask) const {
            (InvertedMask & SchedGroupMask::TRANS) == SchedGroupMask::NONE)
     InvertedMask &= ~SchedGroupMask::ALU;
 
-  // VMEM implies VMEM_READ, VMEM_WRITE.
+  // VMEM implies VMEM_READ, VMEM_WRITE, LDSDMA.
   if ((InvertedMask & SchedGroupMask::VMEM) == SchedGroupMask::NONE)
-    InvertedMask &= ~SchedGroupMask::VMEM_READ & ~SchedGroupMask::VMEM_WRITE;
-  // VMEM_READ, VMEM_WRITE implies VMEM.
+    InvertedMask &= ~SchedGroupMask::VMEM_READ & ~SchedGroupMask::VMEM_WRITE &
+                    ~SchedGroupMask::LDSDMA;
+  // VMEM_READ, VMEM_WRITE, LDSDMA implies VMEM.
   else if ((InvertedMask & SchedGroupMask::VMEM_READ) == SchedGroupMask::NONE ||
-           (InvertedMask & SchedGroupMask::VMEM_WRITE) == SchedGroupMask::NONE)
+           (InvertedMask & SchedGroupMask::VMEM_WRITE) ==
+               SchedGroupMask::NONE ||
+           (InvertedMask & SchedGroupMask::LDSDMA) == SchedGroupMask::NONE)
     InvertedMask &= ~SchedGroupMask::VMEM;
 
-  // DS implies DS_READ, DS_WRITE.
+  // DS implies DS_READ, DS_WRITE, LDSDMA.
   if ((InvertedMask & SchedGroupMask::DS) == SchedGroupMask::NONE)
-    InvertedMask &= ~SchedGroupMask::DS_READ & ~SchedGroupMask::DS_WRITE;
+    InvertedMask &= ~SchedGroupMask::DS_READ & ~SchedGroupMask::DS_WRITE &
+                    ~SchedGroupMask::LDSDMA;
   // DS_READ, DS_WRITE implies DS.
   else if ((InvertedMask & SchedGroupMask::DS_READ) == SchedGroupMask::NONE ||
            (InvertedMask & SchedGroupMask::DS_WRITE) == SchedGroupMask::NONE)

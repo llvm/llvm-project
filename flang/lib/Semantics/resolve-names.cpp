@@ -498,6 +498,8 @@ public:
     // Result symbol
     Symbol *resultSymbol{nullptr};
     bool inFunctionStmt{false}; // true between Pre/Post of FunctionStmt
+    // re-entrancy guard for CompleteFunctionResultType
+    bool completingType{false};
     // Functions with previous implicitly-typed references get those types
     // checked against their later definitions.
     const DeclTypeSpec *previousImplicitType{nullptr};
@@ -1612,25 +1614,26 @@ bool AccVisitor::Pre(const parser::OpenACCBlockConstruct &x) {
 }
 
 void AccVisitor::CopySymbolWithDevice(const parser::Name *name) {
-  // When CUDA Fortran is enabled together with OpenACC, new
-  // symbols are created for the one appearing in the use_device
-  // clause. These new symbols have the CUDA Fortran device
-  // attribute.
-  if (context_.languageFeatures().IsEnabled(common::LanguageFeature::CUDA) &&
-      name && name->symbol) {
-    if (Symbol * copy{currScope().CopySymbol(name->symbol->GetUltimate())}) {
-      name->symbol = copy;
+  // New symbols are created for those appearing in the use_device clause.
+  // These new symbols get the CUDA device attribute.
+  if (name && name->symbol) {
+    Symbol *copy{currScope().CopySymbol(name->symbol->GetUltimate())};
+    if (copy) {
       if (auto *object{copy->GetUltimate().detailsIf<ObjectEntityDetails>()}) {
         object->set_cudaDataAttr(common::CUDADataAttr::Device);
       }
+    } else {
+      copy = FindInScope(currScope(), name->symbol->GetUltimate().name());
+    }
+    if (copy) {
+      name->symbol = copy;
     }
   }
 }
 
 void AccVisitor::CopySymbolWithDeviceStructurePath(const parser::Name *baseName,
     llvm::ArrayRef<SourceName> componentPath, parser::Designator &designator) {
-  if (!context_.languageFeatures().IsEnabled(common::LanguageFeature::CUDA) ||
-      !baseName || !baseName->symbol || componentPath.empty()) {
+  if (!baseName || !baseName->symbol || componentPath.empty()) {
     return;
   }
   const Symbol &orig{*baseName->symbol};
@@ -1730,18 +1733,6 @@ public:
     return true;
   }
   void Post(const parser::OpenMPLoopConstruct &) { PopScope(); }
-  bool Pre(const parser::OmpBeginLoopDirective &x) {
-    return Pre(static_cast<const parser::OmpDirectiveSpecification &>(x));
-  }
-  void Post(const parser::OmpBeginLoopDirective &x) {
-    Post(static_cast<const parser::OmpDirectiveSpecification &>(x));
-  }
-  bool Pre(const parser::OmpEndLoopDirective &x) {
-    return Pre(static_cast<const parser::OmpDirectiveSpecification &>(x));
-  }
-  void Post(const parser::OmpEndLoopDirective &x) {
-    Post(static_cast<const parser::OmpDirectiveSpecification &>(x));
-  }
 
   void Post(const parser::OmpTypeName &);
   bool Pre(const parser::OmpStylizedDeclaration &);
@@ -1763,12 +1754,12 @@ public:
     }
   }
 
-  bool Pre(const parser::OpenMPDeclareMapperConstruct &x) {
+  bool Pre(const parser::OmpDeclareMapperDirective &x) {
     AddOmpSourceRange(x.source);
     return true;
   }
 
-  bool Pre(const parser::OpenMPDeclareSimdConstruct &x) {
+  bool Pre(const parser::OmpDeclareSimdDirective &x) {
     AddOmpSourceRange(x.source);
     return true;
   }
@@ -1778,7 +1769,7 @@ public:
     return true;
   }
 
-  bool Pre(const parser::OpenMPDeclareReductionConstruct &x) {
+  bool Pre(const parser::OmpDeclareReductionDirective &x) {
     AddOmpSourceRange(x.source);
     return true;
   }
@@ -1808,7 +1799,7 @@ public:
     return true;
   }
   void Post(const parser::OpenMPThreadprivate &) { SkipImplicitTyping(false); }
-  bool Pre(const parser::OpenMPDeclareTargetConstruct &x) {
+  bool Pre(const parser::OmpDeclareTargetDirective &x) {
     auto addObjectName{[&](const parser::OmpObject &object) {
       common::visit(
           common::visitors{
@@ -1835,7 +1826,7 @@ public:
     }};
 
     for (const parser::OmpArgument &arg : x.v.Arguments().v) {
-      if (auto *object{omp::GetArgumentObject(arg)}) {
+      if (auto *object{parser::omp::GetArgumentObject(arg)}) {
         addObjectName(*object);
       }
     }
@@ -1851,7 +1842,7 @@ public:
     SkipImplicitTyping(true);
     return true;
   }
-  void Post(const parser::OpenMPDeclareTargetConstruct &) {
+  void Post(const parser::OmpDeclareTargetDirective &) {
     SkipImplicitTyping(false);
   }
   bool Pre(const parser::OmpAllocateDirective &x) {
@@ -2203,7 +2194,7 @@ void OmpVisitor::ResolveCriticalName(const parser::OmpArgument &arg) {
   }()};
 
   if (auto *object{parser::Unwrap<parser::OmpObject>(arg.u)}) {
-    if (auto *desg{omp::GetDesignatorFromObj(*object)}) {
+    if (auto *desg{parser::omp::GetDesignatorFromObj(*object)}) {
       if (auto *name{parser::GetDesignatorNameIfDataRef(*desg)}) {
         if (auto *symbol{FindInScope(globalScope, *name)}) {
           if (!symbol->test(Symbol::Flag::OmpCriticalLock)) {
@@ -2996,6 +2987,7 @@ void FuncResultStack::CompleteFunctionResultType() {
   if (info && &info->scope == &scopeHandler_.currScope() &&
       info->resultSymbol) {
     if (info->parsedType) {
+      auto completingTypeScope{common::ScopedSet(info->completingType, true)};
       scopeHandler_.messageHandler().set_currStmtSource(info->source);
       if (const auto *type{
               scopeHandler_.ProcessTypeSpec(*info->parsedType, true)}) {
@@ -3030,7 +3022,15 @@ void FuncResultStack::CompleteFunctionResultType() {
 void FuncResultStack::CompleteTypeIfFunctionResult(Symbol &symbol) {
   if (FuncInfo * info{Top()}) {
     if (info->resultSymbol == &symbol) {
-      CompleteFunctionResultType();
+      if (info->completingType) {
+        if (!scopeHandler_.context().HasError(symbol)) {
+          scopeHandler_.SayAlreadyDeclared(symbol.name(),
+              info->resultName ? info->resultName->source : symbol.name());
+          scopeHandler_.context().SetError(symbol);
+        }
+      } else {
+        CompleteFunctionResultType();
+      }
     }
   }
 }
@@ -10401,7 +10401,8 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
       std::holds_alternative<parser::CompilerDirective::Inline>(x.u) ||
       std::holds_alternative<parser::CompilerDirective::Prefetch>(x.u) ||
       std::holds_alternative<parser::CompilerDirective::NoInline>(x.u) ||
-      std::holds_alternative<parser::CompilerDirective::IVDep>(x.u)) {
+      std::holds_alternative<parser::CompilerDirective::IVDep>(x.u) ||
+      std::holds_alternative<parser::CompilerDirective::Simd>(x.u)) {
     return;
   }
   if (const auto *tkr{
@@ -10492,6 +10493,21 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
           }
         }
       }
+    }
+  } else if (const auto *inlineAlways{
+                 std::get_if<parser::CompilerDirective::InlineAlways>(&x.u)}) {
+    if (!inlineAlways->v.has_value()) {
+      return;
+    }
+
+    Symbol *sym{currScope().symbol()};
+    if (!sym || !sym->has<SubprogramDetails>()) {
+      Say(x.source,
+          "!DIR$ INLINEALWAYS directive with name must appear in a subprogram"_err_en_US);
+    } else if (inlineAlways->v->ToString() != sym->name().ToString()) {
+      context().Warn(common::UsageWarning::IgnoredDirective, x.source,
+          "INLINEALWAYS name '%s' does not match the subprogram name '%s'"_warn_en_US,
+          inlineAlways->v->ToString(), sym->name().ToString());
     }
   } else if (context().ShouldWarn(common::UsageWarning::IgnoredDirective)) {
     Say(x.source, "Unrecognized compiler directive was ignored"_warn_en_US)

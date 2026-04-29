@@ -574,13 +574,9 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *IndexOp = EmitScalarExpr(E->getArg(1));
 
     llvm::Type *RetTy = ConvertType(E->getType());
-    llvm::Function *IntrFn = llvm::Intrinsic::getOrInsertDeclaration(
-        &CGM.getModule(),
-        CGM.getHLSLRuntime().getCreateResourceGetPointerIntrinsic(),
-        {RetTy, HandleOp->getType(), IndexOp->getType()});
-    llvm::CallInst *CI = EmitRuntimeCall(IntrFn, {HandleOp, IndexOp});
-    CI->setCallingConv(IntrFn->getCallingConv());
-    return CI;
+    return Builder.CreateIntrinsic(
+        RetTy, CGM.getHLSLRuntime().getCreateResourceGetPointerIntrinsic(),
+        ArrayRef<Value *>{HandleOp, IndexOp});
   }
   case Builtin::BI__builtin_hlsl_resource_sample: {
     Value *HandleOp = EmitScalarExpr(E->getArg(0));
@@ -1570,6 +1566,28 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     assert(E->getArg(0)->getType()->hasFloatingRepresentation() &&
            "clip operands types mismatch");
     return handleHlslClip(E, this);
+  case Builtin::BI__builtin_hlsl_all_memory_barrier: {
+    Intrinsic::ID ID = CGM.getHLSLRuntime().getAllMemoryBarrierIntrinsic();
+    return EmitRuntimeCall(
+        Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID));
+  }
+  case Builtin::BI__builtin_hlsl_all_memory_barrier_with_group_sync: {
+    Intrinsic::ID ID =
+        CGM.getHLSLRuntime().getAllMemoryBarrierWithGroupSyncIntrinsic();
+    return EmitRuntimeCall(
+        Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID));
+  }
+  case Builtin::BI__builtin_hlsl_device_memory_barrier: {
+    Intrinsic::ID ID = CGM.getHLSLRuntime().getDeviceMemoryBarrierIntrinsic();
+    return EmitRuntimeCall(
+        Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID));
+  }
+  case Builtin::BI__builtin_hlsl_device_memory_barrier_with_group_sync: {
+    Intrinsic::ID ID =
+        CGM.getHLSLRuntime().getDeviceMemoryBarrierWithGroupSyncIntrinsic();
+    return EmitRuntimeCall(
+        Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID));
+  }
   case Builtin::BI__builtin_hlsl_group_memory_barrier: {
     Intrinsic::ID ID = CGM.getHLSLRuntime().getGroupMemoryBarrierIntrinsic();
     return EmitRuntimeCall(

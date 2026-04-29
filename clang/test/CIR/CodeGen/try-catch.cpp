@@ -899,7 +899,7 @@ void cleanup_inside_try_body() {
   }
 }
 
-// CIR: cir.func {{.*}} @_Z23cleanup_inside_try_bodyv(){{.*}} personality(@__gxx_personality_v0) {
+// CIR: cir.func {{.*}} @_Z23cleanup_inside_try_bodyv(){{.*}} personality(@__gxx_personality_v0){{.*}} {
 // CIR: cir.scope {
 // CIR:   %[[S:.*]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["s"]
 // CIR:   cir.try {
@@ -1009,7 +1009,7 @@ void call_function_inside_try_catch_with_aggregate_exception_type() {
 }
 
 
-// CIR: cir.func {{.*}} @_Z60call_function_inside_try_catch_with_aggregate_exception_typev(){{.*}} personality(@__gxx_personality_v0) {
+// CIR: cir.func {{.*}} @_Z60call_function_inside_try_catch_with_aggregate_exception_typev(){{.*}} personality(@__gxx_personality_v0){{.*}} {
 // CIR: cir.scope {
 // CIR:   %[[E_ADDR:.*]] = cir.alloca !rec_CustomError, !cir.ptr<!rec_CustomError>, ["e"]
 // CIR:   cir.try {
@@ -1129,7 +1129,7 @@ void call_function_inside_try_catch_with_ref_ptr_of_record_exception_type() {
   }
 }
 
-// CIR: cir.func {{.*}} @_Z68call_function_inside_try_catch_with_ref_ptr_of_record_exception_typev(){{.*}} personality(@__gxx_personality_v0) {
+// CIR: cir.func {{.*}} @_Z68call_function_inside_try_catch_with_ref_ptr_of_record_exception_typev(){{.*}} personality(@__gxx_personality_v0){{.*}} {
 // CIR:   %[[E_ADDR:.*]] = cir.alloca !cir.ptr<!cir.ptr<!rec_Record>>, !cir.ptr<!cir.ptr<!cir.ptr<!rec_Record>>>, ["ref_ptr", const]
 // CIR:   %[[EXN_BYREF_TMP:.*]] = cir.alloca !cir.ptr<!rec_Record>, !cir.ptr<!cir.ptr<!rec_Record>>, ["exn.byref.tmp"]
 // CIR:   cir.try {
@@ -1251,7 +1251,7 @@ void call_function_inside_try_catch_with_exception_member_ptr_type() {
   }
 }
 
-// CIR: cir.func {{.*}} @_Z61call_function_inside_try_catch_with_exception_member_ptr_typev(){{.*}} personality(@__gxx_personality_v0) {
+// CIR: cir.func {{.*}} @_Z61call_function_inside_try_catch_with_exception_member_ptr_typev(){{.*}} personality(@__gxx_personality_v0){{.*}} {
 // CIR: cir.scope {
 // CIR:   %[[E_ADDR:.*]] = cir.alloca !s64i, !cir.ptr<!s64i>, ["memberPtr"]
 // CIR:   cir.try {

@@ -8,6 +8,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfTargetDoesNotSupportThreads()
 class LLDBIteratorTestCase(TestBase):
     def setUp(self):
         # Call super's setUp().
