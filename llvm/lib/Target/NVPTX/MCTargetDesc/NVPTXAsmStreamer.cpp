@@ -186,6 +186,8 @@ bool NVPTXAsmStreamer::emitSymbolAttribute(MCSymbol *Symbol,
   case MCSA_Weak:
     OS << MAI->getWeakDirective();
     break;
+  case MCSA_Cold:
+    return false;
   default:
     llvm_unreachable("Unsupported symbol attribute in NVPTXAsmStreamer.");
   }
@@ -205,6 +207,18 @@ void NVPTXAsmStreamer::emitInstruction(const MCInst &Inst,
   }
 
   InstPrinter->printInst(&Inst, 0, "", STI, OS);
+  EmitEOL();
+}
+
+void NVPTXAsmStreamer::emitRelocDirective(const MCExpr &Offset, StringRef Name,
+                                          const MCExpr *Expr, SMLoc) {
+  OS << "\t.reloc ";
+  MAI->printExpr(OS, Offset);
+  OS << ", " << Name;
+  if (Expr) {
+    OS << ", ";
+    MAI->printExpr(OS, *Expr);
+  }
   EmitEOL();
 }
 

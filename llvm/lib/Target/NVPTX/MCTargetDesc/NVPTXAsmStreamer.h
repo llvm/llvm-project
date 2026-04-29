@@ -122,6 +122,9 @@ public:
   void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                         Align ByteAlignment) override {}
 
+  void emitRelocDirective(const MCExpr &Offset, StringRef Name,
+                          const MCExpr *Expr, SMLoc Loc) override;
+
   void emitRawTextImpl(StringRef String) override;
 
   Expected<unsigned> tryEmitDwarfFileDirective(
