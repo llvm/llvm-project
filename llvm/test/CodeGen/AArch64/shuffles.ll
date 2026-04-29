@@ -6,18 +6,18 @@ define <16 x i32> @test_shuf1(<16 x i32> %x, <16 x i32> %y) {
 ; CHECKLE-LABEL: test_shuf1:
 ; CHECKLE:       // %bb.0:
 ; CHECKLE-NEXT:    ext v3.16b, v6.16b, v1.16b, #4
-; CHECKLE-NEXT:    uzp1 v5.4s, v1.4s, v0.4s
 ; CHECKLE-NEXT:    uzp2 v16.4s, v2.4s, v4.4s
-; CHECKLE-NEXT:    dup v17.4s, v4.s[0]
+; CHECKLE-NEXT:    dup v4.4s, v4.s[0]
+; CHECKLE-NEXT:    uzp1 v5.4s, v1.4s, v0.4s
+; CHECKLE-NEXT:    ext v6.16b, v6.16b, v4.16b, #12
 ; CHECKLE-NEXT:    trn2 v4.4s, v1.4s, v3.4s
-; CHECKLE-NEXT:    mov v17.s[0], v6.s[3]
-; CHECKLE-NEXT:    trn2 v1.4s, v5.4s, v1.4s
 ; CHECKLE-NEXT:    rev64 v3.4s, v7.4s
 ; CHECKLE-NEXT:    trn1 v2.4s, v16.4s, v2.4s
+; CHECKLE-NEXT:    trn2 v1.4s, v5.4s, v1.4s
 ; CHECKLE-NEXT:    mov v4.s[0], v7.s[1]
-; CHECKLE-NEXT:    ext v1.16b, v0.16b, v1.16b, #12
-; CHECKLE-NEXT:    mov v3.d[0], v17.d[0]
+; CHECKLE-NEXT:    mov v3.d[0], v6.d[0]
 ; CHECKLE-NEXT:    mov v2.s[3], v7.s[0]
+; CHECKLE-NEXT:    ext v1.16b, v0.16b, v1.16b, #12
 ; CHECKLE-NEXT:    mov v0.16b, v4.16b
 ; CHECKLE-NEXT:    ret
 ;
@@ -41,21 +41,21 @@ define <16 x i32> @test_shuf1(<16 x i32> %x, <16 x i32> %y) {
 ; CHECKBE-NEXT:    dup v4.4s, v4.s[0]
 ; CHECKBE-NEXT:    rev64 v17.4s, v5.4s
 ; CHECKBE-NEXT:    trn2 v6.4s, v1.4s, v6.4s
-; CHECKBE-NEXT:    mov v4.s[0], v3.s[3]
+; CHECKBE-NEXT:    ext v3.16b, v3.16b, v4.16b, #12
 ; CHECKBE-NEXT:    trn2 v1.4s, v16.4s, v1.4s
 ; CHECKBE-NEXT:    trn1 v2.4s, v7.4s, v2.4s
-; CHECKBE-NEXT:    rev64 v3.4s, v17.4s
+; CHECKBE-NEXT:    rev64 v4.4s, v17.4s
 ; CHECKBE-NEXT:    mov v6.s[0], v5.s[1]
-; CHECKBE-NEXT:    rev64 v4.4s, v4.4s
+; CHECKBE-NEXT:    rev64 v3.4s, v3.4s
 ; CHECKBE-NEXT:    ext v0.16b, v0.16b, v1.16b, #12
 ; CHECKBE-NEXT:    mov v2.s[3], v5.s[0]
 ; CHECKBE-NEXT:    rev64 v1.4s, v6.4s
-; CHECKBE-NEXT:    mov v3.d[0], v4.d[0]
-; CHECKBE-NEXT:    rev64 v4.4s, v0.4s
+; CHECKBE-NEXT:    mov v4.d[0], v3.d[0]
+; CHECKBE-NEXT:    rev64 v5.4s, v0.4s
 ; CHECKBE-NEXT:    rev64 v2.4s, v2.4s
 ; CHECKBE-NEXT:    ext v0.16b, v1.16b, v1.16b, #8
-; CHECKBE-NEXT:    ext v3.16b, v3.16b, v3.16b, #8
-; CHECKBE-NEXT:    ext v1.16b, v4.16b, v4.16b, #8
+; CHECKBE-NEXT:    ext v3.16b, v4.16b, v4.16b, #8
+; CHECKBE-NEXT:    ext v1.16b, v5.16b, v5.16b, #8
 ; CHECKBE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
 ; CHECKBE-NEXT:    ret
   %s3 = shufflevector <16 x i32> %x, <16 x i32> %y, <16 x i32> <i32 29, i32 26, i32 7, i32 4, i32 3, i32 6, i32 5, i32 2, i32 9, i32 8, i32 17, i32 28, i32 27, i32 16, i32 31, i32 30>
@@ -443,25 +443,12 @@ define <8 x half> @test_shuf11(<8 x half> %a, <8 x half> %b)
   ret <8 x half> %r
 }
 
-define <16 x i8> @test_shuf_zero_ext_rhs(<16 x i8> %a) {
-; CHECKLE-LABEL: test_shuf_zero_ext_rhs:
-; CHECKLE:       // %bb.0:
-; CHECKLE-NEXT:    movi v1.2d, #0000000000000000
-; CHECKLE-NEXT:    ext v0.16b, v1.16b, v0.16b, #15
-; CHECKLE-NEXT:    ret
-;
-; CHECKBE-LABEL: test_shuf_zero_ext_rhs:
-; CHECKBE:       // %bb.0:
-  %r = shufflevector <16 x i8> %a, <16 x i8> zeroinitializer, <16 x i32> <i32 16, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14>
-  ret <16 x i8> %r
-}
-
 define <8 x half> @test_shuf12(<8 x half> %a, <8 x half> %b)
 ; CHECKLE-LABEL: test_shuf12:
 ; CHECKLE:       // %bb.0:
-; CHECKLE-NEXT:    adrp x8, .LCPI17_0
+; CHECKLE-NEXT:    adrp x8, .LCPI16_0
 ; CHECKLE-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECKLE-NEXT:    ldr q2, [x8, :lo12:.LCPI17_0]
+; CHECKLE-NEXT:    ldr q2, [x8, :lo12:.LCPI16_0]
 ; CHECKLE-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECKLE-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
 ; CHECKLE-NEXT:    ret
@@ -470,8 +457,8 @@ define <8 x half> @test_shuf12(<8 x half> %a, <8 x half> %b)
 ; CHECKBE:       // %bb.0:
 ; CHECKBE-NEXT:    rev64 v1.16b, v1.16b
 ; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
-; CHECKBE-NEXT:    adrp x8, .LCPI17_0
-; CHECKBE-NEXT:    add x8, x8, :lo12:.LCPI17_0
+; CHECKBE-NEXT:    adrp x8, .LCPI16_0
+; CHECKBE-NEXT:    add x8, x8, :lo12:.LCPI16_0
 ; CHECKBE-NEXT:    ext v2.16b, v1.16b, v1.16b, #8
 ; CHECKBE-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECKBE-NEXT:    ld1 { v0.16b }, [x8]
@@ -487,9 +474,9 @@ define <8 x half> @test_shuf12(<8 x half> %a, <8 x half> %b)
 define <8 x half> @test_shuf13(<8 x half> %a, <8 x half> %b)
 ; CHECKLE-LABEL: test_shuf13:
 ; CHECKLE:       // %bb.0:
-; CHECKLE-NEXT:    adrp x8, .LCPI18_0
+; CHECKLE-NEXT:    adrp x8, .LCPI17_0
 ; CHECKLE-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECKLE-NEXT:    ldr q2, [x8, :lo12:.LCPI18_0]
+; CHECKLE-NEXT:    ldr q2, [x8, :lo12:.LCPI17_0]
 ; CHECKLE-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECKLE-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
 ; CHECKLE-NEXT:    ret
@@ -498,8 +485,8 @@ define <8 x half> @test_shuf13(<8 x half> %a, <8 x half> %b)
 ; CHECKBE:       // %bb.0:
 ; CHECKBE-NEXT:    rev64 v1.16b, v1.16b
 ; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
-; CHECKBE-NEXT:    adrp x8, .LCPI18_0
-; CHECKBE-NEXT:    add x8, x8, :lo12:.LCPI18_0
+; CHECKBE-NEXT:    adrp x8, .LCPI17_0
+; CHECKBE-NEXT:    add x8, x8, :lo12:.LCPI17_0
 ; CHECKBE-NEXT:    ext v2.16b, v1.16b, v1.16b, #8
 ; CHECKBE-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECKBE-NEXT:    ld1 { v0.16b }, [x8]
@@ -515,9 +502,9 @@ define <8 x half> @test_shuf13(<8 x half> %a, <8 x half> %b)
 define <8 x half> @test_shuf14(<8 x half> %a, <8 x half> %b)
 ; CHECKLE-LABEL: test_shuf14:
 ; CHECKLE:       // %bb.0:
-; CHECKLE-NEXT:    adrp x8, .LCPI19_0
+; CHECKLE-NEXT:    adrp x8, .LCPI18_0
 ; CHECKLE-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECKLE-NEXT:    ldr q2, [x8, :lo12:.LCPI19_0]
+; CHECKLE-NEXT:    ldr q2, [x8, :lo12:.LCPI18_0]
 ; CHECKLE-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECKLE-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
 ; CHECKLE-NEXT:    ret
@@ -526,8 +513,8 @@ define <8 x half> @test_shuf14(<8 x half> %a, <8 x half> %b)
 ; CHECKBE:       // %bb.0:
 ; CHECKBE-NEXT:    rev64 v1.16b, v1.16b
 ; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
-; CHECKBE-NEXT:    adrp x8, .LCPI19_0
-; CHECKBE-NEXT:    add x8, x8, :lo12:.LCPI19_0
+; CHECKBE-NEXT:    adrp x8, .LCPI18_0
+; CHECKBE-NEXT:    add x8, x8, :lo12:.LCPI18_0
 ; CHECKBE-NEXT:    ext v2.16b, v1.16b, v1.16b, #8
 ; CHECKBE-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECKBE-NEXT:    ld1 { v0.16b }, [x8]
@@ -543,9 +530,9 @@ define <8 x half> @test_shuf14(<8 x half> %a, <8 x half> %b)
 define <8 x half> @test_shuf15(<8 x half> %a, <8 x half> %b)
 ; CHECKLE-LABEL: test_shuf15:
 ; CHECKLE:       // %bb.0:
-; CHECKLE-NEXT:    adrp x8, .LCPI20_0
+; CHECKLE-NEXT:    adrp x8, .LCPI19_0
 ; CHECKLE-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECKLE-NEXT:    ldr q2, [x8, :lo12:.LCPI20_0]
+; CHECKLE-NEXT:    ldr q2, [x8, :lo12:.LCPI19_0]
 ; CHECKLE-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECKLE-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
 ; CHECKLE-NEXT:    ret
@@ -554,8 +541,8 @@ define <8 x half> @test_shuf15(<8 x half> %a, <8 x half> %b)
 ; CHECKBE:       // %bb.0:
 ; CHECKBE-NEXT:    rev64 v1.16b, v1.16b
 ; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
-; CHECKBE-NEXT:    adrp x8, .LCPI20_0
-; CHECKBE-NEXT:    add x8, x8, :lo12:.LCPI20_0
+; CHECKBE-NEXT:    adrp x8, .LCPI19_0
+; CHECKBE-NEXT:    add x8, x8, :lo12:.LCPI19_0
 ; CHECKBE-NEXT:    ext v2.16b, v1.16b, v1.16b, #8
 ; CHECKBE-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECKBE-NEXT:    ld1 { v0.16b }, [x8]
@@ -587,4 +574,189 @@ define <4 x i32> @extract_shuffle(<8 x i16> %j, <4 x i16> %k) {
   %c = zext <4 x i16> %b to <4 x i32>
   %d = shl <4 x i32> %c, <i32 3, i32 3, i32 3, i32 3>
   ret <4 x i32> %d
+}
+
+; Zero/splat-fill EXT: splat prefix (zero inserted at the start, data shifted right)
+define <16 x i8> @test_shuf_zero_ext_start_lhs(<16 x i8> %a) {
+; CHECKLE-LABEL: test_shuf_zero_ext_start_lhs:
+; CHECKLE:       // %bb.0:
+; CHECKLE-NEXT:    movi v1.2d, #0000000000000000
+; CHECKLE-NEXT:    ext v0.16b, v1.16b, v0.16b, #15
+; CHECKLE-NEXT:    ret
+;
+; CHECKBE-LABEL: test_shuf_zero_ext_start_lhs:
+; CHECKBE:       // %bb.0:
+; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
+; CHECKBE-NEXT:    movi v1.2d, #0000000000000000
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    ext v0.16b, v1.16b, v0.16b, #15
+; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    ret
+  %r = shufflevector <16 x i8> %a, <16 x i8> zeroinitializer, <16 x i32> <i32 16, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14>
+  ret <16 x i8> %r
+}
+
+define <16 x i8> @test_shuf_zero_ext_start_lhs2(<16 x i8> %a) {
+; CHECKLE-LABEL: test_shuf_zero_ext_start_lhs2:
+; CHECKLE:       // %bb.0:
+; CHECKLE-NEXT:    movi v1.2d, #0000000000000000
+; CHECKLE-NEXT:    ext v0.16b, v1.16b, v0.16b, #14
+; CHECKLE-NEXT:    ret
+;
+; CHECKBE-LABEL: test_shuf_zero_ext_start_lhs2:
+; CHECKBE:       // %bb.0:
+; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
+; CHECKBE-NEXT:    movi v1.2d, #0000000000000000
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    ext v0.16b, v1.16b, v0.16b, #14
+; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    ret
+  %r = shufflevector <16 x i8> %a, <16 x i8> zeroinitializer, <16 x i32> <i32 16, i32 16, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13>
+  ret <16 x i8> %r
+}
+
+define <16 x i8> @test_shuf_zero_ext_start_rhs(<16 x i8> %a) {
+; CHECKLE-LABEL: test_shuf_zero_ext_start_rhs:
+; CHECKLE:       // %bb.0:
+; CHECKLE-NEXT:    movi v1.2d, #0000000000000000
+; CHECKLE-NEXT:    ext v0.16b, v1.16b, v0.16b, #15
+; CHECKLE-NEXT:    ret
+;
+; CHECKBE-LABEL: test_shuf_zero_ext_start_rhs:
+; CHECKBE:       // %bb.0:
+; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
+; CHECKBE-NEXT:    movi v1.2d, #0000000000000000
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    ext v0.16b, v1.16b, v0.16b, #15
+; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    ret
+  %r = shufflevector <16 x i8> zeroinitializer, <16 x i8> %a, <16 x i32> <i32 0, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30>
+  ret <16 x i8> %r
+}
+
+define <16 x i8> @test_shuf_zero_ext_start_rhs2(<16 x i8> %a) {
+; CHECKLE-LABEL: test_shuf_zero_ext_start_rhs2:
+; CHECKLE:       // %bb.0:
+; CHECKLE-NEXT:    movi v1.2d, #0000000000000000
+; CHECKLE-NEXT:    ext v0.16b, v1.16b, v0.16b, #14
+; CHECKLE-NEXT:    ret
+;
+; CHECKBE-LABEL: test_shuf_zero_ext_start_rhs2:
+; CHECKBE:       // %bb.0:
+; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
+; CHECKBE-NEXT:    movi v1.2d, #0000000000000000
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    ext v0.16b, v1.16b, v0.16b, #14
+; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    ret
+  %r = shufflevector <16 x i8> zeroinitializer, <16 x i8> %a, <16 x i32> <i32 0, i32 0, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29>
+  ret <16 x i8> %r
+}
+
+; Zero/splat-fill EXT: splat suffix (zero appended at the end, data shifted left)
+define <16 x i8> @test_shuf_zero_ext_end_lhs(<16 x i8> %a) {
+; CHECKLE-LABEL: test_shuf_zero_ext_end_lhs:
+; CHECKLE:       // %bb.0:
+; CHECKLE-NEXT:    movi v1.2d, #0000000000000000
+; CHECKLE-NEXT:    ext v0.16b, v0.16b, v1.16b, #1
+; CHECKLE-NEXT:    ret
+;
+; CHECKBE-LABEL: test_shuf_zero_ext_end_lhs:
+; CHECKBE:       // %bb.0:
+; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
+; CHECKBE-NEXT:    movi v1.2d, #0000000000000000
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v1.16b, #1
+; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    ret
+  %r = shufflevector <16 x i8> %a, <16 x i8> zeroinitializer, <16 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16>
+  ret <16 x i8> %r
+}
+
+define <16 x i8> @test_shuf_zero_ext_end_lhs2(<16 x i8> %a) {
+; CHECKLE-LABEL: test_shuf_zero_ext_end_lhs2:
+; CHECKLE:       // %bb.0:
+; CHECKLE-NEXT:    movi v1.2d, #0000000000000000
+; CHECKLE-NEXT:    ext v0.16b, v0.16b, v1.16b, #2
+; CHECKLE-NEXT:    ret
+;
+; CHECKBE-LABEL: test_shuf_zero_ext_end_lhs2:
+; CHECKBE:       // %bb.0:
+; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
+; CHECKBE-NEXT:    movi v1.2d, #0000000000000000
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v1.16b, #2
+; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    ret
+  %r = shufflevector <16 x i8> %a, <16 x i8> zeroinitializer, <16 x i32> <i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 16>
+  ret <16 x i8> %r
+}
+
+define <16 x i8> @test_shuf_zero_ext_end_rhs(<16 x i8> %a) {
+; CHECKLE-LABEL: test_shuf_zero_ext_end_rhs:
+; CHECKLE:       // %bb.0:
+; CHECKLE-NEXT:    movi v1.2d, #0000000000000000
+; CHECKLE-NEXT:    ext v0.16b, v1.16b, v0.16b, #15
+; CHECKLE-NEXT:    ret
+;
+; CHECKBE-LABEL: test_shuf_zero_ext_end_rhs:
+; CHECKBE:       // %bb.0:
+; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
+; CHECKBE-NEXT:    movi v1.2d, #0000000000000000
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    ext v0.16b, v1.16b, v0.16b, #15
+; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    ret
+  %r = shufflevector <16 x i8> zeroinitializer, <16 x i8> %a, <16 x i32> <i32 0, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30>
+  ret <16 x i8> %r
+}
+
+define <16 x i8> @test_shuf_zero_ext_end_rhs2(<16 x i8> %a) {
+; CHECKLE-LABEL: test_shuf_zero_ext_end_rhs2:
+; CHECKLE:       // %bb.0:
+; CHECKLE-NEXT:    movi v1.2d, #0000000000000000
+; CHECKLE-NEXT:    ext v0.16b, v1.16b, v0.16b, #14
+; CHECKLE-NEXT:    ret
+;
+; CHECKBE-LABEL: test_shuf_zero_ext_end_rhs2:
+; CHECKBE:       // %bb.0:
+; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
+; CHECKBE-NEXT:    movi v1.2d, #0000000000000000
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    ext v0.16b, v1.16b, v0.16b, #14
+; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    ret
+  %r = shufflevector <16 x i8> zeroinitializer, <16 x i8> %a, <16 x i32> <i32 0, i32 0, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29>
+  ret <16 x i8> %r
+}
+
+; Zero/splat-fill EXT: non-zero splat prefix (splat of a scalar, data shifted right)
+define <4 x i32> @test_shuf_zero_ext_start_lhs_splat(<4 x i32> %a, i32 %b) {
+; CHECKLE-LABEL: test_shuf_zero_ext_start_lhs_splat:
+; CHECKLE:       // %bb.0:
+; CHECKLE-NEXT:    dup v1.4s, w0
+; CHECKLE-NEXT:    ext v0.16b, v1.16b, v0.16b, #12
+; CHECKLE-NEXT:    ret
+;
+; CHECKBE-LABEL: test_shuf_zero_ext_start_lhs_splat:
+; CHECKBE:       // %bb.0:
+; CHECKBE-NEXT:    rev64 v0.4s, v0.4s
+; CHECKBE-NEXT:    dup v1.4s, w0
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    ext v0.16b, v1.16b, v0.16b, #12
+; CHECKBE-NEXT:    rev64 v0.4s, v0.4s
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    ret
+  %i = insertelement <4 x i32> poison, i32 %b, i64 0
+  %s = shufflevector <4 x i32> %i, <4 x i32> poison, <4 x i32> zeroinitializer
+  %r = shufflevector <4 x i32> %a, <4 x i32> %s, <4 x i32> <i32 4, i32 0, i32 1, i32 2>
+  ret <4 x i32> %r
 }
