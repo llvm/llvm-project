@@ -3466,12 +3466,6 @@ public:
   /// This function can be called with a null (unreachable) insert point.
   void EmitAutoVarDecl(const VarDecl &D);
 
-  /// Helper function to determine whether a variable's or parameter's lifetime
-  /// should be extended.
-  static bool shouldExtendLifetime(const ASTContext &Context,
-                                   const Decl *FuncDecl, const VarDecl &D,
-                                   ImplicitParamDecl *CXXABIThisDecl);
-
   class AutoVarEmission {
     friend class CodeGenFunction;
 

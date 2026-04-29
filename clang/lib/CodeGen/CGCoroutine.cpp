@@ -966,15 +966,6 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
         ParmAlloca->setMetadata(llvm::LLVMContext::MD_coro_outside_frame,
                                 llvm::MDNode::get(CGM.getLLVMContext(), {}));
       }
-      // Push a FakeUse 'cleanup' object onto the EHStack for coroutine
-      // parameters, which will emit a fake.use call with the parameter as
-      // an argument before we free the coroutine frame.
-      if (CGM.getCodeGenOpts().getExtendVariableLiveness() ==
-          CodeGenOptions::ExtendVariableLivenessKind::All) {
-        if (shouldExtendLifetime(getContext(), CurCodeDecl, *Parm,
-                                 CXXABIThisDecl))
-          EHStack.pushCleanup<FakeUse>(NormalFakeUse, ParmAddr);
-      }
     }
     for (auto *PM : S.getParamMoves()) {
       EmitStmt(PM);

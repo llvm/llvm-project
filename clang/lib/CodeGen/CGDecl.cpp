@@ -1452,10 +1452,9 @@ static uint64_t maxFakeUseAggregateSize(const ASTContext &C) {
 
 // Helper function to determine whether a variable's or parameter's lifetime
 // should be extended.
-bool CodeGenFunction::shouldExtendLifetime(const ASTContext &Context,
-                                           const Decl *FuncDecl,
-                                           const VarDecl &D,
-                                           ImplicitParamDecl *CXXABIThisDecl) {
+static bool shouldExtendLifetime(const ASTContext &Context,
+                                 const Decl *FuncDecl, const VarDecl &D,
+                                 ImplicitParamDecl *CXXABIThisDecl) {
   // When we're not inside a valid function it is unlikely that any
   // lifetime extension is useful.
   if (!FuncDecl)
@@ -2856,12 +2855,10 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
       (CGM.getCodeGenOpts().getExtendVariableLiveness() ==
            CodeGenOptions::ExtendVariableLivenessKind::This &&
        &D == CXXABIThisDecl)) {
-    // If the current code context is a coroutine, then we defer pushing the
-    // FakeUse cleanups until after we've pushed the CallCoroEnd cleanup.
-    if (&D == CXXABIThisDecl ||
-        !llvm::isa_and_nonnull<FunctionDecl>(CurCodeDecl) ||
-        cast<FunctionDecl>(CurCodeDecl)->getBody()->getStmtClass() !=
-            Stmt::CoroutineBodyStmtClass) {
+    // We don't emit fake uses for coroutine parameters, other than `this`.
+    if (auto *FnDecl = dyn_cast_or_null<FunctionDecl>(CurCodeDecl);
+        &D == CXXABIThisDecl || !FnDecl ||
+        FnDecl->getBody()->getStmtClass() != Stmt::CoroutineBodyStmtClass) {
       if (shouldExtendLifetime(getContext(), CurCodeDecl, D, CXXABIThisDecl))
         EHStack.pushCleanup<FakeUse>(NormalFakeUse, DeclPtr);
     }
