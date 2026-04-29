@@ -1323,122 +1323,6 @@ getValidLayouts(ArrayRef<int64_t> wgShape, ArrayRef<int64_t> instData,
   return candidates;
 }
 
-/// Helper function to compute inst_data vectors for DPAS operands A, B, and
-/// C/D.
-static std::optional<std::tuple<SmallVector<int64_t>, SmallVector<int64_t>,
-                                SmallVector<int64_t>>>
-getDpasInstDataVectors(VectorType aTy, VectorType bTy, VectorType cdTy,
-                       const xegpu::uArch::uArch *uArch) {
-  const int subgroupSize = uArch->getSubgroupSize();
-  const auto *uArchInstruction =
-      dyn_cast<xegpu::uArch::SubgroupMatrixMultiplyAcc>(uArch->getInstruction(
-          xegpu::uArch::InstructionKind::SubgroupMatrixMultiplyAcc));
-
-  const unsigned dataALen = aTy.getShape().front();
-  auto supportedALen = uArchInstruction->getSupportedM(aTy.getElementType());
-  const int maxALen =
-      xegpu::getLargestDivisor(dataALen, ArrayRef<unsigned>(supportedALen));
-
-  const unsigned dataBLen = bTy.getShape().back();
-  auto supportedBLen = uArchInstruction->getSupportedN(bTy.getElementType());
-  const int maxBLen =
-      xegpu::getLargestDivisor(dataBLen, ArrayRef<unsigned>(supportedBLen));
-
-  auto supportedCLen = uArchInstruction->getSupportedN(cdTy.getElementType());
-  const int maxCLen =
-      xegpu::getLargestDivisor(dataBLen, ArrayRef<unsigned>(supportedCLen));
-  if (maxALen == -1 || maxBLen == -1 || maxCLen == -1)
-    return std::nullopt;
-
-  SmallVector<int64_t> instDataA(aTy.getRank(), 1);
-  instDataA[aTy.getRank() - 2] = maxALen;
-  instDataA[aTy.getRank() - 1] = subgroupSize;
-  SmallVector<int64_t> instDataB(bTy.getRank(), 1);
-  instDataB[bTy.getRank() - 2] = subgroupSize;
-  instDataB[bTy.getRank() - 1] = maxBLen;
-  SmallVector<int64_t> instDataCD(cdTy.getRank(), 1);
-  instDataCD[cdTy.getRank() - 2] = maxALen;
-  instDataCD[cdTy.getRank() - 1] = maxCLen;
-  return std::make_tuple(instDataA, instDataB, instDataCD);
-}
-
-/// Helper function to set up subgroup layouts for DPAS operands A, B, and C/D.
-/// Returns the three layouts if successful, nullopt otherwise.
-static std::optional<std::tuple<xegpu::DistributeLayoutAttr,
-                                xegpu::DistributeLayoutAttr,
-                                xegpu::DistributeLayoutAttr>>
-getupDpasSubgroupLayouts(mlir::MLIRContext *context, VectorType aTy,
-                         VectorType bTy, VectorType cdTy,
-                         xegpu::DistributeLayoutAttr consumerLayout, int numSg,
-                         const xegpu::uArch::uArch *uArch) {
-  auto instDataVecs = getDpasInstDataVectors(aTy, bTy, cdTy, uArch);
-  if (!instDataVecs)
-    return std::nullopt;
-  auto [instDataA, instDataB, instDataCD] = *instDataVecs;
-  assert(instDataA.size() == 2 && instDataB.size() == 2 &&
-         instDataCD.size() == 2 &&
-         "Sg layout creation expects valid 2D inst data");
-
-  std::optional<LayoutRepresentation> consumerSgLayout = std::nullopt;
-  if (consumerLayout && consumerLayout.isForWorkgroup()) {
-    SmallVector<int64_t> sgLayoutD =
-        consumerLayout.getEffectiveSgLayoutAsInt();
-    consumerSgLayout = std::make_pair(sgLayoutD[0], sgLayoutD[1]);
-  }
-
-  // Get all valid layouts for A, B and C/D operands
-  auto layoutsA = getValidLayouts(aTy.getShape(), instDataA, numSg);
-  auto layoutsB = getValidLayouts(bTy.getShape(), instDataB, numSg);
-  auto layoutsCD = getValidLayouts(cdTy.getShape(), instDataCD, numSg);
-  if (layoutsA.empty() || layoutsB.empty() || layoutsCD.empty())
-    return std::nullopt;
-
-  // Pick the best subgroup layout
-  llvm::DenseSet<LayoutRepresentation> setA(layoutsA.begin(), layoutsA.end());
-  llvm::DenseSet<LayoutRepresentation> setCD(layoutsCD.begin(),
-                                              layoutsCD.end());
-  std::optional<LayoutRepresentation> bestPick;
-  for (auto &sgLayout : layoutsB) {
-    if (setA.contains(sgLayout) && setCD.contains(sgLayout)) {
-      if (consumerSgLayout.has_value() && sgLayout == *consumerSgLayout) {
-        bestPick = sgLayout;
-        break;
-      }
-      if (!bestPick)
-        bestPick = sgLayout;
-    }
-  }
-  if (!bestPick)
-    return std::nullopt;
-
-  SmallVector<int> sgLayout = {static_cast<int>(bestPick->first),
-                               static_cast<int>(bestPick->second)};
-  SmallVector<int> sgDataA = {
-      static_cast<int>(aTy.getShape()[0] / sgLayout[0]),
-      static_cast<int>(aTy.getShape()[1] / sgLayout[1])};
-  SmallVector<int> sgDataB = {
-      static_cast<int>(bTy.getShape()[0] / sgLayout[0]),
-      static_cast<int>(bTy.getShape()[1] / sgLayout[1])};
-  SmallVector<int> sgDataCD = {
-      static_cast<int>(cdTy.getShape()[0] / sgLayout[0]),
-      static_cast<int>(cdTy.getShape()[1] / sgLayout[1])};
-
-  auto dpasALayout = xegpu::LayoutAttr::get(
-      context, DenseI32ArrayAttr::get(context, sgLayout),
-      DenseI32ArrayAttr::get(context, sgDataA), nullptr, nullptr, nullptr,
-      nullptr);
-  auto dpasBLayout = xegpu::LayoutAttr::get(
-      context, DenseI32ArrayAttr::get(context, sgLayout),
-      DenseI32ArrayAttr::get(context, sgDataB), nullptr, nullptr, nullptr,
-      nullptr);
-  auto dpasCDLayout = xegpu::LayoutAttr::get(
-      context, DenseI32ArrayAttr::get(context, sgLayout),
-      DenseI32ArrayAttr::get(context, sgDataCD), nullptr, nullptr, nullptr,
-      nullptr);
-
-  return std::make_tuple(dpasALayout, dpasBLayout, dpasCDLayout);
-}
-
 /// Sets up the anchor layouts for dpas operands (A, B, and C/D).
 /// The numSg and consumerLayout (optional) are only used by sg layout
 /// creation.
@@ -1454,13 +1338,122 @@ xegpu::setupDpasLayout(xegpu::LayoutKind layoutKind, VectorType aTy,
       dyn_cast<xegpu::uArch::SubgroupMatrixMultiplyAcc>(uArch->getInstruction(
           xegpu::uArch::InstructionKind::SubgroupMatrixMultiplyAcc));
 
+  auto getInstDataVectors = [&]()
+      -> std::optional<std::tuple<SmallVector<int64_t>, SmallVector<int64_t>,
+                                  SmallVector<int64_t>>> {
+    const int subgroupSize = uArch->getSubgroupSize();
+    const unsigned dataALen = aTy.getShape().front();
+    auto supportedALen = uArchInstruction->getSupportedM(aTy.getElementType());
+    const int maxALen =
+        xegpu::getLargestDivisor(dataALen, ArrayRef<unsigned>(supportedALen));
+
+    const unsigned dataBLen = bTy.getShape().back();
+    auto supportedBLen = uArchInstruction->getSupportedN(bTy.getElementType());
+    const int maxBLen =
+        xegpu::getLargestDivisor(dataBLen, ArrayRef<unsigned>(supportedBLen));
+
+    auto supportedCLen = uArchInstruction->getSupportedN(cdTy.getElementType());
+    const int maxCLen =
+        xegpu::getLargestDivisor(dataBLen, ArrayRef<unsigned>(supportedCLen));
+    if (maxALen == -1 || maxBLen == -1 || maxCLen == -1)
+      return std::nullopt;
+
+    SmallVector<int64_t> instDataA(aTy.getRank(), 1);
+    instDataA[aTy.getRank() - 2] = maxALen;
+    instDataA[aTy.getRank() - 1] = subgroupSize;
+    SmallVector<int64_t> instDataB(bTy.getRank(), 1);
+    instDataB[bTy.getRank() - 2] = subgroupSize;
+    instDataB[bTy.getRank() - 1] = maxBLen;
+    SmallVector<int64_t> instDataCD(cdTy.getRank(), 1);
+    instDataCD[cdTy.getRank() - 2] = maxALen;
+    instDataCD[cdTy.getRank() - 1] = maxCLen;
+    return std::make_tuple(instDataA, instDataB, instDataCD);
+  };
+
   if (layoutKind == xegpu::LayoutKind::Subgroup) {
     assert(numSg > 0 &&
            "Number of subgroups must be provided for sg layout creation.");
-    return getupDpasSubgroupLayouts(context, aTy, bTy, cdTy, consumerLayout,
-                                    numSg, uArch);
+    auto instDataVecs = getInstDataVectors();
+    if (!instDataVecs)
+      return std::nullopt;
+    auto [instDataA, instDataB, instDataCD] = *instDataVecs;
+    assert(instDataA.size() == 2 && instDataB.size() == 2 &&
+           instDataCD.size() == 2 &&
+           "Sg layout creation expects valid 2D inst data");
+
+    std::optional<LayoutRepresentation> consumerSgLayout = std::nullopt;
+    if (consumerLayout && consumerLayout.isForWorkgroup()) {
+      SmallVector<int64_t> sgLayoutD =
+          consumerLayout.getEffectiveSgLayoutAsInt();
+      consumerSgLayout = std::make_pair(sgLayoutD[0], sgLayoutD[1]);
+    }
+
+    // Step 1. Get all valid layouts for A, B and C/D operands.
+    // Order them from most balanced to least balanced.
+    auto layoutsA = getValidLayouts(aTy.getShape(), instDataA, numSg);
+    auto layoutsB = getValidLayouts(bTy.getShape(), instDataB, numSg);
+    auto layoutsCD = getValidLayouts(cdTy.getShape(), instDataCD, numSg);
+    if (layoutsA.empty() || layoutsB.empty() || layoutsCD.empty())
+      return std::nullopt;
+
+    // Step 2. If the consumer layout can be reused for all operands, that
+    // layout is chosen. Otherwise, pick the most balanced subgroup layout
+    // that is valid for A, B and C (if present) operands
+    llvm::DenseSet<LayoutRepresentation> setA(layoutsA.begin(), layoutsA.end());
+    llvm::DenseSet<LayoutRepresentation> setCD(layoutsCD.begin(),
+                                               layoutsCD.end());
+    std::optional<LayoutRepresentation> bestPick;
+    for (auto &sgLayout : layoutsB) {
+      if (setA.contains(sgLayout) && setCD.contains(sgLayout)) {
+        // Is in (A and B and CD) and matches consumer -> best pick
+        if (consumerSgLayout.has_value() && sgLayout == *consumerSgLayout) {
+          bestPick = sgLayout;
+          break;
+        }
+        // Is in (A and B and CD) layoutsB is ordered from most
+        // balanced to least. So the first one we see is the most balanced
+        // one, remember it and later only update if there is one that matches
+        // the consumer.
+        if (!bestPick)
+          bestPick = sgLayout;
+      }
+    }
+    // Step 3. If there is no subgroup layout compatible with A, B and C (if
+    // present) operands, we fail.
+    if (!bestPick)
+      return std::nullopt;
+    SmallVector<int> sgLayout = {static_cast<int>(bestPick->first),
+                                 static_cast<int>(bestPick->second)};
+    SmallVector<int> sgDataA = {
+        static_cast<int>(aTy.getShape()[0] / sgLayout[0]),
+        static_cast<int>(aTy.getShape()[1] / sgLayout[1])};
+    SmallVector<int> sgDataB = {
+        static_cast<int>(bTy.getShape()[0] / sgLayout[0]),
+        static_cast<int>(bTy.getShape()[1] / sgLayout[1])};
+    SmallVector<int> sgDataCD = {
+        static_cast<int>(cdTy.getShape()[0] / sgLayout[0]),
+        static_cast<int>(cdTy.getShape()[1] / sgLayout[1])};
+
+    auto dpasALayout = xegpu::LayoutAttr::get(
+        context, DenseI32ArrayAttr::get(context, sgLayout),
+        DenseI32ArrayAttr::get(context, sgDataA),
+        /*inst_data =*/nullptr, /*lane_layout =*/nullptr,
+        /*lane_data =*/nullptr, /*order =*/nullptr);
+
+    auto dpasBLayout = xegpu::LayoutAttr::get(
+        context, DenseI32ArrayAttr::get(context, sgLayout),
+        DenseI32ArrayAttr::get(context, sgDataB),
+        /*inst_data =*/nullptr, /*lane_layout =*/nullptr,
+        /*lane_data =*/nullptr, /*order =*/nullptr);
+
+    auto dpasCDLayout = xegpu::LayoutAttr::get(
+        context, DenseI32ArrayAttr::get(context, sgLayout),
+        DenseI32ArrayAttr::get(context, sgDataCD),
+        /*inst_data =*/nullptr, /*lane_layout =*/nullptr,
+        /*lane_data =*/nullptr, /*order =*/nullptr);
+    return std::make_tuple(dpasALayout, dpasBLayout, dpasCDLayout);
   } else if (layoutKind == xegpu::LayoutKind::InstData) {
-    auto instDataVecs = getDpasInstDataVectors(aTy, bTy, cdTy, uArch);
+    auto instDataVecs = getInstDataVectors();
     if (!instDataVecs)
       return std::nullopt;
     auto [instDataA, instDataB, instDataCD] = *instDataVecs;
@@ -1482,7 +1475,6 @@ xegpu::setupDpasLayout(xegpu::LayoutKind layoutKind, VectorType aTy,
   }
   return std::nullopt;
 }
-
 
 xegpu::DistributeLayoutAttr
 xegpu::inferSourceLayoutFromResult(OpOperand &operand,
@@ -1553,6 +1545,27 @@ xegpu::inferSourceLayoutFromResult(OpOperand &operand,
   if (auto transpose = dyn_cast<vector::TransposeOp>(op)) {
     return xegpu::inferTransposeSourceLayout(resLayout,
                                              transpose.getPermutation());
+  }
+
+  // For vector::BitCastOp, infer source layout from result layout using
+  // element type bitwidths.
+  if (auto bitcast = dyn_cast<vector::BitCastOp>(op)) {
+    int resElemBitWidth =
+        bitcast.getResultVectorType().getElementType().getIntOrFloatBitWidth();
+    int srcElemBitWidth =
+        bitcast.getSourceVectorType().getElementType().getIntOrFloatBitWidth();
+    return xegpu::inferBitCastSourceLayout(resLayout, resElemBitWidth,
+                                           srcElemBitWidth);
+  }
+
+  // for vector::interleave
+ if (auto interleave = dyn_cast<vector::InterleaveOp>(op)) {
+      return xegpu::inferInterleaveSourceLayout(resLayout);
+  }
+
+  // for vector::deinterleave
+  if (auto deinterleave = dyn_cast<vector::DeinterleaveOp>(op)) {
+      return xegpu::inferDeinterleaveSourceLayout(resLayout);
   }
 
   // For vector::ExtractStridedSliceOp, simply return result layout
