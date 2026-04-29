@@ -79,3 +79,276 @@ define <64 x i8> @test_or_disjoint_overlap_with_imm(<64 x i8> %src, <64 x i8> %m
   %or = or disjoint <64 x i8> %gfni, splat(i8 8)
   ret <64 x i8> %or
 }
+
+define <16 x i8> @test_affine_or_fold_v16i8(<16 x i8> %a) {
+; AVX512-LABEL: test_affine_or_fold_v16i8:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
+; AVX512-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    retq
+  %gf = tail call <16 x i8> @llvm.x86.vgf2p8affineqb.128(
+      <16 x i8> %a,
+      <16 x i8> <i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128,
+                 i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128>,
+      i8 0)
+  %or = or <16 x i8> %gf, splat(i8 15)
+  ret <16 x i8> %or
+}
+
+define <16 x i8> @test_affine_or_fold_v16i8_commuted(<16 x i8> %a) {
+; AVX512-LABEL: test_affine_or_fold_v16i8_commuted:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
+; AVX512-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    retq
+  %gf = tail call <16 x i8> @llvm.x86.vgf2p8affineqb.128(
+      <16 x i8> %a,
+      <16 x i8> <i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128,
+                 i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128>,
+      i8 0)
+  %or = or <16 x i8> splat(i8 15), %gf
+  ret <16 x i8> %or
+}
+
+define <16 x i8> @test_affine_or_fold_v16i8_mask33(<16 x i8> %a) {
+; AVX512-LABEL: test_affine_or_fold_v16i8_mask33:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [90,165,60,195,24,129,126,1,90,165,60,195,24,129,126,1]
+; AVX512-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    retq
+  %gf = tail call <16 x i8> @llvm.x86.vgf2p8affineqb.128(
+      <16 x i8> %a,
+      <16 x i8> <i8 90, i8 -91, i8 60, i8 -61, i8 24, i8 -127, i8 126, i8 1,
+                 i8 90, i8 -91, i8 60, i8 -61, i8 24, i8 -127, i8 126, i8 1>,
+      i8 0)
+  %or = or <16 x i8> %gf, splat(i8 51)
+  ret <16 x i8> %or
+}
+
+
+define <32 x i8> @test_affine_or_fold_v32i8(<32 x i8> %a) {
+; AVX512-LABEL: test_affine_or_fold_v32i8:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
+; AVX512-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX512-NEXT:    retq
+  %gf = tail call <32 x i8> @llvm.x86.vgf2p8affineqb.256(
+      <32 x i8> %a,
+      <32 x i8> <i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128,
+                 i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128,
+                 i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128,
+                 i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128>,
+      i8 0)
+  %or = or <32 x i8> %gf, splat (i8 15)
+  ret <32 x i8> %or
+}
+
+define <32 x i8> @test_affine_or_fold_v32i8_commuted(<32 x i8> %a) {
+; AVX512-LABEL: test_affine_or_fold_v32i8_commuted:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
+; AVX512-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX512-NEXT:    retq
+  %gf = tail call <32 x i8> @llvm.x86.vgf2p8affineqb.256(
+      <32 x i8> %a,
+      <32 x i8> <i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128,
+                 i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128,
+                 i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128,
+                 i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128>,
+      i8 0)
+  %or = or <32 x i8> splat (i8 15), %gf
+  ret <32 x i8> %or
+}
+
+define <32 x i8> @test_affine_or_fold_v32i8_mask33(<32 x i8> %a) {
+; AVX512-LABEL: test_affine_or_fold_v32i8_mask33:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [90,165,60,195,24,129,126,1,90,165,60,195,24,129,126,1,90,165,60,195,24,129,126,1,90,165,60,195,24,129,126,1]
+; AVX512-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX512-NEXT:    retq
+  %gf = tail call <32 x i8> @llvm.x86.vgf2p8affineqb.256(
+      <32 x i8> %a,
+      <32 x i8> <i8 90, i8 -91, i8 60, i8 -61, i8 24, i8 -127, i8 126, i8 1,
+                 i8 90, i8 -91, i8 60, i8 -61, i8 24, i8 -127, i8 126, i8 1,
+                 i8 90, i8 -91, i8 60, i8 -61, i8 24, i8 -127, i8 126, i8 1,
+                 i8 90, i8 -91, i8 60, i8 -61, i8 24, i8 -127, i8 126, i8 1>,
+      i8 0)
+  %or = or <32 x i8> %gf, splat(i8 51)
+  ret <32 x i8> %or
+}
+
+
+define <64 x i8> @test_affine_or_fold_512_v64i8(<64 x i8> %a) {
+; AVX512-LABEL: test_affine_or_fold_512_v64i8:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
+; AVX512-NEXT:    vpord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm0
+; AVX512-NEXT:    retq
+  %gf = tail call <64 x i8> @llvm.x86.vgf2p8affineqb.512(
+      <64 x i8> %a,
+      <64 x i8> <i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128,
+                 i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128,
+                 i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128,
+                 i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128,
+                 i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128,
+                 i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128,
+                 i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128,
+                 i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128>,
+      i8 0)
+  %or = or <64 x i8> %gf, splat(i8 15)
+  ret <64 x i8> %or
+}
+
+define <64 x i8> @test_affine_or_fold_512_v64i8_commuted(<64 x i8> %a) {
+; AVX512-LABEL: test_affine_or_fold_512_v64i8_commuted:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
+; AVX512-NEXT:    vpord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm0
+; AVX512-NEXT:    retq
+  %gf = tail call <64 x i8> @llvm.x86.vgf2p8affineqb.512(
+      <64 x i8> %a,
+      <64 x i8> <i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128,
+                 i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128,
+                 i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128,
+                 i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128,
+                 i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128,
+                 i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128,
+                 i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128,
+                 i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128>,
+      i8 0)
+  %or = or <64 x i8> splat (i8 15), %gf
+  ret <64 x i8> %or
+}
+
+define dso_local <64 x i8> @test_affine_or_fold_v64i8_mask33(<64 x i8> %a) {
+; AVX512-LABEL: test_affine_or_fold_v64i8_mask33:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
+; AVX512-NEXT:    vpord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm0
+; AVX512-NEXT:    retq
+  %gf = tail call <64 x i8> @llvm.x86.vgf2p8affineqb.512(
+      <64 x i8> %a,
+      <64 x i8> <i8 90, i8 -91, i8 60, i8 -61, i8 24, i8 -127, i8 126, i8 1,
+                 i8 90, i8 -91, i8 60, i8 -61, i8 24, i8 -127, i8 126, i8 1,
+                 i8 90, i8 -91, i8 60, i8 -61, i8 24, i8 -127, i8 126, i8 1,
+                 i8 90, i8 -91, i8 60, i8 -61, i8 24, i8 -127, i8 126, i8 1,
+                 i8 90, i8 -91, i8 60, i8 -61, i8 24, i8 -127, i8 126, i8 1,
+                 i8 90, i8 -91, i8 60, i8 -61, i8 24, i8 -127, i8 126, i8 1,
+                 i8 90, i8 -91, i8 60, i8 -61, i8 24, i8 -127, i8 126, i8 1,
+                 i8 90, i8 -91, i8 60, i8 -61, i8 24, i8 -127, i8 126, i8 1>,
+      i8 0)
+  %or = or <64 x i8> %gf, splat(i8 51)
+  ret <64 x i8> %or
+}
+
+
+; Negative
+
+define <16 x i8> @test_affine_or_nofold_nonconst_matrix_v16i8(<16 x i8> %a, <16 x i8> %m) {
+; AVX512-LABEL: test_affine_or_nofold_nonconst_matrix_v16i8:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vgf2p8affineqb $0, %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    retq
+  %gf = tail call <16 x i8> @llvm.x86.vgf2p8affineqb.128(
+      <16 x i8> %a,
+      <16 x i8> %m,
+      i8 0)
+  %or = or <16 x i8> %gf, splat(i8 51)
+  ret <16 x i8> %or
+}
+
+define <32 x i8> @test_affine_or_nofold_nonconst_matrix_v32i8(<32 x i8>  %a, <32 x i8>  %m) {
+; AVX512-LABEL: test_affine_or_nofold_nonconst_matrix_v32i8:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vgf2p8affineqb $0, %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX512-NEXT:    retq
+  %gf = tail call <32 x i8> @llvm.x86.vgf2p8affineqb.256(
+      <32 x i8> %a,
+      <32 x i8> %m,
+      i8 0)
+  %or = or <32 x i8> %gf, splat(i8 51)
+  ret <32 x i8> %or
+}
+
+define <16 x i8> @test_affine_or_nofold_nonsplat_mask_v16i8(<16 x i8>  %a) {
+; AVX512-LABEL: test_affine_or_nofold_nonsplat_mask_v16i8:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [90,165,60,195,24,129,126,1,90,165,60,195,24,129,126,1]
+; AVX512-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    retq
+  %gf = tail call <16 x i8> @llvm.x86.vgf2p8affineqb.128(
+      <16 x i8> %a,
+      <16 x i8> <i8 90, i8 -91, i8 60, i8 -61, i8 24, i8 -127, i8 126, i8 1,
+                 i8 90, i8 -91, i8 60, i8 -61, i8 24, i8 -127, i8 126, i8 1>,
+      i8 0)
+  %or = or <16 x i8> %gf,
+            <i8 51, i8 51, i8 51, i8 51, i8 51, i8 51, i8 51, i8 51,
+             i8 51, i8 51, i8 51, i8 51, i8 51, i8 51, i8 51, i8 50>
+  ret <16 x i8> %or
+}
+
+define <32 x i8> @test_affine_or_nofold_nonsplat_mask_v32i8(<32 x i8> %a) {
+; AVX512-LABEL: test_affine_or_nofold_nonsplat_mask_v32i8:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [90,165,60,195,24,129,126,1,90,165,60,195,24,129,126,1,90,165,60,195,24,129,126,1,90,165,60,195,24,129,126,1]
+; AVX512-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX512-NEXT:    retq
+  %gf = tail call <32 x i8> @llvm.x86.vgf2p8affineqb.256(
+      <32 x i8> %a,
+      <32 x i8> <i8 90, i8 -91, i8 60, i8 -61, i8 24, i8 -127, i8 126, i8 1,
+                 i8 90, i8 -91, i8 60, i8 -61, i8 24, i8 -127, i8 126, i8 1,
+                 i8 90, i8 -91, i8 60, i8 -61, i8 24, i8 -127, i8 126, i8 1,
+                 i8 90, i8 -91, i8 60, i8 -61, i8 24, i8 -127, i8 126, i8 1>,
+      i8 0)
+  %or = or <32 x i8> %gf,
+            <i8 51, i8 51, i8 51, i8 51, i8 51, i8 51, i8 51, i8 51,
+            i8 51, i8 51, i8 51, i8 51, i8 51, i8 51, i8 51, i8 51,
+            i8 51, i8 51, i8 51, i8 51, i8 51, i8 51, i8 51, i8 51,
+            i8 51, i8 51, i8 51, i8 51, i8 51, i8 51, i8 51, i8 50>
+  ret <32 x i8> %or
+}
+
+define <64 x i8> @test_affine_or_nofold_nonconst_matrix_v64i8(<64 x i8> %a, <64 x i8> %m) {
+; AVX512-LABEL: test_affine_or_nofold_nonconst_matrix_v64i8:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vgf2p8affineqb $0, %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm0
+; AVX512-NEXT:    retq
+  %gf = tail call <64 x i8> @llvm.x86.vgf2p8affineqb.512(
+      <64 x i8> %a,
+      <64 x i8> %m,
+      i8 0)
+  %or = or <64 x i8> %gf, splat(i8 51)
+  ret <64 x i8> %or
+}
+
+define <64 x i8> @test_affine_or_nofold_nonsplat_mask_v64i8(<64 x i8> %a) {
+; AVX512-LABEL: test_affine_or_nofold_nonsplat_mask_v64i8:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
+; AVX512-NEXT:    vporq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; AVX512-NEXT:    retq
+  %gf = tail call <64 x i8> @llvm.x86.vgf2p8affineqb.512(
+      <64 x i8> %a,
+      <64 x i8> <i8 90, i8 -91, i8 60, i8 -61, i8 24, i8 -127, i8 126, i8 1,
+                 i8 90, i8 -91, i8 60, i8 -61, i8 24, i8 -127, i8 126, i8 1,
+                 i8 90, i8 -91, i8 60, i8 -61, i8 24, i8 -127, i8 126, i8 1,
+                 i8 90, i8 -91, i8 60, i8 -61, i8 24, i8 -127, i8 126, i8 1,
+                 i8 90, i8 -91, i8 60, i8 -61, i8 24, i8 -127, i8 126, i8 1,
+                 i8 90, i8 -91, i8 60, i8 -61, i8 24, i8 -127, i8 126, i8 1,
+                 i8 90, i8 -91, i8 60, i8 -61, i8 24, i8 -127, i8 126, i8 1,
+                 i8 90, i8 -91, i8 60, i8 -61, i8 24, i8 -127, i8 126, i8 1>,
+      i8 0)
+  %or = or <64 x i8> %gf,
+            <i8 51, i8 51, i8 51, i8 51, i8 51, i8 51, i8 51, i8 51,
+            i8 51, i8 51, i8 51, i8 51, i8 51, i8 51, i8 51, i8 51,
+            i8 51, i8 51, i8 51, i8 51, i8 51, i8 51, i8 51, i8 51,
+            i8 51, i8 51, i8 51, i8 51, i8 51, i8 51, i8 51, i8 51,
+            i8 51, i8 51, i8 51, i8 51, i8 51, i8 51, i8 51, i8 51,
+            i8 51, i8 51, i8 51, i8 51, i8 51, i8 51, i8 51, i8 51,
+            i8 51, i8 51, i8 51, i8 51, i8 51, i8 51, i8 51, i8 51,
+            i8 51, i8 51, i8 51, i8 51, i8 51, i8 51, i8 51, i8 50>
+  ret <64 x i8> %or
+}
