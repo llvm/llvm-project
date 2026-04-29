@@ -867,17 +867,6 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
     ctx.sym.globalOffsetTable->section = sec;
   }
 
-  // .rela_iplt_{start,end} mark the start and the end of the section containing
-  // IRELATIVE relocations.
-  if (ctx.sym.relaIpltStart) {
-    auto &dyn = getIRelativeSection(ctx);
-    if (dyn.isNeeded()) {
-      ctx.sym.relaIpltStart->section = &dyn;
-      ctx.sym.relaIpltEnd->section = &dyn;
-      ctx.sym.relaIpltEnd->value = dyn.getSize();
-    }
-  }
-
   PhdrEntry *last = nullptr;
   OutputSection *lastRO = nullptr;
   auto isLarge = [&ctx = ctx](OutputSection *osec) {
@@ -1793,7 +1782,8 @@ static void removeUnusedSyntheticSections(Ctx &ctx) {
         // Conservatively keep .rela.dyn. .relr.auth.dyn can be made empty, but
         // we would fail to remove it here.
         if (ctx.arg.emachine == EM_AARCH64 && ctx.arg.relrPackDynRelocs &&
-            sec == ctx.mainPart->relaDyn.get())
+            sec == ctx.mainPart->relaDyn.get() && ctx.mainPart->relrAuthDyn &&
+            ctx.mainPart->relrAuthDyn->isNeeded())
           return false;
         unused.insert(sec);
         return true;
@@ -2148,6 +2138,19 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   //    sometimes using forward symbol declarations. We want to set the correct
   //    values. They also might change after adding the thunks.
   finalizeAddressDependentContent();
+
+  // .rela_iplt_{start,end} mark the start and the end of the section containing
+  // IRELATIVE relocations. This must be called after
+  // finalizeAddressDependentContent() because it might move relocations from
+  // .relr.auth.dyn to .rela.dyn.
+  if (ctx.sym.relaIpltStart) {
+    auto &dyn = getIRelativeSection(ctx);
+    if (dyn.isNeeded()) {
+      ctx.sym.relaIpltStart->section = &dyn;
+      ctx.sym.relaIpltEnd->section = &dyn;
+      ctx.sym.relaIpltEnd->value = dyn.getSize();
+    }
+  }
 
   // All information needed for OutputSection part of Map file is available.
   if (errCount(ctx))

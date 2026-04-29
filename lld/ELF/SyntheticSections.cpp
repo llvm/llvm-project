@@ -1174,8 +1174,8 @@ static uint64_t addPltRelSz(Ctx &ctx) { return ctx.in.relaPlt->getSize(); }
 
 // Add remaining entries to complete .dynamic contents.
 template <class ELFT>
-std::vector<std::pair<int32_t, uint64_t>>
-DynamicSection<ELFT>::computeContents() {
+std::vector<std::pair<int32_t, uint64_t>> DynamicSection<ELFT>::computeContents(
+    bool afterFinalizeAddressDependentContents) {
   elf::Partition &part = getPartition(ctx);
   bool isMain = part.name.empty();
   std::vector<std::pair<int32_t, uint64_t>> entries;
@@ -1257,7 +1257,9 @@ DynamicSection<ELFT>::computeContents() {
   if (!ctx.arg.shared && !ctx.arg.relocatable && !ctx.arg.zRodynamic)
     addInt(DT_DEBUG, 0);
 
-  if (part.relaDyn->isNeeded()) {
+  if (part.relaDyn->isNeeded() ||
+      (!afterFinalizeAddressDependentContents && part.relrAuthDyn &&
+       part.relrAuthDyn->getParent() && !part.relrAuthDyn->relocs.empty())) {
     addInSec(part.relaDyn->dynamicTag, *part.relaDyn);
     entries.emplace_back(part.relaDyn->sizeDynamicTag,
                          addRelaSz(ctx, *part.relaDyn));
@@ -1440,13 +1442,16 @@ DynamicSection<ELFT>::computeContents() {
 template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
   if (OutputSection *sec = getPartition(ctx).dynStrTab->getParent())
     getParent()->link = sec->sectionIndex;
-  this->size = computeContents().size() * this->entsize;
+  this->size =
+      computeContents(/*afterFinalizeAddressDependentContents=*/false).size() *
+      this->entsize;
 }
 
 template <class ELFT> void DynamicSection<ELFT>::writeTo(uint8_t *buf) {
   auto *p = reinterpret_cast<Elf_Dyn *>(buf);
 
-  for (std::pair<int32_t, uint64_t> kv : computeContents()) {
+  for (std::pair<int32_t, uint64_t> kv :
+       computeContents(/*afterFinalizeAddressDependentContents=*/true)) {
     p->d_tag = kv.first;
     p->d_un.d_val = kv.second;
     ++p;
