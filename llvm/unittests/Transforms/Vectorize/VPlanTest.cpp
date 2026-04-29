@@ -10,6 +10,7 @@
 #include "../lib/Transforms/Vectorize/VPlan.h"
 #include "../lib/Transforms/Vectorize/VPlanCFG.h"
 #include "../lib/Transforms/Vectorize/VPlanHelpers.h"
+#include "../lib/Transforms/Vectorize/VPlanUtils.h"
 #include "VPlanTestBase.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
@@ -1785,6 +1786,20 @@ TEST_F(VPInstructionTest, VPSymbolicValueMaterialization) {
 
   // Now VF should be materialized.
   EXPECT_TRUE(Plan.getVF().isMaterialized());
+}
+
+using VPUtilsTest = VPlanTestBase;
+
+TEST_F(VPUtilsTest, IsUniformAcrossVFsAndUFsForSingleScalarOpcodes) {
+  VPlan &Plan = getPlan();
+
+  std::unique_ptr<VPInstruction> VScale(
+      new VPInstruction(VPInstruction::VScale, {}));
+  EXPECT_TRUE(vputils::isUniformAcrossVFsAndUFs(VScale.get()));
+
+  std::unique_ptr<VPInstruction> EVL(new VPInstruction(
+      VPInstruction::ExplicitVectorLength, {&Plan.getVF()}));
+  EXPECT_TRUE(vputils::isUniformAcrossVFsAndUFs(EVL.get()));
 }
 
 #if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)
