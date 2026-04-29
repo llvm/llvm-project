@@ -240,7 +240,7 @@ template <typename E> constexpr E enumIncrement(E Value) {
 } // namespace
 
 SymbolTags toSymbolTagBitmask(const SymbolTag ST) {
-  return (1 << static_cast<uint32_t>(ST));
+  return (1 << static_cast<unsigned>(ST));
 }
 
 SymbolTags computeSymbolTags(const NamedDecl &ND) {
