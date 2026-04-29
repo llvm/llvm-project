@@ -1389,11 +1389,20 @@ private:
   vector::UnrollVectorOptions options;
 };
 
-// Unroll vector::BitCastOp into smaller tile-based bitcast operations.
+// Unroll vector::BitCastOp into smaller slice-based bitcast operations.
 // Tiles the result vector into target shape chunks and bitcasts corresponding
 // source slices, accounting for element bitwidth ratios.
-// Example: bitcast v8f32 to v16f16 with target shape [4] unrolls into
-// multiple bitcast operations on 4-element tiles.
+/// Example:
+///   Given a deinterleave Op:
+///
+///     vector.bitcast %src : vector<4x8xf32>
+///
+///   and a target unroll shape of <2x4>, the pattern produces:
+///
+///     %slice_0 = vector.extract_strided_slice %lhs[0, 0] : vector<2x4xf32>
+///     %slice_0 = vector.bitcast %slice_0 : vector<2x4xf32>
+///     %result = vector.insert_strided_slice %slice_0, %init[0, 0]
+///     // ... repeat for remaining slices
 struct UnrollBitCastPattern : public OpRewritePattern<vector::BitCastOp> {
   UnrollBitCastPattern(MLIRContext *context,
                        const vector::UnrollVectorOptions &options,
@@ -1458,8 +1467,8 @@ private:
   vector::UnrollVectorOptions options;
 };
 
-/// Pattern to unroll vector.interleave into smaller tile-sized operations.
-/// Decomposes a large interleave into tiles by extracting slices from both
+/// Pattern to unroll vector.interleave into smaller slice-sized operations.
+/// Decomposes a large interleave into slices by extracting slices from both
 /// input vectors, interleaving them, and inserting back into the result.
 ///
 /// Example:
@@ -1471,10 +1480,10 @@ private:
 ///
 ///     %slice_lhs_0 = vector.extract_strided_slice %lhs[0, 0] : vector<2x2xf32>
 ///     %slice_rhs_0 = vector.extract_strided_slice %rhs[0, 0] : vector<2x2xf32>
-///     %tile_0 = vector.interleave %slice_lhs_0, %slice_rhs_0
+///     %slice_0 = vector.interleave %slice_lhs_0, %slice_rhs_0
 ///       : vector<2x4xf32>
-///     %result = vector.insert_strided_slice %tile_0, %init[0, 0]
-///     // ... repeat for remaining tiles
+///     %result = vector.insert_strided_slice %slice_0, %init[0, 0]
+///     // ... repeat for remaining slices
 struct UnrollInterleavePattern : public OpRewritePattern<vector::InterleaveOp> {
   UnrollInterleavePattern(MLIRContext *context,
                           const vector::UnrollVectorOptions &options,
@@ -1535,21 +1544,24 @@ private:
   vector::UnrollVectorOptions options;
 };
 
-/// Pattern to unroll vector.deinterleave into smaller tile-sized operations.
+/// Pattern to unroll vector.deinterleave into smaller slice-sized operations.
 /// Decomposes a large deinterleave (which splits a vector into even/odd halves)
 /// by extracting source slices, deinterleaving them, and inserting into two
 /// result vectors.
 ///
 /// Example:
-///   %res1, %res2 = vector.deinterleave %src : vector<8xf32>
-///   // Result: %res1 = [src[0], src[2], src[4], src[6]]
-///   //         %res2 = [src[1], src[3], src[5], src[7]]
-///   // Unrolled with target shape [2]:
-///   %slice_0 = vector.extract_strided_slice %src[0] : vector<4xf32>
-///   %tile1_0, %tile2_0 = vector.deinterleave %slice_0 : vector<2xf32>
-///   %result1 = vector.insert_strided_slice %tile1_0, %init1[0]
-///   %result2 = vector.insert_strided_slice %tile2_0, %init2[0]
-///   // ... repeat for remaining tiles
+///   Given a deinterleave Op:
+///
+///     vector.deinterleave %src : vector<4x8xf32>
+///
+///   and a target unroll shape of <2x4>, the pattern produces:
+///
+///   %slice_0 = vector.extract_strided_slice %src[0, 0] : vector<2x4xf32>
+///   %slice_lhs_0, %slice_rhs_0 = vector.deinterleave %slice_0 :
+///   vector<2x4xf32> %result1 = vector.insert_strided_slice %slice_lhs_0,
+///   %init1[0, 0] %result2 = vector.insert_strided_slice %slice_rhs_0,
+///   %init2[0, 0]
+///   // ... repeat for remaining slices
 struct UnrollDeinterleavePattern
     : public OpRewritePattern<vector::DeinterleaveOp> {
   UnrollDeinterleavePattern(MLIRContext *context,
