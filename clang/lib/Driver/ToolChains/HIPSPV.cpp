@@ -15,6 +15,7 @@
 #include "clang/Options/Options.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Program.h"
 
 using namespace clang::driver;
 using namespace clang::driver::toolchains;
@@ -80,8 +81,9 @@ void HIPSPV::Linker::constructLinkAndEmitSpirvCommand(
   auto T = getToolChain().getTriple();
 
   if (T.getOS() == llvm::Triple::ChipStar) {
-    // chipStar: run HipSpvPasses via opt, then use the in-tree SPIR-V backend
-    // for codegen (replaces the external llvm-spirv translator).
+    // chipStar: run HipSpvPasses via opt, then emit SPIR-V either via the
+    // external llvm-spirv translator (if available) or the in-tree SPIR-V
+    // backend (mirrors the fallback in clang-linker-wrapper).
 
     // Run HipSpvPasses plugin via opt (must run on LLVM IR before
     // the SPIR-V backend lowers to MIR).
@@ -100,7 +102,40 @@ void HIPSPV::Linker::constructLinkAndEmitSpirvCommand(
       TempFile = OptOutput;
     }
 
-    // Compile processed bitcode to SPIR-V using the in-tree backend.
+    // Prefer the external llvm-spirv translator when it is available next to
+    // the toolchain — required when LLVM is built without the in-tree SPIR-V
+    // target. Use findProgramByName (not GetProgramPath) so a missing binary
+    // is reported as not-found rather than being silently substituted.
+    std::string LLVMSpirvPath;
+    {
+      llvm::ErrorOr<std::string> P = llvm::sys::findProgramByName(
+          "llvm-spirv", {llvm::sys::path::parent_path(C.getDriver().Dir)});
+      if (!P)
+        P = llvm::sys::findProgramByName("llvm-spirv",
+                                         {llvm::StringRef(C.getDriver().Dir)});
+      if (!P)
+        P = llvm::sys::findProgramByName("llvm-spirv");
+      if (P)
+        LLVMSpirvPath = *P;
+    }
+
+    if (!LLVMSpirvPath.empty()) {
+      // External translator path: BC -> SPIR-V via llvm-spirv.
+      llvm::opt::ArgStringList TrArgs;
+      // Match clang-linker-wrapper's chipstar version selection.
+      if (T.getSubArch() == llvm::Triple::SPIRVSubArch_v13)
+        TrArgs.push_back("--spirv-max-version=1.3");
+      else
+        TrArgs.push_back("--spirv-max-version=1.2");
+      TrArgs.push_back(
+          "--spirv-ext=-all,+SPV_INTEL_function_pointers,+SPV_INTEL_subgroups");
+
+      InputInfo TrInput = InputInfo(types::TY_LLVM_BC, TempFile, "");
+      SPIRV::constructTranslateCommand(C, *this, JA, Output, TrInput, TrArgs);
+      return;
+    }
+
+    // Fallback: compile processed bitcode to SPIR-V using the in-tree backend.
     ArgStringList ClangArgs;
     ClangArgs.push_back("--no-default-config");
     ClangArgs.push_back("-c");
