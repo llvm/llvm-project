@@ -766,14 +766,14 @@ static void processLaneForReplicateRegion(VPlan &Plan, Type *IdxTy,
                "extract indices must be zero");
         NewR.setOperand(1, IdxLane);
       } else if (auto *NewPhi = dyn_cast<VPPhi>(&NewR)) {
-          auto *OldPhi = cast<VPPhi>(&OldR);
-          assert(vputils::onlyFirstLaneUsed(OldPhi) &&
-                                 "VPPhis expected to have only first lane used");
-          auto *BVUser = dyn_cast_or_null<VPInstruction>(OldPhi->getSingleUser());
-        if (BVUser &&
-            match(BVUser,
-                  m_CombineOr(m_BuildVector(), m_BuildStructVector()))) {
-          assert(BVUser->getOperand(0) == OldPhi && "Unexpected first operand of build vector user");
+        auto *OldPhi = cast<VPPhi>(&OldR);
+        assert(vputils::onlyFirstLaneUsed(OldPhi) &&
+               "VPPhis expected to have only first lane used");
+        auto *BVUser = dyn_cast_or_null<VPInstruction>(OldPhi->getSingleUser());
+        if (BVUser && match(BVUser, m_CombineOr(m_BuildVector(),
+                                                m_BuildStructVector()))) {
+          assert(BVUser->getOperand(0) == OldPhi &&
+                 "Unexpected first operand of build vector user");
           BVUser->setOperand(Lane, NewPhi);
         }
       }

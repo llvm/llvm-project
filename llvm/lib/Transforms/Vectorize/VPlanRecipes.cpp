@@ -3676,10 +3676,10 @@ void VPReplicateRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   // Find if the recipe is used by a widened recipe via an intervening
   // VPPredInstPHIRecipe. In this case, also pack the scalar values in a vector.
   if (any_of(users(), [](const VPUser *U) {
-    if (auto *PredR = dyn_cast<VPPredInstPHIRecipe>(U))
-      return !vputils::onlyScalarValuesUsed(PredR);
-    return false;
-  }))
+        if (auto *PredR = dyn_cast<VPPredInstPHIRecipe>(U))
+          return !vputils::onlyScalarValuesUsed(PredR);
+        return false;
+      }))
     O << " (S->V)";
 }
 #endif
