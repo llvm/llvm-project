@@ -759,8 +759,7 @@ void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
 
   VPValue *CanonicalIV = LoopRegion->getCanonicalIV();
   auto *WideCanIV = vputils::findUserOf<VPWidenCanonicalIVRecipe>(CanonicalIV);
-  if (!WideCanIV || vputils::onlyFirstLaneUsed(WideCanIV) ||
-      vputils::onlyScalarValuesUsed(WideCanIV))
+  if (!WideCanIV || vputils::onlyScalarValuesUsed(WideCanIV))
     return;
 
   // Introduce a new VPWidenIntOrFpInductionRecipe if profitable.
@@ -780,7 +779,7 @@ void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
     NumUsers *= UF;
   unsigned RegClass = TTI.getRegisterClassForType(/*Vector=*/true, VecTy);
   VPRegisterUsage Projected = UnrolledBase;
-  Projected.MaxLocalUsers[RegClass] += 1;
+  Projected.MaxLocalUsers[RegClass] += TTI.getRegUsageForType(VecTy);
   if (Projected.spillCost(TTI, CostKind) >
       UnrolledBase.spillCost(TTI, CostKind))
     return;
