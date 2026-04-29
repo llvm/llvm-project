@@ -2447,9 +2447,10 @@ Address CIRGenItaniumCXXABI::initializeArrayCookie(CIRGenFunction &cgf,
       std::max(sizeSize, ctx.getPreferredTypeAlignInChars(elementType));
   assert(cookieSize == getArrayCookieSizeImpl(elementType));
 
+  mlir::Type u8Ty = cgf.getBuilder().getUInt8Ty();
   cir::PointerType u8PtrTy = cgf.getBuilder().getUInt8PtrTy();
   mlir::Value baseBytePtr =
-      cgf.getBuilder().createPtrBitcast(newPtr.getPointer(), u8PtrTy);
+      cgf.getBuilder().createBitcast(newPtr.getPointer(), u8PtrTy);
 
   // Compute an offset to the cookie.
   CharUnits cookieOffset = cookieSize - sizeSize;
@@ -2463,7 +2464,7 @@ Address CIRGenItaniumCXXABI::initializeArrayCookie(CIRGenFunction &cgf,
 
   CharUnits baseAlignment = newPtr.getAlignment();
   CharUnits cookiePtrAlignment = baseAlignment.alignmentAtOffset(cookieOffset);
-  Address cookiePtr(cookiePtrValue, u8PtrTy, cookiePtrAlignment);
+  Address cookiePtr(cookiePtrValue, u8Ty, cookiePtrAlignment);
 
   // Write the number of elements into the appropriate slot.
   Address numElementsPtr =
