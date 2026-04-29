@@ -12759,6 +12759,9 @@ public:
             return false;
           });
 
+  /// Finish template argument deduction for a template declaration, checking
+  /// the deduced template arguments for completeness and forming the deduced
+  /// template argument list.
   TemplateDeductionResult FinishTemplateArgumentDeduction(
       TemplateDecl *TD, TemplateParameterList *TPL,
       ArrayRef<TemplateArgument> PatternArgs, ArrayRef<TemplateArgument> Args,
