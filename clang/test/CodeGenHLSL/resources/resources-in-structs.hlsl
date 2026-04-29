@@ -47,7 +47,7 @@ C c : register(t10);
 
 // Check that c.BufOne is initialized from binding with counter
 //
-// CHECK: define internal void @__cxx_global_var_init.3()
+// CHECK: define internal void @__cxx_global_var_init.{{[0-9]+}}()
 // CHECK-NEXT: entry:
 // CHECK-NEXT: call void @hlsl::StructuredBuffer<float>::__createFromBinding(unsigned int, unsigned int, int, unsigned int, char const*)
 // CHECK-SAME: (ptr dead_on_unwind writable sret(%"class.hlsl::StructuredBuffer") align 4 @c.BufOne, i32 noundef 16, i32 noundef 0, i32 noundef 1, i32 noundef 0, ptr noundef @[[cBufOne]])

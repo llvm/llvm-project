@@ -5554,14 +5554,25 @@ bool SemaHLSL::ActOnUninitializedVarDecl(VarDecl *VD) {
   if (VD->getType().getAddressSpace() == LangAS::hlsl_constant)
     return true;
 
-  // Initialize non-static resources at the global scope.
   if (VD->hasGlobalStorage() && VD->getStorageClass() != SC_Static) {
     const Type *Ty = VD->getType().getTypePtr();
-    if (Ty->isHLSLResourceRecord())
-      return initGlobalResourceDecl(VD);
-    if (Ty->isHLSLResourceRecordArray())
-      return initGlobalResourceArrayDecl(VD);
+    if (Ty->isHLSLResourceRecord() && initGlobalResourceDecl(VD))
+      return true;
+    if (Ty->isHLSLResourceRecordArray() && initGlobalResourceArrayDecl(VD))
+      return true;
   }
+
+  // User-defined structs/classes do not have constructors.
+  // When declared at the a scope, they are part of the constant buffer
+  // and should not be initialized by the compiler.
+  // When declated at a local scope, they are  by default not initialized.
+  // Also applies to arrays of user-defined structs/classes.
+  const Type *Ty = VD->getType()->getUnqualifiedDesugaredType();
+  while (Ty->isArrayType())
+    Ty = Ty->getArrayElementTypeNoTypeQual()->getUnqualifiedDesugaredType();
+  if (CXXRecordDecl *RD = Ty->getAsCXXRecordDecl())
+    return !RD->hasUserProvidedSpecialMembers();
+
   return false;
 }
 

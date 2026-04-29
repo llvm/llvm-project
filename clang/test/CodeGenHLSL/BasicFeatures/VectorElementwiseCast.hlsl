@@ -94,9 +94,12 @@ struct Derived : BFields {
 
 // vector flat cast from derived struct with bitfield
 // CHECK-LABEL: call6
-// CHECK: [[A:%.*]] = alloca <4 x i32>, align 4
+// CHECK-NEXT: entry:
+// CHECK-NEXT: [[D_INDIRECT_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-NEXT: [[A:%.*]] = alloca <4 x i32>, align 4
 // CHECK-NEXT: [[Tmp:%.*]] = alloca %struct.Derived, align 1
 // CHECK-NEXT: [[FlatTmp:%.*]] = alloca <4 x i32>, align 4
+// CHECK-NEXT: store ptr %D, ptr [[D_INDIRECT_ADDR]], align 4
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[Tmp]], ptr align 1 %D, i32 19, i1 false)
 // CHECK-NEXT: [[Gep:%.*]] = getelementptr inbounds %struct.Derived, ptr [[Tmp]], i32 0, i32 0
 // CHECK-NEXT: [[E:%.*]] = getelementptr inbounds nuw %struct.BFields, ptr [[Gep]], i32 0, i32 1
@@ -217,9 +220,12 @@ struct BoolVecStruct {
 
 // vector flat cast from struct containing bool vector
 // CHECK-LABEL: call10
-// CHECK:    [[V:%.*]] = alloca <2 x i32>, align 4
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:  [[S_INDIRECT_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-NEXT:    [[V:%.*]] = alloca <2 x i32>, align 4
 // CHECK-NEXT:    [[AGG_TEMP:%.*]] = alloca %struct.BoolVecStruct, align 1
 // CHECK-NEXT:    [[FLATCAST_TMP:%.*]] = alloca <2 x i1>, align 4
+// CHECK-NEXT:    store ptr %s, ptr [[S_INDIRECT_ADDR]], align 4
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[AGG_TEMP]], ptr align 1 %s, i32 8, i1 false)
 // CHECK-NEXT:    [[VECTOR_GEP:%.*]] = getelementptr inbounds %struct.BoolVecStruct, ptr [[AGG_TEMP]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i1>, ptr [[FLATCAST_TMP]], align 4

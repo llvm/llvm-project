@@ -2082,7 +2082,8 @@ ImplicitCastExpr *ImplicitCastExpr::Create(const ASTContext &C, QualType T,
   // Per C++ [conv.lval]p3, lvalue-to-rvalue conversions on class and
   // std::nullptr_t have special semantics not captured by CK_LValueToRValue.
   assert((Kind != CK_LValueToRValue ||
-          !(T->isNullPtrType() || T->getAsCXXRecordDecl())) &&
+          !(T->isNullPtrType() ||
+            (T->getAsCXXRecordDecl() && !C.getLangOpts().HLSL))) &&
          "invalid type for lvalue-to-rvalue conversion");
   ImplicitCastExpr *E =
       new (Buffer) ImplicitCastExpr(T, Kind, Operand, PathSize, FPO, VK);
