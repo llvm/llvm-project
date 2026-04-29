@@ -1435,52 +1435,92 @@ define i1 @subcarry_ult_2x128(i128 %x0, i128 %x1, i128 %y0, i128 %y1) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    pushl %ebx
-; X86-NEXT:    pushl %edi
-; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    movl 24(%ebp), %esi
-; X86-NEXT:    movl 28(%ebp), %ebx
-; X86-NEXT:    movl 8(%ebp), %edx
-; X86-NEXT:    cmpl 40(%ebp), %edx
-; X86-NEXT:    movl 12(%ebp), %edx
-; X86-NEXT:    sbbl 44(%ebp), %edx
-; X86-NEXT:    movl 16(%ebp), %edx
-; X86-NEXT:    sbbl 48(%ebp), %edx
-; X86-NEXT:    movl 20(%ebp), %edx
-; X86-NEXT:    sbbl 52(%ebp), %edx
-; X86-NEXT:    setb {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Spill
-; X86-NEXT:    cmpl 56(%ebp), %esi
-; X86-NEXT:    movl %ebx, %edx
-; X86-NEXT:    sbbl 60(%ebp), %edx
-; X86-NEXT:    movl 32(%ebp), %edx
-; X86-NEXT:    movl %edx, %edi
-; X86-NEXT:    sbbl 64(%ebp), %edi
-; X86-NEXT:    movl 68(%ebp), %edi
-; X86-NEXT:    movl 36(%ebp), %ecx
-; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    sbbl %edi, %eax
-; X86-NEXT:    setb %ah
-; X86-NEXT:    xorl %edi, %ecx
-; X86-NEXT:    xorl 60(%ebp), %ebx
-; X86-NEXT:    orl %ecx, %ebx
-; X86-NEXT:    xorl 64(%ebp), %edx
-; X86-NEXT:    xorl 56(%ebp), %esi
-; X86-NEXT:    orl %edx, %esi
-; X86-NEXT:    orl %ebx, %esi
-; X86-NEXT:    sete %al
-; X86-NEXT:    andb {{[-0-9]+}}(%e{{[sb]}}p), %al # 1-byte Folded Reload
-; X86-NEXT:    orb %ah, %al
-; X86-NEXT:    leal -12(%ebp), %esp
-; X86-NEXT:    popl %esi
-; X86-NEXT:    popl %edi
-; X86-NEXT:    popl %ebx
+; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    cmpl 40(%ebp), %eax
+; X86-NEXT:    movl 12(%ebp), %eax
+; X86-NEXT:    sbbl 44(%ebp), %eax
+; X86-NEXT:    movl 16(%ebp), %eax
+; X86-NEXT:    sbbl 48(%ebp), %eax
+; X86-NEXT:    movl 20(%ebp), %eax
+; X86-NEXT:    sbbl 52(%ebp), %eax
+; X86-NEXT:    movl 24(%ebp), %eax
+; X86-NEXT:    sbbl 56(%ebp), %eax
+; X86-NEXT:    movl 28(%ebp), %eax
+; X86-NEXT:    sbbl 60(%ebp), %eax
+; X86-NEXT:    movl 32(%ebp), %eax
+; X86-NEXT:    sbbl 64(%ebp), %eax
+; X86-NEXT:    movl 36(%ebp), %eax
+; X86-NEXT:    sbbl 68(%ebp), %eax
+; X86-NEXT:    setb %al
+; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
   %b0 = icmp ult i128 %x0, %y0
   %b1 = icmp ult i128 %x1, %y1
   %e1 = icmp eq i128 %x1, %y1
+  %bp = and i1 %b0, %e1
+  %br = or i1 %b1, %bp
+  ret i1 %br
+}
+
+; i256 borrow chain — exercises the non-simple EVT path (i256->i128->i64/i32).
+define i1 @subcarry_ult_2x256(i256 %x0, i256 %x1, i256 %y0, i256 %y1) nounwind {
+; X64-LABEL: subcarry_ult_2x256:
+; X64:       # %bb.0:
+; X64-NEXT:    movq 16(%rsp), %rax
+; X64-NEXT:    movq 8(%rsp), %r10
+; X64-NEXT:    cmpq 24(%rsp), %rdi
+; X64-NEXT:    sbbq 32(%rsp), %rsi
+; X64-NEXT:    sbbq 40(%rsp), %rdx
+; X64-NEXT:    sbbq 48(%rsp), %rcx
+; X64-NEXT:    sbbq 56(%rsp), %r8
+; X64-NEXT:    sbbq 64(%rsp), %r9
+; X64-NEXT:    sbbq 72(%rsp), %r10
+; X64-NEXT:    sbbq 80(%rsp), %rax
+; X64-NEXT:    setb %al
+; X64-NEXT:    retq
+;
+; X86-LABEL: subcarry_ult_2x256:
+; X86:       # %bb.0:
+; X86-NEXT:    movl 4(%esp), %eax
+; X86-NEXT:    cmpl 68(%esp), %eax
+; X86-NEXT:    movl 8(%esp), %eax
+; X86-NEXT:    sbbl 72(%esp), %eax
+; X86-NEXT:    movl 12(%esp), %eax
+; X86-NEXT:    sbbl 76(%esp), %eax
+; X86-NEXT:    movl 16(%esp), %eax
+; X86-NEXT:    sbbl 80(%esp), %eax
+; X86-NEXT:    movl 20(%esp), %eax
+; X86-NEXT:    sbbl 84(%esp), %eax
+; X86-NEXT:    movl 24(%esp), %eax
+; X86-NEXT:    sbbl 88(%esp), %eax
+; X86-NEXT:    movl 28(%esp), %eax
+; X86-NEXT:    sbbl 92(%esp), %eax
+; X86-NEXT:    movl 32(%esp), %eax
+; X86-NEXT:    sbbl 96(%esp), %eax
+; X86-NEXT:    movl 36(%esp), %eax
+; X86-NEXT:    sbbl 100(%esp), %eax
+; X86-NEXT:    movl 40(%esp), %eax
+; X86-NEXT:    sbbl 104(%esp), %eax
+; X86-NEXT:    movl 44(%esp), %eax
+; X86-NEXT:    sbbl 108(%esp), %eax
+; X86-NEXT:    movl 48(%esp), %eax
+; X86-NEXT:    sbbl 112(%esp), %eax
+; X86-NEXT:    movl 52(%esp), %eax
+; X86-NEXT:    sbbl 116(%esp), %eax
+; X86-NEXT:    movl 56(%esp), %eax
+; X86-NEXT:    sbbl 120(%esp), %eax
+; X86-NEXT:    movl 60(%esp), %eax
+; X86-NEXT:    sbbl 124(%esp), %eax
+; X86-NEXT:    movl 64(%esp), %eax
+; X86-NEXT:    sbbl 128(%esp), %eax
+; X86-NEXT:    setb %al
+; X86-NEXT:    retl
+  %b0 = icmp ult i256 %x0, %y0
+  %b1 = icmp ult i256 %x1, %y1
+  %e1 = icmp eq i256 %x1, %y1
   %bp = and i1 %b0, %e1
   %br = or i1 %b1, %bp
   ret i1 %br

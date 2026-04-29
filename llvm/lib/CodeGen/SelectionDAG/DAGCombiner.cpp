@@ -3922,12 +3922,10 @@ static SDValue combineOrOfSetCCToUSUBOCarry(SDNode *N, SelectionDAG &DAG,
                               m_Value(CarryIn)))))
     return SDValue();
 
-  // Require USUBO_CARRY on the post-legalization type; for oversize integers
-  // (e.g. i128) type legalization then expands one USUBO_CARRY into a chain
-  // of register-width USUBO_CARRYs, which is exactly what we want.
   EVT IntVT = A.getValueType();
   if (!TLI.isOperationLegalOrCustom(
-          ISD::USUBO_CARRY, TLI.getTypeToTransformTo(*DAG.getContext(), IntVT)))
+          ISD::USUBO_CARRY,
+          TLI.getLegalTypeToTransformTo(*DAG.getContext(), IntVT)))
     return SDValue();
 
   SDLoc DL(N);
