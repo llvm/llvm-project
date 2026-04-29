@@ -15,4 +15,4 @@ const int __declspec(selectany) test3 = 42; // Standard usage.
 struct Test4 {
   static constexpr int sdm = 0;
 };
-__declspec(selectany) constexpr int Test4::sdm; // no warning
+__declspec(selectany) constexpr int Test4::sdm; // expected-error {{'selectany' can only be applied to data items with external linkage}}
