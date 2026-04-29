@@ -6714,15 +6714,13 @@ gentbl_cc_library(
     deps = [":OptParserTdFiles"],
 )
 
-cc_binary(
-    name = "llvm-readtapi",
-    testonly = True,
+cc_library(
+    name = "llvm-readtapi-lib",
     srcs = glob([
         "tools/llvm-readtapi/*.cpp",
         "tools/llvm-readtapi/*.h",
     ]),
     copts = llvm_copts,
-    stamp = 0,
     deps = [
         ":BinaryFormat",
         ":Object",
@@ -6732,6 +6730,13 @@ cc_binary(
         ":TextAPI",
         ":TextAPIBinaryReader",
     ],
+)
+
+llvm_driver_cc_binary(
+    name = "llvm-readtapi",
+    testonly = True,
+    stamp = 0,
+    deps = [":llvm-readtapi-lib"],
 )
 
 gentbl_cc_library(
