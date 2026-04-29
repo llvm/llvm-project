@@ -129,9 +129,6 @@ InstrProfCorrelator::get(StringRef Filename, ProfCorrelatorKind FileKind,
     Expected<std::string> Path = BIDFetcher->fetch(BIs.front());
     if (!Path) {
       // Propagate as InstrProf specific error type.
-      assert(errorToErrorCode(Path.takeError()) ==
-                 std::errc::no_such_file_or_directory &&
-             "BuildIDFetcher::fetch() failed in an unexpected way");
       consumeError(Path.takeError());
       return make_error<InstrProfError>(
           instrprof_error::unable_to_correlate_profile,
