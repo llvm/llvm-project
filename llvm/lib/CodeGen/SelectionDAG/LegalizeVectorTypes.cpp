@@ -847,15 +847,18 @@ bool DAGTypeLegalizer::CanSplitVectorIntrinsic(const SDNode *N) {
   auto GetOpVT = [&](unsigned I) -> EVT {
     switch (N->getOpcode()) {
     case ISD::INTRINSIC_WO_CHAIN:
+      // Operands: [IntrinsicID, arg0, arg1, ...]
       return I < N->getNumValues()
                  ? N->getValueType(I)
-                 : N->getOperand(I - N->getNumValues()).getValueType();
+                 : N->getOperand(I - N->getNumValues() + 1).getValueType();
     case ISD::INTRINSIC_W_CHAIN:
+      // Operands: [chain_in, IntrinsicID, arg0, arg1, ...]
       return I < N->getNumValues() - 1
                  ? N->getValueType(I)
-                 : N->getOperand(I - N->getNumValues() + 1).getValueType();
+                 : N->getOperand(I - N->getNumValues() + 3).getValueType();
     case ISD::INTRINSIC_VOID:
-      return N->getOperand(I).getValueType();
+      // Operands: [chain_in, IntrinsicID, arg0, arg1, ...]
+      return N->getOperand(I + 2).getValueType();
     default:
       llvm_unreachable("Expected intrinsic opcode");
     }
