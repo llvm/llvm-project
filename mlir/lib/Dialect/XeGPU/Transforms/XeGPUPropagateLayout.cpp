@@ -1079,27 +1079,10 @@ void LayoutInfoPropagation::visitTransposeOp(
   if (!resultLayout.isAssigned())
     return;
 
-  llvm::dbgs() << "[DEBUG visitTransposeOp] transpose op: " << transpose
-               << "\n";
-  llvm::dbgs() << "[DEBUG visitTransposeOp] resultLayout (consumer): "
-               << resultLayout.get() << "\n";
-  llvm::dbgs() << "[DEBUG visitTransposeOp] permutation: [";
-  auto perm = transpose.getPermutation();
-  for (size_t i = 0; i < perm.size(); ++i) {
-    if (i > 0)
-      llvm::dbgs() << ", ";
-    llvm::dbgs() << perm[i];
-  }
-  llvm::dbgs() << "]\n";
-
   auto consumerLayoutAttr =
       dyn_cast<xegpu::DistributeLayoutAttr>(resultLayout.get());
   auto srcLayoutAttr = xegpu::inferTransposeSourceLayout(
       consumerLayoutAttr, transpose.getPermutation());
-
-  llvm::dbgs()
-      << "[DEBUG visitTransposeOp] srcLayoutAttr (propagated to operand): "
-      << srcLayoutAttr << "\n";
 
   // Propagate the new layout to the vector operand.
   propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(srcLayoutAttr)));
@@ -1162,28 +1145,11 @@ void LayoutInfoPropagation::visitVectorInterleaveOp(
   auto requiredResLayoutAttr = setupInterleaveResultLayout(
       layoutKind, srcVecType, resVecType, consumerLayoutAttr, uArch);
 
-  llvm::dbgs() << "[DEBUG visitVectorInterleaveOp] interleave op: "
-               << interleave << "\n";
-  llvm::dbgs() << "[DEBUG visitVectorInterleaveOp] srcVecType: " << srcVecType
-               << "\n";
-  llvm::dbgs() << "[DEBUG visitVectorInterleaveOp] resVecType: " << resVecType
-               << "\n";
-  llvm::dbgs() << "[DEBUG visitVectorInterleaveOp] consumerLayoutAttr: "
-               << consumerLayoutAttr << "\n";
-  llvm::dbgs() << "[DEBUG visitVectorInterleaveOp] requiredResLayoutAttr "
-                  "(before inferInterleaveSourceLayout): "
-               << requiredResLayoutAttr << "\n";
-
   xegpu::setTemporaryLayout(interleave->getResult(0), requiredResLayoutAttr);
 
   // Derive the source layout from the result layout (halve the innermost dim)
-  llvm::dbgs() << "[DEBUG visitVectorInterleaveOp] About to call "
-                  "inferInterleaveSourceLayout...\n";
   auto srcLayoutAttr =
       xegpu::inferInterleaveSourceLayout(requiredResLayoutAttr);
-  llvm::dbgs() << "[DEBUG visitVectorInterleaveOp] After "
-                  "inferInterleaveSourceLayout, srcLayoutAttr: "
-               << srcLayoutAttr << "\n";
 
   // Both operands (lhs and rhs) get the same source layout
   propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(srcLayoutAttr)));
