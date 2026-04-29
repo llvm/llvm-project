@@ -83,9 +83,8 @@ FileIOResult File::write_unlocked_impl(const void *data, size_t len) {
     flush_unlocked();
     return ret_val;
   }
-  if (bufmode == _IOFBF) { // fully buffered
+  if (bufmode == _IOFBF) // fully buffered
     return write_unlocked_fbf(static_cast<const uint8_t *>(data), len);
-  }
   return write_unlocked_lbf(static_cast<const uint8_t *>(data),
                             len); // line buffered
 }
@@ -571,6 +570,9 @@ FileIOResult File::write_unlocked(const wchar_t *ws, size_t len) {
       err = true;
       return {written, push_err};
     }
+    // buffer the whole wchar to save on calls to write.
+    char buffer[4];
+    size_t char_size = 0;
     while (!cr.isEmpty()) {
       auto pop_res = cr.pop<char8_t>();
       if (!pop_res.has_value()) {
@@ -578,12 +580,14 @@ FileIOResult File::write_unlocked(const wchar_t *ws, size_t len) {
         return {written, pop_res.error()};
       }
       char8_t byte = pop_res.value();
-      auto write_res = write_unlocked_impl(&byte, 1);
-      if (write_res.has_error())
-        return {written, write_res.error};
-      if (write_res.value < 1)
-        return {written, 0};
+      buffer[char_size] = byte;
+      ++char_size;
     }
+    auto write_res = write_unlocked_impl(buffer, char_size);
+    if (write_res.has_error())
+      return {written, write_res.error};
+    if (write_res.value < 1)
+      return {written, 0};
     ++written;
   }
   return {written, 0};
