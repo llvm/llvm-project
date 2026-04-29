@@ -225,7 +225,7 @@ def run_command(args: argparse.Namespace) -> int:
             r"^WARNING: linker: .*unsupported flags DT_FLAGS_1=.*\n?",
             "",
             stderr_content,
-            flags=re.MULTILINE
+            flags=re.MULTILINE,
         )
 
         sys.stderr.write(stderr_content)
