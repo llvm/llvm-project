@@ -161,11 +161,10 @@ TEST(SerializationTest, YAMLConversions) {
   EXPECT_EQ(static_cast<uint8_t>(Sym1.Flags), 129);
   EXPECT_TRUE(Sym1.Flags & Symbol::IndexedForCodeCompletion);
   EXPECT_FALSE(Sym1.Flags & Symbol::Deprecated);
-  // Tags: Deprecated | Static
-  EXPECT_EQ(Sym1.Tags, SymbolTags::fromTag(SymbolTag::Deprecated) |
-                           SymbolTags::fromTag(SymbolTag::Static));
-  EXPECT_TRUE((Sym1.Tags & SymbolTags::fromTag(SymbolTag::Deprecated)));
-  EXPECT_TRUE((Sym1.Tags & SymbolTags::fromTag(SymbolTag::Static)));
+  // Tags: Deprecated (1<<1=2) | Static (1<<8=256) = 258
+  EXPECT_EQ(Sym1.Tags, 258u);
+  EXPECT_TRUE(Sym1.Tags & (1u << static_cast<unsigned>(SymbolTag::Deprecated)));
+  EXPECT_TRUE(Sym1.Tags & (1u << static_cast<unsigned>(SymbolTag::Static)));
   EXPECT_THAT(
       Sym1.IncludeHeaders,
       UnorderedElementsAre(
@@ -182,7 +181,7 @@ TEST(SerializationTest, YAMLConversions) {
             "file:///path/bar.h");
   EXPECT_FALSE(Sym2.Flags & Symbol::IndexedForCodeCompletion);
   EXPECT_TRUE(Sym2.Flags & Symbol::Deprecated);
-  EXPECT_TRUE(Sym2.Tags.empty()); // no Tags in YAML -> default zero
+  EXPECT_EQ(Sym2.Tags, 0u); // no Tags in YAML → default zero
 
   ASSERT_TRUE(bool(ParsedYAML->Refs));
   EXPECT_THAT(
@@ -303,7 +302,9 @@ TEST(SerializationTest, SrcsTest) {
 // This exercises both writeSymbol (new Tags field) and readSymbol.
 TEST(SerializationTest, TagsRoundTrip) {
   // YAML fixture with a single symbol carrying non-zero Tags.
-  // Combined SymbolTags value: Deprecated | Static.
+  // Deprecated (SymbolTag=1) -> bit 1 -> 1<<1 = 2
+  // Static     (SymbolTag=8) -> bit 8 -> 1<<8 = 256
+  // Combined: 258
   const char *TaggedYAML = R"(
 ---
 !Symbol
@@ -327,8 +328,9 @@ Tags:    258
 )";
   const SymbolID TaggedID = cantFail(SymbolID::fromStr("AABBCCDDEEFF0011"));
   constexpr SymbolTags ExpectedTags =
-      SymbolTags::fromTag(SymbolTag::Deprecated) |
-      SymbolTags::fromTag(SymbolTag::Static);
+      (1u << static_cast<unsigned>(SymbolTag::Deprecated)) | // bit 1  = 2
+      (1u << static_cast<unsigned>(SymbolTag::Static));      // bit 8  = 256
+  static_assert(ExpectedTags == 258u, "bitmask sanity check");
 
   // ── Step 1: YAML deserialization ────────────────────────────────────────
   auto FromYAML = readIndexFile(TaggedYAML);
@@ -356,9 +358,10 @@ Tags:    258
         << "symbol not found after RIFF roundtrip";
     EXPECT_EQ(It->Tags, ExpectedTags) << "Tags lost during RIFF serialization";
     // Spot-check individual bits
-    EXPECT_TRUE(It->Tags & SymbolTags::fromTag(SymbolTag::Deprecated));
-    EXPECT_TRUE(It->Tags & SymbolTags::fromTag(SymbolTag::Static));
-    EXPECT_FALSE(It->Tags & SymbolTags::fromTag(SymbolTag::Abstract));
+    EXPECT_TRUE(It->Tags &
+                (1u << static_cast<unsigned>(SymbolTag::Deprecated)));
+    EXPECT_TRUE(It->Tags & (1u << static_cast<unsigned>(SymbolTag::Static)));
+    EXPECT_FALSE(It->Tags & (1u << static_cast<unsigned>(SymbolTag::Abstract)));
   }
 
   // ── Step 3: Symbol with Tags=0 must survive too ─────────────────────────
@@ -394,7 +397,7 @@ Flags:    1
     const SymbolID UntaggedID = cantFail(SymbolID::fromStr("0000000000000001"));
     auto It = FromUntaggedRIFF->Symbols->find(UntaggedID);
     ASSERT_NE(It, FromUntaggedRIFF->Symbols->end());
-    EXPECT_TRUE(It->Tags.empty()) << "Tags must be zero for untagged symbol";
+    EXPECT_EQ(It->Tags, 0u) << "Tags must be zero for untagged symbol";
   }
 }
 

@@ -86,27 +86,10 @@ using clang::clangd::RelationKind;
 using clang::clangd::Symbol;
 using clang::clangd::SymbolID;
 using clang::clangd::SymbolLocation;
-using clang::clangd::SymbolTags;
 using clang::index::SymbolInfo;
 using clang::index::SymbolKind;
 using clang::index::SymbolLanguage;
 using clang::tooling::CompileCommand;
-
-template <> struct ScalarTraits<SymbolTags> {
-  static void output(const SymbolTags &Value, void *, raw_ostream &Out) {
-    Out << Value.raw();
-  }
-
-  static StringRef input(StringRef Scalar, void *, SymbolTags &Value) {
-    SymbolTags::Storage Raw;
-    if (Scalar.getAsInteger(/*Radix=*/10, Raw))
-      return "invalid SymbolTags value";
-    Value = SymbolTags::fromRaw(Raw);
-    return {};
-  }
-
-  static QuotingType mustQuote(StringRef) { return QuotingType::None; }
-};
 
 // Helper to (de)serialize the SymbolID. We serialize it as a hex string.
 struct NormalizedSymbolID {

@@ -243,11 +243,11 @@ template <typename E> constexpr E enumIncrement(E Value) {
 } // namespace
 
 SymbolTags toSymbolTagBitmask(const SymbolTag ST) {
-  return SymbolTags::fromTag(ST);
+  return (1 << static_cast<uint32_t>(ST));
 }
 
 SymbolTags computeSymbolTags(const NamedDecl &ND) {
-  SymbolTags Result;
+  SymbolTags Result = 0;
   const auto IsDef = isUniqueDefinition(&ND);
 
   if (ND.isDeprecated())
@@ -304,7 +304,7 @@ SymbolTags computeSymbolTags(const NamedDecl &ND) {
 std::vector<SymbolTag> expandTagBitmask(const SymbolTags STGS) {
   std::vector<SymbolTag> Tags;
 
-  if (STGS.empty())
+  if (STGS == 0)
     return Tags;
 
   // No filtering required since this function is only used for Symbols from the
@@ -335,7 +335,7 @@ std::vector<SymbolTag> getSymbolTags(const NamedDecl &ND) {
   SymbolTags FilteredTags = STGS;
   std::vector<SymbolTag> Tags;
 
-  if (STGS.empty())
+  if (STGS == 0)
     return Tags;
 
   // Apply specific filter to the symbol tags only on CXX class methods.
