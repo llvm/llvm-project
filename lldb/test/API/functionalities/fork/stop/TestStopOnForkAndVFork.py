@@ -6,28 +6,32 @@ import lldb
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
-import os
 
 
-class TestForkResumesChild(TestBase):
+class TestStopOnForkAndVFork(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    def do_test(self, mode):
+    def do_test(self, mode, fork):
         self.build()
-        exe = self.getBuildArtifact("a.out")
 
-        (target, process, _, _) = lldbutil.run_to_source_breakpoint(
-            self, "// break here", lldb.SBFileSpec("main.c")
+        args = [fork]
+        launch_info = lldb.SBLaunchInfo(args)
+        launch_info.SetWorkingDirectory(self.getBuildDir())
+
+        (_, process, _, _) = lldbutil.run_to_source_breakpoint(
+            self, "// break here", lldb.SBFileSpec("main.c"), launch_info
         )
-        self.runCmd("settings set target.process.stop-on-fork true")
+        self.runCmd(f"settings set target.process.stop-on-{fork} true")
         self.runCmd(f"settings set target.process.follow-fork-mode {mode}")
 
         process.Continue()
         self.assertState(
-            process.GetState(), lldb.eStateStopped, f"Process should be stopped at fork"
+            process.GetState(), lldb.eStateStopped, f"Process should be stopped at {fork}"
         )
-        threads = lldbutil.get_stopped_threads(process, lldb.eStopReasonFork)
-        self.assertEqual(len(threads), 1, f"We got a thread stopped for fork.")
+        threads = lldbutil.get_stopped_threads(
+            process, lldb.eStopReasonVFork if fork == "vfork" else lldb.eStopReasonFork
+        )
+        self.assertEqual(len(threads), 1, f"We got a thread stopped for {fork}.")
 
         self.expect(
             "continue",
@@ -36,8 +40,16 @@ class TestForkResumesChild(TestBase):
 
     @skipIfWindows
     def test_stop_on_fork_and_follow_parent(self):
-        self.do_test("parent")
+        self.do_test("parent", "fork")
 
     @skipIfWindows
     def test_stop_on_fork_and_follow_child(self):
-        self.do_test("child")
+        self.do_test("child", "fork")
+
+    @skipIfWindows
+    def test_stop_on_vfork_and_follow_parent(self):
+        self.do_test("parent", "vfork")
+
+    @skipIfWindows
+    def test_stop_on_vfork_and_follow_child(self):
+        self.do_test("child", "vfork")

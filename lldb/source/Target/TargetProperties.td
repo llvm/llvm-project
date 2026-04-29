@@ -285,11 +285,11 @@ let Definition = "process", Path = "target.process" in {
   def StopOnFork: Property<"stop-on-fork", "Boolean">,
     Global,
     DefaultFalse,
-    Desc<"If true, stop when the inferior fork's.">;
+    Desc<"If true, stop when the inferior forks.">;
   def StopOnVFork: Property<"stop-on-vfork", "Boolean">,
     Global,
     DefaultFalse,
-    Desc<"If true, stop when the inferior vfork's.">;
+    Desc<"If true, stop when the inferior vforks.">;
   def UtilityExpressionTimeout: Property<"utility-expression-timeout", "UInt64">,
 #ifdef LLDB_SANITIZED
     DefaultUnsignedValue<60>,
