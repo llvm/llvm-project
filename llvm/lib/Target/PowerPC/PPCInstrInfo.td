@@ -2017,10 +2017,11 @@ def : Pat<(int_ppc_dcbtst_with_hint xoaddr:$dst, i32:$TH),
 // For example for operation AND, ATOMIC_LOAD_AND_NOWP is only matched for sizes
 // 8 and 16 bit if the word part feature is not available. In all other cases,
 // ATOMIC_LOAD_AND is matched.
-foreach op = ["add", "sub", "and", "or", "xor", "nand", "min", "max", "umax",
-              "umin"] in {
-  defvar atomic_load = "ATOMIC_LOAD_"#!toupper(op);
-  defvar atomic_load_nowp = "ATOMIC_LOAD_"#!toupper(op)#"_NOWP";
+foreach op = ["load_add", "load_sub", "load_and", "load_or", "load_xor",
+              "load_nand", "load_min", "load_max", "load_umax", "load_umin",
+              "swap"] in {
+  defvar atomic_load = "ATOMIC_"#!toupper(op);
+  defvar atomic_load_nowp = "ATOMIC_"#!toupper(op)#"_NOWP";
   let Defs = [CR0] in {
     def atomic_load : PPCCustomInserterPseudo<
         (outs gprc:$dst), (ins memrr:$ptr, i32imm:$sz, gprc:$incr),
@@ -2053,25 +2054,6 @@ foreach bitsz = [8, 16, 32] in {
   def : Pat<(i32 (pat ForceXForm:$ptr, gprc:$old, gprc:$new)),
           (!cast<Instruction>(pseudo) memrr:$ptr, gprc:$old, gprc:$new)>;
 }
-
-let Defs = [CR0] in {
-  def ATOMIC_SWAP : PPCCustomInserterPseudo<
-      (outs gprc:$dst), (ins memrr:$ptr, i32imm:$sz, gprc:$new),
-      "#" # NAME,[]>;
-  def ATOMIC_SWAP_NOWP : PPCCustomInserterPseudo<
-      (outs gprc:$dst), (ins memrr:$ptr, i32imm:$sz, gprc:$new),
-      "#" # NAME,[]>;
-}
-foreach bitsz = [8, 16] in {
-  defvar pat = !cast<PatFrag>("atomic_swap_i"#bitsz);
-  def : Pat<(i32 (pat ForceXForm:$ptr, gprc:$new)),
-          (ATOMIC_SWAP memrr:$ptr, !div(bitsz, 8), gprc:$new)>,
-           Requires<[HasPartwordAtomics]>;
-  def : Pat<(i32 (pat ForceXForm:$ptr, gprc:$new)),
-          (ATOMIC_SWAP_NOWP memrr:$ptr, !div(bitsz, 8), gprc:$new)>;
-}
-def : Pat<(i32 (atomic_swap_i32 ForceXForm:$ptr, gprc:$new)),
-          (ATOMIC_SWAP memrr:$ptr, 4, gprc:$new)>;
 
 def : Pat<(PPCatomicCmpSwap_8 ForceXForm:$ptr, i32:$old, i32:$new),
         (ATOMIC_CMP_SWAP_I8 ForceXForm:$ptr, i32:$old, i32:$new)>;
