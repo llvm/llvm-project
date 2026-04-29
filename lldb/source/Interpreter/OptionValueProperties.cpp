@@ -483,6 +483,13 @@ void OptionValueProperties::Apropos(
       continue;
     }
 
+    if (StreamString qualified_name;
+        property->DumpQualifiedName(qualified_name) &&
+        qualified_name.GetString().contains_insensitive(keyword)) {
+      matching_properties.push_back(property);
+      continue;
+    }
+
     if (llvm::StringRef desc = property->GetDescription();
         desc.contains_insensitive(keyword)) {
       matching_properties.push_back(property);
