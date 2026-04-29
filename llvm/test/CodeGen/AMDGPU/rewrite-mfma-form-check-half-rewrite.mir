@@ -1,0 +1,86 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 \
+# RUN:     -run-pass=machine-scheduler \
+# RUN:     -amdgpu-disable-rewrite-mfma-form-sched-stage=false \
+# RUN:     -o - %s | FileCheck %s
+#
+# Test: RewriteMFMAFormStage — physical register in MFMA src2 aborts rewrite cleanly.
+#
+# Root cause (GCNSchedStrategy.cpp):
+#   rewrite() processes RewriteCands in iteration order. For each MFMA:
+#     MI->setDesc(ReplacementOp);              // opcode mutated
+#     if (!Src2Reg.isVirtual()) return false;  // mid-loop bail-out on physreg
+#   Fix: check isVirtual() in isRewriteCandidate() before adding to RewriteCands,
+#   so rewrite() never sees a physreg src2. Both MFMAs stay in VGPR form.
+#
+# Trigger:
+#   MFMA_B uses $vgpr4_vgpr5_vgpr6_vgpr7 (physical VGPR) as src2.
+#   With fix: isRewriteCandidate() rejects MFMA_B -> rewrite() not called ->
+#   no crash, both MFMAs remain in vreg_128_align2 / vgprcd form.
+#
+# CHECK-LABEL: name: test_bug2_physreg_src2
+# CHECK:       bb.0:
+# MFMA_A: virtual src2 but rewrite aborted (MFMA_B not a candidate) -> vgprcd stays.
+# CHECK:         %res_a:vreg_128_align2 = {{.*}} V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64
+# MFMA_B: physical src2 — skipped by isRewriteCandidate, stays in vgprcd form.
+# CHECK:         %res_b:vreg_128_align2 = {{.*}} V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64
+
+--- |
+  define void @test_bug2_physreg_src2() #0 {
+  entry:
+    unreachable
+  }
+
+  attributes #0 = { "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="64,64" }
+...
+
+---
+name:            test_bug2_physreg_src2
+tracksRegLiveness: true
+liveins:
+  - { reg: '$vgpr4' }
+  - { reg: '$vgpr5' }
+  - { reg: '$vgpr6' }
+  - { reg: '$vgpr7' }
+machineFunctionInfo:
+  isEntryFunction: true
+  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  stackPtrOffsetReg: '$sgpr32'
+  argumentInfo:
+    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
+    kernargSegmentPtr:    { reg: '$sgpr4_sgpr5' }
+    workGroupIDX:         { reg: '$sgpr6' }
+    privateSegmentWaveByteOffset: { reg: '$sgpr7' }
+    workItemIDX:          { reg: '$vgpr0' }
+  sgprForEXECCopy: '$sgpr100_sgpr101'
+body: |
+  bb.0:
+    liveins: $vgpr0, $sgpr4_sgpr5, $vgpr4, $vgpr5, $vgpr6, $vgpr7
+
+    ; 9 x vreg_1024 = 288 VGPRs > 256: triggers RegionsWithExcessArchVGPR.
+    %0:vreg_1024 = IMPLICIT_DEF
+    %1:vreg_1024 = IMPLICIT_DEF
+    %2:vreg_1024 = IMPLICIT_DEF
+    %3:vreg_1024 = IMPLICIT_DEF
+    %4:vreg_1024 = IMPLICIT_DEF
+    %5:vreg_1024 = IMPLICIT_DEF
+    %6:vreg_1024 = IMPLICIT_DEF
+    %7:vreg_1024 = IMPLICIT_DEF
+    %8:vreg_1024 = IMPLICIT_DEF
+
+    %9:av_128_align2   = IMPLICIT_DEF
+    %10:av_128_align2  = IMPLICIT_DEF
+    %11:vreg_64_align2 = IMPLICIT_DEF
+    %12:vgpr_32        = IMPLICIT_DEF
+
+    SCHED_BARRIER 0
+
+    ; MFMA_A: all virtual registers.
+    %acc_a:vreg_128_align2 = IMPLICIT_DEF
+    %res_a:vreg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64 %9:av_128_align2, %10:av_128_align2, %acc_a:vreg_128_align2, 4, 4, %11.sub0:vreg_64_align2, %12:vgpr_32, 0, 0, implicit $mode, implicit $exec
+
+    ; MFMA_B: src2 = $vgpr4_vgpr5_vgpr6_vgpr7 (physical VGPR) — triggers crash.
+    %res_b:vreg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64 %9:av_128_align2, %10:av_128_align2, $vgpr4_vgpr5_vgpr6_vgpr7, 4, 4, %11.sub0:vreg_64_align2, %12:vgpr_32, 0, 0, implicit $mode, implicit $exec
+
+    KILL %0, %1, %2, %3, %4, %5, %6, %7, %8, %res_a, %res_b
+
+    S_ENDPGM 0
