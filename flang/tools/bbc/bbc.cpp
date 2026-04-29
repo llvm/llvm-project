@@ -151,10 +151,14 @@ static llvm::cl::opt<bool>
                  llvm::cl::init(true));
 
 static llvm::cl::opt<std::string> enableDoConcurrentToOpenMPConversion(
-    "fdo-concurrent-to-openmp",
+    "fdo-concurrent",
     llvm::cl::desc(
         "Try to map `do concurrent` loops to OpenMP [none|host|device]"),
     llvm::cl::init("none"));
+
+static llvm::cl::alias enableDoConcurrentToOpenMPConversionAlias(
+    "fdo-concurrent-to-openmp", llvm::cl::desc("Alias for -fdo-concurrent"),
+    llvm::cl::aliasopt(enableDoConcurrentToOpenMPConversion), llvm::cl::Hidden);
 
 static llvm::cl::opt<bool>
     enableOpenMPGPU("fopenmp-is-gpu",
