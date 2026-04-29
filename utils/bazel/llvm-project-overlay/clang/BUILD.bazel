@@ -2334,6 +2334,14 @@ llvm_driver_cc_binary(
     needs_posix_utility_signal_handling = True,
     stamp = 0,
     deps = [":clang-driver"],
+    # Linker options added in CMake by `export_executable_symbols` function
+    # from `llvm/cmake/modules/AddLLVM.cmake` to some tools/drivers for
+    # plugin support.
+    linkopts = select({
+        "@platforms//os:linux": ["-Wl,--export-dynamic"],
+        "@platforms//os:macos": ["-rdynamic"],
+        "//conditions:default": [],
+    }),
 )
 
 cc_binary(
