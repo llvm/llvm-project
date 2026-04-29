@@ -2803,10 +2803,7 @@ bool StructuralEquivalenceContext::IsEquivalent(TemplateParameterList *TPL1,
   if (TPL1 == TPL2)
     return true;
 
-  if (!TPL1 || !TPL2)
-    return false;
-
-  if (TPL1->size() != TPL2->size())
+  if (!TPL1 || !TPL2 || TPL1->size() != TPL2->size())
     return false;
 
   for (unsigned I = 0, N = TPL1->size(); I != N; ++I) {
