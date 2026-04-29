@@ -156,7 +156,7 @@ OffloadBundleFatBin::create(MemoryBufferRef Buf, uint64_t SectionOffset,
     return errorCodeToError(object_error::parse_failed);
 
   std::unique_ptr<OffloadBundleFatBin> TheBundle(
-      new OffloadBundleFatBin(Buf, FileName));
+      new OffloadBundleFatBin(Buf, FileName, Decompress));
 
   // Read the Bundle Entries.
   Error Err =

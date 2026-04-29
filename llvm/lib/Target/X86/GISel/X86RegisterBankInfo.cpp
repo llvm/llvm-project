@@ -201,7 +201,7 @@ void X86RegisterBankInfo::getInstrPartialMappingIdxs(
   unsigned NumOperands = MI.getNumOperands();
   for (unsigned Idx = 0; Idx < NumOperands; ++Idx) {
     auto &MO = MI.getOperand(Idx);
-    if (!MO.isReg() || !MO.getReg())
+    if (!MO.isReg() || !MO.getReg().isVirtual())
       OpRegBankIdx[Idx] = PMI_None;
     else
       OpRegBankIdx[Idx] =
@@ -218,7 +218,7 @@ bool X86RegisterBankInfo::getInstrValueMapping(
   for (unsigned Idx = 0; Idx < NumOperands; ++Idx) {
     if (!MI.getOperand(Idx).isReg())
       continue;
-    if (!MI.getOperand(Idx).getReg())
+    if (!MI.getOperand(Idx).getReg().isVirtual())
       continue;
 
     auto Mapping = getValueMapping(OpRegBankIdx[Idx], 1);

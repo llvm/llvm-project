@@ -58,11 +58,10 @@ func.func @user(%arg0: f32, %arg1: f32) -> f32 {
 
 // CHECK:     @add_lr
 // CHECK-NOT: @also_add_lr
-// CHECK:     @add_rl
+// CHECK-NOT:     @add_rl
 // CHECK-NOT: @also_add_rl
 // CHECK:     @user
-// CHECK-2:     call @add_lr
-// CHECK-2:     call @add_rl
+// CHECK-4:     call @add_lr
 
 // -----
 

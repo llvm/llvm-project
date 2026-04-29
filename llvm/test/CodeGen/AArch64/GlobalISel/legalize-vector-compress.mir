@@ -135,8 +135,8 @@ body:             |
     ; CHECK-NEXT: [[AND7:%[0-9]+]]:_(s32) = G_AND [[ANYEXT3]], [[C4]]
     ; CHECK-NEXT: [[ADD3:%[0-9]+]]:_(s32) = G_ADD [[ADD2]], [[AND7]]
     ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ugt), [[ADD3]](s32), [[C1]]
-    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[ADD3]](s32), [[C1]]
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP1]](s32), [[ADD3]], [[C1]]
+    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(i32) = G_ICMP intpred(ult), [[ADD3]](s32), [[C1]]
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP1]](i32), [[ADD3]], [[C1]]
     ; CHECK-NEXT: [[AND8:%[0-9]+]]:_(s32) = G_AND [[SELECT]], [[C1]]
     ; CHECK-NEXT: [[SEXT4:%[0-9]+]]:_(s64) = G_SEXT [[AND8]](s32)
     ; CHECK-NEXT: [[MUL5:%[0-9]+]]:_(s64) = G_MUL [[SEXT4]], [[C2]]

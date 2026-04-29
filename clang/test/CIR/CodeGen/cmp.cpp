@@ -454,11 +454,11 @@ void bool_cmp(bool a, bool b) {
 // OGCG: store i8 %[[B_INIT]], ptr %[[B_PTR]]
 
 // OGCG: %[[A1:.*]] = load i8, ptr %[[A_PTR]]
-// OGCG: %[[A1_TRUNC:.*]] = trunc i8 %[[A1]] to i1
-// OGCG: %[[A1_EXT:.*]] = zext i1 %[[A1_TRUNC]] to i32
+// OGCG: %[[A1_BOOL:.*]] = icmp ne i8 %[[A1]], 0
+// OGCG: %[[A1_EXT:.*]] = zext i1 %[[A1_BOOL]] to i32
 // OGCG: %[[B1:.*]] = load i8, ptr %[[B_PTR]]
-// OGCG: %[[B1_TRUNC:.*]] = trunc i8 %[[B1]] to i1
-// OGCG: %[[B1_EXT:.*]] = zext i1 %[[B1_TRUNC]] to i32
+// OGCG: %[[B1_BOOL:.*]] = icmp ne i8 %[[B1]], 0
+// OGCG: %[[B1_EXT:.*]] = zext i1 %[[B1_BOOL]] to i32
 // OGCG: %[[CMP1:.*]] = icmp sgt i32 %[[A1_EXT]], %[[B1_EXT]]
 // OGCG: %[[CMP1_BOOL:.*]] = zext i1 %[[CMP1]] to i8
 // OGCG: store i8 %[[CMP1_BOOL]], ptr %[[X_PTR]]

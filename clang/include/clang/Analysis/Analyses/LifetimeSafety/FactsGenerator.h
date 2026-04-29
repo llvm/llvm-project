@@ -53,6 +53,8 @@ public:
   void VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *MTE);
   void VisitLambdaExpr(const LambdaExpr *LE);
   void VisitArraySubscriptExpr(const ArraySubscriptExpr *ASE);
+  void VisitCXXNewExpr(const CXXNewExpr *NE);
+  void VisitCXXDeleteExpr(const CXXDeleteExpr *DE);
 
 private:
   OriginList *getOriginsList(const ValueDecl &D);

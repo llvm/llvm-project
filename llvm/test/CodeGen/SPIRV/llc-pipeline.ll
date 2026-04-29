@@ -7,6 +7,7 @@
 ; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=SPIRV-Opt %s
 ; RUN:llc -O3 -mtriple=spirv-- -disable-verify -debug-pass=Structure < %s 2>&1 \
 ; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=SPIRV-Opt %s
+; REQUIRES:asserts
 
 ; SPIRV-O0:Target Library Information
 ; SPIRV-O0-NEXT:Runtime Library Function Analysis
@@ -48,7 +49,7 @@
 ; SPIRV-O0-NEXT:    SPIRV push constant Access
 ; SPIRV-O0-NEXT:    SPIRV emit intrinsics
 ; SPIRV-O0-NEXT:    FunctionPass Manager
-; SPIRV-O0-NEXT:      SPIRV legalize bitcast pass
+; SPIRV-O0-NEXT:      SPIRV legalize pointer cast pass
 ; SPIRV-O0-NEXT:      Prepare inline asm insts
 ; SPIRV-O0-NEXT:      Safe Stack instrumentation pass
 ; SPIRV-O0-NEXT:      Insert stack protectors
@@ -79,7 +80,6 @@
 ; SPIRV-O0-NEXT:      Analyze Machine Code For Garbage Collection
 ; SPIRV-O0-NEXT:      Insert fentry calls
 ; SPIRV-O0-NEXT:      Insert XRay ops
-; SPIRV-O0-NEXT:      SPIRV NonSemantic.Shader.DebugInfo.100 emitter
 ; SPIRV-O0-NEXT:      Machine Sanitizer Binary Metadata
 ; SPIRV-O0-NEXT:      Lazy Machine Block Frequency Analysis
 ; SPIRV-O0-NEXT:      Machine Optimization Remark Emitter
@@ -163,7 +163,7 @@
 ; SPIRV-Opt-NEXT:    SPIRV push constant Access
 ; SPIRV-Opt-NEXT:    SPIRV emit intrinsics
 ; SPIRV-Opt-NEXT:    FunctionPass Manager
-; SPIRV-Opt-NEXT:      SPIRV legalize bitcast pass
+; SPIRV-Opt-NEXT:      SPIRV legalize pointer cast pass
 ; SPIRV-Opt-NEXT:      Prepare inline asm insts
 ; SPIRV-Opt-NEXT:      Safe Stack instrumentation pass
 ; SPIRV-Opt-NEXT:      Insert stack protectors
@@ -217,7 +217,6 @@
 ; SPIRV-Opt-NEXT:      Analyze Machine Code For Garbage Collection
 ; SPIRV-Opt-NEXT:      Insert fentry calls
 ; SPIRV-Opt-NEXT:      Insert XRay ops
-; SPIRV-Opt-NEXT:      SPIRV NonSemantic.Shader.DebugInfo.100 emitter
 ; SPIRV-Opt-NEXT:      Machine Sanitizer Binary Metadata
 ; SPIRV-Opt-NEXT:      Lazy Machine Block Frequency Analysis
 ; SPIRV-Opt-NEXT:      Machine Optimization Remark Emitter
