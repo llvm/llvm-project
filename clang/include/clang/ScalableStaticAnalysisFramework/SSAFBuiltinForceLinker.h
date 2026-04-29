@@ -32,6 +32,12 @@ extern volatile int SSAFAnalysisRegistryAnchorSource;
 [[maybe_unused]] static int SSAFAnalysisRegistryAnchorDestination =
     SSAFAnalysisRegistryAnchorSource;
 
+// This anchor is used to force the linker to link the
+// SourcePassAnalysisRegistry.
+extern volatile int SSAFSourcePassAnalysisRegistryAnchorSource;
+[[maybe_unused]] static int SSAFSourcePassAnalysisRegistryAnchorDestination =
+    SSAFSourcePassAnalysisRegistryAnchorSource;
+
 // This anchor is used to force the linker to link the UnsafeBufferUsage
 // JSON format.
 extern volatile int UnsafeBufferUsageSSAFJSONFormatAnchorSource;
