@@ -3936,6 +3936,22 @@ MachineBasicBlock::iterator RISCVInstrInfo::insertOutlinedCall(
   return It;
 }
 
+void RISCVInstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
+                                        MachineBasicBlock::iterator Iter,
+                                        DebugLoc &DL,
+                                        bool AllowSideEffects) const {
+
+  const MachineFunction &MF = *MBB.getParent();
+  const RISCVSubtarget &STI = MF.getSubtarget<RISCVSubtarget>();
+  const RISCVRegisterInfo &TRI = *STI.getRegisterInfo();
+
+  if (TRI.isGeneralPurposeRegister(MF, Reg)) {
+    BuildMI(MBB, Iter, DL, get(RISCV::PseudoLI), Reg).addImm(0);
+  } else {
+    llvm_unreachable("Implement buildClearRegister for non-GPR registers");
+  }
+}
+
 std::optional<RegImmPair> RISCVInstrInfo::isAddImmediate(const MachineInstr &MI,
                                                          Register Reg) const {
   // TODO: Handle cases where Reg is a super- or sub-register of the

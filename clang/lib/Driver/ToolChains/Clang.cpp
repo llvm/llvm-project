@@ -6867,10 +6867,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                     options::OPT_fno_check_new);
 
   if (Arg *A = Args.getLastArg(options::OPT_fzero_call_used_regs_EQ)) {
-    // FIXME: There's no reason for this to be restricted to X86. The backend
-    // code needs to be changed to include the appropriate function calls
-    // automatically.
-    if (!Triple.isX86() && !Triple.isAArch64())
+    // FIXME: There's no reason for this to be restricted to some backend.
+    // The backend code needs to be changed to include the appropriate function
+    // calls automatically.
+    StringRef Value = A->getValue();
+    if (!Triple.isX86() && !Triple.isAArch64() &&
+        !(Triple.isRISCV() && (Value == "skip" || Value.contains("gpr"))))
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << A->getAsString(Args) << TripleStr;
   }

@@ -1433,6 +1433,27 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
   emitSiFiveCLICStackSwap(MF, MBB, MBBI, DL);
 }
 
+void RISCVFrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
+                                              MachineBasicBlock &MBB) const {
+  // Insertion point.
+  MachineBasicBlock::iterator MBBI = MBB.getFirstTerminator();
+
+  // Fake a debug loc.
+  DebugLoc DL;
+  if (MBBI != MBB.end())
+    DL = MBBI->getDebugLoc();
+
+  const MachineFunction &MF = *MBB.getParent();
+  const RISCVSubtarget &STI = MF.getSubtarget<RISCVSubtarget>();
+  const RISCVRegisterInfo &TRI = STI.getTargetABI();
+  const RISCVInstrInfo &TII = *STI.getInstrInfo();
+
+  for (MCRegister Reg : RegsToZero.set_bits()) {
+    if (TRI.isGeneralPurposeRegister(MF, Reg))
+      TII.buildClearRegister(Reg, MBB, MBBI, DL);
+  }
+}
+
 StackOffset
 RISCVFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
                                            Register &FrameReg) const {
