@@ -118,10 +118,6 @@ ifeq "$(OS)" "Android"
 	include $(THIS_FILE_DIR)/Android.rules
 endif
 
-ifeq "$(OS)" "WASI"
-	include $(THIS_FILE_DIR)/WASI.rules
-endif
-
 ifeq "$(TRIPLE)" ""
   ifeq "$(ARCH)" ""
     # No triple, no arch: query the compiler for its default triple.
@@ -176,11 +172,7 @@ ifeq "$(OS)" "Darwin"
 else
     ifneq "$(SDKROOT)" ""
         SYSROOT_FLAGS := --sysroot "$(SDKROOT)"
-        ifeq "$(OS)" "WASI"
-            GCC_TOOLCHAIN_FLAGS :=
-        else
-            GCC_TOOLCHAIN_FLAGS := --gcc-toolchain="$(SDKROOT)/usr"
-        endif
+        GCC_TOOLCHAIN_FLAGS := --gcc-toolchain="$(SDKROOT)/usr"
     else
         # Do not set up these options if SDKROOT was not specified.
         # This is a regular build in that case (or Android).
