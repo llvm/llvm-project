@@ -311,9 +311,9 @@ std::vector<SymbolTag> expandTagBitmask(const SymbolTags STGS) {
   // Iterate through SymbolTag enum values and collect any that are present in
   // the bitmask. SymbolTag values are in the numeric range
   // [FirstTag .. LastTag].
-  constexpr uint32_t MinTag = static_cast<uint32_t>(SymbolTag::FirstTag);
-  constexpr uint32_t MaxTag = static_cast<uint32_t>(SymbolTag::LastTag);
-  for (uint32_t I = MinTag; I <= MaxTag; ++I) {
+  constexpr unsigned MinTag = static_cast<unsigned>(SymbolTag::FirstTag);
+  constexpr unsigned MaxTag = static_cast<unsigned>(SymbolTag::LastTag);
+  for (unsigned I = MinTag; I <= MaxTag; ++I) {
     auto ST = static_cast<SymbolTag>(I);
     if (STGS & toSymbolTagBitmask(ST))
       Tags.push_back(ST);
