@@ -143,6 +143,22 @@ do not need to add any serialization code.
 - **Module BMI**: ``Module::EnforcedProfileDesignators`` is written as
   ``SUBMODULE_ENFORCED_PROFILES`` records within each submodule block.
 
+Intentional Omissions
+=====================
+
+The following parts of P3589R2 are deliberately not implemented:
+
+- ``[[profiles::exempt(...)]]`` (P3589R2 section 1.1.6), which would exempt
+  named included source files from profile enforcement. Implementing it
+  requires bookkeeping that connects the original spelling of an ``#include``
+  to the source locations of constructs in the included file, and the feature
+  is not needed to exercise or validate the rest of the framework.
+- The redeclaration consistency rule from P3589R2 section 2.2 paragraph 5
+  (every redeclaration of a declaration in the dominion of a profile must
+  itself appear in the dominion of a compatible profile). Profile attributes
+  on redeclarations are parsed and recorded, but no cross-redeclaration
+  compatibility check is performed.
+
 The ``test::type_cast`` Profile
 ===============================
 
