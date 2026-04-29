@@ -512,7 +512,8 @@ private:
     if (alloc.hasCoarraySpec()) {
       stat = Fortran::lower::genAllocateCoarray(
           converter, loc, alloc.getSymbol(), box.getAddr(),
-          alloc.getCoarraySpec(), errorManager.errMsgAddr);
+          alloc.getCoarraySpec(), errorManager.errMsgAddr,
+          errorManager.hasStatSpec());
     } else if (!isCudaAllocate) {
       stat = genRuntimeAllocate(builder, loc, box, errorManager);
       setPinnedToFalse();
@@ -659,7 +660,8 @@ private:
     if (alloc.hasCoarraySpec()) {
       stat = Fortran::lower::genAllocateCoarray(
           converter, loc, alloc.getSymbol(), box.getAddr(),
-          alloc.getCoarraySpec(), errorManager.errMsgAddr);
+          alloc.getCoarraySpec(), errorManager.errMsgAddr,
+          errorManager.hasStatSpec());
     } else if (Fortran::semantics::HasCUDAAttr(alloc.getSymbol()) ||
                sourceIsDevice) {
       stat =
