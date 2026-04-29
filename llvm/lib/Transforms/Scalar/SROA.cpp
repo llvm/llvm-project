@@ -5183,8 +5183,7 @@ static std::tuple<Type *, bool, VectorType *>
 selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
                     LLVMContext &C) {
   auto LogSelection = [&](StringRef Path, Type *SelectedTy,
-                          VectorType *SelectedVecTy,
-                          bool SelectedIntWidening) {
+                          VectorType *SelectedVecTy, bool SelectedIntWidening) {
     LLVM_DEBUG({
       dbgs() << "selectPartitionType path=" << Path
              << " func=" << AI.getFunction()->getName() << " alloca=";
