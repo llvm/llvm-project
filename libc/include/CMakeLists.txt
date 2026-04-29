@@ -477,10 +477,12 @@ if(LIBC_TARGET_ARCHITECTURE STREQUAL "x86_64")
       .llvm-libc-types.stack_t
   )
 
-  add_header(
+  add_header_macro(
     sys_ucontext
-    HDR
-      sys/ucontext.h
+    ../libc/include/sys/ucontext.yaml
+    sys/ucontext.h
+    DEPENDS
+      .ucontext
   )
 endif()
 
