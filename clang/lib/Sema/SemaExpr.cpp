@@ -12487,7 +12487,8 @@ static void diagnoseTautologicalComparison(Sema &S, SourceLocation Loc,
 
   QualType LHSType = LHS->getType();
   QualType RHSType = RHS->getType();
-  if ((LHSType->isBlockPointerType() && !BinaryOperator::isEqualityOp(Opc)) ||
+  if (LHSType->hasFloatingRepresentation() ||
+      (LHSType->isBlockPointerType() && !BinaryOperator::isEqualityOp(Opc)) ||
       S.inTemplateInstantiation())
     return;
 
@@ -12847,21 +12848,15 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
   Expr *RHSStripped = RHS.get()->IgnoreParenImpCasts();
   if (getLangOpts().CPlusPlus && LHSStripped->getType()->isArrayType() &&
       RHSStripped->getType()->isArrayType()) {
-
-    // In an SFINAE context, don't emit an error.
-    // Just return the operands so the caller can return false.
-    if (isSFINAEContext()) {
-      return InvalidOperands(Loc, LHS, RHS);
-    }
     auto IsDeprArrayComparionIgnored =
         getDiagnostics().isIgnored(diag::warn_depr_array_comparison, Loc);
     auto DiagID = getLangOpts().CPlusPlus26 ? diag::warn_array_comparison_cxx26
                   : !getLangOpts().CPlusPlus20 || IsDeprArrayComparionIgnored
                       ? diag::warn_array_comparison
                       : diag::warn_depr_array_comparison;
-    this->Diag(Loc, DiagID)
-        << LHS.get()->getSourceRange() << RHS.get()->getSourceRange()
-        << LHSStripped->getType() << RHSStripped->getType();
+    Diag(Loc, DiagID) << LHS.get()->getSourceRange()
+                      << RHS.get()->getSourceRange() << LHSStripped->getType()
+                      << RHSStripped->getType();
   }
 
   // C++2a [expr.spaceship]p6: If at least one of the operands is of pointer
