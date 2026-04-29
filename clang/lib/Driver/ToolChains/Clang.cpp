@@ -4683,6 +4683,10 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
     if (IRInput)
       D.Diag(diag::err_drv_dyndbg_ir);
 
+    // Disable composition with sanitizers for now.
+    if (auto *San = Args.getLastArg(options::OPT_fsanitize_EQ))
+      D.Diag(diag::err_drv_dyndbg_incompatible) << San->getAsString(Args);
+
     if (!EmitDwarf)
       D.Diag(diag::warn_drv_dyndbg_req_debug);
     else

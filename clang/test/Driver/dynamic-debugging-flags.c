@@ -24,5 +24,9 @@
 // CHECK-DBG-WARN: clang: warning: '-fdynamic-debugging' ignored: requires debug info
 // CHECK-DBG-WARN-NOT: -fdynamic-debugging
 
+// Do not support sanitizers initially.
+// RUN: not %clang -fsanitize=undefined -c -target x86_64-unknown-unknown -fdynamic-debugging -### -o /dev/null -x ir %s 2>&1 | FileCheck %s -check-prefix=CHECK-SAN-ERR
+// CHECK-SAN-ERR: clang: error: '-fdynamic-debugging' incompatible with '-fsanitize=undefined'
+
 // CHECK-OK-NOT: error:
 // CHECK-OK-NOT: warning:
