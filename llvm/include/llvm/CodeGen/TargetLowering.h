@@ -298,6 +298,14 @@ public:
     ABS = 4,    // Fold with `llvm.abs` op is preferable.
   };
 
+  /// Enum that specifies the extent of load MachineMemOperand flag inference.
+  enum class LoadMMOFlagsPolicy {
+    /// Infer all flags, including expensive dereferenceability checks.
+    Full,
+    /// Preserve only the cheap/direct flags.
+    Fast,
+  };
+
   class ArgListEntry {
   public:
     Value *Val;
@@ -466,10 +474,10 @@ public:
     return MachineMemOperand::MONone;
   }
 
-  MachineMemOperand::Flags
-  getLoadMemOperandFlags(const LoadInst &LI, const DataLayout &DL,
-                         AssumptionCache *AC = nullptr,
-                         const TargetLibraryInfo *LibInfo = nullptr) const;
+  MachineMemOperand::Flags getLoadMemOperandFlags(
+      const LoadInst &LI, const DataLayout &DL, AssumptionCache *AC = nullptr,
+      const TargetLibraryInfo *LibInfo = nullptr,
+      LoadMMOFlagsPolicy Policy = LoadMMOFlagsPolicy::Full) const;
   MachineMemOperand::Flags getStoreMemOperandFlags(const StoreInst &SI,
                                                    const DataLayout &DL) const;
   MachineMemOperand::Flags getAtomicMemOperandFlags(const Instruction &AI,

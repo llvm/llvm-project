@@ -1403,8 +1403,11 @@ bool IRTranslator::translateLoad(const User &U, MachineIRBuilder &MIRBuilder) {
     return true;
   }
 
-  MachineMemOperand::Flags Flags =
-      TLI->getLoadMemOperandFlags(LI, *DL, AC, LibInfo);
+  MachineMemOperand::Flags Flags = TLI->getLoadMemOperandFlags(
+      LI, *DL, AC, LibInfo,
+      OptLevel == CodeGenOptLevel::None
+          ? TargetLowering::LoadMMOFlagsPolicy::Fast
+          : TargetLowering::LoadMMOFlagsPolicy::Full);
   if (AA && !(Flags & MachineMemOperand::MOInvariant)) {
     if (AA->pointsToConstantMemory(
             MemoryLocation(Ptr, LocationSize::precise(StoreSize), AAInfo))) {

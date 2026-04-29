@@ -2774,7 +2774,7 @@ void TargetLoweringBase::finalizeLowering(MachineFunction &MF) const {
 
 MachineMemOperand::Flags TargetLoweringBase::getLoadMemOperandFlags(
     const LoadInst &LI, const DataLayout &DL, AssumptionCache *AC,
-    const TargetLibraryInfo *LibInfo) const {
+    const TargetLibraryInfo *LibInfo, LoadMMOFlagsPolicy Policy) const {
   MachineMemOperand::Flags Flags = MachineMemOperand::MOLoad;
   if (LI.isVolatile())
     Flags |= MachineMemOperand::MOVolatile;
@@ -2785,10 +2785,15 @@ MachineMemOperand::Flags TargetLoweringBase::getLoadMemOperandFlags(
   if (LI.hasMetadata(LLVMContext::MD_invariant_load))
     Flags |= MachineMemOperand::MOInvariant;
 
-  if (isDereferenceableAndAlignedPointer(LI.getPointerOperand(), LI.getType(),
+  if (Policy == LoadMMOFlagsPolicy::Full &&
+      isDereferenceableAndAlignedPointer(LI.getPointerOperand(), LI.getType(),
                                          LI.getAlign(), DL, &LI, AC,
-                                         /*DT=*/nullptr, LibInfo))
+                                         /*DT=*/nullptr, LibInfo)) {
+    // Full mode preserves the expensive inferred dereferenceability query.
     Flags |= MachineMemOperand::MODereferenceable;
+  } else if (LI.hasMetadata(LLVMContext::MD_dereferenceable)) {
+    Flags |= MachineMemOperand::MODereferenceable;
+  }
 
   Flags |= getTargetMMOFlags(LI);
   return Flags;
