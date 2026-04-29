@@ -71,12 +71,12 @@ bool isGslOwnerType(QualType QT);
 // when ownership is manually transferred.
 bool isUniquePtrRelease(const CXXMethodDecl &MD);
 
-// Returns true if the given method invalidates references to container
-// elements (e.g. vector::push_back). Methods that only invalidate iterators
-// but not references (e.g. unordered_map::emplace) are not considered
-// invalidating here.
+// Returns true if the given method invalidates references tracked by lifetime
+// analysis (e.g. vector::push_back). Methods that only invalidate iterators but
+// not references (e.g. unordered_map::emplace) are not considered invalidating
+// here.
 //
-// Invalidation rules are based on:
+// Container invalidation rules are based on:
 // https://en.cppreference.com/w/cpp/container#Iterator_invalidation
 bool isInvalidationMethod(const CXXMethodDecl &MD);
 
