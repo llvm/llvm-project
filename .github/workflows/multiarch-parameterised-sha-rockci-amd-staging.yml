@@ -1,0 +1,168 @@
+# This CI workflow is triggered by:
+#   - push to main branch
+#   - pull request
+#   - workflow dispatch
+#
+# For pull requests, we run default builds and tests for:
+#   - Linux: gfx94X gfx110X
+#   - Windows: gfx110X
+# If you want to trigger jobs for additional targets, please add a defined label (ex: gfx120X-linux) to the pull request
+#
+# For push to main branch, all AMD families will built and tested from `amdgpu_family_matrix.py`.
+#
+# Note: If a test machine is not available for a specific AMD GPU family in `amdgpu_family_matrix.py`, tests will be skipped.
+
+name: Multi Arch Parameterised CI amd-staging
+
+on:
+  workflow_dispatch:
+    inputs:
+      LLVM_PR_URL:
+        description: "pass the LLVM PR url"
+        required: false
+        type: string
+        default: ""
+      SPIRV_PR_URL:
+        description: "pass the SPIRV PR url"
+        required: false
+        type: string
+        default: ""
+      HIPIFY_PR_URL:
+        description: "pass the HIPIFY PR url"
+        required: false
+        type: string
+        default: ""        
+      linux_amdgpu_families:
+        type: string
+        description: "Insert comma-separated list of Linux GPU families to build and test. ex: gfx94X, gfx1201X"
+        default: ""
+      linux_test_labels:
+        type: string
+        description: "If enabled, reduce test set on Linux to the list of labels prefixed with 'test:'. ex: test:rocprim, test:hipcub"
+        default: ""
+      windows_amdgpu_families:
+        type: string
+        description: "Insert comma-separated list of Windows GPU families to build and test. ex: gfx94X, gfx1201X"
+        default: ""
+      windows_test_labels:
+        type: string
+        description: "If enabled, reduce test set on Windows to the list of labels prefixed with 'test:' ex: test:rocprim, test:hipcub"
+        default: ""
+      prebuilt_stages:
+        type: string
+        default: ""
+        description: "Comma-separated build stages to skip (or 'all' for all stages); artifacts are copied from baseline_run_id instead"
+      baseline_run_id:
+        type: string
+        default: ""
+        description: "Workflow run ID to copy prebuilt stage artifacts from; required when prebuilt_stages is set"          
+
+permissions:
+  contents: read
+
+concurrency:
+  # A PR number if a pull request and otherwise the commit hash. This cancels
+  # queued and in-progress runs for the same PR (presubmit) or commit
+  # (postsubmit). The workflow name is prepended to avoid conflicts between
+  # different workflows.
+  group: ${{ github.workflow }}-${{ github.event.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+
+  multiple_pr_sha_params:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Store LLVM, HIPIFY and SPIRV PR URLs into file
+        run: |
+          cat > ${{ github.run_id }}_PR_params.env <<'EOF'
+          LLVM_PR_URL=${{ github.event.inputs.LLVM_PR_URL }}
+          SPIRV_PR_URL=${{ github.event.inputs.SPIRV_PR_URL }}
+          HIPIFY_PR_URL=${{ github.event.inputs.HIPIFY_PR_URL }}
+          EOF
+
+      - name: Upload stored file of PR URls
+        uses: actions/upload-artifact@v4
+        with:
+          name: multiple-pr-build-params
+          path: ${{ github.run_id }}_PR_params.env
+  
+  setup:
+    uses: ./.github/workflows/setup_multi_arch.yml
+    with:
+      build_variant: "release"
+
+  linux_build_and_test:
+    name: Linux::${{ fromJSON(needs.setup.outputs.linux_build_config || '{}').build_variant_label || 'skip' }}
+    needs:
+      - setup
+      - multiple_pr_sha_params
+    if: >-
+      ${{
+        needs.setup.outputs.linux_variants != '[]'
+      }}
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: ${{ fromJSON(needs.setup.outputs.linux_variants) }}
+        exclude:  # families that should not run linux_build_and_test
+          - variant:
+              family: gfx950-dcgpu
+    uses: ./.github/workflows/multi_arch_ci_linux.yml
+    secrets: inherit
+    with:
+      build_config: ${{ needs.setup.outputs.linux_build_config }}
+      test_labels: ${{ needs.setup.outputs.linux_test_labels }}
+      rocm_package_version: ${{ needs.setup.outputs.rocm_package_version }}
+      test_type: ${{ needs.setup.outputs.test_type }}
+    permissions:
+      contents: read
+      id-token: write
+
+  windows_build_and_test:
+    name: Windows::${{ fromJSON(needs.setup.outputs.windows_build_config || '{}').build_variant_label || 'skip' }}
+    needs: 
+      - setup
+      - multiple_pr_sha_params
+    if: >-
+      ${{
+        needs.setup.outputs.windows_build_config != '' &&
+        needs.setup.outputs.enable_build_jobs == 'true'
+      }}
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: ${{ fromJSON(needs.setup.outputs.windows_variants) }}
+    uses: ./.github/workflows/multi_arch_ci_windows.yml
+    secrets: inherit
+    with:
+      build_config: ${{ needs.setup.outputs.windows_build_config }}
+      test_labels: ${{ needs.setup.outputs.windows_test_labels }}
+      rocm_package_version: ${{ needs.setup.outputs.rocm_package_version }}
+      test_type: 'smoke'
+    permissions:
+      contents: read
+      id-token: write      
+
+  # build_python_packages:
+  #   name: Build Python Packages
+  #   uses: ./.github/workflows/build_python_packages.yml
+
+  ci_summary:
+    name: CI Summary
+    if: always()
+    needs:
+      - setup
+      - linux_build_and_test
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: "ROCm/TheRock"
+          ref: 'compiler/amd-staging'
+      - name: Evaluate workflow results
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python build_tools/github_actions/workflow_summary.py \
+            --needs-json '${{ toJSON(needs) }}'        
