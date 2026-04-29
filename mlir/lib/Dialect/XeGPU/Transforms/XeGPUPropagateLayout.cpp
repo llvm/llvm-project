@@ -810,6 +810,17 @@ void LayoutInfoPropagation::visitDpasOp(
     std::tie(requiredALayout, requiredBLayout, requiredCDLayoutAttr) = *layouts;
 
     dpas.setLayoutAAttr(requiredALayout);
+    dpas.setLayoutBAttr(requiredBLayout);
+    dpas.setLayoutCdAttr(requiredCDLayoutAttr);
+    dpasALayout = LayoutInfo(requiredALayout);
+    dpasBLayout = LayoutInfo(requiredBLayout);
+    dpasCDLayout = LayoutInfo(requiredCDLayoutAttr);
+  }
+  propagateIfChanged(operands[0], operands[0]->meet(dpasALayout));
+  propagateIfChanged(operands[1], operands[1]->meet(dpasBLayout));
+  if (operands.size() > 2)
+    propagateIfChanged(operands[2], operands[2]->meet(dpasCDLayout));
+}
 
 /// Propagate layout for DpasMxOp operands using the layout attributes.
 /// DpasMxOp has operands: a, b, acc (optional), scale_a (optional), scale_b (optional)
@@ -842,17 +853,6 @@ void LayoutInfoPropagation::visitDpasMxOp(
 
   if (layoutBScale && operands.size() > 4)
     propagateIfChanged(operands[4], operands[4]->meet(LayoutInfo(layoutBScale)));
-}
-    dpas.setLayoutBAttr(requiredBLayout);
-    dpas.setLayoutCdAttr(requiredCDLayoutAttr);
-    dpasALayout = LayoutInfo(requiredALayout);
-    dpasBLayout = LayoutInfo(requiredBLayout);
-    dpasCDLayout = LayoutInfo(requiredCDLayoutAttr);
-  }
-  propagateIfChanged(operands[0], operands[0]->meet(dpasALayout));
-  propagateIfChanged(operands[1], operands[1]->meet(dpasBLayout));
-  if (operands.size() > 2)
-    propagateIfChanged(operands[2], operands[2]->meet(dpasCDLayout));
 }
 
 /// Set the layout for the value and tensor descriptor operands in StoreNdOp.
