@@ -620,6 +620,59 @@ dead:
   unreachable
 }
 
+; Similar to extended_loop_dead_branch, but the branch to the block with the
+; convergence token use is NOT statically known to be dead (the condition is
+; dynamic). The outer loop should NOT be unrolled because the convergence token
+; extends outside the loop.
+define i32 @extended_loop_not_dead_branch(i32 %n, i1 %cond) {
+; CHECK-LABEL: @extended_loop_not_dead_branch(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[OUTER:%.*]]
+; CHECK:       outer:
+; CHECK-NEXT:    [[X_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[OUTER_LATCH:%.*]] ]
+; CHECK-NEXT:    [[TOK_LOOP:%.*]] = call token @llvm.experimental.convergence.anchor()
+; CHECK-NEXT:    [[TOK_INNER_0:%.*]] = call token @llvm.experimental.convergence.anchor()
+; CHECK-NEXT:    call void @f() [ "convergencectrl"(token [[TOK_INNER_0]]) ]
+; CHECK-NEXT:    [[TOK_INNER_1:%.*]] = call token @llvm.experimental.convergence.anchor()
+; CHECK-NEXT:    call void @f() [ "convergencectrl"(token [[TOK_INNER_1]]) ]
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[DEAD:%.*]], label [[OUTER_LATCH]]
+; CHECK:       outer.latch:
+; CHECK-NEXT:    [[INC]] = add nsw i32 [[X_0]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[EXIT:%.*]], label [[OUTER]], !llvm.loop [[LOOP4]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       dead:
+; CHECK-NEXT:    call void @f() [ "convergencectrl"(token [[TOK_LOOP]]) ]
+; CHECK-NEXT:    unreachable
+;
+entry:
+  br label %outer
+
+outer:
+  %x.0 = phi i32 [ 0, %entry ], [ %inc, %outer.latch ]
+  %tok.loop = call token @llvm.experimental.convergence.anchor()
+  ; Unrolled inner iteration 0
+  %tok.inner.0 = call token @llvm.experimental.convergence.anchor()
+  call void @f() [ "convergencectrl"(token %tok.inner.0) ]
+  ; Unrolled inner iteration 1
+  %tok.inner.1 = call token @llvm.experimental.convergence.anchor()
+  call void @f() [ "convergencectrl"(token %tok.inner.1) ]
+  br i1 %cond, label %dead, label %outer.latch
+
+outer.latch:
+  %inc = add nsw i32 %x.0, 1
+  %exitcond = icmp eq i32 %inc, %n
+  br i1 %exitcond, label %exit, label %outer, !llvm.loop !1
+
+exit:
+  ret i32 0
+
+dead:
+  call void @f() [ "convergencectrl"(token %tok.loop) ]
+  unreachable
+}
+
 declare token @llvm.experimental.convergence.anchor()
 declare token @llvm.experimental.convergence.loop()
 
