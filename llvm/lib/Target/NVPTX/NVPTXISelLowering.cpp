@@ -3020,6 +3020,22 @@ static SDValue lowerPrmtIntrinsic(SDValue Op, SelectionDAG &DAG) {
   return getPRMT(A, B, Selector, DL, DAG, Mode);
 }
 
+/// llvm.nvvm.sub.s16x2 → add.s16x2(a, -b) with per-lane neg.s16.
+static SDValue lowerNvvmSubS16x2Intrinsic(SDValue Op, SelectionDAG &DAG) {
+  SDLoc DL(Op);
+  SDValue A = Op.getOperand(1);
+  SDValue B = Op.getOperand(2);
+  SmallVector<SDValue, 2> NegLanes;
+  SDValue Zero = DAG.getConstant(0, DL, MVT::i16);
+  for (unsigned I = 0; I < 2; ++I) {
+    SDValue Lane = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i16, B,
+                               DAG.getConstant(I, DL, MVT::i32));
+    NegLanes.push_back(DAG.getNode(ISD::SUB, DL, MVT::i16, Zero, Lane));
+  }
+  SDValue NegB = DAG.getNode(ISD::BUILD_VECTOR, DL, MVT::v2i16, NegLanes);
+  return DAG.getNode(ISD::ADD, DL, MVT::v2i16, A, NegB);
+}
+
 #define TCGEN05_LD_RED_INTR(SHAPE, NUM, TYPE)                                  \
   Intrinsic::nvvm_tcgen05_ld_red_##SHAPE##_x##NUM##_##TYPE
 
@@ -3195,6 +3211,8 @@ static SDValue lowerIntrinsicWOChain(SDValue Op, SelectionDAG &DAG) {
   case Intrinsic::nvvm_f32x4_to_e2m1x4_rs_satfinite:
   case Intrinsic::nvvm_f32x4_to_e2m1x4_rs_relu_satfinite:
     return lowerCvtRSIntrinsics(Op, DAG);
+  case Intrinsic::nvvm_sub_s16x2:
+    return lowerNvvmSubS16x2Intrinsic(Op, DAG);
   }
 }
 

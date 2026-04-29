@@ -1602,6 +1602,17 @@ def INT_NVVM_NEG_BF16X2 : F_MATH_1<"neg.bf16x2", BF16X2RT,
   BF16X2RT, int_nvvm_neg_bf16x2, [hasPTX<70>, hasSM<80>]>;
 
 //
+// Packed i16x2 integer ALU 
+//
+let Predicates = [hasPTX<80>, hasSM<90>] in {
+  def : Pat<(int_nvvm_add_s16x2 v2i16:$a, v2i16:$b), (ADD16x2 $a, $b)>;
+  def : Pat<(int_nvvm_min_s16x2 v2i16:$a, v2i16:$b), (SMIN16x2 $a, $b)>;
+  def : Pat<(int_nvvm_max_s16x2 v2i16:$a, v2i16:$b), (SMAX16x2 $a, $b)>;
+  def : Pat<(int_nvvm_min_u16x2 v2i16:$a, v2i16:$b), (UMIN16x2 $a, $b)>;
+  def : Pat<(int_nvvm_max_u16x2 v2i16:$a, v2i16:$b), (UMAX16x2 $a, $b)>;
+}
+
+//
 // Round
 //
 

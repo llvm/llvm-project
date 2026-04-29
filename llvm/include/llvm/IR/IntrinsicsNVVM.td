@@ -1440,6 +1440,25 @@ let TargetPrefix = "nvvm" in {
     PureIntrinsic<[llvm_v2bf16_ty], [llvm_v2bf16_ty]>;
 
   //
+  // Packed i16x2 integer ALU 
+  //
+  let IntrProperties = [IntrNoMem, IntrSpeculatable, Commutative,
+                        IntrNoCreateUndefOrPoison] in {
+    def int_nvvm_add_s16x2 : NVVMBuiltin,
+        DefaultAttrsIntrinsic<[llvm_v2i16_ty], [llvm_v2i16_ty, llvm_v2i16_ty]>;
+    def int_nvvm_min_s16x2 : NVVMBuiltin,
+        DefaultAttrsIntrinsic<[llvm_v2i16_ty], [llvm_v2i16_ty, llvm_v2i16_ty]>;
+    def int_nvvm_max_s16x2 : NVVMBuiltin,
+        DefaultAttrsIntrinsic<[llvm_v2i16_ty], [llvm_v2i16_ty, llvm_v2i16_ty]>;
+    def int_nvvm_min_u16x2 : NVVMBuiltin,
+        DefaultAttrsIntrinsic<[llvm_v2i16_ty], [llvm_v2i16_ty, llvm_v2i16_ty]>;
+    def int_nvvm_max_u16x2 : NVVMBuiltin,
+        DefaultAttrsIntrinsic<[llvm_v2i16_ty], [llvm_v2i16_ty, llvm_v2i16_ty]>;
+  }
+  def int_nvvm_sub_s16x2 : NVVMBuiltin,
+      PureIntrinsic<[llvm_v2i16_ty], [llvm_v2i16_ty, llvm_v2i16_ty]>;
+
+  //
   // Round
   //
   foreach ftz = ["", "_ftz"] in
