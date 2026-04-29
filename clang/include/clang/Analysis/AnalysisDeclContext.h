@@ -207,10 +207,6 @@ private:
   LocationContextManager &getLocationContextManager();
 };
 
-/// It wraps the AnalysisDeclContext to represent both the call stack with
-/// the help of StackFrameContext and inside the function calls the
-/// BlockInvocationContext. It is needed for context sensitive analysis to
-/// model entering, leaving or inlining function calls.
 class LocationContext : public llvm::FoldingSetNode {
 public:
   enum ContextKind { StackFrame };
