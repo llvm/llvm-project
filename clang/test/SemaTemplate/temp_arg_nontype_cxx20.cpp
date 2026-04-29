@@ -157,8 +157,8 @@ template <typename T, template <T> typename TEMPLATE>
 concept C = (TEMPLATE<{}>{}, true);
 
 struct S1 {
-  constexpr S1() = default; // #CannotCopy-S1-default-ctor
-  constexpr S1(S1&) = default; // #CannotCopy-S1-copy-ctor
+  S1() = default; // #CannotCopy-S1-default-ctor
+  S1(S1&) = default; // #CannotCopy-S1-copy-ctor
 };
 template <S1> // #CannotCopy-T1-S1
 struct T1 {};
@@ -171,8 +171,8 @@ template struct T1<{}>;
 static_assert(!C<S1, T1>);
 
 struct S2 {
-  constexpr S2() = default; // #CannotCopy-S2-default-ctor
-  explicit constexpr S2(const S2&) = default; // #CannotCopy-S2-copy-ctor
+  S2() = default; // #CannotCopy-S2-default-ctor
+  explicit S2(const S2&) = default; // #CannotCopy-S2-copy-ctor
 };
 template <S2> // #CannotCopy-T2-S2
 struct T2 {};
@@ -185,7 +185,7 @@ template struct T2<{}>;
 static_assert(!C<S2, T2>);
 
 struct S3 {
-  constexpr S3() = default;
+  S3() = default;
   S3(const S3&) {} // #CannotCopy-S3-copy-ctor
 };
 template <S3> // #CannotCopy-T3-S3
@@ -196,6 +196,36 @@ template struct T3<{}>;
 //   expected-note@#CannotCopy-S3-copy-ctor {{declared here}}
 //   expected-note@#CannotCopy-T3-S3 {{non-type template argument is required to be copyable}}
 static_assert(!C<S3, T3>);
+
+struct Base4 {
+  Base4() = default;
+  Base4(const Base4&) = delete; // #CannotCopy-Base4-copy-ctor
+};
+struct S4 : Base4 {}; // #CannotCopy-S4
+template <S4> // #CannotCopy-T4-S4
+struct T4 {};
+template struct T4<{}>;
+// expected-error@-1 {{call to implicitly-deleted copy constructor of 'S4'}}
+//   expected-note@#CannotCopy-S4 {{copy constructor of 'S4' is implicitly deleted because base class 'Base4' has a deleted copy constructor}}
+//   expected-note@#CannotCopy-Base4-copy-ctor {{'Base4' has been explicitly marked deleted here}}
+//   expected-note@#CannotCopy-T4-S4 {{passing argument to parameter here}}
+//   expected-note@#CannotCopy-T4-S4 {{non-type template argument is required to be copyable}}
+static_assert(!C<S4, T4>);
+
+template <typename = void>
+struct S5 {
+  S5() = default;
+  S5(const S5&) = default;
+  S5(const S5&) requires true = delete; // #CannotCopy-S5-copy-ctor
+};
+template <S5<>> // #CannotCopy-T5-S5
+struct T5 {};
+template struct T5<{}>;
+// expected-error@-1 {{call to deleted constructor of 'S5<>'}}
+//   expected-note@#CannotCopy-S5-copy-ctor {{'S5' has been explicitly marked deleted here}}
+//   expected-note@#CannotCopy-T5-S5 {{passing argument to parameter here}}
+//   expected-note@#CannotCopy-T5-S5 {{non-type template argument is required to be copyable}}
+static_assert(!C<S5<>, T5>);
 }
 
 namespace StableAddress {

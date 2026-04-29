@@ -7142,8 +7142,39 @@ static bool CheckTemplateArgumentCopyEquivalence(Sema &S, NamedDecl *Param,
                                                  SourceLocation ArgLoc) {
   assert(ParamType->isRecordType() && "no need to check copy equivalence");
 
-  if (ParamType->castAsCXXRecordDecl()->isTriviallyCopyingTemplateParam())
-    return false;
+  // Fast path. Try to find the copy constructor which will be selected by
+  // overload resolution. Trivial copy constructor performs per-element copy.
+  if (auto *CXXRecord = ParamType->castAsCXXRecordDecl();
+      !CXXRecord->hasUserDeclaredConstructor()) {
+
+    if (CXXRecord->hasTrivialCopyConstructor() &&
+        CXXRecord->implicitCopyConstructorHasConstParam() &&
+        !CXXRecord->needsOverloadResolutionForCopyConstructor())
+      return false;
+
+  } else {
+    // If there is a copy constructor with const parameter and without explicit,
+    // it should be selected by overload resolution.
+    CXXConstructorDecl *CopyCtor = nullptr;
+
+    // If there is trailing requires clause, let overload resolution handle it.
+    bool FindCopyCtorWithTrailingRequiresClause = false;
+
+    // A template parameter with this type has been initialized,
+    // so implicitly-declared functions should be declared,
+    // and explicit(bool) should be resolved.
+    for (CXXConstructorDecl *Ctor : CXXRecord->ctors())
+      if (unsigned Quals; Ctor->isCopyConstructor(Quals) &&
+                          (Quals & Qualifiers::Const) && !Ctor->isExplicit()) {
+        CopyCtor = Ctor;
+        if (Ctor->getTrailingRequiresClause())
+          FindCopyCtorWithTrailingRequiresClause = true;
+      }
+
+    if (CopyCtor && !FindCopyCtorWithTrailingRequiresClause &&
+        CopyCtor->isTrivial() && !CopyCtor->isDeleted())
+      return false;
+  }
 
   SourceLocation ParamLoc = Param->getLocation();
 
@@ -7162,11 +7193,6 @@ static bool CheckTemplateArgumentCopyEquivalence(Sema &S, NamedDecl *Param,
   ExprResult Result = InitSeq.Perform(S, Entity, Kind, Inits);
   if (Result.isInvalid())
     return S.Diag(ParamLoc, diag::note_template_arg_requires_copy);
-
-  if (cast<CXXConstructExpr>(Result.get())->getConstructor()->isTrivial()) {
-    ParamType->castAsCXXRecordDecl()->setTriviallyCopyingTemplateParam();
-    return false;
-  }
 
   Result = S.ActOnConstantExpression(Result);
   Result = S.ActOnFinishFullExpr(AssertSuccess(Result), ArgLoc,
