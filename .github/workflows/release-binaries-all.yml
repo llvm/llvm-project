@@ -78,9 +78,6 @@ jobs:
 
   release-binaries-all:
     name: Build Release Binaries
-    environment:
-      deployment: false
-      name: ${{ case( github.event_name == 'pull_request', null, 'release') }}
     needs:
       - setup-variables
     permissions:
