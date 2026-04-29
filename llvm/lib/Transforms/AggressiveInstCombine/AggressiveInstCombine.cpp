@@ -53,6 +53,10 @@ STATISTIC(NumGuardedRotates,
 STATISTIC(NumGuardedFunnelShifts,
           "Number of guarded funnel shifts transformed into funnel shifts");
 STATISTIC(NumPopCountRecognized, "Number of popcount idioms recognized");
+STATISTIC(NumSelectCTTZFolded,
+          "Number of select-based split cttz patterns folded");
+STATISTIC(NumSelectCTLZFolded,
+          "Number of select-based split ctlz patterns folded");
 
 static cl::opt<unsigned> MaxInstrsToScan(
     "aggressive-instcombine-max-scan-instrs", cl::init(64), cl::Hidden,
@@ -67,6 +71,190 @@ static cl::opt<unsigned>
     MemChrInlineThreshold("memchr-inline-threshold", cl::init(3), cl::Hidden,
                           cl::desc("The maximum length of a constant string to "
                                    "inline a memchr call."));
+
+/// Try to fold a select-based split cttz pattern into a single full-width cttz.
+///
+///   %lo = trunc iN %val to i(N/2)
+///   %cmp = icmp eq i(N/2) %lo, 0
+///   %shr = lshr iN %val, N/2
+///   %hi = trunc iN %shr to i(N/2)
+///   %cttz_hi = call i(N/2) @llvm.cttz.i(N/2)(i(N/2) %hi, ...)
+///   %hi_plus = add/or_disjoint i(N/2) %cttz_hi, N/2
+///   %cttz_lo = call i(N/2) @llvm.cttz.i(N/2)(i(N/2) %lo, ...)
+///   %result = select i1 %cmp, i(N/2) %hi_plus, i(N/2) %cttz_lo
+/// -->
+///   %cttz_wide = call iN @llvm.cttz.iN(iN %val, i1 false)
+///   %result = trunc iN %cttz_wide to i(N/2)
+/// Alive proof (for i64/i32):  https://alive2.llvm.org/ce/z/-s14-s
+static bool foldSelectSplitCTTZ(Instruction &I) {
+  Value *Cond, *TrueVal, *FalseVal;
+  if (!match(&I, m_Select(m_Value(Cond), m_Value(TrueVal), m_Value(FalseVal))))
+    return false;
+
+  Type *HalfTy = I.getType();
+  if (!HalfTy->isIntegerTy())
+    return false;
+  unsigned HalfWidth = HalfTy->getIntegerBitWidth();
+
+  // Bail out on very small types (i1, i2): the full-width cttz can return
+  // values not representable in the half type (e.g., cttz.i4 can return 4,
+  // which doesn't fit in i2).
+  if (HalfWidth <= 2)
+    return false;
+
+  unsigned FullWidth = HalfWidth * 2;
+
+  // select (icmp eq (trunc SrcVal to i(N/2)), 0), HiResult, LoResult
+  // Or select (icmp ne ...), LoResult, HiResult
+  Value *LoTrunc;
+  Value *HiResult, *LoResult;
+  if (match(Cond,
+            m_SpecificICmp(CmpInst::ICMP_EQ, m_Value(LoTrunc), m_ZeroInt()))) {
+    HiResult = TrueVal;
+    LoResult = FalseVal;
+  } else if (match(Cond, m_SpecificICmp(CmpInst::ICMP_NE, m_Value(LoTrunc),
+                                        m_ZeroInt()))) {
+    HiResult = FalseVal;
+    LoResult = TrueVal;
+  } else {
+    return false;
+  }
+
+  // LoTrunc: trunc iN SrcVal to i(N/2)
+  Value *SrcVal;
+  if (!match(LoTrunc, m_Trunc(m_Value(SrcVal))))
+    return false;
+  if (!SrcVal->getType()->isIntegerTy(FullWidth))
+    return false;
+
+  // LoResult: cttz(trunc(SrcVal), _),  must use same truncated value
+  if (!match(LoResult, m_OneUse(m_Intrinsic<Intrinsic::cttz>(
+                           m_Specific(LoTrunc), m_Value()))))
+    return false;
+
+  // HiResult: add/or_disjoint(cttz(trunc(lshr(SrcVal, N/2)), _), N/2)
+  Value *CttzHiCall;
+  if (!match(HiResult, m_OneUse(m_AddLike(m_Value(CttzHiCall),
+                                          m_SpecificInt(HalfWidth)))))
+    return false;
+
+  Value *HiCttzArg;
+  if (!match(CttzHiCall, m_OneUse(m_Intrinsic<Intrinsic::cttz>(
+                             m_Value(HiCttzArg), m_Value()))))
+    return false;
+
+  if (!match(HiCttzArg,
+             m_Trunc(m_LShr(m_Specific(SrcVal), m_SpecificInt(HalfWidth)))))
+    return false;
+
+  // Match successful.
+  IRBuilder<> Builder(&I);
+  Value *CttzWide = Builder.CreateIntrinsic(
+      Intrinsic::cttz, {SrcVal->getType()}, {SrcVal, Builder.getFalse()});
+  Value *Trunc = Builder.CreateTrunc(CttzWide, HalfTy);
+
+  I.replaceAllUsesWith(Trunc);
+  ++NumSelectCTTZFolded;
+  return true;
+}
+
+/// Same as foldSelectSplitCTTZ but for leading zeros (ctlz).
+///
+///   %shr = lshr iN %val, N/2
+///   %hi = trunc iN %shr to i(N/2)
+///   %cmp = icmp eq i(N/2) %hi, 0   (or icmp eq iN %shr, 0)
+///   %lo = trunc iN %val to i(N/2)
+///   %ctlz_lo = call i(N/2) @llvm.ctlz.i(N/2)(i(N/2) %lo, ...)
+///   %lo_plus = add/or_disjoint i(N/2) %ctlz_lo, N/2
+///   %ctlz_hi = call i(N/2) @llvm.ctlz.i(N/2)(i(N/2) %hi, ...)
+///   %result = select i1 %cmp, i(N/2) %lo_plus, i(N/2) %ctlz_hi
+/// -->
+///   %ctlz_wide = call iN @llvm.ctlz.iN(iN %val, i1 false)
+///   %result = trunc iN %ctlz_wide to i(N/2)
+///
+/// Alive proof (for i64/i32): https://alive2.llvm.org/ce/z/WfQepH
+static bool foldSelectSplitCTLZ(Instruction &I) {
+  Value *Cond, *TrueVal, *FalseVal;
+  if (!match(&I, m_Select(m_Value(Cond), m_Value(TrueVal), m_Value(FalseVal))))
+    return false;
+
+  Type *HalfTy = I.getType();
+  if (!HalfTy->isIntegerTy())
+    return false;
+  unsigned HalfWidth = HalfTy->getIntegerBitWidth();
+
+  // Bail out on very small types (i1, i2): the full-width ctlz can return
+  // values not representable in the half type (e.g., ctlz.i4 can return 4,
+  // which doesn't fit in i2).
+  if (HalfWidth <= 2)
+    return false;
+
+  unsigned FullWidth = HalfWidth * 2;
+
+  // select (icmp eq HiPart, 0), LoResult, HiResult
+  // HiPart could be (trunc (lshr SrcVal, N/2) to i(N/2)) or (lshr SrcVal, N/2)
+  Value *HiPart;
+  Value *LoResult, *HiResult;
+  if (match(Cond,
+            m_SpecificICmp(CmpInst::ICMP_EQ, m_Value(HiPart), m_ZeroInt()))) {
+    LoResult = TrueVal;  // upper is zero: count in lower + N/2
+    HiResult = FalseVal; // upper non-zero: count in upper
+  } else if (match(Cond, m_SpecificICmp(CmpInst::ICMP_NE, m_Value(HiPart),
+                                        m_ZeroInt()))) {
+    LoResult = FalseVal;
+    HiResult = TrueVal;
+  } else {
+    return false;
+  }
+
+  // Extract SrcVal from HiPart: either trunc(lshr(SrcVal, N/2)) or
+  // lshr(SrcVal, N/2)
+  Value *SrcVal;
+  if (match(HiPart,
+            m_Trunc(m_LShr(m_Value(SrcVal), m_SpecificInt(HalfWidth))))) {
+    // HiPart is trunc(lshr(SrcVal, N/2))
+  } else if (match(HiPart, m_LShr(m_Value(SrcVal), m_SpecificInt(HalfWidth)))) {
+    // HiPart is lshr(SrcVal, N/2)
+  } else {
+    return false;
+  }
+  if (!SrcVal->getType()->isIntegerTy(FullWidth))
+    return false;
+
+  // HiResult: ctlz(trunc(lshr(SrcVal, N/2)), _)
+  Value *HiCtlzArg;
+  if (!match(HiResult, m_OneUse(m_Intrinsic<Intrinsic::ctlz>(m_Value(HiCtlzArg),
+                                                             m_Value()))))
+    return false;
+
+  if (!match(HiCtlzArg,
+             m_Trunc(m_LShr(m_Specific(SrcVal), m_SpecificInt(HalfWidth)))))
+    return false;
+
+  // LoResult: add/or_disjoint(ctlz(trunc(SrcVal), _), N/2)
+  Value *CtlzLoCall;
+  if (!match(LoResult, m_OneUse(m_AddLike(m_Value(CtlzLoCall),
+                                          m_SpecificInt(HalfWidth)))))
+    return false;
+
+  Value *LoCtlzArg;
+  if (!match(CtlzLoCall, m_OneUse(m_Intrinsic<Intrinsic::ctlz>(
+                             m_Value(LoCtlzArg), m_Value()))))
+    return false;
+
+  if (!match(LoCtlzArg, m_Trunc(m_Specific(SrcVal))))
+    return false;
+
+  // Match successful.
+  IRBuilder<> Builder(&I);
+  Value *CtlzWide = Builder.CreateIntrinsic(
+      Intrinsic::ctlz, {SrcVal->getType()}, {SrcVal, Builder.getFalse()});
+  Value *Trunc = Builder.CreateTrunc(CtlzWide, HalfTy);
+
+  I.replaceAllUsesWith(Trunc);
+  ++NumSelectCTLZFolded;
+  return true;
+}
 
 /// Match a pattern for a bitwise funnel/rotate operation that partially guards
 /// against undefined behavior by branching around the funnel-shift/rotation
@@ -2115,6 +2303,8 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
     for (Instruction &I : make_early_inc_range(llvm::reverse(BB))) {
       MadeChange |= foldAnyOrAllBitsSet(I);
       MadeChange |= foldGuardedFunnelShift(I, DT);
+      MadeChange |= foldSelectSplitCTTZ(I);
+      MadeChange |= foldSelectSplitCTLZ(I);
       MadeChange |= tryToRecognizePopCount(I);
       MadeChange |= tryToRecognizePopCount2n3(I);
       MadeChange |= tryToFPToSat(I, TTI);

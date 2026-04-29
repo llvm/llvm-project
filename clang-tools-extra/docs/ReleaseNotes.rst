@@ -337,9 +337,9 @@ Changes in existing checks
 
 - Improved :doc:`cppcoreguidelines-missing-std-forward
   <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check:
-  
+
   - Fixed false positive for constrained template parameters
-  
+
   - Fixed false positive with ``std::forward`` in brace-init and paren-init
     lambda captures such as ``[t{std::forward<T>(t)}]``.
 
@@ -504,16 +504,23 @@ Changes in existing checks
   it easier to see which specific enumerators need explicit initialization.
 
 - Improved :doc:`readability-identifier-length
-  <clang-tidy/checks/readability/identifier-length>` check by adding a new
-  option, named `LineCountThreshold`, to silence warnings for short-lived
-  variables, based on distance between declaration and last use.
+  <clang-tidy/checks/readability/identifier-length>` check:
+
+  - A new option, named `LineCountThreshold`, is added to silence warnings for
+    short-lived variables, based on distance between declaration and last use.
+
+  - Support for structured bindings is added. Two new options, named
+    `MinimumBindingNameLength` and `IgnoredBindingNames` respectively, are
+    added to configure the behavior of the check regarding this new identifier
+    kind. By default, names with at least 2 characters are required and the
+    only exception allowed is `_`.
 
 - Improved :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check:
 
   - Fixed incorrect naming style application to C++17 structured bindings.
 
-  - Fixed a false positive where function templates could be diagnosed as generic 
+  - Fixed a false positive where function templates could be diagnosed as generic
     identifiers when `DefaultCase` was enabled.
 
 - Improved :doc:`readability-implicit-bool-conversion
@@ -580,6 +587,8 @@ Improvements to include-fixer
 
 Improvements to clang-include-fixer
 -----------------------------------
+
+- Fixed crashes when command-line argument parsing failed at unknown tool options.
 
 Improvements to modularize
 --------------------------

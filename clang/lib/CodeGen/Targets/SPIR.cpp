@@ -9,6 +9,7 @@
 #include "ABIInfoImpl.h"
 #include "HLSLBufferLayoutBuilder.h"
 #include "TargetInfo.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/Basic/LangOptions.h"
 #include "llvm/IR/DerivedTypes.h"
 
@@ -144,6 +145,8 @@ public:
     return getABIInfo().getTarget().getTriple().getVendor() !=
            llvm::Triple::AMD;
   }
+
+  LangAS getSRetAddrSpace(const CXXRecordDecl *RD) const override;
 };
 } // End anonymous namespace.
 
@@ -443,6 +446,14 @@ void computeSPIRKernelABIInfo(CodeGenModule &CGM, CGFunctionInfo &FI) {
 
 unsigned CommonSPIRTargetCodeGenInfo::getDeviceKernelCallingConv() const {
   return llvm::CallingConv::SPIR_KERNEL;
+}
+
+LangAS SPIRVTargetCodeGenInfo::getSRetAddrSpace(const CXXRecordDecl *RD) const {
+  // Types with no viable copy/move must be constructed in-place, use the
+  // default AS so the sret pointer matches the "this" convention.
+  if (RD && !RD->canPassInRegisters())
+    return LangAS::Default;
+  return getASTAllocaAddressSpace();
 }
 
 void SPIRVTargetCodeGenInfo::setCUDAKernelCallingConvention(

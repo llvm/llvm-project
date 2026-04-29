@@ -231,9 +231,9 @@ public:
   }
 
   mlir::Value VisitFixedPointLiteral(const FixedPointLiteral *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "ScalarExprEmitter: fixed point literal");
-    return {};
+    mlir::Type type = cgf.convertType(e->getType());
+    return cir::ConstantOp::create(builder, cgf.getLoc(e->getExprLoc()),
+                                   cir::IntAttr::get(type, e->getValue()));
   }
 
   mlir::Value VisitFloatingLiteral(const FloatingLiteral *e) {
@@ -1456,22 +1456,24 @@ public:
 
     // Case 3.
     if (isa<cir::PointerType>(srcTy) && !isa<cir::PointerType>(dstTy)) {
+      if (!isa<cir::IntType>(dstTy)) {
+        cgf.cgm.errorNYI(
+            "ScalarExprEmitter: createCastsForTypeOfSameSize Case 3a");
+      }
+
       cgf.cgm.errorNYI(
-          "ScalarExprEmitter: createCastsForTypeOfSameSize Case 3");
+          "ScalarExprEmitter: createCastsForTypeOfSameSize Case 3a and 3b");
       return {};
     }
 
     // Case 4b.
-    if (srcTy.isInteger()) {
+    if (!isa<cir::IntType>(srcTy)) {
       cgf.cgm.errorNYI(
-          "ScalarExprEmitter: createCastsForTypeOfSameSize Case 4b");
+          "ScalarExprEmitter: createCastsForTypeOfSameSize Case 4a");
       return {};
     }
-
     // Cases 4a and 4b.
-    cgf.cgm.errorNYI(
-        "ScalarExprEmitter: createCastsForTypeOfSameSize Cases 4a and 4b");
-    return {};
+    return builder.createIntToPtr(src, dstTy);
   }
 
   mlir::Value VisitAsTypeExpr(AsTypeExpr *e) {
@@ -2223,12 +2225,7 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     return cgf.performAddrSpaceCast(Visit(subExpr), convertType(destTy));
   }
 
-  case CK_AtomicToNonAtomic: {
-    cgf.getCIRGenModule().errorNYI(subExpr->getSourceRange(),
-                                   "CastExpr: ", ce->getCastKindName());
-    mlir::Location loc = cgf.getLoc(subExpr->getSourceRange());
-    return cgf.createDummyValue(loc, destTy);
-  }
+  case CK_AtomicToNonAtomic:
   case CK_NonAtomicToAtomic:
   case CK_UserDefinedConversion:
     return Visit(const_cast<Expr *>(subExpr));

@@ -3432,8 +3432,14 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
 
     // Mimic shouldAssumeDSOLocal in clang, marking external definitions as
     // dso_local if it is defined and is ELF, and either static or PIE.
+    // CUDA device/constant/managed/shared variables must not be marked
+    // dso_local because the CUDA runtime interposes on these symbols via
+    // cudaRegisterVar; using direct addressing instead of GOT indirection
+    // causes the wrong address to be registered, leading to segfaults.
     bool isDefinition = global.isInitialized();
-    if (isDefinition && linkage == mlir::LLVM::Linkage::External &&
+    bool isCUDADeviceVar = global.getDataAttr().has_value();
+    if (isDefinition && !isCUDADeviceVar &&
+        linkage == mlir::LLVM::Linkage::External &&
         fir::getTargetTriple(module).isOSBinFormatELF()) {
       llvm::Reloc::Model rm = fir::getRelocationModel(module);
       bool isPIE = fir::getIsPIE(module);
@@ -4129,6 +4135,18 @@ struct ZeroOpConversion : public fir::FIROpConversion<fir::ZeroOp> {
   }
 };
 
+/// convert to LLVM IR dialect `fake_use`
+struct FakeUseOpConversion : public fir::FIROpConversion<fir::FakeUseOp> {
+  using FIROpConversion::FIROpConversion;
+
+  llvm::LogicalResult
+  matchAndRewrite(fir::FakeUseOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<mlir::LLVM::FakeUseOp>(op, adaptor.getArgs());
+    return mlir::success();
+  }
+};
+
 /// `fir.unreachable` --> `llvm.unreachable`
 struct UnreachableOpConversion
     : public fir::FIROpConversion<fir::UnreachableOp> {
@@ -4815,20 +4833,21 @@ void fir::populateFIRToLLVMConversionPatterns(
       DoConcurrentSpecifierOpConversion<fir::DeclareReductionOp>,
       DivcOpConversion, EmboxOpConversion, EmboxCharOpConversion,
       EmboxProcOpConversion, EqvOpConversion, ExtractValueOpConversion,
-      FieldIndexOpConversion, FirEndOpConversion, FreeMemOpConversion,
-      GlobalLenOpConversion, GlobalOpConversion, InsertOnRangeOpConversion,
-      IsPresentOpConversion, LenParamIndexOpConversion, LoadOpConversion,
-      LogicalAndOpConversion, LogicalOrOpConversion, MulcOpConversion,
-      NegcOpConversion, NeqvOpConversion, NoReassocOpConversion,
-      PrefetchOpConversion, SelectCaseOpConversion, SelectOpConversion,
-      SelectRankOpConversion, SelectTypeOpConversion, ShapeOpConversion,
-      ShapeShiftOpConversion, ShiftOpConversion, SliceOpConversion,
-      StoreOpConversion, StringLitOpConversion, SubcOpConversion,
-      TypeDescOpConversion, TypeInfoOpConversion, UnboxCharOpConversion,
-      UnboxProcOpConversion, UndefOpConversion, UnreachableOpConversion,
-      UseStmtOpConversion, ModuleDebugImportsOpConversion,
-      XArrayCoorOpConversion, XEmboxOpConversion, XReboxOpConversion,
-      ZeroOpConversion>(converter, options);
+      FakeUseOpConversion, FieldIndexOpConversion, FirEndOpConversion,
+      FreeMemOpConversion, GlobalLenOpConversion, GlobalOpConversion,
+      InsertOnRangeOpConversion, IsPresentOpConversion,
+      LenParamIndexOpConversion, LoadOpConversion, LogicalAndOpConversion,
+      LogicalOrOpConversion, MulcOpConversion, NegcOpConversion,
+      NeqvOpConversion, NoReassocOpConversion, PrefetchOpConversion,
+      SelectCaseOpConversion, SelectOpConversion, SelectRankOpConversion,
+      SelectTypeOpConversion, ShapeOpConversion, ShapeShiftOpConversion,
+      ShiftOpConversion, SliceOpConversion, StoreOpConversion,
+      StringLitOpConversion, SubcOpConversion, TypeDescOpConversion,
+      TypeInfoOpConversion, UnboxCharOpConversion, UnboxProcOpConversion,
+      UndefOpConversion, UnreachableOpConversion, UseStmtOpConversion,
+      ModuleDebugImportsOpConversion, XArrayCoorOpConversion,
+      XEmboxOpConversion, XReboxOpConversion, ZeroOpConversion>(converter,
+                                                                options);
 
   // Patterns that are populated without a type converter do not trigger
   // target materializations for the operands of the root op.

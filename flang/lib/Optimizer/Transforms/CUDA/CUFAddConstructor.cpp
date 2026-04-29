@@ -76,6 +76,37 @@ static fir::GlobalOp createManagedPointerGlobal(fir::FirOpBuilder &builder,
   return ptrGlobal;
 }
 
+static bool hasRegisteredGlobals(mlir::ModuleOp mod,
+                                 mlir::SymbolTable gpuSymTable) {
+  for (fir::GlobalOp globalOp : mod.getOps<fir::GlobalOp>()) {
+    auto attr = globalOp.getDataAttrAttr();
+    if (!attr)
+      continue;
+    if (!gpuSymTable.lookup(globalOp.getSymName()))
+      continue;
+    if (attr.getValue() == cuf::DataAttribute::Managed &&
+        !mlir::isa<fir::BaseBoxType>(globalOp.getType()))
+      return true;
+    switch (attr.getValue()) {
+    case cuf::DataAttribute::Device:
+    case cuf::DataAttribute::Constant:
+    case cuf::DataAttribute::Managed: {
+      return true;
+    } break;
+    default:
+      break;
+    }
+  }
+  return false;
+}
+
+static bool hasKernel(mlir::gpu::GPUModuleOp gpuMod) {
+  for (auto func : gpuMod.getOps<mlir::gpu::GPUFuncOp>())
+    if (func.isKernel())
+      return true;
+  return false;
+}
+
 struct CUFAddConstructor
     : public fir::impl::CUFAddConstructorBase<CUFAddConstructor> {
 
@@ -118,6 +149,15 @@ struct CUFAddConstructor
 
     auto gpuMod = symTab.lookup<mlir::gpu::GPUModuleOp>(cudaDeviceModuleName);
     if (gpuMod) {
+      mlir::SymbolTable gpuSymTable(gpuMod);
+      if (!hasKernel(gpuMod) && !hasRegisteredGlobals(mod, gpuSymTable)) {
+        // No kernels and no globals to register means no GPU binary to
+        // register. This happens for host TUs that USE a kernel module but
+        // don't define any device code.
+        mlir::LLVM::ReturnOp::create(builder, loc, mlir::ValueRange{});
+        return;
+      }
+
       auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(ctx);
       auto registeredMod = cuf::RegisterModuleOp::create(
           builder, loc, llvmPtrTy,
@@ -141,6 +181,8 @@ struct CUFAddConstructor
       for (fir::GlobalOp globalOp : mod.getOps<fir::GlobalOp>()) {
         auto attr = globalOp.getDataAttrAttr();
         if (!attr)
+          continue;
+        if (!gpuSymTable.lookup(globalOp.getSymName()))
           continue;
 
         bool isNonAllocManagedGlobal =

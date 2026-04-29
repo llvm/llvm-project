@@ -818,13 +818,18 @@ void vector::ContractionOp::build(OpBuilder &builder, OperationState &result,
 void vector::ContractionOp::build(OpBuilder &builder, OperationState &result,
                                   Value lhs, Value rhs, Value acc,
                                   ArrayAttr indexingMaps,
-                                  ArrayAttr iteratorTypes, CombiningKind kind) {
+                                  ArrayAttr iteratorTypes, CombiningKind kind,
+                                  arith::FastMathFlags fastMathFlags) {
   result.addOperands({lhs, rhs, acc});
   result.addTypes(acc.getType());
   result.addAttribute(getIndexingMapsAttrName(result.name), indexingMaps);
   result.addAttribute(getIteratorTypesAttrName(result.name), iteratorTypes);
   result.addAttribute(getKindAttrName(result.name),
                       CombiningKindAttr::get(builder.getContext(), kind));
+  if (fastMathFlags != arith::FastMathFlags::none)
+    result.addAttribute(
+        getFastmathAttrName(result.name),
+        arith::FastMathFlagsAttr::get(builder.getContext(), fastMathFlags));
 }
 
 ParseResult ContractionOp::parse(OpAsmParser &parser, OperationState &result) {
@@ -921,8 +926,14 @@ void ContractionOp::print(OpAsmPrinter &p) {
 
       attrs.emplace_back(getIteratorTypesAttrName(),
                          ArrayAttr::get(getContext(), iteratorTypeNames));
-    } else if (traitAttrsSet.count(attr.getName().strref()) > 0)
+    } else if (traitAttrsSet.count(attr.getName().strref()) > 0) {
+      // Omit fastmath when it equals the default (none) to keep output clean.
+      if (attr.getName() == getFastmathAttrName() &&
+          llvm::cast<arith::FastMathFlagsAttr>(attr.getValue()).getValue() ==
+              arith::FastMathFlags::none)
+        continue;
       attrs.push_back(attr);
+    }
   }
 
   auto dictAttr = DictionaryAttr::get(getContext(), attrs);
@@ -1147,7 +1158,8 @@ Type ContractionOp::getExpectedMaskType() {
 
 SmallVector<StringRef> ContractionOp::getTraitAttrNames() {
   return SmallVector<StringRef>{getIndexingMapsAttrName(),
-                                getIteratorTypesAttrName(), getKindAttrName()};
+                                getIteratorTypesAttrName(), getKindAttrName(),
+                                getFastmathAttrName()};
 }
 
 static int64_t getResultIndex(AffineMap map, AffineExpr targetExpr) {
