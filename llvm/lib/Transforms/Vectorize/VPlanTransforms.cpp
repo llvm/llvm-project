@@ -1070,14 +1070,24 @@ static VPValue *tryToComputeEndValueForInduction(VPWidenInductionRecipe *WideIV,
 
 /// Attempts to optimize the induction variable exit values for users in the
 /// exit block coming from the latch in the original scalar loop.
-static VPValue *optimizeLatchExitInductionUser(
-    VPlan &Plan, VPTypeAnalysis &TypeInfo, VPBlockBase *PredVPBB, VPValue *Op,
-    DenseMap<VPValue *, VPValue *> &EndValues, PredicatedScalarEvolution &PSE) {
+static VPValue *
+optimizeLatchExitInductionUser(VPlan &Plan, VPTypeAnalysis &TypeInfo,
+                               VPBlockBase *PredVPBB, VPValue *Op,
+                               DenseMap<VPValue *, VPValue *> &EndValues,
+                               PredicatedScalarEvolution &PSE, bool FoldTail) {
   VPValue *Incoming;
-  VPWidenInductionRecipe *WideIV = nullptr;
-  if (match(Op, m_ExtractLastLaneOfLastPart(m_VPValue(Incoming))))
-    WideIV = getOptimizableIVOf(Incoming, PSE);
+  if (FoldTail) {
+    VPValue *Mask = nullptr;
+    if (!match(Op, m_ExtractLane(m_LastActiveLane(m_VPValue(Mask)),
+                                 m_VPValue(Incoming))) ||
+        !vputils::isHeaderMask(Mask, Plan))
+      return nullptr;
+  } else {
+    if (!match(Op, m_ExtractLastLaneOfLastPart(m_VPValue(Incoming))))
+      return nullptr;
+  }
 
+  VPWidenInductionRecipe *WideIV = getOptimizableIVOf(Incoming, PSE);
   if (!WideIV)
     return nullptr;
 
@@ -1155,7 +1165,7 @@ void VPlanTransforms::optimizeInductionLiveOutUsers(
         if (PredVPBB == MiddleVPBB)
           Escape = optimizeLatchExitInductionUser(Plan, TypeInfo, PredVPBB,
                                                   ExitIRI->getOperand(Idx),
-                                                  EndValues, PSE);
+                                                  EndValues, PSE, FoldTail);
         else
           Escape = optimizeEarlyExitInductionUser(
               Plan, TypeInfo, PredVPBB, ExitIRI->getOperand(Idx), PSE);

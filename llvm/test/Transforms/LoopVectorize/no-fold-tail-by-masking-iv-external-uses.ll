@@ -25,6 +25,7 @@ define i32 @test(ptr %arr, i64 %n) {
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[TMP0]], 1
+; CHECK-NEXT:    [[IND_END:%.*]] = add i64 1, [[TMP0]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -73,10 +74,7 @@ define i32 @test(ptr %arr, i64 %n) {
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP22:%.*]] = xor <4 x i1> [[TMP11]], splat (i1 true)
-; CHECK-NEXT:    [[IND_END:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP22]], i1 false)
 ; CHECK-NEXT:    [[IND_ESCAPE:%.*]] = sub i64 [[IND_END]], 1
-; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <4 x i64> [[VEC_IND]], i64 [[IND_ESCAPE]]
 ; CHECK-NEXT:    br label [[LOAD_VAL:%.*]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -91,7 +89,7 @@ define i32 @test(ptr %arr, i64 %n) {
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i64 [[CONV2]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[LOOP]], label [[LOAD_VAL]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       load_val:
-; CHECK-NEXT:    [[FINAL:%.*]] = phi i64 [ [[CONV]], [[LOOP]] ], [ [[TMP23]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[FINAL:%.*]] = phi i64 [ [[CONV]], [[LOOP]] ], [ [[IND_ESCAPE]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr inbounds i32, ptr [[ARR]], i64 [[FINAL]]
 ; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[PTR2]], align 4
 ; CHECK-NEXT:    br label [[DONE]]
