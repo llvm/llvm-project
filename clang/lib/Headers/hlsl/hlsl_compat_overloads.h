@@ -230,11 +230,39 @@ namespace hlsl {
     return fn((float4)V1, (float4)V2, (float4)V3);                             \
   }
 
-#define _DXC_COMPAT_BINARY_MATRIX_OVERLOADS(fn, ty)                            \
+#define _DXC_COMPAT_BINARY_DOUBLE_MATRIX_OVERLOADS(fn)                         \
+  template <uint R, uint C>                                                    \
+  constexpr matrix<float, R, C> fn(matrix<double, R, C> y,                     \
+                                   matrix<double, R, C> x) {                   \
+    return fn((matrix<float, R, C>)y, (matrix<float, R, C>)x);                 \
+  }
+
+#define _DXC_COMPAT_BINARY_INTEGER_MATRIX_OVERLOADS(fn)                        \
+  template <uint R, uint C>                                                    \
   _DXC_DEPRECATED_INT_FN(fn)                                                   \
-  template <typename T, int R, int C>                                          \
-  constexpr matrix<ty, R, C> fn(matrix<T, R, C> y, matrix<T, R, C> x) {        \
-    return fn((matrix<ty, R, C>)y, (matrix<ty, R, C>)x);                       \
+  constexpr matrix<float, R, C> fn(matrix<int, R, C> y, matrix<int, R, C> x) { \
+    return fn((matrix<float, R, C>)y, (matrix<float, R, C>)x);                 \
+  }                                                                            \
+                                                                               \
+  template <uint R, uint C>                                                    \
+  _DXC_DEPRECATED_INT_FN(fn)                                                   \
+  constexpr matrix<float, R, C> fn(matrix<uint, R, C> y,                       \
+                                   matrix<uint, R, C> x) {                     \
+    return fn((matrix<float, R, C>)y, (matrix<float, R, C>)x);                 \
+  }                                                                            \
+                                                                               \
+  template <uint R, uint C>                                                    \
+  _DXC_DEPRECATED_INT_FN(fn)                                                   \
+  constexpr matrix<float, R, C> fn(matrix<int64_t, R, C> y,                    \
+                                   matrix<int64_t, R, C> x) {                  \
+    return fn((matrix<float, R, C>)y, (matrix<float, R, C>)x);                 \
+  }                                                                            \
+                                                                               \
+  template <uint R, uint C>                                                    \
+  _DXC_DEPRECATED_INT_FN(fn)                                                   \
+  constexpr matrix<float, R, C> fn(matrix<uint64_t, R, C> y,                   \
+                                   matrix<uint64_t, R, C> x) {                 \
+    return fn((matrix<float, R, C>)y, (matrix<float, R, C>)x);                 \
   }
 //===----------------------------------------------------------------------===//
 // acos builtins overloads
@@ -263,7 +291,8 @@ _DXC_COMPAT_UNARY_INTEGER_OVERLOADS(atan)
 
 _DXC_COMPAT_BINARY_DOUBLE_OVERLOADS(atan2)
 _DXC_COMPAT_BINARY_INTEGER_OVERLOADS(atan2)
-_DXC_COMPAT_BINARY_MATRIX_OVERLOADS(atan2, float)
+_DXC_COMPAT_BINARY_DOUBLE_MATRIX_OVERLOADS(atan2)
+_DXC_COMPAT_BINARY_INTEGER_MATRIX_OVERLOADS(atan2)
 
 //===----------------------------------------------------------------------===//
 // ceil builtins overloads
