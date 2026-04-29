@@ -1596,6 +1596,7 @@ Status Process::DisableBreakpointSiteByID(lldb::user_id_t break_id) {
 llvm::Error Process::ExecuteBreakpointSiteAction(BreakpointSite &site,
                                                  BreakpointAction action) {
   auto site_sp = site.shared_from_this();
+  std::unique_lock<std::recursive_mutex> guard(m_delayed_breakpoints_mutex);
 
   // Ignore requests that won't change the Site status.
   if (IsBreakpointSiteEnabled(*site_sp) == (action == BreakpointAction::Enable))
@@ -1607,6 +1608,7 @@ llvm::Error Process::ExecuteBreakpointSiteAction(BreakpointSite &site,
   }
 
   m_delayed_breakpoints.RemoveSite(site_sp);
+  guard.unlock();
 
   switch (action) {
   case BreakpointAction::Enable:
@@ -1633,6 +1635,8 @@ Status Process::EnableBreakpointSiteByID(lldb::user_id_t break_id) {
 }
 
 bool Process::IsBreakpointSiteEnabled(const BreakpointSite &site) {
+  std::lock_guard<std::recursive_mutex> guard(m_delayed_breakpoints_mutex);
+
   // `site` won't be mutated, but the cache stores mutable pointers.
   auto it = m_delayed_breakpoints.m_site_to_action.find(
       const_cast<BreakpointSite &>(site).shared_from_this());
@@ -1707,6 +1711,8 @@ static addr_t ComputeConstituentLoadAddress(BreakpointLocation &constituent,
 }
 
 llvm::Error Process::FlushDelayedBreakpoints() {
+  std::unique_lock<std::recursive_mutex> guard(m_delayed_breakpoints_mutex);
+
   // Clear the cache in m_delayed_breakpoints so it can't affect the actual
   // enabling of breakpoints. For example, if `EnableSoftwareBreakpoint` is
   // called outside of FlushDelayedBreakpoints, it needs to check the delayed
@@ -1716,6 +1722,7 @@ llvm::Error Process::FlushDelayedBreakpoints() {
   auto site_to_action = std::move(m_delayed_breakpoints.m_site_to_action);
   m_delayed_breakpoints.m_site_to_action.clear();
 
+  guard.unlock();
   return UpdateBreakpointSites(site_to_action);
 }
 

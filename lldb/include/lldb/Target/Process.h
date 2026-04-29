@@ -3575,6 +3575,7 @@ protected:
   };
 
   DelayedBreakpointCache m_delayed_breakpoints;
+  std::recursive_mutex m_delayed_breakpoints_mutex;
 
   llvm::Error FlushDelayedBreakpoints();
 
