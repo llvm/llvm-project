@@ -67,13 +67,16 @@ def sync_test_dir(local_dir: str, remote_dir: str) -> None:
             # /data/local/tmp, so we need to change the permissions of the
             # directory.
             run_adb_sync_command(["adb", "shell", "chmod", "777", REMOTE_BASE_DIR])
-            run_adb_sync_command(["adb", "shell", "chmod", "777", os.path.dirname(remote_dir)])
+            run_adb_sync_command(
+                ["adb", "shell", "chmod", "777", os.path.dirname(remote_dir)]
+            )
             run_adb_sync_command(["adb", "shell", "chmod", "777", remote_dir])
             return
 
     assert os.path.basename(local_dir) == os.path.basename(remote_dir)
     run_adb_sync_command(["adb", "shell", "mkdir", "-p", remote_dir])
-    run_adb_sync_command(["adb", "push", "--sync", local_dir, os.path.dirname(remote_dir)])
+    run_adb_sync_command(["adb", "push", "--sync", local_dir,
+                          os.path.dirname(remote_dir)])
 
     # Android M (API 23) x86 emulator doesn't have permissions to write to
     # /data/local/tmp, so we need to change the permissions of the
@@ -222,7 +225,8 @@ def run_command(args: argparse.Namespace) -> int:
             r"^WARNING: linker: .*unsupported flags DT_FLAGS_1=.*\n?",
             "",
             stderr_content,
-            flags=re.MULTILINE)
+            flags=re.MULTILINE
+        )
 
         sys.stderr.write(stderr_content)
         sys.stdout.write(match.group(2))
