@@ -183,6 +183,7 @@ public:
 
   /// \copydoc LocationContextManager::getStackFrame()
   const StackFrameContext *getStackFrame(LocationContext const *ParentLC,
+                                         const ento::BlockDataRegion *BlockInvocationData,
                                          const Expr *E, const CFGBlock *Blk,
                                          unsigned BlockCount, unsigned Index);
 
@@ -403,16 +404,19 @@ public:
 
   /// Obtain a context of the call stack using its parent context.
   ///
-  /// \param ADC        The AnalysisDeclContext.
-  /// \param ParentLC   The parent context of this newly created context.
-  /// \param E          The call expression.
-  /// \param Block      The basic block.
-  /// \param BlockCount The current count of entering into \p Block.
-  /// \param StmtIdx    The index of the call expression \p E among the
-  ///                   statements of the CFGBlock \p Block.
+  /// \param ADC                 The AnalysisDeclContext.
+  /// \param ParentLC            The parent context of this newly created context.
+  /// \param BlockInvocationData Extra data in case this StackFrameContext is
+  ///                            created for a BlockInvocation.
+  /// \param E                   The call expression.
+  /// \param Block               The basic block.
+  /// \param BlockCount          The current count of entering into \p Block.
+  /// \param StmtIdx             The index of the call expression \p E among the
+  ///                            statements of the CFGBlock \p Block.
   /// \returns The stack frame context corresponding to the call.
   const StackFrameContext *getStackFrame(AnalysisDeclContext *ADC,
                                          const LocationContext *ParentLC,
+                                         const ento::BlockDataRegion *BlockInvocationData,
                                          const Expr *E, const CFGBlock *Block,
                                          unsigned BlockCount, unsigned StmtIdx);
 
@@ -477,7 +481,7 @@ public:
   ///
   /// \returns The top level stack frame for \p D.
   const StackFrameContext *getStackFrame(const Decl *D) {
-    return LocCtxMgr.getStackFrame(getContext(D), nullptr, nullptr, nullptr, 0,
+    return LocCtxMgr.getStackFrame(getContext(D), nullptr, nullptr, nullptr, nullptr, 0,
                                    0);
   }
 
