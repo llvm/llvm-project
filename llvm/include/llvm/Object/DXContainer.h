@@ -566,6 +566,13 @@ public:
     return Debug ? DebugDXIL : DXIL;
   }
 
+  std::optional<uint16_t> getShaderKind() const {
+    const auto &ProgramPart = DXIL ? DXIL : DebugDXIL;
+    if (!ProgramPart)
+      return std::nullopt;
+    return ProgramPart->first.ShaderKind;
+  }
+
   std::optional<uint64_t> getShaderFeatureFlags() const {
     return ShaderFeatureFlags;
   }

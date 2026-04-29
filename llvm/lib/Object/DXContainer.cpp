@@ -216,13 +216,19 @@ Error DXContainer::parsePartOffsets() {
     }
   }
 
+  if (DXIL && DebugDXIL &&
+      DXIL->first.ShaderKind != DebugDXIL->first.ShaderKind)
+    return parseFailed(
+        "ILDB part shader kind does not match DXIL part shader kind");
+
   // Fully parsing the PSVInfo requires knowing the shader kind which we read
   // out of the program header in the DXIL part.
   if (PSVInfo) {
-    if (!DXIL)
+    auto ShaderKind = getShaderKind();
+    if (!ShaderKind)
       return parseFailed("Cannot fully parse pipeline state validation "
-                         "information without DXIL part.");
-    if (Error Err = PSVInfo->parse(DXIL->first.ShaderKind))
+                         "information without DXIL or ILDB part");
+    if (Error Err = PSVInfo->parse(*ShaderKind))
       return Err;
   }
   return Error::success();

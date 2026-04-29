@@ -92,10 +92,10 @@ dumpDXContainer(MemoryBufferRef Source) {
         break;
       if (const auto *P =
               std::get_if<dxbc::PSV::v0::RuntimeInfo>(&PSVInfo->getInfo())) {
-        if (!Container.getDXIL(false))
+        auto ShaderKind = Container.getShaderKind();
+        if (!ShaderKind)
           break;
-        NewPart.Info = DXContainerYAML::PSVInfo(
-            P, Container.getDXIL(false)->first.ShaderKind);
+        NewPart.Info = DXContainerYAML::PSVInfo(P, *ShaderKind);
       } else if (const auto *P = std::get_if<dxbc::PSV::v1::RuntimeInfo>(
                      &PSVInfo->getInfo()))
         NewPart.Info = DXContainerYAML::PSVInfo(P);
