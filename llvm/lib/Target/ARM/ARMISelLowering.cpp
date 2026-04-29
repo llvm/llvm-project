@@ -6587,6 +6587,24 @@ static SDValue LowerVSETCC(SDValue Op, SelectionDAG &DAG,
     return SDValue();
 
   if (Op1.getValueType().isFloatingPoint()) {
+    // Lower isnan(x) | isnan(never-nan) to x != x.
+    // Lower !isnan(x) & !isnan(never-nan) to x == x.
+    if (SetCCOpcode == ISD::SETUO || SetCCOpcode == ISD::SETO) {
+      bool OneNaN = false;
+      if (Op0 == Op1) {
+        OneNaN = true;
+      } else if (DAG.isKnownNeverNaN(Op1)) {
+        OneNaN = true;
+        Op1 = Op0;
+      } else if (DAG.isKnownNeverNaN(Op0)) {
+        OneNaN = true;
+        Op0 = Op1;
+      }
+      if (OneNaN) {
+        SetCCOpcode = SetCCOpcode == ISD::SETUO ? ISD::SETUNE : ISD::SETOEQ;
+      }
+    }
+
     switch (SetCCOpcode) {
     default: llvm_unreachable("Illegal FP comparison");
     case ISD::SETUNE:
