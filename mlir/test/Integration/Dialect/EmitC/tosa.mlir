@@ -18,7 +18,7 @@
 
 // DEFINE: %{lower_to_emitc} = mlir-opt --pass-pipeline=%{pipeline} %s -o %t
 // DEFINE: %{translate} = mlir-translate -mlir-to-cpp %t -o %t.c 
-// DEFINE: %{compile} =  %host_cc -include stddef.h -c -Wpedantic -Wall -Werror -Wno-unused %t.c
+// DEFINE: %{compile} =  %host_cc -include stddef.h -fsyntax-only -Wpedantic -Wall -Werror -Wno-unused %t.c
 
 /// Lower via the pipeline defined above
 // RUN: rm -f %t && %{lower_to_emitc} && FileCheck %s --input-file=%t && %{translate} && %{compile}
