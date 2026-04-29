@@ -356,9 +356,6 @@ struct WgToSgDpasMxOp : public OpConversionPattern<xegpu::DpasMxOp> {
     Location loc = op.getLoc();
     VectorType resultTy = op.getResult().getType();
 
-    LLVM_DEBUG(llvm::dbgs() << "WgToSgDpasMxOp: original op: " << op << "\n");
-    LLVM_DEBUG(llvm::dbgs() << "  resultTy: " << resultTy << "\n");
-
     if (resultTy.getRank() != 2)
       return failure();
 
@@ -368,17 +365,6 @@ struct WgToSgDpasMxOp : public OpConversionPattern<xegpu::DpasMxOp> {
     auto layoutAScale = op.getLayoutAScaleAttr();
     auto layoutBScale = op.getLayoutBScaleAttr();
 
-    LLVM_DEBUG(llvm::dbgs()
-               << "  adaptor.getA() size: " << adaptor.getA().size() << "\n");
-    LLVM_DEBUG(llvm::dbgs()
-               << "  adaptor.getB() size: " << adaptor.getB().size() << "\n");
-    LLVM_DEBUG(llvm::dbgs() << "  adaptor.getAcc() size: "
-                            << adaptor.getAcc().size() << "\n");
-    LLVM_DEBUG(llvm::dbgs() << "  adaptor.getScaleA() size: "
-                            << adaptor.getScaleA().size() << "\n");
-    LLVM_DEBUG(llvm::dbgs() << "  adaptor.getScaleB() size: "
-                            << adaptor.getScaleB().size() << "\n");
-
     if (!layoutCd || !layoutA || !layoutB || !layoutAScale || !layoutBScale)
       return failure();
 
@@ -386,27 +372,17 @@ struct WgToSgDpasMxOp : public OpConversionPattern<xegpu::DpasMxOp> {
     SmallVector<Value> newDpasMxOps;
     for (auto [index_a, aVec] : llvm::enumerate(adaptor.getA())) {
       for (auto [index_b, bVec] : llvm::enumerate(adaptor.getB())) {
-        LLVM_DEBUG(llvm::dbgs() << "  index_a=" << index_a << " aVec: "
-                                << aVec.getType() << ", index_b=" << index_b
-                                << " bVec: " << bVec.getType() << "\n");
-
         Value accVal;
         if (op.getAcc()) {
           accVal = adaptor.getAcc()[index_c++];
-          LLVM_DEBUG(llvm::dbgs() << "    acc[" << (index_c - 1)
-                                  << "]: " << accVal.getType() << "\n");
         }
         Value scaleAVal;
         if (op.getScaleA()) {
           scaleAVal = adaptor.getScaleA()[index_a];
-          LLVM_DEBUG(llvm::dbgs() << "    scaleA[" << index_a
-                                  << "]: " << scaleAVal.getType() << "\n");
         }
         Value scaleBVal;
         if (op.getScaleB()) {
           scaleBVal = adaptor.getScaleB()[index_b];
-          LLVM_DEBUG(llvm::dbgs() << "    scaleB[" << index_b
-                                  << "]: " << scaleBVal.getType() << "\n");
         }
 
         ArrayRef<int64_t> aVecShape =
@@ -415,19 +391,15 @@ struct WgToSgDpasMxOp : public OpConversionPattern<xegpu::DpasMxOp> {
             llvm::cast<VectorType>(bVec.getType()).getShape();
         VectorType resTy = VectorType::get({aVecShape[0], bVecShape[1]},
                                            resultTy.getElementType());
-        LLVM_DEBUG(llvm::dbgs() << "    resTy: " << resTy << "\n");
         auto newDpasMxOp = xegpu::DpasMxOp::create(
             rewriter, loc, resTy, aVec, bVec, accVal, scaleAVal, scaleBVal,
             layoutA.dropSgLayoutAndData(), layoutB.dropSgLayoutAndData(),
             layoutCd.dropSgLayoutAndData(), layoutAScale.dropSgLayoutAndData(),
             layoutBScale.dropSgLayoutAndData());
-        LLVM_DEBUG(llvm::dbgs() << "    created: " << newDpasMxOp << "\n");
 
         newDpasMxOps.push_back(newDpasMxOp);
       }
     }
-    LLVM_DEBUG(llvm::dbgs()
-               << "  total new DpasMxOps: " << newDpasMxOps.size() << "\n");
     rewriter.replaceOpWithMultiple(op, {newDpasMxOps});
     return success();
   }
@@ -1567,9 +1539,6 @@ struct WgToSgVectorDeinterleaveOp
   LogicalResult
   matchAndRewrite(vector::DeinterleaveOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    VectorType resultType = op.getResultVectorType();
-
-    ArrayRef<int64_t> wgShape = resultType.getShape();
     xegpu::DistributeLayoutAttr layout =
         xegpu::getTemporaryLayout(dyn_cast<OpResult>(op.getRes1()));
     if (!layout || !layout.isForWorkgroup())
@@ -1577,7 +1546,7 @@ struct WgToSgVectorDeinterleaveOp
 
     SmallVector<Value> newRes1Ops;
     SmallVector<Value> newRes2Ops;
-    // Deinterleave produces two results from each source
+
     for (auto src : adaptor.getSource()) {
       auto newDeinterleave =
           vector::DeinterleaveOp::create(rewriter, op.getLoc(), src);
@@ -1585,7 +1554,6 @@ struct WgToSgVectorDeinterleaveOp
       newRes2Ops.push_back(newDeinterleave.getRes2());
     }
 
-    // Combine both result sets for replacement
     SmallVector<SmallVector<Value>> results = {newRes1Ops, newRes2Ops};
     rewriter.replaceOpWithMultiple(op, results);
     return success();
