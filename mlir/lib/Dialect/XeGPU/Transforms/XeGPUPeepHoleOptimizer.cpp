@@ -450,27 +450,17 @@ class MultiRed2dOpPattern
     auto acc = reductionOp.getAcc();
 
     // The decomposition below splits the 2D reduction into an intra-lane
-    // then a cross-lane 1D reduction. If a consumer xegpu.convert_layout
-    // exists on the reduction result, its input_layout was stamped by
-    // layout propagation against the original 2D reduction's slice and
-    // is therefore stale once we replace the producer with two 1D
-    // reductions.
-    //
-    // Hence insert a NEW xegpu.convert_layout between the decomposed
-    // reduction result and the existing convert_layout. The new op
-    // bridges from the natural post-decomposition producer layout
-    // to the layout that the existing convert_layout currently expects on its
-    // input. The existing convert_layout is left untouched.
-    xegpu::ConvertLayoutOp consumerConvertOp;
-    for (auto &use : reductionOp.getResult().getUses()) {
-      if (auto convertLayoutOp =
-              llvm::dyn_cast<xegpu::ConvertLayoutOp>(use.getOwner())) {
-        consumerConvertOp = convertLayoutOp;
-        break;
-      }
-    }
+    // then a cross-lane 1D reduction. The natural result layout of the
+    // decomposed sequence (a doubly-sliced layout) differs from the
+    // original 2D reduction's result layout that the rest of the IR was
+    // written/propagated against. To keep the post-peephole IR
+    // self-consistent without depending on a follow-up layout
+    // propagation pass, we always insert a bridge xegpu.convert_layout
+    // from the natural post-decomposition layout to the original
+    // reduction's result layout. Trivial bridges fold away in
+    // canonicalization.
     xegpu::DistributeLayoutAttr postDecompLayout;
-    if (consumerConvertOp) {
+    if (resLayout) {
       // Derive the source vector's layout.
       xegpu::DistributeLayoutAttr srcLayoutForCvt;
       if (auto resSlice = dyn_cast_if_present<xegpu::SliceAttr>(resLayout))
@@ -484,7 +474,7 @@ class MultiRed2dOpPattern
         // the source) yields `slice<src, [intraLaneDim]>`; REDUCE_2
         // then reduces `adjCrossLaneDim` from that intermediate, giving
         // `slice<slice<src, [intraLaneDim]>, [adjCrossLaneDim]>`.
-        MLIRContext *ctx = consumerConvertOp.getContext();
+        MLIRContext *ctx = reductionOp.getContext();
         int64_t adjCrossLaneDim =
             crossLaneDim > intraLaneDim ? crossLaneDim - 1 : crossLaneDim;
         auto intermediateLayout = xegpu::SliceAttr::get(
@@ -514,19 +504,20 @@ class MultiRed2dOpPattern
     assert(crossLaneReduced.getType() == reductionOp.getResult().getType() &&
            "Type mismatch");
 
-    if (consumerConvertOp && postDecompLayout) {
-      auto consumerInputLayout = consumerConvertOp.getInputLayoutAttr();
-      OpBuilder::InsertionGuard g(rewriter);
-      rewriter.setInsertionPoint(consumerConvertOp);
+    Value replacement = crossLaneReduced;
+    if (resLayout && postDecompLayout) {
+      // Bridge from the natural post-decomposition layout to the
+      // original reduction's result layout. This preserves the contract
+      // any consumer (convert_layout, anchor op, or otherwise) was
+      // written against, so the rewrite is correct independent of
+      // whether layout propagation runs afterwards.
       auto bridgeOp = xegpu::ConvertLayoutOp::create(
           rewriter, loc, crossLaneReduced.getType(), crossLaneReduced,
-          postDecompLayout, consumerInputLayout);
-      rewriter.modifyOpInPlace(consumerConvertOp, [&]() {
-        consumerConvertOp.getSourceMutable().set(bridgeOp.getResult());
-      });
+          postDecompLayout, resLayout);
+      replacement = bridgeOp.getResult();
     }
 
-    rewriter.replaceOp(reductionOp, crossLaneReduced);
+    rewriter.replaceOp(reductionOp, replacement);
     return success();
   }
 
