@@ -1436,8 +1436,8 @@ DIE *CompileUnit::allocateTypeDie(TypeEntryBody *TypeDescriptor,
   // Lock-free pre-checks: skip the lock (and downstream cloning) when this CU
   // has no chance of winning the type slot.
   if (!IsDeclaration && !IsParentDeclaration) {
-    // DiePriority is monotonically decreasing, so a relaxed read that is
-    // <= our priority means we definitely cannot win.
+    // DiePriority only ever decreases, so a relaxed read that is <= our
+    // priority means we definitely cannot win.
     if (Priority >= TypeDescriptor->DiePriority.load(std::memory_order_relaxed))
       return nullptr;
   } else {
@@ -1453,12 +1453,12 @@ DIE *CompileUnit::allocateTypeDie(TypeEntryBody *TypeDescriptor,
 
   if (!IsDeclaration && !IsParentDeclaration) {
     // Definition: lowest priority wins.
-    if (Priority < TypeDescriptor->DiePriority) {
-      TypeDescriptor->DiePriority = Priority;
+    if (Priority < TypeDescriptor->DiePriority.load(std::memory_order_relaxed)) {
+      TypeDescriptor->DiePriority.store(Priority, std::memory_order_relaxed);
       Result = TypeDIEGenerator.createDIE(DieTag, 0);
-      TypeDescriptor->Die = Result;
+      TypeDescriptor->Die.store(Result, std::memory_order_relaxed);
     }
-  } else if (!TypeDescriptor->Die.load()) {
+  } else if (!TypeDescriptor->Die.load(std::memory_order_relaxed)) {
     // Declaration (no definition exists yet).
     // Prefer declarations whose parent is a definition (better context);
     // break ties by CU priority (lower wins).
@@ -1471,7 +1471,7 @@ DIE *CompileUnit::allocateTypeDie(TypeEntryBody *TypeDescriptor,
       TypeDescriptor->DeclarationDiePriority = Priority;
       TypeDescriptor->DeclarationParentIsDeclaration = IsParentDeclaration;
       Result = TypeDIEGenerator.createDIE(DieTag, 0);
-      TypeDescriptor->DeclarationDie = Result;
+      TypeDescriptor->DeclarationDie.store(Result, std::memory_order_relaxed);
     }
   }
 
