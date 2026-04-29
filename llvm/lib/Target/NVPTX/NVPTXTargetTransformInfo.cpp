@@ -215,27 +215,27 @@ static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
     case Intrinsic::nvvm_fmax:
       return {Intrinsic::maximumnum,
               ScalarTy->isDoubleTy() ? FTZ_Any : FTZ_MustBeOff,
-              ScalarTy->isHalfTy()};
+              ScalarTy->isHalfTy() || ScalarTy->isBFloatTy()};
     case Intrinsic::nvvm_fmax_ftz:
-      return {Intrinsic::maximumnum, FTZ_MustBeOn, ScalarTy->isHalfTy()};
+      return {Intrinsic::maximumnum, FTZ_MustBeOn, ScalarTy->isHalfTy() || ScalarTy->isBFloatTy()};
     case Intrinsic::nvvm_fmax_nan:
       return {Intrinsic::maximum,
               ScalarTy->isDoubleTy() ? FTZ_Any : FTZ_MustBeOff,
-              ScalarTy->isHalfTy()};
+              ScalarTy->isHalfTy() || ScalarTy->isBFloatTy()};
     case Intrinsic::nvvm_fmax_ftz_nan:
-      return {Intrinsic::maximum, FTZ_MustBeOn, ScalarTy->isHalfTy()};
+      return {Intrinsic::maximum, FTZ_MustBeOn, ScalarTy->isHalfTy() || ScalarTy->isBFloatTy()};
     case Intrinsic::nvvm_fmin:
       return {Intrinsic::minimumnum,
               ScalarTy->isDoubleTy() ? FTZ_Any : FTZ_MustBeOff,
-              ScalarTy->isHalfTy()};
+              ScalarTy->isHalfTy() || ScalarTy->isBFloatTy()};
     case Intrinsic::nvvm_fmin_ftz:
-      return {Intrinsic::minimumnum, FTZ_MustBeOn, ScalarTy->isHalfTy()};
+      return {Intrinsic::minimumnum, FTZ_MustBeOn, ScalarTy->isHalfTy() || ScalarTy->isBFloatTy()};
     case Intrinsic::nvvm_fmin_nan:
       return {Intrinsic::minimum,
               ScalarTy->isDoubleTy() ? FTZ_Any : FTZ_MustBeOff,
-              ScalarTy->isHalfTy()};
+              ScalarTy->isHalfTy() || ScalarTy->isBFloatTy()};
     case Intrinsic::nvvm_fmin_ftz_nan:
-      return {Intrinsic::minimum, FTZ_MustBeOn, ScalarTy->isHalfTy()};
+      return {Intrinsic::minimum, FTZ_MustBeOn, ScalarTy->isHalfTy() || ScalarTy->isBFloatTy()};
     case Intrinsic::nvvm_sqrt_rn_d:
       return {Intrinsic::sqrt, FTZ_Any};
     case Intrinsic::nvvm_sqrt_f:

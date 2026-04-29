@@ -1319,8 +1319,8 @@ public:
       if (auto Action =
               getIntrinsicAction(N->getConstantOperandVal(ConstIdx), VT))
         return *Action;
-    }
       [[fallthrough]];
+    }
     default:
       return getOperationAction(N->getOpcode(), VT);
     }
