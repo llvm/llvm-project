@@ -348,6 +348,8 @@ int Thread::join(ThreadReturnValue &retval) {
       return EDEADLK;
 
     // Do a best-effort check of concurrent/repeated join.
+    // This cmpxchg establishes exclusive joiner role by setting the joiner
+    // field iff there is no previous joiner
     ThreadAttributes *expected = nullptr;
     if (!attrib->joiner.compare_exchange_strong(expected, self.attrib,
                                                 cpp::MemoryOrder::ACQ_REL))
