@@ -1797,8 +1797,8 @@ TEST_F(VPUtilsTest, IsUniformAcrossVFsAndUFsForSingleScalarOpcodes) {
       new VPInstruction(VPInstruction::VScale, {}));
   EXPECT_TRUE(vputils::isUniformAcrossVFsAndUFs(VScale.get()));
 
-  std::unique_ptr<VPInstruction> EVL(new VPInstruction(
-      VPInstruction::ExplicitVectorLength, {&Plan.getVF()}));
+  std::unique_ptr<VPInstruction> EVL(
+      new VPInstruction(VPInstruction::ExplicitVectorLength, {&Plan.getVF()}));
   EXPECT_TRUE(vputils::isUniformAcrossVFsAndUFs(EVL.get()));
 }
 
