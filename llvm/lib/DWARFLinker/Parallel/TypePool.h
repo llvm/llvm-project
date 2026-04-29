@@ -62,15 +62,16 @@ public:
   // Keeps declaration die.
   std::atomic<DIE *> DeclarationDie = {nullptr};
 
-  // True if parent type die is declaration.
-  std::atomic<bool> ParentIsDeclaration = {true};
+  // True if the declaration winner's parent is itself a declaration.
+  bool DeclarationParentIsDeclaration = true;
 
   // Priority of the CU that set Die (lower wins, for deterministic output).
-  std::atomic<unsigned> DiePriority = {std::numeric_limits<unsigned>::max()};
+  // Atomic so it can be read outside the lock for a fast pre-check; the
+  // definitive comparison still happens under the spinlock.
+  std::atomic<uint64_t> DiePriority = {std::numeric_limits<uint64_t>::max()};
 
   // Priority of the CU that set DeclarationDie (lower wins).
-  std::atomic<unsigned> DeclarationDiePriority = {
-      std::numeric_limits<unsigned>::max()};
+  uint64_t DeclarationDiePriority = std::numeric_limits<uint64_t>::max();
 
   // Spinlock for deterministic type DIE allocation.
   std::atomic_flag Lock = {};

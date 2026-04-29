@@ -113,12 +113,9 @@ public:
 
   /// Set deterministic priority for type DIE allocation ordering.
   /// Lower priority values win when multiple CUs race to define the same type.
-  void setDeterministicPriority(unsigned ObjFileIdx, unsigned LocalIdx) {
-    assert(ObjFileIdx < (1u << 16) && LocalIdx < (1u << 16) &&
-           "priority encoding overflow");
-    DeterministicPriority = (ObjFileIdx << 16) | LocalIdx;
-  }
-  unsigned getDeterministicPriority() const { return DeterministicPriority; }
+  llvm::Error setPriority(uint64_t ObjFileIdx, uint64_t LocalIdx);
+
+  uint64_t getPriority() const { return Priority; }
 
   /// Load DIEs of input compilation unit. \returns true if input DIEs
   /// successfully loaded.
@@ -713,7 +710,7 @@ private:
   bool NoODR = true;
 
   /// Deterministic priority for type DIE allocation (lower wins).
-  unsigned DeterministicPriority = std::numeric_limits<unsigned>::max();
+  uint64_t Priority = std::numeric_limits<uint64_t>::max();
 
   /// The ranges in that map are the PC ranges for functions in this unit,
   /// associated with the PC offset to apply to the addresses to get

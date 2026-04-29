@@ -455,8 +455,10 @@ Error DWARFLinkerImpl::LinkContext::link(TypeUnit *ArtificialTypeUnit) {
 
   // Assign deterministic priorities to module CUs for type DIE allocation.
   unsigned LocalCUIdx = 0;
-  for (auto &Mod : ModulesCompileUnits)
-    Mod.Unit->setDeterministicPriority(ObjectFileIdx, LocalCUIdx++);
+  for (auto &Mod : ModulesCompileUnits) {
+    if (Error E = Mod.Unit->setPriority(ObjectFileIdx, LocalCUIdx++))
+      return E;
+  }
 
   // Link modules compile units first.
   parallelForEach(ModulesCompileUnits, [&](RefModuleUnit &RefModule) {
@@ -489,8 +491,9 @@ Error DWARFLinkerImpl::LinkContext::link(TypeUnit *ArtificialTypeUnit) {
       CompileUnits.emplace_back(std::make_unique<CompileUnit>(
           GlobalData, *OrigCU, UniqueUnitID.fetch_add(1), "", InputDWARFFile,
           getUnitForOffset, OrigCU->getFormParams(), getEndianness()));
-      CompileUnits.back()->setDeterministicPriority(ObjectFileIdx,
-                                                    LocalCUIdx++);
+      if (llvm::Error E =
+              CompileUnits.back()->setPriority(ObjectFileIdx, LocalCUIdx++))
+        return E;
 
       // Preload line table, as it can't be loaded asynchronously.
       CompileUnits.back()->loadLineTable();
@@ -1038,12 +1041,20 @@ void DWARFLinkerImpl::forEachOutputString(
         if (Patch.Die == nullptr)
           return;
 
+        TypeEntryBody *TypeEntry = Patch.TypeName->getValue().load();
+        if (&TypeEntry->getFinalDie() != Patch.Die)
+          return;
+
         StringHandler(StringDestinationKind::DebugStr, Patch.String);
       });
 
       OutSection.ListDebugTypeLineStrPatch.forEach(
           [&](DebugTypeLineStrPatch &Patch) {
             if (Patch.Die == nullptr)
+              return;
+
+            TypeEntryBody *TypeEntry = Patch.TypeName->getValue().load();
+            if (&TypeEntry->getFinalDie() != Patch.Die)
               return;
 
             StringHandler(StringDestinationKind::DebugStr, Patch.String);

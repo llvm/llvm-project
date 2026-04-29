@@ -233,6 +233,18 @@ StringEntry *CompileUnit::getFileName(unsigned FileIdx,
   return nullptr;
 }
 
+llvm::Error CompileUnit::setPriority(uint64_t ObjFileIdx, uint64_t LocalIdx) {
+  if (ObjFileIdx >= std::numeric_limits<uint32_t>::max())
+    return llvm::createStringError("cannot compute priority when number of "
+                                   "object files excteeds UIN32_MAX");
+  if (LocalIdx >= std::numeric_limits<uint32_t>::max())
+    return llvm::createStringError("cannot compute priority when number of "
+                                   "local index excteeds UIN32_MAX");
+
+  Priority = (ObjFileIdx << 32) | LocalIdx;
+  return llvm::Error::success();
+}
+
 void CompileUnit::cleanupDataAfterClonning() {
   AbbreviationsSet.clear();
   ResolvedFullPaths.shrink_and_clear();
@@ -1419,15 +1431,20 @@ DIE *CompileUnit::allocateTypeDie(TypeEntryBody *TypeDescriptor,
                                   DIEGenerator &TypeDIEGenerator,
                                   dwarf::Tag DieTag, bool IsDeclaration,
                                   bool IsParentDeclaration) {
-  // Use a per-type spinlock and CU priority to ensure the earliest CU in link
-  // order always wins the type slot, producing deterministic output regardless
-  // of thread scheduling.
-  unsigned Priority = getDeterministicPriority();
+  uint64_t Priority = getPriority();
 
-  // Speculatively allocate the DIE outside the lock so the critical section
-  // only covers the priority check and pointer store. If we lose, the DIE
-  // is leaked into the bump allocator.
-  DIE *NewDie = TypeDIEGenerator.createDIE(DieTag, 0);
+  // Lock-free pre-checks: skip the lock (and downstream cloning) when this CU
+  // has no chance of winning the type slot.
+  if (!IsDeclaration && !IsParentDeclaration) {
+    // DiePriority is monotonically decreasing, so a relaxed read that is
+    // <= our priority means we definitely cannot win.
+    if (Priority >= TypeDescriptor->DiePriority.load(std::memory_order_relaxed))
+      return nullptr;
+  } else {
+    // Once a definition exists the declaration slot is dead.
+    if (TypeDescriptor->Die.load(std::memory_order_relaxed))
+      return nullptr;
+  }
 
   while (TypeDescriptor->Lock.test_and_set(std::memory_order_acquire))
     ; // spin
@@ -1438,18 +1455,23 @@ DIE *CompileUnit::allocateTypeDie(TypeEntryBody *TypeDescriptor,
     // Definition: lowest priority wins.
     if (Priority < TypeDescriptor->DiePriority) {
       TypeDescriptor->DiePriority = Priority;
-      TypeDescriptor->Die = NewDie;
-      TypeDescriptor->ParentIsDeclaration = false;
-      Result = NewDie;
+      Result = TypeDIEGenerator.createDIE(DieTag, 0);
+      TypeDescriptor->Die = Result;
     }
   } else if (!TypeDescriptor->Die.load()) {
-    // Declaration (no definition exists yet): lowest priority wins.
-    if (Priority < TypeDescriptor->DeclarationDiePriority) {
+    // Declaration (no definition exists yet).
+    // Prefer declarations whose parent is a definition (better context);
+    // break ties by CU priority (lower wins).
+    bool WorseParent =
+        IsParentDeclaration && !TypeDescriptor->DeclarationParentIsDeclaration;
+    bool BetterParent =
+        !IsParentDeclaration && TypeDescriptor->DeclarationParentIsDeclaration;
+    if (!WorseParent &&
+        (BetterParent || Priority < TypeDescriptor->DeclarationDiePriority)) {
       TypeDescriptor->DeclarationDiePriority = Priority;
-      TypeDescriptor->DeclarationDie = NewDie;
-      if (!IsParentDeclaration)
-        TypeDescriptor->ParentIsDeclaration = false;
-      Result = NewDie;
+      TypeDescriptor->DeclarationParentIsDeclaration = IsParentDeclaration;
+      Result = TypeDIEGenerator.createDIE(DieTag, 0);
+      TypeDescriptor->DeclarationDie = Result;
     }
   }
 
