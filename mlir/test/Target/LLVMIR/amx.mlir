@@ -73,7 +73,7 @@ func.func @amx_tile_mulf_f16(
 }
 
 // CHECK-LABEL: define void @amx_tile_mulf_f8
-func.func @amx_tile_mulf_f8E4M3FN(
+func.func @amx_tile_mulf_f8(
     %matA: memref<?x?xf8E4M3FN>, %matB: memref<?x?xf8E5M2>, %idx: index,
     %out: memref<?x?xf32>)
 {
