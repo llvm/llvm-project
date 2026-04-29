@@ -393,6 +393,16 @@ inline bool FMinFMaxShouldFTZ(Intrinsic::ID IntrinsicID) {
   case Intrinsic::nvvm_fmin_ftz_nan_xorsign_abs:
   case Intrinsic::nvvm_fmin_ftz_xorsign_abs:
     return true;
+
+  case Intrinsic::nvvm_fmax:
+  case Intrinsic::nvvm_fmax_nan:
+  case Intrinsic::nvvm_fmax_nan_xorsign_abs:
+  case Intrinsic::nvvm_fmax_xorsign_abs:
+  case Intrinsic::nvvm_fmin:
+  case Intrinsic::nvvm_fmin_nan:
+  case Intrinsic::nvvm_fmin_nan_xorsign_abs:
+  case Intrinsic::nvvm_fmin_xorsign_abs:
+    return false;
   }
   llvm_unreachable("Checking FTZ flag for invalid fmin/fmax intrinsic");
 }
@@ -409,6 +419,16 @@ inline bool FMinFMaxPropagatesNaNs(Intrinsic::ID IntrinsicID) {
   case Intrinsic::nvvm_fmin_ftz_nan_xorsign_abs:
   case Intrinsic::nvvm_fmin_nan_xorsign_abs:
     return true;
+
+  case Intrinsic::nvvm_fmax:
+  case Intrinsic::nvvm_fmax_ftz:
+  case Intrinsic::nvvm_fmax_xorsign_abs:
+  case Intrinsic::nvvm_fmax_ftz_xorsign_abs:
+  case Intrinsic::nvvm_fmin:
+  case Intrinsic::nvvm_fmin_ftz:
+  case Intrinsic::nvvm_fmin_xorsign_abs:
+  case Intrinsic::nvvm_fmin_ftz_xorsign_abs:
+    return false;
   }
   llvm_unreachable("Checking NaN flag for invalid fmin/fmax intrinsic");
 }
@@ -425,6 +445,16 @@ inline bool FMinFMaxIsXorSignAbs(Intrinsic::ID IntrinsicID) {
   case Intrinsic::nvvm_fmin_nan_xorsign_abs:
   case Intrinsic::nvvm_fmin_xorsign_abs:
     return true;
+
+  case Intrinsic::nvvm_fmax:
+  case Intrinsic::nvvm_fmax_ftz:
+  case Intrinsic::nvvm_fmax_nan:
+  case Intrinsic::nvvm_fmax_ftz_nan:
+  case Intrinsic::nvvm_fmin:
+  case Intrinsic::nvvm_fmin_ftz:
+  case Intrinsic::nvvm_fmin_nan:
+  case Intrinsic::nvvm_fmin_ftz_nan:
+    return false;
   }
   llvm_unreachable("Checking XorSignAbs flag for invalid fmin/fmax intrinsic");
 }

@@ -179,6 +179,7 @@ static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
   // Try to generate a SimplifyAction describing how to replace our
   // IntrinsicInstr with target-generic LLVM IR.
   const SimplifyAction Action = [II, RetTy]() -> SimplifyAction {
+    Type *ScalarTy = RetTy->getScalarType();
     switch (II->getIntrinsicID()) {
     // NVVM intrinsics that map directly to LLVM intrinsics.
     case Intrinsic::nvvm_ceil_d:
@@ -212,21 +213,29 @@ static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
     case Intrinsic::nvvm_fma_rn_bf16x2:
       return {Intrinsic::fma, FTZ_MustBeOff, true};
     case Intrinsic::nvvm_fmax:
-      return {Intrinsic::maximumnum, FTZ_MustBeOff, RetTy->isHalfTy()};
+      return {Intrinsic::maximumnum,
+              ScalarTy->isDoubleTy() ? FTZ_Any : FTZ_MustBeOff,
+              ScalarTy->isHalfTy()};
     case Intrinsic::nvvm_fmax_ftz:
-      return {Intrinsic::maximumnum, FTZ_MustBeOn, RetTy->isHalfTy()};
+      return {Intrinsic::maximumnum, FTZ_MustBeOn, ScalarTy->isHalfTy()};
     case Intrinsic::nvvm_fmax_nan:
-      return {Intrinsic::maximum, FTZ_MustBeOff, RetTy->isHalfTy()};
+      return {Intrinsic::maximum,
+              ScalarTy->isDoubleTy() ? FTZ_Any : FTZ_MustBeOff,
+              ScalarTy->isHalfTy()};
     case Intrinsic::nvvm_fmax_ftz_nan:
-      return {Intrinsic::maximum, FTZ_MustBeOn, RetTy->isHalfTy()};
+      return {Intrinsic::maximum, FTZ_MustBeOn, ScalarTy->isHalfTy()};
     case Intrinsic::nvvm_fmin:
-      return {Intrinsic::minimumnum, FTZ_MustBeOff, RetTy->isHalfTy()};
+      return {Intrinsic::minimumnum,
+              ScalarTy->isDoubleTy() ? FTZ_Any : FTZ_MustBeOff,
+              ScalarTy->isHalfTy()};
     case Intrinsic::nvvm_fmin_ftz:
-      return {Intrinsic::minimumnum, FTZ_MustBeOn, RetTy->isHalfTy()};
+      return {Intrinsic::minimumnum, FTZ_MustBeOn, ScalarTy->isHalfTy()};
     case Intrinsic::nvvm_fmin_nan:
-      return {Intrinsic::minimum, FTZ_MustBeOff, RetTy->isHalfTy()};
+      return {Intrinsic::minimum,
+              ScalarTy->isDoubleTy() ? FTZ_Any : FTZ_MustBeOff,
+              ScalarTy->isHalfTy()};
     case Intrinsic::nvvm_fmin_ftz_nan:
-      return {Intrinsic::minimum, FTZ_MustBeOn, RetTy->isHalfTy()};
+      return {Intrinsic::minimum, FTZ_MustBeOn, ScalarTy->isHalfTy()};
     case Intrinsic::nvvm_sqrt_rn_d:
       return {Intrinsic::sqrt, FTZ_Any};
     case Intrinsic::nvvm_sqrt_f:
