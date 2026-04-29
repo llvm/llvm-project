@@ -19,6 +19,36 @@
 
 using namespace clang;
 
+const ModuleCacheDirectory *ModuleCache::getDirectoryPtr(StringRef Path) {
+  auto [ByNameIt, ByNameInserted] = ByPath.insert({Path, nullptr});
+  if (!ByNameIt->second) {
+    // This is a compiler-internal input/output, let's bypass the sandbox.
+    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+
+    // If we cannot get status of the module cache directory, try if trying to
+    // create it helps.
+    llvm::sys::fs::file_status Status;
+    if (std::error_code EC = llvm::sys::fs::status(Path, Status)) {
+      // Unless the status failed because the directory does not exist yet.
+      if (EC != std::errc::no_such_file_or_directory)
+        return nullptr;
+      // If we're unable to create the directory.
+      if (llvm::sys::fs::create_directories(Path))
+        return nullptr;
+      // If we're unable to stat the newly created directory.
+      if (llvm::sys::fs::status(Path, Status))
+        return nullptr;
+    }
+
+    llvm::sys::fs::UniqueID UID = Status.getUniqueID();
+    auto [ByUIDIt, ByUIDInserted] = ByUID.insert({UID, nullptr});
+    if (!ByUIDIt->second)
+      ByUIDIt->second = std::make_unique<ModuleCacheDirectory>();
+    ByNameIt->second = ByUIDIt->second.get();
+  }
+  return ByNameIt->second;
+}
+
 /// Write a new timestamp file with the given path.
 static void writeTimestampFile(StringRef TimestampFile) {
   std::error_code EC;

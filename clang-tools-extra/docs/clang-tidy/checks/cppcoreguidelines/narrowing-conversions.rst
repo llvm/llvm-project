@@ -1,6 +1,4 @@
 .. title:: clang-tidy - cppcoreguidelines-narrowing-conversions
-.. meta::
-   :http-equiv=refresh: 5;URL=../bugprone/narrowing-conversions.html
 
 cppcoreguidelines-narrowing-conversions
 =======================================

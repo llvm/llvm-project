@@ -3,7 +3,7 @@
 ; RUN: -force-vector-width=4 -disable-output 2>&1 < %s | FileCheck %s
 ; RUN: opt -passes=loop-vectorize -vplan-print-after=printOptimizedVPlan \
 ; RUN: -force-vector-width=4 -force-target-supports-masked-memory-ops \
-; RUN: -prefer-predicate-over-epilogue=predicate-dont-vectorize \
+; RUN: -tail-folding-policy=must-fold-tail \
 ; RUN: -disable-output 2>&1 < %s | FileCheck %s --check-prefix=CHECK-TF
 
 ; This function is derived from the following C program:

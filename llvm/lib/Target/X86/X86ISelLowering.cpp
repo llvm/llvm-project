@@ -4933,28 +4933,26 @@ static unsigned getTargetVShiftUniformOpcode(unsigned Opc, bool IsVariable) {
 static SDValue getTargetVShiftByConstNode(unsigned Opc, const SDLoc &dl, MVT VT,
                                           SDValue SrcOp, uint64_t ShiftAmt,
                                           SelectionDAG &DAG) {
-  MVT ElementType = VT.getVectorElementType();
+  assert(
+      (Opc == X86ISD::VSHLI || Opc == X86ISD::VSRLI || Opc == X86ISD::VSRAI) &&
+      "Unknown target vector shift-by-constant node");
 
   // Bitcast the source vector to the output type, this is mainly necessary for
   // vXi8/vXi64 shifts.
-  if (VT != SrcOp.getSimpleValueType())
-    SrcOp = DAG.getBitcast(VT, SrcOp);
+  SrcOp = DAG.getBitcast(VT, SrcOp);
 
   // Fold this packed shift into its first operand if ShiftAmt is 0.
   if (ShiftAmt == 0)
     return SrcOp;
 
   // Check for ShiftAmt >= element width
-  if (ShiftAmt >= ElementType.getSizeInBits()) {
+  unsigned EltSizeInBits = VT.getScalarSizeInBits();
+  if (ShiftAmt >= EltSizeInBits) {
     if (Opc == X86ISD::VSRAI)
-      ShiftAmt = ElementType.getSizeInBits() - 1;
+      ShiftAmt = EltSizeInBits - 1;
     else
       return DAG.getConstant(0, dl, VT);
   }
-
-  assert(
-      (Opc == X86ISD::VSHLI || Opc == X86ISD::VSRLI || Opc == X86ISD::VSRAI) &&
-      "Unknown target vector shift-by-constant node");
 
   // Fold this packed vector shift into a build vector if SrcOp is a
   // vector of Constants or UNDEFs.
@@ -5406,11 +5404,13 @@ static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
       return true;
     }
     if (auto *CInt = dyn_cast<ConstantInt>(Cst)) {
-      Mask = CInt->getValue();
+      Mask = APInt::getSplat(CInt->getType()->getPrimitiveSizeInBits(),
+                             CInt->getValue());
       return true;
     }
     if (auto *CFP = dyn_cast<ConstantFP>(Cst)) {
-      Mask = CFP->getValueAPF().bitcastToAPInt();
+      Mask = APInt::getSplat(CFP->getType()->getPrimitiveSizeInBits(),
+                             CFP->getValueAPF().bitcastToAPInt());
       return true;
     }
     if (auto *CDS = dyn_cast<ConstantDataSequential>(Cst)) {
@@ -7083,7 +7083,7 @@ static void resolveTargetShuffleInputsAndMask(SmallVectorImpl<SDValue> &Inputs,
     // Check for repeated inputs.
     bool IsRepeat = false;
     for (int j = 0, ue = UsedInputs.size(); j != ue; ++j) {
-      if (UsedInputs[j] != Inputs[i])
+      if (peekThroughBitcasts(UsedInputs[j]) != peekThroughBitcasts(Inputs[i]))
         continue;
       for (int &M : Mask)
         if (lo <= M)
@@ -11339,15 +11339,8 @@ static SDValue lowerShuffleAsVTRUNC(const SDLoc &DL, MVT VT, SDValue V1,
 
       MVT SrcSVT = MVT::getIntegerVT(SrcEltBits);
       MVT SrcVT = MVT::getVectorVT(SrcSVT, NumSrcElts);
-      Src = DAG.getBitcast(SrcVT, Src);
-
-      // Shift the offset'd elements into place for the truncation.
-      // TODO: Use getTargetVShiftByConstNode.
-      if (Offset)
-        Src = DAG.getNode(
-            X86ISD::VSRLI, DL, SrcVT, Src,
-            DAG.getTargetConstant(Offset * EltSizeInBits, DL, MVT::i8));
-
+      Src = getTargetVShiftByConstNode(X86ISD::VSRLI, DL, SrcVT, Src,
+                                       Offset * EltSizeInBits, DAG);
       return getAVX512TruncNode(DL, VT, Src, Subtarget, DAG, !UndefUppers);
     }
   }
@@ -12400,14 +12393,12 @@ static SDValue lowerShuffleAsBitRotate(const SDLoc &DL, MVT VT, SDValue V1,
   if (!IsLegal) {
     if ((RotateAmt % 16) == 0)
       return SDValue();
-    // TODO: Use getTargetVShiftByConstNode.
     unsigned ShlAmt = RotateAmt;
     unsigned SrlAmt = RotateVT.getScalarSizeInBits() - RotateAmt;
-    V1 = DAG.getBitcast(RotateVT, V1);
-    SDValue SHL = DAG.getNode(X86ISD::VSHLI, DL, RotateVT, V1,
-                              DAG.getTargetConstant(ShlAmt, DL, MVT::i8));
-    SDValue SRL = DAG.getNode(X86ISD::VSRLI, DL, RotateVT, V1,
-                              DAG.getTargetConstant(SrlAmt, DL, MVT::i8));
+    SDValue SHL = getTargetVShiftByConstNode(X86ISD::VSHLI, DL, RotateVT, V1,
+                                             ShlAmt, DAG);
+    SDValue SRL = getTargetVShiftByConstNode(X86ISD::VSRLI, DL, RotateVT, V1,
+                                             SrlAmt, DAG);
     SDValue Rot = DAG.getNode(ISD::OR, DL, RotateVT, SHL, SRL);
     return DAG.getBitcast(VT, Rot);
   }
@@ -13303,6 +13294,12 @@ static bool isSoftF16(T VT, const X86Subtarget &Subtarget) {
   T EltVT = VT.getScalarType();
   return (EltVT == MVT::bf16 && !Subtarget.hasAVX10_2()) ||
          (EltVT == MVT::f16 && !Subtarget.hasFP16());
+}
+
+template<typename T>
+static bool isBF16orSoftF16(T VT, const X86Subtarget &Subtarget) {
+  T EltVT = VT.getScalarType();
+  return EltVT == MVT::bf16 || (EltVT == MVT::f16 && !Subtarget.hasFP16());
 }
 
 /// Try to lower insertion of a single element into a zero vector.
@@ -20786,7 +20783,7 @@ SDValue X86TargetLowering::LowerSINT_TO_FP(SDValue Op,
   MVT VT = Op.getSimpleValueType();
   SDLoc dl(Op);
 
-  if (isSoftF16(VT, Subtarget))
+  if (isBF16orSoftF16(VT, Subtarget))
     return promoteXINT_TO_FP(Op, dl, DAG);
   else if (isLegalConversion(SrcVT, VT, true, Subtarget))
     return Op;
@@ -21296,7 +21293,7 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
   if (DstVT == MVT::f128)
     return SDValue();
 
-  if (isSoftF16(DstVT, Subtarget))
+  if (isBF16orSoftF16(DstVT, Subtarget))
     return promoteXINT_TO_FP(Op, dl, DAG);
   else if (isLegalConversion(SrcVT, DstVT, false, Subtarget))
     return Op;
@@ -22296,9 +22293,8 @@ static SDValue expandFP_TO_UINT_SSE(MVT VT, SDValue Src, const SDLoc &dl,
     return DAG.getNode(X86ISD::BLENDV, dl, VT, Small, Overflow, Small);
   }
 
-  SDValue IsOverflown =
-      DAG.getNode(X86ISD::VSRAI, dl, VT, Small,
-                  DAG.getTargetConstant(DstBits - 1, dl, MVT::i8));
+  SDValue IsOverflown = getTargetVShiftByConstNode(X86ISD::VSRAI, dl, VT, Small,
+                                                   DstBits - 1, DAG);
   return DAG.getNode(ISD::OR, dl, VT, Small,
                      DAG.getNode(ISD::AND, dl, VT, Big, IsOverflown));
 }
@@ -22315,7 +22311,7 @@ SDValue X86TargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const {
   SDLoc dl(Op);
 
   SDValue Res;
-  if (isSoftF16(SrcVT, Subtarget)) {
+  if (isBF16orSoftF16(SrcVT, Subtarget)) {
     MVT NVT = VT.isVector() ? VT.changeVectorElementType(MVT::f32) : MVT::f32;
     if (IsStrict)
       return DAG.getNode(Op.getOpcode(), dl, {VT, MVT::Other},
@@ -22762,7 +22758,7 @@ X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
 
   // This code is only for floats and doubles. Fall back to generic code for
   // anything else.
-  if (!isScalarFPTypeInSSEReg(SrcVT) || isSoftF16(SrcVT, Subtarget))
+  if (!isScalarFPTypeInSSEReg(SrcVT) || isBF16orSoftF16(SrcVT, Subtarget))
     return SDValue();
 
   EVT SatVT = cast<VTSDNode>(Node->getOperand(1))->getVT();
@@ -26140,8 +26136,8 @@ static SDValue LowerEXTEND_VECTOR_INREG(SDValue Op,
     Curr = DAG.getBitcast(DestVT, Curr);
 
     unsigned SignExtShift = DestWidth - InSVT.getSizeInBits();
-    SignExt = DAG.getNode(X86ISD::VSRAI, dl, DestVT, Curr,
-                          DAG.getTargetConstant(SignExtShift, dl, MVT::i8));
+    SignExt = getTargetVShiftByConstNode(X86ISD::VSRAI, dl, DestVT, Curr,
+                                         SignExtShift, DAG);
   }
 
   if (VT == MVT::v2i64) {
@@ -28223,7 +28219,7 @@ bool X86::isExtendedSwiftAsyncFrameSupported(const X86Subtarget &Subtarget,
     return false;
   // 64-bit targets support extended Swift async frame setup,
   // except for targets that use the windows 64 prologue.
-  return !MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
+  return !MF.getTarget().getMCAsmInfo().usesWindowsCFI();
 }
 
 static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
@@ -28770,7 +28766,7 @@ SDValue X86TargetLowering::LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const {
 
   MFI.setFrameAddressIsTaken(true);
 
-  if (MF.getTarget().getMCAsmInfo()->usesWindowsCFI()) {
+  if (MF.getTarget().getMCAsmInfo().usesWindowsCFI()) {
     // Depth > 0 makes no sense on targets which use Windows unwind codes.  It
     // is not possible to crawl up the stack without looking at the unwind codes
     // simultaneously.
@@ -32567,68 +32563,168 @@ void X86TargetLowering::emitBitTestAtomicRMWIntrinsic(AtomicRMWInst *AI) const {
   AI->eraseFromParent();
 }
 
-static bool shouldExpandCmpArithRMWInIR(const AtomicRMWInst *AI) {
+static X86::CondCode matchSignedNewValueCC(const Instruction *I) {
   using namespace llvm::PatternMatch;
-  if (!AI->hasOneUse())
-    return false;
+  if (match(I->user_back(),
+            m_SpecificICmp(CmpInst::ICMP_SLT, m_Value(), m_ZeroInt())))
+    return X86::COND_S;
+  if (match(I->user_back(),
+            m_SpecificICmp(CmpInst::ICMP_SGT, m_Value(), m_AllOnes())))
+    return X86::COND_NS;
+  return X86::COND_INVALID;
+}
 
+static X86::CondCode matchAddCC(const AtomicRMWInst *AI, const Instruction *I) {
+  using namespace llvm::PatternMatch;
   Value *Op = AI->getOperand(1);
   CmpPredicate Pred;
-  const Instruction *I = AI->user_back();
-  AtomicRMWInst::BinOp Opc = AI->getOperation();
-  if (Opc == AtomicRMWInst::Add) {
-    if (match(I, m_c_ICmp(Pred, m_Sub(m_ZeroInt(), m_Specific(Op)), m_Value())))
-      return Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE;
-    if (match(I, m_OneUse(m_c_Add(m_Specific(Op), m_Value())))) {
-      if (match(I->user_back(),
-                m_SpecificICmp(CmpInst::ICMP_SLT, m_Value(), m_ZeroInt())))
-        return true;
-      if (match(I->user_back(),
-                m_SpecificICmp(CmpInst::ICMP_SGT, m_Value(), m_AllOnes())))
-        return true;
-    }
-    return false;
-  }
-  if (Opc == AtomicRMWInst::Sub) {
-    if (match(I, m_c_ICmp(Pred, m_Specific(Op), m_Value())))
-      return Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE;
-    if (match(I, m_OneUse(m_Sub(m_Value(), m_Specific(Op))))) {
-      if (match(I->user_back(),
-                m_SpecificICmp(CmpInst::ICMP_SLT, m_Value(), m_ZeroInt())))
-        return true;
-      if (match(I->user_back(),
-                m_SpecificICmp(CmpInst::ICMP_SGT, m_Value(), m_AllOnes())))
-        return true;
-    }
-    return false;
-  }
-  if ((Opc == AtomicRMWInst::Or &&
-       match(I, m_OneUse(m_c_Or(m_Specific(Op), m_Value())))) ||
-      (Opc == AtomicRMWInst::And &&
-       match(I, m_OneUse(m_c_And(m_Specific(Op), m_Value()))))) {
-    if (match(I->user_back(), m_ICmp(Pred, m_Value(), m_ZeroInt())))
-      return Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE ||
-             Pred == CmpInst::ICMP_SLT;
-    if (match(I->user_back(),
-              m_SpecificICmp(CmpInst::ICMP_SGT, m_Value(), m_AllOnes())))
-      return true;
-    return false;
-  }
-  if (Opc == AtomicRMWInst::Xor) {
-    if (match(I, m_c_ICmp(Pred, m_Specific(Op), m_Value())))
-      return Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE;
-    if (match(I, m_OneUse(m_c_Xor(m_Specific(Op), m_Value())))) {
-      if (match(I->user_back(),
-                m_SpecificICmp(CmpInst::ICMP_SLT, m_Value(), m_ZeroInt())))
-        return true;
-      if (match(I->user_back(),
-                m_SpecificICmp(CmpInst::ICMP_SGT, m_Value(), m_AllOnes())))
-        return true;
-    }
-    return false;
+
+  // Folded from icmp eq/ne (old + Op), 0 to icmp eq/ne old, -Op.
+  if (match(I, m_c_ICmp(Pred, m_Neg(m_Specific(Op)), m_Value()))) {
+    if (Pred == CmpInst::ICMP_EQ)
+      return X86::COND_E;
+    if (Pred == CmpInst::ICMP_NE)
+      return X86::COND_NE;
   }
 
-  return false;
+  // Non-folded SF form: %new = add %old, Op; icmp slt/sgt %new, 0/-1
+  // lock add sets SF on the new value directly.
+  if (match(I, m_OneUse(m_c_Add(m_Specific(Op), m_Value()))))
+    return matchSignedNewValueCC(I);
+
+  return X86::COND_INVALID;
+}
+
+static X86::CondCode matchSubCC(const AtomicRMWInst *AI, const Instruction *I) {
+  using namespace llvm::PatternMatch;
+  Value *Op = AI->getOperand(1);
+  CmpPredicate Pred;
+
+  // Folded from icmp eq/ne (old - Op), 0 to icmp eq/ne old, Op.
+  if (match(I, m_c_ICmp(Pred, m_Specific(Op), m_Value()))) {
+    if (Pred == CmpInst::ICMP_EQ)
+      return X86::COND_E;
+    if (Pred == CmpInst::ICMP_NE)
+      return X86::COND_NE;
+  }
+
+  // Non-folded SF form: %new = sub %old, Op; icmp slt/sgt %new, 0/-1
+  // lock sub sets SF on the new value directly.
+  if (match(I, m_OneUse(m_Sub(m_Value(), m_Specific(Op)))))
+    return matchSignedNewValueCC(I);
+
+  return X86::COND_INVALID;
+}
+
+static X86::CondCode matchOrCC(const AtomicRMWInst *AI, const Instruction *I) {
+  using namespace llvm::PatternMatch;
+  Value *Op = AI->getOperand(1);
+  CmpPredicate Pred;
+
+  // Non-folded form: %new = or %old, Op; icmp P %new, 0/-1
+  // lock or sets ZF/SF on the new value directly.
+  if (!match(I, m_OneUse(m_c_Or(m_Specific(Op), m_Value()))))
+    return X86::COND_INVALID;
+
+  if (match(I->user_back(), m_ICmp(Pred, m_Value(), m_ZeroInt()))) {
+    if (Pred == CmpInst::ICMP_EQ)
+      return X86::COND_E;
+    if (Pred == CmpInst::ICMP_NE)
+      return X86::COND_NE;
+    if (Pred == CmpInst::ICMP_SLT)
+      return X86::COND_S;
+  }
+  if (match(I->user_back(),
+            m_SpecificICmp(CmpInst::ICMP_SGT, m_Value(), m_AllOnes())))
+    return X86::COND_NS;
+
+  return X86::COND_INVALID;
+}
+
+static X86::CondCode matchAndCC(const AtomicRMWInst *AI, const Instruction *I) {
+  using namespace llvm::PatternMatch;
+  Value *Op = AI->getOperand(1);
+  CmpPredicate Pred;
+
+  // Non-folded form: %new = and %old, Op; icmp P %new, 0/-1
+  // lock and sets ZF/SF on the new value directly.
+  if (match(I, m_OneUse(m_c_And(m_Specific(Op), m_Value())))) {
+    if (match(I->user_back(), m_ICmp(Pred, m_Value(), m_ZeroInt()))) {
+      if (Pred == CmpInst::ICMP_EQ)
+        return X86::COND_E;
+      if (Pred == CmpInst::ICMP_NE)
+        return X86::COND_NE;
+      if (Pred == CmpInst::ICMP_SLT)
+        return X86::COND_S;
+    }
+    if (match(I->user_back(),
+              m_SpecificICmp(CmpInst::ICMP_SGT, m_Value(), m_AllOnes())))
+      return X86::COND_NS;
+    return X86::COND_INVALID;
+  }
+
+  // If -C is a power of 2:
+  //   (old & C) == 0 <=> old ult -C
+  //   (old & C) != 0 <=> old ugt ~C
+  auto *CI = dyn_cast<ConstantInt>(Op);
+  if (!CI)
+    return X86::COND_INVALID;
+  const APInt &C = CI->getValue();
+  const APInt *K;
+  if (!(-C).isPowerOf2() ||
+      !match(I, m_c_ICmp(Pred, m_Specific(AI), m_APInt(K))))
+    return X86::COND_INVALID;
+  if (Pred == ICmpInst::ICMP_ULT && *K == -C)
+    return X86::COND_E;
+  if (Pred == ICmpInst::ICMP_UGT && *K == ~C)
+    return X86::COND_NE;
+  return X86::COND_INVALID;
+}
+
+static X86::CondCode matchXorCC(const AtomicRMWInst *AI, const Instruction *I) {
+  using namespace llvm::PatternMatch;
+  Value *Op = AI->getOperand(1);
+  CmpPredicate Pred;
+
+  // Folded from icmp eq/ne (old ^ Op), 0 to icmp eq/ne old, Op.
+  if (match(I, m_c_ICmp(Pred, m_Specific(Op), m_Value()))) {
+    if (Pred == CmpInst::ICMP_EQ)
+      return X86::COND_E;
+    if (Pred == CmpInst::ICMP_NE)
+      return X86::COND_NE;
+  }
+
+  // Non-folded SF form: %new = xor %old, Op; icmp slt/sgt %new, 0/-1
+  // lock xor sets SF on the new value directly.
+  if (match(I, m_OneUse(m_c_Xor(m_Specific(Op), m_Value()))))
+    return matchSignedNewValueCC(I);
+
+  return X86::COND_INVALID;
+}
+
+static X86::CondCode getCmpArithCC(const AtomicRMWInst *AI) {
+  if (!AI->hasOneUse())
+    return X86::COND_INVALID;
+
+  const Instruction *I = AI->user_back();
+  switch (AI->getOperation()) {
+  case AtomicRMWInst::Add:
+    return matchAddCC(AI, I);
+  case AtomicRMWInst::Sub:
+    return matchSubCC(AI, I);
+  case AtomicRMWInst::Or:
+    return matchOrCC(AI, I);
+  case AtomicRMWInst::And:
+    return matchAndCC(AI, I);
+  case AtomicRMWInst::Xor:
+    return matchXorCC(AI, I);
+  default:
+    return X86::COND_INVALID;
+  }
+}
+
+static bool shouldExpandCmpArithRMWInIR(const AtomicRMWInst *AI) {
+  return getCmpArithCC(AI) != X86::COND_INVALID;
 }
 
 void X86TargetLowering::emitCmpArithAtomicRMWIntrinsic(
@@ -32643,24 +32739,9 @@ void X86TargetLowering::emitCmpArithAtomicRMWIntrinsic(
     assert(TempI->hasOneUse() && "Must have one use");
     ICI = cast<ICmpInst>(TempI->user_back());
   }
-  X86::CondCode CC = X86::COND_INVALID;
-  ICmpInst::Predicate Pred = ICI->getPredicate();
-  switch (Pred) {
-  default:
-    llvm_unreachable("Not supported Pred");
-  case CmpInst::ICMP_EQ:
-    CC = X86::COND_E;
-    break;
-  case CmpInst::ICMP_NE:
-    CC = X86::COND_NE;
-    break;
-  case CmpInst::ICMP_SLT:
-    CC = X86::COND_S;
-    break;
-  case CmpInst::ICMP_SGT:
-    CC = X86::COND_NS;
-    break;
-  }
+  X86::CondCode CC = getCmpArithCC(AI);
+  assert(CC != X86::COND_INVALID && "emitCmpArithAtomicRMWIntrinsic called "
+                                    "without a recognised pattern");
   Intrinsic::ID IID = Intrinsic::not_intrinsic;
   switch (AI->getOperation()) {
   default:
@@ -35138,7 +35219,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     EVT SrcVT = Src.getValueType();
 
     SDValue Res;
-    if (isSoftF16(SrcVT, Subtarget)) {
+    if (isBF16orSoftF16(SrcVT, Subtarget)) {
       EVT NVT = VT.changeElementType(*DAG.getContext(), MVT::f32);
       if (IsStrict) {
         Res =
@@ -39392,6 +39473,14 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
   case X86ISD::MOVQ2DQ: {
     // Move from MMX to XMM. Upper half of XMM should be 0.
     if (DemandedElts.countr_zero() >= (NumElts / 2))
+      Known.setAllZero();
+    break;
+  }
+  case X86ISD::VZEXT_LOAD: {
+    // Upper elements are known zero.
+    auto *LN = cast<MemIntrinsicSDNode>(Op);
+    if (!DemandedElts[0] &&
+        LN->getMemoryVT().getSizeInBits() == VT.getScalarSizeInBits())
       Known.setAllZero();
     break;
   }
@@ -45755,6 +45844,10 @@ bool X86TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
   case X86ISD::GlobalBaseReg:
   case X86ISD::Wrapper:
   case X86ISD::WrapperRIP:
+  // SETCC/SETCC_CARRY always produces a well-defined result based on
+  // EFLAGS/carry flag.
+  case X86ISD::SETCC:
+  case X86ISD::SETCC_CARRY:
     return true;
   case X86ISD::PACKSS:
   case X86ISD::PACKUS: {
@@ -51970,9 +52063,9 @@ static SDValue combineAndMaskToShift(SDNode *N, const SDLoc &DL,
   if (EltBitWidth != DAG.ComputeNumSignBits(Op0))
     return SDValue();
 
-  unsigned ShiftVal = SplatVal.countr_one();
-  SDValue ShAmt = DAG.getTargetConstant(EltBitWidth - ShiftVal, DL, MVT::i8);
-  SDValue Shift = DAG.getNode(X86ISD::VSRLI, DL, VT, Op0, ShAmt);
+  unsigned ShiftVal = EltBitWidth - SplatVal.countr_one();
+  SDValue Shift = getTargetVShiftByConstNode(
+      X86ISD::VSRLI, DL, VT.getSimpleVT(), Op0, ShiftVal, DAG);
   return DAG.getBitcast(N->getValueType(0), Shift);
 }
 
@@ -55616,7 +55709,8 @@ static SDValue combineVTRUNC(SDNode *N, SelectionDAG &DAG,
 }
 
 static SDValue combineVTRUNCSAT(SDNode *N, SelectionDAG &DAG,
-                                TargetLowering::DAGCombinerInfo &DCI) {
+                                TargetLowering::DAGCombinerInfo &DCI,
+                                const X86Subtarget &Subtarget) {
   using namespace SDPatternMatch;
   unsigned Opc = N->getOpcode();
   EVT VT = N->getValueType(0);
@@ -55635,7 +55729,17 @@ static SDValue combineVTRUNCSAT(SDNode *N, SelectionDAG &DAG,
       (EltSizeInBits * 2) == Src.getScalarValueSizeInBits() &&
       isFreeToSplitVector(Src, DAG)) {
     SDLoc DL(N);
-    auto [LHS, RHS] = splitVector(Src, DAG, DL);
+    SDValue LHS, RHS;
+    if (Src.getValueSizeInBits() == VT.getSizeInBits()) {
+      assert(VT.is128BitVector() && "128-bit VTRUNC source expected");
+      LHS = Src;
+      RHS = getZeroVector(Src.getSimpleValueType(), Subtarget, DAG, DL);
+    } else {
+      std::tie(LHS, RHS) = splitVector(Src, DAG, DL);
+    }
+    assert(LHS.getValueSizeInBits() == VT.getSizeInBits() &&
+           RHS.getValueSizeInBits() == VT.getSizeInBits() &&
+           "PACK src/dst size mismatch");
     unsigned PackOpc = Opc == X86ISD::VTRUNCS ? X86ISD::PACKSS : X86ISD::PACKUS;
     SDValue Pack = DAG.getNode(PackOpc, DL, VT, LHS, RHS);
     if (VT.is128BitVector())
@@ -61845,28 +61949,50 @@ static SDValue combineEXTEND_VECTOR_INREG(SDNode *N, SelectionDAG &DAG,
 static SDValue combineKSHIFT(SDNode *N, SelectionDAG &DAG,
                              TargetLowering::DAGCombinerInfo &DCI) {
   EVT VT = N->getValueType(0);
+  SDValue Src = N->getOperand(0);
+  uint64_t Amt = N->getConstantOperandVal(1);
+  unsigned Opcode = N->getOpcode();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  if (ISD::isBuildVectorAllZeros(N->getOperand(0).getNode()))
-    return DAG.getConstant(0, SDLoc(N), VT);
+  SDLoc DL(N);
+
+  if (ISD::isBuildVectorAllZeros(Src.getNode()))
+    return DAG.getConstant(0, DL, VT);
+
+  // Constant Fold.
+  if (auto *SrcC = dyn_cast<ConstantSDNode>(peekThroughBitcasts(Src))) {
+    APInt NewCst = Opcode == X86ISD::KSHIFTR ? SrcC->getAPIntValue().lshr(Amt)
+                                             : SrcC->getAPIntValue().shl(Amt);
+    return DAG.getBitcast(VT,
+                          DAG.getConstant(NewCst, DL, SrcC->getValueType(0)));
+  }
 
   // Fold kshiftr(extract_subvector(X,C1),C2)
   //  --> extract_subvector(kshiftr(X,C1+C2),0)
   // Fold kshiftr(kshiftr(X,C1),C2) --> kshiftr(X,C1+C2)
-  if (N->getOpcode() == X86ISD::KSHIFTR) {
-    SDLoc DL(N);
-    if (N->getOperand(0).getOpcode() == ISD::EXTRACT_SUBVECTOR ||
-        N->getOperand(0).getOpcode() == X86ISD::KSHIFTR) {
-      SDValue Src = N->getOperand(0).getOperand(0);
-      uint64_t Amt = N->getConstantOperandVal(1) +
-                     N->getOperand(0).getConstantOperandVal(1);
-      EVT SrcVT = Src.getValueType();
-      if (TLI.isTypeLegal(SrcVT) && Amt < SrcVT.getVectorNumElements()) {
-        SDValue Shift = DAG.getNode(X86ISD::KSHIFTR, DL, SrcVT, Src,
-                                    DAG.getTargetConstant(Amt, DL, MVT::i8));
+  if (Opcode == X86ISD::KSHIFTR) {
+    if (Src.getOpcode() == ISD::EXTRACT_SUBVECTOR ||
+        Src.getOpcode() == X86ISD::KSHIFTR) {
+      SDValue Inner = Src.getOperand(0);
+      EVT InnerVT = Inner.getValueType();
+      uint64_t NewAmt = Amt + Src.getConstantOperandVal(1);
+      if (TLI.isTypeLegal(InnerVT) && NewAmt < InnerVT.getVectorNumElements()) {
+        SDValue Shift = DAG.getNode(X86ISD::KSHIFTR, DL, InnerVT, Inner,
+                                    DAG.getTargetConstant(NewAmt, DL, MVT::i8));
         return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Shift,
                            DAG.getVectorIdxConstant(0, DL));
       }
     }
+  }
+
+  // Fold kshift(logicop(X,C1),C2)
+  //  --> logicop(kshift(X,C2),kshift(C1,C2))
+  if (ISD::isBitwiseLogicOp(Src.getOpcode()) &&
+      isa<ConstantSDNode>(peekThroughBitcasts(Src.getOperand(1)))) {
+    SDValue LHS =
+        DAG.getNode(Opcode, DL, VT, Src.getOperand(0), N->getOperand(1));
+    SDValue RHS =
+        DAG.getNode(Opcode, DL, VT, Src.getOperand(1), N->getOperand(1));
+    return DAG.getNode(Src.getOpcode(), DL, VT, LHS, RHS);
   }
 
   APInt DemandedElts = APInt::getAllOnes(VT.getVectorNumElements());
@@ -62356,7 +62482,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::TRUNCATE:       return combineTruncate(N, DAG, Subtarget);
   case X86ISD::VTRUNC:      return combineVTRUNC(N, DAG, DCI);
   case X86ISD::VTRUNCS:
-  case X86ISD::VTRUNCUS:    return combineVTRUNCSAT(N, DAG, DCI);
+  case X86ISD::VTRUNCUS:    return combineVTRUNCSAT(N, DAG, DCI, Subtarget);
   case X86ISD::ANDNP:       return combineAndnp(N, DAG, DCI, Subtarget);
   case X86ISD::FAND:        return combineFAnd(N, DAG, Subtarget);
   case X86ISD::FANDN:       return combineFAndn(N, DAG, Subtarget);

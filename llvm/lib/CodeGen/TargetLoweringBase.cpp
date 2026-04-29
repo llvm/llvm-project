@@ -1959,10 +1959,6 @@ EVT TargetLoweringBase::getSetCCResultType(const DataLayout &DL, LLVMContext &,
   return getPointerTy(DL).SimpleTy;
 }
 
-MVT::SimpleValueType TargetLoweringBase::getCmpLibcallReturnType() const {
-  return MVT::i32; // return the default value
-}
-
 /// getVectorTypeBreakdown - Vector types are broken down into some number of
 /// legal first class types.  For example, MVT::v8f32 maps to 2 MVT::v4f32
 /// with Altivec or SSE1, or 8 promoted MVT::f64 values with the X86 FP stack.
@@ -2299,12 +2295,36 @@ int TargetLoweringBase::InstructionOpcodeToISD(unsigned Opcode) const {
 
 int TargetLoweringBase::IntrinsicIDToISD(Intrinsic::ID ID) const {
   switch (ID) {
+  case Intrinsic::acos:
+    return ISD::FACOS;
+  case Intrinsic::asin:
+    return ISD::FASIN;
+  case Intrinsic::atan:
+    return ISD::FATAN;
+  case Intrinsic::cos:
+    return ISD::FCOS;
+  case Intrinsic::cosh:
+    return ISD::FCOSH;
   case Intrinsic::exp:
     return ISD::FEXP;
   case Intrinsic::exp2:
     return ISD::FEXP2;
+  case Intrinsic::exp10:
+    return ISD::FEXP10;
   case Intrinsic::log:
     return ISD::FLOG;
+  case Intrinsic::log2:
+    return ISD::FLOG2;
+  case Intrinsic::log10:
+    return ISD::FLOG10;
+  case Intrinsic::sin:
+    return ISD::FSIN;
+  case Intrinsic::sinh:
+    return ISD::FSINH;
+  case Intrinsic::tan:
+    return ISD::FTAN;
+  case Intrinsic::tanh:
+    return ISD::FTANH;
   default:
     return ISD::DELETED_NODE;
   }

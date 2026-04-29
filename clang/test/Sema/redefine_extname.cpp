@@ -31,7 +31,7 @@ int foo_nsfunc() { return 1; }
 // CHECK-DAG: {{@[^ ]*foo_nsfunc}}
 int foo_nsvar = 1;
 // CHECK-DAG: {{@[^ ]*foo_nsvar}}
-}
+} // namespace ns
 
 /// Check that the warning goes away when doing it in a class.
 /// Such uses are clearly scoped and need no warning (and often can be intentional).

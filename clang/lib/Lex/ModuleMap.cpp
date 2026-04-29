@@ -1849,17 +1849,22 @@ void ModuleMapLoader::handleModuleDecl(const modulemap::ModuleDecl &MD) {
     // We might see a (re)definition of a module that we already have a
     // definition for in four cases:
     //  - If the Existing module was loaded from an AST file and we've found its
-    //    original source module map, or
+    //    original source module map, or we cannot determine Existing's
+    //    definition location.
     bool LoadedFromASTFile = Existing->IsFromModuleFile;
     if (LoadedFromASTFile) {
       OptionalFileEntryRef ExistingModMapFile =
           Map.getContainingModuleMapFile(Existing);
       OptionalFileEntryRef CurrentModMapFile =
           SourceMgr.getFileEntryRefForID(ModuleMapFID);
-      if (ExistingModMapFile && CurrentModMapFile &&
-          *ExistingModMapFile == *CurrentModMapFile)
+      if ((ExistingModMapFile && CurrentModMapFile &&
+           *ExistingModMapFile == *CurrentModMapFile) ||
+          Existing->DefinitionLoc.isInvalid()) {
+        // If we do not know Existing's definition location, we have
+        // no way of checking against it, and hence we stay conservative and do
+        // not check for duplicating module definitions.
         LoadedFromASTFile = true;
-      else
+      } else
         LoadedFromASTFile = false;
     }
     //  - If we previously inferred this module from different module map file.

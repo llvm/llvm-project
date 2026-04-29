@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 // Minimal common base for SummaryAnalysisBase and DerivedAnalysisBase.
-// Carries the identity (analysisName()) and dependency list
-// (dependencyNames()) shared by every analysis regardless of kind.
+// Carries the identity (getAnalysisName()) and dependency list
+// (getDependencyNames()) shared by every analysis regardless of kind.
 //
 //===----------------------------------------------------------------------===//
 
@@ -45,14 +45,14 @@ public:
 
   /// Name of this analysis. Equal to ResultT::analysisName() in both typed
   /// intermediates.
-  virtual AnalysisName analysisName() const = 0;
+  virtual AnalysisName getAnalysisName() const = 0;
 
   /// AnalysisNames of all AnalysisResult dependencies.
-  virtual const std::vector<AnalysisName> &dependencyNames() const = 0;
+  virtual const std::vector<AnalysisName> &getDependencyNames() const = 0;
 
   /// Transfers ownership of the built result. Called once after finalize().
   /// The rvalue ref-qualifier enforces single use.
-  virtual std::unique_ptr<AnalysisResult> result() && = 0;
+  virtual std::unique_ptr<AnalysisResult> takeResult() && = 0;
 };
 
 } // namespace clang::ssaf

@@ -344,7 +344,7 @@ protected:
 
     BreakpointIDList valid_bp_ids;
     CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-        command, target, result, &valid_bp_ids,
+        command, m_exe_ctx, result, &valid_bp_ids,
         BreakpointName::Permissions::PermissionKinds::listPerm);
 
     m_bp_options_vec.clear();
@@ -500,7 +500,7 @@ protected:
 
     BreakpointIDList valid_bp_ids;
     CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-        command, target, result, &valid_bp_ids,
+        command, m_exe_ctx, result, &valid_bp_ids,
         BreakpointName::Permissions::PermissionKinds::listPerm);
 
     if (result.Succeeded()) {
@@ -516,7 +516,7 @@ protected:
             if (bp_loc_sp)
               bp_loc_sp->ClearCallback();
             else {
-              result.AppendErrorWithFormat("Invalid breakpoint ID: %u.%u.\n",
+              result.AppendErrorWithFormat("Invalid breakpoint ID: %u.%u",
                                            cur_bp_id.GetBreakpointID(),
                                            cur_bp_id.GetLocationID());
               return;
@@ -567,7 +567,7 @@ protected:
 
     BreakpointIDList valid_bp_ids;
     CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-        command, target, result, &valid_bp_ids,
+        command, m_exe_ctx, result, &valid_bp_ids,
         BreakpointName::Permissions::PermissionKinds::listPerm);
 
     if (result.Succeeded()) {
@@ -583,7 +583,7 @@ protected:
             if (cur_bp_id.GetLocationID() != LLDB_INVALID_BREAK_ID) {
               bp_loc_sp = bp->FindLocationByID(cur_bp_id.GetLocationID());
               if (!bp_loc_sp) {
-                result.AppendErrorWithFormat("Invalid breakpoint ID: %u.%u.\n",
+                result.AppendErrorWithFormat("Invalid breakpoint ID: %u.%u",
                                              cur_bp_id.GetBreakpointID(),
                                              cur_bp_id.GetLocationID());
                 return;
@@ -618,7 +618,7 @@ protected:
           }
           result.SetStatus(eReturnStatusSuccessFinishResult);
         } else {
-          result.AppendErrorWithFormat("Invalid breakpoint ID: %u.\n",
+          result.AppendErrorWithFormat("Invalid breakpoint ID: %u",
                                        cur_bp_id.GetBreakpointID());
         }
       }
