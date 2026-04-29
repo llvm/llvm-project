@@ -8,15 +8,22 @@
 
 #include "ModulesBuilder.h"
 #include "Compiler.h"
+#include "SourceCode.h"
 #include "support/Logger.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/ModuleCache.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/LockFileManager.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
 
-#include <queue>
+#include <chrono>
+#include <ctime>
 
 namespace clang {
 namespace clangd {
@@ -29,47 +36,257 @@ llvm::cl::opt<bool> DebugModulesBuilder(
                    "Remember to remove them later after debugging."),
     llvm::cl::init(false));
 
-// Create a path to store module files. Generally it should be:
+llvm::cl::opt<unsigned> VersionedModuleFileGCThresholdSeconds(
+    "modules-builder-versioned-gc-threshold-seconds",
+    llvm::cl::desc("Delete versioned copy-on-read module files whose last "
+                   "access time is older than this many seconds."),
+    llvm::cl::init(3 * 24 * 60 * 60));
+
+//===----------------------------------------------------------------------===//
+// Persistent Module Cache Layout.
 //
-//   {TEMP_DIRS}/clangd/module_files/{hashed-file-name}-%%-%%-%%-%%-%%-%%/.
+// clangd publishes prerequisite BMIs into a stable on-disk cache so later
+// builders can reuse them across sessions. Cache entries are grouped by a
+// readable module-unit source directory name plus a hash of the normalized
+// source path, and are further separated by a hash of the full compile
+// command, which keeps incompatible BMI variants apart.
 //
-// {TEMP_DIRS} is the temporary directory for the system, e.g., "/var/tmp"
-// or "C:/TEMP".
-//
-// '%%' means random value to make the generated path unique.
-//
-// \param MainFile is used to get the root of the project from global
-// compilation database.
-//
-// TODO: Move these module fils out of the temporary directory if the module
-// files are persistent.
-llvm::SmallString<256> getUniqueModuleFilesPath(PathRef MainFile) {
-  llvm::SmallString<128> HashedPrefix = llvm::sys::path::filename(MainFile);
-  // There might be multiple files with the same name in a project. So appending
-  // the hash value of the full path to make sure they won't conflict.
-  HashedPrefix += std::to_string(llvm::hash_value(MainFile));
+//   module-unit source
+//      |
+//      v
+//   cache root
+//      |
+//      +-- <module-unit-source-name>-<source-hash>
+//             |
+//             +-- <command-hash>
+//                    |
+//                    +-- <primary-module>[-<partition>].pcm
+//===----------------------------------------------------------------------===//
 
-  llvm::SmallString<256> ResultPattern;
+std::string hashStringForCache(llvm::StringRef Content) {
+  return llvm::toHex(digest(Content));
+}
 
-  llvm::sys::path::system_temp_directory(/*erasedOnReboot=*/true,
-                                         ResultPattern);
+std::string normalizePathForCache(PathRef Path) {
+  llvm::SmallString<256> Normalized(Path);
+  llvm::sys::path::remove_dots(Normalized, /*remove_dot_dot=*/true);
+  return maybeCaseFoldPath(Normalized);
+}
 
-  llvm::sys::path::append(ResultPattern, "clangd");
-  llvm::sys::path::append(ResultPattern, "module_files");
-
-  llvm::sys::path::append(ResultPattern, HashedPrefix);
-
-  ResultPattern.append("-%%-%%-%%-%%-%%-%%");
-
+/// Returns the root directory used for persistent module cache storage.
+/// Prefer a project-local cache so different clangd sessions working on the
+/// same source tree can reuse BMIs. Fall back to the user cache directory, and
+/// finally to a non-ephemeral temp directory when no better cache root exists.
+llvm::SmallString<256>
+getModuleCacheRoot(PathRef ModuleUnitFileName,
+                   const GlobalCompilationDatabase &CDB) {
   llvm::SmallString<256> Result;
-  llvm::sys::fs::createUniquePath(ResultPattern, Result,
-                                  /*MakeAbsolute=*/false);
+  if (auto PI = CDB.getProjectInfo(ModuleUnitFileName);
+      PI && !PI->SourceRoot.empty()) {
+    Result = PI->SourceRoot;
+    llvm::sys::path::append(Result, ".cache", "clangd", "modules");
+    return Result;
+  }
 
-  llvm::sys::fs::create_directories(Result);
+  if (llvm::sys::path::cache_directory(Result)) {
+    llvm::sys::path::append(Result, "clangd", "modules");
+    return Result;
+  }
+
+  llvm::sys::path::system_temp_directory(/*erasedOnReboot=*/false, Result);
+  llvm::sys::path::append(Result, "clangd", "modules");
   return Result;
 }
 
-// Get a unique module file path under \param ModuleFilesPrefix.
+/// Returns the directory holding source-scoped lock files for the persistent
+/// module cache. Placing locks beside the cache ensures all builders sharing
+/// the cache also synchronize through the same lock namespace.
+llvm::SmallString<256>
+getModuleCacheLocksDirectory(PathRef ModuleUnitFileName,
+                             const GlobalCompilationDatabase &CDB) {
+  llvm::SmallString<256> Result = getModuleCacheRoot(ModuleUnitFileName, CDB);
+  llvm::sys::path::append(Result, ".locks");
+  return Result;
+}
+
+std::string getModuleUnitSourcePathHash(PathRef ModuleUnitFileName) {
+  return hashStringForCache(normalizePathForCache(ModuleUnitFileName));
+}
+
+std::string getModuleUnitSourceDirectoryName(PathRef ModuleUnitFileName) {
+  std::string Result = llvm::sys::path::filename(ModuleUnitFileName).str();
+  Result.push_back('-');
+  Result.append(getModuleUnitSourcePathHash(ModuleUnitFileName));
+  return Result;
+}
+
+std::string getCompileCommandStringHash(const tooling::CompileCommand &Cmd) {
+  std::string SerializedCommand;
+  SerializedCommand.reserve(Cmd.Directory.size() + Cmd.Filename.size() +
+                            Cmd.CommandLine.size() * 16);
+  // The module-unit source path is already encoded in the parent cache
+  // directory. Output is rewritten while staging the BMI, so hash only the
+  // semantic compile command to keep the cache key stable across rebuilds.
+  SerializedCommand.append(Cmd.Directory);
+  SerializedCommand.push_back('\0');
+  for (const auto &Arg : Cmd.CommandLine) {
+    SerializedCommand.append(Arg);
+    SerializedCommand.push_back('\0');
+  }
+  return hashStringForCache(SerializedCommand);
+}
+
+/// Returns the directory for a persistent BMI built from a specific module
+/// unit source and compile command. The directory name keeps a readable source
+/// basename alongside the source-hash, and the command-hash keeps incompatible
+/// command lines apart.
+llvm::SmallString<256>
+getModuleFilesDirectory(PathRef ModuleUnitFileName,
+                        const tooling::CompileCommand &Cmd,
+                        const GlobalCompilationDatabase &CDB) {
+  llvm::SmallString<256> Result = getModuleCacheRoot(ModuleUnitFileName, CDB);
+  llvm::sys::path::append(Result,
+                          getModuleUnitSourceDirectoryName(ModuleUnitFileName),
+                          getCompileCommandStringHash(Cmd));
+  return Result;
+}
+
+/// Returns the lock file path guarding publication of BMIs for a module unit
+/// source. Builders targeting the same source-hash serialize through this path.
+llvm::SmallString<256>
+getModuleSourceHashLockPath(PathRef ModuleUnitFileName,
+                            const GlobalCompilationDatabase &CDB) {
+  llvm::SmallString<256> Result =
+      getModuleCacheLocksDirectory(ModuleUnitFileName, CDB);
+  llvm::sys::path::append(Result,
+                          getModuleUnitSourcePathHash(ModuleUnitFileName));
+  return Result;
+}
+
+/// Returns a unique temporary path used to stage a BMI before atomically
+/// publishing it to the stable cache path.
+llvm::SmallString<256> getTemporaryModuleFilePath(PathRef ModuleFilePath) {
+  llvm::SmallString<256> ResultPattern(ModuleFilePath);
+  ResultPattern.append(".tmp-%%-%%-%%-%%-%%-%%");
+  llvm::SmallString<256> Result;
+  llvm::sys::fs::createUniquePath(ResultPattern, Result,
+                                  /*MakeAbsolute=*/false);
+  return Result;
+}
+
+std::string getModuleFileVersionTimestamp() {
+  const auto Now = std::chrono::system_clock::now();
+  const auto Micros = std::chrono::duration_cast<std::chrono::microseconds>(
+                          Now.time_since_epoch()) %
+                      std::chrono::seconds(1);
+  const std::time_t CalendarTime = std::chrono::system_clock::to_time_t(Now);
+  std::tm LocalTime;
+#ifdef _WIN32
+  localtime_s(&LocalTime, &CalendarTime);
+#else
+  localtime_r(&CalendarTime, &LocalTime);
+#endif
+
+  return llvm::formatv("{0:04}{1:02}{2:02}-{3:02}{4:02}{5:02}-{6:06}",
+                       LocalTime.tm_year + 1900, LocalTime.tm_mon + 1,
+                       LocalTime.tm_mday, LocalTime.tm_hour, LocalTime.tm_min,
+                       LocalTime.tm_sec, Micros.count())
+      .str();
+}
+
+llvm::SmallString<256>
+getCopyOnReadModuleFilePath(PathRef PublishedModuleFile) {
+  llvm::SmallString<256> Result(PublishedModuleFile);
+  llvm::sys::path::remove_filename(Result);
+  llvm::sys::path::append(
+      Result,
+      llvm::formatv("{0}-{1}{2}", llvm::sys::path::stem(PublishedModuleFile),
+                    getModuleFileVersionTimestamp(),
+                    llvm::sys::path::extension(PublishedModuleFile))
+          .str());
+  return Result;
+}
+
+/// Ensures the lock anchor file exists before LockFileManager tries to acquire
+/// ownership, creating parent directories as needed.
+llvm::Error ensureLockAnchorFileExists(PathRef LockPath) {
+  llvm::SmallString<256> LockParent(LockPath);
+  llvm::sys::path::remove_filename(LockParent);
+  if (std::error_code EC = llvm::sys::fs::create_directories(LockParent))
+    return llvm::createStringError(llvm::formatv(
+        "Failed to create lock directory {0}: {1}", LockParent, EC.message()));
+
+  int FD = -1;
+  if (std::error_code EC = llvm::sys::fs::openFileForWrite(
+          LockPath, FD, llvm::sys::fs::CD_OpenAlways))
+    return llvm::createStringError(llvm::formatv(
+        "Failed to open lock file anchor {0}: {1}", LockPath, EC.message()));
+  llvm::sys::Process::SafelyCloseFileDescriptor(FD);
+  return llvm::Error::success();
+}
+
+//===----------------------------------------------------------------------===//
+// Persistent Module Cache Locking.
+//
+// Builders targeting the same module-unit source share a source-hash lock.
+// This serializes in-place replacement of stale cache entries and final publish
+// of the stable BMI path, while still allowing unrelated module sources to be
+// built concurrently.
+//
+//   builder A                builder B
+//      |                        |
+//      +---- lock(source) ----->|
+//      |                        |
+//      | build/publish BMI      | wait
+//      |                        |
+//      +---- unlock ----------->|
+//                               | reuse or rebuild
+//===----------------------------------------------------------------------===//
+
+/// Serializes publication and in-place replacement of persistent BMIs for a
+/// single module-unit source across multiple builders.
+class ScopedModuleSourceLock {
+public:
+  static llvm::Expected<ScopedModuleSourceLock>
+  acquire(PathRef ModuleUnitFileName, const GlobalCompilationDatabase &CDB) {
+    constexpr auto LockWaitInterval = std::chrono::seconds(10);
+    llvm::SmallString<256> LockPath =
+        getModuleSourceHashLockPath(ModuleUnitFileName, CDB);
+    if (llvm::Error Err = ensureLockAnchorFileExists(LockPath))
+      return std::move(Err);
+
+    auto Waited = std::chrono::seconds::zero();
+
+    while (true) {
+      auto Lock = std::make_unique<llvm::LockFileManager>(LockPath);
+      auto TryLock = Lock->tryLock();
+      if (!TryLock)
+        return TryLock.takeError();
+      if (*TryLock)
+        return ScopedModuleSourceLock(std::move(Lock));
+
+      switch (Lock->waitForUnlockFor(LockWaitInterval)) {
+      case llvm::WaitForUnlockResult::Success:
+      case llvm::WaitForUnlockResult::OwnerDied:
+        continue;
+      case llvm::WaitForUnlockResult::Timeout:
+        Waited += LockWaitInterval;
+        log("Still waiting for module lock {0} after {1}s", LockPath,
+            Waited.count());
+        continue;
+      }
+      llvm_unreachable("Unhandled lock wait result");
+    }
+  }
+
+private:
+  explicit ScopedModuleSourceLock(std::unique_ptr<llvm::LockFileManager> Lock)
+      : Lock(std::move(Lock)) {}
+
+  std::unique_ptr<llvm::LockFileManager> Lock;
+};
+
+// Get the stable published module file path under \param ModuleFilesPrefix.
 std::string getModuleFilePath(llvm::StringRef ModuleName,
                               PathRef ModuleFilesPrefix) {
   llvm::SmallString<256> ModuleFilePath(ModuleFilesPrefix);
@@ -82,6 +299,11 @@ std::string getModuleFilePath(llvm::StringRef ModuleName,
 
   ModuleFilePath.append(".pcm");
   return std::string(ModuleFilePath);
+}
+
+std::string getPublishedModuleFilePath(llvm::StringRef ModuleName,
+                                       PathRef ModuleFilesPrefix) {
+  return getModuleFilePath(ModuleName, ModuleFilesPrefix);
 }
 
 // FailedPrerequisiteModules - stands for the PrerequisiteModules which has
@@ -159,8 +381,40 @@ public:
   }
 };
 
-/// Represents a module file built by us. We're responsible to remove it.
-class BuiltModuleFile : public ModuleFile {
+//===----------------------------------------------------------------------===//
+// Module File Ownership and Reuse.
+//
+// PrebuiltModuleFile refers to BMIs supplied directly by the compile command.
+// BuiltModuleFile refers to BMIs produced by clangd and published into the
+// persistent cache. Object lifetime does not control filesystem lifetime for
+// BuiltModuleFile; cache files remain on disk for reuse across builders. The
+// versioned copies handed to clang for actual reads are owned by
+// CopyOnReadModuleFile and are deleted when the last reader releases them.
+//
+// Copy-on-read keeps the published BMI path stable for future builders while
+// avoiding in-place replacement races for active readers. clangd never hands
+// the stable cache entry directly to parsing code. Instead, once a published
+// BMI is known to be up to date, clangd copies it to a versioned sibling path
+// and gives that copy to readers. Rebuilding only mutates the stable cache
+// entry; existing readers keep their own immutable copy until the last
+// shared_ptr reference drops and the copy-on-read file is deleted.
+//
+//   compile command ---------> PrebuiltModuleFile
+//
+//   clangd build -> publish -> BuiltModuleFile ------------> stable cache path
+//                                                           (M.pcm)
+//                              |
+//                              +-> copy for read -> CopyOnReadModuleFile
+//                                                   (M-<timestamp>.pcm)
+//                                                   -> handed to clang readers
+//                                                   -> removed on last release
+//
+//   later builder -----------> reuse stable cache path ----> copy for read
+//===----------------------------------------------------------------------===//
+
+/// Represents a module file built and published by clangd into its persistent
+/// cache.
+class BuiltModuleFile final : public ModuleFile {
 private:
   // private class to make sure the class can only be constructed by member
   // functions.
@@ -175,10 +429,29 @@ public:
     return std::make_shared<BuiltModuleFile>(ModuleName, ModuleFilePath,
                                              CtorTag{});
   }
+};
 
-  virtual ~BuiltModuleFile() {
+/// Represents a versioned copy of a published BMI handed to clangd readers.
+/// The copy is removed when the last reader releases it.
+class CopyOnReadModuleFile final : public ModuleFile {
+private:
+  struct CtorTag {};
+
+public:
+  CopyOnReadModuleFile(StringRef ModuleName, PathRef ModuleFilePath, CtorTag)
+      : ModuleFile(ModuleName, ModuleFilePath) {}
+
+  ~CopyOnReadModuleFile() override {
     if (!ModuleFilePath.empty() && !DebugModulesBuilder)
-      llvm::sys::fs::remove(ModuleFilePath);
+      if (std::error_code EC = llvm::sys::fs::remove(ModuleFilePath))
+        vlog("Failed to remove copy-on-read module file {0}: {1}",
+             ModuleFilePath, EC.message());
+  }
+
+  static std::shared_ptr<CopyOnReadModuleFile> make(StringRef ModuleName,
+                                                    PathRef ModuleFilePath) {
+    return std::make_shared<CopyOnReadModuleFile>(ModuleName, ModuleFilePath,
+                                                  CtorTag{});
   }
 };
 
@@ -302,26 +575,36 @@ bool IsModuleFilesUpToDate(
       });
 }
 
-/// Build a module file for module with `ModuleName`. The information of built
-/// module file are stored in \param BuiltModuleFiles.
+/// Builds a BMI into a temporary file and publishes it to `ModuleFilePath`.
+/// If another builder wins the publish race first, reports that through
+/// `PublishedExistingModuleFile` so the caller can validate and reuse it.
 llvm::Expected<std::shared_ptr<BuiltModuleFile>>
 buildModuleFile(llvm::StringRef ModuleName, PathRef ModuleUnitFileName,
-                const GlobalCompilationDatabase &CDB, const ThreadsafeFS &TFS,
-                const ReusablePrerequisiteModules &BuiltModuleFiles) {
-  // Try cheap operation earlier to boil-out cheaply if there are problems.
-  auto Cmd = CDB.getCompileCommand(ModuleUnitFileName);
-  if (!Cmd)
+                tooling::CompileCommand Cmd, PathRef ModuleFilePath,
+                const ThreadsafeFS &TFS,
+                const ReusablePrerequisiteModules &BuiltModuleFiles,
+                bool &PublishedExistingModuleFile) {
+  PublishedExistingModuleFile = false;
+  llvm::SmallString<256> ModuleFilesPrefix(ModuleFilePath);
+  llvm::sys::path::remove_filename(ModuleFilesPrefix);
+  if (std::error_code EC = llvm::sys::fs::create_directories(ModuleFilesPrefix))
     return llvm::createStringError(
-        llvm::formatv("No compile command for {0}", ModuleUnitFileName));
+        llvm::formatv("Failed to create module cache directory {0}: {1}",
+                      ModuleFilesPrefix, EC.message()));
 
-  llvm::SmallString<256> ModuleFilesPrefix =
-      getUniqueModuleFilesPath(ModuleUnitFileName);
+  llvm::SmallString<256> TemporaryModuleFilePath =
+      getTemporaryModuleFilePath(ModuleFilePath);
+  auto RemoveTemporaryModuleFile = llvm::scope_exit([&] {
+    if (!TemporaryModuleFilePath.empty() && !DebugModulesBuilder)
+      llvm::sys::fs::remove(TemporaryModuleFilePath);
+  });
+  (void)RemoveTemporaryModuleFile;
 
-  Cmd->Output = getModuleFilePath(ModuleName, ModuleFilesPrefix);
+  Cmd.Output = TemporaryModuleFilePath.str().str();
 
   ParseInputs Inputs;
   Inputs.TFS = &TFS;
-  Inputs.CompileCommand = std::move(*Cmd);
+  Inputs.CompileCommand = std::move(Cmd);
 
   IgnoreDiagnostics IgnoreDiags;
   auto CI = buildCompilerInvocation(Inputs, IgnoreDiags);
@@ -379,7 +662,35 @@ buildModuleFile(llvm::StringRef ModuleName, PathRef ModuleUnitFileName,
                       ModuleUnitFileName));
   }
 
-  return BuiltModuleFile::make(ModuleName, Inputs.CompileCommand.Output);
+  if (std::error_code EC =
+          llvm::sys::fs::rename(TemporaryModuleFilePath, ModuleFilePath)) {
+    if (!llvm::sys::fs::exists(ModuleFilePath))
+      return llvm::createStringError(
+          llvm::formatv("Failed to publish module file {0}: {1}",
+                        ModuleFilePath, EC.message()));
+    // Another builder already published the stable cache entry. Drop our
+    // staged BMI and let the caller revalidate the published path.
+    PublishedExistingModuleFile = true;
+  } else {
+    // Rename consumed the staging file into the stable cache path. Clear it so
+    // the scope-exit cleanup does not try to remove the published BMI.
+    TemporaryModuleFilePath.clear();
+  }
+
+  return BuiltModuleFile::make(ModuleName, ModuleFilePath);
+}
+
+llvm::Expected<std::shared_ptr<CopyOnReadModuleFile>>
+copyModuleFileForRead(llvm::StringRef ModuleName,
+                      PathRef PublishedModuleFilePath) {
+  llvm::SmallString<256> VersionedModuleFilePath =
+      getCopyOnReadModuleFilePath(PublishedModuleFilePath);
+  if (std::error_code EC = llvm::sys::fs::copy_file(PublishedModuleFilePath,
+                                                    VersionedModuleFilePath))
+    return llvm::createStringError(llvm::formatv(
+        "Failed to copy module file {0} to {1}: {2}", PublishedModuleFilePath,
+        VersionedModuleFilePath, EC.message()));
+  return CopyOnReadModuleFile::make(ModuleName, VersionedModuleFilePath);
 }
 
 bool ReusablePrerequisiteModules::canReuse(
@@ -394,98 +705,91 @@ bool ReusablePrerequisiteModules::canReuse(
   return IsModuleFilesUpToDate(BMIPaths, *this, VFS);
 }
 
-/// A cache for built module files. Currently this can handle cases for
-/// - A module name to the corresponding built module file.
-/// - A module name and the module unit path to the corresponding built
-///   module file. This is needed as there might be cases where we have
-///   multiple module units declaring the same module name.
-///
-/// FIXME: A missing point is, technically, we need to handle the cases
-/// we have multiple built module file from the same module units with
-/// different compilation options.
+//===----------------------------------------------------------------------===//
+// In-Memory Module File Cache.
+//
+// This cache deduplicates BMIs within a single builder instance. Its key
+// mirrors the persistent cache layout: module name, module-unit source, and
+// compile command hash. That prevents a builder from reusing a BMI built under
+// a different command line.
+//
+//   (module name,
+//    module-unit source,
+//    command hash)
+//          |
+//          v
+//      ModuleFileCache
+//          |
+//          +-- hit  -> reuse in current builder
+//          |
+//          +-- miss -> probe persistent cache / rebuild
+//===----------------------------------------------------------------------===//
+
+/// In-memory cache for module files built by clangd. Entries are keyed by
+/// module name, module-unit source, and compile-command hash so persistent BMI
+/// variants do not collide.
 class ModuleFileCache {
 public:
   ModuleFileCache(const GlobalCompilationDatabase &CDB) : CDB(CDB) {}
   const GlobalCompilationDatabase &getCDB() const { return CDB; }
 
-  std::shared_ptr<const ModuleFile>
-  getUniqueModuleForModuleName(StringRef ModuleName) {
+  std::shared_ptr<const ModuleFile> getModule(StringRef ModuleName,
+                                              PathRef ModuleUnitSource,
+                                              llvm::StringRef CommandHash);
+
+  void add(StringRef ModuleName, PathRef ModuleUnitSource,
+           llvm::StringRef CommandHash,
+           std::shared_ptr<const ModuleFile> ModuleFile) {
     std::lock_guard<std::mutex> Lock(ModuleFilesMutex);
-
-    auto Iter = ModuleNameToUniqueModuleCache.find(ModuleName);
-    if (Iter == ModuleNameToUniqueModuleCache.end())
-      return nullptr;
-
-    if (auto Res = Iter->second.lock())
-      return Res;
-
-    ModuleNameToUniqueModuleCache.erase(Iter);
-    return nullptr;
+    ModuleFiles[cacheKey(ModuleName, ModuleUnitSource, CommandHash)] =
+        ModuleFile;
   }
 
-  void addUniqueEntry(StringRef ModuleName,
-                      std::shared_ptr<const ModuleFile> ModuleFile) {
-    std::lock_guard<std::mutex> Lock(ModuleFilesMutex);
-    ModuleNameToUniqueModuleCache[ModuleName] = ModuleFile;
-  }
-
-  void eraseUniqueEntry(StringRef ModuleName) {
-    std::lock_guard<std::mutex> Lock(ModuleFilesMutex);
-    ModuleNameToUniqueModuleCache.erase(ModuleName);
-  }
-
-  std::shared_ptr<const ModuleFile>
-  getMultipleModuleForModuleName(StringRef ModuleName,
-                                 PathRef ModuleUnitSource) {
-    std::lock_guard<std::mutex> Lock(ModuleFilesMutex);
-
-    auto Outer = ModuleNameToMultipleModuleCache.find(ModuleName);
-    if (Outer == ModuleNameToMultipleModuleCache.end())
-      return nullptr;
-
-    auto Inner = Outer->second.find(maybeCaseFoldPath(ModuleUnitSource));
-    if (Inner == Outer->second.end())
-      return nullptr;
-
-    if (auto Res = Inner->second.lock())
-      return Res;
-
-    Outer->second.erase(Inner);
-    if (Outer->second.empty())
-      ModuleNameToMultipleModuleCache.erase(Outer);
-    return nullptr;
-  }
-
-  void addMultipleEntry(StringRef ModuleName, PathRef ModuleUnitSource,
-                        std::shared_ptr<const ModuleFile> ModuleFile) {
-    std::lock_guard<std::mutex> Lock(ModuleFilesMutex);
-    ModuleNameToMultipleModuleCache[ModuleName]
-                                   [maybeCaseFoldPath(ModuleUnitSource)] =
-                                       ModuleFile;
-  }
-
-  void eraseMultipleEntry(StringRef ModuleName, PathRef ModuleUnitSource) {
-    std::lock_guard<std::mutex> Lock(ModuleFilesMutex);
-    auto Outer = ModuleNameToMultipleModuleCache.find(ModuleName);
-    if (Outer == ModuleNameToMultipleModuleCache.end())
-      return;
-    Outer->second.erase(maybeCaseFoldPath(ModuleUnitSource));
-    if (Outer->second.empty())
-      ModuleNameToMultipleModuleCache.erase(Outer);
-  }
+  void remove(StringRef ModuleName, PathRef ModuleUnitSource,
+              llvm::StringRef CommandHash);
 
 private:
+  static std::string cacheKey(StringRef ModuleName, PathRef ModuleUnitSource,
+                              llvm::StringRef CommandHash) {
+    std::string Key;
+    Key.reserve(ModuleName.size() + ModuleUnitSource.size() +
+                CommandHash.size() + 2);
+    Key.append(ModuleName);
+    Key.push_back('\0');
+    Key.append(maybeCaseFoldPath(ModuleUnitSource));
+    Key.push_back('\0');
+    Key.append(CommandHash);
+    return Key;
+  }
+
   const GlobalCompilationDatabase &CDB;
 
-  llvm::StringMap<std::weak_ptr<const ModuleFile>>
-      ModuleNameToUniqueModuleCache;
-  // Map from module name to a map from source to module unit to the built
-  // module files.
-  llvm::StringMap<llvm::StringMap<std::weak_ptr<const ModuleFile>>>
-      ModuleNameToMultipleModuleCache;
-  // Mutex to guard accesses to Caches.
+  llvm::StringMap<std::weak_ptr<const ModuleFile>> ModuleFiles;
   std::mutex ModuleFilesMutex;
 };
+
+std::shared_ptr<const ModuleFile>
+ModuleFileCache::getModule(StringRef ModuleName, PathRef ModuleUnitSource,
+                           llvm::StringRef CommandHash) {
+  std::lock_guard<std::mutex> Lock(ModuleFilesMutex);
+
+  auto Iter =
+      ModuleFiles.find(cacheKey(ModuleName, ModuleUnitSource, CommandHash));
+  if (Iter == ModuleFiles.end())
+    return nullptr;
+
+  if (auto Res = Iter->second.lock())
+    return Res;
+
+  ModuleFiles.erase(Iter);
+  return nullptr;
+}
+
+void ModuleFileCache::remove(StringRef ModuleName, PathRef ModuleUnitSource,
+                             llvm::StringRef CommandHash) {
+  std::lock_guard<std::mutex> Lock(ModuleFilesMutex);
+  ModuleFiles.erase(cacheKey(ModuleName, ModuleUnitSource, CommandHash));
+}
 
 class ModuleNameToSourceCache {
 public:
@@ -649,6 +953,57 @@ llvm::SmallVector<std::string> getAllRequiredModules(PathRef RequiredSource,
   return ModuleNames;
 }
 
+/// Collects cache roots to scan during constructor-time GC.
+/// Scans one cache root and returns all `.pcm` files under it.
+std::vector<std::string> collectModuleFiles(PathRef CacheRoot) {
+  std::vector<std::string> Result;
+  std::error_code EC;
+  for (llvm::sys::fs::recursive_directory_iterator It(CacheRoot, EC), End;
+       It != End && !EC; It.increment(EC)) {
+    if (llvm::sys::path::extension(It->path()) != ".pcm")
+      continue;
+    Result.push_back(It->path());
+  }
+  if (EC)
+    log("Failed to scan module cache directory {0}: {1}", CacheRoot,
+        EC.message());
+  return Result;
+}
+
+/// Performs one GC pass over a persistent module cache root.
+void garbageCollectModuleCache(PathRef CacheRoot) {
+  for (const auto &ModuleFilePath : collectModuleFiles(CacheRoot)) {
+    llvm::sys::fs::file_status Status;
+    if (std::error_code EC = llvm::sys::fs::status(ModuleFilePath, Status)) {
+      log("Failed to stat cached module file {0} for GC: {1}", ModuleFilePath,
+          EC.message());
+      continue;
+    }
+
+    llvm::sys::TimePoint<> LastAccess = Status.getLastAccessedTime();
+    llvm::sys::TimePoint<> Now = std::chrono::system_clock::now();
+    if (LastAccess > Now)
+      continue;
+    auto Age =
+        std::chrono::duration_cast<std::chrono::seconds>(Now - LastAccess);
+    auto Threshold =
+        std::chrono::seconds(VersionedModuleFileGCThresholdSeconds);
+    if (Age <= Threshold)
+      continue;
+
+    if (!llvm::sys::fs::exists(ModuleFilePath))
+      continue;
+
+    constexpr llvm::StringLiteral Reason = "file older than GC threshold";
+    if (std::error_code EC = llvm::sys::fs::remove(ModuleFilePath)) {
+      log("Failed to remove cached module file {0} ({1}): {2}", ModuleFilePath,
+          Reason, EC.message());
+      continue;
+    }
+    log("Removed cached module file {0} ({1})", ModuleFilePath, Reason);
+  }
+}
+
 } // namespace
 
 class ModulesBuilder::ModulesBuilderImpl {
@@ -671,9 +1026,38 @@ private:
                              const ThreadsafeFS &TFS,
                              ReusablePrerequisiteModules &BuiltModuleFiles);
 
+  /// Runs GC once for the cache root owning a project root.
+  void garbageCollectModuleCacheForProjectRoot(PathRef ProjectRoot);
+
   ModuleFileCache Cache;
   ModuleNameToSourceCache ProjectModulesCache;
+  std::mutex GarbageCollectedProjectRootsMutex;
+  llvm::StringSet<> GarbageCollectedProjectRoots;
 };
+
+void ModulesBuilder::ModulesBuilderImpl::
+    garbageCollectModuleCacheForProjectRoot(PathRef ProjectRoot) {
+  if (ProjectRoot.empty())
+    return;
+  std::string NormalizedProjectRoot = normalizePathForCache(ProjectRoot);
+  {
+    // If the project root lives in GarbageCollectedProjectRoots, it implies
+    // we've already started GC on the cache root.
+    std::lock_guard<std::mutex> Lock(GarbageCollectedProjectRootsMutex);
+    if (!GarbageCollectedProjectRoots.insert(NormalizedProjectRoot).second)
+      return;
+  }
+
+  llvm::SmallString<256> CacheRoot(ProjectRoot);
+  llvm::sys::path::append(CacheRoot, ".cache", "clangd", "modules");
+  log("Running GC pass for clangd built module files under {0} with age "
+      "threshold {1} seconds (adjust with --modules-builder-versioned-gc-"
+      "threshold-seconds)",
+      CacheRoot, VersionedModuleFileGCThresholdSeconds);
+  garbageCollectModuleCache(CacheRoot);
+  log("Done running GC pass for clangd built module files under {0}",
+      CacheRoot);
+}
 
 void ModulesBuilder::ModulesBuilderImpl::getPrebuiltModuleFile(
     StringRef ModuleName, PathRef ModuleUnitFileName, const ThreadsafeFS &TFS,
@@ -749,16 +1133,28 @@ llvm::Error ModulesBuilder::ModulesBuilderImpl::getOrBuildModuleFile(
     if (BuiltModuleFiles.isModuleUnitBuilt(ReqModuleName))
       continue;
 
-    auto ModuleState = MDB.getModuleNameState(ReqModuleName);
     std::string ReqFileName =
         MDB.getSourceForModuleName(ReqModuleName, RequiredSource);
+    auto Cmd = getCDB().getCompileCommand(ReqFileName);
+    if (!Cmd)
+      return llvm::createStringError(
+          llvm::formatv("No compile command for {0}", ReqFileName));
+    if (auto PI = getCDB().getProjectInfo(ReqFileName);
+        PI && !PI->SourceRoot.empty())
+      garbageCollectModuleCacheForProjectRoot(PI->SourceRoot);
 
-    std::shared_ptr<const ModuleFile> Cached;
-    if (ModuleState == ProjectModules::ModuleNameState::Multiple) {
-      Cached = Cache.getMultipleModuleForModuleName(ReqModuleName, ReqFileName);
-    } else {
-      Cached = Cache.getUniqueModuleForModuleName(ReqModuleName);
-    }
+    const std::string CommandHash = getCompileCommandStringHash(*Cmd);
+    const std::string PublishedModuleFilePath = getPublishedModuleFilePath(
+        ReqModuleName, getModuleFilesDirectory(ReqFileName, *Cmd, getCDB()));
+
+    // Keep the source-scoped lock while probing and validating cached BMIs so
+    // stale-file replacement and final publication stay serialized.
+    auto SourceLock = ScopedModuleSourceLock::acquire(ReqFileName, getCDB());
+    if (!SourceLock)
+      return SourceLock.takeError();
+
+    std::shared_ptr<const ModuleFile> Cached =
+        Cache.getModule(ReqModuleName, ReqFileName, CommandHash);
 
     if (Cached) {
       if (IsModuleFileUpToDate(Cached->getModuleFilePath(), BuiltModuleFiles,
@@ -768,23 +1164,55 @@ llvm::Error ModulesBuilder::ModulesBuilderImpl::getOrBuildModuleFile(
         BuiltModuleFiles.addModuleFile(std::move(Cached));
         continue;
       }
-      if (ModuleState == ProjectModules::ModuleNameState::Multiple)
-        Cache.eraseMultipleEntry(ReqModuleName, ReqFileName);
-      else
-        Cache.eraseUniqueEntry(ReqModuleName);
+      Cache.remove(ReqModuleName, ReqFileName, CommandHash);
     }
 
+    if (llvm::sys::fs::exists(PublishedModuleFilePath)) {
+      if (IsModuleFileUpToDate(PublishedModuleFilePath, BuiltModuleFiles,
+                               TFS.view(std::nullopt))) {
+        log("Reusing persistent module {0} from {1}", ReqModuleName,
+            PublishedModuleFilePath);
+        auto Materialized =
+            copyModuleFileForRead(ReqModuleName, PublishedModuleFilePath);
+        if (llvm::Error Err = Materialized.takeError())
+          return Err;
+        Cache.add(ReqModuleName, ReqFileName, CommandHash, *Materialized);
+        BuiltModuleFiles.addModuleFile(std::move(*Materialized));
+        continue;
+      }
+
+      // The persistent module file is stale. Remove it and build a new one.
+      std::error_code EC = llvm::sys::fs::remove(PublishedModuleFilePath);
+      if (EC)
+        return llvm::createStringError(
+            llvm::formatv("Failed to remove stale module file {0}: {1}",
+                          PublishedModuleFilePath, EC.message()));
+    }
+
+    bool PublishedExistingModuleFile = false;
     llvm::Expected<std::shared_ptr<BuiltModuleFile>> MF = buildModuleFile(
-        ReqModuleName, ReqFileName, getCDB(), TFS, BuiltModuleFiles);
+        ReqModuleName, ReqFileName, std::move(*Cmd), PublishedModuleFilePath,
+        TFS, BuiltModuleFiles, PublishedExistingModuleFile);
     if (llvm::Error Err = MF.takeError())
       return Err;
 
-    log("Built module {0} to {1}", ReqModuleName, (*MF)->getModuleFilePath());
-    if (ModuleState == ProjectModules::ModuleNameState::Multiple)
-      Cache.addMultipleEntry(ReqModuleName, ReqFileName, *MF);
-    else
-      Cache.addUniqueEntry(ReqModuleName, *MF);
-    BuiltModuleFiles.addModuleFile(std::move(*MF));
+    if (PublishedExistingModuleFile &&
+        !IsModuleFileUpToDate(PublishedModuleFilePath, BuiltModuleFiles,
+                              TFS.view(std::nullopt))) {
+      return llvm::createStringError(
+          llvm::formatv("Published module file {0} is stale after lock wait",
+                        PublishedModuleFilePath));
+    }
+
+    auto Materialized =
+        copyModuleFileForRead(ReqModuleName, PublishedModuleFilePath);
+    if (llvm::Error Err = Materialized.takeError())
+      return Err;
+
+    log("Built module {0} to {1}", ReqModuleName,
+        (*Materialized)->getModuleFilePath());
+    Cache.add(ReqModuleName, ReqFileName, CommandHash, *Materialized);
+    BuiltModuleFiles.addModuleFile(std::move(*Materialized));
   }
 
   return llvm::Error::success();

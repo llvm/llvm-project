@@ -326,6 +326,9 @@ cir::GlobalOp CIRGenVTables::generateConstructionVTable(
   return vtable;
 }
 
+static bool shouldEmitAvailableExternallyVTable(const CIRGenModule &cgm,
+                                                const CXXRecordDecl *rd);
+
 /// Compute the required linkage of the vtable for the given class.
 ///
 /// Note that we only call this at the end of the translation unit.
@@ -369,7 +372,8 @@ cir::GlobalLinkageKind CIRGenModule::getVTableLinkage(const CXXRecordDecl *rd) {
       return cir::GlobalLinkageKind::WeakODRLinkage;
 
     case TSK_ExplicitInstantiationDeclaration:
-      llvm_unreachable("Should not have been asked to emit this");
+      return !def ? cir::GlobalLinkageKind::AvailableExternallyLinkage
+                  : cir::GlobalLinkageKind::ExternalLinkage;
     }
   }
   // -fapple-kext mode does not support weak linkage, so we must use
@@ -395,11 +399,14 @@ cir::GlobalLinkageKind CIRGenModule::getVTableLinkage(const CXXRecordDecl *rd) {
   case TSK_ImplicitInstantiation:
     return discardableODRLinkage;
 
-  case TSK_ExplicitInstantiationDeclaration: {
-    errorNYI(rd->getSourceRange(),
-             "getVTableLinkage: explicit instantiation declaration");
-    return cir::GlobalLinkageKind::ExternalLinkage;
-  }
+  case TSK_ExplicitInstantiationDeclaration:
+    // Explicit instantiations in MSVC do not provide vtables, so we must emit
+    // our own.
+    if (getTarget().getCXXABI().isMicrosoft())
+      return discardableODRLinkage;
+    return shouldEmitAvailableExternallyVTable(*this, rd)
+               ? cir::GlobalLinkageKind::AvailableExternallyLinkage
+               : cir::GlobalLinkageKind::ExternalLinkage;
 
   case TSK_ExplicitInstantiationDefinition:
     return nonDiscardableODRLinkage;
@@ -893,10 +900,12 @@ cir::FuncOp CIRGenVTables::maybeEmitThunk(GlobalDecl gd,
     assert(oldThunkFn.isDeclaration() && "Shouldn't replace non-declaration");
 
     // Remove the name from the old thunk function and get a new thunk.
+    cgm.eraseGlobalSymbol(oldThunkFn);
     oldThunkFn.setName(StringRef());
     thunkFn =
         cir::FuncOp::create(cgm.getBuilder(), thunk->getLoc(), name.str(),
                             thunkFnTy, cir::GlobalLinkageKind::ExternalLinkage);
+    cgm.insertGlobalSymbol(thunkFn);
     cgm.setCIRFunctionAttributes(md, fnInfo, thunkFn, /*isThunk=*/false);
 
     if (!oldThunkFn->use_empty())

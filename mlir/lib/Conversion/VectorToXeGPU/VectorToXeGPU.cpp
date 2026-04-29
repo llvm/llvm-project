@@ -589,7 +589,8 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
     auto chip = xegpu::getChipStr(readOp);
     // Lower to scattered load Op if the target HW doesn't have 2d block load
     // support and the load is not from shared memory.
-    if (chip != "pvc" && chip != "bmg") {
+    if ((chip != "pvc" && chip != "bmg") ||
+        readOp.getVectorType().getRank() > 2) {
 
       // TODO: add support for OutOfBound access
       if (isOutOfBounds)
@@ -704,7 +705,8 @@ struct TransferWriteLowering
     auto chip = xegpu::getChipStr(writeOp);
     // Lower to scattered store Op if the target HW doesn't have 2d block
     // store support and the memref is not SLM.
-    if (chip != "pvc" && chip != "bmg") {
+    if ((chip != "pvc" && chip != "bmg") ||
+        writeOp.getVectorType().getRank() > 2) {
 
       // TODO: add support for OutOfBound access
       if (writeOp.hasOutOfBoundsDim())

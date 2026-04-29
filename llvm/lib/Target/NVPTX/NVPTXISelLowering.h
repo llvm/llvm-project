@@ -238,6 +238,16 @@ private:
   void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
                           SelectionDAG &DAG) const override;
   SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
+
+  bool mayFoldFMULIntoFMA(SDNode *N, MachineFunction &MF,
+                          CodeGenOptLevel OptLevel) const;
+  SDValue performScalarizeV2F32Op(SDNode *N, DAGCombinerInfo &DCI,
+                                  CodeGenOptLevel OptLevel) const;
+  SDValue performFADDCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
+                                         DAGCombinerInfo &DCI,
+                                         CodeGenOptLevel OptLevel) const;
+  SDValue performFADDCombine(SDNode *N, DAGCombinerInfo &DCI,
+                             CodeGenOptLevel OptLevel) const;
 };
 
 } // namespace llvm

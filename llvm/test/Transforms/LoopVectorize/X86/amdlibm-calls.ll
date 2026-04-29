@@ -1962,6 +1962,62 @@ for.end:
   ret void
 }
 
+; ======================= expm1 ============================
+define void @expm1_f64(ptr nocapture %varray) {
+; CHECK-LABEL: @expm1_f64(
+;
+; CHECK-VF2:    {{.*}} = tail call double @expm1(double {{.*}})
+; CHECK-VF4:    {{.*}} = tail call double @expm1(double {{.*}})
+; CHECK-VF8:    {{.*}} = tail call double @expm1(double {{.*}})
+; CHECK-VF16:   {{.*}} = tail call double @expm1(double {{.*}})
+; CHECK:        ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call double @expm1(double %conv)
+  %arrayidx = getelementptr inbounds double, ptr %varray, i64 %iv
+  store double %call, ptr %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+; ======================= expm1f ============================
+define void @expm1f_f32(ptr nocapture %varray) {
+; CHECK-LABEL: @expm1f_f32(
+;
+; CHECK-VF2:    {{.*}} = tail call float @expm1f(float {{.*}})
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_expm1f(<4 x float> [[TMP4:%.*]])
+; CHECK-VF8:    {{.*}} = tail call float @expm1f(float {{.*}})
+; CHECK-VF16:   {{.*}} = tail call float @expm1f(float {{.*}})
+; CHECK:        ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to float
+  %call = tail call float @expm1f(float %conv)
+  %arrayidx = getelementptr inbounds float, ptr %varray, i64 %iv
+  store float %call, ptr %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
 attributes #0 = { nounwind readnone }
 
 declare double @exp10(double) #0
@@ -1973,3 +2029,5 @@ declare float @erfcf(float) #0
 declare double @cdfnorm(double) #0
 declare double @round(double) #0
 declare float @roundf(float) #0
+declare double @expm1(double) #0
+declare float @expm1f(float) #0
