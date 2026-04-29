@@ -466,28 +466,27 @@ void OptionValueProperties::Apropos(
     llvm::StringRef keyword,
     std::vector<const Property *> &matching_properties) const {
   const size_t num_properties = m_properties.size();
-  StreamString strm;
   for (size_t i = 0; i < num_properties; ++i) {
     const Property *property = ProtectedGetPropertyAtIndex(i);
-    if (property) {
-      const OptionValueProperties *properties =
-          property->GetValue()->GetAsProperties();
-      if (properties) {
-        properties->Apropos(keyword, matching_properties);
-      } else {
-        bool match = false;
-        llvm::StringRef name = property->GetName();
-        if (name.contains_insensitive(keyword))
-          match = true;
-        else {
-          llvm::StringRef desc = property->GetDescription();
-          if (desc.contains_insensitive(keyword))
-            match = true;
-        }
-        if (match) {
-          matching_properties.push_back(property);
-        }
-      }
+    if (!property)
+      continue;
+
+    if (const OptionValueProperties *properties =
+            property->GetValue()->GetAsProperties()) {
+      properties->Apropos(keyword, matching_properties);
+      continue;
+    }
+
+    if (llvm::StringRef name = property->GetName();
+        name.contains_insensitive(keyword)) {
+      matching_properties.push_back(property);
+      continue;
+    }
+
+    if (llvm::StringRef desc = property->GetDescription();
+        desc.contains_insensitive(keyword)) {
+      matching_properties.push_back(property);
+      continue;
     }
   }
 }
