@@ -981,11 +981,8 @@ static bool ShouldBreakUpDistribution(Instruction *Mul) {
                    MulUser->getOpcode() != Instruction::Sub))
     return false;
 
-  if (!MulUser)
-    return false;
-
   for (Value *Sibling : MulUser->operands()) {
-    if (Sibling == Mul)
+    if (Sibling == Mul || !Sibling->hasOneUse())
       continue;
 
     // Sibling must be NonConst * C'.
@@ -1011,14 +1008,18 @@ static BinaryOperator *BreakUpDistribute(Instruction *Mul,
                      : C;
 
   BinaryOperator *M1 =
-      CreateMul(AddSub->getOperand(0), C, "Mul1", Mul->getIterator(), Mul);
+      CreateMul(AddSub->getOperand(0), C, "Mul1", Mul->getIterator(), nullptr);
   BinaryOperator *M2 =
-      CreateMul(AddSub->getOperand(1), C2, "Mul2", Mul->getIterator(), Mul);
+      CreateMul(AddSub->getOperand(1), C2, "Mul2", Mul->getIterator(), nullptr);
   BinaryOperator *Result;
-  Result = CreateAdd(M1, M2, "DistAdd", Mul->getIterator(), Mul);
+  Result = CreateAdd(M1, M2, "DistAdd", Mul->getIterator(), nullptr);
 
   Mul->replaceAllUsesWith(Result);
   Result->setDebugLoc(Mul->getDebugLoc());
+
+  ToRedo.insert(M1);
+  ToRedo.insert(M2);
+  ToRedo.insert(Result);
 
   return Result;
 }

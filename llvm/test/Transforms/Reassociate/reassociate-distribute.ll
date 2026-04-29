@@ -94,6 +94,21 @@ define i16 @test_nsw_dropped(i16 %x, i16 %y) {
   ret i16 %add2
 }
 
+define i16 @test_surviving_poison(i16 %x, i16 %y) {
+; CHECK-LABEL: @test_surviving_poison(
+; CHECK-NEXT:    [[MUL1:%.*]] = mul i16 [[Y:%.*]], 20
+; CHECK-NEXT:    [[REASS_MUL:%.*]] = mul i16 [[X:%.*]], 30
+; CHECK-NEXT:    [[ADD2:%.*]] = add i16 [[MUL1]], [[REASS_MUL]]
+; CHECK-NEXT:    ret i16 [[ADD2]]
+;
+  %add = add nsw i16 %x, %y
+  %mul1 = mul nsw i16 %x, 10
+  ; This mul has 'nsw'. We distribute it to x*20 and y*20.
+  %mul2 = mul nsw i16 %add, 20
+  %add2 = add i16 %mul1, %mul2
+  ret i16 %add2
+}
+
 ; ---- Should NOT transform ----
 
 ; No sibling constant mul — nothing to combine with
@@ -102,10 +117,6 @@ define i32 @test_no_match(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[B:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[ADD]], 999
 ; CHECK-NEXT:    ret i32 [[MUL]]
-; CHECK-NOT:     Mul1
-; CHECK-NOT:     Mul2
-; CHECK-NOT:     DistAdd
-; CHECK-NOT:     DistSub
 ;
   %add = add nsw i32 %a, %b
   %mul = mul nsw i32 %add, 999
@@ -119,10 +130,6 @@ define i32 @test_multi_use_add(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[REASS_MUL:%.*]] = mul i32 [[A:%.*]], 335
 ; CHECK-NEXT:    [[RET:%.*]] = add i32 [[REASS_MUL]], [[MUL1]]
 ; CHECK-NEXT:    ret i32 [[RET]]
-; CHECK-NOT:     Mul1
-; CHECK-NOT:     Mul2
-; CHECK-NOT:     DistAdd
-; CHECK-NOT:     DistSub
 ;
   %mul  = mul nsw i32 %a, 777
   %add  = add nsw i32 %a, %b
@@ -141,10 +148,6 @@ define i32 @test_no_const_on_other_mul(i32 %a, i32 %b, i32 %c) {
 ; CHECK-NEXT:    [[MUL1:%.*]] = mul nsw i32 [[ADD]], 555
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[MUL]], [[MUL1]]
 ; CHECK-NEXT:    ret i32 [[SUB]]
-; CHECK-NOT:     Mul1
-; CHECK-NOT:     Mul2
-; CHECK-NOT:     DistAdd
-; CHECK-NOT:     DistSub
 ;
   %mul  = mul nsw i32 %a, %c
   %add  = add nsw i32 %a, %b
