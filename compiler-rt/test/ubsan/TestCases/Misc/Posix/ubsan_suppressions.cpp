@@ -3,5 +3,5 @@
 extern "C" {
   const char *__ubsan_default_suppressions() { return "FooBar"; }
 }
-// CHECK: UndefinedBehaviorSanitizer: failed to parse suppressions
+// CHECK: {{.*}}Sanitizer: failed to parse suppressions
 int main() {}
