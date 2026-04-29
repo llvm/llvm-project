@@ -152,11 +152,11 @@ void TextOutputSection::createThunk(const ConcatInputSection &isec,
   assert(isec.isFinal);
   uint64_t highVA = isec.getVA() + r.offset + target->forwardBranchRange;
   if (addr + size > highVA) {
-    // We can only encounter this if we have a massive section (> ~128MB) or
-    // an enormous number of branch instructions within a single section
-    // (> ~16M), neither of which is feasible in practice. To fix we could
-    // implement branch islands when the available space for thunks become too
-    // small.
+    // We can only encounter this if we have a massive function
+    // (> ~128MB on arm64) or an enormous number of branch instructions within a
+    // single function (> ~16M on arm64), neither of which is feasible in
+    // practice. To fix we could implement branch islands when the available
+    // space for thunks become too small.
     fatal("encountered a branch whose target is out of range, but there is "
           "no more space for a new thunk");
   }
@@ -250,7 +250,9 @@ void TextOutputSection::finalize() {
       if (nextEnd + numPendingThunkTargets * target->thunkSize <= highVA)
         break;
 
+      assert(thunkInfo.pendingBranches.size());
       thunkInfo.pendingBranches.clear();
+      assert(numPendingThunkTargets);
       --numPendingThunkTargets;
       createThunk(*callerIsec, *r);
       branchesToProcess.pop_front();
@@ -299,6 +301,8 @@ void TextOutputSection::finalize() {
         if (thunkInfo.pendingBranches.empty())
           --numPendingThunkTargets;
     }
+    // Do not remove branches if a thunk is in range because if the target is a
+    // stub we may discover that it is in range for a direct branch
     return targetInRange;
   });
 
@@ -328,10 +332,6 @@ void TextOutputSection::finalize() {
   }
 
   for (auto [isec, r, thunkKey] : branchesToProcess) {
-    auto &thunkInfo = thunkMap[thunkKey];
-    if (thunkInfo.pendingBranches.erase(r))
-      if (thunkInfo.pendingBranches.empty())
-        --numPendingThunkTargets;
     if (isTargetStubsAndInRange(*isec, *r, estimatedStubsEnd))
       continue;
     if (auto *thunk = getThunkInRange(*isec, *r)) {
@@ -340,7 +340,6 @@ void TextOutputSection::finalize() {
     }
     createThunk(*isec, *r);
   }
-  assert(numPendingThunkTargets == 0);
 
   if (!thunks.empty())
     log(name + ": Created " + Twine(thunks.size()) + " (" +
