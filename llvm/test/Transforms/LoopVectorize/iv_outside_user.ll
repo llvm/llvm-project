@@ -178,7 +178,7 @@ define ptr @both(ptr %p, i32 %k)  {
 ; VEC-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; VEC-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
 ; VEC:       [[MIDDLE_BLOCK]]:
-; VEC-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <2 x ptr> [[VECTOR_GEP]], i32 1
+; VEC-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <2 x ptr> [[VECTOR_GEP]], i64 1
 ; VEC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
 ; VEC-NEXT:    [[IND_ESCAPE:%.*]] = getelementptr i8, ptr [[TMP5]], i64 -4
 ; VEC-NEXT:    br i1 [[CMP_N]], label %[[FOR_END:.*]], label %[[SCALAR_PH]]
@@ -649,7 +649,7 @@ define i32 @postinc_not_iv_backedge_value(i32 %k)  {
 ; VEC-NEXT:    br i1 [[TMP1]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
 ; VEC:       [[MIDDLE_BLOCK]]:
 ; VEC-NEXT:    [[TMP0:%.*]] = add <2 x i32> [[VEC_IND]], splat (i32 2)
-; VEC-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP0]], i32 1
+; VEC-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP0]], i64 1
 ; VEC-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[K]], [[N_VEC]]
 ; VEC-NEXT:    br i1 [[CMP_N]], label %[[FOR_END:.*]], label %[[SCALAR_PH]]
 ; VEC:       [[SCALAR_PH]]:

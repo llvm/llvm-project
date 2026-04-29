@@ -1731,18 +1731,6 @@ public:
     return true;
   }
   void Post(const parser::OpenMPLoopConstruct &) { PopScope(); }
-  bool Pre(const parser::OmpBeginLoopDirective &x) {
-    return Pre(static_cast<const parser::OmpDirectiveSpecification &>(x));
-  }
-  void Post(const parser::OmpBeginLoopDirective &x) {
-    Post(static_cast<const parser::OmpDirectiveSpecification &>(x));
-  }
-  bool Pre(const parser::OmpEndLoopDirective &x) {
-    return Pre(static_cast<const parser::OmpDirectiveSpecification &>(x));
-  }
-  void Post(const parser::OmpEndLoopDirective &x) {
-    Post(static_cast<const parser::OmpDirectiveSpecification &>(x));
-  }
 
   void Post(const parser::OmpTypeName &);
   bool Pre(const parser::OmpStylizedDeclaration &);
@@ -1764,12 +1752,12 @@ public:
     }
   }
 
-  bool Pre(const parser::OpenMPDeclareMapperConstruct &x) {
+  bool Pre(const parser::OmpDeclareMapperDirective &x) {
     AddOmpSourceRange(x.source);
     return true;
   }
 
-  bool Pre(const parser::OpenMPDeclareSimdConstruct &x) {
+  bool Pre(const parser::OmpDeclareSimdDirective &x) {
     AddOmpSourceRange(x.source);
     return true;
   }
@@ -1779,7 +1767,7 @@ public:
     return true;
   }
 
-  bool Pre(const parser::OpenMPDeclareReductionConstruct &x) {
+  bool Pre(const parser::OmpDeclareReductionDirective &x) {
     AddOmpSourceRange(x.source);
     return true;
   }
@@ -1809,7 +1797,7 @@ public:
     return true;
   }
   void Post(const parser::OpenMPThreadprivate &) { SkipImplicitTyping(false); }
-  bool Pre(const parser::OpenMPDeclareTargetConstruct &x) {
+  bool Pre(const parser::OmpDeclareTargetDirective &x) {
     auto addObjectName{[&](const parser::OmpObject &object) {
       common::visit(
           common::visitors{
@@ -1836,7 +1824,7 @@ public:
     }};
 
     for (const parser::OmpArgument &arg : x.v.Arguments().v) {
-      if (auto *object{omp::GetArgumentObject(arg)}) {
+      if (auto *object{parser::omp::GetArgumentObject(arg)}) {
         addObjectName(*object);
       }
     }
@@ -1852,7 +1840,7 @@ public:
     SkipImplicitTyping(true);
     return true;
   }
-  void Post(const parser::OpenMPDeclareTargetConstruct &) {
+  void Post(const parser::OmpDeclareTargetDirective &) {
     SkipImplicitTyping(false);
   }
   bool Pre(const parser::OmpAllocateDirective &x) {
@@ -2204,7 +2192,7 @@ void OmpVisitor::ResolveCriticalName(const parser::OmpArgument &arg) {
   }()};
 
   if (auto *object{parser::Unwrap<parser::OmpObject>(arg.u)}) {
-    if (auto *desg{omp::GetDesignatorFromObj(*object)}) {
+    if (auto *desg{parser::omp::GetDesignatorFromObj(*object)}) {
       if (auto *name{parser::GetDesignatorNameIfDataRef(*desg)}) {
         if (auto *symbol{FindInScope(globalScope, *name)}) {
           if (!symbol->test(Symbol::Flag::OmpCriticalLock)) {
@@ -10402,7 +10390,8 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
       std::holds_alternative<parser::CompilerDirective::Inline>(x.u) ||
       std::holds_alternative<parser::CompilerDirective::Prefetch>(x.u) ||
       std::holds_alternative<parser::CompilerDirective::NoInline>(x.u) ||
-      std::holds_alternative<parser::CompilerDirective::IVDep>(x.u)) {
+      std::holds_alternative<parser::CompilerDirective::IVDep>(x.u) ||
+      std::holds_alternative<parser::CompilerDirective::Simd>(x.u)) {
     return;
   }
   if (const auto *tkr{
@@ -10493,6 +10482,21 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
           }
         }
       }
+    }
+  } else if (const auto *inlineAlways{
+                 std::get_if<parser::CompilerDirective::InlineAlways>(&x.u)}) {
+    if (!inlineAlways->v.has_value()) {
+      return;
+    }
+
+    Symbol *sym{currScope().symbol()};
+    if (!sym || !sym->has<SubprogramDetails>()) {
+      Say(x.source,
+          "!DIR$ INLINEALWAYS directive with name must appear in a subprogram"_err_en_US);
+    } else if (inlineAlways->v->ToString() != sym->name().ToString()) {
+      context().Warn(common::UsageWarning::IgnoredDirective, x.source,
+          "INLINEALWAYS name '%s' does not match the subprogram name '%s'"_warn_en_US,
+          inlineAlways->v->ToString(), sym->name().ToString());
     }
   } else if (context().ShouldWarn(common::UsageWarning::IgnoredDirective)) {
     Say(x.source, "Unrecognized compiler directive was ignored"_warn_en_US)

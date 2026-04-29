@@ -292,7 +292,7 @@ bool lldb_private::formatters::NSAttributedStringSummaryProvider(
   pointer_value += addr_size;
   CompilerType type(valobj.GetCompilerType());
   ExecutionContext exe_ctx(target_sp, false);
-  ValueObjectSP child_ptr_sp(valobj.CreateValueObjectFromAddress(
+  ValueObjectSP child_ptr_sp(valobj.CreateChildValueObjectFromAddress(
       "string_ptr", pointer_value, exe_ctx, type));
   if (!child_ptr_sp)
     return false;

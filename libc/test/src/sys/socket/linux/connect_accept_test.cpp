@@ -171,7 +171,7 @@ TEST_F(LlvmLibcConnectAcceptTest, Accept4Flags) {
   ASSERT_THAT(LIBC_NAMESPACE::close(accepting_socket), Succeeds(0));
   ASSERT_THAT(LIBC_NAMESPACE::remove(ACCEPT_PATH), Succeeds(0));
 
-  ASSERT_EQ(accepted_addr_len, sizeof(sa_family_t));
+  ASSERT_EQ(accepted_addr_len, static_cast<socklen_t>(sizeof(sa_family_t)));
   ASSERT_EQ(accepted_addr.sun_family, static_cast<sa_family_t>(AF_UNIX));
 
   // Check FD_CLOEXEC

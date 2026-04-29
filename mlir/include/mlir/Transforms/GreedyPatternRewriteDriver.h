@@ -92,7 +92,8 @@ public:
   /// Only ops within the scope are added to the worklist. If no scope is
   /// specified, the closest enclosing region around the initial list of ops
   /// (or the specified region, depending on which greedy rewrite entry point
-  /// is used) is used as a scope.
+  /// is used) is used as a scope. Any region being simplified must be enclosed
+  /// by the scope (or equal to it).
   Region *getScope() const { return scope; }
   GreedyRewriteConfig &setScope(Region *scope) {
     this->scope = scope;
@@ -137,6 +138,29 @@ public:
     return *this;
   }
 
+  /// If set to "true", full common-subexpression elimination is run on the
+  /// scoped region between each pattern-application iteration. Unlike
+  /// `cseConstants` (which only deduplicates constant ops via the operation
+  /// folder) this runs the standard CSE algorithm and can unblock further
+  /// canonicalizations on the next iteration. Off by default because it
+  /// rebuilds dominance info each iteration.
+  ///
+  /// Caveats when enabling this option:
+  /// - Any listener attached via `setListener` will be notified of
+  ///   `notifyOperationReplaced` / `notifyOperationErased` events generated
+  ///   by CSE. Pattern authors relying on operation identity (e.g., the
+  ///   transform dialect's handle tracking) must account for this.
+  /// - CSE-driven changes feed back into the iteration loop: a pattern that
+  ///   re-materializes duplicates that CSE keeps collapsing can extend the
+  ///   iteration count and, in the worst case, hit `maxIterations`. Under
+  ///   `testConvergence=true` such pipelines will be reported as
+  ///   non-convergent.
+  bool isCSEBetweenIterationsEnabled() const { return cseBetweenIterations; }
+  GreedyRewriteConfig &enableCSEBetweenIterations(bool enable = true) {
+    cseBetweenIterations = enable;
+    return *this;
+  }
+
 private:
   Region *scope = nullptr;
   bool useTopDownTraversal = false;
@@ -148,6 +172,7 @@ private:
   RewriterBase::Listener *listener = nullptr;
   bool fold = true;
   bool cseConstants = true;
+  bool cseBetweenIterations = false;
 };
 
 //===----------------------------------------------------------------------===//
@@ -167,6 +192,8 @@ private:
 /// A region scope can be set in the configuration parameter. By default, the
 /// scope is set to the specified region. Only in-scope ops are added to the
 /// worklist and only in-scope ops are allowed to be modified by the patterns.
+/// If a scope is set explicitly, it must enclose `region` (i.e., `region`
+/// must be nested within the scope, or equal to it).
 ///
 /// Returns "success" if the iterative process converged (i.e., fixpoint was
 /// reached) and no more patterns can be matched within the region. `changed`
@@ -191,7 +218,9 @@ applyPatternsGreedily(Region &region, const FrozenRewritePatternSet &patterns,
 /// specified op. A region scope can be set in the configuration parameter. By
 /// default, the scope is set to the region of the current greedy rewrite. Only
 /// in-scope ops are added to the worklist and only in-scope ops and the
-/// specified op itself are allowed to be modified by the patterns.
+/// specified op itself are allowed to be modified by the patterns. If a scope
+/// is set explicitly, it must enclose `op` (i.e., `op` must be nested within
+/// the scope).
 ///
 /// Note: The specified op may be modified, but it may not be removed by the
 /// patterns.
