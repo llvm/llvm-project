@@ -646,9 +646,10 @@ void FactsGenerator::VisitCXXNewExpr(const CXXNewExpr *NE) {
       // Use the placement argument before the implicit conversion to void*, so
       // inner origins are still available.
       const Expr *PlacementArg = NE->getPlacementArg(0);
-      if (const CastExpr *ICE = dyn_cast<CastExpr>(PlacementArg)) {
+      if (const auto *ICE = dyn_cast<ImplicitCastExpr>(PlacementArg);
+          ICE && ICE->getCastKind() == CK_BitCast &&
+          PlacementArg->getType()->isVoidPointerType())
         PlacementArg = ICE->getSubExpr();
-      }
       OriginList *PlacementList = getOriginsList(*PlacementArg);
       // FIXME: General placement arguments need separate handling to overwrite
       // the right origins.
