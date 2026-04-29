@@ -347,11 +347,11 @@ int Thread::join(ThreadReturnValue &retval) {
     if (self.attrib == attrib)
       return EDEADLK;
 
+    attrib->joiner.store(self.attrib);
+    
     // Reject mutual join.
     if (self.attrib->joiner.load() == attrib)
       return EDEADLK;
-
-    attrib->joiner.store(self.attrib);
   }
 
   wait();
