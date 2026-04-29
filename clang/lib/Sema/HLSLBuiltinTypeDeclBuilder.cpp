@@ -2263,8 +2263,6 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addHandleAccessFunction(
     ReturnTy = AST.getLValueReferenceType(ReturnTy);
   } else {
     ReturnTy = ElemTy;
-    if (IsConstReturn)
-      ReturnTy.addConst();
   }
   MMB.ReturnTy = ReturnTy;
 
