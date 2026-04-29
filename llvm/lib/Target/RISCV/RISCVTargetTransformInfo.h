@@ -380,8 +380,6 @@ public:
         Intrinsic::vp_ashr,
         Intrinsic::vp_cttz_elts,
         Intrinsic::vp_fptrunc,
-        Intrinsic::vp_fshl,
-        Intrinsic::vp_fshr,
         Intrinsic::vp_gather,
         Intrinsic::vp_icmp,
         Intrinsic::vp_inttoptr,
