@@ -55,8 +55,7 @@ protected:
 
 public:
   AArch64O0PreLegalizerCombinerImpl(
-      MachineFunction &MF, CombinerInfo &CInfo, GISelValueTracking &VT,
-      GISelCSEInfo *CSEInfo,
+      MachineFunction &MF, CombinerInfo &CInfo, GISelCSEInfo *CSEInfo,
       const AArch64O0PreLegalizerCombinerImplRuleConfig &RuleConfig,
       const AArch64Subtarget &STI, const LibcallLoweringInfo &Libcalls);
 
@@ -77,13 +76,12 @@ private:
 #undef GET_GICOMBINER_IMPL
 
 AArch64O0PreLegalizerCombinerImpl::AArch64O0PreLegalizerCombinerImpl(
-    MachineFunction &MF, CombinerInfo &CInfo, GISelValueTracking &VT,
-    GISelCSEInfo *CSEInfo,
+    MachineFunction &MF, CombinerInfo &CInfo, GISelCSEInfo *CSEInfo,
     const AArch64O0PreLegalizerCombinerImplRuleConfig &RuleConfig,
     const AArch64Subtarget &STI, const LibcallLoweringInfo &Libcalls)
-    : Combiner(MF, CInfo, &VT, CSEInfo),
-      Helper(Observer, B, /*IsPreLegalize*/ true, &VT), RuleConfig(RuleConfig),
-      STI(STI), Libcalls(Libcalls),
+    : Combiner(MF, CInfo, /*VT=*/nullptr, CSEInfo),
+      Helper(Observer, B, /*IsPreLegalize*/ true, /*VT=*/nullptr),
+      RuleConfig(RuleConfig), STI(STI), Libcalls(Libcalls),
 #define GET_GICOMBINER_CONSTRUCTOR_INITS
 #include "AArch64GenO0PreLegalizeGICombiner.inc"
 #undef GET_GICOMBINER_CONSTRUCTOR_INITS
@@ -119,8 +117,7 @@ bool AArch64O0PreLegalizerCombinerImpl::tryCombineAll(MachineInstr &MI) const {
 }
 
 bool runCombiner(
-    MachineFunction &MF, GISelValueTracking *VT,
-    const LibcallLoweringInfo &Libcalls,
+    MachineFunction &MF, const LibcallLoweringInfo &Libcalls,
     const AArch64O0PreLegalizerCombinerImplRuleConfig &RuleConfig) {
   const Function &F = MF.getFunction();
   const AArch64Subtarget &ST = MF.getSubtarget<AArch64Subtarget>();
@@ -132,7 +129,7 @@ bool runCombiner(
   // at the cost of possibly missing optimizations. See PR#94291 for details.
   CInfo.MaxIterations = 1;
 
-  AArch64O0PreLegalizerCombinerImpl Impl(MF, CInfo, *VT,
+  AArch64O0PreLegalizerCombinerImpl Impl(MF, CInfo,
                                          /*CSEInfo*/ nullptr, RuleConfig, ST,
                                          Libcalls);
   return Impl.combineMachineInstrs();
@@ -164,8 +161,6 @@ void AArch64O0PreLegalizerCombinerLegacy::getAnalysisUsage(
     AnalysisUsage &AU) const {
   AU.setPreservesCFG();
   getSelectionDAGFallbackAnalysisUsage(AU);
-  AU.addRequired<GISelValueTrackingAnalysisLegacy>();
-  AU.addPreserved<GISelValueTrackingAnalysisLegacy>();
   AU.addRequired<LibcallLoweringInfoWrapper>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
@@ -182,22 +177,19 @@ bool AArch64O0PreLegalizerCombinerLegacy::runOnMachineFunction(
     return false;
 
   const Function &F = MF.getFunction();
-  GISelValueTracking *VT =
-      &getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
 
   const AArch64Subtarget &ST = MF.getSubtarget<AArch64Subtarget>();
   const LibcallLoweringInfo &Libcalls =
       getAnalysis<LibcallLoweringInfoWrapper>().getLibcallLowering(
           *F.getParent(), ST);
 
-  return runCombiner(MF, VT, Libcalls, RuleConfig);
+  return runCombiner(MF, Libcalls, RuleConfig);
 }
 
 char AArch64O0PreLegalizerCombinerLegacy::ID = 0;
 INITIALIZE_PASS_BEGIN(AArch64O0PreLegalizerCombinerLegacy, DEBUG_TYPE,
                       "Combine AArch64 machine instrs before legalization",
                       false, false)
-INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysisLegacy)
 INITIALIZE_PASS_DEPENDENCY(GISelCSEAnalysisWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LibcallLoweringInfoWrapper)
 INITIALIZE_PASS_END(AArch64O0PreLegalizerCombinerLegacy, DEBUG_TYPE,
@@ -223,8 +215,6 @@ AArch64O0PreLegalizerCombinerPass::run(MachineFunction &MF,
   if (MF.getProperties().hasFailedISel())
     return PreservedAnalyses::all();
 
-  GISelValueTracking &VT = MFAM.getResult<GISelValueTrackingAnalysis>(MF);
-
   const AArch64Subtarget &ST = MF.getSubtarget<AArch64Subtarget>();
   auto &MAMProxy =
       MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF);
@@ -236,12 +226,11 @@ AArch64O0PreLegalizerCombinerPass::run(MachineFunction &MF,
 
   const LibcallLoweringInfo &Libcalls = LibcallResult->getLibcallLowering(ST);
 
-  if (!runCombiner(MF, &VT, Libcalls, *RuleConfig))
+  if (!runCombiner(MF, Libcalls, *RuleConfig))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserveSet<CFGAnalyses>();
-  PA.preserve<GISelValueTrackingAnalysis>();
   return PA;
 }
 
