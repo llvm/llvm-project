@@ -58,7 +58,6 @@
 #include <set>
 
 using namespace clang;
-using namespace sema;
 
 //===----------------------------------------------------------------------===//
 // CheckDefaultArgumentVisitor
@@ -18660,13 +18659,9 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
         Diag(FD->getLocation(), diag::err_friend_decl_with_def_arg_must_be_def);
     }
 
-    unsigned NumTPLists = FD->getNumTemplateParameterLists();
+    ArrayRef<TemplateParameterList *> TPL = FD->getTemplateParameterLists();
     Decl *Friend;
-    if (NumTPLists && SS.isValid()) {
-      SmallVector<TemplateParameterList *, 1> TPL(NumTPLists);
-      for (unsigned I = 0, N = NumTPLists; I != N; ++I)
-        TPL[I] = FD->getTemplateParameterList(I);
-
+    if (TPL.size() > 0 && SS.isValid()) {
       if (CheckTemplateDeclScope(S, TPL.back()))
         return nullptr;
 
@@ -18677,6 +18672,7 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
       Friend = FriendDecl::Create(Context, CurContext, D.getIdentifierLoc(), ND,
                                   DS.getFriendSpecLoc());
     }
+
     Friend->setAccess(AS_public);
     CurContext->addDecl(Friend);
 
