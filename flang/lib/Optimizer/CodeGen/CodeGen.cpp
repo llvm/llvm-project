@@ -954,8 +954,8 @@ struct ConvertOpConversion : public fir::FIROpConversion<fir::ConvertOp> {
           llvm::none_of(strides, mlir::ShapedType::isDynamic);
       return hasStaticLayout && memRefTy.hasStaticShape();
     };
-    auto getAlignedPtr = [&rewriter, &loc, &firConv](
-                             mlir::Value memRefVal, mlir::MemRefType memRefTy) {
+    auto getBufferPtr = [&rewriter, &loc, &firConv](mlir::Value memRefVal,
+                                                    mlir::MemRefType memRefTy) {
       auto alignedPtr =
           mlir::LLVM::ExtractValueOp::create(rewriter, loc, memRefVal, 1);
       auto offset =
@@ -977,7 +977,7 @@ struct ConvertOpConversion : public fir::FIROpConversion<fir::ConvertOp> {
       // If the from type is also a memref we need to extract its buffer
       // pointer.
       if (fromMemRefTy)
-        basePtr = getAlignedPtr(basePtr, fromMemRefTy);
+        basePtr = getBufferPtr(basePtr, fromMemRefTy);
 
       if (isStaticLayoutAndShape(toMemRefTy)) {
         // Static shape and layout: build a fully-populated descriptor.
@@ -1002,7 +1002,7 @@ struct ConvertOpConversion : public fir::FIROpConversion<fir::ConvertOp> {
       // Legalize conversions *from* memref descriptors to pointer-like values
       // by extracting the underlying buffer pointer from the descriptor.
       mlir::Value base = adaptor.getValue();
-      rewriter.replaceOp(convert, getAlignedPtr(base, fromMemRefTy));
+      rewriter.replaceOp(convert, getBufferPtr(base, fromMemRefTy));
       return mlir::success();
     }
 
