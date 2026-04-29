@@ -413,7 +413,9 @@ uint64_t Attribute::getValueAsParsedInteger(uint64_t Default) const {
   if (!isStringAttribute())
     return Default;
   uint64_t Result = Default;
-  getValueAsString().getAsInteger(0, Result);
+  if (getValueAsString().getAsInteger(0, Result))
+    reportFatalUsageError("cannot parse integer attribute " +
+                          getKindAsString());
   return Result;
 }
 
