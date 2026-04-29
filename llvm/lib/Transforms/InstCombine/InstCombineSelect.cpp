@@ -3403,13 +3403,11 @@ foldSelectOfOrderedFAbsCmpOfNaNScrubbedValue(SelectInst &SI,
   FastMathFlags CommonRewriteFMF =
       FastMathFlags::intersectRewrite(FAbsFMF, CmpFMF);
 
-  auto ValueFMF = [](FastMathFlags FMF) {
-    // unionValue with FastMathFlags() drops all rewriter based flags
-    return FastMathFlags::unionValue(FMF, FastMathFlags());
-  };
-
-  FastMathFlags NewFAbsFMF = CommonRewriteFMF | ValueFMF(FAbsFMF);
-  FastMathFlags NewCmpFMF = CommonRewriteFMF | ValueFMF(CmpFMF);
+  // unionValue with FastMathFlags() drops all rewriter based flags
+  FastMathFlags NewFAbsFMF =
+      CommonRewriteFMF | FastMathFlags::unionValue(FAbsFMF, FastMathFlags());
+  FastMathFlags NewCmpFMF =
+      CommonRewriteFMF | FastMathFlags::unionValue(CmpFMF, FastMathFlags());
 
   // When X is NaN, the old code evaluated fabs(Y), while the new code evaluates
   // fabs(X). Do not preserve nnan on either newly-created instruction.
