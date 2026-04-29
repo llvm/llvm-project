@@ -76,6 +76,7 @@
 #include "clang/Sema/SemaPPC.h"
 #include "clang/Sema/SemaRISCV.h"
 #include "clang/Sema/SemaSPIRV.h"
+#include "clang/Sema/SemaSYCL.h"
 #include "clang/Sema/SemaSystemZ.h"
 #include "clang/Sema/SemaWasm.h"
 #include "clang/Sema/SemaX86.h"
@@ -4457,6 +4458,11 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
               << Arg->getSourceRange() << Sema::MaximumAlignment;
       }
     }
+  }
+
+  if (FD && FD->isVariadic() && getLangOpts().SYCLIsDevice &&
+      !isUnevaluatedContext()) {
+    SYCL().DiagIfDeviceCode(Loc, diag::err_variadic_device_fn) << /*SYCL=*/1;
   }
 
   if (FD)
