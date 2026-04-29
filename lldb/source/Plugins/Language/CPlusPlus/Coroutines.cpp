@@ -63,7 +63,8 @@ static Function *ExtractDestroyFunction(lldb::TargetSP target_sp,
 // clang generates aritifical `__promise` and `__coro_frame` variables inside
 // the destroy function. Look for those variables and extract their type.
 static CompilerType InferArtificialCoroType(Function *destroy_func,
-                                            ConstString var_name) {
+                                            ConstString var_name,
+                                            bool is_msvc) {
   if (!destroy_func)
     return {};
 
@@ -73,13 +74,38 @@ static CompilerType InferArtificialCoroType(Function *destroy_func,
   auto var = variable_list->FindVariable(var_name);
   if (!var)
     return {};
-  if (!var->IsArtificial())
+  if (!var->IsArtificial() && !is_msvc)
     return {};
 
   Type *promise_type = var->GetType();
   if (!promise_type)
     return {};
   return promise_type->GetForwardCompilerType();
+}
+
+static CompilerType GetPromiseType(CompilerType handle_type, bool is_msvc) {
+  if (!handle_type)
+    return {};
+
+  CompilerType template_arg = handle_type.GetTypeTemplateArgument(0);
+  if (template_arg || !is_msvc)
+    return template_arg;
+
+  // No template argument, this might be PDB. std::coroutine_handle<Promise>
+  // doesn't have a typedef inside - try to find `Promise& promise()` and use
+  // the return type.
+  size_t n_methods = handle_type.GetNumMemberFunctions();
+  for (size_t i = 0; i < n_methods; ++i) {
+    TypeMemberFunctionImpl fn = handle_type.GetMemberFunctionAtIndex(i);
+    if (fn.GetName() == "promise") {
+      CompilerType return_ty = fn.GetReturnType().GetPointeeType();
+      if (return_ty)
+        return return_ty;
+      break; // Return void here to infer the type from __promise.
+    }
+  }
+
+  return handle_type.GetBasicTypeFromAST(lldb::eBasicTypeVoid);
 }
 
 bool lldb_private::formatters::StdlibCoroutineHandleSummaryProvider(
@@ -138,26 +164,27 @@ lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::Update() {
   if (!ast_ctx)
     return lldb::ChildCacheState::eRefetch;
 
+  bool is_msvc =
+      target_sp->GetArchitecture().GetTriple().isWindowsMSVCEnvironment();
+
   // Determine the coroutine frame type and the promise type. Fall back
   // to `void`, since even the pointer itself might be useful, even if the
   // type inference failed.
   Function *destroy_func = ExtractDestroyFunction(target_sp, frame_ptr_addr);
   CompilerType void_type = ast_ctx->GetBasicType(lldb::eBasicTypeVoid);
-  CompilerType promise_type;
-  if (CompilerType template_arg =
-          valobj_sp->GetCompilerType().GetTypeTemplateArgument(0))
-    promise_type = std::move(template_arg);
+  CompilerType promise_type =
+      GetPromiseType(valobj_sp->GetCompilerType(), is_msvc);
   if (promise_type.IsVoidType()) {
     // Try to infer the promise_type if it was type-erased
     if (destroy_func) {
-      if (CompilerType inferred_type =
-              InferArtificialCoroType(destroy_func, ConstString("__promise"))) {
+      if (CompilerType inferred_type = InferArtificialCoroType(
+              destroy_func, ConstString("__promise"), is_msvc)) {
         promise_type = inferred_type;
       }
     }
   }
-  CompilerType coro_frame_type =
-      InferArtificialCoroType(destroy_func, ConstString("__coro_frame"));
+  CompilerType coro_frame_type = InferArtificialCoroType(
+      destroy_func, ConstString("__coro_frame"), is_msvc);
   if (!coro_frame_type)
     coro_frame_type = void_type;
 
