@@ -2286,8 +2286,7 @@ maybeFunctionArgumentCommentEnd(const PathRef FileName, const unsigned Offset,
 
   SourceManagerForFile FileSM(FileName, Content);
   const SourceManager &SM = FileSM.get();
-  const SourceLocation Cursor =
-      SM.getComposedLoc(SM.getMainFileID(), static_cast<unsigned>(Offset));
+  const SourceLocation Cursor = SM.getComposedLoc(SM.getMainFileID(), Offset);
   const SourceLocation EndOfSuffix =
       Lexer::findEndOfIdentifierContinuation(Cursor, SM, LangOpts);
   const unsigned EndOfSuffixOffset = SM.getFileOffset(EndOfSuffix);
