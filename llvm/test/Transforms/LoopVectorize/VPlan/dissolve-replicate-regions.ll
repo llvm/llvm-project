@@ -50,8 +50,8 @@ define void @predicated_load(i1 %c, ptr %ptr, ptr %dst) {
 ; SCALAR-EMPTY:
 ; SCALAR-NEXT:    pred.load.continue:
 ; SCALAR-NEXT:      EMIT-SCALAR vp<[[VP11:%[0-9]+]]> = phi [ ir<poison>, pred.load.continue ], [ ir<%lv>.1, pred.load.if ]
-; SCALAR-NEXT:      BLEND ir<%pred.val> = ir<0> vp<%9>/ir<%c>
-; SCALAR-NEXT:      BLEND ir<%pred.val>.1 = ir<0> vp<%11>/ir<%c>
+; SCALAR-NEXT:      EMIT ir<%pred.val> = select ir<%c>, vp<[[VP9]]>, ir<0>
+; SCALAR-NEXT:      EMIT ir<%pred.val>.1 = select ir<%c>, vp<[[VP11]]>, ir<0>
 ; SCALAR-NEXT:      CLONE ir<%gep.dst> = getelementptr ir<%dst>, vp<[[VP6]]>
 ; SCALAR-NEXT:      CLONE ir<%gep.dst>.1 = getelementptr ir<%dst>, vp<[[VP7]]>
 ; SCALAR-NEXT:      CLONE store ir<%pred.val>, ir<%gep.dst>
@@ -144,8 +144,8 @@ define void @predicated_load(i1 %c, ptr %ptr, ptr %dst) {
 ; VECTOR-NEXT:    Successor(s): if.then.0
 ; VECTOR-EMPTY:
 ; VECTOR-NEXT:    if.then.0:
-; VECTOR-NEXT:      BLEND ir<%pred.val> = ir<0> vp<%10>/vp<[[VP5]]>
-; VECTOR-NEXT:      BLEND ir<%pred.val>.1 = ir<0> vp<%12>/vp<[[VP5]]>
+; VECTOR-NEXT:      EMIT ir<%pred.val> = select vp<[[VP5]]>, vp<[[VP10]]>, ir<0>
+; VECTOR-NEXT:      EMIT ir<%pred.val>.1 = select vp<[[VP5]]>, vp<[[VP12]]>, ir<0>
 ; VECTOR-NEXT:      CLONE ir<%gep.dst> = getelementptr ir<%dst>, vp<[[VP7]]>
 ; VECTOR-NEXT:      EMIT vp<[[VP13:%[0-9]+]]> = mul nuw nsw vp<[[VP0]]>, ir<1>
 ; VECTOR-NEXT:      vp<[[VP14:%[0-9]+]]> = vector-pointer ir<%gep.dst>

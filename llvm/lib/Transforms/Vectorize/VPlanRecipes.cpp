@@ -2809,8 +2809,6 @@ void VPBlendRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
       if (I != 0)
         O << " ";
       getIncomingValue(I)->printAsOperand(O, SlotTracker);
-      if (I == 0 && isNormalized())
-        continue;
       O << "/";
       getMask(I)->printAsOperand(O, SlotTracker);
     }
@@ -3372,14 +3370,23 @@ static bool isUsedByLoadStoreAddress(const VPUser *V) {
     if (!Cur || !Seen.insert(Cur).second)
       continue;
 
-    auto *Blend = dyn_cast<VPBlendRecipe>(Cur);
+    bool Blend = isa_and_nonnull<PHINode>(Cur->getUnderlyingValue()) &&
+                 match(Cur, m_VPInstruction<Instruction::Select>());
+    // Check if any V* in m_Select(C1, V1, m_Select(C2, V2, ...)) was visited.
+    auto VisitedIncomingValue = [&Seen](const VPSingleDefRecipe *Blend) {
+      const VPValue *X = Blend;
+      VPValue *LHS, *RHS;
+      while (match(X, m_VPInstruction<Instruction::Select>(
+                          m_VPValue(), m_VPValue(LHS), m_VPValue(RHS)))) {
+        if (Seen.contains(LHS->getDefiningRecipe()))
+          return true;
+        X = RHS;
+      }
+      return Seen.contains(X->getDefiningRecipe());
+    };
     // Skip blends that use V only through a compare by checking if any incoming
     // value was already visited.
-    if (Blend && none_of(seq<unsigned>(0, Blend->getNumIncomingValues()),
-                         [&](unsigned I) {
-                           return Seen.contains(
-                               Blend->getIncomingValue(I)->getDefiningRecipe());
-                         }))
+    if (Blend && !VisitedIncomingValue(Cur))
       continue;
 
     for (VPUser *U : Cur->users()) {

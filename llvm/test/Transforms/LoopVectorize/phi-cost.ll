@@ -6,7 +6,7 @@ target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 
 ; CHECK-LABEL: phi_two_incoming_values
 ; CHECK:       Cost of 1 for VF 2: induction instruction   %i = phi i64 [ %i.next, %if.end ], [ 0, %entry ]
-; CHECK:       Cost of 1 for VF 2: BLEND ir<%tmp5> = ir<%tmp1> ir<%tmp4>/ir<%tmp3>
+; CHECK:       Cost of 1 for VF 2: EMIT ir<%tmp5> = select ir<%tmp3>, ir<%tmp4>, ir<%tmp1>
 ;
 define void @phi_two_incoming_values(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; CHECK-LABEL: define void @phi_two_incoming_values(
@@ -83,7 +83,8 @@ for.end:
 
 ; CHECK-LABEL: phi_three_incoming_values
 ; CHECK:       Cost of 1 for VF 2: induction instruction   %i = phi i64 [ %i.next, %if.end ], [ 0, %entry ]
-; CHECK:       Cost of 2 for VF 2: BLEND ir<%tmp8> = ir<%tmp7> ir<3>/vp<{{.*}}> ir<9>/vp<{{.*}}>
+; CHECK:       Cost of 1 for VF 2: EMIT vp<%predphi> = select vp<{{.*}}>, ir<3>, ir<%tmp7>
+; CHECK:       Cost of 1 for VF 2: EMIT ir<%tmp8> = select ir<%tmp4>, vp<%predphi>, ir<9>
 ;
 define void @phi_three_incoming_values(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; CHECK-LABEL: define void @phi_three_incoming_values(
