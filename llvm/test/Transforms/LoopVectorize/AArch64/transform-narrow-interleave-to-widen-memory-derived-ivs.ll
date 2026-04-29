@@ -18,12 +18,12 @@ define void @derived_int_ivs(ptr noalias %a, ptr noalias %b, i64 %end) {
 ; VF2:       [[VECTOR_PH]]:
 ; VF2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 1
 ; VF2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
-; VF2-NEXT:    [[TMP3:%.*]] = mul i64 [[N_VEC]], 16
+; VF2-NEXT:    [[TMP3:%.*]] = shl i64 [[N_VEC]], 4
 ; VF2-NEXT:    [[TMP4:%.*]] = add i64 16, [[TMP3]]
 ; VF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2:       [[VECTOR_BODY]]:
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF2-NEXT:    [[TMP5:%.*]] = mul i64 [[INDEX]], 16
+; VF2-NEXT:    [[TMP5:%.*]] = shl i64 [[INDEX]], 4
 ; VF2-NEXT:    [[OFFSET_IDX:%.*]] = add i64 16, [[TMP5]]
 ; VF2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[OFFSET_IDX]]
 ; VF2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP6]], align 8
@@ -48,12 +48,12 @@ define void @derived_int_ivs(ptr noalias %a, ptr noalias %b, i64 %end) {
 ; VF2IC2:       [[VECTOR_PH]]:
 ; VF2IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 2
 ; VF2IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
-; VF2IC2-NEXT:    [[TMP3:%.*]] = mul i64 [[N_VEC]], 16
+; VF2IC2-NEXT:    [[TMP3:%.*]] = shl i64 [[N_VEC]], 4
 ; VF2IC2-NEXT:    [[TMP4:%.*]] = add i64 16, [[TMP3]]
 ; VF2IC2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2IC2:       [[VECTOR_BODY]]:
 ; VF2IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF2IC2-NEXT:    [[TMP5:%.*]] = mul i64 [[INDEX]], 16
+; VF2IC2-NEXT:    [[TMP5:%.*]] = shl i64 [[INDEX]], 4
 ; VF2IC2-NEXT:    [[OFFSET_IDX:%.*]] = add i64 16, [[TMP5]]
 ; VF2IC2-NEXT:    [[TMP6:%.*]] = add i64 [[OFFSET_IDX]], 16
 ; VF2IC2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[OFFSET_IDX]]
@@ -83,12 +83,12 @@ define void @derived_int_ivs(ptr noalias %a, ptr noalias %b, i64 %end) {
 ; VF4:       [[VECTOR_PH]]:
 ; VF4-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 4
 ; VF4-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
-; VF4-NEXT:    [[TMP3:%.*]] = mul i64 [[N_VEC]], 16
+; VF4-NEXT:    [[TMP3:%.*]] = shl i64 [[N_VEC]], 4
 ; VF4-NEXT:    [[TMP4:%.*]] = add i64 16, [[TMP3]]
 ; VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF4:       [[VECTOR_BODY]]:
 ; VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF4-NEXT:    [[TMP5:%.*]] = mul i64 [[INDEX]], 16
+; VF4-NEXT:    [[TMP5:%.*]] = shl i64 [[INDEX]], 4
 ; VF4-NEXT:    [[OFFSET_IDX:%.*]] = add i64 16, [[TMP5]]
 ; VF4-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[OFFSET_IDX]]
 ; VF4-NEXT:    [[WIDE_VEC:%.*]] = load <8 x double>, ptr [[TMP6]], align 8
@@ -156,17 +156,15 @@ define void @derived_pointer_ivs(ptr noalias %a, ptr noalias %b, ptr %end) {
 ; VF2:       [[VECTOR_PH]]:
 ; VF2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 1
 ; VF2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
-; VF2-NEXT:    [[TMP9:%.*]] = mul i64 [[N_VEC]], 16
+; VF2-NEXT:    [[TMP9:%.*]] = shl i64 [[N_VEC]], 4
 ; VF2-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP9]]
-; VF2-NEXT:    [[TMP11:%.*]] = mul i64 [[N_VEC]], 16
-; VF2-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP11]]
+; VF2-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP9]]
 ; VF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2:       [[VECTOR_BODY]]:
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF2-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 16
+; VF2-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 4
 ; VF2-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[OFFSET_IDX]]
-; VF2-NEXT:    [[OFFSET_IDX6:%.*]] = mul i64 [[INDEX]], 16
-; VF2-NEXT:    [[NEXT_GEP7:%.*]] = getelementptr i8, ptr [[B]], i64 [[OFFSET_IDX6]]
+; VF2-NEXT:    [[NEXT_GEP7:%.*]] = getelementptr i8, ptr [[B]], i64 [[OFFSET_IDX]]
 ; VF2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[NEXT_GEP]], align 8
 ; VF2-NEXT:    store <2 x double> [[WIDE_LOAD]], ptr [[NEXT_GEP7]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 1
@@ -205,21 +203,18 @@ define void @derived_pointer_ivs(ptr noalias %a, ptr noalias %b, ptr %end) {
 ; VF2IC2:       [[VECTOR_PH]]:
 ; VF2IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 2
 ; VF2IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
-; VF2IC2-NEXT:    [[TMP9:%.*]] = mul i64 [[N_VEC]], 16
+; VF2IC2-NEXT:    [[TMP9:%.*]] = shl i64 [[N_VEC]], 4
 ; VF2IC2-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP9]]
-; VF2IC2-NEXT:    [[TMP11:%.*]] = mul i64 [[N_VEC]], 16
-; VF2IC2-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP11]]
+; VF2IC2-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP9]]
 ; VF2IC2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2IC2:       [[VECTOR_BODY]]:
 ; VF2IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF2IC2-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 16
+; VF2IC2-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 4
 ; VF2IC2-NEXT:    [[TMP13:%.*]] = add i64 [[OFFSET_IDX]], 16
 ; VF2IC2-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[OFFSET_IDX]]
 ; VF2IC2-NEXT:    [[NEXT_GEP6:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP13]]
-; VF2IC2-NEXT:    [[OFFSET_IDX7:%.*]] = mul i64 [[INDEX]], 16
-; VF2IC2-NEXT:    [[TMP14:%.*]] = add i64 [[OFFSET_IDX7]], 16
-; VF2IC2-NEXT:    [[NEXT_GEP8:%.*]] = getelementptr i8, ptr [[B]], i64 [[OFFSET_IDX7]]
-; VF2IC2-NEXT:    [[NEXT_GEP9:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP14]]
+; VF2IC2-NEXT:    [[NEXT_GEP8:%.*]] = getelementptr i8, ptr [[B]], i64 [[OFFSET_IDX]]
+; VF2IC2-NEXT:    [[NEXT_GEP9:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP13]]
 ; VF2IC2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[NEXT_GEP]], align 8
 ; VF2IC2-NEXT:    [[WIDE_LOAD10:%.*]] = load <2 x double>, ptr [[NEXT_GEP6]], align 8
 ; VF2IC2-NEXT:    store <2 x double> [[WIDE_LOAD]], ptr [[NEXT_GEP8]], align 8
@@ -260,23 +255,21 @@ define void @derived_pointer_ivs(ptr noalias %a, ptr noalias %b, ptr %end) {
 ; VF4:       [[VECTOR_PH]]:
 ; VF4-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 4
 ; VF4-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
-; VF4-NEXT:    [[TMP9:%.*]] = mul i64 [[N_VEC]], 16
+; VF4-NEXT:    [[TMP9:%.*]] = shl i64 [[N_VEC]], 4
 ; VF4-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP9]]
-; VF4-NEXT:    [[TMP11:%.*]] = mul i64 [[N_VEC]], 16
-; VF4-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP11]]
+; VF4-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP9]]
 ; VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF4:       [[VECTOR_BODY]]:
 ; VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF4-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 16
+; VF4-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 4
 ; VF4-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[OFFSET_IDX]]
-; VF4-NEXT:    [[OFFSET_IDX6:%.*]] = mul i64 [[INDEX]], 16
-; VF4-NEXT:    [[NEXT_GEP7:%.*]] = getelementptr i8, ptr [[B]], i64 [[OFFSET_IDX6]]
+; VF4-NEXT:    [[NEXT_GEP6:%.*]] = getelementptr i8, ptr [[B]], i64 [[OFFSET_IDX]]
 ; VF4-NEXT:    [[WIDE_VEC:%.*]] = load <8 x double>, ptr [[NEXT_GEP]], align 8, !alias.scope [[META4:![0-9]+]]
 ; VF4-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x double> [[WIDE_VEC]], <8 x double> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; VF4-NEXT:    [[STRIDED_VEC8:%.*]] = shufflevector <8 x double> [[WIDE_VEC]], <8 x double> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
 ; VF4-NEXT:    [[TMP13:%.*]] = shufflevector <4 x double> [[STRIDED_VEC]], <4 x double> [[STRIDED_VEC8]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; VF4-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x double> [[TMP13]], <8 x double> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
-; VF4-NEXT:    store <8 x double> [[INTERLEAVED_VEC]], ptr [[NEXT_GEP7]], align 8, !alias.scope [[META7:![0-9]+]], !noalias [[META4]]
+; VF4-NEXT:    store <8 x double> [[INTERLEAVED_VEC]], ptr [[NEXT_GEP6]], align 8, !alias.scope [[META7:![0-9]+]], !noalias [[META4]]
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VF4-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; VF4-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
@@ -315,7 +308,7 @@ define void @narrow_with_uniform_add_and_gep(ptr noalias %p) {
 ; VF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2:       [[VECTOR_BODY]]:
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF2-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
+; VF2-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 1
 ; VF2-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET_IDX]]
 ; VF2-NEXT:    [[STRIDED_VEC1:%.*]] = load <2 x i64>, ptr [[TMP1]], align 8
 ; VF2-NEXT:    [[TMP3:%.*]] = add <2 x i64> [[STRIDED_VEC1]], splat (i64 1)
@@ -336,7 +329,7 @@ define void @narrow_with_uniform_add_and_gep(ptr noalias %p) {
 ; VF2IC2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2IC2:       [[VECTOR_BODY]]:
 ; VF2IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF2IC2-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
+; VF2IC2-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 1
 ; VF2IC2-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 2
 ; VF2IC2-NEXT:    [[TMP3:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET_IDX]]
 ; VF2IC2-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr [[P]], i64 [[TMP0]]
@@ -362,7 +355,7 @@ define void @narrow_with_uniform_add_and_gep(ptr noalias %p) {
 ; VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF4:       [[VECTOR_BODY]]:
 ; VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF4-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
+; VF4-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 1
 ; VF4-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET_IDX]]
 ; VF4-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i64>, ptr [[TMP1]], align 8
 ; VF4-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i64> [[WIDE_VEC]], <8 x i64> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
