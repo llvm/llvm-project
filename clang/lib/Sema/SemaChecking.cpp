@@ -11223,12 +11223,6 @@ static QualType GetExprType(const Expr *E) {
   return Ty;
 }
 
-static bool isUnsignedIntegerOrVectorElementType(QualType T) {
-  if (const auto *VT = T->getAs<VectorType>())
-    T = VT->getElementType();
-  return T->isUnsignedIntegerType();
-}
-
 /// Attempts to estimate an approximate range for the given integer expression.
 /// Returns a range if successful, otherwise it returns \c std::nullopt if a
 /// reliable estimation cannot be determined.
@@ -11501,7 +11495,7 @@ static std::optional<IntRange> TryGetExprRange(ASTContext &C, const Expr *E,
       return IntRange::forValueOfType(C, GetExprType(E));
 
     case UO_Minus: {
-      if (isUnsignedIntegerOrVectorElementType(E->getType())) {
+      if (E->getType()->isUnsignedIntegerOrVectorType()) {
         return TryGetExprRange(C, UO->getSubExpr(), MaxWidth, InConstantContext,
                                Approximate);
       }
@@ -11519,7 +11513,7 @@ static std::optional<IntRange> TryGetExprRange(ASTContext &C, const Expr *E,
     }
 
     case UO_Not: {
-      if (isUnsignedIntegerOrVectorElementType(E->getType())) {
+      if (E->getType()->isUnsignedIntegerOrVectorType()) {
         return TryGetExprRange(C, UO->getSubExpr(), MaxWidth, InConstantContext,
                                Approximate);
       }

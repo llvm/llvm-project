@@ -3020,9 +3020,13 @@ public:
   /// enumeration types whose underlying type is a signed integer type.
   bool isSignedIntegerOrEnumerationType() const;
 
-  /// Determines whether this is an integer type that is unsigned or an
+  /// Return true if this is an integer type that is unsigned or an
   /// enumeration types whose underlying type is a unsigned integer type.
   bool isUnsignedIntegerOrEnumerationType() const;
+
+  // Determine whether this is an unsigned integer type or an unsigned integer
+  // vector type.
+  bool isUnsignedIntegerOrVectorType() const;
 
   /// Return true if this is a fixed point type according to
   /// ISO/IEC JTC1 SC22 WG14 N1169.
