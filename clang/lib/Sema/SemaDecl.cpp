@@ -7152,12 +7152,11 @@ static void checkSelectAnyAttr(Sema &S, NamedDecl &ND) {
   if (!Attr)
     return;
 
-  if (auto *VD = dyn_cast<VarDecl>(&ND)) {
+  if (auto *VD = dyn_cast<VarDecl>(&ND))
     if (!VD->isStaticDataMember() && VD->isExternallyVisible())
       return;
-  }
 
-  S.Diag(Attr->getLocation(), diag::err_attribute_selectany_non_extern_data);
+  S.Diag(Attr->getLocation(), diag::err_attribute_selectany_non_extern_var);
   ND.dropAttr<SelectAnyAttr>();
 }
 
