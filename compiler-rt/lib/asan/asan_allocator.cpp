@@ -34,14 +34,6 @@
 #include "sanitizer_common/sanitizer_quarantine.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
 
-#if SANITIZER_WINDOWS64
-namespace __sanitizer {
-// Set by InitializeMemintrinsicInterceptors(). True when the CRT exposes
-// memcpy and memmove as separate functions (newer vcruntime140.dll).
-extern bool win64_memcpy_memmove_are_disjoint;
-}  // namespace __sanitizer
-#endif
-
 namespace __asan {
 
 // Valid redzone sizes are 16, 32, 64, ... 2048, so we encode them in 3 bits.
@@ -359,6 +351,37 @@ void AllocatorOptions::CopyTo(Flags *f, CommonFlags *cf) {
   cf->allocator_may_return_null = may_return_null;
   f->alloc_dealloc_mismatch = alloc_dealloc_mismatch;
   cf->allocator_release_to_os_interval_ms = release_to_os_interval_ms;
+}
+
+// Copy the contents of the chunk being reallocated into the freshly allocated
+// destination. `m` describes the source chunk so we can honor any
+// platform-specific constraints attached to it (e.g. zero-size allocations
+// upgraded to 1 byte on Windows).
+static void ReallocCopyContents(void *new_ptr, void *old_ptr, uptr size,
+                                AsanChunk *m) {
+#if SANITIZER_WINDOWS64
+  if (!size)
+    return;
+  // On Windows, malloc(0) (and HeapAlloc(.., 0) under
+  // windows_hook_rtl_allocators) is upgraded to a 1-byte allocation whose
+  // single byte is intentionally shadow-poisoned (asan_mark_zero_allocation,
+  // see b3452d9). The user requested 0 bytes, so there is nothing to copy.
+  if (m->from_zero_alloc)
+    return;
+  // After InitializeMemintrinsicInterceptors, REAL(memcpy) != REAL(memmove)
+  // means we successfully intercepted memcpy as a distinct function and can
+  // safely call its trampoline. When the CRT aliases them (or interception
+  // fell back to ASSIGN_REAL(memcpy, memmove)), both REAL pointers refer to
+  // the same memmove trampoline; calling it for memcpy can re-enter the
+  // intercepted libc routine and perform shadow-checked reads. Use
+  // internal_memcpy in that case.
+  if (REAL(memcpy) != REAL(memmove))
+    REAL(memcpy)(new_ptr, old_ptr, size);
+  else
+    internal_memcpy(new_ptr, old_ptr, size);
+#else
+  REAL(memcpy)(new_ptr, old_ptr, size);
+#endif
 }
 
 struct Allocator {
@@ -815,27 +838,7 @@ struct Allocator {
       uptr memcpy_size = Min(new_size, m->UsedSize());
       // If realloc() races with free(), we may start copying freed memory.
       // However, we will report racy double-free later anyway.
-#if SANITIZER_WINDOWS64
-      // On Win64, REAL(memcpy) only points at a distinct non-interceptor
-      // function when memcpy and memmove are separate CRT entry points. When
-      // they are aliased we keep REAL(memcpy) == REAL(memmove), and both may
-      // dispatch back through the intercepted libc routine, which performs
-      // shadow-checked reads. That is a problem for chunks upgraded from
-      // malloc(0) / HeapReAlloc(..., 0): the single live byte is still
-      // shadow-poisoned (from_zero_alloc / asan_mark_zero_allocation), so a
-      // shadow-checked copy of Min(new_size, UsedSize()) bytes reports a
-      // spurious heap-buffer-overflow (see ReallocTest,
-      // heaprealloc_alloc_zero). Fall back to internal_memcpy (which bypasses
-      // the interceptor) for the poisoned or aliased cases, and only use
-      // REAL(memcpy) on the fast path.
-      if (memcpy_size && __sanitizer::win64_memcpy_memmove_are_disjoint &&
-          !m->from_zero_alloc)
-        REAL(memcpy)(new_ptr, old_ptr, memcpy_size);
-      else
-        internal_memcpy(new_ptr, old_ptr, memcpy_size);
-#else
-      REAL(memcpy)(new_ptr, old_ptr, memcpy_size);
-#endif
+      ReallocCopyContents(new_ptr, old_ptr, memcpy_size, m);
       Deallocate(old_ptr, 0, 0, stack, FROM_MALLOC);
     }
     return new_ptr;

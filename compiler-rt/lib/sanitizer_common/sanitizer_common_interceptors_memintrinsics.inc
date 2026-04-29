@@ -235,36 +235,29 @@ INTERCEPTOR(void *, bzero, void *block, usize size) {
 
 namespace __sanitizer {
 
-#if SANITIZER_WINDOWS64
-// On Windows x64, memcpy and memmove used to share a single implementation in
-// the CRT (vcruntime140.dll), but newer CRTs ship them as distinct functions.
-// Detect this at interceptor init time so the rest of the runtime can pick the
-// right code path (e.g. asan_allocator's Reallocate). See
-// InitializeMemintrinsicInterceptors below.
-bool win64_memcpy_memmove_are_disjoint;
-#endif
-
 // This does not need to be called if InitializeCommonInterceptors() is called.
 void InitializeMemintrinsicInterceptors() {
   INIT_MEMSET;
 #if SANITIZER_WINDOWS64
-  // Use volatile to keep the compiler from folding &memcpy != &memmove at
-  // compile time (the two declarations are distinct symbols even if the
-  // runtime resolves them to the same address).
+  INIT_MEMMOVE;
+  // On Windows x64, memcpy and memmove used to resolve to the same function in
+  // the CRT (e.g. vcruntime140.dll on older toolsets, ucrtbase.dll today), but
+  // newer CRTs (recent vcruntime140.dll) ship them as distinct functions. We
+  // can't know which shape the loaded CRT has at compile time, so check it at
+  // runtime. Use volatile to keep the compiler from assuming distinct
+  // declarations imply distinct addresses and folding the comparison to true.
   volatile uptr memcpy_addr = (uptr)&memcpy;
   volatile uptr memmove_addr = (uptr)&memmove;
-  win64_memcpy_memmove_are_disjoint = (memcpy_addr != memmove_addr);
-  INIT_MEMMOVE;
-  if (win64_memcpy_memmove_are_disjoint) {
+  if (memcpy_addr != memmove_addr)
     COMMON_INTERCEPT_FUNCTION(memcpy);
-  } else {
-    // Legacy CRT: memcpy and memmove are the same function; just share REAL.
-    ASSIGN_REAL(memcpy, memmove);
-  }
-  // INTERCEPT_FUNCTION(memcpy) can fail for some binaries (e.g. certain ASan
-  // unit tests linked against the CRT) while REAL(memmove) is valid. Using
-  // the real memmove implementation for REAL(memcpy) is always safe for
-  // interceptor forwarding (memmove is a semantic superset of memcpy).
+  // INTERCEPT_FUNCTION(memcpy) can also fail for some binaries (e.g. certain
+  // ASan unit tests linked against a CRT we can't trampoline), leaving
+  // REAL(memcpy) null while REAL(memmove) is valid. Using the real memmove for
+  // REAL(memcpy) is always safe (memmove is a semantic superset of memcpy).
+  // After this fallback, REAL(memcpy) == REAL(memmove) is the runtime signal
+  // that memcpy is *not* a distinct function we can call directly; consumers
+  // (e.g. asan_allocator's Reallocate) check that predicate to pick the right
+  // code path.
   if (!REAL(memcpy))
     ASSIGN_REAL(memcpy, memmove);
   CHECK(REAL(memcpy));
