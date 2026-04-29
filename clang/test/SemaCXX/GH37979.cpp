@@ -10,16 +10,7 @@ void do_copy() {
     // CHECK-LABEL: CXXMethodDecl{{.*}} implicit used constexpr operator= 'Obj &(const Obj &) noexcept'
     // CHECK-NEXT: ParmVarDecl
     // CHECK-NEXT: CompoundStmt
-    // CHECK-NEXT: CallExpr
-    // CHECK-NEXT: ImplicitCastExpr{{.*}}<BuiltinFnToFnPtr>
-    // CHECK-NEXT: DeclRefExpr{{.*}}__builtin_memcpy
-    // CHECK-NEXT: ImplicitCastExpr{{.*}}'void *' <BitCast>
-    // CHECK-NEXT: UnaryOperator{{.*}} 'int *__restrict (*)[2]' prefix '&'
-    // CHECK-NEXT: MemberExpr{{.*}} 'int *__restrict[2]' lvalue ->myPtr
-    // CHECK-NEXT: CXXThisExpr{{.*}} 'Obj *' this
-    //
-    // CHECK-NEXT: ImplicitCastExpr{{.*}}'const void *' <BitCast>
-    // CHECK-NEXT: UnaryOperator{{.*}} 'int *__restrict const __restrict (*)[2]' prefix '&'
-    // CHECK-NEXT: MemberExpr{{.*}} 'int *__restrict const __restrict[2]' lvalue .myPtr
-    // CHECK-NEXT: DeclRefExpr{{.*}} 'const Obj' lvalue ParmVar
+    // Make sure that this uses the for-loop in the AST rather than trying to do
+    // the early builtin_memcpy opt.
+    // CHECK-NEXT: ForStmt
 }
