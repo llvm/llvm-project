@@ -401,8 +401,9 @@ void AArch64InstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
     return;
   }
 
-  // If we are in a cold block, BTI is not enabled, and there's a free register,
-  // manually insert the indirect branch.
+  // In a cold block without BTI, insert the indirect branch if a register is
+  // free. Skip this if BTI is enabled to avoid inserting a BTI at the target,
+  // prioritizing a dynamic cost in cold code over a static cost in hot code.
   AArch64FunctionInfo *AFI = MBB.getParent()->getInfo<AArch64FunctionInfo>();
   bool HasBTI = AFI && AFI->branchTargetEnforcement();
   if (MBB.getSectionID() == MBBSectionID::ColdSectionID && !HasBTI) {
