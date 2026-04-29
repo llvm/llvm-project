@@ -16432,8 +16432,8 @@ static SDValue combinePExtTruncate(SDNode *N, SelectionDAG &DAG,
       VT != MVT::v4i8 && VT != MVT::v2i32)
     return SDValue();
 
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  if (!TLI.isTypeLegal(VT))
+  // We only support XLen or smaller vectors.
+  if (VT.getSizeInBits() > Subtarget.getXLen())
     return SDValue();
 
   // Check if shift amount is a splat constant
