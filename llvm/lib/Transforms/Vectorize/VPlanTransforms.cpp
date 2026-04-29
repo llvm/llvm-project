@@ -664,8 +664,8 @@ createScalarIVSteps(VPlan &Plan, InductionDescriptor::InductionKind Kind,
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
   VPValue *CanonicalIV = LoopRegion->getCanonicalIV();
-  VPSingleDefRecipe *BaseIV = Builder.createDerivedIV(
-      Kind, FPBinOp, StartV, CanonicalIV, Step, "offset.idx");
+  VPSingleDefRecipe *BaseIV =
+      Builder.createDerivedIV(Kind, FPBinOp, StartV, CanonicalIV, Step);
 
   // Truncate base induction if needed.
   VPTypeAnalysis TypeInfo(Plan);

@@ -3913,22 +3913,19 @@ class VPDerivedIVRecipe : public VPSingleDefRecipe {
   /// for floating point inductions.
   const FPMathOperator *FPBinOp;
 
-  /// Name to use for the generated IR instruction for the derived IV.
-  std::string Name;
-
 public:
   VPDerivedIVRecipe(const InductionDescriptor &IndDesc, VPIRValue *Start,
-                    VPValue *CanonicalIV, VPValue *Step, const Twine &Name = "")
+                    VPValue *CanonicalIV, VPValue *Step)
       : VPDerivedIVRecipe(
             IndDesc.getKind(),
             dyn_cast_or_null<FPMathOperator>(IndDesc.getInductionBinOp()),
-            Start, CanonicalIV, Step, Name) {}
+            Start, CanonicalIV, Step) {}
 
   VPDerivedIVRecipe(InductionDescriptor::InductionKind Kind,
                     const FPMathOperator *FPBinOp, VPIRValue *Start,
-                    VPValue *IV, VPValue *Step, const Twine &Name = "")
+                    VPValue *IV, VPValue *Step)
       : VPSingleDefRecipe(VPRecipeBase::VPDerivedIVSC, {Start, IV, Step}),
-        Kind(Kind), FPBinOp(FPBinOp), Name(Name.str()) {}
+        Kind(Kind), FPBinOp(FPBinOp) {}
 
   ~VPDerivedIVRecipe() override = default;
 
