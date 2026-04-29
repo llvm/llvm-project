@@ -1559,13 +1559,13 @@ xegpu::inferSourceLayoutFromResult(OpOperand &operand,
   }
 
   // for vector::interleave
- if (auto interleave = dyn_cast<vector::InterleaveOp>(op)) {
-      return xegpu::inferInterleaveSourceLayout(resLayout);
+  if (auto interleave = dyn_cast<vector::InterleaveOp>(op)) {
+    return xegpu::inferInterleaveSourceLayout(resLayout);
   }
 
   // for vector::deinterleave
   if (auto deinterleave = dyn_cast<vector::DeinterleaveOp>(op)) {
-      return xegpu::inferDeinterleaveSourceLayout(resLayout);
+    return xegpu::inferDeinterleaveSourceLayout(resLayout);
   }
 
   // For vector::ExtractStridedSliceOp, simply return result layout
