@@ -4,14 +4,14 @@
 # PRINT:      .reloc {{.*}}+4, R_AVR_NONE, .data
 
 # CHECK:      Section ({{.*}}) .rela.text {
+# CHECK-NEXT:   0x4 R_AVR_NONE .data 0x0
+# CHECK-NEXT:   0x2 R_AVR_NONE foo 0x4
 # CHECK-NEXT:   0x0 R_AVR_NONE - 0x8
 # CHECK-NEXT:   0x0 R_AVR_32 .data 0x2
 # CHECK-NEXT:   0x0 R_AVR_16 foo 0x3
 # CHECK-NEXT:   0x0 R_AVR_NONE - 0x9
 # CHECK-NEXT:   0x0 R_AVR_16 - 0x9
 # CHECK-NEXT:   0x0 R_AVR_32 - 0x9
-# CHECK-NEXT:   0x2 R_AVR_NONE foo 0x4
-# CHECK-NEXT:   0x4 R_AVR_NONE .data 0x0
 # CHECK-NEXT: }
 
 .text

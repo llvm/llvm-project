@@ -90,15 +90,16 @@ void MCFragment::appendFixups(ArrayRef<MCFixup> Fixups) {
   FixupEnd = S.size();
 }
 
-void MCFragment::insertFixup(MCFixup F) {
+void MCFragment::insertRelocFixups(ArrayRef<MCFixup> Fixups) {
   moveFixupsToEnd();
 
+  // See MCAssembler::layout() for the rule being followed here.
   auto &S = getParent()->FixupStorage;
-  S.insert(std::upper_bound(S.begin() + FixupStart, S.end(), F,
+  S.insert(std::upper_bound(S.begin() + FixupStart, S.end(), Fixups[0],
                             [](MCFixup F1, MCFixup F2) {
                               return F1.getOffset() < F2.getOffset();
                             }),
-           F);
+           Fixups.begin(), Fixups.end());
   FixupEnd = S.size();
 }
 

@@ -10,10 +10,10 @@
 # ASM-NEXT: .Ltmp2:
 # ASM-NEXT:  .reloc 2+.Ltmp2, R_X86_64_NONE, local
 
-# CHECK:      0x0 R_X86_64_NONE foo 0x0
-# CHECK-NEXT: 0x1 R_X86_64_NONE unused 0x0
-# CHECK-NEXT: 0x2 R_X86_64_NONE foo 0x0
+# CHECK:      0x2 R_X86_64_NONE foo 0x0
+# CHECK-NEXT: 0x0 R_X86_64_NONE foo 0x0
 # CHECK-NEXT: 0x3 R_X86_64_NONE local 0x0
+# CHECK-NEXT: 0x1 R_X86_64_NONE unused 0x0
 # CHECK-NEXT: 0x4 R_X86_64_NONE data 0x1
 
 # CHECK:      .rela.my {

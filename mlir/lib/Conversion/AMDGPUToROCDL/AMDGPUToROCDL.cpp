@@ -1710,8 +1710,11 @@ struct SparseMFMAOpLowering : public ConvertOpToLLVMPattern<SparseMFMAOp> {
           "no intrinsic matching sparse MFMA on the given chipset");
 
     // Bitcast sparse indices from vector<4xi8> or vector<2xi16> to i32.
-    Value sparseIdx = LLVM::BitcastOp::create(
-        rewriter, loc, rewriter.getI32Type(), adaptor.getSparseIdx());
+    // gfx950 8-bit variants already carry the index as i32; skip the bitcast.
+    Value sparseIdx = adaptor.getSparseIdx();
+    Type i32Type = rewriter.getI32Type();
+    if (sparseIdx.getType() != i32Type)
+      sparseIdx = LLVM::BitcastOp::create(rewriter, loc, i32Type, sparseIdx);
 
     OperationState loweredOp(loc, maybeIntrinsic.value());
     loweredOp.addTypes(outType);

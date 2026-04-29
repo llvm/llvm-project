@@ -8,7 +8,9 @@
 
 # X86 relocations use the Elf32_Rel format. Addends are neither stored in the
 # relocation entries nor applied in the referenced locations.
-# CHECK:      0x0 R_386_NONE -
+# CHECK:      0x2 R_386_NONE .data
+# CHECK-NEXT: 0x1 R_386_NONE foo
+# CHECK-NEXT: 0x0 R_386_NONE -
 # CHECK-NEXT: 0x0 R_386_32 .data
 # CHECK-NEXT: 0x0 R_386_IRELATIVE foo
 # CHECK-NEXT: 0x0 R_386_GOT32X -
@@ -16,8 +18,6 @@
 # CHECK-NEXT: 0x0 R_386_8 -
 # CHECK-NEXT: 0x0 R_386_16 -
 # CHECK-NEXT: 0x0 R_386_32 -
-# CHECK-NEXT: 0x1 R_386_NONE foo
-# CHECK-NEXT: 0x2 R_386_NONE .data
 
 # HEX: 0x00000000 00000000 00000000
 

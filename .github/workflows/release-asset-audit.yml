@@ -46,6 +46,9 @@ jobs:
 
   notify-audit-failed:
     name: "Notify Audit Failed"
+    environment:
+      name: main-branch-only
+      deployment: false
     runs-on: ubuntu-24.04
     if: >-
       github.repository == 'llvm/llvm-project' &&

@@ -3599,7 +3599,8 @@ public:
   /// \#pragma redefine_extname before declared.  Used in Solaris system headers
   /// to define functions that occur in multiple standards to call the version
   /// in the currently selected standard.
-  llvm::DenseMap<IdentifierInfo *, AsmLabelAttr *> ExtnameUndeclaredIdentifiers;
+  llvm::MapVector<IdentifierInfo *, AsmLabelAttr *>
+      ExtnameUndeclaredIdentifiers;
 
   /// Set containing all typedefs that are likely unused.
   llvm::SmallSetVector<const TypedefNameDecl *, 4>

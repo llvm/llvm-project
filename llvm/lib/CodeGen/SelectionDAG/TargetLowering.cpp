@@ -11518,7 +11518,9 @@ SDValue TargetLowering::expandAddSubSat(SDNode *Node, SelectionDAG &DAG) const {
   }
 
   // usub.sat(a, 1) -> sub(a, zext(a != 0))
-  if (Opcode == ISD::USUBSAT && isOneOrOneSplat(RHS)) {
+  // Prefer this on targets without legal/cost-effective overflow-carry nodes.
+  if (Opcode == ISD::USUBSAT && isOneOrOneSplat(RHS) &&
+      !isOperationLegalOrCustom(ISD::USUBO_CARRY, VT)) {
     LHS = DAG.getFreeze(LHS);
     SDValue Zero = DAG.getConstant(0, dl, VT);
     EVT BoolVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
@@ -12546,7 +12548,7 @@ SDValue TargetLowering::expandFP_ROUND(SDNode *Node, SelectionDAG &DAG) const {
                               DAG.getShiftAmountConstant(16, I32, dl));
     Lsb = DAG.getNode(ISD::AND, dl, I32, Lsb, One);
     SDValue RoundingBias =
-        DAG.getNode(ISD::ADD, dl, I32, DAG.getConstant(0x7fff, dl, I32), Lsb);
+        DAG.getNode(ISD::ADD, dl, I32, Lsb, DAG.getConstant(0x7fff, dl, I32));
     SDValue Add = DAG.getNode(ISD::ADD, dl, I32, Op, RoundingBias);
 
     // Don't round if we had a NaN, we don't want to turn 0x7fffffff into
@@ -12556,7 +12558,6 @@ SDValue TargetLowering::expandFP_ROUND(SDNode *Node, SelectionDAG &DAG) const {
     // Now that we have rounded, shift the bits into position.
     Op = DAG.getNode(ISD::SRL, dl, I32, Op,
                      DAG.getShiftAmountConstant(16, I32, dl));
-    Op = DAG.getNode(ISD::BITCAST, dl, I32, Op);
     EVT I16 = I32.changeElementType(*DAG.getContext(), MVT::i16);
     Op = DAG.getNode(ISD::TRUNCATE, dl, I16, Op);
     return DAG.getNode(ISD::BITCAST, dl, VT, Op);

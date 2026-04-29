@@ -12,15 +12,15 @@
 # PRINT: .reloc {{.*}}+0, BFD_RELOC_16, 9
 # PRINT: .reloc {{.*}}+0, BFD_RELOC_32, 9
 
-# CHECK:      0x0 R_PPC_NONE - 0x8
+# CHECK:      0x8 R_PPC_NONE .data 0x0
+# CHECK-NEXT: 0x4 R_PPC_NONE foo 0x4
+# CHECK-NEXT: 0x0 R_PPC_NONE - 0x8
 # CHECK-NEXT: 0x0 R_PPC_ADDR32 .data 0x2
 # CHECK-NEXT: 0x0 R_PPC_REL16_HI foo 0x3
 # CHECK-NEXT: 0x0 R_PPC_REL16_HA - 0x5
 # CHECK-NEXT: 0x0 R_PPC_NONE - 0x9
 # CHECK-NEXT: 0x0 R_PPC_ADDR16 - 0x9
 # CHECK-NEXT: 0x0 R_PPC_ADDR32 - 0x9
-# CHECK-NEXT: 0x4 R_PPC_NONE foo 0x4
-# CHECK-NEXT: 0x8 R_PPC_NONE .data 0x0
 
 .text
   .reloc .+8, R_PPC_NONE, .data

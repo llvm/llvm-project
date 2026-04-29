@@ -5,15 +5,15 @@
 
 # PRINT: .reloc {{.*}}+8, R_SPARC_NONE, .data
 
-# CHECK:      0x0 R_SPARC_NONE - 0x8
+# CHECK:      0x8 R_SPARC_NONE .data 0x0
+# CHECK-NEXT: 0x4 R_SPARC_NONE foo 0x4
+# CHECK-NEXT: 0x0 R_SPARC_NONE - 0x8
 # CHECK-NEXT: 0x0 R_SPARC_32 .data 0x2
 # CHECK-NEXT: 0x0 R_SPARC_UA16 foo 0x3
 # CHECK-NEXT: 0x0 R_SPARC_DISP32 foo 0x5
 # CHECK-NEXT: 0x0 R_SPARC_NONE - 0x9
 # CHECK-NEXT: 0x0 R_SPARC_32 foo 0x2
 # CHECK-NEXT: 0x0 R_SPARC_64 foo 0x3
-# CHECK-NEXT: 0x4 R_SPARC_NONE foo 0x4
-# CHECK-NEXT: 0x8 R_SPARC_NONE .data 0x0
 .text
   .reloc .+8, R_SPARC_NONE, .data
   .reloc .+4, R_SPARC_NONE, foo+4

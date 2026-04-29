@@ -230,8 +230,9 @@ public:
   // FixupSize.
   void clearFixups() { FixupEnd = FixupStart; }
   LLVM_ABI void addFixup(MCFixup Fixup);
-  // Insert Fixup while keeping fixups sorted by offset.
-  LLVM_ABI void insertFixup(MCFixup Fixup);
+  // Insert .reloc fixups according to the ordering rules for .reloc
+  // relocations (see MCAssembler::layout()).
+  LLVM_ABI void insertRelocFixups(ArrayRef<MCFixup> Fixups);
   LLVM_ABI void appendFixups(ArrayRef<MCFixup> Fixups);
   LLVM_ABI void moveFixupsToEnd();
   MutableArrayRef<MCFixup> getFixups();

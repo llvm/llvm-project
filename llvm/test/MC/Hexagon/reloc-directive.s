@@ -33,7 +33,9 @@ foo:
   .word 0
   .word 0
 
-# CHECK:      {{0+}} R_HEX_NONE *ABS*+0x8
+# CHECK:      {{0+}}[[#%x,8]] R_HEX_NONE .data
+# CHECK-NEXT: {{0+}}[[#%x,4]] R_HEX_NONE foo+0x4
+# CHECK-NEXT: {{0+}} R_HEX_NONE *ABS*+0x8
 # CHECK-NEXT: {{0+}} R_HEX_8 .data+0x2
 # CHECK-NEXT: {{0+}} R_HEX_16 .data+0x2
 # CHECK-NEXT: {{0+}} R_HEX_32 foo+0x3
@@ -41,5 +43,3 @@ foo:
 # CHECK-NEXT: {{0+}} R_HEX_8 *ABS*+0x9
 # CHECK-NEXT: {{0+}} R_HEX_16 *ABS*+0x9
 # CHECK-NEXT: {{0+}} R_HEX_32 *ABS*+0x9
-# CHECK-NEXT: {{0+}}[[#%x,4]] R_HEX_NONE foo+0x4
-# CHECK-NEXT: {{0+}}[[#%x,8]] R_HEX_NONE .data

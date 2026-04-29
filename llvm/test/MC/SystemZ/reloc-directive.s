@@ -5,19 +5,19 @@
 
 # PRINT:      .reloc {{.*}}+2, R_390_NONE, .data
 
-# CHECK:      0x0 R_390_NONE - 0x8
+# CHECK:      0x2 R_390_NONE .data 0x0
+# CHECK-NEXT: 0x1 R_390_NONE foo 0x4
+# CHECK-NEXT: 0x0 R_390_NONE - 0x8
 # CHECK-NEXT: 0x0 R_390_64 .data 0x2
 # CHECK-NEXT: 0x0 R_390_GOTENT foo 0x3
 # CHECK-NEXT: 0x0 R_390_PC32DBL - 0x6
+# CHECK-NEXT: 0x4 R_390_12 foo 0x0
+# CHECK-NEXT: 0x2 R_390_20 foo 0x0
 # CHECK-NEXT: 0x0 R_390_NONE - 0x9
 # CHECK-NEXT: 0x0 R_390_8 - 0x9
 # CHECK-NEXT: 0x0 R_390_16 - 0x9
 # CHECK-NEXT: 0x0 R_390_32 - 0x9
 # CHECK-NEXT: 0x0 R_390_64 - 0x9
-# CHECK-NEXT: 0x1 R_390_NONE foo 0x4
-# CHECK-NEXT: 0x2 R_390_NONE .data 0x0
-# CHECK-NEXT: 0x2 R_390_20 foo 0x0
-# CHECK-NEXT: 0x4 R_390_12 foo 0x0
 
 .text
   .reloc .+2, R_390_NONE, .data

@@ -5,7 +5,9 @@
 
 # PRINT:      .reloc {{.*}}+2, R_X86_64_NONE, .data
 
-# CHECK:      0x0 R_X86_64_NONE - 0x8
+# CHECK:      0x2 R_X86_64_NONE .data 0x0
+# CHECK-NEXT: 0x1 R_X86_64_NONE foo 0x4
+# CHECK-NEXT: 0x0 R_X86_64_NONE - 0x8
 # CHECK-NEXT: 0x0 R_X86_64_64 .data 0x2
 # CHECK-NEXT: 0x0 R_X86_64_GOTPCRELX foo 0x3
 # CHECK-NEXT: 0x0 R_X86_64_REX_GOTPCRELX - 0x5
@@ -15,8 +17,6 @@
 # CHECK-NEXT: 0x0 R_X86_64_16 - 0x9
 # CHECK-NEXT: 0x0 R_X86_64_32 - 0x9
 # CHECK-NEXT: 0x0 R_X86_64_64 - 0x9
-# CHECK-NEXT: 0x1 R_X86_64_NONE foo 0x4
-# CHECK-NEXT: 0x2 R_X86_64_NONE .data 0x0
 
 .text
   .reloc .+2, R_X86_64_NONE, .data

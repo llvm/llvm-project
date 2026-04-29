@@ -13,7 +13,9 @@
 
 .text
 .Lbase:
-        .fill 16212, 1, 0x90
+        .rept 16212
+        nop
+        .endr
         data16
         leaq    tls@TLSGD(%rip), %rdi
         data16

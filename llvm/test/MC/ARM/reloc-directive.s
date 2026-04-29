@@ -37,7 +37,9 @@ foo:
 
 # ARM relocations use the Elf32_Rel format. Addends are neither stored in the
 # relocation entries nor applied in the referenced locations.
-# CHECK:      0x0 R_ARM_NONE -
+# CHECK:      0x8 R_ARM_NONE .data
+# CHECK-NEXT: 0x4 R_ARM_NONE foo
+# CHECK-NEXT: 0x0 R_ARM_NONE -
 # CHECK-NEXT: 0x0 R_ARM_ALU_PC_G0 .data
 # CHECK-NEXT: 0x0 R_ARM_LDR_PC_G0 foo
 # CHECK-NEXT: 0x0 R_ARM_THM_ALU_PREL_11_0 -
@@ -45,7 +47,5 @@ foo:
 # CHECK-NEXT: 0x0 R_ARM_ABS8 -
 # CHECK-NEXT: 0x0 R_ARM_ABS16 -
 # CHECK-NEXT: 0x0 R_ARM_ABS32 -
-# CHECK-NEXT: 0x4 R_ARM_NONE foo
-# CHECK-NEXT: 0x8 R_ARM_NONE .data
 
 # HEX: 0x00000000 00000000 00000000

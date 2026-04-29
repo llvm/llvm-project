@@ -2117,6 +2117,9 @@ private:
               [&](const Fortran::parser::CompilerDirective::ForceInline &) {
                 stmt.typedCall->setAlwaysInline(true);
               },
+              [&](const Fortran::parser::CompilerDirective::InlineAlways &) {
+                stmt.typedCall->setAlwaysInline(true);
+              },
               [&](const Fortran::parser::CompilerDirective::Inline &) {
                 stmt.typedCall->setInlineHint(true);
               },
@@ -2466,6 +2469,9 @@ private:
                   callOp.setInlineAttr(fir::FortranInlineEnum::inline_hint);
                 },
                 [&](const Fortran::parser::CompilerDirective::ForceInline &) {
+                  callOp.setInlineAttr(fir::FortranInlineEnum::always_inline);
+                },
+                [&](const Fortran::parser::CompilerDirective::InlineAlways &) {
                   callOp.setInlineAttr(fir::FortranInlineEnum::always_inline);
                 },
                 [&](const auto &) {}},
@@ -3557,6 +3563,18 @@ private:
       e->dirs.push_back(&dir);
   }
 
+  void markCurrentFuncAsAlwaysInline(
+      const Fortran::parser::CompilerDirective::InlineAlways &dir) {
+    mlir::func::FuncOp func = builder->getFunction();
+    if (currentFunctionUnit && !currentFunctionUnit->isMainProgram()) {
+      const std::string symName =
+          currentFunctionUnit->getSubprogramSymbol().name().ToString();
+      if (dir.v->ToString() == symName) {
+        func->setAttr("llvm.always_inline", builder->getUnitAttr());
+      }
+    }
+  }
+
   void
   attachInliningDirectiveToStmt(const Fortran::parser::CompilerDirective &dir,
                                 Fortran::lower::pft::Evaluation *e) {
@@ -3634,6 +3652,13 @@ private:
             },
             [&](const Fortran::parser::CompilerDirective::IVDep &) {
               attachDirectiveToLoop(dir, &eval);
+            },
+            [&](const Fortran::parser::CompilerDirective::InlineAlways
+                    &inlineAlways) {
+              if (inlineAlways.v.has_value())
+                markCurrentFuncAsAlwaysInline(inlineAlways);
+              else
+                attachInliningDirectiveToStmt(dir, &eval);
             },
             [&](const Fortran::parser::CompilerDirective::Simd &) {
               attachDirectiveToLoop(dir, &eval);
@@ -6366,7 +6391,6 @@ private:
   void genFIR(const Fortran::parser::IfStmt &) {}              // nop
   void genFIR(const Fortran::parser::IfThenStmt &) {}          // nop
   void genFIR(const Fortran::parser::NonLabelDoStmt &) {}      // nop
-  void genFIR(const Fortran::parser::OmpEndLoopDirective &) {} // nop
   void genFIR(const Fortran::parser::SelectTypeStmt &) {}      // nop
   void genFIR(const Fortran::parser::TypeGuardStmt &) {}       // nop
   void genFIR(const Fortran::parser::ChangeTeamStmt &stmt) {}  // nop
@@ -6608,18 +6632,21 @@ private:
 
     Fortran::lower::AggregateStoreMap storeMap;
 
-    // Map all containing submodule and module equivalences and variables, in
-    // case they are referenced. It might be better to limit this to variables
-    // that are actually referenced, although that is more complicated when
-    // there are equivalenced variables.
-    auto &scopeVariableListMap =
-        Fortran::lower::pft::getScopeVariableListMap(funit);
-    for (auto *scp = &scope.parent(); !scp->IsGlobal(); scp = &scp->parent())
-      if (scp->kind() == Fortran::semantics::Scope::Kind::Module)
-        for (const auto &var : Fortran::lower::pft::getScopeVariableList(
-                 *scp, scopeVariableListMap))
-          if (!var.isRuntimeTypeInfoData())
-            instantiateVar(var, storeMap);
+    // Map containing [sub]module equivalences and variables that are
+    // referenced in this function-like unit. Only referenced host module
+    // variables are instantiated to avoid generating IR for unused module
+    // variables. Equivalenced variables are handled via the aggregate store
+    // analysis performed on the host [sub]module scopes.
+    const bool hasHostModuleScope = [&]() {
+      for (auto *scp = &scope.parent(); !scp->IsGlobal(); scp = &scp->parent())
+        if (scp->kind() == Fortran::semantics::Scope::Kind::Module)
+          return true;
+      return false;
+    }();
+    if (hasHostModuleScope)
+      for (const auto &var :
+           Fortran::lower::pft::getHostModuleVariableList(funit))
+        instantiateVar(var, storeMap);
 
     // Map function equivalences and variables.
     mlir::Value primaryFuncResultStorage;
