@@ -1405,7 +1405,8 @@ struct UnrollBitCastPattern : public OpRewritePattern<vector::BitCastOp> {
                                 PatternRewriter &rewriter) const override {
     auto targetShape = getTargetShape(options, bitCastOp);
     if (!targetShape)
-      return failure();
+      return rewriter.notifyMatchFailure(bitCastOp,
+                                         "failed to get target shape");
 
     VectorType sourceType = bitCastOp.getSourceVectorType();
     VectorType resultType = bitCastOp.getResultVectorType();
@@ -1419,17 +1420,17 @@ struct UnrollBitCastPattern : public OpRewritePattern<vector::BitCastOp> {
     unsigned sourceElementBits = sourceType.getElementTypeBitWidth();
     unsigned resultElementBits = resultType.getElementTypeBitWidth();
 
-    SmallVector<int64_t> sourceTileShape(targetShape->begin(),
-                                         targetShape->end());
-    int64_t lastDim = sourceTileShape.size() - 1;
+    SmallVector<int64_t> sourceSliceShape(targetShape->begin(),
+                                          targetShape->end());
+    int64_t lastDim = sourceSliceShape.size() - 1;
 
-    sourceTileShape[lastDim] =
+    sourceSliceShape[lastDim] =
         ((*targetShape)[lastDim] * resultElementBits) / sourceElementBits;
 
     Value result = arith::ConstantOp::create(rewriter, loc, resultType,
                                              rewriter.getZeroAttr(resultType));
     SmallVector<int64_t> resultStrides(targetShape->size(), 1);
-    SmallVector<int64_t> sourceStrides(sourceTileShape.size(), 1);
+    SmallVector<int64_t> sourceStrides(sourceSliceShape.size(), 1);
 
     VectorType targetType =
         VectorType::get(*targetShape, resultType.getElementType());
@@ -1441,7 +1442,7 @@ struct UnrollBitCastPattern : public OpRewritePattern<vector::BitCastOp> {
           (resultOffsets[lastDim] * resultElementBits) / sourceElementBits;
 
       Value sourceSlice = rewriter.createOrFold<vector::ExtractStridedSliceOp>(
-          loc, bitCastOp.getSource(), sourceOffsets, sourceTileShape,
+          loc, bitCastOp.getSource(), sourceOffsets, sourceSliceShape,
           sourceStrides);
       Value bitcastSlice = rewriter.createOrFold<vector::BitCastOp>(
           loc, targetType, sourceSlice);
@@ -1462,13 +1463,18 @@ private:
 /// input vectors, interleaving them, and inserting back into the result.
 ///
 /// Example:
-///   vector.interleave %lhs, %rhs : vector<8xf32>
-///   // Unrolled with target shape [4]:
-///   %slice_lhs_0 = vector.extract_strided_slice %lhs[0] : vector<2xf32>
-///   %slice_rhs_0 = vector.extract_strided_slice %rhs[0] : vector<2xf32>
-///   %tile_0 = vector.interleave %slice_lhs_0, %slice_rhs_0 : vector<4xf32>
-///   %result = vector.insert_strided_slice %tile_0, %init[0]
-///   // ... repeat for remaining tiles
+///   Given an interleave Op:
+///
+///     vector.interleave %lhs, %rhs : vector<4x8xf32>
+///
+///   and a target unroll shape of <2x4>, the pattern produces:
+///
+///     %slice_lhs_0 = vector.extract_strided_slice %lhs[0, 0] : vector<2x2xf32>
+///     %slice_rhs_0 = vector.extract_strided_slice %rhs[0, 0] : vector<2x2xf32>
+///     %tile_0 = vector.interleave %slice_lhs_0, %slice_rhs_0
+///       : vector<2x4xf32>
+///     %result = vector.insert_strided_slice %tile_0, %init[0, 0]
+///     // ... repeat for remaining tiles
 struct UnrollInterleavePattern : public OpRewritePattern<vector::InterleaveOp> {
   UnrollInterleavePattern(MLIRContext *context,
                           const vector::UnrollVectorOptions &options,
@@ -1480,7 +1486,8 @@ struct UnrollInterleavePattern : public OpRewritePattern<vector::InterleaveOp> {
                                 PatternRewriter &rewriter) const override {
     auto targetShape = getTargetShape(options, interleaveOp);
     if (!targetShape)
-      return failure();
+      return rewriter.notifyMatchFailure(interleaveOp,
+                                         "failed to get target shape");
 
     VectorType resultType = interleaveOp.getResultVectorType();
     ArrayRef<int64_t> resultShape = resultType.getShape();
@@ -1490,15 +1497,15 @@ struct UnrollInterleavePattern : public OpRewritePattern<vector::InterleaveOp> {
       return rewriter.notifyMatchFailure(
           interleaveOp, "target shape rank must match result rank");
 
-    SmallVector<int64_t> sourceTileShape(targetShape->begin(),
-                                         targetShape->end());
-    int64_t lastDim = sourceTileShape.size() - 1;
-    sourceTileShape[lastDim] = (*targetShape)[lastDim] / 2;
+    SmallVector<int64_t> sourceSliceShape(targetShape->begin(),
+                                          targetShape->end());
+    int64_t lastDim = sourceSliceShape.size() - 1;
+    sourceSliceShape[lastDim] = (*targetShape)[lastDim] / 2;
 
     Value result = arith::ConstantOp::create(rewriter, loc, resultType,
                                              rewriter.getZeroAttr(resultType));
     SmallVector<int64_t> resultStrides(targetShape->size(), 1);
-    SmallVector<int64_t> sourceStrides(sourceTileShape.size(), 1);
+    SmallVector<int64_t> sourceStrides(sourceSliceShape.size(), 1);
 
     VectorType targetType =
         VectorType::get(*targetShape, resultType.getElementType());
@@ -1509,10 +1516,10 @@ struct UnrollInterleavePattern : public OpRewritePattern<vector::InterleaveOp> {
       sourceOffsets[lastDim] = resultOffsets[lastDim] / 2;
 
       Value lhsSlice = rewriter.createOrFold<vector::ExtractStridedSliceOp>(
-          loc, interleaveOp.getLhs(), sourceOffsets, sourceTileShape,
+          loc, interleaveOp.getLhs(), sourceOffsets, sourceSliceShape,
           sourceStrides);
       Value rhsSlice = rewriter.createOrFold<vector::ExtractStridedSliceOp>(
-          loc, interleaveOp.getRhs(), sourceOffsets, sourceTileShape,
+          loc, interleaveOp.getRhs(), sourceOffsets, sourceSliceShape,
           sourceStrides);
       Value interleaveSlice = rewriter.createOrFold<vector::InterleaveOp>(
           loc, targetType, lhsSlice, rhsSlice);
@@ -1555,7 +1562,8 @@ struct UnrollDeinterleavePattern
                                 PatternRewriter &rewriter) const override {
     auto targetShape = getTargetShape(options, deinterleaveOp);
     if (!targetShape)
-      return failure();
+      return rewriter.notifyMatchFailure(deinterleaveOp,
+                                         "failed to get target shape");
 
     VectorType resultType = deinterleaveOp.getResultVectorType();
     ArrayRef<int64_t> resultShape = resultType.getShape();
@@ -1565,17 +1573,17 @@ struct UnrollDeinterleavePattern
       return rewriter.notifyMatchFailure(
           deinterleaveOp, "target shape rank must match result rank");
 
-    SmallVector<int64_t> sourceTileShape(targetShape->begin(),
-                                         targetShape->end());
-    int64_t lastDim = sourceTileShape.size() - 1;
-    sourceTileShape[lastDim] = (*targetShape)[lastDim] * 2;
+    SmallVector<int64_t> sourceSliceShape(targetShape->begin(),
+                                          targetShape->end());
+    int64_t lastDim = sourceSliceShape.size() - 1;
+    sourceSliceShape[lastDim] = (*targetShape)[lastDim] * 2;
 
-    Value result1 = arith::ConstantOp::create(rewriter, loc, resultType,
-                                              rewriter.getZeroAttr(resultType));
-    Value result2 = arith::ConstantOp::create(rewriter, loc, resultType,
-                                              rewriter.getZeroAttr(resultType));
+    Value resultOdd = arith::ConstantOp::create(
+        rewriter, loc, resultType, rewriter.getZeroAttr(resultType));
+    Value resultEven = arith::ConstantOp::create(
+        rewriter, loc, resultType, rewriter.getZeroAttr(resultType));
     SmallVector<int64_t> resultStrides(targetShape->size(), 1);
-    SmallVector<int64_t> sourceStrides(sourceTileShape.size(), 1);
+    SmallVector<int64_t> sourceStrides(sourceSliceShape.size(), 1);
 
     for (SmallVector<int64_t> resultOffsets :
          StaticTileOffsetRange(resultShape, *targetShape)) {
@@ -1583,21 +1591,21 @@ struct UnrollDeinterleavePattern
       sourceOffsets[lastDim] = resultOffsets[lastDim] * 2;
 
       Value sourceSlice = rewriter.createOrFold<vector::ExtractStridedSliceOp>(
-          loc, deinterleaveOp.getSource(), sourceOffsets, sourceTileShape,
+          loc, deinterleaveOp.getSource(), sourceOffsets, sourceSliceShape,
           sourceStrides);
 
       auto deinterleaveSlice =
           vector::DeinterleaveOp::create(rewriter, loc, sourceSlice);
 
-      result1 = rewriter.createOrFold<vector::InsertStridedSliceOp>(
-          loc, deinterleaveSlice.getRes1(), result1, resultOffsets,
+      resultOdd = rewriter.createOrFold<vector::InsertStridedSliceOp>(
+          loc, deinterleaveSlice.getRes1(), resultOdd, resultOffsets,
           resultStrides);
-      result2 = rewriter.createOrFold<vector::InsertStridedSliceOp>(
-          loc, deinterleaveSlice.getRes2(), result2, resultOffsets,
+      resultEven = rewriter.createOrFold<vector::InsertStridedSliceOp>(
+          loc, deinterleaveSlice.getRes2(), resultEven, resultOffsets,
           resultStrides);
     }
 
-    rewriter.replaceOp(deinterleaveOp, ValueRange{result1, result2});
+    rewriter.replaceOp(deinterleaveOp, ValueRange{resultOdd, resultEven});
     return success();
   }
 
