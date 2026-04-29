@@ -6,7 +6,7 @@ readability-identifier-length
 This check finds variables and function parameters whose length are too short.
 The desired name length is configurable. Special short names which should be
 ignored can be specified. Local variables with short names can also be ignored
-if they are short-lived. This check offers no automated fix.
+if they are short-lived.
 
 Options
 -------
