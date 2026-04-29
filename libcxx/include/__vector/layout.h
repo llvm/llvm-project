@@ -249,7 +249,7 @@ private:
 template<class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 __vector_layout<_Tp, _Alloc>::__vector_layout(__vector_layout&& __other)
   _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value)
-  : __begin_(std::exchange(__other.__begin_)),
+  : __begin_(std::move(__other.__begin_)),
     __size_(std::move(__other.__size_)),
     __capacity_(std::move(__other.__capacity_)),
     __alloc_(std::move(__other.__alloc_)) {
