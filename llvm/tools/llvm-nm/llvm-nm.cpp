@@ -1825,17 +1825,20 @@ static bool getSymbolNamesFromObject(SymbolicFile &Obj,
         return false;
       }
 
-      // Don't drop format specifc symbols for ARM and AArch64 ELF targets, they
-      // are used to repesent mapping symbols and needed to honor the
-      // --special-syms option.
-      auto *ELFObj = dyn_cast<ELFObjectFileBase>(&Obj);
-      bool HasMappingSymbol =
-          ELFObj && llvm::is_contained({ELF::EM_ARM, ELF::EM_AARCH64,
-                                        ELF::EM_CSKY, ELF::EM_RISCV},
-                                       ELFObj->getEMachine());
-      if (!HasMappingSymbol && !DebugSyms &&
-          (*SymFlagsOrErr & SymbolRef::SF_FormatSpecific))
-        continue;
+      // Drop format-specific symbols (STT_FILE, STT_SECTION, etc.) but
+      // retain mapping symbols (STT_NOTYPE such as $d, $x) on ARM, AArch64,
+      // CSKY, and RISC-V targets to honor the --special-syms option.
+      if (!DebugSyms && (*SymFlagsOrErr & SymbolRef::SF_FormatSpecific)) {
+        auto *ELFObj = dyn_cast<ELFObjectFileBase>(&Obj);
+        bool IsMappingSymbol =
+            ELFObj &&
+            llvm::is_contained(
+                {ELF::EM_ARM, ELF::EM_AARCH64, ELF::EM_CSKY, ELF::EM_RISCV},
+                ELFObj->getEMachine()) &&
+            ELFSymbolRef(Sym).getELFType() == ELF::STT_NOTYPE;
+        if (!IsMappingSymbol)
+          continue;
+      }
       if (WithoutAliases && (*SymFlagsOrErr & SymbolRef::SF_Indirect))
         continue;
       // If a "-s segname sectname" option was specified and this is a Mach-O

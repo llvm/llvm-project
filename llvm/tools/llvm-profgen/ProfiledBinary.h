@@ -28,6 +28,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
+#include "llvm/Object/BuildID.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/CommandLine.h"
@@ -129,7 +130,7 @@ struct PrologEpilogTracker {
       PrologEpilogSet.insert(I.first);
       InstructionPointer IP(Binary, I.first);
       if (!IP.advance())
-        break;
+        continue;
       PrologEpilogSet.insert(IP.Address);
     }
   }
@@ -140,7 +141,7 @@ struct PrologEpilogTracker {
       PrologEpilogSet.insert(Addr);
       InstructionPointer IP(Binary, Addr);
       if (!IP.backward())
-        break;
+        continue;
       PrologEpilogSet.insert(IP.Address);
     }
   }
@@ -282,6 +283,10 @@ class ProfiledBinary {
   std::set<uint64_t> UncondBranchAddrSet;
   // A set of branch instruction addresses.
   std::unordered_set<uint64_t> BranchAddressSet;
+  // A set of indirect branch instruction addresses.
+  std::unordered_set<uint64_t> IndirectBranchAddressSet;
+  // A set of branch target addresses (destinations of branches/calls).
+  std::unordered_set<uint64_t> BranchTargetAddressSet;
 
   // Estimate and track function prolog and epilog ranges.
   PrologEpilogTracker ProEpilogTracker;
@@ -336,6 +341,16 @@ class ProfiledBinary {
   bool MissingMMapWarned = false;
 
   bool IsCOFF = false;
+
+  // Whether the binary has a PT_INTERP program header (PIE executables do,
+  // true shared libraries don't). Used to distinguish PIE from .so since
+  // both are ET_DYN.
+  bool HasInterp = false;
+
+  // Build ID used to filter perfscript addresses in [buildid:]addr format.
+  // For shared libraries, set to the binary's build ID.
+  // For main executables, kept empty (addresses have no buildid prefix).
+  std::string FilterBuildID;
 
   void setPreferredTextSegmentAddresses(const object::ObjectFile *O);
 
@@ -425,6 +440,9 @@ public:
 
   bool isCOFF() const { return IsCOFF; }
 
+  // Return the build ID used for filtering perfscript addresses.
+  StringRef getFilterBuildID() const { return FilterBuildID; }
+
   // Canonicalize to use preferred load address as base address.
   uint64_t canonicalizeVirtualAddress(uint64_t Address) {
     return Address - BaseAddress + getPreferredBaseAddress();
@@ -465,6 +483,12 @@ public:
     return ProEpilogTracker.PrologEpilogSet.count(Address);
   }
 
+  bool addressIsBranchTarget(uint64_t Address) const {
+    return BranchTargetAddressSet.count(Address);
+  }
+  bool addressIsIndirectBranch(uint64_t Address) const {
+    return IndirectBranchAddressSet.count(Address);
+  }
   bool addressIsTransfer(uint64_t Address) {
     return BranchAddressSet.count(Address) || RetAddressSet.count(Address) ||
            CallAddressSet.count(Address);

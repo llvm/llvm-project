@@ -828,9 +828,10 @@ Error LLJITBuilderState::prepareForConstruction() {
       if (!JTMB->getCodeModel())
         JTMB->setCodeModel(CodeModel::Small);
       JTMB->setRelocationModel(Reloc::PIC_);
-      CreateObjectLinkingLayer =
-          [](ExecutionSession &ES) -> Expected<std::unique_ptr<ObjectLayer>> {
-        return std::make_unique<ObjectLinkingLayer>(ES);
+      CreateObjectLinkingLayer = [](ExecutionSession &ES,
+                                    jitlink::JITLinkMemoryManager &MemMgr)
+          -> Expected<std::unique_ptr<ObjectLayer>> {
+        return std::make_unique<ObjectLinkingLayer>(ES, MemMgr);
       };
     }
   }
@@ -943,11 +944,12 @@ Expected<ExecutorAddr> LLJIT::lookupLinkerMangled(JITDylib &JD,
 }
 
 Expected<std::unique_ptr<ObjectLayer>>
-LLJIT::createObjectLinkingLayer(LLJITBuilderState &S, ExecutionSession &ES) {
+LLJIT::createObjectLinkingLayer(LLJITBuilderState &S, ExecutionSession &ES,
+                                jitlink::JITLinkMemoryManager &MemMgr) {
 
   // If the config state provided an ObjectLinkingLayer factory then use it.
   if (S.CreateObjectLinkingLayer)
-    return S.CreateObjectLinkingLayer(ES);
+    return S.CreateObjectLinkingLayer(ES, MemMgr);
 
   // Otherwise default to creating an RTDyldObjectLinkingLayer that constructs
   // a new SectionMemoryManager for each object.
@@ -1019,7 +1021,8 @@ LLJIT::LLJIT(LLJITBuilderState &S, Error &Err)
     return;
   }
 
-  auto ObjLayer = createObjectLinkingLayer(S, *ES);
+  auto ObjLayer = createObjectLinkingLayer(
+      S, *ES, ES->getExecutorProcessControl().getMemMgr());
   if (!ObjLayer) {
     Err = ObjLayer.takeError();
     return;

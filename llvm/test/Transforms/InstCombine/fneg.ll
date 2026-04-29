@@ -115,7 +115,7 @@ define <4 x double> @fmul_fneg_vec(<4 x double> %x) {
 define float @fdiv_fneg_fpmath(float %x, float %y) {
 ; CHECK-LABEL: @fdiv_fneg_fpmath(
 ; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = fdiv float [[NEG]], [[Y:%.*]], !fpmath
+; CHECK-NEXT:    [[R:%.*]] = fdiv float [[NEG]], [[Y:%.*]], !fpmath [[META0:![0-9]+]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %z = fdiv arcp float %x, %y, !fpmath !{float 2.5}
@@ -164,6 +164,50 @@ define float @fdiv_op1_constant_fneg_fmf(float %x) {
 ;
   %d = fdiv float %x, -42.0
   %r = fneg nnan float %d
+  ret float %r
+}
+
+; Don't propagate ninf if it is unavailable on fdiv
+
+define float @fdiv_op1_constant_fneg_ninf(float %x) {
+; CHECK-LABEL: @fdiv_op1_constant_fneg_ninf(
+; CHECK-NEXT:    [[R:%.*]] = fdiv float [[X:%.*]], 0xFFF0000000000000
+; CHECK-NEXT:    ret float [[R]]
+;
+  %d = fdiv float %x, 0x7FF0000000000000
+  %r = fneg ninf float %d
+  ret float %r
+}
+
+define float @fdiv_ninf_op1_constant_fneg_ninf(float %x) {
+; CHECK-LABEL: @fdiv_ninf_op1_constant_fneg_ninf(
+; CHECK-NEXT:    [[R:%.*]] = fdiv ninf float [[X:%.*]], 4.200000e+01
+; CHECK-NEXT:    ret float [[R]]
+;
+  %d = fdiv ninf float %x, -42.0
+  %r = fneg ninf float %d
+  ret float %r
+}
+
+; Don't propagate nsz if it is unavailable on fdiv
+
+define float @fdiv_op1_constant_fneg_nsz(float %x) {
+; CHECK-LABEL: @fdiv_op1_constant_fneg_nsz(
+; CHECK-NEXT:    [[R:%.*]] = fdiv float [[X:%.*]], -0.000000e+00
+; CHECK-NEXT:    ret float [[R]]
+;
+  %d = fdiv float %x, 0.0
+  %r = fneg nsz float %d
+  ret float %r
+}
+
+define float @fdiv_nsz_op1_constant_fneg_nsz(float %x) {
+; CHECK-LABEL: @fdiv_nsz_op1_constant_fneg_nsz(
+; CHECK-NEXT:    [[R:%.*]] = fdiv nsz float [[X:%.*]], -0.000000e+00
+; CHECK-NEXT:    ret float [[R]]
+;
+  %d = fdiv nsz float %x, 0.0
+  %r = fneg nsz float %d
   ret float %r
 }
 
@@ -219,7 +263,7 @@ define <4 x double> @fdiv_op1_constant_fneg_vec(<4 x double> %x) {
 
 define float @fdiv_op1_constant_fneg_fpmath(float %x) {
 ; CHECK-LABEL: @fdiv_op1_constant_fneg_fpmath(
-; CHECK-NEXT:    [[R:%.*]] = fdiv float [[X:%.*]], 4.200000e+01, !fpmath
+; CHECK-NEXT:    [[R:%.*]] = fdiv float [[X:%.*]], 4.200000e+01, !fpmath [[META0]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %d = fdiv float %x, -42.0, !fpmath !{float 2.5}
@@ -333,7 +377,7 @@ define float @fdiv_op0_constant_fneg_nnan(float %x) {
 
 define float @fdiv_op0_constant_fneg_fpmath(float %x) {
 ; CHECK-LABEL: @fdiv_op0_constant_fneg_fpmath(
-; CHECK-NEXT:    [[R:%.*]] = fdiv float -1.000000e+00, [[X:%.*]], !fpmath
+; CHECK-NEXT:    [[R:%.*]] = fdiv float -1.000000e+00, [[X:%.*]], !fpmath [[META0]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %d = fdiv float 1.0, %x, !fpmath !{float 2.5}
@@ -1014,7 +1058,7 @@ define float @fneg_ldexp_contract(float %x, i32 %n) {
 define float @fneg_ldexp_metadata(float %x, i32 %n) {
 ; CHECK-LABEL: @fneg_ldexp_metadata(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fneg float [[X:%.*]]
-; CHECK-NEXT:    [[NEG:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP1]], i32 [[N:%.*]]), !arst [[META0:![0-9]+]]
+; CHECK-NEXT:    [[NEG:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP1]], i32 [[N:%.*]]), !arst [[META1:![0-9]+]]
 ; CHECK-NEXT:    ret float [[NEG]]
 ;
   %ldexp = call float @llvm.ldexp.f32.i32(float %x, i32 %n), !arst !0

@@ -215,7 +215,12 @@ void NonConstParameterCheck::markCanNotBeConst(const Expr *E,
       markCanNotBeConst(U->getSubExpr(), CanNotBeConst);
     }
   } else if (const auto *A = dyn_cast<ArraySubscriptExpr>(E)) {
-    markCanNotBeConst(A->getBase(), true);
+    if (A->isInstantiationDependent()) {
+      markCanNotBeConst(A->getLHS(), true);
+      markCanNotBeConst(A->getRHS(), true);
+    } else {
+      markCanNotBeConst(A->getBase(), true);
+    }
   } else if (const auto *CLE = dyn_cast<CompoundLiteralExpr>(E)) {
     markCanNotBeConst(CLE->getInitializer(), true);
   } else if (const auto *Constr = dyn_cast<CXXConstructExpr>(E)) {

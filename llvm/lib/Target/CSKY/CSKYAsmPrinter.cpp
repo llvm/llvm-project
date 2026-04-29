@@ -72,8 +72,8 @@ void CSKYAsmPrinter::expandTLSLA(const MachineInstr *MI) {
   DebugLoc DL = MI->getDebugLoc();
 
   MCSymbol *PCLabel = OutContext.getOrCreateSymbol(
-      Twine(MAI->getInternalSymbolPrefix()) + "PC" +
-      Twine(getFunctionNumber()) + "_" + Twine(MI->getOperand(3).getImm()));
+      Twine(MAI.getInternalSymbolPrefix()) + "PC" + Twine(getFunctionNumber()) +
+      "_" + Twine(MI->getOperand(3).getImm()));
 
   OutStreamer->emitLabel(PCLabel);
 
@@ -223,7 +223,7 @@ void CSKYAsmPrinter::emitMachineConstantPoolValue(
   if (CCPV->getPCAdjustment()) {
 
     MCSymbol *PCLabel = OutContext.getOrCreateSymbol(
-        Twine(MAI->getInternalSymbolPrefix()) + "PC" +
+        Twine(MAI.getInternalSymbolPrefix()) + "PC" +
         Twine(getFunctionNumber()) + "_" + Twine(CCPV->getLabelID()));
 
     const MCExpr *PCRelExpr = MCSymbolRefExpr::create(PCLabel, OutContext);

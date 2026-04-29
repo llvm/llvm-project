@@ -439,6 +439,9 @@ private:
   void ErrorIfHostSymbol(const A &expr, parser::CharBlock source) {
     if (isHostDevice)
       return;
+    if (context_.languageFeatures().IsEnabled(
+            common::LanguageFeature::CudaUnified))
+      return;
     if (const Symbol * hostArray{FindHostArray{}(expr)}) {
       context_.Say(source,
           "Host array '%s' cannot be present in device context"_err_en_US,
@@ -792,7 +795,7 @@ void CUDAChecker::Enter(const parser::AssignmentStmt &x) {
   }
 
   int nbLhs{evaluate::GetNbOfCUDADeviceSymbols(assign->lhs)};
-  int nbRhs{evaluate::GetNbOfCUDADeviceSymbols(assign->rhs)};
+  int nbRhs{evaluate::GetNbOfUniqueCUDADeviceSymbols(assign->rhs)};
   int nbRhsManaged{evaluate::GetNbOfCUDAManagedOrUnifiedSymbols(assign->rhs)};
 
   // device to host transfer with more than one device object on the rhs is not

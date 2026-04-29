@@ -444,7 +444,7 @@ std::vector<Dialect *> MLIRContext::getLoadedDialects() {
 }
 std::vector<StringRef> MLIRContext::getAvailableDialects() {
   std::vector<StringRef> result;
-  for (auto dialect : impl->dialectsRegistry.getDialectNames())
+  for (auto dialect : impl->dialectsRegistry.getRegisteredDialectNames())
     result.push_back(dialect);
   return result;
 }

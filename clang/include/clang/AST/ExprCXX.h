@@ -96,7 +96,7 @@ class CXXOperatorCallExpr final : public CallExpr {
   CXXOperatorCallExpr(OverloadedOperatorKind OpKind, Expr *Fn,
                       ArrayRef<Expr *> Args, QualType Ty, ExprValueKind VK,
                       SourceLocation OperatorLoc, FPOptionsOverride FPFeatures,
-                      ADLCallKind UsesADL);
+                      ADLCallKind UsesADL, bool IsReversed);
 
   CXXOperatorCallExpr(unsigned NumArgs, bool HasFPFeatures, EmptyShell Empty);
 
@@ -105,7 +105,7 @@ public:
   Create(const ASTContext &Ctx, OverloadedOperatorKind OpKind, Expr *Fn,
          ArrayRef<Expr *> Args, QualType Ty, ExprValueKind VK,
          SourceLocation OperatorLoc, FPOptionsOverride FPFeatures,
-         ADLCallKind UsesADL = NotADL);
+         ADLCallKind UsesADL = NotADL, bool IsReversed = false);
 
   static CXXOperatorCallExpr *CreateEmpty(const ASTContext &Ctx,
                                           unsigned NumArgs, bool HasFPFeatures,
@@ -141,6 +141,9 @@ public:
     }
   }
   bool isComparisonOp() const { return isComparisonOp(getOperator()); }
+
+  /// Whether this is a C++20 rewritten reversed operator.
+  bool isReversed() const { return CXXOperatorCallExprBits.IsReversed; }
 
   /// Is this written as an infix binary operator?
   bool isInfixBinaryOp() const;
@@ -3279,14 +3282,10 @@ public:
 
   /// Determines whether this expression had explicit template arguments.
   bool hasExplicitTemplateArgs() const {
-    if (!hasTemplateKWAndArgsInfo())
-      return false;
-    // FIXME: deduced function types can have "hidden" args and no <
-    // investigate that further, but ultimately maybe we want to model concepts
-    // reference with another kind of expression.
-    return (isConceptReference() || isVarDeclReference())
-               ? getTrailingASTTemplateKWAndArgsInfo()->NumTemplateArgs
-               : getLAngleLoc().isValid();
+    if (getLAngleLoc().isValid())
+      return true;
+    return hasTemplateKWAndArgsInfo() &&
+           getTrailingASTTemplateKWAndArgsInfo()->NumTemplateArgs;
   }
 
   bool isConceptReference() const {

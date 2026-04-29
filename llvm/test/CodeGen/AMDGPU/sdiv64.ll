@@ -560,7 +560,7 @@ define i64 @v_test_sdiv24_64(i64 %x, i64 %y) {
 ; GCN-NEXT:    v_mul_lo_u32 v3, v3, v2
 ; GCN-NEXT:    v_mul_hi_u32 v3, v2, v3
 ; GCN-NEXT:    v_add_i32_e32 v2, vcc, v2, v3
-; GCN-NEXT:    v_mul_hi_u32 v2, v1, v2
+; GCN-NEXT:    v_mul_hi_u32 v2, v2, v1
 ; GCN-NEXT:    v_mul_u32_u24_e32 v3, v2, v0
 ; GCN-NEXT:    v_add_i32_e32 v4, vcc, 1, v2
 ; GCN-NEXT:    v_sub_i32_e32 v1, vcc, v1, v3
@@ -587,7 +587,7 @@ define i64 @v_test_sdiv24_64(i64 %x, i64 %y) {
 ; GCN-IR-NEXT:    v_mul_lo_u32 v3, v3, v2
 ; GCN-IR-NEXT:    v_mul_hi_u32 v3, v2, v3
 ; GCN-IR-NEXT:    v_add_i32_e32 v2, vcc, v2, v3
-; GCN-IR-NEXT:    v_mul_hi_u32 v2, v1, v2
+; GCN-IR-NEXT:    v_mul_hi_u32 v2, v2, v1
 ; GCN-IR-NEXT:    v_mul_u32_u24_e32 v3, v2, v0
 ; GCN-IR-NEXT:    v_add_i32_e32 v4, vcc, 1, v2
 ; GCN-IR-NEXT:    v_sub_i32_e32 v1, vcc, v1, v3

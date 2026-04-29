@@ -21,9 +21,9 @@ define void @test1(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) 
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[TMP6]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x float>, ptr [[TMP6]], align 4
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <vscale x 2 x float> [[WIDE_LOAD]], i32 0
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <vscale x 2 x float> [[WIDE_LOAD]], i64 0
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 2 x float>, ptr [[TMP9]], align 4
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <vscale x 2 x float> [[WIDE_LOAD1]], i32 0
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <vscale x 2 x float> [[WIDE_LOAD1]], i64 0
 ; CHECK-NEXT:    [[FCMP1:%.*]] = fcmp ogt float [[TMP10]], 1.000000e+02
 ; CHECK-NEXT:    [[FCMP2:%.*]] = fcmp ogt float [[TMP12]], 1.000000e+02
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[FCMP1]])
@@ -45,7 +45,7 @@ define void @test1(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) 
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %b, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
@@ -58,13 +58,10 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %indvars.iv, 1599
   br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !0
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
-declare void @llvm.assume(i1) #0
-
-attributes #0 = { nounwind willreturn }
 
 %struct.data = type { ptr, ptr }
 
@@ -117,7 +114,7 @@ entry:
   br label %for.body
 
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   tail call void @llvm.assume(i1 %maskcond)
   %arrayidx = getelementptr inbounds float, ptr %a, i64 %indvars.iv
@@ -130,7 +127,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %indvars.iv, 1599
   br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !0
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
@@ -186,17 +183,17 @@ define void @predicated_assume(ptr noalias nocapture readonly %a, ptr noalias no
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %if.end5
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %if.end5 ]
   %cmp1 = icmp ult i64 %indvars.iv, 495616
   br i1 %cmp1, label %if.end5, label %if.else
 
-if.else:                                          ; preds = %for.body
+if.else:
   %cmp2 = icmp ult i64 %indvars.iv, 991232
   tail call void @llvm.assume(i1 %cmp2)
   br label %if.end5
 
-if.end5:                                          ; preds = %for.body, %if.else
+if.end5:
   %x.0 = phi float [ 4.200000e+01, %if.else ], [ 2.300000e+01, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %a, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
@@ -207,7 +204,7 @@ if.end5:                                          ; preds = %for.body, %if.else
   %cmp = icmp eq i64 %indvars.iv.next, %n
   br i1 %cmp, label %for.cond.cleanup, label %for.body, !llvm.loop !0
 
-for.cond.cleanup:                                 ; preds = %if.end5, %entry
+for.cond.cleanup:
   ret void
 }
 

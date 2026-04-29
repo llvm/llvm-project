@@ -294,6 +294,17 @@ public:
             break;
           }
       }
+      void VisitOffsetOfExpr(const OffsetOfExpr *OOE) {
+        for (unsigned I = OOE->getNumComponents(); I != 0; --I) {
+          const OffsetOfNode &Component = OOE->getComponent(I - 1);
+          if (Component.getKind() == OffsetOfNode::Field) {
+            Outer.add(Component.getField(), Flags);
+            // We don't know which component was intended, we assume the
+            // innermost.
+            break;
+          }
+        }
+      }
       void VisitGotoStmt(const GotoStmt *Goto) {
         if (auto *LabelDecl = Goto->getLabel())
           Outer.add(LabelDecl, Flags);
@@ -812,6 +823,17 @@ llvm::SmallVector<ReferenceLoc> refInStmt(const Stmt *S,
                                     D.getFieldLoc(),
                                     /*IsDecl=*/false,
                                     {D.getFieldDecl()}});
+      }
+    }
+
+    void VisitOffsetOfExpr(const OffsetOfExpr *OOE) {
+      for (unsigned I = 0, N = OOE->getNumComponents(); I < N; ++I) {
+        const OffsetOfNode &Component = OOE->getComponent(I);
+        if (Component.getKind() == OffsetOfNode::Field)
+          Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
+                                      Component.getEndLoc(),
+                                      /*IsDecl=*/false,
+                                      {Component.getField()}});
       }
     }
 

@@ -301,11 +301,12 @@ void ModuleMap::resolveHeader(Module *Mod,
       else
         // Record this umbrella header.
         setUmbrellaHeaderAsWritten(Mod, *File, Header.FileName,
-                                   RelativePathName.str());
+                                   RelativePathName.str(), Header.FileNameLoc);
     } else {
       Module::Header H = {Header.FileName, std::string(RelativePathName),
                           *File};
-      addHeader(Mod, H, headerKindToRole(Header.Kind));
+      addHeader(Mod, H, headerKindToRole(Header.Kind), /*Imported=*/false,
+                Header.FileNameLoc);
     }
   } else if (Header.HasBuiltinHeader && !Header.Size && !Header.ModTime) {
     // There's a builtin header but no corresponding on-disk header. Assume
@@ -486,21 +487,24 @@ void ModuleMap::diagnoseHeaderInclusion(Module *RequestingModule,
                                         bool RequestingModuleIsModuleInterface,
                                         SourceLocation FilenameLoc,
                                         StringRef Filename, FileEntryRef File) {
-  // No errors for indirect modules. This may be a bit of a problem for modules
-  // with no source files.
-  if (getTopLevelOrNull(RequestingModule) != getTopLevelOrNull(SourceModule))
-    return;
-
   if (RequestingModule) {
     resolveUses(RequestingModule, /*Complain=*/false);
     resolveHeaderDirectives(RequestingModule, /*File=*/std::nullopt);
   }
 
+  HeadersMap::iterator Known = findKnownHeader(File);
+
+  diagnoseDuplicateHeaderOwnership(FilenameLoc, Filename, File, Known);
+
+  // No errors for indirect modules. This may be a bit of a problem for modules
+  // with no source files.
+  if (getTopLevelOrNull(RequestingModule) != getTopLevelOrNull(SourceModule))
+    return;
+
   bool Excluded = false;
   Module *Private = nullptr;
   Module *NotUsed = nullptr;
 
-  HeadersMap::iterator Known = findKnownHeader(File);
   if (Known != Headers.end()) {
     for (const KnownHeader &Header : Known->second) {
       // Excluded headers don't really belong to a module.
@@ -561,6 +565,86 @@ void ModuleMap::diagnoseHeaderInclusion(Module *RequestingModule,
         diag::warn_non_modular_include_in_module;
     Diags.Report(FilenameLoc, DiagID) << RequestingModule->getFullModuleName()
         << File.getName();
+  }
+}
+
+void ModuleMap::diagnoseDuplicateHeaderOwnership(SourceLocation FilenameLoc,
+                                                 StringRef Filename,
+                                                 FileEntryRef File,
+                                                 HeadersMap::iterator Known) {
+  if (Known == Headers.end())
+    return;
+
+  if (Diags.isIgnored(diag::warn_mmap_duplicate_header_ownership, FilenameLoc))
+    return;
+
+  // Only diagnose each header once.
+  if (!DiagnosedDuplicateHeaders.insert(&File.getFileEntry()).second)
+    return;
+
+  struct OwnerInfo {
+    Module *Mod;
+    SourceLocation Loc;
+    bool IsUmbrella;
+  };
+
+  // Collect distinct top-level modules that explicitly own this header with
+  // a modular (non-textual, non-excluded) role.
+  SmallVector<OwnerInfo, 2> OwningModules;
+  llvm::SmallPtrSet<Module *, 2> SeenTopLevel;
+  for (const KnownHeader &H : Known->second) {
+    if (!isModular(H.getRole()))
+      continue;
+    Module *TopLevel = H.getModule()->getTopLevelModule();
+    if (!SeenTopLevel.insert(TopLevel).second)
+      continue;
+    auto It = HeaderOwnerLocs.find({&File.getFileEntry(), H.getModule()});
+    SourceLocation OwnerLoc =
+        It != HeaderOwnerLocs.end() ? It->second : SourceLocation();
+    OwningModules.push_back({TopLevel, OwnerLoc, /*IsUmbrella=*/false});
+  }
+
+  // Need at least one explicit owner for there to be a conflict, since
+  // umbrella coverage can only add one more.
+  if (OwningModules.empty())
+    return;
+
+  // Also check umbrella directory coverage for additional owners from different
+  // top-level modules — but only if the header isn't excluded from the umbrella
+  // module. Explicit headers take precedence over umbrella dirs in module
+  // resolution, but a header owned by one module that another module's umbrella
+  // covers can still create problems.
+  SmallVector<DirectoryEntryRef, 2> IntermediateDirs;
+  if (KnownHeader UmbrellaOwner =
+          findHeaderInUmbrellaDirs(File, IntermediateDirs)) {
+    Module *TopLevel = UmbrellaOwner.getModule()->getTopLevelModule();
+    // Only add if it's a different top-level module and the header isn't
+    // excluded from the umbrella module.
+    if (SeenTopLevel.insert(TopLevel).second) {
+      // Check that the header isn't excluded in the umbrella module.
+      bool IsExcluded =
+          llvm::any_of(Known->second, [TopLevel](const KnownHeader &H) {
+            return H.getModule()->getTopLevelModule() == TopLevel &&
+                   H.getRole() == ExcludedHeader;
+          });
+      if (!IsExcluded) {
+        OwningModules.push_back({TopLevel,
+                                 UmbrellaOwner.getModule()->UmbrellaDeclLoc,
+                                 /*IsUmbrella=*/true});
+      }
+    }
+  }
+
+  if (OwningModules.size() < 2)
+    return;
+
+  Diags.Report(FilenameLoc, diag::warn_mmap_duplicate_header_ownership)
+      << Filename;
+  for (const auto &Owner : OwningModules) {
+    unsigned NoteID = Owner.IsUmbrella
+                          ? diag::note_mmap_header_covered_by_umbrella
+                          : diag::note_mmap_header_owned_by;
+    Diags.Report(Owner.Loc, NoteID) << Owner.Mod->getFullModuleName();
   }
 }
 
@@ -1212,9 +1296,12 @@ Module *ModuleMap::createShadowedModule(StringRef Name, bool IsFramework,
 
 void ModuleMap::setUmbrellaHeaderAsWritten(
     Module *Mod, FileEntryRef UmbrellaHeader, const Twine &NameAsWritten,
-    const Twine &PathRelativeToRootModuleDirectory) {
+    const Twine &PathRelativeToRootModuleDirectory, SourceLocation Loc) {
   Headers[UmbrellaHeader].push_back(KnownHeader(Mod, NormalHeader));
+  if (Loc.isValid())
+    HeaderOwnerLocs[{&UmbrellaHeader.getFileEntry(), Mod}] = Loc;
   Mod->Umbrella = UmbrellaHeader;
+  Mod->UmbrellaDeclLoc = Loc;
   Mod->UmbrellaAsWritten = NameAsWritten.str();
   Mod->UmbrellaRelativeToRootModuleDirectory =
       PathRelativeToRootModuleDirectory.str();
@@ -1227,8 +1314,9 @@ void ModuleMap::setUmbrellaHeaderAsWritten(
 
 void ModuleMap::setUmbrellaDirAsWritten(
     Module *Mod, DirectoryEntryRef UmbrellaDir, const Twine &NameAsWritten,
-    const Twine &PathRelativeToRootModuleDirectory) {
+    const Twine &PathRelativeToRootModuleDirectory, SourceLocation Loc) {
   Mod->Umbrella = UmbrellaDir;
+  Mod->UmbrellaDeclLoc = Loc;
   Mod->UmbrellaAsWritten = NameAsWritten.str();
   Mod->UmbrellaRelativeToRootModuleDirectory =
       PathRelativeToRootModuleDirectory.str();
@@ -1307,7 +1395,8 @@ void ModuleMap::resolveHeaderDirectives(
 }
 
 void ModuleMap::addHeader(Module *Mod, Module::Header Header,
-                          ModuleHeaderRole Role, bool Imported) {
+                          ModuleHeaderRole Role, bool Imported,
+                          SourceLocation Loc) {
   KnownHeader KH(Mod, Role);
 
   FileEntryRef HeaderEntry = Header.Entry;
@@ -1318,6 +1407,9 @@ void ModuleMap::addHeader(Module *Mod, Module::Header Header,
   auto &HeaderList = Headers[HeaderEntry];
   if (llvm::is_contained(HeaderList, KH))
     return;
+
+  if (Loc.isValid())
+    HeaderOwnerLocs[{&HeaderEntry.getFileEntry(), Mod}] = Loc;
 
   HeaderList.push_back(KH);
   Mod->addHeader(headerRoleToKind(Role), std::move(Header));
@@ -1756,9 +1848,25 @@ void ModuleMapLoader::handleModuleDecl(const modulemap::ModuleDecl &MD) {
   if (Module *Existing = Map.lookupModuleQualified(ModuleName, ActiveModule)) {
     // We might see a (re)definition of a module that we already have a
     // definition for in four cases:
-    //  - If we loaded one definition from an AST file and we've just found a
-    //    corresponding definition in a module map file, or
+    //  - If the Existing module was loaded from an AST file and we've found its
+    //    original source module map, or we cannot determine Existing's
+    //    definition location.
     bool LoadedFromASTFile = Existing->IsFromModuleFile;
+    if (LoadedFromASTFile) {
+      OptionalFileEntryRef ExistingModMapFile =
+          Map.getContainingModuleMapFile(Existing);
+      OptionalFileEntryRef CurrentModMapFile =
+          SourceMgr.getFileEntryRefForID(ModuleMapFID);
+      if ((ExistingModMapFile && CurrentModMapFile &&
+           *ExistingModMapFile == *CurrentModMapFile) ||
+          Existing->DefinitionLoc.isInvalid()) {
+        // If we do not know Existing's definition location, we have
+        // no way of checking against it, and hence we stay conservative and do
+        // not check for duplicating module definitions.
+        LoadedFromASTFile = true;
+      } else
+        LoadedFromASTFile = false;
+    }
     //  - If we previously inferred this module from different module map file.
     bool Inferred = Existing->IsInferred;
     //  - If we're building a framework that vends a module map, we might've
@@ -2092,7 +2200,8 @@ void ModuleMapLoader::handleUmbrellaDirDecl(
   }
 
   // Record this umbrella directory.
-  Map.setUmbrellaDirAsWritten(ActiveModule, *Dir, DirNameAsWritten, DirName);
+  Map.setUmbrellaDirAsWritten(ActiveModule, *Dir, DirNameAsWritten, DirName,
+                              UDD.Location);
 }
 
 void ModuleMapLoader::handleExportDecl(const modulemap::ExportDecl &ED) {
@@ -2335,6 +2444,17 @@ bool ModuleMap::parseAndLoadModuleMapFile(FileEntryRef File, bool IsSystem,
     ModuleMapLoader Loader(SourceMgr, Diags, *this, ID, Dir, IsSystem,
                            ImplicitlyDiscovered);
     Result = Loader.parseAndLoadModuleMapFile(*MMF);
+
+    // Also record that this was parsed if it wasn't previously. This is used
+    // for diagnostics.
+    llvm::DenseMap<const FileEntry *,
+                   const modulemap::ModuleMapFile *>::iterator PKnown =
+        ParsedModuleMap.find(File);
+    if (PKnown == ParsedModuleMap.end()) {
+      ParsedModuleMaps.push_back(
+          std::make_unique<modulemap::ModuleMapFile>(std::move(*MMF)));
+      ParsedModuleMap[File] = &*ParsedModuleMaps.back();
+    }
   }
   LoadedModuleMap[File] = Result;
 

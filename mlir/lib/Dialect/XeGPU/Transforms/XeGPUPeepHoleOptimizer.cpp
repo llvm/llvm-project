@@ -145,10 +145,17 @@ static xegpu::TensorDescType tryOptimize(xegpu::TensorDescType tdescType,
     return tdescType;
 
   SmallVector<int64_t> supportedShape = {supportedHeight, supportedWidth};
+  auto ctx = tdescType.getContext();
+  auto origLayout = tdescType.getLayoutAttr();
+  auto laneLayoutI64 = origLayout.getEffectiveLaneLayoutAsInt();
+  SmallVector<int32_t> laneLayoutI32(laneLayoutI64.begin(),
+                                     laneLayoutI64.end());
+
   xegpu::LayoutAttr newLayout = xegpu::LayoutAttr::get(
-      tdescType.getContext(), tdescType.getLayoutAttr().getLaneLayout(),
-      DenseI32ArrayAttr::get(tdescType.getContext(), {1, 1}),
-      tdescType.getLayoutAttr().getOrder());
+      ctx, /*lane_layout=*/DenseI32ArrayAttr::get(ctx, laneLayoutI32),
+      /*lane_data=*/DenseI32ArrayAttr::get(ctx, {1, 1}),
+      /*order=*/origLayout.getOrder());
+
   // Array length can not be larger than 1 for transpose case.
   return xegpu::TensorDescType::get(supportedShape, newElemTy, arrayLen,
                                     tdescType.getBoundaryCheck(),
@@ -591,16 +598,7 @@ struct XeGPUPeepHoleOptimizerPass final
     RewritePatternSet emptyPatterns(ctx);
     (void)applyPatternsGreedily(getOperation(), std::move(emptyPatterns));
 
-    // Remove the temporary layout after all patterns are applied.
-    getOperation()->walk([](Operation *op) {
-      SmallVector<StringAttr> attrsToRemove;
-      for (auto namedAttr : op->getDiscardableAttrs()) {
-        if (isa<xegpu::DistributeLayoutAttr>(namedAttr.getValue()))
-          attrsToRemove.push_back(namedAttr.getName());
-      }
-      for (auto attrName : attrsToRemove)
-        op->removeDiscardableAttr(attrName);
-    });
+    xegpu::removeTemporaryLayoutAttrs(getOperation());
   }
 };
 

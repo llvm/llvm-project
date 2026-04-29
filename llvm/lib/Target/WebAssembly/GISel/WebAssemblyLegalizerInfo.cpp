@@ -29,19 +29,20 @@ using namespace LegalizeActions;
 WebAssemblyLegalizerInfo::WebAssemblyLegalizerInfo(
     const WebAssemblySubtarget &ST) {
   using namespace TargetOpcode;
+
+  const LLT i32 = LLT::integer(32);
+  const LLT i64 = LLT::integer(64);
+
+  const LLT f32 = LLT::floatIEEE(32);
+  const LLT f64 = LLT::floatIEEE(64);
+
+  const LLT p0 = LLT::pointer(0, ST.hasAddr64() ? 64 : 32);
+  const LLT p0i = LLT::integer(ST.hasAddr64() ? 64 : 32);
+
   const LLT s8 = LLT::scalar(8);
   const LLT s16 = LLT::scalar(16);
   const LLT s32 = LLT::scalar(32);
   const LLT s64 = LLT::scalar(64);
-
-  const LLT i32 = LLT::integer(32);
-  const LLT i64 = LLT::integer(64);
-  const LLT f32 = LLT::floatIEEE(32);
-  const LLT f64 = LLT::floatIEEE(64);
-
-
-  const LLT p0 = LLT::pointer(0, ST.hasAddr64() ? 64 : 32);
-  const LLT p0i = LLT::integer(ST.hasAddr64() ? 64 : 32);
 
   getActionDefinitionsBuilder(G_GLOBAL_VALUE).legalFor({p0});
 
@@ -79,8 +80,8 @@ WebAssemblyLegalizerInfo::WebAssemblyLegalizerInfo(
 
   getActionDefinitionsBuilder(G_FRAME_INDEX).legalFor({p0});
 
-  getActionDefinitionsBuilder(G_CONSTANT)
-      .legalFor({i32, i64, p0})
+  getActionDefinitionsBuilder(G_IMPLICIT_DEF)
+      .legalFor({s32, s64, p0})
       .widenScalarToNextPow2(0)
       .clampScalar(0, s32, s64);
 
@@ -88,42 +89,35 @@ WebAssemblyLegalizerInfo::WebAssemblyLegalizerInfo(
       .legalFor({f32, f64})
       .clampScalar(0, s32, s64);
 
-  getActionDefinitionsBuilder(G_IMPLICIT_DEF)
-      .legalFor({s32, s64, p0})
-      //.scalarize(0)
-      .widenScalarToNextPow2(0)
-      .clampScalar(0, s32, s64);
-
-  getActionDefinitionsBuilder(
-      {G_ADD, G_SUB, G_MUL, G_UDIV, G_SDIV, G_UREM, G_SREM})
+  getActionDefinitionsBuilder({G_CONSTANT, G_ADD, G_SUB, G_MUL,
+                               G_UDIV, G_SDIV, G_UREM, G_SREM, G_AND, G_OR,
+                               G_XOR})
       .legalFor({i32, i64})
-      //.scalarize(0)
       .widenScalarToNextPow2(0)
       .clampScalar(0, s32, s64);
 
-  getActionDefinitionsBuilder({G_ASHR, G_LSHR, G_SHL, G_CTLZ, G_CTLZ_ZERO_UNDEF,
-                               G_CTTZ, G_CTTZ_ZERO_UNDEF, G_CTPOP})
+  getActionDefinitionsBuilder({G_ASHR, G_LSHR, G_SHL})
       .legalFor({{i32, i32}, {i64, i64}})
-      //.scalarize(0)
       .widenScalarToNextPow2(0)
       .clampScalar(0, s32, s64)
-      .minScalarSameAs(1, 0)
-      .maxScalarSameAs(1, 0);
+      .scalarSameSizeAs(1, 0);
 
-  getActionDefinitionsBuilder({G_FSHL, G_FSHR}).lower();
+  getActionDefinitionsBuilder({G_CTLZ, G_CTTZ, G_CTPOP})
+      .legalFor({{i32, i32}, {i64, i64}})
+      .widenScalarToNextPow2(1)
+      .clampScalar(1, s32, s64)
+      .scalarSameSizeAs(0, 1);
+
+  getActionDefinitionsBuilder({G_CTLZ_ZERO_UNDEF, G_CTTZ_ZERO_UNDEF}).lower();
 
   getActionDefinitionsBuilder({G_ROTL, G_ROTR})
       .legalFor({{i32, i32}, {i64, i64}})
-      //.scalarize(0)
+      .scalarSameSizeAs(1, 0)
       .lower();
 
-  getActionDefinitionsBuilder({G_SCMP, G_UCMP}).lower();
+  getActionDefinitionsBuilder({G_FSHL, G_FSHR}).lower();
 
-  getActionDefinitionsBuilder({G_AND, G_OR, G_XOR})
-      .legalFor({i32, i64})
-      //.scalarize(0)
-      .widenScalarToNextPow2(0)
-      .clampScalar(0, s32, s64);
+  getActionDefinitionsBuilder({G_SCMP, G_UCMP}).lower();
 
   getActionDefinitionsBuilder({G_UMIN, G_UMAX, G_SMIN, G_SMAX}).lower();
   getActionDefinitionsBuilder({G_USUBSAT, G_USUBO}).lower();
@@ -133,16 +127,11 @@ WebAssemblyLegalizerInfo::WebAssemblyLegalizerInfo(
                                G_FNEARBYINT, G_FRINT, G_INTRINSIC_ROUNDEVEN,
                                G_FMINIMUM, G_FMAXIMUM, G_STRICT_FMUL})
       .legalFor({f32, f64})
-      //.scalarize(0)
       .minScalar(0, s32);
 
   getActionDefinitionsBuilder({G_FMINNUM, G_FMAXNUM})
       .customFor({f32, f64})
-      //.scalarize(0)
       .minScalar(0, s32);
-
-  getActionDefinitionsBuilder(
-      {G_VECREDUCE_OR, G_VECREDUCE_AND}); //.scalarize(1);
 
   getActionDefinitionsBuilder(G_BITCAST)
       .legalFor({{i32, f32}, {f32, i32}, {i64, f64}, {f64, i64}})
@@ -156,14 +145,12 @@ WebAssemblyLegalizerInfo::WebAssemblyLegalizerInfo(
       .lowerIf([=](const LegalityQuery &Query) {
         return Query.Types[0].isVector() != Query.Types[1].isVector();
       });
-  //.scalarize(0);
 
   getActionDefinitionsBuilder(G_MERGE_VALUES)
       .lowerFor({{s64, s32}, {s64, s16}, {s64, s8}, {s32, s16}, {s32, s8}});
 
   getActionDefinitionsBuilder(G_FCANONICALIZE)
       .customFor({f32, f64})
-      //.scalarize(0)
       .minScalar(0, s32);
 
   getActionDefinitionsBuilder({G_FMA, G_FREM})
@@ -178,7 +165,6 @@ WebAssemblyLegalizerInfo::WebAssemblyLegalizerInfo(
 
   getActionDefinitionsBuilder(G_FCOPYSIGN)
       .legalFor({f32, f64})
-      //.scalarize(0)
       .minScalar(0, s32)
       .minScalarSameAs(1, 0)
       .maxScalarSameAs(1, 0);
@@ -194,7 +180,6 @@ WebAssemblyLegalizerInfo::WebAssemblyLegalizerInfo(
 
   getActionDefinitionsBuilder({G_UITOFP, G_SITOFP})
       .legalForCartesianProduct({f32, f64}, {i32, i64})
-      //.scalarize(0)
       .minScalar(1, s32)
       .widenScalarToNextPow2(1)
       .clampScalar(1, s32, s64);
@@ -222,7 +207,6 @@ WebAssemblyLegalizerInfo::WebAssemblyLegalizerInfo(
                                                        {s64, p0, s32, 1}}))
       .clampScalar(0, s32, s64)
       .lowerIfMemSizeNotByteSizePow2();
-  //.scalarize(0);
 
   getActionDefinitionsBuilder(G_STORE)
       .legalForTypesWithMemDesc(
@@ -248,7 +232,6 @@ WebAssemblyLegalizerInfo::WebAssemblyLegalizerInfo(
             const LLT VecTy = Query.Types[0];
             return std::pair(0, LLT::integer(VecTy.getSizeInBits()));
           });
-  //.scalarize(0);
 
   getActionDefinitionsBuilder(
       {G_SHUFFLE_VECTOR, G_EXTRACT_VECTOR_ELT, G_INSERT_VECTOR_ELT})
@@ -287,33 +270,20 @@ WebAssemblyLegalizerInfo::WebAssemblyLegalizerInfo(
   // for better optimization (since G_ANYEXT will lower to a ZEXT or SEXT
   // instruction anyway).
 
-  getActionDefinitionsBuilder(G_ANYEXT)
+  getActionDefinitionsBuilder({G_ANYEXT, G_SEXT, G_ZEXT})
       .legalFor({{i64, i32}})
-      //.scalarize(0)
-      .clampScalar(0, s32, s64)
-      .clampScalar(1, s32, s64);
+      .clampScalar(0, s64, s64)
+      .clampScalar(1, s32, s32);
 
-  getActionDefinitionsBuilder({G_SEXT, G_ZEXT})
-      .legalFor({{i64, i32}})
-      //.scalarize(0)
+  getActionDefinitionsBuilder(G_SEXT_INREG)
+      .customFor(ST.hasSignExt(), {i32, i64})
       .clampScalar(0, s32, s64)
-      .clampScalar(1, s32, s64)
       .lower();
-
-  if (ST.hasSignExt()) {
-    getActionDefinitionsBuilder(G_SEXT_INREG)
-        .customFor({i32, i64})
-        .clampScalar(0, s32, s64);
-  } else {
-    getActionDefinitionsBuilder(G_SEXT_INREG).lower();
-  }
 
   getActionDefinitionsBuilder(G_TRUNC)
       .legalFor({{i32, i64}})
-      //.scalarize(0)
-      .clampScalar(0, s32, s64)
-      .clampScalar(1, s32, s64)
-      .lower();
+      .clampScalar(0, s32, s32)
+      .clampScalar(1, s64, s64);
 
   getActionDefinitionsBuilder(G_FPEXT).legalFor({{f64, f32}}); //.scalarize(0);
 
@@ -355,8 +325,8 @@ bool WebAssemblyLegalizerInfo::legalizeCustom(
 
   switch (MI.getOpcode()) {
   case TargetOpcode::G_LOAD: {
-    // If we are here we are looking at a valid load with a MemTy smaller than the ValueTy
-    // just turn it into a G_ZEXTLOAD to aid optimizations
+    // If we are here we are looking at a valid load with a MemTy smaller than
+    // the ValueTy just turn it into a G_ZEXTLOAD to aid optimizations
 
     MI.setDesc(MIRBuilder.getTII().get(TargetOpcode::G_ZEXTLOAD));
     return true;
@@ -577,8 +547,7 @@ bool WebAssemblyLegalizerInfo::legalizeCustom(
     assert(MI.getOperand(2).isImm() && "Expected immediate");
 
     // Mark only 8/16/32-bit SEXT_INREG as legal
-    auto [DstReg, SrcReg] = MI.getFirst2Regs();
-    auto DstType = MRI.getType(DstReg);
+    auto [DstType, SrcType] = MI.getFirst2LLTs();
     auto ExtFromWidth = MI.getOperand(2).getImm();
 
     if (ExtFromWidth == 8 || ExtFromWidth == 16 ||
@@ -586,15 +555,7 @@ bool WebAssemblyLegalizerInfo::legalizeCustom(
       return true;
     }
 
-    Register TmpRes = MRI.createGenericVirtualRegister(DstType);
-
-    auto MIBSz = MIRBuilder.buildConstant(
-        DstType, DstType.getScalarSizeInBits() - ExtFromWidth);
-    MIRBuilder.buildShl(TmpRes, SrcReg, MIBSz->getOperand(0));
-    MIRBuilder.buildAShr(DstReg, TmpRes, MIBSz->getOperand(0));
-    MI.eraseFromParent();
-
-    return true;
+    return Helper.lower(MI, 0, DstType) != LegalizerHelper::UnableToLegalize;
   }
   case TargetOpcode::G_MEMSET: {
     // Anyext the value being set to 32 bit (only the bottom 8 bits are read by

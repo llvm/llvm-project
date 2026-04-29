@@ -14,6 +14,7 @@
 #define MLIR_DIALECT_SPIRV_IR_SPIRVTYPES_H_
 
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Location.h"
@@ -172,8 +173,9 @@ public:
 };
 
 // SPIR-V pointer type
-class PointerType : public Type::TypeBase<PointerType, SPIRVType,
-                                          detail::PointerTypeStorage> {
+class PointerType
+    : public Type::TypeBase<PointerType, SPIRVType, detail::PointerTypeStorage,
+                            VectorElementTypeInterface::Trait> {
 public:
   using Base::Base;
 
@@ -226,6 +228,16 @@ public:
                    Type imageType);
 
   Type getImageType() const;
+};
+
+// SPIR-V sampler type
+class SamplerType : public Type::TypeBase<SamplerType, SPIRVType, TypeStorage> {
+public:
+  using Base::Base;
+
+  static constexpr StringLiteral name = "spirv.sampler";
+
+  static SamplerType get(MLIRContext *context);
 };
 
 /// SPIR-V struct type. Two kinds of struct types are supported:

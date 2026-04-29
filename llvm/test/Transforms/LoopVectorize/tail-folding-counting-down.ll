@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes=loop-vectorize -prefer-predicate-over-epilogue=predicate-dont-vectorize -force-vector-width=4 -S | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -tail-folding-policy=must-fold-tail -force-vector-width=4 -S | FileCheck %s
 
 ; Check that a counting-down loop which has no primary induction variable
 ; is vectorized with preferred predication.

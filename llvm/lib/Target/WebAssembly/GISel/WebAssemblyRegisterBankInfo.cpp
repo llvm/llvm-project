@@ -77,9 +77,17 @@ WebAssemblyRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     OpSize[Idx] = Ty.getSizeInBits().getKnownMinValue();
 
     if (Ty.isInteger() || Ty.isPointer()) {
-      OpRegBankIdx[Idx] = OpSize[Idx] == 64 ? WebAssembly::PMI_I64 : WebAssembly::PMI_I32;
+      if (OpSize[Idx] == 32) {
+        OpRegBankIdx[Idx] = WebAssembly::PMI_I32;
+      } else if (OpSize[Idx] == 64) {
+        OpRegBankIdx[Idx] = WebAssembly::PMI_I64;
+      }
     } else if (Ty.isFloatIEEE()) {
-      OpRegBankIdx[Idx] = OpSize[Idx] == 64 ? WebAssembly::PMI_F64 : WebAssembly::PMI_F32;
+      if (OpSize[Idx] == 32) {
+        OpRegBankIdx[Idx] = WebAssembly::PMI_F32;
+      } else if (OpSize[Idx] == 64) {
+        OpRegBankIdx[Idx] = WebAssembly::PMI_F64;
+      }
     }
   }
 
@@ -94,7 +102,9 @@ WebAssemblyRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
         return getInvalidInstructionMapping();
       }
 
-      const auto &Mapping = getValueMapping(&WebAssembly::PartMappings[OpRegBankIdx[Idx] - WebAssembly::PMI_Min], 1);
+      const auto &Mapping = getValueMapping(
+          &WebAssembly::PartMappings[OpRegBankIdx[Idx] - WebAssembly::PMI_Min],
+          1);
 
       if (!Mapping.isValid())
         return getInvalidInstructionMapping();
@@ -103,6 +113,6 @@ WebAssemblyRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     }
   }
 
-  return getInstructionMapping(MappingID, /*Cost=*/1, getOperandsMapping(OpdsMapping),
-                               NumOperands);
+  return getInstructionMapping(MappingID, /*Cost=*/1,
+                               getOperandsMapping(OpdsMapping), NumOperands);
 }

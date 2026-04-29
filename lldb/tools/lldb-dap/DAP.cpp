@@ -704,7 +704,7 @@ bool DAP::RunLLDBCommands(llvm::StringRef prefix,
                           llvm::ArrayRef<String> commands) {
   bool required_command_failed = false;
   std::string output = ::RunLLDBCommands(
-      debugger, prefix, commands, required_command_failed,
+      debugger, GetAPIMutex(), prefix, commands, required_command_failed,
       /*parse_command_directives*/ true, /*echo_commands*/ true);
   SendOutput(OutputType::Console, output);
   return !required_command_failed;
@@ -1283,7 +1283,18 @@ void DAP::StartEventThread() {
 }
 
 void DAP::StartProgressEventThread() {
-  progress_event_thread = std::thread(&DAP::ProgressEventThread, this);
+  lldb::SBListener listener("lldb-dap.progress.listener");
+
+  // Add the listener for the 'StopProgressThread' event before starting the
+  // progress thread to prevent a race condition. Under heavy load, a stop event
+  // could be sent immediately after the thread starts. If the listener isn't
+  // registered first, the event is missed, leading to a deadlock.
+  broadcaster.AddListener(listener, eBroadcastBitStopProgressThread);
+  debugger.GetBroadcaster().AddListener(
+      listener, lldb::SBDebugger::eBroadcastBitProgress |
+                    lldb::SBDebugger::eBroadcastBitExternalProgress);
+  progress_event_thread =
+      std::thread(&DAP::ProgressEventThread, this, listener);
 }
 
 void DAP::StartEventThreads() {
@@ -1372,12 +1383,7 @@ llvm::Error DAP::InitializeDebugger() {
   return llvm::Error::success();
 }
 
-void DAP::ProgressEventThread() {
-  lldb::SBListener listener("lldb-dap.progress.listener");
-  debugger.GetBroadcaster().AddListener(
-      listener, lldb::SBDebugger::eBroadcastBitProgress |
-                    lldb::SBDebugger::eBroadcastBitExternalProgress);
-  broadcaster.AddListener(listener, eBroadcastBitStopProgressThread);
+void DAP::ProgressEventThread(lldb::SBListener listener) {
   lldb::SBEvent event;
   bool done = false;
   while (!done) {
@@ -1430,6 +1436,7 @@ void DAP::ProgressEventThread() {
       }
     }
   }
+  DAP_LOG(log, "Stopped ProgressEvent Thread.");
 }
 
 std::vector<protocol::Breakpoint> DAP::SetSourceBreakpoints(

@@ -1578,14 +1578,10 @@ Value *NumericalStabilitySanitizer::maybeHandleKnownCallBase(
   }
 
   // Check that the widened intrinsic is valid.
-  SmallVector<Intrinsic::IITDescriptor, 8> Table;
-  getIntrinsicInfoTableEntries(WidenedId, Table);
-  SmallVector<Type *, 4> ArgTys;
-  ArrayRef<Intrinsic::IITDescriptor> TableRef = Table;
-  [[maybe_unused]] Intrinsic::MatchIntrinsicTypesResult MatchResult =
-      Intrinsic::matchIntrinsicSignature(WidenedFnTy, TableRef, ArgTys);
-  assert(MatchResult == Intrinsic::MatchIntrinsicTypes_Match &&
-         "invalid widened intrinsic");
+  SmallVector<Type *, 4> OverloadTys;
+  [[maybe_unused]] bool IsValid =
+      Intrinsic::getIntrinsicSignature(WidenedId, WidenedFnTy, OverloadTys);
+  assert(IsValid && "invalid widened intrinsic");
   // For known intrinsic functions, we create a second call to the same
   // intrinsic with a different type.
   SmallVector<Value *, 4> Args;
@@ -1611,7 +1607,7 @@ Value *NumericalStabilitySanitizer::maybeHandleKnownCallBase(
     // There is no intrinsic with his level of precision, truncate the shadow.
     Args.push_back(Builder.CreateFPTrunc(Shadow, IntrinsicArgTy));
   }
-  Value *IntrinsicCall = Builder.CreateIntrinsic(WidenedId, ArgTys, Args);
+  Value *IntrinsicCall = Builder.CreateIntrinsic(WidenedId, OverloadTys, Args);
   return WidenedFnTy->getReturnType() == ExtendedVT
              ? IntrinsicCall
              : Builder.CreateFPExt(IntrinsicCall, ExtendedVT);
@@ -1886,8 +1882,8 @@ void NumericalStabilitySanitizer::propagateNonFTStore(
     // This might be a fp constant stored as an int. Bitcast and store if it has
     // appropriate size.
     Type *BitcastTy = nullptr; // The FT type to bitcast to.
-    if (auto *CInt = dyn_cast<ConstantInt>(C)) {
-      switch (CInt->getType()->getScalarSizeInBits()) {
+    if (isa<ConstantInt, ConstantDataVector>(C)) {
+      switch (C->getType()->getScalarSizeInBits()) {
       case 32:
         BitcastTy = Type::getFloatTy(Context);
         break;
@@ -1900,25 +1896,9 @@ void NumericalStabilitySanitizer::propagateNonFTStore(
       default:
         break;
       }
-    } else if (auto *CDV = dyn_cast<ConstantDataVector>(C)) {
-      const int NumElements =
-          cast<VectorType>(CDV->getType())->getElementCount().getFixedValue();
-      switch (CDV->getType()->getScalarSizeInBits()) {
-      case 32:
-        BitcastTy =
-            VectorType::get(Type::getFloatTy(Context), NumElements, false);
-        break;
-      case 64:
-        BitcastTy =
-            VectorType::get(Type::getDoubleTy(Context), NumElements, false);
-        break;
-      case 80:
-        BitcastTy =
-            VectorType::get(Type::getX86_FP80Ty(Context), NumElements, false);
-        break;
-      default:
-        break;
-      }
+
+      if (auto *VectorTy = dyn_cast<VectorType>(C->getType()))
+        BitcastTy = VectorType::get(BitcastTy, VectorTy->getElementCount());
     }
     if (BitcastTy) {
       const MemoryExtents Extents = getMemoryExtentsOrDie(BitcastTy);

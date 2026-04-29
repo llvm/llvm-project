@@ -138,7 +138,6 @@ exit:
   ret i8 %r
 }
 
-declare i16 @llvm.umax.i16(i16, i16)
 
 ; Test case for https://github.com/llvm/llvm-project/issues/106780.
 define i32 @cost_of_exit_branch_and_cond_insts(ptr %a, ptr %b, i1 %c, i16 %x) #0 {

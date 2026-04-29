@@ -1,4 +1,4 @@
-//===- FoldMemRefAliasOps.cpp - Fold memref alias ops -----===//
+//===- FoldMemRefAliasOps.cpp - Fold memref alias ops ---------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,13 +13,11 @@
 
 #include "mlir/Dialect/Affine/ViewLikeInterfaceUtils.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
-#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/IR/MemoryAccessOpInterfaces.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Dialect/MemRef/Transforms/Transforms.h"
 #include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
-#include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
@@ -76,10 +74,6 @@ static Value getMemRefOperand(vector::TransferReadOp op) {
   return op.getBase();
 }
 
-static Value getMemRefOperand(nvgpu::LdMatrixOp op) {
-  return op.getSrcMemref();
-}
-
 static Value getMemRefOperand(vector::LoadOp op) { return op.getBase(); }
 
 static Value getMemRefOperand(vector::StoreOp op) { return op.getBase(); }
@@ -90,14 +84,6 @@ static Value getMemRefOperand(vector::MaskedStoreOp op) { return op.getBase(); }
 
 static Value getMemRefOperand(vector::TransferWriteOp op) {
   return op.getBase();
-}
-
-static Value getMemRefOperand(gpu::SubgroupMmaLoadMatrixOp op) {
-  return op.getSrcMemref();
-}
-
-static Value getMemRefOperand(gpu::SubgroupMmaStoreMatrixOp op) {
-  return op.getDstMemref();
 }
 
 //===----------------------------------------------------------------------===//
@@ -176,47 +162,18 @@ public:
     if (!srcSubView)
       return failure();
 
-    // TODO: relax unit stride assumption.
-    if (!subView.hasUnitStride()) {
-      return rewriter.notifyMatchFailure(subView, "requires unit strides");
-    }
-    if (!srcSubView.hasUnitStride()) {
-      return rewriter.notifyMatchFailure(srcSubView, "requires unit strides");
-    }
-
-    // Resolve sizes according to dropped dims.
-    SmallVector<OpFoldResult> resolvedSizes;
-    llvm::SmallBitVector srcDroppedDims = srcSubView.getDroppedDims();
-    affine::resolveSizesIntoOpWithSizes(srcSubView.getMixedSizes(),
-                                        subView.getMixedSizes(), srcDroppedDims,
-                                        resolvedSizes);
-
-    // Resolve offsets according to source offsets and strides.
-    SmallVector<Value> resolvedOffsets;
-    affine::resolveIndicesIntoOpWithOffsetsAndStrides(
-        rewriter, subView.getLoc(), srcSubView.getMixedOffsets(),
-        srcSubView.getMixedStrides(), srcDroppedDims, subView.getMixedOffsets(),
-        resolvedOffsets);
+    SmallVector<OpFoldResult> newOffsets, newSizes, newStrides;
+    if (failed(affine::mergeOffsetsSizesAndStrides(
+            rewriter, subView.getLoc(), srcSubView, subView,
+            srcSubView.getDroppedDims(), newOffsets, newSizes, newStrides)))
+      return failure();
 
     // Replace original op.
     rewriter.replaceOpWithNewOp<memref::SubViewOp>(
-        subView, subView.getType(), srcSubView.getSource(),
-        getAsOpFoldResult(resolvedOffsets), resolvedSizes,
-        srcSubView.getMixedStrides());
-
+        subView, subView.getType(), srcSubView.getSource(), newOffsets,
+        newSizes, newStrides);
     return success();
   }
-};
-
-/// Folds nvgpu.device_async_copy subviews into the copy itself. This pattern
-/// is folds subview on src and dst memref of the copy.
-class NVGPUAsyncCopyOpSubViewOpFolder final
-    : public OpRewritePattern<nvgpu::DeviceAsyncCopyOp> {
-public:
-  using OpRewritePattern<nvgpu::DeviceAsyncCopyOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(nvgpu::DeviceAsyncCopyOp copyOp,
-                                PatternRewriter &rewriter) const override;
 };
 
 /// Merges subview operations with load/store like operations unless such a
@@ -371,16 +328,6 @@ LogicalResult LoadOpOfSubViewOpFolder<OpTy>::matchAndRewrite(
                 op.getPermutationMap(), subViewOp.getSourceType().getRank(),
                 subViewOp.getDroppedDims())),
             op.getPadding(), op.getMask(), op.getInBoundsAttr());
-      })
-      .Case([&](gpu::SubgroupMmaLoadMatrixOp op) {
-        rewriter.replaceOpWithNewOp<gpu::SubgroupMmaLoadMatrixOp>(
-            op, op.getType(), subViewOp.getSource(), sourceIndices,
-            op.getLeadDimension(), op.getTransposeAttr());
-      })
-      .Case([&](nvgpu::LdMatrixOp op) {
-        rewriter.replaceOpWithNewOp<nvgpu::LdMatrixOp>(
-            op, op.getType(), subViewOp.getSource(), sourceIndices,
-            op.getTranspose(), op.getNumTiles());
       })
       .DefaultUnreachable("unexpected operation");
   return success();
@@ -542,11 +489,6 @@ LogicalResult StoreOpOfSubViewOpFolder<OpTy>::matchAndRewrite(
         rewriter.replaceOpWithNewOp<vector::MaskedStoreOp>(
             op, subViewOp.getSource(), sourceIndices, op.getMask(),
             op.getValueToStore());
-      })
-      .Case([&](gpu::SubgroupMmaStoreMatrixOp op) {
-        rewriter.replaceOpWithNewOp<gpu::SubgroupMmaStoreMatrixOp>(
-            op, op.getSrc(), subViewOp.getSource(), sourceIndices,
-            op.getLeadDimension(), op.getTransposeAttr());
       })
       .DefaultUnreachable("unexpected operation");
   return success();
@@ -822,57 +764,6 @@ LogicalResult IndexedMemCopyOpOfCollapseShapeOpFolder::matchAndRewrite(
   return success();
 }
 
-LogicalResult NVGPUAsyncCopyOpSubViewOpFolder::matchAndRewrite(
-    nvgpu::DeviceAsyncCopyOp copyOp, PatternRewriter &rewriter) const {
-
-  LLVM_DEBUG(DBGS() << "copyOp       : " << copyOp << "\n");
-
-  auto srcSubViewOp =
-      copyOp.getSrc().template getDefiningOp<memref::SubViewOp>();
-  auto dstSubViewOp =
-      copyOp.getDst().template getDefiningOp<memref::SubViewOp>();
-
-  if (!(srcSubViewOp || dstSubViewOp))
-    return rewriter.notifyMatchFailure(copyOp, "does not use subview ops for "
-                                               "source or destination");
-
-  // If the source is a subview, we need to resolve the indices.
-  SmallVector<Value> foldedSrcIndices(copyOp.getSrcIndices().begin(),
-                                      copyOp.getSrcIndices().end());
-
-  if (srcSubViewOp) {
-    LLVM_DEBUG(DBGS() << "srcSubViewOp : " << srcSubViewOp << "\n");
-    affine::resolveIndicesIntoOpWithOffsetsAndStrides(
-        rewriter, copyOp.getLoc(), srcSubViewOp.getMixedOffsets(),
-        srcSubViewOp.getMixedStrides(), srcSubViewOp.getDroppedDims(),
-        copyOp.getSrcIndices(), foldedSrcIndices);
-  }
-
-  // If the destination is a subview, we need to resolve the indices.
-  SmallVector<Value> foldedDstIndices(copyOp.getDstIndices().begin(),
-                                      copyOp.getDstIndices().end());
-
-  if (dstSubViewOp) {
-    LLVM_DEBUG(DBGS() << "dstSubViewOp : " << dstSubViewOp << "\n");
-    affine::resolveIndicesIntoOpWithOffsetsAndStrides(
-        rewriter, copyOp.getLoc(), dstSubViewOp.getMixedOffsets(),
-        dstSubViewOp.getMixedStrides(), dstSubViewOp.getDroppedDims(),
-        copyOp.getDstIndices(), foldedDstIndices);
-  }
-
-  // Replace the copy op with a new copy op that uses the source and destination
-  // of the subview.
-  rewriter.replaceOpWithNewOp<nvgpu::DeviceAsyncCopyOp>(
-      copyOp, nvgpu::DeviceAsyncTokenType::get(copyOp.getContext()),
-      (dstSubViewOp ? dstSubViewOp.getSource() : copyOp.getDst()),
-      foldedDstIndices,
-      (srcSubViewOp ? srcSubViewOp.getSource() : copyOp.getSrc()),
-      foldedSrcIndices, copyOp.getDstElements(), copyOp.getSrcElements(),
-      copyOp.getBypassL1Attr());
-
-  return success();
-}
-
 void memref::populateFoldMemRefAliasOpPatterns(RewritePatternSet &patterns) {
   patterns.add<
       // Interface-based patterns to which we will be migrating.
@@ -881,15 +772,12 @@ void memref::populateFoldMemRefAliasOpPatterns(RewritePatternSet &patterns) {
       IndexedMemCopyOpOfExpandShapeOpFolder,
       IndexedMemCopyOpOfCollapseShapeOpFolder,
       // The old way of doing things. Don't add more of these.
-      LoadOpOfSubViewOpFolder<nvgpu::LdMatrixOp>,
       LoadOpOfSubViewOpFolder<vector::LoadOp>,
       LoadOpOfSubViewOpFolder<vector::MaskedLoadOp>,
       LoadOpOfSubViewOpFolder<vector::TransferReadOp>,
-      LoadOpOfSubViewOpFolder<gpu::SubgroupMmaLoadMatrixOp>,
       StoreOpOfSubViewOpFolder<vector::TransferWriteOp>,
       StoreOpOfSubViewOpFolder<vector::StoreOp>,
       StoreOpOfSubViewOpFolder<vector::MaskedStoreOp>,
-      StoreOpOfSubViewOpFolder<gpu::SubgroupMmaStoreMatrixOp>,
       LoadOpOfExpandShapeOpFolder<vector::LoadOp>,
       LoadOpOfExpandShapeOpFolder<vector::MaskedLoadOp>,
       LoadOpOfExpandShapeOpFolder<vector::TransferReadOp>,
@@ -899,8 +787,7 @@ void memref::populateFoldMemRefAliasOpPatterns(RewritePatternSet &patterns) {
       LoadOpOfCollapseShapeOpFolder<vector::MaskedLoadOp>,
       StoreOpOfCollapseShapeOpFolder<vector::StoreOp>,
       StoreOpOfCollapseShapeOpFolder<vector::MaskedStoreOp>,
-      SubViewOfSubViewFolder, NVGPUAsyncCopyOpSubViewOpFolder>(
-      patterns.getContext());
+      SubViewOfSubViewFolder>(patterns.getContext());
 }
 
 //===----------------------------------------------------------------------===//

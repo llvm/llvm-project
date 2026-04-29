@@ -1254,7 +1254,7 @@ int main() {
 // CHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK1-NEXT:    store i32 [[ADD]], ptr [[I]], align 4
 // CHECK1-NEXT:    [[TMP9:%.*]] = load i8, ptr [[AND_VAR1]], align 1
-// CHECK1-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP9]] to i1
+// CHECK1-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP9]], 0
 // CHECK1-NEXT:    br i1 [[LOADEDV]], label [[LAND_RHS:%.*]], label [[LAND_END:%.*]]
 // CHECK1:       land.rhs:
 // CHECK1-NEXT:    [[TMP10:%.*]] = load i32, ptr [[I]], align 4
@@ -1285,11 +1285,11 @@ int main() {
 // CHECK1-NEXT:    ]
 // CHECK1:       .omp.reduction.case1:
 // CHECK1-NEXT:    [[TMP15:%.*]] = load i8, ptr [[TMP0]], align 1
-// CHECK1-NEXT:    [[LOADEDV5:%.*]] = trunc i8 [[TMP15]] to i1
+// CHECK1-NEXT:    [[LOADEDV5:%.*]] = icmp ne i8 [[TMP15]], 0
 // CHECK1-NEXT:    br i1 [[LOADEDV5]], label [[LAND_RHS6:%.*]], label [[LAND_END8:%.*]]
 // CHECK1:       land.rhs6:
 // CHECK1-NEXT:    [[TMP16:%.*]] = load i8, ptr [[AND_VAR1]], align 1
-// CHECK1-NEXT:    [[LOADEDV7:%.*]] = trunc i8 [[TMP16]] to i1
+// CHECK1-NEXT:    [[LOADEDV7:%.*]] = icmp ne i8 [[TMP16]], 0
 // CHECK1-NEXT:    br label [[LAND_END8]]
 // CHECK1:       land.end8:
 // CHECK1-NEXT:    [[TMP17:%.*]] = phi i1 [ false, [[DOTOMP_REDUCTION_CASE1]] ], [ [[LOADEDV7]], [[LAND_RHS6]] ]
@@ -1299,20 +1299,20 @@ int main() {
 // CHECK1-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK1:       .omp.reduction.case2:
 // CHECK1-NEXT:    [[TMP18:%.*]] = load i8, ptr [[AND_VAR1]], align 1
-// CHECK1-NEXT:    [[LOADEDV10:%.*]] = trunc i8 [[TMP18]] to i1
+// CHECK1-NEXT:    [[LOADEDV10:%.*]] = icmp ne i8 [[TMP18]], 0
 // CHECK1-NEXT:    [[ATOMIC_LOAD:%.*]] = load atomic i8, ptr [[TMP0]] monotonic, align 1
 // CHECK1-NEXT:    br label [[ATOMIC_CONT:%.*]]
 // CHECK1:       atomic_cont:
 // CHECK1-NEXT:    [[TMP19:%.*]] = phi i8 [ [[ATOMIC_LOAD]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[TMP25:%.*]], [[LAND_END17:%.*]] ]
-// CHECK1-NEXT:    [[LOADEDV11:%.*]] = trunc i8 [[TMP19]] to i1
+// CHECK1-NEXT:    [[LOADEDV11:%.*]] = icmp ne i8 [[TMP19]], 0
 // CHECK1-NEXT:    [[STOREDV13:%.*]] = zext i1 [[LOADEDV11]] to i8
 // CHECK1-NEXT:    store i8 [[STOREDV13]], ptr [[_TMP12]], align 1
 // CHECK1-NEXT:    [[TMP20:%.*]] = load i8, ptr [[_TMP12]], align 1
-// CHECK1-NEXT:    [[LOADEDV14:%.*]] = trunc i8 [[TMP20]] to i1
+// CHECK1-NEXT:    [[LOADEDV14:%.*]] = icmp ne i8 [[TMP20]], 0
 // CHECK1-NEXT:    br i1 [[LOADEDV14]], label [[LAND_RHS15:%.*]], label [[LAND_END17]]
 // CHECK1:       land.rhs15:
 // CHECK1-NEXT:    [[TMP21:%.*]] = load i8, ptr [[AND_VAR1]], align 1
-// CHECK1-NEXT:    [[LOADEDV16:%.*]] = trunc i8 [[TMP21]] to i1
+// CHECK1-NEXT:    [[LOADEDV16:%.*]] = icmp ne i8 [[TMP21]], 0
 // CHECK1-NEXT:    br label [[LAND_END17]]
 // CHECK1:       land.end17:
 // CHECK1-NEXT:    [[TMP22:%.*]] = phi i1 [ false, [[ATOMIC_CONT]] ], [ [[LOADEDV16]], [[LAND_RHS15]] ]
@@ -1344,11 +1344,11 @@ int main() {
 // CHECK1-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP2]], i64 0, i64 0
 // CHECK1-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
 // CHECK1-NEXT:    [[TMP8:%.*]] = load i8, ptr [[TMP7]], align 1
-// CHECK1-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP8]] to i1
+// CHECK1-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP8]], 0
 // CHECK1-NEXT:    br i1 [[LOADEDV]], label [[LAND_RHS:%.*]], label [[LAND_END:%.*]]
 // CHECK1:       land.rhs:
 // CHECK1-NEXT:    [[TMP9:%.*]] = load i8, ptr [[TMP5]], align 1
-// CHECK1-NEXT:    [[LOADEDV2:%.*]] = trunc i8 [[TMP9]] to i1
+// CHECK1-NEXT:    [[LOADEDV2:%.*]] = icmp ne i8 [[TMP9]], 0
 // CHECK1-NEXT:    br label [[LAND_END]]
 // CHECK1:       land.end:
 // CHECK1-NEXT:    [[TMP10:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ [[LOADEDV2]], [[LAND_RHS]] ]
@@ -1423,7 +1423,7 @@ int main() {
 // CHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK1-NEXT:    store i32 [[ADD]], ptr [[I]], align 4
 // CHECK1-NEXT:    [[TMP9:%.*]] = load i8, ptr [[OR_VAR1]], align 1
-// CHECK1-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP9]] to i1
+// CHECK1-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP9]], 0
 // CHECK1-NEXT:    br i1 [[LOADEDV]], label [[LOR_END:%.*]], label [[LOR_RHS:%.*]]
 // CHECK1:       lor.rhs:
 // CHECK1-NEXT:    [[TMP10:%.*]] = load i32, ptr [[I]], align 4
@@ -1454,11 +1454,11 @@ int main() {
 // CHECK1-NEXT:    ]
 // CHECK1:       .omp.reduction.case1:
 // CHECK1-NEXT:    [[TMP15:%.*]] = load i8, ptr [[TMP0]], align 1
-// CHECK1-NEXT:    [[LOADEDV5:%.*]] = trunc i8 [[TMP15]] to i1
+// CHECK1-NEXT:    [[LOADEDV5:%.*]] = icmp ne i8 [[TMP15]], 0
 // CHECK1-NEXT:    br i1 [[LOADEDV5]], label [[LOR_END8:%.*]], label [[LOR_RHS6:%.*]]
 // CHECK1:       lor.rhs6:
 // CHECK1-NEXT:    [[TMP16:%.*]] = load i8, ptr [[OR_VAR1]], align 1
-// CHECK1-NEXT:    [[LOADEDV7:%.*]] = trunc i8 [[TMP16]] to i1
+// CHECK1-NEXT:    [[LOADEDV7:%.*]] = icmp ne i8 [[TMP16]], 0
 // CHECK1-NEXT:    br label [[LOR_END8]]
 // CHECK1:       lor.end8:
 // CHECK1-NEXT:    [[TMP17:%.*]] = phi i1 [ true, [[DOTOMP_REDUCTION_CASE1]] ], [ [[LOADEDV7]], [[LOR_RHS6]] ]
@@ -1468,20 +1468,20 @@ int main() {
 // CHECK1-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK1:       .omp.reduction.case2:
 // CHECK1-NEXT:    [[TMP18:%.*]] = load i8, ptr [[OR_VAR1]], align 1
-// CHECK1-NEXT:    [[LOADEDV10:%.*]] = trunc i8 [[TMP18]] to i1
+// CHECK1-NEXT:    [[LOADEDV10:%.*]] = icmp ne i8 [[TMP18]], 0
 // CHECK1-NEXT:    [[ATOMIC_LOAD:%.*]] = load atomic i8, ptr [[TMP0]] monotonic, align 1
 // CHECK1-NEXT:    br label [[ATOMIC_CONT:%.*]]
 // CHECK1:       atomic_cont:
 // CHECK1-NEXT:    [[TMP19:%.*]] = phi i8 [ [[ATOMIC_LOAD]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[TMP25:%.*]], [[LOR_END17:%.*]] ]
-// CHECK1-NEXT:    [[LOADEDV11:%.*]] = trunc i8 [[TMP19]] to i1
+// CHECK1-NEXT:    [[LOADEDV11:%.*]] = icmp ne i8 [[TMP19]], 0
 // CHECK1-NEXT:    [[STOREDV13:%.*]] = zext i1 [[LOADEDV11]] to i8
 // CHECK1-NEXT:    store i8 [[STOREDV13]], ptr [[_TMP12]], align 1
 // CHECK1-NEXT:    [[TMP20:%.*]] = load i8, ptr [[_TMP12]], align 1
-// CHECK1-NEXT:    [[LOADEDV14:%.*]] = trunc i8 [[TMP20]] to i1
+// CHECK1-NEXT:    [[LOADEDV14:%.*]] = icmp ne i8 [[TMP20]], 0
 // CHECK1-NEXT:    br i1 [[LOADEDV14]], label [[LOR_END17]], label [[LOR_RHS15:%.*]]
 // CHECK1:       lor.rhs15:
 // CHECK1-NEXT:    [[TMP21:%.*]] = load i8, ptr [[OR_VAR1]], align 1
-// CHECK1-NEXT:    [[LOADEDV16:%.*]] = trunc i8 [[TMP21]] to i1
+// CHECK1-NEXT:    [[LOADEDV16:%.*]] = icmp ne i8 [[TMP21]], 0
 // CHECK1-NEXT:    br label [[LOR_END17]]
 // CHECK1:       lor.end17:
 // CHECK1-NEXT:    [[TMP22:%.*]] = phi i1 [ true, [[ATOMIC_CONT]] ], [ [[LOADEDV16]], [[LOR_RHS15]] ]
@@ -1513,11 +1513,11 @@ int main() {
 // CHECK1-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP2]], i64 0, i64 0
 // CHECK1-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
 // CHECK1-NEXT:    [[TMP8:%.*]] = load i8, ptr [[TMP7]], align 1
-// CHECK1-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP8]] to i1
+// CHECK1-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP8]], 0
 // CHECK1-NEXT:    br i1 [[LOADEDV]], label [[LOR_END:%.*]], label [[LOR_RHS:%.*]]
 // CHECK1:       lor.rhs:
 // CHECK1-NEXT:    [[TMP9:%.*]] = load i8, ptr [[TMP5]], align 1
-// CHECK1-NEXT:    [[LOADEDV2:%.*]] = trunc i8 [[TMP9]] to i1
+// CHECK1-NEXT:    [[LOADEDV2:%.*]] = icmp ne i8 [[TMP9]], 0
 // CHECK1-NEXT:    br label [[LOR_END]]
 // CHECK1:       lor.end:
 // CHECK1-NEXT:    [[TMP10:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ [[LOADEDV2]], [[LOR_RHS]] ]
@@ -3255,7 +3255,7 @@ int main() {
 // CHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK1-NEXT:    store i32 [[ADD]], ptr [[I]], align 4
 // CHECK1-NEXT:    [[TMP10:%.*]] = load i8, ptr [[AND_VAR1]], align 1
-// CHECK1-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP10]] to i1
+// CHECK1-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP10]], 0
 // CHECK1-NEXT:    br i1 [[LOADEDV]], label [[LAND_RHS:%.*]], label [[LAND_END:%.*]]
 // CHECK1:       land.rhs:
 // CHECK1-NEXT:    [[TMP11:%.*]] = load i32, ptr [[I]], align 4
@@ -3290,11 +3290,11 @@ int main() {
 // CHECK1-NEXT:    ]
 // CHECK1:       .omp.reduction.case1:
 // CHECK1-NEXT:    [[TMP17:%.*]] = load i8, ptr [[TMP0]], align 1
-// CHECK1-NEXT:    [[LOADEDV5:%.*]] = trunc i8 [[TMP17]] to i1
+// CHECK1-NEXT:    [[LOADEDV5:%.*]] = icmp ne i8 [[TMP17]], 0
 // CHECK1-NEXT:    br i1 [[LOADEDV5]], label [[LAND_RHS6:%.*]], label [[LAND_END8:%.*]]
 // CHECK1:       land.rhs6:
 // CHECK1-NEXT:    [[TMP18:%.*]] = load i8, ptr [[AND_VAR1]], align 1
-// CHECK1-NEXT:    [[LOADEDV7:%.*]] = trunc i8 [[TMP18]] to i1
+// CHECK1-NEXT:    [[LOADEDV7:%.*]] = icmp ne i8 [[TMP18]], 0
 // CHECK1-NEXT:    br label [[LAND_END8]]
 // CHECK1:       land.end8:
 // CHECK1-NEXT:    [[TMP19:%.*]] = phi i1 [ false, [[DOTOMP_REDUCTION_CASE1]] ], [ [[LOADEDV7]], [[LAND_RHS6]] ]
@@ -3304,20 +3304,20 @@ int main() {
 // CHECK1-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK1:       .omp.reduction.case2:
 // CHECK1-NEXT:    [[TMP20:%.*]] = load i8, ptr [[AND_VAR1]], align 1
-// CHECK1-NEXT:    [[LOADEDV10:%.*]] = trunc i8 [[TMP20]] to i1
+// CHECK1-NEXT:    [[LOADEDV10:%.*]] = icmp ne i8 [[TMP20]], 0
 // CHECK1-NEXT:    [[ATOMIC_LOAD:%.*]] = load atomic i8, ptr [[TMP0]] monotonic, align 1
 // CHECK1-NEXT:    br label [[ATOMIC_CONT:%.*]]
 // CHECK1:       atomic_cont:
 // CHECK1-NEXT:    [[TMP21:%.*]] = phi i8 [ [[ATOMIC_LOAD]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[TMP27:%.*]], [[LAND_END17:%.*]] ]
-// CHECK1-NEXT:    [[LOADEDV11:%.*]] = trunc i8 [[TMP21]] to i1
+// CHECK1-NEXT:    [[LOADEDV11:%.*]] = icmp ne i8 [[TMP21]], 0
 // CHECK1-NEXT:    [[STOREDV13:%.*]] = zext i1 [[LOADEDV11]] to i8
 // CHECK1-NEXT:    store i8 [[STOREDV13]], ptr [[_TMP12]], align 1
 // CHECK1-NEXT:    [[TMP22:%.*]] = load i8, ptr [[_TMP12]], align 1
-// CHECK1-NEXT:    [[LOADEDV14:%.*]] = trunc i8 [[TMP22]] to i1
+// CHECK1-NEXT:    [[LOADEDV14:%.*]] = icmp ne i8 [[TMP22]], 0
 // CHECK1-NEXT:    br i1 [[LOADEDV14]], label [[LAND_RHS15:%.*]], label [[LAND_END17]]
 // CHECK1:       land.rhs15:
 // CHECK1-NEXT:    [[TMP23:%.*]] = load i8, ptr [[AND_VAR1]], align 1
-// CHECK1-NEXT:    [[LOADEDV16:%.*]] = trunc i8 [[TMP23]] to i1
+// CHECK1-NEXT:    [[LOADEDV16:%.*]] = icmp ne i8 [[TMP23]], 0
 // CHECK1-NEXT:    br label [[LAND_END17]]
 // CHECK1:       land.end17:
 // CHECK1-NEXT:    [[TMP24:%.*]] = phi i1 [ false, [[ATOMIC_CONT]] ], [ [[LOADEDV16]], [[LAND_RHS15]] ]
@@ -3349,11 +3349,11 @@ int main() {
 // CHECK1-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP2]], i64 0, i64 0
 // CHECK1-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
 // CHECK1-NEXT:    [[TMP8:%.*]] = load i8, ptr [[TMP7]], align 1
-// CHECK1-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP8]] to i1
+// CHECK1-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP8]], 0
 // CHECK1-NEXT:    br i1 [[LOADEDV]], label [[LAND_RHS:%.*]], label [[LAND_END:%.*]]
 // CHECK1:       land.rhs:
 // CHECK1-NEXT:    [[TMP9:%.*]] = load i8, ptr [[TMP5]], align 1
-// CHECK1-NEXT:    [[LOADEDV2:%.*]] = trunc i8 [[TMP9]] to i1
+// CHECK1-NEXT:    [[LOADEDV2:%.*]] = icmp ne i8 [[TMP9]], 0
 // CHECK1-NEXT:    br label [[LAND_END]]
 // CHECK1:       land.end:
 // CHECK1-NEXT:    [[TMP10:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ [[LOADEDV2]], [[LAND_RHS]] ]
@@ -3434,7 +3434,7 @@ int main() {
 // CHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK1-NEXT:    store i32 [[ADD]], ptr [[I]], align 4
 // CHECK1-NEXT:    [[TMP10:%.*]] = load i8, ptr [[OR_VAR1]], align 1
-// CHECK1-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP10]] to i1
+// CHECK1-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP10]], 0
 // CHECK1-NEXT:    br i1 [[LOADEDV]], label [[LOR_END:%.*]], label [[LOR_RHS:%.*]]
 // CHECK1:       lor.rhs:
 // CHECK1-NEXT:    [[TMP11:%.*]] = load i32, ptr [[I]], align 4
@@ -3469,11 +3469,11 @@ int main() {
 // CHECK1-NEXT:    ]
 // CHECK1:       .omp.reduction.case1:
 // CHECK1-NEXT:    [[TMP17:%.*]] = load i8, ptr [[TMP0]], align 1
-// CHECK1-NEXT:    [[LOADEDV5:%.*]] = trunc i8 [[TMP17]] to i1
+// CHECK1-NEXT:    [[LOADEDV5:%.*]] = icmp ne i8 [[TMP17]], 0
 // CHECK1-NEXT:    br i1 [[LOADEDV5]], label [[LOR_END8:%.*]], label [[LOR_RHS6:%.*]]
 // CHECK1:       lor.rhs6:
 // CHECK1-NEXT:    [[TMP18:%.*]] = load i8, ptr [[OR_VAR1]], align 1
-// CHECK1-NEXT:    [[LOADEDV7:%.*]] = trunc i8 [[TMP18]] to i1
+// CHECK1-NEXT:    [[LOADEDV7:%.*]] = icmp ne i8 [[TMP18]], 0
 // CHECK1-NEXT:    br label [[LOR_END8]]
 // CHECK1:       lor.end8:
 // CHECK1-NEXT:    [[TMP19:%.*]] = phi i1 [ true, [[DOTOMP_REDUCTION_CASE1]] ], [ [[LOADEDV7]], [[LOR_RHS6]] ]
@@ -3483,20 +3483,20 @@ int main() {
 // CHECK1-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK1:       .omp.reduction.case2:
 // CHECK1-NEXT:    [[TMP20:%.*]] = load i8, ptr [[OR_VAR1]], align 1
-// CHECK1-NEXT:    [[LOADEDV10:%.*]] = trunc i8 [[TMP20]] to i1
+// CHECK1-NEXT:    [[LOADEDV10:%.*]] = icmp ne i8 [[TMP20]], 0
 // CHECK1-NEXT:    [[ATOMIC_LOAD:%.*]] = load atomic i8, ptr [[TMP0]] monotonic, align 1
 // CHECK1-NEXT:    br label [[ATOMIC_CONT:%.*]]
 // CHECK1:       atomic_cont:
 // CHECK1-NEXT:    [[TMP21:%.*]] = phi i8 [ [[ATOMIC_LOAD]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[TMP27:%.*]], [[LOR_END17:%.*]] ]
-// CHECK1-NEXT:    [[LOADEDV11:%.*]] = trunc i8 [[TMP21]] to i1
+// CHECK1-NEXT:    [[LOADEDV11:%.*]] = icmp ne i8 [[TMP21]], 0
 // CHECK1-NEXT:    [[STOREDV13:%.*]] = zext i1 [[LOADEDV11]] to i8
 // CHECK1-NEXT:    store i8 [[STOREDV13]], ptr [[_TMP12]], align 1
 // CHECK1-NEXT:    [[TMP22:%.*]] = load i8, ptr [[_TMP12]], align 1
-// CHECK1-NEXT:    [[LOADEDV14:%.*]] = trunc i8 [[TMP22]] to i1
+// CHECK1-NEXT:    [[LOADEDV14:%.*]] = icmp ne i8 [[TMP22]], 0
 // CHECK1-NEXT:    br i1 [[LOADEDV14]], label [[LOR_END17]], label [[LOR_RHS15:%.*]]
 // CHECK1:       lor.rhs15:
 // CHECK1-NEXT:    [[TMP23:%.*]] = load i8, ptr [[OR_VAR1]], align 1
-// CHECK1-NEXT:    [[LOADEDV16:%.*]] = trunc i8 [[TMP23]] to i1
+// CHECK1-NEXT:    [[LOADEDV16:%.*]] = icmp ne i8 [[TMP23]], 0
 // CHECK1-NEXT:    br label [[LOR_END17]]
 // CHECK1:       lor.end17:
 // CHECK1-NEXT:    [[TMP24:%.*]] = phi i1 [ true, [[ATOMIC_CONT]] ], [ [[LOADEDV16]], [[LOR_RHS15]] ]
@@ -3528,11 +3528,11 @@ int main() {
 // CHECK1-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP2]], i64 0, i64 0
 // CHECK1-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
 // CHECK1-NEXT:    [[TMP8:%.*]] = load i8, ptr [[TMP7]], align 1
-// CHECK1-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP8]] to i1
+// CHECK1-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP8]], 0
 // CHECK1-NEXT:    br i1 [[LOADEDV]], label [[LOR_END:%.*]], label [[LOR_RHS:%.*]]
 // CHECK1:       lor.rhs:
 // CHECK1-NEXT:    [[TMP9:%.*]] = load i8, ptr [[TMP5]], align 1
-// CHECK1-NEXT:    [[LOADEDV2:%.*]] = trunc i8 [[TMP9]] to i1
+// CHECK1-NEXT:    [[LOADEDV2:%.*]] = icmp ne i8 [[TMP9]], 0
 // CHECK1-NEXT:    br label [[LOR_END]]
 // CHECK1:       lor.end:
 // CHECK1-NEXT:    [[TMP10:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ [[LOADEDV2]], [[LOR_RHS]] ]
@@ -5242,7 +5242,7 @@ int main() {
 // CHECK3-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK3-NEXT:    store i32 [[ADD]], ptr [[I]], align 4
 // CHECK3-NEXT:    [[TMP9:%.*]] = load i8, ptr [[AND_VAR1]], align 1
-// CHECK3-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP9]] to i1
+// CHECK3-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP9]], 0
 // CHECK3-NEXT:    br i1 [[LOADEDV]], label [[LAND_RHS:%.*]], label [[LAND_END:%.*]]
 // CHECK3:       land.rhs:
 // CHECK3-NEXT:    [[TMP10:%.*]] = load i32, ptr [[I]], align 4
@@ -5273,11 +5273,11 @@ int main() {
 // CHECK3-NEXT:    ]
 // CHECK3:       .omp.reduction.case1:
 // CHECK3-NEXT:    [[TMP15:%.*]] = load i8, ptr [[TMP0]], align 1
-// CHECK3-NEXT:    [[LOADEDV5:%.*]] = trunc i8 [[TMP15]] to i1
+// CHECK3-NEXT:    [[LOADEDV5:%.*]] = icmp ne i8 [[TMP15]], 0
 // CHECK3-NEXT:    br i1 [[LOADEDV5]], label [[LAND_RHS6:%.*]], label [[LAND_END8:%.*]]
 // CHECK3:       land.rhs6:
 // CHECK3-NEXT:    [[TMP16:%.*]] = load i8, ptr [[AND_VAR1]], align 1
-// CHECK3-NEXT:    [[LOADEDV7:%.*]] = trunc i8 [[TMP16]] to i1
+// CHECK3-NEXT:    [[LOADEDV7:%.*]] = icmp ne i8 [[TMP16]], 0
 // CHECK3-NEXT:    br label [[LAND_END8]]
 // CHECK3:       land.end8:
 // CHECK3-NEXT:    [[TMP17:%.*]] = phi i1 [ false, [[DOTOMP_REDUCTION_CASE1]] ], [ [[LOADEDV7]], [[LAND_RHS6]] ]
@@ -5287,20 +5287,20 @@ int main() {
 // CHECK3-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK3:       .omp.reduction.case2:
 // CHECK3-NEXT:    [[TMP18:%.*]] = load i8, ptr [[AND_VAR1]], align 1
-// CHECK3-NEXT:    [[LOADEDV10:%.*]] = trunc i8 [[TMP18]] to i1
+// CHECK3-NEXT:    [[LOADEDV10:%.*]] = icmp ne i8 [[TMP18]], 0
 // CHECK3-NEXT:    [[ATOMIC_LOAD:%.*]] = load atomic i8, ptr [[TMP0]] monotonic, align 1
 // CHECK3-NEXT:    br label [[ATOMIC_CONT:%.*]]
 // CHECK3:       atomic_cont:
 // CHECK3-NEXT:    [[TMP19:%.*]] = phi i8 [ [[ATOMIC_LOAD]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[TMP25:%.*]], [[LAND_END17:%.*]] ]
-// CHECK3-NEXT:    [[LOADEDV11:%.*]] = trunc i8 [[TMP19]] to i1
+// CHECK3-NEXT:    [[LOADEDV11:%.*]] = icmp ne i8 [[TMP19]], 0
 // CHECK3-NEXT:    [[STOREDV13:%.*]] = zext i1 [[LOADEDV11]] to i8
 // CHECK3-NEXT:    store i8 [[STOREDV13]], ptr [[_TMP12]], align 1
 // CHECK3-NEXT:    [[TMP20:%.*]] = load i8, ptr [[_TMP12]], align 1
-// CHECK3-NEXT:    [[LOADEDV14:%.*]] = trunc i8 [[TMP20]] to i1
+// CHECK3-NEXT:    [[LOADEDV14:%.*]] = icmp ne i8 [[TMP20]], 0
 // CHECK3-NEXT:    br i1 [[LOADEDV14]], label [[LAND_RHS15:%.*]], label [[LAND_END17]]
 // CHECK3:       land.rhs15:
 // CHECK3-NEXT:    [[TMP21:%.*]] = load i8, ptr [[AND_VAR1]], align 1
-// CHECK3-NEXT:    [[LOADEDV16:%.*]] = trunc i8 [[TMP21]] to i1
+// CHECK3-NEXT:    [[LOADEDV16:%.*]] = icmp ne i8 [[TMP21]], 0
 // CHECK3-NEXT:    br label [[LAND_END17]]
 // CHECK3:       land.end17:
 // CHECK3-NEXT:    [[TMP22:%.*]] = phi i1 [ false, [[ATOMIC_CONT]] ], [ [[LOADEDV16]], [[LAND_RHS15]] ]
@@ -5332,11 +5332,11 @@ int main() {
 // CHECK3-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP2]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 4
 // CHECK3-NEXT:    [[TMP8:%.*]] = load i8, ptr [[TMP7]], align 1
-// CHECK3-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP8]] to i1
+// CHECK3-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP8]], 0
 // CHECK3-NEXT:    br i1 [[LOADEDV]], label [[LAND_RHS:%.*]], label [[LAND_END:%.*]]
 // CHECK3:       land.rhs:
 // CHECK3-NEXT:    [[TMP9:%.*]] = load i8, ptr [[TMP5]], align 1
-// CHECK3-NEXT:    [[LOADEDV2:%.*]] = trunc i8 [[TMP9]] to i1
+// CHECK3-NEXT:    [[LOADEDV2:%.*]] = icmp ne i8 [[TMP9]], 0
 // CHECK3-NEXT:    br label [[LAND_END]]
 // CHECK3:       land.end:
 // CHECK3-NEXT:    [[TMP10:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ [[LOADEDV2]], [[LAND_RHS]] ]
@@ -5411,7 +5411,7 @@ int main() {
 // CHECK3-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK3-NEXT:    store i32 [[ADD]], ptr [[I]], align 4
 // CHECK3-NEXT:    [[TMP9:%.*]] = load i8, ptr [[OR_VAR1]], align 1
-// CHECK3-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP9]] to i1
+// CHECK3-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP9]], 0
 // CHECK3-NEXT:    br i1 [[LOADEDV]], label [[LOR_END:%.*]], label [[LOR_RHS:%.*]]
 // CHECK3:       lor.rhs:
 // CHECK3-NEXT:    [[TMP10:%.*]] = load i32, ptr [[I]], align 4
@@ -5442,11 +5442,11 @@ int main() {
 // CHECK3-NEXT:    ]
 // CHECK3:       .omp.reduction.case1:
 // CHECK3-NEXT:    [[TMP15:%.*]] = load i8, ptr [[TMP0]], align 1
-// CHECK3-NEXT:    [[LOADEDV5:%.*]] = trunc i8 [[TMP15]] to i1
+// CHECK3-NEXT:    [[LOADEDV5:%.*]] = icmp ne i8 [[TMP15]], 0
 // CHECK3-NEXT:    br i1 [[LOADEDV5]], label [[LOR_END8:%.*]], label [[LOR_RHS6:%.*]]
 // CHECK3:       lor.rhs6:
 // CHECK3-NEXT:    [[TMP16:%.*]] = load i8, ptr [[OR_VAR1]], align 1
-// CHECK3-NEXT:    [[LOADEDV7:%.*]] = trunc i8 [[TMP16]] to i1
+// CHECK3-NEXT:    [[LOADEDV7:%.*]] = icmp ne i8 [[TMP16]], 0
 // CHECK3-NEXT:    br label [[LOR_END8]]
 // CHECK3:       lor.end8:
 // CHECK3-NEXT:    [[TMP17:%.*]] = phi i1 [ true, [[DOTOMP_REDUCTION_CASE1]] ], [ [[LOADEDV7]], [[LOR_RHS6]] ]
@@ -5456,20 +5456,20 @@ int main() {
 // CHECK3-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK3:       .omp.reduction.case2:
 // CHECK3-NEXT:    [[TMP18:%.*]] = load i8, ptr [[OR_VAR1]], align 1
-// CHECK3-NEXT:    [[LOADEDV10:%.*]] = trunc i8 [[TMP18]] to i1
+// CHECK3-NEXT:    [[LOADEDV10:%.*]] = icmp ne i8 [[TMP18]], 0
 // CHECK3-NEXT:    [[ATOMIC_LOAD:%.*]] = load atomic i8, ptr [[TMP0]] monotonic, align 1
 // CHECK3-NEXT:    br label [[ATOMIC_CONT:%.*]]
 // CHECK3:       atomic_cont:
 // CHECK3-NEXT:    [[TMP19:%.*]] = phi i8 [ [[ATOMIC_LOAD]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[TMP25:%.*]], [[LOR_END17:%.*]] ]
-// CHECK3-NEXT:    [[LOADEDV11:%.*]] = trunc i8 [[TMP19]] to i1
+// CHECK3-NEXT:    [[LOADEDV11:%.*]] = icmp ne i8 [[TMP19]], 0
 // CHECK3-NEXT:    [[STOREDV13:%.*]] = zext i1 [[LOADEDV11]] to i8
 // CHECK3-NEXT:    store i8 [[STOREDV13]], ptr [[_TMP12]], align 1
 // CHECK3-NEXT:    [[TMP20:%.*]] = load i8, ptr [[_TMP12]], align 1
-// CHECK3-NEXT:    [[LOADEDV14:%.*]] = trunc i8 [[TMP20]] to i1
+// CHECK3-NEXT:    [[LOADEDV14:%.*]] = icmp ne i8 [[TMP20]], 0
 // CHECK3-NEXT:    br i1 [[LOADEDV14]], label [[LOR_END17]], label [[LOR_RHS15:%.*]]
 // CHECK3:       lor.rhs15:
 // CHECK3-NEXT:    [[TMP21:%.*]] = load i8, ptr [[OR_VAR1]], align 1
-// CHECK3-NEXT:    [[LOADEDV16:%.*]] = trunc i8 [[TMP21]] to i1
+// CHECK3-NEXT:    [[LOADEDV16:%.*]] = icmp ne i8 [[TMP21]], 0
 // CHECK3-NEXT:    br label [[LOR_END17]]
 // CHECK3:       lor.end17:
 // CHECK3-NEXT:    [[TMP22:%.*]] = phi i1 [ true, [[ATOMIC_CONT]] ], [ [[LOADEDV16]], [[LOR_RHS15]] ]
@@ -5501,11 +5501,11 @@ int main() {
 // CHECK3-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP2]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 4
 // CHECK3-NEXT:    [[TMP8:%.*]] = load i8, ptr [[TMP7]], align 1
-// CHECK3-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP8]] to i1
+// CHECK3-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP8]], 0
 // CHECK3-NEXT:    br i1 [[LOADEDV]], label [[LOR_END:%.*]], label [[LOR_RHS:%.*]]
 // CHECK3:       lor.rhs:
 // CHECK3-NEXT:    [[TMP9:%.*]] = load i8, ptr [[TMP5]], align 1
-// CHECK3-NEXT:    [[LOADEDV2:%.*]] = trunc i8 [[TMP9]] to i1
+// CHECK3-NEXT:    [[LOADEDV2:%.*]] = icmp ne i8 [[TMP9]], 0
 // CHECK3-NEXT:    br label [[LOR_END]]
 // CHECK3:       lor.end:
 // CHECK3-NEXT:    [[TMP10:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ [[LOADEDV2]], [[LOR_RHS]] ]
@@ -7241,7 +7241,7 @@ int main() {
 // CHECK3-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK3-NEXT:    store i32 [[ADD]], ptr [[I]], align 4
 // CHECK3-NEXT:    [[TMP10:%.*]] = load i8, ptr [[AND_VAR1]], align 1
-// CHECK3-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP10]] to i1
+// CHECK3-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP10]], 0
 // CHECK3-NEXT:    br i1 [[LOADEDV]], label [[LAND_RHS:%.*]], label [[LAND_END:%.*]]
 // CHECK3:       land.rhs:
 // CHECK3-NEXT:    [[TMP11:%.*]] = load i32, ptr [[I]], align 4
@@ -7275,11 +7275,11 @@ int main() {
 // CHECK3-NEXT:    ]
 // CHECK3:       .omp.reduction.case1:
 // CHECK3-NEXT:    [[TMP17:%.*]] = load i8, ptr [[TMP0]], align 1
-// CHECK3-NEXT:    [[LOADEDV5:%.*]] = trunc i8 [[TMP17]] to i1
+// CHECK3-NEXT:    [[LOADEDV5:%.*]] = icmp ne i8 [[TMP17]], 0
 // CHECK3-NEXT:    br i1 [[LOADEDV5]], label [[LAND_RHS6:%.*]], label [[LAND_END8:%.*]]
 // CHECK3:       land.rhs6:
 // CHECK3-NEXT:    [[TMP18:%.*]] = load i8, ptr [[AND_VAR1]], align 1
-// CHECK3-NEXT:    [[LOADEDV7:%.*]] = trunc i8 [[TMP18]] to i1
+// CHECK3-NEXT:    [[LOADEDV7:%.*]] = icmp ne i8 [[TMP18]], 0
 // CHECK3-NEXT:    br label [[LAND_END8]]
 // CHECK3:       land.end8:
 // CHECK3-NEXT:    [[TMP19:%.*]] = phi i1 [ false, [[DOTOMP_REDUCTION_CASE1]] ], [ [[LOADEDV7]], [[LAND_RHS6]] ]
@@ -7289,20 +7289,20 @@ int main() {
 // CHECK3-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK3:       .omp.reduction.case2:
 // CHECK3-NEXT:    [[TMP20:%.*]] = load i8, ptr [[AND_VAR1]], align 1
-// CHECK3-NEXT:    [[LOADEDV10:%.*]] = trunc i8 [[TMP20]] to i1
+// CHECK3-NEXT:    [[LOADEDV10:%.*]] = icmp ne i8 [[TMP20]], 0
 // CHECK3-NEXT:    [[ATOMIC_LOAD:%.*]] = load atomic i8, ptr [[TMP0]] monotonic, align 1
 // CHECK3-NEXT:    br label [[ATOMIC_CONT:%.*]]
 // CHECK3:       atomic_cont:
 // CHECK3-NEXT:    [[TMP21:%.*]] = phi i8 [ [[ATOMIC_LOAD]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[TMP27:%.*]], [[LAND_END17:%.*]] ]
-// CHECK3-NEXT:    [[LOADEDV11:%.*]] = trunc i8 [[TMP21]] to i1
+// CHECK3-NEXT:    [[LOADEDV11:%.*]] = icmp ne i8 [[TMP21]], 0
 // CHECK3-NEXT:    [[STOREDV13:%.*]] = zext i1 [[LOADEDV11]] to i8
 // CHECK3-NEXT:    store i8 [[STOREDV13]], ptr [[_TMP12]], align 1
 // CHECK3-NEXT:    [[TMP22:%.*]] = load i8, ptr [[_TMP12]], align 1
-// CHECK3-NEXT:    [[LOADEDV14:%.*]] = trunc i8 [[TMP22]] to i1
+// CHECK3-NEXT:    [[LOADEDV14:%.*]] = icmp ne i8 [[TMP22]], 0
 // CHECK3-NEXT:    br i1 [[LOADEDV14]], label [[LAND_RHS15:%.*]], label [[LAND_END17]]
 // CHECK3:       land.rhs15:
 // CHECK3-NEXT:    [[TMP23:%.*]] = load i8, ptr [[AND_VAR1]], align 1
-// CHECK3-NEXT:    [[LOADEDV16:%.*]] = trunc i8 [[TMP23]] to i1
+// CHECK3-NEXT:    [[LOADEDV16:%.*]] = icmp ne i8 [[TMP23]], 0
 // CHECK3-NEXT:    br label [[LAND_END17]]
 // CHECK3:       land.end17:
 // CHECK3-NEXT:    [[TMP24:%.*]] = phi i1 [ false, [[ATOMIC_CONT]] ], [ [[LOADEDV16]], [[LAND_RHS15]] ]
@@ -7334,11 +7334,11 @@ int main() {
 // CHECK3-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP2]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 4
 // CHECK3-NEXT:    [[TMP8:%.*]] = load i8, ptr [[TMP7]], align 1
-// CHECK3-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP8]] to i1
+// CHECK3-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP8]], 0
 // CHECK3-NEXT:    br i1 [[LOADEDV]], label [[LAND_RHS:%.*]], label [[LAND_END:%.*]]
 // CHECK3:       land.rhs:
 // CHECK3-NEXT:    [[TMP9:%.*]] = load i8, ptr [[TMP5]], align 1
-// CHECK3-NEXT:    [[LOADEDV2:%.*]] = trunc i8 [[TMP9]] to i1
+// CHECK3-NEXT:    [[LOADEDV2:%.*]] = icmp ne i8 [[TMP9]], 0
 // CHECK3-NEXT:    br label [[LAND_END]]
 // CHECK3:       land.end:
 // CHECK3-NEXT:    [[TMP10:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ [[LOADEDV2]], [[LAND_RHS]] ]
@@ -7419,7 +7419,7 @@ int main() {
 // CHECK3-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK3-NEXT:    store i32 [[ADD]], ptr [[I]], align 4
 // CHECK3-NEXT:    [[TMP10:%.*]] = load i8, ptr [[OR_VAR1]], align 1
-// CHECK3-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP10]] to i1
+// CHECK3-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP10]], 0
 // CHECK3-NEXT:    br i1 [[LOADEDV]], label [[LOR_END:%.*]], label [[LOR_RHS:%.*]]
 // CHECK3:       lor.rhs:
 // CHECK3-NEXT:    [[TMP11:%.*]] = load i32, ptr [[I]], align 4
@@ -7453,11 +7453,11 @@ int main() {
 // CHECK3-NEXT:    ]
 // CHECK3:       .omp.reduction.case1:
 // CHECK3-NEXT:    [[TMP17:%.*]] = load i8, ptr [[TMP0]], align 1
-// CHECK3-NEXT:    [[LOADEDV5:%.*]] = trunc i8 [[TMP17]] to i1
+// CHECK3-NEXT:    [[LOADEDV5:%.*]] = icmp ne i8 [[TMP17]], 0
 // CHECK3-NEXT:    br i1 [[LOADEDV5]], label [[LOR_END8:%.*]], label [[LOR_RHS6:%.*]]
 // CHECK3:       lor.rhs6:
 // CHECK3-NEXT:    [[TMP18:%.*]] = load i8, ptr [[OR_VAR1]], align 1
-// CHECK3-NEXT:    [[LOADEDV7:%.*]] = trunc i8 [[TMP18]] to i1
+// CHECK3-NEXT:    [[LOADEDV7:%.*]] = icmp ne i8 [[TMP18]], 0
 // CHECK3-NEXT:    br label [[LOR_END8]]
 // CHECK3:       lor.end8:
 // CHECK3-NEXT:    [[TMP19:%.*]] = phi i1 [ true, [[DOTOMP_REDUCTION_CASE1]] ], [ [[LOADEDV7]], [[LOR_RHS6]] ]
@@ -7467,20 +7467,20 @@ int main() {
 // CHECK3-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK3:       .omp.reduction.case2:
 // CHECK3-NEXT:    [[TMP20:%.*]] = load i8, ptr [[OR_VAR1]], align 1
-// CHECK3-NEXT:    [[LOADEDV10:%.*]] = trunc i8 [[TMP20]] to i1
+// CHECK3-NEXT:    [[LOADEDV10:%.*]] = icmp ne i8 [[TMP20]], 0
 // CHECK3-NEXT:    [[ATOMIC_LOAD:%.*]] = load atomic i8, ptr [[TMP0]] monotonic, align 1
 // CHECK3-NEXT:    br label [[ATOMIC_CONT:%.*]]
 // CHECK3:       atomic_cont:
 // CHECK3-NEXT:    [[TMP21:%.*]] = phi i8 [ [[ATOMIC_LOAD]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[TMP27:%.*]], [[LOR_END17:%.*]] ]
-// CHECK3-NEXT:    [[LOADEDV11:%.*]] = trunc i8 [[TMP21]] to i1
+// CHECK3-NEXT:    [[LOADEDV11:%.*]] = icmp ne i8 [[TMP21]], 0
 // CHECK3-NEXT:    [[STOREDV13:%.*]] = zext i1 [[LOADEDV11]] to i8
 // CHECK3-NEXT:    store i8 [[STOREDV13]], ptr [[_TMP12]], align 1
 // CHECK3-NEXT:    [[TMP22:%.*]] = load i8, ptr [[_TMP12]], align 1
-// CHECK3-NEXT:    [[LOADEDV14:%.*]] = trunc i8 [[TMP22]] to i1
+// CHECK3-NEXT:    [[LOADEDV14:%.*]] = icmp ne i8 [[TMP22]], 0
 // CHECK3-NEXT:    br i1 [[LOADEDV14]], label [[LOR_END17]], label [[LOR_RHS15:%.*]]
 // CHECK3:       lor.rhs15:
 // CHECK3-NEXT:    [[TMP23:%.*]] = load i8, ptr [[OR_VAR1]], align 1
-// CHECK3-NEXT:    [[LOADEDV16:%.*]] = trunc i8 [[TMP23]] to i1
+// CHECK3-NEXT:    [[LOADEDV16:%.*]] = icmp ne i8 [[TMP23]], 0
 // CHECK3-NEXT:    br label [[LOR_END17]]
 // CHECK3:       lor.end17:
 // CHECK3-NEXT:    [[TMP24:%.*]] = phi i1 [ true, [[ATOMIC_CONT]] ], [ [[LOADEDV16]], [[LOR_RHS15]] ]
@@ -7512,11 +7512,11 @@ int main() {
 // CHECK3-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP2]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 4
 // CHECK3-NEXT:    [[TMP8:%.*]] = load i8, ptr [[TMP7]], align 1
-// CHECK3-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP8]] to i1
+// CHECK3-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP8]], 0
 // CHECK3-NEXT:    br i1 [[LOADEDV]], label [[LOR_END:%.*]], label [[LOR_RHS:%.*]]
 // CHECK3:       lor.rhs:
 // CHECK3-NEXT:    [[TMP9:%.*]] = load i8, ptr [[TMP5]], align 1
-// CHECK3-NEXT:    [[LOADEDV2:%.*]] = trunc i8 [[TMP9]] to i1
+// CHECK3-NEXT:    [[LOADEDV2:%.*]] = icmp ne i8 [[TMP9]], 0
 // CHECK3-NEXT:    br label [[LOR_END]]
 // CHECK3:       lor.end:
 // CHECK3-NEXT:    [[TMP10:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ [[LOADEDV2]], [[LOR_RHS]] ]
@@ -8730,7 +8730,7 @@ int main() {
 // CHECK9-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK9-NEXT:    store i32 [[ADD]], ptr [[I]], align 4
 // CHECK9-NEXT:    [[TMP9:%.*]] = load i8, ptr [[AND_VAR1]], align 1
-// CHECK9-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP9]] to i1
+// CHECK9-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP9]], 0
 // CHECK9-NEXT:    br i1 [[LOADEDV]], label [[LAND_RHS:%.*]], label [[LAND_END:%.*]]
 // CHECK9:       land.rhs:
 // CHECK9-NEXT:    [[TMP10:%.*]] = load i32, ptr [[I]], align 4
@@ -8764,11 +8764,11 @@ int main() {
 // CHECK9-NEXT:    ]
 // CHECK9:       .omp.reduction.case1:
 // CHECK9-NEXT:    [[TMP16:%.*]] = load i8, ptr [[TMP0]], align 1
-// CHECK9-NEXT:    [[LOADEDV5:%.*]] = trunc i8 [[TMP16]] to i1
+// CHECK9-NEXT:    [[LOADEDV5:%.*]] = icmp ne i8 [[TMP16]], 0
 // CHECK9-NEXT:    br i1 [[LOADEDV5]], label [[LAND_RHS6:%.*]], label [[LAND_END8:%.*]]
 // CHECK9:       land.rhs6:
 // CHECK9-NEXT:    [[TMP17:%.*]] = load i8, ptr [[AND_VAR1]], align 1
-// CHECK9-NEXT:    [[LOADEDV7:%.*]] = trunc i8 [[TMP17]] to i1
+// CHECK9-NEXT:    [[LOADEDV7:%.*]] = icmp ne i8 [[TMP17]], 0
 // CHECK9-NEXT:    br label [[LAND_END8]]
 // CHECK9:       land.end8:
 // CHECK9-NEXT:    [[TMP18:%.*]] = phi i1 [ false, [[DOTOMP_REDUCTION_CASE1]] ], [ [[LOADEDV7]], [[LAND_RHS6]] ]
@@ -8778,20 +8778,20 @@ int main() {
 // CHECK9-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK9:       .omp.reduction.case2:
 // CHECK9-NEXT:    [[TMP19:%.*]] = load i8, ptr [[AND_VAR1]], align 1
-// CHECK9-NEXT:    [[LOADEDV10:%.*]] = trunc i8 [[TMP19]] to i1
+// CHECK9-NEXT:    [[LOADEDV10:%.*]] = icmp ne i8 [[TMP19]], 0
 // CHECK9-NEXT:    [[ATOMIC_LOAD:%.*]] = load atomic i8, ptr [[TMP0]] monotonic, align 1
 // CHECK9-NEXT:    br label [[ATOMIC_CONT:%.*]]
 // CHECK9:       atomic_cont:
 // CHECK9-NEXT:    [[TMP20:%.*]] = phi i8 [ [[ATOMIC_LOAD]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[TMP26:%.*]], [[LAND_END17:%.*]] ]
-// CHECK9-NEXT:    [[LOADEDV11:%.*]] = trunc i8 [[TMP20]] to i1
+// CHECK9-NEXT:    [[LOADEDV11:%.*]] = icmp ne i8 [[TMP20]], 0
 // CHECK9-NEXT:    [[STOREDV13:%.*]] = zext i1 [[LOADEDV11]] to i8
 // CHECK9-NEXT:    store i8 [[STOREDV13]], ptr [[_TMP12]], align 1
 // CHECK9-NEXT:    [[TMP21:%.*]] = load i8, ptr [[_TMP12]], align 1
-// CHECK9-NEXT:    [[LOADEDV14:%.*]] = trunc i8 [[TMP21]] to i1
+// CHECK9-NEXT:    [[LOADEDV14:%.*]] = icmp ne i8 [[TMP21]], 0
 // CHECK9-NEXT:    br i1 [[LOADEDV14]], label [[LAND_RHS15:%.*]], label [[LAND_END17]]
 // CHECK9:       land.rhs15:
 // CHECK9-NEXT:    [[TMP22:%.*]] = load i8, ptr [[AND_VAR1]], align 1
-// CHECK9-NEXT:    [[LOADEDV16:%.*]] = trunc i8 [[TMP22]] to i1
+// CHECK9-NEXT:    [[LOADEDV16:%.*]] = icmp ne i8 [[TMP22]], 0
 // CHECK9-NEXT:    br label [[LAND_END17]]
 // CHECK9:       land.end17:
 // CHECK9-NEXT:    [[TMP23:%.*]] = phi i1 [ false, [[ATOMIC_CONT]] ], [ [[LOADEDV16]], [[LAND_RHS15]] ]
@@ -8823,11 +8823,11 @@ int main() {
 // CHECK9-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP2]], i64 0, i64 0
 // CHECK9-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
 // CHECK9-NEXT:    [[TMP8:%.*]] = load i8, ptr [[TMP7]], align 1
-// CHECK9-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP8]] to i1
+// CHECK9-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP8]], 0
 // CHECK9-NEXT:    br i1 [[LOADEDV]], label [[LAND_RHS:%.*]], label [[LAND_END:%.*]]
 // CHECK9:       land.rhs:
 // CHECK9-NEXT:    [[TMP9:%.*]] = load i8, ptr [[TMP5]], align 1
-// CHECK9-NEXT:    [[LOADEDV2:%.*]] = trunc i8 [[TMP9]] to i1
+// CHECK9-NEXT:    [[LOADEDV2:%.*]] = icmp ne i8 [[TMP9]], 0
 // CHECK9-NEXT:    br label [[LAND_END]]
 // CHECK9:       land.end:
 // CHECK9-NEXT:    [[TMP10:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ [[LOADEDV2]], [[LAND_RHS]] ]
@@ -8911,7 +8911,7 @@ int main() {
 // CHECK9-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK9-NEXT:    store i32 [[ADD]], ptr [[I]], align 4
 // CHECK9-NEXT:    [[TMP9:%.*]] = load i8, ptr [[OR_VAR1]], align 1
-// CHECK9-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP9]] to i1
+// CHECK9-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP9]], 0
 // CHECK9-NEXT:    br i1 [[LOADEDV]], label [[LOR_END:%.*]], label [[LOR_RHS:%.*]]
 // CHECK9:       lor.rhs:
 // CHECK9-NEXT:    [[TMP10:%.*]] = load i32, ptr [[I]], align 4
@@ -8945,11 +8945,11 @@ int main() {
 // CHECK9-NEXT:    ]
 // CHECK9:       .omp.reduction.case1:
 // CHECK9-NEXT:    [[TMP16:%.*]] = load i8, ptr [[TMP0]], align 1
-// CHECK9-NEXT:    [[LOADEDV5:%.*]] = trunc i8 [[TMP16]] to i1
+// CHECK9-NEXT:    [[LOADEDV5:%.*]] = icmp ne i8 [[TMP16]], 0
 // CHECK9-NEXT:    br i1 [[LOADEDV5]], label [[LOR_END8:%.*]], label [[LOR_RHS6:%.*]]
 // CHECK9:       lor.rhs6:
 // CHECK9-NEXT:    [[TMP17:%.*]] = load i8, ptr [[OR_VAR1]], align 1
-// CHECK9-NEXT:    [[LOADEDV7:%.*]] = trunc i8 [[TMP17]] to i1
+// CHECK9-NEXT:    [[LOADEDV7:%.*]] = icmp ne i8 [[TMP17]], 0
 // CHECK9-NEXT:    br label [[LOR_END8]]
 // CHECK9:       lor.end8:
 // CHECK9-NEXT:    [[TMP18:%.*]] = phi i1 [ true, [[DOTOMP_REDUCTION_CASE1]] ], [ [[LOADEDV7]], [[LOR_RHS6]] ]
@@ -8959,20 +8959,20 @@ int main() {
 // CHECK9-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK9:       .omp.reduction.case2:
 // CHECK9-NEXT:    [[TMP19:%.*]] = load i8, ptr [[OR_VAR1]], align 1
-// CHECK9-NEXT:    [[LOADEDV10:%.*]] = trunc i8 [[TMP19]] to i1
+// CHECK9-NEXT:    [[LOADEDV10:%.*]] = icmp ne i8 [[TMP19]], 0
 // CHECK9-NEXT:    [[ATOMIC_LOAD:%.*]] = load atomic i8, ptr [[TMP0]] monotonic, align 1
 // CHECK9-NEXT:    br label [[ATOMIC_CONT:%.*]]
 // CHECK9:       atomic_cont:
 // CHECK9-NEXT:    [[TMP20:%.*]] = phi i8 [ [[ATOMIC_LOAD]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[TMP26:%.*]], [[LOR_END17:%.*]] ]
-// CHECK9-NEXT:    [[LOADEDV11:%.*]] = trunc i8 [[TMP20]] to i1
+// CHECK9-NEXT:    [[LOADEDV11:%.*]] = icmp ne i8 [[TMP20]], 0
 // CHECK9-NEXT:    [[STOREDV13:%.*]] = zext i1 [[LOADEDV11]] to i8
 // CHECK9-NEXT:    store i8 [[STOREDV13]], ptr [[_TMP12]], align 1
 // CHECK9-NEXT:    [[TMP21:%.*]] = load i8, ptr [[_TMP12]], align 1
-// CHECK9-NEXT:    [[LOADEDV14:%.*]] = trunc i8 [[TMP21]] to i1
+// CHECK9-NEXT:    [[LOADEDV14:%.*]] = icmp ne i8 [[TMP21]], 0
 // CHECK9-NEXT:    br i1 [[LOADEDV14]], label [[LOR_END17]], label [[LOR_RHS15:%.*]]
 // CHECK9:       lor.rhs15:
 // CHECK9-NEXT:    [[TMP22:%.*]] = load i8, ptr [[OR_VAR1]], align 1
-// CHECK9-NEXT:    [[LOADEDV16:%.*]] = trunc i8 [[TMP22]] to i1
+// CHECK9-NEXT:    [[LOADEDV16:%.*]] = icmp ne i8 [[TMP22]], 0
 // CHECK9-NEXT:    br label [[LOR_END17]]
 // CHECK9:       lor.end17:
 // CHECK9-NEXT:    [[TMP23:%.*]] = phi i1 [ true, [[ATOMIC_CONT]] ], [ [[LOADEDV16]], [[LOR_RHS15]] ]
@@ -9004,11 +9004,11 @@ int main() {
 // CHECK9-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP2]], i64 0, i64 0
 // CHECK9-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
 // CHECK9-NEXT:    [[TMP8:%.*]] = load i8, ptr [[TMP7]], align 1
-// CHECK9-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP8]] to i1
+// CHECK9-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP8]], 0
 // CHECK9-NEXT:    br i1 [[LOADEDV]], label [[LOR_END:%.*]], label [[LOR_RHS:%.*]]
 // CHECK9:       lor.rhs:
 // CHECK9-NEXT:    [[TMP9:%.*]] = load i8, ptr [[TMP5]], align 1
-// CHECK9-NEXT:    [[LOADEDV2:%.*]] = trunc i8 [[TMP9]] to i1
+// CHECK9-NEXT:    [[LOADEDV2:%.*]] = icmp ne i8 [[TMP9]], 0
 // CHECK9-NEXT:    br label [[LOR_END]]
 // CHECK9:       lor.end:
 // CHECK9-NEXT:    [[TMP10:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ [[LOADEDV2]], [[LOR_RHS]] ]

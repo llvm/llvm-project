@@ -785,6 +785,11 @@ protected:
     /// value of OverloadedOperatorKind.
     LLVM_PREFERRED_TYPE(OverloadedOperatorKind)
     unsigned OperatorKind : 6;
+
+    /// Whether this is a C++20 rewritten reversed operator, where the
+    /// arguments are in reversed source order.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned IsReversed : 1;
   };
 
   class CXXRewrittenBinaryOperatorBitfields {

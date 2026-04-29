@@ -66,6 +66,9 @@ functions:
   strndup:
     c-definition: 7.26.2.7
     in-latest-posix: ''
+  strnlen_s:
+    c-definition: K.3.7.4.4
+    in-latest-posix: ''
   strpbrk:
     c-definition: 7.26.5.5
     in-latest-posix: ''

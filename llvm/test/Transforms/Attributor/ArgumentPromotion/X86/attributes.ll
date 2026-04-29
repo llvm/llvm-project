@@ -7,13 +7,21 @@
 target triple = "x86_64-unknown-linux-gnu"
 
 define internal fastcc void @no_promote_avx2(ptr %arg, ptr readonly %arg1) #0 {
-; CHECK: Function Attrs: inlinehint mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
-; CHECK-LABEL: define {{[^@]+}}@no_promote_avx2
-; CHECK-SAME: (ptr noalias nofree noundef nonnull writeonly align 32 captures(none) dereferenceable(32) [[ARG:%.*]], ptr noalias nofree noundef nonnull readonly align 32 captures(none) dereferenceable(32) [[ARG1:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP:%.*]] = load <4 x i64>, ptr [[ARG1]], align 32
-; CHECK-NEXT:    store <4 x i64> [[TMP]], ptr [[ARG]], align 32
-; CHECK-NEXT:    ret void
+; TUNIT: Function Attrs: inlinehint mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
+; TUNIT-LABEL: define {{[^@]+}}@no_promote_avx2
+; TUNIT-SAME: (ptr noalias nofree noundef nonnull writeonly align 32 captures(none) dereferenceable(32) [[ARG:%.*]], ptr noalias nofree noundef nonnull readonly align 32 captures(none) dereferenceable(32) [[ARG1:%.*]]) #[[ATTR0:[0-9]+]] {
+; TUNIT-NEXT:  bb:
+; TUNIT-NEXT:    [[TMP:%.*]] = load <4 x i64>, ptr [[ARG1]], align 32
+; TUNIT-NEXT:    store <4 x i64> [[TMP]], ptr [[ARG]], align 32
+; TUNIT-NEXT:    ret void
+;
+; CGSCC: Function Attrs: inlinehint mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
+; CGSCC-LABEL: define {{[^@]+}}@no_promote_avx2
+; CGSCC-SAME: (ptr noalias nofree noundef nonnull writeonly align 32 captures(none) dereferenceable(32) [[ARG:%.*]], ptr noalias nofree noundef nonnull readonly align 32 captures(none) dereferenceable(32) [[ARG1:%.*]]) #[[ATTR0:[0-9]+]] {
+; CGSCC-NEXT:  bb:
+; CGSCC-NEXT:    [[TMP:%.*]] = load <4 x i64>, ptr [[ARG1]], align 32, !invariant.load [[META0:![0-9]+]]
+; CGSCC-NEXT:    store <4 x i64> [[TMP]], ptr [[ARG]], align 32
+; CGSCC-NEXT:    ret void
 ;
 bb:
   %tmp = load <4 x i64>, ptr %arg1
@@ -57,15 +65,25 @@ bb:
 }
 
 define internal fastcc void @promote_avx2(ptr %arg, ptr readonly %arg1) #0 {
-; CHECK: Function Attrs: inlinehint mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
-; CHECK-LABEL: define {{[^@]+}}@promote_avx2
-; CHECK-SAME: (ptr noalias nofree noundef nonnull writeonly align 32 captures(none) dereferenceable(32) [[ARG:%.*]], <4 x i64> [[TMP0:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[ARG1_PRIV:%.*]] = alloca <4 x i64>, align 32
-; CHECK-NEXT:    store <4 x i64> [[TMP0]], ptr [[ARG1_PRIV]], align 32
-; CHECK-NEXT:    [[TMP:%.*]] = load <4 x i64>, ptr [[ARG1_PRIV]], align 32
-; CHECK-NEXT:    store <4 x i64> [[TMP]], ptr [[ARG]], align 32
-; CHECK-NEXT:    ret void
+; TUNIT: Function Attrs: inlinehint mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
+; TUNIT-LABEL: define {{[^@]+}}@promote_avx2
+; TUNIT-SAME: (ptr noalias nofree noundef nonnull writeonly align 32 captures(none) dereferenceable(32) [[ARG:%.*]], <4 x i64> [[TMP0:%.*]]) #[[ATTR0]] {
+; TUNIT-NEXT:  bb:
+; TUNIT-NEXT:    [[ARG1_PRIV:%.*]] = alloca <4 x i64>, align 32
+; TUNIT-NEXT:    store <4 x i64> [[TMP0]], ptr [[ARG1_PRIV]], align 32
+; TUNIT-NEXT:    [[TMP:%.*]] = load <4 x i64>, ptr [[ARG1_PRIV]], align 32
+; TUNIT-NEXT:    store <4 x i64> [[TMP]], ptr [[ARG]], align 32
+; TUNIT-NEXT:    ret void
+;
+; CGSCC: Function Attrs: inlinehint mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
+; CGSCC-LABEL: define {{[^@]+}}@promote_avx2
+; CGSCC-SAME: (ptr noalias nofree noundef nonnull writeonly align 32 captures(none) dereferenceable(32) [[ARG:%.*]], <4 x i64> [[TMP0:%.*]]) #[[ATTR0]] {
+; CGSCC-NEXT:  bb:
+; CGSCC-NEXT:    [[ARG1_PRIV:%.*]] = alloca <4 x i64>, align 32
+; CGSCC-NEXT:    store <4 x i64> [[TMP0]], ptr [[ARG1_PRIV]], align 32
+; CGSCC-NEXT:    [[TMP:%.*]] = load <4 x i64>, ptr [[ARG1_PRIV]], align 32, !invariant.load [[META0]]
+; CGSCC-NEXT:    store <4 x i64> [[TMP]], ptr [[ARG]], align 32
+; CGSCC-NEXT:    ret void
 ;
 bb:
   %tmp = load <4 x i64>, ptr %arg1
@@ -117,15 +135,19 @@ attributes #0 = { inlinehint norecurse nounwind uwtable "target-features"="+avx2
 attributes #1 = { nounwind uwtable }
 attributes #2 = { argmemonly nounwind }
 ;.
-; TUNIT: attributes #[[ATTR0]] = { inlinehint mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable "target-features"="+avx2" }
-; TUNIT: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable }
-; TUNIT: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
-; TUNIT: attributes #[[ATTR3]] = { nofree willreturn memory(write) }
-; TUNIT: attributes #[[ATTR4]] = { nofree nosync nounwind willreturn }
-;.
 ; CGSCC: attributes #[[ATTR0]] = { inlinehint mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable "target-features"="+avx2" }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree nosync nounwind willreturn memory(argmem: readwrite) uwtable }
 ; CGSCC: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
 ; CGSCC: attributes #[[ATTR3]] = { nofree willreturn memory(write) }
 ; CGSCC: attributes #[[ATTR4]] = { nofree nounwind willreturn }
 ;.
+; TUNIT: attributes #[[ATTR0]] = { inlinehint mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable "target-features"="+avx2" }
+; TUNIT: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable }
+; TUNIT: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
+; TUNIT: attributes #[[ATTR3]] = { nofree willreturn memory(write) }
+; TUNIT: attributes #[[ATTR4]] = { nofree norecurse nosync nounwind willreturn }
+;.
+; CGSCC: [[META0]] = !{}
+;.
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; CHECK: {{.*}}

@@ -192,7 +192,7 @@ void X86AsmPrinter::emitKCFITypeId(const MachineFunction &MF) {
   // symbols for weak parent functions.
   MCSymbol *FnSym = OutContext.getOrCreateSymbol("__cfi_" + MF.getName());
   emitLinkage(&MF.getFunction(), FnSym);
-  if (MAI->hasDotTypeDotSizeDirective())
+  if (MAI.hasDotTypeDotSizeDirective())
     OutStreamer->emitSymbolAttribute(FnSym, MCSA_ELF_TypeFunction);
   OutStreamer->emitLabel(FnSym);
 
@@ -237,7 +237,7 @@ void X86AsmPrinter::emitKCFITypeId(const MachineFunction &MF) {
                               .addReg(DestReg)
                               .addImm(MaskKCFIType(Type->getZExtValue())));
 
-  if (MAI->hasDotTypeDotSizeDirective()) {
+  if (MAI.hasDotTypeDotSizeDirective()) {
     MCSymbol *EndSym = OutContext.createTempSymbol("cfi_func_end");
     OutStreamer->emitLabel(EndSym);
 
@@ -963,9 +963,8 @@ void X86AsmPrinter::emitStartOfAsmFile(Module &M) {
   }
 
   // TODO: Support prefixed registers for the Intel syntax.
-  unsigned Dialect = TM.Options.MCOptions.OutputAsmVariant.value_or(
-      MAI->getAssemblerDialect());
-  const bool IntelSyntax = Dialect == InlineAsm::AD_Intel;
+  const bool IntelSyntax =
+      MAI.getOutputAssemblerDialect() == InlineAsm::AD_Intel;
   OutStreamer->emitSyntaxDirective(IntelSyntax ? "intel" : "att",
                                    IntelSyntax ? "noprefix" : "");
 
@@ -1133,7 +1132,7 @@ void X86AsmPrinter::emitEndOfAsmFile(Module &M) {
       OutStreamer->switchSection(ReadOnlySection);
       OutStreamer->emitLabel(AddrSymbol);
 
-      unsigned PtrSize = MAI->getCodePointerSize();
+      unsigned PtrSize = MAI.getCodePointerSize();
       OutStreamer->emitSymbolValue(GetExternalSymbolSymbol("__morestack"),
                                    PtrSize);
     }
@@ -1157,10 +1156,8 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86AsmPrinter() {
 
 PreservedAnalyses X86AsmPrinterBeginPass::run(Module &M,
                                               ModuleAnalysisManager &MAM) {
-  Expected<std::unique_ptr<MCStreamer>> Streamer = CreateStreamer(TM);
-  if (!Streamer)
-    reportFatalInternalError("Failed to create MCStreamer");
-  X86AsmPrinter AsmPrinter(TM, std::move(*Streamer));
+  X86AsmPrinter &AsmPrinter = static_cast<X86AsmPrinter &>(
+      MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
   AsmPrinter.GetPSI = [&MAM](Module &M) {
     return &MAM.getResult<ProfileSummaryAnalysis>(M);
   };
@@ -1172,10 +1169,10 @@ PreservedAnalyses X86AsmPrinterBeginPass::run(Module &M,
 
 PreservedAnalyses X86AsmPrinterPass::run(MachineFunction &MF,
                                          MachineFunctionAnalysisManager &MFAM) {
-  Expected<std::unique_ptr<MCStreamer>> Streamer = CreateStreamer(TM);
-  if (!Streamer)
-    reportFatalInternalError("Failed to create MCStreamer");
-  X86AsmPrinter AsmPrinter(TM, std::move(*Streamer));
+  X86AsmPrinter &AsmPrinter = static_cast<X86AsmPrinter &>(
+      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+          .getCachedResult<AsmPrinterAnalysis>(*MF.getFunction().getParent())
+          ->getPrinter());
   AsmPrinter.GetPSI = [&MFAM, &MF](Module &M) {
     return MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
         .getCachedResult<ProfileSummaryAnalysis>(M);
@@ -1188,10 +1185,8 @@ PreservedAnalyses X86AsmPrinterPass::run(MachineFunction &MF,
 
 PreservedAnalyses X86AsmPrinterEndPass::run(Module &M,
                                             ModuleAnalysisManager &MAM) {
-  Expected<std::unique_ptr<MCStreamer>> Streamer = CreateStreamer(TM);
-  if (!Streamer)
-    reportFatalInternalError("Failed to create MCStreamer");
-  X86AsmPrinter AsmPrinter(TM, std::move(*Streamer));
+  X86AsmPrinter &AsmPrinter = static_cast<X86AsmPrinter &>(
+      MAM.getCachedResult<AsmPrinterAnalysis>(M)->getPrinter());
   AsmPrinter.GetPSI = [&MAM](Module &M) {
     return &MAM.getResult<ProfileSummaryAnalysis>(M);
   };

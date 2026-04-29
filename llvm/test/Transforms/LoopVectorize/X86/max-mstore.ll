@@ -23,7 +23,7 @@ define void @foo() {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.inc, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.inc ]
   %arrayidx = getelementptr inbounds [256 x i32], ptr @b, i64 0, i64 %indvars.iv
   %0 = load i32, ptr %arrayidx, align 4
@@ -32,15 +32,15 @@ for.body:                                         ; preds = %for.inc, %entry
   %cmp3 = icmp ugt i32 %0, %1
   br i1 %cmp3, label %if.then, label %for.inc
 
-if.then:                                          ; preds = %for.body
+if.then:
   store i32 %0, ptr %arrayidx2, align 4
   br label %for.inc
 
-for.inc:                                          ; preds = %for.body, %if.then
+for.inc:
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 256
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.inc
+for.end:
   ret void
 }

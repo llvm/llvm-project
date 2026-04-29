@@ -489,6 +489,20 @@ def OpWithBitEnumPropNamed : TEST_Op<"op_with_bit_enum_prop_named"> {
   let assemblyFormat = "$value1 ($value2^)? attr-dict";
 }
 
+def TestSimpleEnum8Prop : EnumProp<TestSimpleEnum8>;
+
+def OpWithSimpleEnum8Prop : TEST_Op<"op_with_simple_enum_8_prop"> {
+  let arguments = (ins TestSimpleEnum8Prop:$value);
+  let assemblyFormat = "$value attr-dict";
+}
+
+def TestSimpleEnum16Prop : EnumProp<TestSimpleEnum16>;
+
+def OpWithSimpleEnum16Prop : TEST_Op<"op_with_simple_enum_16_prop"> {
+  let arguments = (ins TestSimpleEnum16Prop:$value);
+  let assemblyFormat = "$value attr-dict";
+}
+
 //===----------------------------------------------------------------------===//
 // Test Bit Enum Attributes
 //===----------------------------------------------------------------------===//
@@ -3117,6 +3131,30 @@ def TestNVVMRequirestSMArchCondMultiOp :
   let assemblyFormat = "attr-dict";
 }
 
+def TestNVVMRequiresSMFamilyCondOp :
+    TEST_Op<"nvvm_requires_sm_100f", [NVVMRequiresSMf<[100]>]> {
+  let arguments = (ins );
+  let assemblyFormat = "attr-dict";
+}
+
+def TestNVVMRequiresSMFamilyCondHigherOp :
+    TEST_Op<"nvvm_requires_sm_103f", [NVVMRequiresSMf<[103]>]> {
+  let arguments = (ins );
+  let assemblyFormat = "attr-dict";
+}
+
+def TestNVVMRequiresSMFamilyCondMultiOp :
+    TEST_Op<"nvvm_requires_sm_100f_or_sm_120f", [NVVMRequiresSMf<[100, 120]>]> {
+  let arguments = (ins );
+  let assemblyFormat = "attr-dict";
+}
+
+def TestNVVMRequiresSMArchOrFamilyCondOp :
+    TEST_Op<"nvvm_requires_sm_90a_or_sm_100f", [NVVMRequiresSMaOrSMf<[90], [100]>]> {
+  let arguments = (ins );
+  let assemblyFormat = "attr-dict";
+}
+
 //===----------------------------------------------------------------------===//
 // Test Ops with Default-Valued String Attributes
 //===----------------------------------------------------------------------===//
@@ -3898,10 +3936,13 @@ def TestAllocWithMultipleResults : TEST_Op<"alloc_with_multiple_results"> {
 // Test Ops bufferization
 //===----------------------------------------------------------------------===//
 
-def TestDummyTensorOp : TEST_Op<"dummy_tensor_op",
-    [DeclareOpInterfaceMethods<BufferizableOpInterface,
-        ["bufferize", "bufferizesToMemoryRead",
-         "bufferizesToMemoryWrite", "getAliasingValues"]>]> {
+def TestDummyTensorOp
+    : TEST_Op<"dummy_tensor_op",
+              [DeclareOpInterfaceMethods<
+                  BufferizableOpInterface,
+                  ["bufferize", "getBufferType", "bufferizesToMemoryRead",
+                   "bufferizesToMemoryWrite", "getAliasingValues",
+                   "getAliasingOpOperands"]>]> {
   let arguments = (ins
     Arg<Bufferization_TensorLikeTypeInterface>:$input
   );
@@ -3921,7 +3962,23 @@ def TestDummyTensorOp : TEST_Op<"dummy_tensor_op",
     ::mlir::bufferization::AliasingValueList
     test::TestDummyTensorOp::getAliasingValues(::mlir::OpOperand&,
         const ::mlir::bufferization::AnalysisState&) {
-      return {};
+      auto relation = getInput().getType() == getOutput().getType()
+                          ? ::mlir::bufferization::BufferRelation::Equivalent
+                          : ::mlir::bufferization::BufferRelation::Unknown;
+      return {{getOutput(), relation, /*isDefinite=*/true}};
+    }
+
+    ::mlir::bufferization::AliasingOpOperandList
+    test::TestDummyTensorOp::getAliasingOpOperands(::mlir::Value value,
+        const ::mlir::bufferization::AnalysisState&) {
+      if (value != getOutput())
+        return {};
+
+      auto relation = getInput().getType() == getOutput().getType()
+                          ? ::mlir::bufferization::BufferRelation::Equivalent
+                          : ::mlir::bufferization::BufferRelation::Unknown;
+      return {{&getOperation()->getOpOperand(0), relation,
+               /*isDefinite=*/true}};
     }
   }];
 }
@@ -3935,11 +3992,13 @@ def TestDummyMemrefOp : TEST_Op<"dummy_memref_op", []> {
   );
 }
 
-def TestCreateTensorOp : TEST_Op<"create_tensor_op",
-    [DeclareOpInterfaceMethods<BufferizableOpInterface,
-        ["bufferize", "getBufferType", "bufferizesToMemoryRead",
-         "bufferizesToMemoryWrite", "getAliasingValues",
-         "bufferizesToAllocation"]>]> {
+def TestCreateTensorOp
+    : TEST_Op<"create_tensor_op",
+              [DeclareOpInterfaceMethods<
+                  BufferizableOpInterface,
+                  ["bufferize", "getBufferType", "bufferizesToMemoryRead",
+                   "bufferizesToMemoryWrite", "getAliasingValues",
+                   "getAliasingOpOperands", "bufferizesToAllocation"]>]> {
   let arguments = (ins);
   let results = (outs Arg<Bufferization_TensorLikeTypeInterface>:$output);
   let extraClassDefinition = [{
@@ -3958,6 +4017,14 @@ def TestCreateTensorOp : TEST_Op<"create_tensor_op",
     ::mlir::bufferization::AliasingValueList
     test::TestCreateTensorOp::getAliasingValues(::mlir::OpOperand&,
         const ::mlir::bufferization::AnalysisState&) {
+      return {};
+    }
+
+    ::mlir::bufferization::AliasingOpOperandList
+    test::TestCreateTensorOp::getAliasingOpOperands(
+        ::mlir::Value value,
+        const ::mlir::bufferization::AnalysisState&) {
+      (void)value;
       return {};
     }
   }];

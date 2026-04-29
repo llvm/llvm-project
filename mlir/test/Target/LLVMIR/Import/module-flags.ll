@@ -95,3 +95,15 @@ declare void @to()
 ; CHECK-SAME: <cut_off = 10000, min_count = 86427, num_counts = 1>,
 ; CHECK-SAME: <cut_off = 100000, min_count = 86427, num_counts = 1>
 ; CHECK-SAME: >>]
+
+; // -----
+
+; Test that MDTuples of MDStrings (e.g. "riscv-isa") are imported as ArrayAttr
+; of StringAttrs rather than emitting a warning and dropping the flag.
+
+!llvm.module.flags = !{!0}
+
+!0 = !{i32 1, !"riscv-isa", !1}
+!1 = !{!"rv64i2p1", !"m2p0"}
+
+; CHECK: llvm.module_flags [#llvm.mlir.module_flag<error, "riscv-isa", ["rv64i2p1", "m2p0"]>]

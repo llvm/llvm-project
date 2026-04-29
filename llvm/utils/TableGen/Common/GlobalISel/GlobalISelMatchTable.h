@@ -268,6 +268,7 @@ extern std::set<LLTCodeGen> KnownTypes;
 /// Convert an MVT to an equivalent LLT if possible, or the invalid LLT() for
 /// MVTs that don't map cleanly to an LLT (e.g., iPTR, *any, ...).
 std::optional<LLTCodeGen> MVTToLLT(MVT VT);
+std::optional<LLTCodeGen> MVTToGenericLLT(MVT VT);
 
 using TempTypeIdx = int64_t;
 class LLTCodeGenOrTempType {
@@ -306,7 +307,17 @@ inline MatchTable &operator<<(MatchTable &Table,
 //===- Matchers -----------------------------------------------------------===//
 class Matcher {
 public:
+  enum MatcherKind {
+    MK_Group,
+    MK_Switch,
+    MK_Rule,
+  };
+
+  Matcher(MatcherKind Kind) : Kind(Kind) {}
   virtual ~Matcher();
+
+  MatcherKind getKind() const { return Kind; }
+
   virtual void optimize();
   virtual void emit(MatchTable &Table) = 0;
 
@@ -317,6 +328,9 @@ public:
   /// Check recursively if the matcher records named operands for use in C++
   /// predicates.
   virtual bool recordsOperand() const = 0;
+
+private:
+  MatcherKind Kind;
 };
 
 class GroupMatcher final : public Matcher {
@@ -331,6 +345,10 @@ class GroupMatcher final : public Matcher {
   std::vector<std::unique_ptr<Matcher>> MatcherStorage;
 
 public:
+  GroupMatcher() : Matcher(MK_Group) {}
+
+  static bool classof(const Matcher *M) { return M->getKind() == MK_Group; }
+
   /// Add a matcher to the collection of nested matchers if it meets the
   /// requirements, and return true. If it doesn't, do nothing and return false.
   ///
@@ -401,26 +419,36 @@ struct RecordAndValue {
 };
 
 class SwitchMatcher : public Matcher {
-  /// All the nested matchers, representing distinct switch-cases. The first
-  /// conditions (as Matcher::getFirstCondition() reports) of all the nested
-  /// matchers must share the same type and path to a value they check, in other
-  /// words, be isIdenticalDownToValue, but have different values they check
-  /// against.
+  /// All the nested matchers, representing switch-cases. The first conditions
+  /// (as Matcher::getFirstCondition() reports) of all the nested matchers must
+  /// share the same type and path to a value they check, in other words, be
+  /// isIdenticalDownToValue. Multiple matchers can share the same value and are
+  /// bucketed together.
   std::vector<Matcher *> Matchers;
 
   /// The representative condition, with a type and a path (InsnVarID and OpIdx
-  /// in most cases)  shared by all the matchers contained.
+  /// in most cases) shared by all the matchers contained.
   std::unique_ptr<PredicateMatcher> Condition;
 
-  /// Temporary set used to check that the case values don't repeat within the
-  /// same switch.
-  std::set<RecordAndValue> Values;
+  struct Bucket {
+    RecordAndValue Value;
+    std::vector<Matcher *> Matchers;
+
+    explicit Bucket(RecordAndValue Value) : Value(std::move(Value)) {}
+  };
+
+  /// Buckets of matchers keyed by their case value.
+  std::map<int64_t, Bucket> Buckets;
 
   /// An owning collection for any auxiliary matchers created while optimizing
   /// nested matchers contained.
   std::vector<std::unique_ptr<Matcher>> MatcherStorage;
 
 public:
+  SwitchMatcher() : Matcher(MK_Switch) {}
+
+  static bool classof(const Matcher *M) { return M->getKind() == MK_Switch; }
+
   bool addMatcher(Matcher &Candidate);
 
   void finalize();
@@ -550,6 +578,8 @@ public:
   RuleMatcher(ArrayRef<SMLoc> SrcLoc);
   RuleMatcher(RuleMatcher &&Other) = default;
   RuleMatcher &operator=(RuleMatcher &&Other) = default;
+
+  static bool classof(const Matcher *M) { return M->getKind() == MK_Rule; }
 
   TempTypeIdx getNextTempTypeIdx() { return NextTempTypeIdx--; }
 
@@ -832,6 +862,7 @@ public:
     OPM_Int,
     OPM_LiteralInt,
     OPM_LLT,
+    OPM_LLTShape,
     OPM_PointerToAny,
     OPM_RegBank,
     OPM_MBB,
@@ -858,12 +889,16 @@ public:
 
   PredicateKind getKind() const { return Kind; }
 
-  bool dependsOnOperands() const {
+  bool dependsOnRecordedOperands() const {
     // Custom predicates really depend on the context pattern of the
     // instruction, not just the individual instruction. This therefore
     // implicitly depends on all other pattern constraints.
     return Kind == IPM_GenericPredicate;
   }
+
+  /// \param M A Matcher that contains this PredicateMatcher.
+  /// \returns true if this PredicateMatcher can be hoisted outside of \p M.
+  virtual bool canHoistOutsideOf(const Matcher &M) const { return true; }
 
   bool recordsOperand() const { return Kind == OPM_RecordNamedOperand; }
 
@@ -938,12 +973,20 @@ public:
            OrigOpIdx == cast<SameOperandMatcher>(&B)->OrigOpIdx &&
            MatchingName == cast<SameOperandMatcher>(&B)->MatchingName;
   }
+
+  virtual bool canHoistOutsideOf(const Matcher &M) const override;
 };
 
 /// Generates code to check that an operand is a particular LLT.
 class LLTOperandMatcher : public OperandPredicateMatcher {
 protected:
   LLTCodeGen Ty;
+
+  LLTOperandMatcher(PredicateKind Kind, unsigned InsnVarID, unsigned OpIdx,
+                    const LLTCodeGen &Ty)
+      : OperandPredicateMatcher(Kind, InsnVarID, OpIdx), Ty(Ty) {
+    KnownTypes.insert(Ty);
+  }
 
 public:
   static std::map<LLTCodeGen, unsigned> TypeIDValues;
@@ -957,9 +1000,7 @@ public:
   }
 
   LLTOperandMatcher(unsigned InsnVarID, unsigned OpIdx, const LLTCodeGen &Ty)
-      : OperandPredicateMatcher(OPM_LLT, InsnVarID, OpIdx), Ty(Ty) {
-    KnownTypes.insert(Ty);
-  }
+      : LLTOperandMatcher(OPM_LLT, InsnVarID, OpIdx, Ty) {}
 
   static bool classof(const PredicateMatcher *P) {
     return P->getKind() == OPM_LLT;
@@ -977,6 +1018,36 @@ public:
 
   void emitPredicateOpcodes(MatchTable &Table,
                             RuleMatcher &Rule) const override;
+};
+
+/// Generates code to check that the element count & element sizes are the same.
+class LLTOperandShapeMatcher : public LLTOperandMatcher {
+  static ElementCount getShapeElementCount(const LLT &Ty) {
+    return Ty.isVector() ? Ty.getElementCount() : ElementCount::getFixed(1);
+  }
+
+  static unsigned getShapeScalarSizeInBits(const LLT &Ty) {
+    return Ty.getScalarSizeInBits();
+  }
+
+public:
+  LLTOperandShapeMatcher(unsigned InsnVarID, unsigned OpIdx,
+                         const LLTCodeGen &Ty)
+      : LLTOperandMatcher(OPM_LLTShape, InsnVarID, OpIdx, Ty) {}
+
+  static bool classof(const PredicateMatcher *P) {
+    return P->getKind() == OPM_LLTShape;
+  }
+
+  bool isIdentical(const PredicateMatcher &B) const override {
+    return OperandPredicateMatcher::isIdentical(B) &&
+           getShapeElementCount(Ty.get()) ==
+               getShapeElementCount(
+                   cast<LLTOperandShapeMatcher>(&B)->Ty.get()) &&
+           getShapeScalarSizeInBits(Ty.get()) ==
+               getShapeScalarSizeInBits(
+                   cast<LLTOperandShapeMatcher>(&B)->Ty.get());
+  }
 };
 
 /// Generates code to check that an operand is a pointer to any address space.
@@ -1698,6 +1769,14 @@ public:
   bool isIdentical(const PredicateMatcher &B) const override;
   void emitPredicateOpcodes(MatchTable &Table,
                             RuleMatcher &Rule) const override;
+
+  bool canHoistOutsideOf(const Matcher &M) const override {
+    // We can only hoist C++ code if the parent Matcher does not define any
+    // symbol that may be used by C++ code.
+    // TODO?: Could we be more precise, e.g. hoist if the Matcher records
+    // operands, but the operands aren't used by this bit of C++.
+    return !M.recordsOperand();
+  }
 };
 
 class MIFlagsInstructionPredicateMatcher : public InstructionPredicateMatcher {

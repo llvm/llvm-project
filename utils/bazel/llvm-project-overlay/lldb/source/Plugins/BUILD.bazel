@@ -1229,6 +1229,7 @@ cc_library(
     includes = [".."],
     deps = [
         ":PluginDynamicLoaderPosixDYLDHeaders",
+        ":PluginObjectFileELF",
         ":PluginObjectFilePlaceholder",
         ":PluginProcessElfCore",
         ":PluginProcessUtility",
@@ -1240,6 +1241,7 @@ cc_library(
         "//lldb:Target",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//llvm:BinaryFormat",
         "//llvm:Support",
     ],
 )
@@ -1255,6 +1257,7 @@ cc_library(
         "//lldb:Target",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//llvm:Support",
         "//llvm:TargetParser",
     ],
 )
@@ -1828,6 +1831,38 @@ cc_library(
         "//lldb:SymbolHeaders",
         "//lldb:Utility",
         "//llvm:Debuginfod",
+        "//llvm:HTTP",
+        "//llvm:Support",
+    ],
+)
+
+gentbl_cc_library(
+    name = "SymbolLocatorSymStoreProperties",
+    strip_include_prefix = "SymbolLocator/SymStore",
+    tbl_outs = {
+        "SymbolLocator/SymStore/SymbolLocatorSymStoreProperties.inc": ["-gen-lldb-property-defs"],
+        "SymbolLocator/SymStore/SymbolLocatorSymStorePropertiesEnum.inc": ["-gen-lldb-property-enum-defs"],
+    },
+    tblgen = "//lldb:lldb-tblgen",
+    td_file = "SymbolLocator/SymStore/SymbolLocatorSymStoreProperties.td",
+    deps = ["//lldb:CoreTdFiles"],
+)
+
+cc_library(
+    name = "PluginSymbolLocatorSymStore",
+    srcs = glob(["SymbolLocator/SymStore/*.cpp"]),
+    hdrs = glob(["SymbolLocator/SymStore/*.h"]),
+    includes = [".."],
+    deps = [
+        ":SymbolLocatorSymStoreProperties",
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:InterpreterHeaders",
+        "//lldb:Symbol",
+        "//lldb:SymbolHeaders",
+        "//lldb:Utility",
+        "//llvm:HTTP",
         "//llvm:Support",
     ],
 )
@@ -2222,6 +2257,7 @@ cc_library(
         ":PluginProcessUtility",
         "//lldb:Core",
         "//lldb:CoreHeaders",
+        "//lldb:Expression",
         "//lldb:Headers",
         "//lldb:Host",
         "//lldb:InterpreterHeaders",

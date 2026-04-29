@@ -197,10 +197,9 @@ static gpu::GPUFuncOp outlineKernelFuncImpl(gpu::LaunchOp launchOp,
       FunctionType::get(launchOp.getContext(), kernelOperandTypes, {});
   auto outlinedFunc = gpu::GPUFuncOp::create(
       builder, loc, kernelFnName, type,
-      TypeRange(ValueRange(launchOp.getWorkgroupAttributions())),
+      TypeRange(ValueRange(launchOp.getWorkgroupAttributionBBArgs())),
       TypeRange(ValueRange(launchOp.getPrivateAttributions())));
-  outlinedFunc->setAttr(gpu::GPUDialect::getKernelFuncAttrName(),
-                        builder.getUnitAttr());
+  outlinedFunc.setKernel(true);
 
   // If we can infer bounds on the grid and/or block sizes from the arguments
   // to the launch op, propagate them to the generated kernel. This is safe
@@ -227,8 +226,8 @@ static gpu::GPUFuncOp outlineKernelFuncImpl(gpu::LaunchOp launchOp,
 
   // Map memory attributions from the LaunOp op to the GPUFuncOp attributions.
   for (const auto &[launchArg, funcArg] :
-       llvm::zip(launchOp.getWorkgroupAttributions(),
-                 outlinedFunc.getWorkgroupAttributions()))
+       llvm::zip(launchOp.getWorkgroupAttributionBBArgs(),
+                 outlinedFunc.getWorkgroupAttributionBBArgs()))
     map.map(launchArg, funcArg);
   for (const auto &[launchArg, funcArg] :
        llvm::zip(launchOp.getPrivateAttributions(),

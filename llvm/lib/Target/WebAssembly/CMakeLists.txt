@@ -15,7 +15,7 @@ tablegen(LLVM WebAssemblyGenSDNodeInfo.inc -gen-sd-node-info)
 tablegen(LLVM WebAssemblyGenSubtargetInfo.inc -gen-subtarget)
 
 set(LLVM_TARGET_DEFINITIONS WebAssemblyGISel.td)
-tablegen(LLVM WebAssemblyGenGlobalISel.inc -gen-global-isel -optimize-match-table=false -gisel-extended-llt)
+tablegen(LLVM WebAssemblyGenGlobalISel.inc -gen-global-isel -gisel-extended-llt)
 tablegen(LLVM WebAssemblyGenO0PreLegalizeGICombiner.inc -gen-global-isel-combiner
               -combiners="WebAssemblyO0PreLegalizerCombiner")
 tablegen(LLVM WebAssemblyGenPreLegalizeGICombiner.inc -gen-global-isel-combiner

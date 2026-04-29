@@ -206,7 +206,7 @@ static Object serializeComment(const CommentInfo &I, Object &Description) {
   auto &CARef = *ChildArr.getAsArray();
   CARef.reserve(I.Children.size());
   for (const auto &C : I.Children)
-    CARef.emplace_back(serializeComment(*C, Description));
+    CARef.emplace_back(serializeComment(C, Description));
 
   switch (I.Kind) {
   case CommentKind::CK_TextComment: {
@@ -385,7 +385,7 @@ static void serializeDescription(llvm::ArrayRef<CommentInfo> Description,
   auto &Comments = Description.front().Children;
   Object DescriptionObj = Object();
   for (const auto &CommentInfo : Comments) {
-    json::Value Comment = serializeComment(*CommentInfo, DescriptionObj);
+    json::Value Comment = serializeComment(CommentInfo, DescriptionObj);
     // if a ParagraphComment is returned, then it is a top-level comment that
     // needs to be inserted manually.
     if (auto *ParagraphComment = Comment.getAsObject();
@@ -459,8 +459,6 @@ void JSONGenerator::serializeMDReference(const Reference &Ref,
                     Ref.getFileBaseName() + ".md");
   ReferenceObj["BasePath"] = Path;
 }
-
-typedef std::function<void(const Reference &, Object &)> ReferenceFunc;
 
 // Although namespaces and records both have ScopeChildren, they serialize them
 // differently. Only enums, records, and typedefs are handled here.
@@ -771,12 +769,6 @@ void JSONGenerator::serializeInfo(const NamespaceInfo &I, json::Object &Obj) {
   serializeCommonAttributes(I, Obj);
   if (I.USR == GlobalNamespaceID)
     Obj["Name"] = "Global Namespace";
-
-  if (!I.Children.Namespaces.empty()) {
-    serializeArray(I.Children.Namespaces, Obj, "Namespaces",
-                   serializeReferenceLambda());
-    Obj["HasNamespaces"] = true;
-  }
 
   if (!I.Children.Functions.empty()) {
     serializeArray(I.Children.Functions, Obj, "Functions",

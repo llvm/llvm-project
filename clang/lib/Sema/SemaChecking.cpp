@@ -336,10 +336,15 @@ static bool BuiltinAlignment(Sema &S, CallExpr *TheCall, unsigned ID) {
   }
   if ((!SrcTy->isPointerType() && !IsValidIntegerType(SrcTy)) ||
       SrcTy->isFunctionPointerType()) {
-    // FIXME: this is not quite the right error message since we don't allow
-    // floating point types, or member pointers.
     S.Diag(Source->getExprLoc(), diag::err_typecheck_expect_scalar_operand)
         << SrcTy;
+    if (SrcTy->isFloatingType())
+      S.Diag(Source->getExprLoc(), diag::note_alignment_invalid_type);
+    else if (SrcTy->isMemberPointerType())
+      S.Diag(Source->getExprLoc(), diag::note_alignment_invalid_member_pointer);
+    else if (SrcTy->isFunctionPointerType())
+      S.Diag(Source->getExprLoc(),
+             diag::note_alignment_invalid_function_pointer);
     return true;
   }
 
@@ -2356,6 +2361,45 @@ static bool BuiltinPopcountg(Sema &S, CallExpr *TheCall) {
   return false;
 }
 
+/// Checks the __builtin_stdc_* builtins that take a single unsigned integer
+/// argument and return either int, bool, or the argument type.
+static bool BuiltinStdCBuiltin(Sema &S, CallExpr *TheCall,
+                               QualType ReturnType) {
+  if (S.checkArgCount(TheCall, 1))
+    return true;
+
+  ExprResult ArgRes = S.DefaultLvalueConversion(TheCall->getArg(0));
+  if (ArgRes.isInvalid())
+    return true;
+
+  Expr *Arg = ArgRes.get();
+  TheCall->setArg(0, Arg);
+
+  QualType ArgTy = Arg->getType();
+  // C23 stdbit.h functions do not permit bool or enumeration types.
+  if (ArgTy->isBooleanType() || ArgTy->isEnumeralType())
+    return S.Diag(Arg->getBeginLoc(),
+                  diag::err_builtin_stdc_invalid_arg_type_bool_or_enum)
+           << 1 /*1st argument*/ << ArgTy;
+  if (!ArgTy->isUnsignedIntegerType())
+    return S.Diag(Arg->getBeginLoc(), diag::err_builtin_stdc_invalid_arg_type)
+           << 1 /*1st argument*/ << ArgTy;
+
+  // For builtins returning unsigned int, verify the argument's bit width fits.
+  // On targets where unsigned int is 16 bits, a large _BitInt argument could
+  // produce a count that overflows the return type.
+  if (!ReturnType.isNull() && ReturnType == S.Context.UnsignedIntTy) {
+    uint64_t ArgWidth = S.Context.getIntWidth(ArgTy);
+    uint64_t ReturnTypeWidth = S.Context.getIntWidth(S.Context.UnsignedIntTy);
+    if (!llvm::isUIntN(ReturnTypeWidth, ArgWidth))
+      return S.Diag(Arg->getBeginLoc(), diag::err_builtin_stdc_result_overflow)
+             << ArgTy;
+  }
+
+  TheCall->setType(ReturnType.isNull() ? ArgTy : ReturnType);
+  return false;
+}
+
 /// Checks that __builtin_{clzg,ctzg} was called with a first argument, which is
 /// an unsigned integer, and an optional second argument, which is promoted to
 /// an 'int'.
@@ -3811,6 +3855,44 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
       return ExprError();
     break;
 
+  case Builtin::BI__builtin_stdc_bit_floor:
+  case Builtin::BI__builtin_stdc_bit_ceil:
+  case Builtin::BIstdc_bit_floor:
+  case Builtin::BIstdc_bit_ceil:
+    if (BuiltinStdCBuiltin(*this, TheCall, QualType()))
+      return ExprError();
+    break;
+  case Builtin::BI__builtin_stdc_has_single_bit:
+  case Builtin::BIstdc_has_single_bit:
+    if (BuiltinStdCBuiltin(*this, TheCall, Context.BoolTy))
+      return ExprError();
+    break;
+  case Builtin::BI__builtin_stdc_leading_zeros:
+  case Builtin::BI__builtin_stdc_leading_ones:
+  case Builtin::BI__builtin_stdc_trailing_zeros:
+  case Builtin::BI__builtin_stdc_trailing_ones:
+  case Builtin::BI__builtin_stdc_first_leading_zero:
+  case Builtin::BI__builtin_stdc_first_leading_one:
+  case Builtin::BI__builtin_stdc_first_trailing_zero:
+  case Builtin::BI__builtin_stdc_first_trailing_one:
+  case Builtin::BI__builtin_stdc_count_zeros:
+  case Builtin::BI__builtin_stdc_count_ones:
+  case Builtin::BI__builtin_stdc_bit_width:
+  case Builtin::BIstdc_leading_zeros:
+  case Builtin::BIstdc_leading_ones:
+  case Builtin::BIstdc_trailing_zeros:
+  case Builtin::BIstdc_trailing_ones:
+  case Builtin::BIstdc_first_leading_zero:
+  case Builtin::BIstdc_first_leading_one:
+  case Builtin::BIstdc_first_trailing_zero:
+  case Builtin::BIstdc_first_trailing_one:
+  case Builtin::BIstdc_count_zeros:
+  case Builtin::BIstdc_count_ones:
+  case Builtin::BIstdc_bit_width:
+    if (BuiltinStdCBuiltin(*this, TheCall, Context.UnsignedIntTy))
+      return ExprError();
+    break;
+
   case Builtin::BI__builtin_allow_runtime_check: {
     Expr *Arg = TheCall->getArg(0);
     // Check if the argument is a string literal.
@@ -4171,8 +4253,11 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
                      const Expr *ThisArg, ArrayRef<const Expr *> Args,
                      bool IsMemberFunction, SourceLocation Loc,
                      SourceRange Range, VariadicCallType CallType) {
-  // FIXME: We should check as much as we can in the template definition.
-  if (CurContext->isDependentContext())
+
+  if ((ThisArg && ThisArg->isInstantiationDependent()) ||
+      llvm::any_of(Args, [](const Expr *E) {
+        return E && E->isInstantiationDependent();
+      }))
     return;
 
   // Printf and scanf checking.
@@ -4572,6 +4657,91 @@ ExprResult Sema::AtomicOpsOverloaded(ExprResult TheCallResult,
   return BuildAtomicExpr({TheCall->getBeginLoc(), TheCall->getEndLoc()},
                          DRE->getSourceRange(), TheCall->getRParenLoc(), Args,
                          Op);
+}
+
+/// Deprecate __hip_atomic_* builtins in favour of __scoped_atomic_*
+/// equivalents. Provide a fixit when the scope is a compile-time constant and
+/// there is a direct mapping from the HIP builtin to a Clang builtin. The
+/// compare_exchange builtins differ in how they accept the desired value, so
+/// only a warning (without a fixit) is emitted for those.
+static void DiagnoseDeprecatedHIPAtomic(Sema &S, SourceRange ExprRange,
+                                        MultiExprArg Args,
+                                        AtomicExpr::AtomicOp Op) {
+  StringRef OldName;
+  StringRef NewName;
+  bool CanFixIt;
+
+  switch (Op) {
+#define HIP_ATOMIC_FIXABLE(hip, scoped)                                        \
+  case AtomicExpr::AO__hip_atomic_##hip:                                       \
+    OldName = "__hip_atomic_" #hip;                                            \
+    NewName = "__scoped_atomic_" #scoped;                                      \
+    CanFixIt = true;                                                           \
+    break;
+    HIP_ATOMIC_FIXABLE(load, load_n)
+    HIP_ATOMIC_FIXABLE(store, store_n)
+    HIP_ATOMIC_FIXABLE(exchange, exchange_n)
+    HIP_ATOMIC_FIXABLE(fetch_add, fetch_add)
+    HIP_ATOMIC_FIXABLE(fetch_sub, fetch_sub)
+    HIP_ATOMIC_FIXABLE(fetch_and, fetch_and)
+    HIP_ATOMIC_FIXABLE(fetch_or, fetch_or)
+    HIP_ATOMIC_FIXABLE(fetch_xor, fetch_xor)
+    HIP_ATOMIC_FIXABLE(fetch_min, fetch_min)
+    HIP_ATOMIC_FIXABLE(fetch_max, fetch_max)
+#undef HIP_ATOMIC_FIXABLE
+  case AtomicExpr::AO__hip_atomic_compare_exchange_weak:
+    OldName = "__hip_atomic_compare_exchange_weak";
+    NewName = "__scoped_atomic_compare_exchange";
+    CanFixIt = false;
+    break;
+  case AtomicExpr::AO__hip_atomic_compare_exchange_strong:
+    OldName = "__hip_atomic_compare_exchange_strong";
+    NewName = "__scoped_atomic_compare_exchange";
+    CanFixIt = false;
+    break;
+  default:
+    llvm_unreachable("unhandled HIP atomic op");
+  }
+
+  auto DB = S.Diag(ExprRange.getBegin(), diag::warn_hip_deprecated_builtin)
+            << OldName << NewName;
+  if (!CanFixIt)
+    return;
+
+  DB << FixItHint::CreateReplacement(ExprRange, NewName);
+
+  Expr *Scope = Args[Args.size() - 1];
+  std::optional<llvm::APSInt> ScopeVal =
+      Scope->getIntegerConstantExpr(S.Context);
+  if (!ScopeVal)
+    return;
+
+  StringRef ScopeName;
+  switch (ScopeVal->getZExtValue()) {
+  case AtomicScopeHIPModel::SingleThread:
+    ScopeName = "__MEMORY_SCOPE_SINGLE";
+    break;
+  case AtomicScopeHIPModel::Wavefront:
+    ScopeName = "__MEMORY_SCOPE_WVFRNT";
+    break;
+  case AtomicScopeHIPModel::Workgroup:
+    ScopeName = "__MEMORY_SCOPE_WRKGRP";
+    break;
+  case AtomicScopeHIPModel::Agent:
+    ScopeName = "__MEMORY_SCOPE_DEVICE";
+    break;
+  case AtomicScopeHIPModel::System:
+    ScopeName = "__MEMORY_SCOPE_SYSTEM";
+    break;
+  case AtomicScopeHIPModel::Cluster:
+    ScopeName = "__MEMORY_SCOPE_CLUSTR";
+    break;
+  default:
+    return;
+  }
+
+  DB << FixItHint::CreateReplacement(
+      CharSourceRange::getTokenRange(Scope->getSourceRange()), ScopeName);
 }
 
 ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
@@ -5169,6 +5339,9 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
     }
     SubExprs.push_back(Scope);
   }
+
+  if (IsHIP)
+    DiagnoseDeprecatedHIPAtomic(*this, ExprRange, Args, Op);
 
   AtomicExpr *AE = new (Context)
       AtomicExpr(ExprRange.getBegin(), SubExprs, ResultType, Op, RParenLoc);

@@ -235,10 +235,10 @@ body:             |
     ; CHECK-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<16 x s8>) = G_BUILD_VECTOR [[C2]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8)
     ; CHECK-NEXT: [[UMULH:%[0-9]+]]:_(<16 x s8>) = G_UMULH [[COPY]], [[BUILD_VECTOR]]
     ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(<16 x s8>) = G_LSHR [[UMULH]], [[BUILD_VECTOR1]](<16 x s8>)
-    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
-    ; CHECK-NEXT: [[C4:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
-    ; CHECK-NEXT: [[BUILD_VECTOR2:%[0-9]+]]:_(<16 x s1>) = G_BUILD_VECTOR [[C3]](s1), [[C4]](s1), [[C4]](s1), [[C4]](s1), [[C4]](s1), [[C4]](s1), [[C4]](s1), [[C4]](s1), [[C4]](s1), [[C4]](s1), [[C4]](s1), [[C4]](s1), [[C4]](s1), [[C4]](s1), [[C4]](s1), [[C4]](s1)
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<16 x s8>) = G_SELECT [[BUILD_VECTOR2]](<16 x s1>), [[COPY]], [[LSHR]]
+    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(i1) = G_CONSTANT i1 false
+    ; CHECK-NEXT: [[C4:%[0-9]+]]:_(i1) = G_CONSTANT i1 true
+    ; CHECK-NEXT: [[BUILD_VECTOR2:%[0-9]+]]:_(<16 x i1>) = G_BUILD_VECTOR [[C3]](i1), [[C4]](i1), [[C4]](i1), [[C4]](i1), [[C4]](i1), [[C4]](i1), [[C4]](i1), [[C4]](i1), [[C4]](i1), [[C4]](i1), [[C4]](i1), [[C4]](i1), [[C4]](i1), [[C4]](i1), [[C4]](i1), [[C4]](i1)
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<16 x s8>) = G_SELECT [[BUILD_VECTOR2]](<16 x i1>), [[COPY]], [[LSHR]]
     ; CHECK-NEXT: $q0 = COPY [[SELECT]](<16 x s8>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(<16 x s8>) = COPY $q0
@@ -285,10 +285,10 @@ body:             |
     ; CHECK-NEXT: [[UMULH1:%[0-9]+]]:_(<8 x s16>) = G_UMULH [[SUB]], [[BUILD_VECTOR1]]
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(<8 x s16>) = G_ADD [[UMULH1]], [[UMULH]]
     ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(<8 x s16>) = G_LSHR [[ADD]], [[BUILD_VECTOR2]](<8 x s16>)
-    ; CHECK-NEXT: [[C13:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
-    ; CHECK-NEXT: [[C14:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
-    ; CHECK-NEXT: [[BUILD_VECTOR3:%[0-9]+]]:_(<8 x s1>) = G_BUILD_VECTOR [[C13]](s1), [[C14]](s1), [[C14]](s1), [[C14]](s1), [[C14]](s1), [[C14]](s1), [[C14]](s1), [[C14]](s1)
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<8 x s16>) = G_SELECT [[BUILD_VECTOR3]](<8 x s1>), [[COPY]], [[LSHR]]
+    ; CHECK-NEXT: [[C13:%[0-9]+]]:_(i1) = G_CONSTANT i1 true
+    ; CHECK-NEXT: [[C14:%[0-9]+]]:_(i1) = G_CONSTANT i1 false
+    ; CHECK-NEXT: [[BUILD_VECTOR3:%[0-9]+]]:_(<8 x i1>) = G_BUILD_VECTOR [[C13]](i1), [[C14]](i1), [[C14]](i1), [[C14]](i1), [[C14]](i1), [[C14]](i1), [[C14]](i1), [[C14]](i1)
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<8 x s16>) = G_SELECT [[BUILD_VECTOR3]](<8 x i1>), [[COPY]], [[LSHR]]
     ; CHECK-NEXT: $q0 = COPY [[SELECT]](<8 x s16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(<8 x s16>) = COPY $q0

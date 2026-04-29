@@ -340,6 +340,7 @@ HANDLE ProcessLauncherWindows::GetStdioHandle(const llvm::StringRef path,
     break;
   case STDERR_FILENO:
     flags = FILE_FLAG_WRITE_THROUGH;
+    [[fallthrough]];
   case STDOUT_FILENO:
     access = GENERIC_WRITE;
     create = CREATE_ALWAYS;

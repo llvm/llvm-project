@@ -107,9 +107,9 @@ lldb_private::formatters::MsvcStlVectorSyntheticFrontEnd::GetChildAtIndex(
   offset = offset + m_start->GetValueAsUnsigned(0);
   StreamString name;
   name.Printf("[%" PRIu64 "]", (uint64_t)idx);
-  return CreateValueObjectFromAddress(name.GetString(), offset,
-                                      m_backend.GetExecutionContextRef(),
-                                      m_element_type);
+  return CreateChildValueObjectFromAddress(name.GetString(), offset,
+                                           m_backend.GetExecutionContextRef(),
+                                           m_element_type);
 }
 
 lldb::ChildCacheState
@@ -208,11 +208,11 @@ lldb_private::formatters::MsvcStlVectorBoolSyntheticFrontEnd::GetChildAtIndex(
   }
   StreamString name;
   name.Printf("[%" PRIu64 "]", (uint64_t)idx);
-  ValueObjectSP retval_sp(CreateValueObjectFromData(
+  ValueObjectSP retval_sp = CreateChildValueObjectFromData(
       name.GetString(),
       DataExtractor(buffer_sp, process_sp->GetByteOrder(),
                     process_sp->GetAddressByteSize()),
-      m_exe_ctx_ref, m_bool_type));
+      m_exe_ctx_ref, m_bool_type);
   if (retval_sp)
     m_children[idx] = retval_sp;
   return retval_sp;
@@ -267,7 +267,7 @@ lldb_private::formatters::MsvcStlVectorBoolSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   if (!m_count || !m_base_data_address)
     return llvm::createStringErrorV("type has no child named '{0}'", name);
-  auto optional_idx = ExtractIndexFromString(name.AsCString());
+  auto optional_idx = ExtractIndexFromString(name.AsCString(nullptr));
   if (!optional_idx) {
     return llvm::createStringErrorV("type has no child named '{0}'", name);
   }
