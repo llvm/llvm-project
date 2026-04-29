@@ -338,62 +338,25 @@ bool vputils::isAddressSCEVForCost(const SCEV *Addr, ScalarEvolution &SE,
          match(Addr, m_scev_AffineAddRec(m_SCEV(), m_SCEV()));
 }
 
-/// Returns true if \p Opcode preserves uniformity, i.e., if all operands are
-/// uniform, the result will also be uniform.
-static bool preservesUniformity(unsigned Opcode) {
-  if (Instruction::isBinaryOp(Opcode) || Instruction::isCast(Opcode))
-    return true;
-  switch (Opcode) {
-  case Instruction::Freeze:
-  case Instruction::GetElementPtr:
-  case Instruction::ICmp:
-  case Instruction::FCmp:
-  case Instruction::Select:
-  case VPInstruction::Not:
-  case VPInstruction::Broadcast:
-  case VPInstruction::MaskedCond:
-  case VPInstruction::PtrAdd:
-    return true;
-  default:
-    return false;
-  }
-}
-
 bool vputils::isSingleScalar(const VPValue *VPV) {
   // Live-in, symbolic and region-values represent single-scalar values.
   if (isa<VPIRValue, VPSymbolicValue, VPRegionValue>(VPV))
     return true;
 
-  if (auto *Rep = dyn_cast<VPReplicateRecipe>(VPV)) {
+  // Use WideningInfo present directly on the recipe.
+  const VPRecipeBase *R = VPV->getDefiningRecipe();
+  if (R->producesNarrowResult() || R->isAgnostic())
+    return true;
+
+  if (auto *Rep = dyn_cast<VPReplicateRecipe>(R)) {
     const VPRegionBlock *RegionOfR = Rep->getRegion();
     // Don't consider recipes in replicate regions as uniform yet; their first
     // lane cannot be accessed when executing the replicate region for other
     // lanes.
     if (RegionOfR && RegionOfR->isReplicator())
       return false;
-    return Rep->isSingleScalar() || (preservesUniformity(Rep->getOpcode()) &&
-                                     all_of(Rep->operands(), isSingleScalar));
   }
-  if (isa<VPWidenGEPRecipe, VPBlendRecipe>(VPV))
-    return all_of(VPV->getDefiningRecipe()->operands(), isSingleScalar);
-  if (auto *WidenR = dyn_cast<VPWidenRecipe>(VPV)) {
-    return preservesUniformity(WidenR->getOpcode()) &&
-           all_of(WidenR->operands(), isSingleScalar);
-  }
-  if (auto *VPI = dyn_cast<VPInstruction>(VPV))
-    return VPI->isSingleScalar() || VPI->isVectorToScalar() ||
-           (preservesUniformity(VPI->getOpcode()) &&
-            all_of(VPI->operands(), isSingleScalar));
-  if (auto *RR = dyn_cast<VPReductionRecipe>(VPV))
-    return !RR->isPartialReduction();
-  if (isa<VPVectorPointerRecipe, VPVectorEndPointerRecipe, VPDerivedIVRecipe>(
-          VPV))
-    return true;
-  if (auto *Expr = dyn_cast<VPExpressionRecipe>(VPV))
-    return Expr->isSingleScalar();
-
-  // VPExpandSCEVRecipes must be placed in the entry and are always uniform.
-  return isa<VPExpandSCEVRecipe>(VPV);
+  return R->couldProduceNarrowResult() && all_of(R->operands(), isSingleScalar);
 }
 
 bool vputils::isUniformAcrossVFsAndUFs(const VPValue *V) {
@@ -419,18 +382,14 @@ bool vputils::isUniformAcrossVFsAndUFs(const VPValue *V) {
         // Be conservative about side-effects, except for the
         // known-side-effecting assumes and stores, which we know will be
         // uniform.
-        return R->isSingleScalar() &&
+        return R->producesNarrowResult() &&
                (!R->mayHaveSideEffects() ||
                 isa<AssumeInst, StoreInst>(R->getUnderlyingInstr())) &&
                all_of(R->operands(), isUniformAcrossVFsAndUFs);
       })
-      .Case([](const VPWidenRecipe *R) {
-        return preservesUniformity(R->getOpcode()) &&
+      .Case<VPWidenRecipe, VPInstruction>([](const auto *R) {
+        return (R->producesNarrowResult() || R->isAgnostic()) &&
                all_of(R->operands(), isUniformAcrossVFsAndUFs);
-      })
-      .Case([](const VPInstruction *VPI) {
-        return preservesUniformity(VPI->getOpcode()) &&
-               all_of(VPI->operands(), isUniformAcrossVFsAndUFs);
       })
       .Case([](const VPWidenCastRecipe *R) {
         // A cast is uniform according to its operand.

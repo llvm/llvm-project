@@ -399,13 +399,8 @@ public:
     return const_operand_range(op_begin(), op_end());
   }
 
-  /// Returns true if the VPUser uses scalars of operand \p Op. Conservatively
-  /// returns if only first (scalar) lane is used, as default.
-  virtual bool usesScalars(const VPValue *Op) const {
-    assert(is_contained(operands(), Op) &&
-           "Op must be an operand of the recipe");
-    return usesFirstLaneOnly(Op);
-  }
+  /// Returns true if the VPUser uses scalars of operand \p Op.
+  bool usesScalars(const VPValue *Op) const;
 
   /// Returns true if the VPUser only uses the first lane of operand \p Op.
   /// Conservatively returns false.

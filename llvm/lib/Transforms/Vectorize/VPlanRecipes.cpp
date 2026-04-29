@@ -47,6 +47,14 @@ using VectorParts = SmallVector<Value *, 2>;
 #define LV_NAME "loop-vectorize"
 #define DEBUG_TYPE LV_NAME
 
+bool VPUser::usesScalars(const VPValue *Op) const {
+  assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
+  const VPRecipeBase *R = cast<VPRecipeBase>(this);
+  return (R->producesNarrowResult() && !R->isAgnostic()) ||
+         (!isa<VPInstruction>(R) && R->couldReplicatePerPart()) ||
+         usesFirstLaneOnly(Op);
+}
+
 bool VPRecipeBase::mayWriteToMemory() const {
   switch (getVPRecipeID()) {
   case VPExpressionSC:
@@ -312,11 +320,6 @@ bool VPRecipeBase::isPhi() const {
          isa<VPPhi, VPIRPhi>(this);
 }
 
-bool VPRecipeBase::isScalarCast() const {
-  auto *VPI = dyn_cast<VPInstruction>(this);
-  return VPI && Instruction::isCast(VPI->getOpcode());
-}
-
 void VPIRFlags::intersectFlags(const VPIRFlags &Other) {
   assert(OpType == Other.OpType && "OpType must match");
   switch (OpType) {
@@ -423,11 +426,42 @@ template class VPUnrollPartAccessor<2>;
 template class VPUnrollPartAccessor<3>;
 }
 
+/// Returns true if \p Opcode preserves uniformity, i.e., if all operands are
+/// uniform, the result will also be uniform.
+static bool possiblyNarrowOpcode(unsigned Opcode) {
+  if (Instruction::isBinaryOp(Opcode) || Instruction::isCast(Opcode))
+    return true;
+  switch (Opcode) {
+  case Instruction::Freeze:
+  case Instruction::GetElementPtr:
+  case Instruction::ICmp:
+  case Instruction::FCmp:
+  case Instruction::Select:
+  case VPInstruction::Not:
+  case VPInstruction::MaskedCond:
+  case VPInstruction::PtrAdd:
+    return true;
+  default:
+    return false;
+  }
+}
+
 VPInstruction::VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
                              const VPIRFlags &Flags, const VPIRMetadata &MD,
                              DebugLoc DL, const Twine &Name)
-    : VPRecipeWithIRFlags(VPRecipeBase::VPInstructionSC, Operands, Flags, DL),
+    : VPRecipeWithIRFlags(VPRecipeBase::VPInstructionSC, VPRecipeBase::Wide,
+                          Operands, Flags, DL),
       VPIRMetadata(MD), Opcode(Opcode), Name(Name.str()) {
+  if (isSingleScalar())
+    markNarrow();
+  else if (isVectorToScalar())
+    markVectorToScalar();
+  else if (Opcode == VPInstruction::Broadcast)
+    markScalarToVector();
+  else if (is_contained({VPInstruction::Unpack, VPInstruction::PtrAdd}, Opcode))
+    markReplicatePart();
+  if (possiblyNarrowOpcode(Opcode))
+    markPossiblyNarrow();
   assert(flagsValidForOpcode(getOpcode()) &&
          "Set flags not supported for the provided opcode");
   assert(hasRequiredFlagsForOpcode(getOpcode()) &&
@@ -527,7 +561,8 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
 }
 
 bool VPInstruction::doesGeneratePerAllLanes() const {
-  return Opcode == VPInstruction::PtrAdd && !vputils::onlyFirstLaneUsed(this);
+  return Opcode == VPInstruction::Unpack ||
+         (Opcode == VPInstruction::PtrAdd && !vputils::onlyFirstLaneUsed(this));
 }
 
 bool VPInstruction::canGenerateScalarForFirstLane() const {
@@ -2324,6 +2359,27 @@ void VPIRFlags::printFlags(raw_ostream &O) const {
 }
 #endif
 
+VPWidenRecipe::VPWidenRecipe(Instruction &I, ArrayRef<VPValue *> Operands,
+                             const VPIRFlags &Flags,
+                             const VPIRMetadata &Metadata, DebugLoc DL)
+    : VPRecipeWithIRFlags(VPRecipeBase::VPWidenSC, VPRecipeBase::Wide, Operands,
+                          Flags, DL),
+      VPIRMetadata(Metadata), Opcode(I.getOpcode()) {
+  setUnderlyingValue(&I);
+  if (possiblyNarrowOpcode(Opcode))
+    markPossiblyNarrow();
+}
+
+VPWidenRecipe::VPWidenRecipe(unsigned Opcode, ArrayRef<VPValue *> Operands,
+                             const VPIRFlags &Flags,
+                             const VPIRMetadata &Metadata, DebugLoc DL)
+    : VPRecipeWithIRFlags(VPRecipeBase::VPWidenSC, VPRecipeBase::Wide, Operands,
+                          Flags, DL),
+      VPIRMetadata(Metadata), Opcode(Opcode) {
+  if (possiblyNarrowOpcode(Opcode))
+    markPossiblyNarrow();
+}
+
 void VPWidenRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
   switch (Opcode) {
@@ -2952,7 +3008,8 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
 VPExpressionRecipe::VPExpressionRecipe(
     ExpressionTypes ExpressionType,
     ArrayRef<VPSingleDefRecipe *> ExpressionRecipes)
-    : VPSingleDefRecipe(VPRecipeBase::VPExpressionSC, {}, {}),
+    : VPSingleDefRecipe(VPRecipeBase::VPExpressionSC, VPRecipeBase::Wide, {},
+                        {}),
       ExpressionRecipes(ExpressionRecipes), ExpressionType(ExpressionType) {
   assert(!ExpressionRecipes.empty() && "Nothing to combine?");
   assert(
@@ -3005,6 +3062,9 @@ VPExpressionRecipe::VPExpressionRecipe(
   for (auto *R : ExpressionRecipes)
     for (auto const &[LiveIn, Tmp] : zip(operands(), LiveInPlaceholders))
       R->replaceUsesOfWith(LiveIn, Tmp);
+
+  if (isVectorToScalar())
+    markVectorToScalar();
 }
 
 void VPExpressionRecipe::decompose() {
@@ -3098,9 +3158,7 @@ bool VPExpressionRecipe::mayHaveSideEffects() const {
   return false;
 }
 
-bool VPExpressionRecipe::isSingleScalar() const {
-  // Cannot use vputils::isSingleScalar(), because all external operands
-  // of the expression will be live-ins while bundled.
+bool VPExpressionRecipe::isVectorToScalar() const {
   auto *RR = dyn_cast<VPReductionRecipe>(ExpressionRecipes.back());
   return RR && !RR->isPartialReduction();
 }
@@ -3303,10 +3361,28 @@ static void scalarizeInstruction(const Instruction *Instr,
       "are defined outside the vectorized region.");
 }
 
+VPReplicateRecipe::VPReplicateRecipe(Instruction *I,
+                                     ArrayRef<VPValue *> Operands,
+                                     bool IsSingleScalar, VPValue *Mask,
+                                     const VPIRFlags &Flags,
+                                     VPIRMetadata Metadata, DebugLoc DL)
+    : VPRecipeWithIRFlags(VPRecipeBase::VPReplicateSC,
+                          IsSingleScalar ? VPRecipeBase::Narrow
+                                         : VPRecipeBase::ReplicatePart,
+                          Operands, Flags, DL),
+      VPIRMetadata(Metadata), IsPredicated(Mask) {
+  setUnderlyingValue(I);
+  if (Mask)
+    addOperand(Mask);
+  if (possiblyNarrowOpcode(I->getOpcode()))
+    markPossiblyNarrow();
+}
+
 void VPReplicateRecipe::execute(VPTransformState &State) {
   assert(!State.Lane && "replicate regions must be dissolved before ::execute");
-  assert(IsSingleScalar && "VPReplicateRecipes outside replicate regions "
-                           "must have already been unrolled");
+  assert(producesNarrowResult() &&
+         "VPReplicateRecipes outside replicate regions "
+         "must have already been unrolled");
   Instruction *UI = getUnderlyingInstr();
   scalarizeInstruction(UI, this, VPLane(0), State);
 }
@@ -3397,7 +3473,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
   // transform, avoid computing their cost multiple times for now.
   Ctx.SkipCostComputation.insert(UI);
 
-  if (VF.isScalable() && !isSingleScalar())
+  if (VF.isScalable() && !producesNarrowResult())
     return InstructionCost::getInvalid();
 
   switch (UI->getOpcode()) {
@@ -3443,7 +3519,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     Type *ResultTy = Ctx.Types.inferScalarType(this);
     InstructionCost ScalarCallCost =
         Ctx.TTI.getCallInstrCost(CalledFn, ResultTy, Tys, Ctx.CostKind);
-    if (isSingleScalar()) {
+    if (producesNarrowResult()) {
       if (CalledFn->isIntrinsic())
         ScalarCallCost = std::min(
             ScalarCallCost,
@@ -3473,14 +3549,14 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
   case Instruction::FCmp:
     return getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1),
                                       Ctx) *
-           (isSingleScalar() ? 1 : VF.getFixedValue());
+           (producesNarrowResult() ? 1 : VF.getFixedValue());
   case Instruction::SDiv:
   case Instruction::UDiv:
   case Instruction::SRem:
   case Instruction::URem: {
     InstructionCost ScalarCost =
         getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1), Ctx);
-    if (isSingleScalar())
+    if (producesNarrowResult())
       return ScalarCost;
 
     // If any of the operands is from a different replicate region and has its
@@ -3555,13 +3631,14 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
       return UniformCost;
     }
 
-    Type *PtrTy = isSingleScalar() ? ScalarPtrTy : toVectorTy(ScalarPtrTy, VF);
+    Type *PtrTy =
+        producesNarrowResult() ? ScalarPtrTy : toVectorTy(ScalarPtrTy, VF);
     InstructionCost ScalarCost =
         ScalarMemOpCost +
         Ctx.TTI.getAddressComputationCost(
             PtrTy, UsedByLoadStoreAddress ? nullptr : Ctx.PSE.getSE(), PtrSCEV,
             Ctx.CostKind);
-    if (isSingleScalar())
+    if (producesNarrowResult())
       return ScalarCost;
 
     SmallVector<const VPValue *> OpsToScalarize;
@@ -3624,7 +3701,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
   case Instruction::AddrSpaceCast: {
     return getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1),
                                       Ctx) *
-           (isSingleScalar() ? 1 : VF.getFixedValue());
+           (producesNarrowResult() ? 1 : VF.getFixedValue());
   }
   case Instruction::ExtractValue:
   case Instruction::InsertValue:
@@ -3637,7 +3714,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPReplicateRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                     VPSlotTracker &SlotTracker) const {
-  O << Indent << (IsSingleScalar ? "CLONE " : "REPLICATE ");
+  O << Indent << (producesNarrowResult() ? "CLONE " : "REPLICATE ");
 
   if (!getUnderlyingInstr()->getType()->isVoidTy()) {
     printAsOperand(O, SlotTracker);

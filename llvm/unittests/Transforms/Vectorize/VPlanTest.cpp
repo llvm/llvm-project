@@ -1697,7 +1697,8 @@ TEST_F(VPRecipeTest, CastVPReductionEVLRecipeToVPUser) {
 } // namespace
 
 struct VPDoubleValueDef : public VPRecipeBase {
-  VPDoubleValueDef(ArrayRef<VPValue *> Operands) : VPRecipeBase(99, Operands) {
+  VPDoubleValueDef(ArrayRef<VPValue *> Operands)
+      : VPRecipeBase(99, VPRecipeBase::Wide, Operands) {
     new VPRecipeValue(this);
     new VPRecipeValue(this);
   }

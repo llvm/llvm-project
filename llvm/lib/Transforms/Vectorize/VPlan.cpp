@@ -542,6 +542,14 @@ void VPBasicBlock::executeRecipes(VPTransformState *State, BasicBlock *BB) {
 
   for (VPRecipeBase &Recipe : Recipes) {
     State->setDebugLocFrom(Recipe.getDebugLoc());
+    assert(Recipe.WideningInfo && "WideInfo needs to be set");
+    assert(
+        (!Recipe.couldReplicatePerPart() ||
+         (!Recipe.couldProducWideResult() && !Recipe.isAgnostic())) &&
+        "WideInfo cannot simultaneously be ReplicatePart and Wide or Agnostic");
+    assert((!Recipe.isAgnostic() || (Recipe.couldProduceNarrowResult() ^
+                                     Recipe.couldProducWideResult())) &&
+           "Agnostic WideInfo cannot be Narrow and Wide simultaenously");
     Recipe.execute(*State);
   }
 
