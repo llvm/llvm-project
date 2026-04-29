@@ -403,6 +403,8 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
     return emitOMPGenericLoopDirective(cast<OMPGenericLoopDirective>(*s));
   case Stmt::OMPReverseDirectiveClass:
     return emitOMPReverseDirective(cast<OMPReverseDirective>(*s));
+  case Stmt::OMPSplitDirectiveClass:
+    return emitOMPSplitDirective(cast<OMPSplitDirective>(*s));
   case Stmt::OMPInterchangeDirectiveClass:
     return emitOMPInterchangeDirective(cast<OMPInterchangeDirective>(*s));
   case Stmt::OMPAssumeDirectiveClass:
@@ -488,8 +490,8 @@ mlir::LogicalResult CIRGenFunction::emitLabelStmt(const clang::LabelStmt &s) {
 }
 
 // Add a terminating yield on a body region if no other terminators are used.
-static void terminateBody(CIRGenBuilderTy &builder, mlir::Region &r,
-                          mlir::Location loc) {
+void CIRGenFunction::terminateStructuredRegionBody(mlir::Region &r,
+                                                   mlir::Location loc) {
   if (r.empty())
     return;
 
@@ -652,23 +654,8 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
   if (!createNewScope) {
     handleReturnVal();
   } else {
-    mlir::Location scopeLoc =
-        getLoc(rv ? rv->getSourceRange() : s.getSourceRange());
-    // First create cir.scope and later emit it's body. Otherwise all CIRGen
-    // dispatched by `handleReturnVal()` might needs to manipulate blocks and
-    // look into parents, which are all unlinked.
-    mlir::OpBuilder::InsertPoint scopeBody;
-    cir::ScopeOp::create(builder, scopeLoc, /*scopeBuilder=*/
-                         [&](mlir::OpBuilder &b, mlir::Location loc) {
-                           scopeBody = b.saveInsertionPoint();
-                         });
-    {
-      mlir::OpBuilder::InsertionGuard guard(builder);
-      builder.restoreInsertionPoint(scopeBody);
-      CIRGenFunction::LexicalScope lexScope{*this, scopeLoc,
-                                            builder.getInsertionBlock()};
-      handleReturnVal();
-    }
+    FullExprCleanupScope fullExprScope(*this, rv);
+    handleReturnVal();
   }
 
   cleanupScope.forceCleanup();
@@ -930,7 +917,7 @@ CIRGenFunction::emitCXXForRangeStmt(const CXXForRangeStmt &s,
     // scope, create a block to stage a loop exit along.
     // We probably already do the right thing because of ScopeOp, but make
     // sure we handle all cases.
-    assert(!cir::MissingFeatures::requiresCleanups());
+    assert(!cir::MissingFeatures::loopSpecificCleanupHandling());
 
     forOp = builder.createFor(
         getLoc(s.getSourceRange()),
@@ -979,7 +966,7 @@ CIRGenFunction::emitCXXForRangeStmt(const CXXForRangeStmt &s,
   if (res.failed())
     return res;
 
-  terminateBody(builder, forOp.getBody(), getLoc(s.getEndLoc()));
+  terminateStructuredRegionBody(forOp.getBody(), getLoc(s.getEndLoc()));
   return mlir::success();
 }
 
@@ -998,7 +985,7 @@ mlir::LogicalResult CIRGenFunction::emitForStmt(const ForStmt &s) {
     // loop-exit scope, a block is created to stage the loop exit. We probably
     // already do the right thing because of ScopeOp, but we need more testing
     // to be sure we handle all cases.
-    assert(!cir::MissingFeatures::requiresCleanups());
+    assert(!cir::MissingFeatures::loopSpecificCleanupHandling());
 
     forOp = builder.createFor(
         getLoc(s.getSourceRange()),
@@ -1051,7 +1038,7 @@ mlir::LogicalResult CIRGenFunction::emitForStmt(const ForStmt &s) {
   if (res.failed())
     return res;
 
-  terminateBody(builder, forOp.getBody(), getLoc(s.getEndLoc()));
+  terminateStructuredRegionBody(forOp.getBody(), getLoc(s.getEndLoc()));
   return mlir::success();
 }
 
@@ -1066,7 +1053,7 @@ mlir::LogicalResult CIRGenFunction::emitDoStmt(const DoStmt &s) {
     // scope, create a block to stage a loop exit along.
     // We probably already do the right thing because of ScopeOp, but make
     // sure we handle all cases.
-    assert(!cir::MissingFeatures::requiresCleanups());
+    assert(!cir::MissingFeatures::loopSpecificCleanupHandling());
 
     doWhileOp = builder.createDoWhile(
         getLoc(s.getSourceRange()),
@@ -1102,7 +1089,7 @@ mlir::LogicalResult CIRGenFunction::emitDoStmt(const DoStmt &s) {
   if (res.failed())
     return res;
 
-  terminateBody(builder, doWhileOp.getBody(), getLoc(s.getEndLoc()));
+  terminateStructuredRegionBody(doWhileOp.getBody(), getLoc(s.getEndLoc()));
   return mlir::success();
 }
 
@@ -1117,7 +1104,7 @@ mlir::LogicalResult CIRGenFunction::emitWhileStmt(const WhileStmt &s) {
     // scope, create a block to stage a loop exit along.
     // We probably already do the right thing because of ScopeOp, but make
     // sure we handle all cases.
-    assert(!cir::MissingFeatures::requiresCleanups());
+    assert(!cir::MissingFeatures::loopSpecificCleanupHandling());
 
     whileOp = builder.createWhile(
         getLoc(s.getSourceRange()),
@@ -1158,7 +1145,7 @@ mlir::LogicalResult CIRGenFunction::emitWhileStmt(const WhileStmt &s) {
   if (res.failed())
     return res;
 
-  terminateBody(builder, whileOp.getBody(), getLoc(s.getEndLoc()));
+  terminateStructuredRegionBody(whileOp.getBody(), getLoc(s.getEndLoc()));
   return mlir::success();
 }
 
@@ -1253,8 +1240,8 @@ mlir::LogicalResult CIRGenFunction::emitSwitchStmt(const clang::SwitchStmt &s) {
   llvm::SmallVector<CaseOp> cases;
   swop.collectCases(cases);
   for (auto caseOp : cases)
-    terminateBody(builder, caseOp.getCaseRegion(), caseOp.getLoc());
-  terminateBody(builder, swop.getBody(), swop.getLoc());
+    terminateStructuredRegionBody(caseOp.getCaseRegion(), caseOp.getLoc());
+  terminateStructuredRegionBody(swop.getBody(), swop.getLoc());
 
   swop.setAllEnumCasesCovered(s.isAllEnumCasesCovered());
 

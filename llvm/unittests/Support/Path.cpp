@@ -1657,6 +1657,58 @@ TEST_F(FileSystemTest, FileMappingSync) {
   ASSERT_FALSE((bool)fs::remove(FileName));
 }
 
+#ifdef _WIN32
+TEST_F(FileSystemTest, FileMappingNamed) {
+  // Create a temp file.
+  SmallString<0> TempPath(TestDirectory);
+  sys::path::append(TempPath, "test-%%%%");
+  auto TempFileOrError = fs::TempFile::create(TempPath);
+  ASSERT_TRUE((bool)TempFileOrError);
+  fs::TempFile File = std::move(*TempFileOrError);
+  StringRef Content("hello there");
+  std::string FileName = File.TmpName;
+  ASSERT_NO_ERROR(
+      fs::resize_file_before_mapping_readwrite(File.FD, Content.size()));
+  {
+    // Map in the file twice with the same name
+    std::error_code EC1;
+    fs::mapped_file_region MFR1(
+        fs::convertFDToNativeFile(File.FD), fs::mapped_file_region::readwrite,
+        Content.size(), 0, EC1, "Local\\FileSystemTest_map");
+    ASSERT_NO_ERROR(EC1);
+
+    std::error_code EC2;
+    fs::mapped_file_region MFR2(
+        fs::convertFDToNativeFile(File.FD), fs::mapped_file_region::readwrite,
+        Content.size(), 0, EC2, "Local\\FileSystemTest_map");
+    ASSERT_NO_ERROR(EC2);
+
+    // Write content through mapped memory and check the content
+    llvm::copy(Content, MFR1.data());
+    ASSERT_EQ(std::memcmp(MFR1.data(), MFR2.data(), Content.size()), 0);
+  }
+  {
+    // Map in the file twice named and unnamed
+    std::error_code EC1;
+    fs::mapped_file_region MFR1(fs::convertFDToNativeFile(File.FD),
+                                fs::mapped_file_region::readwrite,
+                                Content.size(), 0, EC1, nullptr);
+    ASSERT_NO_ERROR(EC1);
+
+    std::error_code EC2;
+    fs::mapped_file_region MFR2(
+        fs::convertFDToNativeFile(File.FD), fs::mapped_file_region::readwrite,
+        Content.size(), 0, EC2, "Local\\FileSystemTest_map2");
+    ASSERT_NO_ERROR(EC2);
+
+    // Write content through mapped memory and check the content
+    llvm::copy(Content, MFR1.data());
+    ASSERT_EQ(std::memcmp(MFR1.data(), MFR2.data(), Content.size()), 0);
+  }
+  ASSERT_FALSE((bool)File.discard());
+}
+#endif
+
 TEST(Support, NormalizePath) {
   //                           Input,        Expected Win, Expected Posix
   using TestTuple = std::tuple<const char *, const char *, const char *>;
@@ -1676,6 +1728,16 @@ TEST(Support, NormalizePath) {
     path::native(Win, path::Style::windows);
     path::native(Posix, path::Style::posix);
     path::native(WinSlash, path::Style::windows_slash);
+    EXPECT_EQ(std::get<1>(T), Win);
+    EXPECT_EQ(std::get<2>(T), Posix);
+    EXPECT_EQ(std::get<2>(T), WinSlash);
+  }
+
+  for (auto &T : Tests) {
+    std::string Win = path::native(std::get<0>(T), path::Style::windows);
+    std::string Posix = path::native(std::get<0>(T), path::Style::posix);
+    std::string WinSlash =
+        path::native(std::get<0>(T), path::Style::windows_slash);
     EXPECT_EQ(std::get<1>(T), Win);
     EXPECT_EQ(std::get<2>(T), Posix);
     EXPECT_EQ(std::get<2>(T), WinSlash);

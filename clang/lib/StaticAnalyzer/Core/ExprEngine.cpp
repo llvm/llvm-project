@@ -1411,7 +1411,7 @@ void ExprEngine::ProcessDeleteDtor(const CFGDeleteDtor Dtor,
   ProgramStateRef State = Pred->getState();
   const LocationContext *LCtx = Pred->getLocationContext();
   const CXXDeleteExpr *DE = Dtor.getDeleteExpr();
-  const Stmt *Arg = DE->getArgument();
+  const Expr *Arg = DE->getArgument();
   QualType DTy = DE->getDestroyedType();
   SVal ArgVal = State->getSVal(Arg, LCtx);
 
@@ -1641,13 +1641,13 @@ void ExprEngine::processCleanupTemporaryBranch(const CXXBindTemporaryExpr *BTE,
                                                ExplodedNodeSet &Dst,
                                                const CFGBlock *DstT,
                                                const CFGBlock *DstF) {
-  BranchNodeBuilder TempDtorBuilder(Dst, *currBldrCtx, DstT, DstF);
   ProgramStateRef State = Pred->getState();
   const LocationContext *LC = Pred->getLocationContext();
-  if (getObjectUnderConstruction(State, BTE, LC)) {
-    TempDtorBuilder.generateNode(State, true, Pred);
-  } else {
-    TempDtorBuilder.generateNode(State, false, Pred);
+
+  std::optional<SVal> Obj = getObjectUnderConstruction(State, BTE, LC);
+  if (const CFGBlock *DstBlock = Obj ? DstT : DstF) {
+    BlockEdge BE(getCurrBlock(), DstBlock, LC);
+    Dst.insert(Engine.makeNode(BE, State, Pred));
   }
 }
 
@@ -1812,6 +1812,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::OMPStripeDirectiveClass:
     case Stmt::OMPTileDirectiveClass:
     case Stmt::OMPInterchangeDirectiveClass:
+    case Stmt::OMPSplitDirectiveClass:
     case Stmt::OMPFuseDirectiveClass:
     case Stmt::OMPInteropDirectiveClass:
     case Stmt::OMPDispatchDirectiveClass:
@@ -1885,7 +1886,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       // GNU __null is a pointer-width integer, not an actual pointer.
       ProgramStateRef state = Pred->getState();
       state = state->BindExpr(
-          S, Pred->getLocationContext(),
+          cast<Expr>(S), Pred->getLocationContext(),
           svalBuilder.makeIntValWithWidth(getContext().VoidPtrTy, 0));
       Bldr.generateNode(S, Pred, state);
       break;
@@ -2017,7 +2018,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       const LocationContext *LCtx = Pred->getLocationContext();
       for (const auto I : PreVisit) {
         ProgramStateRef State = I->getState();
-        State = State->BindExpr(S, LCtx, *ConstantVal);
+        State = State->BindExpr(cast<Expr>(S), LCtx, *ConstantVal);
         if (IsTemporary)
           State = createTemporaryRegionIfNeeded(State, LCtx,
                                                 cast<Expr>(S),
@@ -2060,7 +2061,9 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
                                       ->getType()->isRecordType()))
           for (auto Child : Ex->children()) {
             assert(Child);
-            SVal Val = State->getSVal(Child, LCtx);
+            const auto *ChildExpr = dyn_cast<Expr>(Child);
+            SVal Val =
+                ChildExpr ? State->getSVal(ChildExpr, LCtx) : UnknownVal();
             State = escapeValues(State, Val, PSK_EscapeOther);
           }
 
@@ -2443,13 +2446,15 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       const auto *PE = cast<PseudoObjectExpr>(S);
       if (const Expr *Result = PE->getResultExpr()) {
         SVal V = state->getSVal(Result, Pred->getLocationContext());
-        Bldr.generateNode(S, Pred,
-                          state->BindExpr(S, Pred->getLocationContext(), V));
+        Bldr.generateNode(
+            S, Pred,
+            state->BindExpr(cast<Expr>(S), Pred->getLocationContext(), V));
       }
       else
         Bldr.generateNode(S, Pred,
-                          state->BindExpr(S, Pred->getLocationContext(),
-                                                   UnknownVal()));
+                          state->BindExpr(cast<Expr>(S),
+                                          Pred->getLocationContext(),
+                                          UnknownVal()));
 
       Bldr.addNodes(Dst);
       break;
@@ -2464,8 +2469,9 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       const auto *OIE = cast<ObjCIndirectCopyRestoreExpr>(S);
       const Expr *E = OIE->getSubExpr();
       SVal V = state->getSVal(E, Pred->getLocationContext());
-      Bldr.generateNode(S, Pred,
-              state->BindExpr(S, Pred->getLocationContext(), V));
+      Bldr.generateNode(
+          S, Pred,
+          state->BindExpr(cast<Expr>(S), Pred->getLocationContext(), V));
       Bldr.addNodes(Dst);
       break;
     }
@@ -2478,7 +2484,7 @@ bool ExprEngine::replayWithoutInlining(ExplodedNode *N,
   const StackFrameContext *CallerSF = CalleeSF->getParent()->getStackFrame();
   assert(CalleeSF && CallerSF);
   ExplodedNode *BeforeProcessingCall = nullptr;
-  const Stmt *CE = CalleeSF->getCallSite();
+  const Expr *CE = CalleeSF->getCallSite();
 
   // Find the first node before we started processing the call expression.
   while (N) {
@@ -2515,9 +2521,16 @@ bool ExprEngine::replayWithoutInlining(ExplodedNode *N,
       BeforeProcessingCall->getLocationContext(), CE, nullptr, &PT);
   // Add the special flag to GDM to signal retrying with no inlining.
   // Note, changing the state ensures that we are not going to cache out.
+  // NOTE: This stores the call site (CE) in the state trait, but the the
+  // actual pointer value is only checked by an assertion; for the analysis,
+  // only the presence or absence of this trait matters.
+  // TODO: If we are handling a destructor call, CE is nullpointer (because it
+  // ultimately comes from the `Origin` of a `CXXDestructorCall`), which is
+  // indistinguishable from the absence (default state) of this state trait.
+  // I don't think that this bad logic causes actually observable problems, but
+  // it would be nice to clean it up if somebody has time to do so.
   ProgramStateRef NewNodeState = BeforeProcessingCall->getState();
-  NewNodeState =
-    NewNodeState->set<ReplayWithoutInlining>(const_cast<Stmt *>(CE));
+  NewNodeState = NewNodeState->set<ReplayWithoutInlining>(CE);
 
   // Make the new node a successor of BeforeProcessingCall.
   bool IsNew = false;
@@ -2534,20 +2547,6 @@ bool ExprEngine::replayWithoutInlining(ExplodedNode *N,
                                   CalleeSF->getIndex());
   NumTimesRetriedWithoutInlining++;
   return true;
-}
-
-/// Return the innermost location context which is inlined at `Node`, unless
-/// it's the top-level (entry point) location context.
-static const LocationContext *getInlinedLocationContext(ExplodedNode *Node,
-                                                        ExplodedGraph &G) {
-  const LocationContext *CalleeLC = Node->getLocation().getLocationContext();
-  const LocationContext *RootLC =
-      G.getRoot()->getLocation().getLocationContext();
-
-  if (CalleeLC->getStackFrame() == RootLC->getStackFrame())
-    return nullptr;
-
-  return CalleeLC;
 }
 
 /// Block entrance.  (Update counters).
@@ -2609,7 +2608,8 @@ void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
     const ExplodedNode *Sink =
         Builder.generateSink(TaggedLoc, Pred->getState(), Pred);
 
-    if (const LocationContext *LC = getInlinedLocationContext(Pred, G)) {
+    const LocationContext *LC = Pred->getLocationContext();
+    if (!LC->inTopFrame()) {
       // FIXME: This will unconditionally prevent inlining this function (even
       // from other entry points), which is not a reasonable heuristic: even if
       // we reached max block count on this particular execution path, there
@@ -2782,9 +2782,9 @@ bool ExprEngine::hasMoreIteration(ProgramStateRef State,
 /// Returns a (HasMoreIteration, HasNoMoreIteration) pair, or std::nullopt when
 /// the acquisition of the loop condition value failed.
 static std::optional<std::pair<ProgramStateRef, ProgramStateRef>>
-assumeCondition(const Stmt *Condition, ExplodedNode *N) {
+assumeCondition(const Stmt *ConditionStmt, ExplodedNode *N) {
   ProgramStateRef State = N->getState();
-  if (const auto *ObjCFor = dyn_cast<ObjCForCollectionStmt>(Condition)) {
+  if (const auto *ObjCFor = dyn_cast<ObjCForCollectionStmt>(ConditionStmt)) {
     bool HasMoreIteraton =
         ExprEngine::hasMoreIteration(State, ObjCFor, N->getLocationContext());
     // Checkers have already ran on branch conditions, so the current
@@ -2797,18 +2797,22 @@ assumeCondition(const Stmt *Condition, ExplodedNode *N) {
     else
       return std::pair<ProgramStateRef, ProgramStateRef>{nullptr, State};
   }
-  SVal X = State->getSVal(Condition, N->getLocationContext());
+
+  const auto *ConditionExpr = dyn_cast<Expr>(ConditionStmt);
+  assert(ConditionExpr && "The condition must be an Expr from here!");
+
+  SVal X = State->getSVal(ConditionExpr, N->getLocationContext());
 
   if (X.isUnknownOrUndef()) {
     // Give it a chance to recover from unknown.
-    if (const auto *Ex = dyn_cast<Expr>(Condition)) {
+    if (const auto *Ex = dyn_cast<Expr>(ConditionExpr)) {
       if (Ex->getType()->isIntegralOrEnumerationType()) {
         // Try to recover some path-sensitivity.  Right now casts of symbolic
         // integers that promote their values are currently not tracked well.
-        // If 'Condition' is such an expression, try and recover the
+        // If 'ConditionExpr' is such an expression, try and recover the
         // underlying value and use that instead.
         SVal recovered =
-            RecoverCastedSymbol(State, Condition, N->getLocationContext(),
+            RecoverCastedSymbol(State, ConditionExpr, N->getLocationContext(),
                                 N->getState()->getStateManager().getContext());
 
         if (!recovered.isUnknown()) {
@@ -2835,10 +2839,17 @@ void ExprEngine::processBranch(
   assert((!Condition || !isa<CXXBindTemporaryExpr>(Condition)) &&
          "CXXBindTemporaryExprs are handled by processBindTemporary.");
 
+  const LocationContext *LC = Pred->getLocationContext();
+
   // Check for NULL conditions; e.g. "for(;;)"
   if (!Condition) {
-    BranchNodeBuilder NullCondBldr(Dst, *currBldrCtx, DstT, DstF);
-    NullCondBldr.generateNode(Pred->getState(), true, Pred);
+    if (!DstT) {
+      // I _hope_ that this "null condition + null transition to loop body"
+      // case is impossible, but I cannot prove this, so let's cover it.
+      return;
+    }
+    BlockEdge BE(getCurrBlock(), DstT, LC);
+    Dst.insert(Engine.makeNode(BE, Pred->getState(), Pred));
     return;
   }
 
@@ -2857,7 +2868,6 @@ void ExprEngine::processBranch(
   if (CheckersOutSet.empty())
     return;
 
-  BranchNodeBuilder Builder(Dst, *currBldrCtx, DstT, DstF);
   for (ExplodedNode *PredN : CheckersOutSet) {
     ProgramStateRef PrevState = PredN->getState();
 
@@ -2903,7 +2913,10 @@ void ExprEngine::processBranch(
       // default). If we intend to support and stabilize the loop widening,
       // we must ensure that it 'plays nicely' with this logic.
       if (!SkipTrueBranch || AMgr.options.ShouldWidenLoops) {
-        Builder.generateNode(StTrue, true, PredN);
+        if (DstT) {
+          BlockEdge BE(getCurrBlock(), DstT, LC);
+          Dst.insert(Engine.makeNode(BE, StTrue, PredN));
+        }
       } else if (!AMgr.options.InlineFunctionsWithAmbiguousLoops) {
         // FIXME: There is an ancient and arbitrary heuristic in
         // `ExprEngine::processCFGBlockEntrance` which prevents all further
@@ -2920,7 +2933,7 @@ void ExprEngine::processBranch(
         // (activates if the third iteration can be entered, and will not
         // recognize cases where the fourth iteration would't be completed), but
         // should be good enough for practical purposes.
-        if (const LocationContext *LC = getInlinedLocationContext(Pred, G)) {
+        if (!LC->inTopFrame()) {
           Engine.FunctionSummaries->markShouldNotInline(
               LC->getStackFrame()->getDecl());
         }
@@ -2943,8 +2956,10 @@ void ExprEngine::processBranch(
       bool BeforeFirstIteration = IterationsCompletedInLoop == std::optional{0};
       bool SkipFalseBranch = BothFeasible && BeforeFirstIteration &&
                              AMgr.options.ShouldAssumeAtLeastOneIteration;
-      if (!SkipFalseBranch)
-        Builder.generateNode(StFalse, false, PredN);
+      if (!SkipFalseBranch && DstF) {
+        BlockEdge BE(getCurrBlock(), DstF, LC);
+        Dst.insert(Engine.makeNode(BE, StFalse, PredN));
+      }
     }
   }
 }
@@ -2960,15 +2975,15 @@ void ExprEngine::processStaticInitializer(const DeclStmt *DS,
                                           const CFGBlock *DstT,
                                           const CFGBlock *DstF) {
   const auto *VD = cast<VarDecl>(DS->getSingleDecl());
-  ProgramStateRef state = Pred->getState();
-  bool initHasRun = state->contains<InitializedGlobalsSet>(VD);
-  BranchNodeBuilder Builder(Dst, *currBldrCtx, DstT, DstF);
+  ProgramStateRef State = Pred->getState();
+  bool InitHasRun = State->contains<InitializedGlobalsSet>(VD);
+  if (!InitHasRun)
+    State = State->add<InitializedGlobalsSet>(VD);
 
-  if (!initHasRun) {
-    state = state->add<InitializedGlobalsSet>(VD);
+  if (const CFGBlock *DstBlock = InitHasRun ? DstT : DstF) {
+    BlockEdge BE(getCurrBlock(), DstBlock, Pred->getLocationContext());
+    Dst.insert(Engine.makeNode(BE, State, Pred));
   }
-
-  Builder.generateNode(state, initHasRun, Pred);
 }
 
 /// processIndirectGoto - Called by CoreEngine.  Used to generate successor
@@ -3082,9 +3097,23 @@ void ExprEngine::processEndOfFunction(ExplodedNode *Pred,
 ///  nodes by processing the 'effects' of a switch statement.
 void ExprEngine::processSwitch(const SwitchStmt *Switch, ExplodedNode *Pred,
                                ExplodedNodeSet &Dst) {
+  const ASTContext &ACtx = getContext();
+  const LocationContext *LCtx = Pred->getLocationContext();
   const Expr *Condition = Switch->getCond();
 
-  SwitchNodeBuilder Builder(Dst, *currBldrCtx);
+  // The block that is terminated by the switch statement.
+  const CFGBlock *SwitchBlock = getCurrBlock();
+  // Note that successors may be null if they are pruned as unreachable.
+  assert(SwitchBlock->succ_size() && "Switch must have at least one successor");
+  // The reversed iteration order is present since the beginning, when in 2008
+  // commit 80ebc1d1c95704b0ff0386b3a3cbc8b3ff960654 added support for handling
+  // switch statements. I don't see any advantage over regular forward
+  // iteration -- but switching the order would perturb the insertion order of
+  // the work list and therefore the analysis results.
+  llvm::iterator_range<CFGBlock::const_succ_reverse_iterator> CaseBlocks(
+      SwitchBlock->succ_rbegin() + 1, SwitchBlock->succ_rend());
+  const CFGBlock *DefaultBlock = *SwitchBlock->succ_rbegin();
+
   ExplodedNodeSet CheckersOutSet;
 
   getCheckerManager().runCheckersForBranchCondition(
@@ -3093,30 +3122,29 @@ void ExprEngine::processSwitch(const SwitchStmt *Switch, ExplodedNode *Pred,
   for (ExplodedNode *Node : CheckersOutSet) {
     ProgramStateRef State = Node->getState();
 
-    SVal CondV = State->getSVal(Condition, Node->getLocationContext());
+    SVal CondV = State->getSVal(Condition, LCtx);
     if (CondV.isUndef()) {
       // This can only happen if core.uninitialized.Branch is disabled.
       continue;
     }
-
     std::optional<NonLoc> CondNL = CondV.getAs<NonLoc>();
 
-    for (const CFGBlock *Block : Builder) {
+    for (const CFGBlock *CaseBlock : CaseBlocks) {
       // Successor may be pruned out during CFG construction.
-      if (!Block)
+      if (!CaseBlock)
         continue;
 
-      const CaseStmt *Case = cast<CaseStmt>(Block->getLabel());
+      const CaseStmt *Case = cast<CaseStmt>(CaseBlock->getLabel());
 
       // Evaluate the LHS of the case value.
-      llvm::APSInt V1 = Case->getLHS()->EvaluateKnownConstInt(getContext());
+      llvm::APSInt V1 = Case->getLHS()->EvaluateKnownConstInt(ACtx);
       assert(V1.getBitWidth() ==
              getContext().getIntWidth(Condition->getType()));
 
       // Get the RHS of the case, if it exists.
       llvm::APSInt V2;
       if (const Expr *E = Case->getRHS())
-        V2 = E->EvaluateKnownConstInt(getContext());
+        V2 = E->EvaluateKnownConstInt(ACtx);
       else
         V2 = V1;
 
@@ -3131,8 +3159,10 @@ void ExprEngine::processSwitch(const SwitchStmt *Switch, ExplodedNode *Pred,
         StateMatching = State;
       }
 
-      if (StateMatching)
-        Builder.generateCaseStmtNode(Block, StateMatching, Node);
+      if (StateMatching) {
+        BlockEdge BE(SwitchBlock, CaseBlock, LCtx);
+        Dst.insert(Engine.makeNode(BE, StateMatching, Node));
+      }
 
       // If _not_ entering the current case is infeasible, then we are done
       // with processing the paths through the current Node.
@@ -3140,6 +3170,10 @@ void ExprEngine::processSwitch(const SwitchStmt *Switch, ExplodedNode *Pred,
         break;
     }
     if (!State)
+      continue;
+
+    // The default block may be null if it is "optimized out" by CFG creation.
+    if (!DefaultBlock)
       continue;
 
     // If we have switch(enum value), the default branch is not
@@ -3154,7 +3188,8 @@ void ExprEngine::processSwitch(const SwitchStmt *Switch, ExplodedNode *Pred,
         continue;
     }
 
-    Builder.generateDefaultCaseNode(State, Node);
+    BlockEdge BE(SwitchBlock, DefaultBlock, LCtx);
+    Dst.insert(Engine.makeNode(BE, State, Node));
   }
 }
 

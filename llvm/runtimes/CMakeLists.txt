@@ -462,6 +462,15 @@ function(runtime_register_target name)
     if(TARGET builtins-${name})
       add_dependencies(check-builtins check-builtins-${name})
     endif()
+
+    foreach(runtime_name ${runtime_names})
+      if(TARGET check-${runtime_name}-${name})
+        if(NOT TARGET check-${runtime_name})
+          add_custom_target(check-${runtime_name})
+        endif()
+        add_dependencies(check-${runtime_name} check-${runtime_name}-${name})
+      endif()
+    endforeach()
   endif()
   foreach(runtime_name ${runtime_names})
     if(NOT TARGET ${runtime_name})
@@ -552,9 +561,19 @@ if(build_runtimes)
     list(APPEND extra_cmake_args "-DCMAKE_PROGRAM_PATH=${CMAKE_PROGRAM_PATH}")
   endif()
 
-  # TODO: We need to consider passing it as '-DRUNTIMES_x86_64_LLVM_ENABLE_RUNTIMES'.
+  set(libclc_enabled FALSE)
   if("libclc" IN_LIST LLVM_ENABLE_RUNTIMES)
-    foreach(dep clang llvm-link opt llvm-ar llvm-ranlib)
+    set(libclc_enabled TRUE)
+  else()
+    foreach(target ${LLVM_RUNTIME_TARGETS})
+      if("libclc" IN_LIST RUNTIMES_${target}_LLVM_ENABLE_RUNTIMES)
+        set(libclc_enabled TRUE)
+        break()
+      endif()
+    endforeach()
+  endif()
+  if(libclc_enabled)
+    foreach(dep clang llvm-link opt llvm-ar llvm-ranlib llvm-spirv)
       if(TARGET ${dep})
         list(APPEND extra_deps ${dep})
       endif()
@@ -591,6 +610,12 @@ if(build_runtimes)
     endforeach()
   endif()
   if(LLVM_LIBC_GPU_BUILD)
+    set(_gpu_loader "${LLVM_TOOLS_BINARY_DIR}/llvm-gpu-loader${CMAKE_EXECUTABLE_SUFFIX}")
+    foreach(name ${LLVM_RUNTIME_TARGETS})
+      if(name MATCHES "^(amdgcn|nvptx)")
+        set(RUNTIMES_${name}_CMAKE_CROSSCOMPILING_EMULATOR "${_gpu_loader}" CACHE STRING "")
+      endif()
+    endforeach()
     list(APPEND extra_cmake_args "-DLLVM_LIBC_GPU_BUILD=ON")
     if(TARGET llvm-offload-binary)
       list(APPEND extra_deps llvm-offload-binary)
@@ -692,6 +717,76 @@ if(build_runtimes)
           EXTRA_ARGS TARGET_TRIPLE ${name} ${extra_args})
       endforeach()
     endforeach()
+
+    # Generate a default multilib.yaml for each runtime target that has one.
+    if(LLVM_RUNTIME_MULTILIBS)
+      set(_multilib_yaml_outputs)
+      foreach(name ${LLVM_RUNTIME_TARGETS})
+        set(_multilibs_for_target)
+        foreach(multilib ${LLVM_RUNTIME_MULTILIBS})
+          if("${name}" IN_LIST LLVM_RUNTIME_MULTILIB_${multilib}_TARGETS)
+            list(APPEND _multilibs_for_target "${multilib}")
+          endif()
+        endforeach()
+
+        # Generate the file into a temporary. We only copy this if the user has
+        # not provided one either in the build tree or the install directory.
+        if(_multilibs_for_target)
+          set(_yaml [=[
+MultilibVersion: 1.0
+
+Variants:
+- Dir: .
+  Flags: []
+]=])
+          set(_flag_values "")
+          foreach(multilib ${_multilibs_for_target})
+            string(APPEND _yaml "\
+- Dir: ${multilib}
+  Flags: [-fmultilib-flag=${multilib}]
+")
+            string(APPEND _flag_values "\
+  - Name: ${multilib}
+")
+          endforeach()
+          string(APPEND _yaml "
+Mappings: []
+
+Flags:
+- Name: multilib
+  Values:
+  - Name: none
+${_flag_values}\
+  Default: none
+")
+
+          set(_staged_dir "${CMAKE_CURRENT_BINARY_DIR}/multilib-yaml/${name}")
+          set(_staged "${_staged_dir}/multilib.yaml")
+          set(_dest "${LLVM_LIBRARY_DIR}/${name}/multilib.yaml")
+          file(GENERATE OUTPUT "${_staged}" CONTENT "${_yaml}")
+
+          # Omitting DEPENDS so the command only runs when OUTPUT is absent.
+          add_custom_command(
+            OUTPUT "${_dest}"
+            COMMAND "${CMAKE_COMMAND}" -E copy "${_staged}" "${_dest}"
+            COMMENT "Generating default multilib.yaml for ${name}")
+          list(APPEND _multilib_yaml_outputs "${_dest}")
+
+          install(CODE "
+            set(_inst \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/lib/${name}/multilib.yaml\")
+            if(NOT EXISTS \"\${_inst}\")
+              file(INSTALL \"${_staged}\"
+                   DESTINATION \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/lib/${name}\")
+            endif()
+          ")
+        endif()
+      endforeach()
+
+      if(_multilib_yaml_outputs)
+        add_custom_target(runtimes-multilib-yaml ALL DEPENDS ${_multilib_yaml_outputs})
+        set_target_properties(runtimes-multilib-yaml PROPERTIES FOLDER "Runtimes")
+      endif()
+    endif()
   endif()
 
   if(NOT LLVM_BUILD_INSTRUMENTED AND CLANG_ENABLE_BOOTSTRAP)
@@ -715,4 +810,10 @@ if(build_runtimes)
 
     set_property(GLOBAL APPEND PROPERTY LLVM_ALL_ADDITIONAL_TEST_TARGETS runtimes ${extra_deps})
   endif()
+endif()
+
+if(LIBOMP_ENABLE_ARM64X)
+  # TODO: This only needs to depend on openmp-arm64ec-pc-windows-msvc, but the 
+  # openmp targets set up for cross build runtimes don't currently work correctly.
+  add_dependencies(runtimes-configure runtimes-arm64ec-pc-windows-msvc-build)
 endif()

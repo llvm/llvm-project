@@ -1441,12 +1441,16 @@ void OpEmitter::genPropertiesSupport() {
       {1};
 )decl";
   const char *attrGetNoDefaultFmt = R"decl(;
-      if (attr && ::mlir::failed(setFromAttr(prop.{0}, attr, emitError)))
+      if (attr && ::mlir::failed(setFromAttr(prop.{0}, attr, [&]() {{
+            return emitError() << "for `{0}`: ";
+          })))
         return ::mlir::failure();
 )decl";
   const char *attrGetDefaultFmt = R"decl(;
       if (attr) {{
-        if (::mlir::failed(setFromAttr(prop.{0}, attr, emitError)))
+        if (::mlir::failed(setFromAttr(prop.{0}, attr, [&]() {{
+              return emitError() << "for `{0}`: ";
+            })))
           return ::mlir::failure();
       } else {{
         prop.{0} = {1};
@@ -2852,8 +2856,8 @@ void OpEmitter::genInferredTypeCollectiveParamBuilder(
     // function.
     body << formatv(R"(
   if (!attributes.empty()) {
-    ::mlir::OpaqueProperties properties =
-      &{1}.getOrAddProperties<{0}::Properties>();
+    (void){1}.getOrAddProperties<{0}::Properties>();
+    ::mlir::PropertyRef properties = {1}.getRawProperties();
     std::optional<::mlir::RegisteredOperationName> info =
       {1}.name.getRegisteredInfo();
     if (failed(info->setOpPropertiesFromAttribute({1}.name, properties,
@@ -3145,8 +3149,8 @@ void OpEmitter::genCollectiveParamBuilder(CollectiveBuilderKind kind) {
     // function.
     body << formatv(R"(
   if (!attributes.empty()) {
-    ::mlir::OpaqueProperties properties =
-      &{1}.getOrAddProperties<{0}::Properties>();
+    (void){1}.getOrAddProperties<{0}::Properties>();
+    ::mlir::PropertyRef properties = {1}.getRawProperties();
     std::optional<::mlir::RegisteredOperationName> info =
       {1}.name.getRegisteredInfo();
     if (failed(info->setOpPropertiesFromAttribute({1}.name, properties,
@@ -4430,22 +4434,22 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
     constructor->addMemberInitializer("Base", "attrs, properties, regions");
     constructor->addMemberInitializer("odsOperands", "values");
 
-    // Add a forwarding constructor to the previous one that accepts
-    // OpaqueProperties instead and check for null and perform the cast to the
-    // actual properties type.
+    // Add a forwarding constructor that accepts PropertyRef instead of a
+    // concrete properties struct. It checks for null and casts to the actual
+    // properties type.
     paramList[1] = MethodParameter("::mlir::DictionaryAttr", "attrs");
-    paramList[2] = MethodParameter("::mlir::OpaqueProperties", "properties");
-    auto *opaquePropertiesConstructor =
+    paramList[2] = MethodParameter("::mlir::PropertyRef", "properties");
+    auto *propertyRefConstructor =
         genericAdaptor.addConstructor(std::move(paramList));
     if (useProperties) {
-      opaquePropertiesConstructor->addMemberInitializer(
+      propertyRefConstructor->addMemberInitializer(
           genericAdaptor.getClassName(),
           "values, "
           "attrs, "
           "(properties ? *properties.as<Properties *>() : Properties{}), "
           "regions");
     } else {
-      opaquePropertiesConstructor->addMemberInitializer(
+      propertyRefConstructor->addMemberInitializer(
           genericAdaptor.getClassName(),
           "values, "
           "attrs, "
@@ -4702,6 +4706,7 @@ static void emitOpClasses(
 
   for (auto *def : defs) {
     Operator op(*def);
+    OpOrAdaptorHelper emitHelper(op, /*emitForOp=*/true);
     if (emitDecl) {
       {
         NamespaceEmitter emitter(os, op.getCppNamespace());
@@ -4711,9 +4716,15 @@ static void emitOpClasses(
         OpEmitter::emitDecl(op, os, staticVerifierEmitter);
       }
       // Emit the TypeID explicit specialization to have a single definition.
-      if (!op.getCppNamespace().empty())
+      if (!op.getCppNamespace().empty()) {
         os << "MLIR_DECLARE_EXPLICIT_TYPE_ID(" << op.getCppNamespace()
-           << "::" << op.getCppClassName() << ")\n\n";
+           << "::" << op.getCppClassName() << ")\n";
+        if (emitHelper.hasNonEmptyPropertiesStruct())
+          os << "MLIR_DECLARE_EXPLICIT_TYPE_ID(" << op.getCppNamespace()
+             << "::detail::" << op.getCppClassName()
+             << "GenericAdaptorBase::Properties)\n";
+        os << "\n";
+      }
     } else {
       {
         NamespaceEmitter emitter(os, op.getCppNamespace());
@@ -4722,9 +4733,15 @@ static void emitOpClasses(
         OpEmitter::emitDef(op, os, staticVerifierEmitter);
       }
       // Emit the TypeID explicit specialization to have a single definition.
-      if (!op.getCppNamespace().empty())
+      if (!op.getCppNamespace().empty()) {
         os << "MLIR_DEFINE_EXPLICIT_TYPE_ID(" << op.getCppNamespace()
-           << "::" << op.getCppClassName() << ")\n\n";
+           << "::" << op.getCppClassName() << ")\n";
+        if (emitHelper.hasNonEmptyPropertiesStruct())
+          os << "MLIR_DEFINE_EXPLICIT_TYPE_ID(" << op.getCppNamespace()
+             << "::detail::" << op.getCppClassName()
+             << "GenericAdaptorBase::Properties)\n";
+        os << "\n";
+      }
     }
   }
 }

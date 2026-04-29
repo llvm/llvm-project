@@ -132,6 +132,10 @@ FLAGS_ENUM(LaunchFlags){
                     ///< permissions but instead inherit them from its parent.
     eLaunchFlagMemoryTagging =
         (1u << 13), ///< Launch process with memory tagging explicitly enabled.
+    eLaunchFlagUsePipes =
+        (1u << 14), ///< Use anonymous pipes for stdio instead of a ConPTY on
+                    ///< Windows. Useful when terminal emulation is not needed
+                    ///< (e.g. lldb-dap internalConsole mode).
 };
 
 /// Thread Run Modes.
@@ -339,6 +343,12 @@ enum ValueType {
   eValueTypeVTable = 9,              ///< virtual function table
   eValueTypeVTableEntry = 10, ///< function pointer in virtual function table
 };
+
+/// A mask that we can use to check if the value type is synthetic or not.
+// NOTE: This limits the number of value types to 31, but that's 3x more than
+// what we currently have now. See lldb/Utility/ValueType.h for helpers for
+// working with synthetic value types.
+static constexpr unsigned ValueTypeSyntheticMask = 0x20;
 
 /// Token size/granularities for Input Readers.
 
@@ -592,6 +602,7 @@ enum CommandArgumentType {
   eArgTypeFilename,
   eArgTypeFormat,
   eArgTypeFrameIndex,
+  eArgTypeFrameProviderIDRange,
   eArgTypeFullName,
   eArgTypeFunctionName,
   eArgTypeFunctionOrSymbol,
@@ -1439,6 +1450,19 @@ enum DILMode {
   /// Allowed: everything supported by DIL.
   /// \see lldb/docs/dil-expr-lang.ebnf
   eDILModeFull
+};
+
+/// When the Process plugin can retrieve information
+/// about all binaries loaded in the target process,
+/// or given a list of binary load addresses, this
+/// enum specifies how much information needed from
+/// the Process plugin; there may be performance reasons
+/// to limit the amount of information returned.
+enum BinaryInformationLevel {
+  eBinaryInformationLevelAddrOnly,
+  eBinaryInformationLevelAddrName,
+  eBinaryInformationLevelAddrNameUUID,
+  eBinaryInformationLevelFull
 };
 
 } // namespace lldb

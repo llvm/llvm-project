@@ -589,7 +589,7 @@ bool llvm::extractParts(Register Reg, LLT RegTy, LLT MainTy, LLT &LeftoverTy,
     return true;
   }
 
-  LeftoverTy = LLT::scalar(LeftoverSize);
+  LeftoverTy = LLT::integer(LeftoverSize);
   // For irregular sizes, extract the individual parts.
   for (unsigned I = 0; I != NumParts; ++I) {
     Register NewReg = MRI.createGenericVirtualRegister(MainTy);
@@ -776,6 +776,10 @@ llvm::ConstantFoldFPBinOp(unsigned Opcode, const Register Op1,
     return minimum(C1, C2);
   case TargetOpcode::G_FMAXIMUM:
     return maximum(C1, C2);
+  case TargetOpcode::G_FMINIMUMNUM:
+    return minimumnum(C1, C2);
+  case TargetOpcode::G_FMAXIMUMNUM:
+    return maximumnum(C1, C2);
   case TargetOpcode::G_FMINNUM_IEEE:
   case TargetOpcode::G_FMAXNUM_IEEE:
     // FIXME: These operations were unfortunately named. fminnum/fmaxnum do not
@@ -790,15 +794,35 @@ llvm::ConstantFoldFPBinOp(unsigned Opcode, const Register Op1,
   return std::nullopt;
 }
 
+static GBuildVector *getBuildVectorLikeDef(Register Reg,
+                                           const MachineRegisterInfo &MRI) {
+  if (auto *BV = getOpcodeDef<GBuildVector>(Reg, MRI))
+    return BV;
+
+  auto *Bitcast = getOpcodeDef(TargetOpcode::G_BITCAST, Reg, MRI);
+  if (!Bitcast)
+    return nullptr;
+
+  auto [Dst, DstTy, Src, SrcTy] = Bitcast->getFirst2RegLLTs();
+  if (!SrcTy.isVector() || !DstTy.isVector())
+    return nullptr;
+  if (SrcTy.getElementCount() != DstTy.getElementCount())
+    return nullptr;
+  if (SrcTy.getScalarSizeInBits() != DstTy.getScalarSizeInBits())
+    return nullptr;
+
+  return getOpcodeDef<GBuildVector>(Src, MRI);
+}
+
 SmallVector<APInt>
 llvm::ConstantFoldVectorBinop(unsigned Opcode, const Register Op1,
                               const Register Op2,
                               const MachineRegisterInfo &MRI) {
-  auto *SrcVec2 = getOpcodeDef<GBuildVector>(Op2, MRI);
+  auto *SrcVec2 = getBuildVectorLikeDef(Op2, MRI);
   if (!SrcVec2)
     return SmallVector<APInt>();
 
-  auto *SrcVec1 = getOpcodeDef<GBuildVector>(Op1, MRI);
+  auto *SrcVec1 = getBuildVectorLikeDef(Op1, MRI);
   if (!SrcVec1)
     return SmallVector<APInt>();
 
@@ -811,89 +835,6 @@ llvm::ConstantFoldVectorBinop(unsigned Opcode, const Register Op1,
     FoldedElements.push_back(*MaybeCst);
   }
   return FoldedElements;
-}
-
-bool llvm::isKnownNeverNaN(Register Val, const MachineRegisterInfo &MRI,
-                           bool SNaN) {
-  const MachineInstr *DefMI = MRI.getVRegDef(Val);
-  if (!DefMI)
-    return false;
-
-  if (DefMI->getFlag(MachineInstr::FmNoNans))
-    return true;
-
-  // If the value is a constant, we can obviously see if it is a NaN or not.
-  if (const ConstantFP *FPVal = getConstantFPVRegVal(Val, MRI)) {
-    return !FPVal->getValueAPF().isNaN() ||
-           (SNaN && !FPVal->getValueAPF().isSignaling());
-  }
-
-  if (DefMI->getOpcode() == TargetOpcode::G_BUILD_VECTOR) {
-    for (const auto &Op : DefMI->uses())
-      if (!isKnownNeverNaN(Op.getReg(), MRI, SNaN))
-        return false;
-    return true;
-  }
-
-  switch (DefMI->getOpcode()) {
-  default:
-    break;
-  case TargetOpcode::G_FADD:
-  case TargetOpcode::G_FSUB:
-  case TargetOpcode::G_FMUL:
-  case TargetOpcode::G_FDIV:
-  case TargetOpcode::G_FREM:
-  case TargetOpcode::G_FSIN:
-  case TargetOpcode::G_FCOS:
-  case TargetOpcode::G_FTAN:
-  case TargetOpcode::G_FACOS:
-  case TargetOpcode::G_FASIN:
-  case TargetOpcode::G_FATAN:
-  case TargetOpcode::G_FATAN2:
-  case TargetOpcode::G_FCOSH:
-  case TargetOpcode::G_FSINH:
-  case TargetOpcode::G_FTANH:
-  case TargetOpcode::G_FMA:
-  case TargetOpcode::G_FMAD:
-    if (SNaN)
-      return true;
-
-    // TODO: Need isKnownNeverInfinity
-    return false;
-  case TargetOpcode::G_FMINNUM_IEEE:
-  case TargetOpcode::G_FMAXNUM_IEEE: {
-    if (SNaN)
-      return true;
-    // This can return a NaN if either operand is an sNaN, or if both operands
-    // are NaN.
-    return (isKnownNeverNaN(DefMI->getOperand(1).getReg(), MRI) &&
-            isKnownNeverSNaN(DefMI->getOperand(2).getReg(), MRI)) ||
-           (isKnownNeverSNaN(DefMI->getOperand(1).getReg(), MRI) &&
-            isKnownNeverNaN(DefMI->getOperand(2).getReg(), MRI));
-  }
-  case TargetOpcode::G_FMINNUM:
-  case TargetOpcode::G_FMAXNUM: {
-    // Only one needs to be known not-nan, since it will be returned if the
-    // other ends up being one.
-    return isKnownNeverNaN(DefMI->getOperand(1).getReg(), MRI, SNaN) ||
-           isKnownNeverNaN(DefMI->getOperand(2).getReg(), MRI, SNaN);
-  }
-  }
-
-  if (SNaN) {
-    // FP operations quiet. For now, just handle the ones inserted during
-    // legalization.
-    switch (DefMI->getOpcode()) {
-    case TargetOpcode::G_FPEXT:
-    case TargetOpcode::G_FPTRUNC:
-    case TargetOpcode::G_FCANONICALIZE:
-      return true;
-    default:
-      return false;
-    }
-  }
-
-  return false;
 }
 
 Align llvm::inferAlignFromPtrInfo(MachineFunction &MF,
@@ -999,36 +940,52 @@ llvm::ConstantFoldIntToFloat(unsigned Opcode, LLT DstTy, Register Src,
   return std::nullopt;
 }
 
-std::optional<SmallVector<unsigned>>
-llvm::ConstantFoldCountZeros(Register Src, const MachineRegisterInfo &MRI,
-                             std::function<unsigned(APInt)> CB) {
-  LLT Ty = MRI.getType(Src);
-  SmallVector<unsigned> FoldedCTLZs;
-  auto tryFoldScalar = [&](Register R) -> std::optional<unsigned> {
-    auto MaybeCst = getIConstantVRegVal(R, MRI);
-    if (!MaybeCst)
-      return std::nullopt;
-    return CB(*MaybeCst);
+SmallVector<APInt>
+llvm::ConstantFoldUnaryIntOp(unsigned Opcode, LLT DstTy, Register Src,
+                             const MachineRegisterInfo &MRI) {
+  unsigned EltBits = DstTy.getScalarSizeInBits();
+  auto Fold = [Opcode, EltBits](const APInt &V) -> APInt {
+    switch (Opcode) {
+    case TargetOpcode::G_CTLZ:
+    case TargetOpcode::G_CTLZ_ZERO_UNDEF:
+      return APInt(EltBits, V.countl_zero());
+    case TargetOpcode::G_CTTZ:
+    case TargetOpcode::G_CTTZ_ZERO_UNDEF:
+      return APInt(EltBits, V.countr_zero());
+    case TargetOpcode::G_CTPOP:
+      return APInt(EltBits, V.popcount());
+    case TargetOpcode::G_ABS:
+      return V.abs();
+    case TargetOpcode::G_BSWAP:
+      return V.byteSwap();
+    case TargetOpcode::G_BITREVERSE:
+      return V.reverseBits();
+    }
+    llvm_unreachable("unexpected opcode in ConstantFoldUnaryIntOp");
   };
-  if (Ty.isVector()) {
-    // Try to constant fold each element.
+
+  auto tryFoldScalar = [&](Register R) -> std::optional<APInt> {
+    if (auto MaybeCst = getIConstantVRegVal(R, MRI))
+      return Fold(*MaybeCst);
+    return std::nullopt;
+  };
+  if (MRI.getType(Src).isVector()) {
     auto *BV = getOpcodeDef<GBuildVector>(Src, MRI);
     if (!BV)
-      return std::nullopt;
+      return {};
+    SmallVector<APInt> Folded;
     for (unsigned SrcIdx = 0; SrcIdx < BV->getNumSources(); ++SrcIdx) {
       if (auto MaybeFold = tryFoldScalar(BV->getSourceReg(SrcIdx))) {
-        FoldedCTLZs.emplace_back(*MaybeFold);
+        Folded.emplace_back(std::move(*MaybeFold));
         continue;
       }
-      return std::nullopt;
+      return {};
     }
-    return FoldedCTLZs;
+    return Folded;
   }
-  if (auto MaybeCst = tryFoldScalar(Src)) {
-    FoldedCTLZs.emplace_back(*MaybeCst);
-    return FoldedCTLZs;
-  }
-  return std::nullopt;
+  if (auto MaybeCst = tryFoldScalar(Src))
+    return {std::move(*MaybeCst)};
+  return {};
 }
 
 std::optional<SmallVector<APInt>>
@@ -1325,7 +1282,7 @@ LLT llvm::getGCDType(LLT OrigTy, LLT TargetTy) {
   LLT TargetScalar = TargetTy.getScalarType();
   unsigned GCD = std::gcd(OrigScalar.getSizeInBits().getFixedValue(),
                           TargetScalar.getSizeInBits().getFixedValue());
-  return LLT::scalar(GCD);
+  return LLT::integer(GCD);
 }
 
 std::optional<int> llvm::getSplatIndex(MachineInstr &MI) {

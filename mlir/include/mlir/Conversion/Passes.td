@@ -1688,6 +1688,10 @@ def ConvertXeGPUToXeVMPass : Pass<"convert-xegpu-to-xevm"> {
                            "memref::MemRefDialect", "arith::ArithDialect",
                            "LLVM::LLVMDialect", "index::IndexDialect",
                            "gpu::GPUDialect", "scf::SCFDialect"];
+  let options = [Option<"use64bitIndex", "use-64bit-index", "bool",
+                        /*default=*/"true",
+                        "Use 64-bit integers to convert index types">,
+  ];
 }
 
 #endif // MLIR_CONVERSION_PASSES

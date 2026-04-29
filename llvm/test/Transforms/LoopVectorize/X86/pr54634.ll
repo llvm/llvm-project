@@ -120,7 +120,7 @@ top:
   %.unpack2 = load i64, ptr addrspace(10) %.elt1, align 8, !tbaa !8
   br label %L26
 
-L26:                                              ; preds = %L26, %top
+L26:
   %value_phi5 = phi i64 [ 0, %top ], [ %8, %L26 ]
   %.repack = getelementptr inbounds { ptr addrspace(10), i64 }, ptr addrspace(13) %7, i64 %value_phi5, i32 0
   store ptr addrspace(10) %.unpack, ptr addrspace(13) %.repack, align 8, !tbaa !10
@@ -130,7 +130,7 @@ L26:                                              ; preds = %L26, %top
   %.not = icmp eq i64 %value_phi5, %2
   br i1 %.not, label %L44, label %L26
 
-L44:                                              ; preds = %L26
+L44:
   ret ptr addrspace(10) null
 }
 

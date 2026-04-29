@@ -115,7 +115,11 @@ public:
       : CodeGenTargetMachineImpl(
             Target(), "", Triple(""), "", "", getTargetOptionsForBogusMachine(),
             Reloc::Static, CodeModel::Small, CodeGenOptLevel::Default),
-        ST(*this) {}
+        ST(*this) {
+    // With an empty Triple, `initAsmInfo` cannot be called. Provide a
+    // default MCAsmInfo so that MCContext can be created.
+    AsmInfo = std::make_unique<MCAsmInfo>(Options.MCOptions);
+  }
 
   ~BogusTargetMachine() override = default;
 

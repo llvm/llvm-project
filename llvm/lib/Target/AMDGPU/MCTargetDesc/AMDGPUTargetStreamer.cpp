@@ -116,6 +116,8 @@ StringRef AMDGPUTargetStreamer::getArchNameFromElfMach(unsigned ElfMach) {
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1152: AK = GK_GFX1152; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1153: AK = GK_GFX1153; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1170: AK = GK_GFX1170; break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1171: AK = GK_GFX1171; break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1172: AK = GK_GFX1172; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1200: AK = GK_GFX1200; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1201: AK = GK_GFX1201; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1250: AK = GK_GFX1250; break;
@@ -206,6 +208,8 @@ unsigned AMDGPUTargetStreamer::getElfMach(StringRef GPU) {
   case GK_GFX1152: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1152;
   case GK_GFX1153: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1153;
   case GK_GFX1170: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1170;
+  case GK_GFX1171: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1171;
+  case GK_GFX1172: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1172;
   case GK_GFX1200: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1200;
   case GK_GFX1201: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1201;
   case GK_GFX1250: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1250;
@@ -291,9 +295,9 @@ void AMDGPUTargetAsmStreamer::EmitMCResourceInfo(
     const MCSymbol *HasRecursion, const MCSymbol *HasIndirectCall) {
 #define PRINT_RES_INFO(ARG)                                                    \
   OS << "\t.set ";                                                             \
-  ARG->print(OS, getContext().getAsmInfo());                                   \
+  ARG->print(OS, &getContext().getAsmInfo());                                  \
   OS << ", ";                                                                  \
-  getContext().getAsmInfo()->printExpr(OS, *ARG->getVariableValue());          \
+  getContext().getAsmInfo().printExpr(OS, *ARG->getVariableValue());           \
   Streamer.addBlankLine();
 
   PRINT_RES_INFO(NumVGPR);
@@ -314,9 +318,9 @@ void AMDGPUTargetAsmStreamer::EmitMCResourceMaximums(
     const MCSymbol *MaxNamedBarrier) {
 #define PRINT_RES_INFO(ARG)                                                    \
   OS << "\t.set ";                                                             \
-  ARG->print(OS, getContext().getAsmInfo());                                   \
+  ARG->print(OS, &getContext().getAsmInfo());                                  \
   OS << ", ";                                                                  \
-  getContext().getAsmInfo()->printExpr(OS, *ARG->getVariableValue());          \
+  getContext().getAsmInfo().printExpr(OS, *ARG->getVariableValue());           \
   Streamer.addBlankLine();
 
   PRINT_RES_INFO(MaxVGPR);
@@ -375,7 +379,7 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
     const MCExpr *NextSGPR, const MCExpr *ReserveVCC,
     const MCExpr *ReserveFlatScr) {
   IsaVersion IVersion = getIsaVersion(STI.getCPU());
-  const MCAsmInfo *MAI = getContext().getAsmInfo();
+  const MCAsmInfo &MAI = getContext().getAsmInfo();
 
   OS << "\t.amdhsa_kernel " << KernelName << '\n';
 
@@ -385,13 +389,13 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
     const MCExpr *ShiftedAndMaskedExpr =
         MCKernelDescriptor::bits_get(Expr, Shift, Mask, getContext());
     const MCExpr *New = foldAMDGPUMCExpr(ShiftedAndMaskedExpr, getContext());
-    printAMDGPUMCExpr(New, OS, MAI);
+    printAMDGPUMCExpr(New, OS, &MAI);
     OS << '\n';
   };
 
   auto EmitMCExpr = [&](const MCExpr *Value) {
     const MCExpr *NewExpr = foldAMDGPUMCExpr(Value, getContext());
-    printAMDGPUMCExpr(NewExpr, OS, MAI);
+    printAMDGPUMCExpr(NewExpr, OS, &MAI);
   };
 
   OS << "\t\t.amdhsa_group_segment_fixed_size ";
@@ -516,7 +520,7 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
         accum_bits, MCConstantExpr::create(4, getContext()), getContext());
     OS << "\t\t.amdhsa_accum_offset ";
     const MCExpr *New = foldAMDGPUMCExpr(accum_bits, getContext());
-    printAMDGPUMCExpr(New, OS, MAI);
+    printAMDGPUMCExpr(New, OS, &MAI);
     OS << '\n';
   }
 

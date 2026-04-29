@@ -712,7 +712,7 @@ public:
   /// Get a timestamp for output into the AST file. The actual timestamp
   /// of the specified file may be ignored if we have been instructed to not
   /// include timestamps in the output file.
-  time_t getTimestampForOutput(const FileEntry *E) const;
+  time_t getTimestampForOutput(time_t ModTime) const;
 
   /// Write a precompiled header or a module with the AST produced by the
   /// \c Sema object, or a dependency scanner module with the preprocessor state
@@ -733,8 +733,7 @@ public:
   /// the module but currently is merely a random 32-bit number.
   ASTFileSignature WriteAST(llvm::PointerUnion<Sema *, Preprocessor *> Subject,
                             StringRef OutputFile, Module *WritingModule,
-                            StringRef isysroot,
-                            bool ShouldCacheASTInMemory = false);
+                            StringRef isysroot);
 
   /// Emit a token.
   void AddToken(const Token &Tok, RecordDataImpl &Record);
@@ -1011,7 +1010,6 @@ class PCHGenerator : public SemaConsumer {
   llvm::BitstreamWriter Stream;
   ASTWriter Writer;
   bool AllowASTWithErrors;
-  bool ShouldCacheASTInMemory;
 
 protected:
   ASTWriter &getWriter() { return Writer; }
@@ -1033,7 +1031,6 @@ public:
                ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
                bool AllowASTWithErrors = false, bool IncludeTimestamps = true,
                bool BuildingImplicitModule = false,
-               bool ShouldCacheASTInMemory = false,
                bool GeneratingReducedBMI = false);
   ~PCHGenerator() override;
 

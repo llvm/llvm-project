@@ -601,6 +601,40 @@ TEST(LocateSymbol, All) {
         }
       )cpp",
 
+      R"cpp(// Field in offsetof
+        struct Foo { int [[x]]; };
+        int y = __builtin_offsetof(Foo, ^x);
+      )cpp",
+
+      R"cpp(// Outer field in nested offsetof designator
+        struct Inner { int c; };
+        struct A { Inner [[B]]; };
+        int y = __builtin_offsetof(A, ^B.c);
+      )cpp",
+
+      R"cpp(// Inner field in nested offsetof designator
+        struct Inner { int [[c]]; };
+        struct A { Inner B; };
+        int y = __builtin_offsetof(A, B.^c);
+      )cpp",
+
+      R"cpp(// Field in offsetof macro form
+        #define offsetof(t, m) __builtin_offsetof(t, m)
+        struct Foo { int [[x]]; };
+        int y = offsetof(Foo, ^x);
+      )cpp",
+
+      R"cpp(// Inherited field in offsetof
+        struct B { int [[x]]; };
+        struct D : B {};
+        int y = __builtin_offsetof(D, ^x);
+      )cpp",
+
+      R"cpp(// Builtin offsetof name is not a field reference.
+        struct Foo { int x; };
+        int y = __builtin_o^ffsetof(Foo, x);
+      )cpp",
+
       R"cpp(// Method call
         struct Foo { int $decl[[x]](); };
         int main() {
@@ -2094,14 +2128,19 @@ TEST(FindType, All) {
 TEST(FindType, Definition) {
   Annotations A(R"cpp(
     class $decl[[X]];
-    X *^x;
+    X *$x^x;
     class $def[[X]] {};
+
+    template <class T>
+    concept $Concept^True = true;
   )cpp");
   auto TU = TestTU::withCode(A.code().str());
+  TU.ExtraArgs.push_back("-std=c++20");
   ParsedAST AST = TU.build();
 
-  EXPECT_THAT(findType(AST, A.point(), nullptr),
+  EXPECT_THAT(findType(AST, A.point("x"), nullptr),
               ElementsAre(sym("X", A.range("decl"), A.range("def"))));
+  EXPECT_THAT(findType(AST, A.point("Concept"), nullptr), IsEmpty());
 }
 
 TEST(FindType, Index) {

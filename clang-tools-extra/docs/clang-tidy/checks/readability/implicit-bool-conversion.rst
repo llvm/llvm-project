@@ -139,6 +139,13 @@ Options
    When `true`, the check will allow conditional pointer conversions. Default
    is `false`.
 
+.. option::  AllowLogicalOperatorConversion
+
+   When `true`, the check will suppress warnings for implicit conversions of
+   logical operator results (``&&``, ``||``, ``!``) to ``bool``. These
+   operators always produce values equal to ``0`` or ``1``, so the conversion
+   is safe. Default is `false`.
+
 .. option::  UseUpperCaseLiteralSuffix
 
    When `true`, the replacements will use an uppercase literal suffix in the

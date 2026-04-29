@@ -521,6 +521,7 @@ define amdgpu_kernel void @introduced_copy_to_sgpr(i64 %arg, i32 %arg1, i32 %arg
 ; GFX908-NEXT:    v_cvt_f32_f16_e32 v18, s0
 ; GFX908-NEXT:    v_mov_b32_e32 v17, 0
 ; GFX908-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; GFX908-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX908-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; GFX908-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX908-NEXT:    v_readfirstlane_b32 s2, v0
@@ -541,11 +542,10 @@ define amdgpu_kernel void @introduced_copy_to_sgpr(i64 %arg, i32 %arg1, i32 %arg
 ; GFX908-NEXT:    s_lshr_b32 s2, s0, 16
 ; GFX908-NEXT:    v_cvt_f32_f16_e32 v19, s2
 ; GFX908-NEXT:    s_lshl_b64 s[6:7], s[4:5], 5
-; GFX908-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX908-NEXT:    s_lshl_b64 s[14:15], s[10:11], 5
 ; GFX908-NEXT:    s_and_b64 s[0:1], exec, s[0:1]
 ; GFX908-NEXT:    s_lshl_b64 s[16:17], s[8:9], 5
-; GFX908-NEXT:    v_mov_b32_e32 v1, 0
+; GFX908-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    v_readfirstlane_b32 s2, v16
 ; GFX908-NEXT:    s_and_b32 s2, 0xffff, s2

@@ -3,8 +3,8 @@
 ## Non-section symbols and offset <= section_size are accepted, matching GNU ld.
 
 # RUN: llvm-mc %s -o %t.o -filetype=obj -triple=x86_64
-# RUN: not ld.lld %t.o -o /dev/null -shared 2>&1 | FileCheck %s -DPREFIX=error --implicit-check-not=error:
-# RUN: ld.lld %t.o -o /dev/null -shared --noinhibit-exec 2>&1 | FileCheck %s -DPREFIX=warning --implicit-check-not=warning:
+# RUN: not ld.lld --threads=1 %t.o -o /dev/null -shared 2>&1 | FileCheck %s -DPREFIX=error --implicit-check-not=error:
+# RUN: ld.lld --threads=1 %t.o -o /dev/null -shared --noinhibit-exec 2>&1 | FileCheck %s -DPREFIX=warning --implicit-check-not=warning:
 
 ## .foo is 8 bytes with entsize=8 (1 piece). .foo+8 (offset==size) is accepted.
 # CHECK:      [[PREFIX]]: {{.*}}:(.foo): offset 0x9 is outside the section
@@ -12,7 +12,7 @@
 # CHECK-NEXT: [[PREFIX]]: {{.*}}:(.foo): offset 0xffffffffffffffff is outside the section
 ## .rodata.str1.1 is "abc\0" (4 bytes). offset<=size is accepted.
 # CHECK-NEXT: [[PREFIX]]: {{.*}}:(.rodata.str1.1): offset 0x5 is outside the section
-## .data.retain references .foo-1 as well.
+## .data.retain references .foo-2 as well.
 # CHECK-NEXT: [[PREFIX]]: {{.*}}:(.foo): offset 0xfffffffffffffffe is outside the section
 
 ## Test that --gc-sections with an out-of-bounds offset doesn't crash.

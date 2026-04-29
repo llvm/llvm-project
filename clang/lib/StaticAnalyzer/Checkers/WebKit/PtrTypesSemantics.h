@@ -14,6 +14,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PointerUnion.h"
 #include <optional>
+#include <string>
 
 namespace clang {
 class CXXBaseSpecifier;

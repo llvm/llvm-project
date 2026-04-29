@@ -459,7 +459,6 @@ public:
                 lldb::offset_t data_offset) override {
     // All we have to do is read the opcode which can be easy for some
     // architectures
-    bool got_op = false;
     DisassemblerScope disasm(*this);
     if (disasm) {
       const ArchSpec &arch = disasm->GetArchitecture();
@@ -470,42 +469,31 @@ public:
       if (min_op_byte_size == max_op_byte_size) {
         // Fixed size instructions, just read that amount of data.
         if (!data.ValidOffsetForDataOfSize(data_offset, min_op_byte_size))
-          return false;
+          return 0;
 
         switch (min_op_byte_size) {
         case 1:
           m_opcode.SetOpcode8(data.GetU8(&data_offset), byte_order);
-          got_op = true;
           break;
 
         case 2:
           m_opcode.SetOpcode16(data.GetU16(&data_offset), byte_order);
-          got_op = true;
           break;
 
         case 4:
           m_opcode.SetOpcode32(data.GetU32(&data_offset), byte_order);
-          got_op = true;
           break;
 
         case 8:
           m_opcode.SetOpcode64(data.GetU64(&data_offset), byte_order);
-          got_op = true;
           break;
 
         default:
-          if (arch.GetTriple().isRISCV())
-            m_opcode.SetOpcode16_32TupleBytes(
-                data.PeekData(data_offset, min_op_byte_size), min_op_byte_size,
-                byte_order);
-          else
-            m_opcode.SetOpcodeBytes(
-                data.PeekData(data_offset, min_op_byte_size), min_op_byte_size);
-          got_op = true;
+          m_opcode.SetOpcodeBytes(data.PeekData(data_offset, min_op_byte_size),
+                                  min_op_byte_size);
           break;
         }
-      }
-      if (!got_op) {
+      } else {
         bool is_alternate_isa = false;
         DisassemblerLLVMC::MCDisasmInstance *mc_disasm_ptr =
             GetDisasmToUse(is_alternate_isa, disasm);
@@ -1296,8 +1284,8 @@ DisassemblerLLVMC::MCDisasmInstance::Create(const char *triple_name,
     return Instance();
 
   std::unique_ptr<llvm::MCContext> context_up(
-      new llvm::MCContext(llvm::Triple(triple), asm_info_up.get(),
-                          reg_info_up.get(), subtarget_info_up.get()));
+      new llvm::MCContext(llvm::Triple(triple), *asm_info_up, reg_info_up.get(),
+                          subtarget_info_up.get()));
   if (!context_up)
     return Instance();
 

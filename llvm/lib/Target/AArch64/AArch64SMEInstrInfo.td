@@ -26,10 +26,6 @@ def AArch64_cond_smstop  : SDNode<"AArch64ISD::COND_SMSTOP", SDTypeProfile<0, 3,
                              [SDTCisInt<0>, SDTCisInt<1>, SDTCisInt<2>]>,
                              [SDNPHasChain, SDNPSideEffect, SDNPVariadic,
                               SDNPOptInGlue, SDNPOutGlue]>;
-def AArch64_restore_za : SDNode<"AArch64ISD::RESTORE_ZA", SDTypeProfile<0, 3,
-                             [SDTCisInt<0>, SDTCisPtrTy<1>]>,
-                             [SDNPHasChain, SDNPSideEffect, SDNPVariadic,
-                              SDNPOptInGlue]>;
 def AArch64_restore_zt : SDNode<"AArch64ISD::RESTORE_ZT", SDTypeProfile<0, 2,
                                 [SDTCisInt<0>, SDTCisPtrTy<1>]>,
                                 [SDNPHasChain, SDNPSideEffect, SDNPMayLoad]>;
@@ -60,52 +56,15 @@ def AArch64_check_matching_vl
 def : Pat<(AArch64_check_matching_vl), (CHECK_MATCHING_VL_PSEUDO)>;
 
 //===----------------------------------------------------------------------===//
-// Old SME ABI lowering ISD nodes/pseudos (deprecated)
-//===----------------------------------------------------------------------===//
-
-def AArch64AllocateZABuffer : SDNode<"AArch64ISD::ALLOCATE_ZA_BUFFER", SDTypeProfile<1, 1,
-                              [SDTCisInt<0>, SDTCisInt<1>]>,
-                              [SDNPHasChain, SDNPSideEffect]>;
-let usesCustomInserter = 1, Defs = [SP], Uses = [SP] in {
-  def AllocateZABuffer : Pseudo<(outs GPR64sp:$dst), (ins GPR64:$size), []>, Sched<[WriteI]> {}
-}
-def : Pat<(i64 (AArch64AllocateZABuffer GPR64:$size)),
-          (AllocateZABuffer $size)>;
-
-def AArch64InitTPIDR2Obj  : SDNode<"AArch64ISD::INIT_TPIDR2OBJ", SDTypeProfile<0, 2,
-                              [SDTCisInt<0>, SDTCisInt<1>]>, [SDNPHasChain, SDNPMayStore]>;
-let usesCustomInserter = 1 in {
-  def InitTPIDR2Obj : Pseudo<(outs), (ins GPR64:$buffer, GPR64:$save_slices), [(AArch64InitTPIDR2Obj GPR64:$buffer, GPR64:$save_slices)]>, Sched<[WriteI]> {}
-}
-
-// Nodes to allocate a save buffer for SME.
-// Needed for __arm_agnostic("sme_za_state").
-def AArch64SMESaveSize : SDNode<"AArch64ISD::GET_SME_SAVE_SIZE", SDTypeProfile<1, 0,
-                               [SDTCisInt<0>]>, [SDNPHasChain]>;
-let usesCustomInserter = 1, Defs = [X0] in {
-  def GetSMESaveSize : Pseudo<(outs GPR64:$dst), (ins), []>, Sched<[]> {}
-}
-def : Pat<(i64 AArch64SMESaveSize), (GetSMESaveSize)>;
-
-def AArch64AllocateSMESaveBuffer : SDNode<"AArch64ISD::ALLOC_SME_SAVE_BUFFER", SDTypeProfile<1, 1,
-                                          [SDTCisInt<0>, SDTCisInt<1>]>, [SDNPHasChain]>;
-let usesCustomInserter = 1, Defs = [SP] in {
-  def AllocateSMESaveBuffer : Pseudo<(outs GPR64sp:$dst), (ins GPR64:$size), []>, Sched<[WriteI]> {}
-}
-def : Pat<(i64 (AArch64AllocateSMESaveBuffer GPR64:$size)),
-          (AllocateSMESaveBuffer $size)>;
-
-//===----------------------------------------------------------------------===//
-// New SME ABI lowering ISD nodes/pseudos (-aarch64-new-sme-abi)
+// SME ABI lowering ISD nodes/pseudos
 //===----------------------------------------------------------------------===//
 
 let hasSideEffects = 1, isMeta = 1 in {
   def InOutZAUsePseudo : Pseudo<(outs), (ins), []>, Sched<[]>;
   def RequiresZASavePseudo : Pseudo<(outs), (ins), []>, Sched<[]>;
   def RequiresZT0SavePseudo : Pseudo<(outs), (ins), []>, Sched<[]>;
+  def SMEStateAllocPseudo : Pseudo<(outs), (ins), []>, Sched<[]>;
 }
-
-def SMEStateAllocPseudo : Pseudo<(outs), (ins), []>, Sched<[]>;
 
 def CommitZASavePseudo
   : Pseudo<(outs),
@@ -319,10 +278,6 @@ def RestoreZAPseudo :
   Pseudo<(outs),
          (ins GPR64:$tpidr2_el0, GPR64sp:$tpidr2obj, i64imm:$restore_routine, variable_ops), []>,
          Sched<[]>;
-
-def : Pat<(AArch64_restore_za
-            (i64 GPR64:$tpidr2_el0), (i64 GPR64sp:$tpidr2obj), (i64 texternalsym:$restore_routine)),
-          (RestoreZAPseudo GPR64:$tpidr2_el0, GPR64sp:$tpidr2obj, texternalsym:$restore_routine)>;
 
 // Read and write TPIDR2_EL0
 def : Pat<(int_aarch64_sme_set_tpidr2 i64:$val),

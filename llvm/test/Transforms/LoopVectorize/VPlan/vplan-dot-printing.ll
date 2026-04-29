@@ -4,7 +4,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 ; Verify that -vplan-print-in-dot-format option works.
 
-define void @print_call_and_memory(i64 %n, ptr noalias %y, ptr noalias %x) nounwind uwtable {
+define void @print_call_and_memory(i64 %n, ptr noalias %y, ptr noalias %x) {
 ; CHECK:      digraph VPlan {
 ; CHECK-NEXT:  graph [labelloc=t, fontsize=30; label="Vectorization Plan\nInitial VPlan for VF=\{4\},UF\>=1\nLive-in vp\<[[VF:%.+]]\> = VF\nLive-in vp\<[[VFxUF:%.+]]\> = VF * UF\nLive-in vp\<[[VEC_TC:%.+]]\> = vector-trip-count\nLive-in ir\<%n\> = original trip-count\n"]
 ; CHECK-NEXT:  node [shape=rect, fontname=Courier, fontsize=30]
@@ -35,9 +35,9 @@ define void @print_call_and_memory(i64 %n, ptr noalias %y, ptr noalias %x) nounw
 ; CHECK-NEXT:  subgraph cluster_N5 {
 ; CHECK-NEXT:    fontname=Courier
 ; CHECK-NEXT:    label="\<x1\> vector loop"
+; CHECK-NEXT:    "vp\<[[CAN_IV:%.+]]\> = CANONICAL-IV"
 ; CHECK-NEXT:    N4 [label =
 ; CHECK-NEXT:    "vector.body:\l" +
-; CHECK-NEXT:    "  EMIT vp\<[[CAN_IV:%.+]]\> = CANONICAL-INDUCTION ir\<0\>, vp\<[[CAN_IV_NEXT:%.+]]\>\l" +
 ; CHECK-NEXT:    "  vp\<[[STEPS:%.+]]\> = SCALAR-STEPS vp\<[[CAN_IV]]\>, ir\<1\>, vp\<[[VF]]\>\l" +
 ; CHECK-NEXT:    "  CLONE ir\<%arrayidx\> = getelementptr inbounds ir\<%y\>, vp\<[[STEPS]]\>\l" +
 ; CHECK-NEXT:    "  vp\<[[VEC_PTR:%.+]]\> = vector-pointer inbounds ir\<%arrayidx\>\l" +
@@ -46,7 +46,7 @@ define void @print_call_and_memory(i64 %n, ptr noalias %y, ptr noalias %x) nounw
 ; CHECK-NEXT:    "  CLONE ir\<%arrayidx2\> = getelementptr inbounds ir\<%x\>, vp\<[[STEPS]]\>\l" +
 ; CHECK-NEXT:    "  vp\<[[VEC_PTR2:%.+]]\> = vector-pointer inbounds ir\<%arrayidx2\>\l" +
 ; CHECK-NEXT:    "  WIDEN store vp\<[[VEC_PTR2]]\>, ir\<%call\>\l" +
-; CHECK-NEXT:    "  EMIT vp\<[[CAN_IV_NEXT]]\> = add nuw vp\<[[CAN_IV]]\>, vp\<[[VFxUF]]\>\l" +
+; CHECK-NEXT:    "  EMIT vp\<[[CAN_IV_NEXT:%.+]]\> = add nuw vp\<[[CAN_IV]]\>, vp\<[[VFxUF]]\>\l" +
 ; CHECK-NEXT:    "  EMIT branch-on-count vp\<[[CAN_IV_NEXT]]\>, vp\<[[VEC_TC]]\>\l" +
 ; CHECK-NEXT:    "No successors\l"
 ; CHECK-NEXT:  ]
@@ -55,7 +55,7 @@ entry:
   %cmp6 = icmp sgt i64 %n, 0
   br i1 %cmp6, label %for.body, label %for.end
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds float, ptr %y, i64 %iv
   %lv = load float, ptr %arrayidx, align 4
@@ -66,8 +66,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i64 %iv.next, %n
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
-declare float @llvm.sqrt.f32(float) nounwind readnone

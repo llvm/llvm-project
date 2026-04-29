@@ -177,11 +177,14 @@ bool mapSecondary(const Options &Options, uptr CommitBase, uptr CommitSize,
     }
   }
 
-  const uptr MaxUnreleasedCacheBytes = MaxUnreleasedCachePages * PageSize;
-  if (useMemoryTagging<Config>(Options) &&
-      CommitSize > MaxUnreleasedCacheBytes) {
-    const uptr UntaggedPos =
-        Max(AllocPos, CommitBase + MaxUnreleasedCacheBytes);
+  const uptr MaxMteMappedBytes = 2 * PageSize;
+  if (useMemoryTagging<Config>(Options) && CommitSize > MaxMteMappedBytes) {
+    // If the headers cross page boundary then two pages need to be mapped with
+    // PROT_MTE, otherwise a single page is sufficient. We could do the math and
+    // apply PROT_MTE to only one page (likely enough in most scenarios), but if
+    // the chunk is cached then this might not be true for the new allocation
+    // while reusing the chunk. Hence, PROT_MTE is used on two pages always.
+    const uptr UntaggedPos = Max(AllocPos, CommitBase + MaxMteMappedBytes);
     return MemMap.remap(CommitBase, UntaggedPos - CommitBase, "scudo:secondary",
                         MAP_MEMTAG | Flags) &&
            MemMap.remap(UntaggedPos, CommitBase + CommitSize - UntaggedPos,

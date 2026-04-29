@@ -622,10 +622,10 @@ AppleObjCTrampolineHandler::AppleObjCTrampolineHandler(
     // step through any method dispatches.  Warn to that effect and get out of
     // here.
     if (process_sp->CanJIT()) {
-      process_sp->GetTarget().GetDebugger().GetAsyncErrorStream()->Printf(
-          "Could not find implementation lookup function \"%s\""
-          " step in through ObjC method dispatch will not work.\n",
-          get_impl_name.AsCString());
+      process_sp->GetTarget().GetDebugger().GetAsyncErrorStream()->Format(
+          "Could not find implementation lookup function \"{0}\" step in "
+          "through ObjC method dispatch will not work.\n",
+          get_impl_name);
     }
     return;
   }

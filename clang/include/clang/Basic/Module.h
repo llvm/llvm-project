@@ -54,41 +54,33 @@ class TargetInfo;
 /// Describes the name of a module.
 using ModuleId = SmallVector<std::pair<std::string, SourceLocation>, 2>;
 
-namespace serialization {
-class ModuleManager;
-} // namespace serialization
-
 /// Deduplication key for a loaded module file in \c ModuleManager.
 ///
-/// For implicitly-built modules, this is the \c DirectoryEntry of the module
-/// cache and the module file name with the (optional) context hash.
-/// This enables using \c FileManager's inode-based canonicalization of the
-/// user-provided module cache path without hitting issues on file systems that
-/// recycle inodes for recompiled module files.
+/// For implicitly-built modules, this is a pointer representing the module
+/// cache directory and the module file name with the (optional) context hash.
+/// This enables using inode-based canonicalization of the user-provided module
+/// cache path without hitting issues on file systems that recycle inodes for
+/// recompiled module files.
 ///
 /// For explicitly-built modules, this is \c FileEntry.
 /// This uses \c FileManager's inode-based canonicalization of the user-provided
 /// module file path. Because input explicitly-built modules do not change
 /// during the lifetime of the compiler, inode recycling is not of concern here.
 class ModuleFileKey {
-  /// The FileManager entity used for deduplication.
+  /// The entity used for deduplication.
   const void *Ptr;
   /// The path relative to the module cache path for implicit module file, empty
   /// for other kinds of module files.
   std::string ImplicitModulePathSuffix;
 
-  friend class serialization::ModuleManager;
-  friend class ModuleFileName;
   friend llvm::DenseMapInfo<ModuleFileKey>;
 
-  ModuleFileKey(const void *Ptr) : Ptr(Ptr) {}
+public:
+  ModuleFileKey(const void *ModuleFile) : Ptr(ModuleFile) {}
 
-  ModuleFileKey(const FileEntry *ModuleFile) : Ptr(ModuleFile) {}
-
-  ModuleFileKey(const DirectoryEntry *ModuleCacheDir, StringRef PathSuffix)
+  ModuleFileKey(const void *ModuleCacheDir, StringRef PathSuffix)
       : Ptr(ModuleCacheDir), ImplicitModulePathSuffix(PathSuffix) {}
 
-public:
   bool operator==(const ModuleFileKey &Other) const {
     return Ptr == Other.Ptr &&
            ImplicitModulePathSuffix == Other.ImplicitModulePathSuffix;
@@ -153,12 +145,6 @@ public:
 
   /// Checks whether the module file name is empty.
   bool empty() const { return Path.empty(); }
-
-  /// Creates the deduplication key for use in \c ModuleManager.
-  /// Returns an empty optional if:
-  /// * the module cache does not exist for an implicit module name,
-  /// * the module file does not exist for an explicit module name.
-  std::optional<ModuleFileKey> makeKey(FileManager &FileMgr) const;
 };
 
 /// The signature of a module, which is a hash of the AST content.
@@ -310,6 +296,9 @@ public:
 
   /// The umbrella header or directory.
   std::variant<std::monostate, FileEntryRef, DirectoryEntryRef> Umbrella;
+
+  /// The location of the umbrella header or directory declaration.
+  SourceLocation UmbrellaDeclLoc;
 
   /// The module signature.
   ASTFileSignature Signature;

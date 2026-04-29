@@ -753,9 +753,9 @@ static std::unique_ptr<JITLinkMemoryManager> createInProcessMemoryManager() {
 }
 
 Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
-createSimpleRemoteMemoryManager(SimpleRemoteEPC &SREPC) {
+createSimpleRemoteMemoryManager(ExecutorProcessControl &EPC) {
   SimpleRemoteMemoryMapper::SymbolAddrs SAs;
-  if (auto Err = SREPC.getBootstrapSymbols(
+  if (auto Err = EPC.getBootstrapSymbols(
           {{SAs.Instance, rt::SimpleExecutorMemoryManagerInstanceName},
            {SAs.Reserve, rt::SimpleExecutorMemoryManagerReserveWrapperName},
            {SAs.Initialize,
@@ -770,13 +770,13 @@ createSimpleRemoteMemoryManager(SimpleRemoteEPC &SREPC) {
   size_t SlabSize = 1024 * 1024 * 1024;
 #endif
   return MapperJITLinkMemoryManager::CreateWithMapper<SimpleRemoteMemoryMapper>(
-      SlabSize, SREPC, SAs);
+      SlabSize, EPC, SAs);
 }
 
 Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
-createSharedMemoryManager(SimpleRemoteEPC &SREPC) {
+createSharedMemoryManager(ExecutorProcessControl &EPC) {
   SharedMemoryMapper::SymbolAddrs SAs;
-  if (auto Err = SREPC.getBootstrapSymbols(
+  if (auto Err = EPC.getBootstrapSymbols(
           {{SAs.Instance, rt::ExecutorSharedMemoryMapperServiceInstanceName},
            {SAs.Reserve,
             rt::ExecutorSharedMemoryMapperServiceReserveWrapperName},
@@ -798,24 +798,27 @@ createSharedMemoryManager(SimpleRemoteEPC &SREPC) {
     SlabSize = ExitOnErr(getSlabAllocSize(SlabAllocateSizeString));
 
   return MapperJITLinkMemoryManager::CreateWithMapper<SharedMemoryMapper>(
-      SlabSize, SREPC, SAs);
+      SlabSize, EPC, SAs);
 }
 
-#if LLVM_ON_UNIX && LLVM_ENABLE_THREADS
-static void setupEPCRemoteMemoryManager(SimpleRemoteEPC::Setup &S) {
-  switch (UseMemMgr) {
-  case MemMgr::Default:
-  case MemMgr::Generic:
-    break;
-  case MemMgr::SimpleRemote:
-    S.CreateMemoryManager = createSimpleRemoteMemoryManager;
-    break;
-  case MemMgr::Shared:
-    S.CreateMemoryManager = createSharedMemoryManager;
-    break;
+static Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
+createMemoryManager(ExecutorProcessControl &EPC) {
+  if (OutOfProcessExecutor.getNumOccurrences() ||
+      OutOfProcessExecutorConnect.getNumOccurrences()) {
+
+    switch (UseMemMgr) {
+    case MemMgr::Default:
+    case MemMgr::Generic:
+      return EPC.createDefaultMemoryManager();
+    case MemMgr::SimpleRemote:
+      return createSimpleRemoteMemoryManager(EPC);
+    case MemMgr::Shared:
+      return createSharedMemoryManager(EPC);
+    }
   }
+
+  return createInProcessMemoryManager();
 }
-#endif
 
 static Expected<MaterializationUnit::Interface>
 getTestObjectFileInterface(Session &S, MemoryBufferRef O) {
@@ -891,7 +894,7 @@ static Error loadProcessSymbols(Session &S) {
       };
   S.ProcessSymsJD->addGenerator(
       ExitOnErr(orc::EPCDynamicLibrarySearchGenerator::GetForTargetProcess(
-          S.ES, std::move(FilterMainEntryPoint))));
+          S.ES, *S.DylibMgr, std::move(FilterMainEntryPoint))));
 
   return Error::success();
 }
@@ -974,12 +977,9 @@ static Expected<std::unique_ptr<ExecutorProcessControl>> launchExecutor() {
   close(ToExecutor[ReadEnd]);
   close(FromExecutor[WriteEnd]);
 
-  auto S = SimpleRemoteEPC::Setup();
-  setupEPCRemoteMemoryManager(S);
-
   return SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(
       std::make_unique<DynamicThreadPoolTaskDispatcher>(MaterializationThreads),
-      std::move(S), FromExecutor[ReadEnd], ToExecutor[WriteEnd]);
+      FromExecutor[ReadEnd], ToExecutor[WriteEnd]);
 #endif
 }
 
@@ -1063,12 +1063,9 @@ static Expected<std::unique_ptr<ExecutorProcessControl>> connectToExecutor() {
   if (!SockFD)
     return SockFD.takeError();
 
-  auto S = SimpleRemoteEPC::Setup();
-  setupEPCRemoteMemoryManager(S);
-
   return SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(
-      std::make_unique<DynamicThreadPoolTaskDispatcher>(std::nullopt),
-      std::move(S), *SockFD, *SockFD);
+      std::make_unique<DynamicThreadPoolTaskDispatcher>(std::nullopt), *SockFD,
+      *SockFD);
 #endif
 }
 
@@ -1086,7 +1083,12 @@ public:
 
 Expected<std::unique_ptr<Session::LazyLinkingSupport>>
 createLazyLinkingSupport(Session &S) {
-  auto RSMgr = JITLinkRedirectableSymbolManager::Create(S.ObjLayer);
+  auto MemAccess = S.ES.getExecutorProcessControl().createDefaultMemoryAccess();
+  if (!MemAccess)
+    return MemAccess.takeError();
+
+  auto RSMgr =
+      JITLinkRedirectableSymbolManager::Create(*S.ObjLayer, **MemAccess);
   if (!RSMgr)
     return RSMgr.takeError();
 
@@ -1108,12 +1110,13 @@ createLazyLinkingSupport(Session &S) {
   }
 
   auto LRMgr = createJITLinkLazyReexportsManager(
-      S.ObjLayer, **RSMgr, *S.PlatformJD, Speculator.get());
+      *S.ObjLayer, **RSMgr, *S.PlatformJD, Speculator.get());
   if (!LRMgr)
     return LRMgr.takeError();
 
   return std::make_unique<Session::LazyLinkingSupport>(
-      std::move(*RSMgr), std::move(Speculator), std::move(*LRMgr), S.ObjLayer);
+      std::move(*MemAccess), std::move(*RSMgr), std::move(Speculator),
+      std::move(*LRMgr), *S.ObjLayer);
 }
 
 static Error writeLazyExecOrder(Session &S) {
@@ -1166,7 +1169,7 @@ Expected<std::unique_ptr<Session>> Session::Create(Triple TT,
 
     EPC = std::make_unique<SelfExecutorProcessControl>(
         std::make_shared<SymbolStringPool>(), std::move(Dispatcher),
-        std::move(TT), *PageSize, createInProcessMemoryManager());
+        std::move(TT), *PageSize);
   }
 
   Error Err = Error::success();
@@ -1194,8 +1197,7 @@ Session::~Session() {
 }
 
 Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
-    : ES(std::move(EPC)),
-      ObjLayer(ES, ES.getExecutorProcessControl().getMemMgr()) {
+    : ES(std::move(EPC)) {
 
   /// Local ObjectLinkingLayer::Plugin class to forward modifyPassConfig to the
   /// Session.
@@ -1222,6 +1224,21 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
 
   ErrorAsOutParameter _(&Err);
 
+  if (auto MM = createMemoryManager(ES.getExecutorProcessControl())) {
+    MemoryMgr = std::move(*MM);
+    ObjLayer = std::make_unique<orc::ObjectLinkingLayer>(ES, *MemoryMgr);
+  } else {
+    Err = MM.takeError();
+    return;
+  }
+
+  if (auto DM = ES.getExecutorProcessControl().createDefaultDylibMgr())
+    DylibMgr = std::move(*DM);
+  else {
+    Err = DM.takeError();
+    return;
+  }
+
   ES.setErrorReporter(reportLLVMJITLinkError);
 
   // Attach WaitingOnGraph recorder if requested.
@@ -1245,7 +1262,7 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
 
   if (!WriteSymbolTableTo.empty()) {
     if (auto STDump = SymbolTableDumpPlugin::Create(WriteSymbolTableTo))
-      ObjLayer.addPlugin(std::move(*STDump));
+      ObjLayer->addPlugin(std::move(*STDump));
     else {
       Err = STDump.takeError();
       return;
@@ -1258,7 +1275,7 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
                                     inconvertibleErrorCode());
       return;
     }
-    ObjLayer.addPlugin(ExitOnErr(GDBJITDebugInfoRegistrationPlugin::Create(
+    ObjLayer->addPlugin(ExitOnErr(GDBJITDebugInfoRegistrationPlugin::Create(
         this->ES, *ProcessSymsJD, TT)));
   }
 
@@ -1268,14 +1285,14 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
                                     inconvertibleErrorCode());
       return;
     }
-    ObjLayer.addPlugin(ExitOnErr(DebugInfoPreservationPlugin::Create()));
-    ObjLayer.addPlugin(ExitOnErr(PerfSupportPlugin::Create(
+    ObjLayer->addPlugin(ExitOnErr(DebugInfoPreservationPlugin::Create()));
+    ObjLayer->addPlugin(ExitOnErr(PerfSupportPlugin::Create(
         this->ES.getExecutorProcessControl(), *ProcessSymsJD, true, true)));
   }
 
   if (VTuneSupport && TT.isOSBinFormatELF()) {
-    ObjLayer.addPlugin(ExitOnErr(DebugInfoPreservationPlugin::Create()));
-    ObjLayer.addPlugin(ExitOnErr(
+    ObjLayer->addPlugin(ExitOnErr(DebugInfoPreservationPlugin::Create()));
+    ObjLayer->addPlugin(ExitOnErr(
         VTuneSupportPlugin::Create(this->ES.getExecutorProcessControl(),
                                    *ProcessSymsJD, /*EmitDebugInfo=*/true,
                                    /*TestMode=*/true)));
@@ -1289,15 +1306,15 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
 
     if (TT.isOSBinFormatMachO()) {
       if (auto P =
-              MachOPlatform::Create(ObjLayer, *PlatformJD, OrcRuntime.c_str()))
+              MachOPlatform::Create(*ObjLayer, *PlatformJD, OrcRuntime.c_str()))
         ES.setPlatform(std::move(*P));
       else {
         Err = P.takeError();
         return;
       }
     } else if (TT.isOSBinFormatELF()) {
-      if (auto P =
-              ELFNixPlatform::Create(ObjLayer, *PlatformJD, OrcRuntime.c_str()))
+      if (auto P = ELFNixPlatform::Create(*ObjLayer, *PlatformJD,
+                                          OrcRuntime.c_str()))
         ES.setPlatform(std::move(*P));
       else {
         Err = P.takeError();
@@ -1313,7 +1330,7 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
       };
 
       if (auto P =
-              COFFPlatform::Create(ObjLayer, *PlatformJD, OrcRuntime.c_str(),
+              COFFPlatform::Create(*ObjLayer, *PlatformJD, OrcRuntime.c_str(),
                                    std::move(LoadDynLibrary)))
         ES.setPlatform(std::move(*P));
       else {
@@ -1336,19 +1353,20 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
         return;
       bool UseEHFrames = ForceEHFrames.value_or(false);
       if (!UseEHFrames)
-        ObjLayer.addPlugin(ExitOnErr(UnwindInfoRegistrationPlugin::Create(ES)));
+        ObjLayer->addPlugin(
+            ExitOnErr(UnwindInfoRegistrationPlugin::Create(ES)));
       else
-        ObjLayer.addPlugin(ExitOnErr(EHFrameRegistrationPlugin::Create(ES)));
+        ObjLayer->addPlugin(ExitOnErr(EHFrameRegistrationPlugin::Create(ES)));
     }
   } else if (TT.isOSBinFormatELF()) {
     if (!NoExec)
-      ObjLayer.addPlugin(ExitOnErr(EHFrameRegistrationPlugin::Create(ES)));
+      ObjLayer->addPlugin(ExitOnErr(EHFrameRegistrationPlugin::Create(ES)));
     if (DebuggerSupport) {
       Error TargetSymErr = Error::success();
       auto Plugin =
           std::make_unique<ELFDebugObjectPlugin>(ES, true, true, TargetSymErr);
       if (!TargetSymErr)
-        ObjLayer.addPlugin(std::move(Plugin));
+        ObjLayer->addPlugin(std::move(Plugin));
       else
         logAllUnhandledErrors(std::move(TargetSymErr), errs(),
                               "Debugger support not available: ");
@@ -1373,7 +1391,7 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
     MainJD->addToLinkOrder(TestResultJD);
   }
 
-  ObjLayer.addPlugin(std::make_unique<JITLinkSessionPlugin>(*this));
+  ObjLayer->addPlugin(std::make_unique<JITLinkSessionPlugin>(*this));
 
   // Process any harness files.
   for (auto &HarnessFile : TestHarnesses) {
@@ -1483,7 +1501,8 @@ Expected<JITDylib *> Session::getOrLoadDynamicLibrary(StringRef LibPath) {
   if (It != DynLibJDs.end()) {
     return It->second;
   }
-  auto G = EPCDynamicLibrarySearchGenerator::Load(ES, LibPath.data());
+  auto G =
+      EPCDynamicLibrarySearchGenerator::Load(ES, *DylibMgr, LibPath.data());
   if (!G)
     return G.takeError();
   auto JD = &ES.createBareJITDylib(LibPath.str());
@@ -2149,7 +2168,7 @@ static Error addSectCreates(Session &S,
     }
 
     if (auto Err = JD.define(std::make_unique<SectCreateMaterializationUnit>(
-            S.ObjLayer, SectName.str(), MemProt::Read, 16, std::move(*Content),
+            *S.ObjLayer, SectName.str(), MemProt::Read, 16, std::move(*Content),
             std::move(ExtraSymbols))))
       return Err;
   }
@@ -2165,7 +2184,7 @@ static Error addTestHarnesses(Session &S) {
                                      LoadArchives::Never);
     if (!Linkable)
       return Linkable.takeError();
-    if (auto Err = S.ObjLayer.add(*S.MainJD, std::move(Linkable->first)))
+    if (auto Err = S.ObjLayer->add(*S.MainJD, std::move(Linkable->first)))
       return Err;
   }
   return Error::success();
@@ -2207,8 +2226,8 @@ static Error addObjects(Session &S,
       if (!ObjInterface)
         return ObjInterface.takeError();
 
-      if (auto Err = S.ObjLayer.add(JD, std::move(ObjBuffer->first),
-                                    std::move(*ObjInterface)))
+      if (auto Err = S.ObjLayer->add(JD, std::move(ObjBuffer->first),
+                                     std::move(*ObjInterface)))
         return Err;
     }
   }
@@ -2245,7 +2264,8 @@ LoadLibraryWeak(Session &S, StringRef Path) {
     return Symbols.takeError();
 
   return std::make_unique<EPCDynamicLibrarySearchGenerator>(
-      S.ES, [Symbols = std::move(*Symbols)](const SymbolStringPtr &Sym) {
+      S.ES, *S.DylibMgr,
+      [Symbols = std::move(*Symbols)](const SymbolStringPtr &Sym) {
         return Symbols.count(Sym);
       });
 }
@@ -2736,8 +2756,8 @@ getTargetInfo(const Triple &TT,
         make_error<StringError>("Unable to create target asm info " + TT.str(),
                                 inconvertibleErrorCode()));
 
-  auto Ctx = std::make_unique<MCContext>(Triple(TT.str()), MAI.get(), MRI.get(),
-                                         STI.get());
+  auto Ctx =
+      std::make_unique<MCContext>(Triple(TT.str()), *MAI, MRI.get(), STI.get());
 
   std::unique_ptr<MCDisassembler> Disassembler(
       TheTarget->createMCDisassembler(*STI, *Ctx));
@@ -2778,12 +2798,12 @@ static Error runChecks(Session &S, Triple TT, SubtargetFeatures Features) {
   LLVM_DEBUG(dbgs() << "Running checks...\n");
 
   auto IsSymbolValid = [&S](StringRef Symbol) {
-    auto InternedSymbol = S.ES.getSymbolStringPool()->intern(Symbol);
+    auto InternedSymbol = S.ES.intern(Symbol);
     return S.isSymbolRegistered(InternedSymbol);
   };
 
   auto GetSymbolInfo = [&S](StringRef Symbol) {
-    auto InternedSymbol = S.ES.getSymbolStringPool()->intern(Symbol);
+    auto InternedSymbol = S.ES.intern(Symbol);
     return S.findSymbolInfo(InternedSymbol, "Can not get symbol info");
   };
 

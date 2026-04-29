@@ -466,6 +466,9 @@ SourceLocation
 Preprocessor::CheckEndOfDirective(StringRef DirType, bool EnableMacros,
                                   SmallVectorImpl<Token> *ExtraToks) {
   Token Tmp;
+  // Avoid use-of-uninitialized-memory for edge case(s) where there is no extra
+  // token to be parsed.
+  Tmp.startToken();
   auto ReadNextTok = [this, ExtraToks, &Tmp](auto &&LexFn) {
     std::invoke(LexFn, this, Tmp);
     if (ExtraToks && Tmp.isNot(tok::eod))
@@ -2730,6 +2733,20 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
       Diag(FilenameTok, DiagId) << Path <<
         FixItHint::CreateReplacement(FilenameRange, Path);
     }
+
+    bool SuppressBackslashDiag =
+        // The diagnostic logic is expensive, so only run it if it's enabled...
+        Diags->isIgnored(diag::pp_nonportable_path_separator, FilenameLoc) ||
+        // ...and try to only trigger on paths that appear in source.
+        FilenameLoc.isMacroID() ||
+        SourceMgr.isWrittenInBuiltinFile(FilenameLoc) ||
+        SourceMgr.isWrittenInModuleIncludes(FilenameLoc);
+    if (!SuppressBackslashDiag && OriginalFilename.contains('\\')) {
+      std::string SuggestedPath = OriginalFilename.str();
+      llvm::replace(SuggestedPath, '\\', '/');
+      Diag(FilenameTok, diag::pp_nonportable_path_separator)
+          << Name << FixItHint::CreateReplacement(FilenameRange, SuggestedPath);
+    }
   }
 
   switch (Action) {
@@ -4472,24 +4489,19 @@ void Preprocessor::HandleObjCImportDirective(Token &AtTok, Token &ImportTok) {
   if (!DirToks.back().isOneOf(tok::semi, tok::eod))
     CollectPPImportSuffix(DirToks);
 
-  if (DirToks.back().isNot(tok::eod))
-    CheckEndOfDirective(ImportTok.getIdentifierInfo()->getName());
-  else
-    DirToks.pop_back();
+  SourceLocation End =
+      DirToks.back().isNot(tok::eod)
+          ? CheckEndOfDirective(ImportTok.getIdentifierInfo()->getName(),
+                                /*EnableMacros=*/false, &DirToks)
 
-  // This is not a pp-import after all.
-  if (DirToks.back().isNot(tok::semi)) {
-    EnterModuleSuffixTokenStream(DirToks);
-    return;
-  }
+          : DirToks.pop_back_val().getLocation();
 
   Module *Imported = nullptr;
-  SourceLocation SemiLoc = DirToks.back().getLocation();
   if (getLangOpts().Modules) {
     Imported = TheModuleLoader.loadModule(ModuleImportLoc, Path, Module::Hidden,
                                           /*IsInclusionDirective=*/false);
     if (Imported)
-      makeModuleVisible(Imported, SemiLoc);
+      makeModuleVisible(Imported, End);
   }
 
   if (Callbacks)

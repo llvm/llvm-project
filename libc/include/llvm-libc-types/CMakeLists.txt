@@ -17,7 +17,7 @@ add_header(__exec_argv_t HDR __exec_argv_t.h)
 add_header(__exec_envp_t HDR __exec_envp_t.h)
 add_header(__futex_word HDR __futex_word.h)
 add_header(pid_t HDR pid_t.h)
-add_header(__mutex_type HDR __mutex_type.h DEPENDS .__futex_word .pid_t)
+add_header(__mutex_type HDR __mutex_type.h DEPENDS .__futex_word .pid_t .size_t)
 add_header(__barrier_type HDR __barrier_type.h)
 add_header(__pthread_once_func_t HDR __pthread_once_func_t.h)
 add_header(__pthread_start_t HDR __pthread_start_t.h)
@@ -70,7 +70,9 @@ add_header(off_t HDR off_t.h)
 add_header(once_flag HDR once_flag.h DEPENDS .__futex_word)
 add_header(posix_spawn_file_actions_t HDR posix_spawn_file_actions_t.h)
 add_header(posix_spawnattr_t HDR posix_spawnattr_t.h)
+add_header(posix_tnode HDR posix_tnode.h)
 add_header(pthread_attr_t HDR pthread_attr_t.h DEPENDS .size_t)
+add_header(pthread_cond_t HDR pthread_cond_t.h DEPENDS .__futex_word .size_t)
 add_header(pthread_condattr_t HDR pthread_condattr_t.h DEPENDS .clockid_t)
 add_header(pthread_key_t HDR pthread_key_t.h)
 add_header(pthread_mutex_t HDR pthread_mutex_t.h DEPENDS .__futex_word .__mutex_type)
@@ -125,6 +127,31 @@ add_header(union_sigval HDR union_sigval.h)
 add_header(siginfo_t HDR siginfo_t.h DEPENDS .union_sigval .pid_t .uid_t .clock_t)
 add_header(sig_atomic_t HDR sig_atomic_t.h)
 add_header(sigset_t HDR sigset_t.h DEPENDS libc.include.llvm-libc-macros.signal_macros)
+set(mcontext_deps)
+set(ucontext_deps .sigset_t .stack_t)
+
+if(LIBC_TARGET_ARCHITECTURE STREQUAL "x86_64")
+  file(COPY x86_64 DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+  add_header(
+    mcontext_t_arch
+    HDR
+      x86_64/mcontext_t.h
+  )
+  add_header(
+    ucontext_t_arch
+    HDR
+      x86_64/ucontext_t.h
+    DEPENDS
+      .mcontext_t_arch
+      .sigset_t
+      .stack_t
+  )
+  list(APPEND mcontext_deps .mcontext_t_arch)
+  list(APPEND ucontext_deps .ucontext_t_arch)
+endif()
+
+add_header(mcontext_t HDR mcontext_t.h DEPENDS ${mcontext_deps})
+add_header(ucontext_t HDR ucontext_t.h DEPENDS .mcontext_t ${ucontext_deps})
 add_header(__jmp_buf HDR __jmp_buf.h DEPENDS .sigset_t)
 add_header(jmp_buf HDR jmp_buf.h DEPENDS .__jmp_buf)
 add_header(sigjmp_buf HDR sigjmp_buf.h DEPENDS .__jmp_buf)
@@ -165,11 +192,15 @@ add_header(
     libc.include.llvm-libc-macros.stdint_macros
 )
 add_header(wint_t HDR wint_t.h)
+add_header(wctype_t HDR wctype_t.h)
 add_header(sa_family_t HDR sa_family_t.h)
 add_header(socklen_t HDR socklen_t.h)
 add_header(struct_sockaddr_un HDR struct_sockaddr_un.h DEPENDS .sa_family_t)
 add_header(struct_sockaddr HDR struct_sockaddr.h DEPENDS .sa_family_t)
+add_header(struct_sockaddr_storage HDR struct_sockaddr_storage.h DEPENDS .sa_family_t)
 add_header(struct_iovec HDR struct_iovec.h DEPENDS .size_t)
+add_header(struct_linger HDR struct_linger.h)
+add_header(struct_cmsghdr HDR struct_cmsghdr.h DEPENDS .size_t)
 add_header(struct_msghdr HDR struct_msghdr.h DEPENDS .size_t .socklen_t .struct_iovec)
 add_header(ACTION HDR ACTION.h)
 add_header(ENTRY HDR ENTRY.h)
@@ -589,3 +620,18 @@ add_header(EFI_SYSTEM_TABLE
     .EFI_TABLE_HEADER
     .char16_t
 )
+add_header(__action_closure_fn_t 
+  HDR 
+    __action_closure_fn_t.h 
+  DEPENDS 
+    .posix_tnode 
+    .VISIT
+)
+add_header(__action_fn_t 
+  HDR 
+    __action_fn_t.h 
+  DEPENDS 
+    .posix_tnode 
+    .VISIT
+)
+add_header(__free_fn_t HDR __free_fn_t.h)

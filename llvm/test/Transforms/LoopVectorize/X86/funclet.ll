@@ -7,27 +7,27 @@ entry:
   invoke void @_CxxThrowException(ptr null, ptr null)
           to label %unreachable unwind label %catch.dispatch
 
-catch.dispatch:                                   ; preds = %entry
+catch.dispatch:
   %0 = catchswitch within none [label %catch] unwind to caller
 
-catch:                                            ; preds = %catch.dispatch
+catch:
   %1 = catchpad within %0 [ptr null, i32 64, ptr null]
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   catchret from %1 to label %try.cont
 
-for.body:                                         ; preds = %for.body, %catch
+for.body:
   %i.07 = phi i32 [ 0, %catch ], [ %inc, %for.body ]
   %call = call double @floor(double 1.0) #1 [ "funclet"(token %1) ]
   %inc = add nuw nsw i32 %i.07, 1
   %exitcond = icmp eq i32 %inc, 1024
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
-try.cont:                                         ; preds = %for.cond.cleanup
+try.cont:
   ret void
 
-unreachable:                                      ; preds = %entry
+unreachable:
   unreachable
 }
 

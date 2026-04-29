@@ -1,9 +1,9 @@
 ; RUN: not llc -mtriple=nvptx64 -mcpu=sm_30 -filetype=null %s 2>&1 | FileCheck %s
 
-; CHECK: error: unsupported cmpxchg
-; CHECK: error: unsupported cmpxchg
-; CHECK: error: unsupported cmpxchg
-; CHECK: error: unsupported cmpxchg
+; CHECK: error: unsupported atomicrmw xchg: instruction alignment 16 is smaller than the required 32-byte alignment for this atomic operation; target supports atomics up to 8 bytes, but this atomic accesses 32 bytes
+; CHECK: error: unsupported atomicrmw xor: instruction alignment 16 is smaller than the required 32-byte alignment for this atomic operation; target supports atomics up to 8 bytes, but this atomic accesses 32 bytes
+; CHECK: error: unsupported atomicrmw or: instruction alignment 16 is smaller than the required 32-byte alignment for this atomic operation; target supports atomics up to 8 bytes, but this atomic accesses 32 bytes
+; CHECK: error: unsupported atomicrmw and: instruction alignment 16 is smaller than the required 32-byte alignment for this atomic operation; target supports atomics up to 8 bytes, but this atomic accesses 32 bytes
 define void @bitwise_i256(ptr %0, i256 %1) {
 entry:
   %2 = atomicrmw and ptr %0, i256 %1 monotonic, align 16
@@ -13,10 +13,10 @@ entry:
   ret void
 }
 
-; CHECK: error: unsupported cmpxchg
-; CHECK: error: unsupported cmpxchg
-; CHECK: error: unsupported cmpxchg
-; CHECK: error: unsupported cmpxchg
+; CHECK: error: unsupported atomicrmw umax: instruction alignment 16 is smaller than the required 32-byte alignment for this atomic operation; target supports atomics up to 8 bytes, but this atomic accesses 32 bytes
+; CHECK: error: unsupported atomicrmw umin: instruction alignment 16 is smaller than the required 32-byte alignment for this atomic operation; target supports atomics up to 8 bytes, but this atomic accesses 32 bytes
+; CHECK: error: unsupported atomicrmw max: instruction alignment 16 is smaller than the required 32-byte alignment for this atomic operation; target supports atomics up to 8 bytes, but this atomic accesses 32 bytes
+; CHECK: error: unsupported atomicrmw min: instruction alignment 16 is smaller than the required 32-byte alignment for this atomic operation; target supports atomics up to 8 bytes, but this atomic accesses 32 bytes
 define void @minmax_i256(ptr %0, i256 %1) {
 entry:
   %2 = atomicrmw min ptr %0, i256 %1 monotonic, align 16
