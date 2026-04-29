@@ -188,6 +188,11 @@ static uptr GetAltStackSize() {
   return SIGSTKSZ * 4;
 }
 
+// Remember the stack we register. We cannot assume that the registered one is
+// the one we allocated
+static THREADLOCAL void* registered_alt_stack_sp;
+static THREADLOCAL uptr registered_alt_stack_size;
+
 void SetAlternateSignalStack() {
   stack_t altstack, oldstack;
   CHECK_EQ(0, sigaltstack(nullptr, &oldstack));
@@ -201,15 +206,36 @@ void SetAlternateSignalStack() {
   altstack.ss_sp = (char *)MmapOrDie(altstack.ss_size, __func__);
   altstack.ss_flags = 0;
   CHECK_EQ(0, sigaltstack(&altstack, nullptr));
+  registered_alt_stack_sp = altstack.ss_sp;
+  registered_alt_stack_size = altstack.ss_size;
 }
 
 void UnsetAlternateSignalStack() {
-  stack_t altstack, oldstack;
-  altstack.ss_sp = nullptr;
-  altstack.ss_flags = SS_DISABLE;
-  altstack.ss_size = GetAltStackSize();  // Some sane value required on Darwin.
-  CHECK_EQ(0, sigaltstack(&altstack, &oldstack));
-  UnmapOrDie(oldstack.ss_sp, oldstack.ss_size);
+  if (!registered_alt_stack_sp)
+    return;
+  void* sp = registered_alt_stack_sp;
+  uptr size = registered_alt_stack_size;
+  registered_alt_stack_sp = nullptr;
+  registered_alt_stack_size = 0;
+
+  // Only un-register the alt stack with the kernel if it still points to the
+  // one we created. Another component (e.g. CreateSigAltStack in llvm) could
+  // have replaced our registration and we will leave them to disable it so
+  // we don't break their signal handling.
+  stack_t current;
+  CHECK_EQ(0, sigaltstack(nullptr, &current));
+  bool still_ours = !(current.ss_flags & SS_DISABLE) && current.ss_sp == sp &&
+                    current.ss_size == size;
+  if (still_ours) {
+    stack_t altstack;
+    altstack.ss_sp = nullptr;
+    altstack.ss_flags = SS_DISABLE;
+    altstack.ss_size = GetAltStackSize();  // Sane value required on Darwin.
+    CHECK_EQ(0, sigaltstack(&altstack, nullptr));
+  }
+  // Even if another stack has been registered, we still need to unmap the
+  // one we allocated
+  UnmapOrDie(sp, size);
 }
 
 bool IsSignalHandlerFromSanitizer(int signum) {
