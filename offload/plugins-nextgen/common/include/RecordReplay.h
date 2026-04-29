@@ -11,6 +11,7 @@
 #ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_RECORDREPLAY_H
 #define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_RECORDREPLAY_H
 
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
@@ -116,6 +117,10 @@ protected:
     /// information about the the kernel's replay, such as the snapshot file.
     KernelReplayOutcomeTy *ReplayOutcome = nullptr;
 
+    /// The begin and end time points of the kernel execution.
+    using ClockTy = std::chrono::steady_clock;
+    mutable std::chrono::time_point<ClockTy> BeginTime, EndTime;
+
     /// The number of occurrences during the execution.
     mutable size_t Occurrences = 0;
 
@@ -128,6 +133,17 @@ protected:
               LaunchConfigHash == Other.LaunchConfigHash &&
               NumTeams == Other.NumTeams && NumThreads == Other.NumThreads &&
               SharedMemorySize == Other.SharedMemorySize);
+    }
+
+    /// Record the begin and ending of the kernel execution.
+    void recordBeginTime() const { BeginTime = ClockTy::now(); }
+    void recordEndTime() const { EndTime = ClockTy::now(); }
+
+    /// Get the kernel execution time in nanoseconds.
+    uint64_t getRecordedTimeNs() const {
+      using DurationNsTy = std::chrono::duration<uint64_t, std::nano>;
+      return std::chrono::duration_cast<DurationNsTy>(EndTime - BeginTime)
+          .count();
     }
   };
 
@@ -209,6 +225,15 @@ private:
   registerInstance(const GenericKernelTy &Kernel, uint32_t NumTeams,
                    uint32_t NumThreads, uint32_t SharedMemorySize,
                    KernelReplayOutcomeTy *ReplayOutcome);
+
+  /// Unregister an instance once it has been replayed. Instances during
+  /// recording cannot be unregistered. Accessing the instance beyond this point
+  /// is invalid.
+  Error unregisterInstance(const InstanceTy &Instance);
+
+  /// Populate the replay outcome struct to forward some replay information.
+  void populateReplayOutcome(const InstanceTy &Instance,
+                             KernelReplayOutcomeTy &Outcome);
 
   /// Record the prologue data.
   virtual Error

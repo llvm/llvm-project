@@ -237,7 +237,7 @@ public:
   void resetTargetOptions(const Function &F) const;
 
   /// Return target specific asm information.
-  const MCAsmInfo *getMCAsmInfo() const { return AsmInfo.get(); }
+  const MCAsmInfo &getMCAsmInfo() const { return *AsmInfo; }
 
   const MCRegisterInfo *getMCRegisterInfo() const { return MRI.get(); }
   const MCInstrInfo *getMCInstrInfo() const { return MII.get(); }

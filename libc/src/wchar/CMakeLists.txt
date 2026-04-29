@@ -333,6 +333,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  wcscoll
+  SRCS
+    wcscoll.cpp
+  HDRS
+    wcscoll.h
+  DEPENDS
+    libc.hdr.wchar_macros
+)
+
+add_entrypoint_object(
   wcsdup
   SRCS
     wcsdup.cpp
@@ -542,4 +552,17 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.size_t
     libc.hdr.wchar_macros
+)
+
+add_entrypoint_object(
+  wcsxfrm
+  SRCS
+    wcsxfrm.cpp
+  HDRS
+    wcsxfrm.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.hdr.types.wchar_t
+    libc.src.__support.macros.config
+    libc.src.__support.common
 )

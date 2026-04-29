@@ -196,12 +196,11 @@ setupDpasLayout(LayoutKind layoutKind, VectorType aTy, VectorType bTy,
 /// Sets up the anchor layouts for dpas_mx operands (A, B, C/D, A_scale, and
 /// B_scale). The numSg and consumerLayout (optional) are only used by sg layout
 /// creation. A_scale and B_scale are optional.
-std::optional<std::tuple<DistributeLayoutAttr, DistributeLayoutAttr,
-                         DistributeLayoutAttr, DistributeLayoutAttr,
-                         DistributeLayoutAttr>>
+std::optional<
+    std::tuple<DistributeLayoutAttr, DistributeLayoutAttr, DistributeLayoutAttr,
+               DistributeLayoutAttr, DistributeLayoutAttr>>
 setupDpasMxLayout(LayoutKind layoutKind, VectorType aTy, VectorType bTy,
-                  VectorType cdTy, std::optional<VectorType> aScaleTy,
-                  std::optional<VectorType> bScaleTy,
+                  VectorType cdTy, VectorType aScaleTy, VectorType bScaleTy,
                   DistributeLayoutAttr consumerLayout, int numSg,
                   const uArch::uArch *uArch);
 

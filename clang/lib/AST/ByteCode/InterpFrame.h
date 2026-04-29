@@ -104,6 +104,7 @@ public:
   template <typename T> void setLocal(unsigned Offset, const T &Value) {
     localRef<T>(Offset) = Value;
     localInlineDesc(Offset)->IsInitialized = true;
+    localInlineDesc(Offset)->LifeState = Lifetime::Started;
   }
 
   /// Returns a pointer to a local variables.

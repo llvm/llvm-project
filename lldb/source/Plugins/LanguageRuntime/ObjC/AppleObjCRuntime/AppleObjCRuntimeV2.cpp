@@ -777,8 +777,8 @@ ExtractRuntimeGlobalSymbol(Process *process, ConstString name,
   return symbol_load_addr;
 }
 
-// Batched version of ExtractRuntimeGlobalSymbol. Resolves symbols and reads
-// their values in a single batch using ReadUnsignedIntegersFromMemory.
+/// Batched version of ExtractRuntimeGlobalSymbol. Resolves symbols and reads
+/// their values in a single batch using ReadUnsignedIntegersFromMemory.
 static llvm::SmallVector<RuntimeGlobalSymbolResult>
 ExtractRuntimeGlobalSymbolsBatched(
     Process *process, const ModuleSP &module_sp,
@@ -3481,28 +3481,29 @@ bool AppleObjCRuntimeV2::GetCFBooleanValuesIfNeeded() {
   static ConstString g_kCFBooleanFalse("kCFBooleanFalse");
   static ConstString g_kCFBooleanTrue("kCFBooleanTrue");
 
-  std::function<lldb::addr_t(ConstString, ConstString)> get_symbol =
-      [this](ConstString sym, ConstString real_sym) -> lldb::addr_t {
-    SymbolContextList sc_list;
-    GetProcess()->GetTarget().GetImages().FindSymbolsWithNameAndType(
-        sym, lldb::eSymbolTypeData, sc_list);
-    if (sc_list.GetSize() == 1) {
-      SymbolContext sc;
-      sc_list.GetContextAtIndex(0, sc);
-      if (sc.symbol)
-        return sc.symbol->GetLoadAddress(&GetProcess()->GetTarget());
-    }
-    GetProcess()->GetTarget().GetImages().FindSymbolsWithNameAndType(
-        real_sym, lldb::eSymbolTypeData, sc_list);
-    if (sc_list.GetSize() != 1)
+  static ModuleSpec corefoundation_module_spec(FileSpec("CoreFoundation"));
+
+  ModuleSP corefoundation_module_sp =
+      GetProcess()->GetTarget().GetImages().FindFirstModule(
+          corefoundation_module_spec);
+
+  if (!corefoundation_module_sp)
+    return false;
+
+  auto get_symbol = [this, &corefoundation_module_sp](
+                        ConstString sym, ConstString real_sym) -> lldb::addr_t {
+    const Symbol *symbol =
+        corefoundation_module_sp->FindFirstSymbolWithNameAndType(
+            sym, lldb::eSymbolTypeData);
+    if (symbol)
+      return symbol->GetLoadAddress(&GetProcess()->GetTarget());
+
+    symbol = corefoundation_module_sp->FindFirstSymbolWithNameAndType(
+        real_sym, lldb::eSymbolTypeData);
+    if (!symbol)
       return LLDB_INVALID_ADDRESS;
 
-    SymbolContext sc;
-    sc_list.GetContextAtIndex(0, sc);
-    if (!sc.symbol)
-      return LLDB_INVALID_ADDRESS;
-
-    lldb::addr_t addr = sc.symbol->GetLoadAddress(&GetProcess()->GetTarget());
+    lldb::addr_t addr = symbol->GetLoadAddress(&GetProcess()->GetTarget());
     Status error;
     addr = GetProcess()->ReadPointerFromMemory(addr, error);
     if (error.Fail())
