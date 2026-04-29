@@ -658,14 +658,17 @@ void FactsGenerator::VisitCXXNewExpr(const CXXNewExpr *NE) {
       // outer storage origin so the list starts with the pointer origin.
       OriginList *PlacementList =
           getRValueOrigins(PlacementArg, getOriginsList(*PlacementArg));
-      // Placement new constructs the pointee of the placement pointer.
-      if (Init)
+      // If the placement argument only has a glvalue origin, there is no
+      // pointee object origin to overwrite.
+      if (Init && PlacementList)
+        // Placement new constructs the pointee of the placement pointer.
         flow(PlacementList->peelOuterOrigin(), getOriginsList(*Init), true);
       // The pointer returned by placement new comes from the placement
       // argument.
-      CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
-          NewList->getOuterOriginID(), PlacementList->getOuterOriginID(),
-          true));
+      if (PlacementList)
+        CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
+            NewList->getOuterOriginID(), PlacementList->getOuterOriginID(),
+            true));
     }
   } else {
     const Loan *L = createLoan(FactMgr, NE);

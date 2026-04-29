@@ -3089,6 +3089,15 @@ void placement_new_pointer_field_use_after_scope() {
   (void)p->Ptr->id;
 }
 
+// FIXME: Stripping implicit casts also strips array to pointer decay, leaving only the array glvalue origin and no pointee origin to overwrite. Because of that, origins are not propagated here.
+void placement_new_direct_array_use_after_placement() {
+  char storage[sizeof(std::string)];
+  std::string* str1 = new (storage) std::string{"Old"};
+  auto p1 = str1->c_str();
+  new (storage) std::string{"New"};
+  (void)*p1;
+}
+
 } // namespace placement_new
 
 namespace method_call_uses_field_origins {
