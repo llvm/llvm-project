@@ -3240,8 +3240,8 @@ static bool CheckFloatOrHalfRepresentation(Sema *S, SourceLocation Loc,
 
   if (!BaseType->isHalfType() && !BaseType->isFloat32Type())
     return S->Diag(Loc, diag::err_builtin_invalid_arg_type)
-           << ArgOrdinal << /* scalar or vector of */ 5 << /* no int */ 0
-           << /* half or float */ 2 << PassedType;
+           << ArgOrdinal << /* scalar, vector or matrix of */ 5
+           << /* no int */ 0 << /* half or float */ 2 << PassedType;
   return false;
 }
 

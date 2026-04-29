@@ -230,6 +230,12 @@ namespace hlsl {
     return fn((float4)V1, (float4)V2, (float4)V3);                             \
   }
 
+#define _DXC_COMPAT_BINARY_MATRIX_OVERLOADS(fn, ty)                            \
+  _DXC_DEPRECATED_INT_FN(fn)                                                   \
+  template <typename T, int R, int C>                                          \
+  constexpr matrix<ty, R, C> fn(matrix<T, R, C> y, matrix<T, R, C> x) {        \
+    return fn((matrix<ty, R, C>)y, (matrix<ty, R, C>)x);                       \
+  }
 //===----------------------------------------------------------------------===//
 // acos builtins overloads
 //===----------------------------------------------------------------------===//
@@ -257,6 +263,7 @@ _DXC_COMPAT_UNARY_INTEGER_OVERLOADS(atan)
 
 _DXC_COMPAT_BINARY_DOUBLE_OVERLOADS(atan2)
 _DXC_COMPAT_BINARY_INTEGER_OVERLOADS(atan2)
+_DXC_COMPAT_BINARY_MATRIX_OVERLOADS(atan2, float)
 
 //===----------------------------------------------------------------------===//
 // ceil builtins overloads

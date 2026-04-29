@@ -309,11 +309,5 @@ constexpr matrix<T, R, C> mul(matrix<T, R, C> x, T y) {
   return x * y;
 }
 
-template <typename T, int R, int C>
-constexpr matrix<float, R, C> atan2(matrix<T, R, C> y, matrix<T, R, C> x) {
-  return __builtin_elementwise_atan2((matrix<float, R, C>)y,
-                                     (matrix<float, R, C>)x);
-}
-
 } // namespace hlsl
 #endif //_HLSL_HLSL_INTRINSICS_H_
