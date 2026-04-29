@@ -7,24 +7,27 @@ define i32 @last_loaded_with_or_exit(i32 %n, ptr %arr) mustprogress {
 ; CHECK-LABEL: define i32 @last_loaded_with_or_exit(
 ; CHECK-SAME: i32 [[N:%.*]], ptr [[ARR:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
 ; CHECK-NEXT:    br label %[[HEADER:.*]]
 ; CHECK:       [[HEADER]]:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[LATCH:.*]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[LAST_LOADED:%.*]] = phi i32 [ [[LAST_LOADED_NEXT:%.*]], %[[LATCH]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[IV_LT_N:%.*]] = icmp ult i64 [[INDVARS_IV]], [[TMP0]]
-; CHECK-NEXT:    [[STAY:%.*]] = or i1 [[IV_LT_N]], false
+; CHECK-NEXT:    [[IV_LT_N:%.*]] = icmp ult i32 [[IV]], [[N]]
+; CHECK-NEXT:    [[IV_MINUS_ONE:%.*]] = add i32 -1, [[IV]]
+; CHECK-NEXT:    [[IV_MINUS_ONE_LT_N:%.*]] = icmp ult i32 [[IV_MINUS_ONE]], [[N]]
+; CHECK-NEXT:    [[STAY:%.*]] = or i1 [[IV_LT_N]], [[IV_MINUS_ONE_LT_N]]
 ; CHECK-NEXT:    br i1 [[STAY]], label %[[BODY:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[BODY]]:
-; CHECK-NEXT:    [[IDX:%.*]] = add nuw i64 4294967295, [[INDVARS_IV]]
-; CHECK-NEXT:    br i1 false, label %[[DO_LOAD:.*]], label %[[LATCH]]
+; CHECK-NEXT:    [[BODY_IV_MINUS_ONE:%.*]] = add i32 -1, [[IV]]
+; CHECK-NEXT:    [[BODY_IV_MINUS_ONE_NONNEG:%.*]] = icmp sgt i32 [[BODY_IV_MINUS_ONE]], -1
+; CHECK-NEXT:    br i1 [[BODY_IV_MINUS_ONE_NONNEG]], label %[[DO_LOAD:.*]], label %[[LATCH]]
 ; CHECK:       [[DO_LOAD]]:
+; CHECK-NEXT:    [[IDX:%.*]] = zext nneg i32 [[BODY_IV_MINUS_ONE]] to i64
 ; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr inbounds i32, ptr [[ARR]], i64 [[IDX]]
 ; CHECK-NEXT:    [[LOADED:%.*]] = load i32, ptr [[ADDR]], align 4
 ; CHECK-NEXT:    br label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    [[LAST_LOADED_NEXT]] = phi i32 [ [[LAST_LOADED]], %[[BODY]] ], [ [[LOADED]], %[[DO_LOAD]] ]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    br label %[[HEADER]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[LAST_LOADED_LCSSA:%.*]] = phi i32 [ [[LAST_LOADED]], %[[HEADER]] ]

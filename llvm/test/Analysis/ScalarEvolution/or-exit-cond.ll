@@ -7,25 +7,25 @@ define i32 @last_loaded_with_or_exit(i32 %n, ptr %arr) mustprogress {
 ; CHECK-LABEL: 'last_loaded_with_or_exit'
 ; CHECK-NEXT:  Classifying expressions for: @last_loaded_with_or_exit
 ; CHECK-NEXT:    %iv = phi i32 [ %iv.next, %latch ], [ 0, %entry ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><%header> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %header: Computable }
+; CHECK-NEXT:    --> {0,+,1}<%header> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %header: Computable }
 ; CHECK-NEXT:    %last_loaded = phi i32 [ %last_loaded.next, %latch ], [ 0, %entry ]
 ; CHECK-NEXT:    --> %last_loaded U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %header: Variant }
 ; CHECK-NEXT:    %iv_minus_one = add i32 -1, %iv
-; CHECK-NEXT:    --> {-1,+,1}<nuw><%header> U: [-1,0) S: [-1,0) Exits: <<Unknown>> LoopDispositions: { %header: Computable }
+; CHECK-NEXT:    --> {-1,+,1}<%header> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %header: Computable }
 ; CHECK-NEXT:    %stay = or i1 %iv_lt_n, %iv_minus_one_lt_n
 ; CHECK-NEXT:    --> (%iv_minus_one_lt_n umax %iv_lt_n) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %header: Variant }
 ; CHECK-NEXT:    %body_iv_minus_one = add i32 -1, %iv
-; CHECK-NEXT:    --> {-1,+,1}<nuw><%header> U: [-1,0) S: [-1,0) Exits: <<Unknown>> LoopDispositions: { %header: Computable }
+; CHECK-NEXT:    --> {-1,+,1}<%header> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %header: Computable }
 ; CHECK-NEXT:    %idx = zext nneg i32 %body_iv_minus_one to i64
-; CHECK-NEXT:    --> {4294967295,+,1}<nuw><%header> U: [4294967295,0) S: [4294967295,0) Exits: <<Unknown>> LoopDispositions: { %header: Computable }
+; CHECK-NEXT:    --> (zext i32 {-1,+,1}<%header> to i64) U: [0,4294967296) S: [0,4294967296) Exits: <<Unknown>> LoopDispositions: { %header: Computable }
 ; CHECK-NEXT:    %addr = getelementptr inbounds i32, ptr %arr, i64 %idx
-; CHECK-NEXT:    --> {(17179869180 + %arr),+,4}<%header> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %header: Computable }
+; CHECK-NEXT:    --> ((4 * (zext i32 {-1,+,1}<%header> to i64))<nuw><nsw> + %arr) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %header: Computable }
 ; CHECK-NEXT:    %loaded = load i32, ptr %addr, align 4
 ; CHECK-NEXT:    --> %loaded U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %header: Variant }
 ; CHECK-NEXT:    %last_loaded.next = phi i32 [ %last_loaded, %body ], [ %loaded, %do_load ]
 ; CHECK-NEXT:    --> %last_loaded.next U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %header: Variant }
 ; CHECK-NEXT:    %iv.next = add i32 %iv, 1
-; CHECK-NEXT:    --> {1,+,1}<nw><%header> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %header: Computable }
+; CHECK-NEXT:    --> {1,+,1}<%header> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %header: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @last_loaded_with_or_exit
 ; CHECK-NEXT:  Loop %header: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %header: Unpredictable constant max backedge-taken count.
