@@ -843,7 +843,7 @@ TEST_F(VPBasicBlockTest, print) {
     raw_string_ostream OS(I3Dump);
     VPSlotTracker SlotTracker;
     cast<VPRecipeBase>(I3)->print(OS, "", SlotTracker);
-    EXPECT_EQ("EMIT store <badref>, <badref>", I3Dump);
+    EXPECT_EQ("EMIT-SCALAR store <badref>, <badref>", I3Dump);
   }
 
   VPBlockUtils::connectBlocks(VPBB2, Plan.getScalarHeader());
@@ -866,7 +866,7 @@ compound=true
     "bb1:\l" +
     "  EMIT vp\<%1\> = add ir\<1\>, ir\<1\>\l" +
     "  EMIT vp\<%2\> = sub vp\<%1\>, ir\<1\>\l" +
-    "  EMIT store vp\<%1\>, vp\<%2\>\l" +
+    "  EMIT-SCALAR store vp\<%1\>, vp\<%2\>\l" +
     "Successor(s): bb2\l"
   ]
   N1 -> N2 [ label=""]
@@ -888,7 +888,7 @@ compound=true
   const char *ExpectedBlock1Str = R"(bb1:
   EMIT vp<%1> = add ir<1>, ir<1>
   EMIT vp<%2> = sub vp<%1>, ir<1>
-  EMIT store vp<%1>, vp<%2>
+  EMIT-SCALAR store vp<%1>, vp<%2>
 Successor(s): bb2
 )";
   std::string Block1Dump;
@@ -912,7 +912,7 @@ Successor(s): ir-bb<scalar.header>
     raw_string_ostream OS(I3Dump);
     VPSlotTracker SlotTracker(&Plan);
     cast<VPRecipeBase>(I3)->print(OS, "", SlotTracker);
-    EXPECT_EQ("EMIT store vp<%1>, vp<%2>", I3Dump);
+    EXPECT_EQ("EMIT-SCALAR store vp<%1>, vp<%2>", I3Dump);
   }
 
   {
@@ -1046,7 +1046,7 @@ compound=true
     "bb1:\l" +
     "  EMIT vp\<%1\> = add ir\<1\>, ir\<1\>\l" +
     "  EMIT vp\<%2\> = sub vp\<%1\>, ir\<1\>\l" +
-    "  EMIT store vp\<%1\>, vp\<%2\>\l" +
+    "  EMIT-SCALAR store vp\<%1\>, vp\<%2\>\l" +
     "No successors\l"
   ]
 }

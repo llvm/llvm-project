@@ -143,7 +143,7 @@ compound=true
       "  EMIT ir\<%arr.idx\> = getelementptr inbounds ir\<%A\>, ir\<%indvars.iv\>\l" +
       "  EMIT-SCALAR ir\<%l1\> = load ir\<%arr.idx\>\l" +
       "  EMIT ir\<%res\> = add ir\<%l1\>, ir\<10\>\l" +
-      "  EMIT store ir\<%res\>, ir\<%arr.idx\>\l" +
+      "  EMIT-SCALAR store ir\<%res\>, ir\<%arr.idx\>\l" +
       "  EMIT ir\<%indvars.iv.next\> = add ir\<%indvars.iv\>, ir\<1\>\l" +
       "  EMIT ir\<%exitcond\> = icmp ne ir\<%indvars.iv.next\>, ir\<%N\>\l" +
       "  EMIT vp\<%3\> = not ir\<%exitcond\>\l" +
@@ -316,7 +316,7 @@ compound=true
     N6 [label =
       "loop.latch:\l" +
       "  EMIT ir\<%res\> = add ir\<%l1\>, ir\<10\>\l" +
-      "  EMIT store ir\<%res\>, ir\<%arr.idx\>\l" +
+      "  EMIT-SCALAR store ir\<%res\>, ir\<%arr.idx\>\l" +
       "  EMIT ir\<%iv.next\> = add ir\<%iv\>, ir\<1\>\l" +
       "  EMIT ir\<%exitcond\> = icmp ne ir\<%iv.next\>, ir\<%N\>\l" +
       "  EMIT vp\<%3\> = not ir\<%exitcond\>\l" +
