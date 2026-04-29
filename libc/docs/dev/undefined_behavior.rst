@@ -191,11 +191,11 @@ Self joining is always rejected with ``EDEADLK``.
 
 At least one of the two threads in a mutual joining will detect the deadlock and 
 returns ``EDEADLK``. If joining requester gets ``EDEADLK``, the joining target is 
-recovered to joinable state. However, the other participant may already be waiting
+recovered to joinable state. However, the joining target may already be waiting
 if it does not see ``EDEADLK``.
 
 Cyclic joining with more than two threads are not detected.
 
 Concurrent and repeated joinings on the same thread are faulty behaviors, because
-target thread's TLS may already be teared down.  ``EINVAL`` may be returned if
+target thread's TLS may already be torn down.  ``EINVAL`` may be returned if
 multiple joinings occur on the same thread but it is not garanteed to observe.
