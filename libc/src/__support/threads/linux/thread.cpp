@@ -17,13 +17,13 @@
 #include "src/__support/libc_errno.h" // For error macros
 #include "src/__support/macros/config.h"
 #include "src/__support/threads/linux/futex_utils.h" // For FutexWordType
-#include <cerrno>
 
 #ifdef LIBC_TARGET_ARCH_IS_AARCH64
 #include <arm_acle.h>
 #endif
 
 #include "hdr/fcntl_macros.h"
+#include "hdr/errno_macros.h"
 #include "hdr/stdint_proxy.h"
 #include <linux/param.h> // For EXEC_PAGESIZE.
 #include <linux/prctl.h> // For PR_SET_NAME
