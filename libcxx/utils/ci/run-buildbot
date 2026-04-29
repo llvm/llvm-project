@@ -448,6 +448,38 @@ generic-hardening-mode-debug)
     check-runtimes
     check-abi-list
 ;;
+generic-llvm-libc)
+    clean
+
+    # Install kernel headers from a known-good Linux kernel version to ensure
+    # the test is hermetic.
+    export LINUX_VERSION=7.0.1
+    mkdir -p "${BUILD_DIR}"
+    curl -L "https://cdn.kernel.org/pub/linux/kernel/v7.x/linux-${LINUX_VERSION}.tar.xz" --output "${BUILD_DIR}/linux.tar.xz"
+    tar -xf "${BUILD_DIR}/linux.tar.xz" -C "${BUILD_DIR}"
+    make INSTALL_HDR_PATH="${BUILD_DIR}/linux-install" -C "${BUILD_DIR}/linux-${LINUX_VERSION}" headers_install
+
+    generate-cmake-base -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-llvm-libc.cmake" \
+                        -DLIBCXX_TEST_CONFIG="llvm-libc++-llvm-libc.cfg.in" \
+                        -DLIBCXXABI_TEST_CONFIG="llvm-libc++abi-llvm-libc.cfg.in" \
+                        -DLIBC_KERNEL_HEADERS="${BUILD_DIR}/linux-install/include"
+    # Ensure we have the builtins archive built as we pass it in explicitly in
+    # the test config.
+    ninja -vC "${BUILD_DIR}" libclang_rt.builtins-x86_64.a
+
+    # Manually run only libcxx/libcxxabi tests as we currently cannot build
+    # libunwind due to a missing dl_iterate_phdr implementation.
+    # TODO(boomanaiden154): Remove this once we can build libunwind and pass
+    # the tests.
+    step "Building libc++ test dependencies"
+    ninja -vC "${BUILD_DIR}" cxx-test-depends
+
+    step "Running the libc++ tests"
+    ninja -vC "${BUILD_DIR}" check-cxx
+
+    step "Running the libc++abi tests"
+    ninja -vC "${BUILD_DIR}" check-cxxabi
+;;
 #
 # Module builds
 #

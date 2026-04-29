@@ -1,6 +1,4 @@
 .. title:: clang-tidy - hicpp-ignored-remove-result
-.. meta::
-   :http-equiv=refresh: 5;URL=../bugprone/unused-return-value.html
 
 hicpp-ignored-remove-result
 ===========================

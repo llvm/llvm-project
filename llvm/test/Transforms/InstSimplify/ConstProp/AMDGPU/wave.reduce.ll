@@ -238,14 +238,16 @@ entry:
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.wave.reduce.add
 ; --------------------------------------------------------------------
-
+; add reduction requires multiplying the constant by number of active
+; lanes, so we can't fold in the constant.
 declare i32 @llvm.amdgcn.wave.reduce.add.i32(i32, i32 immarg)
 declare i64 @llvm.amdgcn.wave.reduce.add.i64(i64, i32 immarg)
 
-define amdgpu_kernel void @test_constant_fold_wave_reduce_add_i32_poison(ptr addrspace(1) %out, i32 %in) {
-; CHECK-LABEL: @test_constant_fold_wave_reduce_add_i32_poison(
+define amdgpu_kernel void @test_no_fold_wave_reduce_add_i32_poison(ptr addrspace(1) %out, i32 %in) {
+; CHECK-LABEL: @test_no_fold_wave_reduce_add_i32_poison(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i32 poison, ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.wave.reduce.add.i32(i32 poison, i32 1)
+; CHECK-NEXT:    store i32 [[RESULT]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -254,10 +256,11 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @test_constant_fold_wave_reduce_add_i32_const(ptr addrspace(1) %out) {
-; CHECK-LABEL: @test_constant_fold_wave_reduce_add_i32_const(
+define amdgpu_kernel void @test_no_fold_wave_reduce_add_i32_const(ptr addrspace(1) %out) {
+; CHECK-LABEL: @test_no_fold_wave_reduce_add_i32_const(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i32 123, ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.wave.reduce.add.i32(i32 123, i32 1)
+; CHECK-NEXT:    store i32 [[RESULT]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -266,10 +269,11 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @test_constant_fold_wave_reduce_add_i64_poison(ptr addrspace(1) %out, i64 %in) {
-; CHECK-LABEL: @test_constant_fold_wave_reduce_add_i64_poison(
+define amdgpu_kernel void @test_no_fold_wave_reduce_add_i64_poison(ptr addrspace(1) %out, i64 %in) {
+; CHECK-LABEL: @test_no_fold_wave_reduce_add_i64_poison(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i64 poison, ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    [[RESULT:%.*]] = call i64 @llvm.amdgcn.wave.reduce.add.i64(i64 poison, i32 1)
+; CHECK-NEXT:    store i64 [[RESULT]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -278,10 +282,11 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @test_constant_fold_wave_reduce_add_i64_const(ptr addrspace(1) %out) {
-; CHECK-LABEL: @test_constant_fold_wave_reduce_add_i64_const(
+define amdgpu_kernel void @test_no_fold_wave_reduce_add_i64_const(ptr addrspace(1) %out) {
+; CHECK-LABEL: @test_no_fold_wave_reduce_add_i64_const(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i64 123, ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    [[RESULT:%.*]] = call i64 @llvm.amdgcn.wave.reduce.add.i64(i64 123, i32 1)
+; CHECK-NEXT:    store i64 [[RESULT]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -293,14 +298,16 @@ entry:
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.wave.reduce.sub
 ; --------------------------------------------------------------------
-
+; sub reduction requires multiplying the constant by number of active
+; lanes, so we can't fold in the constant.
 declare i32 @llvm.amdgcn.wave.reduce.sub.i32(i32, i32 immarg)
 declare i64 @llvm.amdgcn.wave.reduce.sub.i64(i64, i32 immarg)
 
-define amdgpu_kernel void @test_constant_fold_wave_reduce_sub_i32_poison(ptr addrspace(1) %out, i32 %in) {
-; CHECK-LABEL: @test_constant_fold_wave_reduce_sub_i32_poison(
+define amdgpu_kernel void @test_no_fold_wave_reduce_sub_i32_poison(ptr addrspace(1) %out, i32 %in) {
+; CHECK-LABEL: @test_no_fold_wave_reduce_sub_i32_poison(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i32 poison, ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.wave.reduce.sub.i32(i32 poison, i32 1)
+; CHECK-NEXT:    store i32 [[RESULT]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -309,10 +316,11 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @test_constant_fold_wave_reduce_sub_i32_const(ptr addrspace(1) %out) {
-; CHECK-LABEL: @test_constant_fold_wave_reduce_sub_i32_const(
+define amdgpu_kernel void @test_no_fold_wave_reduce_sub_i32_const(ptr addrspace(1) %out) {
+; CHECK-LABEL: @test_no_fold_wave_reduce_sub_i32_const(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i32 123, ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.wave.reduce.sub.i32(i32 123, i32 1)
+; CHECK-NEXT:    store i32 [[RESULT]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -321,10 +329,11 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @test_constant_fold_wave_reduce_sub_i64_poison(ptr addrspace(1) %out, i64 %in) {
-; CHECK-LABEL: @test_constant_fold_wave_reduce_sub_i64_poison(
+define amdgpu_kernel void @test_no_fold_wave_reduce_sub_i64_poison(ptr addrspace(1) %out, i64 %in) {
+; CHECK-LABEL: @test_no_fold_wave_reduce_sub_i64_poison(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i64 poison, ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    [[RESULT:%.*]] = call i64 @llvm.amdgcn.wave.reduce.sub.i64(i64 poison, i32 1)
+; CHECK-NEXT:    store i64 [[RESULT]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -333,10 +342,11 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @test_constant_fold_wave_reduce_sub_i64_const(ptr addrspace(1) %out) {
-; CHECK-LABEL: @test_constant_fold_wave_reduce_sub_i64_const(
+define amdgpu_kernel void @test_no_fold_wave_reduce_sub_i64_const(ptr addrspace(1) %out) {
+; CHECK-LABEL: @test_no_fold_wave_reduce_sub_i64_const(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i64 123, ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    [[RESULT:%.*]] = call i64 @llvm.amdgcn.wave.reduce.sub.i64(i64 123, i32 1)
+; CHECK-NEXT:    store i64 [[RESULT]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -458,14 +468,16 @@ entry:
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.wave.reduce.xor
 ; --------------------------------------------------------------------
-
+; xor reduction requires multiplying the constant by the parity of the
+; number of active lanes, so we can't fold in the constant.
 declare i32 @llvm.amdgcn.wave.reduce.xor.i32(i32, i32 immarg)
 declare i64 @llvm.amdgcn.wave.reduce.xor.i64(i64, i32 immarg)
 
-define amdgpu_kernel void @test_constant_fold_wave_reduce_xor_i32_poison(ptr addrspace(1) %out, i32 %in) {
-; CHECK-LABEL: @test_constant_fold_wave_reduce_xor_i32_poison(
+define amdgpu_kernel void @test_no_fold_wave_reduce_xor_i32_poison(ptr addrspace(1) %out, i32 %in) {
+; CHECK-LABEL: @test_no_fold_wave_reduce_xor_i32_poison(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i32 poison, ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.wave.reduce.xor.i32(i32 poison, i32 1)
+; CHECK-NEXT:    store i32 [[RESULT]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -474,10 +486,11 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @test_constant_fold_wave_reduce_xor_i32_const(ptr addrspace(1) %out) {
-; CHECK-LABEL: @test_constant_fold_wave_reduce_xor_i32_const(
+define amdgpu_kernel void @test_no_fold_wave_reduce_xor_i32_const(ptr addrspace(1) %out) {
+; CHECK-LABEL: @test_no_fold_wave_reduce_xor_i32_const(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i32 123, ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.wave.reduce.xor.i32(i32 123, i32 1)
+; CHECK-NEXT:    store i32 [[RESULT]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -486,10 +499,11 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @test_constant_fold_wave_reduce_xor_i64_poison(ptr addrspace(1) %out, i64 %in) {
-; CHECK-LABEL: @test_constant_fold_wave_reduce_xor_i64_poison(
+define amdgpu_kernel void @test_no_fold_wave_reduce_xor_i64_poison(ptr addrspace(1) %out, i64 %in) {
+; CHECK-LABEL: @test_no_fold_wave_reduce_xor_i64_poison(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i64 poison, ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    [[RESULT:%.*]] = call i64 @llvm.amdgcn.wave.reduce.xor.i64(i64 poison, i32 1)
+; CHECK-NEXT:    store i64 [[RESULT]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -498,10 +512,11 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @test_constant_fold_wave_reduce_xor_i64_const(ptr addrspace(1) %out) {
-; CHECK-LABEL: @test_constant_fold_wave_reduce_xor_i64_const(
+define amdgpu_kernel void @test_no_fold_wave_reduce_xor_i64_const(ptr addrspace(1) %out) {
+; CHECK-LABEL: @test_no_fold_wave_reduce_xor_i64_const(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i64 123, ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    [[RESULT:%.*]] = call i64 @llvm.amdgcn.wave.reduce.xor.i64(i64 123, i32 1)
+; CHECK-NEXT:    store i64 [[RESULT]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

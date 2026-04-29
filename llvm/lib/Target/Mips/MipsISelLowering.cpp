@@ -2667,8 +2667,23 @@ SDValue MipsTargetLowering::lowerATOMIC_FENCE(SDValue Op,
   // FIXME: Set SType for weaker fences where supported/appropriate.
   unsigned SType = 0;
   SDLoc DL(Op);
-  return DAG.getNode(MipsISD::Sync, DL, MVT::Other, Op.getOperand(0),
-                     DAG.getConstant(SType, DL, MVT::i32));
+  SyncScope::ID FenceSSID =
+      static_cast<SyncScope::ID>(Op.getConstantOperandVal(2));
+
+  if (Subtarget.hasMips2() && FenceSSID == SyncScope::System)
+    return DAG.getNode(MipsISD::Sync, DL, MVT::Other, Op.getOperand(0),
+                       DAG.getTargetConstant(SType, DL, MVT::i32));
+
+  // singlethread fences only synchronize with signal handlers on the same
+  // thread and thus only need to preserve instruction order, not actually
+  // enforce memory ordering.
+  if ((Subtarget.hasMips1() && !Subtarget.hasMips2()) ||
+      FenceSSID == SyncScope::SingleThread) {
+    // MEMBARRIER is a compiler barrier; it codegens to a no-op.
+    return DAG.getNode(ISD::MEMBARRIER, DL, MVT::Other, Op.getOperand(0));
+  }
+
+  return Op;
 }
 
 SDValue MipsTargetLowering::lowerShiftLeftParts(SDValue Op,

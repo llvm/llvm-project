@@ -127,6 +127,9 @@ bool IsSeparateModuleProcedureInterface(const Symbol *);
 bool HasAlternateReturns(const Symbol &);
 bool IsAutomaticallyDestroyed(const Symbol &);
 
+// Follow association until the first symbol without HostAssocDetails.
+const Symbol &FollowHostAssoc(const Symbol &);
+
 // Return an ultimate component of type that matches predicate, or nullptr.
 const Symbol *FindUltimateComponent(const DerivedTypeSpec &type,
     const std::function<bool(const Symbol &)> &predicate);

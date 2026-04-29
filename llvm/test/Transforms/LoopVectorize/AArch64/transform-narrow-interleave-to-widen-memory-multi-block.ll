@@ -149,13 +149,13 @@ define void @load_store_interleave_group_block_var_cond(ptr noalias %data, ptr %
 ; VF2IC1-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[MASKS]], i64 [[INDEX]]
 ; VF2IC1-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i8>, ptr [[TMP2]], align 1
 ; VF2IC1-NEXT:    [[TMP3:%.*]] = icmp eq <2 x i8> [[WIDE_LOAD1]], zeroinitializer
-; VF2IC1-NEXT:    [[TMP4:%.*]] = extractelement <2 x i1> [[TMP3]], i32 0
+; VF2IC1-NEXT:    [[TMP4:%.*]] = extractelement <2 x i1> [[TMP3]], i64 0
 ; VF2IC1-NEXT:    br i1 [[TMP4]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; VF2IC1:       [[PRED_STORE_IF]]:
 ; VF2IC1-NEXT:    store i8 1, ptr [[TMP2]], align 1
 ; VF2IC1-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; VF2IC1:       [[PRED_STORE_CONTINUE]]:
-; VF2IC1-NEXT:    [[TMP7:%.*]] = extractelement <2 x i1> [[TMP3]], i32 1
+; VF2IC1-NEXT:    [[TMP7:%.*]] = extractelement <2 x i1> [[TMP3]], i64 1
 ; VF2IC1-NEXT:    br i1 [[TMP7]], label %[[PRED_STORE_IF2:.*]], label %[[PRED_STORE_CONTINUE3]]
 ; VF2IC1:       [[PRED_STORE_IF2]]:
 ; VF2IC1-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX]], 1
@@ -202,13 +202,13 @@ define void @load_store_interleave_group_block_var_cond(ptr noalias %data, ptr %
 ; VF2IC2-NEXT:    [[WIDE_LOAD6:%.*]] = load <2 x i8>, ptr [[TMP8]], align 1
 ; VF2IC2-NEXT:    [[TMP9:%.*]] = icmp eq <2 x i8> [[WIDE_LOAD]], zeroinitializer
 ; VF2IC2-NEXT:    [[TMP10:%.*]] = icmp eq <2 x i8> [[WIDE_LOAD6]], zeroinitializer
-; VF2IC2-NEXT:    [[TMP11:%.*]] = extractelement <2 x i1> [[TMP9]], i32 0
+; VF2IC2-NEXT:    [[TMP11:%.*]] = extractelement <2 x i1> [[TMP9]], i64 0
 ; VF2IC2-NEXT:    br i1 [[TMP11]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; VF2IC2:       [[PRED_STORE_IF]]:
 ; VF2IC2-NEXT:    store i8 1, ptr [[TMP7]], align 1
 ; VF2IC2-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; VF2IC2:       [[PRED_STORE_CONTINUE]]:
-; VF2IC2-NEXT:    [[TMP14:%.*]] = extractelement <2 x i1> [[TMP9]], i32 1
+; VF2IC2-NEXT:    [[TMP14:%.*]] = extractelement <2 x i1> [[TMP9]], i64 1
 ; VF2IC2-NEXT:    br i1 [[TMP14]], label %[[PRED_STORE_IF7:.*]], label %[[PRED_STORE_CONTINUE8:.*]]
 ; VF2IC2:       [[PRED_STORE_IF7]]:
 ; VF2IC2-NEXT:    [[TMP15:%.*]] = add i64 [[INDEX]], 1
@@ -216,14 +216,14 @@ define void @load_store_interleave_group_block_var_cond(ptr noalias %data, ptr %
 ; VF2IC2-NEXT:    store i8 1, ptr [[TMP16]], align 1
 ; VF2IC2-NEXT:    br label %[[PRED_STORE_CONTINUE8]]
 ; VF2IC2:       [[PRED_STORE_CONTINUE8]]:
-; VF2IC2-NEXT:    [[TMP17:%.*]] = extractelement <2 x i1> [[TMP10]], i32 0
+; VF2IC2-NEXT:    [[TMP17:%.*]] = extractelement <2 x i1> [[TMP10]], i64 0
 ; VF2IC2-NEXT:    br i1 [[TMP17]], label %[[PRED_STORE_IF9:.*]], label %[[PRED_STORE_CONTINUE10:.*]]
 ; VF2IC2:       [[PRED_STORE_IF9]]:
 ; VF2IC2-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i8, ptr [[MASKS]], i64 [[TMP0]]
 ; VF2IC2-NEXT:    store i8 1, ptr [[TMP19]], align 1
 ; VF2IC2-NEXT:    br label %[[PRED_STORE_CONTINUE10]]
 ; VF2IC2:       [[PRED_STORE_CONTINUE10]]:
-; VF2IC2-NEXT:    [[TMP20:%.*]] = extractelement <2 x i1> [[TMP10]], i32 1
+; VF2IC2-NEXT:    [[TMP20:%.*]] = extractelement <2 x i1> [[TMP10]], i64 1
 ; VF2IC2-NEXT:    br i1 [[TMP20]], label %[[PRED_STORE_IF11:.*]], label %[[PRED_STORE_CONTINUE12]]
 ; VF2IC2:       [[PRED_STORE_IF11]]:
 ; VF2IC2-NEXT:    [[TMP21:%.*]] = add i64 [[INDEX]], 3

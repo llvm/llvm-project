@@ -55,7 +55,8 @@ bool isCXXABIAttributeLegal(const mlir::TypeConverter &tc,
   // These attributes either don't contain a type, or don't contain a type that
   // can have a data member/method.
   if (isa<mlir::DenseArrayAttr, mlir::FloatAttr, mlir::UnitAttr,
-          mlir::StringAttr, mlir::IntegerAttr, mlir::SymbolRefAttr>(attr))
+          mlir::StringAttr, mlir::IntegerAttr, mlir::SymbolRefAttr,
+          cir::AnnotationAttr>(attr))
     return true;
 
   // Tablegen'ed always-legal attributes:
@@ -415,6 +416,17 @@ static mlir::TypedAttr lowerInitialValue(const LowerModule *lowerModule,
       return cir::ZeroAttr::get(loweredArrTy);
 
     auto arrayVal = mlir::cast<cir::ConstArrayAttr>(initVal);
+
+    // String-literal arrays store their bytes as a StringAttr in `elts`. The
+    // backing i8 element type is never rewritten by the CXX ABI type
+    // converter, so the attribute is already legal and can be passed through
+    // unchanged.
+    if (mlir::isa<mlir::StringAttr>(arrayVal.getElts())) {
+      assert(loweredArrTy == arrTy &&
+             "string-literal array type should not change under CXX ABI");
+      return arrayVal;
+    }
+
     auto arrayElts = mlir::cast<ArrayAttr>(arrayVal.getElts());
     SmallVector<mlir::Attribute> loweredElements;
     loweredElements.reserve(arrTy.getSize());

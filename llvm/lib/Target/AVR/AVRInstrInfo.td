@@ -914,7 +914,7 @@ let hasSideEffects = 0, mayLoad = 1 in {
     //   ld    Rd+1, P+
     //   subiw P,    2
     let Constraints = "@earlyclobber $reg" in
-    def LDWRdPtr : Pseudo<(outs DREGS:$reg), (ins PTRDISPREGS:$ptrreg),
+    def LDWRdPtr : Pseudo<(outs DREGSNOZ:$reg), (ins PTRDISPREGS:$ptrreg),
                           "ldw\t$reg, $ptrreg",
                           [(set i16:$reg, (load i16:$ptrreg))]>,
                    Requires<[HasSRAM]>;
@@ -1019,13 +1019,13 @@ class AtomicLoadOp<PatFrag Op, RegisterClass DRC, RegisterClass PTRRC>
 // which require PTRDISPREGS.
 
 def AtomicLoad8 : AtomicLoad<atomic_load_nonext_8, GPR8, PTRREGS>;
-def AtomicLoad16 : AtomicLoad<atomic_load_nonext_16, DREGS, PTRDISPREGS>;
+def AtomicLoad16 : AtomicLoad<atomic_load_nonext_16, DREGSNOZ, PTRDISPREGS>;
 
 def AtomicStore8 : AtomicStore<atomic_store_8, GPR8, PTRREGS>;
-def AtomicStore16 : AtomicStore<atomic_store_16, DREGS, PTRDISPREGS>;
+def AtomicStore16 : AtomicStore<atomic_store_16, DREGSNOZ, PTRDISPREGS>;
 
 class AtomicLoadOp8<PatFrag Op> : AtomicLoadOp<Op, GPR8, PTRREGS>;
-class AtomicLoadOp16<PatFrag Op> : AtomicLoadOp<Op, DREGS, PTRDISPREGS>;
+class AtomicLoadOp16<PatFrag Op> : AtomicLoadOp<Op, DREGSNOZ, PTRDISPREGS>;
 
 let usesCustomInserter = 1, Defs = [SREG] in {
   def AtomicLoadAdd8 : AtomicLoadOp8<atomic_load_add_i8>;
@@ -1085,7 +1085,7 @@ def STPtrRr : FSTLD<1, 0b00, (outs), (ins PTRREGS:$ptrreg, GPR8:$reg),
 //   st    P+, Rr+1
 //   subiw P,  q+2
 let hasSideEffects = 0, mayStore = 1 in
-def STWPtrRr : Pseudo<(outs), (ins PTRDISPREGS:$ptrreg, DREGS:$reg),
+def STWPtrRr : Pseudo<(outs), (ins PTRDISPREGS:$ptrreg, DREGSNOZ:$reg),
                       "stw\t$ptrreg, $reg", [(store i16:$reg, i16:$ptrreg)]>,
                Requires<[HasSRAM]>;
 

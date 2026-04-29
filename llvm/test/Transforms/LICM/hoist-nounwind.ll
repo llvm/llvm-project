@@ -81,17 +81,17 @@ for.cond.cleanup:
   ret i32 0
 }
 
-; Hoist a non-volatile load past volatile load.
+; Do not hoist a non-volatile load past volatile load, because it may trap.
 define i32 @test3(ptr noalias nocapture readonly %a, ptr %v) nounwind uwtable {
 ; CHECK-LABEL: define i32 @test3(
 ; CHECK-SAME: ptr noalias readonly captures(none) [[A:%.*]], ptr [[V:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[I1:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[I_06:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[X_05:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[ADD:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[XXX:%.*]] = load volatile i32, ptr [[V]], align 4
+; CHECK-NEXT:    [[I1:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    [[ADD]] = add nsw i32 [[I1]], [[X_05]]
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_06]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 1000

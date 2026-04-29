@@ -27,7 +27,6 @@ void main() {
 // This test makes a probably safe assumption that HLSL 202x includes operator overloading for assignment operators.
 // CHECK:     define linkonce_odr hidden noundef i32 @_ZN4Pair8getFirstEv(ptr noundef nonnull align 1 dereferenceable(8) %this) #0 align 2 {
 // CHECK-NEXT:entry:
-// CHECK-NEXT:%[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:%this.addr = alloca ptr, align 4
 // CHECK-NEXT:%Another = alloca %struct.Pair, align 1
 // CHECK-NEXT:%agg.tmp = alloca %struct.Pair, align 1
@@ -40,12 +39,11 @@ void main() {
 // CHECK-NEXT:call void @llvm.memcpy.p0.p0.i32(ptr align 1 %agg.tmp, ptr align 1 %Another, i32 8, i1 false)
 // CHECK-NEXT:call void @_ZN4PairaSES_(ptr noundef nonnull align 1 dereferenceable(8) %this1, ptr noundef byval(%struct.Pair) align 1 %agg.tmp)
 // CHECK-NEXT:%First2 = getelementptr inbounds nuw %struct.Pair, ptr %this1, i32 0, i32 0
-// CHECK-NEXT:%[[#FIRST:]] = load i32, ptr %First2, align 1
-// CHECK-NEXT:ret i32 %[[#FIRST]]
+// CHECK-NEXT:%0 = load i32, ptr %First2, align 1
+// CHECK-NEXT:ret i32 %0
 
 // CHECK:     define linkonce_odr hidden noundef i32 @_ZN4Pair9getSecondEv(ptr noundef nonnull align 1 dereferenceable(8) %this) #0 align 2 {
 // CHECK-NEXT:entry:
-// CHECK-NEXT:%[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:%this.addr = alloca ptr, align 4
 // CHECK-NEXT:%agg.tmp = alloca %struct.Pair, align 1
 // CHECK-NEXT:store ptr %this, ptr %this.addr, align 4
@@ -53,5 +51,5 @@ void main() {
 // CHECK-NEXT:call void @llvm.memset.p0.i32(ptr align 1 %agg.tmp, i8 0, i32 8, i1 false)
 // CHECK-NEXT:call void @_ZN4PairaSES_(ptr noundef nonnull align 1 dereferenceable(8) %this1, ptr noundef byval(%struct.Pair) align 1 %agg.tmp)
 // CHECK-NEXT:%Second = getelementptr inbounds nuw %struct.Pair, ptr %this1, i32 0, i32 1
-// CHECK-NEXT:%[[#SECOND:]] = load i32, ptr %Second, align 1
-// CHECK-NEXT:ret i32 %[[#SECOND]]
+// CHECK-NEXT:%0 = load i32, ptr %Second, align 1
+// CHECK-NEXT:ret i32 %0

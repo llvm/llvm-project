@@ -10,6 +10,7 @@ unittest("MCTests") {
   ]
   sources = [
     "Disassembler.cpp",
+    "DwarfDebugFrameCIE.cpp",
     "DwarfLineTableHeaders.cpp",
     "DwarfLineTables.cpp",
     "MCDisassemblerTest.cpp",

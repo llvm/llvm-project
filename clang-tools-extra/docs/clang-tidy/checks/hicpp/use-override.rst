@@ -1,6 +1,4 @@
 .. title:: clang-tidy - hicpp-use-override
-.. meta::
-   :http-equiv=refresh: 5;URL=../modernize/use-override.html
 
 hicpp-use-override
 ==================
