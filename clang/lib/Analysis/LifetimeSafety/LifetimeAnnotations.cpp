@@ -272,9 +272,18 @@ static bool isStdUniquePtr(const CXXRecordDecl &RD) {
   return RD.isInStdNamespace() && getName(RD) == "unique_ptr";
 }
 
+static bool isStdUniquePtrFunc(const CXXMethodDecl &MD, unsigned int Num,
+                               StringRef Name) {
+  return MD.getIdentifier() && MD.getName() == Name &&
+         MD.getNumParams() == Num && isStdUniquePtr(*MD.getParent());
+}
+
 bool isUniquePtrRelease(const CXXMethodDecl &MD) {
-  return MD.getIdentifier() && MD.getName() == "release" &&
-         MD.getNumParams() == 0 && isStdUniquePtr(*MD.getParent());
+  return isStdUniquePtrFunc(MD, 0, "release");
+}
+
+bool isUniquePtrReset(const CXXMethodDecl &MD) {
+  return isStdUniquePtrFunc(MD, 0, "reset");
 }
 
 bool isContainerInvalidationMethod(const CXXMethodDecl &MD) {
@@ -342,6 +351,9 @@ bool isContainerInvalidationMethod(const CXXMethodDecl &MD) {
                                          // Assignment
                                          "replace"};
 
+  static const llvm::StringSet<> SmartPtr = {// Reallocation
+                                             "reset"};
+
   const StringRef ContainerName = getName(*RD);
   // TODO: Consider caching this lookup by CXXMethodDecl pointer if this
   // StringSwitch becomes a performance bottleneck.
@@ -356,6 +368,7 @@ bool isContainerInvalidationMethod(const CXXMethodDecl &MD) {
                  &NodeBased)
           .Cases({"flat_map", "flat_set", "flat_multimap", "flat_multiset"},
                  &Flat)
+          .Cases({"unique_ptr"}, &SmartPtr)
           .Default(nullptr);
 
   if (!InvalidatingMethods)
