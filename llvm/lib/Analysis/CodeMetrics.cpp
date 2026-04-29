@@ -113,12 +113,11 @@ void CodeMetrics::collectEphemeralValues(
   completeEphemeralValues(Visited, Worklist, EphValues);
 }
 
-/// Check if a block is dead. A block is determined dead if it is terminated by
-/// unreachable and all predecessors are statically known conditional branches
-/// that do not branch to the block.
-static bool isDeadBlock(const BasicBlock *BB) {
-  if (BB->isEntryBlock())
-    return false;
+/// Check if a block was previously marked dead by setting the terminator to
+/// `unreachable` and the condiational branch to the block is statically
+/// evaluated. This is done for instance within the unroll pass, between
+/// unrolling inner/outer loops.
+static bool isBlockMarkedDead(const BasicBlock *BB) {
   if (!isa<UnreachableInst>(BB->getTerminator()))
     return false;
   for (const BasicBlock *Pred : predecessors(BB)) {
@@ -144,9 +143,7 @@ static bool extendsConvergenceOutsideLoop(const Instruction &I, const Loop *L) {
     return false;
   for (const auto *U : I.users()) {
     const auto *UserInst = cast<Instruction>(U);
-    // Ignore users in dead blocks. These can be of a fully unrolled inner loop
-    // where the exit condition was folded.
-    if (isDeadBlock(UserInst->getParent()))
+    if (isBlockMarkedDead(UserInst->getParent()))
       continue;
     if (!L->contains(UserInst))
       return true;
