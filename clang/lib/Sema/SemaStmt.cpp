@@ -4708,9 +4708,22 @@ static bool
 buildCapturedStmtCaptureList(Sema &S, CapturedRegionScopeInfo *RSI,
                              SmallVectorImpl<CapturedStmt::Capture> &Captures,
                              SmallVectorImpl<Expr *> &CaptureInits) {
+  llvm::SmallPtrSet<VarDecl *, 4> CapturedDecomposed;
   for (const sema::Capture &Cap : RSI->Captures) {
     if (Cap.isInvalid())
       continue;
+
+    ValueDecl *CapVar = nullptr;
+    if (Cap.isVariableCapture()) {
+      CapVar = Cap.getVariable();
+      if (auto *BD = dyn_cast<BindingDecl>(CapVar)) {
+        VarDecl *DD = cast<VarDecl>(BD->getDecomposedDecl());
+        if (!CapturedDecomposed.insert(DD).second) {
+          continue; // Skip duplicate.
+        }
+        CapVar = DD;
+      }
+    }
 
     // Form the initializer for the capture.
     ExprResult Init = S.BuildCaptureInit(Cap, Cap.getLocation(),
@@ -4724,8 +4737,8 @@ buildCapturedStmtCaptureList(Sema &S, CapturedRegionScopeInfo *RSI,
 
     // Add the capture to our list of captures.
     if (Cap.isThisCapture()) {
-      Captures.push_back(CapturedStmt::Capture(Cap.getLocation(),
-                                               CapturedStmt::VCK_This));
+      Captures.push_back(
+          CapturedStmt::Capture(Cap.getLocation(), CapturedStmt::VCK_This));
     } else if (Cap.isVLATypeCapture()) {
       Captures.push_back(
           CapturedStmt::Capture(Cap.getLocation(), CapturedStmt::VCK_VLAType));
@@ -4733,12 +4746,7 @@ buildCapturedStmtCaptureList(Sema &S, CapturedRegionScopeInfo *RSI,
       assert(Cap.isVariableCapture() && "unknown kind of capture");
 
       if (S.getLangOpts().OpenMP && RSI->CapRegionKind == CR_OpenMP)
-        S.OpenMP().setOpenMPCaptureKind(Field, Cap.getVariable(),
-                                        RSI->OpenMPLevel);
-
-      ValueDecl *CapVar = Cap.getVariable();
-      if (auto *BD = dyn_cast<BindingDecl>(CapVar))
-        CapVar = cast<VarDecl>(BD->getDecomposedDecl());
+        S.OpenMP().setOpenMPCaptureKind(Field, CapVar, RSI->OpenMPLevel);
       Captures.emplace_back(Cap.getLocation(),
                             Cap.isReferenceCapture() ? CapturedStmt::VCK_ByRef
                                                      : CapturedStmt::VCK_ByCopy,

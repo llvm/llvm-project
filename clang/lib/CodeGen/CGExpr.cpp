@@ -3801,26 +3801,97 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
     if (E->refersToEnclosingVariableOrCapture()) {
       // OpenMP case: binding was captured via its decomposed decl.
       if (auto *DD = dyn_cast<VarDecl>(BD->getDecomposedDecl())) {
-        assert(CapturedStmtInfo && "Expected to be in a captured statement");
-        assert(CapturedStmtInfo->getKind() == CapturedRegionKind::CR_OpenMP &&
-               "Expected OpenMP captured region");
-        assert(CGM.getLangOpts().OpenMP && "OpenMP not enabled");
-        auto I = LocalDeclMap.find(DD);
-        if (I != LocalDeclMap.end()) {
-          Address DDAddr = I->second;
-          llvm::Type *StructTy = CGM.getTypes().ConvertTypeForMem(
-              DD->getType().getCanonicalType());
-          if (DDAddr.getElementType() != StructTy)
-            DDAddr = DDAddr.withElementType(StructTy);
-          LValue BaseLV =
-              MakeAddrLValue(DDAddr, DD->getType().getCanonicalType());
-          return EmitLValueForField(
-              BaseLV, cast<FieldDecl>(
-                          cast<MemberExpr>(BD->getBinding()->IgnoreImplicit())
-                              ->getMemberDecl()));
+        if (CapturedStmtInfo &&
+            CapturedStmtInfo->getKind() == CapturedRegionKind::CR_OpenMP &&
+            CGM.getLangOpts().OpenMP) {
+          auto I = LocalDeclMap.find(DD);
+          if (I != LocalDeclMap.end()) {
+            Address DDAddr = I->second;
+            llvm::Type *ExpectedTy = CGM.getTypes().ConvertTypeForMem(
+                DD->getType().getCanonicalType());
+            if (DDAddr.getElementType() != ExpectedTy)
+              DDAddr = DDAddr.withElementType(ExpectedTy);
+            LValue CapLVal;
+            if (DD->getType()->isReferenceType())
+              CapLVal = EmitLoadOfReferenceLValue(DDAddr, DD->getType(),
+                                                  AlignmentSource::Decl);
+            else
+              CapLVal =
+                  MakeAddrLValue(DDAddr, DD->getType().getCanonicalType());
+            if (getLangOpts().OpenMP &&
+                CGM.getOpenMPRuntime().isNontemporalDecl(DD))
+              CapLVal.setNontemporal(/*Value=*/true);
+            // Extract the specific binding from the decomposed object.
+            Expr *BindingExpr = BD->getBinding()->IgnoreImplicit();
+            if (auto *ME = dyn_cast<MemberExpr>(BindingExpr)) {
+              // Struct/union: access field.
+              return EmitLValueForField(CapLVal,
+                                        cast<FieldDecl>(ME->getMemberDecl()));
+            }
+            if (auto *ASE = dyn_cast<ArraySubscriptExpr>(BindingExpr)) {
+              Address Base = CapLVal.getAddress();
+              llvm::Value *Idx = EmitScalarExpr(ASE->getIdx());
+              llvm::Value *Indices[] = {llvm::ConstantInt::get(Int32Ty, 0),
+                                        Idx};
+              llvm::Type *ElemTy =
+                  CGM.getTypes().ConvertTypeForMem(ASE->getType());
+              llvm::Value *EltPtr = Builder.CreateInBoundsGEP(
+                  Base.getElementType(), Base.emitRawPointer(*this), Indices,
+                  "arrayidx");
+              CharUnits Align = Base.getAlignment().alignmentOfArrayElement(
+                  getContext().getTypeSizeInChars(ASE->getType()));
+              Address EltAddr(EltPtr, ElemTy, Align);
+              return MakeAddrLValue(EltAddr, ASE->getType());
+            }
+            // Fallback for complex binding types.
+            // TODO: Tuple bindings (std::tuple, std::pair via tuple protocol)
+            // use hidden temporary variables that aren't captured in OpenMP
+            // regions. Need to re-emit the get<N>() call on the captured tuple
+            // base object. For now, this will fail.
+            if (isa<DeclRefExpr>(BindingExpr))
+              llvm_unreachable(
+                  "tuple-like structured bindings not yet supported in OpenMP");
+            return EmitLValue(BindingExpr);
+          }
+          // DD not in LocalDeclMap, check capture struct
+          if (auto *FD = CapturedStmtInfo->lookup(DD)) {
+            LValue CapLVal = EmitCapturedFieldLValue(
+                *this, FD, CapturedStmtInfo->getContextValue());
+            Address Addr = CapLVal.getAddress();
+            llvm::Type *ExpectedTy = CGM.getTypes().ConvertTypeForMem(
+                DD->getType().getCanonicalType());
+            if (Addr.getElementType() != ExpectedTy)
+              Addr = Addr.withElementType(ExpectedTy);
+            CapLVal = MakeAddrLValue(Addr, DD->getType().getCanonicalType());
+            if (DD->getType()->isReferenceType())
+              CapLVal = EmitLoadOfReferenceLValue(
+                  CapLVal.getAddress(), DD->getType(), AlignmentSource::Decl);
+            if (getLangOpts().OpenMP &&
+                CGM.getOpenMPRuntime().isNontemporalDecl(DD))
+              CapLVal.setNontemporal(/*Value=*/true);
+
+            // Extract the specific binding.
+            Expr *BindingExpr = BD->getBinding()->IgnoreImplicit();
+            if (auto *ME = dyn_cast<MemberExpr>(BindingExpr)) {
+              return EmitLValueForField(CapLVal,
+                                        cast<FieldDecl>(ME->getMemberDecl()));
+            }
+            if (auto *ASE = dyn_cast<ArraySubscriptExpr>(BindingExpr)) {
+              Address Base = CapLVal.getAddress();
+              llvm::Value *Idx = EmitScalarExpr(ASE->getIdx());
+              llvm::Value *EltPtr = Builder.CreateInBoundsGEP(
+                  Base.getElementType(), Base.emitRawPointer(*this), Idx,
+                  "arrayidx");
+              CharUnits Align = Base.getAlignment().alignmentOfArrayElement(
+                  getContext().getTypeSizeInChars(ASE->getType()));
+              Address EltAddr(EltPtr, Base.getElementType(), Align);
+              return MakeAddrLValue(EltAddr, ASE->getType());
+            }
+            return EmitLValue(BindingExpr);
+          }
         }
       }
-      // Non-OpenMP case: binding was captured as a lambda field directly.
+      // Non-OpenMP case: lambda capture.
       auto *FD = LambdaCaptureFields.lookup(BD);
       return EmitCapturedFieldLValue(*this, FD, CXXABIThisValue);
     }

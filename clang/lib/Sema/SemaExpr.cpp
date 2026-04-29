@@ -19707,12 +19707,6 @@ static bool captureInLambda(LambdaScopeInfo *LSI, ValueDecl *Var,
     ByRef = (LSI->ImpCaptureStyle == LambdaScopeInfo::ImpCap_LambdaByref);
   }
 
-  if (auto *BD = dyn_cast<BindingDecl>(Var)) {
-    // For structured bindings, capture the individual element type,
-    // not the full decomposed type.
-    CaptureType = BD->getType();
-    DeclRefType = BD->getType();
-  }
   if (BuildAndDiagnose && S.Context.getTargetInfo().getTriple().isWasm() &&
       CaptureType.getNonReferenceType().isWebAssemblyReferenceType()) {
     S.Diag(Loc, diag::err_wasm_ca_reference) << 0;

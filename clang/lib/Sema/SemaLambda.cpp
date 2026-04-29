@@ -1988,9 +1988,14 @@ ExprResult Sema::BuildCaptureInit(const Capture &Cap,
   } else {
     assert(Cap.isVariableCapture() && "unknown kind of capture");
     ValueDecl *Var = Cap.getVariable();
+    // For OpenMP structured bindings, capture the decomposed decl, not the
+    // binding.
+    if (IsOpenMPMapping && isa<BindingDecl>(Var)) {
+      Var = cast<BindingDecl>(Var)->getDecomposedDecl();
+    }
     Name = Var->getIdentifier();
     Init = BuildDeclarationNameExpr(
-      CXXScopeSpec(), DeclarationNameInfo(Var->getDeclName(), Loc), Var);
+        CXXScopeSpec(), DeclarationNameInfo(Var->getDeclName(), Loc), Var);
   }
 
   // In OpenMP, the capture kind doesn't actually describe how to capture:
