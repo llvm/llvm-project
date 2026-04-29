@@ -35,13 +35,20 @@ struct CSE : public impl::CSEPassBase<CSE> {
 void CSE::runOnOperation() {
   IRRewriter rewriter(&getContext());
   auto &domInfo = getAnalysis<DominanceInfo>();
+  // The CSE implementation does not rely on PostDominanceInfo. However,
+  // since we mark it as preserved at the end, if a cached PostDominanceInfo
+  // exists, we need to update it within CSE.
+  PostDominanceInfo *postDomInfo = nullptr;
+  if (auto dominate = getCachedAnalysis<PostDominanceInfo>())
+    postDomInfo = &dominate.value().get();
+
   bool changed = false;
   // `numCSE` / `numDCE` are `llvm::Statistic` objects, not raw `int64_t`, so
   // the public API's out-parameters cannot point at them directly.
   int64_t cseCount = 0;
   int64_t dceCount = 0;
   eliminateCommonSubExpressions(rewriter, domInfo, getOperation(), &changed,
-                                &cseCount, &dceCount);
+                                &cseCount, &dceCount, postDomInfo);
 
   numCSE = cseCount;
   numDCE = dceCount;
