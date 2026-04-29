@@ -2263,32 +2263,6 @@ float16_t test_vmulxh_laneq_f16(float16_t a, float16x8_t b) {
   return vmulxh_laneq_f16(a, b, 7);
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test_vmaxv_f16
-// CHECK-SAME: (<4 x half> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x half> [[A]] to <4 x i16>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[TMP0]] to <8 x i8>
-// CHECK-NEXT:    [[VMAXV:%.*]] = bitcast <8 x i8> [[TMP1]] to <4 x half>
-// CHECK-NEXT:    [[VMAXV1:%.*]] = call half @llvm.aarch64.neon.fmaxv.f16.v4f16(<4 x half> [[VMAXV]])
-// CHECK-NEXT:    ret half [[VMAXV1]]
-//
-float16_t test_vmaxv_f16(float16x4_t a) {
-  return vmaxv_f16(a);
-}
-
-// CHECK-LABEL: define {{[^@]+}}@test_vmaxvq_f16
-// CHECK-SAME: (<8 x half> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x half> [[A]] to <8 x i16>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i16> [[TMP0]] to <16 x i8>
-// CHECK-NEXT:    [[VMAXV:%.*]] = bitcast <16 x i8> [[TMP1]] to <8 x half>
-// CHECK-NEXT:    [[VMAXV1:%.*]] = call half @llvm.aarch64.neon.fmaxv.f16.v8f16(<8 x half> [[VMAXV]])
-// CHECK-NEXT:    ret half [[VMAXV1]]
-//
-float16_t test_vmaxvq_f16(float16x8_t a) {
-  return vmaxvq_f16(a);
-}
-
 // CHECK-LABEL: define {{[^@]+}}@test_vminv_f16
 // CHECK-SAME: (<4 x half> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:

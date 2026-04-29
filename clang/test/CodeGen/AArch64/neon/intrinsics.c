@@ -1,6 +1,6 @@
 // REQUIRES: aarch64-registered-target || arm-registered-target
 
-// RUN:                   %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -disable-O0-optnone -flax-vector-conversions=none           -emit-llvm -o - %s | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=ALL,LLVM
+// RUN:                   %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -target-feature +fullfp16 -disable-O0-optnone -flax-vector-conversions=none           -emit-llvm -o - %s | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=ALL,LLVM
 // RUN: %if cir-enabled %{%clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -disable-O0-optnone -flax-vector-conversions=none -fclangir -emit-llvm -o - %s | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=ALL,LLVM %}
 // RUN: %if cir-enabled %{%clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -disable-O0-optnone -flax-vector-conversions=none -fclangir -emit-cir  -o - %s |                               FileCheck %s --check-prefixes=ALL,CIR %}
 
@@ -158,6 +158,28 @@ uint32_t test_vmaxvq_u32(uint32x4_t a) {
 // LLVM:      [[VMAXVQ_U32_I:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[A]])
 // LLVM:      ret i32 [[VMAXVQ_U32_I]]
   return vmaxvq_u32(a);
+}
+
+// LLVM-LABEL: @test_vmaxv_f16(
+// CIR-LABEL: @test_vmaxv_f16(
+float16_t test_vmaxv_f16(float16x4_t a) {
+// CIR: {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.fmaxv" {{%.*}} : (!cir.vector<4 x !cir.f16>) -> !cir.f16
+
+// LLVM-SAME: <4 x half> {{.*}}[[A:%.*]])
+// LLVM:      [[VMAXV1:%.*]] = call half @llvm.aarch64.neon.fmaxv.f16.v4f16(<4 x half> {{.*}})
+// LLVM:      ret half [[VMAXV1]]
+  return vmaxv_f16(a);
+}
+
+// LLVM-LABEL: @test_vmaxvq_f16(
+// CIR-LABEL: cir.func {{.*}} @test_vmaxvq_f16
+float16_t test_vmaxvq_f16(float16x8_t a) {
+// CIR: {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.fmaxv" {{%.*}} : (!cir.vector<8 x !cir.f16>) -> !cir.f16
+
+// LLVM-SAME: <8 x half> {{.*}}[[A:%.*]])
+// LLVM:      [[VMAXV1:%.*]] = call half @llvm.aarch64.neon.fmaxv.f16.v8f16(<8 x half> {{.*}})
+// LLVM:      ret half [[VMAXV1]]
+  return vmaxvq_f16(a);
 }
 
 //LLVM-LABEL: @test_vmaxv_f32

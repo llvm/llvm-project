@@ -2725,10 +2725,18 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vsqrtq_v:
     assert(!cir::MissingFeatures::emitConstrainedFPCall());
     return emitNeonCall(cgm, builder, {ty}, ops, "sqrt", ty, loc);
+  case NEON::BI__builtin_neon_vmaxv_f16: {
+    cir::VectorType vecTy = cir::VectorType::get(fP16Ty, 4);
+    return emitNeonCall(cgm, builder, {vecTy}, ops, "aarch64.neon.fmaxv",
+                        fP16Ty, loc);
+  }
+  case NEON::BI__builtin_neon_vmaxvq_f16: {
+    cir::VectorType vecTy = cir::VectorType::get(fP16Ty, 8);
+    return emitNeonCall(cgm, builder, {vecTy}, ops, "aarch64.neon.fmaxv",
+                        fP16Ty, loc);
+  }
   case NEON::BI__builtin_neon_vrbit_v:
   case NEON::BI__builtin_neon_vrbitq_v:
-  case NEON::BI__builtin_neon_vmaxv_f16:
-  case NEON::BI__builtin_neon_vmaxvq_f16:
   case NEON::BI__builtin_neon_vminv_f16:
   case NEON::BI__builtin_neon_vminvq_f16:
   case NEON::BI__builtin_neon_vmaxnmv_f16:
