@@ -189,8 +189,11 @@ iteration of FC1, but the interleaved execution order may not preserve
 this.
 
 For each memory pair, the pass invokes one of three dependence
-analysis strategies (selectable via
-``--loop-fusion-dependence-analysis``):
+analysis strategies, selectable via
+``--loop-fusion-dependence-analysis``. The default is DA-based
+analysis (``da``); the SCEV-based and combined modes are retained as
+opt-ins. The SCEV-based path is expected to be removed in a future
+change.
 
 **SCEV-based analysis**:
 Rewrites the access function of FC0's instruction into FC1's loop
@@ -425,4 +428,15 @@ following properties holds:
 
 These conditions are hard blockers, not soft preferences: the pass
 never attempts to work around them.
+
+**Atomic operations are not reasoned about.** Atomic loads, stores,
+``atomicrmw``, ``cmpxchg``, and ``fence`` instructions inside the
+loop body are tracked only as ordinary memory reads or writes. The
+pass does not inspect their memory ordering (``unordered``,
+``monotonic``, ``acquire``, ``release``, ``seq_cst``), and the
+underlying dependence analysis reasons about address-based data
+dependence rather than inter-thread synchronization. Fusing two
+loops that contain non-``unordered`` atomics can therefore change
+observable multi-threaded behavior even when the dependence check
+reports no conflict.
 
