@@ -1637,7 +1637,7 @@ Symbol *AccVisitor::CopyUseDeviceSymbol(const Symbol &symbol) {
         hostAssoc && copy->owner().kind() == Scope::Kind::OpenACCConstruct) {
       Scope &hostScope{currScope().parent()};
       if (!FindInScope(hostScope, ultimate.name())) {
-        hostScope.CopySymbol(ultimate);
+        hostScope.CopySymbol(*copy);
       }
     }
     if (const auto *object{ultimate.detailsIf<ObjectEntityDetails>()}) {
