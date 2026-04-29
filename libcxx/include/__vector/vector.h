@@ -835,10 +835,6 @@ private:
   __add_alignment_assumption(_Ptr __p) _NOEXCEPT {
     return __p;
   }
-
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __swap_layouts(_SplitBuffer& __sb) {
-    __sb.__swap_layouts(__begin_, __end_, __cap_);
-  }
 };
 
 #if _LIBCPP_STD_VER >= 17
