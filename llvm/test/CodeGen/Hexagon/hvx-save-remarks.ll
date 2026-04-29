@@ -4,10 +4,10 @@
 
 ;; Test that the HVX save remark pass reports caller-save costs around calls.
 ;; All HVX registers are caller-saved, so any HVX value live across a call
-;; requires a save/restore pair on the stack.  The default threshold is 1024
-;; bytes, so we need at least 8 x 128-byte vectors live across the call.
+;; requires a save/restore pair on the stack.  The default threshold is 8
+;; registers, so we need at least 8 HVX vectors live across the call.
 
-; CHECK: remark: {{.*}} HVX caller-saved register(s) ({{[0-9]+}} bytes) saved and restored around call
+; CHECK: remark: {{.*}} 8 HVX caller-saved register(s) (1024 bytes) live across call
 ; CHECK-NOT: remark:
 
 declare void @bar()
