@@ -1,7 +1,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t
 # RUN: llvm-readobj -r %t | FileCheck %s
 
-# Test that splitting a fragment in two does not break a TLSGD sequence.
+## Test that splitting a fragment in two does not break a TLSGD sequence.
 
 # CHECK:      Relocations [
 # CHECK-NEXT:   Section ({{.*}}) .rela.text {
