@@ -10,6 +10,7 @@
 #define liblldb_IntelPTPerThreadTraceCollection_H_
 
 #include "IntelPTSingleBufferTrace.h"
+#include "llvm/ADT/DenseMap.h"
 #include <optional>
 
 namespace lldb_private {
