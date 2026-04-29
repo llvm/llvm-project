@@ -56,7 +56,9 @@ def C1UUnitLS0    : ProcResource<1>;  // Load/Store 0
 def C1UUnitLS1    : ProcResource<1>;  // Load/Store 1
 def C1UUnitL23    : ProcResource<2>;  // Load 2/3
 def C1UUnitD      : ProcResource<2>;  // Store data 0/1
-def C1UUnitCME    : ProcResource<1>;  // CME operations block
+def C1UUnitCME2X  : ProcResource<2>;  // CME operations block (2-way)
+def C1UUnitCME3X  : ProcResource<3>;  // CME operations block (3-way)
+def C1UUnitCME4X  : ProcResource<4>;  // CME operations block (4-way)
 def C1UUnitFlg    : ProcResource<4>;  // Flags
 
 def C1UUnitS      : ProcResGroup<[C1UUnitS0, C1UUnitS1, C1UUnitS2, C1UUnitS3,
@@ -95,25 +97,26 @@ def : WriteRes<WriteLDHi,    []> { let Latency = 4; }
 
 // Define generic 0 micro-op types.
 def C1UWrite_0c : SchedWriteRes<[]> { let Latency = 0; }
-def C1UWrite_0c_1C : SchedWriteRes<[C1UUnitCME]> { let Latency = 0; }
-def C1UWrite_0c_1M_1C : SchedWriteRes<[C1UUnitM, C1UUnitCME]> {
+def C1UWrite_0c_1C_4X : SchedWriteRes<[C1UUnitCME4X]> { let Latency = 0; }
+def C1UWrite_0c_1M_1C_2X : SchedWriteRes<[C1UUnitM, C1UUnitCME2X]> {
   let Latency = 0;
 }
-def C1UWrite_0c_1SA_1C : SchedWriteRes<[C1UUnitSA, C1UUnitCME]> {
+def C1UWrite_0c_1SA_1C_2X : SchedWriteRes<[C1UUnitSA, C1UUnitCME2X]> {
   let Latency = 0;
 }
-def C1UWrite_0c_1L_1C : SchedWriteRes<[C1UUnitL, C1UUnitCME]> {
+def C1UWrite_0c_1L_1C_3X : SchedWriteRes<[C1UUnitL, C1UUnitCME3X]> {
   let Latency = 0;
 }
-def C1UWrite_0c_1V01_1L_1C : SchedWriteRes<[C1UUnitV01, C1UUnitL,
-                                            C1UUnitCME]> {
+def C1UWrite_0c_1V01_1L_1C_3X : SchedWriteRes<[C1UUnitV01, C1UUnitL,
+                                               C1UUnitCME3X]> {
   let Latency = 0;
 }
-def C1UWrite_0c_1I_1L_1C : SchedWriteRes<[C1UUnitI, C1UUnitL, C1UUnitCME]> {
+def C1UWrite_0c_1I_1L_1C_3X : SchedWriteRes<[C1UUnitI, C1UUnitL,
+                                             C1UUnitCME3X]> {
   let Latency = 0;
 }
-def C1UWrite_0c_1I_1V01_1L_1C : SchedWriteRes<[C1UUnitI, C1UUnitV01,
-                                               C1UUnitL, C1UUnitCME]> {
+def C1UWrite_0c_1I_1V01_1L_1C_3X : SchedWriteRes<[C1UUnitI, C1UUnitV01,
+                                                  C1UUnitL, C1UUnitCME3X]> {
   let Latency = 0;
 }
 
@@ -750,113 +753,113 @@ def C1UWrite_3or4c_1M0_1M : SchedWriteVariant<[
                       SchedVar<NeoversePdIsPg,  [C1UWrite_4c_1M0_1M]>,
                       SchedVar<NoSchedPred,     [C1UWrite_3c_1M0_1M]>]>;
 
-def C1UWr_FMA_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWr_FMA>;
-def C1UWR_VA_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWR_VA>;
-def C1UWR_VDOT_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWR_VDOT>;
-def C1UWR_VMMA_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWR_VMMA>;
-def C1UWR_VMA_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWR_VMA>;
-def C1UWR_VMAH_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWR_VMAH>;
-def C1UWR_VPA_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWR_VPA>;
-def C1UWR_VSA_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWR_VSA>;
-def C1UWR_VFCMA_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWR_VFCMA>;
-def C1UWR_VFMA_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWR_VFMA>;
-def C1UWR_VBFDOT_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWR_VBFDOT>;
-def C1UWR_VBFMMA_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWR_VBFMMA>;
-def C1UWR_VBFMAL_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWR_VBFMAL>;
-def C1UWr_ZA_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWr_ZA>;
-def C1UWr_ZPA_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWr_ZPA>;
-def C1UWr_ZSA_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWr_ZSA>;
-def C1UWr_ZDOTB_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWr_ZDOTB>;
-def C1UWr_ZDOTH_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWr_ZDOTH>;
-def C1UWr_ZCMABHS_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWr_ZCMABHS>;
-def C1UWr_ZMMA_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWr_ZMMA>;
-def C1UWr_ZMA_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWr_ZMA>;
-def C1UWr_ZMASQL_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWr_ZMASQL>;
-def C1UWr_ZFCMA_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWr_ZFCMA>;
-def C1UWr_ZFMA_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWr_ZFMA>;
-def C1UWr_ZFMAL_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWr_ZFMAL>;
-def C1UWr_ZBFDOT_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWr_ZBFDOT>;
-def C1UWr_ZBFMMA_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWr_ZBFMMA>;
-def C1UWr_ZBFMAL_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWr_ZBFMAL>;
+def C1UWr_FMA_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWr_FMA>;
+def C1UWR_VA_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWR_VA>;
+def C1UWR_VDOT_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWR_VDOT>;
+def C1UWR_VMMA_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWR_VMMA>;
+def C1UWR_VMA_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWR_VMA>;
+def C1UWR_VMAH_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWR_VMAH>;
+def C1UWR_VPA_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWR_VPA>;
+def C1UWR_VSA_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWR_VSA>;
+def C1UWR_VFCMA_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWR_VFCMA>;
+def C1UWR_VFMA_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWR_VFMA>;
+def C1UWR_VBFDOT_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWR_VBFDOT>;
+def C1UWR_VBFMMA_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWR_VBFMMA>;
+def C1UWR_VBFMAL_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWR_VBFMAL>;
+def C1UWr_ZA_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWr_ZA>;
+def C1UWr_ZPA_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWr_ZPA>;
+def C1UWr_ZSA_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWr_ZSA>;
+def C1UWr_ZDOTB_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWr_ZDOTB>;
+def C1UWr_ZDOTH_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWr_ZDOTH>;
+def C1UWr_ZCMABHS_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWr_ZCMABHS>;
+def C1UWr_ZMMA_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWr_ZMMA>;
+def C1UWr_ZMA_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWr_ZMA>;
+def C1UWr_ZMASQL_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWr_ZMASQL>;
+def C1UWr_ZFCMA_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWr_ZFCMA>;
+def C1UWr_ZFMA_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWr_ZFMA>;
+def C1UWr_ZFMAL_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWr_ZFMAL>;
+def C1UWr_ZBFDOT_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWr_ZBFDOT>;
+def C1UWr_ZBFMMA_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWr_ZBFMMA>;
+def C1UWr_ZBFMAL_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWr_ZBFMAL>;
 
-def C1UWrite_2c_1V_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWrite_2c_1V>;
-def C1UWrite_2c_1V0_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWrite_2c_1V0>;
-def C1UWrite_2c_1V01_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWrite_2c_1V01>;
-def C1UWrite_2c_1V0134_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWrite_2c_1V0134>;
-def C1UWrite_3c_1V_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWrite_3c_1V>;
-def C1UWrite_3c_1V01_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWrite_3c_1V01>;
-def C1UWrite_3c_1V0134_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWrite_3c_1V0134>;
-def C1UWrite_3c_1V1_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWrite_3c_1V1>;
-def C1UWrite_4c_1V_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWrite_4c_1V>;
-def C1UWrite_4c_1V0_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWrite_4c_1V0>;
-def C1UWrite_4c_1V0134_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWrite_4c_1V0134>;
-def C1UWrite_4c_1V0134_1V_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWrite_4c_1V0134_1V>;
-def C1UWrite_4c_1V_1V0134_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWrite_4c_1V_1V0134>;
-def C1UWrite_4c_2V_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWrite_4c_2V>;
-def C1UWrite_4c_2V0134_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWrite_4c_2V0134>;
-def C1UWrite_5c_1V1_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWrite_5c_1V1>;
-def C1UWrite_6c_1V0134_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWrite_6c_1V0134>;
-def C1UWrite_6c_1V_2V0134_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWrite_6c_1V_2V0134>;
-def C1UWrite_6c_2V1_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWrite_6c_2V1>;
-def C1UWrite_6c_2V_1V0134_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWrite_6c_2V_1V0134>;
-def C1UWrite_6c_3V_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWrite_6c_3V>;
-def C1UWrite_6c_6V0_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWrite_6c_6V0>;
-def C1UWrite_8c_1V1_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWrite_8c_1V1>;
-def C1UWrite_8c_1V1_4rc_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWrite_8c_1V1_4rc>;
-def C1UWrite_8c_1V_3V0134_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWrite_8c_1V_3V0134>;
-def C1UWrite_8c_4V_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWrite_8c_4V>;
-def C1UWrite_9c_1V1_2rc_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWrite_9c_1V1_2rc>;
-def C1UWrite_10c_10V0_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWrite_10c_10V0>;
-def C1UWrite_11c_1V0_4rc_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWrite_11c_1V0_4rc>;
-def C1UWrite_11c_1V1_4rc_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWrite_11c_1V1_4rc>;
-def C1UWrite_12c_1V0_8rc_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWrite_12c_1V0_8rc>;
-def C1UWrite_12c_1V1_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWrite_12c_1V1>;
-def C1UWrite_12c_1V1_8rc_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWrite_12c_1V1_8rc>;
-def C1UWrite_12c_7V0_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWrite_12c_7V0>;
-def C1UWrite_13c_1V0_2rc_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWrite_13c_1V0_2rc>;
-def C1UWrite_13c_1V1_2rc_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWrite_13c_1V1_2rc>;
-def C1UWrite_20c_7V0_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C, C1UWrite_20c_7V0>;
+def C1UWrite_2c_1V_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWrite_2c_1V>;
+def C1UWrite_2c_1V0_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWrite_2c_1V0>;
+def C1UWrite_2c_1V01_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWrite_2c_1V01>;
+def C1UWrite_2c_1V0134_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWrite_2c_1V0134>;
+def C1UWrite_3c_1V_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWrite_3c_1V>;
+def C1UWrite_3c_1V01_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWrite_3c_1V01>;
+def C1UWrite_3c_1V0134_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWrite_3c_1V0134>;
+def C1UWrite_3c_1V1_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWrite_3c_1V1>;
+def C1UWrite_4c_1V_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWrite_4c_1V>;
+def C1UWrite_4c_1V0_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWrite_4c_1V0>;
+def C1UWrite_4c_1V0134_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWrite_4c_1V0134>;
+def C1UWrite_4c_1V0134_1V_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWrite_4c_1V0134_1V>;
+def C1UWrite_4c_1V_1V0134_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWrite_4c_1V_1V0134>;
+def C1UWrite_4c_2V_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWrite_4c_2V>;
+def C1UWrite_4c_2V0134_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWrite_4c_2V0134>;
+def C1UWrite_5c_1V1_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWrite_5c_1V1>;
+def C1UWrite_6c_1V0134_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWrite_6c_1V0134>;
+def C1UWrite_6c_1V_2V0134_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWrite_6c_1V_2V0134>;
+def C1UWrite_6c_2V1_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWrite_6c_2V1>;
+def C1UWrite_6c_2V_1V0134_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWrite_6c_2V_1V0134>;
+def C1UWrite_6c_3V_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWrite_6c_3V>;
+def C1UWrite_6c_6V0_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWrite_6c_6V0>;
+def C1UWrite_8c_1V1_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWrite_8c_1V1>;
+def C1UWrite_8c_1V1_4rc_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWrite_8c_1V1_4rc>;
+def C1UWrite_8c_1V_3V0134_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWrite_8c_1V_3V0134>;
+def C1UWrite_8c_4V_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWrite_8c_4V>;
+def C1UWrite_9c_1V1_2rc_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWrite_9c_1V1_2rc>;
+def C1UWrite_10c_10V0_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWrite_10c_10V0>;
+def C1UWrite_11c_1V0_4rc_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWrite_11c_1V0_4rc>;
+def C1UWrite_11c_1V1_4rc_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWrite_11c_1V1_4rc>;
+def C1UWrite_12c_1V0_8rc_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWrite_12c_1V0_8rc>;
+def C1UWrite_12c_1V1_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWrite_12c_1V1>;
+def C1UWrite_12c_1V1_8rc_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWrite_12c_1V1_8rc>;
+def C1UWrite_12c_7V0_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWrite_12c_7V0>;
+def C1UWrite_13c_1V0_2rc_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWrite_13c_1V0_2rc>;
+def C1UWrite_13c_1V1_2rc_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWrite_13c_1V1_2rc>;
+def C1UWrite_20c_7V0_CME : C1UStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWrite_20c_7V0>;
 
-def C1UWrite_3c_1M0_CME : C1UStreamingSchedWrite<C1UWrite_0c_1M_1C, C1UWrite_3c_1M0>;
-def C1UWrite_3c_1M0_1V_CME : C1UStreamingSchedWrite<C1UWrite_0c_1M_1C, C1UWrite_3c_1M0_1V>;
-def C1UWrite_5c_1M0_1V_CME : C1UStreamingSchedWrite<C1UWrite_0c_1M_1C, C1UWrite_5c_1M0_1V>;
-def C1UWrite_5c_1V1_1V01_CME : C1UStreamingSchedWrite<C1UWrite_0c_1M_1C, C1UWrite_5c_1V1_1V01>;
-def C1UWrite_5c_1V_1M0_CME : C1UStreamingSchedWrite<C1UWrite_0c_1M_1C, C1UWrite_5c_1V_1M0>;
-def C1UWrite_7c_1M0_1V0134_CME : C1UStreamingSchedWrite<C1UWrite_0c_1M_1C, C1UWrite_7c_1M0_1V0134>;
-def C1UWrite_8c_1M0_1V1_1V01_CME : C1UStreamingSchedWrite<C1UWrite_0c_1M_1C, C1UWrite_8c_1M0_1V1_1V01>;
+def C1UWrite_3c_1M0_CME : C1UStreamingSchedWrite<C1UWrite_0c_1M_1C_2X, C1UWrite_3c_1M0>;
+def C1UWrite_3c_1M0_1V_CME : C1UStreamingSchedWrite<C1UWrite_0c_1M_1C_2X, C1UWrite_3c_1M0_1V>;
+def C1UWrite_5c_1M0_1V_CME : C1UStreamingSchedWrite<C1UWrite_0c_1M_1C_2X, C1UWrite_5c_1M0_1V>;
+def C1UWrite_5c_1V1_1V01_CME : C1UStreamingSchedWrite<C1UWrite_0c_1M_1C_2X, C1UWrite_5c_1V1_1V01>;
+def C1UWrite_5c_1V_1M0_CME : C1UStreamingSchedWrite<C1UWrite_0c_1M_1C_2X, C1UWrite_5c_1V_1M0>;
+def C1UWrite_7c_1M0_1V0134_CME : C1UStreamingSchedWrite<C1UWrite_0c_1M_1C_2X, C1UWrite_7c_1M0_1V0134>;
+def C1UWrite_8c_1M0_1V1_1V01_CME : C1UStreamingSchedWrite<C1UWrite_0c_1M_1C_2X, C1UWrite_8c_1M0_1V1_1V01>;
 
-def C1UWrite_6c_1L_CME : C1UStreamingSchedWrite<C1UWrite_0c_1L_1C, C1UWrite_6c_1L>;
-def C1UWrite_6c_1L_1I_CME : C1UStreamingSchedWrite<C1UWrite_0c_1I_1L_1C, C1UWrite_6c_1L_1I>;
-def C1UWrite_6c_1L_1M_CME : C1UStreamingSchedWrite<C1UWrite_0c_1L_1C, C1UWrite_6c_1L_1M>;
-def C1UWrite_6c_2L_1I_CME : C1UStreamingSchedWrite<C1UWrite_0c_1I_1L_1C, C1UWrite_6c_2L_1I>;
-def C1UWrite_7c_1L_1I_CME : C1UStreamingSchedWrite<C1UWrite_0c_1I_1L_1C, C1UWrite_7c_1L_1I>;
-def C1UWrite_8c_2L_2V_CME : C1UStreamingSchedWrite<C1UWrite_0c_1V01_1L_1C, C1UWrite_8c_2L_2V>;
-def C1UWrite_8c_3L_3V_CME : C1UStreamingSchedWrite<C1UWrite_0c_1V01_1L_1C, C1UWrite_8c_3L_3V>;
-def C1UWrite_9c_1V01_1L_CME : C1UStreamingSchedWrite<C1UWrite_0c_1V01_1L_1C, C1UWrite_9c_1V01_1L>;
-def C1UWrite_9c_2L_2V_1I_CME : C1UStreamingSchedWrite<C1UWrite_0c_1I_1V01_1L_1C, C1UWrite_9c_2L_2V_1I>;
-def C1UWrite_9c_3L_3V_1I_CME : C1UStreamingSchedWrite<C1UWrite_0c_1I_1V01_1L_1C, C1UWrite_9c_3L_3V_1I>;
-def C1UWrite_10c_4L_8V_CME : C1UStreamingSchedWrite<C1UWrite_0c_1V01_1L_1C, C1UWrite_10c_4L_8V>;
-def C1UWrite_11c_4L_8V_1I_CME : C1UStreamingSchedWrite<C1UWrite_0c_1I_1V01_1L_1C, C1UWrite_11c_4L_8V_1I>;
+def C1UWrite_6c_1L_CME : C1UStreamingSchedWrite<C1UWrite_0c_1L_1C_3X, C1UWrite_6c_1L>;
+def C1UWrite_6c_1L_1I_CME : C1UStreamingSchedWrite<C1UWrite_0c_1I_1L_1C_3X, C1UWrite_6c_1L_1I>;
+def C1UWrite_6c_1L_1M_CME : C1UStreamingSchedWrite<C1UWrite_0c_1L_1C_3X, C1UWrite_6c_1L_1M>;
+def C1UWrite_6c_2L_1I_CME : C1UStreamingSchedWrite<C1UWrite_0c_1I_1L_1C_3X, C1UWrite_6c_2L_1I>;
+def C1UWrite_7c_1L_1I_CME : C1UStreamingSchedWrite<C1UWrite_0c_1I_1L_1C_3X, C1UWrite_7c_1L_1I>;
+def C1UWrite_8c_2L_2V_CME : C1UStreamingSchedWrite<C1UWrite_0c_1V01_1L_1C_3X, C1UWrite_8c_2L_2V>;
+def C1UWrite_8c_3L_3V_CME : C1UStreamingSchedWrite<C1UWrite_0c_1V01_1L_1C_3X, C1UWrite_8c_3L_3V>;
+def C1UWrite_9c_1V01_1L_CME : C1UStreamingSchedWrite<C1UWrite_0c_1V01_1L_1C_3X, C1UWrite_9c_1V01_1L>;
+def C1UWrite_9c_2L_2V_1I_CME : C1UStreamingSchedWrite<C1UWrite_0c_1I_1V01_1L_1C_3X, C1UWrite_9c_2L_2V_1I>;
+def C1UWrite_9c_3L_3V_1I_CME : C1UStreamingSchedWrite<C1UWrite_0c_1I_1V01_1L_1C_3X, C1UWrite_9c_3L_3V_1I>;
+def C1UWrite_10c_4L_8V_CME : C1UStreamingSchedWrite<C1UWrite_0c_1V01_1L_1C_3X, C1UWrite_10c_4L_8V>;
+def C1UWrite_11c_4L_8V_1I_CME : C1UStreamingSchedWrite<C1UWrite_0c_1I_1V01_1L_1C_3X, C1UWrite_11c_4L_8V_1I>;
 
 def C1UWrite_LdrQ_CME : SchedWriteVariant<[
                           SchedVar<FPIsQForm, [C1UWrite_7c_1L_1I_CME]>,
                           SchedVar<NoSchedPred, [C1UWrite_6c_1L_CME]>]>;
 
-def C1UWrite_1c_1SA_CME : C1UStreamingSchedWrite<C1UWrite_0c_1SA_1C, C1UWrite_1c_1SA>;
-def C1UWrite_2c_1SA_1V01_CME : C1UStreamingSchedWrite<C1UWrite_0c_1SA_1C, C1UWrite_2c_1SA_1V01>;
-def C1UWrite_2c_1SA_1V01_1I_CME : C1UStreamingSchedWrite<C1UWrite_0c_1SA_1C, C1UWrite_2c_1SA_1V01_1I>;
-def C1UWrite_2or4c_1SA_1V01_CME : C1UStreamingSchedWrite<C1UWrite_0c_1SA_1C, C1UWrite_2or4c_1SA_1V01>;
-def C1UWrite_2or4c_3SA_6V01_CME : C1UStreamingSchedWrite<C1UWrite_0c_1SA_1C, C1UWrite_2or4c_3SA_6V01>;
-def C1UWrite_2c_2SA_2V01_CME : C1UStreamingSchedWrite<C1UWrite_0c_1SA_1C, C1UWrite_2c_2SA_2V01>;
-def C1UWrite_4c_2SA_2V01_CME : C1UStreamingSchedWrite<C1UWrite_0c_1SA_1C, C1UWrite_4c_2SA_2V01>;
-def C1UWrite_4c_2SA_2V01_1I_CME : C1UStreamingSchedWrite<C1UWrite_0c_1SA_1C, C1UWrite_4c_2SA_2V01_1I>;
-def C1UWrite_4or6c_3SA_3V01_CME : C1UStreamingSchedWrite<C1UWrite_0c_1SA_1C, C1UWrite_4or6c_3SA_3V01>;
-def C1UWrite_5c_3SA_3V01_CME : C1UStreamingSchedWrite<C1UWrite_0c_1SA_1C, C1UWrite_5c_3SA_3V01>;
-def C1UWrite_5c_3SA_3V01_1I_CME : C1UStreamingSchedWrite<C1UWrite_0c_1SA_1C, C1UWrite_5c_3SA_3V01_1I>;
-def C1UWrite_5or7c_3SA_6V01_CME : C1UStreamingSchedWrite<C1UWrite_0c_1SA_1C, C1UWrite_5or7c_3SA_6V01>;
-def C1UWrite_5or7c_5SA_5V01_CME : C1UStreamingSchedWrite<C1UWrite_0c_1SA_1C, C1UWrite_5or7c_5SA_5V01>;
-def C1UWrite_7c_4SA_4V01_CME : C1UStreamingSchedWrite<C1UWrite_0c_1SA_1C, C1UWrite_7c_4SA_4V01>;
-def C1UWrite_7c_4SA_4V01_1I_CME : C1UStreamingSchedWrite<C1UWrite_0c_1SA_1C, C1UWrite_7c_4SA_4V01_1I>;
+def C1UWrite_1c_1SA_CME : C1UStreamingSchedWrite<C1UWrite_0c_1SA_1C_2X, C1UWrite_1c_1SA>;
+def C1UWrite_2c_1SA_1V01_CME : C1UStreamingSchedWrite<C1UWrite_0c_1SA_1C_2X, C1UWrite_2c_1SA_1V01>;
+def C1UWrite_2c_1SA_1V01_1I_CME : C1UStreamingSchedWrite<C1UWrite_0c_1SA_1C_2X, C1UWrite_2c_1SA_1V01_1I>;
+def C1UWrite_2or4c_1SA_1V01_CME : C1UStreamingSchedWrite<C1UWrite_0c_1SA_1C_2X, C1UWrite_2or4c_1SA_1V01>;
+def C1UWrite_2or4c_3SA_6V01_CME : C1UStreamingSchedWrite<C1UWrite_0c_1SA_1C_2X, C1UWrite_2or4c_3SA_6V01>;
+def C1UWrite_2c_2SA_2V01_CME : C1UStreamingSchedWrite<C1UWrite_0c_1SA_1C_2X, C1UWrite_2c_2SA_2V01>;
+def C1UWrite_4c_2SA_2V01_CME : C1UStreamingSchedWrite<C1UWrite_0c_1SA_1C_2X, C1UWrite_4c_2SA_2V01>;
+def C1UWrite_4c_2SA_2V01_1I_CME : C1UStreamingSchedWrite<C1UWrite_0c_1SA_1C_2X, C1UWrite_4c_2SA_2V01_1I>;
+def C1UWrite_4or6c_3SA_3V01_CME : C1UStreamingSchedWrite<C1UWrite_0c_1SA_1C_2X, C1UWrite_4or6c_3SA_3V01>;
+def C1UWrite_5c_3SA_3V01_CME : C1UStreamingSchedWrite<C1UWrite_0c_1SA_1C_2X, C1UWrite_5c_3SA_3V01>;
+def C1UWrite_5c_3SA_3V01_1I_CME : C1UStreamingSchedWrite<C1UWrite_0c_1SA_1C_2X, C1UWrite_5c_3SA_3V01_1I>;
+def C1UWrite_5or7c_3SA_6V01_CME : C1UStreamingSchedWrite<C1UWrite_0c_1SA_1C_2X, C1UWrite_5or7c_3SA_6V01>;
+def C1UWrite_5or7c_5SA_5V01_CME : C1UStreamingSchedWrite<C1UWrite_0c_1SA_1C_2X, C1UWrite_5or7c_5SA_5V01>;
+def C1UWrite_7c_4SA_4V01_CME : C1UStreamingSchedWrite<C1UWrite_0c_1SA_1C_2X, C1UWrite_7c_4SA_4V01>;
+def C1UWrite_7c_4SA_4V01_1I_CME : C1UStreamingSchedWrite<C1UWrite_0c_1SA_1C_2X, C1UWrite_7c_4SA_4V01_1I>;
 
 def C1UWrite_StrQ_CME : SchedWriteVariant<[
                           SchedVar<FPIsQForm, [C1UWrite_2c_1SA_1V01_1I_CME]>,
@@ -900,11 +903,11 @@ def C1UWrite_2c_2M_Streaming : SchedWriteVariant<[
                       SchedVar<SMESchedPred, [C1UWrite_2c_2M]>,
                       SchedVar<NoSchedPred,          [C1UWrite_0c]>]>;
 
-def C1UWrite_2c_1V_StreamingCME : C1USMEStreamingSchedWrite<C1UWrite_0c_1C, C1UWrite_2c_1V>;
-def C1UWrite_3c_1V01_StreamingCME : C1USMEStreamingSchedWrite<C1UWrite_0c_1C, C1UWrite_3c_1V01>;
-def C1UWrite_4c_1V_StreamingCME : C1USMEStreamingSchedWrite<C1UWrite_0c_1C, C1UWrite_4c_1V>;
-def C1UWrite_2c_1M_StreamingCME : C1USMEStreamingSchedWrite<C1UWrite_0c_1M_1C, C1UWrite_2c_1M>;
-def C1UWrite_2c_2M_StreamingCME : C1USMEStreamingSchedWrite<C1UWrite_0c_1M_1C, C1UWrite_2c_2M>;
+def C1UWrite_2c_1V_StreamingCME : C1USMEStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWrite_2c_1V>;
+def C1UWrite_3c_1V01_StreamingCME : C1USMEStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWrite_3c_1V01>;
+def C1UWrite_4c_1V_StreamingCME : C1USMEStreamingSchedWrite<C1UWrite_0c_1C_4X, C1UWrite_4c_1V>;
+def C1UWrite_2c_1M_StreamingCME : C1USMEStreamingSchedWrite<C1UWrite_0c_1M_1C_2X, C1UWrite_2c_1M>;
+def C1UWrite_2c_2M_StreamingCME : C1USMEStreamingSchedWrite<C1UWrite_0c_1M_1C_2X, C1UWrite_2c_2M>;
 
 
 // Miscellaneous
