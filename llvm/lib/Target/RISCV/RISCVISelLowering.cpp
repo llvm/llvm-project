@@ -528,15 +528,16 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       ISD::FROUNDEVEN};
 
   static const unsigned ZfhminZfbfminPromoteOps[] = {
-      ISD::FMINNUM,      ISD::FMAXNUM,       ISD::FMAXIMUMNUM,
-      ISD::FMINIMUMNUM,  ISD::FADD,          ISD::FSUB,
-      ISD::FMUL,         ISD::FMA,           ISD::FDIV,
-      ISD::FSQRT,        ISD::STRICT_FMA,    ISD::STRICT_FADD,
-      ISD::STRICT_FSUB,  ISD::STRICT_FMUL,   ISD::STRICT_FDIV,
-      ISD::STRICT_FSQRT, ISD::STRICT_FSETCC, ISD::STRICT_FSETCCS,
-      ISD::SETCC,        ISD::FCEIL,         ISD::FFLOOR,
-      ISD::FTRUNC,       ISD::FRINT,         ISD::FROUND,
-      ISD::FROUNDEVEN,   ISD::FCANONICALIZE};
+      ISD::FMINNUM,       ISD::FMAXNUM,        ISD::FMINIMUM,
+      ISD::FMAXIMUM,      ISD::FMAXIMUMNUM,    ISD::FMINIMUMNUM,
+      ISD::FADD,          ISD::FSUB,           ISD::FMUL,
+      ISD::FMA,           ISD::FDIV,           ISD::FSQRT,
+      ISD::STRICT_FMA,    ISD::STRICT_FADD,    ISD::STRICT_FSUB,
+      ISD::STRICT_FMUL,   ISD::STRICT_FDIV,    ISD::STRICT_FSQRT,
+      ISD::STRICT_FSETCC, ISD::STRICT_FSETCCS, ISD::SETCC,
+      ISD::FCEIL,         ISD::FFLOOR,         ISD::FTRUNC,
+      ISD::FRINT,         ISD::FROUND,         ISD::FROUNDEVEN,
+      ISD::FCANONICALIZE};
 
   if (Subtarget.hasStdExtP()) {
     static const MVT RV32VTs[] = {MVT::v2i16, MVT::v4i8};
