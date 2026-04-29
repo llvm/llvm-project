@@ -283,6 +283,7 @@ int Thread::run(ThreadStyle style, ThreadRunner runner, void *arg, void *stack,
   attrib->owned_stack = owned_stack;
   attrib->tls = tls.addr;
   attrib->tls_size = tls.size;
+  attrib->joiner = nullptr;
 
   start_args->thread_attrib = attrib;
   start_args->runner = runner;
@@ -346,9 +347,11 @@ int Thread::join(ThreadReturnValue &retval) {
     if (self.attrib == attrib)
       return EDEADLK;
 
-    // reject mutual join
-    if (attrib->joiner.exchange(self.attrib) == self.attrib->joiner)
+    // Reject mutual join.
+    if (self.attrib->joiner.load() == attrib)
       return EDEADLK;
+
+    attrib->joiner.store(self.attrib);
   }
 
   wait();
