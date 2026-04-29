@@ -6405,25 +6405,6 @@ llvm::Error ProcessGDBRemote::UpdateBreakpointSitesNotBatched(
   return joined;
 }
 
-static llvm::Expected<StringExtractorGDBRemote>
-SendMultiBreakpointPacket(GDBRemoteCommunicationClient &gdb_comm,
-                          llvm::StringRef packet_str,
-                          std::chrono::seconds interrupt_timeout) {
-  StringExtractorGDBRemote response;
-  GDBRemoteCommunication::PacketResult packet_result =
-      gdb_comm.SendPacketAndWaitForResponse(packet_str, response,
-                                            interrupt_timeout);
-  if (packet_result != GDBRemoteCommunication::PacketResult::Success)
-    return llvm::createStringErrorV(
-        "MultiBreakpoint failed to send packet: '{0}'", packet_str);
-
-  if (response.IsUnsupportedResponse())
-    return llvm::createStringErrorV(
-        "MultiBreakpoint unsupported response: '{0}'", response.GetStringRef());
-
-  return response;
-}
-
 /// Parse a MultiBreakpoint response into per-request results.
 /// Returns a vector of results: std::nullopt means OK, a uint8_t value is the
 /// error code from an Exx response.
@@ -6543,8 +6524,9 @@ llvm::Error ProcessGDBRemote::UpdateBreakpointSites(
 
   StreamGDBRemote escaped_stream;
   escaped_stream.PutEscapedBytes(stream.GetString());
-  llvm::Expected<StringExtractorGDBRemote> response = SendMultiBreakpointPacket(
-      m_gdb_comm, escaped_stream.GetString(), GetInterruptTimeout());
+  llvm::Expected<StringExtractorGDBRemote> response =
+      m_gdb_comm.SendPacketAndExpectResponse(escaped_stream.GetString(),
+                                             GetInterruptTimeout());
 
   if (!response) {
     LLDB_LOG_ERROR(log, response.takeError(), "jMultiBreakpoint failed: {0}");
