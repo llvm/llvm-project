@@ -187,15 +187,15 @@ POSIX standard does not demand accurate deadlock detection and leaves
 repeated/concurrent joining as undefined behavior. In the following, 
 we discuss the related behaviors explicitly.
 
-Self joining is always rejected with ``EDEADLK``. 
+Self joining is always rejected with ``EDEADLK``.
 
-At least one of the two threads in a mutual joining will detect the deadlock and 
-returns ``EDEADLK``. If joining requester gets ``EDEADLK``, the joining target is 
+At least one of the two threads in a mutual joining will detect the deadlock and
+return ``EDEADLK``. If joining requester gets ``EDEADLK``, the joining target is
 recovered to joinable state. However, the joining target may already be waiting
 if it does not see ``EDEADLK``.
 
-Cyclic joining with more than two threads are not detected.
+Cyclic joining with more than two threads is not detected.
 
 Concurrent and repeated joinings on the same thread are faulty behaviors, because
 target thread's TLS may already be torn down.  ``EINVAL`` may be returned if
-multiple joinings occur on the same thread but it is not garanteed to observe.
+multiple joinings occur on the same thread but it is not guaranteed to observe.
