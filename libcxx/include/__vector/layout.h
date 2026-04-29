@@ -120,25 +120,25 @@ public:
   using pointer _LIBCPP_NODEBUG        = typename __alloc_traits::pointer;
   using const_pointer _LIBCPP_NODEBUG  = typename __alloc_traits::const_pointer;
 #ifdef _LIBCPP_ABI_SIZE_BASED_VECTOR
-  using _SplitBuffer _LIBCPP_NODEBUG    = __split_buffer<_Tp, _Allocator, __split_buffer_size_layout>;
+  using _SplitBuffer _LIBCPP_NODEBUG = __split_buffer<_Tp, _Allocator, __split_buffer_size_layout>;
   using __bound_type _LIBCPP_NODEBUG = size_type;
 #else
-  using _SplitBuffer _LIBCPP_NODEBUG    = __split_buffer<_Tp, _Allocator, __split_buffer_pointer_layout>;
+  using _SplitBuffer _LIBCPP_NODEBUG = __split_buffer<_Tp, _Allocator, __split_buffer_pointer_layout>;
   using __bound_type _LIBCPP_NODEBUG = pointer;
 #endif
 
   // Cannot be defaulted, since `_LIBCPP_COMPRESSED_PAIR` isn't an aggregate before C++14.
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __vector_layout()
       _NOEXCEPT_(is_nothrow_default_constructible<allocator_type>::value)
-      : __capacity_(__bound_type()) {}
+      : __capacity_() {}
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI explicit __vector_layout(allocator_type const& __a)
       _NOEXCEPT_(is_nothrow_copy_constructible<allocator_type>::value)
-      : __capacity_(__bound_type()), __alloc_(__a) {}
+      : __capacity_(), __alloc_(__a) {}
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI explicit __vector_layout(allocator_type&& __a)
       _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value)
-      : __capacity_(__bound_type()), __alloc_(std::move(__a)) {}
+      : __capacity_(), __alloc_(std::move(__a)) {}
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __vector_layout(__vector_layout&& __other)
       _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value);
@@ -228,7 +228,7 @@ private:
   [[no_unique_address]] allocator_type __alloc_;
 #else
   pointer __end_ = nullptr;
-  _LIBCPP_COMPRESSED_PAIR(pointer, __capacity_, allocator_type, __alloc_);
+  _LIBCPP_COMPRESSED_PAIR(pointer, __capacity_ = nullptr, allocator_type, __alloc_);
 #endif
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20
