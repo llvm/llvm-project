@@ -831,10 +831,8 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
       diags.Report(clang::diag::err_drv_small_columns)
           << arg->getOption().getName() << arg->getValue() << "7";
     }
-    if (isFixedLineFlag)
-      opts.fixedFormColumns = columns;
-    else
-      opts.freeFormColumns = columns;
+
+    (isFixedLineFlag ? opts.fixedFormColumns : opts.freeFormColumns) = columns;
   }
 
   // Set conversion based on -fconvert=<value>
