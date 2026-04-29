@@ -54,8 +54,6 @@ def C1PUnitD   : ProcResource<2>;  // Store data 0/1
 def C1PUnitCME : ProcResource<1>;  // CME operations block
 def C1PUnitFlg : ProcResource<4>;  // Flags
 
-def C1PUnitS   : ProcResGroup<[C1PUnitS0, C1PUnitS1, C1PUnitS2, C1PUnitS3,
-                               C1PUnitS4, C1PUnitS5]>;
 def C1PUnitI   : ProcResGroup<[C1PUnitS0, C1PUnitS1, C1PUnitS2, C1PUnitS3,
                                C1PUnitS4, C1PUnitS5, C1PUnitM0, C1PUnitM1]>;
 def C1PUnitI4  : ProcResGroup<[C1PUnitS0, C1PUnitS2, C1PUnitS4, C1PUnitM0]>;

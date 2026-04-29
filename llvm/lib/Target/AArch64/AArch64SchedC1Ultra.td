@@ -69,10 +69,6 @@ def C1UUnitSA     : ProcResGroup<[C1UUnitLS0, C1UUnitLS1]>;
 def C1UUnitV      : ProcResGroup<[C1UUnitV0, C1UUnitV1, C1UUnitV2,
                                   C1UUnitV3, C1UUnitV4, C1UUnitV5]>;
 def C1UUnitV01    : ProcResGroup<[C1UUnitV0, C1UUnitV1]>;
-def C1UUnitV02    : ProcResGroup<[C1UUnitV0, C1UUnitV2]>;
-def C1UUnitV13    : ProcResGroup<[C1UUnitV1, C1UUnitV3]>;
-def C1UUnitV0123  : ProcResGroup<[C1UUnitV0, C1UUnitV1,
-                                  C1UUnitV2, C1UUnitV3]>;
 def C1UUnitV0134  : ProcResGroup<[C1UUnitV0, C1UUnitV1, C1UUnitV3, C1UUnitV4]>;
 
 // Define commonly used read types.
