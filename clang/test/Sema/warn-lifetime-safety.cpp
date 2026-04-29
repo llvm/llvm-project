@@ -2936,125 +2936,6 @@ void placement_new_array_braces() {
   (void)p[0];                    // expected-note {{later used here}}
 }
 
-// FIXME: Currently `&expr` creates a brand new origin instead of reusing origins
-// from the original expression. Because of that, writes through `&expr` cannot
-// overwrite the original expression's inner storage origins. 
-// Related to https://github.com/llvm/llvm-project/issues/176291
-struct PlacementNewInMethod {
-  View V;
-
-  void bad_store_after_placement_new() {
-    {
-      MyObj obj;
-      new (&V) View(obj);
-    }
-    V.use();
-  }
-};
-
-void placement_new_member_call_from_dead_scope() {
-  View *storage = new View;
-  {
-    MyObj obj;
-    new (storage) View(obj); // expected-warning {{object whose reference is captured does not live long enough}}
-  }                          // expected-note {{destroyed here}}
-  storage->use();            // expected-note {{later used here}}
-}
-
-struct ViewPointerFieldHolder {
-  View *Ptr;
-};
-
-// FIXME: Repeated field accesses do not share stable field origins.
-void placement_new_pointer_field_from_dead_scope() {
-  ViewPointerFieldHolder h{new View};
-  {
-    MyObj obj;
-    new (h.Ptr) View(obj);
-  }
-  h.Ptr->use();
-}
-
-// FIXME: Repeated array element accesses do not share stable element origins.
-void placement_new_array_subscript_from_dead_scope() {
-  View *slots[1] = {new View};
-  {
-    MyObj obj;
-    new (slots[0]) View(obj);
-  }
-  slots[0]->use();
-}
-
-// FIXME: Writes through references do not update the referred pointer's origins.
-void placement_new_pointer_reference_from_dead_scope() {
-  View *storage = new View;
-  View *&ref = storage;
-  {
-    MyObj obj;
-    new (ref) View(obj);
-  }
-  storage->use();
-}
-
-// FIXME: Writing through a conditional glvalue is not propagated to either arm.
-void placement_new_conditional_pointer_from_dead_scope(bool flag) {
-  View *x = new View;
-  View *y = new View;
-  {
-    MyObj obj;
-    new (flag ? x : y) View(obj);
-  }
-  x->use();
-  y->use();
-}
-
-View *identity(View *p [[clang::lifetimebound]]);
-
-// FIXME: Function call results are not mapped back to the argument they expose.
-void placement_new_function_pointer_from_dead_scope() {
-  View *storage = new View;
-  {
-    MyObj obj;
-    new (identity(storage)) View(obj);
-  }
-  storage->use();
-}
-
-struct ViewStorage {
-  View Storage;
-  View *get() [[clang::lifetimebound]];
-};
-
-// FIXME: Placement-new does not write back through the lifetimebound result of `get()`.
-void placement_new_member_function_pointer_from_dead_scope() {
-  ViewStorage storage;
-  {
-    MyObj obj;
-    new (storage.get()) View(obj);
-  }
-  storage.Storage.use();
-}
-
-// FIXME: Address-of placement arguments are not resolved to the addressed object.
-void placement_new_addressof_from_dead_scope() {
-  View storage;
-  {
-    MyObj obj;
-    new (&storage) View(obj);
-  }
-  storage.use();
-}
-
-// FIXME: Explicit casts to `void *` are not ignored for placement arguments.
-void placement_new_explicit_void_cast_from_dead_scope() {
-  View *storage = new View;
-  {
-    MyObj obj;
-    new ((void *)storage) View(obj);
-  }
-  storage->use();
-}
-
 void placement_new_heap_then_delete_use_after_free() {
   int *storage = new int(7); // expected-warning {{allocated object does not live long enough}}
   int *p = new (storage) int(42);
@@ -3088,8 +2969,117 @@ void placement_new_pointer_field_use_after_scope() {
   }
   (void)p->Ptr->id;
 }
+} // namespace placement_new
 
-// FIXME: Stripping implicit casts also strips array to pointer decay, leaving only the array glvalue origin and no pointee origin to overwrite. Because of that, origins are not propagated here.
+// FIXME: Currently this is not diagnosed because placement new does not overwrite the placement argument's origins.
+namespace placement_new_argument {
+struct PlacementNewInMethod {
+  View V;
+
+  void bad_store_after_placement_new() {
+    {
+      MyObj obj;
+      new (&V) View(obj);
+    }
+    V.use();
+  }
+};
+
+void placement_new_member_call_from_dead_scope() {
+  View *storage = new View;
+  {
+    MyObj obj;
+    new (storage) View(obj);
+  }
+  storage->use();
+}
+
+struct ViewPointerFieldHolder {
+  View *Ptr;
+};
+
+void placement_new_pointer_field_from_dead_scope() {
+  ViewPointerFieldHolder h{new View};
+  {
+    MyObj obj;
+    new (h.Ptr) View(obj);
+  }
+  h.Ptr->use();
+}
+
+void placement_new_array_subscript_from_dead_scope() {
+  View *slots[1] = {new View};
+  {
+    MyObj obj;
+    new (slots[0]) View(obj);
+  }
+  slots[0]->use();
+}
+
+void placement_new_pointer_reference_from_dead_scope() {
+  View *storage = new View;
+  View *&ref = storage;
+  {
+    MyObj obj;
+    new (ref) View(obj);
+  }
+  storage->use();
+}
+
+void placement_new_conditional_pointer_from_dead_scope(bool flag) {
+  View *x = new View;
+  View *y = new View;
+  {
+    MyObj obj;
+    new (flag ? x : y) View(obj);
+  }
+  x->use();
+  y->use();
+}
+
+View *identity(View *p [[clang::lifetimebound]]);
+
+void placement_new_function_pointer_from_dead_scope() {
+  View *storage = new View;
+  {
+    MyObj obj;
+    new (identity(storage)) View(obj);
+  }
+  storage->use();
+}
+
+struct ViewStorage {
+  View Storage;
+  View *get() [[clang::lifetimebound]];
+};
+
+void placement_new_member_function_pointer_from_dead_scope() {
+  ViewStorage storage;
+  {
+    MyObj obj;
+    new (storage.get()) View(obj);
+  }
+  storage.Storage.use();
+}
+
+void placement_new_addressof_from_dead_scope() {
+  View storage;
+  {
+    MyObj obj;
+    new (&storage) View(obj);
+  }
+  storage.use();
+}
+
+void placement_new_explicit_void_cast_from_dead_scope() {
+  View *storage = new View;
+  {
+    MyObj obj;
+    new ((void *)storage) View(obj);
+  }
+  storage->use();
+}
+
 void placement_new_direct_array_use_after_placement() {
   char storage[sizeof(std::string)];
   std::string* str1 = new (storage) std::string{"Old"};
@@ -3098,7 +3088,7 @@ void placement_new_direct_array_use_after_placement() {
   (void)*p1;
 }
 
-} // namespace placement_new
+} // namespace placement_new_argument
 
 namespace method_call_uses_field_origins {
 int GLOBAL_INT;

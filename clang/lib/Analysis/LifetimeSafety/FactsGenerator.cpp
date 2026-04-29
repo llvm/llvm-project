@@ -643,26 +643,16 @@ void FactsGenerator::VisitCXXNewExpr(const CXXNewExpr *NE) {
                               ->getType()
                               ->getAs<PointerType>();
         Arg && Arg->isVoidPointerType()) {
-      // FIXME: This assumes the placement argument is a direct glvalue pointer
-      // expression with an origin list shaped like
-      // storage -> pointer value -> pointee object.
-      // The code below overwrites the pointee object origin. Since origin flow
-      // is one way, non-direct placement argument forms such as `storage.get()`
-      // or `&storage` need separate handling to find the actual storage object
-      // whose origins should be overwritten.
-
       // Use the placement argument before the implicit conversion to void*, so
       // inner origins are still available.
-      const Expr *PlacementArg = NE->getPlacementArg(0)->IgnoreImpCasts();
-      // If the placement argument is a glvalue (such as DeclRefExpr), skip its
-      // outer storage origin so the list starts with the pointer origin.
-      OriginList *PlacementList =
-          getRValueOrigins(PlacementArg, getOriginsList(*PlacementArg));
-      // If the placement argument only has a glvalue origin, there is no
-      // pointee object origin to overwrite.
-      if (Init && PlacementList)
-        // Placement new constructs the pointee of the placement pointer.
-        flow(PlacementList->peelOuterOrigin(), getOriginsList(*Init), true);
+      const Expr *PlacementArg = NE->getPlacementArg(0);
+      if (const CastExpr *ICE = dyn_cast<CastExpr>(PlacementArg)) {
+        PlacementArg = ICE->getSubExpr();
+      }
+      OriginList *PlacementList = getOriginsList(*PlacementArg);
+      // FIXME: General placement arguments need separate handling to overwrite
+      // the right origins.
+
       // The pointer returned by placement new comes from the placement
       // argument.
       if (PlacementList)
