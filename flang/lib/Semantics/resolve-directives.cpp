@@ -1165,6 +1165,28 @@ private:
   }
 };
 
+void ResolveAccParts(SemanticsContext &context, const parser::ProgramUnit &node,
+    Scope *topScope) {
+  if (context.IsEnabled(common::LanguageFeature::OpenACC)) {
+    AccAttributeVisitor{context, topScope}.Walk(node);
+  }
+}
+
+void ResolveOmpParts(
+    SemanticsContext &context, const parser::ProgramUnit &node) {
+  if (context.IsEnabled(common::LanguageFeature::OpenMP)) {
+    OmpAttributeVisitor{context}.Walk(node);
+    if (!context.AnyFatalError()) {
+      // The data-sharing attribute of the loop iteration variable for a
+      // sequential loop (2.15.1.1) can only be determined when visiting
+      // the corresponding DoConstruct, a second walk is to adjust the
+      // symbols for all the data-refs of that loop iteration variable
+      // prior to the DoConstruct.
+      OmpAttributeVisitor{context}.Walk(node);
+    }
+  }
+}
+
 template <typename T>
 bool DirectiveAttributeVisitor<T>::HasDataSharingAttributeObject(
     const Symbol &object) {
@@ -3125,28 +3147,6 @@ void OmpAttributeVisitor::CheckMultipleAppearances(
     AddDataSharingAttributeObject(target->GetUltimate());
     if (privateDataSharingAttributeFlags.test(ompFlag)) {
       AddPrivateDataSharingAttributeObjects(*target);
-    }
-  }
-}
-
-void ResolveAccParts(SemanticsContext &context, const parser::ProgramUnit &node,
-    Scope *topScope) {
-  if (context.IsEnabled(common::LanguageFeature::OpenACC)) {
-    AccAttributeVisitor{context, topScope}.Walk(node);
-  }
-}
-
-void ResolveOmpParts(
-    SemanticsContext &context, const parser::ProgramUnit &node) {
-  if (context.IsEnabled(common::LanguageFeature::OpenMP)) {
-    OmpAttributeVisitor{context}.Walk(node);
-    if (!context.AnyFatalError()) {
-      // The data-sharing attribute of the loop iteration variable for a
-      // sequential loop (2.15.1.1) can only be determined when visiting
-      // the corresponding DoConstruct, a second walk is to adjust the
-      // symbols for all the data-refs of that loop iteration variable
-      // prior to the DoConstruct.
-      OmpAttributeVisitor{context}.Walk(node);
     }
   }
 }
