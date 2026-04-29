@@ -1578,14 +1578,10 @@ Value *NumericalStabilitySanitizer::maybeHandleKnownCallBase(
   }
 
   // Check that the widened intrinsic is valid.
-  SmallVector<Intrinsic::IITDescriptor, 8> Table;
-  getIntrinsicInfoTableEntries(WidenedId, Table);
-  SmallVector<Type *, 4> ArgTys;
-  ArrayRef<Intrinsic::IITDescriptor> TableRef = Table;
-  [[maybe_unused]] Intrinsic::MatchIntrinsicTypesResult MatchResult =
-      Intrinsic::matchIntrinsicSignature(WidenedFnTy, TableRef, ArgTys);
-  assert(MatchResult == Intrinsic::MatchIntrinsicTypes_Match &&
-         "invalid widened intrinsic");
+  SmallVector<Type *, 4> OverloadTys;
+  [[maybe_unused]] bool IsValid =
+      Intrinsic::getIntrinsicSignature(WidenedId, WidenedFnTy, OverloadTys);
+  assert(IsValid && "invalid widened intrinsic");
   // For known intrinsic functions, we create a second call to the same
   // intrinsic with a different type.
   SmallVector<Value *, 4> Args;
@@ -1611,7 +1607,7 @@ Value *NumericalStabilitySanitizer::maybeHandleKnownCallBase(
     // There is no intrinsic with his level of precision, truncate the shadow.
     Args.push_back(Builder.CreateFPTrunc(Shadow, IntrinsicArgTy));
   }
-  Value *IntrinsicCall = Builder.CreateIntrinsic(WidenedId, ArgTys, Args);
+  Value *IntrinsicCall = Builder.CreateIntrinsic(WidenedId, OverloadTys, Args);
   return WidenedFnTy->getReturnType() == ExtendedVT
              ? IntrinsicCall
              : Builder.CreateFPExt(IntrinsicCall, ExtendedVT);

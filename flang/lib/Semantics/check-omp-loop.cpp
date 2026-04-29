@@ -380,8 +380,6 @@ void OmpStructureChecker::CheckNestedConstruct(
 }
 
 void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
-  loopStack_.push_back(&x);
-
   const parser::OmpDirectiveName &beginName{x.BeginDir().DirName()};
   PushContextAndClauseSets(beginName.source, beginName.v);
 
@@ -619,40 +617,6 @@ void OmpStructureChecker::Leave(const parser::OpenMPLoopConstruct &x) {
     ExitDirectiveNest(SIMDNest);
   }
   dirContext_.pop_back();
-
-  assert(!loopStack_.empty() && "Expecting non-empty loop stack");
-#ifndef NDEBUG
-  const LoopConstruct &top{loopStack_.back()};
-  auto *loopc{std::get_if<const parser::OpenMPLoopConstruct *>(&top)};
-  assert(loopc != nullptr && *loopc == &x && "Mismatched loop constructs");
-#endif
-  loopStack_.pop_back();
-}
-
-void OmpStructureChecker::Enter(const parser::OmpEndLoopDirective &x) {
-  const parser::OmpDirectiveName &dir{x.DirName()};
-  ResetPartialContext(dir.source);
-  switch (dir.v) {
-  // 2.7.1 end-do -> END DO [nowait-clause]
-  // 2.8.3 end-do-simd -> END DO SIMD [nowait-clause]
-  case llvm::omp::Directive::OMPD_do:
-    PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_end_do);
-    break;
-  case llvm::omp::Directive::OMPD_do_simd:
-    PushContextAndClauseSets(
-        dir.source, llvm::omp::Directive::OMPD_end_do_simd);
-    break;
-  default:
-    // no clauses are allowed
-    break;
-  }
-}
-
-void OmpStructureChecker::Leave(const parser::OmpEndLoopDirective &x) {
-  if ((GetContext().directive == llvm::omp::Directive::OMPD_end_do) ||
-      (GetContext().directive == llvm::omp::Directive::OMPD_end_do_simd)) {
-    dirContext_.pop_back();
-  }
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Depth &x) {
@@ -840,17 +804,17 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Looprange &x) {
 
 void OmpStructureChecker::Enter(const parser::DoConstruct &x) {
   Base::Enter(x);
-  loopStack_.push_back(&x);
+  constructStack_.push_back(&x);
 }
 
 void OmpStructureChecker::Leave(const parser::DoConstruct &x) {
-  assert(!loopStack_.empty() && "Expecting non-empty loop stack");
+  assert(!constructStack_.empty() && "Expecting non-empty construct stack");
 #ifndef NDEBUG
-  const LoopConstruct &top = loopStack_.back();
+  const LoopOrConstruct &top = constructStack_.back();
   auto *doc{std::get_if<const parser::DoConstruct *>(&top)};
-  assert(doc != nullptr && *doc == &x && "Mismatched loop constructs");
+  assert(doc != nullptr && *doc == &x && "Mismatched constructs");
 #endif
-  loopStack_.pop_back();
+  constructStack_.pop_back();
   Base::Leave(x);
 }
 

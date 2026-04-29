@@ -5692,6 +5692,11 @@ public:
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandVectorFindLastActive(SDNode *N, SelectionDAG &DAG) const;
 
+  /// Expand LOOP_DEPENDENCE_MASK nodes
+  /// \param N Node to expand
+  /// \returns The expansion result or SDValue() if it fails.
+  SDValue expandLoopDependenceMask(SDNode *N, SelectionDAG &DAG) const;
+
   /// Expand ABS nodes. Expands vector/scalar ABS nodes,
   /// vector nodes can only succeed if all operations are legal/custom.
   /// (ABS x) -> (XOR (ADD x, (SRA x, type_size)), (SRA x, type_size))

@@ -586,8 +586,16 @@ RTLIB::Libcall RTLIB::getSINCOS(EVT RetVT) {
     switch (RetVT.getSimpleVT().SimpleTy) {
     case MVT::v4f32:
       return RTLIB::SINCOS_V4F32;
+    case MVT::v8f32:
+      return RTLIB::SINCOS_V8F32;
+    case MVT::v16f32:
+      return RTLIB::SINCOS_V16F32;
     case MVT::v2f64:
       return RTLIB::SINCOS_V2F64;
+    case MVT::v4f64:
+      return RTLIB::SINCOS_V4F64;
+    case MVT::v8f64:
+      return RTLIB::SINCOS_V8F64;
     case MVT::nxv4f32:
       return RTLIB::SINCOS_NXV4F32;
     case MVT::nxv2f64:
@@ -2301,10 +2309,6 @@ int TargetLoweringBase::IntrinsicIDToISD(Intrinsic::ID ID) const {
     return ISD::FASIN;
   case Intrinsic::atan:
     return ISD::FATAN;
-  case Intrinsic::atan2:
-    return ISD::FATAN2;
-  case Intrinsic::canonicalize:
-    return ISD::FCANONICALIZE;
   case Intrinsic::cos:
     return ISD::FCOS;
   case Intrinsic::cosh:
@@ -2315,18 +2319,12 @@ int TargetLoweringBase::IntrinsicIDToISD(Intrinsic::ID ID) const {
     return ISD::FEXP2;
   case Intrinsic::exp10:
     return ISD::FEXP10;
-  case Intrinsic::ldexp:
-    return ISD::FLDEXP;
   case Intrinsic::log:
     return ISD::FLOG;
   case Intrinsic::log2:
     return ISD::FLOG2;
   case Intrinsic::log10:
     return ISD::FLOG10;
-  case Intrinsic::pow:
-    return ISD::FPOW;
-  case Intrinsic::powi:
-    return ISD::FPOWI;
   case Intrinsic::sin:
     return ISD::FSIN;
   case Intrinsic::sinh:
