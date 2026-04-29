@@ -511,5 +511,8 @@ def err_cir_verification_failed_pre_passes : Error<
 
 def warn_dyndbg_unable_to_create_target : Warning<
     "ignoring -fdynamic-debugging: unable to create target: '%0'">;
+
+def err_dyndbg_no_instrumentation : Error<
+    "'-fdynamic-debugging' unsupported with instrumentation (PGO/code coverage)">;
 }
 

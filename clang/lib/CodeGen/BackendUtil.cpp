@@ -1484,6 +1484,15 @@ void clang::emitBackendOutput(CompilerInstance &CI, CodeGenOptions &CGOpts,
       Diags.Report(diag::warn_dyndbg_unable_to_create_target) << Error;
       EnableDynamicDebugging = false;
     }
+
+    // Instrumentation causes issues (parts of LLVM expect certain globals to
+    // have initializers). Intrinsics may already have been added to IR by now,
+    // so we can't just turn it off for the inner module (we'd have to strip
+    // them out / not clone them). TODO: Support instrumentation.
+    if (CGOpts.getProfileInstr() != driver::ProfileInstrKind::ProfileNone) {
+      Diags.Report(diag::err_dyndbg_no_instrumentation);
+      EnableDynamicDebugging = false;
+    }
   }
 
   if (EnableDynamicDebugging) {
