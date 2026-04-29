@@ -539,13 +539,10 @@ void ExprEngine::inlineCall(WorkList *WList, const CallEvent &Call,
   const BlockDataRegion *BlockInvocationData = nullptr;
   if (Call.getKind() == CE_Block &&
       !cast<BlockCall>(Call).isConversionFromLambda()) {
-    const BlockDataRegion *BR = cast<BlockCall>(Call).getBlockRegion();
-    BlockInvocationData = BR;
-    assert(BR && "If we have the block definition we should have its region");
+    BlockInvocationData = cast<BlockCall>(Call).getBlockRegion();
+    assert(BlockInvocationData && "If we have the block definition we should have its region");
     AnalysisDeclContext *BlockCtx = AMgr.getAnalysisDeclContext(D);
-    ParentOfCallee = BlockCtx->getBlockInvocationContext(CallerSFC,
-                                                         cast<BlockDecl>(D),
-                                                         BR);
+    ParentOfCallee = CallerSFC;
   }
 
   // This may be NULL, but that's fine.
