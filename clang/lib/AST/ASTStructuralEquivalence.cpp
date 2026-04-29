@@ -2279,7 +2279,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
       return false;
   }
 
-  return true;
+  return IsStructurallyEquivalent(Context, Params1->getRequiresClause(),
+                                  Params2->getRequiresClause());
 }
 
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
@@ -2811,7 +2812,7 @@ bool StructuralEquivalenceContext::IsEquivalent(TemplateParameterList *TPL1,
       return false;
   }
 
-  return true;
+  return IsEquivalent(TPL1->getRequiresClause(), TPL2->getRequiresClause());
 }
 
 bool StructuralEquivalenceContext::CheckKindSpecificEquivalence(
