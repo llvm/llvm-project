@@ -928,6 +928,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI vector<_Tp, _Allocato
     _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value)
 #endif
     : __layout_(std::move(__x.__layout_)) {
+  __x.__layout_.__reset_without_allocator();
 }
 
 template <class _Tp, class _Allocator>

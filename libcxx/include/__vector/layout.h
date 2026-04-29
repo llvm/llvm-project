@@ -253,9 +253,6 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 __vector_layout<_Tp, _Alloc>::__vector_layout(__ve
       __size_(std::move(__other.__size_)),
       __capacity_(std::move(__other.__capacity_)),
       __alloc_(std::move(__other.__alloc_)) {
-  __other.__begin_    = nullptr;
-  __other.__size_     = 0;
-  __other.__capacity_ = 0;
 }
 
 template <class _Tp, class _Alloc>
@@ -400,9 +397,6 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 __vector_layout<_Tp, _Alloc>::__vector_layout(__ve
       __end_(std::move(__other.__end_)),
       __capacity_(std::move(__other.__capacity_)),
       __alloc_(std::move(__other.__alloc_)) {
-  __other.__begin_    = nullptr;
-  __other.__end_      = nullptr;
-  __other.__capacity_ = nullptr;
 }
 
 template <class _Tp, class _Alloc>
