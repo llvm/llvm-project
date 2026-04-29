@@ -521,7 +521,9 @@ void DivisionRepr::dump() const { print(llvm::errs()); }
 SmallVector<DynamicAPInt, 8>
 presburger::getDynamicAPIntVec(ArrayRef<int64_t> range) {
   SmallVector<DynamicAPInt, 8> result(range.size());
-  llvm::transform(range, result.begin(), dynamicAPIntFromInt64);
+  // llvm::transform(range, result.begin(), dynamicAPIntFromInt64);
+  llvm::transform(range, result.begin(),
+                  [](int64_t x) { return dynamicAPIntFromInt64(x); });
   return result;
 }
 
