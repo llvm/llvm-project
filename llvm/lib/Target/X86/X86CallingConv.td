@@ -1135,9 +1135,15 @@ def CSR_32EHRet : CalleeSavedRegs<(add EAX, EDX, CSR_32)>;
 def CSR_64EHRet : CalleeSavedRegs<(add RAX, RDX, CSR_64)>;
 
 def CSR_Win64_NoSSE : CalleeSavedRegs<(add RBX, RBP, RDI, RSI, R12, R13, R14, R15)>;
+// When APX support is present, in Win64 ABI R30 and R31 are callee-saved
+// https://learn.microsoft.com/en-us/cpp/build/x64-calling-convention?view=msvc-170#callercallee-saved-registers
+def CSR_Win64_EGPR : CalleeSavedRegs<(add R30, R31)>;
+def CSR_Win64_NoSSE_APX : CalleeSavedRegs<(add CSR_Win64_NoSSE, CSR_Win64_EGPR)>;
 
 def CSR_Win64 : CalleeSavedRegs<(add CSR_Win64_NoSSE,
                                      (sequence "XMM%u", 6, 15))>;
+def CSR_Win64_APX : CalleeSavedRegs<(add CSR_Win64_NoSSE_APX,
+                                         (sequence "XMM%u", 6, 15))>;
 
 def CSR_Win64_SwiftError : CalleeSavedRegs<(sub CSR_Win64, R12)>;
 def CSR_Win64_SwiftTail : CalleeSavedRegs<(sub CSR_Win64, R13, R14)>;

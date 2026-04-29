@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TileShapeInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Type.h"
 #include "llvm/MC/MCContext.h"
@@ -244,6 +245,7 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   bool HasSSE = Subtarget.hasSSE1();
   bool HasAVX = Subtarget.hasAVX();
   bool HasAVX512 = Subtarget.hasAVX512();
+  bool HasEGPR = Subtarget.hasEGPR();
   bool CallsEHReturn = MF->callsEHReturn();
 
   CallingConv::ID CC = F.getCallingConv();
@@ -315,9 +317,9 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
       return CSR_64_MostRegs_SaveList;
     break;
   case CallingConv::Win64:
-    if (!HasSSE)
-      return CSR_Win64_NoSSE_SaveList;
-    return CSR_Win64_SaveList;
+    if (HasEGPR)
+      return HasSSE ? CSR_Win64_APX_SaveList : CSR_Win64_NoSSE_APX_SaveList;
+    return HasSSE ? CSR_Win64_SaveList : CSR_Win64_NoSSE_SaveList;
   case CallingConv::SwiftTail:
     if (!Is64Bit)
       return CSR_32_SaveList;
@@ -355,8 +357,11 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
       return IsWin64 ? CSR_Win64_SwiftError_SaveList
                      : CSR_64_SwiftError_SaveList;
 
-    if (IsWin64 || IsUEFI64)
+    if (IsWin64 || IsUEFI64) {
+      if (HasEGPR)
+        return HasSSE ? CSR_Win64_APX_SaveList : CSR_Win64_NoSSE_APX_SaveList;
       return HasSSE ? CSR_Win64_SaveList : CSR_Win64_NoSSE_SaveList;
+    }
     if (CallsEHReturn)
       return CSR_64EHRet_SaveList;
     return CSR_64_SaveList;
@@ -446,7 +451,7 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
       return CSR_64_MostRegs_RegMask;
     break;
   case CallingConv::Win64:
-    return CSR_Win64_RegMask;
+    return CSR_Win64_APX_RegMask;
   case CallingConv::SwiftTail:
     if (!Is64Bit)
       return CSR_32_RegMask;
@@ -484,7 +489,7 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
     if (IsSwiftCC)
       return IsWin64 ? CSR_Win64_SwiftError_RegMask : CSR_64_SwiftError_RegMask;
 
-    return (IsWin64 || IsUEFI64) ? CSR_Win64_RegMask : CSR_64_RegMask;
+    return (IsWin64 || IsUEFI64) ? CSR_Win64_APX_RegMask : CSR_64_RegMask;
   }
 
   return CSR_32_RegMask;
@@ -613,6 +618,29 @@ BitVector X86RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // Reserve the extended general purpose registers.
   if (!Is64Bit || !MF.getSubtarget<X86Subtarget>().hasEGPR())
     Reserved.set(X86::R16, X86::R31WH + 1);
+
+  // There is a problem with allocation R30/R31 registers in Win64 APX ABI
+  // functions that have setjmp as unwinder won't be able to restore them:
+  // https://learn.microsoft.com/en-us/cpp/build/x64-calling-convention?view=msvc-170#setjmplongjmp
+  if (MF.exposesReturnsTwice()) {
+    unsigned NumReservedCSRs = 0;
+    for (const MCPhysReg &Reg : CSR_Win64_EGPR_SaveList)
+      if (isCalleeSavedPhysReg(Reg, MF)) {
+        ++NumReservedCSRs;
+        for (const MCPhysReg &SubReg : subregs_inclusive(Reg))
+          Reserved.set(SubReg);
+      }
+    if (NumReservedCSRs && MF.size() > 50 &&
+        !MF.getRegInfo().reservedRegsFrozen()) {
+      const Function &F = MF.getFunction();
+      F.getContext().diagnose(DiagnosticInfoResourceLimit(
+          F,
+          "callee-saved registers reserved due to setjmp; "
+          "this may impact performance in large functions (" +
+              Twine(NumReservedCSRs) + " registers excluded from allocation)",
+          MF.size(), 50, DS_Warning));
+    }
+  }
 
   if (MF.getFunction().getCallingConv() == CallingConv::GRAAL) {
     for (MCRegAliasIterator AI(X86::R14, this, true); AI.isValid(); ++AI)
