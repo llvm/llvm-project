@@ -2785,6 +2785,12 @@ typedef struct kmp_taskgraph_record {
   struct kmp_taskgraph_record *next = nullptr;
 } kmp_taskgraph_record_t;
 
+typedef struct kmp_taskgraph_header {
+  kmp_taskgraph_record_t *first;
+  kmp_taskgraph_record_t *expiring;
+  kmp_lock_t header_lock;
+} kmp_taskgraph_header_t;
+
 typedef struct kmp_taskgraph_exec_descr {
   std::atomic<kmp_int32> npredecessors;
   std::atomic<kmp_int32> nblocks;
