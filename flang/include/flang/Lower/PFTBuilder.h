@@ -608,6 +608,13 @@ VariableList getScopeVariableList(const Fortran::semantics::Scope &scope);
 /// depends on. \p symbol itself will be the last variable in the list.
 VariableList getDependentVariableList(const Fortran::semantics::Symbol &);
 
+struct FunctionLikeUnit;
+/// Create an ordered list of equivalence sets and variables from host
+/// [sub]module scopes of \p funit that are referenced in \p funit. This is
+/// used by lowering of module procedures (and their internal subprograms) to
+/// only instantiate referenced host module variables rather than all of them.
+VariableList getHostModuleVariableList(const FunctionLikeUnit &funit);
+
 void dump(VariableList &, std::string s = {}); // `s` is an optional dump label
 
 /// Function-like units may contain evaluations (executable statements),

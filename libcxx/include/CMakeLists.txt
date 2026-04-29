@@ -543,9 +543,12 @@ set(files
   __locale_dir/support/freebsd.h
   __locale_dir/support/fuchsia.h
   __locale_dir/support/linux.h
+  __locale_dir/support/llvm_libc.h
   __locale_dir/support/netbsd.h
   __locale_dir/support/newlib.h
   __locale_dir/support/no_locale/characters.h
+  __locale_dir/support/no_locale/conversions.h
+  __locale_dir/support/no_locale/formatting.h
   __locale_dir/support/no_locale/strtonum.h
   __locale_dir/support/windows.h
   __locale_dir/time.h
@@ -751,6 +754,7 @@ set(files
   __ranges/single_view.h
   __ranges/size.h
   __ranges/split_view.h
+  __ranges/stride_view.h
   __ranges/subrange.h
   __ranges/take_view.h
   __ranges/take_while_view.h
@@ -775,7 +779,6 @@ set(files
   __support/ibm/gettod_zos.h
   __support/ibm/locale_mgmt_zos.h
   __support/ibm/nanosleep.h
-  __support/xlocale/__nop_locale_mgmt.h
   __support/xlocale/__posix_l_fallback.h
   __support/xlocale/__strtonum_fallback.h
   __system_error/errc.h

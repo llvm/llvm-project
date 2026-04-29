@@ -1,12 +1,11 @@
 // RUN: fir-opt --canonicalize --split-input-file %s | FileCheck %s
 
-// Verify that fir.rebox is NOT folded into fir.array_coor when the rebox
-// is defined outside a cuf.kernel and the array_coor is inside that kernel.
-// CUF codegen turns such a rebox into a managed-memory descriptor (via
-// _FortranACUFAllocDescriptor) that the kernel needs to receive as its
-// argument; folding the rebox away would leave the kernel capturing the
-// host-side descriptor directly, causing illegal device dereferences at
-// runtime.
+// Verify that fir.rebox is NOT folded into fir.array_coor when the rebox is
+// defined outside a cuf.kernel and the array_coor is inside that kernel.
+// CUF lowering converts such a rebox into a managed-memory descriptor that
+// the kernel needs to receive as its argument; folding the rebox away would
+// leave the kernel capturing the host-side descriptor directly, causing
+// illegal device dereferences at runtime.
 // CHECK-LABEL:   func.func @test_cuf_kernel_preserves_captured_rebox(
 // CHECK-SAME:        %[[BOX:.*]]: !fir.box<!fir.array<?xf32>>
 // CHECK-SAME:        %[[VAL:.*]]: f32

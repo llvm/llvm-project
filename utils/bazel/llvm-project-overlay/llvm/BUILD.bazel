@@ -1593,6 +1593,8 @@ cc_library(
     hdrs = glob(["include/llvm/DWP/*.h"]),
     copts = llvm_copts,
     deps = [
+        ":BinaryFormat",
+        ":BinaryFormatELF",
         ":DebugInfoDWARF",
         ":MC",
         ":Object",
@@ -3702,7 +3704,10 @@ gentbl_cc_library(
     name = "webassembly_isel_target_gen",
     strip_include_prefix = "lib/Target/WebAssembly",
     tbl_outs = {
-        "lib/Target/WebAssembly/WebAssemblyGenGlobalISel.inc": ["-gen-global-isel"],
+        "lib/Target/WebAssembly/WebAssemblyGenGlobalISel.inc": [
+            "-gen-global-isel",
+            "-gisel-extended-llt",
+        ],
         "lib/Target/WebAssembly/WebAssemblyGenPreLegalizeGICombiner.inc": [
             "-gen-global-isel-combiner",
             "-combiners=WebAssemblyPreLegalizerCombiner",
@@ -4679,6 +4684,13 @@ cc_library(
     srcs = glob(["lib/HTTP/*.cpp"]),
     hdrs = glob(["include/llvm/HTTP/*.h"]),
     includes = ["include"],
+    linkopts = select({
+        "@platforms//os:windows": [
+            "crypt32.lib",
+            "winhttp.lib",
+        ],
+        "//conditions:default": [],
+    }),
     deps = [":Support"],
 )
 
@@ -5222,6 +5234,7 @@ cc_library(
         ":DWP",
         ":DwpOptionsTableGen",
         ":MC",
+        ":Object",
         ":Option",
         ":Support",
     ],

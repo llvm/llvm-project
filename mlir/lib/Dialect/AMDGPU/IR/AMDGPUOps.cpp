@@ -627,32 +627,51 @@ LogicalResult SparseMFMAOp::verify() {
     return emitOpError(
         "expected source operands to have the same element type");
 
-  // When CBSZ == 0, ABID selects the index set within the sparse index VGPR.
-  // When CBSZ != 0, the first index set is always used (ABID ignored).
+  // Classify the sparse MFMA variant. The three flavors differ in CBSZ/ABID
+  // handling and in the sparse-index layout:
+  //   - gfx942 16-bit:              max ABID = 3, sparse idx = vector<4xi8>
+  //   - gfx950 16-bit / gfx942 8-bit: max ABID = 1, sparse idx = vector<2xi16>
+  //   - gfx950 8-bit:  CBSZ/ABID ignored by hw,   sparse idx = i32
+  uint32_t m = getM(), k = getK();
   bool is8BitSource = sparseElem.isFloat(8) || sparseElem.isInteger(8);
-  // 8-bit source: ABID selects one of two 16-bit index sets.
-  if (getCbsz() == 0 && is8BitSource && getAbid() > 1)
-    return emitOpError("ABID must be 0 or 1 for 8-bit source data");
-  // 16-bit source: ABID selects one of four 8-bit index sets (0-3 all valid).
-  if (getCbsz() == 0 && !is8BitSource && getAbid() > 3)
-    return emitOpError("ABID must be between 0 and 3 for 16-bit source data");
+  bool is16BitGfx942 =
+      !is8BitSource && ((m == 16 && k == 32) || (m == 32 && k == 16));
+  bool is8BitGfx950 =
+      is8BitSource && ((m == 16 && k == 128) || (m == 32 && k == 64));
 
-  // Validate sparseIdx type matches source element type.
-  auto sparseIdxType = cast<VectorType>(getSparseIdx().getType());
-  if (is8BitSource) {
-    // 8-bit source data requires vector<2xi16> sparse indices.
-    if (sparseIdxType.getNumElements() != 2 ||
-        !sparseIdxType.getElementType().isInteger(16))
-      return emitOpError("expected vector<2xi16> sparse indices for 8-bit "
-                         "source data, but got ")
-             << getSparseIdx().getType();
+  // CBSZ/ABID range check. On gfx950 8-bit the hardware always uses the first
+  // set and ignores these fields, so require zeros in IR. Otherwise ABID is
+  // only meaningful when CBSZ == 0 (when CBSZ != 0 the first set is always
+  // used and ABID is irrelevant, so the verifier accepts any value).
+  if (is8BitGfx950) {
+    if (getCbsz() != 0)
+      return emitOpError(
+          "CBSZ must be 0 for this variant (field is ignored by hardware)");
+    if (getAbid() != 0)
+      return emitOpError(
+          "ABID must be 0 for this variant (field is ignored by hardware)");
+  } else if (getCbsz() == 0) {
+    unsigned maxAbid = is16BitGfx942 ? 3u : 1u;
+    if (getAbid() > maxAbid)
+      return emitOpError("ABID must be in [0, ")
+             << maxAbid << "] for this variant";
+  }
+
+  Type sparseIdxType = getSparseIdx().getType();
+  if (is8BitGfx950) {
+    if (!sparseIdxType.isInteger(32))
+      return emitOpError("expected i32 sparse indices for this variant "
+                         "(no internal set structure), but got ")
+             << sparseIdxType;
   } else {
-    // 16-bit source data requires vector<4xi8> sparse indices.
-    if (sparseIdxType.getNumElements() != 4 ||
-        !sparseIdxType.getElementType().isInteger(8))
-      return emitOpError("expected vector<4xi8> sparse indices for 16-bit "
-                         "source data, but got ")
-             << getSparseIdx().getType();
+    unsigned expectedIdxElems = is16BitGfx942 ? 4 : 2;
+    unsigned expectedIdxBits = is16BitGfx942 ? 8 : 16;
+    auto vecType = dyn_cast<VectorType>(sparseIdxType);
+    if (!vecType || vecType.getNumElements() != expectedIdxElems ||
+        !vecType.getElementType().isInteger(expectedIdxBits))
+      return emitOpError("expected vector<")
+             << expectedIdxElems << "xi" << expectedIdxBits
+             << "> sparse indices for this variant, but got " << sparseIdxType;
   }
 
   int64_t expectedSourceElems = (getM() * getK()) / waveSize;

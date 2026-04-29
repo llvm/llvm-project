@@ -51,6 +51,10 @@ public:
   // Returns true if this is an OpTypeInt instruction.
   // If N is non-zero, also checks that the bit width matches N.
   bool isTypeIntN(unsigned N = 0) const;
+  // Returns true if this is an OpTypeFloat instruction.
+  bool isAnyTypeFloat() const;
+  // Returns true if this is an OpTypeInt or OpTypeFloat instruction.
+  bool isTypeIntOrFloat() const { return isTypeIntN() || isAnyTypeFloat(); }
 
   friend struct DenseMapInfo<SPIRVTypeInst>;
 };

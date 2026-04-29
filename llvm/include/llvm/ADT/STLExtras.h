@@ -18,7 +18,6 @@
 #define LLVM_ADT_STLEXTRAS_H
 
 #include "llvm/ADT/ADL.h"
-#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/iterator.h"
