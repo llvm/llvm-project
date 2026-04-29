@@ -305,12 +305,12 @@ static bool CanDeduceTemplateArguments(Sema &S, TemplateParameterList *TPL,
   if (Inst.isInvalid())
     return false;
 
-  if (S.FinishTemplateArgumentDeduction(
-          TD, TPL, PatternArgs, Args, Deduced, Info,
-          /*CopyDeducedArgs=*/false) != TemplateDeductionResult::Success)
-    return false;
-
-  return !Trap.hasErrorOccurred();
+  TemplateDeductionResult Result;
+  S.runWithSufficientStackSpace(Info.getLocation(), [&] {
+    Result = S.FinishTemplateArgumentDeduction(
+        TD, TPL, PatternArgs, Args, Deduced, Info, /*CopyDeducedArgs=*/false);
+  });
+  return Result == TemplateDeductionResult::Success && !Trap.hasErrorOccurred();
 }
 
 static CanQual<FunctionProtoType>
