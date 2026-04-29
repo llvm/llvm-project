@@ -5392,6 +5392,9 @@ static unsigned getCallOpcode(PPCTargetLowering::CallFlags CFlags,
     case PPCISD::BCTRL:
       RetOpc = PPCISD::BCTRL_RM;
       break;
+    case PPCISD::BL_LOAD_TOC:
+      RetOpc = PPCISD::BL_LOAD_TOC_RM;
+      break;
     case PPCISD::CALL_NOTOC:
       RetOpc = PPCISD::CALL_NOTOC_RM;
       break;

@@ -577,6 +577,10 @@ def PPCbctrl_load_toc_rm : SDNode<"PPCISD::BCTRL_LOAD_TOC_RM",
                                   SDTypeProfile<0, 1, []>,
                                   [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                                    SDNPVariadic]>;
+def PPCbl_load_toc_rm : SDNode<"PPCISD::BL_LOAD_TOC_RM",
+                            SDTypeProfile<0, 1, []>,
+                            [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                            SDNPVariadic]>;
 
 // Return with a glue operand, matched by 'blr'
 def PPCretglue   : SDNode<"PPCISD::RET_GLUE", SDTNone,
@@ -1882,6 +1886,15 @@ let isCall = 1, PPC970_Unit = 7, isCodeGenOnly = 1,
      (ins (memri $D, $RA):$addr), "bctrl\n\tlwz 2, $addr", IIC_BrB,
      [(PPCbctrl_load_toc_rm iaddr:$addr)]>, Requires<[IsPPC32]>;
 
+}
+
+let isCall = 1, PPC970_Unit = 7, isCodeGenOnly = 1,
+    Defs = [LR, R2, RM], Uses = [RM, R1], RST = 2, RA = 1, D = 20 in {
+  def BL_RESTORE_RM :
+    IForm_and_DForm_1<18, 0, 1, 32,
+      (outs), (ins calltarget:$LI),
+      "bl $LI\n\tlwz 2, 20(1)", IIC_BrB,
+      []>, Requires<[IsPPC32]>;
 }
 
 let isCodeGenOnly = 1, hasSideEffects = 0 in {
@@ -3464,6 +3477,9 @@ def : Pat<(PPCcall_nop (i32 mcsym:$dst)),
 def : Pat<(PPCcall_nop (i32 texternalsym:$dst)),
           (BL_NOP texternalsym:$dst)>;
 
+def : Pat<(PPCbl_load_toc (i32 texternalsym:$dst)),
+          (BL_RESTORE texternalsym:$dst)>;
+
 def : Pat<(PPCcall_rm (i32 mcsym:$dst)),
           (BL_RM mcsym:$dst)>;
 
@@ -3473,9 +3489,8 @@ def : Pat<(PPCcall_nop_rm (i32 mcsym:$dst)),
 def : Pat<(PPCcall_nop_rm (i32 texternalsym:$dst)),
           (BL_NOP_RM texternalsym:$dst)>;
 
-def : Pat<(PPCbl_load_toc (i32 texternalsym:$dst)),
-          (BL_RESTORE texternalsym:$dst)>;
-// TODO FIXME add _RM version of call.
+def : Pat<(PPCbl_load_toc_rm (i32 texternalsym:$dst)),
+          (BL_RESTORE_RM texternalsym:$dst)>;
 
 def : Pat<(PPCtc_return (i32 tglobaladdr:$dst),  imm:$imm),
           (TCRETURNdi tglobaladdr:$dst, imm:$imm)>;

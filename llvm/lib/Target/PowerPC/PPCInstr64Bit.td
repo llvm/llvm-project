@@ -214,7 +214,15 @@ let isCall = 1, PPC970_Unit = 7, isCodeGenOnly = 1,
                       "bl $LI\n\tld 2, 40(1)", IIC_BrB,
                       []>,
                        Requires<[IsPPC64]>;
-  // TODO FIXME Add _RM version of call.
+}
+
+let isCall = 1, PPC970_Unit = 7, isCodeGenOnly = 1,
+    Defs = [LR8, X2, RM], Uses = [RM, X1], RST = 2, RA = 1, D = 40 in {
+  def BL8_RESTORE_RM : IForm_and_DForm_1<18, 0, 1, 58,
+                        (outs), (ins calltarget:$LI),
+                        "bl $LI\n\tld 2, 40(1)", IIC_BrB,
+                        []>,
+                         Requires<[IsPPC64]>;
 }
 
 } // Interpretation64Bit
@@ -263,15 +271,16 @@ def : Pat<(PPCcall (i64 mcsym:$dst)),
           (BL8 mcsym:$dst)>;
 def : Pat<(PPCcall_nop (i64 mcsym:$dst)),
           (BL8_NOP mcsym:$dst)>;
+def : Pat<(PPCbl_load_toc (i64 texternalsym:$dst)),
+          (BL8_RESTORE texternalsym:$dst)>;
 
 def : Pat<(PPCcall_rm (i64 mcsym:$dst)),
           (BL8_RM mcsym:$dst)>;
 def : Pat<(PPCcall_nop_rm (i64 mcsym:$dst)),
           (BL8_NOP_RM mcsym:$dst)>;
 
-def : Pat<(PPCbl_load_toc (i64 texternalsym:$dst)),
-          (BL8_RESTORE texternalsym:$dst)>;
-// TODO FIXME add _RM version.
+def : Pat<(PPCbl_load_toc_rm (i64 texternalsym:$dst)),
+          (BL8_RESTORE_RM texternalsym:$dst)>;
 
 // Atomic operations
 // FIXME: some of these might be used with constant operands. This will result
