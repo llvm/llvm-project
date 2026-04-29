@@ -118,13 +118,14 @@ PointerFlowMatcher::addEdges(Expected<EntityPointerLevelSet> &&LHS,
 ///
 /// XF(l = r)               := add edge "toEPL(l) -> toEPL(r))"
 /// XF(foo(a, b, ...))      := XF(Param_1 = a), XF(Param_2 = b), ...
-/// XF(return e;)           := XF(Fun = e), where 'Fun' is the enclosing
-///                                         function
+/// XF(return e;)           := XF(FunRet = e), where 'FunRet' is the return
+///                                            entity of the enclosing
+///                                            function
 /// XF(ctor(a, ...) : x1(y1), ... {...})
 ///                         := XF(Param_1 = a), ...,
 ///                            XF(x1 = y1), ...,
 ///                            ctor's body will be visited separately.
-/// XF(T var = e)           := XF(Var = e)
+/// XF(T var = e)           := XF(var = e)
 /// XF(T var = init-list)   := see \ref
 ///                            PointerFlowMatcher::matchInitializerList
 llvm::Error PointerFlowMatcher::matches(const DynTypedNode &DynNode,
@@ -166,7 +167,7 @@ llvm::Error PointerFlowMatcher::matchesStmt(const Stmt *S,
   }
   if (const auto *RS = dyn_cast<ReturnStmt>(S)) {
     const Expr *RetExpr = RS->getRetValue();
-    if (!hasPtrOrArrType(RetExpr))
+    if (!RetExpr || !hasPtrOrArrType(RetExpr))
       return llvm::Error::success();
     return addEdges(toEPL(RootDecl, true), toEPL(RetExpr));
   }

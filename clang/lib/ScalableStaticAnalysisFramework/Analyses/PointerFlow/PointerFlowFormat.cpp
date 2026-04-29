@@ -21,10 +21,10 @@ using Object = llvm::json::Object;
 using Array = llvm::json::Array;
 using Value = llvm::json::Value;
 
-extern ssaf::PointerFlowEntitySummary
+ssaf::PointerFlowEntitySummary
 ssaf::buildPointerFlowEntitySummary(EdgeSet Edges);
 
-extern llvm::iterator_range<EdgeSet::const_iterator>
+llvm::iterator_range<EdgeSet::const_iterator>
 ssaf::getEdges(const PointerFlowEntitySummary &Sum);
 
 namespace {
