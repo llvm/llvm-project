@@ -47943,6 +47943,17 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
     return SDValue();
   }
 
+  // Attempt to avoid multi-use src if we don't need anything from it.
+  // TODO: Generlize this and move to DAGCombine.
+  if (CIdx && ISD::isBitwiseLogicOp(InputVector.getOpcode())) {
+    unsigned Idx = CIdx->getZExtValue();
+    APInt DemandedElts = APInt::getOneBitSet(NumSrcElts, Idx);
+    if (SDValue NewVector = TLI.SimplifyMultipleUseDemandedVectorElts(
+            InputVector, DemandedElts, DAG))
+      if (NewVector.getOpcode() == ISD::BUILD_VECTOR)
+        return DAG.getNode(N->getOpcode(), dl, VT, NewVector, EltIdx);
+  }
+
   // Detect mmx extraction of all bits as a i64. It works better as a bitcast.
   if (VT == MVT::i64 && SrcVT == MVT::v1i64 &&
       InputVector.getOpcode() == ISD::BITCAST &&
@@ -61966,10 +61977,10 @@ static SDValue combineKSHIFT(SDNode *N, SelectionDAG &DAG,
                           DAG.getConstant(NewCst, DL, SrcC->getValueType(0)));
   }
 
-  // Fold kshiftr(extract_subvector(X,C1),C2)
-  //  --> extract_subvector(kshiftr(X,C1+C2),0)
-  // Fold kshiftr(kshiftr(X,C1),C2) --> kshiftr(X,C1+C2)
   if (Opcode == X86ISD::KSHIFTR) {
+    // Fold kshiftr(extract_subvector(X,C1),C2)
+    //  --> extract_subvector(kshiftr(X,C1+C2),0)
+    // Fold kshiftr(kshiftr(X,C1),C2) --> kshiftr(X,C1+C2)
     if (Src.getOpcode() == ISD::EXTRACT_SUBVECTOR ||
         Src.getOpcode() == X86ISD::KSHIFTR) {
       SDValue Inner = Src.getOperand(0);
@@ -61981,6 +61992,18 @@ static SDValue combineKSHIFT(SDNode *N, SelectionDAG &DAG,
         return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Shift,
                            DAG.getVectorIdxConstant(0, DL));
       }
+    }
+    // Fold kshiftr(concat_vectors(X,Y,Z,W),C)
+    //  --> concat_vectors(Z,W,0,0) iff amount is whole subvector shift.
+    if (Src.getOpcode() == ISD::CONCAT_VECTORS &&
+        (Amt % Src.getOperand(0).getValueType().getVectorNumElements()) == 0) {
+      unsigned NumSubs = Src.getNumOperands();
+      EVT SubVT = Src.getOperand(0).getValueType();
+      unsigned Ofs = Amt / SubVT.getVectorNumElements();
+      SmallVector<SDValue, 4> SubOps(NumSubs, DAG.getConstant(0, DL, SubVT));
+      for (unsigned I = Ofs; I != NumSubs; ++I)
+        SubOps[I - Ofs] = Src.getOperand(I);
+      return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, SubOps);
     }
   }
 
