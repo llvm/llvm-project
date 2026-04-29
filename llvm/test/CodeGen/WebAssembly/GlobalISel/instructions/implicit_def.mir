@@ -66,3 +66,35 @@ body:             |
     %0:_(i64) = G_IMPLICIT_DEF
     RETURN %0(i64), implicit-def $arguments
 ...
+
+---
+name:            implicit_def_f32
+tracksRegLiveness: true
+body:             |
+  bb.1.entry:
+    liveins: $arguments
+
+    ; CHECK-LABEL: name: implicit_def_f32
+    ; CHECK: liveins: $arguments
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:f32 = IMPLICIT_DEF
+    ; CHECK-NEXT: RETURN [[DEF]], implicit-def $arguments
+    %0:_(f32) = G_IMPLICIT_DEF
+    RETURN %0(f32), implicit-def $arguments
+...
+
+---
+name:            implicit_def_f64
+tracksRegLiveness: true
+body:             |
+  bb.1.entry:
+    liveins: $arguments
+
+    ; CHECK-LABEL: name: implicit_def_f64
+    ; CHECK: liveins: $arguments
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:f64 = IMPLICIT_DEF
+    ; CHECK-NEXT: RETURN [[DEF]], implicit-def $arguments
+    %0:_(f64) = G_IMPLICIT_DEF
+    RETURN %0(f64), implicit-def $arguments
+...
