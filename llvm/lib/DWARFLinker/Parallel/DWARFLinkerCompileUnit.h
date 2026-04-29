@@ -11,6 +11,7 @@
 
 #include "DWARFLinkerUnit.h"
 #include "llvm/DWARFLinker/DWARFFile.h"
+#include <limits>
 #include <optional>
 
 namespace llvm {
@@ -109,6 +110,15 @@ public:
 
   /// Returns DWARFFile containing this compile unit.
   const DWARFFile &getContaingFile() const { return File; }
+
+  /// Set deterministic priority for type DIE allocation ordering.
+  /// Lower priority values win when multiple CUs race to define the same type.
+  void setDeterministicPriority(unsigned ObjFileIdx, unsigned LocalIdx) {
+    assert(ObjFileIdx < (1u << 16) && LocalIdx < (1u << 16) &&
+           "priority encoding overflow");
+    DeterministicPriority = (ObjFileIdx << 16) | LocalIdx;
+  }
+  unsigned getDeterministicPriority() const { return DeterministicPriority; }
 
   /// Load DIEs of input compilation unit. \returns true if input DIEs
   /// successfully loaded.
@@ -701,6 +711,9 @@ private:
 
   /// Flag indicating whether type de-duplication is forbidden.
   bool NoODR = true;
+
+  /// Deterministic priority for type DIE allocation (lower wins).
+  unsigned DeterministicPriority = std::numeric_limits<unsigned>::max();
 
   /// The ranges in that map are the PC ranges for functions in this unit,
   /// associated with the PC offset to apply to the addresses to get

@@ -1419,46 +1419,42 @@ DIE *CompileUnit::allocateTypeDie(TypeEntryBody *TypeDescriptor,
                                   DIEGenerator &TypeDIEGenerator,
                                   dwarf::Tag DieTag, bool IsDeclaration,
                                   bool IsParentDeclaration) {
-  DIE *DefinitionDie = TypeDescriptor->Die;
-  // Do not allocate any new DIE if definition DIE is already met.
-  if (DefinitionDie)
-    return nullptr;
+  // Use a per-type spinlock and CU priority to ensure the earliest CU in link
+  // order always wins the type slot, producing deterministic output regardless
+  // of thread scheduling.
+  unsigned Priority = getDeterministicPriority();
 
-  DIE *DeclarationDie = TypeDescriptor->DeclarationDie;
-  bool OldParentIsDeclaration = TypeDescriptor->ParentIsDeclaration;
+  // Speculatively allocate the DIE outside the lock so the critical section
+  // only covers the priority check and pointer store. If we lose, the DIE
+  // is leaked into the bump allocator.
+  DIE *NewDie = TypeDIEGenerator.createDIE(DieTag, 0);
 
-  if (IsDeclaration && !DeclarationDie) {
-    // Alocate declaration DIE.
-    DIE *NewDie = TypeDIEGenerator.createDIE(DieTag, 0);
-    if (TypeDescriptor->DeclarationDie.compare_exchange_strong(DeclarationDie,
-                                                               NewDie))
-      return NewDie;
-  } else if (IsDeclaration && !IsParentDeclaration && OldParentIsDeclaration) {
-    // Overwrite existing declaration DIE if it's parent is also an declaration
-    // while parent of current declaration DIE is a definition.
-    if (TypeDescriptor->ParentIsDeclaration.compare_exchange_strong(
-            OldParentIsDeclaration, false)) {
-      DIE *NewDie = TypeDIEGenerator.createDIE(DieTag, 0);
-      TypeDescriptor->DeclarationDie = NewDie;
-      return NewDie;
-    }
-  } else if (!IsDeclaration && IsParentDeclaration && !DeclarationDie) {
-    // Alocate declaration DIE since parent of current DIE is marked as
-    // declaration.
-    DIE *NewDie = TypeDIEGenerator.createDIE(DieTag, 0);
-    if (TypeDescriptor->DeclarationDie.compare_exchange_strong(DeclarationDie,
-                                                               NewDie))
-      return NewDie;
-  } else if (!IsDeclaration && !IsParentDeclaration) {
-    // Allocate definition DIE.
-    DIE *NewDie = TypeDIEGenerator.createDIE(DieTag, 0);
-    if (TypeDescriptor->Die.compare_exchange_strong(DefinitionDie, NewDie)) {
+  while (TypeDescriptor->Lock.test_and_set(std::memory_order_acquire))
+    ; // spin
+
+  DIE *Result = nullptr;
+
+  if (!IsDeclaration && !IsParentDeclaration) {
+    // Definition: lowest priority wins.
+    if (Priority < TypeDescriptor->DiePriority) {
+      TypeDescriptor->DiePriority = Priority;
+      TypeDescriptor->Die = NewDie;
       TypeDescriptor->ParentIsDeclaration = false;
-      return NewDie;
+      Result = NewDie;
+    }
+  } else if (!TypeDescriptor->Die.load()) {
+    // Declaration (no definition exists yet): lowest priority wins.
+    if (Priority < TypeDescriptor->DeclarationDiePriority) {
+      TypeDescriptor->DeclarationDiePriority = Priority;
+      TypeDescriptor->DeclarationDie = NewDie;
+      if (!IsParentDeclaration)
+        TypeDescriptor->ParentIsDeclaration = false;
+      Result = NewDie;
     }
   }
 
-  return nullptr;
+  TypeDescriptor->Lock.clear(std::memory_order_release);
+  return Result;
 }
 
 TypeEntry *CompileUnit::createTypeDIEandCloneAttributes(
