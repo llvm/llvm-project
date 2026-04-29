@@ -323,8 +323,6 @@ define <2 x half> @fma_rn_ftz_f16x2_no_attr(<2 x half> %0, <2 x half> %1, <2 x h
   ret <2 x half> %res
 }
 
-; Crash reproducer: constant-folding nvvm_fmax.f64 must not call llvm_unreachable
-; in FMinFMaxShouldFTZ (which lacked cases for the non-ftz generic IDs).
 ; CHECK-LABEL: fmax_f64_const_fold
 define double @fmax_f64_const_fold() {
   ; CHECK-NOT: @llvm.nvvm.fmax.f64
@@ -341,9 +339,6 @@ define double @fmin_f64_const_fold() {
   ret double %res
 }
 
-; Bug: double got FTZ_MustBeOff instead of FTZ_Any.  The float:preservesign
-; attribute enables FTZ for f32 only; it must not block simplification of a
-; double intrinsic (doubles can't be flushed to zero).
 ; CHECK-LABEL: fmax_f64_float_ftz_attr
 define double @fmax_f64_float_ftz_attr(double %0, double %1) #1 {
   ; CHECK-NOT: @llvm.nvvm.fmax.f64
@@ -360,11 +355,6 @@ define double @fmin_f64_float_ftz_attr(double %0, double %1) #1 {
   ret double %res
 }
 
-; Bug: IsHalfTy was false for <2 x half> because RetTy->isHalfTy() returns
-; false for vector types.  The ftz variant must consult denormal-fp-math (the
-; half attribute), not denormal-fp-math-f32 (the float attribute).
-; With float:preservesign (#1) only the f32 denormal mode is set; the half
-; denormal mode is off, so the ftz variant should NOT be simplified.
 ; CHECK-LABEL: fmax_ftz_f16x2_float_attr
 define <2 x half> @fmax_ftz_f16x2_float_attr(<2 x half> %0, <2 x half> %1) #1 {
   ; CHECK-NOT: @llvm.maximumnum.v2f16

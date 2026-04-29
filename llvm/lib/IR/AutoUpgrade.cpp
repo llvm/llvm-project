@@ -1660,6 +1660,63 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         NewFn = nullptr;
         return true;
       }
+
+      // Upgrade nvvm fmin/fmax type-specific intrinsics to the generic
+      // overloaded form. Old suffixes: .f -> .f32, .d -> .f64,
+      // .f16x2 -> .v2f16, .bf16x2 -> .v2bf16. (.f16 and .bf16 are unchanged.)
+      if (Name.starts_with("fmin.") || Name.starts_with("fmax.")) {
+        LLVMContext &Ctx = F->getContext();
+        Type *NewTy = nullptr;
+        StringRef Base;
+
+        if (Name.ends_with(".bf16x2")) {
+          Base = Name.drop_back(7);
+          NewTy = FixedVectorType::get(Type::getBFloatTy(Ctx), 2);
+        } else if (Name.ends_with(".f16x2")) {
+          Base = Name.drop_back(6);
+          NewTy = FixedVectorType::get(Type::getHalfTy(Ctx), 2);
+        } else if (Name.ends_with(".f")) {
+          Base = Name.drop_back(2);
+          NewTy = Type::getFloatTy(Ctx);
+        } else if (Name.ends_with(".d")) {
+          Base = Name.drop_back(2);
+          NewTy = Type::getDoubleTy(Ctx);
+        }
+
+        if (NewTy) {
+          Intrinsic::ID IID =
+              StringSwitch<Intrinsic::ID>(Base)
+                  .Case("fmax", Intrinsic::nvvm_fmax)
+                  .Case("fmax.ftz", Intrinsic::nvvm_fmax_ftz)
+                  .Case("fmax.nan", Intrinsic::nvvm_fmax_nan)
+                  .Case("fmax.ftz.nan", Intrinsic::nvvm_fmax_ftz_nan)
+                  .Case("fmax.xorsign.abs", Intrinsic::nvvm_fmax_xorsign_abs)
+                  .Case("fmax.ftz.xorsign.abs",
+                        Intrinsic::nvvm_fmax_ftz_xorsign_abs)
+                  .Case("fmax.nan.xorsign.abs",
+                        Intrinsic::nvvm_fmax_nan_xorsign_abs)
+                  .Case("fmax.ftz.nan.xorsign.abs",
+                        Intrinsic::nvvm_fmax_ftz_nan_xorsign_abs)
+                  .Case("fmin", Intrinsic::nvvm_fmin)
+                  .Case("fmin.ftz", Intrinsic::nvvm_fmin_ftz)
+                  .Case("fmin.nan", Intrinsic::nvvm_fmin_nan)
+                  .Case("fmin.ftz.nan", Intrinsic::nvvm_fmin_ftz_nan)
+                  .Case("fmin.xorsign.abs", Intrinsic::nvvm_fmin_xorsign_abs)
+                  .Case("fmin.ftz.xorsign.abs",
+                        Intrinsic::nvvm_fmin_ftz_xorsign_abs)
+                  .Case("fmin.nan.xorsign.abs",
+                        Intrinsic::nvvm_fmin_nan_xorsign_abs)
+                  .Case("fmin.ftz.nan.xorsign.abs",
+                        Intrinsic::nvvm_fmin_ftz_nan_xorsign_abs)
+                  .Default(Intrinsic::not_intrinsic);
+          if (IID != Intrinsic::not_intrinsic) {
+            NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID,
+                                                      {NewTy});
+            return true;
+          }
+        }
+      }
+
       break; // No other 'nvvm.*'.
     }
     break;
