@@ -1539,7 +1539,8 @@ createJumpTableDebugInfo(Function *F, ArrayRef<GlobalTypeMember *> Functions) {
   DIBuilder DIB(M, /*AllowUnresolved=*/true, CU);
   DIFile *File = DIB.createFile("ubsan_interface.h", "sanitizer");
   if (!CU) {
-    // Even with debug info enabled it can be missing if not info yet.
+    // Synthetic module (like ld-temp.o), it frequently lacks a DICompileUnit
+    // even if the rest of the program has debug info.
     CU = DIB.createCompileUnit(
         DISourceLanguageName(dwarf::DW_LANG_C), File, "llvm", true, "", 0, "",
         DICompileUnit::DebugEmissionKind::LineTablesOnly);

@@ -855,8 +855,8 @@ void __ubsan::__ubsan_handle_pointer_overflow_abort(PointerOverflowData *Data,
   Die();
 }
 
-// Returns true if this is a special location created by
-// `LowerTypeTestsModule::createJumpTable`.
+// Returns true if this is an artificial debug location created by the
+// LowerTypeTests pass (see createJumpTableDebugInfo in LLVM).
 static bool isArtificialStack(const SymbolizedStack *S) {
   static constexpr char kSuffix[] = "ubsan_interface.h";
   if (!S || !S->info.function || !S->info.file)
@@ -869,9 +869,10 @@ static bool isArtificialStack(const SymbolizedStack *S) {
   return internal_strcmp(File + FileLen - SuffixLen, kSuffix) == 0;
 }
 
-// Preserve behavior before introducing artificial debug location. It's was not
-// ideal, but better than printing in `ubsan_interface.h` as location. Drop file
-// name, so `Diag` will print a module name.
+// Stripping the file name from artificial frames forces the UBSan Diag
+// to fall back to module names. This preserves the original behavior
+// of showing the module, while still allowing the symbolizer
+// to include the helpful (.cfi_jt) function suffix.
 static SymbolizedStack *removeArtificialFiles(SymbolizedStack *FS) {
   for (SymbolizedStack *S = FS; S; S = S->next) {
     if (isArtificialStack(S))
