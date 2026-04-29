@@ -357,8 +357,8 @@ void AllocatorOptions::CopyTo(Flags *f, CommonFlags *cf) {
 // destination. `m` describes the source chunk so we can honor any
 // platform-specific constraints attached to it (e.g. zero-size allocations
 // upgraded to 1 byte on Windows).
-static void ReallocCopyContents(void *new_ptr, void *old_ptr, uptr size,
-                                AsanChunk *m) {
+static void ReallocCopyContents(void* new_ptr, void* old_ptr, uptr size,
+                                AsanChunk* m) {
 #if SANITIZER_WINDOWS64
   if (!size)
     return;
