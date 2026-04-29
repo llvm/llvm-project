@@ -350,6 +350,10 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::USUBSAT, VT, Legal);
       setOperationAction(ISD::ROTL, VT, Custom);
       setOperationAction(ISD::ROTR, VT, Custom);
+      setOperationAction(ISD::AVGFLOORS, VT, Legal);
+      setOperationAction(ISD::AVGFLOORU, VT, Legal);
+      setOperationAction(ISD::AVGCEILS, VT, Legal);
+      setOperationAction(ISD::AVGCEILU, VT, Legal);
     }
     for (MVT VT : {MVT::v16i8, MVT::v8i16, MVT::v4i32})
       setOperationAction(ISD::BITREVERSE, VT, Custom);
@@ -397,6 +401,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     }
     setOperationAction(ISD::FP_ROUND, MVT::v2f32, Custom);
     setOperationAction(ISD::FP_EXTEND, MVT::v2f32, Custom);
+    // We want to legalize this to an f64 load rather than an i64 load.
+    setOperationAction(ISD::LOAD, MVT::v2f32, Custom);
   }
 
   // Set operations for 'LASX' feature.
@@ -441,6 +447,10 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECREDUCE_ADD, VT, Custom);
       setOperationAction(ISD::ROTL, VT, Custom);
       setOperationAction(ISD::ROTR, VT, Custom);
+      setOperationAction(ISD::AVGFLOORS, VT, Legal);
+      setOperationAction(ISD::AVGFLOORU, VT, Legal);
+      setOperationAction(ISD::AVGCEILS, VT, Legal);
+      setOperationAction(ISD::AVGCEILU, VT, Legal);
     }
     for (MVT VT : {MVT::v32i8, MVT::v16i16, MVT::v8i32})
       setOperationAction(ISD::BITREVERSE, VT, Custom);
@@ -5254,6 +5264,30 @@ void LoongArchTargetLowering::ReplaceNodeResults(
            "Unexpected custom legalisation");
     Results.push_back(customLegalizeToWOp(N, DAG, 2));
     break;
+  case ISD::LOAD: {
+    // Use an f64 load and a scalar_to_vector for v2f32 loads. This avoids
+    // scalarizing in 32-bit mode. In 64-bit mode this avoids a int->fp
+    // cast since type legalization will try to use an i64 load.
+    MVT VT = N->getSimpleValueType(0);
+    assert(VT == MVT::v2f32 && Subtarget.hasExtLSX() &&
+           "Unexpected custom legalisation");
+    assert(getTypeAction(*DAG.getContext(), VT) == TypeWidenVector &&
+           "Unexpected type action!");
+    if (!ISD::isNON_EXTLoad(N))
+      return;
+    auto *Ld = cast<LoadSDNode>(N);
+    SDValue Res = DAG.getLoad(MVT::f64, DL, Ld->getChain(), Ld->getBasePtr(),
+                              Ld->getPointerInfo(), Ld->getBaseAlign(),
+                              Ld->getMemOperand()->getFlags());
+    SDValue Chain = Res.getValue(1);
+    MVT VecVT = MVT::getVectorVT(MVT::f64, 2);
+    Res = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecVT, Res);
+    EVT WideVT = getTypeToTransformTo(*DAG.getContext(), VT);
+    Res = DAG.getBitcast(WideVT, Res);
+    Results.push_back(Res);
+    Results.push_back(Chain);
+    break;
+  }
   case ISD::FP_TO_SINT: {
     assert(VT == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
@@ -8087,29 +8121,40 @@ static MachineBasicBlock *emitPseudoCTPOP(MachineInstr &MI,
   MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
   Register Dst = MI.getOperand(0).getReg();
   Register Src = MI.getOperand(1).getReg();
+
+  unsigned BroadcastOp, CTOp, PickOp;
+  switch (MI.getOpcode()) {
+  default:
+    llvm_unreachable("Unexpected opcode");
+  case LoongArch::PseudoCTPOP_B:
+    BroadcastOp = LoongArch::VREPLGR2VR_B;
+    CTOp = LoongArch::VPCNT_B;
+    PickOp = LoongArch::VPICKVE2GR_B;
+    break;
+  case LoongArch::PseudoCTPOP_H:
+  case LoongArch::PseudoCTPOP_H_LA32:
+    BroadcastOp = LoongArch::VREPLGR2VR_H;
+    CTOp = LoongArch::VPCNT_H;
+    PickOp = LoongArch::VPICKVE2GR_H;
+    break;
+  case LoongArch::PseudoCTPOP_W:
+  case LoongArch::PseudoCTPOP_W_LA32:
+    BroadcastOp = LoongArch::VREPLGR2VR_W;
+    CTOp = LoongArch::VPCNT_W;
+    PickOp = LoongArch::VPICKVE2GR_W;
+    break;
+  case LoongArch::PseudoCTPOP_D:
+    BroadcastOp = LoongArch::VREPLGR2VR_D;
+    CTOp = LoongArch::VPCNT_D;
+    PickOp = LoongArch::VPICKVE2GR_D;
+    break;
+  }
+
   Register ScratchReg1 = MRI.createVirtualRegister(RC);
   Register ScratchReg2 = MRI.createVirtualRegister(RC);
-  Register ScratchReg3 = MRI.createVirtualRegister(RC);
-
-  BuildMI(*BB, MI, DL, TII->get(LoongArch::VLDI), ScratchReg1).addImm(0);
-  BuildMI(*BB, MI, DL,
-          TII->get(Subtarget.is64Bit() ? LoongArch::VINSGR2VR_D
-                                       : LoongArch::VINSGR2VR_W),
-          ScratchReg2)
-      .addReg(ScratchReg1)
-      .addReg(Src)
-      .addImm(0);
-  BuildMI(
-      *BB, MI, DL,
-      TII->get(Subtarget.is64Bit() ? LoongArch::VPCNT_D : LoongArch::VPCNT_W),
-      ScratchReg3)
-      .addReg(ScratchReg2);
-  BuildMI(*BB, MI, DL,
-          TII->get(Subtarget.is64Bit() ? LoongArch::VPICKVE2GR_D
-                                       : LoongArch::VPICKVE2GR_W),
-          Dst)
-      .addReg(ScratchReg3)
-      .addImm(0);
+  BuildMI(*BB, MI, DL, TII->get(BroadcastOp), ScratchReg1).addReg(Src);
+  BuildMI(*BB, MI, DL, TII->get(CTOp), ScratchReg2).addReg(ScratchReg1);
+  BuildMI(*BB, MI, DL, TII->get(PickOp), Dst).addReg(ScratchReg2).addImm(0);
 
   MI.eraseFromParent();
   return BB;
@@ -8481,7 +8526,12 @@ MachineBasicBlock *LoongArchTargetLowering::EmitInstrWithCustomInserter(
   case LoongArch::PseudoXVINSGR2VR_B:
   case LoongArch::PseudoXVINSGR2VR_H:
     return emitPseudoXVINSGR2VR(MI, BB, Subtarget);
-  case LoongArch::PseudoCTPOP:
+  case LoongArch::PseudoCTPOP_B:
+  case LoongArch::PseudoCTPOP_H:
+  case LoongArch::PseudoCTPOP_W:
+  case LoongArch::PseudoCTPOP_D:
+  case LoongArch::PseudoCTPOP_H_LA32:
+  case LoongArch::PseudoCTPOP_W_LA32:
     return emitPseudoCTPOP(MI, BB, Subtarget);
   case LoongArch::PseudoVMSKLTZ_B:
   case LoongArch::PseudoVMSKLTZ_H:

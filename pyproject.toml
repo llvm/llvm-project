@@ -1,7 +1,19 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "LLVM"
-version = "23.0.0"
+dynamic = ["version"]
 requires-python = ">=3.8"
+
+[tool.hatch.version]
+source = "code"
+path = "llvm/utils/lit/lit/__init__.py"
+expression = "__version__"
+
+[tool.uv]
+package = false
 
 [tool.black]
 extend-exclude = '''

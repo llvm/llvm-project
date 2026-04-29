@@ -319,8 +319,8 @@ unsigned LoongArchInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   if (Opcode == TargetOpcode::INLINEASM ||
       Opcode == TargetOpcode::INLINEASM_BR) {
     const MachineFunction *MF = MI.getParent()->getParent();
-    const MCAsmInfo *MAI = MF->getTarget().getMCAsmInfo();
-    return getInlineAsmLength(MI.getOperand(0).getSymbolName(), *MAI);
+    const MCAsmInfo &MAI = MF->getTarget().getMCAsmInfo();
+    return getInlineAsmLength(MI.getOperand(0).getSymbolName(), MAI);
   }
 
   unsigned NumBytes = 0;
