@@ -17,7 +17,7 @@ body:             |
     ; CHECK-NEXT: [[DEF1:%[0-9]+]]:spr = IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF2:%[0-9]+]]:spr = IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF3:%[0-9]+]]:spr = IMPLICIT_DEF
-    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:mqpr = REG_SEQUENCE killed [[DEF2]], %subreg.ssub_0, killed [[DEF1]], %subreg.ssub_1, killed [[DEF3]], %subreg.ssub_2, [[COPY]].ssub_1, %subreg.ssub_3
+    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:mqpr = REG_SEQUENCE killed [[DEF2]], %subreg.ssub_0, killed [[DEF1]], %subreg.ssub_1, killed [[DEF3]], %subreg.ssub_2, [[COPY1]], %subreg.ssub_3
     ; CHECK-NEXT: VST1q64 $r1, 0, killed [[REG_SEQUENCE]], 14 /* CC::al */, $noreg
     %0:dpair = IMPLICIT_DEF
     %1:dpr = COPY %0.dsub_0

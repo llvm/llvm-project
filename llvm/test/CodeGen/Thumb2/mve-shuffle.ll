@@ -366,34 +366,34 @@ define arm_aapcs_vfpcc <8 x i16> @shuffle3step_i16(<32 x i16> %src) {
 ; CHECK-NEXT:    vmov.f32 s16, s1
 ; CHECK-NEXT:    vins.f16 s12, s2
 ; CHECK-NEXT:    vmovx.f16 s2, s2
+; CHECK-NEXT:    vmovx.f16 s13, s3
 ; CHECK-NEXT:    vins.f16 s16, s2
 ; CHECK-NEXT:    vmovx.f16 s2, s5
-; CHECK-NEXT:    vmov.f32 s17, s4
-; CHECK-NEXT:    vmovx.f16 s14, s6
-; CHECK-NEXT:    vins.f16 s17, s2
+; CHECK-NEXT:    vins.f16 s13, s5
+; CHECK-NEXT:    vmovx.f16 s5, s4
+; CHECK-NEXT:    vins.f16 s4, s2
 ; CHECK-NEXT:    vmovx.f16 s2, s8
 ; CHECK-NEXT:    vmov.f32 s18, s7
-; CHECK-NEXT:    vins.f16 s14, s8
+; CHECK-NEXT:    vmovx.f16 s14, s6
 ; CHECK-NEXT:    vins.f16 s18, s2
 ; CHECK-NEXT:    vmovx.f16 s2, s11
+; CHECK-NEXT:    vins.f16 s14, s8
 ; CHECK-NEXT:    vmovx.f16 s8, s10
 ; CHECK-NEXT:    vins.f16 s10, s2
 ; CHECK-NEXT:    vmovx.f16 s2, s1
-; CHECK-NEXT:    vmovx.f16 s13, s3
-; CHECK-NEXT:    vins.f16 s0, s2
-; CHECK-NEXT:    vmovx.f16 s2, s4
-; CHECK-NEXT:    vins.f16 s3, s2
-; CHECK-NEXT:    vmovx.f16 s2, s7
 ; CHECK-NEXT:    vmovx.f16 s15, s9
+; CHECK-NEXT:    vins.f16 s0, s2
+; CHECK-NEXT:    vmovx.f16 s2, s7
 ; CHECK-NEXT:    vins.f16 s6, s2
+; CHECK-NEXT:    vins.f16 s3, s5
 ; CHECK-NEXT:    vins.f16 s9, s8
 ; CHECK-NEXT:    vmov.f32 s1, s3
 ; CHECK-NEXT:    vins.f16 s15, s11
-; CHECK-NEXT:    vins.f16 s13, s5
 ; CHECK-NEXT:    vmov.f32 s2, s6
 ; CHECK-NEXT:    vmov.f32 s3, s9
-; CHECK-NEXT:    vmov.f32 s19, s10
+; CHECK-NEXT:    vmov.f32 s17, s4
 ; CHECK-NEXT:    vadd.i16 q0, q0, q3
+; CHECK-NEXT:    vmov.f32 s19, s10
 ; CHECK-NEXT:    vadd.i16 q0, q0, q4
 ; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    bx lr
@@ -429,8 +429,8 @@ define arm_aapcs_vfpcc <8 x i16> @shuffle4step_i16(<32 x i16> %src) {
 ; CHECK-NEXT:    vins.f16 s17, s20
 ; CHECK-NEXT:    vmov.f32 s20, s1
 ; CHECK-NEXT:    vmovx.f16 s1, s10
-; CHECK-NEXT:    vmov.f32 s22, s9
 ; CHECK-NEXT:    vmov.f32 s21, s5
+; CHECK-NEXT:    vmov.f32 s22, s9
 ; CHECK-NEXT:    vmov.f32 s23, s13
 ; CHECK-NEXT:    vadd.i16 q4, q5, q4
 ; CHECK-NEXT:    vmovx.f16 s22, s8
@@ -439,18 +439,17 @@ define arm_aapcs_vfpcc <8 x i16> @shuffle4step_i16(<32 x i16> %src) {
 ; CHECK-NEXT:    vmovx.f16 s1, s14
 ; CHECK-NEXT:    vmovx.f16 s20, s0
 ; CHECK-NEXT:    vins.f16 s23, s1
-; CHECK-NEXT:    vmov.f32 s1, s2
-; CHECK-NEXT:    vmovx.f16 s2, s2
+; CHECK-NEXT:    vmovx.f16 s1, s2
+; CHECK-NEXT:    vins.f16 s20, s1
 ; CHECK-NEXT:    vmovx.f16 s21, s4
-; CHECK-NEXT:    vins.f16 s20, s2
-; CHECK-NEXT:    vmovx.f16 s2, s6
+; CHECK-NEXT:    vmovx.f16 s1, s6
 ; CHECK-NEXT:    vins.f16 s12, s14
 ; CHECK-NEXT:    vins.f16 s8, s10
 ; CHECK-NEXT:    vins.f16 s4, s6
-; CHECK-NEXT:    vins.f16 s21, s2
-; CHECK-NEXT:    vins.f16 s0, s1
-; CHECK-NEXT:    vmov.f32 s2, s8
+; CHECK-NEXT:    vins.f16 s21, s1
+; CHECK-NEXT:    vins.f16 s0, s2
 ; CHECK-NEXT:    vmov.f32 s1, s4
+; CHECK-NEXT:    vmov.f32 s2, s8
 ; CHECK-NEXT:    vmov.f32 s3, s12
 ; CHECK-NEXT:    vadd.i16 q0, q0, q5
 ; CHECK-NEXT:    vadd.i16 q0, q0, q4
@@ -1363,66 +1362,65 @@ entry:
 define arm_aapcs_vfpcc <8 x half> @shuffle3step_f16(<32 x half> %src) {
 ; CHECKFP16-LABEL: shuffle3step_f16:
 ; CHECKFP16:       @ %bb.0: @ %entry
-; CHECKFP16-NEXT:    .vsave {d8, d9, d10, d11}
-; CHECKFP16-NEXT:    vpush {d8, d9, d10, d11}
-; CHECKFP16-NEXT:    vmovx.f16 s13, s1
-; CHECKFP16-NEXT:    vmovx.f16 s16, s0
-; CHECKFP16-NEXT:    vins.f16 s0, s13
-; CHECKFP16-NEXT:    vmovx.f16 s13, s4
-; CHECKFP16-NEXT:    vmovx.f16 s15, s3
-; CHECKFP16-NEXT:    vins.f16 s3, s13
-; CHECKFP16-NEXT:    vmov q5, q0
-; CHECKFP16-NEXT:    vins.f16 s16, s2
+; CHECKFP16-NEXT:    .vsave {d8, d9}
+; CHECKFP16-NEXT:    vpush {d8, d9}
+; CHECKFP16-NEXT:    vmovx.f16 s13, s0
+; CHECKFP16-NEXT:    vmovx.f16 s16, s1
+; CHECKFP16-NEXT:    vins.f16 s0, s16
+; CHECKFP16-NEXT:    vins.f16 s13, s2
 ; CHECKFP16-NEXT:    vmovx.f16 s2, s2
-; CHECKFP16-NEXT:    vmovx.f16 s14, s6
+; CHECKFP16-NEXT:    vmovx.f16 s16, s4
+; CHECKFP16-NEXT:    vmovx.f16 s15, s3
+; CHECKFP16-NEXT:    vins.f16 s3, s16
 ; CHECKFP16-NEXT:    vins.f16 s1, s2
 ; CHECKFP16-NEXT:    vmovx.f16 s2, s5
-; CHECKFP16-NEXT:    vmovx.f16 s18, s16
-; CHECKFP16-NEXT:    vmovx.f16 s0, s20
+; CHECKFP16-NEXT:    vmovx.f16 s16, s7
+; CHECKFP16-NEXT:    vmovx.f16 s14, s6
+; CHECKFP16-NEXT:    vins.f16 s6, s16
 ; CHECKFP16-NEXT:    vins.f16 s4, s2
-; CHECKFP16-NEXT:    vins.f16 s14, s8
 ; CHECKFP16-NEXT:    vmovx.f16 s2, s8
-; CHECKFP16-NEXT:    vadd.f16 s0, s0, s18
-; CHECKFP16-NEXT:    vmovx.f16 s8, s1
-; CHECKFP16-NEXT:    vins.f16 s15, s5
-; CHECKFP16-NEXT:    vadd.f16 s8, s0, s8
-; CHECKFP16-NEXT:    vadd.f16 s0, s20, s16
-; CHECKFP16-NEXT:    vadd.f16 s0, s0, s1
-; CHECKFP16-NEXT:    vmovx.f16 s1, s3
-; CHECKFP16-NEXT:    vins.f16 s0, s8
-; CHECKFP16-NEXT:    vmovx.f16 s8, s15
-; CHECKFP16-NEXT:    vadd.f16 s8, s1, s8
-; CHECKFP16-NEXT:    vmovx.f16 s1, s4
-; CHECKFP16-NEXT:    vmovx.f16 s13, s7
-; CHECKFP16-NEXT:    vadd.f16 s8, s8, s1
-; CHECKFP16-NEXT:    vadd.f16 s1, s3, s15
-; CHECKFP16-NEXT:    vins.f16 s6, s13
-; CHECKFP16-NEXT:    vadd.f16 s1, s1, s4
-; CHECKFP16-NEXT:    vins.f16 s7, s2
-; CHECKFP16-NEXT:    vins.f16 s1, s8
-; CHECKFP16-NEXT:    vmovx.f16 s8, s6
-; CHECKFP16-NEXT:    vmovx.f16 s4, s14
+; CHECKFP16-NEXT:    vmovx.f16 s16, s10
 ; CHECKFP16-NEXT:    vmovx.f16 s12, s9
-; CHECKFP16-NEXT:    vmovx.f16 s13, s10
+; CHECKFP16-NEXT:    vins.f16 s9, s16
+; CHECKFP16-NEXT:    vmovx.f16 s18, s0
+; CHECKFP16-NEXT:    vmovx.f16 s16, s13
+; CHECKFP16-NEXT:    vins.f16 s7, s2
 ; CHECKFP16-NEXT:    vmovx.f16 s2, s11
-; CHECKFP16-NEXT:    vadd.f16 s4, s8, s4
-; CHECKFP16-NEXT:    vmovx.f16 s8, s7
-; CHECKFP16-NEXT:    vadd.f16 s6, s6, s14
+; CHECKFP16-NEXT:    vadd.f16 s0, s0, s13
 ; CHECKFP16-NEXT:    vins.f16 s10, s2
+; CHECKFP16-NEXT:    vadd.f16 s16, s18, s16
+; CHECKFP16-NEXT:    vmovx.f16 s2, s1
+; CHECKFP16-NEXT:    vins.f16 s15, s5
+; CHECKFP16-NEXT:    vadd.f16 s2, s16, s2
+; CHECKFP16-NEXT:    vadd.f16 s0, s0, s1
+; CHECKFP16-NEXT:    vins.f16 s14, s8
+; CHECKFP16-NEXT:    vins.f16 s0, s2
+; CHECKFP16-NEXT:    vmovx.f16 s2, s15
+; CHECKFP16-NEXT:    vmovx.f16 s8, s3
 ; CHECKFP16-NEXT:    vins.f16 s12, s11
-; CHECKFP16-NEXT:    vins.f16 s9, s13
-; CHECKFP16-NEXT:    vadd.f16 s2, s6, s7
-; CHECKFP16-NEXT:    vadd.f16 s4, s4, s8
+; CHECKFP16-NEXT:    vadd.f16 s2, s8, s2
+; CHECKFP16-NEXT:    vmovx.f16 s8, s4
+; CHECKFP16-NEXT:    vadd.f16 s2, s2, s8
+; CHECKFP16-NEXT:    vadd.f16 s8, s3, s15
+; CHECKFP16-NEXT:    vadd.f16 s1, s8, s4
+; CHECKFP16-NEXT:    vmovx.f16 s4, s6
+; CHECKFP16-NEXT:    vins.f16 s1, s2
+; CHECKFP16-NEXT:    vmovx.f16 s2, s14
+; CHECKFP16-NEXT:    vadd.f16 s2, s4, s2
+; CHECKFP16-NEXT:    vmovx.f16 s4, s7
+; CHECKFP16-NEXT:    vadd.f16 s4, s2, s4
+; CHECKFP16-NEXT:    vadd.f16 s2, s6, s14
+; CHECKFP16-NEXT:    vadd.f16 s2, s2, s7
+; CHECKFP16-NEXT:    vmovx.f16 s6, s9
 ; CHECKFP16-NEXT:    vins.f16 s2, s4
 ; CHECKFP16-NEXT:    vmovx.f16 s4, s12
-; CHECKFP16-NEXT:    vmovx.f16 s6, s9
 ; CHECKFP16-NEXT:    vadd.f16 s4, s6, s4
 ; CHECKFP16-NEXT:    vmovx.f16 s6, s10
 ; CHECKFP16-NEXT:    vadd.f16 s4, s4, s6
 ; CHECKFP16-NEXT:    vadd.f16 s6, s9, s12
 ; CHECKFP16-NEXT:    vadd.f16 s3, s6, s10
 ; CHECKFP16-NEXT:    vins.f16 s3, s4
-; CHECKFP16-NEXT:    vpop {d8, d9, d10, d11}
+; CHECKFP16-NEXT:    vpop {d8, d9}
 ; CHECKFP16-NEXT:    bx lr
 ;
 ; CHECKFP-LABEL: shuffle3step_f16:
@@ -1476,91 +1474,85 @@ entry:
 define arm_aapcs_vfpcc <8 x half> @shuffle4step_f16(<32 x half> %src) {
 ; CHECKFP16-LABEL: shuffle4step_f16:
 ; CHECKFP16:       @ %bb.0: @ %entry
-; CHECKFP16-NEXT:    .vsave {d12, d13, d14, d15}
-; CHECKFP16-NEXT:    vpush {d12, d13, d14, d15}
-; CHECKFP16-NEXT:    .vsave {d8, d9, d10}
-; CHECKFP16-NEXT:    vpush {d8, d9, d10}
-; CHECKFP16-NEXT:    vmov q4, q3
-; CHECKFP16-NEXT:    vmovx.f16 s30, s9
-; CHECKFP16-NEXT:    vmovx.f16 s12, s11
-; CHECKFP16-NEXT:    vmovx.f16 s14, s17
-; CHECKFP16-NEXT:    vins.f16 s30, s12
-; CHECKFP16-NEXT:    vmovx.f16 s12, s19
-; CHECKFP16-NEXT:    vmovx.f16 s24, s1
-; CHECKFP16-NEXT:    vins.f16 s14, s12
-; CHECKFP16-NEXT:    vmovx.f16 s12, s3
+; CHECKFP16-NEXT:    .vsave {d8, d9, d10, d11, d12}
+; CHECKFP16-NEXT:    vpush {d8, d9, d10, d11, d12}
+; CHECKFP16-NEXT:    vmovx.f16 s18, s9
+; CHECKFP16-NEXT:    vins.f16 s9, s11
+; CHECKFP16-NEXT:    vmovx.f16 s11, s11
+; CHECKFP16-NEXT:    vmovx.f16 s16, s13
+; CHECKFP16-NEXT:    vmovx.f16 s22, s1
 ; CHECKFP16-NEXT:    vins.f16 s1, s3
-; CHECKFP16-NEXT:    vmovx.f16 s20, s5
-; CHECKFP16-NEXT:    vins.f16 s24, s12
-; CHECKFP16-NEXT:    vmovx.f16 s12, s7
-; CHECKFP16-NEXT:    vmov.f32 s28, s1
-; CHECKFP16-NEXT:    vins.f16 s20, s12
-; CHECKFP16-NEXT:    vmovx.f16 s12, s24
-; CHECKFP16-NEXT:    vmovx.f16 s1, s1
-; CHECKFP16-NEXT:    vins.f16 s5, s7
-; CHECKFP16-NEXT:    vadd.f16 s1, s1, s12
-; CHECKFP16-NEXT:    vmovx.f16 s12, s0
+; CHECKFP16-NEXT:    vins.f16 s18, s11
+; CHECKFP16-NEXT:    vmovx.f16 s11, s15
+; CHECKFP16-NEXT:    vins.f16 s13, s15
+; CHECKFP16-NEXT:    vmovx.f16 s3, s3
+; CHECKFP16-NEXT:    vmovx.f16 s15, s0
 ; CHECKFP16-NEXT:    vins.f16 s0, s2
 ; CHECKFP16-NEXT:    vmovx.f16 s2, s2
-; CHECKFP16-NEXT:    vmovx.f16 s26, s8
-; CHECKFP16-NEXT:    vins.f16 s8, s10
-; CHECKFP16-NEXT:    vmovx.f16 s7, s4
-; CHECKFP16-NEXT:    vins.f16 s12, s2
+; CHECKFP16-NEXT:    vmovx.f16 s20, s5
+; CHECKFP16-NEXT:    vins.f16 s22, s3
+; CHECKFP16-NEXT:    vmovx.f16 s3, s7
+; CHECKFP16-NEXT:    vmovx.f16 s24, s4
+; CHECKFP16-NEXT:    vins.f16 s15, s2
 ; CHECKFP16-NEXT:    vmovx.f16 s2, s6
+; CHECKFP16-NEXT:    vins.f16 s5, s7
+; CHECKFP16-NEXT:    vins.f16 s20, s3
 ; CHECKFP16-NEXT:    vins.f16 s4, s6
-; CHECKFP16-NEXT:    vins.f16 s7, s2
-; CHECKFP16-NEXT:    vmov.f32 s2, s8
-; CHECKFP16-NEXT:    vmovx.f16 s8, s0
-; CHECKFP16-NEXT:    vmovx.f16 s6, s12
-; CHECKFP16-NEXT:    vadd.f16 s6, s8, s6
-; CHECKFP16-NEXT:    vadd.f16 s8, s28, s24
-; CHECKFP16-NEXT:    vadd.f16 s0, s0, s12
+; CHECKFP16-NEXT:    vins.f16 s24, s2
+; CHECKFP16-NEXT:    vmovx.f16 s6, s0
+; CHECKFP16-NEXT:    vmovx.f16 s2, s15
+; CHECKFP16-NEXT:    vmovx.f16 s3, s22
+; CHECKFP16-NEXT:    vmovx.f16 s7, s1
+; CHECKFP16-NEXT:    vins.f16 s16, s11
+; CHECKFP16-NEXT:    vadd.f16 s11, s7, s3
+; CHECKFP16-NEXT:    vadd.f16 s2, s6, s2
+; CHECKFP16-NEXT:    vadd.f16 s6, s1, s22
+; CHECKFP16-NEXT:    vadd.f16 s0, s0, s15
+; CHECKFP16-NEXT:    vmovx.f16 s7, s8
+; CHECKFP16-NEXT:    vins.f16 s8, s10
 ; CHECKFP16-NEXT:    vmovx.f16 s10, s10
-; CHECKFP16-NEXT:    vadd.f16 s0, s0, s8
-; CHECKFP16-NEXT:    vadd.f16 s6, s6, s1
-; CHECKFP16-NEXT:    vmovx.f16 s3, s16
-; CHECKFP16-NEXT:    vins.f16 s26, s10
-; CHECKFP16-NEXT:    vmovx.f16 s10, s18
-; CHECKFP16-NEXT:    vins.f16 s0, s6
-; CHECKFP16-NEXT:    vmovx.f16 s6, s20
-; CHECKFP16-NEXT:    vmovx.f16 s8, s5
+; CHECKFP16-NEXT:    vadd.f16 s0, s0, s6
+; CHECKFP16-NEXT:    vadd.f16 s2, s2, s11
+; CHECKFP16-NEXT:    vmovx.f16 s3, s12
+; CHECKFP16-NEXT:    vins.f16 s7, s10
+; CHECKFP16-NEXT:    vmovx.f16 s10, s14
+; CHECKFP16-NEXT:    vins.f16 s0, s2
+; CHECKFP16-NEXT:    vmovx.f16 s2, s20
+; CHECKFP16-NEXT:    vmovx.f16 s6, s5
 ; CHECKFP16-NEXT:    vins.f16 s3, s10
-; CHECKFP16-NEXT:    vadd.f16 s6, s8, s6
+; CHECKFP16-NEXT:    vadd.f16 s2, s6, s2
 ; CHECKFP16-NEXT:    vmovx.f16 s10, s4
-; CHECKFP16-NEXT:    vmovx.f16 s8, s7
-; CHECKFP16-NEXT:    vadd.f16 s8, s10, s8
-; CHECKFP16-NEXT:    vadd.f16 s4, s4, s7
-; CHECKFP16-NEXT:    vadd.f16 s6, s8, s6
-; CHECKFP16-NEXT:    vadd.f16 s8, s5, s20
-; CHECKFP16-NEXT:    vadd.f16 s1, s4, s8
-; CHECKFP16-NEXT:    vins.f16 s9, s11
-; CHECKFP16-NEXT:    vins.f16 s1, s6
-; CHECKFP16-NEXT:    vmovx.f16 s4, s30
-; CHECKFP16-NEXT:    vmovx.f16 s6, s9
-; CHECKFP16-NEXT:    vmovx.f16 s8, s2
+; CHECKFP16-NEXT:    vmovx.f16 s6, s24
+; CHECKFP16-NEXT:    vadd.f16 s4, s4, s24
+; CHECKFP16-NEXT:    vadd.f16 s6, s10, s6
+; CHECKFP16-NEXT:    vins.f16 s12, s14
+; CHECKFP16-NEXT:    vadd.f16 s2, s6, s2
+; CHECKFP16-NEXT:    vadd.f16 s6, s5, s20
+; CHECKFP16-NEXT:    vadd.f16 s1, s4, s6
+; CHECKFP16-NEXT:    vmovx.f16 s4, s9
+; CHECKFP16-NEXT:    vins.f16 s1, s2
+; CHECKFP16-NEXT:    vmovx.f16 s2, s18
+; CHECKFP16-NEXT:    vadd.f16 s2, s4, s2
+; CHECKFP16-NEXT:    vmovx.f16 s4, s7
+; CHECKFP16-NEXT:    vmovx.f16 s6, s8
 ; CHECKFP16-NEXT:    vadd.f16 s4, s6, s4
-; CHECKFP16-NEXT:    vmovx.f16 s6, s26
-; CHECKFP16-NEXT:    vadd.f16 s6, s8, s6
-; CHECKFP16-NEXT:    vadd.f16 s2, s2, s26
-; CHECKFP16-NEXT:    vadd.f16 s4, s6, s4
-; CHECKFP16-NEXT:    vadd.f16 s6, s9, s30
-; CHECKFP16-NEXT:    vadd.f16 s2, s2, s6
-; CHECKFP16-NEXT:    vins.f16 s17, s19
-; CHECKFP16-NEXT:    vins.f16 s16, s18
+; CHECKFP16-NEXT:    vadd.f16 s6, s8, s7
+; CHECKFP16-NEXT:    vadd.f16 s4, s4, s2
+; CHECKFP16-NEXT:    vadd.f16 s2, s9, s18
+; CHECKFP16-NEXT:    vadd.f16 s2, s6, s2
+; CHECKFP16-NEXT:    vmovx.f16 s6, s13
 ; CHECKFP16-NEXT:    vins.f16 s2, s4
-; CHECKFP16-NEXT:    vmovx.f16 s4, s14
-; CHECKFP16-NEXT:    vmovx.f16 s6, s17
+; CHECKFP16-NEXT:    vmovx.f16 s4, s16
 ; CHECKFP16-NEXT:    vadd.f16 s4, s6, s4
 ; CHECKFP16-NEXT:    vmovx.f16 s6, s3
-; CHECKFP16-NEXT:    vmovx.f16 s8, s16
+; CHECKFP16-NEXT:    vmovx.f16 s8, s12
 ; CHECKFP16-NEXT:    vadd.f16 s6, s8, s6
-; CHECKFP16-NEXT:    vadd.f16 s8, s16, s3
+; CHECKFP16-NEXT:    vadd.f16 s8, s12, s3
 ; CHECKFP16-NEXT:    vadd.f16 s4, s6, s4
-; CHECKFP16-NEXT:    vadd.f16 s6, s17, s14
+; CHECKFP16-NEXT:    vadd.f16 s6, s13, s16
 ; CHECKFP16-NEXT:    vadd.f16 s3, s8, s6
 ; CHECKFP16-NEXT:    vins.f16 s3, s4
-; CHECKFP16-NEXT:    vpop {d8, d9, d10}
-; CHECKFP16-NEXT:    vpop {d12, d13, d14, d15}
+; CHECKFP16-NEXT:    vpop {d8, d9, d10, d11, d12}
 ; CHECKFP16-NEXT:    bx lr
 ;
 ; CHECKFP-LABEL: shuffle4step_f16:
@@ -1600,12 +1592,12 @@ define arm_aapcs_vfpcc <8 x half> @shuffle4step_f16(<32 x half> %src) {
 ; CHECKFP-NEXT:    vins.f16 s21, s3
 ; CHECKFP-NEXT:    vins.f16 s0, s2
 ; CHECKFP-NEXT:    vmov.f32 s24, s1
-; CHECKFP-NEXT:    vmov.f32 s26, s9
 ; CHECKFP-NEXT:    vmov.f32 s25, s5
+; CHECKFP-NEXT:    vmov.f32 s26, s9
 ; CHECKFP-NEXT:    vmov.f32 s27, s13
-; CHECKFP-NEXT:    vmov.f32 s2, s8
-; CHECKFP-NEXT:    vadd.f16 q4, q6, q4
 ; CHECKFP-NEXT:    vmov.f32 s1, s4
+; CHECKFP-NEXT:    vadd.f16 q4, q6, q4
+; CHECKFP-NEXT:    vmov.f32 s2, s8
 ; CHECKFP-NEXT:    vmov.f32 s3, s12
 ; CHECKFP-NEXT:    vadd.f16 q0, q0, q5
 ; CHECKFP-NEXT:    vadd.f16 q0, q0, q4

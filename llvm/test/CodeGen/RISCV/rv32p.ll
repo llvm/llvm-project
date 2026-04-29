@@ -1360,12 +1360,11 @@ define void @wmaccu_multiple_uses(i32 %a, i32 %b, i64 %c, ptr %out1, ptr %out2) 
 define i64 @wmacc_first_mul_multiple_uses(i32 %a, i32 %b, i32 %c, i32 %d, ptr %out) nounwind {
 ; CHECK-LABEL: wmacc_first_mul_multiple_uses:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    wmul a2, a2, a3
-; CHECK-NEXT:    mv a5, a3
-; CHECK-NEXT:    mv a6, a2
+; CHECK-NEXT:    wmul a6, a2, a3
+; CHECK-NEXT:    padd.dw a2, a6, zero
 ; CHECK-NEXT:    wmacc a2, a0, a1
 ; CHECK-NEXT:    sw a6, 0(a4)
-; CHECK-NEXT:    sw a5, 4(a4)
+; CHECK-NEXT:    sw a7, 4(a4)
 ; CHECK-NEXT:    padd.dw a0, a2, zero
 ; CHECK-NEXT:    ret
   %aext = sext i32 %a to i64
