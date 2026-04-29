@@ -8,7 +8,7 @@
 #include <arm_neon.h>
 
 // CHECK-LABEL: define dso_local <8 x i8> @test_vcgez_s8(
-// CHECK-SAME: <8 x i8> noundef [[A:%.*]])  #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: <8 x i8> noundef [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = icmp sge <8 x i8> [[A]], zeroinitializer
 // CHECK-NEXT:    [[VCGEZ_I:%.*]] = sext <8 x i1> [[TMP0]] to <8 x i8>
@@ -993,314 +993,6 @@ poly16x8_t test_vrev64q_p16(poly16x8_t a) {
 //
 float32x4_t test_vrev64q_f32(float32x4_t a) {
   return vrev64q_f32(a);
-}
-
-// CHECK-LABEL: define dso_local <4 x i16> @test_vpaddl_s8(
-// CHECK-SAME: <8 x i8> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VPADDL_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.saddlp.v4i16.v8i8(<8 x i8> [[A]])
-// CHECK-NEXT:    ret <4 x i16> [[VPADDL_I]]
-//
-int16x4_t test_vpaddl_s8(int8x8_t a) {
-  return vpaddl_s8(a);
-}
-
-// CHECK-LABEL: define dso_local <2 x i32> @test_vpaddl_s16(
-// CHECK-SAME: <4 x i16> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i16> [[A]] to <8 x i8>
-// CHECK-NEXT:    [[VPADDL_I:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
-// CHECK-NEXT:    [[VPADDL1_I:%.*]] = call <2 x i32> @llvm.aarch64.neon.saddlp.v2i32.v4i16(<4 x i16> [[VPADDL_I]])
-// CHECK-NEXT:    ret <2 x i32> [[VPADDL1_I]]
-//
-int32x2_t test_vpaddl_s16(int16x4_t a) {
-  return vpaddl_s16(a);
-}
-
-// CHECK-LABEL: define dso_local <1 x i64> @test_vpaddl_s32(
-// CHECK-SAME: <2 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x i32> [[A]] to <8 x i8>
-// CHECK-NEXT:    [[VPADDL_I:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
-// CHECK-NEXT:    [[VPADDL1_I:%.*]] = call <1 x i64> @llvm.aarch64.neon.saddlp.v1i64.v2i32(<2 x i32> [[VPADDL_I]])
-// CHECK-NEXT:    ret <1 x i64> [[VPADDL1_I]]
-//
-int64x1_t test_vpaddl_s32(int32x2_t a) {
-  return vpaddl_s32(a);
-}
-
-// CHECK-LABEL: define dso_local <4 x i16> @test_vpaddl_u8(
-// CHECK-SAME: <8 x i8> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VPADDL_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.uaddlp.v4i16.v8i8(<8 x i8> [[A]])
-// CHECK-NEXT:    ret <4 x i16> [[VPADDL_I]]
-//
-uint16x4_t test_vpaddl_u8(uint8x8_t a) {
-  return vpaddl_u8(a);
-}
-
-// CHECK-LABEL: define dso_local <2 x i32> @test_vpaddl_u16(
-// CHECK-SAME: <4 x i16> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i16> [[A]] to <8 x i8>
-// CHECK-NEXT:    [[VPADDL_I:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
-// CHECK-NEXT:    [[VPADDL1_I:%.*]] = call <2 x i32> @llvm.aarch64.neon.uaddlp.v2i32.v4i16(<4 x i16> [[VPADDL_I]])
-// CHECK-NEXT:    ret <2 x i32> [[VPADDL1_I]]
-//
-uint32x2_t test_vpaddl_u16(uint16x4_t a) {
-  return vpaddl_u16(a);
-}
-
-// CHECK-LABEL: define dso_local <1 x i64> @test_vpaddl_u32(
-// CHECK-SAME: <2 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x i32> [[A]] to <8 x i8>
-// CHECK-NEXT:    [[VPADDL_I:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
-// CHECK-NEXT:    [[VPADDL1_I:%.*]] = call <1 x i64> @llvm.aarch64.neon.uaddlp.v1i64.v2i32(<2 x i32> [[VPADDL_I]])
-// CHECK-NEXT:    ret <1 x i64> [[VPADDL1_I]]
-//
-uint64x1_t test_vpaddl_u32(uint32x2_t a) {
-  return vpaddl_u32(a);
-}
-
-// CHECK-LABEL: define dso_local <8 x i16> @test_vpaddlq_s8(
-// CHECK-SAME: <16 x i8> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VPADDL_I:%.*]] = call <8 x i16> @llvm.aarch64.neon.saddlp.v8i16.v16i8(<16 x i8> [[A]])
-// CHECK-NEXT:    ret <8 x i16> [[VPADDL_I]]
-//
-int16x8_t test_vpaddlq_s8(int8x16_t a) {
-  return vpaddlq_s8(a);
-}
-
-// CHECK-LABEL: define dso_local <4 x i32> @test_vpaddlq_s16(
-// CHECK-SAME: <8 x i16> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x i16> [[A]] to <16 x i8>
-// CHECK-NEXT:    [[VPADDL_I:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
-// CHECK-NEXT:    [[VPADDL1_I:%.*]] = call <4 x i32> @llvm.aarch64.neon.saddlp.v4i32.v8i16(<8 x i16> [[VPADDL_I]])
-// CHECK-NEXT:    ret <4 x i32> [[VPADDL1_I]]
-//
-int32x4_t test_vpaddlq_s16(int16x8_t a) {
-  return vpaddlq_s16(a);
-}
-
-// CHECK-LABEL: define dso_local <2 x i64> @test_vpaddlq_s32(
-// CHECK-SAME: <4 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A]] to <16 x i8>
-// CHECK-NEXT:    [[VPADDL_I:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
-// CHECK-NEXT:    [[VPADDL1_I:%.*]] = call <2 x i64> @llvm.aarch64.neon.saddlp.v2i64.v4i32(<4 x i32> [[VPADDL_I]])
-// CHECK-NEXT:    ret <2 x i64> [[VPADDL1_I]]
-//
-int64x2_t test_vpaddlq_s32(int32x4_t a) {
-  return vpaddlq_s32(a);
-}
-
-// CHECK-LABEL: define dso_local <8 x i16> @test_vpaddlq_u8(
-// CHECK-SAME: <16 x i8> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VPADDL_I:%.*]] = call <8 x i16> @llvm.aarch64.neon.uaddlp.v8i16.v16i8(<16 x i8> [[A]])
-// CHECK-NEXT:    ret <8 x i16> [[VPADDL_I]]
-//
-uint16x8_t test_vpaddlq_u8(uint8x16_t a) {
-  return vpaddlq_u8(a);
-}
-
-// CHECK-LABEL: define dso_local <4 x i32> @test_vpaddlq_u16(
-// CHECK-SAME: <8 x i16> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x i16> [[A]] to <16 x i8>
-// CHECK-NEXT:    [[VPADDL_I:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
-// CHECK-NEXT:    [[VPADDL1_I:%.*]] = call <4 x i32> @llvm.aarch64.neon.uaddlp.v4i32.v8i16(<8 x i16> [[VPADDL_I]])
-// CHECK-NEXT:    ret <4 x i32> [[VPADDL1_I]]
-//
-uint32x4_t test_vpaddlq_u16(uint16x8_t a) {
-  return vpaddlq_u16(a);
-}
-
-// CHECK-LABEL: define dso_local <2 x i64> @test_vpaddlq_u32(
-// CHECK-SAME: <4 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A]] to <16 x i8>
-// CHECK-NEXT:    [[VPADDL_I:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
-// CHECK-NEXT:    [[VPADDL1_I:%.*]] = call <2 x i64> @llvm.aarch64.neon.uaddlp.v2i64.v4i32(<4 x i32> [[VPADDL_I]])
-// CHECK-NEXT:    ret <2 x i64> [[VPADDL1_I]]
-//
-uint64x2_t test_vpaddlq_u32(uint32x4_t a) {
-  return vpaddlq_u32(a);
-}
-
-// CHECK-LABEL: define dso_local <4 x i16> @test_vpadal_s8(
-// CHECK-SAME: <4 x i16> noundef [[A:%.*]], <8 x i8> noundef [[B:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i16> [[A]] to <8 x i8>
-// CHECK-NEXT:    [[VPADAL_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.saddlp.v4i16.v8i8(<8 x i8> [[B]])
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
-// CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i16> [[VPADAL_I]], [[TMP1]]
-// CHECK-NEXT:    ret <4 x i16> [[TMP2]]
-//
-int16x4_t test_vpadal_s8(int16x4_t a, int8x8_t b) {
-  return vpadal_s8(a, b);
-}
-
-// CHECK-LABEL: define dso_local <2 x i32> @test_vpadal_s16(
-// CHECK-SAME: <2 x i32> noundef [[A:%.*]], <4 x i16> noundef [[B:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x i32> [[A]] to <8 x i8>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[B]] to <8 x i8>
-// CHECK-NEXT:    [[VPADAL_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <4 x i16>
-// CHECK-NEXT:    [[VPADAL1_I:%.*]] = call <2 x i32> @llvm.aarch64.neon.saddlp.v2i32.v4i16(<4 x i16> [[VPADAL_I]])
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
-// CHECK-NEXT:    [[TMP3:%.*]] = add <2 x i32> [[VPADAL1_I]], [[TMP2]]
-// CHECK-NEXT:    ret <2 x i32> [[TMP3]]
-//
-int32x2_t test_vpadal_s16(int32x2_t a, int16x4_t b) {
-  return vpadal_s16(a, b);
-}
-
-// CHECK-LABEL: define dso_local <1 x i64> @test_vpadal_s32(
-// CHECK-SAME: <1 x i64> noundef [[A:%.*]], <2 x i32> noundef [[B:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[A]] to <8 x i8>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[B]] to <8 x i8>
-// CHECK-NEXT:    [[VPADAL_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <2 x i32>
-// CHECK-NEXT:    [[VPADAL1_I:%.*]] = call <1 x i64> @llvm.aarch64.neon.saddlp.v1i64.v2i32(<2 x i32> [[VPADAL_I]])
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
-// CHECK-NEXT:    [[TMP3:%.*]] = add <1 x i64> [[VPADAL1_I]], [[TMP2]]
-// CHECK-NEXT:    ret <1 x i64> [[TMP3]]
-//
-int64x1_t test_vpadal_s32(int64x1_t a, int32x2_t b) {
-  return vpadal_s32(a, b);
-}
-
-// CHECK-LABEL: define dso_local <4 x i16> @test_vpadal_u8(
-// CHECK-SAME: <4 x i16> noundef [[A:%.*]], <8 x i8> noundef [[B:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i16> [[A]] to <8 x i8>
-// CHECK-NEXT:    [[VPADAL_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.uaddlp.v4i16.v8i8(<8 x i8> [[B]])
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
-// CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i16> [[VPADAL_I]], [[TMP1]]
-// CHECK-NEXT:    ret <4 x i16> [[TMP2]]
-//
-uint16x4_t test_vpadal_u8(uint16x4_t a, uint8x8_t b) {
-  return vpadal_u8(a, b);
-}
-
-// CHECK-LABEL: define dso_local <2 x i32> @test_vpadal_u16(
-// CHECK-SAME: <2 x i32> noundef [[A:%.*]], <4 x i16> noundef [[B:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x i32> [[A]] to <8 x i8>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[B]] to <8 x i8>
-// CHECK-NEXT:    [[VPADAL_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <4 x i16>
-// CHECK-NEXT:    [[VPADAL1_I:%.*]] = call <2 x i32> @llvm.aarch64.neon.uaddlp.v2i32.v4i16(<4 x i16> [[VPADAL_I]])
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
-// CHECK-NEXT:    [[TMP3:%.*]] = add <2 x i32> [[VPADAL1_I]], [[TMP2]]
-// CHECK-NEXT:    ret <2 x i32> [[TMP3]]
-//
-uint32x2_t test_vpadal_u16(uint32x2_t a, uint16x4_t b) {
-  return vpadal_u16(a, b);
-}
-
-// CHECK-LABEL: define dso_local <1 x i64> @test_vpadal_u32(
-// CHECK-SAME: <1 x i64> noundef [[A:%.*]], <2 x i32> noundef [[B:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[A]] to <8 x i8>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[B]] to <8 x i8>
-// CHECK-NEXT:    [[VPADAL_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <2 x i32>
-// CHECK-NEXT:    [[VPADAL1_I:%.*]] = call <1 x i64> @llvm.aarch64.neon.uaddlp.v1i64.v2i32(<2 x i32> [[VPADAL_I]])
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
-// CHECK-NEXT:    [[TMP3:%.*]] = add <1 x i64> [[VPADAL1_I]], [[TMP2]]
-// CHECK-NEXT:    ret <1 x i64> [[TMP3]]
-//
-uint64x1_t test_vpadal_u32(uint64x1_t a, uint32x2_t b) {
-  return vpadal_u32(a, b);
-}
-
-// CHECK-LABEL: define dso_local <8 x i16> @test_vpadalq_s8(
-// CHECK-SAME: <8 x i16> noundef [[A:%.*]], <16 x i8> noundef [[B:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x i16> [[A]] to <16 x i8>
-// CHECK-NEXT:    [[VPADAL_I:%.*]] = call <8 x i16> @llvm.aarch64.neon.saddlp.v8i16.v16i8(<16 x i8> [[B]])
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
-// CHECK-NEXT:    [[TMP2:%.*]] = add <8 x i16> [[VPADAL_I]], [[TMP1]]
-// CHECK-NEXT:    ret <8 x i16> [[TMP2]]
-//
-int16x8_t test_vpadalq_s8(int16x8_t a, int8x16_t b) {
-  return vpadalq_s8(a, b);
-}
-
-// CHECK-LABEL: define dso_local <4 x i32> @test_vpadalq_s16(
-// CHECK-SAME: <4 x i32> noundef [[A:%.*]], <8 x i16> noundef [[B:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A]] to <16 x i8>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i16> [[B]] to <16 x i8>
-// CHECK-NEXT:    [[VPADAL_I:%.*]] = bitcast <16 x i8> [[TMP1]] to <8 x i16>
-// CHECK-NEXT:    [[VPADAL1_I:%.*]] = call <4 x i32> @llvm.aarch64.neon.saddlp.v4i32.v8i16(<8 x i16> [[VPADAL_I]])
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
-// CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i32> [[VPADAL1_I]], [[TMP2]]
-// CHECK-NEXT:    ret <4 x i32> [[TMP3]]
-//
-int32x4_t test_vpadalq_s16(int32x4_t a, int16x8_t b) {
-  return vpadalq_s16(a, b);
-}
-
-// CHECK-LABEL: define dso_local <2 x i64> @test_vpadalq_s32(
-// CHECK-SAME: <2 x i64> noundef [[A:%.*]], <4 x i32> noundef [[B:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[A]] to <16 x i8>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B]] to <16 x i8>
-// CHECK-NEXT:    [[VPADAL_I:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x i32>
-// CHECK-NEXT:    [[VPADAL1_I:%.*]] = call <2 x i64> @llvm.aarch64.neon.saddlp.v2i64.v4i32(<4 x i32> [[VPADAL_I]])
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
-// CHECK-NEXT:    [[TMP3:%.*]] = add <2 x i64> [[VPADAL1_I]], [[TMP2]]
-// CHECK-NEXT:    ret <2 x i64> [[TMP3]]
-//
-int64x2_t test_vpadalq_s32(int64x2_t a, int32x4_t b) {
-  return vpadalq_s32(a, b);
-}
-
-// CHECK-LABEL: define dso_local <8 x i16> @test_vpadalq_u8(
-// CHECK-SAME: <8 x i16> noundef [[A:%.*]], <16 x i8> noundef [[B:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x i16> [[A]] to <16 x i8>
-// CHECK-NEXT:    [[VPADAL_I:%.*]] = call <8 x i16> @llvm.aarch64.neon.uaddlp.v8i16.v16i8(<16 x i8> [[B]])
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
-// CHECK-NEXT:    [[TMP2:%.*]] = add <8 x i16> [[VPADAL_I]], [[TMP1]]
-// CHECK-NEXT:    ret <8 x i16> [[TMP2]]
-//
-uint16x8_t test_vpadalq_u8(uint16x8_t a, uint8x16_t b) {
-  return vpadalq_u8(a, b);
-}
-
-// CHECK-LABEL: define dso_local <4 x i32> @test_vpadalq_u16(
-// CHECK-SAME: <4 x i32> noundef [[A:%.*]], <8 x i16> noundef [[B:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A]] to <16 x i8>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i16> [[B]] to <16 x i8>
-// CHECK-NEXT:    [[VPADAL_I:%.*]] = bitcast <16 x i8> [[TMP1]] to <8 x i16>
-// CHECK-NEXT:    [[VPADAL1_I:%.*]] = call <4 x i32> @llvm.aarch64.neon.uaddlp.v4i32.v8i16(<8 x i16> [[VPADAL_I]])
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
-// CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i32> [[VPADAL1_I]], [[TMP2]]
-// CHECK-NEXT:    ret <4 x i32> [[TMP3]]
-//
-uint32x4_t test_vpadalq_u16(uint32x4_t a, uint16x8_t b) {
-  return vpadalq_u16(a, b);
-}
-
-// CHECK-LABEL: define dso_local <2 x i64> @test_vpadalq_u32(
-// CHECK-SAME: <2 x i64> noundef [[A:%.*]], <4 x i32> noundef [[B:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[A]] to <16 x i8>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B]] to <16 x i8>
-// CHECK-NEXT:    [[VPADAL_I:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x i32>
-// CHECK-NEXT:    [[VPADAL1_I:%.*]] = call <2 x i64> @llvm.aarch64.neon.uaddlp.v2i64.v4i32(<4 x i32> [[VPADAL_I]])
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
-// CHECK-NEXT:    [[TMP3:%.*]] = add <2 x i64> [[VPADAL1_I]], [[TMP2]]
-// CHECK-NEXT:    ret <2 x i64> [[TMP3]]
-//
-uint64x2_t test_vpadalq_u32(uint64x2_t a, uint32x4_t b) {
-  return vpadalq_u32(a, b);
 }
 
 // CHECK-LABEL: define dso_local <8 x i8> @test_vqabs_s8(
@@ -3152,9 +2844,9 @@ float64x2_t test_vrndiq_f64(float64x2_t a) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x float> [[A]] to <2 x i32>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[TMP0]] to <8 x i8>
-// CHECK-NEXT:    [[VCVTZ_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <2 x float>
-// CHECK-NEXT:    [[VCVTZ1_I:%.*]] = call <2 x i32> @llvm.aarch64.neon.fcvtzs.v2i32.v2f32(<2 x float> [[VCVTZ_I]])
-// CHECK-NEXT:    ret <2 x i32> [[VCVTZ1_I]]
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to <2 x float>
+// CHECK-NEXT:    [[VCVTZ_I:%.*]] = call <2 x i32> @llvm.fptosi.sat.v2i32.v2f32(<2 x float> [[TMP2]])
+// CHECK-NEXT:    ret <2 x i32> [[VCVTZ_I]]
 //
 int32x2_t test_vcvt_s32_f32(float32x2_t a) {
   return vcvt_s32_f32(a);
@@ -3165,9 +2857,9 @@ int32x2_t test_vcvt_s32_f32(float32x2_t a) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[A]] to <4 x i32>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[TMP0]] to <16 x i8>
-// CHECK-NEXT:    [[VCVTZ_I:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x float>
-// CHECK-NEXT:    [[VCVTZ1_I:%.*]] = call <4 x i32> @llvm.aarch64.neon.fcvtzs.v4i32.v4f32(<4 x float> [[VCVTZ_I]])
-// CHECK-NEXT:    ret <4 x i32> [[VCVTZ1_I]]
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x float>
+// CHECK-NEXT:    [[VCVTZ_I:%.*]] = call <4 x i32> @llvm.fptosi.sat.v4i32.v4f32(<4 x float> [[TMP2]])
+// CHECK-NEXT:    ret <4 x i32> [[VCVTZ_I]]
 //
 int32x4_t test_vcvtq_s32_f32(float32x4_t a) {
   return vcvtq_s32_f32(a);
@@ -3178,9 +2870,9 @@ int32x4_t test_vcvtq_s32_f32(float32x4_t a) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x double> [[A]] to <2 x i64>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to <16 x i8>
-// CHECK-NEXT:    [[VCVTZ_I:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x double>
-// CHECK-NEXT:    [[VCVTZ1_I:%.*]] = call <2 x i64> @llvm.aarch64.neon.fcvtzs.v2i64.v2f64(<2 x double> [[VCVTZ_I]])
-// CHECK-NEXT:    ret <2 x i64> [[VCVTZ1_I]]
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x double>
+// CHECK-NEXT:    [[VCVTZ_I:%.*]] = call <2 x i64> @llvm.fptosi.sat.v2i64.v2f64(<2 x double> [[TMP2]])
+// CHECK-NEXT:    ret <2 x i64> [[VCVTZ_I]]
 //
 int64x2_t test_vcvtq_s64_f64(float64x2_t a) {
   return vcvtq_s64_f64(a);
@@ -3191,9 +2883,9 @@ int64x2_t test_vcvtq_s64_f64(float64x2_t a) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x float> [[A]] to <2 x i32>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[TMP0]] to <8 x i8>
-// CHECK-NEXT:    [[VCVTZ_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <2 x float>
-// CHECK-NEXT:    [[VCVTZ1_I:%.*]] = call <2 x i32> @llvm.aarch64.neon.fcvtzu.v2i32.v2f32(<2 x float> [[VCVTZ_I]])
-// CHECK-NEXT:    ret <2 x i32> [[VCVTZ1_I]]
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to <2 x float>
+// CHECK-NEXT:    [[VCVTZ_I:%.*]] = call <2 x i32> @llvm.fptoui.sat.v2i32.v2f32(<2 x float> [[TMP2]])
+// CHECK-NEXT:    ret <2 x i32> [[VCVTZ_I]]
 //
 uint32x2_t test_vcvt_u32_f32(float32x2_t a) {
   return vcvt_u32_f32(a);
@@ -3204,9 +2896,9 @@ uint32x2_t test_vcvt_u32_f32(float32x2_t a) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[A]] to <4 x i32>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[TMP0]] to <16 x i8>
-// CHECK-NEXT:    [[VCVTZ_I:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x float>
-// CHECK-NEXT:    [[VCVTZ1_I:%.*]] = call <4 x i32> @llvm.aarch64.neon.fcvtzu.v4i32.v4f32(<4 x float> [[VCVTZ_I]])
-// CHECK-NEXT:    ret <4 x i32> [[VCVTZ1_I]]
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x float>
+// CHECK-NEXT:    [[VCVTZ_I:%.*]] = call <4 x i32> @llvm.fptoui.sat.v4i32.v4f32(<4 x float> [[TMP2]])
+// CHECK-NEXT:    ret <4 x i32> [[VCVTZ_I]]
 //
 uint32x4_t test_vcvtq_u32_f32(float32x4_t a) {
   return vcvtq_u32_f32(a);
@@ -3217,9 +2909,9 @@ uint32x4_t test_vcvtq_u32_f32(float32x4_t a) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x double> [[A]] to <2 x i64>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to <16 x i8>
-// CHECK-NEXT:    [[VCVTZ_I:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x double>
-// CHECK-NEXT:    [[VCVTZ1_I:%.*]] = call <2 x i64> @llvm.aarch64.neon.fcvtzu.v2i64.v2f64(<2 x double> [[VCVTZ_I]])
-// CHECK-NEXT:    ret <2 x i64> [[VCVTZ1_I]]
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x double>
+// CHECK-NEXT:    [[VCVTZ_I:%.*]] = call <2 x i64> @llvm.fptoui.sat.v2i64.v2f64(<2 x double> [[TMP2]])
+// CHECK-NEXT:    ret <2 x i64> [[VCVTZ_I]]
 //
 uint64x2_t test_vcvtq_u64_f64(float64x2_t a) {
   return vcvtq_u64_f64(a);

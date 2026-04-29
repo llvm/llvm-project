@@ -1192,6 +1192,27 @@ private:
 };
 } // namespace llvm
 
+/// Validates that each module-defining source is of type \c TY_CXXModule.
+///
+/// \returns false on error, with diagnostics emitted via \p Diags.
+static bool validateScannedJobInputKinds(
+    ArrayRef<std::unique_ptr<Command>> ScannedJobs,
+    ArrayRef<InputDependencies> InputDepsForScannedJobs,
+    DiagnosticsEngine &Diags) {
+  for (const auto &&[Job, InputDeps] : llvm::zip_equal(
+           llvm::make_pointee_range(ScannedJobs), InputDepsForScannedJobs)) {
+    const auto &MainInput = Job.getInputInfos().front();
+    const bool DefinesNamedModule = !InputDeps.ModuleName.empty();
+
+    if (DefinesNamedModule && MainInput.getType() != types::TY_CXXModule) {
+      Diags.Report(diag::err_module_defined_outside_of_module_source)
+          << InputDeps.ModuleName << MainInput.getFilename();
+      return false;
+    }
+  }
+  return true;
+}
+
 static SmallVector<std::unique_ptr<Command>>
 takeJobsAtIndices(SmallVectorImpl<std::unique_ptr<Command>> &Jobs,
                   ArrayRef<size_t> Indices) {
@@ -1558,10 +1579,14 @@ void driver::modules::runModulesDriver(
       Graph, takeJobsAtIndices(Jobs, ScanResult.UnusedStdlibModuleJobIndices));
 
   auto ScannedJobs = takeJobsAtIndices(Jobs, ScanResult.ScannedJobIndices);
+  if (!validateScannedJobInputKinds(ScannedJobs,
+                                    ScanResult.InputDepsForScannedJobs, Diags))
+    return;
+  installScanCommandLines(C, ScannedJobs, ScanResult.InputDepsForScannedJobs);
+
   createClangModuleJobsAndNodes(
       Graph, C, /*ImportingJobs*/ ScannedJobs,
       std::move(ScanResult.ModuleDepGraphsForScannedJobs));
-  installScanCommandLines(C, ScannedJobs, ScanResult.InputDepsForScannedJobs);
   createNodesForScannedJobs(Graph, std::move(ScannedJobs),
                             std::move(ScanResult.InputDepsForScannedJobs));
 

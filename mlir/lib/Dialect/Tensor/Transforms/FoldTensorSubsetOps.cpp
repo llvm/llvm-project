@@ -220,17 +220,46 @@ struct InsertSliceOfInsertSliceFolder : public OpRewritePattern<OpTy> {
   }
 };
 
-void tensor::populateFoldTensorSubsetOpPatterns(RewritePatternSet &patterns) {
-  populateFoldTensorSubsetIntoVectorTransferPatterns(patterns);
-  patterns.add<InsertSliceOfInsertSliceFolder<tensor::InsertSliceOp>,
-               InsertSliceOfInsertSliceFolder<tensor::ParallelInsertSliceOp>>(
-      patterns.getContext());
-}
+struct MergeConsecutiveExtractSlice
+    : public OpRewritePattern<tensor::ExtractSliceOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tensor::ExtractSliceOp nextOp,
+                                PatternRewriter &rewriter) const override {
+    auto prevOp = nextOp.getSource().getDefiningOp<tensor::ExtractSliceOp>();
+    if (!prevOp)
+      return failure();
+
+    SmallVector<OpFoldResult> newOffsets, newSizes, newStrides;
+    if (failed(affine::mergeOffsetsSizesAndStrides(
+            rewriter, nextOp.getLoc(), prevOp, nextOp, prevOp.getDroppedDims(),
+            newOffsets, newSizes, newStrides)))
+      return failure();
+
+    rewriter.replaceOpWithNewOp<tensor::ExtractSliceOp>(
+        nextOp, nextOp.getType(), prevOp.getSource(), newOffsets, newSizes,
+        newStrides);
+    return success();
+  }
+};
 
 void tensor::populateFoldTensorSubsetIntoVectorTransferPatterns(
     RewritePatternSet &patterns) {
   patterns.add<TransferReadOfExtractSliceOpFolder,
                InsertSliceOfTransferWriteOpFolder>(patterns.getContext());
+}
+
+void tensor::populateMergeConsecutiveInsertExtractSlicePatterns(
+    RewritePatternSet &patterns) {
+  patterns.add<MergeConsecutiveExtractSlice,
+               InsertSliceOfInsertSliceFolder<tensor::InsertSliceOp>,
+               InsertSliceOfInsertSliceFolder<tensor::ParallelInsertSliceOp>>(
+      patterns.getContext());
+}
+
+void tensor::populateFoldTensorSubsetOpPatterns(RewritePatternSet &patterns) {
+  populateFoldTensorSubsetIntoVectorTransferPatterns(patterns);
+  populateMergeConsecutiveInsertExtractSlicePatterns(patterns);
 }
 
 //===----------------------------------------------------------------------===//

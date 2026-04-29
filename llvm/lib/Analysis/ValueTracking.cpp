@@ -10431,6 +10431,10 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
         computeConstantRange(SI->getFalseValue(), ForSigned, SQ, Depth + 1);
     CR = CRTrue.unionWith(CRFalse);
     CR = CR.intersectWith(getRangeForSelectPattern(*SI, SQ.IIQ));
+  } else if (auto *TI = dyn_cast<TruncInst>(V)) {
+    ConstantRange SrcCR =
+        computeConstantRange(TI->getOperand(0), ForSigned, SQ, Depth + 1);
+    CR = SrcCR.truncate(BitWidth);
   } else if (isa<FPToUIInst>(V) || isa<FPToSIInst>(V)) {
     APInt Lower = APInt(BitWidth, 0);
     APInt Upper = APInt(BitWidth, 0);
@@ -10498,7 +10502,7 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
           computeConstantRange(Cmp->getOperand(1), /*ForSigned=*/false,
                                SQ.getWithInstruction(I), Depth + 1);
       CR = CR.intersectWith(
-          ConstantRange::makeAllowedICmpRegion(Cmp->getPredicate(), RHS));
+          ConstantRange::makeAllowedICmpRegion(Cmp->getCmpPredicate(), RHS));
     }
   }
 

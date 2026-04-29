@@ -18,49 +18,49 @@ define void @test_pr59090(ptr %l_out, ptr noalias %b) #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule <8 x i64> [[VEC_IV]], splat (i64 10000)
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[INDEX]], 6
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[B:%.*]], align 1, !llvm.access.group [[ACC_GRP0:![0-9]+]]
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <8 x i1> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <8 x i1> [[TMP1]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
 ; CHECK-NEXT:    store i8 [[TMP3]], ptr [[B]], align 1, !llvm.access.group [[ACC_GRP0]]
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; CHECK:       pred.store.continue:
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <8 x i1> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <8 x i1> [[TMP1]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[PRED_STORE_IF1:%.*]], label [[PRED_STORE_CONTINUE2:%.*]]
 ; CHECK:       pred.store.if1:
 ; CHECK-NEXT:    store i8 [[TMP3]], ptr [[B]], align 1, !llvm.access.group [[ACC_GRP0]]
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE2]]
 ; CHECK:       pred.store.continue2:
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <8 x i1> [[TMP1]], i32 2
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <8 x i1> [[TMP1]], i64 2
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[PRED_STORE_IF3:%.*]], label [[PRED_STORE_CONTINUE4:%.*]]
 ; CHECK:       pred.store.if3:
 ; CHECK-NEXT:    store i8 [[TMP3]], ptr [[B]], align 1, !llvm.access.group [[ACC_GRP0]]
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE4]]
 ; CHECK:       pred.store.continue4:
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <8 x i1> [[TMP1]], i32 3
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <8 x i1> [[TMP1]], i64 3
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[PRED_STORE_IF5:%.*]], label [[PRED_STORE_CONTINUE6:%.*]]
 ; CHECK:       pred.store.if5:
 ; CHECK-NEXT:    store i8 [[TMP3]], ptr [[B]], align 1, !llvm.access.group [[ACC_GRP0]]
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE6]]
 ; CHECK:       pred.store.continue6:
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <8 x i1> [[TMP1]], i32 4
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <8 x i1> [[TMP1]], i64 4
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[PRED_STORE_IF7:%.*]], label [[PRED_STORE_CONTINUE8:%.*]]
 ; CHECK:       pred.store.if7:
 ; CHECK-NEXT:    store i8 [[TMP3]], ptr [[B]], align 1, !llvm.access.group [[ACC_GRP0]]
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE8]]
 ; CHECK:       pred.store.continue8:
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <8 x i1> [[TMP1]], i32 5
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <8 x i1> [[TMP1]], i64 5
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[PRED_STORE_IF9:%.*]], label [[PRED_STORE_CONTINUE10:%.*]]
 ; CHECK:       pred.store.if9:
 ; CHECK-NEXT:    store i8 [[TMP3]], ptr [[B]], align 1, !llvm.access.group [[ACC_GRP0]]
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE10]]
 ; CHECK:       pred.store.continue10:
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <8 x i1> [[TMP1]], i32 6
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <8 x i1> [[TMP1]], i64 6
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[PRED_STORE_IF11:%.*]], label [[PRED_STORE_CONTINUE12:%.*]]
 ; CHECK:       pred.store.if11:
 ; CHECK-NEXT:    store i8 [[TMP3]], ptr [[B]], align 1, !llvm.access.group [[ACC_GRP0]]
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE12]]
 ; CHECK:       pred.store.continue12:
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <8 x i1> [[TMP1]], i32 7
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <8 x i1> [[TMP1]], i64 7
 ; CHECK-NEXT:    br i1 [[TMP11]], label [[PRED_STORE_IF13:%.*]], label [[PRED_STORE_CONTINUE14]]
 ; CHECK:       pred.store.if13:
 ; CHECK-NEXT:    store i8 [[TMP3]], ptr [[B]], align 1, !llvm.access.group [[ACC_GRP0]]

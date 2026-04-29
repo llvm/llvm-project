@@ -22,9 +22,9 @@ namespace clang::ssaf {
 /// declared type, a EntityPointerLevel is associated with a '*' (or a '[]`) in
 /// that declaration.
 ///
-/// For example, for 'int *p[10];', there are two EntityPointerLevels. One
-/// is associated with 'int *[10]' of 'p' and the other is associated with 'int
-/// *' of 'p'.
+/// For example, for 'int *p[10];', there are two EntityPointerLevels.
+/// One is associated with 'int *[10]' of 'p' and the other is associated with
+/// 'int *' of 'p'.
 ///
 /// An EntityPointerLevel can be identified by an EntityId and an unsigned
 /// integer indicating the pointer level: '(EntityId, PointerLevel)'.
@@ -34,7 +34,7 @@ namespace clang::ssaf {
 /// For the same example 'int *p[10];', the EntityPointerLevels below are valid:
 /// - '(p, 2)' is associated with the 'int *' part of the declared type of 'p';
 /// - '(p, 1)' is associated with the 'int *[10]' part of the declared type of
-/// 'p'.
+///   'p'.
 class EntityPointerLevel {
   EntityId Entity;
   unsigned PointerLevel;
@@ -97,6 +97,8 @@ llvm::Expected<EntityPointerLevelSet> translateEntityPointerLevel(
     const Expr *E, ASTContext &Ctx,
     llvm::function_ref<EntityId(EntityName EN)> AddEntity);
 
+/// Creates a `EntityPointerLevel` from a pair of an EntityId and a pointer
+/// level:
 EntityPointerLevel buildEntityPointerLevel(EntityId, unsigned);
 
 /// Create an EntityPointerLevel (EPL) from a NamedDecl of a pointer/array type.
@@ -107,14 +109,15 @@ EntityPointerLevel buildEntityPointerLevel(EntityId, unsigned);
 /// \param IsFunRet true iff the created EPL is associated with the return type
 /// of a function entity.
 llvm::Expected<EntityPointerLevel>
-creatEntityPointerLevel(const NamedDecl *ND,
-                        llvm::function_ref<EntityId(EntityName EN)> AddEntity,
-                        bool IsFunRet = false);
+createEntityPointerLevel(const NamedDecl *ND,
+                         llvm::function_ref<EntityId(EntityName EN)> AddEntity,
+                         bool IsFunRet = false);
 
 /// Creates a new EntityPointerLevel (EPL) from `E` by incrementing `E`'s
 /// pointer level.
 /// \return the EPL that is associated with the pointee (or array element) type
-/// of `E`'s associated pointer/array tyoe of the same entity.
+/// of `E`'s associated pointer/array type of the same entity.
 EntityPointerLevel incrementPointerLevel(const EntityPointerLevel &E);
 } // namespace clang::ssaf
+
 #endif // LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_ANALYSES_ENTITYPOINTERLEVEL_ENTITYPOINTERLEVEL_H

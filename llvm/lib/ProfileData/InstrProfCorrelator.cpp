@@ -114,6 +114,7 @@ llvm::Expected<std::unique_ptr<InstrProfCorrelator>>
 InstrProfCorrelator::get(StringRef Filename, ProfCorrelatorKind FileKind,
                          const object::BuildIDFetcher *BIDFetcher,
                          const ArrayRef<object::BuildID> BIs) {
+  std::optional<std::string> Path;
   if (BIDFetcher) {
     if (BIs.empty())
       return make_error<InstrProfError>(
@@ -126,18 +127,12 @@ InstrProfCorrelator::get(StringRef Filename, ProfCorrelatorKind FileKind,
           "unsupported profile binary correlation when there are multiple "
           "build IDs in a profile");
 
-    Expected<std::string> Path = BIDFetcher->fetch(BIs.front());
-    if (!Path) {
-      // Propagate as InstrProf specific error type.
-      assert(errorToErrorCode(Path.takeError()) ==
-                 std::errc::no_such_file_or_directory &&
-             "BuildIDFetcher::fetch() failed in an unexpected way");
-      consumeError(Path.takeError());
+    Path = BIDFetcher->fetch(BIs.front());
+    if (!Path)
       return make_error<InstrProfError>(
           instrprof_error::unable_to_correlate_profile,
           "Missing build ID: " + llvm::toHex(BIs.front(),
                                              /*LowerCase=*/true));
-    }
     Filename = *Path;
   }
 

@@ -305,8 +305,27 @@ void AddDebugInfoPass::handleLocalVariable(Op declOp, llvm::StringRef name,
   // Get the dummy argument position from the explicit attribute.
   unsigned argNo = 0;
   if (dummyScope && declOp.getDummyScope() == dummyScope) {
-    if (auto argNoOpt = declOp.getDummyArgNo())
+    if (auto argNoOpt = declOp.getDummyArgNo()) {
       argNo = *argNoOpt;
+      if (emitFakeUseForArguments) {
+        if constexpr (std::is_same_v<Op, fir::cg::XDeclareOp>) {
+          if (auto funcOp =
+                  declOp->template getParentOfType<mlir::func::FuncOp>()) {
+            if (declOp->getBlock() == &funcOp.getBody().front()) {
+              for (mlir::Block &block : funcOp.getBody()) {
+                if (auto returnOp = mlir::dyn_cast<mlir::func::ReturnOp>(
+                        block.getTerminator())) {
+                  mlir::OpBuilder::InsertionGuard guard(builder);
+                  builder.setInsertionPoint(returnOp);
+                  fir::FakeUseOp::create(builder, declOp.getLoc(),
+                                         declOp.getMemref());
+                }
+              }
+            }
+          }
+        }
+      }
+    }
   }
 
   auto tyAttr =

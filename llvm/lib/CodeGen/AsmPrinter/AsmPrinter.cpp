@@ -409,7 +409,7 @@ Align AsmPrinter::getGVAlignment(const GlobalObject *GV, const DataLayout &DL,
 
 AsmPrinter::AsmPrinter(TargetMachine &tm, std::unique_ptr<MCStreamer> Streamer,
                        char &ID)
-    : MachineFunctionPass(ID), TM(tm), MAI(tm.getMCAsmInfo()),
+    : MachineFunctionPass(ID), TM(tm), MAI(&tm.getMCAsmInfo()),
       OutContext(Streamer->getContext()), OutStreamer(std::move(Streamer)),
       SM(*this) {
   VerboseAsm = OutStreamer->isVerboseAsm();
@@ -629,7 +629,7 @@ bool AsmPrinter::doInitialization(Module &M) {
     emitInlineAsm(
         M.getModuleInlineAsm() + "\n", *TM.getMCSubtargetInfo(),
         TM.Options.MCOptions, nullptr,
-        InlineAsm::AsmDialect(TM.getMCAsmInfo()->getAssemblerDialect()));
+        InlineAsm::AsmDialect(TM.getMCAsmInfo().getAssemblerDialect()));
     OutStreamer->AddComment("End of file scope inline assembly");
     OutStreamer->addBlankLine();
   }
@@ -2289,13 +2289,6 @@ void AsmPrinter::emitFunctionBody() {
             TII->getInstSizeVerifyMode(MI);
         if (Mode != TargetInstrInfo::InstSizeVerifyMode::NoVerify) {
           unsigned ExpectedSize = TII->getInstSizeInBytes(MI);
-          if (MI.isBundled()) {
-            // Bundled instructions are emitted together.
-            auto It = MI.getIterator(), End = MBB.instr_end();
-            for (++It; It != End && It->isInsideBundle(); ++It)
-              ExpectedSize += TII->getInstSizeInBytes(*It);
-          }
-
           MCFragment *NewFragment = OutStreamer->getCurrentFragment();
           unsigned ActualSize;
           if (OldFragment == NewFragment) {

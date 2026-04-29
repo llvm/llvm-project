@@ -1469,10 +1469,18 @@ defm : PatShiftXrXr<srl, "XVSRL">;
 defm : PatShiftXrSplatUimm<srl, "XVSRLI">;
 defm : PatShiftXrUimm<loongarch_vsrli, "XVSRLI">;
 
+// XVSRLR[I]_{B/H/W/D}
+defm : PatXrXr<loongarch_vsrlr, "XVSRLR">;
+defm : PatShiftXrSplatUimm<loongarch_vsrlr, "XVSRLRI">;
+
 // XVSRA[I]_{B/H/W/D}
 defm : PatXrXr<sra, "XVSRA">;
 defm : PatShiftXrXr<sra, "XVSRA">;
 defm : PatShiftXrSplatUimm<sra, "XVSRAI">;
+
+// XVSRAR[I]_{B/H/W/D}
+defm : PatXrXr<loongarch_vsrar, "XVSRAR">;
+defm : PatShiftXrSplatUimm<loongarch_vsrar, "XVSRARI">;
 
 // XVROTR[I]_{B/H/W/D}
 defm : PatXrXr<rotr, "XVROTR">;
@@ -2499,6 +2507,10 @@ defm : PatXrF<ftrunc, "XVFRINTRZ">;
 defm : PatXrF<froundeven, "XVFRINTRNE">;
 def : Pat<(v8f32 (loongarch_vfcvt_s_d (v4f64 LASX256:$xj), (v4f64 LASX256:$xk))),
           (XVFCVT_S_D LASX256:$xj, LASX256:$xk)>;
+def : Pat<(v4f64 (loongarch_vfcvtl_d_s (v8f32 LASX256:$xj))),
+          (XVFCVTL_D_S LASX256:$xj)>;
+def : Pat<(v4f64 (loongarch_vfcvth_d_s (v8f32 LASX256:$xj))),
+          (XVFCVTH_D_S LASX256:$xj)>;
 
 // load
 def : Pat<(int_loongarch_lasx_xvld GPR:$rj, timm:$imm),

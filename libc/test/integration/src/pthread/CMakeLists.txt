@@ -28,11 +28,13 @@ add_integration_test(
   DEPENDS
     libc.include.pthread
     libc.src.errno.errno
+    libc.src.__support.CPP.atomic
     libc.src.pthread.pthread_barrier_destroy
     libc.src.pthread.pthread_barrier_wait
     libc.src.pthread.pthread_barrier_init
     libc.src.pthread.pthread_create
     libc.src.pthread.pthread_join
+    libc.src.string.memset
     libc.src.stdio.printf
 )
 
@@ -77,6 +79,39 @@ add_integration_test(
     libc.src.__support.CPP.atomic
     libc.src.__support.CPP.new
     libc.src.__support.threads.sleep
+)
+
+add_integration_test(
+  pthread_cond_test
+  SUITE
+    libc-pthread-integration-tests
+  SRCS
+    pthread_cond_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.time_macros
+    libc.include.pthread
+    libc.src.__support.CPP.atomic
+    libc.src.pthread.pthread_cond_broadcast
+    libc.src.pthread.pthread_cond_clockwait
+    libc.src.pthread.pthread_cond_destroy
+    libc.src.pthread.pthread_cond_init
+    libc.src.pthread.pthread_cond_signal
+    libc.src.pthread.pthread_cond_timedwait
+    libc.src.pthread.pthread_cond_wait
+    libc.src.pthread.pthread_condattr_destroy
+    libc.src.pthread.pthread_condattr_init
+    libc.src.pthread.pthread_condattr_setpshared
+    libc.src.pthread.pthread_create
+    libc.src.pthread.pthread_join
+    libc.src.pthread.pthread_mutex_destroy
+    libc.src.pthread.pthread_mutex_init
+    libc.src.pthread.pthread_mutex_lock
+    libc.src.pthread.pthread_mutex_unlock
+    libc.src.pthread.pthread_mutexattr_destroy
+    libc.src.pthread.pthread_mutexattr_init
+    libc.src.pthread.pthread_mutexattr_setpshared
+    libc.src.time.clock_gettime
 )
 
 add_integration_test(

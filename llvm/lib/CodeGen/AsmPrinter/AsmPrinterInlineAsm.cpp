@@ -87,10 +87,8 @@ void AsmPrinter::emitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
   // Otherwise parse the asm and emit it via MC support.
   // This is useful in case the asm parser doesn't handle something but the
   // system assembler does.
-  const MCAsmInfo *MCAI = TM.getMCAsmInfo();
-  assert(MCAI && "No MCAsmInfo");
-  if (!MCAI->useIntegratedAssembler() &&
-      !MCAI->parseInlineAsmUsingAsmParser() &&
+  const MCAsmInfo &MCAI = TM.getMCAsmInfo();
+  if (!MCAI.useIntegratedAssembler() && !MCAI.parseInlineAsmUsingAsmParser() &&
       !OutStreamer->isIntegratedAssemblerRequired()) {
     emitInlineAsmStart();
     OutStreamer->emitRawText(Str);
@@ -116,8 +114,8 @@ void AsmPrinter::emitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
   // because it's not subtarget dependent.
   std::unique_ptr<MCInstrInfo> MII(TM.getTarget().createMCInstrInfo());
   assert(MII && "Failed to create instruction info");
-  std::unique_ptr<MCTargetAsmParser> TAP(TM.getTarget().createMCAsmParser(
-      STI, *Parser, *MII, MCOptions));
+  std::unique_ptr<MCTargetAsmParser> TAP(
+      TM.getTarget().createMCAsmParser(STI, *Parser, *MII));
   if (!TAP)
     report_fatal_error("Inline asm not supported by this streamer because"
                        " we don't have an asm parser for this target\n");

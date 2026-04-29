@@ -46,7 +46,7 @@ LLVM
 Target Triples
 --------------
 
-Use the Clang option ``-target <Architecture>-<Vendor>-<OS>-<Environment>``
+Use the Clang option ``--target=<Architecture>-<Vendor>-<OS>-<Environment>``
 to specify the target triple:
 
   .. table:: AMDGPU Architectures
@@ -1606,6 +1606,7 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    - 0x0100: All DS read instructions may be scheduled across sched_barrier.
                                                    - 0x0200: All DS write instructions may be scheduled across sched_barrier.
                                                    - 0x0400: All Transcendental (e.g. V_EXP) instructions may be scheduled across sched_barrier.
+                                                   - 0x0800: All LDSDMA instructions may be scheduled across sched_barrier.
 
   llvm.amdgcn.sched.group.barrier                  Creates schedule groups with specific properties to create custom scheduling
                                                    pipelines. The ordering between groups is enforced by the instruction scheduler.

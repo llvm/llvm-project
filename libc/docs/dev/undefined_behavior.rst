@@ -96,6 +96,16 @@ Unrecognized ``clockid_t`` values for ``pthread_rwlock_clock*`` APIs
 POSIX.1-2024 only demands support for ``CLOCK_REALTIME`` and ``CLOCK_MONOTONIC``. Currently,
 as in LLVM libc, if other clock ids are used, they will be treated as monotonic clocks.
 
+Invalid condition variable attributes for ``pthread_cond_init``
+---------------------------------------------------------------
+POSIX.1-2024 specifies that ``pthread_cond_init`` returns an error number on
+failure, but it does not specify the behavior when the provided
+``pthread_condattr_t`` contains an unsupported clock value or an unrecognized
+process-shared flag. LLVM's libc returns ``EINVAL`` for unsupported clock values
+and for process-shared flags other than ``PTHREAD_PROCESS_PRIVATE`` and
+``PTHREAD_PROCESS_SHARED``. This returns the error number directly and does not
+set ``errno``.
+
 PThread SpinLock Destroy
 ------------------------
 POSIX.1 Issue 7 updates the spinlock destroy behavior description such that the return code for
