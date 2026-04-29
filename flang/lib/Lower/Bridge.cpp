@@ -3571,7 +3571,7 @@ private:
     if (currentFunctionUnit && !currentFunctionUnit->isMainProgram()) {
       const std::string symName =
           currentFunctionUnit->getSubprogramSymbol().name().ToString();
-      if (dir.v->ToString() == symName) {
+      if (dir.v.value().ToString() == symName) {
         func->setAttr("llvm.always_inline", builder->getUnitAttr());
       }
     }
