@@ -561,7 +561,7 @@ Instruction::BinaryOps getSubRecurOpcode(RecurKind Kind) {
     return Instruction::Add;
   if (Kind == RecurKind::FSub)
     return Instruction::FAdd;
-  return (Instruction::BinaryOps)RecurrenceDescriptor::getOpcode(Kind);
+  llvm_unreachable("RecurKind should be Sub/FSub.");
 }
 
 Value *VPInstruction::generate(VPTransformState &State) {
@@ -769,7 +769,10 @@ Value *VPInstruction::generate(VPTransformState &State) {
         else {
           // For sub-recurrences, each part's reduction variable is already
           // negative, we need to do: reduce.add(-acc_uf0 + -acc_uf1)
-          Instruction::BinaryOps Opcode = getSubRecurOpcode(RK);
+          Instruction::BinaryOps Opcode =
+              RecurrenceDescriptor::isSubRecurrenceKind(RK)
+                  ? getSubRecurOpcode(RK)
+                  : (Instruction::BinaryOps)RecurrenceDescriptor::getOpcode(RK);
           ReducedPartRdx =
               Builder.CreateBinOp(Opcode, RdxPart, ReducedPartRdx, "bin.rdx");
         }
