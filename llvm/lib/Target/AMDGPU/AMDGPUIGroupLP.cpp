@@ -889,6 +889,12 @@ void PipelineSolver::greedyFind(
     int TempCost = Builder.build(CandSGID, TempEdges);
     LLVM_DEBUG(dbgs() << "Cost of Group " << TempCost << "\n");
 
+    std::list<std::pair<SUnit *, SUnit *>> AddEdgesEdges;
+    int AddEdgesCost = addEdges(SyncPipeline, CurrSU.first, CandSGID, AddEdgesEdges);
+    if (TempCost != AddEdgesCost)
+      llvm_unreachable("Cost mismatch between EdgeSetBuilder and addEdges");
+    removeEdges(AddEdgesEdges);
+
     if (!Best || TempCost < Best->Cost) {
       Best = {Match, TempEdges, TempCost};
       if (Best->Cost == 0)
