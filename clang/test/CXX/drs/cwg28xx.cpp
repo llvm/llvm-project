@@ -183,6 +183,7 @@ struct A {
   friend void Ts...[0]::f();
   template<typename U>
   friend void Ts...[0]::g();
+  // since-cxx26-error@-1 {{friend declaration does not name a member of a class template specialization}}
 
   friend struct Ts...[0]::B;
   // FIXME: The index of the pack-index-specifier is printed as a memory address in the diagnostic.
