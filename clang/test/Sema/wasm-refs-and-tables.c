@@ -92,7 +92,7 @@ __externref_t func(__externref_t ref) {
   table == 1;                     // expected-error {{invalid operands to binary expression ('__attribute__((address_space(1))) __externref_t[0]' and 'int')}}
   1 >= table;                     // expected-error {{invalid operands to binary expression ('int' and '__attribute__((address_space(1))) __externref_t[0]')}}
   table == other_table;           // expected-error {{invalid operands to binary expression ('__attribute__((address_space(1))) __externref_t[0]' and '__attribute__((address_space(1))) __externref_t[0]')}} \
-                                    cpp-warning {{comparison between two arrays compare their addresses and will be deprecated in c++20}}
+                                     cpp-warning {{comparison between two arrays compare their addresses and will be deprecated in c++20}}
   table !=- table;                // expected-error {{invalid argument type '__attribute__((address_space(1))) __externref_t *' to unary expression}}
   !table;                         // expected-error {{invalid argument type '__attribute__((address_space(1))) __externref_t *' to unary expression}}
   1 && table;                     // expected-error {{invalid operands to binary expression ('int' and '__attribute__((address_space(1))) __externref_t[0]')}}
