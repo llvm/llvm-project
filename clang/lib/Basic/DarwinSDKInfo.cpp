@@ -25,7 +25,7 @@ std::optional<VersionTuple> DarwinSDKInfo::RelatedTargetVersionMapping::map(
     return MaximumValue;
   auto KV = Mapping.find(Key.normalize());
   if (KV != Mapping.end())
-    return KV->second;
+    return KV->getSecond();
   // If no exact entry found, try just the major key version. Only do so when
   // a minor version number is present, to avoid recursing indefinitely into
   // the major-only check.
@@ -43,10 +43,10 @@ DarwinSDKInfo::RelatedTargetVersionMapping::parseJSON(
   VersionTuple MinValue = Min;
   llvm::DenseMap<VersionTuple, VersionTuple> Mapping;
   for (const auto &KV : Obj) {
-    if (auto Val = KV.second.getAsString()) {
+    if (auto Val = KV.getSecond().getAsString()) {
       llvm::VersionTuple KeyVersion;
       llvm::VersionTuple ValueVersion;
-      if (KeyVersion.tryParse(KV.first) || ValueVersion.tryParse(*Val))
+      if (KeyVersion.tryParse(KV.getFirst()) || ValueVersion.tryParse(*Val))
         return std::nullopt;
       Mapping[KeyVersion.normalize()] = ValueVersion;
       if (KeyVersion < Min)
@@ -119,7 +119,7 @@ static DarwinSDKInfo::PlatformInfoStorageType parsePlatformInfos(
 
   for (auto SupportedTargetPair : *SupportedTargets) {
     llvm::json::Object *SupportedTarget =
-        SupportedTargetPair.second.getAsObject();
+        SupportedTargetPair.getSecond().getAsObject();
     auto Vendor = SupportedTarget->getString("LLVMTargetTripleVendor");
     auto OS = SupportedTarget->getString("LLVMTargetTripleSys");
     if (!Vendor || !OS)
@@ -136,7 +136,7 @@ static DarwinSDKInfo::PlatformInfoStorageType parsePlatformInfos(
 
     // The key is either the Xcode platform, or a variant. The platform must be
     // the first entry in the returned PlatformInfoStorageType.
-    StringRef PlatformOrVariant = SupportedTargetPair.first;
+    StringRef PlatformOrVariant = SupportedTargetPair.getFirst();
 
     StringRef EffectivePlatformPrefix;
     // Ignore iosmac value if it exists.
@@ -202,12 +202,12 @@ DarwinSDKInfo::parseDarwinSDKSettingsJSON(std::string FilePath,
     // FIXME: Generalize this out beyond iOS-deriving targets.
     // Look for ios_<targetos> version mapping for targets that derive from ios.
     for (const auto &KV : *VM) {
-      auto Pair = StringRef(KV.first).split("_");
+      auto Pair = StringRef(KV.getFirst()).split("_");
       if (Pair.first.compare_insensitive("ios") == 0) {
         llvm::Triple TT(llvm::Twine("--") + Pair.second.lower());
         if (TT.getOS() != llvm::Triple::UnknownOS) {
           auto Mapping = RelatedTargetVersionMapping::parseJSON(
-              *KV.second.getAsObject(), *MaximumDeploymentVersion);
+              *KV.getSecond().getAsObject(), *MaximumDeploymentVersion);
           if (Mapping)
             VersionMappings[OSEnvPair(llvm::Triple::IOS,
                                       llvm::Triple::UnknownEnvironment,
