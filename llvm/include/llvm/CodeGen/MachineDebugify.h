@@ -6,27 +6,24 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This pass attaches synthetic debug info to everything. It can be used to
-// create targeted tests for debug info preservation, or test for CodeGen
-// differences with vs. without debug info.
+// Attaches synthetic debug info to the MachineFunction for a Function. To be
+// used both by the legacy and the new pass manager.
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CODEGEN_MACHINEDEBUGIFY_H_
 #define LLVM_CODEGEN_MACHINEDEBUGIFY_H_
 
-#include "llvm/IR/Analysis.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/PassManager.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/IR/DIBuilder.h"
+#include "llvm/IR/Function.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
-class DebugifyMachineModulePass
-    : public PassInfoMixin<DebugifyMachineModulePass> {
-public:
-  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-};
+LLVM_ABI bool applyDebugifyMetadataToMachineFunction(
+    DIBuilder &DIB, Function &F,
+    llvm::function_ref<MachineFunction *(Function &)> GetMF);
 
 } // namespace llvm
 

@@ -16,7 +16,6 @@
 #include "llvm/CodeGen/MachineDebugify.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/Passes.h"
@@ -30,8 +29,7 @@
 
 using namespace llvm;
 
-namespace {
-bool applyDebugifyMetadataToMachineFunction(
+bool llvm::applyDebugifyMetadataToMachineFunction(
     DIBuilder &DIB, Function &F,
     llvm::function_ref<MachineFunction *(Function &)> GetMF) {
   MachineFunction *MaybeMF = GetMF(F);
@@ -173,6 +171,8 @@ bool applyDebugifyMetadataToMachineFunction(
   return true;
 }
 
+namespace {
+
 /// ModulePass for attaching synthetic debug info to everything, used with the
 /// legacy module pass manager.
 struct DebugifyMachineModule : public ModulePass {
@@ -211,33 +211,6 @@ INITIALIZE_PASS_BEGIN(DebugifyMachineModule, DEBUG_TYPE,
 INITIALIZE_PASS_END(DebugifyMachineModule, DEBUG_TYPE,
                     "Machine Debugify Module", false, false)
 
-ModulePass *llvm::createDebugifyMachineModuleLegacyPass() {
+ModulePass *llvm::createDebugifyMachineModulePass() {
   return new DebugifyMachineModule();
-}
-
-PreservedAnalyses DebugifyMachineModulePass::run(Module &M,
-                                                 ModuleAnalysisManager &AM) {
-  FunctionAnalysisManager &FAM =
-      AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-  const bool Changed = applyDebugifyMetadata(
-      M, M.functions(),
-      "ModuleDebugify: ", [&](DIBuilder &DIB, Function &F) -> bool {
-        return applyDebugifyMetadataToMachineFunction(
-            DIB, F, [&FAM](Function &F) -> MachineFunction * {
-              MachineFunctionAnalysis::Result *MFA =
-                  FAM.getCachedResult<MachineFunctionAnalysis>(F);
-              if (MFA == nullptr) {
-                return nullptr;
-              }
-              return &MFA->getMF();
-            });
-      });
-  if (!Changed)
-    return PreservedAnalyses::all();
-
-  PreservedAnalyses PA;
-  PA.preserve<MachineModuleAnalysis>();
-  PA.preserve<FunctionAnalysisManagerModuleProxy>();
-  PA.preserveSet<CFGAnalyses>();
-  return PA;
 }

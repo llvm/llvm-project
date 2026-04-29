@@ -806,7 +806,7 @@ void TargetPassConfig::addVerifyPass(const std::string &Banner) {
 }
 
 void TargetPassConfig::addDebugifyPass() {
-  PM->add(createDebugifyMachineModuleLegacyPass());
+  PM->add(createDebugifyMachineModulePass());
 }
 
 void TargetPassConfig::addStripDebugPass() {

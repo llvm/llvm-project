@@ -405,6 +405,19 @@ AnalysisKey NoOpLoopAnalysis::Key;
 
 namespace {
 
+bool applyMIRDebugify(DIBuilder &DIB, Function &F, ModuleAnalysisManager &AM) {
+  FunctionAnalysisManager &FAM =
+      AM.getResult<FunctionAnalysisManagerModuleProxy>(*F.getParent())
+          .getManager();
+
+  return applyDebugifyMetadataToMachineFunction(
+      DIB, F, [&](Function &Func) -> MachineFunction * {
+        MachineFunctionAnalysis::Result *MFA =
+            FAM.getCachedResult<MachineFunctionAnalysis>(Func);
+        return MFA ? &MFA->getMF() : nullptr;
+      });
+}
+
 // Passes for testing crashes.
 // DO NOT USE THIS EXCEPT FOR TESTING!
 class TriggerCrashModulePass : public PassInfoMixin<TriggerCrashModulePass> {
