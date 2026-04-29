@@ -1329,9 +1329,7 @@ Expected<GVNOptions> parseGVNOptions(StringRef Params) {
     std::tie(ParamName, Params) = Params.split(';');
 
     bool Enable = !ParamName.consume_front("no-");
-    if (ParamName == "pre") {
-      Result.setPRE(Enable);
-    } else if (ParamName == "scalar-pre") {
+    if (ParamName == "scalar-pre") {
       Result.setScalarPRE(Enable);
     } else if (ParamName == "load-pre") {
       Result.setLoadPRE(Enable);

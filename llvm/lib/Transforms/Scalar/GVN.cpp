@@ -105,7 +105,6 @@ STATISTIC(MaxBBSpeculationCutoffReachedTimes,
           "Number of times we we reached gvn-max-block-speculations cut-off "
           "preventing further exploration");
 
-static cl::opt<bool> GVNEnablePRE("enable-pre", cl::init(true), cl::Hidden);
 static cl::opt<bool> GVNEnableScalarPRE("enable-scalar-pre", cl::init(true),
                                         cl::Hidden);
 static cl::opt<bool> GVNEnableLoadPRE("enable-load-pre", cl::init(true));
@@ -852,10 +851,6 @@ void GVNPass::LeaderMap::verifyRemoved(const Value *V) const {
 //                                GVN Pass
 //===----------------------------------------------------------------------===//
 
-bool GVNPass::isPREEnabled() const {
-  return Options.AllowPRE.value_or(GVNEnablePRE);
-}
-
 bool GVNPass::isScalarPREEnabled() const {
   return Options.AllowScalarPRE.value_or(GVNEnableScalarPRE);
 }
@@ -919,8 +914,6 @@ void GVNPass::printPipeline(
       OS, MapClassName2PassName);
 
   OS << '<';
-  if (Options.AllowPRE != std::nullopt)
-    OS << (*Options.AllowPRE ? "" : "no-") << "pre;";
   if (Options.AllowScalarPRE != std::nullopt)
     OS << (*Options.AllowScalarPRE ? "" : "no-") << "scalar-pre;";
   if (Options.AllowLoadPRE != std::nullopt)
@@ -2039,7 +2032,7 @@ bool GVNPass::processNonLocalLoad(LoadInst *Load) {
   bool Changed = false;
   // This is a limited form of scalar PRE for load indices. If this load follows
   // a GEP, see if we can PRE the indices before analyzing.
-  if (isPREEnabled() && isScalarPREEnabled()) {
+  if (isScalarPREEnabled()) {
     if (GetElementPtrInst *GEP =
             dyn_cast<GetElementPtrInst>(Load->getOperand(0))) {
       for (Use &U : GEP->indices())
@@ -2089,7 +2082,7 @@ bool GVNPass::processNonLocalLoad(LoadInst *Load) {
   }
 
   // Step 4: Eliminate partial redundancy.
-  if (!isPREEnabled() || !isLoadPREEnabled())
+  if (!isLoadPREEnabled())
     return Changed;
   if (!isLoadInLoopPREEnabled() && LI->getLoopFor(Load->getParent()))
     return Changed;
@@ -2853,7 +2846,7 @@ bool GVNPass::runImpl(Function &F, AssumptionCache &RunAC, DominatorTree &RunDT,
     ++Iteration;
   }
 
-  if (isPREEnabled() && isScalarPREEnabled()) {
+  if (isScalarPREEnabled()) {
     // Fabricate val-num for dead-code in order to suppress assertion in
     // performPRE().
     assignValNumForDeadCode();

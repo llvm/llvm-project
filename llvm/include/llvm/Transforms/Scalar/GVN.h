@@ -76,7 +76,6 @@ class GVNLegacyPass;
 /// Intended use is to create a default object, modify parameters with
 /// additional setters and then pass it to GVN.
 struct GVNOptions {
-  std::optional<bool> AllowPRE;
   std::optional<bool> AllowScalarPRE;
   std::optional<bool> AllowLoadPRE;
   std::optional<bool> AllowLoadInLoopPRE;
@@ -85,12 +84,6 @@ struct GVNOptions {
   std::optional<bool> AllowMemorySSA;
 
   GVNOptions() = default;
-
-  /// Enables or disables PRE in GVN.
-  GVNOptions &setPRE(bool PRE) {
-    AllowPRE = PRE;
-    return *this;
-  }
 
   /// Enables or disables PRE of scalars in GVN.
   GVNOptions &setScalarPRE(bool ScalarPRE) {
@@ -155,7 +148,6 @@ public:
   AAResults *getAliasAnalysis() const { return VN.getAliasAnalysis(); }
   MemoryDependenceResults &getMemDep() const { return *MD; }
 
-  LLVM_ABI bool isPREEnabled() const;
   LLVM_ABI bool isScalarPREEnabled() const;
   LLVM_ABI bool isLoadPREEnabled() const;
   LLVM_ABI bool isLoadInLoopPREEnabled() const;
