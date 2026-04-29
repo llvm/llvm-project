@@ -1037,10 +1037,10 @@ static Instruction *foldSelectZeroOrFixedOp(SelectInst &SI,
 
 /// Transform patterns such as (a > b) ? a - b : 0 into usub.sat(a, b).
 /// There are 8 commuted/swapped variants of this pattern.
-static Value *canonicalizeSaturatedSubtract(const ICmpInst *ICI,
-                                            const Value *TrueVal,
-                                            const Value *FalseVal,
-                                            InstCombiner::BuilderTy &Builder) {
+static Value *
+canonicalizeSaturatedSubtractUnsigned(const ICmpInst *ICI, const Value *TrueVal,
+                                      const Value *FalseVal,
+                                      InstCombiner::BuilderTy &Builder) {
   ICmpInst::Predicate Pred = ICI->getPredicate();
   Value *A = ICI->getOperand(0);
   Value *B = ICI->getOperand(1);
@@ -1102,6 +1102,49 @@ static Value *canonicalizeSaturatedSubtract(const ICmpInst *ICI,
   if (IsNegative)
     Result = Builder.CreateNeg(Result);
   return Result;
+}
+
+static Value *
+canonicalizeSaturatedSubtractSigned(const ICmpInst *ICI, const Value *TrueVal,
+                                    const Value *FalseVal,
+                                    InstCombiner::BuilderTy &Builder) {
+  ICmpInst::Predicate Pred = ICI->getPredicate();
+  Value *CmpLHS = ICI->getOperand(0);
+  Value *CmpRHS = ICI->getOperand(1);
+
+  // `A != B ? X : Y` --> `A == B ? Y : X`
+  // This canonicalization allows us to handle more patterns with fewer checks.
+  if (Pred == ICmpInst::ICMP_NE) {
+    Pred = ICmpInst::getInversePredicate(Pred);
+    std::swap(TrueVal, FalseVal);
+  }
+
+  if (Pred == ICmpInst::ICMP_EQ) {
+    // `A == MIN_INT ? MAX_INT : 0 - A` --> `ssub_sat 0, A`
+    if (match(CmpRHS, m_SignMask()) && match(TrueVal, m_MaxSignedValue()) &&
+        match(FalseVal, m_Neg(m_Specific(CmpLHS)))) {
+      return Builder.CreateBinaryIntrinsic(
+          Intrinsic::ssub_sat, ConstantInt::getNullValue(CmpLHS->getType()),
+          CmpLHS);
+    }
+  }
+
+  return nullptr;
+}
+
+static Value *canonicalizeSaturatedSubtract(const ICmpInst *ICI,
+                                            const Value *TrueVal,
+                                            const Value *FalseVal,
+                                            InstCombiner::BuilderTy &Builder) {
+  if (Value *V = canonicalizeSaturatedSubtractUnsigned(ICI, TrueVal, FalseVal,
+                                                       Builder))
+    return V;
+
+  if (Value *V =
+          canonicalizeSaturatedSubtractSigned(ICI, TrueVal, FalseVal, Builder))
+    return V;
+
+  return nullptr;
 }
 
 static Value *
@@ -2153,15 +2196,6 @@ static Instruction *foldSelectICmpEq(SelectInst &SI, ICmpInst *ICI,
 
   if (Pred == ICmpInst::ICMP_NE)
     std::swap(TrueVal, FalseVal);
-
-  /// `A == MIN_INT ? MAX_INT : 0 - A` --> `ssub_sat 0, A`
-  if (match(CmpRHS, m_MinSignedValue()) && match(TrueVal, m_MaxSignedValue()) &&
-      match(FalseVal, m_Sub(m_ZeroInt(), m_Specific(CmpLHS)))) {
-    return IC.replaceInstUsesWith(
-        SI, IC.Builder.CreateBinaryIntrinsic(
-                Intrinsic::ssub_sat,
-                ConstantInt::getNullValue(CmpLHS->getType()), CmpLHS));
-  }
 
   if (Instruction *Res =
           foldSelectWithExtremeEqCond(CmpLHS, CmpRHS, TrueVal, FalseVal))
