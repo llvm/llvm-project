@@ -710,6 +710,7 @@ public:
     case BoolFromMem::NonZero:
       return true;
     }
+    llvm_unreachable("Unknown BoolFromMem enum");
   }
 };
 
