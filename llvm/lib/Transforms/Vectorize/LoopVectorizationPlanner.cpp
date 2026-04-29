@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LoopVectorizationPlanner.h"
+#include "LoopVectorizationUtils.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
@@ -251,8 +252,10 @@ bool VFSelectionContext::isScalableVectorizationAllowed() {
     return false;
 
   if (Hints->isScalableVectorizationDisabled()) {
-    reportVectorizationInfo("Scalable vectorization is explicitly disabled",
-                            "ScalableVectorizationDisabled", ORE, TheLoop);
+    LoopVectorizationUtils::reportVectorizationInfo(
+        DEBUG_TYPE,
+        "Scalable vectorization is explicitly disabled",
+        "ScalableVectorizationDisabled", ORE, TheLoop);
     return false;
   }
 
@@ -271,7 +274,8 @@ bool VFSelectionContext::isScalableVectorizationAllowed() {
   if (!all_of(Legal->getReductionVars(), [&](const auto &Reduction) -> bool {
         return TTI.isLegalToVectorizeReduction(Reduction.second, MaxScalableVF);
       })) {
-    reportVectorizationInfo(
+    LoopVectorizationUtils::reportVectorizationInfo(
+        DEBUG_TYPE,
         "Scalable vectorization not supported for the reduction "
         "operations found in this loop.",
         "ScalableVFUnfeasible", ORE, TheLoop);
@@ -283,16 +287,20 @@ bool VFSelectionContext::isScalableVectorizationAllowed() {
   if (any_of(ElementTypesInLoop, [&](Type *Ty) {
         return !Ty->isVoidTy() && !TTI.isElementTypeLegalForScalableVector(Ty);
       })) {
-    reportVectorizationInfo("Scalable vectorization is not supported "
-                            "for all element types found in this loop.",
-                            "ScalableVFUnfeasible", ORE, TheLoop);
+    LoopVectorizationUtils::reportVectorizationInfo(
+        DEBUG_TYPE,
+        "Scalable vectorization is not supported "
+        "for all element types found in this loop.",
+        "ScalableVFUnfeasible", ORE, TheLoop);
     return false;
   }
 
   if (!Legal->isSafeForAnyVectorWidth() && !getMaxVScale(F, TTI)) {
-    reportVectorizationInfo("The target does not provide maximum vscale value "
-                            "for safe distance analysis.",
-                            "ScalableVFUnfeasible", ORE, TheLoop);
+    LoopVectorizationUtils::reportVectorizationInfo(
+        DEBUG_TYPE,
+        "The target does not provide maximum vscale value "
+        "for safe distance analysis.",
+        "ScalableVFUnfeasible", ORE, TheLoop);
     return false;
   }
 
@@ -315,7 +323,8 @@ VFSelectionContext::getMaxLegalScalableVF(unsigned MaxSafeElements) {
   MaxScalableVF = ElementCount::getScalable(MaxSafeElements / *MaxVScale);
 
   if (!MaxScalableVF)
-    reportVectorizationInfo(
+    LoopVectorizationUtils::reportVectorizationInfo(
+        DEBUG_TYPE,
         "Max legal vector width too small, scalable vectorization "
         "unfeasible.",
         "ScalableVFUnfeasible", ORE, TheLoop);
@@ -535,7 +544,8 @@ bool VFSelectionContext::runtimeChecksRequired() {
 
   Loop *L = const_cast<Loop *>(TheLoop);
   if (Legal->getRuntimePointerChecking()->Need) {
-    reportVectorizationFailure(
+    LoopVectorizationUtils::reportVectorizationFailure(
+        DEBUG_TYPE,
         "Runtime ptr check is required with -Os/-Oz",
         "runtime pointer checks needed. Enable vectorization of this "
         "loop with '#pragma clang loop vectorize(enable)' when "
@@ -545,7 +555,8 @@ bool VFSelectionContext::runtimeChecksRequired() {
   }
 
   if (!PSE.getPredicate().isAlwaysTrue()) {
-    reportVectorizationFailure(
+    LoopVectorizationUtils::reportVectorizationFailure(
+        DEBUG_TYPE,
         "Runtime SCEV check is required with -Os/-Oz",
         "runtime SCEV checks needed. Enable vectorization of this "
         "loop with '#pragma clang loop vectorize(enable)' when "
@@ -556,7 +567,8 @@ bool VFSelectionContext::runtimeChecksRequired() {
 
   // FIXME: Avoid specializing for stride==1 instead of bailing out.
   if (!Legal->getLAI()->getSymbolicStrides().empty()) {
-    reportVectorizationFailure(
+    LoopVectorizationUtils::reportVectorizationFailure(
+        DEBUG_TYPE,
         "Runtime stride check for small trip count",
         "runtime stride == 1 checks needed. Enable vectorization of "
         "this loop without such check by compiling with -Os/-Oz",
@@ -721,7 +733,8 @@ bool LoopVectorizationPlanner::isMoreProfitable(const VectorizationFactor &A,
 FixedScalableVFPair
 VFSelectionContext::computeVPlanOuterloopVF(ElementCount UserVF) {
   if (UserVF.isScalable() && !supportsScalableVectors()) {
-    reportVectorizationFailure(
+    LoopVectorizationUtils::reportVectorizationFailure(
+        DEBUG_TYPE,
         "Scalable vectorization requested but not supported by the target",
         "the scalable user-specified vectorization width for outer-loop "
         "vectorization cannot be used because the target does not support "

@@ -24,6 +24,7 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_LOOPVECTORIZATIONPLANNER_H
 #define LLVM_TRANSFORMS_VECTORIZE_LOOPVECTORIZATIONPLANNER_H
 
+#include "LoopVectorizationUtils.h"
 #include "VPlan.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -57,15 +58,6 @@ extern cl::opt<bool> PreferInLoopReductions;
 /// attribute.
 std::optional<unsigned> getMaxVScale(const Function &F,
                                      const TargetTransformInfo &TTI);
-
-/// Reports an informative message: print \p Msg for debugging purposes as well
-/// as an optimization remark. Uses either \p I as location of the remark, or
-/// otherwise \p TheLoop. If \p DL is passed, use it as debug location for the
-/// remark.
-void reportVectorizationInfo(const StringRef Msg, const StringRef ORETag,
-                             OptimizationRemarkEmitter *ORE,
-                             const Loop *TheLoop, Instruction *I = nullptr,
-                             DebugLoc DL = {});
 
 /// VPlan-based builder utility analogous to IRBuilder.
 class VPBuilder {

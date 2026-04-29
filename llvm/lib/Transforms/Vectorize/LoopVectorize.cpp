@@ -55,6 +55,7 @@
 
 #include "llvm/Transforms/Vectorize/LoopVectorize.h"
 #include "LoopVectorizationPlanner.h"
+#include "LoopVectorizationUtils.h"
 #include "VPRecipeBuilder.h"
 #include "VPlan.h"
 #include "VPlanAnalysis.h"
@@ -399,48 +400,6 @@ static bool hasIrregularType(Type *Ty, const DataLayout &DL) {
   return DL.getTypeAllocSizeInBits(Ty) != DL.getTypeSizeInBits(Ty);
 }
 
-/// A version of ScalarEvolution::getSmallConstantTripCount that returns an
-/// ElementCount to include loops whose trip count is a function of vscale.
-static ElementCount getSmallConstantTripCount(ScalarEvolution *SE,
-                                              const Loop *L) {
-  if (unsigned ExpectedTC = SE->getSmallConstantTripCount(L))
-    return ElementCount::getFixed(ExpectedTC);
-
-  const SCEV *BTC = SE->getBackedgeTakenCount(L);
-  if (isa<SCEVCouldNotCompute>(BTC))
-    return ElementCount::getFixed(0);
-
-  const SCEV *ExitCount = SE->getTripCountFromExitCount(BTC, BTC->getType(), L);
-  if (isa<SCEVVScale>(ExitCount))
-    return ElementCount::getScalable(1);
-
-  const APInt *Scale;
-  if (match(ExitCount, m_scev_Mul(m_scev_APInt(Scale), m_SCEVVScale())))
-    if (cast<SCEVMulExpr>(ExitCount)->hasNoUnsignedWrap())
-      if (Scale->getActiveBits() <= 32)
-        return ElementCount::getScalable(Scale->getZExtValue());
-
-  return ElementCount::getFixed(0);
-}
-
-/// Get the maximum trip count for \p L from the SCEV unsigned range, excluding
-/// zero from the range. Only valid when not folding the tail, as the minimum
-/// iteration count check guards against a zero trip count. Returns 0 if
-/// unknown.
-static unsigned getMaxTCFromNonZeroRange(PredicatedScalarEvolution &PSE,
-                                         Loop *L) {
-  const SCEV *BTC = PSE.getBackedgeTakenCount();
-  if (isa<SCEVCouldNotCompute>(BTC))
-    return 0;
-  ScalarEvolution *SE = PSE.getSE();
-  const SCEV *TripCount = SE->getTripCountFromExitCount(BTC, BTC->getType(), L);
-  ConstantRange TCRange = SE->getUnsignedRange(TripCount);
-  APInt MaxTCFromRange = TCRange.getUnsignedMax();
-  if (!MaxTCFromRange.isZero() && MaxTCFromRange.getActiveBits() <= 32)
-    return MaxTCFromRange.getZExtValue();
-  return 0;
-}
-
 /// Returns "best known" trip count, which is either a valid positive trip count
 /// or std::nullopt when an estimate cannot be made (including when the trip
 /// count would overflow), for the specified loop \p L as defined by the
@@ -456,7 +415,8 @@ getSmallBestKnownTC(PredicatedScalarEvolution &PSE, Loop *L,
                     bool CanUseConstantMax = true,
                     bool CanExcludeZeroTrips = false) {
   // Check if exact trip count is known.
-  if (auto ExpectedTC = getSmallConstantTripCount(PSE.getSE(), L))
+  if (auto ExpectedTC =
+          LoopVectorizationUtils::getSmallConstantTripCount(PSE.getSE(), L))
     return ExpectedTC;
 
   // Check if there is an expected trip count available from profile data.
@@ -475,7 +435,8 @@ getSmallBestKnownTC(PredicatedScalarEvolution &PSE, Loop *L,
   // only safe when not folding the tail, as the minimum iteration count check
   // prevents entering the vector loop with a zero trip count.
   if (CanUseConstantMax && CanExcludeZeroTrips)
-    if (unsigned RefinedTC = getMaxTCFromNonZeroRange(PSE, L))
+    if (unsigned RefinedTC =
+            LoopVectorizationUtils::getMaxTCFromNonZeroRange(PSE, L))
       return ElementCount::getFixed(RefinedTC);
 
   return std::nullopt;
@@ -711,42 +672,6 @@ static DebugLoc getDebugLocFromInstOrOperands(Instruction *I) {
   return I->getDebugLoc();
 }
 
-/// Write a \p DebugMsg about vectorization to the debug output stream. If \p I
-/// is passed, the message relates to that particular instruction.
-#ifndef NDEBUG
-static void debugVectorizationMessage(const StringRef Prefix,
-                                      const StringRef DebugMsg,
-                                      Instruction *I) {
-  dbgs() << "LV: " << Prefix << DebugMsg;
-  if (I != nullptr)
-    dbgs() << " " << *I;
-  else
-    dbgs() << '.';
-  dbgs() << '\n';
-}
-#endif
-
-/// Create an analysis remark that explains why vectorization failed
-///
-/// \p PassName is the name of the pass (e.g. can be AlwaysPrint).  \p
-/// RemarkName is the identifier for the remark.  If \p I is passed it is an
-/// instruction that prevents vectorization.  Otherwise \p TheLoop is used for
-/// the location of the remark. If \p DL is passed, use it as debug location for
-/// the remark. \return the remark object that can be streamed to.
-static OptimizationRemarkAnalysis
-createLVAnalysis(const char *PassName, StringRef RemarkName,
-                 const Loop *TheLoop, Instruction *I, DebugLoc DL = {}) {
-  BasicBlock *CodeRegion = I ? I->getParent() : TheLoop->getHeader();
-  // If debug location is attached to the instruction, use it. Otherwise if DL
-  // was not provided, use the loop's.
-  if (I && I->getDebugLoc())
-    DL = I->getDebugLoc();
-  else if (!DL)
-    DL = TheLoop->getStartLoc();
-
-  return OptimizationRemarkAnalysis(PassName, RemarkName, DL, CodeRegion);
-}
-
 namespace llvm {
 
 /// Return the runtime value for VF.
@@ -754,67 +679,9 @@ Value *getRuntimeVF(IRBuilderBase &B, Type *Ty, ElementCount VF) {
   return B.CreateElementCount(Ty, VF);
 }
 
-void reportVectorizationFailure(const StringRef DebugMsg,
-                                const StringRef OREMsg, const StringRef ORETag,
-                                OptimizationRemarkEmitter *ORE,
-                                const Loop *TheLoop, Instruction *I) {
-  LLVM_DEBUG(debugVectorizationMessage("Not vectorizing: ", DebugMsg, I));
-  LoopVectorizeHints Hints(TheLoop, false /* doesn't matter */, *ORE);
-  ORE->emit(createLVAnalysis(LV_NAME, ORETag, TheLoop, I)
-            << "loop not vectorized: " << OREMsg);
-}
-
-void reportVectorizationInfo(const StringRef Msg, const StringRef ORETag,
-                             OptimizationRemarkEmitter *ORE,
-                             const Loop *TheLoop, Instruction *I, DebugLoc DL) {
-  LLVM_DEBUG(debugVectorizationMessage("", Msg, I));
-  LoopVectorizeHints Hints(TheLoop, false /* doesn't matter */, *ORE);
-  ORE->emit(createLVAnalysis(LV_NAME, ORETag, TheLoop, I, DL) << Msg);
-}
-
-/// Report successful vectorization of the loop. In case an outer loop is
-/// vectorized, prepend "outer" to the vectorization remark.
-static void reportVectorization(OptimizationRemarkEmitter *ORE, Loop *TheLoop,
-                                VectorizationFactor VF, unsigned IC) {
-  LLVM_DEBUG(debugVectorizationMessage(
-      "Vectorizing: ", TheLoop->isInnermost() ? "innermost loop" : "outer loop",
-      nullptr));
-  StringRef LoopType = TheLoop->isInnermost() ? "" : "outer ";
-  ORE->emit([&]() {
-    return OptimizationRemark(LV_NAME, "Vectorized", TheLoop->getStartLoc(),
-                              TheLoop->getHeader())
-           << "vectorized " << LoopType << "loop (vectorization width: "
-           << ore::NV("VectorizationFactor", VF.Width)
-           << ", interleaved count: " << ore::NV("InterleaveCount", IC) << ")";
-  });
-}
-
 } // end namespace llvm
 
 namespace llvm {
-
-// Loop vectorization cost-model hints how the epilogue/tail loop should be
-// lowered.
-enum EpilogueLowering {
-
-  // The default: allowing epilogues.
-  CM_EpilogueAllowed,
-
-  // Vectorization with OptForSize: don't allow epilogues.
-  CM_EpilogueNotAllowedOptSize,
-
-  // A special case of vectorisation with OptForSize: loops with a very small
-  // trip count are considered for vectorization under OptForSize, thereby
-  // making sure the cost of their loop body is dominant, free of runtime
-  // guards and scalar iteration overheads.
-  CM_EpilogueNotAllowedLowTripLoop,
-
-  // Loop hint indicating an epilogue is undesired, apply tail folding.
-  CM_EpilogueNotNeededFoldTail,
-
-  // Directive indicating we must either fold the epilogue/tail or not vectorize
-  CM_EpilogueNotAllowedFoldTail
-};
 
 /// LoopVectorizationCostModel - estimates the expected speedups due to
 /// vectorization.
@@ -827,9 +694,9 @@ class LoopVectorizationCostModel {
   friend class LoopVectorizationPlanner;
 
 public:
-  LoopVectorizationCostModel(EpilogueLowering SEL, Loop *L,
-                             PredicatedScalarEvolution &PSE, LoopInfo *LI,
-                             LoopVectorizationLegality *Legal,
+  LoopVectorizationCostModel(LoopVectorizationUtils::EpilogueLowering SEL,
+                             Loop *L, PredicatedScalarEvolution &PSE,
+                             LoopInfo *LI, LoopVectorizationLegality *Legal,
                              const TargetTransformInfo &TTI,
                              const TargetLibraryInfo *TLI, AssumptionCache *AC,
                              OptimizationRemarkEmitter *ORE,
@@ -1177,13 +1044,15 @@ public:
   /// Returns true if an epilogue is allowed (e.g., not prevented by
   /// optsize or a loop hint annotation).
   bool isEpilogueAllowed() const {
-    return EpilogueLoweringStatus == CM_EpilogueAllowed;
+    return EpilogueLoweringStatus == LoopVectorizationUtils::EpilogueAllowed;
   }
 
   /// Returns true if tail-folding is preferred over an epilogue.
   bool preferTailFoldedLoop() const {
-    return EpilogueLoweringStatus == CM_EpilogueNotNeededFoldTail ||
-           EpilogueLoweringStatus == CM_EpilogueNotAllowedFoldTail;
+    return EpilogueLoweringStatus ==
+               LoopVectorizationUtils::EpilogueNotNeededFoldTail ||
+           EpilogueLoweringStatus ==
+               LoopVectorizationUtils::EpilogueNotAllowedFoldTail;
   }
 
   /// Returns the TailFoldingStyle that is best for the current loop.
@@ -1217,8 +1086,9 @@ public:
       return;
     // If for some reason EVL mode is unsupported, fallback to an epilogue
     // if it's allowed, or DataWithoutLaneMask otherwise.
-    if (EpilogueLoweringStatus == CM_EpilogueAllowed ||
-        EpilogueLoweringStatus == CM_EpilogueNotNeededFoldTail)
+    if (EpilogueLoweringStatus == LoopVectorizationUtils::EpilogueAllowed ||
+        EpilogueLoweringStatus ==
+            LoopVectorizationUtils::EpilogueNotNeededFoldTail)
       ChosenTailFoldingStyle = TailFoldingStyle::None;
     else
       ChosenTailFoldingStyle = TailFoldingStyle::DataWithoutLaneMask;
@@ -1378,7 +1248,8 @@ private:
   /// or as a peel-loop to handle gaps in interleave-groups.
   /// Under optsize and when the trip count is very small we don't allow any
   /// iterations to execute in the scalar loop.
-  EpilogueLowering EpilogueLoweringStatus = CM_EpilogueAllowed;
+  LoopVectorizationUtils::EpilogueLowering EpilogueLoweringStatus =
+      LoopVectorizationUtils::EpilogueAllowed;
 
   /// Control finally chosen tail folding style.
   TailFoldingStyle ChosenTailFoldingStyle = TailFoldingStyle::None;
@@ -2896,7 +2767,8 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   if (Legal->getRuntimePointerChecking()->Need && TTI.hasBranchDivergence()) {
     // TODO: It may be useful to do since it's still likely to be dynamically
     // uniform if the target can skip.
-    reportVectorizationFailure(
+    LoopVectorizationUtils::reportVectorizationFailure(
+        LV_NAME,
         "Not inserting runtime ptr check for divergent target",
         "runtime pointer checks needed. Not enabled for divergent target",
         "CantVersionLoopWithDivergentTarget", ORE, TheLoop);
@@ -2904,15 +2776,18 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   }
 
   ScalarEvolution *SE = PSE.getSE();
-  ElementCount TC = getSmallConstantTripCount(SE, TheLoop);
+  ElementCount TC =
+      LoopVectorizationUtils::getSmallConstantTripCount(SE, TheLoop);
   unsigned MaxTC = PSE.getSmallConstantMaxTripCount();
-  if (!MaxTC && EpilogueLoweringStatus == CM_EpilogueAllowed)
-    MaxTC = getMaxTCFromNonZeroRange(PSE, TheLoop);
+  if (!MaxTC &&
+      EpilogueLoweringStatus == LoopVectorizationUtils::EpilogueAllowed)
+    MaxTC = LoopVectorizationUtils::getMaxTCFromNonZeroRange(PSE, TheLoop);
   LLVM_DEBUG(dbgs() << "LV: Found trip count: " << TC << '\n');
   if (TC != ElementCount::getFixed(MaxTC))
     LLVM_DEBUG(dbgs() << "LV: Found maximum trip count: " << MaxTC << '\n');
   if (TC.isScalar()) {
-    reportVectorizationFailure("Single iteration (non) loop",
+    LoopVectorizationUtils::reportVectorizationFailure(
+        LV_NAME, "Single iteration (non) loop",
         "loop trip count is one, irrelevant for vectorization",
         "SingleIterationLoop", ORE, TheLoop);
     return FixedScalableVFPair::getNone();
@@ -2927,8 +2802,8 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
           Legal->getWidestInductionType()->getScalarSizeInBits() &&
       SE->isKnownPredicate(CmpInst::ICMP_EQ, BTC,
                            SE->getMinusOne(BTC->getType()))) {
-    reportVectorizationFailure(
-        "Trip count computation wrapped",
+    LoopVectorizationUtils::reportVectorizationFailure(
+        LV_NAME, "Trip count computation wrapped",
         "backedge-taken count is -1, loop trip count wrapped to 0",
         "TripCountWrapped", ORE, TheLoop);
     return FixedScalableVFPair::getNone();
@@ -2939,20 +2814,21 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
          "No cost-modeling decisions should have been taken at this point");
 
   switch (EpilogueLoweringStatus) {
-  case CM_EpilogueAllowed:
+  case LoopVectorizationUtils::EpilogueAllowed:
     return Config.computeFeasibleMaxVF(MaxTC, UserVF, UserIC, false,
                                        requiresScalarEpilogue(true));
-  case CM_EpilogueNotAllowedFoldTail:
+  case LoopVectorizationUtils::EpilogueNotAllowedFoldTail:
     [[fallthrough]];
-  case CM_EpilogueNotNeededFoldTail:
+  case LoopVectorizationUtils::EpilogueNotNeededFoldTail:
     LLVM_DEBUG(dbgs() << "LV: tail-folding hint/switch found.\n"
                       << "LV: Not allowing epilogue, creating tail-folded "
                       << "vector loop.\n");
     break;
-  case CM_EpilogueNotAllowedLowTripLoop:
+  case LoopVectorizationUtils::EpilogueNotAllowedLowTripLoop:
     // fallthrough as a special case of OptForSize
-  case CM_EpilogueNotAllowedOptSize:
-    if (EpilogueLoweringStatus == CM_EpilogueNotAllowedOptSize)
+  case LoopVectorizationUtils::EpilogueNotAllowedOptSize:
+    if (EpilogueLoweringStatus ==
+        LoopVectorizationUtils::EpilogueNotAllowedOptSize)
       LLVM_DEBUG(dbgs() << "LV: Not allowing epilogue due to -Os/-Oz.\n");
     else
       LLVM_DEBUG(dbgs() << "LV: Not allowing epilogue due to low trip "
@@ -3034,7 +2910,8 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
       // If we have a low-trip-count, and the fixed-width VF is known to divide
       // the trip count but the scalable factor does not, use the fixed-width
       // factor in preference to allow the generation of a non-predicated loop.
-      if (EpilogueLoweringStatus == CM_EpilogueNotAllowedLowTripLoop &&
+      if (EpilogueLoweringStatus ==
+              LoopVectorizationUtils::EpilogueNotAllowedLowTripLoop &&
           NoScalarEpilogueNeeded(MaxFactors.FixedVF.getFixedValue())) {
         LLVM_DEBUG(dbgs() << "LV: Picking a fixed-width so that no tail will "
                              "remain for any chosen VF.\n");
@@ -3043,7 +2920,8 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
       }
     }
 
-    reportVectorizationFailure(
+    LoopVectorizationUtils::reportVectorizationFailure(
+        LV_NAME,
         "The trip count is below the minial threshold value.",
         "loop trip count is too low, avoiding vectorization", "LowTripCount",
         ORE, TheLoop);
@@ -3075,26 +2953,30 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
 
   // If there was a tail-folding hint/switch, but we can't fold the tail by
   // masking, fallback to a vectorization with an epilogue.
-  if (EpilogueLoweringStatus == CM_EpilogueNotNeededFoldTail) {
+  if (EpilogueLoweringStatus ==
+      LoopVectorizationUtils::EpilogueNotNeededFoldTail) {
     LLVM_DEBUG(dbgs() << "LV: Cannot fold tail by masking: vectorize with an "
                          "epilogue instead.\n");
-    EpilogueLoweringStatus = CM_EpilogueAllowed;
+    EpilogueLoweringStatus = LoopVectorizationUtils::EpilogueAllowed;
     return MaxFactors;
   }
 
-  if (EpilogueLoweringStatus == CM_EpilogueNotAllowedFoldTail) {
+  if (EpilogueLoweringStatus ==
+      LoopVectorizationUtils::EpilogueNotAllowedFoldTail) {
     LLVM_DEBUG(dbgs() << "LV: Can't fold tail by masking: don't vectorize\n");
     return FixedScalableVFPair::getNone();
   }
 
   if (TC.isZero()) {
-    reportVectorizationFailure(
+    LoopVectorizationUtils::reportVectorizationFailure(
+        LV_NAME,
         "unable to calculate the loop count due to complex control flow",
         "UnknownLoopCountComplexCFG", ORE, TheLoop);
     return FixedScalableVFPair::getNone();
   }
 
-  reportVectorizationFailure(
+  LoopVectorizationUtils::reportVectorizationFailure(
+      LV_NAME,
       "Cannot optimize for size and vectorize at the same time.",
       "cannot optimize for size and vectorize at the same time. "
       "Enable vectorization of this loop with '#pragma clang loop "
@@ -3209,8 +3091,9 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
         OS << " call to " << Name;
       } else
         OS << " " << Instruction::getOpcodeName(Opcode);
-      reportVectorizationInfo(OutString, "InvalidCost", ORE, OrigLoop, nullptr,
-                              R->getDebugLoc());
+      LoopVectorizationUtils::reportVectorizationInfo(
+          LV_NAME, OutString, "InvalidCost", ORE,
+          OrigLoop, nullptr, R->getDebugLoc());
       Tail = Tail.drop_front(Subset.size());
       Subset = {};
     } else
@@ -3738,7 +3621,8 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
     unsigned InterleaveCountLB = bit_floor(std::max(
         1u, std::min(AvailableTC / (EstimatedVF * 2), MaxInterleaveCount)));
 
-    if (getSmallConstantTripCount(PSE.getSE(), OrigLoop).isNonZero()) {
+    if (LoopVectorizationUtils::getSmallConstantTripCount(PSE.getSE(), OrigLoop)
+            .isNonZero()) {
       // If the best known trip count is exact, we select between two
       // prospective ICs, where
       //
@@ -5652,7 +5536,8 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
       UserVF.isScalable() ? MaxFactors.ScalableVF : MaxFactors.FixedVF;
   if (UserVF) {
     if (!ElementCount::isKnownLE(UserVF, MaxUserVF)) {
-      reportVectorizationInfo(
+      LoopVectorizationUtils::reportVectorizationInfo(
+          LV_NAME,
           "UserVF ignored because it may be larger than the maximal safe VF",
           "InvalidUserVF", ORE, OrigLoop);
     } else {
@@ -5681,8 +5566,10 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
         }
       }
       VPlans.clear();
-      reportVectorizationInfo("UserVF ignored because of invalid costs.",
-                              "InvalidCost", ORE, OrigLoop);
+      LoopVectorizationUtils::reportVectorizationInfo(
+          LV_NAME,
+          "UserVF ignored because of invalid costs.", "InvalidCost", ORE,
+          OrigLoop);
     }
   }
 
@@ -5798,7 +5685,8 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
     // simplified away.
     // TODO: Remove this code after stepping away from the legacy cost model and
     // adding code to simplify VPlans before calculating their costs.
-    auto TC = getSmallConstantTripCount(PSE.getSE(), OrigLoop);
+    auto TC = LoopVectorizationUtils::getSmallConstantTripCount(PSE.getSE(),
+                                                                OrigLoop);
     if (TC == VF && !CM.foldTailByMasking())
       addFullyUnrolledInstructionsToIgnore(OrigLoop, Legal->getInductionVars(),
                                            CostCtx.SkipCostComputation);
@@ -7237,10 +7125,7 @@ void LoopVectorizationPlanner::addMinimumIterationCheck(
 // for minimum code-size, 2) tail-folding compiler options, 3) loop
 // hints forcing tail-folding, and 4) a TTI hook that analyses whether the loop
 // is suitable for tail-folding.
-// This function determines epilogue lowering for the main vector loop while
-// epilogue lowering for the tail-folded epilogue path will be handled
-// separately in getEpilogueTailLowering.
-static EpilogueLowering
+static LoopVectorizationUtils::EpilogueLowering
 getEpilogueLowering(Function *F, Loop *L, LoopVectorizeHints &Hints,
                     bool OptForSize, TargetTransformInfo *TTI,
                     TargetLibraryInfo *TLI, LoopVectorizationLegality &LVL,
@@ -7249,54 +7134,54 @@ getEpilogueLowering(Function *F, Loop *L, LoopVectorizeHints &Hints,
   // don't look at hints or options, and don't request an epilogue.
   if (F->hasOptSize() ||
       (OptForSize && Hints.getForce() != LoopVectorizeHints::FK_Enabled))
-    return CM_EpilogueNotAllowedOptSize;
+    return LoopVectorizationUtils::EpilogueNotAllowedOptSize;
 
   // 2) If set, obey the directives
   if (TailFoldingPolicy.getNumOccurrences()) {
     switch (TailFoldingPolicy) {
     case TailFoldingPolicyTy::None:
-      return CM_EpilogueAllowed;
+      return LoopVectorizationUtils::EpilogueAllowed;
     case TailFoldingPolicyTy::PreferFoldTail:
-      return CM_EpilogueNotNeededFoldTail;
+      return LoopVectorizationUtils::EpilogueNotNeededFoldTail;
     case TailFoldingPolicyTy::MustFoldTail:
-      return CM_EpilogueNotAllowedFoldTail;
+      return LoopVectorizationUtils::EpilogueNotAllowedFoldTail;
     };
   }
 
   // 3) If set, obey the hints
   switch (Hints.getPredicate()) {
   case LoopVectorizeHints::FK_Enabled:
-    return CM_EpilogueNotNeededFoldTail;
+    return LoopVectorizationUtils::EpilogueNotNeededFoldTail;
   case LoopVectorizeHints::FK_Disabled:
-    return CM_EpilogueAllowed;
+    return LoopVectorizationUtils::EpilogueAllowed;
   };
 
   // 4) if the TTI hook indicates this is profitable, request tail-folding.
   TailFoldingInfo TFI(TLI, &LVL, IAI);
   if (TTI->preferTailFoldingOverEpilogue(&TFI))
-    return CM_EpilogueNotNeededFoldTail;
+    return LoopVectorizationUtils::EpilogueNotNeededFoldTail;
 
-  return CM_EpilogueAllowed;
+  return LoopVectorizationUtils::EpilogueAllowed;
 }
 
 /// Determine how to lower the epilogue for the vector epilogue loop.
 /// Check if there are any conflicts that prevent tail-folding the epilogue.
 /// \return CM_EpilogueNotNeededFoldTail if epilogue tail-folding is possible,
 /// otherwise CM_EpilogueAllowed.
-static EpilogueLowering
+static LoopVectorizationUtils::EpilogueLowering
 getEpilogueTailLowering(const LoopVectorizationCostModel &MainCM, const Loop *L,
                         OptimizationRemarkEmitter *ORE) {
   // Epilogue TF is only enabled when explicitly requested via command line.
   if (!EpilogueTailFoldingPolicy.getNumOccurrences() ||
       EpilogueTailFoldingPolicy != TailFoldingPolicyTy::PreferFoldTail)
-    return CM_EpilogueAllowed;
+    return LoopVectorizationUtils::EpilogueAllowed;
 
   if (!EnableEpilogueVectorization) {
-    reportVectorizationInfo(
+    LoopVectorizationUtils::reportVectorizationInfo(LV_NAME,
         "Options conflict, epilogue vectorization is disallowed while "
         "epilogue tail-folding allowed!\n",
         "UnsupportedEpilogueTailFoldingPolicy", ORE, L);
-    return CM_EpilogueAllowed;
+    return LoopVectorizationUtils::EpilogueAllowed;
   }
 
   // If scalar epilogue is explicitly required, we can't apply TF.
@@ -7304,18 +7189,18 @@ getEpilogueTailLowering(const LoopVectorizationCostModel &MainCM, const Loop *L,
     LLVM_DEBUG(dbgs() << "LV: Epilogue tail-folding can't be applied because "
                          "scalar epilogue is required\n"
                          "LV: Fall back to a normal epilogue\n");
-    return CM_EpilogueAllowed;
+    return LoopVectorizationUtils::EpilogueAllowed;
   }
 
   // If having epilogue is NOT allowed, then no epilogue to apply TF for.
   if (!MainCM.isEpilogueAllowed()) {
     LLVM_DEBUG(dbgs() << "LV: No epilogue to apply tail-folding for.\n"
                          "LV: Fall back to a normal epilogue\n");
-    return CM_EpilogueAllowed;
+    return LoopVectorizationUtils::EpilogueAllowed;
   }
 
   // We can apply tail-folding on the vectorized epilogue loop.
-  return CM_EpilogueNotNeededFoldTail;
+  return LoopVectorizationUtils::EpilogueNotNeededFoldTail;
 }
 
 // Emit a remark if there are stores to floats that required a floating point
@@ -7395,12 +7280,12 @@ static InstructionCost calculateEarlyExitCost(VPCostContext &CostCtx,
 ///     extra work when exiting the loop early, such as calculating the final
 ///     exit values of variables used outside the loop.
 ///  3. The middle block.
-static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
-                                        VectorizationFactor &VF, Loop *L,
-                                        PredicatedScalarEvolution &PSE,
-                                        VPCostContext &CostCtx, VPlan &Plan,
-                                        EpilogueLowering SEL,
-                                        std::optional<unsigned> VScale) {
+static bool
+isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks, VectorizationFactor &VF,
+                            Loop *L, PredicatedScalarEvolution &PSE,
+                            VPCostContext &CostCtx, VPlan &Plan,
+                            LoopVectorizationUtils::EpilogueLowering SEL,
+                            std::optional<unsigned> VScale) {
   InstructionCost RtC = Checks.getCost();
   if (!RtC.isValid())
     return false;
@@ -7480,7 +7365,7 @@ static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
   // is allowed, choose the next closest multiple of VF. This should partly
   // compensate for ignoring the epilogue cost.
   uint64_t MinTC = std::max(MinTC1, MinTC2);
-  if (SEL == CM_EpilogueAllowed)
+  if (SEL == LoopVectorizationUtils::EpilogueAllowed)
     MinTC = alignTo(MinTC, IntVF);
   VF.MinProfitableTripCount = ElementCount::getFixed(MinTC);
 
@@ -8000,9 +7885,11 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   if (LVL.hasUncountableEarlyExit()) {
     if (!EnableEarlyExitVectorization) {
-      reportVectorizationFailure("Auto-vectorization of loops with uncountable "
-                                 "early exit is not enabled",
-                                 "UncountableEarlyExitLoopsDisabled", ORE, L);
+      LoopVectorizationUtils::reportVectorizationFailure(
+          LV_NAME,
+          "Auto-vectorization of loops with uncountable "
+          "early exit is not enabled",
+          "UncountableEarlyExitLoopsDisabled", ORE, L);
       return false;
     }
   }
@@ -8023,16 +7910,18 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     BasicBlock *LoopLatch = L->getLoopLatch();
     if (IAI.requiresScalarEpilogue() ||
         any_of(LVL.getCountableExitingBlocks(), not_equal_to(LoopLatch))) {
-      reportVectorizationFailure("Auto-vectorization of early exit loops "
-                                 "requiring a scalar epilogue is unsupported",
-                                 "UncountableEarlyExitUnsupported", ORE, L);
+      LoopVectorizationUtils::reportVectorizationFailure(
+          LV_NAME,
+          "Auto-vectorization of early exit loops "
+          "requiring a scalar epilogue is unsupported",
+          "UncountableEarlyExitUnsupported", ORE, L);
       return false;
     }
   }
 
   // Check the function attributes and profiles to find out if this function
   // should be optimized for size.
-  EpilogueLowering SEL =
+  LoopVectorizationUtils::EpilogueLowering SEL =
       getEpilogueLowering(F, L, Hints, OptForSize, TTI, TLI, LVL, &IAI);
 
   // Check the loop for a trip count threshold: vectorize loops with a tiny trip
@@ -8049,19 +7938,20 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       LLVM_DEBUG(dbgs() << "\n");
       // Tail-folded loops are efficient even when the loop
       // iteration count is low. However, setting the epilogue policy to
-      // `CM_EpilogueNotAllowedLowTripLoop` prevents vectorizing loops
-      // with runtime checks. It's more effective to let
+      // `LoopVectorizationUtils::EpilogueNotAllowedLowTripLoop` prevents
+      // vectorizing loops with runtime checks. It's more effective to let
       // `isOutsideLoopWorkProfitable` determine if vectorization is
       // beneficial for the loop.
-      if (SEL != CM_EpilogueNotNeededFoldTail)
-        SEL = CM_EpilogueNotAllowedLowTripLoop;
+      if (SEL != LoopVectorizationUtils::EpilogueNotNeededFoldTail)
+        SEL = LoopVectorizationUtils::EpilogueNotAllowedLowTripLoop;
     }
   }
 
   // Check the function attributes to see if implicit floats or vectors are
   // allowed.
   if (F->hasFnAttribute(Attribute::NoImplicitFloat)) {
-    reportVectorizationFailure(
+    LoopVectorizationUtils::reportVectorizationFailure(
+        LV_NAME,
         "Can't vectorize when the NoImplicitFloat attribute is used",
         "loop not vectorized due to NoImplicitFloat attribute",
         "NoImplicitFloat", ORE, L);
@@ -8075,10 +7965,10 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   // additional fp-math flags can help.
   if (Hints.isPotentiallyUnsafe() &&
       TTI->isFPVectorizationPotentiallyUnsafe()) {
-    reportVectorizationFailure(
+    LoopVectorizationUtils::reportVectorizationFailure(
+        LV_NAME,
         "Potentially unsafe FP op prevents vectorization",
-        "loop not vectorized due to unsafe FP support.",
-        "UnsafeFP", ORE, L);
+        "loop not vectorized due to unsafe FP support.", "UnsafeFP", ORE, L);
     Hints.emitRemarkWithHints();
     return false;
   }
@@ -8113,13 +8003,13 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   LoopVectorizationPlanner LVP(L, LI, DT, TLI, *TTI, &LVL, CM, Config, IAI, PSE,
                                Hints, ORE);
 
-  EpilogueLowering EpilogueTailLoweringStatus =
+  LoopVectorizationUtils::EpilogueLowering EpilogueTailLoweringStatus =
       getEpilogueTailLowering(CM, L, ORE);
   if (EpilogueTailLoweringStatus ==
-      EpilogueLowering::CM_EpilogueNotNeededFoldTail) {
+      LoopVectorizationUtils::EpilogueLowering::EpilogueNotNeededFoldTail) {
     // TODO: Apply tail-folding on the vectorized epilogue loop.
     LLVM_DEBUG(dbgs() << "LV: epilogue tail-folding is not supported yet\n");
-    reportVectorizationInfo(
+    LoopVectorizationUtils::reportVectorizationInfo(LV_NAME,
         "The epilogue-tail-folding policy prefer-fold-tail is not supported "
         "yet, fall back to a normal epilogue",
         "UnsupportedEpilogueTailFoldingPolicy", ORE, L);
@@ -8306,7 +8196,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     });
   } else {
     // Report the vectorization decision.
-    reportVectorization(ORE, L, VF, IC);
+    LoopVectorizationUtils::reportVectorization(LV_NAME, ORE, L, VF.Width, IC);
   }
   if (ORE->allowExtraAnalysis(LV_NAME))
     checkMixedPrecision(L, ORE);

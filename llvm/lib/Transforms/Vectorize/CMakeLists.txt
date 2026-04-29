@@ -35,6 +35,7 @@ add_llvm_component_library(LLVMVectorize
   VPlanUnroll.cpp
   VPlanVerifier.cpp
   VPlanUtils.cpp
+  LoopVectorizationUtils.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Transforms
