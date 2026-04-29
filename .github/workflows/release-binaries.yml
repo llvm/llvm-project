@@ -39,9 +39,12 @@ on:
         required: true
         type: string
     secrets:
-      RELEASE_TASKS_USER_TOKEN:
-        description: "Secret used to check user permissions."
-        required: false
+      LLVM_TOKEN_GENERATOR_CLIENT_ID:
+        description: "Secret used to generate access tokens."
+        required: true
+      LLVM_TOKEN_GENERATOR_PRIVATE_KEY:
+        description: "Secret used to generate access tokens."
+        required: true
 
 
 permissions:
