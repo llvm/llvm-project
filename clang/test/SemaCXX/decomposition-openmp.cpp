@@ -22,7 +22,6 @@ void g() {
   }
 }
 
-// FIXME: OpenMP should support capturing structured bindings
 void h() {
   int i[2] = {};
   auto [a, b] = i;
