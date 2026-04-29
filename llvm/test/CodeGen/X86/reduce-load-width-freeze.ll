@@ -154,8 +154,8 @@ define i32 @and_multiuse_freeze_extload_no_narrow(ptr %p) {
   ret i32 %sel
 }
 
-define i32 @neg_and_multiuse_freeze_narrowing(ptr %p, ptr %q) {
-; CHECK-LABEL: neg_and_multiuse_freeze_narrowing:
+define i32 @and_multiuse_freeze_narrowing(ptr %p, ptr %q) {
+; CHECK-LABEL: and_multiuse_freeze_narrowing:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl (%rdi), %ecx
 ; CHECK-NEXT:    movzbl %cl, %eax
@@ -168,8 +168,8 @@ define i32 @neg_and_multiuse_freeze_narrowing(ptr %p, ptr %q) {
   ret i32 %masked
 }
 
-define i64 @neg_and_multiuse_freeze_i64_narrowing(ptr %p, ptr %q) {
-; CHECK-LABEL: neg_and_multiuse_freeze_i64_narrowing:
+define i64 @and_multiuse_freeze_i64_narrowing(ptr %p, ptr %q) {
+; CHECK-LABEL: and_multiuse_freeze_i64_narrowing:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq (%rdi), %rcx
 ; CHECK-NEXT:    movzbl %cl, %eax
@@ -180,4 +180,177 @@ define i64 @neg_and_multiuse_freeze_i64_narrowing(ptr %p, ptr %q) {
   %masked = and i64 %freeze, 255
   store i64 %freeze, ptr %q
   ret i64 %masked
+}
+
+define i32 @and_freeze_load_i32_to_i16(ptr %p) {
+; CHECK-LABEL: and_freeze_load_i32_to_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movzwl (%rdi), %eax
+; CHECK-NEXT:    retq
+  %load = load i32, ptr %p, align 4
+  %freeze = freeze i32 %load
+  %masked = and i32 %freeze, 65535
+  ret i32 %masked
+}
+
+define i8 @trunc_freeze_load_i16_to_i8(ptr %p) {
+; CHECK-LABEL: trunc_freeze_load_i16_to_i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movzbl (%rdi), %eax
+; CHECK-NEXT:    retq
+  %load = load i16, ptr %p, align 2
+  %freeze = freeze i16 %load
+  %trunc = trunc i16 %freeze to i8
+  ret i8 %trunc
+}
+
+define i16 @trunc_freeze_load_i32_to_i16(ptr %p) {
+; CHECK-LABEL: trunc_freeze_load_i32_to_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movzwl (%rdi), %eax
+; CHECK-NEXT:    retq
+  %load = load i32, ptr %p, align 4
+  %freeze = freeze i32 %load
+  %trunc = trunc i32 %freeze to i16
+  ret i16 %trunc
+}
+
+define i32 @sext_inreg_freeze_load_i16(ptr %p) {
+; CHECK-LABEL: sext_inreg_freeze_load_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movswl (%rdi), %eax
+; CHECK-NEXT:    retq
+  %load = load i32, ptr %p, align 4
+  %freeze = freeze i32 %load
+  %shl = shl i32 %freeze, 16
+  %ashr = ashr i32 %shl, 16
+  ret i32 %ashr
+}
+
+define i32 @and_freeze_load_shifted_mask(ptr %p) {
+; CHECK-LABEL: and_freeze_load_shifted_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movzbl 1(%rdi), %eax
+; CHECK-NEXT:    shll $8, %eax
+; CHECK-NEXT:    retq
+  %load = load i32, ptr %p, align 4
+  %freeze = freeze i32 %load
+  %masked = and i32 %freeze, 65280
+  ret i32 %masked
+}
+
+define i32 @and_freeze_load_unaligned(ptr %p) {
+; CHECK-LABEL: and_freeze_load_unaligned:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movzbl (%rdi), %eax
+; CHECK-NEXT:    retq
+  %load = load i32, ptr %p, align 1
+  %freeze = freeze i32 %load
+  %masked = and i32 %freeze, 255
+  ret i32 %masked
+}
+
+define i32 @trunc_freeze_load_store(ptr %p, ptr %q) {
+; CHECK-LABEL: trunc_freeze_load_store:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movzbl (%rdi), %eax
+; CHECK-NEXT:    movb %al, (%rsi)
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    retq
+  %load = load i16, ptr %p, align 4
+  %freeze = freeze i16 %load
+  %trunc = trunc i16 %freeze to i8
+  store i8 %trunc, ptr %q, align 1
+  ret i32 0
+}
+
+define i32 @and_freeze_atomic_load(ptr %p) {
+; CHECK-LABEL: and_freeze_atomic_load:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl (%rdi), %eax
+; CHECK-NEXT:    movzbl %al, %eax
+; CHECK-NEXT:    retq
+  %load = load atomic i32, ptr %p seq_cst, align 4
+  %freeze = freeze i32 %load
+  %masked = and i32 %freeze, 255
+  ret i32 %masked
+}
+
+define i32 @and_freeze_non_contiguous_mask(ptr %p) {
+; CHECK-LABEL: and_freeze_non_contiguous_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl (%rdi), %eax
+; CHECK-NEXT:    andl $170, %eax
+; CHECK-NEXT:    retq
+  %load = load i32, ptr %p, align 4
+  %freeze = freeze i32 %load
+  %masked = and i32 %freeze, 170
+  ret i32 %masked
+}
+
+define i32 @and_freeze_variable_mask(ptr %p, i32 %mask) {
+; CHECK-LABEL: and_freeze_variable_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    andl (%rdi), %eax
+; CHECK-NEXT:    retq
+  %load = load i32, ptr %p, align 4
+  %freeze = freeze i32 %load
+  %masked = and i32 %freeze, %mask
+  ret i32 %masked
+}
+
+; SRL/SRA through freeze are not yet folded because the freeze peek-through
+; happens after the SRL early-return in reduceLoadWidth.
+
+define i32 @srl_freeze_load_i32(ptr %p) {
+; CHECK-LABEL: srl_freeze_load_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl (%rdi), %eax
+; CHECK-NEXT:    shrl $8, %eax
+; CHECK-NEXT:    retq
+  %load = load i32, ptr %p, align 4
+  %freeze = freeze i32 %load
+  %srl = lshr i32 %freeze, 8
+  ret i32 %srl
+}
+
+define i32 @sra_freeze_load_i32(ptr %p) {
+; CHECK-LABEL: sra_freeze_load_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl (%rdi), %eax
+; CHECK-NEXT:    sarl $8, %eax
+; CHECK-NEXT:    retq
+  %load = load i32, ptr %p, align 4
+  %freeze = freeze i32 %load
+  %sra = ashr i32 %freeze, 8
+  ret i32 %sra
+}
+
+define i8 @trunc_srl_freeze_load(ptr %p) {
+; CHECK-LABEL: trunc_srl_freeze_load:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl (%rdi), %eax
+; CHECK-NEXT:    shrl $8, %eax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    retq
+  %load = load i32, ptr %p, align 4
+  %freeze = freeze i32 %load
+  %srl = lshr i32 %freeze, 8
+  %trunc = trunc i32 %srl to i8
+  ret i8 %trunc
+}
+
+define i16 @srl_freeze_load_i64_to_i16(ptr %p) {
+; CHECK-LABEL: srl_freeze_load_i64_to_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl (%rdi), %eax
+; CHECK-NEXT:    shrl $16, %eax
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    retq
+  %load = load i64, ptr %p, align 8
+  %freeze = freeze i64 %load
+  %srl = lshr i64 %freeze, 16
+  %trunc = trunc i64 %srl to i16
+  ret i16 %trunc
 }
