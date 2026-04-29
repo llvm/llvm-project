@@ -234,12 +234,12 @@ StringEntry *CompileUnit::getFileName(unsigned FileIdx,
 }
 
 llvm::Error CompileUnit::setPriority(uint64_t ObjFileIdx, uint64_t LocalIdx) {
-  if (ObjFileIdx >= std::numeric_limits<uint32_t>::max())
+  if (ObjFileIdx > std::numeric_limits<uint32_t>::max())
     return llvm::createStringError("cannot compute priority when number of "
-                                   "object files excteeds UIN32_MAX");
-  if (LocalIdx >= std::numeric_limits<uint32_t>::max())
+                                   "object files exceeds UINT32_MAX");
+  if (LocalIdx > std::numeric_limits<uint32_t>::max())
     return llvm::createStringError("cannot compute priority when number of "
-                                   "local index excteeds UIN32_MAX");
+                                   "local index exceeds UINT32_MAX");
 
   Priority = (ObjFileIdx << 32) | LocalIdx;
   return llvm::Error::success();
