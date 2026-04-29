@@ -1,0 +1,141 @@
+# Copyright Advanced Micro Devices, Inc.
+# SPDX-License-Identifier: MIT
+
+name: Multi-Arch CI - Windows
+
+on:
+  workflow_call:
+    inputs:
+      build_config:
+        type: string
+        description: >-
+          JSON object with build configuration for this platform. Fields:
+          artifact_group, per_family_info, dist_amdgpu_families,
+          build_variant_label, build_variant_cmake_preset,
+          build_variant_suffix, expect_failure, build_pytorch,
+          prebuilt_stages, baseline_run_id.
+      test_labels:
+        type: string
+      rocm_package_version:
+        type: string
+      test_type:
+        type: string
+      release_type:
+        description: 'Release type: "" for CI, or "dev", "nightly", "prerelease".'
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  copy_prebuilt_stages:
+    name: Copy Prebuilt Stages
+    if: ${{ fromJSON(inputs.build_config).prebuilt_stages != '' && fromJSON(inputs.build_config).baseline_run_id != '' }}
+    # TODO: Consider running on a Linux runner with --platform=windows to
+    #   avoid Windows runner setup overhead (setup-python ~51s).
+    runs-on: azure-windows-scale-rocm
+    defaults:
+      run:
+        shell: bash
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checking out repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.12"
+
+      - name: Install artifact manager dependencies
+        run: pip install boto3
+
+      - name: Configure AWS credentials for artifact uploads
+        uses: ./.github/actions/configure_aws_artifacts_credentials
+        with:
+          release_type: ${{ inputs.release_type }}
+
+      - name: Copy prebuilt stage artifacts
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          RELEASE_TYPE: ${{ inputs.release_type }}
+        run: |
+          python build_tools/artifact_manager.py copy \
+            --source-run-id=${{ fromJSON(inputs.build_config).baseline_run_id }} \
+            --stage="${{ fromJSON(inputs.build_config).prebuilt_stages }}" \
+            --amdgpu-families="${{ fromJSON(inputs.build_config).dist_amdgpu_families }}"
+
+  build_multi_arch_stages:
+    name: Build Multi-Arch Stages
+    needs: copy_prebuilt_stages
+    if: ${{ !cancelled() && !failure() }}
+    uses: ./.github/workflows/multi_arch_build_windows.yml
+    secrets: inherit
+    with:
+      matrix_per_family_json: ${{ toJSON(fromJSON(inputs.build_config).per_family_info) }}
+      dist_amdgpu_families: ${{ fromJSON(inputs.build_config).dist_amdgpu_families }}
+      artifact_group: ${{ fromJSON(inputs.build_config).artifact_group }}
+      build_variant_label: ${{ fromJSON(inputs.build_config).build_variant_label }}
+      build_variant_cmake_preset: ${{ fromJSON(inputs.build_config).build_variant_cmake_preset }}
+      build_variant_suffix: ${{ fromJSON(inputs.build_config).build_variant_suffix }}
+      expect_failure: ${{ fromJSON(inputs.build_config).expect_failure }}
+      prebuilt_stages: ${{ fromJSON(inputs.build_config).prebuilt_stages }}
+      rocm_package_version: ${{ inputs.rocm_package_version }}
+      release_type: ${{ inputs.release_type }}
+    permissions:
+      contents: read
+      id-token: write
+
+  validate_artifact_structure:
+    needs: [build_multi_arch_stages]
+    name: Validate Artifact Structure
+    # If we are expecting a build failure, do not run tests to save machine capacity.
+    if: ${{ !failure() && !cancelled() && fromJSON(inputs.build_config).expect_failure == false }}
+    uses: ./.github/workflows/test_artifacts_structure.yml
+    with:
+      amdgpu_families: ${{ fromJSON(inputs.build_config).dist_amdgpu_families }}
+      platform: windows
+      release_type: ${{ inputs.release_type }}
+
+  test_artifacts_per_family:
+    needs: [copy_prebuilt_stages, build_multi_arch_stages]
+    name: Test ${{ matrix.family_info.amdgpu_family }}
+    # If we are expecting a build failure, do not run tests to save machine capacity.
+    if: >-
+      ${{ !cancelled() && fromJSON(inputs.build_config).expect_failure == false &&
+      (needs.copy_prebuilt_stages.result == 'success' ||
+      needs.copy_prebuilt_stages.result == 'skipped') &&
+      needs.build_multi_arch_stages.result == 'success' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        family_info: ${{ fromJSON(inputs.build_config).per_family_info }}
+    uses: ./.github/workflows/test_artifacts.yml
+    with:
+      # Use architecture-specific artifact group for fetching per-arch artifacts
+      artifact_group: ${{ matrix.family_info.amdgpu_family }}
+      amdgpu_families: ${{ matrix.family_info.amdgpu_family }}
+      amdgpu_targets: ${{ matrix.family_info.amdgpu_targets }}
+      test_runs_on: ${{ matrix.family_info.test-runs-on }}
+      test_type: ${{ inputs.test_type }}
+      test_labels: ${{ inputs.test_labels }}
+      sanity_check_only_for_family: ${{ matrix.family_info.sanity_check_only_for_family }}
+      release_type: ${{ inputs.release_type }}
+
+  build_python_packages:
+    needs: [build_multi_arch_stages]
+    name: Build Python Packages
+    if: ${{ !failure() && !cancelled() && fromJSON(inputs.build_config).expect_failure == false }}
+    uses: ./.github/workflows/build_windows_python_packages.yml
+    with:
+      artifact_group: ${{ fromJSON(inputs.build_config).artifact_group }}
+      amdgpu_families: ${{ fromJSON(inputs.build_config).dist_amdgpu_families }}
+      multiarch_index: true
+      package_version: ${{ inputs.rocm_package_version }}
+      release_type: ${{ inputs.release_type }}
+    permissions:
+      contents: read
+      id-token: write

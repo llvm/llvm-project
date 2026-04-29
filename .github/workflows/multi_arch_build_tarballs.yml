@@ -1,0 +1,103 @@
+# Copyright Advanced Micro Devices, Inc.
+# SPDX-License-Identifier: MIT
+
+name: Build Multi-Arch Tarballs
+
+on:
+  workflow_dispatch:
+    inputs:
+      artifact_run_id:
+        description: "Run ID to fetch artifacts from (defaults to current run)"
+        type: string
+        default: ""
+      artifact_github_repo:
+        description: "GitHub repository for artifact_run_id"
+        type: string
+        default: ROCm/TheRock
+      dist_amdgpu_families:
+        description: "Semicolon-separated list of GPU families (e.g. 'gfx94X-dcgpu;gfx110X-all')"
+        type: string
+      platform:
+        type: choice
+        description: "Platform to fetch artifacts for"
+        options:
+          - linux
+          - windows
+        default: "linux"
+      package_version:
+        description: "ROCm package version string (e.g. '7.13.0.dev0+abc123')"
+        type: string
+      release_type:
+        description: 'Release type: "" for CI, or "dev", "nightly", "prerelease".'
+        type: string
+        default: ""
+  workflow_call:
+    inputs:
+      artifact_run_id:
+        type: string
+        default: ""
+      artifact_github_repo:
+        type: string
+        default: ""
+      dist_amdgpu_families:
+        type: string
+        required: true
+      platform:
+        type: string
+        default: "linux"
+      package_version:
+        type: string
+        required: true
+      release_type:
+        type: string
+        default: ""
+permissions:
+  contents: read
+
+run-name: Build Multi-Arch Tarballs (${{ inputs.dist_amdgpu_families }}, ${{ inputs.platform }})
+
+jobs:
+  build_tarballs:
+    name: Build Tarballs
+    runs-on: ${{ github.repository_owner == 'ROCm' && 'azure-linux-scale-rocm' || 'ubuntu-24.04' }}
+    permissions:
+      id-token: write
+    env:
+      ARTIFACT_RUN_ID: "${{ inputs.artifact_run_id != '' && inputs.artifact_run_id || github.run_id }}"
+      RELEASE_TYPE: ${{ inputs.release_type }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setting up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.12"
+
+      - name: Install Python requirements
+        run: pip install -r requirements.txt
+
+      - name: Build tarballs
+        run: |
+          python build_tools/build_tarballs.py \
+            --run-id="${{ env.ARTIFACT_RUN_ID }}" \
+            --run-github-repo="${{ inputs.artifact_github_repo }}" \
+            --dist-amdgpu-families="${{ inputs.dist_amdgpu_families }}" \
+            --platform="${{ inputs.platform }}" \
+            --package-version="${{ inputs.package_version }}" \
+            --output-dir="${{ github.workspace }}/tarballs"
+
+      - name: Configure AWS Credentials
+        uses: ./.github/actions/configure_aws_artifacts_credentials
+        with:
+          release_type: ${{ inputs.release_type }}
+
+      - name: Upload tarballs
+        id: upload
+        run: |
+          python build_tools/github_actions/upload_tarballs.py \
+            --input-tarballs-dir="${{ github.workspace }}/tarballs" \
+            --run-id="${{ github.run_id }}" \
+            --platform="${{ inputs.platform }}" \
+            --release-type="${{ inputs.release_type }}"

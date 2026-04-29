@@ -1,0 +1,187 @@
+name: Build Multi-Arch Native Linux Packages
+
+on:
+  workflow_call:
+    inputs:
+      dist_amdgpu_families:
+        description: "Semicolon-separated list of all GPU families (e.g., 'gfx94X-dcgpu;gfx120X-all')"
+        required: true
+        type: string
+      artifact_group:
+        type: string
+        description: "Artifact group (e.g. multi-arch-release)"
+        required: true
+      artifact_run_id:
+        description: "Workflow run id to download the artifacts from"
+        required: true
+        type: string
+      rocm_version:
+        description: "ROCm version to append to the package (8.0.0, 8.0.1rc1, ...)"
+        required: true
+        type: string
+      native_package_type:
+        description: "Package type (deb or rpm)"
+        required: true
+        type: string
+      package_suffix:
+        description: "The suffix to be added to package name (asan, tsan, static or rpath)"
+        required: false
+        type: string
+        default: ""
+      release_type:
+        description: "The type of release to build ('dev', 'nightly', or 'release'). Empty string for CI builds."
+        required: false
+        type: string
+        default: ""
+      repository:
+        description: "Repository to checkout. Otherwise, defaults to `github.repository`"
+        type: string
+        required: false
+      ref:
+        description: "Branch, tag or SHA to checkout. Defaults to the reference or SHA that triggered the workflow"
+        type: string
+        required: false
+
+permissions:
+  id-token: write
+  contents: read
+
+run-name: Build ${{ inputs.native_package_type }} packages (${{ inputs.rocm_version }}${{ inputs.release_type && format(', {0}', inputs.release_type) || '' }})
+
+jobs:
+  build_native_packages:
+    name: Build ${{ inputs.native_package_type }} packages
+    runs-on: ${{ github.repository_owner == 'ROCm' && 'azure-linux-scale-rocm' || 'ubuntu-24.04' }}
+    env:
+      ARTIFACT_RUN_ID: ${{ inputs.artifact_run_id }}
+      DIST_AMDGPU_FAMILIES: ${{ inputs.dist_amdgpu_families }}
+      PACKAGE_SUFFIX: ${{ inputs.package_suffix }}
+      OUTPUT_DIR: ${{ github.workspace }}/output
+      ARTIFACTS_DIR: ${{ github.workspace }}/output/artifacts
+      PACKAGE_DIST_DIR: ${{ github.workspace }}/output/packages
+      RELEASE_TYPE: ${{ inputs.release_type }}
+    steps:
+      - name: "Checking out repository"
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: ${{ inputs.repository || github.repository }}
+          ref: ${{ inputs.ref || '' }}
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: '3.12'
+
+      - name: Install Python requirements
+        run: |
+          pip install pyelftools boto3 jinja2
+
+      - name: Install System requirements
+        run: |
+          # Install the needed tools for creating rpm / deb packages
+          # Also install tools for creating repo files
+          sudo apt update
+          sudo apt install -y llvm
+          sudo apt install -y rpm debhelper-compat build-essential
+          sudo apt install -y dpkg-dev createrepo-c
+
+      - name: Determine S3 bucket and prefix
+        id: s3_config
+        run: |
+          python ./build_tools/packaging/linux/get_s3_config.py \
+            --release-type "${{ env.RELEASE_TYPE }}" \
+            --repository "${{ github.repository }}" \
+            --is-fork "${{ github.event.pull_request.head.repo.fork || 'false' }}" \
+            --pkg-type "${{ inputs.native_package_type }}" \
+            --artifact-id "${{ env.ARTIFACT_RUN_ID }}" \
+            --rocm-version "${{ inputs.rocm_version }}" \
+            --output-format github >> $GITHUB_OUTPUT
+
+      - name: Determine IAM role
+        id: iam_role
+        run: |
+          # ================================================================
+          # IAM Role Selection Logic
+          # ================================================================
+          # Determines which AWS IAM role to assume based on job_type from s3_config step.
+          #
+          # Role Mapping:
+          #   ├─ IF job_type == "ci"
+          #   │  └─ Use: therock-ci role
+          #   │     (For all CI buckets: therock-ci-artifacts, therock-ci-artifacts-external, therock-artifacts-internal)
+          #   │
+          #   └─ ELSE (job_type == dev/nightly/prerelease/release)
+          #      └─ Use: therock-${job_type} role
+          #         (For package buckets: therock-dev-packages, therock-nightly-packages, etc.)
+          #
+          # ================================================================
+
+          JOB_TYPE="${{ steps.s3_config.outputs.job_type }}"
+
+          if [[ "${JOB_TYPE}" == "ci" ]]; then
+            # CI builds use the shared CI role (for all artifact buckets)
+            IAM_ROLE="arn:aws:iam::692859939525:role/therock-ci"
+            echo "✓ Using CI role: ${IAM_ROLE}"
+          else
+            # Release builds use release-type-specific roles (for package buckets)
+            IAM_ROLE="arn:aws:iam::692859939525:role/therock-${JOB_TYPE}"
+            echo "✓ Using release-type role: ${IAM_ROLE}"
+          fi
+
+          echo "iam_role=${IAM_ROLE}" >> $GITHUB_OUTPUT
+
+      - name: Fetch Artifacts for all GPU families
+        run: |
+          echo "Fetching artifacts for build ${{ env.ARTIFACT_RUN_ID }}"
+
+          # Convert semicolon-separated to comma-separated
+          FAMILIES_CSV="${DIST_AMDGPU_FAMILIES//;/,}"
+          echo "Fetching artifacts for GPU families: ${FAMILIES_CSV}"
+
+          # Create artifacts directory
+          mkdir -p "${{ env.ARTIFACTS_DIR }}"
+
+          python ./build_tools/fetch_artifacts.py \
+            --run-id="${{ env.ARTIFACT_RUN_ID }}" \
+            --run-github-repo="${{ github.repository }}" \
+            --artifact-group="${{ inputs.artifact_group }}" \
+            --platform="linux" \
+            --amdgpu-targets="${FAMILIES_CSV}" \
+            --output-dir="${{ env.ARTIFACTS_DIR }}"
+
+      - name: Build Packages
+        id: build-packages
+        run: |
+          echo "Building ${{ inputs.native_package_type }} packages for all GPU families"
+          echo "Families: ${{ env.DIST_AMDGPU_FAMILIES }}"
+
+          # Pass the target families as-is (semicolon-separated)
+          # build_package.py's normalize_target_list() handles all separators
+          python ./build_tools/packaging/linux/build_package.py \
+            --dest-dir ${{ env.PACKAGE_DIST_DIR }} \
+            --rocm-version  ${{ inputs.rocm_version }} \
+            --target "${{ env.DIST_AMDGPU_FAMILIES }}" \
+            --artifacts-dir ${{ env.ARTIFACTS_DIR }} \
+            --pkg-type ${{ inputs.native_package_type }} \
+            --version-suffix ${{ env.ARTIFACT_RUN_ID }} \
+            --enable_kpack=false
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@ec61189d14ec14c8efccab744f656cffd0e33f37 # v6.1.0
+        with:
+          aws-region: us-east-2
+          role-to-assume: ${{ steps.iam_role.outputs.iam_role }}
+
+      - name: Upload Package repo to S3
+        id: upload-packages
+        run: |
+          echo "Uploading to S3 bucket: ${{ steps.s3_config.outputs.s3_bucket }}"
+          echo "Using prefix: ${{ steps.s3_config.outputs.s3_prefix }}"
+          echo "Job type: ${{ steps.s3_config.outputs.job_type }}"
+
+          python ./build_tools/packaging/linux/upload_package_repo.py \
+            --pkg-type ${{ inputs.native_package_type }} \
+            --s3-bucket ${{ steps.s3_config.outputs.s3_bucket }} \
+            --artifact-id ${{ env.ARTIFACT_RUN_ID }} \
+            --job ${{ steps.s3_config.outputs.job_type }} \
+            --s3-prefix "${{ steps.s3_config.outputs.s3_prefix }}"

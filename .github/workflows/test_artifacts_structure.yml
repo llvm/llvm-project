@@ -1,0 +1,97 @@
+# Copyright Advanced Micro Devices, Inc.
+# SPDX-License-Identifier: MIT
+
+name: Test Artifact Structure
+
+on:
+  workflow_dispatch:
+    inputs:
+      artifact_run_id:
+        type: string
+        description: "Run ID to fetch artifacts from (defaults to current run)"
+        default: ""
+      artifact_github_repo:
+        description: "GitHub repository for artifact_run_id"
+        type: string
+        default: ROCm/TheRock
+      amdgpu_families:
+        description: "amdgpu_families as a semicolon-separated list (e.g. 'gfx94X-dcgpu;gfx120X-all')"
+        type: string
+        default: ""
+      platform:
+        type: choice
+        description: "Platform to fetch artifacts for"
+        options:
+          - linux
+          - windows
+        default: "linux"
+      release_type:
+        description: 'Release type: "" for CI, or "dev", "nightly", "prerelease".'
+        type: string
+        default: ""
+  workflow_call:
+    inputs:
+      artifact_run_id:
+        type: string
+        default: ""
+      artifact_github_repo:
+        type: string
+        default: ""
+      amdgpu_families:
+        type: string
+        default: ""
+      platform:
+        type: string
+        default: "linux"
+      release_type:
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  test_artifact_structure:
+    name: "Validate artifact structure"
+    runs-on: ${{ github.repository_owner == 'ROCm' && 'azure-linux-scale-rocm' || 'ubuntu-24.04' }}
+    env:
+      ARTIFACT_RUN_ID: "${{ inputs.artifact_run_id != '' && inputs.artifact_run_id || github.run_id }}"
+      PLATFORM: ${{ inputs.platform }}
+      THEROCK_ARTIFACTS_DIR: ${{ github.workspace }}/.download_cache
+      RELEASE_TYPE: ${{ inputs.release_type }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: "ROCm/TheRock"
+          #ref: 'compiler/amd-staging'
+
+      - name: Setting up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.12"
+
+      - name: Install test requirements
+        run: |
+          pip install -r requirements-test.txt
+
+      - name: Fetch artifact archives (no extract)
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python ./build_tools/artifact_manager.py fetch \
+            --run-id="${{ env.ARTIFACT_RUN_ID }}" \
+            --run-github-repo="${{ inputs.artifact_github_repo }}" \
+            --stage=all \
+            --amdgpu-families="${{ inputs.amdgpu_families }}" \
+            --platform="${{ env.PLATFORM }}" \
+            --output-dir="${{ github.workspace }}" \
+            --no-extract
+          # NOTE: artifact_manager.py appends /.download_cache to --output-dir
+          # in --no-extract mode, so pass workspace root here so that
+          # artifacts land in THEROCK_ARTIFACTS_DIR ($workspace/.download_cache).
+
+      - name: Validate artifact structure
+        run: |
+          python -m pytest tests/test_artifact_structure.py \
+            -v --log-cli-level=info --timeout=300

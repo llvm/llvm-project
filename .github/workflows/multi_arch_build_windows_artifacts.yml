@@ -1,0 +1,372 @@
+# Copyright Advanced Micro Devices, Inc.
+# SPDX-License-Identifier: MIT
+
+# Reusable Workflow: Build Stage Artifacts
+#
+# This workflow builds TheRock stage artifacts for all stages.
+# Handles both generic stages (foundation, compiler-runtime, etc.) and
+# per-arch stages (math-libs) using conditional logic.
+#
+# Artifacts flow between stages via S3 using the artifact_manager.py tool.
+#
+# TODO: When kpack splitting is permanently enabled, change fetch commands to use
+# --generic-only instead of --amdgpu-families for efficiency. Subsequent build
+# stages only need generic (host) artifacts; device-specific kpacks are not
+# needed until final packaging.
+
+name: Build Stage Artifacts
+
+on:
+  workflow_call:
+    inputs:
+      stage_name:
+        type: string
+        required: true
+        description: "Stage name (e.g., foundation, math-libs, compiler-runtime)"
+      stage_display_name:
+        type: string
+        required: true
+        description: "Human-readable display name for the job"
+      timeout_minutes:
+        type: number
+        required: true
+        description: "Job timeout in minutes"
+      amdgpu_family:
+        type: string
+        required: false
+        default: ""
+        description: "GPU family for per-arch stages (empty for generic stages)"
+      dist_amdgpu_families:
+        type: string
+        required: true
+        description: "Semicolon-separated list of all GPU families for dist targets"
+      build_variant_cmake_preset:
+        type: string
+      rocm_package_version:
+        type: string
+        required: true
+        description: "ROCm package version string"
+      release_type:
+        description: 'Release type: "" for CI, or "dev", "nightly", "prerelease". Controls artifact bucket and IAM role.'
+        type: string
+        default: ""
+
+jobs:
+  build_stage:
+    name: ${{ inputs.stage_display_name }}
+    runs-on: azure-windows-scale-rocm
+    timeout-minutes: ${{ inputs.timeout_minutes }}
+    permissions:
+      id-token: write
+    defaults:
+      run:
+        shell: bash
+    env:
+      STAGE_NAME: ${{ inputs.stage_name }}
+      AMDGPU_FAMILIES: ${{ inputs.amdgpu_family }}
+      BUILD_DIR: B:\build
+      CCACHE_CONFIGPATH: ${{ github.workspace }}/.ccache/ccache.conf
+      CACHE_DIR: ${{ github.workspace }}/.cache
+      TEATIME_FORCE_INTERACTIVE: 0
+      RELEASE_TYPE: ${{ inputs.release_type }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: "ROCm/TheRock"
+          ref: 'compiler/amd-staging'
+      
+      - name: Update Submodule Pointer to the PR
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          git config --global --add safe.directory $PWD
+          # Fetch the latest commit SHA from the PR branch
+          PR_SHA=${{ github.event.pull_request.head.sha }}
+          # Update the submodule pointer using cacheinfo
+          git update-index --cacheinfo 160000,$PR_SHA,compiler/amd-llvm
+          git config --global user.email "z1-cciauto@amd.com"
+          git config --global user.name "Z1 cciauto"
+          git commit -m "Update submodule reference for compiler/amd-llvm"
+          git submodule update --init --recursive compiler/amd-llvm
+          # Verify the pointer update
+          git submodule status
+          git submodule
+
+      - name: Update Submodule Pointer at compiler/amd-llvm for manual debug
+        if: ${{ github.event_name != 'pull_request' && github.workflow == 'ROCK CI Windows Debug Support' }}
+        run: |
+          git config --global --add safe.directory $PWD
+          echo "sha: $GITHUB_SHA"
+          # Update the submodule pointer using cacheinfo
+          git update-index --cacheinfo 160000,$GITHUB_SHA,compiler/amd-llvm
+          git config --global user.email "z1-cciauto@amd.com"
+          git config --global user.name "Z1 cciauto"
+          git commit -m "Update submodule reference for compiler/amd-llvm using branch SHA"
+          # Verify the pointer update
+          git submodule update --init --recursive compiler/amd-llvm          
+          git submodule status
+          git submodule
+
+      - name: Download LLVM, SPIRV and HIPIFY PR's stored in file
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: multiple-pr-build-params
+          path: .
+
+      - name: Check for parameterised PR trigger
+        id: check_parameterised_trigger
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          if [ -f "./${{ github.run_id }}_PR_params.env" ]; then
+            echo "parameterised_trigger=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "parameterised_trigger=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Source the multiple PR's of params
+        if: ${{ github.event_name == 'workflow_dispatch' && steps.check_parameterised_trigger.outputs.parameterised_trigger == 'true' }}
+        run: |
+          set -a
+          source ./${{ github.run_id }}_PR_params.env
+          set +a
+          echo "LLVM_PR_URL=$LLVM_PR_URL" >> "$GITHUB_ENV"
+          echo "SPIRV_PR_URL=$SPIRV_PR_URL" >> "$GITHUB_ENV"
+          echo "HIPIFY_PR_URL=$HIPIFY_PR_URL" >> "$GITHUB_ENV"
+
+      - name: Update submodule pointers from provided parameter PR values
+        if: ${{ github.event_name == 'workflow_dispatch' && steps.check_parameterised_trigger.outputs.parameterised_trigger == 'true' }}
+        run: |
+          git config --global --add safe.directory "$PWD"
+          # Function to get SHA with git-ls
+          get_pr_sha() {
+             local pr_url="$1"
+             local base_repo_url=$(echo "$pr_url" | sed 's|/pull/.*||')
+             local pr_num=$(echo "$pr_url" | sed 's|.*/pull/||')
+             git ls-remote "${base_repo_url}.git" "refs/pull/${pr_num}/head" | awk '{print $1}'
+          }
+
+          # LLVM PR
+          LLVM_SHA="$(get_pr_sha "$LLVM_PR_URL")"
+          echo "LLVM head SHA: $LLVM_SHA"
+          git update-index --cacheinfo 160000,"$LLVM_SHA","compiler/amd-llvm"
+
+          # SPIRV PR
+          if [[ -n "$SPIRV_PR_URL" ]]; then
+              SPIRV_SHA="$(get_pr_sha "$SPIRV_PR_URL")"
+              echo "SPIRV head SHA: $SPIRV_SHA"
+              git update-index --cacheinfo 160000,"$SPIRV_SHA","compiler/spirv-llvm-translator"
+          else
+              SPIRV_SHA="$(git ls-remote https://github.com/ROCm/SPIRV-LLVM-Translator.git refs/heads/amd-staging | awk '{print $1}')"
+              echo "SPIRV PR NOT Passed, defaulting to the amd-staging tip : $SPIRV_SHA"
+              git update-index --cacheinfo 160000,"$SPIRV_SHA","compiler/spirv-llvm-translator"
+          fi
+
+          # HIPIFY PR
+          if [[ -n "$HIPIFY_PR_URL" ]]; then
+              HIPIFY_SHA="$(get_pr_sha "$HIPIFY_PR_URL")"
+              echo "HIPIFY head SHA: $HIPIFY_SHA"
+              git update-index --cacheinfo 160000,"$HIPIFY_SHA","compiler/hipify"
+          else
+              HIPIFY_SHA="$(git ls-remote https://github.com/ROCm/HIPIFY.git refs/heads/amd-staging | awk '{print $1}')"
+              echo "HIPIFY PR NOT Passed, defaulting to the amd-staging tip : $HIPIFY_SHA"
+              git update-index --cacheinfo 160000,"$HIPIFY_SHA","compiler/hipify"
+          fi
+          git config --global user.email "z1-cciauto@amd.com"
+          git config --global user.name "Z1 cciauto"
+          git commit -m "Update submodule references from PR URLs"
+          git submodule update --init --recursive compiler/amd-llvm          
+          git submodule status
+          git submodule
+
+      - name: "Map Current Directory to L Drive"
+        id: subst
+        shell: cmd
+        run: |
+          REM Get the current working directory
+          set currentDir=%cd%
+          REM Substitute the current directory with L: drive
+          subst L: %currentDir%
+          cd L:
+          dir L:
+          wmic logicaldisk get name
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.12"
+
+      - name: Install python deps
+        run: pip install -r requirements.txt
+
+      - name: Install requirements
+        run: |
+          choco source disable -n=chocolatey
+          choco source add -n=internal -s http://10.0.167.96:8081/repository/choco-group/ --priority=1
+          choco install --no-progress -y ccache
+          # ninja pinned due to a bug in the 1.13.0 release:
+          # https://github.com/ninja-build/ninja/issues/2616
+          choco install --no-progress -y ninja --version 1.12.1
+          choco install --no-progress -y strawberryperl
+          echo "$PATH;C:\Strawberry\c\bin" >> $GITHUB_PATH
+          choco install --no-progress -y pkgconfiglite
+
+      - uses: iterative/setup-dvc@4bdfd2b0f6f1ad7e08afadb03b1a895c352a5239 # v2.0.0
+        with:
+          version: '3.62.0'
+
+      # After other installs, so MSVC gets priority in the PATH.
+      - name: Configure MSVC
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
+
+      - name: Adjust git config
+        run: |
+          git config --global core.symlinks true
+          git config --global core.longpaths true
+          git config fetch.parallel 10
+
+      - name: Runner health status
+        run: |
+          python build_tools/health_status.py
+
+      - name: Remove ununsed existing patchces									 
+        run: |
+          rm -fv patches/amd-mainline/llvm-project/0003-HACK-Handle-ROCM-installation-layout-of-lib-llvm-bin.patch
+          rm -fv patches/amd-mainline/llvm-project/0009-Add-gcc-toolset-13-prefix-detection.patch
+          rm -fv patches/amd-mainline/llvm-project/0001-Ensure-to-use-libamdhip64-with-major-version.patch
+
+      #- name: Setup ccache
+      #  run: |
+      #    ./build_tools/setup_ccache.py \
+      #      --release-type "${{ inputs.release_type }}" \
+      #      --dir "$(dirname $CCACHE_CONFIGPATH)" \
+      #      --local-path "$CACHE_DIR/ccache"
+
+      - name: Setup ccache
+        run: |
+          python ./build_tools/setup_ccache.py \
+            --config-preset "github-oss-presubmit" \
+            --dir "$(dirname $CCACHE_CONFIGPATH)" \
+            --local-path "$CACHE_DIR/ccache" \
+            --log-dir "${BUILD_DIR}/logs/ccache"
+          
+      # Note: no AWS credentials should be needed here since our CI buckets
+      # all currently have public read access.
+      - name: Fetch inbound artifacts
+        run: |
+          python build_tools/artifact_manager.py fetch \
+            --run-id="${{ github.run_id }}" \
+            --stage="${STAGE_NAME}" \
+            --amdgpu-families="${{ inputs.amdgpu_family }}" \
+            --output-dir="${BUILD_DIR}" \
+            --bootstrap
+
+      - name: Fetch sources
+        timeout-minutes: 30
+        run: |
+          git config fetch.parallel 10
+          git config --global core.symlinks true
+          git config --global core.longpaths true          
+          python build_tools/fetch_sources.py --stage ${STAGE_NAME} --jobs 12 --depth 1
+
+      - name: TheRock and llvm SHA
+        if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
+        run: |
+             git config --global --add safe.directory $PWD
+             git log --oneline -1
+             ls -l compiler/amd-llvm
+             cd compiler/amd-llvm/llvm
+             ls -l
+             git log --oneline -3
+             cd -
+
+      - name: Get stage configuration
+        id: stage_config
+        run: |
+          python build_tools/configure_stage.py \
+            --stage=${STAGE_NAME} \
+            --amdgpu-families="${{ inputs.amdgpu_family }}" \
+            --dist-amdgpu-families="${{ inputs.dist_amdgpu_families }}" \
+            --gha-output
+
+      - name: Install stage python deps
+        if: ${{ steps.stage_config.outputs.pip_install_cmd }}
+        run: pip install ${{ steps.stage_config.outputs.pip_install_cmd }}
+
+      - name: Configure PR Projects
+        if: ${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.test_type != 'full') }}
+        env:
+          cmake_preset: ${{ inputs.build_variant_cmake_preset }}
+          amdgpu_families: ${{ inputs.amdgpu_families }}
+          package_version: ${{ inputs.package_version }}
+          #extra_cmake_options: ${{ inputs.extra_cmake_options }}
+          extra_cmake_options: "-DTHEROCK_ENABLE_ALL=OFF -DTHEROCK_ENABLE_COMPILER=ON -DTHEROCK_ENABLE_HIP_RUNTIME=ON -DTHEROCK_ENABLE_PRIM=ON -DTHEROCK_ENABLE_BLAS=ON -DTHEROCK_ENABLE_RAND=ON -DTHEROCK_ENABLE_SOLVER=ON -DTHEROCK_ENABLE_SPARSE=ON -DTHEROCK_ENABLE_SYSDEPS=OFF  -DTHEROCK_ENABLE_COMPOSABLE_KERNEL=OFF -DTHEROCK_ENABLE_OCL_RUNTIME=ON  -DTHEROCK_ENABLE_MATH_LIBS=ON -DLLVM_SMREV_REPO='' -DLLVM_SMREV_REVISION=''"        
+        run: |
+          cmake -B "${BUILD_DIR}" -S . -GNinja \
+            --preset=${{ inputs.build_variant_cmake_preset }} \
+            -DTHEROCK_PACKAGE_VERSION=${{ inputs.rocm_package_version }} \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            ${{ steps.stage_config.outputs.cmake_args }}
+
+      - name: Configure All Projects
+        if: ${{ github.event_name != 'pull_request' && inputs.test_type == 'full' }}
+        env:
+          cmake_preset: ${{ inputs.build_variant_cmake_preset }}
+          amdgpu_families: ${{ inputs.amdgpu_families }}
+          package_version: ${{ inputs.package_version }}
+          extra_cmake_options: ${{ inputs.extra_cmake_options }}
+        run: |
+          # clear cache before build and after download
+          cd L:
+          ccache -z
+          cmake -B 'B:\build' -GNinja -S 'L:\' --preset windows-release -DTHEROCK_AMDGPU_FAMILIES=gfx1151 '-DCMAKE_C_COMPILER=C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\/bin/Hostx64/x64/cl.exe' '-DCMAKE_CXX_COMPILER=C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\/bin/Hostx64/x64/cl.exe' '-DCMAKE_LINKER=C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\/bin/Hostx64/x64/link.exe' -DTHEROCK_BACKGROUND_BUILD_JOBS=4
+
+      - name: Build stage
+        run: |
+          cd L:
+          python build_tools/memory_monitor.py --phase Build -- \
+            cmake --build "${BUILD_DIR}" --target stage-${STAGE_NAME} therock-artifacts -- -k 0
+
+      - name: Report
+        if: ${{ !cancelled() }}
+        run: |
+          echo "CCache Stats:"
+          ccache -s -v
+          echo "Artifacts:"
+          ls -lh "${BUILD_DIR}"/artifacts/*.tar.xz 2>/dev/null || echo "No artifacts found"
+
+
+      #- name: Configure AWS credentials for artifact uploads
+      #  if: ${{ always() }}
+      #  uses: ./.github/actions/configure_aws_artifacts_credentials
+      #  with:
+      #    release_type: ${{ inputs.release_type }}
+
+      - name: Configure AWS Credentials for artifact upload - temp
+        uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708 # v5.1.1
+        with:
+          aws-region: us-east-2
+          role-to-assume: arn:aws:iam::692859939525:role/therock-ci-external
+          
+      # TODO(#3336): Attempt upload `always()`?
+      #   * If some part of the build failed, partial artifacts may be useful for debugging.
+      #   * This script fails if `build_dir / "artifacts"` does not exist. That's useful
+      #     if the build succeeded but did not produce artifacts. That's _not_ useful
+      #     if the workflow failed or was cancelled before the build even started though.
+
+      - name: Push stage artifacts
+        run: |
+          python build_tools/artifact_manager.py push --run-id ${{ github.run_id }} \
+            --stage="${STAGE_NAME}" \
+            --build-dir="${BUILD_DIR}"
+
+      - name: Upload stage logs
+        if: ${{ always() }}
+        run: |
+          python build_tools/github_actions/post_stage_upload.py \
+            --run-id=${{ github.run_id }} \
+            --stage="${STAGE_NAME}" \
+            --build-dir="${BUILD_DIR}" \
+            --amdgpu-family="${AMDGPU_FAMILIES}"

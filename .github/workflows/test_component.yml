@@ -1,3 +1,6 @@
+# Copyright Advanced Micro Devices, Inc.
+# SPDX-License-Identifier: MIT
+
 name: Test component
 
 on:
@@ -10,14 +13,20 @@ on:
         type: string
       amdgpu_families:
         type: string
+      amdgpu_targets:
+        type: string
+        default: ""
+      test_retry_count:
+        type: number          
       test_runs_on:
         type: string
       platform:
         type: string
       component:
         type: string
-      test_retry_count:
-        type: number
+      release_type:
+        type: string
+        default: ""
       default_container_image:
         type: string
         default: "ghcr.io/rocm/no_rocm_image_ubuntu24_04@sha256:4150afe4759d14822f0e3f8930e1124f26e11f68b5c7b91ec9a02b20b1ebbb98"
@@ -52,12 +61,14 @@ jobs:
         --group-add video
         --device /dev/kfd
         --device /dev/dri
+        --group-add 993
         --group-add 992
         --group-add 110
         --ulimit memlock=-1:-1
         --security-opt seccomp=unconfined
         --env-file /etc/podinfo/gha-gpu-isolation-settings
         --user 0:0
+        ${{ fromJSON(inputs.component).container_options }}
     strategy:
       fail-fast: false
       matrix:
@@ -85,7 +96,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: "ROCm/TheRock"
-          ref: 'compiler/amd-staging'
+          ref: 'compiler/amd-staging'          
           sparse-checkout: build_tools
           path: "prejob"
 
@@ -103,15 +114,19 @@ jobs:
 
       - name: Run setup test environment workflow
         timeout-minutes: 15
+        env:
+          RETRY_THIS_STEP: "true"
+          STEP_TIMEOUT_MINUTES: "15" # should match timeout-minutes specified above at this step
         uses: './.github/actions/setup_test_environment'
         with:
           ARTIFACT_RUN_ID: ${{ env.ARTIFACT_RUN_ID }}
+          # TODO(#3381): revert back to `inputs.artifact_group` once issue is resolved
           ARTIFACT_GROUP: ${{ inputs.amdgpu_families }}
           AMDGPU_TARGETS: ${{ inputs.amdgpu_targets }}
           OUTPUT_ARTIFACTS_DIR: ${{ env.OUTPUT_ARTIFACTS_DIR }}
           VENV_DIR: ${{ env.VENV_DIR }}
           FETCH_ARTIFACT_ARGS: ${{ fromJSON(inputs.component).fetch_artifact_args }}
-          IS_PR_FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
+          RELEASE_TYPE: ${{ inputs.release_type }}
 
       # safe.directory must be set before Runner Health Status
       - name: Adjust git config
@@ -128,35 +143,59 @@ jobs:
         run: |
           python ./build_tools/print_driver_gpu_info.py
 
+      - name: Setup Additional Requirements
+        if: ${{ fromJSON(inputs.component).additional_requirements_files != '' }}
+        run: |
+          python ./build_tools/install_additional_requirements.py \
+            --requirements-files ${{ join(fromJSON(inputs.component).additional_requirements_files, ',') }}
+
+        # TODO(#3755): Clean this up after final sanitizer environment variable flags are determined
+      - name: Enable sanitizer-specific test flags
+        if: ${{ contains(inputs.artifact_group, 'asan') }}
+        run: |
+          echo "ASAN_OPTIONS=detect_odr_violation=0:quarantine_size_mb=600" >> $GITHUB_ENV
+          echo "HSA_XNACK=1" >> $GITHUB_ENV
+          echo "ASAN_SYMBOLIZER_PATH=${{ env.OUTPUT_ARTIFACTS_DIR }}/llvm/bin/llvm-symbolizer" >> $GITHUB_ENV
+
       - name: Test
+        id: test
         timeout-minutes: ${{ fromJSON(inputs.component).timeout_minutes }}
         env:
           SHARD_INDEX: ${{ matrix.shard }}
           TOTAL_SHARDS: ${{ fromJSON(inputs.component).total_shards }}
           TEST_TYPE: ${{ fromJSON(inputs.component).test_type }}
+          TEST_COMPONENT: ${{ fromJSON(inputs.component).job_name }}
+          ROCM_KPACK_DEBUG: "1"
+          # Windows hip-tests (PAL=1, ROCR=0) set this via matrix; other components
+          # leave it empty. #3587
+          GPU_ENABLE_PAL: ${{ fromJSON(inputs.component).gpu_enable_pal }}
+          RETRY_THIS_STEP: "true"
+          RETRY_COUNT: "1"
+          RETRY_DELAY: "7"
+          STEP_TIMEOUT_MINUTES: ${{ fromJSON(inputs.component).timeout_minutes }}
+          STEP_NAME: >-
+            Test ${{ fromJSON(inputs.component).job_name }}
+            (shard ${{ matrix.shard }}/${{ fromJSON(inputs.component).total_shards }})
+            (${{ inputs.amdgpu_families }})
+            ${{ fromJSON(inputs.component).expect_failure == true && '(xfail)' || '' }}
         run: |
-          cat > run_test_script.sh <<EOF
-          ${{ fromJSON(inputs.component).test_script }}
-          EOF
-          chmod +x run_test_script.sh
-          attempts_count=${{ inputs.test_retry_count }}
-          exit_code=0
-          for attempt in $(seq 1 "$attempts_count"); do
-            echo "Running test (attempt ${attempt}/${attempts_count}) for shard ${SHARD_INDEX}/${TOTAL_SHARDS} (${TEST_TYPE})"
+          python ./build_tools/memory_monitor.py --phase "Test ${{ fromJSON(inputs.component).job_name }}" -- \
+          bash -c '${{ fromJSON(inputs.component).test_script }}'
 
-            if ./run_test_script.sh; then
-              exit_code=0
-              break
-            else
-              exit_code=$?
-              if [ "$attempt" -lt "$attempts_count" ]; then
-                echo "Attempt ${attempt} failed with exit code ${exit_code}. Retrying in 20 sec…"
-                sleep 20
-              fi
-            fi
-          done
-          rm -f run_test_script.sh
-          exit "$exit_code"
+
+      - name: Print test reproduction command
+        if: ${{ failure() && steps.test.outcome == 'failure' }}
+        run: |
+          python ./build_tools/github_actions/reproduce_test_failure.py \
+            --run-id "${{ env.ARTIFACT_RUN_ID }}" \
+            --repository "${{ github.repository }}" \
+            --amdgpu-family "${{ inputs.amdgpu_families }}" \
+            --test-script "${{ fromJSON(inputs.component).test_script }}" \
+            --shard-index "${{ matrix.shard }}" \
+            --total-shards "${{ fromJSON(inputs.component).total_shards }}" \
+            --test-type "${{ fromJSON(inputs.component).test_type }}" \
+            --print-cmd \
+            ${{ fromJSON(inputs.component).fetch_artifact_args && format('--fetch-artifact-args="{0}"', fromJSON(inputs.component).fetch_artifact_args) || '' }}
 
       # GitHub's 'Complete job' step is unaware of launched executables
       # and will fail to clean up orphan processes.

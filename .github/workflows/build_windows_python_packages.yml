@@ -1,21 +1,37 @@
+# Copyright Advanced Micro Devices, Inc.
+# SPDX-License-Identifier: MIT
+
 name: Build Windows Python Packages
 
 on:
   workflow_dispatch:
     inputs:
       artifact_github_repo:
-        description: GitHub repository for artifact_run_id
+        description: "GitHub repository for artifact_run_id"
         type: string
         default: ROCm/TheRock
       artifact_run_id:
-        description: Workflow run ID to download artifacts from
+        description: "artifact_run_id to download artifacts from"
         type: string
         default: "17865324892" # TODO: default to the most recent successful run (using a script)
       artifact_group:
-        description: "The artifact group to build (ex: gfx94X-dcgpu, gfx101X-dgpu, gfx1151, gfx120X-all)"
+        description: "artifact_group to build (e.g. 'gfx94X-dcgpu' for single family builds, 'multi-arch-release' for multi-arch builds with 'amdgpu_families' set)"
         type: string
+      amdgpu_families:
+        description: "amdgpu_families for multi-arch builds as a semicolon-separated list (e.g. 'gfx94X-dcgpu;gfx120X-all'). Leave empty for single-family builds (those only use artifact_group)"
+        type: string
+        default: ""
+      multiarch_index:
+        description: "Enable multi-arch indexing (generates per-family indexes)"
+        type: boolean
+        default: false
       package_version:
+        description: "package_version to set on packages, e.g. '7.13.0.dev0+dbd7369489260265fc6ddfc9d0de1262a95fe974'"
         type: string
+      release_type:
+        description: 'Release type: "" for CI, or "dev", "nightly", "prerelease".'
+        type: string
+        default: ""
   workflow_call:
     inputs:
       artifact_github_repo:
@@ -25,46 +41,84 @@ on:
         default: ""
       artifact_group:
         type: string
+      amdgpu_families:
+        type: string
+        default: ""
+      multiarch_index:
+        type: boolean
+        default: false
       package_version:
         type: string
+      release_type:
+        type: string
+        default: ""
+    outputs:
+      package_find_links_url:
+        description: URL for pip --find-links to install built packages
+        value: ${{ jobs.build_rocm_wheels.outputs.package_find_links_url }}
+      kpack_split:
+        description: "true if this is a kpack-split flat build, false for legacy per-family"
+        value: ${{ jobs.build_rocm_wheels.outputs.kpack_split }}
 
 permissions:
   contents: read
 
+run-name: Build Windows Python Packages (${{ inputs.artifact_group }}, ${{ inputs.package_version }})
+
 jobs:
-  build:
+  build_rocm_wheels:
     name: Build Python | ${{ inputs.artifact_group }}
     runs-on: ${{ github.repository_owner == 'ROCm' && 'azure-windows-scale-rocm' || 'windows-2022' }}
+    permissions:
+      id-token: write
+    outputs:
+      package_find_links_url: ${{ steps.upload.outputs.package_find_links_url }}
+      kpack_split: ${{ steps.upload.outputs.kpack_split }}
     env:
       ARTIFACT_RUN_ID: "${{ inputs.artifact_run_id != '' && inputs.artifact_run_id || github.run_id }}"
       ARTIFACTS_DIR: "${{ github.workspace }}/artifacts"
       PACKAGES_DIR: "${{ github.workspace }}/packages"
+      RELEASE_TYPE: ${{ inputs.release_type }}
     defaults:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: "ROCm/TheRock"
-          ref: 'compiler/amd-staging'
-      - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
+          
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: '3.12'
 
       - name: Install Python requirements
-        run: pip install boto3 packaging piprepo setuptools
+        run: pip install -r requirements.txt
 
-      # Note: we could fetch "all" artifacts if we wanted to include more files
       - name: Fetch artifacts
-        env:
-          IS_PR_FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
         run: |
-          python ./build_tools/fetch_artifacts.py \
-            --run-github-repo=${{ inputs.artifact_github_repo }} \
-            --run-id=${{ env.ARTIFACT_RUN_ID }} \
-            --artifact-group=${{ inputs.artifact_group }} \
-            --output-dir="${{ env.ARTIFACTS_DIR }}" \
-            _dev_ _lib_ _run_
+          if [ -n "${{ inputs.amdgpu_families }}" ]; then
+            # Multi-arch mode: use artifact_manager.py to fetch all families
+            echo "Fetching artifacts for multiple families: ${{ inputs.amdgpu_families }}"
+            python ./build_tools/artifact_manager.py fetch \
+              --run-id="${{ env.ARTIFACT_RUN_ID }}" \
+              --run-github-repo="${{ inputs.artifact_github_repo }}" \
+              --stage=all \
+              --amdgpu-families="${{ inputs.amdgpu_families }}" \
+              --expand-family-to-targets \
+              --output-dir="${{ github.workspace }}"
+              # NOTE: artifact_manager.py appends /artifacts to --output-dir
+              # in non-flatten mode, so pass workspace root here so that
+              # artifacts land in ARTIFACTS_DIR ($workspace/artifacts).
+          else
+            # Single-family mode: use fetch_artifacts.py (backward compatible)
+            echo "Fetching artifacts for single family: ${{ inputs.artifact_group }}"
+            python ./build_tools/fetch_artifacts.py \
+              --run-github-repo="${{ inputs.artifact_github_repo }}" \
+              --run-id="${{ env.ARTIFACT_RUN_ID }}" \
+              --artifact-group="${{ inputs.artifact_group }}" \
+              --output-dir="${{ env.ARTIFACTS_DIR }}"
+          fi
 
       - name: Build Python packages
         run: |
@@ -73,8 +127,19 @@ jobs:
             --dest-dir="${{ env.PACKAGES_DIR }}" \
             --version="${{ inputs.package_version }}"
 
-      - name: Inspect Python packages
-        run: |
-          ls -la "${{ env.PACKAGES_DIR }}"
+      - name: Configure AWS Credentials
+        uses: ./.github/actions/configure_aws_artifacts_credentials
+        with:
+          release_type: ${{ inputs.release_type }}
 
-      # TODO(#1559): upload packages to artifacts S3 bucket and/or a dedicated Python packages bucket
+      # NOTE: we use `github.run_id` and NOT `env.ARTIFACT_RUN_ID` here!
+      # This ensures that if they are different we _download_ artifacts from the
+      # input run's subdirectory and _upload_ to our current run's subdirectory.
+      - name: Upload Python packages
+        id: upload
+        run: |
+          python build_tools/github_actions/upload_python_packages.py \
+            --input-packages-dir="${{ env.PACKAGES_DIR }}" \
+            --artifact-group="${{ inputs.artifact_group }}" \
+            --run-id="${{ github.run_id }}" \
+            ${{ inputs.multiarch_index && '--multiarch' || '' }}

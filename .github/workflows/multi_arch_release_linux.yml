@@ -1,0 +1,83 @@
+# Copyright Advanced Micro Devices, Inc.
+# SPDX-License-Identifier: MIT
+
+name: Multi-Arch Release Linux
+
+on:
+  workflow_call:
+    inputs:
+      build_config:
+        type: string
+        description: JSON object with build configuration for this platform.
+      rocm_package_version:
+        type: string
+      test_type:
+        type: string
+      release_type:
+        description: 'Release type: "dev", "nightly", or "prerelease".'
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  build_artifacts:
+    name: Build Artifacts
+    uses: ./.github/workflows/multi_arch_build_portable_linux.yml
+    secrets: inherit
+    with:
+      matrix_per_family_json: ${{ toJSON(fromJSON(inputs.build_config).per_family_info) }}
+      dist_amdgpu_families: ${{ fromJSON(inputs.build_config).dist_amdgpu_families }}
+      artifact_group: ${{ fromJSON(inputs.build_config).artifact_group }}
+      build_variant_label: ${{ fromJSON(inputs.build_config).build_variant_label }}
+      build_variant_cmake_preset: ${{ fromJSON(inputs.build_config).build_variant_cmake_preset }}
+      build_variant_suffix: ${{ fromJSON(inputs.build_config).build_variant_suffix }}
+      rocm_package_version: ${{ inputs.rocm_package_version }}
+      release_type: ${{ inputs.release_type }}
+    permissions:
+      contents: read
+      id-token: write
+
+  # TODO: dispatch test artifacts per family (add workflow_dispatch to
+  #   test_artifacts.yml, then use benc-uk/workflow-dispatch here)
+
+  build_tarballs:
+    needs: [build_artifacts]
+    name: Build Tarballs
+    uses: ./.github/workflows/multi_arch_build_tarballs.yml
+    with:
+      dist_amdgpu_families: ${{ fromJSON(inputs.build_config).dist_amdgpu_families }}
+      platform: linux
+      package_version: ${{ inputs.rocm_package_version }}
+      release_type: ${{ inputs.release_type }}
+    permissions:
+      contents: read
+      id-token: write
+
+  # TODO: publish_tarballs - copy from artifacts bucket to release bucket
+  #       (as part of multi_arch_build_tarballs or a separate job?)
+
+  # TODO(#3334): build python packages
+  # build_python_packages:
+  #   needs: [build_artifacts]
+  #   name: Build Python Packages
+  #   if: ${{ !failure() && !cancelled() && fromJSON(inputs.build_config).expect_failure == false }}
+  #   uses: ./.github/workflows/build_portable_linux_python_packages.yml
+  #   with:
+  #     artifact_group: ${{ fromJSON(inputs.build_config).artifact_group }}
+  #     amdgpu_families: ${{ fromJSON(inputs.build_config).dist_amdgpu_families }}
+  #     multiarch_index: true
+  #     package_version: ${{ inputs.rocm_package_version }}
+  #     release_type: ${{ inputs.release_type }}
+  #   permissions:
+  #     contents: read
+  #     id-token: write
+
+  # TODO: publish_python_packages
+
+  # TODO: dispatch native packages (build_native_linux_packages.yml)
+
+  # TODO: dispatch pytorch wheels (release_portable_linux_pytorch_wheels.yml)
+
+  # TODO: dispatch jax wheels (release_portable_linux_jax_wheels.yml)

@@ -1,3 +1,6 @@
+# Copyright Advanced Micro Devices, Inc.
+# SPDX-License-Identifier: MIT
+
 name: Test Artifacts
 
 on:
@@ -10,6 +13,9 @@ on:
         default: ""
       amdgpu_families:
         type: string
+      amdgpu_targets:
+        type: string
+        default: ""
       test_runs_on:
         type: string
       sanity_check_only_for_family:
@@ -19,10 +25,17 @@ on:
         type: string
       test_labels:
         type: string
+      run_functional_tests:
+        type: boolean
+        default: false
+      release_type:
+        description: 'Release type: "" for CI, or "dev", "nightly", "prerelease".'
+        type: string
+        default: ""
       test_retry_count:
         type: number
         default: 2                  #It will perform one additional try if failed
-        required: false
+        required: false          
   workflow_call:
     inputs:
       artifact_group:
@@ -32,6 +45,9 @@ on:
         default: ""
       amdgpu_families:
         type: string
+      amdgpu_targets:
+        type: string
+        default: ""
       test_runs_on:
         type: string
       sanity_check_only_for_family:
@@ -41,11 +57,16 @@ on:
         type: string
       test_labels:
         type: string
+      run_functional_tests:
+        type: boolean
+        default: false
+      release_type:
+        type: string
+        default: ""
       test_retry_count:
         type: number
         default: 2
-        required: false
-          
+        required: false          
   push:
     branches:
       - ADHOCBUILD
@@ -55,21 +76,20 @@ permissions:
 
 jobs:
   configure_test_matrix:
-    name: "Configure test matrix"
+    name: "Configure test matrix (${{ inputs.amdgpu_families }})"
     # if there is a test machine available
     if: ${{ inputs.test_runs_on != '' }}
     runs-on: ${{ inputs.test_runs_on }}
     outputs:
+      sanity_component: ${{ steps.configure.outputs.sanity_component }}
       components: ${{ steps.configure.outputs.components }}
       platform: ${{ steps.configure.outputs.platform }}
       shard_arr: ${{ steps.configure.outputs.shard_arr }}
     steps:
       - name: "Fetch 'build_tools' from repository"
         if: ${{ runner.os == 'Windows' }}
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          repository: "ROCm/TheRock"
-          ref: 'compiler/amd-staging'
           sparse-checkout: build_tools
           path: "prejob"
 
@@ -81,13 +101,13 @@ jobs:
         run: . '${{ github.workspace }}\prejob\build_tools\github_actions\cleanup_processes.ps1'
 
       - name: "Checking out repository"
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: "ROCm/TheRock"
           ref: 'compiler/amd-staging'
-
+            
       - name: Setting up Python
-        uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: 3.12
 
@@ -98,24 +118,29 @@ jobs:
           AMDGPU_FAMILIES: ${{ inputs.amdgpu_families }}
           TEST_TYPE: ${{ inputs.test_type }}
           TEST_LABELS: ${{ inputs.test_labels }}
+          # TODO(#3901): Consolidate run_functional_tests and benchmark_runs_on into a single run_extended_tests input.
+          RUN_FUNCTIONAL_TESTS: ${{ inputs.run_functional_tests }}
         run: |
           if [[ "${TEST_TYPE:-}" == "quick" ]]; then
-              PROJECTS_TO_TEST='rocroller,hipblas,hipblaslt,hipsolver,rocsolver,rocprim,hipcub,rocthrust,hipsparse,rocsparse,rocrand,hiprand,rocfft,hipfft,rocwmma'
+              PROJECTS_TO_TEST='rocroller,hipblas,hipblaslt,hipsolver,rocsolver,rocprim,hipcub,hipsparse,rocsparse,rocrand,hiprand,rocfft,hipfft,rocwmma'
               export PROJECTS_TO_TEST
               echo "PROJECTS_TO_TEST=$PROJECTS_TO_TEST" >> "$GITHUB_ENV"
           fi
-          python ./build_tools/github_actions/fetch_test_configurations.py
+          python ./build_tools/github_actions/fetch_test_configurations.py            
 
   test_sanity_check:
     name: 'Test Sanity Check'
     needs: configure_test_matrix
-    uses: './.github/workflows/test_sanity_check.yml'
+    uses: './.github/workflows/test_component.yml'
     with:
-      artifact_group: ${{ inputs.artifact_group }}
       artifact_run_id: ${{ inputs.artifact_run_id }}
+      artifact_group: ${{ inputs.artifact_group }}
       amdgpu_families: ${{ inputs.amdgpu_families }}
+      amdgpu_targets: ${{ inputs.amdgpu_targets }}
       test_runs_on: ${{ inputs.test_runs_on }}
-      platform: ${{ needs.configure_test_matrix.outputs.platform }}
+      platform: 'linux'
+      component: ${{ needs.configure_test_matrix.outputs.sanity_component }}
+      release_type: ${{ inputs.release_type }}
 
   aomp_smoke_test:
     name: 'AOMP smoke test'
@@ -126,9 +151,11 @@ jobs:
       artifact_group: ${{ inputs.artifact_group }}
       artifact_run_id: ${{ inputs.artifact_run_id }}
       amdgpu_families: ${{ inputs.amdgpu_families }}
-      test_runs_on: ${{ inputs.test_runs_on }}
-      platform: 'linux'
 
+      test_runs_on: ${{ inputs.test_runs_on }}
+      platform: ${{ needs.configure_test_matrix.outputs.platform }}        
+      release_type: ${{ inputs.release_type }}
+ 
   test_components:
     name: 'Test ${{ matrix.components.job_name }}'
     needs: [test_sanity_check, configure_test_matrix]
@@ -143,7 +170,8 @@ jobs:
       artifact_run_id: ${{ inputs.artifact_run_id }}
       artifact_group: ${{ inputs.artifact_group }}
       amdgpu_families: ${{ inputs.amdgpu_families }}
-      test_retry_count: ${{ inputs.test_retry_count }}
+      amdgpu_targets: ${{ inputs.amdgpu_targets }}
+      test_retry_count: ${{ inputs.test_retry_count }}        
       # If the test requires a multi GPU, use the multi GPU test runner
       # Otherwise, use the standard test runner
       test_runs_on: >-
@@ -154,3 +182,4 @@ jobs:
         }}
       platform: ${{ needs.configure_test_matrix.outputs.platform }}
       component: ${{ toJSON(matrix.components) }}
+      release_type: ${{ inputs.release_type }}
