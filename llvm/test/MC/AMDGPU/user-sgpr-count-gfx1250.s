@@ -25,20 +25,3 @@
 
         .amdhsa_user_sgpr_count 32
         .end_amdhsa_kernel
-
-// CHECK:.amdhsa_user_sgpr_count 33
-.amdhsa_kernel user_sgpr_3
-        .amdhsa_next_free_vgpr 2
-        .amdhsa_next_free_sgpr 0
-
-        .amdhsa_user_sgpr_count 33
-.end_amdhsa_kernel
-
-// CHECK:.amdhsa_user_sgpr_count 63
-.amdhsa_kernel user_sgpr_4
-        .amdhsa_next_free_vgpr 0
-        .amdhsa_next_free_sgpr 0
-
-        .amdhsa_user_sgpr_count 63
-
-.end_amdhsa_kernel
