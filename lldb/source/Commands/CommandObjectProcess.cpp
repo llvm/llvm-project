@@ -1098,10 +1098,10 @@ public:
 
     Process *process = m_exe_ctx.GetProcessPtr();
 
-    const std::vector<lldb::addr_t> &tokens = process->GetImageTokens();
-    const size_t token_num = tokens.size();
+    const std::vector<addr_t> &token_addrs = process->GetImageTokens();
+    const size_t token_num = token_addrs.size();
     for (size_t i = 0; i < token_num; ++i) {
-      if (tokens[i] == LLDB_INVALID_IMAGE_TOKEN)
+      if (token_addrs[i] == LLDB_INVALID_ADDRESS)
         continue;
       request.TryCompleteCurrentArg(std::to_string(i));
     }
