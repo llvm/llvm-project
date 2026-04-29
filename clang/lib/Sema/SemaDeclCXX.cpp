@@ -18068,8 +18068,9 @@ bool Sema::CheckDependentFriend(SourceLocation Loc, NestedNameSpecifier NNS,
   if (NNS.isDependent()) {
     if (NNS.getKind() == NestedNameSpecifier::Kind::Type) {
       QualType T(NNS.getCanonical().getAsType(), 0);
-      if (isa<PackIndexingType>(T))
-        return false;
+
+      if (const auto *PIT = dyn_cast<PackIndexingType>(T))
+        T = PIT->getPattern();
 
       if (const auto *TST = dyn_cast<TemplateSpecializationType>(T)) {
         if (isa<ClassTemplateDecl>(TST->getTemplateName().getAsTemplateDecl()))
