@@ -1450,7 +1450,7 @@ void Preprocessor::makeModuleVisible(Module *M, SourceLocation Loc,
 
   // Add this module to the imports list of the currently-built submodule.
   if (!BuildingSubmoduleStack.empty() && M != BuildingSubmoduleStack.back().M)
-    BuildingSubmoduleStack.back().M->Imports.insert(M);
+    BuildingSubmoduleStack.back().M->Imports.push_back(M);
 }
 
 bool Preprocessor::FinishLexStringLiteral(Token &Result, std::string &String,

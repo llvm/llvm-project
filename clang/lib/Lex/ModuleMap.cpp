@@ -938,7 +938,8 @@ Module *ModuleMap::lookupModuleUnqualified(StringRef Name,
   return findModule(Name);
 }
 
-Module *ModuleMap::lookupModuleQualified(StringRef Name, Module *Context) const{
+ModuleRef ModuleMap::lookupModuleQualified(StringRef Name,
+                                           Module *Context) const {
   if (!Context)
     return findModule(Name);
 
@@ -950,8 +951,8 @@ std::pair<Module *, bool> ModuleMap::findOrCreateModule(StringRef Name,
                                                         bool IsFramework,
                                                         bool IsExplicit) {
   // Try to find an existing module with this name.
-  if (Module *Sub = lookupModuleQualified(Name, Parent))
-    return std::make_pair(Sub, false);
+  if (ModuleRef Sub = lookupModuleQualified(Name, Parent); Sub.getExisting())
+    return std::make_pair(Sub.getExisting(), false);
 
   // Create a new module with this name.
   Module *M = createModule(Name, Parent, IsFramework, IsExplicit);
@@ -960,7 +961,7 @@ std::pair<Module *, bool> ModuleMap::findOrCreateModule(StringRef Name,
 
 Module *ModuleMap::createModule(StringRef Name, Module *Parent,
                                 bool IsFramework, bool IsExplicit) {
-  assert(lookupModuleQualified(Name, Parent) == nullptr &&
+  assert(!lookupModuleQualified(Name, Parent).getExisting() &&
          "Creating duplicate submodule");
 
   Module *Result = new (ModulesAlloc.Allocate())
