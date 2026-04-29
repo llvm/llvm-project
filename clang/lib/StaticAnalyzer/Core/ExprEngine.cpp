@@ -1411,7 +1411,7 @@ void ExprEngine::ProcessDeleteDtor(const CFGDeleteDtor Dtor,
   ProgramStateRef State = Pred->getState();
   const LocationContext *LCtx = Pred->getLocationContext();
   const CXXDeleteExpr *DE = Dtor.getDeleteExpr();
-  const Stmt *Arg = DE->getArgument();
+  const Expr *Arg = DE->getArgument();
   QualType DTy = DE->getDestroyedType();
   SVal ArgVal = State->getSVal(Arg, LCtx);
 
@@ -2061,7 +2061,9 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
                                       ->getType()->isRecordType()))
           for (auto Child : Ex->children()) {
             assert(Child);
-            SVal Val = State->getSVal(Child, LCtx);
+            const auto *ChildExpr = dyn_cast<Expr>(Child);
+            SVal Val =
+                ChildExpr ? State->getSVal(ChildExpr, LCtx) : UnknownVal();
             State = escapeValues(State, Val, PSK_EscapeOther);
           }
 
@@ -2780,9 +2782,9 @@ bool ExprEngine::hasMoreIteration(ProgramStateRef State,
 /// Returns a (HasMoreIteration, HasNoMoreIteration) pair, or std::nullopt when
 /// the acquisition of the loop condition value failed.
 static std::optional<std::pair<ProgramStateRef, ProgramStateRef>>
-assumeCondition(const Stmt *Condition, ExplodedNode *N) {
+assumeCondition(const Stmt *ConditionStmt, ExplodedNode *N) {
   ProgramStateRef State = N->getState();
-  if (const auto *ObjCFor = dyn_cast<ObjCForCollectionStmt>(Condition)) {
+  if (const auto *ObjCFor = dyn_cast<ObjCForCollectionStmt>(ConditionStmt)) {
     bool HasMoreIteraton =
         ExprEngine::hasMoreIteration(State, ObjCFor, N->getLocationContext());
     // Checkers have already ran on branch conditions, so the current
@@ -2795,18 +2797,22 @@ assumeCondition(const Stmt *Condition, ExplodedNode *N) {
     else
       return std::pair<ProgramStateRef, ProgramStateRef>{nullptr, State};
   }
-  SVal X = State->getSVal(Condition, N->getLocationContext());
+
+  const auto *ConditionExpr = dyn_cast<Expr>(ConditionStmt);
+  assert(ConditionExpr && "The condition must be an Expr from here!");
+
+  SVal X = State->getSVal(ConditionExpr, N->getLocationContext());
 
   if (X.isUnknownOrUndef()) {
     // Give it a chance to recover from unknown.
-    if (const auto *Ex = dyn_cast<Expr>(Condition)) {
+    if (const auto *Ex = dyn_cast<Expr>(ConditionExpr)) {
       if (Ex->getType()->isIntegralOrEnumerationType()) {
         // Try to recover some path-sensitivity.  Right now casts of symbolic
         // integers that promote their values are currently not tracked well.
-        // If 'Condition' is such an expression, try and recover the
+        // If 'ConditionExpr' is such an expression, try and recover the
         // underlying value and use that instead.
         SVal recovered =
-            RecoverCastedSymbol(State, Condition, N->getLocationContext(),
+            RecoverCastedSymbol(State, ConditionExpr, N->getLocationContext(),
                                 N->getState()->getStateManager().getContext());
 
         if (!recovered.isUnknown()) {

@@ -214,7 +214,7 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the LLVM tools
 
-* `llvm-profgen` now supports ETM trace decoding using the OpenCSD library for Cortex-M targets.
+* `llvm-profgen` now supports ETM trace decoding using the OpenCSD library for Cortex-M targets. OpenCSD version 1.5.4 or higher is required.
 
 * `llvm-objcopy` no longer corrupts the symbol table when `--update-section` is called for ELF files.
 * `FileCheck` option `-check-prefix` now accepts a comma-separated list of
@@ -227,6 +227,11 @@ Makes programs 10x faster by doing Special New Thing.
 * A new ``webinspector-wasm`` platform was added to list and attach to WebAssembly processes in Safari.
 * The default for `load-script-from-symbol-file` was changed from `warn` to `trusted`. This means that scripts from
   code signed dSYM bundles are now loaded automatically, while untrusted bundles continue to produce a warning.
+* Pressing enter after `frame variable` repeats the command with an incremented `--depth` option, allowing quick
+  expansion of nested data.
+* Breakpoint commands now accept `.` to refer to the location(s) at which the current thread is stopped. For
+  example, `breakpoint disable .` disables the just-hit breakpoint location. Another usage is to automate a
+  command to run at the current location: `breakpoint command add -o 'p my_var' .`.
 
 #### Deprecated APIs
 

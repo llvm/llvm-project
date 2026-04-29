@@ -360,6 +360,9 @@ public:
   /// Get the GlobalOp of a template parameter object.
   cir::GlobalOp
   getAddrOfTemplateParamObject(const TemplateParamObjectDecl *tpo);
+  // Get the GlobalOp of a source_location object.
+  cir::GlobalOp
+  getAddrOfUnnamedGlobalConstantDecl(const UnnamedGlobalConstantDecl *gcd);
 
   CharUnits computeNonVirtualBaseClassOffset(
       const CXXRecordDecl *derivedClass,
@@ -429,6 +432,8 @@ public:
   }
 
   llvm::DenseMap<mlir::Attribute, cir::GlobalOp> constantStringMap;
+  llvm::DenseMap<const UnnamedGlobalConstantDecl *, cir::GlobalOp>
+      unnamedGlobalConstantDeclMap;
 
   /// Return a constant array for the given string.
   mlir::Attribute getConstantArrayFromStringLiteral(const StringLiteral *e);

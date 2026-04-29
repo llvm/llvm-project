@@ -4230,7 +4230,7 @@ void ScalarExprEmitter::EmitUndefinedBehaviorIntegerDivAndRemCheck(
   if (CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow) &&
       Ops.Ty->hasSignedIntegerRepresentation() &&
       !IsWidenedIntegerOp(CGF.getContext(), BO->getLHS()) &&
-      Ops.mayHaveIntegerOverflow() && !Ops.Ty.isWrapType() &&
+      Ops.mayHaveIntegerOverflow() &&
       !CGF.getContext().isTypeIgnoredBySanitizer(
           SanitizerKind::SignedIntegerOverflow, Ops.Ty)) {
     llvm::IntegerType *Ty = cast<llvm::IntegerType>(Zero->getType());
@@ -5320,7 +5320,7 @@ Value *ScalarExprEmitter::EmitCompare(const BinaryOperator *E,
 
     // If this is a vector comparison, sign extend the result to the appropriate
     // vector integer type and return it (don't convert to bool).
-    if (LHSTy->isVectorType())
+    if (LHSTy->isVectorType() || LHSTy->isSveVLSBuiltinType())
       return Builder.CreateSExt(Result, ConvertType(E->getType()), "sext");
 
   } else {

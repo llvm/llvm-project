@@ -1556,7 +1556,8 @@ bool GetLocal(InterpState &S, CodePtr OpPC, uint32_t I) {
 
 bool EndLifetime(InterpState &S, CodePtr OpPC);
 bool EndLifetimePop(InterpState &S, CodePtr OpPC);
-bool StartLifetime(InterpState &S, CodePtr OpPC);
+bool StartThisLifetime(InterpState &S, CodePtr OpPC);
+bool StartThisLifetime1(InterpState &S, CodePtr OpPC);
 bool MarkDestroyed(InterpState &S, CodePtr OpPC);
 
 /// 1) Pops the value from the stack.
@@ -3503,30 +3504,9 @@ inline bool GetIntPtr(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
   return true;
 }
 
-inline bool GetMemberPtr(InterpState &S, CodePtr OpPC, const ValueDecl *D) {
-  S.Stk.push<MemberPointer>(D);
-  return true;
-}
-
-inline bool GetMemberPtrBase(InterpState &S, CodePtr OpPC) {
-  const auto &MP = S.Stk.pop<MemberPointer>();
-
-  if (!MP.isBaseCastPossible())
-    return false;
-
-  S.Stk.push<Pointer>(MP.getBase());
-  return true;
-}
-
-inline bool GetMemberPtrDecl(InterpState &S, CodePtr OpPC) {
-  const auto &MP = S.Stk.pop<MemberPointer>();
-
-  const auto *FD = cast<FunctionDecl>(MP.getDecl());
-  const auto *Func = S.getContext().getOrCreateFunction(FD);
-
-  S.Stk.push<Pointer>(Func);
-  return true;
-}
+bool GetMemberPtr(InterpState &S, CodePtr OpPC, const ValueDecl *D);
+bool GetMemberPtrBase(InterpState &S, CodePtr OpPC);
+bool GetMemberPtrDecl(InterpState &S, CodePtr OpPC);
 
 /// Just emit a diagnostic. The expression that caused emission of this
 /// op is not valid in a constant context.
@@ -3932,8 +3912,12 @@ inline bool BitCastPrim(InterpState &S, CodePtr OpPC, bool TargetIsUCharOrByte,
 }
 
 inline bool BitCast(InterpState &S, CodePtr OpPC) {
-  const Pointer &FromPtr = S.Stk.pop<Pointer>();
+  Pointer FromPtr = S.Stk.pop<Pointer>();
   Pointer &ToPtr = S.Stk.peek<Pointer>();
+
+  const Descriptor *D = FromPtr.getFieldDesc();
+  if (D->isPrimitiveArray() && FromPtr.isArrayRoot())
+    FromPtr = FromPtr.atIndex(0);
 
   if (!CheckLoad(S, OpPC, FromPtr))
     return false;
