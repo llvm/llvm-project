@@ -39,7 +39,8 @@ add_entrypoint_object(
   HDRS
     ../mremap.h
   DEPENDS
-    libc.include.sys_mman
+    libc.hdr.sys_mman_macros
+    libc.hdr.types.size_t
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
@@ -76,7 +77,8 @@ add_entrypoint_object(
   HDRS
     ../posix_madvise.h
   DEPENDS
-    libc.include.sys_mman
+    libc.hdr.sys_mman_macros
+    libc.hdr.types.size_t
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
 )
