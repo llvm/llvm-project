@@ -301,7 +301,8 @@ static bool canSafelyRematerialize(Value val, fir::DoLoopOp outermost,
   }
 
   auto *defOp = val.getDefiningOp();
-  assert(defOp && "expected value to be a block argument or have a defining op");
+  assert(defOp &&
+         "expected value to be a block argument or have a defining op");
   if (!outermost->isAncestor(defOp))
     return true;
 
@@ -312,8 +313,8 @@ static bool canSafelyRematerialize(Value val, fir::DoLoopOp outermost,
     for (const auto &info : infos)
       if (llvm::is_contained(info.ivAliases, load.getMemref()))
         return true;
-    LLVM_DEBUG(llvm::dbgs() << "  [remat] non-IV load in bound: " << *defOp
-                            << "\n");
+    LLVM_DEBUG(llvm::dbgs()
+               << "  [remat] non-IV load in bound: " << *defOp << "\n");
     return false;
   }
 
@@ -401,9 +402,8 @@ static bool analyzeNest(SmallVector<LoopIVInfo> &infos) {
     if (!canSafelyRematerialize(info.lowerBound, outermost, infos) ||
         !canSafelyRematerialize(info.upperBound, outermost, infos) ||
         !canSafelyRematerialize(info.step, outermost, infos)) {
-      LLVM_DEBUG(llvm::dbgs()
-                 << "  bounds not safely rematerializable at "
-                 << info.loop.getLoc() << "\n");
+      LLVM_DEBUG(llvm::dbgs() << "  bounds not safely rematerializable at "
+                              << info.loop.getLoc() << "\n");
       return false;
     }
   }
@@ -626,12 +626,11 @@ static fir::DoLoopOp transformOneLoop(fir::DoLoopOp loop,
   // Preserve `unordered` and `loopAnnotation`.  `finalValue` is dropped —
   // the final IV is now handled by an explicit post-loop store.
   builder.setInsertionPoint(loop);
-  auto newLoop =
-      fir::DoLoopOp::create(builder, loc, loop.getLowerBound(),
-                            loop.getUpperBound(), loop.getStep(),
-                            /*unordered=*/loop.getUnordered().has_value(),
-                            /*finalCountValue=*/false,
-                            /*iterArgs=*/mlir::ValueRange{});
+  auto newLoop = fir::DoLoopOp::create(
+      builder, loc, loop.getLowerBound(), loop.getUpperBound(), loop.getStep(),
+      /*unordered=*/loop.getUnordered().has_value(),
+      /*finalCountValue=*/false,
+      /*iterArgs=*/mlir::ValueRange{});
   if (auto annotation = loop.getLoopAnnotationAttr())
     newLoop.setLoopAnnotationAttr(annotation);
   loop.getInductionVar().replaceAllUsesWith(newLoop.getInductionVar());

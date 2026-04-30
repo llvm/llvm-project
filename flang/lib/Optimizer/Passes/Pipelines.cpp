@@ -14,8 +14,8 @@
 #include "mlir/Conversion/Passes.h"
 #include "mlir/Dialect/Affine/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/Transforms/Passes.h"
-#include "mlir/Pass/PassRegistry.h"
 #include "mlir/Dialect/OpenMP/Transforms/Passes.h"
+#include "mlir/Pass/PassRegistry.h"
 #include "llvm/Support/CommandLine.h"
 
 /// Force setting the no-alias attribute on fuction arguments when possible.
@@ -211,7 +211,6 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
     pm.addPass(mlir::createCanonicalizerPass(config));
     pm.addPass(mlir::createCSEPass());
 
-    pm.addPass(mlir::createLoopInvariantCodeMotionPass());
     pm.addPass(fir::createLoopInvariantCodeMotion());
 
     addNestedPassToAllTopLevelOperations<PassConstructor>(

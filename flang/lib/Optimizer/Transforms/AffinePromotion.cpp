@@ -81,8 +81,7 @@ struct AffineFunctionAnalysis {
 /// When \p outermost is provided, values defined outside it are accepted as
 /// valid affine symbols.  When nullptr, only loop IVs and constants are
 /// accepted (legacy behavior).
-static bool isAffineIndex(mlir::Value val,
-                          fir::DoLoopOp outermost = nullptr,
+static bool isAffineIndex(mlir::Value val, fir::DoLoopOp outermost = nullptr,
                           unsigned depth = 0) {
   if (depth > 16)
     return false;
@@ -94,8 +93,7 @@ static bool isAffineIndex(mlir::Value val,
     if (isa<fir::DoLoopOp>(blockArg.getOwner()->getParentOp()) ||
         isa<mlir::affine::AffineForOp>(blockArg.getOwner()->getParentOp()))
       return true;
-    if (outermost &&
-        !outermost->isAncestor(blockArg.getOwner()->getParentOp()))
+    if (outermost && !outermost->isAncestor(blockArg.getOwner()->getParentOp()))
       return true;
     return false;
   }
@@ -225,7 +223,8 @@ private:
 /// Ensure a value is index-typed, inserting a fir.convert immediately after
 /// the value's definition point if needed.  Affine operations require all
 /// dimension and symbol operands to be of index type.
-static mlir::Value castToIndex(mlir::Value val, mlir::PatternRewriter &rewriter) {
+static mlir::Value castToIndex(mlir::Value val,
+                               mlir::PatternRewriter &rewriter) {
   if (val.getType().isIndex())
     return val;
   mlir::OpBuilder::InsertionGuard guard(rewriter);
@@ -233,8 +232,8 @@ static mlir::Value castToIndex(mlir::Value val, mlir::PatternRewriter &rewriter)
     rewriter.setInsertionPointAfter(defOp);
   else if (auto blockArg = mlir::dyn_cast<mlir::BlockArgument>(val))
     rewriter.setInsertionPointToStart(blockArg.getOwner());
-  return fir::ConvertOp::create(rewriter, val.getLoc(),
-                                rewriter.getIndexType(), val);
+  return fir::ConvertOp::create(rewriter, val.getLoc(), rewriter.getIndexType(),
+                                val);
 }
 
 namespace {
@@ -257,11 +256,10 @@ private:
         return false;
     }
     // Reject loops containing fir.if until full fir.if → affine.if
-    // promotion is available.  
+    // promotion is available.
     if (!loopOperation.getOps<fir::IfOp>().empty()) {
-      LLVM_DEBUG(llvm::dbgs()
-                     << "AffineLoopAnalysis: loop contains fir.if, "
-                        "skipping (if-promotion not yet enabled)\n");
+      LLVM_DEBUG(llvm::dbgs() << "AffineLoopAnalysis: loop contains fir.if, "
+                                 "skipping (if-promotion not yet enabled)\n");
       return false;
     }
     return true;
@@ -311,7 +309,6 @@ private:
         return false;
       }
 
-
       // Reject element types that `mlir::MemRefType` cannot hold (e.g.
       // `!fir.char`) — promotion
       // would later build an invalid `MemRefType`.
@@ -359,31 +356,29 @@ private:
     return true;
   }
 
-  bool analyzeBounds(fir::DoLoopOp loopOperation,
-                     fir::DoLoopOp outermost) {
+  bool analyzeBounds(fir::DoLoopOp loopOperation, fir::DoLoopOp outermost) {
     // Only promote loops with a positive constant step. The genericBounds
     // fallback (which attempts to handle variable/negative steps) is broken
     // — see the comment on that function — so we reject everything that
     // positiveConstantStep cannot handle.
     bool hasPositiveConstantStep = false;
-    if (auto defOp = loopOperation.getStep()
-                          .getDefiningOp<mlir::arith::ConstantOp>())
+    if (auto defOp =
+            loopOperation.getStep().getDefiningOp<mlir::arith::ConstantOp>())
       if (auto attr = mlir::dyn_cast<IntegerAttr>(defOp.getValue()))
         hasPositiveConstantStep = attr.getInt() > 0;
     if (!hasPositiveConstantStep) {
-      LLVM_DEBUG(llvm::dbgs()
-                     << "AffineLoopAnalysis: step is not a positive "
-                        "constant, cannot promote\n");
+      LLVM_DEBUG(llvm::dbgs() << "AffineLoopAnalysis: step is not a positive "
+                                 "constant, cannot promote\n");
       return false;
     }
     if (!isAffineIndex(loopOperation.getLowerBound(), outermost)) {
       LLVM_DEBUG(llvm::dbgs()
-                     << "AffineLoopAnalysis: lower bound not affine\n");
+                 << "AffineLoopAnalysis: lower bound not affine\n");
       return false;
     }
     if (!isAffineIndex(loopOperation.getUpperBound(), outermost)) {
       LLVM_DEBUG(llvm::dbgs()
-                     << "AffineLoopAnalysis: upper bound not affine\n");
+                 << "AffineLoopAnalysis: upper bound not affine\n");
       return false;
     }
     return true;
@@ -610,8 +605,8 @@ createMultiDimAffineOps(mlir::Value arrayRef, mlir::PatternRewriter &rewriter,
       auto expr = builder.build(idx);
       assert(expr && "analysis guaranteed index is affine");
       auto adjustedExpr = *expr - 1;
-      auto map = mlir::AffineMap::get(builder.dims.size(),
-                                      builder.syms.size(), adjustedExpr);
+      auto map = mlir::AffineMap::get(builder.dims.size(), builder.syms.size(),
+                                      adjustedExpr);
       auto operands = buildOperands(builder);
       auto adjusted =
           affine::AffineApplyOp::create(rewriter, loc, map, operands);
@@ -651,23 +646,24 @@ createMultiDimAffineOps(mlir::Value arrayRef, mlir::PatternRewriter &rewriter,
 static void rewriteLoad(fir::LoadOp loadOp, mlir::PatternRewriter &rewriter,
                         fir::DoLoopOp outermost) {
   rewriter.setInsertionPoint(loadOp);
-  auto result = createMultiDimAffineOps(loadOp.getMemref(), rewriter, outermost);
+  auto result =
+      createMultiDimAffineOps(loadOp.getMemref(), rewriter, outermost);
   rewriter.replaceOpWithNewOp<affine::AffineLoadOp>(
       loadOp, result.arrayConvert.getResult(), result.indices);
 }
 
-static void rewriteStore(fir::StoreOp storeOp,
-                         mlir::PatternRewriter &rewriter,
+static void rewriteStore(fir::StoreOp storeOp, mlir::PatternRewriter &rewriter,
                          fir::DoLoopOp outermost) {
   rewriter.setInsertionPoint(storeOp);
-  auto result = createMultiDimAffineOps(storeOp.getMemref(), rewriter, outermost);
+  auto result =
+      createMultiDimAffineOps(storeOp.getMemref(), rewriter, outermost);
   rewriter.replaceOpWithNewOp<affine::AffineStoreOp>(
       storeOp, storeOp.getValue(), result.arrayConvert.getResult(),
       result.indices);
 }
 
 static void rewriteMemoryOps(Block *block, mlir::PatternRewriter &rewriter,
-                              fir::DoLoopOp outermost = {}) {
+                             fir::DoLoopOp outermost = {}) {
   for (auto &bodyOp : llvm::make_early_inc_range(block->getOperations())) {
     if (isa<fir::LoadOp>(bodyOp))
       rewriteLoad(cast<fir::LoadOp>(bodyOp), rewriter, outermost);
