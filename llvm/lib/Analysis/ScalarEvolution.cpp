@@ -9298,7 +9298,7 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromCondImpl(
     bool ControlsOnlyExit, bool AllowPredicates) {
   // Handle BinOp conditions (And, Or).
   if (auto LimitFromBinOp = computeExitLimitFromCondFromBinOp(
-          Cache, L, ExitCond, ExitIfTrue, ControlsOnlyExit, AllowPredicates))
+          Cache, L, ExitCond, ExitIfTrue, AllowPredicates))
     return *LimitFromBinOp;
 
   // With an icmp, it may be feasible to compute an exact backedge-taken count.
@@ -9356,9 +9356,11 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromCondImpl(
 }
 
 std::optional<ScalarEvolution::ExitLimit>
-ScalarEvolution::computeExitLimitFromCondFromBinOp(
-    ExitLimitCacheTy &Cache, const Loop *L, Value *ExitCond, bool ExitIfTrue,
-    bool ControlsOnlyExit, bool AllowPredicates) {
+ScalarEvolution::computeExitLimitFromCondFromBinOp(ExitLimitCacheTy &Cache,
+                                                   const Loop *L,
+                                                   Value *ExitCond,
+                                                   bool ExitIfTrue,
+                                                   bool AllowPredicates) {
   // Check if the controlling expression for this loop is an And or Or.
   Value *Op0, *Op1;
   bool IsAnd;
@@ -9368,14 +9370,6 @@ ScalarEvolution::computeExitLimitFromCondFromBinOp(
     IsAnd = false;
   else
     return std::nullopt;
-
-  // Be robust against unsimplified IR for the form "op i1 X, NeutralElement".
-  const Constant *NeutralElement = ConstantInt::get(ExitCond->getType(), IsAnd);
-  if (Op0 == NeutralElement)
-    std::swap(Op0, Op1);
-  if (Op1 == NeutralElement)
-    return computeExitLimitFromCondCached(Cache, L, Op0, ExitIfTrue,
-                                          ControlsOnlyExit, AllowPredicates);
 
   // A sub-condition of a non-trivial binop never solely controls the exit,
   // whether we exit always depends on both conditions.
