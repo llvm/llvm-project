@@ -463,11 +463,11 @@ static std::string computeNVPTXDataLayout(const Triple &T, StringRef ABIName) {
   // Distributed Shared Memory (addrspace:7) follows shared memory
   // (addrspace:3).
   if (!Is64Bit)
-    Ret += "-p:32:32-p6:32:32-p7:32:32";
+    Ret += "-p:32:32-po3:32:32-po5:32:32-p6:32:32-po7:32:32";
   else if (ABIName == "shortptr")
-    Ret += "-p3:32:32-p4:32:32-p5:32:32-p6:32:32-p7:32:32";
+    Ret += "-po3:32:32-p4:32:32-po5:32:32-p6:32:32-po7:32:32";
   else
-    Ret += "-p6:32:32";
+    Ret += "-po3:64:64-po5:64:64-p6:32:32-po7:64:64";
 
   Ret += "-i64:64-i128:128-i256:256-v16:16-v32:32-n16:32:64";
 
