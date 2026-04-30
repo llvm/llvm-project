@@ -2399,7 +2399,6 @@ void ASTDeclReader::VisitFriendDecl(FriendDecl *D) {
   else
     D->Friend = readTypeSourceInfo();
   D->NextFriend = readDeclID().getRawValue();
-  D->UnsupportedFriend = (Record.readInt() != 0);
   D->FriendLoc = readSourceLocation();
   D->EllipsisLoc = readSourceLocation();
 }
@@ -2413,7 +2412,6 @@ void ASTDeclReader::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
   else
     D->Friend = readTypeSourceInfo();
   D->NextFriend = readDeclID().getRawValue();
-  D->UnsupportedFriend = (Record.readInt() != 0);
   D->FriendLoc = readSourceLocation();
   D->EllipsisLoc = readSourceLocation();
 }

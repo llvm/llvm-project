@@ -851,9 +851,8 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
 static AccessResult MatchesFriend(Sema &S,
                                   const EffectiveContext &EC,
                                   FriendDecl *FriendD) {
-  // Whitelist accesses if there's an invalid or unsupported friend
-  // declaration.
-  if (FriendD->isInvalidDecl() || FriendD->isUnsupportedFriend())
+  // Whitelist accesses if there's an invalid friend declaration.
+  if (FriendD->isInvalidDecl())
     return AR_accessible;
 
   if (NamedDecl *Friend = FriendD->getFriendDecl())
@@ -867,7 +866,7 @@ static AccessResult MatchesFriend(Sema &S,
 
 static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
                                   FriendTemplateDecl *FTD) {
-  if (FTD->isInvalidDecl() || FTD->isUnsupportedFriend())
+  if (FTD->isInvalidDecl())
     return AR_accessible;
 
   if (NamedDecl *ND = FTD->getFriendDecl())

@@ -58,12 +58,6 @@ private:
 
   SourceLocation FriendLoc;
 
-  /// True if this 'friend' declaration is unsupported.  Eventually we
-  /// will support every possible friend declaration, but for now we
-  /// silently ignore some and set this flag to authorize all access.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned UnsupportedFriend : 1;
-
 protected:
   // The declaration that's a friend of this class.
   FriendUnion Friend;
@@ -73,10 +67,9 @@ protected:
   FriendDecl(Kind K, DeclContext *DC, SourceLocation L, FriendUnion Friend,
              SourceLocation FriendL, SourceLocation EllipsisLoc = {})
       : Decl(K, DC, L), EllipsisLoc(EllipsisLoc), FriendLoc(FriendL),
-        UnsupportedFriend(false), Friend(Friend), NextFriend() {}
+        Friend(Friend), NextFriend() {}
 
-  FriendDecl(Kind K, EmptyShell Empty)
-      : Decl(K, Empty), UnsupportedFriend(false) {}
+  FriendDecl(Kind K, EmptyShell Empty) : Decl(K, Empty) {}
 
   FriendDecl *getNextFriend() {
     if (NextFriend.isOffset())
@@ -116,14 +109,6 @@ public:
   SourceLocation getFriendLoc() const { return FriendLoc; }
 
   SourceRange getSourceRange() const override LLVM_READONLY;
-
-  /// Determines if this friend kind is unsupported.
-  bool isUnsupportedFriend() const {
-    return UnsupportedFriend;
-  }
-  void setUnsupportedFriend(bool Unsupported) {
-    UnsupportedFriend = Unsupported;
-  }
 
   bool isPackExpansion() const { return EllipsisLoc.isValid(); }
 

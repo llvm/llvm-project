@@ -18103,16 +18103,16 @@ DeclResult Sema::ActOnTemplatedFriendTag(
               TagLoc, NameLoc, SS, nullptr, TempParamLists, /*friend*/ true,
               IsMemberSpecialization, Invalid)) {
     if (TemplateParams->size() > 0) {
-      // This is a declaration of a class template.
       if (Invalid)
         return true;
 
-      return CheckClassTemplate(S, TagSpec, TagUseKind::Friend, TagLoc, SS,
-                                Name, NameLoc, Attr, TemplateParams, AS_public,
-                                /*ModulePrivateLoc=*/SourceLocation(),
-                                FriendLoc, TempParamLists.size() - 1,
-                                TempParamLists.data())
-          .get();
+      if (SS.isEmpty() || !SS.getScopeRep().isDependent()) {
+        DeclResult Result = CheckClassTemplate(
+            S, TagSpec, TagUseKind::Friend, TagLoc, SS, Name, NameLoc, Attr,
+            TemplateParams, AS_public, /*ModulePrivateLoc=*/SourceLocation(),
+            FriendLoc, TempParamLists.size() - 1, TempParamLists.data());
+        return Result.get();
+      }
     } else {
       // The "template<>" header is extraneous.
       Diag(TemplateParams->getTemplateLoc(), diag::err_template_tag_noparams)
@@ -18209,12 +18209,6 @@ DeclResult Sema::ActOnTemplatedFriendTag(
 
     Friend = FriendTemplateDecl::Create(Context, CurContext, NameLoc, TSI,
                                         FriendLoc, TempParamLists, EllipsisLoc);
-  }
-
-  if (EllipsisLoc.isValid() && NNS.isDependent()) {
-    Diag(NameLoc, diag::warn_template_qualified_friend_unsupported)
-        << SS.getScopeRep() << SS.getRange() << cast<CXXRecordDecl>(CurContext);
-    Friend->setUnsupportedFriend(true);
   }
 
   Friend->setAccess(AS_public);
