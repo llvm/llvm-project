@@ -478,6 +478,10 @@ unsigned SystemZTTIImpl::getMinPrefetchStride(unsigned NumMemAccesses,
   return ST->hasMiscellaneousExtensions3() ? 8192 : 2048;
 }
 
+unsigned SystemZTTIImpl::getMaxInterleaveFactor(ElementCount VF) const {
+  return VF.isVector() ? 8 : 1;
+}
+
 bool SystemZTTIImpl::hasDivRemOp(Type *DataType, bool IsSigned) const {
   EVT VT = TLI->getValueType(DL, DataType);
   return (VT.isScalarInteger() && TLI->isTypeLegal(VT));
@@ -539,6 +543,47 @@ static unsigned getNumVectorRegs(Type *Ty) {
   return ((WideBits % 128U) ? ((WideBits / 128U) + 1) : (WideBits / 128U));
 }
 
+static bool isFoldableRMW(const Instruction *I, Type *Ty) {
+  auto *BI = dyn_cast_or_null<BinaryOperator>(I);
+  if (!BI || !BI->hasOneUse())
+    return false;
+
+  unsigned Opcode = BI->getOpcode();
+  unsigned BitWidth = Ty->getScalarSizeInBits();
+
+  switch (Opcode) {
+  case Instruction::And:
+  case Instruction::Or:
+  case Instruction::Xor:
+    if (BitWidth != 8)
+      return false;
+    break;
+  case Instruction::Add:
+  case Instruction::Sub:
+    if (BitWidth != 32 && BitWidth != 64)
+      return false;
+    break;
+  default:
+    return false;
+  }
+
+  Value *Op0 = BI->getOperand(0), *Op1 = BI->getOperand(1);
+  if (!isa<ConstantInt>(Op0) && !isa<ConstantInt>(Op1))
+    return false;
+
+  Value *V =
+      (Opcode == Instruction::Sub) ? Op0 : (isa<ConstantInt>(Op0) ? Op1 : Op0);
+  if (Opcode == Instruction::Sub && !isa<ConstantInt>(Op1))
+    return false;
+
+  auto *LI = dyn_cast_or_null<LoadInst>(V);
+  // Already checked BI hasOneUse.
+  auto *SI = dyn_cast<StoreInst>(BI->user_back());
+
+  return LI && SI && !LI->isVolatile() && !SI->isVolatile() &&
+         LI->hasOneUse() && LI->getPointerOperand() == SI->getPointerOperand();
+}
+
 InstructionCost SystemZTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
@@ -548,7 +593,8 @@ InstructionCost SystemZTTIImpl::getArithmeticInstrCost(
   if (CostKind != TTI::TCK_RecipThroughput)
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
                                          Op2Info, Args, CxtI);
-
+  if (CxtI && Ty && !Ty->isVectorTy() && isFoldableRMW(CxtI, Ty))
+    return TTI::TCC_Free;
   // TODO: return a good value for BB-VECTORIZER that includes the
   // immediate loads, which we do not want to count for the loop
   // vectorizer, since they are hopefully hoisted out of the loop. This
@@ -1086,6 +1132,15 @@ static unsigned getOperandsExtensionCost(const Instruction *I) {
   return ExtCost;
 }
 
+InstructionCost SystemZTTIImpl::getCFInstrCost(unsigned Opcode,
+                                               TTI::TargetCostKind CostKind,
+                                               const Instruction *I) const {
+  if (CostKind != TTI::TCK_RecipThroughput)
+    return Opcode == Instruction::PHI ? TTI::TCC_Free : TTI::TCC_Basic;
+  // Branches are assumed to be predicted.
+  return TTI::TCC_Free;
+}
+
 InstructionCost SystemZTTIImpl::getCmpSelInstrCost(
     unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
     TTI::TargetCostKind CostKind, TTI::OperandValueInfo Op1Info,
@@ -1309,6 +1364,11 @@ InstructionCost SystemZTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   // TODO: Handle other cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
     return 1;
+
+  if (I && Opcode == Instruction::Store && !Src->isVectorTy()) {
+    if (isFoldableRMW(dyn_cast<Instruction>(I->getOperand(0)), Src))
+      return TTI::TCC_Free;
+  }
 
   if (!Src->isVectorTy() && Opcode == Instruction::Load && I != nullptr) {
     // Store the load or its truncated or extended value in FoldedValue.

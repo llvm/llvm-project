@@ -91,3 +91,5 @@ HWASAN_FLAG(
     "instead of choosing one dynamically."
     "Tip: this can be combined with the compiler option, "
     "-hwasan-mapping-offset, to optimize the instrumentation.")
+
+HWASAN_FLAG(int, tag_bits, 0, "Restrict number of bits to use for tags.")

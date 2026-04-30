@@ -693,17 +693,3 @@ ExplodedNode *NodeBuilder::generateNode(const ProgramPoint &Loc,
 
   return N;
 }
-
-ExplodedNode *BranchNodeBuilder::generateNode(ProgramStateRef State,
-                                              bool Branch,
-                                              ExplodedNode *NodePred) {
-  const CFGBlock *Dst = Branch ? DstT : DstF;
-
-  if (!Dst)
-    return nullptr;
-
-  ProgramPoint Loc =
-      BlockEdge(C.getBlock(), Dst, NodePred->getLocationContext());
-  ExplodedNode *Succ = NodeBuilder::generateNode(Loc, State, NodePred);
-  return Succ;
-}

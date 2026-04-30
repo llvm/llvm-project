@@ -58,12 +58,12 @@ body:             |
     BCC 76, killed renamable $cr0, %bb.1
   bb.2:
     renamable $x3 = LI8 2
-    INLINEASM &".space 32744", 1
+    INLINEASM &".space 32744", sideeffect attdialect
     renamable $x3 = PADDI8 $x3, 13
     BLR8 implicit $lr8, implicit $rm, implicit killed $x3
   bb.1:
     renamable $x3 = LI8 1
-    INLINEASM &".space 32744", 1
+    INLINEASM &".space 32744", sideeffect attdialect
     renamable $x3 = PADDI8 $x3, 21
     BLR8 implicit $lr8, implicit $rm, implicit killed $x3
 

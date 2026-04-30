@@ -145,8 +145,8 @@ LifetimeBound
 
 The ``[[clang::lifetimebound]]`` attribute can be applied to function parameters
 or to the implicit ``this`` parameter of a method (by placing it after the
-method declarator). It indicates that the returned pointer or reference becomes
-invalid when the attributed parameter or ``this`` object is destroyed.
+method declarator). It indicates that the returned value becomes invalid when
+the attributed parameter or ``this`` object is destroyed.
 This is crucial for functions that return views or references to their
 arguments.
 
@@ -171,6 +171,32 @@ arguments.
 Without ``[[clang::lifetimebound]]`` on ``getView()``, the analysis would not
 know that the value returned by ``getView()`` depends on the temporary
 ``MyOwner`` object, and it would not be able to diagnose the dangling ``sv``.
+
+The analysis also tracks record types returned from functions and constructors
+with ``[[clang::lifetimebound]]`` annotated parameters:
+
+.. code-block:: c++
+
+  #include <string>
+
+  struct StringView {
+    StringView();
+    StringView(const std::string &s [[clang::lifetimebound]]);
+  };
+
+  StringView getStringView(const std::string &s [[clang::lifetimebound]]);
+
+  void test() {
+    StringView a, b;
+    {
+      std::string s = "temp";
+      StringView tmp(s);    // warning: object whose reference is captured does not live long enough
+      a = tmp;
+      b = getStringView(s); // warning: object whose reference is captured does not live long enough
+    }                       // note: destroyed here
+    (void)a;                // note: later used here
+    (void)b;                // note: later used here
+  }
 
 For more details, see `lifetimebound <https://clang.llvm.org/docs/AttributeReference.html#lifetimebound>`_.
 

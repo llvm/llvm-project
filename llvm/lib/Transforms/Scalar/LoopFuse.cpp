@@ -363,12 +363,15 @@ private:
 
   bool reportInvalidCandidate(Statistic &Stat) const {
     using namespace ore;
-    assert(L && Preheader && "Fusion candidate not initialized properly!");
+    ORE.emit(OptimizationRemarkAnalysis(DEBUG_TYPE, "InvalidCandidate",
+                                        L->getStartLoc(), L->getHeader())
+             << "Loop is not a candidate for fusion");
+
 #if LLVM_ENABLE_STATS
     ++Stat;
     ORE.emit(OptimizationRemarkAnalysis(DEBUG_TYPE, Stat.getName(),
-                                        L->getStartLoc(), Preheader)
-             << "[" << Preheader->getParent()->getName() << "]: "
+                                        L->getStartLoc(), L->getHeader())
+             << "[" << L->getHeader()->getParent()->getName() << "]: "
              << "Loop is not a candidate for fusion: " << Stat.getDesc());
 #endif
     return false;
@@ -1815,6 +1818,8 @@ private:
         DominatorTree::Insert, FC0GuardBlock, FC1NonLoopBlock));
 
     if (FC0.Peeled) {
+      TreeUpdates.emplace_back(DominatorTree::UpdateType(
+          DominatorTree::Delete, FC0.ExitBlock, FC0ExitBlockSuccessor));
       // Remove the Block after the ExitBlock of FC0
       TreeUpdates.emplace_back(DominatorTree::UpdateType(
           DominatorTree::Delete, FC0ExitBlockSuccessor, FC1GuardBlock));

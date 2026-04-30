@@ -1082,18 +1082,27 @@ static unsigned getFixupKindContainerSizeBytes(unsigned Kind) {
 std::optional<bool> ARMAsmBackend::evaluateFixup(const MCFragment &F,
                                                  MCFixup &Fixup, MCValue &,
                                                  uint64_t &Value) {
-  // For a few PC-relative fixups in Thumb mode, offsets need to be aligned
-  // down. We compensate here because the default handler's `Value` decrement
-  // doesn't account for this alignment.
+  // Thumb PC-relative fixups compute displacement relative to
+  // AlignDown(PC, 4). Pre-seed Value with the low bits so the generic
+  // evaluateFixup (which subtracts the raw source offset) effectively
+  // subtracts the aligned offset.
   switch (Fixup.getKind()) {
   case ARM::fixup_t2_ldst_pcrel_12:
   case ARM::fixup_t2_pcrel_10:
   case ARM::fixup_t2_pcrel_9:
-  case ARM::fixup_thumb_adr_pcrel_10:
   case ARM::fixup_t2_adr_pcrel_12:
   case ARM::fixup_arm_thumb_blx:
+    // These Thumb2/BLX fixups are not on relaxable fragments, so Stretch
+    // (which is only nonzero during relaxation) must be zero here.
+    assert(Asm->getStretch() == 0);
+    [[fallthrough]];
+  case ARM::fixup_thumb_adr_pcrel_10:
   case ARM::fixup_arm_thumb_cp:
-    Value = (Asm->getFragmentOffset(F) + Fixup.getOffset()) % 4;
+    // Subtract Stretch so both the pre-seed and the displacement use the
+    // pre-Stretch (old) source offset. This avoids an epoch mismatch that
+    // produces misaligned values when Stretch % 4 != 0.
+    Value =
+        (Asm->getFragmentOffset(F) - Asm->getStretch() + Fixup.getOffset()) % 4;
   }
   return {};
 }

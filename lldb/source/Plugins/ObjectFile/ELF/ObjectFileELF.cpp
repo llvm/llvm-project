@@ -147,7 +147,7 @@ lldb::SectionSP MergeSections(lldb::SectionSP lhs, lldb::SectionSP rhs) {
   // Do a sanity check, these should be the same.
   if (lhs->GetFileAddress() != rhs->GetFileAddress())
     lhs_module_parent->ReportWarning(
-        "Mismatch addresses for section {0} when "
+        "mismatch addresses for section {0} when "
         "merging with {1}, expected: {2:x}, "
         "actual: {3:x}",
         lhs->GetTypeAsCString(),
@@ -1573,10 +1573,10 @@ void ObjectFileELF::ParseRISCVAttributes(DataExtractor &data, uint64_t length,
       /* EnableExperimentalExtension=*/true);
   if (auto error = isa_info.takeError()) {
     StreamString ss;
-    ss << "The .riscv.attributes section contains an invalid RISC-V arch "
+    ss << "the .riscv.attributes section contains an invalid RISC-V arch "
           "string: "
        << llvm::toString(std::move(error))
-       << "\n\tThis could result in misleading disassembler output.\n";
+       << "\n\tThis could result in misleading disassembler output\n";
     Debugger::ReportWarning(ss.GetString().str());
   }
 }
@@ -2205,7 +2205,7 @@ std::shared_ptr<ObjectFileELF> ObjectFileELF::GetGnuDebugDataObjectFile() {
 
   if (!lldb_private::lzma::isAvailable()) {
     GetModule()->ReportWarning(
-        "No LZMA support found for reading .gnu_debugdata section");
+        "no LZMA support found for reading .gnu_debugdata section");
     return nullptr;
   }
 
@@ -2216,7 +2216,7 @@ std::shared_ptr<ObjectFileELF> ObjectFileELF::GetGnuDebugDataObjectFile() {
   auto err = lldb_private::lzma::uncompress(data.GetData(), uncompressedData);
   if (err) {
     GetModule()->ReportWarning(
-        "An error occurred while decompression the section {0}: {1}",
+        "an error occurred while decompressing the section {0}: {1}",
         section->GetName(), llvm::toString(std::move(err)).c_str());
     return nullptr;
   }
@@ -3996,7 +3996,7 @@ size_t ObjectFileELF::ReadSectionData(Section *section,
       GetByteOrder() == eByteOrderLittle, GetAddressByteSize() == 8);
   if (!Decompressor) {
     GetModule()->ReportWarning(
-        "Unable to initialize decompressor for section '{0}': {1}",
+        "unable to initialize decompressor for section '{0}': {1}",
         section->GetName().GetCString(),
         llvm::toString(Decompressor.takeError()).c_str());
     section_data.Clear();
@@ -4007,7 +4007,7 @@ size_t ObjectFileELF::ReadSectionData(Section *section,
       std::make_shared<DataBufferHeap>(Decompressor->getDecompressedSize(), 0);
   if (auto error = Decompressor->decompress(
           {buffer_sp->GetBytes(), size_t(buffer_sp->GetByteSize())})) {
-    GetModule()->ReportWarning("Decompression of section '{0}' failed: {1}",
+    GetModule()->ReportWarning("decompression of section '{0}' failed: {1}",
                                section->GetName().GetCString(),
                                llvm::toString(std::move(error)).c_str());
     section_data.Clear();

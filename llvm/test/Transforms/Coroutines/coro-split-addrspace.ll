@@ -3,7 +3,8 @@
 
 define ptr @f() addrspace(200) presplitcoroutine !func_sanitize !0 {
 entry:
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %f1 = addrspacecast ptr addrspace(200) @f to ptr
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr %f1, ptr null)
   %need.alloc = call i1 @llvm.coro.alloc(token %id)
   br i1 %need.alloc, label %dyn.alloc, label %begin
 
@@ -83,7 +84,6 @@ declare i8  @llvm.coro.suspend(token, i1)
 declare void @llvm.coro.resume(ptr)
 declare void @llvm.coro.destroy(ptr)
 
-declare token @llvm.coro.id(i32, ptr, ptr, ptr)
 declare i1 @llvm.coro.alloc(token)
 declare ptr @llvm.coro.begin(token, ptr)
 declare void @llvm.coro.end(ptr, i1, token) 

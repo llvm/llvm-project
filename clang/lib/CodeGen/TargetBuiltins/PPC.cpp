@@ -791,10 +791,8 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
   // Absolute value
   case PPC::BI__builtin_vsx_xvabsdp:
   case PPC::BI__builtin_vsx_xvabssp: {
-    llvm::Type *ResultType = ConvertType(E->getType());
     Value *X = EmitScalarExpr(E->getArg(0));
-    llvm::Function *F = CGM.getIntrinsic(Intrinsic::fabs, ResultType);
-    return Builder.CreateCall(F, X);
+    return Builder.CreateFAbs(X);
   }
 
   // Fastmath by default
@@ -1160,15 +1158,79 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
       Value *Acc = Builder.CreateLoad(Addr);
       CallOps.push_back(Acc);
     }
-    if (BuiltinID == PPC::BI__builtin_dmmr ||
-        BuiltinID == PPC::BI__builtin_dmxor ||
-        BuiltinID == PPC::BI__builtin_disassemble_dmr ||
-        BuiltinID == PPC::BI__builtin_mma_dmsha2hash) {
+    switch (BuiltinID) {
+    case PPC::BI__builtin_dmmr:
+    case PPC::BI__builtin_dmxor:
+    case PPC::BI__builtin_mma_dmsha2hash: {
       Address Addr = EmitPointerWithAlignment(E->getArg(1));
       Ops[1] = Builder.CreateLoad(Addr);
+      break;
     }
-    if (BuiltinID == PPC::BI__builtin_disassemble_dmr)
+    case PPC::BI__builtin_disassemble_dmr: {
+      Ops[1] = Builder.CreateLoad(EmitPointerWithAlignment(E->getArg(1)));
       return Builder.CreateAlignedStore(Ops[1], Ops[0], MaybeAlign());
+    }
+    case PPC::BI__builtin_dmsha256hash:
+    case PPC::BI__builtin_dmsha512hash: {
+      Ops[1] = Builder.CreateLoad(EmitPointerWithAlignment(E->getArg(1)));
+      int Imm = (BuiltinID == PPC::BI__builtin_dmsha256hash) ? 0 : 1;
+      Ops.push_back(llvm::ConstantInt::get(Int32Ty, Imm));
+      break;
+    }
+    case PPC::BI__builtin_dmsha3dw:
+      Ops.push_back(llvm::ConstantInt::get(Int32Ty, 0));
+      break;
+    case PPC::BI__builtin_dmcryshash:
+      Ops.push_back(llvm::ConstantInt::get(Int32Ty, 12));
+      break;
+    case PPC::BI__builtin_dmxxsha384512pad:
+    case PPC::BI__builtin_dmxxsha224256pad: {
+      int Imm = (BuiltinID == PPC::BI__builtin_dmxxsha384512pad) ? 2 : 3;
+      Ops.push_back(ConstantInt::get(Int32Ty, Imm));
+      Ops.push_back(ConstantInt::get(Int32Ty, 0));
+      Ops.push_back(ConstantInt::get(Int32Ty, 0));
+      break;
+    }
+    case PPC::BI__builtin_dmxxsha3512pad:
+    case PPC::BI__builtin_dmxxsha3384pad:
+    case PPC::BI__builtin_dmxxsha3256pad:
+    case PPC::BI__builtin_dmxxsha3224pad:
+    case PPC::BI__builtin_dmxxshake256pad:
+    case PPC::BI__builtin_dmxxshake128pad: {
+      Value *E_val = Ops[2];
+      int ID, BL;
+      switch (BuiltinID) {
+      case PPC::BI__builtin_dmxxsha3512pad:
+        ID = 0;
+        BL = 0;
+        break;
+      case PPC::BI__builtin_dmxxsha3384pad:
+        ID = 0;
+        BL = 1;
+        break;
+      case PPC::BI__builtin_dmxxsha3256pad:
+        ID = 0;
+        BL = 2;
+        break;
+      case PPC::BI__builtin_dmxxsha3224pad:
+        ID = 0;
+        BL = 3;
+        break;
+      case PPC::BI__builtin_dmxxshake256pad:
+        ID = 1;
+        BL = 0;
+        break;
+      case PPC::BI__builtin_dmxxshake128pad:
+        ID = 1;
+        BL = 1;
+        break;
+      }
+      Ops[2] = ConstantInt::get(Int32Ty, ID);
+      Ops.push_back(E_val);
+      Ops.push_back(ConstantInt::get(Int32Ty, BL));
+      break;
+    }
+    }
     for (unsigned i=1; i<Ops.size(); i++)
       CallOps.push_back(Ops[i]);
     llvm::Function *F = CGM.getIntrinsic(ID);

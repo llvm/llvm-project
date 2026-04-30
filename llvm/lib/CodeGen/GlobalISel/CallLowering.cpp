@@ -31,63 +31,63 @@ using namespace llvm;
 
 void CallLowering::anchor() {}
 
-/// Helper function which updates \p Flags when \p AttrFn returns true.
-static void
-addFlagsUsingAttrFn(ISD::ArgFlagsTy &Flags,
-                    const std::function<bool(Attribute::AttrKind)> &AttrFn) {
+/// Helper function which updates \p Flags based on the contents of \p Attrs.
+static void addFlagsFromAttrSet(ISD::ArgFlagsTy &Flags, AttributeSet Attrs) {
+  if (!Attrs.hasAttributes())
+    return;
+
   // TODO: There are missing flags. Add them here.
-  if (AttrFn(Attribute::SExt))
+  if (Attrs.hasAttribute(Attribute::SExt))
     Flags.setSExt();
-  if (AttrFn(Attribute::ZExt))
+  if (Attrs.hasAttribute(Attribute::ZExt))
     Flags.setZExt();
-  if (AttrFn(Attribute::InReg))
+  if (Attrs.hasAttribute(Attribute::InReg))
     Flags.setInReg();
-  if (AttrFn(Attribute::StructRet))
+  if (Attrs.hasAttribute(Attribute::StructRet))
     Flags.setSRet();
-  if (AttrFn(Attribute::Nest))
+  if (Attrs.hasAttribute(Attribute::Nest))
     Flags.setNest();
-  if (AttrFn(Attribute::ByVal))
+  if (Attrs.hasAttribute(Attribute::ByVal))
     Flags.setByVal();
-  if (AttrFn(Attribute::ByRef))
+  if (Attrs.hasAttribute(Attribute::ByRef))
     Flags.setByRef();
-  if (AttrFn(Attribute::Preallocated))
+  if (Attrs.hasAttribute(Attribute::Preallocated))
     Flags.setPreallocated();
-  if (AttrFn(Attribute::InAlloca))
+  if (Attrs.hasAttribute(Attribute::InAlloca))
     Flags.setInAlloca();
-  if (AttrFn(Attribute::Returned))
+  if (Attrs.hasAttribute(Attribute::Returned))
     Flags.setReturned();
-  if (AttrFn(Attribute::SwiftSelf))
+  if (Attrs.hasAttribute(Attribute::SwiftSelf))
     Flags.setSwiftSelf();
-  if (AttrFn(Attribute::SwiftAsync))
+  if (Attrs.hasAttribute(Attribute::SwiftAsync))
     Flags.setSwiftAsync();
-  if (AttrFn(Attribute::SwiftError))
+  if (Attrs.hasAttribute(Attribute::SwiftError))
     Flags.setSwiftError();
 }
 
 ISD::ArgFlagsTy CallLowering::getAttributesForArgIdx(const CallBase &Call,
                                                      unsigned ArgIdx) const {
   ISD::ArgFlagsTy Flags;
-  addFlagsUsingAttrFn(Flags, [&Call, &ArgIdx](Attribute::AttrKind Attr) {
-    return Call.paramHasAttr(ArgIdx, Attr);
-  });
+  const AttributeList &Attrs = Call.getAttributes();
+  addFlagsFromAttrSet(Flags, Attrs.getParamAttrs(ArgIdx));
+  if (const Function *F = Call.getCalledFunction())
+    addFlagsFromAttrSet(Flags, F->getAttributes().getParamAttrs(ArgIdx));
   return Flags;
 }
 
 ISD::ArgFlagsTy
 CallLowering::getAttributesForReturn(const CallBase &Call) const {
   ISD::ArgFlagsTy Flags;
-  addFlagsUsingAttrFn(Flags, [&Call](Attribute::AttrKind Attr) {
-    return Call.hasRetAttr(Attr);
-  });
+  addFlagsFromAttrSet(Flags, Call.getAttributes().getRetAttrs());
+  if (const Function *F = Call.getCalledFunction())
+    addFlagsFromAttrSet(Flags, F->getAttributes().getRetAttrs());
   return Flags;
 }
 
 void CallLowering::addArgFlagsFromAttributes(ISD::ArgFlagsTy &Flags,
                                              const AttributeList &Attrs,
                                              unsigned OpIdx) const {
-  addFlagsUsingAttrFn(Flags, [&Attrs, &OpIdx](Attribute::AttrKind Attr) {
-    return Attrs.hasAttributeAtIndex(OpIdx, Attr);
-  });
+  addFlagsFromAttrSet(Flags, Attrs.getAttributes(OpIdx));
 }
 
 bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,

@@ -3,9 +3,9 @@
 // RUN: clang-import-test -dump-ast -import %S/Inputs/S.cpp -expression %s -Xcc -DDEDUP | FileCheck --check-prefix=CHECK-DEDUP %s
 // RUN: clang-import-test -dump-ast -import %S/Inputs/S.cpp -expression %s -Xcc -DPACK -Xcc -DSEQ -Xcc -DDEDUP | FileCheck --check-prefixes=CHECK-SEQ,CHECK-PACK,CHECK-DEDUP %s
 
-// CHECK-SEQ:  BuiltinTemplateDecl {{.+}} <<invalid sloc>> <invalid sloc> implicit __make_integer_seq{{$}}
-// CHECK-PACK: BuiltinTemplateDecl {{.+}} <<invalid sloc>> <invalid sloc> implicit __type_pack_element{{$}}
-// CHECK-DEDUP: BuiltinTemplateDecl {{.+}} <<invalid sloc>> <invalid sloc> implicit __builtin_dedup_pack{{$}}
+// CHECK-SEQ:  BuiltinTemplateDecl {{.+}} <<invalid sloc>> <invalid sloc> implicit referenced __make_integer_seq{{$}}
+// CHECK-PACK: BuiltinTemplateDecl {{.+}} <<invalid sloc>> <invalid sloc> implicit referenced __type_pack_element{{$}}
+// CHECK-DEDUP: BuiltinTemplateDecl {{.+}} <<invalid sloc>> <invalid sloc> implicit referenced __builtin_dedup_pack{{$}}
 
 void expr() {
 #ifdef SEQ

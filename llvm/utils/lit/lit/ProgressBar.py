@@ -297,7 +297,7 @@ class ProgressBar:
     BAR = "%s${%s}[${BOLD}%s%s${NORMAL}${%s}]${NORMAL}%s"
     HEADER = "${BOLD}${CYAN}%s${NORMAL}\n\n"
 
-    def __init__(self, term, header, useETA=True):
+    def __init__(self, term, header, minOutputInterval, useETA=True):
         self.term = term
         if not (self.term.CLEAR_EOL and self.term.UP and self.term.BOL):
             raise ValueError(
@@ -321,7 +321,23 @@ class ProgressBar:
             self.startTime = time.time()
         # self.update(0, '')
 
+        self.lastUpdateTime = 0
+        self.minOutputInterval = minOutputInterval
+        # the checks preceeding us should prevent getting here if output is redirected
+        # - we don't want to rate limit (ie drop) output to a file
+        assert sys.stdout.isatty()
+
     def update(self, percent, message):
+        # ratelimit updates
+        if self.minOutputInterval is not None:
+            now = time.time()
+            if now - self.lastUpdateTime < self.minOutputInterval:
+                # ... too soon. Technically, this means we could 'starve'
+                # the output if the next update takes too long to come, but that
+                # doesn't seem to be an issue in practice
+                return
+            self.lastUpdateTime = now
+
         if self.cleared:
             sys.stdout.write(self.header)
             self.cleared = 0

@@ -2,11 +2,12 @@
 
 define void @main() {
 entry:
-; CHECK: call i32 @dx.op.waveGetLaneIndex(i32 111) #[[#ATTR:]]
+; CHECK: call i32 @dx.op.waveGetLaneIndex(i32 111)
   %0 = call i32 @llvm.dx.wave.getlaneindex()
   ret void
 }
 
-; CHECK: attributes #[[#ATTR]] = {{{.*}} memory(read) {{.*}}}
+; CHECK: declare i32 @dx.op.waveGetLaneIndex(i32) #[[#ATTR0:]]
+; CHECK: attributes #[[#ATTR0]] = { nounwind memory(read) }
 
 declare i32 @llvm.dx.wave.getlaneindex()

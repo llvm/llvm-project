@@ -1,6 +1,5 @@
 ; RUN: opt -S < %s -passes=loop-vectorize -force-vector-width=4 | FileCheck %s
 
-declare void @llvm.sideeffect()
 
 ; Vectorization across a @llvm.sideeffect.
 

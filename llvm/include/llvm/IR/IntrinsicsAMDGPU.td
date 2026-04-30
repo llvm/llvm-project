@@ -292,6 +292,8 @@ def int_amdgcn_s_barrier_signal : ClangBuiltin<"__builtin_amdgcn_s_barrier_signa
 
 // void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) %barrier, i32 %memberCnt)
 // The %barrier and %memberCnt argument must be uniform, otherwise behavior is undefined.
+// If %memberCnt is 0, the member count is retained from the previous
+// s_barrier_init or s_barrier_signal operation.
 def int_amdgcn_s_barrier_signal_var : ClangBuiltin<"__builtin_amdgcn_s_barrier_signal_var">,
   Intrinsic<[], [local_ptr_ty, llvm_i32_ty], [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn,
                                 IntrNoCallback, IntrNoFree]>;
@@ -360,6 +362,8 @@ def int_amdgcn_wave_barrier : ClangBuiltin<"__builtin_amdgcn_wave_barrier">,
 //     MASK = 0x0000 0080: ALL DS instructions may be scheduled across SCHED_BARRIER.
 //     MASK = 0x0000 0100: ALL DS read instructions may be scheduled accoss SCHED_BARRIER.
 //     MASK = 0x0000 0200: ALL DS write instructions may be scheduled across SCHED_BARRIER.
+//     MASK = 0x0000 0400: All Transcendental (e.g. V_EXP) instructions may be scheduled across SCHED_BARRIER.
+//     MASK = 0x0000 0800: All LDSDMA instructions may be scheduled across SCHED_BARRIER.
 def int_amdgcn_sched_barrier : ClangBuiltin<"__builtin_amdgcn_sched_barrier">,
   Intrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects, IntrConvergent,
                                 IntrWillReturn, IntrNoCallback, IntrNoFree]>;

@@ -480,6 +480,7 @@ bool AMDGPULowerVGPREncoding::updateSetregModeImm(MachineInstr &MI,
 
   MachineOperand *ImmOp = TII->getNamedOperand(MI, AMDGPU::OpName::imm);
   int64_t OldImm = ImmOp->getImm();
+  // Note that Offset is ignored for mode bits here.
   int64_t NewImm =
       (OldImm & ~AMDGPU::Hwreg::VGPR_MSB_MASK) | (SetregMode << VGPRMSBShift);
   ImmOp->setImm(NewImm);
@@ -498,7 +499,6 @@ bool AMDGPULowerVGPREncoding::handleSetregMode(MachineInstr &MI) {
   assert(SIMM16Op && "SIMM16Op must be present");
 
   auto [HwRegId, Offset, Size] = HwregEncoding::decode(SIMM16Op->getImm());
-  (void)Offset;
   LLVM_DEBUG(dbgs() << "    HwRegId=" << HwRegId << " Offset=" << Offset
                     << " Size=" << Size << '\n');
   if (HwRegId != ID_MODE) {
@@ -515,9 +515,10 @@ bool AMDGPULowerVGPREncoding::handleSetregMode(MachineInstr &MI) {
   });
 
   // Case 1: Size <= 12 - the original instruction uses imm32[0:Size-1], so
-  // imm32[12:19] is unused. Safe to set imm32[12:19] to the correct VGPR
-  // MSBs.
-  if (Size <= VGPRMSBShift) {
+  // imm32[12:19] is unused, or Offset is zero and it is safe to set
+  // imm32[12:19] to the correct VGPR MSBs.
+  if (!Offset || Size <= VGPRMSBShift) {
+    // Set imm32[12:19] to the correct VGPR MSBs.
     LLVM_DEBUG(dbgs() << "    Case 1: Size(" << Size << ") <= VGPRMSBShift("
                       << VGPRMSBShift
                       << "), treating as mode scope boundary\n");
@@ -563,7 +564,7 @@ bool AMDGPULowerVGPREncoding::handleSetregMode(MachineInstr &MI) {
   BuildMI(*MBB, InsertPt, MI.getDebugLoc(), TII->get(AMDGPU::S_NOP)).addImm(0);
   MostRecentModeSet = BuildMI(*MBB, InsertPt, MI.getDebugLoc(),
                               TII->get(AMDGPU::S_SET_VGPR_MSB))
-                          .addImm(ModeValue);
+                          .addImm(ModeValue | (ModeValue << ModeWidth));
   LLVM_DEBUG(dbgs() << "    -> inserted S_SET_VGPR_MSB after setreg: "
                     << *MostRecentModeSet);
   return true;

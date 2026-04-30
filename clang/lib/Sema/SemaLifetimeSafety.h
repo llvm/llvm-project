@@ -43,9 +43,9 @@ class LifetimeSafetySemaHelperImpl : public LifetimeSafetySemaHelper {
 public:
   LifetimeSafetySemaHelperImpl(Sema &S) : S(S) {}
 
-  void reportUseAfterFree(const Expr *IssueExpr, const Expr *UseExpr,
-                          const Expr *MovedExpr,
-                          SourceLocation FreeLoc) override {
+  void reportUseAfterScope(const Expr *IssueExpr, const Expr *UseExpr,
+                           const Expr *MovedExpr,
+                           SourceLocation FreeLoc) override {
     S.Diag(IssueExpr->getExprLoc(),
            MovedExpr ? diag::warn_lifetime_safety_use_after_scope_moved
                      : diag::warn_lifetime_safety_use_after_scope)
@@ -111,21 +111,32 @@ public:
 
   void reportUseAfterInvalidation(const Expr *IssueExpr, const Expr *UseExpr,
                                   const Expr *InvalidationExpr) override {
-    S.Diag(IssueExpr->getExprLoc(), diag::warn_lifetime_safety_invalidation)
+    auto WarnDiag = isa<CXXDeleteExpr>(InvalidationExpr)
+                        ? diag::warn_lifetime_safety_use_after_free
+                        : diag::warn_lifetime_safety_invalidation;
+    auto UseDiag = isa<CXXDeleteExpr>(InvalidationExpr)
+                       ? diag::note_lifetime_safety_freed_here
+                       : diag::note_lifetime_safety_invalidated_here;
+    S.Diag(IssueExpr->getExprLoc(), WarnDiag)
         << false << IssueExpr->getSourceRange();
-    S.Diag(InvalidationExpr->getExprLoc(),
-           diag::note_lifetime_safety_invalidated_here)
+    S.Diag(InvalidationExpr->getExprLoc(), UseDiag)
         << InvalidationExpr->getSourceRange();
     S.Diag(UseExpr->getExprLoc(), diag::note_lifetime_safety_used_here)
         << UseExpr->getSourceRange();
   }
   void reportUseAfterInvalidation(const ParmVarDecl *PVD, const Expr *UseExpr,
                                   const Expr *InvalidationExpr) override {
-    S.Diag(PVD->getSourceRange().getBegin(),
-           diag::warn_lifetime_safety_invalidation)
+
+    auto WarnDiag = isa<CXXDeleteExpr>(InvalidationExpr)
+                        ? diag::warn_lifetime_safety_use_after_free
+                        : diag::warn_lifetime_safety_invalidation;
+    auto UseDiag = isa<CXXDeleteExpr>(InvalidationExpr)
+                       ? diag::note_lifetime_safety_freed_here
+                       : diag::note_lifetime_safety_invalidated_here;
+
+    S.Diag(PVD->getSourceRange().getBegin(), WarnDiag)
         << true << PVD->getSourceRange();
-    S.Diag(InvalidationExpr->getExprLoc(),
-           diag::note_lifetime_safety_invalidated_here)
+    S.Diag(InvalidationExpr->getExprLoc(), UseDiag)
         << InvalidationExpr->getSourceRange();
     S.Diag(UseExpr->getExprLoc(), diag::note_lifetime_safety_used_here)
         << UseExpr->getSourceRange();
@@ -133,7 +144,7 @@ public:
 
   void suggestLifetimeboundToParmVar(SuggestionScope Scope,
                                      const ParmVarDecl *ParmToAnnotate,
-                                     const Expr *EscapeExpr) override {
+                                     EscapingTarget Target) override {
     unsigned DiagID =
         (Scope == SuggestionScope::CrossTU)
             ? diag::warn_lifetime_safety_cross_tu_param_suggestion
@@ -150,9 +161,15 @@ public:
     S.Diag(ParmToAnnotate->getBeginLoc(), DiagID)
         << ParmToAnnotate->getSourceRange()
         << FixItHint::CreateInsertion(InsertionPoint, FixItText);
-    S.Diag(EscapeExpr->getBeginLoc(),
-           diag::note_lifetime_safety_suggestion_returned_here)
-        << EscapeExpr->getSourceRange();
+
+    if (const auto *EscapeExpr = Target.dyn_cast<const Expr *>())
+      S.Diag(EscapeExpr->getBeginLoc(),
+             diag::note_lifetime_safety_suggestion_returned_here)
+          << EscapeExpr->getSourceRange();
+    else if (const auto *EscapeField = Target.dyn_cast<const FieldDecl *>())
+      S.Diag(EscapeField->getLocation(),
+             diag::note_lifetime_safety_escapes_to_field_here)
+          << EscapeField->getSourceRange();
   }
 
   void suggestLifetimeboundToImplicitThis(SuggestionScope Scope,

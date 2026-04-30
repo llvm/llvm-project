@@ -337,16 +337,23 @@ Value *SCEVExpander::InsertBinop(Instruction::BinaryOps Opcode,
   }
 
   // If we haven't found this binop, insert it.
-  // TODO: Use the Builder, which will make CreateBinOp below fold with
-  // InstSimplifyFolder.
-  Instruction *BO = Builder.Insert(BinaryOperator::Create(Opcode, LHS, RHS));
-  BO->setDebugLoc(Loc);
-  if (any(Flags & SCEV::FlagNUW))
-    BO->setHasNoUnsignedWrap();
-  if (any(Flags & SCEV::FlagNSW))
-    BO->setHasNoSignedWrap();
-
-  return BO;
+  Builder.SetCurrentDebugLocation(Loc);
+  bool IsNUW = any(Flags & SCEV::FlagNUW);
+  bool IsNSW = any(Flags & SCEV::FlagNSW);
+  // Don't use folder when expanding post-inc rewrites in LSRMode to preserve
+  // the rewrites.
+  if (LSRMode && !PostIncLoops.empty() &&
+      all_of(PostIncLoops, [&](const Loop *L) {
+        return !L->contains(Builder.GetInsertBlock());
+      })) {
+    auto *BO = BinaryOperator::Create(Opcode, LHS, RHS);
+    if (IsNUW)
+      BO->setHasNoUnsignedWrap();
+    if (IsNSW)
+      BO->setHasNoSignedWrap();
+    return Builder.Insert(BO);
+  }
+  return Builder.CreateNoWrapBinOp(Opcode, LHS, RHS, IsNUW, IsNSW);
 }
 
 /// expandAddToGEP - Expand an addition expression with a pointer type into
@@ -1344,7 +1351,9 @@ Value *SCEVExpander::visitAddRecExpr(SCEVUseT<const SCEVAddRecExpr *> S) {
     Value *V = expand(
         SE.getAddRecExpr(NewOps, S->getLoop(), S.getNoWrapFlags(SCEV::FlagNW)));
     BasicBlock::iterator NewInsertPt =
-        findInsertPointAfter(cast<Instruction>(V), &*Builder.GetInsertPoint());
+        isa<Instruction>(V) ? findInsertPointAfter(cast<Instruction>(V),
+                                                   &*Builder.GetInsertPoint())
+                            : Builder.GetInsertPoint();
     V = expand(SE.getTruncateExpr(SE.getUnknown(V), Ty), NewInsertPt);
     return V;
   }
@@ -2023,12 +2032,26 @@ template<typename T> static InstructionCost costAndCollectOperands(
   case scAddExpr:
     Cost = ArithCost(Instruction::Add, S->getNumOperands() - 1);
     break;
-  case scMulExpr:
-    // TODO: this is a very pessimistic cost modelling for Mul,
-    // because of Bin Pow algorithm actually used by the expander,
-    // see SCEVExpander::visitMulExpr(), ExpandOpBinPowN().
-    Cost = ArithCost(Instruction::Mul, S->getNumOperands() - 1);
+  case scMulExpr: {
+    // Match the actual expansion in visitMulExpr: multiply by -1 is
+    // expanded as a negate (sub 0, x), and multiply by a power of 2 is
+    // expanded as a shift.  Only handle the common two-operand case with a
+    // constant LHS; for everything else fall back to the pessimistic
+    // all-multiplies estimate.
+    // TODO: this is still pessimistic for the general case because of the
+    // Bin Pow algorithm actually used by the expander, see
+    // SCEVExpander::visitMulExpr(), ExpandOpBinPowN().
+    unsigned OpCode = Instruction::Mul;
+    if (S->getNumOperands() == 2)
+      if (auto *SC = dyn_cast<SCEVConstant>(S->getOperand(0))) {
+        if (SC->getAPInt().isAllOnes()) // -1
+          OpCode = Instruction::Sub;
+        else if (SC->getAPInt().isPowerOf2())
+          OpCode = Instruction::Shl;
+      }
+    Cost = ArithCost(OpCode, S->getNumOperands() - 1);
     break;
+  }
   case scSMaxExpr:
   case scUMaxExpr:
   case scSMinExpr:

@@ -165,17 +165,17 @@ public:
   ~Analysis1() { WasDestroyed = true; }
 
   llvm::Error initialize() override {
-    result().WasInitialized = true;
+    getResult().WasInitialized = true;
     return llvm::Error::success();
   }
 
   llvm::Error add(EntityId Id, const Analysis1EntitySummary &S) override {
-    result().Entries.push_back({Id, S.InstanceId});
+    getResult().Entries.push_back({Id, S.InstanceId});
     return llvm::Error::success();
   }
 
   llvm::Error finalize() override {
-    result().WasFinalized = true;
+    getResult().WasFinalized = true;
     return llvm::Error::success();
   }
 };
@@ -193,17 +193,17 @@ public:
   ~Analysis2() { WasDestroyed = true; }
 
   llvm::Error initialize() override {
-    result().WasInitialized = true;
+    getResult().WasInitialized = true;
     return llvm::Error::success();
   }
 
   llvm::Error add(EntityId Id, const Analysis2EntitySummary &S) override {
-    result().Entries.push_back({Id, S.InstanceId});
+    getResult().Entries.push_back({Id, S.InstanceId});
     return llvm::Error::success();
   }
 
   llvm::Error finalize() override {
-    result().WasFinalized = true;
+    getResult().WasFinalized = true;
     return llvm::Error::success();
   }
 };
@@ -219,17 +219,17 @@ public:
   ~Analysis4() { WasDestroyed = true; }
 
   llvm::Error initialize() override {
-    result().WasInitialized = true;
+    getResult().WasInitialized = true;
     return llvm::Error::success();
   }
 
   llvm::Error add(EntityId Id, const Analysis4EntitySummary &S) override {
-    result().Entries.push_back({Id, S.InstanceId});
+    getResult().Entries.push_back({Id, S.InstanceId});
     return llvm::Error::success();
   }
 
   llvm::Error finalize() override {
-    result().WasFinalized = true;
+    getResult().WasFinalized = true;
     return llvm::Error::success();
   }
 };
@@ -247,20 +247,20 @@ public:
 
   llvm::Error initialize(const Analysis1Result &R1, const Analysis2Result &R2,
                          const Analysis4Result &R4) override {
-    result().CallSequence.push_back("initialize");
-    result().Analysis1Entries = R1.Entries;
-    result().Analysis2Entries = R2.Entries;
-    result().Analysis4Entries = R4.Entries;
+    getResult().CallSequence.push_back("initialize");
+    getResult().Analysis1Entries = R1.Entries;
+    getResult().Analysis2Entries = R2.Entries;
+    getResult().Analysis4Entries = R4.Entries;
     return llvm::Error::success();
   }
 
   llvm::Expected<bool> step() override {
-    result().CallSequence.push_back("step");
+    getResult().CallSequence.push_back("step");
     return ++StepCount < 2;
   }
 
   llvm::Error finalize() override {
-    result().CallSequence.push_back("finalize");
+    getResult().CallSequence.push_back("finalize");
     return llvm::Error::success();
   }
 };

@@ -1216,7 +1216,7 @@ std::pair<bool, TypeSP> DWARFASTParserClang::ParseCXXMethod(
     else
       dwarf->GetObjectFile()->GetModule()->ReportWarning(
           "{0:x8}: DW_AT_specification({1:x16}"
-          ") has no decl\n",
+          ") has no decl",
           die.GetID(), spec_die.GetOffset());
 
     return {true, nullptr};
@@ -1236,7 +1236,7 @@ std::pair<bool, TypeSP> DWARFASTParserClang::ParseCXXMethod(
     else
       dwarf->GetObjectFile()->GetModule()->ReportWarning(
           "{0:x8}: DW_AT_abstract_origin({1:x16}"
-          ") has no decl\n",
+          ") has no decl",
           die.GetID(), abs_die.GetOffset());
 
     return {true, nullptr};
@@ -2008,94 +2008,28 @@ private:
 
 static std::optional<clang::APValue> MakeAPValue(const clang::ASTContext &ast,
                                                  CompilerType clang_type,
-                                                 uint64_t value,
-                                                 const DWARFDIE &die) {
+                                                 uint64_t value) {
   std::optional<uint64_t> bit_width =
       llvm::expectedToOptional(clang_type.GetBitSize(nullptr));
   if (!bit_width)
     return std::nullopt;
 
   bool is_signed = false;
+  const bool is_integral = clang_type.IsIntegerOrEnumerationType(is_signed);
 
-  if (clang_type.IsIntegerOrEnumerationType(is_signed) ||
-      clang_type.IsMemberDataPointerType()) {
-    llvm::APSInt apint(*bit_width, !is_signed);
-    apint = value;
+  llvm::APSInt apint(*bit_width, !is_signed);
+  apint = value;
+
+  if (is_integral)
     return clang::APValue(apint);
-  }
 
   // FIXME: we currently support a limited set of floating point types.
   // E.g., 16-bit floats are not supported.
-  if (clang_type.IsRealFloatingPointType()) {
-    llvm::APInt apint(*bit_width, value);
-    return clang::APValue(llvm::APFloat(
-        ast.getFloatTypeSemantics(ClangUtil::GetQualType(clang_type)), apint));
-  }
+  if (!clang_type.IsRealFloatingPointType())
+    return std::nullopt;
 
-  die.GetDWARF()->GetObjectFile()->GetModule()->ReportError(
-      "error: unsupported template value type in die {0:x16}, "
-      "please file a bug",
-      die.GetOffset());
-  lldbassert(false && "Unsupported type for non-type template parameter");
-
-  return std::nullopt;
-}
-
-clang::FieldDecl *DWARFASTParserClang::ResolveMemberDataPointerToFieldDecl(
-    const DWARFDIE &die, uint64_t member_byte_offset) {
-  Log *log = GetLog(DWARFLog::TypeCompletion);
-
-  DWARFDIE type_die = die.GetReferencedDIE(DW_AT_type);
-  assert(type_die && type_die.Tag() == DW_TAG_ptr_to_member_type &&
-         "DW_AT_type of a member data pointer must be "
-         "DW_TAG_ptr_to_member_type");
-
-  DWARFDIE containing_die = type_die.GetReferencedDIE(DW_AT_containing_type);
-  if (!containing_die) {
-    LLDB_LOG(log,
-             "ResolveMemberDataPointerToFieldDecl: DIE {0:x16} — "
-             "DW_TAG_ptr_to_member_type {1:x16} has no DW_AT_containing_type",
-             die.GetOffset(), type_die.GetOffset());
-    return nullptr;
-  }
-
-  Type *containing_type = die.ResolveTypeUID(containing_die);
-  if (!containing_type) {
-    LLDB_LOG(log,
-             "ResolveMemberDataPointerToFieldDecl: DIE {0:x16} — "
-             "failed to resolve containing type {1:x16}",
-             die.GetOffset(), containing_die.GetOffset());
-    return nullptr;
-  }
-
-  CompilerType containing_ct = containing_type->GetFullCompilerType();
-  auto *record_decl =
-      m_ast.GetAsCXXRecordDecl(containing_ct.GetOpaqueQualType());
-  if (!record_decl) {
-    LLDB_LOG(log,
-             "ResolveMemberDataPointerToFieldDecl: DIE {0:x16} — "
-             "containing type {1:x16} is not a CXXRecordDecl",
-             die.GetOffset(), containing_die.GetOffset());
-    return nullptr;
-  }
-
-  clang::ASTContext &ast = m_ast.getASTContext();
-  for (auto *field : record_decl->fields()) {
-    if (ast.getFieldOffset(field) / 8 == member_byte_offset) {
-      LLDB_LOG(log,
-               "ResolveMemberDataPointerToFieldDecl: DIE {0:x16} — "
-               "resolved to field '{1}' at byte offset {2} in {3}",
-               die.GetOffset(), field->getName(), member_byte_offset,
-               containing_die.GetName());
-      return field;
-    }
-  }
-
-  LLDB_LOG(log,
-           "ResolveMemberDataPointerToFieldDecl: DIE {0:x16} — "
-           "no field found at byte offset {1} in {2}",
-           die.GetOffset(), member_byte_offset, containing_die.GetName());
-  return nullptr;
+  return clang::APValue(llvm::APFloat(
+      ast.getFloatTypeSemantics(ClangUtil::GetQualType(clang_type)), apint));
 }
 
 bool DWARFASTParserClang::ParseTemplateDIE(
@@ -2180,24 +2114,7 @@ bool DWARFASTParserClang::ParseTemplateDIE(
         name = nullptr;
 
       if (tag == DW_TAG_template_value_parameter && uval64_valid) {
-        if (auto value = MakeAPValue(ast, clang_type, uval64, die)) {
-          // For pointer-to-member types, try to resolve to the actual FieldDecl
-          if (clang_type.IsMemberDataPointerType()) {
-            if (auto *field =
-                    ResolveMemberDataPointerToFieldDecl(die, uval64)) {
-              template_param_infos.InsertArg(
-                  name, clang::TemplateArgument(
-                            field, ClangUtil::GetQualType(clang_type),
-                            is_default_template_arg));
-              return true;
-            }
-            // Failed to resolve FieldDecl, fall through to integer path
-            die.GetDWARF()->GetObjectFile()->GetModule()->ReportError(
-                "error: failed to resolve member data pointer to FieldDecl "
-                "in die {0:x16}, please file a bug",
-                die.GetOffset());
-          }
-
+        if (auto value = MakeAPValue(ast, clang_type, uval64)) {
           template_param_infos.InsertArg(
               name, clang::TemplateArgument(
                         ast, ClangUtil::GetQualType(clang_type),
@@ -3107,7 +3024,7 @@ void DWARFASTParserClang::ParseSingleMember(
           "{0:x16}: {1} ({2}) bitfield named \"{3}\" has invalid "
           "bit offset ({4:x8}) member will be ignored. Please file a bug "
           "against the "
-          "compiler and include the preprocessed output for {5}\n",
+          "compiler and include the preprocessed output for {5}",
           die.GetID(), DW_TAG_value_to_name(tag), tag, attrs.name,
           this_field_info.bit_offset, GetUnitName(parent_die).c_str());
       return;

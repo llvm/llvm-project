@@ -562,11 +562,10 @@ pid_t StartSubprocess(const char *program, const char *const argv[],
       internal_close(stderr_fd);
     }
 
-#  if SANITIZER_FREEBSD
-    internal_close_range(3, ~static_cast<fd_t>(0), 0);
-#  else
-    for (int fd = sysconf(_SC_OPEN_MAX); fd > 2; fd--) internal_close(fd);
-#  endif
+    // Close all fds except stdin/stdout/stderr before exec.
+    // Fallback to the loop if close_range is not supported.
+    if (internal_close_range(3, ~static_cast<fd_t>(0), 0) != 0)
+      for (int fd = sysconf(_SC_OPEN_MAX); fd > 2; fd--) internal_close(fd);
 
     internal_execve(program, const_cast<char **>(&argv[0]),
                     const_cast<char *const *>(envp));

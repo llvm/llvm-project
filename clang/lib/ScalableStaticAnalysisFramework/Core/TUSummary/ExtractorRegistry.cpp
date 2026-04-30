@@ -12,10 +12,7 @@
 using namespace clang;
 using namespace ssaf;
 
-// FIXME: LLVM_INSTANTIATE_REGISTRY can't be used here because it drops extra
-// type parameters.
-template class CLANG_EXPORT_TEMPLATE
-    llvm::Registry<TUSummaryExtractor, TUSummaryBuilder &>;
+LLVM_DEFINE_REGISTRY(clang::ssaf::TUSummaryExtractorRegistry)
 
 bool ssaf::isTUSummaryExtractorRegistered(llvm::StringRef SummaryName) {
   for (const auto &Entry : TUSummaryExtractorRegistry::entries())
