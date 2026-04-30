@@ -11,8 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVCallingConv.h"
+#include "MCTargetDesc/RISCVBaseInfo.h"
 #include "RISCVMachineFunctionInfo.h"
 #include "RISCVSubtarget.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCRegister.h"
@@ -89,6 +91,9 @@ static const MCPhysReg ArgFPR32s[] = {RISCV::F10_F, RISCV::F11_F, RISCV::F12_F,
 static const MCPhysReg ArgFPR64s[] = {RISCV::F10_D, RISCV::F11_D, RISCV::F12_D,
                                       RISCV::F13_D, RISCV::F14_D, RISCV::F15_D,
                                       RISCV::F16_D, RISCV::F17_D};
+static const MCPhysReg ArgFPR128s[] = {RISCV::F10_Q, RISCV::F11_Q, RISCV::F12_Q,
+                                       RISCV::F13_Q, RISCV::F14_Q, RISCV::F15_Q,
+                                       RISCV::F16_Q, RISCV::F17_Q};
 // This is an interim calling convention and it may be changed in the future.
 static const MCPhysReg ArgVRs[] = {
     RISCV::V8,  RISCV::V9,  RISCV::V10, RISCV::V11, RISCV::V12, RISCV::V13,
@@ -410,6 +415,8 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
   bool AllowFPRForF16_F32 = false;
   // UseFPRForF64 if targeting an FLEN>=64 ABI and the argument isn't variadic.
   bool AllowFPRForF64 = false;
+  // UseFPRForF64 if targeting an FLEN>=64 ABI and the argument isn't variadic.
+  bool AllowFPRForF128 = false;
 
   RISCVABI::ABI ABI = Subtarget.getTargetABI();
   switch (ABI) {
@@ -420,6 +427,10 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
   case RISCVABI::ABI_LP64:
   case RISCVABI::ABI_LP64E:
     break;
+  case RISCVABI::ABI_ILP32Q:
+  case RISCVABI::ABI_LP64Q:
+    AllowFPRForF128 = !ArgFlags.isVarArg();
+    [[fallthrough]];
   case RISCVABI::ABI_ILP32D:
   case RISCVABI::ABI_LP64D:
     AllowFPRForF64 = !ArgFlags.isVarArg();
@@ -446,6 +457,13 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
 
   if (LocVT == MVT::f64 && AllowFPRForF64) {
     if (MCRegister Reg = State.AllocateReg(ArgFPR64s)) {
+      State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+      return false;
+    }
+  }
+
+  if (LocVT == MVT::f128 && AllowFPRForF128) {
+    if (MCRegister Reg = State.AllocateReg(ArgFPR128s)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
@@ -523,9 +541,25 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
   assert(PendingLocs.size() == PendingArgFlags.size() &&
          "PendingLocs and PendingArgFlags out of sync");
 
+  // If f128 cannot be passed in an FPR on RV32, it is passed according to the
+  // integer calling convention. Since it is larger than 2*XLEN, pass it by
+  // reference.
+  if (XLen == 32 && LocVT == MVT::f128) {
+    LocVT = XLenVT;
+    LocInfo = CCValAssign::Indirect;
+    if (MCRegister Reg = State.AllocateReg(ArgGPRs))
+      State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+    else {
+      int64_t StackOffset = State.AllocateStack(4, Align(4));
+      State.addLoc(
+          CCValAssign::getMem(ValNo, ValVT, StackOffset, LocVT, LocInfo));
+    }
+    return false;
+  }
+
   // Handle passing f64 on RV32D with a soft float ABI or when floating point
   // registers are exhausted.
-  if (XLen == 32 && LocVT == MVT::f64) {
+  if ((XLen == 32 && LocVT == MVT::f64) || (XLen == 64 && LocVT == MVT::f128)) {
     assert(PendingLocs.empty() && "Can't lower f64 if it is split");
     // Depending on available argument GPRS, f64 may be passed in a pair of
     // GPRs, split between a GPR and the stack, or passed completely on the
@@ -533,19 +567,23 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
     // cases.
     MCRegister Reg = State.AllocateReg(ArgGPRs);
     if (!Reg) {
-      int64_t StackOffset = State.AllocateStack(8, Align(8));
+      uint32_t AlignForStoredValue = LocVT.getSizeInBits() / 8;
+      int64_t StackOffset =
+          State.AllocateStack(AlignForStoredValue, Align(AlignForStoredValue));
       State.addLoc(
           CCValAssign::getMem(ValNo, ValVT, StackOffset, LocVT, LocInfo));
       return false;
     }
-    LocVT = MVT::i32;
+    LocVT = XLenVT;
     State.addLoc(CCValAssign::getCustomReg(ValNo, ValVT, Reg, LocVT, LocInfo));
     MCRegister HiReg = State.AllocateReg(ArgGPRs);
     if (HiReg) {
       State.addLoc(
           CCValAssign::getCustomReg(ValNo, ValVT, HiReg, LocVT, LocInfo));
     } else {
-      int64_t StackOffset = State.AllocateStack(4, Align(4));
+      uint32_t AlignForStoredValue = LocVT.getSizeInBits() / 8;
+      int64_t StackOffset =
+          State.AllocateStack(AlignForStoredValue, Align(AlignForStoredValue));
       State.addLoc(
           CCValAssign::getCustomMem(ValNo, ValVT, StackOffset, LocVT, LocInfo));
     }

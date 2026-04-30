@@ -1347,6 +1347,7 @@ Register CallLowering::ValueHandler::extendRegister(Register ValReg,
     break;
   case CCValAssign::Full:
   case CCValAssign::BCvt:
+  case CCValAssign::Indirect:
     // FIXME: bitconverting between vector types may or may not be a
     // nop in big-endian situations.
     return ValReg;

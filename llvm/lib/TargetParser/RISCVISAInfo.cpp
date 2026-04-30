@@ -1038,6 +1038,8 @@ StringRef RISCVISAInfo::computeDefaultABI() const {
       return "ilp32d";
     if (Exts.count("f"))
       return "ilp32f";
+    if (Exts.count("q"))
+      return "ilp32q";
     return "ilp32";
   } else if (XLen == 64) {
     if (Exts.count("e"))
@@ -1046,6 +1048,8 @@ StringRef RISCVISAInfo::computeDefaultABI() const {
       return "lp64d";
     if (Exts.count("f"))
       return "lp64f";
+    if (Exts.count("q"))
+      return "lp64q";
     return "lp64";
   }
   llvm_unreachable("Invalid XLEN");

@@ -106,10 +106,12 @@ ABI getTargetABI(StringRef ABIName) {
                        .Case("ilp32", ABI_ILP32)
                        .Case("ilp32f", ABI_ILP32F)
                        .Case("ilp32d", ABI_ILP32D)
+                       .Case("ilp32q", ABI_ILP32Q)
                        .Case("ilp32e", ABI_ILP32E)
                        .Case("lp64", ABI_LP64)
                        .Case("lp64f", ABI_LP64F)
                        .Case("lp64d", ABI_LP64D)
+                       .Case("lp64q", ABI_LP64Q)
                        .Case("lp64e", ABI_LP64E)
                        .Default(ABI_Unknown);
   return TargetABI;

@@ -168,6 +168,8 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__riscv_float_abi_single");
   else if (ABIName == "ilp32d" || ABIName == "lp64d")
     Builder.defineMacro("__riscv_float_abi_double");
+  else if (ABIName == "ilp32q" || ABIName == "lp64q")
+    Builder.defineMacro("__riscv_float_abi_quad");
   else
     Builder.defineMacro("__riscv_float_abi_soft");
 

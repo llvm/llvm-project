@@ -189,7 +189,8 @@ public:
       return true;
     }
 
-    if (Name == "ilp32" || Name == "ilp32f" || Name == "ilp32d") {
+    if (Name == "ilp32" || Name == "ilp32f" || Name == "ilp32d" ||
+        Name == "ilp32q") {
       ABI = Name;
       return true;
     }
@@ -220,7 +221,8 @@ public:
       return true;
     }
 
-    if (Name == "lp64" || Name == "lp64f" || Name == "lp64d") {
+    if (Name == "lp64" || Name == "lp64f" || Name == "lp64d" ||
+        Name == "lp64q") {
       ABI = Name;
       return true;
     }

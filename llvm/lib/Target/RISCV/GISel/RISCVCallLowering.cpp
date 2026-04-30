@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
 
@@ -102,12 +103,19 @@ struct RISCVOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
     assert(VA.getValNo() == VAHi.getValNo() &&
            "Values belong to different arguments");
 
-    assert(VA.getLocVT() == MVT::i32 && VAHi.getLocVT() == MVT::i32 &&
-           VA.getValVT() == MVT::f64 && VAHi.getValVT() == MVT::f64 &&
-           "unexpected custom value");
+    uint32_t RegWidth = 0;
+    if (VA.getLocVT() == MVT::i32 && VAHi.getLocVT() == MVT::i32 &&
+        VA.getValVT() == MVT::f64 && VAHi.getValVT() == MVT::f64)
+      RegWidth = 32;
+    else if (VA.getLocVT() == MVT::i64 && VAHi.getLocVT() == MVT::i64 &&
+             VA.getValVT() == MVT::f128 && VAHi.getValVT() == MVT::f128)
+      RegWidth = 64;
+    else
+      llvm_unreachable("Unexpected custom value");
 
-    Register NewRegs[] = {MRI.createGenericVirtualRegister(LLT::scalar(32)),
-                          MRI.createGenericVirtualRegister(LLT::scalar(32))};
+    Register NewRegs[] = {
+        MRI.createGenericVirtualRegister(LLT::scalar(RegWidth)),
+        MRI.createGenericVirtualRegister(LLT::scalar(RegWidth))};
     MIRBuilder.buildUnmerge(NewRegs, Arg.Regs[0]);
 
     if (VAHi.isMemLoc()) {
@@ -201,12 +209,19 @@ struct RISCVIncomingValueHandler : public CallLowering::IncomingValueHandler {
     assert(VA.getValNo() == VAHi.getValNo() &&
            "Values belong to different arguments");
 
-    assert(VA.getLocVT() == MVT::i32 && VAHi.getLocVT() == MVT::i32 &&
-           VA.getValVT() == MVT::f64 && VAHi.getValVT() == MVT::f64 &&
-           "unexpected custom value");
+    uint32_t RegWidth = 0;
+    if (VA.getLocVT() == MVT::i32 && VAHi.getLocVT() == MVT::i32 &&
+        VA.getValVT() == MVT::f64 && VAHi.getValVT() == MVT::f64)
+      RegWidth = 32;
+    else if (VA.getLocVT() == MVT::i64 && VAHi.getLocVT() == MVT::i64 &&
+             VA.getValVT() == MVT::f128 && VAHi.getValVT() == MVT::f128)
+      RegWidth = 64;
+    else
+      llvm_unreachable("Unexpected custom value");
 
-    Register NewRegs[] = {MRI.createGenericVirtualRegister(LLT::scalar(32)),
-                          MRI.createGenericVirtualRegister(LLT::scalar(32))};
+    Register NewRegs[] = {
+        MRI.createGenericVirtualRegister(LLT::scalar(RegWidth)),
+        MRI.createGenericVirtualRegister(LLT::scalar(RegWidth))};
 
     if (VAHi.isMemLoc()) {
       LLT MemTy(VAHi.getLocVT());

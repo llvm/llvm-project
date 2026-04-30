@@ -117,6 +117,11 @@ RISCVRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     if (HasVectorCSR)
       return CSR_ILP32D_LP64D_V_SaveList;
     return CSR_ILP32D_LP64D_SaveList;
+  case RISCVABI::ABI_ILP32Q:
+  case RISCVABI::ABI_LP64Q:
+    if (HasVectorCSR)
+      return CSR_ILP32Q_LP64Q_V_SaveList;
+    return CSR_ILP32Q_LP64Q_SaveList;
   }
 }
 
@@ -849,6 +854,11 @@ RISCVRegisterInfo::getCallPreservedMask(const MachineFunction & MF,
     if (CC == CallingConv::RISCV_VectorCall)
       return CSR_ILP32D_LP64D_V_RegMask;
     return CSR_ILP32D_LP64D_RegMask;
+  case RISCVABI::ABI_ILP32Q:
+  case RISCVABI::ABI_LP64Q:
+    if (CC == CallingConv::RISCV_VectorCall)
+      return CSR_ILP32D_LP64D_V_RegMask;
+    return CSR_ILP32Q_LP64Q_RegMask;
   }
 }
 

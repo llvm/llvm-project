@@ -114,6 +114,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
               "doesn't support the D instruction set extension (ignoring "
               "target-abi)\n";
     ABI = Subtarget.is64Bit() ? RISCVABI::ABI_LP64 : RISCVABI::ABI_ILP32;
+  } else if ((ABI == RISCVABI::ABI_ILP32Q || ABI == RISCVABI::ABI_LP64Q) &&
+             !Subtarget.hasStdExtQ()) {
+    errs() << "Hard-float 'q' ABI can't be used for a target that "
+              "doesn't support the Q instruction set extension (ignoring "
+              "target-abi)\n";
+    ABI = Subtarget.is64Bit() ? RISCVABI::ABI_LP64 : RISCVABI::ABI_ILP32;
   }
 
   switch (ABI) {
@@ -124,9 +130,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   case RISCVABI::ABI_LP64E:
   case RISCVABI::ABI_ILP32F:
   case RISCVABI::ABI_ILP32D:
+  case RISCVABI::ABI_ILP32Q:
   case RISCVABI::ABI_LP64:
   case RISCVABI::ABI_LP64F:
   case RISCVABI::ABI_LP64D:
+  case RISCVABI::ABI_LP64Q:
     break;
   }
 
@@ -143,6 +151,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     addRegisterClass(MVT::f32, &RISCV::FPR32RegClass);
   if (Subtarget.hasStdExtD())
     addRegisterClass(MVT::f64, &RISCV::FPR64RegClass);
+  if (Subtarget.hasStdExtQ())
+    addRegisterClass(MVT::f128, &RISCV::FPR128RegClass);
   if (Subtarget.hasStdExtZhinxmin())
     addRegisterClass(MVT::f16, &RISCV::GPRF16RegClass);
   if (Subtarget.hasStdExtZfinx())
