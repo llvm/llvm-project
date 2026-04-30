@@ -369,11 +369,16 @@ void TailDuplicator::processPHI(
   // available value liveout of the block.
   Register NewDef = MRI->createVirtualRegister(RC);
   Copies.push_back(std::make_pair(NewDef, RegSubRegPair(SrcReg, SrcSubReg)));
+  if (!Remove) {
+    // Informing MachineSSAUpdater that DefReg -> NewDef in PredBB is not
+    // correct, because it could be used to update on other PHI. But the DefReg
+    // in the COPY will be properly updated by MachineSSAUpdater.
+    MI->getOperand(SrcOpIdx).setReg(NewDef);
+    MI->getOperand(SrcOpIdx).setSubReg(0);
+    return;
+  }
   if (isDefLiveOut(DefReg, TailBB, MRI) || RegsUsedByPhi.count(DefReg))
     addSSAUpdateEntry(DefReg, NewDef, PredBB);
-
-  if (!Remove)
-    return;
 
   MI->removePHIIncomingValueFor(*PredBB);
 

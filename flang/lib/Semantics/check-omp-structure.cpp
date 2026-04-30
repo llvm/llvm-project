@@ -946,11 +946,6 @@ void OmpStructureChecker::Enter(const parser::OpenMPConstruct &x) {
 }
 
 void OmpStructureChecker::Leave(const parser::OpenMPConstruct &x) {
-  for (const auto &[sym, source] : deferredNonVariables_) {
-    context_.SayWithDecl(
-        *sym, source, "'%s' must be a variable"_err_en_US, sym->name());
-  }
-  deferredNonVariables_.clear();
   if (GetOmpDirectiveName(x).v != llvm::omp::Directive::OMPD_section) {
     dirStack_.pop_back();
   }
@@ -3692,7 +3687,8 @@ void OmpStructureChecker::Enter(const parser::OmpClause &x) {
     for (const auto &[symbol, source] : symbols) {
       if (!IsVariableListItem(*symbol) &&
           !(IsNamedConstant(*symbol) && SharedOrFirstprivate)) {
-        deferredNonVariables_.insert({symbol, source});
+        context_.SayWithDecl(*symbol, source,
+            "'%s' must be a variable"_err_en_US, symbol->name());
       }
     }
   }

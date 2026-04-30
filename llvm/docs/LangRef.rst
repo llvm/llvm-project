@@ -3395,12 +3395,15 @@ as follows:
     The optional ``<flags>`` are used to specify properties of pointers in this
     address space: the character ``u`` marks pointers as having an unstable
     representation, and ``e`` marks pointers having external state. See
-    :ref:`Non-Integral Pointer Types <nointptrtype>`. The ``<name>`` is an
+    :ref:`Non-Integral Pointer Types <nointptrtype>`. Additionally, the
+    null pointer bit representation can be specified: ``z`` indicates it is
+    all-zeros, and ``o`` indicates it is all-ones. At most one of ``z`` or
+    ``o`` may be specified. If neither ``z`` nor ``o`` is specified, the null
+    pointer bit representation defaults to all-zeros. The ``<name>`` is an
     optional name of that address space, surrounded by ``(`` and ``)``. If the
     name is specified, it must be unique to that address space and cannot be
     ``A``, ``G``, or ``P`` which are pre-defined names used to denote alloca,
     global, and program address space respectively.
-
 ``i<size>:<abi>[:<pref>]``
     This specifies the alignment for an integer type of a given bit
     ``<size>``. The value of ``<size>`` must be in the range [1,2^24).
@@ -7449,9 +7452,13 @@ does not carry useful data and need not be preserved.
 noalias memory-access sets. This means that some collection of memory access
 instructions (loads, stores, memory-accessing calls, etc.) that carry
 ``noalias`` metadata can specifically be specified not to alias with some other
-collection of memory access instructions that carry ``alias.scope`` metadata. If
-accesses from different collections alias, the behavior is undefined. Each type
-of metadata specifies a list of scopes where each scope has an id and a domain.
+collection of memory access instructions that carry ``alias.scope`` metadata.
+These metadata kinds may also be attached to ``fence`` instructions to indicate
+which scoped memory regions the fence does (or does not) concern; this allows
+alias analysis to prove that a fence cannot affect a particular memory location.
+If accesses from different collections alias, the behavior is undefined. Each
+type of metadata specifies a list of scopes where each scope has an id and a
+domain.
 
 When evaluating an aliasing query, if for some domain, the set
 of scopes with that domain in one instruction's ``alias.scope`` list is a
