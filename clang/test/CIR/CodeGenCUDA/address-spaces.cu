@@ -52,7 +52,7 @@
 // CIR-POST: cir.global external  target_address_space(1) @i = #cir.int<0>
 // LLVM-DEVICE-DAG: @i = addrspace(1) {{.*}}global i32 0
 // OGCG-DAG: @i = addrspace(1) externally_initialized global i32 0
-// CIR-HOST: cir.global {{.*}} @i = #cir.poison : {{.*}} {{{.*}}, cu.shadow_name = #cir.cu.shadow_name<i>}
+// CIR-HOST: cir.global {{.*}} @i = #cir.poison : {{.*}} {{{.*}}, cu.var_registration = #cir.cu.var_registration<i, Variable, extern>}
 // LLVM-HOST: @i = internal global i32 poison
 // OGCG-HOST: @i = internal global i32 undef
 __device__ int i;
@@ -61,7 +61,7 @@ __device__ int i;
 // CIR-POST: cir.global constant external  target_address_space(4) @j = #cir.int<0>
 // LLVM-DEVICE-DAG: @j = addrspace(4) {{.*}}constant i32 0
 // OGCG-DAG: @j = addrspace(4) externally_initialized constant i32 0
-// CIR-HOST:  cir.global {{.*}} @j = #cir.poison : {{.*}} {{{.*}}, cu.shadow_name = #cir.cu.shadow_name<j>}
+// CIR-HOST:  cir.global {{.*}} @j = #cir.poison : {{.*}} {{{.*}}, cu.var_registration = #cir.cu.var_registration<j, Variable, extern, constant>}
 // LLVM-HOST: @j = internal global i32 poison
 // OGCG-HOST: @j = internal global i32 undef
 __constant__ int j;

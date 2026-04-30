@@ -1269,9 +1269,7 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
       // Adjust linkage of shadow variables in host compilation
       getCUDARuntime().internalizeDeviceSideVar(vd, linkage);
     }
-    // TODO(cir):
-    // Handle variable registration
-    // getCUDARuntime().handleVarRegistration(vd, gv);
+    getCUDARuntime().handleVarRegistration(vd, gv);
   }
 
   // Decorate CUDA shadow variables with the cu.shadow_name attribute so we know
@@ -1295,8 +1293,11 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
         getASTContext().CUDADeviceVarODRUsedByHost.contains(vd) ||
         vd->hasAttr<HIPManagedAttr>()) {
       auto shadowName = cudaRuntime->getDeviceSideName(cast<NamedDecl>(vd));
-      auto attr = cir::CUDAShadowNameAttr::get(&getMLIRContext(), shadowName);
-      gv->setAttr(cir::CUDAShadowNameAttr::getMnemonic(), attr);
+      auto attr = cir::CUDAVarRegistrationInfoAttr::get(
+          &getMLIRContext(), shadowName, cir::CUDADeviceVarKind::Variable,
+          vd->hasDefinition(), vd->hasAttr<CUDAConstantAttr>(),
+          vd->hasAttr<HIPManagedAttr>());
+      gv->setAttr(cir::CUDAVarRegistrationInfoAttr::getMnemonic(), attr);
     }
   }
 
@@ -3152,6 +3153,9 @@ void CIRGenModule::release() {
       (getTriple().isSPIRV() && getTriple().getVendor() == llvm::Triple::AMD))
     emitAMDGPUMetadata();
 
+  if (astContext.getLangOpts().CUDA && cudaRuntime)
+    getCUDARuntime().finalizeModule();
+
   // There's a lot of code that is not implemented yet.
   assert(!cir::MissingFeatures::cgmRelease());
 }
@@ -3317,6 +3321,12 @@ void CIRGenModule::updateResolvedBlockAddress(cir::BlockAddressOp op,
   assert(!it->second && "blockaddress already has a resolved label");
 
   it->second = newLabel;
+}
+
+void CIRGenModule::addCompilerUsedGlobal(cir::GlobalOp gv) {
+  assert(!gv.isDeclaration() &&
+         "Only globals with definition can force usage.");
+  llvmCompilerUsed.emplace_back(gv);
 }
 
 cir::LabelOp

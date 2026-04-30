@@ -66,10 +66,25 @@ public:
   void emitDeviceStub(CIRGenFunction &cgf, cir::FuncOp fn,
                       FunctionArgList &args) override;
 
+  void handleVarRegistration(const VarDecl *vd, cir::GlobalOp var) override;
+  void finalizeModule() override;
+
   void internalizeDeviceSideVar(const VarDecl *d,
                                 cir::GlobalLinkageKind &linkage) override;
 
   std::string getDeviceSideName(const NamedDecl *nd) override;
+
+  void registerDeviceVar(const VarDecl *vd, cir::GlobalOp &var, bool isExtern,
+                         bool isConstant) {
+    // Attach the device var attribute to the GlobalOp
+    auto &builder = cgm.getBuilder();
+    var->setAttr(cir::CUDAVarRegistrationInfoAttr::getMnemonic(),
+                 cir::CUDAVarRegistrationInfoAttr::get(
+                     builder.getContext(),
+                     getDeviceSideName(cast<NamedDecl>(vd)),
+                     cir::CUDADeviceVarKind::Variable, isExtern, isConstant,
+                     vd->hasAttr<HIPManagedAttr>()));
+  }
 };
 
 } // namespace
@@ -402,4 +417,66 @@ std::string CIRGenNVCUDARuntime::getDeviceSideName(const NamedDecl *nd) {
     deviceSideName = std::string(out.str());
   }
   return deviceSideName;
+}
+
+void CIRGenNVCUDARuntime::handleVarRegistration(const VarDecl *vd,
+                                                cir::GlobalOp var) {
+  if (vd->hasAttr<CUDADeviceAttr>() || vd->hasAttr<CUDAConstantAttr>()) {
+    // Shadow variables and their properties must be registered with CUDA
+    // runtime. Skip Extern global variables, which will be registered in
+    // the TU where they are defined.
+    //
+    // Don't register a C++17 inline variable. The local symbol can be
+    // discarded and referencing a discarded local symbol from outside the
+    // comdat (__cuda_register_globals) is disallowed by the ELF spec.
+    //
+    // HIP managed variables need to be always recorded in device and host
+    // compilations for transformation.
+    //
+    // HIP managed variables and variables in CUDADeviceVarODRUsedByHost are
+    // added to llvm.compiler-used, therefore they are safe to be registered.
+    if ((!vd->hasExternalStorage() && !vd->isInline()) ||
+        cgm.getASTContext().CUDADeviceVarODRUsedByHost.contains(vd) ||
+        vd->hasAttr<HIPManagedAttr>()) {
+      registerDeviceVar(vd, var, !vd->hasDefinition(),
+                        vd->hasAttr<CUDAConstantAttr>());
+    }
+  } else if (vd->getType()->isCUDADeviceBuiltinSurfaceType() ||
+             vd->getType()->isCUDADeviceBuiltinTextureType()) {
+    // Builtin surfaces and textures and their template arguments are
+    // also registered with CUDA runtime.
+    cgm.errorNYI(vd->getSourceRange(),
+                 "handleVarRegistration: Surface and Texture registration");
+  }
+}
+
+void CIRGenNVCUDARuntime::finalizeModule() {
+  if (!cgm.getLangOpts().CUDAIsDevice)
+    return;
+
+  // Mark ODR-used device variables as compiler used to prevent them from being
+  // eliminated by optimization. This is necessary for device variables
+  // ODR-used by host functions. Sema correctly marks them as ODR-used no
+  // matter whether they are ODR-used by device or host functions.
+  //
+  // We do not need to do this if the variable has used attribute since it
+  // has already been added.
+  //
+  // Static device variables have been externalized at this point, therefore
+  // variables with private or internal linkage need not be added.
+  for (auto globalOp : cgm.getModule().getOps<cir::GlobalOp>()) {
+    auto regAttr = globalOp->getAttrOfType<cir::CUDAVarRegistrationInfoAttr>(
+        cir::CUDAVarRegistrationInfoAttr::getMnemonic());
+    if (!regAttr)
+      continue;
+
+    auto kind = regAttr.getKind();
+    if (!globalOp.isDeclaration() &&
+        !cir::isLocalLinkage(globalOp.getLinkage()) &&
+        (kind == cir::CUDADeviceVarKind::Variable ||
+         kind == cir::CUDADeviceVarKind::Surface ||
+         kind == cir::CUDADeviceVarKind::Texture)) {
+      cgm.addCompilerUsedGlobal(globalOp);
+    }
+  }
 }

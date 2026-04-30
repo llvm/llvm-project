@@ -176,6 +176,10 @@ public:
   void mapResolvedBlockAddress(cir::BlockAddressOp op, cir::LabelOp);
   void updateResolvedBlockAddress(cir::BlockAddressOp op,
                                   cir::LabelOp newLabel);
+
+  /// Add a global value to the LLVMCompilerUsed list.
+  void addCompilerUsedGlobal(cir::GlobalOp gv);
+
   /// Tell the consumer that this variable has been instantiated.
   void handleCXXStaticMemberVarInstantiation(VarDecl *vd);
 
@@ -329,6 +333,8 @@ public:
       cir::GlobalLinkageKind linkage, clang::CharUnits alignment);
 
   void emitVTable(const CXXRecordDecl *rd);
+
+  std::vector<cir::GlobalOp> llvmCompilerUsed;
 
   /// Return the appropriate linkage for the vtable, VTT, and type information
   /// of the given class.

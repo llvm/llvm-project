@@ -55,6 +55,13 @@ public:
   virtual void internalizeDeviceSideVar(const VarDecl *d,
                                         cir::GlobalLinkageKind &linkage) = 0;
 
+  /// Check whether a variable is a device variable and register it if true.
+  virtual void handleVarRegistration(const VarDecl *vd, cir::GlobalOp var) = 0;
+
+  /// Perform module finalization: on device side, mark ODR-used device
+  /// variables as compiler-used. Mirrors OG's CGCUDARuntime::finalizeModule.
+  virtual void finalizeModule() {}
+
   /// Returns function or variable name on device side even if the current
   /// compilation is for host.
   virtual std::string getDeviceSideName(const NamedDecl *nd) = 0;

@@ -37,25 +37,7 @@ def CIR_CUDAKernelNameAttr : CIR_Attr<"CUDAKernelName", "cu.kernel_name"> {
   let canHaveIllegalCXXABIType = 0;
 }
 
-def CUDAShadowNameAttr : CIR_Attr<"CUDAShadowName",
-                                  "cu.shadow_name"> {
-  let summary = "Device-side global variable name for this shadow.";
-  let description =
-  [{
-    This attribute is attached to global variable definitions and records the
-    mangled name of the global variable used on the device.
-
-    In CUDA, __device__, __constant__ and __shared__ variables, as well as 
-    surface and texture variables, will generate a shadow symbol on host.
-    We must preserve the correspodence in order to generate registration
-    functions.
-  }];
-
-  let parameters = (ins "std::string":$device_side_name);
-  let assemblyFormat = "`<` $device_side_name `>`";
-}
-
-def CUDAExternallyInitializedAttr : CIR_Attr<"CUDAExternallyInitialized",
+def CIR_CUDAExternallyInitializedAttr : CIR_Attr<"CUDAExternallyInitialized",
                                              "cu.externally_initialized"> {
   let summary = "The marked variable is externally initialized.";
   let description =
@@ -67,6 +49,34 @@ def CUDAExternallyInitializedAttr : CIR_Attr<"CUDAExternallyInitialized",
     The attribute corresponds to the attribute on LLVM with the same name.
   }];
   let canHaveIllegalCXXABIType = 0;
+}
+
+// Enum for device variable kinds
+def CIR_CUDADeviceVarKind : I32EnumAttr<"CUDADeviceVarKind",
+    "CUDA device variable kind", [
+  I32EnumAttrCase<"Variable", 0>,
+  I32EnumAttrCase<"Surface", 1>,   // Future
+  I32EnumAttrCase<"Texture", 2>,   // Future
+]> {
+  let cppNamespace = "::cir";
+}
+
+// Attribute carrying device variable registration flags
+def CIR_CUDAVarRegistrationInfoAttr : CIR_Attr<"CUDAVarRegistrationInfo", "cu.var_registration"> {
+  let summary = "Device variable registration flags.";
+  let parameters = (ins
+    "std::string":$device_side_name,
+    "CUDADeviceVarKind":$kind,
+    // Note: isExtern is only exercisable once HIP managed variable support
+    // lands. The only path to isExtern=true requires an extern __managed__
+    // variable, which bypasses the external storage filter in
+    // handleVarRegistration via hasAttr<HIPManagedAttr>().
+    "bool":$isExtern,
+    "bool":$isConstant,
+    "bool":$isManaged
+  );
+
+  let hasCustomAssemblyFormat = 1;
 }
 
 #endif // CLANG_CIR_DIALECT_IR_CIRCUDAATTRS_TD

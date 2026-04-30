@@ -430,6 +430,72 @@ ConstComplexAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 }
 
 //===----------------------------------------------------------------------===//
+// CIR_CUDAVarRegistrationInfoAttr definitions
+//===----------------------------------------------------------------------===//
+
+void CUDAVarRegistrationInfoAttr::print(AsmPrinter &p) const {
+  p << "<" << getDeviceSideName();
+  p << ", " << stringifyEnum(getKind());
+  if (getIsExtern())
+    p << ", extern";
+  if (getIsConstant())
+    p << ", constant";
+  if (getIsManaged())
+    p << ", managed";
+  p << ">";
+}
+
+Attribute CUDAVarRegistrationInfoAttr::parse(AsmParser &parser, Type odsType) {
+  if (parser.parseLess())
+    return {};
+
+  std::string deviceSideName;
+  if (parser.parseString(&deviceSideName))
+    return {};
+
+  // Parse the device variable kind (Variable, Surface, Texture)
+  StringRef kindStr;
+  if (parser.parseKeyword(&kindStr))
+    return {};
+
+  auto kind = symbolizeCUDADeviceVarKind(kindStr);
+  if (!kind) {
+    parser.emitError(parser.getCurrentLocation(),
+                     "unknown device variable kind: ")
+        << kindStr;
+    return {};
+  }
+
+  // Parse optional flags: extern, constant, managed
+  bool isExtern = false;
+  bool isConstant = false;
+  bool isManaged = false;
+
+  while (parser.parseOptionalGreater().failed()) {
+    if (parser.parseComma())
+      return {};
+
+    StringRef flag;
+    if (parser.parseKeyword(&flag))
+      return {};
+
+    if (flag == "extern")
+      isExtern = true;
+    else if (flag == "constant")
+      isConstant = true;
+    else if (flag == "managed")
+      isManaged = true;
+    else {
+      parser.emitError(parser.getCurrentLocation(), "unknown flag: ") << flag;
+      return {};
+    }
+  }
+
+  return get(parser.getContext(), deviceSideName, *kind, isExtern, isConstant,
+             isManaged);
+}
+
+//===----------------------------------------------------------------------===//
 // DataMemberAttr definitions
 //===----------------------------------------------------------------------===//
 
