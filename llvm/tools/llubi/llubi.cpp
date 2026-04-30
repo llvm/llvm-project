@@ -171,8 +171,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  if (std::pow(2, static_cast<unsigned>(std::log2(VScale.getValue()))) !=
-      VScale.getValue()) {
+  if (isPowerOf2_32(VScale)) {
     WithColor::error() << "--vscale value must be a power of 2\n";
     return 1;
   }
