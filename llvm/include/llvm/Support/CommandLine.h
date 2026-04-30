@@ -632,10 +632,7 @@ protected:
 // Top-level option class.
 template <class DataType>
 struct OptionValue final
-    : OptionValueBase<DataType, std::conjunction_v<
-                                    std::is_copy_constructible<DataType>,
-                                    std::is_copy_assignable<DataType>,
-                                    std::is_default_constructible<DataType>>> {
+    : OptionValueBase<DataType, std::is_copy_assignable_v<DataType>> {
   OptionValue() = default;
 
   OptionValue(const DataType &V) { this->setValue(V); }
