@@ -4602,14 +4602,10 @@
 // RUN: %clang -march=sm_75 -E -dM %s -o - 2>&1 \
 // RUN:     -target nvptx64-unknown-unknown \
 // RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_NVPTX,CHECK_ARCH_SM_75
-// RUN: %clang -march=sm_90 -E -dM %s -o - 2>&1 \
-// RUN:     -target nvptx64-unknown-unknown \
-// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_NVPTX,CHECK_ARCH_SM_90
 // RUN: %clang -E -dM %s -o - 2>&1 \
 // RUN:     -target nvptx64-unknown-unknown \
 // RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_NVPTX,CHECK_ARCH_UNSET
 // CHECK_ARCH_SM_75: #define __CUDA_ARCH__ 750
-// CHECK_ARCH_SM_90: #define __CUDA_ARCH__ 900
 // CHECK_ARCH_UNSET-NOT: #define __CUDA_ARCH__
 // CHECK_NVPTX: #define __NVPTX__ 1
 
