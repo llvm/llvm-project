@@ -1419,7 +1419,7 @@ def skipUnlessPackageAvailable(name):
     return unittest.skipUnless(available, f"requires the '{name}' package")
 
 
-def skipUnlessLLDBFrameworkArchMatches(func):
+def skipUnlessTargetIsHost(func):
     """Skip the test case if the test binary architecture does not match LLDB.framework."""
 
     def check_arch_match():
