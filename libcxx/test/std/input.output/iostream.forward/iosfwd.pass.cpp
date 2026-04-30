@@ -74,6 +74,25 @@ int main(int, char**)
     test<std::basic_stringstream<wchar_t>*       >();
 #endif
 
+#if TEST_STD_VER >= 23
+    test<std::basic_spanbuf<char>*>();
+#  ifndef TEST_HAS_NO_WIDE_CHARACTERS
+    test<std::basic_spanbuf<wchar_t>*>();
+#  endif
+    test<std::basic_ispanstream<char>*>();
+#  ifndef TEST_HAS_NO_WIDE_CHARACTERS
+    test<std::basic_ispanstream<wchar_t>*>();
+#  endif
+    test<std::basic_ospanstream<char>*>();
+#  ifndef TEST_HAS_NO_WIDE_CHARACTERS
+    test<std::basic_ospanstream<wchar_t>*>();
+#  endif
+    test<std::basic_spanstream<char>*>();
+#  ifndef TEST_HAS_NO_WIDE_CHARACTERS
+    test<std::basic_spanstream<wchar_t>*>();
+#  endif
+#endif // TEST_STD_VER >= 23
+
     test<std::basic_filebuf<char>*          >();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
     test<std::basic_filebuf<wchar_t>*       >();
@@ -119,6 +138,13 @@ int main(int, char**)
     test<std::ostringstream*>();
     test<std::stringstream* >();
 
+#if TEST_STD_VER >= 23
+    test<std::spanbuf*>();
+    test<std::ispanstream*>();
+    test<std::ospanstream*>();
+    test<std::spanstream*>();
+#endif // TEST_STD_VER >= 23
+
     test<std::filebuf* >();
     test<std::ifstream*>();
     test<std::ofstream*>();
@@ -134,6 +160,13 @@ int main(int, char**)
     test<std::wistringstream*>();
     test<std::wostringstream*>();
     test<std::wstringstream* >();
+
+#  if TEST_STD_VER >= 23
+    test<std::wspanbuf*>();
+    test<std::wispanstream*>();
+    test<std::wospanstream*>();
+    test<std::wspanstream*>();
+#  endif // TEST_STD_VER >= 23
 
     test<std::wfilebuf* >();
     test<std::wifstream*>();
