@@ -8663,6 +8663,7 @@ def : Pat<(v2i64 (AArch64saddlv (v2i32 V64:$Rn))),
 def : Pat<(v2i64 (AArch64uaddlv (v2i32 V64:$Rn))),
           (v2i64 (INSERT_SUBREG (v2i64 (IMPLICIT_DEF)), (UADDLPv2i32_v1i64 V64:$Rn), dsub))>;
 
+// uaddlp from shuffle + zext
 def : Pat<(add (AArch64bici (v8i16 (bitconvert v16i8:$src)), (i32 255), (i32 8)),
                (AArch64vlshr (v8i16 (AArch64NvCast v16i8:$src)), (i32 8))),
           (UADDLPv16i8_v8i16 V128:$src)>;
@@ -8677,6 +8678,44 @@ def : Pat<(add (v2i64 (zext (v2i32 (AArch64zip1 (v2i32 (extract_subvector v4i32:
                (v2i64 (zext (v2i32 (AArch64zip2 (v2i32 (extract_subvector v4i32:$src, (i64 0))),
                                          (v2i32 (extract_subvector v4i32:$src, (i64 2)))))))),
           (UADDLPv4i32_v2i64 V128:$src)>;
+
+// uaddlp from zext + shuffle
+def : Pat<(add (AArch64uzp1 (v8i16 (zext (v8i8 (extract_subvector v16i8:$src, (i64 0))))),
+                            (v8i16 (zext (v8i8 (extract_subvector v16i8:$src, (i64 8)))))),
+               (AArch64uzp2 (v8i16 (zext (v8i8 (extract_subvector v16i8:$src, (i64 0))))),
+                            (v8i16 (zext (v8i8 (extract_subvector v16i8:$src, (i64 8))))))),
+          (UADDLPv16i8_v8i16 V128:$src)>;
+
+def : Pat<(add (AArch64uzp1 (v4i32 (zext (v4i16 (extract_subvector v8i16:$src, (i64 0))))),
+                            (v4i32 (zext (v4i16 (extract_subvector v8i16:$src, (i64 4)))))),
+               (AArch64uzp2 (v4i32 (zext (v4i16 (extract_subvector v8i16:$src, (i64 0))))),
+                            (v4i32 (zext (v4i16 (extract_subvector v8i16:$src, (i64 4))))))),
+          (UADDLPv8i16_v4i32 V128:$src)>;
+
+def : Pat<(add (AArch64zip1 (v2i64 (zext (v2i32 (extract_subvector v4i32:$src, (i64 0))))),
+                            (v2i64 (zext (v2i32 (extract_subvector v4i32:$src, (i64 2)))))),
+               (AArch64zip2 (v2i64 (zext (v2i32 (extract_subvector v4i32:$src, (i64 0))))),
+                            (v2i64 (zext (v2i32 (extract_subvector v4i32:$src, (i64 2))))))),
+          (UADDLPv4i32_v2i64 V128:$src)>;
+
+// saddlp from sext + shuffle
+def : Pat<(add (AArch64uzp1 (v8i16 (sext (v8i8 (extract_subvector v16i8:$src, (i64 0))))),
+                            (v8i16 (sext (v8i8 (extract_subvector v16i8:$src, (i64 8)))))),
+               (AArch64uzp2 (v8i16 (sext (v8i8 (extract_subvector v16i8:$src, (i64 0))))),
+                            (v8i16 (sext (v8i8 (extract_subvector v16i8:$src, (i64 8))))))),
+          (SADDLPv16i8_v8i16 V128:$src)>;
+
+def : Pat<(add (AArch64uzp1 (v4i32 (sext (v4i16 (extract_subvector v8i16:$src, (i64 0))))),
+                            (v4i32 (sext (v4i16 (extract_subvector v8i16:$src, (i64 4)))))),
+               (AArch64uzp2 (v4i32 (sext (v4i16 (extract_subvector v8i16:$src, (i64 0))))),
+                            (v4i32 (sext (v4i16 (extract_subvector v8i16:$src, (i64 4))))))),
+          (SADDLPv8i16_v4i32 V128:$src)>;
+
+def : Pat<(add (AArch64zip1 (v2i64 (sext (v2i32 (extract_subvector v4i32:$src, (i64 0))))),
+                            (v2i64 (sext (v2i32 (extract_subvector v4i32:$src, (i64 2)))))),
+               (AArch64zip2 (v2i64 (sext (v2i32 (extract_subvector v4i32:$src, (i64 0))))),
+                            (v2i64 (sext (v2i32 (extract_subvector v4i32:$src, (i64 2))))))),
+          (SADDLPv4i32_v2i64 V128:$src)>;
 
 //------------------------------------------------------------------------------
 // AdvSIMD modified immediate instructions
