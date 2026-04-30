@@ -2543,9 +2543,32 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vqshrun_n_v:
     intrName = "aarch64.neon.sqshrun";
     return emitNeonCall(cgm, builder, {ty, ty}, ops, intrName, ty, loc);
-  case NEON::BI__builtin_neon_vqshrn_n_v:
+  case NEON::BI__builtin_neon_vqshrn_n_v: {
+    mlir::Type inputTy;
+
+    switch (type.getEltType()) {
+    case NeonTypeFlags::Int8:
+      inputTy = getNeonType(
+          this, NeonTypeFlags(NeonTypeFlags::Int16, false, true), loc);
+      break;
+    case NeonTypeFlags::Int16:
+      inputTy = getNeonType(
+          this, NeonTypeFlags(NeonTypeFlags::Int32, false, true), loc);
+      break;
+    case NeonTypeFlags::Int32:
+      inputTy = getNeonType(
+          this, NeonTypeFlags(NeonTypeFlags::Int64, false, true), loc);
+      break;
+    default:
+      llvm_unreachable("unexpected vqshrn element type");
+    }
+
+    auto shiftTy = ops[1].getType();
+    ops[0] = builder.createBitcast(loc, ops[0], inputTy);
+
     intrName = usgn ? "aarch64.neon.uqshrn" : "aarch64.neon.sqshrn";
-    return emitNeonCall(cgm, builder, {ty, ty}, ops, intrName, ty, loc);
+    return emitNeonCall(cgm, builder, {inputTy, shiftTy}, ops, intrName, ty, loc);
+  }
   case NEON::BI__builtin_neon_vmaxnmh_f16:
   case NEON::BI__builtin_neon_vrecpss_f32:
   case NEON::BI__builtin_neon_vrecpsd_f64:
