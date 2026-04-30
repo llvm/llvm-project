@@ -174,6 +174,27 @@ static_assert(!__is_layout_compatible(StructWithAnonUnion, StructWithAnonUnion3)
 #endif
 } // namespace cwg2759
 
+namespace cwg2768 { // cwg2768: 23
+#if __cplusplus >= 201103L
+void test() {
+  enum class E { E1 };
+
+  E e;
+  e = {0};
+  // expected-error@-1 {{cannot initialize a value of type 'E' with an rvalue of type 'int'}}
+
+  struct NotImplicitlyConvertibleToInt {
+    explicit operator int(); // #cwg2768-conversion-operator
+  };
+
+  int i;
+  i = {NotImplicitlyConvertibleToInt{}};
+  // expected-error@-1 {{no viable conversion from 'NotImplicitlyConvertibleToInt' to 'int'}}
+  //   expected-note@#cwg2768-conversion-operator {{explicit conversion function is not a candidate}}
+}
+#endif
+} // namespace cwg2768
+
 namespace cwg2770 { // cwg2770: 20 open 2023-07-14
 #if __cplusplus >= 202002L
 template<typename T>

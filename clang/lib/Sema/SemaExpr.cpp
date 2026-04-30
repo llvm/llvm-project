@@ -15466,11 +15466,14 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
     // The syntax only allows initializer lists on the RHS of assignment,
     // so we don't need to worry about accepting invalid code for
     // non-assignment operators.
-    // C++11 5.17p9:
-    //   The meaning of x = {v} [...] is that of x = T(v) [...]. The meaning
-    //   of x = {} is x = T().
-    InitializationKind Kind = InitializationKind::CreateDirectList(
-        RHSExpr->getBeginLoc(), RHSExpr->getBeginLoc(), RHSExpr->getEndLoc());
+    // C++ [expr.assign]/8:
+    //   A braced-init-list B may appear on the right-hand side of
+    //      - an assignment to a scalar of type T, in which case B shall have at
+    //        most a single element. The meaning of x = B is x = t, where t is
+    //        an invented temporary variable declared and initialized as T t =
+    //        B.
+    InitializationKind Kind =
+        InitializationKind::CreateCopy(RHSExpr->getBeginLoc(), OpLoc);
     InitializedEntity Entity =
         InitializedEntity::InitializeTemporary(LHSExpr->getType());
     InitializationSequence InitSeq(*this, Entity, Kind, RHSExpr);
