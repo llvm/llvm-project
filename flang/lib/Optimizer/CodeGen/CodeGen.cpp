@@ -947,13 +947,6 @@ struct ConvertOpConversion : public fir::FIROpConversion<fir::ConvertOp> {
         static_cast<const fir::LLVMTypeConverter *>(this->getTypeConverter());
     assert(firConv && "expected non-null LLVMTypeConverter");
 
-    auto isStaticLayoutAndShape = [](mlir::MemRefType memRefTy) {
-      auto [strides, offset] = memRefTy.getStridesAndOffset();
-      bool hasStaticLayout =
-          mlir::ShapedType::isStatic(offset) &&
-          llvm::none_of(strides, mlir::ShapedType::isDynamic);
-      return hasStaticLayout && memRefTy.hasStaticShape();
-    };
     auto getBufferPtr = [&rewriter, &loc, &firConv](mlir::Value memRefVal,
                                                     mlir::MemRefType memRefTy) {
       auto alignedPtr =
@@ -979,7 +972,12 @@ struct ConvertOpConversion : public fir::FIROpConversion<fir::ConvertOp> {
       if (fromMemRefTy)
         basePtr = getBufferPtr(basePtr, fromMemRefTy);
 
-      if (isStaticLayoutAndShape(toMemRefTy)) {
+      auto [strides, offset] = memRefTy.getStridesAndOffset();
+      bool hasStaticLayout =
+          mlir::ShapedType::isStatic(offset) &&
+          llvm::none_of(strides, mlir::ShapedType::isDynamic);
+
+      if (toMemRefTy.hasStaticShape() && hasStaticLayout) {
         // Static shape and layout: build a fully-populated descriptor.
         mlir::Value memrefDesc = mlir::MemRefDescriptor::fromStaticShape(
             rewriter, loc, *firConv, toMemRefTy, basePtr);
