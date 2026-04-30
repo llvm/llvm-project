@@ -1134,7 +1134,8 @@ ResolveSDKPathFromDebugInfo(lldb_private::Target *target) {
   if (FileSystem::Instance().Exists(sdk_path)) {
     return sdk_path;
   }
-  auto path_or_err = HostInfo::GetSDKRoot(HostInfo::SDKOptions{merged_sdk.TakeSDK()});
+  auto path_or_err =
+      HostInfo::GetSDKRoot(HostInfo::SDKOptions{merged_sdk.TakeSDK()});
   if (!path_or_err)
     return llvm::createStringError(
         llvm::formatv("Failed to resolve SDK path: {0}",
