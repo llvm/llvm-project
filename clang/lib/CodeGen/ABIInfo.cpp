@@ -170,11 +170,20 @@ bool ABIInfo::isPromotableIntegerTypeForABI(QualType Ty) const {
   return false;
 }
 
-ABIArgInfo ABIInfo::getNaturalAlignIndirect(QualType Ty, unsigned AddrSpace,
-                                            bool ByVal, bool Realign,
-                                            llvm::Type *Padding) const {
+unsigned ABIInfo::getNaturalAddrSpace(QualType Ty) const {
+  // Choose the most natural address space, which is either something specific
+  // from Sema (to avoid copy+addrspacecast) or a basic alloca (so the callee
+  // can see the addrspacecast must be from a local).
+  return Ty.hasAddressSpace()
+             ? getContext().getTargetAddressSpace(Ty.getAddressSpace())
+             : getDataLayout().getAllocaAddrSpace();
+}
+
+ABIArgInfo ABIInfo::getNaturalIndirect(QualType Ty, bool ByVal, bool Realign,
+                                       llvm::Type *Padding) const {
   return ABIArgInfo::getIndirect(getContext().getTypeAlignInChars(Ty),
-                                 AddrSpace, ByVal, Realign, Padding);
+                                 getNaturalAddrSpace(Ty), ByVal, Realign,
+                                 Padding);
 }
 
 ABIArgInfo ABIInfo::getNaturalAlignIndirectInReg(QualType Ty,

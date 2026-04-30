@@ -566,9 +566,7 @@ ABIArgInfo RISCVABIInfo::coerceVLSVector(QualType Ty, unsigned ABIVLen) const {
   } else {
     // Check registers needed <= 8.
     if ((EltType->getScalarSizeInBits() * NumElts / ABIVLen) > 8)
-      return getNaturalAlignIndirect(
-          Ty, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
-          /*ByVal=*/false);
+      return getNaturalIndirect(Ty, /*ByVal=*/false);
 
     // Generic vector
     // The number of elements needs to be at least 1.
@@ -609,9 +607,8 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
   if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI())) {
     if (ArgGPRsLeft)
       ArgGPRsLeft -= 1;
-    return getNaturalAlignIndirect(
-        Ty, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
-        /*ByVal=*/RAA == CGCXXABI::RAA_DirectInMemory);
+    return getNaturalIndirect(Ty,
+                              /*ByVal=*/RAA == CGCXXABI::RAA_DirectInMemory);
   }
 
   uint64_t Size = getContext().getTypeSize(Ty);
@@ -694,9 +691,7 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
 
       if (EIT->getNumBits() <= 2 * XLen)
         return ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty));
-      return getNaturalAlignIndirect(
-          Ty, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
-          /*ByVal=*/false);
+      return getNaturalIndirect(Ty, /*ByVal=*/false);
     }
 
     // All integral types are promoted to XLen width
@@ -741,9 +736,7 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
     return ABIArgInfo::getDirect(
         llvm::ArrayType::get(llvm::IntegerType::get(getVMContext(), XLen), 2));
   }
-  return getNaturalAlignIndirect(
-      Ty, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
-      /*ByVal=*/false);
+  return getNaturalIndirect(Ty, /*ByVal=*/false);
 }
 
 ABIArgInfo RISCVABIInfo::classifyReturnType(QualType RetTy,

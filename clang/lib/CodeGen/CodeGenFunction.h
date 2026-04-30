@@ -2953,7 +2953,7 @@ public:
                            RawAddress *Alloca = nullptr);
 
   /// CreateMemTemp - Create a temporary memory object of the given type, with
-  /// appropriate alignmen without casting it to the default address space.
+  /// appropriate alignment without casting it to the default address space.
   RawAddress CreateMemTempWithoutCast(QualType T, const Twine &Name = "tmp");
   RawAddress CreateMemTempWithoutCast(QualType T, CharUnits Align,
                                       const Twine &Name = "tmp");

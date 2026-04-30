@@ -70,17 +70,15 @@ public:
 
 ABIArgInfo ARCABIInfo::getIndirectByRef(QualType Ty, bool HasFreeRegs) const {
   return HasFreeRegs ? getNaturalAlignIndirectInReg(Ty)
-                     : getNaturalAlignIndirect(
-                           Ty, getDataLayout().getAllocaAddrSpace(), false);
+                     : getNaturalIndirect(Ty, false);
 }
 
 ABIArgInfo ARCABIInfo::getIndirectByValue(QualType Ty) const {
   // Compute the byval alignment.
-  const unsigned MinABIStackAlignInBytes = 4;
-  unsigned TypeAlign = getContext().getTypeAlign(Ty) / 8;
+  const CharUnits MinABIStackAlignInBytes = CharUnits::fromQuantity(4);
+  CharUnits TypeAlign = getContext().getTypeAlignInChars(Ty);
   return ABIArgInfo::getIndirect(
-      CharUnits::fromQuantity(4),
-      /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+      CharUnits::fromQuantity(4), getNaturalAddrSpace(Ty),
       /*ByVal=*/true, TypeAlign > MinABIStackAlignInBytes);
 }
 

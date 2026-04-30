@@ -283,30 +283,47 @@ void AggExprEmitter::withReturnValueSlot(
 
   // If it makes no observable difference, save a memcpy + temporary.
   //
-  // We need to always provide our own temporary if destruction is required.
+  // We need to always provide an address if destruction is required.
   // Otherwise, EmitCall will emit its own, notice that it's "unused", and end
   // its lifetime before we have the chance to emit a proper destructor call.
-  //
-  // We also need a temporary if the destination is in a different address space
-  // from the sret AS. Use the target hook to get the actual sret AS for this
-  // return type.
   const CXXRecordDecl *RD = RetTy->getAsCXXRecordDecl();
-  LangAS SRetLangAS = CGF.CGM.getTargetCodeGenInfo().getSRetAddrSpace(RD);
-  unsigned SRetAS = CGF.getContext().getTargetAddressSpace(SRetLangAS);
-  bool CanAggregateCopy =
-      RD ? (RD->hasTrivialCopyConstructor() ||
-            RD->hasTrivialMoveConstructor() || RD->hasTrivialCopyAssignment() ||
-            RD->hasTrivialMoveAssignment() || RD->hasAttr<TrivialABIAttr>() ||
-            RD->isUnion())
-         : RetTy.isTriviallyCopyableType(CGF.getContext());
-  bool DestASMismatch = !Dest.isIgnored() && CanAggregateCopy &&
-                        Dest.getAddress()
-                                .getBasePointer()
-                                ->stripPointerCasts()
-                                ->getType()
-                                ->getPointerAddressSpace() != SRetAS;
-  bool UseTemp = Dest.isPotentiallyAliased() || Dest.requiresGCollection() ||
-                 (RequiresDestruction && Dest.isIgnored()) || DestASMismatch;
+  // Initially assume we will need to pass through the destination memory.
+  unsigned SRetAS =
+      CGF.getContext().getTargetAddressSpace(RetTy.getAddressSpace());
+  bool DestASMismatch = false;
+  // However, ABIInfo might be permitted to make this return indirect. If it
+  // does, and RetTy doesn't specify an address space, it is also permitted (but
+  // not required) to change the ABI addrspace to alloca. We don't yet know what
+  // it will decide, so make a copy here for the optimizer to remove if it can
+  // prove it unnecessary later.
+  if (!RD || RD->canPassInRegisters()) {
+    if (!RetTy.hasAddressSpace()) {
+      SRetAS = CGF.CGM.getDataLayout().getAllocaAddrSpace();
+      // This will now require a copy unless we can find an underlying object
+      // with the correct addrspace to use for dest.
+      if (!Dest.isIgnored()) {
+        llvm::Value *DestV = Dest.getAddress().getBasePointer();
+        if (DestV->getType()->getPointerAddressSpace() != SRetAS) {
+          DestV = DestV->stripPointerCasts();
+          if (DestV->getType()->getPointerAddressSpace() != SRetAS)
+            DestASMismatch = true;
+        }
+      }
+    }
+  }
+  // Decide if a copy is possibly legal, in which case ABIInfo might later
+  // decide this copy is required. Be careful not to try to use a copy in cases
+  // where it wouldn't be legal, in which case ABIInfo also should not expect
+  // a copy either.
+  bool UseTemp =
+      // Copy okay by construction (see note on AggValueSlot::AliasedFlag)
+      Dest.isPotentiallyAliased()
+      // Copy permitted by ObjC semantics
+      || Dest.requiresGCollection()
+      // No actual copy is performed, since there is no Dest
+      || (RequiresDestruction && Dest.isIgnored())
+      // ABIInfo only requests a copy if it is legal
+      || DestASMismatch;
 
   Address RetAddr = Address::invalid();
 

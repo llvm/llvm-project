@@ -45,7 +45,7 @@ public:
     // stack slot, along with a pointer as the function's implicit argument.
     if (getContext().getTypeSize(Ty) > RetRegs * 8) {
       LargeRet = true;
-      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
+      return getNaturalIndirect(Ty);
     }
     // An i8 return value should not be extended to i16, since AVR has 8-bit
     // registers.
@@ -79,7 +79,7 @@ public:
     // memory. Since there are not enough registers left, current argument
     // and all other unprocessed arguments should be passed in memory.
     // However we still need to return `ABIArgInfo::getDirect()` other than
-    // `ABIInfo::getNaturalAlignIndirect(Ty)`, otherwise an extra stack slot
+    // `ABIInfo::getNaturalIndirect(Ty)`, otherwise an extra stack slot
     // will be allocated, so the stack frame layout will be incompatible with
     // avr-gcc.
     NumRegs = 0;

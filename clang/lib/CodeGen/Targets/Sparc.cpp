@@ -44,8 +44,7 @@ ABIArgInfo SparcV8ABIInfo::classifyReturnType(QualType Ty) const {
                         : ABIArgInfo::getDirect();
 
   if (IsLongDouble)
-    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
-                                   /*ByVal=*/false);
+    return getNaturalIndirect(Ty, /*ByVal=*/false);
 
   return DefaultABIInfo::classifyReturnType(Ty);
 }
@@ -53,7 +52,7 @@ ABIArgInfo SparcV8ABIInfo::classifyReturnType(QualType Ty) const {
 ABIArgInfo SparcV8ABIInfo::classifyArgumentType(QualType Ty) const {
   if (const auto *BT = Ty->getAs<BuiltinType>();
       BT && BT->getKind() == BuiltinType::LongDouble)
-    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
+    return getNaturalIndirect(Ty);
 
   return DefaultABIInfo::classifyArgumentType(Ty);
 }
@@ -256,9 +255,7 @@ ABIArgInfo SparcV9ABIInfo::classifyType(QualType Ty, unsigned SizeLimit,
   // pointer / sret pointer.
   if (Size > SizeLimit) {
     RegOffset += 1;
-    return getNaturalAlignIndirect(
-        Ty, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
-        /*ByVal=*/false);
+    return getNaturalIndirect(Ty, /*ByVal=*/false);
   }
 
   // Treat an enum type as its underlying type.
@@ -287,8 +284,7 @@ ABIArgInfo SparcV9ABIInfo::classifyType(QualType Ty, unsigned SizeLimit,
   // destructor, it is passed with an explicit indirect pointer / sret pointer.
   if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI())) {
     RegOffset += 1;
-    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
-                                   RAA == CGCXXABI::RAA_DirectInMemory);
+    return getNaturalIndirect(Ty, RAA == CGCXXABI::RAA_DirectInMemory);
   }
 
   // This is a small aggregate type that should be passed in registers.

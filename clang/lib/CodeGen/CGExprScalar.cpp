@@ -2682,19 +2682,7 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     llvm::Type *SrcTy = Src->getType();
     llvm::Type *DstTy = ConvertType(DestTy);
 
-    // FIXME: this is a gross but seemingly necessary workaround for an issue
-    // manifesting when a target uses a non-default AS for indirect sret args,
-    // but the source HLL is generic, wherein a valid C-cast or reinterpret_cast
-    // on the address of a local struct that gets returned by value yields an
-    // invalid bitcast from the a pointer to the IndirectAS to a pointer to the
-    // DefaultAS. We can only do this subversive thing because sret args are
-    // manufactured and them residing in the IndirectAS is a target specific
-    // detail, and doing an AS cast here still retains the semantics the user
-    // expects. It is desirable to remove this iff a better solution is found.
-    if (auto A = dyn_cast<llvm::Argument>(Src); A && A->hasStructRetAttr())
-      return CGF.performAddrSpaceCast(Src, DstTy);
-
-    // FIXME: Similarly to the sret case above, we need to handle BitCasts that
+    // FIXME: We need to handle BitCasts that
     // involve implicit address space conversions. This arises when the source
     // language lacks explicit address spaces, but the target's data layout
     // assigns different address spaces (e.g., program address space for

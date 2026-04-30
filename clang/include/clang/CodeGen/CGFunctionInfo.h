@@ -15,12 +15,13 @@
 #ifndef LLVM_CLANG_CODEGEN_CGFUNCTIONINFO_H
 #define LLVM_CLANG_CODEGEN_CGFUNCTIONINFO_H
 
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/CanonicalType.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Type.h"
-#include "llvm/IR/DerivedTypes.h"
 #include "llvm/ADT/FoldingSet.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/TrailingObjects.h"
 #include <cassert>
 
@@ -222,6 +223,16 @@ public:
     AI.setPaddingType(Padding);
     AI.setIndirectAddrSpace(AddrSpace);
     return AI;
+  }
+
+  // This argument cannot be copied, so it must use the addrspace of Ty
+  static ABIArgInfo getNaturalIndirectNoCopy(ASTContext &Ctx, QualType Ty,
+                                             bool ByVal = true,
+                                             bool Realign = false,
+                                             llvm::Type *Padding = nullptr) {
+    unsigned AS = Ctx.getTargetAddressSpace(Ty.getAddressSpace());
+    return ABIArgInfo::getIndirect(Ctx.getTypeAlignInChars(Ty), AS, ByVal,
+                                   Realign, Padding);
   }
 
   /// Pass this in memory using the IR byref attribute.

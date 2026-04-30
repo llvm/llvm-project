@@ -42,7 +42,7 @@ namespace clang {
     private:
       QuantityType Quantity = 0;
 
-      explicit CharUnits(QuantityType C) : Quantity(C) {}
+      constexpr explicit CharUnits(QuantityType C) : Quantity(C) {}
 
     public:
 
@@ -50,17 +50,13 @@ namespace clang {
       CharUnits() = default;
 
       /// Zero - Construct a CharUnits quantity of zero.
-      static CharUnits Zero() {
-        return CharUnits(0);
-      }
+      static constexpr CharUnits Zero() { return CharUnits(0); }
 
       /// One - Construct a CharUnits quantity of one.
-      static CharUnits One() {
-        return CharUnits(1);
-      }
+      static constexpr CharUnits One() { return CharUnits(1); }
 
       /// fromQuantity - Construct a CharUnits quantity from a raw integer type.
-      static CharUnits fromQuantity(QuantityType Quantity) {
+      static constexpr CharUnits fromQuantity(QuantityType Quantity) {
         return CharUnits(Quantity);
       }
 
