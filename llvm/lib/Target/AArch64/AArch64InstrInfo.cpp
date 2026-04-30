@@ -16,6 +16,7 @@
 #include "AArch64PointerAuth.h"
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
+#include "MCTargetDesc/AArch64MCLFIRewriter.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "Utils/AArch64BaseInfo.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -129,14 +130,39 @@ static std::optional<unsigned> getLFIInstSizeInBytes(const MachineInstr &MI) {
     if (MI.getOperand(0).getReg() != AArch64::LR)
       return 8;
     return 4;
+  case AArch64::SYSxt:
+    // VA-based DC/IC ops (op1=3, Cn=7, op2=1) expand to 2 instructions.
+    if (MI.getOperand(0).getImm() == 3 && MI.getOperand(1).getImm() == 7 &&
+        MI.getOperand(3).getImm() == 1)
+      return 8;
+    return std::nullopt;
   default:
     break;
   }
 
-  // Instructions that explicitly modify LR expand to 2 instructions.
+  // Instructions that explicitly modify LR get an extra LR mask.
+  bool ModifiesLR = false;
   for (const MachineOperand &MO : MI.explicit_operands())
-    if (MO.isReg() && MO.isDef() && MO.getReg() == AArch64::LR)
-      return 8;
+    if (MO.isReg() && MO.isDef() && MO.getReg() == AArch64::LR) {
+      ModifiesLR = true;
+      break;
+    }
+
+  // Memory accesses expand to a base-register guard plus the rewritten access
+  // (8 bytes), with an extra base-register update for pre/post-index forms (12
+  // bytes total). If the access also defines LR, an LR mask is appended (+4
+  // bytes). Depending on additional optimizations that the rewriter performs,
+  // this may be an overestimate.
+  if (MI.mayLoadOrStore()) {
+    unsigned Size = isLFIPrePostMemAccess(MI.getOpcode()) ? 12 : 8;
+    if (ModifiesLR)
+      Size += 4;
+    return Size;
+  }
+
+  // Non-memory instructions that modify LR expand to 2 instructions.
+  if (ModifiesLR)
+    return 8;
 
   // Default case: instructions that don't cause expansion.
   // - TP accesses in LFI are a single load/store, so no expansion.

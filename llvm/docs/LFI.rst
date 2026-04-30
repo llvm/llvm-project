@@ -115,8 +115,6 @@ Example:
 Compiler Options
 ++++++++++++++++
 
-**Note**: these options are not yet implemented.
-
 The LFI target has several configuration options, specified via ``-mattr=``:
 
 * ``+no-lfi-loads``: Disable sandboxing for load instructions (stores-only mode).
@@ -197,8 +195,6 @@ require any rewrite.
 Memory accesses
 ~~~~~~~~~~~~~~~
 
-**Note**: not yet implemented.
-
 Memory accesses are rewritten to use the ``[x27, wM, uxtw]`` addressing mode if
 it is available, which is automatically safe. Otherwise, rewrites fall back to
 using ``x28`` along with an instruction to safely load it with the target
@@ -278,8 +274,6 @@ address.
 
 Stack pointer modification
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-**Note**: not yet implemented.
 
 When the stack pointer is modified, we write the modified value to a temporary,
 before moving it back into ``sp`` with a safe ``add``.
