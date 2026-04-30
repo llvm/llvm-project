@@ -664,11 +664,16 @@ static std::optional<unsigned> evalLaneExpr(Value *V, unsigned Lane,
   if (Depth >= MaxAnalysisRecursionDepth)
     return std::nullopt;
 
-  if (isThreadID(ST, V))
-    return Lane;
+  // Poison/undef in the index expression: the shuffle result is poison
+  // regardless of which lane we evaluate.
+  if (isa<PoisonValue>(V) || isa<UndefValue>(V))
+    return std::nullopt;
 
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(V))
     return CI->getZExtValue();
+
+  if (isThreadID(ST, V))
+    return Lane;
 
   const BinaryOperator *BO = dyn_cast<BinaryOperator>(V);
   if (!BO)
