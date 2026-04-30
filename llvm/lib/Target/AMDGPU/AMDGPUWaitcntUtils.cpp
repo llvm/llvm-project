@@ -37,8 +37,10 @@ StringLiteral getInstCounterName(InstCounterType T) {
     return "ASYNC_CNT";
   case TENSOR_CNT:
     return "TENSOR_CNT";
-  case VA_VDST:
-    return "VA_VDST";
+  case VA_VDST_RD:
+    return "VA_VDST_RD";
+  case VA_VDST_WR:
+    return "VA_VDST_WR";
   case VM_VSRC:
     return "VM_VSRC";
   case NUM_INST_CNTS:
