@@ -65,7 +65,12 @@ end program
 ! CHECK-LABEL: func.func @_QPtest_alloc2()
 subroutine test_alloc2
   class(*),allocatable :: a[:]
+  class(*),allocatable :: b[:]
+  integer :: ierr
 
   ! CHECK: mif.alloc_coarray %[[VAL_1:.*]]#0 lcobounds %[[LCOBOUNDS:.*]] ucobounds %[[UCOBOUNDS:.*]] errmsg %[[ERRMSG:.*]] {uniq_name = "_QFtest_alloc2Ea"} : (!fir.ref<!fir.class<!fir.heap<none>>>, !fir.box<!fir.array<1xi64>>, !fir.box<!fir.array<0xi64>>, !fir.box<none>) -> ()
   allocate(real::a[1:*])
+  
+  ! CHECK: mif.alloc_coarray %[[VAL_2:.*]]#0 lcobounds %[[LCOBOUNDS2:.*]] ucobounds %[[UCOBOUNDS2:.*]] stat %[[STAT:.*]] errmsg %[[ERRMSG2:.*]] {uniq_name = "_QFtest_alloc2Eb"} : (!fir.ref<!fir.class<!fir.heap<none>>>, !fir.box<!fir.array<1xi64>>, !fir.box<!fir.array<0xi64>>, !fir.ref<i32>, !fir.box<none>) -> ()
+  allocate(real::b[2:*], STAT=ierr)
 end subroutine
