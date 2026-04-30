@@ -64,16 +64,6 @@ class ServerSpawnInfo {
     return display;
   }
 
-  /**
-   * Returns a truncated representation of `toDisplay`.
-   */
-  toDisplayTruncated(maxLength: number = 300): string {
-    const full = this.toDisplay();
-    if (full.length <= maxLength) {
-      return full;
-    }
-    return full.substring(0, maxLength) + "...";
-  }
 }
 
 /**
@@ -194,7 +184,6 @@ export class LLDBDapServer implements vscode.Disposable {
     }
 
     const changeTLDR = [];
-    const changeDetails = [];
 
     if (this.serverFileChanged) {
       changeTLDR.push("an old binary");
@@ -202,16 +191,7 @@ export class LLDBDapServer implements vscode.Disposable {
 
     const newSpawnInfo = ServerSpawnInfo.create(dapPath, args, env);
     if (!this.serverSpawnInfo.equals(newSpawnInfo)) {
-      changeTLDR.push("different arguments");
-      changeDetails.push(`
-The previous lldb-dap server was started with:
-
-${this.serverSpawnInfo.toDisplayTruncated()}
-
-The new lldb-dap server will be started with:
-
-${newSpawnInfo.toDisplayTruncated()}
-`);
+      changeTLDR.push("different configuration (args, env)");
     }
 
     // If the server hasn't changed, continue startup without killing it.
@@ -225,8 +205,10 @@ ${newSpawnInfo.toDisplayTruncated()}
       {
         modal: true,
         detail: `An existing lldb-dap server (${this.serverProcess.pid}) is running with ${changeTLDR.map((s) => `*${s}*`).join(" and ")}.
-${changeDetails.join("\n")}
-Restarting the server will interrupt any existing debug sessions and start a new server.`,
+
+Restarting the server will interrupt any existing debug sessions and start a new server.
+
+Click "Show Full Details" to see the differences between the existing and new server configuration.`,
       },
       "Restart",
       "Use Existing",
