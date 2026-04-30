@@ -1428,7 +1428,7 @@ def skipUnlessTargetIsHost(func):
         test_arch = lldbplatformutil.getArchitecture()
 
         if lldb_arch != test_arch:
-            return "Test binary architecture differs from LLDB.framework architecture"
+            return "Test binary architecture differs from host architecture"
         return None
 
     return skipTestIfFn(check_arch_match)(func)
