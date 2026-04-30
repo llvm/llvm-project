@@ -165,8 +165,10 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
   // Helper lambda to validate and get A/B tiles
   auto validateABTiles = [&](Operation *op)
       -> std::optional<std::pair<SmallVector<int64_t>, SmallVector<int64_t>>> {
-    std::optional<SmallVector<int64_t>> aTile = getTileShape(op->getOpOperand(0));
-    std::optional<SmallVector<int64_t>> bTile = getTileShape(op->getOpOperand(1));
+    std::optional<SmallVector<int64_t>> aTile =
+        getTileShape(op->getOpOperand(0));
+    std::optional<SmallVector<int64_t>> bTile =
+        getTileShape(op->getOpOperand(1));
 
     if (!aTile || aTile->size() != 2 || !bTile || bTile->size() != 2)
       return std::nullopt;
@@ -194,25 +196,22 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
   };
 
   // Helper lambda to validate scale A/B tiles for DpasMxOp
-  auto validateABScaleTiles = [&](Operation *op, unsigned scaleAOperandIdx,
-                                  unsigned scaleBOperandIdx,
-                                  const SmallVector<int64_t> &aTile,
-                                  const SmallVector<int64_t> &bTile)
-      -> std::optional<int64_t> {
+  auto validateABScaleTiles =
+      [&](Operation *op, unsigned scaleAOperandIdx, unsigned scaleBOperandIdx,
+          const SmallVector<int64_t> &aTile,
+          const SmallVector<int64_t> &bTile) -> std::optional<int64_t> {
     std::optional<SmallVector<int64_t>> aScaleTile =
         getTileShape(op->getOpOperand(scaleAOperandIdx));
     std::optional<SmallVector<int64_t>> bScaleTile =
         getTileShape(op->getOpOperand(scaleBOperandIdx));
 
-    if (!aScaleTile || aScaleTile->size() != 2 ||
-        !bScaleTile || bScaleTile->size() != 2)
+    if (!aScaleTile || aScaleTile->size() != 2 || !bScaleTile ||
+        bScaleTile->size() != 2)
       return std::nullopt;
 
     // Validate scale tile dimensions
-    assert((*aScaleTile)[0] == aTile[0] &&
-           "aScaleTile[0] must equal aTile[0]");
-    assert((*bScaleTile)[1] == bTile[1] &&
-           "bScaleTile[1] must equal bTile[1]");
+    assert((*aScaleTile)[0] == aTile[0] && "aScaleTile[0] must equal aTile[0]");
+    assert((*bScaleTile)[1] == bTile[1] && "bScaleTile[1] must equal bTile[1]");
 
     if ((*aScaleTile)[1] != (*bScaleTile)[0])
       return std::nullopt;
@@ -269,7 +268,7 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
       unsigned scaleBOperandIdx = scaleAOperandIdx + scaleASize;
 
       auto scaleFactor = validateABScaleTiles(op, scaleAOperandIdx,
-                                               scaleBOperandIdx, aTile, bTile);
+                                              scaleBOperandIdx, aTile, bTile);
       if (!scaleFactor)
         return std::nullopt;
 
@@ -287,8 +286,7 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
 
   if (isa<vector::TransposeOp, vector::BroadcastOp, vector::StepOp,
           vector::ShapeCastOp, vector::ConstantMaskOp, vector::CreateMaskOp,
-          vector::BitCastOp, vector::InterleaveOp, vector::DeinterleaveOp>(
-          op))
+          vector::BitCastOp, vector::InterleaveOp, vector::DeinterleaveOp>(op))
     return getTileShape(op->getOpResult(0));
 
   return std::nullopt;
