@@ -312,6 +312,8 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
   case OMPC_when:
   case OMPC_append_args:
   case OMPC_looprange:
+  case OMPC_graph_id:
+  case OMPC_graph_reset:
     break;
   default:
     break;
@@ -692,6 +694,8 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
   case OMPC_when:
   case OMPC_append_args:
   case OMPC_looprange:
+  case OMPC_graph_id:
+  case OMPC_graph_reset:
     break;
   default:
     break;
@@ -944,6 +948,9 @@ void clang::getOpenMPCaptureRegions(
       break;
     case OMPD_taskloop:
       CaptureRegions.push_back(OMPD_taskloop);
+      break;
+    case OMPD_taskgraph:
+      CaptureRegions.push_back(OMPD_taskgraph);
       break;
     case OMPD_loop:
       // TODO: 'loop' may require different capture regions depending on the
