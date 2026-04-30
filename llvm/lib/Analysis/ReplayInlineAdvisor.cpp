@@ -35,7 +35,8 @@ ReplayInlineAdvisor::ReplayInlineAdvisor(
   auto BufferOrErr = MemoryBuffer::getFileOrSTDIN(ReplaySettings.ReplayFile);
   std::error_code EC = BufferOrErr.getError();
   if (EC)
-    reportFatalUsageError("Could not open remarks file: " + Twine(EC.message()));
+    reportFatalUsageError("could not open remarks file: " +
+                          Twine(EC.message()));
 
   // Example for inline remarks to parse:
   //   main:3:1.1: '_Z3subii' inlined into 'main' at callsite sum:1 @
@@ -62,7 +63,7 @@ ReplayInlineAdvisor::ReplayInlineAdvisor(
     auto CallSite = Pair.second.split(";").first;
 
     if (Callee.empty() || Caller.empty() || CallSite.empty())
-      reportFatalUsageError("Invalid remark format: " + Twine(Line));
+      reportFatalUsageError("invalid remark format: " + Twine(Line));
 
     std::string Combined = (Callee + CallSite).str();
     InlineSitesFromRemarks[Combined] = IsPositiveRemark;

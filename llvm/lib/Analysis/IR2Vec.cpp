@@ -634,7 +634,7 @@ Expected<Vocabulary> Vocabulary::fromFile(StringRef VocabFilePath,
 
 void IR2VecVocabAnalysis::emitError(Error Err) {
   handleAllErrors(std::move(Err), [&](const ErrorInfoBase &EI) {
-    reportFatalUsageError(Twine("Error reading vocabulary: ") + EI.message());
+    reportFatalUsageError(Twine("error reading vocabulary: ") + EI.message());
   });
 }
 
