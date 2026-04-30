@@ -20,6 +20,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/WasmSSA/IR/WasmSSA.h"
+#include "mlir/Dialect/WasmSSA/IR/WasmSSAInterfaces.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/ValueRange.h"
@@ -159,25 +160,22 @@ struct RotateOpConversion : OpConversionPattern<SourceOp> {
 
     // Materialize (width - 1) for use in both sides of the expression.
     auto cstWidthMinusOne =
-        rewriter.create<ConstOp>(loc, IntegerAttr::get(ty, width - 1));
+        ConstOp::create(rewriter, loc, IntegerAttr::get(ty, width - 1));
 
     // Form the left-hand side of the OR:
     // (val (lhs shift op) (bits & (width - 1)))
-    auto orLHS = rewriter.create<LHSShiftOp>(
-        loc, val, rewriter.create<AndOp>(loc, bits, cstWidthMinusOne));
+    auto orLHS = LHSShiftOp::create(
+        rewriter, loc, val, AndOp::create(rewriter, loc, bits, cstWidthMinusOne));
 
     // Form the right-hand side of the OR:
     // (val (rhs shift op) (-bits & (width - 1)))
-    auto orRHS = rewriter.create<RHSShiftOp>(
-        loc, val,
+    auto orRHS = RHSShiftOp::create(
+        rewriter, loc, val,
         // (-bits & (width - 1))
-        rewriter.create<AndOp>(
-            loc,
+        AndOp::create(
+            rewriter, loc,
             // 0 - bits == -bits
-            rewriter.create<SubOp>(
-                loc,
-                rewriter.create<ConstOp>(loc, IntegerAttr::get(ty, 0)),
-                bits),
+            SubOp::create(rewriter, loc, ConstOp::create(rewriter, loc, IntegerAttr::get(ty, 0)), bits),
             cstWidthMinusOne));
 
     // OR together the two shifts and replace the rotate with the new
@@ -199,8 +197,7 @@ struct ComparisonOpConversion : OpConversionPattern<SourceOp> {
   matchAndRewrite(SourceOp srcOp, typename SourceOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto cmpRes =
-        rewriter
-            .create<TargetOp>(srcOp.getLoc(), rewriter.getI1Type(),
+        TargetOp::create(rewriter, srcOp.getLoc(), rewriter.getI1Type(),
                               AttrType::get(rewriter.getContext(), flag),
                               adaptor.getLhs(), adaptor.getRhs())
             .getResult();
@@ -257,19 +254,15 @@ struct IntFpComparisonOpConversion : OpConversionPattern<SourceOp> {
     Value comparisonResult;
     if (srcOp.getLhs().getType().isInteger())
       comparisonResult =
-          rewriter
-              .create<arith::CmpIOp>(
-                  srcOp.getLoc(), rewriter.getI1Type(),
-                  arith::CmpIPredicateAttr::get(rewriter.getContext(), IntFlag),
-                  adaptor.getLhs(), adaptor.getRhs())
+          arith::CmpIOp::create(rewriter, srcOp.getLoc(), rewriter.getI1Type(),
+                                arith::CmpIPredicateAttr::get(rewriter.getContext(), IntFlag),
+                                adaptor.getLhs(), adaptor.getRhs())
               .getResult();
     else if (srcOp.getLhs().getType().isFloat())
       comparisonResult =
-          rewriter
-              .create<arith::CmpFOp>(srcOp.getLoc(), rewriter.getI1Type(),
-                                     arith::CmpFPredicateAttr::get(
-                                         rewriter.getContext(), FloatFlag),
-                                     adaptor.getLhs(), adaptor.getRhs())
+          arith::CmpFOp::create(rewriter, srcOp.getLoc(), rewriter.getI1Type(),
+                                arith::CmpFPredicateAttr::get(rewriter.getContext(), FloatFlag),
+                                adaptor.getLhs(), adaptor.getRhs())
               .getResult();
     else
       return rewriter.notifyMatchFailure(
@@ -320,13 +313,9 @@ struct WasmEqzOpConversion : OpConversionPattern<EqzOp> {
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = eqzOp->getLoc();
     auto zero =
-        rewriter
-            .create<arith::ConstantOp>(
-                loc, rewriter.getIntegerAttr(adaptor.getInput().getType(), 0))
+        arith::ConstantOp::create(rewriter, loc, rewriter.getIntegerAttr(adaptor.getInput().getType(), 0))
             .getResult();
-    auto cmpRes = rewriter
-                      .create<arith::CmpIOp>(
-                          loc, rewriter.getI1Type(),
+    auto cmpRes = arith::CmpIOp::create(rewriter, loc, rewriter.getI1Type(),
                           arith::CmpIPredicateAttr::get(
                               rewriter.getContext(), arith::CmpIPredicate::eq),
                           adaptor.getInput(), zero)
@@ -346,9 +335,7 @@ struct WasmExtendLowBitsOpConversion : OpConversionPattern<ExtendLowBitsSOp> {
                   ExtendLowBitsSOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto truncWidth = extendLowBytesSOp.getBitsToTake().getInt();
-    auto truncation = rewriter.create<arith::TruncIOp>(
-        extendLowBytesSOp->getLoc(), rewriter.getIntegerType(truncWidth),
-        adaptor.getInput());
+    auto truncation = arith::TruncIOp::create(rewriter, extendLowBytesSOp->getLoc(), rewriter.getIntegerType(truncWidth), adaptor.getInput());
     rewriter.replaceOpWithNewOp<arith::ExtSIOp>(
         extendLowBytesSOp, extendLowBytesSOp.getResult().getType(),
         truncation.getResult());
@@ -380,15 +367,11 @@ struct WasmFuncOpConversion : OpConversionPattern<FuncOp> {
   class CFRewriterVisitor {
   private:
     using branch_to_dest_t =
-        llvm::DenseMap<WasmSSALabelBranchingInterface, Block *>;
+        llvm::DenseMap<LabelBranchingOpInterface, Block *>;
     Value getCompResultAsI1(Value compResult,
                             ConversionPatternRewriter &rewriter) {
-      auto testValue = rewriter.create<arith::ConstantOp>(
-          compResult.getLoc(), rewriter.getI32IntegerAttr(0));
-      auto flag = rewriter
-                      .create<arith::CmpIOp>(
-                          compResult.getLoc(), rewriter.getIntegerType(1),
-                          arith::CmpIPredicate::ne, compResult, testValue)
+      auto testValue = arith::ConstantOp::create(rewriter, compResult.getLoc(), rewriter.getI32IntegerAttr(0));
+      auto flag = arith::CmpIOp::create(rewriter, compResult.getLoc(), rewriter.getIntegerType(1), arith::CmpIPredicate::ne, compResult, testValue)
                       .getResult();
       return flag;
     }
@@ -420,7 +403,7 @@ struct WasmFuncOpConversion : OpConversionPattern<FuncOp> {
 
     template <typename LevelType>
     LogicalResult
-    replaceNestLevelWithBranchWrapper(WasmSSALabelLevelInterface nestingOp,
+    replaceNestLevelWithBranchWrapper(LabelLevelOpInterface nestingOp,
                                       llvm::ArrayRef<Block *> regionsToEntry,
                                       ConversionPatternRewriter &rewriter) {
       auto cast = dyn_cast<LevelType>(nestingOp.getOperation());
@@ -431,7 +414,7 @@ struct WasmFuncOpConversion : OpConversionPattern<FuncOp> {
     }
 
     template <typename... LevelTypes>
-    LogicalResult inlineNestDispatcher(WasmSSALabelLevelInterface nestingOp,
+    LogicalResult inlineNestDispatcher(LabelLevelOpInterface nestingOp,
                                        ConversionPatternRewriter &rewriter) {
       auto sip = rewriter.saveInsertionPoint();
       Block *blockSuccessor = nestingOp->getSuccessor(0);
@@ -443,8 +426,8 @@ struct WasmFuncOpConversion : OpConversionPattern<FuncOp> {
           continue;
         regionEntries.push_back(&region.front());
         /// Inline blocks of nested ops
-        llvm::SmallVector<WasmSSALabelLevelInterface> nestedOps{
-            region.getOps<WasmSSALabelLevelInterface>()};
+        llvm::SmallVector<LabelLevelOpInterface> nestedOps{
+            region.getOps<LabelLevelOpInterface>()};
         for (auto nestedOp : nestedOps) {
           LLVM_DEBUG(llvm::dbgs() << " Found nested op: " << nestedOp);
           if (failed(inlineBlocks(nestedOp, rewriter)))
@@ -466,12 +449,12 @@ struct WasmFuncOpConversion : OpConversionPattern<FuncOp> {
     }
 
     /// Take a nesting level defining op and inline it in the parent region.
-    LogicalResult inlineBlocks(WasmSSALabelLevelInterface nestingOp,
+    LogicalResult inlineBlocks(LabelLevelOpInterface nestingOp,
                                ConversionPatternRewriter &rewriter) {
       return inlineNestDispatcher<BlockOp, IfOp, LoopOp>(nestingOp, rewriter);
     }
 
-    llvm::FailureOr<Block *> getBlockFor(WasmSSALabelBranchingInterface branchOp) {
+    llvm::FailureOr<Block *> getBlockFor(LabelBranchingOpInterface branchOp) {
       auto destIter = branchToDest.find(branchOp);
       if (destIter == branchToDest.end())
         return branchOp->emitError("No indexed label op for this operation: ")
@@ -494,7 +477,7 @@ struct WasmFuncOpConversion : OpConversionPattern<FuncOp> {
 
     template <typename LevelInterfaceT>
     inline LogicalResult
-    convertBranchWrapper(WasmSSALabelBranchingInterface branchOp, Block *dest,
+    convertBranchWrapper(LabelBranchingOpInterface branchOp, Block *dest,
                          ConversionPatternRewriter &rewriter) {
       auto cast = dyn_cast<LevelInterfaceT>(branchOp.getOperation());
       if (!cast)
@@ -507,7 +490,7 @@ struct WasmFuncOpConversion : OpConversionPattern<FuncOp> {
     }
 
     template <typename... BranchInterfaceT>
-    LogicalResult convertBranchDispatch(WasmSSALabelBranchingInterface branchOp,
+    LogicalResult convertBranchDispatch(LabelBranchingOpInterface branchOp,
                                         ConversionPatternRewriter &rewriter) {
       auto dest = getBlockFor(branchOp);
       if (failed(dest))
@@ -521,7 +504,7 @@ struct WasmFuncOpConversion : OpConversionPattern<FuncOp> {
       return res;
     }
 
-    LogicalResult convertBranch(WasmSSALabelBranchingInterface branchOp,
+    LogicalResult convertBranch(LabelBranchingOpInterface branchOp,
                                 ConversionPatternRewriter &rewriter) {
       return convertBranchDispatch<BlockReturnOp, BranchIfOp>(branchOp,
                                                               rewriter);
@@ -532,19 +515,19 @@ struct WasmFuncOpConversion : OpConversionPattern<FuncOp> {
 
   public:
     CFRewriterVisitor(func::FuncOp func) : func{func} {
-      func.walk([this](WasmSSALabelBranchingInterface branchOp) {
+      func.walk([this](LabelBranchingOpInterface branchOp) {
         branchToDest.insert({branchOp, branchOp.getTarget()});
       });
     }
     LogicalResult rewrite(ConversionPatternRewriter &rewriter) {
-      llvm::SmallVector<WasmSSALabelLevelInterface> nestingOps{
-          func.getOps<WasmSSALabelLevelInterface>()};
+      llvm::SmallVector<LabelLevelOpInterface> nestingOps{
+          func.getOps<LabelLevelOpInterface>()};
       for (auto nestingOp : nestingOps)
         if (failed(inlineBlocks(nestingOp, rewriter)))
           return failure();
 
       auto res =
-          func->walk([this, &rewriter](WasmSSALabelBranchingInterface branchOp) {
+          func->walk([this, &rewriter](LabelBranchingOpInterface branchOp) {
             if (failed(convertBranch(branchOp, rewriter)))
               return WalkResult::interrupt();
             return WalkResult::advance();
@@ -687,32 +670,38 @@ struct WasmMemoryOpConversion : OpConversionPattern<MemOp> {
     auto bufferType =
         MemRefType::get({ShapedType::kDynamic}, rewriter.getI8Type());
     auto bufferPtrType = MemRefType::get({1}, bufferType);
+    auto memVisibility = memOp.getVisibility();
+    // Convert to StringAttr since memref::GlobalOp expects visibility as a string attribute.
+    mlir::StringAttr visAttr;
+    if (memVisibility == mlir::SymbolTable::Visibility::Public)
+        visAttr = mlir::StringAttr::get(memOp->getContext(), "public");
+    else if (memVisibility == mlir::SymbolTable::Visibility::Private)
+        visAttr = mlir::StringAttr::get(memOp->getContext(), "private");
+    else
+        visAttr = mlir::StringAttr::get(memOp->getContext(), "nested");
+
     auto memPtr = rewriter.replaceOpWithNewOp<memref::GlobalOp>(
-        memOp, memOp.getSymNameAttr(), memOp.getSymVisibilityAttr(),
+        memOp, memOp.getSymNameAttr(), visAttr,
         TypeAttr::get(bufferPtrType), /*initialValue*/ rewriter.getUnitAttr(),
         /*constant*/ UnitAttr{}, /*alignment*/ IntegerAttr{});
     auto initializerName = (memPtr.getSymName() + "::initializer").str();
-    auto memInitializer = rewriter.create<func::FuncOp>(
-        loc, initializerName, FunctionType::get(getContext(), {}, {}));
+    auto memInitializer = func::FuncOp::create(rewriter, loc, initializerName,
+                                               FunctionType::get(getContext(), {}, {}));
     memInitializer->setAttr(rewriter.getStringAttr("initializer"),
                             rewriter.getUnitAttr());
     auto *initializerBody = memInitializer.addEntryBlock();
     auto sip = rewriter.saveInsertionPoint();
     rewriter.setInsertionPointToStart(initializerBody);
-    auto memRefPtr = rewriter.create<memref::GetGlobalOp>(
-        loc, MemRefType::get({1}, bufferType), memPtr.getSymName());
-    auto alloc = rewriter.create<memref::AllocOp>(
-        loc,
-        MemRefType::get({memOp.getLimits().getMin()}, rewriter.getI8Type()));
+    auto memRefPtr = memref::GetGlobalOp::create(rewriter, loc, MemRefType::get({1}, bufferType), memPtr.getSymName());
+    auto alloc = memref::AllocOp::create(rewriter, loc, MemRefType::get({memOp.getLimits().getMin()}, rewriter.getI8Type()));
     auto castOp =
-        rewriter.create<memref::CastOp>(loc, bufferType, alloc.getResult());
-    auto idx = rewriter.create<arith::ConstantIndexOp>(loc, 0);
-    rewriter.create<memref::StoreOp>(loc, castOp.getResult(),
-                                     memRefPtr.getResult(),
-                                     ValueRange{idx.getResult()});
-    rewriter.create<func::ReturnOp>(loc);
+        memref::CastOp::create(rewriter, loc, bufferType, alloc.getResult());
+    auto idx = arith::ConstantIndexOp::create(rewriter, loc, 0);
+    memref::StoreOp::create(rewriter, loc, castOp.getResult(),
+                            memRefPtr.getResult(), ValueRange{idx.getResult()});
+    func::ReturnOp::create(rewriter, loc);
     rewriter.restoreInsertionPoint(sip);
-    rewriter.create<func::CallOp>(loc, memInitializer);
+    func::CallOp::create(rewriter, loc, memInitializer);
     return success();
   }
 };

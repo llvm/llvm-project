@@ -2,7 +2,7 @@
 // RUN: mlir-opt --split-input-file %s --raise-wasm-mlir --canonicalize -o - | FileCheck --check-prefix=CHECK-CANONICAL %s
 
 module {
-  wasmssa.func nested @func_0() {
+  wasmssa.func @func_0() {
     wasmssa.loop : {
       wasmssa.block_return
     }> ^bb1
@@ -27,7 +27,7 @@ module {
 // -----
 
 module {
-  wasmssa.func nested @func_0() -> i32 {
+  wasmssa.func @func_0() -> i32 {
     %0 = wasmssa.local of type i32
     wasmssa.loop : {
       %1 = wasmssa.local_get %0 : ref to i32
@@ -67,7 +67,7 @@ module {
 // -----
 
 module {
-  wasmssa.func nested @func_0() {
+  wasmssa.func @func_0() {
     %0 = wasmssa.local of type i32
     wasmssa.loop : {
       %1 = wasmssa.local_get %0 : ref to i32
@@ -117,7 +117,7 @@ module {
 // -----
 
 module {
-  wasmssa.func nested @func_0() {
+  wasmssa.func @func_0() {
     %0 = wasmssa.local of type i32
     %1 = wasmssa.local of type i32
     wasmssa.loop : {

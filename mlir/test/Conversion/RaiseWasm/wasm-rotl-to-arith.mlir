@@ -31,7 +31,7 @@
 
 // CHECK:           %[[RES:.*]] = arith.ori %[[SHRU]], %[[SHL]] : i32
 // CHECK:           return %[[RES]] : i32
-wasmssa.func nested @rotl_i32(%arg0: !wasmssa<local ref to i32>, %arg1: !wasmssa<local ref to i32>) -> i32 {
+wasmssa.func @rotl_i32(%arg0: !wasmssa<local ref to i32>, %arg1: !wasmssa<local ref to i32>) -> i32 {
     %v0 = wasmssa.local_get %arg0 : ref to i32
     %v1 = wasmssa.local_get %arg1 : ref to i32
 
@@ -66,7 +66,7 @@ wasmssa.func nested @rotl_i32(%arg0: !wasmssa<local ref to i32>, %arg1: !wasmssa
 // Form final result.
 // CHECK:           %[[RES:.*]] = arith.ori %[[SHRU]], %[[SHL]] : i64
 // CHECK:           return %[[RES]] : i64
-wasmssa.func nested @rotl_i64(%arg0: !wasmssa<local ref to i64>, %arg1: !wasmssa<local ref to i64>) -> i64 {
+wasmssa.func @rotl_i64(%arg0: !wasmssa<local ref to i64>, %arg1: !wasmssa<local ref to i64>) -> i64 {
     %v0 = wasmssa.local_get %arg0 : ref to i64
     %v1 = wasmssa.local_get %arg1 : ref to i64
 

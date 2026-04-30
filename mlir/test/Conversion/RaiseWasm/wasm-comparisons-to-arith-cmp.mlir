@@ -2,194 +2,194 @@
 
 
 module {
-  wasmssa.func nested @func_lt_si32() -> i32 {
+  wasmssa.func @func_lt_si32() -> i32 {
     %0 = wasmssa.const 12 : i32
     %1 = wasmssa.const 50 : i32
     %2 = wasmssa.lt_si %0 %1 : i32 -> i32
     wasmssa.return %2 : i32
   }
 
-  wasmssa.func nested @func_le_si32() -> i32 {
+  wasmssa.func @func_le_si32() -> i32 {
     %0 = wasmssa.const 12 : i32
     %1 = wasmssa.const 50 : i32
     %2 = wasmssa.le_si %0 %1 : i32 -> i32
     wasmssa.return %2 : i32
   }
-  wasmssa.func nested @func_lt_ui32() -> i32 {
+  wasmssa.func @func_lt_ui32() -> i32 {
     %0 = wasmssa.const 12 : i32
     %1 = wasmssa.const 50 : i32
     %2 = wasmssa.lt_ui %0 %1 : i32 -> i32
     wasmssa.return %2 : i32
   }
-  wasmssa.func nested @func_le_ui32() -> i32 {
+  wasmssa.func @func_le_ui32() -> i32 {
     %0 = wasmssa.const 12 : i32
     %1 = wasmssa.const 50 : i32
     %2 = wasmssa.le_ui %0 %1 : i32 -> i32
     wasmssa.return %2 : i32
   }
-  wasmssa.func nested @func_gt_si32() -> i32 {
+  wasmssa.func @func_gt_si32() -> i32 {
     %0 = wasmssa.const 12 : i32
     %1 = wasmssa.const 50 : i32
     %2 = wasmssa.gt_si %0 %1 : i32 -> i32
     wasmssa.return %2 : i32
   }
-  wasmssa.func nested @func_gt_ui32() -> i32 {
+  wasmssa.func @func_gt_ui32() -> i32 {
     %0 = wasmssa.const 12 : i32
     %1 = wasmssa.const 50 : i32
     %2 = wasmssa.gt_ui %0 %1 : i32 -> i32
     wasmssa.return %2 : i32
   }
-  wasmssa.func nested @func_ge_si32() -> i32 {
+  wasmssa.func @func_ge_si32() -> i32 {
     %0 = wasmssa.const 12 : i32
     %1 = wasmssa.const 50 : i32
     %2 = wasmssa.ge_si %0 %1 : i32 -> i32
     wasmssa.return %2 : i32
   }
-  wasmssa.func nested @func_ge_ui32() -> i32 {
+  wasmssa.func @func_ge_ui32() -> i32 {
     %0 = wasmssa.const 12 : i32
     %1 = wasmssa.const 50 : i32
     %2 = wasmssa.ge_ui %0 %1 : i32 -> i32
     wasmssa.return %2 : i32
   }
-  wasmssa.func nested @func_lt_si64() -> i32 {
+  wasmssa.func @func_lt_si64() -> i32 {
     %0 = wasmssa.const 12 : i64
     %1 = wasmssa.const 50 : i64
     %2 = wasmssa.lt_si %0 %1 : i64 -> i32
     wasmssa.return %2 : i32
   }
-  wasmssa.func nested @func_le_si64() -> i32 {
+  wasmssa.func @func_le_si64() -> i32 {
     %0 = wasmssa.const 12 : i64
     %1 = wasmssa.const 50 : i64
     %2 = wasmssa.le_si %0 %1 : i64 -> i32
     wasmssa.return %2 : i32
   }
-  wasmssa.func nested @func_lt_ui_i64() -> i32 {
+  wasmssa.func @func_lt_ui_i64() -> i32 {
     %0 = wasmssa.const 12 : i64
     %1 = wasmssa.const 50 : i64
     %2 = wasmssa.lt_ui %0 %1 : i64 -> i32
     wasmssa.return %2 : i32
   }
-  wasmssa.func nested @func_le_ui_i64() -> i32 {
+  wasmssa.func @func_le_ui_i64() -> i32 {
     %0 = wasmssa.const 12 : i64
     %1 = wasmssa.const 50 : i64
     %2 = wasmssa.le_ui %0 %1 : i64 -> i32
     wasmssa.return %2 : i32
   }
-  wasmssa.func nested @func_gt_si_i64() -> i32 {
+  wasmssa.func @func_gt_si_i64() -> i32 {
     %0 = wasmssa.const 12 : i64
     %1 = wasmssa.const 50 : i64
     %2 = wasmssa.gt_si %0 %1 : i64 -> i32
     wasmssa.return %2 : i32
   }
-  wasmssa.func nested @func_gt_ui_i64() -> i32 {
+  wasmssa.func @func_gt_ui_i64() -> i32 {
     %0 = wasmssa.const 12 : i64
     %1 = wasmssa.const 50 : i64
     %2 = wasmssa.gt_ui %0 %1 : i64 -> i32
     wasmssa.return %2 : i32
   }
-  wasmssa.func nested @func_ge_si_i64() -> i32 {
+  wasmssa.func @func_ge_si_i64() -> i32 {
     %0 = wasmssa.const 12 : i64
     %1 = wasmssa.const 50 : i64
     %2 = wasmssa.ge_si %0 %1 : i64 -> i32
     wasmssa.return %2 : i32
   }
-  wasmssa.func nested @func_ge_ui_i64() -> i32 {
+  wasmssa.func @func_ge_ui_i64() -> i32 {
     %0 = wasmssa.const 12 : i64
     %1 = wasmssa.const 50 : i64
     %2 = wasmssa.ge_ui %0 %1 : i64 -> i32
     wasmssa.return %2 : i32
   }
-  wasmssa.func nested @func_lt_f32() -> i32 {
+  wasmssa.func @func_lt_f32() -> i32 {
     %0 = wasmssa.const 5.000000e+00 : f32
     %1 = wasmssa.const 1.400000e+01 : f32
     %2 = wasmssa.lt %0 %1 : f32 -> i32
     wasmssa.return %2 : i32
   }
-  wasmssa.func nested @func_le_f32() -> i32 {
+  wasmssa.func @func_le_f32() -> i32 {
     %0 = wasmssa.const 5.000000e+00 : f32
     %1 = wasmssa.const 1.400000e+01 : f32
     %2 = wasmssa.le %0 %1 : f32 -> i32
     wasmssa.return %2 : i32
   }
-  wasmssa.func nested @func_gt_f32() -> i32 {
+  wasmssa.func @func_gt_f32() -> i32 {
     %0 = wasmssa.const 5.000000e+00 : f32
     %1 = wasmssa.const 1.400000e+01 : f32
     %2 = wasmssa.gt %0 %1 : f32 -> i32
     wasmssa.return %2 : i32
   }
-  wasmssa.func nested @func_ge_f32() -> i32 {
+  wasmssa.func @func_ge_f32() -> i32 {
     %0 = wasmssa.const 5.000000e+00 : f32
     %1 = wasmssa.const 1.400000e+01 : f32
     %2 = wasmssa.ge %0 %1 : f32 -> i32
     wasmssa.return %2 : i32
   }
-  wasmssa.func nested @func_lt_f64() -> i32 {
+  wasmssa.func @func_lt_f64() -> i32 {
     %0 = wasmssa.const 5.000000e+00 : f64
     %1 = wasmssa.const 1.400000e+01 : f64
     %2 = wasmssa.lt %0 %1 : f64 -> i32
     wasmssa.return %2 : i32
   }
-  wasmssa.func nested @func_le_f64() -> i32 {
+  wasmssa.func @func_le_f64() -> i32 {
     %0 = wasmssa.const 5.000000e+00 : f64
     %1 = wasmssa.const 1.400000e+01 : f64
     %2 = wasmssa.le %0 %1 : f64 -> i32
     wasmssa.return %2 : i32
   }
-  wasmssa.func nested @func_gt_f64() -> i32 {
+  wasmssa.func @func_gt_f64() -> i32 {
     %0 = wasmssa.const 5.000000e+00 : f64
     %1 = wasmssa.const 1.400000e+01 : f64
     %2 = wasmssa.gt %0 %1 : f64 -> i32
     wasmssa.return %2 : i32
   }
-  wasmssa.func nested @func_ge_f64() -> i32 {
+  wasmssa.func @func_ge_f64() -> i32 {
     %0 = wasmssa.const 5.000000e+00 : f64
     %1 = wasmssa.const 1.400000e+01 : f64
     %2 = wasmssa.ge %0 %1 : f64 -> i32
     wasmssa.return %2 : i32
   }
-  wasmssa.func nested @func_eq_i32() -> i32 {
+  wasmssa.func @func_eq_i32() -> i32 {
     %0 = wasmssa.const 12 : i32
     %1 = wasmssa.const 50 : i32
     %2 = wasmssa.eq %0 %1 : i32 -> i32
     wasmssa.return %2 : i32
   }
-  wasmssa.func nested @func_eq_i64() -> i32 {
+  wasmssa.func @func_eq_i64() -> i32 {
     %0 = wasmssa.const 20 : i64
     %1 = wasmssa.const 5 : i64
     %2 = wasmssa.eq %0 %1 : i64 -> i32
     wasmssa.return %2 : i32
   }
-  wasmssa.func nested @func_eq_f32() -> i32 {
+  wasmssa.func @func_eq_f32() -> i32 {
     %0 = wasmssa.const 5.000000e+00 : f32
     %1 = wasmssa.const 1.400000e+01 : f32
     %2 = wasmssa.eq %0 %1 : f32 -> i32
     wasmssa.return %2 : i32
   }
-  wasmssa.func nested @func_eq_f64() -> i32 {
+  wasmssa.func @func_eq_f64() -> i32 {
     %0 = wasmssa.const 1.700000e+01 : f64
     %1 = wasmssa.const 0.000000e+00 : f64
     %2 = wasmssa.eq %0 %1 : f64 -> i32
     wasmssa.return %2 : i32
   }
-    wasmssa.func nested @func_ne_i32() -> i32 {
+    wasmssa.func @func_ne_i32() -> i32 {
     %0 = wasmssa.const 12 : i32
     %1 = wasmssa.const 50 : i32
     %2 = wasmssa.ne %0 %1 : i32 -> i32
     wasmssa.return %2 : i32
   }
-  wasmssa.func nested @func_ne_i64() -> i32 {
+  wasmssa.func @func_ne_i64() -> i32 {
     %0 = wasmssa.const 20 : i64
     %1 = wasmssa.const 5 : i64
     %2 = wasmssa.ne %0 %1 : i64 -> i32
     wasmssa.return %2 : i32
   }
-  wasmssa.func nested @func_ne_f32() -> i32 {
+  wasmssa.func @func_ne_f32() -> i32 {
     %0 = wasmssa.const 5.000000e+00 : f32
     %1 = wasmssa.const 1.400000e+01 : f32
     %2 = wasmssa.ne %0 %1 : f32 -> i32
     wasmssa.return %2 : i32
   }
-  wasmssa.func nested @func_ne_f64() -> i32 {
+  wasmssa.func @func_ne_f64() -> i32 {
     %0 = wasmssa.const 1.700000e+01 : f64
     %1 = wasmssa.const 0.000000e+00 : f64
     %2 = wasmssa.ne %0 %1 : f64 -> i32

@@ -60,7 +60,7 @@ wasmssa.func @i_am_a_block(%arg0 : !wasmssa<local ref to i32>) -> i32 {
 // CHECK:         ^bb6:
 // CHECK:           %[[VAL_6:.*]] = arith.constant 7 : i32
 // CHECK:           return
-wasmssa.func nested @func_0(%arg0: !wasmssa<local ref to i32>) {
+wasmssa.func @func_0(%arg0: !wasmssa<local ref to i32>) {
   %1 = wasmssa.const 1: i32
   wasmssa.block : {
     %2 = wasmssa.const 2: i32
@@ -104,7 +104,7 @@ wasmssa.func nested @func_0(%arg0: !wasmssa<local ref to i32>) {
 // CHECK:         ^bb6:
 // CHECK:           %[[VAL_6:.*]] = arith.constant 7 : i32
 // CHECK:           return
-wasmssa.func nested @func_1() {
+wasmssa.func @func_1() {
   %1 = wasmssa.const 1: i32
   wasmssa.block : {
     %2 = wasmssa.const 2: i32
@@ -136,7 +136,7 @@ wasmssa.func nested @func_1() {
 // CHECK:           cf.br ^bb2(%[[VAL_3]] : i32)
 // CHECK:         ^bb2(%[[VAL_4:.*]]: i32):
 // CHECK:           return %[[VAL_4]] : i32
-wasmssa.func nested @func_2() -> i32 {
+wasmssa.func @func_2() -> i32 {
   %0 = wasmssa.const 14 : i32
   wasmssa.block(%0) : i32 : {
   ^bb0(%arg0: i32):
@@ -155,7 +155,7 @@ wasmssa.func nested @func_2() -> i32 {
 // CHECK:           cf.br ^bb2(%[[VAL_0]] : i32)
 // CHECK:         ^bb2(%[[VAL_1:.*]]: i32):
 // CHECK:           return %[[VAL_1]] : i32
-wasmssa.func nested @func_3() -> i32 {
+wasmssa.func @func_3() -> i32 {
   wasmssa.block : {
     %1 = wasmssa.const 17 : i32
     wasmssa.block_return %1 : i32
@@ -185,7 +185,7 @@ wasmssa.func nested @func_3() -> i32 {
 // CHECK_CANONICALIZED:           %[[VAL_0:.*]] = arith.constant 1 : i32
 // CHECK_CANONICALIZED:           return %[[VAL_0]] : i32
 
-wasmssa.func nested @branch_if_taken() -> i32 {
+wasmssa.func @branch_if_taken() -> i32 {
   wasmssa.block : {
     %1 = wasmssa.const 1 : i32
     %2 = wasmssa.const 2 : i32
@@ -218,7 +218,7 @@ wasmssa.func nested @branch_if_taken() -> i32 {
 // CHECK_CANONICALIZED:           %[[VAL_0:.*]] = arith.constant 17 : i32
 // CHECK_CANONICALIZED:           return %[[VAL_0]] : i32
 // CHECK_CANONICALIZED:         }
-wasmssa.func nested @branch_if_continue() -> i32 {
+wasmssa.func @branch_if_continue() -> i32 {
   wasmssa.block : {
     %1 = wasmssa.const 1 : i32
     %2 = wasmssa.const 0 : i32
@@ -256,7 +256,7 @@ wasmssa.func nested @branch_if_continue() -> i32 {
 // CHECK:           cf.br ^bb3(%[[VAL_13]] : i32)
 // CHECK:         ^bb3(%[[VAL_14:.*]]: i32):
 // CHECK:           return %[[VAL_14]] : i32
-wasmssa.func nested @if(%arg0: !wasmssa<local ref to i32>) -> i32 {
+wasmssa.func @if(%arg0: !wasmssa<local ref to i32>) -> i32 {
   %1 = wasmssa.local_get %arg0 : ref to i32
   %2 = wasmssa.const 1 : i32
   %3 = wasmssa.and %1 %2 : i32
@@ -294,7 +294,7 @@ wasmssa.func nested @if(%arg0: !wasmssa<local ref to i32>) -> i32 {
 // CHECK:           cf.br ^bb2(%[[VAL_9]] : i32)
 // CHECK:         ^bb2(%[[VAL_10:.*]]: i32):
 // CHECK:           return %[[VAL_10]] : i32
-wasmssa.func nested @if_else(%arg0: !wasmssa<local ref to i32>) -> i32 {
+wasmssa.func @if_else(%arg0: !wasmssa<local ref to i32>) -> i32 {
   %1 = wasmssa.local_get %arg0 : ref to i32
   %2 = wasmssa.local_get %arg0 : ref to i32
   %3 = wasmssa.const 1 : i32
@@ -339,7 +339,7 @@ wasmssa.func nested @if_else(%arg0: !wasmssa<local ref to i32>) -> i32 {
 // CHECK:           cf.br ^bb5(%[[VAL_16]] : i32)
 // CHECK:         ^bb5(%[[VAL_17:.*]]: i32):
 // CHECK:           return %[[VAL_17]] : i32
-wasmssa.func nested @if_if(%arg0: !wasmssa<local ref to i32>) -> i32 {
+wasmssa.func @if_if(%arg0: !wasmssa<local ref to i32>) -> i32 {
   %1 = wasmssa.local_get %arg0 : ref to i32
   %2 = wasmssa.ctz %1 : i32
   "wasmssa.if"(%2)[^bb1] ({
