@@ -148,6 +148,7 @@ typedef enum _ze_structure_type_t {
   ZE_STRUCTURE_TYPE_DRIVER_PROPERTIES = 0x1,
   ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES = 0x3,
   ZE_STRUCTURE_TYPE_DEVICE_COMPUTE_PROPERTIES = 0x4,
+  ZE_STRUCTURE_TYPE_DEVICE_MODULE_PROPERTIES = 0x5,
   ZE_STRUCTURE_TYPE_COMMAND_QUEUE_GROUP_PROPERTIES = 0x6,
   ZE_STRUCTURE_TYPE_DEVICE_MEMORY_PROPERTIES = 0x7,
   ZE_STRUCTURE_TYPE_DEVICE_CACHE_PROPERTIES = 0x9,
@@ -399,6 +400,53 @@ typedef struct _ze_device_cache_properties_t {
   size_t cacheSize;
 } ze_device_cache_properties_t;
 
+/* Native kernel UUID */
+#ifndef ZE_MAX_NATIVE_KERNEL_UUID_SIZE
+#define ZE_MAX_NATIVE_KERNEL_UUID_SIZE 16
+#endif
+
+typedef struct _ze_native_kernel_uuid_t {
+  uint8_t id[ZE_MAX_NATIVE_KERNEL_UUID_SIZE];
+} ze_native_kernel_uuid_t;
+
+/* Device module flags */
+typedef uint32_t ze_device_module_flags_t;
+typedef enum _ze_device_module_flag_t {
+  ZE_DEVICE_MODULE_FLAG_FP16 = ZE_BIT(0),
+  ZE_DEVICE_MODULE_FLAG_FP64 = ZE_BIT(1),
+  ZE_DEVICE_MODULE_FLAG_INT64_ATOMICS = ZE_BIT(2),
+  ZE_DEVICE_MODULE_FLAG_DP4A = ZE_BIT(3),
+  ZE_DEVICE_MODULE_FLAG_FORCE_UINT32 = 0x7fffffff
+} ze_device_module_flag_t;
+
+/* Floating-point capability flags */
+typedef uint32_t ze_device_fp_flags_t;
+typedef enum _ze_device_fp_flag_t {
+  ZE_DEVICE_FP_FLAG_DENORM = ZE_BIT(0),
+  ZE_DEVICE_FP_FLAG_INF_NAN = ZE_BIT(1),
+  ZE_DEVICE_FP_FLAG_ROUND_TO_NEAREST = ZE_BIT(2),
+  ZE_DEVICE_FP_FLAG_ROUND_TO_ZERO = ZE_BIT(3),
+  ZE_DEVICE_FP_FLAG_ROUND_TO_INF = ZE_BIT(4),
+  ZE_DEVICE_FP_FLAG_FMA = ZE_BIT(5),
+  ZE_DEVICE_FP_FLAG_ROUNDED_DIVIDE_SQRT = ZE_BIT(6),
+  ZE_DEVICE_FP_FLAG_SOFT_FLOAT = ZE_BIT(7),
+  ZE_DEVICE_FP_FLAG_FORCE_UINT32 = 0x7fffffff
+} ze_device_fp_flag_t;
+
+/* Device module properties */
+typedef struct _ze_device_module_properties_t {
+  ze_structure_type_t stype;
+  void *pNext;
+  uint32_t spirvVersionSupported;
+  ze_device_module_flags_t flags;
+  ze_device_fp_flags_t fp16flags;
+  ze_device_fp_flags_t fp32flags;
+  ze_device_fp_flags_t fp64flags;
+  uint32_t maxArgumentsSize;
+  uint32_t printfBufferSize;
+  ze_native_kernel_uuid_t nativeKernelSupported;
+} ze_device_module_properties_t;
+
 /* Device IP version (extension) */
 typedef struct _ze_device_ip_version_ext_t {
   ze_structure_type_t stype;
@@ -611,6 +659,9 @@ ZE_APIEXPORT ze_result_t ZE_APICALL zeDeviceGetProperties(
 ZE_APIEXPORT ze_result_t ZE_APICALL zeDeviceGetComputeProperties(
     ze_device_handle_t hDevice,
     ze_device_compute_properties_t *pComputeProperties);
+ZE_APIEXPORT ze_result_t ZE_APICALL
+zeDeviceGetModuleProperties(ze_device_handle_t hDevice,
+                            ze_device_module_properties_t *pModuleProperties);
 ZE_APIEXPORT ze_result_t ZE_APICALL
 zeDeviceGetMemoryProperties(ze_device_handle_t hDevice, uint32_t *pCount,
                             ze_device_memory_properties_t *pMemProperties);

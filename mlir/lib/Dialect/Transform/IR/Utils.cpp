@@ -7,9 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Transform/IR/Utils.h"
+#include "mlir/Analysis/CallGraph.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/IR/Verifier.h"
+#include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
+#include "mlir/Transforms/InliningUtils.h"
+#include "llvm/ADT/SCCIterator.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugLog.h"
 
@@ -29,8 +33,8 @@ static bool canMergeInto(FunctionOpInterface func1, FunctionOpInterface func2) {
 /// Merge `func1` into `func2`. The two ops must be inside the same parent op
 /// and mergable according to `canMergeInto`. The function erases `func1` such
 /// that only `func2` exists when the function returns.
-static InFlightDiagnostic mergeInto(FunctionOpInterface func1,
-                                    FunctionOpInterface func2) {
+static LogicalResult mergeInto(FunctionOpInterface func1,
+                               FunctionOpInterface func2) {
   assert(canMergeInto(func1, func2));
   assert(func1->getParentOp() == func2->getParentOp() &&
          "expected func1 and func2 to be in the same parent op");
@@ -73,10 +77,41 @@ static InFlightDiagnostic mergeInto(FunctionOpInterface func1,
   assert(func1.isExternal());
   func1->erase();
 
-  return InFlightDiagnostic();
+  return success();
 }
 
-InFlightDiagnostic
+LogicalResult transform::detail::verifyNoRecursionInCallGraph(Operation *root) {
+  const mlir::CallGraph callgraph(root);
+  for (auto scc = llvm::scc_begin(&callgraph); !scc.isAtEnd(); ++scc) {
+    if (!scc.hasCycle())
+      continue;
+
+    // Need to check this here additionally because this verification may run
+    // before we check the nested operations.
+    if ((*scc->begin())->isExternal())
+      return root->emitOpError() << "contains a call to an external "
+                                    "operation, which is not allowed";
+
+    Operation *first = (*scc->begin())->getCallableRegion()->getParentOp();
+    InFlightDiagnostic diag = emitError(first->getLoc())
+                              << "recursion not allowed in named sequences";
+    for (auto it = std::next(scc->begin()); it != scc->end(); ++it) {
+      // Need to check this here additionally because this verification may
+      // run before we check the nested operations.
+      if ((*it)->isExternal()) {
+        return root->emitOpError() << "contains a call to an external "
+                                      "operation, which is not allowed";
+      }
+
+      Operation *current = (*it)->getCallableRegion()->getParentOp();
+      diag.attachNote(current->getLoc()) << "operation on recursion stack";
+    }
+    return diag;
+  }
+  return success();
+}
+
+LogicalResult
 transform::detail::mergeSymbolsInto(Operation *target,
                                     OwningOpRef<Operation *> other) {
   assert(target->hasTrait<OpTrait::SymbolTable>() &&
@@ -132,7 +167,7 @@ transform::detail::mergeSymbolsInto(Operation *target,
       auto renameToUnique =
           [&](SymbolOpInterface op, SymbolOpInterface otherOp,
               SymbolTable &symbolTable,
-              SymbolTable &otherSymbolTable) -> InFlightDiagnostic {
+              SymbolTable &otherSymbolTable) -> LogicalResult {
         LDBG() << ", renaming";
         FailureOr<StringAttr> maybeNewName =
             symbolTable.renameToUnique(op, {&otherSymbolTable});
@@ -143,21 +178,19 @@ transform::detail::mergeSymbolsInto(Operation *target,
           return diag;
         }
         LDBG() << "      renamed to @" << maybeNewName->getValue();
-        return InFlightDiagnostic();
+        return success();
       };
 
       if (symbolOp.isPrivate()) {
-        InFlightDiagnostic diag = renameToUnique(
-            symbolOp, collidingOp, *symbolTable, *otherSymbolTable);
-        if (failed(diag))
-          return diag;
+        if (failed(renameToUnique(symbolOp, collidingOp, *symbolTable,
+                                  *otherSymbolTable)))
+          return failure();
         continue;
       }
       if (collidingOp.isPrivate()) {
-        InFlightDiagnostic diag = renameToUnique(
-            collidingOp, symbolOp, *otherSymbolTable, *symbolTable);
-        if (failed(diag))
-          return diag;
+        if (failed(renameToUnique(collidingOp, symbolOp, *otherSymbolTable,
+                                  *symbolTable)))
+          return failure();
         continue;
       }
       LDBG() << ", emitting error";
@@ -197,9 +230,12 @@ transform::detail::mergeSymbolsInto(Operation *target,
       op->moveBefore(&target->getRegion(0).front(),
                      target->getRegion(0).front().end());
 
-      // If there is no collision, we are done.
+      // If there is no collision, we are done -- keep the target symbol
+      // table in sync with the moved op so that subsequent lookups (and the
+      // post-merge validation below) remain efficient.
       if (!collidingOp) {
         LDBG() << " without collision";
+        targetSymbolTable.insert(op);
         continue;
       }
 
@@ -227,21 +263,63 @@ transform::detail::mergeSymbolsInto(Operation *target,
       assert(targetSymbolTable.lookup(funcOp.getName()) == collidingFuncOp);
 
       // Do the actual merging.
-      {
-        InFlightDiagnostic diag = mergeInto(funcOp, collidingFuncOp);
-        if (failed(diag))
-          return diag;
-      }
+      if (failed(mergeInto(funcOp, collidingFuncOp)))
+        return failure();
     }
   }
 
-  // Need full verification here because merging/inlining may have broken some
-  // nesting invariants that were not broken in the sources.
-  // TODO: implement and use InlinerDialectInterface to avoid this check.
-  if (failed(mlir::verify(target)))
-    return target->emitError()
-           << "failed to verify target op after merging symbols";
+  // Symbol merging only moves callable ops between symbol tables; it does not
+  // alter the bodies that were already valid in the source modules. The only
+  // invariants that may newly be violated after merging are:
+  //   1. a call now refers to a callee whose body is structurally not legal to
+  //      inline at the call site (caught by the transform dialect's
+  //      `DialectInlinerInterface` implementation), or
+  //   2. the merged call graph contains a recursive cycle, which is forbidden
+  //      for `transform.named_sequence` callables (caught by the shared
+  //      `verifyNoRecursionInCallGraph` helper).
+  // Use the inliner interface methods directly (without running the inlining
+  // pass) to validate (1), and reuse the dialect's call-graph verifier for
+  // (2). The call graph builder requires call/callable ops to be well-formed,
+  // so pre-verify them here without recursing into their bodies.
+  WalkResult preVerify = target->walk([](Operation *nested) {
+    if (!isa<CallableOpInterface, CallOpInterface>(nested))
+      return WalkResult::advance();
+    if (failed(mlir::verify(nested, /*verifyRecursively=*/false)))
+      return WalkResult::interrupt();
+    return WalkResult::advance();
+  });
+  if (preVerify.wasInterrupted())
+    return failure();
+
+  InlinerInterface inliner(target->getContext());
+  WalkResult inlineCheck = target->walk([&](CallOpInterface call) {
+    Operation *callable = nullptr;
+    CallInterfaceCallable callee = call.getCallableForCallee();
+    if (auto symRef = dyn_cast<SymbolRefAttr>(callee)) {
+      // Fall back to full resolution for nested symbols, the table is
+      // one-level only.
+      if (isa<FlatSymbolRefAttr>(symRef))
+        callable = targetSymbolTable.lookup(symRef.getLeafReference());
+      else
+        callable = SymbolTable::lookupNearestSymbolFrom(call, symRef);
+    } else if (auto value = dyn_cast<Value>(callee)) {
+      callable = value.getDefiningOp();
+    }
+
+    if (!callable)
+      return WalkResult::advance();
+    if (!inliner.isLegalToInline(call, callable, /*wouldBeCloned=*/false)) {
+      InFlightDiagnostic diag =
+          call->emitError()
+          << "merged call is not legal to inline into its caller";
+      diag.attachNote(callable->getLoc()) << "callee defined here";
+      return WalkResult::interrupt();
+    }
+    return WalkResult::advance();
+  });
+  if (inlineCheck.wasInterrupted())
+    return failure();
 
   LDBG() << "done merging ops";
-  return InFlightDiagnostic();
+  return verifyNoRecursionInCallGraph(target);
 }

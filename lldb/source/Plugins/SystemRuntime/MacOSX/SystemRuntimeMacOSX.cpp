@@ -620,10 +620,15 @@ bool SystemRuntimeMacOSX::BacktraceRecordingHeadersInitialized() {
   addr_t item_info_data_offset_address = LLDB_INVALID_ADDRESS;
   Target &target = m_process->GetTarget();
 
+  ModuleSpec lookup_spec(FileSpec("libBacktraceRecording.dylib"));
+  ModuleSP module_sp(target.GetImages().FindFirstModule(lookup_spec));
+  if (!module_sp)
+    return false;
+
   static ConstString introspection_dispatch_queue_info_version(
       "__introspection_dispatch_queue_info_version");
   SymbolContextList sc_list;
-  m_process->GetTarget().GetImages().FindSymbolsWithNameAndType(
+  module_sp->FindSymbolsWithNameAndType(
       introspection_dispatch_queue_info_version, eSymbolTypeData, sc_list);
   if (!sc_list.IsEmpty()) {
     SymbolContext sc;
@@ -635,7 +640,7 @@ bool SystemRuntimeMacOSX::BacktraceRecordingHeadersInitialized() {
 
   static ConstString introspection_dispatch_queue_info_data_offset(
       "__introspection_dispatch_queue_info_data_offset");
-  m_process->GetTarget().GetImages().FindSymbolsWithNameAndType(
+  module_sp->FindSymbolsWithNameAndType(
       introspection_dispatch_queue_info_data_offset, eSymbolTypeData, sc_list);
   if (!sc_list.IsEmpty()) {
     SymbolContext sc;
@@ -647,7 +652,7 @@ bool SystemRuntimeMacOSX::BacktraceRecordingHeadersInitialized() {
 
   static ConstString introspection_dispatch_item_info_version(
       "__introspection_dispatch_item_info_version");
-  m_process->GetTarget().GetImages().FindSymbolsWithNameAndType(
+  module_sp->FindSymbolsWithNameAndType(
       introspection_dispatch_item_info_version, eSymbolTypeData, sc_list);
   if (!sc_list.IsEmpty()) {
     SymbolContext sc;
@@ -659,7 +664,7 @@ bool SystemRuntimeMacOSX::BacktraceRecordingHeadersInitialized() {
 
   static ConstString introspection_dispatch_item_info_data_offset(
       "__introspection_dispatch_item_info_data_offset");
-  m_process->GetTarget().GetImages().FindSymbolsWithNameAndType(
+  module_sp->FindSymbolsWithNameAndType(
       introspection_dispatch_item_info_data_offset, eSymbolTypeData, sc_list);
   if (!sc_list.IsEmpty()) {
     SymbolContext sc;

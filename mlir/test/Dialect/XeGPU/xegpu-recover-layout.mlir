@@ -14,11 +14,11 @@ gpu.func @for_basic(%arg0: memref<8x128xf16>, %arg1: memref<128x16xf16>, %arg2: 
   %c16 = arith.constant 16 : index
   // CHECK: xegpu.create_nd_tdesc
   // CHECK-SAME: -> !xegpu.tensor_desc<8x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
-  %0 = xegpu.create_nd_tdesc %arg0[%c0, %c0] : memref<8x128xf16>
+  %0 = xegpu.create_nd_tdesc %arg0 : memref<8x128xf16>
       -> !xegpu.tensor_desc<8x16xf16>
   // CHECK: xegpu.create_nd_tdesc
   // CHECK-SAME: -> !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>>
-  %1 = xegpu.create_nd_tdesc %arg1[%c0, %c0] : memref<128x16xf16>
+  %1 = xegpu.create_nd_tdesc %arg1 : memref<128x16xf16>
       -> !xegpu.tensor_desc<16x16xf16>
   // Recovery propagates layout from dpas (via store_nd) back to arith.constant.
   // CHECK: arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
@@ -27,9 +27,9 @@ gpu.func @for_basic(%arg0: memref<8x128xf16>, %arg1: memref<128x16xf16>, %arg2: 
   // CHECK: scf.for
   %2 = scf.for %arg3 = %c0 to %c128 step %c16
       iter_args(%arg6 = %cst) -> (vector<8x16xf32>) {
-    %4 = xegpu.load_nd %0 {layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+    %4 = xegpu.load_nd %0[%c0, %c0] {layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
         : !xegpu.tensor_desc<8x16xf16> -> vector<8x16xf16>
-    %5 = xegpu.load_nd %1 {layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>}
+    %5 = xegpu.load_nd %1[%c0, %c0] {layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>}
         : !xegpu.tensor_desc<16x16xf16> -> vector<16x16xf16>
     %6 = xegpu.dpas %4, %5, %arg6
         {layout_a = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
@@ -45,9 +45,9 @@ gpu.func @for_basic(%arg0: memref<8x128xf16>, %arg1: memref<128x16xf16>, %arg2: 
   }
   // CHECK: xegpu.create_nd_tdesc
   // CHECK-SAME: -> !xegpu.tensor_desc<8x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
-  %3 = xegpu.create_nd_tdesc %arg2[%c0, %c0] : memref<8x16xf32>
+  %3 = xegpu.create_nd_tdesc %arg2 : memref<8x16xf32>
       -> !xegpu.tensor_desc<8x16xf32>
-  xegpu.store_nd %2, %3 {layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+  xegpu.store_nd %2, %3[%c0, %c0] {layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
       : vector<8x16xf32>, !xegpu.tensor_desc<8x16xf32>
   gpu.return
 }
@@ -67,13 +67,13 @@ gpu.func @while_basic(%arg0: memref<1024xf32>, %arg1: memref<1024xf32>) {
   %c0_i32 = arith.constant 0 : i32
   // CHECK: xegpu.create_nd_tdesc
   // CHECK-SAME: -> !xegpu.tensor_desc<256xf32, #xegpu.layout<sg_layout = [16], sg_data = [16]>>
-  %0 = xegpu.create_nd_tdesc %arg0[0] : memref<1024xf32>
+  %0 = xegpu.create_nd_tdesc %arg0 : memref<1024xf32>
       -> !xegpu.tensor_desc<256xf32>
-  %1 = xegpu.load_nd %0 {layout = #xegpu.layout<sg_layout = [16], sg_data = [16]>}
+  %1 = xegpu.load_nd %0[0] {layout = #xegpu.layout<sg_layout = [16], sg_data = [16]>}
       : !xegpu.tensor_desc<256xf32> -> vector<256xf32>
   // CHECK: xegpu.create_nd_tdesc
   // CHECK-SAME: -> !xegpu.tensor_desc<256xf32, #xegpu.layout<sg_layout = [16], sg_data = [16]>>
-  %2 = xegpu.create_nd_tdesc %arg1[0] : memref<1024xf32>
+  %2 = xegpu.create_nd_tdesc %arg1 : memref<1024xf32>
       -> !xegpu.tensor_desc<256xf32>
 
   // CHECK: scf.while
@@ -86,12 +86,10 @@ gpu.func @while_basic(%arg0: memref<1024xf32>, %arg1: memref<1024xf32>) {
     scf.condition(%4) %arg2, %arg3 : vector<256xf32>, i32
   } do {
   ^bb0(%arg2: vector<256xf32>, %arg3: i32):
-    xegpu.store_nd %arg2, %2 {layout = #xegpu.layout<sg_layout = [16], sg_data = [16]>}
+    xegpu.store_nd %arg2, %2[0] {layout = #xegpu.layout<sg_layout = [16], sg_data = [16]>}
         : vector<256xf32>, !xegpu.tensor_desc<256xf32>
     %4 = arith.addi %arg3, %c1_i32 : i32
-    %5 = xegpu.update_nd_offset %0, [256]
-        : !xegpu.tensor_desc<256xf32>
-    %6 = xegpu.load_nd %5 {layout = #xegpu.layout<sg_layout = [16], sg_data = [16]>}
+    %6 = xegpu.load_nd %0[256] {layout = #xegpu.layout<sg_layout = [16], sg_data = [16]>}
         : !xegpu.tensor_desc<256xf32> -> vector<256xf32>
     // Recovery propagates layout to scf.yield in the "do" region via
     // sibling region propagation (from "before" region arg back to "do" yield).
@@ -101,7 +99,7 @@ gpu.func @while_basic(%arg0: memref<1024xf32>, %arg1: memref<1024xf32>) {
   // CHECK: } attributes {layout_operand_0 = #xegpu.layout<sg_layout = [16], sg_data = [16]>,
   // CHECK-SAME: layout_result_0 = #xegpu.layout<sg_layout = [16], sg_data = [16]>}
   }
-  xegpu.store_nd %3#0, %2 {layout = #xegpu.layout<sg_layout = [16], sg_data = [16]>}
+  xegpu.store_nd %3#0, %2[0] {layout = #xegpu.layout<sg_layout = [16], sg_data = [16]>}
       : vector<256xf32>, !xegpu.tensor_desc<256xf32>
   gpu.return
 }
@@ -118,18 +116,18 @@ gpu.func @if_basic(
     %arg1: !xegpu.tensor_desc<16x16xf16>,
     %arg2: i1,
     %arg3: !xegpu.tensor_desc<8x16xf32>) {
-  %0 = xegpu.load_nd %arg0 {layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+  %0 = xegpu.load_nd %arg0[0, 0] {layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
       : !xegpu.tensor_desc<8x16xf16> -> vector<8x16xf16>
   // CHECK: scf.if
   %1 = scf.if %arg2 -> (vector<16x16xf16>) {
-    %3 = xegpu.load_nd %arg1 {layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>}
+    %3 = xegpu.load_nd %arg1[0, 0] {layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>}
         : !xegpu.tensor_desc<16x16xf16>
         -> vector<16x16xf16>
     // Recovery propagates layout to scf.yield operand in "then" region.
     // CHECK: scf.yield {layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>}
     scf.yield %3 : vector<16x16xf16>
   } else {
-    %3 = xegpu.load_nd %arg1 {layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>}
+    %3 = xegpu.load_nd %arg1[0, 0] {layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>}
         : !xegpu.tensor_desc<16x16xf16>
         -> vector<16x16xf16>
     // Recovery propagates layout to scf.yield operand in "else" region.
@@ -143,7 +141,7 @@ gpu.func @if_basic(
        layout_b = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>,
        layout_cd = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
       : vector<8x16xf16>, vector<16x16xf16> -> vector<8x16xf32>
-  xegpu.store_nd %2, %arg3 {layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+  xegpu.store_nd %2, %arg3[0, 0] {layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
       : vector<8x16xf32>, !xegpu.tensor_desc<8x16xf32>
   gpu.return
 }

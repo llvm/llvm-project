@@ -2,9 +2,9 @@
 # RUN:   | FileCheck %s
 
 
-# CHECK: __DATA   __data             0x100001018   pointer  0        __ZTISt12out_of_range
-# CHECK: __DATA   __data             0x100001020   pointer  0        __ZTISt12out_of_range
-# CHECK: __DATA   __data             0x100001028   pointer  0        __ZTISt12out_of_range
-# CHECK:                                           strong            __ZdlPv
-# CHECK: __DATA   __data             0x100001018   pointer  0        __Znam
-# CHECK:                                           strong            __Znwm
+# CHECK:      __DATA   __data             0x100001018   pointer  0        __ZTISt12out_of_range
+# CHECK-NEXT: __DATA   __data             0x100001020   pointer  0        __ZTISt12out_of_range
+# CHECK-NEXT: __DATA   __data             0x100001028   pointer  0        __ZTISt12out_of_range
+# CHECK-NEXT:                                           strong            __ZdlPv
+# CHECK-NEXT: __DATA   __data             0x100001018   pointer  0        __Znam
+# CHECK-NEXT:                                           strong            __Znwm

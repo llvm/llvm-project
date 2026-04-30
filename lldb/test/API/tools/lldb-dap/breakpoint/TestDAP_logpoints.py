@@ -12,6 +12,7 @@ import lldbdap_testcase
 import os
 
 
+@skipIfTargetDoesNotSupportSharedLibraries()
 class TestDAP_logpoints(lldbdap_testcase.DAPTestCaseBase):
     def setUp(self):
         lldbdap_testcase.DAPTestCaseBase.setUp(self)
