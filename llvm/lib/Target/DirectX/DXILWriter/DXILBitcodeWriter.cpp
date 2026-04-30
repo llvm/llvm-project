@@ -14,6 +14,7 @@
 #include "DXILValueEnumerator.h"
 #include "DirectXIRPasses/PointerTypeAnalysis.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Bitcode/BitcodeCommon.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/LLVMBitCodes.h"
@@ -1516,7 +1517,13 @@ void DXILBitcodeWriter::writeDICompileUnit(const DICompileUnit *N,
                                            SmallVectorImpl<uint64_t> &Record,
                                            unsigned Abbrev) {
   Record.push_back(N->isDistinct());
-  Record.push_back(N->getSourceLanguage().getUnversionedName());
+  DISourceLanguageName Lang = N->getSourceLanguage();
+  if (Lang.hasVersionedName()) {
+    auto LangName = static_cast<dwarf::SourceLanguageName>(Lang.getName());
+    Lang = dwarf::toDW_LANG(LangName, Lang.getVersion())
+               .value_or(dwarf::SourceLanguage{});
+  }
+  Record.push_back(Lang.getUnversionedName());
   Record.push_back(VE.getMetadataOrNullID(N->getFile()));
   Record.push_back(VE.getMetadataOrNullID(N->getRawProducer()));
   Record.push_back(N->isOptimized());
