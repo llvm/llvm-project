@@ -498,7 +498,8 @@ static bool canHaveUnrollRemainder(const Loop *L) {
 // latches, this function just quickly hacks a few of their probabilities to
 // restore the original total loop body frequency.  Otherwise, it determines
 // less arbitrary probabilities.
-static void fixProbContradiction(UnrollLoopOptions ULO,
+static void fixProbContradiction(Loop *L, UnrollLoopOptions ULO,
+                                 OptimizationRemarkEmitter *ORE,
                                  BranchProbability OriginalLoopProb,
                                  bool CompletelyUnroll,
                                  std::vector<unsigned> &IterCounts,
@@ -754,6 +755,12 @@ static void fixProbContradiction(UnrollLoopOptions ULO,
       //
       // TODO: Cover this case in the test suite if you can.
       FreqCompute = std::numeric_limits<double>::infinity();
+      if (ORE) {
+        ORE->emit([&]() {
+          return OptimizationRemark(DEBUG_TYPE, "InfiniteFrequency",
+                                    L->getStartLoc(), L->getHeader());
+        });
+      }
     } else {
       assert(FreqBefore > 0 &&
              "Expected at least one iteration before first latch");
@@ -1501,8 +1508,8 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
 
   // Fix probabilities we contradicted above.
   if (ProbUpdateRequired) {
-    fixProbContradiction(ULO, OriginalLoopProb, CompletelyUnroll, IterCounts,
-                         CondLatches, CondLatchNexts);
+    fixProbContradiction(L, ULO, ORE, OriginalLoopProb, CompletelyUnroll,
+                         IterCounts, CondLatches, CondLatchNexts);
   }
 
   // If there are partial reductions, create code in the exit block to compute
