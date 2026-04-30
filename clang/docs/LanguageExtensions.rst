@@ -715,7 +715,7 @@ bitwise operators &,|,^,~        yes     yes       yes         yes    yes       
 ==, !=, >, <, >=, <=             yes     yes       yes         yes    yes        yes
 =                                yes     yes       yes         yes    yes        yes
 ?: [#]_                          yes     --        yes         yes    yes        yes
-sizeof                           yes     yes       yes         yes    yes [#]_   yes
+sizeof                           yes     yes       yes         yes    yes [#vls]_ yes [#vls]_
 C-style cast                     yes     yes       yes         no     no         yes
 reinterpret_cast                 yes     no        yes         no     no         yes
 static_cast                      yes     no        yes         no     no         yes
@@ -740,7 +740,7 @@ See also :ref:`langext-__builtin_shufflevector`, :ref:`langext-__builtin_convert
   and uses normal bool conversions (that is, != 0).
   If it's an extension (OpenCL) vector, it's only available in C and OpenCL C.
   And it selects based on the signedness of the condition operands (OpenCL v1.1 s6.3.9).
-.. [#] sizeof can only be used on vector length specific SVE and RVV types.
+.. [#vls] sizeof can only be used on vector length specific SVE and RVV types.
 .. [#] Clang does not allow the address of an element to be taken while GCC
    allows this. This is intentional for vectors with a boolean element type and
    not implemented otherwise.
