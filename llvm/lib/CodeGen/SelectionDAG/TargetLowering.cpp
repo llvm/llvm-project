@@ -13203,8 +13203,8 @@ SDValue TargetLowering::expandVectorNaryOpBySplitting(SDNode *Node,
     HiOps.push_back(Hi);
   }
 
-  SDValue SplitOpLo = DAG.getNode(Opcode, DL, LoVT, LoOps);
-  SDValue SplitOpHi = DAG.getNode(Opcode, DL, HiVT, HiOps);
+  SDValue SplitOpLo = DAG.getNode(Opcode, DL, LoVT, LoOps, Node->getFlags());
+  SDValue SplitOpHi = DAG.getNode(Opcode, DL, HiVT, HiOps, Node->getFlags());
   return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, SplitOpLo, SplitOpHi);
 }
 
