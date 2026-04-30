@@ -300,12 +300,13 @@ jobs:
       #  with:
       #    release_type: ${{ inputs.release_type }}
 
-      - name: Configure AWS Credentials for artifact upload - temp
+      - name: Configure AWS Credentials for non-forked repos - temp
+        if: ${{ github.repository == 'ROCm/TheRock' }}
         uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708 # v5.1.1
         with:
           aws-region: us-east-2
           role-to-assume: arn:aws:iam::692859939525:role/therock-ci-external
-
+          
       # TODO(#3336): Attempt upload `always()`?
       #   * If some part of the build failed, partial artifacts may be useful for debugging.
       #   * This script fails if `build_dir / "artifacts"` does not exist. That's useful
