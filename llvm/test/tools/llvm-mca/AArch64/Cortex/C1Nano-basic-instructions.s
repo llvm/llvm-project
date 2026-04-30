@@ -1121,8 +1121,8 @@
 # CHECK-NEXT:  1      1     1.00           *            stnp	x20, x16, [x8]
 # CHECK-NEXT:  1      1     1.00           *            stp	x3, x6, [x16]
 # CHECK-NEXT:  2      3     1.00    *                   ldp	d2, d3, [x30, #-8]
-# CHECK-NEXT:  1      1     1.00           *            stp	q3, q5, [sp]
-# CHECK-NEXT:  1      1     1.00           *            stp	q17, q19, [sp, #1008]
+# CHECK-NEXT:  1      1     2.00           *            stp	q3, q5, [sp]
+# CHECK-NEXT:  1      1     2.00           *            stp	q17, q19, [sp, #1008]
 # CHECK-NEXT:  2      3     1.00    *                   ldp	q23, q29, [x1, #-1024]
 # CHECK-NEXT:  3      2     1.00    *                   ldp	w3, w5, [sp], #0
 # CHECK-NEXT:  2      1     1.00           *            stp	wzr, w9, [sp], #252
@@ -1140,8 +1140,8 @@
 # CHECK-NEXT:  2      1     1.00           *            stp	d3, d5, [x9], #504
 # CHECK-NEXT:  2      1     1.00           *            stp	d7, d11, [x10], #-512
 # CHECK-NEXT:  3      3     1.00    *                   ldp	d2, d3, [x30], #-8
-# CHECK-NEXT:  2      1     1.00           *            stp	q3, q5, [sp], #0
-# CHECK-NEXT:  2      1     1.00           *            stp	q17, q19, [sp], #1008
+# CHECK-NEXT:  1      1     2.00           *            stp	q3, q5, [sp], #0
+# CHECK-NEXT:  1      1     2.00           *            stp	q17, q19, [sp], #1008
 # CHECK-NEXT:  3      3     1.00    *                   ldp	q23, q29, [x1], #-1024
 # CHECK-NEXT:  3      2     1.00    *                   ldp	w3, w5, [sp, #0]!
 # CHECK-NEXT:  2      1     1.00           *            stp	wzr, w9, [sp, #252]!
@@ -1159,8 +1159,8 @@
 # CHECK-NEXT:  2      1     1.00           *            stp	d3, d5, [x9, #504]!
 # CHECK-NEXT:  2      1     1.00           *            stp	d7, d11, [x10, #-512]!
 # CHECK-NEXT:  3      3     1.00    *                   ldp	d2, d3, [x30, #-8]!
-# CHECK-NEXT:  2      1     1.00           *            stp	q3, q5, [sp, #0]!
-# CHECK-NEXT:  2      1     1.00           *            stp	q17, q19, [sp, #1008]!
+# CHECK-NEXT:  1      1     2.00           *            stp	q3, q5, [sp, #0]!
+# CHECK-NEXT:  1      1     2.00           *            stp	q17, q19, [sp, #1008]!
 # CHECK-NEXT:  3      3     1.00    *                   ldp	q23, q29, [x1, #-1024]!
 # CHECK-NEXT:  2      2     1.00    *                   ldnp	w3, w5, [sp]
 # CHECK-NEXT:  1      1     1.00           *            stnp	wzr, w9, [sp, #252]
@@ -1175,8 +1175,8 @@
 # CHECK-NEXT:  1      1     1.00           *            stnp	d3, d5, [x9, #504]
 # CHECK-NEXT:  1      1     1.00           *            stnp	d7, d11, [x10, #-512]
 # CHECK-NEXT:  2      3     1.00    *                   ldnp	d2, d3, [x30, #-8]
-# CHECK-NEXT:  1      1     1.00           *            stnp	q3, q5, [sp]
-# CHECK-NEXT:  1      1     1.00           *            stnp	q17, q19, [sp, #1008]
+# CHECK-NEXT:  1      1     2.00           *            stnp	q3, q5, [sp]
+# CHECK-NEXT:  1      1     2.00           *            stnp	q17, q19, [sp, #1008]
 # CHECK-NEXT:  2      3     1.00    *                   ldnp	q23, q29, [x1, #-1024]
 # CHECK-NEXT:  1      1     0.50                        and	wsp, w16, #0xe00
 # CHECK-NEXT:  1      1     0.50                        and	x2, x22, #0x1e00
@@ -1267,7 +1267,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT: 260.50 214.50 27.00  64.00  164.50 306.50 89.00   -     122.50 177.50 8.50   8.50   67.00
+# CHECK-NEXT: 260.50 214.50 27.00  64.00  164.50 314.50 89.00   -     122.50 177.50 8.50   8.50   67.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
@@ -2382,8 +2382,8 @@
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     stnp	x20, x16, [x8]
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     stp	x3, x6, [x16]
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldp	d2, d3, [x30, #-8]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     stp	q3, q5, [sp]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     stp	q17, q19, [sp, #1008]
+# CHECK-NEXT:  -      -      -      -      -     2.00    -      -      -      -      -      -      -     stp	q3, q5, [sp]
+# CHECK-NEXT:  -      -      -      -      -     2.00    -      -      -      -      -      -      -     stp	q17, q19, [sp, #1008]
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldp	q23, q29, [x1, #-1024]
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldp	w3, w5, [sp], #0
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     stp	wzr, w9, [sp], #252
@@ -2401,8 +2401,8 @@
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     stp	d3, d5, [x9], #504
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     stp	d7, d11, [x10], #-512
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldp	d2, d3, [x30], #-8
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     stp	q3, q5, [sp], #0
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     stp	q17, q19, [sp], #1008
+# CHECK-NEXT:  -      -      -      -      -     2.00    -      -      -      -      -      -      -     stp	q3, q5, [sp], #0
+# CHECK-NEXT:  -      -      -      -      -     2.00    -      -      -      -      -      -      -     stp	q17, q19, [sp], #1008
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldp	q23, q29, [x1], #-1024
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldp	w3, w5, [sp, #0]!
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     stp	wzr, w9, [sp, #252]!
@@ -2420,8 +2420,8 @@
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     stp	d3, d5, [x9, #504]!
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     stp	d7, d11, [x10, #-512]!
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldp	d2, d3, [x30, #-8]!
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     stp	q3, q5, [sp, #0]!
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     stp	q17, q19, [sp, #1008]!
+# CHECK-NEXT:  -      -      -      -      -     2.00    -      -      -      -      -      -      -     stp	q3, q5, [sp, #0]!
+# CHECK-NEXT:  -      -      -      -      -     2.00    -      -      -      -      -      -      -     stp	q17, q19, [sp, #1008]!
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldp	q23, q29, [x1, #-1024]!
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnp	w3, w5, [sp]
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     stnp	wzr, w9, [sp, #252]
@@ -2436,8 +2436,8 @@
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     stnp	d3, d5, [x9, #504]
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     stnp	d7, d11, [x10, #-512]
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnp	d2, d3, [x30, #-8]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     stnp	q3, q5, [sp]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     stnp	q17, q19, [sp, #1008]
+# CHECK-NEXT:  -      -      -      -      -     2.00    -      -      -      -      -      -      -     stnp	q3, q5, [sp]
+# CHECK-NEXT:  -      -      -      -      -     2.00    -      -      -      -      -      -      -     stnp	q17, q19, [sp, #1008]
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnp	q23, q29, [x1, #-1024]
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     and	wsp, w16, #0xe00
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     and	x2, x22, #0x1e00

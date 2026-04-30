@@ -360,6 +360,12 @@ def : InstRW<[C1NanoWrite<3, C1NanoUnitLd>], (instregex "LDR[BHSDQ]ui")>;
 // Load vector register, register offset
 def : InstRW<[C1NanoWrite<3, C1NanoUnitLd>], (instregex "LDR[BHSDQ]ro[WX]")>;
 
+// FP scalar store instructions
+// -----------------------------------------------------------------------------
+
+// Store vector pair, immediate offset, Q-form
+def : InstRW<[C1NanoMCWrite<1, 2, C1NanoUnitLdSt>], (instregex "STN?PQ(i|post|pre)")>;
+
 // Pointer Authentication Instructions (v8.3 PAC)
 // -----------------------------------------------------------------------------
 
@@ -683,8 +689,9 @@ def : InstRW<[C1NanoWrite<2, C1NanoUnitVALU>], (instregex "[SU]RHADDv")>;
 //def : InstRW<[C1NanoWrite<3, C1NanoUnitVALU>], (instregex "[SU]ADDLPv", "ADDPv")>;
 def : InstRW<[C1NanoWrite<3, C1NanoUnitVALU>], (instregex "[SU]ADDLPv", "ADDPv")>;
 // ASIMD arith, reduce
-def : InstRW<[C1NanoWrite<3, C1NanoUnitVALU_A>], (instregex  "ADDVv")>;
-def : InstRW<[C1NanoWrite<4, C1NanoUnitVALU_B>], (instregex  "SADDLVv", "UADDLVv")>;
+def : InstRW<[C1NanoWrite<3, C1NanoUnitVALU_A>], (instregex  "ADDVv(8|16)")>;
+// ASIMD, arith, reduce 4H/4S
+def : InstRW<[C1NanoWrite<4, C1NanoUnitVALU_B>], (instregex  "SADDLVv", "UADDLVv", "ADDVv4")>;
 // ASIMD compare
 def : InstRW<[C1NanoWrite<3, C1NanoUnitVALU>], (instregex "CM(EQ|GE|GT|HI|HS|LE|LT)v(1i64|2i32|4i16|8i8)")>;
 def : InstRW<[C1NanoWrite<3, C1NanoUnitVALU>], (instregex "CM(EQ|GE|GT|HI|HS|LE|LT)v(2i64|4i32|8i16|16i8)")>;
@@ -1202,14 +1209,14 @@ def : InstRW<[C1NanoWrite<4, C1NanoUnitVMAC>], (instregex "^INDEX_II_[BHS]")>;
 
 // Horizontal operations, B, H, S form, scalar, immediate operands/ scalar
 // operands only / immediate, scalar operands
-def : InstRW<[C1NanoWrite<4, C1NanoUnitVMAC>], (instregex "^INDEX_(IR|RI|RR)_[BHS]")>;
+def : InstRW<[C1NanoWrite<4, C1NanoUnitVMAC_A>], (instregex "^INDEX_(IR|RI|RR)_[BHS]")>;
 
 // Horizontal operations, D form, immediate operands only
 def : InstRW<[C1NanoWrite<4, C1NanoUnitVMAC>], (instrs INDEX_II_D)>;
 
-// Horizontal operations, D form, scalar, immediate operands)/ scalar operands
+// Horizontal operations, D form, scalar, immediate operands / scalar operands
 // only / immediate, scalar operands
-def : InstRW<[C1NanoWrite<4, C1NanoUnitVMAC>], (instregex "^INDEX_(IR|RI|RR)_D")>;
+def : InstRW<[C1NanoWrite<4, C1NanoUnitVMAC_B>], (instregex "^INDEX_(IR|RI|RR)_D")>;
 
 // Logical
 def : InstRW<[C1NanoWrite<3, C1NanoUnitVALU>],
@@ -1333,7 +1340,10 @@ def : InstRW<[C1NanoWrite<3, C1NanoUnitVALU>], (instregex "^REV_ZZ_[BHSD]",
 def : InstRW<[C1NanoWrite<2, C1NanoUnitVALU>], (instregex "^SEL_ZPZZ_[BHSD]")>;
 
 // Table lookup
-def : InstRW<[C1NanoWrite<4, C1NanoUnitVALU>], (instregex "^TBL_ZZZZ?_[BHSD]")>;
+def : InstRW<[C1NanoWrite<4, C1NanoUnitVALU>], (instregex "^TBL_ZZZZ?_[BHS]")>;
+
+// Table lookup, double table
+def : InstRW<[C1NanoMCWrite<8, 5, C1NanoUnitVALU_A>], (instregex "^TBL_ZZZZ?_D")>;
 
 // Table lookup extension
 def : InstRW<[C1NanoWrite<4, C1NanoUnitVALU>], (instregex "^TBX_ZZZ_[BHSD]")>;
@@ -1472,7 +1482,7 @@ def : InstRW<[C1NanoMCWrite<12, 5, C1NanoUnitVALU0>], (instregex "^FADDV_VPZ_H")
 def : InstRW<[C1NanoMCWrite<8, 3, C1NanoUnitVALU0>], (instregex "^FADDV_VPZ_S")>;
 
 // Floating point reduction, F64
-def : InstRW<[C1NanoWrite<4, C1NanoUnitVALU0>], (instregex "^FADDV_VPZ_D")>;
+def : InstRW<[C1NanoMCWrite<4, 2, C1NanoUnitVALU0>], (instregex "^FADDV_VPZ_D")>;
 
 
 // Floating point round to integral, F16

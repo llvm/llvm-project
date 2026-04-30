@@ -586,7 +586,7 @@
 # CHECK-NEXT:  1      4     0.50                        faddp	z0.h, p0/m, z0.h, z1.h
 # CHECK-NEXT:  1      4     0.50                        faddp	z29.s, p3/m, z29.s, z30.s
 # CHECK-NEXT:  1      4     0.50                        faddp	z31.d, p7/m, z31.d, z30.d
-# CHECK-NEXT:  1      4     1.00                        faddv	d0, p7, z31.d
+# CHECK-NEXT:  1      4     2.00                        faddv	d0, p7, z31.d
 # CHECK-NEXT:  1      12    5.00                        faddv	h0, p7, z31.h
 # CHECK-NEXT:  1      8     3.00                        faddv	s0, p7, z31.s
 # CHECK-NEXT:  1      4     0.50                        fcadd	z0.d, p0/m, z0.d, z0.d, #90
@@ -939,35 +939,35 @@
 # CHECK-NEXT:  1      4     0.50                        index	z0.b, #0, #0
 # CHECK-NEXT:  1      4     0.50                        index	z0.d, #0, #0
 # CHECK-NEXT:  1      4     0.50                        index	z0.h, #0, #0
-# CHECK-NEXT:  1      4     0.50                        index	z0.h, w0, w0
+# CHECK-NEXT:  1      4     1.00                        index	z0.h, w0, w0
 # CHECK-NEXT:  1      4     0.50                        index	z0.s, #0, #0
-# CHECK-NEXT:  1      4     0.50                        index	z21.b, w10, w21
-# CHECK-NEXT:  1      4     0.50                        index	z21.d, x10, x21
-# CHECK-NEXT:  1      4     0.50                        index	z21.s, w10, w21
-# CHECK-NEXT:  1      4     0.50                        index	z23.b, #13, w8
-# CHECK-NEXT:  1      4     0.50                        index	z23.b, w13, #8
-# CHECK-NEXT:  1      4     0.50                        index	z23.d, #13, x8
-# CHECK-NEXT:  1      4     0.50                        index	z23.d, x13, #8
-# CHECK-NEXT:  1      4     0.50                        index	z23.h, #13, w8
-# CHECK-NEXT:  1      4     0.50                        index	z23.h, w13, #8
-# CHECK-NEXT:  1      4     0.50                        index	z23.s, #13, w8
-# CHECK-NEXT:  1      4     0.50                        index	z23.s, w13, #8
+# CHECK-NEXT:  1      4     1.00                        index	z21.b, w10, w21
+# CHECK-NEXT:  1      4     1.00                        index	z21.d, x10, x21
+# CHECK-NEXT:  1      4     1.00                        index	z21.s, w10, w21
+# CHECK-NEXT:  1      4     1.00                        index	z23.b, #13, w8
+# CHECK-NEXT:  1      4     1.00                        index	z23.b, w13, #8
+# CHECK-NEXT:  1      4     1.00                        index	z23.d, #13, x8
+# CHECK-NEXT:  1      4     1.00                        index	z23.d, x13, #8
+# CHECK-NEXT:  1      4     1.00                        index	z23.h, #13, w8
+# CHECK-NEXT:  1      4     1.00                        index	z23.h, w13, #8
+# CHECK-NEXT:  1      4     1.00                        index	z23.s, #13, w8
+# CHECK-NEXT:  1      4     1.00                        index	z23.s, w13, #8
 # CHECK-NEXT:  1      4     0.50                        index	z31.b, #-1, #-1
-# CHECK-NEXT:  1      4     0.50                        index	z31.b, #-1, wzr
-# CHECK-NEXT:  1      4     0.50                        index	z31.b, wzr, #-1
-# CHECK-NEXT:  1      4     0.50                        index	z31.b, wzr, wzr
+# CHECK-NEXT:  1      4     1.00                        index	z31.b, #-1, wzr
+# CHECK-NEXT:  1      4     1.00                        index	z31.b, wzr, #-1
+# CHECK-NEXT:  1      4     1.00                        index	z31.b, wzr, wzr
 # CHECK-NEXT:  1      4     0.50                        index	z31.d, #-1, #-1
-# CHECK-NEXT:  1      4     0.50                        index	z31.d, #-1, xzr
-# CHECK-NEXT:  1      4     0.50                        index	z31.d, xzr, #-1
-# CHECK-NEXT:  1      4     0.50                        index	z31.d, xzr, xzr
+# CHECK-NEXT:  1      4     1.00                        index	z31.d, #-1, xzr
+# CHECK-NEXT:  1      4     1.00                        index	z31.d, xzr, #-1
+# CHECK-NEXT:  1      4     1.00                        index	z31.d, xzr, xzr
 # CHECK-NEXT:  1      4     0.50                        index	z31.h, #-1, #-1
-# CHECK-NEXT:  1      4     0.50                        index	z31.h, #-1, wzr
-# CHECK-NEXT:  1      4     0.50                        index	z31.h, wzr, #-1
-# CHECK-NEXT:  1      4     0.50                        index	z31.h, wzr, wzr
+# CHECK-NEXT:  1      4     1.00                        index	z31.h, #-1, wzr
+# CHECK-NEXT:  1      4     1.00                        index	z31.h, wzr, #-1
+# CHECK-NEXT:  1      4     1.00                        index	z31.h, wzr, wzr
 # CHECK-NEXT:  1      4     0.50                        index	z31.s, #-1, #-1
-# CHECK-NEXT:  1      4     0.50                        index	z31.s, #-1, wzr
-# CHECK-NEXT:  1      4     0.50                        index	z31.s, wzr, #-1
-# CHECK-NEXT:  1      4     0.50                        index	z31.s, wzr, wzr
+# CHECK-NEXT:  1      4     1.00                        index	z31.s, #-1, wzr
+# CHECK-NEXT:  1      4     1.00                        index	z31.s, wzr, #-1
+# CHECK-NEXT:  1      4     1.00                        index	z31.s, wzr, wzr
 # CHECK-NEXT:  1      4     0.50                        insr	z0.b, w0
 # CHECK-NEXT:  1      4     0.50                        insr	z0.d, x0
 # CHECK-NEXT:  1      4     0.50                        insr	z0.h, w0
@@ -2889,11 +2889,11 @@
 # CHECK-NEXT:  1      3     0.50                        sxtw	z0.d, p0/m, z0.d
 # CHECK-NEXT:  1      3     0.50                        sxtw	z31.d, p7/m, z31.d
 # CHECK-NEXT:  1      4     0.50                        tbl	z28.b, { z29.b, z30.b }, z31.b
-# CHECK-NEXT:  1      4     0.50                        tbl	z28.d, { z29.d, z30.d }, z31.d
+# CHECK-NEXT:  1      8     5.00                        tbl	z28.d, { z29.d, z30.d }, z31.d
 # CHECK-NEXT:  1      4     0.50                        tbl	z28.h, { z29.h, z30.h }, z31.h
 # CHECK-NEXT:  1      4     0.50                        tbl	z28.s, { z29.s, z30.s }, z31.s
 # CHECK-NEXT:  1      4     0.50                        tbl	z31.b, { z31.b }, z31.b
-# CHECK-NEXT:  1      4     0.50                        tbl	z31.d, { z31.d }, z31.d
+# CHECK-NEXT:  1      8     5.00                        tbl	z31.d, { z31.d }, z31.d
 # CHECK-NEXT:  1      4     0.50                        tbl	z31.h, { z31.h }, z31.h
 # CHECK-NEXT:  1      4     0.50                        tbl	z31.s, { z31.s }, z31.s
 # CHECK-NEXT:  1      4     0.50                        tbx	z31.b, z31.b, z31.b
@@ -3442,7 +3442,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT: 437.00 54.00  9.00    -     156.00 2269.00  -     -     971.00 1081.00 202.00 203.00 690.00
+# CHECK-NEXT: 437.00 54.00  9.00    -     156.00 2269.00  -     -     981.00 1080.00 208.00 197.00 690.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
@@ -4022,7 +4022,7 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     faddp	z0.h, p0/m, z0.h, z1.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     faddp	z29.s, p3/m, z29.s, z30.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     faddp	z31.d, p7/m, z31.d, z30.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -     faddv	d0, p7, z31.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     2.00    -      -      -      -     faddv	d0, p7, z31.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     5.00    -      -      -      -     faddv	h0, p7, z31.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00    -      -      -      -     faddv	s0, p7, z31.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     fcadd	z0.d, p0/m, z0.d, z0.d, #90
@@ -4375,35 +4375,35 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     index	z0.b, #0, #0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     index	z0.d, #0, #0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     index	z0.h, #0, #0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     index	z0.h, w0, w0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -     index	z0.h, w0, w0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     index	z0.s, #0, #0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     index	z21.b, w10, w21
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     index	z21.d, x10, x21
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     index	z21.s, w10, w21
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     index	z23.b, #13, w8
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     index	z23.b, w13, #8
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     index	z23.d, #13, x8
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     index	z23.d, x13, #8
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     index	z23.h, #13, w8
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     index	z23.h, w13, #8
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     index	z23.s, #13, w8
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     index	z23.s, w13, #8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -     index	z21.b, w10, w21
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     index	z21.d, x10, x21
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -     index	z21.s, w10, w21
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -     index	z23.b, #13, w8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -     index	z23.b, w13, #8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     index	z23.d, #13, x8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     index	z23.d, x13, #8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -     index	z23.h, #13, w8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -     index	z23.h, w13, #8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -     index	z23.s, #13, w8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -     index	z23.s, w13, #8
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     index	z31.b, #-1, #-1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     index	z31.b, #-1, wzr
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     index	z31.b, wzr, #-1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     index	z31.b, wzr, wzr
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -     index	z31.b, #-1, wzr
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -     index	z31.b, wzr, #-1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -     index	z31.b, wzr, wzr
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     index	z31.d, #-1, #-1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     index	z31.d, #-1, xzr
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     index	z31.d, xzr, #-1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     index	z31.d, xzr, xzr
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     index	z31.d, #-1, xzr
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     index	z31.d, xzr, #-1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     index	z31.d, xzr, xzr
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     index	z31.h, #-1, #-1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     index	z31.h, #-1, wzr
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     index	z31.h, wzr, #-1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     index	z31.h, wzr, wzr
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -     index	z31.h, #-1, wzr
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -     index	z31.h, wzr, #-1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -     index	z31.h, wzr, wzr
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     index	z31.s, #-1, #-1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     index	z31.s, #-1, wzr
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     index	z31.s, wzr, #-1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     index	z31.s, wzr, wzr
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -     index	z31.s, #-1, wzr
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -     index	z31.s, wzr, #-1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -     index	z31.s, wzr, wzr
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     insr	z0.b, w0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     insr	z0.d, x0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     insr	z0.h, w0
@@ -6325,11 +6325,11 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sxtw	z0.d, p0/m, z0.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sxtw	z31.d, p7/m, z31.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     tbl	z28.b, { z29.b, z30.b }, z31.b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     tbl	z28.d, { z29.d, z30.d }, z31.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     5.00    -      -      -      -     tbl	z28.d, { z29.d, z30.d }, z31.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     tbl	z28.h, { z29.h, z30.h }, z31.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     tbl	z28.s, { z29.s, z30.s }, z31.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     tbl	z31.b, { z31.b }, z31.b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     tbl	z31.d, { z31.d }, z31.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     5.00    -      -      -      -     tbl	z31.d, { z31.d }, z31.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     tbl	z31.h, { z31.h }, z31.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     tbl	z31.s, { z31.s }, z31.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     tbx	z31.b, z31.b, z31.b

@@ -30,8 +30,8 @@
 # CHECK-NEXT:  1      3     0.50                        addp	v0.2d, v0.2d, v0.2d
 # CHECK-NEXT:  1      3     0.50                        addp	v0.8b, v0.8b, v0.8b
 # CHECK-NEXT:  1      3     0.50                        addp	d1, v14.2d
-# CHECK-NEXT:  1      3     1.00                        addv	s0, v0.4s
-# CHECK-NEXT:  1      3     1.00                        addv	h0, v0.4h
+# CHECK-NEXT:  1      4     1.00                        addv	s0, v0.4s
+# CHECK-NEXT:  1      4     1.00                        addv	h0, v0.4h
 # CHECK-NEXT:  1      3     1.00                        addv	h0, v0.8h
 # CHECK-NEXT:  1      3     1.00                        addv	b0, v0.8b
 # CHECK-NEXT:  1      3     1.00                        addv	b0, v0.16b
@@ -1587,7 +1587,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT:  -      -      -      -     13.50  545.50  -      -     632.00 598.00 117.00 117.00 96.00
+# CHECK-NEXT:  -      -      -      -     13.50  545.50  -      -     630.00 600.00 117.00 117.00 96.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
@@ -1611,8 +1611,8 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     addp	v0.2d, v0.2d, v0.2d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     addp	v0.8b, v0.8b, v0.8b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     addp	d1, v14.2d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -     addv	s0, v0.4s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -     addv	h0, v0.4h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     addv	s0, v0.4s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     addv	h0, v0.4h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -     addv	h0, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -     addv	b0, v0.8b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -     addv	b0, v0.16b
