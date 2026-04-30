@@ -110,6 +110,7 @@ void NVPTXAsmStreamer::emitIntValue(uint64_t Value, unsigned Size) {
   emitValue(MCConstantExpr::create(Value, getContext()), Size);
 }
 
+// Helper to check if given section corresponds to a DebugInfo section.
 static bool isDebugSection(const MCSection *Sec) {
   StringRef Name = Sec->getName();
   return Name.starts_with(".debug_") || Name.starts_with(".zdebug_") ||
@@ -122,6 +123,8 @@ void NVPTXAsmStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
   MCSection *CurrSec = getCurrentSectionOnly();
   assert(CurrSec && "Cannot emit contents before setting section!");
 
+  // We don't need a directive to emit values in PTX. This is retained only for
+  // debug_info sections.
   if (isDebugSection(CurrSec)) {
     const char *Directive = nullptr;
     switch (Size) {
@@ -179,6 +182,7 @@ void NVPTXAsmStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
 
 bool NVPTXAsmStreamer::emitSymbolAttribute(MCSymbol *Symbol,
                                            MCSymbolAttr Attribute) {
+  // Support only required symbols for PTX.
   switch (Attribute) {
   case MCSA_Global: // .globl/.global
     OS << MAI->getGlobalDirective();
@@ -227,6 +231,9 @@ void NVPTXAsmStreamer::emitRawTextImpl(StringRef String) {
   OS << String;
   EmitEOL();
 }
+
+// Implementation of support for .loc and .file directives is duplicated from
+// MCAsmStreamer.
 
 void NVPTXAsmStreamer::PrintQuotedString(StringRef Data,
                                          raw_ostream &OS) const {

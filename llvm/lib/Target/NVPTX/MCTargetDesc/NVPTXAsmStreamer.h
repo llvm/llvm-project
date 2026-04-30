@@ -80,6 +80,7 @@ public:
     EmitCommentsAndEOL();
   }
 
+  /// Emit explicit comments and add EOL.
   void EmitCommentsAndEOL();
 
   /// Return true if this streamer supports verbose assembly at all.
@@ -98,16 +99,22 @@ public:
     return CommentStream;
   }
 
+  /// Print T and prefix it with the comment string and
+  /// optionally a tab. This prints the comment immediately, not at the end of
+  /// the current line.
   void emitRawComment(const Twine &T, bool TabPrefix = true) override;
 
+  /// Emit added explicit comments.
   void emitExplicitComments() override;
 
   void addBlankLine() override { EmitEOL(); }
 
+  /// Set the current section where code is being emitted to \p Section.
   void switchSection(MCSection *Section, uint32_t Subsection) override;
 
   void emitBytes(StringRef Data) override;
 
+  /// Customized version to emit values in PTX without needing a directive.
   void emitValueImpl(const MCExpr *Value, unsigned Size,
                      SMLoc Loc = SMLoc()) override;
 
