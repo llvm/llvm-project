@@ -5,7 +5,11 @@ In LLDB's command line interface, pressing Enter (an empty command) repeats the
 previous command. By default, the exact same command is re-executed. However,
 several commands customize this behavior to implement paging or progressive
 expansion, making it easy to explore data incrementally by pressing Enter
-repeatedly.
+repeatedly. Repeat commands can be learned and discovered by pressing enter and
+observing the result.
+
+In some instances, commands disable repeat commands, to prevent
+accidentally triggering a destructive operation (e.g. ``process launch``).
 
 This page documents the commands with custom repeat behavior.
 
@@ -75,9 +79,8 @@ format, size, and count options from the previous invocation.
 -----------------
 
 When ``memory region`` is given an address, it displays the memory region
-containing that address and records the end of that region. Pressing Enter then
-shows the next memory region, and so on, allowing you to walk through the
-process's entire memory map.
+containing that address. Pressing Enter then shows the next memory region, and
+so on, allowing you to walk through the process's entire memory map.
 
 ::
 
@@ -93,10 +96,9 @@ When ``frame variable`` is repeated, it re-runs the command with an incremented
 ``--depth`` (``-D``) value. This progressively reveals deeper levels of nested
 data structures with each press of Enter.
 
-If no ``--depth`` option was specified in the original command, the repeat
-starts at one level beyond the target's default ``max-children-depth`` setting
-(default: 5). If ``--depth`` was specified, it increments the given value by 1
-each time.
+If no ``--depth`` option was specified in the original command, the next repeat
+starts at one level beyond the ``target.max-children-depth`` default setting. If
+``--depth`` was specified, it increments the given value by 1 each time.
 
 Consider a deeply nested configuration structure:
 
@@ -130,7 +132,7 @@ Consider a deeply nested configuration structure:
    }
    (lldb)               # repeats as: frame variable --depth 7 config
 
-With the default ``max-children-depth`` of 5, the first output truncates at
+The default ``target.max-children-depth`` causes the first output to truncate at
 ``issuer``. Each press of Enter reveals one more level without having to
 manually specify ``--depth``.
 
@@ -143,5 +145,5 @@ dumping traced instructions from where the previous instruction dump left off.
 ::
 
    (lldb) thread trace dump instructions
-   ... first 20 instructions ...
+   ... first batch of instructions ...
    (lldb)               # continues dumping the next 20 instructions
