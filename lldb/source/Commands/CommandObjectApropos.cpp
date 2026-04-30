@@ -7,11 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "CommandObjectApropos.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/Property.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/StreamString.h"
+#include "llvm/Support/Regex.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -35,6 +37,15 @@ void CommandObjectApropos::DoExecute(Args &args, CommandReturnObject &result) {
     if (!search_word.empty()) {
       ReturnStatus return_status = eReturnStatusSuccessFinishNoResult;
 
+      std::string escaped_search_word;
+      std::optional<Stream::HighlightSettings> highlight;
+      Debugger &dbg = GetDebugger();
+      if (dbg.GetUseColor()) {
+        escaped_search_word = llvm::Regex::escape(search_word);
+        highlight.emplace(escaped_search_word, dbg.GetRegexMatchAnsiPrefix(),
+                          dbg.GetRegexMatchAnsiSuffix(), true);
+      }
+
       // Find all commands matching the search word.
       StringList commands_found;
       StringList commands_help;
@@ -54,7 +65,8 @@ void CommandObjectApropos::DoExecute(Args &args, CommandReturnObject &result) {
         for (size_t i = 0; i < commands_found.GetSize(); ++i)
           m_interpreter.OutputFormattedHelpText(
               result.GetOutputStream(), commands_found.GetStringAtIndex(i),
-              "--", commands_help.GetStringAtIndex(i), commands_max_len);
+              "--", commands_help.GetStringAtIndex(i), commands_max_len,
+              highlight);
         return_status = eReturnStatusSuccessFinishResult;
       }
 
@@ -86,7 +98,7 @@ void CommandObjectApropos::DoExecute(Args &args, CommandReturnObject &result) {
         for (size_t i = 0; i < num_properties; ++i)
           properties[i]->DumpDescription(
               m_interpreter, result.GetOutputStream(), properties_max_len,
-              dump_qualified_name);
+              dump_qualified_name, highlight);
         return_status = eReturnStatusSuccessFinishResult;
       }
 
