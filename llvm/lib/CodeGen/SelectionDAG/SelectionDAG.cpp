@@ -6038,6 +6038,25 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
   return computeKnownFPClass(Op, DemandedElts, InterestedClasses, Depth);
 }
 
+static KnownFPClass::MinMaxKind GetMinMaxKnownFPClass(unsigned Opcode) {
+  switch (Opcode) {
+  case ISD::FMAXNUM:
+    return KnownFPClass::MinMaxKind::maxnum;
+  case ISD::FMINNUM:
+    return KnownFPClass::MinMaxKind::minnum;
+  case ISD::FMAXIMUM:
+    return KnownFPClass::MinMaxKind::maximum;
+  case ISD::FMINIMUM:
+    return KnownFPClass::MinMaxKind::minimum;
+  case ISD::FMAXIMUMNUM:
+    return KnownFPClass::MinMaxKind::maximumnum;
+  case ISD::FMINIMUMNUM:
+    return KnownFPClass::MinMaxKind::minimumnum;
+  default:
+    llvm_unreachable("Illegal FP min/max opcode");
+  }
+}
+
 KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
                                                const APInt &DemandedElts,
                                                FPClassTest InterestedClasses,
@@ -6157,6 +6176,23 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
     FPClassTest AssertedClasses =
         static_cast<FPClassTest>(Op->getConstantOperandVal(1));
     Known.KnownFPClasses &= ~AssertedClasses;
+    break;
+  }
+  case ISD::FMAXNUM:
+  case ISD::FMINNUM:
+  case ISD::FMAXIMUM:
+  case ISD::FMINIMUM:
+  case ISD::FMAXIMUMNUM:
+  case ISD::FMINIMUMNUM: {
+    KnownFPClass KnownRHS = computeKnownFPClass(Op.getOperand(1), DemandedElts,
+                                                InterestedClasses, Depth + 1);
+    if (KnownRHS.isUnknown())
+      break;
+    KnownFPClass KnownLHS = computeKnownFPClass(Op.getOperand(0), DemandedElts,
+                                                InterestedClasses, Depth + 1);
+    Known = KnownFPClass::minMaxLike(KnownLHS, KnownRHS,
+                                     GetMinMaxKnownFPClass(Opcode),
+                                     getDenormalMode(Op.getValueType()));
     break;
   }
   default:
