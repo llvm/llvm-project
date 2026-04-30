@@ -580,27 +580,6 @@ int PipelineSolver::EdgeSetBuilder::buildImpl(
   DenseSet<SUnit *> Preds = InitialPreds;
 
   int MissedEdges = 0;
-  auto TryMakeSuccEdge = [&](SUnit *Pred) {
-    // If SU ~> Pred, adding Pred -> SU creates a cycle.
-    if (Succs.contains(Pred))
-      ++MissedEdges;
-    else {
-      NewEdges.emplace_back(Pred, SU);
-      computePreds(Preds, Pred);
-    }
-  };
-
-  auto TryMakePredEdge = [&](SUnit *Succ) {
-    // If Succ ~> SU, adding SU -> Succ creates a cycle.
-    if (Preds.contains(Succ))
-      ++MissedEdges;
-    else {
-      // Succs does not need to be updated, since it will not be
-      // queried after the loop below enters the MakePred case.
-      NewEdges.emplace_back(SU, Succ);
-    }
-  };
-
   bool MakePred = false;
   for (const SchedGroup &SG : SchedGroups) {
     if (SG.getSGID() == SGID) {
@@ -612,10 +591,24 @@ int PipelineSolver::EdgeSetBuilder::buildImpl(
       if (A->getInstr()->getOpcode() == AMDGPU::SCHED_GROUP_BARRIER)
         continue;
 
-      if (MakePred)
-        TryMakePredEdge(A);
-      else
-        TryMakeSuccEdge(A);
+      if (MakePred) {
+        // Try add SU -> A.
+        if (Preds.contains(A)) { // Would add cycle since A ~> SU.
+          ++MissedEdges;
+          continue;
+        }
+        // Succs does not need to be updated, since it will not be
+        // queried after entering the MakePred case.
+        NewEdges.emplace_back(SU, A);
+      } else {
+        // Try add Pred -> SU.
+        if (Succs.contains(A)) { // Would add cycle since SU ~> A.
+          ++MissedEdges;
+          continue;
+        }
+        NewEdges.emplace_back(A, SU);
+        computePreds(Preds, A);
+      }
     }
   }
 
