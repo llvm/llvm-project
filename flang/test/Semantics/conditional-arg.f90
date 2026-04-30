@@ -42,6 +42,30 @@ module m_conditional_arg
     subroutine sub_two(x, y)
       integer, intent(in) :: x, y
     end subroutine
+    subroutine sub_array_fixed(x)
+      integer, intent(in) :: x(5)
+    end subroutine
+    subroutine sub_array_two(x, y)
+      integer, intent(in) :: x(:), y(:)
+    end subroutine
+    subroutine sub_matrix(x)
+      integer, intent(in) :: x(:,:)
+    end subroutine
+    subroutine sub_array_optional(x)
+      integer, intent(in), optional :: x(:)
+    end subroutine
+    subroutine sub_matrix_optional(x)
+      integer, intent(in), optional :: x(:,:)
+    end subroutine
+    pure integer function func_int(x)
+      integer, intent(in) :: x
+    end function
+    pure real function func_real(x)
+      real, intent(in) :: x
+    end function
+    pure integer function func_two(x, y)
+      integer, intent(in) :: x, y
+    end function
   end interface
 
 contains
@@ -416,6 +440,244 @@ contains
     call sub_pointer((flag ? p : q))
   end subroutine
 
+  ! =========================================================================
+  ! Shape analysis: verify that conditional args with array consequent-args
+  ! get their shape from the consequents, not from the scalar condition.
+  ! Without the GetShapeHelper(ActualArgument) override, the Traverse base
+  ! class would return the scalar shape of the condition via CombineAnyOf,
+  ! causing spurious shape mismatches.
+  ! =========================================================================
+
+  subroutine test_shape_array_conditional_arg
+    integer :: a(5), b(5)
+    logical :: flag
+    ! Array conditional arg passed to assumed-shape dummy — shape comes
+    ! from the consequent-args (rank 1), not the scalar condition.
+    call sub_array((flag ? a : b))
+  end subroutine
+
+  subroutine test_shape_array_fixed_extent
+    integer :: a(5), b(5)
+    logical :: flag
+    ! Array conditional arg with fixed-extent dummy.
+    call sub_array_fixed((flag ? a : b))
+  end subroutine
+
+  subroutine test_shape_matrix_conditional_arg
+    integer :: m1(3,4), m2(3,4)
+    logical :: flag
+    ! Rank-2 array conditional arg.
+    call sub_matrix((flag ? m1 : m2))
+  end subroutine
+
+  subroutine test_shape_two_array_args
+    integer :: a(5), b(5), c(5), d(5)
+    logical :: f1, f2
+    ! Two independent array conditional args in the same call.
+    call sub_array_two((f1 ? a : b), (f2 ? c : d))
+  end subroutine
+
+  subroutine test_shape_nil_with_array
+    integer :: a(5), b(5)
+    logical :: flag, flag2
+    ! .NIL. mixed with rank-1 array consequent-args passed to an optional
+    ! array dummy.  If the shape analysis fails to extract rank from the
+    ! first non-.NIL. consequent, this will produce a rank mismatch error.
+    call sub_array_optional((flag ? .NIL. : flag2 ? a : b))
+  end subroutine
+
+  subroutine test_shape_nil_scalar_to_array_dummy
+    integer :: a, b
+    logical :: flag, flag2
+    ! .NIL. with scalar consequent-args passed to an optional array dummy.
+    ! Shape analysis extracts rank 0 from the first non-.NIL. consequent,
+    ! which mismatches the assumed-shape array dummy.
+    !ERROR: Scalar actual argument may not be associated with assumed-shape dummy argument 'x='
+    call sub_array_optional((flag ? .NIL. : flag2 ? a : b))
+  end subroutine
+
+  subroutine test_shape_nil_skipped_rank_mismatch
+    integer :: a(5), b(5)
+    logical :: flag, flag2
+    ! .NIL. is the first consequent; non-.NIL. consequents are rank-1 arrays.
+    ! Dummy is a rank-2 matrix.  If shape were extracted from .NIL. (no shape),
+    ! this might silently pass.  Instead, shape comes from the rank-1 array,
+    ! producing a rank mismatch — proving .NIL. was correctly skipped.
+    !ERROR: Rank of dummy argument is 2, but actual argument has rank 1
+    call sub_matrix_optional((flag ? .NIL. : flag2 ? a : b))
+  end subroutine
+
+  subroutine test_shape_nil_forced_rank_match
+    integer :: a(5)
+    ! .TRUE. forces .NIL. to be selected — after folding, the arg becomes
+    ! absent.  But shape analysis runs on the unfolded conditional arg and
+    ! still checks the rank of the non-.NIL. consequent (a, rank 1) against
+    ! the dummy (rank 1).  No error because ranks match.
+    call sub_array_optional((.true. ? .NIL. : a))
+  end subroutine
+
+  subroutine test_shape_nil_forced_rank_mismatch
+    integer :: a(5)
+    ! .TRUE. forces .NIL. to be selected, but shape analysis still extracts
+    ! rank from the non-.NIL. consequent (a, rank 1).  The dummy is rank 2,
+    ! so this errors — proving shape is NOT extracted from .NIL. even when
+    ! .NIL. is the branch that will be selected at compile time.
+    !ERROR: Rank of dummy argument is 2, but actual argument has rank 1
+    call sub_matrix_optional((.true. ? .NIL. : a))
+  end subroutine
+
+  subroutine test_shape_nil_with_array_optional
+    integer :: a(5), b(5)
+    logical :: flag, flag2
+    ! .NIL. with array consequent-args and an optional scalar dummy.
+    ! Shape comes from the first non-.NIL. consequent (a(1), scalar).
+    call sub_optional((flag ? .NIL. : flag2 ? a(1) : b(1)))
+  end subroutine
+
+  subroutine test_shape_multi_branch_array
+    integer :: a(5), b(5), c(5)
+    logical :: f1, f2
+    ! Multi-branch conditional arg with arrays — all same rank.
+    call sub_array((f1 ? a : f2 ? b : c))
+  end subroutine
+
+  ! =========================================================================
+  ! Intrinsic characterization: conditional args with intrinsic procedures.
+  ! Verifies that intrinsic argument matching correctly extracts the type
+  ! and kind from a conditional arg via GetArgExpr().
+  ! =========================================================================
+
+  subroutine test_intrinsic_abs_int
+    integer :: a, b, r
+    logical :: flag
+    ! ABS with integer conditional arg — runtime condition exercises
+    ! the GetArgExpr() path in intrinsic characterization.
+    r = abs((flag ? a : b))
+  end subroutine
+
+  subroutine test_intrinsic_abs_real
+    real :: a, b, r
+    logical :: flag
+    r = abs((flag ? a : b))
+  end subroutine
+
+  subroutine test_intrinsic_max_conditional
+    integer :: a, b, c, r
+    logical :: flag
+    ! MAX with a mix of conditional and plain args.
+    r = max((flag ? a : b), c)
+  end subroutine
+
+  subroutine test_intrinsic_min_multi_conditional
+    integer :: a, b, c, d, r
+    logical :: f1, f2
+    ! MIN with multiple conditional args.
+    r = min((f1 ? a : b), (f2 ? c : d))
+  end subroutine
+
+  subroutine test_intrinsic_len_trim_char
+    character(10) :: s1, s2
+    logical :: flag
+    integer :: r
+    r = len_trim((flag ? s1 : s2))
+  end subroutine
+
+  subroutine test_intrinsic_multi_branch
+    integer :: a, b, c, r
+    logical :: f1, f2
+    ! Multi-branch conditional arg in intrinsic call.
+    r = abs((f1 ? a : f2 ? b : c))
+  end subroutine
+
+  ! =========================================================================
+  ! Coarray: conditional args with coarray consequent-args.
+  ! Verifies that GetCorank (via GetArgExpr()) correctly extracts the
+  ! corank from a conditional arg's consequent.
+  ! =========================================================================
+
+  subroutine test_valid_coarray_conditional(a, b, flag)
+    integer, intent(inout) :: a[*], b[*]
+    logical, intent(in) :: flag
+    ! Both consequent-args are coarrays — matches coarray dummy.
+    call sub_coarray((flag ? a : b))
+  end subroutine
+
+  subroutine test_valid_coarray_multi_branch(a, b, c, f1, f2)
+    integer, intent(inout) :: a[*], b[*], c[*]
+    logical, intent(in) :: f1, f2
+    ! Multi-branch with all coarray consequent-args.
+    call sub_coarray((f1 ? a : f2 ? b : c))
+  end subroutine
+
+  ! =========================================================================
+  ! Double-parenthesized conditional: the extra parens cause the parser to
+  ! treat it as a ConditionalExpr (expression-level) rather than a
+  ! ConditionalArg (argument-level).  This exercises the expression folding
+  ! path for intrinsics instead of the ConditionalArg path.
+  ! =========================================================================
+
+  subroutine test_double_paren_abs_int
+    integer :: a, b, r
+    logical :: flag
+    r = abs(((flag ? a : b)))
+  end subroutine
+
+  subroutine test_double_paren_abs_real
+    real :: a, b, r
+    logical :: flag
+    r = abs(((flag ? a : b)))
+  end subroutine
+
+  subroutine test_double_paren_max
+    integer :: a, b, c, r
+    logical :: flag
+    r = max(((flag ? a : b)), c)
+  end subroutine
+
+  subroutine test_double_paren_multi_branch
+    integer :: a, b, c, r
+    logical :: f1, f2
+    r = abs(((f1 ? a : f2 ? b : c)))
+  end subroutine
+
+  ! =========================================================================
+  ! Non-intrinsic (user-defined) function calls with conditional args.
+  ! Unlike intrinsics, these skip the intrinsic folding path entirely,
+  ! so the ConditionalArg in ActualArgument::u_ is passed through as-is.
+  ! =========================================================================
+
+  subroutine test_user_func_int
+    integer :: a, b, r
+    logical :: flag
+    r = func_int((flag ? a : b))
+  end subroutine
+
+  subroutine test_user_func_real
+    real :: a, b, r
+    logical :: flag
+    r = func_real((flag ? a : b))
+  end subroutine
+
+  subroutine test_user_func_multi_branch
+    integer :: a, b, c, r
+    logical :: f1, f2
+    r = func_int((f1 ? a : f2 ? b : c))
+  end subroutine
+
+  subroutine test_user_func_two_args
+    integer :: a, b, c, d, r
+    logical :: f1, f2
+    ! One conditional arg and one plain arg.
+    r = func_two((f1 ? a : b), c)
+  end subroutine
+
+  subroutine test_user_func_two_conditional
+    integer :: a, b, c, d, r
+    logical :: f1, f2
+    ! Both arguments are conditional args.
+    r = func_two((f1 ? a : b), (f2 ? c : d))
+  end subroutine
+
 end module
 
 ! ===========================================================================
@@ -517,7 +779,6 @@ subroutine test_use_module_intent_out_expr
   !ERROR: 'a+1_4' is not a variable or pointer
   call ext_sub_int_out((flag ? a + 1 : a))
 end subroutine
-
 ! =========================================================================
 ! Derived type tests
 ! =========================================================================

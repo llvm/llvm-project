@@ -1263,12 +1263,36 @@ Expr<T> FoldOperation(FoldingContext &context, FunctionRef<T> &&funcRef) {
     // Don't fold the argument to KIND(); it might be a TypeParamInquiry
     // with a forced result type that doesn't match the parameter.
     for (std::optional<ActualArgument> &arg : args) {
-      if (auto *expr{UnwrapExpr<Expr<SomeType>>(arg)}) {
+      if (arg && arg->GetConditionalArg()) {
+        FoldConditionalArg(context, arg);
+      } else if (auto *expr{UnwrapExpr<Expr<SomeType>>(arg)}) {
         *expr = Fold(context, std::move(*expr));
       }
     }
   }
   if (intrinsic) {
+    // Skip intrinsic folding if any argument is still a conditional arg
+    // (i.e. its condition was not a compile-time constant).  When the
+    // condition is a compile-time constant, FoldConditionalArg already resolved
+    // it to a plain Expr above, and intrinsic folding proceeds normally.
+    //
+    // TODO:
+    // For elemental/pure intrinsics, distribute the call over each
+    // consequent of the conditional arg and fold each branch independently:
+    //   abs((c1 ? a : c2 ? b : c))
+    //     → (c1 ? abs(a) : c2 ? abs(b) : abs(c))
+    // Use ForEachConsequent to walk the chain, clone the call per
+    // consequent, fold each clone, and reassemble into a new ConditionalArg.
+    // When multiple arguments are conditional args, distribute one at a
+    // time to avoid a combinatorial cross-product expansion.
+    // This is NOT valid for non-elemental intrinsics like RESHAPE or
+    // TRANSFER whose results depend on seeing all arguments together.
+    //
+    for (const std::optional<ActualArgument> &arg : args) {
+      if (arg && arg->isConditionalArg()) {
+        return Expr<T>{std::move(funcRef)};
+      }
+    }
     const std::string name{intrinsic->name};
     if (name == "cshift") {
       return Folder<T>{context}.CSHIFT(std::move(funcRef));

@@ -89,9 +89,11 @@ public:
         ConditionalArgPartOrConsequent &&tail);
     DEFAULT_CONSTRUCTORS_AND_ASSIGNMENTS(ConditionalArg)
 
+    Expr<SomeLogical> &condition() { return condition_.value(); }
     const Expr<SomeLogical> &condition() const { return condition_.value(); }
     const Consequent &consequent() const { return consequent_; }
     Consequent &consequent() { return consequent_; }
+    ConditionalArgPartOrConsequent &tail() { return tail_; }
     const ConditionalArgPartOrConsequent &tail() const { return tail_; }
 
     // Dispatch on the tail: calls onConditionalArg(const ConditionalArg &)
@@ -211,6 +213,14 @@ public:
   const Expr<SomeType> *GetConditionalArgExpr() const {
     const auto *condArg{GetConditionalArg()};
     return condArg ? condArg->FirstNonNilConsequent() : nullptr;
+  }
+  // Returns the expression from a direct Expr argument or, failing that,
+  // the first non-NIL consequent from a ConditionalArg.
+  const Expr<SomeType> *GetArgExpr() const {
+    if (const auto *expr{UnwrapExpr()}) {
+      return expr;
+    }
+    return GetConditionalArgExpr();
   }
   bool isPassedObject() const { return attrs_.test(Attr::PassedObject); }
   ActualArgument &set_isPassedObject(bool yes = true) {

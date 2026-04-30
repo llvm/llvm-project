@@ -163,14 +163,11 @@ std::optional<TypeAndShape> TypeAndShape::Characterize(
 
 std::optional<TypeAndShape> TypeAndShape::Characterize(
     const ActualArgument &arg, FoldingContext &context, bool invariantOnly) {
-  if (const auto *expr{arg.UnwrapExpr()}) {
+  if (const auto *expr{arg.GetArgExpr()}) {
     return Characterize(*expr, context, invariantOnly);
   }
   if (const Symbol *assumed{arg.GetAssumedTypeDummy()}) {
     return Characterize(*assumed, context, invariantOnly);
-  }
-  if (const auto *expr{arg.GetConditionalArgExpr()}) {
-    return Characterize(*expr, context, invariantOnly);
   }
   return std::nullopt;
 }
@@ -960,14 +957,11 @@ std::optional<DummyArgument> DummyArgument::FromActual(std::string &&name,
 std::optional<DummyArgument> DummyArgument::FromActual(std::string &&name,
     const ActualArgument &arg, FoldingContext &context,
     bool forImplicitInterface) {
-  if (const auto *expr{arg.UnwrapExpr()}) {
+  if (const auto *expr{arg.GetArgExpr()}) {
     return FromActual(std::move(name), *expr, context, forImplicitInterface);
   }
   if (arg.GetAssumedTypeDummy()) {
     return std::nullopt;
-  }
-  if (const auto *expr{arg.GetConditionalArgExpr()}) {
-    return FromActual(std::move(name), *expr, context, forImplicitInterface);
   }
   // Guard: GetArgExpr() returns the first non-NIL consequent for a
   // ConditionalArg, so normal conditional args are handled above.  An
