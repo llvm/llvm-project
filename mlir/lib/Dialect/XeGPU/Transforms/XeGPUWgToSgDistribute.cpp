@@ -22,10 +22,7 @@
 #include "mlir/Dialect/XeGPU/Transforms/XeGPULayoutImpl.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "llvm/Support/Debug.h"
 #include <optional>
-
-#define DEBUG_TYPE "xegpu-wg-to-sg-distribute"
 
 namespace mlir {
 namespace xegpu {
