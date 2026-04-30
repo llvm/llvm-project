@@ -15,10 +15,10 @@
 ; CHECK: OpAbortKHR %[[#I32]] %[[#MSG]]
 ; CHECK-NOT: OpUnreachable
 
-declare void @llvm.spv.abort(...)
+declare void @llvm.spv.abort(i32)
 
 define void @abort_with_int() {
 entry:
-  call void (...) @llvm.spv.abort(i32 42)
+  call void @llvm.spv.abort(i32 42)
   unreachable
 }

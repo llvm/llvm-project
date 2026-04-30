@@ -27,14 +27,15 @@
 
 %struct.Msg = type { i32, i32, float }
 
-declare void @llvm.spv.abort(...) #0
+declare void @_Z16__spirv_AbortKHR3Msg(%struct.Msg) #0
+declare void @_Z16__spirv_AbortKHRDv4_j(<4 x i32>) #0
 
 define spir_kernel void @abort_with_struct(i32 %x, i32 %y, float %z) {
 entry:
   %m0 = insertvalue %struct.Msg poison, i32 %x, 0
   %m1 = insertvalue %struct.Msg %m0, i32 %y, 1
   %m2 = insertvalue %struct.Msg %m1, float %z, 2
-  call void (...) @llvm.spv.abort(%struct.Msg %m2)
+  call void @_Z16__spirv_AbortKHR3Msg(%struct.Msg %m2)
   unreachable
 }
 
@@ -44,7 +45,7 @@ entry:
   %v1 = insertelement <4 x i32> %v0, i32 %b, i32 1
   %v2 = insertelement <4 x i32> %v1, i32 %c, i32 2
   %v3 = insertelement <4 x i32> %v2, i32 %d, i32 3
-  call void (...) @llvm.spv.abort(<4 x i32> %v3)
+  call void @_Z16__spirv_AbortKHRDv4_j(<4 x i32> %v3)
   unreachable
 }
 

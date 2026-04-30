@@ -2,23 +2,24 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_abort %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_abort %s -o - -filetype=obj | spirv-val %}
 
-;; Pointers are concrete SPIR-V types and are valid Message Type operands
-;; for OpAbortKHR.
+;; llvm.ubsantrap(i8 N) lowers to OpAbortKHR with the i8 failure-kind argument
+;; zero-extended to a 32-bit Message operand.
 
 ; CHECK-DAG: OpCapability AbortKHR
 ; CHECK-DAG: OpExtension "SPV_KHR_abort"
-; CHECK-DAG: %[[#I8:]] = OpTypeInt 8 0
-; CHECK-DAG: %[[#PTR:]] = OpTypePointer CrossWorkgroup %[[#I8]]
+; CHECK-DAG: %[[#I32:]] = OpTypeInt 32 0
+; CHECK-DAG: %[[#MSG:]] = OpConstant %[[#I32]] 7
 
-; CHECK:     OpAbortKHR %[[#PTR]] %{{[0-9]+}}
+; CHECK:     OpAbortKHR %[[#I32]] %[[#MSG]]
 ; CHECK-NOT: OpUnreachable
+; CHECK-NEXT: OpFunctionEnd
 
-declare void @llvm.spv.abort.p1(ptr addrspace(1)) #0
-
-define spir_kernel void @abort_with_pointer(ptr addrspace(1) %p) {
+define spir_func void @ubsantrap_simple() {
 entry:
-  call void @llvm.spv.abort.p1(ptr addrspace(1) %p)
+  call void @llvm.ubsantrap(i8 7)
   unreachable
 }
 
-attributes #0 = { noreturn }
+declare void @llvm.ubsantrap(i8) #0
+
+attributes #0 = { cold noreturn nounwind }

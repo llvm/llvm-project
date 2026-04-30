@@ -1542,6 +1542,22 @@ void SPIRVEmitIntrinsics::replaceMemInstrUses(Instruction *Old,
     } else if (isMemInstrToReplace(U) || isa<ReturnInst>(U) ||
                isa<CallInst>(U)) {
       U->replaceUsesOfWith(Old, New);
+      // For a `llvm.spv.abort` call whose composite message argument was
+      // rewritten to a value-id (i32), also retarget the call to a matching
+      // intrinsic declaration so the IR verifier is satisfied. The SPIR-V
+      // type of the value is tracked via the GlobalRegistry, so the selector
+      // still emits OpAbortKHR with the original composite type.
+      if (auto *CI = dyn_cast<CallInst>(U);
+          CI && CI->getIntrinsicID() == Intrinsic::spv_abort) {
+        Type *NewArgTy = New->getType();
+        Type *ExpectedArgTy = CI->getFunctionType()->getParamType(0);
+        if (NewArgTy != ExpectedArgTy) {
+          Module *M = CI->getModule();
+          Function *NewF = Intrinsic::getOrInsertDeclaration(
+              M, Intrinsic::spv_abort, {NewArgTy});
+          CI->setCalledFunction(NewF);
+        }
+      }
     } else if (auto *Phi = dyn_cast<PHINode>(U)) {
       if (Phi->getType() != New->getType()) {
         Phi->mutateType(New->getType());
@@ -2343,32 +2359,47 @@ Instruction *SPIRVEmitIntrinsics::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
   return NewI;
 }
 
-Instruction *SPIRVEmitIntrinsics::visitUnreachableInst(UnreachableInst &I) {
-  IRBuilder<> B(I.getParent());
-  B.SetInsertPoint(&I);
-  // OpAbortKHR is itself a SPIR-V block terminator. If the immediately
-  // preceding instruction is a call to llvm.spv.abort, do not emit an
-  // additional OpUnreachable, which would leave the SPIR-V block with two
-  // terminators and produce invalid SPIR-V. The check is intentionally limited
-  // to the directly-preceding non-debug instruction: any real instruction
-  // sitting between `llvm.spv.abort` and `unreachable` would also be invalid
-  // SPIR-V (nothing can follow OpAbortKHR in the same block), so assert that
-  // shape if we see an `spv_abort` anywhere earlier in the block.
-  Instruction *Prev = I.getPrevNode();
+static bool isAbortCall(const Instruction &I, const SPIRVSubtarget &ST) {
+  auto *CI = dyn_cast<CallInst>(&I);
+  if (!CI)
+    return false;
+  switch (CI->getIntrinsicID()) {
+  case Intrinsic::spv_abort:
+    return true;
+  case Intrinsic::trap:
+  case Intrinsic::ubsantrap:
+    // When the extension is enabled, selection lowers these to OpAbortKHR.
+    return ST.canUseExtension(SPIRV::Extension::SPV_KHR_abort);
+  default:
+    return false;
+  }
+}
+
+// The OpAbortKHR instruction itself is a block terminator, so we don't need to
+// emit an extra OpUnreachable instruction.
+static bool precededByAbortIntrinsic(const UnreachableInst &I,
+                                     const SPIRVSubtarget &ST) {
+  // Find a previous non-debug instruction.
+  const Instruction *Prev = I.getPrevNode();
   while (Prev && Prev->isDebugOrPseudoInst())
     Prev = Prev->getPrevNode();
-  if (auto *CI = dyn_cast_or_null<CallInst>(Prev);
-      CI && CI->getIntrinsicID() == Intrinsic::spv_abort)
+
+  if (Prev && isAbortCall(*Prev, ST))
+    return true;
+
+  assert(llvm::none_of(
+             *I.getParent(),
+             [&ST](const Instruction &II) { return isAbortCall(II, ST); }) &&
+         "abort-like call must be the last non-debug instruction before its "
+         "block's terminator");
+  return false;
+}
+
+Instruction *SPIRVEmitIntrinsics::visitUnreachableInst(UnreachableInst &I) {
+  const SPIRVSubtarget &ST = TM.getSubtarget<SPIRVSubtarget>(*I.getFunction());
+  if (precededByAbortIntrinsic(I, ST))
     return &I;
-#ifndef NDEBUG
-  for (Instruction *P = I.getPrevNode(); P; P = P->getPrevNode()) {
-    auto *CI = dyn_cast<CallInst>(P);
-    if (CI && CI->getIntrinsicID() == Intrinsic::spv_abort)
-      llvm_unreachable("llvm.spv.abort must be the last non-debug instruction "
-                       "before its block's `unreachable`; OpAbortKHR is itself "
-                       "a SPIR-V block terminator");
-  }
-#endif
+  IRBuilder<> B(&I);
   B.CreateIntrinsic(Intrinsic::spv_unreachable, {});
   return &I;
 }

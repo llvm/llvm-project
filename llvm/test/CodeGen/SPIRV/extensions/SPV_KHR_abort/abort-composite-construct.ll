@@ -15,7 +15,7 @@
 ; CHECK:     OpAbortKHR %[[#V2]] %[[#CC]]
 ; CHECK-NOT: OpUnreachable
 
-declare void @llvm.spv.abort(...) #0
+declare void @llvm.spv.abort(<2 x i32>) #0
 
 define spir_kernel void @abort_composite_construct(i32 %a, i32 %b) {
 entry:
@@ -23,7 +23,7 @@ entry:
   %vb = insertelement <1 x i32> poison, i32 %b, i32 0
   %v = shufflevector <1 x i32> %va, <1 x i32> %vb,
                      <2 x i32> <i32 0, i32 1>
-  call void (...) @llvm.spv.abort(<2 x i32> %v)
+  call void @llvm.spv.abort(<2 x i32> %v)
   unreachable
 }
 

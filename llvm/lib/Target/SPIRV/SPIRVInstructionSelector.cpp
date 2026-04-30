@@ -349,6 +349,7 @@ private:
   bool diagnoseUnsupported(const MachineInstr &I, const Twine &Msg) const;
 
   bool selectAbort(MachineInstr &I) const;
+  bool selectTrap(MachineInstr &I) const;
   bool selectFrameIndex(Register ResVReg, SPIRVTypeInst ResType,
                         MachineInstr &I) const;
   bool selectAllocaArray(Register ResVReg, SPIRVTypeInst ResType,
@@ -1376,11 +1377,13 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
   case TargetOpcode::G_UNMERGE_VALUES:
     return selectUnmergeValues(I);
 
+  case TargetOpcode::G_TRAP:
+  case TargetOpcode::G_UBSANTRAP:
+    return selectTrap(I);
+
   // Discard gen opcodes for intrinsics which we do not expect to actually
   // represent code after lowering or intrinsics which are not implemented but
   // should not crash when found in a customer's LLVM IR input.
-  case TargetOpcode::G_TRAP:
-  case TargetOpcode::G_UBSANTRAP:
   case TargetOpcode::DBG_LABEL:
     return true;
   case TargetOpcode::G_DEBUGTRAP:
@@ -1740,9 +1743,9 @@ bool SPIRVInstructionSelector::selectPopCount(Register ResVReg,
                                               SPIRVTypeInst ResType,
                                               MachineInstr &I,
                                               unsigned Opcode) const {
-  // Vulkan restricts OpBitCount to 32-bit integers or vectors of 32-bit 
-  // integers unless VK_KHR_maintenance9 is enabled. Until VK_KHR_maintaince9 
-  // is core we will not generate OpBitCount with any other types when 
+  // Vulkan restricts OpBitCount to 32-bit integers or vectors of 32-bit
+  // integers unless VK_KHR_maintenance9 is enabled. Until VK_KHR_maintaince9
+  // is core we will not generate OpBitCount with any other types when
   // targeting Vulkan.
   if (!STI.getTargetTriple().isVulkanOS())
     return selectUnOp(ResVReg, ResType, I, Opcode);
@@ -6329,55 +6332,78 @@ bool SPIRVInstructionSelector::selectAllocaArray(Register ResVReg,
   return true;
 }
 
-bool SPIRVInstructionSelector::selectAbort(MachineInstr &I) const {
-  if (!STI.canUseExtension(SPIRV::Extension::SPV_KHR_abort))
-    report_fatal_error("OpAbortKHR instruction requires the following "
-                       "SPIR-V extension: SPV_KHR_abort",
-                       false);
-  // The intrinsic is declared as variadic so it can carry composite message
-  // types (vectors and structs) without LLVM IR mangling restrictions, but
-  // OpAbortKHR takes exactly one Message operand.
-  if (I.getNumExplicitOperands() != 2)
-    report_fatal_error("llvm.spv.abort must be called with exactly one "
-                       "message argument",
-                       false);
-  Register MsgReg = I.getOperand(1).getReg();
-  SPIRVTypeInst MsgType = GR.getSPIRVTypeForVReg(MsgReg);
-  assert(MsgType && "Message argument of llvm.spv.abort has no SPIR-V type");
-  // SPV_KHR_abort requires Message Type to be a concrete type. Per the
-  // SPIR-V "Concrete Type" definition, that means a numerical scalar
-  // (int/float), a (physical) pointer, a vector, matrix, or any aggregate
-  // (array/struct) recursively containing only such types. OpTypeBool,
-  // OpTypeVoid, opaque handles and similar abstract/non-concrete types are
-  // rejected up front rather than emitting invalid SPIR-V. Validate
-  // recursively so that e.g. a struct containing a bool is also rejected.
-  SmallVector<SPIRVTypeInst, 4> Worklist{MsgType};
+// Returns true iff `Ty` is a concrete SPIR-V type per the SPV_KHR_abort
+// definition: a numerical scalar (int/float), a (physical) pointer, a vector,
+// matrix or any aggregate (array/struct) recursively containing only such
+// types. OpTypeBool, OpTypeVoid, opaque handles and similar abstract
+// non-concrete types are rejected.
+static bool isConcreteSPIRVType(SPIRVTypeInst Ty,
+                                const SPIRVGlobalRegistry &GR) {
+  SmallVector<SPIRVTypeInst, 4> Worklist{Ty};
   while (!Worklist.empty()) {
-    SPIRVTypeInst Ty = Worklist.pop_back_val();
-    switch (Ty->getOpcode()) {
+    SPIRVTypeInst T = Worklist.pop_back_val();
+    switch (T->getOpcode()) {
     case SPIRV::OpTypeInt:
     case SPIRV::OpTypeFloat:
     case SPIRV::OpTypePointer:
       break;
     case SPIRV::OpTypeVector:
     case SPIRV::OpTypeMatrix:
-    case SPIRV::OpTypeArray:
-      // Operand 1 holds the element/component type id.
-      Worklist.push_back(GR.getSPIRVTypeForVReg(Ty->getOperand(1).getReg()));
-      break;
+    case SPIRV::OpTypeArray: {
+      Register OperandReg = T->getOperand(1).getReg();
+      SPIRVTypeInst ElementT = GR.getSPIRVTypeForVReg(OperandReg);
+      Worklist.push_back(ElementT);
+    } break;
     case SPIRV::OpTypeStruct:
-      // Operands 1..N hold the field type ids.
-      for (unsigned Idx = 1, E = Ty->getNumOperands(); Idx < E; ++Idx)
-        Worklist.push_back(
-            GR.getSPIRVTypeForVReg(Ty->getOperand(Idx).getReg()));
+      for (unsigned Idx = 1, E = T->getNumOperands(); Idx < E; ++Idx) {
+        Register OperandReg = T->getOperand(Idx).getReg();
+        SPIRVTypeInst ElementT = GR.getSPIRVTypeForVReg(OperandReg);
+        Worklist.push_back(ElementT);
+      }
       break;
     default:
-      report_fatal_error("llvm.spv.abort message type must be a concrete "
-                         "SPIR-V type (numerical scalar, pointer, vector, "
-                         "matrix, or aggregate of such types)",
-                         false);
+      return false;
     }
   }
+  return true;
+}
+
+bool SPIRVInstructionSelector::selectAbort(MachineInstr &I) const {
+  assert(I.getNumExplicitOperands() == 2);
+
+  Register MsgReg = I.getOperand(1).getReg();
+  SPIRVTypeInst MsgType = GR.getSPIRVTypeForVReg(MsgReg);
+  assert(MsgType && "Message argument of llvm.spv.abort has no SPIR-V type");
+
+  if (!isConcreteSPIRVType(MsgType, GR))
+    return diagnoseUnsupported(
+        I,
+        "llvm.spv.abort message type must be a concrete SPIR-V type (numerical "
+        "scalar, pointer, vector, matrix, or aggregate of such types)");
+
+  MachineBasicBlock &BB = *I.getParent();
+  BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpAbortKHR))
+      .addUse(GR.getSPIRVTypeID(MsgType))
+      .addUse(MsgReg)
+      .constrainAllUses(TII, TRI, RBI);
+  return true;
+}
+
+bool SPIRVInstructionSelector::selectTrap(MachineInstr &I) const {
+  // When the SPV_KHR_abort extension is disabled, drop the G_TRAP and
+  // G_UBSANTRAP silently.
+  if (!STI.canUseExtension(SPIRV::Extension::SPV_KHR_abort))
+    return true;
+
+  // Use the 32-bit integer constant for the abort "message" argument:
+  // - G_UBSANTRAP operand is zero-extended to 32 bits.
+  // - "All ones" constant is used for G_TRAP.
+  uint32_t MsgVal = ~0u;
+  if (I.getOpcode() == TargetOpcode::G_UBSANTRAP)
+    MsgVal = static_cast<uint32_t>(I.getOperand(0).getImm());
+
+  SPIRVTypeInst MsgType = GR.getOrCreateSPIRVIntegerType(32, I, TII);
+  Register MsgReg = buildI32Constant(MsgVal, I, MsgType);
   MachineBasicBlock &BB = *I.getParent();
   BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpAbortKHR))
       .addUse(GR.getSPIRVTypeID(MsgType))

@@ -47,6 +47,7 @@ class SPIRVPrepareFunctionsImpl {
   const SPIRVTargetMachine &TM;
   bool substituteIntrinsicCalls(Function *F);
   bool substituteAbortKHRCalls(Function *F);
+  bool terminateBlocksAfterTrap(Module &M, Intrinsic::ID IID);
   Function *removeAggregateTypesFromSignature(Function *F);
   bool removeAggregateTypesFromCalls(Function *F);
 
@@ -543,8 +544,10 @@ addFunctionTypeMutation(NamedMDNode *NMD,
 Function *
 SPIRVPrepareFunctionsImpl::removeAggregateTypesFromSignature(Function *F) {
   bool IsRetAggr = F->getReturnType()->isAggregateType();
-  // Allow intrinsics with aggregate return type to reach GlobalISel
-  if (F->isIntrinsic() && IsRetAggr)
+  // Allow intrinsics with aggregate return/argument types to reach GlobalISel.
+  // Renaming/mutating the signature of an intrinsic would desync its name from
+  // its argument types and break the IR verifier.
+  if (F->isIntrinsic())
     return F;
 
   IRBuilder<> B(F->getContext());
@@ -608,60 +611,102 @@ SPIRVPrepareFunctionsImpl::removeAggregateTypesFromSignature(Function *F) {
   return NewF;
 }
 
-// Replace OpenCL/SPIR-V style calls to `__spirv_AbortKHR(message)` with calls
-// to the `llvm.spv.abort` target intrinsic, so that they go through the same
-// instruction-selection path as the intrinsic and get lowered to OpAbortKHR.
+// Returns true iff `F`'s name resolves (after OpenCL/SPIR-V demangling and
+// builtin-name lookup) to the SPIR-V friendly built-in `__spirv_AbortKHR`.
+static bool isAbortKHRBuiltin(const Function &F) {
+  if (F.isIntrinsic())
+    return false;
+  StringRef Name = F.getName();
+  std::string Demangled = getOclOrSpirvBuiltinDemangledName(Name);
+  if (Demangled.empty())
+    return false;
+  return SPIRV::lookupBuiltinNameHelper(Demangled) == "__spirv_AbortKHR";
+}
+
+// Rewrites a single call to `__spirv_AbortKHR` into a call to the
+// `llvm.spv.abort` target intrinsic, then re-terminates the block with
+// `unreachable`. OpAbortKHR is itself a SPIR-V function-termination
+// instruction and must be the last instruction in its block, so any trailing
+// stores/lifetime intrinsics/`ret` emitted by the OpenCL ABI are dropped.
+// `changeToUnreachable` cleans up any successor PHI predecessor entries.
+static void rewriteAbortKHRCall(CallInst *CI) {
+  IRBuilder<> B(CI);
+  Value *Msg = CI->getArgOperand(0);
+  // The OpenCL C ABI may pass aggregate arguments by pointer (byval). In that
+  // case load the underlying value so that OpAbortKHR receives the composite
+  // itself, as required by the SPV_KHR_abort spec ("Message Type must be a
+  // concrete type").
+  if (CI->isByValArgument(0)) {
+    Type *AggTy = CI->getParamByValType(0);
+    Msg = B.CreateLoad(AggTy, Msg);
+  }
+  B.CreateIntrinsic(Intrinsic::spv_abort, {Msg->getType()}, {Msg});
+  changeToUnreachable(CI);
+}
+
+// Replace OpenCL/SPIR-V style calls to `__spirv_AbortKHR(message)` (i.e.
+// calls to `F` when `F` is the `__spirv_AbortKHR` built-in) with calls to the
+// `llvm.spv.abort` target intrinsic.
 bool SPIRVPrepareFunctionsImpl::substituteAbortKHRCalls(Function *F) {
-  if (F->isDeclaration())
+  if (!isAbortKHRBuiltin(*F))
     return false;
 
   SmallVector<CallInst *> Calls;
-  for (Instruction &I : instructions(F)) {
-    auto *CI = dyn_cast<CallInst>(&I);
-    if (!CI)
-      continue;
-    Function *Callee = CI->getCalledFunction();
-    if (!Callee || Callee->isIntrinsic())
-      continue;
-    StringRef Demangled = Callee->getName();
-    std::string DemangledStr = getOclOrSpirvBuiltinDemangledName(Demangled);
-    if (DemangledStr.empty())
-      continue;
-    std::string BuiltinName = SPIRV::lookupBuiltinNameHelper(DemangledStr);
-    if (StringRef(BuiltinName) != "__spirv_AbortKHR")
+  for (User *U : F->users()) {
+    auto *CI = dyn_cast<CallInst>(U);
+    if (!CI || CI->getCalledFunction() != F)
       continue;
     if (CI->arg_size() != 1)
       continue;
     Calls.push_back(CI);
   }
 
-  if (Calls.empty())
+  for (CallInst *CI : Calls)
+    rewriteAbortKHRCall(CI);
+
+  return !Calls.empty();
+}
+
+// When the SPV_KHR_abort extension is enabled, `llvm.trap` and
+// `llvm.ubsantrap` are lowered to `OpAbortKHR` during instruction selection.
+// `OpAbortKHR` is itself a SPIR-V block terminator, so any instructions that
+// follow the trap call within the same basic block (e.g. `ret`, lifetime
+// markers) would produce SPIR-V ops after `OpAbortKHR` and break validation.
+// Terminate the block right after each call to the trap intrinsics by replacing
+// the next instruction with `unreachable`.
+bool SPIRVPrepareFunctionsImpl::terminateBlocksAfterTrap(Module &M,
+                                                         Intrinsic::ID IID) {
+  assert((IID == Intrinsic::trap || IID == Intrinsic::ubsantrap) &&
+         "Expected trap intrinsic ID");
+
+  Function *F = Intrinsic::getDeclarationIfExists(&M, IID);
+  if (!F)
     return false;
 
-  for (CallInst *CI : Calls) {
-    IRBuilder<> B(CI);
-    Value *Msg = CI->getArgOperand(0);
-    // The OpenCL C ABI may pass aggregate arguments by pointer (byval). In
-    // that case load the underlying value so that OpAbortKHR receives the
-    // composite itself, as required by the SPV_KHR_abort spec ("Message Type
-    // must be a concrete type").
-    if (CI->isByValArgument(0)) {
-      Type *AggTy = CI->getParamByValType(0);
-      Msg = B.CreateLoad(AggTy, Msg);
-    }
-    B.CreateIntrinsic(Intrinsic::spv_abort, {}, {Msg});
-    // OpAbortKHR is itself a SPIR-V function-termination instruction and must
-    // be the last instruction in its block. Drop the original call and
-    // everything that follows it (the OpenCL ABI typically appends stores into
-    // the return slot and a `ret`), and re-terminate the block with
-    // `unreachable`. We use changeToUnreachable so that any successor PHI
-    // nodes have the now-removed predecessor edge cleaned up; otherwise the
-    // IR verifier would reject mismatched PHI incoming entries. The matching
-    // suppression in SPIRVEmitIntrinsics::visitUnreachableInst ensures no
-    // extra OpUnreachable is emitted after OpAbortKHR.
-    changeToUnreachable(CI);
+  // If the target doesn't support SPV_KHR_abort, we won't be able to lower
+  // the trap intrinsic to OpAbortKHR, so we can skip the block-terminating
+  // transformation.
+  const auto &ST = TM.getSubtarget<SPIRVSubtarget>(*F);
+  if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_abort))
+    return false;
+
+  SmallVector<CallInst *> Calls;
+  for (User *U : F->users()) {
+    auto *CI = dyn_cast<CallInst>(U);
+    if (!CI || CI->getCalledFunction() != F)
+      continue;
+    Calls.push_back(CI);
   }
-  return true;
+
+  bool Changed = false;
+  for (CallInst *CI : Calls) {
+    Instruction *Next = CI->getNextNode();
+    if (!Next || isa<UnreachableInst>(Next))
+      continue;
+    changeToUnreachable(Next);
+    Changed = true;
+  }
+  return Changed;
 }
 
 static std::string fixMultiOutputConstraintString(StringRef Constraints) {
@@ -778,9 +823,12 @@ bool SPIRVPrepareFunctionsImpl::runOnModule(Module &M) {
     Changed = true;
   }
 
+  Changed |= terminateBlocksAfterTrap(M, Intrinsic::trap);
+  Changed |= terminateBlocksAfterTrap(M, Intrinsic::ubsantrap);
+
   for (Function &F : M) {
-    Changed |= substituteIntrinsicCalls(&F);
     Changed |= substituteAbortKHRCalls(&F);
+    Changed |= substituteIntrinsicCalls(&F);
     Changed |= sortBlocks(F);
     Changed |= removeAggregateTypesFromCalls(&F);
   }
