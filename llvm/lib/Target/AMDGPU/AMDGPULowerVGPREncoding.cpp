@@ -564,7 +564,7 @@ bool AMDGPULowerVGPREncoding::handleSetregMode(MachineInstr &MI) {
   BuildMI(*MBB, InsertPt, MI.getDebugLoc(), TII->get(AMDGPU::S_NOP)).addImm(0);
   MostRecentModeSet = BuildMI(*MBB, InsertPt, MI.getDebugLoc(),
                               TII->get(AMDGPU::S_SET_VGPR_MSB))
-                          .addImm(ModeValue);
+                          .addImm(ModeValue | (ModeValue << ModeWidth));
   LLVM_DEBUG(dbgs() << "    -> inserted S_SET_VGPR_MSB after setreg: "
                     << *MostRecentModeSet);
   return true;

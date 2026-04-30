@@ -3229,6 +3229,8 @@ define void @foo(ptr %arg0, ptr %arg1) {
   // Check getPointerAddressSpace()
   EXPECT_EQ(NewLd->getPointerAddressSpace(),
             Arg1->getType()->getPointerAddressSpace());
+  // Check helper function getLoadStoreAddressSpace()
+  EXPECT_EQ(getLoadStoreAddressSpace(NewLd), NewLd->getPointerAddressSpace());
   EXPECT_EQ(NewLd->getAlign(), 8);
   EXPECT_EQ(NewLd->getName(), "NewLd");
   // Check create(InsertBefore, IsVolatile=true)
@@ -3299,6 +3301,15 @@ define void @foo(i8 %val, ptr %ptr) {
   // Check getPointerAddressSpace()
   EXPECT_EQ(St->getPointerAddressSpace(),
             Ptr->getType()->getPointerAddressSpace());
+  // Check helper function getLoadStoreAddressSpace(St)
+  EXPECT_EQ(getLoadStoreAddressSpace(St), St->getPointerAddressSpace());
+  EXPECT_EQ(
+      getLoadStoreAddressSpace(const_cast<const sandboxir::StoreInst *>(St)),
+      St->getPointerAddressSpace());
+#ifndef NDEBUG
+  // Check the assertion in getLoadStoreAddressSpace(Ret) if not a load or store
+  EXPECT_DEATH(getLoadStoreAddressSpace(Ret), ".*Expected.*");
+#endif
   // Check getAlign()
   EXPECT_EQ(St->getAlign(), 64);
   // Check create(InsertBefore)
