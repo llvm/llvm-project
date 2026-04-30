@@ -12334,6 +12334,8 @@ def err_omp_single_copyprivate_with_nowait : Error<
   "the 'copyprivate' clause must not be used with the 'nowait' clause">;
 def err_omp_nowait_clause_without_depend: Error<
   "directive '#pragma omp taskwait' cannot use 'nowait' clause without 'depend' clause">;
+def err_omp_taskgraph_taskwait_without_depend: Error<
+  "directive '#pragma omp taskwait' within '#pragma omp taskgraph' must use 'depend' clause to be task-generating">;
 def note_omp_nowait_clause_here : Note<
   "'nowait' clause is here">;
 def err_omp_single_decl_in_declare_simd_variant : Error<
