@@ -72,7 +72,7 @@ jobs:
       ${{
         needs.setup.outputs.linux_build_config != '' &&
         needs.setup.outputs.enable_build_jobs == 'true'
-      }}
+      }}      
     uses: ./.github/workflows/multi_arch_ci_linux.yml
     secrets: inherit
     with:

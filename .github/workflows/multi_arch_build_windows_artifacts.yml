@@ -198,7 +198,12 @@ jobs:
           python-version: "3.12"
 
       - name: Install python deps
-        run: pip install -r requirements.txt
+        run: |
+          pip install -r requirements.txt
+          pip install --upgrade \
+              "boto3>=1.42.79,<1.42.85" \
+              "botocore>=1.42.79,<1.42.85" \
+               "aiobotocore>=3.4.0"
 
       - name: Install requirements
         run: |
@@ -265,6 +270,7 @@ jobs:
       - name: Fetch sources
         timeout-minutes: 30
         run: |
+          cd L:
           git config fetch.parallel 10
           git config --global core.symlinks true
           git config --global core.longpaths true          
@@ -301,14 +307,17 @@ jobs:
           amdgpu_families: ${{ inputs.amdgpu_families }}
           package_version: ${{ inputs.package_version }}
           #extra_cmake_options: ${{ inputs.extra_cmake_options }}
-          extra_cmake_options: "-DTHEROCK_ENABLE_ALL=OFF -DTHEROCK_ENABLE_COMPILER=ON -DTHEROCK_ENABLE_HIP_RUNTIME=ON -DTHEROCK_ENABLE_PRIM=ON -DTHEROCK_ENABLE_BLAS=ON -DTHEROCK_ENABLE_RAND=ON -DTHEROCK_ENABLE_SOLVER=ON -DTHEROCK_ENABLE_SPARSE=ON -DTHEROCK_ENABLE_SYSDEPS=OFF  -DTHEROCK_ENABLE_COMPOSABLE_KERNEL=OFF -DTHEROCK_ENABLE_OCL_RUNTIME=ON  -DTHEROCK_ENABLE_MATH_LIBS=ON -DLLVM_SMREV_REPO='' -DLLVM_SMREV_REVISION=''"        
+          extra_cmake_options: "-DTHEROCK_ENABLE_ALL=OFF -DTHEROCK_ENABLE_COMPOSABLE_KERNEL=OFF -DTHEROCK_ENABLE_MIOPEN=OFF -DTHEROCK_ENABLE_MIOPENPROVIDER=OFF -DTHEROCK_ENABLE_HIPDNN=OFF -DTHEROCK_ENABLE_HIPBLASLTPROVIDER=OFF -DTHEROCK_ENABLE_HIPDNN_SAMPLES=OFF -DLLVM_SMREV_REPO='' -DLLVM_SMREV_REVISION=''"
         run: |
-          cmake -B "${BUILD_DIR}" -S . -GNinja \
-            --preset=${{ inputs.build_variant_cmake_preset }} \
+          cd L:
+          ccache -z
+          cmake -B 'B:\build' -S 'L:\' -GNinja \
             -DTHEROCK_PACKAGE_VERSION=${{ inputs.rocm_package_version }} \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-            ${{ steps.stage_config.outputs.cmake_args }}
+            ${{ inputs.build_variant_cmake_preset && format('--preset={0}', inputs.build_variant_cmake_preset) }} \
+            ${{ steps.stage_config.outputs.cmake_args }} \
+            ${{ env.extra_cmake_options }}
 
       - name: Configure All Projects
         if: ${{ github.event_name != 'pull_request' && inputs.test_type == 'full' }}
