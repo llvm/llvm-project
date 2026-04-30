@@ -2319,11 +2319,6 @@ void TextNodeDumper::VisitTypedefDecl(const TypedefDecl *D) {
   dumpType(D->getUnderlyingType());
   if (D->isModulePrivate())
     OS << " __module_private__";
-
-  const TagDecl *TD = D->getUnderlyingType()->getAsTagDecl();
-  if (TD && TD->getTypedefNameForAnonDecl()) {
-    dumpFormalLinkage(D);
-  }
 }
 
 void TextNodeDumper::VisitEnumDecl(const EnumDecl *D) {
@@ -2358,7 +2353,7 @@ void TextNodeDumper::VisitRecordDecl(const RecordDecl *D) {
   if (D->isCompleteDefinition())
     OS << " definition";
 
-  if (D->getDeclName() && !D->isImplicit() &&
+  if (D->hasNameForLinkage() && !D->isImplicit() &&
       D->getFriendObjectKind() == Decl::FOK_None &&
       (!D->getDescribedTemplate() ||
        D->getDescribedTemplate()->getFriendObjectKind() == Decl::FOK_None)) {
@@ -2700,11 +2695,6 @@ void TextNodeDumper::VisitNamespaceAliasDecl(const NamespaceAliasDecl *D) {
 void TextNodeDumper::VisitTypeAliasDecl(const TypeAliasDecl *D) {
   dumpName(D);
   dumpType(D->getUnderlyingType());
-
-  const TagDecl *TD = D->getUnderlyingType()->getAsTagDecl();
-  if (TD && TD->getTypedefNameForAnonDecl()) {
-    dumpFormalLinkage(D);
-  }
 }
 
 void TextNodeDumper::VisitTypeAliasTemplateDecl(
