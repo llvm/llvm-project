@@ -501,7 +501,7 @@ void lambda(T h) {
 template void lambda<int>(int h);
 #endif
 
-// ATTR-ONLY: `-FunctionTemplateDecl {{.*}} lambda
+// ATTR-ONLY: |-FunctionTemplateDecl {{.*}} lambda
 // ATTR-ONLY:   |-TemplateTypeParmDecl {{.*}} T
 // ATTR-ONLY:   |-FunctionDecl {{.*}} lambda 'void (T)'
 // ATTR-ONLY:   | `-CompoundStmt
