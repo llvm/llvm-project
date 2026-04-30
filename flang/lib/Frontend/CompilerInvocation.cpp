@@ -179,8 +179,7 @@ static bool parseDebugArgs(Fortran::frontend::CodeGenOptions &opts,
 static bool parseDoConcurrentMapping(Fortran::frontend::CodeGenOptions &opts,
                                      llvm::opt::ArgList &args,
                                      clang::DiagnosticsEngine &diags) {
-  llvm::opt::Arg *arg =
-      args.getLastArg(clang::options::OPT_fdo_concurrent_to_openmp_EQ);
+  llvm::opt::Arg *arg = args.getLastArg(clang::options::OPT_fdo_concurrent_EQ);
   if (!arg)
     return true;
 
