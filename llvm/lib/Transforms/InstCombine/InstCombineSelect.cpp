@@ -670,20 +670,18 @@ static Value *foldSelectICmpMinMax(const ICmpInst *Cmp, Value *TVal,
 
   if (match(TVal, m_Zero())) {
     // (X <= Y) ? 0 : (X - Y)
-    if (Pred == CmpInst::ICMP_SLT ||
-        Pred == CmpInst::ICMP_SLE &&
-            match(FVal, m_NSWSub(m_Specific(CmpLHS), m_Specific(CmpRHS))) &&
-            isGuaranteedNotToBeUndef(CmpLHS, nullptr, Cmp, nullptr)) {
+    if ((Pred == CmpInst::ICMP_SLT || Pred == CmpInst::ICMP_SLE) &&
+        match(FVal, m_NSWSub(m_Specific(CmpLHS), m_Specific(CmpRHS))) &&
+        isGuaranteedNotToBeUndef(CmpLHS, nullptr, Cmp, nullptr)) {
       Value *SMin =
           Builder.CreateBinaryIntrinsic(Intrinsic::smin, CmpRHS, CmpLHS);
       return Builder.CreateNSWSub(CmpLHS, SMin);
     }
 
     // (X >= Y) ? 0 : (Y - X)
-    if (Pred == CmpInst::ICMP_SGT ||
-        Pred == CmpInst::ICMP_SGE &&
-            match(FVal, m_NSWSub(m_Specific(CmpRHS), m_Specific(CmpLHS))) &&
-            isGuaranteedNotToBeUndef(CmpRHS, nullptr, Cmp, nullptr)) {
+    if ((Pred == CmpInst::ICMP_SGT || Pred == CmpInst::ICMP_SGE) &&
+        match(FVal, m_NSWSub(m_Specific(CmpRHS), m_Specific(CmpLHS))) &&
+        isGuaranteedNotToBeUndef(CmpRHS, nullptr, Cmp, nullptr)) {
       Value *SMin =
           Builder.CreateBinaryIntrinsic(Intrinsic::smin, CmpRHS, CmpLHS);
       return Builder.CreateNSWSub(CmpRHS, SMin);
