@@ -1935,13 +1935,11 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::MUL, MVT::v1i64, Custom);
     setOperationAction(ISD::MUL, MVT::v2i64, Custom);
 
-    // With SVE2 we can try lowering these to pairwise operations (e.g. smaxp).
-    if (Subtarget->hasSVE2() || Subtarget->isStreamingSVEAvailable()) {
-      setOperationAction(ISD::VECREDUCE_SMAX, MVT::v2i64, Custom);
-      setOperationAction(ISD::VECREDUCE_SMIN, MVT::v2i64, Custom);
-      setOperationAction(ISD::VECREDUCE_UMAX, MVT::v2i64, Custom);
-      setOperationAction(ISD::VECREDUCE_UMIN, MVT::v2i64, Custom);
-    }
+    // NEON doesn't support 128-bit [s|u][min|max] operations, but SVE does.
+    setOperationAction(ISD::VECREDUCE_SMAX, MVT::v2i64, Custom);
+    setOperationAction(ISD::VECREDUCE_SMIN, MVT::v2i64, Custom);
+    setOperationAction(ISD::VECREDUCE_UMAX, MVT::v2i64, Custom);
+    setOperationAction(ISD::VECREDUCE_UMIN, MVT::v2i64, Custom);
 
     // NOTE: Currently this has to happen after computeRegisterProperties rather
     // than the preferred option of combining it with the addRegisterClass call.
@@ -32147,8 +32145,7 @@ bool AArch64TargetLowering::shouldLowerReductionToSVE(
                       (RdxOp.getOpcode() != ISD::VECREDUCE_ADD &&
                        SrcVT.getVectorElementType() == MVT::i64);
 
-  bool UseSVE = useSVEForFixedLengthVectorVT(
-      SrcVT, OverrideNEON && Subtarget->useSVEForFixedLengthVectors());
+  bool UseSVE = useSVEForFixedLengthVectorVT(SrcVT, OverrideNEON);
 
   // Always lower v2i64 vectors to pairwise SVE2 operations when possible as
   // NEON does not natively support reductions on v2i64. Lower v2i32 to pairwise
