@@ -110,3 +110,98 @@ func.func @nested_forall_2d(%arr: !fir.box<!fir.array<?x?xi32>>) {
 // CHECK:           }
 // CHECK:           fir.freemem %[[ALLOC]] : !fir.heap<!fir.array<?x?xi32>>
 // CHECK:           return
+
+// Forall with a negative unit step. The temp's lower bound must be the
+// loop's upper bound (the smaller end of the iv range), not the loop's
+// lower bound (which is the start, i.e. the largest iv value); otherwise
+// the loop induction variable falls below the temp's domain on every
+// iteration but the first.
+func.func @forall_negative_step(%arg0: !fir.ref<!fir.array<10xi32>>) {
+  %c-1 = arith.constant -1 : index
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %c11 = arith.constant 11 : index
+  %0 = fir.shape %c10 : (index) -> !fir.shape<1>
+  %1:2 = hlfir.declare %arg0(%0) {uniq_name = "x"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+  hlfir.forall lb {
+    hlfir.yield %c10 : index
+  } ub {
+    hlfir.yield %c1 : index
+  } step {
+    hlfir.yield %c-1 : index
+  }  (%i: index) {
+    hlfir.region_assign {
+      %rev = arith.subi %c11, %i : index
+      %addr = hlfir.designate %1#0 (%rev)  : (!fir.ref<!fir.array<10xi32>>, index) -> !fir.ref<i32>
+      %val = fir.load %addr : !fir.ref<i32>
+      hlfir.yield %val : i32
+    } to {
+      %addr = hlfir.designate %1#0 (%i)  : (!fir.ref<!fir.array<10xi32>>, index) -> !fir.ref<i32>
+      hlfir.yield %addr : !fir.ref<i32>
+    }
+  }
+  return
+}
+// CHECK-LABEL:   func.func @forall_negative_step(
+// CHECK-NOT:       fir.alloca index
+// The do_loop runs from the loop's lb (c10) down to its ub (c1) with step
+// c-1. The temp's lower bound is the loop's upper bound (c1), not its
+// lower bound, so all iv values [1..10] fit within the temp's domain.
+// CHECK:           %[[C_NEG1:.*]] = arith.constant -1 : index
+// CHECK:           %[[C1:.*]] = arith.constant 1 : index
+// CHECK:           %[[C10:.*]] = arith.constant 10 : index
+// CHECK:           %[[ALLOC:.*]] = fir.allocmem !fir.array<?xi32>, %{{.*}} {bindc_name = ".tmp.forall", uniq_name = ""}
+// CHECK:           %[[SHAPE:.*]] = fir.shape_shift %[[C1]], %{{.*}} : (index, index) -> !fir.shapeshift<1>
+// CHECK:           %[[DECL:.*]]:2 = hlfir.declare %[[ALLOC]](%[[SHAPE]]) {uniq_name = ".tmp.forall"} : (!fir.heap<!fir.array<?xi32>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
+// CHECK:           fir.do_loop %[[IV0:.*]] = %[[C10]] to %[[C1]] step %[[C_NEG1]] {
+// CHECK:             %[[ADDR0:.*]] = hlfir.designate %[[DECL]]#0 (%[[IV0]])  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+// CHECK:             hlfir.assign %{{.*}} to %[[ADDR0]] : i32, !fir.ref<i32>
+// CHECK:           }
+// CHECK:           fir.do_loop %[[IV1:.*]] = %{{.*}} to %{{.*}} step %{{.*}} {
+// CHECK:             %[[ADDR1:.*]] = hlfir.designate %[[DECL]]#0 (%[[IV1]])  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+// CHECK:             %[[V:.*]] = fir.load %[[ADDR1]] : !fir.ref<i32>
+// CHECK:             hlfir.assign %[[V]] to %{{.*}} : i32, !fir.ref<i32>
+// CHECK:           }
+// CHECK:           fir.freemem %[[ALLOC]] : !fir.heap<!fir.array<?xi32>>
+// CHECK:           return
+
+// Forall with a non-unit step (step=2): the loop iv values are
+// non-contiguous (1, 3, 5, 7, 9), so the loop induction variable cannot
+// directly index a contiguous fir.shape_shift temp. We must fall back to
+// the 1D counter-based HomogeneousScalarStack.
+func.func @forall_non_unit_step(%arg0: !fir.ref<!fir.array<10xi32>>) {
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c9 = arith.constant 9 : index
+  %c11 = arith.constant 11 : index
+  %0 = fir.shape %c9 : (index) -> !fir.shape<1>
+  %1:2 = hlfir.declare %arg0(%0) {uniq_name = "x"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+  hlfir.forall lb {
+    hlfir.yield %c1 : index
+  } ub {
+    hlfir.yield %c9 : index
+  } step {
+    hlfir.yield %c2 : index
+  }  (%i: index) {
+    hlfir.region_assign {
+      %rev = arith.subi %c11, %i : index
+      %addr = hlfir.designate %1#0 (%rev)  : (!fir.ref<!fir.array<10xi32>>, index) -> !fir.ref<i32>
+      %val = fir.load %addr : !fir.ref<i32>
+      hlfir.yield %val : i32
+    } to {
+      %addr = hlfir.designate %1#0 (%i)  : (!fir.ref<!fir.array<10xi32>>, index) -> !fir.ref<i32>
+      hlfir.yield %addr : !fir.ref<i32>
+    }
+  }
+  return
+}
+// CHECK-LABEL:   func.func @forall_non_unit_step(
+// Counter-based HomogeneousScalarStack: a fir.alloca index counter and a
+// plain fir.shape (no shift), with the temp indexed through the counter.
+// CHECK:           %[[CTR:.*]] = fir.alloca index
+// CHECK:           %[[ALLOC:.*]] = fir.allocmem !fir.array<?xi32>, %{{.*}} {bindc_name = ".tmp.forall", uniq_name = ""}
+// CHECK:           %[[SHAPE:.*]] = fir.shape %{{.*}} : (index) -> !fir.shape<1>
+// CHECK:           hlfir.declare %[[ALLOC]](%[[SHAPE]]) {uniq_name = ".tmp.forall"} : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
+// CHECK:           fir.load %[[CTR]] : !fir.ref<index>
+// CHECK:           arith.addi %{{.*}}, %{{.*}} : index
+// CHECK:           fir.store %{{.*}} to %[[CTR]] : !fir.ref<index>
