@@ -38,7 +38,7 @@ public:
 
 class JSONCapabilityResult final : public CapabilityResult {
 public:
-  explicit JSONCapabilityResult(json::Value Value) : Value(std::move(Value)) {}
+  explicit JSONCapabilityResult(json::Value V) : Value(std::move(V)) {}
 
   json::Value toJSON() const override { return Value; }
 
@@ -64,8 +64,8 @@ public:
 
 class SimpleAnalyzer : public CapabilityRunner {
 public:
-  SimpleAnalyzer(StringRef CapabilityID, StringRef Summary)
-      : CapabilityID(CapabilityID.str()), Summary(Summary.str()) {}
+  SimpleAnalyzer(StringRef CapID, StringRef Sum)
+      : CapabilityID(CapID.str()), Summary(Sum.str()) {}
 
   StringRef getCapabilityID() const override { return CapabilityID; }
   Expected<std::unique_ptr<CapabilityResult>>
@@ -80,5 +80,20 @@ private:
 // checking source-adjacent paths (.opt.yaml/.opt.json) and the working
 // directory.
 std::string findRemarksPath(const CapabilityContext &Context);
+
+// Helper: create an unavailable JSON result for a capability.
+std::unique_ptr<JSONCapabilityResult>
+makeUnavailableResult(StringRef CapabilityID, StringRef UnitID,
+                      StringRef Reason);
+
+/// Build a JSON capability result with the standard envelope fields already
+/// populated.  Additional properties are merged from Data.
+inline std::unique_ptr<JSONCapabilityResult>
+makeJSONResult(StringRef CapabilityID, StringRef UnitID, json::Object &&Data) {
+  Data["capability"] = CapabilityID;
+  Data["unit_id"] = UnitID;
+  Data["available"] = true;
+  return std::make_unique<JSONCapabilityResult>(std::move(Data));
+}
 
 } // namespace llvm::advisor

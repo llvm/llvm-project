@@ -55,15 +55,19 @@ std::string llvm::advisor::findRemarksPath(const CapabilityContext &Context) {
   return {};
 }
 
+std::unique_ptr<JSONCapabilityResult>
+llvm::advisor::makeUnavailableResult(StringRef CapabilityID, StringRef UnitID,
+                                      StringRef Reason) {
+  return std::make_unique<JSONCapabilityResult>(
+      json::Object{{"capability", CapabilityID},
+                   {"unit_id", UnitID},
+                   {"available", false},
+                   {"reason", Reason}});
+}
+
 // SimpleAnalyzer serves as a base for capabilities that have no dedicated
 // analyzer implementation yet, reporting unavailable until one is provided.
 Expected<std::unique_ptr<CapabilityResult>>
 SimpleAnalyzer::run(const CapabilityContext &Context) {
-  json::Object Result;
-  Result["capability"] = CapabilityID;
-  Result["unit_id"] = Context.Unit.ID;
-  Result["source_path"] = Context.Unit.SourcePath;
-  Result["summary"] = Summary;
-  Result["available"] = false;
-  return std::make_unique<JSONCapabilityResult>(std::move(Result));
+  return makeUnavailableResult(CapabilityID, Context.Unit.ID, Summary);
 }
