@@ -236,9 +236,13 @@ Property::Property(llvm::StringRef name, llvm::StringRef desc, bool is_global,
 
 bool Property::DumpQualifiedName(Stream &strm) const {
   if (!m_name.empty()) {
-    if (m_value_sp->DumpQualifiedName(strm))
-      strm.PutChar('.');
-    strm << m_name;
+    bool has_sub_properties = static_cast<bool>(m_value_sp->GetAsProperties());
+    bool dumped_something = m_value_sp->DumpQualifiedName(strm);
+    if (!has_sub_properties) {
+      if (dumped_something)
+        strm.PutChar('.');
+      strm << m_name;
+    }
     return true;
   }
   return false;

@@ -26,27 +26,15 @@ class SettingsCommandTestCase(TestBase):
             ],
         )
 
-    def test_apropos_should_also_search_settings_qualified_name(self):
-        """Test that 'apropos' command searches the qualified name ("a.b.c.d") of settings not just
-        the name ("d")."""
+    def test_apropos_searches_settings_prefixes(self):
+        """Test that 'apropos' command searches the prefixes of the qualified names."""
 
-        # 'qemu-user' is one component of the qualified name.
         self.expect(
             "apropos 'qemu-user'",
             substrs=[
-                "platform.plugin.qemu-user.architecture",
-                "platform.plugin.qemu-user.emulator-args",
-            ],
-        )
-
-        # Should be able to search for strings that overlap > 1 component of the
-        # qualified name.
-        self.expect(
-            "apropos 'qemu-user.emulator-'",
-            substrs=[
-                "platform.plugin.qemu-user.emulator-args",
-                "platform.plugin.qemu-user.emulator-env-vars",
-                "platform.plugin.qemu-user.emulator-path",
+                "The following settings prefixes may relate to 'qemu-user':\n"
+                "  platform.plugin.qemu-user\n"
+                "\n"
             ],
         )
 

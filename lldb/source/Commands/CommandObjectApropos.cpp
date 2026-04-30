@@ -82,7 +82,7 @@ void CommandObjectApropos::DoExecute(Args &args, CommandReturnObject &result) {
             std::max(properties_max_len, qualified_name.GetString().size());
       }
 
-      if (properties.size() == 0) {
+      if (properties.empty() && property_prefixes.empty()) {
         result.AppendMessageWithFormatv(
             "No settings found pertaining to '{0}'. "
             "Try 'settings show' to see a complete list of "
@@ -90,18 +90,40 @@ void CommandObjectApropos::DoExecute(Args &args, CommandReturnObject &result) {
             args[0].c_str());
 
       } else {
-        result.AppendMessageWithFormatv(
-            "\nThe following settings variables may relate to '{0}': \n\n",
-            search_word);
-
-        const bool dump_qualified_name = true;
-        for (size_t i = 0; i < properties.size(); ++i)
-          properties[i]->DumpDescription(
-              m_interpreter, result.GetOutputStream(), properties_max_len,
-              dump_qualified_name, highlight);
         return_status = eReturnStatusSuccessFinishResult;
-      }
 
+        if (!property_prefixes.empty()) {
+          result.AppendMessageWithFormatv(
+              "\nThe following settings prefixes may relate to '{0}': \n\n",
+              search_word);
+
+          auto &out_strm = result.GetOutputStream();
+          out_strm.IndentMore();
+          for (auto prefix : property_prefixes) {
+            StreamString qual_name_strm;
+            // TODO: highlight!!!!
+            if (prefix->DumpQualifiedName(qual_name_strm)) {
+              result.GetOutputStream().Indent();
+              result.GetOutputStream() << qual_name_strm.GetString() << '\n';
+            }
+          }
+          out_strm.IndentLess();
+
+          result.AppendMessageWithFormatv(
+              "\n(use 'settings list' to show settings with a given prefix)");
+        }
+
+        if (!properties.empty()) {
+          result.AppendMessageWithFormatv(
+              "\nThe following settings variables may relate to '{0}': \n\n",
+              search_word);
+
+          const bool dump_qualified_name = true;
+          for (auto property : properties)
+            property->DumpDescription(m_interpreter, result.GetOutputStream(),
+                                      properties_max_len, dump_qualified_name, highlight);
+        }
+      }
       result.SetStatus(return_status);
     } else {
       result.AppendError("'' is not a valid search word.\n");

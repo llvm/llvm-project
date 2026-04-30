@@ -479,12 +479,6 @@ void OptionValueProperties::Apropos(
 
     bool matched = false;
 
-    // TODO: do we need this at all? It allows you to look for a.b?
-    if (StreamString qualified_name;
-        property->DumpQualifiedName(qualified_name) &&
-        qualified_name.GetString().contains_insensitive(keyword))
-      matched = true;
-
     if (llvm::StringRef name = property->GetName();
         !matched && name.contains_insensitive(keyword))
       matched = true;
