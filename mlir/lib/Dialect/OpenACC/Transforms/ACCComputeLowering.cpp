@@ -250,8 +250,8 @@ assignKnownLaunchArgs(ComputeConstructT computeOp, DeviceType deviceType,
     if (numWorkers) {
       values.push_back(ParWidthOp::create(
           rewriter, loc,
-          getValueOrCreateCastToIndexLike(rewriter, numWorkers.getLoc(), indexTy,
-                                          numWorkers),
+          getValueOrCreateCastToIndexLike(rewriter, numWorkers.getLoc(),
+                                          indexTy, numWorkers),
           policy.workerDim(ctx)));
     }
 
