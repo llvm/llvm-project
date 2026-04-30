@@ -1125,8 +1125,19 @@ void Writer::createSections() {
     if (name.starts_with(".tls"))
       tlsAlignment = std::max(tlsAlignment, c->getAlignment());
 
-    PartialSection *pSec = createPartialSection(name,
-                                                c->getOutputCharacteristics());
+    uint32_t outChars = c->getOutputCharacteristics();
+    StringRef from = getOutputSectionName(name);
+    auto i = ctx.config.merge.find(from);
+    if (i != ctx.config.merge.end() && i->second.contains('$')) {
+      // Set the name as a partial section chunk
+      name = saver().save(i->second + name.substr(from.size()));
+
+      // Use the existing sections characateristics that were targeting
+      if (OutputSection *targetSec = findSection(getOutputSectionName(name)))
+        outChars = targetSec->header.Characteristics;
+    }
+
+    PartialSection *pSec = createPartialSection(name, outChars);
     pSec->chunks.push_back(c);
   }
 
@@ -1655,6 +1666,10 @@ void Writer::createSymbolAndStringTable() {
 }
 
 void Writer::mergeSection(const std::map<StringRef, StringRef>::value_type &p) {
+  // This was a rename to a partial section chunk, so skip it. Handled in createSections()
+  if (p.second.contains('$'))
+    return;
+
   StringRef toName = p.second;
   if (p.first == toName)
     return;

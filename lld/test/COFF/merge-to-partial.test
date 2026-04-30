@@ -1,0 +1,177 @@
+# RUN: yaml2obj %s -o %t.obj
+
+# RUN: lld-link /out:%t1.exe /entry:main /subsystem:console \
+# RUN:   '/merge:.section_2=.text$A' '/merge:.section_4=.text$B' \
+# RUN:   '/merge:.section_1=.text$C' '/merge:.section_3=.text$D' \
+# RUN:   '/merge:.section_5=.text$E' '/merge:.section_6=.text$F' %t.obj
+# RUN: llvm-readobj --sections %t1.exe | FileCheck --check-prefix=SECTIONS1 %s
+# RUN: llvm-readobj --hex-dump=.text %t1.exe | FileCheck --check-prefix=TEXT1 %s
+
+# RUN: lld-link /out:%t2.exe /entry:main /subsystem:console \
+# RUN:   '/merge:.section_4=.text$A' '/merge:.section_2=.text$B' \
+# RUN:   '/merge:.section_6=.text$C' '/merge:.section_1=.text$D' \
+# RUN:   '/merge:.section_5=.text$E' '/merge:.section_3=.text$F' %t.obj
+# RUN: llvm-readobj --sections %t2.exe | FileCheck --check-prefix=SECTIONS2 %s
+# RUN: llvm-readobj --hex-dump=.text %t2.exe | FileCheck --check-prefix=TEXT2 %s
+
+# RUN: lld-link /out:%t3.exe /entry:main /subsystem:console \
+# RUN:   '/merge:.section_2=.text$A' '/merge:.section_4=.text$B' \
+# RUN:   '/merge:.section_6=.text$B' '/merge:.section_1=.text$C' \
+# RUN:   '/merge:.section_3=.text$D' '/merge:.section_5=.text$E' %t.obj
+# RUN: llvm-readobj --sections %t3.exe | FileCheck --check-prefix=SECTIONS3 %s
+# RUN: llvm-readobj --hex-dump=.text %t3.exe | FileCheck --check-prefix=TEXT3 %s
+
+# SECTIONS1: Name: .text
+# SECTIONS1-NOT: Name: .text$B
+# SECTIONS1-NOT: Name: .section_1
+# SECTIONS1-NOT: Name: .section_2
+# SECTIONS1-NOT: Name: .section_3
+# SECTIONS1-NOT: Name: .section_4
+# SECTIONS1-NOT: Name: .section_5
+# SECTIONS1-NOT: Name: .section_6
+# TEXT1: aaaaaaaa
+# TEXT1: bbbbbbbb
+# TEXT1: cccccccc
+# TEXT1: dddddddd
+# TEXT1: eeeeeeee
+# TEXT1: ffffffff
+
+# SECTIONS2: Name: .text
+# SECTIONS2-NOT: Name: .text$B
+# SECTIONS2-NOT: Name: .section_1
+# SECTIONS2-NOT: Name: .section_2
+# SECTIONS2-NOT: Name: .section_3
+# SECTIONS2-NOT: Name: .section_4
+# SECTIONS2-NOT: Name: .section_5
+# SECTIONS2-NOT: Name: .section_6
+# TEXT2: bbbbbbbb
+# TEXT2: aaaaaaaa
+# TEXT2: ffffffff
+# TEXT2: cccccccc
+# TEXT2: eeeeeeee
+# TEXT2: dddddddd
+
+# SECTIONS3: Name: .text
+# SECTIONS3-NOT: Name: .text$B
+# SECTIONS3-NOT: Name: .section_1
+# SECTIONS3-NOT: Name: .section_2
+# SECTIONS3-NOT: Name: .section_3
+# SECTIONS3-NOT: Name: .section_4
+# SECTIONS3-NOT: Name: .section_5
+# SECTIONS3-NOT: Name: .section_6
+# TEXT3: aaaaaaaa
+# TEXT3: bbbbbbbb
+# TEXT3: ffffffff
+# TEXT3: cccccccc
+# TEXT3: dddddddd
+# TEXT3: eeeeeeee
+
+--- !COFF
+header:
+  Machine: IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name: .section_1
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment: 1
+    SectionData: CCCCCCCC
+  - Name: .section_2
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment: 1
+    SectionData: AAAAAAAA
+  - Name: .section_3
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment: 1
+    SectionData: DDDDDDDD
+  - Name: .section_4
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    Alignment: 1
+    SectionData: BBBBBBBB
+  - Name: .section_5
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment: 1
+    SectionData: EEEEEEEE
+  - Name: .section_6
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment: 1
+    SectionData: FFFFFFFF
+symbols:
+  - Name: .section_1
+    Value: 0
+    SectionNumber: 1
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length: 4
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum: 0
+      Number: 0
+  - Name: .section_2
+    Value: 0
+    SectionNumber: 2
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length: 4
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum: 0
+      Number: 0
+  - Name: .section_3
+    Value: 0
+    SectionNumber: 3
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length: 4
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum: 0
+      Number: 0
+  - Name: .section_4
+    Value: 0
+    SectionNumber: 4
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length: 4
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum: 0
+      Number: 0
+  - Name: .section_5
+    Value: 0
+    SectionNumber: 5
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length: 4
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum: 0
+      Number: 0
+  - Name: .section_6
+    Value: 0
+    SectionNumber: 6
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length: 4
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum: 0
+      Number: 0
+  - Name: main
+    Value: 0
+    SectionNumber: 1
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL
+...
