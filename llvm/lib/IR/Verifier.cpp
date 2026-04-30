@@ -5751,7 +5751,7 @@ void Verifier::visitInstruction(Instruction &I) {
   }
 
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_fpmath)) {
-    Check(I.getType()->isFPOrFPVectorTy(),
+    Check(FPMathOperator::isSupportedFloatingPointType(I.getType()),
           "fpmath requires a floating point result!", &I);
     Check(MD->getNumOperands() == 1, "fpmath takes one operand!", &I);
     if (ConstantFP *CFP0 =

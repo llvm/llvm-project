@@ -4963,7 +4963,8 @@ void SelectionDAGBuilder::visitMaskedStore(const CallInst &I,
 
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(PtrOperand), MMOFlags,
-      LocationSize::beforeOrAfterPointer(), Alignment, I.getAAMetadata());
+      LocationSize::upperBound(VT.getStoreSize()), Alignment,
+      I.getAAMetadata());
 
   const auto &TLI = DAG.getTargetLoweringInfo();
 
@@ -5122,7 +5123,7 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I, bool IsExpanding) {
 
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(PtrOperand), MMOFlags,
-      VT.getStoreSize(), Alignment, AAInfo, Ranges);
+      LocationSize::upperBound(VT.getStoreSize()), Alignment, AAInfo, Ranges);
 
   const auto &TLI = DAG.getTargetLoweringInfo();
 

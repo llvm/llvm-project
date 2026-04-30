@@ -556,6 +556,7 @@ void Pointer::initialize() const {
   // Field has its bit in an inline descriptor.
   assert(BS.Base != 0 && "Only composite fields can be initialised");
   getInlineDesc()->IsInitialized = true;
+  getInlineDesc()->LifeState = Lifetime::Started;
 }
 
 void Pointer::initializeElement(unsigned Index) const {
@@ -632,6 +633,7 @@ void Pointer::activate() const {
   std::function<void(Pointer &)> activate;
   activate = [&activate](Pointer &P) -> void {
     P.getInlineDesc()->IsActive = true;
+    P.startLifetime();
     if (const Record *R = P.getRecord(); R && !R->isUnion()) {
       for (const Record::Field &F : R->fields()) {
         Pointer FieldPtr = P.atField(F.Offset);

@@ -52,10 +52,75 @@ define i32 @caller(i32 %idx) {
   ret i32 %r
 }
 
+;; Test that multiple 0 GUIDs in value profile data don't cause an assertion
+;; failure. We can end up with multiple zero GUIDs due to the profile loader
+;; failing to find a function mapping for multiple addresses.
+define i32 @caller_dup_guid(i32 %idx) {
+; CHECK-LABEL: define i32 @caller_dup_guid(
+; CHECK-SAME: i32 [[IDX:%.*]]) {
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x ptr], ptr @jt, i32 0, i32 [[IDX]]
+; CHECK-NEXT:    [[FPTR:%.*]] = load ptr, ptr [[GEP]], align 8
+; CHECK-NEXT:    switch i32 [[IDX]], label %[[DEFAULT_SWITCH_CASE_UNREACHABLE:.*]] [
+; CHECK-NEXT:      i32 0, label %[[CALL_0:.*]]
+; CHECK-NEXT:      i32 1, label %[[CALL_1:.*]]
+; CHECK-NEXT:    ], !prof [[PROF1:![0-9]+]]
+; CHECK:       [[DEFAULT_SWITCH_CASE_UNREACHABLE]]:
+; CHECK-NEXT:    unreachable
+; CHECK:       [[CALL_0]]:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @jt_target_0()
+; CHECK-NEXT:    br [[DOTTAIL:label %.*]]
+; CHECK:       [[CALL_1]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @jt_target_1()
+; CHECK-NEXT:    br [[DOTTAIL]]
+; CHECK:       [[_TAIL:.*:]]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi i32 [ [[TMP1]], %[[CALL_0]] ], [ [[TMP2]], %[[CALL_1]] ]
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %gep = getelementptr inbounds [2 x ptr], ptr @jt, i32 0, i32 %idx
+  %fptr = load ptr, ptr %gep
+  %r = call i32 %fptr(), !prof !1
+  ret i32 %r
+}
+
+define i32 @caller_only_zero_guids(i32 %idx) {
+; CHECK-LABEL: define i32 @caller_only_zero_guids(
+; CHECK-SAME: i32 [[IDX:%.*]]) {
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x ptr], ptr @jt, i32 0, i32 [[IDX]]
+; CHECK-NEXT:    [[FPTR:%.*]] = load ptr, ptr [[GEP]], align 8
+; CHECK-NEXT:    switch i32 [[IDX]], label %[[DEFAULT_SWITCH_CASE_UNREACHABLE:.*]] [
+; CHECK-NEXT:      i32 0, label %[[CALL_0:.*]]
+; CHECK-NEXT:      i32 1, label %[[CALL_1:.*]]
+; CHECK-NEXT:    ], !prof [[PROF2:![0-9]+]]
+; CHECK:       [[DEFAULT_SWITCH_CASE_UNREACHABLE]]:
+; CHECK-NEXT:    unreachable
+; CHECK:       [[CALL_0]]:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @jt_target_0()
+; CHECK-NEXT:    br [[DOTTAIL:label %.*]]
+; CHECK:       [[CALL_1]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @jt_target_1()
+; CHECK-NEXT:    br [[DOTTAIL]]
+; CHECK:       [[_TAIL:.*:]]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi i32 [ [[TMP1]], %[[CALL_0]] ], [ [[TMP2]], %[[CALL_1]] ]
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %gep = getelementptr inbounds [2 x ptr], ptr @jt, i32 0, i32 %idx
+  %fptr = load ptr, ptr %gep
+  %r = call i32 %fptr(), !prof !2
+  ret i32 %r
+}
+
 ;; VP metadata: GUID 11912887233601027218 = MD5("jt_target_0"), count 100
 ;;              GUID 18156790114353049777 = MD5("jt_target_1"), count 50
 !0 = !{!"VP", i32 0, i64 150, i64 11912887233601027218, i64 100, i64 18156790114353049777, i64 50}
 
+;; VP metadata with multiple zero values.
+!1 = !{!"VP", i32 0, i64 150, i64 11912887233601027218, i64 60, i64 0, i64 50, i64 0, i64 40}
+
+;; VP metadata with only a zero value.
+!2 = !{!"VP", i32 0, i64 150, i64 0, i64 40}
+
 ;.
 ; CHECK: [[PROF0]] = !{!"branch_weights", i32 0, i32 100, i32 50}
+; CHECK: [[PROF1]] = !{!"branch_weights", i32 0, i32 60, i32 0}
+; CHECK: [[PROF2]] = !{!"unknown", !"jump-table-to-switch"}
 ;.

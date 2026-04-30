@@ -863,6 +863,16 @@ def skipIfLinux(func):
     return skipIfPlatform(["linux"])(func)
 
 
+def skipIfWasm(func):
+    """Decorate the item to skip tests that should be skipped on WebAssembly."""
+    return skipIfPlatform(["wasip1", "wasi"])(func)
+
+
+def skipIfNoSignals(func):
+    """Decorate the item to skip tests on platforms without signal support."""
+    return skipIfPlatform(["windows", "wasip1", "wasi"])(func)
+
+
 def skipIfWindows(func=None, windows_version=None):
     """Decorate the item to skip tests that should be skipped on Windows."""
 
@@ -980,6 +990,27 @@ def skipUnlessPlatform(oslist):
     return unittest.skipUnless(
         lldbplatformutil.getPlatform() in oslist,
         "requires one of %s" % (", ".join(oslist)),
+    )
+
+
+def skipIfTargetDoesNotSupportThreads():
+    """Skip tests that require thread support (e.g. pthreads)."""
+    platform = lldbplatformutil.getPlatform()
+    # WASI targets ending in "-threads" (e.g. wasip1-threads) support threads;
+    # other WASI targets (e.g. wasip1, wasip2) do not.
+    no_threads = platform.startswith("wasi") and not platform.endswith("threads")
+    return unittest.skipIf(
+        no_threads,
+        "threads are not supported on %s" % platform,
+    )
+
+
+def skipIfTargetDoesNotSupportSharedLibraries():
+    """Skip tests that require shared library (dylib/so) support."""
+    platform = lldbplatformutil.getPlatform()
+    return unittest.skipIf(
+        platform.startswith("wasi"),
+        "shared libraries are not supported on %s" % platform,
     )
 
 
@@ -1380,3 +1411,14 @@ def skipUnlessArm64eSupported(func):
         return None
 
     return skipTestIfFn(can_build_and_run_arm64e)(func)
+
+
+def skipUnlessPackageAvailable(name):
+    """Skip the test case if the named package is not available on the system."""
+    available = True
+    try:
+        __import__(name)
+    except ImportError:
+        available = False
+
+    return unittest.skipUnless(available, f"requires the '{name}' package")

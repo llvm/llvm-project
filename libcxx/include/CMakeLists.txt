@@ -731,6 +731,7 @@ set(files
   __ranges/empty_view.h
   __ranges/enable_borrowed_range.h
   __ranges/enable_view.h
+  __ranges/enumerate_view.h
   __ranges/filter_view.h
   __ranges/from_range.h
   __ranges/iota_view.h
@@ -750,6 +751,7 @@ set(files
   __ranges/single_view.h
   __ranges/size.h
   __ranges/split_view.h
+  __ranges/stride_view.h
   __ranges/subrange.h
   __ranges/take_view.h
   __ranges/take_while_view.h
@@ -774,7 +776,6 @@ set(files
   __support/ibm/gettod_zos.h
   __support/ibm/locale_mgmt_zos.h
   __support/ibm/nanosleep.h
-  __support/xlocale/__nop_locale_mgmt.h
   __support/xlocale/__posix_l_fallback.h
   __support/xlocale/__strtonum_fallback.h
   __system_error/errc.h
@@ -928,6 +929,7 @@ set(files
   __utility/as_lvalue.h
   __utility/auto_cast.h
   __utility/cmp.h
+  __utility/constant_wrapper.h
   __utility/convert_to_integral.h
   __utility/declval.h
   __utility/default_three_way_comparator.h

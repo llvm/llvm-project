@@ -17,7 +17,7 @@ end
 !UNPARSE: !$OMP END DO
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: OmpBeginLoopDirective
+!PARSE-TREE: OmpBeginDirective
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = do
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Linear -> OmpLinearClause
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
@@ -41,7 +41,7 @@ end
 !UNPARSE: !$OMP END DO
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: OmpBeginLoopDirective
+!PARSE-TREE: OmpBeginDirective
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = do
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Linear -> OmpLinearClause
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
@@ -67,7 +67,7 @@ end
 !UNPARSE: !$OMP END DO
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: OmpBeginLoopDirective
+!PARSE-TREE: OmpBeginDirective
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = do
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Linear -> OmpLinearClause
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
@@ -87,7 +87,7 @@ end
 !UNPARSE: !$OMP DECLARE SIMD LINEAR(x: UVAL)
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareSimdConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpDeclareSimdDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare simd
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Linear -> OmpLinearClause
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
@@ -105,7 +105,7 @@ end
 !UNPARSE: !$OMP DECLARE SIMD LINEAR(x: UVAL, STEP(3_4))
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareSimdConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpDeclareSimdDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare simd
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Linear -> OmpLinearClause
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'

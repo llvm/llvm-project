@@ -15,28 +15,17 @@ define i8 @ctz_v8i16(<8 x i16> %a) {
 ; CHECK-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-NEXT:    pcmpeqw %xmm0, %xmm1
 ; CHECK-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; CHECK-NEXT:    pextrw $1, %xmm1, %ecx
-; CHECK-NEXT:    movd %xmm1, %eax
-; CHECK-NEXT:    cmpw %cx, %ax
-; CHECK-NEXT:    cmoval %eax, %ecx
-; CHECK-NEXT:    pextrw $2, %xmm1, %eax
-; CHECK-NEXT:    cmpw %ax, %cx
-; CHECK-NEXT:    cmovbel %eax, %ecx
-; CHECK-NEXT:    pextrw $3, %xmm1, %eax
-; CHECK-NEXT:    cmpw %ax, %cx
-; CHECK-NEXT:    cmovbel %eax, %ecx
-; CHECK-NEXT:    pextrw $4, %xmm1, %eax
-; CHECK-NEXT:    cmpw %ax, %cx
-; CHECK-NEXT:    cmovbel %eax, %ecx
-; CHECK-NEXT:    pextrw $5, %xmm1, %eax
-; CHECK-NEXT:    cmpw %ax, %cx
-; CHECK-NEXT:    cmovbel %eax, %ecx
-; CHECK-NEXT:    pextrw $6, %xmm1, %eax
-; CHECK-NEXT:    cmpw %ax, %cx
-; CHECK-NEXT:    cmovbel %eax, %ecx
-; CHECK-NEXT:    pextrw $7, %xmm1, %eax
-; CHECK-NEXT:    cmpw %ax, %cx
-; CHECK-NEXT:    cmovbel %eax, %ecx
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
+; CHECK-NEXT:    psubusw %xmm1, %xmm0
+; CHECK-NEXT:    paddw %xmm1, %xmm0
+; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; CHECK-NEXT:    psubusw %xmm0, %xmm1
+; CHECK-NEXT:    paddw %xmm0, %xmm1
+; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    psrld $16, %xmm0
+; CHECK-NEXT:    psubusw %xmm1, %xmm0
+; CHECK-NEXT:    paddw %xmm1, %xmm0
+; CHECK-NEXT:    movd %xmm0, %ecx
 ; CHECK-NEXT:    movl $8, %eax
 ; CHECK-NEXT:    subl %ecx, %eax
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
@@ -94,28 +83,17 @@ define i8 @ctz_v8i16_poison(<8 x i16> %a) {
 ; CHECK-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-NEXT:    pcmpeqw %xmm0, %xmm1
 ; CHECK-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; CHECK-NEXT:    pextrw $1, %xmm1, %ecx
-; CHECK-NEXT:    movd %xmm1, %eax
-; CHECK-NEXT:    cmpw %cx, %ax
-; CHECK-NEXT:    cmoval %eax, %ecx
-; CHECK-NEXT:    pextrw $2, %xmm1, %eax
-; CHECK-NEXT:    cmpw %ax, %cx
-; CHECK-NEXT:    cmovbel %eax, %ecx
-; CHECK-NEXT:    pextrw $3, %xmm1, %eax
-; CHECK-NEXT:    cmpw %ax, %cx
-; CHECK-NEXT:    cmovbel %eax, %ecx
-; CHECK-NEXT:    pextrw $4, %xmm1, %eax
-; CHECK-NEXT:    cmpw %ax, %cx
-; CHECK-NEXT:    cmovbel %eax, %ecx
-; CHECK-NEXT:    pextrw $5, %xmm1, %eax
-; CHECK-NEXT:    cmpw %ax, %cx
-; CHECK-NEXT:    cmovbel %eax, %ecx
-; CHECK-NEXT:    pextrw $6, %xmm1, %eax
-; CHECK-NEXT:    cmpw %ax, %cx
-; CHECK-NEXT:    cmovbel %eax, %ecx
-; CHECK-NEXT:    pextrw $7, %xmm1, %eax
-; CHECK-NEXT:    cmpw %ax, %cx
-; CHECK-NEXT:    cmovbel %eax, %ecx
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
+; CHECK-NEXT:    psubusw %xmm1, %xmm0
+; CHECK-NEXT:    paddw %xmm1, %xmm0
+; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; CHECK-NEXT:    psubusw %xmm0, %xmm1
+; CHECK-NEXT:    paddw %xmm0, %xmm1
+; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    psrld $16, %xmm0
+; CHECK-NEXT:    psubusw %xmm1, %xmm0
+; CHECK-NEXT:    paddw %xmm1, %xmm0
+; CHECK-NEXT:    movd %xmm0, %ecx
 ; CHECK-NEXT:    movl $8, %eax
 ; CHECK-NEXT:    subl %ecx, %eax
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax

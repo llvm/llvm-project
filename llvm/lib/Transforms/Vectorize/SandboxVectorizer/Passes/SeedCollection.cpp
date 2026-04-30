@@ -48,15 +48,17 @@ SeedCollection::SeedCollection(StringRef Pipeline, StringRef AuxArg)
   }
 }
 
+static unsigned getAddressSpace(const Instruction *I) {
+  if (auto *LI = dyn_cast<LoadInst>(I))
+    return LI->getPointerAddressSpace();
+  if (auto *SI = dyn_cast<StoreInst>(I))
+    return SI->getPointerAddressSpace();
+  return 0;
+}
+
 bool SeedCollection::runOnFunction(Function &F, const Analyses &A) {
   bool Change = false;
   const auto &DL = F.getParent()->getDataLayout();
-  unsigned VecRegBits =
-      OverrideVecRegBits != 0
-          ? OverrideVecRegBits
-          : A.getTTI()
-                .getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector)
-                .getFixedValue();
   bool CollectStores = CollectSeeds.find(StoreSeedsDef) != std::string::npos;
   bool CollectLoads = CollectSeeds.find(LoadSeedsDef) != std::string::npos;
 
@@ -69,6 +71,10 @@ bool SeedCollection::runOnFunction(Function &F, const Analyses &A) {
           Utils::getNumBits(VecUtils::getElementType(Utils::getExpectedType(
                                 Seeds[Seeds.getFirstUnusedElementIdx()])),
                             DL);
+      unsigned AS = getAddressSpace(Seeds[0]);
+      unsigned VecRegBits = OverrideVecRegBits != 0
+                                ? OverrideVecRegBits
+                                : A.getTTI().getLoadStoreVecRegBitWidth(AS);
 
       auto DivideBy2 = [](unsigned Num) {
         auto Floor = VecUtils::getFloorPowerOf2(Num);

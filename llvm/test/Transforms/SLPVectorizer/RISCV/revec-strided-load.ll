@@ -23,12 +23,9 @@ entry:
 define void @widened_strided_load_runtime(ptr %in0, ptr %out0, i64 %stride) {
 ; CHECK-LABEL: @widened_strided_load_runtime(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[IN1:%.*]] = getelementptr <8 x i8>, ptr [[IN0:%.*]], i64 [[STRIDE:%.*]]
-; CHECK-NEXT:    [[L0:%.*]] = load <8 x i8>, ptr [[IN0]], align 2
-; CHECK-NEXT:    [[L1:%.*]] = load <8 x i8>, ptr [[IN1]], align 2
-; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <8 x i8> [[L0]], <8 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i8> [[L1]], <8 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i8> [[TMP0]], <16 x i8> [[TMP1]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
+; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[STRIDE:%.*]], 8
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i64> @llvm.experimental.vp.strided.load.v2i64.p0.i64(ptr align 2 [[IN0:%.*]], i64 [[TMP0]], <2 x i1> splat (i1 true), i32 2)
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP1]] to <16 x i8>
 ; CHECK-NEXT:    store <16 x i8> [[TMP2]], ptr [[OUT0:%.*]], align 2
 ; CHECK-NEXT:    ret void
 ;
@@ -47,7 +44,8 @@ define void @widened_strided_load_runtime_more_elements(ptr %in0, ptr %out0, i64
 ; CHECK-LABEL: @widened_strided_load_runtime_more_elements(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[STRIDE:%.*]], 2
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i8> @llvm.experimental.vp.strided.load.v8i8.p0.i64(ptr align 2 [[IN0:%.*]], i64 [[TMP0]], <8 x i1> splat (i1 true), i32 8)
+; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i16> @llvm.experimental.vp.strided.load.v4i16.p0.i64(ptr align 2 [[IN0:%.*]], i64 [[TMP0]], <4 x i1> splat (i1 true), i32 4)
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[TMP2]] to <8 x i8>
 ; CHECK-NEXT:    store <8 x i8> [[TMP1]], ptr [[OUT0:%.*]], align 2
 ; CHECK-NEXT:    ret void
 ;
@@ -99,12 +97,9 @@ entry:
 define void @doubly_widened_strided_load_runtime(ptr %in0, ptr %out0, i64 %stride) {
 ; CHECK-LABEL: @doubly_widened_strided_load_runtime(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[IN2:%.*]] = getelementptr <2 x i8>, ptr [[IN0:%.*]], i64 [[STRIDE:%.*]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i8>, ptr [[IN0]], align 2
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[IN2]], align 2
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i8> [[TMP0]], <4 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i8> [[TMP1]], <4 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i8> [[TMP0]], <4 x i8> [[TMP1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[STRIDE:%.*]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.experimental.vp.strided.load.v2i32.p0.i64(ptr align 2 [[IN0:%.*]], i64 [[TMP0]], <2 x i1> splat (i1 true), i32 2)
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i32> [[TMP1]] to <8 x i8>
 ; CHECK-NEXT:    store <8 x i8> [[TMP4]], ptr [[OUT0:%.*]], align 2
 ; CHECK-NEXT:    ret void
 ;
