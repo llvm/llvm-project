@@ -117,7 +117,7 @@ void initLock(omp_lock_t *Lock) { unsetLock(Lock); }
 void destroyLock(omp_lock_t *Lock) { unsetLock(Lock); }
 
 void setLock(omp_lock_t *Lock) {
-  uint64_t lowestActiveThread = utils::ffs(mapping::activemask()) - 1;
+  uint64_t lowestActiveThread = utils::ctz(mapping::activemask()) - 1;
   if (mapping::getThreadIdInWarp() == lowestActiveThread) {
     while (!atomic::cas((uint32_t *)Lock, UNSET, SET, atomic::seq_cst,
                         atomic::seq_cst, atomic::MemScopeTy::system)) {
@@ -133,7 +133,7 @@ void unsetCriticalLock(omp_lock_t *Lock) {
 }
 
 void setCriticalLock(omp_lock_t *Lock) {
-  uint64_t LowestActiveThread = utils::ffs(mapping::activemask()) - 1;
+  uint64_t LowestActiveThread = utils::ctz(mapping::activemask());
   if (mapping::getThreadIdInWarp() == LowestActiveThread) {
     fence::kernel(atomic::release);
     while (
