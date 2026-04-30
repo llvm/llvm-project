@@ -75,10 +75,10 @@ define fp128 @exchange_fp128(ptr %fptr, fp128 %x) {
 ; X64-SSE-NEXT:  .LBB2_1: # %atomicrmw.start
 ; X64-SSE-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X64-SSE-NEXT:    lock cmpxchg16b (%rdi)
+; X64-SSE-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
+; X64-SSE-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; X64-SSE-NEXT:    jne .LBB2_1
 ; X64-SSE-NEXT:  # %bb.2: # %atomicrmw.end
-; X64-SSE-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
-; X64-SSE-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
 ; X64-SSE-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm0
 ; X64-SSE-NEXT:    popq %rbx
 ; X64-SSE-NEXT:    .cfi_def_cfa_offset 8
@@ -98,10 +98,10 @@ define fp128 @exchange_fp128(ptr %fptr, fp128 %x) {
 ; X64-AVX-NEXT:  .LBB2_1: # %atomicrmw.start
 ; X64-AVX-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X64-AVX-NEXT:    lock cmpxchg16b (%rdi)
+; X64-AVX-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
+; X64-AVX-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; X64-AVX-NEXT:    jne .LBB2_1
 ; X64-AVX-NEXT:  # %bb.2: # %atomicrmw.end
-; X64-AVX-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
-; X64-AVX-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
 ; X64-AVX-NEXT:    vmovaps -{{[0-9]+}}(%rsp), %xmm0
 ; X64-AVX-NEXT:    popq %rbx
 ; X64-AVX-NEXT:    .cfi_def_cfa_offset 8

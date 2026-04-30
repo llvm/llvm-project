@@ -1485,6 +1485,43 @@ static bool SinkCast(CastInst *CI) {
   return MadeChange;
 }
 
+/// Hoists bitcasts to the source block to reduce register pressure.
+static bool optimizeBitCast(BitCastInst *BCI, const TargetLowering &TLI,
+                            const DataLayout &DL) {
+  auto *SrcInst = dyn_cast<Instruction>(BCI->getOperand(0));
+  if (!SrcInst)
+    return false;
+
+  // Identify the target scenario.
+  bool IsCrossBlock = (SrcInst->getParent() != BCI->getParent());
+  bool IsMovable = !SrcInst->isTerminator();
+  bool IsSameSize = DL.getTypeSizeInBits(SrcInst->getType()) ==
+                    DL.getTypeSizeInBits(BCI->getType());
+
+  if (!IsCrossBlock || !IsMovable || !IsSameSize)
+    return false;
+
+  // Evaluate the benefit.
+  EVT SrcVT = TLI.getValueType(DL, SrcInst->getType());
+  EVT DestVT = TLI.getValueType(DL, BCI->getType());
+
+  unsigned SrcRegs = TLI.getNumRegisters(BCI->getContext(), SrcVT);
+  unsigned DestRegs = TLI.getNumRegisters(BCI->getContext(), DestVT);
+
+  // Only hoist if the target vector is hardware-legal and it saves registers.
+  if (!TLI.isTypeLegal(DestVT) || SrcRegs <= DestRegs)
+    return false;
+
+  // Move the bitcast. If the source is a PHI, we must insert after the
+  // PHI block to maintain SSA integrity.
+  BasicBlock *SrcBB = SrcInst->getParent();
+  auto InsertPt = isa<PHINode>(SrcInst) ? SrcBB->getFirstInsertionPt()
+                                        : std::next(SrcInst->getIterator());
+
+  BCI->moveBefore(*SrcBB, InsertPt);
+  return true;
+}
+
 /// If the specified cast instruction is a noop copy (e.g. it's casting from
 /// one pointer type to another, i32->i8 on PPC), sink it into user blocks to
 /// reduce the number of virtual registers that must be created and coalesced.
@@ -8937,6 +8974,15 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
     // evaluation in a block other than then one that uses it (e.g. to hoist
     // the address of globals out of a loop).  If this is the case, we don't
     // want to forward-subst the cast.
+
+    if (auto *BCI = dyn_cast<BitCastInst>(CI)) {
+      // Hoist bitcasts of illegal integers to legal types to prevent
+      // cross-block register pressure and splitting.
+      if (optimizeBitCast(BCI, *TLI, *DL)) {
+        return true;
+      }
+    }
+
     if (isa<Constant>(CI->getOperand(0)))
       return AnyChange;
 
