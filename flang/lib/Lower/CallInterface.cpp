@@ -718,12 +718,18 @@ void Fortran::lower::CallInterface<T>::declare() {
       setCUDAAttributes(func, side().getProcedureSymbol(), characteristic);
 
       if (const Fortran::semantics::Symbol *sym = side().getProcedureSymbol()) {
-        if (const auto &info{
-                sym->GetUltimate()
-                    .detailsIf<Fortran::semantics::SubprogramDetails>()}) {
-          if (!info->openACCRoutineInfos().empty()) {
+        const Fortran::semantics::Symbol &ultimate{sym->GetUltimate()};
+        if (const auto *subpDetails{
+                ultimate.detailsIf<Fortran::semantics::SubprogramDetails>()}) {
+          if (!subpDetails->openACCRoutineInfos().empty()) {
             genOpenACCRoutineConstruct(converter, module, func,
-                                       info->openACCRoutineInfos());
+                                       subpDetails->openACCRoutineInfos());
+          }
+        } else if (const auto *procDetails{ultimate.detailsIf<
+                       Fortran::semantics::ProcEntityDetails>()}) {
+          if (!procDetails->openACCRoutineInfos().empty()) {
+            genOpenACCRoutineConstruct(converter, module, func,
+                                       procDetails->openACCRoutineInfos());
           }
         }
       }
@@ -1579,9 +1585,14 @@ Fortran::lower::CallInterface<T>::getProcedureAttrs(
       if (sym->attrs().test(Fortran::semantics::Attr::NON_RECURSIVE) ||
           (sym->owner().context().languageFeatures().IsEnabled(
                Fortran::common::LanguageFeature::DefaultSave) &&
-           !sym->attrs().test(Fortran::semantics::Attr::RECURSIVE))) {
+           !sym->attrs().test(Fortran::semantics::Attr::RECURSIVE)))
         flags = flags | fir::FortranProcedureFlagsEnum::non_recursive;
-      }
+
+      // Set RECURSIVE if the attribute is explicitly present.  This is only
+      // used for debug info generation to maintain consistency with pre-F2018
+      // compilers.
+      if (sym->attrs().test(Fortran::semantics::Attr::RECURSIVE))
+        flags = flags | fir::FortranProcedureFlagsEnum::recursive;
     }
   }
   if (flags != fir::FortranProcedureFlagsEnum::none)

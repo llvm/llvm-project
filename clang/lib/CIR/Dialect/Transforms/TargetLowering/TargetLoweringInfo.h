@@ -1,0 +1,43 @@
+//===---- TargetLoweringInfo.h - Encapsulate target details -----*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file partially mimics the TargetCodeGenInfo class from the file
+// clang/lib/CodeGen/TargetInfo.h.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_CLANG_LIB_CIR_DIALECT_TRANSFORMS_TARGETLOWERING_TARGETLOWERINGINFO_H
+#define LLVM_CLANG_LIB_CIR_DIALECT_TRANSFORMS_TARGETLOWERING_TARGETLOWERINGINFO_H
+
+#include "clang/CIR/Dialect/IR/CIROpsEnums.h"
+#include <memory>
+#include <string>
+
+namespace cir {
+
+class TargetLoweringInfo {
+public:
+  virtual ~TargetLoweringInfo();
+
+  virtual cir::SyncScopeKind
+  convertSyncScope(cir::SyncScopeKind syncScope) const;
+
+  virtual unsigned
+  getTargetAddrSpaceFromCIRAddrSpace(cir::LangAddressSpace addrSpace) const {
+    return 0;
+  };
+};
+
+// Target-specific factory functions.
+std::unique_ptr<TargetLoweringInfo> createAMDGPUTargetLoweringInfo();
+
+std::unique_ptr<TargetLoweringInfo> createNVPTXTargetLoweringInfo();
+
+} // namespace cir
+
+#endif

@@ -101,10 +101,9 @@ public:
   const GCNSubtarget &ST;
   const AMDGPUTargetMachine &TM;
   const TargetLibraryInfo *TLI;
-  AssumptionCache *AC;
-  const DominatorTree *DT;
   const UniformityInfo &UA;
   const DataLayout &DL;
+  SimplifyQuery SQ;
   const bool HasFP32DenormalFlush;
   bool FlowChanged = false;
   mutable Function *SqrtF32 = nullptr;
@@ -116,8 +115,8 @@ public:
   AMDGPUCodeGenPrepareImpl(Function &F, const AMDGPUTargetMachine &TM,
                            const TargetLibraryInfo *TLI, AssumptionCache *AC,
                            const DominatorTree *DT, const UniformityInfo &UA)
-      : F(F), ST(TM.getSubtarget<GCNSubtarget>(F)), TM(TM), TLI(TLI), AC(AC),
-        DT(DT), UA(UA), DL(F.getDataLayout()),
+      : F(F), ST(TM.getSubtarget<GCNSubtarget>(F)), TM(TM), TLI(TLI), UA(UA),
+        DL(F.getDataLayout()), SQ(DL, TLI, DT, AC),
         HasFP32DenormalFlush(SIModeRegisterDefaults(F, ST).FP32Denormals ==
                              DenormalMode::getPreserveSign()) {}
 
@@ -150,7 +149,8 @@ public:
   /// Wrapper to pass all the arguments to computeKnownFPClass
   KnownFPClass computeKnownFPClass(const Value *V, FPClassTest Interested,
                                    const Instruction *CtxI) const {
-    return llvm::computeKnownFPClass(V, DL, Interested, TLI, AC, CtxI, DT);
+    return llvm::computeKnownFPClass(V, Interested,
+                                     SQ.getWithInstruction(CtxI));
   }
 
   bool canIgnoreDenormalInput(const Value *V, const Instruction *CtxI) const {
@@ -161,12 +161,12 @@ public:
   /// \returns The minimum number of bits needed to store the value of \Op as an
   /// unsigned integer. Truncating to this size and then zero-extending to
   /// the original will not change the value.
-  unsigned numBitsUnsigned(Value *Op) const;
+  unsigned numBitsUnsigned(Value *Op, const Instruction *CtxI) const;
 
   /// \returns The minimum number of bits needed to store the value of \Op as a
   /// signed integer. Truncating to this size and then sign-extending to
   /// the original size will not change the value.
-  unsigned numBitsSigned(Value *Op) const;
+  unsigned numBitsSigned(Value *Op, const Instruction *CtxI) const;
 
   /// Replace mul instructions with llvm.amdgcn.mul.u24 or llvm.amdgcn.mul.s24.
   /// SelectionDAG has an issue where an and asserting the bits are known
@@ -208,7 +208,8 @@ public:
 
   bool canWidenScalarExtLoad(LoadInst &I) const;
 
-  Value *matchFractPat(IntrinsicInst &I);
+  Value *matchFractPatImpl(Value &V, const APFloat &C) const;
+  Value *matchFractPatNanAvoidant(Value &V);
   Value *applyFractPat(IRBuilder<> &Builder, Value *FractArg);
 
   bool canOptimizeWithRsq(FastMathFlags DivFMF, FastMathFlags SqrtFMF) const;
@@ -260,6 +261,7 @@ public:
   bool visitIntrinsicInst(IntrinsicInst &I);
   bool visitFMinLike(IntrinsicInst &I);
   bool visitSqrt(IntrinsicInst &I);
+  bool visitLog(FPMathOperator &Log, Intrinsic::ID IID);
   bool visitMbcntLo(IntrinsicInst &I) const;
   bool visitMbcntHi(IntrinsicInst &I) const;
   bool run();
@@ -319,12 +321,16 @@ bool AMDGPUCodeGenPrepareImpl::canWidenScalarExtLoad(LoadInst &I) const {
   return I.isSimple() && TySize < 32 && Alignment >= 4 && UA.isUniform(&I);
 }
 
-unsigned AMDGPUCodeGenPrepareImpl::numBitsUnsigned(Value *Op) const {
-  return computeKnownBits(Op, DL, AC).countMaxActiveBits();
+unsigned
+AMDGPUCodeGenPrepareImpl::numBitsUnsigned(Value *Op,
+                                          const Instruction *CtxI) const {
+  return computeKnownBits(Op, SQ.getWithInstruction(CtxI)).countMaxActiveBits();
 }
 
-unsigned AMDGPUCodeGenPrepareImpl::numBitsSigned(Value *Op) const {
-  return ComputeMaxSignificantBits(Op, DL, AC);
+unsigned
+AMDGPUCodeGenPrepareImpl::numBitsSigned(Value *Op,
+                                        const Instruction *CtxI) const {
+  return ComputeMaxSignificantBits(Op, SQ.DL, SQ.AC, CtxI, SQ.DT);
 }
 
 static void extractValues(IRBuilder<> &Builder,
@@ -375,12 +381,12 @@ bool AMDGPUCodeGenPrepareImpl::replaceMulWithMul24(BinaryOperator &I) const {
   unsigned LHSBits = 0, RHSBits = 0;
   bool IsSigned = false;
 
-  if (ST.hasMulU24() && (LHSBits = numBitsUnsigned(LHS)) <= 24 &&
-      (RHSBits = numBitsUnsigned(RHS)) <= 24) {
+  if (ST.hasMulU24() && (LHSBits = numBitsUnsigned(LHS, &I)) <= 24 &&
+      (RHSBits = numBitsUnsigned(RHS, &I)) <= 24) {
     IsSigned = false;
 
-  } else if (ST.hasMulI24() && (LHSBits = numBitsSigned(LHS)) <= 24 &&
-             (RHSBits = numBitsSigned(RHS)) <= 24) {
+  } else if (ST.hasMulI24() && (LHSBits = numBitsSigned(LHS, &I)) <= 24 &&
+             (RHSBits = numBitsSigned(RHS, &I)) <= 24) {
     IsSigned = true;
 
   } else
@@ -1019,13 +1025,13 @@ unsigned AMDGPUCodeGenPrepareImpl::getDivNumBits(BinaryOperator &I, Value *Num,
          Den->getType()->getScalarSizeInBits());
   unsigned SSBits = Num->getType()->getScalarSizeInBits();
   if (IsSigned) {
-    unsigned RHSSignBits = ComputeNumSignBits(Den, DL, AC, &I);
+    unsigned RHSSignBits = ComputeNumSignBits(Den, SQ.DL, SQ.AC, &I, SQ.DT);
     // A sign bit needs to be reserved for shrinking.
     unsigned DivBits = SSBits - RHSSignBits + 1;
     if (DivBits > MaxDivBits)
       return SSBits;
 
-    unsigned LHSSignBits = ComputeNumSignBits(Num, DL, AC, &I);
+    unsigned LHSSignBits = ComputeNumSignBits(Num, SQ.DL, SQ.AC, &I);
 
     unsigned SignBits = std::min(LHSSignBits, RHSSignBits);
     DivBits = SSBits - SignBits + 1;
@@ -1034,7 +1040,7 @@ unsigned AMDGPUCodeGenPrepareImpl::getDivNumBits(BinaryOperator &I, Value *Num,
 
   // All bits are used for unsigned division for Num or Den in range
   // (SignedMax, UnsignedMax].
-  KnownBits Known = computeKnownBits(Den, DL, AC, &I);
+  KnownBits Known = computeKnownBits(Den, SQ.getWithInstruction(&I));
   if (Known.isNegative() || !Known.isNonNegative())
     return SSBits;
   unsigned RHSSignBits = Known.countMinLeadingZeros();
@@ -1042,7 +1048,7 @@ unsigned AMDGPUCodeGenPrepareImpl::getDivNumBits(BinaryOperator &I, Value *Num,
   if (DivBits > MaxDivBits)
     return SSBits;
 
-  Known = computeKnownBits(Num, DL, AC, &I);
+  Known = computeKnownBits(Num, SQ.getWithInstruction(&I));
   if (Known.isNegative() || !Known.isNonNegative())
     return SSBits;
   unsigned LHSSignBits = Known.countMinLeadingZeros();
@@ -1123,10 +1129,10 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRem24Impl(
                        : Builder.CreateFPToUI(FQ, I32Ty);
 
   // fr = fabs(fr);
-  FR = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, FR, FQ);
+  FR = Builder.CreateFAbs(FR, FQ);
 
   // fb = fabs(fb);
-  FB = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, FB, FQ);
+  FB = Builder.CreateFAbs(FB, FQ);
 
   // int cv = fr >= fb;
   Value *CV = Builder.CreateFCmpOGE(FR, FB);
@@ -1179,7 +1185,7 @@ bool AMDGPUCodeGenPrepareImpl::divHasSpecialOptimization(BinaryOperator &I,
     // If there's no wider mulhi, there's only a better expansion for powers of
     // two.
     // TODO: Should really know for each vector element.
-    if (isKnownToBeAPowerOfTwo(C, DL, true, AC, &I, DT))
+    if (isKnownToBeAPowerOfTwo(C, true, SQ.getWithInstruction(&I)))
       return true;
 
     return false;
@@ -1189,7 +1195,8 @@ bool AMDGPUCodeGenPrepareImpl::divHasSpecialOptimization(BinaryOperator &I,
     // fold (udiv x, (shl c, y)) -> x >>u (log2(c)+y) iff c is power of 2
     if (BinOpDen->getOpcode() == Instruction::Shl &&
         isa<Constant>(BinOpDen->getOperand(0)) &&
-        isKnownToBeAPowerOfTwo(BinOpDen->getOperand(0), DL, true, AC, &I, DT)) {
+        isKnownToBeAPowerOfTwo(BinOpDen->getOperand(0), true,
+                               SQ.getWithInstruction(&I))) {
       return true;
     }
   }
@@ -1585,37 +1592,85 @@ bool AMDGPUCodeGenPrepareImpl::visitLoadInst(LoadInst &I) {
 }
 
 bool AMDGPUCodeGenPrepareImpl::visitSelectInst(SelectInst &I) {
-  Value *Cond = I.getCondition();
-  Value *TrueVal = I.getTrueValue();
-  Value *FalseVal = I.getFalseValue();
-  Value *CmpVal;
-  CmpPredicate Pred;
-
-  // Match fract pattern with nan check.
-  if (!match(Cond, m_FCmp(Pred, m_Value(CmpVal), m_NonNaN())))
-    return false;
-
   FPMathOperator *FPOp = dyn_cast<FPMathOperator>(&I);
   if (!FPOp)
     return false;
 
-  IRBuilder<> Builder(&I);
-  Builder.setFastMathFlags(FPOp->getFastMathFlags());
-
-  auto *IITrue = dyn_cast<IntrinsicInst>(TrueVal);
-  auto *IIFalse = dyn_cast<IntrinsicInst>(FalseVal);
-
+  Value *X;
   Value *Fract = nullptr;
-  if (Pred == FCmpInst::FCMP_UNO && TrueVal == CmpVal && IIFalse &&
-      CmpVal == matchFractPat(*IIFalse)) {
-    // isnan(x) ? x : fract(x)
-    Fract = applyFractPat(Builder, CmpVal);
-  } else if (Pred == FCmpInst::FCMP_ORD && FalseVal == CmpVal && IITrue &&
-             CmpVal == matchFractPat(*IITrue)) {
-    // !isnan(x) ? fract(x) : x
-    Fract = applyFractPat(Builder, CmpVal);
-  } else
-    return false;
+
+  // Match:
+  //   (x - floor(x)) >= MIN_CONSTANT ? MIN_CONSTANT : (x - floor(x))
+  //
+  // This is the preferred way to implement fract.
+  // TODO: Could also match with compare against 1.0
+  const APFloat *C;
+  if (match(&I, m_UnordFMin(m_Value(X), m_APFloatAllowPoison(C)))) {
+    Value *FractSrc = matchFractPatImpl(*X, *C);
+    if (!FractSrc)
+      return false;
+    IRBuilder<> Builder(&I);
+    Builder.setFastMathFlags(FPOp->getFastMathFlags());
+    Fract = applyFractPat(Builder, FractSrc);
+  } else {
+    // Match patterns which may appear in legacy implementations of the fract()
+    // function, built around the nan-avoidant minnum intrinsic. These are the
+    // core pattern plus additional clamping of inf and nan values on the
+    // result.
+    Value *Cond = I.getCondition();
+    Value *TrueVal = I.getTrueValue();
+    Value *FalseVal = I.getFalseValue();
+    Value *CmpVal;
+    CmpPredicate IsNanPred;
+
+    // Match fract pattern with nan check.
+    if (!match(Cond, m_FCmp(IsNanPred, m_Value(CmpVal), m_NonNaN())))
+      return false;
+
+    IRBuilder<> Builder(&I);
+    Builder.setFastMathFlags(FPOp->getFastMathFlags());
+
+    if (IsNanPred == FCmpInst::FCMP_UNO && TrueVal == CmpVal &&
+        CmpVal == matchFractPatNanAvoidant(*FalseVal)) {
+      // isnan(x) ? x : fract(x)
+      Fract = applyFractPat(Builder, CmpVal);
+    } else if (IsNanPred == FCmpInst::FCMP_ORD && FalseVal == CmpVal) {
+      if (CmpVal == matchFractPatNanAvoidant(*TrueVal)) {
+        // !isnan(x) ? fract(x) : x
+        Fract = applyFractPat(Builder, CmpVal);
+      } else {
+        // Match an intermediate clamp infinity to 0 pattern. i.e.
+        // !isnan(x) ? (!isinf(x) ? fract(x) : 0.0) : x
+        CmpPredicate PredInf;
+        Value *IfNotInf;
+
+        if (!match(TrueVal, m_Select(m_FCmp(PredInf, m_FAbs(m_Specific(CmpVal)),
+                                            m_PosInf()),
+                                     m_Value(IfNotInf), m_PosZeroFP())) ||
+            PredInf != FCmpInst::FCMP_UNE ||
+            CmpVal != matchFractPatNanAvoidant(*IfNotInf))
+          return false;
+
+        SelectInst *ClampInfSelect = cast<SelectInst>(TrueVal);
+
+        // Insert before the fabs
+        Value *InsertPt =
+            cast<Instruction>(ClampInfSelect->getCondition())->getOperand(0);
+
+        Builder.SetInsertPoint(cast<Instruction>(InsertPt));
+        Value *NewFract = applyFractPat(Builder, CmpVal);
+        NewFract->takeName(TrueVal);
+
+        // Thread the new fract into the inf clamping sequence.
+        DeadVals.push_back(ClampInfSelect->getOperand(1));
+        ClampInfSelect->setOperand(1, NewFract);
+
+        // The outer select nan handling is also absorbed into the fract.
+        Fract = ClampInfSelect;
+      }
+    } else
+      return false;
+  }
 
   Fract->takeName(&I);
   I.replaceAllUsesWith(Fract);
@@ -1947,7 +2002,7 @@ static bool isPtrKnownNeverNull(const Value *V, const DataLayout &DL,
   // TODO: Use ValueTracking's isKnownNeverNull if it becomes aware that some
   // address spaces have non-zero null values.
   auto SrcPtrKB = computeKnownBits(V, DL);
-  const auto NullVal = TM.getNullPointerValue(AS);
+  const auto NullVal = AMDGPU::getNullPointerValue(AS);
 
   assert(SrcPtrKB.getBitWidth() == DL.getPointerSizeInBits(AS));
   assert((NullVal == 0 || NullVal == -1) &&
@@ -1993,13 +2048,20 @@ bool AMDGPUCodeGenPrepareImpl::visitAddrSpaceCastInst(AddrSpaceCastInst &I) {
 }
 
 bool AMDGPUCodeGenPrepareImpl::visitIntrinsicInst(IntrinsicInst &I) {
-  switch (I.getIntrinsicID()) {
+  Intrinsic::ID IID = I.getIntrinsicID();
+  switch (IID) {
   case Intrinsic::minnum:
   case Intrinsic::minimumnum:
   case Intrinsic::minimum:
     return visitFMinLike(I);
   case Intrinsic::sqrt:
     return visitSqrt(I);
+  case Intrinsic::log:
+  case Intrinsic::log10:
+    return visitLog(cast<FPMathOperator>(I), IID);
+  case Intrinsic::log2:
+    // No reason to handle log2.
+    return false;
   case Intrinsic::amdgcn_mbcnt_lo:
     return visitMbcntLo(I);
   case Intrinsic::amdgcn_mbcnt_hi:
@@ -2009,50 +2071,54 @@ bool AMDGPUCodeGenPrepareImpl::visitIntrinsicInst(IntrinsicInst &I) {
   }
 }
 
-/// Match non-nan fract pattern.
-///   minnum(fsub(x, floor(x)), nextafter(1.0, -1.0))
-///   minimumnum(fsub(x, floor(x)), nextafter(1.0, -1.0))
-///   minimum(fsub(x, floor(x)), nextafter(1.0, -1.0))
-///
-/// If fract is a useful instruction for the subtarget. Does not account for the
-/// nan handling; the instruction has a nan check on the input value.
-Value *AMDGPUCodeGenPrepareImpl::matchFractPat(IntrinsicInst &I) {
+/// Match the core sequence in the fract pattern (x - floor(x), which doesn't
+/// need to consider edge case handling.
+Value *AMDGPUCodeGenPrepareImpl::matchFractPatImpl(Value &FractSrc,
+                                                   const APFloat &C) const {
   if (ST.hasFractBug())
     return nullptr;
 
-  Intrinsic::ID IID = I.getIntrinsicID();
-
-  // The value is only used in contexts where we know the input isn't a nan, so
-  // any of the fmin variants are fine.
-  if (IID != Intrinsic::minnum && IID != Intrinsic::minimum &&
-      IID != Intrinsic::minimumnum)
-    return nullptr;
-
-  Type *Ty = I.getType();
+  Type *Ty = FractSrc.getType();
   if (!isLegalFloatingTy(Ty->getScalarType()))
     return nullptr;
 
-  Value *Arg0 = I.getArgOperand(0);
-  Value *Arg1 = I.getArgOperand(1);
-
-  const APFloat *C;
-  if (!match(Arg1, m_APFloat(C)))
-    return nullptr;
-
-  APFloat One(1.0);
-  bool LosesInfo;
-  One.convert(C->getSemantics(), APFloat::rmNearestTiesToEven, &LosesInfo);
+  APFloat OneNextDown = APFloat::getOne(C.getSemantics());
+  OneNextDown.next(true);
 
   // Match nextafter(1.0, -1)
-  One.next(true);
-  if (One != *C)
+  if (OneNextDown != C)
     return nullptr;
 
   Value *FloorSrc;
-  if (match(Arg0, m_FSub(m_Value(FloorSrc),
-                         m_Intrinsic<Intrinsic::floor>(m_Deferred(FloorSrc)))))
+  if (match(&FractSrc, m_FSub(m_Value(FloorSrc), m_Intrinsic<Intrinsic::floor>(
+                                                     m_Deferred(FloorSrc)))))
     return FloorSrc;
   return nullptr;
+}
+
+/// Match non-nan fract pattern.
+//    MIN_CONSTANT = nextafter(1.0, -1.0)
+///   minnum(fsub(x, floor(x)), MIN_CONSTANT)
+///   minimumnum(fsub(x, floor(x)), MIN_CONSTANT)
+///   minimum(fsub(x, floor(x)), MIN_CONSTANT)
+
+// x_sub_floor >= MIN_CONSTANT ? MIN_CONSTANT : x_sub_floor;
+///
+/// If fract is a useful instruction for the subtarget. Does not account for the
+/// nan handling; the instruction has a nan check on the input value.
+Value *AMDGPUCodeGenPrepareImpl::matchFractPatNanAvoidant(Value &V) {
+  Value *Arg0;
+  const APFloat *C;
+
+  // The value is only used in contexts where we know the input isn't a nan, so
+  // any of the fmin variants are fine.
+  if (!match(&V,
+             m_CombineOr(m_FMinNum_or_FMinimumNum(m_Value(Arg0),
+                                                  m_APFloatAllowPoison(C)),
+                         m_FMinimum(m_Value(Arg0), m_APFloatAllowPoison(C)))))
+    return nullptr;
+
+  return matchFractPatImpl(*Arg0, *C);
 }
 
 Value *AMDGPUCodeGenPrepareImpl::applyFractPat(IRBuilder<> &Builder,
@@ -2072,14 +2138,28 @@ Value *AMDGPUCodeGenPrepareImpl::applyFractPat(IRBuilder<> &Builder,
 }
 
 bool AMDGPUCodeGenPrepareImpl::visitFMinLike(IntrinsicInst &I) {
-  Value *FractArg = matchFractPat(I);
-  if (!FractArg)
-    return false;
+  const APFloat *C;
+  Value *FractArg;
 
-  // Match pattern for fract intrinsic in contexts where the nan check has been
-  // optimized out (and hope the knowledge the source can't be nan wasn't lost).
-  if (!I.hasNoNaNs() && !isKnownNeverNaN(FractArg, SimplifyQuery(DL, TLI)))
-    return false;
+  //  minimum(x - floor(x), MIN_CONSTANT)
+  Value *X;
+  if (!ST.hasFractBug() &&
+      match(&I, m_FMinimum(m_Value(X), m_APFloatAllowPoison(C)))) {
+    FractArg = matchFractPatImpl(*X, *C);
+    if (!FractArg)
+      return false;
+  } else {
+    //  minnum(x - floor(x), MIN_CONSTANT)
+    FractArg = matchFractPatNanAvoidant(I);
+    if (!FractArg)
+      return false;
+
+    // Match pattern for fract intrinsic in contexts where the nan check has
+    // been optimized out (and hope the knowledge the source can't be nan wasn't
+    // lost).
+    if (!I.hasNoNaNs() && !isKnownNeverNaN(FractArg, SQ.getWithInstruction(&I)))
+      return false;
+  }
 
   IRBuilder<> Builder(&I);
   FastMathFlags FMF = I.getFastMathFlags();
@@ -2137,6 +2217,43 @@ bool AMDGPUCodeGenPrepareImpl::visitSqrt(IntrinsicInst &Sqrt) {
   NewSqrt->takeName(&Sqrt);
   Sqrt.replaceAllUsesWith(NewSqrt);
   DeadVals.push_back(&Sqrt);
+  return true;
+}
+
+/// Replace log and log10 intrinsic calls based on fpmath metadata.
+bool AMDGPUCodeGenPrepareImpl::visitLog(FPMathOperator &Log,
+                                        Intrinsic::ID IID) {
+  Type *Ty = Log.getType();
+  if (!Ty->getScalarType()->isHalfTy() || !ST.has16BitInsts())
+    return false;
+
+  FastMathFlags FMF = Log.getFastMathFlags();
+
+  // Defer fast math cases to codegen.
+  if (FMF.approxFunc())
+    return false;
+
+  // Limit experimentally determined from OpenCL conformance test (1.79)
+  if (Log.getFPAccuracy() < 1.80f)
+    return false;
+
+  IRBuilder<> Builder(&cast<CallInst>(Log));
+
+  // Use the generic intrinsic for convenience in the vector case. Codegen will
+  // recognize the denormal handling is not necessary from the fpext.
+  // TODO: Move to generic code
+  Value *Log2 =
+      Builder.CreateUnaryIntrinsic(Intrinsic::log2, Log.getOperand(0), FMF);
+
+  double Log2BaseInverted =
+      IID == Intrinsic::log10 ? numbers::ln2 / numbers::ln10 : numbers::ln2;
+  Value *Mul =
+      Builder.CreateFMulFMF(Log2, ConstantFP::get(Ty, Log2BaseInverted), FMF);
+
+  Mul->takeName(&Log);
+
+  Log.replaceAllUsesWith(Mul);
+  DeadVals.push_back(&Log);
   return true;
 }
 

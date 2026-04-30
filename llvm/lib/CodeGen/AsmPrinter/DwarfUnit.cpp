@@ -185,6 +185,13 @@ bool DwarfUnit::isShareableAcrossCUs(const DINode *D) const {
   // level already) but may be implementable for some value in projects
   // building multiple independent libraries with LTO and then linking those
   // together.
+
+  // Prevent generation of cross-CU references for DWARF v2 due to conflicts
+  // resulting from the FAQ recommendation: "If you are producing DWARF V2,
+  // please use the DWARF V3 definition of DW_FORM_ref_addr."
+  // (https://dwarfstd.org/faq.html)
+  if (DD->getDwarfVersion() == 2)
+    return false;
   if (isDwoUnit() && !DD->shareAcrossDWOCUs())
     return false;
   return (isa<DIType>(D) ||
@@ -231,9 +238,7 @@ void DwarfUnit::addUInt(DIEValueList &Block, dwarf::Form Form,
   addUInt(Block, (dwarf::Attribute)0, Form, Integer);
 }
 
-void DwarfUnit::addIntAsBlock(DIE &Die, dwarf::Attribute Attribute, const APInt &Val) {
-  DIEBlock *Block = new (DIEValueAllocator) DIEBlock;
-
+void DwarfUnit::addIntToBlock(DIEBlock &Block, const APInt &Val) {
   // Get the raw data form of the large APInt.
   const uint64_t *Ptr64 = Val.getRawData();
 
@@ -247,10 +252,16 @@ void DwarfUnit::addIntAsBlock(DIE &Die, dwarf::Attribute Attribute, const APInt 
       c = Ptr64[i / 8] >> (8 * (i & 7));
     else
       c = Ptr64[(NumBytes - 1 - i) / 8] >> (8 * ((NumBytes - 1 - i) & 7));
-    addUInt(*Block, dwarf::DW_FORM_data1, c);
+    addUInt(Block, dwarf::DW_FORM_data1, c);
   }
+}
 
-  addBlock(Die, Attribute, Block);
+void DwarfUnit::addIntAsBlock(DIE &Die, dwarf::Attribute Attribute,
+                              const APInt &Val) {
+  DIEBlock *Block = new (DIEValueAllocator) DIEBlock;
+  addIntToBlock(*Block, Val);
+  Block->computeSize(Asm->getDwarfFormParams());
+  addBlock(Die, Attribute, Block->BestForm(), Block);
 }
 
 void DwarfUnit::addInt(DIE &Die, dwarf::Attribute Attribute,
@@ -919,7 +930,7 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIDerivedType *DTy) {
 }
 
 std::optional<unsigned>
-DwarfUnit::constructSubprogramArguments(DIE &Buffer, DITypeRefArray Args) {
+DwarfUnit::constructSubprogramArguments(DIE &Buffer, DITypeArray Args) {
   // Args[0] is the return type.
   std::optional<unsigned> ObjectPointerIndex;
   for (unsigned i = 1, N = Args.size(); i < N; ++i) {
@@ -1076,8 +1087,12 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
 
     // Add template parameters to a class, structure or union types.
     if (Tag == dwarf::DW_TAG_class_type ||
-        Tag == dwarf::DW_TAG_structure_type || Tag == dwarf::DW_TAG_union_type)
-      addTemplateParams(Buffer, CTy->getTemplateParams());
+        Tag == dwarf::DW_TAG_structure_type ||
+        Tag == dwarf::DW_TAG_union_type) {
+      if (!(DD->useSplitDwarf() && !getCU().getSkeleton()) ||
+          CTy->isNameSimplified())
+        addTemplateParams(Buffer, CTy->getTemplateParams());
+    }
 
     // Add elements to structure type.
     DINodeArray Elements = CTy->getElements();
@@ -1136,8 +1151,7 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
           constructTypeDIE(VariantPart, Composite);
         }
       } else if (Tag == dwarf::DW_TAG_namelist) {
-        auto *Var = dyn_cast<DINode>(Element);
-        auto *VarDIE = getDIE(Var);
+        auto *VarDIE = getDIE(Element);
         if (VarDIE) {
           DIE &ItemDie = createAndAddDIE(dwarf::DW_TAG_namelist_item, Buffer);
           addDIEEntry(ItemDie, dwarf::DW_AT_namelist_item, *VarDIE);
@@ -1394,7 +1408,7 @@ bool DwarfUnit::applySubprogramDefinitionAttributes(const DISubprogram *SP,
   StringRef DeclLinkageName;
   if (auto *SPDecl = SP->getDeclaration()) {
     if (!Minimal) {
-      DITypeRefArray DeclArgs, DefinitionArgs;
+      DITypeArray DeclArgs, DefinitionArgs;
       DeclArgs = SPDecl->getType()->getTypeArray();
       DefinitionArgs = SP->getType()->getTypeArray();
 
@@ -1420,7 +1434,8 @@ bool DwarfUnit::applySubprogramDefinitionAttributes(const DISubprogram *SP,
   }
 
   // Add function template parameters.
-  addTemplateParams(SPDie, SP->getTemplateParams());
+  if (!Minimal || SP->isNameSimplified())
+    addTemplateParams(SPDie, SP->getTemplateParams());
 
   // Add the linkage name if we have one and it isn't in the Decl.
   StringRef LinkageName = SP->getLinkageName();
@@ -1470,7 +1485,7 @@ void DwarfUnit::applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
     addFlag(SPDie, dwarf::DW_AT_APPLE_objc_direct);
 
   unsigned CC = 0;
-  DITypeRefArray Args;
+  DITypeArray Args;
   if (const DISubroutineType *SPTy = SP->getType()) {
     Args = SPTy->getTypeArray();
     CC = SPTy->getCC();
@@ -2031,8 +2046,20 @@ DIE *DwarfUnit::getOrCreateStaticMemberDIE(const DIDerivedType *DT) {
 
   if (const ConstantInt *CI = dyn_cast_or_null<ConstantInt>(DT->getConstant()))
     addConstantValue(StaticMemberDIE, CI, Ty);
-  if (const ConstantFP *CFP = dyn_cast_or_null<ConstantFP>(DT->getConstant()))
+  else if (const ConstantFP *CFP =
+               dyn_cast_or_null<ConstantFP>(DT->getConstant()))
     addConstantFPValue(StaticMemberDIE, CFP);
+  else if (auto *CDS =
+               dyn_cast_or_null<ConstantDataSequential>(DT->getConstant())) {
+    assert(CDS->getElementType()->isIntegerTy() &&
+           "Non-integer arrays not supported.");
+    DIEBlock *Block = new (DIEValueAllocator) DIEBlock;
+    for (unsigned I = 0; I != CDS->getNumElements(); ++I)
+      addIntToBlock(*Block, CDS->getElementAsAPInt(I));
+    Block->computeSize(Asm->getDwarfFormParams());
+    addBlock(StaticMemberDIE, dwarf::DW_AT_const_value, Block->BestForm(),
+             Block);
+  }
 
   if (uint32_t AlignInBytes = DT->getAlignInBytes())
     addUInt(StaticMemberDIE, dwarf::DW_AT_alignment, dwarf::DW_FORM_udata,
@@ -2059,7 +2086,7 @@ void DwarfUnit::emitCommonHeader(bool UseOffsets, dwarf::UnitType UT) {
     Asm->OutStreamer->AddComment("DWARF Unit Type");
     Asm->emitInt8(UT);
     Asm->OutStreamer->AddComment("Address Size (in bytes)");
-    Asm->emitInt8(Asm->MAI->getCodePointerSize());
+    Asm->emitInt8(Asm->MAI.getCodePointerSize());
   }
 
   // We share one abbreviations table across all units so it's always at the
@@ -2075,7 +2102,7 @@ void DwarfUnit::emitCommonHeader(bool UseOffsets, dwarf::UnitType UT) {
 
   if (Version <= 4) {
     Asm->OutStreamer->AddComment("Address Size (in bytes)");
-    Asm->emitInt8(Asm->MAI->getCodePointerSize());
+    Asm->emitInt8(Asm->MAI.getCodePointerSize());
   }
 }
 

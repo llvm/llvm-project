@@ -234,9 +234,6 @@ def IsN64       :     Predicate<"Subtarget->isABI_N64()">;
 def IsNotN64    :     Predicate<"!Subtarget->isABI_N64()">;
 def RelocNotPIC :     Predicate<"!TM.isPositionIndependent()">;
 def RelocPIC    :     Predicate<"TM.isPositionIndependent()">;
-def NoNaNsFPMath :    Predicate<"TM.Options.NoNaNsFPMath">;
-def UseAbs :          Predicate<"Subtarget->inAbs2008Mode() ||"
-                                "TM.Options.NoNaNsFPMath">;
 def HasStdEnc :       Predicate<"Subtarget->hasStandardEncoding()">,
                       AssemblerPredicate<(all_of (not FeatureMips16))>;
 def NotDSP :          Predicate<"!Subtarget->hasDSP()">;
@@ -259,6 +256,10 @@ def UseIndirectJumpsHazard : Predicate<"Subtarget->useIndirectJumpsHazard()">,
                             AssemblerPredicate<(all_of FeatureUseIndirectJumpsHazard)>;
 def NoIndirectJumpGuards : Predicate<"!Subtarget->useIndirectJumpsHazard()">,
                            AssemblerPredicate<(all_of (not FeatureUseIndirectJumpsHazard))>;
+def IsR5900 : Predicate<"Subtarget->isR5900()">,
+              AssemblerPredicate<(all_of FeatureR5900)>;
+def NotR5900 : Predicate<"!Subtarget->isR5900()">,
+               AssemblerPredicate<(all_of (not FeatureR5900))>;
 def HasCRC   : Predicate<"Subtarget->hasCRC()">,
                AssemblerPredicate<(all_of FeatureCRC)>;
 def HasVirt  : Predicate<"Subtarget->hasVirt()">,
@@ -312,12 +313,25 @@ class ISA_MIPS1_NOT_32R6_64R6 {
   list<Predicate> InsnPredicates = [NotMips32r6, NotMips64r6];
   list<Predicate> EncodingPredicates = [HasStdEnc];
 }
+class ISA_MIPS1_NOT_32R6_64R6_R5900 {
+  list<Predicate> InsnPredicates = [NotMips32r6, NotMips64r6, NotR5900];
+  list<Predicate> EncodingPredicates = [HasStdEnc];
+}
 class ISA_MIPS2 {
   list<Predicate> InsnPredicates = [HasMips2];
   list<Predicate> EncodingPredicates = [HasStdEnc];
 }
+class ISA_MIPS2_NOT_R5900 {
+  list<Predicate> InsnPredicates = [HasMips2, NotR5900];
+  list<Predicate> EncodingPredicates = [HasStdEnc];
+}
 class ISA_MIPS2_NOT_32R6_64R6 {
   list<Predicate> InsnPredicates = [HasMips2, NotMips32r6, NotMips64r6];
+  list<Predicate> EncodingPredicates = [HasStdEnc];
+}
+class ISA_MIPS2_NOT_32R6_64R6_R5900 {
+  list<Predicate> InsnPredicates = [HasMips2, NotMips32r6, NotMips64r6,
+                                    NotR5900];
   list<Predicate> EncodingPredicates = [HasStdEnc];
 }
 class ISA_MIPS3 {
@@ -326,6 +340,11 @@ class ISA_MIPS3 {
 }
 class ISA_MIPS3_NOT_32R6_64R6 {
   list<Predicate> InsnPredicates = [HasMips3, NotMips32r6, NotMips64r6];
+  list<Predicate> EncodingPredicates = [HasStdEnc];
+}
+class ISA_MIPS3_NOT_32R6_64R6_R5900 {
+  list<Predicate> InsnPredicates = [HasMips3, NotMips32r6, NotMips64r6,
+                                    NotR5900];
   list<Predicate> EncodingPredicates = [HasStdEnc];
 }
 class ISA_MIPS32 {
@@ -1225,6 +1244,8 @@ def Plus1 : SDNodeXForm<imm, [{
 // Node immediate is zero (e.g. insve.d)
 def immz : PatLeaf<(imm), [{ return N->getSExtValue() == 0; }]>;
 
+def timmz : PatLeaf<(timm), [{ return N->getSExtValue() == 0; }]>;
+
 // Node immediate fits as 16-bit sign extended on target immediate.
 // e.g. addi, andi
 def immSExt8  : PatLeaf<(imm), [{ return isInt<8>(N->getSExtValue()); }]>;
@@ -1676,7 +1697,7 @@ class DEI_FT<string opstr, RegisterOperand RO,
 let hasSideEffects = 1 in
 class SYNC_FT<string opstr> :
   InstSE<(outs), (ins uimm5:$stype), "sync $stype",
-         [(MipsSync immZExt5:$stype)], II_SYNC, FrmOther, opstr>;
+         [(MipsSync timmZExt5:$stype)], II_SYNC, FrmOther, opstr>;
 
 class SYNCI_FT<string opstr, DAGOperand MO> :
   InstSE<(outs), (ins MO:$addr), !strconcat(opstr, "\t$addr"), [],
@@ -1837,11 +1858,15 @@ class Atomic2OpsPostRA<RegisterClass RC> :
   PseudoSE<(outs RC:$dst), (ins PtrRC:$ptr, RC:$incr), []> {
   let mayLoad = 1;
   let mayStore = 1;
+  let Predicates = [NotR5900];
 }
 
-class Atomic2OpsSubwordPostRA<RegisterClass RC> :
-  PseudoSE<(outs RC:$dst), (ins PtrRC:$ptr, RC:$incr, RC:$mask, RC:$mask2,
-                                RC:$shiftamnt), []>;
+class Atomic2OpsSubwordPostRA<RegisterClass RC>
+    : PseudoSE<
+          (outs RC:$dst),
+          (ins PtrRC:$ptr, RC:$incr, RC:$mask, RC:$mask2, RC:$shiftamnt), []> {
+  let Predicates = [NotR5900];
+}
 
 // Atomic Compare & Swap.
 // Atomic compare and swap is lowered into two stages. The first stage happens
@@ -1856,6 +1881,7 @@ class AtomicCmpSwapPostRA<RegisterClass RC> :
   PseudoSE<(outs RC:$dst), (ins PtrRC:$ptr, RC:$cmp, RC:$swap), []> {
   let mayLoad = 1;
   let mayStore = 1;
+  let Predicates = [NotR5900];
 }
 
 class AtomicCmpSwapSubwordPostRA<RegisterClass RC> :
@@ -1863,6 +1889,7 @@ class AtomicCmpSwapSubwordPostRA<RegisterClass RC> :
                                 RC:$mask2, RC:$ShiftNewVal, RC:$ShiftAmt), []> {
   let mayLoad = 1;
   let mayStore = 1;
+  let Predicates = [NotR5900];
 }
 
 class LLBase<string opstr, RegisterOperand RO, DAGOperand MO = mem> :
@@ -2166,14 +2193,22 @@ def SDC2 : StdMMR6Rel, SW_FT2<"sdc2", COP2Opnd, II_SDC2, store>,
 
 // COP3 Memory Instructions
 let DecoderNamespace = "COP3_" in {
-  def LWC3 : LW_FT3<"lwc3", COP3Opnd, II_LWC3, load>, LW_FM<0x33>,
-             ISA_MIPS1_NOT_32R6_64R6, NOT_ASE_CNMIPS;
-  def SWC3 : SW_FT3<"swc3", COP3Opnd, II_SWC3, store>, LW_FM<0x3b>,
-             ISA_MIPS1_NOT_32R6_64R6, NOT_ASE_CNMIPS;
-  def LDC3 : LW_FT3<"ldc3", COP3Opnd, II_LDC3, load>, LW_FM<0x37>,
-             ISA_MIPS2, NOT_ASE_CNMIPS;
-  def SDC3 : SW_FT3<"sdc3", COP3Opnd, II_SDC3, store>, LW_FM<0x3f>,
-             ISA_MIPS2, NOT_ASE_CNMIPS;
+  def LWC3 : LW_FT3<"lwc3", COP3Opnd, II_LWC3, load>,
+             LW_FM<0x33>,
+             ISA_MIPS1_NOT_32R6_64R6_R5900,
+             NOT_ASE_CNMIPS;
+  def SWC3 : SW_FT3<"swc3", COP3Opnd, II_SWC3, store>,
+             LW_FM<0x3b>,
+             ISA_MIPS1_NOT_32R6_64R6_R5900,
+             NOT_ASE_CNMIPS;
+  def LDC3 : LW_FT3<"ldc3", COP3Opnd, II_LDC3, load>,
+             LW_FM<0x37>,
+             ISA_MIPS2_NOT_R5900,
+             NOT_ASE_CNMIPS;
+  def SDC3 : SW_FT3<"sdc3", COP3Opnd, II_SDC3, store>,
+             LW_FM<0x3f>,
+             ISA_MIPS2_NOT_R5900,
+             NOT_ASE_CNMIPS;
 }
 
   def SYNC : MMRel, StdMMR6Rel, SYNC_FT<"sync">, SYNC_FM, ISA_MIPS2;
@@ -2232,8 +2267,14 @@ let AdditionalPredicates = [NotInMicroMips] in {
 
 let AdditionalPredicates = [NotInMicroMips] in {
 /// Load-linked, Store-conditional
-def LL : LLBase<"ll", GPR32Opnd>, LW_FM<0x30>, PTR_32, ISA_MIPS2_NOT_32R6_64R6;
-def SC : SCBase<"sc", GPR32Opnd>, LW_FM<0x38>, PTR_32, ISA_MIPS2_NOT_32R6_64R6;
+def LL : LLBase<"ll", GPR32Opnd>,
+         LW_FM<0x30>,
+         PTR_32,
+         ISA_MIPS2_NOT_32R6_64R6_R5900;
+def SC : SCBase<"sc", GPR32Opnd>,
+         LW_FM<0x38>,
+         PTR_32,
+         ISA_MIPS2_NOT_32R6_64R6_R5900;
 }
 /// Jump and Branch Instructions
 let AdditionalPredicates = [NotInMicroMips, RelocNotPIC] in
@@ -3178,7 +3219,7 @@ def : MipsPat<(mul GPR32:$lhs, GPR32:$rhs),
       ISA_MIPS1_NOT_32R6_64R6;
 
 // SYNC
-def : MipsPat<(MipsSync (i32 immz)),
+def : MipsPat<(MipsSync (i32 timmz)),
               (SYNC 0)>, ISA_MIPS2;
 
 // Call

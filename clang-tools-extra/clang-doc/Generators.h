@@ -30,7 +30,7 @@ public:
   // Write out the decl info for the objects in the given map in the specified
   // format.
   virtual llvm::Error generateDocumentation(
-      StringRef RootDir, llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
+      StringRef RootDir, llvm::StringMap<doc::OwnedPtr<doc::Info>> Infos,
       const ClangDocContext &CDCtx, std::string DirName = "") = 0;
 
   // This function writes a file with the index previously constructed.
@@ -51,7 +51,7 @@ typedef llvm::Registry<Generator> GeneratorRegistry;
 llvm::Expected<std::unique_ptr<Generator>>
 findGeneratorByName(llvm::StringRef Format);
 
-std::string getTagType(TagTypeKind AS);
+llvm::StringRef getTagType(TagTypeKind AS);
 
 llvm::Error createFileOpenError(StringRef FileName, std::error_code EC);
 
@@ -86,6 +86,10 @@ public:
   }
 
   void render(llvm::json::Value &V, raw_ostream &OS) { T.render(V, OS); }
+
+  void setEscapeCharacters(const llvm::DenseMap<char, std::string> Characters) {
+    T.overrideEscapeCharacters(Characters);
+  }
 
   MustacheTemplateFile(std::unique_ptr<llvm::MemoryBuffer> &&B)
       : Saver(Allocator), Ctx(Allocator, Saver), T(B->getBuffer(), Ctx),
@@ -128,7 +132,7 @@ struct MustacheGenerator : public Generator {
   /// JSON, and calls generateDocForJSON for each file.
   /// 4. A file of the desired format is created.
   llvm::Error generateDocumentation(
-      StringRef RootDir, llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
+      StringRef RootDir, llvm::StringMap<doc::OwnedPtr<doc::Info>> Infos,
       const clang::doc::ClangDocContext &CDCtx, std::string DirName) override;
 };
 
@@ -138,6 +142,7 @@ extern volatile int YAMLGeneratorAnchorSource;
 extern volatile int MDGeneratorAnchorSource;
 extern volatile int HTMLGeneratorAnchorSource;
 extern volatile int JSONGeneratorAnchorSource;
+extern volatile int MDMustacheGeneratorAnchorSource;
 
 } // namespace doc
 } // namespace clang

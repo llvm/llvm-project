@@ -71,26 +71,53 @@ SmallVector<Value> makeRegionIsolatedFromAbove(
     llvm::function_ref<bool(Operation *)> cloneOperationIntoRegion =
         [](Operation *) { return false; });
 
-/// Move SSA values used within an operation before an insertion point,
-/// so that the operation itself (or its replacement) can be moved to
-/// the insertion point. Current support is only for movement of
-/// dependencies of `op` before `insertionPoint` in the same basic block.
+/// Move the operation dependencies (producers) of `op` before `insertionPoint`,
+/// so that `op` itself can subsequently be moved. This includes transitive
+/// dependencies. Supports movement within the same block or from nested regions
+/// to an outer block.
+///
+/// The following conditions cause the move to fail:
+/// - `insertionPoint` does not dominate `op`.
+/// - Movement across an isolated-from-above region boundary.
+/// - A dependency uses a block argument that wouldn't dominate
+/// `insertionPoint`.
+/// - `insertionPoint` is itself a dependency of `op` (cycle).
+/// - Any side-effecting operations in the dependency chain pessimistically
+/// blocks movement.
 LogicalResult moveOperationDependencies(RewriterBase &rewriter, Operation *op,
                                         Operation *insertionPoint,
                                         DominanceInfo &dominance);
 LogicalResult moveOperationDependencies(RewriterBase &rewriter, Operation *op,
                                         Operation *insertionPoint);
 
-/// Move definitions of `values` before an insertion point. Current support is
-/// only for movement of definitions within the same basic block. Note that this
-/// is an all-or-nothing approach. Either definitions of all values are moved
-/// before insertion point, or none of them are. Any side-effecting operations
-/// in the producer chain pessimistically blocks movement.
+/// Move definitions of `values` (and their transitive dependencies) before
+/// `insertionPoint`. Supports movement within the same block or from nested
+/// regions to an outer block.
+///
+/// This is all-or-nothing: either all definitions are moved, or none are.
+///
+/// The following conditions cause the move to fail:
+/// - Any value is a block argument (cannot be moved).
+/// - Any side-effecting operations in the dependency chain.
+/// - Movement across an isolated-from-above region boundary.
+/// - A dependency uses a block argument that wouldn't dominate
+/// `insertionPoint`.
+/// - `insertionPoint` is itself a dependency (cycle).
 LogicalResult moveValueDefinitions(RewriterBase &rewriter, ValueRange values,
                                    Operation *insertionPoint,
                                    DominanceInfo &dominance);
 LogicalResult moveValueDefinitions(RewriterBase &rewriter, ValueRange values,
                                    Operation *insertionPoint);
+
+/// Remove trivially dead operations from \p region. An operation is trivially
+/// dead when it has no users and is side-effect-free. Operand-defining ops are
+/// re-evaluated after each erasure, so chains of dead ops are eliminated in a
+/// single pass. When \p includeNestedRegions is true (the default), the pass
+/// descends into nested regions bottom-up before simplifying \p region itself;
+/// when false, only ops directly in \p region are considered. Returns true if
+/// any op was removed.
+bool eliminateTriviallyDeadOps(RewriterBase &rewriter, Region &region,
+                               bool includeNestedRegions = true);
 
 /// Run a set of structural simplifications over the given regions. This
 /// includes transformations like unreachable block elimination, dead argument
@@ -103,10 +130,12 @@ LogicalResult simplifyRegions(RewriterBase &rewriter,
                               MutableArrayRef<Region> regions,
                               bool mergeBlocks = true);
 
-/// Erase the unreachable blocks within the provided regions. Returns success
-/// if any blocks were erased, failure otherwise.
+/// Erase the unreachable blocks within the provided regions. If \p recurse is
+/// true, also visit regions nested under live operations. Returns success if
+/// any blocks were erased, failure otherwise.
 LogicalResult eraseUnreachableBlocks(RewriterBase &rewriter,
-                                     MutableArrayRef<Region> regions);
+                                     MutableArrayRef<Region> regions,
+                                     bool recurse = true);
 
 /// This function returns success if any operations or arguments were deleted,
 /// failure otherwise.

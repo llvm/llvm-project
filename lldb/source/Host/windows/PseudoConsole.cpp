@@ -8,14 +8,13 @@
 
 #include "lldb/Host/windows/PseudoConsole.h"
 
+#include <cstdio>
 #include <mutex>
 
-#include "lldb/Host/windows/PipeWindows.h"
 #include "lldb/Host/windows/windows.h"
 #include "lldb/Utility/LLDBLog.h"
 
 #include "llvm/Support/Errc.h"
-#include "llvm/Support/Errno.h"
 
 using namespace lldb_private;
 
@@ -24,6 +23,8 @@ typedef HRESULT(WINAPI *CreatePseudoConsole_t)(COORD size, HANDLE hInput,
                                                HPCON *phPC);
 
 typedef VOID(WINAPI *ClosePseudoConsole_t)(HPCON hPC);
+
+static constexpr DWORD PSEUDOCONSOLE_INHERIT_CURSOR = 0x1;
 
 struct Kernel32 {
   Kernel32() {
@@ -64,36 +65,86 @@ private:
 
 static Kernel32 kernel32;
 
-llvm::Error PseudoConsole::OpenPseudoConsole() {
-  if (!kernel32.IsConPTYAvailable())
-    return llvm::make_error<llvm::StringError>("ConPTY is not available",
-                                               llvm::errc::io_error);
-  HRESULT hr;
-  HANDLE hInputRead = INVALID_HANDLE_VALUE;
-  HANDLE hInputWrite = INVALID_HANDLE_VALUE;
-  HANDLE hOutputRead = INVALID_HANDLE_VALUE;
-  HANDLE hOutputWrite = INVALID_HANDLE_VALUE;
-
+llvm::Error PseudoConsole::CreateOverlappedPipePair(HANDLE &out_read,
+                                                    HANDLE &out_write,
+                                                    bool inheritable) {
   wchar_t pipe_name[MAX_PATH];
   swprintf(pipe_name, MAX_PATH, L"\\\\.\\pipe\\conpty-lldb-%d-%p",
            GetCurrentProcessId(), this);
+  out_read =
+      CreateNamedPipeW(pipe_name, PIPE_ACCESS_INBOUND | FILE_FLAG_OVERLAPPED,
+                       PIPE_TYPE_BYTE | PIPE_WAIT, 1, 4096, 4096, 0, NULL);
+  if (out_read == INVALID_HANDLE_VALUE)
+    return llvm::errorCodeToError(
+        std::error_code(GetLastError(), std::system_category()));
+  SECURITY_ATTRIBUTES write_sa = {sizeof(SECURITY_ATTRIBUTES), NULL, TRUE};
+  out_write =
+      CreateFileW(pipe_name, GENERIC_WRITE, 0, inheritable ? &write_sa : NULL,
+                  OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+  if (out_write == INVALID_HANDLE_VALUE) {
+    CloseHandle(out_read);
+    out_read = INVALID_HANDLE_VALUE;
+    return llvm::errorCodeToError(
+        std::error_code(GetLastError(), std::system_category()));
+  }
+
+  return llvm::Error::success();
+}
+
+PseudoConsole::~PseudoConsole() {
+  Close();
+  ClosePseudoConsolePipes();
+  CloseAnonymousPipes();
+}
+
+llvm::Error PseudoConsole::OpenPseudoConsole() {
+  assert(m_mode == Mode::None &&
+         "Attempted to open a PseudoConsole in a different mode than None");
+
+  if (!kernel32.IsConPTYAvailable())
+    return llvm::make_error<llvm::StringError>("ConPTY is not available",
+                                               llvm::errc::io_error);
+
+  assert(m_conpty_handle == INVALID_HANDLE_VALUE &&
+         "ConPTY has already been opened");
 
   // A 4096 bytes buffer should be large enough for the majority of console
   // burst outputs.
-  hOutputRead =
-      CreateNamedPipeW(pipe_name, PIPE_ACCESS_INBOUND | FILE_FLAG_OVERLAPPED,
-                       PIPE_TYPE_BYTE | PIPE_WAIT, 1, 4096, 4096, 0, NULL);
-  hOutputWrite = CreateFileW(pipe_name, GENERIC_WRITE, 0, NULL, OPEN_EXISTING,
-                             FILE_ATTRIBUTE_NORMAL, NULL);
+  wchar_t pipe_name[MAX_PATH];
+  swprintf(pipe_name, MAX_PATH, L"\\\\.\\pipe\\conpty-lldb-%d-%p",
+           GetCurrentProcessId(), this);
+  HANDLE hOutputRead = INVALID_HANDLE_VALUE;
+  HANDLE hOutputWrite = INVALID_HANDLE_VALUE;
+  if (auto err = CreateOverlappedPipePair(hOutputRead, hOutputWrite, false))
+    return err;
 
-  if (!CreatePipe(&hInputRead, &hInputWrite, NULL, 0))
+  HANDLE hInputRead = INVALID_HANDLE_VALUE;
+  HANDLE hInputWrite = INVALID_HANDLE_VALUE;
+  if (!CreatePipe(&hInputRead, &hInputWrite, NULL, 0)) {
+    CloseHandle(hOutputRead);
+    CloseHandle(hOutputWrite);
     return llvm::errorCodeToError(
         std::error_code(GetLastError(), std::system_category()));
+  }
 
   COORD consoleSize{80, 25};
+  // Cursor position within the visible window, 1-indexed for VT sequences.
+  // Defaults to the last row so ConPTY won't scroll back over existing output
+  // if we can't query the real console.
+  int cursorRow = consoleSize.Y;
+  int cursorCol = 1;
+  CONSOLE_SCREEN_BUFFER_INFO csbi;
+  if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi)) {
+    consoleSize = {
+        static_cast<SHORT>(csbi.srWindow.Right - csbi.srWindow.Left + 1),
+        static_cast<SHORT>(csbi.srWindow.Bottom - csbi.srWindow.Top + 1)};
+    cursorRow = csbi.dwCursorPosition.Y - csbi.srWindow.Top + 1;
+    cursorCol = csbi.dwCursorPosition.X + 1;
+  }
   HPCON hPC = INVALID_HANDLE_VALUE;
-  hr = kernel32.CreatePseudoConsole(consoleSize, hInputRead, hOutputWrite, 0,
-                                    &hPC);
+  HRESULT hr =
+      kernel32.CreatePseudoConsole(consoleSize, hInputRead, hOutputWrite,
+                                   PSEUDOCONSOLE_INHERIT_CURSOR, &hPC);
   CloseHandle(hInputRead);
   CloseHandle(hOutputWrite);
 
@@ -105,22 +156,90 @@ llvm::Error PseudoConsole::OpenPseudoConsole() {
         llvm::errc::io_error);
   }
 
-  DWORD mode = PIPE_NOWAIT;
-  SetNamedPipeHandleState(hOutputRead, &mode, NULL, NULL);
-
   m_conpty_handle = hPC;
   m_conpty_output = hOutputRead;
   m_conpty_input = hInputWrite;
+  m_mode = Mode::ConPTY;
+
+  // PSEUDOCONSOLE_INHERIT_CURSOR causes ConPTY to emit ESC[6n on the output
+  // pipe to query the current cursor position before it finishes initializing.
+  // Write the cursor position response to the input pipe so ConPTY can read it
+  // and initialize without clearing the screen or overwriting LLDB's prompt.
+  {
+    llvm::SmallString<32> response =
+        llvm::formatv("\x1b[{0};{1}R", cursorRow, cursorCol).sstr<32>();
+    DWORD nwritten = 0;
+    WriteFile(m_conpty_input, response.data(), response.size(), &nwritten,
+              NULL);
+  }
 
   return llvm::Error::success();
 }
 
+bool PseudoConsole::IsConnected() const {
+  if (m_mode == Mode::Pipe)
+    return m_conpty_input != INVALID_HANDLE_VALUE &&
+           m_conpty_output != INVALID_HANDLE_VALUE;
+  return m_conpty_handle != INVALID_HANDLE_VALUE &&
+         m_conpty_input != INVALID_HANDLE_VALUE &&
+         m_conpty_output != INVALID_HANDLE_VALUE;
+}
+
 void PseudoConsole::Close() {
+  SetStopping(true);
+  std::unique_lock<std::mutex> guard(m_mutex);
   if (m_conpty_handle != INVALID_HANDLE_VALUE)
     kernel32.ClosePseudoConsole(m_conpty_handle);
-  CloseHandle(m_conpty_input);
-  CloseHandle(m_conpty_output);
   m_conpty_handle = INVALID_HANDLE_VALUE;
+  SetStopping(false);
+  m_cv.notify_all();
+}
+
+void PseudoConsole::ClosePseudoConsolePipes() {
+  if (m_conpty_input != INVALID_HANDLE_VALUE)
+    CloseHandle(m_conpty_input);
+  if (m_conpty_output != INVALID_HANDLE_VALUE)
+    CloseHandle(m_conpty_output);
+
   m_conpty_input = INVALID_HANDLE_VALUE;
   m_conpty_output = INVALID_HANDLE_VALUE;
+}
+
+void PseudoConsole::CloseAnonymousPipes() {
+  if (m_pipe_child_stdin != INVALID_HANDLE_VALUE)
+    CloseHandle(m_pipe_child_stdin);
+  if (m_pipe_child_stdout != INVALID_HANDLE_VALUE)
+    CloseHandle(m_pipe_child_stdout);
+
+  m_pipe_child_stdin = INVALID_HANDLE_VALUE;
+  m_pipe_child_stdout = INVALID_HANDLE_VALUE;
+}
+
+llvm::Error PseudoConsole::OpenAnonymousPipes() {
+  assert(m_mode == Mode::None &&
+         "Attempted to open a AnonymousPipes in a different mode than None");
+
+  SECURITY_ATTRIBUTES sa = {sizeof(SECURITY_ATTRIBUTES), NULL, TRUE};
+  HANDLE hStdinRead = INVALID_HANDLE_VALUE;
+  HANDLE hStdinWrite = INVALID_HANDLE_VALUE;
+  if (!CreatePipe(&hStdinRead, &hStdinWrite, &sa, 0))
+    return llvm::errorCodeToError(
+        std::error_code(GetLastError(), std::system_category()));
+  // Parent write end must not be inherited by the child.
+  SetHandleInformation(hStdinWrite, HANDLE_FLAG_INHERIT, 0);
+
+  HANDLE hStdoutRead = INVALID_HANDLE_VALUE;
+  HANDLE hStdoutWrite = INVALID_HANDLE_VALUE;
+  if (auto err = CreateOverlappedPipePair(hStdoutRead, hStdoutWrite, true)) {
+    CloseHandle(hStdinRead);
+    CloseHandle(hStdinWrite);
+    return err;
+  }
+
+  m_conpty_input = hStdinWrite;
+  m_conpty_output = hStdoutRead;
+  m_pipe_child_stdin = hStdinRead;
+  m_pipe_child_stdout = hStdoutWrite;
+  m_mode = Mode::Pipe;
+  return llvm::Error::success();
 }

@@ -10,6 +10,7 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANUTILS_H
 
 #include "VPlan.h"
+#include "VPlanPatternMatch.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
@@ -59,8 +60,8 @@ bool isHeaderMask(const VPValue *V, const VPlan &Plan);
 
 /// Checks if \p V is uniform across all VF lanes and UF parts. It is considered
 /// as such if it is either loop invariant (defined outside the vector region)
-/// or its operand is known to be uniform across all VFs and UFs (e.g.
-/// VPDerivedIV or VPCanonicalIVPHI).
+/// or its operands are known to be uniform across all VFs and UFs (e.g.
+/// VPDerivedIV or the canonical IV).
 bool isUniformAcrossVFsAndUFs(VPValue *V);
 
 /// Returns the header block of the first, top-level loop, or null if none
@@ -71,6 +72,10 @@ VPBasicBlock *getFirstLoopHeader(VPlan &Plan, VPDominatorTree &VPDT);
 /// one.
 unsigned getVFScaleFactor(VPRecipeBase *R);
 
+/// Return true if we do not know how to (mechanically) hoist or sink \p R.
+/// When sinking, passing \p Sinking = true ensures that assumes aren't sunk.
+bool cannotHoistOrSinkRecipe(const VPRecipeBase &R, bool Sinking = false);
+
 /// Returns the VPValue representing the uncountable exit comparison used by
 /// AnyOf if the recipes it depends on can be traced back to live-ins and
 /// the addresses (in GEP/PtrAdd form) of any (non-masked) load used in
@@ -79,9 +84,9 @@ unsigned getVFScaleFactor(VPRecipeBase *R);
 /// \p GEPs.
 LLVM_ABI_FOR_TEST
 std::optional<VPValue *>
-getRecipesForUncountableExit(VPlan &Plan,
-                             SmallVectorImpl<VPRecipeBase *> &Recipes,
-                             SmallVectorImpl<VPRecipeBase *> &GEPs);
+getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
+                             SmallVectorImpl<VPInstruction *> &GEPs,
+                             VPBasicBlock *LatchVPBB);
 
 /// Return a MemoryLocation for \p R with noalias metadata populated from
 /// \p R, if the recipe is supported and std::nullopt otherwise. The pointer of
@@ -103,6 +108,63 @@ inline VPIRFlags getFlagsFromIndDesc(const InductionDescriptor &ID) {
          "Expected int induction");
   return VPIRFlags::WrapFlagsTy(false, false);
 }
+
+/// Search \p Start's users for a recipe satisfying \p Pred, looking through
+/// recipes with definitions.
+template <typename PredT>
+inline VPRecipeBase *findRecipe(VPValue *Start, PredT Pred) {
+  SetVector<VPValue *> Worklist;
+  Worklist.insert(Start);
+  for (unsigned I = 0; I != Worklist.size(); ++I) {
+    VPValue *Cur = Worklist[I];
+    auto *R = Cur->getDefiningRecipe();
+    if (!R)
+      continue;
+    if (Pred(R))
+      return R;
+    for (VPUser *U : Cur->users()) {
+      for (VPValue *V : cast<VPRecipeBase>(U)->definedValues())
+        Worklist.insert(V);
+    }
+  }
+  return nullptr;
+}
+
+/// If \p V is used by a recipe matching pattern \p P, return it. Otherwise
+/// return nullptr;
+template <typename MatchT>
+static VPRecipeBase *findUserOf(VPValue *V, const MatchT &P) {
+  using namespace llvm::VPlanPatternMatch;
+  auto It = find_if(V->users(), match_fn(P));
+  return It == V->user_end() ? nullptr : cast<VPRecipeBase>(*It);
+}
+
+/// If \p V is used by a VPInstruction with \p Opcode, return it. Otherwise
+/// return nullptr.
+template <unsigned Opcode> static VPInstruction *findUserOf(VPValue *V) {
+  using namespace llvm::VPlanPatternMatch;
+  return cast_or_null<VPInstruction>(findUserOf(V, m_VPInstruction<Opcode>()));
+}
+
+template <typename RecipeTy> static RecipeTy *findUserOf(VPValue *V) {
+  using namespace llvm::VPlanPatternMatch;
+  return cast_or_null<RecipeTy>(findUserOf(V, m_Isa<RecipeTy>()));
+}
+
+/// Find the canonical IV increment of \p Plan's vector loop region. Returns
+/// nullptr if not found.
+VPInstruction *findCanonicalIVIncrement(VPlan &Plan);
+
+/// Find the ComputeReductionResult recipe for \p PhiR, looking through selects
+/// inserted for predicated reductions or tail folding.
+VPInstruction *findComputeReductionResult(VPReductionPHIRecipe *PhiR);
+
+/// Collect the header mask with the pattern:
+/// (ICMP_ULE, WideCanonicalIV, backedge-taken-count)
+/// TODO: Introduce explicit recipe for header-mask instead of searching
+/// the header-mask pattern manually.
+VPSingleDefRecipe *findHeaderMask(VPlan &Plan);
+
 } // namespace vputils
 
 //===----------------------------------------------------------------------===//
@@ -120,8 +182,7 @@ public:
   /// successors are moved from \p BlockPtr to \p NewBlock. \p NewBlock must
   /// have neither successors nor predecessors.
   static void insertBlockAfter(VPBlockBase *NewBlock, VPBlockBase *BlockPtr) {
-    assert(NewBlock->getSuccessors().empty() &&
-           NewBlock->getPredecessors().empty() &&
+    assert(!NewBlock->hasSuccessors() && !NewBlock->hasPredecessors() &&
            "Can't insert new block with predecessors or successors.");
     NewBlock->setParent(BlockPtr->getParent());
     transferSuccessors(BlockPtr, NewBlock);
@@ -133,8 +194,7 @@ public:
   /// NewBlock. Add \p NewBlock as predecessor of \p BlockPtr and \p BlockPtr as
   /// successor of \p NewBlock.
   static void insertBlockBefore(VPBlockBase *NewBlock, VPBlockBase *BlockPtr) {
-    assert(NewBlock->getSuccessors().empty() &&
-           NewBlock->getPredecessors().empty() &&
+    assert(!NewBlock->hasSuccessors() && !NewBlock->hasPredecessors() &&
            "Can't insert new block with predecessors or successors.");
     NewBlock->setParent(BlockPtr->getParent());
     for (VPBlockBase *Pred : to_vector(BlockPtr->predecessors())) {
@@ -153,9 +213,8 @@ public:
   /// predecessors.
   static void insertTwoBlocksAfter(VPBlockBase *IfTrue, VPBlockBase *IfFalse,
                                    VPBlockBase *BlockPtr) {
-    assert(IfTrue->getSuccessors().empty() &&
-           "Can't insert IfTrue with successors.");
-    assert(IfFalse->getSuccessors().empty() &&
+    assert(!IfTrue->hasSuccessors() && "Can't insert IfTrue with successors.");
+    assert(!IfFalse->hasSuccessors() &&
            "Can't insert IfFalse with successors.");
     BlockPtr->setTwoSuccessors(IfTrue, IfFalse);
     IfTrue->setPredecessors({BlockPtr});
@@ -215,10 +274,16 @@ public:
     Old->clearSuccessors();
   }
 
+  /// Clone the CFG for all nodes reachable from \p Entry, including cloning
+  /// the blocks and their recipes. Operands of cloned recipes will NOT be
+  /// updated. Remapping of operands must be done separately. Returns a pair
+  /// with the new entry and exiting blocks of the cloned region. If \p Entry
+  /// isn't part of a region, return nullptr for the exiting block.
+  static std::pair<VPBlockBase *, VPBlockBase *> cloneFrom(VPBlockBase *Entry);
+
   /// Return an iterator range over \p Range which only includes \p BlockTy
   /// blocks. The accesses are casted to \p BlockTy.
-  template <typename BlockTy, typename T>
-  static auto blocksOnly(const T &Range) {
+  template <typename BlockTy, typename T> static auto blocksOnly(T &&Range) {
     // Create BaseTy with correct const-ness based on BlockTy.
     using BaseTy = std::conditional_t<std::is_const<BlockTy>::value,
                                       const VPBlockBase, VPBlockBase>;
@@ -233,6 +298,12 @@ public:
       return cast<BlockTy>(&Block);
     });
   }
+
+  /// Returns the blocks between \p FirstBB and \p LastBB, where FirstBB
+  /// to LastBB forms a single-sucessor chain.
+  static SmallVector<VPBasicBlock *>
+  blocksInSingleSuccessorChainBetween(VPBasicBlock *FirstBB,
+                                      VPBasicBlock *LastBB);
 
   /// Inserts \p BlockPtr on the edge between \p From and \p To. That is, update
   /// \p From's successor to \p To to point to \p BlockPtr and \p To's

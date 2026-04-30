@@ -402,6 +402,7 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32_inline_asm_phys_agpr(ptr add
 ; GFX908:       ; %bb.0: ; %bb
 ; GFX908-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX908-NEXT:    v_mov_b32_e32 v32, 0
+; GFX908-NEXT:    ; implicit-def: $agpr100_agpr101_agpr102_agpr103_agpr104_agpr105_agpr106_agpr107_agpr108_agpr109_agpr110_agpr111_agpr112_agpr113_agpr114_agpr115_agpr116_agpr117_agpr118_agpr119_agpr120_agpr121_agpr122_agpr123_agpr124_agpr125_agpr126_agpr127_agpr128_agpr129_agpr130_agpr131
 ; GFX908-NEXT:    ;;#ASMSTART
 ; GFX908-NEXT:    ; use a[100:131]
 ; GFX908-NEXT:    ;;#ASMEND
@@ -638,6 +639,7 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32_call(ptr addrspace(1) %arg) 
 ; GFX908-NEXT:    s_mov_b64 s[2:3], s[38:39]
 ; GFX908-NEXT:    s_mov_b32 s32, 0
 ; GFX908-NEXT:    v_mov_b32_e32 v40, 0
+; GFX908-NEXT:    ; implicit-def: $sgpr15
 ; GFX908-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX908-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX908-NEXT:    global_load_dwordx4 v[28:31], v40, s[34:35] offset:112
@@ -902,6 +904,7 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32_call_multi_bb(ptr addrspace(
 ; GFX908-NEXT:    s_mov_b64 s[0:1], s[52:53]
 ; GFX908-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; GFX908-NEXT:    s_mov_b64 s[2:3], s[54:55]
+; GFX908-NEXT:    ; implicit-def: $sgpr15
 ; GFX908-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX908-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX908-NEXT:  .LBB6_2: ; %bb3

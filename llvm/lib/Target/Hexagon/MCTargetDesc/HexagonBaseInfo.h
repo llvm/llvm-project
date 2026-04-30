@@ -16,6 +16,8 @@
 #ifndef LLVM_LIB_TARGET_HEXAGON_MCTARGETDESC_HEXAGONBASEINFO_H
 #define LLVM_LIB_TARGET_HEXAGON_MCTARGETDESC_HEXAGONBASEINFO_H
 
+#include <cstdint>
+
 #include "HexagonDepITypes.h"
 #include "MCTargetDesc/HexagonMCTargetDesc.h"
 
@@ -45,6 +47,34 @@ namespace HexagonII {
     DoubleWordAccess,
     HVXVectorAccess
   };
+
+  enum class RegType : uint8_t {
+    Unknown = 0,
+    QF32,
+    QF16,
+  };
+
+  struct RegTypeInfo {
+    RegType Output = RegType::Unknown;
+    RegType Input1 = RegType::Unknown;
+    RegType Input2 = RegType::Unknown;
+    RegType Input3 = RegType::Unknown;
+  };
+
+  RegTypeInfo getRegTypeInfo(unsigned Opcode);
+
+  inline RegType getOpRegType(unsigned Opcode) {
+    return getRegTypeInfo(Opcode).Output;
+  }
+  inline RegType getInp1RegType(unsigned Opcode) {
+    return getRegTypeInfo(Opcode).Input1;
+  }
+  inline RegType getInp2RegType(unsigned Opcode) {
+    return getRegTypeInfo(Opcode).Input2;
+  }
+  inline RegType getInp3RegType(unsigned Opcode) {
+    return getRegTypeInfo(Opcode).Input3;
+  }
 
   // MCInstrDesc TSFlags
   // *** Must match HexagonInstrFormat*.td ***

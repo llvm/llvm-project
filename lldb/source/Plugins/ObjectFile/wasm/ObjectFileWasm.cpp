@@ -113,15 +113,14 @@ static lldb::offset_t GetWasmOffsetFromInitExpr(DataExtractor &data,
 }
 
 /// Checks whether the data buffer starts with a valid Wasm module header.
-static bool ValidateModuleHeader(const DataBufferSP &data_sp) {
-  if (!data_sp || data_sp->GetByteSize() < kWasmHeaderSize)
+static bool ValidateModuleHeader(llvm::ArrayRef<uint8_t> data) {
+  if (data.size() < kWasmHeaderSize)
     return false;
 
-  if (llvm::identify_magic(toStringRef(data_sp->GetData())) !=
-      llvm::file_magic::wasm_object)
+  if (llvm::identify_magic(toStringRef(data)) != llvm::file_magic::wasm_object)
     return false;
 
-  const uint8_t *Ptr = data_sp->GetBytes() + sizeof(llvm::wasm::WasmMagic);
+  const uint8_t *Ptr = data.data() + sizeof(llvm::wasm::WasmMagic);
 
   uint32_t version = llvm::support::endian::read32le(Ptr);
   return version == llvm::wasm::WasmVersion;
@@ -159,7 +158,7 @@ ObjectFile *ObjectFileWasm::CreateInstance(const ModuleSP &module_sp,
   }
 
   assert(extractor_sp);
-  if (!ValidateModuleHeader(extractor_sp->GetSharedDataBuffer())) {
+  if (!ValidateModuleHeader(extractor_sp->GetData())) {
     LLDB_LOGF(log,
               "Failed to create ObjectFileWasm instance: invalid Wasm header");
     return nullptr;
@@ -200,7 +199,7 @@ ObjectFile *ObjectFileWasm::CreateMemoryInstance(const ModuleSP &module_sp,
                                                  WritableDataBufferSP data_sp,
                                                  const ProcessSP &process_sp,
                                                  addr_t header_addr) {
-  if (!ValidateModuleHeader(data_sp))
+  if (!ValidateModuleHeader(data_sp->GetData()))
     return nullptr;
 
   std::unique_ptr<ObjectFileWasm> objfile_up(
@@ -274,16 +273,16 @@ bool ObjectFileWasm::DecodeSections() {
   return true;
 }
 
-size_t ObjectFileWasm::GetModuleSpecifications(
-    const FileSpec &file, DataBufferSP &data_sp, offset_t data_offset,
-    offset_t file_offset, offset_t length, ModuleSpecList &specs) {
-  if (!ValidateModuleHeader(data_sp)) {
-    return 0;
-  }
+ModuleSpecList
+ObjectFileWasm::GetModuleSpecifications(const FileSpec &file,
+                                        DataExtractorSP &extractor_sp,
+                                        offset_t file_offset, offset_t length) {
+  if (!ValidateModuleHeader(extractor_sp->GetData()))
+    return {};
 
-  ModuleSpec spec(file, ArchSpec("wasm32-unknown-unknown-wasm"));
-  specs.Append(spec);
-  return 1;
+  ModuleSpecList specs;
+  specs.Append(ModuleSpec(file, ArchSpec("wasm32-unknown-unknown-wasm")));
+  return specs;
 }
 
 ObjectFileWasm::ObjectFileWasm(const ModuleSP &module_sp,
@@ -309,8 +308,17 @@ bool ObjectFileWasm::ParseHeader() {
 }
 
 struct WasmFunction {
+  /// Offset from the section to the start of the function. This points past the
+  /// function size, which some other tools consider part of the function.
   lldb::offset_t section_offset = LLDB_INVALID_OFFSET;
+
+  /// Function size, which includes the function header, but not the size ULEB
+  /// that proceeds it.
   uint32_t size = 0;
+
+  /// Offset from section_offset to the first instruction in the function, past
+  /// the local variable declarations.
+  uint32_t code_offset = 0;
 };
 
 static llvm::Expected<uint32_t> ParseImports(DataExtractor &import_data) {
@@ -328,10 +336,16 @@ static llvm::Expected<uint32_t> ParseImports(DataExtractor &import_data) {
   for (uint32_t i = 0; c && i < *count; ++i) {
     // We don't need module and field names, so we can just get them as raw
     // strings and discard.
-    if (!GetWasmString(data, c))
-      return llvm::createStringError("failed to parse module name");
-    if (!GetWasmString(data, c))
-      return llvm::createStringError("failed to parse field name");
+    llvm::Expected<std::string> module_name = GetWasmString(data, c);
+    if (!module_name)
+      return llvm::joinErrors(
+          llvm::createStringError("failed to parse module name"),
+          module_name.takeError());
+    llvm::Expected<std::string> field_name = GetWasmString(data, c);
+    if (!field_name)
+      return llvm::joinErrors(
+          llvm::createStringError("failed to parse field name"),
+          field_name.takeError());
 
     uint8_t kind = data.getU8(c);
     if (kind == llvm::wasm::WASM_EXTERNAL_FUNCTION)
@@ -348,6 +362,22 @@ static llvm::Expected<uint32_t> ParseImports(DataExtractor &import_data) {
   return function_imports;
 }
 
+/// Get the offset in the function to the first instruction.
+static llvm::Expected<uint32_t> GetFunctionCodeOffset(DataExtractor &data,
+                                                      lldb::offset_t offset) {
+  // Wasm function bodies start with:
+  //   [local_count: ULEB128]
+  //   [local_decl: {count: ULEB128, type: byte}] × local_count
+  //   [instructions...]
+  const lldb::offset_t locals_start = offset;
+  const uint32_t local_count = data.GetULEB128(&offset);
+  for (uint32_t i = 0; i < local_count; ++i) {
+    data.GetULEB128(&offset); // count
+    data.GetU8(&offset);      // valtype
+  }
+  return offset - locals_start;
+}
+
 static llvm::Expected<std::vector<WasmFunction>>
 ParseFunctions(DataExtractor &data) {
   lldb::offset_t offset = 0;
@@ -360,13 +390,21 @@ ParseFunctions(DataExtractor &data) {
   functions.reserve(*function_count);
 
   for (uint32_t i = 0; i < *function_count; ++i) {
+    // llvm-objdump considers the ULEB with the function size to be part of the
+    // function. We can't do that here because that would not match the DWARF,
+    // which considers the function to start with the local variable
+    // declarations (the header).
     llvm::Expected<uint32_t> function_size = GetULEB32(data, offset);
     if (!function_size)
       return function_size.takeError();
-    // llvm-objdump considers the ULEB with the function size to be part of the
-    // function. We can't do that here because that would break symbolic
-    // breakpoints, as that address is never executed.
-    functions.push_back({offset, *function_size});
+
+    // Functions start with with a number of local variable declarations.
+    // They're part of the function but they're not instructions.
+    llvm::Expected<uint32_t> code_offset = GetFunctionCodeOffset(data, offset);
+    if (!code_offset)
+      return code_offset.takeError();
+
+    functions.push_back({offset, *function_size, *code_offset});
 
     std::optional<lldb::offset_t> next_offset =
         llvm::checkedAddUnsigned<lldb::offset_t>(offset, *function_size);
@@ -498,6 +536,8 @@ ParseNames(SectionSP code_section_sp, DataExtractor &name_data,
                                /*size_is_valid=*/true,
                                /*contains_linker_annotations=*/false,
                                /*flags=*/0);
+          if (func.code_offset)
+            symbols.back().SetPrologueByteSize(func.code_offset);
         }
       }
     } break;
@@ -621,8 +661,7 @@ void ObjectFileWasm::CreateSections(SectionList &unified_section_list) {
         file_offset,    // Offset of this section in the file.
         sect_info.size, // Size of the section as found in the file.
         0,              // Alignment of the section
-        0,              // Flags for this section.
-        1);             // Number of host bytes per target byte
+        0);             // Flags for this section.
     m_sections_up->AddSection(section_sp);
     unified_section_list.AddSection(section_sp);
   }

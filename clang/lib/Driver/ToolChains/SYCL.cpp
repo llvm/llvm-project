@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 #include "SYCL.h"
 #include "clang/Driver/CommonArgs.h"
+#include "llvm/Support/VirtualFileSystem.h"
 
 using namespace clang::driver;
 using namespace clang::driver::toolchains;
@@ -16,16 +17,45 @@ using namespace llvm::opt;
 
 SYCLInstallationDetector::SYCLInstallationDetector(
     const Driver &D, const llvm::Triple &HostTriple,
-    const llvm::opt::ArgList &Args) {}
+    const llvm::opt::ArgList &Args)
+    : D(D) {
+  // When -fsycl is active, locate the SYCL runtime library and record its
+  // directory in SYCLRTLibPath for use by the linker.
+  StringRef SysRoot = D.SysRoot;
+  SmallString<128> DriverDir(D.Dir);
+  SmallString<128> LibPath(DriverDir);
+  llvm::sys::path::append(LibPath, "..", "lib", HostTriple.str(),
+                          "libLLVMSYCL.so");
+  // Flat lib path for LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=OFF builds,
+  // where the library is installed directly in lib/ with no triple subdir.
+  SmallString<128> FlatLibPath(DriverDir);
+  llvm::sys::path::append(FlatLibPath, "..", "lib", "libLLVMSYCL.so");
+
+  if (DriverDir.starts_with(SysRoot) &&
+      Args.hasFlag(options::OPT_fsycl, options::OPT_fno_sycl, false)) {
+    // LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON: library is in lib/<triple>/
+    if (D.getVFS().exists(LibPath))
+      llvm::sys::path::append(DriverDir, "..", "lib", HostTriple.str());
+    // LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=OFF: library is in lib/
+    else if (D.getVFS().exists(FlatLibPath))
+      llvm::sys::path::append(DriverDir, "..", "lib");
+    else
+      return; // Neither path exists : broken install, leave SYCLRTLibPath unset
+    SYCLRTLibPath = DriverDir;
+  }
+}
 
 void SYCLInstallationDetector::addSYCLIncludeArgs(
     const ArgList &DriverArgs, ArgStringList &CC1Args) const {
   if (DriverArgs.hasArg(options::OPT_nobuiltininc))
     return;
 
-  // Add the SYCL header search locations in the specified order.
-  // FIXME: Add the header file locations once the SYCL library and headers
-  //        are properly established within the build.
+  // Add the SYCL header search locations.
+  // These are included for both SYCL host and device compilations.
+  SmallString<128> IncludePath(D.Dir);
+  llvm::sys::path::append(IncludePath, "..", "include");
+  CC1Args.push_back("-internal-isystem");
+  CC1Args.push_back(DriverArgs.MakeArgString(IncludePath));
 }
 
 // Unsupported options for SYCL device compilation.

@@ -29,6 +29,11 @@
 // CHK-DEVICE-TRIPLE-SAME: "-O2"
 // CHK-DEVICE-TRIPLE: llvm-offload-binary{{.*}} "--image=file={{.*}}.bc,triple=spirv64-unknown-unknown,arch=generic,kind=sycl"
 
+// Check that -fsycl -fno-sycl does not pass libLLVMSYCL.so to the linker.
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl -fno-sycl %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-NO-SYCL-RT %s
+// CHECK-NO-SYCL-RT-NOT: libLLVMSYCL.so
+
 /// Check -fsycl-is-device is passed when compiling for the device.
 /// Check -fsycl-is-host is passed when compiling for host.
 // RUN: %clang -### -fsycl -c %s 2>&1 \

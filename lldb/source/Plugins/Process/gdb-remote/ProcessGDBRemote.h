@@ -233,9 +233,11 @@ public:
   ConfigureStructuredData(llvm::StringRef type_name,
                           const StructuredData::ObjectSP &config_sp) override;
 
-  StructuredData::ObjectSP GetLoadedDynamicLibrariesInfos() override;
+  StructuredData::ObjectSP GetLoadedDynamicLibrariesInfos(
+      lldb::BinaryInformationLevel info_level) override;
 
   StructuredData::ObjectSP GetLoadedDynamicLibrariesInfos(
+      lldb::BinaryInformationLevel info_level,
       const std::vector<lldb::addr_t> &load_addresses) override;
 
   StructuredData::ObjectSP
@@ -248,8 +250,10 @@ public:
   std::string HarmonizeThreadIdsForProfileData(
       StringExtractorGDBRemote &inputStringExtractor);
 
-  void DidFork(lldb::pid_t child_pid, lldb::tid_t child_tid) override;
-  void DidVFork(lldb::pid_t child_pid, lldb::tid_t child_tid) override;
+  void DidFork(lldb::pid_t child_pid, lldb::tid_t child_tid,
+               bool is_expression_fork = false) override;
+  void DidVFork(lldb::pid_t child_pid, lldb::tid_t child_tid,
+                bool is_expression_fork = false) override;
   void DidVForkDone() override;
   void DidExec() override;
 
@@ -297,6 +301,8 @@ protected:
                                               // registers and memory for all
                                               // threads if "jThreadsInfo"
                                               // packet is supported
+  StructuredData::ObjectSP m_shared_cache_info_sp;
+  std::mutex m_shared_cache_info_mutex;
   tid_collection m_continue_c_tids;           // 'c' for continue
   tid_sig_collection m_continue_C_tids;       // 'C' for continue with signal
   tid_collection m_continue_s_tids;           // 's' for step
@@ -390,7 +396,9 @@ protected:
                     lldb::addr_t thread_dispatch_qaddr, bool queue_vars_valid,
                     lldb_private::LazyBool associated_with_libdispatch_queue,
                     lldb::addr_t dispatch_queue_t, std::string &queue_name,
-                    lldb::QueueKind queue_kind, uint64_t queue_serial);
+                    lldb::QueueKind queue_kind, uint64_t queue_serial,
+                    std::vector<lldb::addr_t> &added_binaries,
+                    StructuredData::ObjectSP &detailed_binaries_info);
 
   void ClearThreadIDList();
 
@@ -446,6 +454,14 @@ private:
   std::map<uint64_t, uint32_t> m_thread_id_to_used_usec_map;
   uint64_t m_last_signals_version = 0;
 
+  /// Enable a single breakpoint site by trying Z0 (software), then Z1
+  /// (hardware), then manual memory write as a last resort.
+  llvm::Error DoEnableBreakpointSite(BreakpointSite &bp_site);
+
+  /// Disable a single breakpoint site directly by sending the appropriate
+  /// z packet or restoring the original instruction.
+  llvm::Error DoDisableBreakpointSite(BreakpointSite &bp_site);
+
   static bool NewThreadNotifyBreakpointHit(void *baton,
                                            StoppointCallbackContext *context,
                                            lldb::user_id_t break_id,
@@ -494,7 +510,8 @@ private:
   const ProcessGDBRemote &operator=(const ProcessGDBRemote &) = delete;
 
   // fork helpers
-  void DidForkSwitchSoftwareBreakpoints(bool enable);
+  void DidForkSwitchSoftwareBreakpoints(bool enable,
+                                        bool is_expression_fork = false);
   void DidForkSwitchHardwareTraps(bool enable);
 
   void ParseExpeditedRegisters(ExpeditedRegisterMap &expedited_register_map,

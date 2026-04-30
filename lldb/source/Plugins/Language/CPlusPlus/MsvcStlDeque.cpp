@@ -10,6 +10,7 @@
 
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
+#include "llvm/Support/ErrorExtras.h"
 
 using namespace lldb;
 
@@ -55,7 +56,7 @@ lldb_private::formatters::MsvcStlDequeSyntheticFrontEnd::
 llvm::Expected<uint32_t> lldb_private::formatters::
     MsvcStlDequeSyntheticFrontEnd::CalculateNumChildren() {
   if (!m_map)
-    return llvm::createStringError("Failed to read size");
+    return llvm::createStringError("failed to read size");
   return m_size;
 }
 
@@ -85,9 +86,9 @@ lldb_private::formatters::MsvcStlDequeSyntheticFrontEnd::GetChildAtIndex(
 
   StreamString name;
   name.Printf("[%" PRIu64 "]", (uint64_t)idx);
-  return CreateValueObjectFromAddress(name.GetString(), second_address,
-                                      m_backend.GetExecutionContextRef(),
-                                      m_element_type);
+  return CreateChildValueObjectFromAddress(name.GetString(), second_address,
+                                           m_backend.GetExecutionContextRef(),
+                                           m_element_type);
 }
 
 lldb::ChildCacheState
@@ -110,7 +111,7 @@ lldb_private::formatters::MsvcStlDequeSyntheticFrontEnd::Update() {
   if (!block_size_decl)
     return lldb::eRefetch;
   Scalar block_size = block_size_decl.GetConstantValue();
-  if (!block_size.IsValid())
+  if (!block_size.IsValid() || block_size <= 0)
     return lldb::eRefetch;
 
   ValueObjectSP offset_sp = storage_sp->GetChildMemberWithName("_Myoff");
@@ -126,7 +127,7 @@ lldb_private::formatters::MsvcStlDequeSyntheticFrontEnd::Update() {
     return lldb::eRefetch;
 
   uint64_t map_size = map_size_sp->GetValueAsUnsigned(0, &ok);
-  if (!ok)
+  if (!ok || map_size == 0)
     return lldb::eRefetch;
 
   uint64_t size = size_sp->GetValueAsUnsigned(0, &ok);
@@ -158,13 +159,11 @@ lldb_private::formatters::MsvcStlDequeSyntheticFrontEnd::Update() {
 llvm::Expected<size_t> lldb_private::formatters::MsvcStlDequeSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   if (!m_map)
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
   if (auto optional_idx = ExtractIndexFromString(name.GetCString()))
     return *optional_idx;
 
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.AsCString());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 bool lldb_private::formatters::IsMsvcStlDeque(ValueObject &valobj) {

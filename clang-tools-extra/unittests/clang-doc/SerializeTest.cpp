@@ -40,7 +40,8 @@ public:
 
   template <typename T> bool mapDecl(const T *D) {
     Location Loc(0, 0, "test.cpp");
-    auto [Child, Parent] = serialize::emitInfo(D, getComment(D), Loc, Public);
+    serialize::Serializer S;
+    auto [Child, Parent] = S.emitInfo(D, getComment(D), Loc, Public);
     if (Child)
       EmittedInfos.emplace_back(std::move(Child));
     if (Parent)
@@ -96,12 +97,12 @@ static void extractInfosFromCodeWithArgs(StringRef Code,
 CommentInfo MakeOneLineCommentInfo(const std::string &Text) {
   CommentInfo TopComment;
   TopComment.Kind = "FullComment";
-  TopComment.Children.emplace_back(std::make_unique<CommentInfo>());
+  TopComment.Children.emplace_back(allocatePtr<CommentInfo>());
 
   CommentInfo *Brief = TopComment.Children.back().get();
   Brief->Kind = "ParagraphComment";
 
-  Brief->Children.emplace_back(std::make_unique<CommentInfo>());
+  Brief->Children.emplace_back(allocatePtr<CommentInfo>());
   Brief->Children.back()->Kind = "TextComment";
   Brief->Children.back()->Name = "ParagraphComment";
   Brief->Children.back()->Text = Text;
@@ -599,14 +600,14 @@ TEST_F(SerializeTest, emitChildNamespaces) {
 
   NamespaceInfo *ParentA = InfoAsNamespace(Infos[1].get());
   NamespaceInfo ExpectedParentA(EmptySID);
-  ExpectedParentA.Children.Namespaces.emplace_back(EmptySID, "A",
-                                                   InfoType::IT_namespace);
+  Reference RA(EmptySID, "A", InfoType::IT_namespace);
+  ExpectedParentA.Children.Namespaces.push_back(RA);
   CheckNamespaceInfo(&ExpectedParentA, ParentA);
 
   NamespaceInfo *ParentB = InfoAsNamespace(Infos[3].get());
   NamespaceInfo ExpectedParentB(EmptySID);
-  ExpectedParentB.Children.Namespaces.emplace_back(
-      EmptySID, "B", InfoType::IT_namespace, "A::B", "A");
+  Reference RB(EmptySID, "B", InfoType::IT_namespace, "A::B", "A");
+  ExpectedParentB.Children.Namespaces.push_back(RB);
   CheckNamespaceInfo(&ExpectedParentB, ParentB);
 }
 

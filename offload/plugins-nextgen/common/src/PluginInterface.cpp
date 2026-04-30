@@ -29,7 +29,6 @@
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/JSON.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Signals.h"
@@ -45,343 +44,17 @@ using namespace plugin;
 using namespace error;
 using namespace llvm::offload::debug;
 
-// TODO: Fix any thread safety issues for multi-threaded kernel recording.
-namespace llvm::omp::target::plugin {
-struct RecordReplayTy {
-
-  // Describes the state of the record replay mechanism.
-  enum RRStatusTy { RRDeactivated = 0, RRRecording, RRReplaying };
-
-private:
-  // Memory pointers for recording, replaying memory.
-  void *MemoryStart = nullptr;
-  void *MemoryPtr = nullptr;
-  size_t MemorySize = 0;
-  size_t TotalSize = 0;
-  GenericDeviceTy *Device = nullptr;
-  std::mutex AllocationLock;
-
-  RRStatusTy Status = RRDeactivated;
-  bool ReplaySaveOutput = false;
-  bool UsedVAMap = false;
-  uintptr_t MemoryOffset = 0;
-
-  // A list of all globals mapped to the device.
-  struct GlobalEntry {
-    const char *Name;
-    uint64_t Size;
-    void *Addr;
-  };
-  llvm::SmallVector<GlobalEntry> GlobalEntries{};
-
-  Expected<void *> suggestAddress(uint64_t MaxMemoryAllocation) {
-    // Get a valid pointer address for this system
-    auto AddrOrErr =
-        Device->allocate(1024, /*HstPtr=*/nullptr, TARGET_ALLOC_DEFAULT);
-    if (!AddrOrErr)
-      return AddrOrErr.takeError();
-
-    void *Addr = *AddrOrErr;
-    if (auto Err = Device->free(Addr))
-      return std::move(Err);
-
-    // Align Address to MaxMemoryAllocation
-    Addr = (void *)utils::alignPtr((Addr), MaxMemoryAllocation);
-    return Addr;
-  }
-
-  Error preAllocateVAMemory(uint64_t MaxMemoryAllocation, void *VAddr) {
-    size_t ASize = MaxMemoryAllocation;
-
-    if (!VAddr && isRecording()) {
-      auto VAddrOrErr = suggestAddress(MaxMemoryAllocation);
-      if (!VAddrOrErr)
-        return VAddrOrErr.takeError();
-      VAddr = *VAddrOrErr;
-    }
-
-    ODBG(OLDT_Alloc) << "Request " << MaxMemoryAllocation
-                     << " bytes allocated at " << VAddr;
-
-    if (auto Err = Device->memoryVAMap(&MemoryStart, VAddr, &ASize))
-      return Err;
-
-    if (isReplaying() && VAddr != MemoryStart) {
-      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                           "record-Replay cannot assign the"
-                           "requested recorded address (%p, %p)",
-                           VAddr, MemoryStart);
-    }
-
-    INFO(OMP_INFOTYPE_PLUGIN_KERNEL, Device->getDeviceId(),
-         "Allocated %" PRIu64 " bytes at %p for replay.\n", ASize, MemoryStart);
-
-    MemoryPtr = MemoryStart;
-    MemorySize = 0;
-    TotalSize = ASize;
-    UsedVAMap = true;
-    return Plugin::success();
-  }
-
-  Error preAllocateHeuristic(uint64_t MaxMemoryAllocation,
-                             uint64_t RequiredMemoryAllocation, void *VAddr) {
-    const size_t MAX_MEMORY_ALLOCATION = MaxMemoryAllocation;
-    constexpr size_t STEP = 1024 * 1024 * 1024ULL;
-    MemoryStart = nullptr;
-    for (TotalSize = MAX_MEMORY_ALLOCATION; TotalSize > 0; TotalSize -= STEP) {
-      auto MemoryStartOrErr =
-          Device->allocate(TotalSize, /*HstPtr=*/nullptr, TARGET_ALLOC_DEFAULT);
-      if (!MemoryStartOrErr)
-        return MemoryStartOrErr.takeError();
-      MemoryStart = *MemoryStartOrErr;
-      if (MemoryStart)
-        break;
-    }
-    if (!MemoryStart)
-      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                           "allocating record/replay memory");
-
-    if (VAddr && VAddr != MemoryStart)
-      MemoryOffset = uintptr_t(VAddr) - uintptr_t(MemoryStart);
-
-    MemoryPtr = MemoryStart;
-    MemorySize = 0;
-
-    // Check if we need adjustment.
-    if (MemoryOffset > 0 &&
-        TotalSize >= RequiredMemoryAllocation + MemoryOffset) {
-      // If we are off but "before" the required address and with enough space,
-      // we just "allocate" the offset to match the required address.
-      MemoryPtr = (char *)MemoryPtr + MemoryOffset;
-      MemorySize += MemoryOffset;
-      MemoryOffset = 0;
-      assert(MemoryPtr == VAddr && "Expected offset adjustment to work");
-    } else if (MemoryOffset) {
-      // If we are off and in a situation we cannot just "waste" memory to force
-      // a match, we hope adjusting the arguments is sufficient.
-      REPORT() << "WARNING Failed to allocate replay memory at required "
-               << "location " << VAddr << ", got " << MemoryStart
-               << ", trying to offset argument pointers by " << MemoryOffset;
-    }
-
-    INFO(OMP_INFOTYPE_PLUGIN_KERNEL, Device->getDeviceId(),
-         "Allocated %" PRIu64 " bytes at %p for replay.\n", TotalSize,
-         MemoryStart);
-
-    return Plugin::success();
-  }
-
-  Error preallocateDeviceMemory(uint64_t DeviceMemorySize, void *ReqVAddr) {
-    if (Device->supportVAManagement()) {
-      auto Err = preAllocateVAMemory(DeviceMemorySize, ReqVAddr);
-      if (Err) {
-        REPORT() << "WARNING VA mapping failed, fallback to heuristic: "
-                 << "(Error: " << toString(std::move(Err)) << ")";
-      }
-    }
-
-    uint64_t DevMemSize;
-    if (Device->getDeviceMemorySize(DevMemSize))
-      return Plugin::error(ErrorCode::UNKNOWN,
-                           "cannot determine Device Memory Size");
-
-    return preAllocateHeuristic(DevMemSize, DeviceMemorySize, ReqVAddr);
-  }
-
-  void dumpDeviceMemory(StringRef Filename) {
-    ErrorOr<std::unique_ptr<WritableMemoryBuffer>> DeviceMemoryMB =
-        WritableMemoryBuffer::getNewUninitMemBuffer(MemorySize);
-    if (!DeviceMemoryMB)
-      report_fatal_error("Error creating MemoryBuffer for device memory");
-
-    auto Err = Device->dataRetrieve(DeviceMemoryMB.get()->getBufferStart(),
-                                    MemoryStart, MemorySize, nullptr);
-    if (Err)
-      report_fatal_error("Error retrieving data for target pointer");
-
-    StringRef DeviceMemory(DeviceMemoryMB.get()->getBufferStart(), MemorySize);
-    std::error_code EC;
-    raw_fd_ostream OS(Filename, EC);
-    if (EC)
-      report_fatal_error("Error dumping memory to file " + Filename + " :" +
-                         EC.message());
-    OS << DeviceMemory;
-    OS.close();
-  }
-
-public:
-  bool isRecording() const { return Status == RRStatusTy::RRRecording; }
-  bool isReplaying() const { return Status == RRStatusTy::RRReplaying; }
-  bool isRecordingOrReplaying() const {
-    return (Status != RRStatusTy::RRDeactivated);
-  }
-  void setStatus(RRStatusTy Status) { this->Status = Status; }
-  bool isSaveOutputEnabled() const { return ReplaySaveOutput; }
-  void addEntry(const char *Name, uint64_t Size, void *Addr) {
-    GlobalEntries.emplace_back(GlobalEntry{Name, Size, Addr});
-  }
-
-  void saveImage(const char *Name, const DeviceImageTy &Image) {
-    SmallString<128> ImageName = {Name, ".image"};
-    std::error_code EC;
-    raw_fd_ostream OS(ImageName, EC);
-    if (EC)
-      report_fatal_error("Error saving image : " + StringRef(EC.message()));
-    OS << Image.getMemoryBuffer().getBuffer();
-    OS.close();
-  }
-
-  void dumpGlobals(StringRef Filename, DeviceImageTy &Image) {
-    int32_t Size = 0;
-
-    for (auto &OffloadEntry : GlobalEntries) {
-      if (!OffloadEntry.Size)
-        continue;
-      // Get the total size of the string and entry including the null byte.
-      Size += std::strlen(OffloadEntry.Name) + 1 + sizeof(uint32_t) +
-              OffloadEntry.Size;
-    }
-
-    ErrorOr<std::unique_ptr<WritableMemoryBuffer>> GlobalsMB =
-        WritableMemoryBuffer::getNewUninitMemBuffer(Size);
-    if (!GlobalsMB)
-      report_fatal_error("Error creating MemoryBuffer for globals memory");
-
-    void *BufferPtr = GlobalsMB.get()->getBufferStart();
-    for (auto &OffloadEntry : GlobalEntries) {
-      if (!OffloadEntry.Size)
-        continue;
-
-      int32_t NameLength = std::strlen(OffloadEntry.Name) + 1;
-      memcpy(BufferPtr, OffloadEntry.Name, NameLength);
-      BufferPtr = utils::advancePtr(BufferPtr, NameLength);
-
-      *((uint32_t *)(BufferPtr)) = OffloadEntry.Size;
-      BufferPtr = utils::advancePtr(BufferPtr, sizeof(uint32_t));
-
-      auto Err = Plugin::success();
-      {
-        if (auto Err = Device->dataRetrieve(BufferPtr, OffloadEntry.Addr,
-                                            OffloadEntry.Size, nullptr))
-          report_fatal_error("Error retrieving data for global");
-      }
-      if (Err)
-        report_fatal_error("Error retrieving data for global");
-      BufferPtr = utils::advancePtr(BufferPtr, OffloadEntry.Size);
-    }
-    assert(BufferPtr == GlobalsMB->get()->getBufferEnd() &&
-           "Buffer over/under-filled.");
-    assert(Size == utils::getPtrDiff(BufferPtr,
-                                     GlobalsMB->get()->getBufferStart()) &&
-           "Buffer size mismatch");
-
-    StringRef GlobalsMemory(GlobalsMB.get()->getBufferStart(), Size);
-    std::error_code EC;
-    raw_fd_ostream OS(Filename, EC);
-    OS << GlobalsMemory;
-    OS.close();
-  }
-
-  void saveKernelDescr(const char *Name, KernelLaunchParamsTy LaunchParams,
-                       int32_t NumArgs, uint64_t NumTeamsClause,
-                       uint32_t ThreadLimitClause, uint64_t LoopTripCount) {
-    json::Object JsonKernelInfo;
-    JsonKernelInfo["Name"] = Name;
-    JsonKernelInfo["NumArgs"] = NumArgs;
-    JsonKernelInfo["NumTeamsClause"] = NumTeamsClause;
-    JsonKernelInfo["ThreadLimitClause"] = ThreadLimitClause;
-    JsonKernelInfo["LoopTripCount"] = LoopTripCount;
-    JsonKernelInfo["DeviceMemorySize"] = MemorySize;
-    JsonKernelInfo["DeviceId"] = Device->getDeviceId();
-    JsonKernelInfo["BumpAllocVAStart"] = (intptr_t)MemoryStart;
-
-    json::Array JsonArgPtrs;
-    for (int I = 0; I < NumArgs; ++I)
-      JsonArgPtrs.push_back((intptr_t)LaunchParams.Ptrs[I]);
-    JsonKernelInfo["ArgPtrs"] = json::Value(std::move(JsonArgPtrs));
-
-    json::Array JsonArgOffsets;
-    for (int I = 0; I < NumArgs; ++I)
-      JsonArgOffsets.push_back(0);
-    JsonKernelInfo["ArgOffsets"] = json::Value(std::move(JsonArgOffsets));
-
-    SmallString<128> JsonFilename = {Name, ".json"};
-    std::error_code EC;
-    raw_fd_ostream JsonOS(JsonFilename.str(), EC);
-    if (EC)
-      report_fatal_error("Error saving kernel json file : " +
-                         StringRef(EC.message()));
-    JsonOS << json::Value(std::move(JsonKernelInfo));
-    JsonOS.close();
-  }
-
-  void saveKernelInput(const char *Name, DeviceImageTy &Image) {
-    SmallString<128> GlobalsFilename = {Name, ".globals"};
-    dumpGlobals(GlobalsFilename, Image);
-
-    SmallString<128> MemoryFilename = {Name, ".memory"};
-    dumpDeviceMemory(MemoryFilename);
-  }
-
-  void saveKernelOutputInfo(const char *Name) {
-    SmallString<128> OutputFilename = {
-        Name, (isRecording() ? ".original.output" : ".replay.output")};
-    dumpDeviceMemory(OutputFilename);
-  }
-
-  void *alloc(uint64_t Size) {
-    assert(MemoryStart && "Expected memory has been pre-allocated");
-    void *Alloc = nullptr;
-    constexpr int Alignment = 16;
-    // Assumes alignment is a power of 2.
-    int64_t AlignedSize = (Size + (Alignment - 1)) & (~(Alignment - 1));
-    std::lock_guard<std::mutex> LG(AllocationLock);
-    Alloc = MemoryPtr;
-    MemoryPtr = (char *)MemoryPtr + AlignedSize;
-    MemorySize += AlignedSize;
-    ODBG(OLDT_Alloc) << "Memory Allocator return " << Alloc;
-    return Alloc;
-  }
-
-  Error init(GenericDeviceTy *Device, uint64_t MemSize, void *VAddr,
-             RRStatusTy Status, bool SaveOutput, uint64_t &ReqPtrArgOffset) {
-    this->Device = Device;
-    this->Status = Status;
-    this->ReplaySaveOutput = SaveOutput;
-
-    if (auto Err = preallocateDeviceMemory(MemSize, VAddr))
-      return Err;
-
-    INFO(OMP_INFOTYPE_PLUGIN_KERNEL, Device->getDeviceId(),
-         "Record Replay Initialized (%p)"
-         " as starting address, %lu Memory Size"
-         " and set on status %s\n",
-         MemoryStart, TotalSize,
-         Status == RRStatusTy::RRRecording ? "Recording" : "Replaying");
-
-    // Tell the user to offset pointer arguments as the memory allocation does
-    // not match.
-    ReqPtrArgOffset = MemoryOffset;
-    return Plugin::success();
-  }
-
-  Error deinit() {
-    if (UsedVAMap) {
-      if (auto Err = Device->memoryVAUnMap(MemoryStart, TotalSize))
-        return Err;
-    } else {
-      if (auto Err = Device->free(MemoryStart))
-        return Err;
-    }
-    return Plugin::success();
-  }
-};
-} // namespace llvm::omp::target::plugin
-
 AsyncInfoWrapperTy::AsyncInfoWrapperTy(GenericDeviceTy &Device,
                                        __tgt_async_info *AsyncInfoPtr)
     : Device(Device),
       AsyncInfoPtr(AsyncInfoPtr ? AsyncInfoPtr : &LocalAsyncInfo) {}
+
+Error AsyncInfoWrapperTy::synchronize() {
+  assert(AsyncInfoPtr && "AsyncInfoWrapperTy already finalized");
+
+  // Synchronize with the async info's operations without releasing the queue.
+  return Device.synchronize(AsyncInfoPtr, /*ReleaseQueue=*/false);
+}
 
 void AsyncInfoWrapperTy::finalize(Error &Err) {
   assert(AsyncInfoPtr && "AsyncInfoWrapperTy already finalized");
@@ -435,20 +108,22 @@ Error GenericKernelTy::init(GenericDeviceTy &GenericDevice,
 
 Expected<KernelLaunchEnvironmentTy *>
 GenericKernelTy::getKernelLaunchEnvironment(
-    GenericDeviceTy &GenericDevice, uint32_t Version,
+    GenericDeviceTy &GenericDevice, const KernelArgsTy &KernelArgs,
+    const DynBlockMemConfTy &DynBlockMemConf,
     AsyncInfoWrapperTy &AsyncInfoWrapper) const {
   // Ctor/Dtor have no arguments, replaying uses the original kernel launch
   // environment. Older versions of the compiler do not generate a kernel
   // launch environment.
-  if (GenericDevice.Plugin.getRecordReplay().isReplaying() ||
-      Version < OMP_KERNEL_ARG_MIN_VERSION_WITH_DYN_PTR)
+  if ((GenericDevice.getRecordReplay() &&
+       GenericDevice.getRecordReplay()->isReplaying()) ||
+      KernelArgs.Version < OMP_KERNEL_ARG_MIN_VERSION_WITH_DYN_PTR)
     return nullptr;
 
-  if (!KernelEnvironment.Configuration.ReductionDataSize ||
-      !KernelEnvironment.Configuration.ReductionBufferLength)
+  if ((!KernelEnvironment.Configuration.ReductionDataSize ||
+       !KernelEnvironment.Configuration.ReductionBufferLength) &&
+      KernelArgs.DynCGroupMem == 0)
     return reinterpret_cast<KernelLaunchEnvironmentTy *>(~0);
 
-  // TODO: Check if the kernel needs a launch environment.
   auto AllocOrErr = GenericDevice.dataAlloc(sizeof(KernelLaunchEnvironmentTy),
                                             /*HostPtr=*/nullptr,
                                             TargetAllocTy::TARGET_ALLOC_DEVICE);
@@ -462,7 +137,14 @@ GenericKernelTy::getKernelLaunchEnvironment(
   /// async data transfer.
   auto &LocalKLE = (*AsyncInfoWrapper).KernelLaunchEnvironment;
   LocalKLE = KernelLaunchEnvironment;
-  {
+
+  LocalKLE.DynCGroupMemSize = DynBlockMemConf.Size;
+  LocalKLE.DynCGroupMemFbPtr = DynBlockMemConf.FallbackPtr;
+  LocalKLE.DynCGroupMemFb = DynBlockMemConf.Fallback;
+  LocalKLE.ReductionBuffer = nullptr;
+
+  if (KernelEnvironment.Configuration.ReductionDataSize &&
+      KernelEnvironment.Configuration.ReductionBufferLength) {
     auto AllocOrErr = GenericDevice.dataAlloc(
         KernelEnvironment.Configuration.ReductionDataSize *
             KernelEnvironment.Configuration.ReductionBufferLength,
@@ -508,14 +190,86 @@ Error GenericKernelTy::printLaunchInfoDetails(GenericDeviceTy &GenericDevice,
   return Plugin::success();
 }
 
+Expected<DynBlockMemConfTy>
+GenericKernelTy::prepareBlockMemory(GenericDeviceTy &GenericDevice,
+                                    KernelArgsTy &KernelArgs,
+                                    uint32_t NumBlocks) const {
+  uint32_t MaxBlockMemSize = GenericDevice.getMaxBlockSharedMemSize();
+  uint32_t DynBlockMemSize = KernelArgs.DynCGroupMem;
+  uint32_t TotalBlockMemSize = StaticBlockMemSize + DynBlockMemSize;
+  uint32_t DynNativeBlockMemSize = DynBlockMemSize;
+  void *DynFallbackPtr = nullptr;
+
+  // No enough block memory to cover the static one. Cannot run the kernel.
+  if (StaticBlockMemSize > MaxBlockMemSize)
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "Static block memory size exceeds maximum");
+  // No enough block memory to cover dynamic one, and the fallback is aborting.
+  if (static_cast<DynCGroupMemFallbackType>(
+          KernelArgs.Flags.DynCGroupMemFallback) ==
+          DynCGroupMemFallbackType::Abort &&
+      TotalBlockMemSize > MaxBlockMemSize)
+    return Plugin::error(
+        ErrorCode::INVALID_ARGUMENT,
+        "Requested block memory size (static + dynamic) exceeds maximum");
+
+  DynCGroupMemFallbackType DynFallback = DynCGroupMemFallbackType::None;
+  if (DynBlockMemSize && TotalBlockMemSize > MaxBlockMemSize) {
+    // Launch without native dynamic block memory.
+    DynNativeBlockMemSize = 0;
+    DynFallback = static_cast<DynCGroupMemFallbackType>(
+        KernelArgs.Flags.DynCGroupMemFallback);
+    if (DynFallback != DynCGroupMemFallbackType::DefaultMem) {
+      // Do not provide any memory as fallback.
+      DynBlockMemSize = 0;
+    } else {
+      // Get global memory as fallback.
+      auto AllocOrErr = GenericDevice.dataAlloc(
+          NumBlocks * DynBlockMemSize,
+          /*HostPtr=*/nullptr, TargetAllocTy::TARGET_ALLOC_DEVICE);
+      if (!AllocOrErr)
+        return AllocOrErr.takeError();
+      DynFallbackPtr = *AllocOrErr;
+    }
+  }
+  return DynBlockMemConfTy{DynBlockMemSize, DynNativeBlockMemSize, DynFallback,
+                           DynFallbackPtr};
+}
+
 Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
                               ptrdiff_t *ArgOffsets, KernelArgsTy &KernelArgs,
+                              KernelExtraArgsTy *KernelExtraArgs,
                               AsyncInfoWrapperTy &AsyncInfoWrapper) const {
   llvm::SmallVector<void *, 16> Args;
   llvm::SmallVector<void *, 16> Ptrs;
 
+  uint32_t NumThreads[3] = {KernelArgs.ThreadLimit[0],
+                            KernelArgs.ThreadLimit[1],
+                            KernelArgs.ThreadLimit[2]};
+  uint32_t NumBlocks[3] = {KernelArgs.NumTeams[0], KernelArgs.NumTeams[1],
+                           KernelArgs.NumTeams[2]};
+  if (!isBareMode()) {
+    assert(
+        NumThreads[1] == 1 && NumThreads[2] == 1 && NumBlocks[1] == 1 &&
+        NumBlocks[2] == 1 &&
+        "Non-bare mode should only use the first thread and block dimensions");
+    NumThreads[0] = getNumThreads(GenericDevice, NumThreads);
+    NumBlocks[0] = getNumBlocks(GenericDevice, NumBlocks, KernelArgs.Tripcount,
+                                NumThreads[0], KernelArgs.ThreadLimit[0] > 0);
+  }
+
+  auto DynBlockMemConfOrErr = prepareBlockMemory(
+      GenericDevice, KernelArgs, NumBlocks[0] * NumBlocks[1] * NumBlocks[2]);
+  if (!DynBlockMemConfOrErr)
+    return DynBlockMemConfOrErr.takeError();
+
+  DynBlockMemConfTy &DynBlockMemConf = *DynBlockMemConfOrErr;
+  if (DynBlockMemConf.FallbackPtr)
+    AsyncInfoWrapper.freeAllocationAfterSynchronization(
+        DynBlockMemConf.FallbackPtr);
+
   auto KernelLaunchEnvOrErr = getKernelLaunchEnvironment(
-      GenericDevice, KernelArgs.Version, AsyncInfoWrapper);
+      GenericDevice, KernelArgs, DynBlockMemConf, AsyncInfoWrapper);
   if (!KernelLaunchEnvOrErr)
     return KernelLaunchEnvOrErr.takeError();
 
@@ -528,63 +282,77 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
   } else {
     LaunchParams =
         prepareArgs(GenericDevice, ArgPtrs, ArgOffsets, KernelArgs.NumArgs,
-                    Args, Ptrs, *KernelLaunchEnvOrErr);
-  }
-
-  uint32_t NumThreads[3] = {KernelArgs.ThreadLimit[0],
-                            KernelArgs.ThreadLimit[1],
-                            KernelArgs.ThreadLimit[2]};
-  uint32_t NumBlocks[3] = {KernelArgs.NumTeams[0], KernelArgs.NumTeams[1],
-                           KernelArgs.NumTeams[2]};
-  if (!isBareMode()) {
-    NumThreads[0] = getNumThreads(GenericDevice, NumThreads);
-    NumBlocks[0] = getNumBlocks(GenericDevice, NumBlocks, KernelArgs.Tripcount,
-                                NumThreads[0], KernelArgs.ThreadLimit[0] > 0);
-  }
-
-  // Record the kernel description after we modified the argument count and num
-  // blocks/threads.
-  RecordReplayTy &RecordReplay = GenericDevice.Plugin.getRecordReplay();
-  if (RecordReplay.isRecording()) {
-    RecordReplay.saveImage(getName(), getImage());
-    RecordReplay.saveKernelInput(getName(), getImage());
-    RecordReplay.saveKernelDescr(getName(), LaunchParams, KernelArgs.NumArgs,
-                                 NumBlocks[0], NumThreads[0],
-                                 KernelArgs.Tripcount);
+                    Args, Ptrs, *KernelLaunchEnvOrErr, KernelArgs.Version);
   }
 
   if (auto Err =
           printLaunchInfo(GenericDevice, KernelArgs, NumThreads, NumBlocks))
     return Err;
 
-  return launchImpl(GenericDevice, NumThreads, NumBlocks, KernelArgs,
-                    LaunchParams, AsyncInfoWrapper);
+  RecordReplayTy::HandleTy RRHandle;
+  RecordReplayTy *RecordReplay = GenericDevice.getRecordReplay();
+  if (RecordReplay) {
+    // Record replay requires synchronization of any previous operation.
+    if (auto Err = AsyncInfoWrapper.synchronize())
+      return Err;
+
+    // Record the kernel prologue data before kernel launch.
+    auto RRHandleOrErr = RecordReplay->recordPrologue(
+        *this, KernelArgs, KernelExtraArgs, LaunchParams, NumBlocks, NumThreads,
+        DynBlockMemConf.NativeSize);
+    if (!RRHandleOrErr)
+      return RRHandleOrErr.takeError();
+    RRHandle = *RRHandleOrErr;
+  }
+
+  if (auto Err = launchImpl(GenericDevice, NumThreads, NumBlocks,
+                            DynBlockMemConf.NativeSize, KernelArgs,
+                            LaunchParams, AsyncInfoWrapper))
+    return Err;
+
+  if (RecordReplay) {
+    // Record replay requires synchronization.
+    if (auto Err = AsyncInfoWrapper.synchronize())
+      return Err;
+
+    // Record the epilogue data after kernel synchronization.
+    return RecordReplay->recordEpilogue(*this, RRHandle);
+  }
+  return Plugin::success();
 }
 
-KernelLaunchParamsTy GenericKernelTy::prepareArgs(
-    GenericDeviceTy &GenericDevice, void **ArgPtrs, ptrdiff_t *ArgOffsets,
-    uint32_t &NumArgs, llvm::SmallVectorImpl<void *> &Args,
-    llvm::SmallVectorImpl<void *> &Ptrs,
-    KernelLaunchEnvironmentTy *KernelLaunchEnvironment) const {
-  uint32_t KLEOffset = !!KernelLaunchEnvironment;
-  NumArgs += KLEOffset;
-
+KernelLaunchParamsTy
+GenericKernelTy::prepareArgs(GenericDeviceTy &GenericDevice, void **ArgPtrs,
+                             ptrdiff_t *ArgOffsets, uint32_t &NumArgs,
+                             llvm::SmallVectorImpl<void *> &Args,
+                             llvm::SmallVectorImpl<void *> &Ptrs,
+                             KernelLaunchEnvironmentTy *KernelLaunchEnvironment,
+                             uint32_t Version) const {
   if (NumArgs == 0)
     return KernelLaunchParamsTy{};
 
+  // The argument arrays already include the dyn_ptr slot at the end (appended
+  // by the host for version >= 4, or by upgradeKernelArgs for version 3).
   Args.resize(NumArgs);
   Ptrs.resize(NumArgs);
 
-  if (KernelLaunchEnvironment) {
-    Args[0] = KernelLaunchEnvironment;
-    Ptrs[0] = &Args[0];
-  }
+  for (uint32_t I = 0; I < NumArgs; ++I)
+    Args[I] = reinterpret_cast<void *>(reinterpret_cast<intptr_t>(ArgPtrs[I]) +
+                                       ArgOffsets[I]);
 
-  for (uint32_t I = KLEOffset; I < NumArgs; ++I) {
-    Args[I] =
-        (void *)((intptr_t)ArgPtrs[I - KLEOffset] + ArgOffsets[I - KLEOffset]);
+  // Optionally assign the KernelLaunchEnvironment to the last slot (dyn_ptr).
+  if (KernelLaunchEnvironment)
+    Args[NumArgs - 1] = KernelLaunchEnvironment;
+
+  // Version 3 device kernels have dyn_ptr baked in at position 0. Rotate the
+  // last element to the front to match the device ABI.
+  if (Version <= OMP_KERNEL_ARG_MIN_VERSION_WITH_DYN_PTR &&
+      KernelLaunchEnvironment)
+    std::rotate(Args.begin(), Args.end() - 1, Args.end());
+
+  for (uint32_t I = 0; I < NumArgs; ++I)
     Ptrs[I] = &Args[I];
-  }
+
   return KernelLaunchParamsTy{sizeof(void *) * NumArgs, &Args[0], &Ptrs[0]};
 }
 
@@ -703,7 +471,6 @@ GenericDeviceTy::GenericDeviceTy(GenericPluginTy &Plugin, int32_t DeviceId,
       OMP_NumTeams("OMP_NUM_TEAMS"),
       OMP_TeamsThreadLimit("OMP_TEAMS_THREAD_LIMIT"),
       OMPX_DebugKind("LIBOMPTARGET_DEVICE_RTL_DEBUG"),
-      OMPX_SharedMemorySize("LIBOMPTARGET_SHARED_MEMORY_SIZE"),
       // Do not initialize the following two envars since they depend on the
       // device initialization. These cannot be consulted until the device is
       // initialized correctly. We initialize them in GenericDeviceTy::init().
@@ -733,6 +500,32 @@ GenericDeviceTy::GenericDeviceTy(GenericPluginTy &Plugin, int32_t DeviceId,
 #undef bindOmptCallback
 
 #endif
+
+  // Envar that indicates whether mapped host buffers should be locked
+  // automatically. The possible values are boolean (on/off) and a special:
+  //   off:       Mapped host buffers are not locked.
+  //   on:        Mapped host buffers are locked in a best-effort approach.
+  //              Failure to lock the buffers are silent.
+  //   mandatory: Mapped host buffers are always locked and failures to lock
+  //              a buffer results in a fatal error.
+  StringEnvar OMPX_LockMappedBuffers("LIBOMPTARGET_LOCK_MAPPED_HOST_BUFFERS",
+                                     "off");
+
+  bool Enabled;
+  if (StringParser::parse(OMPX_LockMappedBuffers.get().data(), Enabled)) {
+    // Parsed as a boolean value. Enable the feature if necessary.
+    LockMappedBuffers = Enabled;
+    IgnoreLockMappedFailures = true;
+  } else if (OMPX_LockMappedBuffers.get() == "mandatory") {
+    // Enable the feature and failures are fatal.
+    LockMappedBuffers = true;
+    IgnoreLockMappedFailures = false;
+  } else {
+    // Disable by default.
+    ODBG(OLDT_Alloc) << "Invalid value LIBOMPTARGET_LOCK_MAPPED_HOST_BUFFERS="
+                     << OMPX_LockMappedBuffers.get();
+    LockMappedBuffers = false;
+  }
 }
 
 Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
@@ -828,10 +621,12 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
     delete MemoryManager;
   MemoryManager = nullptr;
 
-  RecordReplayTy &RecordReplay = Plugin.getRecordReplay();
-  if (RecordReplay.isRecordingOrReplaying())
-    if (auto Err = RecordReplay.deinit())
+  if (RecordReplay) {
+    if (auto Err = RecordReplay->deinit())
       return Err;
+    delete RecordReplay;
+    RecordReplay = nullptr;
+  }
 
   if (RPCServer)
     if (auto Err = RPCServer->deinitDevice(*this))
@@ -849,7 +644,8 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
 }
 Expected<DeviceImageTy *> GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
                                                       StringRef InputTgtImage) {
-  ODBG(OLDT_Init) << "Load data from image " << InputTgtImage.bytes_begin();
+  ODBG(OLDT_Init) << "Load data from image "
+                  << static_cast<const void *>(InputTgtImage.bytes_begin());
 
   std::unique_ptr<MemoryBuffer> Buffer;
   if (identify_magic(InputTgtImage) == file_magic::bitcode) {
@@ -1023,8 +819,9 @@ Error PinnedAllocationMapTy::unregisterHostBuffer(void *HstPtr) {
   return eraseEntry(*Entry);
 }
 
-Expected<void *> PinnedAllocationMapTy::lockHostBuffer(void *HstPtr,
-                                                       size_t Size) {
+Expected<void *> PinnedAllocationMapTy::registerMemory(void *HstPtr,
+                                                       size_t Size,
+                                                       bool LockMemory) {
   assert(HstPtr && "Invalid pointer");
   assert(Size && "Invalid size");
 
@@ -1042,6 +839,27 @@ Expected<void *> PinnedAllocationMapTy::lockHostBuffer(void *HstPtr,
                              utils::getPtrDiff(HstPtr, Entry->HstPtr));
   }
 
+  size_t BaseSize;
+  void *BaseHstPtr, *BaseDevAccessiblePtr;
+
+  // Check if it was externally pinned by a vendor-specific API.
+  auto IsPinnedOrErr = Device.isPinnedPtrImpl(HstPtr, BaseHstPtr,
+                                              BaseDevAccessiblePtr, BaseSize);
+  if (!IsPinnedOrErr)
+    return IsPinnedOrErr.takeError();
+
+  // If pinned, just insert the entry representing the whole pinned buffer.
+  if (*IsPinnedOrErr) {
+    if (auto Err = insertEntry(BaseHstPtr, BaseDevAccessiblePtr, BaseSize,
+                               /*Externallylocked=*/true))
+      return std::move(Err);
+    return BaseDevAccessiblePtr;
+  }
+
+  // Not externally pinned. Do nothing if locking of mapped buffers is disabled.
+  if (!LockMemory)
+    return nullptr;
+
   // No intersecting registered allocation found in the map. First, lock the
   // host buffer and retrieve the device accessible pointer.
   auto DevAccessiblePtrOrErr = Device.dataLockImpl(HstPtr, Size);
@@ -1056,12 +874,18 @@ Expected<void *> PinnedAllocationMapTy::lockHostBuffer(void *HstPtr,
   return *DevAccessiblePtrOrErr;
 }
 
-Error PinnedAllocationMapTy::unlockHostBuffer(void *HstPtr) {
+Error PinnedAllocationMapTy::unregisterMemory(void *HstPtr, bool UnlockMemory) {
   assert(HstPtr && "Invalid pointer");
 
   std::lock_guard<std::shared_mutex> Lock(Mutex);
 
   const EntryTy *Entry = findIntersecting(HstPtr);
+
+  // No entry but automatic locking of mapped buffers is disabled, so
+  // nothing to do.
+  if (!Entry && !UnlockMemory)
+    return Plugin::success();
+
   if (!Entry)
     return Plugin::error(ErrorCode::INVALID_ARGUMENT,
                          "cannot find locked buffer");
@@ -1084,91 +908,6 @@ Error PinnedAllocationMapTy::unlockHostBuffer(void *HstPtr) {
       return Err;
 
   // Erase the entry from the map.
-  return eraseEntry(*Entry);
-}
-
-Error PinnedAllocationMapTy::lockMappedHostBuffer(void *HstPtr, size_t Size) {
-  assert(HstPtr && "Invalid pointer");
-  assert(Size && "Invalid size");
-
-  std::lock_guard<std::shared_mutex> Lock(Mutex);
-
-  // If previously registered, just register a new user on the entry.
-  const EntryTy *Entry = findIntersecting(HstPtr);
-  if (Entry)
-    return registerEntryUse(*Entry, HstPtr, Size);
-
-  size_t BaseSize;
-  void *BaseHstPtr, *BaseDevAccessiblePtr;
-
-  // Check if it was externally pinned by a vendor-specific API.
-  auto IsPinnedOrErr = Device.isPinnedPtrImpl(HstPtr, BaseHstPtr,
-                                              BaseDevAccessiblePtr, BaseSize);
-  if (!IsPinnedOrErr)
-    return IsPinnedOrErr.takeError();
-
-  // If pinned, just insert the entry representing the whole pinned buffer.
-  if (*IsPinnedOrErr)
-    return insertEntry(BaseHstPtr, BaseDevAccessiblePtr, BaseSize,
-                       /*Externallylocked=*/true);
-
-  // Not externally pinned. Do nothing if locking of mapped buffers is disabled.
-  if (!LockMappedBuffers)
-    return Plugin::success();
-
-  // Otherwise, lock the buffer and insert the new entry.
-  auto DevAccessiblePtrOrErr = Device.dataLockImpl(HstPtr, Size);
-  if (!DevAccessiblePtrOrErr) {
-    // Errors may be tolerated.
-    if (!IgnoreLockMappedFailures)
-      return DevAccessiblePtrOrErr.takeError();
-
-    consumeError(DevAccessiblePtrOrErr.takeError());
-    return Plugin::success();
-  }
-
-  return insertEntry(HstPtr, *DevAccessiblePtrOrErr, Size);
-}
-
-Error PinnedAllocationMapTy::unlockUnmappedHostBuffer(void *HstPtr) {
-  assert(HstPtr && "Invalid pointer");
-
-  std::lock_guard<std::shared_mutex> Lock(Mutex);
-
-  // Check whether there is any intersecting entry.
-  const EntryTy *Entry = findIntersecting(HstPtr);
-
-  // No entry but automatic locking of mapped buffers is disabled, so
-  // nothing to do.
-  if (!Entry && !LockMappedBuffers)
-    return Plugin::success();
-
-  // No entry, automatic locking is enabled, but the locking may have failed, so
-  // do nothing.
-  if (!Entry && IgnoreLockMappedFailures)
-    return Plugin::success();
-
-  // No entry, but the automatic locking is enabled, so this is an error.
-  if (!Entry)
-    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                         "locked buffer not found");
-
-  // There is entry, so unregister a user and check whether it was the last one.
-  auto LastUseOrErr = unregisterEntryUse(*Entry);
-  if (!LastUseOrErr)
-    return LastUseOrErr.takeError();
-
-  // If it is not the last one, there is nothing to do.
-  if (!(*LastUseOrErr))
-    return Plugin::success();
-
-  // Otherwise, if it was the last and the buffer was locked by the plugin,
-  // unlock it.
-  if (!Entry->ExternallyLocked)
-    if (auto Err = Device.dataUnlockImpl(Entry->HstPtr))
-      return Err;
-
-  // Finally erase the entry from the map.
   return eraseEntry(*Entry);
 }
 
@@ -1198,12 +937,14 @@ Error GenericDeviceTy::synchronize(__tgt_async_info *AsyncInfo,
   return Plugin::success();
 }
 
-Error GenericDeviceTy::queryAsync(__tgt_async_info *AsyncInfo) {
+Error GenericDeviceTy::queryAsync(__tgt_async_info *AsyncInfo,
+                                  bool ReleaseQueue,
+                                  bool *IsQueueWorkCompleted) {
   if (!AsyncInfo || !AsyncInfo->Queue)
     return Plugin::error(ErrorCode::INVALID_ARGUMENT,
                          "invalid async info queue");
 
-  return queryAsyncImpl(*AsyncInfo);
+  return queryAsyncImpl(*AsyncInfo, ReleaseQueue, IsQueueWorkCompleted);
 }
 
 Error GenericDeviceTy::memoryVAMap(void **Addr, void *VAddr, size_t *RSize) {
@@ -1226,8 +967,8 @@ Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
                                             TargetAllocTy Kind) {
   void *Alloc = nullptr;
 
-  if (Plugin.getRecordReplay().isRecordingOrReplaying())
-    return Plugin.getRecordReplay().alloc(Size);
+  if (RecordReplay && RecordReplay->isRecordingOrReplaying())
+    return RecordReplay->allocate(Size);
 
   switch (Kind) {
   case TARGET_ALLOC_DEFAULT:
@@ -1291,8 +1032,8 @@ Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
 
 Error GenericDeviceTy::dataDelete(void *TgtPtr, TargetAllocTy Kind) {
   // Free is a noop when recording or replaying.
-  if (Plugin.getRecordReplay().isRecordingOrReplaying())
-    return Plugin::success();
+  if (RecordReplay && RecordReplay->isRecordingOrReplaying())
+    return RecordReplay->deallocate(TgtPtr);
 
   // Keep track of the deallocation stack if we track allocation traces.
   if (OMPX_TrackAllocationTraces) {
@@ -1389,10 +1130,9 @@ Error GenericDeviceTy::dataFill(void *TgtPtr, const void *PatternPtr,
 Error GenericDeviceTy::launchKernel(void *EntryPtr, void **ArgPtrs,
                                     ptrdiff_t *ArgOffsets,
                                     KernelArgsTy &KernelArgs,
+                                    KernelExtraArgsTy *KernelExtraArgs,
                                     __tgt_async_info *AsyncInfo) {
-  AsyncInfoWrapperTy AsyncInfoWrapper(
-      *this,
-      Plugin.getRecordReplay().isRecordingOrReplaying() ? nullptr : AsyncInfo);
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
 
   GenericKernelTy &GenericKernel =
       *reinterpret_cast<GenericKernelTy *>(EntryPtr);
@@ -1410,15 +1150,9 @@ Error GenericDeviceTy::launchKernel(void *EntryPtr, void **ArgPtrs,
   }
 
   auto Err = GenericKernel.launch(*this, ArgPtrs, ArgOffsets, KernelArgs,
-                                  AsyncInfoWrapper);
+                                  KernelExtraArgs, AsyncInfoWrapper);
 
-  // 'finalize' here to guarantee next record-replay actions are in-sync
   AsyncInfoWrapper.finalize(Err);
-
-  RecordReplayTy &RecordReplay = Plugin.getRecordReplay();
-  if (RecordReplay.isRecordingOrReplaying() &&
-      RecordReplay.isSaveOutputEnabled())
-    RecordReplay.saveKernelOutputInfo(GenericKernel.getName());
 
   return Err;
 }
@@ -1524,6 +1258,11 @@ Error GenericDeviceTy::syncEvent(void *EventPtr) {
   return syncEventImpl(EventPtr);
 }
 
+Expected<float> GenericDeviceTy::getEventElapsedTime(void *StartEventPtr,
+                                                     void *EndEventPtr) {
+  return getEventElapsedTimeImpl(StartEventPtr, EndEventPtr);
+}
+
 bool GenericDeviceTy::useAutoZeroCopy() { return useAutoZeroCopyImpl(); }
 
 Expected<bool> GenericDeviceTy::isAccessiblePtr(const void *Ptr, size_t Size) {
@@ -1556,9 +1295,6 @@ Error GenericPluginTy::init() {
   RPCServer = new RPCServerTy(*this);
   assert(RPCServer && "Invalid RPC server");
 
-  RecordReplay = new RecordReplayTy();
-  assert(RecordReplay && "Invalid RR interface");
-
   return Plugin::success();
 }
 
@@ -1579,13 +1315,10 @@ Error GenericPluginTy::deinit() {
     delete GlobalHandler;
 
   if (RPCServer) {
-    if (Error Err = RPCServer->shutDown())
+    if (Error Err = RPCServer->shutDown(*this))
       return Err;
     delete RPCServer;
   }
-
-  if (RecordReplay)
-    delete RecordReplay;
 
   // Perform last deinitializations on the plugin.
   if (Error Err = deinitImpl())
@@ -1656,9 +1389,10 @@ int32_t GenericPluginTy::is_initialized() const { return Initialized; }
 
 int32_t GenericPluginTy::isPluginCompatible(StringRef Image) {
   auto HandleError = [&](Error Err) -> bool {
-    [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
-    ODBG(OLDT_Init) << "Failure to check validity of image " << Image.data()
-                    << ": " << ErrStr;
+    std::string ErrStr = toString(std::move(Err));
+    ODBG(OLDT_Init) << "Failure to check validity of image "
+                    << static_cast<const void *>(Image.data()) << ": "
+                    << ErrStr;
     return false;
   };
   switch (identify_magic(Image)) {
@@ -1679,14 +1413,18 @@ int32_t GenericPluginTy::isPluginCompatible(StringRef Image) {
     return *MatchOrErr;
   }
   default:
-    return false;
+    auto MatchOrErr = isImageCompatible(Image);
+    if (Error Err = MatchOrErr.takeError())
+      return HandleError(std::move(Err));
+    return *MatchOrErr;
   }
 }
 
 int32_t GenericPluginTy::isDeviceCompatible(int32_t DeviceId, StringRef Image) {
   auto HandleError = [&](Error Err) -> bool {
-    [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
-    ODBG(OLDT_Init) << "Failure to check validity of image " << Image << ": "
+    std::string ErrStr = toString(std::move(Err));
+    ODBG(OLDT_Init) << "Failure to check validity of image "
+                    << static_cast<const void *>(Image.data()) << ": "
                     << ErrStr;
     return false;
   };
@@ -1715,7 +1453,10 @@ int32_t GenericPluginTy::isDeviceCompatible(int32_t DeviceId, StringRef Image) {
     return *MatchOrErr;
   }
   default:
-    return false;
+    auto MatchOrErr = isImageCompatible(DeviceId, Image);
+    if (Error Err = MatchOrErr.takeError())
+      return HandleError(std::move(Err));
+    return *MatchOrErr;
   }
 }
 
@@ -1741,25 +1482,19 @@ int32_t GenericPluginTy::is_data_exchangable(int32_t SrcDeviceId,
   return isDataExchangable(SrcDeviceId, DstDeviceId);
 }
 
-int32_t GenericPluginTy::initialize_record_replay(int32_t DeviceId,
-                                                  int64_t MemorySize,
-                                                  void *VAddr, bool isRecord,
-                                                  bool SaveOutput,
-                                                  uint64_t &ReqPtrArgOffset) {
+int32_t GenericPluginTy::initialize_record_replay(
+    int32_t DeviceId, int64_t MemorySize, void *VAddr, bool IsRecord,
+    bool IsNative, bool SaveOutput, bool EmitReport,
+    const char *OutputDirPath) {
   GenericDeviceTy &Device = getDevice(DeviceId);
-  RecordReplayTy::RRStatusTy Status =
-      isRecord ? RecordReplayTy::RRStatusTy::RRRecording
-               : RecordReplayTy::RRStatusTy::RRReplaying;
 
-  if (auto Err = RecordReplay->init(&Device, MemorySize, VAddr, Status,
-                                    SaveOutput, ReqPtrArgOffset)) {
-    REPORT() << "WARNING RR did not initialize RR-properly with " << MemorySize
-             << " bytes (Error: " << toString(std::move(Err)) << ")";
-    RecordReplay->setStatus(RecordReplayTy::RRStatusTy::RRDeactivated);
-
-    if (!isRecord) {
-      return OFFLOAD_FAIL;
-    }
+  if (auto Err =
+          Device.initRecordReplay(MemorySize, VAddr, IsRecord, IsNative,
+                                  SaveOutput, EmitReport, OutputDirPath)) {
+    REPORT() << "Failure to initialize RR with " << MemorySize
+             << " bytes on device " << DeviceId << ": "
+             << toString(std::move(Err));
+    return OFFLOAD_FAIL;
   }
   return OFFLOAD_SUCCESS;
 }
@@ -1817,7 +1552,7 @@ int32_t GenericPluginTy::data_delete(int32_t DeviceId, void *TgtPtr,
 
 int32_t GenericPluginTy::data_lock(int32_t DeviceId, void *Ptr, int64_t Size,
                                    void **LockedPtr) {
-  auto LockedPtrOrErr = getDevice(DeviceId).dataLock(Ptr, Size);
+  auto LockedPtrOrErr = getDevice(DeviceId).registerMemory(Ptr, Size);
   if (!LockedPtrOrErr) {
     auto Err = LockedPtrOrErr.takeError();
     REPORT() << "Failure to lock memory " << Ptr << ": "
@@ -1836,7 +1571,7 @@ int32_t GenericPluginTy::data_lock(int32_t DeviceId, void *Ptr, int64_t Size,
 }
 
 int32_t GenericPluginTy::data_unlock(int32_t DeviceId, void *Ptr) {
-  auto Err = getDevice(DeviceId).dataUnlock(Ptr);
+  auto Err = getDevice(DeviceId).unregisterMemory(Ptr);
   if (Err) {
     REPORT() << "Failure to unlock memory " << Ptr << ": "
              << toString(std::move(Err));
@@ -1938,9 +1673,11 @@ int32_t GenericPluginTy::data_exchange_async(int32_t SrcDeviceId, void *SrcPtr,
 int32_t GenericPluginTy::launch_kernel(int32_t DeviceId, void *TgtEntryPtr,
                                        void **TgtArgs, ptrdiff_t *TgtOffsets,
                                        KernelArgsTy *KernelArgs,
+                                       KernelExtraArgsTy *KernelExtraArgs,
                                        __tgt_async_info *AsyncInfoPtr) {
   auto Err = getDevice(DeviceId).launchKernel(TgtEntryPtr, TgtArgs, TgtOffsets,
-                                              *KernelArgs, AsyncInfoPtr);
+                                              *KernelArgs, KernelExtraArgs,
+                                              AsyncInfoPtr);
   if (Err) {
     REPORT() << "Failure to run target region " << TgtEntryPtr << " in device "
              << DeviceId << ": " << toString(std::move(Err));
@@ -1972,6 +1709,16 @@ int32_t GenericPluginTy::query_async(int32_t DeviceId,
   }
 
   return OFFLOAD_SUCCESS;
+}
+
+InfoTreeNode GenericPluginTy::obtain_device_info(int32_t DeviceId) {
+  auto InfoOrErr = getDevice(DeviceId).obtainInfo();
+  if (auto Err = InfoOrErr.takeError()) {
+    REPORT() << "Failure to obtain device " << DeviceId
+             << " info: " << toString(std::move(Err));
+    return InfoTreeNode{};
+  }
+  return std::move(*InfoOrErr);
 }
 
 void GenericPluginTy::print_device_info(int32_t DeviceId) {
@@ -2025,6 +1772,23 @@ int32_t GenericPluginTy::sync_event(int32_t DeviceId, void *EventPtr) {
   return OFFLOAD_SUCCESS;
 }
 
+int32_t GenericPluginTy::get_event_elapsed_time(int32_t DeviceId,
+                                                void *StartEventPtr,
+                                                void *EndEventPtr,
+                                                float *ElapsedTime) {
+  auto ElapsedTimeOrErr =
+      getDevice(DeviceId).getEventElapsedTime(StartEventPtr, EndEventPtr);
+  if (!ElapsedTimeOrErr) {
+    REPORT() << "Failure to get elapsed time between events " << StartEventPtr
+             << " and " << EndEventPtr << ": "
+             << toString(ElapsedTimeOrErr.takeError());
+    return OFFLOAD_FAIL;
+  }
+
+  *ElapsedTime = *ElapsedTimeOrErr;
+  return OFFLOAD_SUCCESS;
+}
+
 int32_t GenericPluginTy::destroy_event(int32_t DeviceId, void *EventPtr) {
   auto Err = getDevice(DeviceId).destroyEvent(EventPtr);
   if (Err) {
@@ -2069,7 +1833,7 @@ int32_t GenericPluginTy::use_auto_zero_copy(int32_t DeviceId) {
 int32_t GenericPluginTy::is_accessible_ptr(int32_t DeviceId, const void *Ptr,
                                            size_t Size) {
   auto HandleError = [&](Error Err) -> bool {
-    [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
+    std::string ErrStr = toString(std::move(Err));
     ODBG(OLDT_Device) << "Failure while checking accessibility of pointer "
                       << Ptr << " for device " << DeviceId << ": " << ErrStr;
     return false;
@@ -2101,9 +1865,9 @@ int32_t GenericPluginTy::get_global(__tgt_device_binary Binary, uint64_t Size,
   assert(DevicePtr && "Invalid device global's address");
 
   // Save the loaded globals if we are recording.
-  RecordReplayTy &RecordReplay = Device.Plugin.getRecordReplay();
-  if (RecordReplay.isRecording())
-    RecordReplay.addEntry(Name, Size, *DevicePtr);
+  RecordReplayTy *RecordReplay = Device.getRecordReplay();
+  if (RecordReplay && RecordReplay->isRecording())
+    RecordReplay->addGlobal(Name, Size, *DevicePtr);
 
   return OFFLOAD_SUCCESS;
 }

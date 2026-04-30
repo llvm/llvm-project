@@ -8,6 +8,7 @@
 
 #include "clang/Analysis/Analyses/LifetimeSafety/LiveOrigins.h"
 #include "Dataflow.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
 #include "llvm/Support/ErrorHandling.h"
 
 namespace clang::lifetimes::internal {
@@ -56,8 +57,14 @@ struct Lattice {
 static SourceLocation GetFactLoc(CausingFactType F) {
   if (const auto *UF = F.dyn_cast<const UseFact *>())
     return UF->getUseExpr()->getExprLoc();
-  if (const auto *OEF = F.dyn_cast<const OriginEscapesFact *>())
-    return OEF->getEscapeExpr()->getExprLoc();
+  if (const auto *OEF = F.dyn_cast<const OriginEscapesFact *>()) {
+    if (auto *ReturnEsc = dyn_cast<ReturnEscapeFact>(OEF))
+      return ReturnEsc->getReturnExpr()->getExprLoc();
+    if (auto *FieldEsc = dyn_cast<FieldEscapeFact>(OEF))
+      return FieldEsc->getFieldDecl()->getLocation();
+    if (auto *GlobalEsc = dyn_cast<GlobalEscapeFact>(OEF))
+      return GlobalEsc->getGlobal()->getLocation();
+  }
   llvm_unreachable("unhandled causing fact in PointerUnion");
 }
 
@@ -159,13 +166,23 @@ public:
     return Lattice(Factory.remove(In.LiveOrigins, OF.getDestOriginID()));
   }
 
+  Lattice transfer(Lattice In, const KillOriginFact &F) {
+    return Lattice(Factory.remove(In.LiveOrigins, F.getKilledOrigin()));
+  }
+
+  Lattice transfer(Lattice In, const ExpireFact &F) {
+    if (auto OID = F.getOriginID())
+      return Lattice(Factory.remove(In.LiveOrigins, *OID));
+    return In;
+  }
+
   LivenessMap getLiveOriginsAt(ProgramPoint P) const {
     return getState(P).LiveOrigins;
   }
 
   // Dump liveness values on all test points in the program.
   void dump(llvm::raw_ostream &OS,
-            llvm::StringMap<ProgramPoint> TestPoints) const {
+            const llvm::StringMap<ProgramPoint> &TestPoints) const {
     llvm::dbgs() << "==========================================\n";
     llvm::dbgs() << getAnalysisName() << " results:\n";
     llvm::dbgs() << "==========================================\n";
@@ -199,8 +216,9 @@ LivenessMap LiveOriginsAnalysis::getLiveOriginsAt(ProgramPoint P) const {
   return PImpl->getLiveOriginsAt(P);
 }
 
-void LiveOriginsAnalysis::dump(llvm::raw_ostream &OS,
-                               llvm::StringMap<ProgramPoint> TestPoints) const {
+void LiveOriginsAnalysis::dump(
+    llvm::raw_ostream &OS,
+    const llvm::StringMap<ProgramPoint> &TestPoints) const {
   PImpl->dump(OS, TestPoints);
 }
 } // namespace clang::lifetimes::internal

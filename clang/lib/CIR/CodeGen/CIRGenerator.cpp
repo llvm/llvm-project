@@ -12,7 +12,7 @@
 
 #include "CIRGenModule.h"
 
-#include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/Dialect/OpenACC/OpenACCOpsDialect.h.inc"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Target/LLVMIR/Import.h"
@@ -21,6 +21,7 @@
 #include "clang/CIR/CIRGenerator.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/OpenACC/RegisterOpenACCExtensions.h"
+#include "clang/CIR/Dialect/OpenMP/RegisterOpenMPExtensions.h"
 #include "llvm/IR/DataLayout.h"
 
 using namespace cir;
@@ -56,9 +57,10 @@ void CIRGenerator::Initialize(ASTContext &astContext) {
   mlirContext->getOrLoadDialect<mlir::acc::OpenACCDialect>();
   mlirContext->getOrLoadDialect<mlir::omp::OpenMPDialect>();
 
-  // Register extensions to integrate CIR types with OpenACC.
+  // Register extensions to integrate CIR types with OpenACC and OpenMP.
   mlir::DialectRegistry registry;
   cir::acc::registerOpenACCExtensions(registry);
+  cir::omp::registerOpenMPExtensions(registry);
   mlirContext->appendDialectRegistry(registry);
 
   cgm = std::make_unique<clang::CIRGen::CIRGenModule>(
@@ -149,9 +151,22 @@ void CIRGenerator::HandleTagDeclDefinition(TagDecl *d) {
   // inline initializers as definitions.
   if (astContext->getTargetInfo().getCXXABI().isMicrosoft())
     cgm->errorNYI(d->getSourceRange(), "HandleTagDeclDefinition: MSABI");
-  // For OpenMP emit declare reduction functions, if required.
-  if (astContext->getLangOpts().OpenMP)
-    cgm->errorNYI(d->getSourceRange(), "HandleTagDeclDefinition: OpenMP");
+
+  // For OpenMP emit declare reduction functions or declare mapper, if
+  // required.
+  if (astContext->getLangOpts().OpenMP) {
+    for (Decl *member : d->decls()) {
+      if (auto *drd = dyn_cast<OMPDeclareReductionDecl>(member)) {
+        if (astContext->DeclMustBeEmitted(drd))
+          cgm->errorNYI(d->getSourceRange(),
+                        "HandleTagDeclDefinition: OMPDeclareReductionDecl");
+      } else if (auto *dmd = dyn_cast<OMPDeclareMapperDecl>(member)) {
+        if (astContext->DeclMustBeEmitted(dmd))
+          cgm->errorNYI(d->getSourceRange(),
+                        "HandleTagDeclDefinition: OMPDeclareMapperDecl");
+      }
+    }
+  }
 }
 
 void CIRGenerator::HandleTagDeclRequiredDefinition(const TagDecl *D) {

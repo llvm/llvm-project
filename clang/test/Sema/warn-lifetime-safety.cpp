@@ -1,13 +1,23 @@
-// RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety -Wexperimental-lifetime-safety -Wno-dangling -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wno-dangling -verify=expected,function %s
+// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety -Wno-dangling -verify=expected,tu %s
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wno-dangling -fcxx-exceptions -verify=expected,function %s
+
+#include "Inputs/lifetime-analysis.h"
 
 struct View;
 
 struct [[gsl::Owner]] MyObj {
   int id;
+  MyObj();
+  MyObj(int);
+  MyObj(const MyObj&);
+  MyObj(MyObj&&);
+  MyObj& operator=(MyObj&&);
   ~MyObj() {}  // Non-trivial destructor
   MyObj operator+(MyObj);
   
   View getView() const [[clang::lifetimebound]];
+  const int* getData() const [[clang::lifetimebound]];
 };
 
 struct [[gsl::Owner]] MyTrivialObj {
@@ -19,6 +29,10 @@ struct [[gsl::Pointer()]] View {
   View(const MyTrivialObj &); // Borrows from MyTrivialObj
   View();
   void use() const;
+
+  const MyObj* data() const;
+  const MyObj& operator*() const;
+  const MyObj* operator->() const;
 };
 
 class TriviallyDestructedClass {
@@ -33,11 +47,10 @@ View construct_view(const MyObj &obj [[clang::lifetimebound]]) {
 void use(View);
 
 //===----------------------------------------------------------------------===//
-// Basic Definite Use-After-Free (-W...permissive)
-// These are cases where the pointer is guaranteed to be dangling at the use site.
+// Basic Use-After-Free
 //===----------------------------------------------------------------------===//
 
-void definite_simple_case() {
+void simple_case() {
   MyObj* p;
   {
     MyObj s;
@@ -46,7 +59,7 @@ void definite_simple_case() {
   (void)*p;     // expected-note {{later used here}}
 }
 
-void definite_simple_case_gsl() {
+void simple_case_gsl() {
   View v;
   {
     MyObj s;
@@ -73,7 +86,7 @@ void no_use_no_error_gsl() {
   // 'v' is dangling here, but since it is never used, no warning is issued.
 }
 
-void definite_pointer_chain() {
+void pointer_chain() {
   MyObj* p;
   MyObj* q;
   {
@@ -84,7 +97,7 @@ void definite_pointer_chain() {
   (void)*q;     // expected-note {{later used here}}
 }
 
-void definite_propagation_gsl() {
+void propagation_gsl() {
   View v1, v2;
   {
     MyObj s;
@@ -94,7 +107,7 @@ void definite_propagation_gsl() {
   v2.use();     // expected-note {{later used here}}
 }
 
-void definite_multiple_uses_one_warning() {
+void multiple_uses_one_warning() {
   MyObj* p;
   {
     MyObj s;
@@ -107,7 +120,7 @@ void definite_multiple_uses_one_warning() {
   (void)*q;
 }
 
-void definite_multiple_pointers() {
+void multiple_pointers() {
   MyObj *p, *q, *r;
   {
     MyObj s;
@@ -120,7 +133,7 @@ void definite_multiple_pointers() {
   (void)*r;     // expected-note {{later used here}}
 }
 
-void definite_single_pointer_multiple_loans(bool cond) {
+void single_pointer_multiple_loans(bool cond) {
   MyObj *p;
   if (cond){
     MyObj s;
@@ -133,7 +146,7 @@ void definite_single_pointer_multiple_loans(bool cond) {
   (void)*p;     // expected-note 2  {{later used here}}
 }
 
-void definite_single_pointer_multiple_loans_gsl(bool cond) {
+void single_pointer_multiple_loans_gsl(bool cond) {
   View v;
   if (cond){
     MyObj s;
@@ -146,7 +159,7 @@ void definite_single_pointer_multiple_loans_gsl(bool cond) {
   v.use();      // expected-note 2 {{later used here}}
 }
 
-void definite_if_branch(bool cond) {
+void if_branch(bool cond) {
   MyObj safe;
   MyObj* p = &safe;
   if (cond) {
@@ -156,12 +169,12 @@ void definite_if_branch(bool cond) {
   (void)*p;     // expected-note {{later used here}}
 }
 
-void potential_if_branch(bool cond) {
+void if_branch_potential(bool cond) {
   MyObj safe;
   MyObj* p = &safe;
   if (cond) {
     MyObj temp;
-    p = &temp;  // expected-warning {{object whose reference is captured may not live long enough}}
+    p = &temp;  // expected-warning {{object whose reference is captured does not live long enough}}
   }             // expected-note {{destroyed here}}
   if (!cond)
     (void)*p;   // expected-note {{later used here}}
@@ -169,7 +182,7 @@ void potential_if_branch(bool cond) {
     p = &safe;
 }
 
-void definite_if_branch_gsl(bool cond) {
+void if_branch_gsl(bool cond) {
   MyObj safe;
   View v = safe;
   if (cond) {
@@ -179,7 +192,7 @@ void definite_if_branch_gsl(bool cond) {
   v.use();      // expected-note {{later used here}}
 }
 
-void definite_potential_together(bool cond) {
+void potential_together(bool cond) {
   MyObj safe;
   MyObj* p_maybe = &safe;
   MyObj* p_definite = nullptr;
@@ -189,14 +202,14 @@ void definite_potential_together(bool cond) {
     if (cond)
       p_definite = &s;  // expected-warning {{does not live long enough}}
     if (cond)
-      p_maybe = &s;     // expected-warning {{may not live long enough}}         
+      p_maybe = &s;     // expected-warning {{does not live long enough}}         
   }                     // expected-note 2 {{destroyed here}}
   (void)*p_definite;    // expected-note {{later used here}}
   if (!cond)
     (void)*p_maybe;     // expected-note {{later used here}}
 }
 
-void definite_overrides_potential(bool cond) {
+void overrides_potential(bool cond) {
   MyObj safe;
   MyObj* p;
   MyObj* q;
@@ -211,18 +224,18 @@ void definite_overrides_potential(bool cond) {
     q = &safe;
   }
 
-  // The use of 'p' is a definite error because it was never rescued.
+  // The use of 'p' dominates expiry of 's' error because it was never rescued.
   (void)*q;
   (void)*p;       // expected-note {{later used here}}
   (void)*q;
 }
 
-void potential_due_to_conditional_killing(bool cond) {
+void due_to_conditional_killing(bool cond) {
   MyObj safe;
   MyObj* q;
   {
     MyObj s;
-    q = &s;       // expected-warning {{may not live long enough}}
+    q = &s;       // expected-warning {{does not live long enough}}
   }               // expected-note {{destroyed here}}
   if (cond) {
     // 'q' is conditionally "rescued". 'p' is not.
@@ -231,11 +244,11 @@ void potential_due_to_conditional_killing(bool cond) {
   (void)*q;       // expected-note {{later used here}}
 }
 
-void potential_for_loop_use_after_loop_body(MyObj safe) {
+void for_loop_use_after_loop_body(MyObj safe) {
   MyObj* p = &safe;
   for (int i = 0; i < 1; ++i) {
     MyObj s;
-    p = &s;     // expected-warning {{may not live long enough}}
+    p = &s;     // expected-warning {{does not live long enough}}
   }             // expected-note {{destroyed here}}
   (void)*p;     // expected-note {{later used here}}
 }
@@ -250,17 +263,17 @@ void safe_for_loop_gsl() {
   }
 }
 
-void potential_for_loop_gsl() {
+void for_loop_gsl() {
   MyObj safe;
   View v = safe;
   for (int i = 0; i < 1; ++i) {
     MyObj s;
-    v = s;      // expected-warning {{object whose reference is captured may not live long enough}}
+    v = s;      // expected-warning {{object whose reference is captured does not live long enough}}
   }             // expected-note {{destroyed here}}
   v.use();      // expected-note {{later used here}}
 }
 
-void potential_for_loop_use_before_loop_body(MyObj safe) {
+void for_loop_use_before_loop_body(MyObj safe) {
   MyObj* p = &safe;
   // Prefer the earlier use for diagnsotics.
   for (int i = 0; i < 1; ++i) {
@@ -271,7 +284,7 @@ void potential_for_loop_use_before_loop_body(MyObj safe) {
   (void)*p;
 }
 
-void definite_loop_with_break(bool cond) {
+void loop_with_break(bool cond) {
   MyObj safe;
   MyObj* p = &safe;
   for (int i = 0; i < 10; ++i) {
@@ -284,7 +297,7 @@ void definite_loop_with_break(bool cond) {
   (void)*p;     // expected-note {{later used here}}
 }
 
-void definite_loop_with_break_gsl(bool cond) {
+void loop_with_break_gsl(bool cond) {
   MyObj safe;
   View v = safe;
   for (int i = 0; i < 10; ++i) {
@@ -297,7 +310,7 @@ void definite_loop_with_break_gsl(bool cond) {
   v.use();      // expected-note {{later used here}}
 }
 
-void potential_multiple_expiry_of_same_loan(bool cond) {
+void multiple_expiry_of_same_loan(bool cond) {
   // Choose the last expiry location for the loan (e.g., through scope-ends and break statements).
   MyObj safe;
   MyObj* p = &safe;
@@ -329,11 +342,6 @@ void potential_multiple_expiry_of_same_loan(bool cond) {
       break;          // expected-note {{destroyed here}}
     }
   }
-
-  // TODO: This can be argued to be a "maybe" warning. This is because
-  // we only check for confidence of liveness and not the confidence of
-  // the loan contained in an origin. To deal with this, we can introduce
-  // a confidence in loan propagation analysis as well like liveness.
   (void)*p;           // expected-note {{later used here}}
 
   p = &safe;
@@ -347,13 +355,13 @@ void potential_multiple_expiry_of_same_loan(bool cond) {
   (void)*p;           // expected-note {{later used here}}
 }
 
-void potential_switch(int mode) {
+void switch_potential(int mode) {
   MyObj safe;
   MyObj* p = &safe;
   switch (mode) {
   case 1: {
     MyObj temp;
-    p = &temp;  // expected-warning {{object whose reference is captured may not live long enough}}
+    p = &temp;  // expected-warning {{object whose reference is captured does not live long enough}}
     break;      // expected-note {{destroyed here}}
   }
   case 2: {
@@ -365,7 +373,7 @@ void potential_switch(int mode) {
     (void)*p;     // expected-note {{later used here}}
 }
 
-void definite_switch(int mode) {
+void switch_uaf(int mode) {
   MyObj safe;
   MyObj* p = &safe;
   // A use domintates all the loan expires --> all definite error.
@@ -389,7 +397,7 @@ void definite_switch(int mode) {
   (void)*p;     // expected-note 3 {{later used here}}
 }
 
-void definite_switch_gsl(int mode) {
+void switch_gsl(int mode) {
   View v;
   switch (mode) {
   case 1: {
@@ -417,7 +425,7 @@ void loan_from_previous_iteration(MyObj safe, bool condition) {
 
   while (condition) {
     MyObj x;
-    p = &x;     // expected-warning {{may not live long enough}}
+    p = &x;     // expected-warning {{does not live long enough}}
 
     if (condition)
       q = p;
@@ -455,8 +463,7 @@ void small_scope_reference_var_no_error() {
 }
 
 //===----------------------------------------------------------------------===//
-// Basic Definite Use-After-Return (Return-Stack-Address) (-W...permissive)
-// These are cases where the pointer is guaranteed to be dangling at the use site.
+// Basic Use-After-Return (Return-Stack-Address)
 //===----------------------------------------------------------------------===//
 
 MyObj* simple_return_stack_address() {
@@ -599,6 +606,14 @@ int return_reference_to_parameter_no_error(int a) {
     return b;
 }
 
+MyObj*& return_ref_to_local_ptr_pointing_to_local() {
+  MyObj local;
+  MyObj* p = &local; // expected-warning {{address of stack memory is returned later}}
+  return p;          // expected-note {{returned here}} \
+                     // expected-warning {{address of stack memory is returned later}} \
+                     // expected-note {{returned here}}
+}
+
 const int& reference_via_conditional(int a, int b, bool cond) {
     const int &c = (cond ? ((a)) : (b));  // expected-warning 2 {{address of stack memory is returned later}}
     return c;                             // expected-note 2 {{returned here}}
@@ -703,9 +718,9 @@ View uar_before_uaf(const MyObj& safe, bool c) {
   View p;
   {
     MyObj local_obj; 
-    p = local_obj;  // expected-warning {{address of stack memory is returned later}}
+    p = local_obj;  // expected-warning {{ddress of stack memory is returned later}}
     if (c) {
-      return p;      // expected-note {{returned here}}
+      return p;     // expected-note {{returned here}}
     }
   }
   p.use();
@@ -736,6 +751,18 @@ void no_error_if_dangle_then_rescue_gsl() {
   }
   v = safe;    // 'v' is "rescued" before use by reassigning to a valid object.
   v.use();     // This is safe.
+}
+
+void no_error_if_dangle_then_rescue_via_ref() {
+  MyObj safe;
+  MyObj* p;
+  MyObj*& ref = p;
+  {
+    MyObj temp;
+    ref = &temp;  // p temporarily points to temp via ref.
+  }
+  ref = &safe;    // p is "rescued" via ref before use.
+  (void)*ref;     // This is safe.
 }
 
 void no_error_loan_from_current_iteration(bool cond) {
@@ -895,19 +922,151 @@ void lifetimebound_return_reference() {
   (void)*ptr;             // expected-note {{later used here}}
 }
 
-// FIXME: No warning for non gsl::Pointer types. Origin tracking is only supported for pointer types.
 struct LifetimeBoundCtor {
   LifetimeBoundCtor();
   LifetimeBoundCtor(const MyObj& obj [[clang::lifetimebound]]);
+  LifetimeBoundCtor(const MyObj& obj, int); // not lifetimebound ctor.
+  LifetimeBoundCtor(int* p [[clang::lifetimebound]]);
+  LifetimeBoundCtor(std::string_view sv [[clang::lifetimebound]]);
 };
 
 void lifetimebound_ctor() {
   LifetimeBoundCtor v;
   {
     MyObj obj;
-    v = obj;
+    v = obj; // expected-warning {{object whose reference is captured does not live long enough}}
+  }          // expected-note {{destroyed here}}
+  (void)v;   // expected-note {{later used here}}
+}
+
+void lifetimebound_ctor_functional_cast() {
+  LifetimeBoundCtor v;
+  {
+    MyObj obj;
+    v = LifetimeBoundCtor(obj); // expected-warning {{object whose reference is captured does not live long enough}}
+  }                             // expected-note {{destroyed here}}
+  (void)v;                      // expected-note {{later used here}}
+}
+
+void lifetimebound_ctor_c_style_cast() {
+  LifetimeBoundCtor v;
+  {
+    MyObj obj;
+    v = (LifetimeBoundCtor)(obj); // expected-warning {{object whose reference is captured does not live long enough}}
+  }                               // expected-note {{destroyed here}}
+  (void)v;                        // expected-note {{later used here}}
+}
+
+void lifetimebound_ctor_static_cast() {
+  LifetimeBoundCtor v;
+  {
+    MyObj obj;
+    v = static_cast<LifetimeBoundCtor>(obj); // expected-warning {{object whose reference is captured does not live long enough}}
+  }                                          // expected-note {{destroyed here}}
+  (void)v;                                   // expected-note {{later used here}}
+}
+
+void lifetimebound_make_unique() {
+  std::unique_ptr<LifetimeBoundCtor> ptr;
+  {
+    MyObj obj;
+    ptr = std::make_unique<LifetimeBoundCtor>(obj); // tu-warning {{object whose reference is captured does not live long enough}}
+  }                                                 // tu-note {{destroyed here}}
+  (void)ptr;                                        // tu-note {{later used here}}
+}
+
+void non_lifetimebound_make_unique() {
+  std::unique_ptr<LifetimeBoundCtor> ptr;
+  {
+    MyObj obj;
+    // No error as the ctor is not lifetimebound.
+    ptr = std::make_unique<LifetimeBoundCtor>(obj, 0);
   }
-  (void)v;
+  (void)ptr;
+}
+
+void lifetimebound_make_unique_temp() {
+  std::unique_ptr<LifetimeBoundCtor> ptr = std::make_unique<LifetimeBoundCtor>(MyObj()); // tu-warning {{object whose reference is captured does not live long enough}} \
+                                                                                         // tu-note {{destroyed here}}
+  (void)ptr; // tu-note {{later used here}}
+}
+
+// FIXME: make_unique annotation cannot be inferred for pointer param in constructor
+void lifetimebound_make_unique_raw_ptr() {
+  std::unique_ptr<LifetimeBoundCtor> ptr;
+  int x = 0;
+  {
+    int* p = &x;
+    ptr = std::make_unique<LifetimeBoundCtor>(p);
+  }
+  (void)ptr;
+}
+
+// FIXME: make_unique annotation cannot be inferred for view-type param in constructor
+void lifetimebound_make_unique_string_view_local() {
+  std::unique_ptr<LifetimeBoundCtor> ptr;
+  {
+    std::string s;
+    std::string_view sv(s);
+    ptr = std::make_unique<LifetimeBoundCtor>(sv);
+  }
+  (void)ptr;
+}
+
+struct MultiLifetimeBoundCtor {
+  MultiLifetimeBoundCtor(const MyObj& obj1 [[clang::lifetimebound]], const MyObj& obj2);
+  MultiLifetimeBoundCtor(const MyObj& obj1, const MyObj& obj2 [[clang::lifetimebound]], int);
+  MultiLifetimeBoundCtor(const MyObj& obj1 [[clang::lifetimebound]], const MyObj& obj2 [[clang::lifetimebound]], double);
+};
+
+void lifetimebound_make_unique_multi_params() {
+  std::unique_ptr<MultiLifetimeBoundCtor> ptr;
+  MyObj obj_long;
+  {
+    MyObj obj_short;
+    ptr = std::make_unique<MultiLifetimeBoundCtor>(obj_short, obj_long); // tu-warning {{object whose reference is captured does not live long enough}}
+  } // tu-note {{destroyed here}}
+  (void)ptr; // tu-note {{later used here}}
+}
+
+void lifetimebound_make_unique_multi_params2() {
+  std::unique_ptr<MultiLifetimeBoundCtor> ptr;
+  MyObj obj_long;
+  {
+    MyObj obj_short;
+    ptr = std::make_unique<MultiLifetimeBoundCtor>(obj_long, obj_short, 1); // tu-warning {{object whose reference is captured does not live long enough}}
+  } // tu-note {{destroyed here}}
+  (void)ptr; // tu-note {{later used here}}
+}
+
+void lifetimebound_make_unique_multi_params2_no_error_case() {
+  std::unique_ptr<MultiLifetimeBoundCtor> ptr;
+  MyObj obj_long;
+  {
+    MyObj obj_short;
+    ptr = std::make_unique<MultiLifetimeBoundCtor>(obj_short, obj_long, 1);
+  }
+  (void)ptr;
+}
+
+void lifetimebound_make_unique_multi_params3_1() {
+  std::unique_ptr<MultiLifetimeBoundCtor> ptr;
+  MyObj obj_long;
+  {
+    MyObj obj_short;
+    ptr = std::make_unique<MultiLifetimeBoundCtor>(obj_short, obj_long, 1.0); // tu-warning {{object whose reference is captured does not live long enough}}
+  } // tu-note {{destroyed here}}
+  (void)ptr; // tu-note {{later used here}}
+}
+
+void lifetimebound_make_unique_multi_params3_2() {
+  std::unique_ptr<MultiLifetimeBoundCtor> ptr;
+  MyObj obj_long;
+  {
+    MyObj obj_short;
+    ptr = std::make_unique<MultiLifetimeBoundCtor>(obj_long, obj_short, 1.0); // tu-warning {{object whose reference is captured does not live long enough}}
+  } // tu-note {{destroyed here}}
+  (void)ptr; // tu-note {{later used here}}
 }
 
 View lifetimebound_return_of_local() {
@@ -944,7 +1103,7 @@ View lifetimebound_return_by_value_param_template(T t) {
                       // expected-note@-1 {{returned here}}
 }
 void use_lifetimebound_return_by_value_param_template() { 
-  lifetimebound_return_by_value_param_template(MyObj{}); // expected-note {{in instantiation of}}
+  lifetimebound_return_by_value_param_template(MyObj{}); // function-note {{in instantiation of}}
 }
 
 void lambda_uar_param() {
@@ -981,7 +1140,7 @@ void conditional_operator_one_unsafe_branch(bool cond) {
   MyObj* p = &safe;
   {
     MyObj temp;
-    p = cond ? &temp  // expected-warning {{object whose reference is captured may not live long enough}}
+    p = cond ? &temp  // expected-warning {{object whose reference is captured does not live long enough}}
              : &safe;
   }  // expected-note {{destroyed here}}
 
@@ -1092,12 +1251,11 @@ void passing_temporary_to_lifetime_bound_function() {
   use(a); // expected-note {{later used here}}
 }
 
-// FIXME: We expect to be warned of use-after-free at use(a), but this is not the
-// case as current analysis does not handle trivially destructed temporaries.
 void use_trivial_temporary_after_destruction() {
   View a;
-  a = trivially_destructed_temporary();
-  use(a);
+  a = trivially_destructed_temporary(); // expected-warning {{object whose reference is captured does not live long enough}} \
+                expected-note {{destroyed here}}
+  use(a); // expected-note {{later used here}}
 }
 
 namespace GH162834 {
@@ -1178,7 +1336,7 @@ void range_based_for_not_reference() {
   {
     MyObjStorage s;
     for (MyObj o : s) { // expected-note {{destroyed here}}
-      v = o; // expected-warning {{object whose reference is captured may not live long enough}}
+      v = o; // expected-warning {{object whose reference is captured does not live long enough}}
     }
   }
   v.use();  // expected-note {{later used here}}
@@ -1393,6 +1551,70 @@ void add(int c, MyObj* node) {
 }
 } // namespace CppCoverage
 
+namespace strict_warn_on_move {
+void strict_warn_on_move() {
+  MyObj b;
+  View v;
+  {
+    MyObj a;
+    v = a;            // expected-warning-re {{object whose reference {{.*}} may have been moved}}
+    b = std::move(a); // expected-note {{potentially moved here}}
+  }                   // expected-note {{destroyed here}}
+  (void)v;            // expected-note {{later used here}}
+}
+
+void flow_sensitive(bool c) {
+  View v;
+  {
+    MyObj a;
+    if (c) {
+      MyObj b = std::move(a);
+      return;
+    }
+    v = a;  // expected-warning {{object whose reference}}
+  }         // expected-note {{destroyed here}}
+  (void)v;  // expected-note {{later used here}}
+}
+
+void take(MyObj&&);
+void detect_conditional(bool cond) {
+  View v;
+  {
+    MyObj a, b;
+    v = cond ? a : b; // expected-warning-re 2 {{object whose reference {{.*}} may have been moved}}
+    take(std::move(cond ? a : b)); // expected-note 2 {{potentially moved here}}
+  }         // expected-note 2 {{destroyed here}}
+  (void)v;  // expected-note 2 {{later used here}}
+}
+
+void wrong_use_of_move_is_permissive() {
+  View v;
+  {
+    MyObj a;
+    v = std::move(a); // expected-warning {{object whose reference is captured does not live long enough}}
+  }         // expected-note {{destroyed here}}
+  (void)v;  // expected-note {{later used here}}
+  const int* p;
+  {
+    MyObj a;
+    p = std::move(a).getData(); // expected-warning {{object whose reference is captured does not live long enough}}
+  }         // expected-note {{destroyed here}}
+  (void)p;  // expected-note {{later used here}}
+}
+
+void take(int*);
+void test_release_no_uaf() {
+  int* r;
+  // Calling release() marks p as moved from, so its destruction doesn't invalidate r.
+  {
+    std::unique_ptr<int> p;
+    r = p.get();        // expected-warning-re {{object whose reference {{.*}} may have been moved}}
+    take(p.release());  // expected-note {{potentially moved here}}
+  }                     // expected-note {{destroyed here}}
+  (void)*r;             // expected-note {{later used here}}
+}
+} // namespace strict_warn_on_move
+
 // Implicit this annotations with redecls.
 namespace GH172013 {
 // https://github.com/llvm/llvm-project/issues/62072
@@ -1410,9 +1632,1463 @@ void bar() {
         S s;
         x = s.x(); // expected-warning {{object whose reference is captured does not live long enough}}
         View y = S().x(); // expected-warning {{object whose reference is captured does not live long enough}} \
-          expected-note {{destroyed here}}
-        (void)y; // expected-note {{later used here}}
+                             expected-note {{destroyed here}}
+        (void)y; // expected-note {{used here}}
     } // expected-note {{destroyed here}}
     (void)x; // expected-note {{used here}}
 }
 }
+
+namespace DereferenceViews {
+const MyObj& testDeref(MyObj obj) {
+  View v = obj; // expected-warning {{address of stack memory is returned later}}
+  return *v;    // expected-note {{returned here}}
+}
+const MyObj* testDerefAddr(MyObj obj) {
+  View v = obj; // expected-warning {{address of stack memory is returned later}}
+  return &*v;   // expected-note {{returned here}}
+}
+const MyObj* testData(MyObj obj) {
+  View v = obj;     // expected-warning {{address of stack memory is returned later}}
+  return v.data();  // expected-note {{returned here}}
+}
+const int* testLifetimeboundAccessorOfMyObj(MyObj obj) {
+  View v = obj;           // expected-warning {{address of stack memory is returned later}}
+  const MyObj* ptr = v.data();
+  return ptr->getData();  // expected-note {{returned here}}
+}
+const int* testLifetimeboundAccessorOfMyObjThroughDeref(MyObj obj) {
+  View v = obj;         // expected-warning {{address of stack memory is returned later}}
+  return v->getData();  // expected-note {{returned here}}
+}
+} // namespace DereferenceViews
+
+namespace ViewsBeginEndIterators {
+template <typename T>
+struct [[gsl::Pointer]] Iterator {
+  Iterator operator++();
+  T& operator*() const;
+  T* operator->() const;
+  bool operator!=(const Iterator& other) const;
+};
+
+template <typename T>
+struct [[gsl::Owner]] Container {
+using It = Iterator<T>;
+It begin() const [[clang::lifetimebound]];
+It end() const [[clang::lifetimebound]];
+};
+
+MyObj Global;
+
+const MyObj& ContainerMyObjReturnRef(Container<MyObj> c) {
+  for (const MyObj& x : c) {  // expected-warning {{address of stack memory is returned later}}
+    return x;                 // expected-note {{returned here}}
+  }
+  return Global;
+}
+
+View ContainerMyObjReturnView(Container<MyObj> c) {
+  for (const MyObj& x : c) {  // expected-warning {{address of stack memory is returned later}}
+    return x;                 // expected-note {{returned here}}
+  }
+  for (View x : c) {  // expected-warning {{address of stack memory is returned later}}
+    return x;         // expected-note {{returned here}}
+  }
+  return Global;
+}
+
+View ContainerViewsOk(Container<View> c) {
+  for (View x : c) {
+    return x;
+  }
+  for (const View& x : c) {
+    return x;
+  }
+  return Global;
+}
+} // namespace ViewsBeginEndIterators
+
+namespace reference_type_decl_ref_expr {
+struct S {
+  S();
+  ~S();
+  const std::string& x() const [[clang::lifetimebound]];
+};
+
+const std::string& identity(const std::string& in [[clang::lifetimebound]]);
+const S& identity(const S& in [[clang::lifetimebound]]);
+
+void test_temporary() {
+  const std::string& x = S().x(); // expected-warning {{object whose reference is captured does not live long enough}} expected-note {{destroyed here}}
+  (void)x; // expected-note {{later used here}}
+
+  const std::string& y = identity(S().x()); // expected-warning {{object whose reference is captured does not live long enough}} expected-note {{destroyed here}}
+  (void)y; // expected-note {{later used here}}
+
+  std::string_view z;
+  {
+    S s;
+    const std::string& zz = s.x(); // expected-warning {{object whose reference is captured does not live long enough}}
+    z = zz;
+  } // expected-note {{destroyed here}}
+  (void)z; // expected-note {{later used here}}
+}
+
+void test_lifetime_extension_ok() {
+  const S& x = S();
+  (void)x;
+  const S& y = identity(S()); // expected-warning {{object whose reference is captured does not live long enough}} expected-note {{destroyed here}}
+  (void)y; // expected-note {{later used here}}
+}
+
+const std::string& test_return() {
+  const std::string& x = S().x(); // expected-warning {{object whose reference is captured does not live long enough}} expected-note {{destroyed here}}
+  return x; // expected-note {{later used here}}
+}
+} // namespace reference_type_decl_ref_expr
+
+namespace field_access {
+
+struct S {
+  std::string s;
+  std::string_view sv;
+};
+
+void uaf() {
+  std::string_view view;
+  {
+    S str;
+    S* p = &str;  // expected-warning {{object whose reference is captured does not live long enough}}
+    view = p->s;
+  } // expected-note {{destroyed here}}
+  (void)view;  // expected-note {{later used here}}
+}
+
+void not_uaf() {
+  std::string_view view;
+  {
+    S str;
+    S* p = &str;
+    view = p->sv;
+  }
+  (void)view;
+}
+
+union U {
+  std::string s;
+  std::string_view sv;
+  ~U() {}
+};
+
+void uaf_union() {
+  std::string_view view;
+  {
+    U u = U{"hello"};
+    U* up = &u;  // expected-warning {{object whose reference is captured does not live long enough}}
+    view = up->s;
+  } // expected-note {{destroyed here}}
+  (void)view;  // expected-note {{later used here}}
+}
+
+struct AnonymousUnion {
+union {
+  int x;
+  float y;
+};
+};
+
+void uaf_anonymous_union() {
+  int* ip;
+  {
+    AnonymousUnion au;
+    AnonymousUnion* up = &au;  // expected-warning {{object whose reference is captured does not live long enough}}
+    ip = &up->x;
+  } // expected-note {{destroyed here}}
+  (void)ip;  // expected-note {{later used here}}
+}
+
+struct RefMember {
+  std::string& str_ref;
+  std::string* str_ptr;
+  std::string str;
+  std::string_view view;
+  std::string_view& view_ref;
+  RefMember();
+  ~RefMember();
+};
+
+std::string_view refMemberReturnView1(RefMember a) { return a.str_ref; }
+std::string_view refMemberReturnView2(RefMember a) { return *a.str_ptr; }
+std::string_view refMemberReturnView3(RefMember a) { return a.str; } // expected-warning {{address of stack memory is returned later}} expected-note {{returned here}}
+std::string& refMemberReturnRef1(RefMember a) { return a.str_ref; }
+std::string& refMemberReturnRef2(RefMember a) { return *a.str_ptr; }
+std::string& refMemberReturnRef3(RefMember a) { return a.str; } // expected-warning {{address of stack memory is returned later}} expected-note {{returned here}}
+std::string_view refViewMemberReturnView1(RefMember a) { return a.view; }
+std::string_view& refViewMemberReturnView2(RefMember a) { return a.view; } // expected-warning {{address of stack memory is returned later}} expected-note {{returned here}}
+std::string_view refViewMemberReturnRefView1(RefMember a) { return a.view_ref; }
+std::string_view& refViewMemberReturnRefView2(RefMember a) { return a.view_ref; }
+} // namespace field_access
+
+namespace attr_on_template_params {
+struct MyObj {
+  ~MyObj();
+};
+
+template <typename T>
+struct MemberFuncsTpl {
+  ~MemberFuncsTpl();
+  // Template Version A: Attribute on declaration only
+  const T* memberA(const T& x [[clang::lifetimebound]]);
+  // Template Version B: Attribute on definition only
+  const T* memberB(const T& x);
+  // Template Version C: Attribute on BOTH declaration and definition
+  const T* memberC(const T& x [[clang::lifetimebound]]);
+};
+
+template <typename T>
+const T* MemberFuncsTpl<T>::memberA(const T& x) {
+    return &x;
+}
+template <typename T>
+const T* MemberFuncsTpl<T>::memberB(const T& x [[clang::lifetimebound]]) {
+    return &x;
+}
+template <typename T>
+const T* MemberFuncsTpl<T>::memberC(const T& x [[clang::lifetimebound]]) {
+    return &x;
+}
+
+void test() {
+  MemberFuncsTpl<MyObj> mtf;
+  const MyObj* pTMA = mtf.memberA(MyObj()); // expected-warning {{object whose reference is captured does not live long enough}} // expected-note {{destroyed here}}
+  const MyObj* pTMB = mtf.memberB(MyObj()); // tu-warning {{object whose reference is captured does not live long enough}} // tu-note {{destroyed here}}
+  const MyObj* pTMC = mtf.memberC(MyObj()); // expected-warning {{object whose reference is captured does not live long enough}} // expected-note {{destroyed here}}
+  (void)pTMA; // expected-note {{later used here}}
+  (void)pTMB; // tu-note {{later used here}}
+  (void)pTMC; // expected-note {{later used here}}
+}
+
+} // namespace attr_on_template_params
+
+namespace non_trivial_views {
+struct [[gsl::Pointer]] View {
+    View(const std::string&);
+    ~View(); // Forces a CXXBindTemporaryExpr.
+};
+
+View test1(std::string a) {
+  // Make sure we handle CXXBindTemporaryExpr of view types.
+  return View(a); // expected-warning {{address of stack memory is returned later}} expected-note {{returned here}}
+}
+
+View test2(std::string a) {
+  View b = View(a); // expected-warning {{address of stack memory is returned later}}
+  return b;         // expected-note {{returned here}}
+}
+
+View test3(std::string a) {
+  const View& b = View(a);  // expected-warning {{address of stack memory is returned later}}
+  return b;                 // expected-note {{returned here}}
+}
+} // namespace non_trivial_views
+
+namespace OwnerArrowOperator {
+void test_optional_arrow() {
+  const char* p;
+  {
+    std::optional<std::string> opt;
+    p = opt->data();  // expected-warning {{object whose reference is captured does not live long enough}}
+  }                   // expected-note {{destroyed here}}
+  (void)*p;           // expected-note {{later used here}}
+}
+
+void test_optional_arrow_lifetimebound() {
+  View v;
+  {
+    std::optional<MyObj> opt;
+    v = opt->getView();  // expected-warning {{object whose reference is captured does not live long enough}}
+  }                      // expected-note {{destroyed here}}
+  v.use();               // expected-note {{later used here}}
+}
+
+void test_unique_ptr_arrow() {
+  const char* p;
+  {
+    std::unique_ptr<std::string> up;
+    p = up->data();  // expected-warning {{object whose reference is captured does not live long enough}}
+  }                  // expected-note {{destroyed here}}
+  (void)*p;          // expected-note {{later used here}}
+}
+
+void test_optional_view_arrow() {
+    const char* p;
+    {
+        std::optional<std::string_view> opt;
+        p = opt->data();
+    }
+    (void)*p;
+}
+} // namespace OwnerArrowOperator
+
+namespace lambda_captures {
+auto return_ref_capture() {
+  int local = 1;
+  auto lambda = [&local]() { return local; }; // expected-warning {{address of stack memory is returned later}}
+  return lambda; // expected-note {{returned here}}
+}
+
+void safe_ref_capture() {
+  int local = 1;
+  auto lambda = [&local]() { return local; };
+  lambda();
+}
+
+auto capture_int_by_value() {
+  int x = 1;
+  auto lambda = [x]() { return x; };
+  return lambda;
+}
+
+auto capture_view_by_value() {
+  MyObj obj;
+  View v(obj); // expected-warning {{address of stack memory is returned later}}
+  auto lambda = [v]() { return v; };
+  return lambda; // expected-note {{returned here}}
+}
+
+void capture_view_by_value_safe() {
+  MyObj obj;
+  View v(obj);
+  auto lambda = [v]() { return v; };
+  lambda();
+}
+
+auto capture_pointer_by_ref() {
+  MyObj obj;
+  MyObj* p = &obj;
+  auto lambda = [&p]() { return p; }; // expected-warning {{address of stack memory is returned later}}
+  return lambda; // expected-note {{returned here}}
+}
+
+auto capture_multiple() {
+  int a, b;
+  auto lambda = [
+    &a,  // expected-warning {{address of stack memory is returned later}}
+    &b   // expected-warning {{address of stack memory is returned later}}
+  ]() { return a + b; };
+  return lambda; // expected-note 2 {{returned here}}
+}
+
+auto capture_raw_pointer_by_value() {
+  int x;
+  int* p = &x; // expected-warning {{address of stack memory is returned later}}
+  auto lambda = [p]() { return p; };
+  return lambda; // expected-note {{returned here}}
+}
+
+auto capture_raw_pointer_init_capture() {
+  int x;
+  int* p = &x; // expected-warning {{address of stack memory is returned later}}
+  auto lambda = [q = p]() { return q; };
+  return lambda; // expected-note {{returned here}}
+}
+
+auto capture_view_init_capture() {
+  MyObj obj;
+  View v(obj); // expected-warning {{address of stack memory is returned later}}
+  auto lambda = [w = v]() { return w; };
+  return lambda; // expected-note {{returned here}}
+}
+
+auto capture_lambda() {
+  int x;
+  auto inner = [&x]() { return x; }; // expected-warning {{address of stack memory is returned later}}
+  auto outer = [inner]() { return inner(); };
+  return outer; // expected-note {{returned here}}
+}
+
+auto return_copied_lambda() {
+  int local = 1;
+  auto lambda = [&local]() { return local; }; // expected-warning {{address of stack memory is returned later}}
+  auto lambda_copy = lambda;
+  return lambda_copy; // expected-note {{returned here}}
+}
+
+auto implicit_ref_capture() {
+  int local = 1;
+  auto lambda = [&]() { return local; }; // expected-warning {{address of stack memory is returned later}}
+  return lambda; // expected-note {{returned here}}
+}
+
+// TODO: Include the name of the variable in the diagnostic to improve
+// clarity, especially for implicit lambda captures where multiple warnings
+// can point to the same source location.
+auto implicit_ref_capture_multiple() {
+  int local = 1, local2 = 2;
+  auto lambda = [&]() { return local + local2; }; // expected-warning 2 {{address of stack memory is returned later}}
+  return lambda; // expected-note 2 {{returned here}}
+}
+
+auto implicit_value_capture() {
+  MyObj obj;
+  View v(obj); // expected-warning {{address of stack memory is returned later}}
+  auto lambda = [=]() { return v; };
+  return lambda; // expected-note {{returned here}}
+}
+
+auto* pointer_to_lambda_outlives() {
+  auto lambda = []() { return 42; };
+  return &lambda; // expected-warning {{address of stack memory is returned later}} \
+                  // expected-note {{returned here}}
+}
+
+auto capture_static() {
+  static int local = 1;
+  // Only automatic storage duration variables may be captured.
+  // Variables with static storage duration behave like globals and are directly accessible.
+  // The below lambdas should not capture `local`.
+  auto lambda = [&]() { return local; };
+  auto lambda2 = []() { return local; };
+  lambda2();
+  return lambda;
+}
+
+auto capture_static_address_by_value() {
+  static int local = 1;
+  int* p = &local;
+  auto lambda = [p]() { return p; };
+  return lambda;
+}
+
+auto capture_static_address_by_ref() {
+  static int local = 1;
+  int* p = &local;
+  auto lambda = [&p]() { return p; }; // expected-warning {{address of stack memory is returned later}}
+  return lambda; // expected-note {{returned here}}
+}
+
+auto capture_multilevel_pointer() {
+  int x;
+  int *p = &x; // expected-warning {{address of stack memory is returned later}}
+  int **q = &p; // expected-warning {{address of stack memory is returned later}}
+  int ***r = &q; // expected-warning {{address of stack memory is returned later}}
+  auto lambda = [=]() { return *p + **q + ***r; };
+  return lambda; // expected-note 3 {{returned here}}
+}
+} // namespace lambda_captures
+
+namespace LoopLocalPointers {
+
+void conditional_assignment_in_loop() {
+  for (int i = 0; i < 10; ++i) {
+    MyObj obj;
+    MyObj* view;
+    if (i > 5) {
+      view = &obj;
+    }
+    (void)*view;
+  }
+}
+
+void unconditional_assignment_in_loop() {
+  for (int i = 0; i < 10; ++i) {
+    MyObj obj;
+    MyObj* view = &obj;
+    (void)*view;
+  }
+}
+
+// FIXME: False positive. Requires modeling flow-sensitive aliased origins
+// to properly expire pp's inner origin when p's lifetime ends.
+void multi_level_pointer_in_loop() {
+  for (int i = 0; i < 10; ++i) {
+    MyObj obj;
+    MyObj* p;
+    MyObj** pp;
+    if (i > 5) {
+      p = &obj; // expected-warning {{object whose reference is captured does not live long enough}}
+      pp = &p;
+    }
+    (void)**pp; // expected-note {{later used here}}
+  }             // expected-note {{destroyed here}}
+}
+
+void outer_pointer_outlives_inner_pointee() {
+  MyObj safe;
+  MyObj* view = &safe;
+  for (int i = 0; i < 10; ++i) {
+    MyObj obj;
+    view = &obj;     // expected-warning {{object whose reference is captured does not live long enough}}
+  }                  // expected-note {{destroyed here}}
+  (void)*view;       // expected-note {{later used here}}
+}
+
+} // namespace LoopLocalPointers
+
+namespace array {
+
+void element_use_after_scope() {
+  int* p;
+  {
+    int a[10]{};
+    p = &a[2]; // expected-warning {{object whose reference is captured does not live long enough}}
+  }            // expected-note {{destroyed here}}
+  (void)*p;    // expected-note {{later used here}}
+}
+
+int* element_use_after_return() {
+  int a[10]{};
+  int* p = &a[0]; // expected-warning {{address of stack memory is returned later}}
+  return p;       // expected-note {{returned here}}
+}
+
+void element_use_same_scope() {
+  int a[10]{};
+  int* p = &a[0];
+  (void)*p;
+}
+
+void element_reassigned_safe() {
+  int safe[10]{};
+  int* p;
+  {
+    int a[10]{};
+    p = &a[0];
+  }
+  p = &safe[0]; // Rescued.
+  (void)*p;
+}
+
+void multidimensional_use_after_scope() {
+  int* p;
+  {
+    int a[3][4]{};
+    p = &a[1][2]; // expected-warning {{object whose reference is captured does not live long enough}}
+  }               // expected-note {{destroyed here}}
+  (void)*p;       // expected-note {{later used here}}
+}
+
+void member_array_element_use_after_scope() {
+  struct S {
+    int arr[10];
+    int b;
+  };
+  int* p;
+  {
+    S s;
+    p = &s.arr[0]; // expected-warning {{object whose reference is captured does not live long enough}}
+  }                // expected-note {{destroyed here}}
+  (void)*p;        // expected-note {{later used here}}
+}
+
+void array_of_pointers_use_after_scope() {
+  int** p;
+  {
+    int* a[10]{};
+    p = a;  // expected-warning {{object whose reference is captured does not live long enough}}
+  }         // expected-note {{destroyed here}}
+  (void)*p; // expected-note {{later used here}}
+}
+
+void reversed_subscript_use_after_scope() {
+  int* p;
+  {
+    int a[10]{};
+    p = &(0[a]); // expected-warning {{object whose reference is captured does not live long enough}}
+  }              // expected-note {{destroyed here}}
+  (void)*p;      // expected-note {{later used here}}
+}
+
+int* return_decayed_array() {
+  int a[10]{};
+  int *p = a; // expected-warning {{address of stack memory is returned later}}
+  return p;   // expected-note {{returned here}}
+}
+
+int* param_array_element(int a[], int n) {
+  return &a[n];
+}
+
+int* static_array() {
+  static int a[10]{};
+  return &a[1];
+}
+
+void pointer_arithmetic_use_after_scope() {
+  int* p;
+  int* p2;
+  int* p3;
+  {
+    int a[10]{};
+    p = a + 5;  // expected-warning {{object whose reference is captured does not live long enough}}
+    p2 = a - 5; // expected-warning {{object whose reference is captured does not live long enough}}
+    p3 = 5 + a; // expected-warning {{object whose reference is captured does not live long enough}}
+  }             // expected-note 3 {{destroyed here}}
+  (void)*p;     // expected-note {{later used here}}
+  (void)*p2;    // expected-note {{later used here}}
+  (void)*p3;    // expected-note {{later used here}}
+}
+
+// FIXME: Copying a pointer value out of an array element is not tracked.
+void copy_pointer_from_array_use_after_scope() {
+  int* q;
+  {
+    int x = 0;
+    int* arr[10] = {&x};
+    q = arr[0];
+  }
+  (void)*q; // Should warn.
+}
+
+// FIXME: A pointer inside an array becoming dangling is not detected.
+void pointer_in_array_use_after_scope() {
+  int* arr[10];
+  {
+    int x = 0;
+    arr[0] = &x;
+  }
+  (void)*arr[0]; // Should warn.
+}
+
+} // namespace array
+
+namespace static_call_operator {
+// https://github.com/llvm/llvm-project/issues/187426
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wc++23-extensions"
+
+struct S {
+  static S operator()(int, int&&);
+  static S& operator()(std::string&&,
+                       const int& a [[clang::lifetimebound]],
+                       const int& b [[clang::lifetimebound]]);
+};
+
+void indexing_with_static_operator() {
+  S()(1, 2);
+  S& x = S()("1",
+             2,  // expected-warning {{object whose reference is captured does not live long enough}} expected-note {{destroyed here}}
+             3); // expected-warning {{object whose reference is captured does not live long enough}} expected-note {{destroyed here}}
+
+  (void)x; // expected-note 2 {{later used here}}
+
+}
+} // namespace static_call_operator
+
+namespace track_origins_for_lifetimebound_record_type {
+
+template <class T> void use(T);
+
+struct S {
+  S();
+  S(const std::string &s [[clang::lifetimebound]]);
+
+  S return_self_after_registration() const;
+  std::string_view getData() const [[clang::lifetimebound]];
+};
+
+S getS(const std::string &s [[clang::lifetimebound]]);
+
+void from_free_function() {
+  S s = getS(std::string("temp")); // expected-warning {{object whose reference is captured does not live long enough}} \
+                                   // expected-note {{destroyed here}}
+  use(s);                          // expected-note {{later used here}}
+}
+
+void from_constructor() {
+  S s(std::string("temp")); // expected-warning {{object whose reference is captured does not live long enough}} \
+                            // expected-note {{destroyed here}}
+  use(s);                   // expected-note {{later used here}}
+}
+
+struct Factory {
+  S make(const std::string &s [[clang::lifetimebound]]);
+  static S create(const std::string &s [[clang::lifetimebound]]);
+  S makeThis() const [[clang::lifetimebound]];
+};
+
+void from_method() {
+  Factory f;
+  S s = f.make(std::string("temp")); // expected-warning {{object whose reference is captured does not live long enough}} \
+                                     // expected-note {{destroyed here}}
+  use(s);                            // expected-note {{later used here}}
+}
+
+void from_static_method() {
+  S s = Factory::create(std::string("temp")); // expected-warning {{object whose reference is captured does not live long enough}} \
+                                              // expected-note {{destroyed here}}
+  use(s);                                     // expected-note {{later used here}}
+}
+
+void from_lifetimebound_this_method() {
+  S value;
+  {
+    Factory f;
+    value = f.makeThis(); // expected-warning {{object whose reference is captured does not live long enough}}
+  }                       // expected-note {{destroyed here}}
+  use(value);             // expected-note {{later used here}}
+}
+
+void across_scope() {
+  S s{};
+  {
+    std::string str{"abc"};
+    s = getS(str); // expected-warning {{object whose reference is captured does not live long enough}}
+  }                // expected-note {{destroyed here}}
+  use(s);          // expected-note {{later used here}}
+}
+
+void same_scope() {
+  std::string str{"abc"};
+  S s = getS(str);
+  use(s);
+}
+
+S copy_propagation() {
+  std::string str{"abc"};
+  S a = getS(str); // expected-warning {{address of stack memory is returned later}}
+  S b = a;
+  return b; // expected-note {{returned here}}
+}
+
+void assignment_propagation() {
+  S a, b;
+  {
+    std::string str{"abc"};
+    a = getS(str); // expected-warning {{object whose reference is captured does not live long enough}}
+    b = a;
+  }                // expected-note {{destroyed here}}
+  use(b);          // expected-note {{later used here}}
+}
+
+S getSNoAnnotation(const std::string &s);
+
+void no_annotation() {
+  S s = getSNoAnnotation(std::string("temp"));
+  use(s);
+}
+
+void mix_annotated_and_not() {
+  S s1 = getS(std::string("temp")); // expected-warning {{object whose reference is captured does not live long enough}} \
+                                    // expected-note {{destroyed here}}
+  S s2 = getSNoAnnotation(std::string("temp"));
+  use(s1); // expected-note {{later used here}}
+  use(s2);
+}
+
+S getS2(const std::string &a [[clang::lifetimebound]], const std::string &b [[clang::lifetimebound]]);
+
+S multiple_lifetimebound_params() {
+  std::string str{"abc"};
+  S s = getS2(str, std::string("temp")); // expected-warning {{address of stack memory is returned later}} \
+                                         // expected-warning {{object whose reference is captured does not live long enough}} \
+                                         // expected-note {{destroyed here}}
+  return s;                              // expected-note {{returned here}} \
+                                         // expected-note {{later used here}}
+}
+
+// TODO: Diagnose [[clang::lifetimebound]] on functions whose return value
+// cannot refer to any object (e.g., returning int or enum).
+int getInt(const std::string &s [[clang::lifetimebound]]);
+
+void primitive_return() {
+  int i = getInt(std::string("temp"));
+  use(i);
+}
+
+template <class T>
+T make(const std::string &s [[clang::lifetimebound]]);
+
+void from_template_instantiation() {
+  S s = make<S>(std::string("temp")); // expected-warning {{object whose reference is captured does not live long enough}} \
+                                      // expected-note {{destroyed here}}
+  use(s);                             // expected-note {{later used here}}
+}
+
+struct FieldInitFromLifetimebound {
+  S value; // expected-note {{this field dangles}}
+  FieldInitFromLifetimebound() : value(getS(std::string("temp"))) {} // expected-warning {{address of stack memory escapes to a field}}
+};
+
+S S::return_self_after_registration() const {
+  std::string s{"abc"};
+  getS(s);
+  return *this;
+}
+
+struct SWithUserDefinedCopyLikeOps {
+  SWithUserDefinedCopyLikeOps();
+  SWithUserDefinedCopyLikeOps(const std::string &s [[clang::lifetimebound]]) : owned(s), data(s) {}
+
+  SWithUserDefinedCopyLikeOps(const SWithUserDefinedCopyLikeOps &other) : owned("copy"), data(owned) {}
+
+  SWithUserDefinedCopyLikeOps &operator=(const SWithUserDefinedCopyLikeOps &) {
+    owned = "copy";
+    data = owned;
+    return *this;
+  }
+
+  std::string owned;
+  std::string_view data;
+};
+
+SWithUserDefinedCopyLikeOps getSWithUserDefinedCopyLikeOps(const std::string &s [[clang::lifetimebound]]);
+
+SWithUserDefinedCopyLikeOps user_defined_copy_ctor_should_not_assume_origin_propagation() {
+  std::string str{"abc"};
+  SWithUserDefinedCopyLikeOps s = getSWithUserDefinedCopyLikeOps(str);
+  SWithUserDefinedCopyLikeOps copy = s; // Copy is rescued by user-defined copy constructor, so should not warn.
+  return copy;
+}
+
+void user_defined_assignment_should_not_assume_origin_propagation() {
+  SWithUserDefinedCopyLikeOps dst;
+  {
+    std::string str{"abc"};
+    SWithUserDefinedCopyLikeOps src = getSWithUserDefinedCopyLikeOps(str);
+    dst = src;
+  }
+  use(dst);
+}
+
+const S &getRef(const std::string &s [[clang::lifetimebound]]);
+
+S from_ref() {
+  std::string str{"abc"};
+  S s = getRef(str);
+  return s;
+}
+
+using SAlias = S;
+SAlias getSAlias(const std::string &s [[clang::lifetimebound]]);
+
+void from_typedef_return() {
+  SAlias s = getSAlias(std::string("temp")); // expected-warning {{object whose reference is captured does not live long enough}} \
+                                             // expected-note {{destroyed here}}
+  use(s);                                    // expected-note {{later used here}}
+}
+
+struct SWithOriginPropagatingCopy {
+  SWithOriginPropagatingCopy();
+  SWithOriginPropagatingCopy(const std::string &s [[clang::lifetimebound]]) : data(s) {}
+  SWithOriginPropagatingCopy(const SWithOriginPropagatingCopy &other) : data(other.data) {}
+  std::string_view data;
+};
+
+SWithOriginPropagatingCopy getSWithOriginPropagatingCopy(const std::string &s [[clang::lifetimebound]]);
+
+// FIXME: False negative. User-defined copy ctor may propagate origins.
+SWithOriginPropagatingCopy user_defined_copy_with_origin_propagation() {
+  std::string str{"abc"};
+  SWithOriginPropagatingCopy s = getSWithOriginPropagatingCopy(str);
+  SWithOriginPropagatingCopy copy = s;
+  return copy; // Should warn.
+}
+
+struct DefaultedOuter {
+  DefaultedOuter();
+  DefaultedOuter(const std::string &s [[clang::lifetimebound]]) : inner(s) {}
+  SWithUserDefinedCopyLikeOps inner;
+};
+
+DefaultedOuter getDefaultedOuter(const std::string &s [[clang::lifetimebound]]);
+
+// The defaulted outer copy ctor propagates origins even though the inner
+// user-defined copy ctor may break the borrow. This is intentional: this
+// pattern does not fit the ownership model this analysis supports.
+DefaultedOuter nested_defaulted_outer_with_user_defined_inner() {
+  std::string str{"abc"};
+  DefaultedOuter o = getDefaultedOuter(str); // expected-warning {{address of stack memory is returned later}}
+  DefaultedOuter copy = o;
+  return copy; // expected-note {{returned here}}
+}
+
+std::string_view getSV(S s [[clang::lifetimebound]]);
+
+// FIXME: False negative. Non-pointer/ref/gsl::Pointer parameter types marked
+// [[clang::lifetimebound]] are not registered for origin tracking.
+void dangling_view_from_non_pointer_param() {
+  std::string_view sv;
+  {
+    S s;
+    sv = getSV(s);
+  }
+  use(sv); // Should warn.
+}
+
+MyObj getMyObj(const MyObj &obj [[clang::lifetimebound]]);
+
+void gsl_owner_return() {
+  MyObj obj;
+  View v = obj;
+  getMyObj(obj);
+  use(v);
+}
+
+std::vector<std::string_view> createViews(const std::string &s [[clang::lifetimebound]]);
+
+std::span<std::string_view> owner_to_pointer_via_gsl_construction() {
+  std::string local;
+  auto views = createViews(local);
+  return views; // expected-warning {{address of stack memory is returned later}} \
+                // expected-note {{returned here}}
+}
+
+std::unique_ptr<S> getUniqueS(const std::string &s [[clang::lifetimebound]]);
+
+void owner_return_unique_ptr_s() {
+  auto ptr = getUniqueS(std::string("temp")); // expected-warning {{object whose reference is captured does not live long enough}} \
+                                              // expected-note {{destroyed here}}
+  (void)ptr;                                  // expected-note {{later used here}}
+}
+
+std::string_view return_dangling_view_through_owner() {
+  std::string local;
+  auto ups = getUniqueS(local);
+  S* s = ups.get(); // expected-warning {{address of stack memory is returned later}}
+  std::string_view sv = s->getData();
+  return sv; // expected-note {{returned here}}
+}
+
+void owner_outlives_lifetimebound_source() {
+  std::unique_ptr<S> ups;
+  {
+    std::string local;
+    ups = getUniqueS(local); // expected-warning {{object whose reference is captured does not live long enough}}
+  } // expected-note {{destroyed here}}
+  (void)ups; // expected-note {{later used here}}
+}
+
+} // namespace track_origins_for_lifetimebound_record_type
+
+namespace gslpointer_construction_from_lifetimebound {
+// https://github.com/llvm/llvm-project/issues/175898
+struct Bar {};
+template <typename T> struct [[gsl::Pointer]] Pointer {
+  Pointer();
+  Pointer(const T &bar [[clang::lifetimebound]]);
+  Pointer(const Pointer<T> &p);
+  const T &operator*() const [[clang::lifetimebound]];
+};
+
+template <typename T> void use(T);
+
+void local_pointer() {
+  Pointer<int> p;
+  {
+    int v;
+    p = Pointer(v); // expected-warning {{object whose reference is captured does not live long enough}}
+  }                 // expected-note {{destroyed here}}
+  use(*p);          // expected-note {{later used here}}
+}
+
+void nested_local_pointer() {
+  Pointer<Pointer<Pointer<Bar>>> ppp;
+  Pointer<Pointer<Bar>> pp;
+  Pointer<Bar> p;
+  {
+    Bar v;
+    p = Pointer(v);     // expected-warning {{object whose reference is captured does not live long enough}}
+    pp = Pointer(p);
+    ppp = Pointer(pp);
+  }                     // expected-note {{destroyed here}}
+  use(***ppp);          // expected-note {{later used here}}
+}
+
+struct PFieldFromParam {
+  Pointer<Bar> value;                      // expected-note {{this field dangles}}
+  PFieldFromParam(Bar bar) : value(bar) {} // expected-warning {{address of stack memory escapes to a field}}
+};
+
+struct PFieldFromTemp {
+  Pointer<Bar> value;                // expected-note {{this field dangles}}
+  PFieldFromTemp() : value(Bar{}) {} // expected-warning {{address of stack memory escapes to a field}}
+};
+
+} // namespace gslpointer_construction_from_lifetimebound
+namespace conditional_operator_control_flow {
+// https://github.com/llvm/llvm-project/issues/183895
+
+#ifdef __cpp_exceptions
+
+void throw_branches(bool cond, int *value) {
+  (void)(cond ? throw 1 : value);
+  (void)(cond ? throw 1 : throw 2);
+}
+
+void nested_throw_branches(bool cond, bool cond2, int *value) {
+  (void)(cond ? (cond2 ? throw 1 : value) : throw 2);
+  (void)(cond ? throw 1 : (cond2 ? value : throw 2));
+}
+
+#endif
+
+int *f(int *p [[clang::lifetimebound]]);
+[[noreturn]] int *noret_f(int *p [[clang::lifetimebound]]);
+
+
+constexpr bool kTrue = true;
+constexpr bool kFalse = false;
+
+int *constexpr_dead_false(int *num) {
+  int local = 0;
+  return kTrue ? num : f(&local);
+}
+
+int *constexpr_dead_nested(int *num) {
+  int local = 0;
+  return kTrue ? (kTrue ? num : f(&local)) : num; 
+}
+
+int *constexpr_live_false(int *num) {
+  int local = 0;
+  return kFalse ? num : f(&local); // expected-warning {{address of stack memory is returned later}} // expected-note {{returned here}}
+}
+
+int *constexpr_live_nested(int *num) {
+  int local = 0;
+  return kTrue ? (kFalse ? num : f(&local)) : num; // expected-warning {{address of stack memory is returned later}} // expected-note {{returned here}}
+}
+int *noreturn_dead_false(bool cond, int *num) {
+  int local = 0;
+  return cond ? num : noret_f(&local);
+}
+
+int *noreturn_dead_nested(bool cond, bool cond2, int *num) {
+  int local = 0;
+  return cond ? (cond2 ? num : noret_f(&local)) : num;
+}
+
+} // namespace conditional_operator_control_flow
+
+namespace new_allocation {
+
+//===----------------------------------------------------------------------===//
+// new
+//===----------------------------------------------------------------------===//
+
+void new_view_from_dead_scope() {
+  View *p;
+  {
+    MyObj obj;
+    p = new View(obj); // expected-warning {{object whose reference is captured does not live long enough}}
+  }                    // expected-note {{destroyed here}}
+  p->use();            // expected-note {{later used here}}
+}
+
+void new_int_basic() {
+  int *p = new int; // expected-warning {{allocated object does not live long enough}}
+  delete p;         // expected-note {{freed here}}
+  (void)*p;         // expected-note {{later used here}}
+}
+
+void new_int_parens() {
+  int *p = new int(); // expected-warning {{allocated object does not live long enough}}
+  delete p;           // expected-note {{freed here}}
+  (void)*p;           // expected-note {{later used here}}
+}
+
+void new_int_braces() {
+  int *p = new int{}; // expected-warning {{allocated object does not live long enough}}
+  delete p;           // expected-note {{freed here}}
+  (void)*p;           // expected-note {{later used here}}
+}
+
+void conditional_delete(bool cond) {
+  int *p1 = new int;       // expected-warning {{allocated object does not live long enough}}
+  int *p2 = new int;       // expected-warning {{allocated object does not live long enough}}
+  delete (cond ? p1 : p2); // expected-note 2 {{freed here}}
+  (void)*p1;               // expected-note {{later used here}}
+  (void)*p2;               // expected-note {{later used here}}
+}
+
+int* foo(int* x [[clang::lifetimebound]], int* y [[clang::lifetimebound]]);
+
+void delete_returned_from_call() {
+  int* x = new int(1); // expected-warning {{allocated object does not live long enough}}
+  int* y = new int(2); // expected-warning {{allocated object does not live long enough}}
+  delete foo(x, y);    // expected-note 2 {{freed here}}
+  (void)x;             // expected-note {{later used here}}
+  (void)y;             // expected-note {{later used here}}
+}
+
+void new_pointer_from_pointer() {
+  MyObj **p;
+  {
+    MyObj obj;
+    MyObj *q = &obj;    // expected-warning {{object whose reference is captured does not live long enough}}
+    p = new MyObj *(q); 
+  }                     // expected-note {{destroyed here}}
+  (void)**p;            // expected-note {{later used here}}
+}
+
+void new_pointer_from_dead_object() {
+  MyObj **p;
+  {
+    MyObj obj;
+    p = new MyObj *(&obj); // expected-warning {{object whose reference is captured does not live long enough}}
+  }                        // expected-note {{destroyed here}}
+  (void)**p;               // expected-note {{later used here}}
+}
+
+struct MultiView {
+  MultiView(MyObj& a [[clang::lifetimebound]], MyObj& b [[clang::lifetimebound]]);
+};
+
+void new_multiview_from_mixed_scope() {
+  MyObj obj1;
+  MultiView *p;
+  {
+    MyObj obj2;
+    p = new MultiView(obj1, obj2); // expected-warning {{object whose reference is captured does not live long enough}}
+  }                                // expected-note {{destroyed here}}
+  (void)p;                         // expected-note {{later used here}}
+}
+
+void new_array_basic() {
+  int *p = new int[2]; // expected-warning {{allocated object does not live long enough}}
+  delete[] p;          // expected-note {{freed here}}
+  (void)p[0];          // expected-note {{later used here}}
+}
+
+void new_array_parens() {
+  int *p = new int[2](); // expected-warning {{allocated object does not live long enough}}
+  delete[] p;            // expected-note {{freed here}}
+  (void)p[0];            // expected-note {{later used here}}
+}
+
+void new_array_braces() {
+  int *p = new int[2]{}; // expected-warning {{allocated object does not live long enough}}
+  delete[] p;            // expected-note {{freed here}}
+  (void)p[0];            // expected-note {{later used here}}
+}
+
+// FIXME: https://github.com/llvm/llvm-project/issues/187471
+void new_pointer_array_from_dead_objects() {
+  MyObj **arr;
+  {
+    MyObj a, b;
+    arr = new MyObj *[2]{&a, &b};
+  }
+  (void)arr[0]->id;
+  (void)arr[1]->id;
+}
+
+struct PointerArrayFieldHolder {
+  MyObj **Ptrs;
+};
+
+// FIXME: https://github.com/llvm/llvm-project/issues/187471
+void pointer_array_field_sensitivity() {
+  PointerArrayFieldHolder h;
+  {
+    MyObj a, b;
+    h.Ptrs = new MyObj *[2]{&a, &b};
+  }
+  (void)h.Ptrs[0]->id;
+}
+
+//===----------------------------------------------------------------------===//
+// delete
+//===----------------------------------------------------------------------===//
+
+void delete_direct_use_after_free() {
+  MyObj *p = new MyObj; // expected-warning {{allocated object does not live long enough}}
+  delete p;             // expected-note {{freed here}}
+  (void)p->id;          // expected-note {{later used here}}
+}
+
+void delete_alias_use_after_free() {
+  MyObj *p = new MyObj; // expected-warning {{allocated object does not live long enough}}
+  MyObj *q = p;
+  delete p;             // expected-note {{freed here}}
+  (void)q->id;          // expected-note {{later used here}}
+}
+
+void delete_pointer_propagation_use_after_free() {
+  MyObj *p = new MyObj; // expected-warning {{allocated object does not live long enough}}
+  MyObj **pp = &p;
+  delete p;             // expected-note {{freed here}}
+  (void)(*pp)->id;      // expected-note {{later used here}}
+}
+
+void delete_param_pointer(int* x) { // expected-warning {{parameter does not live long enough}}
+  delete x;                         // expected-note {{freed here}}
+  (void)x;                          // expected-note {{later used here}}
+}
+
+// FIXME: false-negative
+struct S {
+  int *x;
+  void foo() {
+    delete x;
+    (void)x;
+  }
+};
+
+void use_inner_origin_after_delete(MyObj* obj) { // expected-warning {{parameter does not live long enough}}
+    int* p = &obj->id;
+    delete obj;                                   // expected-note {{freed here}}
+    (void)*p;                                     // expected-note {{later used here}}
+}
+
+void delete_nullptr_no_warning() {
+  int *p = nullptr;
+  delete p;
+}
+
+void delete_array_nullptr_no_warning() {
+  int *p = nullptr;
+  delete[] p;
+}
+
+struct ClassSpecificDelete {
+  int X;
+  static void operator delete(void *);
+};
+
+void class_specific_operator_delete_use_after_free() {
+  ClassSpecificDelete *p = new ClassSpecificDelete; // expected-warning {{allocated object does not live long enough}}
+  delete p;                                         // expected-note {{freed here}}
+  (void)p->X;                                       // expected-note {{later used here}}
+}
+
+struct PointerFieldHolder {
+  MyObj *Ptr;
+};
+
+// FIXME: https://github.com/llvm/llvm-project/issues/184344
+void placement_new_pointer_field_use_after_scope() {
+  PointerFieldHolder h;
+  PointerFieldHolder *p = &h;
+  {
+    MyObj obj;
+    p = new (&h) PointerFieldHolder{&obj};
+  }
+  (void)p->Ptr->id;
+}
+
+// FIXME: https://github.com/llvm/llvm-project/issues/184344
+void delete_through_pointer_field() {
+  PointerFieldHolder h{new MyObj};
+  delete h.Ptr;
+  (void)h.Ptr->id;
+}
+
+void delete_stack_object() {
+  MyObj obj;
+  MyObj* p = &obj; // expected-warning {{allocated object does not live long enough}}
+  delete &obj;     // expected-note {{freed here}}
+  (void)p->id;     // expected-note {{later used here}}
+}
+
+void delete_stack_object_int() {
+  int obj;
+  int* p = &obj;  // expected-warning {{allocated object does not live long enough}}
+  delete &obj;    // expected-note {{freed here}}
+  (void)*p;       // expected-note {{later used here}}
+}
+
+void allocate_void_ptr() {
+    void** v = new void*;
+    delete v;
+}
+
+} // namespace new_allocation
+
+namespace method_call_uses_field_origins {
+int GLOBAL_INT;
+std::string GLOBAL_STRING{"123"};
+
+struct S {
+  int* p_;
+  void bar();
+  void foo() {
+    {
+      int num;
+      this->p_ = &num; // expected-warning {{object whose reference is captured does not live long enough}}
+    }                  // expected-note {{destroyed here}}
+    bar();             // expected-note {{later used here}}
+    this->p_ = &GLOBAL_INT;
+  }
+  void baz() {
+    {
+      int num;
+      this->p_ = &num;
+    }
+    this->p_ = &GLOBAL_INT;
+    bar();
+  }
+};
+
+struct T {
+  std::string_view v;
+  void bar();
+  void foo() {
+    v = std::string("tmp"); // expected-warning {{object whose reference is captured does not live long enough}} expected-note {{destroyed here}}
+    bar();                  // expected-note {{later used here}}
+  }
+};
+
+// FIXME: false-negative
+void foo() {
+  S s;
+  {
+    int num;
+    s.p_ = &num; // does not warn
+  }
+  s.bar();
+  s.p_ = &GLOBAL_INT;
+}
+
+struct S2 : S {
+  void bar2();
+  void foo2() {
+    {
+      int num;
+      this->p_ = &num; // expected-warning {{object whose reference is captured does not live long enough}}
+    }                  // expected-note {{destroyed here}}
+    bar();             // expected-note {{later used here}}
+    this->p_ = &GLOBAL_INT;
+  }
+  void baz2() {
+    {
+      int num;
+      this->p_ = &num; // expected-warning {{object whose reference is captured does not live long enough}}
+    }                  // expected-note {{destroyed here}}
+    bar2();            // expected-note {{later used here}}
+    this->p_ = nullptr;
+  }
+};
+
+} // namespace method_call_uses_field_origins
+
+namespace CXXDefaultInitExprTests {
+struct Holder {
+  std::string_view view = std::string("temporary"); // expected-warning {{address of stack memory escapes to a field}} expected-note {{this field dangles}}
+  Holder() {}
+};
+} // namespace CXXDefaultInitExprTests
+
+namespace base_class_fields {
+struct X { int* x; }; // expected-note {{this field dangles}}
+struct Y : X {
+  int* y;
+  void bar() {
+    {
+      int a;
+      x = &a; // expected-warning {{address of stack memory escapes to a field}}
+    }
+    (void)x;
+  }
+};
+} // namespace base_class_fields
+
+namespace callable_wrappers {
+
+std::function<void()> direct_return() {
+  int x;
+  return [&x]() { (void)x; }; // expected-warning {{address of stack memory is returned later}} \
+                              // expected-note {{returned here}}
+}
+
+std::function<void()> copy_function() {
+  int x;
+  std::function<void()> f = [&x]() { (void)x; }; // expected-warning {{address of stack memory is returned later}}
+  std::function<void()> f2 = f;
+  return f2; // expected-note {{returned here}}
+}
+
+std::function<void()> copy_assign() {
+  int x;
+  std::function<void()> f = [&x]() { (void)x; }; // expected-warning {{address of stack memory is returned later}}
+  std::function<void()> f2 = []() {};
+  f2 = f;
+  return f2; // expected-note {{returned here}}
+}
+
+// FIXME: False negative. std::move's lifetimebound handling in
+// `handleFunctionCall` only flows the outermost origin, missing inner origins
+// that carry the lambda's loans.
+std::function<void()> move_assign() {
+  int x;
+  std::function<void()> f = [&x]() { (void)x; }; // Should warn.
+  std::function<void()> f2 = []() {};
+  f2 = std::move(f);
+  return f2;
+}
+
+std::function<void()> reassign_safe_then_unsafe() {
+  static int safe = 1;
+  int local = 2;
+  std::function<void()> f = []() { (void)safe; };
+  f = [&local]() { (void)local; }; // expected-warning {{address of stack memory is returned later}}
+  return f; // expected-note {{returned here}}
+}
+
+std::function<void()> reassign_unsafe_then_safe() {
+  static int safe = 1;
+  int local = 2;
+  std::function<void()> f = [&local]() { (void)local; };
+  f = []() { (void)safe; };
+  return f;
+}
+
+std::function<void()> non_capturing_lambda() {
+  return []() {};
+}
+
+void free_function();
+
+std::function<void()> reassign_lambda_to_function_pointer() {
+  int local;
+  std::function<void()> f = [&local]() { (void)local; };
+  f = &free_function;
+  return f;
+}
+
+struct Functor { void operator()() const; };
+
+std::function<void()> reassign_lambda_to_functor() {
+  int local;
+  Functor c;
+  std::function<void()> f = [&local]() { (void)local; };
+  f = c;
+  return f;
+}
+
+std::function<void()> capture_lifetimebound_param(int &x [[clang::lifetimebound]]) {
+  return [&]() { (void)x; };
+}
+
+void uaf_via_lifetimebound() {
+  std::function<void()> f = []() {};
+  {
+    int local;
+    f = capture_lifetimebound_param(local); // expected-warning {{object whose reference is captured does not live long enough}}
+  } // expected-note {{destroyed here}}
+  (void)f; // expected-note {{later used here}}
+}
+
+} // namespace callable_wrappers
+
+namespace GH126600 {
+struct [[gsl::Pointer]] function_ref {
+  template <typename Callable>
+  function_ref(Callable &&callable [[clang::lifetimebound]]) : ref(callable) {}
+  void (*ref)();
+};
+
+// FIXME: The lifetimebound annotation tracks the outer callable object's
+// storage rather than what the callable captures. A mechanism like
+// lifetimebound(2) could enable tracking inner lifetimes, which would
+// avoid this warning for non-capturing lambdas.
+void assign_non_capturing_to_function_ref(function_ref &r) {
+  r = []() {}; // expected-warning {{object whose reference is captured does not live long enough}} \
+               // expected-note {{destroyed here}}
+  (void)r; // expected-note {{later used here}}
+}
+
+} // namespace GH126600

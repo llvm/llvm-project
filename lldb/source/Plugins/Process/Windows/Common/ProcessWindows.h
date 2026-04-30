@@ -93,13 +93,17 @@ public:
   void OnDebuggerError(const Status &error, uint32_t type) override;
 
   std::optional<uint32_t> GetWatchpointSlotCount() override;
+
+  /// Returns the exception code of the active (current) debug exception,
+  /// or std::nullopt if there is no active exception.
+  std::optional<DWORD> GetActiveExceptionCode() const;
+
   Status EnableWatchpoint(lldb::WatchpointSP wp_sp,
                           bool notify = true) override;
   Status DisableWatchpoint(lldb::WatchpointSP wp_sp,
                            bool notify = true) override;
 
-  void
-  SetPseudoConsoleHandle(const std::shared_ptr<PseudoConsole> &pty) override;
+  void SetPseudoConsoleHandle() override;
 
 protected:
   ProcessWindows(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp);
@@ -117,6 +121,7 @@ private:
   };
   std::map<lldb::break_id_t, WatchpointInfo> m_watchpoints;
   std::vector<lldb::break_id_t> m_watchpoint_ids;
+  std::shared_ptr<PTY> m_pty;
 };
 } // namespace lldb_private
 

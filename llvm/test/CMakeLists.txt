@@ -31,6 +31,7 @@ llvm_canonicalize_cmake_booleans(
   LLVM_APPEND_VC_REV
   LLVM_HAS_LOGF128
   LLVM_ENABLE_ONDISK_CAS
+  LLVM_HAVE_OPENCSD
   )
 
 configure_lit_site_cfg(
@@ -66,16 +67,16 @@ set(LLVM_TEST_DEPENDS_COMMON
   count
   llvm-config
   not
+  split-file
   )
 
 set(LLVM_TEST_DEPENDS
   ${LLVM_TEST_DEPENDS_COMMON}
-  BugpointPasses
   LLVMWindowsDriver
-  bugpoint
   llc
   lli
   lli-child-target
+  llubi
   llvm-addr2line
   llvm-ar
   llvm-as
@@ -155,7 +156,6 @@ set(LLVM_TEST_DEPENDS
   opt
   sancov
   sanstats
-  split-file
   verify-uselistorder
   yaml-bench
   yaml2obj

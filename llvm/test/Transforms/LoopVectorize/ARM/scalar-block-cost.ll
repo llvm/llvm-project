@@ -21,10 +21,10 @@ entry:
   %cmp8 = icmp sgt i32 %n, 0
   br i1 %cmp8, label %for.body, label %exit
 
-exit:                                 ; preds = %for.body, %entry
+exit:
   ret void
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.09 = phi i32 [ %add, %for.body ], [ 0, %entry ]
   %add = add nuw nsw i32 %i.09, 1
   %arrayidx = getelementptr inbounds i32, ptr %data, i32 %add
@@ -63,16 +63,16 @@ entry:
   %cmp31 = icmp slt i32 %start, %end
   br i1 %cmp31, label %for.body.preheader, label %for.cond.cleanup
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body
 
-for.cond.cleanup.loopexit:                        ; preds = %if.end
+for.cond.cleanup.loopexit:
   br label %for.cond.cleanup
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %for.body.preheader, %if.end
+for.body:
   %i.032 = phi i32 [ %inc, %if.end ], [ %start, %for.body.preheader ]
   %arrayidx = getelementptr inbounds i32, ptr %a, i32 %i.032
   %0 = load i32, ptr %arrayidx, align 4
@@ -81,7 +81,7 @@ for.body:                                         ; preds = %for.body.preheader,
   %cmp3 = icmp sgt i32 %0, %1
   br i1 %cmp3, label %if.then, label %if.end
 
-if.then:                                          ; preds = %for.body
+if.then:
   %mul = mul nsw i32 %0, 5
   %add = add nsw i32 %mul, 3
   %factor = shl i32 %add, 1
@@ -90,7 +90,7 @@ if.then:                                          ; preds = %for.body
   store i32 %add7, ptr %arrayidx2, align 4
   br label %if.end
 
-if.end:                                           ; preds = %if.then, %for.body
+if.end:
   %k.0 = phi i32 [ %add, %if.then ], [ %0, %for.body ]
   store i32 %k.0, ptr %arrayidx, align 4
   %inc = add nsw i32 %i.032, 1

@@ -339,6 +339,9 @@ LogicalResult Serializer::processDecorationAttr(Location loc, uint32_t resultID,
   case spirv::Decoration::DescriptorSet:
   case spirv::Decoration::Location:
   case spirv::Decoration::Index:
+  case spirv::Decoration::Offset:
+  case spirv::Decoration::XfbBuffer:
+  case spirv::Decoration::XfbStride:
     if (auto intAttr = dyn_cast<IntegerAttr>(attr)) {
       args.push_back(intAttr.getValue().getZExtValue());
       break;
@@ -402,6 +405,23 @@ LogicalResult Serializer::processDecorationAttr(Location loc, uint32_t resultID,
               resultID, decoration,
               {cacheLevel, static_cast<uint32_t>(storeCacheControl)});
         });
+  case spirv::Decoration::AlignmentId:
+  case spirv::Decoration::MaxByteOffsetId:
+  case spirv::Decoration::CounterBuffer: {
+    auto symRef = dyn_cast<FlatSymbolRefAttr>(attr);
+    if (!symRef)
+      return emitError(loc, "expected symbol reference for ")
+             << stringifyDecoration(decoration);
+    StringRef symName = symRef.getValue();
+    uint32_t operandID = getVariableID(symName);
+    if (!operandID)
+      operandID = getSpecConstID(symName);
+    if (!operandID)
+      return emitError(loc, "could not find <id> for symbol '")
+             << symName << "' referenced by "
+             << stringifyDecoration(decoration);
+    return emitDecorationId(resultID, decoration, {operandID});
+  }
   default:
     return emitError(loc, "unhandled decoration ")
            << stringifyDecoration(decoration);
@@ -599,6 +619,15 @@ LogicalResult Serializer::prepareBasicType(
     if (floatType.isBF16()) {
       operands.push_back(static_cast<uint32_t>(spirv::FPEncoding::BFloat16KHR));
     }
+    if (floatType.isF8E4M3FN()) {
+      operands.push_back(
+          static_cast<uint32_t>(spirv::FPEncoding::Float8E4M3EXT));
+    }
+    if (floatType.isF8E5M2()) {
+      operands.push_back(
+          static_cast<uint32_t>(spirv::FPEncoding::Float8E5M2EXT));
+    }
+
     return success();
   }
 
@@ -714,6 +743,11 @@ LogicalResult Serializer::prepareBasicType(
     typeEnum = spirv::Opcode::OpTypeRuntimeArray;
     operands.push_back(elementTypeID);
     return processTypeDecoration(loc, runtimeArrayType, resultID);
+  }
+
+  if (isa<spirv::SamplerType>(type)) {
+    typeEnum = spirv::Opcode::OpTypeSampler;
+    return success();
   }
 
   if (auto sampledImageType = dyn_cast<spirv::SampledImageType>(type)) {
@@ -1253,8 +1287,10 @@ uint32_t Serializer::prepareConstantFp(Location loc, FloatAttr floatAttr,
     } words = llvm::bit_cast<DoubleWord>(value.convertToDouble());
     encodeInstructionInto(typesGlobalValues, opcode,
                           {typeID, resultID, words.word1, words.word2});
-  } else if (semantics == &APFloat::IEEEhalf() ||
-             semantics == &APFloat::BFloat()) {
+  } else if (llvm::is_contained({&APFloat::IEEEhalf(), &APFloat::BFloat(),
+                                 &APFloat::Float8E4M3FN(),
+                                 &APFloat::Float8E5M2()},
+                                semantics)) {
     uint32_t word =
         static_cast<uint32_t>(value.bitcastToAPInt().getZExtValue());
     encodeInstructionInto(typesGlobalValues, opcode, {typeID, resultID, word});
@@ -1655,6 +1691,18 @@ LogicalResult Serializer::emitDecoration(uint32_t target,
       spirv::getPrefixedOpcode(wordCount, spirv::Opcode::OpDecorate), target,
       static_cast<uint32_t>(decoration));
   llvm::append_range(decorations, params);
+  return success();
+}
+
+LogicalResult Serializer::emitDecorationId(uint32_t target,
+                                           spirv::Decoration decoration,
+                                           ArrayRef<uint32_t> operandIds) {
+  uint32_t wordCount = 3 + operandIds.size();
+  llvm::append_values(
+      decorations,
+      spirv::getPrefixedOpcode(wordCount, spirv::Opcode::OpDecorateId), target,
+      static_cast<uint32_t>(decoration));
+  llvm::append_range(decorations, operandIds);
   return success();
 }
 

@@ -140,14 +140,14 @@ View the diff from {self.name} here.
                 "llvm/include/llvm/Demangle/",
             ],
             "export_macro": "LLVM_ABI",
-            "include_header": "llvm/include/llvm/Support/Compiler.h",
+            "include_header": "llvm/Support/Compiler.h",
         },
         {
             "name": "LLVM-C headers",
             "patterns": ["llvm/include/llvm-c/**/*.h"],
             "excludes": [],
             "export_macro": "LLVM_C_ABI",
-            "include_header": "llvm/include/llvm-c/Visibility.h",
+            "include_header": "llvm-c/Visibility.h",
         },
         {
             "name": "LLVM Demangle headers",
@@ -167,8 +167,8 @@ View the diff from {self.name} here.
             # Check if file matches any pattern
             matches_pattern = False
             for pattern in category["patterns"]:
-                # Simple pattern matching for /**/*.h style patterns
-                pattern_prefix = pattern.replace("/**/*.h", "")
+                # Simple pattern matching for **/*.h style patterns
+                pattern_prefix = pattern.replace("**/*.h", "")
                 if path.startswith(pattern_prefix) and path.endswith(".h"):
                     matches_pattern = True
                     break

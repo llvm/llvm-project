@@ -12,6 +12,7 @@
 #include "Plugins/Language/CPlusPlus/CxxStringTypes.h"
 #include "Plugins/Language/CPlusPlus/Generic.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
+
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/StringPrinter.h"
 #include "lldb/DataFormatters/VectorIterator.h"
@@ -22,6 +23,7 @@
 #include "lldb/Utility/Stream.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
+#include "llvm/Support/ErrorExtras.h"
 #include <optional>
 
 using namespace lldb;
@@ -141,8 +143,8 @@ lldb::ValueObjectSP
 LibstdcppMapIteratorSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
   if (m_pair_address != 0 && m_pair_type) {
     if (!m_pair_sp)
-      m_pair_sp = CreateValueObjectFromAddress("pair", m_pair_address,
-                                               m_exe_ctx_ref, m_pair_type);
+      m_pair_sp = CreateChildValueObjectFromAddress("pair", m_pair_address,
+                                                    m_exe_ctx_ref, m_pair_type);
     if (m_pair_sp)
       return m_pair_sp->GetChildAtIndex(idx);
   }
@@ -156,8 +158,7 @@ LibstdcppMapIteratorSyntheticFrontEnd::GetIndexOfChildWithName(
     return 0;
   if (name == "second")
     return 1;
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.AsCString());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 SyntheticChildrenFrontEnd *
@@ -209,7 +210,7 @@ lldb::ChildCacheState VectorIteratorSyntheticFrontEnd::Update() {
     return lldb::ChildCacheState::eRefetch;
   Status err;
   m_exe_ctx_ref = valobj_sp->GetExecutionContextRef();
-  m_item_sp = CreateValueObjectFromAddress(
+  m_item_sp = CreateChildValueObjectFromAddress(
       "item", item_ptr->GetValueAsUnsigned(0), m_exe_ctx_ref,
       item_ptr->GetCompilerType().GetPointeeType());
   if (err.Fail())
@@ -233,8 +234,7 @@ llvm::Expected<size_t>
 VectorIteratorSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
   if (name == "item")
     return 0;
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.AsCString());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 bool lldb_private::formatters::LibStdcppStringSummaryProvider(
@@ -393,8 +393,7 @@ LibStdcppSharedPtrSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
   if (name == "object" || name == "$$dereference$$")
     return 1;
 
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.AsCString());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 SyntheticChildrenFrontEnd *

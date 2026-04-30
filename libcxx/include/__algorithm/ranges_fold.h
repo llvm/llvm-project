@@ -10,12 +10,14 @@
 #ifndef _LIBCPP___ALGORITHM_RANGES_FOLD_H
 #define _LIBCPP___ALGORITHM_RANGES_FOLD_H
 
+#include <__algorithm/for_each.h>
 #include <__concepts/assignable.h>
 #include <__concepts/constructible.h>
 #include <__concepts/convertible_to.h>
 #include <__concepts/invocable.h>
 #include <__concepts/movable.h>
 #include <__config>
+#include <__functional/identity.h>
 #include <__functional/invoke.h>
 #include <__functional/reference_wrapper.h>
 #include <__iterator/concepts.h>
@@ -28,6 +30,7 @@
 #include <__type_traits/invoke.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
+#include <optional>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -62,6 +65,9 @@ struct in_value_result {
 template <class _Ip, class _Tp>
 using fold_left_with_iter_result = in_value_result<_Ip, _Tp>;
 
+template <class _Ip, class _Tp>
+using fold_left_first_with_iter_result = in_value_result<_Ip, _Tp>;
+
 template <class _Fp, class _Tp, class _Ip, class _Rp, class _Up = decay_t<_Rp>>
 concept __indirectly_binary_left_foldable_impl =
     convertible_to<_Rp, _Up> &&                    //
@@ -87,11 +93,17 @@ struct __fold_left_with_iter {
     }
 
     _Up __result = std::invoke(__f, std::move(__init), *__first);
-    for (++__first; __first != __last; ++__first) {
-      __result = std::invoke(__f, std::move(__result), *__first);
-    }
+    ++__first;
+    __identity __proj;
+    auto __end = std::__for_each(
+        std::move(__first),
+        std::move(__last),
+        [&](auto&& __element) {
+          __result = std::invoke(__f, std::move(__result), std::forward<decltype(__element)>(__element));
+        },
+        __proj);
 
-    return fold_left_with_iter_result<_Ip, _Up>{std::move(__first), std::move(__result)};
+    return fold_left_with_iter_result<_Ip, _Up>{std::move(__end), std::move(__result)};
   }
 
   template <input_range _Rp, class _Tp, __indirectly_binary_left_foldable<_Tp, iterator_t<_Rp>> _Fp>
@@ -118,6 +130,63 @@ struct __fold_left {
 };
 
 inline constexpr auto fold_left = __fold_left();
+
+struct __fold_left_first_with_iter {
+  template <input_iterator _Iter,
+            sentinel_for<_Iter> _Sent,
+            __indirectly_binary_left_foldable<iter_value_t<_Iter>, _Iter> _Func>
+    requires constructible_from<iter_value_t<_Iter>, iter_reference_t<_Iter>>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(_Iter __first, _Sent __last, _Func __func) {
+    using _Up = decltype(fold_left(std::move(__first), __last, iter_value_t<_Iter>(*__first), __func));
+
+    if (__first == __last)
+      return fold_left_first_with_iter_result<_Iter, optional<_Up>>{std::move(__first), optional<_Up>()};
+
+    _Up __result(*__first);
+    ++__first;
+    __identity __proj;
+    auto __end = std::__for_each(
+        std::move(__first),
+        std::move(__last),
+        [&](auto&& __element) {
+          __result = std::invoke(__func, std::move(__result), std::forward<decltype(__element)>(__element));
+        },
+        __proj);
+
+    return fold_left_first_with_iter_result<_Iter, optional<_Up>>{std::move(__end), optional<_Up>(std::move(__result))};
+  }
+
+  template <input_range _Range, __indirectly_binary_left_foldable<range_value_t<_Range>, iterator_t<_Range>> _Func>
+    requires constructible_from<range_value_t<_Range>, range_reference_t<_Range>>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(_Range&& __range, _Func __func) {
+    auto __result = operator()(ranges::begin(__range), ranges::end(__range), std::ref(__func));
+
+    using _Up = decltype(fold_left(
+        ranges::begin(__range), ranges::end(__range), range_value_t<_Range>(*ranges::begin(__range)), __func));
+    return fold_left_first_with_iter_result<borrowed_iterator_t<_Range>, optional<_Up>>{
+        std::move(__result.in), std::move(__result.value)};
+  }
+};
+
+inline constexpr auto fold_left_first_with_iter = __fold_left_first_with_iter();
+
+struct __fold_left_first {
+  template <input_iterator _Iter,
+            sentinel_for<_Iter> _Sent,
+            __indirectly_binary_left_foldable<iter_value_t<_Iter>, _Iter> _Func>
+    requires constructible_from<iter_value_t<_Iter>, iter_reference_t<_Iter>>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(_Iter __first, _Sent __last, _Func __func) {
+    return fold_left_first_with_iter(std::move(__first), std::move(__last), std::ref(__func)).value;
+  }
+
+  template <input_range _Range, __indirectly_binary_left_foldable<range_value_t<_Range>, iterator_t<_Range>> _Func>
+    requires constructible_from<range_value_t<_Range>, range_reference_t<_Range>>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(_Range&& __range, _Func __func) {
+    return fold_left_first_with_iter(ranges::begin(__range), ranges::end(__range), std::ref(__func)).value;
+  }
+};
+
+inline constexpr auto fold_left_first = __fold_left_first();
 } // namespace ranges
 
 #endif // _LIBCPP_STD_VER >= 23

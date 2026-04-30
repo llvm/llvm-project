@@ -337,9 +337,16 @@ const char *const Runtimes = R"(
       __clang_Interpreter_SetValueCopyArr(Src[0], Placement, Size);
     }
 #else
+    #if __STDC_VERSION__ < 199901L
+      #define CI_RESTRICT
+      #define CI_INLINE
+    #else
+      #define CI_RESTRICT restrict
+      #define CI_INLINE inline
+    #endif
     #define EXTERN_C extern
-    EXTERN_C void *memcpy(void *restrict dst, const void *restrict src, __SIZE_TYPE__ n);
-    EXTERN_C inline void __clang_Interpreter_SetValueCopyArr(const void* Src, void* Placement, unsigned long Size) {
+    EXTERN_C void *memcpy(void *CI_RESTRICT dst, const void *CI_RESTRICT src, __SIZE_TYPE__ n);
+    EXTERN_C CI_INLINE void __clang_Interpreter_SetValueCopyArr(const void* Src, void* Placement, unsigned long Size) {
       memcpy(Placement, Src, Size);
     }
 #endif // __cplusplus

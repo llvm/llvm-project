@@ -97,8 +97,7 @@ define void @v4i8(ptr %p1) {
 ; CHECK-GI-NEXT:    mov v2.b[2], v3.b[0]
 ; CHECK-GI-NEXT:    mov v2.b[3], v0.b[0]
 ; CHECK-GI-NEXT:    cnt v0.8b, v2.8b
-; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    str w8, [x0]
+; CHECK-GI-NEXT:    str s0, [x0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %d = load <4 x i8>, ptr %p1
@@ -395,24 +394,24 @@ entry:
 define <3 x i128> @v3i128(<3 x i128> %d) {
 ; CHECK-SD-LABEL: v3i128:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    fmov d0, x4
+; CHECK-SD-NEXT:    fmov d0, x0
 ; CHECK-SD-NEXT:    fmov d1, x2
-; CHECK-SD-NEXT:    fmov d2, x0
-; CHECK-SD-NEXT:    mov v0.d[1], x5
+; CHECK-SD-NEXT:    fmov d2, x4
+; CHECK-SD-NEXT:    mov v2.d[1], x5
 ; CHECK-SD-NEXT:    mov v1.d[1], x3
-; CHECK-SD-NEXT:    mov v2.d[1], x1
+; CHECK-SD-NEXT:    mov v0.d[1], x1
 ; CHECK-SD-NEXT:    mov x1, xzr
 ; CHECK-SD-NEXT:    mov x3, xzr
 ; CHECK-SD-NEXT:    mov x5, xzr
-; CHECK-SD-NEXT:    cnt v0.16b, v0.16b
-; CHECK-SD-NEXT:    cnt v1.16b, v1.16b
 ; CHECK-SD-NEXT:    cnt v2.16b, v2.16b
-; CHECK-SD-NEXT:    addv b0, v0.16b
-; CHECK-SD-NEXT:    addv b1, v1.16b
+; CHECK-SD-NEXT:    cnt v1.16b, v1.16b
+; CHECK-SD-NEXT:    cnt v0.16b, v0.16b
 ; CHECK-SD-NEXT:    addv b2, v2.16b
-; CHECK-SD-NEXT:    fmov x0, d2
+; CHECK-SD-NEXT:    addv b1, v1.16b
+; CHECK-SD-NEXT:    addv b0, v0.16b
+; CHECK-SD-NEXT:    fmov x0, d0
 ; CHECK-SD-NEXT:    fmov x2, d1
-; CHECK-SD-NEXT:    fmov x4, d0
+; CHECK-SD-NEXT:    fmov x4, d2
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v3i128:
@@ -444,30 +443,30 @@ entry:
 define <4 x i128> @v4i128(<4 x i128> %d) {
 ; CHECK-SD-LABEL: v4i128:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    fmov d0, x6
-; CHECK-SD-NEXT:    fmov d1, x4
-; CHECK-SD-NEXT:    fmov d2, x2
-; CHECK-SD-NEXT:    fmov d3, x0
-; CHECK-SD-NEXT:    mov v1.d[1], x5
-; CHECK-SD-NEXT:    mov v2.d[1], x3
-; CHECK-SD-NEXT:    mov v0.d[1], x7
-; CHECK-SD-NEXT:    mov v3.d[1], x1
+; CHECK-SD-NEXT:    fmov d0, x0
+; CHECK-SD-NEXT:    fmov d1, x2
+; CHECK-SD-NEXT:    fmov d2, x4
+; CHECK-SD-NEXT:    fmov d3, x6
+; CHECK-SD-NEXT:    mov v2.d[1], x5
+; CHECK-SD-NEXT:    mov v1.d[1], x3
+; CHECK-SD-NEXT:    mov v0.d[1], x1
+; CHECK-SD-NEXT:    mov v3.d[1], x7
 ; CHECK-SD-NEXT:    mov x1, xzr
 ; CHECK-SD-NEXT:    mov x3, xzr
 ; CHECK-SD-NEXT:    mov x5, xzr
 ; CHECK-SD-NEXT:    mov x7, xzr
-; CHECK-SD-NEXT:    cnt v1.16b, v1.16b
 ; CHECK-SD-NEXT:    cnt v2.16b, v2.16b
+; CHECK-SD-NEXT:    cnt v1.16b, v1.16b
 ; CHECK-SD-NEXT:    cnt v0.16b, v0.16b
 ; CHECK-SD-NEXT:    cnt v3.16b, v3.16b
-; CHECK-SD-NEXT:    addv b1, v1.16b
 ; CHECK-SD-NEXT:    addv b2, v2.16b
+; CHECK-SD-NEXT:    addv b1, v1.16b
 ; CHECK-SD-NEXT:    addv b0, v0.16b
 ; CHECK-SD-NEXT:    addv b3, v3.16b
-; CHECK-SD-NEXT:    fmov x2, d2
-; CHECK-SD-NEXT:    fmov x4, d1
-; CHECK-SD-NEXT:    fmov x6, d0
-; CHECK-SD-NEXT:    fmov x0, d3
+; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    fmov x2, d1
+; CHECK-SD-NEXT:    fmov x4, d2
+; CHECK-SD-NEXT:    fmov x6, d3
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v4i128:
@@ -500,6 +499,17 @@ define <4 x i128> @v4i128(<4 x i128> %d) {
 entry:
   %s = call <4 x i128> @llvm.ctpop(<4 x i128> %d)
   ret <4 x i128> %s
+}
+
+define <8 x i4> @v8i4(<8 x i4> %a) {
+; CHECK-LABEL: v8i4:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v1.8b, #15
+; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    cnt v0.8b, v0.8b
+; CHECK-NEXT:    ret
+  %r = call <8 x i4> @llvm.ctpop(<8 x i4> %a)
+  ret <8 x i4> %r
 }
 
 define i8 @i8(i8 %x) {
@@ -561,7 +571,7 @@ define i32 @i32_mask(i32 %x) {
 ; CHECK-GI-LABEL: i32_mask:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    and w8, w0, #0xff
-; CHECK-GI-NEXT:    fmov s0, w8
+; CHECK-GI-NEXT:    fmov d0, x8
 ; CHECK-GI-NEXT:    cnt v0.8b, v0.8b
 ; CHECK-GI-NEXT:    uaddlv h0, v0.8b
 ; CHECK-GI-NEXT:    fmov w0, s0
@@ -585,7 +595,7 @@ define i32 @i32_mask_negative(i32 %x) {
 ; CHECK-GI-LABEL: i32_mask_negative:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    and w8, w0, #0xffff
-; CHECK-GI-NEXT:    fmov s0, w8
+; CHECK-GI-NEXT:    fmov d0, x8
 ; CHECK-GI-NEXT:    cnt v0.8b, v0.8b
 ; CHECK-GI-NEXT:    uaddlv h0, v0.8b
 ; CHECK-GI-NEXT:    fmov w0, s0
@@ -599,10 +609,9 @@ entry:
 define i128 @i128_mask(i128 %x) {
 ; CHECK-SD-LABEL: i128_mask:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-SD-NEXT:    and x8, x0, #0xff
 ; CHECK-SD-NEXT:    mov x1, xzr
-; CHECK-SD-NEXT:    mov v0.d[0], x8
+; CHECK-SD-NEXT:    fmov d0, x8
 ; CHECK-SD-NEXT:    cnt v0.16b, v0.16b
 ; CHECK-SD-NEXT:    addv b0, v0.16b
 ; CHECK-SD-NEXT:    fmov x0, d0

@@ -12,6 +12,7 @@
 
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/MemRef/IR/MemoryAccessOpInterfaces.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -40,6 +41,9 @@ void NVGPUDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/NVGPU/IR/NVGPUOps.cpp.inc"
       >();
+  declarePromisedInterfaces<memref::IndexedAccessOpInterface, LdMatrixOp>();
+  declarePromisedInterfaces<memref::IndexedMemCopyOpInterface,
+                            DeviceAsyncCopyOp>();
 }
 
 bool NVGPUDialect::isSharedMemoryAddressSpace(Attribute memorySpace) {
@@ -261,6 +265,9 @@ static LogicalResult verifyMmaSyncOp(Operation *op,
 }
 
 LogicalResult MmaSyncOp::verify() {
+  if (getMmaShape().size() != 3)
+    return emitOpError() << "mmaShape must have exactly 3 elements";
+
   return verifyMmaSyncOp(this->getOperation(), getMatrixA(), getMatrixB(),
                          getMatrixC(), getMmaShapeAsArray(),
                          getOperation()->hasAttr(getTf32EnabledAttrName()));
@@ -281,6 +288,10 @@ LogicalResult MmaSparseSyncOp::verify() {
   unsigned sparsitySelector = getSparsitySelector();
   if (sparsitySelector > 1)
     return emitOpError() << "sparsity selector should be 0 or 1";
+
+  if (getMmaShape().size() != 3)
+    return emitOpError() << "mmaShape must have exactly 3 elements";
+
   return verifyMmaSyncOp(this->getOperation(), getMatrixA(), getMatrixB(),
                          getMatrixC(), getMmaShapeAsArray(),
                          getOperation()->hasAttr(getTf32EnabledAttrName()),

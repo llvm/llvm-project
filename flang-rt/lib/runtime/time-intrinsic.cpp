@@ -130,7 +130,6 @@ using unsigned_count_t = std::uint64_t;
 //  - nanoseconds for kinds 8, 16
 constexpr unsigned_count_t DS_PER_SEC{10u};
 constexpr unsigned_count_t MS_PER_SEC{1'000u};
-[[maybe_unused]] constexpr unsigned_count_t US_PER_SEC{1'000'000u};
 constexpr unsigned_count_t NS_PER_SEC{1'000'000'000u};
 
 // Computes HUGE(INT(0,kind)) as an unsigned integer value.
@@ -159,14 +158,14 @@ count_t ConvertSecondsNanosecondsToCount(
 // Function converts a struct timeval into the desired count to
 // be returned by the timing functions in accordance with the requested
 // kind at the call site.
-count_t ConvertTimevalToCount(int kind, const struct timeval &tval) {
+static count_t ConvertTimevalToCount(int kind, const struct timeval &tval) {
   unsigned_count_t sec{static_cast<unsigned_count_t>(tval.tv_sec)};
   unsigned_count_t nsec{static_cast<unsigned_count_t>(tval.tv_usec) * 1000};
   return ConvertSecondsNanosecondsToCount(kind, sec, nsec);
 }
 
 template <typename Unused = void>
-count_t GetSystemClockCount(int kind, fallback_implementation) {
+static count_t GetSystemClockCount(int kind, fallback_implementation) {
   struct timeval tval;
 
   if (gettimeofday(&tval, /*timezone=*/nullptr) != 0) {
@@ -193,7 +192,7 @@ count_t ConvertTimeSpecToCount(int kind, const struct timespec &tspec) {
 #ifndef _AIX
 // More accurate version with nanosecond accuracy
 template <typename Unused = void>
-count_t GetSystemClockCount(int kind, fallback_implementation) {
+static count_t GetSystemClockCount(int kind, fallback_implementation) {
   struct timespec tspec;
 
   if (timespec_get(&tspec, TIME_UTC) < 0) {
@@ -209,16 +208,12 @@ count_t GetSystemClockCount(int kind, fallback_implementation) {
 #endif // !NO_TIMESPEC
 
 template <typename Unused = void>
-count_t GetSystemClockCountRate(int kind, fallback_implementation) {
-#ifdef NO_TIMESPEC
-  return kind >= 8 ? US_PER_SEC : kind >= 2 ? MS_PER_SEC : DS_PER_SEC;
-#else
+static count_t GetSystemClockCountRate(int kind, fallback_implementation) {
   return kind >= 8 ? NS_PER_SEC : kind >= 2 ? MS_PER_SEC : DS_PER_SEC;
-#endif
 }
 
 template <typename Unused = void>
-count_t GetSystemClockCountMax(int kind, fallback_implementation) {
+static count_t GetSystemClockCountMax(int kind, fallback_implementation) {
   unsigned_count_t maxCount{GetHUGE(kind)};
   return maxCount;
 }
@@ -226,7 +221,7 @@ count_t GetSystemClockCountMax(int kind, fallback_implementation) {
 #ifndef NO_TIMESPEC
 #ifdef CLOCKID_ELAPSED_TIME
 template <typename T = int, typename U = struct timespec>
-count_t GetSystemClockCount(int kind, preferred_implementation,
+static count_t GetSystemClockCount(int kind, preferred_implementation,
     // We need some dummy parameters to pass to decltype(clock_gettime).
     T ClockId = 0, U *Timespec = nullptr,
     decltype(clock_gettime(ClockId, Timespec)) *Enabled = nullptr) {
@@ -243,7 +238,7 @@ count_t GetSystemClockCount(int kind, preferred_implementation,
 #endif // CLOCKID_ELAPSED_TIME
 
 template <typename T = int, typename U = struct timespec>
-count_t GetSystemClockCountRate(int kind, preferred_implementation,
+static count_t GetSystemClockCountRate(int kind, preferred_implementation,
     // We need some dummy parameters to pass to decltype(clock_gettime).
     T ClockId = 0, U *Timespec = nullptr,
     decltype(clock_gettime(ClockId, Timespec)) *Enabled = nullptr) {
@@ -251,7 +246,7 @@ count_t GetSystemClockCountRate(int kind, preferred_implementation,
 }
 
 template <typename T = int, typename U = struct timespec>
-count_t GetSystemClockCountMax(int kind, preferred_implementation,
+static count_t GetSystemClockCountMax(int kind, preferred_implementation,
     // We need some dummy parameters to pass to decltype(clock_gettime).
     T ClockId = 0, U *Timespec = nullptr,
     decltype(clock_gettime(ClockId, Timespec)) *Enabled = nullptr) {
@@ -290,21 +285,23 @@ static void DateAndTimeUnavailable(Fortran::runtime::Terminator &terminator,
   if (values) {
     auto typeCode{values->type().GetCategoryAndKind()};
     RUNTIME_CHECK(terminator,
-        values->rank() == 1 && values->GetDimension(0).Extent() >= 8 &&
-            typeCode &&
+        values->rank() == 1 && typeCode &&
             typeCode->first == Fortran::common::TypeCategory::Integer);
     // DATE_AND_TIME values argument must have decimal range > 4. Do not accept
     // KIND 1 here.
     int kind{typeCode->second};
     RUNTIME_CHECK(terminator, kind != 1);
-    for (std::size_t i = 0; i < 8; ++i) {
+    auto extent{static_cast<std::size_t>(values->GetDimension(0).Extent())};
+    if (extent > 8u) {
+      extent = 8;
+    }
+    for (std::size_t i{0}; i < extent; ++i) {
       Fortran::runtime::ApplyIntegerKind<StoreNegativeHugeAt, void>(
           kind, terminator, *values, i);
     }
   }
 }
 
-#ifndef _WIN32
 #ifdef _AIX
 // Compute the time difference from GMT/UTC to get around the behavior of
 // strfname on AIX that requires setting an environment variable for numeric
@@ -378,7 +375,7 @@ GetGmtOffset(const TM &tm, fallback_implementation) {
   // return -HUGE to report that this information is not available.
   const auto negHuge{-std::numeric_limits<Fortran::runtime::CppTypeFor<
       Fortran::common::TypeCategory::Integer, KIND>>::max()};
-#ifdef _AIX
+#if defined _AIX
   bool err{false};
   auto diff{computeUTCDiff(tm, &err)};
   if (err) {
@@ -386,6 +383,18 @@ GetGmtOffset(const TM &tm, fallback_implementation) {
   } else {
     return diff;
   }
+#elif defined _WIN32
+  DYNAMIC_TIME_ZONE_INFORMATION tzi;
+  std::uint32_t tzid{GetDynamicTimeZoneInformation(&tzi)};
+  if (tzid == TIME_ZONE_ID_INVALID) {
+    return negHuge;
+  }
+
+  std::int32_t bias{tzi.Bias};
+  bias += (tzid == TIME_ZONE_ID_DAYLIGHT ? tzi.DaylightBias : tzi.StandardBias);
+
+  // Bias is minutes behind GMT, and we need minutes ahead.
+  return -bias;
 #else
   return negHuge;
 #endif
@@ -400,6 +409,44 @@ template <typename TM = struct tm> struct GmtOffsetHelper {
     }
   };
 };
+
+#ifdef _WIN32
+struct timeval {
+  std::int64_t tv_sec;
+  std::int64_t tv_usec;
+};
+
+// gettimeofday half-implementation for win32; ignore the timezone as we don't
+// use it anyway
+static int gettimeofday(timeval *tv, void *) {
+  constexpr std::uint64_t epoch_offset{116444736000000000ull};
+
+  FILETIME ftime;
+  GetSystemTimePreciseAsFileTime(&ftime);
+
+  // Convert ftime to a real 64-bit integer
+  std::uint64_t time{
+      ULARGE_INTEGER{{ftime.dwLowDateTime, ftime.dwHighDateTime}}.QuadPart};
+  // Convert to Unix epoch time
+  time -= epoch_offset;
+
+  auto [sec, usec] = std::lldiv(time, 10'000'000l);
+  tv->tv_sec = sec;
+  tv->tv_usec = usec;
+  return 0;
+}
+
+// localtime_s on Windows does the same thing as localtime_r but swaps the
+// arguments
+static struct tm *localtime_r(const time_t *timer, struct tm *buf) {
+  errno_t ec{_localtime64_s(buf, timer)};
+  if (ec != 0) {
+    return nullptr;
+  }
+  return buf;
+}
+
+#endif
 
 // Dispatch to posix implementation where gettimeofday and localtime_r are
 // available.
@@ -447,17 +494,19 @@ static void GetDateAndTime(Fortran::runtime::Terminator &terminator, char *date,
   if (values) {
     auto typeCode{values->type().GetCategoryAndKind()};
     RUNTIME_CHECK(terminator,
-        values->rank() == 1 && values->GetDimension(0).Extent() >= 8 &&
-            typeCode &&
+        values->rank() == 1 && typeCode &&
             typeCode->first == Fortran::common::TypeCategory::Integer);
     // DATE_AND_TIME values argument must have decimal range > 4. Do not accept
     // KIND 1 here.
     int kind{typeCode->second};
     RUNTIME_CHECK(terminator, kind != 1);
-    auto storeIntegerAt = [&](std::size_t atIndex, std::int64_t value) {
-      Fortran::runtime::ApplyIntegerKind<Fortran::runtime::StoreIntegerAt,
-          void>(kind, terminator, *values, atIndex, value);
-    };
+    auto extent{static_cast<std::size_t>(values->GetDimension(0).Extent())};
+    auto storeIntegerAt{[&](std::size_t atIndex, std::int64_t value) {
+      if (atIndex < extent) {
+        Fortran::runtime::ApplyIntegerKind<Fortran::runtime::StoreIntegerAt,
+            void>(kind, terminator, *values, atIndex, value);
+      }
+    }};
     storeIntegerAt(0, localTime.tm_year + 1900);
     storeIntegerAt(1, localTime.tm_mon + 1);
     storeIntegerAt(2, localTime.tm_mday);
@@ -470,20 +519,6 @@ static void GetDateAndTime(Fortran::runtime::Terminator &terminator, char *date,
     storeIntegerAt(7, ms);
   }
 }
-
-#else
-// Fallback implementation where gettimeofday or localtime_r are not both
-// available (e.g. windows).
-static void GetDateAndTime(Fortran::runtime::Terminator &terminator, char *date,
-    std::size_t dateChars, char *time, std::size_t timeChars, char *zone,
-    std::size_t zoneChars, const Fortran::runtime::Descriptor *values) {
-  // TODO: An actual implementation for non Posix system should be added.
-  // So far, implement as if the date and time is not available on those
-  // platforms.
-  DateAndTimeUnavailable(
-      terminator, date, dateChars, time, timeChars, zone, zoneChars, values);
-}
-#endif
 } // namespace
 
 namespace Fortran::runtime {

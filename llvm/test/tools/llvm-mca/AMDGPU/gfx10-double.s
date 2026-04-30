@@ -42,12 +42,12 @@ v_sqrt_f64 v[4:5], v[4:5]
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      28
 # CHECK-NEXT: Total Cycles:      205
-# CHECK-NEXT: Total uOps:        29
+# CHECK-NEXT: Total uOps:        28
 
 # CHECK:      Dispatch Width:    1
 # CHECK-NEXT: uOps Per Cycle:    0.14
 # CHECK-NEXT: IPC:               0.14
-# CHECK-NEXT: Block RThroughput: 29.0
+# CHECK-NEXT: Block RThroughput: 28.0
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -79,7 +79,7 @@ v_sqrt_f64 v[4:5], v[4:5]
 # CHECK-NEXT:  1      22    1.00                  U     v_div_fmas_f64 v[0:1], v[0:1], v[0:1], v[0:1]
 # CHECK-NEXT:  1      22    1.00                  U     v_div_fixup_f64 v[0:1], v[0:1], v[0:1], v[0:1]
 # CHECK-NEXT:  1      22    1.00                  U     v_ldexp_f64 v[2:3], v[2:3], v0
-# CHECK-NEXT:  2      22    2.00                  U     v_div_scale_f64 v[0:1], vcc_lo, v[0:1], v[0:1], v[0:1]
+# CHECK-NEXT:  1      22    1.00                  U     v_div_scale_f64 v[0:1], vcc_lo, v[0:1], v[0:1], v[0:1]
 # CHECK-NEXT:  1      22    1.00                  U     v_trig_preop_f64 v[2:3], v[2:3], v0
 # CHECK-NEXT:  1      22    1.00                  U     v_cmp_eq_f64_e32 vcc_lo, v[0:1], v[0:1]
 # CHECK-NEXT:  1      22    1.00                  U     v_cmp_class_f64_e64 vcc_lo, v[2:3], s0
@@ -99,7 +99,7 @@ v_sqrt_f64 v[4:5], v[4:5]
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]
-# CHECK-NEXT:  -      -      -     29.00  1.00   3.00   28.00   -
+# CHECK-NEXT:  -      -      -     28.00  1.00   3.00   28.00   -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    Instructions:
@@ -124,7 +124,7 @@ v_sqrt_f64 v[4:5], v[4:5]
 # CHECK-NEXT:  -      -      -     1.00    -      -     1.00    -     v_div_fmas_f64 v[0:1], v[0:1], v[0:1], v[0:1]
 # CHECK-NEXT:  -      -      -     1.00    -      -     1.00    -     v_div_fixup_f64 v[0:1], v[0:1], v[0:1], v[0:1]
 # CHECK-NEXT:  -      -      -     1.00    -      -     1.00    -     v_ldexp_f64 v[2:3], v[2:3], v0
-# CHECK-NEXT:  -      -      -     2.00   1.00    -     1.00    -     v_div_scale_f64 v[0:1], vcc_lo, v[0:1], v[0:1], v[0:1]
+# CHECK-NEXT:  -      -      -     1.00   1.00    -     1.00    -     v_div_scale_f64 v[0:1], vcc_lo, v[0:1], v[0:1], v[0:1]
 # CHECK-NEXT:  -      -      -     1.00    -      -     1.00    -     v_trig_preop_f64 v[2:3], v[2:3], v0
 # CHECK-NEXT:  -      -      -     1.00    -      -     1.00    -     v_cmp_eq_f64_e32 vcc_lo, v[0:1], v[0:1]
 # CHECK-NEXT:  -      -      -     1.00    -      -     1.00    -     v_cmp_class_f64_e64 vcc_lo, v[2:3], s0

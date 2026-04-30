@@ -207,9 +207,10 @@ public:
   /// Get a FileEntryRef if it exists, without doing anything on error.
   OptionalFileEntryRef getOptionalFileRef(StringRef Filename,
                                           bool OpenFile = false,
-                                          bool CacheFailure = true) {
+                                          bool CacheFailure = true,
+                                          bool IsText = true) {
     return llvm::expectedToOptional(
-        getFileRef(Filename, OpenFile, CacheFailure));
+        getFileRef(Filename, OpenFile, CacheFailure, IsText));
   }
 
   /// Returns the current file system options
@@ -295,9 +296,12 @@ public:
                                 SmallVectorImpl<char> &Path);
 
   /// Makes \c Path absolute taking into account FileSystemOptions and the
-  /// working directory option.
-  /// \returns true if \c Path changed to absolute.
-  bool makeAbsolutePath(SmallVectorImpl<char> &Path) const;
+  /// working directory option, and canonicalizes through
+  /// `llvm::path::remove_dots` if \c Canonicalize is true.
+  ///
+  /// \returns true if \c Path was changed.
+  bool makeAbsolutePath(SmallVectorImpl<char> &Path,
+                        bool Canonicalize = false) const;
 
   /// Produce an array mapping from the unique IDs assigned to each
   /// file to the corresponding FileEntryRef.

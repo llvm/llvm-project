@@ -71,8 +71,44 @@ public:
   using InstListType = SymbolTableList<Instruction, ilist_iterator_bits<true>,
                                        ilist_parent<BasicBlock>>;
 
+  /// Iterator type that casts an operand to a basic block.
+  ///
+  /// All terminators store successors as adjacent operands.
+  struct succ_iterator
+      : iterator_adaptor_base<succ_iterator, op_iterator,
+                              std::random_access_iterator_tag, BasicBlock *,
+                              ptrdiff_t, BasicBlock *, BasicBlock *> {
+    succ_iterator() = default;
+    explicit succ_iterator(op_iterator I) : iterator_adaptor_base(I) {}
+
+    BasicBlock *operator*() const { return cast<BasicBlock>(*I); }
+    BasicBlock *operator->() const { return operator*(); }
+
+    op_iterator getUse() const { return I; }
+  };
+
+  /// The const version of `succ_iterator`.
+  struct const_succ_iterator
+      : iterator_adaptor_base<const_succ_iterator, const_op_iterator,
+                              std::random_access_iterator_tag,
+                              const BasicBlock *, ptrdiff_t, const BasicBlock *,
+                              const BasicBlock *> {
+    const_succ_iterator() = default;
+    explicit const_succ_iterator(const_op_iterator I)
+        : iterator_adaptor_base(I) {}
+
+    const BasicBlock *operator*() const { return cast<BasicBlock>(*I); }
+    const BasicBlock *operator->() const { return operator*(); }
+
+    const_op_iterator getUse() const { return I; }
+  };
+
 private:
   DebugLoc DbgLoc;                         // 'dbg' Metadata cache.
+
+  friend class Value;
+  /// Index of first metadata attachment in context, or zero.
+  unsigned MetadataIndex = 0;
 
   /// Relative order of this instruction in its parent basic block. Used for
   /// O(1) local dominance checks between instructions.
@@ -132,9 +168,9 @@ public:
   LLVM_ABI void handleMarkerRemoval();
 
 protected:
-  // The 15 first bits of `Value::SubclassData` are available for subclasses of
+  // All 16 bits of `Value::SubclassData` are available for subclasses of
   // `Instruction` to use.
-  using OpaqueField = Bitfield::Element<uint16_t, 0, 15>;
+  using OpaqueField = Bitfield::Element<uint16_t, 0, 16>;
 
   // Template alias so that all Instruction storing alignment use the same
   // definiton.
@@ -153,11 +189,6 @@ protected:
   using AtomicOrderingBitfieldElementT =
       typename Bitfield::Element<AtomicOrdering, Offset, 3,
                                  AtomicOrdering::LAST>;
-
-private:
-  // The last bit is used to store whether the instruction has metadata attached
-  // or not.
-  using HasMetadataField = Bitfield::Element<bool, 15, 1>;
 
 protected:
   LLVM_ABI ~Instruction(); // Use deleteValue() to delete a generic Instruction.
@@ -403,7 +434,7 @@ public:
   //===--------------------------------------------------------------------===//
 
   /// Return true if this instruction has any metadata attached to it.
-  bool hasMetadata() const { return DbgLoc || Value::hasMetadata(); }
+  bool hasMetadata() const { return DbgLoc || MetadataIndex != 0; }
 
   // Return true if this instruction contains loop metadata other than
   // a debug location
@@ -411,7 +442,7 @@ public:
 
   /// Return true if this instruction has metadata attached to it other than a
   /// debug location.
-  bool hasMetadataOtherThanDebugLoc() const { return Value::hasMetadata(); }
+  bool hasMetadataOtherThanDebugLoc() const { return MetadataIndex != 0; }
 
   /// Return true if this instruction has the given type of metadata attached.
   bool hasMetadata(unsigned KindID) const {
@@ -429,7 +460,8 @@ public:
     // Handle 'dbg' as a special case since it is not stored in the hash table.
     if (KindID == LLVMContext::MD_dbg)
       return DbgLoc.getAsMDNode();
-    return Value::getMetadata(KindID);
+    return hasMetadataOtherThanDebugLoc() ? Value::getMetadataImpl(KindID)
+                                          : nullptr;
   }
 
   /// Get the metadata of given kind attached to this Instruction.
@@ -975,6 +1007,14 @@ public:
   /// instruction must be a terminator.
   LLVM_ABI void setSuccessor(unsigned Idx, BasicBlock *BB);
 
+  LLVM_ABI iterator_range<const_succ_iterator> successors() const LLVM_READONLY;
+  LLVM_ABI iterator_range<succ_iterator> successors() {
+    auto Ops = static_cast<const Instruction *>(this)->successors();
+    Use *Begin = const_cast<Use *>(Ops.begin().getUse());
+    Use *End = const_cast<Use *>(Ops.end().getUse());
+    return make_range(succ_iterator(Begin), succ_iterator(End));
+  }
+
   /// Replace specified successor OldBB to point at the provided block.
   /// This instruction must be a terminator.
   LLVM_ABI void replaceSuccessorWith(BasicBlock *OldBB, BasicBlock *NewBB);
@@ -1052,24 +1092,16 @@ private:
   }
 
 protected:
-  // Instruction subclasses can stick up to 15 bits of stuff into the
+  // Instruction subclasses can stick up to 16 bits of stuff into the
   // SubclassData field of instruction with these members.
 
   template <typename BitfieldElement>
   typename BitfieldElement::Type getSubclassData() const {
-    static_assert(
-        std::is_same<BitfieldElement, HasMetadataField>::value ||
-            !Bitfield::isOverlapping<BitfieldElement, HasMetadataField>(),
-        "Must not overlap with the metadata bit");
     return Bitfield::get<BitfieldElement>(getSubclassDataFromValue());
   }
 
   template <typename BitfieldElement>
   void setSubclassData(typename BitfieldElement::Type Value) {
-    static_assert(
-        std::is_same<BitfieldElement, HasMetadataField>::value ||
-            !Bitfield::isOverlapping<BitfieldElement, HasMetadataField>(),
-        "Must not overlap with the metadata bit");
     auto Storage = getSubclassDataFromValue();
     Bitfield::set<BitfieldElement>(Storage, Value);
     setValueSubclassData(Storage);

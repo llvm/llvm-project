@@ -10,7 +10,6 @@
 #include <cstdlib>
 
 #include <memory>
-#include <mutex>
 
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
@@ -36,8 +35,6 @@
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/StringExtractor.h"
 #include "lldb/Utility/UUID.h"
-
-#include "llvm/Support/Threading.h"
 
 #define USEC_PER_SEC 1000000
 
@@ -70,7 +67,7 @@ public:
 
   PluginProperties() : Properties() {
     m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
-    m_collection_sp->Initialize(g_processkdp_properties);
+    m_collection_sp->Initialize(g_processkdp_properties_def);
   }
 
   ~PluginProperties() override = default;
@@ -97,6 +94,7 @@ llvm::StringRef ProcessKDP::GetPluginDescriptionStatic() {
 }
 
 void ProcessKDP::Terminate() {
+  ProcessKDPLog::Terminate();
   PluginManager::UnregisterPlugin(ProcessKDP::CreateInstance);
 }
 
@@ -497,7 +495,7 @@ bool ProcessKDP::DoUpdateThreadList(ThreadList &old_thread_list,
                                     ThreadList &new_thread_list) {
   // locker will keep a mutex locked until it goes out of scope
   Log *log = GetLog(KDPLog::Thread);
-  LLDB_LOGV(log, "pid = {0}", GetID());
+  LLDB_LOG_VERBOSE(log, "pid = {0}", GetID());
 
   // Even though there is a CPU mask, it doesn't mean we can see each CPU
   // individually, there is really only one. Lets call this thread 1.
@@ -635,9 +633,9 @@ Status ProcessKDP::EnableBreakpointSite(BreakpointSite *bp_site) {
 
   if (m_comm.LocalBreakpointsAreSupported()) {
     Status error;
-    if (!bp_site->IsEnabled()) {
+    if (!IsBreakpointSiteEnabled(*bp_site)) {
       if (m_comm.SendRequestBreakpoint(true, bp_site->GetLoadAddress())) {
-        bp_site->SetEnabled(true);
+        SetBreakpointSiteEnabled(*bp_site);
         bp_site->SetType(BreakpointSite::eExternal);
       } else {
         return Status::FromErrorString("KDP set breakpoint failed");
@@ -651,15 +649,15 @@ Status ProcessKDP::EnableBreakpointSite(BreakpointSite *bp_site) {
 Status ProcessKDP::DisableBreakpointSite(BreakpointSite *bp_site) {
   if (m_comm.LocalBreakpointsAreSupported()) {
     Status error;
-    if (bp_site->IsEnabled()) {
+    if (IsBreakpointSiteEnabled(*bp_site)) {
       BreakpointSite::Type bp_type = bp_site->GetType();
       if (bp_type == BreakpointSite::eExternal) {
         if (m_destroy_in_process && m_comm.IsRunning()) {
           // We are trying to destroy our connection and we are running
-          bp_site->SetEnabled(false);
+          SetBreakpointSiteEnabled(*bp_site, false);
         } else {
           if (m_comm.SendRequestBreakpoint(false, bp_site->GetLoadAddress()))
-            bp_site->SetEnabled(false);
+            SetBreakpointSiteEnabled(*bp_site, false);
           else
             return Status::FromErrorString("KDP remove breakpoint failed");
         }
@@ -682,15 +680,11 @@ Status ProcessKDP::DoSignal(int signo) {
 }
 
 void ProcessKDP::Initialize() {
-  static llvm::once_flag g_once_flag;
+  PluginManager::RegisterPlugin(GetPluginNameStatic(),
+                                GetPluginDescriptionStatic(), CreateInstance,
+                                DebuggerInitialize);
 
-  llvm::call_once(g_once_flag, []() {
-    PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                  GetPluginDescriptionStatic(), CreateInstance,
-                                  DebuggerInitialize);
-
-    ProcessKDPLog::Initialize();
-  });
+  ProcessKDPLog::Initialize();
 }
 
 void ProcessKDP::DebuggerInitialize(lldb_private::Debugger &debugger) {

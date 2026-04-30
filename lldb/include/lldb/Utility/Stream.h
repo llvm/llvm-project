@@ -65,10 +65,9 @@ public:
 
   /// Construct with flags and address size and byte order.
   ///
-  /// Construct with dump flags \a flags and the default address size. \a
-  /// flags can be any of the above enumeration logical OR'ed together.
-  Stream(uint32_t flags, uint32_t addr_size, lldb::ByteOrder byte_order,
-         bool colors = false);
+  /// Construct with dump flags \a flags.
+  /// \a flags can be any of the above enumeration logical OR'ed together.
+  Stream(uint32_t flags, lldb::ByteOrder byte_order, bool colors = false);
 
   /// Construct a default Stream, not binary, host byte order and host addr
   /// size.
@@ -80,7 +79,6 @@ public:
 
   Stream &operator=(const Stream &rhs) {
     m_flags = rhs.m_flags;
-    m_addr_size = rhs.m_addr_size;
     m_byte_order = rhs.m_byte_order;
     m_indent_level = rhs.m_indent_level;
     return *this;
@@ -225,6 +223,16 @@ public:
   ///     in one statement.
   Stream &operator<<(char ch);
 
+  /// Output the result of a formatv expression to the stream.
+  ///
+  /// \param[in] obj
+  ///     A formatv_object_base produced by llvm::formatv().
+  ///
+  /// \return
+  ///     A reference to this class so multiple things can be streamed
+  ///     in one statement.
+  Stream &operator<<(const llvm::formatv_object_base &obj);
+
   Stream &operator<<(uint8_t uval) = delete;
   Stream &operator<<(uint16_t uval) = delete;
   Stream &operator<<(uint32_t uval) = delete;
@@ -268,13 +276,6 @@ public:
 
   /// Output and End of Line character to the stream.
   size_t EOL();
-
-  /// Get the address size in bytes.
-  ///
-  /// \return
-  ///     The size of an address in bytes that is used when outputting
-  ///     address and pointer values to the stream.
-  uint32_t GetAddressByteSize() const;
 
   /// The flags accessor.
   ///
@@ -361,8 +362,10 @@ public:
 
   size_t PrintfVarArg(const char *format, va_list args);
 
+  /// Forwards the arguments to llvm::formatv and writes to the stream.
+  /// FIXME: instead of this API, consider using llvm::formatv directly.
   template <typename... Args> void Format(const char *format, Args &&... args) {
-    PutCString(llvm::formatv(format, std::forward<Args>(args)...).str());
+    *this << llvm::formatv(format, std::forward<Args>(args)...);
   }
 
   /// Output a quoted C string value to the stream.
@@ -376,13 +379,6 @@ public:
   /// \param[in] format
   ///     The optional C string format that can be overridden.
   void QuotedCString(const char *cstr, const char *format = "\"%s\"");
-
-  /// Set the address size in bytes.
-  ///
-  /// \param[in] addr_size
-  ///     The new size in bytes of an address to use when outputting
-  ///     address and pointer values.
-  void SetAddressByteSize(uint32_t addr_size);
 
   /// Output a SLEB128 number to the stream.
   ///
@@ -409,8 +405,7 @@ public:
 
 protected:
   // Member variables
-  Flags m_flags;        ///< Dump flags.
-  uint32_t m_addr_size = 4; ///< Size of an address in bytes.
+  Flags m_flags; ///< Dump flags.
   lldb::ByteOrder
       m_byte_order;   ///< Byte order to use when encoding scalar types.
   unsigned m_indent_level = 0;     ///< Indention level.

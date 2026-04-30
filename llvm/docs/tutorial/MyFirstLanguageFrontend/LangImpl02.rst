@@ -632,7 +632,7 @@ nullary (zero argument) functions for them:
     static std::unique_ptr<FunctionAST> ParseTopLevelExpr() {
       if (auto E = ParseExpression()) {
         // Make an anonymous proto.
-        auto Proto = std::make_unique<PrototypeAST>("", std::vector<std::string>());
+        auto Proto = std::make_unique<PrototypeAST>("__anon_expr", std::vector<std::string>());
         return std::make_unique<FunctionAST>(std::move(Proto), std::move(E));
       }
       return nullptr;

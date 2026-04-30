@@ -5,10 +5,11 @@ define void @test(i32 %0, ptr %p) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: i32 [[TMP0:%.*]], ptr [[P:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> <i32 0, i32 0, i32 0, i32 poison>, i32 [[TMP0]], i32 3
-; CHECK-NEXT:    [[TMP5:%.*]] = xor <4 x i32> [[TMP1]], <i32 1, i32 1, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i32> <i32 0, i32 0, i32 0, i32 poison, i32 1, i32 1, i32 1, i32 poison>, i32 [[TMP0]], i32 3
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 3>
+; CHECK-NEXT:    [[TMP8:%.*]] = xor <8 x i32> [[TMP2]], <i32 1, i32 1, i32 1, i32 0, i32 0, i32 0, i32 0, i32 0>
 ; CHECK-NEXT:    [[OP_RDX:%.*]] = extractelement <8 x i32> [[TMP8]], i32 3
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x i32> [[TMP8]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    br i1 false, label [[EXIT:%.*]], label [[PH:%.*]]
 ; CHECK:       ph:
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 poison, i32 0, i32 0, i32 0>, i32 [[TMP0]], i32 4

@@ -38,6 +38,16 @@ using namespace llvm::ELF;
 using namespace lld;
 using namespace lld::elf;
 
+static AddBufferFn
+createAddBufferFn(std::vector<std::unique_ptr<MemoryBuffer>> &files,
+                  SmallVectorImpl<std::string> &filenames) {
+  return [&files, &filenames](unsigned task, const Twine &moduleName,
+                              std::unique_ptr<MemoryBuffer> mb) {
+    files[task] = std::move(mb);
+    filenames[task] = moduleName.str();
+  };
+}
+
 static std::string getThinLTOOutputFile(Ctx &ctx, StringRef modulePath) {
   return lto::getThinLTOOutputFile(modulePath, ctx.arg.thinLTOPrefixReplaceOld,
                                    ctx.arg.thinLTOPrefixReplaceNew);
@@ -124,7 +134,7 @@ static lto::Config createConfig(Ctx &ctx) {
 
   c.SampleProfile = std::string(ctx.arg.ltoSampleProfile);
   for (StringRef pluginFn : ctx.arg.passPlugins)
-    c.PassPlugins.push_back(std::string(pluginFn));
+    c.PassPluginFilenames.push_back(std::string(pluginFn));
   c.DebugPassManager = ctx.arg.ltoDebugPassManager;
   c.DwoDir = std::string(ctx.arg.dwoDir);
 
@@ -188,7 +198,7 @@ BitcodeCompiler::BitcodeCompiler(Ctx &ctx) : ctx(ctx) {
         ctx.arg.outputFile, ctx.arg.dtltoDistributor,
         ctx.arg.dtltoDistributorArgs, ctx.arg.dtltoCompiler,
         ctx.arg.dtltoCompilerPrependArgs, ctx.arg.dtltoCompilerArgs,
-        !ctx.arg.saveTempsArgs.empty());
+        !ctx.arg.saveTempsArgs.empty(), createAddBufferFn(files, filenames));
   } else {
     backend = lto::createInProcessThinBackend(
         llvm::heavyweight_hardware_concurrency(ctx.arg.thinLTOJobs),
@@ -205,9 +215,10 @@ BitcodeCompiler::BitcodeCompiler(Ctx &ctx) : ctx(ctx) {
                                         ctx.arg.ltoPartitions,
                                         ltoModes[ctx.arg.ltoKind]);
   else
-    ltoObj = std::make_unique<lto::DTLTO>(createConfig(ctx), backend,
-                                          ctx.arg.ltoPartitions,
-                                          ltoModes[ctx.arg.ltoKind]);
+    ltoObj = std::make_unique<lto::DTLTO>(
+        createConfig(ctx), backend, ctx.arg.ltoPartitions,
+        ltoModes[ctx.arg.ltoKind], ctx.arg.outputFile,
+        !ctx.arg.saveTempsArgs.empty());
   // Initialize usedStartStop.
   if (ctx.bitcodeFiles.empty())
     return;
@@ -258,7 +269,7 @@ void BitcodeCompiler::add(BitcodeFile &f) {
     r.VisibleToRegularObj = ctx.arg.relocatable || sym->isUsedInRegularObj ||
                             sym->referencedAfterWrap ||
                             (r.Prevailing && sym->isExported) ||
-                            usedStartStop.count(objSym.getSectionName());
+                            usedStartStop.contains(objSym.getSectionName());
     // Identify symbols exported dynamically, and that therefore could be
     // referenced by a shared library not visible to the linker.
     r.ExportDynamic = sym->computeBinding(ctx) != STB_LOCAL &&
@@ -328,11 +339,7 @@ SmallVector<std::unique_ptr<InputFile>, 0> BitcodeCompiler::compile() {
   FileCache cache;
   if (!ctx.arg.thinLTOCacheDir.empty())
     cache = check(localCache("ThinLTO", "Thin", ctx.arg.thinLTOCacheDir,
-                             [&](size_t task, const Twine &moduleName,
-                                 std::unique_ptr<MemoryBuffer> mb) {
-                               files[task] = std::move(mb);
-                               filenames[task] = moduleName.str();
-                             }));
+                             createAddBufferFn(files, filenames)));
 
   if (!ctx.bitcodeFiles.empty())
     checkError(ctx.e, ltoObj->run(
@@ -385,8 +392,10 @@ SmallVector<std::unique_ptr<InputFile>, 0> BitcodeCompiler::compile() {
     StringRef bitcodeFilePath;
     StringRef objBuf;
     if (files[i]) {
-      // When files[i] is not null, we get the native relocatable file from the
-      // cache. filenames[i] contains the original BitcodeFile's identifier.
+      // When files[i] is not null, it holds a native relocatable file provided
+      // as a MemoryBuffer, for example from the cache or from an external DTLTO
+      // backend compilation. filenames[i] contains the original BitcodeFile's
+      // identifier.
       objBuf = files[i]->getBuffer();
       bitcodeFilePath = filenames[i];
     } else {

@@ -193,12 +193,7 @@ define <8 x i16> @add_avgceilu2(<8 x i16> %a0, <8 x i16> %a1) {
 define <16 x i8> @lsb_avgceilu_v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: lsb_avgceilu_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v2.16b, #1
-; CHECK-NEXT:    ushr v3.16b, v1.16b, #1
-; CHECK-NEXT:    orr v1.16b, v1.16b, v0.16b
-; CHECK-NEXT:    usra v3.16b, v0.16b, #1
-; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-NEXT:    add v0.16b, v3.16b, v1.16b
+; CHECK-NEXT:    urhadd v0.16b, v1.16b, v0.16b
 ; CHECK-NEXT:    ret
   %a_shr_1 = lshr <16 x i8> %a, splat (i8 1)
   %b_shr_1 = lshr <16 x i8> %b, splat (i8 1)
@@ -212,12 +207,7 @@ define <16 x i8> @lsb_avgceilu_v16i8(<16 x i8> %a, <16 x i8> %b) {
 define <8 x i16> @lsb_avgceilu_v8i16(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: lsb_avgceilu_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v2.8h, #1
-; CHECK-NEXT:    ushr v3.8h, v1.8h, #1
-; CHECK-NEXT:    orr v1.16b, v1.16b, v0.16b
-; CHECK-NEXT:    usra v3.8h, v0.8h, #1
-; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-NEXT:    add v0.8h, v3.8h, v1.8h
+; CHECK-NEXT:    urhadd v0.8h, v1.8h, v0.8h
 ; CHECK-NEXT:    ret
   %a_shr_1 = lshr <8 x i16> %a, splat (i16 1)
   %b_shr_1 = lshr <8 x i16> %b, splat (i16 1)
@@ -324,12 +314,7 @@ define <8 x i16> @add_avgceils2(<8 x i16> %a0, <8 x i16> %a1) {
 define <16 x i8> @lsb_avgceils_v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: lsb_avgceils_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v2.16b, #1
-; CHECK-NEXT:    sshr v3.16b, v1.16b, #1
-; CHECK-NEXT:    orr v1.16b, v1.16b, v0.16b
-; CHECK-NEXT:    ssra v3.16b, v0.16b, #1
-; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-NEXT:    add v0.16b, v3.16b, v1.16b
+; CHECK-NEXT:    srhadd v0.16b, v1.16b, v0.16b
 ; CHECK-NEXT:    ret
   %a_shr_1 = ashr <16 x i8> %a, splat (i8 1)
   %b_shr_1 = ashr <16 x i8> %b, splat (i8 1)
@@ -343,12 +328,7 @@ define <16 x i8> @lsb_avgceils_v16i8(<16 x i8> %a, <16 x i8> %b) {
 define <8 x i16> @lsb_avgceils_v8i16(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: lsb_avgceils_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v2.8h, #1
-; CHECK-NEXT:    sshr v3.8h, v1.8h, #1
-; CHECK-NEXT:    orr v1.16b, v1.16b, v0.16b
-; CHECK-NEXT:    ssra v3.8h, v0.8h, #1
-; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-NEXT:    add v0.8h, v3.8h, v1.8h
+; CHECK-NEXT:    srhadd v0.8h, v1.8h, v0.8h
 ; CHECK-NEXT:    ret
   %a_shr_1 = ashr <8 x i16> %a, splat (i16 1)
   %b_shr_1 = ashr <8 x i16> %b, splat (i16 1)

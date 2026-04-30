@@ -724,6 +724,19 @@ define void @va_intrinsics_test(ptr %0, ptr %1, ...) {
   ret void
 }
 
+; CHECK-LABEL: @fake_use
+; CHECK-SAME:  %[[VAL:[a-zA-Z0-9]+]]
+; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
+define void @fake_use(i32 %0, ptr %1) {
+  ; CHECK: llvm.intr.fake.use %[[VAL]] : i32
+  call void (...) @llvm.fake.use(i32 %0)
+  ; CHECK: llvm.intr.fake.use %[[PTR]] : !llvm.ptr
+  call void (...) @llvm.fake.use(ptr %1)
+  ; CHECK: llvm.intr.fake.use %[[VAL]], %[[PTR]] : i32, !llvm.ptr
+  call void (...) @llvm.fake.use(i32 %0, ptr %1)
+  ret void
+}
+
 ; CHECK-LABEL: @assume
 ; CHECK-SAME:  %[[TRUE:[a-zA-Z0-9]+]]
 define void @assume(i1 %true) {
@@ -778,18 +791,19 @@ define void @threadlocal_test() {
 }
 
 ; CHECK-LABEL:  llvm.func @coro_id
-define void @coro_id(i32 %0, ptr %1) {
+define void @coro_id() {
+  %a = alloca [16 x i8]
   ; CHECK: llvm.intr.coro.id %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.token
-  %3 = call token @llvm.coro.id(i32 %0, ptr %1, ptr %1, ptr null)
+  %3 = call token @llvm.coro.id(i32 0, ptr %a, ptr null, ptr null)
   ret void
 }
 
 ; CHECK-LABEL:  llvm.func @coro_begin
-define void @coro_begin(i32 %0, ptr %1) {
+define void @coro_begin(ptr %0) {
   ; CHECK: llvm.intr.coro.id %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.token
-  %3 = call token @llvm.coro.id(i32 %0, ptr %1, ptr %1, ptr null)
+  %3 = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
   ; CHECK: llvm.intr.coro.begin %{{.*}}, %{{.*}} : (!llvm.token, !llvm.ptr) -> !llvm.ptr
-  %4 = call ptr @llvm.coro.begin(token %3, ptr %1)
+  %4 = call ptr @llvm.coro.begin(token %3, ptr %0)
   ret void
 }
 
@@ -818,11 +832,11 @@ define void @coro_save(ptr %0) {
 }
 
 ; CHECK-LABEL:  llvm.func @coro_suspend
-define void @coro_suspend(i32 %0, i1 %1, ptr %2) {
+define void @coro_suspend(i1 %0) {
   ; CHECK: llvm.intr.coro.id %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.token
-  %4 = call token @llvm.coro.id(i32 %0, ptr %2, ptr %2, ptr null)
+  %4 = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
   ; CHECK: llvm.intr.coro.suspend %{{.*}}, %{{.*}} : i8
-  %5 = call i8 @llvm.coro.suspend(token %4, i1 %1)
+  %5 = call i8 @llvm.coro.suspend(token %4, i1 %0)
   ret void
 }
 
@@ -834,11 +848,11 @@ define void @coro_end(ptr %0, i1 %1) {
 }
 
 ; CHECK-LABEL:  llvm.func @coro_free
-define void @coro_free(i32 %0, ptr %1) {
+define void @coro_free(ptr %0) {
   ; CHECK: llvm.intr.coro.id %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.token
-  %3 = call token @llvm.coro.id(i32 %0, ptr %1, ptr %1, ptr null)
+  %3 = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
   ; CHECK: llvm.intr.coro.free %{{.*}}, %{{.*}} : (!llvm.token, !llvm.ptr) -> !llvm.ptr
-  %4 = call ptr @llvm.coro.free(token %3, ptr %1)
+  %4 = call ptr @llvm.coro.free(token %3, ptr %0)
   ret void
 }
 
@@ -1062,6 +1076,69 @@ define <8 x ptr> @vector_ptrmask(<8 x ptr> %0, <8 x i64> %1) {
   ; CHECK: %{{.*}} = llvm.intr.ptrmask %{{.*}} : (vector<8x!llvm.ptr>, vector<8xi64>) -> vector<8x!llvm.ptr>
   %3 = call <8 x ptr> @llvm.ptrmask.v8p0.v8i64(<8 x ptr> %0, <8 x i64> %1)
   ret <8 x ptr> %3
+}
+
+; CHECK-LABEL: experimental_constrained_fadd
+define void @experimental_constrained_fadd(float %s, <4 x float> %v) {
+  ; CHECK: llvm.intr.experimental.constrained.fadd %{{.*}}, %{{.*}} towardzero ignore : f32
+  %1 = call float @llvm.experimental.constrained.fadd.f32(float %s, float %s, metadata !"round.towardzero", metadata !"fpexcept.ignore")
+  ; CHECK: llvm.intr.experimental.constrained.fadd %{{.*}}, %{{.*}} towardzero ignore : vector<4xf32>
+  %2 = call <4 x float> @llvm.experimental.constrained.fadd.v4f32(<4 x float> %v, <4 x float> %v, metadata !"round.towardzero", metadata !"fpexcept.ignore")
+  ret void
+}
+
+; CHECK-LABEL: experimental_constrained_fsub
+define void @experimental_constrained_fsub(float %s, <4 x float> %v) {
+  ; CHECK: llvm.intr.experimental.constrained.fsub %{{.*}}, %{{.*}} towardzero ignore : f32
+  %1 = call float @llvm.experimental.constrained.fsub.f32(float %s, float %s, metadata !"round.towardzero", metadata !"fpexcept.ignore")
+  ; CHECK: llvm.intr.experimental.constrained.fsub %{{.*}}, %{{.*}} towardzero ignore : vector<4xf32>
+  %2 = call <4 x float> @llvm.experimental.constrained.fsub.v4f32(<4 x float> %v, <4 x float> %v, metadata !"round.towardzero", metadata !"fpexcept.ignore")
+  ret void
+}
+
+; CHECK-LABEL: experimental_constrained_fmul
+define void @experimental_constrained_fmul(float %s, <4 x float> %v) {
+  ; CHECK: llvm.intr.experimental.constrained.fmul %{{.*}}, %{{.*}} towardzero ignore : f32
+  %1 = call float @llvm.experimental.constrained.fmul.f32(float %s, float %s, metadata !"round.towardzero", metadata !"fpexcept.ignore")
+  ; CHECK: llvm.intr.experimental.constrained.fmul %{{.*}}, %{{.*}} towardzero ignore : vector<4xf32>
+  %2 = call <4 x float> @llvm.experimental.constrained.fmul.v4f32(<4 x float> %v, <4 x float> %v, metadata !"round.towardzero", metadata !"fpexcept.ignore")
+  ret void
+}
+
+; CHECK-LABEL: experimental_constrained_fdiv
+define void @experimental_constrained_fdiv(float %s, <4 x float> %v) {
+  ; CHECK: llvm.intr.experimental.constrained.fdiv %{{.*}}, %{{.*}} towardzero ignore : f32
+  %1 = call float @llvm.experimental.constrained.fdiv.f32(float %s, float %s, metadata !"round.towardzero", metadata !"fpexcept.ignore")
+  ; CHECK: llvm.intr.experimental.constrained.fdiv %{{.*}}, %{{.*}} towardzero ignore : vector<4xf32>
+  %2 = call <4 x float> @llvm.experimental.constrained.fdiv.v4f32(<4 x float> %v, <4 x float> %v, metadata !"round.towardzero", metadata !"fpexcept.ignore")
+  ret void
+}
+
+; CHECK-LABEL: experimental_constrained_frem
+define void @experimental_constrained_frem(float %s, <4 x float> %v) {
+  ; CHECK: llvm.intr.experimental.constrained.frem %{{.*}}, %{{.*}} towardzero ignore : f32
+  %1 = call float @llvm.experimental.constrained.frem.f32(float %s, float %s, metadata !"round.towardzero", metadata !"fpexcept.ignore")
+  ; CHECK: llvm.intr.experimental.constrained.frem %{{.*}}, %{{.*}} towardzero ignore : vector<4xf32>
+  %2 = call <4 x float> @llvm.experimental.constrained.frem.v4f32(<4 x float> %v, <4 x float> %v, metadata !"round.towardzero", metadata !"fpexcept.ignore")
+  ret void
+}
+
+; CHECK-LABEL: experimental_constrained_fma
+define void @experimental_constrained_fma(float %s, <4 x float> %v) {
+  ; CHECK: llvm.intr.experimental.constrained.fma %{{.*}}, %{{.*}}, %{{.*}} towardzero ignore : f32
+  %1 = call float @llvm.experimental.constrained.fma.f32(float %s, float %s, float %s, metadata !"round.towardzero", metadata !"fpexcept.ignore")
+  ; CHECK: llvm.intr.experimental.constrained.fma %{{.*}}, %{{.*}}, %{{.*}} towardzero ignore : vector<4xf32>
+  %2 = call <4 x float> @llvm.experimental.constrained.fma.v4f32(<4 x float> %v, <4 x float> %v, <4 x float> %v, metadata !"round.towardzero", metadata !"fpexcept.ignore")
+  ret void
+}
+
+; CHECK-LABEL: experimental_constrained_fmuladd
+define void @experimental_constrained_fmuladd(float %s, <4 x float> %v) {
+  ; CHECK: llvm.intr.experimental.constrained.fmuladd %{{.*}}, %{{.*}}, %{{.*}} towardzero ignore : f32
+  %1 = call float @llvm.experimental.constrained.fmuladd.f32(float %s, float %s, float %s, metadata !"round.towardzero", metadata !"fpexcept.ignore")
+  ; CHECK: llvm.intr.experimental.constrained.fmuladd %{{.*}}, %{{.*}}, %{{.*}} towardzero ignore : vector<4xf32>
+  %2 = call <4 x float> @llvm.experimental.constrained.fmuladd.v4f32(<4 x float> %v, <4 x float> %v, <4 x float> %v, metadata !"round.towardzero", metadata !"fpexcept.ignore")
+  ret void
 }
 
 ; CHECK-LABEL: experimental_constrained_fptrunc
@@ -1402,6 +1479,20 @@ declare ptr @llvm.ptrmask.p0.i64(ptr, i64)
 declare <8 x ptr> @llvm.ptrmask.v8p0.v8i64(<8 x ptr>, <8 x i64>)
 declare <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float>, <4 x float>, i64)
 declare <4 x float> @llvm.vector.extract.v4f32.nxv4f32(<vscale x 4 x float>, i64)
+declare float @llvm.experimental.constrained.fadd.f32(float, float, metadata, metadata)
+declare <4 x float> @llvm.experimental.constrained.fadd.v4f32(<4 x float>, <4 x float>, metadata, metadata)
+declare float @llvm.experimental.constrained.fsub.f32(float, float, metadata, metadata)
+declare <4 x float> @llvm.experimental.constrained.fsub.v4f32(<4 x float>, <4 x float>, metadata, metadata)
+declare float @llvm.experimental.constrained.fmul.f32(float, float, metadata, metadata)
+declare <4 x float> @llvm.experimental.constrained.fmul.v4f32(<4 x float>, <4 x float>, metadata, metadata)
+declare float @llvm.experimental.constrained.fdiv.f32(float, float, metadata, metadata)
+declare <4 x float> @llvm.experimental.constrained.fdiv.v4f32(<4 x float>, <4 x float>, metadata, metadata)
+declare float @llvm.experimental.constrained.frem.f32(float, float, metadata, metadata)
+declare <4 x float> @llvm.experimental.constrained.frem.v4f32(<4 x float>, <4 x float>, metadata, metadata)
+declare float @llvm.experimental.constrained.fma.f32(float, float, float, metadata, metadata)
+declare <4 x float> @llvm.experimental.constrained.fma.v4f32(<4 x float>, <4 x float>, <4 x float>, metadata, metadata)
+declare float @llvm.experimental.constrained.fmuladd.f32(float, float, float, metadata, metadata)
+declare <4 x float> @llvm.experimental.constrained.fmuladd.v4f32(<4 x float>, <4 x float>, <4 x float>, metadata, metadata)
 declare <4 x float> @llvm.experimental.constrained.uitofp.v4f32.v4i32(<4 x i32>, metadata, metadata)
 declare float @llvm.experimental.constrained.uitofp.f32.i32(i32, metadata, metadata)
 declare <4 x float> @llvm.experimental.constrained.sitofp.v4f32.v4i32(<4 x i32>, metadata, metadata)
@@ -1414,3 +1505,4 @@ declare i2 @llvm.ucmp.i2.i32(i32, i32)
 declare <4 x i32> @llvm.ucmp.v4i32.v4i32(<4 x i32>, <4 x i32>)
 declare i2 @llvm.scmp.i2.i32(i32, i32)
 declare <4 x i32> @llvm.scmp.v4i32.v4i32(<4 x i32>, <4 x i32>)
+declare void @llvm.fake.use(...)

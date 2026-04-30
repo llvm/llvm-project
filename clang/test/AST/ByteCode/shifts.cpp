@@ -75,6 +75,8 @@ namespace shifts {
                           // ref-cxx17-warning {{shift count >= width of type}}
     (void)((long)c << __CHAR_BIT__);
 
+    c = 1 << (int)INT_MIN; // all-warning {{shift count is negative}}
+
     int i; // cxx17-warning {{uninitialized variable}} \
            // ref-cxx17-warning {{uninitialized variable}}
     i = 1 << (__INT_WIDTH__ - 2);

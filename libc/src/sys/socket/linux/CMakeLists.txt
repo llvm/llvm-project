@@ -25,6 +25,74 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  accept
+  SRCS
+    accept.cpp
+  HDRS
+    ../accept.h
+  DEPENDS
+    libc.include.sys_socket
+    libc.src.__support.OSUtil.osutil
+    libc.hdr.types.struct_sockaddr
+    libc.hdr.types.socklen_t
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  accept4
+  SRCS
+    accept4.cpp
+  HDRS
+    ../accept4.h
+  DEPENDS
+    libc.include.sys_socket
+    libc.src.__support.OSUtil.osutil
+    libc.hdr.types.struct_sockaddr
+    libc.hdr.types.socklen_t
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  connect
+  SRCS
+    connect.cpp
+  HDRS
+    ../connect.h
+  DEPENDS
+    libc.include.sys_socket
+    libc.src.__support.OSUtil.osutil
+    libc.hdr.types.struct_sockaddr
+    libc.hdr.types.socklen_t
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  getsockopt
+  SRCS
+    getsockopt.cpp
+  HDRS
+    ../getsockopt.h
+  DEPENDS
+    libc.include.sys_socket
+    libc.src.__support.OSUtil.osutil
+    libc.hdr.types.socklen_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.getsockopt
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  listen
+  SRCS
+    listen.cpp
+  HDRS
+    ../listen.h
+  DEPENDS
+    libc.include.sys_socket
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   socketpair
   SRCS
     socketpair.cpp
@@ -63,6 +131,20 @@ add_entrypoint_object(
     libc.hdr.types.struct_sockaddr
     libc.hdr.types.socklen_t
     libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  setsockopt
+  SRCS
+    setsockopt.cpp
+  HDRS
+    ../setsockopt.h
+  DEPENDS
+    libc.include.sys_socket
+    libc.src.__support.OSUtil.osutil
+    libc.hdr.types.socklen_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.setsockopt
     libc.src.errno.errno
 )
 
@@ -118,6 +200,18 @@ add_entrypoint_object(
     libc.include.sys_syscall
     libc.hdr.types.struct_msghdr
     libc.src.__support.macros.sanitizer
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  shutdown
+  SRCS
+    shutdown.cpp
+  HDRS
+    ../shutdown.h
+  DEPENDS
+    libc.include.sys_socket
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )

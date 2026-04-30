@@ -355,7 +355,8 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
                                    unsigned MinSVEVectorSizeInBitsOverride,
                                    unsigned MaxSVEVectorSizeInBitsOverride,
                                    bool IsStreaming, bool IsStreamingCompatible,
-                                   bool HasMinSize)
+                                   bool HasMinSize,
+                                   bool EnableSRLTSubregToRegMitigation)
     : AArch64GenSubtargetInfo(TT, CPU, TuneCPU, FS),
       ReserveXRegister(AArch64::GPR64commonRegClass.getNumRegs()),
       ReserveXRegisterForRA(AArch64::GPR64commonRegClass.getNumRegs()),
@@ -367,7 +368,9 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
               ? std::optional<unsigned>(AArch64StreamingHazardSize)
               : std::nullopt),
       MinSVEVectorSizeInBits(MinSVEVectorSizeInBitsOverride),
-      MaxSVEVectorSizeInBits(MaxSVEVectorSizeInBitsOverride), TargetTriple(TT),
+      MaxSVEVectorSizeInBits(MaxSVEVectorSizeInBitsOverride),
+      EnableSRLTSubregToRegMitigation(EnableSRLTSubregToRegMitigation),
+      TargetTriple(TT),
       InstrInfo(initializeSubtargetDependencies(FS, CPU, TuneCPU, HasMinSize)),
       TLInfo(TM, *this) {
   if (AArch64::isX18ReservedByDefault(TT))
@@ -400,7 +403,17 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
   if (ReservedRegNames.count("X29") || ReservedRegNames.count("FP"))
     ReserveXRegisterForRA.set(29);
 
-  EnableSubregLiveness = EnableSubregLivenessTracking.getValue();
+  // To benefit from SME2's strided-register multi-vector load/store
+  // instructions we'll need to enable subreg liveness. Our longer
+  // term aim is to make this the default, regardless of streaming
+  // mode, but there are still some outstanding issues, see:
+  //  https://github.com/llvm/llvm-project/pull/174188
+  // and:
+  //  https://github.com/llvm/llvm-project/pull/168353
+  if (IsStreaming)
+    EnableSubregLiveness = true;
+  else
+    EnableSubregLiveness = EnableSubregLivenessTracking.getValue();
 }
 
 const CallLowering *AArch64Subtarget::getCallLowering() const {

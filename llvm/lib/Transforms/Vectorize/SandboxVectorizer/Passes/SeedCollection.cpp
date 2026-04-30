@@ -32,30 +32,41 @@ cl::opt<std::string> CollectSeeds(
              "list of '" StoreSeedsDef "' and '" LoadSeedsDef "'."));
 
 namespace sandboxir {
-SeedCollection::SeedCollection(StringRef Pipeline)
+
+SeedCollection::SeedCollection(StringRef Pipeline, StringRef AuxArg)
     : FunctionPass("seed-collection"),
-      RPM("rpm", Pipeline, SandboxVectorizerPassBuilder::createRegionPass) {}
+      RPM("rpm", Pipeline, SandboxVectorizerPassBuilder::createRegionPass) {
+  if (!AuxArg.empty()) {
+    if (AuxArg != DiffTypesArgStr) {
+      std::string ErrStr;
+      raw_string_ostream ErrSS(ErrStr);
+      ErrSS << "SeedCollection only supports '" << DiffTypesArgStr
+            << "' aux argument!\n";
+      reportFatalUsageError(ErrStr.c_str());
+    }
+    AllowDiffTypes = true;
+  }
+}
 
 bool SeedCollection::runOnFunction(Function &F, const Analyses &A) {
   bool Change = false;
   const auto &DL = F.getParent()->getDataLayout();
-  unsigned VecRegBits =
-      OverrideVecRegBits != 0
-          ? OverrideVecRegBits
-          : A.getTTI()
-                .getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector)
-                .getFixedValue();
   bool CollectStores = CollectSeeds.find(StoreSeedsDef) != std::string::npos;
   bool CollectLoads = CollectSeeds.find(LoadSeedsDef) != std::string::npos;
 
   // TODO: Start from innermost BBs first
   for (auto &BB : F) {
-    SeedCollector SC(&BB, A.getScalarEvolution(), CollectStores, CollectLoads);
+    SeedCollector SC(&BB, A.getScalarEvolution(), CollectStores, CollectLoads,
+                     AllowDiffTypes);
     for (SeedBundle &Seeds : SC.getStoreSeeds()) {
       unsigned ElmBits =
           Utils::getNumBits(VecUtils::getElementType(Utils::getExpectedType(
                                 Seeds[Seeds.getFirstUnusedElementIdx()])),
                             DL);
+      unsigned AS = getLoadStoreAddressSpace(Seeds[0]);
+      unsigned VecRegBits = OverrideVecRegBits != 0
+                                ? OverrideVecRegBits
+                                : A.getTTI().getLoadStoreVecRegBitWidth(AS);
 
       auto DivideBy2 = [](unsigned Num) {
         auto Floor = VecUtils::getFloorPowerOf2(Num);

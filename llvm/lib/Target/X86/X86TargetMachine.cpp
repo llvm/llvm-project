@@ -53,9 +53,10 @@
 
 using namespace llvm;
 
-static cl::opt<bool> EnableMachineCombinerPass("x86-machine-combiner",
-                               cl::desc("Enable the machine combiner pass"),
-                               cl::init(true), cl::Hidden);
+cl::opt<bool>
+    X86EnableMachineCombinerPass("x86-machine-combiner",
+                                 cl::desc("Enable the machine combiner pass"),
+                                 cl::init(true), cl::Hidden);
 
 static cl::opt<bool>
     EnableTileRAPass("x86-tile-ra",
@@ -72,7 +73,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86LowerAMXTypeLegacyPassPass(PR);
   initializeX86PreTileConfigLegacyPass(PR);
   initializeGlobalISel(PR);
-  initializeWinEHStatePassPass(PR);
+  initializeWinEHStateLegacyPass(PR);
   initializeX86FixupBWInstLegacyPass(PR);
   initializeCompressEVEXLegacyPass(PR);
   initializeFixupLEAsLegacyPass(PR);
@@ -83,22 +84,21 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86TileConfigLegacyPass(PR);
   initializeX86FastPreTileConfigLegacyPass(PR);
   initializeX86FastTileConfigLegacyPass(PR);
-  initializeKCFIPass(PR);
+  initializeMachineKCFILegacyPass(PR);
   initializeX86LowerTileCopyLegacyPass(PR);
   initializeX86ExpandPseudoLegacyPass(PR);
   initializeX86ExecutionDomainFixPass(PR);
   initializeX86DomainReassignmentLegacyPass(PR);
   initializeX86AvoidSFBLegacyPass(PR);
   initializeX86AvoidTrailingCallLegacyPassPass(PR);
-  initializeX86SpeculativeLoadHardeningPassPass(PR);
-  initializeX86SpeculativeExecutionSideEffectSuppressionPass(PR);
+  initializeX86SpeculativeLoadHardeningLegacyPass(PR);
+  initializeX86SpeculativeExecutionSideEffectSuppressionLegacyPass(PR);
   initializeX86FlagsCopyLoweringLegacyPass(PR);
-  initializeX86LoadValueInjectionLoadHardeningPassPass(PR);
-  initializeX86LoadValueInjectionRetHardeningPassPass(PR);
+  initializeX86LoadValueInjectionLoadHardeningLegacyPass(PR);
+  initializeX86LoadValueInjectionRetHardeningLegacyPass(PR);
   initializeX86OptimizeLEAsLegacyPass(PR);
   initializeX86PartialReductionLegacyPass(PR);
-  initializePseudoProbeInserterPass(PR);
-  initializeX86ReturnThunksPass(PR);
+  initializeX86ReturnThunksLegacyPass(PR);
   initializeX86DAGToDAGISelLegacyPass(PR);
   initializeX86ArgumentStackSlotLegacyPass(PR);
   initializeX86AsmPrinterPass(PR);
@@ -106,8 +106,9 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86FixupVectorConstantsLegacyPass(PR);
   initializeX86DynAllocaExpanderLegacyPass(PR);
   initializeX86SuppressAPXForRelocationLegacyPass(PR);
-  initializeX86WinEHUnwindV2Pass(PR);
+  initializeX86WinEHUnwindV2LegacyPass(PR);
   initializeX86PreLegalizerCombinerPass(PR);
+  initializeX86PostLegalizerCombinerLegacyPass(PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -372,6 +373,7 @@ public:
   bool addInstSelector() override;
   bool addIRTranslator() override;
   bool addLegalizeMachineIR() override;
+  void addPreRegBankSelect() override;
   bool addRegBankSelect() override;
   bool addGlobalInstructionSelect() override;
   void addPreLegalizeMachineIR() override;
@@ -441,11 +443,7 @@ void X86PassConfig::addIRPasses() {
   // Add Control Flow Guard checks.
   const Triple &TT = TM->getTargetTriple();
   if (TT.isOSWindows()) {
-    if (TT.isX86_64()) {
-      addPass(createCFGuardDispatchPass());
-    } else {
-      addPass(createCFGuardCheckPass());
-    }
+    addPass(createCFGuardPass());
   }
 
   if (TM->Options.JMCInstrument)
@@ -459,9 +457,9 @@ bool X86PassConfig::addInstSelector() {
   // For ELF, cleanup any local-dynamic TLS accesses.
   if (TM->getTargetTriple().isOSBinFormatELF() &&
       getOptLevel() != CodeGenOptLevel::None)
-    addPass(createCleanupLocalDynamicTLSPass());
+    addPass(createCleanupLocalDynamicTLSLegacyPass());
 
-  addPass(createX86GlobalBaseRegPass());
+  addPass(createX86GlobalBaseRegLegacyPass());
   addPass(createX86ArgumentStackSlotLegacyPass());
   return false;
 }
@@ -471,6 +469,12 @@ bool X86PassConfig::addIRTranslator() {
   return false;
 }
 
+void X86PassConfig::addPreRegBankSelect() {
+  bool IsOptNone = getOptLevel() == CodeGenOptLevel::None;
+  if (!IsOptNone) {
+    addPass(createX86PostLegalizerCombinerLegacy());
+  }
+}
 bool X86PassConfig::addLegalizeMachineIR() {
   addPass(new Legalizer());
   return false;
@@ -485,7 +489,7 @@ bool X86PassConfig::addGlobalInstructionSelect() {
   addPass(new InstructionSelect(getOptLevel()));
   // Add GlobalBaseReg in case there is no SelectionDAG passes afterwards
   if (isGlobalISelAbortEnabled())
-    addPass(createX86GlobalBaseRegPass());
+    addPass(createX86GlobalBaseRegLegacyPass());
   return false;
 }
 
@@ -497,7 +501,7 @@ void X86PassConfig::addPreLegalizeMachineIR() {
 
 bool X86PassConfig::addILPOpts() {
   addPass(&EarlyIfConverterLegacyID);
-  if (EnableMachineCombinerPass)
+  if (X86EnableMachineCombinerPass)
     addPass(&MachineCombinerID);
   addPass(createX86CmovConversionLegacyPass());
   return true;
@@ -507,7 +511,7 @@ bool X86PassConfig::addPreISel() {
   // Only add this pass for 32-bit x86 Windows.
   const Triple &TT = TM->getTargetTriple();
   if (TT.isOSWindows() && TT.isX86_32())
-    addPass(createX86WinEHStatePass());
+    addPass(createX86WinEHStateLegacyPass());
   return true;
 }
 
@@ -522,7 +526,7 @@ void X86PassConfig::addPreRegAlloc() {
 
   addPass(createX86SuppressAPXForRelocationLegacyPass());
 
-  addPass(createX86SpeculativeLoadHardeningPass());
+  addPass(createX86SpeculativeLoadHardeningLegacyPass());
   addPass(createX86FlagsCopyLoweringLegacyPass());
   addPass(createX86DynAllocaExpanderLegacyPass());
 
@@ -545,7 +549,7 @@ void X86PassConfig::addPostRegAlloc() {
   // mitigation. This is to prevent slow downs due to
   // analyses needed by the LVIHardening pass when compiling at -O0.
   if (getOptLevel() != CodeGenOptLevel::None)
-    addPass(createX86LoadValueInjectionLoadHardeningPass());
+    addPass(createX86LoadValueInjectionLoadHardeningLegacyPass());
 }
 
 void X86PassConfig::addPreSched2() {
@@ -559,9 +563,9 @@ void X86PassConfig::addPreEmitPass() {
     addPass(createBreakFalseDeps());
   }
 
-  addPass(createX86IndirectBranchTrackingPass());
+  addPass(createX86IndirectBranchTrackingLegacyPass());
 
-  addPass(createX86IssueVZeroUpperPass());
+  addPass(createX86InsertVZeroUpperLegacyPass());
 
   if (getOptLevel() != CodeGenOptLevel::None) {
     addPass(createX86FixupBWInstsLegacyPass());
@@ -571,12 +575,12 @@ void X86PassConfig::addPreEmitPass() {
     addPass(createX86FixupVectorConstantsLegacyPass());
   }
   addPass(createX86CompressEVEXLegacyPass());
-  addPass(createX86InsertX87waitPass());
+  addPass(createX86InsertX87WaitLegacyPass());
 }
 
 void X86PassConfig::addPreEmitPass2() {
   const Triple &TT = TM->getTargetTriple();
-  const MCAsmInfo *MAI = TM->getMCAsmInfo();
+  const MCAsmInfo &MAI = TM->getMCAsmInfo();
 
   // The X86 Speculative Execution Pass must run after all control
   // flow graph modifying passes. As a result it was listed to run right before
@@ -587,9 +591,9 @@ void X86PassConfig::addPreEmitPass2() {
   // passes don't move the code around the LFENCEs in a way that will hurt the
   // correctness of this pass. This placement has been shown to work based on
   // hand inspection of the codegen output.
-  addPass(createX86SpeculativeExecutionSideEffectSuppression());
+  addPass(createX86SpeculativeExecutionSideEffectSuppressionLegacyPass());
   addPass(createX86IndirectThunksPass());
-  addPass(createX86ReturnThunksPass());
+  addPass(createX86ReturnThunksLegacyPass());
 
   // Insert extra int3 instructions after trailing call instructions to avoid
   // issues in the unwinder.
@@ -601,7 +605,7 @@ void X86PassConfig::addPreEmitPass2() {
   // instructions.
   if (!TT.isOSDarwin() &&
       (!TT.isOSWindows() ||
-       MAI->getExceptionHandlingType() == ExceptionHandling::DwarfCFI))
+       MAI.getExceptionHandlingType() == ExceptionHandling::DwarfCFI))
     addPass(createCFIInstrInserter());
 
   if (TT.isOSWindows()) {
@@ -610,14 +614,14 @@ void X86PassConfig::addPreEmitPass2() {
     // Identify valid eh continuation targets for Windows EHCont Guard.
     addPass(createEHContGuardTargetsPass());
   }
-  addPass(createX86LoadValueInjectionRetHardeningPass());
+  addPass(createX86LoadValueInjectionRetHardeningLegacyPass());
 
   // Insert pseudo probe annotation for callsite profiling
   addPass(createPseudoProbeInserter());
 
   // KCFI indirect call checks are lowered to a bundle, and on Darwin platforms,
   // also CALL_RVMARKER.
-  addPass(createUnpackMachineBundles([&TT](const MachineFunction &MF) {
+  addPass(createUnpackMachineBundlesLegacy([&TT](const MachineFunction &MF) {
     // Only run bundle expansion if the module uses kcfi, or there are relevant
     // ObjC runtime functions present in the module.
     const Function &F = MF.getFunction();
@@ -631,7 +635,7 @@ void X86PassConfig::addPreEmitPass2() {
   // Analyzes and emits pseudos to support Win x64 Unwind V2. This pass must run
   // after all real instructions have been added to the epilog.
   if (TT.isOSWindows() && TT.isX86_64())
-    addPass(createX86WinEHUnwindV2Pass());
+    addPass(createX86WinEHUnwindV2LegacyPass());
 }
 
 bool X86PassConfig::addPostFastRegAllocRewrite() {

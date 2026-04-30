@@ -38,7 +38,7 @@ public:
   KnownBits() = default;
 
   /// Create a known bits object of BitWidth bits initialized to unknown.
-  KnownBits(unsigned BitWidth) : Zero(BitWidth, 0), One(BitWidth, 0) {}
+  explicit KnownBits(unsigned BitWidth) : Zero(BitWidth, 0), One(BitWidth, 0) {}
 
   /// Get the bit width of this value.
   unsigned getBitWidth() const {
@@ -51,9 +51,7 @@ public:
   bool hasConflict() const { return Zero.intersects(One); }
 
   /// Returns true if we know the value of all bits.
-  bool isConstant() const {
-    return Zero.popcount() + One.popcount() == getBitWidth();
-  }
+  bool isConstant() const { return Zero.isInverseOf(One); }
 
   /// Returns the value when all bits have a known value. This just returns One
   /// with a protective assertion.
@@ -160,6 +158,9 @@ public:
     return Max;
   }
 
+  /// Return if the value is known even (the low bit is 0).
+  bool isEven() const { return Zero[0]; }
+
   /// Return known bits for a truncation of the value we're tracking.
   KnownBits trunc(unsigned BitWidth) const {
     return KnownBits(Zero.trunc(BitWidth), One.trunc(BitWidth));
@@ -213,6 +214,16 @@ public:
       return trunc(BitWidth);
     return *this;
   }
+
+  /// Truncate with signed saturation (signed input -> signed output)
+  LLVM_ABI KnownBits truncSSat(unsigned BitWidth) const;
+
+  /// Truncate with signed saturation to unsigned (signed input -> unsigned
+  /// output)
+  LLVM_ABI KnownBits truncSSatU(unsigned BitWidth) const;
+
+  /// Truncate with unsigned saturation (unsigned input -> unsigned output)
+  LLVM_ABI KnownBits truncUSat(unsigned BitWidth) const;
 
   /// Return known bits for a in-register sign extension of the value we're
   /// tracking.
@@ -348,7 +359,16 @@ public:
 
   /// Compute knownbits resulting from addition of LHS and RHS.
   static KnownBits add(const KnownBits &LHS, const KnownBits &RHS,
-                       bool NSW = false, bool NUW = false) {
+                       bool NSW = false, bool NUW = false,
+                       bool SelfAdd = false) {
+    // ADD(X,X) is equivalent to SHL(X,1), the low bit is always zero.
+    if (SelfAdd) {
+      // Shift amount bitwidth is independent of src bitwidth (and we're
+      // just shifting by one so don't have any bounds issues).
+      assert(LHS == RHS && "Expected matching knownbits");
+      KnownBits Amt = KnownBits::makeConstant(APInt(8, 1));
+      return KnownBits::shl(LHS, Amt, NUW, NSW, /*ShAmtNonZero=*/true);
+    }
     return computeForAddSub(/*Add=*/true, NSW, NUW, LHS, RHS);
   }
 
@@ -447,6 +467,17 @@ public:
   /// NOTE: RHS (shift amount) bitwidth doesn't need to be the same as LHS.
   LLVM_ABI static KnownBits ashr(const KnownBits &LHS, const KnownBits &RHS,
                                  bool ShAmtNonZero = false, bool Exact = false);
+
+  /// Compute known bits for fshl(LHS, RHS, Amt).
+  LLVM_ABI static KnownBits fshl(const KnownBits &LHS, const KnownBits &RHS,
+                                 const APInt &Amt);
+
+  /// Compute known bits for fshr(LHS, RHS, Amt).
+  LLVM_ABI static KnownBits fshr(const KnownBits &LHS, const KnownBits &RHS,
+                                 const APInt &Amt);
+
+  /// Compute known bits for clmul(LHS, RHS).
+  LLVM_ABI static KnownBits clmul(const KnownBits &LHS, const KnownBits &RHS);
 
   /// Determine if these known bits always give the same ICMP_EQ result.
   LLVM_ABI static std::optional<bool> eq(const KnownBits &LHS,

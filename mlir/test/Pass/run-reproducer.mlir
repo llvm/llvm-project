@@ -17,7 +17,7 @@ func.func @bar() {
       // CHECK:       builtin.module(
       // CHECK-NEXT:    func.func(
       // CHECK-NEXT:      cse,
-      // CHECK-NEXT:      canonicalize{ max-iterations=1 max-num-rewrites=-1 region-simplify=normal test-convergence=false top-down=false}
+      // CHECK-NEXT:      canonicalize{cse-between-iterations=false max-iterations=1 max-num-rewrites=-1 region-simplify=normal test-convergence=false top-down=false}
       // CHECK-NEXT:    )
       // CHECK-NEXT:  )
       pipeline: "builtin.module(func.func(cse,canonicalize{max-iterations=1 max-num-rewrites=-1 region-simplify=normal top-down=false}))",
@@ -26,9 +26,9 @@ func.func @bar() {
   }
 #-}
 
-// BEFORE: // -----// IR Dump Before{{.*}}CSE (cse) //----- //
+// BEFORE: // -----// IR Dump Before{{.*}}CSEPass (cse) //----- //
 // BEFORE-NEXT: func @foo()
-// BEFORE: // -----// IR Dump Before{{.*}}CSE (cse) //----- //
+// BEFORE: // -----// IR Dump Before{{.*}}CSEPass (cse) //----- //
 // BEFORE-NEXT: func @bar()
-// BEFORE-NOT: // -----// IR Dump Before{{.*}}Canonicalizer (canonicalize) //----- //
+// BEFORE-NOT: // -----// IR Dump Before{{.*}}CanonicalizerPass (canonicalize) //----- //
 // BEFORE-NOT: // -----// IR Dump After

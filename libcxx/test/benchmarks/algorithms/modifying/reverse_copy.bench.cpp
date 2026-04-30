@@ -44,9 +44,6 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("std::reverse_copy(vector<int>)", std_reverse_copy);
     bm.operator()<std::deque<int>>("std::reverse_copy(deque<int>)", std_reverse_copy);
     bm.operator()<std::list<int>>("std::reverse_copy(list<int>)", std_reverse_copy);
-    bm.operator()<std::vector<int>>("rng::reverse_copy(vector<int>)", std::ranges::reverse_copy);
-    bm.operator()<std::deque<int>>("rng::reverse_copy(deque<int>)", std::ranges::reverse_copy);
-    bm.operator()<std::list<int>>("rng::reverse_copy(list<int>)", std::ranges::reverse_copy);
   }
 
   benchmark::Initialize(&argc, argv);

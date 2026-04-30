@@ -118,37 +118,37 @@ s_buffer_load_dwordx4 ttmp[7+1:(3+2)*2+1], [ttmp[45/11],ttmp[5],ttmp6,ttmp[(33+4
 
 flat_load_dword v[8:8], v[2:3]
 // GFX10: flat_load_dword v8, v[2:3]              ; encoding: [0x00,0x00,0x30,0xdc,0x02,0x00,0x7d,0x08]
-// NOSICI: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE-2]]:1: error: instruction not supported on this GPU (tahiti): flat_load_dword
 // VI: flat_load_dword v8, v[2:3]              ; encoding: [0x00,0x00,0x50,0xdc,0x02,0x00,0x00,0x08]
 
 flat_load_dword v[63/8+1:65/8], v[2:3]
 // GFX10: flat_load_dword v8, v[2:3]              ; encoding: [0x00,0x00,0x30,0xdc,0x02,0x00,0x7d,0x08]
-// NOSICI: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE-2]]:1: error: instruction not supported on this GPU (tahiti): flat_load_dword
 // VI: flat_load_dword v8, v[2:3]              ; encoding: [0x00,0x00,0x50,0xdc,0x02,0x00,0x00,0x08]
 
 flat_load_dword v8, v[2*2-2:(3+7)/3]
 // GFX10: flat_load_dword v8, v[2:3]              ; encoding: [0x00,0x00,0x30,0xdc,0x02,0x00,0x7d,0x08]
-// NOSICI: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE-2]]:1: error: instruction not supported on this GPU (tahiti): flat_load_dword
 // VI: flat_load_dword v8, v[2:3]              ; encoding: [0x00,0x00,0x50,0xdc,0x02,0x00,0x00,0x08]
 
 flat_load_dword v[63/8+1], v[2:3]
 // GFX10: flat_load_dword v8, v[2:3]              ; encoding: [0x00,0x00,0x30,0xdc,0x02,0x00,0x7d,0x08]
-// NOSICI: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE-2]]:1: error: instruction not supported on this GPU (tahiti): flat_load_dword
 // VI: flat_load_dword v8, v[2:3]              ; encoding: [0x00,0x00,0x50,0xdc,0x02,0x00,0x00,0x08]
 
 flat_load_dwordx4 v[8:11], v[2*2-2:(3*3-6)]
 // GFX10: flat_load_dwordx4 v[8:11], v[2:3]       ; encoding: [0x00,0x00,0x38,0xdc,0x02,0x00,0x7d,0x08]
-// NOSICI: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE-2]]:1: error: instruction not supported on this GPU (tahiti): flat_load_dwordx4
 // VI: flat_load_dwordx4 v[8:11], v[2:3]       ; encoding: [0x00,0x00,0x5c,0xdc,0x02,0x00,0x00,0x08]
 
 flat_load_dwordx4 v[8/2+4:11/2+6], v[2:3]
 // GFX10: flat_load_dwordx4 v[8:11], v[2:3]       ; encoding: [0x00,0x00,0x38,0xdc,0x02,0x00,0x7d,0x08]
-// NOSICI: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE-2]]:1: error: instruction not supported on this GPU (tahiti): flat_load_dwordx4
 // VI: flat_load_dwordx4 v[8:11], v[2:3]       ; encoding: [0x00,0x00,0x5c,0xdc,0x02,0x00,0x00,0x08]
 
 flat_load_dwordx4   [v[8/2+4],v9,v[10],v[11/2+6]], v[2:3]
 // GFX10: flat_load_dwordx4 v[8:11], v[2:3]       ; encoding: [0x00,0x00,0x38,0xdc,0x02,0x00,0x7d,0x08]
-// NOSICI: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE-2]]:1: error: instruction not supported on this GPU (tahiti): flat_load_dwordx4
 // VI: flat_load_dwordx4 v[8:11], v[2:3]       ; encoding: [0x00,0x00,0x5c,0xdc,0x02,0x00,0x00,0x08]
 
 v_mul_f32 v0, null, v2
@@ -156,7 +156,7 @@ v_mul_f32 v0, null, v2
 // NOSICIVI: :[[@LINE-2]]:15: error: 'null' operand is not supported on this GPU
 
 v_mul_f64 v[0:1], null, null
-// GFX10: v_mul_f64 v[0:1], null, null            ; encoding: [0x00,0x00,0x65,0xd5,0x7d,0xfa,0x00,0x00]
+// GFX10: v_mul_f64 v[0:1], null, null            ; encoding: [0x00,0x00,0x65,0xd5,0x7d,0xfa,0x00,0x02]
 // NOSICIVI: :[[@LINE-2]]:19: error: 'null' operand is not supported on this GPU
 
 s_add_u32 null, null, null

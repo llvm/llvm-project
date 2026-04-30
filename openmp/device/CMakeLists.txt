@@ -16,7 +16,6 @@ set(src_files
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Mapping.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Misc.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Parallelism.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/Profiling.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Reduction.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/State.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Synchronization.cpp
@@ -33,6 +32,7 @@ list(APPEND compile_options -fno-rtti)
 list(APPEND compile_options -fno-exceptions)
 list(APPEND compile_options -fconvergent-functions)
 list(APPEND compile_options -Wno-unknown-cuda-version)
+
 if(LLVM_DEFAULT_TARGET_TRIPLE)
   list(APPEND compile_options --target=${LLVM_DEFAULT_TARGET_TRIPLE})
 endif()
@@ -52,12 +52,15 @@ elseif("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^nvptx" OR
        "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^nvptx")
   set(target_name "nvptx")
   list(APPEND compile_options --cuda-feature=+ptx63)
+elseif("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^spirv" OR
+       "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^spirv")
+  set(target_name "spirv") 
 endif()
 
 # Trick to combine these into a bitcode file via the linker's LTO pass.
 add_executable(libompdevice ${src_files})
 set_target_properties(libompdevice PROPERTIES
-  RUNTIME_OUTPUT_DIRECTORY "${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE}"
+  RUNTIME_OUTPUT_DIRECTORY "${LLVM_LIBRARY_OUTPUT_INTDIR}/${OPENMP_TARGET_SUBDIR}"
   LINKER_LANGUAGE CXX
   BUILD_RPATH ""
   INSTALL_RPATH ""
@@ -74,8 +77,15 @@ target_include_directories(libompdevice PRIVATE
                            ${CMAKE_CURRENT_SOURCE_DIR}/../../libc
                            ${CMAKE_CURRENT_SOURCE_DIR}/../../offload/include)
 target_compile_options(libompdevice PRIVATE ${compile_options})
-target_link_options(libompdevice PRIVATE
-                    "-flto" "-r" "-nostdlib" "-Wl,--lto-emit-llvm")
+if(NOT "${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^spirv" AND
+   NOT "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^spirv")
+  target_link_options(libompdevice PRIVATE
+                  "-flto" "-r" "-nostdlib" "-Wl,--lto-emit-llvm")
+else()
+  target_link_options(libompdevice PRIVATE
+                  "-nostdlib" "-emit-llvm")
+endif()
+
 if(LLVM_DEFAULT_TARGET_TRIPLE)
   target_link_options(libompdevice PRIVATE "--target=${LLVM_DEFAULT_TARGET_TRIPLE}")
 endif()
@@ -85,13 +95,13 @@ install(TARGETS libompdevice
 
 add_library(ompdevice.all_objs OBJECT IMPORTED)
 set_property(TARGET ompdevice.all_objs APPEND PROPERTY IMPORTED_OBJECTS
-             ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE}/libomptarget-${target_name}.bc)
+             ${LLVM_LIBRARY_OUTPUT_INTDIR}/${OPENMP_TARGET_SUBDIR}/libomptarget-${target_name}.bc)
 
 # Archive all the object files generated above into a static library
 add_library(ompdevice STATIC)
 add_dependencies(ompdevice libompdevice)
 set_target_properties(ompdevice PROPERTIES
-  ARCHIVE_OUTPUT_DIRECTORY "${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE}"
+  ARCHIVE_OUTPUT_DIRECTORY "${LLVM_LIBRARY_OUTPUT_INTDIR}/${OPENMP_TARGET_SUBDIR}"
   LINKER_LANGUAGE CXX
 )
 target_link_libraries(ompdevice PRIVATE ompdevice.all_objs)

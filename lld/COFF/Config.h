@@ -15,12 +15,12 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/CachePruning.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <cstdint>
 #include <map>
-#include <set>
 #include <string>
 
 namespace lld::coff {
@@ -48,6 +48,7 @@ enum class ExportSource {
   Directives,
   Export,
   ModuleDefinition,
+  ExportAll,
 };
 
 enum class EmitKind { Obj, LLVM, ASM };
@@ -155,14 +156,14 @@ struct Configuration {
   // Symbols in this set are considered as live by the garbage collector.
   std::vector<Symbol *> gcroot;
 
-  std::set<std::string> noDefaultLibs;
+  llvm::StringSet<> noDefaultLibs;
   bool noDefaultLibAll = false;
 
   // True if we are creating a DLL.
   bool dll = false;
   StringRef implib;
   bool noimplib = false;
-  std::set<std::string> delayLoads;
+  llvm::StringSet<> delayLoads;
   std::map<std::string, int> dllOrder;
   Symbol *arm64ECIcallHelper = nullptr;
 
@@ -215,6 +216,9 @@ struct Configuration {
 
   // Used for /merge:from=to (e.g. /merge:.rdata=.text)
   std::map<StringRef, StringRef> merge;
+
+  // Used for /discard-section:.name
+  llvm::StringSet<> discardSection;
 
   // Used for /section=.name,{DEKPRSW} to set section attributes.
   std::map<StringRef, uint32_t> section;

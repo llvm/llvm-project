@@ -24,6 +24,9 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
@@ -33,22 +36,21 @@ class raw_ostream;
 class Type;
 class Value;
 class VPDef;
-struct VPDoubleValueDef;
 class VPSlotTracker;
 class VPUser;
 class VPRecipeBase;
 class VPPhiAccessors;
+class VPRegionValue;
+class VPRegionBlock;
 
 /// This is the base class of the VPlan Def/Use graph, used for modeling the
 /// data flow into, within and out of the VPlan. VPValues can stand for live-ins
 /// coming from the input IR, symbolic values and values defined by recipes.
 class LLVM_ABI_FOR_TEST VPValue {
-  friend class VPDef;
-  friend struct VPDoubleValueDef;
-  friend class VPlan;
   friend struct VPIRValue;
   friend struct VPSymbolicValue;
   friend class VPRecipeValue;
+  friend class VPRegionValue;
 
   const unsigned char SubclassID; ///< Subclass identifier (for isa/dyn_cast).
 
@@ -80,6 +82,8 @@ public:
     VPVIRValueSC,     /// A live-in VPValue wrapping an IR Value.
     VPVSymbolicSC,    /// A symbolic live-in VPValue without IR backing.
     VPVRecipeValueSC, /// A VPValue defined by a recipe.
+    VPRegionValueSC,  /// A VPValue sub-class that is defined by a region, like
+                      /// the canonical IV of a loop region.
   };
 
   VPValue(const VPValue &) = delete;
@@ -102,11 +106,24 @@ public:
   void dump() const;
 #endif
 
-  unsigned getNumUsers() const { return Users.size(); }
-  void addUser(VPUser &User) { Users.push_back(&User); }
+  /// Assert that this VPValue has not been materialized, if it is a
+  /// VPSymbolicValue.
+  void assertNotMaterialized() const;
+
+  unsigned getNumUsers() const {
+    if (Users.empty())
+      return 0;
+    assertNotMaterialized();
+    return Users.size();
+  }
+  void addUser(VPUser &User) {
+    assertNotMaterialized();
+    Users.push_back(&User);
+  }
 
   /// Remove a single \p User from the list of users.
   void removeUser(VPUser &User) {
+    assertNotMaterialized();
     // The same user can be added multiple times, e.g. because the same VPValue
     // is used twice by the same VPUser. Remove a single one.
     auto *I = find(Users, &User);
@@ -119,10 +136,22 @@ public:
   typedef iterator_range<user_iterator> user_range;
   typedef iterator_range<const_user_iterator> const_user_range;
 
-  user_iterator user_begin() { return Users.begin(); }
-  const_user_iterator user_begin() const { return Users.begin(); }
-  user_iterator user_end() { return Users.end(); }
-  const_user_iterator user_end() const { return Users.end(); }
+  user_iterator user_begin() {
+    assertNotMaterialized();
+    return Users.begin();
+  }
+  const_user_iterator user_begin() const {
+    assertNotMaterialized();
+    return Users.begin();
+  }
+  user_iterator user_end() {
+    assertNotMaterialized();
+    return Users.end();
+  }
+  const_user_iterator user_end() const {
+    assertNotMaterialized();
+    return Users.end();
+  }
   user_range users() { return user_range(user_begin(), user_end()); }
   const_user_range users() const {
     return const_user_range(user_begin(), user_end());
@@ -176,6 +205,33 @@ public:
   }
 };
 
+/// VPValues defined by a VPRegionBlock, like the canonical IV.
+class VPRegionValue : public VPValue {
+  VPRegionBlock *DefiningRegion;
+  Type *Ty;
+  DebugLoc DL;
+
+public:
+  VPRegionValue(Type *Ty, DebugLoc DL, VPRegionBlock *Region)
+      : VPValue(VPValue::VPRegionValueSC), DefiningRegion(Region), Ty(Ty),
+        DL(DL) {}
+
+  ~VPRegionValue() override = default;
+
+  /// Returns the region that defines this value.
+  VPRegionBlock *getDefiningRegion() const { return DefiningRegion; }
+
+  /// Returns the type of the VPRegionValue.
+  Type *getType() const { return Ty; }
+
+  /// Returns the debug location of the VPRegionValue.
+  DebugLoc getDebugLoc() const { return DL; }
+
+  static inline bool classof(const VPValue *V) {
+    return V->getVPValueID() == VPValue::VPRegionValueSC;
+  }
+};
+
 LLVM_ABI_FOR_TEST raw_ostream &operator<<(raw_ostream &OS,
                                           const VPRecipeBase &R);
 
@@ -197,6 +253,28 @@ struct VPIRValue : public VPValue {
   }
 };
 
+/// An overlay on VPIRValue for VPValues that wrap a ConstantInt. Provides
+/// convenient accessors for the underlying constant.
+struct VPConstantInt : public VPIRValue {
+  VPConstantInt(ConstantInt *CI) : VPIRValue(CI) {}
+
+  static bool classof(const VPValue *V) {
+    return isa<VPIRValue>(V) && isa<ConstantInt>(V->getUnderlyingValue());
+  }
+
+  bool isOne() const { return getAPInt().isOne(); }
+
+  bool isZero() const { return getAPInt().isZero(); }
+
+  const APInt &getAPInt() const {
+    return cast<ConstantInt>(getValue())->getValue();
+  }
+
+  unsigned getBitWidth() const { return getAPInt().getBitWidth(); }
+
+  uint64_t getZExtValue() const { return getAPInt().getZExtValue(); }
+};
+
 /// A symbolic live-in VPValue, used for values like vector trip count, VF, and
 /// VFxUF.
 struct VPSymbolicValue : public VPValue {
@@ -205,19 +283,41 @@ struct VPSymbolicValue : public VPValue {
   static bool classof(const VPValue *V) {
     return V->getVPValueID() == VPVSymbolicSC;
   }
+
+  /// Returns true if this symbolic value has been materialized.
+  bool isMaterialized() const { return Materialized; }
+
+  /// Mark this symbolic value as materialized.
+  void markMaterialized() {
+    assert(!Materialized && "VPSymbolicValue already materialized");
+    Materialized = true;
+  }
+
+private:
+  /// Track whether this symbolic value has been materialized (replaced).
+  /// After materialization, accessing users should trigger an assertion.
+  bool Materialized = false;
 };
 
 /// A VPValue defined by a recipe that produces one or more values.
 class VPRecipeValue : public VPValue {
   friend class VPValue;
   friend class VPDef;
-  /// Pointer to the VPDef that defines this VPValue.
-  VPDef *Def;
+
+  /// Pointer to the VPRecipeBase that defines this VPValue.
+  VPRecipeBase *Def;
+
+#if !defined(NDEBUG)
+  /// Returns true if this VPRecipeValue is defined by \p D.
+  /// NOTE: Only used by VPDef to assert that VPRecipeValues added/removed from
+  /// /p D are associated with its VPRecipeBase,
+  bool isDefinedBy(const VPDef *D) const;
+#endif
 
 public:
-  VPRecipeValue(VPDef *Def, Value *UV = nullptr);
+  LLVM_ABI_FOR_TEST VPRecipeValue(VPRecipeBase *Def, Value *UV = nullptr);
 
-  virtual ~VPRecipeValue();
+  LLVM_ABI_FOR_TEST virtual ~VPRecipeValue();
 
   static bool classof(const VPValue *V) {
     return V->getVPValueID() == VPVRecipeValueSC;
@@ -330,18 +430,14 @@ public:
 /// Single-value VPDefs that also inherit from VPValue must make sure to inherit
 /// from VPDef before VPValue.
 class VPDef {
-  friend class VPValue;
   friend class VPRecipeValue;
-
-  /// Subclass identifier (for isa/dyn_cast).
-  const unsigned char SubclassID;
 
   /// The VPValues defined by this VPDef.
   TinyPtrVector<VPRecipeValue *> DefinedValues;
 
   /// Add \p V as a defined value by this VPDef.
   void addDefinedValue(VPRecipeValue *V) {
-    assert(V->Def == this &&
+    assert(V->isDefinedBy(this) &&
            "can only add VPValue already linked with this VPDef");
     DefinedValues.push_back(V);
   }
@@ -349,7 +445,8 @@ class VPDef {
   /// Remove \p V from the values defined by this VPDef. \p V must be a defined
   /// value of this VPDef.
   void removeDefinedValue(VPRecipeValue *V) {
-    assert(V->Def == this && "can only remove VPValue linked with this VPDef");
+    assert(V->isDefinedBy(this) &&
+           "can only remove VPValue linked with this VPDef");
     assert(is_contained(DefinedValues, V) &&
            "VPValue to remove must be in DefinedValues");
     llvm::erase(DefinedValues, V);
@@ -357,63 +454,11 @@ class VPDef {
   }
 
 public:
-  /// An enumeration for keeping track of the concrete subclass of VPRecipeBase
-  /// that is actually instantiated. Values of this enumeration are kept in the
-  /// SubclassID field of the VPRecipeBase objects. They are used for concrete
-  /// type identification.
-  using VPRecipeTy = enum {
-    VPBranchOnMaskSC,
-    VPDerivedIVSC,
-    VPExpandSCEVSC,
-    VPExpressionSC,
-    VPIRInstructionSC,
-    VPInstructionSC,
-    VPInterleaveEVLSC,
-    VPInterleaveSC,
-    VPReductionEVLSC,
-    VPReductionSC,
-    VPReplicateSC,
-    VPScalarIVStepsSC,
-    VPVectorPointerSC,
-    VPVectorEndPointerSC,
-    VPWidenCallSC,
-    VPWidenCanonicalIVSC,
-    VPWidenCastSC,
-    VPWidenGEPSC,
-    VPWidenIntrinsicSC,
-    VPWidenLoadEVLSC,
-    VPWidenLoadSC,
-    VPWidenStoreEVLSC,
-    VPWidenStoreSC,
-    VPWidenSC,
-    VPWidenSelectSC,
-    VPBlendSC,
-    VPHistogramSC,
-    // START: Phi-like recipes. Need to be kept together.
-    VPWidenPHISC,
-    VPPredInstPHISC,
-    // START: SubclassID for recipes that inherit VPHeaderPHIRecipe.
-    // VPHeaderPHIRecipe need to be kept together.
-    VPCanonicalIVPHISC,
-    VPActiveLaneMaskPHISC,
-    VPEVLBasedIVPHISC,
-    VPFirstOrderRecurrencePHISC,
-    VPWidenIntOrFpInductionSC,
-    VPWidenPointerInductionSC,
-    VPReductionPHISC,
-    // END: SubclassID for recipes that inherit VPHeaderPHIRecipe
-    // END: Phi-like recipes
-    VPFirstPHISC = VPWidenPHISC,
-    VPFirstHeaderPHISC = VPCanonicalIVPHISC,
-    VPLastHeaderPHISC = VPReductionPHISC,
-    VPLastPHISC = VPReductionPHISC,
-  };
-
-  VPDef(const unsigned char SC) : SubclassID(SC) {}
+  VPDef() {}
 
   virtual ~VPDef() {
     for (VPRecipeValue *D : to_vector(DefinedValues)) {
-      assert(D->Def == this &&
+      assert(D->isDefinedBy(this) &&
              "all defined VPValues should point to the containing VPDef");
       assert(D->getNumUsers() == 0 &&
              "all defined VPValues should have no more users");
@@ -451,21 +496,13 @@ public:
 
   /// Returns the number of values defined by the VPDef.
   unsigned getNumDefinedValues() const { return DefinedValues.size(); }
-
-  /// \return an ID for the concrete type of this object.
-  /// This is used to implement the classof checks. This should not be used
-  /// for any other purpose, as the values may change as LLVM evolves.
-  unsigned getVPDefID() const { return SubclassID; }
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Dump the VPDef to stderr (for debugging).
-  LLVM_ABI_FOR_TEST void dump() const;
-
-  /// Each concrete VPDef prints itself.
-  virtual void print(raw_ostream &O, const Twine &Indent,
-                     VPSlotTracker &SlotTracker) const = 0;
-#endif
 };
+
+inline void VPValue::assertNotMaterialized() const {
+  assert((!isa<VPSymbolicValue>(this) ||
+          !cast<VPSymbolicValue>(this)->isMaterialized()) &&
+         "accessing materialized symbolic value");
+}
 
 } // namespace llvm
 

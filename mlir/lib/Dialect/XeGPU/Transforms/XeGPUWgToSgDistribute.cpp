@@ -19,6 +19,7 @@
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
+#include "mlir/Dialect/XeGPU/Transforms/XeGPULayoutImpl.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include <optional>
@@ -51,32 +52,23 @@ getSgShapeAndCount(ArrayRef<int64_t> shape,
                    xegpu::DistributeLayoutAttr layout) {
   int count = 1;
   SmallVector<int64_t> sgShape(shape);
-  if (layout && layout.isForWorkgroup()) {
-    SmallVector<int64_t> sgLayout = layout.getEffectiveSgLayoutAsInt();
-    if (!layout.getEffectiveSgDataAsInt().empty())
-      sgShape = layout.getEffectiveSgDataAsInt();
-    else if (auto maybeDerivedSgData = computeShapeRatio(shape, sgLayout))
-      sgShape = *maybeDerivedSgData;
-    SmallVector<int64_t> distUnit = computeElementwiseMul(sgLayout, sgShape);
-    // Clamp distUnit to the original shape to handle cases where data is
-    // shared among subgroups, which may cause distUnit to exceed the original
-    // shape.
-    for (size_t i = 0; i < distUnit.size(); ++i)
-      distUnit[i] = std::min(shape[i], distUnit[i]);
-    count = computeProduct(shape) / computeProduct(distUnit);
-  }
-  return std::make_pair(sgShape, count);
+  auto distributedShape = layout.computeDistributedShape(
+      SmallVector<int64_t>(shape.begin(), shape.end()));
+  if (failed(distributedShape))
+    return std::make_pair(sgShape, count);
+  auto sgData = layout.getEffectiveSgDataAsInt();
+  count = computeProduct(distributedShape.value()) / computeProduct(sgData);
+  return std::make_pair(sgData, count);
 }
 
 /// Utility helper for deriving a list of offsets for each sub-TensorDescs
 /// or sub-MemDescs to be accessed by current subgroup (sgId) based on the
 /// associated distribute layout attribute, the shape, subgroup id and the
 /// original offsets of the op
-template <
-    typename OpType,
-    typename = std::enable_if_t<llvm::is_one_of<
-        OpType, xegpu::CreateNdDescOp, xegpu::LoadNdOp, xegpu::StoreNdOp,
-        xegpu::PrefetchNdOp, xegpu::LoadMatrixOp, xegpu::StoreMatrixOp>::value>>
+template <typename OpType,
+          typename = std::enable_if_t<llvm::is_one_of<
+              OpType, xegpu::LoadNdOp, xegpu::StoreNdOp, xegpu::PrefetchNdOp,
+              xegpu::LoadMatrixOp, xegpu::StoreMatrixOp>::value>>
 static LogicalResult
 genOffsetsList(ConversionPatternRewriter &rewriter, OpType op,
                SmallVector<SmallVector<OpFoldResult>> &offsetsList) {
@@ -143,13 +135,13 @@ genOffsetsList(ConversionPatternRewriter &rewriter, OpType op,
 /// from a workgroup descriptor. It replaces the offsets and sizes with
 /// appropriate values for the subgroup.
 /// It uses round-robin assignment to distribute the work to the subgroups.
-/// Following create_nd_desc operation:,
-///    %tdesc = xegpu.create_nd_tdesc %src[0, 0] : memref<24x24xf32>
+/// Following create_nd_desc operation:
+///    %tdesc = xegpu.create_nd_tdesc %src : memref<24x24xf32>
 ///       -> !xegpu.tensor_desc<24x24xf32, #xegpu.layout<sg_layout = [4, 4],
 ///           sg_data = [2, 2], lane_layout = [2, 2], lane_data = [1, 1]>>
 /// is converted to 9 subgroup level operations based on the sg_layout &
 /// sg_data:
-///    %tdesc = xegpu.create_nd_tdesc %src[off1, off2] : memref<24x24xf32> ->
+///    %tdesc = xegpu.create_nd_tdesc %src : memref<24x24xf32> ->
 ///           !xegpu.tensor_desc<2x2xf32, #xegpu.layout<lane_layout = [2, 2],
 ///           lane_data = [1, 1]>>
 ///
@@ -184,53 +176,14 @@ genOffsetsList(ConversionPatternRewriter &rewriter, OpType op,
 /// pattern and all the other ops just follow.
 /// TODO: Decouple the distribution logic from WgToSgCreateNdOp for all the
 /// ops in the pass.
+// This pattern transforms the CreateNdDescOp to create a
+// subgroup descriptor from a workgroup descriptor.
 struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
   using OpConversionPattern<xegpu::CreateNdDescOp>::OpConversionPattern;
 
   LogicalResult
   matchAndRewrite(xegpu::CreateNdDescOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    SmallVector<SmallVector<OpFoldResult>> offsetsList;
-    if (failed(genOffsetsList(rewriter, op, offsetsList)))
-      return failure();
-
-    MLIRContext *ctx = op.getContext();
-    xegpu::TensorDescType tdescTy = op.getType();
-    ArrayRef<int64_t> wgShape = tdescTy.getShape();
-    Type elemTy = tdescTy.getElementType();
-    xegpu::DistributeLayoutAttr layout = tdescTy.getLayoutAttr();
-    SmallVector<int64_t> sgShape = getSgShapeAndCount(wgShape, layout).first;
-    auto newTdescTy =
-        xegpu::TensorDescType::get(ctx, sgShape, elemTy, tdescTy.getEncoding(),
-                                   layout.dropSgLayoutAndData());
-
-    SmallVector<Value> newOps;
-    for (auto offsets : offsetsList) {
-      auto newOp = xegpu::CreateNdDescOp::create(
-          rewriter, op.getLoc(), newTdescTy, op.getSource(), offsets,
-          op.getMixedSizes(), op.getMixedStrides());
-
-      newOps.push_back(newOp);
-    }
-    rewriter.replaceOpWithMultiple(op, {newOps});
-
-    return success();
-  }
-};
-
-// This pattern transforms the CreateNdDescOp without offsets to create a
-// subgroup descriptor from a workgroup descriptor
-struct WgToSgCreateNdOpNoOffset
-    : public OpConversionPattern<xegpu::CreateNdDescOp> {
-  using OpConversionPattern<xegpu::CreateNdDescOp>::OpConversionPattern;
-
-  LogicalResult
-  matchAndRewrite(xegpu::CreateNdDescOp op, OneToNOpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-
-    // Check no offsets are specified.
-    if (!op.getMixedOffsets().empty())
-      return failure();
 
     Location loc = op.getLoc();
     MLIRContext *ctx = op.getContext();
@@ -267,51 +220,6 @@ struct WgToSgLoadNdOp : public OpConversionPattern<xegpu::LoadNdOp> {
   LogicalResult
   matchAndRewrite(xegpu::LoadNdOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (!op.getMixedOffsets().empty())
-      return failure();
-
-    SmallVector<Value> newLoadOps;
-    for (auto src : adaptor.getTensorDesc()) {
-      xegpu::TensorDescType tdescTy =
-          dyn_cast<xegpu::TensorDescType>(src.getType());
-      ArrayRef<int64_t> srcShape = tdescTy.getShape();
-      VectorType newResTy = VectorType::get(srcShape, tdescTy.getElementType());
-      auto newLoadOp = xegpu::LoadNdOp::create(rewriter, op.getLoc(), newResTy,
-                                               src, op->getAttrs());
-      newLoadOps.push_back(newLoadOp);
-    }
-    rewriter.replaceOpWithMultiple(op, {newLoadOps});
-    return mlir::success();
-  }
-};
-
-/// This pattern transforms the StoreNdOp to store to a subgroup descriptor
-/// It creates a StoreNdOp op to store the updated values to the new subgroup
-/// src tensor descriptors.
-struct WgToSgStoreNdOp : public OpConversionPattern<xegpu::StoreNdOp> {
-  using OpConversionPattern<xegpu::StoreNdOp>::OpConversionPattern;
-  LogicalResult
-  matchAndRewrite(xegpu::StoreNdOp op, OneToNOpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    if (!op.getMixedOffsets().empty())
-      return failure();
-
-    for (auto [v, t] : llvm::zip(adaptor.getValue(), adaptor.getTensorDesc()))
-      xegpu::StoreNdOp::create(rewriter, op.getLoc(), v, t, op.getL1HintAttr(),
-                               op.getL2HintAttr(), op.getL3HintAttr());
-
-    rewriter.eraseOp(op);
-    return success();
-  }
-};
-
-// This pattern transforms the LoadNdOp with explicit offsets to load
-// subgroup data.
-struct WgToSgLoadNdOpWithOffset : public OpConversionPattern<xegpu::LoadNdOp> {
-  using OpConversionPattern<xegpu::LoadNdOp>::OpConversionPattern;
-  LogicalResult
-  matchAndRewrite(xegpu::LoadNdOp op, OneToNOpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
 
     SmallVector<SmallVector<OpFoldResult>> offsetsList;
     if (failed(genOffsetsList(rewriter, op, offsetsList)))
@@ -338,10 +246,8 @@ struct WgToSgLoadNdOpWithOffset : public OpConversionPattern<xegpu::LoadNdOp> {
   }
 };
 
-// This pattern transforms the StoreNdOp with explicit offsets to store
-// subgroup data.
-struct WgToSgStoreNdOpWithOffset
-    : public OpConversionPattern<xegpu::StoreNdOp> {
+/// This pattern transforms the StoreNdOp to store subgroup data.
+struct WgToSgStoreNdOp : public OpConversionPattern<xegpu::StoreNdOp> {
   using OpConversionPattern<xegpu::StoreNdOp>::OpConversionPattern;
   LogicalResult
   matchAndRewrite(xegpu::StoreNdOp op, OneToNOpAdaptor adaptor,
@@ -365,10 +271,8 @@ struct WgToSgStoreNdOpWithOffset
   }
 };
 
-// This pattern transforms the PrefetchNdOp with explicit offsets to prefetch
-// subgroup data.
-struct WgToSgPrefetchNdOpWithOffset
-    : public OpConversionPattern<xegpu::PrefetchNdOp> {
+/// This pattern transforms the PrefetchNdOp to prefetch subgroup data.
+struct WgToSgPrefetchNdOp : public OpConversionPattern<xegpu::PrefetchNdOp> {
   using OpConversionPattern<xegpu::PrefetchNdOp>::OpConversionPattern;
   LogicalResult
   matchAndRewrite(xegpu::PrefetchNdOp op, OneToNOpAdaptor adaptor,
@@ -388,28 +292,6 @@ struct WgToSgPrefetchNdOpWithOffset
     }
     rewriter.eraseOp(op);
 
-    return success();
-  }
-};
-
-/// This pattern transforms the UpdateNdOffsetOp to update the offsets of a
-/// subgroup descriptor. It creates an UpdateNdOffsetOp op to update the
-/// offsets of the new subgroup src tensor descriptors.
-struct WgToSgUpdateNdOffsetOp
-    : public OpConversionPattern<xegpu::UpdateNdOffsetOp> {
-  using OpConversionPattern<xegpu::UpdateNdOffsetOp>::OpConversionPattern;
-  LogicalResult
-  matchAndRewrite(xegpu::UpdateNdOffsetOp op, OneToNOpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    llvm::SmallVector<Value> newUpdateTileOffsetOps;
-    for (auto tDesc : adaptor.getTensorDesc()) {
-      auto newUpdateTileOffsetOp = xegpu::UpdateNdOffsetOp::create(
-          rewriter, op.getLoc(), tDesc.getType(), tDesc, op.getOffsets(),
-          op.getConstOffsets());
-      newUpdateTileOffsetOps.push_back(newUpdateTileOffsetOp);
-    }
-
-    rewriter.replaceOpWithMultiple(op, {newUpdateTileOffsetOps});
     return success();
   }
 };
@@ -461,25 +343,6 @@ struct WgToSgDpasOp : public OpConversionPattern<xegpu::DpasOp> {
   }
 };
 
-/// This pattern transforms the PrefetchNdOp to prefetch the subgroup data.
-struct WgToSgPrefetchNdOp : public OpConversionPattern<xegpu::PrefetchNdOp> {
-  using OpConversionPattern<xegpu::PrefetchNdOp>::OpConversionPattern;
-  LogicalResult
-  matchAndRewrite(xegpu::PrefetchNdOp op, OneToNOpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-
-    int64_t offsetSize = static_cast<int64_t>(op.getOffsets().size());
-    if ((offsetSize != 0) || op.getConstOffsetsAttr())
-      return failure();
-
-    for (auto src : adaptor.getTensorDesc())
-      xegpu::PrefetchNdOp::create(rewriter, op.getLoc(), TypeRange(), src,
-                                  op->getAttrs());
-    rewriter.eraseOp(op);
-    return success();
-  }
-};
-
 /// This pattern transforms vector.broadcast ops to work at subgroup level.
 struct WgToSgVectorBroadcastOp
     : public OpConversionPattern<vector::BroadcastOp> {
@@ -497,21 +360,22 @@ struct WgToSgVectorBroadcastOp
     if (!layout || !layout.isForWorkgroup())
       return failure();
 
-    SmallVector<int64_t> sgShape = getSgShapeAndCount(wgShape, layout).first;
+    SmallVector<int64_t> sgShape;
+    int count;
+    std::tie(sgShape, count) = getSgShapeAndCount(wgShape, layout);
     VectorType newResultType =
         VectorType::get(sgShape, resultType.getElementType());
 
-    if (!xegpu::XeGPUDialect::isEvenlyDistributable(wgShape, layout))
-      return failure();
-
     SmallVector<Value> newBroadcastOps;
-    for (auto operand : adaptor.getOperands().front()) {
-      auto newBroadcast = vector::BroadcastOp::create(rewriter, op.getLoc(),
-                                                      newResultType, operand);
-      xegpu::setTemporaryLayout(newBroadcast->getResult(0),
-                                layout.dropSgLayoutAndData());
+    auto distSource = adaptor.getOperands().front();
+    int numDistributions = count / distSource.size();
+    for (int i = 0; i < numDistributions; ++i) {
+      for (auto operand : distSource) {
+        auto newBroadcast = vector::BroadcastOp::create(rewriter, op.getLoc(),
+                                                        newResultType, operand);
 
-      newBroadcastOps.push_back(newBroadcast.getResult());
+        newBroadcastOps.push_back(newBroadcast.getResult());
+      }
     }
     rewriter.replaceOpWithMultiple(op, {newBroadcastOps});
     return success();
@@ -561,19 +425,9 @@ struct WgToSgElementwiseOp : public ConversionPattern {
       OperationState state(op->getLoc(), op->getName());
       state.addOperands(opOperands);
       state.addTypes(newResultType);
-      // Copy all attributes, but update "layout_result_0" to drop
-      // sgLayout/sgData
-      for (auto attr : op->getAttrs()) {
-        if (auto layout =
-                dyn_cast<xegpu::DistributeLayoutAttr>(attr.getValue())) {
-          if (!layout.getEffectiveLaneLayoutAsInt().empty() ||
-              !layout.getEffectiveInstDataAsInt().empty())
-            state.addAttribute(attr.getName(), layout.dropSgLayoutAndData());
-        } else {
-          state.addAttribute(attr.getName(), attr.getValue());
-        }
-      }
+      state.addAttributes(op->getAttrs());
       Operation *newOp = rewriter.create(state);
+      xegpu::removeLayoutAttrs(newOp);
       newResults.push_back(newOp->getResult(0));
     }
 
@@ -611,44 +465,118 @@ struct WgToSgElementwiseOp : public ConversionPattern {
 struct WgToSgConvertLayoutOp
     : public OpConversionPattern<xegpu::ConvertLayoutOp> {
   using OpConversionPattern<xegpu::ConvertLayoutOp>::OpConversionPattern;
+
   LogicalResult
   matchAndRewrite(xegpu::ConvertLayoutOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    // TODO: currently, we only support LayoutAttr
-    auto input = dyn_cast<xegpu::LayoutAttr>(op.getInputLayout());
-    auto target = dyn_cast<xegpu::LayoutAttr>(op.getTargetLayout());
+    Location loc = op.getLoc();
+    auto inputLayout = op.getInputLayout();
+    auto targetLayout = op.getTargetLayout();
 
-    if (!input || !target || !input.isForWorkgroup() ||
-        !target.isForWorkgroup())
+    if (!inputLayout || !targetLayout || !inputLayout.isForWorkgroup() ||
+        !targetLayout.isForWorkgroup())
       return rewriter.notifyMatchFailure(
           op, "Input and target layouts must have subgroup layout");
 
-    DenseI32ArrayAttr inputSgLayout = input.getSgLayout();
-    DenseI32ArrayAttr inputSgData = input.getSgData();
-    DenseI32ArrayAttr inputOrder = input.getOrder();
-    DenseI32ArrayAttr targetSgLayout = target.getSgLayout();
-    DenseI32ArrayAttr targetSgData = target.getSgData();
-    DenseI32ArrayAttr targetOrder = target.getOrder();
+    Type resultType = op.getResult().getType();
+    if (resultType.isIntOrFloat()) {
+      rewriter.replaceOp(op, op.getSource());
+      assert(!inputLayout.dropSgLayoutAndData() &&
+             !targetLayout.dropSgLayoutAndData() &&
+             "unexpected layout attributes for scalar type");
+      return success();
+    }
 
-    // TODO: currently we only support for optimal case, where input and
-    // output has the same sg_layout and sg_data, so SLM is not involved.
-    if (inputSgLayout != targetSgLayout || inputSgData != targetSgData ||
-        inputOrder != targetOrder)
+    ArrayRef<int64_t> wgShape = cast<VectorType>(resultType).getShape();
+    SmallVector<int64_t> inputSgLayout =
+        inputLayout.getEffectiveSgLayoutAsInt();
+    SmallVector<int64_t> inputSgData = inputLayout.getEffectiveSgDataAsInt();
+    SmallVector<int64_t> targetSgLayout =
+        targetLayout.getEffectiveSgLayoutAsInt();
+    SmallVector<int64_t> targetSgData = targetLayout.getEffectiveSgDataAsInt();
+
+    // Fast path: if sg_layout and sg_data are identical, no SLM needed
+    SmallVector<int64_t> wgShapeVec(wgShape.begin(), wgShape.end());
+    if (inputLayout.isCompatibleWith(targetLayout, wgShapeVec,
+                                     xegpu::LayoutKind::Subgroup)) {
+      inputLayout = inputLayout.dropSgLayoutAndData();
+      targetLayout = targetLayout.dropSgLayoutAndData();
+
+      SmallVector<Value> newOps(adaptor.getSource());
+      if (inputLayout && targetLayout) {
+        for (auto [i, src] : llvm::enumerate(adaptor.getSource())) {
+          auto newOp = xegpu::ConvertLayoutOp::create(
+              rewriter, loc, src.getType(), src, inputLayout, targetLayout);
+          newOps[i] = newOp;
+        }
+      }
+      rewriter.replaceOpWithMultiple(op, {newOps});
+      return success();
+    }
+
+    // SLM path: layouts differ, need cross-subgroup data redistribution
+    Type elemTy = cast<VectorType>(op.getSource().getType()).getElementType();
+
+    SmallVector<int64_t> slmShape = llvm::to_vector(wgShape);
+
+    // Calculate SLM size requirements
+    auto bitWidth = elemTy.getIntOrFloatBitWidth();
+    auto bytesPerElement = bitWidth / 8;
+    auto slmSize = computeProduct(slmShape) * bytesPerElement;
+
+    // Allocate SLM
+    auto slmTy = MemRefType::get({slmSize}, rewriter.getI8Type(), {}, 3);
+    auto slm = memref::AllocaOp::create(rewriter, loc, slmTy);
+
+    auto memDescType = xegpu::MemDescType::get(rewriter.getContext(), slmShape,
+                                               elemTy, nullptr);
+    auto memDesc =
+        xegpu::CreateMemDescOp::create(rewriter, loc, memDescType, slm);
+
+    auto sgId = gpu::SubgroupIdOp::create(rewriter, loc,
+                                          rewriter.getIndexType(), nullptr);
+
+    // STORE PHASE: Each subgroup stores in SLM using input layout
+    auto storeCoords = inputLayout.computeDistributedCoords(
+        rewriter, loc, sgId.getResult(), wgShape);
+    if (failed(storeCoords))
       return failure();
 
-    input = input.dropSgLayoutAndData();
-    target = target.dropSgLayoutAndData();
-
-    SmallVector<Value> newOps(adaptor.getSource());
-    if (input && target) {
-      // keep the ConvertLayoutOp for rest fields, e.g., inst_data.
-      for (auto [i, src] : llvm::enumerate(adaptor.getSource())) {
-        auto newOp = xegpu::ConvertLayoutOp::create(
-            rewriter, op.getLoc(), src.getType(), src, input, target);
-        newOps[i] = newOp;
+    // Store to SLM
+    for (auto [src, coords] : llvm::zip(adaptor.getSource(), *storeCoords)) {
+      SmallVector<OpFoldResult> storeMatrixOffsets;
+      for (Value coord : coords) {
+        storeMatrixOffsets.push_back(coord);
       }
+      xegpu::StoreMatrixOp::create(rewriter, loc, src, memDesc.getResult(),
+                                   storeMatrixOffsets, nullptr /*layout*/);
     }
-    rewriter.replaceOpWithMultiple(op, {newOps});
+
+    gpu::BarrierOp::create(rewriter, loc);
+
+    // LOAD PHASE: Each target subgroup loads from SLM using target layout
+    auto loadCoords = targetLayout.computeDistributedCoords(
+        rewriter, loc, sgId.getResult(), wgShape);
+    if (failed(loadCoords))
+      return failure();
+
+    VectorType loadType = VectorType::get(targetSgData, elemTy);
+
+    // Load vectors from SLM
+    SmallVector<Value> finalResults;
+    for (auto coords : *loadCoords) {
+      SmallVector<OpFoldResult> loadMatrixOffsets;
+      for (Value coord : coords) {
+        loadMatrixOffsets.push_back(coord);
+      }
+      auto loadOp = xegpu::LoadMatrixOp::create(
+          rewriter, loc, loadType, memDesc.getResult(), loadMatrixOffsets,
+          targetLayout.dropSgLayoutAndData());
+
+      finalResults.push_back(loadOp.getResult());
+    }
+
+    rewriter.replaceOpWithMultiple(op, {finalResults});
     return success();
   }
 };
@@ -755,24 +683,21 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
     Location loc = op.getLoc();
     auto eltType = vecType.getElementType();
 
-    auto setLayout = [&](Value val) {
-      xegpu::setTemporaryLayout(llvm::dyn_cast<OpResult>(val),
-                                layout.dropSgLayoutAndData());
-    };
-
     if (vecAttr.isSplat()) {
       // Splat: single value for all subgroups
       Attribute singleVal = vecAttr.getSplatValue<Attribute>();
       auto sgAttr = DenseElementsAttr::get(newType, singleVal);
-      auto cstOp = arith::ConstantOp::create(rewriter, loc, newType, sgAttr);
-      setLayout(cstOp->getResult(0));
-      rewriter.replaceOp(op, cstOp);
+      SmallVector<Value> newConstOps;
+      for (int i = 0; i < count; ++i) {
+        auto cstOp = arith::ConstantOp::create(rewriter, loc, newType, sgAttr);
+        newConstOps.push_back(cstOp);
+      }
+      rewriter.replaceOpWithMultiple(op, {newConstOps});
       return success();
     } else if (sgShape == wgShape) { // if the entire vector is shared by all
                                      // subgroups, don't distribute
       auto newConstOp =
           arith::ConstantOp::create(rewriter, op.getLoc(), vecType, vecAttr);
-      setLayout(newConstOp->getResult(0));
       rewriter.replaceOp(op, newConstOp);
       return success();
     } else {
@@ -874,9 +799,6 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
             rewriter, loc, baseConstVec.getType(), mulOffset);
         auto finalConst =
             arith::AddIOp::create(rewriter, loc, baseConstVec, bcastOffset);
-        setLayout(baseConstVec);
-        setLayout(bcastOffset);
-        setLayout(finalConst);
         newConstOps.push_back(finalConst);
       }
       rewriter.replaceOpWithMultiple(op, {newConstOps});
@@ -887,15 +809,11 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
 
 // This pattern transforms the LoadGatherOp with explicit offsets to load
 // subgroup data
-struct WgToSgLoadGatherOpWithOffset
-    : public OpConversionPattern<xegpu::LoadGatherOp> {
+struct WgToSgLoadGatherOp : public OpConversionPattern<xegpu::LoadGatherOp> {
   using OpConversionPattern<xegpu::LoadGatherOp>::OpConversionPattern;
   LogicalResult
   matchAndRewrite(xegpu::LoadGatherOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-
-    if (!op.getOffsets())
-      return failure();
 
     Location loc = op.getLoc();
     VectorType resultType = dyn_cast<VectorType>(op.getResult().getType());
@@ -932,7 +850,6 @@ struct WgToSgLoadGatherOpWithOffset
           rewriter, loc, newTy, op.getSource(), offsets, mask, chunkSizeAttr,
           op.getL1HintAttr(), op.getL2HintAttr(), op.getL3HintAttr(),
           newLayout);
-      newLoadOp.setAnchorLayout(newLayout);
       newLoadOps.push_back(newLoadOp);
     }
     rewriter.replaceOpWithMultiple(op, {newLoadOps});
@@ -942,15 +859,12 @@ struct WgToSgLoadGatherOpWithOffset
 
 // This pattern transforms the StoreScatterOp with explicit offsets to store
 // subgroup data
-struct WgToSgStoreScatterOpWithOffset
+struct WgToSgStoreScatterOp
     : public OpConversionPattern<xegpu::StoreScatterOp> {
   using OpConversionPattern<xegpu::StoreScatterOp>::OpConversionPattern;
   LogicalResult
   matchAndRewrite(xegpu::StoreScatterOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-
-    if (!op.getOffsets())
-      return failure();
 
     Location loc = op.getLoc();
     VectorType valueType = dyn_cast<VectorType>(op.getValue().getType());
@@ -978,17 +892,10 @@ struct WgToSgStoreScatterOpWithOffset
     auto chunkSizeAttr = rewriter.getI64IntegerAttr(chunkSize);
     for (auto [val, offs, mask] : llvm::zip(
              adaptor.getValue(), adaptor.getOffsets(), adaptor.getMask())) {
-      auto store = xegpu::StoreScatterOp::create(
-          rewriter, loc, val, op.getDest(), offs, mask, chunkSizeAttr,
-          op.getL1HintAttr(), op.getL2HintAttr(), op.getL3HintAttr(),
-          layout.dropSgLayoutAndData());
-      // Update the layout attribute to drop sg_layout and sg_data.
-      for (OpOperand &operand : store->getOpOperands()) {
-        // Skip for operand one (memref)
-        if (operand.getOperandNumber() == 1)
-          continue;
-        xegpu::setTemporaryLayout(operand, layout.dropSgLayoutAndData());
-      }
+      xegpu::StoreScatterOp::create(rewriter, loc, val, op.getDest(), offs,
+                                    mask, chunkSizeAttr, op.getL1HintAttr(),
+                                    op.getL2HintAttr(), op.getL3HintAttr(),
+                                    layout.dropSgLayoutAndData());
     }
     rewriter.eraseOp(op);
     return success();
@@ -1080,12 +987,6 @@ struct WgToSgVectorStepOp : public OpConversionPattern<vector::StepOp> {
           vector::BroadcastOp::create(rewriter, loc, newTy, offsets[0]);
       auto finalSteps =
           arith::AddIOp::create(rewriter, loc, steps, bcastOffset);
-      xegpu::setTemporaryLayout(steps->getResult(0),
-                                layout.dropSgLayoutAndData());
-      xegpu::setTemporaryLayout(bcastOffset->getResult(0),
-                                layout.dropSgLayoutAndData());
-      xegpu::setTemporaryLayout(finalSteps->getResult(0),
-                                layout.dropSgLayoutAndData());
       newOps.push_back(finalSteps);
     }
 
@@ -1120,49 +1021,21 @@ struct WgToSgVectorShapeCastOp
       return failure();
 
     ArrayRef<int64_t> srcShape = srcType.getShape();
-    llvm::SetVector<int64_t> expandedUnitDims;
-
-    // Check if shapes only differ by expanding unit dimensions (like
-    // expand_dims)
-    auto checkOnlyExpandUnitDims = [&](ArrayRef<int64_t> src,
-                                       ArrayRef<int64_t> dst) -> bool {
-      // All unit dimensions in dst that don't appear in src are the expanded
-      // unit dimensions
-      size_t srcIdx = 0;
-      for (size_t dstIdx = 0; dstIdx < dst.size(); ++dstIdx)
-        if (srcIdx < src.size() && src[srcIdx] == dst[dstIdx])
-          srcIdx++;
-        else if (dst[dstIdx] == 1)
-          expandedUnitDims.insert(dstIdx);
-        else
-          return false;
-      return srcIdx == src.size();
-    };
 
     xegpu::DistributeLayoutAttr layoutToDistribute = layout;
-
-    if (checkOnlyExpandUnitDims(srcShape, wgShape)) {
+    SmallVector<int64_t> expandedUnitDims;
+    if (xegpu::matchUnitDimExpansion(srcShape, wgShape, expandedUnitDims)) {
       xegpu::DistributeLayoutAttr sourceLayout =
-          xegpu::getDistributeLayoutAttr(op.getSource());
-
-      auto usedByBroadcastOp = [](vector::ShapeCastOp op) {
-        return llvm::all_of(op.getResult().getUsers(), [](Operation *user) {
-          return isa<vector::BroadcastOp>(user);
-        });
-      };
-
-      if (!usedByBroadcastOp(op))
-        return rewriter.notifyMatchFailure(
-            op, "ShapeCast ops that expand unit dimensions and are used by "
-                "non-broadcast operations are not supported.");
+          xegpu::getTemporaryLayout(op->getOpOperand(0));
 
       if (!sourceLayout.isSliceOf(layout))
         return rewriter.notifyMatchFailure(
-            op, "The ShapeCast op only expands dimensions, the result layout "
-                "must be a slice of the input layout, or vice versa.");
-      layoutToDistribute = layoutToDistribute.setUnitDimData(expandedUnitDims);
-      layoutToDistribute =
-          layoutToDistribute.setUnitDimLayout(expandedUnitDims);
+            op, "The ShapeCast op only expands dimensions, the input layout "
+                "must be a slice of the result layout.");
+
+      assert(layoutToDistribute.isEqualTo(
+                 layoutToDistribute.setUnitDimData(expandedUnitDims)) &&
+             "The sg_data for unit dimensions should be set as 1");
     }
 
     SmallVector<int64_t> sgShape =
@@ -1174,8 +1047,6 @@ struct WgToSgVectorShapeCastOp
     for (auto src : adaptor.getSource()) {
       auto newShapeCast = vector::ShapeCastOp::create(rewriter, op.getLoc(),
                                                       newResultType, src);
-      xegpu::setTemporaryLayout(newShapeCast->getResult(0),
-                                layout.dropSgLayoutAndData());
       newShapeCastOps.push_back(newShapeCast.getResult());
     }
 
@@ -1184,11 +1055,38 @@ struct WgToSgVectorShapeCastOp
   }
 };
 
-/// Pattern for lowering vector.multi_reduction op to subgroup level.
-/// Current limitation: the sg_layout in the reduced dimension being 1
-/// so that reduction is local to subgroup & no cross-subgroup communication is
-/// needed.
-/// TODO: Add cases to handle more general situations which require SLM access.
+/// This pattern transforms vector.multi_dim_reduction operations from
+/// workgroup-level to subgroup-level execution with support for multiple
+/// reduction dimensions.
+///
+/// Steps include:
+/// 1. LOCAL REDUCTION :
+///    - Each subgroup performs local reduction on its data slice
+///    - Uses ZERO accumulator to avoid double-counting during cross-subgroup
+///    phase
+///
+/// 2. CROSS-SUBGROUP :
+///    - Determines if cross-subgroup reduction is needed (when sg_layout > 1 in
+///      reduction dims & sgData[reduction dims] < wgData[reduction dims])
+///    - If not needed, adds original accumulator and returns local results
+///
+/// 3. SHARED LOCAL MEMORY (SLM) PHASE (when cross-subgroup reduction needed):
+///    a) SLM Layout Design:
+///       - Rows: subgroups participating in reduction (product of sg_layout in
+///       reduction dims)
+///       - Cols: total result elements across non-reduction dimensions
+///
+///    b) Store Phase:
+///       - Each subgroup stores its local reduction result to SLM
+///       - Row offset: linearized index of subgroup in reduction dimensions
+///       - Col offset: linearized index of subgroup in non-reduction dimensions
+///
+///    c) Load and Final Reduction Phase:
+///       - Each subgroup loads a column of data (all reduction participants for
+///       its position)
+///       - Performs final reduction along the loaded dimension
+///       - Adds original accumulator to get final result
+///
 struct WgToSgMultiDimReductionOp
     : public OpConversionPattern<vector::MultiDimReductionOp> {
   using OpConversionPattern<vector::MultiDimReductionOp>::OpConversionPattern;
@@ -1196,12 +1094,16 @@ struct WgToSgMultiDimReductionOp
   LogicalResult
   matchAndRewrite(vector::MultiDimReductionOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    VectorType srcType = op.getSourceVectorType();
-    VectorType dstType = dyn_cast<VectorType>(op.getResult().getType());
-    if (!dstType)
-      return failure();
+    Location loc = op.getLoc();
 
-    auto srcShape = srcType.getShape();
+    VectorType srcType = op.getSourceVectorType();
+    Type resultTy = op.getResult().getType();
+    VectorType dstVecType = dyn_cast<VectorType>(resultTy);
+    bool isScalarResult = !dstVecType;
+
+    auto originalSrcShape = srcType.getShape();
+    Type elemTy = srcType.getElementType();
+
     xegpu::DistributeLayoutAttr layout =
         xegpu::getTemporaryLayout(dyn_cast<OpResult>(op.getResult()));
     if (!layout || !layout.isForWorkgroup())
@@ -1209,39 +1111,168 @@ struct WgToSgMultiDimReductionOp
 
     auto reductionDims = llvm::to_vector(op.getReductionDims());
 
-    SmallVector<int64_t> sgLayout = llvm::cast<xegpu::SliceAttr>(layout)
-                                        .getParent()
-                                        .getEffectiveSgLayoutAsInt();
-    SmallVector<int64_t> sgData = llvm::cast<xegpu::SliceAttr>(layout)
-                                      .getParent()
-                                      .getEffectiveSgDataAsInt();
+    // Get sg_layout and sg_data from the parent layout
+    SmallVector<int64_t> sgLayout;
+    SmallVector<int64_t> sgData;
+    xegpu::DistributeLayoutAttr parentLayout;
+    if (auto sliceAttr = dyn_cast<xegpu::SliceAttr>(layout)) {
+      parentLayout = sliceAttr.getParent();
+      sgLayout = parentLayout.getEffectiveSgLayoutAsInt();
+      sgData = parentLayout.getEffectiveSgDataAsInt();
+    } else
+      return rewriter.notifyMatchFailure(
+          op, "Reduction should have SliceAttr layout");
 
-    // Check that the sgLayout in the reduced dimension is 1 and
-    // each sg gets the entire slice to reduce.
+    // Step 1: perform local subgroup reductions with neutral accumulator
+    SmallVector<Value> localReductions;
+    auto sgSrcs = adaptor.getSource();
+    auto sgSrcType = dyn_cast<VectorType>(sgSrcs.front().getType());
+    SmallVector<int64_t> sgSrcShape(sgSrcType.getShape().begin(),
+                                    sgSrcType.getShape().end());
+
+    // Determine the SG-level destination type.
+    // For scalar results (all dims reduced), the sg result is also scalar.
+    // For vector results, compute the sg destination shape from layout.
+    Type sgDstType;
+    if (dstVecType) {
+      auto originalDstShape = dstVecType.getShape();
+      SmallVector<int64_t> sgDstShape =
+          getSgShapeAndCount(originalDstShape, layout).first;
+      sgDstType = VectorType::get(sgDstShape, elemTy);
+    } else {
+      sgDstType = elemTy;
+    }
+
+    for (auto sgSrc : sgSrcs) {
+      // Create neutral accumulator for local reduction
+      Value neutralLocalAcc = xegpu::createReductionNeutralValue(
+          rewriter, loc, sgDstType, op.getKind());
+      // Local reduction with neutral accumulator
+      auto localReduce = vector::MultiDimReductionOp::create(
+          rewriter, loc, sgDstType, op.getKind(), sgSrc, neutralLocalAcc,
+          reductionDims);
+      localReductions.push_back(localReduce.getResult());
+    }
+
+    // Check if cross-subgroup reduction is needed for any reduction dimension
+    SmallVector<int64_t> crossSgReductionDims;
+    for (int64_t reductionDim : reductionDims) {
+      bool needsCrossSubgroupReduction =
+          (sgLayout[reductionDim] > 1) &&
+          (sgData[reductionDim] < originalSrcShape[reductionDim]);
+
+      if (needsCrossSubgroupReduction) {
+        crossSgReductionDims.push_back(reductionDim);
+      }
+    }
+
+    // If no cross-subgroup reduction needed, add accumulator and return
+    if (crossSgReductionDims.empty()) {
+      SmallVector<Value> results;
+      for (auto localResult : localReductions) {
+        auto finalResult = vector::makeArithReduction(
+            rewriter, loc, op.getKind(), localResult, adaptor.getAcc()[0]);
+        results.push_back(finalResult);
+      }
+      rewriter.replaceOpWithMultiple(op, {results});
+      return success();
+    }
+
+    // Step 2: cross-subgroup reduction using SLM - allocating slm memory
+    auto slmStoreDataShape = sgSrcShape;
+    for (int64_t dim : reductionDims)
+      slmStoreDataShape[dim] = 1;
+    VectorType slmStoreDataType = VectorType::get(slmStoreDataShape, elemTy);
+    SmallVector<Value> slmStoreData;
+    for (auto localResult : localReductions) {
+      if (isScalarResult) {
+        // Scalar result: broadcast scalar to vector<1x...x1> for SLM store
+        slmStoreData.push_back(vector::BroadcastOp::create(
+            rewriter, loc, slmStoreDataType, localResult));
+      } else {
+        slmStoreData.push_back(vector::ShapeCastOp::create(
+            rewriter, loc, slmStoreDataType, localResult));
+      }
+    }
+    // for reduction dimension, SLM stores partial results from each subgroup
+    SmallVector<int64_t> slmShape(originalSrcShape.begin(),
+                                  originalSrcShape.end());
+    SmallVector<int> slmSgData(sgData.begin(), sgData.end());
+    SmallVector<int> slmSgLayout(sgLayout.begin(), sgLayout.end());
+    for (int dim : reductionDims) {
+      slmShape[dim] = sgLayout[dim];
+      slmSgData[dim] = 1;
+    }
+    xegpu::LayoutAttr slmStoreLayout =
+        xegpu::LayoutAttr::get(rewriter.getContext(), slmSgLayout, slmSgData);
+
+    // Allocate SLM
+    auto bitWidth = elemTy.getIntOrFloatBitWidth();
+    auto bytesPerElement = bitWidth / 8;
+    auto slmSize = computeProduct(slmShape) * bytesPerElement;
+    auto slmTy = MemRefType::get({slmSize}, rewriter.getI8Type(), {}, 3);
+    auto slm = memref::AllocaOp::create(rewriter, loc, slmTy);
+
+    auto memDescType = xegpu::MemDescType::get(rewriter.getContext(), slmShape,
+                                               elemTy, nullptr);
+    auto memDesc =
+        xegpu::CreateMemDescOp::create(rewriter, loc, memDescType, slm);
+
+    // Step 3: Store local results to SLM
+    auto sgId = gpu::SubgroupIdOp::create(rewriter, loc,
+                                          rewriter.getIndexType(), nullptr);
+
+    auto slmStoreCoords =
+        slmStoreLayout.computeDistributedCoords(rewriter, loc, sgId, slmShape);
+    if (failed(slmStoreCoords))
+      return failure();
+    for (auto [data, coord] : llvm::zip(slmStoreData, *slmStoreCoords)) {
+      SmallVector<OpFoldResult> coordOfr(coord.begin(), coord.end());
+      xegpu::StoreMatrixOp::create(rewriter, loc, data, memDesc.getResult(),
+                                   coordOfr,
+                                   /*layout=*/nullptr);
+    }
+
+    gpu::BarrierOp::create(rewriter, loc);
+
+    // Step 4: Load from SLM for final reduction
+    SmallVector<int64_t> slmLoadDataShape(sgSrcShape.begin(), sgSrcShape.end());
     for (int64_t dim : reductionDims) {
-      if (sgLayout[dim] != 1 || sgData[dim] != srcShape[dim])
-        return rewriter.notifyMatchFailure(
-            op,
-            "sgLayout in each reduced dimension must be 1 and sgData in the "
-            "reduced dim must match srcShape in that dim");
+      slmLoadDataShape[dim] = slmShape[dim];
+      slmSgData[dim] = slmShape[dim];
+    }
+    xegpu::LayoutAttr slmLoadLayout =
+        xegpu::LayoutAttr::get(rewriter.getContext(), slmSgLayout, slmSgData);
+    auto slmLoadCoords =
+        slmLoadLayout.computeDistributedCoords(rewriter, loc, sgId, slmShape);
+    if (failed(slmLoadCoords))
+      return failure();
+
+    VectorType slmLoadType = VectorType::get(slmLoadDataShape, elemTy);
+    SmallVector<Value> slmLoadData;
+    for (auto coord : *slmLoadCoords) {
+      SmallVector<OpFoldResult> coordOfr(coord.begin(), coord.end());
+      slmLoadData.push_back(xegpu::LoadMatrixOp::create(
+          rewriter, loc, slmLoadType, memDesc.getResult(), coordOfr,
+          /*layout=*/nullptr));
     }
 
-    SmallVector<int64_t> sgShape = getSgShapeAndCount(srcShape, layout).first;
+    // Step 5: Perform final reduction with neutral accumulator and add the
+    // original accumulator at the end
+    Value neutralFinalAcc = xegpu::createReductionNeutralValue(
+        rewriter, loc, sgDstType, op.getKind());
 
-    VectorType newDstType =
-        VectorType::get({sgShape}, dstType.getElementType());
-
-    SmallVector<Value> newReductions;
-    for (auto sgSrc : adaptor.getSource()) {
-      auto newOp = vector::MultiDimReductionOp::create(
-          rewriter, op.getLoc(), newDstType, op.getKind(), sgSrc,
-          adaptor.getAcc()[0], op.getReductionDims());
-      xegpu::setTemporaryLayout(newOp->getResult(0),
-                                layout.dropSgLayoutAndData());
-      newReductions.push_back(newOp.getResult());
+    SmallVector<Value> finalResults;
+    for (size_t i = 0; i < slmLoadData.size(); ++i) {
+      auto loaded = slmLoadData[i];
+      auto finalReduce = vector::MultiDimReductionOp::create(
+          rewriter, loc, sgDstType, op.getKind(), loaded, neutralFinalAcc,
+          reductionDims);
+      finalResults.push_back(vector::makeArithReduction(
+          rewriter, loc, op.getKind(), finalReduce.getResult(),
+          adaptor.getAcc()[i]));
     }
-
-    rewriter.replaceOpWithMultiple(op, {newReductions});
+    rewriter.replaceOpWithMultiple(op, {finalResults});
     return success();
   }
 };
@@ -1270,13 +1301,6 @@ struct WgToSgVectorTransposeOp
     SmallVector<int64_t> sourceSgLayout =
         sourceLayout.getEffectiveSgLayoutAsInt();
     SmallVector<int64_t> resultSgLayout = layout.getEffectiveSgLayoutAsInt();
-    DenseI32ArrayAttr sourceOrder = sourceLayout.getOrder();
-    DenseI32ArrayAttr resultOrder = layout.getOrder();
-
-    if (!sourceOrder || !resultOrder) {
-      return rewriter.notifyMatchFailure(
-          op, "Both source and result must have order attributes");
-    }
 
     ArrayRef<int64_t> permutation = op.getPermutation();
     size_t permutationSize = permutation.size();
@@ -1288,7 +1312,8 @@ struct WgToSgVectorTransposeOp
 
     // Check that sgLayout, sgData & order are properly transposed for source
     // and result
-    if (!layout.isTransposeOf(sourceLayout, permutation))
+    if (!layout.isTransposeOf(sourceLayout, permutation,
+                              xegpu::LayoutKind::Subgroup))
       return rewriter.notifyMatchFailure(
           op, "Result layout is not a valid transpose of source layout "
               "according to permutation");
@@ -1296,15 +1321,13 @@ struct WgToSgVectorTransposeOp
     SmallVector<int64_t> sgShape = getSgShapeAndCount(wgShape, layout).first;
     VectorType newResultType =
         VectorType::get(sgShape, resultType.getElementType());
+
     SmallVector<Value> newTransposeOps;
     for (auto src : adaptor.getVector()) {
       auto newTranspose = vector::TransposeOp::create(
           rewriter, op.getLoc(), newResultType, src, permutation);
-      xegpu::setTemporaryLayout(newTranspose->getResult(0),
-                                layout.dropSgLayoutAndData());
       newTransposeOps.push_back(newTranspose.getResult());
     }
-
     rewriter.replaceOpWithMultiple(op, {newTransposeOps});
     return success();
   }
@@ -1370,8 +1393,6 @@ struct WgToSgVectorMaskOp : public OpConversionPattern<MaskOpType> {
 
       auto newCreateMaskOp =
           vector::CreateMaskOp::create(rewriter, loc, resultType, maskOperands);
-      xegpu::setTemporaryLayout(newCreateMaskOp->getResult(0),
-                                layout.dropSgLayoutAndData());
       newCreateMaskOps.push_back(newCreateMaskOp.getResult());
     }
 
@@ -1387,18 +1408,15 @@ using WgToSgVectorCreateMaskOp = WgToSgVectorMaskOp<vector::CreateMaskOp>;
 namespace mlir {
 namespace xegpu {
 void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns) {
-  patterns
-      .add<WgToSgCreateNdOp, WgToSgCreateNdOpNoOffset, WgToSgLoadNdOp,
-           WgToSgLoadNdOpWithOffset, WgToSgStoreNdOp, WgToSgStoreNdOpWithOffset,
-           WgToSgUpdateNdOffsetOp, WgToSgDpasOp, WgToSgPrefetchNdOp,
-           WgToSgPrefetchNdOpWithOffset, UnrealizedConversionCastOpPattern,
-           WgToSgElementwiseOp, WgToSgVectorBroadcastOp, WgToSgConvertLayoutOp,
-           WgToSgArithConstantOp, WgToSgLoadGatherOpWithOffset,
-           WgToSgStoreScatterOpWithOffset, WgToSgLoadMatrixOp,
-           WgToSgStoreMatrixOp, WgToSgVectorStepOp, WgToSgVectorShapeCastOp,
-           WgToSgMultiDimReductionOp, WgToSgVectorTransposeOp,
-           WgToSgVectorConstantMaskOp, WgToSgVectorCreateMaskOp>(
-          patterns.getContext());
+  patterns.add<WgToSgCreateNdOp, WgToSgLoadNdOp, WgToSgStoreNdOp, WgToSgDpasOp,
+               WgToSgPrefetchNdOp, UnrealizedConversionCastOpPattern,
+               WgToSgElementwiseOp, WgToSgVectorBroadcastOp,
+               WgToSgConvertLayoutOp, WgToSgArithConstantOp, WgToSgLoadGatherOp,
+               WgToSgStoreScatterOp, WgToSgLoadMatrixOp, WgToSgStoreMatrixOp,
+               WgToSgVectorStepOp, WgToSgVectorShapeCastOp,
+               WgToSgMultiDimReductionOp, WgToSgVectorTransposeOp,
+               WgToSgVectorConstantMaskOp, WgToSgVectorCreateMaskOp>(
+      patterns.getContext());
 }
 } // namespace xegpu
 } // namespace mlir
@@ -1412,12 +1430,11 @@ struct XeGPUWgToSgDistributePass
 
 void XeGPUWgToSgDistributePass::runOnOperation() {
 
-  // TODO-LayoutRefactor: unify the local propagation for layout preprocessing
-  // Operation *op = getOperation();
-  // if (!xegpu::recoverTemporaryLayouts(op)) {
-  //   signalPassFailure();
-  //   return;
-  // }
+  Operation *op = getOperation();
+  if (!xegpu::recoverTemporaryLayouts(op)) {
+    signalPassFailure();
+    return;
+  }
 
   // Track existing UnrealizedConversionCastOps
   SmallVector<Operation *> existingCastOps;
@@ -1437,14 +1454,20 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
     converter.addConversion(
         [&](RankedTensorType type,
             SmallVectorImpl<Type> &result) -> std::optional<LogicalResult> {
+          // Only convert RankedTensorTypes that carry an XeGPU layout encoding.
+          // Plain tensors (e.g. tensor<?xi32>) have no XeGPU encoding and must
+          // not be converted: VectorType does not support dynamic dimensions.
+          auto encoding = dyn_cast_if_present<xegpu::DistributeLayoutAttr>(
+              type.getEncoding());
+          if (!encoding)
+            return std::nullopt;
+
           Type elemTy = type.getElementType();
           ArrayRef<int64_t> shape = type.getShape();
 
           int count;
           SmallVector<int64_t> subShape;
-          std::tie(subShape, count) = getSgShapeAndCount(
-              shape,
-              dyn_cast_if_present<xegpu::LayoutAttr>(type.getEncoding()));
+          std::tie(subShape, count) = getSgShapeAndCount(shape, encoding);
 
           auto newTy = VectorType::get(subShape, elemTy);
           result.append(count, newTy);
@@ -1465,16 +1488,20 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
   converter.addConversion(
       [&](xegpu::TensorDescType type,
           SmallVectorImpl<Type> &result) -> std::optional<LogicalResult> {
+        xegpu::DistributeLayoutAttr layout = type.getLayoutAttr();
+        // Only convert WG-level tensor descs. SG-level or layout-less types
+        // are already legal and should pass through unchanged.
+        if (!layout || !layout.isForWorkgroup())
+          return std::nullopt;
+
         Type elemTy = type.getElementType();
         ArrayRef<int64_t> shape = type.getShape();
 
         int count;
         SmallVector<int64_t> subShape;
-        xegpu::LayoutAttr layout = type.getLayoutAttr();
         std::tie(subShape, count) = getSgShapeAndCount(shape, layout);
 
-        if (layout)
-          layout = layout.dropSgLayoutAndData();
+        layout = layout.dropSgLayoutAndData();
 
         auto newTy = xegpu::TensorDescType::get(
             type.getContext(), subShape, elemTy, type.getEncoding(), layout);
@@ -1489,8 +1516,6 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
       return loadOp.getTensorDescType();
     if (auto storeOp = dyn_cast<xegpu::StoreNdOp>(op))
       return storeOp.getTensorDescType();
-    if (auto updateOp = dyn_cast<xegpu::UpdateNdOffsetOp>(op))
-      return updateOp.getType();
     if (auto prefetchOp = dyn_cast<xegpu::PrefetchNdOp>(op))
       return prefetchOp.getTensorDescType();
     return xegpu::TensorDescType();
@@ -1501,12 +1526,13 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
   };
 
   target.addDynamicallyLegalOp<xegpu::CreateNdDescOp, xegpu::LoadNdOp,
-                               xegpu::StoreNdOp, xegpu::UpdateNdOffsetOp,
-                               xegpu::PrefetchNdOp>([=](Operation *op) -> bool {
-    auto tdescTy = getTensorDescType(op);
-    auto layout = dyn_cast_if_present<xegpu::LayoutAttr>(tdescTy.getLayout());
-    return isLegal(layout);
-  });
+                               xegpu::StoreNdOp, xegpu::PrefetchNdOp>(
+      [=](Operation *op) -> bool {
+        auto tdescTy = getTensorDescType(op);
+        auto layout =
+            dyn_cast_if_present<xegpu::LayoutAttr>(tdescTy.getLayout());
+        return isLegal(layout);
+      });
 
   target.addDynamicallyLegalOp<xegpu::DpasOp>([=](xegpu::DpasOp op) -> bool {
     auto layout = op.getLayoutCdAttr();
@@ -1601,21 +1627,5 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
           applyPartialConversion(getOperation(), target, std::move(patterns))))
     return signalPassFailure();
 
-  // Remove sg_layout and sg_data attributes from the Layout
-  // attribute for each VectorType result of the operation.
-  // For Structured Control Flow ops, the layout is simply removed,
-  // since in 1:N case, the layout for new results are missing.
-  // Layout propagation pass will activated.
-  getOperation()->walk([](Operation *op) {
-    for (OpResult result : op->getOpResults()) {
-      std::string name = xegpu::getTemporaryLayoutName(result);
-      if (auto layout = op->getAttrOfType<xegpu::LayoutAttr>(name)) {
-        op->removeAttr(name);
-        if (!isa<scf::IfOp, scf::ForOp, scf::WhileOp, scf::ConditionOp>(op)) {
-          if (auto newLayout = layout.dropSgLayoutAndData())
-            op->setAttr(name, newLayout);
-        }
-      }
-    }
-  });
+  xegpu::removeTemporaryLayoutAttrs(getOperation());
 }

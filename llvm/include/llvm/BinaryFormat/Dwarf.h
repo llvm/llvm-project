@@ -301,8 +301,8 @@ inline std::optional<SourceLanguage> toDW_LANG(SourceLanguageName name,
     return DW_LANG_Go;
   case DW_LNAME_Haskell:
     return DW_LANG_Haskell;
-  // case DW_LNAME_HIP:
-  //   return DW_LANG_HIP;
+  case DW_LNAME_HIP:
+    return DW_LANG_HIP;
   case DW_LNAME_Java:
     return DW_LANG_Java;
   case DW_LNAME_Julia:
@@ -430,7 +430,7 @@ toDW_LNAME(SourceLanguage language) {
   case DW_LANG_Haskell:
     return {{DW_LNAME_Haskell, 0}};
   case DW_LANG_HIP:
-    return {}; // return {{DW_LNAME_HIP, 0}};
+    return {{DW_LNAME_HIP, 0}};
   case DW_LANG_Java:
     return {{DW_LNAME_Java, 0}};
   case DW_LANG_Julia:
@@ -1090,6 +1090,10 @@ LLVM_ABI std::optional<unsigned> OperationOperands(LocationAtom O);
 /// stack this operation operates on. Returns -1 if the arity is variable (e.g.
 /// depending on the argument) or unknown.
 LLVM_ABI std::optional<unsigned> OperationArity(LocationAtom O);
+
+inline bool isTlsAddressOp(uint8_t O) {
+  return O == DW_OP_form_tls_address || O == DW_OP_GNU_push_tls_address;
+}
 
 LLVM_ABI std::optional<unsigned> LanguageLowerBound(SourceLanguage L);
 

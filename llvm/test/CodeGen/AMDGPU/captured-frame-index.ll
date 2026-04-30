@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-- -mcpu=tahiti -mattr=-promote-alloca < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=tahiti -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 
 ; TODO: Test with flat scratch
 

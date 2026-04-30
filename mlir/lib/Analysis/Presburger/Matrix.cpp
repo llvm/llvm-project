@@ -285,6 +285,24 @@ void Matrix<T>::moveColumns(unsigned srcPos, unsigned num, unsigned dstPos) {
 }
 
 template <typename T>
+Matrix<T> Matrix<T>::postMultiply(const Matrix<T> &other) const {
+  assert(getNumColumns() == other.getNumRows());
+  unsigned n = getNumRows();
+  unsigned m = other.getNumRows();
+  unsigned p = other.getNumColumns();
+  Matrix<T> result(n, p);
+
+  for (unsigned i = 0; i < n; i++) {
+    for (unsigned j = 0; j < m; j++) {
+      for (unsigned k = 0; k < p; k++) {
+        result.at(i, k) += at(i, j) * other.at(j, k);
+      }
+    }
+  }
+  return result;
+}
+
+template <typename T>
 void Matrix<T>::addToRow(unsigned sourceRow, unsigned targetRow,
                          const T &scale) {
   addToRow(targetRow, getRow(sourceRow), scale);
@@ -533,6 +551,149 @@ std::pair<IntMatrix, IntMatrix> IntMatrix::computeHermiteNormalForm() const {
   }
 
   return {h, u};
+}
+
+// In the submatrix `mat(from:, from:)`, the function finds the position (row,
+// col) of the element with smallest non-zero absolute value. When all elements
+// in the submatrix are zero, returns std::nullopt.
+static std::optional<std::pair<unsigned, unsigned>>
+findNonZeroMinInSubmatrix(const IntMatrix &mat, unsigned from) {
+  unsigned numRows = mat.getNumRows();
+  unsigned numCols = mat.getNumColumns();
+  unsigned minRow = from, minCol = from;
+
+  std::optional<DynamicAPInt> minVal;
+  for (unsigned r = from; r < numRows; r++) {
+    for (unsigned c = from; c < numCols; c++) {
+      DynamicAPInt val = llvm::abs(mat(r, c));
+      if (val == 0 || (minVal && val >= *minVal))
+        continue;
+
+      minVal = val;
+      minRow = r;
+      minCol = c;
+    }
+  }
+
+  if (!minVal)
+    return std::nullopt;
+
+  return std::make_pair(minRow, minCol);
+}
+
+// Finds the first row in submatrix `mat(from:, from:)` that contains an element
+// `d` such that `d` is not a multiple of `divisor`. When there is no such row,
+// returns std::nullopt.
+static std::optional<unsigned> findNonMultipleRow(const IntMatrix &mat,
+                                                  unsigned from,
+                                                  const DynamicAPInt &divisor) {
+  unsigned numRows = mat.getNumRows();
+  unsigned numCols = mat.getNumColumns();
+  for (unsigned row = from; row < numRows; ++row) {
+    for (unsigned col = from; col < numCols; ++col) {
+      if (mat(row, col) % divisor != 0)
+        return row;
+    }
+  }
+  return std::nullopt;
+}
+
+std::tuple<IntMatrix, IntMatrix, IntMatrix>
+IntMatrix::computeSmithNormalForm() const {
+  IntMatrix d = *this;
+  // We put D into diagonal form by applying row and columns operations to it.
+  // The matrix U records row operations applied in the process, and V records
+  // column operations.
+  IntMatrix u = IntMatrix::identity(d.getNumRows());
+  IntMatrix v = IntMatrix::identity(d.getNumColumns());
+
+  unsigned numRows = d.getNumRows();
+  unsigned numCols = d.getNumColumns();
+  for (unsigned i = 0, e = std::min(numRows, numCols); i < e; i++) {
+    // We first put D into diagonal form, and then ensure the divisibility
+    // condition. The latter step is better illustrated with an example:
+    //
+    // [6 0 ] ---(1)--> [6 10] ---(2)--> [2 0 ]
+    // [0 10]           [0 10]           [0 10]
+    //
+    // (1) adds the element violating the divisibility constraint to the same
+    // column in row i;
+    // (2) does an elimination of the column.
+    //
+    // There can be many elements that violate the constraint, hence the loop.
+    bool changed;
+    do {
+      changed = false;
+
+      // Find the entry in the submatrix d(i:, i:) with the smallest non-zero
+      // absolute value.
+      // The element is the pivot, and we record its current row and column.
+      auto pivotPos = findNonZeroMinInSubmatrix(d, i);
+      if (!pivotPos)
+        break;
+      auto [pvtRow, pvtCol] = *pivotPos;
+
+      // The remaining submatrix is zero.
+      if (d(pvtRow, pvtCol) == 0)
+        break;
+
+      // Bring pivot to d(i, i). Record the operation in u, v respectively.
+      if (pvtRow != i) {
+        d.swapRows(pvtRow, i);
+        u.swapRows(pvtRow, i);
+      }
+      if (pvtCol != i) {
+        d.swapColumns(pvtCol, i);
+        v.swapColumns(pvtCol, i);
+      }
+
+      // Ensure the pivot is positive.
+      if (d(i, i) < 0) {
+        d.negateRow(i);
+        u.negateRow(i);
+      }
+
+      // Clear other entries in row i and column i with Euclid's algorithm.
+      for (unsigned r = i + 1; r < numRows; ++r) {
+        while (d(r, i) != 0) {
+          DynamicAPInt quotient = d(r, i) / d(i, i);
+          d.addToRow(i, r, -quotient);
+          u.addToRow(i, r, -quotient);
+
+          if (d(r, i) != 0) {
+            d.swapRows(r, i);
+            u.swapRows(r, i);
+            changed = true;
+          }
+        }
+      }
+      // Similar to the rows operations, this time it works on columns.
+      for (unsigned c = i + 1; c < numCols; ++c) {
+        while (d(i, c) != 0) {
+          DynamicAPInt quotient = d(i, c) / d(i, i);
+          d.addToColumn(i, c, -quotient);
+          v.addToColumn(i, c, -quotient);
+
+          if (d(i, c) != 0) {
+            d.swapColumns(c, i);
+            v.swapColumns(c, i);
+            changed = true;
+          }
+        }
+      }
+
+      if (auto row = findNonMultipleRow(d, i + 1, d(i, i))) {
+        // Add the row (r) to row i. This brings d(r, c) into the i-th row,
+        // creating a new value at d(i, c) that will be used to reduce the
+        // pivot size.
+        d.addToRow(*row, i, 1);
+        u.addToRow(*row, i, 1);
+        changed = true;
+      }
+    } while (changed);
+  }
+
+  return {u, d, v};
 }
 
 DynamicAPInt IntMatrix::normalizeRow(unsigned row, unsigned cols) {

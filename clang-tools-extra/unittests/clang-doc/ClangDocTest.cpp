@@ -26,7 +26,7 @@ ClangDocContext ClangDocContextTest::getClangDocContext(
     StringRef RepositoryLinePrefix, StringRef Base) {
   return ClangDocContext(nullptr, "test-project", false, "", "", RepositoryUrl,
                          RepositoryLinePrefix, Base, UserStylesheets, Diags,
-                         false);
+                         OutputFormatTy::html, false);
 }
 
 NamespaceInfo *InfoAsNamespace(Info *I) {
@@ -56,8 +56,8 @@ TypedefInfo *InfoAsTypedef(Info *I) {
 
 void CheckCommentInfo(const std::vector<CommentInfo> &Expected,
                       const std::vector<CommentInfo> &Actual);
-void CheckCommentInfo(const std::vector<std::unique_ptr<CommentInfo>> &Expected,
-                      const std::vector<std::unique_ptr<CommentInfo>> &Actual);
+void CheckCommentInfo(const std::vector<OwnedPtr<CommentInfo>> &Expected,
+                      const std::vector<OwnedPtr<CommentInfo>> &Actual);
 
 void CheckCommentInfo(const CommentInfo &Expected, const CommentInfo &Actual) {
   EXPECT_EQ(Expected.Kind, Actual.Kind);
@@ -91,8 +91,8 @@ void CheckCommentInfo(const std::vector<CommentInfo> &Expected,
     CheckCommentInfo(Expected[Idx], Actual[Idx]);
 }
 
-void CheckCommentInfo(const std::vector<std::unique_ptr<CommentInfo>> &Expected,
-                      const std::vector<std::unique_ptr<CommentInfo>> &Actual) {
+void CheckCommentInfo(const std::vector<OwnedPtr<CommentInfo>> &Expected,
+                      const std::vector<OwnedPtr<CommentInfo>> &Actual) {
   ASSERT_EQ(Expected.size(), Actual.size());
   for (size_t Idx = 0; Idx < Actual.size(); ++Idx)
     CheckCommentInfo(*Expected[Idx], *Actual[Idx]);
@@ -177,9 +177,13 @@ void CheckNamespaceInfo(NamespaceInfo *Expected, NamespaceInfo *Actual) {
 
   ASSERT_EQ(Expected->Children.Namespaces.size(),
             Actual->Children.Namespaces.size());
-  for (size_t Idx = 0; Idx < Actual->Children.Namespaces.size(); ++Idx)
-    CheckReference(Expected->Children.Namespaces[Idx],
-                   Actual->Children.Namespaces[Idx]);
+  auto ItExpected = Expected->Children.Namespaces.begin();
+  auto ItActual = Actual->Children.Namespaces.begin();
+  while (ItExpected != Expected->Children.Namespaces.end()) {
+    CheckReference(*ItExpected, *ItActual);
+    ++ItExpected;
+    ++ItActual;
+  }
 
   ASSERT_EQ(Expected->Children.Records.size(), Actual->Children.Records.size());
   for (size_t Idx = 0; Idx < Actual->Children.Records.size(); ++Idx)
@@ -247,8 +251,8 @@ void CheckBaseRecordInfo(BaseRecordInfo *Expected, BaseRecordInfo *Actual) {
 void CheckIndex(Index &Expected, Index &Actual) {
   CheckReference(Expected, Actual);
   ASSERT_EQ(Expected.Children.size(), Actual.Children.size());
-  for (size_t Idx = 0; Idx < Actual.Children.size(); ++Idx)
-    CheckIndex(Expected.Children[Idx], Actual.Children[Idx]);
+  for (auto &[_, C] : Expected.Children)
+    CheckIndex(C, Actual.Children.find(llvm::toStringRef(C.USR))->second);
 }
 
 } // namespace doc

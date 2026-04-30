@@ -119,6 +119,9 @@ inline StringRef getInstrProfValueProfMemOpFuncName() {
   return INSTR_PROF_VALUE_PROF_MEMOP_FUNC_STR;
 }
 
+/// Return the prefix of the name of the variables to function as a filter.
+inline StringRef getInstrProfVarPrefix() { return "__prof"; }
+
 /// Return the name prefix of variables containing instrumented function names.
 inline StringRef getInstrProfNameVarPrefix() { return "__profn_"; }
 
@@ -506,9 +509,9 @@ class InstrProfSymtab {
 public:
   using AddrHashMap = std::vector<std::pair<uint64_t, uint64_t>>;
 
-  // Returns the canonical name of the given PGOName. In a canonical name, all
-  // suffixes that begins with "." except ".__uniq." are stripped.
-  // FIXME: Unify this with `FunctionSamples::getCanonicalFnName`.
+  // Returns the canonical name of the given PGOName. This shares the same
+  // logic of FunctionSamples::getCanonicalFnName() but only strips ".llvm."
+  // and ".part", and leaves out ".__uniq.".
   LLVM_ABI static StringRef getCanonicalName(StringRef PGOName);
 
 private:
@@ -761,7 +764,7 @@ void InstrProfSymtab::finalizeSymtab() const {
   if (Sorted)
     return;
   llvm::sort(MD5NameMap, less_first());
-  llvm::sort(MD5FuncMap, less_first());
+  llvm::stable_sort(MD5FuncMap, less_first());
   llvm::sort(AddrToMD5Map, less_first());
   AddrToMD5Map.erase(llvm::unique(AddrToMD5Map), AddrToMD5Map.end());
   Sorted = true;

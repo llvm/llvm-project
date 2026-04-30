@@ -186,7 +186,7 @@ CallEvent::getCalleeStackFrame(unsigned BlockCount) const {
         break;
   assert(Idx < Sz);
 
-  return ADC->getManager()->getStackFrame(ADC, LCtx, E, B, BlockCount, Idx);
+  return ADC->getStackFrame(LCtx, E, B, BlockCount, Idx);
 }
 
 const ParamVarRegion
@@ -229,6 +229,14 @@ static void findPtrToConstParams(llvm::SmallSet<unsigned, 4> &PreserveArgs,
   }
 }
 
+static const MemRegion *getThisRegionBaseOrNull(const CallEvent &Call) {
+  if (const auto *CtorCall = dyn_cast<CXXConstructorCall>(&Call)) {
+    if (const MemRegion *R = CtorCall->getCXXThisVal().getAsRegion())
+      return R->getBaseRegion();
+  }
+  return nullptr;
+}
+
 ProgramStateRef CallEvent::invalidateRegions(unsigned BlockCount,
                                              ProgramStateRef State) const {
   // Don't invalidate anything if the callee is marked pure/const.
@@ -246,14 +254,26 @@ ProgramStateRef CallEvent::invalidateRegions(unsigned BlockCount,
   if (!argumentsMayEscape())
     findPtrToConstParams(PreserveArgs, *this);
 
+  // We should not preserve the contents of the region pointed by "this" when
+  // constructing the object, even if an argument refers to it.
+  const auto *ThisRegionBaseOrNull = getThisRegionBaseOrNull(*this);
+
   for (unsigned Idx = 0, Count = getNumArgs(); Idx != Count; ++Idx) {
     // Mark this region for invalidation.  We batch invalidate regions
     // below for efficiency.
-    if (PreserveArgs.count(Idx))
-      if (const MemRegion *MR = getArgSVal(Idx).getAsRegion())
-        ETraits.setTrait(MR->getBaseRegion(),
-                        RegionAndSymbolInvalidationTraits::TK_PreserveContents);
-        // TODO: Factor this out + handle the lower level const pointers.
+    if (PreserveArgs.count(Idx)) {
+      if (const MemRegion *ArgBaseR = getArgSVal(Idx).getAsRegion()) {
+        ArgBaseR = ArgBaseR->getBaseRegion();
+
+        // Preserve the contents of the pointee of the argument - except if it
+        // refers to the object under construction (ctor call).
+        if (ArgBaseR != ThisRegionBaseOrNull) {
+          ETraits.setTrait(
+              ArgBaseR, RegionAndSymbolInvalidationTraits::TK_PreserveContents);
+          // TODO: Factor this out + handle the lower level const pointers.
+        }
+      }
+    }
 
     ValuesToInvalidate.push_back(getArgSVal(Idx));
 
@@ -542,9 +562,11 @@ std::optional<SVal> CallEvent::getReturnValueUnderConstruction() const {
 
   EvalCallOptions CallOpts;
   ExprEngine &Engine = getState()->getStateManager().getOwningEngine();
+  unsigned NumVisitedCall = Engine.getNumVisited(
+      getLocationContext(), getCFGElementRef().getParent());
   SVal RetVal = Engine.computeObjectUnderConstruction(
-      getOriginExpr(), getState(), &Engine.getBuilderContext(),
-      getLocationContext(), CC, CallOpts);
+      getOriginExpr(), getState(), NumVisitedCall, getLocationContext(), CC,
+      CallOpts);
   return RetVal;
 }
 
@@ -601,7 +623,9 @@ RuntimeDefinition AnyFunctionCall::getRuntimeDefinition() const {
   if (!CTUDeclOrError) {
     handleAllErrors(CTUDeclOrError.takeError(),
                     [&](const cross_tu::IndexError &IE) {
-                      CTUCtx.emitCrossTUDiagnostics(IE);
+                      auto Loc = getOriginExpr() ? getOriginExpr()->getExprLoc()
+                                                 : FD->getLocation();
+                      CTUCtx.emitCrossTUDiagnostics(IE, Loc);
                     });
     return {};
   }
@@ -1456,7 +1480,7 @@ CallEventManager::getCaller(const StackFrameContext *CalleeCtx,
                                           CalleeCtx->getIndex()};
   assert(CallerCtx && "This should not be used for top-level stack frames");
 
-  const Stmt *CallSite = CalleeCtx->getCallSite();
+  const Expr *CallSite = CalleeCtx->getCallSite();
 
   if (CallSite) {
     if (CallEventRef<> Out = getCall(CallSite, State, CallerCtx, ElemRef))
@@ -1470,13 +1494,11 @@ CallEventManager::getCaller(const StackFrameContext *CalleeCtx,
     if (const auto *CE = dyn_cast<CXXConstructExpr>(CallSite))
       return getCXXConstructorCall(CE, ThisVal.getAsRegion(), State, CallerCtx,
                                    ElemRef);
-    else if (const auto *CIE = dyn_cast<CXXInheritedCtorInitExpr>(CallSite))
+    if (const auto *CIE = dyn_cast<CXXInheritedCtorInitExpr>(CallSite))
       return getCXXInheritedConstructorCall(CIE, ThisVal.getAsRegion(), State,
                                             CallerCtx, ElemRef);
-    else {
-      // All other cases are handled by getCall.
-      llvm_unreachable("This is not an inlineable statement");
-    }
+    // All other cases are handled by getCall.
+    llvm_unreachable("This is not an inlineable statement");
   }
 
   // Fall back to the CFG. The only thing we haven't handled yet is

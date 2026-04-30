@@ -355,6 +355,7 @@ public:
   // the argument translation business.
   mutable bool TargetInitialized;
 
+  // TODO: Are these useful? Can we use Triple::OSType/EnvironmentType instead?
   enum DarwinPlatformKind {
     MacOS,
     IPhoneOS,
@@ -362,7 +363,7 @@ public:
     WatchOS,
     DriverKit,
     XROS,
-    LastDarwinPlatform = XROS
+    Firmware,
   };
   enum DarwinEnvironmentKind {
     NativeEnvironment,
@@ -386,6 +387,15 @@ public:
 
 private:
   void AddDeploymentTarget(llvm::opt::DerivedArgList &Args) const;
+
+  void VerifyTripleForSDK(const llvm::opt::ArgList &Args,
+                          const llvm::Triple Triple) const;
+
+protected:
+  /// Lazily initialize the target platform from the triple when
+  /// AddDeploymentTarget has not run yet (e.g. when Darwin is used as
+  /// a host toolchain for device offloading).
+  void ensureTargetInitialized() const;
 
 public:
   Darwin(const Driver &D, const llvm::Triple &Triple,
@@ -516,6 +526,8 @@ public:
     return TargetPlatform == DriverKit;
   }
 
+  bool isTargetFirmware() const { return TargetPlatform == Firmware; }
+
   bool isTargetMacCatalyst() const {
     return TargetPlatform == IPhoneOS && TargetEnvironment == MacCatalyst;
   }
@@ -588,7 +600,6 @@ protected:
       const llvm::opt::ArgList &Args,
       llvm::opt::ArgStringList &CC1ASArgs) const override;
 
-  StringRef getPlatformFamily() const;
   StringRef getOSLibraryNameSuffix(bool IgnoreSim = false) const override;
 
 public:
@@ -687,6 +698,8 @@ public:
   llvm::DebuggerKind getDefaultDebuggerTuning() const override {
     return llvm::DebuggerKind::LLDB;
   }
+
+  bool getDefaultDebugSimpleTemplateNames() const override;
 
   /// }
 

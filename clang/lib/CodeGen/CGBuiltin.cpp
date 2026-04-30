@@ -121,6 +121,8 @@ static Value *EmitTargetArchBuiltinExpr(CodeGenFunction *CGF,
     return CGF->EmitHexagonBuiltinExpr(BuiltinID, E);
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
+  case llvm::Triple::riscv32be:
+  case llvm::Triple::riscv64be:
     return CGF->EmitRISCVBuiltinExpr(BuiltinID, E, ReturnValue);
   case llvm::Triple::spirv32:
   case llvm::Triple::spirv64:
@@ -185,7 +187,7 @@ llvm::Constant *CodeGenModule::getBuiltinLibFunction(const FunctionDecl *FD,
 
   // TODO: This list should be expanded or refactored after all GCC-compatible
   // std libcall builtins are implemented.
-  static SmallDenseMap<unsigned, StringRef, 64> F128Builtins{
+  static const SmallDenseMap<unsigned, StringRef, 64> F128Builtins{
       {Builtin::BI__builtin___fprintf_chk, "__fprintf_chkieee128"},
       {Builtin::BI__builtin___printf_chk, "__printf_chkieee128"},
       {Builtin::BI__builtin___snprintf_chk, "__snprintf_chkieee128"},
@@ -214,7 +216,7 @@ llvm::Constant *CodeGenModule::getBuiltinLibFunction(const FunctionDecl *FD,
   // The AIX library functions frexpl, ldexpl, and modfl are for 128-bit
   // IBM 'long double' (i.e. __ibm128). Map to the 'double' versions
   // if it is 64-bit 'long double' mode.
-  static SmallDenseMap<unsigned, StringRef, 4> AIXLongDouble64Builtins{
+  static const SmallDenseMap<unsigned, StringRef, 4> AIXLongDouble64Builtins{
       {Builtin::BI__builtin_frexpl, "frexp"},
       {Builtin::BI__builtin_ldexpl, "ldexp"},
       {Builtin::BI__builtin_modfl, "modf"},
@@ -231,12 +233,12 @@ llvm::Constant *CodeGenModule::getBuiltinLibFunction(const FunctionDecl *FD,
     if (getTriple().isPPC64() &&
         &getTarget().getLongDoubleFormat() == &llvm::APFloat::IEEEquad() &&
         F128Builtins.contains(BuiltinID))
-      Name = F128Builtins[BuiltinID];
+      Name = F128Builtins.lookup(BuiltinID);
     else if (getTriple().isOSAIX() &&
              &getTarget().getLongDoubleFormat() ==
                  &llvm::APFloat::IEEEdouble() &&
              AIXLongDouble64Builtins.contains(BuiltinID))
-      Name = AIXLongDouble64Builtins[BuiltinID];
+      Name = AIXLongDouble64Builtins.lookup(BuiltinID);
     else
       Name = Context.BuiltinInfo.getName(BuiltinID).substr(10);
   }
@@ -388,7 +390,9 @@ static RValue EmitBinaryAtomicPost(CodeGenFunction &CGF,
 /// Note: In order to lower Microsoft's _InterlockedCompareExchange* intrinsics
 /// invoke the function EmitAtomicCmpXchgForMSIntrin.
 Value *MakeAtomicCmpXchgValue(CodeGenFunction &CGF, const CallExpr *E,
-                                     bool ReturnBool) {
+                              bool ReturnBool,
+                              llvm::AtomicOrdering SuccessOrdering,
+                              llvm::AtomicOrdering FailureOrdering) {
   QualType T = ReturnBool ? E->getArg(1)->getType() : E->getType();
   Address DestAddr = CheckAtomicAlignment(CGF, E);
 
@@ -401,8 +405,7 @@ Value *MakeAtomicCmpXchgValue(CodeGenFunction &CGF, const CallExpr *E,
   Value *New = EmitToInt(CGF, CGF.EmitScalarExpr(E->getArg(2)), T, IntType);
 
   Value *Pair = CGF.Builder.CreateAtomicCmpXchg(
-      DestAddr, Cmp, New, llvm::AtomicOrdering::SequentiallyConsistent,
-      llvm::AtomicOrdering::SequentiallyConsistent);
+      DestAddr, Cmp, New, SuccessOrdering, FailureOrdering);
   if (ReturnBool)
     // Extract boolean success flag and zext it to int.
     return CGF.Builder.CreateZExt(CGF.Builder.CreateExtractValue(Pair, 1),
@@ -749,8 +752,7 @@ static llvm::Value *emitModfBuiltin(CodeGenFunction &CGF, const CallExpr *E,
 
 /// EmitFAbs - Emit a call to @llvm.fabs().
 static Value *EmitFAbs(CodeGenFunction &CGF, Value *V) {
-  Function *F = CGF.CGM.getIntrinsic(Intrinsic::fabs, V->getType());
-  llvm::CallInst *Call = CGF.Builder.CreateCall(F, V);
+  llvm::CallInst *Call = CGF.Builder.CreateFAbs(V);
   Call->setDoesNotAccessMemory();
   return Call;
 }
@@ -924,10 +926,10 @@ CodeGenFunction::evaluateOrEmitBuiltinObjectSize(const Expr *E, unsigned Type,
                                                  llvm::IntegerType *ResType,
                                                  llvm::Value *EmittedE,
                                                  bool IsDynamic) {
-  uint64_t ObjectSize;
-  if (!E->tryEvaluateObjectSize(ObjectSize, getContext(), Type))
-    return emitBuiltinObjectSize(E, Type, ResType, EmittedE, IsDynamic);
-  return ConstantInt::get(ResType, ObjectSize, /*isSigned=*/true);
+  if (std::optional<uint64_t> ObjectSize =
+          E->tryEvaluateObjectSize(getContext(), Type))
+    return ConstantInt::get(ResType, *ObjectSize, /*isSigned=*/true);
+  return emitBuiltinObjectSize(E, Type, ResType, EmittedE, IsDynamic);
 }
 
 namespace {
@@ -2490,12 +2492,57 @@ RValue CodeGenFunction::emitRotate(const CallExpr *E, bool IsRotateRight) {
   // The builtin's shift arg may have a different type than the source arg and
   // result, but the LLVM intrinsic uses the same type for all values.
   llvm::Type *Ty = Src->getType();
-  ShiftAmt = Builder.CreateIntCast(ShiftAmt, Ty, false);
+  llvm::Type *ShiftTy = ShiftAmt->getType();
+
+  unsigned BitWidth = Ty->getIntegerBitWidth();
+
+  // Normalize shift amount to [0, BitWidth) range to match runtime behavior.
+  // This matches the algorithm in ExprConstant.cpp for constant evaluation.
+  if (BitWidth == 1) {
+    // Rotating a 1-bit value is always a no-op
+    ShiftAmt = ConstantInt::get(ShiftTy, 0);
+  } else if (BitWidth == 2) {
+    // For 2-bit values: rotation amount is 0 or 1 based on
+    // whether the amount is even or odd. We can't use srem here because
+    // the divisor (2) would be misinterpreted as -2 in 2-bit signed arithmetic.
+    llvm::Value *One = ConstantInt::get(ShiftTy, 1);
+    ShiftAmt = Builder.CreateAnd(ShiftAmt, One);
+  } else {
+    unsigned ShiftAmtBitWidth = ShiftTy->getIntegerBitWidth();
+    bool ShiftAmtIsSigned = E->getArg(1)->getType()->isSignedIntegerType();
+
+    // Choose the wider type for the divisor to avoid truncation
+    llvm::Type *DivisorTy = ShiftAmtBitWidth > BitWidth ? ShiftTy : Ty;
+    llvm::Value *Divisor = ConstantInt::get(DivisorTy, BitWidth);
+
+    // Extend ShiftAmt to match Divisor width if needed
+    if (ShiftAmtBitWidth < DivisorTy->getIntegerBitWidth()) {
+      ShiftAmt = Builder.CreateIntCast(ShiftAmt, DivisorTy, ShiftAmtIsSigned);
+    }
+
+    // Normalize to [0, BitWidth)
+    llvm::Value *RemResult;
+    if (ShiftAmtIsSigned) {
+      RemResult = Builder.CreateSRem(ShiftAmt, Divisor);
+      // Signed remainder can be negative, convert to positive equivalent
+      llvm::Value *Zero = ConstantInt::get(DivisorTy, 0);
+      llvm::Value *IsNegative = Builder.CreateICmpSLT(RemResult, Zero);
+      llvm::Value *PositiveShift = Builder.CreateAdd(RemResult, Divisor);
+      ShiftAmt = Builder.CreateSelect(IsNegative, PositiveShift, RemResult);
+    } else {
+      ShiftAmt = Builder.CreateURem(ShiftAmt, Divisor);
+    }
+  }
+
+  // Convert to the source type if needed
+  if (ShiftAmt->getType() != Ty) {
+    ShiftAmt = Builder.CreateIntCast(ShiftAmt, Ty, false);
+  }
 
   // Rotate is a special case of LLVM funnel shift - 1st 2 args are the same.
   unsigned IID = IsRotateRight ? Intrinsic::fshr : Intrinsic::fshl;
   Function *F = CGM.getIntrinsic(IID, Ty);
-  return RValue::get(Builder.CreateCall(F, { Src, Src, ShiftAmt }));
+  return RValue::get(Builder.CreateCall(F, {Src, Src, ShiftAmt}));
 }
 
 // Map math builtins for long-double to f128 version.
@@ -2592,6 +2639,63 @@ static RValue EmitHipStdParUnsupportedBuiltin(CodeGenFunction *CGF,
     Args.push_back(llvm::PoisonValue::get(FormalTy));
 
   return RValue::get(CGF->Builder.CreateCall(UBF, Args));
+}
+
+// stdc_{leading,trailing}_{zeros,ones} and stdc_count_ones: counts bits using
+// ctlz, cttz, or ctpop (IsPop). InvertArg flips the input to count the
+// opposite bit value.
+RValue CodeGenFunction::emitStdcCountIntrinsic(const CallExpr *E,
+                                               Intrinsic::ID IntID,
+                                               bool InvertArg, bool IsPop) {
+  Value *ArgValue = EmitScalarExpr(E->getArg(0));
+  llvm::Type *ArgType = ArgValue->getType();
+  llvm::Type *ResultType = ConvertType(E->getType());
+  Value *ActualArg = InvertArg ? Builder.CreateNot(ArgValue) : ArgValue;
+  Function *F = CGM.getIntrinsic(IntID, ArgType);
+  Value *Result = IsPop
+                      ? Builder.CreateCall(F, ActualArg)
+                      : Builder.CreateCall(F, {ActualArg, Builder.getFalse()});
+  if (Result->getType() != ResultType)
+    Result = Builder.CreateIntCast(Result, ResultType, false);
+  return RValue::get(Result);
+}
+
+// stdc_count_zeros (BitWidth - ctpop) and stdc_bit_width (BitWidth - ctlz).
+// IsPop selects ctpop; otherwise ctlz is used.
+RValue CodeGenFunction::emitStdcBitWidthMinus(const CallExpr *E,
+                                              Intrinsic::ID IntID, bool IsPop) {
+  Value *ArgValue = EmitScalarExpr(E->getArg(0));
+  llvm::Type *ArgType = ArgValue->getType();
+  llvm::Type *ResultType = ConvertType(E->getType());
+  unsigned BitWidth = ArgType->getIntegerBitWidth();
+  Function *F = CGM.getIntrinsic(IntID, ArgType);
+  Value *Cnt = IsPop ? Builder.CreateCall(F, ArgValue)
+                     : Builder.CreateCall(F, {ArgValue, Builder.getFalse()});
+  Value *Result = Builder.CreateSub(ConstantInt::get(ArgType, BitWidth), Cnt);
+  if (Result->getType() != ResultType)
+    Result = Builder.CreateIntCast(Result, ResultType, false);
+  return RValue::get(Result);
+}
+
+// stdc_first_{leading,trailing}_{zero,one}: returns the 1-based position of
+// the first matching bit, or 0 if no such bit exists. InvertArg flips the
+// input to search for zeros instead of ones.
+RValue CodeGenFunction::emitStdcFirstBit(const CallExpr *E, Intrinsic::ID IntID,
+                                         bool InvertArg) {
+  Value *ArgValue = EmitScalarExpr(E->getArg(0));
+  llvm::Type *ArgType = ArgValue->getType();
+  llvm::Type *ResultType = ConvertType(E->getType());
+  Value *Zero = ConstantInt::get(ArgType, 0);
+  Value *One = ConstantInt::get(ArgType, 1);
+  Value *ActualArg = InvertArg ? Builder.CreateNot(ArgValue) : ArgValue;
+  Function *F = CGM.getIntrinsic(IntID, ArgType);
+  Value *Cnt = Builder.CreateCall(F, {ActualArg, Builder.getFalse()});
+  Value *Tmp = Builder.CreateAdd(Cnt, One);
+  Value *IsZero = Builder.CreateICmpEQ(ActualArg, Zero);
+  Value *Result = Builder.CreateSelect(IsZero, Zero, Tmp);
+  if (Result->getType() != ResultType)
+    Result = Builder.CreateIntCast(Result, ResultType, false);
+  return RValue::get(Result);
 }
 
 RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
@@ -2830,10 +2934,13 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_fmaxf:
     case Builtin::BI__builtin_fmaxf16:
     case Builtin::BI__builtin_fmaxl:
-    case Builtin::BI__builtin_fmaxf128:
-      return RValue::get(emitBinaryMaybeConstrainedFPBuiltin(*this, E,
-                                   Intrinsic::maxnum,
-                                   Intrinsic::experimental_constrained_maxnum));
+    case Builtin::BI__builtin_fmaxf128: {
+      IRBuilder<>::FastMathFlagGuard FMFGuard(Builder);
+      Builder.getFastMathFlags().setNoSignedZeros();
+      return RValue::get(emitBinaryMaybeConstrainedFPBuiltin(
+          *this, E, Intrinsic::maxnum,
+          Intrinsic::experimental_constrained_maxnum));
+    }
 
     case Builtin::BIfmin:
     case Builtin::BIfminf:
@@ -2842,10 +2949,13 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_fminf:
     case Builtin::BI__builtin_fminf16:
     case Builtin::BI__builtin_fminl:
-    case Builtin::BI__builtin_fminf128:
-      return RValue::get(emitBinaryMaybeConstrainedFPBuiltin(*this, E,
-                                   Intrinsic::minnum,
-                                   Intrinsic::experimental_constrained_minnum));
+    case Builtin::BI__builtin_fminf128: {
+      IRBuilder<>::FastMathFlagGuard FMFGuard(Builder);
+      Builder.getFastMathFlags().setNoSignedZeros();
+      return RValue::get(emitBinaryMaybeConstrainedFPBuiltin(
+          *this, E, Intrinsic::minnum,
+          Intrinsic::experimental_constrained_minnum));
+    }
 
     case Builtin::BIfmaximum_num:
     case Builtin::BIfmaximum_numf:
@@ -3638,6 +3748,16 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(
         emitBuiltinWithOneOverloadedType<1>(*this, E, Intrinsic::bswap));
   }
+  case Builtin::BI__builtin_bitreverseg: {
+    Value *ArgValue = EmitScalarExpr(E->getArg(0));
+    llvm::IntegerType *IntTy = cast<llvm::IntegerType>(ArgValue->getType());
+    assert(IntTy &&
+           "LLVM's __builtin_bitreverseg only support integer variants");
+    if (IntTy->getBitWidth() == 1)
+      return RValue::get(ArgValue);
+    return RValue::get(
+        emitBuiltinWithOneOverloadedType<1>(*this, E, Intrinsic::bitreverse));
+  }
   case Builtin::BI__builtin_bitreverse8:
   case Builtin::BI__builtin_bitreverse16:
   case Builtin::BI__builtin_bitreverse32:
@@ -3649,6 +3769,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_rotateleft16:
   case Builtin::BI__builtin_rotateleft32:
   case Builtin::BI__builtin_rotateleft64:
+  case Builtin::BI__builtin_stdc_rotate_left:
   case Builtin::BI_rotl8: // Microsoft variants of rotate left
   case Builtin::BI_rotl16:
   case Builtin::BI_rotl:
@@ -3660,12 +3781,177 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_rotateright16:
   case Builtin::BI__builtin_rotateright32:
   case Builtin::BI__builtin_rotateright64:
+  case Builtin::BI__builtin_stdc_rotate_right:
   case Builtin::BI_rotr8: // Microsoft variants of rotate right
   case Builtin::BI_rotr16:
   case Builtin::BI_rotr:
   case Builtin::BI_lrotr:
   case Builtin::BI_rotr64:
     return emitRotate(E, true);
+
+  case Builtin::BIstdc_leading_zeros_uc:
+  case Builtin::BIstdc_leading_zeros_us:
+  case Builtin::BIstdc_leading_zeros_ui:
+  case Builtin::BIstdc_leading_zeros_ul:
+  case Builtin::BIstdc_leading_zeros_ull:
+  case Builtin::BIstdc_leading_zeros:
+  case Builtin::BI__builtin_stdc_leading_zeros:
+    return emitStdcCountIntrinsic(E, Intrinsic::ctlz, /*InvertArg=*/false);
+  case Builtin::BIstdc_leading_ones_uc:
+  case Builtin::BIstdc_leading_ones_us:
+  case Builtin::BIstdc_leading_ones_ui:
+  case Builtin::BIstdc_leading_ones_ul:
+  case Builtin::BIstdc_leading_ones_ull:
+  case Builtin::BIstdc_leading_ones:
+  case Builtin::BI__builtin_stdc_leading_ones:
+    return emitStdcCountIntrinsic(E, Intrinsic::ctlz, /*InvertArg=*/true);
+  case Builtin::BIstdc_trailing_zeros_uc:
+  case Builtin::BIstdc_trailing_zeros_us:
+  case Builtin::BIstdc_trailing_zeros_ui:
+  case Builtin::BIstdc_trailing_zeros_ul:
+  case Builtin::BIstdc_trailing_zeros_ull:
+  case Builtin::BIstdc_trailing_zeros:
+  case Builtin::BI__builtin_stdc_trailing_zeros:
+    return emitStdcCountIntrinsic(E, Intrinsic::cttz, /*InvertArg=*/false);
+  case Builtin::BIstdc_trailing_ones_uc:
+  case Builtin::BIstdc_trailing_ones_us:
+  case Builtin::BIstdc_trailing_ones_ui:
+  case Builtin::BIstdc_trailing_ones_ul:
+  case Builtin::BIstdc_trailing_ones_ull:
+  case Builtin::BIstdc_trailing_ones:
+  case Builtin::BI__builtin_stdc_trailing_ones:
+    return emitStdcCountIntrinsic(E, Intrinsic::cttz, /*InvertArg=*/true);
+  case Builtin::BIstdc_first_leading_zero_uc:
+  case Builtin::BIstdc_first_leading_zero_us:
+  case Builtin::BIstdc_first_leading_zero_ui:
+  case Builtin::BIstdc_first_leading_zero_ul:
+  case Builtin::BIstdc_first_leading_zero_ull:
+  case Builtin::BIstdc_first_leading_zero:
+  case Builtin::BI__builtin_stdc_first_leading_zero:
+    return emitStdcFirstBit(E, Intrinsic::ctlz, /*InvertArg=*/true);
+  case Builtin::BIstdc_first_leading_one_uc:
+  case Builtin::BIstdc_first_leading_one_us:
+  case Builtin::BIstdc_first_leading_one_ui:
+  case Builtin::BIstdc_first_leading_one_ul:
+  case Builtin::BIstdc_first_leading_one_ull:
+  case Builtin::BIstdc_first_leading_one:
+  case Builtin::BI__builtin_stdc_first_leading_one:
+    return emitStdcFirstBit(E, Intrinsic::ctlz, /*InvertArg=*/false);
+  case Builtin::BIstdc_first_trailing_zero_uc:
+  case Builtin::BIstdc_first_trailing_zero_us:
+  case Builtin::BIstdc_first_trailing_zero_ui:
+  case Builtin::BIstdc_first_trailing_zero_ul:
+  case Builtin::BIstdc_first_trailing_zero_ull:
+  case Builtin::BIstdc_first_trailing_zero:
+  case Builtin::BI__builtin_stdc_first_trailing_zero:
+    return emitStdcFirstBit(E, Intrinsic::cttz, /*InvertArg=*/true);
+  case Builtin::BIstdc_first_trailing_one_uc:
+  case Builtin::BIstdc_first_trailing_one_us:
+  case Builtin::BIstdc_first_trailing_one_ui:
+  case Builtin::BIstdc_first_trailing_one_ul:
+  case Builtin::BIstdc_first_trailing_one_ull:
+  case Builtin::BIstdc_first_trailing_one:
+  case Builtin::BI__builtin_stdc_first_trailing_one:
+    return emitStdcFirstBit(E, Intrinsic::cttz, /*InvertArg=*/false);
+  case Builtin::BIstdc_count_zeros_uc:
+  case Builtin::BIstdc_count_zeros_us:
+  case Builtin::BIstdc_count_zeros_ui:
+  case Builtin::BIstdc_count_zeros_ul:
+  case Builtin::BIstdc_count_zeros_ull:
+  case Builtin::BIstdc_count_zeros:
+  case Builtin::BI__builtin_stdc_count_zeros:
+    return emitStdcBitWidthMinus(E, Intrinsic::ctpop, /*IsPop=*/true);
+  case Builtin::BIstdc_count_ones_uc:
+  case Builtin::BIstdc_count_ones_us:
+  case Builtin::BIstdc_count_ones_ui:
+  case Builtin::BIstdc_count_ones_ul:
+  case Builtin::BIstdc_count_ones_ull:
+  case Builtin::BIstdc_count_ones:
+  case Builtin::BI__builtin_stdc_count_ones:
+    return emitStdcCountIntrinsic(E, Intrinsic::ctpop, /*InvertArg=*/false,
+                                  /*IsPop=*/true);
+  case Builtin::BIstdc_has_single_bit_uc:
+  case Builtin::BIstdc_has_single_bit_us:
+  case Builtin::BIstdc_has_single_bit_ui:
+  case Builtin::BIstdc_has_single_bit_ul:
+  case Builtin::BIstdc_has_single_bit_ull:
+  case Builtin::BIstdc_has_single_bit:
+  case Builtin::BI__builtin_stdc_has_single_bit: {
+    Value *ArgValue = EmitScalarExpr(E->getArg(0));
+    llvm::Type *ArgType = ArgValue->getType();
+    Value *One = ConstantInt::get(ArgType, 1);
+    Function *F = CGM.getIntrinsic(Intrinsic::ctpop, ArgType);
+    Value *PopCnt = Builder.CreateCall(F, ArgValue);
+    return RValue::get(Builder.CreateICmpEQ(PopCnt, One));
+  }
+  case Builtin::BIstdc_bit_width_uc:
+  case Builtin::BIstdc_bit_width_us:
+  case Builtin::BIstdc_bit_width_ui:
+  case Builtin::BIstdc_bit_width_ul:
+  case Builtin::BIstdc_bit_width_ull:
+  case Builtin::BIstdc_bit_width:
+  case Builtin::BI__builtin_stdc_bit_width:
+    return emitStdcBitWidthMinus(E, Intrinsic::ctlz, /*IsPop=*/false);
+  case Builtin::BIstdc_bit_floor_uc:
+  case Builtin::BIstdc_bit_floor_us:
+  case Builtin::BIstdc_bit_floor_ui:
+  case Builtin::BIstdc_bit_floor_ul:
+  case Builtin::BIstdc_bit_floor_ull:
+  case Builtin::BIstdc_bit_floor:
+  case Builtin::BI__builtin_stdc_bit_floor: {
+    Value *ArgValue = EmitScalarExpr(E->getArg(0));
+    llvm::Type *ArgType = ArgValue->getType();
+    unsigned BitWidth = ArgType->getIntegerBitWidth();
+    Value *Zero = ConstantInt::get(ArgType, 0);
+    Value *One = ConstantInt::get(ArgType, 1);
+    Function *F = CGM.getIntrinsic(Intrinsic::ctlz, ArgType);
+    Value *LZ = Builder.CreateCall(F, {ArgValue, Builder.getTrue()});
+    Value *ShiftAmt =
+        Builder.CreateSub(ConstantInt::get(ArgType, BitWidth - 1), LZ);
+    Value *Shifted = Builder.CreateShl(One, ShiftAmt);
+    Value *IsZero = Builder.CreateICmpEQ(ArgValue, Zero);
+    Value *Result = Builder.CreateSelect(IsZero, Zero, Shifted);
+    return RValue::get(Result);
+  }
+  case Builtin::BIstdc_bit_ceil_uc:
+  case Builtin::BIstdc_bit_ceil_us:
+  case Builtin::BIstdc_bit_ceil_ui:
+  case Builtin::BIstdc_bit_ceil_ul:
+  case Builtin::BIstdc_bit_ceil_ull:
+  case Builtin::BIstdc_bit_ceil:
+  case Builtin::BI__builtin_stdc_bit_ceil: {
+    Value *ArgValue = EmitScalarExpr(E->getArg(0));
+    llvm::Type *ArgType = ArgValue->getType();
+    unsigned BitWidth = ArgType->getIntegerBitWidth();
+    Value *One = ConstantInt::get(ArgType, 1);
+    Value *Two = ConstantInt::get(ArgType, 2);
+
+    Value *IsLEOne = Builder.CreateICmpULE(ArgValue, One, "isleone");
+
+    BasicBlock *EntryBB = Builder.GetInsertBlock();
+    BasicBlock *CalcBB = createBasicBlock("bitceil.calc", CurFn);
+    BasicBlock *MergeBB = createBasicBlock("bitceil.merge", CurFn);
+
+    Builder.CreateCondBr(IsLEOne, MergeBB, CalcBB);
+
+    Builder.SetInsertPoint(CalcBB);
+    Function *F = CGM.getIntrinsic(Intrinsic::ctlz, ArgType);
+    Value *ArgMinusOne = Builder.CreateSub(ArgValue, One);
+    Value *LZ = Builder.CreateCall(F, {ArgMinusOne, Builder.getFalse()});
+    // 2<<(BitWidth-1-LZ) to get the next power of two. The shift
+    // amount is always in [0, BitWidth-1], so when LZ==0 (argument has its MSB
+    // set), the result wraps to 0
+    Value *ShiftAmt =
+        Builder.CreateSub(ConstantInt::get(ArgType, BitWidth - 1), LZ);
+    Value *Tmp = Builder.CreateShl(Two, ShiftAmt);
+    Builder.CreateBr(MergeBB);
+
+    Builder.SetInsertPoint(MergeBB);
+    PHINode *Phi = Builder.CreatePHI(ArgType, 2);
+    Phi->addIncoming(One, EntryBB);
+    Phi->addIncoming(Tmp, CalcBB);
+    return RValue::get(Phi);
+  }
 
   case Builtin::BI__builtin_constant_p: {
     llvm::Type *ResultType = ConvertType(E->getType());
@@ -3763,7 +4049,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin___clear_cache: {
     Value *Begin = EmitScalarExpr(E->getArg(0));
     Value *End = EmitScalarExpr(E->getArg(1));
-    Function *F = CGM.getIntrinsic(Intrinsic::clear_cache);
+    Function *F = CGM.getIntrinsic(Intrinsic::clear_cache, {CGM.DefaultPtrTy});
     return RValue::get(Builder.CreateCall(F, {Begin, End}));
   }
   case Builtin::BI__builtin_trap:
@@ -4150,6 +4436,29 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_reduce_minimum:
     return RValue::get(emitBuiltinWithOneOverloadedType<1>(
         *this, E, Intrinsic::vector_reduce_fminimum, "rdx.minimum"));
+  case Builtin::BI__builtin_reduce_assoc_fadd:
+  case Builtin::BI__builtin_reduce_in_order_fadd: {
+    llvm::Value *Vector = EmitScalarExpr(E->getArg(0));
+    llvm::Type *ScalarTy = Vector->getType()->getScalarType();
+    llvm::Value *StartValue = nullptr;
+    if (E->getNumArgs() == 2)
+      StartValue = Builder.CreateFPCast(EmitScalarExpr(E->getArg(1)), ScalarTy);
+    llvm::Value *Args[] = {/*start_value=*/StartValue
+                               ? StartValue
+                               : llvm::ConstantFP::get(ScalarTy, -0.0F),
+                           /*vector=*/Vector};
+    llvm::Function *F =
+        CGM.getIntrinsic(Intrinsic::vector_reduce_fadd, Vector->getType());
+    llvm::CallBase *Reduce = Builder.CreateCall(F, Args, "rdx.addf");
+    if (BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_reduce_assoc_fadd) {
+      // `__builtin_reduce_assoc_fadd` is an associative reduction which
+      // requires the reassoc FMF flag.
+      llvm::FastMathFlags FMF;
+      FMF.setAllowReassoc();
+      cast<llvm::CallBase>(Reduce)->setFastMathFlags(FMF);
+    }
+    return RValue::get(Reduce);
+  }
 
   case Builtin::BI__builtin_matrix_transpose: {
     auto *MatrixTy = E->getArg(0)->getType()->castAs<ConstantMatrixType>();
@@ -4405,12 +4714,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     AI->setAlignment(SuitableAlignmentInBytes);
     if (BuiltinID != Builtin::BI__builtin_alloca_uninitialized)
       initializeAlloca(*this, AI, Size, SuitableAlignmentInBytes);
-    LangAS AAS = getASTAllocaAddressSpace();
-    LangAS EAS = E->getType()->getPointeeType().getAddressSpace();
-    if (AAS != EAS) {
+    if (AI->getAddressSpace() !=
+        CGM.getContext().getTargetAddressSpace(
+            E->getType()->getPointeeType().getAddressSpace())) {
       llvm::Type *Ty = CGM.getTypes().ConvertType(E->getType());
-      return RValue::get(
-          getTargetHooks().performAddrSpaceCast(*this, AI, AAS, Ty));
+      return RValue::get(performAddrSpaceCast(AI, Ty));
     }
     return RValue::get(AI);
   }
@@ -4427,12 +4735,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     AI->setAlignment(AlignmentInBytes);
     if (BuiltinID != Builtin::BI__builtin_alloca_with_align_uninitialized)
       initializeAlloca(*this, AI, Size, AlignmentInBytes);
-    LangAS AAS = getASTAllocaAddressSpace();
-    LangAS EAS = E->getType()->getPointeeType().getAddressSpace();
-    if (AAS != EAS) {
+    if (AI->getAddressSpace() !=
+        CGM.getContext().getTargetAddressSpace(
+            E->getType()->getPointeeType().getAddressSpace())) {
       llvm::Type *Ty = CGM.getTypes().ConvertType(E->getType());
-      return RValue::get(
-          getTargetHooks().performAddrSpaceCast(*this, AI, AAS, Ty));
+      return RValue::get(performAddrSpaceCast(AI, Ty));
     }
     return RValue::get(AI);
   }
@@ -4737,11 +5044,13 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_return_address: {
     Value *Depth = ConstantEmitter(*this).emitAbstract(E->getArg(0),
                                                    getContext().UnsignedIntTy);
-    Function *F = CGM.getIntrinsic(Intrinsic::returnaddress);
+    Function *F =
+        CGM.getIntrinsic(Intrinsic::returnaddress, {CGM.ProgramPtrTy});
     return RValue::get(Builder.CreateCall(F, Depth));
   }
   case Builtin::BI_ReturnAddress: {
-    Function *F = CGM.getIntrinsic(Intrinsic::returnaddress);
+    Function *F =
+        CGM.getIntrinsic(Intrinsic::returnaddress, {CGM.ProgramPtrTy});
     return RValue::get(Builder.CreateCall(F, Builder.getInt32(0)));
   }
   case Builtin::BI__builtin_frame_address: {
@@ -4993,14 +5302,18 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__sync_val_compare_and_swap_4:
   case Builtin::BI__sync_val_compare_and_swap_8:
   case Builtin::BI__sync_val_compare_and_swap_16:
-    return RValue::get(MakeAtomicCmpXchgValue(*this, E, false));
+    return RValue::get(MakeAtomicCmpXchgValue(
+        *this, E, false, AtomicOrdering::SequentiallyConsistent,
+        AtomicOrdering::SequentiallyConsistent));
 
   case Builtin::BI__sync_bool_compare_and_swap_1:
   case Builtin::BI__sync_bool_compare_and_swap_2:
   case Builtin::BI__sync_bool_compare_and_swap_4:
   case Builtin::BI__sync_bool_compare_and_swap_8:
   case Builtin::BI__sync_bool_compare_and_swap_16:
-    return RValue::get(MakeAtomicCmpXchgValue(*this, E, true));
+    return RValue::get(MakeAtomicCmpXchgValue(
+        *this, E, true, AtomicOrdering::SequentiallyConsistent,
+        AtomicOrdering::SequentiallyConsistent));
 
   case Builtin::BI__sync_swap_1:
   case Builtin::BI__sync_swap_2:
@@ -5284,12 +5597,17 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     SmallVector<Metadata *, 1> Strings;
     for (const Expr *Arg : E->arguments()) {
       const auto *Str = cast<StringLiteral>(Arg->IgnoreParenCasts());
-      assert(Str->getCharByteWidth() == 2);
+      assert(Str->getCharByteWidth() == 2 || Str->getCharByteWidth() == 4);
       StringRef WideBytes = Str->getBytes();
       std::string StrUtf8;
-      if (!convertUTF16ToUTF8String(
-              ArrayRef(WideBytes.data(), WideBytes.size()), StrUtf8)) {
-        CGM.ErrorUnsupported(E, "non-UTF16 __annotation argument");
+      bool Converted =
+          (Str->getCharByteWidth() == 2)
+              ? convertUTF16ToUTF8String(
+                    ArrayRef(WideBytes.data(), WideBytes.size()), StrUtf8)
+              : convertUTF32ToUTF8String(
+                    ArrayRef(WideBytes.data(), WideBytes.size()), StrUtf8);
+      if (!Converted) {
+        CGM.ErrorUnsupported(E, "non-Unicode __annotation argument");
         continue;
       }
       Strings.push_back(llvm::MDString::get(getLLVMContext(), StrUtf8));
@@ -5665,12 +5983,13 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
   case Builtin::BI__builtin_ptrauth_auth:
   case Builtin::BI__builtin_ptrauth_auth_and_resign:
+  case Builtin::BI__builtin_ptrauth_auth_load_relative_and_sign:
   case Builtin::BI__builtin_ptrauth_blend_discriminator:
   case Builtin::BI__builtin_ptrauth_sign_generic_data:
   case Builtin::BI__builtin_ptrauth_sign_unauthenticated:
   case Builtin::BI__builtin_ptrauth_strip: {
     // Emit the arguments.
-    SmallVector<llvm::Value *, 5> Args;
+    SmallVector<llvm::Value *, 6> Args;
     for (auto argExpr : E->arguments())
       Args.push_back(EmitScalarExpr(argExpr));
 
@@ -5681,6 +6000,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     switch (BuiltinID) {
     case Builtin::BI__builtin_ptrauth_auth_and_resign:
+    case Builtin::BI__builtin_ptrauth_auth_load_relative_and_sign:
       if (Args[4]->getType()->isPointerTy())
         Args[4] = Builder.CreatePtrToInt(Args[4], IntPtrTy);
       [[fallthrough]];
@@ -5708,6 +6028,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         return Intrinsic::ptrauth_auth;
       case Builtin::BI__builtin_ptrauth_auth_and_resign:
         return Intrinsic::ptrauth_resign;
+      case Builtin::BI__builtin_ptrauth_auth_load_relative_and_sign:
+        return Intrinsic::ptrauth_resign_load_relative;
       case Builtin::BI__builtin_ptrauth_blend_discriminator:
         return Intrinsic::ptrauth_blend;
       case Builtin::BI__builtin_ptrauth_sign_generic_data:

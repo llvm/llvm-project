@@ -67,7 +67,9 @@ const MCAsmInfo::AtSpecifier atSpecifiers[] = {
 
 void X86MCAsmInfoDarwin::anchor() { }
 
-X86MCAsmInfoDarwin::X86MCAsmInfoDarwin(const Triple &T) {
+X86MCAsmInfoDarwin::X86MCAsmInfoDarwin(const Triple &T,
+                                       const MCTargetOptions &Options)
+    : MCAsmInfoDarwin(Options) {
   bool is64Bit = T.isX86_64();
   if (is64Bit)
     CodePointerSize = CalleeSaveStackSlotSize = 8;
@@ -83,8 +85,6 @@ X86MCAsmInfoDarwin::X86MCAsmInfoDarwin(const Triple &T) {
   // for .S files on other systems.  Perhaps this is because the file system
   // wasn't always case preserving or something.
   CommentString = "##";
-
-  AllowDollarAtStartOfIdentifier = false;
 
   SupportsDebugInformation = true;
   UseDataRegionDirectives = MarkedJTDataRegions;
@@ -106,13 +106,15 @@ X86MCAsmInfoDarwin::X86MCAsmInfoDarwin(const Triple &T) {
   initializeAtSpecifiers(atSpecifiers);
 }
 
-X86_64MCAsmInfoDarwin::X86_64MCAsmInfoDarwin(const Triple &Triple)
-  : X86MCAsmInfoDarwin(Triple) {
-}
+X86_64MCAsmInfoDarwin::X86_64MCAsmInfoDarwin(const Triple &Triple,
+                                             const MCTargetOptions &Options)
+    : X86MCAsmInfoDarwin(Triple, Options) {}
 
 void X86ELFMCAsmInfo::anchor() { }
 
-X86ELFMCAsmInfo::X86ELFMCAsmInfo(const Triple &T) {
+X86ELFMCAsmInfo::X86ELFMCAsmInfo(const Triple &T,
+                                 const MCTargetOptions &Options)
+    : MCAsmInfoELF(Options) {
   bool is64Bit = T.isX86_64();
   bool isX32 = T.isX32();
 
@@ -125,7 +127,6 @@ X86ELFMCAsmInfo::X86ELFMCAsmInfo(const Triple &T) {
   CalleeSaveStackSlotSize = is64Bit ? 8 : 4;
 
   AssemblerDialect = X86AsmSyntax;
-  AllowDollarAtStartOfIdentifier = false;
 
   // Debug Information
   SupportsDebugInformation = true;
@@ -148,9 +149,11 @@ X86_64MCAsmInfoDarwin::getExprForPersonalitySymbol(const MCSymbol *Sym,
 
 void X86MCAsmInfoMicrosoft::anchor() { }
 
-X86MCAsmInfoMicrosoft::X86MCAsmInfoMicrosoft(const Triple &Triple) {
+X86MCAsmInfoMicrosoft::X86MCAsmInfoMicrosoft(const Triple &Triple,
+                                             const MCTargetOptions &Options)
+    : MCAsmInfoMicrosoft(Options) {
   if (Triple.isX86_64()) {
-    PrivateGlobalPrefix = ".L";
+    InternalSymbolPrefix = ".L";
     PrivateLabelPrefix = ".L";
     CodePointerSize = 8;
     WinEHEncodingType = WinEH::EncodingType::Itanium;
@@ -164,7 +167,6 @@ X86MCAsmInfoMicrosoft::X86MCAsmInfoMicrosoft(const Triple &Triple) {
   ExceptionsType = ExceptionHandling::WinEH;
 
   AssemblerDialect = X86AsmSyntax;
-  AllowDollarAtStartOfIdentifier = false;
 
   AllowAtInName = true;
 
@@ -173,8 +175,9 @@ X86MCAsmInfoMicrosoft::X86MCAsmInfoMicrosoft(const Triple &Triple) {
 
 void X86MCAsmInfoMicrosoftMASM::anchor() { }
 
-X86MCAsmInfoMicrosoftMASM::X86MCAsmInfoMicrosoftMASM(const Triple &Triple)
-    : X86MCAsmInfoMicrosoft(Triple) {
+X86MCAsmInfoMicrosoftMASM::X86MCAsmInfoMicrosoftMASM(
+    const Triple &Triple, const MCTargetOptions &Options)
+    : X86MCAsmInfoMicrosoft(Triple, Options) {
   DollarIsPC = true;
   SeparatorString = "\n";
   CommentString = ";";
@@ -184,13 +187,43 @@ X86MCAsmInfoMicrosoftMASM::X86MCAsmInfoMicrosoftMASM(const Triple &Triple)
   AllowAtAtStartOfIdentifier = true;
 }
 
+static bool isValidX86UnquotedName(const MCAsmInfo &MAI,
+                                   const StringSet<> &ReservedIdentifiers,
+                                   StringRef Name) {
+  if (!MAI.MCAsmInfo::isValidUnquotedName(Name))
+    return false;
+  // Only Intel-syntax output needs to avoid register/keyword collisions; AT&T
+  // disambiguates registers with '%' and doesn't treat `byte`, `ptr`, etc. as
+  // keywords.
+  return MAI.getOutputAssemblerDialect() == 0 ||
+         !ReservedIdentifiers.contains(Name.lower());
+}
+
+bool X86MCAsmInfoDarwin::isValidUnquotedName(StringRef Name) const {
+  return isValidX86UnquotedName(*this, ReservedIdentifiers, Name);
+}
+
+bool X86ELFMCAsmInfo::isValidUnquotedName(StringRef Name) const {
+  return isValidX86UnquotedName(*this, ReservedIdentifiers, Name);
+}
+
+bool X86MCAsmInfoMicrosoft::isValidUnquotedName(StringRef Name) const {
+  return isValidX86UnquotedName(*this, ReservedIdentifiers, Name);
+}
+
+bool X86MCAsmInfoGNUCOFF::isValidUnquotedName(StringRef Name) const {
+  return isValidX86UnquotedName(*this, ReservedIdentifiers, Name);
+}
+
 void X86MCAsmInfoGNUCOFF::anchor() { }
 
-X86MCAsmInfoGNUCOFF::X86MCAsmInfoGNUCOFF(const Triple &Triple) {
+X86MCAsmInfoGNUCOFF::X86MCAsmInfoGNUCOFF(const Triple &Triple,
+                                         const MCTargetOptions &Options)
+    : MCAsmInfoGNUCOFF(Options) {
   assert((Triple.isOSWindows() || Triple.isUEFI()) &&
          "Windows and UEFI are the only supported COFF targets");
   if (Triple.isX86_64()) {
-    PrivateGlobalPrefix = ".L";
+    InternalSymbolPrefix = ".L";
     PrivateLabelPrefix = ".L";
     CodePointerSize = 8;
     WinEHEncodingType = WinEH::EncodingType::Itanium;
@@ -202,7 +235,6 @@ X86MCAsmInfoGNUCOFF::X86MCAsmInfoGNUCOFF(const Triple &Triple) {
   AssemblerDialect = X86AsmSyntax;
 
   AllowAtInName = true;
-  AllowDollarAtStartOfIdentifier = false;
 
   initializeAtSpecifiers(atSpecifiers);
 }
