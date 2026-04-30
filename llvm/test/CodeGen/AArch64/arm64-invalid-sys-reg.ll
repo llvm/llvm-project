@@ -22,9 +22,5 @@ entry:
   ret void
 }
 
-declare i32 @llvm.reac_register.i32(metadata) nounwind
-declare void @llvm.write_register.i64(metadata, i64) nounwind
-
 !0 = !{!"notareg\00"}
 !1 = !{!"1:2:3:4:5"}
-

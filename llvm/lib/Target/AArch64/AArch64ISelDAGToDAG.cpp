@@ -4268,6 +4268,7 @@ bool AArch64DAGToDAGISel::tryReadRegister(SDNode *N) {
       Imm = TheReg->Encoding;
     else
       Imm = AArch64SysReg::parseGenericRegister(RegString->getString());
+
     if (Imm == -1) {
       // Still no match, see if this is "pc" or give up.
       if (!ReadIs128Bit && RegString->getString() == "pc") {
