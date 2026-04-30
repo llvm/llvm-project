@@ -1757,7 +1757,15 @@ Process::CreateBreakpointSite(const BreakpointLocationSP &constituent,
 
   BreakpointSiteSP bp_site_sp(
       new BreakpointSite(constituent, load_addr, use_hardware));
-  Status error = EnableBreakpointSite(bp_site_sp.get());
+
+  bool bp_from_address =
+      constituent->GetBreakpoint().GetResolver()->GetResolverTy() ==
+      BreakpointResolver::ResolverTy::AddressResolver;
+  bool should_be_eager = use_hardware || bp_from_address;
+
+  auto error = should_be_eager ? EnableBreakpointSite(bp_site_sp.get())
+                               : Status::FromError(ExecuteBreakpointSiteAction(
+                                     *bp_site_sp, BreakpointAction::Enable));
   if (error.Success()) {
     constituent->SetBreakpointSite(bp_site_sp);
     return m_breakpoint_site_list.Add(bp_site_sp);
