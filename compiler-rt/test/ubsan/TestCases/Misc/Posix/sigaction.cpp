@@ -7,8 +7,9 @@
 // Reason unknown, needs debugging.
 // UNSUPPORTED: target=aarch64{{.*}} && ubsan-tsan
 
-// TySan doesn't build a shared library
+// These sanitizers don't build a shared library
 // UNSUPPORTED: ubsan-tysan
+// UNSUPPORTED: ubsan-rtsan
 
 #include <assert.h>
 #include <signal.h>

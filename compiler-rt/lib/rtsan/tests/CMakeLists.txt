@@ -97,7 +97,9 @@ foreach(arch ${RTSAN_TEST_ARCH})
       $<TARGET_OBJECTS:RTSanitizerCommon.osx>
       $<TARGET_OBJECTS:RTSanitizerCommonLibc.osx>
       $<TARGET_OBJECTS:RTSanitizerCommonCoverage.osx>
-      $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.osx>)
+      $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.osx>
+      $<TARGET_OBJECTS:RTUbsan.osx>
+      )
   else()
     set(RTSAN_TEST_RUNTIME_OBJECTS
       $<TARGET_OBJECTS:RTRtsan.${arch}>
@@ -106,7 +108,10 @@ foreach(arch ${RTSAN_TEST_ARCH})
       $<TARGET_OBJECTS:RTSanitizerCommonLibc.${arch}>
       $<TARGET_OBJECTS:RTSanitizerCommonCoverage.${arch}>
       $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.${arch}>
-      $<TARGET_OBJECTS:RTSanitizerCommonSymbolizerInternal.${arch}>)
+      $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.${arch}>
+      $<TARGET_OBJECTS:RTSanitizerCommonSymbolizerInternal.${arch}>
+      $<TARGET_OBJECTS:RTUbsan.${arch}>
+      )
   endif()
   add_library(${RTSAN_TEST_RUNTIME} STATIC ${RTSAN_TEST_RUNTIME_OBJECTS})
   set_target_properties(${RTSAN_TEST_RUNTIME} PROPERTIES

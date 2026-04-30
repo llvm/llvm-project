@@ -11,8 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "rtsan/rtsan_flags.h"
+
+#include "rtsan/rtsan.h"
 #include "sanitizer_common/sanitizer_flag_parser.h"
 #include "sanitizer_common/sanitizer_flags.h"
+#include "ubsan/ubsan_flags.h"
 
 using namespace __sanitizer;
 using namespace __rtsan;
@@ -44,10 +47,28 @@ void __rtsan::InitializeFlags() {
   RegisterRtsanFlags(&parser, &flags());
   RegisterCommonFlags(&parser);
 
+#if RTSAN_CONTAINS_UBSAN
+  __ubsan::Flags *uf = __ubsan::flags();
+  uf->SetDefaults();
+
+  FlagParser ubsan_parser;
+  __ubsan::RegisterUbsanFlags(&ubsan_parser, uf);
+  RegisterCommonFlags(&ubsan_parser);
+#endif
+
   // Override from user-specified string.
   parser.ParseString(__rtsan_default_options());
 
+#if RTSAN_CONTAINS_UBSAN
+  const char *ubsan_default_options = __ubsan_default_options();
+  ubsan_parser.ParseString(ubsan_default_options);
+#endif
+
   parser.ParseStringFromEnv("RTSAN_OPTIONS");
+
+#if RTSAN_CONTAINS_UBSAN
+  ubsan_parser.ParseStringFromEnv("UBSAN_OPTIONS");
+#endif
 
   InitializeCommonFlags();
 

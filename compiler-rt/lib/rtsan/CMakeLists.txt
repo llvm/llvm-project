@@ -65,6 +65,7 @@ set(RTSAN_COMMON_RUNTIME_OBJECT_LIBS
   RTSanitizerCommon
   RTSanitizerCommonLibc
   RTSanitizerCommonCoverage
+  RTUbsan
   RTSanitizerCommonSymbolizer)
 
 append_list_if(COMPILER_RT_HAS_LIBDL dl RTSAN_DYNAMIC_LIBS)

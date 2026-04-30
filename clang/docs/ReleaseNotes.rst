@@ -750,6 +750,7 @@ Static Analyzer
 
 Sanitizers
 ----------
+- Support running RealtimeSanitizer with UndefinedBehaviorSanitizer
 
 Python Binding Changes
 ----------------------

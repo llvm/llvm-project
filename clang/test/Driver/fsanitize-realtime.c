@@ -41,8 +41,8 @@
 // RUN: not %clang --target=x86_64-linux-gnu -fsanitize=realtime,memory  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-REALTIME-MSAN
 // CHECK-REALTIME-MSAN: error: invalid argument '-fsanitize=realtime' not allowed with '-fsanitize=memory'
 
-// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=realtime,undefined  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-REALTIME-UBSAN
-// CHECK-REALTIME-UBSAN: error: invalid argument '-fsanitize=realtime' not allowed with '-fsanitize=undefined'
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=realtime,undefined  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-REALTIME-UBSAN
+// CHECK-REALTIME-UBSAN-NOT: error: invalid argument '-fsanitize=realtime' not allowed with '-fsanitize=undefined'
 
 // RUN: not %clang --target=x86_64-linux-gnu -fsanitize=type,realtime  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-REALTIME-TYSAN
 // RUN: not %clang --target=x86_64-linux-gnu -fsanitize=realtime,type  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-REALTIME-TYSAN

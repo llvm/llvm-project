@@ -19,9 +19,10 @@
 // RUN: %clangxx -fsanitize=shift -O1 -fsanitize-coverage=edge,trace-pc-guard  %s -o %t
 // RUN: %env_ubsan_opts=coverage=1:verbosity=1:coverage_dir='"%t-dir"' %run %t 2>&1 | FileCheck %s --check-prefix=CHECK3 --check-prefix=CHECK_WARN
 
-// Coverage is not yet implemented in TSan or TySan.
+// Coverage is not yet implemented in these sanitizers
 // XFAIL: ubsan-tsan
 // XFAIL: ubsan-tysan
+// XFAIL: ubsan-rtsan
 // UNSUPPORTED: ubsan-standalone-static
 // No coverage support
 // UNSUPPORTED: target={{.*openbsd.*}}

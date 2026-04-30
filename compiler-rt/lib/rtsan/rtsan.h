@@ -11,6 +11,11 @@
 #pragma once
 
 #include "sanitizer_common/sanitizer_internal_defs.h"
+#include "ubsan/ubsan_platform.h"
+
+#ifndef RTSAN_CONTAINS_UBSAN
+#define RTSAN_CONTAINS_UBSAN CAN_SANITIZE_UB
+#endif
 
 extern "C" {
 

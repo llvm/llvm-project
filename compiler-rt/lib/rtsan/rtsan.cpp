@@ -18,8 +18,10 @@
 
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"
+#include "sanitizer_common/sanitizer_interface_internal.h"
 #include "sanitizer_common/sanitizer_mutex.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
+#include "ubsan/ubsan_init.h"
 
 using namespace __rtsan;
 using namespace __sanitizer;
@@ -84,9 +86,15 @@ SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_init() {
   SanitizerToolName = "RealtimeSanitizer";
   InitializeFlags();
 
+  __sanitizer_set_report_path(common_flags()->log_path);
+
   InitializePlatformEarly();
 
   InitializeInterceptors();
+
+#if RTSAN_CONTAINS_UBSAN
+  __ubsan::InitAsPlugin();
+#endif
 
   InitializeSuppressions();
 
@@ -149,6 +157,23 @@ __rtsan_notify_blocking_call(const char *func_name) {
   ExpectNotRealtime(GetContextForThisThread(),
                     {DiagnosticsInfoType::BlockingCall, func_name, pc, bp},
                     OnViolation);
+}
+
+// This function is used for interop with UBSan, they have tests to confirm this
+// works as intended
+SANITIZER_INTERFACE_ATTRIBUTE
+void __sanitizer_print_stack_trace() {
+
+  if (!__rtsan_is_initialized())
+    return;
+
+  UNINITIALIZED __sanitizer::BufferedStackTrace stack;
+
+  GET_CALLER_PC_BP;
+  stack.Unwind(pc, bp, nullptr,
+               __sanitizer::common_flags()->fast_unwind_on_fatal);
+
+  stack.Print();
 }
 
 } // extern "C"
