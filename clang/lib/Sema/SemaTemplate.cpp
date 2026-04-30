@@ -11055,8 +11055,7 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
   } else if (TSK == TSK_ExplicitInstantiationDefinition) {
     // C++2c [expr.prim.lambda#closure-19] A member of a closure type shall not
     // be explicitly instantiated.
-    if (CXXRecordDecl *RD =
-            dyn_cast<CXXRecordDecl>(Specialization->getParent());
+    if (const auto *RD = dyn_cast<CXXRecordDecl>(Specialization->getParent());
         RD && RD->isLambda()) {
       Diag(D.getBeginLoc(), diag::err_lambda_explicit_temp_spec)
           << /*instantiation*/ 1;

@@ -16335,7 +16335,7 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
     if (FD->getTemplateSpecializationInfo()->isExplicitSpecialization()) {
       Diag(FD->getLocation(), diag::err_lambda_explicit_temp_spec)
           << /*specialization*/ 0;
-      CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(FD->getParent());
+      CXXRecordDecl *RD = cast<CXXRecordDecl>(FD->getParent());
       Diag(RD->getLocation(), diag::note_defined_here) << RD;
 
       FD->setInvalidDecl();
