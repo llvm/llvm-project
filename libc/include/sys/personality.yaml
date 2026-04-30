@@ -1,0 +1,13 @@
+header: sys/personality.h
+header_template: personality.h.def
+macros: []
+types: []
+enums: []
+objects: []
+functions:
+  - name: personality
+    standards:
+      - Linux
+    return_type: int
+    arguments:
+      - type: unsigned long

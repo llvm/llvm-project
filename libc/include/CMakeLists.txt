@@ -640,6 +640,14 @@ add_header_macro(
 )
 
 add_header_macro(
+  sys_personality
+  ../libc/include/sys/personality.yaml
+  sys/personality.h
+  DEPENDS
+    .llvm_libc_common_h
+)
+
+add_header_macro(
   sys_prctl
   ../libc/include/sys/prctl.yaml
   sys/prctl.h
