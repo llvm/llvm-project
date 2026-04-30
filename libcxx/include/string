@@ -1491,7 +1491,7 @@ public:
     size_type __old_sz = __str.size();
     if (!__str.__is_long())
       __str.__annotate_delete();
-    __rep_ = std::__move_and_reset(__str.__rep_);
+    __rep_ = std::__exchange(__str.__rep_, __rep());
     __str.__annotate_new(0);
 
     _Traits::move(data(), data() + __pos, __len);

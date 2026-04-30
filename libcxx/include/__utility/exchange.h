@@ -36,16 +36,6 @@ __exchange(_T1& __obj, _T2&& __new_value)
   return __old_value;
 }
 
-template <class _Tp>
-[[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX14 auto __move_and_reset(_Tp& __obj)
-    _NOEXCEPT_(is_nothrow_default_constructible<_Tp>::value&& is_nothrow_move_constructible<_Tp>::value&&
-                   is_nothrow_move_assignable<_Tp>::value) ->
-    typename std::enable_if<is_default_constructible<_Tp>::value && is_move_constructible<_Tp>::value &&
-                                is_move_assignable<_Tp>::value,
-                            _Tp>::type {
-  return std::__exchange(__obj, _Tp());
-}
-
 #if _LIBCPP_STD_VER >= 14
 template <class _T1, class _T2 = _T1>
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _T1 exchange(_T1& __obj, _T2&& __new_value) noexcept(
