@@ -1661,8 +1661,10 @@ bool CompilerInvocation::createFromArgs(
 
   // -frealloc-lhs is the default.
   if (!args.hasFlag(clang::options::OPT_frealloc_lhs,
-                    clang::options::OPT_fno_realloc_lhs, true))
+                    clang::options::OPT_fno_realloc_lhs, true)) {
     invoc.loweringOpts.setReallocateLHS(false);
+    invoc.getLangOpts().NoReallocateLHS = true;
+  }
 
   invoc.loweringOpts.setRepackArrays(args.hasFlag(
       clang::options::OPT_frepack_arrays, clang::options::OPT_fno_repack_arrays,
