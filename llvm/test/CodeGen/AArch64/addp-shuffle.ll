@@ -361,9 +361,7 @@ entry:
 define <4 x i32> @or_deinterleave_shuffle_v8i32(<8 x i32> %a) {
 ; CHECK-LABEL: or_deinterleave_shuffle_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uzp1 v2.4s, v0.4s, v1.4s
-; CHECK-NEXT:    uzp2 v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    orr v0.16b, v2.16b, v0.16b
+; CHECK-NEXT:    addp v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %r0 = shufflevector <8 x i32> %a, <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
   %r1 = shufflevector <8 x i32> %a, <8 x i32> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
@@ -374,9 +372,7 @@ define <4 x i32> @or_deinterleave_shuffle_v8i32(<8 x i32> %a) {
 define <4 x i32> @or_deinterleave_shuffle_v8i32_c(<8 x i32> %a) {
 ; CHECK-LABEL: or_deinterleave_shuffle_v8i32_c:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uzp1 v2.4s, v0.4s, v1.4s
-; CHECK-NEXT:    uzp2 v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    orr v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    addp v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %r0 = shufflevector <8 x i32> %a, <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
   %r1 = shufflevector <8 x i32> %a, <8 x i32> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
@@ -387,10 +383,8 @@ define <4 x i32> @or_deinterleave_shuffle_v8i32_c(<8 x i32> %a) {
 define <2 x i32> @or_deinterleave_shuffle_v4i32(<4 x i32> %a) {
 ; CHECK-LABEL: or_deinterleave_shuffle_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    zip1 v2.2s, v0.2s, v1.2s
-; CHECK-NEXT:    zip2 v0.2s, v0.2s, v1.2s
-; CHECK-NEXT:    orr v0.8b, v2.8b, v0.8b
+; CHECK-NEXT:    addp v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %r0 = shufflevector <4 x i32> %a, <4 x i32> poison, <2 x i32> <i32 0, i32 2>
   %r1 = shufflevector <4 x i32> %a, <4 x i32> poison, <2 x i32> <i32 1, i32 3>
@@ -401,9 +395,7 @@ define <2 x i32> @or_deinterleave_shuffle_v4i32(<4 x i32> %a) {
 define <8 x i16> @or_deinterleave_shuffle_v16i16(<16 x i16> %a) {
 ; CHECK-LABEL: or_deinterleave_shuffle_v16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uzp1 v2.8h, v0.8h, v1.8h
-; CHECK-NEXT:    uzp2 v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    orr v0.16b, v2.16b, v0.16b
+; CHECK-NEXT:    addp v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %r0 = shufflevector <16 x i16> %a, <16 x i16> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
   %r1 = shufflevector <16 x i16> %a, <16 x i16> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
@@ -414,9 +406,8 @@ define <8 x i16> @or_deinterleave_shuffle_v16i16(<16 x i16> %a) {
 define <4 x i16> @or_deinterleave_shuffle_v8i16(<8 x i16> %a) {
 ; CHECK-LABEL: or_deinterleave_shuffle_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    xtn v1.4h, v0.4s
-; CHECK-NEXT:    uzp2 v0.8h, v0.8h, v0.8h
-; CHECK-NEXT:    orr v0.8b, v1.8b, v0.8b
+; CHECK-NEXT:    addp v0.8h, v0.8h, v0.8h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %r0 = shufflevector <8 x i16> %a, <8 x i16> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
   %r1 = shufflevector <8 x i16> %a, <8 x i16> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
@@ -427,9 +418,7 @@ define <4 x i16> @or_deinterleave_shuffle_v8i16(<8 x i16> %a) {
 define <16 x i8> @or_deinterleave_shuffle_v32i8(<32 x i8> %a) {
 ; CHECK-LABEL: or_deinterleave_shuffle_v32i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uzp1 v2.16b, v0.16b, v1.16b
-; CHECK-NEXT:    uzp2 v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    orr v0.16b, v2.16b, v0.16b
+; CHECK-NEXT:    addp v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %r0 = shufflevector <32 x i8> %a, <32 x i8> poison, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
   %r1 = shufflevector <32 x i8> %a, <32 x i8> poison, <16 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 17, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31>
@@ -440,9 +429,8 @@ define <16 x i8> @or_deinterleave_shuffle_v32i8(<32 x i8> %a) {
 define <8 x i8> @or_deinterleave_shuffle_v16i8(<16 x i8> %a) {
 ; CHECK-LABEL: or_deinterleave_shuffle_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    xtn v1.8b, v0.8h
-; CHECK-NEXT:    uzp2 v0.16b, v0.16b, v0.16b
-; CHECK-NEXT:    orr v0.8b, v1.8b, v0.8b
+; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %r0 = shufflevector <16 x i8> %a, <16 x i8> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
   %r1 = shufflevector <16 x i8> %a, <16 x i8> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
@@ -453,12 +441,9 @@ define <8 x i8> @or_deinterleave_shuffle_v16i8(<16 x i8> %a) {
 define <4 x i64> @or_deinterleave_shuffle_v8i64(<8 x i64> %a) {
 ; CHECK-LABEL: or_deinterleave_shuffle_v8i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip1 v4.2d, v2.2d, v3.2d
-; CHECK-NEXT:    zip1 v5.2d, v0.2d, v1.2d
-; CHECK-NEXT:    zip2 v2.2d, v2.2d, v3.2d
-; CHECK-NEXT:    zip2 v0.2d, v0.2d, v1.2d
-; CHECK-NEXT:    orr v1.16b, v4.16b, v2.16b
-; CHECK-NEXT:    orr v0.16b, v5.16b, v0.16b
+; CHECK-NEXT:    addp v2.2d, v2.2d, v3.2d
+; CHECK-NEXT:    addp v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    mov v1.16b, v2.16b
 ; CHECK-NEXT:    ret
   %r0 = shufflevector <8 x i64> %a, <8 x i64> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
   %r1 = shufflevector <8 x i64> %a, <8 x i64> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
@@ -469,9 +454,7 @@ define <4 x i64> @or_deinterleave_shuffle_v8i64(<8 x i64> %a) {
 define <8 x i8> @or_manual_addp_v8i8(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-LABEL: or_manual_addp_v8i8:
 ; CHECK:       // %bb.0: // %start
-; CHECK-NEXT:    uzp1 v2.8b, v0.8b, v1.8b
-; CHECK-NEXT:    uzp2 v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    orr v0.8b, v2.8b, v0.8b
+; CHECK-NEXT:    addp v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
 start:
   %0 = shufflevector <8 x i8> %a, <8 x i8> %b, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
@@ -483,9 +466,7 @@ start:
 define <4 x i16> @or_manual_addp_v4i16(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-LABEL: or_manual_addp_v4i16:
 ; CHECK:       // %bb.0: // %start
-; CHECK-NEXT:    uzp1 v2.4h, v0.4h, v1.4h
-; CHECK-NEXT:    uzp2 v0.4h, v0.4h, v1.4h
-; CHECK-NEXT:    orr v0.8b, v2.8b, v0.8b
+; CHECK-NEXT:    addp v0.4h, v0.4h, v1.4h
 ; CHECK-NEXT:    ret
 start:
   %0 = shufflevector <4 x i16> %a, <4 x i16> %b, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
@@ -497,9 +478,7 @@ start:
 define <2 x i32> @or_manual_addp_v2i32(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: or_manual_addp_v2i32:
 ; CHECK:       // %bb.0: // %start
-; CHECK-NEXT:    zip1 v2.2s, v0.2s, v1.2s
-; CHECK-NEXT:    zip2 v0.2s, v0.2s, v1.2s
-; CHECK-NEXT:    orr v0.8b, v2.8b, v0.8b
+; CHECK-NEXT:    addp v0.2s, v0.2s, v1.2s
 ; CHECK-NEXT:    ret
 start:
   %0 = shufflevector <2 x i32> %a, <2 x i32> %b, <2 x i32> <i32 0, i32 2>
@@ -511,9 +490,7 @@ start:
 define <16 x i8> @or_manual_addp_v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: or_manual_addp_v16i8:
 ; CHECK:       // %bb.0: // %start
-; CHECK-NEXT:    uzp1 v2.16b, v0.16b, v1.16b
-; CHECK-NEXT:    uzp2 v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    orr v0.16b, v2.16b, v0.16b
+; CHECK-NEXT:    addp v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
 start:
   %0 = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
@@ -525,9 +502,7 @@ start:
 define <8 x i16> @or_manual_addp_v8i16(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: or_manual_addp_v8i16:
 ; CHECK:       // %bb.0: // %start
-; CHECK-NEXT:    uzp1 v2.8h, v0.8h, v1.8h
-; CHECK-NEXT:    uzp2 v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    orr v0.16b, v2.16b, v0.16b
+; CHECK-NEXT:    addp v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
 start:
   %0 = shufflevector <8 x i16> %a, <8 x i16> %b, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
@@ -539,9 +514,7 @@ start:
 define <4 x i32> @or_manual_addp_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: or_manual_addp_v4i32:
 ; CHECK:       // %bb.0: // %start
-; CHECK-NEXT:    uzp1 v2.4s, v0.4s, v1.4s
-; CHECK-NEXT:    uzp2 v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    orr v0.16b, v2.16b, v0.16b
+; CHECK-NEXT:    addp v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
 start:
   %0 = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
@@ -553,9 +526,7 @@ start:
 define <2 x i64> @or_manual_addp_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: or_manual_addp_v2i64:
 ; CHECK:       // %bb.0: // %start
-; CHECK-NEXT:    zip1 v2.2d, v0.2d, v1.2d
-; CHECK-NEXT:    zip2 v0.2d, v0.2d, v1.2d
-; CHECK-NEXT:    orr v0.16b, v2.16b, v0.16b
+; CHECK-NEXT:    addp v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
 start:
   %0 = shufflevector <2 x i64> %a, <2 x i64> %b, <2 x i32> <i32 0, i32 2>
@@ -591,3 +562,70 @@ entry:
   %1 = extractelement <2 x i64> %0, i32 0
   ret i64 %1
 }
+
+define <16 x i8> @xtn_uzp2_v16i8_add(<16 x i8> %x) {
+; CHECK-LABEL: xtn_uzp2_v16i8_add:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    ret
+  %e = shufflevector <16 x i8> %x, <16 x i8> poison, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %o = shufflevector <16 x i8> %x, <16 x i8> poison, <16 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %r = add <16 x i8> %e, %o
+  ret <16 x i8> %r
+}
+
+define <16 x i8> @xtn_uzp2_v16i8_or(<16 x i8> %x) {
+; CHECK-LABEL: xtn_uzp2_v16i8_or:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    ret
+  %e = shufflevector <16 x i8> %x, <16 x i8> poison, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %o = shufflevector <16 x i8> %x, <16 x i8> poison, <16 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %r = or disjoint <16 x i8> %e, %o
+  ret <16 x i8> %r
+}
+
+define <8 x i16> @xtn_uzp2_v8i16_add(<8 x i16> %x) {
+; CHECK-LABEL: xtn_uzp2_v8i16_add:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    addp v0.8h, v0.8h, v0.8h
+; CHECK-NEXT:    ret
+  %e = shufflevector <8 x i16> %x, <8 x i16> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 poison, i32 poison, i32 poison, i32 poison>
+  %o = shufflevector <8 x i16> %x, <8 x i16> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
+  %r = add <8 x i16> %e, %o
+  ret <8 x i16> %r
+}
+
+define <8 x i16> @xtn_uzp2_v8i16_or(<8 x i16> %x) {
+; CHECK-LABEL: xtn_uzp2_v8i16_or:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    addp v0.8h, v0.8h, v0.8h
+; CHECK-NEXT:    ret
+  %e = shufflevector <8 x i16> %x, <8 x i16> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 poison, i32 poison, i32 poison, i32 poison>
+  %o = shufflevector <8 x i16> %x, <8 x i16> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
+  %r = or disjoint <8 x i16> %e, %o
+  ret <8 x i16> %r
+}
+
+define <4 x i32> @xtn_uzp2_v4i32_add(<4 x i32> %x) {
+; CHECK-LABEL: xtn_uzp2_v4i32_add:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    addp v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    ret
+  %e = shufflevector <4 x i32> %x, <4 x i32> poison, <4 x i32> <i32 0, i32 2, i32 poison, i32 poison>
+  %o = shufflevector <4 x i32> %x, <4 x i32> poison, <4 x i32> <i32 1, i32 3, i32 poison, i32 poison>
+  %r = add <4 x i32> %e, %o
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @xtn_uzp2_v4i32_or(<4 x i32> %x) {
+; CHECK-LABEL: xtn_uzp2_v4i32_or:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    addp v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    ret
+  %e = shufflevector <4 x i32> %x, <4 x i32> poison, <4 x i32> <i32 0, i32 2, i32 poison, i32 poison>
+  %o = shufflevector <4 x i32> %x, <4 x i32> poison, <4 x i32> <i32 1, i32 3, i32 poison, i32 poison>
+  %r = or disjoint <4 x i32> %e, %o
+  ret <4 x i32> %r
+}
+

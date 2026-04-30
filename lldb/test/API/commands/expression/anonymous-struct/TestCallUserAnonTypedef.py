@@ -13,6 +13,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfWasm  # no expression evaluation
 class TestExprLookupAnonStructTypedef(TestBase):
     def test(self):
         """Test typedeffed untagged struct arguments for function call expressions"""

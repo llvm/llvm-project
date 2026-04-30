@@ -147,12 +147,29 @@ One requests information on all shared libraries:
 ```
 jGetLoadedDynamicLibrariesInfos:{"fetch_all_solibs":true}
 ```
-with an optional `"report_load_commands":false` which can be added, asking
-that only the dyld SPI information (load addresses, filenames) be returned.
-The default behavior is that debugserver scans the mach-o header and load
-commands of each binary, and returns it in the JSON reply.
 
-And the second requests information about a list of shared libraries, given their load addresses:
+There are two additional keys that can be specified: the older
+`"report_load_commands":false` which specifies that the detailed
+information about the binary should not be included (the Mach-O
+header and load commands), and the newer key that supplants
+`report_load_commands`, `information-level` which takes a string
+argument that is one of `address-only`, `address-name`,
+`address-name-uuid`, `full`.  `full` will include the details of
+the mach header and segment virtual addresses for the binaries.
+
+`"report_load_commands":false` is equivalent to
+`"information-level":"address-only"`.
+
+`information-level` allows the caller to limit the amount of data
+being returned to one of (address, address+name, address+name+uuid,
+full).  When we first attach to a process, we may want to fetch the
+binary addresses for all binaries loaded in the process, and then
+fetch detailed information in batches, to keep the size of the
+packets from becoming too large.
+
+
+And the second form of jGetLoadedDynamicLibrariesInfos 
+requests information about a list of binaries, given their load addresses:
 ```
 jGetLoadedDynamicLibrariesInfos:{"solib_addresses":[8382824135,3258302053,830202858503]}
 ```
@@ -618,6 +635,62 @@ running, then an error message is returned.
 do live tracing. Specifically, the name of the plug-in should match the name
 of the tracing technology returned by this packet.
 
+## jMultiBreakpoint
+
+This packet allows setting and removing multiple breakpoints in one go. It
+lists multiple `Z` and `z` packets using a JSON array of strings.
+Formally:
+
+```
+$jMultiBreakpoint:{"breakpoint_requests" : ["request"[,"request"]*]}
+```
+
+Where each `request` is one of:
+
+```
+* z0,addr,kind
+* z1,addr,kind
+* z2,addr,kind
+* z3,addr,kind
+* z4,addr,kind
+* Z0,addr,kind[;cond_list…][;cmds:persist,cmd_list…]
+* Z1,addr,kind[;cond_list…][;cmds:persist,cmd_list…]
+* Z2,addr,kind
+* Z3,addr,kind
+* Z4,addr,kind
+```
+
+Each field has the same meaning as the corresponding packet in the GDB Remote
+Protocol.
+
+For example, the packet below is a request to set one breakpoint and to remove
+two others:
+
+```
+$jMultiBreakpoint: {"breakpoint_requests": ["Z0,1025783e8,4", "z0,1025783ec,4", "z0,1025783e8,4"]}
+```
+
+The same address may be specified multiple times.
+
+The stub must execute the sequence of `request`s in the order they
+appear in the `jMultiBreakpoint` packet. This is not an atomic operation:
+individual requests may fail, and the stub must process subsequent requests
+regardless of previous failures.
+
+The reply consists of a JSON dictionary with a single entry, `results`, which
+is an array of strings, with the same contents allowed by a reply to a `z` or
+`Z` packet.
+
+```
+{"results": ["OK", "E03", "OK"]}
+```
+
+A stub that supports this packet must include `jMultiBreakpoint+` in the reply
+to `qSupported`.
+
+**Priority To Implement:** Low. This is a performance optimization, reducing
+the number of packets sent when manipulating breakpoints.
+
 ## jThreadExtendedInfo
 
 This packet, which takes its arguments as JSON and sends its reply as
@@ -727,10 +800,19 @@ server to expedite memory that the client is likely to use (e.g., areas around t
 stack pointer, which are needed for computing backtraces) and it reduces the packet
 count.
 
+When a thread has hit the binaries-loaded lldb internal breakpoint
+(if the server can detect that), the server may expedite information
+about the binaries that have been loaded, to reduce packet traffic
+that would immediately follow.  The key `added-binaries` will have
+a value of an array of binary addresses.  The key `detailed-binaries-info`
+will have a value of a JSON dictionary which is the reply that
+`jGetLoadedDynamicLibrariesInfos` would return for these binaries,
+so lldb doesn't need to request it.
+
 On macOS with debugserver, we expedite the frame pointer backchain for a thread
 (up to 256 entries) by reading 2 pointers worth of bytes at the frame pointer (for
 the previous FP and PC), and follow the backchain. Most backtraces on macOS and
-iOS now don't require us to read any memory!
+iOS now don't require us to read any memory.
 
 **Priority To Implement:** Low
 
@@ -1443,6 +1525,8 @@ tuples to return are:
   listed (`dirty-pages:;`) indicates no dirty pages in
   this memory region.  The *absence* of this key means
   that this stub cannot determine dirty pages.
+* `protection-key:<key>` - where `<key>` is an unsigned integer memory
+  protection key.
 
 If the address requested is not in a mapped region (e.g. we've jumped through
 a NULL pointer and are at 0x0) currently lldb expects to get back the size
@@ -2243,6 +2327,19 @@ following keys and values:
   Specifies how many bits in addresses in high memory are significant for
   addressing, base 10.  AArch64 can have different page table setups for low and
   high memory, and therefore a different number of bits used for addressing.
+* `added-binaries` when the remote stub knows that a thread has stopped
+  at a binaries-loaded breakpoint notification, and it can retrieve the list
+  of binaries that have just been loaded, it may send the list of base16
+  addresses (no 0x prefix) for all of the binaries, to save lldb the need
+  to read it from memory.
+* `detailed-binaries-info` when the remote stub knows that a thread
+  has stopped at a binaries-loaded breakpoint notification, it may
+  be able to gather detailed information about the newly loaded
+  binaries, the information jGetLoadedDynamicLibrariesInfos would
+  return.  If this key is present, the information for all binaries
+  being added at this stop are provided.  The value is asciihex
+  encoded JSON.  It must be asciihex encoded in case a filename
+  includes one of the gdb RSP packet metacharacters or a semicolon.
 
 ### Best Practices
 

@@ -200,6 +200,8 @@ class EvalIDScope {
 public:
   EvalIDScope(Context &Ctx) : Ctx(Ctx), OldID(Ctx.EvalID) { ++Ctx.EvalID; }
   ~EvalIDScope() { Ctx.EvalID = OldID; }
+  EvalIDScope(const EvalIDScope &) = delete;
+  EvalIDScope &operator=(const EvalIDScope &) = delete;
 
 private:
   Context &Ctx;

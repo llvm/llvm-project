@@ -536,8 +536,7 @@ static lldb_private::RegisterInfo g_register_infos_ppc[] = {
 };
 
 static_assert((sizeof(g_register_infos_ppc) /
-               sizeof(g_register_infos_ppc[0])) ==
-                  k_num_registers_ppc64,
+               sizeof(g_register_infos_ppc[0])) == k_num_registers_ppc64,
               "g_register_infos_powerpc has wrong number of register infos");
 
 #undef DEFINE_FPR_PPC64

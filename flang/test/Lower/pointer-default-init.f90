@@ -2,7 +2,7 @@
 ! clean NULL() status. This is required by f18 runtime to do pointer
 ! association with a RHS with an undefined association status from a
 ! Fortran point of view.
-! RUN: bbc -emit-fir -hlfir=false -I nw %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -I nw %s -o - | FileCheck %s
 
 module test
   type t
@@ -19,9 +19,10 @@ subroutine test_local()
   type(t) :: x
 end subroutine
 ! CHECK-LABEL:   func.func @_QPtest_local() {
-! CHECK: %[[x:.*]] = fir.alloca !fir.type<_QMtestTt{i:i32,x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}> {bindc_name = "x", uniq_name = "_QFtest_localEx"}
+! CHECK: %[[ALLOCA:.*]] = fir.alloca !fir.type<_QMtestTt{i:i32,x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}> {bindc_name = "x", uniq_name = "_QFtest_localEx"}
+! CHECK: %[[x:.*]]:2 = hlfir.declare %[[ALLOCA]]
 ! CHECK: %[[ADDR:.*]] = fir.address_of(@_QQ_QMtestTt.DerivedInit) : !fir.ref<!fir.type<_QMtestTt{i:i32,x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>
-! CHECK: fir.copy %[[ADDR]] to %[[x]] no_overlap : !fir.ref<!fir.type<_QMtestTt{i:i32,x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>, !fir.ref<!fir.type<_QMtestTt{i:i32,x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>
+! CHECK: fir.copy %[[ADDR]] to %[[x]]#0 no_overlap : !fir.ref<!fir.type<_QMtestTt{i:i32,x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>, !fir.ref<!fir.type<_QMtestTt{i:i32,x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>
 
 subroutine test_saved()
   use test, only : t
@@ -51,7 +52,7 @@ subroutine test_struct_ctor_cst(x)
   x = t(42)
 end subroutine
 ! CHECK-LABEL:   func.func @_QPtest_struct_ctor_cst(
-! CHECK:  fir.call @_FortranAInitialize(
+! CHECK:  hlfir.assign
 
 subroutine test_struct_ctor_dyn(x, i)
   use test, only : t

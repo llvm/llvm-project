@@ -34,3 +34,6 @@ const union u {
 } _str2[] = {S[0], S[1]};
 
 const int compared = strcmp(_str, (const char *)_str2); // both-error {{initializer element is not a compile-time constant}}
+
+int ptrint = __builtin_bswap64("") == 0x1234 ? 1 : 0; // both-error {{incompatible pointer to integer conversion}} \
+                                                      // both-error {{initializer element is not a compile-time constant}}
