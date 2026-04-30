@@ -4777,7 +4777,6 @@ ExpectedDecl ASTNodeImporter::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
                               *EllipsisLocOrErr))
     return FTD;
 
-  FTD->setUnsupportedFriend(D->isUnsupportedFriend());
   FTD->setAccess(D->getAccess());
   FTD->setLexicalDeclContext(LexicalDC);
   LexicalDC->addDeclInternal(FTD);
