@@ -10,6 +10,7 @@ from lldbsuite.test import lldbutil
 
 class StdChronoDataFormatterTestCase(TestBase):
     SHARED_BUILD_TESTCASE = False
+    TEST_WITH_PDB_DEBUG_INFO = True
 
     def do_test(self):
         """Test that that file and class static variables display correctly."""
@@ -436,4 +437,14 @@ class StdChronoDataFormatterTestCase(TestBase):
     @add_test_categories(["libc++"])
     def test_libcxx(self):
         self.build(dictionary={"USE_LIBCPP": 1})
+        self.do_test()
+
+    @add_test_categories(["libstdcxx"])
+    def test_libstdcpp(self):
+        self.build(dictionary={"USE_LIBSTDCPP": 1})
+        self.do_test()
+
+    @add_test_categories(["msvcstl"])
+    def test_msvcstl(self):
+        self.build()
         self.do_test()
