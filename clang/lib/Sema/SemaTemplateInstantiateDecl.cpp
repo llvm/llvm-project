@@ -4735,9 +4735,31 @@ Decl *TemplateDeclInstantiator::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
     if (SubstTemplateParameterLists(TPLists, TPL))
       return nullptr;
 
-    TypeSourceInfo *InstTy = SemaRef.SubstType(
-        FT, TemplateArgs, D->getLocation(), DeclarationName());
-    if (InstTy) {
+    ClassTemplateDecl *CTD = nullptr;
+    if (auto DNT = FT->getTypeLoc().getAs<DependentNameTypeLoc>()) {
+      NestedNameSpecifierLoc QualifierLoc = SemaRef.SubstNestedNameSpecifierLoc(
+          DNT.getQualifierLoc(), TemplateArgs);
+      if (QualifierLoc) {
+        CXXScopeSpec SS;
+        SS.Adopt(QualifierLoc);
+
+        DeclContext *DC =
+            SemaRef.computeDeclContext(SS, /*EnteringContext=*/true);
+        if (DC) {
+          LookupResult Result(SemaRef, DNT.getTypePtr()->getIdentifier(),
+                              DNT.getNameLoc(), Sema::LookupOrdinaryName,
+                              SemaRef.forRedeclarationInCurContext());
+          SemaRef.LookupQualifiedName(Result, DC);
+          CTD = Result.getAsSingle<ClassTemplateDecl>();
+        }
+      }
+    }
+
+    if (CTD) {
+      FTD = FriendTemplateDecl::Create(SemaRef.Context, Owner, D->getLocation(),
+                                       CTD, D->getFriendLoc(), TPL);
+    } else if (TypeSourceInfo *InstTy = SemaRef.SubstType(
+                   FT, TemplateArgs, D->getLocation(), DeclarationName())) {
       FTD = FriendTemplateDecl::Create(SemaRef.Context, Owner, D->getLocation(),
                                        InstTy, D->getFriendLoc(), TPL);
     }
