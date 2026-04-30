@@ -82,6 +82,8 @@ public:
                                 bool HasCall) const override;
   bool enableWritePrefetching() const override { return true; }
 
+  unsigned getMaxInterleaveFactor(ElementCount VF) const override;
+
   bool hasDivRemOp(Type *DataType, bool IsSigned) const override;
   bool prefersVectorizedAddressing() const override { return false; }
   bool LSRWithInstrQueries() const override { return true; }
