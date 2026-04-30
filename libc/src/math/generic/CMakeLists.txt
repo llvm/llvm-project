@@ -205,7 +205,7 @@ add_entrypoint_object(
   HDRS
     ../ddivl.h
   DEPENDS
-    libc.src.__support.FPUtil.generic.div
+    libc.src.__support.math.ddivl
 )
 
 add_entrypoint_object(
@@ -215,8 +215,7 @@ add_entrypoint_object(
   HDRS
     ../ddivf128.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.generic.div
+    libc.src.__support.math.ddivf128
 )
 
 add_entrypoint_object(

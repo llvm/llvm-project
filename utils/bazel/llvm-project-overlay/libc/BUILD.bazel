@@ -4063,6 +4063,25 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_ddivf128",
+    hdrs = ["src/__support/math/ddivf128.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_ddivl",
+    hdrs = ["src/__support/math/ddivl.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_dmulf128",
     hdrs = ["src/__support/math/dmulf128.h"],
     deps = [
@@ -7161,10 +7180,18 @@ libc_math_function(
     ],
 )
 
-libc_math_function(name = "ddivl")
+libc_math_function(
+    name = "ddivl",
+    additional_deps = [
+        ":__support_math_ddivl",
+    ],
+)
 
 libc_math_function(
     name = "ddivf128",
+    additional_deps = [
+        ":__support_math_ddivf128",
+    ],
 )
 
 libc_math_function(
