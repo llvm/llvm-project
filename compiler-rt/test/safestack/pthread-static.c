@@ -7,13 +7,11 @@
 
 #include <pthread.h>
 
-void *f(void *p)
-{
+void *f(void *p) {
   return NULL;
 }
 
-int main(void)
-{
+int main(void) {
   pthread_t t;
   (void)pthread_create(&t, NULL, f, NULL);
   return 0;
