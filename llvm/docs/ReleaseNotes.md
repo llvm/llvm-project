@@ -81,6 +81,13 @@ Makes programs 10x faster by doing Special New Thing.
   will be reintroduced in the future with bitwise-all-zeros semantics
   to support non-zero null pointers.
 
+* Added support for specifying the null pointer bit representation per
+  address space in `DataLayout`. Pointer specifications (`p`) accept new
+  flags: `z` (null is all-zeros) and `o` (null is all-ones). Address
+  spaces without an explicit flag default to all-zeros. See the
+  `DataLayout` section of the
+  [LangRef](https://llvm.org/docs/LangRef.html#data-layout) for details.
+
 * Removed TypePromoteFloat legalization from SelectionDAG
 
 * Removed `bugpoint`. Usage has been replaced by `llvm-reduce` and

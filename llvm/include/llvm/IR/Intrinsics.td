@@ -327,7 +327,7 @@ def IIT_V64 : IIT_Vec<64, 16>;
 def IIT_MMX : IIT_VT<x86mmx, 17>;
 def IIT_TOKEN : IIT_VT<token, 18>;
 def IIT_METADATA : IIT_VT<MetadataVT, 19>;
-def IIT_EMPTYSTRUCT : IIT_VT<OtherVT, 20>;
+// Note: Unused IIT code 20.
 def IIT_STRUCT : IIT_Base<21>;
 def IIT_EXTEND_ARG : IIT_Base<22>;
 def IIT_TRUNC_ARG : IIT_Base<23>;
