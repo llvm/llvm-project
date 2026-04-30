@@ -42,10 +42,10 @@ INTERCEPT_LIBRARY_FUNCTION_ASAN(memchr);
 #  endif
 INTERCEPT_LIBRARY_FUNCTION_ASAN(memcmp);
 INTERCEPT_LIBRARY_FUNCTION_ASAN(memcpy);
-// Older Win64 CRTs aliased memmove and memcpy, so hooking memcpy was enough.
-// Newer vcruntime140.dll ships them as distinct functions, so we always have
-// to intercept memmove explicitly.
+#  ifndef _WIN64
+// memmove and memcpy share an implementation on amd64
 INTERCEPT_LIBRARY_FUNCTION_ASAN(memmove);
+#  endif
 INTERCEPT_LIBRARY_FUNCTION_ASAN(memset);
 INTERCEPT_LIBRARY_FUNCTION_ASAN(strcat);
 INTERCEPT_LIBRARY_FUNCTION_ASAN(strchr);
