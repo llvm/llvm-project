@@ -130,7 +130,7 @@ public:
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) {
-    return K == Decl::Friend || K == Decl::FriendTemplate;
+    return K >= firstFriend && K <= lastFriend;
   }
 };
 /// An iterator over the friend declarations of a class.

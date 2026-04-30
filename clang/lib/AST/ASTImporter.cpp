@@ -4608,8 +4608,8 @@ ExpectedDecl ASTNodeImporter::VisitFriendDecl(FriendDecl *D) {
   SmallVector<FriendDecl *, 2> ImportedEquivalentFriends;
   for (FriendDecl *ImportedFriend : RD->friends()) {
     if (ImportedFriend->getKind() == Decl::Friend &&
-        IsEquivalentFriend(Importer, D, cast<FriendDecl>(ImportedFriend)))
-      ImportedEquivalentFriends.push_back(cast<FriendDecl>(ImportedFriend));
+        IsEquivalentFriend(Importer, D, ImportedFriend))
+      ImportedEquivalentFriends.push_back(ImportedFriend);
   }
 
   FriendCountAndPosition CountAndPosition =
@@ -4671,11 +4671,10 @@ ExpectedDecl ASTNodeImporter::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
   const auto *RD = cast<CXXRecordDecl>(DC);
   SmallVector<FriendTemplateDecl *, 2> ImportedEquivalentFriends;
   for (FriendDecl *ImportedFriend : RD->friends()) {
-    if (isa<FriendTemplateDecl>(ImportedFriend) &&
-        IsEquivalentFriend(Importer, D,
-                           cast<FriendTemplateDecl>(ImportedFriend)))
-      ImportedEquivalentFriends.push_back(
-          cast<FriendTemplateDecl>(ImportedFriend));
+    auto *ImportedFriendTemplate = dyn_cast<FriendTemplateDecl>(ImportedFriend);
+    if (ImportedFriendTemplate &&
+        IsEquivalentFriend(Importer, D, ImportedFriendTemplate))
+      ImportedEquivalentFriends.push_back(ImportedFriendTemplate);
   }
 
   FriendCountAndPosition CountAndPosition =

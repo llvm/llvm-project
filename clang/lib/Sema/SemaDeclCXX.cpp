@@ -18199,7 +18199,7 @@ DeclResult Sema::ActOnTemplatedFriendTag(
   TL.setQualifierLoc(SS.getWithLocInContext(Context));
   TL.setNameLoc(NameLoc);
 
-  Decl *Friend;
+  FriendDecl *Friend;
   if (TempParamLists.empty())
     Friend = FriendDecl::Create(Context, CurContext, NameLoc, TSI, FriendLoc,
                                 EllipsisLoc);
@@ -18214,7 +18214,7 @@ DeclResult Sema::ActOnTemplatedFriendTag(
   if (EllipsisLoc.isValid() && NNS.isDependent()) {
     Diag(NameLoc, diag::warn_template_qualified_friend_unsupported)
         << SS.getScopeRep() << SS.getRange() << cast<CXXRecordDecl>(CurContext);
-    cast<FriendDecl>(Friend)->setUnsupportedFriend(true);
+    Friend->setUnsupportedFriend(true);
   }
 
   Friend->setAccess(AS_public);
@@ -18661,7 +18661,7 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
     }
 
     ArrayRef<TemplateParameterList *> TPL = FD->getTemplateParameterLists();
-    Decl *Friend;
+    FriendDecl *Friend;
     if (TPL.size() > 0 && SS.isValid()) {
       if (CheckTemplateDeclScope(S, TPL.back()))
         return nullptr;

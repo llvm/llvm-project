@@ -890,7 +890,7 @@ static AccessResult GetFriendKind(Sema &S,
     if (auto *FTD = dyn_cast<FriendTemplateDecl>(Friend))
       AR = MatchesFriend(S, EC, FTD);
     else
-      AR = MatchesFriend(S, EC, cast<FriendDecl>(Friend));
+      AR = MatchesFriend(S, EC, Friend);
 
     switch (AR) {
     case AR_accessible:
