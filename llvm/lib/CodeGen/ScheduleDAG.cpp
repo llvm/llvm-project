@@ -736,7 +736,8 @@ bool ScheduleDAGTopologicalSort::IsReachable(const SUnit *SU,
   bool HasLoop = false;
   // Is Ord(TargetSU) < Ord(SU) ?
   if (LowerBound < UpperBound) {
-    if (auto It = Reachable.find({LowerBound, UpperBound}); It != Reachable.end()) {
+    if (auto It = Reachable.find({LowerBound, UpperBound});
+        It != Reachable.end()) {
       return It->second;
     }
     Visited.reset();
