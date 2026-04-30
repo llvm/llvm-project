@@ -1233,6 +1233,23 @@ let Command = "platform shell" in {
 let Command = "plugin list" in {
   def plugin_list_json : Option<"json", "j">,
                          Desc<"Output the plugin list in json format.">;
+  def plugin_list_domain : Option<"domain", "d">,
+                           EnumArg<"PluginDomain">,
+                           Desc<"The ${d}omain to list plugins for. Defaults to 'global'.">;
+}
+
+let Command = "plugin enable" in {
+  def plugin_enable_domain : Option<"domain", "d">,
+                             EnumArg<"PluginDomain">,
+                             Desc<"The ${d}omain in which to enable the "
+                                  "matching plugins. Defaults to 'global'.">;
+}
+
+let Command = "plugin disable" in {
+  def plugin_disable_domain : Option<"domain", "d">,
+                              EnumArg<"PluginDomain">,
+                              Desc<"The ${d}omain in which to disable the "
+                                   "matching plugins. Defaults to 'global'.">;
 }
 
 let Command = "process launch" in {
@@ -1899,6 +1916,103 @@ let Command = "target stop_hook list" in {
   def target_stop_hook_list_internal
       : Option<"internal", "i">,
         Desc<"Show debugger ${i}nternal stop hooks.">;
+}
+
+let Command = "target hook add" in {
+  // Command-based options (Group 1 only -- mutually exclusive with -P).
+  def target_hook_add_one_liner
+      : Option<"one-liner", "o">,
+        Group<1>,
+        Arg<"OneLiner">,
+        Desc<"Add a command for the hook. Can be specified more than "
+             "once, and commands will be run in the order they appear.">;
+  def target_hook_add_on_load
+      : Option<"on-load", "L">,
+        Group<1>,
+        Desc<"Fire the hook when modules are ${L}oaded.">;
+  def target_hook_add_on_unload
+      : Option<"on-unload", "u">,
+        Group<1>,
+        Desc<"Fire the hook when modules are ${u}nloaded.">;
+  def target_hook_add_on_stop
+      : Option<"on-stop", "S">,
+        Group<1>,
+        Desc<"Fire the hook when the process ${S}tops.">;
+  // Shared options (both command-based and Python class hooks).
+  def target_hook_add_shlib
+      : Option<"shlib", "s">,
+        Arg<"ShlibName">,
+        Completion<"Module">,
+        Desc<"Set the module within which the stop handler is to be run.">;
+  def target_hook_add_thread_index
+      : Option<"thread-index", "x">,
+        Arg<"ThreadIndex">,
+        Desc<"The stop handler is run only for the thread whose inde${x} "
+             "matches this argument.">;
+  def target_hook_add_thread_id
+      : Option<"thread-id", "t">,
+        Arg<"ThreadID">,
+        Desc<"The stop handler is run only for the ${t}hread whose TID "
+             "matches this argument.">;
+  def target_hook_add_thread_name
+      : Option<"thread-name", "T">,
+        Arg<"ThreadName">,
+        Desc<"The stop handler is run only for the ${T}hread whose thread "
+             "name matches this argument.">;
+  def target_hook_add_queue_name
+      : Option<"queue-name", "q">,
+        Arg<"QueueName">,
+        Desc<"The stop handler is run only for threads in the ${q}ueue whose "
+             "name is given by this argument.">;
+  def target_hook_add_file
+      : Option<"file", "f">,
+        Arg<"Filename">,
+        Desc<"Specify the source ${f}ile within which the stop handler is "
+             "to be run.">,
+        Completion<"SourceFile">;
+  def target_hook_add_start_line
+      : Option<"start-line", "l">,
+        Arg<"LineNum">,
+        Desc<"Set the start of the ${l}ine range for which the stop handler "
+             "is to be run.">;
+  def target_hook_add_end_line
+      : Option<"end-line", "e">,
+        Arg<"LineNum">,
+        Desc<"Set the ${e}nd of the line range for which the stop handler "
+             "is to be run.">;
+  def target_hook_add_classname
+      : Option<"classname", "c">,
+        Arg<"ClassName">,
+        Desc<"Specify the ${c}lass within which the stop handler is to "
+             "be run.">;
+  def target_hook_add_name
+      : Option<"name", "n">,
+        Arg<"FunctionName">,
+        Desc<"Set the function ${n}ame within which the stop handler will "
+             "be run.">,
+        Completion<"Symbol">;
+  def target_hook_add_auto_continue
+      : Option<"auto-continue", "G">,
+        Arg<"Boolean">,
+        Desc<"The hook will auto-continue after running its stop handler.">;
+  def target_hook_add_at_initial_stop
+      : Option<"at-initial-stop", "I">,
+        Arg<"Boolean">,
+        Desc<"Whether the stop handler will trigger when lldb ${I}nitially "
+             "gains control of the process. Defaults to true.">;
+}
+
+let Command = "target hook modify" in {
+  def target_hook_modify_enable_trigger
+      : Option<"enable-trigger", "e">,
+        Arg<"Name">,
+        Desc<"Enable a trigger on the hook. Valid trigger names: load, "
+             "unload, stop.">;
+  def target_hook_modify_disable_trigger
+      : Option<"disable-trigger", "d">,
+        Arg<"Name">,
+        Desc<"Disable a trigger on the hook. Valid trigger names: load, "
+             "unload, stop.">;
 }
 
 let Command = "thread backtrace" in {

@@ -586,8 +586,16 @@ RTLIB::Libcall RTLIB::getSINCOS(EVT RetVT) {
     switch (RetVT.getSimpleVT().SimpleTy) {
     case MVT::v4f32:
       return RTLIB::SINCOS_V4F32;
+    case MVT::v8f32:
+      return RTLIB::SINCOS_V8F32;
+    case MVT::v16f32:
+      return RTLIB::SINCOS_V16F32;
     case MVT::v2f64:
       return RTLIB::SINCOS_V2F64;
+    case MVT::v4f64:
+      return RTLIB::SINCOS_V4F64;
+    case MVT::v8f64:
+      return RTLIB::SINCOS_V8F64;
     case MVT::nxv4f32:
       return RTLIB::SINCOS_NXV4F32;
     case MVT::nxv2f64:
@@ -2295,12 +2303,36 @@ int TargetLoweringBase::InstructionOpcodeToISD(unsigned Opcode) const {
 
 int TargetLoweringBase::IntrinsicIDToISD(Intrinsic::ID ID) const {
   switch (ID) {
+  case Intrinsic::acos:
+    return ISD::FACOS;
+  case Intrinsic::asin:
+    return ISD::FASIN;
+  case Intrinsic::atan:
+    return ISD::FATAN;
+  case Intrinsic::cos:
+    return ISD::FCOS;
+  case Intrinsic::cosh:
+    return ISD::FCOSH;
   case Intrinsic::exp:
     return ISD::FEXP;
   case Intrinsic::exp2:
     return ISD::FEXP2;
+  case Intrinsic::exp10:
+    return ISD::FEXP10;
   case Intrinsic::log:
     return ISD::FLOG;
+  case Intrinsic::log2:
+    return ISD::FLOG2;
+  case Intrinsic::log10:
+    return ISD::FLOG10;
+  case Intrinsic::sin:
+    return ISD::FSIN;
+  case Intrinsic::sinh:
+    return ISD::FSINH;
+  case Intrinsic::tan:
+    return ISD::FTAN;
+  case Intrinsic::tanh:
+    return ISD::FTANH;
   default:
     return ISD::DELETED_NODE;
   }

@@ -145,7 +145,7 @@ define i64 @reverse_load_liveout_only(ptr %A) {
 ; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[REVERSE1:%.*]] = shufflevector <2 x i32> [[WIDE_LOAD]], <2 x i32> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i32> [[REVERSE1]], i32 1
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i32> [[REVERSE1]], i64 1
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i64 0

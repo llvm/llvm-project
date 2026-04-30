@@ -17,10 +17,11 @@
 
 #include <sycl/__impl/detail/config.hpp>
 
-#include <detail/device_binary_structures.hpp>
+#include <llvm/Object/OffloadBinary.h>
 
 #include <OffloadAPI.h>
 
+#include <memory>
 #include <unordered_map>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
@@ -35,8 +36,7 @@ public:
   /// provided arguments.
   ///
   /// \param Device is the device to use for program creation.
-  /// \param DevImage is the device image (wrapped __sycl_tgt_device_image) to
-  /// use for program creation.
+  /// \param DevImage is the device image to use for program creation.
   /// \throw sycl::exception with sycl::errc::runtime when failed to create the
   /// program.
   ProgramWrapper(ol_device_handle_t Device, DeviceImageManager &DevImage);
@@ -61,7 +61,8 @@ private:
 /// creation.
 class DeviceImageManager {
 public:
-  DeviceImageManager(const __sycl_tgt_device_image &Bin) : MBin(&Bin) {}
+  DeviceImageManager(std::unique_ptr<llvm::object::OffloadBinary> Bin)
+      : MBin(std::move(Bin)) {}
   // Explicitly delete copy constructor/operator= to avoid unintentional copies.
   DeviceImageManager(const DeviceImageManager &) = delete;
   DeviceImageManager &operator=(const DeviceImageManager &) = delete;
@@ -71,14 +72,8 @@ public:
 
   ~DeviceImageManager() = default;
 
-  /// \return a reference to the corresponding raw __sycl_tgt_device_image
-  /// object.
-  const __sycl_tgt_device_image &getRawData() const { return *get(); }
-
-  /// \return the size of the corresponding device image data in bytes.
-  size_t getSize() const {
-    return static_cast<size_t>(MBin->ImageEnd - MBin->ImageStart);
-  }
+  /// \return a reference to the corresponding parsed OffloadBinary object.
+  const llvm::object::OffloadBinary &getOffloadBinary() const { return *MBin; }
 
   /// Returns a liboffload program which is compatible with the specified
   /// device. Searches among existing programs and creates a new one if no
@@ -92,9 +87,7 @@ public:
 protected:
   std::unordered_map<ol_device_handle_t, ProgramWrapper> MPrograms;
 
-  const __sycl_tgt_device_image *get() const { return MBin; }
-
-  __sycl_tgt_device_image const *MBin{};
+  std::unique_ptr<llvm::object::OffloadBinary> MBin;
 };
 
 } // namespace detail

@@ -1580,12 +1580,21 @@ cc_library(
     ],
 )
 
+td_library(
+    name = "FlangOptionsTdFiles",
+    srcs = ["include/clang/Options/FlangOptions.td"],
+    includes = ["include"],
+)
+
 gentbl_cc_library(
     name = "driver_options_inc_gen",
     tbl_outs = {"include/clang/Options/Options.inc": ["-gen-opt-parser-defs"]},
     tblgen = "//llvm:llvm-tblgen",
     td_file = "include/clang/Options/Options.td",
-    deps = ["//llvm:OptParserTdFiles"],
+    deps = [
+        ":FlangOptionsTdFiles",
+        "//llvm:OptParserTdFiles",
+    ],
 )
 
 cc_library(
@@ -2652,8 +2661,10 @@ cc_library(
     name = "scalable_static_analysis_analyses",
     srcs = glob([
         "lib/ScalableStaticAnalysisFramework/Analyses/**/*.cpp",
+        "lib/ScalableStaticAnalysisFramework/Analyses/**/*.h",
     ]),
     hdrs = glob(["include/clang/ScalableStaticAnalysisFramework/Analyses/**/*.h"]),
+    includes = ["lib/ScalableStaticAnalysisFramework/Analyses"],
     deps = [
         ":analysis",
         ":ast",

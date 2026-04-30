@@ -2730,6 +2730,17 @@ public:
   LLVM_ABI SDValue getNeutralElement(unsigned Opcode, const SDLoc &DL, EVT VT,
                                      SDNodeFlags Flags);
 
+  /// Get an expression that implements a partial multiply-subtract reduction.
+  /// In practice this means that parts of the expression are negated, e.g.
+  ///
+  ///     partial_reduce_fmls acc, lhs, rhs
+  /// <=> partial_reduce_fmla acc, lhs, -rhs
+  ///
+  ///      partial_reduce_umls acc, lhs, rhs
+  /// <=> -partial_reduce_umla -acc, lhs, rhs
+  SDValue getPartialReduceMLS(unsigned Opc, const SDLoc &DL, SDValue Acc,
+                              SDValue LHS, SDValue RHS);
+
   /// Some opcodes may create immediate undefined behavior when used with some
   /// values (integer division-by-zero for example). Therefore, these operations
   /// are not generally safe to move around or change.

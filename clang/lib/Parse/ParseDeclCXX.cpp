@@ -990,14 +990,19 @@ Decl *Parser::ParseStaticAssertDeclaration(SourceLocation &DeclEnd) {
     }
 
     if (ParseAsExpression) {
-      Diag(Tok,
-           getLangOpts().CPlusPlus26
-               ? diag::warn_cxx20_compat_static_assert_user_generated_message
-               : diag::ext_cxx_static_assert_user_generated_message);
       AssertMessage = ParseConstantExpressionInExprEvalContext();
-    } else if (tokenIsLikeStringLiteral(Tok, getLangOpts()))
+      if (Tok.is(tok::r_paren)) {
+        Diag(Tok,
+             getLangOpts().CPlusPlus26
+                 ? diag::warn_cxx20_compat_static_assert_user_generated_message
+                 : diag::ext_cxx_static_assert_user_generated_message);
+      } else {
+        T.consumeClose();
+        return nullptr;
+      }
+    } else if (tokenIsLikeStringLiteral(Tok, getLangOpts())) {
       AssertMessage = ParseUnevaluatedStringLiteralExpression();
-    else {
+    } else {
       Diag(Tok, diag::err_expected_string_literal)
           << /*Source='static_assert'*/ 1;
       SkipMalformedDecl();
@@ -1010,8 +1015,7 @@ Decl *Parser::ParseStaticAssertDeclaration(SourceLocation &DeclEnd) {
     }
   }
 
-  if (T.consumeClose())
-    return nullptr;
+  T.consumeClose();
 
   DeclEnd = Tok.getLocation();
   ExpectAndConsumeSemi(diag::err_expected_semi_after_static_assert, TokName);
@@ -2515,18 +2519,22 @@ bool Parser::ParseCXXMemberDeclaratorBeforeInitializer(
   else
     DeclaratorInfo.SetIdentifier(nullptr, Tok.getLocation());
 
+  bool IsFunctionDeclarator = DeclaratorInfo.isFunctionDeclarator();
+  if (!IsFunctionDeclarator && !getLangOpts().MSVCCompat)
+    MaybeParseGNUAttributes(DeclaratorInfo, &LateParsedAttrs);
+
   if (getLangOpts().HLSL)
     MaybeParseHLSLAnnotations(DeclaratorInfo, nullptr,
                               /*CouldBeBitField*/ true);
 
-  if (!DeclaratorInfo.isFunctionDeclarator() && TryConsumeToken(tok::colon)) {
+  if (!IsFunctionDeclarator && TryConsumeToken(tok::colon)) {
     assert(DeclaratorInfo.isPastIdentifier() &&
            "don't know where identifier would go yet?");
     BitfieldSize = ParseConstantExpression();
     if (BitfieldSize.isInvalid())
       SkipUntil(tok::comma, StopAtSemi | StopBeforeMatch);
   } else if (Tok.is(tok::kw_requires)) {
-    ParseTrailingRequiresClause(DeclaratorInfo);
+    ParseTrailingRequiresClauseWithScope(DeclaratorInfo);
   } else {
     ParseOptionalCXX11VirtSpecifierSeq(
         VS, getCurrentClass().IsInterface,
@@ -4098,10 +4106,8 @@ TypeResult Parser::ParseTrailingReturnType(SourceRange &Range,
                                    : DeclaratorContext::TrailingReturn);
 }
 
-void Parser::ParseTrailingRequiresClause(Declarator &D) {
+void Parser::ParseTrailingRequiresClauseWithScope(Declarator &D) {
   assert(Tok.is(tok::kw_requires) && "expected requires");
-
-  SourceLocation RequiresKWLoc = ConsumeToken();
 
   // C++23 [basic.scope.namespace]p1:
   //   For each non-friend redeclaration or specialization whose target scope
@@ -4121,11 +4127,22 @@ void Parser::ParseTrailingRequiresClause(Declarator &D) {
   if (SS.isValid() && Actions.ShouldEnterDeclaratorScope(getCurScope(), SS))
     DeclScopeObj.EnterDeclaratorScope();
 
-  ExprResult TrailingRequiresClause;
   ParseScope ParamScope(this, Scope::DeclScope |
                                   Scope::FunctionDeclarationScope |
                                   Scope::FunctionPrototypeScope);
 
+  ParseTrailingRequiresClause(D);
+}
+
+void Parser::ParseTrailingRequiresClause(Declarator &D) {
+  assert(Tok.is(tok::kw_requires) && "expected requires");
+  assert(
+      getCurScope()->isFunctionPrototypeScope() &&
+      "trailing requires-clause must be parsed in a function prototype scope");
+
+  SourceLocation RequiresKWLoc = ConsumeToken();
+
+  ExprResult TrailingRequiresClause;
   Actions.ActOnStartTrailingRequiresClause(getCurScope(), D);
 
   std::optional<Sema::CXXThisScopeRAII> ThisScope;

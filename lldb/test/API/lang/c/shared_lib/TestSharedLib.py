@@ -8,6 +8,7 @@ from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
 
 
+@skipIfTargetDoesNotSupportSharedLibraries()
 class SharedLibTestCase(TestBase):
     def common_test_expr(self, preload_symbols):
         if "clang" in self.getCompiler() and "3.4" in self.getCompilerVersion():

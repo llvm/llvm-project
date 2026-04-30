@@ -5,7 +5,7 @@
 ;  for (int i = N-1; i >= 0; --i)
 ;    a[i] = b[i] + 1.0;
 
-; RUN: opt -passes=loop-vectorize,dce,instcombine -mtriple aarch64-linux-gnu -S \
+; RUN: opt -passes=loop-vectorize,instcombine -mtriple aarch64-linux-gnu -S \
 ; RUN:   -tail-folding-policy=dont-fold-tail < %s | FileCheck %s
 
 define void @vector_reverse_f64(i64 %N, ptr noalias %a, ptr noalias %b) #0{

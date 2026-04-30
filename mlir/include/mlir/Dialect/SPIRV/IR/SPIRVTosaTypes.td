@@ -22,16 +22,19 @@ def SPIRV_I8OrI16OrI32OrI64 : AnyIntOfWidths<[8, 16, 32, 64]>;
 def SPIRV_I16OrI32 : AnyIntOfWidths<[16, 32]>;
 def SPIRV_I32OrI64 : AnyIntOfWidths<[32, 64]>;
 def SPIRV_F16OrF32OrBF16 : AnyTypeOf<[SPIRV_Float16, SPIRV_Float32, SPIRV_BFloat16KHR]>;
-def SPIRV_I8OrF16OrF32OrBF16 : AnyTypeOf<[SPIRV_Int8, SPIRV_F16OrF32OrBF16]>;
+def SPIRV_F16OrF32OrBF16OrFP8 : AnyTypeOf<[SPIRV_Float16, SPIRV_Float32, SPIRV_BFloat16KHR, SPIRV_Float8E4M3EXT, SPIRV_Float8E5M2EXT]>;
 def SPIRV_I8OrI16OrF16OrF32OrBF16 : AnyTypeOf<[SPIRV_I8OrI16, SPIRV_F16OrF32OrBF16]>;
+def SPIRV_I8OrF16OrF32OrBF16OrFP8 : AnyTypeOf<[SPIRV_Int8, SPIRV_F16OrF32OrBF16OrFP8]>;
+def SPIRV_I8OrI16OrF16OrF32OrBF16OrFP8 : AnyTypeOf<[SPIRV_I8OrI16, SPIRV_F16OrF32OrBF16OrFP8]>;
 def SPIRV_I32OrF16OrF32OrBF16 : AnyTypeOf<[SPIRV_Int32, SPIRV_F16OrF32OrBF16]>;
 def SPIRV_I8OrI16OrI32OrF16OrF32OrBF16 : AnyTypeOf<[SPIRV_I8OrI16OrI32, SPIRV_F16OrF32OrBF16]>;
+def SPIRV_I8OrI16OrI32OrF16OrF32OrBF16OrFP8 : AnyTypeOf<[SPIRV_I8OrI16OrI32, SPIRV_F16OrF32OrBF16OrFP8]>;
 def SPIRV_I32OrI64OrF16OrF32OrBF16 : AnyTypeOf<[SPIRV_I32OrI64, SPIRV_F16OrF32OrBF16]>;
 def SPIRV_I32OrI64OrF16OrF32 : AnyTypeOf<[SPIRV_I32OrI64, SPIRV_Float16, SPIRV_Float32]>;
 def SPIRV_I32OrI8OrI64OrI16OrF16OrF32OrBF16 : AnyTypeOf<[SPIRV_I8OrI16OrI32OrI64, SPIRV_F16OrF32OrBF16]>;
-def SPIRV_BoolOrI8OrI16OrI32OrBF16OrF16OrF32 : AnyTypeOf<[SPIRV_Bool, SPIRV_I8OrI16OrI32, SPIRV_F16OrF32OrBF16]>;
 def SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16 : AnyTypeOf<[SPIRV_Bool, SPIRV_I8OrI16OrI32, SPIRV_F16OrF32OrBF16]>;
-def SPIRV_I8OrI16OrI32OrBoolOrF16OrF32OrBF16 : AnyTypeOf<[SPIRV_I8OrI16OrI32, SPIRV_Bool, SPIRV_F16OrF32OrBF16]>;
+def SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16OrFP8 : AnyTypeOf<[SPIRV_Bool, SPIRV_I8OrI16OrI32, SPIRV_F16OrF32OrBF16OrFP8]>;
+def SPIRV_I8OrI16OrI32OrBoolOrF16OrF32OrBF16OrFP8 : AnyTypeOf<[SPIRV_I8OrI16OrI32, SPIRV_Bool, SPIRV_F16OrF32OrBF16OrFP8]>;
 def SPIRV_I8OrI32 : AnyTypeOf<[SPIRV_Int8, SPIRV_Int32]>;
 
 def SPIRV_TensorArmAxisAttr : ConfinedAttr<I32Attr, [IntNonNegative, IntMaxValue<5>]>;
@@ -57,23 +60,25 @@ def SPIRV_I32_TensorArm2D : TensorArmRankOf<[SPIRV_Int32], [2]>;
 def SPIRV_F32_TensorArm3D: TensorArmRankOf<[SPIRV_Float32], [3]>;
 def SPIRV_I32OrI64OrF16OrF32OrBF16_TensorArm1D : TensorArmRankOf<[SPIRV_I32OrI64OrF16OrF32OrBF16], [1]>;
 def SPIRV_I8OrI16_TensorArm1D : TensorArmRankOf<[SPIRV_I8OrI16], [1]>;
-def SPIRV_I8OrI16OrF16OrF32OrBF16_TensorArm3D : TensorArmRankOf<[SPIRV_I8OrI16OrF16OrF32OrBF16], [3]>;
-def SPIRV_I8OrI16OrI32OrF16OrF32OrBF16_TensorArm3D : TensorArmRankOf<[SPIRV_I8OrI16OrI32OrF16OrF32OrBF16], [3]>;
+def SPIRV_I8OrI16OrF16OrF32OrBF16OrFP8_TensorArm3D : TensorArmRankOf<[SPIRV_I8OrI16OrF16OrF32OrBF16OrFP8], [3]>;
+def SPIRV_I8OrI16OrI32OrF16OrF32OrBF16OrFP8_TensorArm3D : TensorArmRankOf<[SPIRV_I8OrI16OrI32OrF16OrF32OrBF16OrFP8], [3]>;
 def SPIRV_I32OrI64OrF16OrF32_TensorArm3D : TensorArmRankOf<[SPIRV_I32OrI64OrF16OrF32], [3]>;
 def SPIRV_I8OrI16OrF16OrF32OrBF16_TensorArm4D : TensorArmRankOf<[SPIRV_I8OrI16OrF16OrF32OrBF16], [4]>;
-def SPIRV_I8OrF16OrF32OrBF16_TensorArm4D : TensorArmRankOf<[SPIRV_I8OrF16OrF32OrBF16], [4]>;
+def SPIRV_I8OrI16OrF16OrF32OrBF16OrFP8_TensorArm4D : TensorArmRankOf<[SPIRV_I8OrI16OrF16OrF32OrBF16OrFP8], [4]>;
+def SPIRV_I8OrF16OrF32OrBF16OrFP8_TensorArm4D : TensorArmRankOf<[SPIRV_I8OrF16OrF32OrBF16OrFP8], [4]>;
 def SPIRV_I32OrI64OrF16OrF32OrBF16_TensorArm4D : TensorArmRankOf<[SPIRV_I32OrI64OrF16OrF32OrBF16], [4]>;
 def SPIRV_I32OrI8OrI64OrI16OrF16OrF32OrBF16_TensorArm4D : TensorArmRankOf<[SPIRV_I32OrI8OrI64OrI16OrF16OrF32OrBF16], [4]>;
-def SPIRV_I8OrI16OrF16OrF32OrBF16_TensorArm5D : TensorArmRankOf<[SPIRV_I8OrI16OrF16OrF32OrBF16], [5]>;
-def SPIRV_I8OrF16OrF32OrBF16_TensorArm5D : TensorArmRankOf<[SPIRV_I8OrF16OrF32OrBF16], [5]>;
+def SPIRV_I8OrI16OrF16OrF32OrBF16OrFP8_TensorArm5D : TensorArmRankOf<[SPIRV_I8OrI16OrF16OrF32OrBF16OrFP8], [5]>;
+def SPIRV_I8OrF16OrF32OrBF16OrFP8_TensorArm5D : TensorArmRankOf<[SPIRV_I8OrF16OrF32OrBF16OrFP8], [5]>;
 def SPIRV_I32OrI64OrF16OrF32OrBF16_TensorArm5D : TensorArmRankOf<[SPIRV_I32OrI64OrF16OrF32OrBF16], [5]>;
 
-def SPIRV_BoolOrI8OrI16OrI32OrBF16OrF16OrF32_TensorArm : TensorArmRankOf<[SPIRV_BoolOrI8OrI16OrI32OrBF16OrF16OrF32], [1, 2, 3, 4, 5, 6]>;
 def SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16_TensorArm : TensorArmRankOf<[SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16], [1, 2, 3, 4, 5, 6]>;
+def SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16OrFP8_TensorArm : TensorArmRankOf<[SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16OrFP8], [1, 2, 3, 4, 5, 6]>;
 def SPIRV_F16OrF32OrBF16_TensorArm : TensorArmRankOf<[SPIRV_F16OrF32OrBF16], [1, 2, 3, 4, 5, 6]>;
 def SPIRV_I8OrI16OrF16OrF32OrBF16_TensorArm : TensorArmRankOf<[SPIRV_I8OrI16OrF16OrF32OrBF16], [1, 2, 3, 4, 5, 6]>;
+def SPIRV_I8OrI16OrF16OrF32OrBF16OrFP8_TensorArm : TensorArmRankOf<[SPIRV_I8OrI16OrF16OrF32OrBF16OrFP8], [1, 2, 3, 4, 5, 6]>;
 def SPIRV_I32OrF16OrF32OrBF16_TensorArm : TensorArmRankOf<[SPIRV_I32OrF16OrF32OrBF16], [1, 2, 3, 4, 5, 6]>;
-def SPIRV_I8OrI16OrI32OrBoolOrF16OrF32OrBF16_TensorArm : TensorArmRankOf<[SPIRV_I8OrI16OrI32OrBoolOrF16OrF32OrBF16], [1, 2, 3, 4, 5, 6]>;
+def SPIRV_I8OrI16OrI32OrBoolOrF16OrF32OrBF16OrFP8_TensorArm : TensorArmRankOf<[SPIRV_I8OrI16OrI32OrBoolOrF16OrF32OrBF16OrFP8], [1, 2, 3, 4, 5, 6]>;
 def SPIRV_I8OrI16OrI32OrF16OrF32OrBF16_TensorArm : TensorArmRankOf<[SPIRV_I8OrI16OrI32OrF16OrF32OrBF16], [1, 2, 3, 4, 5, 6]>;
 def SPIRV_I8OrI16OrI32OrI64_TensorArm : TensorArmRankOf<[SPIRV_I8OrI16OrI32OrI64], [1, 2, 3, 4, 5, 6]>;
 def SPIRV_I8OrI16OrI32_TensorArm : TensorArmRankOf<[SPIRV_I8OrI16OrI32], [1, 2, 3, 4, 5, 6]>;
@@ -110,6 +115,16 @@ def SPIRV_I32_1DTensorArmOfLength3Attr : ConfinedAttr<RankedI32ElementsAttr<[3]>
 def SPIRV_I32_1DTensorArmOfLength4Attr : ConfinedAttr<RankedI32ElementsAttr<[4]>, [SPIRV_DenseElementAttrsWithTensorArmType]>;
 def SPIRV_I32_1DTensorArmOfLength5Attr : ConfinedAttr<RankedI32ElementsAttr<[5]>, [SPIRV_DenseElementAttrsWithTensorArmType]>;
 def SPIRV_I32_1DTensorArmOfLength6Attr : ConfinedAttr<RankedI32ElementsAttr<[6]>, [SPIRV_DenseElementAttrsWithTensorArmType]>;
+class IntElementsAttrAllValuesAtLeast<int minValue> : AttrConstraint<
+  CPred<"::llvm::all_of(::llvm::cast<::mlir::DenseElementsAttr>($_self).getValues<::llvm::APInt>(), "
+        "[](const ::llvm::APInt &value) { return value.getSExtValue() >= " #
+        minValue # "; })">,
+  "all values must be >= " # minValue>;
+
+def SPIRV_PositiveI32_1DTensorArmOfLength2Attr : ConfinedAttr<RankedI32ElementsAttr<[2]>, [SPIRV_DenseElementAttrsWithTensorArmType, IntElementsAttrAllValuesAtLeast<1>]>;
+def SPIRV_PositiveI32_1DTensorArmOfLength3Attr : ConfinedAttr<RankedI32ElementsAttr<[3]>, [SPIRV_DenseElementAttrsWithTensorArmType, IntElementsAttrAllValuesAtLeast<1>]>;
+def SPIRV_NonNegativeI32_1DTensorArmOfLength4Attr : ConfinedAttr<RankedI32ElementsAttr<[4]>, [SPIRV_DenseElementAttrsWithTensorArmType, IntElementsAttrAllValuesAtLeast<0>]>;
+def SPIRV_NonNegativeI32_1DTensorArmOfLength6Attr : ConfinedAttr<RankedI32ElementsAttr<[6]>, [SPIRV_DenseElementAttrsWithTensorArmType, IntElementsAttrAllValuesAtLeast<0>]>;
 
 class Is1DTensorArmAttrOfLength<list<int> allowedLengths> :
   AttrConstraint<And<[CPred<[{::llvm::cast<::mlir::spirv::TensorArmType>(::llvm::cast<::mlir::DenseElementsAttr>($_self).getType()).getShape().size() == 1 }]>,
@@ -121,12 +136,12 @@ def SPIRV_I32_1DTensorArmOfLength1To6Attr : ConfinedAttr<
   I32ElementsAttr, [SPIRV_DenseElementAttrsWithTensorArmType, Is1DTensorArmAttrOfLength<[1, 2, 3, 4, 5, 6]>]>;
 
 def SPIRV_I8_1DTensorArmOfLength1 : SPIRV_1DTensorArmOfLengthAndType<[1], [SPIRV_Int8]>;
-def SPIRV_I8OrI16OrF16OrF32OrBF16_1DTensorArmOfLength1 : SPIRV_1DTensorArmOfLengthAndType<[1], [SPIRV_I8OrI16OrF16OrF32OrBF16]>;
+def SPIRV_I8OrI16OrF16OrF32OrBF16OrFP8_1DTensorArmOfLength1 : SPIRV_1DTensorArmOfLengthAndType<[1], [SPIRV_I8OrI16OrF16OrF32OrBF16OrFP8]>;
 def SPIRV_I8OrI16OrI32OrF16OrF32OrBF16_1DTensorArmOfLength1 : SPIRV_1DTensorArmOfLengthAndType<[1], [SPIRV_I8OrI16OrI32OrF16OrF32OrBF16]>;
 def SPIRV_I8OrI16OrI32OrI64_1DTensorArmOfLength1 : SPIRV_1DTensorArmOfLengthAndType<[1], [SPIRV_I8OrI16OrI32OrI64]>;
 def SPIRV_I8OrI16OrI32_1DTensorArmOfLength1 : SPIRV_1DTensorArmOfLengthAndType<[1], [SPIRV_I8OrI16OrI32]>;
-def SPIRV_I8OrF16OrF32OrBF16_1DTensorArmOfLength1 : SPIRV_1DTensorArmOfLengthAndType<[1], [SPIRV_I8OrF16OrF32OrBF16]>;
-def SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16_1DTensorArmOfLength1 : SPIRV_1DTensorArmOfLengthAndType<[1], [SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16]>;
+def SPIRV_I8OrF16OrF32OrBF16OrFP8_1DTensorArmOfLength1 : SPIRV_1DTensorArmOfLengthAndType<[1], [SPIRV_I8OrF16OrF32OrBF16OrFP8]>;
+def SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16OrFP8_1DTensorArmOfLength1 : SPIRV_1DTensorArmOfLengthAndType<[1], [SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16OrFP8]>;
 
 // Struct type
 
@@ -191,15 +206,46 @@ class MatchBroadcastableShapes<string input1, string input2, string output>:
     "})">]>
   >;
 
+class DimOf<string input, int dim> :
+  StrFunc<"::llvm::cast<::mlir::ShapedType>($" # input #
+          ".getType()).getDimSize(" # dim # ")">;
+
+class DimIsDynamic<string input, int dim> :
+  CPred<"::mlir::ShapedType::isDynamic(" # DimOf<input, dim>.result # ")">;
+
+class DimIsOne<string input, int dim> :
+  CPred<DimOf<input, dim>.result # " == 1">;
+
+class DimsMatch<string lhs, int lhsDim, string rhs, int rhsDim> :
+  CPred<DimOf<lhs, lhsDim>.result # " == " # DimOf<rhs, rhsDim>.result>;
+
+class ProductDimsMatch<string lhs, int lhsDim, string rhs, int rhsDim,
+                       string output, int outputDim> :
+  CPred<DimOf<lhs, lhsDim>.result # " * " # DimOf<rhs, rhsDim>.result #
+        " == " # DimOf<output, outputDim>.result>;
+
 class SameDimsOrDynamicPred<string lhs, int lhsDim, string rhs, int rhsDim> :
-  CPred<"[](::mlir::ShapedType lhsType, ::mlir::ShapedType rhsType) { "
-        "  int64_t lhsSize = lhsType.getDimSize(" # lhsDim # "); "
-        "  int64_t rhsSize = rhsType.getDimSize(" # rhsDim # "); "
-        "  return ::mlir::ShapedType::isDynamic(lhsSize) || "
-        "         ::mlir::ShapedType::isDynamic(rhsSize) || lhsSize == rhsSize; "
-        "}("
-        "::llvm::cast<::mlir::ShapedType>($" # lhs # ".getType()), "
-        "::llvm::cast<::mlir::ShapedType>($" # rhs # ".getType()))">;
+  Or<[
+    DimIsDynamic<lhs, lhsDim>,
+    DimIsDynamic<rhs, rhsDim>,
+    DimsMatch<lhs, lhsDim, rhs, rhsDim>
+  ]>;
+
+class SameDimsOrOneOrDynamicPred<string lhs, int lhsDim, string rhs, int rhsDim> :
+  Or<[
+    SameDimsOrDynamicPred<lhs, lhsDim, rhs, rhsDim>,
+    DimIsOne<lhs, lhsDim>
+  ]>;
+
+class ProductDimOrOneOrDynamicPred<string lhs, int lhsDim, string rhs,
+                                   int rhsDim, string output, int outputDim> :
+  Or<[
+    DimIsDynamic<lhs, lhsDim>,
+    DimIsDynamic<rhs, rhsDim>,
+    DimIsDynamic<output, outputDim>,
+    ProductDimsMatch<lhs, lhsDim, rhs, rhsDim, output, outputDim>,
+    DimIsOne<output, outputDim>
+  ]>;
 
 class ValuesIndicesShapesMatch<string values, string indices, string tensor>:
   PredOpTrait<"shapes of " # values # ", " # indices # ", and " # tensor #
@@ -211,6 +257,64 @@ class ValuesIndicesShapesMatch<string values, string indices, string tensor>:
       SameDimsOrDynamicPred<indices, 1, tensor, 1>,
       SameDimsOrDynamicPred<values, 2, tensor, 2>
     ]>>;
+
+// The tensor shapes are [N,H,W,C] where N,H,W,C are the dimension values.
+class NHWCInputOutputShapeMatch<string input, string output>:
+  PredOpTrait<"shapes of " # input # " and " # output #
+                  " must satisfy [N,*,*,C] and [N,*,*,C]",
+    And<[
+      SameDimsOrDynamicPred<input, 0, output, 0>,
+      SameDimsOrDynamicPred<input, 3, output, 3>
+    ]>>;
+
+
+class Conv2DShapeMatch<string input, string weight, string bias, string output>:
+  PredOpTrait<"shapes of " # input # ", " # weight # ", " # bias # ", and " #
+                  output # " must satisfy [N,IH,IW,IC], [OC,KH,KW,IC], "
+                  "[OC/1], [N,OH,OW,OC]",
+    And<[
+      SameDimsOrDynamicPred<input, 0, output, 0>,
+      SameDimsOrDynamicPred<input, 3, weight, 3>,
+      SameDimsOrDynamicPred<weight, 0, output, 3>,
+      SameDimsOrOneOrDynamicPred<bias, 0, output, 3>
+    ]>>;
+
+class Conv3DShapeMatch<string input, string weight, string bias, string output>:
+  PredOpTrait<"shapes of " # input # ", " # weight # ", " # bias # ", and " #
+                  output # " must satisfy [N,ID,IH,IW,IC], [OC,KD,KH,KW,IC], "
+                  "[OC/1], [N,OD,OH,OW,OC]",
+    And<[
+      SameDimsOrDynamicPred<input, 0, output, 0>,
+      SameDimsOrDynamicPred<input, 4, weight, 4>,
+      SameDimsOrDynamicPred<weight, 0, output, 4>,
+      SameDimsOrOneOrDynamicPred<bias, 0, output, 4>
+    ]>>;
+
+class DepthwiseConv2DShapeMatch<string input, string weight, string bias,
+                                string output>:
+  PredOpTrait<"shapes of " # input # ", " # weight # ", " # bias # ", and " #
+                  output # " must satisfy [N,IH,IW,IC], [KH,KW,IC,M], "
+                  "[IC*M/1], [N,OH,OW,IC*M]",
+    And<[
+      SameDimsOrDynamicPred<input, 0, output, 0>,
+      SameDimsOrDynamicPred<input, 3, weight, 2>,
+      ProductDimOrOneOrDynamicPred<input, 3, weight, 3, output, 3>,
+      SameDimsOrOneOrDynamicPred<bias, 0, output, 3>
+    ]>>;
+
+class FetchNthIntElementsAttr<string attrName, int idx> :
+  StrFunc<"get" # snakeCaseToCamelCase<attrName>.ret # "().getValues<APInt>()[" # idx # "].getSExtValue()">;
+
+class ElementsAttrValueLessThan<string leftAttrName, int leftIdx,string rightAttrName, int rightIdx> :
+   CPred<FetchNthIntElementsAttr<leftAttrName, leftIdx>.result # " < " # FetchNthIntElementsAttr<rightAttrName, rightIdx>.result>;
+
+class Pool2DPadValuesLessThanKernel<string padAttr, string kernelAttr> :
+    PredOpTrait<"op pad values must satisfy pad_top/pad_bottom < kernel_y and pad_left/pad_right < kernel_x",
+    And<[ElementsAttrValueLessThan<padAttr, 0, kernelAttr, 0>,
+         ElementsAttrValueLessThan<padAttr, 1, kernelAttr, 0>,
+         ElementsAttrValueLessThan<padAttr, 2, kernelAttr, 1>,
+         ElementsAttrValueLessThan<padAttr, 3, kernelAttr, 1>]
+    >>;
 
 class TableSizeConstraint<string input, Type type, int size>:
   PredOpTrait<"table must have size " # size # " if " # input # " has element type " # type.summary,
