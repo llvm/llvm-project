@@ -3437,6 +3437,7 @@ private:
 
   /// Generate FIR for a FORALL construct.
   void genFIR(const Fortran::parser::ForallConstruct &forall) {
+    setCurrentPositionAt(forall);
     mlir::OpBuilder::InsertPoint insertPt = builder->saveInsertionPoint();
     if (lowerToHighLevelFIR())
       localSymbols.pushScope();
@@ -3670,6 +3671,7 @@ private:
   }
 
   void genFIR(const Fortran::parser::OpenACCConstruct &acc) {
+    setCurrentPositionAt(acc);
     Fortran::lower::clearCollapsedDoConstructs();
     mlir::OpBuilder::InsertPoint insertPt = builder->saveInsertionPoint();
 
@@ -3832,6 +3834,7 @@ private:
   }
 
   void genFIR(const Fortran::parser::OpenACCDeclarativeConstruct &accDecl) {
+    setCurrentPositionAt(accDecl);
     genOpenACCDeclarativeConstruct(*this, bridge.getSemanticsContext(),
                                    bridge.openAccCtx(), accDecl);
     for (Fortran::lower::pft::Evaluation &e : getEval().getNestedEvaluations())
@@ -3843,6 +3846,7 @@ private:
   }
 
   void genFIR(const Fortran::parser::CUFKernelDoConstruct &kernel) {
+    setCurrentPositionAt(kernel);
     Fortran::lower::SymMapScope scope(localSymbols);
     const Fortran::parser::CUFKernelDoConstruct::Directive &dir =
         std::get<Fortran::parser::CUFKernelDoConstruct::Directive>(kernel.t);
@@ -4114,6 +4118,7 @@ private:
   }
 
   void genFIR(const Fortran::parser::OpenMPConstruct &omp) {
+    setCurrentPositionAt(omp);
     mlir::OpBuilder::InsertPoint insertPt = builder->saveInsertionPoint();
     genOpenMPConstruct(*this, localSymbols, bridge.getSemanticsContext(),
                        getEval(), omp);
@@ -4125,6 +4130,7 @@ private:
   }
 
   void genFIR(const Fortran::parser::OpenMPDeclarativeConstruct &ompDecl) {
+    setCurrentPositionAt(ompDecl);
     mlir::OpBuilder::InsertPoint insertPt = builder->saveInsertionPoint();
     // Register if a declare target construct intended for a target device was
     // found
@@ -4381,6 +4387,7 @@ private:
   }
 
   void genFIR(const Fortran::parser::ChangeTeamConstruct &construct) {
+    setCurrentPositionAt(construct);
     Fortran::lower::StatementContext stmtCtx;
     pushActiveConstruct(getEval(), stmtCtx);
     Fortran::lower::pft::Evaluation &eval = getEval();
@@ -6078,6 +6085,7 @@ private:
   bool isInsideHlfirWhere() const { return isInsideOp<hlfir::WhereOp>(); }
 
   void genFIR(const Fortran::parser::WhereConstruct &c) {
+    setCurrentPositionAt(c);
     mlir::Location loc = getCurrentLocation();
     hlfir::WhereOp whereOp;
 
@@ -6159,6 +6167,7 @@ private:
       implicitIterSpace.append(maskExpr);
   }
   void genFIR(const Fortran::parser::WhereConstruct::MaskedElsewhere &ew) {
+    setCurrentPositionAt(ew);
     mlir::Location loc = getCurrentLocation();
     hlfir::ElseWhereOp elsewhereOp;
     if (lowerToHighLevelFIR()) {
@@ -6188,6 +6197,7 @@ private:
       implicitIterSpace.append(maskExpr);
   }
   void genFIR(const Fortran::parser::WhereConstruct::Elsewhere &ew) {
+    setCurrentPositionAt(ew);
     if (lowerToHighLevelFIR()) {
       auto elsewhereOp =
           hlfir::ElseWhereOp::create(*builder, getCurrentLocation());
