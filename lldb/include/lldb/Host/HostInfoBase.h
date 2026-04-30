@@ -16,6 +16,7 @@
 #include "lldb/Utility/UserIDResolver.h"
 #include "lldb/Utility/XcodeSDK.h"
 #include "lldb/lldb-enumerations.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errc.h"
 
@@ -263,6 +264,16 @@ public:
   /// did not match.
   static bool SharedCacheIndexFiles(FileSpec &filepath, UUID &uuid,
                                     lldb::SymbolSharedCacheUse sc_mode) {
+    return false;
+  }
+
+  /// Invoke \p callback with the retained dyld_image_t for a shared cache
+  /// image matching \p image_uuid. The image handle is only valid for the
+  /// duration of the callback. Returns true if the image was found.
+  static bool
+  WithSharedCacheImage(const UUID &image_uuid, const UUID &sc_uuid,
+                       lldb::SymbolSharedCacheUse sc_mode,
+                       llvm::function_ref<void(void *image)> callback) {
     return false;
   }
 

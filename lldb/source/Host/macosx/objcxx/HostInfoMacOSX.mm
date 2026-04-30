@@ -717,6 +717,25 @@ public:
   /// system, open it and add all of the binary images to m_caches.
   bool CreateSharedCacheImageList(UUID uuid, std::string filepath);
 
+  /// Invoke \p callback with the retained dyld_image_t for the image matching
+  /// \p file_uuid in shared cache \p sc_uuid. Returns true if found.
+  bool WithImageBaton(UUID sc_uuid, UUID file_uuid,
+                      llvm::function_ref<void(void *image)> callback) {
+    llvm::sys::ScopedReader guard(m_mutex);
+    if (!sc_uuid)
+      sc_uuid = m_host_uuid;
+    if (!m_uuid_map.contains(sc_uuid))
+      return false;
+    if (!m_uuid_map[sc_uuid].contains(file_uuid))
+      return false;
+    size_t idx = m_uuid_map[sc_uuid][file_uuid];
+    void *baton = m_file_infos[sc_uuid][idx].GetImageBaton();
+    if (!baton)
+      return false;
+    callback(baton);
+    return true;
+  }
+
   SharedCacheInfo(SymbolSharedCacheUse sc_mode);
 
 private:
@@ -1097,6 +1116,13 @@ bool HostInfoMacOSX::SharedCacheIndexFiles(FileSpec &filepath, UUID &uuid,
     return GetSharedCacheSingleton(sc_mode).CreateSharedCacheImageList(
         uuid, filepath.GetPath());
   return false;
+}
+
+bool HostInfoMacOSX::WithSharedCacheImage(
+    const UUID &image_uuid, const UUID &sc_uuid, SymbolSharedCacheUse sc_mode,
+    llvm::function_ref<void(void *image)> callback) {
+  return GetSharedCacheSingleton(sc_mode).WithImageBaton(sc_uuid, image_uuid,
+                                                         callback);
 }
 
 bool HostInfoMacOSX::IsBundleCodeSignTrusted(const FileSpec &bundle_path) {

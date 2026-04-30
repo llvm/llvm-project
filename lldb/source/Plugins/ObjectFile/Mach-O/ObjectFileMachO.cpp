@@ -15,11 +15,13 @@
 #include "Plugins/Process/Utility/RegisterContextDarwin_x86_64.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Progress.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Host/Host.h"
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/DWARFCallFrameInfo.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/DynamicLoader.h"
@@ -2718,73 +2720,50 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
     UndefinedNameToDescMap undefined_name_to_desc;
     SymbolIndexToName reexport_shlib_needs_fixup;
 
-    dyld_for_each_installed_shared_cache(^(dyld_shared_cache_t shared_cache) {
-      uuid_t cache_uuid;
-      dyld_shared_cache_copy_uuid(shared_cache, &cache_uuid);
-      if (found_image)
+    auto nlist_extraction_block = ^(const void *nlistStart, uint64_t nlistCount,
+                                    const char *stringTable) {
+      if (!nlistStart || !nlistCount)
         return;
 
-        if (process_shared_cache_uuid.IsValid() &&
-          process_shared_cache_uuid != UUID(&cache_uuid, 16))
+      kern_return_t ret = vm_read(mach_task_self(), (vm_address_t)nlistStart,
+                                  nlist_byte_size * nlistCount,
+                                  &vm_nlist_memory, &vm_nlist_bytes_read);
+      if (ret != KERN_SUCCESS)
+        return;
+      assert(vm_nlist_bytes_read == nlist_byte_size * nlistCount);
+
+      vm_address_t string_address = (vm_address_t)stringTable;
+      vm_size_t region_size;
+      mach_msg_type_number_t info_count = VM_REGION_BASIC_INFO_COUNT_64;
+      vm_region_basic_info_data_t info;
+      memory_object_name_t object;
+      ret = vm_region_64(mach_task_self(), &string_address, &region_size,
+                         VM_REGION_BASIC_INFO_64, (vm_region_info_t)&info,
+                         &info_count, &object);
+      if (ret != KERN_SUCCESS)
         return;
 
-      dyld_shared_cache_for_each_image(shared_cache, ^(dyld_image_t image) {
-        uuid_t dsc_image_uuid;
-        if (found_image)
-          return;
+      ret = vm_read(mach_task_self(), (vm_address_t)stringTable,
+                    region_size - ((vm_address_t)stringTable - string_address),
+                    &vm_string_memory, &vm_string_bytes_read);
+      if (ret != KERN_SUCCESS)
+        return;
 
-        dyld_image_copy_uuid(image, &dsc_image_uuid);
-        if (image_uuid != UUID(dsc_image_uuid, 16))
-          return;
+      nlist_buffer = (void *)vm_nlist_memory;
+      string_table = (char *)vm_string_memory;
+      nlist_count = nlistCount;
+    };
 
-        found_image = true;
+    // Use the host shared cache to look up the image directly by UUID, avoiding
+    // the expensive iteration through all installed shared caches.
+    SymbolSharedCacheUse sc_mode = ModuleList::GetGlobalModuleListProperties()
+                                       .GetSharedCacheBinaryLoading();
+    found_image = HostInfo::WithSharedCacheImage(
+        image_uuid, process_shared_cache_uuid, sc_mode, [&](void *image) {
+          dyld_image_local_nlist_content_4Symbolication((dyld_image_t)image,
+                                                        nlist_extraction_block);
+        });
 
-        // Compute the size of the string table. We need to ask dyld for a
-        // new SPI to avoid this step.
-        dyld_image_local_nlist_content_4Symbolication(
-            image, ^(const void *nlistStart, uint64_t nlistCount,
-                     const char *stringTable) {
-              if (!nlistStart || !nlistCount)
-                return;
-
-              // The buffers passed here are valid only inside the block.
-              // Use vm_read to make a cheap copy of them available for our
-              // processing later.
-              kern_return_t ret =
-                  vm_read(mach_task_self(), (vm_address_t)nlistStart,
-                          nlist_byte_size * nlistCount, &vm_nlist_memory,
-                          &vm_nlist_bytes_read);
-              if (ret != KERN_SUCCESS)
-                return;
-              assert(vm_nlist_bytes_read == nlist_byte_size * nlistCount);
-
-              // We don't know the size of the string table. It's cheaper
-              // to map the whole VM region than to determine the size by
-              // parsing all the nlist entries.
-              vm_address_t string_address = (vm_address_t)stringTable;
-              vm_size_t region_size;
-              mach_msg_type_number_t info_count = VM_REGION_BASIC_INFO_COUNT_64;
-              vm_region_basic_info_data_t info;
-              memory_object_name_t object;
-              ret = vm_region_64(mach_task_self(), &string_address,
-                                 &region_size, VM_REGION_BASIC_INFO_64,
-                                 (vm_region_info_t)&info, &info_count, &object);
-              if (ret != KERN_SUCCESS)
-                return;
-
-              ret = vm_read(mach_task_self(), (vm_address_t)stringTable,
-                            region_size -
-                                ((vm_address_t)stringTable - string_address),
-                            &vm_string_memory, &vm_string_bytes_read);
-              if (ret != KERN_SUCCESS)
-                return;
-
-              nlist_buffer = (void *)vm_nlist_memory;
-              string_table = (char *)vm_string_memory;
-              nlist_count = nlistCount;
-            });
-      });
-    });
     if (nlist_buffer) {
       DataExtractor dsc_local_symbols_data(nlist_buffer,
                                            nlist_count * nlist_byte_size,
