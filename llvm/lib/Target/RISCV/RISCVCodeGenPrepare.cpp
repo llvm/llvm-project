@@ -50,6 +50,7 @@ public:
   bool visitIntrinsicInst(IntrinsicInst &I);
   bool expandVPStrideLoad(IntrinsicInst &I);
   bool expandMulReduction(IntrinsicInst &I);
+  bool simplyInsertElementForReduction(IntrinsicInst &I);
   bool widenVPMerge(Instruction *I);
   bool visitFreezeInst(FreezeInst &BO);
 };
@@ -233,6 +234,9 @@ bool RISCVCodeGenPrepare::visitIntrinsicInst(IntrinsicInst &I) {
   if (expandMulReduction(I))
     return true;
 
+  if (simplyInsertElementForReduction(I))
+    return true;
+
   if (widenVPMerge(&I))
     return true;
 
@@ -261,6 +265,110 @@ bool RISCVCodeGenPrepare::visitIntrinsicInst(IntrinsicInst &I) {
 
   PHI->eraseFromParent();
 
+  return true;
+}
+
+// For reduction operations with an initial value, ir:
+//  %6 = phi <vscale x 4 x i32> [ %12, %4 ],
+//          [ insertelement (<vscale x 4 x i32> zeroinitializer, i32 13, i32 0),
+//          %2 ]
+//  %11 = add <vscale x 4 x i32> %a10, %6
+//  %12 = tail call <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1>
+//  splat (i1 true),
+//                                <vscale x 4 x i32> %11, <vscale x 4 x i32> %6,
+//                                i32 %vl)
+//
+// bb:
+//  %18 = tail call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> %12)
+//
+//  insertelement (<vscale x 2 x i64> zeroinitializer, i64 13, i32 0),
+//  which generates multiple vmv instructions. By initializing with
+//  zeroinitializer and adding the initial value after the reduction, some vmv
+//  instructions can be avoided. ir:
+//
+//  %6 = phi <vscale x 4 x i32> [ %12, %4 ], [zeroinitializer, %2 ]
+//  %11 = add <vscale x 4 x i32> %a10, %6
+//  %12 = tail call <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1>
+//  splat (i1 true),
+//                                <vscale x 4 x i32> %11, <vscale x 4 x i32> %6,
+//                                i32 %vl)
+//
+// bb:
+//  %18 = tail call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> %12)
+//  %19 = add i32 %18, 13
+bool RISCVCodeGenPrepare::simplyInsertElementForReduction(IntrinsicInst &II) {
+  auto Opcode = II.getIntrinsicID();
+  if (Opcode != Intrinsic::vector_reduce_xor &&
+      Opcode != Intrinsic::vector_reduce_add &&
+      Opcode != Intrinsic::vector_reduce_or)
+    return false;
+
+  Value *C, *X, *Y;
+  Value *Op0 = II.getArgOperand(0);
+  using namespace PatternMatch;
+  switch (Opcode) {
+  case Intrinsic::vector_reduce_xor:
+    if (!match(Op0, m_Intrinsic<Intrinsic::vp_merge>(
+                        m_One(), m_OneUse(m_Xor(m_Value(X), m_Value(Y))),
+                        m_Value(C))) ||
+        (X != C && Y != C))
+      return false;
+    break;
+  case Intrinsic::vector_reduce_add:
+    if (!match(Op0, m_Intrinsic<Intrinsic::vp_merge>(
+                        m_One(), m_OneUse(m_Add(m_Value(X), m_Value(Y))),
+                        m_Value(C))) ||
+        (X != C && Y != C))
+      return false;
+    break;
+  case Intrinsic::vector_reduce_or:
+    if (!match(Op0, m_Intrinsic<Intrinsic::vp_merge>(
+                        m_One(), m_OneUse(m_Or(m_Value(X), m_Value(Y))),
+                        m_Value(C))) ||
+        (X != C && Y != C))
+      return false;
+    break;
+  default:
+    return false;
+  };
+  auto *PHI = dyn_cast<PHINode>(C);
+  if (!PHI || !PHI->hasNUses(2) || PHI->getNumIncomingValues() != 2)
+    return false;
+
+  auto isScalar = [&](const Value *X) -> llvm::Value * {
+    if (auto *E = dyn_cast<ConstantExpr>(X);
+        E && E->getOpcode() == Instruction::InsertElement &&
+        match(E->getOperand(0), m_Zero()))
+      return E->getOperand(1);
+    if (auto *I = dyn_cast<Instruction>(X);
+        I && I->getOpcode() == Instruction::InsertElement &&
+        match(I->getOperand(0), m_Zero()))
+      return I->getOperand(1);
+    return nullptr;
+  };
+
+  auto *Phi0 = PHI->getIncomingValue(0);
+  auto *Phi1 = PHI->getIncomingValue(1);
+  Value *Scalar;
+  if (Scalar = isScalar(Phi0); Scalar && Phi1 == Op0)
+    PHI->setIncomingValue(0, ConstantInt::get(PHI->getType(), 0));
+  else if (Scalar = isScalar(Phi1); Scalar && Phi0 == Op0)
+    PHI->setIncomingValue(1, ConstantInt::get(PHI->getType(), 0));
+  else
+    return false;
+
+  IRBuilder<> Builder(&II);
+  Value *NewOp = Builder.CreateIntrinsic(Opcode, Op0->getType(), Op0);
+  Value *NewScalar;
+  if (Opcode == Intrinsic::vector_reduce_xor)
+    NewScalar = Builder.CreateXor(NewOp, Scalar);
+  else if (Opcode == Intrinsic::vector_reduce_add)
+    NewScalar = Builder.CreateAdd(NewOp, Scalar);
+  else
+    NewScalar = Builder.CreateOr(NewOp, Scalar);
+
+  II.replaceAllUsesWith(NewScalar);
+  II.eraseFromParent();
   return true;
 }
 
