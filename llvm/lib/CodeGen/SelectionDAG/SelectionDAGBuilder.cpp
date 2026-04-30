@@ -105,7 +105,6 @@
 #include <cstddef>
 #include <limits>
 #include <optional>
-#include <sstream>
 #include <tuple>
 
 using namespace llvm;
@@ -10202,14 +10201,18 @@ struct ConstraintDecisionInfo {
   SDValue Glue, Chain;
   bool HasSideEffect = false;
   MCSymbol *BeginLabel = nullptr;
-  std::stringstream ErrorMsg;
+
+  SmallVector<char> Buffer;
+  raw_svector_ostream ErrorMsg;
+
+  ConstraintDecisionInfo() : ErrorMsg(Buffer) {}
 };
 
 } // end anonymous namespace
 
 /// Construct operand info objects.
 static bool
-ConstructOperandInfo(ConstraintDecisionInfo &Info,
+constructOperandInfo(ConstraintDecisionInfo &Info,
                      TargetLowering::AsmOperandInfoVector &TargetConstraints,
                      SelectionDAGBuilder &Builder, const TargetLowering &TLI,
                      ExtraFlags &ExtraInfo) {
@@ -10246,7 +10249,7 @@ ConstructOperandInfo(ConstraintDecisionInfo &Info,
 
 /// Compute which constraint option to use for each operand.
 static void
-ComputeConstraintToUse(ConstraintDecisionInfo &Info, const CallBase &Call,
+computeConstraintToUse(ConstraintDecisionInfo &Info, const CallBase &Call,
                        TargetLowering::AsmOperandInfoVector &TargetConstraints,
                        SelectionDAGBuilder &Builder, const TargetLowering &TLI,
                        const TargetMachine &TM, SelectionDAG &DAG) {
@@ -10326,7 +10329,7 @@ ComputeConstraintToUse(ConstraintDecisionInfo &Info, const CallBase &Call,
 
 /// Prepare DAG-level operands. As part of this, assign virtual and physical
 /// registers for inputs and output.
-static bool PrepareDAGLevelOperands(ConstraintDecisionInfo &Info,
+static bool prepareDAGLevelOperands(ConstraintDecisionInfo &Info,
                                     const CallBase &Call,
                                     SelectionDAGBuilder &Builder,
                                     const TargetLowering &TLI,
@@ -10355,8 +10358,8 @@ static bool PrepareDAGLevelOperands(ConstraintDecisionInfo &Info,
 
       for (Register Reg : OpInfo.AssignedRegs.Regs) {
         if (Reg.isPhysical() && TRI.isInlineAsmReadOnlyReg(MF, Reg)) {
-          Info.ErrorMsg << "write to reserved register '" << TRI.getName(Reg)
-                        << "'";
+          Info.ErrorMsg << "write to reserved register '"
+                        << TRI.getRegAsmName(Reg) << "'";
           return true;
         }
       }
@@ -10584,19 +10587,9 @@ static bool PrepareDAGLevelOperands(ConstraintDecisionInfo &Info,
   return false;
 }
 
-/// DetermineConstraints - ASM operands may have more than one constraint. We
-/// want to choose the "best" constraint for each operand to avoid horrible
-/// code generation---e.g., for "rm" we would like to use "r". This function
-/// tries different constraints in order from best to worst. If a given
-/// constraint isn't possible, e.g., because no registers are available, then
-/// the function returns 'true' and is rerun on the next constraint.
-///
-/// Each operand which has a suitable constraint is marked as "finalized". This
-/// helps reduce the number of times we need to run this function, keeping the
-/// complexity at O(n), where 'n' is the total number of constraints on inputs
-/// and outputs (i.e., for "rm", n == 2).
+/// DetermineConstraints - Find the constraints to use for inline asm operands.
 static bool
-DetermineConstraints(ConstraintDecisionInfo &Info,
+determineConstraints(ConstraintDecisionInfo &Info,
                      TargetLowering::AsmOperandInfoVector &TargetConstraints,
                      const CallBase &Call, SelectionDAGBuilder &Builder,
                      const TargetLowering &TLI, const TargetMachine &TM,
@@ -10606,7 +10599,7 @@ DetermineConstraints(ConstraintDecisionInfo &Info,
 
   // First pass: Construct operand info objects.
   Info.HasSideEffect = IA->hasSideEffects();
-  if (ConstructOperandInfo(Info, TargetConstraints, Builder, TLI, ExtraInfo))
+  if (constructOperandInfo(Info, TargetConstraints, Builder, TLI, ExtraInfo))
     return true;
 
   // We won't need to flush pending loads if this asm doesn't touch
@@ -10625,7 +10618,7 @@ DetermineConstraints(ConstraintDecisionInfo &Info,
     Info.Chain = Builder.lowerStartEH(Info.Chain, EHPadBB, Info.BeginLabel);
 
   // Second pass: Compute which constraint option to use.
-  ComputeConstraintToUse(Info, Call, TargetConstraints, Builder, TLI, TM, DAG);
+  computeConstraintToUse(Info, Call, TargetConstraints, Builder, TLI, TM, DAG);
 
   // AsmNodeOperands - The operands for the ISD::INLINEASM node.
   Info.AsmNodeOperands.push_back(SDValue()); // reserve space for input chain
@@ -10645,7 +10638,7 @@ DetermineConstraints(ConstraintDecisionInfo &Info,
                             TLI.getPointerTy(DAG.getDataLayout())));
 
   // Third pass: Prepare DAG-level operands
-  return PrepareDAGLevelOperands(Info, Call, Builder, TLI, DAG);
+  return prepareDAGLevelOperands(Info, Call, Builder, TLI, DAG);
 }
 
 /// visitInlineAsm - Handle a call to an InlineAsm object.
@@ -10660,7 +10653,7 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
     assert(EHPadBB && "InvokeInst must have an EHPadBB");
 
   ConstraintDecisionInfo Info;
-  if (DetermineConstraints(Info, TargetConstraints, Call, *this, TLI, TM, DAG,
+  if (determineConstraints(Info, TargetConstraints, Call, *this, TLI, TM, DAG,
                            EHPadBB))
     return emitInlineAsmError(Call, Info.ErrorMsg.str());
 
