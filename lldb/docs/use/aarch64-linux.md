@@ -377,12 +377,12 @@ This involves 3 components:
   into the overlay permissions.
 * The permissions set in the page table. These are the base permissions of the
   memory.
-* Overlay permissions, stored in the `por` register. These are applied on top
+* Overlay permissions, stored in the `por_el0` register. These are applied on top
   of the page table permissions. Overlay permissions cannot enable anything
   that was not enabled in the page table. In other words, overlay permissions
   can only keep, or remove permissions.
 
-LLDB users can read and write the `por` register if they choose to, but for
+LLDB users can read and write the `por_el0` register if they choose to, but for
 purely inspecting permissions, the `memory region` command is the better choice
 as it will show you all 3 things in one place.
 
@@ -408,10 +408,10 @@ overlay 6 is read only (`r--`). `effective: r--` is the result of overlaying
 that permission set onto the base permissions. Which removes the write
 permission, which is the cause of the signal.
 
-You can also see overlay `6` by reading the `por` register:
+You can also see overlay `6` by reading the `por_el0` register:
 ```
-(lldb) register read por
-     por = 0x0000000001234567
+(lldb) register read por_el0
+     por_el0 = 0x0000000001234567
          = {
 <...>
              Perm6 = Read
@@ -423,4 +423,4 @@ for glibc).
 
 ### Expression Evaluation
 
-The `por` reigster is saved before, and restored after expression evaluation.
+The `por_el0` reigster is saved before, and restored after expression evaluation.
