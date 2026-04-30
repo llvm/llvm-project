@@ -4557,7 +4557,7 @@ struct AAIsDeadFunction : public AAIsDead {
       }
 
     if (HasChanged == ChangeStatus::CHANGED)
-      FirstDeadInstCache.clear();
+      FirstBarrierInstCache.clear();
 
     return HasChanged;
   }
@@ -4618,34 +4618,35 @@ struct AAIsDeadFunction : public AAIsDead {
     // the beginning of the block, checking KnownDeadEnds and ToBeExploredFrom
     // at each step. By caching we trade complexity for storage.
     const BasicBlock *BB = I->getParent();
-    auto It = FirstDeadInstCache.find(BB);
-    if (It == FirstDeadInstCache.end()) {
-      // Cache miss. Scan the block forward to find the first dead end.
-      const Instruction *FirstDead = nullptr;
+    auto It = FirstBarrierInstCache.find(BB);
+    if (It == FirstBarrierInstCache.end()) {
+      // Cache miss. Scan the block forward to find the first liveness barrier.
+      const Instruction *FirstBarrierInst = nullptr;
       for (const Instruction &Inst : *BB) {
         if (KnownDeadEnds.count(&Inst) || ToBeExploredFrom.count(&Inst)) {
-          FirstDead = &Inst;
+          FirstBarrierInst = &Inst;
           break;
         }
       }
-      It = FirstDeadInstCache.insert({BB, FirstDead}).first;
+      It = FirstBarrierInstCache.insert({BB, FirstBarrierInst}).first;
     }
 
-    const Instruction *FirstDead = It->second;
+    const Instruction *FirstBarrierInst = It->second;
 
-    // If no dead end in the block, I is not dead (via this mechanism).
-    if (!FirstDead)
+    // If no liveness barrier in the block, I is not dead (via this mechanism).
+    if (!FirstBarrierInst)
       return false;
 
-    // If I is the first dead end, it is not dead *after* a barrier (it IS the
-    // barrier).
-    if (FirstDead == I)
+    // If I is the first liveness barrier, it is not dead *after* a barrier
+    // (it IS the barrier).
+    if (FirstBarrierInst == I)
       return false;
 
-    // If FirstDead comes before I, then I is dead.
+    // If FirstBarrierInst comes before I, then I is dead.
     // Note: comesBefore is O(N), but it avoids the hash lookups of the original
-    // loop. Also, we only scan from FirstDead to I, not from I to start.
-    return FirstDead->comesBefore(I);
+    // loop. Also, we only scan from FirstBarrierInst to I, not from I to
+    // start.
+    return FirstBarrierInst->comesBefore(I);
   }
 
   /// See AAIsDead::isKnownDead(Instruction *I).
@@ -4684,11 +4685,13 @@ struct AAIsDeadFunction : public AAIsDead {
   /// Collection of all assumed live BasicBlocks.
   DenseSet<const BasicBlock *> AssumedLiveBlocks;
 
-  /// Cache to store the first "dead end" instruction for each basic block.
-  /// A "dead end" is an instruction in KnownDeadEnds or ToBeExploredFrom.
-  /// If the mapped value is nullptr, the block has no dead ends.
-  /// If it is non-null, it points to the first such instruction in the block.
-  mutable DenseMap<const BasicBlock *, const Instruction *> FirstDeadInstCache;
+  /// Cache mapping each basic block to its first liveness barrier instruction.
+  /// A liveness barrier is an instruction in KnownDeadEnds or ToBeExploredFrom
+  /// — a terminator or call that is known/assumed to not transfer control to
+  /// its successor. If the mapped value is nullptr, the block has no barrier.
+  /// If non-null, it points to the first such instruction in the block.
+  mutable DenseMap<const BasicBlock *, const Instruction *>
+      FirstBarrierInstCache;
 };
 
 static bool
@@ -4892,13 +4895,13 @@ ChangeStatus AAIsDeadFunction::updateImpl(Attributor &A) {
                 AliveSuccessors.size() < I->getNumSuccessors())) {
       if (KnownDeadEnds.insert(I)) {
         Change = ChangeStatus::CHANGED;
-        // Invalidate the cached first-dead-instruction for this block,
+        // Invalidate the cached first liveness barrier for this block,
         // since the newly added dead end may precede the previously
-        // cached entry (or the block may have had no cached dead end).
+        // cached barrier (or the block may have had no cached barrier).
         // A stale cache could be observed if identifyAliveSuccessors
         // triggers a call chain (via getAAFor) that queries
         // isAssumedDead on this instance before the bulk clear below.
-        FirstDeadInstCache.erase(I->getParent());
+        FirstBarrierInstCache.erase(I->getParent());
       }
     }
 
@@ -4934,7 +4937,7 @@ ChangeStatus AAIsDeadFunction::updateImpl(Attributor &A) {
   // If the state changed (KnownDeadEnds or ToBeExploredFrom), the cache is
   // invalid.
   if (Change == ChangeStatus::CHANGED)
-    FirstDeadInstCache.clear();
+    FirstBarrierInstCache.clear();
 
   // If we know everything is live there is no need to query for liveness.
   // Instead, indicating a pessimistic fixpoint will cause the state to be
