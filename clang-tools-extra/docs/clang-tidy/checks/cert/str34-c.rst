@@ -1,6 +1,4 @@
 .. title:: clang-tidy - cert-str34-c
-.. meta::
-   :http-equiv=refresh: 5;URL=../bugprone/signed-char-misuse.html
 
 cert-str34-c
 ============

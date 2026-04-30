@@ -152,7 +152,7 @@ define void @single_constant_stride_int_iv(ptr %p) {
 ; CHECK-UF2-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 1
 ; CHECK-UF2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP4]]
 ; CHECK-UF2-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
-; CHECK-UF2-NEXT:    [[TMP5:%.*]] = mul i64 [[N_VEC]], 64
+; CHECK-UF2-NEXT:    [[TMP5:%.*]] = shl i64 [[N_VEC]], 6
 ; CHECK-UF2-NEXT:    [[TMP6:%.*]] = shl <vscale x 4 x i64> [[BROADCAST_SPLAT]], splat (i64 6)
 ; CHECK-UF2-NEXT:    [[TMP7:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
 ; CHECK-UF2-NEXT:    [[TMP8:%.*]] = mul nuw nsw <vscale x 4 x i64> [[TMP7]], splat (i64 64)
@@ -259,7 +259,7 @@ define void @single_constant_stride_ptr_iv(ptr %p) {
 ; CHECK-UF2-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
 ; CHECK-UF2-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], i64 [[TMP4]], i64 [[N_MOD_VF]]
 ; CHECK-UF2-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[TMP6]]
-; CHECK-UF2-NEXT:    [[TMP7:%.*]] = mul i64 [[N_VEC]], 8
+; CHECK-UF2-NEXT:    [[TMP7:%.*]] = shl i64 [[N_VEC]], 3
 ; CHECK-UF2-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP7]]
 ; CHECK-UF2-NEXT:    [[TMP9:%.*]] = shl <vscale x 4 x i64> [[BROADCAST_SPLAT]], splat (i64 3)
 ; CHECK-UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -1217,8 +1217,7 @@ define void @double_stride_ptr_iv(ptr %p, ptr %p2, i64 %stride) {
 ; STRIDED-UF2-NEXT:    [[BROADCAST_SPLAT8:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT7]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; STRIDED-UF2-NEXT:    [[TMP10:%.*]] = mul i64 [[N_VEC]], [[STRIDE]]
 ; STRIDED-UF2-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP10]]
-; STRIDED-UF2-NEXT:    [[TMP12:%.*]] = mul i64 [[N_VEC]], [[STRIDE]]
-; STRIDED-UF2-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[P2]], i64 [[TMP12]]
+; STRIDED-UF2-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[P2]], i64 [[TMP10]]
 ; STRIDED-UF2-NEXT:    [[TMP14:%.*]] = mul <vscale x 4 x i64> [[BROADCAST_SPLAT]], [[BROADCAST_SPLAT8]]
 ; STRIDED-UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; STRIDED-UF2:       [[VECTOR_BODY]]:
@@ -1251,7 +1250,7 @@ define void @double_stride_ptr_iv(ptr %p, ptr %p2, i64 %stride) {
 ; STRIDED-UF2:       [[SCALAR_PH]]:
 ; STRIDED-UF2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
 ; STRIDED-UF2-NEXT:    [[BC_RESUME_VAL16:%.*]] = phi ptr [ [[TMP11]], %[[MIDDLE_BLOCK]] ], [ [[P]], %[[ENTRY]] ], [ [[P]], %[[VECTOR_MEMCHECK]] ]
-; STRIDED-UF2-NEXT:    [[BC_RESUME_VAL17:%.*]] = phi ptr [ [[TMP13]], %[[MIDDLE_BLOCK]] ], [ [[P2]], %[[ENTRY]] ], [ [[P2]], %[[VECTOR_MEMCHECK]] ]
+; STRIDED-UF2-NEXT:    [[BC_RESUME_VAL17:%.*]] = phi ptr [ [[TMP12]], %[[MIDDLE_BLOCK]] ], [ [[P2]], %[[ENTRY]] ], [ [[P2]], %[[VECTOR_MEMCHECK]] ]
 ; STRIDED-UF2-NEXT:    br label %[[LOOP:.*]]
 ; STRIDED-UF2:       [[LOOP]]:
 ; STRIDED-UF2-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[NEXTI:%.*]], %[[LOOP]] ]

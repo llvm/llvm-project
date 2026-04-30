@@ -1386,6 +1386,12 @@ InductionDescriptor::InductionDescriptor(Value *Start, InductionKind K,
     llvm::append_range(RedundantCasts, *Casts);
 }
 
+InductionDescriptor
+InductionDescriptor::getCanonicalIntInduction(Type *Ty, ScalarEvolution &SE) {
+  return InductionDescriptor(Constant::getNullValue(Ty), IK_IntInduction,
+                             SE.getOne(Ty));
+}
+
 ConstantInt *InductionDescriptor::getConstIntStepValue() const {
   if (auto *ConstStep = dyn_cast<SCEVConstant>(Step))
     return ConstStep->getValue();

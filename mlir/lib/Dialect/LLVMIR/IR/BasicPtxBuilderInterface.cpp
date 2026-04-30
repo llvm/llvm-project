@@ -505,21 +505,31 @@ void PtxBuilder::buildAndReplaceOp() {
     return;
   }
 
-  // Case 1: Simple path, return single scalar
+  // Case 1: Simple path, single scalar inline asm result.
   if (!needsPackUnpack(interfaceOp, needsManualRegisterMapping,
                        registerModifiers)) {
-    if (inlineAsmOp->getNumResults() > 0) {
+    // Sub-case 1a: the wrapper op has a declared result -- replace it
+    // directly with the inline asm result.
+    if (interfaceOp->getNumResults() > 0) {
       rewriter.replaceOp(interfaceOp, inlineAsmOp->getResults());
-    } else {
-      // RW-only case with no declared results: forward the RW value.
-      SmallVector<Value> results;
-      for (auto [m, v] : llvm::zip(registerModifiers, ptxOperands))
-        if (m == PTXRegisterMod::ReadWrite) {
-          results.push_back(v);
-          break;
-        }
-      rewriter.replaceOp(interfaceOp, results);
+      return;
     }
+    // Sub-case 1b: RW-only, no declared result. The inline asm produces a
+    // single value that represents the post-asm value of the read-write
+    // operand; forward it to that operand's uses and erase the wrapper.
+    if (inlineAsmOp->getNumResults() > 0) {
+      Value postAsm = inlineAsmOp->getResult(0);
+      for (auto [m, v] : llvm::zip(registerModifiers, ptxOperands)) {
+        if (m != PTXRegisterMod::ReadWrite)
+          continue;
+        v.replaceUsesWithIf(postAsm, [&](OpOperand &use) {
+          Operation *owner = use.getOwner();
+          return owner != interfaceOp && owner != inlineAsmOp;
+        });
+        break;
+      }
+    }
+    rewriter.eraseOp(interfaceOp);
     return;
   }
 

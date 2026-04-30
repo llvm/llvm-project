@@ -1089,6 +1089,7 @@ def Arith_SubFOp : Arith_FloatBinaryOpWithRoundingMode<"subf"> {
     ```
   }];
   let hasFolder = 1;
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//
