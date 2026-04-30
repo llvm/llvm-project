@@ -1011,9 +1011,9 @@ protected:
     ChildrenMap m_children;
     size_t m_children_count = 0;
   };
-  
+
   using ValueObjectManagerSP = std::shared_ptr<ValueObjectManager>;
-  
+
   /// The following two functions are helpers for Create methods
   /// for ValueObject subclasses that need to optionally receive
   /// a parent or external manager.
@@ -1027,11 +1027,12 @@ protected:
       manager_sp = ValueObjectManager::Create();
     return manager_sp;
   }
-  
+
   /// If manager is null, makes a new ValueObjectManager and sets
   /// manager to the new ValueObjectManager.  It also returns the
   /// shared pointer which is necessary to keep the new manager alive.
-  static ValueObjectManagerSP CreateManagerIfEmpty(ValueObjectManager *&manager) {
+  static ValueObjectManagerSP
+  CreateManagerIfEmpty(ValueObjectManager *&manager) {
     std::shared_ptr<ValueObjectManager> manager_sp;
     if (!manager) {
       manager_sp = ValueObjectManager::Create();
@@ -1039,7 +1040,6 @@ protected:
     }
     return manager_sp;
   }
-
 
   // Classes that inherit from ValueObject can see and modify these
 
@@ -1212,8 +1212,6 @@ protected:
 
 protected:
   virtual void DoUpdateChildrenAddressType(ValueObject &valobj) {};
-  
-  
 
 private:
   void UpdateChildrenAddressType() {
