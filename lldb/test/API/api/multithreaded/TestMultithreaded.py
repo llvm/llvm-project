@@ -9,6 +9,7 @@ from lldbsuite.test import lldbutil
 
 
 @unittest.skip("skipping due to frequent timeouts: rdar://28183131")
+@skipIfTargetDoesNotSupportThreads()
 @skipIfNoSBHeaders
 class SBBreakpointCallbackCase(TestBase):
     SHARED_BUILD_TESTCASE = False
