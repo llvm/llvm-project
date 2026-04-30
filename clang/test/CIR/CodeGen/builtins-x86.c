@@ -56,6 +56,85 @@ void test_clflush(void* a){
 typedef float v4f __attribute__((vector_size(16)));
 typedef int   v4i __attribute__((vector_size(16)));
 
+v4f test_cmpeqps(v4f a, v4f b) {
+  // CIR-LABEL: @test_cmpeqps
+  // CIR: cir.vec.cmp(eq, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.vector<4 x !s32i> -> !cir.vector<4 x !cir.float>
+
+  // LLVM-LABEL: @test_cmpeqps
+  // LLVM: fcmp oeq <4 x float>
+
+  // OGCG-LABEL: @test_cmpeqps
+  // OGCG: fcmp oeq <4 x float>
+  return __builtin_ia32_cmpeqps(a, b);
+}
+
+v4f test_cmpltps(v4f a, v4f b) {
+  // CIR-LABEL: @test_cmpltps
+  // CIR: cir.vec.cmp(lt, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.vector<4 x !s32i> -> !cir.vector<4 x !cir.float>
+
+  // LLVM-LABEL: @test_cmpltps
+  // LLVM: fcmp olt <4 x float>
+
+  // OGCG-LABEL: @test_cmpltps
+  // OGCG: fcmp olt <4 x float>
+  return __builtin_ia32_cmpltps(a, b);
+}
+
+v4f test_cmpleps(v4f a, v4f b) {
+  // CIR-LABEL: @test_cmpleps
+  // CIR: cir.vec.cmp(le, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.vector<4 x !s32i> -> !cir.vector<4 x !cir.float>
+
+  // LLVM-LABEL: @test_cmpleps
+  // LLVM: fcmp ole <4 x float>
+
+  // OGCG-LABEL: @test_cmpleps
+  // OGCG: fcmp ole <4 x float>
+  return __builtin_ia32_cmpleps(a, b);
+}
+
+v4f test_cmpunordps(v4f a, v4f b) {
+  // CIR-LABEL: @test_cmpunordps
+  // CIR: cir.vec.cmp(uno, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.vector<4 x !s32i> -> !cir.vector<4 x !cir.float>
+
+  // LLVM-LABEL: @test_cmpunordps
+  // LLVM: fcmp uno <4 x float>
+
+  // OGCG-LABEL: @test_cmpunordps
+  // OGCG: fcmp uno <4 x float>
+  return __builtin_ia32_cmpunordps(a, b);
+}
+
+v4f test_cmpordps(v4f a, v4f b) {
+  // CIR-LABEL: @test_cmpordps
+  // CIR: cir.vec.cmp(uno, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+  // CIR: cir.not %{{.*}} : !cir.vector<4 x !s32i>
+
+  // LLVM-LABEL: @test_cmpordps
+  // LLVM: fcmp uno <4 x float>
+  // LLVM: xor <4 x i32> %{{.*}}, splat (i32 -1)
+
+  // OGCG-LABEL: @test_cmpordps
+  // OGCG: fcmp ord <4 x float>
+  return __builtin_ia32_cmpordps(a, b);
+}
+
+v4f test_cmpneqps(v4f a, v4f b) {
+  // CIR-LABEL: @test_cmpneqps
+  // CIR: cir.vec.cmp(ne, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+  // CIR: cir.cast bitcast %{{.*}} : !cir.vector<4 x !s32i> -> !cir.vector<4 x !cir.float>
+
+  // LLVM-LABEL: @test_cmpneqps
+  // LLVM: fcmp une <4 x float>
+
+  // OGCG-LABEL: @test_cmpneqps
+  // OGCG: fcmp une <4 x float>
+  return __builtin_ia32_cmpneqps(a, b);
+}
+
 v4i test_convertvector(v4f a) {
   // CIR-LABEL: test_convertvector
   // CIR: cir.cast float_to_int %{{.*}} : !cir.vector<4 x !cir.float> -> !cir.vector<4 x !s32i>

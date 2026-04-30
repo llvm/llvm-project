@@ -1,6 +1,4 @@
 .. title:: clang-tidy - cppcoreguidelines-c-copy-assignment-signature
-.. meta::
-   :http-equiv=refresh: 5;URL=../misc/unconventional-assign-operator.html
 
 cppcoreguidelines-c-copy-assignment-signature
 =============================================
