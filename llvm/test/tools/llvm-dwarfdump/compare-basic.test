@@ -1,0 +1,128 @@
+## Test that llvm-dwarfdump --compare reports no differences for
+## self-comparison, and detects differences between files with
+## different content.
+
+# REQUIRES: x86-registered-target
+
+## Self-comparison: should report no differences.
+# RUN: yaml2obj --docnum=1 %s -o %t.o
+# RUN: llvm-dwarfdump --compare %t.o %t.o | FileCheck %s --check-prefix=SELF
+
+# SELF: Matched:
+# SELF: Different: 0
+
+## Compare with a modified version: different function name.
+# RUN: yaml2obj --docnum=2 %s -o %t2.o
+# RUN: llvm-dwarfdump --compare %t.o %t2.o > %t.out 2>&1 || true
+# RUN: FileCheck %s --check-prefix=DIFF < %t.out
+
+# DIFF: subprogram{{.*}}bar
+# DIFF: subprogram{{.*}}baz
+
+## --- Doc1: subprogram "bar"
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Size:  0x10
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+      - Tag:      DW_TAG_subprogram
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_base_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_encoding
+            Form:      DW_FORM_data1
+          - Attribute: DW_AT_byte_size
+            Form:      DW_FORM_data1
+  debug_info:
+    - Version:  5
+      UnitType: DW_UT_compile
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: test.c
+            - Value:  0x0001
+        - AbbrCode: 2
+          Values:
+            - CStr: bar
+        - AbbrCode: 3
+          Values:
+            - CStr: int
+            - Value:  0x05
+            - Value:  0x04
+        - AbbrCode: 0
+
+## --- Doc2: subprogram "baz"
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Size:  0x10
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+      - Tag:      DW_TAG_subprogram
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_base_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_encoding
+            Form:      DW_FORM_data1
+          - Attribute: DW_AT_byte_size
+            Form:      DW_FORM_data1
+  debug_info:
+    - Version:  5
+      UnitType: DW_UT_compile
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: test.c
+            - Value:  0x0001
+        - AbbrCode: 2
+          Values:
+            - CStr: baz
+        - AbbrCode: 3
+          Values:
+            - CStr: int
+            - Value:  0x05
+            - Value:  0x04
+        - AbbrCode: 0

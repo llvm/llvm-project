@@ -9,6 +9,14 @@
 # RUN: dsymutil --linker=parallel -y %t2.map -f -o %t1.out
 # RUN: llvm-dwarfdump -a %t1.out | FileCheck %s
 
+## Verify the classic and parallel linker produce semantically equivalent output.
+# RUN: dsymutil -y %t2.map -f -o %t.classic.out
+# RUN: llvm-dwarfdump --compare --compare-ignore-lines \
+# RUN:   %t.classic.out %t1.out > %t.compare 2>&1 || true
+# RUN: FileCheck --check-prefix=COMPARE %s < %t.compare
+
+# COMPARE: Matched
+
 ## This test checks debug info for the case when one compilation unit
 ## contains forward declaration of the type and another compilation unit
 ## contains definition for that type. The result should have type table

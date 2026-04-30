@@ -1,0 +1,310 @@
+## Test that --compare handles namespaced types correctly: A::C1 and B::C1
+## should be treated as different types despite having the same short name.
+
+# REQUIRES: x86-registered-target
+
+## Same namespaced types should match.
+# RUN: yaml2obj --docnum=1 %s -o %t-lhs.o
+# RUN: yaml2obj --docnum=2 %s -o %t-rhs.o
+# RUN: llvm-dwarfdump --compare %t-lhs.o %t-rhs.o | FileCheck %s --check-prefix=SAME
+
+# SAME: Matched:
+# SAME: Different: 0
+
+
+## Swapping namespace members should be detected.
+# RUN: yaml2obj --docnum=3 %s -o %t-swapped.o
+# RUN: llvm-dwarfdump --compare %t-lhs.o %t-swapped.o > %t.out 2>&1 || true
+# RUN: FileCheck %s --check-prefix=SWAPPED < %t.out
+
+# SWAPPED: member{{.*}}A::Foo::x
+# SWAPPED: member{{.*}}A::Foo::y
+
+## --- LHS: namespace A { struct Foo { int x; }; }
+##          namespace B { struct Foo { float y; }; }
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Size:  0x10
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+      - Tag:      DW_TAG_namespace
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_structure_type
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_byte_size
+            Form:      DW_FORM_data1
+      - Tag:      DW_TAG_member
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+      - Tag:      DW_TAG_base_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_encoding
+            Form:      DW_FORM_data1
+          - Attribute: DW_AT_byte_size
+            Form:      DW_FORM_data1
+  debug_info:
+    - Version:  5
+      UnitType: DW_UT_compile
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: test.cpp
+            - Value:  0x04
+        - AbbrCode: 2           # namespace A
+          Values:
+            - CStr: A
+        - AbbrCode: 3           # struct Foo { int x; }
+          Values:
+            - CStr: Foo
+            - Value:  0x04
+        - AbbrCode: 4
+          Values:
+            - CStr: x
+            - Value:  0x0000003c # -> int
+        - AbbrCode: 0           # end Foo
+        - AbbrCode: 0           # end namespace A
+        - AbbrCode: 2           # namespace B
+          Values:
+            - CStr: B
+        - AbbrCode: 3           # struct Foo { float y; }
+          Values:
+            - CStr: Foo
+            - Value:  0x04
+        - AbbrCode: 4
+          Values:
+            - CStr: y
+            - Value:  0x00000043 # -> float
+        - AbbrCode: 0           # end Foo
+        - AbbrCode: 0           # end namespace B
+        - AbbrCode: 5           # int
+          Values:
+            - CStr: int
+            - Value:  0x05
+            - Value:  0x04
+        - AbbrCode: 5           # float
+          Values:
+            - CStr: float
+            - Value:  0x04
+            - Value:  0x04
+        - AbbrCode: 0           # end CU
+
+## --- RHS: identical structure (same namespaces, same types)
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Size:  0x10
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+      - Tag:      DW_TAG_namespace
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_structure_type
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_byte_size
+            Form:      DW_FORM_data1
+      - Tag:      DW_TAG_member
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+      - Tag:      DW_TAG_base_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_encoding
+            Form:      DW_FORM_data1
+          - Attribute: DW_AT_byte_size
+            Form:      DW_FORM_data1
+  debug_info:
+    - Version:  5
+      UnitType: DW_UT_compile
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: test.cpp
+            - Value:  0x04
+        - AbbrCode: 2
+          Values:
+            - CStr: A
+        - AbbrCode: 3
+          Values:
+            - CStr: Foo
+            - Value:  0x04
+        - AbbrCode: 4
+          Values:
+            - CStr: x
+            - Value:  0x0000003c
+        - AbbrCode: 0
+        - AbbrCode: 0
+        - AbbrCode: 2
+          Values:
+            - CStr: B
+        - AbbrCode: 3
+          Values:
+            - CStr: Foo
+            - Value:  0x04
+        - AbbrCode: 4
+          Values:
+            - CStr: y
+            - Value:  0x00000043
+        - AbbrCode: 0
+        - AbbrCode: 0
+        - AbbrCode: 5
+          Values:
+            - CStr: int
+            - Value:  0x05
+            - Value:  0x04
+        - AbbrCode: 5
+          Values:
+            - CStr: float
+            - Value:  0x04
+            - Value:  0x04
+        - AbbrCode: 0
+
+## --- Swapped: A::Foo has float y (was int x), B::Foo has int x (was float y)
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Size:  0x10
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+      - Tag:      DW_TAG_namespace
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_structure_type
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_byte_size
+            Form:      DW_FORM_data1
+      - Tag:      DW_TAG_member
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+      - Tag:      DW_TAG_base_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_encoding
+            Form:      DW_FORM_data1
+          - Attribute: DW_AT_byte_size
+            Form:      DW_FORM_data1
+  debug_info:
+    - Version:  5
+      UnitType: DW_UT_compile
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: test.cpp
+            - Value:  0x04
+        - AbbrCode: 2
+          Values:
+            - CStr: A
+        - AbbrCode: 3           # A::Foo now has float y
+          Values:
+            - CStr: Foo
+            - Value:  0x04
+        - AbbrCode: 4
+          Values:
+            - CStr: y
+            - Value:  0x00000043 # -> float
+        - AbbrCode: 0
+        - AbbrCode: 0
+        - AbbrCode: 2
+          Values:
+            - CStr: B
+        - AbbrCode: 3           # B::Foo now has int x
+          Values:
+            - CStr: Foo
+            - Value:  0x04
+        - AbbrCode: 4
+          Values:
+            - CStr: x
+            - Value:  0x0000003c # -> int
+        - AbbrCode: 0
+        - AbbrCode: 0
+        - AbbrCode: 5
+          Values:
+            - CStr: int
+            - Value:  0x05
+            - Value:  0x04
+        - AbbrCode: 5
+          Values:
+            - CStr: float
+            - Value:  0x04
+            - Value:  0x04
+        - AbbrCode: 0
