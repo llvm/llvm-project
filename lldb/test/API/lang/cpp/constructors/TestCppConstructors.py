@@ -4,6 +4,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfWasm  # no expression evaluation
 class TestCase(TestBase):
     @expectedFailureAll(bugnumber="llvm.org/pr50814", compiler="gcc")
     def test_constructors(self):
