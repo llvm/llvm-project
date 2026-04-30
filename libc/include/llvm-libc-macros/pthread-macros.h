@@ -45,6 +45,15 @@
   }
 #endif
 
+#define PTHREAD_COND_INITIALIZER                                               \
+  {                                                                            \
+      /* .__waiter_queue = */ {{NULL, NULL}},                                  \
+      /* .__futex = */ {0},                                                    \
+      /* .__is_shared = */ 0,                                                  \
+      /* .__is_realtime = */ 1,                                                \
+      /* .__padding = */ {0},                                                  \
+  }
+
 #define PTHREAD_RWLOCK_INITIALIZER                                             \
   {                                                                            \
       /* .__raw = */ {                                                         \
