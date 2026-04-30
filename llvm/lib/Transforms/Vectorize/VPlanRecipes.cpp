@@ -3337,8 +3337,22 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
 
   // Replace the operands of the cloned instructions with their scalar
   // equivalents in the new loop.
-  for (const auto &[Idx, V] : enumerate(operands()))
-    Cloned->setOperand(Idx, State.get(V, true));
+  auto *EVI = dyn_cast<ExtractValueInst>(Instr);
+  for (const auto &[Idx, V] : enumerate(operands())) {
+    if (EVI && Idx > 0) {
+      // tryToWiden() stores ExtractValueInst->getIndices() as the second
+      // operand.
+
+      // Invariants from tryToWiden()
+      assert(Idx == 1);
+      assert(EVI->getNumIndices() == 1 && "Expected one extractvalue index");
+
+      Value *NewOp = State.get(V, true);
+      assert(cast<ConstantInt>(NewOp)->getZExtValue() == EVI->getIndices()[0]);
+    } else {
+      Cloned->setOperand(Idx, State.get(V, true));
+    }
+  }
 
   // Place the cloned scalar in the new loop.
   State.Builder.Insert(Cloned);
