@@ -10,22 +10,9 @@
 #include "llvm/DWARFLinker/Classic/DWARFLinkerCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
-#include "llvm/DebugInfo/DWARF/DWARFTypePrinter.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
-#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
-
-static std::optional<std::string>
-makeSimpleTemplateNameWithParams(StringRef Name, const DWARFDie &DIE) {
-  std::string Result = Name.str();
-  raw_string_ostream OS(Result);
-  DWARFTypePrinter<DWARFDie> Printer(OS);
-  Printer.appendAndTerminateTemplateParameters(DIE);
-  if (Result == Name)
-    return std::nullopt;
-  return Result;
-}
 
 using namespace dwarf_linker;
 using namespace dwarf_linker::classic;
@@ -101,22 +88,10 @@ DeclContextTree::getChildDeclContext(DeclContext &Context, const DWARFDie &DIE,
   StringRef NameForUniquing;
   StringRef FileRef;
 
-  if (const char *LinkageName = DIE.getLinkageName()) {
+  if (const char *LinkageName = DIE.getLinkageName())
     NameForUniquing = StringPool.internString(LinkageName);
-  } else if (!Name.empty()) {
-    // With -gsimple-template-names, DW_AT_name omits template parameters
-    // ("vector" instead of "vector<int>"). Reconstruct them from child
-    // DW_TAG_template_*_parameter DIEs so different specializations get
-    // distinct uniquing names.
-    bool HasTemplateParamsInName =
-        Name.ends_with(">") && !Name.ends_with("<=>") && Name.contains('<');
-    assert((!HasTemplateParamsInName || Tag != dwarf::DW_TAG_subprogram) &&
-           "subprogram with template-like name should have a linkage name");
-    std::optional<std::string> FullName;
-    if (!HasTemplateParamsInName)
-      FullName = makeSimpleTemplateNameWithParams(Name, DIE);
-    NameForUniquing = StringPool.internString(FullName ? *FullName : Name);
-  }
+  else if (!Name.empty())
+    NameForUniquing = StringPool.internString(Name);
 
   bool IsAnonymousNamespace =
       NameForUniquing.empty() && Tag == dwarf::DW_TAG_namespace;

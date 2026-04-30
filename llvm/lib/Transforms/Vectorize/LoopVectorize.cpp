@@ -4828,7 +4828,7 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
       // the cost will actually be assigned to one instruction.
       if (const auto *Group = getInterleavedAccessGroup(&I)) {
         if (Decision == CM_Scalarize) {
-          for (auto *I : Group->members())
+          for (Instruction *I : Group->members())
             setWideningDecision(I, VF, Decision,
                                 getMemInstScalarizationCost(I, VF));
         } else {

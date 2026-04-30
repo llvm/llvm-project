@@ -503,6 +503,7 @@ static bool mergeReplicateRegionsIntoSuccessors(VPlan &Plan) {
 }
 
 static VPRegionBlock *createReplicateRegion(VPReplicateRecipe *PredRecipe,
+                                            VPRegionBlock *ParentRegion,
                                             VPlan &Plan) {
   Instruction *Instr = PredRecipe->getUnderlyingInstr();
   // Build the triangular if-then region.
@@ -523,25 +524,23 @@ static VPRegionBlock *createReplicateRegion(VPReplicateRecipe *PredRecipe,
       PredRecipe->getDebugLoc());
   auto *Pred =
       Plan.createVPBasicBlock(Twine(RegionName) + ".if", RecipeWithoutMask);
-
-  VPPredInstPHIRecipe *PHIRecipe = nullptr;
-  if (PredRecipe->getNumUsers() != 0) {
-    PHIRecipe = new VPPredInstPHIRecipe(RecipeWithoutMask,
-                                        RecipeWithoutMask->getDebugLoc());
-    PredRecipe->replaceAllUsesWith(PHIRecipe);
-    PHIRecipe->setOperand(0, RecipeWithoutMask);
-  }
-  PredRecipe->eraseFromParent();
-  auto *Exiting =
-      Plan.createVPBasicBlock(Twine(RegionName) + ".continue", PHIRecipe);
+  auto *Exiting = Plan.createVPBasicBlock(Twine(RegionName) + ".continue");
   VPRegionBlock *Region =
       Plan.createReplicateRegion(Entry, Exiting, RegionName);
 
   // Note: first set Entry as region entry and then connect successors starting
   // from it in order, to propagate the "parent" of each VPBasicBlock.
+  Region->setParent(ParentRegion);
   VPBlockUtils::insertTwoBlocksAfter(Pred, Exiting, Entry);
   VPBlockUtils::connectBlocks(Pred, Exiting);
 
+  if (PredRecipe->getNumUsers() != 0) {
+    auto *PHIRecipe = new VPPredInstPHIRecipe(RecipeWithoutMask,
+                                              RecipeWithoutMask->getDebugLoc());
+    Exiting->appendRecipe(PHIRecipe);
+    PredRecipe->replaceAllUsesWith(PHIRecipe);
+  }
+  PredRecipe->eraseFromParent();
   return Region;
 }
 
@@ -565,8 +564,8 @@ static void addReplicateRegions(VPlan &Plan) {
     SplitBlock->setName(
         OrigBB->hasName() ? OrigBB->getName() + "." + Twine(BBNum++) : "");
     // Record predicated instructions for above packing optimizations.
-    VPRegionBlock *Region = createReplicateRegion(RepR, Plan);
-    Region->setParent(CurrentBlock->getParent());
+    VPRegionBlock *Region =
+        createReplicateRegion(RepR, CurrentBlock->getParent(), Plan);
     VPBlockUtils::insertOnEdge(CurrentBlock, SplitBlock, Region);
 
     VPRegionBlock *ParentRegion = Region->getParent();

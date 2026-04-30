@@ -3395,12 +3395,15 @@ as follows:
     The optional ``<flags>`` are used to specify properties of pointers in this
     address space: the character ``u`` marks pointers as having an unstable
     representation, and ``e`` marks pointers having external state. See
-    :ref:`Non-Integral Pointer Types <nointptrtype>`. The ``<name>`` is an
+    :ref:`Non-Integral Pointer Types <nointptrtype>`. Additionally, the
+    null pointer bit representation can be specified: ``z`` indicates it is
+    all-zeros, and ``o`` indicates it is all-ones. At most one of ``z`` or
+    ``o`` may be specified. If neither ``z`` nor ``o`` is specified, the null
+    pointer bit representation defaults to all-zeros. The ``<name>`` is an
     optional name of that address space, surrounded by ``(`` and ``)``. If the
     name is specified, it must be unique to that address space and cannot be
     ``A``, ``G``, or ``P`` which are pre-defined names used to denote alloca,
     global, and program address space respectively.
-
 ``i<size>:<abi>[:<pref>]``
     This specifies the alignment for an integer type of a given bit
     ``<size>``. The value of ``<size>`` must be in the range [1,2^24).

@@ -75,6 +75,12 @@ functions:
       - type: pid_t
       - type: size_t
       - type: cpu_set_t *
+  - name: sched_getcpu
+    standards:
+      - GNUExtensions
+    return_type: int
+    arguments:
+      - type: void
   - name: sched_getparam
     standards:
       - POSIX
