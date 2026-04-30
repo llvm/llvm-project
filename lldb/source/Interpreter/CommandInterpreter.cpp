@@ -62,7 +62,7 @@
 
 #include "lldb/Host/Config.h"
 #include "lldb/lldb-forward.h"
-#if LLDB_ENABLE_LIBEDIT
+#if LLDB_ENABLE_REPLXX
 #include "lldb/Host/Editline.h"
 #endif
 #include "lldb/Host/File.h"

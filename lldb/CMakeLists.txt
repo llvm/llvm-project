@@ -139,6 +139,7 @@ endif()
 # TableGen
 add_subdirectory(utils/TableGen)
 
+add_subdirectory(third_party)
 add_subdirectory(source)
 add_subdirectory(tools)
 add_subdirectory(docs)
