@@ -41,7 +41,8 @@ lldb_private::CompilerType SwiftArrayNativeBufferHandler::GetElementType() {
   return m_elem_type;
 }
 
-ValueObjectSP SwiftArrayNativeBufferHandler::GetElementAtIndex(size_t idx) {
+ValueObjectSP SwiftArrayNativeBufferHandler::GetElementAtIndex(size_t idx, 
+    ValueObject *parent) {
   if (idx >= m_size)
     return ValueObjectSP();
 
@@ -61,13 +62,16 @@ ValueObjectSP SwiftArrayNativeBufferHandler::GetElementAtIndex(size_t idx) {
                      process_sp->GetAddressByteSize());
   StreamString name;
   name.Printf("[%zu]", idx);
-  return ValueObject::CreateValueObjectFromData(name.GetData(), data,
+  if (!parent)
+    parent = m_valobj_sp.get();
+  return parent->CreateChildValueObjectFromData(name.GetData(), data,
                                                 m_exe_ctx_ref, m_elem_type);
 }
 
 SwiftArrayNativeBufferHandler::SwiftArrayNativeBufferHandler(
     ValueObject &valobj, lldb::addr_t native_ptr, CompilerType elem_type)
-    : m_elem_type(elem_type), m_exe_ctx_ref(valobj.GetExecutionContextRef()) {
+    : m_elem_type(elem_type), m_exe_ctx_ref(valobj.GetExecutionContextRef()), 
+    m_valobj_sp(valobj.GetSP()) {
   if (ConstString mangled = valobj.GetCompilerType().GetMangledTypeName())
     m_is_embedded_swift =
         SwiftLanguageRuntime::GetManglingFlavor(mangled.GetStringRef()) ==
@@ -143,7 +147,8 @@ lldb_private::CompilerType SwiftArrayBridgedBufferHandler::GetElementType() {
 }
 
 lldb::ValueObjectSP
-SwiftArrayBridgedBufferHandler::GetElementAtIndex(size_t idx) {
+SwiftArrayBridgedBufferHandler::GetElementAtIndex(size_t idx,
+    ValueObject *parent) {
   if (!m_frontend)
     return {};
   return m_frontend->GetChildAtIndex(idx);
@@ -181,7 +186,7 @@ lldb_private::CompilerType SwiftArraySliceBufferHandler::GetElementType() {
 }
 
 lldb::ValueObjectSP
-SwiftArraySliceBufferHandler::GetElementAtIndex(size_t idx) {
+SwiftArraySliceBufferHandler::GetElementAtIndex(size_t idx, ValueObject *parent) {
   if (idx >= m_size)
     return ValueObjectSP();
 
@@ -204,7 +209,9 @@ SwiftArraySliceBufferHandler::GetElementAtIndex(size_t idx) {
                      process_sp->GetAddressByteSize());
   StreamString name;
   name.Printf("[%" PRIu64 "]", effective_idx);
-  return ValueObject::CreateValueObjectFromData(name.GetData(), data,
+  if (!parent)
+    parent = m_valobj_sp.get();
+  return parent->CreateChildValueObjectFromData(name.GetData(), data,
                                                 m_exe_ctx_ref, m_elem_type);
 }
 
@@ -214,7 +221,7 @@ SwiftArraySliceBufferHandler::SwiftArraySliceBufferHandler(
     : m_size(0), m_first_elem_ptr(LLDB_INVALID_ADDRESS), m_elem_type(elem_type),
       m_element_size(0), m_element_stride(0),
       m_exe_ctx_ref(valobj.GetExecutionContextRef()), m_native_buffer(false),
-      m_start_index(0) {
+      m_start_index(0), m_valobj_sp(valobj.GetSP()) {
   static ConstString g_start("subscriptBaseAddress");
   static ConstString g_value("_value");
   static ConstString g__rawValue("_rawValue");
@@ -271,7 +278,11 @@ lldb_private::CompilerType SwiftArrayInlineBufferHandler::GetElementType() {
   return m_elem_type;
 }
 
-ValueObjectSP SwiftArrayInlineBufferHandler::GetElementAtIndex(size_t idx) {
+// The parent is not used here because m_valobj_sp is a direct child of the
+// ValueObject representing the array, and so its parent is already set 
+// correctly.
+ValueObjectSP SwiftArrayInlineBufferHandler::GetElementAtIndex(size_t idx,
+    ValueObject *parent) {
   if (idx >= m_size)
     return {};
   return m_valobj_sp->GetChildAtIndex(idx);
@@ -304,8 +315,12 @@ SwiftSyntheticFrontEndBufferHandler::GetElementType() {
   return CompilerType();
 }
 
+// We don't need to use the parent here because this class makes its children
+// in one of the SyntheticFrontEnd Providers directly, so its up to the FrontEnd
+// to get the parent attribution correctly.
 lldb::ValueObjectSP
-SwiftSyntheticFrontEndBufferHandler::GetElementAtIndex(size_t idx) {
+SwiftSyntheticFrontEndBufferHandler::GetElementAtIndex(size_t idx,
+    ValueObject *parent) {
   if (!m_frontend)
     return {};
   return m_frontend->GetChildAtIndex(idx);
@@ -587,7 +602,7 @@ lldb_private::formatters::swift::ArraySyntheticFrontEnd::GetChildAtIndex(
   if (!m_array_buffer)
     return ValueObjectSP();
 
-  lldb::ValueObjectSP child_sp = m_array_buffer->GetElementAtIndex(idx);
+  lldb::ValueObjectSP child_sp = m_array_buffer->GetElementAtIndex(idx, &m_backend);
   if (child_sp)
     child_sp->SetSyntheticChildrenGenerated(true);
 

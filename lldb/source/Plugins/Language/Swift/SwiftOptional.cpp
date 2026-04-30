@@ -102,7 +102,7 @@ ExtractSomeIfAny(ValueObject *optional,
     ptr = runtime->MaskMaybeBridgedPointer(ptr);
     auto exe_ctx = valobj.GetExecutionContextRef().Lock(true);
     return ValueObjectMemory::Create(exe_ctx.GetBestExecutionContextScope(),
-                                     g_some, ptr, projected_type);
+                                     g_some, ptr, projected_type, &valobj);
   };
 
   auto project_enum =

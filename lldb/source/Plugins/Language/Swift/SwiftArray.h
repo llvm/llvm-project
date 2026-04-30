@@ -39,7 +39,15 @@ public:
 
   virtual lldb_private::CompilerType GetElementType() = 0;
 
-  virtual lldb::ValueObjectSP GetElementAtIndex(size_t) = 0;
+  // This class hands out synthetic child values which need to be managed by the
+  // ValueObjectManager of the ValueObject that owns the SyntheticFrontEnd.
+  // Some of the derived classes of this class hand out actual children of the
+  // incoming ValueObject, and their managers are already set correctly.  Some
+  // others of these subclasses make child ValueObject's from memory or data, 
+  // however, and those ones will rely on the parent being set correctly.
+  // 
+  virtual lldb::ValueObjectSP GetElementAtIndex(size_t idx, 
+      ValueObject *parent) = 0;
 
   static std::unique_ptr<SwiftArrayBufferHandler>
   CreateBufferHandler(ValueObject &valobj);
@@ -58,7 +66,7 @@ public:
   size_t GetCapacity() override { return 0; }
   lldb_private::CompilerType GetElementType() override { return m_elem_type; }
 
-  lldb::ValueObjectSP GetElementAtIndex(size_t) override {
+  lldb::ValueObjectSP GetElementAtIndex(size_t, ValueObject *parent) override {
     return lldb::ValueObjectSP();
   }
 
@@ -78,7 +86,7 @@ public:
   size_t GetCount() override;
   size_t GetCapacity() override;
   lldb_private::CompilerType GetElementType() override;
-  lldb::ValueObjectSP GetElementAtIndex(size_t) override;
+  lldb::ValueObjectSP GetElementAtIndex(size_t, ValueObject *parent) override;
   bool IsValid() override;
 
 protected:
@@ -97,6 +105,7 @@ private:
   size_t m_element_stride = 0;
   lldb_private::ExecutionContextRef m_exe_ctx_ref;
   bool m_is_embedded_swift = false;
+  lldb::ValueObjectSP m_valobj_sp;
 };
 
 class SwiftArrayBridgedBufferHandler : public SwiftArrayBufferHandler {
@@ -104,7 +113,7 @@ public:
   size_t GetCount() override;
   size_t GetCapacity() override;
   lldb_private::CompilerType GetElementType() override;
-  lldb::ValueObjectSP GetElementAtIndex(size_t) override;
+  lldb::ValueObjectSP GetElementAtIndex(size_t, ValueObject *parent) override;
   bool IsValid() override;
 
 protected:
@@ -122,7 +131,7 @@ public:
   size_t GetCount() override;
   size_t GetCapacity() override;
   lldb_private::CompilerType GetElementType() override;
-  lldb::ValueObjectSP GetElementAtIndex(size_t) override;
+  lldb::ValueObjectSP GetElementAtIndex(size_t, ValueObject *parent) override;
   bool IsValid() override;
 
 protected:
@@ -138,6 +147,7 @@ private:
   lldb_private::ExecutionContextRef m_exe_ctx_ref;
   bool m_native_buffer;
   uint64_t m_start_index;
+  lldb::ValueObjectSP m_valobj_sp;
 };
 
 /// Handles Swift.InlineArray<>
@@ -146,7 +156,7 @@ public:
   size_t GetCount() override;
   size_t GetCapacity() override;
   lldb_private::CompilerType GetElementType() override;
-  lldb::ValueObjectSP GetElementAtIndex(size_t) override;
+  lldb::ValueObjectSP GetElementAtIndex(size_t, ValueObject *parent) override;
   bool IsValid() override;
 
 protected:
@@ -165,7 +175,7 @@ public:
   size_t GetCount() override;
   size_t GetCapacity() override;
   lldb_private::CompilerType GetElementType() override;
-  lldb::ValueObjectSP GetElementAtIndex(size_t) override;
+  lldb::ValueObjectSP GetElementAtIndex(size_t, ValueObject *parent) override;
   bool IsValid() override;
 
 protected:

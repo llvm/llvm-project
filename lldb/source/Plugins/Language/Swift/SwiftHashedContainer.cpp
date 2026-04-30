@@ -46,7 +46,7 @@ public:
 
   virtual CompilerType GetElementType() override { return m_elem_type; }
 
-  virtual ValueObjectSP GetElementAtIndex(size_t) override {
+  virtual ValueObjectSP GetElementAtIndex(size_t, ValueObject *parent) override {
     return ValueObjectSP();
   }
 
@@ -69,7 +69,7 @@ public:
   virtual CompilerType GetElementType() override { return m_element_type; }
 
 
-  virtual ValueObjectSP GetElementAtIndex(size_t) override;
+  virtual ValueObjectSP GetElementAtIndex(size_t, ValueObject *parent) override;
 
   virtual bool IsValid() override;
 
@@ -168,7 +168,7 @@ public:
     return CompilerType();
   }
 
-  virtual ValueObjectSP GetElementAtIndex(size_t idx) override {
+  virtual ValueObjectSP GetElementAtIndex(size_t idx, ValueObject *parent) override {
     if (!m_frontend)
       return {};
     return m_frontend->GetChildAtIndex(idx);
@@ -329,6 +329,7 @@ ValueObjectSP HashedCollectionConfig::StorageObjectAtAddress(
 
 ValueObjectSP
 HashedCollectionConfig::CocoaObjectAtAddress(
+  ValueObject &valobj,
   const ExecutionContext &exe_ctx,
   lldb::addr_t address) const {
 
@@ -343,7 +344,7 @@ HashedCollectionConfig::CocoaObjectAtAddress(
     return nullptr;
   CompilerType id = clang_ts_sp->GetBasicType(lldb::eBasicTypeObjCID);
   InferiorSizedWord isw(address, *process_sp);
-  return ValueObject::CreateValueObjectFromData(
+  return valobj.CreateChildValueObjectFromData(
     "cocoa", isw.GetAsData(process_sp->GetByteOrder()), exe_ctx, id);
 }
 
@@ -617,7 +618,8 @@ NativeHashedStorageHandler::UpdateBuckets() {
 }
 
 ValueObjectSP
-NativeHashedStorageHandler::GetElementAtIndex(size_t idx) {
+NativeHashedStorageHandler::GetElementAtIndex(size_t idx,
+    ValueObject *parent) {
   if (!UpdateBuckets())
     return nullptr;
   if (!IsValid())
@@ -639,8 +641,12 @@ NativeHashedStorageHandler::GetElementAtIndex(size_t idx) {
   full_data.SetData(full_buffer_sp);
   StreamString name;
   name.Printf("[%zu]", idx);
-  return ValueObjectConstResult::Create(
-    m_process, m_element_type, ConstString(name.GetData()), full_data);
+  if (parent)
+    return parent->CreateChildValueObjectFromData(ConstString(name.GetData()), 
+        full_data, m_process, m_element_type);
+  else
+    return ValueObjectConstResult::Create(
+        m_process, m_element_type, ConstString(name.GetData()), full_data);
 }
 
 //===----------------------------------------------------------------------===//
@@ -722,7 +728,7 @@ HashedCollectionConfig::CreateHandler(ValueObject &valobj) const {
       return nullptr;
     return CreateNativeHandler(valobj_sp, storage_sp);
   } else {
-    auto cocoa_sp = CocoaObjectAtAddress(exe_ctx, masked_storage_location);
+    auto cocoa_sp = CocoaObjectAtAddress(valobj, exe_ctx, masked_storage_location);
     if (!cocoa_sp)
       return nullptr;
     return CreateCocoaHandler(cocoa_sp);
@@ -753,7 +759,7 @@ ValueObjectSP HashedSyntheticChildrenFrontEnd::GetChildAtIndex(uint32_t idx) {
   if (!m_buffer)
     return ValueObjectSP();
 
-  ValueObjectSP child_sp = m_buffer->GetElementAtIndex(idx);
+  ValueObjectSP child_sp = m_buffer->GetElementAtIndex(idx, &m_backend);
 
   if (child_sp)
     child_sp->SetSyntheticChildrenGenerated(true);
