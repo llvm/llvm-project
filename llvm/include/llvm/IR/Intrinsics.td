@@ -1077,6 +1077,10 @@ def int_structured_alloca : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [], [IntrIna
 //===------------------- Standard C Library Intrinsics --------------------===//
 //
 
+// The memcpy etc. intrinsics specify willreturn and argmemonly here, and these
+// then get removed by accessors if the memcpy is volatile. FIXME: Consider
+// inverting the handling.
+
 def int_memcpy  : DefaultAttrsIntrinsic<[],
                             [llvm_anyptr_ty, llvm_anyptr_ty, llvm_anyint_ty,
                              llvm_i1_ty],
