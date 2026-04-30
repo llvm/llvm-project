@@ -1626,7 +1626,7 @@ bool ModuleMap::resolveExports(Module *Mod, bool Complain) {
   Mod->UnresolvedExports.clear();
   for (auto &UE : Unresolved) {
     Module::ExportDecl Export = resolveExport(Mod, UE, Complain);
-    if (Export.getPointer() || Export.getInt())
+    if (Export.first || Export.second)
       Mod->Exports.push_back(Export);
     else
       Mod->UnresolvedExports.push_back(UE);
@@ -1849,17 +1849,22 @@ void ModuleMapLoader::handleModuleDecl(const modulemap::ModuleDecl &MD) {
     // We might see a (re)definition of a module that we already have a
     // definition for in four cases:
     //  - If the Existing module was loaded from an AST file and we've found its
-    //    original source module map, or
+    //    original source module map, or we cannot determine Existing's
+    //    definition location.
     bool LoadedFromASTFile = Existing->IsFromModuleFile;
     if (LoadedFromASTFile) {
       OptionalFileEntryRef ExistingModMapFile =
           Map.getContainingModuleMapFile(Existing);
       OptionalFileEntryRef CurrentModMapFile =
           SourceMgr.getFileEntryRefForID(ModuleMapFID);
-      if (ExistingModMapFile && CurrentModMapFile &&
-          *ExistingModMapFile == *CurrentModMapFile)
+      if ((ExistingModMapFile && CurrentModMapFile &&
+           *ExistingModMapFile == *CurrentModMapFile) ||
+          Existing->DefinitionLoc.isInvalid()) {
+        // If we do not know Existing's definition location, we have
+        // no way of checking against it, and hence we stay conservative and do
+        // not check for duplicating module definitions.
         LoadedFromASTFile = true;
-      else
+      } else
         LoadedFromASTFile = false;
     }
     //  - If we previously inferred this module from different module map file.
@@ -2001,6 +2006,13 @@ void ModuleMapLoader::handleExternModuleDecl(
   if (llvm::sys::path::is_relative(FileNameRef)) {
     ModuleMapFileName += Directory.getName();
     llvm::sys::path::append(ModuleMapFileName, EMD.Path);
+    // As extern module declarations are parsed recursively, relative paths
+    // to those modules can become arbitrarily long.
+    // If the OS name length limit is exceeded when trying to get the file ref
+    // we can silently fail to find an extern module that exists.
+    // To mitigate this, collapse relative paths containing '../' for when
+    // constructing the name of each module file referenced as an extern module.
+    llvm::sys::path::remove_dots(ModuleMapFileName, /*remove_dot_dot=*/true);
     FileNameRef = ModuleMapFileName;
   }
   if (auto File = SourceMgr.getFileManager().getOptionalFileRef(FileNameRef))

@@ -1233,7 +1233,7 @@ attributes #2 = { null_pointer_is_valid }
 ; TUNIT: attributes #[[ATTR12]] = { mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite) }
 ; TUNIT: attributes #[[ATTR13]] = { nofree nosync nounwind }
 ; TUNIT: attributes #[[ATTR14]] = { nofree nosync nounwind willreturn memory(read) }
-; TUNIT: attributes #[[ATTR15]] = { nofree nosync nounwind willreturn }
+; TUNIT: attributes #[[ATTR15]] = { nofree norecurse nosync nounwind willreturn }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree noinline nosync nounwind willreturn memory(none) uwtable }

@@ -48,14 +48,14 @@ public:
     DeclContext *DC = D->getDeclContext();
 
     // Collects Decl for global variables or static data members:
-    if (DC->isFileContext() || DC->isNamespace() || D->isStaticDataMember())
+    if (DC->isFileContext() || D->isStaticDataMember())
       Contributors.insert(D);
     return true;
   }
 
   bool VisitLambdaExpr(LambdaExpr *L) override {
-    // TraverseLambdaExpr directly visits the body stmt, but we need to collect
-    // the CXXMethodDecl as a contributor:
+    // TraverseLambdaExpr directly visits the body stmt, skipping the
+    // CXXMethodDecl, which is a contributor that needs to be collected.
     VisitFunctionDecl(L->getCallOperator());
     return true;
   }

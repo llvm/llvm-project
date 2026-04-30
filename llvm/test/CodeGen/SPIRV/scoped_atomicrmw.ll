@@ -10,7 +10,7 @@
 ; CHECK-DAG: %[[#Value:]] = OpConstant %[[#Int]] 42{{$}}
 ; CHECK-DAG: %[[#FPValue:]] = OpConstant %[[#Float]] 42{{$}}
 ; CHECK-DAG: %[[#Scope_Invocation:]] = OpConstant %[[#Int]] 4{{$}}
-; CHECK-DAG: %[[#MemSem_SeqCst:]] = OpConstant %[[#Int]] 16{{$}}
+; CHECK-DAG: %[[#MemSem_SeqCst:]] = OpConstant %[[#Int]] 528{{$}}
 ; CHECK-DAG: %[[#Scope_Subgroup:]] = OpConstant %[[#Int]] 3{{$}}
 ; CHECK-DAG: %[[#Scope_Workgroup:]] = OpConstant %[[#Int]] 2{{$}}
 ; CHECK-DAG: %[[#Scope_Device:]] = OpConstant %[[#Int]] 1{{$}}

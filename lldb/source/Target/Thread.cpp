@@ -1180,6 +1180,15 @@ ThreadPlan *Thread::GetCurrentPlan() const {
   return GetPlans().GetCurrentPlan().get();
 }
 
+bool Thread::IsRunningCallFunctionPlan() const {
+  for (ThreadPlan *plan = GetCurrentPlan(); plan;
+       plan = GetPreviousPlan(plan)) {
+    if (plan->GetKind() == ThreadPlan::eKindCallFunction)
+      return true;
+  }
+  return false;
+}
+
 ThreadPlanSP Thread::GetCompletedPlan() const {
   return GetPlans().GetCompletedPlan();
 }

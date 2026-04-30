@@ -4148,10 +4148,41 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
     ID.APSIntVal = Lex.getAPSIntVal();
     ID.Kind = ValID::t_APSInt;
     break;
-  case lltok::APFloat:
+  case lltok::APFloat: {
     ID.APFloatVal = Lex.getAPFloatVal();
     ID.Kind = ValID::t_APFloat;
     break;
+  }
+  case lltok::FloatLiteral: {
+    if (!ExpectedTy)
+      return error(ID.Loc, "unexpected floating-point literal");
+    if (!ExpectedTy->isFloatingPointTy())
+      return error(ID.Loc, "floating-point constant invalid for type");
+    ID.APFloatVal = APFloat(ExpectedTy->getFltSemantics());
+    auto Except = ID.APFloatVal.convertFromString(
+        Lex.getStrVal(), RoundingMode::NearestTiesToEven);
+    assert(Except && "Invalid float strings should be caught by the lexer");
+    // Forbid overflowing and underflowing literals, but permit inexact
+    // literals. Underflow is thrown when the result is denormal, so to allow
+    // denormals, only reject underflowing literals that resulted in a zero.
+    if (*Except & APFloat::opOverflow)
+      return error(ID.Loc, "floating-point constant overflowed type");
+    if ((*Except & APFloat::opUnderflow) && ID.APFloatVal.isZero())
+      return error(ID.Loc, "floating-point constant underflowed type");
+    ID.Kind = ValID::t_APFloat;
+    break;
+  }
+  case lltok::FloatHexLiteral: {
+    if (!ExpectedTy)
+      return error(ID.Loc, "unexpected floating-point literal");
+    const auto &Semantics = ExpectedTy->getFltSemantics();
+    const APInt &Bits = Lex.getAPSIntVal();
+    if (APFloat::getSizeInBits(Semantics) != Bits.getBitWidth())
+      return error(ID.Loc, "float hex literal has incorrect number of bits");
+    ID.APFloatVal = APFloat(Semantics, Bits);
+    ID.Kind = ValID::t_APFloat;
+    break;
+  }
   case lltok::kw_true:
     ID.ConstantVal = ConstantInt::getTrue(Context);
     ID.Kind = ValID::t_Constant;
@@ -5849,6 +5880,9 @@ bool LLParser::parseDIBasicType(MDNode *&Result, bool IsDistinct) {
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
   OPTIONAL(tag, DwarfTagField, (dwarf::DW_TAG_base_type));                     \
   OPTIONAL(name, MDStringField, );                                             \
+  OPTIONAL(file, MDField, );                                                   \
+  OPTIONAL(line, LineField, );                                                 \
+  OPTIONAL(scope, MDField, );                                                  \
   OPTIONAL(size, MDUnsignedOrMDField, (0, UINT64_MAX));                        \
   OPTIONAL(align, MDUnsignedField, (0, UINT32_MAX));                           \
   OPTIONAL(dataSize, MDUnsignedField, (0, UINT32_MAX));                        \
@@ -5859,9 +5893,9 @@ bool LLParser::parseDIBasicType(MDNode *&Result, bool IsDistinct) {
 #undef VISIT_MD_FIELDS
 
   Result = GET_OR_DISTINCT(
-      DIBasicType,
-      (Context, tag.Val, name.Val, size.getValueAsMetadata(Context), align.Val,
-       encoding.Val, num_extra_inhabitants.Val, dataSize.Val, flags.Val));
+      DIBasicType, (Context, tag.Val, name.Val, file.Val, line.Val, scope.Val,
+                    size.getValueAsMetadata(Context), align.Val, encoding.Val,
+                    num_extra_inhabitants.Val, dataSize.Val, flags.Val));
   return false;
 }
 
@@ -5874,6 +5908,9 @@ bool LLParser::parseDIFixedPointType(MDNode *&Result, bool IsDistinct) {
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
   OPTIONAL(tag, DwarfTagField, (dwarf::DW_TAG_base_type));                     \
   OPTIONAL(name, MDStringField, );                                             \
+  OPTIONAL(file, MDField, );                                                   \
+  OPTIONAL(line, LineField, );                                                 \
+  OPTIONAL(scope, MDField, );                                                  \
   OPTIONAL(size, MDUnsignedOrMDField, (0, UINT64_MAX));                        \
   OPTIONAL(align, MDUnsignedField, (0, UINT32_MAX));                           \
   OPTIONAL(encoding, DwarfAttEncodingField, );                                 \
@@ -5886,10 +5923,10 @@ bool LLParser::parseDIFixedPointType(MDNode *&Result, bool IsDistinct) {
 #undef VISIT_MD_FIELDS
 
   Result = GET_OR_DISTINCT(DIFixedPointType,
-                           (Context, tag.Val, name.Val,
-                            size.getValueAsMetadata(Context), align.Val,
-                            encoding.Val, flags.Val, kind.Val, factor.Val,
-                            numerator.Val, denominator.Val));
+                           (Context, tag.Val, name.Val, file.Val, line.Val,
+                            scope.Val, size.getValueAsMetadata(Context),
+                            align.Val, encoding.Val, flags.Val, kind.Val,
+                            factor.Val, numerator.Val, denominator.Val));
   return false;
 }
 
@@ -6850,7 +6887,7 @@ bool LLParser::parseConstantValue(Type *Ty, Constant *&C) {
   C = nullptr;
   ValID ID;
   auto Loc = Lex.getLoc();
-  if (parseValID(ID, /*PFS=*/nullptr))
+  if (parseValID(ID, /*PFS=*/nullptr, /*ExpectedTy=*/Ty))
     return true;
   switch (ID.Kind) {
   case ValID::t_APSInt:
