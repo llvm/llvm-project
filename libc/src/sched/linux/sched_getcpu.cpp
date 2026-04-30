@@ -18,9 +18,9 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, sched_getcpu, ()) {
-  int cpu = 0;
+  unsigned int cpu = 0;
   int ret =
-      LIBC_NAMESPACE::syscall_impl<int>(SYS_getcpu, cpu, nullptr, nullptr);
+      LIBC_NAMESPACE::syscall_impl<int>(SYS_getcpu, &cpu, nullptr, nullptr);
   if (ret < 0) {
     libc_errno = -ret;
     return -1;
