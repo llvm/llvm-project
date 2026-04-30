@@ -5672,7 +5672,8 @@ static SDValue lowerVZIP(unsigned Opc, SDValue Op0, SDValue Op1,
 
 static SDValue lowerZvzipVZIP(SDValue Op0, SDValue Op1, const SDLoc &DL,
                               SelectionDAG &DAG,
-                              const RISCVSubtarget &Subtarget, unsigned Part) {
+                              const RISCVSubtarget &Subtarget,
+                              std::optional<unsigned> Part = std::nullopt) {
   assert(Op0.getSimpleValueType() == Op1.getSimpleValueType());
   MVT VT = Op0.getSimpleValueType();
   MVT IntVT = VT.changeVectorElementTypeToInteger();
@@ -5689,12 +5690,19 @@ static SDValue lowerZvzipVZIP(SDValue Op0, SDValue Op1, const SDLoc &DL,
   SDValue Passthru = DAG.getUNDEF(ResVT);
   SDValue Res =
       DAG.getNode(RISCVISD::VZIP_VL, DL, ResVT, Op0, Op1, Passthru, Mask, VL);
-  Res = DAG.getExtractSubvector(
-      DL, ContainerVT, Res,
-      Part * ContainerVT.getVectorElementCount().getKnownMinValue());
+  if (Part) {
+    assert(*Part < 2 && "Unexpected VZIP part");
+    Res = DAG.getExtractSubvector(
+        DL, ContainerVT, Res,
+        *Part * ContainerVT.getVectorElementCount().getKnownMinValue());
+    if (IntVT.isFixedLengthVector())
+      Res = convertFromScalableVector(IntVT, Res, DAG, Subtarget);
+    return DAG.getBitcast(VT, Res);
+  }
   if (IntVT.isFixedLengthVector())
-    Res = convertFromScalableVector(IntVT, Res, DAG, Subtarget);
-  Res = DAG.getBitcast(VT, Res);
+    Res = convertFromScalableVector(IntVT.getDoubleNumVectorElementsVT(), Res,
+                                    DAG, Subtarget);
+  Res = DAG.getBitcast(VT.getDoubleNumVectorElementsVT(), Res);
   return Res;
 }
 
@@ -6474,11 +6482,8 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
 
     // Prefer vzip2a or vzip if available.
     // TODO: Extend to matching ri.vzip2b or vzip if EvenSrc and OddSrc allow.
-    if (Subtarget.hasStdExtZvzip() && isLegalVTForZvzip(VT, Subtarget, *this)) {
-      EvenV = DAG.getInsertSubvector(DL, DAG.getUNDEF(VT), EvenV, 0);
-      OddV = DAG.getInsertSubvector(DL, DAG.getUNDEF(VT), OddV, 0);
-      return lowerZvzipVZIP(EvenV, OddV, DL, DAG, Subtarget, /*Part=*/0);
-    }
+    if (Subtarget.hasStdExtZvzip() && isLegalVTForZvzip(VT, Subtarget, *this))
+      return lowerZvzipVZIP(EvenV, OddV, DL, DAG, Subtarget);
     if (Subtarget.hasVendorXRivosVizip()) {
       EvenV = DAG.getInsertSubvector(DL, DAG.getUNDEF(VT), EvenV, 0);
       OddV = DAG.getInsertSubvector(DL, DAG.getUNDEF(VT), OddV, 0);
