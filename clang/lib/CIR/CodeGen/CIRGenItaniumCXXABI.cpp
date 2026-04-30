@@ -2057,7 +2057,8 @@ mlir::Value CIRGenItaniumCXXABI::getVirtualBaseClassOffset(
 
   mlir::Value vbaseOffset;
   if (cgm.getLangOpts().RelativeCXXABIVTables) {
-    mlir::Value offsetPtr = builder.createBitcast(vbaseOffsetPtr, builder.getPointerTo(cgm.sInt32Ty));
+    mlir::Value offsetPtr = builder.createBitcast(
+        vbaseOffsetPtr, builder.getPointerTo(cgm.sInt32Ty));
     vbaseOffset = cgf.getBuilder().createLoad(
         loc, Address(offsetPtr, cgm.sInt32Ty,
                      CharUnits::fromQuantity(4))); // vbase.offset
