@@ -164,6 +164,7 @@ private:
 #include "clang/Basic/AttrList.inc"
     NKI_ObjCProtocolLoc,
     NKI_ConceptReference,
+    NKI_OffsetOfNode,
     NKI_NumberOfKinds
   };
 
@@ -224,6 +225,7 @@ KIND_TO_KIND_ID(Attr)
 KIND_TO_KIND_ID(ObjCProtocolLoc)
 KIND_TO_KIND_ID(CXXBaseSpecifier)
 KIND_TO_KIND_ID(ConceptReference)
+KIND_TO_KIND_ID(OffsetOfNode)
 #define DECL(DERIVED, BASE) KIND_TO_KIND_ID(DERIVED##Decl)
 #include "clang/AST/DeclNodes.inc"
 #define STMT(DERIVED, BASE) KIND_TO_KIND_ID(DERIVED)
@@ -588,6 +590,10 @@ struct DynTypedNode::BaseConverter<ObjCProtocolLoc, void>
 template <>
 struct DynTypedNode::BaseConverter<ConceptReference, void>
     : public PtrConverter<ConceptReference> {};
+
+template <>
+struct DynTypedNode::BaseConverter<OffsetOfNode, void>
+    : public PtrConverter<OffsetOfNode> {};
 
 // The only operation we allow on unsupported types is \c get.
 // This allows to conveniently use \c DynTypedNode when having an arbitrary

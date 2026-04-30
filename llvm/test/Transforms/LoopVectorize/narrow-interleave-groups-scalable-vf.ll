@@ -15,7 +15,7 @@ define void @scalablevf(ptr %dst.start, i8 %a, i8 %b) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 4
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[DST_START]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[NEXT_GEP]], align 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul nuw <4 x i8> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
@@ -41,8 +41,7 @@ define void @scalablevf(ptr %dst.start, i8 %a, i8 %b) {
 ; SCALABLE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; SCALABLE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 64, [[TMP2]]
 ; SCALABLE-NEXT:    [[N_VEC:%.*]] = sub i64 64, [[N_MOD_VF]]
-; SCALABLE-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], 4
-; SCALABLE-NEXT:    [[TMP5:%.*]] = mul i64 [[N_VEC]], 4
+; SCALABLE-NEXT:    [[TMP5:%.*]] = shl i64 [[N_VEC]], 2
 ; SCALABLE-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[DST_START]], i64 [[TMP5]]
 ; SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i8> poison, i8 [[B]], i64 0
 ; SCALABLE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i8> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i8> poison, <vscale x 4 x i32> zeroinitializer
@@ -51,7 +50,7 @@ define void @scalablevf(ptr %dst.start, i8 %a, i8 %b) {
 ; SCALABLE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; SCALABLE:       [[VECTOR_BODY]]:
 ; SCALABLE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; SCALABLE-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 4
+; SCALABLE-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 2
 ; SCALABLE-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[DST_START]], i64 [[OFFSET_IDX]]
 ; SCALABLE-NEXT:    [[TMP10:%.*]] = load <vscale x 4 x i8>, ptr [[NEXT_GEP]], align 1
 ; SCALABLE-NEXT:    [[TMP20:%.*]] = mul nuw <vscale x 4 x i8> [[TMP10]], [[BROADCAST_SPLAT]]
