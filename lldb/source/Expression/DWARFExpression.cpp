@@ -1145,6 +1145,34 @@ static llvm::Error Evaluate_DW_OP_piece(
   return llvm::Error::success();
 }
 
+static llvm::Error
+Evaluate_DW_OP_convert(DWARFExpression::Stack &stack,
+                       const DWARFExpression::Delegate *dwarf_cu,
+                       lldb::ModuleSP module_sp, uint64_t relative_die_offset) {
+  uint64_t bit_size;
+  bool sign;
+  if (relative_die_offset == 0) {
+    // The generic type has the size of an address on the target
+    // machine and an unspecified signedness. Scalar has no
+    // "unspecified signedness", so we use unsigned types.
+    if (!module_sp)
+      return llvm::createStringError("no module");
+    sign = false;
+    bit_size = module_sp->GetArchitecture().GetAddressByteSize() * 8;
+    if (!bit_size)
+      return llvm::createStringError("unspecified architecture");
+  } else {
+    auto bit_size_sign_or_err =
+        dwarf_cu->GetDIEBitSizeAndSign(relative_die_offset);
+    if (!bit_size_sign_or_err)
+      return bit_size_sign_or_err.takeError();
+    bit_size = bit_size_sign_or_err->first;
+    sign = bit_size_sign_or_err->second;
+  }
+  stack.back().GetScalar().TruncOrExtendTo(bit_size, sign);
+  return llvm::Error::success();
+}
+
 llvm::Expected<Value> DWARFExpression::Evaluate(
     ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
     lldb::ModuleSP module_sp, const DataExtractor &opcodes,
@@ -2077,32 +2105,11 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     //
     // DESCRIPTION: Pop the top stack element, convert it to a
     // different type, and push the result.
-    case DW_OP_convert: {
-      const uint64_t relative_die_offset = op->getRawOperand(0);
-      uint64_t bit_size;
-      bool sign;
-      if (relative_die_offset == 0) {
-        // The generic type has the size of an address on the target
-        // machine and an unspecified signedness. Scalar has no
-        // "unspecified signedness", so we use unsigned types.
-        if (!module_sp)
-          return llvm::createStringError("no module");
-        sign = false;
-        bit_size = module_sp->GetArchitecture().GetAddressByteSize() * 8;
-        if (!bit_size)
-          return llvm::createStringError("unspecified architecture");
-      } else {
-        auto bit_size_sign_or_err =
-            dwarf_cu->GetDIEBitSizeAndSign(relative_die_offset);
-        if (!bit_size_sign_or_err)
-          return bit_size_sign_or_err.takeError();
-        bit_size = bit_size_sign_or_err->first;
-        sign = bit_size_sign_or_err->second;
-      }
-      Scalar &top = stack.back().GetScalar();
-      top.TruncOrExtendTo(bit_size, sign);
+    case DW_OP_convert:
+      if (llvm::Error err = Evaluate_DW_OP_convert(stack, dwarf_cu, module_sp,
+                                                   op->getRawOperand(0)))
+        return err;
       break;
-    }
 
     // OPCODE: DW_OP_call_frame_cfa
     // OPERANDS: None
