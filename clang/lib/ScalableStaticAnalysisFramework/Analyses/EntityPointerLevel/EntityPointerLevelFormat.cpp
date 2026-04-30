@@ -82,3 +82,53 @@ Expected<EntityPointerLevelSet> clang::ssaf::entityPointerLevelSetFromJSON(
   }
   return EPLs;
 }
+
+llvm::json::Array clang::ssaf::entityPointerLevelMapToJSON(
+    const std::map<EntityId, EntityPointerLevelSet> &Map,
+    JSONFormat::EntityIdToJSONFn IdToJSON) {
+  llvm::json::Array Content;
+
+  for (const auto &[Id, EPLs] : Map) {
+    Content.push_back(IdToJSON(Id));
+    Content.push_back(entityPointerLevelSetToJSON(EPLs, IdToJSON));
+  }
+  return Content;
+}
+
+Expected<std::map<EntityId, EntityPointerLevelSet>>
+clang::ssaf::entityPointerLevelMapFromJSON(
+    const llvm::json::Array &Content,
+    JSONFormat::EntityIdFromJSONFn IdFromJSON) {
+  if (Content.size() % 2 != 0)
+    return makeSawButExpectedError(Content,
+                                   "an even number of elements, got %lu",
+                                   static_cast<size_t>(Content.size()));
+
+  std::map<EntityId, EntityPointerLevelSet> Result;
+
+  for (size_t I = 0; I < Content.size(); I += 2) {
+    const llvm::json::Object *IdData = Content[I].getAsObject();
+
+    if (!IdData)
+      return makeSawButExpectedError(Content[I],
+                                     "an object representing EntityId");
+
+    auto Id = IdFromJSON(*IdData);
+
+    if (!Id)
+      return Id.takeError();
+
+    const llvm::json::Array *EPLsData = Content[I + 1].getAsArray();
+
+    if (!EPLsData)
+      return makeSawButExpectedError(
+          Content[I + 1], "an array representing EntityPointerLevelSet");
+
+    auto EPLs = entityPointerLevelSetFromJSON(*EPLsData, IdFromJSON);
+
+    if (!EPLs)
+      return EPLs.takeError();
+    Result[*Id] = std::move(*EPLs);
+  }
+  return Result;
+}
