@@ -46,9 +46,10 @@ public:
       return;
 
     TypeSwitch<SPIRVType>(type)
-        .Case<CooperativeMatrixType, PointerType, ScalarType, TensorArmType>(
+        .Case<CooperativeMatrixType, ImageType, PointerType, ScalarType,
+              TensorArmType>(
             [this](auto concreteType) { addConcrete(concreteType); })
-        .Case<ArrayType, ImageType, MatrixType, RuntimeArrayType, VectorType>(
+        .Case<ArrayType, MatrixType, RuntimeArrayType, VectorType>(
             [this](auto concreteType) { add(concreteType.getElementType()); })
         .Case([this](SampledImageType concreteType) {
           add(concreteType.getImageType());
@@ -66,6 +67,7 @@ public:
 private:
   // Types that add unique extensions.
   void addConcrete(CooperativeMatrixType type);
+  void addConcrete(ImageType type);
   void addConcrete(PointerType type);
   void addConcrete(ScalarType type);
   void addConcrete(TensorArmType type);
@@ -423,12 +425,101 @@ ImageSamplerUseInfo ImageType::getSamplerUseInfo() const {
 
 ImageFormat ImageType::getImageFormat() const { return getImpl()->format; }
 
+void TypeExtensionVisitor::addConcrete(ImageType type) {
+  // OpTypeImage with a 64-bit integer Sampled Type requires the
+  // SPV_EXT_shader_image_int64 extension (companion to Int64ImageEXT).
+  if (auto intTy = dyn_cast<IntegerType>(type.getElementType());
+      intTy && intTy.getWidth() == 64) {
+    static constexpr auto ext = Extension::SPV_EXT_shader_image_int64;
+    extensions.push_back(ext);
+  }
+  add(type.getElementType());
+}
+
 void TypeCapabilityVisitor::addConcrete(ImageType type) {
-  if (auto dimCaps = spirv::getCapabilities(type.getDim()))
-    capabilities.push_back(*dimCaps);
+  // Capability requirements for OpTypeImage are determined jointly by Dim,
+  // Sampled, MS, and Arrayed - see the SPIR-V spec's "Capabilities" column on
+  // OpTypeImage.
+  Dim dim = type.getDim();
+  bool isMultisampled =
+      type.getSamplingInfo() == ImageSamplingInfo::MultiSampled;
+  bool isArrayed = type.getArrayedInfo() == ImageArrayedInfo::Arrayed;
+  ImageSamplerUseInfo sampler = type.getSamplerUseInfo();
+  bool noSampler = sampler == ImageSamplerUseInfo::NoSampler;
+  bool needSampler = sampler == ImageSamplerUseInfo::NeedSampler;
+
+  switch (dim) {
+  case Dim::Dim1D: {
+    if (needSampler) {
+      static constexpr auto cap = Capability::Sampled1D;
+      capabilities.push_back(cap);
+    } else if (noSampler) {
+      static constexpr auto cap = Capability::Image1D;
+      capabilities.push_back(cap);
+    } else {
+      static constexpr Capability caps[] = {Capability::Image1D,
+                                            Capability::Sampled1D};
+      capabilities.push_back(caps);
+    }
+    break;
+  }
+  case Dim::Dim2D:
+    if (isMultisampled && noSampler) {
+      static constexpr auto cap = Capability::StorageImageMultisample;
+      capabilities.push_back(cap);
+    }
+    if (isMultisampled && isArrayed) {
+      static constexpr auto cap = Capability::ImageMSArray;
+      capabilities.push_back(cap);
+    }
+    break;
+  case Dim::Dim3D:
+    break;
+  case Dim::Cube: {
+    static constexpr auto shaderCap = Capability::Shader;
+    capabilities.push_back(shaderCap);
+    if (isArrayed) {
+      static constexpr auto cap = Capability::ImageCubeArray;
+      capabilities.push_back(cap);
+    }
+    break;
+  }
+  case Dim::Rect: {
+    static constexpr Capability caps[] = {Capability::ImageRect,
+                                          Capability::SampledRect};
+    capabilities.push_back(caps);
+    break;
+  }
+  case Dim::Buffer: {
+    if (needSampler) {
+      static constexpr auto cap = Capability::SampledBuffer;
+      capabilities.push_back(cap);
+    } else if (noSampler) {
+      static constexpr auto cap = Capability::ImageBuffer;
+      capabilities.push_back(cap);
+    } else {
+      static constexpr Capability caps[] = {Capability::ImageBuffer,
+                                            Capability::SampledBuffer};
+      capabilities.push_back(caps);
+    }
+    break;
+  }
+  case Dim::SubpassData: {
+    static constexpr auto cap = Capability::InputAttachment;
+    capabilities.push_back(cap);
+    break;
+  }
+  }
 
   if (auto fmtCaps = spirv::getCapabilities(type.getImageFormat()))
     capabilities.push_back(*fmtCaps);
+
+  // OpTypeImage with a 64-bit integer Sampled Type requires Int64ImageEXT.
+  if (auto intTy = dyn_cast<IntegerType>(type.getElementType());
+      intTy && intTy.getWidth() == 64) {
+    static constexpr auto cap = Capability::Int64ImageEXT;
+    capabilities.push_back(cap);
+  }
 
   add(type.getElementType());
 }
