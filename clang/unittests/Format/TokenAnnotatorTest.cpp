@@ -433,6 +433,18 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   EXPECT_TOKEN(Tokens[7], tok::r_paren, TT_Unknown); // Not TT_CastRParen
   EXPECT_TOKEN(Tokens[10], tok::amp, TT_PointerOrReference);
   EXPECT_TOKEN(Tokens[11], tok::identifier, TT_StartOfName);
+
+  Tokens = annotate("template <typename T>\n"
+                    "concept C = requires(T t) { [](auto &c) {}(t); };");
+  ASSERT_EQ(Tokens.size(), 30u) << Tokens;
+  EXPECT_TOKEN(Tokens[18], tok::amp, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[19], tok::identifier, TT_StartOfName);
+
+  Tokens = annotate("template <typename T>\n"
+                    "concept C = requires(T t) { [](auto *c) {}(t); };");
+  ASSERT_EQ(Tokens.size(), 30u) << Tokens;
+  EXPECT_TOKEN(Tokens[18], tok::star, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[19], tok::identifier, TT_StartOfName);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsUsesOfPlusAndMinus) {

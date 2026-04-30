@@ -8,15 +8,13 @@
 
 #include "lldb/Host/windows/PseudoConsole.h"
 
+#include <cstdio>
 #include <mutex>
 
-#include "lldb/Host/windows/PipeWindows.h"
-#include "lldb/Host/windows/ProcessLauncherWindows.h"
 #include "lldb/Host/windows/windows.h"
 #include "lldb/Utility/LLDBLog.h"
 
 #include "llvm/Support/Errc.h"
-#include "llvm/Support/Errno.h"
 
 using namespace lldb_private;
 
@@ -25,6 +23,8 @@ typedef HRESULT(WINAPI *CreatePseudoConsole_t)(COORD size, HANDLE hInput,
                                                HPCON *phPC);
 
 typedef VOID(WINAPI *ClosePseudoConsole_t)(HPCON hPC);
+
+static constexpr DWORD PSEUDOCONSOLE_INHERIT_CURSOR = 0x1;
 
 struct Kernel32 {
   Kernel32() {
@@ -88,8 +88,6 @@ llvm::Error PseudoConsole::CreateOverlappedPipePair(HANDLE &out_read,
         std::error_code(GetLastError(), std::system_category()));
   }
 
-  DWORD mode = PIPE_NOWAIT;
-  SetNamedPipeHandleState(out_read, &mode, NULL, NULL);
   return llvm::Error::success();
 }
 
@@ -130,14 +128,23 @@ llvm::Error PseudoConsole::OpenPseudoConsole() {
   }
 
   COORD consoleSize{80, 25};
+  // Cursor position within the visible window, 1-indexed for VT sequences.
+  // Defaults to the last row so ConPTY won't scroll back over existing output
+  // if we can't query the real console.
+  int cursorRow = consoleSize.Y;
+  int cursorCol = 1;
   CONSOLE_SCREEN_BUFFER_INFO csbi;
-  if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi))
+  if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi)) {
     consoleSize = {
         static_cast<SHORT>(csbi.srWindow.Right - csbi.srWindow.Left + 1),
         static_cast<SHORT>(csbi.srWindow.Bottom - csbi.srWindow.Top + 1)};
+    cursorRow = csbi.dwCursorPosition.Y - csbi.srWindow.Top + 1;
+    cursorCol = csbi.dwCursorPosition.X + 1;
+  }
   HPCON hPC = INVALID_HANDLE_VALUE;
-  HRESULT hr = kernel32.CreatePseudoConsole(consoleSize, hInputRead,
-                                            hOutputWrite, 0, &hPC);
+  HRESULT hr =
+      kernel32.CreatePseudoConsole(consoleSize, hInputRead, hOutputWrite,
+                                   PSEUDOCONSOLE_INHERIT_CURSOR, &hPC);
   CloseHandle(hInputRead);
   CloseHandle(hOutputWrite);
 
@@ -154,10 +161,16 @@ llvm::Error PseudoConsole::OpenPseudoConsole() {
   m_conpty_input = hInputWrite;
   m_mode = Mode::ConPTY;
 
-  if (auto error = DrainInitSequences()) {
-    Log *log = GetLog(LLDBLog::Host);
-    LLDB_LOG_ERROR(log, std::move(error),
-                   "failed to finalize ConPTY's setup: {0}");
+  // PSEUDOCONSOLE_INHERIT_CURSOR causes ConPTY to emit ESC[6n on the output
+  // pipe to query the current cursor position before it finishes initializing.
+  // Write the cursor position response to the input pipe so ConPTY can read it
+  // and initialize without clearing the screen or overwriting LLDB's prompt.
+  {
+    llvm::SmallString<32> response =
+        llvm::formatv("\x1b[{0};{1}R", cursorRow, cursorCol).sstr<32>();
+    DWORD nwritten = 0;
+    WriteFile(m_conpty_input, response.data(), response.size(), &nwritten,
+              NULL);
   }
 
   return llvm::Error::success();
@@ -228,72 +241,5 @@ llvm::Error PseudoConsole::OpenAnonymousPipes() {
   m_pipe_child_stdin = hStdinRead;
   m_pipe_child_stdout = hStdoutWrite;
   m_mode = Mode::Pipe;
-  return llvm::Error::success();
-}
-
-llvm::Error PseudoConsole::DrainInitSequences() {
-  STARTUPINFOEXW startupinfoex = {};
-  startupinfoex.StartupInfo.cb = sizeof(STARTUPINFOEXW);
-  startupinfoex.StartupInfo.dwFlags |= STARTF_USESTDHANDLES;
-
-  auto attributelist_or_err = ProcThreadAttributeList::Create(startupinfoex);
-  if (!attributelist_or_err)
-    return llvm::errorCodeToError(attributelist_or_err.getError());
-  ProcThreadAttributeList attributelist = std::move(*attributelist_or_err);
-  if (auto error = attributelist.SetupPseudoConsole(m_conpty_handle))
-    return error;
-
-  PROCESS_INFORMATION pi = {};
-
-  wchar_t comspec[MAX_PATH];
-  DWORD comspecLen = GetEnvironmentVariableW(L"COMSPEC", comspec, MAX_PATH);
-  if (comspecLen == 0 || comspecLen >= MAX_PATH)
-    return llvm::createStringError(
-        std::error_code(GetLastError(), std::system_category()),
-        "Failed to get the 'COMSPEC' environment variable");
-
-  static constexpr char s_drain_marker[] = "LLDB_CONPTY_DRAIN_DONE";
-  static constexpr wchar_t s_drain_marker_w[] = L"LLDB_CONPTY_DRAIN_DONE";
-  std::wstring cmdline_str =
-      std::wstring(comspec) + L" /c echo " + s_drain_marker_w;
-  std::vector<wchar_t> cmdline(cmdline_str.begin(), cmdline_str.end());
-  cmdline.push_back(L'\0');
-
-  if (!CreateProcessW(/*lpApplicationName=*/comspec, cmdline.data(),
-                      /*lpProcessAttributes=*/NULL, /*lpThreadAttributes=*/NULL,
-                      /*bInheritHandles=*/TRUE,
-                      /*dwCreationFlags=*/EXTENDED_STARTUPINFO_PRESENT |
-                          CREATE_UNICODE_ENVIRONMENT,
-                      /*lpEnvironment=*/NULL, /*lpCurrentDirectory=*/NULL,
-                      /*lpStartupInfo=*/
-                      reinterpret_cast<STARTUPINFOW *>(&startupinfoex),
-                      /*lpProcessInformation=*/&pi))
-    return llvm::errorCodeToError(
-        std::error_code(GetLastError(), std::system_category()));
-
-  char buf[4096];
-  OVERLAPPED ov = {};
-  ov.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
-
-  DWORD read = 0;
-  ReadFile(m_conpty_output, buf, sizeof(buf), &read, &ov);
-
-  WaitForSingleObject(pi.hProcess, INFINITE);
-
-  std::string accumulated;
-  while (GetOverlappedResult(m_conpty_output, &ov, &read, /*bWait=*/TRUE) &&
-         read > 0) {
-    accumulated.append(buf, read);
-    if (accumulated.find(s_drain_marker) != std::string::npos)
-      break;
-    ResetEvent(ov.hEvent);
-    ReadFile(m_conpty_output, buf, sizeof(buf), &read, &ov);
-  }
-
-  CancelIo(m_conpty_output);
-  CloseHandle(ov.hEvent);
-  CloseHandle(pi.hProcess);
-  CloseHandle(pi.hThread);
-
   return llvm::Error::success();
 }

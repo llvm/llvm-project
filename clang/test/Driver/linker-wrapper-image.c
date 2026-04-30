@@ -162,6 +162,8 @@
 // RUN:   --linker-path=/usr/bin/ld %t.o -o a.out 2>&1 | FileCheck %s --check-prefixes=HIP,HIP-ELF
 // RUN: clang-linker-wrapper --print-wrapped-module --dry-run --host-triple=x86_64-unknown-windows-gnu \
 // RUN:   --linker-path=/usr/bin/ld %t.o -o a.out 2>&1 | FileCheck %s --check-prefixes=HIP,HIP-COFF
+// RUN: clang-linker-wrapper --print-wrapped-module --dry-run --host-triple=x86_64-apple-macosx10.15.0 \
+// RUN:   --linker-path=/usr/bin/ld %t.o -o a.out 2>&1 | FileCheck %s --check-prefixes=HIP,HIP-MACHO
 
 //      HIP-ELF: @__start_llvm_offload_entries = external hidden constant [0 x %struct.__tgt_offload_entry]
 // HIP-ELF-NEXT: @__stop_llvm_offload_entries = external hidden constant [0 x %struct.__tgt_offload_entry]
@@ -170,13 +172,25 @@
 //      HIP-COFF: @__start_llvm_offload_entries = weak_odr hidden constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "llvm_offload_entries$OA"
 // HIP-COFF-NEXT: @__stop_llvm_offload_entries = weak_odr hidden constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "llvm_offload_entries$OZ"
 
-//      HIP: @.fatbin_image = internal constant [0 x i8] zeroinitializer, section ".hip_fatbin"
-// HIP-NEXT: @.fatbin_wrapper = internal constant %fatbin_wrapper { i32 1212764230, i32 1, ptr @.fatbin_image, ptr null }, section ".hipFatBinSegment", align 8
-// HIP-NEXT: @.hip.binary_handle = internal global ptr null
+//      HIP-MACHO: @"\01section$start$__LLVM$offload_entries" = external hidden constant [0 x %struct.__tgt_offload_entry]
+// HIP-MACHO-NEXT: @"\01section$end$__LLVM$offload_entries" = external hidden constant [0 x %struct.__tgt_offload_entry]
+// HIP-MACHO-NEXT: @"__dummy.__LLVM,offload_entries" = internal constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "__LLVM,offload_entries"
+
+//      HIP-ELF: @.fatbin_image = internal constant [0 x i8] zeroinitializer, section ".hip_fatbin"
+// HIP-ELF-NEXT: @.fatbin_wrapper = internal constant %fatbin_wrapper { i32 1212764230, i32 1, ptr @.fatbin_image, ptr null }, section ".hipFatBinSegment", align 8
+// HIP-ELF-NEXT: @.hip.binary_handle = internal global ptr null
+
+//      HIP-COFF: @.fatbin_image = internal constant [0 x i8] zeroinitializer, section ".hip_fatbin"
+// HIP-COFF-NEXT: @.fatbin_wrapper = internal constant %fatbin_wrapper { i32 1212764230, i32 1, ptr @.fatbin_image, ptr null }, section ".hipFatBinSegment", align 8
+// HIP-COFF-NEXT: @.hip.binary_handle = internal global ptr null
+
+//      HIP-MACHO: @.fatbin_image = internal constant [0 x i8] zeroinitializer, section "__HIP,__hip_fatbin"
+// HIP-MACHO-NEXT: @.fatbin_wrapper = internal constant %fatbin_wrapper { i32 1212764230, i32 1, ptr @.fatbin_image, ptr null }, section "__HIP,__fatbin", align 8
+// HIP-MACHO-NEXT: @.hip.binary_handle = internal global ptr null
 
 // HIP: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 101, ptr @.hip.fatbin_reg, ptr null }]
 
-//      HIP: define internal void @.hip.fatbin_reg() section ".text.startup" {
+//      HIP: define internal void @.hip.fatbin_reg() section "{{\.text\.startup|__TEXT,__StaticInit}}" {
 // HIP-NEXT: entry:
 // HIP-NEXT:   %0 = call ptr @__hipRegisterFatBinary(ptr @.fatbin_wrapper)
 // HIP-NEXT:   store ptr %0, ptr @.hip.binary_handle, align 8
@@ -185,20 +199,20 @@
 // HIP-NEXT:   ret void
 // HIP-NEXT: }
 //
-//      HIP: define internal void @.hip.fatbin_unreg() section ".text.startup" {
+//      HIP: define internal void @.hip.fatbin_unreg() section "{{\.text\.startup|__TEXT,__StaticInit}}" {
 // HIP-NEXT: entry:
 // HIP-NEXT:   %0 = load ptr, ptr @.hip.binary_handle, align 8
 // HIP-NEXT:   call void @__hipUnregisterFatBinary(ptr %0)
 // HIP-NEXT:   ret void
 // HIP-NEXT: }
 //
-//      HIP: define internal void @.hip.globals_reg(ptr %0) section ".text.startup" {
+//      HIP: define internal void @.hip.globals_reg(ptr %0) section "{{\.text\.startup|__TEXT,__StaticInit}}" {
 // HIP-NEXT: entry:
-// HIP-NEXT:   %1 = icmp ne ptr @__start_llvm_offload_entries, @__stop_llvm_offload_entries
+// HIP-NEXT:   %1 = icmp ne ptr @{{.*offload_entries.*}}, @{{.*offload_entries.*}}
 // HIP-NEXT:   br i1 %1, label %while.entry, label %while.end
 //
 //      HIP: while.entry:
-// HIP-NEXT:   %entry1 = phi ptr [ @__start_llvm_offload_entries, %entry ], [ %16, %if.end ]
+// HIP-NEXT:   %entry1 = phi ptr [ @{{.*offload_entries.*}}, %entry ], [ %16, %if.end ]
 // HIP-NEXT:   %2 = getelementptr inbounds %struct.__tgt_offload_entry, ptr %entry1, i32 0, i32 4
 // HIP-NEXT:   %addr = load ptr, ptr %2, align 8
 // HIP-NEXT:   %3 = getelementptr inbounds %struct.__tgt_offload_entry, ptr %entry1, i32 0, i32 8
@@ -258,7 +272,7 @@
 //
 //      HIP: if.end:
 // HIP-NEXT:   %16 = getelementptr inbounds %struct.__tgt_offload_entry, ptr %entry1, i64 1
-// HIP-NEXT:   %17 = icmp eq ptr %16, @__stop_llvm_offload_entries
+// HIP-NEXT:   %17 = icmp eq ptr %16, @{{.*offload_entries.*}}
 // HIP-NEXT:   br i1 %17, label %while.end, label %while.entry
 //
 //      HIP: while.end:

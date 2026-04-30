@@ -265,7 +265,9 @@ void WTFCrash(void);
 
 template<typename T> class RetainPtr;
 template<typename T> RetainPtr<T> adoptNS(T*);
+template<typename T> RetainPtr<T> adoptNSNullable(T*);
 template<typename T> RetainPtr<T> adoptCF(T);
+template<typename T> RetainPtr<T> adoptCFNullable(T);
 
 template <typename T, typename S> T *downcast(S *t) { return static_cast<T*>(t); }
 
@@ -367,7 +369,9 @@ private:
   CFTypeRef toCFTypeRef(const void* ptr) { return (CFTypeRef)ptr; }
 
   template <typename U> friend RetainPtr<U> adoptNS(U*);
+  template <typename U> friend RetainPtr<U> adoptNSNullable(U*);
   template <typename U> friend RetainPtr<U> adoptCF(U);
+  template <typename U> friend RetainPtr<U> adoptCFNullable(U);
 
   enum AdoptTag { Adopt };
   RetainPtr(PtrType t, AdoptTag) : t(t) { }
@@ -396,7 +400,21 @@ RetainPtr<T> adoptNS(T* t) {
 }
 
 template <typename T>
+RetainPtr<T> adoptNSNullable(T* t) {
+#if __has_feature(objc_arc)
+  return t;
+#else
+  return RetainPtr<T>(t, RetainPtr<T>::Adopt);
+#endif
+}
+
+template <typename T>
 RetainPtr<T> adoptCF(T t) {
+  return RetainPtr<T>(t, RetainPtr<T>::Adopt);
+}
+
+template <typename T>
+RetainPtr<T> adoptCFNullable(T t) {
   return RetainPtr<T>(t, RetainPtr<T>::Adopt);
 }
 
@@ -681,7 +699,9 @@ WTF_DECLARE_CF_MUTABLE_TYPE_TRAIT(CFDictionary, CFMutableDictionary);
 
 using WTF::RetainPtr;
 using WTF::adoptNS;
+using WTF::adoptNSNullable;
 using WTF::adoptCF;
+using WTF::adoptCFNullable;
 using WTF::retainPtr;
 using WTF::OSObjectPtr;
 using WTF::adoptOSObject;

@@ -501,7 +501,7 @@ define void @test(ptr %A, ptr noalias %B) #0 {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX]], 6
@@ -555,7 +555,7 @@ define void @test(ptr %A, ptr noalias %B) #0 {
 ; MAX-BW-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; MAX-BW:       [[VECTOR_BODY]]:
 ; MAX-BW-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; MAX-BW-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
+; MAX-BW-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 1
 ; MAX-BW-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 2
 ; MAX-BW-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], 4
 ; MAX-BW-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX]], 6

@@ -11,9 +11,13 @@
 
 #include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
+#include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Target/Thread.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/lldb-forward.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -55,6 +59,16 @@ bool BreakpointIDList::Contains(BreakpointID bp_id) const {
   return llvm::is_contained(m_breakpoint_ids, bp_id);
 }
 
+static std::string LocationIDForStop(StopInfoSP stop_info_sp, uint32_t idx) {
+  assert(stop_info_sp->GetStopReason() == lldb::eStopReasonBreakpoint &&
+         "expected breakpoint stop");
+  break_id_t bp_id = stop_info_sp->GetStopReasonDataAtIndex(idx);
+  break_id_t loc_id = stop_info_sp->GetStopReasonDataAtIndex(idx + 1);
+  StreamString stream;
+  BreakpointID::GetCanonicalReference(&stream, bp_id, loc_id);
+  return stream.GetString().str();
+}
+
 //  This function takes OLD_ARGS, which is usually the result of breaking the
 //  command string arguments into
 //  an array of space-separated strings, and searches through the arguments for
@@ -69,8 +83,9 @@ bool BreakpointIDList::Contains(BreakpointID bp_id) const {
 //  by the members of the range.
 
 llvm::Error BreakpointIDList::FindAndReplaceIDRanges(
-    Args &old_args, Target *target, bool allow_locations,
+    Args &old_args, ExecutionContext &exe_ctx, bool allow_locations,
     BreakpointName::Permissions ::PermissionKinds purpose, Args &new_args) {
+  Target *target = exe_ctx.GetTargetPtr();
   llvm::StringRef range_from;
   llvm::StringRef range_to;
   llvm::StringRef current_arg;
@@ -80,6 +95,30 @@ llvm::Error BreakpointIDList::FindAndReplaceIDRanges(
     bool is_range = false;
 
     current_arg = old_args[i].ref();
+
+    if (allow_locations && current_arg == ".") {
+      Thread *thread = exe_ctx.GetThreadPtr();
+      if (!thread) {
+        new_args.Clear();
+        return llvm::createStringError("no current thread");
+      }
+      StopInfoSP stop_info_sp = thread->GetStopInfo();
+      if (!stop_info_sp ||
+          stop_info_sp->GetStopReason() != eStopReasonBreakpoint) {
+        new_args.Clear();
+        return llvm::createStringError(
+            "current thread is not stopped at a breakpoint");
+      }
+
+      uint32_t data_count = stop_info_sp->GetStopReasonDataCount();
+      for (uint32_t j = 0; j < data_count; j += 2) {
+        std::string location_id = LocationIDForStop(stop_info_sp, j);
+        new_args.AppendArgument(location_id);
+      }
+
+      continue;
+    }
+
     if (!allow_locations && current_arg.contains('.')) {
       new_args.Clear();
       return llvm::createStringError(

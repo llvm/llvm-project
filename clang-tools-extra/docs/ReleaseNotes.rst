@@ -272,6 +272,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/macro-parentheses>` check by printing the macro
   definition in the warning message if the macro is defined on command line.
 
+- Improved :doc:`bugprone-move-forwarding-reference
+  <clang-tidy/checks/bugprone/move-forwarding-reference>` check by fixing some
+  false positives in the context of moved lambda captures.
+
 - Improved :doc:`bugprone-narrowing-conversions
   <clang-tidy/checks/bugprone/narrowing-conversions>` check by fixing a false
   positive when converting a ``bool`` to a signed integer type.

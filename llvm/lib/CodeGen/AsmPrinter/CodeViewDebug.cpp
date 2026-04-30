@@ -2149,7 +2149,7 @@ TypeIndex CodeViewDebug::lowerTypeMemberFunction(const DISubroutineType *Ty,
 
 TypeIndex CodeViewDebug::lowerTypeVFTableShape(const DIDerivedType *Ty) {
   unsigned VSlotCount =
-      Ty->getSizeInBits() / (8 * Asm->MAI->getCodePointerSize());
+      Ty->getSizeInBits() / (8 * Asm->MAI.getCodePointerSize());
   SmallVector<VFTableSlotKind, 4> Slots(VSlotCount, VFTableSlotKind::Near);
 
   VFTableShapeRecord VFTSR(Slots);

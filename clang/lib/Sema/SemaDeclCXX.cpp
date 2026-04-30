@@ -10979,8 +10979,8 @@ Sema::ActOnReenterTemplateScope(Decl *D,
   DeclContext *LookupDC = dyn_cast<DeclContext>(D);
 
   if (DeclaratorDecl *DD = dyn_cast<DeclaratorDecl>(D)) {
-    for (unsigned i = 0; i < DD->getNumTemplateParameterLists(); ++i)
-      ParameterLists.push_back(DD->getTemplateParameterList(i));
+    for (TemplateParameterList *TPL : DD->getTemplateParameterLists())
+      ParameterLists.push_back(TPL);
 
     if (FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
       if (FunctionTemplateDecl *FTD = FD->getDescribedFunctionTemplate())
@@ -10994,8 +10994,8 @@ Sema::ActOnReenterTemplateScope(Decl *D,
         ParameterLists.push_back(PSD->getTemplateParameters());
     }
   } else if (TagDecl *TD = dyn_cast<TagDecl>(D)) {
-    for (unsigned i = 0; i < TD->getNumTemplateParameterLists(); ++i)
-      ParameterLists.push_back(TD->getTemplateParameterList(i));
+    for (TemplateParameterList *TPL : TD->getTemplateParameterLists())
+      ParameterLists.push_back(TPL);
 
     if (CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(TD)) {
       if (ClassTemplateDecl *CTD = RD->getDescribedClassTemplate())
@@ -18613,7 +18613,7 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
     }
 
     // Mark templated-scope function declarations as unsupported.
-    if (FD->getNumTemplateParameterLists() && SS.isValid()) {
+    if (!FD->getTemplateParameterLists().empty() && SS.isValid()) {
       Diag(FD->getLocation(), diag::warn_template_qualified_friend_unsupported)
         << SS.getScopeRep() << SS.getRange()
         << cast<CXXRecordDecl>(CurContext);

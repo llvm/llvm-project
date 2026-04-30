@@ -47,3 +47,19 @@ __device__ void test_div_scale_f32_with_ptr(float* out, int* flagout, bool* flag
 {
   *out = __builtin_amdgcn_div_scalef(a, b, true, flag);
 }
+
+// CIR-LABEL: @_Z17test_div_fmas_f32Pdfffi
+// CIR: cir.call_llvm_intrinsic "amdgcn.div.fmas" {{.*}} : (!cir.float, !cir.float, !cir.float, !cir.bool) -> !cir.float
+// LLVM: define{{.*}} void @_Z17test_div_fmas_f32Pdfffi
+// LLVM: call{{.*}} float @llvm.amdgcn.div.fmas.f32(float %{{.+}}, float %{{.+}}, float %{{.+}}, i1 %{{.*}})
+__device__ void test_div_fmas_f32(double* out, float a, float b, float c, int d) {
+  *out = __builtin_amdgcn_div_fmasf(a, b, c, d);
+}
+
+// CIR-LABEL: @_Z17test_div_fmas_f64Pddddi
+// CIR: cir.call_llvm_intrinsic "amdgcn.div.fmas" {{.*}} : (!cir.double, !cir.double, !cir.double, !cir.bool) -> !cir.double
+// LLVM: define{{.*}} void @_Z17test_div_fmas_f64Pddddi
+// LLVM: call{{.*}} double @llvm.amdgcn.div.fmas.f64(double %{{.+}}, double %{{.+}}, double %{{.+}}, i1 %{{.*}})
+__device__ void test_div_fmas_f64(double* out, double a, double b, double c, int d) {
+  *out = __builtin_amdgcn_div_fmas(a, b, c, d);
+}

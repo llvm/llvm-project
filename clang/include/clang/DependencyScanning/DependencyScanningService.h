@@ -93,6 +93,8 @@ struct DependencyScanningServiceOptions {
   ScanningOptimizations OptimizeArgs = ScanningOptimizations::Default;
   /// Whether to make reported file paths absolute.
   bool ReportAbsolutePaths = true;
+  /// Whether to report modules visible from modules that are imported directly.
+  bool ReportVisibleModules = false;
   /// Whether the resulting command lines should load explicit PCMs eagerly.
   bool EagerLoadModules = false;
   /// Whether to trace VFS accesses during the scan.

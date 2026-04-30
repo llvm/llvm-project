@@ -42,11 +42,6 @@ class VPRecipeBuilder {
   // their recipe.
   DenseMap<Instruction *, VPRecipeBase *> Ingredient2Recipe;
 
-  /// Cross-iteration reduction & first-order recurrence phis for which we need
-  /// to add the incoming value from the backedge after all recipes have been
-  /// created.
-  SmallVector<VPHeaderPHIRecipe *, 4> PhisToFix;
-
   /// Check if \p I can be widened at the start of \p Range and possibly
   /// decrease the range such that the returned value holds for the entire \p
   /// Range. The function should not be called for memory instructions or calls.

@@ -113,6 +113,7 @@ public:
   void Leave(const parser::OpenMPInteropConstruct &);
   void Enter(const parser::OmpBlockConstruct &);
   void Leave(const parser::OmpBlockConstruct &);
+  void Enter(const parser::OmpBeginDirective &);
   void Leave(const parser::OmpBeginDirective &);
   void Enter(const parser::OmpEndDirective &);
   void Leave(const parser::OmpEndDirective &);
@@ -175,6 +176,8 @@ public:
 
   void Enter(const parser::OmpMetadirectiveDirective &);
   void Leave(const parser::OmpMetadirectiveDirective &);
+  void Enter(const parser::OmpDelimitedMetadirectiveDirective &);
+  void Leave(const parser::OmpDelimitedMetadirectiveDirective &);
 
   void Enter(const parser::OmpContextSelector &);
   void Leave(const parser::OmpContextSelector &);

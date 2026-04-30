@@ -146,7 +146,7 @@ void dwarfgen::DIE::addStrOffsetsBaseAttribute() {
   const MCExpr *Expr =
       MCSymbolRefExpr::create(DG.getStringOffsetsStartSym(), MC);
 
-  if (!Asm->MAI->doesDwarfUseRelocationsAcrossSections())
+  if (!Asm->MAI.doesDwarfUseRelocationsAcrossSections())
     Expr = MCBinaryExpr::createSub(
         Expr, MCSymbolRefExpr::create(SectionStart, MC), MC);
 
@@ -164,7 +164,7 @@ void dwarfgen::DIE::addAddrBaseAttribute() {
 
   const MCExpr *Expr = MCSymbolRefExpr::create(DG.getAddrTableStartSym(), MC);
 
-  if (!Asm->MAI->doesDwarfUseRelocationsAcrossSections())
+  if (!Asm->MAI.doesDwarfUseRelocationsAcrossSections())
     Expr = MCBinaryExpr::createSub(
         Expr, MCSymbolRefExpr::create(SectionStart, MC), MC);
 

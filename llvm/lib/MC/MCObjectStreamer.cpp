@@ -580,9 +580,9 @@ void MCObjectStreamer::emitDwarfLineEndEntry(MCSection *Section,
   MCContext &Ctx = getContext();
   switchSection(Ctx.getObjectFileInfo()->getDwarfLineSection());
 
-  const MCAsmInfo *AsmInfo = Ctx.getAsmInfo();
+  const MCAsmInfo &AsmInfo = Ctx.getAsmInfo();
   emitDwarfAdvanceLineAddr(INT64_MAX, LastLabel, EndLabel,
-                           AsmInfo->getCodePointerSize());
+                           AsmInfo.getCodePointerSize());
 }
 
 void MCObjectStreamer::emitDwarfAdvanceFrameAddr(const MCSymbol *LastLabel,

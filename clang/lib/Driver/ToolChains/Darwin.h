@@ -391,6 +391,12 @@ private:
   void VerifyTripleForSDK(const llvm::opt::ArgList &Args,
                           const llvm::Triple Triple) const;
 
+protected:
+  /// Lazily initialize the target platform from the triple when
+  /// AddDeploymentTarget has not run yet (e.g. when Darwin is used as
+  /// a host toolchain for device offloading).
+  void ensureTargetInitialized() const;
+
 public:
   Darwin(const Driver &D, const llvm::Triple &Triple,
          const llvm::opt::ArgList &Args);

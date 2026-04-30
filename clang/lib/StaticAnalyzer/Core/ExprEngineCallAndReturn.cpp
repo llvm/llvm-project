@@ -297,11 +297,10 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
   if (CE) {
     if (const ReturnStmt *RS = dyn_cast_or_null<ReturnStmt>(LastSt)) {
       const LocationContext *LCtx = CEBNode->getLocationContext();
-      // FIXME: This tries to look up the return statement in the environment,
-      // which is special cased to look up the subexpression RS->getRetValue()
-      // in environment. Instead of relying on this hack, pass
-      // RS->getRetValue() to getSVal() after checking it for nullness.
-      SVal V = State->getSVal(RS, LCtx);
+
+      SVal V = UndefinedVal();
+      if (RS->getRetValue())
+        V = State->getSVal(RS->getRetValue(), LCtx);
 
       // Ensure that the return type matches the type of the returned Expr.
       if (wasDifferentDeclUsedForInlining(Call, CalleeCtx)) {

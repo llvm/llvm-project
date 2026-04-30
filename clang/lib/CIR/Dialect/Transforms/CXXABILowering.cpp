@@ -621,9 +621,7 @@ mlir::LogicalResult CIRDeleteArrayOpABILowering::matchAndRewrite(
   mlir::Value loweredAddress = adaptor.getAddress();
 
   cir::UsualDeleteParamsAttr deleteParams = op.getDeleteParams();
-  bool cookieRequired = deleteParams.getSize();
-  assert((deleteParams.getSize() || !op.getElementDtorAttr()) &&
-         "Expected size parameter when dtor fn is provided!");
+  bool cookieRequired = deleteParams.getSize() || op.getElementDtorAttr();
 
   if (deleteParams.getTypeAwareDelete() || deleteParams.getDestroyingDelete() ||
       deleteParams.getAlignment())
@@ -659,22 +657,23 @@ mlir::LogicalResult CIRDeleteArrayOpABILowering::matchAndRewrite(
           });
     }
 
-    // Compute the total allocation size and add it to the call arguments.
     callArgs.push_back(deletePtr);
-    uint64_t eltSizeBytes = dl.getTypeSizeInBits(ptrTy.getPointee()) / 8;
-    unsigned ptrWidth =
-        lowerModule->getTarget().getPointerWidth(clang::LangAS::Default);
-    cir::IntType sizeTy = cirBuilder.getUIntNTy(ptrWidth);
+    if (deleteParams.getSize()) {
+      uint64_t eltSizeBytes = dl.getTypeSizeInBits(ptrTy.getPointee()) / 8;
+      unsigned ptrWidth =
+          lowerModule->getTarget().getPointerWidth(clang::LangAS::Default);
+      cir::IntType sizeTy = cirBuilder.getUIntNTy(ptrWidth);
 
-    mlir::Value eltSizeVal = cir::ConstantOp::create(
-        rewriter, loc, cir::IntAttr::get(sizeTy, eltSizeBytes));
-    mlir::Value allocSize =
-        cir::MulOp::create(rewriter, loc, sizeTy, eltSizeVal, numElements);
-    mlir::Value cookieSizeVal = cir::ConstantOp::create(
-        rewriter, loc, cir::IntAttr::get(sizeTy, cookieSize.getQuantity()));
-    allocSize =
-        cir::AddOp::create(rewriter, loc, sizeTy, allocSize, cookieSizeVal);
-    callArgs.push_back(allocSize);
+      mlir::Value eltSizeVal = cir::ConstantOp::create(
+          rewriter, loc, cir::IntAttr::get(sizeTy, eltSizeBytes));
+      mlir::Value allocSize =
+          cir::MulOp::create(rewriter, loc, sizeTy, eltSizeVal, numElements);
+      mlir::Value cookieSizeVal = cir::ConstantOp::create(
+          rewriter, loc, cir::IntAttr::get(sizeTy, cookieSize.getQuantity()));
+      allocSize =
+          cir::AddOp::create(rewriter, loc, sizeTy, allocSize, cookieSizeVal);
+      callArgs.push_back(allocSize);
+    }
   } else {
     deletePtr = cir::CastOp::create(rewriter, loc, cirBuilder.getVoidPtrTy(),
                                     cir::CastKind::bitcast, loweredAddress);

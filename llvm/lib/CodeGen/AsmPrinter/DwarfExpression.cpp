@@ -569,7 +569,7 @@ bool DwarfExpression::addExpression(
       unsigned DerefSize = 0;
       //  Operations are done in the DWARF "generic type" whose size
       // is the size of a pointer.
-      unsigned PtrSizeInBytes = CU.getAsmPrinter()->MAI->getCodePointerSize();
+      unsigned PtrSizeInBytes = CU.getAsmPrinter()->MAI.getCodePointerSize();
 
       // If we have a memory location then dereference to get the value, though
       // we have to make sure we don't dereference any bytes past the end of the

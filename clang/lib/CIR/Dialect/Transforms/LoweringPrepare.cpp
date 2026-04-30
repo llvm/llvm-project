@@ -93,9 +93,23 @@ struct LoweringPreparePass
   void lowerArrayDtor(cir::ArrayDtor op);
   void lowerArrayCtor(cir::ArrayCtor op);
   void lowerTrivialCopyCall(cir::CallOp op);
-  void lowerStoreOfConstAggregate(cir::StoreOp op);
+  void lowerStoreOfConstAggregate(cir::StoreOp op,
+                                  mlir::SymbolTableCollection &symbolTables);
   void lowerLocalInitOp(cir::LocalInitOp op,
                         mlir::SymbolTableCollection &symbolTables);
+
+  /// Return a private constant cir::GlobalOp with the given type and initial
+  /// value, suitable for backing a memcpy-initialized local aggregate.
+  ///
+  /// If a global with `baseName` (or one of its `.<n>` versioned siblings)
+  /// already has a matching type and initial value, that global is reused.
+  /// Otherwise a new global is created with the next available `.<n>` suffix
+  /// (matching CIRGenBuilder::createVersionedGlobal and OGCG behavior).
+  cir::GlobalOp
+  getOrCreateConstAggregateGlobal(CIRBaseBuilderTy &builder,
+                                  mlir::SymbolTableCollection &symbolTables,
+                                  mlir::Location loc, llvm::StringRef baseName,
+                                  mlir::Type ty, mlir::TypedAttr constant);
 
   /// Build the function that initializes the specified global
   cir::FuncOp buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op);
@@ -219,6 +233,8 @@ struct LoweringPreparePass
 
   /// Tracks guard variables for static locals (keyed by global symbol name).
   llvm::StringMap<cir::GlobalOp> staticLocalDeclGuardMap;
+
+  llvm::StringMap<llvm::SmallVector<cir::GlobalOp, 1>> constAggregateGlobals;
 
   /// List of ctors and their priorities to be called before main()
   llvm::SmallVector<std::pair<std::string, uint32_t>, 4> globalCtorList;
@@ -1679,7 +1695,67 @@ void LoweringPreparePass::lowerTrivialCopyCall(cir::CallOp op) {
   }
 }
 
-void LoweringPreparePass::lowerStoreOfConstAggregate(cir::StoreOp op) {
+cir::GlobalOp LoweringPreparePass::getOrCreateConstAggregateGlobal(
+    CIRBaseBuilderTy &builder, mlir::SymbolTableCollection &symbolTables,
+    mlir::Location loc, llvm::StringRef baseName, mlir::Type ty,
+    mlir::TypedAttr constant) {
+  // Look up (and lazily populate) the per-base-name cache.
+  llvm::SmallVector<cir::GlobalOp, 1> &versions =
+      constAggregateGlobals[baseName];
+
+  // First, check globals we've already discovered for this base name.
+  for (cir::GlobalOp gv : versions) {
+    if (gv.getSymType() == ty && gv.getInitialValue() == constant)
+      return gv;
+  }
+
+  // No cached match. Scan the module's symbol table starting from the next
+  // unscanned version. In practice this should usually exit on the first
+  // iteration, but it's possible that some other pass or a previous
+  // invocation of this pass created globals using this same logic.
+  llvm::SmallString<128> name(baseName);
+  size_t baseLen = name.size();
+  unsigned version = versions.size();
+  while (true) {
+    name.resize(baseLen);
+    if (version != 0) {
+      name.push_back('.');
+      llvm::Twine(version).toVector(name);
+    }
+    auto existingGv = symbolTables.lookupSymbolIn<cir::GlobalOp>(
+        mlirModule, mlir::StringAttr::get(&getContext(), name));
+    if (!existingGv)
+      break;
+    versions.push_back(existingGv);
+    if (existingGv.getSymType() == ty &&
+        existingGv.getInitialValue() == constant)
+      return existingGv;
+    ++version;
+  }
+
+  // No match found, create a new global. The loop above found an unused name.
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToStart(mlirModule.getBody());
+  auto gv =
+      cir::GlobalOp::create(builder, loc, name, ty,
+                            /*isConstant=*/true,
+                            cir::LangAddressSpaceAttr::get(
+                                &getContext(), cir::LangAddressSpace::Default),
+                            cir::GlobalLinkageKind::PrivateLinkage);
+  mlir::SymbolTable::setSymbolVisibility(
+      gv, mlir::SymbolTable::Visibility::Private);
+  gv.setInitialValueAttr(constant);
+
+  // Keep the cached symbol table in sync with the new global so subsequent
+  // lookups for other base names find it.
+  symbolTables.getSymbolTable(mlirModule).insert(gv);
+
+  versions.push_back(gv);
+  return gv;
+}
+
+void LoweringPreparePass::lowerStoreOfConstAggregate(
+    cir::StoreOp op, mlir::SymbolTableCollection &symbolTables) {
   // Check if the value operand is a cir.const with aggregate type.
   auto constOp = op.getValue().getDefiningOp<cir::ConstantOp>();
   if (!constOp)
@@ -1715,36 +1791,21 @@ void LoweringPreparePass::lowerStoreOfConstAggregate(cir::StoreOp op) {
   // Get variable name from the alloca.
   llvm::StringRef varName = alloca.getName();
 
-  // Build name: __const.<func>.<var>
-  std::string name = ("__const." + funcName + "." + varName).str();
-
-  // Create the global constant.
+  // Build base name: __const.<func>.<var>
+  std::string baseName = ("__const." + funcName + "." + varName).str();
   CIRBaseBuilderTy builder(getContext());
 
-  // Use InsertionGuard to create the global at module level.
-  builder.setInsertionPointToStart(mlirModule.getBody());
-
-  // If a global with this name already exists (e.g. CIRGen materializes
-  // constexpr locals as globals when their address is taken), reuse it.
-  if (!mlir::SymbolTable::lookupSymbolIn(
-          mlirModule, mlir::StringAttr::get(&getContext(), name))) {
-    auto gv = cir::GlobalOp::create(
-        builder, op.getLoc(), name, ty,
-        /*isConstant=*/true,
-        cir::LangAddressSpaceAttr::get(&getContext(),
-                                       cir::LangAddressSpace::Default),
-        cir::GlobalLinkageKind::PrivateLinkage);
-    mlir::SymbolTable::setSymbolVisibility(
-        gv, mlir::SymbolTable::Visibility::Private);
-    gv.setInitialValueAttr(constant);
-  }
+  // Check for existing globals and create a new global with a unique name
+  // if no match is found.
+  cir::GlobalOp gv = getOrCreateConstAggregateGlobal(
+      builder, symbolTables, op.getLoc(), baseName, ty, constant);
 
   // Now replace the store with get_global + copy.
   builder.setInsertionPoint(op);
 
   auto ptrTy = cir::PointerType::get(ty);
   mlir::Value globalPtr =
-      cir::GetGlobalOp::create(builder, op.getLoc(), ptrTy, name);
+      cir::GetGlobalOp::create(builder, op.getLoc(), ptrTy, gv.getSymName());
 
   // Replace store with copy.
   builder.createCopy(op.getAddr(), globalPtr);
@@ -1776,7 +1837,7 @@ void LoweringPreparePass::runOnOp(mlir::Operation *op,
   } else if (auto callOp = dyn_cast<cir::CallOp>(op)) {
     lowerTrivialCopyCall(callOp);
   } else if (auto storeOp = dyn_cast<cir::StoreOp>(op)) {
-    lowerStoreOfConstAggregate(storeOp);
+    lowerStoreOfConstAggregate(storeOp, symbolTables);
   } else if (auto fnOp = dyn_cast<cir::FuncOp>(op)) {
     if (auto globalCtor = fnOp.getGlobalCtorPriority())
       globalCtorList.emplace_back(fnOp.getName(), globalCtor.value());

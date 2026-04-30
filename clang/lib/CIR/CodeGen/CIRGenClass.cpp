@@ -922,8 +922,7 @@ void CIRGenFunction::emitForwardingCallToLambda(
                    "emitForwardingCallToLambda: ObjCAutoRefCount");
     emitReturnOfRValue(*currSrcLoc, rv, resultType);
   } else {
-    cgm.errorNYI(callOperator->getSourceRange(),
-                 "emitForwardingCallToLambda: return slot is not null");
+    cir::ReturnOp::create(builder, *currSrcLoc);
   }
 }
 

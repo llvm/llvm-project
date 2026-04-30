@@ -90,13 +90,13 @@ define <2 x i16> @test_bitreverse_v2i16(<2 x i16> %a) nounwind {
 ; X86GFNI-LABEL: test_bitreverse_v2i16:
 ; X86GFNI:       # %bb.0:
 ; X86GFNI-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[1,0,3,2,5,4,7,6,9,8,11,10,13,12,15,14]
-; X86GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}{1to2}, %xmm0, %xmm0
+; X86GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}{1to2}, %xmm0, %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; X86GFNI-NEXT:    retl
 ;
 ; X64GFNI-LABEL: test_bitreverse_v2i16:
 ; X64GFNI:       # %bb.0:
 ; X64GFNI-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[1,0,3,2,5,4,7,6,9,8,11,10,13,12,15,14]
-; X64GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; X64GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; X64GFNI-NEXT:    retq
   %b = call <2 x i16> @llvm.bitreverse.v2i16(<2 x i16> %a)
   ret <2 x i16> %b
@@ -180,7 +180,7 @@ define i64 @test_bitreverse_i64(i64 %a) nounwind {
 ; X86GFNI-LABEL: test_bitreverse_i64:
 ; X86GFNI:       # %bb.0:
 ; X86GFNI-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; X86GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}{1to2}, %xmm0, %xmm0
+; X86GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}{1to2}, %xmm0, %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; X86GFNI-NEXT:    vpextrd $1, %xmm0, %eax
 ; X86GFNI-NEXT:    bswapl %eax
 ; X86GFNI-NEXT:    vmovd %xmm0, %edx
@@ -190,7 +190,7 @@ define i64 @test_bitreverse_i64(i64 %a) nounwind {
 ; X64GFNI-LABEL: test_bitreverse_i64:
 ; X64GFNI:       # %bb.0:
 ; X64GFNI-NEXT:    vmovq %rdi, %xmm0
-; X64GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; X64GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; X64GFNI-NEXT:    vmovq %xmm0, %rax
 ; X64GFNI-NEXT:    bswapq %rax
 ; X64GFNI-NEXT:    retq
@@ -255,7 +255,7 @@ define i32 @test_bitreverse_i32(i32 %a) nounwind {
 ; X86GFNI-LABEL: test_bitreverse_i32:
 ; X86GFNI:       # %bb.0:
 ; X86GFNI-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}{1to2}, %xmm0, %xmm0
+; X86GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}{1to2}, %xmm0, %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; X86GFNI-NEXT:    vmovd %xmm0, %eax
 ; X86GFNI-NEXT:    bswapl %eax
 ; X86GFNI-NEXT:    retl
@@ -263,7 +263,7 @@ define i32 @test_bitreverse_i32(i32 %a) nounwind {
 ; X64GFNI-LABEL: test_bitreverse_i32:
 ; X64GFNI:       # %bb.0:
 ; X64GFNI-NEXT:    vmovd %edi, %xmm0
-; X64GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; X64GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; X64GFNI-NEXT:    vmovd %xmm0, %eax
 ; X64GFNI-NEXT:    bswapl %eax
 ; X64GFNI-NEXT:    retq
@@ -331,7 +331,7 @@ define i24 @test_bitreverse_i24(i24 %a) nounwind {
 ; X86GFNI-LABEL: test_bitreverse_i24:
 ; X86GFNI:       # %bb.0:
 ; X86GFNI-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}{1to2}, %xmm0, %xmm0
+; X86GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}{1to2}, %xmm0, %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; X86GFNI-NEXT:    vmovd %xmm0, %eax
 ; X86GFNI-NEXT:    bswapl %eax
 ; X86GFNI-NEXT:    shrl $8, %eax
@@ -340,7 +340,7 @@ define i24 @test_bitreverse_i24(i24 %a) nounwind {
 ; X64GFNI-LABEL: test_bitreverse_i24:
 ; X64GFNI:       # %bb.0:
 ; X64GFNI-NEXT:    vmovd %edi, %xmm0
-; X64GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; X64GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; X64GFNI-NEXT:    vmovd %xmm0, %eax
 ; X64GFNI-NEXT:    bswapl %eax
 ; X64GFNI-NEXT:    shrl $8, %eax
@@ -409,7 +409,7 @@ define i16 @test_bitreverse_i16(i16 %a) nounwind {
 ; X86GFNI-LABEL: test_bitreverse_i16:
 ; X86GFNI:       # %bb.0:
 ; X86GFNI-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}{1to2}, %xmm0, %xmm0
+; X86GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}{1to2}, %xmm0, %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; X86GFNI-NEXT:    vmovd %xmm0, %eax
 ; X86GFNI-NEXT:    rolw $8, %ax
 ; X86GFNI-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -418,7 +418,7 @@ define i16 @test_bitreverse_i16(i16 %a) nounwind {
 ; X64GFNI-LABEL: test_bitreverse_i16:
 ; X64GFNI:       # %bb.0:
 ; X64GFNI-NEXT:    vmovd %edi, %xmm0
-; X64GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; X64GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; X64GFNI-NEXT:    vmovd %xmm0, %eax
 ; X64GFNI-NEXT:    rolw $8, %ax
 ; X64GFNI-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -476,7 +476,7 @@ define i8 @test_bitreverse_i8(i8 %a) {
 ; X86GFNI-LABEL: test_bitreverse_i8:
 ; X86GFNI:       # %bb.0:
 ; X86GFNI-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}{1to2}, %xmm0, %xmm0
+; X86GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}{1to2}, %xmm0, %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; X86GFNI-NEXT:    vmovd %xmm0, %eax
 ; X86GFNI-NEXT:    # kill: def $al killed $al killed $eax
 ; X86GFNI-NEXT:    retl
@@ -484,7 +484,7 @@ define i8 @test_bitreverse_i8(i8 %a) {
 ; X64GFNI-LABEL: test_bitreverse_i8:
 ; X64GFNI:       # %bb.0:
 ; X64GFNI-NEXT:    vmovd %edi, %xmm0
-; X64GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; X64GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; X64GFNI-NEXT:    vmovd %xmm0, %eax
 ; X64GFNI-NEXT:    # kill: def $al killed $al killed $eax
 ; X64GFNI-NEXT:    retq
@@ -543,7 +543,7 @@ define i4 @test_bitreverse_i4(i4 %a) {
 ; X86GFNI-LABEL: test_bitreverse_i4:
 ; X86GFNI:       # %bb.0:
 ; X86GFNI-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}{1to2}, %xmm0, %xmm0
+; X86GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}{1to2}, %xmm0, %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; X86GFNI-NEXT:    vmovd %xmm0, %eax
 ; X86GFNI-NEXT:    shrb $4, %al
 ; X86GFNI-NEXT:    # kill: def $al killed $al killed $eax
@@ -552,7 +552,7 @@ define i4 @test_bitreverse_i4(i4 %a) {
 ; X64GFNI-LABEL: test_bitreverse_i4:
 ; X64GFNI:       # %bb.0:
 ; X64GFNI-NEXT:    vmovd %edi, %xmm0
-; X64GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; X64GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; X64GFNI-NEXT:    vmovd %xmm0, %eax
 ; X64GFNI-NEXT:    shrb $4, %al
 ; X64GFNI-NEXT:    # kill: def $al killed $al killed $eax
@@ -847,7 +847,7 @@ define i128 @test_bitreverse_i128(i128 %a) nounwind {
 ; X86GFNI-NEXT:    movl 8(%ebp), %eax
 ; X86GFNI-NEXT:    vmovdqu 24(%ebp), %xmm0
 ; X86GFNI-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
-; X86GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}{1to2}, %xmm0, %xmm0
+; X86GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}{1to2}, %xmm0, %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; X86GFNI-NEXT:    vmovdqa %xmm0, (%eax)
 ; X86GFNI-NEXT:    movl %ebp, %esp
 ; X86GFNI-NEXT:    popl %ebp
@@ -859,7 +859,7 @@ define i128 @test_bitreverse_i128(i128 %a) nounwind {
 ; X64GFNI-NEXT:    vmovq %rsi, %xmm1
 ; X64GFNI-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; X64GFNI-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8]
-; X64GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; X64GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; X64GFNI-NEXT:    vmovq %xmm0, %rax
 ; X64GFNI-NEXT:    vpextrq $1, %xmm0, %rdx
 ; X64GFNI-NEXT:    retq
@@ -1138,7 +1138,7 @@ define i256 @test_bitreverse_i256(i256 %a) nounwind {
 ; X86GFNI-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86GFNI-NEXT:    vpermq {{.*#+}} ymm0 = mem[3,2,1,0]
 ; X86GFNI-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8,23,22,21,20,19,18,17,16,31,30,29,28,27,26,25,24]
-; X86GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}{1to4}, %ymm0, %ymm0
+; X86GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}{1to4}, %ymm0, %ymm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; X86GFNI-NEXT:    vmovdqu %ymm0, (%eax)
 ; X86GFNI-NEXT:    vzeroupper
 ; X86GFNI-NEXT:    retl $4
@@ -1154,7 +1154,7 @@ define i256 @test_bitreverse_i256(i256 %a) nounwind {
 ; X64GFNI-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
 ; X64GFNI-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
 ; X64GFNI-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8,23,22,21,20,19,18,17,16,31,30,29,28,27,26,25,24]
-; X64GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm0
+; X64GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; X64GFNI-NEXT:    vmovdqu %ymm0, (%rdi)
 ; X64GFNI-NEXT:    vzeroupper
 ; X64GFNI-NEXT:    retq
@@ -1692,7 +1692,7 @@ define i512 @test_bitreverse_i512(i512 %a) nounwind {
 ; X86GFNI-NEXT:    vpmovsxbq {{.*#+}} zmm0 = [7,6,5,4,3,2,1,0]
 ; X86GFNI-NEXT:    vpermq {{[0-9]+}}(%esp), %zmm0, %zmm0
 ; X86GFNI-NEXT:    vpshufb {{.*#+}} zmm0 = zmm0[7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8,23,22,21,20,19,18,17,16,31,30,29,28,27,26,25,24,39,38,37,36,35,34,33,32,47,46,45,44,43,42,41,40,55,54,53,52,51,50,49,48,63,62,61,60,59,58,57,56]
-; X86GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}{1to8}, %zmm0, %zmm0
+; X86GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}{1to8}, %zmm0, %zmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; X86GFNI-NEXT:    vmovdqu64 %zmm0, (%eax)
 ; X86GFNI-NEXT:    vzeroupper
 ; X86GFNI-NEXT:    retl $4
@@ -1714,7 +1714,7 @@ define i512 @test_bitreverse_i512(i512 %a) nounwind {
 ; X64GFNI-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
 ; X64GFNI-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
 ; X64GFNI-NEXT:    vpshufb {{.*#+}} zmm0 = zmm0[7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8,23,22,21,20,19,18,17,16,31,30,29,28,27,26,25,24,39,38,37,36,35,34,33,32,47,46,45,44,43,42,41,40,55,54,53,52,51,50,49,48,63,62,61,60,59,58,57,56]
-; X64GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
+; X64GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; X64GFNI-NEXT:    vmovdqu64 %zmm0, (%rdi)
 ; X64GFNI-NEXT:    vzeroupper
 ; X64GFNI-NEXT:    retq

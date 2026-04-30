@@ -296,24 +296,35 @@ static std::string computeRISCVDataLayout(const Triple &TT, StringRef ABIName) {
 
   Ret += "-m:e";
 
+  // TODO: Maybe we should move RISCVABI to TargetParser, so we can reuse that
+  // logic here instead of duplicating the string handling?
+  bool IsRVYPurecapABI =
+      ABIName.starts_with("il32pc64") || ABIName.starts_with("l64pc128");
+
   // Pointer and integer sizes.
   if (TT.isRISCV64()) {
-    Ret += "-p:64:64-i64:64-i128:128";
-    Ret += "-n32:64";
+    Ret += "-p:64:64";
+    if (IsRVYPurecapABI)
+      Ret += "-pe200:128:128:128:64";
+    Ret += "-i64:64-i128:128-n32:64";
   } else {
     assert(TT.isRISCV32() && "only RV32 and RV64 are currently supported");
-    Ret += "-p:32:32-i64:64";
-    Ret += "-n32";
+    Ret += "-p:32:32";
+    if (IsRVYPurecapABI)
+      Ret += "-pe200:64:64:64:32";
+    Ret += "-i64:64-n32";
   }
 
   // Stack alignment based on ABI.
-  StringRef ABI = ABIName;
-  if (ABI == "ilp32e")
+  if (ABIName == "ilp32e")
     Ret += "-S32";
-  else if (ABI == "lp64e")
+  else if (ABIName == "lp64e")
     Ret += "-S64";
   else
     Ret += "-S128";
+
+  if (IsRVYPurecapABI)
+    Ret += "-A200-P200-G200";
 
   return Ret;
 }

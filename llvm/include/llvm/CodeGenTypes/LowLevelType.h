@@ -305,11 +305,40 @@ public:
            isFloat(APFloatBase::S_IEEEdouble) ||
            isFloat(APFloatBase::S_IEEEquad);
   }
-  constexpr bool isBFloat16() const { return isFloat(FpSemantics::S_BFloat); }
-  constexpr bool isX86FP80() const {
+
+  bool isFloat16() const {
+    if (!getUseExtended())
+      return isAnyScalar() && getSizeInBits() == 16;
+    return isFloat(APFloatBase::S_IEEEhalf);
+  }
+  bool isFloat32() const {
+    if (!getUseExtended())
+      return isAnyScalar() && getSizeInBits() == 32;
+    return isFloat(APFloatBase::S_IEEEsingle);
+  }
+  bool isFloat64() const {
+    if (!getUseExtended())
+      return isAnyScalar() && getSizeInBits() == 64;
+    return isFloat(APFloatBase::S_IEEEdouble);
+  }
+  bool isFloat128() const {
+    if (!getUseExtended())
+      return isAnyScalar() && getSizeInBits() == 128;
+    return isFloat(APFloatBase::S_IEEEquad);
+  }
+  bool isBFloat16() const {
+    if (!getUseExtended())
+      return false;
+    return isFloat(FpSemantics::S_BFloat);
+  }
+  bool isX86FP80() const {
+    if (!getUseExtended())
+      return false;
     return isFloat(FpSemantics::S_x87DoubleExtended);
   }
-  constexpr bool isPPCF128() const {
+  bool isPPCF128() const {
+    if (!getUseExtended())
+      return false;
     return isFloat(FpSemantics::S_PPCDoubleDouble);
   }
 

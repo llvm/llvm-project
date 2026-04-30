@@ -352,7 +352,7 @@ private:
 
   /// A mapping from the submodule name to the index into the
   /// \c SubModules vector at which that submodule resides.
-  mutable llvm::StringMap<unsigned> SubModuleIndex;
+  llvm::StringMap<unsigned> SubModuleIndex;
 
   /// The AST file name and key if this is a top-level module which has a
   /// corresponding serialized AST file, or null otherwise.
@@ -562,7 +562,7 @@ public:
   ///
   /// The pointer is the module being re-exported, while the bit will be true
   /// to indicate that this is a wildcard export.
-  using ExportDecl = llvm::PointerIntPair<Module *, 1, bool>;
+  using ExportDecl = std::pair<Module *, bool>;
 
   /// The set of export declarations.
   SmallVector<ExportDecl, 2> Exports;
@@ -738,6 +738,7 @@ public:
   void setParent(Module *M) {
     assert(!Parent);
     Parent = M;
+    Parent->SubModuleIndex[M->Name] = Parent->SubModules.size();
     Parent->SubModules.push_back(this);
   }
 

@@ -1159,108 +1159,123 @@ The memory model supported is based on the HSA memory model [HSA]_ which is
 based in turn on HRF-indirect with scope inclusion [HRF]_. The happens-before
 relation is transitive over the synchronizes-with relation independent of scope
 and synchronizes-with allows the memory scope instances to be inclusive (see
-table :ref:`amdgpu-amdhsa-llvm-sync-scopes-table`).
+table :ref:`amdgpu-amdhsa-llvm-sync-scopes-table`). Concurrent atomic operations
+only operate atomically with respect to each other if they are included in each
+other's sync scope. If a read R and the writes it may see are atomic but do not
+all have inclusive scopes, then R returns ``undef`` (see :ref:`memmodel`).
 
 This is different to the OpenCL [OpenCL]_ memory model which does not have scope
 inclusion and requires the memory scopes to exactly match. However, this
 is conservatively correct for OpenCL.
 
-  .. table:: AMDHSA LLVM Sync Scopes
-     :name: amdgpu-amdhsa-llvm-sync-scopes-table
+There is a ``one-as`` variant for each sync scope. If a ``release`` or
+``acquire`` operation with a ``one-as`` sync scope participates in a
+synchronization, only the effects of memory operations in the address space of
+the ``one-as`` operation are synchronized. The address space of a ``fence``
+instruction with ``one-as`` sync scope is specified via
+``amdgpu-synchronize-as`` MMRAs (see :ref:`amdgpu-fence-as`).
 
-     ======================= ===================================================
-     LLVM Sync Scope         Description
-     ======================= ===================================================
-     *none*                  The default: ``system``.
+.. note::
+  The behavior of ``one-as`` sync scopes is currently not well-founded in the
+  memory model. Synchronization via a ``one-as`` sync scope effectively causes
+  the happens-before relation to be non-transitive.
 
-                             Synchronizes with, and participates in modification
-                             and seq_cst total orderings with, other operations
-                             (except image operations) for all address spaces
-                             (except private, or generic that accesses private)
-                             provided the other operation's sync scope is:
+.. table:: AMDHSA LLVM Sync Scopes
+    :name: amdgpu-amdhsa-llvm-sync-scopes-table
 
-                             - ``system``.
-                             - ``agent`` and executed by a thread on the same
-                               agent.
-                             - ``workgroup`` and executed by a thread in the
-                               same work-group.
-                             - ``wavefront`` and executed by a thread in the
-                               same wavefront.
+    ======================= ===================================================
+    LLVM Sync Scope         Description
+    ======================= ===================================================
+    *none*                  The default: ``system``.
 
-     ``agent``               Synchronizes with, and participates in modification
-                             and seq_cst total orderings with, other operations
-                             (except image operations) for all address spaces
-                             (except private, or generic that accesses private)
-                             provided the other operation's sync scope is:
+                            Synchronizes with, and participates in modification
+                            and seq_cst total orderings with, other operations
+                            (except image operations) for all address spaces
+                            (except private, or generic that accesses private)
+                            provided the other operation's sync scope is:
 
-                             - ``system`` or ``agent`` and executed by a thread
-                               on the same agent.
-                             - ``workgroup`` and executed by a thread in the
-                               same work-group.
-                             - ``wavefront`` and executed by a thread in the
-                               same wavefront.
+                            - ``system``.
+                            - ``agent`` and executed by a thread on the same
+                              agent.
+                            - ``workgroup`` and executed by a thread in the
+                              same work-group.
+                            - ``wavefront`` and executed by a thread in the
+                              same wavefront.
 
-     ``cluster``             Synchronizes with, and participates in modification
-                             and seq_cst total orderings with, other operations
-                             (except image operations) for all address spaces
-                             (except private, or generic that accesses private)
-                             provided the other operation's sync scope is:
+    ``agent``               Synchronizes with, and participates in modification
+                            and seq_cst total orderings with, other operations
+                            (except image operations) for all address spaces
+                            (except private, or generic that accesses private)
+                            provided the other operation's sync scope is:
 
-                             - ``system``, ``agent`` or ``cluster`` and
-                               executed by a thread on the same cluster.
-                             - ``workgroup`` and executed by a thread in the
-                               same work-group.
-                             - ``wavefront`` and executed by a thread in the
-                               same wavefront.
+                            - ``system`` or ``agent`` and executed by a thread
+                              on the same agent.
+                            - ``workgroup`` and executed by a thread in the
+                              same work-group.
+                            - ``wavefront`` and executed by a thread in the
+                              same wavefront.
 
-                             On targets that do not support workgroup cluster
-                             launch mode, this behaves like ``agent`` scope instead.
+    ``cluster``             Synchronizes with, and participates in modification
+                            and seq_cst total orderings with, other operations
+                            (except image operations) for all address spaces
+                            (except private, or generic that accesses private)
+                            provided the other operation's sync scope is:
 
-     ``workgroup``           Synchronizes with, and participates in modification
-                             and seq_cst total orderings with, other operations
-                             (except image operations) for all address spaces
-                             (except private, or generic that accesses private)
-                             provided the other operation's sync scope is:
+                            - ``system``, ``agent`` or ``cluster`` and
+                              executed by a thread on the same cluster.
+                            - ``workgroup`` and executed by a thread in the
+                              same work-group.
+                            - ``wavefront`` and executed by a thread in the
+                              same wavefront.
 
-                             - ``system``, ``agent`` or ``workgroup`` and
-                               executed by a thread in the same work-group.
-                             - ``wavefront`` and executed by a thread in the
-                               same wavefront.
+                            On targets that do not support workgroup cluster
+                            launch mode, this behaves like ``agent`` scope instead.
 
-     ``wavefront``           Synchronizes with, and participates in modification
-                             and seq_cst total orderings with, other operations
-                             (except image operations) for all address spaces
-                             (except private, or generic that accesses private)
-                             provided the other operation's sync scope is:
+    ``workgroup``           Synchronizes with, and participates in modification
+                            and seq_cst total orderings with, other operations
+                            (except image operations) for all address spaces
+                            (except private, or generic that accesses private)
+                            provided the other operation's sync scope is:
 
-                             - ``system``, ``agent``, ``workgroup`` or
-                               ``wavefront`` and executed by a thread in the
-                               same wavefront.
+                            - ``system``, ``agent`` or ``workgroup`` and
+                              executed by a thread in the same work-group.
+                            - ``wavefront`` and executed by a thread in the
+                              same wavefront.
 
-     ``singlethread``        Only synchronizes with and participates in
-                             modification and seq_cst total orderings with,
-                             other operations (except image operations) running
-                             in the same thread for all address spaces (for
-                             example, in signal handlers).
+    ``wavefront``           Synchronizes with, and participates in modification
+                            and seq_cst total orderings with, other operations
+                            (except image operations) for all address spaces
+                            (except private, or generic that accesses private)
+                            provided the other operation's sync scope is:
 
-     ``one-as``              Same as ``system`` but only synchronizes with other
-                             operations within the same address space.
+                            - ``system``, ``agent``, ``workgroup`` or
+                              ``wavefront`` and executed by a thread in the
+                              same wavefront.
 
-     ``agent-one-as``        Same as ``agent`` but only synchronizes with other
-                             operations within the same address space.
+    ``singlethread``        Only synchronizes with and participates in
+                            modification and seq_cst total orderings with,
+                            other operations (except image operations) running
+                            in the same thread for all address spaces (for
+                            example, in signal handlers).
 
-     ``cluster-one-as``      Same as ``cluster`` but only synchronizes with other
-                             operations within the same address space.
+    ``one-as``              Same as ``system`` but only synchronizes with other
+                            operations within the same address space.
 
-     ``workgroup-one-as``    Same as ``workgroup`` but only synchronizes with
-                             other operations within the same address space.
+    ``agent-one-as``        Same as ``agent`` but only synchronizes with other
+                            operations within the same address space.
 
-     ``wavefront-one-as``    Same as ``wavefront`` but only synchronizes with
-                             other operations within the same address space.
+    ``cluster-one-as``      Same as ``cluster`` but only synchronizes with other
+                            operations within the same address space.
 
-     ``singlethread-one-as`` Same as ``singlethread`` but only synchronizes with
-                             other operations within the same address space.
-     ======================= ===================================================
+    ``workgroup-one-as``    Same as ``workgroup`` but only synchronizes with
+                            other operations within the same address space.
+
+    ``wavefront-one-as``    Same as ``wavefront`` but only synchronizes with
+                            other operations within the same address space.
+
+    ``singlethread-one-as`` Same as ``singlethread`` but only synchronizes with
+                            other operations within the same address space.
+    ======================= ===================================================
 
 Target Types
 ------------
@@ -1776,6 +1791,32 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    * :ref:`Load Atomic Ordering<amdgpu-intrinsics-c-abi-atomic-memory-ordering-operand>`.
                                                    * :ref:`Synchronization Scope<amdgpu-intrinsics-syncscope-metadata-operand>`.
                                                      Note that the scope used must ensure that the L2 cache will be hit.
+
+  llvm.amdgcn.ds.atomic.barrier.arrive.rtn.b64     Available starting GFX12.5.
+                                                   Corresponds to ``ds_atomic_barrier_arrive_rtn_b64``.
+
+                                                   For the purposes of the memory model, this is a monotonic atomic
+                                                   read-modify-write operation in the local address space.
+
+                                                   This intrinsic has 2 operands:
+
+                                                   * Local pointer to the LDS barrier data.
+                                                   * Update value; the pending count of the barrier will be
+                                                     decremented by this value (generally 1).
+
+                                                   Returns the LDS barrier data as it was before this operation
+                                                   was executed.
+
+  llvm.amdgcn.ds.atomic.async.barrier.arrive.b64   Available starting GFX12.5.
+                                                   Corresponds to ``ds_atomic_async_barrier_arrive_b64``.
+
+                                                   For the purposes of the memory model, this is an asynchronous
+                                                   monotonic atomic read-modify-write operation in the local
+                                                   address space.
+
+                                                   This intrinsic has 1 operand:
+
+                                                   * Local pointer to the LDS barrier data.
 
   ==============================================   ==========================================================
 

@@ -859,13 +859,11 @@ public:
 
   void setTrailingRequiresClause(const AssociatedConstraint &AC);
 
-  unsigned getNumTemplateParameterLists() const {
-    return hasExtInfo() ? getExtInfo()->NumTemplParamLists : 0;
-  }
-
-  TemplateParameterList *getTemplateParameterList(unsigned index) const {
-    assert(index < getNumTemplateParameterLists());
-    return getExtInfo()->TemplParamLists[index];
+  ArrayRef<TemplateParameterList *> getTemplateParameterLists() const {
+    if (!hasExtInfo())
+      return {};
+    return {/*data=*/getExtInfo()->TemplParamLists,
+            /*length=*/getExtInfo()->NumTemplParamLists};
   }
 
   void setTemplateParameterListsInfo(ASTContext &Context,
@@ -3990,13 +3988,11 @@ public:
 
   void setQualifierInfo(NestedNameSpecifierLoc QualifierLoc);
 
-  unsigned getNumTemplateParameterLists() const {
-    return hasExtInfo() ? getExtInfo()->NumTemplParamLists : 0;
-  }
-
-  TemplateParameterList *getTemplateParameterList(unsigned i) const {
-    assert(i < getNumTemplateParameterLists());
-    return getExtInfo()->TemplParamLists[i];
+  ArrayRef<TemplateParameterList *> getTemplateParameterLists() const {
+    if (!hasExtInfo())
+      return {};
+    return {/*data=*/getExtInfo()->TemplParamLists,
+            /*length=*/getExtInfo()->NumTemplParamLists};
   }
 
   // These types are created lazily, use the ASTContext methods to obtain them.

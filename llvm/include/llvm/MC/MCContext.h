@@ -117,7 +117,7 @@ private:
   DiagHandlerTy DiagHandler;
 
   /// The MCAsmInfo for this target.
-  const MCAsmInfo *MAI = nullptr;
+  const MCAsmInfo &MAI;
 
   /// The MCRegisterInfo for this target.
   const MCRegisterInfo *MRI = nullptr;
@@ -406,7 +406,7 @@ public:
 
   void setObjectFileInfo(const MCObjectFileInfo *Mofi) { MOFI = Mofi; }
 
-  const MCAsmInfo *getAsmInfo() const { return MAI; }
+  const MCAsmInfo &getAsmInfo() const { return MAI; }
 
   const MCRegisterInfo *getRegisterInfo() const { return MRI; }
 

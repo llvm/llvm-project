@@ -326,6 +326,7 @@ bool EvalEmitter::emitSetLocal(uint32_t I, SourceInfo Info) {
   B->deref<T>() = S.Stk.pop<T>();
   auto &Desc = B->getBlockDesc<InlineDescriptor>();
   Desc.IsInitialized = true;
+  Desc.LifeState = Lifetime::Started;
 
   return true;
 }

@@ -338,12 +338,8 @@ void RISCVAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case TargetOpcode::PATCHABLE_FUNCTION_ENTER: {
     const Function &F = MI->getParent()->getParent()->getFunction();
     if (F.hasFnAttribute("patchable-function-entry")) {
-      unsigned Num;
-      [[maybe_unused]] bool Result =
-          F.getFnAttribute("patchable-function-entry")
-              .getValueAsString()
-              .getAsInteger(10, Num);
-      assert(!Result && "Enforced by the verifier");
+      unsigned Num =
+          F.getFnAttributeAsParsedInteger("patchable-function-entry");
       emitNops(Num);
       return;
     }
@@ -444,7 +440,7 @@ bool RISCVAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
   if (Offset.isImm())
     OS << MCO.getImm();
   else if (Offset.isGlobal() || Offset.isBlockAddress() || Offset.isMCSymbol())
-    MAI->printExpr(OS, *MCO.getExpr());
+    MAI.printExpr(OS, *MCO.getExpr());
 
   if (Offset.isMCSymbol())
     MMI->getContext().registerInlineAsmLabel(Offset.getMCSymbol());
@@ -681,12 +677,9 @@ void RISCVAsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
     // Adjust the offset for patchable-function-prefix. This assumes that
     // patchable-function-prefix is the same for all functions.
     int NopSize = STI->hasStdExtZca() ? 2 : 4;
-    int64_t PrefixNops = 0;
-    (void)MI.getMF()
-        ->getFunction()
-        .getFnAttribute("patchable-function-prefix")
-        .getValueAsString()
-        .getAsInteger(10, PrefixNops);
+    int64_t PrefixNops =
+        MI.getMF()->getFunction().getFnAttributeAsParsedInteger(
+            "patchable-function-prefix");
 
     // Load the target function type hash.
     EmitToStreamer(*OutStreamer, MCInstBuilder(RISCV::LW)

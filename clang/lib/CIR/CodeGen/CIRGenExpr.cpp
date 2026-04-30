@@ -989,6 +989,16 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
     }
   }
 
+  // FIXME: We should be able to assert this for FunctionDecls as well!
+  // FIXME: We should be able to assert this for all DeclRefExprs, not just
+  // those with a valid source location.
+  assert((nd->isUsed(false) || !isa<VarDecl>(nd) || e->isNonOdrUse() ||
+          !e->getLocation().isValid()) &&
+         "Should not use decl without marking it used!");
+
+  if (nd->hasAttr<WeakRefAttr>())
+    cgm.errorNYI(nd->getSourceRange(), "emitGlobal: WeakRefAttr");
+
   if (const auto *vd = dyn_cast<VarDecl>(nd)) {
     // Checks for omitted feature handling
     assert(!cir::MissingFeatures::opAllocaStaticLocal());

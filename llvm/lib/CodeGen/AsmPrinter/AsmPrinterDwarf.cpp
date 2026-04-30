@@ -107,7 +107,7 @@ unsigned AsmPrinter::GetSizeOfEncodedValue(unsigned Encoding) const {
   default:
     llvm_unreachable("Invalid encoded value.");
   case dwarf::DW_EH_PE_absptr:
-    return MAI->getCodePointerSize();
+    return MAI.getCodePointerSize();
   case dwarf::DW_EH_PE_udata2:
     return 2;
   case dwarf::DW_EH_PE_udata4:
@@ -132,7 +132,7 @@ void AsmPrinter::emitDwarfSymbolReference(const MCSymbol *Label,
                                           bool ForceOffset) const {
   if (!ForceOffset) {
     // On COFF targets, we have to emit the special .secrel32 directive.
-    if (MAI->needsDwarfSectionOffsetDirective()) {
+    if (MAI.needsDwarfSectionOffsetDirective()) {
       assert(!isDwarf64() &&
              "emitting DWARF64 is not implemented for COFF targets");
       OutStreamer->emitCOFFSecRel32(Label, /*Offset=*/0);

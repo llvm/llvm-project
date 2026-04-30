@@ -655,11 +655,51 @@ static void removeRedundantInductionCasts(VPlan &Plan) {
   }
 }
 
+static VPScalarIVStepsRecipe *
+createScalarIVSteps(VPlan &Plan, InductionDescriptor::InductionKind Kind,
+                    Instruction::BinaryOps InductionOpcode,
+                    FPMathOperator *FPBinOp, Instruction *TruncI,
+                    VPIRValue *StartV, VPValue *Step, DebugLoc DL,
+                    VPBuilder &Builder) {
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
+  VPValue *CanonicalIV = LoopRegion->getCanonicalIV();
+  VPSingleDefRecipe *BaseIV =
+      Builder.createDerivedIV(Kind, FPBinOp, StartV, CanonicalIV, Step);
+
+  // Truncate base induction if needed.
+  VPTypeAnalysis TypeInfo(Plan);
+  Type *ResultTy = TypeInfo.inferScalarType(BaseIV);
+  if (TruncI) {
+    Type *TruncTy = TruncI->getType();
+    assert(ResultTy->getScalarSizeInBits() > TruncTy->getScalarSizeInBits() &&
+           "Not truncating.");
+    assert(ResultTy->isIntegerTy() && "Truncation requires an integer type");
+    BaseIV = Builder.createScalarCast(Instruction::Trunc, BaseIV, TruncTy, DL);
+    ResultTy = TruncTy;
+  }
+
+  // Truncate step if needed.
+  Type *StepTy = TypeInfo.inferScalarType(Step);
+  if (ResultTy != StepTy) {
+    assert(StepTy->getScalarSizeInBits() > ResultTy->getScalarSizeInBits() &&
+           "Not truncating.");
+    assert(StepTy->isIntegerTy() && "Truncation requires an integer type");
+    auto *VecPreheader =
+        cast<VPBasicBlock>(HeaderVPBB->getSingleHierarchicalPredecessor());
+    VPBuilder::InsertPointGuard Guard(Builder);
+    Builder.setInsertPoint(VecPreheader);
+    Step = Builder.createScalarCast(Instruction::Trunc, Step, ResultTy, DL);
+  }
+  return Builder.createScalarIVSteps(InductionOpcode, FPBinOp, BaseIV, Step,
+                                     &Plan.getVF(), DL);
+}
+
 /// Try to replace VPWidenCanonicalIVRecipes with a widened canonical IV
 /// recipe, if it exists.
 static void removeRedundantCanonicalIVs(VPlan &Plan) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
-  VPValue *CanonicalIV = LoopRegion->getCanonicalIV();
+  VPRegionValue *CanonicalIV = LoopRegion->getCanonicalIV();
   auto *WidenNewIV = vputils::findUserOf<VPWidenCanonicalIVRecipe>(CanonicalIV);
 
   if (!WidenNewIV)
@@ -689,6 +729,73 @@ static void removeRedundantCanonicalIVs(VPlan &Plan) {
       return;
     }
   }
+
+  if (!vputils::onlyFirstLaneUsed(WidenNewIV) && !Plan.hasScalarVFOnly()) {
+    assert(!vputils::onlyScalarValuesUsed(WidenNewIV) &&
+           "Lanes other than first lane being used should imply that not just "
+           "scalars are used");
+    return;
+  }
+
+  // Replace the wide canonical IV with a scalar-iv-steps over the canonical
+  // IV.
+  Type *CanonicalIVTy = LoopRegion->getCanonicalIVType();
+  VPBuilder Builder(WidenNewIV);
+  WidenNewIV->replaceAllUsesWith(createScalarIVSteps(
+      Plan, InductionDescriptor::IK_IntInduction, Instruction::Add, nullptr,
+      nullptr, Plan.getZero(CanonicalIVTy),
+      Plan.getConstantInt(CanonicalIVTy, 1), CanonicalIV->getDebugLoc(),
+      Builder));
+  WidenNewIV->eraseFromParent();
+}
+
+void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
+    VPlan &Plan, ScalarEvolution &SE, const TargetTransformInfo &TTI,
+    TargetTransformInfo::TargetCostKind CostKind, ElementCount VF, unsigned UF,
+    const SmallPtrSetImpl<const Value *> &ValuesToIgnore) {
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  if (!LoopRegion || Plan.hasScalarVFOnly())
+    return;
+
+  VPValue *CanonicalIV = LoopRegion->getCanonicalIV();
+  auto *WideCanIV = vputils::findUserOf<VPWidenCanonicalIVRecipe>(CanonicalIV);
+  if (!WideCanIV || vputils::onlyScalarValuesUsed(WideCanIV))
+    return;
+
+  // Introduce a new VPWidenIntOrFpInductionRecipe if profitable.
+  Type *CanIVTy = LoopRegion->getCanonicalIVType();
+  auto *VecTy = VectorType::get(CanIVTy, VF);
+  InstructionCost BroadcastCost = TTI.getShuffleCost(
+      TargetTransformInfo::SK_Broadcast, VecTy, VecTy, {}, CostKind);
+  InstructionCost PHICost = TTI.getCFInstrCost(Instruction::PHI, CostKind);
+  if (PHICost > BroadcastCost)
+    return;
+
+  // Bail out if the additional wide induction phi increase the expected spill
+  // cost.
+  VPRegisterUsage UnrolledBase =
+      calculateRegisterUsageForPlan(Plan, VF, TTI, ValuesToIgnore)[0];
+  for (unsigned &NumUsers : make_second_range(UnrolledBase.MaxLocalUsers))
+    NumUsers *= UF;
+  unsigned RegClass = TTI.getRegisterClassForType(/*Vector=*/true, VecTy);
+  VPRegisterUsage Projected = UnrolledBase;
+  Projected.MaxLocalUsers[RegClass] += TTI.getRegUsageForType(VecTy);
+  if (Projected.spillCost(TTI, CostKind) >
+      UnrolledBase.spillCost(TTI, CostKind))
+    return;
+
+  InductionDescriptor ID =
+      InductionDescriptor::getCanonicalIntInduction(CanIVTy, SE);
+  VPValue *StepV = Plan.getConstantInt(CanIVTy, 1);
+  auto *NewWideIV = new VPWidenIntOrFpInductionRecipe(
+      /*IV=*/nullptr, Plan.getZero(CanIVTy), StepV, &Plan.getVF(), ID,
+      VPIRFlags::WrapFlagsTy(/*HasNUW=*/LoopRegion->hasCanonicalIVNUW(),
+                             /*HasNSW=*/false),
+      WideCanIV->getDebugLoc());
+  VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
+  NewWideIV->insertBefore(&*Header->getFirstNonPhi());
+  WideCanIV->replaceAllUsesWith(NewWideIV);
+  WideCanIV->eraseFromParent();
 }
 
 /// Returns true if \p R is dead and can be removed.
@@ -739,52 +846,10 @@ void VPlanTransforms::removeDeadRecipes(VPlan &Plan) {
   }
 }
 
-static VPScalarIVStepsRecipe *
-createScalarIVSteps(VPlan &Plan, InductionDescriptor::InductionKind Kind,
-                    Instruction::BinaryOps InductionOpcode,
-                    FPMathOperator *FPBinOp, Instruction *TruncI,
-                    VPIRValue *StartV, VPValue *Step, DebugLoc DL,
-                    VPBuilder &Builder) {
-  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
-  VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
-  VPValue *CanonicalIV = LoopRegion->getCanonicalIV();
-  VPSingleDefRecipe *BaseIV = Builder.createDerivedIV(
-      Kind, FPBinOp, StartV, CanonicalIV, Step, "offset.idx");
-
-  // Truncate base induction if needed.
-  VPTypeAnalysis TypeInfo(Plan);
-  Type *ResultTy = TypeInfo.inferScalarType(BaseIV);
-  if (TruncI) {
-    Type *TruncTy = TruncI->getType();
-    assert(ResultTy->getScalarSizeInBits() > TruncTy->getScalarSizeInBits() &&
-           "Not truncating.");
-    assert(ResultTy->isIntegerTy() && "Truncation requires an integer type");
-    BaseIV = Builder.createScalarCast(Instruction::Trunc, BaseIV, TruncTy, DL);
-    ResultTy = TruncTy;
-  }
-
-  // Truncate step if needed.
-  Type *StepTy = TypeInfo.inferScalarType(Step);
-  if (ResultTy != StepTy) {
-    assert(StepTy->getScalarSizeInBits() > ResultTy->getScalarSizeInBits() &&
-           "Not truncating.");
-    assert(StepTy->isIntegerTy() && "Truncation requires an integer type");
-    auto *VecPreheader =
-        cast<VPBasicBlock>(HeaderVPBB->getSingleHierarchicalPredecessor());
-    VPBuilder::InsertPointGuard Guard(Builder);
-    Builder.setInsertPoint(VecPreheader);
-    Step = Builder.createScalarCast(Instruction::Trunc, Step, ResultTy, DL);
-  }
-  return Builder.createScalarIVSteps(InductionOpcode, FPBinOp, BaseIV, Step,
-                                     &Plan.getVF(), DL);
-}
-
 static SmallVector<VPUser *> collectUsersRecursively(VPValue *V) {
   SetVector<VPUser *> Users(llvm::from_range, V->users());
   for (unsigned I = 0; I != Users.size(); ++I) {
     VPRecipeBase *Cur = cast<VPRecipeBase>(Users[I]);
-    if (isa<VPHeaderPHIRecipe>(Cur))
-      continue;
     for (VPValue *V : Cur->definedValues())
       Users.insert_range(V->users());
   }
@@ -1791,43 +1856,13 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
-      if (!isa<VPWidenRecipe, VPWidenGEPRecipe, VPReplicateRecipe,
-               VPWidenStoreRecipe>(&R))
+      if (!isa<VPWidenRecipe, VPWidenGEPRecipe, VPReplicateRecipe>(&R))
         continue;
       auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
       if (RepR && (RepR->isSingleScalar() || RepR->isPredicated()))
         continue;
 
-      // Convert an unmasked scatter with an uniform address into
-      // extract-last-lane + scalar store.
-      // TODO: Add a profitability check comparing the cost of a scatter vs.
-      // extract + scalar store.
-      auto *WidenStoreR = dyn_cast<VPWidenStoreRecipe>(&R);
-      if (WidenStoreR && vputils::isSingleScalar(WidenStoreR->getAddr()) &&
-          !WidenStoreR->isConsecutive()) {
-        VPValue *Mask = WidenStoreR->getMask();
-
-        // Only convert the scatter to a scalar store if it is unmasked.
-        // TODO: Support converting scatter masked by the header mask to scalar
-        // store.
-        if (Mask)
-          continue;
-
-        auto *Extract = new VPInstruction(VPInstruction::ExtractLastLane,
-                                          {WidenStoreR->getOperand(1)});
-        Extract->insertBefore(WidenStoreR);
-
-        // TODO: Sink the scalar store recipe to middle block if possible.
-        auto *ScalarStore = new VPReplicateRecipe(
-            &WidenStoreR->getIngredient(), {Extract, WidenStoreR->getAddr()},
-            true /*IsSingleScalar*/, nullptr /*Mask*/, {},
-            *WidenStoreR /*Metadata*/);
-        ScalarStore->insertBefore(WidenStoreR);
-        WidenStoreR->eraseFromParent();
-        continue;
-      }
-
-      auto *RepOrWidenR = dyn_cast<VPRecipeWithIRFlags>(&R);
+      auto *RepOrWidenR = cast<VPRecipeWithIRFlags>(&R);
       if (RepR && RepR->getOpcode() == Instruction::Store &&
           vputils::isSingleScalar(RepR->getOperand(1))) {
         auto *Clone = new VPReplicateRecipe(
@@ -1848,7 +1883,7 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
       }
 
       // Skip recipes that aren't single scalars.
-      if (!RepOrWidenR || !vputils::isSingleScalar(RepOrWidenR))
+      if (!vputils::isSingleScalar(RepOrWidenR))
         continue;
 
       // Predicate to check if a user of Op introduces extra broadcasts.
@@ -3745,6 +3780,47 @@ static void expandVPWidenPointerInduction(VPWidenPointerInductionRecipe *R,
   ScalarPtrPhi->addOperand(InductionGEP);
 }
 
+/// Expand a VPDerivedIVRecipe into executable recipes.
+static void expandVPDerivedIV(VPDerivedIVRecipe *R, VPTypeAnalysis &TypeInfo) {
+  VPBuilder Builder(R);
+  VPIRValue *Start = R->getStartValue();
+  VPValue *Step = R->getStepValue();
+  VPValue *Index = R->getIndex();
+  Type *StepTy = TypeInfo.inferScalarType(Step);
+  Type *IndexTy = TypeInfo.inferScalarType(Index);
+  Index = StepTy->isIntegerTy()
+              ? Builder.createScalarSExtOrTrunc(
+                    Index, StepTy, IndexTy, DebugLoc::getCompilerGenerated())
+              : Builder.createScalarCast(Instruction::SIToFP, Index, StepTy,
+                                         DebugLoc::getCompilerGenerated());
+  switch (R->getInductionKind()) {
+  case InductionDescriptor::IK_IntInduction: {
+    assert(TypeInfo.inferScalarType(Index) == TypeInfo.inferScalarType(Start) &&
+           "Index type does not match StartValue type");
+    return R->replaceAllUsesWith(Builder.createAdd(
+        Start, Builder.createOverflowingOp(Instruction::Mul, {Index, Step})));
+  }
+  case InductionDescriptor::IK_PtrInduction:
+    return R->replaceAllUsesWith(Builder.createPtrAdd(
+        Start, Builder.createOverflowingOp(Instruction::Mul, {Index, Step})));
+  case InductionDescriptor::IK_FpInduction: {
+    assert(StepTy->isFloatingPointTy() && "Expected FP Step value");
+    const FPMathOperator *FPBinOp = R->getFPBinOp();
+    assert(FPBinOp &&
+           (FPBinOp->getOpcode() == Instruction::FAdd ||
+            FPBinOp->getOpcode() == Instruction::FSub) &&
+           "Original BinOp should be defined for FP induction");
+    FastMathFlags FMF = FPBinOp->getFastMathFlags();
+    VPValue *FMul = Builder.createNaryOp(Instruction::FMul, {Step, Index}, FMF);
+    return R->replaceAllUsesWith(
+        Builder.createNaryOp(FPBinOp->getOpcode(), {Start, FMul}, FMF));
+  }
+  case InductionDescriptor::IK_NoInduction:
+    return;
+  }
+  llvm_unreachable("Unhandled induction kind");
+}
+
 void VPlanTransforms::dissolveLoopRegions(VPlan &Plan) {
   // Replace loop regions with explicity CFG.
   SmallVector<VPRegionBlock *> LoopRegions;
@@ -3834,6 +3910,12 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
         }
         expandVPWidenPointerInduction(WidenIVR, TypeInfo);
         ToRemove.push_back(WidenIVR);
+        continue;
+      }
+
+      if (auto *DerivedIVR = dyn_cast<VPDerivedIVRecipe>(&R)) {
+        expandVPDerivedIV(DerivedIVR, TypeInfo);
+        ToRemove.push_back(DerivedIVR);
         continue;
       }
 
@@ -6108,6 +6190,9 @@ matchExtendedReductionOperand(VPWidenRecipe *UpdateR, VPValue *Op,
       // by widening the inner extends to match it. See
       // optimizeExtendsForPartialReduction.
       Op = CastSource;
+      // FIXME: createPartialReductionExpression can't handle sub(ext(mul(...)))
+      if (UpdateR->getOpcode() == Instruction::Sub)
+        return std::nullopt;
     } else if (UpdateR->getOpcode() == Instruction::Add ||
                UpdateR->getOpcode() == Instruction::FAdd) {
       // Match: UpdateR(PrevValue, ext(...))

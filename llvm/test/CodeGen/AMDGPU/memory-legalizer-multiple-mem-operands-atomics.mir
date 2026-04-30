@@ -20,9 +20,9 @@ body:             |
   ; GCN-NEXT:   $sgpr11 = S_MOV_B32 15204352, implicit-def $sgpr8_sgpr9_sgpr10_sgpr11
   ; GCN-NEXT:   $vgpr0 = V_MOV_B32_e32 1, implicit $exec
   ; GCN-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr8_sgpr9_sgpr10_sgpr11, $sgpr3, 4, 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(5) poison`, addrspace 5)
-  ; GCN-NEXT:   S_WAITCNT 127
+  ; GCN-NEXT:   S_WAITCNT .Lgkmcnt_0
   ; GCN-NEXT:   S_CMP_LG_U32 killed $sgpr2, 0, implicit-def $scc
-  ; GCN-NEXT:   S_WAITCNT 3855
+  ; GCN-NEXT:   S_WAITCNT .Expcnt_0
   ; GCN-NEXT:   $vgpr0 = V_MOV_B32_e32 2, implicit $exec
   ; GCN-NEXT:   $vgpr1 = V_MOV_B32_e32 32772, implicit $exec
   ; GCN-NEXT:   BUFFER_STORE_DWORD_OFFEN killed $vgpr0, killed $vgpr1, $sgpr8_sgpr9_sgpr10_sgpr11, $sgpr3, 0, 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(5) poison`, addrspace 5)
@@ -33,7 +33,7 @@ body:             |
   ; GCN-NEXT:   liveins: $sgpr0_sgpr1, $sgpr4_sgpr5, $sgpr3, $sgpr8_sgpr9_sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 52, 0 :: (non-temporal dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
-  ; GCN-NEXT:   S_WAITCNT 3855
+  ; GCN-NEXT:   S_WAITCNT .Expcnt_0
   ; GCN-NEXT:   $vgpr0 = V_MOV_B32_e32 32772, implicit $exec
   ; GCN-NEXT:   S_BRANCH %bb.3
   ; GCN-NEXT: {{  $}}
@@ -42,13 +42,13 @@ body:             |
   ; GCN-NEXT:   liveins: $sgpr0_sgpr1, $sgpr4_sgpr5, $sgpr3, $sgpr8_sgpr9_sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 48, 0 :: (non-temporal dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
-  ; GCN-NEXT:   S_WAITCNT 3855
+  ; GCN-NEXT:   S_WAITCNT .Expcnt_0
   ; GCN-NEXT:   $vgpr0 = V_MOV_B32_e32 4, implicit $exec
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.3:
   ; GCN-NEXT:   liveins: $sgpr3, $sgpr4_sgpr5, $sgpr8_sgpr9_sgpr10_sgpr11, $vgpr0, $sgpr0
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   S_WAITCNT 127
+  ; GCN-NEXT:   S_WAITCNT .Lgkmcnt_0
   ; GCN-NEXT:   $sgpr0 = S_LSHL_B32 killed $sgpr0, 2, implicit-def dead $scc
   ; GCN-NEXT:   $vgpr0 = V_ADD_CO_U32_e32 killed $sgpr0, killed $vgpr0, implicit-def dead $vcc, implicit $exec
   ; GCN-NEXT:   S_WAITCNT_soft 3952
@@ -57,7 +57,7 @@ body:             |
   ; GCN-NEXT:   BUFFER_WBINVL1_VOL implicit $exec
   ; GCN-NEXT:   $vgpr1 = V_MOV_B32_e32 $sgpr4, implicit $exec, implicit-def $vgpr1_vgpr2, implicit $sgpr4_sgpr5
   ; GCN-NEXT:   $vgpr2 = V_MOV_B32_e32 killed $sgpr5, implicit $exec, implicit $sgpr4_sgpr5, implicit $exec
-  ; GCN-NEXT:   S_WAITCNT 3952
+  ; GCN-NEXT:   S_WAITCNT .Vmcnt_0
   ; GCN-NEXT:   FLAT_STORE_DWORD killed $vgpr1_vgpr2, killed $vgpr0, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0.entry:

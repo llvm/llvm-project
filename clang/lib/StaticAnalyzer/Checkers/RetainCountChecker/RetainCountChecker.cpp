@@ -229,7 +229,8 @@ void RetainCountChecker::processObjCLiterals(CheckerContext &C,
   ProgramStateRef state = C.getState();
   const ExplodedNode *pred = C.getPredecessor();
   for (const Stmt *Child : Ex->children()) {
-    SVal V = pred->getSVal(Child);
+    const auto *ChildAsExpr = dyn_cast<Expr>(Child);
+    SVal V = ChildAsExpr ? pred->getSVal(ChildAsExpr) : UnknownVal();
     if (SymbolRef sym = V.getAsSymbol())
       if (const RefVal* T = getRefBinding(state, sym)) {
         RefVal::Kind hasErr = (RefVal::Kind) 0;

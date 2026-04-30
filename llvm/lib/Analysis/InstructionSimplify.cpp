@@ -6851,6 +6851,9 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
     if (match(Op1, m_Zero()))
       return ConstantInt::getFalse(ReturnType);
 
+    if (!Call)
+      break;
+
     const Function *F = Call->getFunction();
     auto *ScalableTy = dyn_cast<ScalableVectorType>(ReturnType);
     Attribute Attr = F->getFnAttribute(Attribute::VScaleRange);

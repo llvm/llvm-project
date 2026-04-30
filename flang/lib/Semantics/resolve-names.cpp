@@ -498,6 +498,8 @@ public:
     // Result symbol
     Symbol *resultSymbol{nullptr};
     bool inFunctionStmt{false}; // true between Pre/Post of FunctionStmt
+    // re-entrancy guard for CompleteFunctionResultType
+    bool completingType{false};
     // Functions with previous implicitly-typed references get those types
     // checked against their later definitions.
     const DeclTypeSpec *previousImplicitType{nullptr};
@@ -2985,6 +2987,7 @@ void FuncResultStack::CompleteFunctionResultType() {
   if (info && &info->scope == &scopeHandler_.currScope() &&
       info->resultSymbol) {
     if (info->parsedType) {
+      auto completingTypeScope{common::ScopedSet(info->completingType, true)};
       scopeHandler_.messageHandler().set_currStmtSource(info->source);
       if (const auto *type{
               scopeHandler_.ProcessTypeSpec(*info->parsedType, true)}) {
@@ -3019,7 +3022,15 @@ void FuncResultStack::CompleteFunctionResultType() {
 void FuncResultStack::CompleteTypeIfFunctionResult(Symbol &symbol) {
   if (FuncInfo * info{Top()}) {
     if (info->resultSymbol == &symbol) {
-      CompleteFunctionResultType();
+      if (info->completingType) {
+        if (!scopeHandler_.context().HasError(symbol)) {
+          scopeHandler_.SayAlreadyDeclared(symbol.name(),
+              info->resultName ? info->resultName->source : symbol.name());
+          scopeHandler_.context().SetError(symbol);
+        }
+      } else {
+        CompleteFunctionResultType();
+      }
     }
   }
 }
@@ -10492,11 +10503,11 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
     Symbol *sym{currScope().symbol()};
     if (!sym || !sym->has<SubprogramDetails>()) {
       Say(x.source,
-          "!DIR$ INLINEALWAYS directive with name must appear in a subroutine or function"_err_en_US);
-    }
-    if (inlineAlways->v->ToString() != sym->name().ToString()) {
+          "!DIR$ INLINEALWAYS directive with name must appear in a subprogram"_err_en_US);
+    } else if (inlineAlways->v->ToString() != sym->name().ToString()) {
       context().Warn(common::UsageWarning::IgnoredDirective, x.source,
-          "INLINEALWAYS name does not match the subroutine or function name"_warn_en_US);
+          "INLINEALWAYS name '%s' does not match the subprogram name '%s'"_warn_en_US,
+          inlineAlways->v->ToString(), sym->name().ToString());
     }
   } else if (context().ShouldWarn(common::UsageWarning::IgnoredDirective)) {
     Say(x.source, "Unrecognized compiler directive was ignored"_warn_en_US)

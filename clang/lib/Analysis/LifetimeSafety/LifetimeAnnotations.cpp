@@ -277,7 +277,7 @@ bool isUniquePtrRelease(const CXXMethodDecl &MD) {
          MD.getNumParams() == 0 && isStdUniquePtr(*MD.getParent());
 }
 
-bool isContainerInvalidationMethod(const CXXMethodDecl &MD) {
+bool isInvalidationMethod(const CXXMethodDecl &MD) {
   const CXXRecordDecl *RD = MD.getParent();
   if (!isInStlNamespace(RD))
     return false;
@@ -342,11 +342,14 @@ bool isContainerInvalidationMethod(const CXXMethodDecl &MD) {
                                          // Assignment
                                          "replace"};
 
-  const StringRef ContainerName = getName(*RD);
+  static const llvm::StringSet<> UniquePtr = {// Reallocation
+                                              "reset"};
+
+  const StringRef RecordName = getName(*RD);
   // TODO: Consider caching this lookup by CXXMethodDecl pointer if this
   // StringSwitch becomes a performance bottleneck.
   const llvm::StringSet<> *InvalidatingMethods =
-      llvm::StringSwitch<const llvm::StringSet<> *>(ContainerName)
+      llvm::StringSwitch<const llvm::StringSet<> *>(RecordName)
           .Case("vector", &Vector)
           .Case("basic_string", &String)
           .Case("deque", &Deque)
@@ -356,6 +359,7 @@ bool isContainerInvalidationMethod(const CXXMethodDecl &MD) {
                  &NodeBased)
           .Cases({"flat_map", "flat_set", "flat_multimap", "flat_multiset"},
                  &Flat)
+          .Case("unique_ptr", &UniquePtr)
           .Default(nullptr);
 
   if (!InvalidatingMethods)
@@ -371,7 +375,7 @@ bool isContainerInvalidationMethod(const CXXMethodDecl &MD) {
     case OO_Subscript: // operator[] : Invalidation only for
                        // `flat_map` (Insert-or-access).
                        // `map` and `unordered_map` are excluded.
-      return ContainerName == "flat_map";
+      return RecordName == "flat_map";
     default:
       return false;
     }

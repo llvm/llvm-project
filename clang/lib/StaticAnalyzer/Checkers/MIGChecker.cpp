@@ -270,7 +270,7 @@ void MIGChecker::checkReturnAux(const ReturnStmt *RS, CheckerContext &C) const {
   if (!State->get<ReleasedParameter>())
     return;
 
-  SVal V = C.getSVal(RS);
+  SVal V = RS->getRetValue() ? C.getSVal(RS->getRetValue()) : UndefinedVal();
   if (mayBeSuccess(V, C))
     return;
 

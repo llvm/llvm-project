@@ -233,11 +233,10 @@ void DeclInfo::fill() {
     Kind = FunctionKind;
     ParamVars = FD->parameters();
     ReturnType = FD->getReturnType();
-    unsigned NumLists = FD->getNumTemplateParameterLists();
-    if (NumLists != 0) {
+    ArrayRef<TemplateParameterList *> TPLs = FD->getTemplateParameterLists();
+    if (!TPLs.empty()) {
       TemplateKind = TemplateSpecialization;
-      TemplateParameters =
-          FD->getTemplateParameterList(NumLists - 1);
+      TemplateParameters = TPLs.back();
     }
 
     if (K == Decl::CXXMethod || K == Decl::CXXConstructor ||

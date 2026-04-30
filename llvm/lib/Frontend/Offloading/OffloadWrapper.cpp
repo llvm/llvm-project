@@ -44,6 +44,12 @@ IntegerType *getSizeTTy(Module &M) {
   return M.getDataLayout().getIntPtrType(M.getContext());
 }
 
+/// Returns the appropriate startup section for registration functions.
+/// Mach-O uses "__TEXT,__StaticInit"; ELF/COFF use ".text.startup".
+StringRef getStartupSection(const Triple &T) {
+  return T.isOSBinFormatMachO() ? "__TEXT,__StaticInit" : ".text.startup";
+}
+
 // struct __tgt_device_image {
 //   void *ImageStart;
 //   void *ImageEnd;
@@ -207,7 +213,7 @@ Function *createUnregisterFunction(Module &M, GlobalVariable *BinDesc,
   auto *Func =
       Function::Create(FuncTy, GlobalValue::InternalLinkage,
                        ".omp_offloading.descriptor_unreg" + Suffix, &M);
-  Func->setSection(".text.startup");
+  Func->setSection(getStartupSection(M.getTargetTriple()));
 
   // Get __tgt_unregister_lib function declaration.
   auto *UnRegFuncTy = FunctionType::get(Type::getVoidTy(C), getBinDescPtrTy(M),
@@ -229,7 +235,7 @@ void createRegisterFunction(Module &M, GlobalVariable *BinDesc,
   auto *FuncTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg*/ false);
   auto *Func = Function::Create(FuncTy, GlobalValue::InternalLinkage,
                                 ".omp_offloading.descriptor_reg" + Suffix, &M);
-  Func->setSection(".text.startup");
+  Func->setSection(getStartupSection(M.getTargetTriple()));
 
   // Get __tgt_register_lib function declaration.
   auto *RegFuncTy = FunctionType::get(Type::getVoidTy(C), getBinDescPtrTy(M),
@@ -285,7 +291,7 @@ GlobalVariable *createFatbinDesc(Module &M, ArrayRef<char> Image, bool IsHIP,
 
   // Create the global string containing the fatbinary.
   StringRef FatbinConstantSection =
-      IsHIP ? ".hip_fatbin"
+      IsHIP ? (Triple.isMacOSX() ? "__HIP,__hip_fatbin" : ".hip_fatbin")
             : (Triple.isMacOSX() ? "__NV_CUDA,__nv_fatbin" : ".nv_fatbin");
   auto *Data = ConstantDataArray::get(C, Image);
   auto *Fatbin = new GlobalVariable(M, Data->getType(), /*isConstant*/ true,
@@ -294,9 +300,9 @@ GlobalVariable *createFatbinDesc(Module &M, ArrayRef<char> Image, bool IsHIP,
   Fatbin->setSection(FatbinConstantSection);
 
   // Create the fatbinary wrapper
-  StringRef FatbinWrapperSection = IsHIP               ? ".hipFatBinSegment"
-                                   : Triple.isMacOSX() ? "__NV_CUDA,__fatbin"
-                                                       : ".nvFatBinSegment";
+  StringRef FatbinWrapperSection =
+      IsHIP ? (Triple.isMacOSX() ? "__HIP,__fatbin" : ".hipFatBinSegment")
+            : (Triple.isMacOSX() ? "__NV_CUDA,__fatbin" : ".nvFatBinSegment");
   Constant *FatbinWrapper[] = {
       ConstantInt::get(Type::getInt32Ty(C), IsHIP ? HIPFatMagic : CudaFatMagic),
       ConstantInt::get(Type::getInt32Ty(C), 1),
@@ -403,7 +409,7 @@ Function *createRegisterGlobalsFunction(Module &M, bool IsHIP,
   auto *RegGlobalsFn =
       Function::Create(RegGlobalsTy, GlobalValue::InternalLinkage,
                        IsHIP ? ".hip.globals_reg" : ".cuda.globals_reg", &M);
-  RegGlobalsFn->setSection(".text.startup");
+  RegGlobalsFn->setSection(getStartupSection(M.getTargetTriple()));
 
   // Create the loop to register all the entries.
   IRBuilder<> Builder(BasicBlock::Create(C, "entry", RegGlobalsFn));
@@ -559,13 +565,13 @@ void createRegisterFatbinFunction(Module &M, GlobalVariable *FatbinDesc,
   auto *CtorFunc = Function::Create(
       CtorFuncTy, GlobalValue::InternalLinkage,
       (IsHIP ? ".hip.fatbin_reg" : ".cuda.fatbin_reg") + Suffix, &M);
-  CtorFunc->setSection(".text.startup");
+  CtorFunc->setSection(getStartupSection(M.getTargetTriple()));
 
   auto *DtorFuncTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg*/ false);
   auto *DtorFunc = Function::Create(
       DtorFuncTy, GlobalValue::InternalLinkage,
       (IsHIP ? ".hip.fatbin_unreg" : ".cuda.fatbin_unreg") + Suffix, &M);
-  DtorFunc->setSection(".text.startup");
+  DtorFunc->setSection(getStartupSection(M.getTargetTriple()));
 
   auto *PtrTy = PointerType::getUnqual(C);
 
@@ -655,7 +661,7 @@ public:
         FunctionType::get(Type::getVoidTy(C), /*isVarArg*/ false);
     Function *Func = Function::Create(FuncTy, GlobalValue::InternalLinkage,
                                       Twine("sycl") + ".descriptor_reg", &M);
-    Func->setSection(".text.startup");
+    Func->setSection(getStartupSection(M.getTargetTriple()));
 
     PointerType *PtrTy = PointerType::getUnqual(C);
     IntegerType *Int64Ty = Type::getInt64Ty(C);
@@ -677,7 +683,7 @@ public:
         FunctionType::get(Type::getVoidTy(C), /*isVarArg*/ false);
     Function *Func = Function::Create(FuncTy, GlobalValue::InternalLinkage,
                                       "sycl.descriptor_unreg", &M);
-    Func->setSection(".text.startup");
+    Func->setSection(getStartupSection(M.getTargetTriple()));
 
     PointerType *PtrTy = PointerType::getUnqual(C);
     IntegerType *Int64Ty = Type::getInt64Ty(C);

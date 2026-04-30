@@ -231,6 +231,8 @@ def err_drv_argument_not_allowed_with : Error<
 def warn_drv_argument_not_allowed_with : Warning<
   "invalid argument '%0' not allowed with '%1'">,
   InGroup<OptionIgnored>;
+def err_drv_sycl_requires_cxx17 : Error<
+  "SYCL requires C++17 or later; '%0' is not supported">;
 def err_drv_cannot_open_randomize_layout_seed_file : Error<
   "cannot read randomize layout seed file '%0'">;
 def err_drv_invalid_version_number : Error<

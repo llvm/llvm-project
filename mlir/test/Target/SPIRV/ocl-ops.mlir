@@ -50,6 +50,26 @@ spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, Vec
     spirv.Return
   }
 
+  spirv.func @float_int_insts(%arg0 : f32, %arg1 : i32) "None" {
+    // CHECK: {{%.*}} = spirv.CL.ldexp {{%.*}}, {{%.*}} : f32, i32 -> f32
+    %0 = spirv.CL.ldexp %arg0, %arg1 : f32, i32 -> f32
+    // CHECK: {{%.*}} = spirv.CL.pown {{%.*}}, {{%.*}} : f32, i32 -> f32
+    %1 = spirv.CL.pown %arg0, %arg1 : f32, i32 -> f32
+    // CHECK: {{%.*}} = spirv.CL.rootn {{%.*}}, {{%.*}} : f32, i32 -> f32
+    %2 = spirv.CL.rootn %arg0, %arg1 : f32, i32 -> f32
+    spirv.Return
+  }
+
+  spirv.func @float_int_vec_insts(%arg0 : vector<3xf32>, %arg1 : vector<3xi32>) "None" {
+    // CHECK: {{%.*}} = spirv.CL.ldexp {{%.*}}, {{%.*}} : vector<3xf32>, vector<3xi32> -> vector<3xf32>
+    %0 = spirv.CL.ldexp %arg0, %arg1 : vector<3xf32>, vector<3xi32> -> vector<3xf32>
+    // CHECK: {{%.*}} = spirv.CL.pown {{%.*}}, {{%.*}} : vector<3xf32>, vector<3xi32> -> vector<3xf32>
+    %1 = spirv.CL.pown %arg0, %arg1 : vector<3xf32>, vector<3xi32> -> vector<3xf32>
+    // CHECK: {{%.*}} = spirv.CL.rootn {{%.*}}, {{%.*}} : vector<3xf32>, vector<3xi32> -> vector<3xf32>
+    %2 = spirv.CL.rootn %arg0, %arg1 : vector<3xf32>, vector<3xi32> -> vector<3xf32>
+    spirv.Return
+  }
+
   spirv.func @maxmin(%arg0 : f32, %arg1 : f32, %arg2 : i32, %arg3 : i32) "None" {
     // CHECK: {{%.*}} = spirv.CL.fmax {{%.*}}, {{%.*}} : f32
     %1 = spirv.CL.fmax %arg0, %arg1 : f32

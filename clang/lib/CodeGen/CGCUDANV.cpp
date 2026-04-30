@@ -817,10 +817,14 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
   llvm::Constant *FatBinStr;
   unsigned FatMagic;
   if (IsHIP) {
-    FatbinConstantName = ".hip_fatbin";
-    FatbinSectionName = ".hipFatBinSegment";
+    // On macOS (Mach-O), section names must be in "segment,section" format.
+    FatbinConstantName =
+        CGM.getTriple().isMacOSX() ? "__HIP,__hip_fatbin" : ".hip_fatbin";
+    FatbinSectionName =
+        CGM.getTriple().isMacOSX() ? "__HIP,__fatbin" : ".hipFatBinSegment";
 
-    ModuleIDSectionName = "__hip_module_id";
+    ModuleIDSectionName =
+        CGM.getTriple().isMacOSX() ? "__HIP,__module_id" : "__hip_module_id";
     ModuleIDPrefix = "__hip_";
 
     if (CudaGpuBinary) {
