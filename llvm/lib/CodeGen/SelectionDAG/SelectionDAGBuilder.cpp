@@ -10777,9 +10777,8 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
   if (!OutChains.empty())
     Chain = DAG.getNode(ISD::TokenFactor, getCurSDLoc(), MVT::Other, OutChains);
 
-  if (isa<InvokeInst>(Call))
-    Chain =
-        lowerEndEH(Chain, cast<InvokeInst>(&Call), EHPadBB, Info.BeginLabel);
+  if (const auto *II = dyn_cast<InvokeInst>(&Call))
+    Chain = lowerEndEH(Chain, II, EHPadBB, Info.BeginLabel);
 
   // Only Update Root if inline assembly has a memory effect.
   if (ResultValues.empty() || Info.HasSideEffect || !OutChains.empty() ||
