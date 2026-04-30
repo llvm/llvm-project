@@ -425,10 +425,10 @@ struct UnrollDpasMxOp : public UnrollPattern<xegpu::DpasMxOp> {
         }))
       return failure();
 
-    // A vector of 3 elements should be returned, representing M, K, N
+    // A vector of 4 elements should be returned, representing M, K, N, S
     // respectively.
     std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
-    if (!targetShape || targetShape->size() != 3)
+    if (!targetShape || targetShape->size() != 4)
       return failure();
     auto M = (*targetShape)[0];
     auto K = (*targetShape)[1];
@@ -553,6 +553,8 @@ struct UnrollDpasMxOp : public UnrollPattern<xegpu::DpasMxOp> {
               rewriter, loc, vecTy, operands,
               xegpu::dropInstDataOnAttrs(op->getAttrs()));
           LLVM_DEBUG(llvm::dbgs() << "    created: " << newDpasMxOp << "\n");
+          // Update tmpC to accumulate across K iterations
+          tmpC = newDpasMxOp.getResult();
         }
         newOps.push_back(newDpasMxOp);
       }

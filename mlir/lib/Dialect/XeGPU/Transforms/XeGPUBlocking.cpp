@@ -122,13 +122,17 @@ XeGPUBlockingPass::getTileShape(const T &operandOrResult) const {
 
   xegpu::DistributeLayoutAttr layout =
       xegpu::getDistributeLayoutAttr(operandOrResult);
+  LDBG() << "getTileShape for value: " << value << ", layout: " << layout;
   if (layout && layout.isForSubgroup()) {
     if (!layout.getEffectiveInstDataAsInt().empty()) {
       SmallVector<int64_t> instData = layout.getEffectiveInstDataAsInt();
+      LDBG() << "  returning instData size: " << instData.size();
       return instData;
     }
-    if (auto type = dyn_cast<ShapedType>(value.getType()))
+    if (auto type = dyn_cast<ShapedType>(value.getType())) {
+      LDBG() << "  returning shape from type";
       return llvm::to_vector(type.getShape());
+    }
   }
   LDBG() << "failed to getTileShape for: " << value;
   return std::nullopt;
@@ -168,27 +172,12 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
     std::optional<SmallVector<int64_t>> aTile = getTileShape(op->getOpOperand(0));
     std::optional<SmallVector<int64_t>> bTile = getTileShape(op->getOpOperand(1));
 
-    LLVM_DEBUG(llvm::dbgs() << "  aTile: "
-                            << (aTile ? llvm::join(llvm::map_range(*aTile,
-                                   [](int64_t v) { return std::to_string(v); }), "x")
-                                      : "nullopt")
-                            << "\n");
-    LLVM_DEBUG(llvm::dbgs() << "  bTile: "
-                            << (bTile ? llvm::join(llvm::map_range(*bTile,
-                                   [](int64_t v) { return std::to_string(v); }), "x")
-                                      : "nullopt")
-                            << "\n");
-
     if (!aTile || aTile->size() != 2 || !bTile || bTile->size() != 2)
       return std::nullopt;
 
     // semantic check for A and B
-    if ((*aTile)[1] != (*bTile)[0]) {
-      LLVM_DEBUG(llvm::dbgs() << "  A/B semantic check failed: aTile[1]="
-                              << (*aTile)[1] << " != bTile[0]=" << (*bTile)[0]
-                              << "\n");
+    if ((*aTile)[1] != (*bTile)[0])
       return std::nullopt;
-    }
 
     return std::make_pair(*aTile, *bTile);
   };
@@ -203,12 +192,6 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
     std::optional<SmallVector<int64_t>> cTile =
         getTileShape(op->getOpOperand(cOperandIdx));
     int64_t expectedCTile[2] = {aTile[0], bTile[1]};
-    LLVM_DEBUG(llvm::dbgs() << "  cTile: "
-                            << (cTile ? llvm::join(llvm::map_range(*cTile,
-                                   [](int64_t v) { return std::to_string(v); }), "x")
-                                      : "nullopt")
-                            << ", expected: " << expectedCTile[0] << "x"
-                            << expectedCTile[1] << "\n");
     if (!cTile || !llvm::equal(*cTile, expectedCTile))
       return false;
     return true;
@@ -225,17 +208,6 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
     std::optional<SmallVector<int64_t>> bScaleTile =
         getTileShape(op->getOpOperand(scaleBOperandIdx));
 
-    LLVM_DEBUG(llvm::dbgs() << "  aScaleTile: "
-                            << (aScaleTile ? llvm::join(llvm::map_range(*aScaleTile,
-                                   [](int64_t v) { return std::to_string(v); }), "x")
-                                          : "nullopt")
-                            << "\n");
-    LLVM_DEBUG(llvm::dbgs() << "  bScaleTile: "
-                            << (bScaleTile ? llvm::join(llvm::map_range(*bScaleTile,
-                                   [](int64_t v) { return std::to_string(v); }), "x")
-                                          : "nullopt")
-                            << "\n");
-
     if (!aScaleTile || aScaleTile->size() != 2 ||
         !bScaleTile || bScaleTile->size() != 2)
       return std::nullopt;
@@ -246,20 +218,14 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
     assert((*bScaleTile)[1] == bTile[1] &&
            "bScaleTile[1] must equal bTile[1]");
 
-    if ((*aScaleTile)[1] != (*bScaleTile)[0]) {
-      LLVM_DEBUG(llvm::dbgs() << "  scale A/B semantic check failed: aScaleTile[1]="
-                              << (*aScaleTile)[1] << " != bScaleTile[0]="
-                              << (*bScaleTile)[0] << "\n");
+    if ((*aScaleTile)[1] != (*bScaleTile)[0])
       return std::nullopt;
-    }
 
     // Return the K scale factor
     return (*aScaleTile)[1];
   };
 
   if (isa<xegpu::DpasOp>(op)) {
-    LLVM_DEBUG(llvm::dbgs() << "getTileShape for DpasOp: " << *op << "\n");
-
     auto abTiles = validateABTiles(op);
     if (!abTiles)
       return std::nullopt;
@@ -270,14 +236,10 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
     if (!validateCTile(op, 2, aTile, bTile))
       return std::nullopt;
 
-    LLVM_DEBUG(llvm::dbgs() << "  result: [" << aTile[0] << ", "
-                            << aTile[1] << ", " << bTile[1] << "]\n");
     return SmallVector<int64_t>({aTile[0], aTile[1], bTile[1]});
   }
 
   if (auto dpasMxOp = dyn_cast<xegpu::DpasMxOp>(op)) {
-    LLVM_DEBUG(llvm::dbgs() << "getTileShape for DpasMxOp: " << *op << "\n");
-
     auto abTiles = validateABTiles(op);
     if (!abTiles)
       return std::nullopt;
@@ -318,9 +280,6 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
       kScaleFactor = *scaleFactor;
     }
 
-    LLVM_DEBUG(llvm::dbgs() << "  result: [" << aTile[0] << ", "
-                            << aTile[1] << ", " << bTile[1] << ", "
-                            << kScaleFactor << "]\n");
     return SmallVector<int64_t>({aTile[0], aTile[1], bTile[1], kScaleFactor});
   }
 
@@ -371,7 +330,14 @@ bool XeGPUBlockingPass::needsUnroll(Operation *op) const {
   bool hasUnrollableOperands =
       llvm::any_of(op->getOpOperands(), [&](OpOperand &opr) {
         std::optional<SmallVector<int64_t>> tileShape = getTileShape(opr);
-        return tileShape.has_value() && isUnrollable(opr.get(), *tileShape);
+        bool result =
+            tileShape.has_value() && isUnrollable(opr.get(), *tileShape);
+        if (isa<xegpu::DpasMxOp>(op)) {
+          LDBG() << "  operand " << opr.getOperandNumber()
+                 << ": tileShape.has_value=" << tileShape.has_value()
+                 << ", isUnrollable=" << result;
+        }
+        return result;
       });
   bool hasUnrollableResults =
       llvm::any_of(op->getOpResults(), [&](OpResult result) {
@@ -386,8 +352,15 @@ bool XeGPUBlockingPass::needsUnroll(Operation *op) const {
       isConvertLayoutWithInstData = true;
     }
   }
-  return hasUnrollableOperands || hasUnrollableResults ||
-         isConvertLayoutWithInstData;
+  bool shouldUnroll = hasUnrollableOperands || hasUnrollableResults ||
+                      isConvertLayoutWithInstData;
+  if (isa<xegpu::DpasMxOp>(op)) {
+    LDBG() << "needsUnroll for DpasMxOp: hasUnrollableOperands="
+           << hasUnrollableOperands
+           << ", hasUnrollableResults=" << hasUnrollableResults
+           << ", shouldUnroll=" << shouldUnroll;
+  }
+  return shouldUnroll;
 }
 
 void XeGPUBlockingPass::runOnOperation() {
