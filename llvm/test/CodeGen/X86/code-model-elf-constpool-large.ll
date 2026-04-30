@@ -7,10 +7,17 @@
 ; CHECK: .lrodata.cst16 {{.*}} AMl
 ; CHECK: .lrodata.cst4  {{.*}} AMl
 
+; Also verify the suffixed path (via -partition-static-data-sections).
+; RUN: llc < %s -relocation-model=pic -code-model=large \
+; RUN:     -partition-static-data-sections -o - | FileCheck %s --check-prefix=SUFFIX
+
+; SUFFIX: .section .lrodata.cst16.hot.,"aMl",@progbits,16
+; SUFFIX: .section .lrodata.cst4,"aMl",@progbits,4
+
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64--linux"
 
-define void @vec_add(ptr %out, ptr %a, ptr %b, i32 %n) {
+define void @vec_add(ptr %out, ptr %a, ptr %b, i32 %n) !prof !17 {
 entry:
   %cmp = icmp sgt i32 %n, 0
   br i1 %cmp, label %loop, label %exit
@@ -40,3 +47,23 @@ define float @scalar_const(float %x) {
   %r = fadd float %x, 1.0
   ret float %r
 }
+
+!llvm.module.flags = !{!1}
+
+!1 = !{i32 1, !"ProfileSummary", !2}
+!2 = !{!3, !4, !5, !6, !7, !8, !9, !10, !11, !12}
+!3 = !{!"ProfileFormat", !"InstrProf"}
+!4 = !{!"TotalCount", i64 1460617}
+!5 = !{!"MaxCount", i64 849536}
+!6 = !{!"MaxInternalCount", i64 32769}
+!7 = !{!"MaxFunctionCount", i64 849536}
+!8 = !{!"NumCounts", i64 23784}
+!9 = !{!"NumFunctions", i64 3301}
+!10 = !{!"IsPartialProfile", i64 0}
+!11 = !{!"PartialProfileRatio", double 0.000000e+00}
+!12 = !{!"DetailedSummary", !13}
+!13 = !{!14, !15}
+!14 = !{i32 990000, i64 166, i32 73}
+!15 = !{i32 999999, i64 1, i32 1463}
+!16 = !{!"function_entry_count", i64 1}
+!17 = !{!"function_entry_count", i64 100000}
