@@ -462,23 +462,6 @@ void OptionValueProperties::DumpAllDescriptions(CommandInterpreter &interpreter,
   }
 }
 
-// This function flattens a nested set of properties. This is what we want for
-// search results. If we didn't do this, search results would be presented
-// split up by type of setting.
-static void
-FlattenProperties(const OptionValueProperties *properties,
-                  std::vector<const Property *> &matching_properties) {
-  size_t num_child_properties = properties->GetNumProperties();
-  for (size_t i = 0; i < num_child_properties; ++i)
-    if (auto property = properties->GetPropertyAtIndex(i)) {
-      if (auto children = property->GetValue()->GetAsProperties()) {
-        FlattenProperties(children, matching_properties);
-      } else {
-        matching_properties.push_back(property);
-      }
-    }
-}
-
 void OptionValueProperties::Apropos(
     llvm::StringRef keyword,
     std::vector<const Property *> &matching_properties) const {
@@ -488,37 +471,21 @@ void OptionValueProperties::Apropos(
     if (!property)
       continue;
 
-    // The qualified name includes the category parts. For example
-    // "platform.plugin.qemu-user.qemu-user".
-    StreamString qualified_name_strm;
-    std::optional<llvm::StringRef> qualified_name_str;
-    if (property->DumpQualifiedName(qualified_name_strm))
-      qualified_name_str = qualified_name_strm.GetString();
-
-    // Some properties are a group of other priorities.
     if (const OptionValueProperties *properties =
             property->GetValue()->GetAsProperties()) {
-      // If the keyword is already in the qualified name, any nested
-      // settings would match too and we can just add them, skipping
-      // getting their qualified names too.
-      if (qualified_name_str &&
-          qualified_name_str->contains_insensitive(keyword)) {
-        FlattenProperties(properties, matching_properties);
-      } else {
-        // Search in all the nested settings.
-        properties->Apropos(keyword, matching_properties);
-      }
-
+      properties->Apropos(keyword, matching_properties);
       continue;
     }
 
-    if (qualified_name_str) {
-      if (qualified_name_str->contains_insensitive(keyword)) {
-        matching_properties.push_back(property);
-        continue;
-      }
-    } else if (llvm::StringRef name = property->GetName();
-               name.contains_insensitive(keyword)) {
+    if (llvm::StringRef name = property->GetName();
+        name.contains_insensitive(keyword)) {
+      matching_properties.push_back(property);
+      continue;
+    }
+
+    if (StreamString qualified_name;
+        property->DumpQualifiedName(qualified_name) &&
+        qualified_name.GetString().contains_insensitive(keyword)) {
       matching_properties.push_back(property);
       continue;
     }

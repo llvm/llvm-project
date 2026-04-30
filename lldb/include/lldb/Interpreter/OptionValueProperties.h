@@ -84,8 +84,6 @@ public:
     return ProtectedGetPropertyAtIndex(idx);
   }
 
-  size_t GetNumProperties() const { return m_properties.size(); }
-
   // Property can be a property path like
   // "target.process.extra-startup-command"
   virtual const Property *
