@@ -4824,7 +4824,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     llvm::Value *Metadata = llvm::MetadataAsValue::get(Context, RegName);
 
     llvm::Function *F =
-        CGM.getIntrinsic(Intrinsic::read_register, {Int64Ty});
+        CGM.getIntrinsic(Intrinsic::read_volatile_register, {Int64Ty});
     return Builder.CreateCall(F, Metadata);
   }
 

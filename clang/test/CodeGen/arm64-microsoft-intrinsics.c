@@ -154,8 +154,8 @@ unsigned __int64 check__getReg(void) {
   return reg;
 }
 
-// CHECK-MSCOMPAT: call i64 @llvm.read_register.i64(metadata ![[MD2:.*]])
-// CHECK-MSCOMPAT: call i64 @llvm.read_register.i64(metadata ![[MD3:.*]])
+// CHECK-MSCOMPAT: call i64 @llvm.read_volatile_register.i64(metadata ![[MD2:.*]])
+// CHECK-MSCOMPAT: call i64 @llvm.read_volatile_register.i64(metadata ![[MD3:.*]])
 
 #ifdef __LP64__
 #define LONG __int32
