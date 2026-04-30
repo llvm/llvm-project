@@ -517,8 +517,6 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case VPInstruction::ComputeReductionResult:
   case VPInstruction::FirstActiveLane:
   case VPInstruction::LastActiveLane:
-  case VPInstruction::SLPLoad:
-  case VPInstruction::SLPStore:
   case VPInstruction::ExtractLane:
   case VPInstruction::ExtractLastActive:
     // Cannot determine the number of operands from the opcode.
@@ -1468,12 +1466,6 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
   switch (getOpcode()) {
   case VPInstruction::Not:
     O << "not";
-    break;
-  case VPInstruction::SLPLoad:
-    O << "combined load";
-    break;
-  case VPInstruction::SLPStore:
-    O << "combined store";
     break;
   case VPInstruction::ActiveLaneMask:
     O << "active lane mask";

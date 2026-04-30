@@ -16067,10 +16067,17 @@ SDValue SITargetLowering::performMinMaxCombine(SDNode *N,
 
   if (supportsMin3Max3(*Subtarget, Opc, VT)) {
     auto IsTreeWithCombinableChildren = [Opc](SDValue Op) {
-      return Op.getOperand(0).getOpcode() == Opc &&
-             Op.getOperand(1).getOpcode() == Opc &&
-             (Op.getOperand(0).hasOneUse() || Op.getOperand(1).hasOneUse());
+      return (Op.getOperand(0).getOpcode() == Opc &&
+              Op.getOperand(0).hasOneUse()) ||
+             (Op.getOperand(1).getOpcode() == Opc &&
+              Op.getOperand(1).hasOneUse());
     };
+
+    bool CanTreeCombineApply = Op0.getOpcode() == Opc && Op0.hasOneUse() &&
+                               Op1.getOpcode() == Opc && Op1.hasOneUse();
+    bool HasCombinableTreeChild =
+        CanTreeCombineApply && (IsTreeWithCombinableChildren(Op0) ||
+                                IsTreeWithCombinableChildren(Op1));
 
     // Tree reduction: when both operands are the same min/max op, restructure
     // to keep a 2-op node on top so higher tree levels can still combine.
@@ -16079,9 +16086,7 @@ SDValue SITargetLowering::performMinMaxCombine(SDNode *N,
     // min(min(a, b), min(c, d)) -> min(min3(a, b, c), d)
     //
     // Defer when either inner op is a tree node with combinable children.
-    if (Op0.getOpcode() == Opc && Op0.hasOneUse() && Op1.getOpcode() == Opc &&
-        Op1.hasOneUse() && !IsTreeWithCombinableChildren(Op0) &&
-        !IsTreeWithCombinableChildren(Op1)) {
+    if (CanTreeCombineApply && !HasCombinableTreeChild) {
       SDLoc DL(N);
       SDValue Inner =
           DAG.getNode(minMaxOpcToMin3Max3Opc(Opc), DL, VT, Op0.getOperand(0),
@@ -16092,8 +16097,7 @@ SDValue SITargetLowering::performMinMaxCombine(SDNode *N,
     // max(max(a, b), c) -> max3(a, b, c)
     // min(min(a, b), c) -> min3(a, b, c)
     // Deferred when Op0 is a tree node with combinable children.
-    if (Op0.getOpcode() == Opc && Op0.hasOneUse() &&
-        !IsTreeWithCombinableChildren(Op0)) {
+    if (Op0.getOpcode() == Opc && Op0.hasOneUse() && !HasCombinableTreeChild) {
       SDLoc DL(N);
       return DAG.getNode(minMaxOpcToMin3Max3Opc(Opc), DL, N->getValueType(0),
                          Op0.getOperand(0), Op0.getOperand(1), Op1);
@@ -16103,8 +16107,7 @@ SDValue SITargetLowering::performMinMaxCombine(SDNode *N,
     // max(a, max(b, c)) -> max3(a, b, c)
     // min(a, min(b, c)) -> min3(a, b, c)
     // Deferred when Op1 is a tree node with combinable children.
-    if (Op1.getOpcode() == Opc && Op1.hasOneUse() &&
-        !IsTreeWithCombinableChildren(Op1)) {
+    if (Op1.getOpcode() == Opc && Op1.hasOneUse() && !HasCombinableTreeChild) {
       SDLoc DL(N);
       return DAG.getNode(minMaxOpcToMin3Max3Opc(Opc), DL, N->getValueType(0),
                          Op0, Op1.getOperand(0), Op1.getOperand(1));
