@@ -1242,13 +1242,24 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
   FileSpec sysroot_spec;
 
   if (target) {
-    auto sysroot_spec_or_err = ::ResolveSDKPathFromDebugInfo(target);
-    if (!sysroot_spec_or_err) {
-      LLDB_LOG_ERROR(GetLog(LLDBLog::Types | LLDBLog::Host),
-                     sysroot_spec_or_err.takeError(),
-                     "Failed to resolve sysroot: {0}");
-    } else {
-      sysroot_spec = *sysroot_spec_or_err;
+    if (PlatformSP platform_sp = target->GetPlatform()) {
+      FileSpec platform_sdk_spec(platform_sp->GetSDKRootDirectory());
+      if (platform_sdk_spec) {
+        FileSystem::Instance().Resolve(platform_sdk_spec);
+        if (FileSystem::Instance().IsDirectory(platform_sdk_spec.GetPath()))
+          sysroot_spec = platform_sdk_spec;
+      }
+    }
+
+    if (!FileSystem::Instance().IsDirectory(sysroot_spec.GetPath())) {
+      auto sysroot_spec_or_err = ::ResolveSDKPathFromDebugInfo(target);
+      if (!sysroot_spec_or_err) {
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Types | LLDBLog::Host),
+                       sysroot_spec_or_err.takeError(),
+                       "Failed to resolve sysroot: {0}");
+      } else {
+        sysroot_spec = *sysroot_spec_or_err;
+      }
     }
   }
 

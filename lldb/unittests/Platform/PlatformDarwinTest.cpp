@@ -18,6 +18,8 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/CommandReturnObject.h"
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
@@ -124,6 +126,48 @@ TEST(PlatformDarwinTest, TestParseVersionBuildDir) {
 
   std::tie(V, D) = PlatformDarwin::ParseVersionBuildDir("3.4.5");
   EXPECT_EQ(llvm::VersionTuple(3, 4, 5), V);
+}
+
+TEST_F(PlatformDarwinLocateTest,
+       AddClangModuleCompilationOptionsUsesSelectedPlatformSDKRoot) {
+  llvm::SmallString<128> sdk_root(m_tmp_root_dir);
+  llvm::sys::path::append(sdk_root, "Target.sdk");
+  ASSERT_FALSE(llvm::sys::fs::create_directory(sdk_root))
+      << "Failed to create test SDK root directory.";
+  std::string sdk_root_path = sdk_root.str().str();
+
+  CommandReturnObject result(/*colors*/ false);
+  std::string command =
+      llvm::formatv("platform select ios-simulator -S \"{0}\"", sdk_root_path)
+          .str();
+  m_debugger_sp->GetCommandInterpreter().HandleCommand(command.c_str(),
+                                                       eLazyBoolNo, result);
+  ASSERT_TRUE(result.Succeeded()) << result.GetErrorString();
+
+  PlatformSP platform_sp =
+      m_debugger_sp->GetPlatformList().GetSelectedPlatform();
+  ASSERT_TRUE(platform_sp);
+  ASSERT_EQ(platform_sp->GetPluginName(), llvm::StringRef("ios-simulator"));
+  ASSERT_EQ(platform_sp->GetSDKRootDirectory(), sdk_root_path);
+
+  TargetSP target_sp;
+  ArchSpec arch("x86_64-apple-ios-simulator");
+  m_debugger_sp->GetTargetList().CreateTarget(*m_debugger_sp, "", arch,
+                                              lldb_private::eLoadDependentsNo,
+                                              platform_sp, target_sp);
+  ASSERT_TRUE(target_sp);
+
+  std::vector<std::string> options;
+  platform_sp->AddClangModuleCompilationOptions(target_sp.get(), options);
+
+  bool found_sdk_root = false;
+  for (size_t i = 0; i + 1 < options.size(); ++i) {
+    if (options[i] == "-isysroot" && options[i + 1] == sdk_root_path) {
+      found_sdk_root = true;
+      break;
+    }
+  }
+  EXPECT_TRUE(found_sdk_root);
 }
 
 TEST_F(PlatformDarwinLocateTest,
