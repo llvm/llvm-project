@@ -518,5 +518,7 @@ extern "C" unsigned __cudaPushCallConfiguration(dim3 gridDim, dim3 blockDim,
                                                 void *stream = 0);
 #endif
 
+#define _CG_CLUSTER_INTRINSICS_AVAILABLE 1
+
 #endif // __CUDA__
 #endif // __CLANG_CUDA_RUNTIME_WRAPPER_H__

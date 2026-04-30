@@ -184,12 +184,6 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
     unsigned ArchID = CudaArchToID(GPU);
     Builder.defineMacro("__CUDA_ARCH__", llvm::Twine(ArchID));
 
-    // Per
-    // https://docs.nvidia.com/cuda/cuda-programming-guide/04-special-topics/cooperative-groups.html#id4
-    // clusters are only available with >=9.0 compute capability
-    if (ArchID >= 900)
-      Builder.defineMacro("_CG_CLUSTER_INTRINSICS_AVAILABLE");
-
     if (IsNVIDIAAcceleratedOffloadArch(GPU))
       Builder.defineMacro(
           "__CUDA_ARCH_FEAT_SM" + llvm::Twine(ArchID / 10) + "_ALL", "1");
