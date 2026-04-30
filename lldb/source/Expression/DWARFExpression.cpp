@@ -1228,7 +1228,7 @@ static llvm::Error Evaluate_DW_OP_call_frame_cfa(DWARFExpression::Stack &stack,
                                                  StackFrame *frame) {
   if (!frame)
     return llvm::createStringError(
-        "unvalid stack frame in context for DW_OP_call_frame_cfa opcode");
+        "invalid stack frame in context for DW_OP_call_frame_cfa opcode");
 
   // Note that we don't have to parse FDEs because this DWARF expression
   // is commonly evaluated with a valid stack frame.
