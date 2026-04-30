@@ -7449,9 +7449,13 @@ does not carry useful data and need not be preserved.
 noalias memory-access sets. This means that some collection of memory access
 instructions (loads, stores, memory-accessing calls, etc.) that carry
 ``noalias`` metadata can specifically be specified not to alias with some other
-collection of memory access instructions that carry ``alias.scope`` metadata. If
-accesses from different collections alias, the behavior is undefined. Each type
-of metadata specifies a list of scopes where each scope has an id and a domain.
+collection of memory access instructions that carry ``alias.scope`` metadata.
+These metadata kinds may also be attached to ``fence`` instructions to indicate
+which scoped memory regions the fence does (or does not) concern; this allows
+alias analysis to prove that a fence cannot affect a particular memory location.
+If accesses from different collections alias, the behavior is undefined. Each
+type of metadata specifies a list of scopes where each scope has an id and a
+domain.
 
 When evaluating an aliasing query, if for some domain, the set
 of scopes with that domain in one instruction's ``alias.scope`` list is a

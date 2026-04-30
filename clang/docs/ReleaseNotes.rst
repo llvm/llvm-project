@@ -571,6 +571,7 @@ Bug Fixes to C++ Support
   conforming and could lead to recursive constraint satisfaction checking. (#GH149443)
 - Fixed a crash in Itanium C++ name mangling for a lambda in a local class field initializer inside a constructor/destructor. (#GH176395)
 - Fixed crashes in Itanium C++ name mangling for lambdas with trailing requires-clauses involving requires-expressions. (#GH100774) (#GH123854)
+- Fixed an invalid rejection and assertion failure while generating ``operator=`` for fields with the ``__restrict`` qualifier. (#GH37979)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
