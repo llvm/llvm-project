@@ -7109,11 +7109,25 @@ static void emitLoadScalarOpsFromVGPRLoop(
     unsigned NumSubRegs = RegSize / 32;
     Register VScalarOp = ScalarOp->getReg();
 
-    // V_READFIRSTLANE_B32 / V_CMP_EQ_U32_e64 reject AGPR sources, so demote
-    // AV_* operands into a pure VGPR class on subtargets with AGPRs.
-    if (TRI->hasAGPRs(MRI.getRegClass(VScalarOp))) {
-      Register VRReg = MRI.createVirtualRegister(
-          TRI->getEquivalentVGPRClass(MRI.getRegClass(VScalarOp)));
+    auto LaneClassOf = [&](const TargetRegisterClass *RC) {
+      if (TRI->getRegSizeInBits(*RC) <= 32)
+        return RC;
+      const TargetRegisterClass *Sub =
+          TRI->getSubRegisterClass(RC, AMDGPU::sub0);
+      return Sub ? Sub : RC;
+    };
+    const TargetRegisterClass *VScalarOpRC = MRI.getRegClass(VScalarOp);
+    const TargetRegisterClass *RFLSrcRC = TRI->getRegClass(TII.getOpRegClassID(
+        TII.get(AMDGPU::V_READFIRSTLANE_B32).operands()[1]));
+    const TargetRegisterClass *LaneRC = LaneClassOf(VScalarOpRC);
+    if (RFLSrcRC && TRI->getCommonSubClass(LaneRC, RFLSrcRC) != LaneRC) {
+      const TargetRegisterClass *DemoteRC =
+          TRI->getEquivalentVGPRClass(VScalarOpRC);
+      assert(DemoteRC &&
+             TRI->getCommonSubClass(LaneClassOf(DemoteRC), RFLSrcRC) ==
+                 LaneClassOf(DemoteRC) &&
+             "demote target lane class incompatible with V_READFIRSTLANE_B32");
+      Register VRReg = MRI.createVirtualRegister(DemoteRC);
       BuildMI(LoopBB, I, DL, TII.get(AMDGPU::COPY), VRReg).addReg(VScalarOp);
       VScalarOp = VRReg;
     }
@@ -7837,15 +7851,12 @@ void SIInstrInfo::createWaterFallForSiCall(MachineInstr *MI,
          MI->definesRegister(End->getOperand(1).getReg(), &RI))
     ++End;
 
-  // generateWaterFallLoop() splices [Start, End) into BodyBB, but the
-  // readfirstlane/compare it emits live in LoopBB and execute before
-  // BodyBB on the first iteration. Hoist simple-COPY defs of ScalarOp
-  // registers whose source already dominates Start so they stay in MBB
-  // (LoopBB's predecessor) and the readfirstlane sees a defined value.
   MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
-  auto IsBeforeStart = [&](const MachineInstr *Q) {
+  auto DominatesStart = [&](const MachineInstr *Q) -> bool {
     if (!Q)
       return false;
+    if (MDT)
+      return MDT->dominates(Q, &*Start);
     if (Q->getParent() != &MBB)
       return true;
     for (auto It = MBB.begin(); It != Start; ++It)
@@ -7857,19 +7868,16 @@ void SIInstrInfo::createWaterFallForSiCall(MachineInstr *MI,
     if (!MO->isReg())
       continue;
     Register R = MO->getReg();
-    if (!R.isVirtual() || !MRI.hasOneDef(R))
+    if (!R.isVirtual())
       continue;
     MachineInstr *DefMI = MRI.getVRegDef(R);
     if (!DefMI || !DefMI->isCopy() || DefMI->getParent() != &MBB ||
-        IsBeforeStart(DefMI))
+        DominatesStart(DefMI))
       continue;
     const MachineOperand &Src = DefMI->getOperand(1);
     if (!Src.isReg() || !Src.getReg().isVirtual() ||
-        !IsBeforeStart(MRI.getVRegDef(Src.getReg())))
+        !DominatesStart(MRI.getVRegDef(Src.getReg())))
       continue;
-    // The COPY moves out of [Begin, MI], so generateWaterFallLoop's kill-flag
-    // sweep no longer covers it; clear them here to keep any remaining use of
-    // Src inside BodyBB valid.
     for (MachineOperand &U : DefMI->all_uses())
       MRI.clearKillFlags(U.getReg());
     MBB.splice(Start, &MBB, DefMI->getIterator());
