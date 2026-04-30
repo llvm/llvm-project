@@ -462,7 +462,7 @@ ModRefInfo AAResults::getModRefInfo(const LoadInst *L,
                                     const MemoryLocation &Loc,
                                     AAQueryInfo &AAQI) {
   // Be conservative in the face of atomic.
-  if (isStrongerThan(L->getOrdering(), AtomicOrdering::Unordered))
+  if (isStrongerThanMonotonic(L->getOrdering()))
     return ModRefInfo::ModRef;
 
   // If the load address doesn't alias the given address, it doesn't read
@@ -472,6 +472,13 @@ ModRefInfo AAResults::getModRefInfo(const LoadInst *L,
     if (AR == AliasResult::NoAlias)
       return ModRefInfo::NoModRef;
   }
+
+  assert(!isStrongerThanMonotonic(L->getOrdering()) &&
+         "Stronger atomic orderings should have been handled above!");
+
+  if (isStrongerThanUnordered(L->getOrdering()))
+    return ModRefInfo::ModRef;
+
   // Otherwise, a load just reads.
   return ModRefInfo::Ref;
 }
@@ -480,7 +487,7 @@ ModRefInfo AAResults::getModRefInfo(const StoreInst *S,
                                     const MemoryLocation &Loc,
                                     AAQueryInfo &AAQI) {
   // Be conservative in the face of atomic.
-  if (isStrongerThan(S->getOrdering(), AtomicOrdering::Unordered))
+  if (isStrongerThanMonotonic(S->getOrdering()))
     return ModRefInfo::ModRef;
 
   if (Loc.Ptr) {
@@ -498,7 +505,13 @@ ModRefInfo AAResults::getModRefInfo(const StoreInst *S,
       return ModRefInfo::NoModRef;
   }
 
-  // Otherwise, a store just writes.
+  assert(!isStrongerThanMonotonic(S->getOrdering()) &&
+         "Stronger atomic orderings should have been handled above!");
+
+  if (isStrongerThanUnordered(S->getOrdering()))
+    return ModRefInfo::ModRef;
+
+  // A store just writes.
   return ModRefInfo::Mod;
 }
 
