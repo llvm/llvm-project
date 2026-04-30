@@ -750,8 +750,11 @@ const MDNode *ValueEnumerator::enumerateMetadataImpl(unsigned F, const Metadata 
   }
 
   // Don't assign IDs to metadata nodes.
-  if (auto *N = dyn_cast<MDNode>(MD))
+  if (auto *N = dyn_cast<MDNode>(MD)) {
+    if (const auto *CU = dyn_cast<DICompileUnit>(N))
+      enumerateMetadataImpl(F, CU->getRawDialect());
     return N;
+  }
 
   // Save the metadata.
   MDs.push_back(MD);

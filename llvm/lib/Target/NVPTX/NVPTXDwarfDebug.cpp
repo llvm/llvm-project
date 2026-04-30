@@ -283,7 +283,7 @@ void NVPTXDwarfDebug::addTargetVariableAttributes(
 
 void NVPTXDwarfDebug::finishTargetUnitAttributes(const DICompileUnit &DIUnit,
                                                  DwarfCompileUnit &NewCU) {
-  StringRef Dialect = DIUnit.getDialect();
+  StringRef Dialect = DIUnit.getSourceLanguage().getDialect();
   if (!Dialect.empty()) {
     if (Dialect != "simt" && Dialect != "tile") {
       std::string Msg = ("unknown NVPTX language dialect '" + Dialect +

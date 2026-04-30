@@ -6174,16 +6174,18 @@ bool LLParser::parseDICompileUnit(MDNode *&Result, bool IsDistinct) {
     return error(Loc, "'sourceLanguageVersion' requires an associated "
                       "'sourceLanguageName' on !DICompileUnit");
 
+  DISourceLanguageName SourceLanguage =
+      language.Seen
+          ? DISourceLanguageName(language.Val, dialect.Val)
+          : DISourceLanguageName(sourceLanguageName.Val,
+                                 sourceLanguageVersion.Val, dialect.Val);
+
   Result = DICompileUnit::getDistinct(
-      Context,
-      language.Seen ? DISourceLanguageName(language.Val)
-                    : DISourceLanguageName(sourceLanguageName.Val,
-                                           sourceLanguageVersion.Val),
-      file.Val, producer.Val, isOptimized.Val, flags.Val, runtimeVersion.Val,
-      splitDebugFilename.Val, emissionKind.Val, enums.Val, retainedTypes.Val,
-      globals.Val, imports.Val, macros.Val, dwoId.Val, splitDebugInlining.Val,
-      debugInfoForProfiling.Val, nameTableKind.Val, rangesBaseAddress.Val,
-      sysroot.Val, sdk.Val, dialect.Val);
+      Context, SourceLanguage, file.Val, producer.Val, isOptimized.Val,
+      flags.Val, runtimeVersion.Val, splitDebugFilename.Val, emissionKind.Val,
+      enums.Val, retainedTypes.Val, globals.Val, imports.Val, macros.Val,
+      dwoId.Val, splitDebugInlining.Val, debugInfoForProfiling.Val,
+      nameTableKind.Val, rangesBaseAddress.Val, sysroot.Val, sdk.Val);
   return false;
 }
 

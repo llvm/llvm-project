@@ -1230,12 +1230,14 @@ DICompileUnit *DICompileUnit::getImpl(
     Metadata *GlobalVariables, Metadata *ImportedEntities, Metadata *Macros,
     uint64_t DWOId, bool SplitDebugInlining, bool DebugInfoForProfiling,
     unsigned NameTableKind, bool RangesBaseAddress, MDString *SysRoot,
-    MDString *SDK, MDString *Dialect, StorageType Storage, bool ShouldCreate) {
+    MDString *SDK, StorageType Storage, bool ShouldCreate) {
   assert(Storage != Uniqued && "Cannot unique DICompileUnit");
   assert(isCanonical(Producer) && "Expected canonical MDString");
   assert(isCanonical(Flags) && "Expected canonical MDString");
   assert(isCanonical(SplitDebugFilename) && "Expected canonical MDString");
-  assert((!Dialect || isCanonical(Dialect)) && "Expected canonical MDString");
+  assert((!SourceLanguage.getRawDialect() ||
+          isCanonical(SourceLanguage.getRawDialect())) &&
+         "Expected canonical MDString");
 
   Metadata *Ops[] = {File,
                      Producer,
@@ -1247,8 +1249,7 @@ DICompileUnit *DICompileUnit::getImpl(
                      ImportedEntities,
                      Macros,
                      SysRoot,
-                     SDK,
-                     Dialect};
+                     SDK};
   return storeImpl(new (std::size(Ops), Storage) DICompileUnit(
                        Context, Storage, SourceLanguage, IsOptimized,
                        RuntimeVersion, EmissionKind, DWOId, SplitDebugInlining,

@@ -1947,13 +1947,14 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     const auto LangVersionMask = (uint64_t(1) << 63);
     const bool HasVersionedLanguage = Record[1] & LangVersionMask;
     const uint32_t LanguageVersion = Record.size() > 22 ? Record[22] : 0;
+    auto *Dialect = Record.size() <= 23 ? nullptr : getMDString(Record[23]);
 
     auto *CU = DICompileUnit::getDistinct(
         Context,
         HasVersionedLanguage
             ? DISourceLanguageName(Record[1] & ~LangVersionMask,
-                                   LanguageVersion)
-            : DISourceLanguageName(Record[1]),
+                                   LanguageVersion, Dialect)
+            : DISourceLanguageName(Record[1], Dialect),
         getMDOrNull(Record[2]), getMDString(Record[3]), Record[4],
         getMDString(Record[5]), Record[6], getMDString(Record[7]), Record[8],
         getMDOrNull(Record[9]), getMDOrNull(Record[10]),
@@ -1964,12 +1965,11 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
         Record.size() <= 17 ? false : Record[17],
         Record.size() <= 18 ? 0 : Record[18],
         Record.size() <= 19 ? false : Record[19],
+        // Keep these guarded for backwards-compatibility with older bitcode
+        // records. In the current METADATA_COMPILE_UNIT layout, index 20 is
+        // sysroot, 21 is SDK, 22 is source-language version, and 23 is dialect.
         Record.size() <= 20 ? nullptr : getMDString(Record[20]),
-        Record.size() <= 21 ? nullptr : getMDString(Record[21]),
-        // Record layout matches ModuleBitcodeWriter::writeDICompileUnit. Index
-        // 22 is the source-language version (0 when unversioned), not dialect.
-        // Optional dialect is index 23; it is omitted when Record.size() <= 23.
-        Record.size() <= 23 ? nullptr : getMDString(Record[23]));
+        Record.size() <= 21 ? nullptr : getMDString(Record[21]));
 
     MetadataList.assignValue(CU, NextMetadataNo);
     NextMetadataNo++;

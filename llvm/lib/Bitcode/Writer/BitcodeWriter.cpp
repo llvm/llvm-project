@@ -2203,7 +2203,7 @@ void ModuleBitcodeWriter::writeDICompileUnit(const DICompileUnit *N,
   Record.push_back(VE.getMetadataOrNullID(N->getRawSysRoot()));
   Record.push_back(VE.getMetadataOrNullID(N->getRawSDK()));
   Record.push_back(Lang.hasVersionedName() ? Lang.getVersion() : 0);
-  Record.push_back(VE.getMetadataOrNullID(N->getRawDialect()));
+  Record.push_back(VE.getMetadataOrNullID(Lang.getRawDialect()));
 
   Stream.EmitRecord(bitc::METADATA_COMPILE_UNIT, Record, Abbrev);
   Record.clear();
