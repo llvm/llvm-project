@@ -452,8 +452,8 @@ define amdgpu_kernel void @s_test_imin_sle_v4i32(ptr addrspace(1) %out, <4 x i32
 ; GFX1250-NEXT:    s_min_i32 s3, s10, s14
 ; GFX1250-NEXT:    s_min_i32 s4, s8, s12
 ; GFX1250-NEXT:    s_min_i32 s5, s9, s13
-; GFX1250-NEXT:    v_mov_b32_e32 v0, s4
-; GFX1250-NEXT:    v_mov_b32_e32 v1, s5
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-NEXT:    v_mov_b64_e32 v[0:1], s[4:5]
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s3
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, s2
 ; GFX1250-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
@@ -1719,8 +1719,8 @@ define amdgpu_kernel void @s_test_imin_slt_v2i32(ptr addrspace(1) %out, <2 x i32
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_min_i32 s0, s0, s2
 ; GFX1250-NEXT:    s_min_i32 s1, s1, s3
-; GFX1250-NEXT:    v_mov_b32_e32 v0, s0
-; GFX1250-NEXT:    v_mov_b32_e32 v1, s1
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX1250-NEXT:    global_store_b64 v2, v[0:1], s[6:7]
 ; GFX1250-NEXT:    s_endpgm
   %cmp = icmp slt <2 x i32> %a, %b
@@ -3576,8 +3576,7 @@ define amdgpu_kernel void @s_test_umin_ult_v8i32(ptr addrspace(1) %out, <8 x i32
 ; GFX1250-NEXT:    s_min_u32 s9, s13, s21
 ; GFX1250-NEXT:    s_min_u32 s2, s11, s19
 ; GFX1250-NEXT:    s_min_u32 s3, s10, s18
-; GFX1250-NEXT:    v_mov_b32_e32 v0, s8
-; GFX1250-NEXT:    v_mov_b32_e32 v1, s9
+; GFX1250-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, s6
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s5

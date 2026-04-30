@@ -99,8 +99,7 @@ define amdgpu_kernel void @not_enough_agprs(ptr addrspace(1) %arg) #2 {
 ; HEURRC-NEXT:    v_mov_b64_e32 v[22:23], s[6:7]
 ; HEURRC-NEXT:    v_mov_b64_e32 v[24:25], s[8:9]
 ; HEURRC-NEXT:    v_mov_b64_e32 v[26:27], s[10:11]
-; HEURRC-NEXT:    v_mov_b32_e32 v28, s12
-; HEURRC-NEXT:    v_mov_b32_e32 v29, s13
+; HEURRC-NEXT:    v_mov_b64_e32 v[28:29], s[12:13]
 ; HEURRC-NEXT:    v_mov_b64_e32 v[30:31], s[14:15]
 ; HEURRC-NEXT:    s_nop 1
 ; HEURRC-NEXT:    v_mfma_f32_32x32x1_2b_f32 v[0:31], v33, v34, v[0:31] cbsz:1 abid:2 blgp:3
@@ -140,8 +139,7 @@ define amdgpu_kernel void @not_enough_agprs(ptr addrspace(1) %arg) #2 {
 ; VGPRRC-NEXT:    v_mov_b64_e32 v[22:23], s[6:7]
 ; VGPRRC-NEXT:    v_mov_b64_e32 v[24:25], s[8:9]
 ; VGPRRC-NEXT:    v_mov_b64_e32 v[26:27], s[10:11]
-; VGPRRC-NEXT:    v_mov_b32_e32 v28, s12
-; VGPRRC-NEXT:    v_mov_b32_e32 v29, s13
+; VGPRRC-NEXT:    v_mov_b64_e32 v[28:29], s[12:13]
 ; VGPRRC-NEXT:    v_mov_b64_e32 v[30:31], s[14:15]
 ; VGPRRC-NEXT:    s_nop 1
 ; VGPRRC-NEXT:    v_mfma_f32_32x32x1_2b_f32 v[0:31], v33, v34, v[0:31] cbsz:1 abid:2 blgp:3

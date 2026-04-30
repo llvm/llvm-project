@@ -2110,7 +2110,7 @@ define amdgpu_kernel void @lds_wg_st_release_single64(ptr addrspace(3) %p, i32 %
   ; GFX942-NEXT:   liveins: $sgpr4_sgpr5
   ; GFX942-NEXT: {{  $}}
   ; GFX942-NEXT:   early-clobber renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s64) from %ir.p.kernarg.offset, align 4, addrspace 4)
-  ; GFX942-NEXT:   $vgpr0_vgpr1 = V_MOV_B64_e32 killed $sgpr0_sgpr1, implicit $exec, implicit $exec
+  ; GFX942-NEXT:   $vgpr0_vgpr1 = V_MOV_B64_e32 killed $sgpr0_sgpr1, implicit $exec
   ; GFX942-NEXT:   DS_WRITE_B32_gfx9 killed renamable $vgpr0, killed renamable $vgpr1, 0, 0, implicit $exec :: (store syncscope("workgroup") release (s32) into %ir.2, addrspace 3)
   ; GFX942-NEXT:   S_ENDPGM 0
   ;
@@ -2393,7 +2393,7 @@ define amdgpu_kernel void @lds_wg_cmpxchg_acq_rel_monotonic_single64(ptr addrspa
   ; GFX942-NEXT:   liveins: $sgpr4_sgpr5
   ; GFX942-NEXT: {{  $}}
   ; GFX942-NEXT:   early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3 = S_LOAD_DWORDX4_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s128) from %ir.p.kernarg.offset, align 4, addrspace 4)
-  ; GFX942-NEXT:   $vgpr0_vgpr1 = V_MOV_B64_e32 killed $sgpr0_sgpr1, implicit $exec, implicit $exec
+  ; GFX942-NEXT:   $vgpr0_vgpr1 = V_MOV_B64_e32 killed $sgpr0_sgpr1, implicit $exec
   ; GFX942-NEXT:   $vgpr2 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
   ; GFX942-NEXT:   DS_CMPST_B32_gfx9 killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec :: (load store syncscope("workgroup") acq_rel monotonic (s32) on %ir.2, addrspace 3)
   ; GFX942-NEXT:   S_ENDPGM 0
@@ -2514,7 +2514,7 @@ define amdgpu_kernel void @lds_wg_cmpxchg_monotonic_acquire_single64(ptr addrspa
   ; GFX942-NEXT:   liveins: $sgpr4_sgpr5
   ; GFX942-NEXT: {{  $}}
   ; GFX942-NEXT:   early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3 = S_LOAD_DWORDX4_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s128) from %ir.p.kernarg.offset, align 4, addrspace 4)
-  ; GFX942-NEXT:   $vgpr0_vgpr1 = V_MOV_B64_e32 killed $sgpr0_sgpr1, implicit $exec, implicit $exec
+  ; GFX942-NEXT:   $vgpr0_vgpr1 = V_MOV_B64_e32 killed $sgpr0_sgpr1, implicit $exec
   ; GFX942-NEXT:   $vgpr2 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
   ; GFX942-NEXT:   DS_CMPST_B32_gfx9 killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec :: (load store syncscope("workgroup") monotonic acquire (s32) on %ir.2, addrspace 3)
   ; GFX942-NEXT:   S_ENDPGM 0

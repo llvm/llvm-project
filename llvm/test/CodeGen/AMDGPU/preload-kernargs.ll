@@ -700,9 +700,8 @@ define amdgpu_kernel void @v5f64_arg(ptr addrspace(1) nocapture inreg %out, <5 x
 ; GFX942-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    v_mov_b64_e32 v[2:3], s[12:13]
-; GFX942-NEXT:    v_mov_b32_e32 v0, s8
+; GFX942-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
 ; GFX942-NEXT:    global_store_dwordx2 v4, v[2:3], s[2:3] offset:32
-; GFX942-NEXT:    v_mov_b32_e32 v1, s9
 ; GFX942-NEXT:    v_mov_b64_e32 v[2:3], s[10:11]
 ; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3] offset:16
 ; GFX942-NEXT:    s_nop 1

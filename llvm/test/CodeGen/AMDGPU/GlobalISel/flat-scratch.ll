@@ -2810,8 +2810,7 @@ define void @store_load_v3i32_unaligned(ptr addrspace(5) nocapture %arg) {
 ; GFX942-NEXT:    s_mov_b32 s1, 2
 ; GFX942-NEXT:    s_mov_b32 s0, 1
 ; GFX942-NEXT:    v_mov_b32_e32 v4, s2
-; GFX942-NEXT:    v_mov_b32_e32 v3, s1
-; GFX942-NEXT:    v_mov_b32_e32 v2, s0
+; GFX942-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
 ; GFX942-NEXT:    scratch_store_dwordx3 v0, v[2:4], off sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    scratch_load_dwordx3 v[0:2], v0, off sc0 sc1

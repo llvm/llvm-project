@@ -636,9 +636,9 @@ define amdgpu_kernel void @calls_intrin_ascast_cc_kernel(ptr addrspace(3) %ptr) 
 ; GFX942-ARCH-FLAT:       ; %bb.0:
 ; GFX942-ARCH-FLAT-NEXT:    s_mov_b64 s[0:1], src_shared_base
 ; GFX942-ARCH-FLAT-NEXT:    s_load_dword s0, s[4:5], 0x0
-; GFX942-ARCH-FLAT-NEXT:    v_mov_b32_e32 v2, 7
 ; GFX942-ARCH-FLAT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-ARCH-FLAT-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
+; GFX942-ARCH-FLAT-NEXT:    v_mov_b32_e32 v2, 7
 ; GFX942-ARCH-FLAT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX942-ARCH-FLAT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-ARCH-FLAT-NEXT:    s_endpgm

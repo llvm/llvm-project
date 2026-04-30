@@ -1883,10 +1883,8 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
 
 void GCNPassConfig::addPostRegAlloc() {
   addPass(&SIFixVGPRCopiesID);
-  if (getOptLevel() > CodeGenOptLevel::None) {
-    addPass(&SIMergeVGPRCopiesID);
+  if (getOptLevel() > CodeGenOptLevel::None)
     addPass(&SIOptimizeExecMaskingLegacyID);
-  }
   TargetPassConfig::addPostRegAlloc();
 }
 
@@ -1899,6 +1897,8 @@ void GCNPassConfig::addPreSched2() {
 void GCNPassConfig::addPreEmitPass() {
   if (isPassEnabled(EnableVOPD, CodeGenOptLevel::Less))
     addPass(&GCNCreateVOPDID);
+  if (getOptLevel() > CodeGenOptLevel::None)
+    addPass(&SIMergeVGPRCopiesID);
   addPass(createSIMemoryLegalizerPass());
   addPass(createSIInsertWaitcntsPass());
 
@@ -2587,10 +2587,8 @@ Error AMDGPUCodeGenPassBuilder::addRegAssignmentOptimized(
 
 void AMDGPUCodeGenPassBuilder::addPostRegAlloc(PassManagerWrapper &PMW) const {
   addMachineFunctionPass(SIFixVGPRCopiesPass(), PMW);
-  if (TM.getOptLevel() > CodeGenOptLevel::None) {
-    addMachineFunctionPass(SIMergeVGPRCopiesPass(), PMW);
+  if (TM.getOptLevel() > CodeGenOptLevel::None)
     addMachineFunctionPass(SIOptimizeExecMaskingPass(), PMW);
-  }
   Base::addPostRegAlloc(PMW);
 }
 
@@ -2611,6 +2609,8 @@ void AMDGPUCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) const {
   if (isPassEnabled(EnableVOPD, CodeGenOptLevel::Less)) {
     addMachineFunctionPass(GCNCreateVOPDPass(), PMW);
   }
+  if (TM.getOptLevel() > CodeGenOptLevel::None)
+    addMachineFunctionPass(SIMergeVGPRCopiesPass(), PMW);
 
   addMachineFunctionPass(SIMemoryLegalizerPass(), PMW);
   addMachineFunctionPass(SIInsertWaitcntsPass(), PMW);

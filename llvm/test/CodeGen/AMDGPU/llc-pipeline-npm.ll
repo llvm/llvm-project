@@ -225,7 +225,6 @@
 ; GCN-O2-NEXT: machine-cp
 ; GCN-O2-NEXT: machinelicm
 ; GCN-O2-NEXT: si-fix-vgpr-copies
-; GCN-O2-NEXT: si-merge-vgpr-copies
 ; GCN-O2-NEXT: si-optimize-exec-masking
 ; GCN-O2-NEXT: remove-redundant-debug-values
 ; GCN-O2-NEXT: fixup-statepoint-caller-saved
@@ -244,6 +243,7 @@
 ; GCN-O2-NEXT: fentry-insert
 ; GCN-O2-NEXT: xray-instrumentation
 ; GCN-O2-NEXT: gcn-create-vopd
+; GCN-O2-NEXT: si-merge-vgpr-copies
 ; GCN-O2-NEXT: si-memory-legalizer
 ; GCN-O2-NEXT: si-insert-waitcnts
 ; GCN-O2-NEXT: si-mode-register
@@ -395,7 +395,6 @@
 ; GCN-O3-NEXT: machine-cp
 ; GCN-O3-NEXT: machinelicm
 ; GCN-O3-NEXT: si-fix-vgpr-copies
-; GCN-O3-NEXT: si-merge-vgpr-copies
 ; GCN-O3-NEXT: si-optimize-exec-masking
 ; GCN-O3-NEXT: remove-redundant-debug-values
 ; GCN-O3-NEXT: fixup-statepoint-caller-saved
@@ -414,6 +413,7 @@
 ; GCN-O3-NEXT: fentry-insert
 ; GCN-O3-NEXT: xray-instrumentation
 ; GCN-O3-NEXT: gcn-create-vopd
+; GCN-O3-NEXT: si-merge-vgpr-copies
 ; GCN-O3-NEXT: si-memory-legalizer
 ; GCN-O3-NEXT: si-insert-waitcnts
 ; GCN-O3-NEXT: si-mode-register

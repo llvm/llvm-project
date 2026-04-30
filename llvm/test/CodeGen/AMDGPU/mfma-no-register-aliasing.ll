@@ -315,8 +315,7 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32(ptr addrspace(1) %arg) #0 {
 ; GREEDY942-NEXT:    v_mov_b64_e32 v[22:23], s[6:7]
 ; GREEDY942-NEXT:    v_mov_b64_e32 v[24:25], s[8:9]
 ; GREEDY942-NEXT:    v_mov_b64_e32 v[26:27], s[10:11]
-; GREEDY942-NEXT:    v_mov_b32_e32 v28, s12
-; GREEDY942-NEXT:    v_mov_b32_e32 v29, s13
+; GREEDY942-NEXT:    v_mov_b64_e32 v[28:29], s[12:13]
 ; GREEDY942-NEXT:    v_mov_b64_e32 v[30:31], s[14:15]
 ; GREEDY942-NEXT:    s_nop 1
 ; GREEDY942-NEXT:    v_mfma_f32_32x32x1_2b_f32 v[0:31], v64, v65, v[0:31]

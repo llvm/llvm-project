@@ -493,8 +493,7 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32(ptr addrspace(1) %arg) #0 {
 ; GFX942-NEXT:    v_mov_b64_e32 v[22:23], s[6:7]
 ; GFX942-NEXT:    v_mov_b64_e32 v[24:25], s[8:9]
 ; GFX942-NEXT:    v_mov_b64_e32 v[26:27], s[10:11]
-; GFX942-NEXT:    v_mov_b32_e32 v28, s12
-; GFX942-NEXT:    v_mov_b32_e32 v29, s13
+; GFX942-NEXT:    v_mov_b64_e32 v[28:29], s[12:13]
 ; GFX942-NEXT:    v_mov_b64_e32 v[30:31], s[14:15]
 ; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_mfma_f32_32x32x1_2b_f32 v[0:31], v33, v34, v[0:31] cbsz:1 abid:2 blgp:3
@@ -534,8 +533,7 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32(ptr addrspace(1) %arg) #0 {
 ; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[22:23], s[6:7]
 ; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[24:25], s[8:9]
 ; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[26:27], s[10:11]
-; GFX942-VGPR-NEXT:    v_mov_b32_e32 v28, s12
-; GFX942-VGPR-NEXT:    v_mov_b32_e32 v29, s13
+; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[28:29], s[12:13]
 ; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[30:31], s[14:15]
 ; GFX942-VGPR-NEXT:    s_nop 1
 ; GFX942-VGPR-NEXT:    v_mfma_f32_32x32x1_2b_f32 v[0:31], v33, v34, v[0:31] cbsz:1 abid:2 blgp:3
@@ -1890,10 +1888,10 @@ define amdgpu_kernel void @test_mfma_f32_32x32x4f16(ptr addrspace(1) %arg, ptr a
 ; GFX942-NEXT:    s_load_dwordx4 s[0:3], s[38:39], 0x0
 ; GFX942-NEXT:    v_mov_b64_e32 v[0:1], s[16:17]
 ; GFX942-NEXT:    v_mov_b64_e32 v[2:3], s[18:19]
-; GFX942-NEXT:    v_mov_b64_e32 v[4:5], s[20:21]
-; GFX942-NEXT:    v_mov_b64_e32 v[6:7], s[22:23]
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    v_mov_b64_e32 v[34:35], s[0:1]
+; GFX942-NEXT:    v_mov_b64_e32 v[4:5], s[20:21]
+; GFX942-NEXT:    v_mov_b64_e32 v[6:7], s[22:23]
 ; GFX942-NEXT:    v_mov_b64_e32 v[8:9], s[24:25]
 ; GFX942-NEXT:    v_mov_b64_e32 v[10:11], s[26:27]
 ; GFX942-NEXT:    v_mov_b64_e32 v[12:13], s[28:29]
@@ -1932,10 +1930,10 @@ define amdgpu_kernel void @test_mfma_f32_32x32x4f16(ptr addrspace(1) %arg, ptr a
 ; GFX942-VGPR-NEXT:    s_load_dwordx4 s[0:3], s[38:39], 0x0
 ; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[0:1], s[16:17]
 ; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[2:3], s[18:19]
-; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[4:5], s[20:21]
-; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[6:7], s[22:23]
 ; GFX942-VGPR-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[34:35], s[0:1]
+; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[4:5], s[20:21]
+; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[6:7], s[22:23]
 ; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[8:9], s[24:25]
 ; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[10:11], s[26:27]
 ; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[12:13], s[28:29]
@@ -3337,8 +3335,7 @@ define amdgpu_kernel void @test_mfma_i32_32x32x4i8(ptr addrspace(1) %arg) #0 {
 ; GFX942-NEXT:    v_mov_b64_e32 v[22:23], s[6:7]
 ; GFX942-NEXT:    v_mov_b64_e32 v[24:25], s[8:9]
 ; GFX942-NEXT:    v_mov_b64_e32 v[26:27], s[10:11]
-; GFX942-NEXT:    v_mov_b32_e32 v28, s12
-; GFX942-NEXT:    v_mov_b32_e32 v29, s13
+; GFX942-NEXT:    v_mov_b64_e32 v[28:29], s[12:13]
 ; GFX942-NEXT:    v_mov_b64_e32 v[30:31], s[14:15]
 ; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_mfma_i32_32x32x4_2b_i8 v[0:31], v33, v34, v[0:31] cbsz:1 abid:2 blgp:3
@@ -3378,8 +3375,7 @@ define amdgpu_kernel void @test_mfma_i32_32x32x4i8(ptr addrspace(1) %arg) #0 {
 ; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[22:23], s[6:7]
 ; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[24:25], s[8:9]
 ; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[26:27], s[10:11]
-; GFX942-VGPR-NEXT:    v_mov_b32_e32 v28, s12
-; GFX942-VGPR-NEXT:    v_mov_b32_e32 v29, s13
+; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[28:29], s[12:13]
 ; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[30:31], s[14:15]
 ; GFX942-VGPR-NEXT:    s_nop 1
 ; GFX942-VGPR-NEXT:    v_mfma_i32_32x32x4_2b_i8 v[0:31], v33, v34, v[0:31] cbsz:1 abid:2 blgp:3
@@ -4768,8 +4764,7 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32_forward_acc(ptr addrspace(1)
 ; GFX942-NEXT:    v_mov_b64_e32 v[22:23], s[6:7]
 ; GFX942-NEXT:    v_mov_b64_e32 v[24:25], s[8:9]
 ; GFX942-NEXT:    v_mov_b64_e32 v[26:27], s[10:11]
-; GFX942-NEXT:    v_mov_b32_e32 v28, s12
-; GFX942-NEXT:    v_mov_b32_e32 v29, s13
+; GFX942-NEXT:    v_mov_b64_e32 v[28:29], s[12:13]
 ; GFX942-NEXT:    v_mov_b64_e32 v[30:31], s[14:15]
 ; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_mfma_f32_32x32x1_2b_f32 v[0:31], v32, v33, v[0:31]
@@ -4810,8 +4805,7 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32_forward_acc(ptr addrspace(1)
 ; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[22:23], s[6:7]
 ; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[24:25], s[8:9]
 ; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[26:27], s[10:11]
-; GFX942-VGPR-NEXT:    v_mov_b32_e32 v28, s12
-; GFX942-VGPR-NEXT:    v_mov_b32_e32 v29, s13
+; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[28:29], s[12:13]
 ; GFX942-VGPR-NEXT:    v_mov_b64_e32 v[30:31], s[14:15]
 ; GFX942-VGPR-NEXT:    s_nop 1
 ; GFX942-VGPR-NEXT:    v_mfma_f32_32x32x1_2b_f32 v[0:31], v32, v33, v[0:31]

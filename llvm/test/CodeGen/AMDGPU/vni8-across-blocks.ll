@@ -574,10 +574,9 @@ define amdgpu_kernel void @v8i8_phi_const(ptr addrspace(1) %src1, ptr addrspace(
 ; GFX942-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX942-NEXT:    v_lshl_or_b32 v3, v11, 16, v3
 ; GFX942-NEXT:    global_store_dwordx2 v4, v[2:3], s[12:13]
-; GFX942-NEXT:    v_mov_b32_e32 v2, v0
+; GFX942-NEXT:    v_mov_b64_e32 v[2:3], v[0:1]
 ; GFX942-NEXT:    v_mov_b32_e32 v11, v10
 ; GFX942-NEXT:    v_pk_mov_b32 v[12:13], v[8:9], v[8:9] op_sel:[1,0]
-; GFX942-NEXT:    v_mov_b32_e32 v3, v1
 ; GFX942-NEXT:    v_pk_mov_b32 v[14:15], v[6:7], v[6:7] op_sel:[1,0]
 ; GFX942-NEXT:    v_mov_b32_e32 v16, v5
 ; GFX942-NEXT:  .LBB10_4: ; %bb.3
