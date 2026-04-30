@@ -22,6 +22,8 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Allocator.h"
 
+#include <limits>
+
 namespace llvm::ubi {
 
 using namespace PatternMatch;
@@ -744,8 +746,21 @@ public:
       const auto &Vec = Args[0].asAggregate();
       const auto &SubVec = Args[1].asAggregate();
       const auto &Idx = Args[2].asInteger();
-      const uint64_t Offset = Idx.getZExtValue();
-      if (Offset + SubVec.size() > Vec.size())
+      auto EC = cast<VectorType>(CB.getArgOperand(1)->getType())
+                    ->getElementCount();
+      const uint64_t RawOffset = Idx.getZExtValue();
+      if (RawOffset % EC.getKnownMinValue() != 0) {
+        reportImmediateUB("llvm.vector.insert index is not a multiple of the "
+                          "subvector's known minimum vector length.");
+        return AnyValue::poison();
+      }
+      const uint32_t VScale = Ctx.getVScale();
+      if (EC.isScalable() && VScale != 0 &&
+          RawOffset > std::numeric_limits<uint64_t>::max() / VScale)
+        return AnyValue::poison();
+      const uint64_t Offset =
+          EC.isScalable() ? RawOffset * VScale : RawOffset;
+      if (Offset > Vec.size() || SubVec.size() > Vec.size() - Offset)
         return AnyValue::poison();
       std::vector<AnyValue> Res;
       Res.reserve(Vec.size());
@@ -762,10 +777,21 @@ public:
         return AnyValue::poison();
       const auto &Vec = Args[0].asAggregate();
       const auto &Idx = Args[1].asInteger();
-      const uint64_t Offset = Idx.getZExtValue();
-      const uint64_t DstSize =
-          Ctx.getEVL(cast<VectorType>(RetTy)->getElementCount());
-      if (Offset + DstSize > Vec.size())
+      auto EC = cast<VectorType>(RetTy)->getElementCount();
+      const uint64_t RawOffset = Idx.getZExtValue();
+      if (RawOffset % EC.getKnownMinValue() != 0) {
+        reportImmediateUB("llvm.vector.extract index is not a multiple of the "
+                          "result's known minimum vector length.");
+        return AnyValue::poison();
+      }
+      const uint32_t VScale = Ctx.getVScale();
+      if (EC.isScalable() && VScale != 0 &&
+          RawOffset > std::numeric_limits<uint64_t>::max() / VScale)
+        return AnyValue::poison();
+      const uint64_t Offset =
+          EC.isScalable() ? RawOffset * VScale : RawOffset;
+      const uint64_t DstSize = Ctx.getEVL(EC);
+      if (Offset > Vec.size() || DstSize > Vec.size() - Offset)
         return AnyValue::poison();
       return std::vector(Vec.begin() + Offset, Vec.begin() + Offset + DstSize);
     }

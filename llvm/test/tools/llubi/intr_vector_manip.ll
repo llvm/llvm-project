@@ -5,12 +5,12 @@ define void @main() {
   %insert_mid = call <6 x i32> @llvm.vector.insert.v6i32.v2i32(<6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>, <2 x i32> <i32 10, i32 11>, i64 2)
   %insert_poison_lane = call <6 x i32> @llvm.vector.insert.v6i32.v2i32(<6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>, <2 x i32> <i32 poison, i32 11>, i64 2)
   %insert_tail = call <6 x i32> @llvm.vector.insert.v6i32.v2i32(<6 x i32> zeroinitializer, <2 x i32> <i32 9, i32 10>, i64 4)
-  %insert_poison = call <6 x i32> @llvm.vector.insert.v6i32.v2i32(<6 x i32> zeroinitializer, <2 x i32> <i32 9, i32 10>, i64 5)
+  %insert_poison = call <6 x i32> @llvm.vector.insert.v6i32.v2i32(<6 x i32> zeroinitializer, <2 x i32> <i32 9, i32 10>, i64 6)
 
   %extract_mid = call <2 x i32> @llvm.vector.extract.v2i32.v6i32(<6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>, i64 2)
   %extract_poison_lane = call <2 x i32> @llvm.vector.extract.v2i32.v6i32(<6 x i32> <i32 0, i32 poison, i32 2, i32 3, i32 4, i32 5>, i64 0)
   %extract_tail = call <2 x i32> @llvm.vector.extract.v2i32.v6i32(<6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>, i64 4)
-  %extract_poison = call <2 x i32> @llvm.vector.extract.v2i32.v6i32(<6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>, i64 5)
+  %extract_poison = call <2 x i32> @llvm.vector.extract.v2i32.v6i32(<6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>, i64 6)
 
   %reverse = call <4 x i32> @llvm.vector.reverse.v4i32(<4 x i32> <i32 0, i32 1, i32 2, i32 3>)
   %reverse_poison = call <4 x i32> @llvm.vector.reverse.v4i32(<4 x i32> <i32 0, i32 poison, i32 2, i32 3>)
@@ -35,11 +35,11 @@ define void @main() {
 ; CHECK-NEXT:   %insert_mid = call <6 x i32> @llvm.vector.insert.v6i32.v2i32(<6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>, <2 x i32> <i32 10, i32 11>, i64 2) => { i32 0, i32 1, i32 10, i32 11, i32 4, i32 5 }
 ; CHECK-NEXT:   %insert_poison_lane = call <6 x i32> @llvm.vector.insert.v6i32.v2i32(<6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>, <2 x i32> <i32 poison, i32 11>, i64 2) => { i32 0, i32 1, poison, i32 11, i32 4, i32 5 }
 ; CHECK-NEXT:   %insert_tail = call <6 x i32> @llvm.vector.insert.v6i32.v2i32(<6 x i32> zeroinitializer, <2 x i32> <i32 9, i32 10>, i64 4) => { i32 0, i32 0, i32 0, i32 0, i32 9, i32 10 }
-; CHECK-NEXT:   %insert_poison = call <6 x i32> @llvm.vector.insert.v6i32.v2i32(<6 x i32> zeroinitializer, <2 x i32> <i32 9, i32 10>, i64 5) => poison
+; CHECK-NEXT:   %insert_poison = call <6 x i32> @llvm.vector.insert.v6i32.v2i32(<6 x i32> zeroinitializer, <2 x i32> <i32 9, i32 10>, i64 6) => poison
 ; CHECK-NEXT:   %extract_mid = call <2 x i32> @llvm.vector.extract.v2i32.v6i32(<6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>, i64 2) => { i32 2, i32 3 }
 ; CHECK-NEXT:   %extract_poison_lane = call <2 x i32> @llvm.vector.extract.v2i32.v6i32(<6 x i32> <i32 0, i32 poison, i32 2, i32 3, i32 4, i32 5>, i64 0) => { i32 0, poison }
 ; CHECK-NEXT:   %extract_tail = call <2 x i32> @llvm.vector.extract.v2i32.v6i32(<6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>, i64 4) => { i32 4, i32 5 }
-; CHECK-NEXT:   %extract_poison = call <2 x i32> @llvm.vector.extract.v2i32.v6i32(<6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>, i64 5) => poison
+; CHECK-NEXT:   %extract_poison = call <2 x i32> @llvm.vector.extract.v2i32.v6i32(<6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>, i64 6) => poison
 ; CHECK-NEXT:   %reverse = call <4 x i32> @llvm.vector.reverse.v4i32(<4 x i32> <i32 0, i32 1, i32 2, i32 3>) => { i32 3, i32 2, i32 1, i32 0 }
 ; CHECK-NEXT:   %reverse_poison = call <4 x i32> @llvm.vector.reverse.v4i32(<4 x i32> <i32 0, i32 poison, i32 2, i32 3>) => { i32 3, i32 2, poison, i32 0 }
 ; CHECK-NEXT:   %splice_left = call <4 x i32> @llvm.vector.splice.left.v4i32(<4 x i32> <i32 0, i32 1, i32 2, i32 3>, <4 x i32> <i32 10, i32 11, i32 12, i32 13>, i32 2) => { i32 2, i32 3, i32 10, i32 11 }
