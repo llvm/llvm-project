@@ -93,13 +93,13 @@ gpu.module @test_distribution {
     gpu.return
   }
 
-  // CHECK-LABEL: dpas_mx
+   // CHECK-LABEL: dpas_mx
   gpu.func @dpas_mx(%a: memref<128x128xf8E5M2>, %b: memref<128x128xf8E5M2>, %a_scale: memref<128x4xf8E8M0FNU>, %b_scale: memref<4x128xf8E8M0FNU>) {
-    // CHECK: %[[DPAS_MX:.*]] = xegpu.dpas_mx %{{.*}}, %{{.*}}, %{{.*}} scale_a = %{{.*}} scale_b = %{{.*}} {layout_a = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, layout_a_scale = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, layout_b = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>, layout_b_scale = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, layout_cd = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} : vector<16x128xf8E5M2>, vector<128x16xf8E5M2>, vector<16x16xbf16>, vector<16x4xf8E8M0FNU>, vector<4x16xf8E8M0FNU> -> vector<16x16xbf16>
+    // CHECK: %[[DPAS_MX:.*]] = xegpu.dpas_mx %{{.*}}, %{{.*}}, %{{.*}} scale_a = %{{.*}} scale_b = %{{.*}} {layout_a = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 2]>, layout_a_scale = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>, layout_b = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>, layout_b_scale = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, layout_cd = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} : vector<16x128xf8E5M2>, vector<128x16xf8E5M2>, vector<16x16xbf16>, vector<16x4xf8E8M0FNU>, vector<4x16xf8E8M0FNU> -> vector<16x16xbf16>
     %tdesc_a = xegpu.create_nd_tdesc %a : memref<128x128xf8E5M2>
-      -> !xegpu.tensor_desc<128x128xf8E5M2, #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 128], lane_layout = [1, 16], lane_data = [1, 1]>>
-    %load_a =  xegpu.load_nd %tdesc_a[0, 0] {layout = #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 128], lane_layout = [1, 16], lane_data = [1, 1]>}
-      : !xegpu.tensor_desc<128x128xf8E5M2, #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 128], lane_layout = [1, 16], lane_data = [1, 1]>>
+      -> !xegpu.tensor_desc<128x128xf8E5M2, #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 128], lane_layout = [1, 16], lane_data = [1, 2]>>
+    %load_a =  xegpu.load_nd %tdesc_a[0, 0] {layout = #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 128], lane_layout = [1, 16], lane_data = [1, 2]>}
+      : !xegpu.tensor_desc<128x128xf8E5M2, #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 128], lane_layout = [1, 16], lane_data = [1, 2]>>
       -> vector<128x128xf8E5M2>
     %tdesc_b = xegpu.create_nd_tdesc %b : memref<128x128xf8E5M2>
       -> !xegpu.tensor_desc<128x128xf8E5M2, #xegpu.layout<sg_layout = [8, 8], sg_data = [128, 16], lane_layout = [1, 16], lane_data = [2, 1]>>
@@ -107,9 +107,9 @@ gpu.module @test_distribution {
       : !xegpu.tensor_desc<128x128xf8E5M2, #xegpu.layout<sg_layout = [8, 8], sg_data = [128, 16], lane_layout = [1, 16], lane_data = [2, 1]>>
       -> vector<128x128xf8E5M2>
     %tdesc_a_scale = xegpu.create_nd_tdesc %a_scale : memref<128x4xf8E8M0FNU>
-      -> !xegpu.tensor_desc<128x4xf8E8M0FNU, #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 4], lane_layout = [1, 16], lane_data = [1, 1]>>
-    %load_a_scale =  xegpu.load_nd %tdesc_a_scale[0, 0] {layout = #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 4], lane_layout = [1, 16], lane_data = [1, 1]>}
-      : !xegpu.tensor_desc<128x4xf8E8M0FNU, #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 4], lane_layout = [1, 16], lane_data = [1, 1]>>
+      -> !xegpu.tensor_desc<128x4xf8E8M0FNU, #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 4], lane_layout = [16, 1], lane_data = [1, 1]>>
+    %load_a_scale =  xegpu.load_nd %tdesc_a_scale[0, 0] {layout = #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 4], lane_layout = [16, 1], lane_data = [1, 1]>}
+      : !xegpu.tensor_desc<128x4xf8E8M0FNU, #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 4], lane_layout = [16, 1], lane_data = [1, 1]>>
       -> vector<128x4xf8E8M0FNU>
     %tdesc_b_scale = xegpu.create_nd_tdesc %b_scale : memref<4x128xf8E8M0FNU>
       -> !xegpu.tensor_desc<4x128xf8E8M0FNU, #xegpu.layout<sg_layout = [8, 8], sg_data = [4, 16], lane_layout = [1, 16], lane_data = [1, 1]>>
@@ -118,10 +118,10 @@ gpu.module @test_distribution {
       -> vector<4x128xf8E8M0FNU>
     %cst = arith.constant dense<0.0> : vector<128x128xbf16>
     %dpas_mx = xegpu.dpas_mx %load_a, %load_b, %cst scale_a = %load_a_scale scale_b = %load_b_scale
-       {layout_a = #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 128], lane_layout = [1, 16], lane_data = [1, 1]>,
+       {layout_a = #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 128], lane_layout = [1, 16], lane_data = [1, 2]>,
         layout_b = #xegpu.layout<sg_layout = [8, 8], sg_data = [128, 16], lane_layout = [1, 16], lane_data = [2, 1]>,
         layout_cd =  #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 16], lane_layout = [1, 16], lane_data = [1, 1]>,
-        layout_a_scale = #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 4], lane_layout = [1, 16], lane_data = [1, 1]>,
+        layout_a_scale = #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 4], lane_layout = [16, 1], lane_data = [1, 1]>,
         layout_b_scale = #xegpu.layout<sg_layout = [8, 8], sg_data = [4, 16], lane_layout = [1, 16], lane_data = [1, 1]>}
       : vector<128x128xf8E5M2>, vector<128x128xf8E5M2>, vector<128x128xbf16>, vector<128x4xf8E8M0FNU>, vector<4x128xf8E8M0FNU> -> vector<128x128xbf16>
     gpu.return
