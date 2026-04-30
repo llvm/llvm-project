@@ -1826,7 +1826,7 @@ void SymbolFileNativePDB::ParseInlineSite(PdbCompilandSymId id,
         S_INLINESITE) {
       // Its parent is another inline site, lookup parent site's range vector
       // for callsite line.
-      ParseInlineSite(parent_id, func_base);
+      ParseInlineSite(parent_id, Address(func_base));
       std::shared_ptr<InlineSite> parent_site =
           m_inline_sites[toOpaqueUid(parent_id)];
       FileSpec &parent_decl_file =
@@ -3109,13 +3109,13 @@ SymbolFileNativePDB::ResolveUdtDeclaration(PdbTypeSymId type_id) {
 
   auto it = m_udt_declarations.find(type_id.index);
   if (it == m_udt_declarations.end())
-    return llvm::createStringError("No UDT declaration found");
+    return llvm::createStringError("no UDT declaration found");
 
   llvm::StringRef file_name;
   if (it->second.IsIpiIndex) {
     CVType cvt = m_index->ipi().getType(it->second.FileNameIndex);
     if (cvt.kind() != LF_STRING_ID)
-      return llvm::createStringError("File name was not a LF_STRING_ID");
+      return llvm::createStringError("file name was not a LF_STRING_ID");
 
     StringIdRecord sid;
     if (auto err = TypeDeserializer::deserializeAs(cvt, sid))

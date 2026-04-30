@@ -23,13 +23,13 @@ namespace impl {
 /// Lookup a device-side function using a host pointer /p HstPtr using the table
 /// provided by the device plugin. The table is an ordered pair of host and
 /// device pointers sorted on the value of the host pointer.
-static void *indirectCallLookup(void *HstPtr) {
+static FnPtrTy indirectCallLookup(FnPtrTy HstPtr) {
   if (!HstPtr)
     return nullptr;
 
   struct IndirectCallTable {
-    void *HstPtr;
-    void *DevPtr;
+    FnPtrTy HstPtr;
+    FnPtrTy DevPtr;
   };
   IndirectCallTable *Table =
       reinterpret_cast<IndirectCallTable *>(config::getIndirectCallTablePtr());
@@ -89,7 +89,7 @@ double omp_get_wtime(void) {
   return static_cast<double>(__builtin_readsteadycounter()) * omp_get_wtick();
 }
 
-void *__llvm_omp_indirect_call_lookup(void *HstPtr) {
+FnPtrTy __llvm_omp_indirect_call_lookup(FnPtrTy HstPtr) {
   return ompx::impl::indirectCallLookup(HstPtr);
 }
 

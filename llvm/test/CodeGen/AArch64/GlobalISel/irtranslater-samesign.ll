@@ -7,11 +7,11 @@ define <2 x i1> @call_icmp_samesign_vector(<2 x i32> %a, <2 x i32> %b) {
   ; CHECK: bb.1.entry:
   ; CHECK-NEXT:   liveins: $d0, $d1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $d1
-  ; CHECK-NEXT:   %2:_(<2 x s1>) = samesign G_ICMP intpred(ult), [[COPY]](<2 x s32>), [[COPY1]]
-  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(<2 x s32>) = G_ANYEXT %2(<2 x s1>)
-  ; CHECK-NEXT:   $d0 = COPY [[ANYEXT]](<2 x s32>)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x i32>) = COPY $d0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<2 x i32>) = COPY $d1
+  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(<2 x i1>) = samesign G_ICMP intpred(ult), [[COPY]](<2 x i32>), [[COPY1]]
+  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(<2 x i32>) = G_ANYEXT [[ICMP]](<2 x i1>)
+  ; CHECK-NEXT:   $d0 = COPY [[ANYEXT]](<2 x i32>)
   ; CHECK-NEXT:   RET_ReallyLR implicit $d0
 entry:
   %result = icmp samesign ult <2 x i32> %a, %b
@@ -23,11 +23,11 @@ define <2 x i1> @call_icmp_vector(<2 x i32> %a, <2 x i32> %b) {
   ; CHECK: bb.1.entry:
   ; CHECK-NEXT:   liveins: $d0, $d1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $d1
-  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(<2 x s1>) = G_ICMP intpred(ult), [[COPY]](<2 x s32>), [[COPY1]]
-  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(<2 x s32>) = G_ANYEXT [[ICMP]](<2 x s1>)
-  ; CHECK-NEXT:   $d0 = COPY [[ANYEXT]](<2 x s32>)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x i32>) = COPY $d0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<2 x i32>) = COPY $d1
+  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(<2 x i1>) = G_ICMP intpred(ult), [[COPY]](<2 x i32>), [[COPY1]]
+  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(<2 x i32>) = G_ANYEXT [[ICMP]](<2 x i1>)
+  ; CHECK-NEXT:   $d0 = COPY [[ANYEXT]](<2 x i32>)
   ; CHECK-NEXT:   RET_ReallyLR implicit $d0
 entry:
   %result = icmp ult <2 x i32> %a, %b
@@ -39,12 +39,12 @@ define i1 @call_icmp(i32 %a) {
   ; CHECK: bb.1.entry:
   ; CHECK-NEXT:   liveins: $w0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
-  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ult), [[COPY]](s32), [[C]]
-  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s8) = G_ZEXT [[ICMP]](s1)
-  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ZEXT]](s8)
-  ; CHECK-NEXT:   $w0 = COPY [[ANYEXT]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 3
+  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ult), [[COPY]](i32), [[C]]
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(i8) = G_ZEXT [[ICMP]](i1)
+  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[ZEXT]](i8)
+  ; CHECK-NEXT:   $w0 = COPY [[ANYEXT]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
 entry:
   %result = icmp ult i32 %a, 3
@@ -56,12 +56,12 @@ define i1 @call_icmp_samesign(i32 %a) {
   ; CHECK: bb.1.entry:
   ; CHECK-NEXT:   liveins: $w0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
-  ; CHECK-NEXT:   %2:_(s1) = samesign G_ICMP intpred(ult), [[COPY]](s32), [[C]]
-  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s8) = G_ZEXT %2(s1)
-  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ZEXT]](s8)
-  ; CHECK-NEXT:   $w0 = COPY [[ANYEXT]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 3
+  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(i1) = samesign G_ICMP intpred(ult), [[COPY]](i32), [[C]]
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(i8) = G_ZEXT [[ICMP]](i1)
+  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[ZEXT]](i8)
+  ; CHECK-NEXT:   $w0 = COPY [[ANYEXT]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
 entry:
   %result = icmp samesign ult i32 %a, 3

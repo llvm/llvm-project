@@ -356,7 +356,7 @@ static int AssembleInput(const char *ProgName, const Target *TheTarget,
   std::unique_ptr<MCAsmParser> Parser(
       createMCAsmParser(SrcMgr, Ctx, Str, MAI));
   std::unique_ptr<MCTargetAsmParser> TAP(
-      TheTarget->createMCAsmParser(STI, *Parser, MCII, MCOptions));
+      TheTarget->createMCAsmParser(STI, *Parser, MCII));
 
   if (!TAP) {
     WithColor::error(errs(), ProgName)
@@ -413,6 +413,8 @@ int main(int argc, char **argv) {
   MCOptions.MCNoExecStack = NoExecStack;
   MCOptions.MCUseDwarfDirectory = MCTargetOptions::EnableDwarfDirectory;
   MCOptions.InstPrinterOptions = InstPrinterOptions;
+  if (OutputAsmVariant.getNumOccurrences())
+    MCOptions.OutputAsmVariant = OutputAsmVariant;
 
   setDwarfDebugFlags(argc, argv);
   setDwarfDebugProducer();
@@ -489,8 +491,7 @@ int main(int argc, char **argv) {
 
   // FIXME: This is not pretty. MCContext has a ptr to MCObjectFileInfo and
   // MCObjectFileInfo needs a MCContext reference in order to initialize itself.
-  MCContext Ctx(TheTriple, MAI.get(), MRI.get(), STI.get(), &SrcMgr,
-                &MCOptions);
+  MCContext Ctx(TheTriple, *MAI, MRI.get(), STI.get(), &SrcMgr);
   std::unique_ptr<MCObjectFileInfo> MOFI(
       TheTarget->createMCObjectFileInfo(Ctx, PIC, LargeCodeModel));
   Ctx.setObjectFileInfo(MOFI.get());
@@ -586,9 +587,7 @@ int main(int argc, char **argv) {
     TheTarget->createNullTargetStreamer(*FFS);
     Str = std::move(FFS);
   } else if (FileType == OFT_AssemblyFile) {
-    unsigned AsmVariant = OutputAsmVariant.getNumOccurrences()
-                              ? OutputAsmVariant
-                              : MAI->getAssemblerDialect();
+    unsigned AsmVariant = MAI->getOutputAssemblerDialect();
     IP.reset(TheTarget->createMCInstPrinter(Triple(TripleName), AsmVariant,
                                             *MAI, *MCII, *MRI));
 

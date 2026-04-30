@@ -46,19 +46,6 @@ class Value;
 /// vectors it is an expression determined at runtime.
 Value *getRuntimeVF(IRBuilderBase &B, Type *Ty, ElementCount VF);
 
-/// Return a value for Step multiplied by VF.
-Value *createStepForVF(IRBuilderBase &B, Type *Ty, ElementCount VF,
-                       int64_t Step);
-
-/// Compute the transformed value of Index at offset StartValue using step
-/// StepValue.
-/// For integer induction, returns StartValue + Index * StepValue.
-/// For pointer induction, returns StartValue[Index * StepValue].
-Value *emitTransformedIndex(IRBuilderBase &B, Value *Index, Value *StartValue,
-                            Value *Step,
-                            InductionDescriptor::InductionKind InductionKind,
-                            const BinaryOperator *InductionBinOp);
-
 /// A range of powers-of-2 vectorization factors with fixed start and
 /// adjustable end. The range includes start and excludes end, e.g.,:
 /// [1, 16) = {1, 2, 4, 8}
@@ -366,15 +353,10 @@ struct VPCostContext {
 
   /// \returns how much the cost of a predicated block should be divided by.
   /// Forwards to LoopVectorizationCostModel::getPredBlockCostDivisor.
-  unsigned getPredBlockCostDivisor(BasicBlock *BB) const;
+  uint64_t getPredBlockCostDivisor(BasicBlock *BB) const;
 
   /// Returns the OperandInfo for \p V, if it is a live-in.
   TargetTransformInfo::OperandValueInfo getOperandInfo(VPValue *V) const;
-
-  /// Return true if \p I is considered uniform-after-vectorization in the
-  /// legacy cost model for \p VF. Only used to check for additional VPlan
-  /// simplifications.
-  bool isLegacyUniformAfterVectorization(Instruction *I, ElementCount VF) const;
 
   /// Estimate the overhead of scalarizing a recipe with result type \p ResultTy
   /// and \p Operands with \p VF. This is a convenience wrapper for the

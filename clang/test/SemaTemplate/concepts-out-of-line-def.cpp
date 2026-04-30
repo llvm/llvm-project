@@ -842,7 +842,7 @@ namespace PackIndexExpr {
 template <int... T>
 concept C = true;
 
-template <typename...> struct TplClass {
+template <typename...> struct TplClass { // #TplClassDef
   template <int... Ts>
   requires C<Ts...[0]>
   static auto buggy() -> void;
@@ -852,6 +852,10 @@ template <>
 template <int... Ts>
 requires C<Ts...[0]>
 auto TplClass<int>::buggy() -> void {}
+// FIXME: These shouldn't diagnose, but are a result of a revert: #193558
+// expected-error@-2{{does not match any declaration in}}
+// expected-note@#TplClassDef{{TplClass defined here}}
+//
 }
 
 namespace GH139476 {

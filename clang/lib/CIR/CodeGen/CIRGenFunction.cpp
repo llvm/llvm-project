@@ -20,6 +20,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/IR/FPEnv.h"
 
 #include <cassert>
@@ -245,16 +246,7 @@ void CIRGenFunction::LexicalScope::cleanup() {
   CIRGenBuilderTy &builder = cgf.builder;
   LexicalScope *localScope = cgf.curLexScope;
 
-  auto applyCleanup = [&]() {
-    if (performCleanup) {
-      // ApplyDebugLocation
-      assert(!cir::MissingFeatures::generateDebugInfo());
-      forceCleanup();
-    }
-  };
-
-  // Cleanup are done right before codegen resumes a scope. This is where
-  // objects are destroyed. Process all return blocks.
+  // Process all return blocks — emit cir.return ops.
   // TODO(cir): Handle returning from a switch statement through a cleanup
   // block. We can't simply jump to the cleanup block, because the cleanup block
   // is not part of the case region. Either reemit all cleanups in the return
@@ -268,74 +260,13 @@ void CIRGenFunction::LexicalScope::cleanup() {
     emitReturn(retLoc);
   }
 
-  auto insertCleanupAndLeave = [&](mlir::Block *insPt) {
-    mlir::OpBuilder::InsertionGuard guard(builder);
-    builder.setInsertionPointToEnd(insPt);
-
-    // If we still don't have a cleanup block, it means that `applyCleanup`
-    // below might be able to get us one.
-    mlir::Block *cleanupBlock = localScope->getCleanupBlock(builder);
-
-    // Leverage and defers to RunCleanupsScope's dtor and scope handling.
-    applyCleanup();
-
-    mlir::Block *currentBlock = builder.getBlock();
-
-    // If we now have one after `applyCleanup`, hook it up properly.
-    if (!cleanupBlock && localScope->getCleanupBlock(builder)) {
-      cleanupBlock = localScope->getCleanupBlock(builder);
-      cir::BrOp::create(builder, insPt->back().getLoc(), cleanupBlock);
-      if (!cleanupBlock->mightHaveTerminator()) {
-        mlir::OpBuilder::InsertionGuard guard(builder);
-        builder.setInsertionPointToEnd(cleanupBlock);
-        cir::YieldOp::create(builder, localScope->endLoc);
-      }
-    }
-
-    if (localScope->depth == 0) {
-      // Reached the end of the function.
-      // Special handling only for single return block case
-      if (localScope->getRetBlocks().size() == 1) {
-        mlir::Block *retBlock = localScope->getRetBlocks()[0];
-        mlir::Location retLoc = localScope->getRetLoc(retBlock);
-        if (retBlock->getUses().empty()) {
-          retBlock->erase();
-        } else {
-          // Thread return block via cleanup block.
-          if (cleanupBlock) {
-            for (mlir::BlockOperand &blockUse : retBlock->getUses()) {
-              cir::BrOp brOp = mlir::cast<cir::BrOp>(blockUse.getOwner());
-              brOp.setSuccessor(cleanupBlock);
-            }
-          }
-
-          cir::BrOp::create(builder, retLoc, retBlock);
-          return;
-        }
-      }
-      emitImplicitReturn();
-      return;
-    }
-
-    // End of any local scope != function
-    // Ternary ops have to deal with matching arms for yielding types
-    // and do return a value, it must do its own cir.yield insertion.
-    if (!localScope->isTernary() && !currentBlock->mightHaveTerminator()) {
-      !retVal ? cir::YieldOp::create(builder, localScope->endLoc)
-              : cir::YieldOp::create(builder, localScope->endLoc, retVal);
-    }
-  };
-
-  // If a cleanup block has been created at some point, branch to it
-  // and set the insertion point to continue at the cleanup block.
-  // Terminators are then inserted either in the cleanup block or
-  // inline in this current block.
-  mlir::Block *cleanupBlock = localScope->getCleanupBlock(builder);
-  if (cleanupBlock)
-    insertCleanupAndLeave(cleanupBlock);
-
-  // Now deal with any pending block wrap up like implicit end of
-  // scope.
+  // Pop cleanup scopes from the EH stack. In CIR, this emits cleanup code
+  // into the cleanup regions of cir.cleanup.scope ops — no CFG-level cleanup
+  // blocks or branches are needed.
+  if (performCleanup) {
+    assert(!cir::MissingFeatures::generateDebugInfo());
+    forceCleanup();
+  }
 
   mlir::Block *curBlock = builder.getBlock();
   if (isGlobalInit() && !curBlock)
@@ -343,9 +274,11 @@ void CIRGenFunction::LexicalScope::cleanup() {
   if (curBlock->mightHaveTerminator() && curBlock->getTerminator())
     return;
 
-  // Get rid of any empty block at the end of the scope.
-  bool entryBlock = builder.getInsertionBlock()->isEntryBlock();
-  if (!entryBlock && curBlock->empty()) {
+  // Get rid of any empty block at the end of the scope. An empty non-entry
+  // block is created when a terminator (return/break/continue) is followed
+  // by unreachable code.
+  bool isEntryBlock = builder.getInsertionBlock()->isEntryBlock();
+  if (!isEntryBlock && curBlock->empty()) {
     curBlock->erase();
     for (mlir::Block *retBlock : retBlocks) {
       if (retBlock->getUses().empty())
@@ -354,14 +287,29 @@ void CIRGenFunction::LexicalScope::cleanup() {
     return;
   }
 
-  // If there's a cleanup block, branch to it, nothing else to do.
-  if (cleanupBlock) {
-    cir::BrOp::create(builder, curBlock->back().getLoc(), cleanupBlock);
+  if (localScope->depth == 0) {
+    // Reached the end of the function.
+    if (localScope->getRetBlocks().size() == 1) {
+      mlir::Block *retBlock = localScope->getRetBlocks()[0];
+      mlir::Location retLoc = localScope->getRetLoc(retBlock);
+      if (retBlock->getUses().empty()) {
+        retBlock->erase();
+      } else {
+        cir::BrOp::create(builder, retLoc, retBlock);
+        return;
+      }
+    }
+    emitImplicitReturn();
     return;
   }
 
-  // No pre-existent cleanup block, emit cleanup code and yield/return.
-  insertCleanupAndLeave(curBlock);
+  // End of any local scope != function.
+  // Ternary ops have to deal with matching arms for yielding types
+  // and do return a value, it must do its own cir.yield insertion.
+  if (!localScope->isTernary() && !curBlock->mightHaveTerminator()) {
+    !retVal ? cir::YieldOp::create(builder, localScope->endLoc)
+            : cir::YieldOp::create(builder, localScope->endLoc, retVal);
+  }
 }
 
 cir::ReturnOp CIRGenFunction::LexicalScope::emitReturn(mlir::Location loc) {
@@ -370,10 +318,6 @@ cir::ReturnOp CIRGenFunction::LexicalScope::emitReturn(mlir::Location loc) {
   auto fn = dyn_cast<cir::FuncOp>(cgf.curFn);
   assert(fn && "emitReturn from non-function");
 
-  // If we are on a coroutine, add the coro_end builtin call.
-  if (fn.getCoroutine())
-    cgf.emitCoroEndBuiltinCall(loc,
-                               builder.getNullPtr(builder.getVoidPtrTy(), loc));
   if (!fn.getFunctionType().hasVoidReturn()) {
     // Load the value from `__retval` and return it via the `cir.return` op.
     auto value = cir::LoadOp::create(
@@ -570,6 +514,21 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
     }
     emitAndUpdateRetAlloca(returnType, getLoc(bodyEndLoc),
                            getContext().getTypeAlignInChars(returnType));
+
+    // If this is an implicit-return-zero function, initialize the return
+    // value. This mirrors the implicit-return-zero handling in classic
+    // codegen's EmitFunctionProlog (CGCall.cpp). It is done here, after
+    // emitAndUpdateRetAlloca, because in CIR the return slot is created
+    // after the prolog (the opposite of classic codegen, where ReturnValue
+    // is set up before EmitFunctionProlog runs).
+    // TODO(cir): Align prolog handling with classic codegen.
+    if (fd && fd->hasImplicitReturnZero()) {
+      mlir::Type cirRetTy = convertType(returnType.getUnqualifiedType());
+      mlir::Location bodyBeginMLIRLoc = getLoc(bodyBeginLoc);
+      mlir::Value zero = builder.getNullValue(cirRetTy, bodyBeginMLIRLoc);
+      builder.CIRBaseBuilderTy::createStore(bodyBeginMLIRLoc, zero,
+                                            returnValue.getPointer());
+    }
   }
 
   if (isa_and_nonnull<CXXMethodDecl>(d) &&
@@ -619,6 +578,24 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
 
     assert(!cir::MissingFeatures::sanitizers());
     assert(!cir::MissingFeatures::emitTypeCheck());
+  }
+
+  // If any of the arguments have a variably modified type, make sure to
+  // emit the type size, but only if the function is not naked. Naked functions
+  // have no prolog to run this evaluation.
+  if (!fd || !fd->hasAttr<NakedAttr>()) {
+    for (const VarDecl *vd : args) {
+      // Dig out the type as written from ParmVarDecls; it's unclear whether
+      // the standard (C99 6.9.1p10) requires this, but we're following the
+      // precedent set by gcc.
+      QualType ty;
+      if (const auto *pvd = dyn_cast<ParmVarDecl>(vd))
+        ty = pvd->getOriginalType();
+      else
+        ty = vd->getType();
+      if (ty->isVariablyModifiedType())
+        emitVariablyModifiedType(ty);
+    }
   }
 }
 
@@ -675,6 +652,10 @@ void CIRGenFunction::finishFunction(SourceLocation endLoc) {
     // FIXME(cir): should we clearInsertionPoint? breaks many testcases
     popCleanupBlocks(prologueCleanupDepth);
   }
+
+  assert(deferredConditionalCleanupStack.empty() &&
+         "deferred conditional cleanups were not consumed by a "
+         "FullExprCleanupScope");
 }
 
 mlir::LogicalResult CIRGenFunction::emitFunctionBody(const clang::Stmt *body) {
@@ -717,6 +698,7 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
       builder.setInsertionPoint(fn);
       clone = cir::FuncOp::create(builder, fn.getLoc(), fdInlineName,
                                   fn.getFunctionType());
+      cgm.insertGlobalSymbol(clone);
       clone.setLinkage(cir::GlobalLinkageKind::InternalLinkage);
       clone.setSymVisibility("private");
       clone.setInlineKind(cir::InlineKind::AlwaysInline);
@@ -741,6 +723,7 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
                   .replaceAllSymbolUses(fn.getSymNameAttr(), cgm.getModule())
                   .failed())
             llvm_unreachable("Failed to replace inline builtin symbol uses");
+          cgm.eraseGlobalSymbol(inlineFn);
           inlineFn.erase();
         }
         break;
@@ -839,27 +822,44 @@ void CIRGenFunction::emitConstructorBody(FunctionArgList &args) {
   Stmt *body = ctor->getBody(definition);
   assert(definition == ctor && "emitting wrong constructor body");
 
-  if (isa_and_nonnull<CXXTryStmt>(body)) {
-    cgm.errorNYI(ctor->getSourceRange(), "emitConstructorBody: try body");
-    return;
-  }
+  bool isTryBody = isa_and_nonnull<CXXTryStmt>(body);
 
-  assert(!cir::MissingFeatures::incrementProfileCounter());
-  assert(!cir::MissingFeatures::runCleanupsScope());
+  // A type that handles the emission of the constructor body, that can be
+  // called directly for cases where we don't have a try-body, or passed to
+  // emitCXXTryStmt.
+  struct ctorTryBodyEmitter final : cxxTryBodyEmitter {
+    const CXXConstructorDecl *ctor = nullptr;
+    CXXCtorType ctorType;
+    FunctionArgList &args;
+    Stmt *emitterBody = nullptr;
+    ctorTryBodyEmitter(const CXXConstructorDecl *ctor, CXXCtorType ctorType,
+                       FunctionArgList &args, bool isTryBody, Stmt *b)
+        : ctor(ctor), ctorType(ctorType), args(args),
+          emitterBody(isTryBody ? cast<CXXTryStmt>(b)->getTryBlock() : b) {}
+    ~ctorTryBodyEmitter() override = default;
 
-  // TODO: in restricted cases, we can emit the vbase initializers of a
-  // complete ctor and then delegate to the base ctor.
+    mlir::LogicalResult operator()(CIRGenFunction &cgf) override {
+      assert(!cir::MissingFeatures::incrementProfileCounter());
+      assert(!cir::MissingFeatures::runCleanupsScope());
 
-  // Emit the constructor prologue, i.e. the base and member initializers.
-  emitCtorPrologue(ctor, ctorType, args);
+      //// TODO: in restricted cases, we can emit the vbase initializers of a
+      //// complete ctor and then delegate to the base ctor.
 
-  // TODO(cir): propagate this result via mlir::logical result. Just unreachable
-  // now just to have it handled.
-  if (mlir::failed(emitStmt(body, true))) {
+      cgf.emitCtorPrologue(ctor, ctorType, args);
+      return cgf.emitStmt(emitterBody, /*useCurrentScope=*/true);
+    }
+  };
+
+  ctorTryBodyEmitter emitter{ctor, ctorType, args, isTryBody, body};
+  mlir::LogicalResult bodyRes =
+      isTryBody ? emitCXXTryStmt(*cast<CXXTryStmt>(body), emitter)
+                : emitter(*this);
+
+  // TODO(cir): propagate this result via mlir::logical result. Just
+  // unreachable now just to have it handled.
+  if (bodyRes.failed())
     cgm.errorNYI(ctor->getSourceRange(),
                  "emitConstructorBody: emit body statement failed.");
-    return;
-  }
 }
 
 /// Emits the body of the current destructor.
@@ -1026,18 +1026,113 @@ clang::QualType CIRGenFunction::buildFunctionArgList(clang::GlobalDecl gd,
     cgm.getCXXABI().buildThisParam(*this, args);
   }
 
+  bool passedParams = true;
   if (const auto *cd = dyn_cast<CXXConstructorDecl>(fd))
-    if (cd->getInheritedConstructor())
-      cgm.errorNYI(fd->getSourceRange(),
-                   "buildFunctionArgList: inherited constructor");
+    if (auto inherited = cd->getInheritedConstructor())
+      passedParams =
+          getTypes().inheritingCtorHasParams(inherited, gd.getCtorType());
 
-  for (auto *param : fd->parameters())
-    args.push_back(param);
+  if (passedParams) {
+    for (auto *param : fd->parameters()) {
+      args.push_back(param);
+      if (param->hasAttr<PassObjectSizeAttr>())
+        cgm.errorNYI(param->getSourceRange(), "pass-object-size attribute");
+    }
+  }
 
   if (md && (isa<CXXConstructorDecl>(md) || isa<CXXDestructorDecl>(md)))
     cgm.getCXXABI().addImplicitStructorParams(*this, retTy, args);
 
   return retTy;
+}
+
+LValue CIRGenFunction::emitInitListLValue(const InitListExpr *e) {
+  // Initializing an aggregate temporary in C++11: T{...}.
+  if (!e->isGLValue())
+    return emitAggExprToLValue(e);
+
+  // An lvalue initializer list must be initializing a reference.
+  assert(e->isTransparent() && "non-transparent glvalue init list");
+  return emitLValue(e->getInit(0));
+}
+
+static std::variant<LValue, RValue>
+emitPseudoObjectExpr(CIRGenFunction &cgf, const PseudoObjectExpr *e,
+                     bool forLValue, AggValueSlot slot) {
+  using OVMD = CIRGenFunction::OpaqueValueMappingData;
+  SmallVector<OVMD> opaques;
+  llvm::scope_exit opaque_cleanup{
+      [&]() { llvm::for_each(opaques, [&](OVMD &o) { o.unbind(cgf); }); }};
+
+  // Find the result expression, if any.
+  const Expr *resultExpr = e->getResultExpr();
+  std::variant<LValue, RValue> result;
+
+  for (const Expr *semantic : e->semantics()) {
+    // If this semantic expression is an opaque value, bind it
+    // to the result of its source expression.
+    if (const auto *ov = dyn_cast<OpaqueValueExpr>(semantic)) {
+
+      // Skip unique OVEs.
+      if (ov->isUnique()) {
+        // FIXME: This doesn't really affect anything, but I cannot find a test
+        // for this, so leave an ErrorNYI here until we can find one.
+        cgf.cgm.errorNYI(e->getSourceRange(),
+                         "emitPseudoObjectExpr skipped for uniqueness");
+        assert(ov != resultExpr &&
+               "A unique OVE cannot be used as the result expression");
+        continue;
+      }
+
+      // If this is the result expression, we may need to evaluate
+      // directly into the slot.
+      OVMD opaqueData;
+      if (ov == resultExpr && ov->isPRValue() && !forLValue &&
+          CIRGenFunction::hasAggregateEvaluationKind(ov->getType())) {
+        cgf.cgm.errorNYI(e->getSourceRange(),
+                         "emitPseudoObjectExpr for RValue & aggregate kind");
+      } else {
+        opaqueData = OVMD::bind(cgf, ov, ov->getSourceExpr());
+
+        // If this is the result, also evaluate the result now.
+        if (ov == resultExpr) {
+          // FIXME: This doesn't really affect anything, but I cannot find a
+          // test for this, so leave an ErrorNYI here until we can find one.
+          cgf.cgm.errorNYI(e->getSourceRange(),
+                           "emitPseudoObjectExpr as result");
+          if (forLValue)
+            result = cgf.emitLValue(ov);
+          else
+            cgf.cgm.errorNYI(e->getSourceRange(),
+                             "emitPseudoObjectExpr as an RValue");
+        }
+      }
+      opaques.push_back(opaqueData);
+    } else if (semantic == resultExpr) {
+      // Otherwise, if the expression is the result, evaluate it
+      // and remember the result.
+      if (forLValue)
+        result = cgf.emitLValue(semantic);
+      else
+        cgf.cgm.errorNYI(
+            e->getSourceRange(),
+            "emitPseudoObjectExpr as an RValue, when semantic is result");
+    } else {
+      // FIXME: best I can tell, this is only reachable as an r-value, so this
+      // isn't properly tested.
+      cgf.cgm.errorNYI(e->getSourceRange(),
+                       "emitPseudoObjectExpr as an ignored value");
+      // Otherwise, evaluate the expression in an ignored context.
+      cgf.emitIgnoredExpr(semantic);
+    }
+  }
+
+  return result;
+}
+
+LValue CIRGenFunction::emitPseudoObjectLValue(const PseudoObjectExpr *e) {
+  return std::get<LValue>(emitPseudoObjectExpr(*this, e, /*forLValue=*/true,
+                                               AggValueSlot::ignored()));
 }
 
 /// Emit code to compute a designator that specifies the location
@@ -1114,7 +1209,8 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
   case Expr::CXXDynamicCastExprClass:
   case Expr::CXXReinterpretCastExprClass:
   case Expr::CXXConstCastExprClass:
-    // TODO(cir): The above list is missing CXXFunctionalCastExprClass,
+  case Expr::CXXFunctionalCastExprClass:
+    // TODO(cir): The above list is missing
     // CXXAddrSpaceCastExprClass, and ObjCBridgedCastExprClass.
     return emitCastLValue(cast<CastExpr>(e));
   case Expr::MaterializeTemporaryExprClass:
@@ -1125,6 +1221,15 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     return emitLValue(cast<ChooseExpr>(e)->getChosenSubExpr());
   case Expr::SubstNonTypeTemplateParmExprClass:
     return emitLValue(cast<SubstNonTypeTemplateParmExpr>(e)->getReplacement());
+  case Expr::InitListExprClass:
+    return emitInitListLValue(cast<InitListExpr>(e));
+  case Expr::PseudoObjectExprClass:
+    return emitPseudoObjectLValue(cast<PseudoObjectExpr>(e));
+  case Expr::CXXDefaultInitExprClass: {
+    auto *die = cast<CXXDefaultInitExpr>(e);
+    CXXDefaultInitExprScope scope(*this, die);
+    return emitLValue(die->getExpr());
+  }
   }
 }
 
@@ -1267,11 +1372,31 @@ CIRGenFunction::emitArrayLength(const clang::ArrayType *origArrayType,
 
   // If it's a VLA, we have to load the stored size.  Note that
   // this is the size of the VLA in bytes, not its size in elements.
+  mlir::Value numVLAElements = nullptr;
   if (isa<VariableArrayType>(arrayType)) {
-    assert(!cir::MissingFeatures::vlas());
-    cgm.errorNYI(*currSrcLoc, "VLAs");
-    return builder.getConstInt(*currSrcLoc, sizeTy, 0);
+    numVLAElements = getVLASize(cast<VariableArrayType>(arrayType)).numElts;
+
+    // Walk into all VLAs.  This doesn't require changes to addr,
+    // which has type T* where T is the first non-VLA element type.
+    do {
+      QualType elementType = arrayType->getElementType();
+      arrayType = getContext().getAsArrayType(elementType);
+
+      // If we only have VLA components, 'addr' requires no adjustment.
+      if (!arrayType) {
+        baseType = elementType;
+        return numVLAElements;
+      }
+    } while (isa<VariableArrayType>(arrayType));
+
+    // We get out here only if we find a constant array type
+    // inside the VLA.
   }
+
+  // Classic codegen emits an all-zero inbounds GEP to convert addr from
+  // [M x [N x T]]* to T*. CIR doesn't need this because callers handle
+  // the array-to-element pointer conversion themselves (via array_to_ptrdecay
+  // casts, ptr_bitcast, or manual array type peeling).
 
   uint64_t countFromCLAs = 1;
   QualType eltType;
@@ -1299,7 +1424,17 @@ CIRGenFunction::emitArrayLength(const clang::ArrayType *origArrayType,
   }
 
   baseType = eltType;
-  return builder.getConstInt(*currSrcLoc, sizeTy, countFromCLAs);
+
+  mlir::Value numElements =
+      builder.getConstInt(*currSrcLoc, sizeTy, countFromCLAs);
+
+  // If we had any VLA dimensions, factor them in.
+  if (numVLAElements)
+    numElements =
+        builder.createMul(numVLAElements.getLoc(), numVLAElements, numElements,
+                          cir::OverflowBehavior::NoUnsignedWrap);
+
+  return numElements;
 }
 
 void CIRGenFunction::instantiateIndirectGotoBlock() {

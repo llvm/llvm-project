@@ -614,53 +614,40 @@ public:
 
     void *BlockBegin = getBlockBegin(OldTaggedPtr, &Header);
     uptr BlockEnd;
-    uptr OldSize;
     const uptr ClassId = Header.ClassId;
+    uptr OldSize;
+    uptr UsableSize;
     if (LIKELY(ClassId)) {
       BlockEnd = reinterpret_cast<uptr>(BlockBegin) +
                  SizeClassMap::getSizeByClassId(ClassId);
       OldSize = Header.SizeOrUnusedBytes;
+      UsableSize = BlockEnd - reinterpret_cast<uptr>(OldTaggedPtr);
     } else {
       BlockEnd = SecondaryT::getBlockEnd(BlockBegin);
-      OldSize = BlockEnd - (reinterpret_cast<uptr>(OldTaggedPtr) +
-                            Header.SizeOrUnusedBytes);
+      UsableSize = BlockEnd - reinterpret_cast<uptr>(OldTaggedPtr);
+      OldSize = UsableSize - Header.SizeOrUnusedBytes;
     }
-    // If the new chunk still fits in the previously allocated block (with a
-    // reasonable delta), we just keep the old block, and update the chunk
-    // header to reflect the size change.
-    if (reinterpret_cast<uptr>(OldTaggedPtr) + NewSize <= BlockEnd) {
-      if (NewSize > OldSize || (OldSize - NewSize) < getPageSizeCached()) {
-        // If we have reduced the size, set the extra bytes to the fill value
-        // so that we are ready to grow it again in the future.
-        if (NewSize < OldSize) {
-          const FillContentsMode FillContents =
-              TSDRegistry.getDisableMemInit() ? NoFill
-                                              : Options.getFillContentsMode();
-          if (FillContents != NoFill) {
-            memset(reinterpret_cast<char *>(OldTaggedPtr) + NewSize,
-                   FillContents == ZeroFill ? 0 : PatternFillByte,
-                   OldSize - NewSize);
-          }
-        }
 
-        Header.SizeOrUnusedBytes =
-            (ClassId ? NewSize
-                     : BlockEnd -
-                           (reinterpret_cast<uptr>(OldTaggedPtr) + NewSize)) &
-            Chunk::SizeOrUnusedBytesMask;
-        Chunk::storeHeader(Cookie, OldPtr, &Header);
-        if (UNLIKELY(useMemoryTagging<AllocatorConfig>(Options))) {
-          if (ClassId) {
-            resizeTaggedChunk(reinterpret_cast<uptr>(OldTaggedPtr) + OldSize,
-                              reinterpret_cast<uptr>(OldTaggedPtr) + NewSize,
-                              NewSize, untagPointer(BlockEnd));
-            storePrimaryAllocationStackMaybe(Options, OldPtr);
-          } else {
-            storeSecondaryAllocationStackMaybe(Options, OldPtr, NewSize);
-          }
+    // If the new chunk fits in the previously allocated block, do nothing
+    // but update the header and return immediately.
+    if (NewSize <= UsableSize) {
+      Header.SizeOrUnusedBytes =
+          (ClassId
+               ? NewSize
+               : BlockEnd - (reinterpret_cast<uptr>(OldTaggedPtr) + NewSize)) &
+          Chunk::SizeOrUnusedBytesMask;
+      Chunk::storeHeader(Cookie, OldPtr, &Header);
+      if (UNLIKELY(useMemoryTagging<AllocatorConfig>(Options))) {
+        if (ClassId) {
+          resizeTaggedChunk(reinterpret_cast<uptr>(OldTaggedPtr) + OldSize,
+                            reinterpret_cast<uptr>(OldTaggedPtr) + NewSize,
+                            NewSize, untagPointer(BlockEnd));
+          storePrimaryAllocationStackMaybe(Options, OldPtr);
+        } else {
+          storeSecondaryAllocationStackMaybe(Options, OldPtr, NewSize);
         }
-        return OldTaggedPtr;
       }
+      return OldTaggedPtr;
     }
 
     // Otherwise we allocate a new one, and deallocate the old one. Some
@@ -669,7 +656,10 @@ public:
     // are currently unclear.
     void *NewPtr = allocate(NewSize, Chunk::Origin::Malloc, Alignment);
     if (LIKELY(NewPtr)) {
-      memcpy(NewPtr, OldTaggedPtr, Min(NewSize, OldSize));
+      bool ExactSize = AllocatorConfig::getExactUsableSize() ||
+                       useMemoryTagging<AllocatorConfig>(Options);
+      memcpy(NewPtr, OldTaggedPtr,
+             Min(NewSize, ExactSize ? OldSize : UsableSize));
       quarantineOrDeallocateChunk(Options, OldTaggedPtr, &Header, OldSize);
     }
     return NewPtr;

@@ -653,8 +653,6 @@ IntMatrix::computeSmithNormalForm() const {
         u.negateRow(i);
       }
 
-      DynamicAPInt pivot = d(i, i);
-
       // Clear other entries in row i and column i with Euclid's algorithm.
       for (unsigned r = i + 1; r < numRows; ++r) {
         while (d(r, i) != 0) {
@@ -684,7 +682,7 @@ IntMatrix::computeSmithNormalForm() const {
         }
       }
 
-      if (auto row = findNonMultipleRow(d, i + 1, pivot)) {
+      if (auto row = findNonMultipleRow(d, i + 1, d(i, i))) {
         // Add the row (r) to row i. This brings d(r, c) into the i-th row,
         // creating a new value at d(i, c) that will be used to reduce the
         // pivot size.

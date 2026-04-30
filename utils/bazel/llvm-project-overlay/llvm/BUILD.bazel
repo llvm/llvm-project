@@ -287,7 +287,6 @@ cc_library(
         "lib/Support/*.h",
         "lib/Support/*.inc",
         "lib/Support/LSP/*.cpp",
-        "lib/Support/HTTP/*.cpp",
         # To avoid a dependency cycle.
         "include/llvm/Option/*.h",
     ]) + select({
@@ -355,6 +354,7 @@ cc_library(
             "-luuid",
             "-lws2_32",
             "-lntdll",
+            "-lwinhttp",
         ],
         ":is_windows_clang_cl": [
             "/STACK:10000000",
@@ -362,6 +362,7 @@ cc_library(
             "uuid.lib",
             "ws2_32.lib",
             "ntdll.lib",
+            "winhttp.lib",
         ],
         ":is_windows_msvc": [
             "/STACK:10000000",
@@ -369,6 +370,7 @@ cc_library(
             "uuid.lib",
             "ws2_32.lib",
             "ntdll.lib",
+            "winhttp.lib",
         ],
         "@platforms//os:freebsd": [
             "-pthread",
@@ -628,6 +630,7 @@ cc_library(
     deps = [
         ":BinaryFormat",
         ":DebugInfoDWARF",
+        ":HTTP",
         ":Object",
         ":Support",
         ":Symbolize",
@@ -737,6 +740,7 @@ cc_library(
         ":DebugInfoGSYM",
         ":DebugInfoPDB",
         ":Demangle",
+        ":HTTP",
         ":Object",
         ":Support",
         ":TargetParser",
@@ -1085,6 +1089,8 @@ cc_library(
     srcs = glob([
         "lib/IR/*.cpp",
         "lib/IR/*.h",
+        # Resolves circular-dep b/w Coroutines and Core.
+        "include/llvm/Transforms/Coroutines/CoroInstr.h",
     ]),
     hdrs = glob(
         [
@@ -1332,6 +1338,7 @@ cc_library(
     copts = llvm_copts,
     deps = [
         ":Support",
+        ":ir_headers",
     ],
 )
 
@@ -1586,6 +1593,8 @@ cc_library(
     hdrs = glob(["include/llvm/DWP/*.h"]),
     copts = llvm_copts,
     deps = [
+        ":BinaryFormat",
+        ":BinaryFormatELF",
         ":DebugInfoDWARF",
         ":MC",
         ":Object",
@@ -2307,7 +2316,10 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/AArch64/AArch64GenFastISel.inc",
             ),
             (
-                ["-gen-global-isel"],
+                [
+                    "-gen-global-isel",
+                    "-gisel-extended-llt",
+                ],
                 "lib/Target/AArch64/AArch64GenGlobalISel.inc",
             ),
             (
@@ -3692,7 +3704,10 @@ gentbl_cc_library(
     name = "webassembly_isel_target_gen",
     strip_include_prefix = "lib/Target/WebAssembly",
     tbl_outs = {
-        "lib/Target/WebAssembly/WebAssemblyGenGlobalISel.inc": ["-gen-global-isel"],
+        "lib/Target/WebAssembly/WebAssemblyGenGlobalISel.inc": [
+            "-gen-global-isel",
+            "-gisel-extended-llt",
+        ],
         "lib/Target/WebAssembly/WebAssemblyGenPreLegalizeGICombiner.inc": [
             "-gen-global-isel-combiner",
             "-combiners=WebAssemblyPreLegalizerCombiner",
@@ -4664,6 +4679,21 @@ cc_library(
     }),
 )
 
+cc_library(
+    name = "HTTP",
+    srcs = glob(["lib/HTTP/*.cpp"]),
+    hdrs = glob(["include/llvm/HTTP/*.h"]),
+    includes = ["include"],
+    linkopts = select({
+        "@platforms//os:windows": [
+            "crypt32.lib",
+            "winhttp.lib",
+        ],
+        "//conditions:default": [],
+    }),
+    deps = [":Support"],
+)
+
 ################################################################################
 # LLVM toolchain and development binaries
 
@@ -4970,6 +5000,7 @@ cc_binary(
     deps = [
         ":Coverage",
         ":Debuginfod",
+        ":HTTP",
         ":Instrumentation",
         ":Object",
         ":ProfileData",
@@ -5098,6 +5129,7 @@ cc_library(
         ":Core",
         ":DebugInfodFindOptsTableGen",
         ":Debuginfod",
+        ":HTTP",
         ":Option",
         ":Support",
         ":Symbolize",
@@ -5202,6 +5234,7 @@ cc_library(
         ":DWP",
         ":DwpOptionsTableGen",
         ":MC",
+        ":Object",
         ":Option",
         ":Support",
     ],
@@ -5793,6 +5826,7 @@ cc_library(
         ":DebugInfoDWARFLowLevel",
         ":Debuginfod",
         ":Demangle",
+        ":HTTP",
         ":MC",
         ":MCDisassembler",
         ":ObjdumpOptsTableGen",
@@ -5908,6 +5942,7 @@ cc_library(
     deps = [
         ":Core",
         ":Debuginfod",
+        ":HTTP",
         ":Object",
         ":ProfileData",
         ":Support",
@@ -5931,6 +5966,7 @@ cc_binary(
     deps = [
         ":AllTargetsCodeGens",
         ":AllTargetsDisassemblers",
+        ":BinaryFormat",
         ":Core",
         ":DebugInfoDWARF",
         ":DebugInfoPDB",
@@ -6207,6 +6243,7 @@ cc_library(
         ":DebugInfoDWARF",
         ":DebugInfoPDB",
         ":Debuginfod",
+        ":HTTP",
         ":Object",
         ":Option",
         ":Support",
@@ -6467,10 +6504,8 @@ cc_library(
     ]),
     hdrs = glob(["include/llvm/Testing/Support/*.h"]),
     copts = llvm_copts,
-    features = ["-layering_check"],
     deps = [
         ":Support",
-        ":config",
         "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
     ],

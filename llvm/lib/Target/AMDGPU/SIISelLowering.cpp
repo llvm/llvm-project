@@ -319,6 +319,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setOperationAction({ISD::SHL_PARTS, ISD::SRA_PARTS, ISD::SRL_PARTS}, MVT::i64,
                      Expand);
 
+  setOperationAction(ISD::INLINEASM, MVT::Other, Custom);
+
 #if 0
   setOperationAction({ISD::UADDO_CARRY, ISD::USUBO_CARRY}, MVT::i64, Legal);
 #endif
@@ -518,6 +520,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   setOperationAction({ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF}, MVT::i32, Custom);
   setOperationAction({ISD::CTTZ, ISD::CTTZ_ZERO_UNDEF}, MVT::i32, Custom);
+  setOperationAction(ISD::CTLS, MVT::i32, Custom);
 
   // We only really have 32-bit BFE instructions (and 16-bit on VI).
   //
@@ -1551,6 +1554,7 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
     Info.size = 8;
     Info.align.reset();
     Info.flags = Flags | MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
+    Info.order = AtomicOrdering::Monotonic;
     Infos.push_back(Info);
     return;
   }
@@ -5509,7 +5513,7 @@ static MachineBasicBlock *emitIndirectDst(MachineInstr &MI,
   return LoopBB;
 }
 
-static MachineBasicBlock *Expand64BitScalarArithmetic(MachineInstr &MI,
+static MachineBasicBlock *expand64BitScalarArithmetic(MachineInstr &MI,
                                                       MachineBasicBlock *BB) {
   // For targets older than GFX12, we emit a sequence of 32-bit operations.
   // For GFX12, we emit s_add_u64 and s_sub_u64.
@@ -5560,7 +5564,71 @@ static MachineBasicBlock *Expand64BitScalarArithmetic(MachineInstr &MI,
   return BB;
 }
 
-static uint32_t getIdentityValueFor32BitWaveReduction(unsigned Opc) {
+static void expand64BitV_CNDMASK(MachineInstr &MI, MachineBasicBlock *BB) {
+  MachineFunction *MF = BB->getParent();
+  const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+  const DebugLoc &DL = MI.getDebugLoc();
+  Register Dst = MI.getOperand(0).getReg();
+  const MachineOperand &Src0 = MI.getOperand(1);
+  const MachineOperand &Src1 = MI.getOperand(2);
+  Register SrcCond = MI.getOperand(3).getReg();
+
+  Register DstLo = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+  Register DstHi = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+  const TargetRegisterClass *CondRC = TRI->getWaveMaskRegClass();
+  Register SrcCondCopy = MRI.createVirtualRegister(CondRC);
+
+  int Src0Idx =
+      AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src0);
+  int Src1Idx =
+      AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src1);
+  const TargetRegisterClass *Src0RC =
+      TRI->getAllocatableClass(TII->getRegClass(MI.getDesc(), Src0Idx));
+  const TargetRegisterClass *Src1RC =
+      TRI->getAllocatableClass(TII->getRegClass(MI.getDesc(), Src1Idx));
+
+  const TargetRegisterClass *Src0SubRC =
+      TRI->getSubRegisterClass(Src0RC, AMDGPU::sub0);
+  const TargetRegisterClass *Src1SubRC =
+      TRI->getSubRegisterClass(Src1RC, AMDGPU::sub1);
+
+  MachineOperand Src0Sub0 = TII->buildExtractSubRegOrImm(
+      MI, MRI, Src0, Src0RC, AMDGPU::sub0, Src0SubRC);
+  MachineOperand Src1Sub0 = TII->buildExtractSubRegOrImm(
+      MI, MRI, Src1, Src1RC, AMDGPU::sub0, Src1SubRC);
+
+  MachineOperand Src0Sub1 = TII->buildExtractSubRegOrImm(
+      MI, MRI, Src0, Src0RC, AMDGPU::sub1, Src0SubRC);
+  MachineOperand Src1Sub1 = TII->buildExtractSubRegOrImm(
+      MI, MRI, Src1, Src1RC, AMDGPU::sub1, Src1SubRC);
+
+  BuildMI(*BB, MI, DL, TII->get(AMDGPU::COPY), SrcCondCopy).addReg(SrcCond);
+  BuildMI(*BB, MI, DL, TII->get(AMDGPU::V_CNDMASK_B32_e64), DstLo)
+      .addImm(0)
+      .add(Src0Sub0)
+      .addImm(0)
+      .add(Src1Sub0)
+      .addReg(SrcCondCopy);
+
+  BuildMI(*BB, MI, DL, TII->get(AMDGPU::V_CNDMASK_B32_e64), DstHi)
+      .addImm(0)
+      .add(Src0Sub1)
+      .addImm(0)
+      .add(Src1Sub1)
+      .addReg(SrcCondCopy);
+
+  BuildMI(*BB, MI, DL, TII->get(AMDGPU::REG_SEQUENCE), Dst)
+      .addReg(DstLo)
+      .addImm(AMDGPU::sub0)
+      .addReg(DstHi)
+      .addImm(AMDGPU::sub1);
+  MI.eraseFromParent();
+}
+
+static uint64_t getIdentityValueForWaveReduction(unsigned Opc) {
   switch (Opc) {
   case AMDGPU::S_MIN_U32:
     return std::numeric_limits<uint32_t>::max();
@@ -5583,15 +5651,7 @@ static uint32_t getIdentityValueFor32BitWaveReduction(unsigned Opc) {
     return std::numeric_limits<uint32_t>::max();
   case AMDGPU::V_MIN_F32_e64:
   case AMDGPU::V_MAX_F32_e64:
-    return 0x7fc00000; // qNAN
-  default:
-    llvm_unreachable(
-        "Unexpected opcode in getIdentityValueFor32BitWaveReduction");
-  }
-}
-
-static uint64_t getIdentityValueFor64BitWaveReduction(unsigned Opc) {
-  switch (Opc) {
+    return 0x7fc00000;           // qNAN
   case AMDGPU::V_CMP_LT_U64_e64: // umin.u64
     return std::numeric_limits<uint64_t>::max();
   case AMDGPU::V_CMP_LT_I64_e64: // min.i64
@@ -5616,8 +5676,7 @@ static uint64_t getIdentityValueFor64BitWaveReduction(unsigned Opc) {
   case AMDGPU::V_ADD_F64_pseudo_e64:
     return 0x8000000000000000; // -0.0
   default:
-    llvm_unreachable(
-        "Unexpected opcode in getIdentityValueFor64BitWaveReduction");
+    llvm_unreachable("Unexpected opcode in getIdentityValueForWaveReduction");
   }
 }
 
@@ -5639,30 +5698,97 @@ static bool isFloatingPointWaveReduceOperation(unsigned Opc) {
          Opc == AMDGPU::V_ADD_F64_e64 || Opc == AMDGPU::V_ADD_F64_pseudo_e64;
 }
 
-static unsigned getDPPOpcForWaveReduction(unsigned Opc,
-                                          const GCNSubtarget &ST) {
+static std::tuple<unsigned, unsigned>
+getDPPOpcForWaveReduction(unsigned Opc, const GCNSubtarget &ST) {
+  unsigned DPPOpc;
   switch (Opc) {
   case AMDGPU::S_MIN_U32:
-    return AMDGPU::V_MIN_U32_dpp;
+    DPPOpc = AMDGPU::V_MIN_U32_dpp;
+    break;
   case AMDGPU::S_MIN_I32:
-    return AMDGPU::V_MIN_I32_dpp;
+    DPPOpc = AMDGPU::V_MIN_I32_dpp;
+    break;
   case AMDGPU::S_MAX_U32:
-    return AMDGPU::V_MAX_U32_dpp;
+    DPPOpc = AMDGPU::V_MAX_U32_dpp;
+    break;
   case AMDGPU::S_MAX_I32:
-    return AMDGPU::V_MAX_I32_dpp;
+    DPPOpc = AMDGPU::V_MAX_I32_dpp;
+    break;
   case AMDGPU::S_ADD_I32:
   case AMDGPU::S_SUB_I32:
-    return ST.hasAddNoCarryInsts() ? AMDGPU::V_ADD_U32_dpp
-                                   : AMDGPU::V_ADD_CO_U32_dpp;
+    DPPOpc = ST.hasAddNoCarryInsts() ? AMDGPU::V_ADD_U32_dpp
+                                     : AMDGPU::V_ADD_CO_U32_dpp;
+    break;
   case AMDGPU::S_AND_B32:
-    return AMDGPU::V_AND_B32_dpp;
+    DPPOpc = AMDGPU::V_AND_B32_dpp;
+    break;
   case AMDGPU::S_OR_B32:
-    return AMDGPU::V_OR_B32_dpp;
+    DPPOpc = AMDGPU::V_OR_B32_dpp;
+    break;
   case AMDGPU::S_XOR_B32:
-    return AMDGPU::V_XOR_B32_dpp;
+    DPPOpc = AMDGPU::V_XOR_B32_dpp;
+    break;
+  case AMDGPU::V_ADD_F32_e64:
+  case AMDGPU::V_SUB_F32_e64:
+    DPPOpc = AMDGPU::V_ADD_F32_dpp;
+    break;
+  case AMDGPU::V_MIN_F32_e64:
+    DPPOpc = AMDGPU::V_MIN_F32_dpp;
+    break;
+  case AMDGPU::V_MAX_F32_e64:
+    DPPOpc = AMDGPU::V_MAX_F32_dpp;
+    break;
+  case AMDGPU::V_CMP_LT_U64_e64: // umin.u64
+  case AMDGPU::V_CMP_LT_I64_e64: // min.i64
+  case AMDGPU::V_CMP_GT_U64_e64: // umax.u64
+  case AMDGPU::V_CMP_GT_I64_e64: // max.i64
+  case AMDGPU::S_ADD_U64_PSEUDO:
+  case AMDGPU::S_SUB_U64_PSEUDO:
+  case AMDGPU::S_AND_B64:
+  case AMDGPU::S_OR_B64:
+  case AMDGPU::S_XOR_B64:
+  case AMDGPU::V_MIN_NUM_F64_e64:
+  case AMDGPU::V_MIN_F64_e64:
+  case AMDGPU::V_MAX_NUM_F64_e64:
+  case AMDGPU::V_MAX_F64_e64:
+  case AMDGPU::V_ADD_F64_pseudo_e64:
+  case AMDGPU::V_ADD_F64_e64:
+    DPPOpc = AMDGPU::V_MOV_B64_DPP_PSEUDO;
+    break;
   default:
     llvm_unreachable("unhandled lane op");
   }
+  unsigned ClampOpc = Opc;
+  if (!ST.getInstrInfo()->isVALU(Opc)) {
+    if (Opc == AMDGPU::S_SUB_I32)
+      ClampOpc = AMDGPU::S_ADD_I32;
+    if (Opc == AMDGPU::S_ADD_U64_PSEUDO || Opc == AMDGPU::S_SUB_U64_PSEUDO)
+      ClampOpc = AMDGPU::V_ADD_CO_U32_e64;
+    else if (Opc == AMDGPU::S_AND_B64)
+      ClampOpc = AMDGPU::V_AND_B32_e64;
+    else if (Opc == AMDGPU::S_OR_B64)
+      ClampOpc = AMDGPU::V_OR_B32_e64;
+    else if (Opc == AMDGPU::S_XOR_B64)
+      ClampOpc = AMDGPU::V_XOR_B32_e64;
+    else
+      ClampOpc = ST.getInstrInfo()->getVALUOp(ClampOpc);
+  }
+  return {DPPOpc, ClampOpc};
+}
+
+static std::pair<Register, Register>
+ExtractSubRegs(MachineInstr &MI, MachineOperand &Op,
+               const TargetRegisterClass *SrcRC, const GCNSubtarget &ST,
+               MachineRegisterInfo &MRI) {
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  const TargetRegisterClass *SrcSubRC =
+      TRI->getSubRegisterClass(SrcRC, AMDGPU::sub0);
+  Register Op1L =
+      TII->buildExtractSubReg(MI, MRI, Op, SrcRC, AMDGPU::sub0, SrcSubRC);
+  Register Op1H =
+      TII->buildExtractSubReg(MI, MRI, Op, SrcRC, AMDGPU::sub1, SrcSubRC);
+  return {Op1L, Op1H};
 }
 
 static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
@@ -5681,6 +5807,18 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
   unsigned Stratergy = static_cast<unsigned>(MI.getOperand(2).getImm());
   enum WAVE_REDUCE_STRATEGY : unsigned { DEFAULT = 0, ITERATIVE = 1, DPP = 2 };
   MachineBasicBlock *RetBB = nullptr;
+  unsigned MIOpc = MI.getOpcode();
+  auto BuildRegSequence = [&](MachineBasicBlock &BB,
+                              MachineBasicBlock::iterator MI, Register Dst,
+                              Register Src0, Register Src1) {
+    auto RegSequence =
+        BuildMI(BB, MI, DL, TII->get(TargetOpcode::REG_SEQUENCE), Dst)
+            .addReg(Src0)
+            .addImm(AMDGPU::sub0)
+            .addReg(Src1)
+            .addImm(AMDGPU::sub1);
+    return RegSequence;
+  };
   if (isSGPR) {
     switch (Opc) {
     case AMDGPU::S_MIN_U32:
@@ -5762,29 +5900,15 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
               MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
           Register DestSub1 =
               MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
-
-          const TargetRegisterClass *SrcRC = MRI.getRegClass(SrcReg);
-          const TargetRegisterClass *SrcSubRC =
-              TRI->getSubRegisterClass(SrcRC, AMDGPU::sub0);
-
-          MachineOperand Op1L = TII->buildExtractSubRegOrImm(
-              MI, MRI, MI.getOperand(1), SrcRC, AMDGPU::sub0, SrcSubRC);
-          MachineOperand Op1H = TII->buildExtractSubRegOrImm(
-              MI, MRI, MI.getOperand(1), SrcRC, AMDGPU::sub1, SrcSubRC);
-
+          auto [Op1L, Op1H] = ExtractSubRegs(MI, MI.getOperand(1),
+                                             MRI.getRegClass(SrcReg), ST, MRI);
           BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), DestSub0)
-              .add(Op1L)
+              .addReg(Op1L)
               .addReg(ParityRegister);
-
           BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), DestSub1)
-              .add(Op1H)
+              .addReg(Op1H)
               .addReg(ParityRegister);
-
-          BuildMI(BB, MI, DL, TII->get(TargetOpcode::REG_SEQUENCE), DstReg)
-              .addReg(DestSub0)
-              .addImm(AMDGPU::sub0)
-              .addReg(DestSub1)
-              .addImm(AMDGPU::sub1);
+          BuildRegSequence(BB, MI, DstReg, DestSub0, DestSub1);
         }
         break;
       }
@@ -5820,16 +5944,8 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
             MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
         Register NegatedValHi =
             MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
-
-        const TargetRegisterClass *Src1RC = MRI.getRegClass(SrcReg);
-        const TargetRegisterClass *Src1SubRC =
-            TRI->getSubRegisterClass(Src1RC, AMDGPU::sub0);
-
-        MachineOperand Op1L = TII->buildExtractSubRegOrImm(
-            MI, MRI, MI.getOperand(1), Src1RC, AMDGPU::sub0, Src1SubRC);
-        MachineOperand Op1H = TII->buildExtractSubRegOrImm(
-            MI, MRI, MI.getOperand(1), Src1RC, AMDGPU::sub1, Src1SubRC);
-
+        auto [Op1L, Op1H] = ExtractSubRegs(MI, MI.getOperand(1),
+                                           MRI.getRegClass(SrcReg), ST, MRI);
         if (Opc == AMDGPU::S_SUB_U64_PSEUDO) {
           BuildMI(BB, MI, DL, TII->get(AMDGPU::S_SUB_I32), NegatedValLo)
               .addImm(0)
@@ -5840,20 +5956,20 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
               .addImm(31)
               .setOperandDead(3); // Dead scc
           BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), Op1L_Op0H_Reg)
-              .add(Op1L)
+              .addReg(Op1L)
               .addReg(NegatedValHi);
         }
         Register LowOpcode = Opc == AMDGPU::S_SUB_U64_PSEUDO
                                  ? NegatedValLo
                                  : NewAccumulator->getOperand(0).getReg();
         BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), DestSub0)
-            .add(Op1L)
+            .addReg(Op1L)
             .addReg(LowOpcode);
         BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_HI_U32), CarryReg)
-            .add(Op1L)
+            .addReg(Op1L)
             .addReg(LowOpcode);
         BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), Op1H_Op0L_Reg)
-            .add(Op1H)
+            .addReg(Op1H)
             .addReg(LowOpcode);
 
         Register HiVal = Opc == AMDGPU::S_SUB_U64_PSEUDO ? AddReg : DestSub1;
@@ -5868,11 +5984,7 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
               .addReg(Op1L_Op0H_Reg)
               .setOperandDead(3); // Dead scc
         }
-        BuildMI(BB, MI, DL, TII->get(TargetOpcode::REG_SEQUENCE), DstReg)
-            .addReg(DestSub0)
-            .addImm(AMDGPU::sub0)
-            .addReg(DestSub1)
-            .addImm(AMDGPU::sub1);
+        BuildRegSequence(BB, MI, DstReg, DestSub0, DestSub1);
         break;
       }
       case AMDGPU::V_ADD_F32_e64:
@@ -5893,11 +6005,10 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
             .addImm(0); // output-modifier
 
         // Take negation of input for SUB reduction
-        unsigned srcMod =
-            (Opc == AMDGPU::V_SUB_F32_e64 ||
-             MI.getOpcode() == AMDGPU::WAVE_REDUCE_FSUB_PSEUDO_F64)
-                ? SISrcMods::NEG
-                : SISrcMods::NONE;
+        unsigned srcMod = (MIOpc == AMDGPU::WAVE_REDUCE_FSUB_PSEUDO_F32 ||
+                           MIOpc == AMDGPU::WAVE_REDUCE_FSUB_PSEUDO_F64)
+                              ? SISrcMods::NEG
+                              : SISrcMods::NONE;
         unsigned MulOpc = is32BitOpc ? AMDGPU::V_MUL_F32_e64
                           : ST.getGeneration() >= AMDGPUSubtarget::GFX12
                               ? AMDGPU::V_MUL_F64_pseudo_e64
@@ -5918,27 +6029,17 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
               MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
           Register LaneValueHiReg =
               MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
-          const TargetRegisterClass *VregSubRC =
-              TRI->getSubRegisterClass(VregRC, AMDGPU::sub0);
-          MachineOperand Op1L =
-              TII->buildExtractSubRegOrImm(MI, MRI, DestVregInst->getOperand(0),
-                                           VregRC, AMDGPU::sub0, VregSubRC);
-          MachineOperand Op1H =
-              TII->buildExtractSubRegOrImm(MI, MRI, DestVregInst->getOperand(0),
-                                           VregRC, AMDGPU::sub1, VregSubRC);
+          auto [Op1L, Op1H] =
+              ExtractSubRegs(MI, DestVregInst->getOperand(0), VregRC, ST, MRI);
           // lane value input should be in an sgpr
           BuildMI(BB, MI, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32),
                   LaneValueLoReg)
-              .add(Op1L);
+              .addReg(Op1L);
           BuildMI(BB, MI, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32),
                   LaneValueHiReg)
-              .add(Op1H);
+              .addReg(Op1H);
           NewAccumulator =
-              BuildMI(BB, MI, DL, TII->get(TargetOpcode::REG_SEQUENCE), DstReg)
-                  .addReg(LaneValueLoReg)
-                  .addImm(AMDGPU::sub0)
-                  .addReg(LaneValueHiReg)
-                  .addImm(AMDGPU::sub1);
+              BuildRegSequence(BB, MI, DstReg, LaneValueLoReg, LaneValueHiReg);
         }
       }
       }
@@ -5950,6 +6051,7 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
     Register SrcReg = MI.getOperand(1).getReg();
     bool is32BitOpc = is32bitWaveReduceOperation(Opc);
     bool isFPOp = isFloatingPointWaveReduceOperation(Opc);
+    bool NeedsMovDPP = !is32BitOpc;
     // Create virtual registers required for lowering.
     const TargetRegisterClass *WaveMaskRegClass = TRI->getWaveMaskRegClass();
     const TargetRegisterClass *DstRegClass = MRI.getRegClass(DstReg);
@@ -5982,19 +6084,15 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
       // Create initial values of induction variable from Exec, Accumulator and
       // insert branch instr to newly created ComputeBlock
       BuildMI(BB, I, DL, TII->get(MovOpcForExec), LoopIterator).addReg(ExecReg);
-      if (is32BitOpc) {
-        uint32_t IdentityValue = getIdentityValueFor32BitWaveReduction(Opc);
-        BuildMI(BB, I, DL, TII->get(AMDGPU::S_MOV_B32), IdentityValReg)
-            .addImm(IdentityValue);
-      } else {
-        uint64_t IdentityValue =
-            MI.getOpcode() == AMDGPU::WAVE_REDUCE_FSUB_PSEUDO_F64
-                ? 0x0 // +0.0 for double sub reduction
-                : getIdentityValueFor64BitWaveReduction(Opc);
-        BuildMI(BB, I, DL, TII->get(AMDGPU::S_MOV_B64_IMM_PSEUDO),
-                IdentityValReg)
-            .addImm(IdentityValue);
-      }
+      uint64_t IdentityValue =
+          MI.getOpcode() == AMDGPU::WAVE_REDUCE_FSUB_PSEUDO_F64
+              ? 0x0 // +0.0 for double sub reduction
+              : getIdentityValueForWaveReduction(Opc);
+      BuildMI(BB, I, DL,
+              TII->get(is32BitOpc ? AMDGPU::S_MOV_B32
+                                  : AMDGPU::S_MOV_B64_IMM_PSEUDO),
+              IdentityValReg)
+          .addImm(IdentityValue);
       // clang-format off
       BuildMI(BB, I, DL, TII->get(AMDGPU::S_BRANCH))
           .addMBB(ComputeLoop);
@@ -6054,29 +6152,19 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
             MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
         Register LaneValReg =
             MRI.createVirtualRegister(&AMDGPU::SReg_64RegClass);
-        const TargetRegisterClass *SrcRC = MRI.getRegClass(SrcReg);
-        const TargetRegisterClass *SrcSubRC =
-            TRI->getSubRegisterClass(SrcRC, AMDGPU::sub0);
-        MachineOperand Op1L = TII->buildExtractSubRegOrImm(
-            MI, MRI, MI.getOperand(1), SrcRC, AMDGPU::sub0, SrcSubRC);
-        MachineOperand Op1H = TII->buildExtractSubRegOrImm(
-            MI, MRI, MI.getOperand(1), SrcRC, AMDGPU::sub1, SrcSubRC);
+        auto [Op1L, Op1H] = ExtractSubRegs(MI, MI.getOperand(1),
+                                           MRI.getRegClass(SrcReg), ST, MRI);
         // lane value input should be in an sgpr
         BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::V_READLANE_B32),
                 LaneValueLoReg)
-            .add(Op1L)
+            .addReg(Op1L)
             .addReg(FF1Reg);
         BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::V_READLANE_B32),
                 LaneValueHiReg)
-            .add(Op1H)
+            .addReg(Op1H)
             .addReg(FF1Reg);
-        auto LaneValue =
-            BuildMI(*ComputeLoop, I, DL, TII->get(TargetOpcode::REG_SEQUENCE),
-                    LaneValReg)
-                .addReg(LaneValueLoReg)
-                .addImm(AMDGPU::sub0)
-                .addReg(LaneValueHiReg)
-                .addImm(AMDGPU::sub1);
+        auto LaneValue = BuildRegSequence(*ComputeLoop, I, LaneValReg,
+                                          LaneValueLoReg, LaneValueHiReg);
         switch (Opc) {
         case AMDGPU::S_OR_B64:
         case AMDGPU::S_AND_B64:
@@ -6098,21 +6186,11 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
               AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src);
           const TargetRegisterClass *VregClass =
               TRI->getAllocatableClass(TII->getRegClass(MI.getDesc(), SrcIdx));
-          const TargetRegisterClass *VSubRegClass =
-              TRI->getSubRegisterClass(VregClass, AMDGPU::sub0);
           Register AccumulatorVReg = MRI.createVirtualRegister(VregClass);
-          MachineOperand SrcReg0Sub0 = TII->buildExtractSubRegOrImm(
-              MI, MRI, Accumulator->getOperand(0), VregClass, AMDGPU::sub0,
-              VSubRegClass);
-          MachineOperand SrcReg0Sub1 = TII->buildExtractSubRegOrImm(
-              MI, MRI, Accumulator->getOperand(0), VregClass, AMDGPU::sub1,
-              VSubRegClass);
-          BuildMI(*ComputeLoop, I, DL, TII->get(TargetOpcode::REG_SEQUENCE),
-                  AccumulatorVReg)
-              .add(SrcReg0Sub0)
-              .addImm(AMDGPU::sub0)
-              .add(SrcReg0Sub1)
-              .addImm(AMDGPU::sub1);
+          auto [SrcReg0Sub0, SrcReg0Sub1] = ExtractSubRegs(
+              MI, Accumulator->getOperand(0), VregClass, ST, MRI);
+          BuildRegSequence(*ComputeLoop, I, AccumulatorVReg, SrcReg0Sub0,
+                           SrcReg0Sub1);
           BuildMI(*ComputeLoop, I, DL, TII->get(Opc), LaneMaskReg)
               .addReg(LaneValue->getOperand(0).getReg())
               .addReg(AccumulatorVReg);
@@ -6138,8 +6216,6 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
               AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src);
           const TargetRegisterClass *VregRC =
               TRI->getAllocatableClass(TII->getRegClass(MI.getDesc(), SrcIdx));
-          const TargetRegisterClass *VregSubRC =
-              TRI->getSubRegisterClass(VregRC, AMDGPU::sub0);
           Register AccumulatorVReg = MRI.createVirtualRegister(VregRC);
           Register DstVreg = MRI.createVirtualRegister(VregRC);
           Register LaneValLo =
@@ -6167,20 +6243,12 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
               BuildMI(*ComputeLoop, I, DL,
                       TII->get(AMDGPU::V_READFIRSTLANE_B32), LaneValHi);
           MachineBasicBlock::iterator Iters = *ReadLaneLo;
-          MachineOperand Op1L = TII->buildExtractSubRegOrImm(
-              Iters, MRI, DstVregInst->getOperand(0), VregRC, AMDGPU::sub0,
-              VregSubRC);
-          MachineOperand Op1H = TII->buildExtractSubRegOrImm(
-              Iters, MRI, DstVregInst->getOperand(0), VregRC, AMDGPU::sub1,
-              VregSubRC);
-          ReadLaneLo.add(Op1L);
-          ReadLaneHi.add(Op1H);
-          NewAccumulator = BuildMI(*ComputeLoop, I, DL,
-                                   TII->get(TargetOpcode::REG_SEQUENCE), DstReg)
-                               .addReg(LaneValLo)
-                               .addImm(AMDGPU::sub0)
-                               .addReg(LaneValHi)
-                               .addImm(AMDGPU::sub1);
+          auto [Op1L, Op1H] = ExtractSubRegs(*Iters, DstVregInst->getOperand(0),
+                                             VregRC, ST, MRI);
+          ReadLaneLo.addReg(Op1L);
+          ReadLaneHi.addReg(Op1H);
+          NewAccumulator =
+              BuildRegSequence(*ComputeLoop, I, DstReg, LaneValLo, LaneValHi);
           break;
         }
         case AMDGPU::S_ADD_U64_PSEUDO:
@@ -6189,7 +6257,7 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
                                .addReg(Accumulator->getOperand(0).getReg())
                                .addReg(LaneValue->getOperand(0).getReg());
           ComputeLoop =
-              Expand64BitScalarArithmetic(*NewAccumulator, ComputeLoop);
+              expand64BitScalarArithmetic(*NewAccumulator, ComputeLoop);
           break;
         }
         }
@@ -6216,7 +6284,7 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
       RetBB = ComputeEnd;
     } else {
       assert(ST.hasDPP() && "Sub Target does not support DPP Operations");
-
+      MachineBasicBlock *CurrBB = &BB;
       Register SrcWithIdentity = MRI.createVirtualRegister(SrcRegClass);
       Register IdentityVGPR = MRI.createVirtualRegister(SrcRegClass);
       Register IdentitySGPR = MRI.createVirtualRegister(DstRegClass);
@@ -6230,146 +6298,365 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
       Register RowBcast31 = MRI.createVirtualRegister(SrcRegClass);
       Register UndefExec = MRI.createVirtualRegister(WaveMaskRegClass);
       Register FinalDPPResult;
-      BuildMI(BB, MI, DL, TII->get(AMDGPU::IMPLICIT_DEF), UndefExec);
+      MachineInstr *SrcWithIdentityInstr;
+      MachineInstr *LastBcastInstr;
+      BuildMI(*CurrBB, MI, DL, TII->get(AMDGPU::IMPLICIT_DEF), UndefExec);
 
-      uint32_t IdentityValue = getIdentityValueFor32BitWaveReduction(Opc);
-      BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MOV_B32), IdentitySGPR)
+      uint64_t IdentityValue = getIdentityValueForWaveReduction(Opc);
+      BuildMI(*CurrBB, MI, DL,
+              TII->get(is32BitOpc ? AMDGPU::S_MOV_B32
+                                  : AMDGPU::S_MOV_B64_IMM_PSEUDO),
+              IdentitySGPR)
           .addImm(IdentityValue);
-      BuildMI(BB, MI, DL, TII->get(AMDGPU::COPY), IdentityVGPR)
-          .addReg(IdentitySGPR);
-
-      // Set inactive lanes to the identity value.
-      BuildMI(BB, MI, DL, TII->get(AMDGPU::V_SET_INACTIVE_B32), SrcWithIdentity)
-          .addImm(0)            // src0 modifiers
-          .addReg(SrcReg)       // src0
-          .addImm(0)            // src1 modifiers
-          .addReg(IdentityVGPR) // identity value for inactive lanes
-          .addReg(UndefExec);   // bool i1
-
-      unsigned DPPOpc = getDPPOpcForWaveReduction(Opc, ST);
+      auto IdentityCopyInstr =
+          BuildMI(*CurrBB, MI, DL, TII->get(AMDGPU::COPY), IdentityVGPR)
+              .addReg(IdentitySGPR);
+      auto DPPClampOpcPair = getDPPOpcForWaveReduction(Opc, ST);
+      unsigned DPPOpc = std::get<0>(DPPClampOpcPair);
+      unsigned ClampOpc = std::get<1>(DPPClampOpcPair);
+      auto BuildSetInactiveInstr = [&](Register Dst, Register Src0,
+                                       Register Src1) {
+        return BuildMI(BB, MI, DL, TII->get(AMDGPU::V_SET_INACTIVE_B32),
+                       Dst)
+            .addImm(0)          // src0 modifiers
+            .addReg(Src0)       // src0
+            .addImm(0)          // src1 modifiers
+            .addReg(Src1)       // identity value for inactive lanes
+            .addReg(UndefExec); // bool i1
+      };
       auto BuildDPPMachineInstr = [&](Register Dst, Register Src,
                                       unsigned DPPCtrl) {
-        BuildMI(BB, MI, DL, TII->get(DPPOpc), Dst)
-            .addReg(Src)     // old
-            .addReg(Src)     // src0
-            .addReg(Src)     // src1
+        auto DPPInstr =
+            BuildMI(*CurrBB, MI, DL, TII->get(DPPOpc), Dst).addReg(Src); // old
+        if (isFPOp && !NeedsMovDPP)
+          DPPInstr.addImm(SISrcMods::NONE); // src0 modifier
+        DPPInstr.addReg(Src);               // src0
+        if (isFPOp && !NeedsMovDPP)
+          DPPInstr.addImm(SISrcMods::NONE); // src1 modifier
+        if (!NeedsMovDPP)
+          DPPInstr.addReg(Src); // src1
+        if (AMDGPU::getNamedOperandIdx(DPPOpc, AMDGPU::OpName::clamp) >= 0)
+          DPPInstr.addImm(0); // clamp
+        DPPInstr
             .addImm(DPPCtrl) // dpp-ctrl
             .addImm(0xf)     // row-mask
             .addImm(0xf)     // bank-mask
             .addImm(0);      // bound-control
       };
+      auto BuildClampInstr = [&](Register Dst, Register Src0, Register Src1,
+                                 bool isAddSub = false,
+                                 bool needsCarryIn = false,
+                                 Register CarryIn = Register()) {
+        unsigned InstrOpc = ClampOpc;
+        Register CarryOutReg = MRI.createVirtualRegister(WaveMaskRegClass);
+        if (needsCarryIn)
+          InstrOpc = AMDGPU::V_ADDC_U32_e64;
+        auto ClampInstr = BuildMI(*CurrBB, MI, DL, TII->get(InstrOpc), Dst);
+        if (isFPOp)
+          ClampInstr.addImm(SISrcMods::NONE); // src0 mod
+        if (isAddSub) {
+          if (needsCarryIn)
+            ClampInstr.addReg(CarryOutReg,
+                              RegState::Define |
+                                  RegState::Dead); // killed carry-out reg
+          else
+            ClampInstr.addReg(CarryOutReg, RegState::Define); // carry-out reg
+        }
+        ClampInstr.addReg(Src0);              // src0
+        if (isFPOp)
+          ClampInstr.addImm(SISrcMods::NONE); // src1 mod
+        ClampInstr.addReg(Src1);              // src1
+        if (needsCarryIn)
+          ClampInstr.addReg(CarryIn, RegState::Kill); // carry-in reg
+        if (AMDGPU::getNamedOperandIdx(InstrOpc, AMDGPU::OpName::clamp) >= 0)
+          ClampInstr.addImm(0); // clamp
+        if (isFPOp)
+          ClampInstr.addImm(0); // omod
+        LastBcastInstr = ClampInstr;
+        return CarryOutReg;
+      };
+      auto BuildPostDPPInstr = [&](Register Src0, Register Src1) {
+        bool isAddSubOpc =
+            Opc == AMDGPU::S_ADD_U64_PSEUDO || Opc == AMDGPU::S_SUB_U64_PSEUDO;
+        bool isBitWiseOpc = Opc == AMDGPU::S_AND_B64 ||
+                            Opc == AMDGPU::S_OR_B64 || Opc == AMDGPU::S_XOR_B64;
+        Register ReturnReg = MRI.createVirtualRegister(SrcRegClass);
+        if (isAddSubOpc || isBitWiseOpc) {
+          Register ResLo = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+          Register ResHi = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+          MachineOperand Src0Operand =
+              MachineOperand::CreateReg(Src0, /*isDef=*/false);
+          MachineOperand Src1Operand =
+              MachineOperand::CreateReg(Src1, /*isDef=*/false);
+          auto [Src0Lo, Src0Hi] =
+              ExtractSubRegs(MI, Src0Operand, SrcRegClass, ST, MRI);
+          auto [Src1Lo, Src1Hi] =
+              ExtractSubRegs(MI, Src1Operand, SrcRegClass, ST, MRI);
+          Register CarryReg = BuildClampInstr(
+              ResLo, Src0Lo, Src1Lo, isAddSubOpc, /*needsCarryIn*/ false);
+          BuildClampInstr(ResHi, Src0Hi, Src1Hi, isAddSubOpc,
+                          /*needsCarryIn*/ isAddSubOpc, CarryReg);
+          BuildRegSequence(*CurrBB, MI, ReturnReg, ResLo, ResHi);
+        } else {
+          if (isFPOp) {
+            BuildMI(*CurrBB, MI, DL, TII->get(Opc), ReturnReg)
+                .addImm(SISrcMods::NONE) // src0 modifiers
+                .addReg(Src0)
+                .addImm(SISrcMods::NONE) // src1 modifiers
+                .addReg(Src1)
+                .addImm(SISrcMods::NONE)  // clamp
+                .addImm(SISrcMods::NONE); // omod
+          } else {
+            Register CmpMaskReg = MRI.createVirtualRegister(WaveMaskRegClass);
+            BuildMI(*CurrBB, MI, DL, TII->get(Opc), CmpMaskReg)
+                .addReg(Src0)  // src0
+                .addReg(Src1); // src1
+            LastBcastInstr =
+                BuildMI(*CurrBB, MI, DL, TII->get(AMDGPU::V_CNDMASK_B64_PSEUDO),
+                        ReturnReg)
+                    .addReg(Src1)        // src0
+                    .addReg(Src0)        // src1
+                    .addReg(CmpMaskReg); // src2
+            expand64BitV_CNDMASK(*LastBcastInstr, CurrBB);
+          }
+        }
+        return ReturnReg;
+      };
+
+      // Set inactive lanes to the identity value.
+      if (is32BitOpc) {
+        SrcWithIdentityInstr =
+            BuildSetInactiveInstr(SrcWithIdentity, SrcReg, IdentityVGPR);
+      } else {
+        Register SrcWithIdentitylo =
+            MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+        Register SrcWithIdentityhi =
+            MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+        auto [Reg0Sub0, Reg0Sub1] = ExtractSubRegs(
+            MI, IdentityCopyInstr->getOperand(0), SrcRegClass, ST, MRI);
+        auto [SrcReg0Sub0, SrcReg0Sub1] =
+            ExtractSubRegs(MI, MI.getOperand(1), SrcRegClass, ST, MRI);
+        MachineInstr *SetInactiveLoInstr =
+            BuildSetInactiveInstr(SrcWithIdentitylo, SrcReg0Sub0, Reg0Sub0);
+        MachineInstr *SetInactiveHiInstr =
+            BuildSetInactiveInstr(SrcWithIdentityhi, SrcReg0Sub1, Reg0Sub1);
+        SrcWithIdentityInstr =
+            BuildRegSequence(*CurrBB, MI, SrcWithIdentity,
+                             SetInactiveLoInstr->getOperand(0).getReg(),
+                             SetInactiveHiInstr->getOperand(0).getReg());
+      }
       // DPP reduction
-      BuildDPPMachineInstr(DPPRowShr1, SrcWithIdentity,
+      Register SrcWithIdentityReg =
+          SrcWithIdentityInstr->getOperand(0).getReg();
+      BuildDPPMachineInstr(DPPRowShr1, SrcWithIdentityReg,
                            AMDGPU::DPP::ROW_SHR_FIRST);
+      if (NeedsMovDPP)
+        DPPRowShr1 = BuildPostDPPInstr(SrcWithIdentityReg, DPPRowShr1);
 
       BuildDPPMachineInstr(DPPRowShr2, DPPRowShr1,
                            (AMDGPU::DPP::ROW_SHR_FIRST + 1));
+      if (NeedsMovDPP)
+        DPPRowShr2 = BuildPostDPPInstr(DPPRowShr1, DPPRowShr2);
 
       BuildDPPMachineInstr(DPPRowShr4, DPPRowShr2,
                            (AMDGPU::DPP::ROW_SHR_FIRST + 3));
+      if (NeedsMovDPP)
+        DPPRowShr4 = BuildPostDPPInstr(DPPRowShr2, DPPRowShr4);
 
       BuildDPPMachineInstr(DPPRowShr8, DPPRowShr4,
                            (AMDGPU::DPP::ROW_SHR_FIRST + 7));
+      if (NeedsMovDPP)
+        DPPRowShr8 = BuildPostDPPInstr(DPPRowShr4, DPPRowShr8);
 
       if (ST.hasDPPBroadcasts()) {
         BuildDPPMachineInstr(RowBcast15, DPPRowShr8, AMDGPU::DPP::BCAST15);
+        if (NeedsMovDPP)
+          RowBcast15 = BuildPostDPPInstr(DPPRowShr8, RowBcast15);
       } else {
         // magic constant: 0x1E0
         // To Set BIT_MODE : bit 15 = 0
         // XOR mask : bit [14:10] = 0
         // OR mask : bit [9:5] = 15
         // AND mask : bit [4:0] = 0
-        Register SwizzledValue =
-            MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-        BuildMI(BB, MI, DL, TII->get(AMDGPU::DS_SWIZZLE_B32), SwizzledValue)
-            .addReg(DPPRowShr8) // addr
-            .addImm(0x1E0)      // swizzle offset (i16)
-            .addImm(0x0);       // gds (i1)
-        auto ClampInstr =
-            BuildMI(BB, MI, DL,
-                    TII->get(TII->getVALUOp(
-                        Opc == AMDGPU::S_SUB_I32
-                            ? static_cast<unsigned>(AMDGPU::S_ADD_I32)
-                            : Opc)),
-                    RowBcast15)
-                .addReg(DPPRowShr8)
-                .addReg(SwizzledValue);
-        if (TII->hasIntClamp(*ClampInstr) || TII->hasFPClamp(*ClampInstr))
-          ClampInstr.addImm(0);
+        if (is32BitOpc) {
+          Register SwizzledValue =
+              MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+          BuildMI(*CurrBB, MI, DL, TII->get(AMDGPU::DS_SWIZZLE_B32),
+                  SwizzledValue)
+              .addReg(DPPRowShr8) // addr
+              .addImm(0x1E0)      // swizzle offset (i16)
+              .addImm(0x0);       // gds (i1)
+          BuildClampInstr(RowBcast15, DPPRowShr8, SwizzledValue);
+        } else {
+          Register SwizzledValuelo =
+              MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+          Register SwizzledValuehi =
+              MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+          Register SwizzledValue64 = MRI.createVirtualRegister(SrcRegClass);
+          MachineOperand DPPRowShr8Op =
+              MachineOperand::CreateReg(DPPRowShr8, /*isDef=*/false);
+          auto [Op1L, Op1H] =
+              ExtractSubRegs(MI, DPPRowShr8Op, SrcRegClass, ST, MRI);
+          BuildMI(*CurrBB, MI, DL, TII->get(AMDGPU::DS_SWIZZLE_B32),
+                  SwizzledValuelo)
+              .addReg(Op1L)  // addr
+              .addImm(0x1E0) // swizzle offset (i16)
+              .addImm(0x0);  // gds (i1)
+          BuildMI(*CurrBB, MI, DL, TII->get(AMDGPU::DS_SWIZZLE_B32),
+                  SwizzledValuehi)
+              .addReg(Op1H)  // addr
+              .addImm(0x1E0) // swizzle offset (i16)
+              .addImm(0x0);  // gds (i1)
+          BuildRegSequence(*CurrBB, MI, SwizzledValue64, SwizzledValuelo,
+                           SwizzledValuehi);
+          if (NeedsMovDPP)
+            RowBcast15 = BuildPostDPPInstr(DPPRowShr8, SwizzledValue64);
+          else
+            BuildClampInstr(RowBcast15, DPPRowShr8, SwizzledValue64);
+        }
       }
       FinalDPPResult = RowBcast15;
       if (!IsWave32) {
         if (ST.hasDPPBroadcasts()) {
           BuildDPPMachineInstr(RowBcast31, RowBcast15, AMDGPU::DPP::BCAST31);
+          if (NeedsMovDPP)
+            RowBcast31 = BuildPostDPPInstr(RowBcast15, RowBcast31);
         } else {
           Register ShiftedThreadID =
               MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
           Register PermuteByteOffset =
               MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-          Register PermutedValue =
-              MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-          Register Lane32Offset = MRI.createVirtualRegister(DstRegClass);
-          Register WordSizeConst = MRI.createVirtualRegister(DstRegClass);
+          Register PermutedValue = MRI.createVirtualRegister(SrcRegClass);
+          Register Lane32Offset =
+              MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+          Register WordSizeConst =
+              MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
           Register ThreadIDRegLo =
               MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
           Register ThreadIDReg =
               MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
           // Get the thread ID.
-          BuildMI(BB, MI, DL, TII->get(AMDGPU::V_MBCNT_LO_U32_B32_e64),
+          BuildMI(*CurrBB, MI, DL, TII->get(AMDGPU::V_MBCNT_LO_U32_B32_e64),
                   ThreadIDRegLo)
               .addImm(-1)
               .addImm(0);
-          BuildMI(BB, MI, DL, TII->get(AMDGPU::V_MBCNT_HI_U32_B32_e64),
+          BuildMI(*CurrBB, MI, DL, TII->get(AMDGPU::V_MBCNT_HI_U32_B32_e64),
                   ThreadIDReg)
               .addImm(-1)
               .addReg(ThreadIDRegLo);
           // shift each lane over by 32 positions, so value in 31st lane is
           // present in 63rd lane.
-          BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MOV_B32), Lane32Offset)
+          BuildMI(*CurrBB, MI, DL, TII->get(AMDGPU::S_MOV_B32), Lane32Offset)
               .addImm(0x20);
-          BuildMI(BB, MI, DL, TII->get(AMDGPU::V_ADD_U32_e64), ShiftedThreadID)
+          BuildMI(*CurrBB, MI, DL, TII->get(AMDGPU::V_ADD_U32_e64),
+                  ShiftedThreadID)
               .addReg(ThreadIDReg)
               .addReg(Lane32Offset)
               .addImm(0); // clamp
           // multiply by reg size.
-          BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MOV_B32), WordSizeConst)
+          BuildMI(*CurrBB, MI, DL, TII->get(AMDGPU::S_MOV_B32), WordSizeConst)
               .addImm(0x4);
-          BuildMI(BB, MI, DL, TII->get(AMDGPU::V_MUL_LO_U32_e64),
+          BuildMI(*CurrBB, MI, DL, TII->get(AMDGPU::V_MUL_LO_U32_e64),
                   PermuteByteOffset)
               .addReg(WordSizeConst)
               .addReg(ShiftedThreadID);
           // Permute the lanes
-          BuildMI(BB, MI, DL, TII->get(AMDGPU::DS_PERMUTE_B32), PermutedValue)
-              .addReg(PermuteByteOffset) // addr
-              .addReg(RowBcast15)        // data
-              .addImm(0);                // offset
-          auto ClampInstr =
-              BuildMI(BB, MI, DL,
-                      TII->get(TII->getVALUOp(
-                          Opc == AMDGPU::S_SUB_I32
-                              ? static_cast<unsigned>(AMDGPU::S_ADD_I32)
-                              : Opc)),
-                      RowBcast31)
-                  .addReg(RowBcast15)
-                  .addReg(PermutedValue);
-          if (TII->hasIntClamp(*ClampInstr) || TII->hasFPClamp(*ClampInstr))
-            ClampInstr.addImm(0);
+          if (is32BitOpc) {
+            BuildMI(*CurrBB, MI, DL, TII->get(AMDGPU::DS_PERMUTE_B32),
+                    PermutedValue)
+                .addReg(PermuteByteOffset) // addr
+                .addReg(RowBcast15)        // data
+                .addImm(0);                // offset
+          } else {
+            Register PermutedValuelo =
+                MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+            Register PermutedValuehi =
+                MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+            MachineOperand RowBcast15Op =
+                MachineOperand::CreateReg(RowBcast15, /*isDef=*/false);
+            auto [RowBcast15Lo, RowBcast15Hi] =
+                ExtractSubRegs(MI, RowBcast15Op, SrcRegClass, ST, MRI);
+            BuildMI(*CurrBB, MI, DL, TII->get(AMDGPU::DS_PERMUTE_B32),
+                    PermutedValuelo)
+                .addReg(PermuteByteOffset) // addr
+                .addReg(RowBcast15Lo)      // swizzle offset (i16)
+                .addImm(0x0);              // gds (i1)
+            BuildMI(*CurrBB, MI, DL, TII->get(AMDGPU::DS_PERMUTE_B32),
+                    PermutedValuehi)
+                .addReg(PermuteByteOffset) // addr
+                .addReg(RowBcast15Hi)      // swizzle offset (i16)
+                .addImm(0x0);              // gds (i1)
+            BuildRegSequence(*CurrBB, MI, PermutedValue, PermutedValuelo,
+                             PermutedValuehi);
+          }
+          if (NeedsMovDPP)
+            RowBcast31 = BuildPostDPPInstr(RowBcast15, PermutedValue);
+          else
+            BuildClampInstr(RowBcast31, RowBcast15, PermutedValue);
         }
         FinalDPPResult = RowBcast31;
       }
+      if (MIOpc == AMDGPU::WAVE_REDUCE_FSUB_PSEUDO_F32 ||
+          MIOpc == AMDGPU::WAVE_REDUCE_FSUB_PSEUDO_F64) {
+        Register NegatedValVGPR = MRI.createVirtualRegister(SrcRegClass);
+        // Opc for f32 reduction is V_SUB_F32.
+        // For f64, there is no equivalent V_SUB_F64 opcode, so use
+        // V_ADD_F64/V_ADD_F64_pseudo, and negate the second operand.
+        BuildMI(*CurrBB, MI, DL, TII->get(Opc),
+                NegatedValVGPR)
+            .addImm(SISrcMods::NONE)                               // src0 mods
+            .addReg(IdentityVGPR)                                  // src0
+            .addImm(is32BitOpc ? SISrcMods::NONE : SISrcMods::NEG) // src1 mods
+            .addReg(IsWave32 ? RowBcast15 : RowBcast31)            // src1
+            .addImm(SISrcMods::NONE)                               // clamp
+            .addImm(SISrcMods::NONE);                              // omod
+        FinalDPPResult = NegatedValVGPR;
+      }
       // The final reduced value is in the last lane.
-      BuildMI(BB, MI, DL, TII->get(AMDGPU::V_READLANE_B32), ReducedValSGPR)
-          .addReg(FinalDPPResult)
-          .addImm(ST.getWavefrontSize() - 1);
-      if (Opc == AMDGPU::S_SUB_I32)
-        BuildMI(BB, MI, DL, TII->get(AMDGPU::S_SUB_I32), NegatedReducedVal)
+      if (is32BitOpc) {
+        BuildMI(*CurrBB, MI, DL, TII->get(AMDGPU::V_READLANE_B32),
+                ReducedValSGPR)
+            .addReg(FinalDPPResult)
+            .addImm(ST.getWavefrontSize() - 1);
+      } else {
+        Register LaneValueLoReg =
+            MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
+        Register LaneValueHiReg =
+            MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
+        const TargetRegisterClass *SrcRC = MRI.getRegClass(SrcReg);
+        MachineOperand FinalDPPResultOperand =
+            MachineOperand::CreateReg(FinalDPPResult, /*isDef=*/false);
+        auto [Op1L, Op1H] =
+            ExtractSubRegs(MI, FinalDPPResultOperand, SrcRC, ST, MRI);
+        // lane value input should be in an sgpr
+        BuildMI(*CurrBB, MI, DL, TII->get(AMDGPU::V_READLANE_B32),
+                LaneValueLoReg)
+            .addReg(Op1L)
+            .addImm(ST.getWavefrontSize() - 1);
+        BuildMI(*CurrBB, MI, DL, TII->get(AMDGPU::V_READLANE_B32),
+                LaneValueHiReg)
+            .addReg(Op1H)
+            .addImm(ST.getWavefrontSize() - 1);
+        BuildRegSequence(*CurrBB, MI, ReducedValSGPR, LaneValueLoReg,
+                         LaneValueHiReg);
+      }
+      if (Opc == AMDGPU::S_SUB_I32) {
+        BuildMI(*CurrBB, MI, DL, TII->get(AMDGPU::S_SUB_I32), NegatedReducedVal)
             .addImm(0)
             .addReg(ReducedValSGPR);
+      } else if (Opc == AMDGPU::S_SUB_U64_PSEUDO) {
+        auto NegatedValInstr =
+            BuildMI(*CurrBB, MI, DL, TII->get(Opc), NegatedReducedVal)
+                .addImm(0)
+                .addReg(ReducedValSGPR);
+        CurrBB = expand64BitScalarArithmetic(*NegatedValInstr, CurrBB);
+      }
       // Mark the final result as a whole-wave-mode calculation.
-      BuildMI(BB, MI, DL, TII->get(AMDGPU::STRICT_WWM), DstReg)
-          .addReg(Opc == AMDGPU::S_SUB_I32 ? NegatedReducedVal
-                                           : ReducedValSGPR);
-      RetBB = &BB;
+      BuildMI(*CurrBB, MI, DL, TII->get(AMDGPU::STRICT_WWM), DstReg)
+          .addReg(Opc == AMDGPU::S_SUB_I32 || Opc == AMDGPU::S_SUB_U64_PSEUDO
+                      ? NegatedReducedVal
+                      : ReducedValSGPR);
+      RetBB = CurrBB;
     }
   }
   MI.eraseFromParent();
@@ -6479,7 +6766,7 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   }
   case AMDGPU::S_ADD_U64_PSEUDO:
   case AMDGPU::S_SUB_U64_PSEUDO: {
-    return Expand64BitScalarArithmetic(MI, BB);
+    return expand64BitScalarArithmetic(MI, BB);
   }
   case AMDGPU::V_ADD_U64_PSEUDO:
   case AMDGPU::V_SUB_U64_PSEUDO: {
@@ -6743,58 +7030,7 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case AMDGPU::SI_KILL_I1_PSEUDO:
     return splitKillBlock(MI, BB);
   case AMDGPU::V_CNDMASK_B64_PSEUDO: {
-    Register Dst = MI.getOperand(0).getReg();
-    const MachineOperand &Src0 = MI.getOperand(1);
-    const MachineOperand &Src1 = MI.getOperand(2);
-    Register SrcCond = MI.getOperand(3).getReg();
-
-    Register DstLo = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-    Register DstHi = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-    const auto *CondRC = TRI->getWaveMaskRegClass();
-    Register SrcCondCopy = MRI.createVirtualRegister(CondRC);
-
-    const TargetRegisterClass *Src0RC = Src0.isReg()
-                                            ? MRI.getRegClass(Src0.getReg())
-                                            : &AMDGPU::VReg_64RegClass;
-    const TargetRegisterClass *Src1RC = Src1.isReg()
-                                            ? MRI.getRegClass(Src1.getReg())
-                                            : &AMDGPU::VReg_64RegClass;
-
-    const TargetRegisterClass *Src0SubRC =
-        TRI->getSubRegisterClass(Src0RC, AMDGPU::sub0);
-    const TargetRegisterClass *Src1SubRC =
-        TRI->getSubRegisterClass(Src1RC, AMDGPU::sub1);
-
-    MachineOperand Src0Sub0 = TII->buildExtractSubRegOrImm(
-        MI, MRI, Src0, Src0RC, AMDGPU::sub0, Src0SubRC);
-    MachineOperand Src1Sub0 = TII->buildExtractSubRegOrImm(
-        MI, MRI, Src1, Src1RC, AMDGPU::sub0, Src1SubRC);
-
-    MachineOperand Src0Sub1 = TII->buildExtractSubRegOrImm(
-        MI, MRI, Src0, Src0RC, AMDGPU::sub1, Src0SubRC);
-    MachineOperand Src1Sub1 = TII->buildExtractSubRegOrImm(
-        MI, MRI, Src1, Src1RC, AMDGPU::sub1, Src1SubRC);
-
-    BuildMI(*BB, MI, DL, TII->get(AMDGPU::COPY), SrcCondCopy).addReg(SrcCond);
-    BuildMI(*BB, MI, DL, TII->get(AMDGPU::V_CNDMASK_B32_e64), DstLo)
-        .addImm(0)
-        .add(Src0Sub0)
-        .addImm(0)
-        .add(Src1Sub0)
-        .addReg(SrcCondCopy);
-    BuildMI(*BB, MI, DL, TII->get(AMDGPU::V_CNDMASK_B32_e64), DstHi)
-        .addImm(0)
-        .add(Src0Sub1)
-        .addImm(0)
-        .add(Src1Sub1)
-        .addReg(SrcCondCopy);
-
-    BuildMI(*BB, MI, DL, TII->get(AMDGPU::REG_SEQUENCE), Dst)
-        .addReg(DstLo)
-        .addImm(AMDGPU::sub0)
-        .addReg(DstHi)
-        .addImm(AMDGPU::sub1);
-    MI.eraseFromParent();
+    expand64BitV_CNDMASK(MI, BB);
     return BB;
   }
   case AMDGPU::SI_BR_UNDEF: {
@@ -7364,6 +7600,8 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return lowerSET_FPENV(Op, DAG);
   case ISD::ROTR:
     return lowerROTR(Op, DAG);
+  case ISD::INLINEASM:
+    return LowerINLINEASM(Op, DAG);
   }
   return SDValue();
 }
@@ -8115,6 +8353,18 @@ bool SITargetLowering::shouldUseLDSConstAddress(const GlobalValue *GV) const {
   if (!GV->hasExternalLinkage())
     return true;
 
+  // With object linking, external LDS declarations need relocations so the
+  // linker can assign their offsets.
+  if (AMDGPUTargetMachine::EnableObjectLinking) {
+    if (const auto *GVar = dyn_cast<GlobalVariable>(GV)) {
+      if (GVar->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
+        assert(GVar->isDeclaration() && "AS3 GVs should be declaration here "
+                                        "when object linking is enabled");
+        return false;
+      }
+    }
+  }
+
   const auto OS = getTargetMachine().getTargetTriple().getOS();
   return OS == Triple::AMDHSA || OS == Triple::AMDPAL;
 }
@@ -8749,6 +8999,79 @@ SDValue SITargetLowering::lowerDEBUGTRAP(SDValue Op, SelectionDAG &DAG) const {
       static_cast<uint64_t>(GCNSubtarget::TrapID::LLVMAMDHSADebugTrap);
   SDValue Ops[] = {Chain, DAG.getTargetConstant(TrapID, SL, MVT::i16)};
   return DAG.getNode(AMDGPUISD::TRAP, SL, MVT::Other, Ops);
+}
+
+/// When a divergent value (in VGPR) is passed to an inline asm with an SGPR
+/// constraint ('s'), we need to insert v_readfirstlane to move the value from
+/// VGPR to SGPR. This is done by modifying the CopyToReg nodes in the glue
+/// chain that feed into the INLINEASM node.
+SDValue SITargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
+  unsigned NumOps = Op.getNumOperands();
+
+  const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
+  SmallSet<Register, 8> SGPRInputRegs;
+
+  unsigned NumVals = 0;
+  for (unsigned I = InlineAsm::Op_FirstOperand; I < NumOps - 1;
+       I += 1 + NumVals) {
+    const InlineAsm::Flag Flags(Op.getConstantOperandVal(I));
+    NumVals = Flags.getNumOperandRegisters();
+
+    unsigned RCID;
+    bool IsSGPRInput = Flags.getKind() == InlineAsm::Kind::RegUse &&
+                       NumVals > 0 && Flags.hasRegClassConstraint(RCID) &&
+                       TRI->isSGPRClass(TRI->getRegClass(RCID));
+
+    for (unsigned J = 0; J < NumVals; ++J) {
+      SDValue Val = Op.getOperand(I + 1 + J);
+      if (const RegisterSDNode *RegNode =
+              dyn_cast<RegisterSDNode>(Val.getNode())) {
+        Register Reg = RegNode->getReg();
+        if (IsSGPRInput || (Reg.isPhysical() && TRI->isSGPRPhysReg(Reg)))
+          SGPRInputRegs.insert(Reg);
+      }
+    }
+  }
+
+  if (SGPRInputRegs.empty())
+    return Op;
+
+  // Walk the glue chain and insert readfirstlane for divergent SGPR inputs.
+  SDLoc DL(Op);
+  SDNode *N = Op.getOperand(NumOps - 1).getNode();
+
+  while (N && N->getOpcode() == ISD::CopyToReg) {
+    Register Reg = cast<RegisterSDNode>(N->getOperand(1))->getReg();
+    SDValue SrcVal = N->getOperand(2);
+
+    // Insert readfirstlane if copying a divergent value to an SGPR input.
+    if (SrcVal->isDivergent() && SGPRInputRegs.count(Reg)) {
+      SDValue ReadFirstLaneID =
+          DAG.getTargetConstant(Intrinsic::amdgcn_readfirstlane, DL, MVT::i32);
+      SDValue ReadFirstLane =
+          DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, SrcVal.getValueType(),
+                      ReadFirstLaneID, SrcVal);
+
+      SmallVector<SDValue, 4> Ops = {N->getOperand(0), N->getOperand(1),
+                                     ReadFirstLane};
+      if (N->getNumOperands() > 3)
+        Ops.push_back(N->getOperand(3)); // Glue input
+
+      DAG.UpdateNodeOperands(N, Ops);
+    }
+
+    // Follow glue chain to next CopyToReg.
+    SDNode *Next = nullptr;
+    for (unsigned I = 0, E = N->getNumOperands(); I != E; ++I) {
+      if (N->getOperand(I).getValueType() == MVT::Glue) {
+        Next = N->getOperand(I).getNode();
+        break;
+      }
+    }
+    N = Next;
+  }
+
+  return Op;
 }
 
 SDValue SITargetLowering::getSegmentAperture(unsigned AS, const SDLoc &DL,
@@ -10256,10 +10579,12 @@ SDValue SITargetLowering::lowerSBuffer(EVT VT, SDLoc DL, SDValue Rsrc,
                    NumLoads > 1 ? Align(16 * NumLoads) : Align(4));
 
   uint64_t InstOffset = Ops[5]->getAsZExtVal();
+  unsigned LoadSize = LoadVT.getStoreSize();
   for (unsigned i = 0; i < NumLoads; ++i) {
     Ops[5] = DAG.getTargetConstant(InstOffset + 16 * i, DL, MVT::i32);
+    MachineMemOperand *LoadMMO = MF.getMachineMemOperand(MMO, 16 * i, LoadSize);
     Loads.push_back(getMemIntrinsicNode(AMDGPUISD::BUFFER_LOAD, DL, VTList, Ops,
-                                        LoadVT, MMO, DAG));
+                                        LoadVT, LoadMMO, DAG));
   }
 
   if (NumElts == 8 || NumElts == 16)
@@ -10616,8 +10941,6 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_fmul_legacy:
     return DAG.getNode(AMDGPUISD::FMUL_LEGACY, DL, VT, Op.getOperand(1),
                        Op.getOperand(2));
-  case Intrinsic::amdgcn_sffbh:
-    return DAG.getNode(AMDGPUISD::FFBH_I32, DL, VT, Op.getOperand(1));
   case Intrinsic::amdgcn_sbfe:
     return DAG.getNode(AMDGPUISD::BFE_I32, DL, VT, Op.getOperand(1),
                        Op.getOperand(2), Op.getOperand(3));
@@ -12031,8 +12354,38 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     return SDValue(DAG.getMachineNode(AMDGPU::SI_END_CF, DL, MVT::Other,
                                       Op->getOperand(2), Chain),
                    0);
-  case Intrinsic::amdgcn_s_barrier_init:
   case Intrinsic::amdgcn_s_barrier_signal_var: {
+    // Member count of 0 means to re-use a previous member count,
+    // which, if the named barrier is statically chosen, means we can use
+    // the immarg form. Otherwisee, fall through to constructiong M0 as for
+    // s_barrier_init.
+    SDValue CntOp = Op->getOperand(3);
+    auto *CntC = dyn_cast<ConstantSDNode>(CntOp);
+    if (CntC && CntC->isZero()) {
+      SDValue Chain = Op->getOperand(0);
+      SDValue BarOp = Op->getOperand(2);
+      SmallVector<SDValue, 2> Ops;
+
+      std::optional<uint64_t> BarVal;
+      if (auto *C = dyn_cast<ConstantSDNode>(BarOp))
+        BarVal = C->getZExtValue();
+      else if (auto *GA = dyn_cast<GlobalAddressSDNode>(BarOp))
+        if (auto Addr = AMDGPUMachineFunctionInfo::getLDSAbsoluteAddress(
+                *GA->getGlobal()))
+          BarVal = *Addr + GA->getOffset();
+
+      if (BarVal) {
+        unsigned BarID = (*BarVal >> 4) & 0x3F;
+        Ops.push_back(DAG.getTargetConstant(BarID, DL, MVT::i32));
+        Ops.push_back(Chain);
+        auto *NewMI = DAG.getMachineNode(AMDGPU::S_BARRIER_SIGNAL_IMM, DL,
+                                         Op->getVTList(), Ops);
+        return SDValue(NewMI, 0);
+      }
+    }
+    [[fallthrough]];
+  }
+  case Intrinsic::amdgcn_s_barrier_init: {
     // these two intrinsics have two operands: barrier pointer and member count
     SDValue Chain = Op->getOperand(0);
     SmallVector<SDValue, 2> Ops;
@@ -12754,15 +13107,30 @@ SDValue SITargetLowering::lowerFastUnsafeFDIV64(SDValue Op,
   if (!AllowInaccurateDiv)
     return SDValue();
 
-  SDValue NegY = DAG.getNode(ISD::FNEG, SL, VT, Y);
+  const ConstantFPSDNode *CLHS = dyn_cast<ConstantFPSDNode>(X);
+  bool IsNegRcp = CLHS && CLHS->isExactlyValue(-1.0);
+
+  // Pull out the negation so it folds for free into the source modifiers.
+  if (IsNegRcp)
+    X = DAG.getConstantFP(1.0, SL, VT);
+
+  SDValue NegY = IsNegRcp ? Y : DAG.getNode(ISD::FNEG, SL, VT, Y);
   SDValue One = DAG.getConstantFP(1.0, SL, VT);
 
   SDValue R = DAG.getNode(AMDGPUISD::RCP, SL, VT, Y);
+  if (IsNegRcp)
+    R = DAG.getNode(ISD::FNEG, SL, VT, R);
+
   SDValue Tmp0 = DAG.getNode(ISD::FMA, SL, VT, NegY, R, One);
 
   R = DAG.getNode(ISD::FMA, SL, VT, Tmp0, R, R);
   SDValue Tmp1 = DAG.getNode(ISD::FMA, SL, VT, NegY, R, One);
   R = DAG.getNode(ISD::FMA, SL, VT, Tmp1, R, R);
+
+  // Skip the last 2 correction terms for reciprocal.
+  if (IsNegRcp || (CLHS && CLHS->isExactlyValue(1.0)))
+    return R;
+
   SDValue Ret = DAG.getNode(ISD::FMUL, SL, VT, X, R);
   SDValue Tmp2 = DAG.getNode(ISD::FMA, SL, VT, NegY, Ret, X);
   return DAG.getNode(ISD::FMA, SL, VT, Tmp2, R, Ret);
@@ -13385,17 +13753,20 @@ SDValue SITargetLowering::lowerFSQRTF64(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
 
   SDValue X = Op.getOperand(0);
-  SDValue ScaleConstant = DAG.getConstantFP(0x1.0p-767, DL, MVT::f64);
-
-  SDValue Scaling = DAG.getSetCC(DL, MVT::i1, X, ScaleConstant, ISD::SETOLT);
-
   SDValue ZeroInt = DAG.getConstant(0, DL, MVT::i32);
 
-  // Scale up input if it is too small.
-  SDValue ScaleUpFactor = DAG.getConstant(256, DL, MVT::i32);
-  SDValue ScaleUp =
-      DAG.getNode(ISD::SELECT, DL, MVT::i32, Scaling, ScaleUpFactor, ZeroInt);
-  SDValue SqrtX = DAG.getNode(ISD::FLDEXP, DL, MVT::f64, X, ScaleUp, Flags);
+  SDValue SqrtX = X;
+  SDValue Scaling;
+  if (!Flags.hasApproximateFuncs()) {
+    SDValue ScaleConstant = DAG.getConstantFP(0x1.0p-767, DL, MVT::f64);
+    Scaling = DAG.getSetCC(DL, MVT::i1, X, ScaleConstant, ISD::SETOLT);
+
+    // Scale up input if it is too small.
+    SDValue ScaleUpFactor = DAG.getConstant(256, DL, MVT::i32);
+    SDValue ScaleUp =
+        DAG.getNode(ISD::SELECT, DL, MVT::i32, Scaling, ScaleUpFactor, ZeroInt);
+    SqrtX = DAG.getNode(ISD::FLDEXP, DL, MVT::f64, X, ScaleUp, Flags);
+  }
 
   SDValue SqrtY = DAG.getNode(AMDGPUISD::RSQ, DL, MVT::f64, SqrtX);
 
@@ -13417,24 +13788,31 @@ SDValue SITargetLowering::lowerFSQRTF64(SDValue Op, SelectionDAG &DAG) const {
 
   SDValue SqrtS2 = DAG.getNode(ISD::FMA, DL, MVT::f64, SqrtD0, SqrtH1, SqrtS1);
 
-  SDValue NegSqrtS2 = DAG.getNode(ISD::FNEG, DL, MVT::f64, SqrtS2);
-  SDValue SqrtD1 =
-      DAG.getNode(ISD::FMA, DL, MVT::f64, NegSqrtS2, SqrtS2, SqrtX);
+  SDValue SqrtRet = SqrtS2;
+  if (!Flags.hasApproximateFuncs()) {
+    SDValue NegSqrtS2 = DAG.getNode(ISD::FNEG, DL, MVT::f64, SqrtS2);
+    SDValue SqrtD1 =
+        DAG.getNode(ISD::FMA, DL, MVT::f64, NegSqrtS2, SqrtS2, SqrtX);
 
-  SDValue SqrtRet = DAG.getNode(ISD::FMA, DL, MVT::f64, SqrtD1, SqrtH1, SqrtS2);
+    SqrtRet = DAG.getNode(ISD::FMA, DL, MVT::f64, SqrtD1, SqrtH1, SqrtS2);
 
-  SDValue ScaleDownFactor = DAG.getSignedConstant(-128, DL, MVT::i32);
-  SDValue ScaleDown =
-      DAG.getNode(ISD::SELECT, DL, MVT::i32, Scaling, ScaleDownFactor, ZeroInt);
-  SqrtRet = DAG.getNode(ISD::FLDEXP, DL, MVT::f64, SqrtRet, ScaleDown, Flags);
-
-  // TODO: Switch to fcmp oeq 0 for finite only. Can't fully remove this check
-  // with finite only or nsz because rsq(+/-0) = +/-inf
+    SDValue ScaleDownFactor = DAG.getSignedConstant(-128, DL, MVT::i32);
+    SDValue ScaleDown = DAG.getNode(ISD::SELECT, DL, MVT::i32, Scaling,
+                                    ScaleDownFactor, ZeroInt);
+    SqrtRet = DAG.getNode(ISD::FLDEXP, DL, MVT::f64, SqrtRet, ScaleDown, Flags);
+  }
 
   // TODO: Check for DAZ and expand to subnormals
-  SDValue IsZeroOrInf =
-      DAG.getNode(ISD::IS_FPCLASS, DL, MVT::i1, SqrtX,
-                  DAG.getTargetConstant(fcZero | fcPosInf, DL, MVT::i32));
+
+  SDValue IsZeroOrInf;
+  if (Flags.hasNoInfs()) {
+    SDValue Zero = DAG.getConstantFP(0.0, DL, MVT::f64);
+    IsZeroOrInf = DAG.getSetCC(DL, MVT::i1, SqrtX, Zero, ISD::SETOEQ);
+  } else {
+    IsZeroOrInf =
+        DAG.getNode(ISD::IS_FPCLASS, DL, MVT::i1, SqrtX,
+                    DAG.getTargetConstant(fcZero | fcPosInf, DL, MVT::i32));
+  }
 
   // If x is +INF, +0, or -0, use its original value
   return DAG.getNode(ISD::SELECT, DL, MVT::f64, IsZeroOrInf, SqrtX, SqrtRet,
@@ -15710,9 +16088,38 @@ SDValue SITargetLowering::performMinMaxCombine(SDNode *N,
   // register pressure for no benefit.
 
   if (supportsMin3Max3(*Subtarget, Opc, VT)) {
+    auto IsTreeWithCombinableChildren = [Opc](SDValue Op) {
+      return (Op.getOperand(0).getOpcode() == Opc &&
+              Op.getOperand(0).hasOneUse()) ||
+             (Op.getOperand(1).getOpcode() == Opc &&
+              Op.getOperand(1).hasOneUse());
+    };
+
+    bool CanTreeCombineApply = Op0.getOpcode() == Opc && Op0.hasOneUse() &&
+                               Op1.getOpcode() == Opc && Op1.hasOneUse();
+    bool HasCombinableTreeChild =
+        CanTreeCombineApply && (IsTreeWithCombinableChildren(Op0) ||
+                                IsTreeWithCombinableChildren(Op1));
+
+    // Tree reduction: when both operands are the same min/max op, restructure
+    // to keep a 2-op node on top so higher tree levels can still combine.
+    //
+    // max(max(a, b), max(c, d)) -> max(max3(a, b, c), d)
+    // min(min(a, b), min(c, d)) -> min(min3(a, b, c), d)
+    //
+    // Defer when either inner op is a tree node with combinable children.
+    if (CanTreeCombineApply && !HasCombinableTreeChild) {
+      SDLoc DL(N);
+      SDValue Inner =
+          DAG.getNode(minMaxOpcToMin3Max3Opc(Opc), DL, VT, Op0.getOperand(0),
+                      Op0.getOperand(1), Op1.getOperand(0));
+      return DAG.getNode(Opc, DL, VT, Inner, Op1.getOperand(1));
+    }
+
     // max(max(a, b), c) -> max3(a, b, c)
     // min(min(a, b), c) -> min3(a, b, c)
-    if (Op0.getOpcode() == Opc && Op0.hasOneUse()) {
+    // Deferred when Op0 is a tree node with combinable children.
+    if (Op0.getOpcode() == Opc && Op0.hasOneUse() && !HasCombinableTreeChild) {
       SDLoc DL(N);
       return DAG.getNode(minMaxOpcToMin3Max3Opc(Opc), DL, N->getValueType(0),
                          Op0.getOperand(0), Op0.getOperand(1), Op1);
@@ -15721,10 +16128,26 @@ SDValue SITargetLowering::performMinMaxCombine(SDNode *N,
     // Try commuted.
     // max(a, max(b, c)) -> max3(a, b, c)
     // min(a, min(b, c)) -> min3(a, b, c)
-    if (Op1.getOpcode() == Opc && Op1.hasOneUse()) {
+    // Deferred when Op1 is a tree node with combinable children.
+    if (Op1.getOpcode() == Opc && Op1.hasOneUse() && !HasCombinableTreeChild) {
       SDLoc DL(N);
       return DAG.getNode(minMaxOpcToMin3Max3Opc(Opc), DL, N->getValueType(0),
                          Op0, Op1.getOperand(0), Op1.getOperand(1));
+    }
+  }
+
+  // umin(sffbh(x), bitwidth) -> sffbh(x) if x is known to be not 0 or -1.
+  SDValue FfbhSrc;
+  uint64_t Clamp = 0;
+  if (Opc == ISD::UMIN &&
+      sd_match(Op0,
+               m_IntrinsicWOChain<Intrinsic::amdgcn_sffbh>(m_Value(FfbhSrc))) &&
+      sd_match(Op1, m_ConstInt(Clamp))) {
+    unsigned BitWidth = FfbhSrc.getValueType().getScalarSizeInBits();
+    if (Clamp >= BitWidth) {
+      KnownBits Known = DAG.computeKnownBits(FfbhSrc);
+      if (Known.isNonZero() && !Known.isAllOnes())
+        return Op0;
     }
   }
 
@@ -16976,6 +17399,10 @@ SDValue SITargetLowering::performPtrAddCombine(SDNode *N,
   return SDValue();
 }
 
+static bool isCtlzOpc(unsigned Opc) {
+  return Opc == ISD::CTLZ || Opc == ISD::CTLZ_ZERO_UNDEF;
+}
+
 SDValue SITargetLowering::performSubCombine(SDNode *N,
                                             DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -17021,6 +17448,27 @@ SDValue SITargetLowering::performSubCombine(SDNode *N,
     SDValue Args[] = {LHS.getOperand(0), RHS, LHS.getOperand(2)};
     return DAG.getNode(ISD::USUBO_CARRY, SDLoc(N), LHS->getVTList(), Args);
   }
+
+  // sub (ctlz (xor x, (sra x, 31))), 1 -> ctls x.
+  if (isOneConstant(RHS) && isCtlzOpc(LHS.getOpcode())) {
+    SDValue CtlzSrc = LHS.getOperand(0);
+    // Check for xor x, (sra x, 31) pattern.
+    if (CtlzSrc.getOpcode() == ISD::XOR) {
+      SDValue X = CtlzSrc.getOperand(0);
+      SDValue SignExt = CtlzSrc.getOperand(1);
+      // Try both ordering of XOR operands.
+      if (SignExt.getOpcode() != ISD::SRA)
+        std::swap(X, SignExt);
+      if (SignExt.getOpcode() == ISD::SRA && SignExt.getOperand(0) == X) {
+        ConstantSDNode *ShiftAmt =
+            dyn_cast<ConstantSDNode>(SignExt.getOperand(1));
+        unsigned BitWidth = X.getValueType().getScalarSizeInBits();
+        if (ShiftAmt && ShiftAmt->getZExtValue() == BitWidth - 1)
+          return DAG.getNode(ISD::CTLS, SL, VT, X);
+      }
+    }
+  }
+
   return SDValue();
 }
 
@@ -17314,6 +17762,195 @@ SDValue SITargetLowering::performFMACombine(SDNode *N,
   return SDValue();
 }
 
+// Given a double-precision ordered or unordered comparison, return the
+// condition code for an equivalent integral comparison of the operands' upper
+// 32 bits, or `SETCC_INVALID` if not possible.
+// For simplicity, no simplification occurs if the operands are not both known
+// to have sign bit zero.
+//
+// EQ/NE:
+//  If LHS.lo32 == RHS.lo32:
+//    setcc LHS, RHS, eq/ne => setcc LHS.hi32, RHS.hi32, eq/ne
+//  If LHS.lo32 != RHS.lo32:
+//    setcc LHS, RHS, eq/ne => setcc LHS.hi32, RHS.hi32, false/true
+//  The reduction is not possible if operands may be +0 and -0.
+//  For ordered eq / unordered ne, at most one operand may be NaN.
+//  For unordered eq / ordered ne, neither operand can be NaN.
+//
+// LT/GE:
+//  If LHS.lo32 >= RHS.lo32 (unsigned):
+//    setcc LHS, RHS, [u]lt/ge => LHS.hi32, RHS.hi32, [u]lt/ge
+//  If LHS.lo32 < RHS.lo32 (unsigned):
+//    setcc LHS, RHS, [u]lt/ge => LHS.hi32, RHS.hi32, [u]le/gt
+//  The reduction is only supported if both operands are nonnegative.
+//  For ordered lt / unordered ge, the RHS cannot be NaN.
+//  For unordered lt / ordered ge, neither operand can be NaN.
+//
+// LE/GT:
+//  If LHS.lo32 > RHS.lo32 (unsigned):
+//    setcc LHS, RHS, [u]le/gt => LHS.hi32, RHS.hi32, [u]lt/ge
+//  If LHS.lo32 <= RHS.lo32 (unsigned):
+//    setcc LHS, RHS, [u]le/gt => LHS.hi32, RHS.hi32, [u]le/gt
+//  The reduction is only supported if both operands are nonnegative.
+//  For unordered le / ordered gt, the LHS cannot be NaN.
+//  For ordered le / unordered gt, neither operand can be NaN.
+static ISD::CondCode tryReduceF64CompareToHiHalf(const ISD::CondCode CC,
+                                                 const SDValue LHS,
+                                                 const SDValue RHS,
+                                                 const SelectionDAG &DAG) {
+  EVT VT = LHS.getValueType();
+  assert(VT == MVT::f64 && "Incorrect operand type!");
+
+  const KnownBits RHSBits = DAG.computeKnownBits(RHS);
+  // Bail if RHS sign bit is not known to be zero.
+  if (!RHSBits.Zero.isSignBitSet())
+    return ISD::SETCC_INVALID;
+
+  const KnownBits RHSKnownLo32 = RHSBits.trunc(32);
+  const KnownFPClass RHSFPClass =
+      KnownFPClass::bitcast(VT.getFltSemantics(), RHSBits);
+  const bool RHSMaybeNaN = !RHSFPClass.isKnownNeverNaN();
+
+  const KnownBits LHSBits = DAG.computeKnownBits(LHS);
+  const KnownBits LHSKnownLo32 = LHSBits.trunc(32);
+  const KnownFPClass LHSFPClass =
+      KnownFPClass::bitcast(VT.getFltSemantics(), LHSBits);
+  const bool LHSMaybeNaN = !LHSFPClass.isKnownNeverNaN();
+
+  // Bail if LHS sign bit is not known to be zero.
+  if (!LHSBits.Zero.isSignBitSet())
+    return ISD::SETCC_INVALID;
+
+  switch (CC) {
+  default:
+    break;
+  case ISD::SETEQ:
+  case ISD::SETOEQ:
+  case ISD::SETUEQ:
+  case ISD::SETONE:
+  case ISD::SETUNE: {
+    // OEQ should be false if either operand is NaN, so it suffices that at
+    // least one operand is not NaN.
+    if (CC == ISD::SETOEQ && LHSMaybeNaN && RHSMaybeNaN)
+      break;
+    // UEQ should be true if either operand is NaN, but this cannot be checked
+    // on underlying bits.
+    if (CC == ISD::SETUEQ && (LHSMaybeNaN || RHSMaybeNaN))
+      break;
+    // ONE should be false if either operand is NaN, but this cannot be
+    // checked on underlying bits.
+    if (CC == ISD::SETONE && (LHSMaybeNaN || RHSMaybeNaN))
+      break;
+    // UNE should be true if either operand is NaN, so it suffices that they
+    // are not both NaN.
+    if (CC == ISD::SETUNE && LHSMaybeNaN && RHSMaybeNaN)
+      break;
+
+    const std::optional<bool> KnownEq =
+        KnownBits::eq(LHSKnownLo32, RHSKnownLo32);
+
+    if (!KnownEq)
+      break;
+
+    if (*KnownEq)
+      return (CC == ISD::SETEQ || CC == ISD::SETOEQ || CC == ISD::SETUEQ)
+                 ? ISD::SETEQ
+                 : ISD::SETNE;
+
+    return (CC == ISD::SETEQ || CC == ISD::SETOEQ || CC == ISD::SETUEQ)
+               ? ISD::SETFALSE
+               : ISD::SETTRUE;
+  }
+  case ISD::SETLT:
+  case ISD::SETOLT:
+  case ISD::SETULT:
+  case ISD::SETGE:
+  case ISD::SETOGE:
+  case ISD::SETUGE: {
+    // OLT should be false if either operand is NaN.
+    // Since NaNs have maximum exponent and nonzero mantissa, false positives
+    // are only possible if the RHS is NaN. (No issue with RHS == +inf since
+    // the inequality is strict)
+    if (CC == ISD::SETOLT && RHSMaybeNaN)
+      break;
+    // ULT should be true if either operand is NaN, but this cannot be ensured
+    // with a truncated comparison.
+    if (CC == ISD::SETULT && (LHSMaybeNaN || RHSMaybeNaN))
+      break;
+    // OGE should be false if either operand is NaN, but this cannot be
+    // ensured with a truncated comparison.
+    if (CC == ISD::SETOGE && (LHSMaybeNaN || RHSMaybeNaN))
+      break;
+    // UGE should be true if either operand is NaN.
+    // False negatives are only possible if the RHS is NaN.
+    // (No issue with RHS == +inf since the inequality is inclusive)
+    if (CC == ISD::SETUGE && RHSMaybeNaN)
+      break;
+
+    const std::optional<bool> KnownUge =
+        KnownBits::uge(LHSKnownLo32, RHSKnownLo32);
+
+    if (!KnownUge)
+      break;
+
+    if (*KnownUge) {
+      // LHS.lo32 uge RHS.lo32, so LHS >= RHS iff LHS.hi32 >= RHS.hi32
+      return (CC == ISD::SETLT || CC == ISD::SETOLT || CC == ISD::SETULT)
+                 ? ISD::SETLT
+                 : ISD::SETGE;
+    }
+    // LHS.lo32 ult RHS.lo32, so LHS >= RHS iff LHS.hi32 > RHS.hi32
+    return (CC == ISD::SETLT || CC == ISD::SETOLT || CC == ISD::SETULT)
+               ? ISD::SETLE
+               : ISD::SETGT;
+  }
+  case ISD::SETLE:
+  case ISD::SETOLE:
+  case ISD::SETULE:
+  case ISD::SETGT:
+  case ISD::SETOGT:
+  case ISD::SETUGT: {
+    // OLE should be false if either operand is NaN, but this cannot be
+    // ensured with a truncated comparison.
+    if (CC == ISD::SETOLE && (LHSMaybeNaN || RHSMaybeNaN))
+      break;
+    // ULE should be true if either operand is NaN.
+    // False negatives are only possible if the LHS is NaN.
+    // (No issue with LHS == +inf since the inequality is inclusive)
+    if (CC == ISD::SETULE && LHSMaybeNaN)
+      break;
+    // OGT should be false if either operand is NaN.
+    // False positives are only possible if the LHS is NaN.
+    // (No issue with LHS == +inf since the inequality is strict)
+    if (CC == ISD::SETOGT && LHSMaybeNaN)
+      break;
+    // UGT should be true if either operand is NaN, but this cannot be ensured
+    // with a truncated comparison.
+    if (CC == ISD::SETUGT && (LHSMaybeNaN || RHSMaybeNaN))
+      break;
+
+    const std::optional<bool> KnownUle =
+        KnownBits::ule(LHSKnownLo32, RHSKnownLo32);
+
+    if (!KnownUle)
+      break;
+
+    if (*KnownUle) {
+      // LHS.lo32 ule RHS.lo32, so LHS <= RHS iff LHS.hi32 <= RHS.hi32
+      return (CC == ISD::SETLE || CC == ISD::SETOLE || CC == ISD::SETULE)
+                 ? ISD::SETLE
+                 : ISD::SETGT;
+    }
+    // LHS.lo32 ugt RHS.lo32, so LHS <= RHS iff LHS.hi32 < RHS.hi32
+    return (CC == ISD::SETLE || CC == ISD::SETOLE || CC == ISD::SETULE)
+               ? ISD::SETLT
+               : ISD::SETGE;
+  }
+  }
+
+  return ISD::SETCC_INVALID;
+}
+
 SDValue SITargetLowering::performSetCCCombine(SDNode *N,
                                               DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -17541,6 +18178,13 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
       return DAG.getNode(AMDGPUISD::FP_CLASS, SL, MVT::i1, LHS.getOperand(0),
                          DAG.getConstant(Mask, SL, MVT::i32));
     }
+  }
+
+  if (VT == MVT::f64) {
+    ISD::CondCode HiHalfCC = tryReduceF64CompareToHiHalf(CC, LHS, RHS, DAG);
+    if (HiHalfCC != ISD::SETCC_INVALID)
+      return DAG.getSetCC(SL, N->getValueType(0), getHiHalf64(LHS, DAG),
+                          getHiHalf64(RHS, DAG), HiHalfCC);
   }
 
   return SDValue();
@@ -18522,7 +19166,7 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
       // Check for lossy scalar/vector conversions.
       if (VT.isVector() && VT.getSizeInBits() != 32)
         return std::pair(0U, nullptr);
-      if (Idx < RC->getNumRegs())
+      if (RC && Idx < RC->getNumRegs())
         return std::pair(RC->getRegister(Idx), RC);
       return std::pair(0U, nullptr);
     }

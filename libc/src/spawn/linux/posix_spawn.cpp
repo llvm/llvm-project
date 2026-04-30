@@ -16,6 +16,7 @@
 
 #include "hdr/fcntl_macros.h"
 #include "hdr/types/mode_t.h"
+#include "src/signal/linux/signal_utils.h"
 #include <signal.h> // For SIGCHLD
 #include <spawn.h>
 #include <sys/syscall.h> // For syscall numbers.
@@ -25,6 +26,8 @@ namespace LIBC_NAMESPACE_DECL {
 namespace {
 
 pid_t fork() {
+  // Block signal and stop abort sigaction modification.
+  SigAbortGuard guard(/*exclusive=*/false);
   // TODO: Use only the clone syscall and use a sperate small stack in the child
   // to avoid duplicating the complete stack from the parent. A new stack will
   // be created on exec anyway so duplicating the full stack is unnecessary.

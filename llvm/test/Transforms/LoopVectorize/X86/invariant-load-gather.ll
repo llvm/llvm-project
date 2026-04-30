@@ -41,9 +41,9 @@ define i32 @inv_load_conditional(ptr %a, i64 %n, ptr %b, i32 %k) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <16 x i1> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <16 x i1> [[TMP1]], i64 0
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[TMP10]], <16 x i32> [[WIDE_MASKED_GATHER]], <16 x i32> splat (i32 1)
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <16 x i32> [[PREDPHI]], i32 15
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <16 x i32> [[PREDPHI]], i64 15
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[SMAX2]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; CHECK:       vec.epilog.iter.check:
@@ -68,9 +68,9 @@ define i32 @inv_load_conditional(ptr %a, i64 %n, ptr %b, i32 %k) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT15]], [[N_VEC7]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <8 x i1> [[TMP5]], i32 0
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <8 x i1> [[TMP5]], i64 0
 ; CHECK-NEXT:    [[PREDPHI14:%.*]] = select i1 [[TMP9]], <8 x i32> [[WIDE_MASKED_GATHER13]], <8 x i32> splat (i32 1)
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <8 x i32> [[PREDPHI14]], i32 7
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <8 x i32> [[PREDPHI14]], i64 7
 ; CHECK-NEXT:    [[CMP_N16:%.*]] = icmp eq i64 [[SMAX2]], [[N_VEC7]]
 ; CHECK-NEXT:    br i1 [[CMP_N16]], label [[FOR_END]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
@@ -99,7 +99,7 @@ entry:
   %ntrunc = trunc i64 %n to i32
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %i = phi i64 [ %i.next, %latch ], [ 0, %entry ]
   %i1 = getelementptr inbounds i32, ptr %b, i64 %i
   %i2 = load i32, ptr %i1, align 8
@@ -117,6 +117,6 @@ latch:
   %cond = icmp slt i64 %i.next, %n
   br i1 %cond, label %for.body, label %for.end
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret i32 %a.lcssa
 }

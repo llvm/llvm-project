@@ -252,6 +252,8 @@ foreach S = !listconcat(F32VectorSuffixes, F64VectorSuffixes) in {
   def TAN_#S : RuntimeLibcall;
   def TANH_#S : RuntimeLibcall;
   def TGAMMA_#S : RuntimeLibcall;
+  def CDFNORM_#S : RuntimeLibcall;
+  def ROUND_#S : RuntimeLibcall;
 }
 
 foreach S = F64VectorSuffixes in {
@@ -2798,7 +2800,8 @@ def HexagonSystemLibrary
     __umoddi3, __divdf3, __muldf3, __divsi3, __subdf3, sqrtf,
     __divdi3, __umodsi3, __moddi3, __modsi3), HexagonLibcalls,
     LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
-    exp10f, exp10, exp10l_f128, __stack_chk_fail, __stack_chk_guard)>;
+    exp10f, exp10, exp10l_f128, __stack_chk_fail, __stack_chk_guard,
+    DefaultSafeStackGlobals)>;
 
 //===----------------------------------------------------------------------===//
 // Lanai Runtime Libcalls
@@ -4422,13 +4425,13 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrd2_exp : RuntimeLibcallImpl<EXP_V2F64>;
   def amd_vrd2_exp10 : RuntimeLibcallImpl<EXP10_V2F64>;
   def amd_vrd2_exp2 : RuntimeLibcallImpl<EXP2_V2F64>;
-  def amd_vrd2_expm1 : RuntimeLibcallImpl<EXPM1_V2F64>;
   def amd_vrd2_log : RuntimeLibcallImpl<LOG_V2F64>;
   def amd_vrd2_log10 : RuntimeLibcallImpl<LOG10_V2F64>;
   def amd_vrd2_log1p : RuntimeLibcallImpl<LOG1P_V2F64>;
   def amd_vrd2_log2 : RuntimeLibcallImpl<LOG2_V2F64>;
   def amd_vrd2_pow : RuntimeLibcallImpl<POW_V2F64>;
   def amd_vrd2_sin : RuntimeLibcallImpl<SIN_V2F64>;
+  def amd_vrd2_sincos : RuntimeLibcallImpl<SINCOS_V2F64>;
   def amd_vrd2_tan : RuntimeLibcallImpl<TAN_V2F64>;
   def amd_vrd4_atan : RuntimeLibcallImpl<ATAN_V4F64>;
   def amd_vrd4_cos : RuntimeLibcallImpl<COS_V4F64>;
@@ -4504,4 +4507,13 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrs8_sinf : RuntimeLibcallImpl<SIN_V8F32>;
   def amd_vrs8_tanf : RuntimeLibcallImpl<TAN_V8F32>;
   def amd_vrs8_tanhf : RuntimeLibcallImpl<TANH_V8F32>;
+  def amd_vrd2_cdfnorm : RuntimeLibcallImpl<CDFNORM_V2F64>;
+  def amd_vrd4_cdfnorm : RuntimeLibcallImpl<CDFNORM_V4F64>;
+  def amd_vrd8_cdfnorm : RuntimeLibcallImpl<CDFNORM_V8F64>;
+  def amd_vrs4_roundf : RuntimeLibcallImpl<ROUND_V4F32>;
+  def amd_vrs8_roundf : RuntimeLibcallImpl<ROUND_V8F32>;
+  def amd_vrs16_roundf : RuntimeLibcallImpl<ROUND_V16F32>;
+  def amd_vrd2_round : RuntimeLibcallImpl<ROUND_V2F64>;
+  def amd_vrd4_round : RuntimeLibcallImpl<ROUND_V4F64>;
+  def amd_vrd8_round : RuntimeLibcallImpl<ROUND_V8F64>;
 }

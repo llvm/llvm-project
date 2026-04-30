@@ -266,7 +266,7 @@ class CA_ALU<bits<6> funct6, bits<2> funct2, string OpcodeStr>
 
 let Predicates = [HasStdExtZca] in {
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [X2] in
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 def C_ADDI4SPN : RVInst16CIW<0b000, OPC_C0, (outs GPRC:$rd),
                              (ins SP:$rs1, uimm10_lsb00nonzero:$imm),
                              "c.addi4spn", "$rd, $rs1, $imm">,
@@ -344,8 +344,7 @@ def C_ADDI : RVInst16CI<0b000, OPC_C1, (outs GPRNoX0:$rd_wb),
 }
 
 // Alternate syntax for c.nop. Converted to C_NOP/C_NOP_HINT by the assembler.
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCodeGenOnly = 0,
-    isAsmParserOnly = 1 in
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCodeGenOnly = 0 in
 def PseudoC_ADDI_NOP : Pseudo<(outs GPRX0:$rd), (ins GPRX0:$rs1, simm6:$imm),
                               [], "c.addi", "$rd, $imm"> {
   let Constraints = "$rs1 = $rd";

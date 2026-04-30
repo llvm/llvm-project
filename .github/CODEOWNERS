@@ -107,14 +107,13 @@
 /mlir/lib/Dialect/MemRef/Transforms/EmulateNarrowType.cpp @MaheshRavishankar @nicolasvasilache
 
 # Vector Dialect in MLIR.
-/mlir/**/*AMX* @aartbik @dcaballe
 /mlir/**/*Neon* @banach-space @dcaballe @nicolasvasilache
 /mlir/**/*SME* @banach-space @dcaballe @nicolasvasilache
 /mlir/**/*SVE* @banach-space @dcaballe @nicolasvasilache
 /mlir/**/*VectorInterfaces* @dcaballe @nicolasvasilache
 /mlir/**/*VectorToSCF* @banach-space @dcaballe @matthias-springer @nicolasvasilache
 /mlir/**/*VectorToLLVM* @banach-space @dcaballe @nicolasvasilache
-/mlir/**/*X86Vector* @aartbik @dcaballe @nicolasvasilache
+/mlir/**/*X86* @aartbik @dcaballe @nicolasvasilache @adam-smnk
 /mlir/include/mlir/Dialect/Vector @banach-space @dcaballe @nicolasvasilache @Groverkss
 /mlir/include/mlir/Dialect/Vector/IR @kuhar
 /mlir/lib/Dialect/Vector @banach-space @dcaballe @nicolasvasilache @Groverkss
@@ -156,6 +155,10 @@
 
 # MLIR Index Dialect
 /mlir/**/Index* @mogball
+
+# MLIR Shard Dialect
+/mlir/**/*shard* @fschlimb
+/mlir/**/*Shard* @fschlimb
 
 # MLIR Python Bindings
 /mlir/test/python/ @ftynse @makslevental @stellaraccident @rolfmorel

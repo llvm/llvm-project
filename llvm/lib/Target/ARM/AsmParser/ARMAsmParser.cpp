@@ -689,8 +689,8 @@ public:
   };
 
   ARMAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
-               const MCInstrInfo &MII, const MCTargetOptions &Options)
-    : MCTargetAsmParser(Options, STI, MII), UC(Parser), MS(STI) {
+               const MCInstrInfo &MII)
+      : MCTargetAsmParser(STI, MII), UC(Parser), MS(STI) {
     MCAsmParserExtension::Initialize(Parser);
 
     // Cache the MCRegisterInfo.
@@ -6871,19 +6871,13 @@ void ARMAsmParser::tryConvertingToTwoOperandForm(
   }
 }
 
+static bool isARMMCExpr(MCParsedAsmOperand &MCOp);
 // this function returns true if the operand is one of the following
 // relocations: :upper8_15:, :upper0_7:, :lower8_15: or :lower0_7:
 static bool isThumbI8Relocation(MCParsedAsmOperand &MCOp) {
+  assert(isARMMCExpr(MCOp));
   ARMOperand &Op = static_cast<ARMOperand &>(MCOp);
-  if (!Op.isImm())
-    return false;
-  const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(Op.getImm());
-  if (CE)
-    return false;
-  const MCExpr *E = dyn_cast<MCExpr>(Op.getImm());
-  if (!E)
-    return false;
-  auto *ARM16Expr = dyn_cast<MCSpecifierExpr>(E);
+  auto *ARM16Expr = dyn_cast<MCSpecifierExpr>(Op.getImm());
   if (ARM16Expr && (ARM16Expr->getSpecifier() == ARM::S_HI_8_15 ||
                     ARM16Expr->getSpecifier() == ARM::S_HI_0_7 ||
                     ARM16Expr->getSpecifier() == ARM::S_LO_8_15 ||
@@ -7652,13 +7646,7 @@ static bool isARMMCExpr(MCParsedAsmOperand &MCOp) {
   ARMOperand &Op = static_cast<ARMOperand &>(MCOp);
   if (!Op.isImm())
     return false;
-  const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(Op.getImm());
-  if (CE)
-    return false;
-  const MCExpr *E = dyn_cast<MCExpr>(Op.getImm());
-  if (!E)
-    return false;
-  return true;
+  return !isa<MCConstantExpr>(Op.getImm());
 }
 
 // FIXME: We would really like to be able to tablegen'erate this.
@@ -8286,10 +8274,9 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
     int i = (Operands[MnemonicOpsEndInd]->isImm()) ? MnemonicOpsEndInd
                                                    : MnemonicOpsEndInd + 1;
     ARMOperand &Op = static_cast<ARMOperand &>(*Operands[i]);
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(Op.getImm());
-    if (CE) break;
-    const MCExpr *E = dyn_cast<MCExpr>(Op.getImm());
-    if (!E) break;
+    const MCExpr *E = Op.getImm();
+    if (isa<MCConstantExpr>(E))
+      break;
     auto *ARM16Expr = dyn_cast<MCSpecifierExpr>(E);
     if (!ARM16Expr || (ARM16Expr->getSpecifier() != ARM::S_HI16 &&
                        ARM16Expr->getSpecifier() != ARM::S_LO16))
@@ -12322,12 +12309,12 @@ bool ARMAsmParser::parseDirectiveEven(SMLoc L) {
     return true;
 
   if (!Section) {
-    getStreamer().initSections(false, getSTI());
+    getStreamer().initSections(getSTI());
     Section = getStreamer().getCurrentSectionOnly();
   }
 
   assert(Section && "must have section to emit alignment");
-  if (getContext().getAsmInfo()->useCodeAlign(*Section))
+  if (getContext().getAsmInfo().useCodeAlign(*Section))
     getStreamer().emitCodeAlignment(Align(2), &getSTI());
   else
     getStreamer().emitValueToAlignment(Align(2));
@@ -12525,7 +12512,7 @@ bool ARMAsmParser::parseDirectiveAlign(SMLoc L) {
     // '.align' is target specifically handled to mean 2**2 byte alignment.
     const MCSection *Section = getStreamer().getCurrentSectionOnly();
     assert(Section && "must have section to emit alignment");
-    if (getContext().getAsmInfo()->useCodeAlign(*Section))
+    if (getContext().getAsmInfo().useCodeAlign(*Section))
       getStreamer().emitCodeAlignment(Align(4), &getSTI(), 0);
     else
       getStreamer().emitValueToAlignment(Align(4), 0, 1, 0);

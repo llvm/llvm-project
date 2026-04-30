@@ -5320,6 +5320,23 @@ bool CombinerHelper::matchConstantFoldCastOp(MachineInstr &MI,
   return false;
 }
 
+bool CombinerHelper::matchConstantFoldUnaryIntOp(MachineInstr &MI,
+                                                 BuildFnTy &MatchInfo) const {
+  Register Dst = MI.getOperand(0).getReg();
+  auto Csts = ConstantFoldUnaryIntOp(MI.getOpcode(), MRI.getType(Dst),
+                                     MI.getOperand(1).getReg(), MRI);
+  if (Csts.empty())
+    return false;
+
+  MatchInfo = [Dst, Csts = std::move(Csts)](MachineIRBuilder &B) {
+    if (Csts.size() == 1)
+      B.buildConstant(Dst, Csts[0]);
+    else
+      B.buildBuildVectorConstant(Dst, Csts);
+  };
+  return true;
+}
+
 bool CombinerHelper::matchConstantFoldBinOp(MachineInstr &MI,
                                             APInt &MatchInfo) const {
   Register Op1 = MI.getOperand(1).getReg();
@@ -5432,7 +5449,7 @@ bool CombinerHelper::matchNarrowBinopFeedingAnd(
   unsigned NarrowWidth = Mask.countr_one();
   if (NarrowWidth == WideTy.getSizeInBits())
     return false;
-  LLT NarrowTy = LLT::scalar(NarrowWidth);
+  LLT NarrowTy = LLT::integer(NarrowWidth);
 
   // Check if adding the zext + truncates could be harmful.
   auto &MF = *MI.getMF();
@@ -5733,7 +5750,8 @@ MachineInstr *CombinerHelper::buildUDivOrURemUsingMul(MachineInstr &MI) const {
   auto One = MIB.buildConstant(Ty, 1);
   auto IsOne = MIB.buildICmp(
       CmpInst::Predicate::ICMP_EQ,
-      Ty.isScalar() ? LLT::scalar(1) : Ty.changeElementSize(1), RHS, One);
+      Ty.isScalar() ? LLT::integer(1) : Ty.changeElementType(LLT::integer(1)),
+      RHS, One);
   auto ret = MIB.buildSelect(Ty, IsOne, LHS, Q);
 
   if (Opcode == TargetOpcode::G_UREM) {
@@ -6020,8 +6038,8 @@ void CombinerHelper::applySDivByPow2(MachineInstr &MI) const {
   Register RHS = SDiv.getReg(2);
   LLT Ty = MRI.getType(Dst);
   LLT ShiftAmtTy = getTargetLowering().getPreferredShiftAmountTy(Ty);
-  LLT CCVT =
-      Ty.isVector() ? LLT::vector(Ty.getElementCount(), 1) : LLT::scalar(1);
+  LLT CCVT = Ty.isVector() ? LLT::vector(Ty.getElementCount(), LLT::integer(1))
+                           : LLT::integer(1);
 
   // Effectively we want to lower G_SDIV %lhs, %rhs, where %rhs is a power of 2,
   // to the following version:
@@ -7080,8 +7098,8 @@ unsigned CombinerHelper::getFPMinMaxOpcForSelect(
 CombinerHelper::SelectPatternNaNBehaviour
 CombinerHelper::computeRetValAgainstNaN(Register LHS, Register RHS,
                                         bool IsOrderedComparison) const {
-  bool LHSSafe = isKnownNeverNaN(LHS, MRI);
-  bool RHSSafe = isKnownNeverNaN(RHS, MRI);
+  bool LHSSafe = VT->isKnownNeverNaN(LHS);
+  bool RHSSafe = VT->isKnownNeverNaN(RHS);
   // Completely unsafe.
   if (!LHSSafe && !RHSSafe)
     return SelectPatternNaNBehaviour::NOT_APPLICABLE;

@@ -186,7 +186,8 @@ private:
       next();
 
     for (bool SeenTernaryOperator = false, MaybeAngles = true; CurrentToken;) {
-      const bool InExpr = Contexts[Contexts.size() - 2].IsExpression;
+      const auto &ParentContext = Contexts[Contexts.size() - 2];
+      const bool InExpr = ParentContext.IsExpression;
       if (CurrentToken->is(tok::greater)) {
         const auto *Next = CurrentToken->Next;
         if (CurrentToken->isNot(TT_TemplateCloser)) {
@@ -208,6 +209,10 @@ private:
           }
           if (!MaybeAngles)
             return false;
+          if (ParentContext.InStaticAssertFirstArgument && Next &&
+              Next->isOneOf(tok::minus, tok::identifier)) {
+            return false;
+          }
         }
         Left->MatchingParen = CurrentToken;
         CurrentToken->MatchingParen = Left;
@@ -2753,7 +2758,7 @@ private:
     if (BeforeRParen == LParen || !AfterRParen)
       return false;
 
-    if (LParen->is(TT_OverloadedOperatorLParen))
+    if (LParen->isOneOf(TT_OverloadedOperatorLParen, TT_FunctionTypeLParen))
       return false;
 
     auto *LeftOfParens = LParen->getPreviousNonComment();
@@ -4257,6 +4262,29 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
                              ChildSize + Current->SpacesRequiredBefore;
     }
 
+    if ((Style.PackParameters.BinPack == FormatStyle::BPPS_UseBreakAfter &&
+         Prev->MightBeFunctionDeclParen &&
+         Prev->ParameterCount > Style.PackParameters.BreakAfter) ||
+        (Style.PackArguments.BinPack == FormatStyle::BPAS_UseBreakAfter &&
+         !Prev->MightBeFunctionDeclParen &&
+         Prev->isOneOf(tok::l_paren, tok::l_brace,
+                       TT_ArrayInitializerLSquare) &&
+         Prev->ParameterCount > Style.PackArguments.BreakAfter)) {
+      const auto *RParen = Prev->MatchingParen;
+      for (auto *ParamTok = Current; ParamTok && ParamTok != RParen;
+           ParamTok = ParamTok->Next) {
+        if (ParamTok->opensScope()) {
+          ParamTok = ParamTok->MatchingParen;
+          continue;
+        }
+
+        if (startsNextParameter(*ParamTok, Style)) {
+          ParamTok->MustBreakBefore = true;
+          ParamTok->CanBreakBefore = true;
+        }
+      }
+    }
+
     if (Current->is(TT_ControlStatementLBrace)) {
       if (Style.ColumnLimit > 0 &&
           Style.BraceWrapping.AfterControlStatement ==
@@ -5546,6 +5574,10 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     return Style.SpaceBeforeCtorInitializerColon;
   if (Right.is(TT_InheritanceColon) && !Style.SpaceBeforeInheritanceColon)
     return false;
+  if (Right.is(TT_EnumUnderlyingTypeColon) &&
+      !Style.SpaceBeforeEnumUnderlyingTypeColon) {
+    return false;
+  }
   if (Right.is(TT_RangeBasedForLoopColon) &&
       !Style.SpaceBeforeRangeBasedForLoopColon) {
     return false;
@@ -5641,10 +5673,9 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     return false;
   }
   if (Right.is(tok::coloncolon) && Left.is(tok::identifier)) {
-    // Generally don't remove existing spaces between an identifier and "::".
-    // The identifier might actually be a macro name such as ALWAYS_INLINE. If
-    // this turns out to be too lenient, add analysis of the identifier itself.
-    return Right.hasWhitespaceBefore();
+    // Preserve the space in constructs such as ALWAYS_INLINE ::std::string.
+    return Left.isPossibleMacro(/*AllowFollowingColonColon=*/true) &&
+           Right.hasWhitespaceBefore();
   }
   if (Right.is(tok::coloncolon) &&
       Left.isNoneOf(tok::l_brace, tok::comment, tok::l_paren)) {
@@ -5735,7 +5766,7 @@ bool TokenAnnotator::mustBreakBefore(AnnotatedLine &Line,
 
   // Ignores the first parameter as this will be handled separately by
   // BreakFunctionDefinitionParameters or AlignAfterOpenBracket.
-  if (Style.BinPackParameters == FormatStyle::BPPS_AlwaysOnePerLine &&
+  if (Style.PackParameters.BinPack == FormatStyle::BPPS_AlwaysOnePerLine &&
       Line.MightBeFunctionDecl && !Left.opensScope() &&
       startsNextParameter(Right, Style)) {
     return true;
@@ -6040,7 +6071,8 @@ bool TokenAnnotator::mustBreakBefore(AnnotatedLine &Line,
 
     if (Style.BraceWrapping.AfterEnum) {
       if (Line.startsWith(tok::kw_enum) ||
-          Line.startsWith(tok::kw_typedef, tok::kw_enum)) {
+          Line.startsWith(tok::kw_typedef, tok::kw_enum) ||
+          Line.startsWith(tok::kw_export, tok::kw_enum)) {
         return true;
       }
       // Ensure BraceWrapping for `public enum A {`.

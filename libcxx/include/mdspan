@@ -46,15 +46,15 @@ namespace std {
 // extents synopsis
 
 namespace std {
-  template<class _IndexType, size_t... _Extents>
+  template<class IndexType, size_t... Extents>
   class extents {
   public:
-    using index_type = _IndexType;
+    using index_type = IndexType;
     using size_type = make_unsigned_t<index_type>;
     using rank_type = size_t;
 
     // [mdspan.extents.obs], observers of the multidimensional index space
-    static constexpr rank_type rank() noexcept { return sizeof...(_Extents); }
+    static constexpr rank_type rank() noexcept { return sizeof...(Extents); }
     static constexpr rank_type rank_dynamic() noexcept { return dynamic-index(rank()); }
     static constexpr size_t static_extent(rank_type) noexcept;
     constexpr index_type extent(rank_type) const noexcept;
@@ -62,20 +62,20 @@ namespace std {
     // [mdspan.extents.cons], constructors
     constexpr extents() noexcept = default;
 
-    template<class _OtherIndexType, size_t... _OtherExtents>
+    template<class OtherIndexType, size_t... OtherExtents>
       constexpr explicit(see below)
-        extents(const extents<_OtherIndexType, _OtherExtents...>&) noexcept;
-    template<class... _OtherIndexTypes>
-      constexpr explicit extents(_OtherIndexTypes...) noexcept;
-    template<class _OtherIndexType, size_t N>
+        extents(const extents<OtherIndexType, OtherExtents...>&) noexcept;
+    template<class... OtherIndexTypes>
+      constexpr explicit extents(OtherIndexTypes...) noexcept;
+    template<class OtherIndexType, size_t N>
       constexpr explicit(N != rank_dynamic())
-        extents(span<_OtherIndexType, N>) noexcept;
-    template<class _OtherIndexType, size_t N>
+        extents(span<OtherIndexType, N>) noexcept;
+    template<class OtherIndexType, size_t N>
       constexpr explicit(N != rank_dynamic())
-        extents(const array<_OtherIndexType, N>&) noexcept;
+        extents(const array<OtherIndexType, N>&) noexcept;
 
     // [mdspan.extents.cmp], comparison operators
-    template<class _OtherIndexType, size_t... _OtherExtents>
+    template<class OtherIndexType, size_t... OtherExtents>
       friend constexpr bool operator==(const extents&,
                                        const extents<_OtherIndexType, _OtherExtents...>&) noexcept;
 
@@ -97,12 +97,12 @@ namespace std {
   class layout_left::mapping {
   public:
     using extents_type = Extents;
-    using index_type = typename extents_type::index_type;
-    using size_type = typename extents_type::size_type;
-    using rank_type = typename extents_type::rank_type;
+    using index_type = extents_type::index_type;
+    using size_type = extents_type::size_type;
+    using rank_type = extents_type::rank_type;
     using layout_type = layout_left;
 
-    // [mdspan.layout.right.cons], constructors
+    // [mdspan.layout.left.cons], constructors
     constexpr mapping() noexcept = default;
     constexpr mapping(const mapping&) noexcept = default;
     constexpr mapping(const extents_type&) noexcept;
@@ -118,7 +118,7 @@ namespace std {
 
     constexpr mapping& operator=(const mapping&) noexcept = default;
 
-    // [mdspan.layout.right.obs], observers
+    // [mdspan.layout.left.obs], observers
     constexpr const extents_type& extents() const noexcept { return extents_; }
 
     constexpr index_type required_span_size() const noexcept;
@@ -151,9 +151,9 @@ namespace std {
   class layout_right::mapping {
   public:
     using extents_type = Extents;
-    using index_type = typename extents_type::index_type;
-    using size_type = typename extents_type::size_type;
-    using rank_type = typename extents_type::rank_type;
+    using index_type = extents_type::index_type;
+    using size_type = extents_type::size_type;
+    using rank_type = extents_type::rank_type;
     using layout_type = layout_right;
 
     // [mdspan.layout.right.cons], constructors
@@ -205,9 +205,9 @@ namespace std {
   class layout_stride::mapping {
   public:
     using extents_type = Extents;
-    using index_type = typename extents_type::index_type;
-    using size_type = typename extents_type::size_type;
-    using rank_type = typename extents_type::rank_type;
+    using index_type = extents_type::index_type;
+    using size_type = extents_type::size_type;
+    using rank_type = extents_type::rank_type;
     using layout_type = layout_stride;
 
   private:
@@ -286,22 +286,19 @@ namespace std {
     static constexpr size_t byte_alignment = ByteAlignment;
 
     constexpr aligned_accessor() noexcept = default;
-
     template<class OtherElementType, size_t OtherByteAlignment>
       constexpr aligned_accessor(
         aligned_accessor<OtherElementType, OtherByteAlignment>) noexcept;
+    template<class OtherElementType>
+      constexpr explicit aligned_accessor(default_accessor<OtherElementType>) noexcept;
 
     template<class OtherElementType>
-      explicit constexpr aligned_accessor(
-        default_accessor<OtherElementType>) noexcept;
-
-    template<class OtherElementType>
-    constexpr operator default_accessor<OtherElementType>() const noexcept;
+      constexpr operator default_accessor<OtherElementType>() const noexcept;
 
     constexpr reference access(data_handle_type p, size_t i) const noexcept;
 
-    constexpr typename offset_policy::data_handle_type
-      offset(data_handle_type p, size_t i) const noexcept;
+    constexpr typename offset_policy::data_handle_type offset(
+      data_handle_type p, size_t i) const noexcept;
   };
 }
 
@@ -315,14 +312,14 @@ namespace std {
     using extents_type = Extents;
     using layout_type = LayoutPolicy;
     using accessor_type = AccessorPolicy;
-    using mapping_type = typename layout_type::template mapping<extents_type>;
+    using mapping_type = layout_type::template mapping<extents_type>;
     using element_type = ElementType;
     using value_type = remove_cv_t<element_type>;
-    using index_type = typename extents_type::index_type;
-    using size_type = typename extents_type::size_type;
-    using rank_type = typename extents_type::rank_type;
-    using data_handle_type = typename accessor_type::data_handle_type;
-    using reference = typename accessor_type::reference;
+    using index_type = extents_type::index_type;
+    using size_type = extents_type::size_type;
+    using rank_type = extents_type::rank_type;
+    using data_handle_type = accessor_type::data_handle_type;
+    using reference = accessor_type::reference;
 
     static constexpr rank_type rank() noexcept { return extents_type::rank(); }
     static constexpr rank_type rank_dynamic() noexcept { return extents_type::rank_dynamic(); }
@@ -365,7 +362,7 @@ namespace std {
       constexpr reference operator[](const array<OtherIndexType, rank()>& indices) const;
 
     constexpr size_type size() const noexcept;
-    [[nodiscard]] constexpr bool empty() const noexcept;
+    constexpr bool empty() const noexcept;
 
     friend constexpr void swap(mdspan& x, mdspan& y) noexcept;
 
@@ -398,17 +395,17 @@ namespace std {
   };
 
   template<class CArray>
-    requires(is_array_v<CArray> && rank_v<CArray> == 1)
+    requires (is_array_v<CArray> && rank_v<CArray> == 1)
     mdspan(CArray&)
       -> mdspan<remove_all_extents_t<CArray>, extents<size_t, extent_v<CArray, 0>>>;
 
   template<class Pointer>
-    requires(is_pointer_v<remove_reference_t<Pointer>>)
+    requires (is_pointer_v<remove_reference_t<Pointer>>)
     mdspan(Pointer&&)
       -> mdspan<remove_pointer_t<remove_reference_t<Pointer>>, extents<size_t>>;
 
   template<class ElementType, class... Integrals>
-    requires((is_convertible_v<Integrals, size_t> && ...) && sizeof...(Integrals) > 0)
+    requires ((is_convertible_v<Integrals, size_t> && ...) && sizeof...(Integrals) > 0)
     explicit mdspan(ElementType*, Integrals...)
       -> mdspan<ElementType, dextents<size_t, sizeof...(Integrals)>>;            // until C++26
   template<class ElementType, class... Integrals>
@@ -434,7 +431,7 @@ namespace std {
                 typename MappingType::layout_type>;
 
   template<class MappingType, class AccessorType>
-    mdspan(const typename AccessorType::data_handle_type&, const MappingType&,
+    mdspan(typename AccessorType::data_handle_type, const MappingType&,
            const AccessorType&)
       -> mdspan<typename AccessorType::element_type, typename MappingType::extents_type,
                 typename MappingType::layout_type, AccessorType>;

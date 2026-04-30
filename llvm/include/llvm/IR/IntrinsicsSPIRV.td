@@ -25,7 +25,9 @@ let TargetPrefix = "spv" in {
 
   def int_spv_gep : Intrinsic<[llvm_any_ty], [llvm_i1_ty, llvm_any_ty, llvm_vararg_ty], [ImmArg<ArgIndex<0>>]>;
   def int_spv_load : Intrinsic<[llvm_i32_ty], [llvm_anyptr_ty, llvm_i16_ty, llvm_i32_ty], [ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
+  def int_spv_atomic_load : Intrinsic<[llvm_i32_ty], [llvm_anyptr_ty, llvm_i16_ty, llvm_i8_ty], [ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
   def int_spv_store : Intrinsic<[], [llvm_any_ty, llvm_anyptr_ty, llvm_i16_ty, llvm_i32_ty], [ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>]>;
+  def int_spv_atomic_store : Intrinsic<[], [llvm_any_ty, llvm_anyptr_ty, llvm_i16_ty, llvm_i8_ty], [ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>]>;
   def int_spv_extractv : Intrinsic<[llvm_any_ty], [llvm_i32_ty, llvm_vararg_ty]>;
   def int_spv_insertv : Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_any_ty, llvm_vararg_ty]>;
   def int_spv_extractelt : Intrinsic<[llvm_any_ty], [llvm_any_ty, llvm_anyint_ty]>;
@@ -138,6 +140,7 @@ def int_spv_rsqrt : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty]
   def int_spv_wave_any : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_i1_ty], [IntrConvergent, IntrNoMem]>;
   def int_spv_wave_reduce_or : DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>], [IntrConvergent, IntrNoMem]>;
   def int_spv_wave_reduce_xor : DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>], [IntrConvergent, IntrNoMem]>;
+  def int_spv_wave_reduce_and : DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>], [IntrConvergent, IntrNoMem]>;
   def int_spv_subgroup_ballot : ClangBuiltin<"__builtin_spirv_subgroup_ballot">,
     DefaultAttrsIntrinsic<[llvm_v4i32_ty], [llvm_i1_ty], [IntrConvergent, IntrNoMem]>;
   def int_spv_wave_reduce_umax : DefaultAttrsIntrinsic<[llvm_any_ty], [LLVMMatchType<0>], [IntrConvergent, IntrNoMem]>;
@@ -153,8 +156,14 @@ def int_spv_rsqrt : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty]
   def int_spv_wave_prefix_sum : DefaultAttrsIntrinsic<[llvm_any_ty], [LLVMMatchType<0>], [IntrConvergent, IntrNoMem]>;
   def int_spv_wave_prefix_product : DefaultAttrsIntrinsic<[llvm_any_ty], [LLVMMatchType<0>], [IntrConvergent, IntrNoMem]>;
   def int_spv_quad_read_across_x : DefaultAttrsIntrinsic<[llvm_any_ty], [LLVMMatchType<0>], [IntrConvergent, IntrNoMem]>;
+  def int_spv_quad_read_across_y : DefaultAttrsIntrinsic<[llvm_any_ty], [LLVMMatchType<0>], [IntrConvergent, IntrNoMem]>;
   def int_spv_sign : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i32_ty>], [llvm_any_ty], [IntrNoMem]>;
   def int_spv_radians : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty], [IntrNoMem]>;
+  def int_spv_all_memory_barrier : DefaultAttrsIntrinsic<[], [], [IntrConvergent]>;
+  def int_spv_all_memory_barrier_with_group_sync : DefaultAttrsIntrinsic<[], [], [IntrConvergent]>;
+  def int_spv_device_memory_barrier : DefaultAttrsIntrinsic<[], [], [IntrConvergent]>;
+  def int_spv_device_memory_barrier_with_group_sync : DefaultAttrsIntrinsic<[], [], [IntrConvergent]>;
+  def int_spv_group_memory_barrier : DefaultAttrsIntrinsic<[], [], [IntrConvergent]>;
   def int_spv_group_memory_barrier_with_group_sync : ClangBuiltin<"__builtin_spirv_group_barrier">,
     DefaultAttrsIntrinsic<[], [], [IntrConvergent]>;
   def int_spv_discard : DefaultAttrsIntrinsic<[], [], []>;
@@ -202,6 +211,20 @@ def int_spv_rsqrt : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty]
 
   def int_spv_resource_getdimensions_x
       : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_any_ty], [IntrReadMem]>;
+  def int_spv_resource_getdimensions_xy
+      : DefaultAttrsIntrinsic<[llvm_v2i32_ty], [llvm_any_ty], [IntrReadMem]>;
+  def int_spv_resource_getdimensions_xyz
+      : DefaultAttrsIntrinsic<[llvm_v3i32_ty], [llvm_any_ty], [IntrReadMem]>;
+  def int_spv_resource_getdimensions_levels_x
+      : DefaultAttrsIntrinsic<[llvm_v2i32_ty], [llvm_any_ty, llvm_i32_ty], [IntrReadMem]>;
+  def int_spv_resource_getdimensions_levels_xy
+      : DefaultAttrsIntrinsic<[llvm_v3i32_ty], [llvm_any_ty, llvm_i32_ty], [IntrReadMem]>;
+  def int_spv_resource_getdimensions_levels_xyz
+      : DefaultAttrsIntrinsic<[llvm_v4i32_ty], [llvm_any_ty, llvm_i32_ty], [IntrReadMem]>;
+  def int_spv_resource_getdimensions_ms_xy
+      : DefaultAttrsIntrinsic<[llvm_v3i32_ty], [llvm_any_ty], [IntrReadMem]>;
+  def int_spv_resource_getdimensions_ms_xyz
+      : DefaultAttrsIntrinsic<[llvm_v4i32_ty], [llvm_any_ty], [IntrReadMem]>;
 
   def int_spv_resource_sample
       : DefaultAttrsIntrinsic<
@@ -269,6 +292,16 @@ def int_spv_rsqrt : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty]
                                llvm_float_ty, llvm_any_ty],
                               [IntrReadMem]>;
 
+  def int_spv_resource_calculate_lod
+      : DefaultAttrsIntrinsic<[llvm_any_ty],
+                              [llvm_any_ty, llvm_any_ty, llvm_any_ty],
+                              [IntrReadMem]>;
+
+  def int_spv_resource_calculate_lod_unclamped
+      : DefaultAttrsIntrinsic<[llvm_any_ty],
+                              [llvm_any_ty, llvm_any_ty, llvm_any_ty],
+                              [IntrReadMem]>;
+
   def int_spv_resource_gather
       : DefaultAttrsIntrinsic<[llvm_any_ty],
                               [llvm_any_ty, llvm_any_ty, llvm_any_ty,
@@ -282,7 +315,7 @@ def int_spv_rsqrt : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty]
                               [IntrReadMem]>;
 
   def int_spv_resource_getpointer
-      : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [llvm_any_ty, llvm_i32_ty],
+      : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [llvm_any_ty, llvm_any_ty],
                               [IntrNoMem]>;
 
   def int_spv_pushconstant_getpointer

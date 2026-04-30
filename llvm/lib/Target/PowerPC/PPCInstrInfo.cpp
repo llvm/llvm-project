@@ -3010,7 +3010,7 @@ unsigned PPCInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   case PPC::INLINEASM_BR: {
     const MachineFunction *MF = MI.getParent()->getParent();
     const char *AsmStr = MI.getOperand(0).getSymbolName();
-    return getInlineAsmLength(AsmStr, *MF->getTarget().getMCAsmInfo());
+    return getInlineAsmLength(AsmStr, MF->getTarget().getMCAsmInfo());
   }
   case TargetOpcode::STACKMAP: {
     StackMapOpers Opers(&MI);
@@ -3023,15 +3023,32 @@ unsigned PPCInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   case TargetOpcode::PATCHABLE_FUNCTION_ENTER: {
     const MachineFunction *MF = MI.getParent()->getParent();
     const Function &F = MF->getFunction();
-    unsigned Num = 0;
-    (void)F.getFnAttribute("patchable-function-entry")
-        .getValueAsString()
-        .getAsInteger(10, Num);
-    return Num * 4;
+    unsigned Num = F.getFnAttributeAsParsedInteger("patchable-function-entry");
+    if (Num || MF->getTarget().getTargetTriple().isOSAIX() ||
+        !MF->getTarget().getTargetTriple().isLittleEndian())
+      return Num * 4;
+    // Size of xray sled.
+    return 7 * 4;
   }
+  case TargetOpcode::PATCHABLE_RET: {
+    // Size of xray sled.
+    unsigned RetOpcode = MI.getOperand(0).getImm();
+    bool IsConditional = RetOpcode == PPC::BCCLR;
+    return (8 + IsConditional) * 4;
+  }
+  case TargetOpcode::BUNDLE:
+    return getInstBundleSize(MI);
   default:
     return get(Opcode).getSize();
   }
+}
+
+TargetInstrInfo::InstSizeVerifyMode
+PPCInstrInfo::getInstSizeVerifyMode(const MachineInstr &MI) const {
+  // FIXME: The size of STACKMAP is currently over-estimated.
+  return MI.getOpcode() == TargetOpcode::STACKMAP
+             ? InstSizeVerifyMode::AllowOverEstimate
+             : InstSizeVerifyMode::ExactSize;
 }
 
 std::pair<unsigned, unsigned>
@@ -3321,6 +3338,9 @@ bool PPCInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     MI.removeOperand(0);
     return true;
   }
+  case PPC::LWAT_CSNE_PSEUDO:
+  case PPC::LDAT_CSNE_PSEUDO:
+    return expandAMOCSNEPseudo(MI);
   }
   return false;
 }
@@ -5873,4 +5893,43 @@ bool PPCInstrInfo::areMemAccessesTriviallyDisjoint(
     }
   }
   return false;
+}
+
+// Expands LWAT_CSNE_PSEUDO/LDAT_CSNE_PSEUDO post register allocation.
+// lwat/ldat FC=16 requires 3 consecutive registers. X8/X9/X10 are
+// hardcoded post-RA to satisfy this constraint without a dedicated
+// register class.
+bool PPCInstrInfo::expandAMOCSNEPseudo(MachineInstr &MI) const {
+  MachineBasicBlock &MBB = *MI.getParent();
+  DebugLoc DL = MI.getDebugLoc();
+  bool IsLDAT = MI.getOpcode() == PPC::LDAT_CSNE_PSEUDO;
+
+  Register DstReg = MI.getOperand(0).getReg();
+  Register PtrReg = MI.getOperand(1).getReg();
+
+  Register ScratchReg = PtrReg;
+  if (PtrReg == PPC::X8 || PtrReg == PPC::X9 || PtrReg == PPC::X10) {
+    // If ptr is in X8/X9/X10, use $dst as scratch to move ptr away from
+    // X8/X9/X10 since lwat FC=16 always writes its result to X8. After lwat
+    // copy X8 into $dst.
+    Register DstReg64 = IsLDAT ? DstReg
+                               : Register(getRegisterInfo().getMatchingSuperReg(
+                                     DstReg, PPC::sub_32, &PPC::G8RCRegClass));
+    BuildMI(MBB, MI, DL, get(PPC::OR8), DstReg64).addReg(PtrReg).addReg(PtrReg);
+    ScratchReg = DstReg64;
+  }
+
+  BuildMI(MBB, MI, DL, get(IsLDAT ? PPC::LDAT_CSNE : PPC::LWAT_CSNE), PPC::X8)
+      .addReg(ScratchReg)
+      .addImm(16)
+      .addReg(PPC::X9, RegState::Implicit)
+      .addReg(PPC::X10, RegState::Implicit);
+
+  if (DstReg != (IsLDAT ? PPC::X8 : PPC::R8)) {
+    BuildMI(MBB, MI, DL, get(IsLDAT ? PPC::OR8 : PPC::OR), DstReg)
+        .addReg(IsLDAT ? PPC::X8 : PPC::R8)
+        .addReg(IsLDAT ? PPC::X8 : PPC::R8);
+  }
+  MI.eraseFromParent();
+  return true;
 }

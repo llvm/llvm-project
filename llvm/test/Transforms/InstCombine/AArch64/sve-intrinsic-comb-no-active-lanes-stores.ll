@@ -31,7 +31,7 @@ define void @test_st1_scatter_index(<vscale x 2 x i32> %data_trunc, ptr %base, <
 ; CHECK-LABEL: define void @test_st1_scatter_index(
 ; CHECK-SAME: <vscale x 2 x i32> [[DATA_TRUNC:%.*]], ptr [[BASE:%.*]], <vscale x 2 x i64> [[OFFSETS:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    call void @llvm.aarch64.sve.st1.scatter.index.nxv2i32(<vscale x 2 x i32> [[DATA_TRUNC]], <vscale x 2 x i1> zeroinitializer, ptr [[BASE]], <vscale x 2 x i64> [[OFFSETS]])
+; CHECK-NEXT:    call void @llvm.aarch64.sve.st1.scatter.index.nxv2i32.p0(<vscale x 2 x i32> [[DATA_TRUNC]], <vscale x 2 x i1> zeroinitializer, ptr [[BASE]], <vscale x 2 x i64> [[OFFSETS]])
 ; CHECK-NEXT:    ret void
 ;
 entry:

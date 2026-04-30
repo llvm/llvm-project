@@ -422,10 +422,34 @@ public:
     return MI->isTerminator() && isUnspillableTerminatorImpl(MI);
   }
 
+  /// Sum the sizes of instructions inside of a BUNDLE, by calling \ref
+  /// getInstSizeInBytes on each. This is a utility function for implementations
+  /// of \ref getInstSizeInBytes to use.
+  unsigned getInstBundleSize(const MachineInstr &MI) const;
+
   /// Returns the size in bytes of the specified MachineInstr, or ~0U
   /// when this function is not implemented by a target.
+
+  /// For BUNDLE instructions, target implementations are responsible for
+  /// accounting for the size of all bundled instructions.
   virtual unsigned getInstSizeInBytes(const MachineInstr &MI) const {
     return ~0U;
+  }
+
+  enum class InstSizeVerifyMode {
+    /// Do not verify instruction size.
+    NoVerify,
+    /// Check that the instruction size matches exactly.
+    ExactSize,
+    /// Allow the reported instruction size to be larger than the actual size.
+    AllowOverEstimate,
+  };
+
+  /// Determine whether/how the instruction size returned by
+  /// getInstSizeInBytes() should be verified.
+  virtual InstSizeVerifyMode
+  getInstSizeVerifyMode(const MachineInstr &MI) const {
+    return InstSizeVerifyMode::NoVerify;
   }
 
   /// Return true if the instruction is as cheap as a move instruction.
@@ -1238,17 +1262,18 @@ public:
   /// operand folded, otherwise NULL is returned.
   /// The new instruction is inserted before MI, and the client is responsible
   /// for removing the old instruction.
+  /// If a copy instruction being created during fold, return it by CopyMI.
   /// If VRM is passed, the assigned physregs can be inspected by target to
   /// decide on using an opcode (note that those assignments can still change).
   MachineInstr *foldMemoryOperand(MachineInstr &MI, ArrayRef<unsigned> Ops,
-                                  int FI,
+                                  int FI, MachineInstr *&CopyMI,
                                   LiveIntervals *LIS = nullptr,
                                   VirtRegMap *VRM = nullptr) const;
 
   /// Same as the previous version except it allows folding of any load and
   /// store from / to any address, not just from a specific stack slot.
   MachineInstr *foldMemoryOperand(MachineInstr &MI, ArrayRef<unsigned> Ops,
-                                  MachineInstr &LoadMI,
+                                  MachineInstr &LoadMI, MachineInstr *&CopyMI,
                                   LiveIntervals *LIS = nullptr) const;
 
   /// This function defines the logic to lower COPY instruction to
@@ -1425,12 +1450,11 @@ protected:
   /// Target-independent code in foldMemoryOperand will
   /// take care of adding a MachineMemOperand to the newly created instruction.
   /// The instruction and any auxiliary instructions necessary will be inserted
-  /// at InsertPt.
+  /// at MI.
   virtual MachineInstr *
   foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
-                        ArrayRef<unsigned> Ops,
-                        MachineBasicBlock::iterator InsertPt, int FrameIndex,
-                        LiveIntervals *LIS = nullptr,
+                        ArrayRef<unsigned> Ops, int FrameIndex,
+                        MachineInstr *&CopyMI, LiveIntervals *LIS = nullptr,
                         VirtRegMap *VRM = nullptr) const {
     return nullptr;
   }
@@ -1439,11 +1463,12 @@ protected:
   /// Target-independent code in foldMemoryOperand will
   /// take care of adding a MachineMemOperand to the newly created instruction.
   /// The instruction and any auxiliary instructions necessary will be inserted
-  /// at InsertPt.
-  virtual MachineInstr *foldMemoryOperandImpl(
-      MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
-      MachineBasicBlock::iterator InsertPt, MachineInstr &LoadMI,
-      LiveIntervals *LIS = nullptr) const {
+  /// at MI.
+  virtual MachineInstr *
+  foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
+                        ArrayRef<unsigned> Ops, MachineInstr &LoadMI,
+                        MachineInstr *&CopyMI,
+                        LiveIntervals *LIS = nullptr) const {
     return nullptr;
   }
 
@@ -1825,11 +1850,13 @@ public:
   /// whether it can be folded into MI. FoldAsLoadDefReg is the virtual register
   /// defined by the load we are trying to fold. DefMI returns the machine
   /// instruction that defines FoldAsLoadDefReg, and the function returns
-  /// the machine instruction generated due to folding.
+  /// the machine instruction generated due to folding. CopyMI returns the
+  /// copy instruction possibly generated due to folding.
   virtual MachineInstr *optimizeLoadInstr(MachineInstr &MI,
                                           const MachineRegisterInfo *MRI,
                                           Register &FoldAsLoadDefReg,
-                                          MachineInstr *&DefMI) const;
+                                          MachineInstr *&DefMI,
+                                          MachineInstr *&CopyMI) const;
 
   /// 'Reg' is known to be defined by a move immediate instruction,
   /// try to fold the immediate into the use instruction.
@@ -2260,12 +2287,8 @@ public:
                                   MachineBasicBlock::iterator Iter,
                                   DebugLoc &DL,
                                   bool AllowSideEffects = true) const {
-#if 0
-    // FIXME: This should exist once all platforms that use stack protectors
-    // implements it.
     llvm_unreachable(
         "Target didn't implement TargetInstrInfo::buildClearRegister!");
-#endif
   }
 
   /// Return true if the function can safely be outlined from.
@@ -2345,10 +2368,9 @@ public:
     llvm_unreachable("impossible call instruction");
   }
 
-  /// Return the uniformity behavior of the given instruction.
-  virtual InstructionUniformity
-  getInstructionUniformity(const MachineInstr &MI) const {
-    return InstructionUniformity::Default;
+  /// Return the uniformity behavior of the given value.
+  virtual ValueUniformity getValueUniformity(const MachineInstr &MI) const {
+    return ValueUniformity::Default;
   }
 
   /// Returns true if the given \p MI defines a TargetIndex operand that can be
@@ -2371,6 +2393,15 @@ public:
   virtual void getFrameIndexOperands(SmallVectorImpl<MachineOperand> &Ops,
                                      int FI) const {
     llvm_unreachable("unknown number of operands necessary");
+  }
+
+  /// Inserts a code prefetch instruction before `InsertBefore` in block `MBB`
+  /// targetting `GV`.
+  virtual MachineInstr *
+  insertCodePrefetchInstr(MachineBasicBlock &MBB,
+                          MachineBasicBlock::iterator InsertBefore,
+                          const GlobalValue *GV) const {
+    llvm_unreachable("target did not implement");
   }
 
 private:

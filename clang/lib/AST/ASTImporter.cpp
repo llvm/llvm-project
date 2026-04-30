@@ -3579,13 +3579,13 @@ ExpectedDecl ASTNodeImporter::VisitEnumConstantDecl(EnumConstantDecl *D) {
 template <typename DeclTy>
 Error ASTNodeImporter::ImportTemplateParameterLists(const DeclTy *FromD,
                                                     DeclTy *ToD) {
-  unsigned int Num = FromD->getNumTemplateParameterLists();
-  if (Num == 0)
+  ArrayRef<TemplateParameterList *> FromTPLs =
+      FromD->getTemplateParameterLists();
+  if (FromTPLs.empty())
     return Error::success();
-  SmallVector<TemplateParameterList *, 2> ToTPLists(Num);
-  for (unsigned int I = 0; I < Num; ++I)
-    if (Expected<TemplateParameterList *> ToTPListOrErr =
-            import(FromD->getTemplateParameterList(I)))
+  SmallVector<TemplateParameterList *, 2> ToTPLists(FromTPLs.size());
+  for (unsigned int I = 0; I < FromTPLs.size(); ++I)
+    if (Expected<TemplateParameterList *> ToTPListOrErr = import(FromTPLs[I]))
       ToTPLists[I] = *ToTPListOrErr;
     else
       return ToTPListOrErr.takeError();
@@ -9749,12 +9749,16 @@ Expected<Attr *> ASTImporter::Import(const Attr *FromAttr) {
   }
   case attr::GuardedBy: {
     const auto *From = cast<GuardedByAttr>(FromAttr);
-    AI.importAttr(From, AI.importArg(From->getArg()).value());
+    AI.importAttr(From,
+                  AI.importArrayArg(From->args(), From->args_size()).value(),
+                  From->args_size());
     break;
   }
   case attr::PtGuardedBy: {
     const auto *From = cast<PtGuardedByAttr>(FromAttr);
-    AI.importAttr(From, AI.importArg(From->getArg()).value());
+    AI.importAttr(From,
+                  AI.importArrayArg(From->args(), From->args_size()).value(),
+                  From->args_size());
     break;
   }
   case attr::AcquiredAfter: {

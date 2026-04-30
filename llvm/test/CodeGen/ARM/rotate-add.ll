@@ -29,7 +29,7 @@ define i32 @test_simple_rotr(i32 %x) {
 define i32 @test_rotl_var(i32 %x, i32 %y) {
 ; CHECK-LABEL: test_rotl_var:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    rsb r1, r1, #32
+; CHECK-NEXT:    rsb r1, r1, #0
 ; CHECK-NEXT:    ror r0, r0, r1
 ; CHECK-NEXT:    bx lr
   %shl = shl i32 %x, %y

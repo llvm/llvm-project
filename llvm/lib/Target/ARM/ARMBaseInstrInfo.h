@@ -416,8 +416,6 @@ private:
   bool checkAndUpdateStackOffset(MachineInstr *MI, int64_t Fixup,
                                  bool Updt) const;
 
-  unsigned getInstBundleLength(const MachineInstr &MI) const;
-
   std::optional<unsigned> getVLDMDefCycle(const InstrItineraryData *ItinData,
                                           const MCInstrDesc &DefMCID,
                                           unsigned DefClass, unsigned DefIdx,

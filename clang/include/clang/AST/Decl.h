@@ -29,11 +29,11 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Linkage.h"
 #include "clang/Basic/OperatorKinds.h"
+#include "clang/Basic/OptionalUnsigned.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/PragmaKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
-#include "clang/Basic/UnsignedOrNone.h"
 #include "clang/Basic/Visibility.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -859,13 +859,11 @@ public:
 
   void setTrailingRequiresClause(const AssociatedConstraint &AC);
 
-  unsigned getNumTemplateParameterLists() const {
-    return hasExtInfo() ? getExtInfo()->NumTemplParamLists : 0;
-  }
-
-  TemplateParameterList *getTemplateParameterList(unsigned index) const {
-    assert(index < getNumTemplateParameterLists());
-    return getExtInfo()->TemplParamLists[index];
+  ArrayRef<TemplateParameterList *> getTemplateParameterLists() const {
+    if (!hasExtInfo())
+      return {};
+    return {/*data=*/getExtInfo()->TemplParamLists,
+            /*length=*/getExtInfo()->NumTemplParamLists};
   }
 
   void setTemplateParameterListsInfo(ASTContext &Context,
@@ -1210,6 +1208,21 @@ public:
             // C++11 [dcl.stc]p4
             (getStorageClass() == SC_None && getTSCSpec() == TSCS_thread_local))
       && !isFileVarDecl();
+  }
+
+  /// Returns true if this is a file-scope variable with internal linkage.
+  bool isInternalLinkageFileVar() const {
+    // Calling isExternallyVisible() can trigger linkage computation/caching,
+    // which may produce stale results when a decl's DeclContext changes after
+    // creation (e.g., OpenMP declare mapper variables), so here we determine
+    // it syntactically instead.
+    if (!isFileVarDecl())
+      return false;
+    // Linkage is determined by enclosing class/namespace for static data
+    // members.
+    if (getStorageClass() == SC_Static && !isStaticDataMember())
+      return true;
+    return isInAnonymousNamespace();
   }
 
   /// Returns true if a variable has extern or __private_extern__
@@ -3975,13 +3988,11 @@ public:
 
   void setQualifierInfo(NestedNameSpecifierLoc QualifierLoc);
 
-  unsigned getNumTemplateParameterLists() const {
-    return hasExtInfo() ? getExtInfo()->NumTemplParamLists : 0;
-  }
-
-  TemplateParameterList *getTemplateParameterList(unsigned i) const {
-    assert(i < getNumTemplateParameterLists());
-    return getExtInfo()->TemplParamLists[i];
+  ArrayRef<TemplateParameterList *> getTemplateParameterLists() const {
+    if (!hasExtInfo())
+      return {};
+    return {/*data=*/getExtInfo()->TemplParamLists,
+            /*length=*/getExtInfo()->NumTemplParamLists};
   }
 
   // These types are created lazily, use the ASTContext methods to obtain them.

@@ -3421,7 +3421,8 @@ void JoinVals::pruneSubRegValues(LiveInterval &LI, LaneBitmask &ShrinkMask) {
         LIS->pruneValue(S, Def, &EndPoints);
         DidPrune = true;
         // Mark value number as unused.
-        ValueOut->markUnused();
+        if (ValueOut->def == Def)
+          ValueOut->markUnused();
 
         if (V.Identical && S.Query(OtherDef).valueOutOrDead()) {
           // If V is identical to V.OtherVNI (and S was live at OtherDef),

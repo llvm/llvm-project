@@ -614,6 +614,14 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
     return "loop_dep_war";
   case ISD::LOOP_DEPENDENCE_RAW_MASK:
     return "loop_dep_raw";
+  case ISD::MASKED_UDIV:
+    return "masked_udiv";
+  case ISD::MASKED_SDIV:
+    return "masked_sdiv";
+  case ISD::MASKED_UREM:
+    return "masked_urem";
+  case ISD::MASKED_SREM:
+    return "masked_srem";
 
     // Vector Predication
 #define BEGIN_REGISTER_VP_SDNODE(SDID, LEGALARG, NAME, ...)                    \

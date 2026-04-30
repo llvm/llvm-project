@@ -301,8 +301,8 @@ public:
   static bool isSymbolDiff(const MCExpr *Expr);
 
   RISCVAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
-                 const MCInstrInfo &MII, const MCTargetOptions &Options)
-      : MCTargetAsmParser(Options, STI, MII) {
+                 const MCInstrInfo &MII)
+      : MCTargetAsmParser(STI, MII) {
     MCAsmParserExtension::Initialize(Parser);
 
     Parser.addAliasForDirective(".half", ".2byte");
@@ -311,7 +311,7 @@ public:
     Parser.addAliasForDirective(".dword", ".8byte");
     setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
 
-    auto ABIName = StringRef(Options.ABIName);
+    auto ABIName = StringRef(getTargetOptions().ABIName);
     if (ABIName.ends_with("f") && !getSTI().hasFeature(RISCV::FeatureStdExtF)) {
       errs() << "Hard-float 'f' ABI can't be used for a target that "
                 "doesn't support the F instruction set extension (ignoring "
@@ -749,9 +749,19 @@ public:
     return isUImmPred([](int64_t Imm) { return isUInt<5>(Imm) && Imm > 3; });
   }
 
+  bool isUImm4Plus1() const {
+    return isUImmPred(
+        [](int64_t Imm) { return Imm > 0 && isUInt<4>(Imm - 1); });
+  }
+
   bool isUImm5Plus1() const {
     return isUImmPred(
         [](int64_t Imm) { return Imm > 0 && isUInt<5>(Imm - 1); });
+  }
+
+  bool isUImm6Plus1() const {
+    return isUImmPred(
+        [](int64_t Imm) { return Imm > 0 && isUInt<6>(Imm - 1); });
   }
 
   bool isUImm5GE6Plus1() const {
@@ -904,8 +914,8 @@ public:
            VK == RISCV::S_QC_ABS20;
   }
 
-  bool isSImm8Unsigned() const { return isSImm<8>() || isUImm<8>(); }
-  bool isSImm10Unsigned() const { return isSImm<10>() || isUImm<10>(); }
+  bool isSImm8PLI_B() const { return isSImm<8>() || isUImm<8>(); }
+  bool isSImm10PLUI() const { return isSImm<10>() || isUImm<10>(); }
 
   bool isSImm10PLI_H() const {
     return isSImm<10>() || isUImmPred([](int64_t Imm) {
@@ -1073,7 +1083,7 @@ public:
       break;
     case KindTy::FRM:
       OS << "<frm: ";
-      roundingModeToString(getFRM());
+      OS << roundingModeToString(getFRM());
       OS << '>';
       break;
     case KindTy::Fence:
@@ -1218,20 +1228,13 @@ public:
     addExpr(Inst, getExpr(), isRV64Expr());
   }
 
-  void addSImm8UnsignedOperands(MCInst &Inst, unsigned N) const {
+  template <unsigned Bits>
+  void addSExtImmOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     int64_t Imm;
     [[maybe_unused]] bool IsConstant = evaluateConstantExpr(getExpr(), Imm);
     assert(IsConstant);
-    Inst.addOperand(MCOperand::createImm(SignExtend64<8>(Imm)));
-  }
-
-  void addSImm10UnsignedOperands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-    int64_t Imm;
-    [[maybe_unused]] bool IsConstant = evaluateConstantExpr(getExpr(), Imm);
-    assert(IsConstant);
-    Inst.addOperand(MCOperand::createImm(SignExtend64<10>(Imm)));
+    Inst.addOperand(MCOperand::createImm(SignExtend64<Bits>(Imm)));
   }
 
   void addFPImmOperands(MCInst &Inst, unsigned N) const {
@@ -1512,6 +1515,8 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 3) - 1);
   case Match_InvalidUImm4:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 4) - 1);
+  case Match_InvalidUImm4Plus1:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, 1, (1 << 4));
   case Match_InvalidUImm5:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 5) - 1);
   case Match_InvalidUImm5NonZero:
@@ -1529,6 +1534,8 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   }
   case Match_InvalidUImm6:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 6) - 1);
+  case Match_InvalidUImm6Plus1:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, 1, (1 << 6));
   case Match_InvalidUImm7:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 7) - 1);
   case Match_InvalidUImm8:
@@ -1584,7 +1591,7 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, 0, (1 << 9) - 8,
         "immediate must be a multiple of 8 bytes in the range");
-  case Match_InvalidSImm8Unsigned:
+  case Match_InvalidSImm8PLI_B:
     return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 7),
                                       (1 << 8) - 1);
   case Match_InvalidSImm10:
@@ -1592,7 +1599,7 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidSImm10PLI_W:
     return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 9),
                                       (1 << 9) - 1);
-  case Match_InvalidSImm10Unsigned:
+  case Match_InvalidSImm10PLUI:
     return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 9),
                                       (1 << 10) - 1);
   case Match_InvalidUImm10Lsb00NonZero:
@@ -3207,6 +3214,10 @@ bool RISCVAsmParser::parseDirectiveOption() {
       return true;
 
     getTargetStreamer().emitDirectiveOptionArch(Args);
+
+    if (auto ParseResult =
+            RISCVFeatures::parseFeatureBits(isRV64(), STI->getFeatureBits()))
+      getTargetStreamer().setArchString((*ParseResult)->toString());
     return false;
   }
 
@@ -3236,6 +3247,9 @@ bool RISCVAsmParser::parseDirectiveOption() {
 
     getTargetStreamer().emitDirectiveOptionRVC();
     setFeatureBits(RISCV::FeatureStdExtC, "c");
+    if (auto ParseResult =
+            RISCVFeatures::parseFeatureBits(isRV64(), STI->getFeatureBits()))
+      getTargetStreamer().setArchString((*ParseResult)->toString());
     return false;
   }
 
@@ -3246,6 +3260,9 @@ bool RISCVAsmParser::parseDirectiveOption() {
     getTargetStreamer().emitDirectiveOptionNoRVC();
     clearFeatureBits(RISCV::FeatureStdExtC, "c");
     clearFeatureBits(RISCV::FeatureStdExtZca, "zca");
+    if (auto ParseResult =
+            RISCVFeatures::parseFeatureBits(isRV64(), STI->getFeatureBits()))
+      getTargetStreamer().setArchString((*ParseResult)->toString());
     return false;
   }
 
@@ -3368,6 +3385,10 @@ bool RISCVAsmParser::parseDirectiveAttribute() {
 
     // Then emit the arch string.
     getTargetStreamer().emitTextAttribute(Tag, Result);
+
+    // And then update the active ISA so the next instruction-run emits
+    // an ISA-specific mapping symbol.
+    getTargetStreamer().setArchString(Result);
   }
 
   return false;

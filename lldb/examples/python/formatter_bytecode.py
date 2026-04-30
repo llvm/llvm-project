@@ -94,7 +94,8 @@ sig_init = 1
 sig_get_num_children = 2
 sig_get_child_index = 3
 sig_get_child_at_index = 4
-sig_update = 5
+sig_get_value = 5
+sig_update = 6
 
 SIGNATURES = {
     "summary": sig_summary,
@@ -102,6 +103,7 @@ SIGNATURES = {
     "get_num_children": sig_get_num_children,
     "get_child_index": sig_get_child_index,
     "get_child_at_index": sig_get_child_at_index,
+    "get_value": sig_get_value,
     "update": sig_update,
 }
 
@@ -293,11 +295,6 @@ class BytecodeSection:
             builder.emit_uleb(len(bc), "program size")
             builder.emit_bytes(bc, "program")
 
-    @property
-    def _var_name(self):
-        var_name = re.sub(r"\W", "_", self.type_name)
-        return f"_{var_name}_formatter"
-
     def write_c(self, output: TextIO) -> None:
         self.validate()
 
@@ -320,7 +317,8 @@ class BytecodeSection:
             "__attribute__((used, section(FORMATTER_SECTION)))",
             file=output,
         )
-        print(f"unsigned char {self._var_name}[] =", file=output)
+        var_name = re.sub(r"\W", "_", self.type_name)
+        print(f"unsigned char _{var_name}_formatter[] =", file=output)
         indent = "    "
         for string, comment in builder.entries:
             print(f"{indent}// {comment}", file=output)
@@ -337,7 +335,7 @@ class BytecodeSection:
             textwrap.dedent(
                 """\
                 #if swift(>=6.3)
-                #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS) || os(visionOS)
+                #if objectFormat(MachO)
                 @section("__DATA_CONST,__lldbformatters")
                 #else
                 @section(".lldbformatters")
@@ -347,7 +345,7 @@ class BytecodeSection:
             file=output,
         )
         print(
-            f"let {self._var_name}: {builder.type_decl} = (",
+            f"let `{self.type_name} formatter`: {builder.type_decl} = (",
             file=output,
         )
         indent = "    "
@@ -890,6 +888,13 @@ class Compiler(ast.NodeVisitor):
     def _compile_method(self, node: ast.FunctionDef) -> None:
         self.current_sig = _METHOD_SIGS[node.name]
 
+        return_type = node.returns.id if isinstance(node.returns, ast.Name) else None
+        if node.name == "update" and return_type != "bool":
+            raise CompilerError(
+                "update must be declared to return bool: def update(self) -> bool:",
+                node,
+            )
+
         # Strip 'self' (and 'internal_dict' for __init__) from the arg list;
         # the remaining args become the initial locals.
         args = copy(node.args.args)
@@ -1148,14 +1153,12 @@ def _main():
     )
     parser.add_argument("-n", "--type-name", help="source type of formatter")
     parser.add_argument(
-        "--skip-invocation-comment",
-        action="store_true",
-        help="do not print invocation comment in compiled output",
-    )
-    parser.add_argument(
         "-o",
         "--output",
         help="output file (required for --assemble)",
+    )
+    parser.add_argument(
+        "--append", action="store_true", help="append to existing output file"
     )
     parser.add_argument(
         "-f",
@@ -1167,6 +1170,10 @@ def _main():
     parser.add_argument("-t", "--test", action="store_true", help="run unit tests")
 
     args = parser.parse_args()
+
+    if args.append and not args.compile:
+        parser.error("--append is valid only with --compile")
+
     if args.compile:
         if not args.type_name:
             parser.error("--type-name is required with --compile")
@@ -1184,10 +1191,8 @@ def _main():
             with open(args.output, "wb") as output:
                 section.write_binary(output)
         else:
-            with open(args.output, "w") as output:
-                if not args.skip_invocation_comment:
-                    print("// Generated with:", file=output)
-                    print("//  ", shlex.join(sys.argv), file=output)
+            mode = "a" if args.append else "w"
+            with open(args.output, mode) as output:
                 section.write_source(output, language=args.format)
     elif args.assemble:
         if not args.type_name:

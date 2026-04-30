@@ -36,6 +36,19 @@ template <typename T> constexpr auto addr_if(const std::optional<T> &x) {
   return x ? &*x : nullptr;
 }
 
+const parser::Designator *GetDesignatorFromObj(const parser::OmpObject &object);
+const parser::DataRef *GetDataRefFromObj(const parser::OmpObject &object);
+const parser::ArrayElement *GetArrayElementFromObj(
+    const parser::OmpObject &object);
+std::optional<parser::CharBlock> GetObjectSource(
+    const parser::OmpObject &object);
+const parser::OmpObject *GetArgumentObject(const parser::OmpArgument &argument);
+
+const OmpDirectiveSpecification &GetOmpDirectiveSpecification(
+    const OpenMPConstruct &x);
+const OmpDirectiveSpecification &GetOmpDirectiveSpecification(
+    const OpenMPDeclarativeConstruct &x);
+
 namespace detail {
 struct DirectiveNameScope {
   static OmpDirectiveName MakeName(CharBlock source = {},
@@ -48,10 +61,6 @@ struct DirectiveNameScope {
 
   static OmpDirectiveName GetOmpDirectiveName(const OmpDirectiveName &x) {
     return x;
-  }
-
-  static OmpDirectiveName GetOmpDirectiveName(const OmpBeginLoopDirective &x) {
-    return x.DirName();
   }
 
   static OmpDirectiveName GetOmpDirectiveName(const OpenMPSectionConstruct &x) {
@@ -121,17 +130,6 @@ const OpenMPConstruct *GetOmp(const ExecutionPartConstruct &x);
 
 const OpenMPLoopConstruct *GetOmpLoop(const ExecutionPartConstruct &x);
 const DoConstruct *GetDoConstruct(const ExecutionPartConstruct &x);
-
-// Is the template argument "Statement<T>" for some T?
-template <typename T> struct IsStatement {
-  static constexpr bool value{false};
-};
-template <typename T> struct IsStatement<Statement<T>> {
-  static constexpr bool value{true};
-};
-
-std::optional<Label> GetStatementLabel(const ExecutionPartConstruct &x);
-std::optional<Label> GetFinalLabel(const OpenMPConstruct &x);
 
 namespace detail {
 // Clauses with flangClass = "OmpObjectList".

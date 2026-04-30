@@ -28,7 +28,7 @@ This issue may be a good introductory issue for people new to working on LLVM. I
 
 1. Check that no other contributor is working on this issue. If someone is assigned to the issue or claimed to be working on it, ping the person. After one week without a response, the assignee may be changed.
 1. Leave a comment indicating that you are working on the issue, or just create a [pull request](https://github.com/llvm/llvm-project/pulls) after following the steps below. [Mention](https://docs.github.com/en/issues/tracking-your-work-with-issues/linking-a-pull-request-to-an-issue) this issue in the description of the pull request.
-1. Fix the issue locally.
+1. Fix the issue locally. Be aware that [LLVM's AI policy](https://llvm.org/docs/AIToolPolicy.html#details) forbids the use of AI tools to fix good first issues since it squanders a learning opportunity. Using LLMs to search and learn is permitted, since the goal is learning.
 1. [Run the test suite](https://llvm.org/docs/TestingGuide.html#unit-and-regression-tests) locally. Remember that the subdirectories under `test/` create fine-grained testing targets, so you can e.g. use `make check-clang-ast` to only run Clang's AST tests.
 1. Create a Git commit.
 1. Run [`git clang-format HEAD~1`](https://clang.llvm.org/docs/ClangFormat.html#git-integration) to format your changes.
@@ -54,10 +54,22 @@ def escape_description(str):
     # https://github.com/github/markup/issues/1168#issuecomment-494946168
     str = html.escape(str, False)
     # '@' followed by alphanum is a user name
-    str = re.sub("@(?=\w)", "@<!-- -->", str)
+    str = re.sub(r"@(?=\w)", "@<!-- -->", str)
     # '#' followed by digits is considered an issue number
-    str = re.sub("#(?=\d)", "#<!-- -->", str)
+    str = re.sub(r"#(?=\d)", "#<!-- -->", str)
     return str
+
+
+def format_author(user) -> str:
+    # user.login is the account name, which everyone has. In theory it can be None,
+    # perhaps for closed accounts. user.name is a longer display name for example
+    # "First Last", which not everyone has set.
+    author = "Author: "
+    if user.name is not None:
+        author += f"{user.name} ({user.login})"
+    else:
+        author += f"{user.login}"
+    return author
 
 
 class IssueSubscriber:
@@ -88,7 +100,7 @@ class IssueSubscriber:
         comment = f"""
 @llvm/{team.slug}
 
-Author: {self.issue.user.name} ({self.issue.user.login})
+{format_author(self.issue.user)}
 
 <details>
 {body}
@@ -183,7 +195,7 @@ class PRSubscriber:
 {self.COMMENT_TAG}
 {team_mention}
 
-Author: {self.pr.user.name} ({self.pr.user.login})
+{format_author(self.pr.user)}
 
 <details>
 <summary>Changes</summary>
@@ -650,7 +662,7 @@ class ReleaseWorkflow:
     def get_main_commit(self, cherry_pick_sha: str) -> github.Commit.Commit:
         commit = self.repo.get_commit(cherry_pick_sha)
         message = commit.commit.message
-        m = re.search("\(cherry picked from commit ([0-9a-f]+)\)", message)
+        m = re.search(r"\(cherry picked from commit ([0-9a-f]+)\)", message)
         if not m:
             return None
         return self.repo.get_commit(m.group(1))

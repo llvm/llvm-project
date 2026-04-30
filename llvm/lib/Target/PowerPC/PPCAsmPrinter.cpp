@@ -27,7 +27,6 @@
 #include "PPCTargetMachine.h"
 #include "TargetInfo/PowerPCTargetInfo.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
@@ -284,7 +283,7 @@ public:
 
   PPCAIXAsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
       : PPCAsmPrinter(TM, std::move(Streamer), ID) {
-    if (MAI->isLittleEndian())
+    if (MAI.isLittleEndian())
       report_fatal_error(
           "cannot create AIX PPC Assembly Printer for a little-endian target");
   }
@@ -946,31 +945,6 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     return PPC::S_None;
   };
 
-#ifndef NDEBUG
-  // Instruction sizes must be correct for PPCBranchSelector to pick the
-  // right branch kind. Verify that the reported sizes and the actually
-  // emitted sizes match.
-  unsigned ExpectedSize = Subtarget->getInstrInfo()->getInstSizeInBytes(*MI);
-  MCFragment *OldFragment = OutStreamer->getCurrentFragment();
-  size_t OldFragSize = OldFragment->getFixedSize();
-  scope_exit VerifyInstSize([&]() {
-    if (!OutStreamer->isObj())
-      return; // Can only verify size when streaming to object.
-    MCFragment *NewFragment = OutStreamer->getCurrentFragment();
-    if (NewFragment != OldFragment)
-      return; // Don't try to handle fragment splitting cases.
-    unsigned ActualSize = NewFragment->getFixedSize() - OldFragSize;
-    // FIXME: InstrInfo currently over-estimates the size of STACKMAP.
-    if (ActualSize != ExpectedSize &&
-        MI->getOpcode() != TargetOpcode::STACKMAP) {
-      dbgs() << "Size mismatch for: " << *MI << "\n";
-      dbgs() << "Expected size: " << ExpectedSize << "\n";
-      dbgs() << "Actual size: " << ActualSize << "\n";
-      abort();
-    }
-  });
-#endif
-
   // Lower multi-instruction pseudo operations.
   switch (MI->getOpcode()) {
   default: break;
@@ -978,10 +952,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     assert(!Subtarget->isAIXABI() &&
            "AIX does not support patchable function entry!");
     const Function &F = MF->getFunction();
-    unsigned Num = 0;
-    (void)F.getFnAttribute("patchable-function-entry")
-        .getValueAsString()
-        .getAsInteger(10, Num);
+    unsigned Num = F.getFnAttributeAsParsedInteger("patchable-function-entry");
     if (!Num)
       return;
     emitNops(Num);
@@ -1729,27 +1700,6 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::EnforceIEIO));
     return;
   }
-  case PPC::BL8:
-  case PPC::BL8_NOP: {
-    const MachineOperand &MO = MI->getOperand(0);
-    if (MO.isSymbol()) {
-      StringRef Name = MO.getSymbolName();
-      Name.consume_front(".");
-      Name.consume_back("[PR]");
-      bool IsLWAT = Name == "__lwat_csne_pseudo";
-      bool IsLDAT = Name == "__ldat_csne_pseudo";
-      if (IsLWAT || IsLDAT) {
-        EmitToStreamer(*OutStreamer,
-                       MCInstBuilder(IsLWAT ? PPC::LWAT : PPC::LDAT)
-                           .addReg(PPC::X3)
-                           .addReg(PPC::X3)
-                           .addReg(PPC::X6)
-                           .addImm(16));
-        return;
-      }
-    }
-    break;
-  }
   }
 
   LowerPPCMachineInstrToMCInst(MI, TmpInst, *this);
@@ -1864,12 +1814,9 @@ void PPCLinuxAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // of instructions change.
     // XRAY is only supported on PPC Linux little endian.
     const Function &F = MF->getFunction();
-    unsigned Num = 0;
-    (void)F.getFnAttribute("patchable-function-entry")
-        .getValueAsString()
-        .getAsInteger(10, Num);
+    unsigned Num = F.getFnAttributeAsParsedInteger("patchable-function-entry");
 
-    if (!MAI->isLittleEndian() || Num)
+    if (!MAI.isLittleEndian() || Num)
       break;
     MCSymbol *BeginOfSled = OutContext.createTempSymbol();
     MCSymbol *EndOfSled = OutContext.createTempSymbol();
@@ -2111,7 +2058,7 @@ void PPCLinuxAsmPrinter::emitEndOfAsmFile(Module &M) {
   if (static_cast<const PPCTargetMachine &>(TM).hasGlibcHWCAPAccess())
     OutStreamer->emitSymbolValue(
         GetExternalSymbolSymbol("__parse_hwcap_and_convert_at_platform"),
-        MAI->getCodePointerSize());
+        MAI.getCodePointerSize());
   emitGNUAttributes(M);
 
   if (!TOC.empty()) {
@@ -2333,13 +2280,13 @@ void PPCAIXAsmPrinter::emitLinkage(const GlobalValue *GV,
     // TODO: "internal" Visibility needs to go here.
     case GlobalValue::DefaultVisibility:
       if (GV->hasDLLExportStorageClass())
-        VisibilityAttr = MAI->getExportedVisibilityAttr();
+        VisibilityAttr = MAI.getExportedVisibilityAttr();
       break;
     case GlobalValue::HiddenVisibility:
-      VisibilityAttr = MAI->getHiddenVisibilityAttr();
+      VisibilityAttr = MAI.getHiddenVisibilityAttr();
       break;
     case GlobalValue::ProtectedVisibility:
-      VisibilityAttr = MAI->getProtectedVisibilityAttr();
+      VisibilityAttr = MAI.getProtectedVisibilityAttr();
       break;
     }
   }
@@ -3632,12 +3579,13 @@ void PPCAIXAsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
 
   // generate the code for .foo now:
   if (TOCRestoreNeededForCallToImplementation(GI)) {
-    Twine Msg = "unimplemented: TOC register save/restore needed for ifunc \"" +
-                Twine(GI.getName()) +
-                "\", because couldn't prove all candidates "
-                "are static or hidden/protected visibility definitions";
+    SmallString<128> Msg;
+    Msg.append("unimplemented: TOC register save/restore needed for ifunc \"");
+    getNameWithPrefix(Msg, &GI);
+    Msg.append("\", because couldn't prove all candidates are static or "
+               "hidden/protected visibility definitions");
     if (!IFuncWarnInsteadOfError)
-      reportFatalUsageError(Msg);
+      reportFatalUsageError(Msg.str());
     else
       dbgs() << Msg << "\n";
   }

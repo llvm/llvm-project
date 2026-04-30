@@ -42,6 +42,62 @@ class PCHContainerReader;
 
 namespace serialization {
 
+/// The result of attempting to add a new module.
+class AddModuleResult {
+public:
+  enum Kind {
+    /// State at construction.
+    None,
+    /// The module file had already been loaded.
+    AlreadyLoaded,
+    /// The module file was just loaded in response to this call.
+    NewlyLoaded,
+    /// The module file is missing.
+    Missing,
+    /// The module file is out-of-date.
+    OutOfDate
+  };
+
+  Kind getKind() const { return K; };
+
+  ModuleFile *getModule() const { return Module; }
+
+  StringRef getBufferError() const {
+    assert(K == Missing && !Module);
+    return BufferError;
+  }
+
+  const SmallVector<Change, 2> &getChanges() const {
+    assert(K == OutOfDate && !Module);
+    return Changes;
+  }
+
+  InputFilesValidation getValidationStatus() const {
+    assert(K == OutOfDate && !Module);
+    return ValidationStatus;
+  }
+
+  StringRef getSignatureError() const {
+    assert(K == OutOfDate && !Module);
+    return SignatureError;
+  }
+
+  void setOutOfDate(InputFilesValidation Status) {
+    K = OutOfDate;
+    ValidationStatus = Status;
+  }
+
+private:
+  friend class ModuleManager;
+
+  Kind K = None;
+  ModuleFile *Module = nullptr;
+  SmallVector<Change, 2> Changes;
+  InputFilesValidation ValidationStatus = InputFilesValidation::NotStarted;
+  std::string BufferError;
+  std::string SignatureError;
+};
+
 /// Manages the set of modules loaded by an AST reader.
 class ModuleManager {
   /// The chain of AST files, in the order in which we started to load
@@ -73,7 +129,8 @@ class ModuleManager {
   /// Preprocessor's HeaderSearchInfo containing the module map.
   const HeaderSearch &HeaderSearchInfo;
 
-  /// A lookup of in-memory (virtual file) buffers
+  /// A lookup of in-memory (virtual file) buffers.
+  // FIXME: No need to key this by `FileEntry`.
   llvm::DenseMap<const FileEntry *, std::unique_ptr<llvm::MemoryBuffer>>
       InMemoryBuffers;
 
@@ -95,6 +152,13 @@ class ModuleManager {
   /// The global module index will actually be owned by the ASTReader; this is
   /// just an non-owning pointer.
   GlobalModuleIndex *GlobalIndex = nullptr;
+
+  bool isModuleFileOutOfDate(off_t Size, time_t ModTime, off_t ExpectedSize,
+                             time_t ExpectedModTime, AddModuleResult &Result);
+
+  bool checkSignature(ASTFileSignature Signature,
+                      ASTFileSignature ExpectedSignature,
+                      AddModuleResult &Result);
 
   /// State used by the "visit" operation to avoid malloc traffic in
   /// calls to visit().
@@ -172,16 +236,8 @@ public:
   /// Returns the module associated with the given index
   ModuleFile &operator[](unsigned Index) const { return *Chain[Index]; }
 
-  /// Returns the module associated with the given file name.
-  /// Soon to be removed.
-  ModuleFile *lookupByFileName(StringRef FileName) const;
-
   /// Returns the module associated with the given module name.
   ModuleFile *lookupByModuleName(StringRef ModName) const;
-
-  /// Returns the module associated with the given module file.
-  /// Soon to be removed.
-  ModuleFile *lookup(const FileEntry *File) const;
 
   /// Returns the module associated with the given module file name.
   ModuleFile *lookupByFileName(ModuleFileName FileName) const;
@@ -190,25 +246,11 @@ public:
   ModuleFile *lookup(ModuleFileKey Key) const;
 
   /// Returns the in-memory (virtual file) buffer with the given name
-  std::unique_ptr<llvm::MemoryBuffer> lookupBuffer(StringRef Name);
+  std::unique_ptr<llvm::MemoryBuffer> lookupBuffer(StringRef Name, off_t &Size,
+                                                   time_t &ModTime);
 
   /// Number of modules loaded
   unsigned size() const { return Chain.size(); }
-
-  /// The result of attempting to add a new module.
-  enum AddModuleResult {
-    /// The module file had already been loaded.
-    AlreadyLoaded,
-
-    /// The module file was just loaded in response to this call.
-    NewlyLoaded,
-
-    /// The module file is missing.
-    Missing,
-
-    /// The module file is out-of-date.
-    OutOfDate
-  };
 
   using ASTFileSignatureReader = ASTFileSignature (*)(StringRef);
 
@@ -238,21 +280,14 @@ public:
   /// \param ReadSignature Reads the signature from an AST file without actually
   /// loading it.
   ///
-  /// \param Module A pointer to the module file if the module was successfully
-  /// loaded.
-  ///
-  /// \param ErrorStr Will be set to a non-empty string if any errors occurred
-  /// while trying to load the module.
-  ///
-  /// \return A pointer to the module that corresponds to this file name,
-  /// and a value indicating whether the module was loaded.
+  /// \return The result of attempting to add the module, including a pointer
+  /// to the module file if successfully loaded.
   AddModuleResult addModule(ModuleFileName FileName, ModuleKind Type,
                             SourceLocation ImportLoc, ModuleFile *ImportedBy,
                             unsigned Generation, off_t ExpectedSize,
                             time_t ExpectedModTime,
                             ASTFileSignature ExpectedSignature,
-                            ASTFileSignatureReader ReadSignature,
-                            ModuleFile *&Module, std::string &ErrorStr);
+                            ASTFileSignatureReader ReadSignature);
 
   /// Remove the modules starting from First (to the end).
   void removeModules(ModuleIterator First);
@@ -292,6 +327,12 @@ public:
 
   /// View the graphviz representation of the module graph.
   void viewGraph();
+
+  /// Creates the deduplication key for use in \c ModuleManager.
+  /// Returns an empty optional if:
+  /// * the module cache does not exist for an implicit module name,
+  /// * the module file does not exist for an explicit module name.
+  std::optional<ModuleFileKey> makeKey(const ModuleFileName &Name) const;
 
   ModuleCache &getModuleCache() const { return ModCache; }
 };

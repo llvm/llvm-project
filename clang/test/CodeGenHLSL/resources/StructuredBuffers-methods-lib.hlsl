@@ -57,7 +57,7 @@ export void TestAppend(float value) {
 // CHECK-NEXT: %__counter_handle = getelementptr inbounds nuw %"class.hlsl::AppendStructuredBuffer", ptr %{{.*}}, i32 0, i32 1
 // DXIL-NEXT: %[[COUNTER_HANDLE:.*]] = load target("dx.RawBuffer", float, 1, 0), ptr %__counter_handle
 // DXIL-NEXT: %[[COUNTER:.*]] = call i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0) %[[COUNTER_HANDLE]], i8 1)
-// DXIL-NEXT: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0) %[[HANDLE]], i32 %[[COUNTER]])
+// DXIL-NEXT: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f32_1_0t.i32(target("dx.RawBuffer", float, 1, 0) %[[HANDLE]], i32 %[[COUNTER]])
 // CHECK-NEXT: store float %[[VALUE]], ptr %[[PTR]]
 // CHECK-NEXT: ret void
 
@@ -74,7 +74,7 @@ export double TestConsume() {
 // CHECK-NEXT: %__counter_handle = getelementptr inbounds nuw %"class.hlsl::ConsumeStructuredBuffer", ptr %{{.*}}, i32 0, i32 1
 // DXIL-NEXT: %[[COUNTER_HANDLE:.*]] = load target("dx.RawBuffer", double, 1, 0), ptr %__counter_handle
 // DXIL-NEXT: %[[COUNTER:.*]] = call i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_f64_1_0t(target("dx.RawBuffer", double, 1, 0) %[[COUNTER_HANDLE]], i8 -1)
-// DXIL-NEXT: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f64_1_0t(target("dx.RawBuffer", double, 1, 0) %[[HANDLE]], i32 %[[COUNTER]])
+// DXIL-NEXT: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f64_1_0t.i32(target("dx.RawBuffer", double, 1, 0) %[[HANDLE]], i32 %[[COUNTER]])
 // CHECK-NEXT: %[[VAL:.*]] = load double, ptr %[[PTR]], align 8
 // CHECK-NEXT: ret double %[[VAL]]
 
@@ -83,24 +83,24 @@ export float TestLoad() {
 }
 
 // CHECK: define noundef nofpclass(nan inf) float @TestLoad()()
-// CHECK: call {{.*}} float @hlsl::RWStructuredBuffer<float>::Load(unsigned int)(ptr {{.*}} @RWSB1, i32 noundef 1)
-// CHECK: call {{.*}} float @hlsl::StructuredBuffer<float>::Load(unsigned int)(ptr {{.*}} @SB1, i32 noundef 2)
+// CHECK: call {{.*}} float @hlsl::RWStructuredBuffer<float>::Load(unsigned int) const(ptr {{.*}} @RWSB1, i32 noundef 1)
+// CHECK: call {{.*}} float @hlsl::StructuredBuffer<float>::Load(unsigned int) const(ptr {{.*}} @SB1, i32 noundef 2)
 // CHECK: add
 // CHECK: ret float
 
-// CHECK: define {{.*}} float @hlsl::RWStructuredBuffer<float>::Load(unsigned int)(ptr {{.*}} %this, i32 noundef %Index)
+// CHECK: define {{.*}} float @hlsl::RWStructuredBuffer<float>::Load(unsigned int) const(ptr {{.*}} %this, i32 noundef %Index)
 // CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::RWStructuredBuffer", ptr %{{.*}}, i32 0, i32 0
 // DXIL-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", float, 1, 0), ptr %__handle
 // CHECK-NEXT: %[[INDEX:.*]] = load i32, ptr %Index.addr
-// DXIL-NEXT: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0) %[[HANDLE]], i32 %[[INDEX]])
+// DXIL-NEXT: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f32_1_0t.i32(target("dx.RawBuffer", float, 1, 0) %[[HANDLE]], i32 %[[INDEX]])
 // CHECK-NEXT: %[[VAL:.*]] = load float, ptr %[[PTR]]
 // CHECK-NEXT: ret float %[[VAL]]
 
-// CHECK: define {{.*}} float @hlsl::StructuredBuffer<float>::Load(unsigned int)(ptr {{.*}} %this, i32 noundef %Index)
+// CHECK: define {{.*}} float @hlsl::StructuredBuffer<float>::Load(unsigned int) const(ptr {{.*}} %this, i32 noundef %Index)
 // CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::StructuredBuffer", ptr %{{.*}}, i32 0, i32 0
 // DXIL-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", float, 0, 0), ptr %__handle
 // CHECK-NEXT: %[[INDEX:.*]] = load i32, ptr %Index.addr
-// DXIL-NEXT: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f32_0_0t(target("dx.RawBuffer", float, 0, 0) %[[HANDLE]], i32 %[[INDEX]])
+// DXIL-NEXT: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f32_0_0t.i32(target("dx.RawBuffer", float, 0, 0) %[[HANDLE]], i32 %[[INDEX]])
 // CHECK-NEXT: %[[VAL:.*]] = load float, ptr %[[PTR]]
 // CHECK-NEXT: ret float %[[VAL]]
 
@@ -113,12 +113,12 @@ export float TestLoadWithStatus() {
 }
 
 // CHECK: define noundef nofpclass(nan inf) float @TestLoadWithStatus()()
-// CHECK: call {{.*}} float @hlsl::RWStructuredBuffer<float>::Load(unsigned int, unsigned int&)(ptr {{.*}} @RWSB1, i32 noundef 1, ptr {{.*}} %tmp)
-// CHECK: call {{.*}} float @hlsl::StructuredBuffer<float>::Load(unsigned int, unsigned int&)(ptr {{.*}} @SB1, i32 noundef 2, ptr {{.*}} %tmp1)
+// CHECK: call {{.*}} float @hlsl::RWStructuredBuffer<float>::Load(unsigned int, unsigned int&) const(ptr {{.*}} @RWSB1, i32 noundef 1, ptr {{.*}} %tmp)
+// CHECK: call {{.*}} float @hlsl::StructuredBuffer<float>::Load(unsigned int, unsigned int&) const(ptr {{.*}} @SB1, i32 noundef 2, ptr {{.*}} %tmp1)
 // CHECK: add
 // CHECK: ret float
 
-// CHECK: define {{.*}} float @hlsl::RWStructuredBuffer<float>::Load(unsigned int, unsigned int&)(ptr {{.*}} %this, i32 noundef %Index, ptr {{.*}} %Status)
+// CHECK: define {{.*}} float @hlsl::RWStructuredBuffer<float>::Load(unsigned int, unsigned int&) const(ptr {{.*}} %this, i32 noundef %Index, ptr {{.*}} %Status)
 // CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::RWStructuredBuffer", ptr %{{.*}}, i32 0, i32 0
 // DXIL-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", float, 1, 0), ptr %__handle
 // CHECK-NEXT: %[[INDEX:.*]] = load i32, ptr %Index.addr
@@ -130,7 +130,7 @@ export float TestLoadWithStatus() {
 // CHECK-NEXT: store i32 %[[STATUS_EXT]], ptr %[[LOADED_STATUS_ADDR]], align 4
 // CHECK-NEXT: ret float %[[VALUE]]
 
-// CHECK: define {{.*}} float @hlsl::StructuredBuffer<float>::Load(unsigned int, unsigned int&)(ptr {{.*}} %this, i32 noundef %Index, ptr {{.*}} %Status)
+// CHECK: define {{.*}} float @hlsl::StructuredBuffer<float>::Load(unsigned int, unsigned int&) const(ptr {{.*}} %this, i32 noundef %Index, ptr {{.*}} %Status)
 // CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::StructuredBuffer", ptr %{{.*}}, i32 0, i32 0
 // DXIL-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", float, 0, 0), ptr %__handle
 // CHECK-NEXT: %[[INDEX:.*]] = load i32, ptr %Index.addr
@@ -159,8 +159,8 @@ export uint TestGetDimensions() {
 // CHECK: define {{.*}} void @hlsl::StructuredBuffer<float>::GetDimensions(unsigned int&, unsigned int&)(ptr {{.*}}, ptr {{.*}} %numStructs, ptr {{.*}} %stride)
 // CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::StructuredBuffer", ptr %{{.*}}, i32 0, i32 0
 // CHECK-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", float, 0, 0), ptr %__handle
-// CHECK-NEXT: %[[NUMSTRUCTS_PTR:.*]] = load ptr, ptr %numStructs.addr
 // DXIL-NEXT: %[[NUMSTRUCTS:.*]] = call i32 @llvm.dx.resource.getdimensions.x.tdx.RawBuffer_f32_0_0t(target("dx.RawBuffer", float, 0, 0) %[[HANDLE]])
+// CHECK-NEXT: %[[NUMSTRUCTS_PTR:.*]] = load ptr, ptr %numStructs.addr
 // CHECK-NEXT: store i32 %[[NUMSTRUCTS]], ptr %[[NUMSTRUCTS_PTR]]
 // CHECK-NEXT: %[[STRIDEPTR:.*]] = load ptr, ptr %stride.addr
 // CHECK-NEXT: store i32 4, ptr %[[STRIDEPTR]]
@@ -169,8 +169,8 @@ export uint TestGetDimensions() {
 // CHECK: define {{.*}} void @hlsl::RWStructuredBuffer<unsigned int vector[4]>::GetDimensions(unsigned int&, unsigned int&)(ptr {{.*}} %this, {{.*}} %numStructs, {{.*}} %stride)
 // CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::RWStructuredBuffer.0", ptr %{{.*}}, i32 0, i32 0
 // CHECK-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", <4 x i32>, 1, 0), ptr %__handle
-// CHECK-NEXT: %[[NUMSTRUCTS_PTR:.*]] = load ptr, ptr %numStructs.addr
 // DXIL-NEXT: %[[NUMSTRUCTS:.*]] = call i32 @llvm.dx.resource.getdimensions.x.tdx.RawBuffer_v4i32_1_0t(target("dx.RawBuffer", <4 x i32>, 1, 0) %[[HANDLE]])
+// CHECK-NEXT: %[[NUMSTRUCTS_PTR:.*]] = load ptr, ptr %numStructs.addr
 // CHECK-NEXT: store i32 %[[NUMSTRUCTS]], ptr %[[NUMSTRUCTS_PTR]]
 // CHECK-NEXT: %[[STRIDEPTR:.*]] = load ptr, ptr %stride.addr
 // CHECK-NEXT: store i32 16, ptr %[[STRIDEPTR]]
@@ -179,8 +179,8 @@ export uint TestGetDimensions() {
 // CHECK: define {{.*}} void @hlsl::ConsumeStructuredBuffer<double>::GetDimensions(unsigned int&, unsigned int&)(ptr {{.*}} %this, {{.*}} %numStructs, {{.*}} %stride)
 // CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::ConsumeStructuredBuffer", ptr %{{.*}}, i32 0, i32 0
 // CHECK-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", double, 1, 0), ptr %__handle
-// CHECK-NEXT: %[[NUMSTRUCTS_PTR:.*]] = load ptr, ptr %numStructs.addr
 // DXIL-NEXT: %[[NUMSTRUCTS:.*]] = call i32 @llvm.dx.resource.getdimensions.x.tdx.RawBuffer_f64_1_0t(target("dx.RawBuffer", double, 1, 0) %[[HANDLE]])
+// CHECK-NEXT: %[[NUMSTRUCTS_PTR:.*]] = load ptr, ptr %numStructs.addr
 // CHECK-NEXT: store i32 %[[NUMSTRUCTS]], ptr %[[NUMSTRUCTS_PTR]]
 // CHECK-NEXT: %[[STRIDEPTR:.*]] = load ptr, ptr %stride.addr
 // CHECK-NEXT: store i32 8, ptr %[[STRIDEPTR]]
@@ -188,10 +188,10 @@ export uint TestGetDimensions() {
 
 // DXIL: declare i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0), i8)
 // DXIL: declare i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_v4i32_1_0t(target("dx.RawBuffer", <4 x i32>, 1, 0), i8)
-// DXIL: declare ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0), i32)
+// DXIL: declare ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f32_1_0t.i32(target("dx.RawBuffer", float, 1, 0), i32)
 // DXIL: declare i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_f64_1_0t(target("dx.RawBuffer", double, 1, 0), i8)
-// DXIL: declare ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f64_1_0t(target("dx.RawBuffer", double, 1, 0), i32)
-// DXIL: declare ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f32_0_0t(target("dx.RawBuffer", float, 0, 0), i32)
+// DXIL: declare ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f64_1_0t.i32(target("dx.RawBuffer", double, 1, 0), i32)
+// DXIL: declare ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f32_0_0t.i32(target("dx.RawBuffer", float, 0, 0), i32)
 
 // DXIL: declare i32 @llvm.dx.resource.getdimensions.x.tdx.RawBuffer_f32_0_0t(target("dx.RawBuffer", float, 0, 0))
 // DXIL: declare i32 @llvm.dx.resource.getdimensions.x.tdx.RawBuffer_v4i32_1_0t(target("dx.RawBuffer", <4 x i32>, 1, 0))

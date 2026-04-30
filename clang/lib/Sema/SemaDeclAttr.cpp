@@ -14,6 +14,7 @@
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTMutationListener.h"
+#include "clang/AST/Availability.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -460,36 +461,33 @@ static void handlePtGuardedVarAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 }
 
 static bool checkGuardedByAttrCommon(Sema &S, Decl *D, const ParsedAttr &AL,
-                                     Expr *&Arg) {
-  SmallVector<Expr *, 1> Args;
-  // check that all arguments are lockable objects
-  checkAttrArgsAreCapabilityObjs(S, D, AL, Args);
-  unsigned Size = Args.size();
-  if (Size != 1)
+                                     SmallVectorImpl<Expr *> &Args) {
+  if (!AL.checkAtLeastNumArgs(S, 1))
     return false;
 
-  Arg = Args[0];
-
-  return true;
+  checkAttrArgsAreCapabilityObjs(S, D, AL, Args);
+  return !Args.empty();
 }
 
 static void handleGuardedByAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  Expr *Arg = nullptr;
-  if (!checkGuardedByAttrCommon(S, D, AL, Arg))
+  SmallVector<Expr *, 1> Args;
+  if (!checkGuardedByAttrCommon(S, D, AL, Args))
     return;
 
-  D->addAttr(::new (S.Context) GuardedByAttr(S.Context, AL, Arg));
+  D->addAttr(::new (S.Context)
+                 GuardedByAttr(S.Context, AL, Args.data(), Args.size()));
 }
 
 static void handlePtGuardedByAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  Expr *Arg = nullptr;
-  if (!checkGuardedByAttrCommon(S, D, AL, Arg))
+  SmallVector<Expr *, 1> Args;
+  if (!checkGuardedByAttrCommon(S, D, AL, Args))
     return;
 
   if (!threadSafetyCheckIsPointer(S, D, AL))
     return;
 
-  D->addAttr(::new (S.Context) PtGuardedByAttr(S.Context, AL, Arg));
+  D->addAttr(::new (S.Context)
+                 PtGuardedByAttr(S.Context, AL, Args.data(), Args.size()));
 }
 
 static bool checkAcquireOrderAttrCommon(Sema &S, Decl *D, const ParsedAttr &AL,
@@ -1528,6 +1526,20 @@ static void handleOwnershipAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     Module = &S.PP.getIdentifierTable().get(ModuleName);
   }
 
+  // Check if the new ownership_returns attribute does not contain
+  // an index, but previous attributes do.
+  if (K == OwnershipAttr::Returns && AL.getNumArgs() == 1) {
+    for (const auto *I : D->specific_attrs<OwnershipAttr>()) {
+      if (I->getOwnKind() == OwnershipAttr::Returns && I->args_size() > 0) {
+        S.Diag(I->getLocation(), diag::err_ownership_returns_index_mismatch)
+            << I->args_begin()->getSourceIndex() << 0;
+        S.Diag(AL.getLoc(), diag::note_ownership_returns_index_mismatch)
+            << 0 << 1;
+        return;
+      }
+    }
+  }
+
   SmallVector<ParamIdx, 8> OwnershipArgs;
   for (unsigned i = 1; i < AL.getNumArgs(); ++i) {
     Expr *Ex = AL.getArgAsExpr(i);
@@ -1560,21 +1572,25 @@ static void handleOwnershipAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       // Cannot have two ownership attributes of different kinds for the same
       // index.
       if (I->getOwnKind() != K && llvm::is_contained(I->args(), Idx)) {
-          S.Diag(AL.getLoc(), diag::err_attributes_are_not_compatible)
-              << AL << I
-              << (AL.isRegularKeywordAttribute() ||
-                  I->isRegularKeywordAttribute());
-          return;
-      } else if (K == OwnershipAttr::Returns &&
-                 I->getOwnKind() == OwnershipAttr::Returns) {
-        // A returns attribute conflicts with any other returns attribute using
-        // a different index.
-        if (!llvm::is_contained(I->args(), Idx)) {
+        S.Diag(AL.getLoc(), diag::err_attributes_are_not_compatible)
+            << AL << I
+            << (AL.isRegularKeywordAttribute() ||
+                I->isRegularKeywordAttribute());
+        return;
+      }
+
+      if (K == OwnershipAttr::Returns &&
+          I->getOwnKind() == OwnershipAttr::Returns) {
+        bool IHasArgs = I->args_size() > 0;
+
+        if (!IHasArgs || !llvm::is_contained(I->args(), Idx)) {
+          unsigned IIdx = IHasArgs ? I->args_begin()->getSourceIndex() : 0;
+
           S.Diag(I->getLocation(), diag::err_ownership_returns_index_mismatch)
-              << I->args_begin()->getSourceIndex();
-          if (I->args_size())
-            S.Diag(AL.getLoc(), diag::note_ownership_returns_index_mismatch)
-                << Idx.getSourceIndex() << Ex->getSourceRange();
+              << IIdx << (IHasArgs ? 0 : 1);
+
+          S.Diag(AL.getLoc(), diag::note_ownership_returns_index_mismatch)
+              << Idx.getSourceIndex() << 0 << Ex->getSourceRange();
           return;
         }
       } else if (K == OwnershipAttr::Takes &&
@@ -2361,7 +2377,8 @@ AvailabilityAttr *Sema::mergeAvailabilityAttr(
     bool Implicit, VersionTuple Introduced, VersionTuple Deprecated,
     VersionTuple Obsoleted, bool IsUnavailable, StringRef Message,
     bool IsStrict, StringRef Replacement, AvailabilityMergeKind AMK,
-    int Priority, const IdentifierInfo *Environment) {
+    int Priority, const IdentifierInfo *Environment,
+    const IdentifierInfo *InferredPlatformII) {
   VersionTuple MergedIntroduced = Introduced;
   VersionTuple MergedDeprecated = Deprecated;
   VersionTuple MergedObsoleted = Obsoleted;
@@ -2383,20 +2400,35 @@ AvailabilityAttr *Sema::mergeAvailabilityAttr(
   if (D->hasAttrs()) {
     AttrVec &Attrs = D->getAttrs();
     for (unsigned i = 0, e = Attrs.size(); i != e;) {
-      const auto *OldAA = dyn_cast<AvailabilityAttr>(Attrs[i]);
+      auto *OldAA = dyn_cast<AvailabilityAttr>(Attrs[i]);
       if (!OldAA) {
-        ++i;
-        continue;
-      }
-
-      const IdentifierInfo *OldPlatform = OldAA->getPlatform();
-      if (OldPlatform != Platform) {
         ++i;
         continue;
       }
 
       const IdentifierInfo *OldEnvironment = OldAA->getEnvironment();
       if (OldEnvironment != Environment) {
+        ++i;
+        continue;
+      }
+
+      if (OldAA->getPlatform() != Platform) {
+        // If this new attr is for anyappleos and the old attr is for the
+        // inferred platform, the existing explicit platform attr wins.
+        if (InferredPlatformII) {
+          if (OldAA->getPlatform() == InferredPlatformII)
+            return nullptr;
+        } else {
+          // If this new attr is an explicit platform attr, check if the old
+          // attr is an existing anyAppleOS attr whose inferred attr is for this
+          // platform. If so, the explicit attr wins: erase the old attr.
+          if (AvailabilityAttr *Inf = OldAA->getInferredAttrAs();
+              Inf && Inf->getPlatform() == Platform) {
+            Attrs.erase(Attrs.begin() + i);
+            --e;
+            continue;
+          }
+        }
         ++i;
         continue;
       }
@@ -2520,11 +2552,40 @@ AvailabilityAttr *Sema::mergeAvailabilityAttr(
       !OverrideOrImpl) {
     auto *Avail = ::new (Context) AvailabilityAttr(
         Context, CI, Platform, Introduced, Deprecated, Obsoleted, IsUnavailable,
-        Message, IsStrict, Replacement, Priority, Environment);
+        Message, IsStrict, Replacement, Priority, Environment,
+        /*InferredAttr=*/nullptr);
     Avail->setImplicit(Implicit);
     return Avail;
   }
   return nullptr;
+}
+
+AvailabilityAttr *Sema::mergeAndInferAvailabilityAttr(
+    NamedDecl *D, const AttributeCommonInfo &CI, const IdentifierInfo *Platform,
+    bool Implicit, VersionTuple Introduced, VersionTuple Deprecated,
+    VersionTuple Obsoleted, bool IsUnavailable, StringRef Message,
+    bool IsStrict, StringRef Replacement, AvailabilityMergeKind AMK,
+    int Priority, const IdentifierInfo *IIEnvironment,
+    const IdentifierInfo *InferredPlatformII) {
+  AvailabilityAttr *OrigAttr = mergeAvailabilityAttr(
+      D, CI, Platform, Implicit, Introduced, Deprecated, Obsoleted,
+      IsUnavailable, Message, IsStrict, Replacement, AMK, Priority,
+      IIEnvironment, InferredPlatformII);
+  if (!OrigAttr || !InferredPlatformII)
+    return OrigAttr;
+
+  auto *InferredAttr = ::new (Context) AvailabilityAttr(
+      Context, CI, InferredPlatformII, OrigAttr->getIntroduced(),
+      OrigAttr->getDeprecated(), OrigAttr->getObsoleted(),
+      OrigAttr->getUnavailable(), OrigAttr->getMessage(), OrigAttr->getStrict(),
+      OrigAttr->getReplacement(),
+      Priority == AP_PragmaClangAttribute
+          ? AP_PragmaClangAttribute_InferredFromAnyAppleOS
+          : AP_InferredFromAnyAppleOS,
+      IIEnvironment, /*InferredAttr=*/nullptr);
+  InferredAttr->setImplicit(true);
+  OrigAttr->setInferredAttr(InferredAttr);
+  return OrigAttr;
 }
 
 /// Returns true if the given availability attribute should be inferred, and
@@ -2704,6 +2765,59 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
              diag::err_availability_unexpected_parameter)
           << "environment" << /* C/C++ */ 1;
     }
+  }
+
+  // Handle anyAppleOS: preserve the original anyappleos attr on the decl and
+  // store the inferred platform-specific attr as a field on it.
+  if (II->getName() == "anyappleos") {
+    // Validate anyAppleOS versions; reject versions older than 26.0.
+    auto ValidateVersion = [&](const llvm::VersionTuple &Version,
+                               SourceLocation Loc) -> bool {
+      if (AvailabilitySpec::validateAnyAppleOSVersion(Version))
+        return true;
+      S.Diag(Loc, diag::err_availability_invalid_anyappleos_version)
+          << Version.getAsString();
+      return false;
+    };
+
+    // Validate the versions; bail out if any are invalid.
+    bool Valid = ValidateVersion(Introduced.Version, Introduced.KeywordLoc);
+    Valid &= ValidateVersion(Deprecated.Version, Deprecated.KeywordLoc);
+    Valid &= ValidateVersion(Obsoleted.Version, Obsoleted.KeywordLoc);
+    if (!Valid)
+      return;
+
+    llvm::Triple T = S.Context.getTargetInfo().getTriple();
+
+    // Only create implicit attributes for Darwin OSes.
+    if (!T.isOSDarwin())
+      return;
+
+    StringRef PlatformName;
+
+    // Determine the platform name based on the target triple.
+    if (T.isMacOSX())
+      PlatformName = "macos";
+    else if (T.getOS() == llvm::Triple::IOS && T.isMacCatalystEnvironment())
+      PlatformName = "maccatalyst";
+    else // For iOS, tvOS, watchOS, visionOS, bridgeOS, etc.
+      PlatformName = llvm::Triple::getOSTypeName(T.getOS());
+
+    IdentifierInfo *InferredPlatformII = &S.Context.Idents.get(PlatformName);
+
+    // Call mergeAvailabilityAttr for the original anyappleos attr. Pass
+    // InferredPlatformII so the dedup loop can detect a conflicting explicit
+    // platform attr (in which case mergeAvailabilityAttr returns null and we
+    // add neither attr).
+    AvailabilityAttr *OrigAttr = S.mergeAndInferAvailabilityAttr(
+        ND, AL, II, /*Implicit=*/false, Introduced.Version, Deprecated.Version,
+        Obsoleted.Version, IsUnavailable, Str, IsStrict, Replacement,
+        AvailabilityMergeKind::None, PriorityModifier, IIEnvironment,
+        InferredPlatformII);
+    if (!OrigAttr)
+      return;
+    D->addAttr(OrigAttr);
+    return;
   }
 
   AvailabilityAttr *NewAttr = S.mergeAvailabilityAttr(
@@ -5124,6 +5238,18 @@ OptimizeNoneAttr *Sema::mergeOptimizeNoneAttr(Decl *D,
 }
 
 static void handleAlwaysInlineAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  AlwaysInlineAttr AIA(S.Context, AL);
+  if (!S.getLangOpts().MicrosoftExt &&
+      (AIA.isMSVCForceInline() || AIA.isMSVCForceInlineCalls())) {
+    S.Diag(AL.getLoc(), diag::warn_attribute_ignored) << AL;
+    return;
+  }
+  if (AIA.isMSVCForceInlineCalls()) {
+    S.Diag(AL.getLoc(), diag::warn_stmt_attribute_ignored_in_function)
+        << "[[msvc::forceinline]]";
+    return;
+  }
+
   if (AlwaysInlineAttr *Inline =
           S.mergeAlwaysInlineAttr(D, AL, AL.getAttrName()))
     D->addAttr(Inline);
@@ -7956,6 +8082,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_HLSLVkExtBuiltinInput:
     S.HLSL().handleVkExtBuiltinInputAttr(D, AL);
     break;
+  case ParsedAttr::AT_HLSLVkExtBuiltinOutput:
+    S.HLSL().handleVkExtBuiltinOutputAttr(D, AL);
+    break;
   case ParsedAttr::AT_HLSLVkPushConstant:
     S.HLSL().handleVkPushConstantAttr(D, AL);
     break;
@@ -7979,6 +8108,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_HLSLParamModifier:
     S.HLSL().handleParamModifierAttr(D, AL);
+    break;
+  case ParsedAttr::AT_HLSLMatrixLayout:
+    S.HLSL().handleMatrixLayoutAttr(D, AL);
     break;
   case ParsedAttr::AT_HLSLUnparsedSemantic:
     S.HLSL().handleSemanticAttr(D, AL);

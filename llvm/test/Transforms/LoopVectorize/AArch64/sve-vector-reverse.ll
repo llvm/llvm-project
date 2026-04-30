@@ -5,8 +5,8 @@
 ;  for (int i = N-1; i >= 0; --i)
 ;    a[i] = b[i] + 1.0;
 
-; RUN: opt -passes=loop-vectorize,dce,instcombine -mtriple aarch64-linux-gnu -S \
-; RUN:   -prefer-predicate-over-epilogue=scalar-epilogue < %s | FileCheck %s
+; RUN: opt -passes=loop-vectorize,instcombine -mtriple aarch64-linux-gnu -S \
+; RUN:   -tail-folding-policy=dont-fold-tail < %s | FileCheck %s
 
 define void @vector_reverse_f64(i64 %N, ptr noalias %a, ptr noalias %b) #0{
 ; CHECK-LABEL: @vector_reverse_f64(
@@ -55,10 +55,10 @@ entry:
   %cmp7 = icmp sgt i64 %N, 0
   br i1 %cmp7, label %for.body, label %for.cond.cleanup
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.08.in = phi i64 [ %i.08, %for.body ], [ %N, %entry ]
   %i.08 = add nsw i64 %i.08.in, -1
   %arrayidx = getelementptr inbounds double, ptr %b, i64 %i.08
@@ -126,10 +126,10 @@ entry:
   %cmp8 = icmp sgt i64 %N, 0
   br i1 %cmp8, label %for.body, label %for.cond.cleanup
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.09.in = phi i64 [ %i.09, %for.body ], [ %N, %entry ]
   %i.09 = add nsw i64 %i.09.in, -1
   %arrayidx = getelementptr inbounds i64, ptr %b, i64 %i.09

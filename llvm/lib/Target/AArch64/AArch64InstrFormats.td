@@ -56,6 +56,11 @@ def DestructiveTernaryCommWithRev : DestructiveInstTypeEnum<8>;
 def Destructive2xRegImmUnpred     : DestructiveInstTypeEnum<9>;
 
 def DestructiveUnaryPassthru      : DestructiveInstTypeEnum<10>;
+// Preferable to select a destination register that is distinct
+// from the governing predicate.
+def DestructivePredicate          : DestructiveInstTypeEnum<11>;
+
+def DestructiveBinaryImmUnpred    : DestructiveInstTypeEnum<12>;
 
 class FalseLanesEnum<bits<2> val> {
   bits<2> Value = val;
@@ -174,6 +179,9 @@ def extract_high_v2f64 :
 def gi_extract_high_v8f16 :
   GIComplexOperandMatcher<v4s16, "selectExtractHigh">,
   GIComplexPatternEquiv<extract_high_v8f16>;
+def gi_extract_high_v8bf16 :
+  GIComplexOperandMatcher<v4s16, "selectExtractHigh">,
+  GIComplexPatternEquiv<extract_high_v8bf16>;
 def gi_extract_high_v4f32 :
   GIComplexOperandMatcher<v2s32, "selectExtractHigh">,
   GIComplexPatternEquiv<extract_high_v4f32>;
@@ -1876,7 +1884,7 @@ class STSHHI
     : SimpleSystemI<0, (ins phint_op:$policy), "stshh", "\t$policy", []>,
       Sched<[WriteHint]> {
   bits<3> policy;
-  let Inst{20-12} = 0b000011001;
+  let Inst{20-12} = 0b000110010;
   let Inst{11-8} = 0b0110;
   let Inst{7-5} = policy;
 }
@@ -2116,16 +2124,21 @@ def SysCRAsmOperand : AsmOperandClass {
   let ParserMethod = "tryParseSysCROperand";
 }
 
-def sys_cr_op : Operand<i32> {
+def sys_cr_op : Operand<i32>, TImmLeaf<i32, [{
+  return ((uint32_t)Imm) < 16;
+}]> {
   let PrintMethod = "printSysCROperand";
   let ParserMatchClass = SysCRAsmOperand;
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
-class SystemXtI<bit L, string asm>
-  : RtSystemI<L, (outs),
-       (ins imm0_7:$op1, sys_cr_op:$Cn, sys_cr_op:$Cm, imm0_7:$op2, GPR64:$Rt),
-       asm, "\t$op1, $Cn, $Cm, $op2, $Rt"> {
+class SystemXtI<string asm>
+  : RtSystemI<0, (outs),
+       (ins imm32_0_7:$op1, sys_cr_op:$Cn, sys_cr_op:$Cm, imm32_0_7:$op2,
+            GPR64:$Rt),
+       asm, "\t$op1, $Cn, $Cm, $op2, $Rt",
+       [(int_aarch64_sys timm32_0_7:$op1, sys_cr_op:$Cn, sys_cr_op:$Cm,
+                          timm32_0_7:$op2, GPR64:$Rt)]> {
   bits<3> op1;
   bits<4> Cn;
   bits<4> Cm;
@@ -2135,6 +2148,10 @@ class SystemXtI<bit L, string asm>
   let Inst{15-12} = Cn;
   let Inst{11-8}  = Cm;
   let Inst{7-5}   = op2;
+
+  let mayLoad = 1;
+  let mayStore = 1;
+  let hasSideEffects = 1;
 }
 
 class SystemLXtI<bit L, string asm>
@@ -6675,14 +6692,14 @@ multiclass SIMDThreeSameVectorMLAL<bit Q, bits<2> sz, string asm, SDPatternOpera
                                          V128, v4f32, v16i8, op>;
 }
 
-multiclass SIMDThreeSameVectorFMLA<string asm> {
+multiclass SIMDThreeSameVectorFMLA<string asm, SDPatternOperator OpNode = null_frag> {
   def v8f16_v8f16 : BaseSIMDThreeSameVectorDot<0b1, 0b0, 0b11, 0b1101, asm, ".8h", ".8h",
-                                          V128, v8f16, v8f16, null_frag>;
+                                          V128, v8f16, v8f16, OpNode>;
 }
 
-multiclass SIMDThreeSameVectorFMLAWiden<string asm> {
+multiclass SIMDThreeSameVectorFMLAWiden<string asm, SDPatternOperator OpNode = null_frag> {
   def v8f16_v4f32 : BaseSIMDThreeSameVectorDot<0b1, 0b0, 0b01, 0b1101, asm, ".4s", ".8h",
-                                          V128, v4f32, v8f16, null_frag>;
+                                          V128, v4f32, v8f16, OpNode>;
 }
 
 multiclass SIMDThreeSameVectorFDot<string asm, SDPatternOperator OpNode = null_frag> {

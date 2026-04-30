@@ -7,8 +7,8 @@
 ; scalar iteration overhead for a low trip count loop. Make sure we pick
 ; the correct insertion point when fixing first order recurrences.
 
-@A = external dso_local global [5 x i32], align 4
-@B = external dso_local global [5 x i32], align 4
+@A = external global [5 x i32], align 4
+@B = external global [5 x i32], align 4
 
 define void @func_21() {
 ; CHECK-LABEL: @func_21(
@@ -24,38 +24,38 @@ define void @func_21() {
 ; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <2 x i64> poison, i64 [[INDEX]], i32 0
 ; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <2 x i64> [[TMP21]], i64 [[TMP1]], i32 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule <2 x i8> [[VEC_IND]], splat (i8 4)
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i1> [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i1> [[TMP2]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
 ; CHECK:       pred.load.if:
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [5 x i32], ptr @A, i64 0, i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP4]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> poison, i32 [[TMP5]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> poison, i32 [[TMP5]], i64 0
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE]]
 ; CHECK:       pred.load.continue:
 ; CHECK-NEXT:    [[TMP7:%.*]] = phi <2 x i32> [ poison, [[VECTOR_BODY]] ], [ [[TMP6]], [[PRED_LOAD_IF]] ]
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i1> [[TMP2]], i32 1
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i1> [[TMP2]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[PRED_LOAD_IF1:%.*]], label [[PRED_LOAD_CONTINUE2:%.*]]
 ; CHECK:       pred.load.if1:
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [5 x i32], ptr @A, i64 0, i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[TMP9]], align 4
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x i32> [[TMP7]], i32 [[TMP10]], i32 1
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x i32> [[TMP7]], i32 [[TMP10]], i64 1
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE2]]
 ; CHECK:       pred.load.continue2:
 ; CHECK-NEXT:    [[TMP12]] = phi <2 x i32> [ [[TMP7]], [[PRED_LOAD_CONTINUE]] ], [ [[TMP11]], [[PRED_LOAD_IF1]] ]
 ; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <2 x i32> [[VECTOR_RECUR]], <2 x i32> [[TMP12]], <2 x i32> <i32 1, i32 2>
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x i1> [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x i1> [[TMP2]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP14]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [5 x i32], ptr @B, i64 0, i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x i32> [[TMP13]], i32 0
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x i32> [[TMP13]], i64 0
 ; CHECK-NEXT:    store i32 [[TMP16]], ptr [[TMP15]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; CHECK:       pred.store.continue:
-; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <2 x i1> [[TMP2]], i32 1
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <2 x i1> [[TMP2]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP17]], label [[PRED_STORE_IF3:%.*]], label [[PRED_STORE_CONTINUE4]]
 ; CHECK:       pred.store.if3:
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [5 x i32], ptr @B, i64 0, i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <2 x i32> [[TMP13]], i32 1
+; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <2 x i32> [[TMP13]], i64 1
 ; CHECK-NEXT:    store i32 [[TMP19]], ptr [[TMP18]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE4]]
 ; CHECK:       pred.store.continue4:
@@ -71,7 +71,7 @@ define void @func_21() {
 entry:
   br label %loop
 
-loop:                                    ; preds = %loop, %entry
+loop:
   %rec = phi i32 [ 0, %entry], [ %lv, %loop ]
   %indvars.iv = phi i64 [ 0, %entry], [ %indvars.iv.next, %loop ]
   %A.ptr= getelementptr inbounds [5 x i32], ptr @A, i64 0, i64 %indvars.iv
@@ -82,6 +82,6 @@ loop:                                    ; preds = %loop, %entry
   %exitcond = icmp eq i64 %indvars.iv.next, 5
   br i1 %exitcond, label %exit, label %loop
 
-exit:                                             ; preds = %loop
+exit:
   ret void
 }

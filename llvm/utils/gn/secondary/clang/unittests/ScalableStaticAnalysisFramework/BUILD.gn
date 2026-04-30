@@ -18,6 +18,7 @@ unittest("ClangScalableAnalysisTests") {
   ]
   include_dirs = [ "." ]
   sources = [
+    "Analyses/CallGraph/CallGraphExtractorTest.cpp",
     "Analyses/UnsafeBufferUsage/UnsafeBufferUsageTest.cpp",
     "ASTEntityMappingTest.cpp",
     "BuildNamespaceTest.cpp",
@@ -40,7 +41,8 @@ unittest("ClangScalableAnalysisTests") {
     "Serialization/JSONFormatTest/TUSummaryTest.cpp",
     "SummaryData/SummaryDataTest.cpp",
     "SummaryNameTest.cpp",
-    "TestFixture.cpp",
     "TUSummaryBuilderTest.cpp",
+    "TestFixture.cpp",
+    "WholeProgramAnalysis/AnalysisDriverTest.cpp",
   ]
 }

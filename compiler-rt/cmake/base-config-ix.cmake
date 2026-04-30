@@ -14,16 +14,17 @@ include(CompilerRTDarwinUtils)
 check_include_file(unwind.h HAVE_UNWIND_H)
 
 # Used by sanitizer_common and tests.
+set(_rpc_xdr_header "rpc/xdr.h")
+set(_default_require_rpc_xdr_h OFF)
 if ("${CMAKE_SYSTEM_NAME}" MATCHES AIX)
   set(_rpc_xdr_header "tirpc/rpc/xdr.h")
-  set(_default_require_rpc_xdr_h ON)
-else()
-  set(_rpc_xdr_header "rpc/xdr.h")
-  set(_default_require_rpc_xdr_h OFF)
+  if (COMPILER_RT_BUILD_SANITIZERS)
+    set(_default_require_rpc_xdr_h ON)
+  endif()
 endif()
 check_include_file(${_rpc_xdr_header} HAVE_RPC_XDR_H)
 option(COMPILER_RT_REQUIRE_RPC_XDR_H
-  "Require ${_rpc_xdr_header} for sanitizer builds (default ON for AIX, OFF elsewhere). \
+  "Require ${_rpc_xdr_header} for sanitizer builds (default ON for AIX when sanitizers are enabled, OFF elsewhere). \
 Set to OFF to bypass the missing-header error."
   ${_default_require_rpc_xdr_h})
 if (NOT HAVE_RPC_XDR_H)
@@ -120,6 +121,8 @@ if(NOT DEFINED COMPILER_RT_OS_DIR)
     string(TOLOWER ${CMAKE_SYSTEM_NAME} COMPILER_RT_OS_DIR)
   endif()
 endif()
+
+# TODO: Use common runtimes infrastructure for output and install paths
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   set(COMPILER_RT_OUTPUT_LIBRARY_DIR
     ${COMPILER_RT_OUTPUT_DIR}/lib)

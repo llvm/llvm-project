@@ -247,27 +247,30 @@ define amdgpu_kernel void @simple_test_v_loop(ptr addrspace(1) %dst, ptr addrspa
 ; SI-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; SI-NEXT:    s_cbranch_execz .LBB4_3
 ; SI-NEXT:  ; %bb.1: ; %loop.preheader
-; SI-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x9
+; SI-NEXT:    s_load_dwordx4 s[12:15], s[4:5], 0x9
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; SI-NEXT:    s_mov_b64 s[0:1], 0
-; SI-NEXT:    s_mov_b32 s3, 0xf000
+; SI-NEXT:    s_mov_b32 s8, 64
+; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v1, s9
-; SI-NEXT:    v_add_i32_e32 v0, vcc, s8, v0
+; SI-NEXT:    v_mov_b32_e32 v1, s13
+; SI-NEXT:    v_add_i32_e32 v0, vcc, s12, v0
 ; SI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    s_mov_b32 s4, s10
-; SI-NEXT:    s_mov_b32 s5, s11
-; SI-NEXT:    s_mov_b32 s7, s3
+; SI-NEXT:    s_mov_b32 s4, s14
+; SI-NEXT:    s_mov_b32 s5, s15
+; SI-NEXT:    s_mov_b32 s3, s7
+; SI-NEXT:    s_mov_b32 s0, s2
+; SI-NEXT:    s_mov_b32 s1, s2
 ; SI-NEXT:  .LBB4_2: ; %loop
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    buffer_load_dword v2, off, s[4:7], 0
+; SI-NEXT:    s_add_i32 s8, s8, -1
+; SI-NEXT:    s_cmp_lg_u32 s8, 0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
-; SI-NEXT:    s_add_u32 s0, s0, 4
-; SI-NEXT:    s_addc_u32 s1, s1, 0
-; SI-NEXT:    s_cmpk_lg_i32 s0, 0x100
+; SI-NEXT:    v_add_i32_e32 v0, vcc, 4, v0
+; SI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; SI-NEXT:    s_cbranch_scc1 .LBB4_2
 ; SI-NEXT:  .LBB4_3: ; %exit
 ; SI-NEXT:    s_endpgm

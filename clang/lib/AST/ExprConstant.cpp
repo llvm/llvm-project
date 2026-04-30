@@ -1862,19 +1862,22 @@ APValue *EvalInfo::createHeapAlloc(const Expr *E, QualType T, LValue &LV) {
 void CallStackFrame::describe(raw_ostream &Out) const {
   bool IsMemberCall = false;
   bool ExplicitInstanceParam = false;
+  clang::PrintingPolicy PrintingPolicy = Info.Ctx.getPrintingPolicy();
+  PrintingPolicy.SuppressLambdaBody = true;
+
   if (const auto *MD = dyn_cast<CXXMethodDecl>(Callee)) {
     IsMemberCall = !isa<CXXConstructorDecl>(MD) && !MD->isStatic();
     ExplicitInstanceParam = MD->isExplicitObjectMemberFunction();
   }
 
   if (!IsMemberCall)
-    Callee->getNameForDiagnostic(Out, Info.Ctx.getPrintingPolicy(),
+    Callee->getNameForDiagnostic(Out, PrintingPolicy,
                                  /*Qualified=*/false);
 
   if (This && IsMemberCall) {
     if (const auto *MCE = dyn_cast_if_present<CXXMemberCallExpr>(CallExpr)) {
       const Expr *Object = MCE->getImplicitObjectArgument();
-      Object->printPretty(Out, /*Helper=*/nullptr, Info.Ctx.getPrintingPolicy(),
+      Object->printPretty(Out, /*Helper=*/nullptr, PrintingPolicy,
                           /*Indentation=*/0);
       if (Object->getType()->isPointerType())
           Out << "->";
@@ -1882,8 +1885,7 @@ void CallStackFrame::describe(raw_ostream &Out) const {
           Out << ".";
     } else if (const auto *OCE =
                    dyn_cast_if_present<CXXOperatorCallExpr>(CallExpr)) {
-      OCE->getArg(0)->printPretty(Out, /*Helper=*/nullptr,
-                                  Info.Ctx.getPrintingPolicy(),
+      OCE->getArg(0)->printPretty(Out, /*Helper=*/nullptr, PrintingPolicy,
                                   /*Indentation=*/0);
       Out << ".";
     } else {
@@ -1894,7 +1896,7 @@ void CallStackFrame::describe(raw_ostream &Out) const {
           Info.Ctx.getLValueReferenceType(This->Designator.MostDerivedType));
       Out << ".";
     }
-    Callee->getNameForDiagnostic(Out, Info.Ctx.getPrintingPolicy(),
+    Callee->getNameForDiagnostic(Out, PrintingPolicy,
                                  /*Qualified=*/false);
   }
 
@@ -1984,7 +1986,9 @@ static bool IsGlobalLValue(APValue::LValueBase B) {
   case Expr::ObjCEncodeExprClass:
     return true;
   case Expr::ObjCBoxedExprClass:
-    return cast<ObjCBoxedExpr>(E)->isExpressibleAsConstantInitializer();
+  case Expr::ObjCArrayLiteralClass:
+  case Expr::ObjCDictionaryLiteralClass:
+    return cast<ObjCObjectLiteral>(E)->isExpressibleAsConstantInitializer();
   case Expr::CallExprClass:
     return IsOpaqueConstantCall(cast<CallExpr>(E));
   // For GCC compatibility, &&label has static storage duration.
@@ -4178,10 +4182,12 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
       // IsWithinLifetime, resulting in false.
       if (I != 0 && handler.AccessKind == AK_IsWithinLifetime)
         return false;
-      if (!Info.checkingPotentialConstantExpression())
+      if (!Info.checkingPotentialConstantExpression()) {
         Info.FFDiag(E, diag::note_constexpr_access_uninit)
             << handler.AccessKind << O->isIndeterminate()
             << E->getSourceRange();
+        NoteLValueLocation(Info, Obj.Base);
+      }
       return handler.failed();
     }
 
@@ -9899,6 +9905,12 @@ public:
       EvaluateIgnoredValue(Info, E->getSubExpr());
     return Error(E);
   }
+  bool VisitObjCArrayLiteral(const ObjCArrayLiteral *E) {
+    return E->isExpressibleAsConstantInitializer() ? Success(E) : Error(E);
+  }
+  bool VisitObjCDictionaryLiteral(const ObjCDictionaryLiteral *E) {
+    return E->isExpressibleAsConstantInitializer() ? Success(E) : Error(E);
+  }
   bool VisitAddrLabelExpr(const AddrLabelExpr *E)
       { return Success(E); }
   bool VisitCallExpr(const CallExpr *E);
@@ -11203,6 +11215,22 @@ bool RecordExprEvaluator::VisitCastExpr(const CastExpr *E) {
                             SrcTypes))
       return false;
 
+    return true;
+  }
+  case CK_ToUnion: {
+    const FieldDecl *Field = E->getTargetUnionField();
+    LValue Subobject = This;
+    if (!HandleLValueMember(Info, E, Subobject, Field))
+      return false;
+    Result = APValue(Field);
+    if (!EvaluateInPlace(Result.getUnionValue(), Info, Subobject,
+                         E->getSubExpr()))
+      return false;
+    if (Field->isBitField()) {
+      if (!truncateBitfieldValue(Info, E->getSubExpr(), Result.getUnionValue(),
+                                 Field))
+        return false;
+    }
     return true;
   }
   }
@@ -12556,6 +12584,67 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
 
+  case clang::X86::BI__builtin_ia32_dbpsadbw128:
+  case clang::X86::BI__builtin_ia32_dbpsadbw256:
+  case clang::X86::BI__builtin_ia32_dbpsadbw512: {
+    APValue SourceA, SourceB, SourceImm;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceA) ||
+        !EvaluateAsRValue(Info, E->getArg(1), SourceB) ||
+        !EvaluateAsRValue(Info, E->getArg(2), SourceImm))
+      return false;
+
+    unsigned SourceLen = SourceA.getVectorLength();
+    constexpr unsigned LaneSize = 16; // 128-bit lane = 16 bytes
+    unsigned Imm = SourceImm.getInt().getZExtValue();
+
+    auto *DestTy = E->getType()->castAs<VectorType>();
+    QualType DestEltTy = DestTy->getElementType();
+    bool DestUnsigned = DestEltTy->isUnsignedIntegerOrEnumerationType();
+    SmallVector<APValue, 32> ResultElements;
+    ResultElements.reserve(SourceLen / 2);
+
+    // Phase 1: Shuffle SourceB using all four 2-bit fields of imm8.
+    // Within each 128-bit lane, for group j (0..3), select a 4-byte block
+    // from SourceB based on bits [2*j+1:2*j] of imm8.
+    SmallVector<uint8_t, 64> Shuffled(SourceLen);
+    for (unsigned I = 0; I < SourceLen; I += LaneSize) {
+      for (unsigned J = 0; J < 4; ++J) {
+        unsigned Part = (Imm >> (2 * J)) & 3;
+        for (unsigned K = 0; K < 4; ++K) {
+          Shuffled[I + 4 * J + K] = static_cast<uint8_t>(
+              SourceB.getVectorElt(I + 4 * Part + K).getInt().getZExtValue());
+        }
+      }
+    }
+
+    // Phase 2: Sliding SAD computation.
+    // For every group of 4 output u16 values, compute absolute differences
+    // using overlapping windows into SourceA and the shuffled array.
+    unsigned Size = SourceLen / 2; // number of output u16 elements
+    for (unsigned I = 0; I < Size; I += 4) {
+      unsigned Sad[4] = {0, 0, 0, 0};
+      for (unsigned J = 0; J < 4; ++J) {
+        uint8_t A1 = static_cast<uint8_t>(
+            SourceA.getVectorElt(2 * I + J).getInt().getZExtValue());
+        uint8_t A2 = static_cast<uint8_t>(
+            SourceA.getVectorElt(2 * I + J + 4).getInt().getZExtValue());
+        uint8_t B0 = Shuffled[2 * I + J];
+        uint8_t B1 = Shuffled[2 * I + J + 1];
+        uint8_t B2 = Shuffled[2 * I + J + 2];
+        uint8_t B3 = Shuffled[2 * I + J + 3];
+        Sad[0] += (A1 > B0) ? (A1 - B0) : (B0 - A1);
+        Sad[1] += (A1 > B1) ? (A1 - B1) : (B1 - A1);
+        Sad[2] += (A2 > B2) ? (A2 - B2) : (B2 - A2);
+        Sad[3] += (A2 > B3) ? (A2 - B3) : (B3 - A2);
+      }
+      for (unsigned R = 0; R < 4; ++R)
+        ResultElements.push_back(
+            APValue(APSInt(APInt(16, Sad[R]), DestUnsigned)));
+    }
+
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+
   case clang::X86::BI__builtin_ia32_pmulhuw128:
   case clang::X86::BI__builtin_ia32_pmulhuw256:
   case clang::X86::BI__builtin_ia32_pmulhuw512:
@@ -12908,6 +12997,45 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       ResultElements.push_back(Passthru.getVectorElt(I));
     }
 
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+  case X86::BI__builtin_ia32_expanddf128_mask:
+  case X86::BI__builtin_ia32_expanddf256_mask:
+  case X86::BI__builtin_ia32_expanddf512_mask:
+  case X86::BI__builtin_ia32_expanddi128_mask:
+  case X86::BI__builtin_ia32_expanddi256_mask:
+  case X86::BI__builtin_ia32_expanddi512_mask:
+  case X86::BI__builtin_ia32_expandhi128_mask:
+  case X86::BI__builtin_ia32_expandhi256_mask:
+  case X86::BI__builtin_ia32_expandhi512_mask:
+  case X86::BI__builtin_ia32_expandqi128_mask:
+  case X86::BI__builtin_ia32_expandqi256_mask:
+  case X86::BI__builtin_ia32_expandqi512_mask:
+  case X86::BI__builtin_ia32_expandsf128_mask:
+  case X86::BI__builtin_ia32_expandsf256_mask:
+  case X86::BI__builtin_ia32_expandsf512_mask:
+  case X86::BI__builtin_ia32_expandsi128_mask:
+  case X86::BI__builtin_ia32_expandsi256_mask:
+  case X86::BI__builtin_ia32_expandsi512_mask: {
+    APValue Source, Passthru;
+    if (!EvaluateAsRValue(Info, E->getArg(0), Source) ||
+        !EvaluateAsRValue(Info, E->getArg(1), Passthru))
+      return false;
+    APSInt Mask;
+    if (!EvaluateInteger(E->getArg(2), Mask, Info))
+      return false;
+
+    unsigned NumElts = Source.getVectorLength();
+    SmallVector<APValue, 64> ResultElements;
+    ResultElements.reserve(NumElts);
+
+    unsigned SourceIdx = 0;
+    for (unsigned I = 0; I != NumElts; ++I) {
+      if (Mask[I])
+        ResultElements.push_back(Source.getVectorElt(SourceIdx++));
+      else
+        ResultElements.push_back(Passthru.getVectorElt(I));
+    }
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
   case X86::BI__builtin_ia32_vpconflictsi_128:
@@ -16778,6 +16906,253 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     }
   }
 
+  case Builtin::BIstdc_leading_zeros_uc:
+  case Builtin::BIstdc_leading_zeros_us:
+  case Builtin::BIstdc_leading_zeros_ui:
+  case Builtin::BIstdc_leading_zeros_ul:
+  case Builtin::BIstdc_leading_zeros_ull:
+  case Builtin::BIstdc_leading_ones_uc:
+  case Builtin::BIstdc_leading_ones_us:
+  case Builtin::BIstdc_leading_ones_ui:
+  case Builtin::BIstdc_leading_ones_ul:
+  case Builtin::BIstdc_leading_ones_ull:
+  case Builtin::BIstdc_trailing_zeros_uc:
+  case Builtin::BIstdc_trailing_zeros_us:
+  case Builtin::BIstdc_trailing_zeros_ui:
+  case Builtin::BIstdc_trailing_zeros_ul:
+  case Builtin::BIstdc_trailing_zeros_ull:
+  case Builtin::BIstdc_trailing_ones_uc:
+  case Builtin::BIstdc_trailing_ones_us:
+  case Builtin::BIstdc_trailing_ones_ui:
+  case Builtin::BIstdc_trailing_ones_ul:
+  case Builtin::BIstdc_trailing_ones_ull:
+  case Builtin::BIstdc_first_leading_zero_uc:
+  case Builtin::BIstdc_first_leading_zero_us:
+  case Builtin::BIstdc_first_leading_zero_ui:
+  case Builtin::BIstdc_first_leading_zero_ul:
+  case Builtin::BIstdc_first_leading_zero_ull:
+  case Builtin::BIstdc_first_leading_one_uc:
+  case Builtin::BIstdc_first_leading_one_us:
+  case Builtin::BIstdc_first_leading_one_ui:
+  case Builtin::BIstdc_first_leading_one_ul:
+  case Builtin::BIstdc_first_leading_one_ull:
+  case Builtin::BIstdc_first_trailing_zero_uc:
+  case Builtin::BIstdc_first_trailing_zero_us:
+  case Builtin::BIstdc_first_trailing_zero_ui:
+  case Builtin::BIstdc_first_trailing_zero_ul:
+  case Builtin::BIstdc_first_trailing_zero_ull:
+  case Builtin::BIstdc_first_trailing_one_uc:
+  case Builtin::BIstdc_first_trailing_one_us:
+  case Builtin::BIstdc_first_trailing_one_ui:
+  case Builtin::BIstdc_first_trailing_one_ul:
+  case Builtin::BIstdc_first_trailing_one_ull:
+  case Builtin::BIstdc_count_zeros_uc:
+  case Builtin::BIstdc_count_zeros_us:
+  case Builtin::BIstdc_count_zeros_ui:
+  case Builtin::BIstdc_count_zeros_ul:
+  case Builtin::BIstdc_count_zeros_ull:
+  case Builtin::BIstdc_count_ones_uc:
+  case Builtin::BIstdc_count_ones_us:
+  case Builtin::BIstdc_count_ones_ui:
+  case Builtin::BIstdc_count_ones_ul:
+  case Builtin::BIstdc_count_ones_ull:
+  case Builtin::BIstdc_has_single_bit_uc:
+  case Builtin::BIstdc_has_single_bit_us:
+  case Builtin::BIstdc_has_single_bit_ui:
+  case Builtin::BIstdc_has_single_bit_ul:
+  case Builtin::BIstdc_has_single_bit_ull:
+  case Builtin::BIstdc_bit_width_uc:
+  case Builtin::BIstdc_bit_width_us:
+  case Builtin::BIstdc_bit_width_ui:
+  case Builtin::BIstdc_bit_width_ul:
+  case Builtin::BIstdc_bit_width_ull:
+  case Builtin::BIstdc_bit_floor_uc:
+  case Builtin::BIstdc_bit_floor_us:
+  case Builtin::BIstdc_bit_floor_ui:
+  case Builtin::BIstdc_bit_floor_ul:
+  case Builtin::BIstdc_bit_floor_ull:
+  case Builtin::BIstdc_bit_ceil_uc:
+  case Builtin::BIstdc_bit_ceil_us:
+  case Builtin::BIstdc_bit_ceil_ui:
+  case Builtin::BIstdc_bit_ceil_ul:
+  case Builtin::BIstdc_bit_ceil_ull:
+  case Builtin::BIstdc_leading_zeros:
+  case Builtin::BIstdc_leading_ones:
+  case Builtin::BIstdc_trailing_zeros:
+  case Builtin::BIstdc_trailing_ones:
+  case Builtin::BIstdc_first_leading_zero:
+  case Builtin::BIstdc_first_leading_one:
+  case Builtin::BIstdc_first_trailing_zero:
+  case Builtin::BIstdc_first_trailing_one:
+  case Builtin::BIstdc_count_zeros:
+  case Builtin::BIstdc_count_ones:
+  case Builtin::BIstdc_has_single_bit:
+  case Builtin::BIstdc_bit_width:
+  case Builtin::BIstdc_bit_floor:
+  case Builtin::BIstdc_bit_ceil:
+  case Builtin::BI__builtin_stdc_leading_zeros:
+  case Builtin::BI__builtin_stdc_leading_ones:
+  case Builtin::BI__builtin_stdc_trailing_zeros:
+  case Builtin::BI__builtin_stdc_trailing_ones:
+  case Builtin::BI__builtin_stdc_first_leading_zero:
+  case Builtin::BI__builtin_stdc_first_leading_one:
+  case Builtin::BI__builtin_stdc_first_trailing_zero:
+  case Builtin::BI__builtin_stdc_first_trailing_one:
+  case Builtin::BI__builtin_stdc_count_zeros:
+  case Builtin::BI__builtin_stdc_count_ones:
+  case Builtin::BI__builtin_stdc_has_single_bit:
+  case Builtin::BI__builtin_stdc_bit_width:
+  case Builtin::BI__builtin_stdc_bit_floor:
+  case Builtin::BI__builtin_stdc_bit_ceil: {
+    APSInt Val;
+    if (!EvaluateInteger(E->getArg(0), Val, Info))
+      return false;
+
+    unsigned BitWidth = Val.getBitWidth();
+    const unsigned ResBitWidth = Info.Ctx.getIntWidth(E->getType());
+
+    switch (BuiltinOp) {
+    case Builtin::BIstdc_leading_zeros_uc:
+    case Builtin::BIstdc_leading_zeros_us:
+    case Builtin::BIstdc_leading_zeros_ui:
+    case Builtin::BIstdc_leading_zeros_ul:
+    case Builtin::BIstdc_leading_zeros_ull:
+    case Builtin::BIstdc_leading_zeros:
+    case Builtin::BI__builtin_stdc_leading_zeros:
+      return Success(APInt(ResBitWidth, Val.countl_zero()), E);
+    case Builtin::BIstdc_leading_ones_uc:
+    case Builtin::BIstdc_leading_ones_us:
+    case Builtin::BIstdc_leading_ones_ui:
+    case Builtin::BIstdc_leading_ones_ul:
+    case Builtin::BIstdc_leading_ones_ull:
+    case Builtin::BIstdc_leading_ones:
+    case Builtin::BI__builtin_stdc_leading_ones:
+      return Success(APInt(ResBitWidth, Val.countl_one()), E);
+    case Builtin::BIstdc_trailing_zeros_uc:
+    case Builtin::BIstdc_trailing_zeros_us:
+    case Builtin::BIstdc_trailing_zeros_ui:
+    case Builtin::BIstdc_trailing_zeros_ul:
+    case Builtin::BIstdc_trailing_zeros_ull:
+    case Builtin::BIstdc_trailing_zeros:
+    case Builtin::BI__builtin_stdc_trailing_zeros:
+      return Success(APInt(ResBitWidth, Val.countr_zero()), E);
+    case Builtin::BIstdc_trailing_ones_uc:
+    case Builtin::BIstdc_trailing_ones_us:
+    case Builtin::BIstdc_trailing_ones_ui:
+    case Builtin::BIstdc_trailing_ones_ul:
+    case Builtin::BIstdc_trailing_ones_ull:
+    case Builtin::BIstdc_trailing_ones:
+    case Builtin::BI__builtin_stdc_trailing_ones:
+      return Success(APInt(ResBitWidth, Val.countr_one()), E);
+    case Builtin::BIstdc_first_leading_zero_uc:
+    case Builtin::BIstdc_first_leading_zero_us:
+    case Builtin::BIstdc_first_leading_zero_ui:
+    case Builtin::BIstdc_first_leading_zero_ul:
+    case Builtin::BIstdc_first_leading_zero_ull:
+    case Builtin::BIstdc_first_leading_zero:
+    case Builtin::BI__builtin_stdc_first_leading_zero:
+      return Success(
+          APInt(ResBitWidth, Val.isAllOnes() ? 0 : Val.countl_one() + 1), E);
+    case Builtin::BIstdc_first_leading_one_uc:
+    case Builtin::BIstdc_first_leading_one_us:
+    case Builtin::BIstdc_first_leading_one_ui:
+    case Builtin::BIstdc_first_leading_one_ul:
+    case Builtin::BIstdc_first_leading_one_ull:
+    case Builtin::BIstdc_first_leading_one:
+    case Builtin::BI__builtin_stdc_first_leading_one:
+      return Success(
+          APInt(ResBitWidth, Val.isZero() ? 0 : Val.countl_zero() + 1), E);
+    case Builtin::BIstdc_first_trailing_zero_uc:
+    case Builtin::BIstdc_first_trailing_zero_us:
+    case Builtin::BIstdc_first_trailing_zero_ui:
+    case Builtin::BIstdc_first_trailing_zero_ul:
+    case Builtin::BIstdc_first_trailing_zero_ull:
+    case Builtin::BIstdc_first_trailing_zero:
+    case Builtin::BI__builtin_stdc_first_trailing_zero:
+      return Success(
+          APInt(ResBitWidth, Val.isAllOnes() ? 0 : Val.countr_one() + 1), E);
+    case Builtin::BIstdc_first_trailing_one_uc:
+    case Builtin::BIstdc_first_trailing_one_us:
+    case Builtin::BIstdc_first_trailing_one_ui:
+    case Builtin::BIstdc_first_trailing_one_ul:
+    case Builtin::BIstdc_first_trailing_one_ull:
+    case Builtin::BIstdc_first_trailing_one:
+    case Builtin::BI__builtin_stdc_first_trailing_one:
+      return Success(
+          APInt(ResBitWidth, Val.isZero() ? 0 : Val.countr_zero() + 1), E);
+    case Builtin::BIstdc_count_zeros_uc:
+    case Builtin::BIstdc_count_zeros_us:
+    case Builtin::BIstdc_count_zeros_ui:
+    case Builtin::BIstdc_count_zeros_ul:
+    case Builtin::BIstdc_count_zeros_ull:
+    case Builtin::BIstdc_count_zeros:
+    case Builtin::BI__builtin_stdc_count_zeros: {
+      APInt Cnt(ResBitWidth, BitWidth - Val.popcount());
+      return Success(APSInt(Cnt, /*IsUnsigned*/ true), E);
+    }
+    case Builtin::BIstdc_count_ones_uc:
+    case Builtin::BIstdc_count_ones_us:
+    case Builtin::BIstdc_count_ones_ui:
+    case Builtin::BIstdc_count_ones_ul:
+    case Builtin::BIstdc_count_ones_ull:
+    case Builtin::BIstdc_count_ones:
+    case Builtin::BI__builtin_stdc_count_ones: {
+      APInt Cnt(ResBitWidth, Val.popcount());
+      return Success(APSInt(Cnt, /*IsUnsigned*/ true), E);
+    }
+    case Builtin::BIstdc_has_single_bit_uc:
+    case Builtin::BIstdc_has_single_bit_us:
+    case Builtin::BIstdc_has_single_bit_ui:
+    case Builtin::BIstdc_has_single_bit_ul:
+    case Builtin::BIstdc_has_single_bit_ull:
+    case Builtin::BIstdc_has_single_bit:
+    case Builtin::BI__builtin_stdc_has_single_bit: {
+      APInt Res(ResBitWidth, Val.popcount() == 1 ? 1 : 0);
+      return Success(APSInt(Res, /*IsUnsigned*/ true), E);
+    }
+    case Builtin::BIstdc_bit_width_uc:
+    case Builtin::BIstdc_bit_width_us:
+    case Builtin::BIstdc_bit_width_ui:
+    case Builtin::BIstdc_bit_width_ul:
+    case Builtin::BIstdc_bit_width_ull:
+    case Builtin::BIstdc_bit_width:
+    case Builtin::BI__builtin_stdc_bit_width:
+      return Success(APInt(ResBitWidth, BitWidth - Val.countl_zero()), E);
+    case Builtin::BIstdc_bit_floor_uc:
+    case Builtin::BIstdc_bit_floor_us:
+    case Builtin::BIstdc_bit_floor_ui:
+    case Builtin::BIstdc_bit_floor_ul:
+    case Builtin::BIstdc_bit_floor_ull:
+    case Builtin::BIstdc_bit_floor:
+    case Builtin::BI__builtin_stdc_bit_floor: {
+      if (Val.isZero())
+        return Success(APInt(BitWidth, 0), E);
+      unsigned Exp = BitWidth - Val.countl_zero() - 1;
+      return Success(
+          APSInt(APInt::getOneBitSet(BitWidth, Exp), /*IsUnsigned*/ true), E);
+    }
+    case Builtin::BIstdc_bit_ceil_uc:
+    case Builtin::BIstdc_bit_ceil_us:
+    case Builtin::BIstdc_bit_ceil_ui:
+    case Builtin::BIstdc_bit_ceil_ul:
+    case Builtin::BIstdc_bit_ceil_ull:
+    case Builtin::BIstdc_bit_ceil:
+    case Builtin::BI__builtin_stdc_bit_ceil: {
+      if (Val.ule(1))
+        return Success(APSInt(APInt(BitWidth, 1), /*IsUnsigned*/ true), E);
+      APInt ValMinusOne = Val - 1;
+      unsigned LZ = ValMinusOne.countl_zero();
+      if (LZ == 0)
+        return Success(APSInt(APInt(BitWidth, 0), /*IsUnsigned*/ true),
+                       E); // overflows; wrap to 0
+      APInt Result = APInt::getOneBitSet(BitWidth, BitWidth - LZ);
+      return Success(APSInt(Result, /*IsUnsigned*/ true), E);
+    }
+    default:
+      llvm_unreachable("Unknown stdc builtin");
+    }
+  }
+
   case Builtin::BI__builtin_elementwise_add_sat: {
     APSInt LHS, RHS;
     if (!EvaluateInteger(E->getArg(0), LHS, Info) ||
@@ -17124,7 +17499,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
                       ResultType->isSignedIntegerOrEnumerationType();
       uint64_t LHSSize = LHS.getBitWidth();
       uint64_t RHSSize = RHS.getBitWidth();
-      uint64_t ResultSize = Info.Ctx.getTypeSize(ResultType);
+      uint64_t ResultSize = Info.Ctx.getIntWidth(ResultType);
       uint64_t MaxBits = std::max(std::max(LHSSize, RHSSize), ResultSize);
 
       // Add an additional bit if the signedness isn't uniformly agreed to. We
@@ -17175,23 +17550,23 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       break;
     }
 
+    // APSInt doesn't have a TruncOrSelf, so we use extOrTrunc instead,
+    // since it will give us the behavior of a TruncOrSelf in the case where
+    // its parameter <= its size.  We previously set Result to be at least the
+    // integer width of the result, so getIntWidth(ResultType) <=
+    // Result.BitWidth will work exactly like TruncOrSelf.
+    APSInt Temp = Result.extOrTrunc(Info.Ctx.getIntWidth(ResultType));
+    Temp.setIsSigned(ResultType->isSignedIntegerOrEnumerationType());
+
     // In the case where multiple sizes are allowed, truncate and see if
     // the values are the same.
     if (BuiltinOp == Builtin::BI__builtin_add_overflow ||
         BuiltinOp == Builtin::BI__builtin_sub_overflow ||
         BuiltinOp == Builtin::BI__builtin_mul_overflow) {
-      // APSInt doesn't have a TruncOrSelf, so we use extOrTrunc instead,
-      // since it will give us the behavior of a TruncOrSelf in the case where
-      // its parameter <= its size.  We previously set Result to be at least the
-      // type-size of the result, so getTypeSize(ResultType) <= Result.BitWidth
-      // will work exactly like TruncOrSelf.
-      APSInt Temp = Result.extOrTrunc(Info.Ctx.getTypeSize(ResultType));
-      Temp.setIsSigned(ResultType->isSignedIntegerOrEnumerationType());
-
       if (!APSInt::isSameValue(Temp, Result))
         DidOverflow = true;
-      Result = Temp;
     }
+    Result = Temp;
 
     APValue APV{Result};
     if (!handleAssignment(Info, E, ResultLValue, ResultType, APV))

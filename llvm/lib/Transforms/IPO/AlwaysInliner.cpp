@@ -42,7 +42,6 @@ bool AlwaysInlineImpl(
   SmallSetVector<CallBase *, 16> Calls;
   bool Changed = false;
   SmallVector<Function *, 16> InlinedComdatFunctions;
-  SmallVector<Function *, 4> NeedFlattening;
 
   auto TryInline = [&](CallBase &CB, Function &Callee,
                        OptimizationRemarkEmitter &ORE, const char *InlineReason,
@@ -53,8 +52,9 @@ bool AlwaysInlineImpl(
     BasicBlock *Block = CB.getParent();
 
     InlineFunctionInfo IFI(GetAssumptionCache, &PSI);
-    InlineResult Res = InlineFunction(CB, IFI, /*MergeAttributes=*/true,
-                                      &GetAAR(Callee), InsertLifetime);
+    InlineResult Res = InlineFunction(
+        CB, IFI, /*MergeAttributes=*/true, &GetAAR(Callee), InsertLifetime,
+        /*TrackInlineHistory=*/NewCallSites != nullptr);
     if (!Res.isSuccess()) {
       ORE.emit([&]() {
         return OptimizationRemarkMissed(DEBUG_TYPE, "NotInlined", DLoc, Block)
@@ -75,52 +75,16 @@ bool AlwaysInlineImpl(
     return true;
   };
 
-  for (Function &F : make_early_inc_range(M)) {
-    if (F.hasFnAttribute(Attribute::Flatten))
-      NeedFlattening.push_back(&F);
-
-    if (F.isPresplitCoroutine())
+  for (Function &F : M) {
+    if (!F.hasFnAttribute(Attribute::Flatten))
       continue;
-
-    if (F.isDeclaration() || !isInlineViable(F).isSuccess())
-      continue;
-
-    Calls.clear();
-
-    for (User *U : F.users())
-      if (auto *CB = dyn_cast<CallBase>(U))
-        if (CB->getCalledFunction() == &F &&
-            CB->hasFnAttr(Attribute::AlwaysInline) &&
-            !CB->getAttributes().hasFnAttr(Attribute::NoInline))
-          Calls.insert(CB);
-
-    for (CallBase *CB : Calls) {
-      OptimizationRemarkEmitter ORE(CB->getCaller());
-      Changed |= TryInline(*CB, F, ORE, "always inline attribute");
-    }
-
-    F.removeDeadConstantUsers();
-    if (F.hasFnAttribute(Attribute::AlwaysInline) && F.isDefTriviallyDead()) {
-      if (F.hasComdat()) {
-        InlinedComdatFunctions.push_back(&F);
-      } else {
-        if (FAM)
-          FAM->clear(F, F.getName());
-        M.getFunctionList().erase(F);
-        Changed = true;
-      }
-    }
-  }
-
-  // Flatten functions with the flatten attribute using a local worklist.
-  for (Function *F : NeedFlattening) {
     SmallVector<std::pair<CallBase *, int>, 16> Worklist;
     SmallVector<std::pair<Function *, int>, 16> InlineHistory;
     SmallVector<CallBase *> NewCallSites;
-    OptimizationRemarkEmitter ORE(F);
+    OptimizationRemarkEmitter ORE(&F);
 
     // Collect initial calls.
-    for (BasicBlock &BB : *F) {
+    for (BasicBlock &BB : F) {
       for (Instruction &I : BB) {
         if (auto *CB = dyn_cast<CallBase>(&I)) {
           Function *Callee = CB->getCalledFunction();
@@ -140,8 +104,7 @@ bool AlwaysInlineImpl(
         continue;
 
       // Detect recursion.
-      if (Callee == F ||
-          inlineHistoryIncludes(Callee, InlineHistoryID, InlineHistory)) {
+      if (Callee == &F) {
         ORE.emit([&]() {
           return OptimizationRemarkMissed("inline", "NotInlined",
                                           CB->getDebugLoc(), CB->getParent())
@@ -175,6 +138,40 @@ bool AlwaysInlineImpl(
           if (NewCallee && !NewCallee->isDeclaration())
             Worklist.push_back({NewCB, NewHistoryID});
         }
+      }
+    }
+  }
+
+  for (Function &F : make_early_inc_range(M)) {
+    if (F.isPresplitCoroutine())
+      continue;
+
+    if (F.isDeclaration() || !isInlineViable(F).isSuccess())
+      continue;
+
+    Calls.clear();
+
+    for (User *U : F.users())
+      if (auto *CB = dyn_cast<CallBase>(U))
+        if (CB->getCalledFunction() == &F &&
+            CB->hasFnAttr(Attribute::AlwaysInline) &&
+            !CB->getAttributes().hasFnAttr(Attribute::NoInline))
+          Calls.insert(CB);
+
+    for (CallBase *CB : Calls) {
+      OptimizationRemarkEmitter ORE(CB->getCaller());
+      Changed |= TryInline(*CB, F, ORE, "always inline attribute");
+    }
+
+    F.removeDeadConstantUsers();
+    if (F.hasFnAttribute(Attribute::AlwaysInline) && F.isDefTriviallyDead()) {
+      if (F.hasComdat()) {
+        InlinedComdatFunctions.push_back(&F);
+      } else {
+        if (FAM)
+          FAM->clear(F, F.getName());
+        M.getFunctionList().erase(F);
+        Changed = true;
       }
     }
   }

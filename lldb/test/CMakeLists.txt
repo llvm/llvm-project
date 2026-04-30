@@ -12,11 +12,11 @@ endif()
 if(LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS)
   message(STATUS "Enforcing strict test requirements for LLDB")
   # Lit uses psutil to do per-test timeouts.
-  set(useful_python_modules psutil packaging)
+  set(useful_python_modules psutil packaging cryptography)
 
   if(NOT WIN32)
     # We no longer vendor pexpect and it is not used on Windows.
-    list(APPEND pexpect)
+    list(APPEND useful_python_modules pexpect)
   endif()
 
   foreach(module ${useful_python_modules})
@@ -250,6 +250,10 @@ if (CMAKE_SIZEOF_VOID_P EQUAL 8)
   set(LLDB_IS_64_BITS 1)
 endif()
 
+if (LLDB_ENABLE_ARM64E_DEBUGSERVER OR LLDB_USE_SYSTEM_DEBUGSERVER)
+  set(LLDB_USE_ARM64E_DEBUGSERVER ON)
+endif()
+
 set(LLDB_TEST_SHELL_DISABLE_REMOTE OFF CACHE BOOL "Disable remote Shell tests execution")
 
 # These values are not canonicalized within LLVM.
@@ -267,7 +271,8 @@ llvm_canonicalize_cmake_booleans(
   LLDB_TOOL_LLDB_SERVER_BUILD
   LLDB_USE_SYSTEM_DEBUGSERVER
   LLDB_IS_64_BITS
-  LLDB_BUILD_LLDBRPC)
+  LLDB_BUILD_LLDBRPC
+  LLDB_USE_ARM64E_DEBUGSERVER)
 
 # Configure the individual test suites.
 add_subdirectory(API)

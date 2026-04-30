@@ -711,10 +711,20 @@ struct GenericAtomicRMWOpLowering
     auto loc = atomicOp.getLoc();
     Type valueType = typeConverter->convertType(atomicOp.getResult().getType());
 
+    // `llvm.cmpxchg` only supports integer or pointer operands. For
+    // floating-point element types, perform the CAS on a same-width integer
+    // and bitcast at the boundaries.
+    bool needsBitcast = isa<FloatType>(valueType);
+    Type cmpxchgType = valueType;
+    if (needsBitcast) {
+      unsigned bitWidth = cast<FloatType>(valueType).getWidth();
+      cmpxchgType = rewriter.getIntegerType(bitWidth);
+    }
+
     // Split the block into initial, loop, and ending parts.
     auto *initBlock = rewriter.getInsertionBlock();
     auto *loopBlock = rewriter.splitBlock(initBlock, Block::iterator(atomicOp));
-    loopBlock->addArgument(valueType, loc);
+    loopBlock->addArgument(cmpxchgType, loc);
 
     auto *endBlock =
         rewriter.splitBlock(loopBlock, Block::iterator(atomicOp)++);
@@ -727,15 +737,21 @@ struct GenericAtomicRMWOpLowering
     Value init = LLVM::LoadOp::create(
         rewriter, loc, typeConverter->convertType(memRefType.getElementType()),
         dataPtr);
+    if (needsBitcast)
+      init = LLVM::BitcastOp::create(rewriter, loc, cmpxchgType, init);
     LLVM::BrOp::create(rewriter, loc, init, loopBlock);
 
     // Prepare the body of the loop block.
     rewriter.setInsertionPointToStart(loopBlock);
 
     // Clone the GenericAtomicRMWOp region and extract the result.
-    auto loopArgument = loopBlock->getArgument(0);
+    Value loopArgument = loopBlock->getArgument(0);
+    Value loopArgForBody = loopArgument;
+    if (needsBitcast)
+      loopArgForBody =
+          LLVM::BitcastOp::create(rewriter, loc, valueType, loopArgument);
     IRMapping mapping;
-    mapping.map(atomicOp.getCurrentValue(), loopArgument);
+    mapping.map(atomicOp.getCurrentValue(), loopArgForBody);
     Block &entryBlock = atomicOp.body().front();
     for (auto &nestedOp : entryBlock.without_terminator()) {
       Operation *clone = rewriter.clone(nestedOp, mapping);
@@ -747,6 +763,8 @@ struct GenericAtomicRMWOpLowering
     if (!result) {
       return atomicOp.emitError("result not defined in region");
     }
+    if (needsBitcast)
+      result = LLVM::BitcastOp::create(rewriter, loc, cmpxchgType, result);
 
     // Prepare the epilog of the loop block.
     // Append the cmpxchg op to the end of the loop block.
@@ -763,9 +781,14 @@ struct GenericAtomicRMWOpLowering
     LLVM::CondBrOp::create(rewriter, loc, ok, endBlock, ArrayRef<Value>(),
                            loopBlock, newLoaded);
 
+    // The 'result' of the atomic_rmw op is the newly loaded value. Bitcast
+    // back to the float type if needed. Insert at the start of `endBlock` so
+    // the bitcast precedes the existing terminator (split into endBlock).
+    if (needsBitcast) {
+      rewriter.setInsertionPointToStart(endBlock);
+      newLoaded = LLVM::BitcastOp::create(rewriter, loc, valueType, newLoaded);
+    }
     rewriter.setInsertionPointToEnd(endBlock);
-
-    // The 'result' of the atomic_rmw op is the newly loaded value.
     rewriter.replaceOp(atomicOp, {newLoaded});
 
     return success();
@@ -2117,7 +2140,9 @@ struct FinalizeMemRefToLLVMConversionPass
 
 /// Implement the interface to convert MemRef to LLVM.
 struct MemRefToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
-  using ConvertToLLVMPatternInterface::ConvertToLLVMPatternInterface;
+  MemRefToLLVMDialectInterface(Dialect *dialect)
+      : ConvertToLLVMPatternInterface(dialect) {}
+
   void loadDependentDialects(MLIRContext *context) const final {
     context->loadDialect<LLVM::LLVMDialect>();
   }
