@@ -399,10 +399,14 @@ static Address applyNonVirtualAndVirtualOffset(
   mlir::Value baseOffset;
   if (!nonVirtualOffset.isZero()) {
     if (virtualOffset) {
-      cgf.cgm.errorNYI(
-          loc,
-          "applyNonVirtualAndVirtualOffset: virtual and non-virtual offset");
-      return Address::invalid();
+      mlir::Type offsetType =
+          (cgf.cgm.getTarget().getCXXABI().isItaniumFamily() &&
+           cgf.cgm.getLangOpts().RelativeCXXABIVTables)
+              ? cgf.sInt32Ty
+              : cgf.ptrDiffTy;
+      baseOffset = cgf.getBuilder().getConstInt(loc, offsetType,
+                                                nonVirtualOffset.getQuantity());
+      baseOffset = cgf.getBuilder().createAdd(loc, virtualOffset, baseOffset);
     } else {
       assert(baseValueTy && "expected base type");
       // If no virtualOffset is present this is the final stop.
@@ -922,8 +926,7 @@ void CIRGenFunction::emitForwardingCallToLambda(
                    "emitForwardingCallToLambda: ObjCAutoRefCount");
     emitReturnOfRValue(*currSrcLoc, rv, resultType);
   } else {
-    cgm.errorNYI(callOperator->getSourceRange(),
-                 "emitForwardingCallToLambda: return slot is not null");
+    cir::ReturnOp::create(builder, *currSrcLoc);
   }
 }
 

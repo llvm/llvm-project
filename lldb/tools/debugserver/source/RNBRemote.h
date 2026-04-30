@@ -101,6 +101,7 @@ public:
     query_process_info,                            // 'qProcessInfo'
     json_query_thread_extended_info,               // 'jThreadExtendedInfo'
     json_query_get_loaded_dynamic_libraries_infos, // 'jGetLoadedDynamicLibrariesInfos'
+    json_multi_breakpoint,                         // 'jMultiBreakpoint'
     json_query_threads_info,                       // 'jThreadsInfo'
     json_query_get_shared_cache_info,              // 'jGetSharedCacheInfo'
     pass_signals_to_inferior,                      // 'QPassSignals'
@@ -190,6 +191,7 @@ public:
   rnb_err_t HandlePacket_jThreadExtendedInfo(const char *p);
   rnb_err_t HandlePacket_jGetLoadedDynamicLibrariesInfos(const char *p);
   rnb_err_t HandlePacket_jThreadsInfo(const char *p);
+  rnb_err_t HandlePacket_jMultiBreakpoint(const char *p);
   rnb_err_t HandlePacket_jGetSharedCacheInfo(const char *p);
   rnb_err_t HandlePacket_qThreadExtraInfo(const char *p);
   rnb_err_t HandlePacket_qThreadStopInfo(const char *p);

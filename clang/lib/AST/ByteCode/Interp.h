@@ -196,6 +196,12 @@ bool CheckShift(InterpState &S, CodePtr OpPC, const LT &LHS, const RT &RHS,
 /// Checks if Div/Rem operation on LHS and RHS is valid.
 template <typename T>
 bool CheckDivRem(InterpState &S, CodePtr OpPC, const T &LHS, const T &RHS) {
+
+  if constexpr (isIntegralOrPointer<T>()) {
+    if (!LHS.isNumber() || !RHS.isNumber())
+      return false;
+  }
+
   if (RHS.isZero()) {
     const auto *Op = cast<BinaryOperator>(S.Current->getExpr(OpPC));
     if constexpr (std::is_same_v<T, Floating>) {
@@ -412,9 +418,14 @@ bool Sub(InterpState &S, CodePtr OpPC) {
     // a AddrLabelDiff integral.
     if (LHS.getKind() == IntegralKind::LabelAddress ||
         RHS.getKind() == IntegralKind::LabelAddress) {
-      const auto *A = reinterpret_cast<const Expr *>(LHS.getPtr());
-      const auto *B = reinterpret_cast<const Expr *>(RHS.getPtr());
-      if (!isa<AddrLabelExpr>(A) || !isa<AddrLabelExpr>(B))
+      const auto *A = LHS.getKind() == IntegralKind::LabelAddress
+                          ? reinterpret_cast<const Expr *>(LHS.getPtr())
+                          : nullptr;
+      const auto *B = RHS.getKind() == IntegralKind::LabelAddress
+                          ? reinterpret_cast<const Expr *>(RHS.getPtr())
+                          : nullptr;
+      if (!isa_and_nonnull<AddrLabelExpr>(A) ||
+          !isa_and_nonnull<AddrLabelExpr>(B))
         return false;
       const auto *LHSAddrExpr = cast<AddrLabelExpr>(A);
       const auto *RHSAddrExpr = cast<AddrLabelExpr>(B);
@@ -1550,7 +1561,8 @@ bool GetLocal(InterpState &S, CodePtr OpPC, uint32_t I) {
 
 bool EndLifetime(InterpState &S, CodePtr OpPC);
 bool EndLifetimePop(InterpState &S, CodePtr OpPC);
-bool StartLifetime(InterpState &S, CodePtr OpPC);
+bool StartThisLifetime(InterpState &S, CodePtr OpPC);
+bool StartThisLifetime1(InterpState &S, CodePtr OpPC);
 bool MarkDestroyed(InterpState &S, CodePtr OpPC);
 
 /// 1) Pops the value from the stack.
@@ -3497,30 +3509,11 @@ inline bool GetIntPtr(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
   return true;
 }
 
-inline bool GetMemberPtr(InterpState &S, CodePtr OpPC, const ValueDecl *D) {
-  S.Stk.push<MemberPointer>(D);
-  return true;
-}
-
-inline bool GetMemberPtrBase(InterpState &S, CodePtr OpPC) {
-  const auto &MP = S.Stk.pop<MemberPointer>();
-
-  if (!MP.isBaseCastPossible())
-    return false;
-
-  S.Stk.push<Pointer>(MP.getBase());
-  return true;
-}
-
-inline bool GetMemberPtrDecl(InterpState &S, CodePtr OpPC) {
-  const auto &MP = S.Stk.pop<MemberPointer>();
-
-  const auto *FD = cast<FunctionDecl>(MP.getDecl());
-  const auto *Func = S.getContext().getOrCreateFunction(FD);
-
-  S.Stk.push<Pointer>(Func);
-  return true;
-}
+bool GetMemberPtr(InterpState &S, CodePtr OpPC, const ValueDecl *D);
+bool GetMemberPtrBase(InterpState &S, CodePtr OpPC);
+bool GetMemberPtrDecl(InterpState &S, CodePtr OpPC);
+bool CopyMemberPtrPath(InterpState &S, CodePtr OpPC, const RecordDecl *Entry,
+                       bool IsDerived);
 
 /// Just emit a diagnostic. The expression that caused emission of this
 /// op is not valid in a constant context.
@@ -3926,8 +3919,12 @@ inline bool BitCastPrim(InterpState &S, CodePtr OpPC, bool TargetIsUCharOrByte,
 }
 
 inline bool BitCast(InterpState &S, CodePtr OpPC) {
-  const Pointer &FromPtr = S.Stk.pop<Pointer>();
+  Pointer FromPtr = S.Stk.pop<Pointer>();
   Pointer &ToPtr = S.Stk.peek<Pointer>();
+
+  const Descriptor *D = FromPtr.getFieldDesc();
+  if (D->isPrimitiveArray() && FromPtr.isArrayRoot())
+    FromPtr = FromPtr.atIndex(0);
 
   if (!CheckLoad(S, OpPC, FromPtr))
     return false;

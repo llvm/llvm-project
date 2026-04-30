@@ -219,41 +219,74 @@ namespace llvm {
                     uint32_t NumExtraInhabitants = 0,
                     uint32_t DataSizeInBits = 0);
 
+    /// Create debugging information entry for a basic
+    /// type.
+    /// \param Name        Type name.
+    /// \param File        File where this type is defined.
+    /// \param LineNo      Line number.
+    /// \param Context     The surrounding context for the typedef.
+    /// \param SizeInBits  Size of the type.
+    /// \param Encoding    DWARF encoding code, e.g., dwarf::DW_ATE_float.
+    /// \param Flags       Optional DWARF attributes, e.g., DW_AT_endianity.
+    /// \param NumExtraInhabitants The number of extra inhabitants of the type.
+    /// An extra inhabitant is a bit pattern that does not represent a valid
+    /// value for instances of a given type. This is used by the Swift language.
+    /// \param DataSizeInBits Optionally describes the number of bits used by
+    /// the value of the object when this is less than the storage size of
+    /// SizeInBits. Default value of zero indicates the object value and storage
+    /// sizes are equal.
+    LLVM_ABI DIBasicType *
+    createBasicType(StringRef Name, DIFile *File, unsigned LineNo,
+                    DIScope *Context, uint64_t SizeInBits, unsigned Encoding,
+                    DINode::DIFlags Flags = DINode::FlagZero,
+                    uint32_t NumExtraInhabitants = 0,
+                    uint32_t DataSizeInBits = 0);
+
     /// Create debugging information entry for a binary fixed-point type.
     /// \param Name        Type name.
+    /// \param File        File where this type is defined.
+    /// \param LineNo      Line number.
+    /// \param Context     The surrounding context for the typedef.
     /// \param Encoding    DWARF encoding code, either
     ///                    dwarf::DW_ATE_signed_fixed or DW_ATE_unsigned_fixed.
     /// \param Flags       Optional DWARF attributes, e.g., DW_AT_endianity.
     /// \param Factor      Binary scale factor.
     LLVM_ABI DIFixedPointType *
-    createBinaryFixedPointType(StringRef Name, uint64_t SizeInBits,
+    createBinaryFixedPointType(StringRef Name, DIFile *File, unsigned LineNo,
+                               DIScope *Context, uint64_t SizeInBits,
                                uint32_t AlignInBits, unsigned Encoding,
                                DINode::DIFlags Flags, int Factor);
 
     /// Create debugging information entry for a decimal fixed-point type.
     /// \param Name        Type name.
+    /// \param File        File where this type is defined.
+    /// \param LineNo      Line number.
+    /// \param Context     The surrounding context for the typedef.
     /// \param Encoding    DWARF encoding code, either
     ///                    dwarf::DW_ATE_signed_fixed or DW_ATE_unsigned_fixed.
     /// \param Flags       Optional DWARF attributes, e.g., DW_AT_endianity.
     /// \param Factor      Decimal scale factor.
     LLVM_ABI DIFixedPointType *
-    createDecimalFixedPointType(StringRef Name, uint64_t SizeInBits,
+    createDecimalFixedPointType(StringRef Name, DIFile *File, unsigned LineNo,
+                                DIScope *Context, uint64_t SizeInBits,
                                 uint32_t AlignInBits, unsigned Encoding,
                                 DINode::DIFlags Flags, int Factor);
 
     /// Create debugging information entry for an arbitrary rational
     /// fixed-point type.
     /// \param Name        Type name.
+    /// \param File        File where this type is defined.
+    /// \param LineNo      Line number.
+    /// \param Context     The surrounding context for the typedef.
     /// \param Encoding    DWARF encoding code, either
     ///                    dwarf::DW_ATE_signed_fixed or DW_ATE_unsigned_fixed.
     /// \param Flags       Optional DWARF attributes, e.g., DW_AT_endianity.
     /// \param Numerator   Numerator of scale factor.
     /// \param Denominator Denominator of scale factor.
-    LLVM_ABI DIFixedPointType *
-    createRationalFixedPointType(StringRef Name, uint64_t SizeInBits,
-                                 uint32_t AlignInBits, unsigned Encoding,
-                                 DINode::DIFlags Flags, APInt Numerator,
-                                 APInt Denominator);
+    LLVM_ABI DIFixedPointType *createRationalFixedPointType(
+        StringRef Name, DIFile *File, unsigned LineNo, DIScope *Context,
+        uint64_t SizeInBits, uint32_t AlignInBits, unsigned Encoding,
+        DINode::DIFlags Flags, APInt Numerator, APInt Denominator);
 
     /// Create debugging information entry for a string
     /// type.
