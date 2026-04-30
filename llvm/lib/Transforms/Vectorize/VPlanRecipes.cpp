@@ -556,7 +556,7 @@ bool VPInstruction::canGenerateScalarForFirstLane() const {
   }
 }
 
-Instruction::BinaryOps getSubRecurOpcode(RecurKind Kind) {
+static Instruction::BinaryOps getSubRecurOpcode(RecurKind Kind) {
   if (Kind == RecurKind::Sub)
     return Instruction::Add;
   if (Kind == RecurKind::FSub)

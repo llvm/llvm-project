@@ -269,9 +269,9 @@ exit:
   ret i64 %sub
 }
 
-define float @fdotp_fsub(ptr %a, ptr %b) #0 {
+define float @fdotp_fsub(ptr %a, ptr %b, ptr %c) #0 {
 ; CHECK-INTERLEAVE1-LABEL: define float @fdotp_fsub(
-; CHECK-INTERLEAVE1-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
+; CHECK-INTERLEAVE1-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]]) #[[ATTR0]] {
 ; CHECK-INTERLEAVE1-NEXT:  entry:
 ; CHECK-INTERLEAVE1-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK-INTERLEAVE1:       vector.ph:
@@ -283,10 +283,15 @@ define float @fdotp_fsub(ptr %a, ptr %b) #0 {
 ; CHECK-INTERLEAVE1-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x half>, ptr [[TMP0]], align 2
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP1:%.*]] = getelementptr half, ptr [[B]], i64 [[INDEX]]
 ; CHECK-INTERLEAVE1-NEXT:    [[WIDE_LOAD1:%.*]] = load <8 x half>, ptr [[TMP1]], align 2
+; CHECK-INTERLEAVE1-NEXT:    [[TMP8:%.*]] = getelementptr half, ptr [[C]], i64 [[INDEX]]
+; CHECK-INTERLEAVE1-NEXT:    [[WIDE_LOAD2:%.*]] = load <8 x half>, ptr [[TMP8]], align 2
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP2:%.*]] = fpext <8 x half> [[WIDE_LOAD1]] to <8 x float>
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP3:%.*]] = fpext <8 x half> [[WIDE_LOAD]] to <8 x float>
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP4:%.*]] = fmul reassoc contract <8 x float> [[TMP2]], [[TMP3]]
-; CHECK-INTERLEAVE1-NEXT:    [[PARTIAL_REDUCE]] = call reassoc contract <4 x float> @llvm.vector.partial.reduce.fadd.v4f32.v8f32(<4 x float> [[VEC_PHI]], <8 x float> [[TMP4]])
+; CHECK-INTERLEAVE1-NEXT:    [[PARTIAL_REDUCE1:%.*]] = call reassoc contract <4 x float> @llvm.vector.partial.reduce.fadd.v4f32.v8f32(<4 x float> [[VEC_PHI]], <8 x float> [[TMP4]])
+; CHECK-INTERLEAVE1-NEXT:    [[TMP9:%.*]] = fpext <8 x half> [[WIDE_LOAD2]] to <8 x float>
+; CHECK-INTERLEAVE1-NEXT:    [[TMP10:%.*]] = fmul reassoc contract <8 x float> [[TMP9]], [[TMP3]]
+; CHECK-INTERLEAVE1-NEXT:    [[PARTIAL_REDUCE]] = call reassoc contract <4 x float> @llvm.vector.partial.reduce.fadd.v4f32.v8f32(<4 x float> [[PARTIAL_REDUCE1]], <8 x float> [[TMP10]])
 ; CHECK-INTERLEAVE1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-INTERLEAVE1-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
@@ -298,7 +303,7 @@ define float @fdotp_fsub(ptr %a, ptr %b) #0 {
 ; CHECK-INTERLEAVE1-NEXT:    ret float [[TMP7]]
 ;
 ; CHECK-INTERLEAVED-LABEL: define float @fdotp_fsub(
-; CHECK-INTERLEAVED-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
+; CHECK-INTERLEAVED-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]]) #[[ATTR0]] {
 ; CHECK-INTERLEAVED-NEXT:  entry:
 ; CHECK-INTERLEAVED-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK-INTERLEAVED:       vector.ph:
@@ -315,14 +320,24 @@ define float @fdotp_fsub(ptr %a, ptr %b) #0 {
 ; CHECK-INTERLEAVED-NEXT:    [[TMP3:%.*]] = getelementptr half, ptr [[TMP2]], i64 8
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD3:%.*]] = load <8 x half>, ptr [[TMP2]], align 2
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD4:%.*]] = load <8 x half>, ptr [[TMP3]], align 2
+; CHECK-INTERLEAVED-NEXT:    [[TMP16:%.*]] = getelementptr half, ptr [[C]], i64 [[INDEX]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP17:%.*]] = getelementptr half, ptr [[TMP16]], i64 8
+; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD5:%.*]] = load <8 x half>, ptr [[TMP16]], align 2
+; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD6:%.*]] = load <8 x half>, ptr [[TMP17]], align 2
 ; CHECK-INTERLEAVED-NEXT:    [[TMP4:%.*]] = fpext <8 x half> [[WIDE_LOAD3]] to <8 x float>
 ; CHECK-INTERLEAVED-NEXT:    [[TMP5:%.*]] = fpext <8 x half> [[WIDE_LOAD]] to <8 x float>
 ; CHECK-INTERLEAVED-NEXT:    [[TMP6:%.*]] = fmul reassoc contract <8 x float> [[TMP4]], [[TMP5]]
-; CHECK-INTERLEAVED-NEXT:    [[PARTIAL_REDUCE]] = call reassoc contract <4 x float> @llvm.vector.partial.reduce.fadd.v4f32.v8f32(<4 x float> [[VEC_PHI]], <8 x float> [[TMP6]])
+; CHECK-INTERLEAVED-NEXT:    [[PARTIAL_REDUCE1:%.*]] = call reassoc contract <4 x float> @llvm.vector.partial.reduce.fadd.v4f32.v8f32(<4 x float> [[VEC_PHI]], <8 x float> [[TMP6]])
 ; CHECK-INTERLEAVED-NEXT:    [[TMP7:%.*]] = fpext <8 x half> [[WIDE_LOAD4]] to <8 x float>
 ; CHECK-INTERLEAVED-NEXT:    [[TMP8:%.*]] = fpext <8 x half> [[WIDE_LOAD2]] to <8 x float>
 ; CHECK-INTERLEAVED-NEXT:    [[TMP9:%.*]] = fmul reassoc contract <8 x float> [[TMP7]], [[TMP8]]
-; CHECK-INTERLEAVED-NEXT:    [[PARTIAL_REDUCE5]] = call reassoc contract <4 x float> @llvm.vector.partial.reduce.fadd.v4f32.v8f32(<4 x float> [[VEC_PHI1]], <8 x float> [[TMP9]])
+; CHECK-INTERLEAVED-NEXT:    [[PARTIAL_REDUCE7:%.*]] = call reassoc contract <4 x float> @llvm.vector.partial.reduce.fadd.v4f32.v8f32(<4 x float> [[VEC_PHI1]], <8 x float> [[TMP9]])
+; CHECK-INTERLEAVED-NEXT:    [[TMP18:%.*]] = fpext <8 x half> [[WIDE_LOAD5]] to <8 x float>
+; CHECK-INTERLEAVED-NEXT:    [[TMP13:%.*]] = fmul reassoc contract <8 x float> [[TMP18]], [[TMP5]]
+; CHECK-INTERLEAVED-NEXT:    [[PARTIAL_REDUCE]] = call reassoc contract <4 x float> @llvm.vector.partial.reduce.fadd.v4f32.v8f32(<4 x float> [[PARTIAL_REDUCE1]], <8 x float> [[TMP13]])
+; CHECK-INTERLEAVED-NEXT:    [[TMP14:%.*]] = fpext <8 x half> [[WIDE_LOAD6]] to <8 x float>
+; CHECK-INTERLEAVED-NEXT:    [[TMP15:%.*]] = fmul reassoc contract <8 x float> [[TMP14]], [[TMP8]]
+; CHECK-INTERLEAVED-NEXT:    [[PARTIAL_REDUCE5]] = call reassoc contract <4 x float> @llvm.vector.partial.reduce.fadd.v4f32.v8f32(<4 x float> [[PARTIAL_REDUCE7]], <8 x float> [[TMP15]])
 ; CHECK-INTERLEAVED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-INTERLEAVED-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
@@ -335,7 +350,7 @@ define float @fdotp_fsub(ptr %a, ptr %b) #0 {
 ; CHECK-INTERLEAVED-NEXT:    ret float [[TMP12]]
 ;
 ; CHECK-MAXBW-LABEL: define float @fdotp_fsub(
-; CHECK-MAXBW-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
+; CHECK-MAXBW-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]]) #[[ATTR0]] {
 ; CHECK-MAXBW-NEXT:  entry:
 ; CHECK-MAXBW-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK-MAXBW:       vector.ph:
@@ -347,10 +362,15 @@ define float @fdotp_fsub(ptr %a, ptr %b) #0 {
 ; CHECK-MAXBW-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x half>, ptr [[TMP0]], align 2
 ; CHECK-MAXBW-NEXT:    [[TMP1:%.*]] = getelementptr half, ptr [[B]], i64 [[INDEX]]
 ; CHECK-MAXBW-NEXT:    [[WIDE_LOAD1:%.*]] = load <8 x half>, ptr [[TMP1]], align 2
+; CHECK-MAXBW-NEXT:    [[TMP8:%.*]] = getelementptr half, ptr [[C]], i64 [[INDEX]]
+; CHECK-MAXBW-NEXT:    [[WIDE_LOAD2:%.*]] = load <8 x half>, ptr [[TMP8]], align 2
 ; CHECK-MAXBW-NEXT:    [[TMP2:%.*]] = fpext <8 x half> [[WIDE_LOAD1]] to <8 x float>
 ; CHECK-MAXBW-NEXT:    [[TMP3:%.*]] = fpext <8 x half> [[WIDE_LOAD]] to <8 x float>
 ; CHECK-MAXBW-NEXT:    [[TMP4:%.*]] = fmul reassoc contract <8 x float> [[TMP2]], [[TMP3]]
-; CHECK-MAXBW-NEXT:    [[PARTIAL_REDUCE]] = call reassoc contract <4 x float> @llvm.vector.partial.reduce.fadd.v4f32.v8f32(<4 x float> [[VEC_PHI]], <8 x float> [[TMP4]])
+; CHECK-MAXBW-NEXT:    [[PARTIAL_REDUCE1:%.*]] = call reassoc contract <4 x float> @llvm.vector.partial.reduce.fadd.v4f32.v8f32(<4 x float> [[VEC_PHI]], <8 x float> [[TMP4]])
+; CHECK-MAXBW-NEXT:    [[TMP9:%.*]] = fpext <8 x half> [[WIDE_LOAD2]] to <8 x float>
+; CHECK-MAXBW-NEXT:    [[TMP10:%.*]] = fmul reassoc contract <8 x float> [[TMP9]], [[TMP3]]
+; CHECK-MAXBW-NEXT:    [[PARTIAL_REDUCE]] = call reassoc contract <4 x float> @llvm.vector.partial.reduce.fadd.v4f32.v8f32(<4 x float> [[PARTIAL_REDUCE1]], <8 x float> [[TMP10]])
 ; CHECK-MAXBW-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-MAXBW-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-MAXBW-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
@@ -373,8 +393,13 @@ for.body:
   %gep.b = getelementptr half, ptr %b, i64 %iv
   %load.b = load half, ptr %gep.b, align 2
   %ext.b = fpext half %load.b to float
-  %mul = fmul reassoc contract float %ext.b, %ext.a
-  %sub = fsub reassoc contract float %accum, %mul
+  %gep.c = getelementptr half, ptr %c, i64 %iv
+  %load.c = load half, ptr %gep.c, align 2
+  %ext.c = fpext half %load.c to float
+  %mul.ab = fmul reassoc contract float %ext.b, %ext.a
+  %mul.ac = fmul reassoc contract float %ext.c, %ext.a
+  %sub.ab = fsub reassoc contract float %accum, %mul.ab
+  %sub = fsub reassoc contract float %sub.ab, %mul.ac
   %iv.next = add i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body
