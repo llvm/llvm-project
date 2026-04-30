@@ -347,14 +347,83 @@ TEST_F(TargetDeclTest, OffsetOf) {
     struct Foo { int bar; };
     int x = __builtin_offsetof(Foo, [[bar]]);
   )cpp";
-  EXPECT_DECLS("OffsetOfExpr", "int bar");
+  EXPECT_DECLS("OffsetOfNode", "int bar");
 
-  // For a nested designator, allTargetDecls reports the innermost field.
   Code = R"cpp(
-    struct A { struct { int c; } b; };
-    int x = __builtin_offsetof(A, [[b.c]]);
+    struct Inner { int c; };
+    struct Outer { Inner b; };
+    int x = __builtin_offsetof(Outer, [[b]].c);
   )cpp";
-  EXPECT_DECLS("OffsetOfExpr", "int c");
+  EXPECT_DECLS("OffsetOfNode", "Inner b");
+
+  Code = R"cpp(
+    struct Inner { int c; };
+    struct Outer { Inner b; };
+    int x = __builtin_offsetof(Outer, b.[[c]]);
+  )cpp";
+  EXPECT_DECLS("OffsetOfNode", "int c");
+
+  // Selection that spans multiple components doesn't match any single
+  // OffsetOfNode.
+  Code = R"cpp(
+    struct Inner { int c; };
+    struct Outer { Inner b; };
+    int x = __builtin_offsetof(Outer, [[b.c]]);
+  )cpp";
+  EXPECT_THAT(assertNodeAndPrintDecls("OffsetOfExpr"), ::testing::IsEmpty());
+
+  Code = R"cpp(
+    struct Inner { int c; };
+    struct Outer { Inner b; };
+    int x = __builtin_offsetof(Outer, [[b.]]c);
+  )cpp";
+  EXPECT_THAT(assertNodeAndPrintDecls("OffsetOfExpr"), ::testing::IsEmpty());
+
+  Code = R"cpp(
+    struct Inner { int c; };
+    struct Outer { Inner b; };
+    int x = __builtin_offsetof(Outer, b[[.c]]);
+  )cpp";
+  EXPECT_DECLS("OffsetOfNode", "int c");
+
+  Code = R"cpp(
+    struct Foo { int bar; };
+    int x = __builtin_[[offsetof]](Foo, bar);
+  )cpp";
+  EXPECT_THAT(assertNodeAndPrintDecls("OffsetOfExpr"), ::testing::IsEmpty());
+
+  // Base-class component: the implicit Base node has no source range, so
+  // the cursor on `x` resolves precisely to the inherited field.
+  Code = R"cpp(
+    struct B { int x; };
+    struct D : B {};
+    int o = __builtin_offsetof(D, [[x]]);
+  )cpp";
+  EXPECT_DECLS("OffsetOfNode", "int x");
+
+  // Dependent-type identifier component: no resolvable decl, but must not
+  // crash and must not produce spurious targets.
+  Code = R"cpp(
+    template <typename T> int f() { return __builtin_offsetof(T, [[x]]); }
+  )cpp";
+  EXPECT_THAT(assertNodeAndPrintDecls("OffsetOfNode"), ::testing::IsEmpty());
+
+  // C-style offsetof macro form resolves the same as __builtin_offsetof.
+  Code = R"cpp(
+    #define offsetof(t, m) __builtin_offsetof(t, m)
+    struct Foo { int bar; };
+    int x = offsetof(Foo, [[bar]]);
+  )cpp";
+  EXPECT_DECLS("OffsetOfNode", "int bar");
+
+  // Array-index expression in an offsetof designator should still resolve as
+  // the expression, not as the enclosing OffsetOfNode.
+  Code = R"cpp(
+    struct Foo { int bar[4]; };
+    int i;
+    int x = __builtin_offsetof(Foo, bar[ [[i]] ]);
+  )cpp";
+  EXPECT_DECLS("DeclRefExpr", "int i");
 }
 
 TEST_F(TargetDeclTest, NestedNameSpecifier) {

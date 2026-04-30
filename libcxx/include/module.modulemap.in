@@ -1606,7 +1606,10 @@ module std [system] {
       textual header "__locale_dir/support/freebsd.h"
       textual header "__locale_dir/support/fuchsia.h"
       textual header "__locale_dir/support/linux.h"
+      textual header "__locale_dir/support/llvm_libc.h"
       textual header "__locale_dir/support/netbsd.h"
+      textual header "__locale_dir/support/no_locale/conversions.h"
+      textual header "__locale_dir/support/no_locale/formatting.h"
       textual header "__locale_dir/support/newlib.h"
       textual header "__locale_dir/support/no_locale/characters.h"
       textual header "__locale_dir/support/no_locale/strtonum.h"
@@ -2452,10 +2455,6 @@ module std_errno_h [system] {
 }
 module std_fenv_h [system] {
   header "fenv.h"
-  export *
-}
-module std_inttypes_h [system] {
-  header "inttypes.h"
   export *
 }
 module std_math_h [system] {

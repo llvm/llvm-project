@@ -15,6 +15,9 @@ add_integration_test(
     libc.src.pthread.pthread_mutex_lock
     libc.src.pthread.pthread_mutex_trylock
     libc.src.pthread.pthread_mutex_unlock
+    libc.src.pthread.pthread_mutexattr_destroy
+    libc.src.pthread.pthread_mutexattr_init
+    libc.src.pthread.pthread_mutexattr_settype
     libc.src.pthread.pthread_create
     libc.src.pthread.pthread_join
 )
@@ -242,11 +245,14 @@ add_integration_test(
   SRCS
     pthread_join_test.cpp
   DEPENDS
+    libc.src.__support.CPP.atomic
+    libc.src.__support.threads.thread
     libc.include.pthread
     libc.include.stdio
     libc.src.errno.errno
     libc.src.pthread.pthread_create
     libc.src.pthread.pthread_join
+    libc.src.pthread.pthread_self
 )
 
 add_integration_test(
