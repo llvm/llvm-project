@@ -8166,6 +8166,11 @@ void OMPClauseWriter::VisitOMPNowaitClause(OMPNowaitClause *C) {
   Record.AddSourceLocation(C->getLParenLoc());
 }
 
+void OMPClauseWriter::VisitOMPReplayableClause(OMPReplayableClause *C) {
+  Record.AddStmt(C->getCondition());
+  Record.AddSourceLocation(C->getLParenLoc());
+}
+
 void OMPClauseWriter::VisitOMPUntiedClause(OMPUntiedClause *) {}
 
 void OMPClauseWriter::VisitOMPMergeableClause(OMPMergeableClause *) {}
@@ -8578,6 +8583,16 @@ void OMPClauseWriter::VisitOMPThreadLimitClause(OMPThreadLimitClause *C) {
 void OMPClauseWriter::VisitOMPPriorityClause(OMPPriorityClause *C) {
   VisitOMPClauseWithPreInit(C);
   Record.AddStmt(C->getPriority());
+  Record.AddSourceLocation(C->getLParenLoc());
+}
+
+void OMPClauseWriter::VisitOMPGraphIdClause(OMPGraphIdClause *C) {
+  Record.AddStmt(C->getId());
+  Record.AddSourceLocation(C->getLParenLoc());
+}
+
+void OMPClauseWriter::VisitOMPGraphResetClause(OMPGraphResetClause *C) {
+  Record.AddStmt(C->getCondition());
   Record.AddSourceLocation(C->getLParenLoc());
 }
 
