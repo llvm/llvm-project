@@ -996,9 +996,6 @@ void Serializer::parseFriends(RecordInfo &RI, const CXXRecordDecl *D) {
     return;
 
   for (const FriendDecl *FD : D->friends()) {
-    if (FD->isUnsupportedFriend())
-      continue;
-
     FriendInfo F(InfoType::IT_friend, getUSRForDecl(FD));
     const auto *ActualDecl = FD->getFriendDecl();
     if (!ActualDecl) {
