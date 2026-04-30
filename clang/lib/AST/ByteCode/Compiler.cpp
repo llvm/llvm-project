@@ -2640,12 +2640,11 @@ bool Compiler<Emitter>::VisitMemberExpr(const MemberExpr *E) {
   }
 
   if (!isa<FieldDecl>(Member)) {
-    // Bound member functions (non-static CXXMethodDecls) cannot be
-    // constant-evaluated. visitDeclRef would blindly push a FnPtr,
-    // but the caller expects a MemberPointer, causing a stack mismatch.
+    // A non-static member function access only makes sense as part of the
+    // enclosing call here. Don't try to evaluate it in isolation.
     if (const auto *MD = dyn_cast<CXXMethodDecl>(Member);
-    MD && !MD->isStatic()) {
-        return false;
+        MD && !MD->isStatic()) {
+      return false;
     }
 
     if (!this->discard(Base) && !this->emitSideEffect(E))

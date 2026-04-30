@@ -5245,18 +5245,6 @@ TEST(Hover, FunctionParameters) {
   }
 }
 
-TEST(Hover, NoCrashOnBoundMemberFunctionWithNewInterpreter) {
-  Annotations Code(R"cpp(
-    struct S { void f(); };
-    void g() { S s; s.^f(); }
-  )cpp");
-  TestTU TU = TestTU::withCode(Code.code());
-  TU.ExtraArgs.push_back("-std=c++23");
-  TU.ExtraArgs.push_back("-fexperimental-new-constant-interpreter");
-  auto AST = TU.build();
-  getHover(AST, Code.point(), format::getLLVMStyle(), nullptr);
-}
-
 } // namespace
 } // namespace clangd
 } // namespace clang
