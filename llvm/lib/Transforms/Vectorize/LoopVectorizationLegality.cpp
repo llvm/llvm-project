@@ -579,6 +579,123 @@ public:
 
 } // namespace
 
+static Value *stripSimpleCasts(Value *V) {
+  while (isa<SExtInst>(V) || isa<ZExtInst>(V) || isa<TruncInst>(V))
+    V = cast<Instruction>(V)->getOperand(0);
+  return V;
+}
+
+static LoadInst *getLoopBoundLoadCandidate(Loop *L) {
+  Instruction *Icmp = L->getLatchCmpInst();
+  if (!Icmp)
+    return nullptr;
+
+  Value *Op0 = stripSimpleCasts(Icmp->getOperand(0));
+  Value *Op1 = stripSimpleCasts(Icmp->getOperand(1));
+
+  if (!isa<LoadInst>(Op0) && !isa<LoadInst>(Op1))
+    return nullptr;
+
+  LoadInst *BoundLoad =
+      isa<LoadInst>(Op0) ? dyn_cast<LoadInst>(Op0) : dyn_cast<LoadInst>(Op1);
+
+  // Reject non int load types.
+  if (!BoundLoad->getType()->isIntegerTy())
+    return nullptr;
+
+  return BoundLoad;
+}
+
+static bool isLoadSpeculativelyHoistable(Loop *L, LoadInst *LoadCandidate,
+                                         PredicatedScalarEvolution &PSE,
+                                         AAResults &AA) {
+
+  if (!L || !LoadCandidate)
+    return false;
+
+  if (!L->contains(LoadCandidate))
+    return false;
+
+  Value *Ptr = LoadCandidate->getPointerOperand();
+  if (!L->isLoopInvariant(Ptr))
+    return false;
+
+  // We don't want to deal with global pointers for now.
+  if (isa<GlobalValue>(Ptr))
+    return false;
+
+  if (!LoadCandidate->isSimple() || LoadCandidate->isVolatile())
+    return false;
+
+  const SCEV *PtrScev = PSE.getSCEV(Ptr);
+  if (!PtrScev || !PSE.getSE()->isLoopInvariant(PtrScev, L))
+    return false;
+
+  for (auto *User : Ptr->users()) {
+    Instruction *UserI = dyn_cast<Instruction>(User);
+    if (!UserI || UserI == dyn_cast<Instruction>(LoadCandidate))
+      continue;
+
+    if (!L->contains(UserI))
+      continue;
+
+    if (UserI->mayWriteToMemory())
+      return false;
+  }
+
+  MemoryLocation LoadLoc = MemoryLocation::get(LoadCandidate);
+  // No call in loop may write to Ptr via aliasing.
+  for (BasicBlock *BB : L->blocks()) {
+    for (Instruction &I : *BB) {
+      auto *CB = dyn_cast<CallBase>(&I);
+      if (!CB)
+        continue;
+
+      MemoryEffects ME = AA.getMemoryEffects(CB);
+      // If call doesn't write anything it's safe.
+      if (!isModSet(ME.getModRef()))
+        continue;
+
+      // If call writes to escaped or global memory reject.
+      if (isModSet(ME.getModRef(IRMemLocation::Other)))
+        return false;
+
+      // Check if any args alias with loadloc.
+      for (Value *Arg : CB->args()) {
+        if (!Arg->getType()->isPointerTy())
+          continue;
+        if (AA.alias(MemoryLocation::getBeforeOrAfter(Arg), LoadLoc) !=
+            AliasResult::NoAlias)
+          return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+LoadInst *
+LoopVectorizationLegality::tryToFindDyanmicBoundLoadCandidate(Loop *L,
+                                                             AAResults &AA) {
+  if (!L->isInnermost())
+    return nullptr;
+
+  LoadInst *LoadCandidate = getLoopBoundLoadCandidate(L);
+  if (!LoadCandidate)
+    return nullptr;
+
+  // Reject if loop body may have some non-vectorizable calls, like pow/ instrs
+  // with side-effects, here even if the load were hoisted it would not allow
+  // the loop to vectorize anyway.
+  if (!canVectorizeInstrs())
+    return nullptr;
+
+  if (!isLoadSpeculativelyHoistable(L, LoadCandidate, PSE, AA))
+    return nullptr;
+
+  return LoadCandidate;
+}
+
 bool LoopVectorizationLegality::isUniform(Value *V, ElementCount VF) const {
   if (isInvariant(V))
     return true;

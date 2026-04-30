@@ -144,6 +144,7 @@
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
 #include "llvm/Transforms/Vectorize/LoopVectorizationLegality.h"
+#include "llvm/Transforms/Utils/Cloning.h"
 #include <algorithm>
 #include <cassert>
 #include <cmath>
@@ -377,6 +378,8 @@ static cl::opt<bool> EnableEarlyExitVectorization(
 // Likelyhood of bypassing the vectorized loop because there are zero trips left
 // after prolog. See `emitIterationCountCheck`.
 static constexpr uint32_t MinItersBypassWeights[] = {1, 127};
+
+static bool AllowInvariantBoundRetry = true;
 
 /// A helper function that returns true if the given type is irregular. The
 /// type is irregular if its allocated size doesn't equal the store size of an
@@ -8163,6 +8166,179 @@ static void connectEpilogueVectorLoop(VPlan &EpiPlan, Loop *L,
       Phi.eraseFromParent();
 }
 
+static bool isSpeculativeBoundVersioningProfitable() { return true; }
+
+
+/*
+
+              preheader
+                |
+              rtcheck-block
+                /  \
+               /    \
+        for.preheader    ver.preheader
+            |               |
+         for.body       ver.for.body
+
+*/
+static Loop *tryToVersionLoopForInvariantBoundLoad(
+    Loop *L, LoadInst *BoundLoad, const DataLayout &DL, DominatorTree &DT,
+    LoopInfo &LI, AAResults &AA, PredicatedScalarEvolution &PSE,
+    AssumptionCache *AC) {
+  LoadInst *InnerLoad = BoundLoad;
+  if (!InnerLoad)
+    return nullptr;
+  auto *PreHeader = L->getLoopPreheader();
+  if (!PreHeader)
+    return nullptr;
+
+  Value *BoundPtrOl = InnerLoad->getPointerOperand();
+  if (auto *BoundPtrI = dyn_cast<Instruction>(BoundPtrOl))
+    if (!DT.properlyDominates(BoundPtrI->getParent(), PreHeader))
+      return nullptr;
+
+  // All the relevent base pointers of participating stores should dominate both
+  // loops.
+  LoopAccessInfoManager PreFlightLAIs(*PSE.getSE(), AA, DT, LI, nullptr,
+                                      nullptr, AC);
+  const LoopAccessInfo &PreLAI = PreFlightLAIs.getInfo(*L);
+  const auto &RtPtrChecking = *PreLAI.getRuntimePointerChecking();
+
+  for (const auto &Check : RtPtrChecking.getChecks()) {
+    for (const RuntimeCheckingPtrGroup *Group : {Check.first, Check.second}) {
+      for (unsigned Idx : Group->Members) {
+        Value *Ptr = RtPtrChecking.Pointers[Idx].PointerValue;
+        Value *Base = getUnderlyingObject(Ptr);
+        if (auto *BaseI = dyn_cast<Instruction>(Base))
+          if (!DT.properlyDominates(BaseI->getParent(), PreHeader)) {
+            return nullptr;
+          }
+      }
+    }
+  }
+
+  Function *ParentF = PreHeader->getParent();
+  LLVMContext &Ctx = ParentF->getContext();
+
+  BasicBlock *RtCheckBB =
+      BasicBlock::Create(Ctx, "ivbound.rtcheck", ParentF, PreHeader);
+
+  // Temporary terminator for SCEVExapnder to have valid insert point.
+  IRBuilder<> TmpBuilder(RtCheckBB);
+  Instruction *TmpTerm = TmpBuilder.CreateUnreachable();
+
+  // Re-wire the CFG.
+  // Redirect the predecessors of preheader the new rtcheck block.
+  SmallVector<BasicBlock *, 4> PreHeaderPreds(predecessors(PreHeader));
+  for (auto *Pred : PreHeaderPreds)
+    Pred->getTerminator()->replaceUsesOfWith(PreHeader, RtCheckBB);
+
+  BasicBlock *OldPreheadIdom = DT.getNode(PreHeader)->getIDom()->getBlock();
+  DT.addNewBlock(RtCheckBB, OldPreheadIdom);
+  DT.changeImmediateDominator(PreHeader, RtCheckBB);
+
+  // Fix the preheader phis via rtcblock phis.
+  for (PHINode &PN : make_early_inc_range(PreHeader->phis())) {
+    // Create the rtcblock phi.
+    PHINode *RtcPN =
+        PHINode::Create(PN.getType(), PreHeaderPreds.size(),
+                        PN.getName() + ".rtcphi", &RtCheckBB->front());
+    for (unsigned i = 0; i < PN.getNumIncomingValues(); i++) {
+      BasicBlock *IBB = PN.getIncomingBlock(i);
+      assert(is_contained(PreHeaderPreds, IBB) &&
+             "Incoming Basic Block not part of predecessors list!");
+      RtcPN->addIncoming(PN.getIncomingValue(i), IBB);
+    }
+    PN.replaceAllUsesWith(RtcPN);
+    PN.eraseFromParent();
+  }
+
+  // Clone the loop including preheader.
+  ValueToValueMapTy VMap;
+  SmallVector<BasicBlock *, 4> NewBlocks;
+  Loop *VerLoop = cloneLoopWithPreheader(PreHeader, RtCheckBB, L, VMap, ".lver",
+                                         &LI, &DT, NewBlocks);
+
+  remapInstructionsInBlocks(NewBlocks, VMap);
+
+  BasicBlock *VerPreHeader = cast<BasicBlock>(VMap[PreHeader]);
+  BasicBlock *VerLatch = cast<BasicBlock>(VMap[L->getLoopLatch()]);
+
+  if (Loop *ParLoop = L->getParentLoop())
+    ParLoop->addBasicBlockToLoop(RtCheckBB, LI);
+
+  VerLatch->getTerminator()->setMetadata(LLVMContext::MD_loop, nullptr);
+
+  LoadInst *HoistLoad = cast<LoadInst>(InnerLoad->clone());
+  HoistLoad->setName(InnerLoad->getName() + ".speculatively.hoisted");
+  // Put this hoisted load in RtcheckBB, since SCEVExapnder needs it.
+  HoistLoad->insertBefore(TmpTerm);
+  Instruction *ClonedInnerLoad = cast<Instruction>(VMap[InnerLoad]);
+  ClonedInnerLoad->replaceAllUsesWith(HoistLoad);
+  ClonedInnerLoad->eraseFromParent();
+
+  // fix lcssa phis.
+  SmallVector<BasicBlock *, 4> ExitBlocks;
+  L->getExitBlocks(ExitBlocks);
+  for (BasicBlock *ExBB : ExitBlocks) {
+    DT.changeImmediateDominator(ExBB, RtCheckBB);
+    for (PHINode &Phi : ExBB->phis()) {
+      int idx = Phi.getBasicBlockIndex(L->getLoopLatch());
+      if (idx < 0)
+        continue;
+      Value *OrigVal = Phi.getIncomingValue(idx);
+      Value *NewVal =
+          VMap.count(OrigVal) ? cast<Value>(VMap[OrigVal]) : OrigVal;
+      Phi.addIncoming(NewVal, VerLatch);
+    }
+  }
+
+  formDedicatedExitBlocks(L, &DT, &LI, nullptr, true);
+  formDedicatedExitBlocks(VerLoop, &DT, &LI, nullptr, true);
+
+  // RTC condition generation using SCEV.
+  auto &SE = *PSE.getSE();
+  LoopAccessInfoManager NewLAIs(SE, AA, DT, LI, nullptr, nullptr, AC);
+  const LoopAccessInfo &VerLAI = NewLAIs.getInfo(*VerLoop);
+
+  // Generate LAA based ptr runtime checks.
+  SCEVExpander MemExp(*VerLAI.getRuntimePointerChecking()->getSE(),
+                      "ivbound.mem.check");
+  Value *MemRTC = nullptr;
+  if (VerLAI.getRuntimePointerChecking()->Need)
+    MemRTC = addRuntimeChecks(TmpTerm, VerLoop,
+                              VerLAI.getRuntimePointerChecking()->getChecks(),
+                              MemExp);
+
+  // Generate SCEV predicate runtime checks.
+  SCEVExpander SCEVEx(SE, "ivbound.scev.check");
+  const SCEVPredicate &Preds = VerLAI.getPSE().getPredicate();
+  Value *SCEVrtc = SCEVEx.expandCodeForPredicate(&Preds, TmpTerm);
+
+  Value *RtCheckCond = nullptr;
+  if (MemRTC && SCEVrtc) {
+    IRBuilder<> Builder(TmpTerm);
+    RtCheckCond = Builder.CreateOr(MemRTC, SCEVrtc, "ivbound.safe");
+  } else {
+    RtCheckCond = MemRTC ? MemRTC : SCEVrtc;
+  }
+
+  TmpTerm->eraseFromParent();
+  IRBuilder<> Builder(RtCheckBB);
+
+  // If No runtime checks needed then ver-loop is unconditionally safe.
+  // Use constant false to disregard orignal loop path.
+  if (!RtCheckCond)
+    RtCheckCond = ConstantInt::getFalse(Ctx);
+
+  Builder.CreateCondBr(RtCheckCond, PreHeader, VerPreHeader);
+  // RTCheck now idom's both preheaders.
+  DT.insertEdge(RtCheckBB, PreHeader);
+  DT.insertEdge(RtCheckBB, VerPreHeader);
+
+  return VerLoop;
+}
+
 bool LoopVectorizePass::processLoop(Loop *L) {
   assert((EnableVPlanNativePath || L->isInnermost()) &&
          "VPlan-native path is not enabled. Only process inner loops.");
@@ -8215,6 +8391,24 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                                 &Requirements, &Hints, DB, AC,
                                 /*AllowRuntimeSCEVChecks=*/!OptForSize, AA);
   if (!LVL.canVectorize(EnableVPlanNativePath)) {
+     if (AllowInvariantBoundRetry) {
+      // There has to be a better way to do this? Trying to avoid changing processLoop Signature.
+      AllowInvariantBoundRetry = false;
+      const DataLayout &DL = F->getDataLayout();
+      // 1) Check if the loop qualifies for loop invariant bound load.
+      // 2) Generate the versioned loop with runtime checks using the dynamic loop bound.
+      // load. Return this versioned loop to attempt vectorization
+      // again. 3) If the versioned loop is generated successfully, re-try
+      // vectorization on the versioned loop.
+      if (LoadInst *BoundLoad = LVL.tryToFindDyanmicBoundLoadCandidate(L, *AA)) {
+        if (isSpeculativeBoundVersioningProfitable())
+          if (Loop *Cand = tryToVersionLoopForInvariantBoundLoad(
+                  L, BoundLoad, DL, *DT, *LI, *AA, PSE, AC)) {
+            SE->forgetLoop(L);
+            return processLoop(Cand);
+          }
+      }
+    }
     LLVM_DEBUG(dbgs() << "LV: Not vectorizing: Cannot prove legality.\n");
     Hints.emitRemarkWithHints();
     return false;
