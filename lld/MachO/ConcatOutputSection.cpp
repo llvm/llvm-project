@@ -120,19 +120,16 @@ bool TextOutputSection::isTargetKnownInRange(const ConcatInputSection &isec,
 }
 
 Defined *TextOutputSection::getThunkInRange(const ConcatInputSection &isec,
-                                            const Relocation &r) const {
+                                            const Relocation &r,
+                                            const ThunkInfo &thunkInfo) const {
   assert(!isTargetKnownInRange(isec, r));
+  if (!thunkInfo.sym)
+    return nullptr;
   uint64_t callVA = isec.getVA() + r.offset;
   uint64_t lowVA = target->backwardBranchRange < callVA
                        ? callVA - target->backwardBranchRange
                        : 0;
   uint64_t highVA = callVA + target->forwardBranchRange;
-  auto *funcSym = cast<Symbol *>(r.referent);
-  auto it = thunkMap.find(ThunkKey{funcSym, r.addend});
-  if (it == thunkMap.end())
-    return nullptr;
-  auto &thunkInfo = it->second;
-  assert(thunkInfo.sym);
   uint64_t thunkVA = thunkInfo.isec->getVA();
   if (lowVA <= thunkVA && thunkVA <= highVA)
     return thunkInfo.sym;
@@ -149,8 +146,8 @@ void TextOutputSection::updateBranchTargetToThunk(Relocation &r,
 }
 
 void TextOutputSection::createThunk(const ConcatInputSection &isec,
-                                    Relocation &r) {
-  assert(getThunkInRange(isec, r) == nullptr);
+                                    Relocation &r, ThunkInfo &thunkInfo) {
+  assert(getThunkInRange(isec, r, thunkInfo) == nullptr);
   assert(isec.isFinal);
   uint64_t highVA = isec.getVA() + r.offset + target->forwardBranchRange;
   if (addr + size > highVA) {
@@ -162,8 +159,6 @@ void TextOutputSection::createThunk(const ConcatInputSection &isec,
           ": FIXME: thunk range overrun. Consider increasing the "
           "slop-scale with `--slop-scale=<unsigned_int>`.");
   }
-  auto *funcSym = cast<Symbol *>(r.referent);
-  ThunkInfo &thunkInfo = thunkMap[ThunkKey{funcSym, r.addend}];
   thunkInfo.isec = makeSyntheticInputSection(isec.getSegName(), isec.getName());
   thunkInfo.isec->parent = this;
   assert(thunkInfo.isec->live);
@@ -172,6 +167,7 @@ void TextOutputSection::createThunk(const ConcatInputSection &isec,
   if (r.addend != 0)
     addendSuffix = "+" + std::to_string(r.addend);
   size_t thunkSize = target->thunkSize;
+  auto *funcSym = cast<Symbol *>(r.referent);
   StringRef thunkName =
       saver().save(funcSym->getName() + addendSuffix + ".thunk." +
                    std::to_string(thunkInfo.sequence++));
@@ -217,8 +213,7 @@ void TextOutputSection::finalize() {
 
   // Branches whose target sections are out of range or have not yet been
   // finalized. We may need to emit thunks for them.
-  std::deque<std::tuple<ConcatInputSection *, Relocation *, ThunkKey>>
-      branchesToProcess;
+  std::deque<std::pair<ConcatInputSection *, Relocation *>> branchesToProcess;
   // Branches whose targets have not yet be finalized, but a thunk for that
   // target exists. We defer processing these branches because it's possible we
   // can still direct call to their targets after they have all been finalized.
@@ -228,13 +223,15 @@ void TextOutputSection::finalize() {
   const uint64_t slop = config->slopScale * target->thunkSize;
   for (auto *isec : inputs) {
     while (!branchesToProcess.empty()) {
-      auto &[callerIsec, r, thunkKey] = branchesToProcess.front();
+      auto &[callerIsec, r] = branchesToProcess.front();
       assert(callerIsec->isFinal);
+      auto *funcSym = cast<Symbol *>(r->referent);
+      auto &thunkInfo = thunkMap[{funcSym, r->addend}];
       if (isTargetKnownInRange(*callerIsec, *r)) {
         branchesToProcess.pop_front();
         continue;
       }
-      if (auto *thunk = getThunkInRange(*callerIsec, *r)) {
+      if (auto *thunk = getThunkInRange(*callerIsec, *r, thunkInfo)) {
         deferredBranchRedirects.emplace_back(callerIsec, r, thunk);
         branchesToProcess.pop_front();
         continue;
@@ -250,7 +247,7 @@ void TextOutputSection::finalize() {
       if (nextEnd + slop <= highVA)
         break;
 
-      createThunk(*callerIsec, *r);
+      createThunk(*callerIsec, *r, thunkInfo);
       branchesToProcess.pop_front();
     }
     finalizeOne(isec);
@@ -274,27 +271,31 @@ void TextOutputSection::finalize() {
         continue;
       if (isTargetKnownInRange(*isec, r))
         continue;
-      if (auto *thunk = getThunkInRange(*isec, r)) {
+      auto *funcSym = cast<Symbol *>(r.referent);
+      auto &thunkInfo = thunkMap[{funcSym, r.addend}];
+      if (auto *thunk = getThunkInRange(*isec, r, thunkInfo)) {
         deferredBranchRedirects.emplace_back(isec, &r, thunk);
         continue;
       }
-      auto *funcSym = cast<Symbol *>(r.referent);
-      ThunkKey key{funcSym, r.addend};
-      branchesToProcess.emplace_back(isec, &r, key);
+      branchesToProcess.emplace_back(isec, &r);
     }
   }
 
   llvm::erase_if(branchesToProcess, [&](auto &tuple) {
-    auto [callerIsec, r, thunkKey] = tuple;
+    auto [callerIsec, r] = tuple;
     return isTargetKnownInRange(*callerIsec, *r);
   });
   // Count distinct unresolved branch targets that still lack an in-range thunk.
   // We use this as an upper bound on the number of thunks we may still create
   // when estimating where __stubs / __objc_stubs could end up.
   DenseSet<ThunkKey, ThunkMapKeyInfo> branchTargets;
-  for (auto [callerIsec, r, thunkKey] : branchesToProcess)
-    if (!getThunkInRange(*callerIsec, *r))
+  for (auto [callerIsec, r] : branchesToProcess) {
+    auto *funcSym = cast<Symbol *>(r->referent);
+    ThunkKey thunkKey{funcSym, r->addend};
+    auto &thunkInfo = thunkMap[thunkKey];
+    if (!getThunkInRange(*callerIsec, *r, thunkInfo))
       branchTargets.insert(thunkKey);
+  }
 
   uint64_t estimatedTextEnd =
       addr + size + branchTargets.size() * target->thunkSize;
@@ -313,14 +314,16 @@ void TextOutputSection::finalize() {
     updateBranchTargetToThunk(*r, thunk);
   }
 
-  for (auto [isec, r, thunkKey] : branchesToProcess) {
+  for (auto [isec, r] : branchesToProcess) {
     if (isTargetStubsAndInRange(*isec, *r, estimatedStubsEnd))
       continue;
-    if (auto *thunk = getThunkInRange(*isec, *r)) {
+    auto *funcSym = cast<Symbol *>(r->referent);
+    auto &thunkInfo = thunkMap[{funcSym, r->addend}];
+    if (auto *thunk = getThunkInRange(*isec, *r, thunkInfo)) {
       updateBranchTargetToThunk(*r, thunk);
       continue;
     }
-    createThunk(*isec, *r);
+    createThunk(*isec, *r, thunkInfo);
   }
 
   if (!thunks.empty())

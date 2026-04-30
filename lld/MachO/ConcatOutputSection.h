@@ -62,6 +62,25 @@ private:
   void finalizeFlags(InputSection *input);
 };
 
+// We maintain one ThunkInfo per real function.
+//
+// The "active thunk" is represented by the sym/isec pair that
+// turns-over during finalize(): as the call-site address advances,
+// the active thunk goes out of branch-range, and we create a new
+// thunk to take its place.
+//
+// The remaining members -- bools and counters -- apply to the
+// collection of thunks associated with the real function.
+
+struct ThunkInfo {
+  // These denote the active thunk:
+  Defined *sym = nullptr;             // private-extern symbol for active thunk
+  ConcatInputSection *isec = nullptr; // input section for active thunk
+
+  // The following value is cumulative across all thunks on this function
+  uint8_t sequence = 0; // how many thunks created so-far?
+};
+
 // ConcatOutputSections that contain code (text) require special handling to
 // support thunk insertion.
 class TextOutputSection : public ConcatOutputSection {
@@ -86,12 +105,13 @@ private:
                             const Relocation &r) const;
   /// If there exists a thunk in range of the target in \p r, \return that
   /// thunk.
-  Defined *getThunkInRange(const ConcatInputSection &isec,
-                           const Relocation &r) const;
+  Defined *getThunkInRange(const ConcatInputSection &isec, const Relocation &r,
+                           const ThunkInfo &thunkInfo) const;
   /// Update \p r to target \p thunk which is guaranteed to be in range.
   void updateBranchTargetToThunk(Relocation &r, Defined *thunk);
   /// Create a new thunk and update \p r to target the new thunk.
-  void createThunk(const ConcatInputSection &isec, Relocation &r);
+  void createThunk(const ConcatInputSection &isec, Relocation &r,
+                   ThunkInfo &thunkInfo);
   /// \return true if the target in \p r is in __stubs or __objc_stubs and in
   /// range from the location in \p isec. \p estimatedStubsEnd is the estimated
   /// VA of the end of the last stubs section.
@@ -100,25 +120,6 @@ private:
                                uint64_t estimatedStubsEnd) const;
   /// The number of relocations updated to point to thunks.
   size_t thunkCallCount = 0;
-};
-
-// We maintain one ThunkInfo per real function.
-//
-// The "active thunk" is represented by the sym/isec pair that
-// turns-over during finalize(): as the call-site address advances,
-// the active thunk goes out of branch-range, and we create a new
-// thunk to take its place.
-//
-// The remaining members -- bools and counters -- apply to the
-// collection of thunks associated with the real function.
-
-struct ThunkInfo {
-  // These denote the active thunk:
-  Defined *sym = nullptr;             // private-extern symbol for active thunk
-  ConcatInputSection *isec = nullptr; // input section for active thunk
-
-  // The following value is cumulative across all thunks on this function
-  uint8_t sequence = 0;        // how many thunks created so-far?
 };
 
 NamePair maybeRenameSection(NamePair key);
