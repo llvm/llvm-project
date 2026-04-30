@@ -690,8 +690,7 @@ class AssignOverloadIndex<list<bit> IsOverloadedType> {
   list<int> ret  = !foreach(a, PrefixSum, !if(!ge(a, 0), a, ?));
 }
 
-class TypeInfoGen<string Name, list<LLVMType> RetTypes,
-                  list<LLVMType> ParamTypes> {
+class TypeInfoGen<list<LLVMType> RetTypes, list<LLVMType> ParamTypes> {
   list<LLVMType> AllTypes = !listconcat(RetTypes, ParamTypes);
 
   // Assign overload index for all overloaded types
@@ -708,39 +707,19 @@ class TypeInfoGen<string Name, list<LLVMType> RetTypes,
 
   // Validate that the overload index referenced by dependent types always
   // references an LLVMAnyType type.
-  list<LLVMType> InvalidOverload = !filter(ty, AllTypes,
-    // A dependent type has an invalid overload index if it references another
-    // overload type that is not `Any`.
+  list<int> InvalidOverload = !foreach(ty, AllTypes,
+    // an entry in the list will be 1 if its a dependent type and it
+    // references another overload type that is not `Any`.
     !and(
       !isa<LLVMDependentType>(ty),
-      !or(
-        !if(!ge(!cast<LLVMDependentType>(ty).OverloadIndex, !size(OverloadTypes)), -1, 0),
-        !not(!isa<LLVMAnyType>(
-          OverloadTypes[!cast<LLVMDependentType>(ty).OverloadIndex]))
+      !if(!ge(!cast<LLVMDependentType>(ty).OverloadIndex, !size(OverloadTypes)),
+        1,
+        !not(!isa<LLVMAnyType>(OverloadTypes[!cast<LLVMDependentType>(ty).OverloadIndex]))
       )
     )
   );
-  assert !empty(InvalidOverload),
-    Name #
-    ": dependent types must reference an overload index of an \'llvm_any\' type";
-
-  // Validate that return types cannot have vararg.
-  assert !empty(!filter(ty, RetTypes, !eq(ty, llvm_vararg_ty))),
-    Name # ": cannot use llvm_vararg_ty as a return type";
-
-  // Validate that param types can have vararg only in the last position.
-  // Create a list of indices for vararg_ty occurrences in the list.
-  list<int> VarArgIndices = !filter(
-    Idx1,
-    !foreach(Idx0, !range(ParamTypes),
-      !if(!eq(ParamTypes[Idx0], llvm_vararg_ty), Idx0, -1)),
-    !ge(Idx1, 0)
-  );
-  assert !le(!size(VarArgIndices), 1),
-    Name # ": cannot use llvm_vararg_ty more than once as a param type";
-  assert !or(!if(!empty(VarArgIndices), -1, 0),
-             !eq(VarArgIndices[0], !sub(!size(ParamTypes), 1))),
-    Name # ": llvm_vararg_ty must be used as the last param type";
+  assert !eq(!foldl(0, InvalidOverload, a, x, !add(a, x)), 0),
+     "dependent types must reference an overload index of an \'llvm_any\' type";
 
   list<LLVMType> Types = !foreach(ty, AllTypes,
     !if(!isa<LLVMDependentType>(ty),
@@ -789,7 +768,7 @@ class Intrinsic<list<LLVMType> ret_types,
   // IntrinsicProperty<1>
   bit DisableDefaultAttributes = disable_default_attributes;
 
-  TypeInfoGen TypeInfo = TypeInfoGen<NAME, RetTypes, ParamTypes>;
+  TypeInfoGen TypeInfo = TypeInfoGen<RetTypes, ParamTypes>;
 }
 
 // Intrinsic with default attributes (disable_default_attributes = false).

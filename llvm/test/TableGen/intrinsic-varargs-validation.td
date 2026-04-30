@@ -10,26 +10,26 @@
 include "llvm/IR/Intrinsics.td"
 
 #ifdef TEST0
-// CHECK-TEST0: error: assertion failed: int_test: cannot use llvm_vararg_ty as a return type
+// CHECK-TEST0: error: cannot use llvm_vararg_ty as a return type
 def int_test: Intrinsic<[llvm_vararg_ty], []>;
 #endif // TEST0
 
 #ifdef TEST1
-// CHECK-TEST1: error: assertion failed: int_test: cannot use llvm_vararg_ty as a return type
+// CHECK-TEST1: error: cannot use llvm_vararg_ty as a return type
 def int_test: Intrinsic<[llvm_i32_ty, llvm_vararg_ty], []>;
 #endif // TEST1
 
 #ifdef TEST2
-// CHECK-TEST2: error: assertion failed: int_test: llvm_vararg_ty must be used as the last param type
+// CHECK-TEST2: error: llvm_vararg_ty can only be the last parameter type
 def int_test: Intrinsic<[], [llvm_i32_ty, llvm_vararg_ty, llvm_i1_ty]>;
 #endif // TEST2
 
 #ifdef TEST3
-// CHECK-TEST3: error: assertion failed: int_test: cannot use llvm_vararg_ty more than once as a param type
+// CHECK-TEST3: error: llvm_vararg_ty can only be the last parameter type
 def int_test: Intrinsic<[], [llvm_i32_ty, llvm_vararg_ty, llvm_vararg_ty]>;
 #endif // TEST3
 
 #ifdef TEST4
-// CHECK-TEST4: error: assertion failed: int_test: cannot use llvm_vararg_ty more than once as a param type
+// CHECK-TEST4: error: llvm_vararg_ty can only be the last parameter type
 def int_test: Intrinsic<[], [llvm_vararg_ty, llvm_i32_ty, llvm_vararg_ty]>;
 #endif // TEST4

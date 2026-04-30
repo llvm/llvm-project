@@ -12,7 +12,7 @@ include "llvm/IR/Intrinsics.td"
 
 #ifdef TEST0
 
-// CHECK-TEST0: error: assertion failed: int_test: dependent types must reference an overload index of an 'llvm_any' type
+// CHECK-TEST0: error: assertion failed: dependent types must reference an overload index of an 'llvm_any' type
 def int_test: DefaultAttrsIntrinsic<
     [ llvm_anyvector_ty],               // overload index 0.
     [ LLVMVectorOfAnyPointersToElt<0>,  // overload index 1.
@@ -28,7 +28,7 @@ def int_test: DefaultAttrsIntrinsic<
 
 #ifdef TEST1
 
-// CHECK-TEST1: error: assertion failed: int_test: dependent types must reference an overload index of an 'llvm_any' type
+// CHECK-TEST1: error: assertion failed: dependent types must reference an overload index of an 'llvm_any' type
 def int_test: DefaultAttrsIntrinsic<
     [ llvm_anyvector_ty],               // overload index 0.
     [ LLVMVectorOfAnyPointersToElt<0>,  // overload index 1.
@@ -44,7 +44,7 @@ def int_test: DefaultAttrsIntrinsic<
 
 #ifdef TEST2
 
-// CHECK-TEST2: error: assertion failed: int_test: dependent types must reference an overload index of an 'llvm_any' type
+// CHECK-TEST2: error: assertion failed: dependent types must reference an overload index of an 'llvm_any' type
 def int_test: DefaultAttrsIntrinsic<
     [ llvm_anyvector_ty],               // overload index 0.
     [ LLVMVectorOfAnyPointersToElt<0>,  // overload index 1.
@@ -60,7 +60,7 @@ def int_test: DefaultAttrsIntrinsic<
 
 #ifdef TEST3
 
-// CHECK-TEST3: error: assertion failed: int_test: dependent types must reference an overload index of an 'llvm_any' type
+// CHECK-TEST3: error: assertion failed: dependent types must reference an overload index of an 'llvm_any' type
 def int_test: DefaultAttrsIntrinsic<
     [ llvm_anyvector_ty],               // overload index 0.
     [ LLVMVectorOfAnyPointersToElt<0>,  // overload index 1.
