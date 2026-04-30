@@ -639,63 +639,91 @@ static void fixProbContradiction(UnrollLoopOptions ULO,
     return Prob;
   };
 
-  // Compute the probability required at CondLatches[ComputeIdx] to get as close
-  // as possible to FreqDesired without replacing probabilities elsewhere in
-  // CondLatches.  Return {Prob, Freq} where 0 <= Prob <= 1 and Freq is the new
-  // frequency.
-  auto ComputeProb = [&](unsigned ComputeIdx) -> std::pair<double, double> {
+  // Adjust the probability at CondLatches[ComputeIdx] to get as close as
+  // possible to FreqDesired without replacing probabilities elsewhere in
+  // CondLatches.  Return the new total frequency.
+  //
+  // Given a CondLatches index I, then for a single unrolled loop iteration:
+  // - ProbBefore or ProbAfter is the probability that control flow can pass
+  //   through every CondLatches[J] for J < I or J > I, respectively.
+  // - FreqBefore or FreqAfter is the total frequency accumulated before or
+  //   after CondLatches[I], respectively, while the probability at
+  //   CondLatches[I] is treated as 1.
+  //
+  // If ComputeIdx == 0, then ComputeProb will set those values for I == 0 and
+  // ignore the current values.  If ComputeIdx > 0, then it expects those values
+  // to already be set for I == ComputeIdx - 1, and it will set them for I ==
+  // ComputeIdx.
+  auto AdjustProb = [&](unsigned ComputeIdx, double &ProbBefore,
+                        double &ProbAfter, double &FreqBefore,
+                        double &FreqAfter) {
     assert(ComputeIdx < CondLatches.size() &&
            "Expected valid CondLatches index");
 
-    // Accumulate the frequency from before ComputeIdx into FreqBeforeCompute,
-    // and accumulate the rest in Freq without yet multiplying the latter by any
-    // probability for ComputeIdx (i.e., treat it as 1 for now).
-    double ProbReaching = 1;     // p^0
-    double Freq = IterCounts[0]; // c_0*p^0
-    double FreqBeforeCompute;
-    for (unsigned I = 0, E = CondLatches.size(); I < E; ++I) {
-      // Get the branch probability for CondLatches[I].
-      double Prob = -1; // Init expected to be unused.
-      if (I == ComputeIdx) {
-        FreqBeforeCompute = Freq;
-        Freq = 0;
-        Prob = 1;
-      } else {
-        Prob = GetProb(I);
+    // Compute or update ProbBefore, ProbAfter, FreqBefore, and FreqAfter.
+    auto ComputeAfter = [&]() {
+      ProbAfter = 1;
+      FreqAfter = IterCounts[ComputeIdx + 1];
+      for (unsigned I = ComputeIdx + 1, E = CondLatches.size(); I < E; ++I) {
+        double Prob = GetProb(I);
+        ProbAfter *= Prob;
+        // After Prob == 0, ProbAfter and FreqAfter won't change, so save time.
+        if (Prob == 0)
+          break;
+        FreqAfter += IterCounts[I + 1] * ProbAfter;
       }
-      assert(0 <= Prob && Prob <= 1 && "Expected valid probability");
-      ProbReaching *= Prob;                     // p^(I+1)
-      Freq += IterCounts[I + 1] * ProbReaching; // c_(I+1)*p^(I+1)
+    };
+    if (ComputeIdx == 0) {
+      ProbBefore = 1;
+      FreqBefore = IterCounts[0];
+      ComputeAfter();
+    } else {
+      // Rather than iterating all of CondLatches again, we fix up the
+      // previously compute values.
+      double ProbOld = GetProb(ComputeIdx);
+      if (ProbOld > 0) {
+        FreqAfter -= IterCounts[ComputeIdx] * ProbBefore;
+        ProbAfter /= ProbOld;
+        FreqAfter /= ProbOld;
+      } else {
+        // We cannot divide out the old zero probability.  We short-circuited
+        // the iteration at that zero in the previous ComputeAfter call, so now
+        // we pick up where we left off.
+        ComputeAfter();
+      }
+      ProbBefore *= GetProb(ComputeIdx - 1);
+      FreqBefore += IterCounts[ComputeIdx] * ProbBefore;
     }
 
     // Compute the required probability, and limit it to a valid probability (0
-    // <= p <= 1).  See the Freq formula below for how to derive the ProbCompute
-    // formula.
-    double ProbReachingBackedge = CompletelyUnroll ? 0 : ProbReaching;
-    double ProbComputeNumerator = FreqDesired - FreqBeforeCompute;
-    double ProbComputeDenominator = Freq + FreqDesired * ProbReachingBackedge;
+    // <= p <= 1).  See the FreqCompute formula below for how to derive the
+    // ProbCompute formula.
+    double ProbReachingBackedge = CompletelyUnroll ? 0 : ProbBefore * ProbAfter;
+    double ProbComputeNumerator = FreqDesired - FreqBefore;
+    double ProbComputeDenominator =
+        FreqAfter + FreqDesired * ProbReachingBackedge;
     double ProbCompute = -1; // Init expected to be unused.
     if (ProbComputeNumerator <= 0) {
-      // FreqBeforeCompute has already reached or surpassed FreqDesired, so add
-      // no more frequency.  It is possible that ProbComputeDenominator == 0
-      // here because some latch probability (maybe the original) was set to
-      // zero, so this check avoids setting ProbCompute=1 (in the else if below)
-      // and division by zero where the numerator <= 0 (in the else below).
+      // FreqBefore has already reached or surpassed FreqDesired, so add no more
+      // frequency.  It is possible that ProbComputeDenominator == 0 here
+      // because some latch probability (maybe the original) was set to zero, so
+      // this check avoids setting ProbCompute=1 (in the else if below) and
+      // division by zero where the numerator <= 0 (in the else below).
       ProbCompute = 0;
     } else if (ProbComputeDenominator == 0) {
       // Analytically, this case seems impossible.  It would occur if either:
-      // - Both Freq and FreqDesired are zero.  But the latter would cause
+      // - Both FreqAfter and FreqDesired are zero.  But the latter would cause
       //   ProbComputeNumerator < 0, which we catch above, and FreqDesired
       //   should always be >= 1 anyway.
       // - There are no iterations after CondLatches[ComputeIdx], not even via
-      //   a backedge, so that both Freq and ProbReachingBackedge are zero.
+      //   a backedge, so that both FreqAfter and ProbReachingBackedge are zero.
       //   But iterations should exist after even the last conditional latch.
       // - Some latch probability (maybe the original) was set to zero so that
-      //   both Freq and ProbReachingBackedge are zero.  But that should not
-      //   have happened because, according to the above ProbComputeNumerator
-      //   check, we have not yet reached FreqDesired (which, if the original
-      //   latch probability is zero, is just 1 and thus always reached or
-      //   surpassed).
+      //   both FreqAfter and ProbReachingBackedge are zero.  But that should
+      //   not have happened because, according to the above
+      //   ProbComputeNumerator check, we have not yet reached FreqDesired
+      //   (which, if the original latch probability is zero, is just 1 and thus
+      //   always reached or surpassed).
       //
       // Numerically, perhaps this case is possible.  We interpret it to mean we
       // need more frequency (ProbComputeNumerator > 0) but have no way to get
@@ -710,10 +738,10 @@ static void fixProbContradiction(UnrollLoopOptions ULO,
       ProbCompute = std::max(ProbCompute, 0.);
       ProbCompute = std::min(ProbCompute, 1.);
     }
-    assert(0 <= ProbCompute && ProbCompute <= 1 &&
-           "Expected valid probability");
+    SetProb(ComputeIdx, ProbCompute);
 
     // Compute the resulting total frequency.
+    double FreqCompute = -1;
     if (ProbReachingBackedge * ProbCompute == 1) {
       // Analytically, this case seems impossible.  It requires that there is a
       // backedge and that FreqDesired == infinity so that every conditional
@@ -725,16 +753,17 @@ static void fixProbContradiction(UnrollLoopOptions ULO,
       // point, the frequency is computed as infinite.
       //
       // TODO: Cover this case in the test suite if you can.
-      Freq = std::numeric_limits<double>::infinity();
+      FreqCompute = std::numeric_limits<double>::infinity();
     } else {
-      assert(FreqBeforeCompute > 0 &&
+      assert(FreqBefore > 0 &&
              "Expected at least one iteration before first latch");
       // In this equation, if we replace the left-hand side with FreqDesired and
       // then solve for ProbCompute, we get the ProbCompute formula above.
-      Freq = (FreqBeforeCompute + Freq * ProbCompute) /
-             (1 - ProbReachingBackedge * ProbCompute);
+      FreqCompute = (FreqBefore + FreqAfter * ProbCompute) /
+                    (1 - ProbReachingBackedge * ProbCompute);
     }
-    return {ProbCompute, Freq};
+    assert(FreqCompute > 0 && "Expected valid frequency");
+    return FreqCompute;
   };
 
   // Determine and set branch weights.
@@ -750,10 +779,10 @@ static void fixProbContradiction(UnrollLoopOptions ULO,
     // visited.  We do have to iterate because the first latch alone might not
     // be enough.  For example, we might need to set all probabilities to 1 if
     // the frequency is the unroll factor.
+    double ProbBefore = -1, ProbAfter = -1; // Inits expected to be unused.
+    double FreqBefore = -1, FreqAfter = -1; // Inits expected to be unused.
     for (unsigned I = 0; I != CondLatches.size(); ++I) {
-      double Prob, Freq;
-      std::tie(Prob, Freq) = ComputeProb(I);
-      SetProb(I, Prob);
+      double Freq = AdjustProb(I, ProbBefore, ProbAfter, FreqBefore, FreqAfter);
       if (fabs(Freq - FreqDesired) < FreqPrec)
         break;
     }
