@@ -34,6 +34,7 @@ Implementation Status
    strings
    sys/mman
    sys/resource
+   sys/select
    sys/socket
    sys/stat
    sys/statvfs
