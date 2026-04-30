@@ -1864,11 +1864,9 @@ static ExitConditionInfo describeExitingBranch(BasicBlock *ExitingBB, Loop *L,
                                                ScalarEvolution *SE) {
   ExitConditionInfo Info;
 
-  auto *BI = dyn_cast<CondBrInst>(ExitingBB->getTerminator());
-  if (!BI)
-    return Info;
-
-  // Classify the exit target.
+  // Trap/normal classification is meaningful for any terminator kind
+  // (conditional branch, unconditional branch, switch, invoke, ...), so
+  // do it first before we decide whether to dig out predicate/stride info.
   for (BasicBlock *Succ : successors(ExitingBB)) {
     if (L->contains(Succ))
       continue;
@@ -1877,6 +1875,10 @@ static ExitConditionInfo describeExitingBranch(BasicBlock *ExitingBB, Loop *L,
     else
       Info.IsNormalExit = true;
   }
+
+  auto *BI = dyn_cast<CondBrInst>(ExitingBB->getTerminator());
+  if (!BI)
+    return Info;
 
   auto *Cmp = dyn_cast_or_null<ICmpInst>(BI->getCondition());
   if (!Cmp)
