@@ -1864,7 +1864,7 @@ static ExitConditionInfo describeExitingBranch(BasicBlock *ExitingBB, Loop *L,
                                                ScalarEvolution *SE) {
   ExitConditionInfo Info;
 
-  auto *BI = dyn_cast<BranchInst>(ExitingBB->getTerminator());
+  auto *BI = dyn_cast<CondBrInst>(ExitingBB->getTerminator());
   if (!BI)
     return Info;
 
