@@ -184,8 +184,8 @@ xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
       }
     }
     if (auto dpasMxOp = dyn_cast<xegpu::DpasMxOp>(op)) {
-      // DpasMxOp has operands: a, b, optional acc, optional scale_a, optional scale_b
-      // Use AttrSizedOperandSegments to determine which operand this is
+      // DpasMxOp has operands: a, b, optional acc, optional scale_a, optional
+      // scale_b Use AttrSizedOperandSegments to determine which operand this is
       auto segmentSizesAttr = dpasMxOp->getAttrOfType<DenseI32ArrayAttr>(
           dpasMxOp.getOperandSegmentSizesAttrName());
       if (!segmentSizesAttr)
