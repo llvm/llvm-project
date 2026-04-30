@@ -107,8 +107,8 @@ void NVPTXTargetStreamer::emitRawBytes(StringRef Data) {
   // resolved. Currently, (it is confirmed by NVidia) it causes a crash in
   // ptxas.
 #if 0
-  const MCAsmInfo *MAI = Streamer.getContext().getAsmInfo();
-  const char *Directive = MAI->getData8bitsDirective();
+  const MCAsmInfo &MAI = Streamer.getContext().getAsmInfo();
+  const char *Directive = MAI.getData8bitsDirective();
   unsigned NumElements = Data.size();
   const unsigned MaxLen = 40;
   unsigned NumChunks = 1 + ((NumElements - 1) / MaxLen);

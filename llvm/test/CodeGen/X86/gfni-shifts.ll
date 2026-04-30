@@ -523,17 +523,17 @@ define <16 x i8> @constant_ashr_v16i8(<16 x i8> %a) nounwind {
 define <16 x i8> @splatconstant_shl_v16i8(<16 x i8> %a) nounwind {
 ; GFNISSE-LABEL: splatconstant_shl_v16i8:
 ; GFNISSE:       # %bb.0:
-; GFNISSE-NEXT:    gf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; GFNISSE-NEXT:    gf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [16,8,4,2,1,0,0,0,16,8,4,2,1,0,0,0]
 ; GFNISSE-NEXT:    retq
 ;
 ; GFNIAVX1OR2-LABEL: splatconstant_shl_v16i8:
 ; GFNIAVX1OR2:       # %bb.0:
-; GFNIAVX1OR2-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; GFNIAVX1OR2-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [16,8,4,2,1,0,0,0,16,8,4,2,1,0,0,0]
 ; GFNIAVX1OR2-NEXT:    retq
 ;
 ; GFNIAVX512-LABEL: splatconstant_shl_v16i8:
 ; GFNIAVX512:       # %bb.0:
-; GFNIAVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; GFNIAVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0 # [16,8,4,2,1,0,0,0,16,8,4,2,1,0,0,0]
 ; GFNIAVX512-NEXT:    retq
   %shift = shl <16 x i8> %a, <i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3>
   ret <16 x i8> %shift
@@ -542,17 +542,17 @@ define <16 x i8> @splatconstant_shl_v16i8(<16 x i8> %a) nounwind {
 define <16 x i8> @splatconstant_lshr_v16i8(<16 x i8> %a) nounwind {
 ; GFNISSE-LABEL: splatconstant_lshr_v16i8:
 ; GFNISSE:       # %bb.0:
-; GFNISSE-NEXT:    gf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; GFNISSE-NEXT:    gf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [0,0,0,0,0,0,0,128,0,0,0,0,0,0,0,128]
 ; GFNISSE-NEXT:    retq
 ;
 ; GFNIAVX1OR2-LABEL: splatconstant_lshr_v16i8:
 ; GFNIAVX1OR2:       # %bb.0:
-; GFNIAVX1OR2-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; GFNIAVX1OR2-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [0,0,0,0,0,0,0,128,0,0,0,0,0,0,0,128]
 ; GFNIAVX1OR2-NEXT:    retq
 ;
 ; GFNIAVX512-LABEL: splatconstant_lshr_v16i8:
 ; GFNIAVX512:       # %bb.0:
-; GFNIAVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; GFNIAVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0 # [0,0,0,0,0,0,0,128,0,0,0,0,0,0,0,128]
 ; GFNIAVX512-NEXT:    retq
   %shift = lshr <16 x i8> %a, <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>
   ret <16 x i8> %shift
@@ -561,17 +561,17 @@ define <16 x i8> @splatconstant_lshr_v16i8(<16 x i8> %a) nounwind {
 define <16 x i8> @splatconstant_ashr_v16i8(<16 x i8> %a) nounwind {
 ; GFNISSE-LABEL: splatconstant_ashr_v16i8:
 ; GFNISSE:       # %bb.0:
-; GFNISSE-NEXT:    gf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; GFNISSE-NEXT:    gf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [128,128,128,128,128,64,32,16,128,128,128,128,128,64,32,16]
 ; GFNISSE-NEXT:    retq
 ;
 ; GFNIAVX1OR2-LABEL: splatconstant_ashr_v16i8:
 ; GFNIAVX1OR2:       # %bb.0:
-; GFNIAVX1OR2-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; GFNIAVX1OR2-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [128,128,128,128,128,64,32,16,128,128,128,128,128,64,32,16]
 ; GFNIAVX1OR2-NEXT:    retq
 ;
 ; GFNIAVX512-LABEL: splatconstant_ashr_v16i8:
 ; GFNIAVX512:       # %bb.0:
-; GFNIAVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; GFNIAVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0 # [128,128,128,128,128,64,32,16,128,128,128,128,128,64,32,16]
 ; GFNIAVX512-NEXT:    retq
   %shift = ashr <16 x i8> %a, <i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4>
   ret <16 x i8> %shift
@@ -1264,12 +1264,12 @@ define <32 x i8> @splatconstant_shl_v32i8(<32 x i8> %a) nounwind {
 ;
 ; GFNIAVX1OR2-LABEL: splatconstant_shl_v32i8:
 ; GFNIAVX1OR2:       # %bb.0:
-; GFNIAVX1OR2-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; GFNIAVX1OR2-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [2,1,0,0,0,0,0,0,2,1,0,0,0,0,0,0,2,1,0,0,0,0,0,0,2,1,0,0,0,0,0,0]
 ; GFNIAVX1OR2-NEXT:    retq
 ;
 ; GFNIAVX512-LABEL: splatconstant_shl_v32i8:
 ; GFNIAVX512:       # %bb.0:
-; GFNIAVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm0
+; GFNIAVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm0 # [2,1,0,0,0,0,0,0,2,1,0,0,0,0,0,0,2,1,0,0,0,0,0,0,2,1,0,0,0,0,0,0]
 ; GFNIAVX512-NEXT:    retq
   %shift = shl <32 x i8> %a, <i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6>
   ret <32 x i8> %shift
@@ -1285,12 +1285,12 @@ define <32 x i8> @splatconstant_lshr_v32i8(<32 x i8> %a) nounwind {
 ;
 ; GFNIAVX1OR2-LABEL: splatconstant_lshr_v32i8:
 ; GFNIAVX1OR2:       # %bb.0:
-; GFNIAVX1OR2-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; GFNIAVX1OR2-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [0,128,64,32,16,8,4,2,0,128,64,32,16,8,4,2,0,128,64,32,16,8,4,2,0,128,64,32,16,8,4,2]
 ; GFNIAVX1OR2-NEXT:    retq
 ;
 ; GFNIAVX512-LABEL: splatconstant_lshr_v32i8:
 ; GFNIAVX512:       # %bb.0:
-; GFNIAVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm0
+; GFNIAVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm0 # [0,128,64,32,16,8,4,2,0,128,64,32,16,8,4,2,0,128,64,32,16,8,4,2,0,128,64,32,16,8,4,2]
 ; GFNIAVX512-NEXT:    retq
   %shift = lshr <32 x i8> %a, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
   ret <32 x i8> %shift
@@ -1306,12 +1306,12 @@ define <32 x i8> @splatconstant_ashr_v32i8(<32 x i8> %a) nounwind {
 ;
 ; GFNIAVX1OR2-LABEL: splatconstant_ashr_v32i8:
 ; GFNIAVX1OR2:       # %bb.0:
-; GFNIAVX1OR2-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; GFNIAVX1OR2-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [128,128,128,64,32,16,8,4,128,128,128,64,32,16,8,4,128,128,128,64,32,16,8,4,128,128,128,64,32,16,8,4]
 ; GFNIAVX1OR2-NEXT:    retq
 ;
 ; GFNIAVX512-LABEL: splatconstant_ashr_v32i8:
 ; GFNIAVX512:       # %bb.0:
-; GFNIAVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm0
+; GFNIAVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm0 # [128,128,128,64,32,16,8,4,128,128,128,64,32,16,8,4,128,128,128,64,32,16,8,4,128,128,128,64,32,16,8,4]
 ; GFNIAVX512-NEXT:    retq
   %shift = ashr <32 x i8> %a, <i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2>
   ret <32 x i8> %shift
@@ -2389,7 +2389,7 @@ define <64 x i8> @splatconstant_shl_v64i8(<64 x i8> %a) nounwind {
 ;
 ; GFNIAVX512-LABEL: splatconstant_shl_v64i8:
 ; GFNIAVX512:       # %bb.0:
-; GFNIAVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
+; GFNIAVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0 # [4,2,1,0,0,0,0,0,4,2,1,0,0,0,0,0,4,2,1,0,0,0,0,0,4,2,1,0,0,0,0,0,4,2,1,0,0,0,0,0,4,2,1,0,0,0,0,0,4,2,1,0,0,0,0,0,4,2,1,0,0,0,0,0]
 ; GFNIAVX512-NEXT:    retq
   %shift = shl <64 x i8> %a, <i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5>
   ret <64 x i8> %shift
@@ -2421,7 +2421,7 @@ define <64 x i8> @splatconstant_lshr_v64i8(<64 x i8> %a) nounwind {
 ;
 ; GFNIAVX512-LABEL: splatconstant_lshr_v64i8:
 ; GFNIAVX512:       # %bb.0:
-; GFNIAVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
+; GFNIAVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0 # [0,0,0,0,0,0,0,128,0,0,0,0,0,0,0,128,0,0,0,0,0,0,0,128,0,0,0,0,0,0,0,128,0,0,0,0,0,0,0,128,0,0,0,0,0,0,0,128,0,0,0,0,0,0,0,128,0,0,0,0,0,0,0,128]
 ; GFNIAVX512-NEXT:    retq
   %shift = lshr <64 x i8> %a, <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>
   ret <64 x i8> %shift
@@ -2453,7 +2453,7 @@ define <64 x i8> @splatconstant_ashr_v64i8(<64 x i8> %a) nounwind {
 ;
 ; GFNIAVX512-LABEL: splatconstant_ashr_v64i8:
 ; GFNIAVX512:       # %bb.0:
-; GFNIAVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
+; GFNIAVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0 # [128,128,64,32,16,8,4,2,128,128,64,32,16,8,4,2,128,128,64,32,16,8,4,2,128,128,64,32,16,8,4,2,128,128,64,32,16,8,4,2,128,128,64,32,16,8,4,2,128,128,64,32,16,8,4,2,128,128,64,32,16,8,4,2]
 ; GFNIAVX512-NEXT:    retq
   %shift = ashr <64 x i8> %a, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
   ret <64 x i8> %shift

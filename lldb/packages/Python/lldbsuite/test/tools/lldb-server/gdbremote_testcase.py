@@ -15,6 +15,7 @@ import tempfile
 import time
 from lldbsuite.test import configuration
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test.decorators import skipIfWasm
 from lldbsuite.support import seven
 from lldbgdbserverutils import *
 import logging
@@ -55,6 +56,7 @@ class GdbRemoteTestCaseFactory(type):
         return super(GdbRemoteTestCaseFactory, cls).__new__(cls, name, bases, newattrs)
 
 
+@skipIfWasm  # wasm uses runtime's GDB stub, not lldb-server
 class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
     # Default time out in seconds. The timeout is increased tenfold under Asan.
     DEFAULT_TIMEOUT = 20 * (10 if ("ASAN_OPTIONS" in os.environ) else 1)
@@ -933,6 +935,7 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         "SupportedWatchpointTypes",
         "SupportedCompressions",
         "MultiMemRead",
+        "jMultiBreakpoint",
     ]
 
     def parse_qSupported_response(self, context):
