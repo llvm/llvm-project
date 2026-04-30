@@ -4468,9 +4468,9 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
   }
 
   if (FD && FD->isVariadic() && getLangOpts().SYCLIsDevice &&
-      !isUnevaluatedContext()) {
-    SYCL().DiagIfDeviceCode(Loc, diag::err_variadic_device_fn) << /*SYCL=*/1;
-  }
+      !isUnevaluatedContext())
+    SYCL().DiagIfDeviceCode(Loc, diag::err_variadic_device_fn)
+        << diag::OffloadLang::SYCL;
 
   if (FD)
     diagnoseArgDependentDiagnoseIfAttrs(FD, ThisArg, Args, Loc);
