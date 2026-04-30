@@ -592,6 +592,14 @@ void reference_destructor_invalidates_pointer() {
   (void)*p;                   // expected-note {{later used here}}
 }
 
+void destroy_at_ternary_operator(bool flag) {
+  std::string* str1 = new std::string; // expected-warning {{object whose reference is captured is later invalidated}}
+  std::string* str2 = new std::string;
+  const char *p = str1->data();
+  std::destroy_at(flag ? str1 : str2); // expected-note {{invalidated here}}
+  (void)*p;                            // expected-note {{later used here}}
+}
+
 struct StringOwner {
   std::string s, t;
 };
