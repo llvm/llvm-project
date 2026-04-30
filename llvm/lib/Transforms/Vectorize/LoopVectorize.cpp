@@ -8242,7 +8242,7 @@ static Loop *tryToVersionLoopForInvariantBoundLoad(
   for (PHINode &PN : make_early_inc_range(PreHeader->phis())) {
     PHINode *RtcPN =
         PHINode::Create(PN.getType(), PreHeaderPreds.size(),
-                        PN.getName() + ".rtcphi", &RtCheckBB->front());
+                        PN.getName() + ".rtcphi", RtCheckBB->begin());
     for (unsigned i = 0; i < PN.getNumIncomingValues(); i++) {
       BasicBlock *IBB = PN.getIncomingBlock(i);
       assert(is_contained(PreHeaderPreds, IBB) &&
@@ -8272,7 +8272,7 @@ static Loop *tryToVersionLoopForInvariantBoundLoad(
   LoadInst *HoistLoad = cast<LoadInst>(InnerLoad->clone());
   HoistLoad->setName(InnerLoad->getName() + ".speculatively.hoisted");
   // Put this hoisted load in RtcheckBB, since SCEVExapnder needs it.
-  HoistLoad->insertBefore(TmpTerm);
+  HoistLoad->insertBefore(TmpTerm->getIterator());
   Instruction *ClonedInnerLoad = cast<Instruction>(VMap[InnerLoad]);
   ClonedInnerLoad->replaceAllUsesWith(HoistLoad);
   ClonedInnerLoad->eraseFromParent();
