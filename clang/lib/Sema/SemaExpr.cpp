@@ -16086,8 +16086,8 @@ ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
     RHSExpr = resolvedRHS.get();
   }
 
-  if (getLangOpts().HLSL &&
-      (LHSExpr->getType()->isHLSLResourceRecord() || LHSExpr->getType()->isHLSLResourceRecordArray())) {
+  if (getLangOpts().HLSL && (LHSExpr->getType()->isHLSLResourceRecord() ||
+                             LHSExpr->getType()->isHLSLResourceRecordArray())) {
     if (!HLSL().CheckResourceBinOp(Opc, LHSExpr, RHSExpr, OpLoc))
       return ExprError();
   }
