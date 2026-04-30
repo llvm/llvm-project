@@ -680,7 +680,7 @@ static void fixProbContradiction(Loop *L, UnrollLoopOptions ULO,
       ComputeAfter();
     } else {
       // Rather than iterating all of CondLatches again, we fix up the
-      // previously compute values.
+      // previously computed values.
       double ProbOld = GetProb(ComputeIdx);
       if (ProbOld > 0) {
         FreqAfter -= IterCounts[ComputeIdx] * ProbBefore;
