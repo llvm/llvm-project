@@ -122,19 +122,14 @@ XeGPUBlockingPass::getTileShape(const T &operandOrResult) const {
 
   xegpu::DistributeLayoutAttr layout =
       xegpu::getDistributeLayoutAttr(operandOrResult);
-  LDBG() << "getTileShape for value: " << value << ", layout: " << layout;
   if (layout && layout.isForSubgroup()) {
     if (!layout.getEffectiveInstDataAsInt().empty()) {
       SmallVector<int64_t> instData = layout.getEffectiveInstDataAsInt();
-      LDBG() << "  returning instData size: " << instData.size();
       return instData;
     }
-    if (auto type = dyn_cast<ShapedType>(value.getType())) {
-      LDBG() << "  returning shape from type";
+    if (auto type = dyn_cast<ShapedType>(value.getType()))
       return llvm::to_vector(type.getShape());
-    }
   }
-  LDBG() << "failed to getTileShape for: " << value;
   return std::nullopt;
 }
 
@@ -330,14 +325,7 @@ bool XeGPUBlockingPass::needsUnroll(Operation *op) const {
   bool hasUnrollableOperands =
       llvm::any_of(op->getOpOperands(), [&](OpOperand &opr) {
         std::optional<SmallVector<int64_t>> tileShape = getTileShape(opr);
-        bool result =
-            tileShape.has_value() && isUnrollable(opr.get(), *tileShape);
-        if (isa<xegpu::DpasMxOp>(op)) {
-          LDBG() << "  operand " << opr.getOperandNumber()
-                 << ": tileShape.has_value=" << tileShape.has_value()
-                 << ", isUnrollable=" << result;
-        }
-        return result;
+        return tileShape.has_value() && isUnrollable(opr.get(), *tileShape);
       });
   bool hasUnrollableResults =
       llvm::any_of(op->getOpResults(), [&](OpResult result) {
@@ -352,15 +340,8 @@ bool XeGPUBlockingPass::needsUnroll(Operation *op) const {
       isConvertLayoutWithInstData = true;
     }
   }
-  bool shouldUnroll = hasUnrollableOperands || hasUnrollableResults ||
-                      isConvertLayoutWithInstData;
-  if (isa<xegpu::DpasMxOp>(op)) {
-    LDBG() << "needsUnroll for DpasMxOp: hasUnrollableOperands="
-           << hasUnrollableOperands
-           << ", hasUnrollableResults=" << hasUnrollableResults
-           << ", shouldUnroll=" << shouldUnroll;
-  }
-  return shouldUnroll;
+  return hasUnrollableOperands || hasUnrollableResults ||
+         isConvertLayoutWithInstData;
 }
 
 void XeGPUBlockingPass::runOnOperation() {
