@@ -1206,6 +1206,19 @@ ValueObjectSP Thread::GetReturnValueObject(bool *is_swift_error_value) {
   return ValueObjectSP();
 }
 
+bool Thread::IsRunningCallFunctionPlan() const {
+  for (ThreadPlan *plan = GetCurrentPlan(); plan;
+       plan = GetPreviousPlan(plan)) {
+    if (plan->GetKind() == ThreadPlan::eKindCallFunction)
+      return true;
+  }
+  return false;
+}
+
+ThreadPlanSP Thread::GetCompletedPlan() const {
+  return GetPlans().GetCompletedPlan();
+}
+
 ThreadPlanSP Thread::GetCompletedPlan() const {
   return GetPlans().GetCompletedPlan();
 }
