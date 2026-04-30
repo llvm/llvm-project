@@ -376,6 +376,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
 
   case CK_FloatingCast: {
     // HLSL uses CK_FloatingCast to cast between vectors.
+    if (E->getType()->isVectorType())
+      return this->emitVectorElementwiseCast(E);
     if (!SubExpr->getType()->isFloatingType() ||
         !E->getType()->isFloatingType())
       return false;
@@ -386,6 +388,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
   }
 
   case CK_IntegralToFloating: {
+    if (E->getType()->isVectorType())
+      return this->emitVectorElementwiseCast(E);
     if (!E->getType()->isRealFloatingType())
       return false;
     if (!this->visit(SubExpr))
@@ -396,6 +400,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
   }
 
   case CK_FloatingToBoolean: {
+    if (E->getType()->isVectorType())
+      return this->emitVectorElementwiseCast(E);
     if (!SubExpr->getType()->isRealFloatingType() ||
         !E->getType()->isBooleanType())
       return false;
@@ -407,6 +413,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
   }
 
   case CK_FloatingToIntegral: {
+    if (E->getType()->isVectorType())
+      return this->emitVectorElementwiseCast(E);
     if (!E->getType()->isIntegralOrEnumerationType())
       return false;
     if (!this->visit(SubExpr))
@@ -554,6 +562,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
   }
   case CK_IntegralToBoolean:
   case CK_FixedPointToBoolean: {
+    if (E->getType()->isVectorType())
+      return this->emitVectorElementwiseCast(E);
     // HLSL uses this to cast to one-element vectors.
     OptPrimType FromT = classify(SubExpr->getType());
     if (!FromT)
@@ -568,6 +578,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
 
   case CK_BooleanToSignedIntegral:
   case CK_IntegralCast: {
+    if (E->getCastKind() == CK_IntegralCast && E->getType()->isVectorType())
+      return this->emitVectorElementwiseCast(E);
     OptPrimType FromT = classify(SubExpr->getType());
     OptPrimType ToT = classify(E->getType());
     if (!FromT || !ToT)
@@ -8108,6 +8120,50 @@ bool Compiler<Emitter>::emitBuiltinBitCast(const CastExpr *E) {
   if (DiscardResult)
     return this->emitPop(*ToT, E);
 
+  return true;
+}
+
+/// Cast each element of a source vector to the corresponding element type of a
+/// destination vector using a scalar primitive cast. A pointer to the
+/// destination must be on top of the interpreter stack when \p Initializing is
+/// true; otherwise a new local is allocated for the result.
+template <class Emitter>
+bool Compiler<Emitter>::emitVectorElementwiseCast(const CastExpr *E) {
+  const Expr *SubExpr = E->getSubExpr();
+  assert(SubExpr->getType()->isVectorType() && "expected vector source type");
+  assert(E->getType()->isVectorType() && "expected vector destination type");
+
+  const auto *DstVTy = E->getType()->getAs<VectorType>();
+  unsigned NumElts = DstVTy->getNumElements();
+  PrimType SrcElemT = classifyVectorElementType(SubExpr->getType());
+  PrimType DstElemT = classifyVectorElementType(E->getType());
+  QualType DstElemType = DstVTy->getElementType();
+
+  if (!Initializing) {
+    UnsignedOrNone LocalIndex = allocateLocal(E);
+    if (!LocalIndex)
+      return false;
+    if (!this->emitGetPtrLocal(*LocalIndex, E))
+      return false;
+  }
+
+  unsigned SrcOffset =
+      allocateLocalPrimitive(SubExpr, PT_Ptr, /*IsConst=*/true);
+  if (!this->visit(SubExpr))
+    return false;
+  if (!this->emitSetLocal(PT_Ptr, SrcOffset, E))
+    return false;
+
+  for (unsigned I = 0; I < NumElts; ++I) {
+    if (!this->emitGetLocal(PT_Ptr, SrcOffset, E))
+      return false;
+    if (!this->emitArrayElemPop(SrcElemT, I, E))
+      return false;
+    if (!this->emitPrimCast(SrcElemT, DstElemT, DstElemType, E))
+      return false;
+    if (!this->emitInitElem(DstElemT, I, E))
+      return false;
+  }
   return true;
 }
 
