@@ -21,6 +21,10 @@
 #include <mutex>
 
 namespace llvm {
+namespace jitlink {
+class LinkGraph;
+} // namespace jitlink
+
 namespace orc {
 
 /// Manages mapping, content transfer and protections for JIT memory

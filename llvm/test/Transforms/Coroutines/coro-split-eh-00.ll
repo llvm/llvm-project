@@ -4,7 +4,7 @@
 
 define ptr @f(i1 %val) presplitcoroutine personality i32 3 {
 entry:
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr null)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
   call void @print(i32 0)
   br i1 %val, label %resume, label %susp

@@ -624,8 +624,7 @@ Instruction *InstCombinerImpl::foldFPSignBitOps(BinaryOperator &I) {
   if (match(Op0, m_FAbs(m_Value(X))) && match(Op1, m_FAbs(m_Value(Y))) &&
       (Op0->hasOneUse() || Op1->hasOneUse())) {
     Value *XY = Builder.CreateBinOpFMF(Opcode, X, Y, &I);
-    Value *Fabs =
-        Builder.CreateUnaryIntrinsic(Intrinsic::fabs, XY, &I, I.getName());
+    Value *Fabs = Builder.CreateFAbs(XY, &I, I.getName());
     return replaceInstUsesWith(I, Fabs);
   }
 

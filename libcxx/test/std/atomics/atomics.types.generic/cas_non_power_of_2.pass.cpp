@@ -16,6 +16,10 @@
 // the fix https://github.com/llvm/llvm-project/pull/78707
 // UNSUPPORTED: clang-22
 
+// The ARM Picolibc build does not include implementations of __atomic_load or
+// __atomic_compare_exchange: https://github.com/llvm/llvm-project/issues/191388
+// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
+
 #include <atomic>
 #include <cstring>
 #include <cassert>

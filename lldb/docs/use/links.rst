@@ -47,6 +47,15 @@ LLVM Developers' Meeting Talks
 * `2016 EuroLLVM Developers' Meeting: D. Panickal & A. Warzynski "LLDB Tutorial: Adding debugger ..." <https://www.youtube.com/watch?v=9hhDZeV0fYU>`__
 * `2013 LLVM Developers' Meeting: "Adapting LLDB for your hardware: Remote Debugging the Hexagon DSP" <https://www.youtube.com/watch?v=281sEoJYm8E>`__
 
+FOSDEM Talks
+~~~~~~~~~~~~
+
+* `WebAssembly Debugging with LLDB <https://fosdem.org/2026/schedule/event/87ZLQV-wasm-debugging-lldb/>`__
+* `Enhanced debuggability support in LLVM for various Fortran language features <https://archive.fosdem.org/2022/schedule/event/llvm_fortran_debug/>`__
+* `Debugging with LLVM <https://archive.fosdem.org/2020/schedule/event/debugging_with_llvm/>`__
+* `LLVM, Rust, and Debugging <https://archive.fosdem.org/2018/schedule/event/rustdebug/>`__
+* `Porting LLDB to a new Target <https://archive.fosdem.org/2015/schedule/event/llvm_lldb_port/>`__
+
 Books
 -----
 
