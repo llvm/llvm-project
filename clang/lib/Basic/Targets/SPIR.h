@@ -245,7 +245,6 @@ public:
 
   bool hasInt128Type() const override { return false; }
 
-  bool isValidSYCLDeviceTarget() const override { return true; }
 };
 
 class LLVM_LIBRARY_VISIBILITY SPIRTargetInfo : public BaseSPIRTargetInfo {

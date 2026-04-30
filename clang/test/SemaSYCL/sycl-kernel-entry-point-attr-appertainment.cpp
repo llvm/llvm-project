@@ -286,6 +286,13 @@ consteval void bad25() {}
 [[clang::sycl_kernel_entry_point(BADKN<26>)]]
 [[noreturn]] void bad26();
 
+#if !defined(__SYCL_DEVICE_ONLY__)
+// expected-error@+3 {{attribute 'target' multiversioning cannot be combined with attribute 'clang::sycl_kernel_entry_point'}}
+__attribute__((target("avx"))) void bad27();
+[[clang::sycl_kernel_entry_point(BADKN<27>)]]
+__attribute__((target("sse4.2"))) void bad27();
+#endif
+
 template<typename KNT>
 struct B28 {
   // expected-error@+1 {{the 'clang::sycl_kernel_entry_point' attribute cannot be applied to a deleted function}}

@@ -118,7 +118,7 @@ bool CompilerInstance::createTarget() {
   if (!hasTarget())
     return false;
 
-  if (getLangOpts().SYCLIsDevice && !getTarget().isValidSYCLDeviceTarget()) {
+  if (getLangOpts().SYCLIsDevice && !getTarget().getTriple().isGPU()) {
     getDiagnostics().Report(diag::err_sycl_device_invalid_target)
         << getTarget().getTriple().str();
     return false;

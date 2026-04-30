@@ -217,7 +217,6 @@ public:
 
   bool hasBitIntType() const override { return true; }
   bool hasBFloat16Type() const override { return true; }
-  bool isValidSYCLDeviceTarget() const override { return true; }
 
   OffloadArch getGPU() const { return GPU; }
 };
