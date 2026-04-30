@@ -2497,18 +2497,20 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
         return mlir::failure();
       }
     } else if (mlir::isa<cir::ConstArrayAttr>(init.value())) {
-      if (mlir::failed(lowerInitializerForConstArray(op, init.value(), rewriter)))
+      if (mlir::failed(
+              lowerInitializerForConstArray(op, init.value(), rewriter)))
         return mlir::failure();
       // If lowerInitializerForConstArray converted the initializer to a
       // non-CIR attribute (e.g. StringAttr), fall through to direct global
       // emission below. Otherwise use the region initializer path.
       if (mlir::isa<cir::ConstArrayAttr>(init.value()))
-        return matchAndRewriteRegionInitializedGlobal(op, init.value(), rewriter);
+        return matchAndRewriteRegionInitializedGlobal(op, init.value(),
+                                                      rewriter);
     } else if (mlir::isa<cir::ConstVectorAttr, cir::ConstRecordAttr,
                          cir::ConstPtrAttr, cir::ConstComplexAttr,
                          cir::GlobalViewAttr, cir::TypeInfoAttr, cir::UndefAttr,
-                         cir::PoisonAttr, cir::VTableAttr,
-                         cir::ZeroAttr>(init.value())) {
+                         cir::PoisonAttr, cir::VTableAttr, cir::ZeroAttr>(
+                   init.value())) {
       // TODO(cir): once LLVM's dialect has proper equivalent attributes this
       // should be updated. For now, we use a custom op to initialize globals
       // to the appropriate value.
