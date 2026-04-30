@@ -16,6 +16,10 @@
 // RUN:         -fms-extensions -x c++ -emit-llvm-only -verify %s -DERR_SYNC2
 // RUN: %clang_cc1 -triple x86_64-windows -fcxx-exceptions -fexceptions \
 // RUN:         -fms-extensions -x c++ -emit-llvm-only -verify %s -DERR_SYNC3
+// RUN: %clang_cc1 -triple x86_64-windows -fasync-exceptions -fcxx-exceptions -fexceptions \
+// RUN:         -fms-extensions -x c++ -emit-llvm-only -verify %s -DERR_NEW_THROWING_CTOR
+// RUN: %clang_cc1 -triple x86_64-windows -fasync-exceptions -fcxx-exceptions -fexceptions \
+// RUN:         -fms-extensions -x c++ -emit-llvm-only -verify %s -DNOERR_NEW_NOEXCEPT_CTOR
 // RUN: %clang_cc1 -triple x86_64-windows \
 // RUN:         -fms-extensions -x c++ -emit-llvm-only -verify %s -DNOERR
 
@@ -208,6 +212,27 @@ void seh_unwinding() {
 void seh_unwinding() {
   HasCleanup x; // expected-error{{'__try' is not permitted in functions that require object unwinding}}
   __try {
+  } __except (1) {
+  }
+}
+#elif defined(ERR_NEW_THROWING_CTOR)
+void seh_unwinding() {
+  __try {
+    HasCleanup *p = new HasCleanup; // expected-error{{'__try' is not permitted in functions that require object unwinding}}
+    delete p;
+  } __except (1) {
+  }
+}
+#elif defined(NOERR_NEW_NOEXCEPT_CTOR)
+// new-expression with a noexcept constructor should be fine.
+struct NoThrowCtor {
+  NoThrowCtor() noexcept;
+  ~NoThrowCtor();
+};
+void seh_unwinding() {
+  __try {
+    NoThrowCtor *p = new NoThrowCtor; // expected-no-diagnostics
+    delete p;
   } __except (1) {
   }
 }

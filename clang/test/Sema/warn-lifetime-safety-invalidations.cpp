@@ -539,3 +539,37 @@ void function_captured_ref_invalidated() {
 }
 
 } // namespace callable_wrappers
+
+namespace unique_ptr_invalidation {
+
+void invalid_after_reset() {
+  std::unique_ptr<int> up(new int);
+  int *p = up.get(); // expected-warning {{object whose reference is captured is later invalidated}}
+  up.reset();        // expected-note {{invalidated here}}
+  (void)*p;          // expected-note {{later used here}}
+}
+
+void invalid_after_move_assign() {
+  std::unique_ptr<int> up(new int);
+  std::unique_ptr<int> other(new int);
+  int *p = up.get();     // expected-warning {{object whose reference is captured is later invalidated}}
+  up = std::move(other); // expected-note {{invalidated here}}
+  (void)*p;              // expected-note {{later used here}}
+}
+
+void invalid_after_null_assign() {
+  std::unique_ptr<int> up(new int);
+  int *p = up.get(); // expected-warning {{object whose reference is captured is later invalidated}}
+  up = nullptr;      // expected-note {{invalidated here}}
+  (void)*p;          // expected-note {{later used here}}
+}
+
+void invalid_after_ternary_reset(bool flag) {
+  std::unique_ptr<int> up(new int);
+  std::unique_ptr<int> other(new int);
+  int *p = flag ? up.get() : other.get(); // expected-warning {{object whose reference is captured is later invalidated}}
+  up.reset();                             // expected-note {{invalidated here}}
+  (void)*p;                               // expected-note {{later used here}}
+}
+
+} // namespace unique_ptr_invalidation
