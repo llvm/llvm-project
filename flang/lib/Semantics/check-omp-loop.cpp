@@ -456,11 +456,12 @@ void OmpStructureChecker::CheckIterationVariables(
   // are the "host" versions of symbols inside the construct. The flags
   // of interest are on the associated symbols.
   std::map<const Symbol *, std::pair<parser::CharBlock, llvm::omp::Clause>> dsa;
-  for (auto &clause : spec.Clauses().v) {
+  for (const parser::OmpClause &clause : spec.Clauses().v) {
     llvm::omp::Clause clauseId{clause.Id()};
     if (llvm::omp::isDataSharingAttributeClause(clauseId, version)) {
-      for (auto &object : parser::omp::GetOmpObjectList(clause)->v) {
-        if (auto *symbol{GetObjectSymbol(object)}) {
+      for (const parser::OmpObject &object :
+          parser::omp::GetOmpObjectList(clause)->v) {
+        if (const Symbol *symbol{GetObjectSymbol(object)}) {
           auto maybeSource{parser::omp::GetObjectSource(object)};
           assert(maybeSource && "Expecting object source");
           dsa.insert(
@@ -469,6 +470,7 @@ void OmpStructureChecker::CheckIterationVariables(
       }
     }
   }
+}
 
   auto [depth, _]{GetAffectedNestDepthWithReason(spec, version)};
   bool isLinearAllowed{false};
