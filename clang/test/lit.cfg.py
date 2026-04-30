@@ -119,7 +119,6 @@ tools = [
     "apinotes-test",
     "c-index-test",
     "cache-build-session",
-    "cir-opt",
     "clang-diff",
     "clang-format",
     "clang-repl",
@@ -147,6 +146,9 @@ tools = [
     "clang-ssaf-linker",
     "clang-ssaf-format",
 ]
+
+if config.clang_enable_cir:
+    tools.append("clang-cir")
 
 if config.clang_examples:
     config.available_features.add("examples")
