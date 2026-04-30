@@ -1471,6 +1471,9 @@ class HandleVectorExtractPattern
       } else {
         return failure();
       }
+    } else {
+      // No defining op (e.g. function argument): nothing to hoist/merge.
+      return failure();
     }
     return success();
   }

@@ -481,7 +481,7 @@ private:
   // here, to get the "correct" assembler dialect, and use it in various
   // functions.
   unsigned getMAIAssemblerDialect() {
-    return Parser.getContext().getAsmInfo()->getAssemblerDialect();
+    return Parser.getContext().getAsmInfo().getAssemblerDialect();
   }
 
   // An alphabetic character in HLASM is a letter from 'A' through 'Z',

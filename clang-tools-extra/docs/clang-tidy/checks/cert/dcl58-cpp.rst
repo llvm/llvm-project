@@ -1,6 +1,4 @@
 .. title:: clang-tidy - cert-dcl58-cpp
-.. meta::
-   :http-equiv=refresh: 5;URL=../bugprone/std-namespace-modification.html
 
 cert-dcl58-cpp
 ==============

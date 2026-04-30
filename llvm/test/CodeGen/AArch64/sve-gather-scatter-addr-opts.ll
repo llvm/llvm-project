@@ -457,6 +457,27 @@ define void @masked_scatter_nxv4i32_u32s8_offsets(ptr %base, <vscale x 4 x i8> %
   ret void
 }
 
+define <vscale x 4 x ptr> @masked_scatter_shift_left(ptr %base, <vscale x 4 x i1> %mask) #0 {
+; CHECK-LABEL: masked_scatter_shift_left:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    index z0.d, x0, #8
+; CHECK-NEXT:    mov w8, #64 // =0x40
+; CHECK-NEXT:    movi v3.2d, #0000000000000000
+; CHECK-NEXT:    index z2.s, #0, w8
+; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    st1b { z3.s }, p0, [x0, z2.s, sxtw]
+; CHECK-NEXT:    incd z1.d, all, mul #8
+; CHECK-NEXT:    ret
+entry:
+  %step = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
+  %step_shifted = shl <vscale x 4 x i64> %step, splat (i64 2)
+  %step_aligned = and <vscale x 4 x i64> %step_shifted, splat (i64 4294967292)
+  %ptrs = getelementptr [16 x i8], ptr %base, <vscale x 4 x i64> %step_aligned
+  call void @llvm.masked.scatter.nxv8i8.nxv8p0(<vscale x 4 x i8> zeroinitializer, <vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> %mask)
+  %result = getelementptr [2 x i8], ptr %base, <vscale x 4 x i64> %step_aligned
+  ret <vscale x 4 x ptr> %result
+}
+
 attributes #0 = { "target-features"="+sve" vscale_range(1, 16) }
 
 declare <vscale x 2 x i64> @llvm.masked.gather.nxv2i64(<vscale x 2 x ptr>, i32, <vscale x 2 x i1>, <vscale x 2 x i64>)

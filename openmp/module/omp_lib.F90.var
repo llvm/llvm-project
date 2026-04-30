@@ -102,6 +102,9 @@
         integer(kind=omp_sched_kind), parameter, public :: omp_sched_auto    = 4
         integer(kind=omp_sched_kind), parameter, public :: omp_sched_monotonic = int(Z'80000000', kind=omp_sched_kind)
 
+        integer (kind=omp_integer_kind), parameter, public :: omp_initial_device = -1
+        integer (kind=omp_integer_kind), parameter, public :: omp_invalid_device = -2
+
         integer (kind=omp_proc_bind_kind), parameter, public :: omp_proc_bind_false = 0
         integer (kind=omp_proc_bind_kind), parameter, public :: omp_proc_bind_true = 1
         integer (kind=omp_proc_bind_kind), parameter, public :: omp_proc_bind_master = 2

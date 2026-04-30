@@ -2201,7 +2201,9 @@ def CIR_CmpOpKind : CIR_I32EnumAttr<"CmpOpKind", "compare operation kind", [
   I32EnumAttrCase<"gt", 2>,
   I32EnumAttrCase<"ge", 3>,
   I32EnumAttrCase<"eq", 4>,
-  I32EnumAttrCase<"ne", 5>
+  I32EnumAttrCase<"ne", 5>,
+  I32EnumAttrCase<"one", 6>,
+  I32EnumAttrCase<"uno", 7>
 ]>;
 
 def CIR_CmpOp : CIR_Op<"cmp", [Pure, SameTypeOperands]> {
@@ -2219,9 +2221,13 @@ def CIR_CmpOp : CIR_Op<"cmp", [Pure, SameTypeOperands]> {
     - `ge`: greater than or equal
     - `eq`: equal
     - `ne`: not equal
+    - `one`: ordered and not equal (floating-point only)
+    - `uno`: unordered (floating-point only, true if either operand is NaN)
 
     For floating-point comparisons, the predicate follows C semantics (e.g.
     NaN comparisons return false for all predicates except `ne`).
+    The `one` and `uno` predicates are floating-point specific: `one` is
+    ordered not-equal (false for NaN), `uno` tests if either operand is NaN.
 
     ```
     %0 = cir.cmp gt %1, %2 : !s32i
@@ -3622,9 +3628,16 @@ def CIR_OptionalPriorityAttr : OptionalAttr<
   >
 >;
 
-// TODO(CIR): CallingConv is a placeholder here so we can use it in
-// infrastructure calls, but it currently has no values.
-def CIR_CallingConv : CIR_I32EnumAttr<"CallingConv", "calling convention", []>;
+// The enumeration cases are ordered to match `llvm::CallingConv`. The values
+// are CIR-specific and are not in sync with `llvm::CallingConv` or
+// `clang::CallingConv`.
+def CIR_CallingConv : CIR_I32EnumAttr<"CallingConv", "calling convention", [
+  I32EnumAttrCase<"C", 0, "c">,
+  I32EnumAttrCase<"PTXKernel", 1, "ptx_kernel">,
+  I32EnumAttrCase<"SpirFunction", 2, "spir_function">,
+  I32EnumAttrCase<"SpirKernel", 3, "spir_kernel">,
+  I32EnumAttrCase<"AMDGPUKernel", 4, "amdgpu_kernel">
+]>;
 
 def CIR_FuncOp : CIR_Op<"func", [
   AutomaticAllocationScope, CallableOpInterface, FunctionOpInterface,
@@ -3639,6 +3652,11 @@ def CIR_FuncOp : CIR_Op<"func", [
 
     The function linkage information is specified by `linkage`, as defined by
     `GlobalLinkageKind` attribute.
+
+    The `calling_conv` attribute specifies the calling convention of the function.
+    By default calling convention is `CallingConv::C`. When printed, C calling
+    convention is omitted. Other calling conventions are printed as `cc(<mnemonic>)`,
+    e.g. `cc(amdgpu_kernel)`.
 
     A compiler builtin function must be marked as `builtin` for further
     processing when lowering from CIR.
@@ -3681,6 +3699,9 @@ def CIR_FuncOp : CIR_Op<"func", [
     // Linkage information
     cir.func linkonce_odr @some_method(...)
 
+    // Calling convention information
+    cir.func @func1(...) cc(amdgpu_kernel)
+
     // Inline information
     cir.func no_inline @some_method(...)
     
@@ -3712,6 +3733,10 @@ def CIR_FuncOp : CIR_Op<"func", [
       CIR_GlobalLinkageKind,
       "cir::GlobalLinkageKind::ExternalLinkage"
     >:$linkage,
+    DefaultValuedAttr<
+      CIR_CallingConv,
+      "cir::CallingConv::C"
+    >:$calling_conv,
     OptionalAttr<StrAttr>:$sym_visibility,
     UnitAttr:$comdat,
     OptionalAttr<DictArrayAttr>:$arg_attrs,
@@ -3731,7 +3756,8 @@ def CIR_FuncOp : CIR_Op<"func", [
 
   let builders = [OpBuilder<(ins
     "llvm::StringRef":$sym_name, "FuncType":$type,
-    CArg<"cir::GlobalLinkageKind", "cir::GlobalLinkageKind::ExternalLinkage">:$linkage)
+    CArg<"cir::GlobalLinkageKind", "cir::GlobalLinkageKind::ExternalLinkage">:$linkage,
+    CArg<"cir::CallingConv", "cir::CallingConv::C">:$callingConv)
   >];
 
   let extraClassDeclaration = [{
@@ -3813,9 +3839,7 @@ def CIR_FuncOp : CIR_Op<"func", [
 //===----------------------------------------------------------------------===//
 
 def CIR_LocalInitOp : CIR_Op<"local_init", [
-  DeclareOpInterfaceMethods<SymbolUserOpInterface>, NoRegionArguments,
-  ParentOneOf<["cir::FuncOp"]>,
-  HasAtMostOneOfAttrs<["tls", "static_local"]>
+  DeclareOpInterfaceMethods<SymbolUserOpInterface>, NoRegionArguments
 ]> {
   let summary = "initialize a static or thread local object";
   let description = [{
@@ -3824,8 +3848,13 @@ def CIR_LocalInitOp : CIR_Op<"local_init", [
     variable. This will be handled during lowering-prepare to include the
     guard variables correctly for the variable.
 
+    This operation may also represent a static local thread local variable,
+    which would be indicated by the 'tls' flag.
+
     Example:
     ```
+    // Note: despite this always being static_local, we print it anyway to be
+    // visually consistent with get_global, and as a 'counter' to 'tls'.
     cir.local_init static_local @GlobalName ctor {
       %4 = cir.get_global static_local @GlobalName : !cir.ptr<!rec_CtorDtor>
       %5 = cir.call @_Z5get_iv() : () -> !s32i
@@ -3840,8 +3869,7 @@ def CIR_LocalInitOp : CIR_Op<"local_init", [
   }];
   let arguments = (ins
     FlatSymbolRefAttr : $globalName,
-    UnitAttr : $tls,
-    UnitAttr : $static_local
+    UnitProp : $tls
   );
 
   let regions = (region
@@ -3850,8 +3878,7 @@ def CIR_LocalInitOp : CIR_Op<"local_init", [
   );
 
   let assemblyFormat = [{
-    (`thread_local` $tls^)?
-    (`static_local` $static_local^)?
+    (`thread_local` $tls^) : (`static_local`)?
     $globalName attr-dict
     (`ctor` $ctorRegion^)?
     (`dtor` $dtorRegion^)?
@@ -3867,6 +3894,7 @@ def CIR_LocalInitOp : CIR_Op<"local_init", [
 }
 }];
 
+  let hasVerifier = 1;
   let hasLLVMLowering = false;
 }
 
@@ -6774,6 +6802,47 @@ def CIR_ATan2Op : CIR_BinaryFPToFPBuiltinOp<"atan2", "ATan2Op"> {
   }];
 }
 
+def CIR_FrexpOp : CIR_Op<"frexp", [Pure]> {
+  let summary = "Decomposes a floating-point value into significand and exponent";
+  let description = [{
+    `cir.frexp` splits a floating-point value into a normalized significand
+    (in the range [0.5, 1.0)) and an integral power-of-two exponent, such
+    that `src = significand * 2^exp`.  Returns both as separate results.
+
+    Lowers to `llvm.frexp`.
+
+    Example:
+      %sig, %exp = cir.frexp %x : !cir.float -> !cir.float, !s32i
+  }];
+
+  let arguments = (ins CIR_AnyFloatType:$src);
+  let results = (outs CIR_AnyFloatType:$result, CIR_AnyIntType:$exp);
+
+  let assemblyFormat = [{
+    $src `:` type($src) `->` type($result) `,` type($exp) attr-dict
+  }];
+}
+
+def CIR_ModfOp : CIR_Op<"modf", [Pure]> {
+  let summary = "Decomposes a floating-point value into fractional and integral parts";
+  let description = [{
+    `cir.modf` splits a floating-point value into its fractional and integral
+    parts.  Both parts have the same sign as the input.
+
+    Lowers to `llvm.modf`.
+
+    Example:
+      %frac, %intpart = cir.modf %x : !cir.float -> !cir.float, !cir.float
+  }];
+
+  let arguments = (ins CIR_AnyFloatType:$src);
+  let results = (outs CIR_AnyFloatType:$fractional, CIR_AnyFloatType:$integral);
+
+  let assemblyFormat = [{
+    $src `:` type($src) `->` type($fractional) `,` type($integral) attr-dict
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // Variadic Operations
 //===----------------------------------------------------------------------===//
@@ -7577,6 +7646,59 @@ def CIR_EndCatchOp : CIR_Op<"end_catch"> {
   let arguments = (ins CIR_CatchTokenType:$catch_token);
   let assemblyFormat = [{
     $catch_token `:` type($catch_token) attr-dict
+  }];
+
+  let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
+// EH Operations: InitCatchParamOp
+//===----------------------------------------------------------------------===//
+
+def CIR_InitCatchKind : CIR_I32EnumAttr<
+  "InitCatchKind", "", [
+    I32EnumAttrCase<"Reference", 0, "reference">,
+    I32EnumAttrCase<"Pointer", 1, "pointer">,
+    I32EnumAttrCase<"Scalar", 2, "scalar">,
+    I32EnumAttrCase<"Objc", 3, "objc">,
+    I32EnumAttrCase<"TrivialCopy", 4, "trivial_copy">,
+    I32EnumAttrCase<"NonTrivialCopy", 5, "non_trivial_copy">,
+]>;
+
+def CIR_InitCatchParamOp : CIR_Op<"init_catch_param"> {
+  let summary = "Initialize a catch parameter from the exception pointer";
+  let description = [{
+    `cir.init_catch_param` represents copying or otherwise materializing the
+    caught exception object into the local catch parameter variable. It takes
+    the exception pointer returned by `cir.begin_catch` and the address of
+    the alloca created for the catch parameter, and has no result.
+
+    This operation is target-independent. It is replaced during EHABI
+    lowering with the appropriate target/ABI-specific sequence (for example,
+    the Itanium C++ ABI may emit a load and store for scalar/pointer catch
+    types, an aggregate copy for record types, or a call to a copy
+    constructor when one is required).
+
+    Example:
+
+    ```
+    %catch_token, %exn_ptr = cir.begin_catch %eh_token
+      : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+    %param_addr = cir.alloca !s32i, !cir.ptr<!s32i>, ["e", init]
+    cir.init_catch_param %exn_ptr to %param_addr
+      : !cir.ptr<!void>, !cir.ptr<!s32i>
+    ```
+  }];
+
+  let arguments = (ins
+      CIR_PointerType:$exn_ptr,
+      CIR_PointerType:$param_addr,
+      CIR_InitCatchKind:$kind
+  );
+
+  let assemblyFormat = [{
+    $kind $exn_ptr `to` $param_addr `:`
+      qualified(type($exn_ptr)) `,` qualified(type($param_addr)) attr-dict
   }];
 
   let hasLLVMLowering = false;

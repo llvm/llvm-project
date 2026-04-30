@@ -6,8 +6,8 @@
 
 @G = global i32 0
 
-define i6 @foo() {
-  %call = tail call i32 @llvm.bitreverse.i32(i32 42)
+define i6 @foo(i32 %x) {
+  %call = tail call i32 @llvm.bitreverse.i32(i32 %x)
   store i32 %call, ptr @G
   ret i6 2
 }
