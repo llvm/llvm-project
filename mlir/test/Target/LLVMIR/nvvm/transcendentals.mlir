@@ -28,6 +28,20 @@ llvm.func @nvvm_cos_ftz(%arg0: f32) -> f32 {
   llvm.return %0 : f32
 }
 
+// CHECK-LABEL: @nvvm_lg2
+llvm.func @nvvm_lg2(%arg0: f32) -> f32 {
+  // CHECK: call float @llvm.nvvm.lg2.approx.f(float %{{.*}})
+  %0 = nvvm.log2 %arg0 : f32
+  llvm.return %0 : f32
+}
+
+// CHECK-LABEL: @nvvm_lg2_ftz
+llvm.func @nvvm_lg2_ftz(%arg0: f32) -> f32 {
+  // CHECK: call float @llvm.nvvm.lg2.approx.ftz.f(float %{{.*}})
+  %0 = nvvm.log2 %arg0 {ftz = true} : f32
+  llvm.return %0 : f32
+}
+
 // CHECK-LABEL: @nvvm_ex2
 llvm.func @nvvm_ex2(%arg0: f32) -> f32 {
   // CHECK: call float @llvm.nvvm.ex2.approx.f32(float %{{.*}})
