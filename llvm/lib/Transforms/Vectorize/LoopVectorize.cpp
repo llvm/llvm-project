@@ -136,6 +136,7 @@
 #include "llvm/Support/NativeFormatting.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/InjectTLIMappings.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
@@ -144,7 +145,6 @@
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
 #include "llvm/Transforms/Vectorize/LoopVectorizationLegality.h"
-#include "llvm/Transforms/Utils/Cloning.h"
 #include <algorithm>
 #include <cassert>
 #include <cmath>
@@ -8166,8 +8166,9 @@ static void connectEpilogueVectorLoop(VPlan &EpiPlan, Loop *L,
       Phi.eraseFromParent();
 }
 
+// Is profitable to generate runtime check dominated version of the loop? which
+// has speculatively hoisted the loop bound load.
 static bool isSpeculativeBoundVersioningProfitable() { return true; }
-
 
 /*
 
@@ -8239,7 +8240,6 @@ static Loop *tryToVersionLoopForInvariantBoundLoad(
 
   // Fix the preheader phis via rtcblock phis.
   for (PHINode &PN : make_early_inc_range(PreHeader->phis())) {
-    // Create the rtcblock phi.
     PHINode *RtcPN =
         PHINode::Create(PN.getType(), PreHeaderPreds.size(),
                         PN.getName() + ".rtcphi", &RtCheckBB->front());
@@ -8391,16 +8391,18 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                                 &Requirements, &Hints, DB, AC,
                                 /*AllowRuntimeSCEVChecks=*/!OptForSize, AA);
   if (!LVL.canVectorize(EnableVPlanNativePath)) {
-     if (AllowInvariantBoundRetry) {
-      // There has to be a better way to do this? Trying to avoid changing processLoop Signature.
+    if (AllowInvariantBoundRetry) {
+      // There has to be a better way to do this? Trying to avoid changing
+      // processLoop Signature.
       AllowInvariantBoundRetry = false;
       const DataLayout &DL = F->getDataLayout();
       // 1) Check if the loop qualifies for loop invariant bound load.
-      // 2) Generate the versioned loop with runtime checks using the dynamic loop bound.
-      // load. Return this versioned loop to attempt vectorization
+      // 2) Generate the versioned loop with runtime checks using the dynamic
+      // loop bound. load. Return this versioned loop to attempt vectorization
       // again. 3) If the versioned loop is generated successfully, re-try
       // vectorization on the versioned loop.
-      if (LoadInst *BoundLoad = LVL.tryToFindDyanmicBoundLoadCandidate(L, *AA)) {
+      if (LoadInst *BoundLoad =
+              LVL.tryToFindDyanmicBoundLoadCandidate(L, *AA)) {
         if (isSpeculativeBoundVersioningProfitable())
           if (Loop *Cand = tryToVersionLoopForInvariantBoundLoad(
                   L, BoundLoad, DL, *DT, *LI, *AA, PSE, AC)) {

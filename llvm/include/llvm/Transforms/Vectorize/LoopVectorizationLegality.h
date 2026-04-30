@@ -350,7 +350,7 @@ public:
   /// reductions found in the loop.
   bool isInvariantStoreOfReduction(StoreInst *SI);
 
-  LoadInst* tryToFindDyanmicBoundLoadCandidate(Loop *L, AAResults &AA);
+  LoadInst *tryToFindDyanmicBoundLoadCandidate(Loop *L, AAResults &AA);
 
   /// Returns True if given address is invariant and is used to store recurrent
   /// expression
