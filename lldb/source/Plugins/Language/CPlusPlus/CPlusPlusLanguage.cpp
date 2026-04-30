@@ -1255,7 +1255,7 @@ static void LoadStdChronoFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSummary(cpp_category_sp, chrono::SysSecondsSummaryProvider,
                 "std::chrono::sys_seconds summary provider",
                 "^std::(__[[:alnum:]]+::)?chrono::time_point<"
-                "std::(__[[:alnum:]]+::)?chrono::system_clock, ?"
+                "std::(__[[:alnum:]]+::)?chrono::(_V[0-9]+::)?system_clock, ?"
                 "std::(__[[:alnum:]]+::)?chrono::duration<.*, ?"
                 "std::(__[[:alnum:]]+::)?ratio<1, 1> ?"
                 "> ?>$",
@@ -1263,8 +1263,8 @@ static void LoadStdChronoFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSummary(cpp_category_sp, chrono::SysDaysSummaryProvider,
                 "std::chrono::sys_seconds summary provider",
                 "^std::(__[[:alnum:]]+::)?chrono::time_point<"
-                "std::(__[[:alnum:]]+::)?chrono::system_clock, ?"
-                "std::(__[[:alnum:]]+::)?chrono::duration<int, ?"
+                "std::(__[[:alnum:]]+::)?chrono::(_V[0-9]+::)?system_clock, ?"
+                "std::(__[[:alnum:]]+::)?chrono::duration<.*, ?"
                 "std::(__[[:alnum:]]+::)?ratio<86400, 1> ?"
                 "> ?>$",
                 chrono_flags, true);
@@ -1281,7 +1281,7 @@ static void LoadStdChronoFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 "std::chrono::local_seconds summary provider",
                 "^std::(__[[:alnum:]]+::)?chrono::time_point<"
                 "std::(__[[:alnum:]]+::)?chrono::local_t, ?"
-                "std::(__[[:alnum:]]+::)?chrono::duration<int, ?"
+                "std::(__[[:alnum:]]+::)?chrono::duration<.*, ?"
                 "std::(__[[:alnum:]]+::)?ratio<86400, 1> ?"
                 "> ?>$",
                 chrono_flags, true);
