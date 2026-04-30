@@ -151,9 +151,8 @@ jobs:
       artifact_group: ${{ inputs.artifact_group }}
       artifact_run_id: ${{ inputs.artifact_run_id }}
       amdgpu_families: ${{ inputs.amdgpu_families }}
-
       test_runs_on: ${{ inputs.test_runs_on }}
-      platform: ${{ needs.configure_test_matrix.outputs.platform }}        
+      platform: 'linux'
       release_type: ${{ inputs.release_type }}
  
   test_components:
