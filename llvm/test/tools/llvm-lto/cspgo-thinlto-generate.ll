@@ -1,7 +1,4 @@
-; Test that CS-PGO instrumentation works through ThinLTOCodeGenerator::optimizeModule().
-; This validates the fix for a bug where optimizeModule() created an empty
-; PGOOptions and never populated it from cl::opt flags, so the PassBuilder
-; never saw a CS instrumentation request.
+; REQUIRES: aarch64-registered-target
 ;
 ; RUN: llvm-profdata merge %S/Inputs/cspgo-noncs.proftext -o %t.profdata
 ; RUN: opt -module-summary %s -o %t.o

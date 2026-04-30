@@ -1,7 +1,4 @@
-; Test that CS-PGO instrumentation works through the old LTO C API codepath.
-; This validates the fix for a bug where LTOCodeGenerator::optimize() did not
-; re-read cl::opt values (cs-profile-generate, cs-profile-path) after
-; parseCodeGenDebugOptions(), causing Config.RunCSIRInstr to be stale.
+; REQUIRES: aarch64-registered-target
 ;
 ; RUN: llvm-profdata merge %S/Inputs/cspgo-noncs.proftext -o %t.profdata
 ; RUN: opt -module-summary %s -o %t.o
