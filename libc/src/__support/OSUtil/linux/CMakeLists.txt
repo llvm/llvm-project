@@ -47,11 +47,12 @@ add_header_library(
     libc.src.__support.CPP.array
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.optional
+    libc.src.__support.ctype_utils
+    libc.src.__support.macros.config
     libc.src.__support.OSUtil.linux.syscall_wrappers.close
     libc.src.__support.OSUtil.linux.syscall_wrappers.open
     libc.src.__support.OSUtil.linux.syscall_wrappers.read
     libc.src.__support.OSUtil.linux.syscall_wrappers.sched_getaffinity
-    libc.src.__support.ctype_utils
 )
 
 add_header_library(
