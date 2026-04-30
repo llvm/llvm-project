@@ -1201,6 +1201,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::VECTOR_DEINTERLEAVE);
   setTargetDAGCombine(ISD::CTPOP);
 
+  if (Subtarget->isSVEorStreamingSVEAvailable())
+    setTargetDAGCombine(ISD::BITCAST);
+
   // In case of strict alignment, avoid an excessive number of byte wide stores.
   MaxStoresPerMemsetOptSize = 8;
   MaxStoresPerMemset =
@@ -26405,6 +26408,7 @@ static SDValue performSTORECombine(SDNode *N,
                                    TargetLowering::DAGCombinerInfo &DCI,
                                    SelectionDAG &DAG,
                                    const AArch64Subtarget *Subtarget) {
+  using namespace llvm::SDPatternMatch;
   StoreSDNode *ST = cast<StoreSDNode>(N);
   SDValue Chain = ST->getChain();
   SDValue Value = ST->getValue();
@@ -26413,6 +26417,20 @@ static SDValue performSTORECombine(SDNode *N,
   EVT MemVT = ST->getMemoryVT();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDLoc DL(ST);
+
+  // Fixed length svbool_t store operations use an i8 vector as the underlying
+  // memory type which is cast from a scalable boolean vector. This combine
+  // replaces such sequences with a direct store of an SVE predicate.
+  SDValue SVBool;
+  if (DCI.isBeforeLegalize() && Subtarget->isSVEorStreamingSVEAvailable() &&
+      ISD::isNormalStore(N) && ValueVT.isFixedLengthVectorOf(MVT::i8) &&
+      ValueVT.getSizeInBits() == Subtarget->getSVEPredicateSizeInBits() &&
+      sd_match(Value, m_ExtractSubvector(m_BitCast(m_SpecificVT(
+                                             MVT::nxv16i1, m_Value(SVBool))),
+                                         m_SpecificInt(0))))
+    return DAG.getStore(Chain, DL, SVBool, Ptr, ST->getPointerInfo(),
+                        ST->getBaseAlign(), ST->getMemOperand()->getFlags(),
+                        ST->getAAInfo());
 
   if (SDValue Res = combineStoreValueFPToInt(ST, DCI, DAG, Subtarget))
     return Res;
@@ -29700,6 +29718,44 @@ static SDValue performMINMAXCombine(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ReductionOpcode, SDLoc(N), N->getValueType(0), Vec);
 }
 
+// Fixed length svbool_t load operations use an i8 vector as the underlying
+// memory type which is then cast to a scalable boolean vector. This combine
+// replaces such sequences with a direct load of an SVE predicate.
+static SDValue performPredicateLoadCombine(SDNode *N,
+                                           TargetLowering::DAGCombinerInfo &DCI,
+                                           SelectionDAG &DAG) {
+  using namespace llvm::SDPatternMatch;
+
+  auto &Subtarget = DAG.getSubtarget<AArch64Subtarget>();
+  if (!DCI.isBeforeLegalize() || !Subtarget.isSVEorStreamingSVEAvailable())
+    return SDValue();
+
+  SDValue SubVec;
+  if (!sd_match(N, m_SpecificVT(MVT::nxv16i1, m_BitCast(m_InsertSubvector(
+                                                  m_Undef(), m_Value(SubVec),
+                                                  m_SpecificInt(0))))))
+    return SDValue();
+
+  if (!ISD::isNormalLoad(SubVec.getNode()))
+    return SDValue();
+
+  auto Load = cast<LoadSDNode>(SubVec);
+  EVT LoadVT = Load->getValueType(0);
+
+  if (!LoadVT.isFixedLengthVectorOf(MVT::i8) ||
+      LoadVT.getSizeInBits() != Subtarget.getSVEPredicateSizeInBits())
+    return SDValue();
+
+  SDLoc DL(Load);
+  SDValue LoadPred =
+      DAG.getLoad(MVT::nxv16i1, DL, Load->getChain(), Load->getBasePtr(),
+                  Load->getPointerInfo(), Load->getBaseAlign(),
+                  Load->getMemOperand()->getFlags(), Load->getAAInfo());
+
+  DAG.makeEquivalentMemoryOrdering(Load, LoadPred);
+  return LoadPred;
+}
+
 SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
                                                  DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -30048,6 +30104,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performSHLCombine(N, DCI, DAG);
   case ISD::CTPOP:
     return performCTPOPCombine(N, DCI, DAG);
+  case ISD::BITCAST:
+    return performPredicateLoadCombine(N, DCI, DAG);
   }
   return SDValue();
 }
