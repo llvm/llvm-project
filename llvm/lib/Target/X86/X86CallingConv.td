@@ -1033,6 +1033,11 @@ def CC_Intel_OCL_BI : CallingConv<[
 ]>;
 
 def CC_X86_64_Preserve_None : CallingConv<[
+  // Byval arguments must be passed on the stack as required by the x86-64 ABI. 
+  // This must come before the register assignment rules to prevent byval arguments 
+  // from being incorrectly assigned to registers, which would cause the required 
+  // caller-side copy to not be emitted.
+  CCIfByVal<CCPassByVal<8, 8>>,
   // We don't preserve general registers, so all of them can be used to pass
   // arguments except
   //   - RBP        frame pointer

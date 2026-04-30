@@ -215,6 +215,9 @@ public:
   // Get the kernel launch callee.
   FunctionCallee getClusterKernelLaunchFn();
 
+  // Get the cooperative kernel launch callee.
+  FunctionCallee getKernelLaunchCooperativeFn();
+
   // Get the module function callee.
   FunctionCallee getModuleFunctionFn();
 
@@ -303,6 +306,17 @@ llvm::FunctionCallee llvm::LaunchKernel::getKernelLaunchFn() {
 llvm::FunctionCallee llvm::LaunchKernel::getClusterKernelLaunchFn() {
   return module.getOrInsertFunction(
       "mgpuLaunchClusterKernel",
+      FunctionType::get(
+          voidTy,
+          ArrayRef<Type *>({ptrTy, intPtrTy, intPtrTy, intPtrTy, intPtrTy,
+                            intPtrTy, intPtrTy, intPtrTy, intPtrTy, intPtrTy,
+                            i32Ty, ptrTy, ptrTy, ptrTy}),
+          false));
+}
+
+llvm::FunctionCallee llvm::LaunchKernel::getKernelLaunchCooperativeFn() {
+  return module.getOrInsertFunction(
+      "mgpuLaunchKernelCooperative",
       FunctionType::get(
           voidTy,
           ArrayRef<Type *>({ptrTy, intPtrTy, intPtrTy, intPtrTy, intPtrTy,
@@ -452,8 +466,25 @@ llvm::LaunchKernel::createKernelLaunch(mlir::gpu::LaunchFuncOp op,
   // Create the launch call.
   Value *nullPtr = ConstantPointerNull::get(ptrTy);
 
-  // Launch kernel with clusters if cluster size is specified.
-  if (op.hasClusterSize()) {
+  // Cooperative launches go through mgpuLaunchKernelCooperative, which also
+  // handles an optional cluster. Cluster-only (non-cooperative) launches keep
+  // their existing path through mgpuLaunchClusterKernel. Plain launches go
+  // through mgpuLaunchKernel.
+  if (op.getCooperative()) {
+    Value *cx = ConstantInt::get(intPtrTy, 0);
+    Value *cy = ConstantInt::get(intPtrTy, 0);
+    Value *cz = ConstantInt::get(intPtrTy, 0);
+    if (op.hasClusterSize()) {
+      mlir::gpu::KernelDim3 cluster = op.getClusterSizeOperandValues();
+      cx = llvmValue(cluster.x);
+      cy = llvmValue(cluster.y);
+      cz = llvmValue(cluster.z);
+    }
+    builder.CreateCall(
+        getKernelLaunchCooperativeFn(),
+        ArrayRef<Value *>({moduleFunction, gx, gy, gz, cx, cy, cz, bx, by, bz,
+                           dynamicMemorySize, stream, argArray, nullPtr}));
+  } else if (op.hasClusterSize()) {
     mlir::gpu::KernelDim3 cluster = op.getClusterSizeOperandValues();
     Value *cx = llvmValue(cluster.x), *cy = llvmValue(cluster.y),
           *cz = llvmValue(cluster.z);

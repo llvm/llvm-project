@@ -135,8 +135,6 @@ const uint8_t *BreakpointSite::GetSavedOpcodeBytes() const {
   return &m_saved_opcode[0];
 }
 
-bool BreakpointSite::IsEnabled() const { return m_enabled; }
-
 void BreakpointSite::SetEnabled(bool enabled) { m_enabled = enabled; }
 
 void BreakpointSite::AddConstituent(const BreakpointLocationSP &constituent) {

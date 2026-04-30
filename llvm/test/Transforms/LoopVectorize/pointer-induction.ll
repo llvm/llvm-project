@@ -18,7 +18,7 @@ define void @a(ptr readnone %b) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[N_VEC]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 0, [[N_VEC]]
 ; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr null, i64 [[TMP1]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -131,7 +131,7 @@ define void @pointer_induction_used_as_vector(ptr noalias %start.1, ptr noalias 
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[N_VEC]], 8
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[N_VEC]], 3
 ; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START_1:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[IND_END2:%.*]] = getelementptr i8, ptr [[START_2:%.*]], i64 [[N_VEC]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -140,7 +140,7 @@ define void @pointer_induction_used_as_vector(ptr noalias %start.1, ptr noalias 
 ; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[START_2]], [[VECTOR_PH]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VECTOR_GEP:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i64> <i64 0, i64 1, i64 2, i64 3>
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x ptr> [[VECTOR_GEP]], i64 0
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START_1]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, <4 x ptr> [[VECTOR_GEP]], i64 1
 ; CHECK-NEXT:    store <4 x ptr> [[TMP2]], ptr [[NEXT_GEP]], align 8
@@ -291,7 +291,7 @@ define void @outside_lattice(ptr noalias %p, ptr noalias %q, i32 %n) {
 ; DEFAULT:       vector.ph:
 ; DEFAULT-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[UMAX1]], 4
 ; DEFAULT-NEXT:    [[N_VEC:%.*]] = sub i64 [[UMAX1]], [[N_MOD_VF]]
-; DEFAULT-NEXT:    [[TMP3:%.*]] = mul i64 [[N_VEC]], 4
+; DEFAULT-NEXT:    [[TMP3:%.*]] = shl i64 [[N_VEC]], 2
 ; DEFAULT-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[TMP3]]
 ; DEFAULT-NEXT:    [[IND_END2:%.*]] = trunc i64 [[N_VEC]] to i32
 ; DEFAULT-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -345,7 +345,7 @@ define void @outside_lattice(ptr noalias %p, ptr noalias %q, i32 %n) {
 ; STRIDED:       vector.ph:
 ; STRIDED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[UMAX1]], 4
 ; STRIDED-NEXT:    [[N_VEC:%.*]] = sub i64 [[UMAX1]], [[N_MOD_VF]]
-; STRIDED-NEXT:    [[TMP3:%.*]] = mul i64 [[N_VEC]], 4
+; STRIDED-NEXT:    [[TMP3:%.*]] = shl i64 [[N_VEC]], 2
 ; STRIDED-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[TMP3]]
 ; STRIDED-NEXT:    [[IND_END2:%.*]] = trunc i64 [[N_VEC]] to i32
 ; STRIDED-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -719,17 +719,15 @@ define void @strided_ptr_iv_runtime_stride(ptr %pIn, ptr %pOut, i32 %nCols, i32 
 ; STRIDED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[UMAX]], 4
 ; STRIDED-NEXT:    [[N_VEC:%.*]] = sub i64 [[UMAX]], [[N_MOD_VF]]
 ; STRIDED-NEXT:    [[TMP4:%.*]] = trunc i64 [[N_VEC]] to i32
-; STRIDED-NEXT:    [[TMP5:%.*]] = mul i64 [[N_VEC]], 4
+; STRIDED-NEXT:    [[TMP5:%.*]] = shl i64 [[N_VEC]], 2
 ; STRIDED-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[PIN]], i64 [[TMP5]]
-; STRIDED-NEXT:    [[TMP7:%.*]] = mul i64 [[N_VEC]], 4
-; STRIDED-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[POUT]], i64 [[TMP7]]
+; STRIDED-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[POUT]], i64 [[TMP5]]
 ; STRIDED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; STRIDED:       vector.body:
 ; STRIDED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; STRIDED-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 4
+; STRIDED-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 2
 ; STRIDED-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PIN]], i64 [[OFFSET_IDX]]
-; STRIDED-NEXT:    [[OFFSET_IDX3:%.*]] = mul i64 [[INDEX]], 4
-; STRIDED-NEXT:    [[NEXT_GEP4:%.*]] = getelementptr i8, ptr [[POUT]], i64 [[OFFSET_IDX3]]
+; STRIDED-NEXT:    [[NEXT_GEP4:%.*]] = getelementptr i8, ptr [[POUT]], i64 [[OFFSET_IDX]]
 ; STRIDED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[NEXT_GEP]], align 4
 ; STRIDED-NEXT:    store <4 x float> [[WIDE_LOAD]], ptr [[NEXT_GEP4]], align 4
 ; STRIDED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4

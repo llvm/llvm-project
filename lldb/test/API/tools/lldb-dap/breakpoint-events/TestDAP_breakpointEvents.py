@@ -10,6 +10,7 @@ import lldbdap_testcase
 import os
 
 
+@skipIfTargetDoesNotSupportSharedLibraries()
 class TestDAP_breakpointEvents(lldbdap_testcase.DAPTestCaseBase):
     @skipIfWindows
     def test_breakpoint_events(self):

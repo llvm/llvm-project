@@ -29,6 +29,8 @@ ${PROGNAME} [options] <BUILDER> [-- commit ...]
 [--lnt-url <URL>]   The optional URL of the LNT instance to submit results to. By
                     default, results are not submitted to any LNT instance.
 
+[--filter <FILTER>] Optional filter to pass to lit to run only a subset of benchmarks.
+
 Environment variables
 SPEC_DIR            Optional path to a SPEC installation. If set and the directory
                     exists, SPEC benchmarks are included in the run.
@@ -60,6 +62,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --lnt-url)
             LNT_URL="${2}"
+            shift; shift
+            ;;
+        --filter)
+            FILTER="${2}"
             shift; shift
             ;;
         --)
@@ -124,6 +130,11 @@ run_benchmarks() {
         spec_arg="--spec-dir ${SPEC_DIR}"
     fi
 
+    local filter_arg=""
+    if [ -n "${FILTER}" ]; then
+        filter_arg="--filter ${FILTER}"
+    fi
+
     local output=$(next_available_path "${BUILD_DIR}/${1}.json")
     ${MONOREPO_ROOT}/libcxx/utils/ci/lnt/run-benchmarks                                                         \
         --test-suite-commit ${BENCHMARK_SUITE_VERSION}                                                          \
@@ -132,6 +143,7 @@ run_benchmarks() {
         --compiler ${COMPILER}                                                                                  \
         --benchmark-commit ${1}                                                                                 \
         ${spec_arg}                                                                                             \
+        ${filter_arg}                                                                                           \
         --output ${output}
 
     if [ -n "${LNT_URL}" ]; then
