@@ -2930,6 +2930,18 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
       return 0;
     }
   }
+  // UseDevice (OpenACC host_data use_device) has a device address but the
+  // underlying variable is host-resident.  Prefer device dummies, but allow
+  // host dummies with a higher distance.
+  if (actualDataAttr && *actualDataAttr == common::CUDADataAttr::UseDevice) {
+    if (!dummyDataAttr)
+      return 3;
+    if (*dummyDataAttr == common::CUDADataAttr::Device)
+      return 0;
+    if (*dummyDataAttr == common::CUDADataAttr::Managed ||
+        *dummyDataAttr == common::CUDADataAttr::Unified)
+      return 2;
+  }
   return cudaInfMatchingValue;
 }
 

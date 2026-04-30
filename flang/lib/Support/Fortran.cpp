@@ -117,6 +117,10 @@ bool AreCompatibleCUDADataAttrs(std::optional<CUDADataAttr> x,
   if (ignoreTKR.test(common::IgnoreTKR::Device)) {
     return true;
   }
+  // UseDevice (from OpenACC host_data use_device) is compatible with any dummy:
+  // it has a device address but the underlying variable may be host-resident.
+  if (y && *y == CUDADataAttr::UseDevice)
+    return true;
   if (!y && isHostDeviceProcedure) {
     return true;
   }
