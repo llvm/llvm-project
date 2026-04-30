@@ -56,8 +56,9 @@ template <> mlir::APFloat getZeroInitFromType(mlir::Type ty) {
 /// \param currentDims the shpae of tensor we're going to convert to
 /// \param dimIndex the current dimension we're processing
 /// \param currentIndex the current index in the values array
+/// \returns true on success, false if an unsupported element kind was found
 template <typename AttrTy, typename StorageTy>
-void convertToDenseElementsAttrImpl(
+bool convertToDenseElementsAttrImpl(
     cir::ConstArrayAttr attr, llvm::SmallVectorImpl<StorageTy> &values,
     const llvm::SmallVectorImpl<int64_t> &currentDims, int64_t dimIndex,
     int64_t currentIndex) {
@@ -67,7 +68,7 @@ void convertToDenseElementsAttrImpl(
         auto intAttr = cir::IntAttr::get(arrayType.getElementType(), element);
         values[currentIndex++] = mlir::dyn_cast<AttrTy>(intAttr).getValue();
       }
-      return;
+      return true;
     }
   }
 
@@ -84,8 +85,9 @@ void convertToDenseElementsAttrImpl(
     }
 
     if (auto subArrayAttr = mlir::dyn_cast<cir::ConstArrayAttr>(eltAttr)) {
-      convertToDenseElementsAttrImpl<AttrTy>(subArrayAttr, values, currentDims,
-                                             dimIndex, currentIndex);
+      if (!convertToDenseElementsAttrImpl<AttrTy>(
+              subArrayAttr, values, currentDims, dimIndex, currentIndex))
+        return false;
       currentIndex += elementsSizeInCurrentDim;
       continue;
     }
@@ -95,12 +97,15 @@ void convertToDenseElementsAttrImpl(
       continue;
     }
 
-    llvm_unreachable("unknown element in ConstArrayAttr");
+    // Unsupported element kind (e.g. PoisonAttr): signal failure so the
+    // caller can fall back to the region-based initializer path.
+    return false;
   }
+  return true;
 }
 
 template <typename AttrTy, typename StorageTy>
-mlir::DenseElementsAttr convertToDenseElementsAttr(
+std::optional<mlir::DenseElementsAttr> convertToDenseElementsAttr(
     cir::ConstArrayAttr attr, const llvm::SmallVectorImpl<int64_t> &dims,
     mlir::Type elementType, mlir::Type convertedElementType) {
   unsigned vectorSize = 1;
@@ -108,8 +113,10 @@ mlir::DenseElementsAttr convertToDenseElementsAttr(
     vectorSize *= dim;
   auto values = llvm::SmallVector<StorageTy, 8>(
       vectorSize, getZeroInitFromType<StorageTy>(elementType));
-  convertToDenseElementsAttrImpl<AttrTy>(attr, values, dims, /*currentDim=*/0,
-                                         /*initialIndex=*/0);
+  if (!convertToDenseElementsAttrImpl<AttrTy>(attr, values, dims,
+                                              /*currentDim=*/0,
+                                              /*initialIndex=*/0))
+    return std::nullopt;
   return mlir::DenseElementsAttr::get(
       mlir::RankedTensorType::get(dims, convertedElementType),
       llvm::ArrayRef(values));
@@ -135,13 +142,19 @@ lowerConstArrayAttr(cir::ConstArrayAttr constArr,
   if (mlir::isa<mlir::StringAttr>(constArr.getElts()))
     return convertStringAttrToDenseElementsAttr(constArr,
                                                 converter->convertType(type));
-  if (mlir::isa<cir::IntType>(type))
-    return convertToDenseElementsAttr<cir::IntAttr, mlir::APInt>(
-        constArr, dims, type, converter->convertType(type));
+  if (mlir::isa<cir::IntType>(type)) {
+    if (auto denseAttr = convertToDenseElementsAttr<cir::IntAttr, mlir::APInt>(
+            constArr, dims, type, converter->convertType(type)))
+      return *denseAttr;
+    return std::nullopt;
+  }
 
-  if (mlir::isa<cir::FPTypeInterface>(type))
-    return convertToDenseElementsAttr<cir::FPAttr, mlir::APFloat>(
-        constArr, dims, type, converter->convertType(type));
+  if (mlir::isa<cir::FPTypeInterface>(type)) {
+    if (auto denseAttr = convertToDenseElementsAttr<cir::FPAttr, mlir::APFloat>(
+            constArr, dims, type, converter->convertType(type)))
+      return *denseAttr;
+    return std::nullopt;
+  }
 
   return std::nullopt;
 }
