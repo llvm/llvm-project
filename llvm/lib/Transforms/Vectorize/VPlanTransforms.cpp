@@ -3509,17 +3509,26 @@ void VPlanTransforms::createInterleaveGroups(
     VPlan &Plan,
     const SmallPtrSetImpl<const InterleaveGroup<Instruction> *>
         &InterleaveGroups,
-    VPRecipeBuilder &RecipeBuilder, const bool &EpilogueAllowed) {
+    const bool &EpilogueAllowed) {
   if (InterleaveGroups.empty())
     return;
+
+  DenseMap<Instruction *, VPWidenMemoryRecipe *> IRMemberToRecipe;
+  for (VPBasicBlock *VPBB :
+       VPBlockUtils::blocksOnly<VPBasicBlock>(vp_depth_first_shallow(
+           Plan.getVectorLoopRegion()->getEntryBasicBlock())))
+    for (VPRecipeBase &R :
+         make_filter_range(*VPBB, IsaPred<VPWidenMemoryRecipe>)) {
+      auto &MemR = cast<VPWidenMemoryRecipe>(R);
+      IRMemberToRecipe[&MemR.getIngredient()] = &MemR;
+    }
 
   // Interleave memory: for each Interleave Group we marked earlier as relevant
   // for this VPlan, replace the Recipes widening its memory instructions with a
   // single VPInterleaveRecipe at its insertion point.
   VPDominatorTree VPDT(Plan);
   for (const auto *IG : InterleaveGroups) {
-    auto *Start =
-        cast<VPWidenMemoryRecipe>(RecipeBuilder.getRecipe(IG->getMember(0)));
+    auto *Start = IRMemberToRecipe.lookup(IG->getMember(0));
     VPIRMetadata InterleaveMD(*Start);
     SmallVector<VPValue *, 4> StoredValues;
     if (auto *StoreR = dyn_cast<VPWidenStoreRecipe>(Start))
@@ -3528,8 +3537,7 @@ void VPlanTransforms::createInterleaveGroups(
       Instruction *MemberI = IG->getMember(I);
       if (!MemberI)
         continue;
-      VPWidenMemoryRecipe *MemoryR =
-          cast<VPWidenMemoryRecipe>(RecipeBuilder.getRecipe(MemberI));
+      VPWidenMemoryRecipe *MemoryR = IRMemberToRecipe.lookup(MemberI);
       if (auto *StoreR = dyn_cast<VPWidenStoreRecipe>(MemoryR))
         StoredValues.push_back(StoreR->getStoredValue());
       InterleaveMD.intersect(*MemoryR);
@@ -3540,8 +3548,7 @@ void VPlanTransforms::createInterleaveGroups(
         (!StoredValues.empty() && !IG->isFull());
 
     Instruction *IRInsertPos = IG->getInsertPos();
-    auto *InsertPos =
-        cast<VPWidenMemoryRecipe>(RecipeBuilder.getRecipe(IRInsertPos));
+    auto *InsertPos = IRMemberToRecipe.lookup(IRInsertPos);
 
     GEPNoWrapFlags NW = GEPNoWrapFlags::none();
     if (auto *Gep = dyn_cast<GetElementPtrInst>(
@@ -3588,7 +3595,7 @@ void VPlanTransforms::createInterleaveGroups(
     unsigned J = 0;
     for (unsigned i = 0; i < IG->getFactor(); ++i)
       if (Instruction *Member = IG->getMember(i)) {
-        VPRecipeBase *MemberR = RecipeBuilder.getRecipe(Member);
+        VPRecipeBase *MemberR = IRMemberToRecipe.lookup(Member);
         if (!Member->getType()->isVoidTy()) {
           VPValue *OriginalV = MemberR->getVPSingleValue();
           OriginalV->replaceAllUsesWith(VPIG->getVPValue(J));
@@ -6460,8 +6467,6 @@ void VPlanTransforms::makeMemOpWideningDecisions(
 
   for (VPInstruction *VPI : MemOps) {
     auto ReplaceWith = [&](VPRecipeBase *New) {
-      RecipeBuilder.setRecipe(cast<Instruction>(VPI->getUnderlyingValue()),
-                              New);
       New->insertBefore(VPI);
       if (VPI->getOpcode() == Instruction::Load)
         VPI->replaceAllUsesWith(New->getVPSingleValue());
