@@ -5,11 +5,11 @@ description: >-
 inputs:
   LLVM_TOKEN_GENERATOR_CLIENT_ID:
     description: >-
-      Client ID for generating access tokens.
+      Client ID for our GitHub App we use for generating access tokens.
     required: true
   LLVM_TOKEN_GENERATOR_PRIVATE_KEY:
     description: >-
-      Private key for generating access tokens
+      Private key for our GitHub App we use for generating access tokens.
     required: true
 
 runs:
