@@ -1596,6 +1596,14 @@ xegpu::DistributeLayoutAttr xegpu::inferSourceLayoutFromResultForNonAnchorOp(
   // For vector::ExtractStridedSliceOp, simply return result layout
   if (dyn_cast<vector::ExtractStridedSliceOp>(op))
     return resLayout;
+
+  // For vector::ExtractOp, propagate the result layout to the source vector
+  // operand.
+  if (auto extract = dyn_cast<vector::ExtractOp>(op)) {
+    if (idx != 0)
+      return nullptr;
+    return resLayout;
+  }
   // For elementwise operations, all operands must have the same layout as the
   // result.
   if (OpTrait::hasElementwiseMappableTraits(op) && op->getNumResults() == 1)
