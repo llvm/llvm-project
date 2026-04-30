@@ -93,7 +93,7 @@ static Instruction *lookThroughAnd(PHINode *Phi, Type *&RT,
 }
 
 bool RecurrenceDescriptor::isSubRecurrenceKind(RecurKind Kind) {
-  return (Kind == RecurKind::Sub || Kind == RecurKind::FSub);
+  return Kind == RecurKind::Sub || Kind == RecurKind::FSub;
 }
 
 /// Compute the minimal bit width needed to represent a reduction whose exit
@@ -1019,10 +1019,9 @@ RecurrenceDescriptor::isRecurrenceInstr(Loop *L, PHINode *OrigPhi,
                         Kind == RecurKind::FAddChainWithSubs,
                     I, I->hasAllowReassoc() ? nullptr : I);
   case Instruction::Select:
-    if (Kind == RecurKind::FAdd || Kind == RecurKind::FSub ||
+    if (isSubRecurrenceKind(Kind) || Kind == RecurKind::FAdd ||
         Kind == RecurKind::FMul || Kind == RecurKind::Add ||
-        Kind == RecurKind::Mul || Kind == RecurKind::Sub ||
-        Kind == RecurKind::AddChainWithSubs ||
+        Kind == RecurKind::Mul || Kind == RecurKind::AddChainWithSubs ||
         Kind == RecurKind::FAddChainWithSubs)
       return isConditionalRdxPattern(I);
     if (isFindRecurrenceKind(Kind) && SE)
@@ -1324,7 +1323,7 @@ RecurrenceDescriptor::getReductionOpChain(PHINode *Phi, Loop *L) const {
       return true;
 
     if (Cur->getOpcode() == Instruction::FSub &&
-        Kind == RecurKind::AddChainWithSubs)
+        Kind == RecurKind::FAddChainWithSubs)
       return true;
 
     return Cur->getOpcode() == getOpcode();
