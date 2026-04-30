@@ -532,6 +532,7 @@ SourceLocation Lexer::findEndOfIdentifierContinuation(
   Lexer TheLexer(SM.getLocForStartOfFile(LocInfo.first), LangOpts,
                  Buffer.begin(), StrData, Buffer.end());
   Token Tok;
+  Tok.startToken();
   TheLexer.LexIdentifierContinue(Tok, StrData);
   return Loc.getLocWithOffset(Tok.getLength());
 }
