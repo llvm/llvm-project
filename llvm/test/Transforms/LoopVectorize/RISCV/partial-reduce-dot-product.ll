@@ -19,7 +19,8 @@ define i32 @vdot4a(ptr %a, ptr %b) #0 {
 ; V-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[UMAX]]
 ; V-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; V:       vector.ph:
-; V-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
+; V-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
+; V-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
 ; V-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; V-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; V-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -52,7 +53,8 @@ define i32 @vdot4a(ptr %a, ptr %b) #0 {
 ; ZVDOT4A8I-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[UMAX]]
 ; ZVDOT4A8I-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; ZVDOT4A8I:       vector.ph:
-; ZVDOT4A8I-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
+; ZVDOT4A8I-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
+; ZVDOT4A8I-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
 ; ZVDOT4A8I-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; ZVDOT4A8I-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; ZVDOT4A8I-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -212,7 +214,8 @@ define i32 @vdot4au(ptr %a, ptr %b) #0 {
 ; V-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[UMAX]]
 ; V-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; V:       vector.ph:
-; V-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
+; V-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
+; V-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
 ; V-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; V-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; V-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -245,7 +248,8 @@ define i32 @vdot4au(ptr %a, ptr %b) #0 {
 ; ZVDOT4A8I-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[UMAX]]
 ; ZVDOT4A8I-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; ZVDOT4A8I:       vector.ph:
-; ZVDOT4A8I-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
+; ZVDOT4A8I-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
+; ZVDOT4A8I-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
 ; ZVDOT4A8I-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; ZVDOT4A8I-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; ZVDOT4A8I-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -405,7 +409,8 @@ define i32 @vdot4asu(ptr %a, ptr %b) #0 {
 ; V-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[UMAX]]
 ; V-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; V:       vector.ph:
-; V-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
+; V-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
+; V-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
 ; V-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; V-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; V-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -438,7 +443,8 @@ define i32 @vdot4asu(ptr %a, ptr %b) #0 {
 ; ZVDOT4A8I-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[UMAX]]
 ; ZVDOT4A8I-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; ZVDOT4A8I:       vector.ph:
-; ZVDOT4A8I-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
+; ZVDOT4A8I-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
+; ZVDOT4A8I-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
 ; ZVDOT4A8I-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; ZVDOT4A8I-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; ZVDOT4A8I-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -597,7 +603,8 @@ define i32 @vdot4asu2(ptr %a, ptr %b) #0 {
 ; V-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[UMAX]]
 ; V-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; V:       vector.ph:
-; V-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
+; V-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
+; V-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
 ; V-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; V-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; V-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -630,7 +637,8 @@ define i32 @vdot4asu2(ptr %a, ptr %b) #0 {
 ; ZVDOT4A8I-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[UMAX]]
 ; ZVDOT4A8I-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; ZVDOT4A8I:       vector.ph:
-; ZVDOT4A8I-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
+; ZVDOT4A8I-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
+; ZVDOT4A8I-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
 ; ZVDOT4A8I-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; ZVDOT4A8I-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; ZVDOT4A8I-NEXT:    br label [[VECTOR_BODY:%.*]]

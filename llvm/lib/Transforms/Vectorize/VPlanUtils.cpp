@@ -838,6 +838,7 @@ bool vputils::isUsedByLoadStoreAddress(const VPValue *V) {
       if (auto *SDR = dyn_cast<VPSingleDefRecipe>(U))
         WorkList.push_back(SDR);
   }
+  return false;
 }
 
 VPValue *VPBuilder::VPSCEVExpander::expand(const SCEV *S) {
