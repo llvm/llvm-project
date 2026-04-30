@@ -5,6 +5,7 @@
 // RUN: mlir-opt %s -mlir-disable-threading=true -pass-pipeline='builtin.module(func.func(cse,canonicalize))' -mlir-print-ir-before=cse -mlir-print-ir-module-scope -o /dev/null 2>&1 | FileCheck -check-prefix=BEFORE_MODULE %s
 // RUN: mlir-opt %s -mlir-disable-threading=true -pass-pipeline='builtin.module(func.func(cse,cse))' -mlir-print-ir-after-all -mlir-print-ir-after-change -o /dev/null 2>&1 | FileCheck -check-prefix=AFTER_ALL_CHANGE %s
 // RUN: not mlir-opt %s -mlir-disable-threading=true -pass-pipeline='builtin.module(func.func(cse,test-pass-failure))' -mlir-print-ir-after-failure -o /dev/null 2>&1 | FileCheck -check-prefix=AFTER_FAILURE %s
+// RUN: mlir-opt %s -mlir-disable-threading=true -pass-pipeline='builtin.module(func.func(canonicalize{max-iterations=5}))' -mlir-print-ir-before=canonicalize -o /dev/null 2>&1 | FileCheck -check-prefix=OPTIONS %s
 
 func.func @foo() {
   %0 = arith.constant 0 : i32
@@ -65,3 +66,6 @@ func.func @bar() {
 // AFTER_FAILURE-NOT: // -----// IR Dump After{{.*}}CSE
 // AFTER_FAILURE: // -----// IR Dump After{{.*}}TestFailurePass Failed (test-pass-failure) //----- //
 // AFTER_FAILURE: func @foo()
+
+// OPTIONS: // -----// IR Dump Before{{.*}}CanonicalizerPass (canonicalize) //----- //
+// OPTIONS-NEXT: // Pass options: canonicalize{cse-between-iterations=false{{[[:space:]]*}}max-iterations=5 max-num-rewrites=-1 region-simplify=normal test-convergence=false top-down=true}

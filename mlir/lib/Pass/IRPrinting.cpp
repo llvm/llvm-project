@@ -47,11 +47,17 @@ private:
 } // namespace
 
 static void printIR(Operation *op, bool printModuleScope, raw_ostream &out,
-                    OpPrintingFlags flags) {
+                    OpPrintingFlags flags, Pass *pass = nullptr) {
   // Otherwise, check to see if we are not printing at module scope.
-  if (!printModuleScope)
-    return op->print(out << " //----- //\n",
-                     op->getBlock() ? flags.useLocalScope() : flags);
+  if (!printModuleScope) {
+    out << " //----- //\n";
+    if (pass) {
+      out << "// Pass options: ";
+      pass->printAsTextualPipeline(out);
+      out << "\n";
+    }
+    return op->print(out, op->getBlock() ? flags.useLocalScope() : flags);
+  }
 
   // Otherwise, we are printing at module scope.
   out << " ('" << op->getName() << "' operation";
@@ -59,6 +65,11 @@ static void printIR(Operation *op, bool printModuleScope, raw_ostream &out,
           op->getAttrOfType<StringAttr>(SymbolTable::getSymbolAttrName()))
     out << ": @" << symbolName.getValue();
   out << ") //----- //\n";
+  if (pass) {
+    out << "// Pass options: ";
+    pass->printAsTextualPipeline(out);
+    out << "\n";
+  }
 
   // Find the top-level operation.
   auto *topLevelOp = op;
@@ -79,7 +90,7 @@ void IRPrinterInstrumentation::runBeforePass(Pass *pass, Operation *op) {
     out << "// -----// IR Dump Before " << pass->getName() << " ("
         << pass->getArgument() << ")";
     printIR(op, config->shouldPrintAtModuleScope(), out,
-            config->getOpPrintingFlags());
+            config->getOpPrintingFlags(), pass);
     out << "\n\n";
   });
 }
@@ -110,7 +121,7 @@ void IRPrinterInstrumentation::runAfterPass(Pass *pass, Operation *op) {
     out << "// -----// IR Dump After " << pass->getName() << " ("
         << pass->getArgument() << ")";
     printIR(op, config->shouldPrintAtModuleScope(), out,
-            config->getOpPrintingFlags());
+            config->getOpPrintingFlags(), pass);
     out << "\n\n";
   });
 }
@@ -125,7 +136,7 @@ void IRPrinterInstrumentation::runAfterPassFailed(Pass *pass, Operation *op) {
     out << formatv("// -----// IR Dump After {0} Failed ({1})", pass->getName(),
                    pass->getArgument());
     printIR(op, config->shouldPrintAtModuleScope(), out,
-            config->getOpPrintingFlags());
+            config->getOpPrintingFlags(), pass);
     out << "\n\n";
   });
 }
