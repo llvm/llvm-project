@@ -2329,8 +2329,10 @@ static bool noConflictingReadWrites(Instruction *I, MemorySSA *MSSA,
     if (!Accesses)
       continue;
     for (const auto &MA : *Accesses) {
+      // Accesses are ordered. If we find one that I dominates we can stop.
       if (!Flags.getIsSink() && MSSA->dominates(IMD, &MA))
-        continue;
+        break;
+
       if (const auto *MU = dyn_cast<MemoryUse>(&MA)) {
         auto *MD = getClobberingMemoryAccess(*MSSA, BAA, Flags,
                                              const_cast<MemoryUse *>(MU));
