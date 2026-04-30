@@ -7,14 +7,14 @@
 
 // RUN: llvm-profdata merge %S/Inputs/double_dots.proftext -o %t.profdata
 // RUN: llvm-cov show %S/Inputs/native_separators.covmapping -instr-profile=%t.profdata -o %t.dir
-// RUN: FileCheck -check-prefixes=TEXT-INDEX -input-file=%t.dir/index.txt %s
+// RUN: FileCheck -check-prefixes=TEXT-INDEX -input-file=%t.dir/index.txt -DSEP=%{fs-sep} %s
 // RUN: llvm-cov show -format=html %S/Inputs/native_separators.covmapping -instr-profile=%t.profdata -path-equivalence=/tmp,%S %S/../llvm-"config"/../llvm-"cov"/native_separators.c -o %t.dir
-// RUN: FileCheck -check-prefixes=HTML-INDEX -input-file=%t.dir/index.html %s
+// RUN: FileCheck -check-prefixes=HTML-INDEX -input-file=%t.dir/index.html -DSEP=%{fs-sep} %s
 // RUN: llvm-cov show -format=html %S/Inputs/native_separators.covmapping -instr-profile=%t.profdata -path-equivalence=/tmp,%S %s -o %t.dir
-// RUN: FileCheck -check-prefixes=HTML -input-file=%t.dir/coverage/tmp/native_separators.c.html %s
+// RUN: FileCheck -check-prefixes=HTML -input-file=%t.dir/coverage/tmp/native_separators.c.html -DSEP=%{fs-sep} %s
 
-// TEXT-INDEX: {{[/\\]}}tmp{{[/\\]}}native_separators.c
-// HTML-INDEX: >tmp{{[/\\]}}native_separators.c</a>
-// HTML: <pre>{{[/\\]}}tmp{{[/\\]}}native_separators.c</pre>
+// TEXT-INDEX: [[SEP]]tmp[[SEP]]native_separators.c
+// HTML-INDEX: >tmp[[SEP]]native_separators.c</a>
+// HTML: <pre>[[SEP]]tmp[[SEP]]native_separators.c</pre>
 
 int main() {}
