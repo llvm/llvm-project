@@ -367,6 +367,7 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
   case UTT_IsCompound:
   case UTT_IsMemberPointer:
   case UTT_IsTypedResourceElementCompatible:
+  case UTT_IsConstantBufferElementCompatible:
     // Fall-through
 
     // These traits are modeled on type predicates in C++0x [meta.unary.prop]
@@ -1131,6 +1132,14 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
       return false;
 
     return Self.HLSL().IsTypedResourceElementCompatible(T);
+
+  case UTT_IsConstantBufferElementCompatible:
+    assert(Self.getLangOpts().HLSL &&
+           "constant buffer element compatible types are an HLSL-only feature");
+    if (T->isIncompleteType())
+      return false;
+
+    return Self.HLSL().IsConstantBufferElementCompatible(T);
   }
 }
 
