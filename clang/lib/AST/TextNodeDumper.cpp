@@ -1432,7 +1432,8 @@ static void dumpBasePath(raw_ostream &OS, const CastExpr *Node) {
 void TextNodeDumper::dumpFormalLinkage(const NamedDecl *ND) {
   switch (ND->getFormalLinkage()) {
   case Linkage::None:
-    OS << " no-linkage";
+    // A lot of declarations have no linkage, so we only dump linkage if there
+    // is one.
     break;
   case Linkage::Internal:
     OS << " internal-linkage";
