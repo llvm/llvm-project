@@ -1014,6 +1014,165 @@ static llvm::Error Evaluate_DW_OP_deref_size(
   return llvm::Error::success();
 }
 
+static llvm::Error Evaluate_DW_OP_piece(
+    DWARFExpression::Stack &stack, Value &pieces, uint64_t &op_piece_offset,
+    LocationDescriptionKind &dwarf4_location_description_kind,
+    const DWARFExpression::Delegate *dwarf_cu, lldb::ModuleSP module_sp,
+    Target *target, uint64_t piece_byte_size, Log *log) {
+  LocationDescriptionKind piece_locdesc = dwarf4_location_description_kind;
+  // Reset for the next piece.
+  dwarf4_location_description_kind = Memory;
+
+  if (piece_byte_size == 0)
+    return llvm::Error::success();
+
+  Value curr_piece;
+
+  if (stack.empty()) {
+    UpdateValueTypeFromLocationDescription(log, dwarf_cu,
+                                           LocationDescriptionKind::Empty);
+    // In a multi-piece expression, this means that the current piece is
+    // not available. Fill with zeros for now by resizing the data and
+    // appending it
+    curr_piece.ResizeData(piece_byte_size);
+    // Note that "0" is not a correct value for the unknown bits.
+    // It would be better to also return a mask of valid bits together
+    // with the expression result, so the debugger can print missing
+    // members as "<optimized out>" or something.
+    ::memset(curr_piece.GetBuffer().GetBytes(), 0, piece_byte_size);
+    pieces.AppendDataToHostBuffer(curr_piece);
+  } else {
+    Status error;
+    // Extract the current piece into "curr_piece"
+    Value curr_piece_source_value(stack.back());
+    stack.pop_back();
+    UpdateValueTypeFromLocationDescription(log, dwarf_cu, piece_locdesc,
+                                           &curr_piece_source_value);
+
+    const Value::ValueType curr_piece_source_value_type =
+        curr_piece_source_value.GetValueType();
+    Scalar &scalar = curr_piece_source_value.GetScalar();
+    lldb::addr_t addr = scalar.ULongLong(LLDB_INVALID_ADDRESS);
+    switch (curr_piece_source_value_type) {
+    case Value::ValueType::Invalid:
+      return llvm::createStringError("invalid value type");
+    case Value::ValueType::FileAddress:
+      if (target) {
+        curr_piece_source_value.ConvertToLoadAddress(module_sp.get(), target);
+        addr = scalar.ULongLong(LLDB_INVALID_ADDRESS);
+      } else {
+        return llvm::createStringError(
+            "unable to convert file address 0x%" PRIx64 " to load address "
+            "for DW_OP_piece(%" PRIu64 "): "
+            "no target available",
+            addr, piece_byte_size);
+      }
+      [[fallthrough]];
+    case Value::ValueType::LoadAddress: {
+      if (target) {
+        if (curr_piece.ResizeData(piece_byte_size) == piece_byte_size) {
+          if (target->ReadMemory(
+                  Address(addr), curr_piece.GetBuffer().GetBytes(),
+                  piece_byte_size, error,
+                  /*force_live_memory=*/false) != piece_byte_size) {
+            const char *addr_type =
+                (curr_piece_source_value_type == Value::ValueType::LoadAddress)
+                    ? "load"
+                    : "file";
+            return llvm::createStringError(
+                "failed to read memory DW_OP_piece(%" PRIu64
+                ") from %s address 0x%" PRIx64,
+                piece_byte_size, addr_type, addr);
+          }
+        } else {
+          return llvm::createStringError(
+              "failed to resize the piece memory buffer for "
+              "DW_OP_piece(%" PRIu64 ")",
+              piece_byte_size);
+        }
+      }
+    } break;
+    case Value::ValueType::HostAddress: {
+      return llvm::createStringError(
+          "failed to read memory DW_OP_piece(%" PRIu64
+          ") from host address 0x%" PRIx64,
+          piece_byte_size, addr);
+    } break;
+
+    case Value::ValueType::Scalar: {
+      uint32_t bit_size = piece_byte_size * 8;
+      uint32_t bit_offset = 0;
+      if (!scalar.ExtractBitfield(bit_size, bit_offset)) {
+        return llvm::createStringError(
+            "unable to extract %" PRIu64 " bytes from a %" PRIu64
+            " byte scalar value.",
+            piece_byte_size,
+            (uint64_t)curr_piece_source_value.GetScalar().GetByteSize());
+      }
+
+      // We have seen a case where we have expression like:
+      //      DW_OP_lit0, DW_OP_stack_value, DW_OP_piece 0x28
+      // here we are assuming the compiler was trying to zero
+      // extend the value that we should append to the buffer.
+      scalar.TruncOrExtendTo(bit_size, /*sign=*/false);
+      curr_piece.GetScalar() = scalar;
+    } break;
+    }
+
+    // Check if this is the first piece?
+    if (op_piece_offset == 0) {
+      // This is the first piece, we should push it back onto the stack
+      // so subsequent pieces will be able to access this piece and add
+      // to it.
+      if (pieces.AppendDataToHostBuffer(curr_piece) == 0) {
+        return llvm::createStringError("failed to append piece data");
+      }
+    } else {
+      // If this is the second or later piece there should be a value on
+      // the stack.
+      if (pieces.GetBuffer().GetByteSize() != op_piece_offset) {
+        return llvm::createStringError("DW_OP_piece for offset %" PRIu64
+                                       " but top of stack is of size %" PRIu64,
+                                       op_piece_offset,
+                                       pieces.GetBuffer().GetByteSize());
+      }
+
+      if (pieces.AppendDataToHostBuffer(curr_piece) == 0)
+        return llvm::createStringError("failed to append piece data");
+    }
+  }
+  op_piece_offset += piece_byte_size;
+  return llvm::Error::success();
+}
+
+static llvm::Error
+Evaluate_DW_OP_convert(DWARFExpression::Stack &stack,
+                       const DWARFExpression::Delegate *dwarf_cu,
+                       lldb::ModuleSP module_sp, uint64_t relative_die_offset) {
+  uint64_t bit_size;
+  bool sign;
+  if (relative_die_offset == 0) {
+    // The generic type has the size of an address on the target
+    // machine and an unspecified signedness. Scalar has no
+    // "unspecified signedness", so we use unsigned types.
+    if (!module_sp)
+      return llvm::createStringError("no module");
+    sign = false;
+    bit_size = module_sp->GetArchitecture().GetAddressByteSize() * 8;
+    if (!bit_size)
+      return llvm::createStringError("unspecified architecture");
+  } else {
+    auto bit_size_sign_or_err =
+        dwarf_cu->GetDIEBitSizeAndSign(relative_die_offset);
+    if (!bit_size_sign_or_err)
+      return bit_size_sign_or_err.takeError();
+    bit_size = bit_size_sign_or_err->first;
+    sign = bit_size_sign_or_err->second;
+  }
+  stack.back().GetScalar().TruncOrExtendTo(bit_size, sign);
+  return llvm::Error::success();
+}
+
 llvm::Expected<Value> DWARFExpression::Evaluate(
     ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
     lldb::ModuleSP module_sp, const DataExtractor &opcodes,
@@ -1790,132 +1949,10 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // provides a way of describing how large a part of a variable a particular
     // DWARF expression refers to.
     case DW_OP_piece: {
-      LocationDescriptionKind piece_locdesc = dwarf4_location_description_kind;
-      // Reset for the next piece.
-      dwarf4_location_description_kind = Memory;
-
-      const uint64_t piece_byte_size = op->getRawOperand(0);
-
-      if (piece_byte_size > 0) {
-        Value curr_piece;
-
-        if (stack.empty()) {
-          UpdateValueTypeFromLocationDescription(
-              log, dwarf_cu, LocationDescriptionKind::Empty);
-          // In a multi-piece expression, this means that the current piece is
-          // not available. Fill with zeros for now by resizing the data and
-          // appending it
-          curr_piece.ResizeData(piece_byte_size);
-          // Note that "0" is not a correct value for the unknown bits.
-          // It would be better to also return a mask of valid bits together
-          // with the expression result, so the debugger can print missing
-          // members as "<optimized out>" or something.
-          ::memset(curr_piece.GetBuffer().GetBytes(), 0, piece_byte_size);
-          pieces.AppendDataToHostBuffer(curr_piece);
-        } else {
-          Status error;
-          // Extract the current piece into "curr_piece"
-          Value curr_piece_source_value(stack.back());
-          stack.pop_back();
-          UpdateValueTypeFromLocationDescription(log, dwarf_cu, piece_locdesc,
-                                                 &curr_piece_source_value);
-
-          const Value::ValueType curr_piece_source_value_type =
-              curr_piece_source_value.GetValueType();
-          Scalar &scalar = curr_piece_source_value.GetScalar();
-          lldb::addr_t addr = scalar.ULongLong(LLDB_INVALID_ADDRESS);
-          switch (curr_piece_source_value_type) {
-          case Value::ValueType::Invalid:
-            return llvm::createStringError("invalid value type");
-          case Value::ValueType::FileAddress:
-            if (target) {
-              curr_piece_source_value.ConvertToLoadAddress(module_sp.get(),
-                                                           target);
-              addr = scalar.ULongLong(LLDB_INVALID_ADDRESS);
-            } else {
-              return llvm::createStringError(
-                  "unable to convert file address 0x%" PRIx64
-                  " to load address "
-                  "for DW_OP_piece(%" PRIu64 "): "
-                  "no target available",
-                  addr, piece_byte_size);
-            }
-            [[fallthrough]];
-          case Value::ValueType::LoadAddress: {
-            if (target) {
-              if (curr_piece.ResizeData(piece_byte_size) == piece_byte_size) {
-                if (target->ReadMemory(
-                        Address(addr), curr_piece.GetBuffer().GetBytes(),
-                        piece_byte_size, error,
-                        /*force_live_memory=*/false) != piece_byte_size) {
-                  const char *addr_type = (curr_piece_source_value_type ==
-                                           Value::ValueType::LoadAddress)
-                                              ? "load"
-                                              : "file";
-                  return llvm::createStringError(
-                      "failed to read memory DW_OP_piece(%" PRIu64
-                      ") from %s address 0x%" PRIx64,
-                      piece_byte_size, addr_type, addr);
-                }
-              } else {
-                return llvm::createStringError(
-                    "failed to resize the piece memory buffer for "
-                    "DW_OP_piece(%" PRIu64 ")",
-                    piece_byte_size);
-              }
-            }
-          } break;
-          case Value::ValueType::HostAddress: {
-            return llvm::createStringError(
-                "failed to read memory DW_OP_piece(%" PRIu64
-                ") from host address 0x%" PRIx64,
-                piece_byte_size, addr);
-          } break;
-
-          case Value::ValueType::Scalar: {
-            uint32_t bit_size = piece_byte_size * 8;
-            uint32_t bit_offset = 0;
-            if (!scalar.ExtractBitfield(bit_size, bit_offset)) {
-              return llvm::createStringError(
-                  "unable to extract %" PRIu64 " bytes from a %" PRIu64
-                  " byte scalar value.",
-                  piece_byte_size,
-                  (uint64_t)curr_piece_source_value.GetScalar().GetByteSize());
-            }
-
-            // We have seen a case where we have expression like:
-            //      DW_OP_lit0, DW_OP_stack_value, DW_OP_piece 0x28
-            // here we are assuming the compiler was trying to zero
-            // extend the value that we should append to the buffer.
-            scalar.TruncOrExtendTo(bit_size, /*sign=*/false);
-            curr_piece.GetScalar() = scalar;
-          } break;
-          }
-
-          // Check if this is the first piece?
-          if (op_piece_offset == 0) {
-            // This is the first piece, we should push it back onto the stack
-            // so subsequent pieces will be able to access this piece and add
-            // to it.
-            if (pieces.AppendDataToHostBuffer(curr_piece) == 0) {
-              return llvm::createStringError("failed to append piece data");
-            }
-          } else {
-            // If this is the second or later piece there should be a value on
-            // the stack.
-            if (pieces.GetBuffer().GetByteSize() != op_piece_offset) {
-              return llvm::createStringError(
-                  "DW_OP_piece for offset %" PRIu64
-                  " but top of stack is of size %" PRIu64,
-                  op_piece_offset, pieces.GetBuffer().GetByteSize());
-            }
-
-            if (pieces.AppendDataToHostBuffer(curr_piece) == 0)
-              return llvm::createStringError("failed to append piece data");
-          }
-        }
-        op_piece_offset += piece_byte_size;
-      }
+      if (llvm::Error err = Evaluate_DW_OP_piece(
+              stack, pieces, op_piece_offset, dwarf4_location_description_kind,
+              dwarf_cu, module_sp, target, op->getRawOperand(0), log))
+        return err;
     } break;
 
     case DW_OP_bit_piece: // 0x9d ULEB128 bit size, ULEB128 bit offset (DWARF3);
@@ -2068,32 +2105,11 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     //
     // DESCRIPTION: Pop the top stack element, convert it to a
     // different type, and push the result.
-    case DW_OP_convert: {
-      const uint64_t relative_die_offset = op->getRawOperand(0);
-      uint64_t bit_size;
-      bool sign;
-      if (relative_die_offset == 0) {
-        // The generic type has the size of an address on the target
-        // machine and an unspecified signedness. Scalar has no
-        // "unspecified signedness", so we use unsigned types.
-        if (!module_sp)
-          return llvm::createStringError("no module");
-        sign = false;
-        bit_size = module_sp->GetArchitecture().GetAddressByteSize() * 8;
-        if (!bit_size)
-          return llvm::createStringError("unspecified architecture");
-      } else {
-        auto bit_size_sign_or_err =
-            dwarf_cu->GetDIEBitSizeAndSign(relative_die_offset);
-        if (!bit_size_sign_or_err)
-          return bit_size_sign_or_err.takeError();
-        bit_size = bit_size_sign_or_err->first;
-        sign = bit_size_sign_or_err->second;
-      }
-      Scalar &top = stack.back().GetScalar();
-      top.TruncOrExtendTo(bit_size, sign);
+    case DW_OP_convert:
+      if (llvm::Error err = Evaluate_DW_OP_convert(stack, dwarf_cu, module_sp,
+                                                   op->getRawOperand(0)))
+        return err;
       break;
-    }
 
     // OPCODE: DW_OP_call_frame_cfa
     // OPERANDS: None
