@@ -2185,12 +2185,11 @@ bool SPIRVInstructionSelector::selectAtomicRMW(Register ResVReg,
   Register ScopeReg = buildI32Constant(Scope, I);
 
   Register Ptr = I.getOperand(1).getReg();
-  // TODO: Changed as it's implemented in the translator. See test/atomicrmw.ll
-  // auto ScSem =
-  // getMemSemanticsForStorageClass(GR.getPointerStorageClass(Ptr));
+  uint32_t ScSem = static_cast<uint32_t>(
+      getMemSemanticsForStorageClass(GR.getPointerStorageClass(Ptr)));
   AtomicOrdering AO = MemOp->getSuccessOrdering();
-  uint32_t MemSem = static_cast<uint32_t>(getMemSemantics(AO));
-  Register MemSemReg = buildI32Constant(MemSem /*| ScSem*/, I);
+  uint32_t MemSem = static_cast<uint32_t>(getMemSemantics(AO)) | ScSem;
+  Register MemSemReg = buildI32Constant(MemSem, I);
 
   Register ValueReg = I.getOperand(2).getReg();
   if (NegateOpcode != 0) {
