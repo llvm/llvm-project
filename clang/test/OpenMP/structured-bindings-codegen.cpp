@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 -x c++ -std=c++20 -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 -x c++ -std=c++20 \
+// RUN: -emit-llvm %s -o - | FileCheck %s
 
 // expected-no-diagnostics
 
