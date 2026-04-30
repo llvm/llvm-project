@@ -1862,7 +1862,7 @@ def _runShTest(
     useExternalSh,
     script,
     tmpBase,
-    extra_inproc_builtins,
+    extra_inproc_builtins={},
 ) -> lit.Test.Result:
     # Always returns the tuple (out, err, exitCode, timeoutInfo, status).
     def runOnce(
@@ -2024,5 +2024,10 @@ def executeShTest(
             script[index] = _expandLateSubstitutionsExternal(command)
 
     return _runShTest(
-        test, litConfig, useExternalSh, script, tmpBase, extra_inproc_builtins
+        test,
+        litConfig,
+        useExternalSh,
+        script,
+        tmpBase,
+        extra_inproc_builtins=extra_inproc_builtins,
     )
