@@ -130,7 +130,7 @@ define void @test_scalar_cost_single_store_loop_invariant_cond(ptr %dst, i1 %c) 
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 4
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    call void @llvm.masked.store.v8i32.p0(<8 x i32> zeroinitializer, ptr align 4 [[NEXT_GEP]], <8 x i1> [[BROADCAST_SPLAT]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
@@ -187,11 +187,10 @@ define void @test_scalar_cost_single_store_loop_varying_cond(ptr %dst, ptr noali
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 4
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[OFFSET_IDX3:%.*]] = mul i64 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX3]], 16
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[OFFSET_IDX3]]
+; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX]], 16
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <16 x i32>, ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <16 x i32> [[WIDE_VEC]], <16 x i32> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>

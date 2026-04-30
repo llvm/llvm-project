@@ -33,7 +33,7 @@ int main() {
   }
 
   // CHECK: runtime error: control flow integrity check for type 'void *()' failed during indirect function call
-  // CHECK: dso_symbol defined here
+  // CHECK: cross-dso-diagnostic.cpp:[[@LINE-13]]: note: dso_symbol defined here
   // CHECK: check failed in {{.*}}_exe_suffix, destination function located in {{.*}}[[DSONAME]]
   void *S = fp(); // trigger cfi-icall failure
 

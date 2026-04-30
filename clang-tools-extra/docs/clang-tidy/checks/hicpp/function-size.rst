@@ -1,6 +1,4 @@
 .. title:: clang-tidy - hicpp-function-size
-.. meta::
-   :http-equiv=refresh: 5;URL=../readability/function-size.html
 
 hicpp-function-size
 ===================
