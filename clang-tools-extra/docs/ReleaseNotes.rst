@@ -395,7 +395,7 @@ Changes in existing checks
 
 - Improved :doc:`misc-unused-parameters
   <clang-tidy/checks/misc/unused-parameters>` check by adding
-  :option:`IgnoreMacroParameters` option to suppress warnings for unused
+  `IgnoreMacroParameters` option to suppress warnings for unused
   parameters whose declarations originate from macro expansions.
 
 - Improved :doc:`misc-unused-using-decls
