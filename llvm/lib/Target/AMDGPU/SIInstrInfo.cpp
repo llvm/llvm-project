@@ -5454,6 +5454,14 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     }
   }
 
+  if (isDPP(MI) && !ST.hasDPPSrc1SGPR() && Src1Idx != -1) {
+    const MachineOperand &Src1MO = MI.getOperand(Src1Idx);
+    if (Src1MO.isReg() && RI.isSGPRReg(MRI, Src1MO.getReg())) {
+      ErrInfo = "DPP src1 cannot be SGPR on this subtarget";
+      return false;
+    }
+  }
+
   // Verify MIMG / VIMAGE / VSAMPLE
   if (isImage(Opcode) && !MI.mayStore()) {
     // Ensure that the return type used is large enough for all the options

@@ -213,6 +213,7 @@ entry:
   %dpp.shr8 = tail call half @llvm.amdgcn.update.dpp.f16(half 0xHFC00, half %max3, i32 280, i32 15, i32 15, i1 false)
   %max4 = tail call nnan half @llvm.maxnum.f16(half %max3, half %dpp.shr8)
   ret half %max4
+}
 
 ; should be combined only on subtargets that allow sgpr for src1
 ; GCN-LABEL: {{^}}dpp_src1_sgpr:
