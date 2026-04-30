@@ -129,9 +129,11 @@ def DISubroutineTypeAttr : DialectAttribute<(attr
 //===----------------------------------------------------------------------===//
 
 def DICompileUnitAttr : DialectAttribute<(attr
-  Attr<"DistinctAttr">:$id,
+  OptionalAttribute<"DistinctAttr">:$recId,
+  Bool:$isRecSelf,
+  OptionalAttribute<"DistinctAttr">:$id,
   VarInt:$sourceLanguage,
-  Attr<"DIFileAttr">:$file,
+  OptionalAttribute<"DIFileAttr">:$file,
   OptionalAttribute<"StringAttr">:$producer,
   Bool:$isOptimized,
   EnumClassFlag<"DIEmissionKind", "getEmissionKind()">:$_rawEmissionKind,

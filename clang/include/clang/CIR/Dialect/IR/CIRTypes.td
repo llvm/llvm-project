@@ -49,20 +49,35 @@ def CIR_IntType : CIR_Type<"Int", "int", [
     Those integer types that are directly available in C/C++ standard are called
     fundamental integer types. Said types are: `signed char`, `short`, `int`,
     `long`, `long long`, and their unsigned variations.
+
+    Examples: `!cir.int<s, 32>`, `!cir.int<u, 64>`, `!cir.int<s, 128, bitint>`
   }];
-  let parameters = (ins "unsigned":$width, "bool":$isSigned);
+  let parameters = (ins "unsigned":$width, "bool":$is_signed,
+                        DefaultValuedParameter<"bool", "false">:$is_bit_int);
+  let builders = [
+    TypeBuilder<(ins "unsigned":$width, "bool":$is_signed), [{
+      return $_get($_ctxt, width, is_signed, /*is_bit_int=*/false);
+    }]>,
+  ];
   let hasCustomAssemblyFormat = 1;
   let extraClassDeclaration = [{
     /// Return true if this is a signed integer type.
     bool isSigned() const { return getIsSigned(); }
     /// Return true if this is an unsigned integer type.
     bool isUnsigned() const { return !getIsSigned(); }
+    /// Return true if this is a _BitInt type.
+    bool isBitInt() const { return getIsBitInt(); }
     /// Return type alias.
     std::string getAlias() const {
-      return (isSigned() ? 's' : 'u') + std::to_string(getWidth()) + 'i';
+      std::string alias =
+          (isSigned() ? 's' : 'u') + std::to_string(getWidth()) + 'i';
+      if (isBitInt())
+        alias += "_bitint";
+      return alias;
     }
     /// Return true if this is a fundamental integer type (i.e. signed or
     /// unsigned integer types whose bit width is 8, 16, 32, or 64).
+    /// _BitInt types are never fundamental even if their width matches.
     bool isFundamental() const {
       return isFundamentalIntType(*this);
     }
@@ -75,8 +90,9 @@ def CIR_IntType : CIR_Type<"Int", "int", [
 
     /// Returns a minimum bitwidth of cir::IntType
     static unsigned minBitwidth() { return 1; }
-    /// Returns a maximum bitwidth of cir::IntType
-    static unsigned maxBitwidth() { return 128; }
+    /// Returns a maximum bitwidth of cir::IntType.
+    /// Matches llvm::IntegerType::MAX_INT_BITS (1 << 23).
+    static unsigned maxBitwidth() { return (1 << 23); }
   }];
   let genVerifyDecl = 1;
 }
@@ -189,7 +205,7 @@ def CIR_ComplexType : CIR_Type<"Complex", "complex", [
     the complex number. `elementType` must be either a CIR integer type or a CIR
     floating-point type.
 
-    ```mlir
+    ```
     !cir.complex<!s32i>
     !cir.complex<!cir.float>
     ```
@@ -240,7 +256,7 @@ def CIR_PointerType : CIR_Type<"Pointer", "ptr", [
 
     Examples:
 
-    ```mlir
+    ```
     !cir.ptr<!cir.int<u, 8>>
     !cir.ptr<!cir.float>
     !cir.ptr<!cir.record<struct "MyStruct">>
@@ -347,6 +363,7 @@ def CIR_DataMemberType : CIR_Type<"DataMember", "data_member", [
 //===----------------------------------------------------------------------===//
 
 def CIR_VPtrType : CIR_Type<"VPtr", "vptr", [
+    DeclareTypeInterfaceMethods<CIR_SizedTypeInterface>,
     DeclareTypeInterfaceMethods<DataLayoutTypeInterface>
 ]> {
   let summary = "CIR type that is used for the vptr member of C++ objects";
@@ -435,7 +452,7 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
 
     Syntax:
 
-    ```mlir
+    ```
     vector-type ::= !cir.vector<size x element-type>
     size ::= (decimal-literal | `[` decimal-literal `]`)
     element-type ::= float-type | integer-type | pointer-type
@@ -446,7 +463,7 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
 
     Examples:
 
-    ```mlir
+    ```
     !cir.vector<4 x !cir.int<u, 8>>
     !cir.vector<2 x !cir.float>
     ```
@@ -454,7 +471,7 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
     Scalable vectors are indicated by enclosing size in square brackets.
 
     Example:
-    ```mlir
+    ```
     !cir.vector<[4] x !cir.int<u, 8>>
     ```
   }];
@@ -497,7 +514,7 @@ def CIR_FuncType : CIR_Type<"Func", "func"> {
 
     Example:
 
-    ```mlir
+    ```
     !cir.func<()>
     !cir.func<() -> bool>
     !cir.func<(!s8i, !s8i)>
@@ -637,7 +654,7 @@ def CIR_RecordType : CIR_Type<"Record", "record", [
 
     A few examples:
 
-    ```mlir
+    ```
         !rec_complete = !cir.record<struct "complete" {!u8i}>
         !rec_incomplete = !cir.record<struct "incomplete" incomplete>
         !anonymous_struct = !cir.record<struct {!u8i}>
@@ -654,7 +671,7 @@ def CIR_RecordType : CIR_Type<"Record", "record", [
     In the example below, the `Node` record has a member that is a pointer to a
     `Node` record:
 
-    ```mlir
+    ```
         !s = !cir.record<struct "Node" {!cir.ptr<!cir.record<struct "Node">>}>
     ```
   }];
@@ -765,6 +782,9 @@ def CIR_RecordType : CIR_Type<"Record", "record", [
     bool isSized() const {
       return isComplete();
     }
+
+    /// Returns the data size (excluding tail padding) for struct types.
+    unsigned computeStructDataSize(const mlir::DataLayout &dataLayout) const;
 
   private:
 

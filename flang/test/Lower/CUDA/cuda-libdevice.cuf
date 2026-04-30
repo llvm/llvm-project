@@ -30,10 +30,10 @@ attributes(global) subroutine test_dsqrt_rX()
 end subroutine
 
 ! CHECK-LABEL: _QPtest_dsqrt_rx
-! CHECK: %{{.*}} = fir.call @__nv_dsqrt_rd(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f64
-! CHECK: %{{.*}} = fir.call @__nv_dsqrt_rn(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f64
-! CHECK: %{{.*}} = fir.call @__nv_dsqrt_ru(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f64
-! CHECK: %{{.*}} = fir.call @__nv_dsqrt_rz(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f64
+! CHECK: %{{.*}} = fir.call @__dsqrt_rd(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f64
+! CHECK: %{{.*}} = fir.call @__dsqrt_rn(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f64
+! CHECK: %{{.*}} = fir.call @__dsqrt_ru(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f64
+! CHECK: %{{.*}} = fir.call @__dsqrt_rz(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f64
 
 attributes(global) subroutine test_uint2float_rX()
   real :: res
@@ -149,10 +149,10 @@ attributes(global) subroutine test_drcp_rX()
 end subroutine
 
 ! CHECK-LABEL: _QPtest_drcp_rx
-! CHECK: %{{.*}} = fir.call @__nv_drcp_rd(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f64
-! CHECK: %{{.*}} = fir.call @__nv_drcp_rn(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f64
-! CHECK: %{{.*}} = fir.call @__nv_drcp_ru(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f64
-! CHECK: %{{.*}} = fir.call @__nv_drcp_rz(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f64
+! CHECK: %{{.*}} = fir.call @__drcp_rd(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f64
+! CHECK: %{{.*}} = fir.call @__drcp_rn(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f64
+! CHECK: %{{.*}} = fir.call @__drcp_ru(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f64
+! CHECK: %{{.*}} = fir.call @__drcp_rz(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f64
 
 attributes(global) subroutine test_double2ull_rX()
   integer(8) :: res

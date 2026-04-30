@@ -1155,9 +1155,6 @@ void case27(CustomResource a) {
 // CHECK-NEXT:    [[TI:%.*]] = alloca [[STRUCT_TWOINTS:%.*]], align 1
 // CHECK-NEXT:    [[REF_TMP:%.*]] = alloca [[STRUCT_TWOINTS]], align 1
 // CHECK-NEXT:    [[AGG_TEMP:%.*]] = alloca [[STRUCT_TWOFLOATS]], align 1
-// CHECK-NEXT:    [[REF_TMP6:%.*]] = alloca [[STRUCT_TWOINTS]], align 1
-// CHECK-NEXT:    [[AGG_TEMP7:%.*]] = alloca [[STRUCT_TWOFLOATS]], align 1
-// CHECK-NEXT:    [[Z:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[TI]], i32 0, i32 0
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[AGG_TEMP]], ptr align 1 [[TF]], i32 8, i1 false)
 // CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [[STRUCT_TWOINTS]], ptr [[REF_TMP]], i32 0, i32 0
 // CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [[STRUCT_TWOINTS]], ptr [[REF_TMP]], i32 0, i32 1
@@ -1169,23 +1166,13 @@ void case27(CustomResource a) {
 // CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[GEP3]], align 4
 // CHECK-NEXT:    [[CONV4:%.*]] = fptosi float [[TMP1]] to i32
 // CHECK-NEXT:    store i32 [[CONV4]], ptr [[GEP1]], align 4
+// CHECK-NEXT:    [[Z:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[TI]], i32 0, i32 0
 // CHECK-NEXT:    [[Z5:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[REF_TMP]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[Z5]], align 1
 // CHECK-NEXT:    store i32 [[TMP2]], ptr [[Z]], align 1
 // CHECK-NEXT:    [[W:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[TI]], i32 0, i32 1
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[AGG_TEMP7]], ptr align 1 [[TF]], i32 8, i1 false)
-// CHECK-NEXT:    [[GEP8:%.*]] = getelementptr inbounds [[STRUCT_TWOINTS]], ptr [[REF_TMP6]], i32 0, i32 0
-// CHECK-NEXT:    [[GEP9:%.*]] = getelementptr inbounds [[STRUCT_TWOINTS]], ptr [[REF_TMP6]], i32 0, i32 1
-// CHECK-NEXT:    [[GEP10:%.*]] = getelementptr inbounds [[STRUCT_TWOFLOATS]], ptr [[AGG_TEMP7]], i32 0, i32 0
-// CHECK-NEXT:    [[GEP11:%.*]] = getelementptr inbounds [[STRUCT_TWOFLOATS]], ptr [[AGG_TEMP7]], i32 0, i32 1
-// CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[GEP10]], align 4
-// CHECK-NEXT:    [[CONV12:%.*]] = fptosi float [[TMP3]] to i32
-// CHECK-NEXT:    store i32 [[CONV12]], ptr [[GEP8]], align 4
-// CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr [[GEP11]], align 4
-// CHECK-NEXT:    [[CONV13:%.*]] = fptosi float [[TMP4]] to i32
-// CHECK-NEXT:    store i32 [[CONV13]], ptr [[GEP9]], align 4
-// CHECK-NEXT:    [[W14:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[REF_TMP6]], i32 0, i32 1
-// CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[W14]], align 1
+// CHECK-NEXT:    [[W6:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[REF_TMP]], i32 0, i32 1
+// CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[W6]], align 1
 // CHECK-NEXT:    store i32 [[TMP5]], ptr [[W]], align 1
 // CHECK-NEXT:    ret void
 //
@@ -1199,8 +1186,6 @@ void case28(TwoFloats TF) {
 // CHECK-NEXT:    [[INTS:%.*]] = alloca [2 x i32], align 4
 // CHECK-NEXT:    [[REF_TMP:%.*]] = alloca [2 x i32], align 4
 // CHECK-NEXT:    [[AGG_TEMP:%.*]] = alloca [[STRUCT_FOURFLOATS]], align 1
-// CHECK-NEXT:    [[REF_TMP7:%.*]] = alloca [2 x i32], align 4
-// CHECK-NEXT:    [[AGG_TEMP8:%.*]] = alloca [[STRUCT_FOURFLOATS]], align 1
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[AGG_TEMP]], ptr align 1 [[FF]], i32 16, i1 false)
 // CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x i32], ptr [[REF_TMP]], i32 0, i32 0
 // CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [2 x i32], ptr [[REF_TMP]], i32 0, i32 1
@@ -1218,21 +1203,8 @@ void case28(TwoFloats TF) {
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 // CHECK-NEXT:    store i32 [[TMP2]], ptr [[INTS]], align 4
 // CHECK-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds i32, ptr [[INTS]], i32 1
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[AGG_TEMP8]], ptr align 1 [[FF]], i32 16, i1 false)
-// CHECK-NEXT:    [[GEP9:%.*]] = getelementptr inbounds [2 x i32], ptr [[REF_TMP7]], i32 0, i32 0
-// CHECK-NEXT:    [[GEP10:%.*]] = getelementptr inbounds [2 x i32], ptr [[REF_TMP7]], i32 0, i32 1
-// CHECK-NEXT:    [[GEP11:%.*]] = getelementptr inbounds [[STRUCT_FOURFLOATS]], ptr [[AGG_TEMP8]], i32 0, i32 0, i32 0
-// CHECK-NEXT:    [[GEP12:%.*]] = getelementptr inbounds [[STRUCT_FOURFLOATS]], ptr [[AGG_TEMP8]], i32 0, i32 0, i32 1
-// CHECK-NEXT:    [[GEP13:%.*]] = getelementptr inbounds [[STRUCT_FOURFLOATS]], ptr [[AGG_TEMP8]], i32 0, i32 1
-// CHECK-NEXT:    [[GEP14:%.*]] = getelementptr inbounds [[STRUCT_FOURFLOATS]], ptr [[AGG_TEMP8]], i32 0, i32 2
-// CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[GEP11]], align 4
-// CHECK-NEXT:    [[CONV15:%.*]] = fptosi float [[TMP3]] to i32
-// CHECK-NEXT:    store i32 [[CONV15]], ptr [[GEP9]], align 4
-// CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr [[GEP12]], align 4
-// CHECK-NEXT:    [[CONV16:%.*]] = fptosi float [[TMP4]] to i32
-// CHECK-NEXT:    store i32 [[CONV16]], ptr [[GEP10]], align 4
-// CHECK-NEXT:    [[ARRAYIDX17:%.*]] = getelementptr inbounds nuw [2 x i32], ptr [[REF_TMP7]], i32 0, i32 1
-// CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[ARRAYIDX17]], align 4
+// CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds nuw [2 x i32], ptr [[REF_TMP]], i32 0, i32 1
+// CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[ARRAYIDX7]], align 4
 // CHECK-NEXT:    store i32 [[TMP5]], ptr [[ARRAYINIT_ELEMENT]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -1247,10 +1219,7 @@ void case29(FourFloats FF) {
 // CHECK-NEXT:    [[TI:%.*]] = alloca [[STRUCT_TWOINTS:%.*]], align 1
 // CHECK-NEXT:    [[REF_TMP:%.*]] = alloca [[STRUCT_TWOINTS]], align 1
 // CHECK-NEXT:    [[AGG_TEMP:%.*]] = alloca [4 x float], align 4
-// CHECK-NEXT:    [[REF_TMP8:%.*]] = alloca [[STRUCT_TWOINTS]], align 1
-// CHECK-NEXT:    [[AGG_TEMP9:%.*]] = alloca [4 x float], align 4
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[ARR]], ptr align 4 @__const._Z6case30v.Arr, i32 16, i1 false)
-// CHECK-NEXT:    [[Z:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[TI]], i32 0, i32 0
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[AGG_TEMP]], ptr align 4 [[ARR]], i32 16, i1 false)
 // CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [[STRUCT_TWOINTS]], ptr [[REF_TMP]], i32 0, i32 0
 // CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [[STRUCT_TWOINTS]], ptr [[REF_TMP]], i32 0, i32 1
@@ -1264,25 +1233,13 @@ void case29(FourFloats FF) {
 // CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[GEP3]], align 4
 // CHECK-NEXT:    [[CONV6:%.*]] = fptosi float [[TMP1]] to i32
 // CHECK-NEXT:    store i32 [[CONV6]], ptr [[GEP1]], align 4
+// CHECK-NEXT:    [[Z:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[TI]], i32 0, i32 0
 // CHECK-NEXT:    [[Z7:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[REF_TMP]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[Z7]], align 1
 // CHECK-NEXT:    store i32 [[TMP2]], ptr [[Z]], align 1
 // CHECK-NEXT:    [[W:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[TI]], i32 0, i32 1
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[AGG_TEMP9]], ptr align 4 [[ARR]], i32 16, i1 false)
-// CHECK-NEXT:    [[GEP10:%.*]] = getelementptr inbounds [[STRUCT_TWOINTS]], ptr [[REF_TMP8]], i32 0, i32 0
-// CHECK-NEXT:    [[GEP11:%.*]] = getelementptr inbounds [[STRUCT_TWOINTS]], ptr [[REF_TMP8]], i32 0, i32 1
-// CHECK-NEXT:    [[GEP12:%.*]] = getelementptr inbounds [4 x float], ptr [[AGG_TEMP9]], i32 0, i32 0
-// CHECK-NEXT:    [[GEP13:%.*]] = getelementptr inbounds [4 x float], ptr [[AGG_TEMP9]], i32 0, i32 1
-// CHECK-NEXT:    [[GEP14:%.*]] = getelementptr inbounds [4 x float], ptr [[AGG_TEMP9]], i32 0, i32 2
-// CHECK-NEXT:    [[GEP15:%.*]] = getelementptr inbounds [4 x float], ptr [[AGG_TEMP9]], i32 0, i32 3
-// CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[GEP12]], align 4
-// CHECK-NEXT:    [[CONV16:%.*]] = fptosi float [[TMP3]] to i32
-// CHECK-NEXT:    store i32 [[CONV16]], ptr [[GEP10]], align 4
-// CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr [[GEP13]], align 4
-// CHECK-NEXT:    [[CONV17:%.*]] = fptosi float [[TMP4]] to i32
-// CHECK-NEXT:    store i32 [[CONV17]], ptr [[GEP11]], align 4
-// CHECK-NEXT:    [[W18:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[REF_TMP8]], i32 0, i32 1
-// CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[W18]], align 1
+// CHECK-NEXT:    [[W8:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[REF_TMP]], i32 0, i32 1
+// CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[W8]], align 1
 // CHECK-NEXT:    store i32 [[TMP5]], ptr [[W]], align 1
 // CHECK-NEXT:    ret void
 //

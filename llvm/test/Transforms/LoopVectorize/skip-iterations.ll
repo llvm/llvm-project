@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes=loop-vectorize,dce,instcombine -force-vector-width=4 -S | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -force-vector-width=4 -S | FileCheck %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
@@ -27,27 +27,27 @@ entry:
   %cmp8 = icmp sgt i32 %Length, 0
   br i1 %cmp8, label %for.body.preheader, label %end
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %if.else
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %if.else ], [ 0, %for.body.preheader ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
   %0 = load i32, ptr %arrayidx, align 4, !tbaa !15
   %cmp1 = icmp sgt i32 %0, 10
   br i1 %cmp1, label %end.loopexit, label %if.else
 
-if.else:                                          ; preds = %for.body
+if.else:
   store i32 0, ptr %arrayidx, align 4, !tbaa !15
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %1 = trunc i64 %indvars.iv.next to i32
   %cmp = icmp slt i32 %1, %Length
   br i1 %cmp, label %for.body, label %end.loopexit
 
-end.loopexit:                                     ; preds = %if.else, %for.body
+end.loopexit:
   br label %end
 
-end:                                              ; preds = %end.loopexit, %entry
+end:
   ret i32 0
 }
 
@@ -70,27 +70,27 @@ entry:
   %cmp8 = icmp sgt i32 %Length, 0
   br i1 %cmp8, label %for.body.preheader, label %end
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %if.else
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %if.else ], [ 0, %for.body.preheader ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
   %ld = load i32, ptr %arrayidx, align 4
   %cmp1 = icmp eq i32 %ld, %K
   br i1 %cmp1, label %end.loopexit, label %if.else
 
-if.else:                                          ; preds = %for.body
+if.else:
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %trunc = trunc i64 %indvars.iv.next to i32
   %cmp = icmp slt i32 %trunc, %Length
   br i1 %cmp, label %for.body, label %end.loopexit
 
-end.loopexit:                                     ; preds = %if.else, %for.body
+end.loopexit:
   %result.lcssa = phi i32 [ 1, %for.body ], [ 0, %if.else ]
   br label %end
 
-end:                                              ; preds = %end.loopexit, %entry
+end:
   %result = phi i32 [ %result.lcssa, %end.loopexit ], [ 0, %entry ]
   ret i32 %result
 }
@@ -112,28 +112,28 @@ entry:
   %cmp8 = icmp sgt i32 %Length, 0
   br i1 %cmp8, label %for.body.preheader, label %end
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %if.else
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %if.else ], [ 0, %for.body.preheader ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
   %ld = load i32, ptr %arrayidx, align 4
   %cmp1 = icmp eq i32 %ld, %K
   br i1 %cmp1, label %end.loopexit, label %if.else
 
-if.else:                                          ; preds = %for.body
+if.else:
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %trunc = trunc i64 %indvars.iv.next to i32
   %cmp = icmp slt i32 %trunc, %Length
   br i1 %cmp, label %for.body, label %end.loopexit
 
-end.loopexit:                                     ; preds = %if.else, %for.body
+end.loopexit:
   %result.lcssa = phi i64 [ %indvars.iv, %for.body ], [ -1, %if.else ]
   %res.trunc = trunc i64 %result.lcssa to i32
   br label %end
 
-end:                                              ; preds = %end.loopexit, %entry
+end:
   %result = phi i32 [ %res.trunc, %end.loopexit ], [ -1, %entry ]
   ret i32 %result
 }
@@ -152,10 +152,10 @@ entry:
   %cmp8 = icmp sgt i32 %Length, 0
   br i1 %cmp8, label %for.body.preheader, label %end.loopexit
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %if.else
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %latch ], [ 0, %for.body.preheader ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
@@ -168,11 +168,11 @@ if.else:
   store i32 %J, ptr %arrayidx, align 4
   br label %latch
 
-latch:                                          ; preds = %for.body
+latch:
   %cmp = icmp slt i32 %trunc, %Length
   br i1 %cmp, label %for.body, label %end.loopexit
 
-end.loopexit:                                     ; preds = %if.else, %for.body
+end.loopexit:
   ret void
 }
 !15 = !{!16, !16, i64 0}

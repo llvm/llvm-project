@@ -68,13 +68,13 @@ define internal i32 @dead_internal_func(i32 %0) {
 }
 
 define i32 @volatile_load(ptr) norecurse nounwind uwtable {
-; TUNIT: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite) uwtable
+; TUNIT: Function Attrs: nofree norecurse nounwind memory(argmem: readwrite) uwtable
 ; TUNIT-LABEL: define {{[^@]+}}@volatile_load
 ; TUNIT-SAME: (ptr nofree noundef align 4 [[TMP0:%.*]]) #[[ATTR6:[0-9]+]] {
 ; TUNIT-NEXT:    [[TMP2:%.*]] = load volatile i32, ptr [[TMP0]], align 4
 ; TUNIT-NEXT:    ret i32 [[TMP2]]
 ;
-; CGSCC: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite) uwtable
+; CGSCC: Function Attrs: nofree norecurse nounwind memory(argmem: readwrite) uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@volatile_load
 ; CGSCC-SAME: (ptr nofree noundef align 4 [[TMP0:%.*]]) #[[ATTR7:[0-9]+]] {
 ; CGSCC-NEXT:    [[TMP2:%.*]] = load volatile i32, ptr [[TMP0]], align 4
@@ -2474,7 +2474,7 @@ define internal void @dead_with_blockaddress_users(ptr nocapture %pc) nounwind r
 ; CGSCC-NEXT:    [[TMP1_PN:%.*]] = load i32, ptr [[PC_ADDR_0]], align 4
 ; CGSCC-NEXT:    [[INDIRECT_GOTO_DEST_IN:%.*]] = getelementptr inbounds [2 x ptr], ptr @dead_with_blockaddress_users.l, i32 0, i32 [[TMP1_PN]]
 ; CGSCC-NEXT:    [[INDIRECT_GOTO_DEST:%.*]] = load ptr, ptr [[INDIRECT_GOTO_DEST_IN]], align 8
-; CGSCC-NEXT:    indirectbr ptr [[INDIRECT_GOTO_DEST]], [label [[LAB0]], label %end]
+; CGSCC-NEXT:    indirectbr ptr [[INDIRECT_GOTO_DEST]], [label [[LAB0]], label [[END:%.*]]]
 ;
 entry:
   br label %indirectgoto
@@ -2688,7 +2688,7 @@ declare void @llvm.lifetime.end.p0(ptr %1)
 ; TUNIT: attributes #[[ATTR3]] = { noreturn nounwind }
 ; TUNIT: attributes #[[ATTR4]] = { noreturn }
 ; TUNIT: attributes #[[ATTR5]] = { nosync memory(none) }
-; TUNIT: attributes #[[ATTR6]] = { mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite) uwtable }
+; TUNIT: attributes #[[ATTR6]] = { nofree norecurse nounwind memory(argmem: readwrite) uwtable }
 ; TUNIT: attributes #[[ATTR7]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write) }
 ; TUNIT: attributes #[[ATTR8]] = { nofree norecurse noreturn nosync nounwind memory(none) }
 ; TUNIT: attributes #[[ATTR9]] = { mustprogress nofree nosync nounwind willreturn memory(none) }
@@ -2709,7 +2709,7 @@ declare void @llvm.lifetime.end.p0(ptr %1)
 ; CGSCC: attributes #[[ATTR4]] = { noreturn }
 ; CGSCC: attributes #[[ATTR5]] = { nosync memory(none) }
 ; CGSCC: attributes #[[ATTR6]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
-; CGSCC: attributes #[[ATTR7]] = { mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite) uwtable }
+; CGSCC: attributes #[[ATTR7]] = { nofree norecurse nounwind memory(argmem: readwrite) uwtable }
 ; CGSCC: attributes #[[ATTR8]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) uwtable }
 ; CGSCC: attributes #[[ATTR9]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write) }
 ; CGSCC: attributes #[[ATTR10]] = { nofree norecurse noreturn nosync nounwind memory(none) }

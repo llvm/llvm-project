@@ -222,6 +222,9 @@ namespace format {
   TYPE(VerilogMultiLineListLParen)                                             \
   /* for the base in a number literal, not including the quote */              \
   TYPE(VerilogNumberBase)                                                      \
+  /* The text that is in the opaque protected block. Like the text between     \
+   * 'pragma protect data_block' and 'pragma protect end_protected'. */        \
+  TYPE(VerilogProtected)                                                       \
   /* like `(strong1, pull0)` */                                                \
   TYPE(VerilogStrength)                                                        \
   /* Things inside the table in user-defined primitives. */                    \
@@ -545,6 +548,10 @@ public:
   /// The indent level of this token. Copied from the surrounding line.
   unsigned IndentLevel = 0;
 
+  /// Block + continuation indent level, applied by the WhitespaceManager to
+  /// this token.
+  mutable unsigned AppliedIndentLevel = 0;
+
   /// Penalty for inserting a line break before this token.
   unsigned SplitPenalty = 0;
 
@@ -858,6 +865,21 @@ public:
       return ForcedPrecedence;
     return getBinOpPrecedence(Tok.getKind(), /*GreaterThanIsOperator=*/true,
                               /*CPlusPlus11=*/true);
+  }
+
+  template <typename T> [[nodiscard]] FormatToken *getPrevious(T A1) const {
+    FormatToken *Tok = Previous;
+    while (Tok && Tok->isNot(A1))
+      Tok = Tok->Previous;
+    return Tok;
+  }
+
+  template <typename... Ts>
+  [[nodiscard]] FormatToken *getPreviousOneOf(Ts... Ks) const {
+    FormatToken *Tok = Previous;
+    while (Tok && (Tok->isNot(Ks) && ...))
+      Tok = Tok->Previous;
+    return Tok;
   }
 
   /// Returns the previous token ignoring comments.
@@ -1202,6 +1224,9 @@ struct AdditionalKeywords {
     kw_cover = &IdentTable.get("cover");
     kw_covergroup = &IdentTable.get("covergroup");
     kw_coverpoint = &IdentTable.get("coverpoint");
+    kw_data_block = &IdentTable.get("data_block");
+    kw_data_decrypt_key = &IdentTable.get("data_decrypt_key");
+    kw_data_public_key = &IdentTable.get("data_public_key");
     kw_default_decay_time = &IdentTable.get("default_decay_time");
     kw_default_nettype = &IdentTable.get("default_nettype");
     kw_default_trireg_strength = &IdentTable.get("default_trireg_strength");
@@ -1209,6 +1234,9 @@ struct AdditionalKeywords {
     kw_delay_mode_path = &IdentTable.get("delay_mode_path");
     kw_delay_mode_unit = &IdentTable.get("delay_mode_unit");
     kw_delay_mode_zero = &IdentTable.get("delay_mode_zero");
+    kw_digest_block = &IdentTable.get("digest_block");
+    kw_digest_decrypt_key = &IdentTable.get("digest_decrypt_key");
+    kw_digest_public_key = &IdentTable.get("digest_public_key");
     kw_disable = &IdentTable.get("disable");
     kw_dist = &IdentTable.get("dist");
     kw_edge = &IdentTable.get("edge");
@@ -1251,6 +1279,8 @@ struct AdditionalKeywords {
     kw_join = &IdentTable.get("join");
     kw_join_any = &IdentTable.get("join_any");
     kw_join_none = &IdentTable.get("join_none");
+    kw_key_block = &IdentTable.get("key_block");
+    kw_key_public_key = &IdentTable.get("key_public_key");
     kw_large = &IdentTable.get("large");
     kw_local = &IdentTable.get("local");
     kw_localparam = &IdentTable.get("localparam");
@@ -1267,6 +1297,7 @@ struct AdditionalKeywords {
     kw_priority = &IdentTable.get("priority");
     kw_program = &IdentTable.get("program");
     kw_property = &IdentTable.get("property");
+    kw_protect = &IdentTable.get("protect");
     kw_pull0 = &IdentTable.get("pull0");
     kw_pull1 = &IdentTable.get("pull1");
     kw_pure = &IdentTable.get("pure");
@@ -1621,6 +1652,9 @@ struct AdditionalKeywords {
   IdentifierInfo *kw_cover;
   IdentifierInfo *kw_covergroup;
   IdentifierInfo *kw_coverpoint;
+  IdentifierInfo *kw_data_block;
+  IdentifierInfo *kw_data_decrypt_key;
+  IdentifierInfo *kw_data_public_key;
   IdentifierInfo *kw_default_decay_time;
   IdentifierInfo *kw_default_nettype;
   IdentifierInfo *kw_default_trireg_strength;
@@ -1628,10 +1662,13 @@ struct AdditionalKeywords {
   IdentifierInfo *kw_delay_mode_path;
   IdentifierInfo *kw_delay_mode_unit;
   IdentifierInfo *kw_delay_mode_zero;
+  IdentifierInfo *kw_digest_block;
+  IdentifierInfo *kw_digest_decrypt_key;
+  IdentifierInfo *kw_digest_public_key;
   IdentifierInfo *kw_disable;
   IdentifierInfo *kw_dist;
-  IdentifierInfo *kw_elsif;
   IdentifierInfo *kw_edge;
+  IdentifierInfo *kw_elsif;
   IdentifierInfo *kw_end;
   IdentifierInfo *kw_end_keywords;
   IdentifierInfo *kw_endcase;
@@ -1670,6 +1707,8 @@ struct AdditionalKeywords {
   IdentifierInfo *kw_join;
   IdentifierInfo *kw_join_any;
   IdentifierInfo *kw_join_none;
+  IdentifierInfo *kw_key_block;
+  IdentifierInfo *kw_key_public_key;
   IdentifierInfo *kw_large;
   IdentifierInfo *kw_local;
   IdentifierInfo *kw_localparam;
@@ -1686,6 +1725,7 @@ struct AdditionalKeywords {
   IdentifierInfo *kw_priority;
   IdentifierInfo *kw_program;
   IdentifierInfo *kw_property;
+  IdentifierInfo *kw_protect;
   IdentifierInfo *kw_pull0;
   IdentifierInfo *kw_pull1;
   IdentifierInfo *kw_pure;

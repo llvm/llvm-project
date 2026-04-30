@@ -142,15 +142,15 @@ template<class T>
 
 // [numeric.sat], saturation arithmetic
 template<class T>
-constexpr T add_sat(T x, T y) noexcept;                     // freestanding, Since C++26
+constexpr T saturating_add(T x, T y) noexcept;                // freestanding, Since C++26
 template<class T>
-constexpr T sub_sat(T x, T y) noexcept;                     // freestanding, Since C++26
+constexpr T saturating_sub(T x, T y) noexcept;                // freestanding, Since C++26
 template<class T>
-constexpr T mul_sat(T x, T y) noexcept;                     // freestanding, Since C++26
+constexpr T saturating_mul(T x, T y) noexcept;                // freestanding, Since C++26
 template<class T>
-constexpr T div_sat(T x, T y) noexcept;                     // freestanding, Since C++26
+constexpr T saturating_div(T x, T y) noexcept;                // freestanding, Since C++26
 template<class T, class U>
-constexpr T saturate_cast(U x) noexcept;                    // freestanding, Since C++26
+constexpr T saturating_cast(U x) noexcept;                    // freestanding, Since C++26
 
 }  // std
 

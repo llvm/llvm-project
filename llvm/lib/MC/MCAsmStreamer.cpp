@@ -90,7 +90,7 @@ public:
                 std::unique_ptr<MCCodeEmitter> emitter,
                 std::unique_ptr<MCAsmBackend> asmbackend)
       : MCAsmBaseStreamer(Context), OSOwner(std::move(os)), OS(*OSOwner),
-        MAI(Context.getAsmInfo()), InstPrinter(std::move(printer)),
+        MAI(&Context.getAsmInfo()), InstPrinter(std::move(printer)),
         Assembler(std::make_unique<MCAssembler>(
             Context, std::move(asmbackend), std::move(emitter),
             (asmbackend) ? asmbackend->createObjectWriter(NullStream)
@@ -102,14 +102,12 @@ public:
 
     Context.setUseNamesOnTempLabels(true);
 
-    auto *TO = Context.getTargetOptions();
-    if (!TO)
-      return;
-    IsVerboseAsm = TO->AsmVerbose;
+    const MCTargetOptions &TO = Context.getTargetOptions();
+    IsVerboseAsm = TO.AsmVerbose;
     if (IsVerboseAsm)
       InstPrinter->setCommentStream(CommentStream);
-    ShowInst = TO->ShowMCInst;
-    switch (TO->MCUseDwarfDirectory) {
+    ShowInst = TO.ShowMCInst;
+    switch (TO.MCUseDwarfDirectory) {
     case MCTargetOptions::DisableDwarfDirectory:
       UseDwarfDirectory = false;
       break;
@@ -118,7 +116,7 @@ public:
       break;
     case MCTargetOptions::DefaultDwarfDirectory:
       UseDwarfDirectory =
-          Context.getAsmInfo()->enableDwarfFileDirectoryDefault();
+          Context.getAsmInfo().enableDwarfFileDirectoryDefault();
       break;
     }
   }
@@ -288,7 +286,8 @@ public:
 
   void emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
                          unsigned MaxBytesToEmit = 0) override;
-  void emitPrefAlign(Align Alignment) override;
+  void emitPrefAlign(Align Alignment, const MCSymbol &End, bool EmitNops,
+                     uint8_t Fill, const MCSubtargetInfo &STI) override;
 
   void emitValueToOffset(const MCExpr *Offset,
                          unsigned char Value,
@@ -1568,8 +1567,15 @@ void MCAsmStreamer::emitCodeAlignment(Align Alignment,
     emitAlignmentDirective(Alignment.value(), std::nullopt, 1, MaxBytesToEmit);
 }
 
-void MCAsmStreamer::emitPrefAlign(Align Alignment) {
-  OS << "\t.prefalign\t" << Alignment.value();
+void MCAsmStreamer::emitPrefAlign(Align Alignment, const MCSymbol &End,
+                                  bool EmitNops, uint8_t Fill,
+                                  const MCSubtargetInfo &) {
+  OS << "\t.prefalign\t" << Log2(Alignment) << ", ";
+  End.print(OS, MAI);
+  if (EmitNops)
+    OS << ", nop";
+  else
+    OS << ", " << static_cast<unsigned>(Fill);
   EmitEOL();
 }
 
@@ -2697,9 +2703,9 @@ void MCAsmStreamer::emitDwarfLineEndEntry(MCSection *Section,
 
   if (!EndLabel)
     EndLabel = TextSection->getEndSymbol(Ctx);
-  const MCAsmInfo *AsmInfo = Ctx.getAsmInfo();
+  const MCAsmInfo &AsmInfo = Ctx.getAsmInfo();
   emitDwarfAdvanceLineAddr(INT64_MAX, LastLabel, EndLabel,
-                           AsmInfo->getCodePointerSize());
+                           AsmInfo.getCodePointerSize());
 }
 
 // Generate DWARF line sections for assembly mode without .loc/.file

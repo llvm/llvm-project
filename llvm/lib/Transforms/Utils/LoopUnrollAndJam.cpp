@@ -584,20 +584,24 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
 
   // Apply updates to the DomTree.
   DT = &DTU.getDomTree();
+  // Update LoopInfo if the loop is completely removed, and store the loop
+  // blocks before they become unavailable after the update.
+  std::vector<BasicBlock *> Blocks = L->getBlocks();
+  if (CompletelyUnroll) {
+    LI->erase(L);
+    L = nullptr;
+  }
 
   // At this point, the code is well formed.  We now do a quick sweep over the
   // inserted code, doing constant propagation and dead code elimination as we
   // go.
-  simplifyLoopAfterUnroll(SubLoop, true, LI, SE, DT, AC, TTI);
+  simplifyLoopAfterUnroll(SubLoop, true, LI, SE, DT, AC, TTI,
+                          SubLoop->getBlocks());
   simplifyLoopAfterUnroll(L, !CompletelyUnroll && Count > 1, LI, SE, DT, AC,
-                          TTI);
+                          TTI, Blocks);
 
   NumCompletelyUnrolledAndJammed += CompletelyUnroll;
   ++NumUnrolledAndJammed;
-
-  // Update LoopInfo if the loop is completely removed.
-  if (CompletelyUnroll)
-    LI->erase(L);
 
 #ifndef NDEBUG
   // We shouldn't have done anything to break loop simplify form or LCSSA.

@@ -30,6 +30,7 @@ include "mlir/Dialect/NVGPU/IR/NVGPUTypes.td"
 class NVGPU_Op<string mnemonic, list<Trait> traits = []> :
   Op<NVGPU_Dialect, mnemonic, traits> {}
 
+// Promises IndexedAccessOpInterface.
 def NVGPU_LdMatrixOp : NVGPU_Op<"ldmatrix", [
                                 MemoryEffects<[MemRead]>,
                                 PredOpTrait<"srcMemref and res have same element type",
@@ -183,6 +184,7 @@ def NVGPU_MmaSparseSyncOp : NVGPU_MmaSyncOp<"mma.sp.sync"> {
   let extraClassDeclaration = extraBaseClassDeclaration;
 }
 
+// Promises IndexedMemCopyOpInterface.
 def NVGPU_DeviceAsyncCopyOp : NVGPU_Op<"device_async_copy", [
                                        AttrSizedOperandSegments]> {
   let summary = "device-side asynchronous copy";

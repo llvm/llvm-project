@@ -13,6 +13,8 @@
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/FormatAdapters.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
@@ -30,19 +32,20 @@ uint8_t DWARFDebugMacro::MacroHeader::getOffsetByteSize() const {
 
 void DWARFDebugMacro::MacroHeader::dumpMacroHeader(raw_ostream &OS) const {
   // FIXME: Add support for dumping opcode_operands_table
-  OS << format("macro header: version = 0x%04" PRIx16, Version)
-     << format(", flags = 0x%02" PRIx8, Flags)
+  OS << formatv("macro header: version = {0:x4}", Version)
+     << formatv(", flags = {0:x2}", Flags)
      << ", format = " << FormatString(getDwarfFormat());
   if (Flags & MACRO_DEBUG_LINE_OFFSET)
-    OS << format(", debug_line_offset = 0x%0*" PRIx64, 2 * getOffsetByteSize(),
-                 DebugLineOffset);
+    OS << formatv(", debug_line_offset = 0x{0:x-}",
+                  fmt_align(DebugLineOffset, AlignStyle::Right,
+                            2 * getOffsetByteSize(), '0'));
   OS << "\n";
 }
 
 void DWARFDebugMacro::dump(raw_ostream &OS) const {
   unsigned IndLevel = 0;
   for (const auto &Macros : MacroLists) {
-    OS << format("0x%08" PRIx64 ":\n", Macros.Offset);
+    OS << formatv("{0:x8}:\n", Macros.Offset);
     if (Macros.IsDebugMacro)
       Macros.Header.dumpMacroHeader(OS);
     for (const Entry &E : Macros.Macros) {
@@ -89,8 +92,9 @@ void DWARFDebugMacro::dump(raw_ostream &OS) const {
         OS << " filenum: " << E.File;
         break;
       case DW_MACRO_import:
-        OS << format(" - import offset: 0x%0*" PRIx64,
-                     2 * Macros.Header.getOffsetByteSize(), E.ImportOffset);
+        OS << formatv(" - import offset: 0x{0:x-}",
+                      fmt_align(E.ImportOffset, AlignStyle::Right,
+                                2 * Macros.Header.getOffsetByteSize(), '0'));
         break;
       case DW_MACRO_end_file:
         break;

@@ -16,6 +16,7 @@ static_library("Host") {
   ]
   public_deps = [ "//llvm/utils/gn/build/libs/xml" ]
   sources = [
+    "common/ConPTYUtils.cpp",
     "common/DiagnosticsRendering.cpp",
     "common/File.cpp",
     "common/FileAction.cpp",
@@ -51,7 +52,6 @@ static_library("Host") {
     "common/UDPSocket.cpp",
     "common/XML.cpp",
     "common/ZipFileResolver.cpp",
-    "windows/WindowsFileAction.cpp",
   ]
 
   if (lldb_enable_libedit) {
@@ -79,6 +79,7 @@ static_library("Host") {
       "windows/ProcessLauncherWindows.cpp",
       "windows/ProcessRunLock.cpp",
       "windows/PseudoConsole.cpp",
+      "windows/WindowsFileAction.cpp",
     ]
   } else {
     sources += [

@@ -139,7 +139,7 @@ PWACtx SCEVAffinator::checkForWrapping(const SCEV *Expr, PWACtx PWAC) const {
   // whereas n is the number of bits of the Expr, hence:
   //   n = bitwidth(ExprType)
 
-  if (IgnoreIntegerWrapping || (getNoWrapFlags(Expr) & SCEV::FlagNSW))
+  if (IgnoreIntegerWrapping || any(getNoWrapFlags(Expr) & SCEV::FlagNSW))
     return PWAC;
 
   isl::pw_aff PWAMod = addModuloSemantic(PWAC.first, Expr->getType());

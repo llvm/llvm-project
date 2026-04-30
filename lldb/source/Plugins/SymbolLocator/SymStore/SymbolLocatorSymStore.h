@@ -43,6 +43,14 @@ public:
   static std::optional<FileSpec>
   LocateExecutableSymbolFile(const ModuleSpec &module_spec,
                              const FileSpecList &default_search_paths);
+
+  struct LookupEntry {
+    std::string source;
+    std::optional<std::string> cache;
+  };
+
+  static std::vector<LookupEntry> ParseEnvSymbolPaths(llvm::StringRef val);
+  static std::string GetSystemDefaultCachePath();
 };
 
 } // namespace lldb_private

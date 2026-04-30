@@ -207,6 +207,7 @@ PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
          "available.");
 
   llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile> file_specs;
+  const FileSpec original_module_spec = module_spec;
   while (module_spec.GetFilename()) {
     ScriptInterpreter::SanitizedScriptingModuleName sanitized_name =
         target.GetDebugger()
@@ -236,8 +237,9 @@ PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
                                          orig_script_fspec, script_fspec);
 
     if (FileSystem::Instance().Exists(script_fspec)) {
-      file_specs.try_emplace(std::move(script_fspec),
-                             target.GetLoadScriptFromSymbolFile());
+      LoadScriptFromSymFile load_style =
+          Platform::GetScriptLoadStyleForModule(original_module_spec, target);
+      file_specs.try_emplace(std::move(script_fspec), load_style);
       break;
     }
 
@@ -1107,11 +1109,11 @@ ResolveSDKPathFromDebugInfo(lldb_private::Target *target) {
 
   ModuleSP exe_module_sp = target->GetExecutableModule();
   if (!exe_module_sp)
-    return llvm::createStringError("Failed to get module from target");
+    return llvm::createStringError("failed to get module from target");
 
   SymbolFile *sym_file = exe_module_sp->GetSymbolFile();
   if (!sym_file)
-    return llvm::createStringError("Failed to get symbol file from executable");
+    return llvm::createStringError("failed to get symbol file from executable");
 
   if (sym_file->GetNumCompileUnits() == 0)
     return llvm::createStringError(
@@ -1561,4 +1563,39 @@ PlatformDarwin::ResolveSDKPathFromDebugInfo(CompileUnit &unit) {
                       llvm::toString(path_or_err.takeError())));
 
   return path_or_err->str();
+}
+
+llvm::Expected<FileSpecList>
+PlatformDarwin::GetSafeAutoLoadPaths(const Target &target) const {
+  Log *log = GetLog(LLDBLog::Modules | LLDBLog::Platform);
+
+  XcodeSDK::Type sdk_type =
+      XcodeSDK::GetSDKTypeForTriple(target.GetArchitecture().GetTriple());
+  XcodeSDK::Info info;
+  info.type = sdk_type;
+  XcodeSDK sdk(info);
+
+  auto sdk_root_or_err = HostInfo::GetSDKRoot(HostInfo::SDKOptions{sdk});
+  if (!sdk_root_or_err) {
+    LLDB_LOG_ERROR(log, sdk_root_or_err.takeError(),
+                   "Failed to resolve SDK root for triple '{1}': {0}",
+                   target.GetArchitecture().GetTriple().str());
+
+    // Fall back to any macOS SDK.
+    sdk = XcodeSDK::GetAnyMacOS();
+    LLDB_LOG(log, "Falling back to SDK '{0}'", sdk.GetString());
+    sdk_root_or_err = HostInfo::GetSDKRoot(HostInfo::SDKOptions{sdk});
+  }
+
+  if (!sdk_root_or_err)
+    return sdk_root_or_err.takeError();
+
+  // $SDKROOT/usr/share/lldb is an auto-loadable path.
+  llvm::SmallString<256> resolved(*sdk_root_or_err);
+  llvm::sys::path::append(resolved, "usr", "share", "lldb");
+
+  FileSpecList fspecs;
+  fspecs.Append(FileSpec(resolved));
+
+  return fspecs;
 }

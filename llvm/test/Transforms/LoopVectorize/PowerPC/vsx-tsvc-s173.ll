@@ -8,7 +8,7 @@ target triple = "powerpc64-unknown-linux-gnu"
 @global_data = external global %struct.GlobalData, align 16
 @ntimes = external hidden unnamed_addr global i32, align 4
 
-define signext i32 @s173() #0 {
+define signext i32 @s173() {
 ; CHECK-LABEL: define signext i32 @s173(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -102,11 +102,11 @@ entry:
   %cmp21 = icmp sgt i32 %0, 0
   br i1 %cmp21, label %for.cond1.preheader, label %for.end12
 
-for.cond1.preheader:                              ; preds = %for.end, %entry
+for.cond1.preheader:
   %nl.022 = phi i32 [ %inc11, %for.end ], [ 0, %entry ]
   br label %for.body3
 
-for.body3:                                        ; preds = %for.body3, %for.cond1.preheader
+for.body3:
   %indvars.iv = phi i64 [ 0, %for.cond1.preheader ], [ %indvars.iv.next, %for.body3 ]
   %arrayidx = getelementptr inbounds %struct.GlobalData, ptr @global_data, i64 0, i32 0, i64 %indvars.iv
   %1 = load float, ptr %arrayidx, align 4
@@ -120,19 +120,17 @@ for.body3:                                        ; preds = %for.body3, %for.con
   %exitcond = icmp eq i64 %indvars.iv.next, 16000
   br i1 %exitcond, label %for.end, label %for.body3
 
-for.end:                                          ; preds = %for.body3
+for.end:
   %inc11 = add nsw i32 %nl.022, 1
   %4 = load i32, ptr @ntimes, align 4
   %mul = mul nsw i32 %4, 10
   %cmp = icmp slt i32 %inc11, %mul
   br i1 %cmp, label %for.cond1.preheader, label %for.end12
 
-for.end12:                                        ; preds = %for.end, %entry
+for.end12:
   ret i32 0
 
 }
-
-attributes #0 = { nounwind }
 
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}

@@ -225,9 +225,9 @@ define amdgpu_kernel void @test_readlane_imm_sreg_i64(ptr addrspace(1) %out, i32
 ; CHECK-GISEL:       ; %bb.0:
 ; CHECK-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; CHECK-GISEL-NEXT:    s_add_i32 s12, s12, s17
-; CHECK-GISEL-NEXT:    v_mov_b32_e32 v0, 32
 ; CHECK-GISEL-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; CHECK-GISEL-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; CHECK-GISEL-NEXT:    v_mov_b32_e32 v0, 32
 ; CHECK-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-GISEL-NEXT:    v_mov_b32_e32 v3, s1
 ; CHECK-GISEL-NEXT:    v_mov_b32_e32 v1, 0
@@ -258,9 +258,9 @@ define amdgpu_kernel void @test_readlane_imm_sreg_f64(ptr addrspace(1) %out, i32
 ; CHECK-GISEL:       ; %bb.0:
 ; CHECK-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; CHECK-GISEL-NEXT:    s_add_i32 s12, s12, s17
-; CHECK-GISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-GISEL-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; CHECK-GISEL-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; CHECK-GISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-GISEL-NEXT:    v_mov_b32_e32 v3, s1
 ; CHECK-GISEL-NEXT:    v_mov_b32_e32 v1, 0x40400000

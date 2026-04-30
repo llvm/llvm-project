@@ -270,7 +270,7 @@ multiclass VPseudoVNCVTD_W_RM_BF16 {
                          forcePassthruRead=true>;
 }
 
-let Predicates = [HasStdExtZvfbfa], AltFmtType = IS_ALTFMT in {
+let Predicates = [HasVInstructionsBF16], AltFmtType = IS_ALTFMT in {
 let mayRaiseFPException = true in {
 defm PseudoVFADD_ALT : VPseudoVALU_VV_VF_RM_BF16;
 defm PseudoVFSUB_ALT  : VPseudoVALU_VV_VF_RM_BF16;
@@ -375,7 +375,7 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
 
 defm PseudoVFSLIDE1UP_ALT   : VPseudoVSLD1_VF<"@earlyclobber $rd">;
 defm PseudoVFSLIDE1DOWN_ALT : VPseudoVSLD1_VF;
-} // Predicates = [HasStdExtZvfbfa], AltFmtType = IS_ALTFMT
+} // Predicates = [HasVInstructionsBF16], AltFmtType = IS_ALTFMT
 
 //===----------------------------------------------------------------------===//
 // Patterns
@@ -490,7 +490,7 @@ multiclass VPatConversionVF_WF_BF16<string intrinsic, string instruction,
   }
 }
 
-let Predicates = [HasStdExtZvfbfa] in {
+let Predicates = [HasVInstructionsBF16] in {
 defm : VPatBinaryV_VV_VX_RM<"int_riscv_vfadd", "PseudoVFADD_ALT",
                             AllBF16Vectors, isSEWAware = 1>;
 defm : VPatBinaryV_VV_VX_RM<"int_riscv_vfsub", "PseudoVFSUB_ALT",
@@ -581,4 +581,4 @@ defm : VPatConversionVF_WF_BF16<"int_riscv_vfncvt_rod_f_f_w", "PseudoVFNCVT_ROD_
                                 isSEWAware=1>;
 defm : VPatBinaryV_VX<"int_riscv_vfslide1up", "PseudoVFSLIDE1UP_ALT", AllBF16Vectors>;
 defm : VPatBinaryV_VX<"int_riscv_vfslide1down", "PseudoVFSLIDE1DOWN_ALT", AllBF16Vectors>;
-} // Predicates = [HasStdExtZvfbfa]
+} // Predicates = [HasVInstructionsBF16]

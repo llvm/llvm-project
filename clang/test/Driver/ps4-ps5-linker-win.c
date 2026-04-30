@@ -16,8 +16,9 @@
 // RUN: env "PATH=%t;%PATH%;" %clang -target x86_64-sie-ps5  %s -shared -### 2>&1 \
 // RUN:   | FileCheck --check-prefixes=CHECK-PS5-LINKER,SHARED %s
 
-// CHECK-PS4-LINKER: \\orbis-ld
-// CHECK-PS5-LINKER: \\prospero-lld
+// Forward or backward slashes can be used depending on LLVM_WINDOWS_PREFER_FORWARD_SLASH.
+// CHECK-PS4-LINKER: {{/|\\\\}}orbis-ld
+// CHECK-PS5-LINKER: {{/|\\\\}}prospero-lld
 // SHARED: "--shared"
 
 // RUN: env "PATH=%t;%PATH%;" not %clang --target=x86_64-scei-ps4 %s -fuse-ld=gold -### 2>&1 \

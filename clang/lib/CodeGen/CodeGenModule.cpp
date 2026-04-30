@@ -247,6 +247,7 @@ createTargetCodeGenInfo(CodeGenModule &CGM) {
 
   case llvm::Triple::tce:
   case llvm::Triple::tcele:
+  case llvm::Triple::tcele64:
     return createTCETargetCodeGenInfo(CGM);
 
   case llvm::Triple::x86: {
@@ -1163,6 +1164,13 @@ void CodeGenModule::Release() {
         llvm::Module::Warning, "cfguard",
         static_cast<unsigned>(llvm::ControlFlowGuardMode::TableOnly));
   }
+  if (CodeGenOpts.getWinControlFlowGuardMechanism() !=
+      llvm::ControlFlowGuardMechanism::Automatic) {
+    // Specify the Control Flow Guard mechanism to use on Windows.
+    getModule().addModuleFlag(
+        llvm::Module::Warning, "cfguard-mechanism",
+        static_cast<unsigned>(CodeGenOpts.getWinControlFlowGuardMechanism()));
+  }
   if (CodeGenOpts.EHContGuard) {
     // Function ID tables for EH Continuation Guard.
     getModule().addModuleFlag(llvm::Module::Warning, "ehcontguard", 1);
@@ -1383,12 +1391,12 @@ void CodeGenModule::Release() {
                                 "sign-return-address-with-bkey", 2);
 
     if (LangOpts.PointerAuthELFGOT)
-      getModule().addModuleFlag(llvm::Module::Min, "ptrauth-elf-got", 1);
+      getModule().addModuleFlag(llvm::Module::Error, "ptrauth-elf-got", 1);
 
     if (getTriple().isOSLinux()) {
       if (LangOpts.PointerAuthCalls)
-        getModule().addModuleFlag(llvm::Module::Min, "ptrauth-sign-personality",
-                                  1);
+        getModule().addModuleFlag(llvm::Module::Error,
+                                  "ptrauth-sign-personality", 1);
       assert(getTriple().isOSBinFormatELF());
       using namespace llvm::ELF;
       uint64_t PAuthABIVersion =
@@ -2966,6 +2974,9 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
   // function attribute.
   if (CodeGenOpts.DisableOutlining || D->hasAttr<NoOutlineAttr>())
     B.addAttribute(llvm::Attribute::NoOutline);
+
+  if (D->hasAttr<FlattenAttr>())
+    B.addAttribute(llvm::Attribute::Flatten);
 
   F->addFnAttrs(B);
 
@@ -5981,6 +5992,10 @@ void CodeGenModule::EmitExternalDeclaration(const DeclaratorDecl *D) {
     return;
 
   llvm::Constant *Addr = GetAddrOfGlobal(GD)->stripPointerCasts();
+  if (auto *GA = dyn_cast<llvm::GlobalAlias>(Addr)) {
+    DI->EmitGlobalAlias(GA, GD);
+    return;
+  }
   if (const auto *VD = dyn_cast<VarDecl>(D)) {
     DI->EmitExternalVariable(
         cast<llvm::GlobalVariable>(Addr->stripPointerCasts()), VD);
@@ -7777,6 +7792,7 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
     break;
 
   case Decl::StaticAssert:
+  case Decl::ExplicitInstantiation:
     // Nothing to do.
     break;
 
@@ -7909,7 +7925,7 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
         EmitTopLevelDecl(D);
 
       // Visit the submodules of this module.
-      for (auto *Submodule : Mod->submodules()) {
+      for (Module *Submodule : Mod->submodules()) {
         // Skip explicit children; they need to be explicitly imported to emit
         // the initializers.
         if (Submodule->IsExplicit)
@@ -8315,8 +8331,7 @@ void CodeGenModule::EmitOMPThreadPrivateDecl(const OMPThreadPrivateDecl *D) {
     auto *VD = cast<VarDecl>(cast<DeclRefExpr>(RefExpr)->getDecl());
     bool PerformInit =
         VD->getAnyInitializer() &&
-        !VD->getAnyInitializer()->isConstantInitializer(getContext(),
-                                                        /*ForRef=*/false);
+        !VD->getAnyInitializer()->isConstantInitializer(getContext());
 
     Address Addr(GetAddrOfGlobalVar(VD),
                  getTypes().ConvertTypeForMem(VD->getType()),

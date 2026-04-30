@@ -78,7 +78,11 @@ static cl::opt<LoopVectorizeHints::ScalableForceKind>
             clEnumValN(
                 LoopVectorizeHints::SK_PreferScalable, "on",
                 "Scalable vectorization is available and favored when the "
-                "cost is inconclusive.")));
+                "cost is inconclusive."),
+            clEnumValN(
+                LoopVectorizeHints::SK_AlwaysScalable, "always",
+                "Scalable vectorization is available and always favored when "
+                "feasible")));
 
 static cl::opt<bool> EnableHistogramVectorization(
     "enable-histogram-loop-vectorization", cl::init(false), cl::Hidden,
@@ -162,19 +166,9 @@ LoopVectorizeHints::LoopVectorizeHints(const Loop *L,
 }
 
 void LoopVectorizeHints::setAlreadyVectorized() {
-  LLVMContext &Context = TheLoop->getHeader()->getContext();
-
-  MDNode *IsVectorizedMD = MDNode::get(
-      Context,
-      {MDString::get(Context, "llvm.loop.isvectorized"),
-       ConstantAsMetadata::get(ConstantInt::get(Context, APInt(32, 1)))});
-  MDNode *LoopID = TheLoop->getLoopID();
-  MDNode *NewLoopID =
-      makePostTransformationMetadata(Context, LoopID,
-                                     {Twine(Prefix(), "vectorize.").str(),
-                                      Twine(Prefix(), "interleave.").str()},
-                                     {IsVectorizedMD});
-  TheLoop->setLoopID(NewLoopID);
+  TheLoop->addIntLoopAttribute("llvm.loop.isvectorized", 1,
+                               {Twine(Prefix(), "vectorize.").str(),
+                                Twine(Prefix(), "interleave.").str()});
 
   // Update internal cache.
   IsVectorized.Value = 1;
@@ -2070,11 +2064,6 @@ bool LoopVectorizationLegality::canFoldTailByMasking() const {
   }
 
   LLVM_DEBUG(dbgs() << "LV: checking if tail can be folded by masking.\n");
-
-  SmallPtrSet<const Value *, 8> ReductionLiveOuts;
-
-  for (const auto &Reduction : getReductionVars())
-    ReductionLiveOuts.insert(Reduction.second.getLoopExitInstr());
 
   // The list of pointers that we can safely read and write to remains empty.
   SmallPtrSet<Value *, 8> SafePointers;

@@ -2301,18 +2301,24 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_vpshufbitqmb512_mask:
   case X86::BI__builtin_ia32_cmpeqps:
   case X86::BI__builtin_ia32_cmpeqpd:
+    return emitVectorFCmp(*this, *expr, ops, cir::CmpOpKind::eq,
+                          /*shouldInvert=*/false);
   case X86::BI__builtin_ia32_cmpltps:
   case X86::BI__builtin_ia32_cmpltpd:
+    return emitVectorFCmp(*this, *expr, ops, cir::CmpOpKind::lt,
+                          /*shouldInvert=*/false);
   case X86::BI__builtin_ia32_cmpleps:
   case X86::BI__builtin_ia32_cmplepd:
+    return emitVectorFCmp(*this, *expr, ops, cir::CmpOpKind::le,
+                          /*shouldInvert=*/false);
   case X86::BI__builtin_ia32_cmpunordps:
   case X86::BI__builtin_ia32_cmpunordpd:
+    return emitVectorFCmp(*this, *expr, ops, cir::CmpOpKind::uno,
+                          /*shouldInvert=*/false);
   case X86::BI__builtin_ia32_cmpneqps:
   case X86::BI__builtin_ia32_cmpneqpd:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented X86 builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinID));
-    return mlir::Value{};
+    return emitVectorFCmp(*this, *expr, ops, cir::CmpOpKind::ne,
+                          /*shouldInvert=*/false);
   case X86::BI__builtin_ia32_cmpnltps:
   case X86::BI__builtin_ia32_cmpnltpd:
     return emitVectorFCmp(*this, *expr, ops, cir::CmpOpKind::lt,
@@ -2323,6 +2329,8 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
                           /*shouldInvert=*/true);
   case X86::BI__builtin_ia32_cmpordps:
   case X86::BI__builtin_ia32_cmpordpd:
+    return emitVectorFCmp(*this, *expr, ops, cir::CmpOpKind::uno,
+                          /*shouldInvert=*/true);
   case X86::BI__builtin_ia32_cmpph128_mask:
   case X86::BI__builtin_ia32_cmpph256_mask:
   case X86::BI__builtin_ia32_cmpph512_mask:

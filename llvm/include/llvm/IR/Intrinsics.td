@@ -228,6 +228,9 @@ def IntrHasSideEffects : IntrinsicProperty;
 // poison.
 def IntrNoCreateUndefOrPoison : IntrinsicProperty;
 
+// This property indicates that the intrinsic is trivially scalarizable.
+def IntrTriviallyScalarizable : IntrinsicProperty;
+
 //===----------------------------------------------------------------------===//
 // IIT constants and utils
 //===----------------------------------------------------------------------===//
@@ -324,7 +327,7 @@ def IIT_V64 : IIT_Vec<64, 16>;
 def IIT_MMX : IIT_VT<x86mmx, 17>;
 def IIT_TOKEN : IIT_VT<token, 18>;
 def IIT_METADATA : IIT_VT<MetadataVT, 19>;
-def IIT_EMPTYSTRUCT : IIT_VT<OtherVT, 20>;
+// Note: Unused IIT code 20.
 def IIT_STRUCT : IIT_Base<21>;
 def IIT_EXTEND_ARG : IIT_Base<22>;
 def IIT_TRUNC_ARG : IIT_Base<23>;
@@ -391,8 +394,8 @@ class LLVMType<ValueType vt> {
          "Invalid IIT encoding for vector type v" # vt.nElem # vt.ElementType;
 
   list<int> Sig = !listconcat(
-    !if(vt.isScalable, [IIT_SCALABLE_VEC.Number], []),
     !foreach(iit, IIT_Vecs, iit.Number),
+    !if(vt.isScalable, [IIT_SCALABLE_VEC.Number], []),
     !foreach(iit, IITs,     iit.Number));
 }
 
@@ -2549,12 +2552,12 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<1>>] in {
 
 def int_loop_dependence_raw_mask:
   DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-            [llvm_ptr_ty, llvm_ptr_ty, llvm_i64_ty],
+            [llvm_anyint_ty, LLVMMatchType<1>, LLVMMatchType<1>],
             [IntrNoMem, IntrNoSync, IntrWillReturn, ImmArg<ArgIndex<2>>]>;
 
 def int_loop_dependence_war_mask:
   DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-            [llvm_ptr_ty, llvm_ptr_ty, llvm_i64_ty],
+            [llvm_anyint_ty, LLVMMatchType<1>, LLVMMatchType<1>],
             [IntrNoMem, IntrNoSync, IntrWillReturn, ImmArg<ArgIndex<2>>]>;
 
 def int_get_active_lane_mask:
@@ -2640,6 +2643,34 @@ def int_experimental_vector_compress:
     DefaultAttrsIntrinsic<[llvm_anyvector_ty],
               [LLVMMatchType<0>, LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, LLVMMatchType<0>],
               [IntrNoMem]>;
+
+def int_masked_udiv:
+  DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+            [LLVMMatchType<0>,
+             LLVMMatchType<0>,
+             LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
+            [IntrNoMem]>;
+
+def int_masked_sdiv:
+  DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+            [LLVMMatchType<0>,
+             LLVMMatchType<0>,
+             LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
+            [IntrNoMem]>;
+
+def int_masked_urem:
+  DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+            [LLVMMatchType<0>,
+             LLVMMatchType<0>,
+             LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
+            [IntrNoMem]>;
+
+def int_masked_srem:
+  DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+            [LLVMMatchType<0>,
+             LLVMMatchType<0>,
+             LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
+            [IntrNoMem]>;
 
 // Test whether a pointer is associated with a type metadata identifier.
 def int_type_test : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_ptr_ty, llvm_metadata_ty],

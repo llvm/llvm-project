@@ -473,25 +473,32 @@ EXTERN int __tgt_target_kernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
 /// Activates the record replay mechanism.
 /// \param DeviceId The device identifier to execute the target region.
 /// \param MemorySize The number of bytes to be (pre-)allocated
-///                   by the bump allocator
+///                   by the record replay allocator.
 /// /param IsRecord Activates the record replay mechanism in
-///                 'record' mode or 'replay' mode.
+///                 'record' or 'replay' mode.
 /// /param SaveOutput Store the device memory after kernel
-///                   execution on persistent storage
+///                   execution on persistent storage.
+/// /param EmitReport Emit a summary report after the recording.
+/// /param OutputDirPath The output directory where the record replay files
+/// should be stored. An empty string or nullptr indicates the current working
+/// directory should be used.
 EXTERN int __tgt_activate_record_replay(int64_t DeviceId, uint64_t MemorySize,
                                         void *VAddr, bool IsRecord,
-                                        bool SaveOutput,
-                                        uint64_t &ReqPtrArgOffset) {
+                                        bool SaveOutput, bool EmitReport,
+                                        const char *OutputDirPath) {
   assert(PM && "Runtime not initialized");
   OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   auto DeviceOrErr = PM->getDevice(DeviceId);
   if (!DeviceOrErr)
     FATAL_MESSAGE(DeviceId, "%s", toString(DeviceOrErr.takeError()).c_str());
 
-  [[maybe_unused]] int Rc = target_activate_rr(
-      *DeviceOrErr, MemorySize, VAddr, IsRecord, SaveOutput, ReqPtrArgOffset);
-  assert(Rc == OFFLOAD_SUCCESS &&
-         "__tgt_activate_record_replay unexpected failure!");
+  int Rc = target_activate_rr(*DeviceOrErr, MemorySize, VAddr, IsRecord,
+                              SaveOutput, EmitReport, OutputDirPath);
+  if (Rc != OFFLOAD_SUCCESS) {
+    ODBG(ODT_Interface) << "Record replay failed to activate in device "
+                        << DeviceId;
+    return OMP_TGT_FAIL;
+  }
   return OMP_TGT_SUCCESS;
 }
 
@@ -502,6 +509,9 @@ EXTERN int __tgt_activate_record_replay(int64_t DeviceId, uint64_t MemorySize,
 /// \param DeviceMemory A pointer to an array storing device memory data to move
 ///                     prior to kernel execution.
 /// \param DeviceMemorySize The size of the above device memory data in bytes.
+/// \param ReuseDeviceAlloc Pointer to a device memory allocation that should be
+///                         reused for the replay. If null, the replay will
+///                         allocate the necessary device buffer.
 /// \param TgtArgs An array of pointers of the pre-recorded target kernel
 ///                arguments.
 /// \param TgtOffsets An array of pointers of the pre-recorded target kernel
@@ -512,12 +522,13 @@ EXTERN int __tgt_activate_record_replay(int64_t DeviceId, uint64_t MemorySize,
 ///                    execution.
 /// \param LoopTripCount The pre-recorded value of the loop tripcount, if any.
 /// \return OMP_TGT_SUCCESS on success, OMP_TGT_FAIL on failure.
-EXTERN int __tgt_target_kernel_replay(ident_t *Loc, int64_t DeviceId,
-                                      void *HostPtr, void *DeviceMemory,
-                                      int64_t DeviceMemorySize, void **TgtArgs,
-                                      ptrdiff_t *TgtOffsets, int32_t NumArgs,
-                                      int32_t NumTeams, int32_t ThreadLimit,
-                                      uint64_t LoopTripCount) {
+EXTERN int __tgt_target_kernel_replay(
+    ident_t *Loc, int64_t DeviceId, void *HostPtr, void *DeviceMemory,
+    void *ReuseDeviceAlloc, int64_t DeviceMemorySize,
+    const llvm::offloading::EntryTy *Globals, int32_t NumGlobals,
+    void **TgtArgs, ptrdiff_t *TgtOffsets, int32_t NumArgs, int32_t NumTeams,
+    int32_t ThreadLimit, uint32_t SharedMemorySize, uint64_t LoopTripCount,
+    KernelReplayOutcomeTy *ReplayOutcome) {
   assert(PM && "Runtime not initialized");
   OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   if (checkDevice(DeviceId, Loc)) {
@@ -534,14 +545,19 @@ EXTERN int __tgt_target_kernel_replay(ident_t *Loc, int64_t DeviceId,
                     /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
   AsyncInfoTy AsyncInfo(*DeviceOrErr);
-  int Rc = target_replay(Loc, *DeviceOrErr, HostPtr, DeviceMemory,
-                         DeviceMemorySize, TgtArgs, TgtOffsets, NumArgs,
-                         NumTeams, ThreadLimit, LoopTripCount, AsyncInfo);
+  int Rc =
+      target_replay(Loc, *DeviceOrErr, HostPtr, DeviceMemory, DeviceMemorySize,
+                    ReuseDeviceAlloc, Globals, NumGlobals, TgtArgs, TgtOffsets,
+                    NumArgs, NumTeams, ThreadLimit, SharedMemorySize,
+                    LoopTripCount, AsyncInfo, ReplayOutcome);
+
   if (Rc == OFFLOAD_SUCCESS)
     Rc = AsyncInfo.synchronize();
-  handleTargetOutcome(Rc == OFFLOAD_SUCCESS, Loc);
-  assert(Rc == OFFLOAD_SUCCESS &&
-         "__tgt_target_kernel_replay unexpected failure!");
+
+  if (Rc != OFFLOAD_SUCCESS) {
+    ODBG(ODT_Interface) << "Kernel replay failed in device " << DeviceId;
+    return OMP_TGT_FAIL;
+  }
   return OMP_TGT_SUCCESS;
 }
 

@@ -42,7 +42,7 @@ __global__ void global_fn(int a) {}
 // CIR-DEVICE: cir.func {{.*}}{{.*}} @_Z9global_fni
 // OGCG-DEVICE: define protected amdgpu_kernel void @_Z9global_fni
 
-// CIR-HOST: @_Z24__device_stub__global_fni{{.*}}attributes {cu.kernel_name = #cir.cu.kernel_name<_Z9global_fni>{{.*}}}
+// CIR-HOST: @_Z24__device_stub__global_fni{{.*}}attributes {{{.*}}cu.kernel_name = #cir.cu.kernel_name<"_Z9global_fni">{{.*}}}
 // CIR-HOST: %[[#CIRKernelArgs:]] = cir.alloca {{.*}}"kernel_args"
 // CIR-HOST: %[[#Decayed:]] = cir.cast array_to_ptrdecay %[[#CIRKernelArgs]]
 // CIR-HOST: cir.call @__hipPopCallConfiguration

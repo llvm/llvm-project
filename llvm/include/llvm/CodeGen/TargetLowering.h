@@ -996,8 +996,9 @@ public:
   /// Return the ValueType for comparison libcalls. Comparison libcalls include
   /// floating point comparison calls, and Ordered/Unordered check calls on
   /// floating point numbers.
-  virtual
-  MVT::SimpleValueType getCmpLibcallReturnType() const;
+  virtual MVT::SimpleValueType getCmpLibcallReturnType() const {
+    return MVT::i32; // return the default value
+  }
 
   /// For targets without i1 registers, this gives the nature of the high-bits
   /// of boolean values held in types wider than i1.
@@ -2298,6 +2299,14 @@ public:
   virtual AtomicOrdering
   atomicOperationOrderAfterFenceSplit(const Instruction *I) const {
     return AtomicOrdering::Monotonic;
+  }
+
+  // Whether to issue an atomic load for the initial word value before the
+  // atomicrmw/cmpxchg emulation loop.
+  // TODO: For correctness, an atomic load should be issued for all targets.
+  // Remove this API once this is achieved
+  virtual bool shouldIssueAtomicLoadForAtomicEmulationLoop(void) const {
+    return true;
   }
 
   /// Perform a load-linked operation on Addr, returning a "Value *" with the
@@ -5690,6 +5699,11 @@ public:
   /// \param N Node to expand
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandVectorFindLastActive(SDNode *N, SelectionDAG &DAG) const;
+
+  /// Expand LOOP_DEPENDENCE_MASK nodes
+  /// \param N Node to expand
+  /// \returns The expansion result or SDValue() if it fails.
+  SDValue expandLoopDependenceMask(SDNode *N, SelectionDAG &DAG) const;
 
   /// Expand ABS nodes. Expands vector/scalar ABS nodes,
   /// vector nodes can only succeed if all operations are legal/custom.

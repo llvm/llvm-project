@@ -285,6 +285,7 @@ bool CachingVPExpander::expandPredicationToFPCall(
 
   switch (UnpredicatedIntrinsicID) {
   case Intrinsic::fabs:
+  case Intrinsic::copysign:
   case Intrinsic::sqrt:
   case Intrinsic::maxnum:
   case Intrinsic::minnum:
@@ -298,7 +299,8 @@ bool CachingVPExpander::expandPredicationToFPCall(
   case Intrinsic::rint:
   case Intrinsic::nearbyint:
   case Intrinsic::lrint:
-  case Intrinsic::llrint: {
+  case Intrinsic::llrint:
+  case Intrinsic::is_fpclass: {
     SmallVector<Value *, 2> Argument;
     for (unsigned i = 0; i < VPI.getNumOperands() - 3; i++) {
       Argument.push_back(VPI.getOperand(i));
@@ -619,6 +621,7 @@ bool CachingVPExpander::expandPredication(VPIntrinsic &VPI) {
   case Intrinsic::vp_fshr:
     return expandPredicationToIntCall(Builder, VPI);
   case Intrinsic::vp_fabs:
+  case Intrinsic::vp_copysign:
   case Intrinsic::vp_sqrt:
   case Intrinsic::vp_maxnum:
   case Intrinsic::vp_minnum:
@@ -635,6 +638,7 @@ bool CachingVPExpander::expandPredication(VPIntrinsic &VPI) {
   case Intrinsic::vp_llrint:
   case Intrinsic::vp_fma:
   case Intrinsic::vp_fmuladd:
+  case Intrinsic::vp_is_fpclass:
     return expandPredicationToFPCall(Builder, VPI,
                                      VPI.getFunctionalIntrinsicID().value());
   case Intrinsic::vp_load:

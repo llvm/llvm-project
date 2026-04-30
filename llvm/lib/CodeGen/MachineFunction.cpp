@@ -20,6 +20,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
@@ -38,7 +39,6 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
-#include "llvm/CodeGen/WasmEHFuncInfo.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Attributes.h"
@@ -63,6 +63,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DOTGraphTraits.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -161,6 +162,21 @@ static inline Align getFnStackAlignment(const TargetSubtargetInfo &STI,
   return STI.getFrameLowering()->getStackAlign();
 }
 
+static FramePointerKind getFramePointerPolicy(const Function &F) {
+  Attribute FPAttr = F.getFnAttribute("frame-pointer");
+  if (!FPAttr.isValid())
+    return FramePointerKind::None;
+
+  StringRef FP = FPAttr.getValueAsString();
+  return StringSwitch<FramePointerKind>(FP)
+      .Case("all", FramePointerKind::All)
+      .Case("non-leaf", FramePointerKind::NonLeaf)
+      .Case("non-leaf-no-reserve", FramePointerKind::NonLeafNoReserve)
+      .Case("reserved", FramePointerKind::Reserved)
+      .Case("none", FramePointerKind::None)
+      .Default(FramePointerKind::None);
+}
+
 MachineFunction::MachineFunction(Function &F, const TargetMachine &Target,
                                  const TargetSubtargetInfo &STI, MCContext &Ctx,
                                  unsigned FunctionNum)
@@ -202,6 +218,7 @@ void MachineFunction::init() {
   FrameInfo = new (Allocator) MachineFrameInfo(
       getFnStackAlignment(STI, F), /*StackRealignable=*/CanRealignSP,
       /*ForcedRealign=*/ForceRealignSP && CanRealignSP);
+  FrameInfo->setFramePointerPolicy(getFramePointerPolicy(F));
 
   setUnsafeStackSize(F, *FrameInfo);
 
@@ -229,14 +246,14 @@ void MachineFunction::init() {
     WinEHInfo = new (Allocator) WinEHFuncInfo();
   }
 
-  if (isScopedEHPersonality(classifyEHPersonality(
-          F.hasPersonalityFn() ? F.getPersonalityFn() : nullptr))) {
-    WasmEHInfo = new (Allocator) WasmEHFuncInfo();
+  if (!Target.isCompatibleDataLayout(getDataLayout())) {
+    report_fatal_error(
+        formatv("Can't create a MachineFunction using a Module with a "
+                "Target-incompatible DataLayout attached\n  Target "
+                "DataLayout: {0}\n  Module DataLayout: {1}\n",
+                Target.createDataLayout().getStringRepresentation(),
+                getDataLayout().getStringRepresentation()));
   }
-
-  assert(Target.isCompatibleDataLayout(getDataLayout()) &&
-         "Can't create a MachineFunction using a Module with a "
-         "Target-incompatible DataLayout attached\n");
 
   PSVManager = std::make_unique<PseudoSourceValueManager>(getTarget());
 }
@@ -293,11 +310,6 @@ void MachineFunction::clear() {
   if (WinEHInfo) {
     WinEHInfo->~WinEHFuncInfo();
     Allocator.Deallocate(WinEHInfo);
-  }
-
-  if (WasmEHInfo) {
-    WasmEHInfo->~WasmEHFuncInfo();
-    Allocator.Deallocate(WasmEHInfo);
   }
 }
 

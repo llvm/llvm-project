@@ -188,6 +188,8 @@ public:
 struct FunctionPropertiesStatisticsPass
     : PassInfoMixin<FunctionPropertiesStatisticsPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+
+  static bool isRequired() { return true; }
 };
 
 /// Correctly update FunctionPropertiesInfo post-inlining. A
