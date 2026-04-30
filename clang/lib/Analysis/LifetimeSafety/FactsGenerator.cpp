@@ -787,7 +787,7 @@ void FactsGenerator::handleInvalidatingCall(const Expr *Call,
 void FactsGenerator::handleDestructiveCall(const Expr *Call,
                                            const FunctionDecl *FD,
                                            ArrayRef<const Expr *> Args) {
-  if (!isDestructionFunc(*FD))
+  if (!destructsFirstArg(*FD))
     return;
   OriginList *ArgList = getOriginsList(*Args[0]);
   if (ArgList)

@@ -104,6 +104,7 @@ private:
   void handleInvalidatingCall(const Expr *Call, const FunctionDecl *FD,
                               ArrayRef<const Expr *> Args);
 
+  // Detect explicit destructor calls/`std::destroy_at`
   void handleDestructiveCall(const Expr *Call, const FunctionDecl *FD,
                              ArrayRef<const Expr *> Args);
 

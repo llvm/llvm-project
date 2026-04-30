@@ -593,13 +593,14 @@ void reference_destructor_invalidates_pointer() {
 }
 
 struct StringOwner {
-  std::string s;
+  std::string s, t;
 };
 
+// FIXME: False-positive
 void member_destructor_invalidates_pointer() {
-  StringOwner owner = {"42"};
+  StringOwner owner = {"42", "43"};
   const char *p = owner.s.data(); // expected-warning {{object whose reference is captured is later invalidated}}
-  owner.s.~basic_string();        // expected-note {{invalidated here}}
+  owner.t.~basic_string();        // expected-note {{invalidated here}}
   (void)*p;                       // expected-note {{later used here}}
 }
 
