@@ -9,8 +9,8 @@ body:             |
     liveins: $v2, $v3
     ; CHECK-LABEL: name: copy_cr0_gprc
     ; CHECK: renamable $cr0 = nofpexcept XVTDIVDP killed renamable $v2, killed renamable $v3, implicit $rm
-    ; CHECK: $r3 = MFOCRF $cr0
-    ; CHECK: $r3 = RLWINM killed $r3, 4, 28, 31, implicit-def $x3
+    ; CHECK: $r3 = MFOCRF $cr0, implicit-def $x3
+    ; CHECK: $r3 = RLWINM killed $r3, 4, 28, 31
     ; CHECK: BLR8 implicit $lr8, implicit $rm, implicit $x3
     renamable $cr0 = nofpexcept XVTDIVDP killed renamable $v2, killed renamable $v3, implicit $rm
     renamable $r3 = COPY killed renamable $cr0, implicit-def $x3
@@ -23,8 +23,8 @@ body:             |
     liveins: $v2, $v3
     ; CHECK-LABEL: name: copy_cr3_gprc
     ; CHECK: renamable $cr3 = nofpexcept XVTDIVDP killed renamable $v2, killed renamable $v3, implicit $rm
-    ; CHECK: $r3 = MFOCRF $cr3
-    ; CHECK: $r3 = RLWINM killed $r3, 16, 28, 31, implicit-def $x3
+    ; CHECK: $r3 = MFOCRF $cr3, implicit-def $x3
+    ; CHECK: $r3 = RLWINM killed $r3, 16, 28, 31
     ; CHECK: BLR8 implicit $lr8, implicit $rm, implicit $x3
     renamable $cr3 = nofpexcept XVTDIVDP killed renamable $v2, killed renamable $v3, implicit $rm
     renamable $r3 = COPY killed renamable $cr3, implicit-def $x3
