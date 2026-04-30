@@ -7198,9 +7198,7 @@ void LoopVectorizationPlanner::addReductionResultComputation(
   for (VPRecipeBase &R :
        Plan->getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
     VPReductionPHIRecipe *PhiR = dyn_cast<VPReductionPHIRecipe>(&R);
-    // TODO: Remove check for constant incoming value once removeDeadRecipes is
-    // used on VPlan0.
-    if (!PhiR || isa<VPIRValue>(PhiR->getOperand(1)))
+    if (!PhiR)
       continue;
 
     RecurKind RecurrenceKind = PhiR->getRecurrenceKind();
