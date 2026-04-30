@@ -174,4 +174,21 @@ constexpr U _ = nondeterministic(true);
 #endif
 } // namespace cwg2922
 
+namespace cwg2943 { // cwg2943: 3.9
+#if __cplusplus >= 201703L
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wignored-attributes"
+[[nodiscard]] void f();
+#pragma clang diagnostic pop
+template <class T> [[nodiscard]] T g();
+
+void h() {
+  f();
+  g<void>();
+  g<int>();
+  // expected-warning@-1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+}
+#endif
+} // namespace cwg2943
+
 // cwg2947 is in cwg2947.cpp
