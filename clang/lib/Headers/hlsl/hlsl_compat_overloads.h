@@ -232,6 +232,7 @@ namespace hlsl {
 
 #define _DXC_COMPAT_BINARY_DOUBLE_MATRIX_OVERLOADS(fn)                         \
   template <uint R, uint C>                                                    \
+  _DXC_DEPRECATED_64BIT_FN(fn)                                                 \
   constexpr matrix<float, R, C> fn(matrix<double, R, C> y,                     \
                                    matrix<double, R, C> x) {                   \
     return fn((matrix<float, R, C>)y, (matrix<float, R, C>)x);                 \
