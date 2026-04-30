@@ -748,7 +748,7 @@ class TargetRegisterInfo;
     /// a set of nodes visited during a DFS traversal.
     BitVector Visited;
     /// Cache of reachability queries. {A, B} -> true if B is reachable from A.
-    /// The keys are topological indices.
+    /// The keys are SUnit NodeNums.
     DenseMap<std::pair<int, int>, bool> Reachable;
 
     /// Makes a DFS traversal and mark all nodes affected by the edge insertion.

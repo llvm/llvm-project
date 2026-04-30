@@ -736,14 +736,18 @@ bool ScheduleDAGTopologicalSort::IsReachable(const SUnit *SU,
   bool HasLoop = false;
   // Is Ord(TargetSU) < Ord(SU) ?
   if (LowerBound < UpperBound) {
-    if (auto It = Reachable.find({LowerBound, UpperBound});
+    if (auto It = Reachable.find({TargetSU->NodeNum, SU->NodeNum});
         It != Reachable.end()) {
       return It->second;
     }
     Visited.reset();
     // There may be a path from TargetSU to SU. Check for it.
     DFS(TargetSU, UpperBound, HasLoop);
-    Reachable[{LowerBound, UpperBound}] = HasLoop;
+    // If there's no loop, cache the result. We only cache negative results,
+    // as positive results are not safe to cache; users call SU.removePred()
+    // without notifying us.
+    if (!HasLoop)
+      Reachable[{TargetSU->NodeNum, SU->NodeNum}] = false;
   }
   return HasLoop;
 }
