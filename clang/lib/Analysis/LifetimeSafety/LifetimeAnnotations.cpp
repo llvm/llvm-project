@@ -268,6 +268,12 @@ static StringRef getName(const CXXRecordDecl &RD) {
   return "";
 }
 
+static StringRef getName(const FunctionDecl &FD) {
+  if (FD.getIdentifier())
+    return FD.getName();
+  return "";
+}
+
 static bool isStdUniquePtr(const CXXRecordDecl &RD) {
   return RD.isInStdNamespace() && getName(RD) == "unique_ptr";
 }
@@ -390,8 +396,7 @@ bool isInvalidationMethod(const CXXMethodDecl &MD) {
 bool isDestructionFunc(const FunctionDecl &FD) {
   if (isa<CXXDestructorDecl>(FD))
     return true;
-  if (const auto *II = FD.getIdentifier();
-      isInStlNamespace(&FD) && II && II->getName() == "destroy_at")
+  if (isInStlNamespace(&FD) && getName(FD) == "destroy_at")
     return true;
   return false;
 }

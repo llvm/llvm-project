@@ -540,7 +540,8 @@ void function_captured_ref_invalidated() {
 
 } // namespace callable_wrappers
 
-namespace manual_destruction {
+// FIXME: does not report a double free
+namespace explicit_destructor {
 
 void explicit_destructor_invalidates_pointer() {
   std::string s = "42";
@@ -575,37 +576,34 @@ void destroy_at_then_placement_new_rescues_pointer() {
   (void)*p;
 }
 
-// FIXME: False-negative
 void destroy_at_invalidates_array_pointer() {
   std::string arr[1] = {"42"};
   std::string (&arr_ref)[1] = arr;
-  const char *p = arr[0].data();
-  std::destroy_at(&arr_ref);
-  (void)*p;
+  const char *p = arr[0].data(); // expected-warning {{object whose reference is captured is later invalidated}}
+  std::destroy_at(&arr_ref);     // expected-note {{invalidated here}}
+  (void)*p;                      // expected-note {{later used here}}
 }
 
-// FIXME: False-negative
 void reference_destructor_invalidates_pointer() {
   std::string s = "42";
-  std::string &ref = s;
+  std::string &ref = s;       // expected-warning {{object whose reference is captured is later invalidated}}
   const char *p = ref.data();
-  std::destroy_at(&ref);
-  (void)*p;
+  std::destroy_at(&ref);      // expected-note {{invalidated here}}
+  (void)*p;                   // expected-note {{later used here}}
 }
 
 struct StringOwner {
   std::string s;
 };
 
-// FIXME: False-negative
 void member_destructor_invalidates_pointer() {
   StringOwner owner = {"42"};
-  const char *p = owner.s.data();
-  owner.s.~basic_string();
-  (void)*p;
+  const char *p = owner.s.data(); // expected-warning {{object whose reference is captured is later invalidated}}
+  owner.s.~basic_string();        // expected-note {{invalidated here}}
+  (void)*p;                       // expected-note {{later used here}}
 }
 
-} // namespace manual_destruction
+} // namespace explicit_destructor
 
 namespace unique_ptr_invalidation {
 

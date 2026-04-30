@@ -768,21 +768,29 @@ void FactsGenerator::handleInvalidatingCall(const Expr *Call,
                                             const FunctionDecl *FD,
                                             ArrayRef<const Expr *> Args) {
   const auto *MD = dyn_cast<CXXMethodDecl>(FD);
-  const bool IsInvalidatingMethod = MD && isInvalidationMethod(*MD);
-  const bool IsDestruction = isDestructionFunc(*FD);
-  if (!IsInvalidatingMethod && !IsDestruction)
+  if (!MD || !MD->isInstance())
     return;
 
-  // `destroy_at` get an implicit cast for the object argument, methods already
-  // give us the right shape.
-  const Expr *Target = IsDestruction ? Args[0]->IgnoreImpCasts() : Args[0];
-
-  // Heuristics to turn down false positives.
-  const auto *DRE = dyn_cast<DeclRefExpr>(Target);
+  if (!isInvalidationMethod(*MD))
+    return;
+  // Heuristics to turn-down false positives.
+  auto *DRE = dyn_cast<DeclRefExpr>(Args[0]);
   if (!DRE || DRE->getDecl()->getType()->isReferenceType())
     return;
 
-  if (OriginList *ArgList = getOriginsList(*Args[0]))
+  OriginList *ThisList = getOriginsList(*Args[0]);
+  if (ThisList)
+    CurrentBlockFacts.push_back(FactMgr.createFact<InvalidateOriginFact>(
+        ThisList->getOuterOriginID(), Call));
+}
+
+void FactsGenerator::handleDestructiveCall(const Expr *Call,
+                                           const FunctionDecl *FD,
+                                           ArrayRef<const Expr *> Args) {
+  if (!isDestructionFunc(*FD))
+    return;
+  OriginList *ArgList = getOriginsList(*Args[0]);
+  if (ArgList)
     CurrentBlockFacts.push_back(FactMgr.createFact<InvalidateOriginFact>(
         ArgList->getOuterOriginID(), Call));
 }
@@ -832,6 +840,7 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
   for (const Expr *Arg : Args)
     handleUse(Arg);
   handleInvalidatingCall(Call, FD, Args);
+  handleDestructiveCall(Call, FD, Args);
   handleMovedArgsInCall(FD, Args);
   handleImplicitObjectFieldUses(Call, FD);
   if (!CallList)
