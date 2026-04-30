@@ -10,7 +10,7 @@ target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 ; cost reported for VPWidenCanonicalIVRecipe.
 
 ; CHECK-LABEL: LV: Checking a loop in 'two_reductions'
-; CHECK:       Cost of 0 for VF 4: EMIT vp<{{.*}}> = WIDEN-CANONICAL-INDUCTION
+; CHECK:       Cost of 2 for VF 4: EMIT vp<{{.*}}> = WIDEN-CANONICAL-INDUCTION
 
 define i32 @two_reductions(i64 %N, ptr %a, ptr %b) {
 entry:

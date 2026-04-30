@@ -4559,6 +4559,24 @@ void VPWidenCanonicalIVRecipe::execute(VPTransformState &State) {
   State.set(this, CanonicalVectorIV);
 }
 
+InstructionCost
+VPWidenCanonicalIVRecipe::computeCost(ElementCount VF,
+                                      VPCostContext &Ctx) const {
+  if (VF.isScalar())
+    return 0;
+  // execute() emits: broadcast of the scalar IV, a step vector and a vector
+  // add. Charge the broadcast and the add directly. The step vector is
+  // emitted as a VPInstruction::StepVector whose own cost migration is
+  // pending (see VPInstructionWithType::computeCost), so it is not charged
+  // here to avoid front-running that work.
+  Type *ScalarTy = Ctx.Types.inferScalarType(this);
+  auto *VectorTy = VectorType::get(ScalarTy, VF);
+  return Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Broadcast, VectorTy,
+                                VectorTy, {}, Ctx.CostKind) +
+         Ctx.TTI.getArithmeticInstrCost(Instruction::Add, VectorTy,
+                                        Ctx.CostKind);
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenCanonicalIVRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                            VPSlotTracker &SlotTracker) const {
