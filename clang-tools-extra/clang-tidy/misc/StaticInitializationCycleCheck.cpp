@@ -349,7 +349,8 @@ reportCycles(ArrayRef<const VarUseNode *> SCC,
     FoundPath.push_back(N);
   }
 
-  std::stringstream CycleOs;
+  std::string OutStr;
+  llvm::raw_string_ostream CycleOs(OutStr);
 
   for (const VarUseNode *N : FoundPath) {
     const VarUseRecord &U = *NextNode[N];
@@ -366,9 +367,9 @@ reportCycles(ArrayRef<const VarUseNode *> SCC,
                DiagnosticIDs::Note)
           << VarFuncUseStr << U.Node->getDecl() << N->getDecl();
 
-    CycleOs << N->getDecl()->getNameAsString() << " - ";
+    CycleOs << *N->getDecl() << " - ";
   }
-  CycleOs << FoundPath.front()->getDecl()->getNameAsString();
+  CycleOs << *(FoundPath.front()->getDecl());
 
   Chk.diag((*VarNode)->getDecl()->getLocation(),
            "possible cyclical initialization: %0", DiagnosticIDs::Note)
@@ -389,10 +390,9 @@ void StaticInitializationCycleCheck::check(
   VarUseGraphBuilder Builder(Uses);
   Builder.TraverseDecl(const_cast<TranslationUnitDecl *>(TU));
 
-  for (llvm::scc_iterator<const VarUseGraph *>
-           SCCI = llvm::scc_begin(const_cast<const VarUseGraph *>(&Uses)),
-           SCCE = llvm::scc_end(const_cast<const VarUseGraph *>(&Uses));
-       SCCI != SCCE; ++SCCI) {
+  for (llvm::scc_iterator<const VarUseGraph *> SCCI =
+           llvm::scc_begin(const_cast<const VarUseGraph *>(&Uses));
+       !SCCI.isAtEnd(); ++SCCI) {
     if (!SCCI.hasCycle())
       continue;
     reportCycles(*SCCI, *this);
