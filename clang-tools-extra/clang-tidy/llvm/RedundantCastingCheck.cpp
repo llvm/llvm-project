@@ -31,7 +31,7 @@ namespace clang::tidy::llvm_check {
 namespace {
 AST_MATCHER(Expr, isMacroID) { return Node.getExprLoc().isMacroID(); }
 AST_MATCHER_P(OverloadExpr, hasAnyUnresolvedName, ArrayRef<StringRef>, Names) {
-  DeclarationName DeclName = Node.getName();
+  const DeclarationName DeclName = Node.getName();
   if (!DeclName.isIdentifier())
     return false;
   const IdentifierInfo *II = DeclName.getAsIdentifierInfo();
