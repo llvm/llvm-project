@@ -120,7 +120,7 @@ class TestCase(TestBase):
         self.assertIn("= 0x1p1\n", self.getFormatted("hex float", "2.0"))
         # FIXME: long double not supported.
         # on Darwin arm64, long double is 8 bytes, same as long.
-        if self.getArchitecture() != "arm64":
+        if self.getArchitecture() not in ["arm64", "arm64e"]:
             self.assertIn(
                 "= error: unsupported byte size (16) for hex float format\n",
                 self.getFormatted("hex float", "2.0l"),
