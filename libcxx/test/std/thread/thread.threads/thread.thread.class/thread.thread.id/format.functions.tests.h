@@ -22,7 +22,7 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
   std::thread::id input{};
 
   /***** Test the type specific part *****/
-#if !defined(__APPLE__) && !defined(__FreeBSD__)
+#if !defined(__APPLE__) && !defined(__FreeBSD__) && !defined(__LLVM_LIBC__)
   check(SV("0"), SV("{}"), input);
   check(SV("0^42"), SV("{}^42"), input);
   check(SV("0^42"), SV("{:}^42"), input);
