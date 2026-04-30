@@ -71,10 +71,6 @@ int main(int argc, char *argv[]) {
     fail("unexpected error status %d", (int)Status);
 
   if (OutputPath) {
-    size_t OutSize = 0;
-    amd_comgr_(get_data(OutputData, &OutSize, NULL));
-    if (OutSize != ElfSize)
-      fail("output size %zu != input size %zu", OutSize, ElfSize);
     dumpData(OutputData, OutputPath);
   } else {
     size_t OutSize = 0;

@@ -245,8 +245,7 @@ LLVMState initLLVM(const TargetIdentifier &TI) {
     return S;
   }
 
-  S.Ctx =
-      std::make_unique<MCContext>(TT, *S.MAI, S.MRI.get(), S.STI.get());
+  S.Ctx = std::make_unique<MCContext>(TT, *S.MAI, S.MRI.get(), S.STI.get());
   S.MOFI = std::make_unique<MCObjectFileInfo>();
   S.MOFI->initMCObjectFileInfo(*S.Ctx, false);
   S.Ctx->setObjectFileInfo(S.MOFI.get());
@@ -307,20 +306,28 @@ LLVMState initLLVM(const TargetIdentifier &TI) {
   }
   S.SNopBytes.assign(NopBytes.begin(), NopBytes.end());
 
+  SmallVector<MCInst, 2> VNopInsts = parseAsmToMCInsts("v_nop", S);
+  if (VNopInsts.size() != 1) {
+    log() << "hotswap: error: initLLVM: failed to parse 'v_nop' for CPU '"
+          << S.Cpu << "'.\n";
+    return S;
+  }
+  S.VNopInst = VNopInsts[0];
+
   S.Valid = true;
   return S;
 }
 
 // -- LLVMState::encodeSBranch -------------------------------------------------
 
-bool LLVMState::encodeSBranch(uint64_t FromOffset, uint64_t ToOffset,
-                              uint8_t OutBytes[]) const {
+SmallVector<uint8_t> LLVMState::encodeSBranch(uint64_t FromOffset,
+                                              uint64_t ToOffset) const {
   if (!Valid || !MCE || !MCII || SBranchOpcode >= MCII->getNumOpcodes()) {
     log() << "hotswap: error: encodeSBranch: LLVMState is not ready "
           << "(Valid=" << Valid << ", has MCE=" << (MCE != nullptr)
           << ", has MCII=" << (MCII != nullptr)
           << ", SBranchOpcode=" << SBranchOpcode << ").\n";
-    return false;
+    return {};
   }
   int64_t ByteDelta = static_cast<int64_t>(ToOffset) -
                       static_cast<int64_t>(FromOffset) - MinInstSize;
@@ -329,7 +336,7 @@ bool LLVMState::encodeSBranch(uint64_t FromOffset, uint64_t ToOffset,
           << " from 0x" << utohexstr(FromOffset) << " to 0x"
           << utohexstr(ToOffset) << "; must be a multiple of " << MinInstSize
           << ".\n";
-    return false;
+    return {};
   }
   int64_t DwordOffset = ByteDelta / MinInstSize;
   if (DwordOffset < BranchOffsetMin || DwordOffset > BranchOffsetMax) {
@@ -337,7 +344,7 @@ bool LLVMState::encodeSBranch(uint64_t FromOffset, uint64_t ToOffset,
           << " out of s_branch simm16 range [" << BranchOffsetMin << ", "
           << BranchOffsetMax << "] (from 0x" << utohexstr(FromOffset)
           << " to 0x" << utohexstr(ToOffset) << ").\n";
-    return false;
+    return {};
   }
 
   MCInst Inst;
@@ -348,10 +355,9 @@ bool LLVMState::encodeSBranch(uint64_t FromOffset, uint64_t ToOffset,
     log() << "hotswap: error: encodeSBranch: MCCodeEmitter produced "
           << Bytes.size() << " bytes for s_branch (opcode index "
           << SBranchOpcode << "); expected " << MinInstSize << ".\n";
-    return false;
+    return {};
   }
-  std::memcpy(OutBytes, Bytes.data(), MinInstSize);
-  return true;
+  return Bytes;
 }
 
 // -- Instruction decode -------------------------------------------------------
@@ -443,8 +449,9 @@ Trampoline buildTrampoline(ArrayRef<std::string> AsmLines,
   uint64_t BranchBackFrom = TrampolineTextOffset + Result.Bytes.size();
   uint64_t BranchBackTo = OriginalOffset + OriginalSize;
 
-  uint8_t BranchBytes[MinInstSize];
-  if (!S.encodeSBranch(BranchBackFrom, BranchBackTo, BranchBytes)) {
+  SmallVector<uint8_t> BranchBytes =
+      S.encodeSBranch(BranchBackFrom, BranchBackTo);
+  if (BranchBytes.empty()) {
     log() << "hotswap: error: buildTrampoline: encodeSBranch failed for "
           << "branch-back from trampoline offset 0x"
           << utohexstr(BranchBackFrom) << " to original offset 0x"
@@ -453,8 +460,43 @@ Trampoline buildTrampoline(ArrayRef<std::string> AsmLines,
     return Result;
   }
 
-  Result.Bytes.insert(Result.Bytes.end(), BranchBytes,
-                      BranchBytes + MinInstSize);
+  Result.Bytes.append(BranchBytes.begin(), BranchBytes.end());
+  return Result;
+}
+
+Trampoline buildTrampoline(ArrayRef<MCInst> Insts, uint64_t OriginalOffset,
+                           uint32_t OriginalSize, uint64_t TrampolineTextOffset,
+                           const LLVMState &S) {
+  Trampoline Result;
+  Result.OriginalOffset = OriginalOffset;
+  Result.OriginalSize = OriginalSize;
+
+  for (const MCInst &Inst : Insts) {
+    SmallVector<uint8_t> InstBytes = encodeMCInst(Inst, S);
+    if (InstBytes.empty()) {
+      log() << "hotswap: error: buildTrampoline(MCInst): encodeMCInst failed "
+            << "for opcode " << Inst.getOpcode() << " at trampoline for 0x"
+            << utohexstr(OriginalOffset) << "\n";
+      Result.Bytes.clear();
+      return Result;
+    }
+    Result.Bytes.append(InstBytes.begin(), InstBytes.end());
+  }
+
+  uint64_t BranchBackFrom = TrampolineTextOffset + Result.Bytes.size();
+  uint64_t BranchBackTo = OriginalOffset + OriginalSize;
+
+  SmallVector<uint8_t> BranchBytes =
+      S.encodeSBranch(BranchBackFrom, BranchBackTo);
+  if (BranchBytes.empty()) {
+    log() << "hotswap: error: buildTrampoline(MCInst): encodeSBranch failed "
+          << "for branch-back from 0x" << utohexstr(BranchBackFrom) << " to 0x"
+          << utohexstr(BranchBackTo) << "; clearing trampoline.\n";
+    Result.Bytes.clear();
+    return Result;
+  }
+
+  Result.Bytes.append(BranchBytes.begin(), BranchBytes.end());
   return Result;
 }
 

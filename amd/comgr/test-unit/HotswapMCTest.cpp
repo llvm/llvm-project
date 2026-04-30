@@ -110,50 +110,47 @@ TEST(InitLLVM, UnknownProcessorFails) {
 TEST(EncodeSBranch, ForwardBranchRoundTrip) {
   LLVMState S = initLLVM(makeGfx1250Ident());
   ASSERT_TRUE(S.Valid);
-  uint8_t Out[MinInstSize] = {};
   // s_branch SIMM16 -> PC += (SIMM16 + 1) * 4; From=0, To=8 => SIMM16=1.
-  ASSERT_TRUE(S.encodeSBranch(0, 8, Out));
-  uint32_t Encoded = readDword(Out);
+  llvm::SmallVector<uint8_t> Out = S.encodeSBranch(0, 8);
+  ASSERT_EQ(Out.size(), MinInstSize);
+  uint32_t Encoded = readDword(Out.data());
   EXPECT_EQ(static_cast<uint16_t>(Encoded & 0xFFFFu), 1u);
 }
 
 TEST(EncodeSBranch, BackwardBranchRoundTrip) {
   LLVMState S = initLLVM(makeGfx1250Ident());
   ASSERT_TRUE(S.Valid);
-  uint8_t Out[MinInstSize] = {};
   // From=16, To=0 => delta=-5 dwords.
-  ASSERT_TRUE(S.encodeSBranch(16, 0, Out));
-  uint32_t Encoded = readDword(Out);
+  llvm::SmallVector<uint8_t> Out = S.encodeSBranch(16, 0);
+  ASSERT_EQ(Out.size(), MinInstSize);
+  uint32_t Encoded = readDword(Out.data());
   EXPECT_EQ(static_cast<int16_t>(Encoded & 0xFFFFu), -5);
 }
 
 TEST(EncodeSBranch, ZeroOffsetBranch) {
   LLVMState S = initLLVM(makeGfx1250Ident());
   ASSERT_TRUE(S.Valid);
-  uint8_t Out[MinInstSize] = {};
   // PC advance of MinInstSize: SIMM16 should be 0.
-  ASSERT_TRUE(S.encodeSBranch(0, MinInstSize, Out));
-  EXPECT_EQ(readDword(Out) & 0xFFFFu, 0u);
+  llvm::SmallVector<uint8_t> Out = S.encodeSBranch(0, MinInstSize);
+  ASSERT_EQ(Out.size(), MinInstSize);
+  EXPECT_EQ(readDword(Out.data()) & 0xFFFFu, 0u);
 }
 
 TEST(EncodeSBranch, UnalignedDeltaFails) {
   LLVMState S = initLLVM(makeGfx1250Ident());
   ASSERT_TRUE(S.Valid);
-  uint8_t Out[MinInstSize] = {};
-  EXPECT_FALSE(S.encodeSBranch(0, 7, Out));
+  EXPECT_TRUE(S.encodeSBranch(0, 7).empty());
 }
 
 TEST(EncodeSBranch, OutOfRangeFails) {
   LLVMState S = initLLVM(makeGfx1250Ident());
   ASSERT_TRUE(S.Valid);
-  uint8_t Out[MinInstSize] = {};
-  EXPECT_FALSE(S.encodeSBranch(0, 500000, Out));
+  EXPECT_TRUE(S.encodeSBranch(0, 500000).empty());
 }
 
 TEST(EncodeSBranch, FailsOnInvalidState) {
   LLVMState S; // default-constructed, Valid = false
-  uint8_t Out[MinInstSize] = {};
-  EXPECT_FALSE(S.encodeSBranch(0, 8, Out));
+  EXPECT_TRUE(S.encodeSBranch(0, 8).empty());
 }
 
 // -- assembleSingleInst / decodeTextSection round-trip ------------------------
@@ -296,4 +293,72 @@ TEST(BuildTrampoline, EmptyOnBadAsm) {
                                  /*OriginalSize=*/MinInstSize,
                                  /*TrampolineTextOffset=*/0x1000, S);
   EXPECT_TRUE(T.Bytes.empty());
+}
+
+// -- classifyWmmaNops ---------------------------------------------------------
+
+TEST(ClassifyWmmaNops, NonWmmaReturnsDefault) {
+  WmmaNopReq Req = classifyWmmaNops("v_add_f32");
+  EXPECT_EQ(Req.A0Nops, 4);
+  EXPECT_EQ(Req.B0Nops, 4);
+}
+
+TEST(ClassifyWmmaNops, IntegerWmmaReturns8) {
+  WmmaNopReq Req = classifyWmmaNops("v_wmma_i32_16x16x32_iu8");
+  EXPECT_EQ(Req.A0Nops, 8);
+  EXPECT_EQ(Req.B0Nops, 4);
+}
+
+TEST(ClassifyWmmaNops, Iu4Returns8) {
+  WmmaNopReq Req = classifyWmmaNops("v_wmma_i32_16x16x64_iu4");
+  EXPECT_EQ(Req.A0Nops, 8);
+  EXPECT_EQ(Req.B0Nops, 4);
+}
+
+TEST(ClassifyWmmaNops, F8f6f4Returns1) {
+  WmmaNopReq Req = classifyWmmaNops("v_wmma_f32_16x16x128_f8f6f4");
+  EXPECT_EQ(Req.A0Nops, 1);
+  EXPECT_EQ(Req.B0Nops, 4);
+}
+
+TEST(ClassifyWmmaNops, Fp8_16x16x128Returns3) {
+  WmmaNopReq Req = classifyWmmaNops("v_wmma_f32_16x16x128_fp8_fp8");
+  EXPECT_EQ(Req.A0Nops, 3);
+  EXPECT_EQ(Req.B0Nops, 4);
+}
+
+TEST(ClassifyWmmaNops, Fp8SmallReturns1) {
+  WmmaNopReq Req = classifyWmmaNops("v_wmma_f32_16x16x32_fp8_fp8");
+  EXPECT_EQ(Req.A0Nops, 1);
+  EXPECT_EQ(Req.B0Nops, 4);
+}
+
+TEST(ClassifyWmmaNops, F16Returns4) {
+  WmmaNopReq Req = classifyWmmaNops("v_wmma_f32_16x16x16_f16");
+  EXPECT_EQ(Req.A0Nops, 4);
+  EXPECT_EQ(Req.B0Nops, 4);
+}
+
+TEST(ClassifyWmmaNops, Bf16Returns4) {
+  WmmaNopReq Req = classifyWmmaNops("v_wmma_f32_16x16x16_bf16");
+  EXPECT_EQ(Req.A0Nops, 4);
+  EXPECT_EQ(Req.B0Nops, 4);
+}
+
+TEST(ClassifyWmmaNops, SwmmacIu8Returns8) {
+  WmmaNopReq Req = classifyWmmaNops("v_swmmac_i32_16x16x64_iu8");
+  EXPECT_EQ(Req.A0Nops, 8);
+  EXPECT_EQ(Req.B0Nops, 4);
+}
+
+TEST(ClassifyWmmaNops, F32WmmaFallsToDefault) {
+  WmmaNopReq Req = classifyWmmaNops("v_wmma_f32_16x16x4_f32");
+  EXPECT_EQ(Req.A0Nops, 4);
+  EXPECT_EQ(Req.B0Nops, 4);
+}
+
+TEST(ClassifyWmmaNops, OrderingMostRestrictiveWins) {
+  // A mnemonic containing both _iu8 and _f16 should return 8 (iu8 first)
+  WmmaNopReq Req = classifyWmmaNops("v_wmma_f16_something_iu8");
+  EXPECT_EQ(Req.A0Nops, 8);
 }

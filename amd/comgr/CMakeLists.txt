@@ -81,6 +81,7 @@ set(SOURCES
   src/comgr-hotswap-elf.cpp
   src/comgr-hotswap-llvm.cpp
   src/comgr-hotswap-patch-inplace.cpp
+  src/comgr-hotswap-patch-wmma-hazard.cpp
   src/comgr-libcxx-headers.cpp
   src/comgr-metadata.cpp
   src/comgr-signal.cpp

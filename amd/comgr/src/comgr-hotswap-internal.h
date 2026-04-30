@@ -295,15 +295,23 @@ struct LLVMState {
   /// NOP-sled padding paths instead of a hardcoded encoding.
   llvm::SmallVector<uint8_t, 4> SNopBytes;
 
+  /// Cached `v_nop` MCInst, resolved at initLLVM() time. Used by the WMMA
+  /// co-execution hazard patch to build trampolines without string
+  /// round-trips.
+  llvm::MCInst VNopInst;
+
   bool Valid = false;
 
-  /// Encode a relative `s_branch` from \p FromOffset to \p ToOffset, writing
-  /// MinInstSize bytes to \p OutBytes. Returns false if the delta is
-  /// unaligned, out of the 16-bit signed dword range, or if this LLVMState
-  /// is not valid / has no cached s_branch opcode. Uses MCCodeEmitter for
-  /// the encoding so no hardcoded opcode bits appear in the hotswap code.
-  [[nodiscard]] bool encodeSBranch(uint64_t FromOffset, uint64_t ToOffset,
-                                   uint8_t OutBytes[]) const;
+  /// Encode a relative `s_branch` from \p FromOffset to \p ToOffset and
+  /// return the MinInstSize encoded bytes. Returns an empty vector if the
+  /// delta is unaligned, out of the 16-bit signed dword range, or if this
+  /// LLVMState is not valid / has no cached s_branch opcode. Uses
+  /// MCCodeEmitter for the encoding so no hardcoded opcode bits appear in
+  /// the hotswap code. Empty-on-failure matches the convention used by
+  /// encodeMCInst() and assembleSingleInst() so the same idiom applies
+  /// uniformly across the MC layer.
+  [[nodiscard]] llvm::SmallVector<uint8_t>
+  encodeSBranch(uint64_t FromOffset, uint64_t ToOffset) const;
 };
 
 // -- Decoded instruction ------------------------------------------------------
@@ -344,6 +352,12 @@ Trampoline buildTrampoline(llvm::ArrayRef<std::string> AsmLines,
                            uint64_t OriginalOffset, uint32_t OriginalSize,
                            uint64_t TrampolineTextOffset, const LLVMState &LS);
 
+/// Overload that accepts pre-decoded MCInst instructions directly,
+/// encoding them via MCCodeEmitter without a string round-trip.
+Trampoline buildTrampoline(llvm::ArrayRef<llvm::MCInst> Insts,
+                           uint64_t OriginalOffset, uint32_t OriginalSize,
+                           uint64_t TrampolineTextOffset, const LLVMState &LS);
+
 /// Return true iff any register operand of \p WmmaInst overlaps the
 /// destination operand of \p ValuInst (for WMMA/VALU co-execution hazard
 /// detection). Delegates aliasing to MCRegisterInfo::regsOverlap so
@@ -352,6 +366,15 @@ Trampoline buildTrampoline(llvm::ArrayRef<std::string> AsmLines,
 bool checkVgprOverlap(const llvm::MCInst &WmmaInst,
                       const llvm::MCInst &ValuInst,
                       const llvm::MCRegisterInfo &MRI);
+
+/// WMMA/SWMMAC A0 vs B0 v_nop spacing requirement.
+struct WmmaNopReq {
+  int A0Nops = 4;
+  int B0Nops = 4;
+};
+
+/// Classify the A0/B0 v_nop requirement for a WMMA/SWMMAC mnemonic.
+WmmaNopReq classifyWmmaNops(llvm::StringRef Mnemonic);
 
 // -- VGPR liveness types ------------------------------------------------------
 

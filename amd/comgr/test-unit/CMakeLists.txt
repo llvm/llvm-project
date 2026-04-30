@@ -83,6 +83,7 @@ add_executable(HotswapMCTests
   HotswapMCTest.cpp
   ../src/comgr-hotswap-elf.cpp
   ../src/comgr-hotswap-llvm.cpp
+  ../src/comgr-hotswap-patch-wmma-hazard.cpp
   ../src/comgr-env.cpp)
 
 llvm_map_components_to_libnames(COMGR_TEST_UNIT_MC_LIBS
