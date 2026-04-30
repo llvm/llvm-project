@@ -15318,6 +15318,27 @@ If the source pointer is poison, the instruction returns poison.
 The resulting pointer belongs to the same address space as ``source``.
 This instruction does not dereference the pointer.
 
+Aliasing rules:
+"""""""""""""""
+
+Common :ref:`aliasing rules <pointeraliasing>` apply to pointers returned
+by this intrinsic, as well as the following additional rules:
+
+- A pointer returned by `@llvm.structured.gep` for a given element is
+  considered not to alias with pointers the instruction would return for
+  a sibling element.
+
+.. code-block:: llvm
+
+   %S = { i32, i32 }
+   %ptr = call ptr @llvm.structured.gep(ptr elementtype(%S) %src, i32 0)
+   %res = load i64, ptr %ptr
+
+Here, `%res` is not expected to load the second `i32` of the struct `%S`.
+The loaded value is implementation defined and depends on the physical
+layout of `i32`.
+This means it is allowed to consider the second field of `%S` to be unused.
+
 Example:
 """"""""
 
