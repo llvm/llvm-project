@@ -39,6 +39,7 @@
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/RealpathPrefixes.h"
 #include "lldb/Utility/StructuredData.h"
+#include "lldb/Utility/Stream.h"
 #include "lldb/Utility/Timeout.h"
 #include "lldb/lldb-public.h"
 #include "llvm/ADT/MapVector.h"
@@ -997,7 +998,89 @@ public:
 
   /// Resets the hit count of all breakpoints.
   void ResetBreakpointHitCounts();
+  
+  // This callout implements the "Resolver Override".  When we have determined
+  // the Resolver for a given breakpoint, we pass each of the registered
+  // overrides the "natural" resolver, and then we will use whatever resolver
+  // we get back from it if it is non-null.
+  // We keep a list of overrides ordered by ID - and we search through the list
+  // by ID order, and the first override that returns a non-null Resolver will
+  // be the one we use.  If no overrides return an override resolver, we'll use
+  // the original one.
 
+  // This is the abstract version of the override.  Particular implementations
+  // e.g. the scripted 
+  class BreakpointResolverOverride {
+  public:
+    BreakpointResolverOverride(Target &target, const std::string &description)
+        : m_target(target), m_desc(description) {}
+        
+    virtual BreakpointResolverOverride *CopyIntoNewTarget(Target &target) = 0;
+
+    virtual ~BreakpointResolverOverride() {}
+    virtual lldb::BreakpointResolverSP CheckForOverride(Target &target,
+        lldb::BreakpointResolverSP initial_sp) {
+      return {};
+    }
+    const std::string &GetDescription() { return m_desc; }
+  protected:
+    Target &m_target;
+    std::string m_desc;
+  };
+  
+  uint64_t AddBreakpointResolverOverride(BreakpointResolverOverride *override) {
+    static uint64_t g_override_id = 1;
+    uint64_t id_used = g_override_id;
+    m_breakpoint_overrides.emplace(g_override_id,
+        std::unique_ptr<BreakpointResolverOverride>(override));
+    g_override_id++;
+    return id_used;
+  }
+  
+  uint64_t AddBreakpointResolverOverride(llvm::StringRef class_name, 
+      StructuredData::DictionarySP args_data_sp, llvm::StringRef description);
+
+  
+  bool RemoveBreakpointResolverOverride(uint64_t override_id) {
+    size_t removed = m_breakpoint_overrides.erase(override_id);
+    return removed == 1;
+  }
+  
+  void ClearBreakpointResolverOverrides() {
+    m_breakpoint_overrides.clear();
+  }
+  
+  lldb::BreakpointResolverSP CheckBreakpointOverrides(lldb::BreakpointResolverSP original_sp) 
+  {
+    for (auto const &elem : m_breakpoint_overrides) {
+      lldb::BreakpointResolverSP overriden_sp;
+      overriden_sp = elem.second->CheckForOverride(*this, original_sp);
+      if (overriden_sp)
+        return overriden_sp;
+    }
+    return {};
+  }
+
+  // Describe the 
+  void DescribeBreakpointOverrides(Stream &stream, std::vector<uint64_t> idxs) {
+    if (m_breakpoint_overrides.size() == 0) {
+      stream << "No overrides.\n";
+      return;
+    }
+    // FIXME: Is there some good way to flow the description?
+    stream << "ID      Description\n";
+    stream << "------  -----------\n";
+    
+    auto begin = idxs.begin();
+    auto end = idxs.end();
+    bool empty = idxs.empty();
+    for (auto const &elem : m_breakpoint_overrides) {
+      if (empty || std::find(begin, end, elem.first) != end)
+        stream.Format("{0,-6}  {1}", elem.first, elem.second->GetDescription());
+      else
+        stream.Format("{0,6} is not a breakpoint override index", elem.first);
+    }
+  }        
   // The flag 'end_to_end', default to true, signifies that the operation is
   // performed end to end, for both the debugger and the debuggee.
 
@@ -2019,6 +2102,9 @@ protected:
   using BreakpointNameList =
       std::map<ConstString, std::unique_ptr<BreakpointName>>;
   BreakpointNameList m_breakpoint_names;
+  
+  std::map<uint64_t, std::unique_ptr<BreakpointResolverOverride>> m_breakpoint_overrides;
+
 
   lldb::BreakpointSP m_last_created_breakpoint;
   WatchpointList m_watchpoint_list;

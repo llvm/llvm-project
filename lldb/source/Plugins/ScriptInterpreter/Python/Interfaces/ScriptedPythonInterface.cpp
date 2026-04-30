@@ -288,6 +288,21 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ValueObjectSP>(
 }
 
 template <>
+lldb::TargetSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::TargetSP>(
+    python::PythonObject &p, Status &error) {
+  lldb::SBTarget *sb_target = reinterpret_cast<lldb::SBTarget *>(
+      python::LLDBSWIGPython_CastPyObjectToSBTarget(p.get()));
+  if (!sb_target) {
+    error = Status::FromErrorStringWithFormat(
+        "couldn't cast lldb::SBTarget to lldb::TargetSP");
+    return {};
+  }
+
+  return m_interpreter.GetOpaqueTypeFromSBTarget(*sb_target);
+}
+
+template <>
 lldb::ValueObjectListSP
 ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ValueObjectListSP>(
     python::PythonObject &p, Status &error) {

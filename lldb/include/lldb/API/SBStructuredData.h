@@ -137,6 +137,10 @@ public:
   /// Change the type to generic and overwrite the previous data with the new
   /// value.
   void SetGenericValue(SBScriptObject value);
+  
+#ifndef SWIG
+  void CopyImpl(lldb_private::StructuredDataImpl &new_impl);
+#endif
 
 protected:
   friend class SBAttachInfo;

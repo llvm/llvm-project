@@ -238,6 +238,10 @@ void Target::PrimeFromDummyTarget(Target &target) {
   for (const auto &bp_name_entry : target.m_breakpoint_names) {
     AddBreakpointName(std::make_unique<BreakpointName>(*bp_name_entry.second));
   }
+  
+  for (auto const &elem : target.m_breakpoint_overrides) {
+    AddBreakpointResolverOverride(elem.second->CopyIntoNewTarget(*this));
+  }
 
   m_frame_recognizer_manager_up = std::make_unique<StackFrameRecognizerManager>(
       *target.m_frame_recognizer_manager_up);
@@ -798,6 +802,14 @@ BreakpointSP Target::CreateBreakpoint(SearchFilterSP &filter_sp,
                                       bool resolve_indirect_symbols) {
   BreakpointSP bp_sp;
   if (filter_sp && resolver_sp) {
+    // Now check whether there are any "Breakpoint Overrides" registered, and
+    // if there are see if one of them want to handle this request instead.
+    // But we don't allow overrides for internal breakpoints:
+    if (!internal) {
+      BreakpointResolverSP overridden_sp = CheckBreakpointOverrides(resolver_sp);
+      if (overridden_sp)
+        resolver_sp = overridden_sp;
+    }
     const bool hardware = request_hardware || GetRequireHardwareBreakpoints();
     bp_sp.reset(new Breakpoint(*this, filter_sp, resolver_sp, hardware,
                                resolve_indirect_symbols));
@@ -930,6 +942,18 @@ void Target::GetBreakpointNames(std::vector<std::string> &names) {
   }
   llvm::sort(names);
 }
+
+uint64_t Target::AddBreakpointResolverOverride(llvm::StringRef class_name, 
+    StructuredData::DictionarySP args_data_sp, llvm::StringRef description) {
+  StructuredDataImpl impl;
+  impl.SetObjectSP(args_data_sp);
+  
+  ScriptedBreakpointResolverOverride *new_override 
+      = new ScriptedBreakpointResolverOverride(*this, 
+      std::string(description), std::string(class_name), impl);
+  return AddBreakpointResolverOverride(new_override);
+}
+
 
 bool Target::ProcessIsValid() {
   return (m_process_sp && m_process_sp->IsAlive());

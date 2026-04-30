@@ -637,6 +637,11 @@ public:
   ///     The amount of data read in host bytes.
   size_t ReadMemory(const SBAddress addr, void *buf, size_t size,
                     lldb::SBError &error);
+                    
+  uint64_t AddBreakpointOverride(const char *class_name,
+      const char *description, SBStructuredData &args_data);
+  
+  bool RemoveBreakpointOverride(uint64_t id);
 
   lldb::SBBreakpoint BreakpointCreateByLocation(const char *file,
                                                 uint32_t line);
@@ -1050,6 +1055,8 @@ protected:
   friend class SBVariablesOptions;
 
   friend class lldb_private::python::SWIGBridge;
+  friend class lldb_private::lua::SWIGBridge;
+  friend class lldb_private::ScriptInterpreter;
 
   // Constructors are private, use static Target::Create function to create an
   // instance of this class.

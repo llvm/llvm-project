@@ -11,9 +11,32 @@
 
 #include "ScriptedInterface.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Target/Target.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {
+class ScriptedBreakpointResolverOverride
+    : public Target::BreakpointResolverOverride {
+public:
+  ScriptedBreakpointResolverOverride(Target &target, const std::string &description, 
+      const std::string &class_name, StructuredDataImpl &args_data)
+         : Target::BreakpointResolverOverride(target, description),
+         m_args_data(args_data), m_class_name(class_name) {}
+
+  BreakpointResolverOverride *CopyIntoNewTarget(Target &target) override {
+    return new ScriptedBreakpointResolverOverride(target, m_desc, m_class_name,
+        m_args_data); 
+  }
+
+  lldb::BreakpointResolverSP CheckForOverride(Target &target,
+        lldb::BreakpointResolverSP initial_sp) override;
+
+private:
+  StructuredDataImpl m_args_data;
+  std::string m_class_name;
+};
+
+
 class ScriptedBreakpointInterface : public ScriptedInterface {
 public:
   virtual llvm::Expected<StructuredData::GenericSP>
@@ -36,6 +59,13 @@ public:
                          lldb::DescriptionLevel level) {
     return {};
   }
+  
+  virtual void SetBreakpoint(lldb::BreakpointSP break_sp) {}
+  
+  virtual bool OverridesResolver(Target &target, StructuredDataImpl &original_resolver) {
+    return false;
+  }
+  
 };
 } // namespace lldb_private
 
