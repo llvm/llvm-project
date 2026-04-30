@@ -767,6 +767,11 @@ static bool isIntOrBoolCast(cir::CastOp op) {
          kind == cir::CastKind::int_to_bool || kind == cir::CastKind::integral;
 }
 
+static bool isCirFunctionPointerType(mlir::Type ty) {
+  const auto ptrTy = mlir::dyn_cast<cir::PointerType>(ty);
+  return ptrTy && mlir::isa<cir::FuncType>(ptrTy.getPointee());
+}
+
 static Value tryFoldCastChain(cir::CastOp op) {
   cir::CastOp head = op, tail = op;
 
@@ -777,21 +782,37 @@ static Value tryFoldCastChain(cir::CastOp op) {
     op = head.getSrc().getDefiningOp<cir::CastOp>();
   }
 
-  if (head == tail)
+  if (head != tail) {
+    // if bool_to_int -> ...  -> int_to_bool: take the bool
+    // as we had it was before all casts
+    if (head.getKind() == cir::CastKind::bool_to_int &&
+        tail.getKind() == cir::CastKind::int_to_bool)
+      return head.getSrc();
+
+    // if int_to_bool -> ...  -> int_to_bool: take the result
+    // of the first one, as no other casts (and ext casts as well)
+    // don't change the first result
+    if (head.getKind() == cir::CastKind::int_to_bool &&
+        tail.getKind() == cir::CastKind::int_to_bool)
+      return head.getResult();
+
     return {};
+  }
 
-  // if bool_to_int -> ...  -> int_to_bool: take the bool
-  // as we had it was before all casts
-  if (head.getKind() == cir::CastKind::bool_to_int &&
-      tail.getKind() == cir::CastKind::int_to_bool)
-    return head.getSrc();
-
-  // if int_to_bool -> ...  -> int_to_bool: take the result
-  // of the first one, as no other casts (and ext casts as well)
-  // don't change the first result
-  if (head.getKind() == cir::CastKind::int_to_bool &&
-      tail.getKind() == cir::CastKind::int_to_bool)
-    return head.getResult();
+  // Bitcast round-trip on function pointers: T0 -> T1 -> T0 (e.g. no-proto
+  // redeclaration vs. actual prototype). Restrict to function pointers so
+  // other pointer bitcast chains are unchanged.
+  if (tail.getKind() == cir::CastKind::bitcast) {
+    auto *inner = tail.getSrc().getDefiningOp();
+    if (inner && isCirFunctionPointerType(tail.getType())) {
+      auto innerCast = mlir::dyn_cast<cir::CastOp>(inner);
+      if (innerCast && innerCast.getKind() == cir::CastKind::bitcast &&
+          innerCast.getSrc().getType() == tail.getType() &&
+          innerCast.getType() == tail.getSrc().getType()) {
+        return innerCast.getSrc();
+      }
+    }
+  }
 
   return {};
 }
