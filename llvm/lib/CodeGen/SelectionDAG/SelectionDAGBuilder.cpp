@@ -10648,9 +10648,8 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
   TargetLowering::AsmOperandInfoVector TargetConstraints = TLI.ParseConstraints(
       DAG.getDataLayout(), DAG.getSubtarget().getRegisterInfo(), Call);
 
-  bool EmitEHLabels = isa<InvokeInst>(Call);
-  if (EmitEHLabels)
-    assert(EHPadBB && "InvokeInst must have an EHPadBB");
+  assert((!isa<InvokeInst>(Call) || EHPadBB) &&
+         "InvokeInst must have an EHPadBB");
 
   ConstraintDecisionInfo Info;
   if (determineConstraints(Info, TargetConstraints, Call, *this, TLI, TM, DAG,
@@ -10778,13 +10777,13 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
   if (!OutChains.empty())
     Chain = DAG.getNode(ISD::TokenFactor, getCurSDLoc(), MVT::Other, OutChains);
 
-  if (EmitEHLabels)
+  if (isa<InvokeInst>(Call))
     Chain =
         lowerEndEH(Chain, cast<InvokeInst>(&Call), EHPadBB, Info.BeginLabel);
 
   // Only Update Root if inline assembly has a memory effect.
   if (ResultValues.empty() || Info.HasSideEffect || !OutChains.empty() ||
-      IsCallBr || EmitEHLabels)
+      IsCallBr || isa<InvokeInst>(Call))
     DAG.setRoot(Chain);
 }
 
