@@ -5,7 +5,7 @@ subroutine test_transfer_constant(l4, l8)
   logical(4) :: l4
   logical(8) :: l8
   l4 = transfer(3, .true._4)
-  l8 = transfer(7, .true._8)
+  l8 = transfer(7_8, .true._8)
 end subroutine
 
 module constant_logical

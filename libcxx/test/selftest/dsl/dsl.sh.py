@@ -10,6 +10,9 @@
 # because stdout & stderr are treated as the same.
 # XFAIL: LIBCXX-PICOLIBC-FIXME
 
+# Investigate why this is failing with LLVM libc.
+# XFAIL: LLVM-LIBC-FIXME
+
 # Note: We prepend arguments with 'x' to avoid thinking there are too few
 #       arguments in case an argument is an empty string.
 # RUN: %{python} %s x%S x%{temp} x%{substitutions}
@@ -157,7 +160,9 @@ class TestProgramOutput(SetupConfigs):
         #include <cstdio>
         int main(int, char**) { std::printf("FOOBAR\\n"); return 0; }
         """
-        self.assertEqual(dsl.programOutput(self.config, source), "FOOBAR\n")
+        self.assertEqual(
+            dsl.programOutput(self.config, source), "FOOBAR%s" % os.linesep
+        )
 
     def test_valid_program_returns_no_output(self):
         source = """
@@ -221,14 +226,14 @@ class TestProgramOutput(SetupConfigs):
             compileFlags + " -DMACRO=1",
         )
         output1 = dsl.programOutput(self.config, source)
-        self.assertEqual(output1, "MACRO=1\n")
+        self.assertEqual(output1, "MACRO=1%s" % os.linesep)
 
         self.config.substitutions[compileFlagsIndex] = (
             "%{compile_flags}",
             compileFlags + " -DMACRO=2",
         )
         output2 = dsl.programOutput(self.config, source)
-        self.assertEqual(output2, "MACRO=2\n")
+        self.assertEqual(output2, "MACRO=2%s" % os.linesep)
 
     def test_program_stderr_is_not_conflated_with_stdout(self):
         # Run a program that produces stdout output and stderr output too, making

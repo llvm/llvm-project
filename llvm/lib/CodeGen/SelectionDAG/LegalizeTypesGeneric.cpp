@@ -231,8 +231,8 @@ void DAGTypeLegalizer::ExpandRes_EXTRACT_VECTOR_ELT(SDNode *N, SDValue &Lo,
 
   // Extract the elements at 2 * Idx and 2 * Idx + 1 from the new vector.
   SDValue Idx = N->getOperand(1);
-
-  Idx = DAG.getNode(ISD::ADD, dl, Idx.getValueType(), Idx, Idx);
+  Idx = DAG.getNode(ISD::SHL, dl, Idx.getValueType(), Idx,
+                    DAG.getShiftAmountConstant(1, Idx.getValueType(), dl));
   Lo = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, NewVT, NewVec, Idx);
 
   Idx = DAG.getNode(ISD::ADD, dl, Idx.getValueType(), Idx,
@@ -446,12 +446,12 @@ SDValue DAGTypeLegalizer::ExpandOp_INSERT_VECTOR_ELT(SDNode *N) {
     std::swap(Lo, Hi);
 
   SDValue Idx = N->getOperand(2);
-  Idx = DAG.getNode(ISD::ADD, dl, Idx.getValueType(), Idx, Idx);
+  Idx = DAG.getNode(ISD::SHL, dl, Idx.getValueType(), Idx,
+                    DAG.getShiftAmountConstant(1, Idx.getValueType(), dl));
   NewVec = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, NewVecVT, NewVec, Lo, Idx);
-  Idx = DAG.getNode(ISD::ADD, dl,
-                    Idx.getValueType(), Idx,
+  Idx = DAG.getNode(ISD::ADD, dl, Idx.getValueType(), Idx,
                     DAG.getConstant(1, dl, Idx.getValueType()));
-  NewVec =  DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, NewVecVT, NewVec, Hi, Idx);
+  NewVec = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, NewVecVT, NewVec, Hi, Idx);
 
   // Convert the new vector to the old vector type.
   return DAG.getNode(ISD::BITCAST, dl, VecVT, NewVec);

@@ -502,6 +502,11 @@ ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
     return Result;
   }
 
+  // Functions without a visible body can still be known non-throwing from their
+  // exception specification.
+  if (!canThrow(Func))
+    return ExceptionInfo::createNonThrowing();
+
   auto Result = ExceptionInfo::createUnknown();
 
   if (const auto *FPT = Func->getType()->getAs<FunctionProtoType>()) {

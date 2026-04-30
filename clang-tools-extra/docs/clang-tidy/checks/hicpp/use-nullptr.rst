@@ -1,6 +1,4 @@
 .. title:: clang-tidy - hicpp-use-nullptr
-.. meta::
-   :http-equiv=refresh: 5;URL=../modernize/use-nullptr.html
 
 hicpp-use-nullptr
 =================

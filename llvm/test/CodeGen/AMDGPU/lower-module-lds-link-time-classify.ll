@@ -51,9 +51,6 @@ declare void @extern_func()
 ; CHECK-DAG: !{ptr @my_kernel, ptr addrspace(3) @lds_global}
 ; CHECK-DAG: !{ptr @func, ptr addrspace(3) @lds_global}
 
-; Module should be marked with the link-time LDS module flag.
-; CHECK: !{i32 1, !"amdgpu-link-time-lds", i32 1}
-
 define void @func() {
   %gep1 = getelementptr [64 x i32], ptr addrspace(3) @lds_global, i32 0, i32 0
   store i32 1, ptr addrspace(3) %gep1

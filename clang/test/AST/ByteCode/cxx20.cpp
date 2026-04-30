@@ -1354,3 +1354,16 @@ namespace ConstIntPotentialConstantExpr {
     return 1;
   }
 }
+
+namespace IndirectFieldInitializer {
+  struct A {
+    struct {
+      union {
+        int x = x = 3;
+      };
+    };
+    constexpr A() {}
+  };
+  static_assert(A().x == 3, "");
+
+}
