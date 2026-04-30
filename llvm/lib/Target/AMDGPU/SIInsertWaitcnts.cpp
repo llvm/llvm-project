@@ -657,9 +657,6 @@ public:
     return VmemReadMapping[getVmemType(Inst)];
   }
 
-  std::optional<WaitEventType>
-  getExpertSchedulingEventType(const MachineInstr &Inst) const;
-
   bool isAsync(const MachineInstr &MI) const {
     if (!SIInstrInfo::isLDSDMA(MI))
       return false;
@@ -2863,43 +2860,6 @@ bool SIInsertWaitcnts::generateWaitcnt(AMDGPU::Waitcnt Wait,
   return Modified;
 }
 
-std::optional<WaitEventType>
-SIInsertWaitcnts::getExpertSchedulingEventType(const MachineInstr &Inst) const {
-  if (TII.isVALU(Inst)) {
-    // Core/Side-, DP-, XDL- and TRANS-MACC VALU instructions complete
-    // out-of-order with respect to each other, so each of these classes
-    // has its own event.
-
-    if (TII.isXDL(Inst))
-      return VGPR_XDL_WRITE;
-
-    if (TII.isTRANS(Inst))
-      return VGPR_TRANS_WRITE;
-
-    if (AMDGPU::isDPMACCInstruction(Inst.getOpcode()))
-      return VGPR_DPMACC_WRITE;
-
-    return VGPR_CSMACC_WRITE;
-  }
-
-  // FLAT and LDS instructions may read their VGPR sources out-of-order
-  // with respect to each other and all other VMEM instructions, so
-  // each of these also has a separate event.
-
-  if (TII.isFLAT(Inst))
-    return VGPR_FLAT_READ;
-
-  if (TII.isDS(Inst))
-    return VGPR_LDS_READ;
-
-  if (TII.isVMEM(Inst) || TII.isVIMAGE(Inst) || TII.isVSAMPLE(Inst))
-    return VGPR_VMEM_READ;
-
-  // Otherwise, no hazard.
-
-  return {};
-}
-
 bool SIInsertWaitcnts::isVmemAccess(const MachineInstr &MI) const {
   return (TII.isFLAT(MI) && TII.mayAccessVMEMThroughFlat(MI)) ||
          (TII.isVMEM(MI) && !AMDGPU::getMUBUFIsBufferInv(MI.getOpcode()));
@@ -2966,8 +2926,29 @@ bool SIInsertWaitcnts::insertForcedWaitAfter(MachineInstr &Inst,
 WaitEventSet SIInsertWaitcnts::getEventsFor(const MachineInstr &Inst) const {
   WaitEventSet Events;
   if (IsExpertMode) {
-    if (const auto ET = getExpertSchedulingEventType(Inst))
-      Events.insert(*ET);
+    if (TII.isVALU(Inst)) {
+      // Core/Side-, DP-, XDL- and TRANS-MACC VALU instructions complete
+      // out-of-order with respect to each other, so each of these classes
+      // has its own event.
+      if (TII.isXDL(Inst))
+        Events.insert(VGPR_XDL_WRITE);
+      else if (TII.isTRANS(Inst))
+        Events.insert(VGPR_TRANS_WRITE);
+      else if (AMDGPU::isDPMACCInstruction(Inst.getOpcode()))
+        Events.insert(VGPR_DPMACC_WRITE);
+      else
+        Events.insert(VGPR_CSMACC_WRITE);
+    } else {
+      // FLAT and LDS instructions may read their VGPR sources out-of-order
+      // with respect to each other and all other VMEM instructions, so
+      // each of these also has a separate event.
+      if (TII.isFLAT(Inst))
+        Events.insert(VGPR_FLAT_READ);
+      else if (TII.isDS(Inst))
+        Events.insert(VGPR_LDS_READ);
+      else if (TII.isVMEM(Inst))
+        Events.insert(VGPR_VMEM_READ);
+    }
   }
 
   if (TII.isDS(Inst) && TII.usesLGKM_CNT(Inst)) {
