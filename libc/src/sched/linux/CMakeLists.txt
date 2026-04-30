@@ -6,6 +6,7 @@ add_entrypoint_object(
     ../getcpu.h
   DEPENDS
     libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.vdso
     libc.src.errno.errno
 )
 
