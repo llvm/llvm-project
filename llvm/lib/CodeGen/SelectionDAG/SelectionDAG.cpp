@@ -6165,7 +6165,7 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
     // IR-level ValueTracking.
     KnownFPClass KnownFalseClass = computeKnownFPClass(
         Op.getOperand(2), DemandedElts, InterestedClasses, Depth + 1);
-    if (KnownFalseClass.KnownFPClasses == fcAllFlags)
+    if (KnownFalseClass.isUnknown())
       break;
     KnownFPClass KnownTrueClass = computeKnownFPClass(
         Op.getOperand(1), DemandedElts, InterestedClasses, Depth + 1);

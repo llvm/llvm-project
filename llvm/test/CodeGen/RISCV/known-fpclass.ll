@@ -136,14 +136,46 @@ define <vscale x 4 x i1> @vselect_rhs_unknown(<vscale x 4 x i1> %cond, <vscale x
   ret <vscale x 4 x i1> %class
 }
 
+define <vscale x 4 x i1> @vselect_lhs_unknown(<vscale x 4 x i1> %cond, <vscale x 4 x float> %a, <vscale x 4 x float> nofpclass(nan) %b) {
+; CHECK-LABEL: vselect_lhs_unknown:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vmerge.vvm v8, v10, v8, v0
+; CHECK-NEXT:    vfclass.v v8, v8
+; CHECK-NEXT:    li a0, 768
+; CHECK-NEXT:    vand.vx v8, v8, a0
+; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    ret
+  %sel = select <vscale x 4 x i1> %cond, <vscale x 4 x float> %a, <vscale x 4 x float> %b
+  %class = call <vscale x 4 x i1> @llvm.is.fpclass.nxv4f32(<vscale x 4 x float> %sel, i32 3)  ; 0x3 = "nan"
+  ret <vscale x 4 x i1> %class
+}
+
 define i1 @select_rhs_unknown(i1 %cond, float nofpclass(nan) %a, float %b) {
 ; CHECK-LABEL: select_rhs_unknown:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a0, a0, 1
-; CHECK-NEXT:    bnez a0, .LBB11_2
+; CHECK-NEXT:    bnez a0, .LBB12_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    fmv.s fa0, fa1
-; CHECK-NEXT:  .LBB11_2:
+; CHECK-NEXT:  .LBB12_2:
+; CHECK-NEXT:    fclass.s a0, fa0
+; CHECK-NEXT:    andi a0, a0, 768
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    ret
+  %sel = select i1 %cond, float %a, float %b
+  %class = call i1 @llvm.is.fpclass.f32(float %sel, i32 3)  ; 0x3 = "nan"
+  ret i1 %class
+}
+
+define i1 @select_lhs_unknown(i1 %cond, float %a, float nofpclass(nan) %b) {
+; CHECK-LABEL: select_lhs_unknown:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi a0, a0, 1
+; CHECK-NEXT:    bnez a0, .LBB13_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    fmv.s fa0, fa1
+; CHECK-NEXT:  .LBB13_2:
 ; CHECK-NEXT:    fclass.s a0, fa0
 ; CHECK-NEXT:    andi a0, a0, 768
 ; CHECK-NEXT:    snez a0, a0
@@ -203,10 +235,10 @@ define i1 @select_asymmetric_nevernan_neverinf_query_nan(i1 %cond, float nofpcla
 ; CHECK-LABEL: select_asymmetric_nevernan_neverinf_query_nan:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a0, a0, 1
-; CHECK-NEXT:    bnez a0, .LBB16_2
+; CHECK-NEXT:    bnez a0, .LBB18_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    fmv.s fa0, fa1
-; CHECK-NEXT:  .LBB16_2:
+; CHECK-NEXT:  .LBB18_2:
 ; CHECK-NEXT:    fclass.s a0, fa0
 ; CHECK-NEXT:    andi a0, a0, 768
 ; CHECK-NEXT:    snez a0, a0
@@ -220,10 +252,10 @@ define i1 @select_asymmetric_nevernan_neverinf_query_inf(i1 %cond, float nofpcla
 ; CHECK-LABEL: select_asymmetric_nevernan_neverinf_query_inf:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a0, a0, 1
-; CHECK-NEXT:    bnez a0, .LBB17_2
+; CHECK-NEXT:    bnez a0, .LBB19_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    fmv.s fa0, fa1
-; CHECK-NEXT:  .LBB17_2:
+; CHECK-NEXT:  .LBB19_2:
 ; CHECK-NEXT:    fclass.s a0, fa0
 ; CHECK-NEXT:    andi a0, a0, 129
 ; CHECK-NEXT:    snez a0, a0
