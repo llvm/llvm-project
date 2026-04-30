@@ -19250,23 +19250,28 @@ EVT ARMTargetLowering::getOptimalMemOpType(
     LLVMContext &Context, const MemOp &Op,
     const AttributeList &FuncAttributes) const {
   // See if we can use NEON instructions for this...
-  if ((Op.isMemcpy() || Op.isZeroMemset()) && Subtarget->hasNEON() &&
-      !FuncAttributes.hasFnAttr(Attribute::NoImplicitFloat)) {
+  bool CanImplicitFloat = !FuncAttributes.hasFnAttr(Attribute::NoImplicitFloat);
+  bool CanUseNEON = Subtarget->hasNEON() && CanImplicitFloat;
+
+  auto AlignmentIsAcceptable = [&](EVT VT, Align AlignCheck) {
+    if (Op.isAligned(AlignCheck))
+      return true;
     unsigned Fast;
-    if (Op.size() >= 16 &&
-        (Op.isAligned(Align(16)) ||
-         (allowsMisalignedMemoryAccesses(MVT::v2f64, 0, Align(1),
-                                         MachineMemOperand::MONone, &Fast) &&
-          Fast))) {
+    return allowsMisalignedMemoryAccesses(VT, 0, Align(1),
+                                          MachineMemOperand::MONone, &Fast) &&
+           Fast;
+  };
+
+  // NEON vld1/vst1 as v2f64 (16-byte) or f64 (8-byte) for memcpy / zero memset.
+  if ((Op.isMemcpy() || Op.isZeroMemset()) && CanUseNEON) {
+    if (Op.size() >= 16 && AlignmentIsAcceptable(MVT::v2f64, Align(16)))
       return MVT::v2f64;
-    } else if (Op.size() >= 8 &&
-               (Op.isAligned(Align(8)) ||
-                (allowsMisalignedMemoryAccesses(
-                     MVT::f64, 0, Align(1), MachineMemOperand::MONone, &Fast) &&
-                 Fast))) {
+    if (Op.size() >= 8 && AlignmentIsAcceptable(MVT::f64, Align(8)))
       return MVT::f64;
-    }
   }
+
+  if (Op.size() >= 4 && AlignmentIsAcceptable(MVT::i32, Align(4)))
+    return MVT::i32;
 
   // Let the target-independent logic figure it out.
   return MVT::Other;

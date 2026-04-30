@@ -18927,7 +18927,7 @@ EVT AArch64TargetLowering::getOptimalMemOpType(
   // taken one instruction to materialize the v2i64 zero and one store (with
   // restrictive addressing mode). Just do i64 stores.
   // For non-zero memset, use NEON even for smaller sizes as dup is efficient.
-  bool IsSmallZeroMemset = Op.isMemset() && Op.size() < 32 && Op.isZeroMemset();
+  bool IsSmallZeroMemset = Op.size() < 32 && Op.isZeroMemset();
   auto AlignmentIsAcceptable = [&](EVT VT, Align AlignCheck) {
     if (Op.isAligned(AlignCheck))
       return true;
