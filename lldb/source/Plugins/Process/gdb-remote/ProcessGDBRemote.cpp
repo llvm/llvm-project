@@ -1795,7 +1795,7 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
     addr_t pc = thread_sp->GetRegisterContext()->GetPC();
     BreakpointSiteSP bp_site_sp =
         thread_sp->GetProcess()->GetBreakpointSiteList().FindByAddress(pc);
-    if (bp_site_sp && bp_site_sp->IsEnabled())
+    if (bp_site_sp && IsBreakpointSiteEnabled(*bp_site_sp))
       thread_sp->SetThreadStoppedAtUnexecutedBP(pc);
 
     if (exc_type != 0) {
@@ -1979,7 +1979,7 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
           // BreakpointSites in any other location, but we can't know for
           // sure what happened so it's a reasonable default.
           if (bp_site_sp) {
-            if (bp_site_sp->IsEnabled())
+            if (IsBreakpointSiteEnabled(*bp_site_sp))
               thread_sp->SetThreadHitBreakpointSite();
 
             if (bp_site_sp->ValidForThisThread(*thread_sp)) {
@@ -3276,12 +3276,11 @@ size_t ProcessGDBRemote::PutSTDIN(const char *src, size_t src_len,
 
 /// Enable a single breakpoint site by trying Z0 (software), then Z1
 /// (hardware), then manual memory write as a last resort.
-static llvm::Error DoEnableBreakpointSite(ProcessGDBRemote &proc,
-                                          BreakpointSite &bp_site) {
+llvm::Error ProcessGDBRemote::DoEnableBreakpointSite(BreakpointSite &bp_site) {
   Log *log = GetLog(GDBRLog::Breakpoints);
   const addr_t addr = bp_site.GetLoadAddress();
-  const size_t bp_op_size = proc.GetSoftwareBreakpointTrapOpcode(&bp_site);
-  auto &gdb_comm = proc.GetGDBRemote();
+  const size_t bp_op_size = GetSoftwareBreakpointTrapOpcode(&bp_site);
+  auto &gdb_comm = GetGDBRemote();
 
   // SupportsGDBStoppointPacket always returns true unless a previously sent
   // packet failed. As such, query the function before AND after sending the
@@ -3289,10 +3288,9 @@ static llvm::Error DoEnableBreakpointSite(ProcessGDBRemote &proc,
   if (gdb_comm.SupportsGDBStoppointPacket(eBreakpointSoftware) &&
       !bp_site.HardwareRequired()) {
     uint8_t error_no = gdb_comm.SendGDBStoppointTypePacket(
-        eBreakpointSoftware, true, addr, bp_op_size,
-        proc.GetInterruptTimeout());
+        eBreakpointSoftware, true, addr, bp_op_size, GetInterruptTimeout());
     if (error_no == 0) {
-      bp_site.SetEnabled(true);
+      SetBreakpointSiteEnabled(bp_site);
       bp_site.SetType(BreakpointSite::eExternal);
       return llvm::Error::success();
     }
@@ -3308,10 +3306,9 @@ static llvm::Error DoEnableBreakpointSite(ProcessGDBRemote &proc,
   // Like above, this is also queried twice.
   if (gdb_comm.SupportsGDBStoppointPacket(eBreakpointHardware)) {
     uint8_t error_no = gdb_comm.SendGDBStoppointTypePacket(
-        eBreakpointHardware, true, addr, bp_op_size,
-        proc.GetInterruptTimeout());
+        eBreakpointHardware, true, addr, bp_op_size, GetInterruptTimeout());
     if (error_no == 0) {
-      bp_site.SetEnabled(true);
+      SetBreakpointSiteEnabled(bp_site);
       bp_site.SetType(BreakpointSite::eHardware);
       return llvm::Error::success();
     }
@@ -3331,38 +3328,35 @@ static llvm::Error DoEnableBreakpointSite(ProcessGDBRemote &proc,
   if (bp_site.HardwareRequired())
     return llvm::createStringError("hardware breakpoints are not supported");
 
-  return proc.EnableSoftwareBreakpoint(&bp_site).takeError();
+  return EnableSoftwareBreakpoint(&bp_site).takeError();
 }
 
 /// Disable a single breakpoint site directly by sending the appropriate
 /// z packet or restoring the original instruction.
-static llvm::Error DoDisableBreakpointSite(ProcessGDBRemote &proc,
-                                           BreakpointSite &bp_site) {
+llvm::Error ProcessGDBRemote::DoDisableBreakpointSite(BreakpointSite &bp_site) {
   const addr_t addr = bp_site.GetLoadAddress();
-  const size_t bp_op_size = proc.GetSoftwareBreakpointTrapOpcode(&bp_site);
-  auto &gdb_comm = proc.GetGDBRemote();
+  const size_t bp_op_size = GetSoftwareBreakpointTrapOpcode(&bp_site);
+  auto &gdb_comm = GetGDBRemote();
 
   switch (bp_site.GetType()) {
   case BreakpointSite::eSoftware: {
-    Status error = proc.DisableSoftwareBreakpoint(&bp_site);
+    Status error = DisableSoftwareBreakpoint(&bp_site);
     if (error.Fail())
       return error.takeError();
     break;
   }
   case BreakpointSite::eHardware:
     if (gdb_comm.SendGDBStoppointTypePacket(eBreakpointHardware, false, addr,
-                                            bp_op_size,
-                                            proc.GetInterruptTimeout()))
+                                            bp_op_size, GetInterruptTimeout()))
       return llvm::createStringError("unknown error");
     break;
   case BreakpointSite::eExternal:
     if (gdb_comm.SendGDBStoppointTypePacket(eBreakpointSoftware, false, addr,
-                                            bp_op_size,
-                                            proc.GetInterruptTimeout()))
+                                            bp_op_size, GetInterruptTimeout()))
       return llvm::createStringError("unknown error");
     break;
   }
-  bp_site.SetEnabled(false);
+  SetBreakpointSiteEnabled(bp_site, false);
   return llvm::Error::success();
 }
 
@@ -3383,7 +3377,7 @@ Status ProcessGDBRemote::EnableBreakpointSite(BreakpointSite *bp_site) {
             site_id, (uint64_t)addr);
 
   // Breakpoint already exists and is enabled
-  if (bp_site->IsEnabled()) {
+  if (IsBreakpointSiteEnabled(*bp_site)) {
     LLDB_LOGF(log,
               "ProcessGDBRemote::EnableBreakpointSite (size_id = %" PRIu64
               ") address = 0x%" PRIx64 " -- SUCCESS (already enabled)",
@@ -3391,7 +3385,7 @@ Status ProcessGDBRemote::EnableBreakpointSite(BreakpointSite *bp_site) {
     return Status();
   }
 
-  return Status::FromError(DoEnableBreakpointSite(*this, *bp_site));
+  return Status::FromError(DoEnableBreakpointSite(*bp_site));
 }
 
 Status ProcessGDBRemote::DisableBreakpointSite(BreakpointSite *bp_site) {
@@ -3404,7 +3398,7 @@ Status ProcessGDBRemote::DisableBreakpointSite(BreakpointSite *bp_site) {
             ") addr = 0x%8.8" PRIx64,
             site_id, (uint64_t)addr);
 
-  if (!bp_site->IsEnabled()) {
+  if (!IsBreakpointSiteEnabled(*bp_site)) {
     LLDB_LOGF(log,
               "ProcessGDBRemote::DisableBreakpointSite (site_id = %" PRIu64
               ") addr = 0x%8.8" PRIx64 " -- SUCCESS (already disabled)",
@@ -3412,7 +3406,7 @@ Status ProcessGDBRemote::DisableBreakpointSite(BreakpointSite *bp_site) {
     return Status();
   }
 
-  return Status::FromError(DoDisableBreakpointSite(*this, *bp_site));
+  return Status::FromError(DoDisableBreakpointSite(*bp_site));
 }
 
 // Pre-requisite: wp != NULL.
@@ -6022,7 +6016,7 @@ CommandObject *ProcessGDBRemote::GetPluginCommandObject() {
 
 void ProcessGDBRemote::DidForkSwitchSoftwareBreakpoints(bool enable) {
   GetBreakpointSiteList().ForEach([this, enable](BreakpointSite *bp_site) {
-    if (bp_site->IsEnabled() &&
+    if (IsBreakpointSiteEnabled(*bp_site) &&
         (bp_site->GetType() == BreakpointSite::eSoftware ||
          bp_site->GetType() == BreakpointSite::eExternal)) {
       m_gdb_comm.SendGDBStoppointTypePacket(
@@ -6035,7 +6029,7 @@ void ProcessGDBRemote::DidForkSwitchSoftwareBreakpoints(bool enable) {
 void ProcessGDBRemote::DidForkSwitchHardwareTraps(bool enable) {
   if (m_gdb_comm.SupportsGDBStoppointPacket(eBreakpointHardware)) {
     GetBreakpointSiteList().ForEach([this, enable](BreakpointSite *bp_site) {
-      if (bp_site->IsEnabled() &&
+      if (IsBreakpointSiteEnabled(*bp_site) &&
           bp_site->GetType() == BreakpointSite::eHardware) {
         m_gdb_comm.SendGDBStoppointTypePacket(
             eBreakpointHardware, enable, bp_site->GetLoadAddress(),
