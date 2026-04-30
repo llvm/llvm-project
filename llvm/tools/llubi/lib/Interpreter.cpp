@@ -22,6 +22,8 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Allocator.h"
 
+#include <limits>
+
 namespace llvm::ubi {
 
 using namespace PatternMatch;
@@ -744,8 +746,18 @@ public:
       const auto &Vec = Args[0].asAggregate();
       const auto &SubVec = Args[1].asAggregate();
       const auto &Idx = Args[2].asInteger();
-      const uint64_t Offset = Idx.getZExtValue();
-      if (Offset + SubVec.size() > Vec.size())
+      auto EC =
+          cast<VectorType>(CB.getArgOperand(1)->getType())->getElementCount();
+      const uint64_t RawOffset = Idx.getZExtValue();
+      const uint32_t MinSize = EC.getKnownMinValue();
+      if (RawOffset % MinSize != 0)
+        return AnyValue::poison();
+      const uint64_t Chunk = RawOffset / MinSize;
+      const uint64_t EVL = Ctx.getEVL(EC);
+      if (Chunk > std::numeric_limits<uint64_t>::max() / EVL)
+        return AnyValue::poison();
+      const uint64_t Offset = Chunk * EVL;
+      if (Offset > Vec.size() || SubVec.size() > Vec.size() - Offset)
         return AnyValue::poison();
       std::vector<AnyValue> Res;
       Res.reserve(Vec.size());
@@ -762,12 +774,19 @@ public:
         return AnyValue::poison();
       const auto &Vec = Args[0].asAggregate();
       const auto &Idx = Args[1].asInteger();
-      const uint64_t Offset = Idx.getZExtValue();
-      const uint64_t DstSize =
-          Ctx.getEVL(cast<VectorType>(RetTy)->getElementCount());
-      if (Offset + DstSize > Vec.size())
+      auto EC = cast<VectorType>(RetTy)->getElementCount();
+      const uint64_t RawOffset = Idx.getZExtValue();
+      const uint32_t MinSize = EC.getKnownMinValue();
+      if (RawOffset % MinSize != 0)
         return AnyValue::poison();
-      return std::vector(Vec.begin() + Offset, Vec.begin() + Offset + DstSize);
+      const uint64_t Chunk = RawOffset / MinSize;
+      const uint64_t EVL = Ctx.getEVL(EC);
+      if (Chunk > std::numeric_limits<uint64_t>::max() / EVL)
+        return AnyValue::poison();
+      const uint64_t Offset = Chunk * EVL;
+      if (Offset > Vec.size() || EVL > Vec.size() - Offset)
+        return AnyValue::poison();
+      return std::vector(Vec.begin() + Offset, Vec.begin() + Offset + EVL);
     }
     case Intrinsic::vector_reverse: {
       auto Vec = Args[0].asAggregate();

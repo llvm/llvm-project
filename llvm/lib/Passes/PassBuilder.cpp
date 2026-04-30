@@ -814,17 +814,6 @@ Expected<bool> parseLintOptions(StringRef Params) {
                                             "LintPass");
 }
 
-/// Parser of parameters for FunctionPropertiesStatistics pass.
-Expected<bool> parseFunctionPropertiesStatisticsOptions(StringRef Params) {
-  return PassBuilder::parseSinglePassOption(Params, "pre-opt",
-                                            "FunctionPropertiesStatisticsPass");
-}
-
-/// Parser of parameters for InstCount pass.
-Expected<bool> parseInstCountOptions(StringRef Params) {
-  return PassBuilder::parseSinglePassOption(Params, "pre-opt", "InstCountPass");
-}
-
 /// Parser of parameters for LoopUnroll pass.
 Expected<LoopUnrollOptions> parseLoopUnrollOptions(StringRef Params) {
   LoopUnrollOptions UnrollOpts;

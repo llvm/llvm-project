@@ -1112,43 +1112,6 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       }
       break;
 
-    // The DW_OP_addr_sect_offset4 is used for any location expressions in
-    // shared libraries that have a location like:
-    //  DW_OP_addr(0x1000)
-    // If this address resides in a shared library, then this virtual address
-    // won't make sense when it is evaluated in the context of a running
-    // process where shared libraries have been slid. To account for this, this
-    // new address type where we can store the section pointer and a 4 byte
-    // offset.
-    //      case DW_OP_addr_sect_offset4:
-    //          {
-    //              result_type = eResultTypeFileAddress;
-    //              lldb::Section *sect = (lldb::Section
-    //              *)opcodes.GetMaxU64(&offset, sizeof(void *));
-    //              lldb::addr_t sect_offset = opcodes.GetU32(&offset);
-    //
-    //              Address so_addr (sect, sect_offset);
-    //              lldb::addr_t load_addr = so_addr.GetLoadAddress();
-    //              if (load_addr != LLDB_INVALID_ADDRESS)
-    //              {
-    //                  // We successfully resolve a file address to a load
-    //                  // address.
-    //                  stack.push_back(load_addr);
-    //                  break;
-    //              }
-    //              else
-    //              {
-    //                  // We were able
-    //                  if (error_ptr)
-    //                      error_ptr->SetErrorStringWithFormat ("Section %s in
-    //                      %s is not currently loaded.\n",
-    //                      sect->GetName().AsCString(),
-    //                      sect->GetModule()->GetFileSpec().GetFilename().AsCString());
-    //                  return false;
-    //              }
-    //          }
-    //          break;
-
     // OPCODE: DW_OP_deref
     // OPERANDS: none
     // DESCRIPTION: Pops the top stack entry and treats it as an address.
