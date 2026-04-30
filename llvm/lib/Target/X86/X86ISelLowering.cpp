@@ -39036,28 +39036,24 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
       break;
 
     uint8_t Imm8 = ImmN->getZExtValue();
-    unsigned NumElts = DemandedElts.getBitWidth();
-
-    KnownBits Res(BitWidth);
-    Res.resetAll();
+    APInt UndefElts;
+    SmallVector<APInt, 64> MatEltBits;
+    if (!getTargetConstantBitsFromNode(Matrix, 8, UndefElts, MatEltBits,
+                                       /*AllowWholeUndefs=*/false,
+                                       /*AllowPartialUndefs=*/false))
+      break;
 
     KnownBits InputKnown = DAG.computeKnownBits(Input, DemandedElts, Depth + 1);
 
     APInt KnownMask = InputKnown.Zero | InputKnown.One;
+    KnownBits Res(BitWidth);
+    Res.resetAll();
 
     for (unsigned OutBit = 0; OutBit != 8; ++OutBit) {
       unsigned RowIdx = 7 - OutBit;
 
-      APInt RowDemandedElts = APInt::getSplat(NumElts, APInt(8, 1u << RowIdx));
-
-      KnownBits RowKnown =
-          DAG.computeKnownBits(Matrix, RowDemandedElts, Depth + 1);
-
-      if (!RowKnown.isConstant())
-        continue;
-
-      uint8_t Row = RowKnown.getConstant().getZExtValue();
-      APInt RowMask(BitWidth, Row);
+      uint8_t Row = MatEltBits[RowIdx].getZExtValue();
+      APInt RowMask(8, Row);
 
       if (!(RowMask & ~KnownMask).isZero())
         continue;
