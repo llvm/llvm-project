@@ -9,9 +9,13 @@
 /// Strong-symbol override for applyInPlacePatches.  Handles instruction
 /// rewrites that fit in the same code size as the original:
 ///
-///   - cluster_load -> global_load   (opcode swap via MCInst + MCCodeEmitter)
-///   - s_clause     -> s_nop         (byte-level overwrite via
-///   applyByteReplace)
+///   - cluster_load             -> global_load    (opcode swap via MCInst +
+///                                                 MCCodeEmitter)
+///   - s_clause                 -> s_nop          (byte-level overwrite via
+///                                                 applyByteReplace)
+///   - s_barrier_signal_isfirst -> s_barrier_signal
+///                                                (opcode swap; same operand
+///                                                 layout, drops SCC write)
 ///
 /// No trampolines, ELF growth, or extra VGPRs are required.
 ///
@@ -116,6 +120,41 @@ uint32_t applyInPlacePatches(PatchContext &Ctx, size_t Idx) {
                          Ctx.LS)) {
       log() << "hotswap: inplace: s_clause -> s_nop at 0x"
             << utohexstr(DI.Offset) << "\n";
+      return 1;
+    }
+  }
+
+  // s_barrier_signal_isfirst -> s_barrier_signal: on A0, the isfirst
+  // variant may return stale SCC when cluster barriers are in flight.
+  // Both S_BARRIER_SIGNAL_IMM and S_BARRIER_SIGNAL_ISFIRST_IMM share
+  // a single SplitBarrier:$src0 immediate operand (see SOPInstructions.td),
+  // so cloning the decoded MCInst and flipping the opcode preserves the
+  // original barrier-ID operand. The dummy "-1" is only used to resolve
+  // the target opcode via the asm parser.
+  //
+  // Correctness caveat: the isfirst variant defines SCC; the non-isfirst
+  // variant does not. If downstream code reads SCC expecting the result
+  // of isfirst (e.g. an s_cbranch_scc1 selecting the elected wave), the
+  // swap leaves that read consuming stale SCC. On A0 the isfirst result
+  // is already unreliable due to the underlying race, so the swap removes
+  // a known-broken code path rather than introducing a new one. But it
+  // is not a semantic equivalence. Liveness/CFG-aware detection of SCC
+  // consumers is undecidable in general; the proper fix lives in
+  // A0-targeted Clang codegen and is out of scope for hotswap. This
+  // patch is a runtime mitigation for B0 binaries running on A0.
+  //
+  // The _M0 form has a different tablegen mnemonic string
+  // ("s_barrier_signal_isfirst m0", with the "m0" baked into the
+  // mnemonic itself, not as an operand -- see S_BARRIER_SIGNAL_ISFIRST_M0
+  // in SOPInstructions.td), so it does not match this equality check
+  // and falls through to the dispatcher's "no match" return below.
+  // The AMDGPU backend never emits the _M0 form for compute kernels.
+  if (Mnemonic == "s_barrier_signal_isfirst") {
+    std::optional<unsigned> NewOpcode =
+        resolveOpcode("s_barrier_signal -1", Ctx.LS);
+    if (NewOpcode && swapOpcode(DI, Ctx.Text, Ctx.LS, *NewOpcode)) {
+      log() << "hotswap: inplace: s_barrier_signal_isfirst -> opcode "
+            << *NewOpcode << " at 0x" << utohexstr(DI.Offset) << "\n";
       return 1;
     }
   }
