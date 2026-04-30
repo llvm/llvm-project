@@ -3976,12 +3976,13 @@ For a simpler introduction to the ordering constraints, see the
     address. All modification orders must be compatible with the
     happens-before order. There is no guarantee that the modification
     orders can be combined to a global total order for the whole program
-    (and this often will not be possible). The read in an atomic
-    read-modify-write operation (:ref:`cmpxchg <i_cmpxchg>` and
-    :ref:`atomicrmw <i_atomicrmw>`) reads the value in the modification
-    order immediately before the value it writes. If one atomic read
-    happens before another atomic read of the same address, the later
-    read must see the same value or a later value in the address's
+    (and this often will not be possible). If the read in an atomic
+    read-modify-write operation M (:ref:`cmpxchg <i_cmpxchg>` and
+    :ref:`atomicrmw <i_atomicrmw>`) reads from a ``monotonic`` (or
+    stronger) write W, W must be immediately before M in the address's
+    modification order. If one atomic read happens before another atomic
+    read of the same address and both are at least ``monotonic``, the
+    later read must not see an earlier value in the address's
     modification order. This disallows reordering of ``monotonic`` (or
     stronger) operations on the same address. If an address is written
     ``monotonic``-ally by one thread, and other threads ``monotonic``-ally
@@ -4007,10 +4008,11 @@ For a simpler introduction to the ordering constraints, see the
     In addition to the guarantees of ``acq_rel`` (``acquire`` for an
     operation that only reads, ``release`` for an operation that only
     writes), there is a global total order on all
-    sequentially-consistent operations on all addresses. Each
-    sequentially-consistent read sees the last preceding write to the
-    same address in this global order. This corresponds to the C/C++
-    ``memory_order_seq_cst`` and Java ``volatile``.
+    sequentially-consistent operations on all addresses. If an address
+    is only accessed through sequentially-consistent operations, each
+    sequentially-consistent read of that address sees the last preceding
+    write to the same address in this global order. This corresponds to
+    the C/C++ ``memory_order_seq_cst`` and Java ``volatile``.
 
     Note: this global total order is *not* guaranteed to be fully
     consistent with the *happens-before* partial order if
