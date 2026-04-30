@@ -467,6 +467,7 @@ void ScheduleDAGTopologicalSort::InitDAGTopologicalSorting() {
   // Cancel pending updates, mark as valid.
   Dirty = false;
   Updates.clear();
+  Reachable.clear();
 
   unsigned DAGSize = SUnits.size();
   std::vector<SUnit*> WorkList;
@@ -562,6 +563,7 @@ void ScheduleDAGTopologicalSort::AddPred(SUnit *Y, SUnit *X) {
   }
 
   NumNewPredsAdded++;
+  Reachable.clear();
 }
 
 void ScheduleDAGTopologicalSort::RemovePred(SUnit *M, SUnit *N) {
@@ -734,9 +736,13 @@ bool ScheduleDAGTopologicalSort::IsReachable(const SUnit *SU,
   bool HasLoop = false;
   // Is Ord(TargetSU) < Ord(SU) ?
   if (LowerBound < UpperBound) {
+    if (auto It = Reachable.find({LowerBound, UpperBound}); It != Reachable.end()) {
+      return It->second;
+    }
     Visited.reset();
     // There may be a path from TargetSU to SU. Check for it.
     DFS(TargetSU, UpperBound, HasLoop);
+    Reachable[{LowerBound, UpperBound}] = HasLoop;
   }
   return HasLoop;
 }
