@@ -193,23 +193,41 @@ define <7 x i8> @sign_7xi8(<7 x i8> %a) {
 ; CHECK-BMI2-SSE2-NEXT:    movw %cx, 4(%rax)
 ; CHECK-BMI2-SSE2-NEXT:    retq
 ;
-; CHECK-AVX-LABEL: sign_7xi8:
-; CHECK-AVX:       # %bb.0:
-; CHECK-AVX-NEXT:    movq %rdi, %rax
-; CHECK-AVX-NEXT:    vmovd %esi, %xmm0
-; CHECK-AVX-NEXT:    vpinsrb $1, %edx, %xmm0, %xmm0
-; CHECK-AVX-NEXT:    vpinsrb $2, %ecx, %xmm0, %xmm0
-; CHECK-AVX-NEXT:    vpinsrb $3, %r8d, %xmm0, %xmm0
-; CHECK-AVX-NEXT:    vpinsrb $4, %r9d, %xmm0, %xmm0
-; CHECK-AVX-NEXT:    vpinsrb $5, {{[0-9]+}}(%rsp), %xmm0, %xmm0
-; CHECK-AVX-NEXT:    vpinsrb $6, {{[0-9]+}}(%rsp), %xmm0, %xmm0
-; CHECK-AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-AVX-NEXT:    vpcmpgtb %xmm0, %xmm1, %xmm0
-; CHECK-AVX-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; CHECK-AVX-NEXT:    vpextrb $6, %xmm0, 6(%rdi)
-; CHECK-AVX-NEXT:    vpextrw $2, %xmm0, 4(%rdi)
-; CHECK-AVX-NEXT:    vmovd %xmm0, (%rdi)
-; CHECK-AVX-NEXT:    retq
+; CHECK-AVX12-LABEL: sign_7xi8:
+; CHECK-AVX12:       # %bb.0:
+; CHECK-AVX12-NEXT:    movq %rdi, %rax
+; CHECK-AVX12-NEXT:    vmovd %esi, %xmm0
+; CHECK-AVX12-NEXT:    vpinsrb $1, %edx, %xmm0, %xmm0
+; CHECK-AVX12-NEXT:    vpinsrb $2, %ecx, %xmm0, %xmm0
+; CHECK-AVX12-NEXT:    vpinsrb $3, %r8d, %xmm0, %xmm0
+; CHECK-AVX12-NEXT:    vpinsrb $4, %r9d, %xmm0, %xmm0
+; CHECK-AVX12-NEXT:    vpinsrb $5, {{[0-9]+}}(%rsp), %xmm0, %xmm0
+; CHECK-AVX12-NEXT:    vpinsrb $6, {{[0-9]+}}(%rsp), %xmm0, %xmm0
+; CHECK-AVX12-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-AVX12-NEXT:    vpcmpgtb %xmm0, %xmm1, %xmm0
+; CHECK-AVX12-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-AVX12-NEXT:    vpextrb $6, %xmm0, 6(%rdi)
+; CHECK-AVX12-NEXT:    vpextrw $2, %xmm0, 4(%rdi)
+; CHECK-AVX12-NEXT:    vmovd %xmm0, (%rdi)
+; CHECK-AVX12-NEXT:    retq
+;
+; CHECK-AVX512-LABEL: sign_7xi8:
+; CHECK-AVX512:       # %bb.0:
+; CHECK-AVX512-NEXT:    movq %rdi, %rax
+; CHECK-AVX512-NEXT:    vmovd %esi, %xmm0
+; CHECK-AVX512-NEXT:    vpinsrb $1, %edx, %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    vpinsrb $2, %ecx, %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    vpinsrb $3, %r8d, %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    vpinsrb $4, %r9d, %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    vpinsrb $5, {{[0-9]+}}(%rsp), %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    vpinsrb $6, {{[0-9]+}}(%rsp), %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-AVX512-NEXT:    vpcmpgtb %xmm0, %xmm1, %xmm0
+; CHECK-AVX512-NEXT:    vpord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    vpextrb $6, %xmm0, 6(%rdi)
+; CHECK-AVX512-NEXT:    vpextrw $2, %xmm0, 4(%rdi)
+; CHECK-AVX512-NEXT:    vmovd %xmm0, (%rdi)
+; CHECK-AVX512-NEXT:    retq
   %c = icmp sgt <7 x i8> %a, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
   %res = select <7 x i1> %c, <7 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>, <7 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
   ret <7 x i8> %res
@@ -232,12 +250,19 @@ define <8 x i8> @sign_8xi8(<8 x i8> %a) {
 ; CHECK-BMI2-SSE2-NEXT:    movdqa %xmm1, %xmm0
 ; CHECK-BMI2-SSE2-NEXT:    retq
 ;
-; CHECK-AVX-LABEL: sign_8xi8:
-; CHECK-AVX:       # %bb.0:
-; CHECK-AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-AVX-NEXT:    vpcmpgtb %xmm0, %xmm1, %xmm0
-; CHECK-AVX-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; CHECK-AVX-NEXT:    retq
+; CHECK-AVX12-LABEL: sign_8xi8:
+; CHECK-AVX12:       # %bb.0:
+; CHECK-AVX12-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-AVX12-NEXT:    vpcmpgtb %xmm0, %xmm1, %xmm0
+; CHECK-AVX12-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-AVX12-NEXT:    retq
+;
+; CHECK-AVX512-LABEL: sign_8xi8:
+; CHECK-AVX512:       # %bb.0:
+; CHECK-AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-AVX512-NEXT:    vpcmpgtb %xmm0, %xmm1, %xmm0
+; CHECK-AVX512-NEXT:    vpord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    retq
   %c = icmp sgt <8 x i8> %a, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
   %res = select <8 x i1> %c, <8 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>, <8 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
   ret <8 x i8> %res
@@ -306,10 +331,8 @@ define <3 x i32> @sign_3xi32(<3 x i32> %a) {
 ;
 ; CHECK-AVX512-LABEL: sign_3xi32:
 ; CHECK-AVX512:       # %bb.0:
-; CHECK-AVX512-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; CHECK-AVX512-NEXT:    vpcmpgtd %xmm1, %xmm0, %k1
-; CHECK-AVX512-NEXT:    vpbroadcastd {{.*#+}} xmm1 {%k1} = [1,1,1,1]
-; CHECK-AVX512-NEXT:    vmovdqa %xmm1, %xmm0
+; CHECK-AVX512-NEXT:    vpsrad $31, %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    vpord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    retq
   %c = icmp sgt <3 x i32> %a, <i32 -1, i32 -1, i32 -1>
   %res = select <3 x i1> %c, <3 x i32> <i32 1, i32 1, i32 1>, <3 x i32> <i32 -1, i32 -1, i32 -1>
