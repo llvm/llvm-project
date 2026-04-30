@@ -154,6 +154,9 @@ public:
   void CodeCompleteDesignator(const QualType BaseType,
                               llvm::ArrayRef<Expr *> InitExprs,
                               const Designation &D);
+  /// Trigger code completion for a position inside a __builtin_offsetof
+  /// member designator (after the type's `,`, or after a `.`).
+  void CodeCompleteOffsetOfDesignator(QualType BaseType, const Designation &D);
   void CodeCompleteKeywordAfterIf(bool AfterExclaim) const;
   void CodeCompleteAfterIf(Scope *S, bool IsBracedThen);
 
