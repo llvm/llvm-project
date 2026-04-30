@@ -228,14 +228,14 @@ std::optional<MergePair> areMergablePartners(MachineInstr &MI,
   if (SrcIsInversed && (UsesSGPRSources || !ST.hasPkMovB32()))
     return std::nullopt;
 
+  const TargetRegisterClass *VGPR64RC = TRI->getVGPR64Class();
+  const TargetRegisterClass *SGPR64RC = &AMDGPU::SReg_64RegClass;
   Register Dst64 = TRI->getMatchingSuperReg(DstBase, AMDGPU::sub0, VGPR64RC);
   Register Src64 = TRI->getMatchingSuperReg(
       SrcBase, AMDGPU::sub0, UsesSGPRSources ? SGPR64RC : VGPR64RC);
   if (!Dst64 || !Src64)
     return std::nullopt;
 
-  const TargetRegisterClass *VGPR64RC = TRI->getVGPR64Class();
-  const TargetRegisterClass *SGPR64RC = &AMDGPU::SReg_64RegClass;
   bool KillSrc = MISrcOp->isKill() && NextMISrcOp->isKill();
   return MergePair{&MI,           &NextMI, Dst64,          Src64,
                    SrcIsInversed, KillSrc, UsesSGPRSources};
