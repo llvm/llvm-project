@@ -13,6 +13,6 @@
 using LlvmLibcSchedSchedGetCpuTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 TEST_F(LlvmLibcSchedSchedGetCpuTest, SmokeTest) {
-  ASSERT_GT(LIBC_NAMESPACE::sched_getcpu(), 0);
+  ASSERT_GE(LIBC_NAMESPACE::sched_getcpu(), 0);
   ASSERT_ERRNO_SUCCESS();
 }
