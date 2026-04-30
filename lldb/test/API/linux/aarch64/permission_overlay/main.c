@@ -76,9 +76,10 @@ int main(void) {
   // Which leaves 7 keys available for programs to allocate.
 
   const size_t page_size = (size_t)sysconf(_SC_PAGESIZE);
-  // pkeys can only subtract from the set of permissions in the page table,
-  // so we set the page table to allow everything.
-  const int prot = PROT_READ | PROT_WRITE | PROT_EXEC;
+  // pkeys can only subtract from the set of permissions in the page table.
+  // So we leave out execute here to check later that an overlay does not
+  // enable execution.
+  const int prot = PROT_READ | PROT_WRITE;
   const int flags = MAP_PRIVATE | MAP_ANONYMOUS;
 
   // This page will have the default key 0.
