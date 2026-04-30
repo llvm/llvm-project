@@ -449,9 +449,10 @@ Attribute CUDAVarRegistrationInfoAttr::parse(AsmParser &parser, Type odsType) {
   if (parser.parseLess())
     return {};
 
-  std::string deviceSideName;
-  if (parser.parseString(&deviceSideName))
+  StringRef deviceSideNameRef;
+  if (parser.parseKeyword(&deviceSideNameRef))
     return {};
+  std::string deviceSideName = deviceSideNameRef.str();
 
   // Parse the device variable kind (Variable, Surface, Texture)
   StringRef kindStr;

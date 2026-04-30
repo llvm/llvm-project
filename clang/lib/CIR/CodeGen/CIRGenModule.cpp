@@ -3585,12 +3585,6 @@ void CIRGenModule::updateResolvedBlockAddress(cir::BlockAddressOp op,
   it->second = newLabel;
 }
 
-void CIRGenModule::addCompilerUsedGlobal(cir::GlobalOp gv) {
-  assert(!gv.isDeclaration() &&
-         "Only globals with definition can force usage.");
-  llvmCompilerUsed.emplace_back(gv);
-}
-
 cir::LabelOp
 CIRGenModule::lookupBlockAddressInfo(cir::BlockAddrInfoAttr blockInfo) {
   return blockAddressInfoToLabel.lookup(blockInfo);
