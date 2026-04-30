@@ -1,0 +1,48 @@
+!rec_cudaStream = !cir.record<struct "cudaStream" incomplete>
+!s32i = !cir.int<s, 32>
+!u32i = !cir.int<u, 32>
+!u64i = !cir.int<u, 64>
+!void = !cir.void
+!rec_dim3 = !cir.record<struct "dim3" {!u32i, !u32i, !u32i}>
+module @"/home/zaky/workspace/llvm-project/clang/test/CIR/CodeGenCUDA/address-spaces.cu" attributes {cir.lang = #cir.lang<cxx>, cir.module_asm = [], cir.triple = "x86_64-unknown-linux-gnu", dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vector<4xi64>, !llvm.ptr<271> = dense<32> : vector<4xi64>, !llvm.ptr<272> = dense<64> : vector<4xi64>, i64 = dense<64> : vector<2xi64>, i128 = dense<128> : vector<2xi64>, f80 = dense<128> : vector<2xi64>, !llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little", "dlti.mangling_mode" = "e", "dlti.legal_int_widths" = array<i32: 8, 16, 32, 64>, "dlti.stack_alignment" = 128 : i64>} {
+  cir.global "private" internal dso_local @i = #cir.poison : !s32i {alignment = 4 : i64, cu.var_registration = #cir.cu.var_registration<i, Variable, extern>} loc(#loc12)
+  cir.global "private" internal dso_local @j = #cir.poison : !s32i {alignment = 4 : i64, cu.var_registration = #cir.cu.var_registration<j, Variable, extern, constant>} loc(#loc13)
+  cir.global "private" internal dso_local @k = #cir.poison : !s32i {alignment = 4 : i64} loc(#loc14)
+  cir.global "private" internal dso_local @b = #cir.poison : !cir.float {alignment = 4 : i64} loc(#loc15)
+  cir.func private dso_local @__cudaPopCallConfiguration(!cir.ptr<!rec_dim3>, !cir.ptr<!rec_dim3>, !cir.ptr<!u64i>, !cir.ptr<!cir.ptr<!rec_cudaStream>>) -> !s32i loc(#loc)
+  cir.func private dso_local @cudaLaunchKernel(!cir.ptr<!void>, !rec_dim3, !rec_dim3, !cir.ptr<!cir.ptr<!void>>, !u64i, !cir.ptr<!rec_cudaStream>) -> !u32i loc(#loc)
+  cir.func no_inline dso_local @_Z17__device_stub__fnv() attributes {cu.kernel_name = #cir.cu.kernel_name<_Z2fnv>, nothrow} {
+    %0 = cir.alloca !cir.array<!cir.ptr<!void> x 0>, !cir.ptr<!cir.array<!cir.ptr<!void> x 0>>, ["kernel_args"] {alignment = 16 : i64} loc(#loc16)
+    %1 = cir.cast array_to_ptrdecay %0 : !cir.ptr<!cir.array<!cir.ptr<!void> x 0>> -> !cir.ptr<!cir.ptr<!void>> loc(#loc16)
+    %2 = cir.alloca !rec_dim3, !cir.ptr<!rec_dim3>, ["grid_dim"] {alignment = 8 : i64} loc(#loc16)
+    %3 = cir.alloca !rec_dim3, !cir.ptr<!rec_dim3>, ["block_dim"] {alignment = 8 : i64} loc(#loc16)
+    %4 = cir.alloca !u64i, !cir.ptr<!u64i>, ["shared_mem"] {alignment = 8 : i64} loc(#loc16)
+    %5 = cir.alloca !cir.ptr<!rec_cudaStream>, !cir.ptr<!cir.ptr<!rec_cudaStream>>, ["stream"] {alignment = 8 : i64} loc(#loc16)
+    %6 = cir.call @__cudaPopCallConfiguration(%2, %3, %4, %5) : (!cir.ptr<!rec_dim3>, !cir.ptr<!rec_dim3>, !cir.ptr<!u64i>, !cir.ptr<!cir.ptr<!rec_cudaStream>>) -> !s32i loc(#loc16)
+    %7 = cir.get_global @_Z17__device_stub__fnv : !cir.ptr<!cir.func<()>> loc(#loc16)
+    %8 = cir.cast bitcast %7 : !cir.ptr<!cir.func<()>> -> !cir.ptr<!void> loc(#loc16)
+    %9 = cir.load %4 : !cir.ptr<!u64i>, !u64i loc(#loc16)
+    %10 = cir.load %5 : !cir.ptr<!cir.ptr<!rec_cudaStream>>, !cir.ptr<!rec_cudaStream> loc(#loc16)
+    %11 = cir.load align(8) %2 : !cir.ptr<!rec_dim3>, !rec_dim3 loc(#loc11)
+    %12 = cir.load align(8) %3 : !cir.ptr<!rec_dim3>, !rec_dim3 loc(#loc11)
+    %13 = cir.call @cudaLaunchKernel(%8, %11, %12, %1, %9, %10) : (!cir.ptr<!void> {llvm.noundef}, !rec_dim3, !rec_dim3, !cir.ptr<!cir.ptr<!void>> {llvm.noundef}, !u64i {llvm.noundef}, !cir.ptr<!rec_cudaStream> {llvm.noundef}) -> (!u32i {llvm.noundef}) loc(#loc11)
+    cir.return loc(#loc10)
+  } loc(#loc16)
+} loc(#loc)
+#loc = loc("/home/zaky/workspace/llvm-project/clang/test/CIR/CodeGenCUDA/address-spaces.cu":0:0)
+#loc1 = loc("clang/test/CIR/CodeGenCUDA/address-spaces.cu":58:1)
+#loc2 = loc("clang/test/CIR/CodeGenCUDA/address-spaces.cu":58:16)
+#loc3 = loc("clang/test/CIR/CodeGenCUDA/address-spaces.cu":67:1)
+#loc4 = loc("clang/test/CIR/CodeGenCUDA/address-spaces.cu":67:18)
+#loc5 = loc("clang/test/CIR/CodeGenCUDA/address-spaces.cu":76:1)
+#loc6 = loc("clang/test/CIR/CodeGenCUDA/address-spaces.cu":76:16)
+#loc7 = loc("clang/test/CIR/CodeGenCUDA/address-spaces.cu":82:1)
+#loc8 = loc("clang/test/CIR/CodeGenCUDA/address-spaces.cu":82:18)
+#loc9 = loc("clang/test/CIR/CodeGenCUDA/address-spaces.cu":98:1)
+#loc10 = loc("clang/test/CIR/CodeGenCUDA/address-spaces.cu":102:1)
+#loc11 = loc("clang/test/CIR/CodeGenCUDA/address-spaces.cu":98:17)
+#loc12 = loc(fused[#loc1, #loc2])
+#loc13 = loc(fused[#loc3, #loc4])
+#loc14 = loc(fused[#loc5, #loc6])
+#loc15 = loc(fused[#loc7, #loc8])
+#loc16 = loc(fused[#loc9, #loc10])

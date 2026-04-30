@@ -209,10 +209,6 @@ public:
   void updateResolvedBlockAddress(cir::BlockAddressOp op,
                                   cir::LabelOp newLabel);
 
-<<<<<<< HEAD
-  /// Add a global value to the LLVMCompilerUsed list.
-  void addCompilerUsedGlobal(cir::GlobalOp gv);
-=======
   /// Add a global value to the llvmUsed list.
   void addUsedGlobal(cir::CIRGlobalValueInterface gv);
 
@@ -224,7 +220,6 @@ public:
 
   /// Emit llvm.used and llvm.compiler.used globals.
   void emitLLVMUsed();
->>>>>>> 2fdb09cf65e680094bdb3573435467ae544c7490
 
   /// Tell the consumer that this variable has been instantiated.
   void handleCXXStaticMemberVarInstantiation(VarDecl *vd);

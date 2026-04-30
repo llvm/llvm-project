@@ -1319,10 +1319,7 @@ static void emitUsed(CIRGenModule &cgm, StringRef name,
   gv.setSectionAttr(builder.getStringAttr("llvm.metadata"));
 }
 
-void CIRGenModule::emitLLVMUsed() {
-  emitUsed(*this, "llvm.used", llvmUsed);
-  emitUsed(*this, "llvm.compiler.used", llvmCompilerUsed);
-}
+void CIRGenModule::emitLLVMUsed() { emitUsed(*this, "llvm.used", llvmUsed); }
 
 void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
                                            bool isTentative) {
