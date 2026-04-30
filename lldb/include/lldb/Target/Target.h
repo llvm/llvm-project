@@ -518,6 +518,10 @@ public:
 
   void SetTrapExceptions(bool b) { m_trap_exceptions = b; }
 
+  bool GetStopOnFork() const { return m_stop_on_fork; }
+
+  void SetStopOnFork(bool b) { m_stop_on_fork = b; }
+
   bool GetREPLEnabled() const { return m_repl; }
 
   void SetREPLEnabled(bool b) { m_repl = b; }
@@ -638,6 +642,7 @@ private:
   bool m_stop_others = true;
   bool m_debug = false;
   bool m_trap_exceptions = true;
+  bool m_stop_on_fork = false;
   bool m_repl = false;
   bool m_playground = false;
   bool m_playground_transforms_hp = true;
