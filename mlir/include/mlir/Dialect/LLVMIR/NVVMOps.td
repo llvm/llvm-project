@@ -302,8 +302,7 @@ class NVVM_SingleResultIntrinsicOp<string mnemonic, list<Trait> traits = [], str
   }];
 }
 
-// Base class for unary NVVM operations.
-class NVVM_UnaryOp<string mnemonic, list<Trait> traits = []> :
+class NVVM_F32UnaryApproxOp<string mnemonic, list<Trait> traits = []> :
     NVVM_SingleResultIntrinsicOp<mnemonic,
         traits # [Pure, SameOperandsAndResultType]> {
   let arguments = (ins F32:$src,
@@ -537,8 +536,7 @@ def NVVM_RcpApproxFtzF32Op : NVVM_IntrOp<"rcp.approx.ftz.f", [Pure], 1> {
 // keeps the NVVM dialect self-contained -- users don't need to reach for
 // `math.*` ops for something that already has a PTX instruction.
 
-def NVVM_SinOp : NVVM_UnaryOp<"sin",
-    [Pure, SameOperandsAndResultType]> {
+def NVVM_SinOp : NVVM_F32UnaryApproxOp<"sin"> {
   let summary = "Sine (fast approximation)";
   let description = [{
     Computes a fast approximation of the sine of the input value (in radians).
@@ -550,7 +548,7 @@ def NVVM_SinOp : NVVM_UnaryOp<"sin",
   }];
 }
 
-def NVVM_CosOp : NVVM_UnaryOp<"cos"> {
+def NVVM_CosOp : NVVM_F32UnaryApproxOp<"cos"> {
   let summary = "Cosine (fast approximation)";
   let description = [{
     Computes a fast approximation of the cosine of the input value (in
@@ -559,8 +557,7 @@ def NVVM_CosOp : NVVM_UnaryOp<"cos"> {
   }];
 }
 
-def NVVM_Log2Op : NVVM_UnaryOp<"log2",
-    [Pure, SameOperandsAndResultType]> {
+def NVVM_Log2Op : NVVM_F32UnaryApproxOp<"log2"> {
   let summary = "Base-2 logarithm (fast approximation)";
   let description = [{
     Computes a fast approximation of the base-2 logarithm of the input
@@ -569,7 +566,7 @@ def NVVM_Log2Op : NVVM_UnaryOp<"log2",
   }];
 }
 
-def NVVM_Ex2Op : NVVM_UnaryOp<"ex2"> {
+def NVVM_Ex2Op : NVVM_F32UnaryApproxOp<"ex2"> {
   let summary = "Base-2 exponential (fast approximation)";
   let description = [{
     Computes a fast approximation of 2 raised to the power of the input
