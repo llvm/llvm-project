@@ -222,7 +222,7 @@ public:
 
   int getSyncID() { return SyncID; }
 
-  int getSGID() const { return SGID; }
+  int getSGID() { return SGID; }
 
   SchedGroupMask getMask() { return SGMask; }
 
@@ -549,10 +549,7 @@ int PipelineSolver::EdgeSetBuilder::build(
   }
 
   // See comment in addEdges concerning the iterator direction.
-  return IsBottomUp ? buildImpl(SGID,
-                                llvm::make_range(SyncPipeline.rbegin(),
-                                                 SyncPipeline.rend()),
-                                NewEdges)
+  return IsBottomUp ? buildImpl(SGID, reverse(SyncPipeline), NewEdges)
                     : buildImpl(SGID,
                                 llvm::make_range(SyncPipeline.begin(),
                                                  SyncPipeline.end()),
@@ -581,7 +578,7 @@ int PipelineSolver::EdgeSetBuilder::buildImpl(
 
   int MissedEdges = 0;
   bool MakePred = false;
-  for (const SchedGroup &SG : SchedGroups) {
+  for (SchedGroup &SG : SchedGroups) {
     if (SG.getSGID() == SGID) {
       MakePred = true;
       continue;
