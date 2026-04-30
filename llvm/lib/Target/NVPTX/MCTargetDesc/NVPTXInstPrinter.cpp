@@ -178,6 +178,13 @@ void NVPTXInstPrinter::printFTZFlag(const MCInst *MI, int OpNum,
     O << ".ftz";
 }
 
+void NVPTXInstPrinter::printNegatedPredicate(const MCInst *MI, int OpNum,
+                                             const MCSubtargetInfo &,
+                                             raw_ostream &O) {
+  if (MI->getOperand(OpNum).getImm())
+    O << "!";
+}
+
 void NVPTXInstPrinter::printCmpMode(const MCInst *MI, int OpNum,
                                     const MCSubtargetInfo &, raw_ostream &O,
                                     StringRef Modifier) {
