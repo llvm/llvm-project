@@ -1387,13 +1387,10 @@ bool IRTranslator::translateLoad(const User &U, MachineIRBuilder &MIRBuilder) {
     return true;
 
   ArrayRef<Register> Regs = getOrCreateVRegs(LI);
-  ArrayRef<uint64_t> Offsets = *VMap.getOffsets(LI);
   Register Base = getOrCreateVReg(*LI.getPointerOperand());
   AAMDNodes AAInfo = LI.getAAMetadata();
 
   const Value *Ptr = LI.getPointerOperand();
-  Type *OffsetIRTy = DL->getIndexType(Ptr->getType());
-  LLT OffsetTy = getLLTForType(*OffsetIRTy, *DL);
 
   if (CLI->supportSwiftError() && isSwiftError(Ptr)) {
     assert(Regs.size() == 1 && "swifterror should be single pointer");
@@ -1412,18 +1409,30 @@ bool IRTranslator::translateLoad(const User &U, MachineIRBuilder &MIRBuilder) {
     }
   }
 
-  const MDNode *Ranges =
-      Regs.size() == 1 ? LI.getMetadata(LLVMContext::MD_range) : nullptr;
+  // Fast-path the common single-register load.
+  if (Regs.size() == 1) {
+    auto MMO = MF->getMachineMemOperand(
+        MachinePointerInfo(LI.getPointerOperand()), Flags,
+        MRI->getType(Regs[0]), getMemOpAlign(LI), AAInfo,
+        LI.getMetadata(LLVMContext::MD_range), LI.getSyncScopeID(),
+        LI.getOrdering());
+    MIRBuilder.buildLoad(Regs[0], Base, *MMO);
+    return true;
+  }
+
+  ArrayRef<uint64_t> Offsets = *VMap.getOffsets(LI);
+  Type *OffsetIRTy = DL->getIndexType(Ptr->getType());
+  LLT OffsetTy = getLLTForType(*OffsetIRTy, *DL);
   for (unsigned i = 0; i < Regs.size(); ++i) {
     Register Addr;
     MIRBuilder.materializeObjectPtrOffset(Addr, Base, OffsetTy, Offsets[i]);
 
     MachinePointerInfo Ptr(LI.getPointerOperand(), Offsets[i]);
     Align BaseAlign = getMemOpAlign(LI);
-    auto MMO =
-        MF->getMachineMemOperand(Ptr, Flags, MRI->getType(Regs[i]),
-                                 commonAlignment(BaseAlign, Offsets[i]), AAInfo,
-                                 Ranges, LI.getSyncScopeID(), LI.getOrdering());
+    auto MMO = MF->getMachineMemOperand(Ptr, Flags, MRI->getType(Regs[i]),
+                                        commonAlignment(BaseAlign, Offsets[i]),
+                                        AAInfo, nullptr, LI.getSyncScopeID(),
+                                        LI.getOrdering());
     MIRBuilder.buildLoad(Regs[i], Addr, *MMO);
   }
 
@@ -1436,11 +1445,7 @@ bool IRTranslator::translateStore(const User &U, MachineIRBuilder &MIRBuilder) {
     return true;
 
   ArrayRef<Register> Vals = getOrCreateVRegs(*SI.getValueOperand());
-  ArrayRef<uint64_t> Offsets = *VMap.getOffsets(*SI.getValueOperand());
   Register Base = getOrCreateVReg(*SI.getPointerOperand());
-
-  Type *OffsetIRTy = DL->getIndexType(SI.getPointerOperandType());
-  LLT OffsetTy = getLLTForType(*OffsetIRTy, *DL);
 
   if (CLI->supportSwiftError() && isSwiftError(SI.getPointerOperand())) {
     assert(Vals.size() == 1 && "swifterror should be single pointer");
@@ -1452,7 +1457,19 @@ bool IRTranslator::translateStore(const User &U, MachineIRBuilder &MIRBuilder) {
   }
 
   MachineMemOperand::Flags Flags = TLI->getStoreMemOperandFlags(SI, *DL);
+  // Fast-path the common single-register store.
+  if (Vals.size() == 1) {
+    auto MMO = MF->getMachineMemOperand(
+        MachinePointerInfo(SI.getPointerOperand()), Flags,
+        MRI->getType(Vals[0]), getMemOpAlign(SI), SI.getAAMetadata(), nullptr,
+        SI.getSyncScopeID(), SI.getOrdering());
+    MIRBuilder.buildStore(Vals[0], Base, *MMO);
+    return true;
+  }
 
+  ArrayRef<uint64_t> Offsets = *VMap.getOffsets(*SI.getValueOperand());
+  Type *OffsetIRTy = DL->getIndexType(SI.getPointerOperandType());
+  LLT OffsetTy = getLLTForType(*OffsetIRTy, *DL);
   for (unsigned i = 0; i < Vals.size(); ++i) {
     Register Addr;
     MIRBuilder.materializeObjectPtrOffset(Addr, Base, OffsetTy, Offsets[i]);
