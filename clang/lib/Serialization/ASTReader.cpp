@@ -5115,8 +5115,8 @@ ASTReader::ASTReadResult ASTReader::ReadAST(ModuleFileName FileName,
 
     case UnresolvedModuleRef::Export:
       if (ResolvedMod || Unresolved.IsWildcard)
-        Unresolved.Mod->Exports.push_back(
-          Module::ExportDecl(ResolvedMod, Unresolved.IsWildcard));
+        Unresolved.Mod->Exports.push_back(Module::ExportDecl(
+            ResolvedMod, static_cast<bool>(Unresolved.IsWildcard)));
       continue;
     }
   }
@@ -9748,9 +9748,9 @@ void ASTReader::ReadExtnameUndeclaredIdentifiers(
     IdentifierInfo *NameId =
         DecodeIdentifierInfo(ExtnameUndeclaredIdentifiers[I]);
     IdentifierInfo *ExtnameId =
-        DecodeIdentifierInfo(ExtnameUndeclaredIdentifiers[I+1]);
+        DecodeIdentifierInfo(ExtnameUndeclaredIdentifiers[I + 1]);
     SourceLocation Loc =
-        SourceLocation::getFromRawEncoding(ExtnameUndeclaredIdentifiers[I+2]);
+        SourceLocation::getFromRawEncoding(ExtnameUndeclaredIdentifiers[I + 2]);
     AsmLabelAttr *Attr = AsmLabelAttr::CreateImplicit(
         getContext(), ExtnameId->getName(),
         AttributeCommonInfo(ExtnameId, SourceRange(Loc),

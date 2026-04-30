@@ -1,4 +1,4 @@
-//===- EntityPointerLevel.cpp ----------------------------------*- C++ -*-===//
+//===- EntityPointerLevel.cpp -----------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,7 +11,6 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/StmtVisitor.h"
-#include "clang/ScalableStaticAnalysisFramework/Analyses/EntityPointerLevel/EntityPointerLevelFormat.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/ASTEntityMapping.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityName.h"
 #include <optional>
@@ -260,71 +259,4 @@ clang::ssaf::incrementPointerLevel(const EntityPointerLevel &E) {
 EntityPointerLevel clang::ssaf::buildEntityPointerLevel(EntityId Id,
                                                         unsigned PtrLv) {
   return EntityPointerLevel({Id, PtrLv});
-}
-
-// Writes an EntityPointerLevel as
-// Array [
-//   Object { "@" : [entity-id]},
-//   [pointer-level-integer]
-// ]
-llvm::json::Value clang::ssaf::entityPointerLevelToJSON(
-    const EntityPointerLevel &EPL, JSONFormat::EntityIdToJSONFn EntityId2JSON) {
-  return llvm::json::Array{EntityId2JSON(EPL.getEntity()),
-                           llvm::json::Value(EPL.getPointerLevel())};
-}
-
-Expected<EntityPointerLevel> clang::ssaf::entityPointerLevelFromJSON(
-    const llvm::json::Value &EPLData,
-    JSONFormat::EntityIdFromJSONFn EntityIdFromJSON) {
-  auto *AsArr = EPLData.getAsArray();
-
-  if (!AsArr || AsArr->size() != 2)
-    return makeSawButExpectedError(
-        EPLData, "an array with exactly two elements representing "
-                 "EntityId and PointerLevel, respectively");
-
-  auto *EntityIdObj = (*AsArr)[0].getAsObject();
-
-  if (!EntityIdObj)
-    return makeSawButExpectedError((*AsArr)[0],
-                                   "an object representing EntityId");
-
-  Expected<EntityId> Id = EntityIdFromJSON(*EntityIdObj);
-
-  if (!Id)
-    return Id.takeError();
-
-  std::optional<uint64_t> PtrLv = (*AsArr)[1].getAsInteger();
-
-  if (!PtrLv)
-    return makeSawButExpectedError((*AsArr)[1],
-                                   "an integer representing PointerLevel");
-
-  return buildEntityPointerLevel(*Id, *PtrLv);
-}
-
-llvm::json::Array clang::ssaf::entityPointerLevelSetToJSON(
-    llvm::iterator_range<EntityPointerLevelSet::const_iterator> EPLs,
-    JSONFormat::EntityIdToJSONFn EntityId2JSON) {
-  llvm::json::Array Result;
-
-  for (const auto &EPL : EPLs)
-    Result.push_back(entityPointerLevelToJSON(EPL, EntityId2JSON));
-  return Result;
-}
-
-Expected<EntityPointerLevelSet> clang::ssaf::entityPointerLevelSetFromJSON(
-    const llvm::json::Array &EPLsData,
-    JSONFormat::EntityIdFromJSONFn EntityIdFromJSON) {
-  EntityPointerLevelSet EPLs;
-
-  for (const auto &EltData : EPLsData) {
-    llvm::Expected<EntityPointerLevel> EPL =
-        entityPointerLevelFromJSON(EltData, EntityIdFromJSON);
-
-    if (!EPL)
-      return EPL.takeError();
-    EPLs.insert(*EPL);
-  }
-  return EPLs;
 }

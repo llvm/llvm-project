@@ -339,7 +339,7 @@ uint32_t test_vcvtpd_u32_f64(float64_t a) {
 // CHECK-LABEL: define {{[^@]+}}@test_vcvts_s32_f32
 // CHECK-SAME: (float noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VCVTS_S32_F32_I:%.*]] = call i32 @llvm.aarch64.neon.fcvtzs.i32.f32(float [[A]])
+// CHECK-NEXT:    [[VCVTS_S32_F32_I:%.*]] = call i32 @llvm.fptosi.sat.i32.f32(float [[A]])
 // CHECK-NEXT:    ret i32 [[VCVTS_S32_F32_I]]
 //
 int32_t test_vcvts_s32_f32(float32_t a) {
@@ -349,7 +349,7 @@ int32_t test_vcvts_s32_f32(float32_t a) {
 // CHECK-LABEL: define {{[^@]+}}@test_vcvtd_s64_f64
 // CHECK-SAME: (double noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VCVTD_S64_F64_I:%.*]] = call i64 @llvm.aarch64.neon.fcvtzs.i64.f64(double [[A]])
+// CHECK-NEXT:    [[VCVTD_S64_F64_I:%.*]] = call i64 @llvm.fptosi.sat.i64.f64(double [[A]])
 // CHECK-NEXT:    ret i64 [[VCVTD_S64_F64_I]]
 //
 int64_t test_vcvtd_s64_f64(float64_t a) {
@@ -359,7 +359,7 @@ int64_t test_vcvtd_s64_f64(float64_t a) {
 // CHECK-LABEL: define {{[^@]+}}@test_vcvts_s64_f32
 // CHECK-SAME: (float noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VCVTS_S64_F32_I:%.*]] = call i64 @llvm.aarch64.neon.fcvtzs.i64.f32(float [[A]])
+// CHECK-NEXT:    [[VCVTS_S64_F32_I:%.*]] = call i64 @llvm.fptosi.sat.i64.f32(float [[A]])
 // CHECK-NEXT:    ret i64 [[VCVTS_S64_F32_I]]
 //
 int64_t test_vcvts_s64_f32(float32_t a) {
@@ -369,7 +369,7 @@ int64_t test_vcvts_s64_f32(float32_t a) {
 // CHECK-LABEL: define {{[^@]+}}@test_vcvtd_s32_f64
 // CHECK-SAME: (double noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VCVTD_S32_F64_I:%.*]] = call i32 @llvm.aarch64.neon.fcvtzs.i32.f64(double [[A]])
+// CHECK-NEXT:    [[VCVTD_S32_F64_I:%.*]] = call i32 @llvm.fptosi.sat.i32.f64(double [[A]])
 // CHECK-NEXT:    ret i32 [[VCVTD_S32_F64_I]]
 //
 int32_t test_vcvtd_s32_f64(float64_t a) {
@@ -379,7 +379,7 @@ int32_t test_vcvtd_s32_f64(float64_t a) {
 // CHECK-LABEL: define {{[^@]+}}@test_vcvts_u32_f32
 // CHECK-SAME: (float noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VCVTS_U32_F32_I:%.*]] = call i32 @llvm.aarch64.neon.fcvtzu.i32.f32(float [[A]])
+// CHECK-NEXT:    [[VCVTS_U32_F32_I:%.*]] = call i32 @llvm.fptoui.sat.i32.f32(float [[A]])
 // CHECK-NEXT:    ret i32 [[VCVTS_U32_F32_I]]
 //
 uint32_t test_vcvts_u32_f32(float32_t a) {
@@ -389,7 +389,7 @@ uint32_t test_vcvts_u32_f32(float32_t a) {
 // CHECK-LABEL: define {{[^@]+}}@test_vcvtd_u64_f64
 // CHECK-SAME: (double noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VCVTD_U64_F64_I:%.*]] = call i64 @llvm.aarch64.neon.fcvtzu.i64.f64(double [[A]])
+// CHECK-NEXT:    [[VCVTD_U64_F64_I:%.*]] = call i64 @llvm.fptoui.sat.i64.f64(double [[A]])
 // CHECK-NEXT:    ret i64 [[VCVTD_U64_F64_I]]
 //
 uint64_t test_vcvtd_u64_f64(float64_t a) {
@@ -399,7 +399,7 @@ uint64_t test_vcvtd_u64_f64(float64_t a) {
 // CHECK-LABEL: define {{[^@]+}}@test_vcvts_u64_f32
 // CHECK-SAME: (float noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VCVTS_U64_F32_I:%.*]] = call i64 @llvm.aarch64.neon.fcvtzu.i64.f32(float [[A]])
+// CHECK-NEXT:    [[VCVTS_U64_F32_I:%.*]] = call i64 @llvm.fptoui.sat.i64.f32(float [[A]])
 // CHECK-NEXT:    ret i64 [[VCVTS_U64_F32_I]]
 //
 uint64_t test_vcvts_u64_f32(float32_t a) {
@@ -409,7 +409,7 @@ uint64_t test_vcvts_u64_f32(float32_t a) {
 // CHECK-LABEL: define {{[^@]+}}@test_vcvtd_u32_f64
 // CHECK-SAME: (double noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VCVTD_U32_F64_I:%.*]] = call i32 @llvm.aarch64.neon.fcvtzu.i32.f64(double [[A]])
+// CHECK-NEXT:    [[VCVTD_U32_F64_I:%.*]] = call i32 @llvm.fptoui.sat.i32.f64(double [[A]])
 // CHECK-NEXT:    ret i32 [[VCVTD_U32_F64_I]]
 //
 uint32_t test_vcvtd_u32_f64(float64_t a) {

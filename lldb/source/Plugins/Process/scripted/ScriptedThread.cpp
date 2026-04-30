@@ -164,6 +164,11 @@ bool ScriptedThread::LoadArtificialStackFrames() {
         error, LLDBLog::Thread);
 
   size_t arr_size = arr_sp->GetSize();
+  if (!arr_size)
+    return ScriptedInterface::ErrorWithMessage<bool>(
+        LLVM_PRETTY_FUNCTION, "StackFrame array is empty.", error,
+        LLDBLog::Thread);
+
   if (arr_size > std::numeric_limits<uint32_t>::max())
     return ScriptedInterface::ErrorWithMessage<bool>(
         LLVM_PRETTY_FUNCTION,
@@ -308,9 +313,10 @@ bool ScriptedThread::CalculateStopInfo() {
   // if we CreateStopReasonWithBreakpointSiteID.
   if (RegisterContextSP reg_ctx_sp = GetRegisterContext()) {
     addr_t pc = reg_ctx_sp->GetPC();
+    ProcessSP proc = GetProcess();
     if (BreakpointSiteSP bp_site_sp =
-            GetProcess()->GetBreakpointSiteList().FindByAddress(pc))
-      if (bp_site_sp->IsEnabled())
+            proc->GetBreakpointSiteList().FindByAddress(pc))
+      if (proc->IsBreakpointSiteEnabled(*bp_site_sp))
         SetThreadStoppedAtUnexecutedBP(pc);
   }
 

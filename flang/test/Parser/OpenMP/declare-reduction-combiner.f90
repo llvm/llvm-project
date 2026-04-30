@@ -17,7 +17,7 @@ end
 !UNPARSE: END SUBROUTINE
 
 !PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct
-!PARSE-TREE: OpenMPDeclareReductionConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: OmpDeclareReductionDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare reduction
 !PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpReductionSpecifier
 !PARSE-TREE: | | OmpReductionIdentifier -> ProcedureDesignator -> Name = 'tred'
@@ -61,7 +61,7 @@ end
 !UNPARSE: END SUBROUTINE
 
 
-!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareReductionConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpDeclareReductionDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare reduction
 !PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpReductionSpecifier
 !PARSE-TREE: | | OmpReductionIdentifier -> ProcedureDesignator -> Name = 'tred'

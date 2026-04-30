@@ -517,8 +517,6 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case VPInstruction::ComputeReductionResult:
   case VPInstruction::FirstActiveLane:
   case VPInstruction::LastActiveLane:
-  case VPInstruction::SLPLoad:
-  case VPInstruction::SLPStore:
   case VPInstruction::ExtractLane:
   case VPInstruction::ExtractLastActive:
     // Cannot determine the number of operands from the opcode.
@@ -1468,12 +1466,6 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
   switch (getOpcode()) {
   case VPInstruction::Not:
     O << "not";
-    break;
-  case VPInstruction::SLPLoad:
-    O << "combined load";
-    break;
-  case VPInstruction::SLPStore:
-    O << "combined store";
     break;
   case VPInstruction::ActiveLaneMask:
     O << "active lane mask";
@@ -2529,23 +2521,6 @@ bool VPWidenIntOrFpInductionRecipe::isCanonical() const {
   return match(getStartValue(), m_ZeroInt()) &&
          match(getStepValue(), m_One()) &&
          getScalarType() == getRegion()->getCanonicalIVType();
-}
-
-void VPDerivedIVRecipe::execute(VPTransformState &State) {
-  assert(!State.Lane && "VPDerivedIVRecipe being replicated.");
-
-  // Fast-math-flags propagate from the original induction instruction.
-  IRBuilder<>::FastMathFlagGuard FMFG(State.Builder);
-  if (FPBinOp)
-    State.Builder.setFastMathFlags(FPBinOp->getFastMathFlags());
-
-  Value *Step = State.get(getStepValue(), VPLane(0));
-  Value *Index = State.get(getOperand(1), VPLane(0));
-  Value *DerivedIV = emitTransformedIndex(
-      State.Builder, Index, getStartValue()->getLiveInIRValue(), Step, Kind,
-      cast_if_present<BinaryOperator>(FPBinOp));
-  DerivedIV->setName(Name);
-  State.set(this, DerivedIV, VPLane(0));
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

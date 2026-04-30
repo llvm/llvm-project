@@ -777,7 +777,7 @@ Error LLJITBuilderState::prepareForConstruction() {
       D = std::make_unique<InPlaceTaskDispatcher>();
 #endif // LLVM_ENABLE_THREADS
     if (auto EPCOrErr =
-            SelfExecutorProcessControl::Create(nullptr, std::move(D), nullptr))
+            SelfExecutorProcessControl::Create(nullptr, std::move(D)))
       EPC = std::move(*EPCOrErr);
     else
       return EPCOrErr.takeError();
@@ -943,6 +943,13 @@ Expected<ExecutorAddr> LLJIT::lookupLinkerMangled(JITDylib &JD,
     return Sym.takeError();
 }
 
+Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
+LLJIT::createMemoryManager(LLJITBuilderState &S, ExecutionSession &ES) {
+  if (S.CreateMemoryManager)
+    return S.CreateMemoryManager(ES);
+  return ES.getExecutorProcessControl().createDefaultMemoryManager();
+}
+
 Expected<std::unique_ptr<ObjectLayer>>
 LLJIT::createObjectLinkingLayer(LLJITBuilderState &S, ExecutionSession &ES,
                                 jitlink::JITLinkMemoryManager &MemMgr) {
@@ -1014,6 +1021,13 @@ LLJIT::LLJIT(LLJITBuilderState &S, Error &Err)
     }
   }
 
+  if (auto MM = createMemoryManager(S, *ES))
+    MemMgr = std::move(*MM);
+  else {
+    Err = MM.takeError();
+    return;
+  }
+
   if (auto DM = ES->getExecutorProcessControl().createDefaultDylibMgr())
     DylibMgr = std::move(*DM);
   else {
@@ -1021,8 +1035,7 @@ LLJIT::LLJIT(LLJITBuilderState &S, Error &Err)
     return;
   }
 
-  auto ObjLayer = createObjectLinkingLayer(
-      S, *ES, ES->getExecutorProcessControl().getMemMgr());
+  auto ObjLayer = createObjectLinkingLayer(S, *ES, *MemMgr);
   if (!ObjLayer) {
     Err = ObjLayer.takeError();
     return;
