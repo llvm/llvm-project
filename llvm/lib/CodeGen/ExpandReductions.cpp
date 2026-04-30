@@ -49,6 +49,8 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI,
       case Intrinsic::vector_reduce_umin:
       case Intrinsic::vector_reduce_fmax:
       case Intrinsic::vector_reduce_fmin:
+      case Intrinsic::vector_reduce_fmaximum:
+      case Intrinsic::vector_reduce_fminimum:
         if (TTI->shouldExpandReduction(II))
           Worklist.push_back(II);
 
@@ -146,6 +148,19 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI,
     }
     case Intrinsic::vector_reduce_fmax:
     case Intrinsic::vector_reduce_fmin: {
+      // We require "nnan" to use a shuffle reduction; "nsz" is implied by the
+      // semantics of the reduction.
+      Value *Vec = II->getArgOperand(0);
+      if (!isPowerOf2_32(
+              cast<FixedVectorType>(Vec->getType())->getNumElements()) ||
+          !FMF.noNaNs())
+        continue;
+      unsigned RdxOpcode = getArithmeticReductionInstruction(ID);
+      Rdx = getShuffleReduction(Builder, Vec, RdxOpcode, RS, RK);
+      break;
+    }
+    case Intrinsic::vector_reduce_fmaximum:
+    case Intrinsic::vector_reduce_fminimum: {
       // We require "nnan" to use a shuffle reduction; "nsz" is implied by the
       // semantics of the reduction.
       Value *Vec = II->getArgOperand(0);
