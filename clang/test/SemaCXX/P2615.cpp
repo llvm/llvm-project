@@ -5,8 +5,8 @@
 // RUN: %clang_cc1 -std=c++20 -verify -fsyntax-only %t/A.cpp
 // RUN: %clang_cc1 -std=c++20 -verify -fsyntax-only %t/B.cpp
 // RUN: %clang_cc1 -std=c++20 -fsyntax-only -fdiagnostics-parseable-fixits %t/B.cpp 2>&1 | FileCheck %t/B.cpp
-// RUN: %clang_cc1 -std=c++20 -verify -fsyntax-only %t/msvc-stl-exception-1.cpp
-// RUN: %clang_cc1 -std=c++20 -verify -fsyntax-only %t/msvc-stl-exception-2.cpp
+// RUN: %clang_cc1 -std=c++20 -verify -fsyntax-only -fms-extensions %t/msvc-stl-exception-1.cpp
+// RUN: %clang_cc1 -std=c++20 -verify -fsyntax-only -fms-extensions %t/msvc-stl-exception-2.cpp
 
 //--- A.cpp
 // expected-no-diagnostics

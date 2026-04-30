@@ -487,7 +487,7 @@ void Parser::CheckUnbracedLinkageOrExportDeclaration(
     // on some template specializations, but it would be too disruptive to
     // reject them. This was fixed in
     // https://github.com/microsoft/STL/pull/6074, merged on 2026-02-11.
-    if (LinkageOrExportDecl->isInStdNamespace() &&
+    if (getLangOpts().MicrosoftExt && LinkageOrExportDecl->isInStdNamespace() &&
         getPreprocessor().NeedsMsvcStlWorkaroundBefore(2026'03))
       return;
 
