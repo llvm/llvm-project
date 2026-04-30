@@ -483,7 +483,7 @@ protected:
         if (wp)
           wp->ClearCallback();
       } else {
-        result.AppendErrorWithFormat("Invalid watchpoint ID: %u.\n", cur_wp_id);
+        result.AppendErrorWithFormat("Invalid watchpoint ID: %u", cur_wp_id);
         return;
       }
     }
@@ -555,8 +555,7 @@ protected:
           }
           result.SetStatus(eReturnStatusSuccessFinishResult);
         } else {
-          result.AppendErrorWithFormat("Invalid watchpoint ID: %u.\n",
-                                       cur_wp_id);
+          result.AppendErrorWithFormat("Invalid watchpoint ID: %u", cur_wp_id);
         }
       }
     }

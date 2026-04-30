@@ -82,6 +82,7 @@ extern cl::opt<bool> Hugify;
 extern cl::opt<bool> Instrument;
 extern cl::opt<uint32_t> InstrumentationSleepTime;
 extern cl::opt<bool> KeepNops;
+extern cl::opt<bool> LargeCodeModel;
 extern cl::opt<bool> Lite;
 extern cl::list<std::string> PrintOnly;
 extern cl::opt<std::string> PrintOnlyFile;
@@ -2239,6 +2240,13 @@ Error RewriteInstance::readSpecialSections() {
   if (HasDebugInfo && !opts::UpdateDebugSections && !opts::AggregateOnly) {
     BC->errs() << "BOLT-WARNING: debug info will be stripped from the binary. "
                   "Use -update-debug-sections to keep it.\n";
+  }
+
+  if (opts::LargeCodeModel.getNumOccurrences() == 0 && !BC->UseLargeCodeModel &&
+      BC->getUniqueSectionByName(".ltext")) {
+    BC->outs() << "BOLT-INFO: .ltext detected - enabling large code model\n";
+    BC->UseLargeCodeModel = true;
+    BC->updateLSDAEncoding();
   }
 
   HasTextRelocations = (bool)BC->getUniqueSectionByName(
@@ -6427,6 +6435,7 @@ void RewriteInstance::writeEHFrameHeader() {
 
   // If there was not enough space, allocate more memory for .eh_frame_hdr.
   if (!OldEHFrameHdrSection) {
+    Out->os().seek(getFileOffsetForAddress(NextAvailableAddress));
     NextAvailableAddress =
         appendPadding(Out->os(), NextAvailableAddress, EHFrameHdrAlign);
 

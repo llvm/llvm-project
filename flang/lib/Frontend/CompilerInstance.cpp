@@ -21,6 +21,7 @@
 #include "mlir/Support/RawOstreamExtras.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/IR/PassTimingInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Errc.h"

@@ -1180,6 +1180,15 @@ ThreadPlan *Thread::GetCurrentPlan() const {
   return GetPlans().GetCurrentPlan().get();
 }
 
+bool Thread::IsRunningCallFunctionPlan() const {
+  for (ThreadPlan *plan = GetCurrentPlan(); plan;
+       plan = GetPreviousPlan(plan)) {
+    if (plan->GetKind() == ThreadPlan::eKindCallFunction)
+      return true;
+  }
+  return false;
+}
+
 ThreadPlanSP Thread::GetCompletedPlan() const {
   return GetPlans().GetCompletedPlan();
 }
@@ -1936,7 +1945,7 @@ Status Thread::JumpToLine(const FileSpec &file, uint32_t line,
         "first location:\n",
         file.GetFilename(), line);
     DumpAddressList(sstr, candidates, target);
-    *warnings = std::string(sstr.GetString());
+    *warnings = std::string(sstr.GetString().trim('\n'));
   }
 
   if (!reg_ctx->SetPC(dest))

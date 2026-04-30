@@ -20,6 +20,7 @@
 #include "AMDGPUHSAMetadataStreamer.h"
 #include "AMDGPUMCResourceInfo.h"
 #include "AMDGPUResourceUsageAnalysis.h"
+#include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUInstPrinter.h"
 #include "MCTargetDesc/AMDGPUMCExpr.h"
@@ -33,6 +34,7 @@
 #include "Utils/SIDefinesUtils.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/CodeGen/AsmPrinterHandler.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
@@ -92,6 +94,22 @@ LLVMInitializeAMDGPUAsmPrinter() {
   TargetRegistry::RegisterAsmPrinter(getTheGCNTarget(),
                                      createAMDGPUAsmPrinterPass);
 }
+
+namespace {
+class AMDGPUAsmPrinterHandler : public AsmPrinterHandler {
+protected:
+  AMDGPUAsmPrinter *Asm;
+
+public:
+  AMDGPUAsmPrinterHandler(AMDGPUAsmPrinter *A) : Asm(A) {}
+
+  void beginFunction(const MachineFunction *MF) override {}
+
+  void endFunction(const MachineFunction *MF) override { Asm->endFunction(MF); }
+
+  void endModule() override {}
+};
+} // End anonymous namespace
 
 AMDGPUAsmPrinter::AMDGPUAsmPrinter(TargetMachine &TM,
                                    std::unique_ptr<MCStreamer> Streamer)
@@ -215,13 +233,12 @@ void AMDGPUAsmPrinter::emitFunctionBodyStart() {
     HSAMetadataStream->emitKernel(*MF, CurrentProgramInfo);
 }
 
-void AMDGPUAsmPrinter::emitFunctionBodyEnd() {
+void AMDGPUAsmPrinter::endFunction(const MachineFunction *MF) {
   const SIMachineFunctionInfo &MFI = *MF->getInfo<SIMachineFunctionInfo>();
   if (!MFI.isEntryFunction())
     return;
 
-  if (TM.getTargetTriple().getOS() != Triple::AMDHSA)
-    return;
+  assert(TM.getTargetTriple().getOS() == Triple::AMDHSA);
 
   auto &Streamer = getTargetStreamer()->getStreamer();
   auto &Context = Streamer.getContext();
@@ -314,10 +331,18 @@ void AMDGPUAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
       return;
     }
 
-    // LDS variables aren't emitted in HSA or PAL yet.
     const Triple::OSType OS = TM.getTargetTriple().getOS();
-    if (OS == Triple::AMDHSA || OS == Triple::AMDPAL)
-      return;
+    if (OS == Triple::AMDHSA || OS == Triple::AMDPAL) {
+      if (!AMDGPUTargetMachine::EnableObjectLinking)
+        return;
+      // With object linking, LDS definitions should have been externalized
+      // by earlier passes (e.g. LDS lowering, named barrier lowering).
+      // Only declarations reach here, emitted as SHN_AMDGPU_LDS symbols
+      // so the linker can assign their offsets.
+      assert(GV->isDeclaration() &&
+             "LDS definitions should have been externalized when object "
+             "linking is enabled");
+    }
 
     MCSymbol *GVSym = getSymbol(GV);
 
@@ -357,6 +382,8 @@ bool AMDGPUAsmPrinter::doInitialization(Module &M) {
     default:
       reportFatalUsageError("unsupported code object version");
     }
+
+    addAsmPrinterHandler(std::make_unique<AMDGPUAsmPrinterHandler>(this));
   }
 
   return AsmPrinter::doInitialization(M);
@@ -554,7 +581,7 @@ SmallString<128> AMDGPUAsmPrinter::getMCExprStr(const MCExpr *Value) {
   auto &Streamer = getTargetStreamer()->getStreamer();
   auto &Context = Streamer.getContext();
   const MCExpr *New = foldAMDGPUMCExpr(Value, Context);
-  printAMDGPUMCExpr(New, OSS, MAI);
+  printAMDGPUMCExpr(New, OSS, &MAI);
   return Str;
 }
 
@@ -651,7 +678,7 @@ AMDGPUAsmPrinter::getAmdhsaKernelDescriptor(const MachineFunction &MF,
       STM.getKernArgSegmentSize(F, MaxKernArgAlign), Ctx);
 
   KernelDescriptor.compute_pgm_rsrc1 = PI.getComputePGMRSrc1(STM, Ctx);
-  KernelDescriptor.compute_pgm_rsrc2 = PI.getComputePGMRSrc2(Ctx);
+  KernelDescriptor.compute_pgm_rsrc2 = PI.getComputePGMRSrc2(STM, Ctx);
   KernelDescriptor.kernel_code_properties = getAmdhsaKernelCodeProperties(MF);
 
   int64_t PGM_Rsrc3 = 1;
@@ -1365,7 +1392,8 @@ void AMDGPUAsmPrinter::EmitProgramInfoSI(
                        /*Size=*/4);
 
     OutStreamer->emitInt32(R_00B84C_COMPUTE_PGM_RSRC2);
-    EmitResolvedOrExpr(CurrentProgramInfo.getComputePGMRSrc2(Ctx), /*Size=*/4);
+    EmitResolvedOrExpr(CurrentProgramInfo.getComputePGMRSrc2(STM, Ctx),
+                       /*Size=*/4);
 
     OutStreamer->emitInt32(R_00B860_COMPUTE_TMPRING_SIZE);
 
@@ -1491,7 +1519,7 @@ void AMDGPUAsmPrinter::EmitPALMetadata(
   if (MD->getPALMajorVersion() < 3) {
     MD->setRsrc1(CC, CurrentProgramInfo.getPGMRSrc1(CC, STM, Ctx), Ctx);
     if (AMDGPU::isCompute(CC)) {
-      MD->setRsrc2(CC, CurrentProgramInfo.getComputePGMRSrc2(Ctx), Ctx);
+      MD->setRsrc2(CC, CurrentProgramInfo.getComputePGMRSrc2(STM, Ctx), Ctx);
     } else {
       const MCExpr *HasScratchBlocks =
           MCBinaryExpr::createGT(CurrentProgramInfo.ScratchBlocks,
@@ -1573,7 +1601,7 @@ void AMDGPUAsmPrinter::emitPALFunctionMetadata(const MachineFunction &MF) {
         CallingConv::AMDGPU_CS,
         CurrentProgramInfo.getPGMRSrc1(CallingConv::AMDGPU_CS, ST, Ctx), Ctx);
     MD->setRsrc2(CallingConv::AMDGPU_CS,
-                 CurrentProgramInfo.getComputePGMRSrc2(Ctx), Ctx);
+                 CurrentProgramInfo.getComputePGMRSrc2(ST, Ctx), Ctx);
   } else {
     EmitPALMetadataCommon(
         MD, CurrentProgramInfo, CallingConv::AMDGPU_CS, ST,
@@ -1616,7 +1644,7 @@ void AMDGPUAsmPrinter::getAmdKernelCode(AMDGPUMCKernelCodeT &Out,
   Out.compute_pgm_resource1_registers =
       CurrentProgramInfo.getComputePGMRSrc1(STM, Ctx);
   Out.compute_pgm_resource2_registers =
-      CurrentProgramInfo.getComputePGMRSrc2(Ctx);
+      CurrentProgramInfo.getComputePGMRSrc2(STM, Ctx);
   Out.code_properties |= AMD_CODE_PROPERTY_IS_PTR64;
 
   Out.is_dynamic_callstack = CurrentProgramInfo.DynamicCallStack;

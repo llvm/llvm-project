@@ -273,6 +273,108 @@ void CIRGenFunction::addCatchHandlerAttr(
   }
 }
 
+namespace {
+struct CallEndCatch final : EHScopeStack::Cleanup {
+  CallEndCatch(mlir::Value catchToken) : catchToken(catchToken) {}
+  mlir::Value catchToken;
+
+  void emit(CIRGenFunction &cgf, Flags flags) override {
+    cir::EndCatchOp::create(cgf.getBuilder(), *cgf.currSrcLoc, catchToken);
+    cir::YieldOp::create(cgf.getBuilder(), *cgf.currSrcLoc);
+  }
+};
+} // namespace
+
+static mlir::Value callBeginCatch(CIRGenFunction &cgf, mlir::Value ehToken,
+                                  mlir::Type exnPtrTy) {
+  auto catchTokenTy = cir::CatchTokenType::get(cgf.getBuilder().getContext());
+  auto beginCatch = cir::BeginCatchOp::create(cgf.getBuilder(),
+                                              cgf.getBuilder().getUnknownLoc(),
+                                              catchTokenTy, exnPtrTy, ehToken);
+
+  cgf.ehStack.pushCleanup<CallEndCatch>(NormalAndEHCleanup,
+                                        beginCatch.getCatchToken());
+
+  return beginCatch.getExnPtr();
+}
+
+/// A "special initializer" callback for initializing a catch
+/// parameter during catch initialization.
+static void initCatchParam(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
+                           mlir::Value ehToken, const VarDecl &catchParam,
+                           SourceLocation loc) {
+  CanQualType catchType =
+      cgf.cgm.getASTContext().getCanonicalType(catchParam.getType());
+  cir::InitCatchKind kind;
+
+  // If we're catching by reference, we can just cast the object
+  // pointer to the appropriate pointer.
+  if (isa<ReferenceType>(catchType)) {
+    kind = cir::InitCatchKind::Reference;
+  } else {
+    cir::TypeEvaluationKind tek = cgf.getEvaluationKind(catchType);
+    if (tek == cir::TEK_Aggregate) {
+      assert(isa<RecordType>(catchType) && "unexpected catch type!");
+      const Expr *copyExpr = catchParam.getInit();
+      kind = !copyExpr ? cir::InitCatchKind::TrivialCopy
+                       : cir::InitCatchKind::NonTrivialCopy;
+    } else {
+      // Scalars and complexes.
+      if (catchType->hasPointerRepresentation()) {
+        switch (catchType.getQualifiers().getObjCLifetime()) {
+        case Qualifiers::OCL_Weak:
+        case Qualifiers::OCL_Strong:
+          kind = cir::InitCatchKind::Objc;
+          break;
+
+        case Qualifiers::OCL_ExplicitNone:
+        case Qualifiers::OCL_Autoreleasing:
+        case Qualifiers::OCL_None:
+          kind = cir::InitCatchKind::Pointer;
+          break;
+        }
+      } else {
+        kind = cir::InitCatchKind::Scalar;
+      }
+    }
+  }
+
+  mlir::Value exnPtr = callBeginCatch(cgf, ehToken, builder.getVoidPtrTy());
+  CIRGenFunction::AutoVarEmission var = cgf.emitAutoVarAlloca(catchParam);
+  cir::InitCatchParamOp::create(builder, cgf.getLoc(loc), exnPtr,
+                                var.getAllocatedAddress().getPointer(), kind);
+  cgf.emitAutoVarCleanups(var);
+}
+
+/// Begins a catch statement by initializing the catch variable and
+/// calling __cxa_begin_catch.
+void CIRGenFunction::emitBeginCatch(const CXXCatchStmt *catchStmt,
+                                    mlir::Value ehToken) {
+  // We have to be very careful with the ordering of cleanups here:
+  //   C++ [except.throw]p4:
+  //     The destruction [of the exception temporary] occurs
+  //     immediately after the destruction of the object declared in
+  //     the exception-declaration in the handler.
+  //
+  // So the precise ordering is:
+  //   1.  Construct catch variable.
+  //   2.  begin_catch
+  //   3.  Enter CallEndCatch cleanup
+  //   4.  Enter dtor cleanup
+  //
+  VarDecl *catchParam = catchStmt->getExceptionDecl();
+  if (!catchParam) {
+    callBeginCatch(*this, ehToken, builder.getVoidPtrTy());
+    return;
+  }
+
+  // Emit the local. Make sure the alloca's superseed the current scope, since
+  // these are going to be consumed by `cir.catch`, which is not within the
+  // current scope.
+  initCatchParam(*this, builder, ehToken, *catchParam,
+                 catchStmt->getBeginLoc());
+}
+
 mlir::LogicalResult
 CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s,
                                cxxTryBodyEmitter &bodyCallback) {
@@ -295,8 +397,8 @@ CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s,
   builder.restoreInsertionPoint(scopeIP);
 
   const llvm::Triple &t = getTarget().getTriple();
-  // If we encounter a try statement on in an OpenMP target region offloaded to
-  // a GPU, we treat it as a basic block.
+  // If we encounter a try statement on in an OpenMP target region offloaded
+  // to a GPU, we treat it as a basic block.
   const bool isTargetDevice =
       (cgm.getLangOpts().OpenMPIsTargetDevice && (t.isNVPTX() || t.isAMDGCN()));
   if (isTargetDevice) {
@@ -384,7 +486,7 @@ CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s,
     // Initialize the catch variable.
     // TODO(cir): Move this out of CXXABI.
     assert(!cir::MissingFeatures::currentFuncletPad());
-    cgm.getCXXABI().emitBeginCatch(*this, catchStmt, ehToken);
+    emitBeginCatch(catchStmt, ehToken);
 
     // Emit the PGO counter increment.
     assert(!cir::MissingFeatures::incrementProfileCounter());
@@ -435,15 +537,16 @@ mlir::LogicalResult CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s) {
   return emitCXXTryStmt(s, emitter);
 }
 
-// in classic codegen this function is mapping to `isInvokeDest` previously and
-// currently it's mapping to the conditions that performs early returns in
-// `getInvokeDestImpl`, in CIR we need the condition to know if the EH scope may
-// throw exception or now.
+// in classic codegen this function is mapping to `isInvokeDest` previously
+// and currently it's mapping to the conditions that performs early returns in
+// `getInvokeDestImpl`, in CIR we need the condition to know if the EH scope
+// may throw exception or now.
 bool CIRGenFunction::isCatchOrCleanupRequired() {
-  // If exceptions are disabled/ignored and SEH is not in use, then there is no
-  // invoke destination. SEH "works" even if exceptions are off. In practice,
-  // this means that C++ destructors and other EH cleanups don't run, which is
-  // consistent with MSVC's behavior, except in the presence of -EHa
+  // If exceptions are disabled/ignored and SEH is not in use, then there is
+  // no invoke destination. SEH "works" even if exceptions are off. In
+  // practice, this means that C++ destructors and other EH cleanups don't
+  // run, which is consistent with MSVC's behavior, except in the presence of
+  // -EHa
   const LangOptions &lo = cgm.getLangOpts();
   if (!lo.Exceptions || lo.IgnoreExceptions) {
     if (!lo.Borland && !lo.MicrosoftExt)

@@ -243,6 +243,16 @@ add_libc_test(
 )
 
 add_libc_test(
+  wcscoll_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcscoll_test.cpp
+  DEPENDS
+    libc.src.wchar.wcscoll
+)
+
+add_libc_test(
   wcspbrk_test
   SUITE
     libc_wchar_unittests
@@ -516,4 +526,14 @@ add_libc_test(
     libc.src.__support.uint128
     libc.src.wchar.wcstold
     libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_unittest(
+  wcsxfrm_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcsxfrm_test.cpp
+  DEPENDS
+    libc.src.wchar.wcsxfrm
 )

@@ -399,7 +399,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.wchar.wmemset
     libc.src.wchar.wcschr
     libc.src.wchar.wcsncmp
+    libc.src.wchar.wcsxfrm
     libc.src.wchar.wcscmp
+    libc.src.wchar.wcscoll
     libc.src.wchar.wcspbrk
     libc.src.wchar.wcsrchr
     libc.src.wchar.wcsspn
@@ -440,6 +442,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.wctype.iswxdigit
     libc.src.wctype.iswpunct
     libc.src.wctype.iswprint
+    libc.src.wctype.iswctype
+    libc.src.wctype.wctype
 
     # sys/uio.h entrypoints
     libc.src.sys.uio.writev
@@ -1187,6 +1191,13 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_condattr_init
     libc.src.pthread.pthread_condattr_setclock
     libc.src.pthread.pthread_condattr_setpshared
+    libc.src.pthread.pthread_cond_broadcast
+    libc.src.pthread.pthread_cond_clockwait
+    libc.src.pthread.pthread_cond_destroy
+    libc.src.pthread.pthread_cond_init
+    libc.src.pthread.pthread_cond_signal
+    libc.src.pthread.pthread_cond_timedwait
+    libc.src.pthread.pthread_cond_wait
     libc.src.pthread.pthread_create
     libc.src.pthread.pthread_detach
     libc.src.pthread.pthread_equal
@@ -1250,6 +1261,10 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.setjmp.setjmp
     libc.src.setjmp.siglongjmp
     libc.src.setjmp.sigsetjmp
+
+    # ucontext.h entrypoints
+    libc.src.ucontext.getcontext
+    libc.src.ucontext.setcontext
 
     # stdio.h entrypoints
     libc.src.stdio.clearerr
@@ -1416,11 +1431,15 @@ if(LLVM_LIBC_FULL_BUILD)
 
     # sys/socket.h entrypoints
     libc.src.sys.socket.accept
+    libc.src.sys.socket.accept4
     libc.src.sys.socket.socket
     libc.src.sys.socket.bind
     libc.src.sys.socket.connect
+    libc.src.sys.socket.getsockopt
     libc.src.sys.socket.listen
+    libc.src.sys.socket.shutdown
     libc.src.sys.socket.socketpair
+    libc.src.sys.socket.setsockopt
     libc.src.sys.socket.send
     libc.src.sys.socket.sendto
     libc.src.sys.socket.sendmsg

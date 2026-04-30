@@ -2211,7 +2211,7 @@ def fdiagnostics_parseable_fixits : Flag<["-"], "fdiagnostics-parseable-fixits">
     HelpText<"Print fix-its in machine parseable form">,
     MarshallingInfoFlag<DiagnosticOpts<"ShowParseableFixits">>;
 def fdiagnostics_print_source_range_info : Flag<["-"], "fdiagnostics-print-source-range-info">,
-    Group<f_clang_Group>,  Visibility<[ClangOption, CC1Option]>,
+    Group<f_clang_Group>,  Visibility<[ClangOption, CLOption, CC1Option]>,
     HelpText<"Print source range spans in numeric form">,
     MarshallingInfoFlag<DiagnosticOpts<"ShowSourceRanges">>;
 defm diagnostics_show_hotness : BoolFOption<"diagnostics-show-hotness",
@@ -2239,10 +2239,10 @@ defm diagnostics_show_note_include_stack : BoolFOption<"diagnostics-show-note-in
 defm diagnostics_show_inlining_chain
     : BoolFOption<"diagnostics-show-inlining-chain",
                   CodeGenOpts<"ShowInliningChain">, DefaultFalse,
-                  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+                  PosFlag<SetTrue, [], [ClangOption, CLOption, CC1Option],
                           "Show inlining chain notes for "
                           "[[gnu::warning/error]] diagnostics">,
-                  NegFlag<SetFalse, [], [ClangOption, CC1Option]>>;
+                  NegFlag<SetFalse, [], [ClangOption, CLOption, CC1Option]>>;
 def fdiagnostics_format_EQ : Joined<["-"], "fdiagnostics-format=">, Group<f_clang_Group>;
 def fdiagnostics_show_category_EQ : Joined<["-"], "fdiagnostics-show-category=">, Group<f_clang_Group>;
 def fdiagnostics_show_template_tree : Flag<["-"], "fdiagnostics-show-template-tree">,
@@ -4470,6 +4470,27 @@ def fno_debug_macro : Flag<["-"], "fno-debug-macro">, Group<f_Group>,
 def fstrict_aliasing : Flag<["-"], "fstrict-aliasing">, Group<f_Group>,
   Visibility<[ClangOption, CLOption, DXCOption]>,
   HelpText<"Enable optimizations based on strict aliasing rules">;
+def fstrict_bool : Flag<["-"], "fstrict-bool">, Group<f_Group>,
+  Visibility<[ClangOption]>,
+  HelpText<"Enable optimizations based on bool bit patterns never being "
+    "anything other than 0 or 1">;
+def fno_strict_bool : Flag<["-"], "fno-strict-bool">, Group<f_Group>,
+  Visibility<[ClangOption]>,
+  HelpText<"Disable optimizations based on bool bit patterns never being "
+    "anything other than 0 or 1">;
+def fno_strict_bool_EQ : Joined<["-"], "fno-strict-bool=">, Group<f_Group>,
+  Visibility<[ClangOption]>,
+  HelpText<"Disable optimizations based on bool bit patterns never being "
+    "anything other than 0 or 1, specifying a conversion behavior.">,
+  Values<"truncate,nonzero">;
+def load_bool_from_mem : Joined<["-"], "load-bool-from-mem=">, Group<f_Group>,
+  Visibility<[CC1Option]>,
+  HelpText<"Specify how to convert a multi-bit bool loaded from memory to a "
+    "1-bit value">,
+  NormalizedValuesScope<"CodeGenOptions::BoolFromMem">,
+  Values<"strict,nonstrict,truncate,nonzero">,
+  NormalizedValues<["Strict", "NonStrictDefault", "Truncate", "NonZero"]>,
+  MarshallingInfoEnum<CodeGenOpts<"LoadBoolFromMem">, "Strict">;
 def fstrict_enums : Flag<["-"], "fstrict-enums">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Enable optimizations based on the strict definition of an enum's "
@@ -10097,12 +10118,12 @@ def fhlsl_spv_enable_maximal_reconvergence
                "well-defined merge points as defined by the Vulkan spec.">,
       MarshallingInfoFlag<LangOpts<"HLSLSpvEnableMaximalReconvergence">>;
 
-def fexperimental_emit_sgep
-    : Flag<["-"], "fexperimental-emit-sgep">,
+def fexperimental_logical_pointer
+    : Flag<["-"], "fexperimental-logical-pointer">,
       Visibility<[CC1Option, DXCOption]>,
-      HelpText<"Emit structured GEP intrinsic instead of GEP instructions "
-               "(experimental).">,
-      MarshallingInfoFlag<LangOpts<"EmitStructuredGEP">>;
+      HelpText<"Allow emitting structured GEP/alloca intrinsics instead of "
+               "normal GEP/alloca instructions (experimental).">,
+      MarshallingInfoFlag<LangOpts<"EmitLogicalPointer">>;
 
 def no_wasm_opt : Flag<["--"], "no-wasm-opt">,
   Group<m_Group>,

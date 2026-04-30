@@ -109,6 +109,7 @@
 #include "llvm/CodeGen/InterleavedAccess.h"
 #include "llvm/CodeGen/InterleavedLoadCombine.h"
 #include "llvm/CodeGen/JMCInstrumenter.h"
+#include "llvm/CodeGen/KCFI.h"
 #include "llvm/CodeGen/LiveDebugValuesPass.h"
 #include "llvm/CodeGen/LiveDebugVariables.h"
 #include "llvm/CodeGen/LiveIntervals.h"
@@ -119,6 +120,7 @@
 #include "llvm/CodeGen/LowerEmuTLS.h"
 #include "llvm/CodeGen/MIRPrinter.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
+#include "llvm/CodeGen/MachineBlockHashInfo.h"
 #include "llvm/CodeGen/MachineBlockPlacement.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineCSE.h"
@@ -134,6 +136,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/MachineSink.h"
+#include "llvm/CodeGen/MachineStripDebug.h"
 #include "llvm/CodeGen/MachineTraceMetrics.h"
 #include "llvm/CodeGen/MachineUniformityAnalysis.h"
 #include "llvm/CodeGen/MachineVerifier.h"
@@ -374,6 +377,7 @@
 #include "llvm/Transforms/Utils/PredicateInfo.h"
 #include "llvm/Transforms/Utils/ProfileVerify.h"
 #include "llvm/Transforms/Utils/RelLookupTableConverter.h"
+#include "llvm/Transforms/Utils/StripConvergenceIntrinsics.h"
 #include "llvm/Transforms/Utils/StripGCRelocates.h"
 #include "llvm/Transforms/Utils/StripNonLineTableDebugInfo.h"
 #include "llvm/Transforms/Utils/SymbolRewriter.h"
@@ -486,13 +490,17 @@ public:
 } // namespace
 
 static std::optional<OptimizationLevel> parseOptLevel(StringRef S) {
+  if (S == "Os" || S == "Oz")
+    reportFatalUsageError(
+        Twine("The optimization level \"") + S +
+        "\" is no longer supported. Use O2 in conjunction with the " +
+        (S == "Os" ? "optsize" : "minsize") + " attribute instead.");
+
   return StringSwitch<std::optional<OptimizationLevel>>(S)
       .Case("O0", OptimizationLevel::O0)
       .Case("O1", OptimizationLevel::O1)
       .Case("O2", OptimizationLevel::O2)
       .Case("O3", OptimizationLevel::O3)
-      .Case("Os", OptimizationLevel::Os)
-      .Case("Oz", OptimizationLevel::Oz)
       .Default(std::nullopt);
 }
 
@@ -824,8 +832,7 @@ Expected<LoopUnrollOptions> parseLoopUnrollOptions(StringRef Params) {
     StringRef ParamName;
     std::tie(ParamName, Params) = Params.split(';');
     std::optional<OptimizationLevel> OptLevel = parseOptLevel(ParamName);
-    // Don't accept -Os/-Oz.
-    if (OptLevel && !OptLevel->isOptimizingForSize()) {
+    if (OptLevel) {
       UnrollOpts.setOptLevel(OptLevel->getSpeedupLevel());
       continue;
     }
@@ -966,6 +973,26 @@ Expected<HWAddressSanitizerOptions> parseHWASanPassOptions(StringRef Params) {
       return make_error<StringError>(
           formatv("invalid HWAddressSanitizer pass parameter '{}'", ParamName)
               .str(),
+          inconvertibleErrorCode());
+    }
+  }
+  return Result;
+}
+
+Expected<lowertypetests::DropTestKind>
+parseDropTypeTestsPassOptions(StringRef Params) {
+  lowertypetests::DropTestKind Result = lowertypetests::DropTestKind::Assume;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    if (ParamName == "all") {
+      Result = lowertypetests::DropTestKind::All;
+    } else if (ParamName == "assume") {
+      Result = lowertypetests::DropTestKind::Assume;
+    } else {
+      return make_error<StringError>(
+          formatv("invalid DropTypeTestsPass parameter '{}'", ParamName).str(),
           inconvertibleErrorCode());
     }
   }

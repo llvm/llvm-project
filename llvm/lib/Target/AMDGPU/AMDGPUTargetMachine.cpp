@@ -27,6 +27,7 @@
 #include "AMDGPUISelDAGToDAG.h"
 #include "AMDGPULowerVGPREncoding.h"
 #include "AMDGPUMacroFusion.h"
+#include "AMDGPUNextUseAnalysis.h"
 #include "AMDGPUPerfHintAnalysis.h"
 #include "AMDGPUPreloadKernArgProlog.h"
 #include "AMDGPUPrepareAGPRAlloc.h"
@@ -677,6 +678,8 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSIShrinkInstructionsLegacyPass(*PR);
   initializeSIOptimizeExecMaskingPreRALegacyPass(*PR);
   initializeSIOptimizeVGPRLiveRangeLegacyPass(*PR);
+  initializeAMDGPUNextUseAnalysisLegacyPassPass(*PR);
+  initializeAMDGPUNextUseAnalysisPrinterLegacyPassPass(*PR);
   initializeSILoadStoreOptimizerLegacyPass(*PR);
   initializeAMDGPUCtorDtorLoweringLegacyPass(*PR);
   initializeAMDGPUAlwaysInlinePass(*PR);
@@ -718,7 +721,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSIFormMemoryClausesLegacyPass(*PR);
   initializeSIPostRABundlerLegacyPass(*PR);
   initializeGCNCreateVOPDLegacyPass(*PR);
-  initializeAMDGPUUnifyDivergentExitNodesPass(*PR);
+  initializeAMDGPUUnifyDivergentExitNodesLegacyPass(*PR);
   initializeAMDGPUAAWrapperPassPass(*PR);
   initializeAMDGPUExternalAAWrapperPass(*PR);
   initializeAMDGPUImageIntrinsicOptimizerPass(*PR);
@@ -1054,12 +1057,10 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         // anything, and before other cleanup optimizations.
         FPM.addPass(AMDGPULowerKernelAttributesPass());
 
-        if (Level != OptimizationLevel::O0) {
-          // Promote alloca to vector before SROA and loop unroll. If we
-          // manage to eliminate allocas before unroll we may choose to unroll
-          // less.
-          FPM.addPass(AMDGPUPromoteAllocaToVectorPass(*this));
-        }
+        // Promote alloca to vector before SROA and loop unroll. If we
+        // manage to eliminate allocas before unroll we may choose to unroll
+        // less.
+        FPM.addPass(AMDGPUPromoteAllocaToVectorPass(*this));
 
         PM.addPass(createCGSCCToFunctionPassAdaptor(std::move(FPM)));
       });
@@ -1581,11 +1582,10 @@ bool AMDGPUPassConfig::addGCPasses() {
 bool GCNPassConfig::addPreISel() {
   AMDGPUPassConfig::addPreISel();
 
-  if (TM->getOptLevel() > CodeGenOptLevel::None)
+  if (TM->getOptLevel() > CodeGenOptLevel::None) {
     addPass(createSinkingPass());
-
-  if (TM->getOptLevel() > CodeGenOptLevel::None)
     addPass(createAMDGPULateCodeGenPrepareLegacyPass());
+  }
 
   // Merge divergent exit nodes. StructurizeCFG won't recognize the multi-exit
   // regions formed by them.

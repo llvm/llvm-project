@@ -366,3 +366,21 @@ ThreadGDBRemote::GetSiginfo(size_t max_size) const {
 
   return llvm::MemoryBuffer::getMemBufferCopy(response.get());
 }
+
+std::vector<lldb::addr_t> ThreadGDBRemote::FetchNewlyAddedBinaries() {
+  return m_added_binaries;
+}
+
+StructuredData::ObjectSP ThreadGDBRemote::FetchDetailedBinariesInfo() {
+  return m_detailed_binaries_info;
+}
+
+void ThreadGDBRemote::SetNewlyAddedBinaries(
+    const std::vector<lldb::addr_t> &added_binaries) {
+  m_added_binaries = added_binaries;
+}
+
+void ThreadGDBRemote::SetDetailedBinariesInfo(
+    StructuredData::ObjectSP &detailed_info) {
+  m_detailed_binaries_info = detailed_info;
+}

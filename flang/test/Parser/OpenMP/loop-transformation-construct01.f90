@@ -20,13 +20,13 @@ end subroutine
 
 !CHECK-PARSE: | ExecutionPart -> Block
 !CHECK-PARSE-NEXT: | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
-!CHECK-PARSE-NEXT: | | | OmpBeginLoopDirective
+!CHECK-PARSE-NEXT: | | | OmpBeginDirective
 !CHECK-PARSE-NEXT: | | | | OmpDirectiveName -> llvm::omp::Directive = do
 !CHECK-PARSE-NEXT: | | | | OmpClauseList ->
 !CHECK-PARSE-NEXT: | | | | Flags = {}
 !CHECK-PARSE-NEXT: | | | Block
 !CHECK-PARSE-NEXT: | | | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
-!CHECK-PARSE-NEXT: | | | | | OmpBeginLoopDirective
+!CHECK-PARSE-NEXT: | | | | | OmpBeginDirective
 !CHECK-PARSE-NEXT: | | | | | | OmpDirectiveName -> llvm::omp::Directive = unroll
 !CHECK-PARSE-NEXT: | | | | | | OmpClauseList -> OmpClause -> Partial -> Scalar -> Integer -> Constant -> Expr = '1_4'
 !CHECK-PARSE-NEXT: | | | | | | | LiteralConstant -> IntLiteralConstant = '1'
@@ -57,11 +57,11 @@ end subroutine
 !CHECK-PARSE-NEXT: | | | | | | | | | | | Expr = '5_4'
 !CHECK-PARSE-NEXT: | | | | | | | | | | | | LiteralConstant -> IntLiteralConstant = '5'
 !CHECK-PARSE-NEXT: | | | | | | | EndDoStmt ->
-!CHECK-PARSE-NEXT: | | | | | OmpEndLoopDirective
+!CHECK-PARSE-NEXT: | | | | | OmpEndDirective
 !CHECK-PARSE-NEXT: | | | | | | OmpDirectiveName -> llvm::omp::Directive = unroll
 !CHECK-PARSE-NEXT: | | | | | | OmpClauseList ->
 !CHECK-PARSE-NEXT: | | | | | | Flags = {}
-!CHECK-PARSE-NEXT: | | | OmpEndLoopDirective
+!CHECK-PARSE-NEXT: | | | OmpEndDirective
 !CHECK-PARSE-NEXT: | | | | OmpDirectiveName -> llvm::omp::Directive = do
 !CHECK-PARSE-NEXT: | | | | OmpClauseList ->
 !CHECK-PARSE-NEXT: | | | | Flags = {}

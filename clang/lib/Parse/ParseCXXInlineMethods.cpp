@@ -131,7 +131,8 @@ NamedDecl *Parser::ParseCXXInlineMethodDef(
         << Delete;
       SkipUntil(tok::semi);
     } else if (ExpectAndConsume(tok::semi, diag::err_expected_after,
-                                Delete ? "delete" : "default")) {
+                                Delete ? "delete" : "default") &&
+               !isLikelyAtStartOfNewDeclaration()) {
       SkipUntil(tok::semi);
     }
 
@@ -268,12 +269,12 @@ void Parser::ParseCXXNonStaticMemberInitializer(Decl *VarD) {
   Toks.push_back(Eof);
 }
 
-Parser::LateParsedDeclaration::~LateParsedDeclaration() {}
-void Parser::LateParsedDeclaration::ParseLexedMethodDeclarations() {}
-void Parser::LateParsedDeclaration::ParseLexedMemberInitializers() {}
-void Parser::LateParsedDeclaration::ParseLexedMethodDefs() {}
-void Parser::LateParsedDeclaration::ParseLexedAttributes() {}
-void Parser::LateParsedDeclaration::ParseLexedPragmas() {}
+LateParsedDeclaration::~LateParsedDeclaration() {}
+void LateParsedDeclaration::ParseLexedMethodDeclarations() {}
+void LateParsedDeclaration::ParseLexedMemberInitializers() {}
+void LateParsedDeclaration::ParseLexedMethodDefs() {}
+void LateParsedDeclaration::ParseLexedAttributes() {}
+void LateParsedDeclaration::ParseLexedPragmas() {}
 
 Parser::LateParsedClass::LateParsedClass(Parser *P, ParsingClass *C)
   : Self(P), Class(C) {}
@@ -314,7 +315,7 @@ void Parser::LateParsedMemberInitializer::ParseLexedMemberInitializers() {
   Self->ParseLexedMemberInitializer(*this);
 }
 
-void Parser::LateParsedAttribute::ParseLexedAttributes() {
+void LateParsedAttribute::ParseLexedAttributes() {
   Self->ParseLexedAttribute(*this, true, false);
 }
 
@@ -380,6 +381,20 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
   InFunctionTemplateScope.Scopes.Enter(Scope::FunctionPrototypeScope |
                                        Scope::FunctionDeclarationScope |
                                        Scope::DeclScope);
+
+  // Delayed default arguments or exception specifications may contain lambdas,
+  // struct S {
+  //   void ICE(int x, int = sizeof([x] { return x; }()));
+  // }
+  //
+  // struct X {
+  //   void ICE(int val) noexcept(noexcept([val]{}));
+  // };
+  // Lambda capture handling in tryCaptureVariable() expects an enclosing
+  // function scope in Sema's FunctionScopes stack.
+  Sema::FunctionScopeRAII PopFnContext(Actions);
+  Actions.PushFunctionScope();
+
   for (unsigned I = 0, N = LM.DefaultArgs.size(); I != N; ++I) {
     auto Param = cast<ParmVarDecl>(LM.DefaultArgs[I].Param);
     // Introduce the parameter into scope.
@@ -501,20 +516,11 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
       FunctionToPush = cast<FunctionDecl>(LM.Method);
     Method = dyn_cast<CXXMethodDecl>(FunctionToPush);
 
-    // Push a function scope so that tryCaptureVariable() can properly visit
-    // function scopes involving function parameters that are referenced inside
-    // the noexcept specifier e.g. through a lambda expression.
-    // Example:
-    // struct X {
-    //   void ICE(int val) noexcept(noexcept([val]{}));
-    // };
     // Setup the CurScope to match the function DeclContext - we have such
     // assumption in IsInFnTryBlockHandler().
     ParseScope FnScope(this, Scope::FnScope);
     Sema::ContextRAII FnContext(Actions, FunctionToPush,
                                 /*NewThisContext=*/false);
-    Sema::FunctionScopeRAII PopFnContext(Actions);
-    Actions.PushFunctionScope();
 
     Sema::CXXThisScopeRAII ThisScope(
         Actions, Method ? Method->getParent() : nullptr,

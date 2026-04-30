@@ -1501,6 +1501,13 @@ def SPIRV_C_Float8EXT : I32EnumAttrCase<"Float8EXT", 4212> {
   ];
 }
 
+def SPIRV_C_Float8CooperativeMatrixEXT                       : I32EnumAttrCase<"Float8CooperativeMatrixEXT", 4213> {
+  list<I32EnumAttrCase> implies = [SPIRV_C_Float8EXT, SPIRV_C_CooperativeMatrixKHR];
+  list<Availability> availability = [
+    Extension<[SPV_EXT_float8]>
+  ];
+}
+
 def SPIRV_CapabilityAttr :
     SPIRV_I32EnumAttr<"Capability", "valid SPIR-V Capability", "capability", [
       SPIRV_C_Matrix, SPIRV_C_Addresses, SPIRV_C_Linkage, SPIRV_C_Kernel, SPIRV_C_Float16,
@@ -1599,7 +1606,7 @@ def SPIRV_CapabilityAttr :
       SPIRV_C_CacheControlsINTEL, SPIRV_C_BFloat16TypeKHR,
       SPIRV_C_BFloat16DotProductKHR, SPIRV_C_BFloat16CooperativeMatrixKHR,
       SPIRV_C_TensorFloat32RoundingINTEL, SPIRV_C_MaskedGatherScatterINTEL,
-      SPIRV_C_Float8EXT
+      SPIRV_C_Float8EXT, SPIRV_C_Float8CooperativeMatrixEXT
     ]>;
 
 def SPIRV_AM_Logical                 : I32EnumAttrCase<"Logical", 0>;
@@ -4512,6 +4519,8 @@ def SPIRV_OC_OpIAddCarry                      : I32EnumAttrCase<"OpIAddCarry", 1
 def SPIRV_OC_OpISubBorrow                     : I32EnumAttrCase<"OpISubBorrow", 150>;
 def SPIRV_OC_OpUMulExtended                   : I32EnumAttrCase<"OpUMulExtended", 151>;
 def SPIRV_OC_OpSMulExtended                   : I32EnumAttrCase<"OpSMulExtended", 152>;
+def SPIRV_OC_OpAny                            : I32EnumAttrCase<"OpAny", 154>;
+def SPIRV_OC_OpAll                            : I32EnumAttrCase<"OpAll", 155>;
 def SPIRV_OC_OpIsNan                          : I32EnumAttrCase<"OpIsNan", 156>;
 def SPIRV_OC_OpIsInf                          : I32EnumAttrCase<"OpIsInf", 157>;
 def SPIRV_OC_OpIsFinite                       : I32EnumAttrCase<"OpIsFinite", 158>;
@@ -4598,6 +4607,7 @@ def SPIRV_OC_OpGroupSMax                      : I32EnumAttrCase<"OpGroupSMax", 2
 def SPIRV_OC_OpNoLine                         : I32EnumAttrCase<"OpNoLine", 317>;
 def SPIRV_OC_OpModuleProcessed                : I32EnumAttrCase<"OpModuleProcessed", 330>;
 def SPIRV_OC_OpExecutionModeId                : I32EnumAttrCase<"OpExecutionModeId", 331>;
+def SPIRV_OC_OpDecorateId                     : I32EnumAttrCase<"OpDecorateId", 332>;
 def SPIRV_OC_OpGroupNonUniformElect           : I32EnumAttrCase<"OpGroupNonUniformElect", 333>;
 def SPIRV_OC_OpGroupNonUniformAll             : I32EnumAttrCase<"OpGroupNonUniformAll", 334>;
 def SPIRV_OC_OpGroupNonUniformAny             : I32EnumAttrCase<"OpGroupNonUniformAny", 335>;
@@ -4714,6 +4724,7 @@ def SPIRV_OpcodeAttr :
       SPIRV_OC_OpMatrixTimesMatrix, SPIRV_OC_OpOuterProduct, SPIRV_OC_OpDot,
       SPIRV_OC_OpIAddCarry,
       SPIRV_OC_OpISubBorrow, SPIRV_OC_OpUMulExtended, SPIRV_OC_OpSMulExtended,
+      SPIRV_OC_OpAny, SPIRV_OC_OpAll,
       SPIRV_OC_OpIsNan, SPIRV_OC_OpIsInf, SPIRV_OC_OpIsFinite,
       SPIRV_OC_OpOrdered, SPIRV_OC_OpUnordered,
       SPIRV_OC_OpLogicalEqual, SPIRV_OC_OpLogicalNotEqual, SPIRV_OC_OpLogicalOr,
@@ -4745,7 +4756,7 @@ def SPIRV_OpcodeAttr :
       SPIRV_OC_OpGroupFAdd, SPIRV_OC_OpGroupFMin, SPIRV_OC_OpGroupUMin,
       SPIRV_OC_OpGroupSMin, SPIRV_OC_OpGroupFMax, SPIRV_OC_OpGroupUMax,
       SPIRV_OC_OpGroupSMax, SPIRV_OC_OpNoLine, SPIRV_OC_OpModuleProcessed,
-      SPIRV_OC_OpExecutionModeId,
+      SPIRV_OC_OpExecutionModeId, SPIRV_OC_OpDecorateId,
       SPIRV_OC_OpGroupNonUniformElect, SPIRV_OC_OpGroupNonUniformAll,
       SPIRV_OC_OpGroupNonUniformAny, SPIRV_OC_OpGroupNonUniformAllEqual,
       SPIRV_OC_OpGroupNonUniformBroadcast, SPIRV_OC_OpGroupNonUniformBroadcastFirst,

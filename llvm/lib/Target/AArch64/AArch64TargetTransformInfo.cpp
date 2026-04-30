@@ -1461,6 +1461,10 @@ static SVEIntrinsicInfo constructSVEIntrinsicInfo(IntrinsicInst &II) {
   case Intrinsic::aarch64_sve_fcvtzu_i32f64:
   case Intrinsic::aarch64_sve_fcvtzu_i64f16:
   case Intrinsic::aarch64_sve_fcvtzu_i64f32:
+  case Intrinsic::aarch64_sve_revb:
+  case Intrinsic::aarch64_sve_revh:
+  case Intrinsic::aarch64_sve_revw:
+  case Intrinsic::aarch64_sve_revd:
   case Intrinsic::aarch64_sve_scvtf:
   case Intrinsic::aarch64_sve_scvtf_f16i32:
   case Intrinsic::aarch64_sve_scvtf_f16i64:
@@ -4886,6 +4890,7 @@ AArch64TTIImpl::getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
   case Intrinsic::masked_gather:
     return getGatherScatterOpCost(MICA, CostKind);
   case Intrinsic::masked_load:
+  case Intrinsic::masked_expandload:
   case Intrinsic::masked_store:
     return getMaskedMemoryOpCost(MICA, CostKind);
   }
@@ -4915,6 +4920,15 @@ AArch64TTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
   if (VT->getElementCount() == ElementCount::getScalable(1))
     return InstructionCost::getInvalid();
 
+  InstructionCost MemOpCost = LT.first;
+  if (MICA.getID() == Intrinsic::masked_expandload) {
+    if (!isLegalMaskedExpandLoad(Src, MICA.getAlignment()))
+      return InstructionCost::getInvalid();
+
+    // Operation will be split into expand of masked.load
+    MemOpCost *= 2;
+  }
+
   // If we need to split the memory operation, we will also need to split the
   // mask. This will likely lead to overestimating the cost in some cases if
   // multiple memory operations use the same mask, but we often don't have
@@ -4924,9 +4938,9 @@ AArch64TTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
   // since the number of bits in a P register matches the number of bytes in a
   // Z register.
   if (LT.first > 1 && LT.second.getScalarSizeInBits() > 8)
-    return LT.first * 2;
+    return MemOpCost * 2;
 
-  return LT.first;
+  return MemOpCost;
 }
 
 // This function returns gather/scatter overhead either from
@@ -5148,6 +5162,18 @@ AArch64TTIImpl::getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) const {
               getMemoryOpCost(Instruction::Load, I, Align(128), 0, CostKind);
   }
   return Cost;
+}
+
+bool AArch64TTIImpl::isLegalMaskedExpandLoad(Type *DataTy,
+                                             Align Alignment) const {
+  // Neon types should be scalarised when we are not choosing to use SVE.
+  if (useNeonVector(DataTy))
+    return false;
+
+  // Return true only if we are able to lower using the SVE2p2/SME2p2
+  // expand instruction.
+  return (ST->isSVEAvailable() && ST->hasSVE2p2()) ||
+         (ST->isSVEorStreamingSVEAvailable() && ST->hasSME2p2());
 }
 
 unsigned AArch64TTIImpl::getMaxInterleaveFactor(ElementCount VF) const {
@@ -6497,7 +6523,7 @@ unsigned AArch64TTIImpl::getEpilogueVectorizationMinVF() const {
   return ST->getEpilogueVectorizationMinVF();
 }
 
-bool AArch64TTIImpl::preferPredicateOverEpilogue(TailFoldingInfo *TFI) const {
+bool AArch64TTIImpl::preferTailFoldingOverEpilogue(TailFoldingInfo *TFI) const {
   if (!ST->hasSVE())
     return false;
 

@@ -338,7 +338,7 @@ int bar(int n){
 // CHECK1:       user_code.entry:
 // CHECK1-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
 // CHECK1-NEXT:    [[TMP3:%.*]] = load i8, ptr [[DOTCAPTURE_EXPR__ADDR]], align 1
-// CHECK1-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP3]] to i1
+// CHECK1-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP3]], 0
 // CHECK1-NEXT:    [[STOREDV:%.*]] = zext i1 [[LOADEDV]] to i8
 // CHECK1-NEXT:    store i8 [[STOREDV]], ptr [[DOTCAPTURE_EXPR__CASTED]], align 1
 // CHECK1-NEXT:    [[TMP4:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR__CASTED]], align 8
@@ -1594,7 +1594,7 @@ int bar(int n){
 // CHECK2:       user_code.entry:
 // CHECK2-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
 // CHECK2-NEXT:    [[TMP3:%.*]] = load i8, ptr [[DOTCAPTURE_EXPR__ADDR]], align 1
-// CHECK2-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP3]] to i1
+// CHECK2-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP3]], 0
 // CHECK2-NEXT:    [[STOREDV:%.*]] = zext i1 [[LOADEDV]] to i8
 // CHECK2-NEXT:    store i8 [[STOREDV]], ptr [[DOTCAPTURE_EXPR__CASTED]], align 1
 // CHECK2-NEXT:    [[TMP4:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR__CASTED]], align 8
@@ -2839,7 +2839,7 @@ int bar(int n){
 // CHECK3:       user_code.entry:
 // CHECK3-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
 // CHECK3-NEXT:    [[TMP3:%.*]] = load i8, ptr [[DOTCAPTURE_EXPR__ADDR]], align 1
-// CHECK3-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP3]] to i1
+// CHECK3-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP3]], 0
 // CHECK3-NEXT:    [[STOREDV:%.*]] = zext i1 [[LOADEDV]] to i8
 // CHECK3-NEXT:    store i8 [[STOREDV]], ptr [[DOTCAPTURE_EXPR__CASTED]], align 1
 // CHECK3-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR__CASTED]], align 4

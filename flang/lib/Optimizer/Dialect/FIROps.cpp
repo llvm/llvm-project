@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Dialect/FIROps.h"
+#include "flang/Optimizer/Dialect/CUDAKernelOpInterface.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
@@ -31,6 +32,7 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeRange.h"
+#include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -202,8 +204,16 @@ bool fir::mayBeAbsentBox(mlir::Value val) {
 
     // Check for fir.embox and fir.rebox before checking for
     // FortranObjectViewOpInterface, which they support.
-    // A box created by fir.embox/rebox cannot be absent.
-    if (mlir::isa<fir::ReboxOp, fir::EmboxOp, fir::LoadOp>(defOp))
+    // A box created by fir.embox/fir.rebox/fir.rebox_assumed_rank is only
+    // potentially absent when the operation was explicitly tagged with the
+    // `optional` attribute.
+    if (auto reboxOp = mlir::dyn_cast<fir::ReboxOp>(defOp))
+      return reboxOp.getOptional();
+    if (auto emboxOp = mlir::dyn_cast<fir::EmboxOp>(defOp))
+      return emboxOp.getOptional();
+    if (auto reboxAROp = mlir::dyn_cast<fir::ReboxAssumedRankOp>(defOp))
+      return reboxAROp.getOptional();
+    if (mlir::isa<fir::LoadOp>(defOp))
       return false;
 
     if (auto viewIface =
@@ -585,6 +595,15 @@ struct SimplifyArrayCoorOp : public mlir::OpRewritePattern<fir::ArrayCoorOp> {
           llvm::any_of(memref.getUsers(), [](mlir::Operation *u) {
             return mlir::isa<ACC_DATA_ENTRY_OPS>(u);
           }))
+        return mlir::failure();
+      // Don't pull in rebox defined outside a CUDA kernel boundary when the
+      // array_coor is inside that kernel. CUF lowering converts such a rebox
+      // into a managed-memory descriptor that the kernel needs to receive as
+      // its argument; folding the rebox away would leave the kernel capturing
+      // the host-side descriptor directly, causing illegal device dereferences
+      // at runtime.
+      if (op->getParentOfType<fir::CUDAKernelOpInterface>() !=
+          reboxOp->getParentOfType<fir::CUDAKernelOpInterface>())
         return mlir::failure();
       boxedMemref = reboxOp.getBox();
       boxedShape = reboxOp.getShape();
@@ -1219,6 +1238,66 @@ mlir::OpFoldResult fir::BoxCharLenOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// BoxEleSizeOp
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// Canonicalize fir.box_elesize when the element type is statically known.
+struct FoldBoxEleSize : public mlir::OpRewritePattern<fir::BoxEleSizeOp> {
+  using mlir::OpRewritePattern<fir::BoxEleSizeOp>::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::BoxEleSizeOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    auto boxTy = mlir::cast<fir::BaseBoxType>(op.getVal().getType());
+
+    // ClassType is polymorphic — the actual runtime type may differ, size
+    // not statically known.
+    if (mlir::isa<fir::ClassType>(boxTy))
+      return mlir::failure();
+
+    // unwrapInnerType peels through any ptr/heap/array wrapper inside the box
+    // to reach the scalar element type.
+    mlir::Type eleTy = boxTy.unwrapInnerType();
+
+    // NoneType is the element type for TYPE(*) assumed-type boxes — no static
+    // element type.
+    if (mlir::isa<mlir::NoneType>(eleTy))
+      return mlir::failure();
+
+    // Bail out for types whose size is only known at runtime as a string whose
+    // length is unknown or a record type with fields with a dynamic size
+    if (fir::hasDynamicSize(eleTy))
+      return mlir::failure();
+
+    mlir::DataLayout dl = mlir::DataLayout::closest(op);
+    fir::KindMapping kindMap = fir::getKindMapping(op.getOperation());
+
+    auto sizeAndAlign =
+        fir::getTypeSizeAndAlignment(op.getLoc(), eleTy, dl, kindMap);
+    if (!sizeAndAlign)
+      return mlir::failure();
+
+    // The descriptor stores the byte stride between elements (not the raw
+    // natural size), so we must round up to alignment just as
+    // fir::computeElementDistance does.
+    auto [size, alignment] = *sizeAndAlign;
+    std::int64_t distance = llvm::alignTo(size, alignment);
+
+    mlir::Type resultTy = op.getType();
+    rewriter.replaceOpWithNewOp<mlir::arith::ConstantOp>(
+        op, resultTy, rewriter.getIntegerAttr(resultTy, distance));
+    return mlir::success();
+  }
+};
+} // namespace
+
+void fir::BoxEleSizeOp::getCanonicalizationPatterns(
+    mlir::RewritePatternSet &results, mlir::MLIRContext *context) {
+  results.insert<FoldBoxEleSize>(context);
+}
+
+//===----------------------------------------------------------------------===//
 // BoxDimsOp
 //===----------------------------------------------------------------------===//
 
@@ -1633,6 +1712,12 @@ void fir::ConvertOp::getCanonicalizationPatterns(
       context);
 }
 
+static bool isI1(mlir::Type ty) {
+  if (auto intTy = mlir::dyn_cast<mlir::IntegerType>(ty))
+    return intTy.getWidth() == 1;
+  return false;
+}
+
 mlir::OpFoldResult fir::ConvertOp::fold(FoldAdaptor adaptor) {
   if (getValue().getType() == getType())
     return getValue();
@@ -1651,6 +1736,13 @@ mlir::OpFoldResult fir::ConvertOp::fold(FoldAdaptor adaptor) {
         if (mlir::isa<fir::LogicalType>(inner.getType()) && (toTy == fromTy) &&
             (fromTy.getWidth() == 1))
           return inner.getValue();
+  }
+  // (convert (bitcast 'cst : int -> logical) : logical -> i1) ==> `'cst != 0`
+  if (isI1(getType()) &&
+      matchPattern(getValue(), mlir::m_Op<fir::BitcastOp>())) {
+    auto bitcast = mlir::cast<fir::BitcastOp>(getValue().getDefiningOp());
+    if (auto cst = fir::getIntIfConstant(bitcast.getValue()))
+      return mlir::IntegerAttr::get(getType(), cst != 0 ? 1 : 0);
   }
   return {};
 }
@@ -2416,6 +2508,11 @@ std::optional<std::int64_t> fir::EmboxOp::getViewOffset(mlir::OpResult) {
 }
 
 mlir::Speculation::Speculatability fir::EmboxOp::getSpeculatability() {
+  // The operation is always safe to evaluate if it has the "optional"
+  // attribute, otherwise it is not safe to evaluate if the input may
+  // be absent.
+  if (getOptional())
+    return mlir::Speculation::Speculatable;
   return (getSourceBox() && mayBeAbsentBox(getSourceBox()))
              ? mlir::Speculation::NotSpeculatable
              : mlir::Speculation::Speculatable;
@@ -3727,6 +3824,11 @@ std::optional<std::int64_t> fir::ReboxOp::getViewOffset(mlir::OpResult) {
 }
 
 mlir::Speculation::Speculatability fir::ReboxOp::getSpeculatability() {
+  // The operation is always safe to evaluate if it has the "optional"
+  // attribute, otherwise it is not safe to evaluate if the input may
+  // be absent.
+  if (getOptional())
+    return mlir::Speculation::Speculatable;
   return mayBeAbsentBox(getBox()) ? mlir::Speculation::NotSpeculatable
                                   : mlir::Speculation::Speculatable;
 }
@@ -5544,8 +5646,13 @@ void fir::DeclareOp::visitReplacedValues(
     llvm::ArrayRef<std::pair<mlir::Operation *, mlir::Value>> definitions,
     mlir::OpBuilder &builder) {
   for (auto [op, value] : definitions) {
+    // Do not emit DeclareValue when we have a dummy scope as this can
+    // potentially result in us generating it where the DummyScope does not
+    // dominate it. This can happen after inlining.
+    if (getDummyScope())
+      continue;
     builder.setInsertionPointAfter(op);
-    fir::DeclareValueOp::create(builder, getLoc(), value, getDummyScope(),
+    fir::DeclareValueOp::create(builder, getLoc(), value, nullptr,
                                 getUniqNameAttr(), getFortranAttrsAttr(),
                                 getDataAttrAttr(), getDummyArgNoAttr());
   }

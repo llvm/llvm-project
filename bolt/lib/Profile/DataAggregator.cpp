@@ -1455,9 +1455,11 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
     return std::error_code();
   }
 
-  // Reset external addresses.
+  // Reset external addresses, but preserve sentinel values (BR_ONLY,
+  // FT_EXTERNAL_ORIGIN, FT_EXTERNAL_RETURN).
   for (std::optional<Location> &Loc : Addr)
-    if (Loc && Loc->Name != FilterBuildID)
+    if (Loc && Loc->Offset < Trace::FT_EXTERNAL_RETURN &&
+        Loc->Name != FilterBuildID)
       Loc->Offset = Trace::EXTERNAL;
 
   const uint64_t FromOffset = Addr[0]->Offset;

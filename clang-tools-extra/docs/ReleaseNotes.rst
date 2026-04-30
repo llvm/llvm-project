@@ -175,6 +175,11 @@ New checks
   Suggests insertion of ``std::move(...)`` to turn copy assignment operator
   calls into move assignment ones, when deemed valid and profitable.
 
+- New :doc:`readability-redundant-lambda-parameter-list
+  <clang-tidy/checks/readability/redundant-lambda-parameter-list>` check.
+
+  Finds lambda expressions with a redundant empty parameter list and removes it.
+
 - New :doc:`readability-redundant-qualified-alias
   <clang-tidy/checks/readability/redundant-qualified-alias>` check.
 
@@ -267,6 +272,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/macro-parentheses>` check by printing the macro
   definition in the warning message if the macro is defined on command line.
 
+- Improved :doc:`bugprone-move-forwarding-reference
+  <clang-tidy/checks/bugprone/move-forwarding-reference>` check by fixing some
+  false positives in the context of moved lambda captures.
+
 - Improved :doc:`bugprone-narrowing-conversions
   <clang-tidy/checks/bugprone/narrowing-conversions>` check by fixing a false
   positive when converting a ``bool`` to a signed integer type.
@@ -285,6 +294,11 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/string-constructor>` check to detect suspicious
   string constructor calls when the string class constructor has a default
   allocator argument.
+
+- Improved :doc:`bugprone-throwing-static-initialization
+  <clang-tidy/checks/bugprone/throwing-static-initialization>` check by adding
+  the `AllowedTypes` option. With this option it is possible to exclude
+  static declarations with specific types from the check.
 
 - Improved :doc:`bugprone-unchecked-optional-access
   <clang-tidy/checks/bugprone/unchecked-optional-access>` to recognize common
@@ -308,6 +322,9 @@ Changes in existing checks
 
   - Do not report explicit call to destructor after move as an invalid use.
 
+  - Avoid false positives when moving object to a base type then accessing
+    non-base members.
+
 - Improved :doc:`cppcoreguidelines-avoid-capturing-lambda-coroutines
   <clang-tidy/checks/cppcoreguidelines/avoid-capturing-lambda-coroutines>`
   check by adding the `AllowExplicitObjectParameters` option. When enabled,
@@ -318,11 +335,15 @@ Changes in existing checks
   <clang-tidy/checks/cppcoreguidelines/init-variables>` check by ensuring that
   member pointers are correctly flagged as uninitialized.
 
+- Fixed :doc:`cppcoreguidelines-init-variables
+  <clang-tidy/checks/cppcoreguidelines/init-variables>` check by excluding
+  Objective-C for-in loop variable declaration.
+
 - Improved :doc:`cppcoreguidelines-missing-std-forward
   <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check:
-  
+
   - Fixed false positive for constrained template parameters
-  
+
   - Fixed false positive with ``std::forward`` in brace-init and paren-init
     lambda captures such as ``[t{std::forward<T>(t)}]``.
 
@@ -458,6 +479,11 @@ Changes in existing checks
   - Reduce verbosity by removing the note indicating source location of the
     ``empty`` function.
 
+- Improved :doc:`readability-convert-member-functions-to-static
+  <clang-tidy/checks/readability/convert-member-functions-to-static>` check by
+  avoiding false positive on ``const`` member functions to static when they are
+  a part of const/non-const overload pair.
+
 - Improved :doc:`readability-else-after-return
   <clang-tidy/checks/readability/else-after-return>` check:
 
@@ -481,12 +507,24 @@ Changes in existing checks
   now uses separate note diagnostics for each uninitialized enumerator, making
   it easier to see which specific enumerators need explicit initialization.
 
+- Improved :doc:`readability-identifier-length
+  <clang-tidy/checks/readability/identifier-length>` check:
+
+  - A new option, named `LineCountThreshold`, is added to silence warnings for
+    short-lived variables, based on distance between declaration and last use.
+
+  - Support for structured bindings is added. Two new options, named
+    `MinimumBindingNameLength` and `IgnoredBindingNames` respectively, are
+    added to configure the behavior of the check regarding this new identifier
+    kind. By default, names with at least 2 characters are required and the
+    only exception allowed is `_`.
+
 - Improved :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check:
 
   - Fixed incorrect naming style application to C++17 structured bindings.
 
-  - Fixed a false positive where function templates could be diagnosed as generic 
+  - Fixed a false positive where function templates could be diagnosed as generic
     identifiers when `DefaultCase` was enabled.
 
 - Improved :doc:`readability-implicit-bool-conversion
@@ -537,6 +575,11 @@ Changes in existing checks
   <clang-tidy/checks/readability/suspicious-call-argument>` check by avoiding a
   crash from invalid ``Abbreviations`` option.
 
+- Improved :doc:`readability-use-anyofallof
+  <clang-tidy/checks/readability/use-anyofallof>` check by emitting a diagnostic
+  note to suggest materializing the temporary range when iterating over temporary
+  range expressions or initializer lists, as reusing them directly could be unsafe.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
@@ -548,6 +591,8 @@ Improvements to include-fixer
 
 Improvements to clang-include-fixer
 -----------------------------------
+
+- Fixed crashes when command-line argument parsing failed at unknown tool options.
 
 Improvements to modularize
 --------------------------
