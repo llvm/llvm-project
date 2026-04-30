@@ -720,7 +720,7 @@ class SVE_Shift_Add_All_Active_Pat<ValueType vtd, SDPatternOperator op, ValueTyp
 : Pat<(vtd (add vt1:$Op1, (op (pt (SVEAllActive)), vt2:$Op2, vt3:$Op3))),
       (inst $Op1, $Op2, $Op3)>;
 
-class SVE2p1_Sat_Shift_VG2_Pat<string name, SDPatternOperator intrinsic, ValueType out_vt, ValueType in_vt, Operand imm_ty>
+class SVE_Sat_Shift_VG2_Pat<string name, SDPatternOperator intrinsic, ValueType out_vt, ValueType in_vt, Operand imm_ty>
     : Pat<(out_vt (intrinsic in_vt:$Zn1, in_vt:$Zn2, (i32 imm_ty:$i))),
                   (!cast<Instruction>(name) (REG_SEQUENCE ZPR2Mul2, in_vt:$Zn1, zsub0, in_vt:$Zn2, zsub1), imm_ty:$i)>;
 
@@ -10166,7 +10166,7 @@ multiclass sve2p1_multi_vec_extract_narrow<string mnemonic, bits<2> opc, SDPatte
 }
 
 // SVE2 multi-vec shift narrow
-class sve2p1_multi_vec_shift_narrow<string mnemonic, ZPRRegOp ZdRC, RegisterOperand ZSrcOp,
+class sve_multi_vec_shift_narrow<string mnemonic, ZPRRegOp ZdRC, RegisterOperand ZSrcOp,
                                     Operand immtype, bits<3> opc, bits<2> tsz>
     : I<(outs ZdRC:$Zd), (ins ZSrcOp:$Zn, immtype:$imm),
         mnemonic, "\t$Zd, $Zn, $imm",
@@ -10190,17 +10190,19 @@ class sve2p1_multi_vec_shift_narrow<string mnemonic, ZPRRegOp ZdRC, RegisterOper
 }
 
 multiclass sve_multi_vec_shift_narrow<string mnemonic, bits<3> opc, SDPatternOperator intrinsic> {
-  def NAME : sve2p1_multi_vec_shift_narrow<mnemonic, ZPR16, ZZ_s_mul_r, vecshiftR16, opc, 0b01> {
+  def NAME : sve_multi_vec_shift_narrow<mnemonic, ZPR16, ZZ_s_mul_r, vecshiftR16, opc, 0b01> {
     let Inst{19} = imm{3}; // imm4
   }
 
-  def : SVE2p1_Sat_Shift_VG2_Pat<NAME, intrinsic, nxv8i16, nxv4i32, vecshiftR16>;
+  def : SVE_Sat_Shift_VG2_Pat<NAME, intrinsic, nxv8i16, nxv4i32, vecshiftR16>;
 }
 
-multiclass sve_multi_vec_round_shift_narrow<string mnemonic, bits<3> opc> {
-  def NAME : sve2p1_multi_vec_shift_narrow<mnemonic, ZPR8, ZZ_h_mul_r, vecshiftR8, opc, 0b00> {
+multiclass sve_multi_vec_round_shift_narrow<string mnemonic, bits<3> opc, SDPatternOperator intrinsic> {
+  def NAME : sve_multi_vec_shift_narrow<mnemonic, ZPR8, ZZ_h_mul_r, vecshiftR8, opc, 0b00> {
     let Inst{19} = 0b1;    // always 1 for imm3 version
   }
+
+  def : SVE_Sat_Shift_VG2_Pat<NAME, intrinsic, nxv16i8, nxv8i16, vecshiftR8>;
 }
 
 // SME2 multi-vec contiguous load (scalar plus scalar, two registers)

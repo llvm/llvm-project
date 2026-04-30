@@ -1434,6 +1434,65 @@ MachineIRBuilder::buildInstr(unsigned Opc, ArrayRef<DstOp> DstOps,
            "Type mismatch");
     break;
   }
+  case TargetOpcode::G_INSERT_SUBVECTOR: {
+    assert(DstOps.size() == 1 && "Invalid Dst");
+    assert(SrcOps.size() == 3 && "Invalid Srcs");
+    [[maybe_unused]] LLT DstTy = DstOps[0].getLLTTy(*getMRI());
+    [[maybe_unused]] LLT BigVecTy = SrcOps[0].getLLTTy(*getMRI());
+    [[maybe_unused]] LLT SubVecTy = SrcOps[1].getLLTTy(*getMRI());
+    assert(DstTy == BigVecTy &&
+           "Dest and insert subvector source types must match!");
+    assert(DstTy.isVector() && SubVecTy.isVector() &&
+           "Insert subvector VTs must be vectors!");
+    assert(DstTy.getElementType() == SubVecTy.getElementType() &&
+           "Insert subvector VTs must have the same element type!");
+    assert((DstTy.isScalable() || !SubVecTy.isScalable()) &&
+           "Cannot insert a scalable vector into a fixed length vector!");
+    assert((DstTy.isScalable() != SubVecTy.isScalable() ||
+            DstTy.getElementCount().getKnownMinValue() >=
+                SubVecTy.getElementCount().getKnownMinValue()) &&
+           "Insert subvector must be from smaller vector to larger vector!");
+    assert(SrcOps[2].getSrcOpKind() == SrcOp::SrcType::Ty_Imm &&
+           "Insert subvector index must be constant");
+    assert((DstTy.isScalable() != SubVecTy.isScalable() ||
+            (SubVecTy.getElementCount().getKnownMinValue() +
+             (uint64_t)SrcOps[2].getImm()) <=
+                DstTy.getElementCount().getKnownMinValue()) &&
+           "Insert subvector overflow!");
+    assert((uint64_t)SrcOps[2].getImm() %
+                   SubVecTy.getElementCount().getKnownMinValue() ==
+               0 &&
+           "Insert index is not a multiple of the subvector length");
+    break;
+  }
+  case TargetOpcode::G_EXTRACT_SUBVECTOR: {
+    assert(DstOps.size() == 1 && "Invalid Dst");
+    assert(SrcOps.size() == 2 && "Invalid Srcs");
+    [[maybe_unused]] LLT DstTy = DstOps[0].getLLTTy(*getMRI());
+    [[maybe_unused]] LLT SrcVecTy = SrcOps[0].getLLTTy(*getMRI());
+    assert(DstTy.isVector() && SrcVecTy.isVector() &&
+           "Extract subvector VTs must be vectors!");
+    assert(DstTy.getElementType() == SrcVecTy.getElementType() &&
+           "Extract subvector VTs must have the same element type!");
+    assert((!DstTy.isScalable() || SrcVecTy.isScalable()) &&
+           "Cannot extract a scalable vector from a fixed length vector!");
+    assert((DstTy.isScalable() != SrcVecTy.isScalable() ||
+            DstTy.getElementCount().getKnownMinValue() <=
+                SrcVecTy.getElementCount().getKnownMinValue()) &&
+           "Extract subvector must be from larger vector to smaller vector!");
+    assert(SrcOps[1].getSrcOpKind() == SrcOp::SrcType::Ty_Imm &&
+           "Extract subvector index must be a constant");
+    assert((DstTy.isScalable() != SrcVecTy.isScalable() ||
+            (DstTy.getElementCount().getKnownMinValue() +
+             (uint64_t)SrcOps[1].getImm()) <=
+                SrcVecTy.getElementCount().getKnownMinValue()) &&
+           "Extract subvector overflow!");
+    assert((uint64_t)SrcOps[1].getImm() %
+                   DstTy.getElementCount().getKnownMinValue() ==
+               0 &&
+           "Extract index is not a multiple of the output vector length");
+    break;
+  }
   case TargetOpcode::G_BUILD_VECTOR: {
     assert((!SrcOps.empty() || SrcOps.size() < 2) &&
            "Must have at least 2 operands");

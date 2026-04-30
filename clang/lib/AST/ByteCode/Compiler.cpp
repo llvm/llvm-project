@@ -773,8 +773,12 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
 
     auto Sem =
         Ctx.getASTContext().getFixedPointSemantics(E->getType()).toOpaqueInt();
-    return this->emitCastIntegralFixedPoint(classifyPrim(SubExpr->getType()),
-                                            Sem, E);
+    if (!this->emitCastIntegralFixedPoint(classifyPrim(SubExpr->getType()), Sem,
+                                          E))
+      return false;
+    if (DiscardResult)
+      return this->emitPopFixedPoint(E);
+    return true;
   }
   case CK_FloatingToFixedPoint: {
     if (!this->visit(SubExpr))
@@ -782,25 +786,42 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
 
     auto Sem =
         Ctx.getASTContext().getFixedPointSemantics(E->getType()).toOpaqueInt();
-    return this->emitCastFloatingFixedPoint(Sem, E);
+    if (!this->emitCastFloatingFixedPoint(Sem, E))
+      return false;
+    if (DiscardResult)
+      return this->emitPopFixedPoint(E);
+    return true;
   }
   case CK_FixedPointToFloating: {
     if (!this->visit(SubExpr))
       return false;
     const auto *TargetSemantics = &Ctx.getFloatSemantics(E->getType());
-    return this->emitCastFixedPointFloating(TargetSemantics, E);
+    if (!this->emitCastFixedPointFloating(TargetSemantics, E))
+      return false;
+    if (DiscardResult)
+      return this->emitPopFloat(E);
+    return true;
   }
   case CK_FixedPointToIntegral: {
     if (!this->visit(SubExpr))
       return false;
-    return this->emitCastFixedPointIntegral(classifyPrim(E->getType()), E);
+    PrimType IntegralT = classifyPrim(E->getType());
+    if (!this->emitCastFixedPointIntegral(IntegralT, E))
+      return false;
+    if (DiscardResult)
+      return this->emitPop(IntegralT, E);
+    return true;
   }
   case CK_FixedPointCast: {
     if (!this->visit(SubExpr))
       return false;
     auto Sem =
         Ctx.getASTContext().getFixedPointSemantics(E->getType()).toOpaqueInt();
-    return this->emitCastFixedPoint(Sem, E);
+    if (!this->emitCastFixedPoint(Sem, E))
+      return false;
+    if (DiscardResult)
+      return this->emitPopFixedPoint(E);
+    return true;
   }
 
   case CK_ToVoid:
@@ -966,9 +987,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
       return false;
     if (!this->emitActivate(E))
       return false;
-    if (!this->visitInitializer(SubExpr))
-      return false;
-    return this->emitPopPtr(E);
+    return this->visitInitializerPop(SubExpr);
   }
 
   default:
@@ -1904,7 +1923,11 @@ bool Compiler<Emitter>::VisitFixedPointUnaryOperator(const UnaryOperator *E) {
   case UO_Minus:
     if (!this->visit(SubExpr))
       return false;
-    return this->emitNegFixedPoint(E);
+    if (!this->emitNegFixedPoint(E))
+      return false;
+    if (DiscardResult)
+      return this->emitPopFixedPoint(E);
+    return true;
   default:
     return false;
   }
@@ -2120,9 +2143,7 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
       if (Activate && !this->emitActivate(E))
         return false;
 
-      if (!this->visitInitializer(Init))
-        return false;
-      return this->emitPopPtr(E);
+      return this->visitInitializerPop(Init);
     };
 
     if (R->isUnion()) {
@@ -2168,10 +2189,7 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
           if (!this->emitGetPtrBase(B->Offset, Init))
             return false;
 
-          if (!this->visitInitializer(Init))
-            return false;
-
-          if (!this->emitFinishInitPop(E))
+          if (!this->visitInitializerPop(Init))
             return false;
           // Base initializers don't increase InitIndex, since they don't count
           // into the Record's fields.
@@ -2349,9 +2367,7 @@ bool Compiler<Emitter>::visitArrayElemInit(unsigned ElemIndex, const Expr *Init,
     return false;
   if (!this->emitArrayElemPtrUint32(Init))
     return false;
-  if (!this->visitInitializer(Init))
-    return false;
-  return this->emitFinishInitPop(Init);
+  return this->visitInitializerPop(Init);
 }
 
 template <class Emitter>
@@ -3280,7 +3296,7 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
 
     if (!this->emitGetPtrLocal(*LocalIndex, E))
       return false;
-    return this->visitInitializer(Inner) && this->emitFinishInit(E);
+    return this->visitInitializer(Inner);
   }
   return false;
 }
@@ -3312,7 +3328,7 @@ bool Compiler<Emitter>::VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
 
   if (Initializing) {
     // We already have a value, just initialize that.
-    return this->visitInitializer(Init) && this->emitFinishInit(E);
+    return this->visitInitializer(Init);
   }
 
   OptPrimType T = classify(E->getType());
@@ -3339,7 +3355,7 @@ bool Compiler<Emitter>::VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
       return this->emitInitGlobal(*T, *GlobalIndex, E);
     }
 
-    return this->visitInitializer(Init) && this->emitFinishInit(E);
+    return this->visitInitializer(Init);
   }
 
   // Otherwise, use a local variable.
@@ -3361,7 +3377,7 @@ bool Compiler<Emitter>::VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
 
   if (T)
     return this->visit(Init) && this->emitInit(*T, E);
-  return this->visitInitializer(Init) && this->emitFinishInit(E);
+  return this->visitInitializer(Init);
 }
 
 template <class Emitter>
@@ -3413,10 +3429,7 @@ bool Compiler<Emitter>::VisitLambdaExpr(const LambdaExpr *E) {
       if (!this->emitGetPtrField(F.Offset, E))
         return false;
 
-      if (!this->visitInitializer(Init))
-        return false;
-
-      if (!this->emitPopPtr(E))
+      if (!this->visitInitializerPop(Init))
         return false;
     }
   }
@@ -3616,7 +3629,7 @@ bool Compiler<Emitter>::VisitCXXConstructExpr(const CXXConstructExpr *E) {
 
     if (DiscardResult)
       return this->emitPopPtr(E);
-    return this->emitFinishInit(E);
+    return true;
   }
 
   if (T->isArrayType()) {
@@ -4077,9 +4090,7 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
             if (!this->emitStorePop(*InitT, E))
               return false;
           } else {
-            if (!this->visitInitializer(DynamicInit))
-              return false;
-            if (!this->emitPopPtr(E))
+            if (!this->visitInitializerPop(DynamicInit))
               return false;
           }
         } else if (ElemT) {
@@ -4635,7 +4646,16 @@ bool Compiler<Emitter>::visitInitializer(const Expr *E) {
 
   OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/false,
                              /*NewInitializing=*/true, /*ToLValue=*/false);
-  return this->Visit(E);
+  return this->Visit(E) && this->emitFinishInit(E);
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::visitInitializerPop(const Expr *E) {
+  assert(!canClassify(E->getType()));
+
+  OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/false,
+                             /*NewInitializing=*/true, /*ToLValue=*/false);
+  return this->Visit(E) && this->emitFinishInitPop(E);
 }
 
 template <class Emitter> bool Compiler<Emitter>::visitAsLValue(const Expr *E) {
@@ -5106,9 +5126,6 @@ bool Compiler<Emitter>::visitExpr(const Expr *E, bool DestroyToplevelScope) {
 
     if (!visitInitializer(E))
       return false;
-
-    if (!this->emitFinishInit(E))
-      return false;
     // We are destroying the locals AFTER the Ret op.
     // The Ret op needs to copy the (alive) values, but the
     // destructors may still turn the entire expression invalid.
@@ -5296,10 +5313,7 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD,
     if (!this->emitGetPtrLocal(*Offset, Init))
       return false;
 
-    if (!visitInitializer(Init))
-      return false;
-
-    return this->emitFinishInitPop(Init);
+    return visitInitializerPop(Init);
   }
   return false;
 }
@@ -5316,8 +5330,19 @@ bool Compiler<Emitter>::visitAPValue(const APValue &Val, PrimType ValType,
   }
 
   if (Val.isMemberPointer()) {
-    if (const ValueDecl *MemberDecl = Val.getMemberPointerDecl())
-      return this->emitGetMemberPtr(MemberDecl, E);
+    if (const ValueDecl *MemberDecl = Val.getMemberPointerDecl()) {
+      if (!this->emitGetMemberPtr(MemberDecl, E))
+        return false;
+
+      bool IsDerived = Val.isMemberPointerToDerivedMember();
+      // Apply the member pointer path.
+      for (const CXXRecordDecl *PathEntry : Val.getMemberPointerPath()) {
+        if (!this->emitCopyMemberPtrPath(PathEntry, IsDerived, E))
+          return false;
+      }
+
+      return true;
+    }
     return this->emitNullMemberPtr(0, nullptr, E);
   }
 
@@ -6087,9 +6112,7 @@ bool Compiler<Emitter>::visitReturnStmt(const ReturnStmt *RS) {
       // RVO - construct the value in the return location.
       if (!this->emitRVOPtr(RE))
         return false;
-      if (!this->visitInitializer(RE))
-        return false;
-      if (!this->emitPopPtr(RE))
+      if (!this->visitInitializerPop(RE))
         return false;
 
       this->emitCleanup();
@@ -6732,6 +6755,10 @@ template <class Emitter>
 bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
   assert(!ReturnType);
 
+  // Only start the lifetime of the instance pointer.
+  if (!this->emitStartThisLifetime1(Ctor))
+    return false;
+
   auto emitFieldInitializer = [&](const Record::Field *F, unsigned FieldOffset,
                                   const Expr *InitExpr,
                                   bool Activate = false) -> bool {
@@ -6760,10 +6787,7 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
     if (Activate && !this->emitActivate(InitExpr))
       return false;
 
-    if (!this->visitInitializer(InitExpr))
-      return false;
-
-    return this->emitFinishInitPop(InitExpr);
+    return this->visitInitializerPop(InitExpr);
   };
 
   const RecordDecl *RD = Ctor->getParent();
@@ -6789,6 +6813,7 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
            this->emitRetVoid(Ctor);
   }
 
+  unsigned FieldInits = 0;
   InitLinkScope<Emitter> InitScope(this, InitLink::This());
   for (const auto *Init : Ctor->inits()) {
     // Scope needed for the initializers.
@@ -6802,6 +6827,7 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
                                     initNeedsOverridenLoc(Init));
       if (!emitFieldInitializer(F, F->Offset, InitExpr, IsUnion))
         return false;
+      ++FieldInits;
     } else if (const Type *Base = Init->getBaseClass()) {
       const auto *BaseDecl = Base->getAsCXXRecordDecl();
       assert(BaseDecl);
@@ -6823,9 +6849,7 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
       if (IsUnion && !this->emitActivate(InitExpr))
         return false;
 
-      if (!this->visitInitializer(InitExpr))
-        return false;
-      if (!this->emitFinishInitPop(InitExpr))
+      if (!this->visitInitializerPop(InitExpr))
         return false;
     } else if (const IndirectFieldDecl *IFD = Init->getIndirectMember()) {
       LocOverrideScope<Emitter> LOS(this, SourceInfo{},
@@ -6878,13 +6902,18 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
       assert(Init->isDelegatingInitializer());
       if (!this->emitThis(InitExpr))
         return false;
-      if (!this->visitInitializer(Init->getInit()))
-        return false;
-      if (!this->emitPopPtr(InitExpr))
+      if (!this->visitInitializerPop(Init->getInit()))
         return false;
     }
 
     if (!Scope.destroyLocals())
+      return false;
+  }
+
+  if (FieldInits != R->getNumFields()) {
+    assert(FieldInits < R->getNumFields());
+    // Start the lifetime of all members.
+    if (!this->emitStartThisLifetime(Ctor))
       return false;
   }
 
@@ -7620,8 +7649,8 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
 
   // For C.
   if (!Ctx.getLangOpts().CPlusPlus) {
-    if (VD->getAnyInitializer() && DeclType.isConstant(Ctx.getASTContext()) &&
-        !VD->isWeak())
+    if (VD->getInit() && DeclType.isConstant(Ctx.getASTContext()) &&
+        !VD->isWeak() && VD->evaluateValue())
       return revisit(VD, /*IsConstexprUnknown=*/false);
     return this->emitDummyPtr(D, E);
   }

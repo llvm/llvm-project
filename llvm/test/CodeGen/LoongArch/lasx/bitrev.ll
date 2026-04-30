@@ -55,8 +55,7 @@ entry:
 define <8 x i32> @bitrevi_v16i16_v8i32(<8 x i32> %a) nounwind {
 ; CHECK-LABEL: bitrevi_v16i16_v8i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvrepli.h $xr1, 4
-; CHECK-NEXT:    xvxor.v $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvbitrevi.h $xr0, $xr0, 2
 ; CHECK-NEXT:    ret
 entry:
     %0 = xor <8 x i32> %a, splat (i32 262148)
@@ -76,8 +75,7 @@ entry:
 define <4 x i64> @bitrevi_v16i16_v4i64(<4 x i64> %a) nounwind {
 ; CHECK-LABEL: bitrevi_v16i16_v4i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvrepli.h $xr1, 4
-; CHECK-NEXT:    xvxor.v $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvbitrevi.h $xr0, $xr0, 2
 ; CHECK-NEXT:    ret
 entry:
     %0 = xor <4 x i64> %a, splat (i64 1125917086973956)
@@ -87,8 +85,7 @@ entry:
 define <4 x i64> @bitrevi_v8i32_v4i64(<4 x i64> %a) nounwind {
 ; CHECK-LABEL: bitrevi_v8i32_v4i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvrepli.w $xr1, 4
-; CHECK-NEXT:    xvxor.v $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvbitrevi.w $xr0, $xr0, 2
 ; CHECK-NEXT:    ret
 entry:
     %0 = xor <4 x i64> %a, splat (i64 17179869188)

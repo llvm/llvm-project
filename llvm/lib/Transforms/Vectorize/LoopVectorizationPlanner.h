@@ -351,10 +351,9 @@ public:
   /// \p Step.
   VPDerivedIVRecipe *createDerivedIV(InductionDescriptor::InductionKind Kind,
                                      FPMathOperator *FPBinOp, VPIRValue *Start,
-                                     VPValue *Current, VPValue *Step,
-                                     const Twine &Name = "") {
+                                     VPValue *Current, VPValue *Step) {
     return tryInsertInstruction(
-        new VPDerivedIVRecipe(Kind, FPBinOp, Start, Current, Step, Name));
+        new VPDerivedIVRecipe(Kind, FPBinOp, Start, Current, Step));
   }
 
   VPInstructionWithType *createScalarLoad(Type *ResultTy, VPValue *Addr,
