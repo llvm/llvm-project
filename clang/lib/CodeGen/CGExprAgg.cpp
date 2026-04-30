@@ -652,9 +652,15 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
   auto Emit = [&](Expr *Init, uint64_t ArrayIndex) {
     llvm::Value *element = begin;
     if (ArrayIndex > 0) {
-      element = Builder.CreateInBoundsGEP(
-          llvmElementType, begin,
-          llvm::ConstantInt::get(CGF.SizeTy, ArrayIndex), "arrayinit.element");
+      if (CGF.getLangOpts().EmitLogicalPointer)
+        element = Builder.CreateStructuredGEP(
+            AType, begin, llvm::ConstantInt::get(CGF.SizeTy, ArrayIndex),
+            "arrayinit.element");
+      else
+        element = Builder.CreateInBoundsGEP(
+            llvmElementType, begin,
+            llvm::ConstantInt::get(CGF.SizeTy, ArrayIndex),
+            "arrayinit.element");
 
       // Tell the cleanup that it needs to destroy up to this
       // element.  TODO: some of these stores can be trivially

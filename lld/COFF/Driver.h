@@ -178,8 +178,10 @@ private:
   void addBuffer(std::unique_ptr<MemoryBuffer> mb, bool wholeArchive,
                  bool lazy);
   void addArchiveBuffer(MemoryBufferRef mbref, StringRef symName,
-                        StringRef parentName, uint64_t offsetInArchive);
-  void addThinArchiveBuffer(MemoryBufferRef mbref, StringRef symName);
+                        StringRef parentName, uint64_t offsetInArchive,
+                        bool lazy);
+  void addThinArchiveBuffer(MemoryBufferRef mbref, StringRef symName,
+                            bool lazy);
 
   void enqueueTask(std::function<void()> task);
   bool run();
