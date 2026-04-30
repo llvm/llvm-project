@@ -1266,28 +1266,6 @@ static void __kmp_stg_parse_num_threads(char const *name, char const *value,
   K_DIAG(1, ("__kmp_dflt_team_nth == %d\n", __kmp_dflt_team_nth));
 } // __kmp_stg_parse_num_threads
 
-#if OMP_TASKGRAPH_EXPERIMENTAL
-static void __kmp_stg_parse_max_tdgs(char const *name, char const *value,
-                                     void *data) {
-  __kmp_stg_parse_int(name, value, 0, INT_MAX, &__kmp_max_tdgs);
-} // __kmp_stg_parse_max_tdgs
-
-static void __kmp_std_print_max_tdgs(kmp_str_buf_t *buffer, char const *name,
-                                     void *data) {
-  __kmp_stg_print_int(buffer, name, __kmp_max_tdgs);
-} // __kmp_std_print_max_tdgs
-
-static void __kmp_stg_parse_tdg_dot(char const *name, char const *value,
-                                   void *data) {
-  __kmp_stg_parse_bool(name, value, &__kmp_tdg_dot);
-} // __kmp_stg_parse_tdg_dot
-
-static void __kmp_stg_print_tdg_dot(kmp_str_buf_t *buffer, char const *name,
-                                   void *data) {
-  __kmp_stg_print_bool(buffer, name, __kmp_tdg_dot);
-} // __kmp_stg_print_tdg_dot
-#endif
-
 static void __kmp_stg_parse_num_hidden_helper_threads(char const *name,
                                                       char const *value,
                                                       void *data) {
@@ -1579,6 +1557,7 @@ KMP_STG_X_DEBUG(c)
 KMP_STG_X_DEBUG(d)
 KMP_STG_X_DEBUG(e)
 KMP_STG_X_DEBUG(f)
+KMP_STG_X_DEBUG(g)
 
 #undef KMP_STG_X_DEBUG
 
@@ -1603,6 +1582,9 @@ static void __kmp_stg_parse_debug(char const *name, char const *value,
   }
   if (kmp_f_debug < debug) {
     kmp_f_debug = debug;
+  }
+  if (kmp_g_debug < debug) {
+    kmp_g_debug = debug;
   }
 } // __kmp_stg_parse_debug
 
@@ -5590,6 +5572,8 @@ static kmp_setting_t __kmp_stg_table[] = {
      0},
     {"KMP_F_DEBUG", __kmp_stg_parse_f_debug, __kmp_stg_print_f_debug, NULL, 0,
      0},
+    {"KMP_G_DEBUG", __kmp_stg_parse_g_debug, __kmp_stg_print_g_debug, NULL, 0,
+     0},
     {"KMP_DEBUG", __kmp_stg_parse_debug, NULL, /* no print */ NULL, 0, 0},
     {"KMP_DEBUG_BUF", __kmp_stg_parse_debug_buf, __kmp_stg_print_debug_buf,
      NULL, 0, 0},
@@ -5742,12 +5726,6 @@ static kmp_setting_t __kmp_stg_table[] = {
     {"LIBOMP_NUM_HIDDEN_HELPER_THREADS",
      __kmp_stg_parse_num_hidden_helper_threads,
      __kmp_stg_print_num_hidden_helper_threads, NULL, 0, 0},
-#if OMP_TASKGRAPH_EXPERIMENTAL
-    {"KMP_MAX_TDGS", __kmp_stg_parse_max_tdgs, __kmp_std_print_max_tdgs, NULL,
-     0, 0},
-    {"KMP_TDG_DOT", __kmp_stg_parse_tdg_dot, __kmp_stg_print_tdg_dot, NULL, 0,
-     0},
-#endif
 
 #if OMPT_SUPPORT
     {"OMP_TOOL", __kmp_stg_parse_omp_tool, __kmp_stg_print_omp_tool, NULL, 0,
