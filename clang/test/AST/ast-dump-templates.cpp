@@ -814,7 +814,7 @@ namespace AliasDependentTemplateSpecializationType {
 // DUMP-NEXT:     `-TemplateArgument type 'int'
 // DUMP-NEXT:       `-BuiltinType {{.*}} 'int'
 
-// FIXME: a non-trivial amound of data present in textual dump is nowhere to be found in JSON dump
+// FIXME: a non-trivial amount of data present in textual dump is nowhere to be found in JSON dump
 
 // JSON:      "kind": "TypeAliasTemplateDecl"
 // JSON:      "name": "T2",
