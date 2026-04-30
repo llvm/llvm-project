@@ -688,22 +688,25 @@ void Parser::ParseGNUAttributeArgs(
     // Find the innermost function chunk to make its parameters available for
     // attribute argument parsing. This is necessary for attributes like thread
     // safety annotations on function pointers which reference their parameters.
+    const DeclaratorChunk::FunctionTypeInfo *FTI = nullptr;
     for (unsigned i = 0; i < D->getNumTypeObjects(); ++i) {
       if (D->getTypeObject(i).Kind == DeclaratorChunk::Function) {
-        const DeclaratorChunk::FunctionTypeInfo &FTI = D->getTypeObject(i).Fun;
-        // Inherit the class scope flag from the current context. This is safe
-        // because it only preserves existing struct/class visibility, which is
-        // required for attributes to resolve sibling members in C structs.
-        PrototypeScope.emplace(
-            this, Scope::FunctionPrototypeScope |
-                      Scope::FunctionDeclarationScope | Scope::DeclScope |
-                      (getCurScope()->getFlags() & Scope::ClassScope));
-        for (unsigned j = 0; j < FTI.NumParams; ++j)
-          Actions.ActOnReenterCXXMethodParameter(
-              getCurScope(),
-              dyn_cast_or_null<ParmVarDecl>(FTI.Params[j].Param));
+        FTI = &D->getTypeObject(i).Fun;
         break;
       }
+    }
+
+    if (FTI) {
+      // Inherit the class scope flag from the current context. This is safe
+      // because it only preserves existing struct/class visibility, which is
+      // required for attributes to resolve sibling members in C structs.
+      PrototypeScope.emplace(
+          this, Scope::FunctionPrototypeScope |
+                    Scope::FunctionDeclarationScope | Scope::DeclScope |
+                    (getCurScope()->getFlags() & Scope::ClassScope));
+      for (unsigned i = 0; i < FTI->NumParams; ++i)
+        Actions.ActOnReenterCXXMethodParameter(
+            getCurScope(), dyn_cast_or_null<ParmVarDecl>(FTI->Params[i].Param));
     }
   }
 
