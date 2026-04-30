@@ -113,12 +113,12 @@ public:
   }
 
   bool SupportsDomain(lldb::PluginDomainKind domain) const {
-    assert(llvm::has_single_bit((uint8_t)domain));
+    assert(llvm::has_single_bit(static_cast<uint8_t>(domain)));
     return supported_domains & domain;
   }
 
   bool SupportsOnlyDomain(lldb::PluginDomainKind domain) const {
-    assert(llvm::has_single_bit((uint8_t)domain));
+    assert(llvm::has_single_bit(static_cast<uint8_t>(domain)));
     return supported_domains == domain;
   }
 

@@ -2472,6 +2472,7 @@ llvm::StringRef PluginManager::PluginDomainKindToStr(PluginDomainKind kind) {
   case ePluginDomainKindTarget:
     return "target";
   }
+  llvm_unreachable("unhandled PluginDomainKind");
 }
 
 llvm::Error PluginManager::SetInstrumentationRuntimePluginEnabled(

@@ -128,7 +128,7 @@ int SetEnableOnMatchingPlugins(const llvm::StringRef &pattern,
           // namespace.
           if (!plugin_namespace.SupportsDomain(domain)) {
             result.AppendErrorWithFormatv(
-                "failed to {0} plugin {1}.{2}: because the {1} namespace "
+                "failed to {0} plugin {1}.{2}: the {1} namespace "
                 "does not support the {3} domain",
                 enabled ? "enable" : "disable", plugin_namespace.name,
                 plugin.name, PluginManager::PluginDomainKindToStr(domain));
@@ -181,9 +181,9 @@ public:
       m_json_format = true;
       break;
     case 'd':
-      m_domain = (PluginDomainKind)OptionArgParser::ToOptionEnum(
+      m_domain = static_cast<PluginDomainKind>(OptionArgParser::ToOptionEnum(
           option_arg, GetDefinitions()[option_idx].enum_values, kDefaultDomain,
-          error);
+          error));
       break;
     default:
       llvm_unreachable("Unimplemented option");
@@ -392,9 +392,9 @@ public:
     const int short_option = m_getopt_table[option_idx].val;
     switch (short_option) {
     case 'd':
-      m_domain = (PluginDomainKind)OptionArgParser::ToOptionEnum(
+      m_domain = static_cast<PluginDomainKind>(OptionArgParser::ToOptionEnum(
           option_arg, GetDefinitions()[option_idx].enum_values, kDefaultDomain,
-          error);
+          error));
       break;
     default:
       llvm_unreachable("Unimplemented option");
