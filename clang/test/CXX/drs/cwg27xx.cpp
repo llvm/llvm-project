@@ -198,8 +198,8 @@ namespace cwg2780 { // cwg2780: 2.7
 
 void f();
 
-void(&g())(int) {
-  return reinterpret_cast<void(&)(int)>(f);
+void g() {
+  (void)reinterpret_cast<void(&)(int)>(f);
 }
 
 } // namespace cwg2780
