@@ -81,8 +81,7 @@ using namespace std::chrono;
 
 void Process::DelayedBreakpointCache::Enqueue(lldb::BreakpointSiteSP site,
                                               BreakpointAction action) {
-  auto [previous, inserted] =
-      m_site_to_action.insert({std::move(site), action});
+  auto [previous, inserted] = m_site_to_action.insert({site, action});
   // New site or already enqueued for the same action.
   if (inserted || previous->second == action)
     return;
@@ -1602,8 +1601,8 @@ llvm::Error Process::ExecuteBreakpointSiteAction(BreakpointSite &site,
   if (IsBreakpointSiteEnabled(*site_sp) == (action == BreakpointAction::Enable))
     return llvm::Error::success();
 
-  if (!GetUseDelayedBreakpoints()) {
-    m_delayed_breakpoints.Enqueue(site.shared_from_this(), action);
+  if (GetUseDelayedBreakpoints()) {
+    m_delayed_breakpoints.Enqueue(site_sp, action);
     return llvm::Error::success();
   }
 
@@ -1723,6 +1722,7 @@ llvm::Error Process::FlushDelayedBreakpoints() {
   m_delayed_breakpoints.m_site_to_action.clear();
 
   guard.unlock();
+  // Use a copy of the cache so that iteration is safe.
   return UpdateBreakpointSites(site_to_action);
 }
 
