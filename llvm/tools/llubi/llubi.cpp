@@ -171,7 +171,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  if (isPowerOf2_32(VScale)) {
+  if (!isPowerOf2_32(VScale)) {
     WithColor::error() << "--vscale value must be a power of 2\n";
     return 1;
   }

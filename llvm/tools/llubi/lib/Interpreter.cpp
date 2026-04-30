@@ -749,13 +749,14 @@ public:
       auto EC =
           cast<VectorType>(CB.getArgOperand(1)->getType())->getElementCount();
       const uint64_t RawOffset = Idx.getZExtValue();
-      if (RawOffset % EC.getKnownMinValue() != 0)
+      const uint32_t MinSize = EC.getKnownMinValue();
+      if (RawOffset % MinSize != 0)
         return AnyValue::poison();
-      const uint32_t VScale = Ctx.getVScale();
-      if (EC.isScalable() &&
-          RawOffset > std::numeric_limits<uint64_t>::max() / VScale)
+      const uint64_t Chunk = RawOffset / MinSize;
+      const uint64_t EVL = Ctx.getEVL(EC);
+      if (Chunk > std::numeric_limits<uint64_t>::max() / EVL)
         return AnyValue::poison();
-      const uint64_t Offset = EC.isScalable() ? RawOffset * VScale : RawOffset;
+      const uint64_t Offset = Chunk * EVL;
       if (Offset > Vec.size() || SubVec.size() > Vec.size() - Offset)
         return AnyValue::poison();
       std::vector<AnyValue> Res;
@@ -775,17 +776,17 @@ public:
       const auto &Idx = Args[1].asInteger();
       auto EC = cast<VectorType>(RetTy)->getElementCount();
       const uint64_t RawOffset = Idx.getZExtValue();
-      if (RawOffset % EC.getKnownMinValue() != 0)
+      const uint32_t MinSize = EC.getKnownMinValue();
+      if (RawOffset % MinSize != 0)
         return AnyValue::poison();
-      const uint32_t VScale = Ctx.getVScale();
-      if (EC.isScalable() &&
-          RawOffset > std::numeric_limits<uint64_t>::max() / VScale)
+      const uint64_t Chunk = RawOffset / MinSize;
+      const uint64_t EVL = Ctx.getEVL(EC);
+      if (Chunk > std::numeric_limits<uint64_t>::max() / EVL)
         return AnyValue::poison();
-      const uint64_t Offset = EC.isScalable() ? RawOffset * VScale : RawOffset;
-      const uint64_t DstSize = Ctx.getEVL(EC);
-      if (Offset > Vec.size() || DstSize > Vec.size() - Offset)
+      const uint64_t Offset = Chunk * EVL;
+      if (Offset > Vec.size() || EVL > Vec.size() - Offset)
         return AnyValue::poison();
-      return std::vector(Vec.begin() + Offset, Vec.begin() + Offset + DstSize);
+      return std::vector(Vec.begin() + Offset, Vec.begin() + Offset + EVL);
     }
     case Intrinsic::vector_reverse: {
       auto Vec = Args[0].asAggregate();
