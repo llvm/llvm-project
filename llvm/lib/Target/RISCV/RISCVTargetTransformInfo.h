@@ -374,7 +374,6 @@ public:
         Intrinsic::experimental_vp_strided_store,
         Intrinsic::experimental_vp_reverse,
         Intrinsic::experimental_vp_splice,
-        Intrinsic::vp_abs,
         Intrinsic::vp_add,
         Intrinsic::vp_and,
         Intrinsic::vp_ashr,
