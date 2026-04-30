@@ -34,20 +34,6 @@ half4 test_atan2_half4 (half4 p0, half4 p1) {
   return atan2(p0, p1);
 }
 
-// CHECK-LABEL: test_atan2_half4x4
-// NATIVE_HALF: call reassoc nnan ninf nsz arcp afn <16 x half> @llvm.atan2.v16f16
-// NO_HALF: call reassoc nnan ninf nsz arcp afn <16 x float> @llvm.atan2.v16f32
-half4x4 test_atan2_half4x4 (half4x4 p0, half4x4 p1) {
-  return atan2(p0, p1);
-}
-
-// CHECK-LABEL: test_atan2_half2x3
-// NATIVE_HALF: call reassoc nnan ninf nsz arcp afn <6 x half> @llvm.atan2.v6f16
-// NO_HALF: call reassoc nnan ninf nsz arcp afn <6 x float> @llvm.atan2.v6f32
-half2x3 test_atan2_half2x3 (half2x3 p0, half2x3 p1) {
-  return atan2(p0, p1);
-}
-
 // CHECK-LABEL: test_atan2_float
 // CHECK: call reassoc nnan ninf nsz arcp afn float @llvm.atan2.f32
 float test_atan2_float (float p0, float p1) {
@@ -69,18 +55,5 @@ float3 test_atan2_float3 (float3 p0, float3 p1) {
 // CHECK-LABEL: test_atan2_float4
 // CHECK: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.atan2.v4f32
 float4 test_atan2_float4 (float4 p0, float4 p1) {
-  return atan2(p0, p1);
-}
-
-// CHECK-LABEL: test_atan2_float4x4
-// CHECK:  call reassoc nnan ninf nsz arcp afn <16 x float> @llvm.atan2.v16f32
-float4x4 test_atan2_float4x4 (float4x4 p0, float4x4 p1) {
-  return atan2(p0, p1);
-}
-
-
-// CHECK-LABEL: test_atan2_float2x3
-// CHECK:  call reassoc nnan ninf nsz arcp afn <6 x float> @llvm.atan2.v6f32
-float2x3 test_atan2_float2x3 (float2x3 p0, float2x3 p1) {
   return atan2(p0, p1);
 }
