@@ -13,7 +13,6 @@
 #define OMPTARGET_DEVICERTL_DEVICE_UTILS_H
 
 #include "DeviceTypes.h"
-#include "Shared/Utils.h"
 
 namespace utils {
 
@@ -61,6 +60,22 @@ using remove_addrspace_t = typename remove_addrspace<T>::type;
 template <typename To, typename From> inline To bitCast(From V) {
   static_assert(sizeof(To) == sizeof(From), "Bad conversion");
   return __builtin_bit_cast(To, V);
+}
+
+/// Return the first bit set in \p V.
+template <typename T> inline int ctz(T V) { return __builtin_ctzg(V); }
+
+/// Return the number of bits set in \p V.
+template <typename T> inline int popc(T V) { return __builtin_popcountg(V); }
+
+/// Return \p V aligned up to the nearest power of two multiple of \p A.
+template <typename T, typename U> inline int alignUp(T V, U A) {
+  return __builtin_align_up(V, A);
+}
+
+/// Return \p Ptr advanced by \p Offset bytes.
+template <typename T, typename U> T *advancePtr(T *Ptr, U Offset) {
+  return reinterpret_cast<T *>(reinterpret_cast<char *>(Ptr) + Offset);
 }
 
 /// Return the value \p Var from thread Id \p SrcLane in the warp if the thread

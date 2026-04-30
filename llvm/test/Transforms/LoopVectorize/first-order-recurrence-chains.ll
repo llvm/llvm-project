@@ -927,7 +927,7 @@ define ptr @test_first_order_recurrences_and_pointer_induction1(ptr %ptr, i64 %n
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[N_VEC]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[N_VEC]], 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[TMP2]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -998,7 +998,7 @@ define ptr @test_first_order_recurrences_and_pointer_induction2(ptr %ptr, i64 %n
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[N_VEC]], 4
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[N_VEC]], 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[TMP0]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:

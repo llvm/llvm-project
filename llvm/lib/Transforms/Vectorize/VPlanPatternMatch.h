@@ -785,10 +785,15 @@ inline auto m_c_LogicalOr(const Op0_t &Op0, const Op1_t &Op1) {
   return m_c_Select(Op0, m_True(), Op1);
 }
 
-inline auto m_CanonicalIV() {
-  // TODO: Don't assume all region values are canonical IVs.
-  return m_Isa<VPRegionValue>();
-}
+/// Match the canonical induction variable (IV) of any loop region.
+struct canonical_iv_match {
+  template <typename ArgTy> bool match(const ArgTy *V) const {
+    const auto *RV = dyn_cast<VPRegionValue>(V);
+    return RV && RV->getDefiningRegion()->getCanonicalIV() == RV;
+  }
+};
+
+inline canonical_iv_match m_CanonicalIV() { return {}; }
 
 template <typename Op0_t, typename Op1_t, typename Op2_t>
 inline auto m_ScalarIVSteps(const Op0_t &Op0, const Op1_t &Op1,
