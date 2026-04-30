@@ -556,6 +556,7 @@ Bug Fixes to C++ Support
 - Fixed a crash on ``typeid`` of incomplete local types during template instantiation. (#GH63242), (#GH176397)
 - Fixed a crash when an immediate-invoked ``consteval`` lambda is used as an invalid initializer. (#GH185270)
 - Fixed an assertion failure when using a global destructor with a target with a non-default program address space. (#GH186484)
+- Fixed a class member access bug where ``obj.id`` or ``obj->id`` followed by ``<`` was wrongly disambiguated as a template-id when ``obj`` had a type nested in the current class template (e.g. ``M<T>::E``) and a same-named template was visible in the surrounding scope (commonly ``::hash`` brought in by ``using namespace std;``). Per [basic.lookup.classref], the identifier is looked up in the class of the object expression first; the surrounding scope is consulted only when not found there.
 
 - Inherited constructors in ``dllexport`` classes are now exported for ABI-compatible cases, matching
   MSVC behavior. Constructors with variadic arguments or callee-cleanup parameters are not yet supported
