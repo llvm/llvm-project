@@ -28,6 +28,12 @@ define void @main() {
   %splice_left_poison_idx = call <4 x i32> @llvm.vector.splice.left.v4i32(<4 x i32> zeroinitializer, <4 x i32> zeroinitializer, i32 poison)
   %splice_right_poison_idx = call <4 x i32> @llvm.vector.splice.right.v4i32(<4 x i32> zeroinitializer, <4 x i32> zeroinitializer, i32 poison)
 
+  %insert_bad_idx = call <6 x i32> @llvm.vector.insert.v6i32.v2i32(<6 x i32> zeroinitializer, <2 x i32> zeroinitializer, i64 1)
+  %extract_bad_idx = call <2 x i32> @llvm.vector.extract.v2i32.v6i32(<6 x i32> zeroinitializer, i64 1)
+
+  %insert_idx_overflow = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.nxv2i32(<vscale x 4 x i32> zeroinitializer, <vscale x 2 x i32> zeroinitializer, i64 9223372036854775808)
+  %extract_idx_overflow = call <vscale x 2 x i32> @llvm.vector.extract.nxv2i32.nxv4i32(<vscale x 4 x i32> zeroinitializer, i64 9223372036854775808)
+
   ret void
 }
 
@@ -52,5 +58,9 @@ define void @main() {
 ; CHECK-NEXT:   %insert_poison_idx = call <6 x i32> @llvm.vector.insert.v6i32.v2i32(<6 x i32> zeroinitializer, <2 x i32> <i32 1, i32 2>, i64 poison) => poison
 ; CHECK-NEXT:   %splice_left_poison_idx = call <4 x i32> @llvm.vector.splice.left.v4i32(<4 x i32> zeroinitializer, <4 x i32> zeroinitializer, i32 poison) => poison
 ; CHECK-NEXT:   %splice_right_poison_idx = call <4 x i32> @llvm.vector.splice.right.v4i32(<4 x i32> zeroinitializer, <4 x i32> zeroinitializer, i32 poison) => poison
+; CHECK-NEXT:   %insert_bad_idx = call <6 x i32> @llvm.vector.insert.v6i32.v2i32(<6 x i32> zeroinitializer, <2 x i32> zeroinitializer, i64 1) => poison
+; CHECK-NEXT:   %extract_bad_idx = call <2 x i32> @llvm.vector.extract.v2i32.v6i32(<6 x i32> zeroinitializer, i64 1) => poison
+; CHECK-NEXT:   %insert_idx_overflow = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.nxv2i32(<vscale x 4 x i32> zeroinitializer, <vscale x 2 x i32> zeroinitializer, i64 -9223372036854775808) => poison
+; CHECK-NEXT:   %extract_idx_overflow = call <vscale x 2 x i32> @llvm.vector.extract.nxv2i32.nxv4i32(<vscale x 4 x i32> zeroinitializer, i64 -9223372036854775808) => poison
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

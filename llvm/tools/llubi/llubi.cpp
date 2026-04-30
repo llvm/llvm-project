@@ -166,6 +166,17 @@ int main(int argc, char **argv) {
     return 1;
   }
 
+  if (VScale == 0) {
+    WithColor::error() << "--vscale value must be positive\n";
+    return 1;
+  }
+
+  if (std::pow(2, static_cast<unsigned>(std::log2(VScale.getValue()))) !=
+      VScale.getValue()) {
+    WithColor::error() << "--vscale value must be a power of 2\n";
+    return 1;
+  }
+
   LLVMContext Context;
 
   // Load the bitcode...

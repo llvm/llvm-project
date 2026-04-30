@@ -749,13 +749,10 @@ public:
       auto EC =
           cast<VectorType>(CB.getArgOperand(1)->getType())->getElementCount();
       const uint64_t RawOffset = Idx.getZExtValue();
-      if (RawOffset % EC.getKnownMinValue() != 0) {
-        reportImmediateUB("llvm.vector.insert index is not a multiple of the "
-                          "subvector's known minimum vector length.");
+      if (RawOffset % EC.getKnownMinValue() != 0)
         return AnyValue::poison();
-      }
       const uint32_t VScale = Ctx.getVScale();
-      if (EC.isScalable() && VScale != 0 &&
+      if (EC.isScalable() &&
           RawOffset > std::numeric_limits<uint64_t>::max() / VScale)
         return AnyValue::poison();
       const uint64_t Offset = EC.isScalable() ? RawOffset * VScale : RawOffset;
@@ -778,13 +775,10 @@ public:
       const auto &Idx = Args[1].asInteger();
       auto EC = cast<VectorType>(RetTy)->getElementCount();
       const uint64_t RawOffset = Idx.getZExtValue();
-      if (RawOffset % EC.getKnownMinValue() != 0) {
-        reportImmediateUB("llvm.vector.extract index is not a multiple of the "
-                          "result's known minimum vector length.");
+      if (RawOffset % EC.getKnownMinValue() != 0)
         return AnyValue::poison();
-      }
       const uint32_t VScale = Ctx.getVScale();
-      if (EC.isScalable() && VScale != 0 &&
+      if (EC.isScalable() &&
           RawOffset > std::numeric_limits<uint64_t>::max() / VScale)
         return AnyValue::poison();
       const uint64_t Offset = EC.isScalable() ? RawOffset * VScale : RawOffset;
