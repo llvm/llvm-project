@@ -90,18 +90,18 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; DATA_NO_LANEMASK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT5]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; DATA_NO_LANEMASK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[VAL:%.*]], i64 0
 ; DATA_NO_LANEMASK-NEXT:    [[BROADCAST_SPLAT5:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT1]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+; DATA_NO_LANEMASK-NEXT:    [[TMP3:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
+; DATA_NO_LANEMASK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP5]], i64 0
+; DATA_NO_LANEMASK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT3]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; DATA_NO_LANEMASK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; DATA_NO_LANEMASK:       vector.body:
 ; DATA_NO_LANEMASK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT6:%.*]], [[VECTOR_BODY]] ]
-; DATA_NO_LANEMASK-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[INDEX1]], i64 0
-; DATA_NO_LANEMASK-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT2]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
-; DATA_NO_LANEMASK-NEXT:    [[TMP10:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
-; DATA_NO_LANEMASK-NEXT:    [[TMP11:%.*]] = add <vscale x 4 x i64> zeroinitializer, [[TMP10]]
-; DATA_NO_LANEMASK-NEXT:    [[VEC_IV:%.*]] = add <vscale x 4 x i64> [[BROADCAST_SPLAT3]], [[TMP11]]
+; DATA_NO_LANEMASK-NEXT:    [[VEC_IV:%.*]] = phi <vscale x 4 x i64> [ [[TMP3]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; DATA_NO_LANEMASK-NEXT:    [[TMP12:%.*]] = icmp ule <vscale x 4 x i64> [[VEC_IV]], [[BROADCAST_SPLAT]]
 ; DATA_NO_LANEMASK-NEXT:    [[TMP13:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 [[INDEX1]]
 ; DATA_NO_LANEMASK-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[BROADCAST_SPLAT5]], ptr align 4 [[TMP13]], <vscale x 4 x i1> [[TMP12]])
 ; DATA_NO_LANEMASK-NEXT:    [[INDEX_NEXT6]] = add i64 [[INDEX1]], [[TMP5]]
+; DATA_NO_LANEMASK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 4 x i64> [[VEC_IV]], [[BROADCAST_SPLAT4]]
 ; DATA_NO_LANEMASK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT6]], [[N_VEC]]
 ; DATA_NO_LANEMASK-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; DATA_NO_LANEMASK:       middle.block:

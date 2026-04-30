@@ -131,6 +131,11 @@ const Name &GetFirstName(const EntityDecl &x) {
   return std::get<ObjectName>(x.t);
 }
 
+const Name &GetFirstName(const AccObject &x) {
+  return common::visit(
+      [](const auto &y) -> const Name & { return GetFirstName(y); }, x.u);
+}
+
 const CoindexedNamedObject *GetCoindexedNamedObject(const DataRef &base) {
   return common::visit(
       common::visitors{
