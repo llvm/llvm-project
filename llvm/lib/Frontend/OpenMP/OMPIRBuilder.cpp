@@ -2730,9 +2730,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
     // Task is untied iff (Flags & 1) == 0.
     // Task is final iff (Flags & 2) == 2.
     // Task is not final iff (Flags & 2) == 0.
-    // Tasks lowered from a constant false `if` clause use the merged-if0
-    // runtime path and must execute immediately while still going through the
-    // normal task scheduling entrypoints.
+    // Task is mergeable or merged-if0 iff (Flags & 4) == 4.
+    // Task is neither mergeable nor merged-if0 iff (Flags & 4) == 0.
     // Task is detachable iff (Flags & 64) == 64.
     // Task is not detachable iff (Flags & 64) == 0.
     // Task is priority iff (Flags & 32) == 32.
