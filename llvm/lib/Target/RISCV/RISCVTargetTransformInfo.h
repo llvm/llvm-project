@@ -375,7 +375,6 @@ public:
         Intrinsic::experimental_vp_reverse,
         Intrinsic::experimental_vp_splice,
         Intrinsic::vp_add,
-        Intrinsic::vp_and,
         Intrinsic::vp_ashr,
         Intrinsic::vp_cttz_elts,
         Intrinsic::vp_fptrunc,
@@ -387,7 +386,6 @@ public:
         Intrinsic::vp_lshr,
         Intrinsic::vp_merge,
         Intrinsic::vp_mul,
-        Intrinsic::vp_or,
         Intrinsic::vp_reduce_add,
         Intrinsic::vp_reduce_and,
         Intrinsic::vp_reduce_fadd,
@@ -414,7 +412,6 @@ public:
         Intrinsic::vp_trunc,
         Intrinsic::vp_udiv,
         Intrinsic::vp_urem,
-        Intrinsic::vp_xor,
         Intrinsic::vp_zext};
     if (!ST->hasVInstructions() ||
         (PI.getIntrinsicID() == Intrinsic::vp_reduce_mul &&
