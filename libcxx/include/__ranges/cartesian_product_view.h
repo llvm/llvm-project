@@ -30,13 +30,14 @@
 #include <__ranges/view_interface.h>
 #include <__ranges/zip_view.h>
 #include <__tuple/tuple_transform.h>
+#include <__type_traits/common_type.h>
+#include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/maybe_const.h>
 #include <__utility/forward.h>
 #include <__utility/integer_sequence.h>
 #include <__utility/move.h>
 #include <cstddef>
 #include <tuple>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
