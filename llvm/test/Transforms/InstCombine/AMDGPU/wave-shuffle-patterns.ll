@@ -7,7 +7,9 @@ declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32)
 declare i32 @llvm.amdgcn.mbcnt.hi(i32, i32)
 declare i32 @llvm.amdgcn.wave.shuffle.i32(i32, i32)
 declare float @llvm.amdgcn.wave.shuffle.f32(float, i32)
+declare <2 x i16> @llvm.amdgcn.wave.shuffle.v2i16(<2 x i16>, i32)
 declare ptr addrspace(3) @llvm.amdgcn.wave.shuffle.p3(ptr addrspace(3), i32)
+declare ptr addrspace(5) @llvm.amdgcn.wave.shuffle.p5(ptr addrspace(5), i32)
 declare i32 @llvm.amdgcn.ds.bpermute(i32, i32)
 
 ; Quad perm: lane ^ 1 swaps adjacent pairs.
@@ -413,6 +415,80 @@ define ptr addrspace(3) @test_quad_perm_xor1_ptr3_w32(ptr addrspace(3) %val) {
   %idx = xor i32 %lane, 1
   %result = call ptr addrspace(3) @llvm.amdgcn.wave.shuffle.p3(ptr addrspace(3) %val, i32 %idx)
   ret ptr addrspace(3) %result
+}
+
+; Scratch (32-bit) pointer: same gate must accept other 32-bit address spaces.
+define ptr addrspace(5) @test_quad_perm_xor1_ptr5_w32(ptr addrspace(5) %val) {
+; GFX11-LABEL: @test_quad_perm_xor1_ptr5_w32(
+; GFX11-NEXT:    [[RESULT:%.*]] = call ptr addrspace(5) @llvm.amdgcn.update.dpp.p5(ptr addrspace(5) poison, ptr addrspace(5) [[VAL:%.*]], i32 177, i32 15, i32 15, i1 true)
+; GFX11-NEXT:    ret ptr addrspace(5) [[RESULT]]
+;
+; GFX11-W64-LABEL: @test_quad_perm_xor1_ptr5_w32(
+; GFX11-W64-NEXT:    [[LANE:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX11-W64-NEXT:    [[IDX:%.*]] = xor i32 [[LANE]], 1
+; GFX11-W64-NEXT:    [[RESULT:%.*]] = call ptr addrspace(5) @llvm.amdgcn.wave.shuffle.p5(ptr addrspace(5) [[VAL:%.*]], i32 [[IDX]])
+; GFX11-W64-NEXT:    ret ptr addrspace(5) [[RESULT]]
+;
+; GFX9-LABEL: @test_quad_perm_xor1_ptr5_w32(
+; GFX9-NEXT:    [[LANE:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX9-NEXT:    [[IDX:%.*]] = xor i32 [[LANE]], 1
+; GFX9-NEXT:    [[RESULT:%.*]] = call ptr addrspace(5) @llvm.amdgcn.wave.shuffle.p5(ptr addrspace(5) [[VAL:%.*]], i32 [[IDX]])
+; GFX9-NEXT:    ret ptr addrspace(5) [[RESULT]]
+;
+  %lane = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+  %idx = xor i32 %lane, 1
+  %result = call ptr addrspace(5) @llvm.amdgcn.wave.shuffle.p5(ptr addrspace(5) %val, i32 %idx)
+  ret ptr addrspace(5) %result
+}
+
+; <2 x i16> packed vector should optimize like i32 (same 32-bit width).
+define <2 x i16> @test_quad_perm_xor1_v2i16_w32(<2 x i16> %val) {
+; GFX11-LABEL: @test_quad_perm_xor1_v2i16_w32(
+; GFX11-NEXT:    [[RESULT:%.*]] = call <2 x i16> @llvm.amdgcn.update.dpp.v2i16(<2 x i16> poison, <2 x i16> [[VAL:%.*]], i32 177, i32 15, i32 15, i1 true)
+; GFX11-NEXT:    ret <2 x i16> [[RESULT]]
+;
+; GFX11-W64-LABEL: @test_quad_perm_xor1_v2i16_w32(
+; GFX11-W64-NEXT:    [[LANE:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX11-W64-NEXT:    [[IDX:%.*]] = xor i32 [[LANE]], 1
+; GFX11-W64-NEXT:    [[RESULT:%.*]] = call <2 x i16> @llvm.amdgcn.wave.shuffle.v2i16(<2 x i16> [[VAL:%.*]], i32 [[IDX]])
+; GFX11-W64-NEXT:    ret <2 x i16> [[RESULT]]
+;
+; GFX9-LABEL: @test_quad_perm_xor1_v2i16_w32(
+; GFX9-NEXT:    [[LANE:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX9-NEXT:    [[IDX:%.*]] = xor i32 [[LANE]], 1
+; GFX9-NEXT:    [[RESULT:%.*]] = call <2 x i16> @llvm.amdgcn.wave.shuffle.v2i16(<2 x i16> [[VAL:%.*]], i32 [[IDX]])
+; GFX9-NEXT:    ret <2 x i16> [[RESULT]]
+;
+  %lane = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+  %idx = xor i32 %lane, 1
+  %result = call <2 x i16> @llvm.amdgcn.wave.shuffle.v2i16(<2 x i16> %val, i32 %idx)
+  ret <2 x i16> %result
+}
+
+; Half-row-share with <2 x i16>: on GFX9 (no DPP8) falls into ds_swizzle,
+; exercising the bitcast path in createDsSwizzle. Uses the full
+; mbcnt.lo+mbcnt.hi sequence so isThreadID succeeds on wave64 (gfx900).
+define <2 x i16> @test_half_row_share3_v2i16(<2 x i16> %val) {
+; GFX11-LABEL: @test_half_row_share3_v2i16(
+; GFX11-NEXT:    [[RESULT:%.*]] = call <2 x i16> @llvm.amdgcn.mov.dpp8.v2i16(<2 x i16> [[VAL:%.*]], i32 7190235)
+; GFX11-NEXT:    ret <2 x i16> [[RESULT]]
+;
+; GFX11-W64-LABEL: @test_half_row_share3_v2i16(
+; GFX11-W64-NEXT:    [[RESULT:%.*]] = call <2 x i16> @llvm.amdgcn.mov.dpp8.v2i16(<2 x i16> [[VAL:%.*]], i32 7190235)
+; GFX11-W64-NEXT:    ret <2 x i16> [[RESULT]]
+;
+; GFX9-LABEL: @test_half_row_share3_v2i16(
+; GFX9-NEXT:    [[TMP1:%.*]] = bitcast <2 x i16> [[VAL:%.*]] to i32
+; GFX9-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.ds.swizzle(i32 [[TMP1]], i32 120)
+; GFX9-NEXT:    [[RESULT:%.*]] = bitcast i32 [[TMP2]] to <2 x i16>
+; GFX9-NEXT:    ret <2 x i16> [[RESULT]]
+;
+  %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+  %tid = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
+  %masked = and i32 %tid, -8
+  %idx = or i32 %masked, 3
+  %result = call <2 x i16> @llvm.amdgcn.wave.shuffle.v2i16(<2 x i16> %val, i32 %idx)
+  ret <2 x i16> %result
 }
 
 ; Negative: non-constant index, should not be optimized.
