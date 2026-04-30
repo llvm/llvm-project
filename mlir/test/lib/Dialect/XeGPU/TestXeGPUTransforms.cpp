@@ -59,46 +59,29 @@ struct TestXeGPUUnrollingPatterns
     xegpu::UnrollOptions options;
     options.setNativeShapeFn([&](Operation *op)
                                  -> std::optional<SmallVector<int64_t>> {
-      if (isa<xegpu::CreateNdDescOp, xegpu::UpdateNdOffsetOp,
-              xegpu::PrefetchNdOp, xegpu::LoadNdOp, xegpu::StoreNdOp,
-              xegpu::PrefetchOp, xegpu::LoadGatherOp, xegpu::StoreScatterOp>(
-              op)) {
+      if (isa<xegpu::CreateNdDescOp, xegpu::PrefetchNdOp, xegpu::LoadNdOp,
+              xegpu::StoreNdOp, xegpu::PrefetchOp, xegpu::LoadGatherOp,
+              xegpu::StoreScatterOp>(op)) {
         xegpu::TensorDescType tdescTy;
         if (auto createNdOp = dyn_cast<xegpu::CreateNdDescOp>(op)) {
           tdescTy = createNdOp.getType();
-        } else if (auto updateNdOp = dyn_cast<xegpu::UpdateNdOffsetOp>(op)) {
-          tdescTy = updateNdOp.getTensorDescType();
         } else if (auto prefetchNdOp = dyn_cast<xegpu::PrefetchNdOp>(op)) {
           tdescTy = prefetchNdOp.getTensorDescType();
         } else if (auto loadNdOp = dyn_cast<xegpu::LoadNdOp>(op)) {
           tdescTy = loadNdOp.getTensorDescType();
         } else if (auto storeNdOp = dyn_cast<xegpu::StoreNdOp>(op)) {
           tdescTy = storeNdOp.getTensorDescType();
-        } else if (auto prefetchOp = dyn_cast<xegpu::PrefetchOp>(op)) {
-          tdescTy = prefetchOp.getTensorDescType();
-        } else if (auto loadOp = dyn_cast<xegpu::LoadGatherOp>(op)) {
-          if (loadOp.getOffsets()) {
-            auto layout = xegpu::getDistributeLayoutAttr(loadOp.getResult());
-            if (layout && layout.isForSubgroup()) {
-              auto inst_data = layout.getEffectiveInstDataAsInt();
-              if (!inst_data.empty())
-                return SmallVector<int64_t>(inst_data.begin(), inst_data.end());
-            }
-            return std::nullopt;
+        } else if (isa<xegpu::PrefetchOp, xegpu::LoadGatherOp,
+                       xegpu::StoreScatterOp>(op)) {
+          auto anchorOp = cast<xegpu::AnchorLayoutInterface>(op);
+          auto layout =
+              dyn_cast_or_null<xegpu::LayoutAttr>(anchorOp.getAnchorLayout());
+          if (layout && layout.isForSubgroup()) {
+            auto inst_data = layout.getEffectiveInstDataAsInt();
+            if (!inst_data.empty())
+              return SmallVector<int64_t>(inst_data.begin(), inst_data.end());
           }
-          tdescTy = loadOp.getTensorDescType();
-        } else if (auto storeOp = dyn_cast<xegpu::StoreScatterOp>(op)) {
-          if (storeOp.getOffsets()) {
-            auto layout = llvm::dyn_cast_or_null<xegpu::LayoutAttr>(
-                op->getAttr("layout"));
-            if (layout && layout.isForSubgroup()) {
-              auto inst_data = layout.getEffectiveInstDataAsInt();
-              if (!inst_data.empty())
-                return SmallVector<int64_t>(inst_data.begin(), inst_data.end());
-            }
-            return std::nullopt;
-          }
-          tdescTy = storeOp.getTensorDescType();
+          return std::nullopt;
         }
 
         if (auto layout = tdescTy.getLayoutAttr()) {
@@ -200,6 +183,38 @@ class TestStepOpPattern : public OpConversionPattern<vector::StepOp> {
     }
     rewriter.replaceOpWithMultiple(op, {newOps});
     return success();
+  }
+};
+
+struct TestXeGPURecoverTemporaryLayouts
+    : public PassWrapper<TestXeGPURecoverTemporaryLayouts,
+                         OperationPass<gpu::GPUModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestXeGPURecoverTemporaryLayouts)
+
+  StringRef getArgument() const final {
+    return "test-xegpu-recover-temporary-layouts";
+  }
+
+  StringRef getDescription() const final {
+    return "Test the implementation of XeGPU temporary layout recovery";
+  }
+
+  void getDependentDialects(::mlir::DialectRegistry &registry) const override {
+    registry.insert<arith::ArithDialect>();
+    registry.insert<memref::MemRefDialect>();
+    registry.insert<xegpu::XeGPUDialect>();
+    registry.insert<vector::VectorDialect>();
+    registry.insert<gpu::GPUDialect>();
+  }
+
+  TestXeGPURecoverTemporaryLayouts() = default;
+  TestXeGPURecoverTemporaryLayouts(const TestXeGPURecoverTemporaryLayouts &pass)
+      : PassWrapper(pass) {}
+
+  void runOnOperation() override {
+    Operation *op = getOperation();
+    if (!xegpu::recoverTemporaryLayouts(op))
+      signalPassFailure();
   }
 };
 
@@ -457,6 +472,7 @@ namespace test {
 void registerTestXeGPULowerings() {
   PassRegistration<TestXeGPUUnrollingPatterns>();
   PassRegistration<TestXeGPULayoutInterface>();
+  PassRegistration<TestXeGPURecoverTemporaryLayouts>();
   PassRegistration<TestXeGPUSGDistribute>();
   PassRegistration<TestXeGPUSgToWiDistributeExperimental>();
   PassRegistration<TestXeGPUMoveFuncBodyToWarpOp>();

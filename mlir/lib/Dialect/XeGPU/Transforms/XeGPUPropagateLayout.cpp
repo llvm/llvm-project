@@ -310,6 +310,9 @@ static LayoutInfo getSIMTLayoutInfoBlockIO(Ty ty,
 /// (other) consumers.
 class LayoutInfoPropagation
     : public SparseBackwardDataFlowAnalysis<LayoutInfoLattice> {
+public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(LayoutInfoPropagation)
+
 private:
   xegpu::LayoutKind layoutKind;
   unsigned indexBitWidth;
@@ -339,10 +342,6 @@ private:
   void visitVectorBitcastOp(vector::BitCastOp bitcast,
                             ArrayRef<LayoutInfoLattice *> operands,
                             ArrayRef<const LayoutInfoLattice *> results);
-
-  void visitUpdateNdOffsetOp(xegpu::UpdateNdOffsetOp updateNdOffset,
-                             ArrayRef<LayoutInfoLattice *> operands,
-                             ArrayRef<const LayoutInfoLattice *> results);
 
   void visitPrefetchNdOp(xegpu::PrefetchNdOp prefetch,
                          ArrayRef<LayoutInfoLattice *> operands,
@@ -437,9 +436,6 @@ LogicalResult LayoutInfoPropagation::visitOperation(
       })
       .Case([&](xegpu::LoadGatherOp loadGatherOp) {
         visitLoadGatherOp(loadGatherOp, operands, results);
-      })
-      .Case([&](xegpu::UpdateNdOffsetOp updateNdOffsetOp) {
-        visitUpdateNdOffsetOp(updateNdOffsetOp, operands, results);
       })
       .Case([&](xegpu::PrefetchNdOp prefetchNdOp) {
         visitPrefetchNdOp(prefetchNdOp, operands, results);
@@ -731,20 +727,6 @@ void LayoutInfoPropagation::visitShapeCastOp(
       xegpu::inferShapeCastSourceLayout(resultLayoutAttr, resShape, srcShape);
 
   propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(srcLayoutAttr)));
-}
-
-/// Propagate the layout of the result tensor to the source tensor descriptor
-/// in UpdateNdOffsetOp.
-void LayoutInfoPropagation::visitUpdateNdOffsetOp(
-    xegpu::UpdateNdOffsetOp updateNdOffset,
-    ArrayRef<LayoutInfoLattice *> operands,
-    ArrayRef<const LayoutInfoLattice *> results) {
-  // The layout of the result must be present.
-  LayoutInfo resultLayout = results[0]->getValue();
-  if (!resultLayout.isAssigned())
-    return;
-  // Propagate the layout to the source operand.
-  propagateIfChanged(operands[0], operands[0]->meet(resultLayout));
 }
 
 /// Set the layouts for DPAS A, B, and C operands.
@@ -1652,16 +1634,9 @@ LogicalResult xegpu::resolveLayoutConflicts(Operation *target) {
 }
 
 void XeGPUPropagateLayoutPass::runOnOperation() {
-  // Clean up temporary layout attributes
-  getOperation()->walk([](Operation *op) {
-    SmallVector<StringAttr> attrsToRemove;
-    for (auto namedAttr : op->getDiscardableAttrs()) {
-      if (isa<xegpu::DistributeLayoutAttr>(namedAttr.getValue()))
-        attrsToRemove.push_back(namedAttr.getName());
-    }
-    for (auto attrName : attrsToRemove)
-      op->removeDiscardableAttr(attrName);
-  });
+
+  xegpu::removeTemporaryLayoutAttrs(getOperation());
+
   xegpu::LayoutKind layoutKind;
   if (this->layoutKind == "lane") {
     layoutKind = xegpu::LayoutKind::Lane;

@@ -599,7 +599,7 @@ def CIR_AllocaOp : CIR_Op<"alloca", [
     UnitAttr:$constant,
     UnitAttr:$cleanup_dest_slot,
     ConfinedAttr<I64Attr, [IntMinValue<1>]>:$alignment,
-    OptionalAttr<ArrayAttr>:$annotations
+    OptionalAttr<CIR_AnnotationArrayAttr>:$annotations
   );
 
   let results = (outs Res<CIR_PointerType, "",
@@ -954,9 +954,9 @@ def CIR_ConditionOp : CIR_Op<"condition", [
 //===----------------------------------------------------------------------===//
 
 defvar CIR_YieldableScopes = [
-  "ArrayCtor", "ArrayDtor", "AwaitOp", "CaseOp", "CleanupScopeOp", "DoWhileOp",
-  "ForOp", "GlobalOp", "IfOp", "ScopeOp", "SwitchOp", "TernaryOp", "TryOp",
-  "WhileOp"
+  "ArrayCtor", "ArrayDtor", "AwaitOp", "CaseOp", "CleanupScopeOp", "CoroBodyOp",
+  "DoWhileOp", "ForOp", "GlobalOp", "IfOp", "LocalInitOp", "ScopeOp", "SwitchOp",
+  "TernaryOp", "TryOp", "WhileOp"
 ];
 
 def CIR_YieldOp : CIR_Op<"yield", [
@@ -1055,12 +1055,14 @@ def CIR_ContinueOp : CIR_Op<"continue", [Terminator]> {
 // Resume
 //===----------------------------------------------------------------------===//
 
+// Note: cir.resume can appear transiently inside any structured CIR op
+// during FlattenCFG. Its final position (inside cir.try, cir.cleanup.scope,
+// or cir.func) is validated by post-flattening verification.
 def CIR_ResumeOp : CIR_Op<"resume", [
   DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface, [
     "getMutableSuccessorOperands"
   ]>,
-  Terminator,
-  ParentOneOf<["cir::TryOp", "cir::CleanupScopeOp", "cir::FuncOp"]>
+  Terminator
 ]> {
   let summary = "Resumes execution after not catching exceptions";
   let description = [{
@@ -1070,11 +1072,11 @@ def CIR_ResumeOp : CIR_Op<"resume", [
     `CatchUnwind` region of `cir.try`, where it receives an `!cir.eh_token`
     argument representing the in-flight exception.
 
-    During CFG flattening, this operation may appear within a `cir.try`
-    operation where it indicates that exception unwinding should continue
-    from that point. When the `cir.try` operation is flattened, the resume
-    operation will be replaced with a branch to the flattened try operation's
-    dispatch block.
+    During CFG flattening, this operation may temporarily appear inside any
+    structured CIR operation (scope, loop, switch, etc.) when an inner cleanup
+    scope is flattened before the enclosing structured op. When the enclosing
+    op is subsequently flattened, the resume will end up in a `cir.try`
+    operation or at function level.
 
     After CFG flattening, this operation appears at the function level (inside
     `cir.func`) to indicate that the exception should be re-thrown to the
@@ -2066,7 +2068,7 @@ class CIR_WhileOpBase<string mnemonic> : CIR_LoopOpBase<mnemonic> {
 }
 
 def CIR_WhileOp : CIR_WhileOpBase<"while"> {
-  let regions = (region SizedRegion<1>:$cond, MinSizedRegion<1>:$body);
+  let regions = (region MinSizedRegion<1>:$cond, MinSizedRegion<1>:$body);
   let assemblyFormat = "$cond `do` $body attr-dict";
 
   let description = [{
@@ -2093,7 +2095,7 @@ def CIR_WhileOp : CIR_WhileOpBase<"while"> {
 }
 
 def CIR_DoWhileOp : CIR_WhileOpBase<"do"> {
-  let regions = (region MinSizedRegion<1>:$body, SizedRegion<1>:$cond);
+  let regions = (region MinSizedRegion<1>:$body, MinSizedRegion<1>:$cond);
   let assemblyFormat = " $body `while` $cond attr-dict";
 
   let extraClassDeclaration = [{
@@ -2149,9 +2151,9 @@ def CIR_ForOp : CIR_LoopOpBase<"for"> {
     ```
   }];
 
-  let regions = (region SizedRegion<1>:$cond,
+  let regions = (region MinSizedRegion<1>:$cond,
                         MinSizedRegion<1>:$body,
-                        SizedRegion<1>:$step);
+                        MinSizedRegion<1>:$step);
   let assemblyFormat = [{
     `:` `cond` $cond
     `body` $body
@@ -2199,7 +2201,9 @@ def CIR_CmpOpKind : CIR_I32EnumAttr<"CmpOpKind", "compare operation kind", [
   I32EnumAttrCase<"gt", 2>,
   I32EnumAttrCase<"ge", 3>,
   I32EnumAttrCase<"eq", 4>,
-  I32EnumAttrCase<"ne", 5>
+  I32EnumAttrCase<"ne", 5>,
+  I32EnumAttrCase<"one", 6>,
+  I32EnumAttrCase<"uno", 7>
 ]>;
 
 def CIR_CmpOp : CIR_Op<"cmp", [Pure, SameTypeOperands]> {
@@ -2217,9 +2221,13 @@ def CIR_CmpOp : CIR_Op<"cmp", [Pure, SameTypeOperands]> {
     - `ge`: greater than or equal
     - `eq`: equal
     - `ne`: not equal
+    - `one`: ordered and not equal (floating-point only)
+    - `uno`: unordered (floating-point only, true if either operand is NaN)
 
     For floating-point comparisons, the predicate follows C semantics (e.g.
     NaN comparisons return false for all predicates except `ne`).
+    The `one` and `uno` predicates are floating-point specific: `one` is
+    ordered not-equal (false for NaN), `uno` tests if either operand is NaN.
 
     ```
     %0 = cir.cmp gt %1, %2 : !s32i
@@ -2862,11 +2870,12 @@ def CIR_GlobalOp : CIR_Op<"global", [
                        OptionalAttr<CIR_StaticLocalGuardAttr>:$static_local_guard,
                        OptionalAttr<I64Attr>:$alignment,
                        OptionalAttr<ASTVarDeclInterface>:$ast,
-                       OptionalAttr<StrAttr>:$section
+                       OptionalAttr<StrAttr>:$section,
+                       OptionalAttr<CIR_AnnotationArrayAttr>:$annotations
                        );
 
-  let regions = (region MaxSizedRegion<1>:$ctorRegion,
-                        MaxSizedRegion<1>:$dtorRegion);
+  let regions = (region AnyRegion:$ctorRegion,
+                        AnyRegion:$dtorRegion);
 
   let assemblyFormat = [{
     ($sym_visibility^)?
@@ -2881,6 +2890,7 @@ def CIR_GlobalOp : CIR_Op<"global", [
     $sym_name
     custom<GlobalOpTypeAndInitialValue>($sym_type, $initial_value,
                                         $ctorRegion, $dtorRegion)
+    ($annotations^)?
     attr-dict
   }];
 
@@ -3547,8 +3557,9 @@ def CIR_InsertMemberOp : CIR_Op<"insert_member", [
 def CIR_GetElementOp : CIR_Op<"get_element", [
   TypesMatchWith<
       "type of 'result' matches element type of 'base'", "base", "result",
-      "cir::PointerType::get(mlir::cast<cir::ArrayType>(mlir::cast<cir::"
-      "PointerType>($_self).getPointee()).getElementType())">
+      "cir::PointerType::get("
+      "mlir::cast<cir::ArrayType>(mlir::cast<cir::PointerType>($_self).getPointee()).getElementType(), "
+      "mlir::cast<cir::PointerType>($_self).getAddrSpace())">
 ]> {
   let summary = "Get the address of an array element";
 
@@ -3557,6 +3568,7 @@ def CIR_GetElementOp : CIR_Op<"get_element", [
     from the `base` array.
 
     It expects a pointer to the `base` array and the `index` of the element.
+    The result pointer preserves the address space of the base pointer.
 
     Example:
     ```
@@ -3570,6 +3582,11 @@ def CIR_GetElementOp : CIR_Op<"get_element", [
     // Get the address of the element at index %i.
     %i = ...
     %elem_i = cir.get_element %0[%i : !s32i] : !cir.ptr<!array_ty> -> !cir.ptr<!s32i>
+
+    // With address space (e.g., GPU private memory):
+    %elem_gpu = cir.get_element %gpu_arr[%i : !s32i] :
+      !cir.ptr<!cir.array<!s32i x 10>, target_address_space(5)> ->
+      !cir.ptr<!s32i, target_address_space(5)>
 
     ```
   }];
@@ -3710,7 +3727,8 @@ def CIR_FuncOp : CIR_Op<"func", [
     OptionalAttr<FlatSymbolRefAttr>:$personality,
     CIR_OptionalPriorityAttr:$global_ctor_priority,
     CIR_OptionalPriorityAttr:$global_dtor_priority,
-    OptionalAttr<CIR_CXXSpecialMemberAttr>:$cxx_special_member
+    OptionalAttr<CIR_CXXSpecialMemberAttr>:$cxx_special_member,
+    OptionalAttr<CIR_AnnotationArrayAttr>:$annotations
   );
 
   let regions = (region AnyRegion:$body);
@@ -3794,6 +3812,70 @@ def CIR_FuncOp : CIR_Op<"func", [
                          OpAdaptor adaptor,
                          mlir::ConversionPatternRewriter &rewriter) const;
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// LocalInitOp
+//===----------------------------------------------------------------------===//
+
+def CIR_LocalInitOp : CIR_Op<"local_init", [
+  DeclareOpInterfaceMethods<SymbolUserOpInterface>, NoRegionArguments
+]> {
+  let summary = "initialize a static or thread local object";
+  let description = [{
+    The 'cir.local_init' operation has no result, but is responsible for
+    containing the regions to initialize and destroy the static local
+    variable. This will be handled during lowering-prepare to include the
+    guard variables correctly for the variable.
+
+    This operation may also represent a static local thread local variable,
+    which would be indicated by the 'tls' flag.
+
+    Example:
+    ```
+    // Note: despite this always being static_local, we print it anyway to be
+    // visually consistent with get_global, and as a 'counter' to 'tls'.
+    cir.local_init static_local @GlobalName ctor {
+      %4 = cir.get_global static_local @GlobalName : !cir.ptr<!rec_CtorDtor>
+      %5 = cir.call @_Z5get_iv() : () -> !s32i
+      cir.call @_ZN8CtorDtorC1Ei(%4, %5) : !cir.ptr<!rec_CtorDtor>
+      cir.yield
+    }, dtor {
+      %4 = cir.get_global static_local @_ZZ3foovE8localCD2 :
+                                                  !cir.ptr<!rec_CtorDtor>
+      cir.call @_ZN8CtorDtorD1Ev(%4) : (!cir.ptr<!rec_CtorDtor>) -> ()
+      cir.yield
+    }
+  }];
+  let arguments = (ins
+    FlatSymbolRefAttr : $globalName,
+    UnitProp : $tls
+  );
+
+  let regions = (region
+    MaxSizedRegion<1>:$ctorRegion,
+    MaxSizedRegion<1>:$dtorRegion
+  );
+
+  let assemblyFormat = [{
+    (`thread_local` $tls^) : (`static_local`)?
+    $globalName attr-dict
+    (`ctor` $ctorRegion^)?
+    (`dtor` $dtorRegion^)?
+  }];
+
+  let extraClassDeclaration = [{
+    /// Look up the cir.global this op references. Returns null if the symbol
+    /// is absent or is not a cir.global, callers that run after verification
+    /// can assume non-null.
+    cir::GlobalOp getReferencedGlobal(mlir::SymbolTableCollection &tables) {
+      return llvm::dyn_cast_or_null<cir::GlobalOp>(
+          tables.lookupNearestSymbolFrom(*this, getGlobalNameAttr()));
+}
+}];
+
+  let hasVerifier = 1;
+  let hasLLVMLowering = false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -4149,6 +4231,70 @@ def CIR_AwaitOp : CIR_Op<"await",[
 
   let hasVerifier = 1;
 }
+//===----------------------------------------------------------------------===//
+// CoroBody
+//===----------------------------------------------------------------------===//
+def CIR_CoroBodyOp : CIR_Op<"coro.body", [
+  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
+  RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments,
+  RecursiveMemoryEffects
+]> {
+  let summary = "Region containing the user-authored coroutine body";
+  let description = [{
+    The `cir.coro.body` operation models the region where the user-authored
+    coroutine code is emitted.
+
+    This operation serves as a structural boundary separating the coroutine
+    setup and teardown logic (e.g. initial suspend, final suspend, and cleanup)
+    from the user-provided statements inside the coroutine.
+
+    The body region contains the code corresponding to the original function
+    body, including `co_await` and `co_return` expressions. In particular,
+    `cir.co_return` operations inside this region mark coroutine exit points
+    and introduce structured control flow that transfers execution to the
+    final suspend point of the coroutine.
+  }];
+
+  let regions = (region AnyRegion:$body);
+
+  let skipDefaultBuilders = 1;
+
+  let builders = [
+    OpBuilder<(ins "BuilderCallbackRef":$bodyBuilder)>
+  ];
+
+  let assemblyFormat = [{
+    $body attr-dict
+  }];
+
+  let hasLLVMLowering = false;
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// CoReturnOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CoReturnOp : CIR_Op<"co_return", [
+  ReturnLike, Pure, Terminator
+]> {
+  let summary = "Coroutine return operation";
+  let description = [{
+    The `cir.co_return` operation models a coroutine return point inside a
+    `cir.coro.body` region.
+    This operation is expected to appear only within a `cir.coro.body` region,
+    but it may be nested within other operations or regions inside that body.
+  }];
+
+  let assemblyFormat = [{
+    attr-dict
+  }];
+
+  let hasVerifier = 1;
+
+  let hasLLVMLowering = false;
+}
+
 
 //===----------------------------------------------------------------------===//
 // CopyOp
@@ -6633,6 +6779,47 @@ def CIR_ATan2Op : CIR_BinaryFPToFPBuiltinOp<"atan2", "ATan2Op"> {
   let description = [{
     `cir.atan2` computes the arc tangent of the first operand divided by the
     second operand, using the signs of both to determine the quadrant.
+  }];
+}
+
+def CIR_FrexpOp : CIR_Op<"frexp", [Pure]> {
+  let summary = "Decomposes a floating-point value into significand and exponent";
+  let description = [{
+    `cir.frexp` splits a floating-point value into a normalized significand
+    (in the range [0.5, 1.0)) and an integral power-of-two exponent, such
+    that `src = significand * 2^exp`.  Returns both as separate results.
+
+    Lowers to `llvm.frexp`.
+
+    Example:
+      %sig, %exp = cir.frexp %x : !cir.float -> !cir.float, !s32i
+  }];
+
+  let arguments = (ins CIR_AnyFloatType:$src);
+  let results = (outs CIR_AnyFloatType:$result, CIR_AnyIntType:$exp);
+
+  let assemblyFormat = [{
+    $src `:` type($src) `->` type($result) `,` type($exp) attr-dict
+  }];
+}
+
+def CIR_ModfOp : CIR_Op<"modf", [Pure]> {
+  let summary = "Decomposes a floating-point value into fractional and integral parts";
+  let description = [{
+    `cir.modf` splits a floating-point value into its fractional and integral
+    parts.  Both parts have the same sign as the input.
+
+    Lowers to `llvm.modf`.
+
+    Example:
+      %frac, %intpart = cir.modf %x : !cir.float -> !cir.float, !cir.float
+  }];
+
+  let arguments = (ins CIR_AnyFloatType:$src);
+  let results = (outs CIR_AnyFloatType:$fractional, CIR_AnyFloatType:$integral);
+
+  let assemblyFormat = [{
+    $src `:` type($src) `->` type($fractional) `,` type($integral) attr-dict
   }];
 }
 

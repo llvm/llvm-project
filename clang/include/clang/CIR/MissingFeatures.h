@@ -220,6 +220,7 @@ struct MissingFeatures {
   static bool builtinCall() { return false; }
   static bool builtinCallF128() { return false; }
   static bool builtinCallMathErrno() { return false; }
+  static bool builtinBitCountExpr() { return false; }
   static bool builtinCheckKind() { return false; }
   static bool cgCapturedStmtInfo() { return false; }
   static bool countedBySize() { return false; }
@@ -286,7 +287,6 @@ struct MissingFeatures {
   static bool intrinsicElementTypeSupport() { return false; }
   static bool intrinsics() { return false; }
   static bool isTrivialCtorOrDtor() { return false; }
-  static bool lambdaCaptures() { return false; }
   static bool loopInfoStack() { return false; }
   static bool lowerAggregateLoadStore() { return false; }
   static bool lowerModeOptLevel() { return false; }

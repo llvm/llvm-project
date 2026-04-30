@@ -363,14 +363,12 @@ static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
   // Validate chain entries and collect stores from chain entries and
   // intermediate ops.
   SmallVector<StoreInst *> Stores;
-  unsigned OutOfLoopUses = 0;
   for (Value *V : Chain) {
     for (User *U : V->users()) {
       if (Chain.contains(U))
         continue;
       auto *I = dyn_cast<Instruction>(U);
-      if (!I || (!TheLoop->contains(I) &&
-                 (V != BackedgeValue || ++OutOfLoopUses > 1)))
+      if (!I || (!TheLoop->contains(I) && V != BackedgeValue))
         return {};
       if (!TheLoop->contains(I))
         continue;

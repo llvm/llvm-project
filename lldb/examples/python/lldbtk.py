@@ -544,22 +544,19 @@ class DelegateTree(ttk.Frame):
 
 
 @lldb.command("tk-variables")
-def tk_variable_display(debugger, command, result, dict):
+def tk_variable_display(debugger, command, exe_ctx, result, internal_dict):
     # needed for tree creation in TK library as it uses sys.argv...
     sys.argv = ["tk-variables"]
-    target = debugger.GetSelectedTarget()
-    if not target:
+    if not exe_ctx.target:
         print("invalid target", file=result)
         return
-    process = target.GetProcess()
-    if not process:
+    if not exe_ctx.process:
         print("invalid process", file=result)
         return
-    thread = process.GetSelectedThread()
-    if not thread:
+    if not exe_ctx.thread:
         print("invalid thread", file=result)
         return
-    frame = thread.GetSelectedFrame()
+    frame = exe_ctx.frame
     if not frame:
         print("invalid frame", file=result)
         return
@@ -578,14 +575,13 @@ def tk_variable_display(debugger, command, result, dict):
 
 
 @lldb.command("tk-process")
-def tk_process_display(debugger, command, result, dict):
+def tk_process_display(debugger, command, exe_ctx, result, internal_dict):
     # needed for tree creation in TK library as it uses sys.argv...
     sys.argv = ["tk-process"]
-    target = debugger.GetSelectedTarget()
-    if not target:
+    if not exe_ctx.target:
         print("invalid target", file=result)
         return
-    process = target.GetProcess()
+    process = exe_ctx.process
     if not process:
         print("invalid process", file=result)
         return
@@ -603,10 +599,10 @@ def tk_process_display(debugger, command, result, dict):
 
 
 @lldb.command("tk-target")
-def tk_target_display(debugger, command, result, dict):
+def tk_target_display(debugger, command, exe_ctx, result, internal_dict):
     # needed for tree creation in TK library as it uses sys.argv...
     sys.argv = ["tk-target"]
-    target = debugger.GetSelectedTarget()
+    target = exe_ctx.target
     if not target:
         print("invalid target", file=result)
         return

@@ -2261,7 +2261,7 @@ MachineBasicBlock *AVRTargetLowering::insertAtomicArithmeticOp(
   //   out SREG, r0
 
   const TargetRegisterClass *RC =
-      (Width == 8) ? &AVR::GPR8RegClass : &AVR::DREGSRegClass;
+      (Width == 8) ? &AVR::GPR8RegClass : &AVR::DREGSNOZRegClass;
   unsigned LoadOpcode = (Width == 8) ? AVR::LDRdPtr : AVR::LDWRdPtr;
   unsigned StoreOpcode = (Width == 8) ? AVR::STPtrRr : AVR::STWPtrRr;
 

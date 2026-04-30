@@ -21,8 +21,9 @@ define void @print_call_and_memory(i64 %n, ptr noalias %y, ptr noalias %x) {
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      EMIT vp<[[VP3:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%y>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds ir<%arrayidx>
@@ -95,8 +96,9 @@ define void @print_widen_gep_and_select(i64 %n, ptr noalias %y, ptr noalias %x, 
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      EMIT vp<[[VP3:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      WIDEN-GEP Inv[Var] ir<%arrayidx> = getelementptr inbounds ir<%y>, ir<%iv>
@@ -177,8 +179,9 @@ define void @print_replicate_predicated_phi(i64 %n, ptr %x) {
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP4:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK-NEXT:      ir<%i> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      WIDEN ir<%cmp> = icmp ult ir<%i>, ir<5>
@@ -272,8 +275,9 @@ define void @print_interleave_groups(i32 %C, i32 %D) {
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP4:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = DERIVED-IV ir<0> + vp<[[VP4]]> * ir<4>
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<4>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%gep.AB.0> = getelementptr inbounds ir<@AB>, ir<0>, vp<[[VP6]]>
@@ -377,8 +381,9 @@ define void @recipe_debug_loc_location(ptr nocapture %src) !dbg !5 {
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      EMIT vp<[[VP3:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%isd> = getelementptr inbounds ir<%src>, vp<[[VP4]]>, !dbg /tmp/s.c:5:3
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds ir<%isd>, !dbg /tmp/s.c:6:3
@@ -488,8 +493,9 @@ define void @print_expand_scev(i64 %y, ptr %ptr) {
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP6:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, vp<[[VP4]]>, vp<[[VP0]]> (truncated to i8)
 ; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = DERIVED-IV ir<0> + vp<[[VP6]]> * vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = SCALAR-STEPS vp<[[VP7]]>, vp<[[VP4]]>, vp<[[VP0]]>
@@ -560,8 +566,9 @@ define i32 @print_exit_value(ptr %ptr, i32 %off) {
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      EMIT vp<[[VP3:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%gep> = getelementptr inbounds ir<%ptr>, vp<[[VP4]]>
@@ -631,8 +638,9 @@ define void @print_fast_math_flags(i64 %n, ptr noalias %y, ptr noalias %x, ptr %
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      EMIT vp<[[VP3:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%gep.y> = getelementptr inbounds ir<%y>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds ir<%gep.y>
@@ -710,8 +718,9 @@ define void @print_exact_flags(i64 %n, ptr noalias %x) {
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      EMIT vp<[[VP3:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%gep.x> = getelementptr inbounds ir<%x>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds ir<%gep.x>
@@ -786,8 +795,9 @@ define void @print_call_flags(ptr readonly %src, ptr noalias %dest, i64 %n) {
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      EMIT vp<[[VP3:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%ld.addr> = getelementptr inbounds ir<%src>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds ir<%ld.addr>
@@ -888,8 +898,9 @@ define void @print_disjoint_flags(i64 %n, ptr noalias %x) {
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      EMIT vp<[[VP3:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%gep.x> = getelementptr inbounds ir<%x>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds ir<%gep.x>
@@ -964,8 +975,9 @@ define void @zext_nneg(ptr noalias %p, ptr noalias %p1) {
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      EMIT vp<[[VP3:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%idx> = getelementptr ir<%p>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer ir<%idx>
@@ -1035,8 +1047,9 @@ define i16 @print_first_order_recurrence_and_result(ptr %ptr) {
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      EMIT vp<[[VP3:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK-NEXT:      FIRST-ORDER-RECURRENCE-PHI ir<%for.1> = phi ir<22>, ir<%for.1.next>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%gep.ptr> = getelementptr inbounds ir<%ptr>, vp<[[VP4]]>
@@ -1114,8 +1127,9 @@ define void @print_select_with_fastmath_flags(ptr noalias %a, ptr noalias %b, pt
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      EMIT vp<[[VP3:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%gep> = getelementptr inbounds nuw ir<%b>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds nuw ir<%gep>

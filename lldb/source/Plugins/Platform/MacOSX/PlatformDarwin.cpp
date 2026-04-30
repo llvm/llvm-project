@@ -1571,7 +1571,9 @@ PlatformDarwin::GetSafeAutoLoadPaths(const Target &target) const {
 
   XcodeSDK::Type sdk_type =
       XcodeSDK::GetSDKTypeForTriple(target.GetArchitecture().GetTriple());
-  XcodeSDK sdk(XcodeSDK::Info{sdk_type, {}});
+  XcodeSDK::Info info;
+  info.type = sdk_type;
+  XcodeSDK sdk(info);
 
   auto sdk_root_or_err = HostInfo::GetSDKRoot(HostInfo::SDKOptions{sdk});
   if (!sdk_root_or_err) {

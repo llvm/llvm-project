@@ -775,6 +775,7 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
                     "error",
                     "dirty-pages",
                     "type",
+                    "protection-key",
                 ],
             )
             self.assertIsNotNone(val)
@@ -932,6 +933,7 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         "SupportedWatchpointTypes",
         "SupportedCompressions",
         "MultiMemRead",
+        "jMultiBreakpoint",
     ]
 
     def parse_qSupported_response(self, context):

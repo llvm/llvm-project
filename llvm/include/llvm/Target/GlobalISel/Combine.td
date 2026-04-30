@@ -1390,6 +1390,18 @@ def constant_fold_cast_op : GICombineRule<
    [{ return Helper.matchConstantFoldCastOp(*${d}, ${matchinfo}); }]),
   (apply [{ Helper.replaceInstWithConstant(*${d}, ${matchinfo}); }])>;
 
+def count_op_frags : GICombinePatFrag<
+  (outs root:$dst), (ins),
+  !foreach(op,
+           [G_CTLZ, G_CTLZ_ZERO_UNDEF, G_CTTZ, G_CTTZ_ZERO_UNDEF, G_CTPOP],
+           (pattern (op $dst, $src)))>;
+
+def constant_fold_count_op : GICombineRule<
+  (defs root:$dst, build_fn_matchinfo:$matchinfo),
+  (match (count_op_frags $dst):$mi,
+   [{ return Helper.matchConstantFoldCountOp(*${mi}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${mi}, ${matchinfo}); }])>;
+
 def mulo_by_2: GICombineRule<
   (defs root:$root, build_fn_matchinfo:$matchinfo),
   (match (wip_match_opcode G_UMULO, G_SMULO):$root,
@@ -2366,7 +2378,7 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     shift_immed_chain, shift_of_shifted_logic_chain, load_or_combine,
     div_rem_to_divrem, funnel_shift_combines, bitreverse_shift, commute_shift,
     form_bitfield_extract, constant_fold_binops, constant_fold_fma,
-    constant_fold_cast_op, fabs_fneg_fold,
+    constant_fold_cast_op, constant_fold_count_op, fabs_fneg_fold,
     mulh_combines, redundant_neg_operands,
     and_or_disjoint_mask, fma_combines, fold_binop_into_select,
     intrem_combines, intdiv_combines, fdiv_repeated_divison,
@@ -2383,4 +2395,4 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
 // compile time performance.
 def optnone_combines : GICombineGroup<[trivial_combines,
     ptr_add_immed_chain, combines_for_extload,
-    not_cmp_fold, opt_brcond_by_inverting_cond, combine_concat_vector]>;
+    not_cmp_fold, combine_concat_vector]>;

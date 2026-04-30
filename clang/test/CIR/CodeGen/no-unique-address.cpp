@@ -39,7 +39,7 @@ struct Outer {
 // CIR:         %[[EXTRA:.*]] = cir.get_member %[[THIS]][1] {name = "extra"} : !cir.ptr<!rec_Outer> -> !cir.ptr<!s8i>
 
 // LLVM-LABEL: define {{.*}} void @_ZN5OuterC2ERK6Middlec(
-// LLVM:         %[[GEP:.*]] = getelementptr %struct.Outer, ptr %{{.+}}, i32 0, i32 0
+// LLVM:         %[[GEP:.*]] = getelementptr inbounds nuw %struct.Outer, ptr %{{.+}}, i32 0, i32 0
 // LLVM:         call void @llvm.memcpy.p0.p0.i64(ptr %[[GEP]], ptr %{{.+}}, i64 5, i1 false)
 
 // OGCG-LABEL: define {{.*}} void @_ZN5OuterC2ERK6Middlec(

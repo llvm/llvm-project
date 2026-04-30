@@ -2458,6 +2458,8 @@ def int_aarch64_sve_stnt1_scatter_scalar_offset  : AdvSIMD_ScatterStore_VS_Intri
 //
 
 def int_aarch64_sve_saba          : AdvSIMD_3VectorArg_Intrinsic<[IntrSpeculatable]>;
+def int_aarch64_sve_sabal         : SVE2_3VectorArg_Long_Intrinsic<[IntrSpeculatable]>;
+def int_aarch64_sve_uabal         : SVE2_3VectorArg_Long_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_shadd         : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_shsub         : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_shsub_u       : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
@@ -2560,6 +2562,10 @@ def int_aarch64_sve_smaxp   : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable
 def int_aarch64_sve_sminp   : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_umaxp   : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_uminp   : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
+
+def int_aarch64_sve_addqp   : AdvSIMD_2VectorArg_Intrinsic<[IntrSpeculatable]>;
+def int_aarch64_sve_addsubp : AdvSIMD_2VectorArg_Intrinsic<[IntrSpeculatable]>;
+def int_aarch64_sve_subp    : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 
 //
 // SVE2 - Widening pairwise arithmetic

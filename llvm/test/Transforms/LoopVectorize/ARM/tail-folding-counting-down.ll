@@ -1,6 +1,6 @@
 ; RUN: opt < %s -passes=loop-vectorize -S | FileCheck %s --check-prefixes=COMMON,DEFAULT
-; RUN: opt < %s -passes=loop-vectorize -tail-predication=enabled -prefer-predicate-over-epilogue=predicate-dont-vectorize -S | FileCheck %s --check-prefixes=COMMON,CHECK-TF,CHECK-PREFER
-; RUN: opt < %s -passes=loop-vectorize -tail-predication=enabled -prefer-predicate-over-epilogue=predicate-else-scalar-epilogue -S | FileCheck %s --check-prefixes=COMMON,CHECK-TF,CHECK-PREFER
+; RUN: opt < %s -passes=loop-vectorize -tail-predication=enabled -tail-folding-policy=must-fold-tail -S | FileCheck %s --check-prefixes=COMMON,CHECK-TF,CHECK-PREFER
+; RUN: opt < %s -passes=loop-vectorize -tail-predication=enabled -tail-folding-policy=prefer-fold-tail -S | FileCheck %s --check-prefixes=COMMON,CHECK-TF,CHECK-PREFER
 ; RUN: opt < %s -passes=loop-vectorize -tail-predication=enabled -S | FileCheck %s --check-prefixes=COMMON,CHECK-TF,CHECK-ENABLE-TP
 
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
@@ -17,7 +17,7 @@ define void @sgt_loopguard(ptr noalias nocapture readonly %a, ptr noalias nocapt
 ; COMMON-LABEL: @sgt_loopguard(
 ; COMMON:       vector.body:
 
-; CHECK-TF:     %[[VIVELEM0:.*]] = extractelement <16 x i32> %vec.iv, i32 0
+; CHECK-TF:     %[[VIVELEM0:.*]] = extractelement <16 x i32> %vec.iv, i64 0
 ; CHECK-TF:     %active.lane.mask = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 %[[VIVELEM0]], i32 %N)
 ; CHECK-TF:     llvm.masked.load.v16i8.p0(ptr align 1 %{{.*}}, <16 x i1> %active.lane.mask
 ; CHECK-TF:     llvm.masked.load.v16i8.p0(ptr align 1 %{{.*}}, <16 x i1> %active.lane.mask

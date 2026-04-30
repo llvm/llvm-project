@@ -14,10 +14,12 @@ Options
 The following options are described below:
 
  - :option:`MinimumVariableNameLength`, :option:`IgnoredVariableNames`
+ - :option:`MinimumBindingNameLength`, :option:`IgnoredBindingNames`
  - :option:`MinimumParameterNameLength`, :option:`IgnoredParameterNames`
  - :option:`MinimumLoopCounterNameLength`, :option:`IgnoredLoopCounterNames`
  - :option:`MinimumExceptionNameLength`,
    :option:`IgnoredExceptionVariableNames`
+ - :option:`LineCountThreshold`
 
 .. option:: MinimumVariableNameLength
 
@@ -38,6 +40,25 @@ The following options are described below:
 
     Specifies a regular expression for variable names that are
     to be ignored. The default value is empty, thus no names are ignored.
+
+.. option:: MinimumBindingNameLength
+
+    All variables introduced by structured bindings are expected to have at
+    least a length of `MinimumBindingNameLength` (default is `2`). Setting it
+    to `0` or `1` disables the check entirely.
+
+    .. code-block:: c++
+
+      auto [a] = get_result();    // warns that 'a' is too short
+
+    This check does not have any fix suggestions in the general case since
+    variable names have semantic value.
+
+.. option:: IgnoredBindingNames
+
+    Specifies a regular expression for variable names introduced by structured
+    bindings that are to be ignored. The default value is `^[_]$`, to allow the
+    use of the `_` idiom to specify that the value is discarded on purpose.
 
 .. option:: MinimumParameterNameLength
 
@@ -121,3 +142,20 @@ The following options are described below:
       catch (const std::exception& e) {
           // ...
       }
+
+.. option:: LineCountThreshold
+
+    Defines the minimum number of lines required between declaration and last
+    use for a diagnostic to be issued. The default value for this option is 0,
+    which corresponds to all variables being flagged. This option only affects
+    the behavior regarding local variables: a warning is always issued when a
+    global variable has a short name, because globals can potentially be used
+    across multiple files.
+
+    .. code-block:: c++
+
+      // In this example, a warning will be issued if LineCountThreshold < N
+      int a = 0;      // First line (declaration line)
+      a = 1;          // Second line
+                      // ...
+      last_use_of(a); // N-th line

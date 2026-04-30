@@ -17,15 +17,14 @@
 ; CHECK-DAG: %[[#Const42:]] = OpConstant %[[#TyInt16]] 42{{$}}
 ; CHECK-DAG: %[[#ScopeDevice:]] = OpConstant %[[#TyInt32]] 1{{$}}
 ; CHECK-DAG: %[[#ScopeAllSvmDevices:]] = OpConstantNull %[[#TyInt32]]
-; CHECK-DAG: %[[#MemSemAcqRel:]] = OpConstant %[[#TyInt32]] 528{{$}}
-; CHECK-DAG: %[[#MemSeqCst:]] = OpConstant %[[#TyInt32]] 16{{$}}
+; CHECK-DAG: %[[#MemSem528:]] = OpConstant %[[#TyInt32]] 528{{$}}
 
 ; CHECK-DAG: %[[#Val:]] = OpVariable %[[#TyInt16Ptr]] CrossWorkgroup %[[#Const0]]
 
-; CHECK: OpAtomicLoad %[[#TyInt16]] %[[#Val]] %[[#ScopeDevice]] %[[#MemSemAcqRel]]
-; CHECK: OpAtomicStore %[[#Val]] %[[#ScopeDevice]] %[[#MemSemAcqRel]] %[[#Const42]]
-; CHECK: OpAtomicExchange %[[#TyInt16]] %[[#Val]] %[[#ScopeAllSvmDevices]] %[[#MemSeqCst]] %[[#Const42]]
-; CHECK: OpAtomicCompareExchange %[[#TyInt16]] %[[#]] %[[#ScopeAllSvmDevices]] %[[#MemSeqCst]] %[[#MemSeqCst]] %[[#Const42]] %[[#Const1]]
+; CHECK: OpAtomicLoad %[[#TyInt16]] %[[#Val]] %[[#ScopeDevice]] %[[#MemSem528]]
+; CHECK: OpAtomicStore %[[#Val]] %[[#ScopeDevice]] %[[#MemSem528]] %[[#Const42]]
+; CHECK: OpAtomicExchange %[[#TyInt16]] %[[#Val]] %[[#ScopeAllSvmDevices]] %[[#MemSem528]] %[[#Const42]]
+; CHECK: OpAtomicCompareExchange %[[#TyInt16]] %[[#]] %[[#ScopeAllSvmDevices]] %[[#MemSem528]] %[[#MemSem528]] %[[#Const42]] %[[#Const1]]
 
 
 @val = private addrspace(1) global i16 0

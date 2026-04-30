@@ -54,15 +54,15 @@ FUSION_FEATURE(ArithLogical, hasAddLogicalFusion, -1,
 // {and, andc, eqv, nand, nor, or, orc, xor} - {add, subf}
 FUSION_FEATURE(LogicalArith, hasLogicalAddFusion, -1,
                FUSION_OP_SET(AND, ANDC, EQV, NAND, NOR, OR, ORC, XOR, AND8,
-                             ANDC8, EQV8, NAND8, NOR8, OR8, ORC8, XOR8),
+                             ANDC8, NAND8, NOR8, OR8, ORC8, XOR8),
                FUSION_OP_SET(ADD4, ADD8, SUBF, SUBF8))
 
 // Either of {and, andc, eqv, nand, nor, or, orc, xor}
 FUSION_FEATURE(Logical, hasLogicalFusion, -1,
                FUSION_OP_SET(AND, ANDC, EQV, NAND, NOR, OR, ORC, XOR, AND8,
-                             ANDC8, EQV8, NAND8, NOR8, OR8, ORC8, XOR8),
+                             ANDC8, NAND8, NOR8, OR8, ORC8, XOR8),
                FUSION_OP_SET(AND, ANDC, EQV, NAND, NOR, OR, ORC, XOR, AND8,
-                             ANDC8, EQV8, NAND8, NOR8, OR8, ORC8, XOR8))
+                             ANDC8, NAND8, NOR8, OR8, ORC8, XOR8))
 
 // vaddudm - vaddudm
 FUSION_FEATURE(VecAdd, hasArithAddFusion, -1, FUSION_OP_SET(VADDUDM),
