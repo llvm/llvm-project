@@ -1668,8 +1668,11 @@ void DXILBitcodeWriter::writeDIGlobalVariable(const DIGlobalVariable *N,
 void DXILBitcodeWriter::writeDILocalVariable(const DILocalVariable *N,
                                              SmallVectorImpl<uint64_t> &Record,
                                              unsigned Abbrev) {
+  constexpr unsigned DW_TAG_auto_variable = 0x0100;
+  constexpr unsigned DW_TAG_arg_variable = 0x0101;
   Record.push_back(N->isDistinct());
-  Record.push_back(N->getTag());
+  assert(N->getTag() == dwarf::DW_TAG_variable);
+  Record.push_back(N->getArg() ? DW_TAG_arg_variable : DW_TAG_auto_variable);
   Record.push_back(VE.getMetadataOrNullID(N->getScope()));
   Record.push_back(VE.getMetadataOrNullID(N->getRawName()));
   Record.push_back(VE.getMetadataOrNullID(N->getFile()));
