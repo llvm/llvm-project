@@ -457,7 +457,7 @@ determine the correct quadrant.
 \param x The x-coordinate.
 }];
   let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingMatDims = [];
+  let VaryingMatDims = AllMatDims;
 }
 
 // Returns the smallest integer value that is greater than or equal to the
