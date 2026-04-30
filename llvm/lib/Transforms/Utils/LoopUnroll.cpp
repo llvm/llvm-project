@@ -742,7 +742,7 @@ static void fixProbContradiction(Loop *L, UnrollLoopOptions ULO,
     SetProb(ComputeIdx, ProbCompute);
 
     // Compute the resulting total frequency.
-    double FreqCompute = -1;
+    double FreqCompute = -1; // Init expected to be unused.
     if (ProbReachingBackedge * ProbCompute == 1) {
       // Analytically, this case seems impossible.  It requires that there is a
       // backedge and that FreqDesired == infinity so that every conditional
