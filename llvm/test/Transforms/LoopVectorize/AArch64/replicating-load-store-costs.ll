@@ -454,8 +454,7 @@ define void @test_prefer_vector_addressing(ptr %start, ptr %ms, ptr noalias %src
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP6]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[N_VEC]], 3
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[GEP_START]], i64 [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = mul i64 [[N_VEC]], 3
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP9]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP7]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -665,7 +664,7 @@ define i32 @test_or_reduction_with_stride_2(i32 %scale, ptr %src) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <16 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP66:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX]], 6

@@ -915,6 +915,7 @@ static kmp_taskgraph_region_t *__kmp_taskgraph_region_alloc(
   region->successors = nullptr;
   region->mutexset = nullptr;
   region->mutexset_parent = nullptr;
+  region->reduce_input = nullptr;
   *alloc_chain = region;
   alloc_chain = &region->alloc_chain;
   return region;
@@ -3277,7 +3278,7 @@ kmp_int32 __kmp_build_taskgraph(kmp_int32 gtid,
   *alloc_chain = nullptr;
 
   taskgraph->root = root_region;
-  taskgraph->alloc_root = initial_regions[0].alloc_chain;
+  taskgraph->alloc_root = initial_regions;
 
   // Free dependency lists and deleted regions.
   kmp_taskgraph_region_t **regp = &taskgraph->alloc_root;

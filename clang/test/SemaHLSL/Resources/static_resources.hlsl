@@ -99,15 +99,15 @@ void main() {
 // CHECK-SAME: (ptr {{.*}} getelementptr inbounds nuw (i8, ptr @StaticArray, i32 4), ptr {{.*}} @One)
 
   StaticLocal[0] = 123;
-// CHECK-NEXT: %[[PTR0:.*]] = call {{.*}} ptr @hlsl::RWBuffer<float>::operator[](unsigned int)(ptr {{.*}} @main()::StaticLocal, i32 noundef 0)
+// CHECK-NEXT: %[[PTR0:.*]] = call {{.*}} ptr @hlsl::RWBuffer<float>::operator[](unsigned int) const(ptr {{.*}} @main()::StaticLocal, i32 noundef 0)
 // CHECK-NEXT: store float 1.230000e+02, ptr %[[PTR0]]
 
   StaticOne[1] = 456;
-// CHECK-NEXT: %[[PTR1:.*]] = call {{.*}} ptr @hlsl::RWBuffer<float>::operator[](unsigned int)(ptr {{.*}}) @StaticOne, i32 noundef 1)
+// CHECK-NEXT: %[[PTR1:.*]] = call {{.*}} ptr @hlsl::RWBuffer<float>::operator[](unsigned int) const(ptr {{.*}}) @StaticOne, i32 noundef 1)
 // CHECK-NEXT: store float 4.560000e+02, ptr %[[PTR1]], align 4
 
   StaticArray[1][2] = 789;
-// CHECK-NEXT: %[[PTR2:.*]] = call {{.*}} ptr @hlsl::RWBuffer<float>::operator[](unsigned int)
+// CHECK-NEXT: %[[PTR2:.*]] = call {{.*}} ptr @hlsl::RWBuffer<float>::operator[](unsigned int) const
 // CHECK-SAME: (ptr {{.*}} getelementptr inbounds nuw (i8, ptr @StaticArray, i32 4), i32 noundef 2)
 // CHECK-NEXT: store float 7.890000e+02, ptr %[[PTR2]], align 4
 
