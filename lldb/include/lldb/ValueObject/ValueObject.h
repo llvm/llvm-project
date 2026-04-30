@@ -1020,7 +1020,7 @@ protected:
   /// This returns a ValueObjectManagerSP that is either the SP of the
   /// parent - if it is non-null, or a new manager if null.
   static ValueObjectManagerSP ReuseManagerIfParent(ValueObject *parent) {
-    std::shared_ptr<ValueObjectManager> manager_sp;
+    ValueObjectManagerSP manager_sp;
     if (parent)
       manager_sp = parent->GetManager()->shared_from_this();
     else
@@ -1033,7 +1033,7 @@ protected:
   /// shared pointer which is necessary to keep the new manager alive.
   static ValueObjectManagerSP
   CreateManagerIfEmpty(ValueObjectManager *&manager) {
-    std::shared_ptr<ValueObjectManager> manager_sp;
+    ValueObjectManagerSP manager_sp;
     if (!manager) {
       manager_sp = ValueObjectManager::Create();
       manager = manager_sp.get();
