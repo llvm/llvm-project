@@ -1,9 +1,17 @@
-//===- Complex Number type for use in MLIR ----------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the declaration of the mlir::NonFloatComplex type and
+/// mlir::complex type alias. The interface is intended to match the
+/// std::complex type, and the mlir::complex alias defers to std::complex for
+/// builtin floating point types.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef MLIR_SUPPORT_COMPLEX_H
