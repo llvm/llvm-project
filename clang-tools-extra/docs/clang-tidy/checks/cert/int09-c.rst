@@ -1,6 +1,4 @@
 .. title:: clang-tidy - cert-int09-c
-.. meta::
-   :http-equiv=refresh: 5;URL=../readability/enum-initial-value.html
 
 cert-int09-c
 ============

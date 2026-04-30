@@ -17,12 +17,12 @@ define void @switch_default_to_latch_common_dest(ptr %start, ptr %end) {
 ; COST:       [[VECTOR_PH]]:
 ; COST-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 4
 ; COST-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
-; COST-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], 8
+; COST-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 3
 ; COST-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP4]]
 ; COST-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; COST:       [[VECTOR_BODY]]:
 ; COST-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; COST-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
+; COST-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 3
 ; COST-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[OFFSET_IDX]]
 ; COST-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[NEXT_GEP]], align 1
 ; COST-NEXT:    [[TMP7:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD]], splat (i64 -12)
@@ -69,12 +69,12 @@ define void @switch_default_to_latch_common_dest(ptr %start, ptr %end) {
 ; FORCED:       [[VECTOR_PH]]:
 ; FORCED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 8
 ; FORCED-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
-; FORCED-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], 8
+; FORCED-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 3
 ; FORCED-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP4]]
 ; FORCED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; FORCED:       [[VECTOR_BODY]]:
 ; FORCED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; FORCED-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
+; FORCED-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 3
 ; FORCED-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[OFFSET_IDX]]
 ; FORCED-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i64 4
 ; FORCED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[NEXT_GEP]], align 1
@@ -152,12 +152,12 @@ define void @switch_default_to_latch_common_dest_using_branches(ptr %start, ptr 
 ; COST:       [[VECTOR_PH]]:
 ; COST-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 4
 ; COST-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
-; COST-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], 8
+; COST-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 3
 ; COST-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP4]]
 ; COST-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; COST:       [[VECTOR_BODY]]:
 ; COST-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; COST-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
+; COST-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 3
 ; COST-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[OFFSET_IDX]]
 ; COST-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[NEXT_GEP]], align 1
 ; COST-NEXT:    [[TMP7:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD]], splat (i64 -12)
@@ -207,12 +207,12 @@ define void @switch_default_to_latch_common_dest_using_branches(ptr %start, ptr 
 ; FORCED:       [[VECTOR_PH]]:
 ; FORCED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 8
 ; FORCED-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
-; FORCED-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], 8
+; FORCED-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 3
 ; FORCED-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP4]]
 ; FORCED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; FORCED:       [[VECTOR_BODY]]:
 ; FORCED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; FORCED-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
+; FORCED-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 3
 ; FORCED-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[OFFSET_IDX]]
 ; FORCED-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i64 4
 ; FORCED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[NEXT_GEP]], align 1
@@ -330,12 +330,12 @@ define void @switch_all_dests_distinct(ptr %start, ptr %end) {
 ; FORCED:       [[VECTOR_PH]]:
 ; FORCED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 8
 ; FORCED-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
-; FORCED-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], 8
+; FORCED-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 3
 ; FORCED-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP4]]
 ; FORCED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; FORCED:       [[VECTOR_BODY]]:
 ; FORCED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; FORCED-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
+; FORCED-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 3
 ; FORCED-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[OFFSET_IDX]]
 ; FORCED-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i64 4
 ; FORCED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[NEXT_GEP]], align 1
@@ -448,12 +448,12 @@ define void @switch_all_dests_distinct_variant_using_branches(ptr %start, ptr %e
 ; COST:       [[VECTOR_PH]]:
 ; COST-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 4
 ; COST-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
-; COST-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], 8
+; COST-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 3
 ; COST-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP4]]
 ; COST-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; COST:       [[VECTOR_BODY]]:
 ; COST-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; COST-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
+; COST-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 3
 ; COST-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[OFFSET_IDX]]
 ; COST-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[NEXT_GEP]], align 1
 ; COST-NEXT:    [[TMP7:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD]], splat (i64 -12)
@@ -520,12 +520,12 @@ define void @switch_all_dests_distinct_variant_using_branches(ptr %start, ptr %e
 ; FORCED:       [[VECTOR_PH]]:
 ; FORCED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 8
 ; FORCED-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
-; FORCED-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], 8
+; FORCED-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 3
 ; FORCED-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP4]]
 ; FORCED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; FORCED:       [[VECTOR_BODY]]:
 ; FORCED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; FORCED-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
+; FORCED-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 3
 ; FORCED-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[OFFSET_IDX]]
 ; FORCED-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i64 4
 ; FORCED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[NEXT_GEP]], align 1
@@ -680,12 +680,12 @@ define void @switch_multiple_common_dests(ptr %start, ptr %end) {
 ; FORCED:       [[VECTOR_PH]]:
 ; FORCED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 8
 ; FORCED-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
-; FORCED-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], 8
+; FORCED-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 3
 ; FORCED-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP4]]
 ; FORCED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; FORCED:       [[VECTOR_BODY]]:
 ; FORCED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; FORCED-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
+; FORCED-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 3
 ; FORCED-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[OFFSET_IDX]]
 ; FORCED-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i64 4
 ; FORCED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[NEXT_GEP]], align 1
@@ -829,12 +829,12 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; FORCED:       [[VECTOR_PH]]:
 ; FORCED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 8
 ; FORCED-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
-; FORCED-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], 8
+; FORCED-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 3
 ; FORCED-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP4]]
 ; FORCED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; FORCED:       [[VECTOR_BODY]]:
 ; FORCED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; FORCED-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
+; FORCED-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 3
 ; FORCED-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[OFFSET_IDX]]
 ; FORCED-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i64 4
 ; FORCED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[NEXT_GEP]], align 1
@@ -934,14 +934,14 @@ define void @switch_under_br_default_common_dest_with_case(ptr %start, ptr %end,
 ; COST:       [[VECTOR_PH]]:
 ; COST-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 4
 ; COST-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
-; COST-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], 8
+; COST-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 3
 ; COST-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP4]]
 ; COST-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[X]], i64 0
 ; COST-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; COST-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; COST:       [[VECTOR_BODY]]:
 ; COST-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; COST-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
+; COST-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 3
 ; COST-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[OFFSET_IDX]]
 ; COST-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[NEXT_GEP]], align 1
 ; COST-NEXT:    [[TMP7:%.*]] = icmp ule <4 x i64> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
@@ -1005,14 +1005,14 @@ define void @switch_under_br_default_common_dest_with_case(ptr %start, ptr %end,
 ; FORCED:       [[VECTOR_PH]]:
 ; FORCED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 8
 ; FORCED-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
-; FORCED-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], 8
+; FORCED-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 3
 ; FORCED-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP4]]
 ; FORCED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[X]], i64 0
 ; FORCED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; FORCED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; FORCED:       [[VECTOR_BODY]]:
 ; FORCED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; FORCED-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
+; FORCED-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 3
 ; FORCED-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[OFFSET_IDX]]
 ; FORCED-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i64 4
 ; FORCED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[NEXT_GEP]], align 1
@@ -1158,14 +1158,14 @@ define void @br_under_switch_default_common_dest_with_case(ptr %start, ptr %end,
 ; FORCED:       [[VECTOR_PH]]:
 ; FORCED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 8
 ; FORCED-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
-; FORCED-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], 8
+; FORCED-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 3
 ; FORCED-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP4]]
 ; FORCED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[X]], i64 0
 ; FORCED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; FORCED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; FORCED:       [[VECTOR_BODY]]:
 ; FORCED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; FORCED-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
+; FORCED-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 3
 ; FORCED-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[OFFSET_IDX]]
 ; FORCED-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i64 4
 ; FORCED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[NEXT_GEP]], align 1
@@ -1312,12 +1312,12 @@ define void @large_number_of_cases(ptr %start, ptr %end) {
 ; FORCED:       [[VECTOR_PH]]:
 ; FORCED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 8
 ; FORCED-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
-; FORCED-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], 8
+; FORCED-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 3
 ; FORCED-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP4]]
 ; FORCED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; FORCED:       [[VECTOR_BODY]]:
 ; FORCED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; FORCED-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
+; FORCED-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 3
 ; FORCED-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[OFFSET_IDX]]
 ; FORCED-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i64 4
 ; FORCED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[NEXT_GEP]], align 1
