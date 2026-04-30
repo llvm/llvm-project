@@ -911,6 +911,15 @@ def RtzRoundMode : TImmLeaf<i32, [{
   return Imm == (int)RoundingMode::TowardZero;
 }]>;
 
+// llvm.convert.from.arbitrary.fp format-selector predicates.
+// Only OCP formats are matched here; FNUZ formats use the generic expansion.
+def fp8_sem : TImmLeaf<i32, [{
+  return Imm == APFloatBase::S_Float8E4M3FN;
+}]>;
+def bf8_sem : TImmLeaf<i32, [{
+  return Imm == APFloatBase::S_Float8E5M2;
+}]>;
+
 def VOP3PModsNeg : SDNodeXForm<timm, [{
   unsigned Mods = SISrcMods::OP_SEL_1;
   if (N->getZExtValue())

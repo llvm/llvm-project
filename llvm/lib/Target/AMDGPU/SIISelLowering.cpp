@@ -986,14 +986,14 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::FEXP2, ISD::FLOG2, ISD::FSQRT}, MVT::bf16, Legal);
   }
 
-  if (Subtarget->hasFP8ConversionInsts()) {
+  if (Subtarget->hasOCPFP8ConversionInsts()) {
     setOperationAction(ISD::CONVERT_FROM_ARBITRARY_FP,
                        {MVT::f32, MVT::v2f32, MVT::v4f32}, Custom);
     setOperationAction(ISD::CONVERT_FROM_ARBITRARY_FP, {MVT::v2i8, MVT::v4i8},
                        Custom);
   }
 
-  if (Subtarget->hasGFX1250Insts()) {
+  if (Subtarget->hasFP8F16ConversionInsts()) {
     setOperationAction(ISD::CONVERT_FROM_ARBITRARY_FP,
                        {MVT::f16, MVT::v2f16, MVT::v4f16}, Custom);
   }
@@ -10584,26 +10584,32 @@ SDValue SITargetLowering::lowerWorkitemID(SelectionDAG &DAG, SDValue Op,
                      DAG.getValueType(SmallVT));
 }
 
-// Pack vector inputs as hw instruction is packed.
-// FIXME: note, packing loses lane-wise poison. Should we do something about
-// it?
+// Pack a vector of i8 lanes into i32 via bitcast.
+// FIXME: packing loses lane-wise poison. Should we do something about it?
 SDValue SITargetLowering::packBytesToI32(SelectionDAG &DAG, const SDLoc &SL,
                                          SDValue Src, unsigned NumBytes,
                                          unsigned FirstLane) {
-  EVT SrcEltVT = Src.getValueType().getVectorElementType();
-  SDValue PackedI32;
-  for (unsigned I = 0; I != NumBytes; ++I) {
-    SDValue Elt = DAG.getExtractVectorElt(SL, SrcEltVT, Src, FirstLane + I);
-    SDValue Byte = DAG.getZExtOrTrunc(Elt, SL, MVT::i32);
-    Byte = DAG.getNode(ISD::AND, SL, MVT::i32, Byte,
-                       DAG.getConstant(0xFF, SL, MVT::i32));
-    if (I != 0)
-      Byte = DAG.getNode(ISD::SHL, SL, MVT::i32, Byte,
-                         DAG.getConstant(I * 8, SL, MVT::i32));
-    PackedI32 =
-        I == 0 ? Byte : DAG.getNode(ISD::OR, SL, MVT::i32, PackedI32, Byte);
+  EVT SrcVT = Src.getValueType();
+  assert(SrcVT.isVector() &&
+         SrcVT.getVectorElementType() == MVT::i8 &&
+         "packBytesToI32 expects a v*i8 source");
+  unsigned SrcBytes = SrcVT.getVectorNumElements();
+  assert((NumBytes == 2 || NumBytes == 4) && "expected 2 or 4 bytes");
+
+  if (NumBytes == 4) {
+    assert(FirstLane == 0 && "v4i8 -> i32 takes the full vector");
+    return DAG.getNode(ISD::BITCAST, SL, MVT::i32, Src);
   }
-  return PackedI32;
+
+  // Bitcast a vector to the same-width integer, optionally shift down to the
+  // requested slice, truncate to i16, and zext to i32.
+  EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), SrcBytes * 8);
+  SDValue AsInt = DAG.getNode(ISD::BITCAST, SL, IntVT, Src);
+  if (FirstLane != 0)
+    AsInt = DAG.getNode(ISD::SRL, SL, IntVT, AsInt,
+                        DAG.getConstant(FirstLane * 8, SL, IntVT));
+  SDValue I16 = DAG.getNode(ISD::TRUNCATE, SL, MVT::i16, AsInt);
+  return DAG.getNode(ISD::ZERO_EXTEND, SL, MVT::i32, I16);
 }
 
 SDValue SITargetLowering::lowerFromFP8ToF32(SDValue Op, bool IsBF8,
@@ -10612,14 +10618,7 @@ SDValue SITargetLowering::lowerFromFP8ToF32(SDValue Op, bool IsBF8,
   SDLoc SL(Op);
   SDValue Src = Op.getOperand(0);
 
-  if (DstVT == MVT::f32) {
-    unsigned IntrID =
-        IsBF8 ? Intrinsic::amdgcn_cvt_f32_bf8 : Intrinsic::amdgcn_cvt_f32_fp8;
-    SDValue SrcI32 = DAG.getAnyExtOrTrunc(Src, SL, MVT::i32);
-    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, MVT::f32,
-                       DAG.getTargetConstant(IntrID, SL, MVT::i32), SrcI32,
-                       DAG.getTargetConstant(0, SL, MVT::i32));
-  }
+  assert(DstVT.isVector() && "Scalar f32 should be selected by TableGen");
 
   auto EmitPk = [&](SDValue PackedI32, unsigned WordSel) {
     unsigned IntrID = IsBF8 ? Intrinsic::amdgcn_cvt_pk_f32_bf8
@@ -10640,22 +10639,14 @@ SDValue SITargetLowering::lowerFromFP8ToF32(SDValue Op, bool IsBF8,
 
 SDValue SITargetLowering::lowerFromFP8ToF16(SDValue Op, bool IsBF8,
                                             SelectionDAG &DAG) const {
-  assert(Subtarget->hasGFX1250Insts() &&
-         "unscaled fp8/bf8 -> f16 requires gfx1250+");
+  assert(Subtarget->hasFP8F16ConversionInsts() &&
+         "fp8/bf8 -> f16 conversion requires FP8F16ConversionInsts");
   EVT DstVT = Op.getValueType();
   SDLoc SL(Op);
   SDValue Src = Op.getOperand(0);
 
-  // amdgcn_cvt_f16_{fp8,bf8}(i32 src, byte_sel) -> f16.
-  // amdgcn_cvt_pk_f16_{fp8,bf8}(i16 src) -> v2f16.
-  if (!DstVT.isVector()) {
-    unsigned IntrID =
-        IsBF8 ? Intrinsic::amdgcn_cvt_f16_bf8 : Intrinsic::amdgcn_cvt_f16_fp8;
-    SDValue SrcI32 = DAG.getAnyExtOrTrunc(Src, SL, MVT::i32);
-    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, MVT::f16,
-                       DAG.getTargetConstant(IntrID, SL, MVT::i32), SrcI32,
-                       DAG.getTargetConstant(0, SL, MVT::i32));
-  }
+  // Scalar f16 is handled by TableGen patterns.
+  assert(DstVT.isVector() && "Scalar f16 should be selected by TableGen");
 
   unsigned IntrID = IsBF8 ? Intrinsic::amdgcn_cvt_pk_f16_bf8
                           : Intrinsic::amdgcn_cvt_pk_f16_fp8;
@@ -10676,6 +10667,8 @@ SDValue SITargetLowering::lowerFromFP8ToF16(SDValue Op, bool IsBF8,
 SDValue
 SITargetLowering::LowerCONVERT_FROM_ARBITRARY_FP(SDValue Op,
                                                  SelectionDAG &DAG) const {
+  // Only handle OCP FP8 formats (E4M3FN, E5M2). FNUZ formats that are supported
+  // by gfx942 fall through to the generic expansion.
   bool IsBF8 = false;
   switch (static_cast<APFloatBase::Semantics>(Op.getConstantOperandVal(1))) {
   case APFloatBase::S_Float8E4M3FN:
@@ -10693,10 +10686,21 @@ SITargetLowering::LowerCONVERT_FROM_ARBITRARY_FP(SDValue Op,
     return SDValue();
 
   EVT DstVT = Op.getValueType();
-  EVT EltVT = DstVT.isVector() ? DstVT.getVectorElementType() : DstVT;
+  if (!DstVT.isVector()) {
+    SDValue Src = Op.getOperand(0);
+    if (Src.getValueType() != MVT::i32) {
+      SDLoc SL(Op);
+      SDValue SrcI32 = DAG.getAnyExtOrTrunc(Src, SL, MVT::i32);
+      return DAG.getNode(ISD::CONVERT_FROM_ARBITRARY_FP, SL, DstVT, SrcI32,
+                         Op.getOperand(1));
+    }
+    return Op;
+  }
+
+  EVT EltVT = DstVT.getVectorElementType();
   if (EltVT == MVT::f16)
     return lowerFromFP8ToF16(Op, IsBF8, DAG);
-  if (DstVT == MVT::f32 || DstVT == MVT::v2f32 || DstVT == MVT::v4f32)
+  if (EltVT == MVT::f32)
     return lowerFromFP8ToF32(Op, IsBF8, DAG);
   return SDValue();
 }
