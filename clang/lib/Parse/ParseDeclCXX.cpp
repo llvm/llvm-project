@@ -454,7 +454,7 @@ void Parser::CheckUnbracedLinkageOrExportDeclaration(
   // Nested export declarations are diagnosed elsewhere.
   if (isa<LinkageSpecDecl>(LinkageOrExportDecl) && isa<ExportDecl>(D)) {
     Diag(LinkageOrExportDecl->getLocation(),
-         diag::err_invalid_decl_in_linkage_spec)
+         diag::warn_invalid_decl_in_linkage_spec)
         << /*export declaration*/ 2;
     return;
   }
@@ -475,7 +475,7 @@ void Parser::CheckUnbracedLinkageOrExportDeclaration(
     return;
 
   if (const auto *ED = dyn_cast<ExportDecl>(LinkageOrExportDecl)) {
-    Diag(ED->getExportLoc(), diag::err_meaningless_export)
+    Diag(ED->getExportLoc(), diag::warn_meaningless_export)
         << (TSK == TSK_ExplicitSpecialization)
         << FixItHint::CreateRemoval(ED->getExportLoc());
     Diag(ED->getExportLoc(), diag::note_meaningless_export_explanation);
@@ -491,7 +491,7 @@ void Parser::CheckUnbracedLinkageOrExportDeclaration(
         getPreprocessor().NeedsMsvcStlWorkaroundBefore(2026'03))
       return;
 
-    Diag(LS->getLocation(), diag::err_invalid_decl_in_linkage_spec)
+    Diag(LS->getLocation(), diag::warn_invalid_decl_in_linkage_spec)
         << (TSK == TSK_ExplicitSpecialization);
     return;
   }
