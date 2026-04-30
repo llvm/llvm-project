@@ -518,8 +518,7 @@ void PipelineSolver::EdgeSetBuilder::computeReachable(
   if (!Reachable.insert(Start).second)
     return;
 
-  SmallVector<SUnit *, 32> WorkList;
-  WorkList.push_back(Start);
+  SmallVector<SUnit *, 32> WorkList = {Start};
 
   while (!WorkList.empty()) {
     SUnit *Current = WorkList.pop_back_val();
