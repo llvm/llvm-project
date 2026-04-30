@@ -117,6 +117,10 @@ public:
 
   std::string getCompilerRTPath() const override;
 
+  bool isPIEDefault(const llvm::opt::ArgList &Args) const override {
+    return getTriple().isOSLinux() && Linux::isPIEDefault(Args);
+  }
+
   static bool isAutoHVXEnabled(const llvm::opt::ArgList &Args);
   static StringRef GetDefaultCPU();
   static StringRef GetTargetCPUVersion(const llvm::opt::ArgList &Args);
