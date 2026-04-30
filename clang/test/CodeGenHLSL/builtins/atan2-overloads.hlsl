@@ -191,6 +191,24 @@ float4 test_atan2_uint64_t4 (uint64_t4 p0, uint64_t4 p1) {
   return atan2(p0, p1);
 }
 
+// CHECK: define [[FNATTRS]] <16 x float> @_Z19test_atan2_int_t4x4u11matrix_typeILj4ELj4EiES_(
+// CHECK:    [[CONVI:%.*]] = sitofp <16 x i32> %{{.*}} to <16 x float>
+// CHECK:    [[CONV1I:%.*]] = sitofp <16 x i32> %{{.*}} to <16 x float>
+// CHECK:    [[V5:%.*]] = call {{.*}} <16 x float> @llvm.atan2.v16f32(<16 x float> [[CONVI]], <16 x float> [[CONV1I]])
+// CHECK:    ret <16 x float> [[V5]]
+float4x4 test_atan2_int_t4x4 (int4x4 p0, int4x4 p1) {
+  return atan2(p0, p1);
+}
+
+// CHECK: define [[FNATTRS]] <16 x float> @_Z20test_atan2_uint_t4x4u11matrix_typeILj4ELj4EjES_(
+// CHECK:    [[CONVI:%.*]] = uitofp <16 x i32> %{{.*}} to <16 x float>
+// CHECK:    [[CONV1I:%.*]] = uitofp <16 x i32> %{{.*}} to <16 x float>
+// CHECK:    [[V5:%.*]] = call {{.*}} <16 x float> @llvm.atan2.v16f32(<16 x float> [[CONVI]], <16 x float> [[CONV1I]])
+// CHECK:    ret <16 x float> [[V5]]
+float4x4 test_atan2_uint_t4x4 (uint4x4 p0, uint4x4 p1) {
+  return atan2(p0, p1);
+}
+
 // CHECK: define [[FNATTRS]] <16 x float> @_Z21test_atan2_int64_t4x4u11matrix_typeILj4ELj4ElES_(
 // CHECK:    [[CONVI:%.*]] = sitofp <16 x i64> %{{.*}} to <16 x float>
 // CHECK:    [[CONV1I:%.*]] = sitofp <16 x i64> %{{.*}} to <16 x float>
