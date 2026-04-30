@@ -528,7 +528,7 @@ define <vscale x 2 x i32> @vpselect_vpzext(<vscale x 2 x i32> %passthru, <vscale
 define <vscale x 2 x i32> @vpselect_vptrunc(<vscale x 2 x i32> %passthru, <vscale x 2 x i64> %x, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vpselect_vptrunc:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
 ; CHECK-NEXT:    vnsrl.wi v8, v10, 0, v0.t
 ; CHECK-NEXT:    ret
   %a = call <vscale x 2 x i32> @llvm.vp.trunc.nxv2i32.nxv2i64(<vscale x 2 x i64> %x, <vscale x 2 x i1> splat (i1 -1), i32 %vl)
