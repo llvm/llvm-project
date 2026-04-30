@@ -3273,6 +3273,14 @@ void OmpStructureChecker::Enter(const parser::OmpEndDirective &x) {
   case llvm::omp::Directive::OMPD_workshare:
     PushContextAndClauseSets(source, llvm::omp::Directive::OMPD_end_workshare);
     break;
+  // 2.7.1 end-do -> END DO [nowait-clause]
+  // 2.8.3 end-do-simd -> END DO SIMD [nowait-clause]
+  case llvm::omp::Directive::OMPD_do:
+    PushContextAndClauseSets(source, llvm::omp::Directive::OMPD_end_do);
+    break;
+  case llvm::omp::Directive::OMPD_do_simd:
+    PushContextAndClauseSets(source, llvm::omp::Directive::OMPD_end_do_simd);
+    break;
   default:
     // no clauses are allowed
     break;
@@ -3287,7 +3295,9 @@ void OmpStructureChecker::Enter(const parser::OmpEndDirective &x) {
 void OmpStructureChecker::Leave(const parser::OmpEndDirective &x) {
   if ((GetContext().directive == llvm::omp::Directive::OMPD_end_scope) ||
       (GetContext().directive == llvm::omp::Directive::OMPD_end_single) ||
-      (GetContext().directive == llvm::omp::Directive::OMPD_end_workshare)) {
+      (GetContext().directive == llvm::omp::Directive::OMPD_end_workshare) ||
+      (GetContext().directive == llvm::omp::Directive::OMPD_end_do) ||
+      (GetContext().directive == llvm::omp::Directive::OMPD_end_do_simd)) {
     dirContext_.pop_back();
   }
 }

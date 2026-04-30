@@ -629,32 +629,6 @@ void OmpStructureChecker::Leave(const parser::OpenMPLoopConstruct &x) {
   loopStack_.pop_back();
 }
 
-void OmpStructureChecker::Enter(const parser::OmpEndLoopDirective &x) {
-  const parser::OmpDirectiveName &dir{x.DirName()};
-  ResetPartialContext(dir.source);
-  switch (dir.v) {
-  // 2.7.1 end-do -> END DO [nowait-clause]
-  // 2.8.3 end-do-simd -> END DO SIMD [nowait-clause]
-  case llvm::omp::Directive::OMPD_do:
-    PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_end_do);
-    break;
-  case llvm::omp::Directive::OMPD_do_simd:
-    PushContextAndClauseSets(
-        dir.source, llvm::omp::Directive::OMPD_end_do_simd);
-    break;
-  default:
-    // no clauses are allowed
-    break;
-  }
-}
-
-void OmpStructureChecker::Leave(const parser::OmpEndLoopDirective &x) {
-  if ((GetContext().directive == llvm::omp::Directive::OMPD_end_do) ||
-      (GetContext().directive == llvm::omp::Directive::OMPD_end_do_simd)) {
-    dirContext_.pop_back();
-  }
-}
-
 void OmpStructureChecker::Enter(const parser::OmpClause::Depth &x) {
   CheckAllowedClause(llvm::omp::Clause::OMPC_depth);
 
