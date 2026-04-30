@@ -1916,7 +1916,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32}}, !hasPST)
       .Div(S64, {{Vgpr64}, {IntrId, Vgpr64}})
       .Uni(S64, {{UniInVgprS64}, {IntrId, Vgpr64}});
-      
+
   addRulesForIOpcs({amdgcn_ds_atomic_async_barrier_arrive_b64})
       .Any({{}, {{}, {IntrId, VgprP3}}});
 

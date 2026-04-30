@@ -71,8 +71,8 @@ define double @v_fneg_fabs_sqrt_f64(double %src)  {
   ret double %sqrt
 }
 
-define double @s_sqrt_f64_gfx12(double inreg %src) {
-; GFX12-LABEL: s_sqrt_f64_gfx12:
+define double @s_sqrt_f64(double inreg %src) {
+; GFX12-LABEL: s_sqrt_f64:
 ; GFX12:       ; %bb.0:
 ; GFX12:       v_sqrt_f64_e32 v[0:1], s[0:1]
 ; GFX12-NEXT:  s_setpc_b64 s[30:31]
