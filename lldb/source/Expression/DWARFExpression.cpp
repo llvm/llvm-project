@@ -1173,6 +1173,38 @@ Evaluate_DW_OP_convert(DWARFExpression::Stack &stack,
   return llvm::Error::success();
 }
 
+static llvm::Error
+Evaluate_DW_OP_form_tls_address(DWARFExpression::Stack &stack,
+                                ExecutionContext *exe_ctx,
+                                lldb::ModuleSP module_sp, LocationAtom opcode) {
+  if (stack.empty())
+    return llvm::createStringError("%s needs an argument",
+                                   opcode == DW_OP_form_tls_address
+                                       ? "DW_OP_form_tls_address"
+                                       : "DW_OP_GNU_push_tls_address");
+
+  if (!exe_ctx || !module_sp)
+    return llvm::createStringError("no context to evaluate TLS within");
+
+  Thread *thread = exe_ctx->GetThreadPtr();
+  if (!thread)
+    return llvm::createStringError("no thread to evaluate TLS within");
+
+  // Lookup the TLS block address for this thread and module.
+  const addr_t tls_file_addr =
+      stack.back().GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
+  const addr_t tls_load_addr =
+      thread->GetThreadLocalData(module_sp, tls_file_addr);
+
+  if (tls_load_addr == LLDB_INVALID_ADDRESS)
+    return llvm::createStringError(
+        "no TLS data currently exists for this thread");
+
+  stack.back().GetScalar() = tls_load_addr;
+  stack.back().SetValueType(Value::ValueType::LoadAddress);
+  return llvm::Error::success();
+}
+
 llvm::Expected<Value> DWARFExpression::Evaluate(
     ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
     lldb::ModuleSP module_sp, const DataExtractor &opcodes,
@@ -2144,36 +2176,11 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // an address in the current thread's thread-local storage block, and
     // pushes it on the stack.
     case DW_OP_form_tls_address:
-    case DW_OP_GNU_push_tls_address: {
-      if (stack.size() < 1) {
-        if (opcode == DW_OP_form_tls_address)
-          return llvm::createStringError(
-              "DW_OP_form_tls_address needs an argument");
-        else
-          return llvm::createStringError(
-              "DW_OP_GNU_push_tls_address needs an argument");
-      }
-
-      if (!exe_ctx || !module_sp)
-        return llvm::createStringError("no context to evaluate TLS within");
-
-      Thread *thread = exe_ctx->GetThreadPtr();
-      if (!thread)
-        return llvm::createStringError("no thread to evaluate TLS within");
-
-      // Lookup the TLS block address for this thread and module.
-      const addr_t tls_file_addr =
-          stack.back().GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
-      const addr_t tls_load_addr =
-          thread->GetThreadLocalData(module_sp, tls_file_addr);
-
-      if (tls_load_addr == LLDB_INVALID_ADDRESS)
-        return llvm::createStringError(
-            "no TLS data currently exists for this thread");
-
-      stack.back().GetScalar() = tls_load_addr;
-      stack.back().SetValueType(Value::ValueType::LoadAddress);
-    } break;
+    case DW_OP_GNU_push_tls_address:
+      if (llvm::Error err = Evaluate_DW_OP_form_tls_address(stack, exe_ctx,
+                                                            module_sp, opcode))
+        return err;
+      break;
 
     // OPCODE: DW_OP_addrx (DW_OP_GNU_addr_index is the legacy name.)
     // OPERANDS: 1
