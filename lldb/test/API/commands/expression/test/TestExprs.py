@@ -19,6 +19,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfWasm  # no expression evaluation
 class BasicExprCommandsTestCase(TestBase):
     def setUp(self):
         # Call super's setUp().

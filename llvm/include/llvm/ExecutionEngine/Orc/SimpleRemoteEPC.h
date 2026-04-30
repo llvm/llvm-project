@@ -29,20 +29,10 @@ namespace orc {
 class LLVM_ABI SimpleRemoteEPC : public ExecutorProcessControl,
                                  public SimpleRemoteEPCTransportClient {
 public:
-  /// A setup object containing a callback to construct a memory manager.
-  /// If not specified, EPCGenericJITLinkMemoryManager will be used.
-  struct Setup {
-    using CreateMemoryManagerFn =
-        Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>(
-            SimpleRemoteEPC &);
-
-    unique_function<CreateMemoryManagerFn> CreateMemoryManager;
-  };
-
   /// Create a SimpleRemoteEPC using the given transport type and args.
   template <typename TransportT, typename... TransportTCtorArgTs>
   static Expected<std::unique_ptr<SimpleRemoteEPC>>
-  Create(std::unique_ptr<TaskDispatcher> D, Setup S,
+  Create(std::unique_ptr<TaskDispatcher> D,
          TransportTCtorArgTs &&...TransportTCtorArgs) {
     std::unique_ptr<SimpleRemoteEPC> SREPC(
         new SimpleRemoteEPC(std::make_shared<SymbolStringPool>(),
@@ -52,7 +42,7 @@ public:
     if (!T)
       return T.takeError();
     SREPC->T = std::move(*T);
-    if (auto Err = SREPC->setup(std::move(S)))
+    if (auto Err = SREPC->setup())
       return joinErrors(std::move(Err), SREPC->disconnect());
     return std::move(SREPC);
   }
@@ -73,6 +63,9 @@ public:
   void callWrapperAsync(ExecutorAddr WrapperFnAddr,
                         IncomingWFRHandler OnComplete,
                         ArrayRef<char> ArgBuffer) override;
+
+  Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
+  createDefaultMemoryManager() override;
 
   Expected<std::unique_ptr<DylibManager>> createDefaultDylibMgr() override;
 
@@ -99,7 +92,7 @@ private:
 
   Error handleSetup(uint64_t SeqNo, ExecutorAddr TagAddr,
                     shared::WrapperFunctionBuffer ArgBytes);
-  Error setup(Setup S);
+  Error setup();
 
   Error handleResult(uint64_t SeqNo, ExecutorAddr TagAddr,
                      shared::WrapperFunctionBuffer ArgBytes);
@@ -119,7 +112,6 @@ private:
   Error DisconnectErr = Error::success();
 
   std::unique_ptr<SimpleRemoteEPCTransport> T;
-  std::unique_ptr<jitlink::JITLinkMemoryManager> OwnedMemMgr;
 
   ExecutorAddr RunAsMainAddr;
   ExecutorAddr RunAsVoidFunctionAddr;

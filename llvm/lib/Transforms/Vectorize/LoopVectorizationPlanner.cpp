@@ -563,6 +563,10 @@ bool VFSelectionContext::runtimeChecksRequired() {
   return false;
 }
 
+void VFSelectionContext::computeMinimalBitwidths() {
+  MinBWs = computeMinimumValueSizes(TheLoop->getBlocks(), *DB, &TTI);
+}
+
 void VFSelectionContext::collectInLoopReductions() {
   // Avoid duplicating work finding in-loop reductions.
   if (!InLoopReductions.empty())
