@@ -782,9 +782,9 @@ void FactsGenerator::handleInvalidatingCall(const Expr *Call,
   if (!DRE || DRE->getDecl()->getType()->isReferenceType())
     return;
 
-  if (OriginList *ThisList = getOriginsList(*Args[0]))
+  if (OriginList *ArgList = getOriginsList(*Args[0]))
     CurrentBlockFacts.push_back(FactMgr.createFact<InvalidateOriginFact>(
-        ThisList->getOuterOriginID(), Call));
+        ArgList->getOuterOriginID(), Call));
 }
 
 void FactsGenerator::handleImplicitObjectFieldUses(const Expr *Call,
