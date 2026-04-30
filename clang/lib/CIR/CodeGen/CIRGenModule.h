@@ -405,8 +405,6 @@ public:
 
   void emitVTable(const CXXRecordDecl *rd);
 
-  std::vector<cir::GlobalOp> llvmCompilerUsed;
-
   /// Return the appropriate linkage for the vtable, VTT, and type information
   /// of the given class.
   cir::GlobalLinkageKind getVTableLinkage(const CXXRecordDecl *rd);
