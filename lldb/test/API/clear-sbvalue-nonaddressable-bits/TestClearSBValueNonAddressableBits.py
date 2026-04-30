@@ -54,14 +54,6 @@ class TestClearSBValueNonAddressableBits(TestBase):
 
         main_p = frame.FindVariable("main_p")
         main_invalid_p = frame.FindVariable("main_invalid_p")
-        if self.getArchitecture() in ["arm64e"]:
-            # On arm64e, main_p.GetValueAsUnsigned() will have all the pointer
-            # metadata in it whereas main_invalid_p will have all the metadata
-            # stripped.
-            self.assertNotEqual(
-                main_p.GetValueAsUnsigned(), main_invalid_p.GetValueAsAddress()
-            )
-        else:
-            self.assertEqual(
-                main_p.GetValueAsUnsigned(), main_invalid_p.GetValueAsAddress()
-            )
+        self.assertEqual(
+            main_p.GetValueAsAddress(), main_invalid_p.GetValueAsAddress()
+        )
