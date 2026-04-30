@@ -7153,26 +7153,19 @@ static bool CheckTemplateArgumentCopyEquivalence(Sema &S, NamedDecl *Param,
       return false;
 
   } else {
-    // If there is a copy constructor with const parameter and without explicit,
-    // it should be selected by overload resolution.
-    CXXConstructorDecl *CopyCtor = nullptr;
-
-    // If there is trailing requires clause, let overload resolution handle it.
-    bool FindCopyCtorWithTrailingRequiresClause = false;
 
     // A template parameter with this type has been initialized,
     // so implicitly-declared functions should be declared,
     // and explicit(bool) should be resolved.
-    for (CXXConstructorDecl *Ctor : CXXRecord->ctors())
-      if (unsigned Quals; Ctor->isCopyConstructor(Quals) &&
-                          Quals == Qualifiers::Const && !Ctor->isExplicit()) {
-        CopyCtor = Ctor;
-        if (Ctor->getTrailingRequiresClause())
-          FindCopyCtorWithTrailingRequiresClause = true;
-      }
-
-    if (CopyCtor && !FindCopyCtorWithTrailingRequiresClause &&
-        CopyCtor->isTrivial() && !CopyCtor->isDeleted())
+    if (llvm::any_of(CXXRecord->ctors(), [](CXXConstructorDecl *Ctor) {
+          unsigned Quals;
+          // TODO: After correctly marking deleted methods as ineligible,
+          // `!Ctor->isDeleted()` is redundant and can be dropped.
+          // See comment in `SetEligibleMethods` in SemaDecl.cpp.
+          return Ctor->isCopyConstructor(Quals) && Quals == Qualifiers::Const &&
+                 !Ctor->isIneligibleOrNotSelected() && Ctor->isTrivial() &&
+                 !Ctor->isDeleted() && !Ctor->isExplicit();
+        }))
       return false;
   }
 
