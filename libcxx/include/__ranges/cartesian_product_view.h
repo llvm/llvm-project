@@ -12,6 +12,7 @@
 #include <__concepts/convertible_to.h>
 #include <__concepts/equality_comparable.h>
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__iterator/access.h>
 #include <__iterator/concepts.h>
 #include <__iterator/default_sentinel.h>
@@ -36,7 +37,6 @@
 #include <__utility/forward.h>
 #include <__utility/integer_sequence.h>
 #include <__utility/move.h>
-#include <cstddef>
 #include <tuple>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
