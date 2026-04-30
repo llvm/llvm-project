@@ -644,7 +644,8 @@ static void fixProbContradiction(UnrollLoopOptions ULO,
   // CondLatches.  Return {Prob, Freq} where 0 <= Prob <= 1 and Freq is the new
   // frequency.
   auto ComputeProb = [&](unsigned ComputeIdx) -> std::pair<double, double> {
-    assert(ComputeIdx < CondLatches.size());
+    assert(ComputeIdx < CondLatches.size() &&
+           "Expected valid CondLatches index");
 
     // Accumulate the frequency from before ComputeIdx into FreqBeforeCompute,
     // and accumulate the rest in Freq without yet multiplying the latter by any
@@ -654,7 +655,7 @@ static void fixProbContradiction(UnrollLoopOptions ULO,
     double FreqBeforeCompute;
     for (unsigned I = 0, E = CondLatches.size(); I < E; ++I) {
       // Get the branch probability for CondLatches[I].
-      double Prob;
+      double Prob = -1; // Init expected to be unused.
       if (I == ComputeIdx) {
         FreqBeforeCompute = Freq;
         Freq = 0;
@@ -662,6 +663,7 @@ static void fixProbContradiction(UnrollLoopOptions ULO,
       } else {
         Prob = GetProb(I);
       }
+      assert(0 <= Prob && Prob <= 1 && "Expected valid probability");
       ProbReaching *= Prob;                     // p^(I+1)
       Freq += IterCounts[I + 1] * ProbReaching; // c_(I+1)*p^(I+1)
     }
@@ -672,7 +674,7 @@ static void fixProbContradiction(UnrollLoopOptions ULO,
     double ProbReachingBackedge = CompletelyUnroll ? 0 : ProbReaching;
     double ProbComputeNumerator = FreqDesired - FreqBeforeCompute;
     double ProbComputeDenominator = Freq + FreqDesired * ProbReachingBackedge;
-    double ProbCompute;
+    double ProbCompute = -1; // Init expected to be unused.
     if (ProbComputeNumerator <= 0) {
       // FreqBeforeCompute has already reached or surpassed FreqDesired, so add
       // no more frequency.  It is possible that ProbComputeDenominator == 0
@@ -708,6 +710,8 @@ static void fixProbContradiction(UnrollLoopOptions ULO,
       ProbCompute = std::max(ProbCompute, 0.);
       ProbCompute = std::min(ProbCompute, 1.);
     }
+    assert(0 <= ProbCompute && ProbCompute <= 1 &&
+           "Expected valid probability");
 
     // Compute the resulting total frequency.
     if (ProbReachingBackedge * ProbCompute == 1) {
