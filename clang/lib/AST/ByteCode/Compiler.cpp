@@ -2640,9 +2640,6 @@ bool Compiler<Emitter>::VisitMemberExpr(const MemberExpr *E) {
   }
 
   if (!isa<FieldDecl>(Member)) {
-    if (!this->discard(Base) && !this->emitSideEffect(E))
-      return false;
-
     // Bound member functions (non-static CXXMethodDecls) cannot be
     // constant-evaluated. visitDeclRef would blindly push a FnPtr,
     // but the caller expects a MemberPointer, causing a stack mismatch.
@@ -2650,6 +2647,9 @@ bool Compiler<Emitter>::VisitMemberExpr(const MemberExpr *E) {
       if (!MD->isStatic())
         return false;
     }
+
+    if (!this->discard(Base) && !this->emitSideEffect(E))
+      return false;
 
     return this->visitDeclRef(Member, E);
   }
