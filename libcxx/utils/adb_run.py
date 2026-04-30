@@ -63,9 +63,11 @@ def sync_test_dir(local_dir: str, remote_dir: str) -> None:
         if not os.path.islink(local_file) and os.path.isfile(local_file):
             run_adb_sync_command(["adb", "push", "--sync", local_file,
                                   remote_file])
-            # Android M (API 23) x86 emulator doesn't have permissions to write to
-            # /data/local/tmp, so we need to change the permissions of the
-            # directory.
+            # Some libc++ tests create temporary files in the working directory,
+            # which might be owned by root. In Android M (API 23), the
+            # directories are owned by root so they are not writable by the
+            # shell user. Make them writable before running the tests as the shell
+            # user.
             run_adb_sync_command(["adb", "shell", "chmod", "777", REMOTE_BASE_DIR])
             run_adb_sync_command(
                 ["adb", "shell", "chmod", "777", os.path.dirname(remote_dir)]
@@ -78,9 +80,10 @@ def sync_test_dir(local_dir: str, remote_dir: str) -> None:
     run_adb_sync_command(["adb", "push", "--sync", local_dir,
                           os.path.dirname(remote_dir)])
 
-    # Android M (API 23) x86 emulator doesn't have permissions to write to
-    # /data/local/tmp, so we need to change the permissions of the
-    # directory.
+    # Some libc++ tests create temporary files in the working directory, which might be
+    # owned by root. In Android M (API 23), the directories are owned by root so they are
+    # not writable by the shell user. Make them writable before running the tests as the
+    # shell user.
     run_adb_sync_command(["adb", "shell", "chmod", "777", REMOTE_BASE_DIR])
     run_adb_sync_command(["adb", "shell", "chmod", "777", os.path.dirname(remote_dir)])
     run_adb_sync_command(["adb", "shell", "chmod", "777", remote_dir])
@@ -128,10 +131,6 @@ def run_command(args: argparse.Namespace) -> int:
         # emulator devices (before Android N) do not have a working `adb unroot`
         # and always run as root. Non-debug builds typically lack `su` and only
         # run as the shell user.
-        #
-        # Some libc++ tests create temporary files in the working directory,
-        # which might be owned by root. Before switching to shell, make the
-        # cwd writable (and readable+executable) to every user.
         #
         # N.B.:
         #  - Avoid "id -u" because it wasn't supported until Android M.
@@ -219,7 +218,7 @@ def run_command(args: argparse.Namespace) -> int:
             return 1
 
         # Android M (API 23) will print a warning for DT_FLAGS_1=0x8000001
-        # because they were not set in the dynamic flags since Android N.
+        # because they were not set until 2016 which is Android O.
         stderr_content = match.group(1)
         stderr_content = re.sub(
             r"^WARNING: linker: .*unsupported flags DT_FLAGS_1=.*\n?",
