@@ -2419,6 +2419,62 @@ define signext i32 @vreduce_mul_nxv4i32_exact_vlen(<vscale x 4 x i32> %v) vscale
   ret i32 %red
 }
 
+define signext i32 @vreduce_mul_nxv6i32_from_nxv8i32_exact_vlen(<vscale x 8 x i32> %v) vscale_range(2,2) {
+; CHECK-LABEL: vreduce_mul_nxv6i32_from_nxv8i32_exact_vlen:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v11, v10, 3
+; CHECK-NEXT:    vslidedown.vi v12, v10, 2
+; CHECK-NEXT:    vslidedown.vi v13, v10, 1
+; CHECK-NEXT:    vmv.x.s a0, v10
+; CHECK-NEXT:    vslidedown.vi v10, v8, 3
+; CHECK-NEXT:    vslidedown.vi v14, v8, 2
+; CHECK-NEXT:    vslidedown.vi v15, v8, 1
+; CHECK-NEXT:    vmv.x.s a1, v8
+; CHECK-NEXT:    vslidedown.vi v8, v9, 3
+; CHECK-NEXT:    vslidedown.vi v16, v9, 2
+; CHECK-NEXT:    vmv.x.s a2, v9
+; CHECK-NEXT:    vslidedown.vi v9, v9, 1
+; CHECK-NEXT:    vmv.x.s a3, v11
+; CHECK-NEXT:    vmv.x.s a4, v12
+; CHECK-NEXT:    vmv.x.s a5, v13
+; CHECK-NEXT:    vmv.x.s a6, v10
+; CHECK-NEXT:    vmv.x.s a7, v14
+; CHECK-NEXT:    vmv.x.s t0, v15
+; CHECK-NEXT:    vmv.x.s t1, v8
+; CHECK-NEXT:    vmv.x.s t2, v16
+; CHECK-NEXT:    vmv.x.s t3, v9
+; CHECK-NEXT:    vmv.v.x v8, a2
+; CHECK-NEXT:    vmv.v.x v9, a1
+; CHECK-NEXT:    vmv.v.x v10, a0
+; CHECK-NEXT:    vslide1down.vx v8, v8, t3
+; CHECK-NEXT:    vslide1down.vx v9, v9, t0
+; CHECK-NEXT:    vslide1down.vx v10, v10, a5
+; CHECK-NEXT:    vslide1down.vx v8, v8, t2
+; CHECK-NEXT:    vslide1down.vx v11, v9, a7
+; CHECK-NEXT:    vslide1down.vx v10, v10, a4
+; CHECK-NEXT:    vslide1down.vx v9, v8, t1
+; CHECK-NEXT:    vslide1down.vx v10, v10, a3
+; CHECK-NEXT:    vslide1down.vx v8, v11, a6
+; CHECK-NEXT:    vmv.v.i v11, 1
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vmul.vv v8, v8, v10
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vmul.vv v8, v8, v9
+; CHECK-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v9, v8, 2
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vmul.vv v8, v8, v9
+; CHECK-NEXT:    vslidedown.vi v9, v8, 1
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-NEXT:    vmul.vv v8, v8, v9
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    ret
+  %sub = call <vscale x 6 x i32> @llvm.vector.extract.nxv6i32.nxv8i32(<vscale x 8 x i32> %v, i64 0)
+  %red = call i32 @llvm.vector.reduce.mul.nxv6i32(<vscale x 6 x i32> %sub)
+  ret i32 %red
+}
+
 define signext i32 @vreduce_mul_nxv6i32_exact_vlen(<vscale x 6 x i32> %v) vscale_range(2,2) {
 ; CHECK-LABEL: vreduce_mul_nxv6i32_exact_vlen:
 ; CHECK:       # %bb.0:
