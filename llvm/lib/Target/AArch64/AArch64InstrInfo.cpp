@@ -140,13 +140,17 @@ static std::optional<unsigned> getLFIInstSizeInBytes(const MachineInstr &MI) {
     break;
   }
 
-  // Instructions that explicitly modify LR get an extra LR mask.
+  // Detect instructions that explicitly define SP or LR.
   bool ModifiesLR = false;
-  for (const MachineOperand &MO : MI.explicit_operands())
-    if (MO.isReg() && MO.isDef() && MO.getReg() == AArch64::LR) {
+  bool ModifiesSP = false;
+  for (const MachineOperand &MO : MI.defs()) {
+    if (!MO.isReg())
+      continue;
+    if (MO.getReg() == AArch64::LR)
       ModifiesLR = true;
-      break;
-    }
+    else if (MO.getReg() == AArch64::SP)
+      ModifiesSP = true;
+  }
 
   // Memory accesses expand to a base-register guard plus the rewritten access
   // (8 bytes), with an extra base-register update for pre/post-index forms (12
@@ -159,6 +163,10 @@ static std::optional<unsigned> getLFIInstSizeInBytes(const MachineInstr &MI) {
       Size += 4;
     return Size;
   }
+
+  // SP modification expands to 2 instructions.
+  if (ModifiesSP)
+    return 8;
 
   // Non-memory instructions that modify LR expand to 2 instructions.
   if (ModifiesLR)
