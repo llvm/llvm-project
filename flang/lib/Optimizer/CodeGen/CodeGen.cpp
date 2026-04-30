@@ -972,7 +972,7 @@ struct ConvertOpConversion : public fir::FIROpConversion<fir::ConvertOp> {
       if (fromMemRefTy)
         basePtr = getBufferPtr(basePtr, fromMemRefTy);
 
-      auto [strides, offset] = memRefTy.getStridesAndOffset();
+      auto [strides, offset] = toMemRefTy.getStridesAndOffset();
       bool hasStaticLayout =
           mlir::ShapedType::isStatic(offset) &&
           llvm::none_of(strides, mlir::ShapedType::isDynamic);
