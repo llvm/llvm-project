@@ -56,8 +56,8 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_dmul)
   // form to be multiplied.
   bic     xh, xh, r12, lsl #5     // r12 = 0x07FF0000, so r12 << 5 = 0xFF800000
   bic     yh, yh, r12, lsl #5
-  orr     xh, xh, #1<<20
-  orr     yh, yh, #1<<20
+  orr     xh, xh, #(1 << 20)
+  orr     yh, yh, #(1 << 20)
 
   // Now we're ready to multiply mantissas. This is also the place we'll come
   // back to after decoding denormal inputs. The denormal decoding will also
