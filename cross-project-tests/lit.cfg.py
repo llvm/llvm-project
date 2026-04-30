@@ -110,6 +110,49 @@ if llvm_config.use_llvm_tool("llvm-ar"):
     config.available_features.add("llvm-ar")
 
 
+def check_dexter_requirements():
+    # Determine whether Dexter's dependencies are available, and disable Dexter tests if not.
+    dexter_requirements_path = os.path.join(
+        config.cross_project_tests_src_root,
+        "debuginfo-tests",
+        "dexter",
+        "requirements.txt",
+    )
+    if not os.path.isfile(dexter_requirements_path):
+        print(
+            f"Couldn't find Dexter requirements path at existed path: {dexter_requirements_path}"
+        )
+        return False
+    with open(dexter_requirements_path) as req:
+        requirements_list = [
+            req_str
+            for req_line in req
+            if (req_str := req_line.strip()) and not req_str.startswith("#")
+        ]
+    try:
+        from packaging.requirements import Requirement
+        from importlib.metadata import version
+    except Exception as e:
+        # If we don't have packaging, we can't check requirements - assume false.
+        print(f"Missing required packages to check version: {e}")
+        return False
+    for req_str in requirements_list:
+        req = Requirement(req_str)
+        if req.marker and not req.marker.evaluate():
+            continue
+        try:
+            current_version = version(req.name)
+        except BaseException as e:
+            print(f"Missing required packages for Dexter: {req_str}")
+            return False
+        if req.specifier and current_version not in req.specifier:
+            print(
+                f"Dexter Requirement {req_str} has incorrect installed version {current_version}"
+            )
+            return False
+    return True
+
+
 def configure_dexter_substitutions():
     """Configure substitutions for host platform and return list of dependencies"""
     # Produce dexter path, lldb path, and combine into the %dexter substitution
@@ -223,16 +266,24 @@ def can_target_host():
 # Dexter tests run on the host machine. If the host arch is supported add
 # 'dexter' as an available feature and force the dexter tests to use the host
 # triple.
-if can_target_host():
-    if config.host_triple != config.target_triple:
-        print("Forcing dexter tests to use host triple {}.".format(config.host_triple))
-    dependencies = configure_dexter_substitutions()
-    if all(d in config.available_features for d in dependencies):
-        config.available_features.add("dexter")
+if check_dexter_requirements():
+    if can_target_host():
+        if config.host_triple != config.target_triple:
+            print(
+                "Forcing dexter tests to use host triple {}.".format(config.host_triple)
+            )
+
+        dependencies = configure_dexter_substitutions()
+        if all(d in config.available_features for d in dependencies):
+            config.available_features.add("dexter")
+    else:
+        print(
+            "Host triple {} not supported. Skipping dexter tests in the "
+            "debuginfo-tests project.".format(config.host_triple)
+        )
 else:
     print(
-        "Host triple {} not supported. Skipping dexter tests in the "
-        "debuginfo-tests project.".format(config.host_triple)
+        "Missing or unable to verify dexter requirements; skipping dexter tests in the debuginfo-tests project."
     )
 
 tool_dirs = [config.llvm_tools_dir]
