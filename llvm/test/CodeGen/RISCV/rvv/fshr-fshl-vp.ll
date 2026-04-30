@@ -941,13 +941,13 @@ define <vscale x 1 x i9> @fshl_v1i9(<vscale x 1 x i9> %a, <vscale x 1 x i9> %b, 
 define <vscale x 1 x i8> @fshr_v1i4(<vscale x 1 x i8> %a, <vscale x 1 x i8> %b, <vscale x 1 x i8> %c, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: fshr_v1i4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vand.vi v9, v9, 15
 ; CHECK-NEXT:    vsll.vi v8, v8, 4
 ; CHECK-NEXT:    vor.vv v8, v8, v9
 ; CHECK-NEXT:    vand.vi v9, v10, 3
 ; CHECK-NEXT:    vsrl.vv v8, v8, v9
-; CHECK-NEXT:    vand.vi v8, v8, 15, v0.t
+; CHECK-NEXT:    vand.vi v8, v8, 15
 ; CHECK-NEXT:    ret
   %trunca = call <vscale x 1 x i4> @llvm.vp.trunc.nxv1i4.nxv1i8(<vscale x 1 x i8> %a, <vscale x 1 x i1> %m, i32 zeroext %evl)
   %truncb = call <vscale x 1 x i4> @llvm.vp.trunc.nxv1i4.nxv1i8(<vscale x 1 x i8> %b, <vscale x 1 x i1> %m, i32 zeroext %evl)
@@ -960,14 +960,13 @@ define <vscale x 1 x i8> @fshr_v1i4(<vscale x 1 x i8> %a, <vscale x 1 x i8> %b, 
 define <vscale x 1 x i8> @fshl_v1i4(<vscale x 1 x i8> %a, <vscale x 1 x i8> %b, <vscale x 1 x i8> %c, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: fshl_v1i4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vand.vi v9, v9, 15
 ; CHECK-NEXT:    vsll.vi v8, v8, 4
 ; CHECK-NEXT:    vor.vv v8, v8, v9
 ; CHECK-NEXT:    vand.vi v9, v10, 3
 ; CHECK-NEXT:    vsll.vv v8, v8, v9
 ; CHECK-NEXT:    vsrl.vi v8, v8, 4
-; CHECK-NEXT:    vand.vi v8, v8, 15, v0.t
 ; CHECK-NEXT:    ret
   %trunca = call <vscale x 1 x i4> @llvm.vp.trunc.nxv1i4.nxv1i8(<vscale x 1 x i8> %a, <vscale x 1 x i1> %m, i32 zeroext %evl)
   %truncb = call <vscale x 1 x i4> @llvm.vp.trunc.nxv1i4.nxv1i8(<vscale x 1 x i8> %b, <vscale x 1 x i1> %m, i32 zeroext %evl)

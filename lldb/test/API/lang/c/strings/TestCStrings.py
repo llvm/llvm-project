@@ -7,6 +7,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfWasm  # no expression evaluation
 class CStringsTestCase(TestBase):
     def test_with_run_command(self):
         """Tests that C strings work as expected in expressions"""

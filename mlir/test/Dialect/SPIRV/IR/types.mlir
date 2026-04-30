@@ -486,6 +486,18 @@ func.func private @coop_matrix_types(!spirv.coopmatrix<8x16xi32, Subgroup, Matri
                                      !spirv.coopmatrix<8x8xf32, Workgroup, MatrixB>,
                                      !spirv.coopmatrix<4x8xf32, Workgroup, MatrixAcc>) -> ()
 
+// CHECK-LABEL: func private @coop_matrix_types_f8E4M3FN
+// CHECK-SAME:    !spirv.coopmatrix<8x16xf8E4M3FN, Subgroup, MatrixA>
+func.func private @coop_matrix_types_f8E4M3FN(!spirv.coopmatrix<8x16xf8E4M3FN, Subgroup, MatrixA>) -> ()
+
+// CHECK-LABEL: func private @coop_matrix_types_f8E5M2
+// CHECK-SAME:    !spirv.coopmatrix<8x16xf8E5M2, Subgroup, MatrixA>
+func.func private @coop_matrix_types_f8E5M2(!spirv.coopmatrix<8x16xf8E5M2, Subgroup, MatrixA>) -> ()
+
+// CHECK-LABEL: func private @coop_matrix_types_bf16
+// CHECK-SAME:    !spirv.coopmatrix<8x16xbf16, Subgroup, MatrixA>
+func.func private @coop_matrix_types_bf16(!spirv.coopmatrix<8x16xbf16, Subgroup, MatrixA>) -> ()
+
 // -----
 
 // expected-error @+1 {{expected valid keyword}}

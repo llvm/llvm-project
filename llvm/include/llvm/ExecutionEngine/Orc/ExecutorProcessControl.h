@@ -14,7 +14,6 @@
 #define LLVM_EXECUTIONENGINE_ORC_EXECUTORPROCESSCONTROL_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
@@ -27,6 +26,12 @@
 #include <future>
 #include <mutex>
 #include <vector>
+
+namespace llvm::jitlink {
+
+class JITLinkMemoryManager;
+
+} // namespace llvm::jitlink
 
 namespace llvm::orc {
 
@@ -134,11 +139,9 @@ public:
   /// Get the JIT dispatch function and context address for the executor.
   const JITDispatchInfo &getJITDispatchInfo() const { return JDI; }
 
-  /// Return a JITLinkMemoryManager for the target process.
-  jitlink::JITLinkMemoryManager &getMemMgr() const {
-    assert(MemMgr && "No MemMgr object set");
-    return *MemMgr;
-  }
+  /// Create a default JITLinkMemoryManager for the target process.
+  virtual Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
+  createDefaultMemoryManager() = 0;
 
   /// Create a default DylibManager for the target process.
   virtual Expected<std::unique_ptr<DylibManager>> createDefaultDylibMgr() = 0;
@@ -310,7 +313,6 @@ protected:
   Triple TargetTriple;
   unsigned PageSize = 0;
   JITDispatchInfo JDI;
-  jitlink::JITLinkMemoryManager *MemMgr = nullptr;
   StringMap<std::vector<char>> BootstrapMap;
   StringMap<ExecutorAddr> BootstrapSymbols;
 };

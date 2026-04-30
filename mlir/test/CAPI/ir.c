@@ -2376,6 +2376,24 @@ void testExplicitThreadPools(void) {
   mlirLlvmThreadPoolDestroy(threadPool);
 }
 
+void testLocation(void) {
+  MlirContext ctx = mlirContextCreate();
+  fprintf(stderr, "@test_location\n");
+
+  MlirLocation unknownLoc = mlirLocationUnknownGet(ctx);
+  MlirLocation fileLoc = mlirLocationFileLineColGet(
+      ctx, mlirStringRefCreateFromCString("foo.c"), 1, 2);
+
+  // CHECK-LABEL: @test_location
+  // CHECK: unknown is_a_unknown: 1
+  fprintf(stderr, "unknown is_a_unknown: %d\n",
+          mlirLocationIsAUnknown(unknownLoc));
+  // CHECK: file is_a_unknown: 0
+  fprintf(stderr, "file is_a_unknown: %d\n", mlirLocationIsAUnknown(fileLoc));
+
+  mlirContextDestroy(ctx);
+}
+
 void testDiagnostics(void) {
   MlirContext ctx = mlirContextCreate();
   MlirDiagnosticHandlerID id = mlirContextAttachDiagnosticHandler(
@@ -2552,6 +2570,7 @@ int main(void) {
     return 16;
 
   testExplicitThreadPools();
+  testLocation();
   testDiagnostics();
 
   if (testBlockPredecessorsSuccessors(ctx))
