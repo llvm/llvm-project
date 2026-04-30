@@ -10,20 +10,23 @@
 #define LLVM_LIBC_TYPES___MUTEX_TYPE_H
 
 #include "__futex_word.h"
+#include "pid_t.h"
+#include "size_t.h"
 
 typedef struct {
-  unsigned char __timed;
-  unsigned char __recursive;
-  unsigned char __robust;
-
-  void *__owner;
-  unsigned long long __lock_count;
-
 #ifdef __linux__
   __futex_word __ftxw;
 #else
 #error "Mutex type not defined for the target platform."
 #endif
+
+  unsigned int __priority_inherit : 1;
+  unsigned int __recursive : 1;
+  unsigned int __robust : 1;
+  unsigned int __pshared : 1;
+
+  pid_t __owner;
+  size_t __lock_count;
 } __mutex_type;
 
 #endif // LLVM_LIBC_TYPES___MUTEX_TYPE_H

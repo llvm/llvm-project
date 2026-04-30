@@ -37,8 +37,9 @@ which ensures that every volatile load and store happens and is performed in the
 stated order.  A couple examples: if a SequentiallyConsistent store is
 immediately followed by another SequentiallyConsistent store to the same
 address, the first store can be erased. This transformation is not allowed for a
-pair of volatile stores. On the other hand, a non-volatile non-atomic load can
-be moved across a volatile load freely, but not an Acquire load.
+pair of volatile stores. On the other hand, a speculatable non-volatile
+non-atomic load can be moved across a volatile load freely, but not an Acquire
+load.
 
 This document is intended to guide anyone writing a frontend
 for LLVM or working on optimization passes for LLVM on how to deal

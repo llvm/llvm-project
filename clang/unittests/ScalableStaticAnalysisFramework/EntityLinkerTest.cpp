@@ -197,7 +197,7 @@ TEST_F(EntityLinkerTest, CreatesEmptyLinker) {
 
   EntityLinker Linker(LUNamespace);
 
-  const auto Output = std::move(Linker).getOutput();
+  const auto Output = std::move(Linker).takeOutput();
   EXPECT_EQ(getIdTable(Output).count(), 0u);
   EXPECT_EQ(getLinkageTable(Output).size(), 0u);
   EXPECT_EQ(getData(Output).size(), 0u);
@@ -214,7 +214,7 @@ TEST_F(EntityLinkerTest, LinksEmptyTranslationUnit) {
 
   EXPECT_THAT_ERROR(Linker.link(std::move(TUEmpty)), llvm::Succeeded());
 
-  const auto Output = std::move(Linker).getOutput();
+  const auto Output = std::move(Linker).takeOutput();
   EXPECT_EQ(getIdTable(Output).count(), 0u);
   EXPECT_EQ(getLinkageTable(Output).size(), 0u);
   EXPECT_EQ(getData(Output).size(), 0u);
@@ -246,7 +246,7 @@ TEST_F(EntityLinkerTest, LinksOneTranslationUnit) {
 
   ASSERT_THAT_ERROR(Linker.link(std::move(TU)), llvm::Succeeded());
 
-  const auto Output = std::move(Linker).getOutput();
+  const auto Output = std::move(Linker).takeOutput();
   const auto &IdTable = getIdTable(Output);
   const auto &Entities = getEntities(IdTable);
   const auto &LinkageTable = getLinkageTable(Output);
@@ -411,7 +411,7 @@ TEST_F(EntityLinkerTest, LinksTwoTranslationUnits) {
 
   ASSERT_THAT_ERROR(Linker.link(std::move(TU2)), llvm::Succeeded());
 
-  const auto Output = std::move(Linker).getOutput();
+  const auto Output = std::move(Linker).takeOutput();
   const auto &IdTable = getIdTable(Output);
   const auto &Entities = getEntities(IdTable);
   const auto &LinkageTable = getLinkageTable(Output);
@@ -648,7 +648,7 @@ TEST_F(EntityLinkerTest, InternalLinkageWithEmptyNamespaceAcrossTUs) {
   ASSERT_THAT_ERROR(Linker.link(std::move(TU2)), llvm::Succeeded());
 
   // Check that the two internal symbols are not merged.
-  const auto Output = std::move(Linker).getOutput();
+  const auto Output = std::move(Linker).takeOutput();
   const auto &IdTable = getIdTable(Output);
 
   NestedBuildNamespace TU1NS{{{CompilationUnit, "TU1"}, {LinkUnit, "LU"}}};

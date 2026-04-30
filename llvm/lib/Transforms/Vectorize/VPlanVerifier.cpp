@@ -97,8 +97,8 @@ bool VPlanVerifier::verifyPhiRecipes(const VPBasicBlock *VPBB) {
     }
 
     if (isa<VPCurrentIterationPHIRecipe>(RecipeI) &&
-        !isa_and_nonnull<VPCanonicalIVPHIRecipe>(std::prev(RecipeI))) {
-      errs() << "CurrentIteration PHI is not immediately after canonical IV\n";
+        RecipeI->getIterator() != VPBB->begin()) {
+      errs() << "CurrentIteration PHI is not the first recipe\n";
       return false;
     }
 
@@ -148,7 +148,7 @@ static bool isKnownMonotonic(VPValue *V) {
     return true;
   // Only handle a subset of IVs until we can guarantee there's no overflow.
   if (auto *WidenIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(V))
-    return WidenIV->isCanonical();
+    return WidenIV->isCanonical() || WidenIV->hasNoUnsignedWrap();
   if (auto *Steps = dyn_cast<VPScalarIVStepsRecipe>(V))
     return match(Steps->getOperand(0),
                  m_CombineOr(
@@ -472,12 +472,6 @@ bool VPlanVerifier::verify(const VPlan &Plan) {
   const VPBasicBlock *Entry = dyn_cast<VPBasicBlock>(TopRegion->getEntry());
   if (!Entry) {
     errs() << "VPlan entry block is not a VPBasicBlock\n";
-    return false;
-  }
-
-  if (!isa<VPCanonicalIVPHIRecipe>(&*Entry->begin())) {
-    errs() << "VPlan vector loop header does not start with a "
-              "VPCanonicalIVPHIRecipe\n";
     return false;
   }
 

@@ -12,6 +12,7 @@ import lldbdap_testcase
 from lldbsuite.test import lldbutil
 
 
+@skipIfTargetDoesNotSupportSharedLibraries()
 class TestDAP_eventStatistic(lldbdap_testcase.DAPTestCaseBase):
     """
 

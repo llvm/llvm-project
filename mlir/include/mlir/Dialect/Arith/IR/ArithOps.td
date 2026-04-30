@@ -991,6 +991,45 @@ def Arith_NegFOp : Arith_FloatUnaryOp<"negf"> {
 }
 
 //===----------------------------------------------------------------------===//
+// FlushDenormalsOp
+//===----------------------------------------------------------------------===//
+
+def Arith_FlushDenormalsOp : Arith_FloatUnaryOp<"flush_denormals"> {
+  let summary = "flush denormal floating-point values to zero";
+  let description = [{
+    The `flush_denormals` operation takes a floating-point value and returns
+    the input value if it is a normal (or zero, infinity, or NaN) value, or
+    a zero of the same type if the input is a denormal (subnormal) value.
+    The sign of zero is preserved when flushing a denormal: negative
+    denormals flush to `-0.0`, positive denormals flush to `+0.0`.
+
+    A denormal number ("subnormal number" in IEEE-754) is a non-zero floating
+    point number that is smaller (closer to zero) than the smallest normal
+    number. Denormals fill the underflow gap around zero in floating-point
+    arithmetics, but may come at a runtime cost on some architectures.
+
+    The input and result are required to be the same type. This type may be
+    a floating-point scalar type, a vector whose element type is a
+    floating-point type, or a tensor of floats. When operating on vectors
+    or tensors, the operation is applied elementwise.
+
+    Example:
+
+    ```mlir
+    // Scalar denormal flushing.
+    %a = arith.flush_denormals %b : f32
+
+    // SIMD vector element-wise denormal flushing.
+    %f = arith.flush_denormals %g : vector<4xf32>
+
+    // Tensor element-wise denormal flushing.
+    %x = arith.flush_denormals %y : tensor<4x?xbf16>
+    ```
+  }];
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // AddFOp
 //===----------------------------------------------------------------------===//
 

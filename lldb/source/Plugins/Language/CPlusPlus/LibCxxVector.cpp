@@ -121,9 +121,9 @@ lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::GetChildAtIndex(
   offset = offset + m_start->GetValueAsUnsigned(0);
   StreamString name;
   name.Printf("[%" PRIu64 "]", (uint64_t)idx);
-  return CreateValueObjectFromAddress(name.GetString(), offset,
-                                      m_backend.GetExecutionContextRef(),
-                                      m_element_type);
+  return CreateChildValueObjectFromAddress(name.GetString(), offset,
+                                           m_backend.GetExecutionContextRef(),
+                                           m_element_type);
 }
 
 static ValueObjectSP GetDataPointer(ValueObject &root) {
@@ -228,11 +228,11 @@ lldb_private::formatters::LibcxxVectorBoolSyntheticFrontEnd::GetChildAtIndex(
   }
   StreamString name;
   name.Printf("[%" PRIu64 "]", (uint64_t)idx);
-  ValueObjectSP retval_sp(CreateValueObjectFromData(
+  ValueObjectSP retval_sp = CreateChildValueObjectFromData(
       name.GetString(),
       DataExtractor(buffer_sp, process_sp->GetByteOrder(),
                     process_sp->GetAddressByteSize()),
-      m_exe_ctx_ref, m_bool_type));
+      m_exe_ctx_ref, m_bool_type);
   if (retval_sp)
     m_children[idx] = retval_sp;
   return retval_sp;

@@ -9,8 +9,8 @@ define ptr @test_simple_load_pre(ptr %ptr) {
   ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 42
-  ; CHECK-NEXT:   [[INDEXED_LOAD:%[0-9]+]]:_(s8), [[INDEXED_LOAD1:%[0-9]+]]:_(p0) = G_INDEXED_LOAD [[COPY]], [[C]](s64), 1 :: (volatile load (s8) from %ir.next)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 42
+  ; CHECK-NEXT:   [[INDEXED_LOAD:%[0-9]+]]:_(i8), [[INDEXED_LOAD1:%[0-9]+]]:_(p0) = G_INDEXED_LOAD [[COPY]], [[C]](i64), 1 :: (volatile load (i8) from %ir.next)
   ; CHECK-NEXT:   $x0 = COPY [[INDEXED_LOAD1]](p0)
   ; CHECK-NEXT:   RET_ReallyLR implicit $x0
   %next = getelementptr i8, ptr %ptr, i32 42
@@ -25,9 +25,9 @@ define ptr @test_unused_load_pre(ptr %ptr) {
   ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 42
-  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s64)
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[PTR_ADD]](p0) :: (volatile load (s8) from %ir.next)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 42
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](i64)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i8) = G_LOAD [[PTR_ADD]](p0) :: (volatile load (i8) from %ir.next)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
   ; CHECK-NEXT:   $x0 = COPY [[C1]](p0)
   ; CHECK-NEXT:   RET_ReallyLR implicit $x0
@@ -43,9 +43,9 @@ define ptr @test_simple_store_pre(ptr %ptr) {
   ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 42
-  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
-  ; CHECK-NEXT:   [[INDEXED_STORE:%[0-9]+]]:_(p0) = G_INDEXED_STORE [[C1]](s8), [[COPY]], [[C]](s64), 1 :: (volatile store (s8) into %ir.next)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 42
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i8) = G_CONSTANT i8 0
+  ; CHECK-NEXT:   [[INDEXED_STORE:%[0-9]+]]:_(p0) = G_INDEXED_STORE [[C1]](i8), [[COPY]], [[C]](i64), 1 :: (volatile store (i8) into %ir.next)
   ; CHECK-NEXT:   $x0 = COPY [[INDEXED_STORE]](p0)
   ; CHECK-NEXT:   RET_ReallyLR implicit $x0
   %next = getelementptr i8, ptr %ptr, i32 42
@@ -62,8 +62,8 @@ define ptr @test_store_pre_val_loop(ptr %ptr) {
   ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 336
-  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s64)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 336
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](i64)
   ; CHECK-NEXT:   G_STORE [[PTR_ADD]](p0), [[PTR_ADD]](p0) :: (volatile store (p0) into %ir.next)
   ; CHECK-NEXT:   $x0 = COPY [[PTR_ADD]](p0)
   ; CHECK-NEXT:   RET_ReallyLR implicit $x0
@@ -81,12 +81,12 @@ define ptr @test_load_pre_before(ptr %ptr) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 42
-  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s64)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 42
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](i64)
   ; CHECK-NEXT:   $x0 = COPY [[PTR_ADD]](p0)
   ; CHECK-NEXT:   BL @bar, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[PTR_ADD]](p0) :: (volatile load (s8) from %ir.next)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i8) = G_LOAD [[PTR_ADD]](p0) :: (volatile load (i8) from %ir.next)
   ; CHECK-NEXT:   $x0 = COPY [[PTR_ADD]](p0)
   ; CHECK-NEXT:   RET_ReallyLR implicit $x0
   %next = getelementptr i8, ptr %ptr, i32 42
@@ -101,10 +101,10 @@ define ptr @test_alloca_load_pre() {
 
   ; CHECK-LABEL: name: test_alloca_load_pre
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 42
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 42
   ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.ptr
-  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s64)
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[PTR_ADD]](p0) :: (volatile dereferenceable load (s8) from %ir.next)
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](i64)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i8) = G_LOAD [[PTR_ADD]](p0) :: (volatile dereferenceable load (i8) from %ir.next)
   ; CHECK-NEXT:   $x0 = COPY [[PTR_ADD]](p0)
   ; CHECK-NEXT:   RET_ReallyLR implicit $x0
   %ptr = alloca i8, i32 128
@@ -120,8 +120,8 @@ define ptr @test_simple_load_post(ptr %ptr) {
   ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 42
-  ; CHECK-NEXT:   [[INDEXED_LOAD:%[0-9]+]]:_(s8), [[INDEXED_LOAD1:%[0-9]+]]:_(p0) = G_INDEXED_LOAD [[COPY]], [[C]](s64), 0 :: (volatile load (s8) from %ir.ptr)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 42
+  ; CHECK-NEXT:   [[INDEXED_LOAD:%[0-9]+]]:_(i8), [[INDEXED_LOAD1:%[0-9]+]]:_(p0) = G_INDEXED_LOAD [[COPY]], [[C]](i64), 0 :: (volatile load (i8) from %ir.ptr)
   ; CHECK-NEXT:   $x0 = COPY [[INDEXED_LOAD1]](p0)
   ; CHECK-NEXT:   RET_ReallyLR implicit $x0
   %next = getelementptr i8, ptr %ptr, i32 42
@@ -139,8 +139,8 @@ define ptr @test_simple_load_post_gep_after(ptr %ptr) {
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   BL @get_offset, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit-def $x0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x0
-  ; CHECK-NEXT:   [[INDEXED_LOAD:%[0-9]+]]:_(s8), [[INDEXED_LOAD1:%[0-9]+]]:_(p0) = G_INDEXED_LOAD [[COPY]], [[COPY1]](s64), 0 :: (volatile load (s8) from %ir.ptr)
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i64) = COPY $x0
+  ; CHECK-NEXT:   [[INDEXED_LOAD:%[0-9]+]]:_(i8), [[INDEXED_LOAD1:%[0-9]+]]:_(p0) = G_INDEXED_LOAD [[COPY]], [[COPY1]](i64), 0 :: (volatile load (i8) from %ir.ptr)
   ; CHECK-NEXT:   $x0 = COPY [[INDEXED_LOAD1]](p0)
   ; CHECK-NEXT:   RET_ReallyLR implicit $x0
   %offset = call i64 @get_offset()
@@ -159,13 +159,13 @@ define ptr @test_load_post_keep_looking(ptr %ptr) {
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   BL @get_offset, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit-def $x0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x0
-  ; CHECK-NEXT:   [[INDEXED_LOAD:%[0-9]+]]:_(s8), [[INDEXED_LOAD1:%[0-9]+]]:_(p0) = G_INDEXED_LOAD [[COPY]], [[COPY1]](s64), 0 :: (volatile load (s8) from %ir.ptr)
-  ; CHECK-NEXT:   [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[COPY]](p0)
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[PTRTOINT]](s64)
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i64) = COPY $x0
+  ; CHECK-NEXT:   [[INDEXED_LOAD:%[0-9]+]]:_(i8), [[INDEXED_LOAD1:%[0-9]+]]:_(p0) = G_INDEXED_LOAD [[COPY]], [[COPY1]](i64), 0 :: (volatile load (i8) from %ir.ptr)
+  ; CHECK-NEXT:   [[PTRTOINT:%[0-9]+]]:_(i64) = G_PTRTOINT [[COPY]](p0)
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i8) = G_TRUNC [[PTRTOINT]](i64)
   ; CHECK-NEXT:   [[ADRP:%[0-9]+]]:gpr64(p0) = ADRP target-flags(aarch64-page) @var
   ; CHECK-NEXT:   [[ADD_LOW:%[0-9]+]]:_(p0) = G_ADD_LOW [[ADRP]](p0), target-flags(aarch64-pageoff, aarch64-nc) @var
-  ; CHECK-NEXT:   G_STORE [[TRUNC]](s8), [[ADD_LOW]](p0) :: (store (s8) into @var)
+  ; CHECK-NEXT:   G_STORE [[TRUNC]](i8), [[ADD_LOW]](p0) :: (store (i8) into @var)
   ; CHECK-NEXT:   $x0 = COPY [[INDEXED_LOAD1]](p0)
   ; CHECK-NEXT:   RET_ReallyLR implicit $x0
   %offset = call i64 @get_offset()
@@ -183,9 +183,9 @@ define ptr @test_load_post_alloca() {
   ; CHECK-LABEL: name: test_load_post_alloca
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.ptr
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[FRAME_INDEX]](p0) :: (volatile dereferenceable load (s8) from %ir.ptr)
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 42
-  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s64)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i8) = G_LOAD [[FRAME_INDEX]](p0) :: (volatile dereferenceable load (i8) from %ir.ptr)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 42
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](i64)
   ; CHECK-NEXT:   $x0 = COPY [[PTR_ADD]](p0)
   ; CHECK-NEXT:   RET_ReallyLR implicit $x0
   %ptr = alloca i8, i32 128
@@ -202,12 +202,12 @@ define ptr @test_load_post_gep_offset_after(ptr %ptr) {
   ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[COPY]](p0) :: (volatile load (s8) from %ir.ptr)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i8) = G_LOAD [[COPY]](p0) :: (volatile load (i8) from %ir.ptr)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   BL @get_offset, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit-def $x0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x0
-  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[COPY1]](s64)
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i64) = COPY $x0
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[COPY1]](i64)
   ; CHECK-NEXT:   $x0 = COPY [[PTR_ADD]](p0)
   ; CHECK-NEXT:   RET_ReallyLR implicit $x0
   load volatile i8, ptr %ptr

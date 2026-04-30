@@ -170,8 +170,6 @@ In the following assembly rewrites, some shorthand is used.
 Control flow
 ~~~~~~~~~~~~
 
-**Note**: not yet implemented.
-
 Indirect branches get rewritten to branch through register ``x28``, which must
 always contain an address within the sandbox. An ``add`` is used to safely
 update ``x28`` with the destination address. Since ``ret`` uses ``x30`` by
@@ -300,8 +298,6 @@ before moving it back into ``sp`` with a safe ``add``.
 
 Link register modification
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-**Note**: not yet implemented.
 
 When the link register is modified, we write the modified value to a
 temporary, before loading it back into ``x30`` with a safe ``add``.
