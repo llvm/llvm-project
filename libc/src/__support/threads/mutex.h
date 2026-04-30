@@ -62,6 +62,7 @@ struct Mutex {
   LIBC_INLINE MutexError unlock() { return MutexError::NONE; }
   LIBC_INLINE MutexError reset() { return MutexError::NONE; }
   LIBC_INLINE MutexError trylock() { return MutexError::NONE; }
+  LIBC_INLINE bool is_robust() const { return false; }
 };
 
 } // namespace LIBC_NAMESPACE_DECL
