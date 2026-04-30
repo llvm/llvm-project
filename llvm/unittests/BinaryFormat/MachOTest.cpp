@@ -110,7 +110,8 @@ TEST(MachOTest, CPUSubType) {
   CHECK_CPUSUBTYPE("arm64_32-apple-darwin", MachO::CPU_SUBTYPE_ARM64_32_V8);
   CHECK_CPUSUBTYPE("armv8m.main-apple-darwin", MachO::CPU_SUBTYPE_ARM_V8M_MAIN);
   CHECK_CPUSUBTYPE("armv8m.base-apple-darwin", MachO::CPU_SUBTYPE_ARM_V8M_BASE);
-  CHECK_CPUSUBTYPE("armv8.1m.main-apple-darwin", MachO::CPU_SUBTYPE_ARM_V8_1M_MAIN);
+  CHECK_CPUSUBTYPE("armv8.1m.main-apple-darwin",
+                   MachO::CPU_SUBTYPE_ARM_V8_1M_MAIN);
 
   {
     // Not a mach-o.

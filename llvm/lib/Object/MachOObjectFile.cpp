@@ -2931,26 +2931,10 @@ bool MachOObjectFile::isValidArch(StringRef ArchFlag) {
 
 ArrayRef<StringRef> MachOObjectFile::getValidArchs() {
   static const std::array<StringRef, 21> ValidArchs = {{
-      "i386",
-      "x86_64",
-      "x86_64h",
-      "armv4t",
-      "arm",
-      "armv5e",
-      "armv6",
-      "armv6m",
-      "armv7",
-      "armv7em",
-      "armv7k",
-      "armv7m",
-      "armv7s",
-      "armv8m.base",
-      "armv8m.main",
-      "armv8.1m.main",
-      "arm64",
-      "arm64e",
-      "arm64_32",
-      "ppc",
+      "i386",          "x86_64", "x86_64h", "armv4t",      "arm",
+      "armv5e",        "armv6",  "armv6m",  "armv7",       "armv7em",
+      "armv7k",        "armv7m", "armv7s",  "armv8m.base", "armv8m.main",
+      "armv8.1m.main", "arm64",  "arm64e",  "arm64_32",    "ppc",
       "ppc64",
   }};
 
