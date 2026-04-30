@@ -455,7 +455,11 @@ void OmpStructureChecker::CheckIterationVariables(
   // Collect symbols from DSA clauses on the construct. These symbols
   // are the "host" versions of symbols inside the construct. The flags
   // of interest are on the associated symbols.
-  std::map<const Symbol *, std::pair<parser::CharBlock, llvm::omp::Clause>> dsa;
+  struct ClauseAppearance {
+    llvm::omp::Clause clauseId;
+    parser::CharBlock source;
+  };
+  std::multimap<const Symbol *, ClauseAppearance> dsa;
   for (const parser::OmpClause &clause : spec.Clauses().v) {
     llvm::omp::Clause clauseId{clause.Id()};
     if (llvm::omp::isDataSharingAttributeClause(clauseId, version)) {
@@ -465,12 +469,11 @@ void OmpStructureChecker::CheckIterationVariables(
           auto maybeSource{parser::omp::GetObjectSource(object)};
           assert(maybeSource && "Expecting object source");
           dsa.insert(
-              std::make_pair(symbol, std::make_pair(*maybeSource, clauseId)));
+              std::make_pair(symbol, ClauseAppearance{clauseId, *maybeSource}));
         }
       }
     }
   }
-}
 
   auto [depth, _]{GetAffectedNestDepthWithReason(spec, version)};
   bool isLinearAllowed{false};
@@ -508,8 +511,9 @@ void OmpStructureChecker::CheckIterationVariables(
     assert(iv.symbol->test(Symbol::Flag::OmpPreDetermined) &&
         "Expecting affected iteration variable to have predetermined DSA");
     if (iv.symbol->test(Symbol::Flag::OmpExplicit)) {
-      if (auto f{dsa.find(host)}; f != dsa.end()) {
-        llvm::omp::Clause id{f->second.second};
+      auto range{dsa.equal_range(host)};
+      for (auto found{range.first}; found != range.second; ++found) {
+        llvm::omp::Clause id{found->second.clauseId};
         if (!llvm::omp::isAllowedClauseForDirective(dirId, id, version)) {
           continue;
         }
@@ -521,7 +525,7 @@ void OmpStructureChecker::CheckIterationVariables(
           continue;
         }
         context_
-            .Say(f->second.first,
+            .Say(found->second.source,
                 "Loop iteration variable with a predetermined data sharing attribute cannot appear in a %s clause"_err_en_US,
                 parser::omp::GetUpperName(id, version))
             .Attach(iv.source,
