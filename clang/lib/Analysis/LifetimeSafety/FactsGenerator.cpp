@@ -771,7 +771,7 @@ void FactsGenerator::handleInvalidatingCall(const Expr *Call,
   if (!MD || !MD->isInstance())
     return;
 
-  if (!isContainerInvalidationMethod(*MD))
+  if (!isInvalidationMethod(*MD))
     return;
   // Heuristics to turn-down false positives.
   auto *DRE = dyn_cast<DeclRefExpr>(Args[0]);

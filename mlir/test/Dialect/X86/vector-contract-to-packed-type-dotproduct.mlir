@@ -887,6 +887,111 @@ module attributes {transform.with_named_sequence} {
 // -----
 
 !vecA = vector<1x1x2xbf16>
+!vecB = vector<1x2x16xbf16>
+!vecC = vector<1x16xf32>
+
+#map = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
+#map1 = affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>
+#map2 = affine_map<(d0, d1, d2, d3) -> (d1, d2)>
+
+func.func @brmatmul_bf16dp_flat_layout_loop_tensor_type(%arg0: tensor<16x64x32xbf16>, %arg1: tensor<16x32x64xbf16>, %arg2: tensor<64x64xf32>) -> tensor<64x64xf32> {
+  %0 = ub.poison : f32
+  %1 = ub.poison : bf16
+  %c0 = arith.constant 0 : index
+  %c64 = arith.constant 64 : index
+  %c16 = arith.constant 16 : index
+  %c32 = arith.constant 32 : index
+  %c2 = arith.constant 2 : index
+  %c1 = arith.constant 1 : index
+  %2 = scf.for %arg3 = %c0 to %c64 step %c2 iter_args(%arg4 = %arg2) -> (tensor<64x64xf32>) {
+    %3 = scf.for %arg5 = %c0 to %c64 step %c32 iter_args(%arg6 = %arg4) -> (tensor<64x64xf32>) {
+
+      %extracted_slice = tensor.extract_slice %arg6[%arg3, %arg5] [2, 32] [1, 1]
+                                : tensor<64x64xf32> to tensor<2x32xf32>
+      %4 = vector.transfer_read %extracted_slice[%c0, %c0], %0 {in_bounds = [true, true]}
+                                : tensor<2x32xf32>, !vecC
+      %5 = vector.transfer_read %extracted_slice[%c0, %c16], %0 {in_bounds = [true, true]}
+                                : tensor<2x32xf32>, !vecC
+      %6 = vector.transfer_read %extracted_slice[%c1, %c0], %0 {in_bounds = [true, true]}
+                                : tensor<2x32xf32>, !vecC
+      %7 = vector.transfer_read %extracted_slice[%c1, %c16], %0 {in_bounds = [true, true]}
+                                : tensor<2x32xf32>, !vecC
+      %8:4 = scf.for %arg7 = %c0 to %c16 step %c1 iter_args(%arg8 = %4, %arg9 = %5, %arg10 = %6, %arg11 = %7) -> (!vecC, !vecC, !vecC, !vecC) {
+        %13:4 = scf.for %arg12 = %c0 to %c32 step %c2 iter_args(%arg13 = %arg8, %arg14 = %arg9, %arg15 = %arg10, %arg16 = %arg11) -> (!vecC, !vecC, !vecC, !vecC) {
+
+          %extracted_slice_0 = tensor.extract_slice %arg0[%arg7, %arg3, %arg12] [1, 2, 2] [1, 1, 1]
+                                : tensor<16x64x32xbf16> to tensor<1x2x2xbf16>
+          %extracted_slice_1 = tensor.extract_slice %arg1[%arg7, %arg12, %arg5] [1, 2, 32] [1, 1, 1]
+                                : tensor<16x32x64xbf16> to tensor<1x2x32xbf16>
+          %14 = vector.transfer_read %extracted_slice_0[%c0, %c0, %c0], %1 {in_bounds = [true, true, true]}
+                                : tensor<1x2x2xbf16>, !vecA
+          %15 = vector.transfer_read %extracted_slice_0[%c0, %c1, %c0], %1 {in_bounds = [true, true, true]}
+                                : tensor<1x2x2xbf16>, !vecA
+          %16 = vector.transfer_read %extracted_slice_1[%c0, %c0, %c0], %1 {in_bounds = [true, true, true]}
+                                : tensor<1x2x32xbf16>, !vecB
+          %17 = vector.transfer_read %extracted_slice_1[%c0, %c0, %c16], %1 {in_bounds = [true, true, true]}
+                                : tensor<1x2x32xbf16>, !vecB
+          %18 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types =
+                        ["reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>} %14, %16, %arg13
+                        {unroll_shape = array<i64: 1, 1, 16, 2>} : !vecA, !vecB into !vecC
+          %19 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types =
+                        ["reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>} %14, %17, %arg14
+                        {unroll_shape = array<i64: 1, 1, 16, 2>} : !vecA, !vecB into !vecC
+          %20 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types =
+                        ["reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>} %15, %16, %arg15
+                        {unroll_shape = array<i64: 1, 1, 16, 2>} : !vecA, !vecB into !vecC
+          %21 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types =
+                        ["reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>} %15, %17, %arg16
+                        {unroll_shape = array<i64: 1, 1, 16, 2>} : !vecA, !vecB into !vecC
+          scf.yield %18, %19, %20, %21 : !vecC, !vecC, !vecC, !vecC
+        }
+        scf.yield %13#0, %13#1, %13#2, %13#3 : !vecC, !vecC, !vecC, !vecC
+      }
+
+      %9 = vector.transfer_write %8#3, %extracted_slice[%c1, %c16] {in_bounds = [true, true]}
+                : !vecC, tensor<2x32xf32>
+      %10 = vector.transfer_write %8#2, %9[%c1, %c0] {in_bounds = [true, true]}
+                : !vecC, tensor<2x32xf32>
+      %11 = vector.transfer_write %8#1, %10[%c0, %c16] {in_bounds = [true, true]}
+                : !vecC, tensor<2x32xf32>
+      %12 = vector.transfer_write %8#0, %11[%c0, %c0] {in_bounds = [true, true]}
+                : !vecC, tensor<2x32xf32>
+      %inserted_slice = tensor.insert_slice %12 into %arg6[%arg3, %arg5] [2, 32] [1, 1]
+                : tensor<2x32xf32> into tensor<64x64xf32>
+      scf.yield %inserted_slice : tensor<64x64xf32>
+    }
+    scf.yield %3 : tensor<64x64xf32>
+  }
+  return %2 : tensor<64x64xf32>
+}
+
+// CHECK-LABEL: @brmatmul_bf16dp_flat_layout_loop_tensor_type
+// CHECK: vector.shuffle{{.*}}[0, 1, 2, 3, 16, 17, 18, 19, 4, 5, 6, 7, 20, 21, 22, 23] : vector<16xf32>, vector<16xf32>
+// CHECK-NEXT: vector.shuffle{{.*}}[8, 9, 10, 11, 24, 25, 26, 27, 12, 13, 14, 15, 28, 29, 30, 31] : vector<16xf32>, vector<16xf32>
+// CHECK: scf.for
+// CHECK: scf.for
+// CHECK: vector.shuffle{{.*}}[0, 32, 1, 33, 2, 34, 3, 35, 8, 40, 9, 41, 10, 42, 11, 43, 16, 48, 17, 49, 18, 50, 19, 51, 24, 56, 25, 57, 26, 58, 27, 59] : vector<32xbf16>, vector<32xbf16>
+// CHECK-NEXT: vector.shuffle{{.*}}[4, 36, 5, 37, 6, 38, 7, 39, 12, 44, 13, 45, 14, 46, 15, 47, 20, 52, 21, 53, 22, 54, 23, 55, 28, 60, 29, 61, 30, 62, 31, 63] : vector<32xbf16>, vector<32xbf16>
+// CHECK: x86.avx512.dot
+// CHECK: x86.avx512.dot
+// CHECK: scf.yield
+// CHECK: scf.yield
+// CHECK: vector.shuffle{{.*}}[0, 1, 2, 3, 16, 17, 18, 19, 4, 5, 6, 7, 20, 21, 22, 23] : vector<16xf32>, vector<16xf32>
+// CHECK-NEXT: vector.shuffle{{.*}}[8, 9, 10, 11, 24, 25, 26, 27, 12, 13, 14, 15, 28, 29, 30, 31] : vector<16xf32>, vector<16xf32>
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86.vector_contract_to_packed_type_dot_product
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+!vecA = vector<1x1x2xbf16>
 !vecB = vector<1x16x2xbf16>
 !vecC = vector<1x16xf32>
 #map = affine_map<(d4, d1, d2, d3) -> (d1, d3, d4)>

@@ -2086,12 +2086,8 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     const Function &F = MF.getFunction();
     if (Opcode == TargetOpcode::PATCHABLE_FUNCTION_ENTER &&
         F.hasFnAttribute("patchable-function-entry")) {
-      unsigned Num;
-      if (F.getFnAttribute("patchable-function-entry")
-              .getValueAsString()
-              .getAsInteger(10, Num))
-        return get(Opcode).getSize();
-
+      unsigned Num =
+          F.getFnAttributeAsParsedInteger("patchable-function-entry");
       // Number of C.NOP or NOP
       return (STI.hasStdExtZca() ? 2 : 4) * Num;
     }

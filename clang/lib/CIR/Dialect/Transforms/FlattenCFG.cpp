@@ -1579,28 +1579,34 @@ public:
                                                insertBefore->getIterator())) {
       if (auto yieldOp = dyn_cast<cir::YieldOp>(block.getTerminator())) {
         // Verify that end_catch is the last non-branch operation before
-        // this yield. After cleanup scope flattening, end_catch may be in
-        // a predecessor block rather than immediately before the yield.
-        // Walk back through the single-predecessor chain, verifying that
-        // each intermediate block contains only a branch terminator, until
-        // we find end_catch as the last non-terminator in some block.
-        assert([&]() {
-          // Check if end_catch immediately precedes the yield.
-          if (mlir::Operation *prev = yieldOp->getPrevNode())
-            return isa<cir::EndCatchOp>(prev);
-          // The yield is alone in its block. Walk backward through
-          // single-predecessor blocks that contain only a branch.
-          mlir::Block *b = block.getSinglePredecessor();
-          while (b) {
-            mlir::Operation *term = b->getTerminator();
-            if (mlir::Operation *prev = term->getPrevNode())
-              return isa<cir::EndCatchOp>(prev);
-            if (!isa<cir::BrOp>(term))
-              return false;
-            b = b->getSinglePredecessor();
-          }
-          return false;
-        }() && "expected end_catch as last operation before yield "
+        // this yield.  After cleanup scope flattening, end_catch may be
+        // in a predecessor block rather than immediately before the yield.
+        // Walk back through predecessors (including multi-predecessor
+        // blocks), verifying that each intermediate block contains only a
+        // branch terminator, until we find end_catch as the last
+        // non-terminator in some block.
+        assert(([&]() {
+                 if (mlir::Operation *prev = yieldOp->getPrevNode())
+                   return isa<cir::EndCatchOp>(prev);
+                 llvm::SmallPtrSet<mlir::Block *, 8> visited;
+                 llvm::SmallVector<mlir::Block *, 4> worklist;
+                 for (mlir::Block *pred : block.getPredecessors())
+                   worklist.push_back(pred);
+                 while (!worklist.empty()) {
+                   mlir::Block *b = worklist.pop_back_val();
+                   if (!visited.insert(b).second)
+                     continue;
+                   mlir::Operation *term = b->getTerminator();
+                   if (mlir::Operation *prev = term->getPrevNode())
+                     return isa<cir::EndCatchOp>(prev);
+                   if (!isa<cir::BrOp>(term))
+                     return false;
+                   for (mlir::Block *pred : b->getPredecessors())
+                     worklist.push_back(pred);
+                 }
+                 return false;
+               }()) &&
+               "expected end_catch as last operation before yield "
                "in catch handler, with only branches in between");
         rewriter.setInsertionPoint(yieldOp);
         rewriter.replaceOpWithNewOp<cir::BrOp>(yieldOp, continueBlock);
