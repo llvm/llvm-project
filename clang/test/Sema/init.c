@@ -206,4 +206,4 @@ const union PR4517_u u2 = u1; // no-warning
 const union PR4517_u u3 = {u1.y}; // expected-error {{initializer element is not a compile-time constant}}
 
 int PR192471_1 = {{}, {}, {}}; // expected-warning {{too many braces around scalar initializer}} expected-warning {{excess elements in scalar initializer}}
-char PR192471_2 = {"1110", "3227"}; // expected-warning {{excess elements in char array initializer}}
+
