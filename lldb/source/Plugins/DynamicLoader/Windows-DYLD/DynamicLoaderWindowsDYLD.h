@@ -12,8 +12,6 @@
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/lldb-forward.h"
 
-#include "llvm/ADT/DenseMap.h"
-
 namespace lldb_private {
 
 class DynamicLoaderWindowsDYLD : public DynamicLoader {
