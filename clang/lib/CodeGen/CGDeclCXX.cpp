@@ -707,7 +707,7 @@ void CodeGenModule::EmitCXXModuleInitFunc(Module *Primary) {
   llvm::SmallSetVector<Module *, 8> AllImports;
   // Ones that we export
   for (auto I : Primary->Exports)
-    AllImports.insert(I.getPointer());
+    AllImports.insert(I.first);
   // Ones that we only import.
   AllImports.insert_range(Primary->Imports);
   // Ones that we import in the global module fragment or the private module
