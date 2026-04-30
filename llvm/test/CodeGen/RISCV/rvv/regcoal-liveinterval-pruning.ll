@@ -1,6 +1,5 @@
 ; RUN: llc -mtriple=riscv64 < %s | FileCheck %s
 
-
 define <8 x i64> @ID156249() #0 {
 ; CHECK-LABEL: ID156249:
 
