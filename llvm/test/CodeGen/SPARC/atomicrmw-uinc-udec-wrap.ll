@@ -121,9 +121,13 @@ define i64 @atomicrmw_uinc_wrap_i64(ptr %ptr, i64 %val) {
 ; CHECK-NEXT:    .cfi_def_cfa_register %fp
 ; CHECK-NEXT:    .cfi_window_save
 ; CHECK-NEXT:    .cfi_register %o7, %i7
-; CHECK-NEXT:    ldd [%i0], %g2
+; CHECK-NEXT:    mov %i0, %o0
+; CHECK-NEXT:    call __atomic_load_8
+; CHECK-NEXT:    mov %g0, %o1
+; CHECK-NEXT:    mov %o0, %g2
 ; CHECK-NEXT:    add %fp, -8, %i3
 ; CHECK-NEXT:    mov 5, %i4
+; CHECK-NEXT:    mov %o1, %g3
 ; CHECK-NEXT:  .LBB3_1: ! %atomicrmw.start
 ; CHECK-NEXT:    ! =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    mov %g0, %i5
@@ -282,9 +286,13 @@ define i64 @atomicrmw_udec_wrap_i64(ptr %ptr, i64 %val) {
 ; CHECK-NEXT:    .cfi_def_cfa_register %fp
 ; CHECK-NEXT:    .cfi_window_save
 ; CHECK-NEXT:    .cfi_register %o7, %i7
-; CHECK-NEXT:    ldd [%i0], %g2
+; CHECK-NEXT:    mov %i0, %o0
+; CHECK-NEXT:    call __atomic_load_8
+; CHECK-NEXT:    mov %g0, %o1
+; CHECK-NEXT:    mov %o0, %g2
 ; CHECK-NEXT:    add %fp, -8, %i3
 ; CHECK-NEXT:    mov 5, %i4
+; CHECK-NEXT:    mov %o1, %g3
 ; CHECK-NEXT:  .LBB7_1: ! %atomicrmw.start
 ; CHECK-NEXT:    ! =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    mov %g0, %i5

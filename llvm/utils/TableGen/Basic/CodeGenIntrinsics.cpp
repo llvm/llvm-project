@@ -322,11 +322,20 @@ CodeGenIntrinsic::CodeGenIntrinsic(const Record *R,
 
   // Types field is a concatenation of Return types followed by Param types.
   unsigned Idx = 0;
-  for (; Idx < NumRet; ++Idx)
-    IS.RetTys.push_back(TypeList->getElementAsRecord(Idx));
+  for (; Idx < NumRet; ++Idx) {
+    const Record *RetTy = TypeList->getElementAsRecord(Idx);
+    if (RetTy->getName() == "llvm_vararg_ty")
+      PrintFatalError(DefLoc, "cannot use llvm_vararg_ty as a return type");
+    IS.RetTys.push_back(RetTy);
+  }
 
-  for (unsigned E = TypeList->size(); Idx < E; ++Idx)
-    IS.ParamTys.push_back(TypeList->getElementAsRecord(Idx));
+  for (unsigned E = TypeList->size(); Idx < E; ++Idx) {
+    const Record *ParamTy = TypeList->getElementAsRecord(Idx);
+    if (Idx != E - 1 && ParamTy->getName() == "llvm_vararg_ty")
+      PrintFatalError(DefLoc,
+                      "llvm_vararg_ty can only be the last parameter type");
+    IS.ParamTys.push_back(ParamTy);
+  }
 
   // Parse the intrinsic properties.
   const ListInit *PropList = R->getValueAsListInit("IntrProperties");
