@@ -49,6 +49,7 @@ intermediate LLVM representation.
    InstCombineContributorGuide
    InstrProfileFormat
    InstrRefDebugInfo
+   IRTracker
    KeyInstructionsDebugInfo
    LFI
    LinkTimeOptimization
