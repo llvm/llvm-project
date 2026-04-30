@@ -13,14 +13,23 @@ import json
 import lit.formats
 import lit.util
 
-
 def get_path_from_clang(args, allow_failure):
+    clang_path_cache = getattr(lit_config, "_clang_path_cache", None)
+
+    if clang_path_cache is None:
+        clang_path_cache = {}
+        setattr(lit_config, "_clang_path_cache", clang_path_cache)
+
     clang_cmd = [
         config.clang.strip(),
         f"--target={config.target_triple}",
         *args,
     ]
-    path = None
+
+    path = clang_path_cache.get(tuple(clang_cmd))
+    if path is not None:
+        return path, clang_cmd
+
     try:
         result = subprocess.run(
             clang_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True
@@ -32,6 +41,8 @@ def get_path_from_clang(args, allow_failure):
             lit_config.warning(msg)
         else:
             lit_config.fatal(msg)
+
+    clang_path_cache[tuple(clang_cmd)] = path
     return path, clang_cmd
 
 
@@ -952,23 +963,6 @@ if config.target_os == "Darwin":
     # much slower. Let's override this and run lit tests with 'abort_on_error=0'.
     config.default_sanitizer_opts += ["abort_on_error=0"]
     config.default_sanitizer_opts += ["log_to_syslog=0"]
-    if lit.util.which("log"):
-        # Querying the log can only done by a privileged user so
-        # so check if we can query the log.
-        exit_code = -1
-        with open("/dev/null", "r") as f:
-            # Run a `log show` command the should finish fairly quickly and produce very little output.
-            exit_code = subprocess.call(
-                ["log", "show", "--last", "1m", "--predicate", "1 == 0"],
-                stdout=f,
-                stderr=f,
-            )
-        if exit_code == 0:
-            config.available_features.add("darwin_log_cmd")
-        else:
-            lit_config.warning("log command found but cannot queried")
-    else:
-        lit_config.warning("log command not found. Some tests will be skipped.")
 elif config.android:
     config.default_sanitizer_opts += ["abort_on_error=0"]
 
