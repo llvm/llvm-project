@@ -10,6 +10,7 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/threads/mutex.h"
 
+#include "hdr/limits_macros.h"
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/mutex.h" // lock_guard
 #include "src/__support/CPP/optional.h"
@@ -155,11 +156,31 @@ ThreadAtExitCallbackMgr *get_thread_atexit_callback_mgr() {
 
 void call_atexit_callbacks(ThreadAttributes *attrib) {
   attrib->atexit_callback_mgr->call();
-  for (size_t i = 0; i < TSS_KEY_COUNT; ++i) {
-    TSSValueUnit &unit = tss_values[i];
-    // Both dtor and value need to nonnull to call dtor
-    if (unit.dtor != nullptr && unit.payload != nullptr)
-      unit.dtor(unit.payload);
+
+  for (size_t iteration = 0; iteration < PTHREAD_DESTRUCTOR_ITERATIONS;
+       ++iteration) {
+    bool has_pending_tss_dtor = false;
+
+    for (size_t i = 0; i < TSS_KEY_COUNT; ++i) {
+      TSSValueUnit &unit = tss_values[i];
+      if (unit.dtor == nullptr || unit.payload == nullptr)
+        continue;
+
+      void *payload = unit.payload;
+      unit.payload = nullptr;
+      unit.dtor(payload);
+    }
+
+    for (size_t i = 0; i < TSS_KEY_COUNT; ++i) {
+      TSSValueUnit &unit = tss_values[i];
+      if (unit.dtor != nullptr && unit.payload != nullptr) {
+        has_pending_tss_dtor = true;
+        break;
+      }
+    }
+
+    if (!has_pending_tss_dtor)
+      break;
   }
 }
 

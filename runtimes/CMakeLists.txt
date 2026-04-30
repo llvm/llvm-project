@@ -59,6 +59,15 @@ foreach(proj ${LLVM_ENABLE_RUNTIMES})
   endif()
 endforeach()
 
+# The in-tree LLVM libc only provides a complete public C header set in
+# full-build mode. Consumers like libc++, libc++abi, and libunwind need those
+# headers to avoid falling back to the host libc in overlay mode.
+if(DEFINED RUNTIMES_USE_LIBC AND RUNTIMES_USE_LIBC STREQUAL "llvm-libc")
+  message(STATUS "Enabling LLVM_LIBC_FULL_BUILD because RUNTIMES_USE_LIBC=llvm-libc")
+  set(LLVM_LIBC_FULL_BUILD ON CACHE BOOL
+      "Build and test LLVM libc as if it is the full libc" FORCE)
+endif()
+
 function(runtime_register_component name)
   set_property(GLOBAL APPEND PROPERTY SUB_COMPONENTS ${name})
 endfunction()

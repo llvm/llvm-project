@@ -9,6 +9,9 @@
 #ifndef LLVM_LIBC_MACROS_LINUX_SYS_TIME_MACROS_H
 #define LLVM_LIBC_MACROS_LINUX_SYS_TIME_MACROS_H
 
+// Decrements in real time and delivers SIGALRM when it expires.
+#define ITIMER_REAL 0
+
 // Add two timevals and put the result in timeval_ptr_result. If the resulting
 // usec value is greater than 999,999 then the microseconds are turned into full
 // seconds (1,000,000 is subtracted from usec and 1 is added to sec).

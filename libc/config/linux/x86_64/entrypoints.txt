@@ -111,6 +111,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.inttypes.strtoimax
     libc.src.inttypes.strtoumax
 
+    # link.h entrypoints
+    libc.src.link.dl_iterate_phdr
+
     # stdbit.h entrypoints
     libc.src.stdbit.stdc_bit_ceil_uc
     libc.src.stdbit.stdc_bit_ceil_ui
