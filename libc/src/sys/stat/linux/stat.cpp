@@ -14,7 +14,7 @@
 #include "src/__support/common.h"
 
 #include "hdr/fcntl_macros.h"
-#include <sys/stat.h>
+#include "hdr/types/struct_stat.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
