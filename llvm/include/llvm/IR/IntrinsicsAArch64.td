@@ -2458,6 +2458,8 @@ def int_aarch64_sve_stnt1_scatter_scalar_offset  : AdvSIMD_ScatterStore_VS_Intri
 //
 
 def int_aarch64_sve_saba          : AdvSIMD_3VectorArg_Intrinsic<[IntrSpeculatable]>;
+def int_aarch64_sve_sabal         : SVE2_3VectorArg_Long_Intrinsic<[IntrSpeculatable]>;
+def int_aarch64_sve_uabal         : SVE2_3VectorArg_Long_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_shadd         : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_shsub         : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_shsub_u       : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
@@ -3780,6 +3782,13 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sve_sqcvtun_x4 : SVE2_CVT_VG4_SINGLE_Intrinsic;
 
   //
+  // Multi-vector saturating shift right narrow and interleave
+  //
+  def int_aarch64_sve_sqshrn_x2 : SVE2_VG2_Multi_Imm_Intrinsic;
+  def int_aarch64_sve_uqshrn_x2 : SVE2_VG2_Multi_Imm_Intrinsic;
+  def int_aarch64_sve_sqshrun_x2 : SVE2_VG2_Multi_Imm_Intrinsic;
+
+  //
   // Multi-Single add/sub
   //
 
@@ -4294,4 +4303,3 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sve_pmlal_pair_x2 : DefaultAttrsIntrinsic<[llvm_nxv2i64_ty, llvm_nxv2i64_ty],
       [llvm_nxv2i64_ty, llvm_nxv2i64_ty, llvm_nxv2i64_ty, llvm_nxv2i64_ty], [IntrNoMem]>;
 }
-

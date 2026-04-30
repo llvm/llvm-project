@@ -1174,29 +1174,29 @@ def funnel_shift_overshift: GICombineRule<
 
 // Transform: fshl x, z, y | shl x, y -> fshl x, z, y
 // Transform: shl x, y | fshl x, z, y  -> fshl x, z, y
-// FIXME: TableGen didn't handle G_OR commutativity on its own, 
+// FIXME: TableGen didn't handle G_OR commutativity on its own,
 //        necessitating the use of !foreach to handle it manually.
 def funnel_shift_or_shift_to_funnel_shift_left_frags : GICombinePatFrag<
   (outs root: $dst, $out1, $out2), (ins),
-  !foreach(inst, [(G_OR $dst, $out1, $out2), (G_OR $dst, $out2, $out1)], 
+  !foreach(inst, [(G_OR $dst, $out1, $out2), (G_OR $dst, $out2, $out1)],
            (pattern (G_FSHL $out1, $x, $z, $y), (G_SHL $out2, $x, $y), inst))>;
 def funnel_shift_or_shift_to_funnel_shift_left: GICombineRule<
-  (defs root:$root), 
+  (defs root:$root),
   (match (funnel_shift_or_shift_to_funnel_shift_left_frags $root, $out1, $out2)),
   (apply (GIReplaceReg $root, $out1))
 >;
 
 // Transform: fshr z, x, y | srl x, y -> fshr z, x, y
 // Transform: srl x, y | fshr z, x, y -> fshr z, x, y
-// FIXME: TableGen didn't handle G_OR commutativity on its own, 
+// FIXME: TableGen didn't handle G_OR commutativity on its own,
 //        necessitating the use of !foreach to handle it manually.
 def funnel_shift_or_shift_to_funnel_shift_right_frags : GICombinePatFrag<
   (outs root: $dst, $out1, $out2), (ins),
-  !foreach(inst, [(G_OR $dst, $out1, $out2), (G_OR $dst, $out2, $out1)], 
+  !foreach(inst, [(G_OR $dst, $out1, $out2), (G_OR $dst, $out2, $out1)],
            (pattern (G_FSHR $out1, $z, $x, $y), (G_LSHR $out2, $x, $y), inst))>;
 def funnel_shift_or_shift_to_funnel_shift_right: GICombineRule<
-  (defs root:$root), 
-  (match (funnel_shift_or_shift_to_funnel_shift_right_frags $root, $out1, $out2)), 
+  (defs root:$root),
+  (match (funnel_shift_or_shift_to_funnel_shift_right_frags $root, $out1, $out2)),
   (apply (GIReplaceReg $root, $out1))
 >;
 
@@ -1323,7 +1323,7 @@ def udiv_by_pow2 : GICombineRule<
    [{ return Helper.matchDivByPow2(*${root}, /*IsSigned=*/false); }]),
   (apply [{ Helper.applyUDivByPow2(*${root}); }])>;
 
-def intdiv_combines : GICombineGroup<[udiv_by_pow2, sdiv_by_pow2, 
+def intdiv_combines : GICombineGroup<[udiv_by_pow2, sdiv_by_pow2,
                                       udiv_by_const, sdiv_by_const,]>;
 
 def urem_by_const : GICombineRule<
@@ -1390,16 +1390,17 @@ def constant_fold_cast_op : GICombineRule<
    [{ return Helper.matchConstantFoldCastOp(*${d}, ${matchinfo}); }]),
   (apply [{ Helper.replaceInstWithConstant(*${d}, ${matchinfo}); }])>;
 
-def count_op_frags : GICombinePatFrag<
+def unary_int_op_frags : GICombinePatFrag<
   (outs root:$dst), (ins),
   !foreach(op,
-           [G_CTLZ, G_CTLZ_ZERO_UNDEF, G_CTTZ, G_CTTZ_ZERO_UNDEF, G_CTPOP],
+           [G_CTLZ, G_CTLZ_ZERO_UNDEF, G_CTTZ, G_CTTZ_ZERO_UNDEF, G_CTPOP,
+            G_ABS, G_BSWAP, G_BITREVERSE],
            (pattern (op $dst, $src)))>;
 
-def constant_fold_count_op : GICombineRule<
+def constant_fold_unary_int_op : GICombineRule<
   (defs root:$dst, build_fn_matchinfo:$matchinfo),
-  (match (count_op_frags $dst):$mi,
-   [{ return Helper.matchConstantFoldCountOp(*${mi}, ${matchinfo}); }]),
+  (match (unary_int_op_frags $dst):$mi,
+   [{ return Helper.matchConstantFoldUnaryIntOp(*${mi}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFn(*${mi}, ${matchinfo}); }])>;
 
 def mulo_by_2: GICombineRule<
@@ -1446,7 +1447,7 @@ def trunc_ssatu : GICombineRule<
 
 def trunc_usatu : GICombineRule<
   (defs root:$root),
-  (match (G_UMIN $min, $x, $y):$Min, 
+  (match (G_UMIN $min, $x, $y):$Min,
          (G_TRUNC $dst, $min):$root,
     [{ return Helper.matchTruncUSatU(*${root}, *${Min}); }]),
   (apply (G_TRUNC_USAT_U $dst, $x))>;
@@ -1994,14 +1995,14 @@ def APlusBMinusAplusC : GICombineRule<
           (G_SUB $sub1, $B, $add1),
           (G_ADD $root, $A, $sub1)),
    (apply (G_SUB $root, $B, $C))>;
-   
+
 // fold (A-(B-C)) to A+(C-B)
 def AMinusBMinusC : GICombineRule<
    (defs root:$root),
    (match (G_SUB $sub1, $B, $C),
-          (G_SUB $root, $A, $sub1), 
+          (G_SUB $root, $A, $sub1),
           [{ return MRI.hasOneNonDBGUse(${sub1}.getReg()); }]),
-   (apply (G_SUB $add, $C, $B), 
+   (apply (G_SUB $add, $C, $B),
           (G_ADD $root, $A, $add))>;
 
 // fold (A+(B-(C+A))) to (B-C)
@@ -2011,7 +2012,7 @@ def APlusBMinusCPlusA : GICombineRule<
           (G_SUB $sub1, $B, $add1),
           (G_ADD $root, $A, $sub1)),
    (apply (G_SUB $root, $B, $C))>;
-  
+
 // fold (A - (0 - B)) to (A + B)
 def AMinusZeroMinusB : GICombineRule<
    (defs root:$root),
@@ -2025,7 +2026,7 @@ def AMinusBMinusA: GICombineRule<
    (match (G_SUB $add, $A, $B),
           (G_SUB $root, $A, $add)),
    (apply (GIReplaceReg $root, $B))>;
-   
+
 // fold (not (add X, -1)) -> (sub 0, X)
 def NotAPlusNegOne: GICombineRule<
    (defs root:$root),
@@ -2378,7 +2379,7 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     shift_immed_chain, shift_of_shifted_logic_chain, load_or_combine,
     div_rem_to_divrem, funnel_shift_combines, bitreverse_shift, commute_shift,
     form_bitfield_extract, constant_fold_binops, constant_fold_fma,
-    constant_fold_cast_op, constant_fold_count_op, fabs_fneg_fold,
+    constant_fold_cast_op, constant_fold_unary_int_op, fabs_fneg_fold,
     mulh_combines, redundant_neg_operands,
     and_or_disjoint_mask, fma_combines, fold_binop_into_select,
     intrem_combines, intdiv_combines, fdiv_repeated_divison,

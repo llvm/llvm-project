@@ -63,10 +63,10 @@ body: |
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.1(0x80000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   S_WAITCNT 0
+  ; GCN-NEXT:   S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
   ; GCN-NEXT:   $agpr0 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %ir.global4, addrspace 1)
   ; GCN-NEXT:   $agpr4_agpr5_agpr6_agpr7 = FLAT_LOAD_DWORDX4 $vgpr8_vgpr9, 0, 0, implicit $exec, implicit $flat_scr :: (load (s128) from %ir.global16, addrspace 1)
-  ; GCN-NEXT:   S_WAITCNT 3953
+  ; GCN-NEXT:   S_WAITCNT .Vmcnt_1
   ; GCN-NEXT:   $agpr0 = V_ACCVGPR_MOV_B32 $agpr1, implicit $exec
   ; GCN-NEXT:   S_BRANCH %bb.1
   ; GCN-NEXT: {{  $}}
@@ -74,15 +74,15 @@ body: |
   ; GCN-NEXT:   successors: %bb.2(0x80000000)
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   $agpr0 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
-  ; GCN-NEXT:   S_WAITCNT 3952
+  ; GCN-NEXT:   S_WAITCNT .Vmcnt_0
   ; GCN-NEXT:   $agpr4_agpr5_agpr6_agpr7 = FLAT_LOAD_DWORDX4 $vgpr8_vgpr9, 0, 0, implicit $exec, implicit $flat_scr :: (load (s128) from %ir.global16, addrspace 1)
   ; GCN-NEXT:   $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr1, implicit $exec
   ; GCN-NEXT:   S_BRANCH %bb.2
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2:
-  ; GCN-NEXT:   S_WAITCNT 49279
+  ; GCN-NEXT:   S_WAITCNT .Lgkmcnt_0
   ; GCN-NEXT:   $agpr0 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %ir.flat4)
-  ; GCN-NEXT:   S_WAITCNT 3952
+  ; GCN-NEXT:   S_WAITCNT .Vmcnt_0
   ; GCN-NEXT:   $agpr4_agpr5_agpr6_agpr7 = FLAT_LOAD_DWORDX4 $vgpr8_vgpr9, 0, 0, implicit $exec, implicit $flat_scr :: (load (s128) from %ir.flat16)
   ; GCN-NEXT:   $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr1, implicit $exec
   ; GCN-NEXT:   S_ENDPGM 0
@@ -118,12 +118,12 @@ body: |
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.1(0x80000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   S_WAITCNT 0
+  ; GCN-NEXT:   S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
   ; GCN-NEXT:   $agpr0 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   $vgpr4_vgpr5 = V_LSHLREV_B64_e64 4, $vgpr8_vgpr9, implicit $exec
-  ; GCN-NEXT:   S_WAITCNT 112
+  ; GCN-NEXT:   S_WAITCNT .Vmcnt_0_Lgkmcnt_0
   ; GCN-NEXT:   FLAT_STORE_DWORD $vgpr4_vgpr5, $agpr0, 0, 0, implicit $exec, implicit $flat_scr
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
@@ -149,7 +149,7 @@ body: |
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.2(0x80000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   S_WAITCNT 0
+  ; GCN-NEXT:   S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
   ; GCN-NEXT:   $agpr0 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
   ; GCN-NEXT:   S_BRANCH %bb.2
   ; GCN-NEXT: {{  $}}
@@ -159,7 +159,7 @@ body: |
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   $vgpr4_vgpr5 = V_LSHLREV_B64_e64 4, $vgpr8_vgpr9, implicit $exec
-  ; GCN-NEXT:   S_WAITCNT 112
+  ; GCN-NEXT:   S_WAITCNT .Vmcnt_0_Lgkmcnt_0
   ; GCN-NEXT:   FLAT_STORE_DWORD $vgpr4_vgpr5, $agpr0, 0, 0, implicit $exec, implicit $flat_scr
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
@@ -179,7 +179,7 @@ body: |
 
 # GCN-LABEL: name: preexisting_waitcnt{{$}}
 # GCN: FLAT_LOAD_DWORD
-# GCN-NEXT: S_WAITCNT 0
+# GCN-NEXT: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
 # GCN-NOT: S_WAITCNT
 name: preexisting_waitcnt
 tracksRegLiveness: true
@@ -211,7 +211,7 @@ body: |
     ; GCN-NEXT:   S_NOP 0
     ; GCN-NEXT:   S_NOP 0
     ; GCN-NEXT: }
-    ; GCN-NEXT: S_WAITCNT 112
+    ; GCN-NEXT: S_WAITCNT .Vmcnt_0_Lgkmcnt_0
     ; GCN-NEXT: FLAT_STORE_DWORD $vgpr2_vgpr3, $agpr0, 0, 0, implicit $exec, implicit $flat_scr
     $agpr0 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
     BUNDLE {
@@ -238,7 +238,7 @@ body: |
     ; GCN-NEXT: $agpr0 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: BUNDLE {
     ; GCN-NEXT:   S_NOP 0
-    ; GCN-NEXT:   S_WAITCNT 0
+    ; GCN-NEXT:   S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
     ; GCN-NEXT: }
     ; GCN-NEXT: FLAT_STORE_DWORD $vgpr2_vgpr3, $agpr0, 0, 0, implicit $exec, implicit $flat_scr
     $agpr0 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
@@ -266,7 +266,7 @@ body: |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: BUNDLE implicit-def $agpr0, implicit $vgpr2_vgpr3 {
     ; GCN-NEXT:   $agpr0 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
-    ; GCN-NEXT:   S_WAITCNT 112
+    ; GCN-NEXT:   S_WAITCNT .Vmcnt_0_Lgkmcnt_0
     ; GCN-NEXT:   FLAT_STORE_DWORD $vgpr2_vgpr3, internal $agpr0, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: }
     BUNDLE implicit-def $agpr0, implicit $vgpr2_vgpr3 {
@@ -293,7 +293,7 @@ body: |
     ; GCN-NEXT: BUNDLE implicit-def $agpr0, implicit $vgpr2_vgpr3 {
     ; GCN-NEXT:   $agpr0 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: }
-    ; GCN-NEXT: S_WAITCNT 112
+    ; GCN-NEXT: S_WAITCNT .Vmcnt_0_Lgkmcnt_0
     ; GCN-NEXT: FLAT_STORE_DWORD $vgpr2_vgpr3, $agpr0, 0, 0, implicit $exec, implicit $flat_scr
     BUNDLE implicit-def $agpr0, implicit $vgpr2_vgpr3 {
     $agpr0 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
@@ -322,7 +322,7 @@ body: |
     ; GCN-NEXT:   $agpr0 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: }
     ; GCN-NEXT: BUNDLE implicit $agpr0, implicit $vgpr2_vgpr3 {
-    ; GCN-NEXT:   S_WAITCNT 112
+    ; GCN-NEXT:   S_WAITCNT .Vmcnt_0_Lgkmcnt_0
     ; GCN-NEXT:   FLAT_STORE_DWORD $vgpr2_vgpr3, $agpr0, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: }
     BUNDLE implicit-def $agpr0, implicit $vgpr2_vgpr3 {
@@ -341,7 +341,7 @@ name: high_register_collision
 body: |
   bb.0:
     ; GCN-LABEL: name: high_register_collision
-    ; GCN: S_WAITCNT 0
+    ; GCN: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
     ; GCN-NEXT: $agpr0 = V_ACCVGPR_MOV_B32 $agpr1, implicit $exec
     ; GCN-NEXT: $vgpr226 = FLAT_LOAD_DWORD $vgpr6_vgpr7, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: $vgpr4_vgpr5 = V_LSHLREV_B64_e64 4, $vgpr8_vgpr9, implicit $exec

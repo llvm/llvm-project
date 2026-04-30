@@ -54,6 +54,7 @@ if (SPHINX_FOUND)
       glob
       inttypes
       locale
+      nl_types
       net/if
       netinet/in
       poll
@@ -65,6 +66,7 @@ if (SPHINX_FOUND)
       stdlib
       string
       strings
+      sys/ipc
       sys/mman
       sys/resource
       sys/select

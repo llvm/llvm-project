@@ -14,12 +14,15 @@
 #include "ExecutorBase.h"
 #include "Library.h"
 #include "Value.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Allocator.h"
+
+#include <limits>
 
 namespace llvm::ubi {
 
@@ -682,6 +685,203 @@ public:
               llvm_unreachable("Unexpected intrinsic ID");
             }
           });
+    }
+    case Intrinsic::vector_reduce_add:
+    case Intrinsic::vector_reduce_mul:
+    case Intrinsic::vector_reduce_and:
+    case Intrinsic::vector_reduce_or:
+    case Intrinsic::vector_reduce_xor:
+    case Intrinsic::vector_reduce_smax:
+    case Intrinsic::vector_reduce_smin:
+    case Intrinsic::vector_reduce_umax:
+    case Intrinsic::vector_reduce_umin: {
+      std::optional<APInt> Res;
+      for (const auto &V : Args[0].asAggregate()) {
+        if (V.isPoison()) {
+          Res.reset();
+          break;
+        }
+        const auto &IntV = V.asInteger();
+        if (!Res) {
+          Res = IntV;
+          continue;
+        }
+        switch (IID) {
+        case Intrinsic::vector_reduce_add:
+          *Res += IntV;
+          break;
+        case Intrinsic::vector_reduce_mul:
+          *Res *= IntV;
+          break;
+        case Intrinsic::vector_reduce_and:
+          *Res &= IntV;
+          break;
+        case Intrinsic::vector_reduce_or:
+          *Res |= IntV;
+          break;
+        case Intrinsic::vector_reduce_xor:
+          *Res ^= IntV;
+          break;
+        case Intrinsic::vector_reduce_smax:
+          *Res = APIntOps::smax(*Res, IntV);
+          break;
+        case Intrinsic::vector_reduce_smin:
+          *Res = APIntOps::smin(*Res, IntV);
+          break;
+        case Intrinsic::vector_reduce_umax:
+          *Res = APIntOps::umax(*Res, IntV);
+          break;
+        case Intrinsic::vector_reduce_umin:
+          *Res = APIntOps::umin(*Res, IntV);
+          break;
+        default:
+          llvm_unreachable("Unexpected intrinsic ID");
+        }
+      }
+      return Res ? *Res : AnyValue::poison();
+    }
+    case Intrinsic::vector_insert: {
+      if (Args[2].isPoison())
+        return AnyValue::poison();
+      const auto &Vec = Args[0].asAggregate();
+      const auto &SubVec = Args[1].asAggregate();
+      const auto &Idx = Args[2].asInteger();
+      auto EC =
+          cast<VectorType>(CB.getArgOperand(1)->getType())->getElementCount();
+      const uint64_t RawOffset = Idx.getZExtValue();
+      const uint32_t MinSize = EC.getKnownMinValue();
+      if (RawOffset % MinSize != 0)
+        return AnyValue::poison();
+      const uint64_t Chunk = RawOffset / MinSize;
+      const uint64_t EVL = Ctx.getEVL(EC);
+      if (Chunk > std::numeric_limits<uint64_t>::max() / EVL)
+        return AnyValue::poison();
+      const uint64_t Offset = Chunk * EVL;
+      if (Offset > Vec.size() || SubVec.size() > Vec.size() - Offset)
+        return AnyValue::poison();
+      std::vector<AnyValue> Res;
+      Res.reserve(Vec.size());
+      for (size_t I = 0; I != Vec.size(); ++I) {
+        if (I >= Offset && I < Offset + SubVec.size())
+          Res.push_back(SubVec[I - Offset]);
+        else
+          Res.push_back(Vec[I]);
+      }
+      return std::move(Res);
+    }
+    case Intrinsic::vector_extract: {
+      if (Args[1].isPoison())
+        return AnyValue::poison();
+      const auto &Vec = Args[0].asAggregate();
+      const auto &Idx = Args[1].asInteger();
+      auto EC = cast<VectorType>(RetTy)->getElementCount();
+      const uint64_t RawOffset = Idx.getZExtValue();
+      const uint32_t MinSize = EC.getKnownMinValue();
+      if (RawOffset % MinSize != 0)
+        return AnyValue::poison();
+      const uint64_t Chunk = RawOffset / MinSize;
+      const uint64_t EVL = Ctx.getEVL(EC);
+      if (Chunk > std::numeric_limits<uint64_t>::max() / EVL)
+        return AnyValue::poison();
+      const uint64_t Offset = Chunk * EVL;
+      if (Offset > Vec.size() || EVL > Vec.size() - Offset)
+        return AnyValue::poison();
+      return std::vector(Vec.begin() + Offset, Vec.begin() + Offset + EVL);
+    }
+    case Intrinsic::vector_reverse: {
+      auto Vec = Args[0].asAggregate();
+      std::reverse(Vec.begin(), Vec.end());
+      return std::move(Vec);
+    }
+    case Intrinsic::vector_deinterleave2:
+    case Intrinsic::vector_deinterleave3:
+    case Intrinsic::vector_deinterleave4:
+    case Intrinsic::vector_deinterleave5:
+    case Intrinsic::vector_deinterleave6:
+    case Intrinsic::vector_deinterleave7:
+    case Intrinsic::vector_deinterleave8: {
+      const unsigned Factor = getDeinterleaveIntrinsicFactor(IID);
+      if (Factor == 0)
+        llvm_unreachable("Unexpected intrinsic ID");
+      const auto &Vec = Args[0].asAggregate();
+      std::vector<std::vector<AnyValue>> Res(Factor);
+      for (auto &SubVec : Res)
+        SubVec.reserve(Vec.size() / Factor);
+      for (size_t I = 0, E = Vec.size(); I != E; ++I)
+        Res[I % Factor].push_back(Vec[I]);
+
+      std::vector<AnyValue> AggRes;
+      AggRes.reserve(Factor);
+      for (auto &SubVec : Res)
+        AggRes.emplace_back(std::move(SubVec));
+      return AnyValue(std::move(AggRes));
+    }
+    case Intrinsic::vector_interleave2:
+    case Intrinsic::vector_interleave3:
+    case Intrinsic::vector_interleave4:
+    case Intrinsic::vector_interleave5:
+    case Intrinsic::vector_interleave6:
+    case Intrinsic::vector_interleave7:
+    case Intrinsic::vector_interleave8: {
+      const unsigned Factor = getInterleaveIntrinsicFactor(IID);
+      if (Factor == 0)
+        llvm_unreachable("Unexpected intrinsic ID");
+      const auto &Vec = Args[0].asAggregate();
+      std::vector<AnyValue> Res;
+      Res.reserve(Vec.size() * Factor);
+      for (size_t I = 0, E = Vec.size(); I != E; ++I) {
+        for (unsigned J = 0; J != Factor; ++J)
+          Res.push_back(Args[J].asAggregate()[I]);
+      }
+      return std::move(Res);
+    }
+    case Intrinsic::vector_splice_left: {
+      if (Args[2].isPoison())
+        return AnyValue::poison();
+      const auto &LHS = Args[0].asAggregate();
+      const auto &RHS = Args[1].asAggregate();
+      const auto &Off = Args[2].asInteger();
+      const size_t Len = LHS.size();
+      if (Off.ugt(Len))
+        return AnyValue::poison();
+      uint64_t Offset = Off.getZExtValue();
+      std::vector<AnyValue> Res;
+      Res.reserve(Len);
+      for (size_t I = 0; I != Len; ++I) {
+        size_t Pos = I + Offset;
+        Res.push_back(Pos < Len ? LHS[Pos] : RHS[Pos - Len]);
+      }
+      return std::move(Res);
+    }
+    case Intrinsic::vector_splice_right: {
+      if (Args[2].isPoison())
+        return AnyValue::poison();
+      const auto &LHS = Args[0].asAggregate();
+      const auto &RHS = Args[1].asAggregate();
+      const auto &Off = Args[2].asInteger();
+      const size_t Len = LHS.size();
+      if (Off.ugt(Len))
+        return AnyValue::poison();
+      uint64_t Offset = Len - Off.getZExtValue();
+      std::vector<AnyValue> Res;
+      Res.reserve(Len);
+      for (size_t I = 0; I != Len; ++I) {
+        size_t Pos = I + Offset;
+        Res.push_back(Pos < Len ? LHS[Pos] : RHS[Pos - Len]);
+      }
+      return std::move(Res);
+    }
+    case Intrinsic::stepvector: {
+      std::vector<AnyValue> Res;
+      const uint32_t Len =
+          Ctx.getEVL(cast<VectorType>(RetTy)->getElementCount());
+      const unsigned BitWidth = RetTy->getScalarSizeInBits();
+      Res.reserve(Len);
+      for (uint64_t I = 0; I != Len; ++I) {
+        Res.push_back(
+            APInt(BitWidth, I, /*IsSigned=*/false, /*ImplicitTrunc=*/true));
+      }
+      return std::move(Res);
     }
     default:
       Handler.onUnrecognizedInstruction(CB);

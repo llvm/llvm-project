@@ -35,6 +35,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -226,7 +227,30 @@ public:
   llvm::DenseMap<const Decl *, cir::GlobalOp> staticLocalDeclMap;
   llvm::DenseMap<const VarDecl *, cir::GlobalOp> initializerConstants;
 
+  /// Cache for O(1) symbol lookups by name, replacing the O(N) linear scan
+  /// in SymbolTable::lookupSymbolIn that getGlobalValue used previously.
+  llvm::StringMap<mlir::Operation *> symbolLookupCache;
+
   mlir::Operation *getGlobalValue(llvm::StringRef ref);
+
+  /// O(1) lookup of a FuncOp by name in the symbol cache.
+  /// Returns nullptr if the name is not found or is not a FuncOp.
+  cir::FuncOp lookupFuncOp(llvm::StringRef name) {
+    auto *op = getGlobalValue(name);
+    return op ? mlir::dyn_cast<cir::FuncOp>(op) : cir::FuncOp{};
+  }
+
+  void insertGlobalSymbol(mlir::Operation *op) {
+    if (auto sym = mlir::dyn_cast<mlir::SymbolOpInterface>(op))
+      symbolLookupCache[sym.getName()] = op;
+  }
+  void eraseGlobalSymbol(mlir::Operation *op) {
+    if (auto sym = mlir::dyn_cast<mlir::SymbolOpInterface>(op)) {
+      auto it = symbolLookupCache.find(sym.getName());
+      if (it != symbolLookupCache.end() && it->second == op)
+        symbolLookupCache.erase(it);
+    }
+  }
 
   cir::GlobalOp getStaticLocalDeclAddress(const VarDecl *d) {
     return staticLocalDeclMap[d];
@@ -333,6 +357,13 @@ public:
   /// Return the mlir::GlobalViewAttr for the address of the given global.
   cir::GlobalViewAttr getAddrOfGlobalVarAttr(const VarDecl *d);
 
+  /// Get the GlobalOp of a template parameter object.
+  cir::GlobalOp
+  getAddrOfTemplateParamObject(const TemplateParamObjectDecl *tpo);
+  // Get the GlobalOp of a source_location object.
+  cir::GlobalOp
+  getAddrOfUnnamedGlobalConstantDecl(const UnnamedGlobalConstantDecl *gcd);
+
   CharUnits computeNonVirtualBaseClassOffset(
       const CXXRecordDecl *derivedClass,
       llvm::iterator_range<CastExpr::path_const_iterator> path);
@@ -401,6 +432,8 @@ public:
   }
 
   llvm::DenseMap<mlir::Attribute, cir::GlobalOp> constantStringMap;
+  llvm::DenseMap<const UnnamedGlobalConstantDecl *, cir::GlobalOp>
+      unnamedGlobalConstantDeclMap;
 
   /// Return a constant array for the given string.
   mlir::Attribute getConstantArrayFromStringLiteral(const StringLiteral *e);
@@ -864,6 +897,9 @@ private:
   /// Call replaceAllUsesWith on all pairs in replacements.
   void applyReplacements();
 
+  bool getCPUAndFeaturesAttributes(GlobalDecl gd,
+                                   llvm::StringMap<std::string> &attrs,
+                                   bool setTargetFeatures = true);
   void setNonAliasAttributes(GlobalDecl gd, mlir::Operation *op);
 
   /// Map source language used to a CIR attribute.
