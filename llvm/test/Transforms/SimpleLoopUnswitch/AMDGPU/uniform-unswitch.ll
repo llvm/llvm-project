@@ -20,20 +20,29 @@
 
 define amdgpu_kernel void @uniform_unswitch(ptr nocapture %out, i32 %n, i32 %x) {
 ; CHECK-LABEL: define amdgpu_kernel void @uniform_unswitch(
-; CHECK-SAME: ptr writeonly captures(none) [[OUT:%.*]], i32 [[N:%.*]], i32 [[X:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr captures(none) [[OUT:%.*]], i32 [[N:%.*]], i32 [[X:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[OUT_GLOBAL:%.*]] = addrspacecast ptr [[OUT]] to ptr addrspace(1)
 ; CHECK-NEXT:    [[CMP6:%.*]] = icmp sgt i32 [[N]], 0
+; CHECK-NEXT:    br i1 [[CMP6]], label [[FOR_BODY_LR_PH:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECK:       for.body.lr.ph:
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[X]], 123456
-; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[CMP6]], i1 [[CMP1]], i1 false
-; CHECK-NEXT:    br i1 [[OR_COND]], label [[FOR_BODY:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[I_07:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[I_07:%.*]] = phi i32 [ 0, [[FOR_BODY_LR_PH]] ], [ [[INC:%.*]], [[FOR_INC:%.*]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[I_07]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4 x i8], ptr addrspace(1) [[OUT_GLOBAL]], i64 [[TMP0]]
+; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
 ; CHECK-NEXT:    store i32 [[I_07]], ptr addrspace(1) [[ARRAYIDX]], align 4
+; CHECK-NEXT:    br label [[FOR_INC]]
+; CHECK:       if.else:
+; CHECK-NEXT:    [[TMP2:%.*]] = addrspacecast ptr addrspace(1) [[ARRAYIDX]] to ptr
+; CHECK-NEXT:    store volatile i32 0, ptr [[TMP2]], align 4
+; CHECK-NEXT:    br label [[FOR_INC]]
+; CHECK:       for.inc:
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_07]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], [[N]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]]
@@ -54,14 +63,19 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup.lo
 
 for.body:                                         ; preds = %for.inc, %for.body.lr.ph
   %i.07 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.inc ]
-  br i1 %cmp1, label %if.then, label %for.inc
+  br i1 %cmp1, label %if.then, label %if.else
 
 if.then:                                          ; preds = %for.body
   %arrayidx = getelementptr inbounds i32, ptr %out, i32 %i.07
   store i32 %i.07, ptr %arrayidx, align 4
   br label %for.inc
 
-for.inc:                                          ; preds = %for.body, %if.then
+if.else:                                          ; preds = %for.body
+  %arrayidx2 = getelementptr inbounds i32, ptr %out, i32 %i.07
+  store volatile i32 0, ptr %arrayidx2, align 4
+  br label %for.inc
+
+for.inc:                                          ; preds = %if.else, %if.then
   %inc = add nuw nsw i32 %i.07, 1
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup.loopexit, label %for.body

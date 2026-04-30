@@ -616,6 +616,7 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
         {cfg::UpdateKind::Delete, BI.getParent(), BI.getSuccessor(*LatchIdx)});
     Updates.push_back(
         {cfg::UpdateKind::Insert, BI.getParent(), L.getUniqueLatchExitBlock()});
+    L.getLoopLatch()->removePredecessor(BI.getParent());
     BI.setSuccessor(*LatchIdx, L.getUniqueLatchExitBlock());
     for (PHINode &PN : L.getUniqueLatchExitBlock()->phis()) {
       Value *V = PN.getIncomingValueForBlock(L.getLoopLatch());
