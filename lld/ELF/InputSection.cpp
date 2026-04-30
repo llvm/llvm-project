@@ -1552,7 +1552,7 @@ SectionPiece &MergeInputSection::getSectionPiece(uint64_t offset) {
   // intra-piece offset in lower bits.
   if (uint32_t idx = offset >> mergeValueShift)
     return pieces[idx - 1];
-  assert(offset < content().size());
+  assert(offset <= content().size());
   // For non-string fixed-size records, piece index = offset / entsize.
   if (!(flags & SHF_STRINGS))
     return pieces[offset / entsize];
