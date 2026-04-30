@@ -3322,7 +3322,7 @@ cxxConstructorDecl(isDelegatingConstructor()) will match #3 and #4, but not
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXConstructorDecl.html">CXXConstructorDecl</a>&gt;</td><td class="name" onclick="toggle('isExplicit0')"><a name="isExplicit0Anchor">isExplicit</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="isExplicit0"><pre>Matches constructor, conversion function, and deduction guide declarations
 that have an explicit specifier if this explicit specifier is resolved to
-true.
+true. Also matches explicitly written initializer list expressions.
 
 Given
   template&lt;bool b&gt;

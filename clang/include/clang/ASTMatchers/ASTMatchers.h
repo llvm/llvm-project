@@ -8122,7 +8122,7 @@ AST_MATCHER(CXXConstructorDecl, isDelegatingConstructor) {
 
 /// Matches constructor, conversion function, and deduction guide declarations
 /// that have an explicit specifier if this explicit specifier is resolved to
-/// true.
+/// true. Also matches explicitly written initializer list expressions.
 ///
 /// Given
 /// \code
@@ -8144,7 +8144,7 @@ AST_MATCHER(CXXConstructorDecl, isDelegatingConstructor) {
 /// cxxDeductionGuideDecl(isExplicit()) will match #6, but not #5.
 AST_POLYMORPHIC_MATCHER(isExplicit, AST_POLYMORPHIC_SUPPORTED_TYPES(
                                         CXXConstructorDecl, CXXConversionDecl,
-                                        CXXDeductionGuideDecl)) {
+                                        CXXDeductionGuideDecl, InitListExpr)) {
   return Node.isExplicit();
 }
 

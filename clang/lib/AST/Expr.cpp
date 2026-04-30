@@ -2404,12 +2404,14 @@ EmbedExpr::EmbedExpr(const ASTContext &Ctx, SourceLocation Loc,
 }
 
 InitListExpr::InitListExpr(const ASTContext &C, SourceLocation lbraceloc,
-                           ArrayRef<Expr *> initExprs, SourceLocation rbraceloc)
+                           ArrayRef<Expr *> initExprs, SourceLocation rbraceloc,
+                           bool isExplicit)
     : Expr(InitListExprClass, QualType(), VK_PRValue, OK_Ordinary),
       InitExprs(C, initExprs.size()), LBraceLoc(lbraceloc),
       RBraceLoc(rbraceloc), AltForm(nullptr, true) {
   sawArrayRangeDesignator(false);
   InitExprs.insert(C, InitExprs.end(), initExprs.begin(), initExprs.end());
+  InitListExprBits.IsExplicit = isExplicit;
 
   setDependence(computeDependence(this));
 }
@@ -4933,7 +4935,8 @@ DesignatedInitUpdateExpr::DesignatedInitUpdateExpr(const ASTContext &C,
            OK_Ordinary) {
   BaseAndUpdaterExprs[0] = baseExpr;
 
-  InitListExpr *ILE = new (C) InitListExpr(C, lBraceLoc, {}, rBraceLoc);
+  InitListExpr *ILE =
+      new (C) InitListExpr(C, lBraceLoc, {}, rBraceLoc, /*isExplicit=*/false);
   ILE->setType(baseExpr->getType());
   BaseAndUpdaterExprs[1] = ILE;
 

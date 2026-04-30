@@ -521,19 +521,21 @@ TEST_P(ImportExpr, ImportPredefinedExpr) {
 
 TEST_P(ImportExpr, ImportInitListExpr) {
   MatchVerifier<Decl> Verifier;
-  testImport("void declToImport() {"
-             "  struct point { double x; double y; };"
-             "  point ptarray[10] = { [2].y = 1.0, [2].x = 2.0,"
-             "                        [0].x = 1.0 }; }",
-             Lang_CXX03, "", Lang_CXX03, Verifier,
-             functionDecl(hasDescendant(initListExpr(
-                 has(cxxConstructExpr(requiresZeroInitialization())),
-                 has(initListExpr(
-                     hasType(asString("point")), has(floatLiteral(equals(1.0))),
-                     has(implicitValueInitExpr(hasType(asString("double")))))),
-                 has(initListExpr(hasType(asString("point")),
-                                  has(floatLiteral(equals(2.0))),
-                                  has(floatLiteral(equals(1.0)))))))));
+  testImport(
+      "void declToImport() {"
+      "  struct point { double x; double y; };"
+      "  point ptarray[10] = { [2].y = 1.0, [2].x = 2.0,"
+      "                        [0].x = 1.0 }; }",
+      Lang_CXX03, "", Lang_CXX03, Verifier,
+      functionDecl(hasDescendant(initListExpr(
+          isExplicit(), has(cxxConstructExpr(requiresZeroInitialization())),
+          has(initListExpr(
+              unless(isExplicit()), hasType(asString("point")),
+              has(floatLiteral(equals(1.0))),
+              has(implicitValueInitExpr(hasType(asString("double")))))),
+          has(initListExpr(unless(isExplicit()), hasType(asString("point")),
+                           has(floatLiteral(equals(2.0))),
+                           has(floatLiteral(equals(1.0)))))))));
 }
 
 const internal::VariadicDynCastAllOfMatcher<Expr, CXXDefaultInitExpr>
