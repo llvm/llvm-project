@@ -311,11 +311,10 @@ AnalysisDeclContext *AnalysisDeclContextManager::getContext(const Decl *D) {
 BodyFarm &AnalysisDeclContextManager::getBodyFarm() { return FunctionBodyFarm; }
 
 const StackFrameContext *AnalysisDeclContext::getStackFrame(
-    const LocationContext *ParentLC,
-    const ento::BlockDataRegion *BlockInvocationData, const Expr *E,
+    const LocationContext *ParentLC, const void *Data, const Expr *E,
     const CFGBlock *Blk, unsigned BlockCount, unsigned Index) {
-  return getLocationContextManager().getStackFrame(
-      this, ParentLC, BlockInvocationData, E, Blk, BlockCount, Index);
+  return getLocationContextManager().getStackFrame(this, ParentLC, Data, E, Blk,
+                                                   BlockCount, Index);
 }
 
 bool AnalysisDeclContext::isInStdNamespace(const Decl *D) {
@@ -409,8 +408,8 @@ void LocationContext::ProfileCommon(llvm::FoldingSetNodeID &ID,
 }
 
 void StackFrameContext::Profile(llvm::FoldingSetNodeID &ID) {
-  Profile(ID, getAnalysisDeclContext(), getParent(), BlockInvocationData,
-          CallSite, Block, BlockCount, Index);
+  Profile(ID, getAnalysisDeclContext(), getParent(), Data, CallSite, Block,
+          BlockCount, Index);
 }
 
 //===----------------------------------------------------------------------===//
@@ -418,18 +417,17 @@ void StackFrameContext::Profile(llvm::FoldingSetNodeID &ID) {
 //===----------------------------------------------------------------------===//
 
 const StackFrameContext *LocationContextManager::getStackFrame(
-    AnalysisDeclContext *Ctx, const LocationContext *Parent,
-    const ento::BlockDataRegion *BlockInvocationData, const Expr *E,
-    const CFGBlock *Blk, unsigned BlockCount, unsigned StmtIdx) {
+    AnalysisDeclContext *Ctx, const LocationContext *Parent, const void *Data,
+    const Expr *E, const CFGBlock *Blk, unsigned BlockCount, unsigned StmtIdx) {
   llvm::FoldingSetNodeID ID;
-  StackFrameContext::Profile(ID, Ctx, Parent, BlockInvocationData, E, Blk,
-                             BlockCount, StmtIdx);
+  StackFrameContext::Profile(ID, Ctx, Parent, Data, E, Blk, BlockCount,
+                             StmtIdx);
   void *InsertPos;
   auto *L =
    cast_or_null<StackFrameContext>(Contexts.FindNodeOrInsertPos(ID, InsertPos));
   if (!L) {
-    L = new StackFrameContext(Ctx, Parent, BlockInvocationData, E, Blk,
-                              BlockCount, StmtIdx, ++NewID);
+    L = new StackFrameContext(Ctx, Parent, Data, E, Blk, BlockCount, StmtIdx,
+                              ++NewID);
     Contexts.InsertNode(L, InsertPos);
   }
   return L;

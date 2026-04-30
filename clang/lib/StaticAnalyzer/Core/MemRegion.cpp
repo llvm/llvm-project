@@ -1004,9 +1004,10 @@ getStackOrCaptureRegionForDeclContext(const LocationContext *LC,
     if (const auto *SFC = dyn_cast<StackFrameContext>(LC)) {
       if (cast<DeclContext>(SFC->getDecl()) == DC)
         return SFC;
-      if (SFC->getBlockInvocationData()) {
+      if (SFC->getData()) {
         // FIXME: This can be made more efficient.
-        for (auto Var : SFC->getBlockInvocationData()->referenced_vars()) {
+        for (auto Var : static_cast<const BlockDataRegion *>(SFC->getData())
+                            ->referenced_vars()) {
           const TypedValueRegion *OrigR = Var.getOriginalRegion();
           if (const auto *VR = dyn_cast<VarRegion>(OrigR)) {
             if (VR->getDecl() == VD)

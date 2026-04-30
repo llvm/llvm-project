@@ -45,10 +45,6 @@ class StackFrameContext;
 class Stmt;
 class VarDecl;
 
-namespace ento {
-class BlockDataRegion;
-}
-
 /// The base class of a hierarchy of objects representing analyses tied
 /// to AnalysisDeclContext.
 class ManagedAnalysis {
@@ -181,10 +177,10 @@ public:
   const ImplicitParamDecl *getSelfDecl() const;
 
   /// \copydoc LocationContextManager::getStackFrame()
-  const StackFrameContext *
-  getStackFrame(LocationContext const *ParentLC,
-                const ento::BlockDataRegion *BlockInvocationData, const Expr *E,
-                const CFGBlock *Blk, unsigned BlockCount, unsigned Index);
+  const StackFrameContext *getStackFrame(LocationContext const *ParentLC,
+                                         const void *Data, const Expr *E,
+                                         const CFGBlock *Blk,
+                                         unsigned BlockCount, unsigned Index);
 
   /// \returns The specified analysis object, lazily running the analysis if
   /// necessary or nullptr if the analysis could not run.
@@ -295,7 +291,7 @@ class StackFrameContext : public LocationContext {
   friend class LocationContextManager;
 
   // Extra data for BlockInvocations
-  const ento::BlockDataRegion *BlockInvocationData;
+  const void *Data;
 
   // The call site where this stack frame is established.
   const Expr *CallSite;
@@ -312,19 +308,15 @@ class StackFrameContext : public LocationContext {
   const unsigned Index;
 
   StackFrameContext(AnalysisDeclContext *ADC, const LocationContext *ParentLC,
-                    const ento::BlockDataRegion *BlockInvocationData,
-                    const Expr *E, const CFGBlock *Block, unsigned BlockCount,
-                    unsigned Index, int64_t ID)
-      : LocationContext(StackFrame, ADC, ParentLC, ID),
-        BlockInvocationData(BlockInvocationData), CallSite(E), Block(Block),
-        BlockCount(BlockCount), Index(Index) {}
+                    const void *Data, const Expr *E, const CFGBlock *Block,
+                    unsigned BlockCount, unsigned Index, int64_t ID)
+      : LocationContext(StackFrame, ADC, ParentLC, ID), Data(Data), CallSite(E),
+        Block(Block), BlockCount(BlockCount), Index(Index) {}
 
 public:
   ~StackFrameContext() override = default;
 
-  const ento::BlockDataRegion *getBlockInvocationData() const {
-    return BlockInvocationData;
-  }
+  const void *getData() const { return Data; }
 
   const Expr *getCallSite() const { return CallSite; }
 
@@ -339,12 +331,11 @@ public:
   void Profile(llvm::FoldingSetNodeID &ID) override;
 
   static void Profile(llvm::FoldingSetNodeID &ID, AnalysisDeclContext *ADC,
-                      const LocationContext *ParentLC,
-                      const ento::BlockDataRegion *BlockInvocationData,
+                      const LocationContext *ParentLC, const void *Data,
                       const Expr *E, const CFGBlock *Block, unsigned BlockCount,
                       unsigned Index) {
     ProfileCommon(ID, StackFrame, ADC, ParentLC, E);
-    ID.AddPointer(BlockInvocationData);
+    ID.AddPointer(Data);
     ID.AddPointer(Block);
     ID.AddInteger(BlockCount);
     ID.AddInteger(Index);
@@ -366,21 +357,22 @@ public:
 
   /// Obtain a context of the call stack using its parent context.
   ///
-  /// \param ADC                 The AnalysisDeclContext.
-  /// \param ParentLC            The parent context of this newly created
-  /// context.
-  /// \param BlockInvocationData Extra data in case this StackFrameContext is
-  ///                            created for a BlockInvocation.
-  /// \param E                   The call expression.
-  /// \param Block               The basic block.
-  /// \param BlockCount          The current count of entering into \p Block.
-  /// \param StmtIdx             The index of the call expression \p E among the
-  ///                            statements of the CFGBlock \p Block.
+  /// \param ADC        The AnalysisDeclContext.
+  /// \param ParentLC   The parent context of this newly created
+  ///                   context.
+  /// \param Data       Extra data in case this StackFrameContext is
+  ///                   created for a BlockInvocation.
+  /// \param E          The call expression.
+  /// \param Block      The basic block.
+  /// \param BlockCount The current count of entering into \p Block.
+  /// \param StmtIdx    The index of the call expression \p E among the
+  ///                   statements of the CFGBlock \p Block.
   /// \returns The stack frame context corresponding to the call.
-  const StackFrameContext *
-  getStackFrame(AnalysisDeclContext *ADC, const LocationContext *ParentLC,
-                const ento::BlockDataRegion *BlockInvocationData, const Expr *E,
-                const CFGBlock *Block, unsigned BlockCount, unsigned StmtIdx);
+  const StackFrameContext *getStackFrame(AnalysisDeclContext *ADC,
+                                         const LocationContext *ParentLC,
+                                         const void *Data, const Expr *E,
+                                         const CFGBlock *Block,
+                                         unsigned BlockCount, unsigned StmtIdx);
 
   /// Discard all previously created LocationContext objects.
   void clear();
