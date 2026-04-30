@@ -7165,7 +7165,7 @@ static bool CheckTemplateArgumentCopyEquivalence(Sema &S, NamedDecl *Param,
     // and explicit(bool) should be resolved.
     for (CXXConstructorDecl *Ctor : CXXRecord->ctors())
       if (unsigned Quals; Ctor->isCopyConstructor(Quals) &&
-                          (Quals & Qualifiers::Const) && !Ctor->isExplicit()) {
+                          Quals == Qualifiers::Const && !Ctor->isExplicit()) {
         CopyCtor = Ctor;
         if (Ctor->getTrailingRequiresClause())
           FindCopyCtorWithTrailingRequiresClause = true;
