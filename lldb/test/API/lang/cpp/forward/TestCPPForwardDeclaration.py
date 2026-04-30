@@ -6,6 +6,7 @@ from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 
 
+@skipIfTargetDoesNotSupportSharedLibraries()
 class ForwardDeclarationTestCase(TestBase):
     SHARED_BUILD_TESTCASE = False
 

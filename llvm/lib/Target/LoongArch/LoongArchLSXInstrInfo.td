@@ -1870,6 +1870,17 @@ foreach vt = [v8i16, v4i32, v2i64] in {
             (VBITREVI_W LSX128:$vj, grlenimm:$imm)>;
 }
 
+// VBITSEL_V
+foreach vt = [v16i8, v8i16, v4i32, v2i64] in
+  def : Pat<(vt (or (and LSX128:$va, LSX128:$vk),
+                    (loongarch_vandn LSX128:$va, LSX128:$vj))),
+            (vt (VBITSEL_V LSX128:$vj, LSX128:$vk, LSX128:$va))>;
+
+// VBITSELI_B
+def : Pat<(v16i8 (or (and LSX128:$vd, (v16i8 (SplatPat_uimm8 uimm8:$imm))),
+                     (loongarch_vandn LSX128:$vd, LSX128:$vj))),
+          (VBITSELI_B LSX128:$vd, LSX128:$vj, uimm8:$imm)>;
+
 // Vector bswaps
 def : Pat<(bswap (v8i16 LSX128:$vj)), (VSHUF4I_B LSX128:$vj, 0b10110001)>;
 def : Pat<(bswap (v4i32 LSX128:$vj)), (VSHUF4I_B LSX128:$vj, 0b00011011)>;

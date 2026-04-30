@@ -2284,6 +2284,8 @@ public:
 
   Status EnableBreakpointSiteByID(lldb::user_id_t break_id);
 
+  bool IsBreakpointSiteEnabled(const BreakpointSite &site);
+
   // BreakpointLocations use RemoveConstituentFromBreakpointSite to remove
   // themselves from the constituent's list of this breakpoint sites.
   void RemoveConstituentFromBreakpointSite(lldb::user_id_t site_id,
@@ -3618,6 +3620,13 @@ protected:
   void LoadOperatingSystemPlugin(bool flush);
 
   void SetAddressableBitMasks(AddressableBits bit_masks);
+
+  // Updates the state of site.
+  // This should be used by derived Process classes after they have changed the
+  // state of a site.
+  void SetBreakpointSiteEnabled(BreakpointSite &site, bool is_enabled = true) {
+    site.SetEnabled(is_enabled);
+  }
 
 private:
   Status DestroyImpl(bool force_kill);

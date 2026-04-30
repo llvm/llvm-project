@@ -398,7 +398,6 @@ public:
         Intrinsic::vp_sdiv,
         Intrinsic::vp_srem,
         Intrinsic::vp_store,
-        Intrinsic::vp_trunc,
         Intrinsic::vp_udiv,
         Intrinsic::vp_urem};
     if (!ST->hasVInstructions() ||

@@ -464,6 +464,12 @@ void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
 
   const auto *global = cast<ValueDecl>(gd.getDecl());
 
+  if (global->hasAttr<WeakRefAttr>())
+    errorNYI(global->getSourceRange(), "emitGlobal: WeakRefAttr");
+
+  if (global->hasAttr<AliasAttr>())
+    errorNYI(global->getSourceRange(), "emitGlobal: AliasAttr");
+
   // If this is CUDA, be selective about which declarations we emit.
   // Non-constexpr non-lambda implicit host device functions are not emitted
   // unless they are used on device side.
@@ -2790,10 +2796,10 @@ void CIRGenModule::setCIRFunctionAttributes(GlobalDecl globalDecl,
 
   // TODO(cir): Check X86_VectorCall incompatibility wiht WinARM64EC
 
-  // TODO(cir): typically the calling conv is set right here, but since
-  // cir::CallingConv is empty and we've not yet added calling-conv to FuncOop,
-  // this isn't really useful here.  This should call func.setCallingConv/etc
-  // later.
+  // TODO(cir): Set the calling convention computed by constructAttributeList
+  // on the function. FuncOp supports calling_conv, but target-specific
+  // CodeGen is needed to set it correctly (e.g., AMDGPU kernel functions
+  // should be marked with AMDGPUKernel).
   assert(!cir::MissingFeatures::opFuncCallingConv());
 }
 

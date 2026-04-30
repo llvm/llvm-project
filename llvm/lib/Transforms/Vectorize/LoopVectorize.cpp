@@ -819,16 +819,18 @@ class LoopVectorizationCostModel {
   friend class LoopVectorizationPlanner;
 
 public:
-  LoopVectorizationCostModel(
-      EpilogueLowering SEL, Loop *L, PredicatedScalarEvolution &PSE,
-      LoopInfo *LI, LoopVectorizationLegality *Legal,
-      const TargetTransformInfo &TTI, const TargetLibraryInfo *TLI,
-      DemandedBits *DB, AssumptionCache *AC, OptimizationRemarkEmitter *ORE,
-      std::function<BlockFrequencyInfo &()> GetBFI, const Function *F,
-      const LoopVectorizeHints *Hints, InterleavedAccessInfo &IAI,
-      VFSelectionContext &Config)
+  LoopVectorizationCostModel(EpilogueLowering SEL, Loop *L,
+                             PredicatedScalarEvolution &PSE, LoopInfo *LI,
+                             LoopVectorizationLegality *Legal,
+                             const TargetTransformInfo &TTI,
+                             const TargetLibraryInfo *TLI, AssumptionCache *AC,
+                             OptimizationRemarkEmitter *ORE,
+                             std::function<BlockFrequencyInfo &()> GetBFI,
+                             const Function *F, const LoopVectorizeHints *Hints,
+                             InterleavedAccessInfo &IAI,
+                             VFSelectionContext &Config)
       : Config(Config), EpilogueLoweringStatus(SEL), TheLoop(L), PSE(PSE),
-        LI(LI), Legal(Legal), TTI(TTI), TLI(TLI), DB(DB), AC(AC), ORE(ORE),
+        LI(LI), Legal(Legal), TTI(TTI), TLI(TLI), AC(AC), ORE(ORE),
         GetBFI(GetBFI), TheFunction(F), Hints(Hints), InterleaveInfo(IAI) {}
 
   /// \return An upper bound for the vectorization factors (both fixed and
@@ -854,13 +856,6 @@ public:
 
   /// Collect values we want to ignore in the cost model.
   void collectValuesToIgnore();
-
-  /// \returns The smallest bitwidth each instruction can be represented with.
-  /// The vector equivalents of these instructions should be truncated to this
-  /// type.
-  const MapVector<Instruction *, uint64_t> &getMinimalBitwidths() const {
-    return MinBWs;
-  }
 
   /// \returns True if it is more profitable to scalarize instruction \p I for
   /// vectorization factor \p VF.
@@ -915,6 +910,7 @@ public:
   /// \returns True if instruction \p I can be truncated to a smaller bitwidth
   /// for vectorization factor \p VF.
   bool canTruncateToMinimalBitwidth(Instruction *I, ElementCount VF) const {
+    const auto &MinBWs = Config.getMinimalBitwidths();
     // Truncs must truncate at most to their destination type.
     if (isa_and_nonnull<TruncInst>(I) && MinBWs.contains(I) &&
         I->getType()->getScalarSizeInBits() < MinBWs.lookup(I))
@@ -1351,11 +1347,6 @@ private:
   InstructionCost getScalarizationOverhead(Instruction *I,
                                            ElementCount VF) const;
 
-  /// Map of scalar integer values to the smallest bitwidth they can be legally
-  /// represented as. The vector equivalents of these values should be truncated
-  /// to this type.
-  MapVector<Instruction *, uint64_t> MinBWs;
-
   /// A type representing the costs for instructions if they were to be
   /// scalarized rather than vectorized. The entries are Instruction-Cost
   /// pairs.
@@ -1490,9 +1481,6 @@ public:
 
   /// Target Library Info.
   const TargetLibraryInfo *TLI;
-
-  /// Demanded bits analysis.
-  DemandedBits *DB;
 
   /// Assumption cache.
   AssumptionCache *AC;
@@ -1913,85 +1901,6 @@ static void collectSupportedLoops(Loop &L, LoopInfo *LI,
 // Implementation of LoopVectorizationLegality, InnerLoopVectorizer and
 // LoopVectorizationCostModel and LoopVectorizationPlanner.
 //===----------------------------------------------------------------------===//
-
-/// FIXME: The newly created binary instructions should contain nsw/nuw
-/// flags, which can be found from the original scalar operations.
-Value *
-llvm::emitTransformedIndex(IRBuilderBase &B, Value *Index, Value *StartValue,
-                           Value *Step,
-                           InductionDescriptor::InductionKind InductionKind,
-                           const BinaryOperator *InductionBinOp) {
-  using namespace llvm::PatternMatch;
-  Type *StepTy = Step->getType();
-  Value *CastedIndex = StepTy->isIntegerTy()
-                           ? B.CreateSExtOrTrunc(Index, StepTy)
-                           : B.CreateCast(Instruction::SIToFP, Index, StepTy);
-  if (CastedIndex != Index) {
-    CastedIndex->setName(CastedIndex->getName() + ".cast");
-    Index = CastedIndex;
-  }
-
-  // Note: the IR at this point is broken. We cannot use SE to create any new
-  // SCEV and then expand it, hoping that SCEV's simplification will give us
-  // a more optimal code. Unfortunately, attempt of doing so on invalid IR may
-  // lead to various SCEV crashes. So all we can do is to use builder and rely
-  // on InstCombine for future simplifications. Here we handle some trivial
-  // cases only.
-  auto CreateAdd = [&B](Value *X, Value *Y) {
-    assert(X->getType() == Y->getType() && "Types don't match!");
-    if (match(X, m_ZeroInt()))
-      return Y;
-    if (match(Y, m_ZeroInt()))
-      return X;
-    return B.CreateAdd(X, Y);
-  };
-
-  // We allow X to be a vector type, in which case Y will potentially be
-  // splatted into a vector with the same element count.
-  auto CreateMul = [&B](Value *X, Value *Y) {
-    assert(X->getType()->getScalarType() == Y->getType() &&
-           "Types don't match!");
-    if (match(X, m_One()))
-      return Y;
-    if (match(Y, m_One()))
-      return X;
-    VectorType *XVTy = dyn_cast<VectorType>(X->getType());
-    if (XVTy && !isa<VectorType>(Y->getType()))
-      Y = B.CreateVectorSplat(XVTy->getElementCount(), Y);
-    return B.CreateMul(X, Y);
-  };
-
-  switch (InductionKind) {
-  case InductionDescriptor::IK_IntInduction: {
-    assert(!isa<VectorType>(Index->getType()) &&
-           "Vector indices not supported for integer inductions yet");
-    assert(Index->getType() == StartValue->getType() &&
-           "Index type does not match StartValue type");
-    if (isa<ConstantInt>(Step) && cast<ConstantInt>(Step)->isMinusOne())
-      return B.CreateSub(StartValue, Index);
-    auto *Offset = CreateMul(Index, Step);
-    return CreateAdd(StartValue, Offset);
-  }
-  case InductionDescriptor::IK_PtrInduction:
-    return B.CreatePtrAdd(StartValue, CreateMul(Index, Step));
-  case InductionDescriptor::IK_FpInduction: {
-    assert(!isa<VectorType>(Index->getType()) &&
-           "Vector indices not supported for FP inductions yet");
-    assert(Step->getType()->isFloatingPointTy() && "Expected FP Step value");
-    assert(InductionBinOp &&
-           (InductionBinOp->getOpcode() == Instruction::FAdd ||
-            InductionBinOp->getOpcode() == Instruction::FSub) &&
-           "Original bin op should be defined for FP induction");
-
-    Value *MulExp = B.CreateFMul(Step, Index);
-    return B.CreateBinOp(InductionBinOp->getOpcode(), StartValue, MulExp,
-                         "induction");
-  }
-  case InductionDescriptor::IK_NoInduction:
-    return nullptr;
-  }
-  llvm_unreachable("invalid enum");
-}
 
 /// For the given VF and UF and maximum trip count computed for the loop, return
 /// whether the induction variable might overflow in the vectorized loop. If not,
@@ -3018,8 +2927,6 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   assert(WideningDecisions.empty() && CallWideningDecisions.empty() &&
          Uniforms.empty() && Scalars.empty() &&
          "No cost-modeling decisions should have been taken at this point");
-
-  MinBWs = computeMinimumValueSizes(TheLoop->getBlocks(), *DB, &TTI);
 
   switch (EpilogueLoweringStatus) {
   case CM_EpilogueAllowed:
@@ -5221,9 +5128,11 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
              VF.getKnownMinValue();
   }
 
+  const auto &MinBWs = Config.getMinimalBitwidths();
+  uint64_t InstrMinBWs = MinBWs.lookup(I);
   Type *RetTy = I->getType();
   if (canTruncateToMinimalBitwidth(I, VF))
-    RetTy = IntegerType::get(RetTy->getContext(), MinBWs[I]);
+    RetTy = IntegerType::get(RetTy->getContext(), InstrMinBWs);
   auto *SE = PSE.getSE();
 
   Type *VectorTy;
@@ -5505,10 +5414,10 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
       [[maybe_unused]] Instruction *Op0AsInstruction =
           dyn_cast<Instruction>(I->getOperand(0));
       assert((!canTruncateToMinimalBitwidth(Op0AsInstruction, VF) ||
-              MinBWs[I] == MinBWs[Op0AsInstruction]) &&
+              InstrMinBWs == MinBWs.lookup(Op0AsInstruction)) &&
              "if both the operand and the compare are marked for "
              "truncation, they must have the same bitwidth");
-      ValTy = IntegerType::get(ValTy->getContext(), MinBWs[I]);
+      ValTy = IntegerType::get(ValTy->getContext(), InstrMinBWs);
     }
 
     VectorTy = toVectorTy(ValTy, VF);
@@ -5608,8 +5517,8 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
     Type *SrcScalarTy = I->getOperand(0)->getType();
     Instruction *Op0AsInstruction = dyn_cast<Instruction>(I->getOperand(0));
     if (canTruncateToMinimalBitwidth(Op0AsInstruction, VF))
-      SrcScalarTy =
-          IntegerType::get(SrcScalarTy->getContext(), MinBWs[Op0AsInstruction]);
+      SrcScalarTy = IntegerType::get(SrcScalarTy->getContext(),
+                                     MinBWs.lookup(Op0AsInstruction));
     Type *SrcVecTy =
         VectorTy->isVectorTy() ? toVectorTy(SrcScalarTy, VF) : SrcScalarTy;
 
@@ -5861,6 +5770,10 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
   FixedScalableVFPair MaxFactors = CM.computeMaxVF(UserVF, UserIC);
   if (!MaxFactors) // Cases that should not to be vectorized nor interleaved.
     return;
+
+  // Compute the minimal bitwidths required for integer operations in the loop
+  // for later use by the cost model.
+  Config.computeMinimalBitwidths();
 
   // Invalidate interleave groups if all blocks of loop will be predicated.
   if (CM.blockNeedsPredicationForAnyReason(OrigLoop->getHeader()) &&
@@ -6264,6 +6177,10 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
          "Trying to execute plan with unsupported UF");
   if (BestVPlan.hasEarlyExit())
     ++LoopsEarlyExitVectorized;
+
+  VPlanTransforms::replaceWideCanonicalIVWithWideIV(
+      BestVPlan, *PSE.getSE(), CM.TTI, Config.CostKind, BestVF, BestUF,
+      CM.ValuesToIgnore);
   // TODO: Move to VPlan transform stage once the transition to the VPlan-based
   // cost model is complete for better cost estimates.
   RUN_VPLAN_PASS(VPlanTransforms::unrollByUF, BestVPlan, BestUF);
@@ -6983,7 +6900,7 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
     RUN_VPLAN_PASS(VPlanTransforms::hoistPredicatedLoads, *Plan, PSE, OrigLoop);
     RUN_VPLAN_PASS(VPlanTransforms::sinkPredicatedStores, *Plan, PSE, OrigLoop);
     RUN_VPLAN_PASS(VPlanTransforms::truncateToMinimalBitwidths, *Plan,
-                   CM.getMinimalBitwidths());
+                   Config.getMinimalBitwidths());
     RUN_VPLAN_PASS(VPlanTransforms::optimize, *Plan);
     // TODO: try to put addExplicitVectorLength close to addActiveLaneMask
     if (CM.foldTailWithEVL()) {
@@ -7580,8 +7497,8 @@ static bool processLoopInVPlanNativePath(
   EpilogueLowering SEL =
       getEpilogueLowering(F, L, Hints, OptForSize, TTI, TLI, *LVL, &IAI);
 
-  VFSelectionContext Config(*TTI, LVL, L, *F, PSE, ORE, &Hints, OptForSize);
-  LoopVectorizationCostModel CM(SEL, L, PSE, LI, LVL, *TTI, TLI, DB, AC, ORE,
+  VFSelectionContext Config(*TTI, LVL, L, *F, PSE, DB, ORE, &Hints, OptForSize);
+  LoopVectorizationCostModel CM(SEL, L, PSE, LI, LVL, *TTI, TLI, AC, ORE,
                                 GetBFI, F, &Hints, IAI, Config);
   // Use the planner for outer loop vectorization.
   // TODO: CM is not used at this point inside the planner. Turn CM into an
@@ -8413,8 +8330,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   }
 
   // Use the cost model.
-  VFSelectionContext Config(*TTI, &LVL, L, *F, PSE, ORE, &Hints, OptForSize);
-  LoopVectorizationCostModel CM(SEL, L, PSE, LI, &LVL, *TTI, TLI, DB, AC, ORE,
+  VFSelectionContext Config(*TTI, &LVL, L, *F, PSE, DB, ORE, &Hints,
+                            OptForSize);
+  LoopVectorizationCostModel CM(SEL, L, PSE, LI, &LVL, *TTI, TLI, AC, ORE,
                                 GetBFI, F, &Hints, IAI, Config);
   // Use the planner for vectorization.
   LoopVectorizationPlanner LVP(L, LI, DT, TLI, *TTI, &LVL, CM, Config, IAI, PSE,

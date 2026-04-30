@@ -6,9 +6,11 @@
 
 
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 
+@skipIfWasm  # no expression evaluation
 class ExprInsideLambdaTestCase(TestBase):
     def expectExprError(self, expr: str, expected: str):
         frame = self.thread.GetFrameAtIndex(0)
