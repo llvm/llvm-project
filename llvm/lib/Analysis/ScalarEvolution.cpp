@@ -3745,6 +3745,39 @@ const SCEV *ScalarEvolution::getUDivExactExpr(SCEVUse LHS, SCEVUse RHS) {
   // just deal with u/exact (multiply, constant). See SCEVDivision towards the
   // end of this file for inspiration.
 
+  if (LHS == RHS)
+    return getConstant(LHS->getType(), 1);
+
+  if (const SCEVMulExpr *RHSMul = dyn_cast<SCEVMulExpr>(RHS);
+      RHSMul && RHSMul->hasNoUnsignedWrap() &&
+      isa<SCEVMulExpr, SCEVConstant, SCEVUnknown>(LHS)) {
+    const SCEV *CurrSCEV = LHS;
+    SmallVector<SCEVUse, 2> Operands;
+    bool OnlyNonZero = true;
+    for (SCEVUse Op : RHSMul->operands()) {
+      if (!OnlyNonZero) {
+        Operands.push_back(Op);
+        continue;
+      }
+      const SCEV *NewSCEV = getUDivExactExpr(CurrSCEV, Op);
+      if (isa<SCEVUDivExpr>(NewSCEV)) {
+        Operands.push_back(Op);
+        continue;
+      }
+      if (!isa<SCEVConstant>(Op) || Op->isZero())
+        OnlyNonZero = false;
+      CurrSCEV = NewSCEV;
+    }
+    if (Operands.size())
+      return getUDivExpr(
+          CurrSCEV,
+          getMulExpr(Operands, OnlyNonZero
+                                   ? RHSMul->getNoWrapFlags() & SCEV::FlagNUW
+                                   : SCEVNoWrapFlags::FlagAnyWrap));
+    else
+      return CurrSCEV;
+  }
+
   const SCEVMulExpr *Mul = dyn_cast<SCEVMulExpr>(LHS);
   if (!Mul || !Mul->hasNoUnsignedWrap())
     return getUDivExpr(LHS, RHS);

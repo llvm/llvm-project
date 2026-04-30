@@ -1651,6 +1651,160 @@ TEST_F(ScalarEvolutionsTest, SCEVUDivExactPreserveNUW) {
   });
 }
 
+TEST_F(ScalarEvolutionsTest, SCEVUDivExactNUWMulDivisor) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(
+      "define void @foo(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {"
+      "  ret void"
+      "}",
+      Err, C);
+
+  ASSERT_TRUE(M && "Could not parse module?");
+  ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
+
+  runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    const SCEV *A = SE.getSCEV(getArgByName(F, "a"));
+    const SCEV *B = SE.getSCEV(getArgByName(F, "b"));
+    const SCEV *C = SE.getSCEV(getArgByName(F, "c"));
+    const SCEV *D = SE.getSCEV(getArgByName(F, "d"));
+    const SCEV *E = SE.getSCEV(getArgByName(F, "e"));
+    const SCEV *One = SE.getConstant(A->getType(), 1);
+    const SCEV *Two = SE.getConstant(A->getType(), 2);
+    const SCEV *Three = SE.getConstant(A->getType(), 3);
+    const SCEV *Six = SE.getConstant(A->getType(), 6);
+
+    SmallVector<SCEVUse, 2> BDOps = {B, D};
+    const SCEV *BD = SE.getMulExpr(BDOps, SCEV::FlagNUW);
+
+    SmallVector<SCEVUse, 2> CEOps = {C, E};
+    const SCEV *CE = SE.getMulExpr(CEOps, SCEV::FlagNUW);
+
+    SmallVector<SCEVUse, 2> CDEOps = {C, D, E};
+    const SCEV *CDE = SE.getMulExpr(CDEOps, SCEV::FlagNUW);
+
+    SmallVector<SCEVUse, 3> ABCOps = {A, B, C};
+    const SCEV *ABC = SE.getMulExpr(ABCOps, SCEV::FlagNUW);
+
+    SmallVector<SCEVUse, 3> ABEOps = {A, B, E};
+    const SCEV *ABE = SE.getMulExpr(ABEOps, SCEV::FlagNUW);
+
+    SmallVector<SCEVUse, 3> BCEOps = {B, C, E};
+    const SCEV *BCE = SE.getMulExpr(BCEOps, SCEV::FlagNUW);
+
+    SmallVector<SCEVUse, 2> A3Ops = {A, Three};
+    const SCEV *A3 = SE.getMulExpr(A3Ops, SCEV::FlagNUW);
+
+    SmallVector<SCEVUse, 2> B3Ops = {B, Three};
+    const SCEV *B3 = SE.getMulExpr(B3Ops, SCEV::FlagNUW);
+
+    SmallVector<SCEVUse, 2> D6Ops = {D, Six};
+    const SCEV *D6 = SE.getMulExpr(D6Ops, SCEV::FlagNUW);
+
+    SmallVector<SCEVUse, 4> ABCDOps = {A, B, C, D};
+    const SCEV *ABCDNoNUW = SE.getMulExpr(ABCDOps);
+
+    SmallVector<SCEVUse, 4> ABCE3Ops = {A, B, C, E, Three};
+    const SCEV *ABCE3 = SE.getMulExpr(ABCE3Ops, SCEV::FlagNUW);
+
+    // B / (B * D)
+    EXPECT_EQ(SE.getUDivExactExpr(B, BD), SE.getUDivExpr(One, D));
+
+    // A / (A * B * C)
+    {
+      auto *A_ABC = SE.getUDivExactExpr(A, ABC);
+      auto *Denom = dyn_cast<const SCEVMulExpr>(A_ABC->operands().back());
+      EXPECT_TRUE(Denom);
+      EXPECT_FALSE(!Denom || Denom->hasNoUnsignedWrap());
+      SmallVector<SCEVUse, 2> BCOps = {B, C};
+      const SCEV *BCNoNUW = SE.getMulExpr(BCOps);
+      EXPECT_EQ(A_ABC, SE.getUDivExpr(One, BCNoNUW));
+    }
+
+    // B / (A * B * C)
+    {
+      auto *B_ABC = SE.getUDivExactExpr(B, ABC);
+      auto *Denom = dyn_cast<const SCEVMulExpr>(B_ABC->operands().back());
+      EXPECT_TRUE(Denom);
+      EXPECT_FALSE(!Denom || Denom->hasNoUnsignedWrap());
+      SmallVector<SCEVUse, 2> ACOps = {A, C};
+      const SCEV *ACNoNUW = SE.getMulExpr(ACOps);
+      EXPECT_EQ(B_ABC, SE.getUDivExpr(One, ACNoNUW));
+    }
+
+    // C / (A * B * C)
+    {
+      auto *C_ABC = SE.getUDivExactExpr(C, ABC);
+      auto *Denom = dyn_cast<const SCEVMulExpr>(C_ABC->operands().back());
+      EXPECT_TRUE(Denom);
+      EXPECT_FALSE(!Denom || Denom->hasNoUnsignedWrap());
+      SmallVector<SCEVUse, 2> ABOps = {A, B};
+      const SCEV *ABNoNUW = SE.getMulExpr(ABOps);
+      EXPECT_EQ(C_ABC, SE.getUDivExpr(One, ABNoNUW));
+    }
+
+    // (C * E) / (C * D * E)
+    {
+      auto *CE_CDE = SE.getUDivExactExpr(CE, CDE);
+      auto *Denom = dyn_cast<const SCEVMulExpr>(CE_CDE->operands().back());
+      EXPECT_TRUE(Denom);
+      EXPECT_FALSE(!Denom || Denom->hasNoUnsignedWrap());
+      SmallVector<SCEVUse, 2> DEOps = {D, E};
+      const SCEV *DENoNUW = SE.getMulExpr(DEOps);
+      SmallVector<SCEVUse, 2> CDOps = {C, D};
+      const SCEV *CDNoNUW = SE.getMulExpr(CDOps);
+      EXPECT_TRUE(CE_CDE == SE.getUDivExpr(E, DENoNUW) ||
+                  CE_CDE == SE.getUDivExpr(C, CDNoNUW));
+    }
+
+    // (B * D) / (A * B * E)
+    {
+      auto *BD_ABE = SE.getUDivExactExpr(BD, ABE);
+      auto *Denom = dyn_cast<const SCEVMulExpr>(BD_ABE->operands().back());
+      EXPECT_TRUE(Denom);
+      EXPECT_FALSE(!Denom || Denom->hasNoUnsignedWrap());
+      SmallVector<SCEVUse, 2> AEOps = {A, E};
+      const SCEV *AENoNUW = SE.getMulExpr(AEOps);
+      EXPECT_EQ(BD_ABE, SE.getUDivExpr(D, AENoNUW));
+    }
+
+    // (3 * A) / (3 * B)
+    EXPECT_EQ(SE.getUDivExactExpr(A3, B3), SE.getUDivExpr(A, B));
+
+    // (B * D) / (B * D)
+    EXPECT_EQ(SE.getUDivExactExpr(BD, BD), One);
+
+    // (3 * A) / (3 * A)
+    EXPECT_EQ(SE.getUDivExactExpr(A3, A3), One);
+
+    // (D) / (B * C * E)
+    EXPECT_EQ(SE.getUDivExactExpr(D, BCE), SE.getUDivExpr(D, BCE));
+
+    // (D * 6) / (3 * A * B * C * E)
+    {
+      auto *D6_ABCE3 = SE.getUDivExactExpr(D6, ABCE3);
+      EXPECT_TRUE(cast<const SCEVMulExpr>(D6_ABCE3->operands().front())
+                      ->hasNoUnsignedWrap());
+      EXPECT_TRUE(cast<const SCEVMulExpr>(D6_ABCE3->operands().back())
+                      ->hasNoUnsignedWrap());
+      auto *Num = dyn_cast<const SCEVMulExpr>(D6_ABCE3->operands().front());
+      auto *Denom = dyn_cast<const SCEVMulExpr>(D6_ABCE3->operands().back());
+      EXPECT_TRUE(Num);
+      EXPECT_TRUE(Num && Num->hasNoUnsignedWrap());
+      EXPECT_TRUE(Denom);
+      EXPECT_TRUE(Denom && Denom->hasNoUnsignedWrap());
+      SmallVector<SCEVUse, 4> ABCEOps = {A, B, C, E};
+      const SCEV *ABCE = SE.getMulExpr(ABCEOps, SCEV::FlagNUW);
+      SmallVector<SCEVUse, 2> D2Ops = {D, Two};
+      const SCEV *D2 = SE.getMulExpr(D2Ops, SCEV::FlagNUW);
+      EXPECT_EQ(D6_ABCE3, SE.getUDivExpr(D2, ABCE));
+      // No NUW
+      EXPECT_EQ(SE.getUDivExactExpr(A, ABCDNoNUW),
+                SE.getUDivExpr(A, ABCDNoNUW));
+    }
+  });
+}
+
 TEST_F(ScalarEvolutionsTest, CheckGetPowerOfTwo) {
   Module M("CheckGetPowerOfTwo", Context);
   FunctionType *FTy = FunctionType::get(Type::getVoidTy(Context), {}, false);
