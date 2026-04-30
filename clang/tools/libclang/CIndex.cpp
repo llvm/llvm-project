@@ -2407,6 +2407,10 @@ void OMPClauseEnqueue::VisitOMPNowaitClause(const OMPNowaitClause *C) {
   Visitor->AddStmt(C->getCondition());
 }
 
+void OMPClauseEnqueue::VisitOMPReplayableClause(const OMPReplayableClause *C) {
+  Visitor->AddStmt(C->getCondition());
+}
+
 void OMPClauseEnqueue::VisitOMPUntiedClause(const OMPUntiedClause *) {}
 
 void OMPClauseEnqueue::VisitOMPMergeableClause(const OMPMergeableClause *) {}
@@ -2748,6 +2752,12 @@ void OMPClauseEnqueue::VisitOMPUseDeviceAddrClause(
 void OMPClauseEnqueue::VisitOMPIsDevicePtrClause(
     const OMPIsDevicePtrClause *C) {
   VisitOMPClauseList(C);
+}
+void OMPClauseEnqueue::VisitOMPGraphIdClause(const OMPGraphIdClause *C) {
+  Visitor->AddStmt(C->getId());
+}
+void OMPClauseEnqueue::VisitOMPGraphResetClause(const OMPGraphResetClause *C) {
+  Visitor->AddStmt(C->getCondition());
 }
 void OMPClauseEnqueue::VisitOMPHasDeviceAddrClause(
     const OMPHasDeviceAddrClause *C) {
@@ -6363,6 +6373,8 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("OMPTaskwaitDirective");
   case CXCursor_OMPAssumeDirective:
     return cxstring::createRef("OMPAssumeDirective");
+  case CXCursor_OMPTaskgraphDirective:
+    return cxstring::createRef("OMPTaskgraphDirective");
   case CXCursor_OMPErrorDirective:
     return cxstring::createRef("OMPErrorDirective");
   case CXCursor_OMPTaskgroupDirective:
