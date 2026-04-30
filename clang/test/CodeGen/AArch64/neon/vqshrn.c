@@ -38,3 +38,33 @@ int32x2_t test_vqshrn_n_s64(int64x2_t a) {
   // LLVM-NEXT: ret <2 x i32> [[RES]]
   return vqshrn_n_s64(a, 19);
 }
+
+// LLVM-LABEL: @test_vqshrn_n_u16(
+// CIR-LABEL: @vqshrn_n_u16(
+uint8x8_t test_vqshrn_n_u16(uint16x8_t a) {
+  // CIR: {{.*}}cir.call_llvm_intrinsic "aarch64.neon.uqshrn"
+  // CIR-SAME: (!cir.vector<8 x !u16i>) -> !cir.vector<8 x !u8i>
+  // LLVM: [[RES:%.*]] = call <8 x i8> @llvm.aarch64.neon.uqshrn.v8i8
+  // LLVM-NEXT: ret <8 x i8> [[RES]]
+  return vqshrn_n_u16(a, 3);
+}
+
+// LLVM-LABEL: @test_vqshrn_n_u32(
+// CIR-LABEL: @vqshrn_n_u32(
+uint16x4_t test_vqshrn_n_u32(uint32x4_t a) {
+  // CIR: {{.*}}cir.call_llvm_intrinsic "aarch64.neon.uqshrn"
+  // CIR-SAME: (!cir.vector<4 x !u32i>) -> !cir.vector<4 x !u16i>
+  // LLVM: [[RES:%.*]] = call <4 x i16> @llvm.aarch64.neon.uqshrn.v4i16
+  // LLVM-NEXT: ret <4 x i16> [[RES]]
+  return vqshrn_n_u32(a, 9);
+}
+
+// LLVM-LABEL: @test_vqshrn_n_u64(
+// CIR-LABEL: @vqshrn_n_u64(
+uint32x2_t test_vqshrn_n_u64(uint64x2_t a) {
+  // CIR: {{.*}}cir.call_llvm_intrinsic "aarch64.neon.uqshrn"
+  // CIR-SAME: (!cir.vector<2 x !u64i>) -> !cir.vector<2 x !u32i>
+  // LLVM: [[RES:%.*]] = call <2 x i32> @llvm.aarch64.neon.uqshrn.v2i32
+  // LLVM-NEXT: ret <2 x i32> [[RES]]
+  return vqshrn_n_u64(a, 19);
+}

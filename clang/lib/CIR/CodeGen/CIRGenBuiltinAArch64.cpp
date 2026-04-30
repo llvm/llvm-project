@@ -2544,7 +2544,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     intrName = "aarch64.neon.sqshrun";
     return emitNeonCall(cgm, builder, {ty, ty}, ops, intrName, ty, loc);
   case NEON::BI__builtin_neon_vqshrn_n_v:
-    intrName = "aarch64.neon.sqshrn";
+    intrName = usgn ? "aarch64.neon.uqshrn" : "aarch64.neon.sqshrn";
     return emitNeonCall(cgm, builder, {ty, ty}, ops, intrName, ty, loc);
   case NEON::BI__builtin_neon_vmaxnmh_f16:
   case NEON::BI__builtin_neon_vrecpss_f32:
