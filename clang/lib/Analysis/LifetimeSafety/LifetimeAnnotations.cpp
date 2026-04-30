@@ -387,6 +387,15 @@ bool isInvalidationMethod(const CXXMethodDecl &MD) {
   return InvalidatingMethods->contains(MD.getName());
 }
 
+bool isDestructionFunc(const FunctionDecl &FD) {
+  if (isa<CXXDestructorDecl>(FD))
+    return true;
+  if (const auto *II = FD.getIdentifier();
+      isInStlNamespace(&FD) && II && II->getName() == "destroy_at")
+    return true;
+  return false;
+}
+
 bool isStdCallableWrapperType(const CXXRecordDecl *RD) {
   if (!RD || !isInStlNamespace(RD))
     return false;

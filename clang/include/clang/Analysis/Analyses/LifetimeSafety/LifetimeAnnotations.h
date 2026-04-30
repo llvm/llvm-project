@@ -80,6 +80,8 @@ bool isUniquePtrRelease(const CXXMethodDecl &MD);
 // https://en.cppreference.com/w/cpp/container#Iterator_invalidation
 bool isInvalidationMethod(const CXXMethodDecl &MD);
 
+// Returns true if the given function is a destructor/deleter (destroy_at).
+bool isDestructionFunc(const FunctionDecl &FD);
 /// Returns true for standard library callable wrappers (e.g., std::function)
 /// that can propagate the stored lambda's origins.
 bool isStdCallableWrapperType(const CXXRecordDecl *RD);

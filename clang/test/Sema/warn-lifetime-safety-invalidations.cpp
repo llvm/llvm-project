@@ -540,6 +540,73 @@ void function_captured_ref_invalidated() {
 
 } // namespace callable_wrappers
 
+namespace manual_destruction {
+
+void explicit_destructor_invalidates_pointer() {
+  std::string s = "42";
+  const char *p = s.data(); // expected-warning {{object whose reference is captured is later invalidated}}
+  s.~basic_string();        // expected-note {{invalidated here}}
+  (void)*p;                 // expected-note {{later used here}}
+}
+
+void pointer_destructor_invalidates_pointer() {
+  char storage[sizeof(std::string)];
+  std::string *obj = new (storage) std::string("42"); // expected-warning {{object whose reference is captured is later invalidated}}
+  const char *p = obj->data();
+  obj->~basic_string();                               // expected-note {{invalidated here}}
+  (void)*p;                                           // expected-note {{later used here}}
+}
+
+void destroy_at_invalidates_pointer() {
+  char storage[sizeof(std::string)];
+  std::string *obj = new (storage) std::string("42"); // expected-warning {{object whose reference is captured is later invalidated}}
+  const char *p = obj->data();
+  std::destroy_at(obj);                               // expected-note {{invalidated here}}
+  (void)*p;                                           // expected-note {{later used here}}
+}
+
+void destroy_at_then_placement_new_rescues_pointer() {
+  char storage[sizeof(std::string)];
+  std::string *obj = new (storage) std::string("42");
+  const char *p = obj->data();
+  std::destroy_at(obj);
+  obj = new (storage) std::string("23");
+  p = obj->data();
+  (void)*p;
+}
+
+// FIXME: False-negative
+void destroy_at_invalidates_array_pointer() {
+  std::string arr[1] = {"42"};
+  std::string (&arr_ref)[1] = arr;
+  const char *p = arr[0].data();
+  std::destroy_at(&arr_ref);
+  (void)*p;
+}
+
+// FIXME: False-negative
+void reference_destructor_invalidates_pointer() {
+  std::string s = "42";
+  std::string &ref = s;
+  const char *p = ref.data();
+  std::destroy_at(&ref);
+  (void)*p;
+}
+
+struct StringOwner {
+  std::string s;
+};
+
+// FIXME: False-negative
+void member_destructor_invalidates_pointer() {
+  StringOwner owner = {"42"};
+  const char *p = owner.s.data();
+  owner.s.~basic_string();
+  (void)*p;
+}
+
+} // namespace manual_destruction
+
 namespace unique_ptr_invalidation {
 
 void invalid_after_reset() {

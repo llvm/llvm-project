@@ -768,18 +768,21 @@ void FactsGenerator::handleInvalidatingCall(const Expr *Call,
                                             const FunctionDecl *FD,
                                             ArrayRef<const Expr *> Args) {
   const auto *MD = dyn_cast<CXXMethodDecl>(FD);
-  if (!MD || !MD->isInstance())
+  const bool IsInvalidatingMethod = MD && isInvalidationMethod(*MD);
+  const bool IsDestruction = isDestructionFunc(*FD);
+  if (!IsInvalidatingMethod && !IsDestruction)
     return;
 
-  if (!isInvalidationMethod(*MD))
-    return;
-  // Heuristics to turn-down false positives.
-  auto *DRE = dyn_cast<DeclRefExpr>(Args[0]);
+  // `destroy_at` get an implicit cast for the object argument, methods already
+  // give us the right shape.
+  const Expr *Target = IsDestruction ? Args[0]->IgnoreImpCasts() : Args[0];
+
+  // Heuristics to turn down false positives.
+  const auto *DRE = dyn_cast<DeclRefExpr>(Target);
   if (!DRE || DRE->getDecl()->getType()->isReferenceType())
     return;
 
-  OriginList *ThisList = getOriginsList(*Args[0]);
-  if (ThisList)
+  if (OriginList *ThisList = getOriginsList(*Args[0]))
     CurrentBlockFacts.push_back(FactMgr.createFact<InvalidateOriginFact>(
         ThisList->getOuterOriginID(), Call));
 }
