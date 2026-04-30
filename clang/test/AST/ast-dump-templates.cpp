@@ -146,8 +146,6 @@ void func() {
 // DUMP-NEXT:   `-TemplateTypeParmType {{.*}} 'Key' dependent depth 0 index 0
 // DUMP-NEXT:     `-TemplateTypeParm {{.*}} 'Key'
 
-// FIXME: JSON dump is missing TemplateTypeParm node at the end.
-
 // JSON-LABEL: "name": "test6",
 // JSON:       "kind": "UnresolvedLookupExpr",
 // JSON:       "type": {
