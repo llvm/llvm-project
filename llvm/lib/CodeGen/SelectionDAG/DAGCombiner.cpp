@@ -3909,9 +3909,8 @@ static SDValue combineCarryDiamond(SelectionDAG &DAG, const TargetLowering &TLI,
 
 // Reconstruct a subtract-with-borrow chain from its canonicalized icmp form:
 //   carry_out = or(icmp ult A, B, and(icmp eq A, B, carry_in))
-// InstCombine collapses chained usub.with.overflow intrinsics into this
-// shape, losing the direct USUBO_CARRY that the backend can chain through
-// sbb/sbcs. Fixes llvm#106118.
+// InstCombine folds usub.with.overflow chains into this, losing the
+// USUBO_CARRY that lowers to sbb/sbcs.
 static SDValue combineOrOfSetCCToUSUBOCarry(SDNode *N, SelectionDAG &DAG,
                                             const TargetLowering &TLI) {
   SDValue A, B, CarryIn;
