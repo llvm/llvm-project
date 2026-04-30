@@ -1296,9 +1296,8 @@ struct AAPointerInfoImpl
     auto CanSkipAccess = [&](const Access &Acc, bool Exact) {
       if (SkipCB && SkipCB(Acc))
         return true;
-      if (!CanIgnoreThreading(Acc)) {
+      if (!CanIgnoreThreading(Acc))
         return false;
-      }
 
       // Check read (RAW) dependences and write (WAR) dependences as necessary.
       // If we successfully excluded all effects we are interested in, the
@@ -1453,12 +1452,6 @@ struct AAPointerInfoImpl
       // EnsureReachableFromI: it answers "can Acc reach I?" rather than
       // "can I reach Acc?".
       //
-      // Lazily compute backward reachability to I's block.
-      // BFS over predecessor edges within Scope, skipping dead edges and
-      // not traversing past ExclusionSet blocks. This is the mirror of
-      // EnsureReachableFromI: it answers "can Acc reach I?" rather than
-      // "can I reach Acc?".
-      //
       // As with EnsureReachableFromI, I's block is always traversed
       // (its predecessors are always explored) to match isPotentiallyReachable
       // semantics.
@@ -1513,7 +1506,7 @@ struct AAPointerInfoImpl
       // set Checked = true without calling isPotentiallyReachable.
       //
       // When BFSSafe is false, the BFS cannot be a negative filter because
-      // isPotentiallyreachable considers inter-procedural and cross-invocation
+      // isPotentiallyReachable considers inter-procedural and cross-invocation
       // paths that the BFS can't model. In that case, we skip the BFS entirely
       // and only use the same-block optimization (which doesn't depend on the
       // BFS).
@@ -1524,9 +1517,8 @@ struct AAPointerInfoImpl
       auto CanSkipAccessBatch = [&](const Access &Acc, bool Exact) {
         if (SkipCB && SkipCB(Acc))
           return true;
-        if (!CanIgnoreThreading(Acc)) {
+        if (!CanIgnoreThreading(Acc))
           return false;
-        }
 
         bool ReadChecked = !FindInterferingReads;
         bool WriteChecked = !FindInterferingWrites;
