@@ -66,7 +66,7 @@ void MCAsmBaseStreamer::addEncodingComment(const MCInst &Inst,
   // RISC-V instructions are always little-endian, even on BE systems.
   bool ForceLE = getContext().getTargetTriple().isRISCV();
 
-  const MCAsmInfo *MAI = getContext().getAsmInfo();
+  const MCAsmInfo &MAI = getContext().getAsmInfo();
 
   // If we are showing fixups, create symbolic markers in the encoded
   // representation. We do this by making a per-bit map to the fixup item index,
@@ -125,7 +125,7 @@ void MCAsmBaseStreamer::addEncodingComment(const MCInst &Inst,
         // RISC-V instructions are always little-endian.
         // The FixupMap is indexed by actual bit positions in the LE
         // instruction.
-        if (MAI->isLittleEndian() || ForceLE)
+        if (MAI.isLittleEndian() || ForceLE)
           FixupBit = I * 8 + J;
         else
           FixupBit = I * 8 + (7 - J);
@@ -144,7 +144,7 @@ void MCAsmBaseStreamer::addEncodingComment(const MCInst &Inst,
     MCFixup &F = Fixups[I];
     OS << "  fixup " << char('A' + I) << " - "
        << "offset: " << F.getOffset() << ", value: ";
-    MAI->printExpr(OS, *F.getValue());
+    MAI.printExpr(OS, *F.getValue());
     auto Kind = F.getKind();
     if (mc::isRelocation(Kind))
       OS << ", relocation type: " << Kind;
