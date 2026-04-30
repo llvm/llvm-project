@@ -353,6 +353,10 @@ public:
   /// when set by name.
   bool GetEnableTrampolineSupport() const;
 
+  void SetCheckValueObjectOwnership(bool check);
+
+  bool GetCheckValueObjectOwnership() const;
+
   std::optional<LoadScriptFromSymFile>
   GetAutoLoadScriptsForModule(llvm::StringRef module_name) const;
 
