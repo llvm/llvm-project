@@ -10590,8 +10590,7 @@ SDValue SITargetLowering::packBytesToI32(SelectionDAG &DAG, const SDLoc &SL,
                                          SDValue Src, unsigned NumBytes,
                                          unsigned FirstLane) {
   EVT SrcVT = Src.getValueType();
-  assert(SrcVT.isVector() &&
-         SrcVT.getVectorElementType() == MVT::i8 &&
+  assert(SrcVT.isVector() && SrcVT.getVectorElementType() == MVT::i8 &&
          "packBytesToI32 expects a v*i8 source");
   unsigned SrcBytes = SrcVT.getVectorNumElements();
   assert((NumBytes == 2 || NumBytes == 4) && "expected 2 or 4 bytes");
