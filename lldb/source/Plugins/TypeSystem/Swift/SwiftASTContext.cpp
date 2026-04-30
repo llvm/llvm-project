@@ -1917,9 +1917,9 @@ void SwiftASTContext::ConfigureModuleValidation(
 }
 
 void SwiftASTContext::AddExtraClangArgs(
-    const std::vector<std::string> &ExtraArgs,
-    const std::vector<std::pair<std::string, bool>> module_search_paths,
-    const std::vector<std::pair<std::string, bool>> framework_search_paths,
+    llvm::ArrayRef<std::string> ExtraArgs,
+    llvm::ArrayRef<std::pair<std::string, bool>> module_search_paths,
+    llvm::ArrayRef<std::pair<std::string, bool>> framework_search_paths,
     StringRef overrideOpts) {
   swift::ClangImporterOptions &importer_options = GetClangImporterOptions();
   auto defer = llvm::make_scope_exit([&]() {
@@ -1997,9 +1997,9 @@ bool SwiftASTContext::IsModuleAvailableInCAS(llvm::StringRef key) const {
 };
 
 void SwiftASTContext::AddExtraClangCC1Args(
-    const std::vector<std::string> &source,
-    const std::vector<std::pair<std::string, bool>> module_search_paths,
-    const std::vector<std::pair<std::string, bool>> framework_search_paths,
+    llvm::ArrayRef<std::string> source,
+    llvm::ArrayRef<std::pair<std::string, bool>> module_search_paths,
+    llvm::ArrayRef<std::pair<std::string, bool>> framework_search_paths,
     std::vector<std::string> &dest) {
   clang::CompilerInvocation invocation;
   std::vector<std::string> default_paths = {
