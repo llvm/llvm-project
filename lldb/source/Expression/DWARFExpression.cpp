@@ -1205,6 +1205,45 @@ Evaluate_DW_OP_form_tls_address(DWARFExpression::Stack &stack,
   return llvm::Error::success();
 }
 
+static llvm::Error Evaluate_DW_OP_fbreg(DWARFExpression::Stack &stack,
+                                        ExecutionContext *exe_ctx,
+                                        StackFrame *frame,
+                                        int64_t fbreg_offset) {
+  if (!exe_ctx)
+    return llvm::createStringError("NULL execution context for DW_OP_fbreg");
+  if (!frame)
+    return llvm::createStringError(
+        "invalid stack frame in context for DW_OP_fbreg opcode");
+
+  Scalar value;
+  if (llvm::Error err = frame->GetFrameBaseValue(value))
+    return err;
+  value += fbreg_offset;
+  stack.push_back(value);
+  stack.back().SetValueType(Value::ValueType::LoadAddress);
+  return llvm::Error::success();
+}
+
+static llvm::Error Evaluate_DW_OP_call_frame_cfa(DWARFExpression::Stack &stack,
+                                                 StackFrame *frame) {
+  if (!frame)
+    return llvm::createStringError(
+        "unvalid stack frame in context for DW_OP_call_frame_cfa opcode");
+
+  // Note that we don't have to parse FDEs because this DWARF expression
+  // is commonly evaluated with a valid stack frame.
+  StackID id = frame->GetStackID();
+  addr_t cfa = id.GetCallFrameAddressWithMetadata();
+  if (cfa == LLDB_INVALID_ADDRESS)
+    return llvm::createStringError("stack frame does not include a canonical "
+                                   "frame address for DW_OP_call_frame_cfa "
+                                   "opcode");
+
+  stack.push_back(Scalar(cfa));
+  stack.back().SetValueType(Value::ValueType::LoadAddress);
+  return llvm::Error::success();
+}
+
 llvm::Expected<Value> DWARFExpression::Evaluate(
     ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
     lldb::ModuleSP module_sp, const DataExtractor &opcodes,
@@ -1940,24 +1979,9 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     } break;
 
     case DW_OP_fbreg:
-      if (exe_ctx) {
-        if (frame) {
-          Scalar value;
-          if (llvm::Error err = frame->GetFrameBaseValue(value))
-            return err;
-          int64_t fbreg_offset = op->getRawOperand(0);
-          value += fbreg_offset;
-          stack.push_back(value);
-          stack.back().SetValueType(Value::ValueType::LoadAddress);
-        } else {
-          return llvm::createStringError(
-              "invalid stack frame in context for DW_OP_fbreg opcode");
-        }
-      } else {
-        return llvm::createStringError(
-            "NULL execution context for DW_OP_fbreg");
-      }
-
+      if (llvm::Error err =
+              Evaluate_DW_OP_fbreg(stack, exe_ctx, frame, op->getRawOperand(0)))
+        return err;
       break;
 
     // OPCODE: DW_OP_nop
@@ -2149,24 +2173,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // the canonical frame address consistent with the call frame information
     // located in .debug_frame (or in the FDEs of the eh_frame section).
     case DW_OP_call_frame_cfa:
-      if (frame) {
-        // Note that we don't have to parse FDEs because this DWARF expression
-        // is commonly evaluated with a valid stack frame.
-        StackID id = frame->GetStackID();
-        addr_t cfa = id.GetCallFrameAddressWithMetadata();
-        if (cfa != LLDB_INVALID_ADDRESS) {
-          stack.push_back(Scalar(cfa));
-          stack.back().SetValueType(Value::ValueType::LoadAddress);
-        } else {
-          return llvm::createStringError(
-              "stack frame does not include a canonical "
-              "frame address for DW_OP_call_frame_cfa "
-              "opcode");
-        }
-      } else {
-        return llvm::createStringError("unvalid stack frame in context for "
-                                       "DW_OP_call_frame_cfa opcode");
-      }
+      if (llvm::Error err = Evaluate_DW_OP_call_frame_cfa(stack, frame))
+        return err;
       break;
 
     // OPCODE: DW_OP_form_tls_address (or the old pre-DWARFv3 vendor extension
