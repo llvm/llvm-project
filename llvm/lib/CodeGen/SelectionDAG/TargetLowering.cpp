@@ -11518,7 +11518,9 @@ SDValue TargetLowering::expandAddSubSat(SDNode *Node, SelectionDAG &DAG) const {
   }
 
   // usub.sat(a, 1) -> sub(a, zext(a != 0))
-  if (Opcode == ISD::USUBSAT && isOneOrOneSplat(RHS)) {
+  // Prefer this on targets without legal/cost-effective overflow-carry nodes.
+  if (Opcode == ISD::USUBSAT && isOneOrOneSplat(RHS) &&
+      !isOperationLegalOrCustom(ISD::USUBO_CARRY, VT)) {
     LHS = DAG.getFreeze(LHS);
     SDValue Zero = DAG.getConstant(0, dl, VT);
     EVT BoolVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
