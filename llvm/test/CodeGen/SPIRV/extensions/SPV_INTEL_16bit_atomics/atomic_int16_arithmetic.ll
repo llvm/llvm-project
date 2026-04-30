@@ -14,7 +14,7 @@
 ; CHECK-DAG: %[[#Const5:]] = OpConstant %[[#TyInt16]] 5{{$}}
 ; CHECK-DAG: %[[#Const0:]] = OpConstantNull %[[#TyInt16]]
 ; CHECK-DAG: %[[#Scope:]] = OpConstantNull %[[#TyInt32]]
-; CHECK-DAG: %[[#MemSeqCst:]] = OpConstant %[[#TyInt32]] 16{{$}}
+; CHECK-DAG: %[[#MemSeqCst:]] = OpConstant %[[#TyInt32]] 528{{$}}
 ; CHECK-DAG: %[[#Val:]] = OpVariable %[[#TyInt16Ptr]] CrossWorkgroup %[[#Const0]]
 
 ; CHECK: OpAtomicIAdd %[[#TyInt16]] %[[#Val]] %[[#Scope]] %[[#MemSeqCst]] %[[#Const5]]

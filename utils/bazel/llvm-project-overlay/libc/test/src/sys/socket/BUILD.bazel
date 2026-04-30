@@ -33,6 +33,7 @@ libc_test(
     srcs = ["linux/send_recv_test.cpp"],
     deps = [
         "//libc:close",
+        "//libc:hdr_sys_socket_macros",
         "//libc:recv",
         "//libc:send",
         "//libc:socketpair",
@@ -55,8 +56,16 @@ libc_test(
     srcs = ["linux/sendmsg_recvmsg_test.cpp"],
     deps = [
         "//libc:close",
+        "//libc:fcntl",
+        "//libc:getsockopt",
+        "//libc:hdr_fcntl_macros",
+        "//libc:hdr_sys_socket_macros",
+        "//libc:llvm_libc_macros_sys_socket_macros",
+        "//libc:memcpy",
+        "//libc:memset",
         "//libc:recvmsg",
         "//libc:sendmsg",
         "//libc:socketpair",
+        "//libc:types_struct_cmsghdr",
     ],
 )

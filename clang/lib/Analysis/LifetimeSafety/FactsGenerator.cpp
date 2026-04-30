@@ -94,6 +94,14 @@ static const Loan *createLoan(FactManager &FactMgr,
   return FactMgr.getLoanMgr().createLoan(Path, MTE);
 }
 
+/// Creates a loan for an allocation through 'new'
+/// \param NE The CXXNewExpr that represents the allocation
+/// \return The new Loan on success, nullptr otherwise
+static const Loan *createLoan(FactManager &FactMgr, const CXXNewExpr *NE) {
+  AccessPath Path(NE);
+  return FactMgr.getLoanMgr().createLoan(Path, NE);
+}
+
 void FactsGenerator::run() {
   llvm::TimeTraceScope TimeProfile("FactGenerator");
   const CFG &Cfg = *AC.getCFG();
@@ -323,6 +331,12 @@ void FactsGenerator::VisitCastExpr(const CastExpr *CE) {
   case CK_FunctionToPointerDecay:
   case CK_BuiltinFnToFnPtr:
     // Ignore function-to-pointer decays.
+    return;
+  case CK_BitCast:
+    // OriginLists for Src and Dst may differ here. For example when casting
+    // from int** to void*
+    if (Src && Dest && Dest->getLength() == Src->getLength())
+      flow(Dest, Src, /*Kill=*/true);
     return;
   default:
     return;
@@ -615,6 +629,61 @@ void FactsGenerator::VisitArraySubscriptExpr(const ArraySubscriptExpr *ASE) {
       Dst->getOuterOriginID(), Src->getOuterOriginID(), /*Kill=*/true));
 }
 
+void FactsGenerator::VisitCXXNewExpr(const CXXNewExpr *NE) {
+  OriginList *NewList = getOriginsList(*NE);
+  const Expr *Init = NE->getInitializer();
+
+  // Check if we have a placement new where the second argument is void*, to
+  // avoid flowing from non-pointer parameters, such as std::nothrow.
+  // And that the placement parameter num is 1,
+  // that is to mostly limit to standard library placement new.
+  if (NE->getNumPlacementArgs() == 1) {
+    if (const auto *Arg = NE->getOperatorNew()
+                              ->getParamDecl(1)
+                              ->getType()
+                              ->getAs<PointerType>();
+        Arg && Arg->isVoidPointerType()) {
+      // Use the placement argument before the implicit conversion to void*, so
+      // inner origins are still available.
+      const Expr *PlacementArg = NE->getPlacementArg(0);
+      if (const auto *ICE = dyn_cast<ImplicitCastExpr>(PlacementArg);
+          ICE && ICE->getCastKind() == CK_BitCast &&
+          PlacementArg->getType()->isVoidPointerType())
+        PlacementArg = ICE->getSubExpr();
+      OriginList *PlacementList = getOriginsList(*PlacementArg);
+      // FIXME: General placement arguments need separate handling to overwrite
+      // the right origins.
+
+      // The pointer returned by placement new comes from the placement
+      // argument.
+      if (PlacementList)
+        CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
+            NewList->getOuterOriginID(), PlacementList->getOuterOriginID(),
+            true));
+    }
+  } else {
+    const Loan *L = createLoan(FactMgr, NE);
+    CurrentBlockFacts.push_back(
+        FactMgr.createFact<IssueFact>(L->getID(), NewList->getOuterOriginID()));
+  }
+
+  NewList = NewList->peelOuterOrigin();
+
+  if (!NewList || !Init)
+    return;
+
+  // FIXME: OriginList is null for `new[]` initializers. Remove this `Init`
+  // check once array origins are supported.
+  if (OriginList *InitList = getOriginsList(*Init); InitList)
+    flow(NewList, InitList, true);
+}
+
+void FactsGenerator::VisitCXXDeleteExpr(const CXXDeleteExpr *DE) {
+  OriginList *List = getOriginsList(*DE->getArgument());
+  CurrentBlockFacts.push_back(
+      FactMgr.createFact<InvalidateOriginFact>(List->getOuterOriginID(), DE));
+}
+
 bool FactsGenerator::escapesViaReturn(OriginID OID) const {
   return llvm::any_of(EscapesInCurrentBlock, [OID](const Fact *F) {
     if (const auto *EF = F->getAs<ReturnEscapeFact>())
@@ -739,7 +808,7 @@ void FactsGenerator::handleInvalidatingCall(const Expr *Call,
   if (!MD || !MD->isInstance())
     return;
 
-  if (!isContainerInvalidationMethod(*MD))
+  if (!isInvalidationMethod(*MD))
     return;
   // Heuristics to turn-down false positives.
   auto *DRE = dyn_cast<DeclRefExpr>(Args[0]);

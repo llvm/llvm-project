@@ -14,6 +14,7 @@
 #include "AMDGPURegBankLegalizeHelper.h"
 #include "AMDGPUGlobalISelUtils.h"
 #include "AMDGPUInstrInfo.h"
+#include "AMDGPULaneMaskUtils.h"
 #include "AMDGPURegBankLegalizeRules.h"
 #include "AMDGPURegisterBankInfo.h"
 #include "GCNSubtarget.h"
@@ -38,6 +39,7 @@ RegBankLegalizeHelper::RegBankLegalizeHelper(
       RBLRules(RBLRules), IsWave32(ST.isWave32()),
       SgprRB(&RBI.getRegBank(AMDGPU::SGPRRegBankID)),
       VgprRB(&RBI.getRegBank(AMDGPU::VGPRRegBankID)),
+      AgprRB(&RBI.getRegBank(AMDGPU::AGPRRegBankID)),
       VccRB(&RBI.getRegBank(AMDGPU::VCCRegBankID)) {}
 
 bool RegBankLegalizeHelper::findRuleAndApplyMapping(MachineInstr &MI) {
@@ -94,20 +96,7 @@ bool RegBankLegalizeHelper::executeInWaterfallLoop(MachineIRBuilder &B,
 
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
   const TargetRegisterClass *WaveRC = TRI->getWaveMaskRegClass();
-  unsigned MovExecOpc, MovExecTermOpc, XorTermOpc, AndSaveExecOpc, ExecReg;
-  if (IsWave32) {
-    MovExecOpc = AMDGPU::S_MOV_B32;
-    MovExecTermOpc = AMDGPU::S_MOV_B32_term;
-    XorTermOpc = AMDGPU::S_XOR_B32_term;
-    AndSaveExecOpc = AMDGPU::S_AND_SAVEEXEC_B32;
-    ExecReg = AMDGPU::EXEC_LO;
-  } else {
-    MovExecOpc = AMDGPU::S_MOV_B64;
-    MovExecTermOpc = AMDGPU::S_MOV_B64_term;
-    XorTermOpc = AMDGPU::S_XOR_B64_term;
-    AndSaveExecOpc = AMDGPU::S_AND_SAVEEXEC_B64;
-    ExecReg = AMDGPU::EXEC;
-  }
+  const AMDGPU::LaneMaskConstants &LMC = AMDGPU::LaneMaskConstants::get(ST);
 
 #ifndef NDEBUG
   const int OrigRangeSize = std::distance(BeginIt, EndIt);
@@ -269,7 +258,7 @@ bool RegBankLegalizeHelper::executeInWaterfallLoop(MachineIRBuilder &B,
   B.buildIntrinsic(Intrinsic::amdgcn_ballot, CondRegLM).addReg(CondReg);
 
   // Update EXEC, save the original EXEC value to SavedExec.
-  B.buildInstr(AndSaveExecOpc)
+  B.buildInstr(LMC.AndSaveExecOpc)
       .addDef(SavedExec)
       .addReg(CondRegLM, RegState::Kill);
   MRI.setSimpleHint(SavedExec, CondRegLM);
@@ -277,7 +266,10 @@ bool RegBankLegalizeHelper::executeInWaterfallLoop(MachineIRBuilder &B,
   B.setInsertPt(*BodyBB, BodyBB->end());
 
   // Update EXEC, switch all done bits to 0 and all todo bits to 1.
-  B.buildInstr(XorTermOpc).addDef(ExecReg).addReg(ExecReg).addReg(SavedExec);
+  B.buildInstr(LMC.XorTermOpc)
+      .addDef(LMC.ExecReg)
+      .addReg(LMC.ExecReg)
+      .addReg(SavedExec);
 
   // XXX - s_xor_b64 sets scc to 1 if the result is nonzero, so can we use
   // s_cbranch_scc0?
@@ -287,11 +279,11 @@ bool RegBankLegalizeHelper::executeInWaterfallLoop(MachineIRBuilder &B,
 
   // Save the EXEC mask before the loop.
   B.setInsertPt(MBB, MBB.end());
-  B.buildInstr(MovExecOpc).addDef(SaveExecReg).addReg(ExecReg);
+  B.buildInstr(LMC.MovOpc).addDef(SaveExecReg).addReg(LMC.ExecReg);
 
   // Restore the EXEC mask after the loop.
   B.setInsertPt(*RestoreExecBB, RestoreExecBB->begin());
-  B.buildInstr(MovExecTermOpc).addDef(ExecReg).addReg(SaveExecReg);
+  B.buildInstr(LMC.MovTermOpc).addDef(LMC.ExecReg).addReg(SaveExecReg);
 
   // Set the insert point after the original instruction, so any new
   // instructions will be in the remainder.
@@ -1405,8 +1397,27 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
     }));
     return true;
   }
-  case ApplyINTRIN_IMAGE:
-    return applyRegisterBanksINTRIN_IMAGE(MI);
+  case ApplyINTRIN_IMAGE: {
+    const AMDGPU::RsrcIntrinsic *RSrcIntrin =
+        AMDGPU::lookupRsrcIntrinsic(AMDGPU::getIntrinsicID(MI));
+    assert(RSrcIntrin && RSrcIntrin->IsImage);
+    // The reported argument index is relative to the IR intrinsic call
+    // arguments, so shift by the number of defs and the intrinsic ID.
+    unsigned RsrcIdx = RSrcIntrin->RsrcArg + MI.getNumExplicitDefs() + 1;
+    return applyRegisterBanksVgprWithSgprRsrc(MI, RsrcIdx);
+  }
+  case ApplyBVH_INTERSECT_RAY: {
+    // Rsrc is the last register operand. Base BVH trails an A16 immediate
+    // after rsrc; dual/BVH8 do not. Scan backwards for the last virtual
+    // register.
+    unsigned RsrcIdx = MI.getNumOperands();
+    while (RsrcIdx-- > MI.getNumExplicitDefs()) {
+      const MachineOperand &Op = MI.getOperand(RsrcIdx);
+      if (Op.isReg() && Op.getReg().isVirtual())
+        break;
+    }
+    return applyRegisterBanksVgprWithSgprRsrc(MI, RsrcIdx);
+  }
   case SplitBitCount64To32:
     return lowerSplitBitCount64To32(MI);
   case ExtrVecEltToSel:
@@ -1654,6 +1665,8 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case Sgpr32SExt:
   case Sgpr32ZExt:
     return SgprRB;
+  case AgprAnyTy:
+    return AgprRB;
   case Vgpr16:
   case Vgpr32:
   case Vgpr64:
@@ -1684,6 +1697,7 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case VgprB256:
   case VgprB512:
   case VgprBRC:
+  case VgprAnyTy:
   case Vgpr32AExt:
   case Vgpr32SExt:
   case Vgpr32ZExt:
@@ -1770,6 +1784,19 @@ bool RegBankLegalizeHelper::applyMappingDst(
     case VgprPtr128: {
       assert(Ty == getBTyFromID(MethodIDs[OpIdx], Ty));
       assert(RB == getRegBankFromID(MethodIDs[OpIdx]));
+      break;
+    }
+    case VgprAnyTy: {
+      assert(RB == VgprRB);
+      break;
+    }
+    case AgprAnyTy: {
+      if (RB == AgprRB)
+        break;
+      Register NewAgprDst = MRI.createVirtualRegister({AgprRB, Ty});
+      Op.setReg(NewAgprDst);
+      if (!MRI.use_nodbg_empty(Reg))
+        B.buildCopy(Reg, NewAgprDst);
       break;
     }
     // uniform in vcc/vgpr: scalars, vectors and B-types
@@ -1964,6 +1991,20 @@ bool RegBankLegalizeHelper::applyMappingSrc(
       }
       break;
     }
+    case VgprAnyTy: {
+      if (RB != VgprRB) {
+        auto CopyToVgpr = B.buildCopy({VgprRB, Ty}, Reg);
+        Op.setReg(CopyToVgpr.getReg(0));
+      }
+      break;
+    }
+    case AgprAnyTy: {
+      if (RB != AgprRB) {
+        auto CopyToAgpr = B.buildCopy({AgprRB, Ty}, Reg);
+        Op.setReg(CopyToAgpr.getReg(0));
+      }
+      break;
+    }
     // sgpr waterfall, scalars, and vectors
     case Sgpr32_WF:
     case SgprV4S32_WF: {
@@ -2102,28 +2143,19 @@ bool RegBankLegalizeHelper::applyMappingSrc(
   return true;
 }
 
-bool RegBankLegalizeHelper::applyRegisterBanksINTRIN_IMAGE(MachineInstr &MI) {
-  const AMDGPU::RsrcIntrinsic *RSrcIntrin =
-      AMDGPU::lookupRsrcIntrinsic(AMDGPU::getIntrinsicID(MI));
-  assert(RSrcIntrin && RSrcIntrin->IsImage);
-
-  unsigned RsrcIdx = RSrcIntrin->RsrcArg;
+bool RegBankLegalizeHelper::applyRegisterBanksVgprWithSgprRsrc(
+    MachineInstr &MI, unsigned RsrcIdx) {
   const unsigned NumDefs = MI.getNumExplicitDefs();
-
-  // The reported argument index is relative to the IR intrinsic call arguments,
-  // so we need to shift by the number of defs and the intrinsic ID.
-  RsrcIdx += NumDefs + 1;
 
   MachineBasicBlock *MBB = MI.getParent();
   B.setInsertPt(*MBB, MBB->SkipPHIsAndLabels(std::next(MI.getIterator())));
 
-  // Defs(for image loads with return) are vgpr.
+  // Defs are vgpr.
   for (unsigned i = 0; i < NumDefs; ++i) {
-    const RegisterBank *RB = MRI.getRegBank(MI.getOperand(i).getReg());
-    if (RB == VgprRB)
+    Register Reg = MI.getOperand(i).getReg();
+    if (MRI.getRegBank(Reg) == VgprRB)
       continue;
 
-    Register Reg = MI.getOperand(i).getReg();
     Register NewVgprDst = MRI.createVirtualRegister({VgprRB, MRI.getType(Reg)});
     MI.getOperand(i).setReg(NewVgprDst);
     buildReadAnyLane(B, Reg, NewVgprDst, RBI);
@@ -2131,8 +2163,8 @@ bool RegBankLegalizeHelper::applyRegisterBanksINTRIN_IMAGE(MachineInstr &MI) {
 
   B.setInstrAndDebugLoc(MI);
 
-  // Register uses(before RsrcIdx) are vgpr.
-  for (unsigned i = 1; i < RsrcIdx; ++i) {
+  // Register uses before RsrcIdx are vgpr.
+  for (unsigned i = NumDefs; i < RsrcIdx; ++i) {
     MachineOperand &Op = MI.getOperand(i);
     if (!Op.isReg())
       continue;
@@ -2150,7 +2182,7 @@ bool RegBankLegalizeHelper::applyRegisterBanksINTRIN_IMAGE(MachineInstr &MI) {
 
   SmallSet<Register, 4> OpsToWaterfall;
 
-  // Register use RsrcIdx(and RsrcIdx+1 in some cases) is sgpr.
+  // Register use RsrcIdx (and later register operands) is sgpr.
   for (unsigned i = RsrcIdx; i < MI.getNumOperands(); ++i) {
     MachineOperand &Op = MI.getOperand(i);
     if (!Op.isReg())

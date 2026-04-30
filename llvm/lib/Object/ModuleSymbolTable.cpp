@@ -103,7 +103,7 @@ initializeRecordStreamer(const Module &M,
   SourceMgr SrcMgr;
   SrcMgr.AddNewSourceBuffer(std::move(Buffer), SMLoc());
 
-  MCContext MCCtx(TT, MAI.get(), MRI.get(), STI.get(), &SrcMgr);
+  MCContext MCCtx(TT, *MAI, MRI.get(), STI.get(), &SrcMgr);
   std::unique_ptr<MCObjectFileInfo> MOFI(
       T->createMCObjectFileInfo(MCCtx, /*PIC=*/false));
   MCCtx.setObjectFileInfo(MOFI.get());
@@ -114,7 +114,7 @@ initializeRecordStreamer(const Module &M,
       createMCAsmParser(SrcMgr, MCCtx, Streamer, *MAI));
 
   std::unique_ptr<MCTargetAsmParser> TAP(
-      T->createMCAsmParser(*STI, *Parser, *MCII, MCOptions));
+      T->createMCAsmParser(*STI, *Parser, *MCII));
   if (!TAP)
     return;
 

@@ -1839,6 +1839,8 @@ SDValue SelectionDAG::getConstant(const ConstantInt &Val, const SDLoc &DL,
 
   if (!N) {
     N = newSDNode<ConstantSDNode>(isT, isO, Elt, VTs);
+    if (!isT)
+      N->setDebugLoc(DL.getDebugLoc());
     CSEMap.InsertNode(N, IP);
     InsertNode(N);
     NewSDValueDbgMsg(SDValue(N, 0), "Creating constant: ", this);
@@ -3867,16 +3869,11 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
 
       // fshl: (X << (Z % BW)) | (Y >> (BW - (Z % BW)))
       // fshr: (X << (BW - (Z % BW))) | (Y >> (Z % BW))
+      const APInt ShAmt(BitWidth, Amt);
       Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
       Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
-      if (Opcode == ISD::FSHL) {
-        Known <<= Amt;
-        Known2 >>= BitWidth - Amt;
-      } else {
-        Known <<= BitWidth - Amt;
-        Known2 >>= Amt;
-      }
-      Known = Known.unionWith(Known2);
+      Known = Opcode == ISD::FSHL ? KnownBits::fshl(Known, Known2, ShAmt)
+                                  : KnownBits::fshr(Known, Known2, ShAmt);
     }
     break;
   case ISD::SHL_PARTS:
@@ -6099,6 +6096,25 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
     }
     break;
   }
+  case ISD::EXTRACT_VECTOR_ELT: {
+    SDValue Src = Op.getOperand(0);
+    auto *CIdx = dyn_cast<ConstantSDNode>(Op.getOperand(1));
+    EVT SrcVT = Src.getValueType();
+    if (SrcVT.isFixedLengthVector() && CIdx) {
+      if (CIdx->getAPIntValue().ult(SrcVT.getVectorNumElements())) {
+        APInt DemandedSrcElts = APInt::getOneBitSet(
+            SrcVT.getVectorNumElements(), CIdx->getZExtValue());
+        Known = computeKnownFPClass(Src, DemandedSrcElts, InterestedClasses,
+                                    Depth + 1);
+      } else {
+        // Out of bounds index is poison.
+        Known.KnownFPClasses = fcNone;
+      }
+    } else {
+      Known = computeKnownFPClass(Src, InterestedClasses, Depth + 1);
+    }
+    break;
+  }
   case ISD::SPLAT_VECTOR: {
     Known = computeKnownFPClass(Op.getOperand(0), InterestedClasses, Depth + 1);
     break;
@@ -6125,6 +6141,14 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
     Known = computeKnownFPClass(Op.getOperand(0), DemandedElts,
                                 InterestedClasses, Depth + 1);
     Known.fabs();
+    break;
+  }
+  case ISD::FCOPYSIGN: {
+    Known = computeKnownFPClass(Op.getOperand(0), DemandedElts,
+                                InterestedClasses, Depth + 1);
+    KnownFPClass KnownSign = computeKnownFPClass(Op.getOperand(1), DemandedElts,
+                                                 InterestedClasses, Depth + 1);
+    Known.copysign(KnownSign);
     break;
   }
   case ISD::AssertNoFPClass: {
@@ -7753,6 +7777,13 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
         }
       }
     }
+    // Logic ops can be folded from raw integer bits - mainly for AVX512 masks.
+    if (ISD::isBitwiseLogicOp(Opcode) && isa<ConstantSDNode>(N1) &&
+        isa<ConstantSDNode>(N2)) {
+      if (SDValue Res = FoldConstantArithmetic(Opcode, DL, N1.getValueType(),
+                                               {N1, N2}, Flags))
+        return getBitcast(VT, Res);
+    }
   }
 
   // Fold (mul step_vector(C0), C1) to (step_vector(C0 * C1)).
@@ -8307,6 +8338,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     assert(N1.getValueType().isFloatingPoint() &&
            "IS_FPCLASS is used for a non-floating type");
     assert(isa<ConstantSDNode>(N2) && "FPClassTest is not Constant");
+    // is.fpclass(poison, mask) -> poison
+    if (N1.getOpcode() == ISD::POISON)
+      return getPOISON(VT);
     FPClassTest Mask = static_cast<FPClassTest>(N2->getAsZExtVal());
     // If all tests are made, it doesn't matter what the value is.
     if ((Mask & fcAllFlags) == fcAllFlags)
@@ -14865,6 +14899,22 @@ SDValue SelectionDAG::getNeutralElement(unsigned Opcode, const SDLoc &DL,
   }
 
   }
+}
+
+SDValue SelectionDAG::getPartialReduceMLS(unsigned Opc, const SDLoc &DL,
+                                          SDValue Acc, SDValue LHS,
+                                          SDValue RHS) {
+  EVT AccVT = Acc.getValueType();
+  if (AccVT.isFloatingPoint()) {
+    assert(Opc == ISD::PARTIAL_REDUCE_FMLA && "Unexpected opcode");
+    SDValue NegRHS = getNode(ISD::FNEG, DL, RHS.getValueType(), RHS);
+    return getNode(Opc, DL, AccVT, Acc, LHS, NegRHS);
+  }
+  assert((Opc == ISD::PARTIAL_REDUCE_UMLA || Opc == ISD::PARTIAL_REDUCE_SMLA) &&
+         "Unexpected opcode");
+  SDValue NegAcc = getNegative(Acc, DL, AccVT);
+  SDValue MLA = getNode(Opc, DL, AccVT, NegAcc, LHS, RHS);
+  return getNegative(MLA, DL, AccVT);
 }
 
 /// Helper used to make a call to a library function that has one argument of

@@ -1552,6 +1552,7 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
     Info.size = 8;
     Info.align.reset();
     Info.flags = Flags | MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
+    Info.order = AtomicOrdering::Monotonic;
     Infos.push_back(Info);
     return;
   }
@@ -13029,15 +13030,30 @@ SDValue SITargetLowering::lowerFastUnsafeFDIV64(SDValue Op,
   if (!AllowInaccurateDiv)
     return SDValue();
 
-  SDValue NegY = DAG.getNode(ISD::FNEG, SL, VT, Y);
+  const ConstantFPSDNode *CLHS = dyn_cast<ConstantFPSDNode>(X);
+  bool IsNegRcp = CLHS && CLHS->isExactlyValue(-1.0);
+
+  // Pull out the negation so it folds for free into the source modifiers.
+  if (IsNegRcp)
+    X = DAG.getConstantFP(1.0, SL, VT);
+
+  SDValue NegY = IsNegRcp ? Y : DAG.getNode(ISD::FNEG, SL, VT, Y);
   SDValue One = DAG.getConstantFP(1.0, SL, VT);
 
   SDValue R = DAG.getNode(AMDGPUISD::RCP, SL, VT, Y);
+  if (IsNegRcp)
+    R = DAG.getNode(ISD::FNEG, SL, VT, R);
+
   SDValue Tmp0 = DAG.getNode(ISD::FMA, SL, VT, NegY, R, One);
 
   R = DAG.getNode(ISD::FMA, SL, VT, Tmp0, R, R);
   SDValue Tmp1 = DAG.getNode(ISD::FMA, SL, VT, NegY, R, One);
   R = DAG.getNode(ISD::FMA, SL, VT, Tmp1, R, R);
+
+  // Skip the last 2 correction terms for reciprocal.
+  if (IsNegRcp || (CLHS && CLHS->isExactlyValue(1.0)))
+    return R;
+
   SDValue Ret = DAG.getNode(ISD::FMUL, SL, VT, X, R);
   SDValue Tmp2 = DAG.getNode(ISD::FMA, SL, VT, NegY, Ret, X);
   return DAG.getNode(ISD::FMA, SL, VT, Tmp2, R, Ret);
@@ -15996,10 +16012,17 @@ SDValue SITargetLowering::performMinMaxCombine(SDNode *N,
 
   if (supportsMin3Max3(*Subtarget, Opc, VT)) {
     auto IsTreeWithCombinableChildren = [Opc](SDValue Op) {
-      return Op.getOperand(0).getOpcode() == Opc &&
-             Op.getOperand(1).getOpcode() == Opc &&
-             (Op.getOperand(0).hasOneUse() || Op.getOperand(1).hasOneUse());
+      return (Op.getOperand(0).getOpcode() == Opc &&
+              Op.getOperand(0).hasOneUse()) ||
+             (Op.getOperand(1).getOpcode() == Opc &&
+              Op.getOperand(1).hasOneUse());
     };
+
+    bool CanTreeCombineApply = Op0.getOpcode() == Opc && Op0.hasOneUse() &&
+                               Op1.getOpcode() == Opc && Op1.hasOneUse();
+    bool HasCombinableTreeChild =
+        CanTreeCombineApply && (IsTreeWithCombinableChildren(Op0) ||
+                                IsTreeWithCombinableChildren(Op1));
 
     // Tree reduction: when both operands are the same min/max op, restructure
     // to keep a 2-op node on top so higher tree levels can still combine.
@@ -16008,9 +16031,7 @@ SDValue SITargetLowering::performMinMaxCombine(SDNode *N,
     // min(min(a, b), min(c, d)) -> min(min3(a, b, c), d)
     //
     // Defer when either inner op is a tree node with combinable children.
-    if (Op0.getOpcode() == Opc && Op0.hasOneUse() && Op1.getOpcode() == Opc &&
-        Op1.hasOneUse() && !IsTreeWithCombinableChildren(Op0) &&
-        !IsTreeWithCombinableChildren(Op1)) {
+    if (CanTreeCombineApply && !HasCombinableTreeChild) {
       SDLoc DL(N);
       SDValue Inner =
           DAG.getNode(minMaxOpcToMin3Max3Opc(Opc), DL, VT, Op0.getOperand(0),
@@ -16021,8 +16042,7 @@ SDValue SITargetLowering::performMinMaxCombine(SDNode *N,
     // max(max(a, b), c) -> max3(a, b, c)
     // min(min(a, b), c) -> min3(a, b, c)
     // Deferred when Op0 is a tree node with combinable children.
-    if (Op0.getOpcode() == Opc && Op0.hasOneUse() &&
-        !IsTreeWithCombinableChildren(Op0)) {
+    if (Op0.getOpcode() == Opc && Op0.hasOneUse() && !HasCombinableTreeChild) {
       SDLoc DL(N);
       return DAG.getNode(minMaxOpcToMin3Max3Opc(Opc), DL, N->getValueType(0),
                          Op0.getOperand(0), Op0.getOperand(1), Op1);
@@ -16032,8 +16052,7 @@ SDValue SITargetLowering::performMinMaxCombine(SDNode *N,
     // max(a, max(b, c)) -> max3(a, b, c)
     // min(a, min(b, c)) -> min3(a, b, c)
     // Deferred when Op1 is a tree node with combinable children.
-    if (Op1.getOpcode() == Opc && Op1.hasOneUse() &&
-        !IsTreeWithCombinableChildren(Op1)) {
+    if (Op1.getOpcode() == Opc && Op1.hasOneUse() && !HasCombinableTreeChild) {
       SDLoc DL(N);
       return DAG.getNode(minMaxOpcToMin3Max3Opc(Opc), DL, N->getValueType(0),
                          Op0, Op1.getOperand(0), Op1.getOperand(1));

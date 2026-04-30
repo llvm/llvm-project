@@ -490,17 +490,14 @@ bool LLVMSymbolizer::getOrFindDebugBinary(const ArrayRef<uint8_t> BuildID,
   }
   if (!BIDFetcher)
     return false;
-  Expected<std::string> Path = BIDFetcher->fetch(BuildID);
-  if (Path) {
+  if (std::optional<std::string> Path = BIDFetcher->fetch(BuildID)) {
     Result = *Path;
     auto InsertResult = BuildIDPaths.insert({BuildIDStr, Result});
     assert(InsertResult.second);
     (void)InsertResult;
     return true;
   }
-  // Failure to fetch debuginfod is rarely an error and most users will not care
-  // why this failed.
-  consumeError(Path.takeError());
+
   return false;
 }
 

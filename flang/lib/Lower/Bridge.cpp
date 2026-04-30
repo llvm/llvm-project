@@ -2117,6 +2117,9 @@ private:
               [&](const Fortran::parser::CompilerDirective::ForceInline &) {
                 stmt.typedCall->setAlwaysInline(true);
               },
+              [&](const Fortran::parser::CompilerDirective::InlineAlways &) {
+                stmt.typedCall->setAlwaysInline(true);
+              },
               [&](const Fortran::parser::CompilerDirective::Inline &) {
                 stmt.typedCall->setInlineHint(true);
               },
@@ -2466,6 +2469,9 @@ private:
                   callOp.setInlineAttr(fir::FortranInlineEnum::inline_hint);
                 },
                 [&](const Fortran::parser::CompilerDirective::ForceInline &) {
+                  callOp.setInlineAttr(fir::FortranInlineEnum::always_inline);
+                },
+                [&](const Fortran::parser::CompilerDirective::InlineAlways &) {
                   callOp.setInlineAttr(fir::FortranInlineEnum::always_inline);
                 },
                 [&](const auto &) {}},
@@ -2867,6 +2873,11 @@ private:
               [&](const Fortran::parser::CompilerDirective::IVDep &iv) {
                 aga.push_back(
                     mlir::LLVM::AccessGroupAttr::get(builder->getContext()));
+                has_attrs = true;
+              },
+              [&](const Fortran::parser::CompilerDirective::Simd &simd) {
+                disableVecAttr =
+                    mlir::BoolAttr::get(builder->getContext(), false);
                 has_attrs = true;
               },
               [&](const auto &) {}},
@@ -3424,6 +3435,7 @@ private:
 
   /// Generate FIR for a FORALL construct.
   void genFIR(const Fortran::parser::ForallConstruct &forall) {
+    setCurrentPositionAt(forall);
     mlir::OpBuilder::InsertPoint insertPt = builder->saveInsertionPoint();
     if (lowerToHighLevelFIR())
       localSymbols.pushScope();
@@ -3552,6 +3564,18 @@ private:
       e->dirs.push_back(&dir);
   }
 
+  void markCurrentFuncAsAlwaysInline(
+      const Fortran::parser::CompilerDirective::InlineAlways &dir) {
+    mlir::func::FuncOp func = builder->getFunction();
+    if (currentFunctionUnit && !currentFunctionUnit->isMainProgram()) {
+      const std::string symName =
+          currentFunctionUnit->getSubprogramSymbol().name().ToString();
+      if (dir.v.value().ToString() == symName) {
+        func->setAttr("llvm.always_inline", builder->getUnitAttr());
+      }
+    }
+  }
+
   void
   attachInliningDirectiveToStmt(const Fortran::parser::CompilerDirective &dir,
                                 Fortran::lower::pft::Evaluation *e) {
@@ -3630,11 +3654,22 @@ private:
             [&](const Fortran::parser::CompilerDirective::IVDep &) {
               attachDirectiveToLoop(dir, &eval);
             },
+            [&](const Fortran::parser::CompilerDirective::InlineAlways
+                    &inlineAlways) {
+              if (inlineAlways.v.has_value())
+                markCurrentFuncAsAlwaysInline(inlineAlways);
+              else
+                attachInliningDirectiveToStmt(dir, &eval);
+            },
+            [&](const Fortran::parser::CompilerDirective::Simd &) {
+              attachDirectiveToLoop(dir, &eval);
+            },
             [&](const auto &) {}},
         dir.u);
   }
 
   void genFIR(const Fortran::parser::OpenACCConstruct &acc) {
+    setCurrentPositionAt(acc);
     Fortran::lower::clearCollapsedDoConstructs();
     mlir::OpBuilder::InsertPoint insertPt = builder->saveInsertionPoint();
 
@@ -3797,6 +3832,7 @@ private:
   }
 
   void genFIR(const Fortran::parser::OpenACCDeclarativeConstruct &accDecl) {
+    setCurrentPositionAt(accDecl);
     genOpenACCDeclarativeConstruct(*this, bridge.getSemanticsContext(),
                                    bridge.openAccCtx(), accDecl);
     for (Fortran::lower::pft::Evaluation &e : getEval().getNestedEvaluations())
@@ -3808,6 +3844,7 @@ private:
   }
 
   void genFIR(const Fortran::parser::CUFKernelDoConstruct &kernel) {
+    setCurrentPositionAt(kernel);
     Fortran::lower::SymMapScope scope(localSymbols);
     const Fortran::parser::CUFKernelDoConstruct::Directive &dir =
         std::get<Fortran::parser::CUFKernelDoConstruct::Directive>(kernel.t);
@@ -4079,6 +4116,7 @@ private:
   }
 
   void genFIR(const Fortran::parser::OpenMPConstruct &omp) {
+    setCurrentPositionAt(omp);
     mlir::OpBuilder::InsertPoint insertPt = builder->saveInsertionPoint();
     genOpenMPConstruct(*this, localSymbols, bridge.getSemanticsContext(),
                        getEval(), omp);
@@ -4090,6 +4128,7 @@ private:
   }
 
   void genFIR(const Fortran::parser::OpenMPDeclarativeConstruct &ompDecl) {
+    setCurrentPositionAt(ompDecl);
     mlir::OpBuilder::InsertPoint insertPt = builder->saveInsertionPoint();
     // Register if a declare target construct intended for a target device was
     // found
@@ -4346,6 +4385,7 @@ private:
   }
 
   void genFIR(const Fortran::parser::ChangeTeamConstruct &construct) {
+    setCurrentPositionAt(construct);
     Fortran::lower::StatementContext stmtCtx;
     pushActiveConstruct(getEval(), stmtCtx);
     Fortran::lower::pft::Evaluation &eval = getEval();
@@ -5642,15 +5682,23 @@ private:
 
     // Gather some information about the assignment that will impact how it is
     // lowered.
-    const bool isWholeAllocatableAssignment =
+    const bool lhsIsWholeAllocatable =
         !userDefinedAssignment && !isInsideHlfirWhere() &&
-        Fortran::lower::isWholeAllocatable(assign.lhs) &&
-        bridge.getLoweringOptions().getReallocateLHS();
+        Fortran::lower::isWholeAllocatable(assign.lhs);
+    std::optional<Fortran::evaluate::DynamicType> lhsType =
+        assign.lhs.GetType();
+    // Polymorphic allocatable LHS always requires reallocation semantics
+    // regardless of -fno-realloc-lhs: assignment to a polymorphic variable
+    // is a F2003+ feature that requires dynamic type tracking, which cannot
+    // be safely skipped.  A warning is emitted by the semantics phase.
+    const bool lhsIsPolymorphic =
+        lhsType.has_value() && lhsType->IsPolymorphic();
+    const bool isWholeAllocatableAssignment =
+        lhsIsWholeAllocatable &&
+        (bridge.getLoweringOptions().getReallocateLHS() || lhsIsPolymorphic);
     const bool isUserDefAssignToPointerOrAllocatable =
         userDefinedAssignment &&
         firstDummyIsPointerOrAllocatable(*userDefinedAssignment);
-    std::optional<Fortran::evaluate::DynamicType> lhsType =
-        assign.lhs.GetType();
     const bool keepLhsLengthInAllocatableAssignment =
         isWholeAllocatableAssignment && lhsType.has_value() &&
         lhsType->category() == Fortran::common::TypeCategory::Character &&
@@ -6035,6 +6083,7 @@ private:
   bool isInsideHlfirWhere() const { return isInsideOp<hlfir::WhereOp>(); }
 
   void genFIR(const Fortran::parser::WhereConstruct &c) {
+    setCurrentPositionAt(c);
     mlir::Location loc = getCurrentLocation();
     hlfir::WhereOp whereOp;
 
@@ -6116,6 +6165,7 @@ private:
       implicitIterSpace.append(maskExpr);
   }
   void genFIR(const Fortran::parser::WhereConstruct::MaskedElsewhere &ew) {
+    setCurrentPositionAt(ew);
     mlir::Location loc = getCurrentLocation();
     hlfir::ElseWhereOp elsewhereOp;
     if (lowerToHighLevelFIR()) {
@@ -6145,6 +6195,7 @@ private:
       implicitIterSpace.append(maskExpr);
   }
   void genFIR(const Fortran::parser::WhereConstruct::Elsewhere &ew) {
+    setCurrentPositionAt(ew);
     if (lowerToHighLevelFIR()) {
       auto elsewhereOp =
           hlfir::ElseWhereOp::create(*builder, getCurrentLocation());
@@ -6350,7 +6401,6 @@ private:
   void genFIR(const Fortran::parser::IfStmt &) {}              // nop
   void genFIR(const Fortran::parser::IfThenStmt &) {}          // nop
   void genFIR(const Fortran::parser::NonLabelDoStmt &) {}      // nop
-  void genFIR(const Fortran::parser::OmpEndLoopDirective &) {} // nop
   void genFIR(const Fortran::parser::SelectTypeStmt &) {}      // nop
   void genFIR(const Fortran::parser::TypeGuardStmt &) {}       // nop
   void genFIR(const Fortran::parser::ChangeTeamStmt &stmt) {}  // nop
@@ -6592,18 +6642,21 @@ private:
 
     Fortran::lower::AggregateStoreMap storeMap;
 
-    // Map all containing submodule and module equivalences and variables, in
-    // case they are referenced. It might be better to limit this to variables
-    // that are actually referenced, although that is more complicated when
-    // there are equivalenced variables.
-    auto &scopeVariableListMap =
-        Fortran::lower::pft::getScopeVariableListMap(funit);
-    for (auto *scp = &scope.parent(); !scp->IsGlobal(); scp = &scp->parent())
-      if (scp->kind() == Fortran::semantics::Scope::Kind::Module)
-        for (const auto &var : Fortran::lower::pft::getScopeVariableList(
-                 *scp, scopeVariableListMap))
-          if (!var.isRuntimeTypeInfoData())
-            instantiateVar(var, storeMap);
+    // Map containing [sub]module equivalences and variables that are
+    // referenced in this function-like unit. Only referenced host module
+    // variables are instantiated to avoid generating IR for unused module
+    // variables. Equivalenced variables are handled via the aggregate store
+    // analysis performed on the host [sub]module scopes.
+    const bool hasHostModuleScope = [&]() {
+      for (auto *scp = &scope.parent(); !scp->IsGlobal(); scp = &scp->parent())
+        if (scp->kind() == Fortran::semantics::Scope::Kind::Module)
+          return true;
+      return false;
+    }();
+    if (hasHostModuleScope)
+      for (const auto &var :
+           Fortran::lower::pft::getHostModuleVariableList(funit))
+        instantiateVar(var, storeMap);
 
     // Map function equivalences and variables.
     mlir::Value primaryFuncResultStorage;

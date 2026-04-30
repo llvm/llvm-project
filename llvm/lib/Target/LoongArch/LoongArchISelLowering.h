@@ -247,6 +247,7 @@ private:
   SDValue lowerSETCC(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerRotate(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const;
 
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;

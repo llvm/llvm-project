@@ -8814,14 +8814,18 @@ static bool tryUnmergingGEPsAcrossIndirectBr(GetElementPtrInst *GEPI,
   for (GetElementPtrInst *UGEPI : UGEPIs) {
     UGEPI->setOperand(0, GEPI);
     ConstantInt *UGEPIIdx = cast<ConstantInt>(UGEPI->getOperand(1));
-    Constant *NewUGEPIIdx = ConstantInt::get(
-        GEPIIdx->getType(), UGEPIIdx->getValue() - GEPIIdx->getValue());
+    auto NewIdx = UGEPIIdx->getValue() - GEPIIdx->getValue();
+    Constant *NewUGEPIIdx = ConstantInt::get(GEPIIdx->getType(), NewIdx);
     UGEPI->setOperand(1, NewUGEPIIdx);
-    // If GEPI is not inbounds but UGEPI is inbounds, change UGEPI to not
-    // inbounds to avoid UB.
-    if (!GEPI->isInBounds()) {
-      UGEPI->setIsInBounds(false);
-    }
+
+    auto SourceFlags = GEPI->getNoWrapFlags();
+    // Intersect flags to avoid UB in updated GEP.
+    auto TargetFlags =
+        UGEPI->getNoWrapFlags().intersectForOffsetAdd(SourceFlags);
+    // If UGEPI now has a negative index, drop the nuw flag.
+    if (NewIdx.isNegative() && TargetFlags.hasNoUnsignedWrap())
+      TargetFlags = TargetFlags.withoutNoUnsignedWrap();
+    UGEPI->setNoWrapFlags(TargetFlags);
   }
   // After unmerging, verify that GEPIOp is actually only used in SrcBlock (not
   // alive on IndirectBr edges).

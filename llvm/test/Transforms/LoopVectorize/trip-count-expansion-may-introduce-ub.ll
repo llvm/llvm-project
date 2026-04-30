@@ -153,13 +153,13 @@ define i64 @multi_exit_2_exit_count_with_udiv_by_value_in_block_executed_uncondi
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], splat (i32 10)
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i1> [[TMP7]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i1> [[TMP7]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
 ; CHECK-NEXT:    store i32 1, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; CHECK:       pred.store.continue:
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i1> [[TMP7]], i32 1
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i1> [[TMP7]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[PRED_STORE_IF1:%.*]], label [[PRED_STORE_CONTINUE2:%.*]]
 ; CHECK:       pred.store.if1:
 ; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[IV]], 1
@@ -167,7 +167,7 @@ define i64 @multi_exit_2_exit_count_with_udiv_by_value_in_block_executed_uncondi
 ; CHECK-NEXT:    store i32 1, ptr [[TMP12]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE2]]
 ; CHECK:       pred.store.continue2:
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i1> [[TMP7]], i32 2
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i1> [[TMP7]], i64 2
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[PRED_STORE_IF3:%.*]], label [[PRED_STORE_CONTINUE4:%.*]]
 ; CHECK:       pred.store.if3:
 ; CHECK-NEXT:    [[TMP14:%.*]] = add i64 [[IV]], 2
@@ -175,7 +175,7 @@ define i64 @multi_exit_2_exit_count_with_udiv_by_value_in_block_executed_uncondi
 ; CHECK-NEXT:    store i32 1, ptr [[TMP15]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE4]]
 ; CHECK:       pred.store.continue4:
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x i1> [[TMP7]], i32 3
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x i1> [[TMP7]], i64 3
 ; CHECK-NEXT:    br i1 [[TMP16]], label [[PRED_STORE_IF5:%.*]], label [[LOOP_LATCH]]
 ; CHECK:       pred.store.if5:
 ; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[IV]], 3
@@ -262,13 +262,13 @@ define i64 @multi_exit_2_exit_count_with_udiv_by_constant_in_block_executed_unco
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], splat (i32 10)
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i1> [[TMP7]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i1> [[TMP7]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
 ; CHECK-NEXT:    store i32 1, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; CHECK:       pred.store.continue:
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i1> [[TMP7]], i32 1
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i1> [[TMP7]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[PRED_STORE_IF1:%.*]], label [[PRED_STORE_CONTINUE2:%.*]]
 ; CHECK:       pred.store.if1:
 ; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[IV]], 1
@@ -276,7 +276,7 @@ define i64 @multi_exit_2_exit_count_with_udiv_by_constant_in_block_executed_unco
 ; CHECK-NEXT:    store i32 1, ptr [[TMP12]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE2]]
 ; CHECK:       pred.store.continue2:
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i1> [[TMP7]], i32 2
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i1> [[TMP7]], i64 2
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[PRED_STORE_IF3:%.*]], label [[PRED_STORE_CONTINUE4:%.*]]
 ; CHECK:       pred.store.if3:
 ; CHECK-NEXT:    [[TMP14:%.*]] = add i64 [[IV]], 2
@@ -284,7 +284,7 @@ define i64 @multi_exit_2_exit_count_with_udiv_by_constant_in_block_executed_unco
 ; CHECK-NEXT:    store i32 1, ptr [[TMP15]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE4]]
 ; CHECK:       pred.store.continue4:
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x i1> [[TMP7]], i32 3
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x i1> [[TMP7]], i64 3
 ; CHECK-NEXT:    br i1 [[TMP16]], label [[PRED_STORE_IF5:%.*]], label [[LOOP_LATCH]]
 ; CHECK:       pred.store.if5:
 ; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[IV]], 3
