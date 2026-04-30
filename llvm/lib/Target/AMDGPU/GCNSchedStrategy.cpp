@@ -2259,8 +2259,9 @@ void RewriteMFMAFormStage::resetRewriteCandsToVGPR(
     ArrayRef<std::pair<MachineInstr *, unsigned>> RewriteCands) {
   for (auto &[MI, OriginalOpcode] : RewriteCands) {
     assert(TII->isMAI(*MI));
-    const TargetRegisterClass *VDefRC =
-        TII->getRegClass(TII->get(OriginalOpcode), 0);
+    const TargetRegisterClass *ADefRC =
+        DAG.MRI.getRegClass(MI->getOperand(0).getReg());
+    const TargetRegisterClass *VDefRC = SRI->getEquivalentVGPRClass(ADefRC);
     DAG.MRI.setRegClass(MI->getOperand(0).getReg(), VDefRC);
     MI->setDesc(TII->get(OriginalOpcode));
 
