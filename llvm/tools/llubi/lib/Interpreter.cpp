@@ -746,8 +746,8 @@ public:
       const auto &Vec = Args[0].asAggregate();
       const auto &SubVec = Args[1].asAggregate();
       const auto &Idx = Args[2].asInteger();
-      auto EC = cast<VectorType>(CB.getArgOperand(1)->getType())
-                    ->getElementCount();
+      auto EC =
+          cast<VectorType>(CB.getArgOperand(1)->getType())->getElementCount();
       const uint64_t RawOffset = Idx.getZExtValue();
       if (RawOffset % EC.getKnownMinValue() != 0) {
         reportImmediateUB("llvm.vector.insert index is not a multiple of the "
@@ -758,8 +758,7 @@ public:
       if (EC.isScalable() && VScale != 0 &&
           RawOffset > std::numeric_limits<uint64_t>::max() / VScale)
         return AnyValue::poison();
-      const uint64_t Offset =
-          EC.isScalable() ? RawOffset * VScale : RawOffset;
+      const uint64_t Offset = EC.isScalable() ? RawOffset * VScale : RawOffset;
       if (Offset > Vec.size() || SubVec.size() > Vec.size() - Offset)
         return AnyValue::poison();
       std::vector<AnyValue> Res;
@@ -788,8 +787,7 @@ public:
       if (EC.isScalable() && VScale != 0 &&
           RawOffset > std::numeric_limits<uint64_t>::max() / VScale)
         return AnyValue::poison();
-      const uint64_t Offset =
-          EC.isScalable() ? RawOffset * VScale : RawOffset;
+      const uint64_t Offset = EC.isScalable() ? RawOffset * VScale : RawOffset;
       const uint64_t DstSize = Ctx.getEVL(EC);
       if (Offset > Vec.size() || DstSize > Vec.size() - Offset)
         return AnyValue::poison();
