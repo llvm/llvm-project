@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++20 %s -fcxx-exceptions -fsyntax-only -Wexceptions -verify -fdeclspec
+// RUN: %clang_cc1 -std=c++20 %s -fcxx-exceptions -fsyntax-only -Wexceptions -Wno-coroutines-unsupported-target -verify -fdeclspec
 
 #include "Inputs/std-coroutine.h"
 

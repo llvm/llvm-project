@@ -334,7 +334,7 @@ define void @test_stride_noninvar_4i32(ptr readonly %data, ptr noalias nocapture
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP0:%.*]] = mul i32 [[N_VEC]], 8
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i32 [[N_VEC]], 3
 ; CHECK-NEXT:    [[IND_END:%.*]] = add i32 3, [[TMP0]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:

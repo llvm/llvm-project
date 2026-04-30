@@ -148,16 +148,16 @@ class VOPD<dag outs, dag ins, string asm, VOP_Pseudo VDX, VOP_Pseudo VDY,
            VOPD_Component XasVC, VOPD_Component YasVC, GFXGenD Gen>
     : VOPD_Base<outs, ins, asm, VDX, VDY, XasVC, YasVC, Gen>,
       VOPDe<XasVC.VOPDOp{3-0}, YasVC.VOPDOp{4-0}> {
-  let Inst{16-9} = !if (!eq(VDX.Mnemonic, "v_mov_b32"), 0x0, vsrc1X);
-  let Inst{48-41} = !if (!eq(VDY.Mnemonic, "v_mov_b32"), 0x0, vsrc1Y);
+  let Inst{16-9} = !if (!eq(VDX.Mnemonic, "v_mov_b32"), ?, vsrc1X);
+  let Inst{48-41} = !if (!eq(VDY.Mnemonic, "v_mov_b32"), ?, vsrc1Y);
 }
 
 class VOPD_MADK<dag outs, dag ins, string asm, VOP_Pseudo VDX, VOP_Pseudo VDY,
                 VOPD_Component XasVC, VOPD_Component YasVC, GFXGenD Gen>
     : VOPD_Base<outs, ins, asm, VDX, VDY, XasVC, YasVC, Gen>,
       VOPD_MADKe<XasVC.VOPDOp{3-0}, YasVC.VOPDOp{4-0}> {
-  let Inst{16-9} = !if (!eq(VDX.Mnemonic, "v_mov_b32"), 0x0, vsrc1X);
-  let Inst{48-41} = !if (!eq(VDY.Mnemonic, "v_mov_b32"), 0x0, vsrc1Y);
+  let Inst{16-9} = !if (!eq(VDX.Mnemonic, "v_mov_b32"), ?, vsrc1X);
+  let Inst{48-41} = !if (!eq(VDY.Mnemonic, "v_mov_b32"), ?, vsrc1Y);
   let Size = 12;
   let FixedSize = 1;
 }

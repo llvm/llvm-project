@@ -107,7 +107,7 @@ void unsetCriticalLock(omp_lock_t *Lock) {
 }
 
 void setCriticalLock(omp_lock_t *Lock) {
-  uint64_t LowestActiveThread = utils::ffs(mapping::activemask()) - 1;
+  uint64_t LowestActiveThread = utils::ctz(mapping::activemask());
   if (mapping::getThreadIdInWarp() == LowestActiveThread) {
     fence::kernel(atomic::release);
     while (

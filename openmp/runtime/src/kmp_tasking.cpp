@@ -907,7 +907,7 @@ static void __kmp_task_finish(kmp_int32 gtid, kmp_task_t *task,
 #if OMP_TASKGRAPH_EXPERIMENTAL
     if (is_taskgraph) {
       __kmp_taskgraph_exec_descr_finish(gtid, thread, taskdata->exec_descr);
-      KMP_ATOMIC_DEC(&taskdata->td_parent->td_incomplete_child_tasks) - 1;
+      KMP_ATOMIC_DEC(&taskdata->td_parent->td_incomplete_child_tasks);
       if (taskdata->td_taskgroup)
         KMP_ATOMIC_DEC(&taskdata->td_taskgroup->count);
       thread->th.th_current_task = resumed_task;
@@ -2369,7 +2369,7 @@ static void __kmp_omp_tg_task(kmp_int32 gtid, kmp_task_t *task,
 
   KMP_ATOMIC_ST_RLX(&taskdata->td_untied_count, 0);
   KMP_ATOMIC_ST_RLX(&taskdata->td_incomplete_child_tasks, 0);
-  // start at one because counts current task and children
+  // Start at one because counter represents current task and children.
   KMP_ATOMIC_ST_RLX(&taskdata->td_allocated_child_tasks, 1);
 
   taskdata->td_taskgroup = taskgroup;
