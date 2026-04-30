@@ -5811,6 +5811,14 @@ let Predicates = [HasV8_1MMainline] in {
               (t2CSINC ZR, ZR, (inv_cond_XFORM imm:$cc))>;
   def : T2Pat<(ARMcmov (i32 0), (i32 -1), imm:$cc, CPSR),
               (t2CSINV ZR, ZR, (inv_cond_XFORM imm:$cc))>;
+  def : T2Pat<(ARMcmov (i32 1), GPRwithZR:$tval, imm:$cc, CPSR),
+              (t2CSINC GPRwithZR:$tval, ZR, imm:$cc)>;
+  def : T2Pat<(ARMcmov GPRwithZR:$fval, (i32 1), imm:$cc, CPSR),
+              (t2CSINC GPRwithZR:$fval, ZR, (inv_cond_XFORM imm:$cc))>;
+  def : T2Pat<(ARMcmov (i32 -1), GPRwithZR:$tval, imm:$cc, CPSR),
+              (t2CSINV GPRwithZR:$tval, ZR, imm:$cc)>;
+  def : T2Pat<(ARMcmov GPRwithZR:$fval, (i32 -1), imm:$cc, CPSR),
+              (t2CSINV GPRwithZR:$fval, ZR, (inv_cond_XFORM imm:$cc))>;
 
   multiclass ModifiedV8_1CSEL<Instruction Insn, dag modvalue> {
     def : T2Pat<(ARMcmov modvalue, GPRwithZR:$tval, imm:$cc, CPSR),

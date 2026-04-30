@@ -613,75 +613,74 @@ define arm_aapcs_vfpcc void @usatmul_2_q31(ptr nocapture readonly %pSrcA, ptr no
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r9, r10, r11, lr}
 ; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11, lr}
-; CHECK-NEXT:    .pad #8
-; CHECK-NEXT:    sub sp, #8
+; CHECK-NEXT:    .pad #4
+; CHECK-NEXT:    sub sp, #4
 ; CHECK-NEXT:    cmp r3, #0
 ; CHECK-NEXT:    beq .LBB3_8
 ; CHECK-NEXT:  @ %bb.1: @ %entry
+; CHECK-NEXT:    mov r10, r1
 ; CHECK-NEXT:    cmp r3, #1
 ; CHECK-NEXT:    bne .LBB3_3
 ; CHECK-NEXT:  @ %bb.2:
-; CHECK-NEXT:    movs r7, #0
+; CHECK-NEXT:    movs r1, #0
 ; CHECK-NEXT:    mov r12, r0
-; CHECK-NEXT:    mov r10, r1
+; CHECK-NEXT:    mov r9, r10
 ; CHECK-NEXT:    mov r11, r2
 ; CHECK-NEXT:    b .LBB3_6
 ; CHECK-NEXT:  .LBB3_3: @ %vector.ph
-; CHECK-NEXT:    str r3, [sp, #4] @ 4-byte Spill
-; CHECK-NEXT:    bic r3, r3, #1
-; CHECK-NEXT:    subs r7, r3, #2
+; CHECK-NEXT:    bic r1, r3, #1
 ; CHECK-NEXT:    movs r6, #1
-; CHECK-NEXT:    str r3, [sp] @ 4-byte Spill
-; CHECK-NEXT:    add.w r11, r2, r3, lsl #2
+; CHECK-NEXT:    subs r7, r1, #2
+; CHECK-NEXT:    str r1, [sp] @ 4-byte Spill
+; CHECK-NEXT:    add.w r11, r2, r1, lsl #2
+; CHECK-NEXT:    add.w r9, r10, r1, lsl #2
 ; CHECK-NEXT:    add.w lr, r6, r7, lsr #1
-; CHECK-NEXT:    add.w r10, r1, r3, lsl #2
-; CHECK-NEXT:    add.w r12, r0, r3, lsl #2
+; CHECK-NEXT:    add.w r12, r0, r1, lsl #2
 ; CHECK-NEXT:    vmov.i64 q0, #0xffffffff
 ; CHECK-NEXT:  .LBB3_4: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldrd r4, r6, [r0], #8
 ; CHECK-NEXT:    mov.w r8, #0
-; CHECK-NEXT:    ldrd r7, r3, [r1], #8
-; CHECK-NEXT:    umull r4, r9, r7, r4
-; CHECK-NEXT:    lsrl r4, r9, #31
+; CHECK-NEXT:    ldrd r7, r1, [r10], #8
+; CHECK-NEXT:    umull r4, r7, r7, r4
+; CHECK-NEXT:    lsrl r4, r7, #31
 ; CHECK-NEXT:    subs.w r5, r4, #-1
-; CHECK-NEXT:    sbcs r5, r9, #0
+; CHECK-NEXT:    sbcs r5, r7, #0
 ; CHECK-NEXT:    csetm r5, lo
 ; CHECK-NEXT:    bfi r8, r5, #0, #8
-; CHECK-NEXT:    umull r6, r5, r3, r6
+; CHECK-NEXT:    umull r6, r5, r1, r6
 ; CHECK-NEXT:    lsrl r6, r5, #31
-; CHECK-NEXT:    subs.w r7, r6, #-1
+; CHECK-NEXT:    subs.w r1, r6, #-1
 ; CHECK-NEXT:    vmov q1[2], q1[0], r4, r6
-; CHECK-NEXT:    sbcs r3, r5, #0
-; CHECK-NEXT:    vmov q1[3], q1[1], r9, r5
-; CHECK-NEXT:    csetm r3, lo
-; CHECK-NEXT:    bfi r8, r3, #8, #8
+; CHECK-NEXT:    sbcs r1, r5, #0
+; CHECK-NEXT:    vmov q1[3], q1[1], r7, r5
+; CHECK-NEXT:    csetm r1, lo
+; CHECK-NEXT:    bfi r8, r1, #8, #8
 ; CHECK-NEXT:    vmsr p0, r8
 ; CHECK-NEXT:    vpsel q1, q1, q0
-; CHECK-NEXT:    vmov r3, s6
+; CHECK-NEXT:    vmov r1, s6
 ; CHECK-NEXT:    vmov r4, s4
-; CHECK-NEXT:    strd r4, r3, [r2], #8
+; CHECK-NEXT:    strd r4, r1, [r2], #8
 ; CHECK-NEXT:    le lr, .LBB3_4
 ; CHECK-NEXT:  @ %bb.5: @ %middle.block
-; CHECK-NEXT:    ldrd r7, r3, [sp] @ 8-byte Folded Reload
-; CHECK-NEXT:    cmp r7, r3
+; CHECK-NEXT:    ldr r1, [sp] @ 4-byte Reload
+; CHECK-NEXT:    cmp r1, r3
 ; CHECK-NEXT:    beq .LBB3_8
 ; CHECK-NEXT:  .LBB3_6: @ %for.body.preheader
-; CHECK-NEXT:    sub.w lr, r3, r7
+; CHECK-NEXT:    sub.w lr, r3, r1
 ; CHECK-NEXT:  .LBB3_7: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr r0, [r12], #4
-; CHECK-NEXT:    ldr r1, [r10], #4
+; CHECK-NEXT:    ldr r1, [r9], #4
 ; CHECK-NEXT:    umull r0, r1, r1, r0
 ; CHECK-NEXT:    lsrl r0, r1, #31
 ; CHECK-NEXT:    subs.w r2, r0, #-1
 ; CHECK-NEXT:    sbcs r1, r1, #0
-; CHECK-NEXT:    it hs
-; CHECK-NEXT:    movhs.w r0, #-1
+; CHECK-NEXT:    csinv r0, r0, zr, lo
 ; CHECK-NEXT:    str r0, [r11], #4
 ; CHECK-NEXT:    le lr, .LBB3_7
 ; CHECK-NEXT:  .LBB3_8: @ %for.cond.cleanup
-; CHECK-NEXT:    add sp, #8
+; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11, pc}
 entry:
   switch i32 %N, label %vector.ph [
@@ -854,8 +853,7 @@ define arm_aapcs_vfpcc void @usatmul_4_q31(ptr nocapture readonly %pSrcA, ptr no
 ; CHECK-NEXT:    lsrl r0, r3, #31
 ; CHECK-NEXT:    subs.w r2, r0, #-1
 ; CHECK-NEXT:    sbcs r2, r3, #0
-; CHECK-NEXT:    it hs
-; CHECK-NEXT:    movhs.w r0, #-1
+; CHECK-NEXT:    csinv r0, r0, zr, lo
 ; CHECK-NEXT:    str r0, [r1], #4
 ; CHECK-NEXT:    le lr, .LBB4_7
 ; CHECK-NEXT:  .LBB4_8: @ %for.cond.cleanup
