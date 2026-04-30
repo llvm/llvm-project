@@ -319,7 +319,8 @@ GetCanonicalFunctionProto(Sema &S, const FunctionDecl *FD) {
 }
 
 static const TemplateSpecializationType *
-TryGetTemplateSpecializationType(Sema &S, NestedNameSpecifier NNS) {
+GetCanonicalQualifierTemplateSpecializationType(Sema &S,
+                                                NestedNameSpecifier NNS) {
   if (!NNS)
     return nullptr;
 
@@ -352,12 +353,12 @@ static FunctionTemplateDecl *TryGetFunctionTemplateDecl(FunctionDecl *FD) {
   return nullptr;
 }
 
-static bool MatchesFriendContext(Sema &S, FunctionDecl *FD,
+static bool MatchesFriendContext(Sema &S, DeclContext *DC,
                                  ClassTemplateDecl *FriendCTD,
                                  ArrayRef<TemplateArgument> FriendArgs,
                                  TemplateParameterList *FriendTPL,
                                  SourceLocation Loc) {
-  const auto *RD = dyn_cast<CXXRecordDecl>(FD->getDeclContext());
+  const auto *RD = dyn_cast<CXXRecordDecl>(DC);
   if (!RD)
     return false;
 
@@ -692,10 +693,54 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
 
 static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
                                   FriendTemplateDecl *FriendTD,
+                                  ClassTemplateDecl *FriendCTD) {
+  AccessResult OnFailure = AR_inaccessible;
+  const auto *FriendTST = GetCanonicalQualifierTemplateSpecializationType(
+      S, FriendCTD->getTemplatedDecl()->getQualifier());
+  if (!FriendTST)
+    return MatchesFriend(S, EC, FriendCTD);
+
+  auto *FriendContextCTD = dyn_cast<ClassTemplateDecl>(
+      FriendTST->getTemplateName().getAsTemplateDecl());
+  if (!FriendContextCTD)
+    return OnFailure;
+
+  ArrayRef<TemplateParameterList *> FriendTPLists =
+      FriendTD->getFriendTypeTemplateParameterLists();
+  if (FriendTPLists.empty())
+    return OnFailure;
+
+  TemplateParameterList *FriendTPL = FriendTPLists.front();
+  if (!FriendTPL)
+    return OnFailure;
+
+  ArrayRef<TemplateArgument> FriendArgs = FriendTST->template_arguments();
+  for (CXXRecordDecl *RD : EC.Records) {
+    ClassTemplateDecl *ContextCTD = nullptr;
+    if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RD))
+      ContextCTD = CTSD->getSpecializedTemplate();
+    else
+      ContextCTD = RD->getDescribedClassTemplate();
+
+    if (!ContextCTD)
+      continue;
+
+    if (MightInstantiateTo(ContextCTD->getTemplatedDecl(),
+                           FriendCTD->getTemplatedDecl()) &&
+        MatchesFriendContext(S, RD->getDeclContext(), FriendContextCTD,
+                             FriendArgs, FriendTPL, FriendTD->getLocation()))
+      return AR_accessible;
+  }
+
+  return OnFailure;
+}
+
+static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
+                                  FriendTemplateDecl *FriendTD,
                                   FunctionTemplateDecl *FriendFTD) {
   AccessResult OnFailure = AR_inaccessible;
-  NestedNameSpecifier FriendNNS = FriendFTD->getTemplatedDecl()->getQualifier();
-  const auto *FriendTST = TryGetTemplateSpecializationType(S, FriendNNS);
+  const auto *FriendTST = GetCanonicalQualifierTemplateSpecializationType(
+      S, FriendFTD->getTemplatedDecl()->getQualifier());
   if (!FriendTST)
     return OnFailure;
 
@@ -717,8 +762,8 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
   SourceLocation FriendLoc = FriendTD->getLocation();
 
   for (FunctionDecl *FD : EC.Functions) {
-    if (!MatchesFriendContext(S, FD, FriendCTD, FriendArgs, FriendTPL,
-                              FriendLoc))
+    if (!MatchesFriendContext(S, FD->getDeclContext(), FriendCTD, FriendArgs,
+                              FriendTPL, FriendLoc))
       continue;
 
     FunctionTemplateDecl *ContextFTD = TryGetFunctionTemplateDecl(FD);
@@ -733,8 +778,8 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
                                   FriendTemplateDecl *FriendTD,
                                   FunctionDecl *FriendFD) {
   AccessResult OnFailure = AR_inaccessible;
-  NestedNameSpecifier FriendNNS = FriendFD->getQualifier();
-  const auto *FriendTST = TryGetTemplateSpecializationType(S, FriendNNS);
+  const auto *FriendTST = GetCanonicalQualifierTemplateSpecializationType(
+      S, FriendFD->getQualifier());
   if (!FriendTST)
     return OnFailure;
 
@@ -762,8 +807,8 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
     if (!MightInstantiateTo(S, FD->getDeclName(), FriendFD->getDeclName()))
       continue;
 
-    if (!MatchesFriendContext(S, FD, FriendCTD, FriendArgs, FriendTPL,
-                              FriendLoc))
+    if (!MatchesFriendContext(S, FD->getDeclContext(), FriendCTD, FriendArgs,
+                              FriendTPL, FriendLoc))
       continue;
 
     CanQual<FunctionProtoType> ContextProto = GetCanonicalFunctionProto(S, FD);
@@ -776,6 +821,9 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
 
 static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
                                   FriendTemplateDecl *FTD, NamedDecl *ND) {
+  if (auto *CTD = dyn_cast<ClassTemplateDecl>(ND))
+    return MatchesFriend(S, EC, FTD, CTD);
+
   if (auto *TD = dyn_cast<FunctionTemplateDecl>(ND))
     return MatchesFriend(S, EC, FTD, TD);
 
@@ -801,12 +849,7 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
   if (!NNS)
     return OnFailure;
 
-  const auto *T = NNS.getAsType();
-  if (!T)
-    return OnFailure;
-
-  const auto *TST =
-      S.Context.getCanonicalType(T)->getAsNonAliasTemplateSpecializationType();
+  const auto *TST = GetCanonicalQualifierTemplateSpecializationType(S, NNS);
   if (!TST)
     return OnFailure;
 
