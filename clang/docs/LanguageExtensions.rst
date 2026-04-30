@@ -702,9 +702,9 @@ The table below shows the support for each operation by vector extension.  A
 dash indicates that an operation is not accepted according to a corresponding
 specification.
 
-============================== ======= ======= ============= ======= ========== =====
+============================== ======= ======= ============= ======= ========== ===========
          Operator              OpenCL  AltiVec     GCC        NEON    SVE        RVV
-============================== ======= ======= ============= ======= ========== =====
+============================== ======= ======= ============= ======= ========== ===========
 []                               yes     yes       yes         yes    yes        yes
 unary operators +, --            yes     yes       yes         yes    yes        yes
 ++, -- --                        yes     yes       yes         no     no         no
@@ -721,7 +721,7 @@ reinterpret_cast                 yes     no        yes         no     no        
 static_cast                      yes     no        yes         no     no         yes
 const_cast                       no      no        no          no     no         no
 address &v[i]                    no      no        no [#]_     no     no         no
-============================== ======= ======= ============= ======= ========== =====
+============================== ======= ======= ============= ======= ========== ===========
 
 Both SVE and RVV define sizeless vector types which cannot be used in globals,
 structs, unions, or arrays.  Both provide an attribute (``arm_sve_vector_bits``
