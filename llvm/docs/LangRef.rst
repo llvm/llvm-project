@@ -9157,9 +9157,11 @@ Other Module Flags
 ------------------
 
 ``require-logical-pointer``
-    This flag indicates this module must only user logical pointer intrinsics
-    such as '``llvm.structured.gep``' or '``llvm.structured.alloca``'.
-    Using a normal '``getelementptr``' or '``alloca``' is illegal.
+    This flag indicates this module must only use logical pointer intrinsics
+    such as :ref:`@llvm.structured.gep <i_structured_gep>` or
+    :ref:`@llvm.structured.alloca <i_structured_alloca>`.
+    Using a normal :ref:`getelementptr <i_getelementptr>` or
+    :ref:`alloca <i_alloca>` is illegal.
 
 Embedded Objects Names Metadata
 ===============================
