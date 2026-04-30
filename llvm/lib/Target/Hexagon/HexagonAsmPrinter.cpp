@@ -798,7 +798,7 @@ void HexagonAsmPrinter::emitEndOfAsmFile(Module &M) {
 void HexagonAsmPrinter::emitAttributes() {
   HexagonTargetStreamer &HTS =
       static_cast<HexagonTargetStreamer &>(*OutStreamer->getTargetStreamer());
-  HTS.emitTargetAttributes(*TM.getMCSubtargetInfo());
+  HTS.emitTargetAttributes(TM.getMCSubtargetInfo());
 }
 
 void HexagonAsmPrinter::EmitSled(const MachineInstr &MI, SledKind Kind) {
