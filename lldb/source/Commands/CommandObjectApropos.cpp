@@ -73,8 +73,8 @@ void CommandObjectApropos::DoExecute(Args &args, CommandReturnObject &result) {
       // Find all the properties matching the search word.
       size_t properties_max_len = 0;
       std::vector<const Property *> properties;
-      const size_t num_properties =
-          GetDebugger().Apropos(search_word, properties);
+      std::vector<const Property *> property_prefixes;
+      GetDebugger().Apropos(search_word, properties, property_prefixes);
       for (const Property *prop : properties) {
         StreamString qualified_name;
         prop->DumpQualifiedName(qualified_name);
@@ -82,7 +82,7 @@ void CommandObjectApropos::DoExecute(Args &args, CommandReturnObject &result) {
             std::max(properties_max_len, qualified_name.GetString().size());
       }
 
-      if (num_properties == 0) {
+      if (properties.size() == 0) {
         result.AppendMessageWithFormatv(
             "No settings found pertaining to '{0}'. "
             "Try 'settings show' to see a complete list of "
@@ -95,7 +95,7 @@ void CommandObjectApropos::DoExecute(Args &args, CommandReturnObject &result) {
             search_word);
 
         const bool dump_qualified_name = true;
-        for (size_t i = 0; i < num_properties; ++i)
+        for (size_t i = 0; i < properties.size(); ++i)
           properties[i]->DumpDescription(
               m_interpreter, result.GetOutputStream(), properties_max_len,
               dump_qualified_name, highlight);

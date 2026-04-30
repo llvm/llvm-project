@@ -463,37 +463,43 @@ void OptionValueProperties::DumpAllDescriptions(CommandInterpreter &interpreter,
 }
 
 void OptionValueProperties::Apropos(
-    llvm::StringRef keyword,
-    std::vector<const Property *> &matching_properties) const {
+    llvm::StringRef keyword, std::vector<const Property *> &matching_properties,
+    std::vector<const Property *> &matching_property_prefixes) const {
   const size_t num_properties = m_properties.size();
   for (size_t i = 0; i < num_properties; ++i) {
     const Property *property = ProtectedGetPropertyAtIndex(i);
     if (!property)
       continue;
 
-    if (const OptionValueProperties *properties =
-            property->GetValue()->GetAsProperties()) {
-      properties->Apropos(keyword, matching_properties);
-      continue;
-    }
+    const OptionValueProperties *properties =
+        property->GetValue()->GetAsProperties();
+    if (properties)
+      properties->Apropos(keyword, matching_properties,
+                          matching_property_prefixes);
 
-    if (llvm::StringRef name = property->GetName();
-        name.contains_insensitive(keyword)) {
-      matching_properties.push_back(property);
-      continue;
-    }
+    bool matched = false;
 
+    // TODO: do we need this at all? It allows you to look for a.b?
     if (StreamString qualified_name;
         property->DumpQualifiedName(qualified_name) &&
-        qualified_name.GetString().contains_insensitive(keyword)) {
-      matching_properties.push_back(property);
-      continue;
-    }
+        qualified_name.GetString().contains_insensitive(keyword))
+      matched = true;
+
+    if (llvm::StringRef name = property->GetName();
+        !matched && name.contains_insensitive(keyword))
+      matched = true;
 
     if (llvm::StringRef desc = property->GetDescription();
-        desc.contains_insensitive(keyword)) {
-      matching_properties.push_back(property);
+        !matched && desc.contains_insensitive(keyword))
+      matched = true;
+
+    if (!matched)
       continue;
+
+    if (properties) {
+      matching_property_prefixes.push_back(property);
+    } else {
+      matching_properties.push_back(property);
     }
   }
 }
