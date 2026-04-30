@@ -8803,13 +8803,12 @@ SDValue SITargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
 
     for (unsigned J = 0; J < NumVals; ++J) {
       SDValue Val = Op.getOperand(I + 1 + J);
-      if (Val.getOpcode() != ISD::Register)
-        continue;
-
-      Register Reg = cast<RegisterSDNode>(Val.getNode())->getReg();
-
-      if (IsSGPRInput || (Reg.isPhysical() && TRI->isSGPRPhysReg(Reg)))
-        SGPRInputRegs.insert(Reg);
+      if (const RegisterSDNode *RegNode =
+              dyn_cast<RegisterSDNode>(Val.getNode())) {
+        Register Reg = RegNode->getReg();
+        if (IsSGPRInput || (Reg.isPhysical() && TRI->isSGPRPhysReg(Reg)))
+          SGPRInputRegs.insert(Reg);
+      }
     }
   }
 
