@@ -265,7 +265,7 @@
 #include "WebAssemblyTargetMachine.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
-#include "llvm/CodeGen/WasmEHFuncInfo.h"
+#include "llvm/CodeGen/WasmEHInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"

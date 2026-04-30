@@ -8,7 +8,6 @@
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for sub_h
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for mul_h
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for div_h
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for s_to_h
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for d_to_h
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for sitofp_i8
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for sitofp_i16
@@ -41,7 +40,6 @@
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for sub_h
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for mul_h
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for div_h
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for s_to_h
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for d_to_h
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for sitofp_i8
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for sitofp_i16
@@ -223,24 +221,40 @@ entry:
 }
 
 define <4 x bfloat> @s_to_h(<4 x float> %a) {
-; CHECK-CVT-LABEL: s_to_h:
-; CHECK-CVT:       // %bb.0:
-; CHECK-CVT-NEXT:    movi v1.4s, #1
-; CHECK-CVT-NEXT:    movi v2.4s, #127, msl #8
-; CHECK-CVT-NEXT:    ushr v3.4s, v0.4s, #16
-; CHECK-CVT-NEXT:    and v1.16b, v3.16b, v1.16b
-; CHECK-CVT-NEXT:    add v2.4s, v0.4s, v2.4s
-; CHECK-CVT-NEXT:    fcmeq v3.4s, v0.4s, v0.4s
-; CHECK-CVT-NEXT:    orr v0.4s, #64, lsl #16
-; CHECK-CVT-NEXT:    add v1.4s, v1.4s, v2.4s
-; CHECK-CVT-NEXT:    bit v0.16b, v1.16b, v3.16b
-; CHECK-CVT-NEXT:    shrn v0.4h, v0.4s, #16
-; CHECK-CVT-NEXT:    ret
+; CHECK-CVT-SD-LABEL: s_to_h:
+; CHECK-CVT-SD:       // %bb.0:
+; CHECK-CVT-SD-NEXT:    movi v1.4s, #1
+; CHECK-CVT-SD-NEXT:    movi v2.4s, #127, msl #8
+; CHECK-CVT-SD-NEXT:    ushr v3.4s, v0.4s, #16
+; CHECK-CVT-SD-NEXT:    and v1.16b, v3.16b, v1.16b
+; CHECK-CVT-SD-NEXT:    add v2.4s, v0.4s, v2.4s
+; CHECK-CVT-SD-NEXT:    fcmeq v3.4s, v0.4s, v0.4s
+; CHECK-CVT-SD-NEXT:    orr v0.4s, #64, lsl #16
+; CHECK-CVT-SD-NEXT:    add v1.4s, v1.4s, v2.4s
+; CHECK-CVT-SD-NEXT:    bit v0.16b, v1.16b, v3.16b
+; CHECK-CVT-SD-NEXT:    shrn v0.4h, v0.4s, #16
+; CHECK-CVT-SD-NEXT:    ret
 ;
 ; CHECK-BF16-LABEL: s_to_h:
 ; CHECK-BF16:       // %bb.0:
 ; CHECK-BF16-NEXT:    bfcvtn v0.4h, v0.4s
 ; CHECK-BF16-NEXT:    ret
+;
+; CHECK-CVT-GI-LABEL: s_to_h:
+; CHECK-CVT-GI:       // %bb.0:
+; CHECK-CVT-GI-NEXT:    movi v1.4s, #1
+; CHECK-CVT-GI-NEXT:    movi v2.4s, #127, msl #8
+; CHECK-CVT-GI-NEXT:    ushr v3.4s, v0.4s, #16
+; CHECK-CVT-GI-NEXT:    fcmeq v4.4s, v0.4s, v0.4s
+; CHECK-CVT-GI-NEXT:    movi v5.4s, #64, lsl #16
+; CHECK-CVT-GI-NEXT:    and v1.16b, v3.16b, v1.16b
+; CHECK-CVT-GI-NEXT:    add v2.4s, v0.4s, v2.4s
+; CHECK-CVT-GI-NEXT:    mvn v3.16b, v4.16b
+; CHECK-CVT-GI-NEXT:    orr v0.16b, v0.16b, v5.16b
+; CHECK-CVT-GI-NEXT:    add v1.4s, v2.4s, v1.4s
+; CHECK-CVT-GI-NEXT:    bif v0.16b, v1.16b, v3.16b
+; CHECK-CVT-GI-NEXT:    shrn v0.4h, v0.4s, #16
+; CHECK-CVT-GI-NEXT:    ret
   %1 = fptrunc <4 x float> %a to <4 x bfloat>
   ret <4 x bfloat> %1
 }

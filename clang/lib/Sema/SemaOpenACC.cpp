@@ -2748,8 +2748,10 @@ Expr *GenerateReductionInitRecipeExpr(ASTContext &Context,
 VarDecl *CreateAllocaDecl(ASTContext &Ctx, DeclContext *DC,
                           SourceLocation BeginLoc, IdentifierInfo *VarName,
                           QualType VarTy) {
-  return VarDecl::Create(Ctx, DC, BeginLoc, BeginLoc, VarName, VarTy,
-                         Ctx.getTrivialTypeSourceInfo(VarTy), SC_Auto);
+  auto *VD = VarDecl::Create(Ctx, DC, BeginLoc, BeginLoc, VarName, VarTy,
+                             Ctx.getTrivialTypeSourceInfo(VarTy), SC_Auto);
+  VD->markUsed(Ctx);
+  return VD;
 }
 
 ExprResult FinishValueInit(Sema &S, InitializedEntity &Entity,

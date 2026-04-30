@@ -1498,6 +1498,7 @@ public:
       FMT(G);
       FMT(L);
       FMT(A);
+      FMT(AT);
       FMT(D);
 #undef FMT
     }
@@ -1907,6 +1908,13 @@ public:
               Word("!DIR$ NOINLINE");
             },
             [&](const CompilerDirective::IVDep &) { Word("!DIR$ IVDEP"); },
+            [&](const CompilerDirective::InlineAlways &inlineAlways) {
+              Word("!DIR$ INLINEALWAYS");
+              if (inlineAlways.v.has_value()) {
+                Word(" ");
+                Word(inlineAlways.v->ToString());
+              }
+            },
             [&](const CompilerDirective::Simd &) { Word("!DIR$ SIMD"); },
             [&](const CompilerDirective::Unrecognized &) {
               Word("!DIR$ ");
@@ -2193,12 +2201,13 @@ public:
   void Unparse(const OmpBeginDirective &x) {
     BeginOpenMP();
     Word("!$OMP ");
+    auto flags{std::get<OmpDirectiveSpecification::Flags>(x.t)};
+    if (flags.test(OmpDirectiveSpecification::Flag::ExplicitBegin)) {
+      Word("BEGIN ");
+    }
     Walk(static_cast<const OmpDirectiveSpecification &>(x));
     Put("\n");
     EndOpenMP();
-  }
-  void Unparse(const OmpBeginLoopDirective &x) {
-    Unparse(static_cast<const OmpBeginDirective &>(x));
   }
   void Unparse(const OmpBeginSectionsDirective &x) {
     Unparse(static_cast<const OmpBeginDirective &>(x));
@@ -2304,9 +2313,6 @@ public:
     Walk(static_cast<const OmpDirectiveSpecification &>(x));
     Put("\n");
     EndOpenMP();
-  }
-  void Unparse(const OmpEndLoopDirective &x) {
-    Unparse(static_cast<const OmpEndDirective &>(x));
   }
   void Unparse(const OmpEndSectionsDirective &x) {
     Unparse(static_cast<const OmpEndDirective &>(x));
@@ -2659,28 +2665,28 @@ public:
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OpenMPDeclareMapperConstruct &x) {
+  void Unparse(const OmpDeclareMapperDirective &x) {
     BeginOpenMP();
     Word("!$OMP ");
     Walk(x.v);
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OpenMPDeclareReductionConstruct &x) {
+  void Unparse(const OmpDeclareReductionDirective &x) {
     BeginOpenMP();
     Word("!$OMP ");
     Walk(x.v);
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OpenMPDeclareSimdConstruct &x) {
+  void Unparse(const OmpDeclareSimdDirective &x) {
     BeginOpenMP();
     Word("!$OMP ");
     Walk(x.v);
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OpenMPDeclareTargetConstruct &x) {
+  void Unparse(const OmpDeclareTargetDirective &x) {
     BeginOpenMP();
     Word("!$OMP ");
     Walk(x.v);

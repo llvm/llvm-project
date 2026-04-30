@@ -58,3 +58,10 @@ define void @loadnested(i32 %index) {
 
   ret void
 }
+
+; CHECK: declare %dx.types.Handle @dx.op.createHandle(i32, i8, i32, i32, i1) #[[#ATTR0:]]
+; CHECK-DAG: declare %dx.types.ResRet.i32 @dx.op.bufferLoad.i32(i32, %dx.types.Handle, i32, i32) #[[#ATTR0]]
+; CHECK-DAG: declare %dx.types.ResRet.f16 @dx.op.bufferLoad.f16(i32, %dx.types.Handle, i32, i32) #[[#ATTR0]]
+; CHECK-DAG: declare %dx.types.ResRet.f32 @dx.op.bufferLoad.f32(i32, %dx.types.Handle, i32, i32) #[[#ATTR0]]
+
+; CHECK-DAG: attributes #[[#ATTR0]] = { nounwind memory(read) }

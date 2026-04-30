@@ -823,7 +823,7 @@ class Base(unittest.TestCase):
 
         # Set any user-overridden settings.
         for setting, value in configuration.settings:
-            commands.append("setting set %s %s" % (setting, value))
+            commands.append("setting set -- %s %s" % (setting, value))
 
         # Make sure that a sanitizer LLDB's environment doesn't get passed on.
         if (
@@ -2232,7 +2232,8 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
                 # Make sure we found the local shared library in the above code
                 self.assertTrue(os.path.exists(local_shlib_path))
 
-            local_shlib_path = os.path.realpath(local_shlib_path)
+            if lldb.remote_platform:
+                local_shlib_path = os.path.realpath(local_shlib_path)
             # Add the shared library to our target
             shlib_module = target.AddModule(local_shlib_path, None, None, None)
             if lldb.remote_platform:

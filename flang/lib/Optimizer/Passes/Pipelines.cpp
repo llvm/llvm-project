@@ -13,11 +13,17 @@
 #include "flang/Optimizer/OpenACC/Passes.h"
 #include "mlir/Conversion/Passes.h"
 #include "mlir/Dialect/LLVMIR/Transforms/Passes.h"
+#include "mlir/Dialect/OpenMP/Transforms/Passes.h"
 #include "llvm/Support/CommandLine.h"
 
 /// Force setting the no-alias attribute on fuction arguments when possible.
 static llvm::cl::opt<bool> forceNoAlias("force-no-alias", llvm::cl::Hidden,
                                         llvm::cl::init(true));
+
+/// Disable the use of fake use for arguments.
+static llvm::cl::opt<bool> disableArgumentFakeUse("disable-argument-fake-use",
+                                                  llvm::cl::Hidden,
+                                                  llvm::cl::init(false));
 
 namespace fir {
 
@@ -107,6 +113,9 @@ void addDebugInfoPass(mlir::PassManager &pm,
   options.dwarfVersion = config.DwarfVersion;
   options.splitDwarfFile = config.SplitDwarfFile;
   options.dwarfDebugFlags = config.DwarfDebugFlags;
+  options.emitFakeUseForArguments =
+      (config.OptLevel == llvm::OptimizationLevel::O0) &&
+      !disableArgumentFakeUse;
   addPassConditionally(pm, disableDebugInfo,
                        [&]() { return fir::createAddDebugInfoPass(options); });
 }
@@ -432,6 +441,12 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
   }
 
   fir::addFIRToLLVMPass(pm, config);
+
+  // Convert applicable OpenMP stack allocations to shared memory allocations
+  // for GPU targets. This pass must run after any alloca-generating passes to
+  // ensure all are adequately accounted for.
+  if (config.EnableOpenMP && !config.EnableOpenMPSimd)
+    pm.addPass(mlir::omp::createStackToSharedPass());
 }
 
 /// Create a pass pipeline for lowering from MLIR to LLVM IR

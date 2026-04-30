@@ -546,6 +546,12 @@ public:
 
   bool isLValueSuitableForInlineAtomic(LValue lv);
 
+  RValue emitAtomicLoad(LValue lvalue, SourceLocation loc,
+                        AggValueSlot slot = AggValueSlot::ignored());
+  RValue emitAtomicLoad(LValue lvalue, SourceLocation loc, cir::MemOrder order,
+                        bool isVolatile = false,
+                        AggValueSlot slot = AggValueSlot::ignored());
+
   /// An abstract representation of regular/ObjC call/message targets.
   class AbstractCallee {
     /// The function declaration of the callee.
@@ -1792,6 +1798,8 @@ public:
     virtual ~cxxTryBodyEmitter() = default;
   };
 
+  void emitBeginCatch(const CXXCatchStmt *catchStmt, mlir::Value ehToken);
+
   mlir::LogicalResult emitCXXTryStmt(const clang::CXXTryStmt &s,
                                      cxxTryBodyEmitter &bodyCallback);
   mlir::LogicalResult emitCXXTryStmt(const clang::CXXTryStmt &s);
@@ -2050,8 +2058,7 @@ public:
 
   void emitStaticVarDecl(const VarDecl &d, cir::GlobalLinkageKind linkage);
 
-  /// Emit a guarded initializer for a static local variable or a static
-  /// data member of a class template instantiation.
+  /// Emit a guarded initializer for a static local variable.
   void emitCXXGuardedInit(const VarDecl &varDecl, cir::GlobalOp globalOp,
                           bool performInit);
 
