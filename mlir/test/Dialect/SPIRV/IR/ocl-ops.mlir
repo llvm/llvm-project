@@ -440,3 +440,118 @@ func.func @atan2(%arg0 : vector<4xf16>, %arg1 : vector<4xf16>) -> () {
   return
 }
 
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.CL.ldexp
+//===----------------------------------------------------------------------===//
+
+func.func @ldexp(%arg0 : f32, %arg1 : i32) -> () {
+  // CHECK: {{%.*}} = spirv.CL.ldexp {{%.*}}, {{%.*}} : f32, i32 -> f32
+  %0 = spirv.CL.ldexp %arg0, %arg1 : f32, i32 -> f32
+  return
+}
+
+// -----
+
+func.func @ldexp_vec(%arg0 : vector<3xf32>, %arg1 : vector<3xi32>) -> () {
+  // CHECK: {{%.*}} = spirv.CL.ldexp {{%.*}}, {{%.*}} : vector<3xf32>, vector<3xi32> -> vector<3xf32>
+  %0 = spirv.CL.ldexp %arg0, %arg1 : vector<3xf32>, vector<3xi32> -> vector<3xf32>
+  return
+}
+
+// -----
+
+func.func @ldexp_wrong_type_scalar(%arg0 : f32, %arg1 : vector<2xi32>) -> () {
+  // expected-error @+1 {{operands must both be scalars or vectors}}
+  %0 = spirv.CL.ldexp %arg0, %arg1 : f32, vector<2xi32> -> f32
+  return
+}
+
+// -----
+
+func.func @ldexp_wrong_type_vec_1(%arg0 : vector<3xf32>, %arg1 : i32) -> () {
+  // expected-error @+1 {{operands must both be scalars or vectors}}
+  %0 = spirv.CL.ldexp %arg0, %arg1 : vector<3xf32>, i32 -> vector<3xf32>
+  return
+}
+
+// -----
+
+func.func @ldexp_wrong_type_vec_2(%arg0 : vector<3xf32>, %arg1 : vector<2xi32>) -> () {
+  // expected-error @+1 {{operands must have the same number of elements}}
+  %0 = spirv.CL.ldexp %arg0, %arg1 : vector<3xf32>, vector<2xi32> -> vector<3xf32>
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.CL.pown
+//===----------------------------------------------------------------------===//
+
+func.func @pown(%arg0 : f32, %arg1 : i32) -> () {
+  // CHECK: {{%.*}} = spirv.CL.pown {{%.*}}, {{%.*}} : f32, i32 -> f32
+  %0 = spirv.CL.pown %arg0, %arg1 : f32, i32 -> f32
+  return
+}
+
+// -----
+
+func.func @pown_vec(%arg0 : vector<3xf32>, %arg1 : vector<3xi32>) -> () {
+  // CHECK: {{%.*}} = spirv.CL.pown {{%.*}}, {{%.*}} : vector<3xf32>, vector<3xi32> -> vector<3xf32>
+  %0 = spirv.CL.pown %arg0, %arg1 : vector<3xf32>, vector<3xi32> -> vector<3xf32>
+  return
+}
+
+// -----
+
+func.func @pown_wrong_type_scalar(%arg0 : f32, %arg1 : vector<2xi32>) -> () {
+  // expected-error @+1 {{operands must both be scalars or vectors}}
+  %0 = spirv.CL.pown %arg0, %arg1 : f32, vector<2xi32> -> f32
+  return
+}
+
+// -----
+
+func.func @pown_wrong_type_vec(%arg0 : vector<3xf32>, %arg1 : vector<2xi32>) -> () {
+  // expected-error @+1 {{operands must have the same number of elements}}
+  %0 = spirv.CL.pown %arg0, %arg1 : vector<3xf32>, vector<2xi32> -> vector<3xf32>
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.CL.rootn
+//===----------------------------------------------------------------------===//
+
+func.func @rootn(%arg0 : f32, %arg1 : i32) -> () {
+  // CHECK: {{%.*}} = spirv.CL.rootn {{%.*}}, {{%.*}} : f32, i32 -> f32
+  %0 = spirv.CL.rootn %arg0, %arg1 : f32, i32 -> f32
+  return
+}
+
+// -----
+
+func.func @rootn_vec(%arg0 : vector<3xf32>, %arg1 : vector<3xi32>) -> () {
+  // CHECK: {{%.*}} = spirv.CL.rootn {{%.*}}, {{%.*}} : vector<3xf32>, vector<3xi32> -> vector<3xf32>
+  %0 = spirv.CL.rootn %arg0, %arg1 : vector<3xf32>, vector<3xi32> -> vector<3xf32>
+  return
+}
+
+// -----
+
+func.func @rootn_wrong_type_scalar(%arg0 : f32, %arg1 : vector<2xi32>) -> () {
+  // expected-error @+1 {{operands must both be scalars or vectors}}
+  %0 = spirv.CL.rootn %arg0, %arg1 : f32, vector<2xi32> -> f32
+  return
+}
+
+// -----
+
+func.func @rootn_wrong_type_vec(%arg0 : vector<3xf32>, %arg1 : vector<2xi32>) -> () {
+  // expected-error @+1 {{operands must have the same number of elements}}
+  %0 = spirv.CL.rootn %arg0, %arg1 : vector<3xf32>, vector<2xi32> -> vector<3xf32>
+  return
+}

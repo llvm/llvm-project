@@ -58,8 +58,9 @@ throwing_task f() {
   // CHECK: [[RESUMETRYCONT]]:
   // CHECK-NEXT: br label %[[CLEANUP:.+]]
   // CHECK: [[CLEANUP]]:
-  // CHECK: switch i32 %{{.+}}, label %{{.+}} [
+  // CHECK: switch i32 %{{.+}}, label %unreachable [
   // CHECK-NEXT: i32 0, label %[[CLEANUPCONT:.+]]
+  // CHECK-NEXT: i32 2, label %{{.+}}
   // CHECK-NEXT: ]
 
   // The variable RESUMETHREW is loaded and if true, then 'await_resume'

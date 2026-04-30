@@ -1403,7 +1403,6 @@ def XeGPU_TruncfOp
 }
 
 def XeGPU_DpasMxOp : XeGPU_Op<"dpas_mx", [Pure, AttrSizedOperandSegments,
-                                          AllElementTypesMatch<["a", "b"]>,
                                           AnchorLayoutInterface]> {
   let summary = "It performs scaled mma computation";
 
@@ -1450,7 +1449,9 @@ def XeGPU_DpasMxOp : XeGPU_Op<"dpas_mx", [Pure, AttrSizedOperandSegments,
                           VectorOfRankAndType<[1, 2], [F8E8M0FNU]>]>>:$scale_b,
       OptionalAttr<DistributeLayoutAttr>:$layout_a,
       OptionalAttr<DistributeLayoutAttr>:$layout_b,
-      OptionalAttr<DistributeLayoutAttr>:$layout_cd);
+      OptionalAttr<DistributeLayoutAttr>:$layout_cd,
+      OptionalAttr<DistributeLayoutAttr>:$layout_a_scale,
+      OptionalAttr<DistributeLayoutAttr>:$layout_b_scale);
   let results = (outs XeGPU_DpasResType:$result);
   let extraClassDeclaration = [{
 

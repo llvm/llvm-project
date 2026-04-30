@@ -36,6 +36,7 @@
 #include "llvm/CodeGen/FEntryInserter.h"
 #include "llvm/CodeGen/FinalizeISel.h"
 #include "llvm/CodeGen/FixupStatepointCallerSaved.h"
+#include "llvm/CodeGen/GCEmptyBasicBlocks.h"
 #include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/GlobalMerge.h"
 #include "llvm/CodeGen/GlobalMergeFunctions.h"
@@ -1075,6 +1076,9 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addMachinePasses(
       addModulePass(MachineOutlinerPass(Opt.EnableMachineOutliner), PMW);
     }
   }
+
+  if (Opt.EnableGCEmptyBlocks)
+    addMachineFunctionPass(GCEmptyBasicBlocksPass(), PMW);
 
   derived().addPostBBSections(PMW);
 

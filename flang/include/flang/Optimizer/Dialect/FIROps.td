@@ -894,13 +894,16 @@ def fir_EmboxOp : fir_Op<"embox", [NoMemoryEffect, AttrSizedOperandSegments,
           type descriptor or element size to populate the new descriptor.
         - accessMap: unused/experimental.
         - allocator_idx: specify special allocator to use.
+        - optional: indicates that a null pointer `memref` must produce a absent
+          fir.box as opposed to a fir.box containing a nullptr.
   }];
 
   let arguments = (ins AnyReferenceLike:$memref, Optional<AnyShapeType>:$shape,
       Optional<fir_SliceType>:$slice, Variadic<AnyIntegerType>:$typeparams,
       Optional<BoxOrClassType>:$sourceBox,
       OptionalAttr<AffineMapAttr>:$accessMap,
-      OptionalAttr<I32Attr>:$allocator_idx);
+      OptionalAttr<I32Attr>:$allocator_idx,
+      UnitAttr:$optional);
 
   let results = (outs BoxOrClassType);
 
@@ -913,12 +916,13 @@ def fir_EmboxOp : fir_Op<"embox", [NoMemoryEffect, AttrSizedOperandSegments,
       CArg<"mlir::IntegerAttr", "{}">:$allocator_idx),
     [{ return build($_builder, $_state, resultTypes, memref, shape, slice,
                     typeparams, sourceBox, mlir::AffineMapAttr{},
-                    allocator_idx); }]>
+                    allocator_idx, /*optional=*/mlir::UnitAttr{}); }]>
   ];
 
   let assemblyFormat = [{
     $memref (`(` $shape^ `)`)? (`[` $slice^ `]`)? (`typeparams` $typeparams^)?
-      (`source_box` $sourceBox^)? (`map` $accessMap^)? attr-dict `:`
+      (`source_box` $sourceBox^)? (`map` $accessMap^)?
+      (`optional` $optional^)? attr-dict `:`
       functional-type(operands, results)
   }];
 
@@ -976,18 +980,24 @@ def fir_ReboxOp : fir_Op<"rebox", [NoMemoryEffect, AttrSizedOperandSegments,
       %3 = fir.shape %c3, %c4 : (index, index) -> !fir.shape<2>
       %4 = fir.rebox %2(%3) : (!fir.box<!fir.array<?xf32>>, !fir.shape<2>) -> !fir.box<!fir.array<?x?xf32>>
     ```
+
+    When the `optional` unit attribute is set, `$box` may be an absent
+    (null-descriptor) OPTIONAL. In such case, the produced fir.box will be
+    absent when the input one is absent. Without this flag, it is illegal
+    to execute a fir.rebox where the input fir.box is absent.
   }];
 
   let arguments = (ins
     BoxOrClassType:$box,
     Optional<AnyShapeOrShiftType>:$shape,
-    Optional<fir_SliceType>:$slice
+    Optional<fir_SliceType>:$slice,
+    UnitAttr:$optional
   );
 
   let results = (outs BoxOrClassType);
 
   let assemblyFormat = [{
-    $box (`(` $shape^ `)`)? (`[` $slice^ `]`)?
+    $box (`(` $shape^ `)`)? (`[` $slice^ `]`)? (`optional` $optional^)?
         attr-dict `:` functional-type(operands, results)
   }];
 
@@ -1022,18 +1032,24 @@ def fir_ReboxAssumedRankOp : fir_Op<"rebox_assumed_rank",
     Example:
     ```
       fir.rebox_assumed_rank %1 lbs zeroes : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>
-    ```    
+    ```
+
+    When the `optional` unit attribute is set, `$box` may be an absent
+    (null-descriptor) OPTIONAL. In such case, the produced fir.box will be
+    absent when the input one is absent. Without this flag, it is illegal
+    to execute a fir.rebox where the input fir.box is absent.
   }];
 
   let arguments = (ins
     AnyRefOrBoxType:$box,
-    fir_LowerBoundModifierAttribute:$lbs_modifier
+    fir_LowerBoundModifierAttribute:$lbs_modifier,
+    UnitAttr:$optional
   );
 
   let results = (outs BoxOrClassType);
 
   let assemblyFormat = [{
-    $box `lbs` $lbs_modifier
+    $box `lbs` $lbs_modifier (`optional` $optional^)?
         attr-dict `:` functional-type(operands, results)
   }];
 

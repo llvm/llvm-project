@@ -72,6 +72,40 @@ func.func @amx_tile_mulf_f16(
   return
 }
 
+// CHECK-LABEL: define void @amx_tile_mulf_f8
+func.func @amx_tile_mulf_f8(
+    %matA: memref<?x?xf8E4M3FN>, %matB: memref<?x?xf8E5M2>, %idx: index,
+    %out: memref<?x?xf32>)
+{
+  %c0 = arith.constant 0 : index
+  %c16 = arith.constant 16 : index
+  // CHECK: call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
+  %acc = x86.amx.tile_zero : !x86.amx.tile<16x16xf32>
+  // CHECK-COUNT-4: call x86_amx @llvm.x86.tileloadd64.internal
+  %tA = x86.amx.tile_load %matA[%idx, %idx] : memref<?x?xf8E4M3FN> into !x86.amx.tile<16x64xf8E4M3FN>
+  %tB = x86.amx.tile_load %matB[%idx, %idx] : memref<?x?xf8E5M2> into !x86.amx.tile<16x64xf8E5M2>
+  %tA1 = x86.amx.tile_load %matA[%c0, %c0] : memref<?x?xf8E4M3FN> into !x86.amx.tile<16x64xf8E4M3FN>
+  %tB1 = x86.amx.tile_load %matB[%c0, %c0] : memref<?x?xf8E5M2> into !x86.amx.tile<16x64xf8E5M2>
+  // CHECK: call x86_amx @llvm.x86.tdpbf8ps.internal
+  // CHECK: call x86_amx @llvm.x86.tdpbhf8ps.internal
+  // CHECK: call x86_amx @llvm.x86.tdphbf8ps.internal
+  // CHECK: call x86_amx @llvm.x86.tdphf8ps.internal
+  %tRes = x86.amx.tile_mulf %tA, %tA1, %acc
+    : !x86.amx.tile<16x64xf8E4M3FN>, !x86.amx.tile<16x64xf8E4M3FN>, !x86.amx.tile<16x16xf32>
+  %tRes1 = x86.amx.tile_mulf %tA, %tB, %acc
+      : !x86.amx.tile<16x64xf8E4M3FN>, !x86.amx.tile<16x64xf8E5M2>, !x86.amx.tile<16x16xf32>
+  %tRes2 = x86.amx.tile_mulf %tB, %tA, %acc
+      : !x86.amx.tile<16x64xf8E5M2>, !x86.amx.tile<16x64xf8E4M3FN>, !x86.amx.tile<16x16xf32>
+  %tRes3 = x86.amx.tile_mulf %tB, %tB1, %acc
+    : !x86.amx.tile<16x64xf8E5M2>, !x86.amx.tile<16x64xf8E5M2>, !x86.amx.tile<16x16xf32>
+  // CHECK-COUNT-4: call void @llvm.x86.tilestored64.internal
+  x86.amx.tile_store %out[%idx, %c0], %tRes : memref<?x?xf32>, !x86.amx.tile<16x16xf32>
+  x86.amx.tile_store %out[%idx, %c16], %tRes1 : memref<?x?xf32>, !x86.amx.tile<16x16xf32>
+  x86.amx.tile_store %out[%c0, %idx], %tRes2 : memref<?x?xf32>, !x86.amx.tile<16x16xf32>
+  x86.amx.tile_store %out[%c16, %idx], %tRes3 : memref<?x?xf32>, !x86.amx.tile<16x16xf32>
+  return
+}
+
 // CHECK-LABEL: define void @amx_tile_muli
 func.func @amx_tile_muli(%matA: memref<?x?xi8>, %matB: memref<?x?xi8>,
     %matC: memref<?x?xi32>, %idx: index, %out: memref<?x?xi8>)
