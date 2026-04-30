@@ -1579,6 +1579,78 @@ TEST_F(ScalarEvolutionsTest, SCEVUDivFloorCeiling) {
   });
 }
 
+TEST_F(ScalarEvolutionsTest, SCEVUDivExactPreserveNUW) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M =
+      parseAssemblyString("define void @foo(i32 %a, i32 %b) {"
+                          "  ret void"
+                          "}",
+                          Err, C);
+
+  ASSERT_TRUE(M && "Could not parse module?");
+  ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
+
+  runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    const SCEV *A = SE.getSCEV(getArgByName(F, "a"));
+    const SCEV *B = SE.getSCEV(getArgByName(F, "b"));
+    const SCEV *Two = SE.getConstant(A->getType(), 2);
+    const SCEV *Three = SE.getConstant(A->getType(), 3);
+    const SCEV *Four = SE.getConstant(A->getType(), 4);
+    const SCEV *Six = SE.getConstant(A->getType(), 6);
+    const SCEV *Nine = SE.getConstant(A->getType(), 9);
+    const SCEV *Twelve = SE.getConstant(A->getType(), 12);
+    const SCEV *TwentyFour = SE.getConstant(A->getType(), 24);
+
+    SmallVector<SCEVUse, 3> LHSMulOps = {A, B, Twelve};
+    const SCEVMulExpr *LHSMulNUW =
+        cast<const SCEVMulExpr>(SE.getMulExpr(LHSMulOps, SCEV::FlagNUW));
+    // UDivExactExpr where the divisor is a constant that appears in dividend
+    // MulExpr
+    const SCEVMulExpr *EqualConsts =
+        cast<const SCEVMulExpr>(SE.getUDivExactExpr(LHSMulNUW, Twelve));
+    SmallVector<SCEVUse, 2> EqualConstsResOps = {A, B};
+    EXPECT_TRUE(EqualConsts->hasNoUnsignedWrap());
+    EXPECT_EQ(EqualConsts, SE.getMulExpr(EqualConstsResOps, SCEV::FlagNUW));
+
+    // UDivExactExpr where the divisor is a constant multiple of the dividend
+    // constant
+    const SCEV *DividendSmaller = SE.getUDivExactExpr(LHSMulNUW, TwentyFour);
+    SmallVector<SCEVUse, 2> DividendSmallerResOps = {A, B};
+    EXPECT_TRUE(cast<const SCEVMulExpr>(DividendSmaller->operands().front())
+                    ->hasNoUnsignedWrap());
+    EXPECT_EQ(DividendSmaller,
+              SE.getUDivExpr(
+                  SE.getMulExpr(DividendSmallerResOps, SCEV::FlagNUW), Two));
+
+    // UDivExactExpr where the dividend constant is a constant multiple of the
+    // divisor
+    const SCEVMulExpr *DivisorSmaller =
+        cast<const SCEVMulExpr>(SE.getUDivExactExpr(LHSMulNUW, Six));
+    SmallVector<SCEVUse, 2> DivisorSmallerResOps = {A, B, Two};
+    EXPECT_TRUE(DivisorSmaller->hasNoUnsignedWrap());
+    EXPECT_EQ(DivisorSmaller,
+              SE.getMulExpr(DivisorSmallerResOps, SCEV::FlagNUW));
+
+    // UDivExactExpr where the divisor and dividend constant,are not factors of
+    // each other
+    const SCEV *NoFactor = SE.getUDivExactExpr(LHSMulNUW, Nine);
+    SmallVector<SCEVUse, 2> NoFactorResOps = {A, B, Four};
+    EXPECT_TRUE(cast<const SCEVMulExpr>(NoFactor->operands().front())
+                    ->hasNoUnsignedWrap());
+    EXPECT_EQ(
+        NoFactor,
+        SE.getUDivExpr(SE.getMulExpr(NoFactorResOps, SCEV::FlagNUW), Three));
+
+    // UDivExactExpr where the divisor is contained in the divident MulExpr
+    const SCEVMulExpr *NonConstFactor =
+        cast<const SCEVMulExpr>(SE.getUDivExactExpr(LHSMulNUW, B));
+    SmallVector<SCEVUse, 2> NonConstFactorResOps = {A, Twelve};
+    EXPECT_FALSE(NonConstFactor->hasNoUnsignedWrap());
+    EXPECT_EQ(NonConstFactor, SE.getMulExpr(NonConstFactorResOps));
+  });
+}
+
 TEST_F(ScalarEvolutionsTest, CheckGetPowerOfTwo) {
   Module M("CheckGetPowerOfTwo", Context);
   FunctionType *FTy = FunctionType::get(Type::getVoidTy(Context), {}, false);
