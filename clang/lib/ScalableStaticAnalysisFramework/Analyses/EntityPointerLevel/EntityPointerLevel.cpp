@@ -97,10 +97,8 @@ public:
     if (const auto *FD = dyn_cast<FunctionDecl>(D))
       return createEntityPointerLevelForReturn(FD);
 
-    return makeErrAtNode(
-        Ctx, D,
-        "attempt to call getEntityNameForReturn on a NamedDecl of %s kind",
-        D->getDeclKindName());
+    return makeErrAtNode(Ctx, D, "attempt to get entity for return of %s",
+                         D->getDeclKindName());
   }
 
   static EntityPointerLevel incrementPointerLevel(const EntityPointerLevel &E) {
