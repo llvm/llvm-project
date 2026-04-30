@@ -1405,18 +1405,22 @@ void DXILBitcodeWriter::writeDISubrange(const DISubrange *N,
                                         unsigned Abbrev) {
   Record.push_back(N->isDistinct());
 
-  // TODO: Do we need to handle DIExpression here? What about cases where Count
-  // isn't specified but UpperBound and such are?
-  ConstantInt *Count = dyn_cast<ConstantInt *>(N->getCount());
-  assert(Count && "Count is missing or not ConstantInt");
-  Record.push_back(Count->getValue().getSExtValue());
+  // Count may be a reference to a DILocalVariable or DIGlobalVariable
+  // in case of C99 VLA. Non-constant count It is not supported by
+  // DXIL, so we emit a subrange of -1 (empty).
+  if (ConstantInt *Count = dyn_cast<ConstantInt *>(N->getCount())) {
+    Record.push_back(Count->getValue().getSExtValue());
+  } else {
+    Record.push_back(-1);
+  }
 
-  // TODO: Similarly, DIExpression is allowed here now
+  // Similarly, non constant lower bound is not allowed here.
   DISubrange::BoundType LowerBound = N->getLowerBound();
-  assert((LowerBound.isNull() || isa<ConstantInt *>(LowerBound)) &&
-         "Lower bound provided but not ConstantInt");
-  Record.push_back(
-      LowerBound ? rotateSign(cast<ConstantInt *>(LowerBound)->getValue()) : 0);
+  if (!LowerBound.isNull() && isa<ConstantInt *>(LowerBound)) {
+    Record.push_back(rotateSign(cast<ConstantInt *>(LowerBound)->getValue()));
+  } else {
+    Record.push_back(0);
+  }
 
   Stream.EmitRecord(bitc::METADATA_SUBRANGE, Record, Abbrev);
   Record.clear();
