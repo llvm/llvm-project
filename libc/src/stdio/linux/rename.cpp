@@ -7,23 +7,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdio/rename.h"
-#include "hdr/fcntl_macros.h"
-#include "src/__support/OSUtil/syscall.h" // For internal syscall function.
+#include "src/__support/OSUtil/linux/syscall_wrappers/rename.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include <sys/syscall.h> // For syscall numbers.
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, rename, (const char *oldpath, const char *newpath)) {
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_renameat2, AT_FDCWD, oldpath,
-                                              AT_FDCWD, newpath, 0);
-
-  if (ret >= 0)
-    return 0;
-  libc_errno = -ret;
-  return -1;
+  auto result = linux_syscalls::rename(oldpath, newpath);
+  if (!result) {
+    libc_errno = result.error();
+    return -1;
+  }
+  return 0;
 }
 
 } // namespace LIBC_NAMESPACE_DECL
