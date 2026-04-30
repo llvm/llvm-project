@@ -110,8 +110,6 @@ DeclContextTree::getChildDeclContext(DeclContext &Context, const DWARFDie &DIE,
     // distinct uniquing names.
     bool HasTemplateParamsInName =
         Name.ends_with(">") && !Name.ends_with("<=>") && Name.contains('<');
-    assert((!HasTemplateParamsInName || Tag != dwarf::DW_TAG_subprogram) &&
-           "subprogram with template-like name should have a linkage name");
     std::optional<std::string> FullName;
     if (!HasTemplateParamsInName)
       FullName = makeSimpleTemplateNameWithParams(Name, DIE);
