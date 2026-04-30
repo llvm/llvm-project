@@ -215,6 +215,9 @@ WebAssemblyTargetMachine::WebAssemblyTargetMachine(
 
   basicCheckForEHAndSjLj(this);
   initAsmInfo();
+
+  LLT::setUseExtended(true);
+
   // Note that we don't use setRequiresStructuredCFG(true). It disables
   // optimizations than we're ok with, and want, such as critical edge
   // splitting and tail merging.

@@ -1254,6 +1254,7 @@ def Offset1 : NamedIntOperand<"offset1">;
 }
 
 def gds : NamedBitOperand<"gds", "GDS">;
+def lds : NamedBitOperand<"lds", "LDS", 1>;
 
 def omod : CustomOperand<1, "OModSI">;
 def omod0 : DefaultOperand<omod, 0>;

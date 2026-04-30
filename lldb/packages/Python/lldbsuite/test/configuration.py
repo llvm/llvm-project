@@ -50,9 +50,6 @@ make_path = None
 # Allow specifying a triple for cross compilation.
 triple = None
 
-# Clang resource directory for cross compilation.
-resource_dir = None
-
 # The overriden dwarf verison.
 # Don't use this to test the current compiler's
 # DWARF version, as this won't be set if the

@@ -26,6 +26,7 @@
 
 #include "support/Context.h"
 #include "llvm/ADT/FunctionExtras.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
 #include <functional>

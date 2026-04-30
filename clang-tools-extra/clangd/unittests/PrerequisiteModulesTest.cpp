@@ -20,9 +20,12 @@
 #include "support/Path.h"
 #include "support/ThreadsafeFS.h"
 #include "clang/Tooling/Tooling.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Chrono.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
@@ -148,6 +151,21 @@ private:
   llvm::StringMap<tooling::CompileCommand> Commands;
   std::vector<std::string> Files;
   std::shared_ptr<IndexedCompilationDatabase> ToolingCDB;
+};
+
+class ModuleUnitRootCompilationDatabase
+    : public PerFileModulesCompilationDatabase {
+public:
+  ModuleUnitRootCompilationDatabase(StringRef TestDir, const ThreadsafeFS &TFS)
+      : PerFileModulesCompilationDatabase(TestDir, TFS) {}
+
+  std::optional<ProjectInfo> getProjectInfo(PathRef File) const override {
+    // Treat each module-unit directory as its own project root so tests can
+    // verify that the persistent cache follows the providing module unit.
+    llvm::SmallString<256> Root(File);
+    llvm::sys::path::remove_filename(Root);
+    return ProjectInfo{std::string(Root)};
+  }
 };
 
 class MockDirectoryCompilationDatabase : public MockCompilationDatabase {
@@ -529,6 +547,49 @@ export int nn = 43;
   EXPECT_TRUE(NInfo->canReuse(*Invocation, FS.view(TestDir)));
 }
 
+TEST_F(PrerequisiteModulesTests, CanReuseWithTransitiveNamedModuleImports) {
+  MockDirectoryCompilationDatabase CDB(TestDir, FS);
+
+  CDB.addFile("N.cppm", R"cpp(
+export module N;
+export inline constexpr int n = 1;
+  )cpp");
+
+  CDB.addFile("M.cppm", R"cpp(
+export module M;
+import N;
+export inline constexpr int m = n + 1;
+  )cpp");
+
+  CDB.addFile("A.cppm", R"cpp(
+export module A;
+import M;
+export inline constexpr int a = m + 1;
+  )cpp");
+
+  CDB.addFile("Use.cpp", R"cpp(
+import A;
+int use() { return a; }
+  )cpp");
+
+  ModulesBuilder Builder(CDB);
+
+  auto UseInfo = Builder.buildPrerequisiteModulesFor(getFullPath("Use.cpp"), FS);
+  ASSERT_TRUE(UseInfo);
+
+  HeaderSearchOptions HSOpts;
+  UseInfo->adjustHeaderSearchOptions(HSOpts);
+  EXPECT_TRUE(HSOpts.PrebuiltModuleFiles.count("A"));
+  EXPECT_TRUE(HSOpts.PrebuiltModuleFiles.count("M"));
+  EXPECT_TRUE(HSOpts.PrebuiltModuleFiles.count("N"));
+
+  auto Invocation =
+      buildCompilerInvocation(getInputs("Use.cpp", CDB), DiagConsumer);
+  ASSERT_TRUE(Invocation);
+
+  EXPECT_TRUE(UseInfo->canReuse(*Invocation, FS.view(TestDir)));
+}
+
 // An End-to-End test for modules.
 TEST_F(PrerequisiteModulesTests, ParsedASTTest) {
   MockDirectoryCompilationDatabase CDB(TestDir, FS);
@@ -713,8 +774,10 @@ export constexpr int M = 43;
   EXPECT_FALSE(NewHSOptsB.PrebuiltModuleFiles.empty());
 
   EXPECT_EQ(NewHSOptsA.PrebuiltModuleFiles, NewHSOptsB.PrebuiltModuleFiles);
-  // Check that we didn't reuse the old and stale module files.
-  EXPECT_NE(NewHSOptsA.PrebuiltModuleFiles, HSOptsA.PrebuiltModuleFiles);
+  // Persistent cache keeps the published BMI path stable, so verify the new
+  // module graph by reuse semantics instead of expecting a different path.
+  EXPECT_TRUE(NewAInfo->canReuse(*AInvocation, FS.view(TestDir)));
+  EXPECT_TRUE(NewBInfo->canReuse(*BInvocation, FS.view(TestDir)));
 }
 
 TEST_F(PrerequisiteModulesTests, ScanningCacheTest) {
@@ -1153,6 +1216,351 @@ int useB() { return onlyB; }
                                {}, PreambleB);
   ASSERT_TRUE(ASTB);
   EXPECT_TRUE(findDecl(*ASTB, "onlyB").isFromASTFile());
+}
+
+TEST_F(PrerequisiteModulesTests, PersistentModuleCacheReusedAcrossBuilders) {
+  MockDirectoryCompilationDatabase CDB(TestDir, FS);
+
+  CDB.addFile("M.cppm", R"cpp(
+export module M;
+export int MValue = 43;
+  )cpp");
+  CDB.addFile("A.cppm", R"cpp(
+export module A;
+import M;
+export int AValue = MValue;
+  )cpp");
+
+  std::string FirstPCMPath;
+  {
+    ModulesBuilder Builder(CDB);
+    auto AInfo = Builder.buildPrerequisiteModulesFor(getFullPath("A.cppm"), FS);
+    ASSERT_TRUE(AInfo);
+    HeaderSearchOptions HS(TestDir);
+    AInfo->adjustHeaderSearchOptions(HS);
+    ASSERT_EQ(HS.PrebuiltModuleFiles.count("M"), 1u);
+    FirstPCMPath = HS.PrebuiltModuleFiles["M"];
+    EXPECT_TRUE(llvm::sys::fs::exists(FirstPCMPath));
+    EXPECT_TRUE(StringRef(FirstPCMPath).contains(".cache/clangd/modules"));
+  }
+
+  EXPECT_FALSE(llvm::sys::fs::exists(FirstPCMPath));
+
+  // A fresh builder should reuse the persistent BMI published by the first one
+  // instead of rebuilding its stable cache entry.
+  ModulesBuilder Builder(CDB);
+  auto AInfo = Builder.buildPrerequisiteModulesFor(getFullPath("A.cppm"), FS);
+  ASSERT_TRUE(AInfo);
+  HeaderSearchOptions HS(TestDir);
+  AInfo->adjustHeaderSearchOptions(HS);
+  ASSERT_EQ(HS.PrebuiltModuleFiles.count("M"), 1u);
+  EXPECT_TRUE(llvm::sys::fs::exists(HS.PrebuiltModuleFiles["M"]));
+  EXPECT_TRUE(StringRef(HS.PrebuiltModuleFiles["M"]).contains("M-"));
+
+  ParseInputs AUse = getInputs("A.cppm", CDB);
+  AUse.ModulesManager = &Builder;
+  auto Invocation = buildCompilerInvocation(AUse, DiagConsumer);
+  ASSERT_TRUE(Invocation);
+  EXPECT_TRUE(AInfo->canReuse(*Invocation, FS.view(TestDir)));
+}
+
+TEST_F(PrerequisiteModulesTests,
+       PersistentModuleCacheRebuildsAfterDeletingStalePCM) {
+  MockDirectoryCompilationDatabase CDB(TestDir, FS);
+
+  CDB.addFile("M.cppm", R"cpp(
+export module M;
+export int MValue = 43;
+  )cpp");
+  CDB.addFile("A.cppm", R"cpp(
+export module A;
+import M;
+export int AValue = MValue;
+  )cpp");
+
+  ModulesBuilder Builder(CDB);
+  auto AInfo = Builder.buildPrerequisiteModulesFor(getFullPath("A.cppm"), FS);
+  ASSERT_TRUE(AInfo);
+  HeaderSearchOptions HS(TestDir);
+  AInfo->adjustHeaderSearchOptions(HS);
+  ASSERT_EQ(HS.PrebuiltModuleFiles.count("M"), 1u);
+  std::string PCMPath = HS.PrebuiltModuleFiles["M"];
+
+  std::error_code EC;
+  llvm::raw_fd_ostream OS(PCMPath, EC);
+  ASSERT_FALSE(EC);
+  OS << "broken";
+  OS.close();
+
+  // Corrupt the handed-out BMI and ensure clangd rebuilds a usable replacement.
+  auto NewAInfo =
+      Builder.buildPrerequisiteModulesFor(getFullPath("A.cppm"), FS);
+  ASSERT_TRUE(NewAInfo);
+  HeaderSearchOptions NewHS(TestDir);
+  NewAInfo->adjustHeaderSearchOptions(NewHS);
+  ASSERT_EQ(NewHS.PrebuiltModuleFiles.count("M"), 1u);
+  EXPECT_TRUE(llvm::sys::fs::exists(NewHS.PrebuiltModuleFiles["M"]));
+  EXPECT_TRUE(StringRef(NewHS.PrebuiltModuleFiles["M"]).contains("M-"));
+
+  ParseInputs AUse = getInputs("A.cppm", CDB);
+  AUse.ModulesManager = &Builder;
+  auto Invocation = buildCompilerInvocation(AUse, DiagConsumer);
+  ASSERT_TRUE(Invocation);
+  EXPECT_TRUE(NewAInfo->canReuse(*Invocation, FS.view(TestDir)));
+}
+
+TEST_F(PrerequisiteModulesTests, PersistentModuleCacheCreatesSourceHashLock) {
+  MockDirectoryCompilationDatabase CDB(TestDir, FS);
+
+  CDB.addFile("M.cppm", R"cpp(
+export module M;
+export int MValue = 43;
+  )cpp");
+  CDB.addFile("A.cppm", R"cpp(
+export module A;
+import M;
+export int AValue = MValue;
+  )cpp");
+
+  ModulesBuilder Builder(CDB);
+  auto AInfo = Builder.buildPrerequisiteModulesFor(getFullPath("A.cppm"), FS);
+  ASSERT_TRUE(AInfo);
+
+  HeaderSearchOptions HS(TestDir);
+  AInfo->adjustHeaderSearchOptions(HS);
+  ASSERT_EQ(HS.PrebuiltModuleFiles.count("M"), 1u);
+
+  llvm::SmallString<256> PCMPath(HS.PrebuiltModuleFiles["M"]);
+  llvm::sys::path::remove_filename(PCMPath);
+  llvm::SmallString<256> SourceHashDir(PCMPath);
+  llvm::sys::path::remove_filename(SourceHashDir);
+  llvm::SmallString<256> CacheRoot(SourceHashDir);
+  llvm::sys::path::remove_filename(CacheRoot);
+
+  // Locks live next to the persistent cache and are keyed by source-hash so
+  // builders publishing the same module unit serialize with each other.
+  llvm::StringRef SourceDirectoryName =
+      llvm::sys::path::filename(SourceHashDir);
+  // Split from the right because the readable basename may also contain '-'.
+  llvm::StringRef SourceHash = SourceDirectoryName.rsplit('-').second;
+  llvm::SmallString<256> LockPath(CacheRoot);
+  llvm::sys::path::append(LockPath, ".locks", SourceHash);
+
+  EXPECT_TRUE(llvm::sys::fs::exists(LockPath));
+}
+
+TEST_F(PrerequisiteModulesTests,
+       PersistentModuleCacheGCRemovesOldStablePublishedModule) {
+  PerFileModulesCompilationDatabase CDB(TestDir, FS);
+
+  CDB.addFile("M.cppm", R"cpp(
+export module M;
+export int MValue = 43;
+  )cpp");
+  CDB.addFile("A.cppm", R"cpp(
+export module A;
+import M;
+export int AValue = MValue;
+  )cpp");
+
+  llvm::SmallString<256> OrphanPCMPath;
+  {
+    ModulesBuilder Builder(CDB);
+    auto AInfo = Builder.buildPrerequisiteModulesFor(getFullPath("A.cppm"), FS);
+    ASSERT_TRUE(AInfo);
+    HeaderSearchOptions HS(TestDir);
+    AInfo->adjustHeaderSearchOptions(HS);
+    ASSERT_EQ(HS.PrebuiltModuleFiles.count("M"), 1u);
+
+    OrphanPCMPath = HS.PrebuiltModuleFiles["M"];
+    llvm::sys::path::remove_filename(OrphanPCMPath);
+    llvm::sys::path::append(OrphanPCMPath, "Orphan.pcm");
+
+    std::error_code EC;
+    llvm::raw_fd_ostream OS(OrphanPCMPath, EC);
+    ASSERT_FALSE(EC);
+    OS << "orphan";
+    OS.close();
+    EXPECT_TRUE(llvm::sys::fs::exists(OrphanPCMPath));
+
+    int FD = -1;
+    ASSERT_FALSE(llvm::sys::fs::openFileForWrite(OrphanPCMPath, FD,
+                                                 llvm::sys::fs::CD_OpenExisting,
+                                                 llvm::sys::fs::OF_None));
+    auto CloseFD = llvm::scope_exit(
+        [&] { llvm::sys::Process::SafelyCloseFileDescriptor(FD); });
+    llvm::sys::TimePoint<> OldTime =
+        std::chrono::system_clock::now() - std::chrono::hours(24 * 5);
+    ASSERT_FALSE(llvm::sys::fs::setLastAccessAndModificationTime(FD, OldTime));
+  }
+
+  ModulesBuilder Builder(CDB);
+  auto AInfo = Builder.buildPrerequisiteModulesFor(getFullPath("A.cppm"), FS);
+  ASSERT_TRUE(AInfo);
+  EXPECT_FALSE(llvm::sys::fs::exists(OrphanPCMPath));
+}
+
+TEST_F(PrerequisiteModulesTests,
+       PersistentModuleCacheGCKeepsRecentStablePublishedModule) {
+  PerFileModulesCompilationDatabase CDB(TestDir, FS);
+
+  CDB.addFile("M.cppm", R"cpp(
+export module M;
+export int MValue = 43;
+  )cpp");
+  CDB.addFile("A.cppm", R"cpp(
+export module A;
+import M;
+export int AValue = MValue;
+  )cpp");
+
+  llvm::SmallString<256> OrphanPCMPath;
+  {
+    ModulesBuilder Builder(CDB);
+    auto AInfo = Builder.buildPrerequisiteModulesFor(getFullPath("A.cppm"), FS);
+    ASSERT_TRUE(AInfo);
+    HeaderSearchOptions HS(TestDir);
+    AInfo->adjustHeaderSearchOptions(HS);
+    ASSERT_EQ(HS.PrebuiltModuleFiles.count("M"), 1u);
+
+    OrphanPCMPath = HS.PrebuiltModuleFiles["M"];
+    llvm::sys::path::remove_filename(OrphanPCMPath);
+    llvm::sys::path::append(OrphanPCMPath, "Orphan.pcm");
+
+    std::error_code EC;
+    llvm::raw_fd_ostream OS(OrphanPCMPath, EC);
+    ASSERT_FALSE(EC);
+    OS << "orphan";
+    OS.close();
+    EXPECT_TRUE(llvm::sys::fs::exists(OrphanPCMPath));
+  }
+
+  ModulesBuilder Builder(CDB);
+  auto AInfo = Builder.buildPrerequisiteModulesFor(getFullPath("A.cppm"), FS);
+  ASSERT_TRUE(AInfo);
+  EXPECT_TRUE(llvm::sys::fs::exists(OrphanPCMPath));
+}
+
+TEST_F(PrerequisiteModulesTests,
+       PersistentModuleCacheGCRemovesOldVersionedModuleFile) {
+  PerFileModulesCompilationDatabase CDB(TestDir, FS);
+
+  CDB.addFile("M.cppm", R"cpp(
+export module M;
+export int MValue = 43;
+  )cpp");
+  CDB.addFile("A.cppm", R"cpp(
+export module A;
+import M;
+export int AValue = MValue;
+  )cpp");
+
+  llvm::SmallString<256> OldVersionedPCMPath;
+  {
+    ModulesBuilder Builder(CDB);
+    auto AInfo = Builder.buildPrerequisiteModulesFor(getFullPath("A.cppm"), FS);
+    ASSERT_TRUE(AInfo);
+    HeaderSearchOptions HS(TestDir);
+    AInfo->adjustHeaderSearchOptions(HS);
+    ASSERT_EQ(HS.PrebuiltModuleFiles.count("M"), 1u);
+
+    OldVersionedPCMPath = HS.PrebuiltModuleFiles["M"];
+    ASSERT_TRUE(llvm::sys::fs::exists(OldVersionedPCMPath));
+
+    int FD = -1;
+    ASSERT_FALSE(llvm::sys::fs::openFileForWrite(OldVersionedPCMPath, FD,
+                                                 llvm::sys::fs::CD_OpenExisting,
+                                                 llvm::sys::fs::OF_None));
+    auto CloseFD = llvm::scope_exit(
+        [&] { llvm::sys::Process::SafelyCloseFileDescriptor(FD); });
+    llvm::sys::TimePoint<> OldTime =
+        std::chrono::system_clock::now() - std::chrono::hours(24 * 5);
+    ASSERT_FALSE(llvm::sys::fs::setLastAccessAndModificationTime(FD, OldTime));
+  }
+
+  ModulesBuilder Builder(CDB);
+  auto AInfo = Builder.buildPrerequisiteModulesFor(getFullPath("A.cppm"), FS);
+  ASSERT_TRUE(AInfo);
+  EXPECT_FALSE(llvm::sys::fs::exists(OldVersionedPCMPath));
+}
+
+TEST_F(PrerequisiteModulesTests,
+       PersistentModuleCacheGCKeepsRecentVersionedModuleFile) {
+  PerFileModulesCompilationDatabase CDB(TestDir, FS);
+
+  CDB.addFile("M.cppm", R"cpp(
+export module M;
+export int MValue = 43;
+  )cpp");
+  CDB.addFile("A.cppm", R"cpp(
+export module A;
+import M;
+export int AValue = MValue;
+  )cpp");
+
+  auto FirstBuilder = std::make_unique<ModulesBuilder>(CDB);
+  auto AInfo =
+      FirstBuilder->buildPrerequisiteModulesFor(getFullPath("A.cppm"), FS);
+  ASSERT_TRUE(AInfo);
+  HeaderSearchOptions HS(TestDir);
+  AInfo->adjustHeaderSearchOptions(HS);
+  ASSERT_EQ(HS.PrebuiltModuleFiles.count("M"), 1u);
+  llvm::StringRef CopyOnReadPCMPath = HS.PrebuiltModuleFiles["M"];
+  ASSERT_TRUE(llvm::sys::fs::exists(CopyOnReadPCMPath));
+
+  ModulesBuilder SecondBuilder(CDB);
+  auto SecondInfo =
+      SecondBuilder.buildPrerequisiteModulesFor(getFullPath("A.cppm"), FS);
+  ASSERT_TRUE(SecondInfo);
+  EXPECT_TRUE(llvm::sys::fs::exists(CopyOnReadPCMPath));
+}
+
+TEST_F(PrerequisiteModulesTests,
+       PersistentModuleCacheIgnoresRequiredSourceForOnDiskPath) {
+  ModuleUnitRootCompilationDatabase CDB(TestDir, FS);
+
+  CDB.addFile("shared/M.cppm", R"cpp(
+export module M;
+export int MValue = 43;
+  )cpp");
+  CDB.addFile("projA/A.cppm", R"cpp(
+export module A;
+import M;
+export int AValue = MValue;
+  )cpp");
+  CDB.addFile("projB/B.cppm", R"cpp(
+export module B;
+import M;
+export int BValue = MValue;
+  )cpp");
+
+  ModulesBuilder Builder(CDB);
+
+  auto AInfo =
+      Builder.buildPrerequisiteModulesFor(getFullPath("projA/A.cppm"), FS);
+  auto BInfo =
+      Builder.buildPrerequisiteModulesFor(getFullPath("projB/B.cppm"), FS);
+  ASSERT_TRUE(AInfo);
+  ASSERT_TRUE(BInfo);
+
+  HeaderSearchOptions HSA(TestDir);
+  HeaderSearchOptions HSB(TestDir);
+  AInfo->adjustHeaderSearchOptions(HSA);
+  BInfo->adjustHeaderSearchOptions(HSB);
+  ASSERT_EQ(HSA.PrebuiltModuleFiles.count("M"), 1u);
+  ASSERT_EQ(HSB.PrebuiltModuleFiles.count("M"), 1u);
+  EXPECT_TRUE(llvm::sys::fs::exists(HSA.PrebuiltModuleFiles["M"]));
+  EXPECT_TRUE(llvm::sys::fs::exists(HSB.PrebuiltModuleFiles["M"]));
+
+  llvm::SmallString<256> ExpectedRoot(getFullPath("shared/M.cppm"));
+  llvm::sys::path::remove_filename(ExpectedRoot);
+  llvm::sys::path::append(ExpectedRoot, ".cache", "clangd", "modules");
+  EXPECT_TRUE(
+      StringRef(HSA.PrebuiltModuleFiles["M"]).starts_with(ExpectedRoot));
+  EXPECT_TRUE(StringRef(HSA.PrebuiltModuleFiles["M"]).contains("M.cppm-"));
+  EXPECT_TRUE(
+      StringRef(HSB.PrebuiltModuleFiles["M"]).starts_with(ExpectedRoot));
+  EXPECT_TRUE(StringRef(HSB.PrebuiltModuleFiles["M"]).contains("M.cppm-"));
 }
 
 TEST_F(PrerequisiteModulesTests, ModuleImportThroughInclude) {

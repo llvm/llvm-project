@@ -338,7 +338,7 @@ mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
   VectorType oldAccType = dyn_cast<VectorType>(contractOp.getAccType());
   if (oldAccType == nullptr)
     return failure();
-  if (oldAccType.getRank() < 2)
+  if (oldAccType.getRank() < 1)
     return failure();
   if (oldAccType.getShape()[0] != 1)
     return failure();

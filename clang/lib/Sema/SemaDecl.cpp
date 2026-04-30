@@ -4802,25 +4802,6 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
       return New->setInvalidDecl();
     }
   }
-
-  // C2y 6.7.1p7:
-  //   Within a translation unit, the same identifier shall not appear with
-  //   both internal and external linkage.
-  //
-  // In C11 through C23, this was undefined behavior (C11 6.2.2p7).
-  //
-  // This can occur when an extern declaration in block scope finds a file-scope
-  // static declaration, but a no-linkage local variable shadowed the static,
-  // preventing linkage inheritance per C2y 6.2.2p4.
-  if (!getLangOpts().CPlusPlus && New->isLocalVarDecl() &&
-      New->hasExternalStorage() && Old->isFileVarDecl() && Old->hasLinkage() &&
-      Previous.isShadowed() && Old->getFormalLinkage() == Linkage::Internal) {
-    Diag(New->getLocation(), diag::err_internal_extern_mismatch)
-        << New->getDeclName() << getLangOpts().C2y;
-    Diag(OldLocation, PrevDiag);
-    return New->setInvalidDecl();
-  }
-
   // C99 6.2.2p4:
   //   For an identifier declared with the storage-class specifier
   //   extern in a scope in which a prior declaration of that
@@ -5015,7 +4996,8 @@ bool Sema::checkVarDeclRedefinition(VarDecl *Old, VarDecl *New) {
   if (!hasVisibleDefinition(Old) &&
       (New->getFormalLinkage() == Linkage::Internal || New->isInline() ||
        isa<VarTemplateSpecializationDecl>(New) ||
-       New->getDescribedVarTemplate() || New->getNumTemplateParameterLists() ||
+       New->getDescribedVarTemplate() ||
+       !New->getTemplateParameterLists().empty() ||
        New->getDeclContext()->isDependentContext() ||
        New->hasAttr<SelectAnyAttr>())) {
     // The previous definition is hidden, and multiple definitions are
@@ -8273,7 +8255,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     // Insert the asm attribute.
     NewVD->addAttr(AsmLabelAttr::Create(Context, Label, SE->getStrTokenLoc(0)));
   } else if (!ExtnameUndeclaredIdentifiers.empty()) {
-    llvm::DenseMap<IdentifierInfo *, AsmLabelAttr *>::iterator I =
+    llvm::MapVector<IdentifierInfo *, AsmLabelAttr *>::iterator I =
         ExtnameUndeclaredIdentifiers.find(NewVD->getIdentifier());
     if (I != ExtnameUndeclaredIdentifiers.end()) {
       if (isDeclExternC(NewVD)) {
@@ -10583,8 +10565,8 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     NewFD->addAttr(
         AsmLabelAttr::Create(Context, SE->getString(), SE->getStrTokenLoc(0)));
   } else if (!ExtnameUndeclaredIdentifiers.empty()) {
-    llvm::DenseMap<IdentifierInfo*,AsmLabelAttr*>::iterator I =
-      ExtnameUndeclaredIdentifiers.find(NewFD->getIdentifier());
+    llvm::MapVector<IdentifierInfo *, AsmLabelAttr *>::iterator I =
+        ExtnameUndeclaredIdentifiers.find(NewFD->getIdentifier());
     if (I != ExtnameUndeclaredIdentifiers.end()) {
       if (isDeclExternC(NewFD)) {
         NewFD->addAttr(I->second);
@@ -16176,7 +16158,7 @@ Sema::CheckForFunctionRedefinition(FunctionDecl *FD,
   if (SkipBody && isRedefinitionAllowedFor(Definition, DefinitionVisible) &&
       (Definition->getFormalLinkage() == Linkage::Internal ||
        Definition->isInlined() || Definition->getDescribedFunctionTemplate() ||
-       Definition->getNumTemplateParameterLists())) {
+       !Definition->getTemplateParameterLists().empty())) {
     SkipBody->ShouldSkip = true;
     SkipBody->Previous = const_cast<FunctionDecl*>(Definition);
     if (!DefinitionVisible) {

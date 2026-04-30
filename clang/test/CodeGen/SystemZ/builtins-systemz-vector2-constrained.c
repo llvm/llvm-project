@@ -6,43 +6,47 @@ typedef __attribute__((vector_size(16))) double vec_double;
 typedef __attribute__((vector_size(16))) float vec_float;
 
 volatile vec_double vd;
+volatile vec_double vd1;
+volatile vec_double vd2;
 volatile vec_float vf;
+volatile vec_float vf1;
+volatile vec_float vf2;
 
 void test_float(void) {
-  vd = __builtin_s390_vfmaxdb(vd, vd, 4);
+  vd = __builtin_s390_vfmaxdb(vd, vd1, 4);
   // CHECK: call <2 x double> @llvm.experimental.constrained.maxnum.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}})
 
-  vd = __builtin_s390_vfmindb(vd, vd, 4);
+  vd = __builtin_s390_vfmindb(vd, vd1, 4);
   // CHECK: call <2 x double> @llvm.experimental.constrained.minnum.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}})
-  vd = __builtin_s390_vfmindb(vd, vd, 0);
+  vd = __builtin_s390_vfmindb(vd, vd1, 0);
 
-  vd = __builtin_s390_vfnmadb(vd, vd, vd);
+  vd = __builtin_s390_vfnmadb(vd, vd1, vd2);
   // CHECK: [[RES:%[^ ]+]] = call <2 x double> @llvm.experimental.constrained.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}})
   // CHECK: fneg <2 x double> [[RES]]
 
-  vd = __builtin_s390_vfnmsdb(vd, vd, vd);
+  vd = __builtin_s390_vfnmsdb(vd, vd1, vd2);
   // CHECK: [[NEG:%[^ ]+]] = fneg <2 x double> {{.*}}
   // CHECK:  [[RES:%[^ ]+]] = call <2 x double> @llvm.experimental.constrained.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> [[NEG]], metadata !{{.*}})
   // CHECK: fneg <2 x double> [[RES]]
 
-  vf = __builtin_s390_vfmaxsb(vf, vf, 4);
+  vf = __builtin_s390_vfmaxsb(vf, vf1, 4);
   // CHECK: call <4 x float> @llvm.experimental.constrained.maxnum.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, metadata !{{.*}})
 
-  vf = __builtin_s390_vfminsb(vf, vf, 4);
+  vf = __builtin_s390_vfminsb(vf, vf1, 4);
   // CHECK: call <4 x float> @llvm.experimental.constrained.minnum.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, metadata !{{.*}})
 
   vf = __builtin_s390_vfsqsb(vf);
   // CHECK: call <4 x float> @llvm.experimental.constrained.sqrt.v4f32(<4 x float> %{{.*}}, metadata !{{.*}})
 
-  vf = __builtin_s390_vfmasb(vf, vf, vf);
+  vf = __builtin_s390_vfmasb(vf, vf1, vf2);
   // CHECK: call <4 x float> @llvm.experimental.constrained.fma.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}}, metadata !{{.*}})
-  vf = __builtin_s390_vfmssb(vf, vf, vf);
+  vf = __builtin_s390_vfmssb(vf, vf1, vf2);
   // CHECK: [[NEG:%[^ ]+]] = fneg <4 x float> %{{.*}}
   // CHECK: call <4 x float> @llvm.experimental.constrained.fma.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> [[NEG]], metadata !{{.*}})
-  vf = __builtin_s390_vfnmasb(vf, vf, vf);
+  vf = __builtin_s390_vfnmasb(vf, vf1, vf2);
   // CHECK: [[RES:%[^ ]+]] = call <4 x float> @llvm.experimental.constrained.fma.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}}, metadata !{{.*}})
   // CHECK: fneg <4 x float> [[RES]]
-  vf = __builtin_s390_vfnmssb(vf, vf, vf);
+  vf = __builtin_s390_vfnmssb(vf, vf1, vf2);
   // CHECK: [[NEG:%[^ ]+]] = fneg <4 x float> %{{.*}}
   // CHECK: [[RES:%[^ ]+]] = call <4 x float> @llvm.experimental.constrained.fma.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> [[NEG]], metadata !{{.*}})
   // CHECK: fneg <4 x float> [[RES]]

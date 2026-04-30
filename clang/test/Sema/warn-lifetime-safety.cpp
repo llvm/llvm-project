@@ -2891,6 +2891,11 @@ void delete_stack_object_int() {
   (void)*p;       // expected-note {{later used here}}
 }
 
+void allocate_void_ptr() {
+    void** v = new void*;
+    delete v;
+}
+
 } // namespace new_allocation
 
 namespace method_call_uses_field_origins {

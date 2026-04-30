@@ -2413,9 +2413,6 @@ def : RWSysReg<"MPAMCTL_EL1",   0b11, 0b000, 0b1010, 0b0101, 0b010>;
 def : RWSysReg<"MPAMCTL_EL12",  0b11, 0b101, 0b1010, 0b0101, 0b010>;
 def : RWSysReg<"MPAMCTL_EL2",   0b11, 0b100, 0b1010, 0b0101, 0b010>;
 def : RWSysReg<"MPAMCTL_EL3",   0b11, 0b110, 0b1010, 0b0101, 0b010>;
-def : RWSysReg<"MPAMVIDCR_EL2", 0b11, 0b100, 0b1010, 0b0111, 0b000>;
-def : RWSysReg<"MPAMVIDSR_EL2", 0b11, 0b100, 0b1010, 0b0111, 0b001>;
-def : RWSysReg<"MPAMVIDSR_EL3", 0b11, 0b110, 0b1010, 0b0111, 0b001>;
 
 // v9.7a General Improvements
 //                                        Op0   Op1    CRn     CRm     Op2
@@ -2525,39 +2522,6 @@ foreach n = 0-3 in {
 }
 
 def : ROSysReg<"TLBIDIDR_EL1",      0b11,  0b000, 0b1010, 0b0100, 0b110>;
-
-// MPAM Lookaside Buffer Invalidate (MLBI) instructions
-class MLBI<string name, bits<3> op1, bits<4> crn, bits<4> crm, bits<3> op2, bit needsreg> {
-  string Name = name;
-  bits<14> Encoding;
-  let Encoding{13-11} = op1;
-  let Encoding{10-7} = crn;
-  let Encoding{6-3} = crm;
-  let Encoding{2-0} = op2;
-  bit NeedsReg = needsreg;
-  string RequiresStr = [{ {AArch64::FeatureMPAMv2} }];
-}
-
-def MLBITable : GenericTable {
-  let FilterClass = "MLBI";
-  let CppTypeName = "MLBI";
-  let Fields = ["Name", "Encoding", "NeedsReg", "RequiresStr"];
-
-  let PrimaryKey = ["Encoding"];
-  let PrimaryKeyName = "lookupMLBIByEncoding";
-}
-
-def lookupMLBIByName : SearchIndex {
-  let Table = MLBITable;
-  let Key = ["Name"];
-}
-
-//                     Op1    CRn     CRm     Op2    needsReg
-def : MLBI<"ALLE1",    0b100, 0b0111, 0b0000, 0b100, 0>;
-def : MLBI<"VMALLE1",  0b100, 0b0111, 0b0000, 0b101, 0>;
-def : MLBI<"VPIDE1",   0b100, 0b0111, 0b0000, 0b110, 1>;
-def : MLBI<"VPMGE1",   0b100, 0b0111, 0b0000, 0b111, 1>;
-
 
 // v9.7-A GICv5 (FEAT_GCIE)
 // CPU Interface Registers

@@ -2342,6 +2342,14 @@ static std::optional<hlfir::EntityWithAttributes> genHLFIRIntrinsicRefCore(
     const Fortran::evaluate::SpecificIntrinsic *intrinsic,
     const fir::IntrinsicHandlerEntry &intrinsicEntry,
     CallContext &callContext) {
+  // Delegate intrinsics with custom optional handling to
+  // genCustomIntrinsicRefCore before attempting any HLFIR op lowering. This
+  // ensures consistent dispatch symmetry with genIntrinsicRefCore and
+  // genIntrinsicRef, both of which check for custom optional handling before
+  // reaching the HLFIR intrinsic path.
+  if (intrinsic && Fortran::lower::intrinsicRequiresCustomOptionalHandling(
+                       callContext.procRef, *intrinsic, callContext.converter))
+    return genCustomIntrinsicRefCore(loweredActuals, intrinsic, callContext);
   // Try lowering transformational intrinsic ops to HLFIR ops if enabled
   // (transformational always have a result type)
   if (useHlfirIntrinsicOps && callContext.resultType) {
@@ -3254,19 +3262,13 @@ bool Fortran::lower::isIntrinsicModuleProcRef(
   return module && module->attrs().test(Fortran::semantics::Attr::INTRINSIC);
 }
 
-static bool isInWhereMaskedExpression(fir::FirOpBuilder &builder) {
-  // The MASK of the outer WHERE is not masked itself.
-  mlir::Operation *op = builder.getRegion().getParentOp();
-  return op && op->getParentOfType<hlfir::WhereOp>();
-}
-
 std::optional<hlfir::EntityWithAttributes> Fortran::lower::convertCallToHLFIR(
     mlir::Location loc, Fortran::lower::AbstractConverter &converter,
     const evaluate::ProcedureRef &procRef, std::optional<mlir::Type> resultType,
     Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx) {
   auto &builder = converter.getFirOpBuilder();
   if (resultType && !procRef.IsElemental() &&
-      isInWhereMaskedExpression(builder) &&
+      hlfir::isInsideHlfirWhereMaskedExpression(builder.getRegion()) &&
       !builder.getRegion().getParentOfType<hlfir::ExactlyOnceOp>()) {
     // Non elemental calls inside a where-assignment-stmt must be executed
     // exactly once without mask control. Lower them in a special region so that
