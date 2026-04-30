@@ -3623,7 +3623,7 @@ static bool canEmitSpuriousReferenceToVariable(CodeGenFunction &CGF,
 LValue CodeGenFunction::EmitOMPCapturedBindingLValue(const BindingDecl *BD) {
   assert(CapturedStmtInfo &&
          CapturedStmtInfo->getKind() == CapturedRegionKind::CR_OpenMP &&
-             CGM.getLangOpts().OpenMP);
+         CGM.getLangOpts().OpenMP);
   auto *DD = cast<VarDecl>(BD->getDecomposedDecl());
   auto I = LocalDeclMap.find(DD);
   assert(I != LocalDeclMap.end() && "Decomposed decl not in LocalDeclMap");
