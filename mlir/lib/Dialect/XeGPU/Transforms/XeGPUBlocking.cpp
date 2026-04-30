@@ -130,6 +130,7 @@ XeGPUBlockingPass::getTileShape(const T &operandOrResult) const {
     if (auto type = dyn_cast<ShapedType>(value.getType()))
       return llvm::to_vector(type.getShape());
   }
+  LDBG() << "failed to getTileShape for: " << value;
   return std::nullopt;
 }
 
