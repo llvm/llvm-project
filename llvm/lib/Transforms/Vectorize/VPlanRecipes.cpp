@@ -2608,7 +2608,7 @@ void VPScalarIVStepsRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 
 bool VPWidenGEPRecipe::usesFirstLaneOnly(const VPValue *Op) const {
   assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
-  return vputils::isSingleScalar(Op);
+  return Op->isDefinedOutsideLoopRegions();
 }
 
 void VPWidenGEPRecipe::execute(VPTransformState &State) {
