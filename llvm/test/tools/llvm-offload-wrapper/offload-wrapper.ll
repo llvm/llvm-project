@@ -51,6 +51,34 @@
 ; HIP-NEXT:   ret void
 ; HIP-NEXT: }
 
+; RUN: llvm-offload-wrapper --triple=x86_64-apple-macosx10.15.0 -kind=hip %s -o %t.bc
+; RUN: llvm-dis %t.bc -o - | FileCheck %s --check-prefix=HIP-MACHO
+
+;      HIP-MACHO: @"\01section$start$__LLVM$offload_entries" = external hidden constant [0 x %struct.__tgt_offload_entry]
+; HIP-MACHO-NEXT: @"\01section$end$__LLVM$offload_entries" = external hidden constant [0 x %struct.__tgt_offload_entry]
+; HIP-MACHO-NEXT: @"__dummy.__LLVM,offload_entries" = internal constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "__LLVM,offload_entries", align 8
+; HIP-MACHO-NEXT: @llvm.compiler.used = appending global [1 x ptr] [ptr @"__dummy.__LLVM,offload_entries"], section "llvm.metadata"
+; HIP-MACHO-NEXT: @.fatbin_image = internal constant {{.*}}, section "__HIP,__hip_fatbin"
+; HIP-MACHO-NEXT: @.fatbin_wrapper = internal constant %fatbin_wrapper { i32 1212764230, i32 1, ptr @.fatbin_image, ptr null }, section "__HIP,__fatbin", align 8
+; HIP-MACHO-NEXT: @.hip.binary_handle = internal global ptr null
+; HIP-MACHO-NEXT: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 101, ptr @.hip.fatbin_reg, ptr null }]
+
+;      HIP-MACHO: define internal void @.hip.fatbin_reg() section "__TEXT,__StaticInit" {
+; HIP-MACHO-NEXT: entry:
+; HIP-MACHO-NEXT:   %0 = call ptr @__hipRegisterFatBinary(ptr @.fatbin_wrapper)
+; HIP-MACHO-NEXT:   store ptr %0, ptr @.hip.binary_handle, align 8
+; HIP-MACHO-NEXT:   call void @.hip.globals_reg(ptr %0)
+; HIP-MACHO-NEXT:   %1 = call i32 @atexit(ptr @.hip.fatbin_unreg)
+; HIP-MACHO-NEXT:   ret void
+; HIP-MACHO-NEXT: }
+
+;      HIP-MACHO: define internal void @.hip.fatbin_unreg() section "__TEXT,__StaticInit" {
+; HIP-MACHO-NEXT: entry:
+; HIP-MACHO-NEXT:   %0 = load ptr, ptr @.hip.binary_handle, align 8
+; HIP-MACHO-NEXT:   call void @__hipUnregisterFatBinary(ptr %0)
+; HIP-MACHO-NEXT:   ret void
+; HIP-MACHO-NEXT: }
+
 ; RUN: llvm-offload-wrapper --triple=x86_64-unknown-linux-gnu -kind=cuda %s -o %t.bc
 ; RUN: llvm-dis %t.bc -o - | FileCheck %s --check-prefix=CUDA
 

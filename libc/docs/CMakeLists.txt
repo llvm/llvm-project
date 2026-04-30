@@ -65,9 +65,11 @@ if (SPHINX_FOUND)
       stdlib
       string
       strings
+      sys/ipc
       sys/mman
       sys/resource
       sys/select
+      sys/sem
       sys/socket
       sys/stat
       sys/statvfs

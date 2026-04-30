@@ -1,0 +1,10 @@
+# Test that module hooks fire when modules are loaded.
+#
+# RUN: %clang_host -g %S/Inputs/main.c -o %t
+# RUN: %lldb -b -o 'file %t' \
+# RUN:   -o 'target hook add -L -o "script print(\"HOOK_FIRED\")"' \
+# RUN:   -o 'target modules add %t' \
+# RUN:   2>&1 | FileCheck %s
+
+# CHECK: Hook #1 added.
+# CHECK: HOOK_FIRED

@@ -39,7 +39,7 @@ int foo(struct has_bool *b) {
 }
 
 // CHECK-LABEL: @bar
-int bar(struct has_bool *c) {
+int bar(struct has_bool *b) {
     // CHECK-STRICT: [[BITINT:%.+]] = load i8, ptr {{.+}}, !range ![[RANGE_BOOL:[0-9]+]]
     // CHECK-STRICT-NOT: and i8 [[BITINT]], 1
     // CHECK-STRICT-NOT: icmp ne i8 [[BITINT]], 0
@@ -59,7 +59,7 @@ int bar(struct has_bool *c) {
     // CHECK-UBSAN-TRUNCATE-NOT: !range
     // CHECK-UBSAN-TRUNCATE: [[BITINT:%.+]] = load i8, ptr {{.+}}
     // CHECK-UBSAN-TRUNCATE: icmp ult i8 [[BITINT]], 2
-    return c->c;
+    return b->c;
 }
 
 // CHECK-LABEL: @vec

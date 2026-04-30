@@ -889,19 +889,16 @@ public:
   }
 };
 
+void getFuchsiaDefines(MacroBuilder &Builder, const LangOptions &Opts,
+                       const llvm::Triple &Triple);
+
 // Fuchsia Target
 template <typename Target>
 class LLVM_LIBRARY_VISIBILITY FuchsiaTargetInfo : public OSTargetInfo<Target> {
 protected:
   void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
                     MacroBuilder &Builder) const override {
-    Builder.defineMacro("__Fuchsia__");
-    if (Opts.POSIXThreads)
-      Builder.defineMacro("_REENTRANT");
-    // Required by the libc++ locale support.
-    if (Opts.CPlusPlus)
-      Builder.defineMacro("_GNU_SOURCE");
-    Builder.defineMacro("__Fuchsia_API_level__", Twine(Opts.FuchsiaAPILevel));
+    getFuchsiaDefines(Builder, Opts, Triple);
     this->PlatformName = "fuchsia";
     this->PlatformMinVersion = VersionTuple(Opts.FuchsiaAPILevel);
   }
