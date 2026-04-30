@@ -674,7 +674,8 @@ mlir::LogicalResult CIRDeleteArrayOpABILowering::matchAndRewrite(
           auto arrayDtor = cir::ArrayDtor::create(
               b, l, loweredAddress, numElements,
               [&](mlir::OpBuilder &bb, mlir::Location ll) {
-                auto arg = bb.getInsertionBlock()->addArgument(eltPtrTy, ll);
+                mlir::Value arg =
+                    bb.getInsertionBlock()->addArgument(eltPtrTy, ll);
                 auto dtorCall = cir::CallOp::create(
                     bb, ll, dtorFn, cir::VoidType(), mlir::ValueRange{arg});
                 if (!op.getDtorMayThrow())
@@ -692,11 +693,11 @@ mlir::LogicalResult CIRDeleteArrayOpABILowering::matchAndRewrite(
         callArgs.push_back(deletePtr);
         if (deleteParams.getSize()) {
           uint64_t eltSizeBytes = dl.getTypeSizeInBits(ptrTy.getPointee()) / 8;
-          mlir::Value eltSizeVal = cir::ConstantOp::create(
+          auto eltSizeVal = cir::ConstantOp::create(
               b, l, cir::IntAttr::get(sizeTy, eltSizeBytes));
           mlir::Value allocSize =
               cir::MulOp::create(b, l, sizeTy, eltSizeVal, numElements);
-          mlir::Value cookieSizeVal = cir::ConstantOp::create(
+          auto cookieSizeVal = cir::ConstantOp::create(
               b, l, cir::IntAttr::get(sizeTy, cookieSize.getQuantity()));
           allocSize =
               cir::AddOp::create(b, l, sizeTy, allocSize, cookieSizeVal);
