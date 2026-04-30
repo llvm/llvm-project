@@ -1,4 +1,4 @@
-function(cannonicalize_cmake_boolean var)
+function(canonicalize_cmake_boolean var)
     if(${var})
         set(${var} 1 PARENT_SCOPE)
     else()
@@ -6,7 +6,8 @@ function(cannonicalize_cmake_boolean var)
     endif()
 endfunction()
 
-cannonicalize_cmake_boolean(COMGR_DISABLE_SPIRV)
+canonicalize_cmake_boolean(COMGR_SPIRV_BACKEND_AVAILABLE)
+canonicalize_cmake_boolean(COMGR_SPIRV_TRANSLATOR_AVAILABLE)
 
 configure_file(lit.site.cfg.py.in lit.site.cfg.py @ONLY)
 

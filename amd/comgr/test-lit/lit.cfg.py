@@ -12,8 +12,10 @@ config.excludes = ["comgr-sources"]
 config.test_source_root = os.path.dirname(__file__)
 config.test_exec_root = config.my_obj_root
 
-if not config.comgr_disable_spirv:
-    config.available_features.add("comgr-has-spirv")
+if config.comgr_spirv_backend_available:
+    config.available_features.add("comgr-has-spirv-backend")
+if config.comgr_spirv_translator_available:
+    config.available_features.add("comgr-has-spirv-translator")
 
 if platform.system() == "Windows":
     config.available_features.add("system-windows")

@@ -7,7 +7,8 @@ def _fwd(p):
 config.my_src_root = _fwd(r'@CMAKE_CURRENT_SOURCE_DIR@')
 config.my_obj_root = _fwd(r'@CMAKE_CURRENT_BINARY_DIR@')
 
-config.comgr_disable_spirv = @COMGR_DISABLE_SPIRV@
+config.comgr_spirv_backend_available = @COMGR_SPIRV_BACKEND_AVAILABLE@
+config.comgr_spirv_translator_available = @COMGR_SPIRV_TRANSLATOR_AVAILABLE@
 
 config.llvm_tools_dir = _fwd(r'@LLVM_TOOLS_BINARY_DIR@')
 config.comgr_obj_dir = config.my_obj_root

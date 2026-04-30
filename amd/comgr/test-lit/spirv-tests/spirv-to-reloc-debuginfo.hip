@@ -1,4 +1,4 @@
-// REQUIRES: comgr-has-spirv
+// REQUIRES: comgr-has-spirv-translator
 
 
 // COM: Generate a debuginfo SPIR-V file from a HIP kernel

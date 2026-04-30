@@ -1,4 +1,4 @@
-// REQUIRES: comgr-has-spirv
+// REQUIRES: comgr-has-spirv-translator
 // COM: Same as spirv-translator but with the cache
 // RUN: rm -fr %t.cache
 

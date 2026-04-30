@@ -224,7 +224,22 @@ option(COMGR_USE_INCBIN "Use the gnu .incbin assembler directive" ${default_use_
 
 option(COMGR_DISABLE_SPIRV "To disable SPIRV in Comgr" OFF)
 
-if (NOT COMGR_DISABLE_SPIRV)
+set(COMGR_SPIRV_TRANSLATOR_AVAILABLE OFF)
+set(COMGR_SPIRV_BACKEND_AVAILABLE OFF)
+
+if (COMGR_DISABLE_SPIRV)
+  message("-- Comgr SPIRV disabled (-DCOMGR_DISABLE_SPIRV)")
+  list(APPEND AMD_COMGR_PRIVATE_COMPILE_DEFINITIONS "COMGR_DISABLE_SPIRV")
+else()
+  if ("SPIRV" IN_LIST LLVM_TARGETS_TO_BUILD)
+    set(COMGR_SPIRV_BACKEND_AVAILABLE ON)
+    message("-- LLVM SPIRV target found (SPIRV backend available in Comgr)")
+  else()
+    message("-- LLVM SPIRV target not found (SPIRV backend unavailable in Comgr)")
+    message("-- LLVM targets configured: ${LLVM_TARGETS_TO_BUILD}")
+    message("-- SPIRV must be set in -DLLVM_TARGETS_TO_BUILD when building LLVM")
+  endif()
+
   # Candidate include paths for LLVMSPIRVLib.h:
   # 1. ${LLVM_INCLUDE_DIRS}/LLVMSPIRVLib (standalone build)
   # 2. ${LLVM_EXTERNAL_SPIRV_LLVM_TRANSLATOR_SOURCE_DIR}/include (external project)
@@ -238,24 +253,30 @@ if (NOT COMGR_DISABLE_SPIRV)
       "${CMAKE_SOURCE_DIR}/projects/SPIRV-LLVM-Translator/include"
     NO_DEFAULT_PATH
   )
-  if (NOT EXISTS "${FOUND_SPIRV_INCLUDE_DIR}/LLVMSPIRVLib.h")
-    message("-- LLVMSPIRVLib/LLVMSPIRVLib.h not found")
-    set(COMGR_DISABLE_SPIRV ON)
+  if (EXISTS "${FOUND_SPIRV_INCLUDE_DIR}/LLVMSPIRVLib.h")
+    set(COMGR_SPIRV_TRANSLATOR_AVAILABLE ON)
+    message("-- LLVMSPIRVLib/LLVMSPIRVLib.h found at ${FOUND_SPIRV_INCLUDE_DIR} (SPIRV translator available in Comgr)")
   else()
-    message("-- LLVMSPIRVLib/LLVMSPIRVLib.h found at ${FOUND_SPIRV_INCLUDE_DIR}")
+    message("-- LLVMSPIRVLib/LLVMSPIRVLib.h not found (SPIRV translator unavailable in Comgr)")
   endif()
+
+  if (COMGR_SPIRV_TRANSLATOR_AVAILABLE)
+    target_include_directories(amd_comgr
+        PRIVATE
+          "${FOUND_SPIRV_INCLUDE_DIR}")
+  endif()
+
 endif()
 
-if(${COMGR_DISABLE_SPIRV})
-    list(APPEND AMD_COMGR_PRIVATE_COMPILE_DEFINITIONS "COMGR_DISABLE_SPIRV")
-  message("-- Comgr SPIRV Disabled")
-else()
-  message("-- Comgr SPIRV Enabled")
-  target_include_directories(amd_comgr
-      PRIVATE
-        "${FOUND_SPIRV_INCLUDE_DIR}")
-endif()
+message("-- COMGR_SPIRV_TRANSLATOR_AVAILABLE: ${COMGR_SPIRV_TRANSLATOR_AVAILABLE}")
+message("-- COMGR_SPIRV_BACKEND_AVAILABLE: ${COMGR_SPIRV_BACKEND_AVAILABLE}")
 
+if (COMGR_SPIRV_TRANSLATOR_AVAILABLE)
+  list(APPEND AMD_COMGR_PRIVATE_COMPILE_DEFINITIONS "COMGR_SPIRV_TRANSLATOR_AVAILABLE")
+endif()
+if (COMGR_SPIRV_BACKEND_AVAILABLE)
+  list(APPEND AMD_COMGR_PRIVATE_COMPILE_DEFINITIONS "COMGR_SPIRV_BACKEND_AVAILABLE")
+endif()
 
 if (UNIX)
   list(APPEND AMD_COMGR_PRIVATE_COMPILE_OPTIONS
@@ -484,12 +505,12 @@ set(LLD_LIBS
   lldELF
   lldCommon)
 
-if (${COMGR_DISABLE_SPIRV})
-  set(SPIRV_DYNAMIC_LIB "")
-  set(SPIRV_STATIC_LIB "")
-else()
+if (${COMGR_SPIRV_TRANSLATOR_AVAILABLE})
   set(SPIRV_DYNAMIC_LIB "LLVMSPIRVAMDLib")
   set(SPIRV_STATIC_LIB "SPIRVAMDLib")
+else()
+  set(SPIRV_DYNAMIC_LIB "")
+  set(SPIRV_STATIC_LIB "")
 endif()
 
 if (LLVM_LINK_LLVM_DYLIB)

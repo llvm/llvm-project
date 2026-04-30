@@ -274,7 +274,7 @@ amd_comgr_status_t COMGR::parseTargetIdentifier(StringRef IdentStr,
 
 void COMGR::ensureLLVMInitialized() {
 
-  // LLVMInitializeAMDGPUTargetInfo calls TargetRegistry.cpp:RegisterTarget()
+  // LLVMInitialize<...>TargetInfo calls TargetRegistry.cpp:RegisterTarget()
   // This function is not thread safe. There may be thread safety issues
   // with the other LLVMInitialize functions as well. For completeness, we
   // include all of these initialization functions in mutual exclusion region
@@ -293,6 +293,12 @@ void COMGR::ensureLLVMInitialized() {
     LLVMInitializeAMDGPUDisassembler();
     LLVMInitializeAMDGPUAsmParser();
     LLVMInitializeAMDGPUAsmPrinter();
+#ifdef COMGR_SPIRV_BACKEND_AVAILABLE
+    LLVMInitializeSPIRVTarget();
+    LLVMInitializeSPIRVTargetInfo();
+    LLVMInitializeSPIRVTargetMC();
+    LLVMInitializeSPIRVAsmPrinter();
+#endif
     LLVMInitialized = true;
   }
 }

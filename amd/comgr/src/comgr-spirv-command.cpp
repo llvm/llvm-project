@@ -14,7 +14,7 @@
 
 #include "comgr-spirv-command.h"
 
-#ifndef COMGR_DISABLE_SPIRV
+#ifdef COMGR_SPIRV_TRANSLATOR_AVAILABLE
 #include "comgr-diagnostic-handler.h"
 
 #include <LLVMSPIRVLib.h>
@@ -39,7 +39,7 @@ Expected<StringRef> SPIRVCommand::readExecuteOutput() {
 }
 
 amd_comgr_status_t SPIRVCommand::execute(raw_ostream &LogS) {
-#ifndef COMGR_DISABLE_SPIRV
+#ifdef COMGR_SPIRV_TRANSLATOR_AVAILABLE
   LLVMContext Context;
   Context.setDiagnosticHandler(
       std::make_unique<AMDGPUCompilerDiagnosticHandler>(LogS), true);

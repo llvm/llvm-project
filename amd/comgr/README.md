@@ -94,11 +94,20 @@ step (e.g., `-DCOMGR_DLL_NAME=amd_comgr_3.dll`).
 `llvm/projects` or `llvm/tools` and build using the above instructions, with the
 exception that the `-DCMAKE_PREFIX_PATH` for llvm-project must be an install
 path (specified with `-DCMAKE_INSTALL_PREFIX=/path/to/install/dir` and populated
-with `make install`) rather than the build path.
+with `make install`) rather than the build path. Minimal SPIRV support requires
+that the translator be found when configuring Comgr. At configure time Comgr
+detects translator and backend independently, and `-DCOMGR_DISABLE_SPIRV` is the
+only Comgr CMake option for SPIR-V.
 
 Comgr SPIRV-related APIs can be disabled by passing
 `-DCOMGR_DISABLE_SPIRV=1` during the Comgr `cmake` step. This removes any
-dependency on LLVM SPIRV libraries or the llvm-spirv tool.
+dependency on LLVM SPIRV libraries, the llvm-spirv tool or the SPIRV backend in LLVM.
+If `-DCOMGR_DISABLE_SPIRV` is unset or set to zero, Comgr will have the SPIR-V backend
+available when `SPIRV` is included in `-DLLVM_TARGETS_TO_BUILD` (for example
+`-DLLVM_TARGETS_TO_BUILD="AMDGPU;X86;SPIRV"` when configuring LLVM). That does
+not yet make the SPIR-V backend the default path for SPIR-V code generation in
+Comgr, even when it is found; by default, SPIR-V code generation still uses the
+translator path.
 
 **Code Coverage Instrumentation:** Comgr supports source-based [code coverage
 via clang](https://clang.llvm.org/docs/SourceBasedCodeCoverage.html), and
