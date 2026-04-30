@@ -25840,9 +25840,12 @@ static SDValue vectorToScalarBitmask(SDNode *N, SelectionDAG &DAG) {
   SmallVector<SDValue, 16> MaskConstants;
   if (DAG.getSubtarget<AArch64Subtarget>().isNeonAvailable() &&
       VecVT == MVT::v16i8) {
-    // v16i8 is a special case, as we have 16 entries but only 8 positional bits
-    // per entry. We split it into two halves, apply the mask, zip the halves to
-    // create 8x 16-bit values, and the perform the vector reduce.
+    // v16i8 is a special case: we have 16 entries but only 8 positional bits
+    // per i16 of bitmask. ANDing with a mask whose two 8-byte halves both
+    // hold the powers-of-two 1,2,...,128 leaves at most one bit set per byte
+    // lane within each 8-byte group, so pairwise addition equals OR and
+    // cannot carry. Three levels of ADDP then losslessly pack the 16
+    // per-lane bits into the low i16 of the result vector.
     for (unsigned Half = 0; Half < 2; ++Half) {
       for (unsigned I = 0; I < 8; ++I) {
         // On big-endian targets, the lane order in sub-byte vector elements
@@ -25855,13 +25858,13 @@ static SDValue vectorToScalarBitmask(SDNode *N, SelectionDAG &DAG) {
     SDValue RepresentativeBits =
         DAG.getNode(ISD::AND, DL, VecVT, ComparisonResult, Mask);
 
-    SDValue UpperRepresentativeBits =
-        DAG.getNode(AArch64ISD::EXT, DL, VecVT, RepresentativeBits,
-                    RepresentativeBits, DAG.getConstant(8, DL, MVT::i32));
-    SDValue Zipped = DAG.getNode(AArch64ISD::ZIP1, DL, VecVT,
-                                 RepresentativeBits, UpperRepresentativeBits);
-    Zipped = DAG.getNode(ISD::BITCAST, DL, MVT::v8i16, Zipped);
-    return DAG.getNode(ISD::VECREDUCE_ADD, DL, MVT::i16, Zipped);
+    SDValue V = RepresentativeBits;
+    V = DAG.getNode(AArch64ISD::ADDP, DL, VecVT, V, V);
+    V = DAG.getNode(AArch64ISD::ADDP, DL, VecVT, V, V);
+    V = DAG.getNode(AArch64ISD::ADDP, DL, VecVT, V, V);
+    V = DAG.getNode(ISD::BITCAST, DL, MVT::v8i16, V);
+    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i16, V,
+                       DAG.getConstant(0, DL, MVT::i64));
   }
 
   // All other vector sizes.

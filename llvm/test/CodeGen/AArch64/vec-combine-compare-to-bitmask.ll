@@ -17,10 +17,10 @@ define i16 @convert_to_bitmask16(<16 x i8> %vec) {
 ; CHECK-SD-NEXT:    cmeq.16b v0, v0, #0
 ; CHECK-SD-NEXT:    ldr q1, [x8, lCPI0_0@PAGEOFF]
 ; CHECK-SD-NEXT:    bic.16b v0, v1, v0
-; CHECK-SD-NEXT:    ext.16b v1, v0, v0, #8
-; CHECK-SD-NEXT:    zip1.16b v0, v0, v1
-; CHECK-SD-NEXT:    addv.8h h0, v0
-; CHECK-SD-NEXT:    fmov w0, s0
+; CHECK-SD-NEXT:    addp.16b v0, v0, v0
+; CHECK-SD-NEXT:    addp.16b v0, v0, v0
+; CHECK-SD-NEXT:    addp.16b v0, v0, v0
+; CHECK-SD-NEXT:    umov.h w0, v0[0]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: convert_to_bitmask16:
@@ -521,10 +521,10 @@ define i16 @convert_to_bitmask_without_knowing_type(<16 x i1> %vec) {
 ; CHECK-SD-NEXT:    ldr q1, [x8, lCPI10_0@PAGEOFF]
 ; CHECK-SD-NEXT:    cmlt.16b v0, v0, #0
 ; CHECK-SD-NEXT:    and.16b v0, v0, v1
-; CHECK-SD-NEXT:    ext.16b v1, v0, v0, #8
-; CHECK-SD-NEXT:    zip1.16b v0, v0, v1
-; CHECK-SD-NEXT:    addv.8h h0, v0
-; CHECK-SD-NEXT:    fmov w0, s0
+; CHECK-SD-NEXT:    addp.16b v0, v0, v0
+; CHECK-SD-NEXT:    addp.16b v0, v0, v0
+; CHECK-SD-NEXT:    addp.16b v0, v0, v0
+; CHECK-SD-NEXT:    umov.h w0, v0[0]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: convert_to_bitmask_without_knowing_type:
@@ -996,9 +996,9 @@ define <2 x i8> @vector_to_vector_cast(<16 x i1> %arg) nounwind {
 ; CHECK-SD-NEXT:    ldr q1, [x8, lCPI20_0@PAGEOFF]
 ; CHECK-SD-NEXT:    cmlt.16b v0, v0, #0
 ; CHECK-SD-NEXT:    and.16b v0, v0, v1
-; CHECK-SD-NEXT:    ext.16b v1, v0, v0, #8
-; CHECK-SD-NEXT:    zip1.16b v0, v0, v1
-; CHECK-SD-NEXT:    addv.8h h0, v0
+; CHECK-SD-NEXT:    addp.16b v0, v0, v0
+; CHECK-SD-NEXT:    addp.16b v0, v0, v0
+; CHECK-SD-NEXT:    addp.16b v0, v0, v0
 ; CHECK-SD-NEXT:    ushll.8h v0, v0, #0
 ; CHECK-SD-NEXT:    ushll.4s v0, v0, #0
 ; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0
