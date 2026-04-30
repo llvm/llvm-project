@@ -48,6 +48,21 @@ void initializeWebAssemblyPostLegalizerCombinerPass(PassRegistry &);
 FunctionPass *createWebAssemblyPreLegalizerCombiner();
 void initializeWebAssemblyPreLegalizerCombinerPass(PassRegistry &);
 
+// GlobalISel
+InstructionSelector *
+createWebAssemblyInstructionSelector(const WebAssemblyTargetMachine &,
+                                     const WebAssemblySubtarget &,
+                                     const WebAssemblyRegisterBankInfo &);
+
+FunctionPass *createWebAssemblyPostLegalizerCombiner(bool IsOptNone);
+void initializeWebAssemblyPostLegalizerCombinerPass(PassRegistry &);
+
+FunctionPass *createWebAssemblyO0PreLegalizerCombiner();
+void initializeWebAssemblyO0PreLegalizerCombinerPass(PassRegistry &);
+
+FunctionPass *createWebAssemblyPreLegalizerCombiner();
+void initializeWebAssemblyPreLegalizerCombinerPass(PassRegistry &);
+
 // ISel and immediate followup passes.
 FunctionPass *createWebAssemblyISelDag(WebAssemblyTargetMachine &TM,
                                        CodeGenOptLevel OptLevel);

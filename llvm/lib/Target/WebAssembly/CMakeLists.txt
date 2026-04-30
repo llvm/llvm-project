@@ -16,6 +16,8 @@ tablegen(LLVM WebAssemblyGenSubtargetInfo.inc -gen-subtarget)
 
 set(LLVM_TARGET_DEFINITIONS WebAssemblyGISel.td)
 tablegen(LLVM WebAssemblyGenGlobalISel.inc -gen-global-isel -gisel-extended-llt)
+tablegen(LLVM WebAssemblyGenO0PreLegalizeGICombiner.inc -gen-global-isel-combiner
+              -combiners="WebAssemblyO0PreLegalizerCombiner")
 tablegen(LLVM WebAssemblyGenPreLegalizeGICombiner.inc -gen-global-isel-combiner
               -combiners="WebAssemblyPreLegalizerCombiner")
 tablegen(LLVM WebAssemblyGenPostLegalizeGICombiner.inc -gen-global-isel-combiner
@@ -26,6 +28,7 @@ add_public_tablegen_target(WebAssemblyCommonTableGen)
 add_llvm_target(WebAssemblyCodeGen
   GISel/WebAssemblyCallLowering.cpp
   GISel/WebAssemblyInstructionSelector.cpp
+  GISel/WebAssemblyO0PreLegalizerCombiner.cpp
   GISel/WebAssemblyPostLegalizerCombiner.cpp
   GISel/WebAssemblyPreLegalizerCombiner.cpp
   GISel/WebAssemblyLegalizerInfo.cpp

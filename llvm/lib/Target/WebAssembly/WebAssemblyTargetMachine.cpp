@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
+#include "llvm/CodeGen/GlobalISel/Localizer.h"
 #include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/CodeGen/MIRParser/MIParser.h"
 #include "llvm/CodeGen/Passes.h"
@@ -91,6 +92,7 @@ LLVMInitializeWebAssemblyTarget() {
   // Register backend passes
   auto &PR = *PassRegistry::getPassRegistry();
   initializeGlobalISel(PR);
+  initializeWebAssemblyO0PreLegalizerCombinerPass(PR);
   initializeWebAssemblyPreLegalizerCombinerPass(PR);
   initializeWebAssemblyPostLegalizerCombinerPass(PR);
   initializeWebAssemblyAddMissingPrototypesPass(PR);
@@ -685,9 +687,12 @@ bool WebAssemblyPassConfig::addIRTranslator() {
 }
 
 void WebAssemblyPassConfig::addPreLegalizeMachineIR() {
-  if (getOptLevel() != CodeGenOptLevel::None) {
+  if (getOptLevel() == CodeGenOptLevel::None) {
+    addPass(createWebAssemblyO0PreLegalizerCombiner());
+  } else {
     addPass(createWebAssemblyPreLegalizerCombiner());
   }
+  addPass(new Localizer());
 }
 bool WebAssemblyPassConfig::addLegalizeMachineIR() {
   addPass(new Legalizer());
@@ -695,9 +700,8 @@ bool WebAssemblyPassConfig::addLegalizeMachineIR() {
 }
 
 void WebAssemblyPassConfig::addPreRegBankSelect() {
-  if (getOptLevel() != CodeGenOptLevel::None) {
-    addPass(createWebAssemblyPostLegalizerCombiner());
-  }
+  addPass(createWebAssemblyPostLegalizerCombiner(getOptLevel() ==
+                                                 CodeGenOptLevel::None));
 }
 
 bool WebAssemblyPassConfig::addRegBankSelect() {
