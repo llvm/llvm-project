@@ -244,11 +244,14 @@ Adding a new compiler option in Flang consists of two steps:
 ### Option Definition
 All of Flang's compiler and frontend driver options are defined in
 `clang/include/clang/Options/FlangOptions.td` and `clang/include/clang/Options/Options.td`.
-When adding a new option to Flang, you will either:
+When adding a new option to Flang, you will do one of the following:
   * extend the existing definition for an option that is already available
-    in one of Clang's drivers (e.g.  `clang`), but not yet available in Flang, or
+    in one of Clang's drivers (e.g.  `clang`), but not yet available in Flang. These
+    options will be in `clang/Options/Options.td`.
   * add a completely new definition if the option that you are adding has not
-    been defined yet.
+    been defined yet. These must be added to `clang/Options/FlangOptions.td` unless
+    they are intended to be shared with Clang, in which case they should be added
+    to `clang/Options/Options.td`.
 
 There are many predefined TableGen classes and records that you can use to fine
 tune your new option. The list of available configurations can be overwhelming
