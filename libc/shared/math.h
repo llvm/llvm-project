@@ -87,6 +87,8 @@
 #include "math/cospif16.h"
 #include "math/daddf128.h"
 #include "math/daddl.h"
+#include "math/ddivf128.h"
+#include "math/ddivl.h"
 #include "math/dfmaf128.h"
 #include "math/dfmal.h"
 #include "math/dmulf128.h"
