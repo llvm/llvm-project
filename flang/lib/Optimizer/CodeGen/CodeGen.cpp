@@ -67,7 +67,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/DebugLog.h"
 
 namespace fir {
 #define GEN_PASS_DEF_FIRTOLLVMLOWERING
