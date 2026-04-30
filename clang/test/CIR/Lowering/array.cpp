@@ -1,6 +1,16 @@
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s
 
+// Global char arrays with string initializers must lower to a direct
+// [N x i8] c"..." constant, not through an initializer region.
+// CHECK-DAG: @str = constant [6 x i8] c"hello\00"
+extern const char str[] = "hello";
+
+// Binary blob (unsigned char): bytes plus trailing null must also produce a
+// direct constant without an initializer region.
+// CHECK-DAG: @blob = constant [6 x i8] c"\7FELF\00\00"
+extern const unsigned char blob[] = "\x7f\x45\x4c\x46\x00";
+
 // CHECK-DAG: @[[FUNC2_ARR:.*]] = private constant [2 x i32] [i32 5, i32 0]
 // CHECK-DAG: @[[FUNC3_ARR:.*]] = private constant [2 x i32] [i32 5, i32 6]
 // CHECK-DAG: @[[FUNC4_ARR:.*]] = private constant [2 x [1 x i32]] {{.*}}[1 x i32] [i32 5], [1 x i32] [i32 6]{{.*}}

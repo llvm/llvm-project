@@ -2424,6 +2424,33 @@ CIRToLLVMGlobalOpLowering::matchAndRewriteRegionInitializedGlobal(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMGlobalOpLowering::lowerInitializerForConstArray(
+    cir::GlobalOp op, mlir::Attribute &init,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  auto constArr = mlir::cast<cir::ConstArrayAttr>(init);
+
+  // Initializer is a constant array: convert it to a compatible LLVM init.
+  if (auto strAttr = mlir::dyn_cast<mlir::StringAttr>(constArr.getElts())) {
+    llvm::SmallString<256> literal(strAttr.getValue());
+    if (constArr.getTrailingZerosNum())
+      literal.append(constArr.getTrailingZerosNum(), '\0');
+    init = rewriter.getStringAttr(literal);
+    return mlir::success();
+  }
+
+  if (mlir::isa<mlir::ArrayAttr>(constArr.getElts())) {
+    // If failed to use a compact attribute as an initializer, we initialize
+    // elements individually.
+    if (auto val = lowerConstArrayAttr(constArr, getTypeConverter()))
+      init = val.value();
+    return mlir::success();
+  }
+
+  return op.emitError() << "unsupported lowering for #cir.const_array with "
+                           "value "
+                        << constArr.getElts();
+}
+
 mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
     cir::GlobalOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -2469,11 +2496,19 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
         op.emitError() << "unsupported initializer '" << init.value() << "'";
         return mlir::failure();
       }
-    } else if (mlir::isa<cir::ConstArrayAttr, cir::ConstVectorAttr,
-                         cir::ConstRecordAttr, cir::ConstPtrAttr,
-                         cir::ConstComplexAttr, cir::GlobalViewAttr,
-                         cir::TypeInfoAttr, cir::UndefAttr, cir::PoisonAttr,
-                         cir::VTableAttr, cir::ZeroAttr>(init.value())) {
+    } else if (mlir::isa<cir::ConstArrayAttr>(init.value())) {
+      if (mlir::failed(lowerInitializerForConstArray(op, init.value(), rewriter)))
+        return mlir::failure();
+      // If lowerInitializerForConstArray converted the initializer to a
+      // non-CIR attribute (e.g. StringAttr), fall through to direct global
+      // emission below. Otherwise use the region initializer path.
+      if (mlir::isa<cir::ConstArrayAttr>(init.value()))
+        return matchAndRewriteRegionInitializedGlobal(op, init.value(), rewriter);
+    } else if (mlir::isa<cir::ConstVectorAttr, cir::ConstRecordAttr,
+                         cir::ConstPtrAttr, cir::ConstComplexAttr,
+                         cir::GlobalViewAttr, cir::TypeInfoAttr, cir::UndefAttr,
+                         cir::PoisonAttr, cir::VTableAttr,
+                         cir::ZeroAttr>(init.value())) {
       // TODO(cir): once LLVM's dialect has proper equivalent attributes this
       // should be updated. For now, we use a custom op to initialize globals
       // to the appropriate value.
