@@ -11743,6 +11743,32 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
                                    Op->getVTList(), {Chain, Ptr},
                                    MII->getMemoryVT(), MII->getMemOperand());
   }
+  case Intrinsic::amdgcn_mask: {
+    SDNode *N = Op.getNode();
+    SDLoc SL(N);
+    SDValue Pred = N->getOperand(2);
+
+    // generate a new EXEC mask based on the predicate value
+    SmallVector<SDValue, 2> Operands;
+    Operands.push_back(
+        DAG.getTargetConstant(Intrinsic::amdgcn_ballot, SL, MVT::i32));
+    Operands.push_back(Pred);
+    SDValue NewMask =
+        DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, MVT::i32, Operands);
+
+    // save the original EXEC mask
+    EVT ExecVT = Subtarget->isWave32() ? MVT::i32 : MVT::i64;
+    Register ExecReg = Subtarget->isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
+    SDValue OrigMask =
+        DAG.getCopyFromReg(DAG.getEntryNode(), SL, ExecReg, ExecVT);
+    SDValue Chain = OrigMask.getValue(1);
+
+    // change the EXEC mask
+    SDValue Res = DAG.getCopyToReg(Chain, SL, ExecReg, NewMask, SDValue());
+
+    return DAG.getMergeValues({OrigMask.getValue(0), Res.getValue(0)}, SL);
+  }
+
   default:
 
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
@@ -12425,6 +12451,16 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     SDValue Val = Op->getOperand(3);
     return DAG.getAtomic(ISD::ATOMIC_STORE, DL, MII->getMemoryVT(), Chain, Val,
                          Ptr, MII->getMemOperand());
+  }
+  case Intrinsic::amdgcn_reset_mask: {
+    SDNode *N = Op.getNode();
+    SDLoc SL(N);
+
+    SDValue Chain = N->getOperand(0);
+    SDValue Mask = N->getOperand(2);
+    const GCNSubtarget *ST = this->getSubtarget();
+    Register ExecReg = ST->isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
+    return DAG.getCopyToReg(Chain, SL, ExecReg, Mask.getValue(0), SDValue());
   }
   default: {
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =

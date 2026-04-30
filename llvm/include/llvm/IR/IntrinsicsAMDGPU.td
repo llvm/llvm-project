@@ -3846,6 +3846,16 @@ def int_amdgcn_cooperative_atomic_store_16x8B : AMDGPUCooperativeAtomicStore<llv
 def int_amdgcn_cooperative_atomic_load_8x16B : AMDGPUCooperativeAtomicLoad<llvm_v4i32_ty>;
 def int_amdgcn_cooperative_atomic_store_8x16B : AMDGPUCooperativeAtomicStore<llvm_v4i32_ty>;
 
+def int_amdgcn_mask : ClangBuiltin<"__builtin_amdgcn_mask">,
+  Intrinsic<[llvm_anyint_ty],
+  [llvm_i1_ty], [IntrWillReturn, IntrNoCallback, IntrNoFree]
+>;
+
+def int_amdgcn_reset_mask : ClangBuiltin<"__builtin_amdgcn_reset_mask">,
+  Intrinsic<[],
+  [llvm_anyint_ty], [IntrWillReturn, IntrNoCallback, IntrNoFree]
+>;
+
 //===----------------------------------------------------------------------===//
 // Special Intrinsics for backend internal use only. No frontend
 // should emit calls to these.
