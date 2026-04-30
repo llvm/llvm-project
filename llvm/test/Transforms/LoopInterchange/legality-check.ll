@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
 ; RUN: opt < %s -passes=loop-interchange -verify-dom-info -verify-loop-info \
-; RUN:     -disable-output -debug 2>&1 | FileCheck %s
+; RUN:     -disable-output -debug -da-enable-dependence-test=all 2>&1 | FileCheck %s
 
 @a = dso_local global [256 x [256 x float]] zeroinitializer, align 4
 @b = dso_local global [20 x [20 x [20 x i32]]] zeroinitializer, align 4

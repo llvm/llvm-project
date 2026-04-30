@@ -1,6 +1,4 @@
 .. title:: clang-tidy - cert-dcl37-c
-.. meta::
-   :http-equiv=refresh: 5;URL=../bugprone/reserved-identifier.html
 
 cert-dcl37-c
 ============

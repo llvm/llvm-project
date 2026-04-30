@@ -174,5 +174,7 @@ template <int I> struct std::tuple_element<I, const C> {
 
 namespace ZeroInCheckInvoke {
   constexpr C foo(const C &) { return C{}; }
+#ifndef __MVS__
   thread_local const auto &[s, t, u] = foo(C{}); // both-warning {{thread_local}}
+#endif
 }

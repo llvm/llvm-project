@@ -940,11 +940,11 @@ llvm::ConstantFoldIntToFloat(unsigned Opcode, LLT DstTy, Register Src,
   return std::nullopt;
 }
 
-SmallVector<APInt> llvm::ConstantFoldCountOp(unsigned Opcode, LLT DstTy,
-                                             Register Src,
-                                             const MachineRegisterInfo &MRI) {
+SmallVector<APInt>
+llvm::ConstantFoldUnaryIntOp(unsigned Opcode, LLT DstTy, Register Src,
+                             const MachineRegisterInfo &MRI) {
   unsigned EltBits = DstTy.getScalarSizeInBits();
-  auto Count = [Opcode, EltBits](const APInt &V) -> APInt {
+  auto Fold = [Opcode, EltBits](const APInt &V) -> APInt {
     switch (Opcode) {
     case TargetOpcode::G_CTLZ:
     case TargetOpcode::G_CTLZ_ZERO_UNDEF:
@@ -954,13 +954,19 @@ SmallVector<APInt> llvm::ConstantFoldCountOp(unsigned Opcode, LLT DstTy,
       return APInt(EltBits, V.countr_zero());
     case TargetOpcode::G_CTPOP:
       return APInt(EltBits, V.popcount());
+    case TargetOpcode::G_ABS:
+      return V.abs();
+    case TargetOpcode::G_BSWAP:
+      return V.byteSwap();
+    case TargetOpcode::G_BITREVERSE:
+      return V.reverseBits();
     }
-    llvm_unreachable("unexpected opcode in ConstantFoldCountOp");
+    llvm_unreachable("unexpected opcode in ConstantFoldUnaryIntOp");
   };
 
   auto tryFoldScalar = [&](Register R) -> std::optional<APInt> {
     if (auto MaybeCst = getIConstantVRegVal(R, MRI))
-      return Count(*MaybeCst);
+      return Fold(*MaybeCst);
     return std::nullopt;
   };
   if (MRI.getType(Src).isVector()) {
