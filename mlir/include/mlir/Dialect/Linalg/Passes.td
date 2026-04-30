@@ -168,6 +168,16 @@ def LinalgInlineScalarOperandsPass : Pass<"linalg-inline-scalar-operands"> {
   ];
 }
 
+def LinalgMergeConsecutiveReduceOpsPass
+    : Pass<"linalg-merge-consecutive-reduce-ops"> {
+  let summary = "Merge consecutive linalg.reduce ops";
+  let description = [{
+    Merge consecutive `linalg.reduce` ops that use the same combiner into a
+    single `linalg.reduce` over the original input.
+  }];
+  let dependentDialects = ["linalg::LinalgDialect"];
+}
+
 def LinalgFoldIntoElementwisePass : Pass<"linalg-fold-into-elementwise"> {
   let summary = "Fold transpose and broadcast ops into elementwise";
   let dependentDialects = ["linalg::LinalgDialect"];
