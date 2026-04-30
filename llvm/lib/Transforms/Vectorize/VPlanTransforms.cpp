@@ -649,12 +649,9 @@ static void removeRedundantInductionCasts(VPlan &Plan) {
           break;
         }
       }
-      // Cast recipe may have been removed by earlier simplifications.
-      if (!FoundUserCast)
-        break;
       FindMyCast = FoundUserCast;
     }
-    if (FindMyCast != IV)
+    if (FindMyCast)
       FindMyCast->replaceAllUsesWith(IV);
   }
 }
@@ -3525,11 +3522,9 @@ void VPlanTransforms::createInterleaveGroups(
     // Skip interleave groups where members don't have recipes. This can happen
     // when removeDeadRecipes removes recipes that are part of interleave groups
     // but have no users.
-    if (llvm::any_of(llvm::seq(IG->getFactor()),
-                     [IG, &RecipeBuilder](unsigned I) {
-                       Instruction *Member = IG->getMember(I);
-                       return Member && !RecipeBuilder.hasRecipe(Member);
-                     }))
+    if (llvm::any_of(IG->members(), [&RecipeBuilder](Instruction *Member) {
+          return !RecipeBuilder.hasRecipe(Member);
+        }))
       continue;
 
     auto *Start =
