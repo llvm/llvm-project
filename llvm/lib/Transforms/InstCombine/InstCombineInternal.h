@@ -822,6 +822,12 @@ public:
   Value *foldSelectWithConstOpToBinOp(ICmpInst *Cmp, Value *TrueVal,
                                       Value *FalseVal);
   Instruction *foldSelectValueEquivalence(SelectInst &SI, CmpInst &CI);
+
+  // Apply on both shufflevector and llvm.vector.deinterleave2. The reason
+  // it returns bool is because it doesn't directly replace `DI` with
+  // another instruction.
+  bool foldExtractionOfVectorDeinterleave(Instruction *DI);
+
   bool replaceInInstruction(Value *V, Value *Old, Value *New,
                             unsigned Depth = 0);
 

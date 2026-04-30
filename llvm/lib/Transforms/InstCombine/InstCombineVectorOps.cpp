@@ -2904,6 +2904,12 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   if (Instruction *I = simplifyBinOpSplats(SVI))
     return I;
 
+  if (foldExtractionOfVectorDeinterleave(&SVI)) {
+    // If the transform is successful, we're removing this
+    // shufflevector instruction, hence returning null.
+    return nullptr;
+  }
+
   // Canonicalize splat shuffle to use poison RHS. Handle this explicitly in
   // order to support scalable vectors.
   if (match(SVI.getShuffleMask(), m_ZeroMask()) && !isa<PoisonValue>(RHS))
@@ -3295,4 +3301,126 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   }
 
   return MadeChange ? &SVI : nullptr;
+}
+
+/// Given the following de-interleaving shufflevectors and the consuming zexts:
+/// ```
+/// %f0 = shufflevector <8 x i32> %v, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+/// %f1 = shufflevector <8 x i32> %v, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+/// %z0 = zext <4 x i32> %f0 to <4 x i64>
+/// %z1 = zext <4 x i32> %f1 to <4 x i64>
+/// ```
+/// We can actually bitcast the input value, `%v` first before replacing zexts
+/// with simple arithmetics on this new bitcast:
+/// ```
+/// %bc = bitcast <8 x i32> %v to <4 x i64>
+//  %z0 = and <4 x i64> %bc, splat (i64 4294967295)
+//  %z1 = lshr <4 x i64> %bc, splat (i64 32)
+/// ```
+/// This transformation is almost always benefitial as shufflevector is more
+/// expensive than normal arithmetics.
+bool InstCombinerImpl::foldExtractionOfVectorDeinterleave(Instruction *DI) {
+  // This pattern involves bitcast that is not compatible with big endian.
+  if (DL.isBigEndian())
+    return false;
+
+  using namespace PatternMatch;
+  // The actual value that got de-interleaved.
+  Value *DIV;
+
+  auto isDeinterleaveShuffle =
+      [](Instruction *I) -> std::pair<Value *, unsigned> {
+    Value *V;
+    ArrayRef<int> ShuffleMask;
+    unsigned Index;
+    // Match the most common form of `shufflevector <vec0>, poison, <mask>`.
+    // Not sure if we'll see `shufflevector poison, <vec0>, <mask>` in the
+    // future.
+    if (match(I, m_Shuffle(m_Value(V), m_Undef(), m_Mask(ShuffleMask))) &&
+        ShuffleVectorInst::isDeInterleaveMaskOfFactor(ShuffleMask, 2, Index) &&
+        Index < 2)
+      return {V, Index};
+    return {nullptr, UINT_MAX};
+  };
+
+  // Try matching shufflevector. The point here is to just find the first
+  // shufflevector. We'll find other shufflevectors later.
+  DIV = isDeinterleaveShuffle(DI).first;
+  // Try matching llvm.vector.deinterleave2.
+  if (!DIV) {
+    if (!match(DI, m_Deinterleave2(m_Value(DIV))) ||
+        !all_of(DI->users(), [](User *Usr) -> bool {
+          auto *EV = dyn_cast<ExtractValueInst>(Usr);
+          return EV && EV->getNumIndices() == 1;
+        }))
+      return false;
+  }
+
+  auto *InputVecTy = dyn_cast<VectorType>(DIV->getType());
+  if (!InputVecTy)
+    return false;
+  auto *InElementTy = dyn_cast<IntegerType>(InputVecTy->getElementType());
+  if (!InElementTy)
+    return false;
+  if (!InputVecTy->getElementCount().isKnownEven())
+    return false;
+
+  // {Field instruction, Field index}
+  SmallVector<std::pair<Instruction *, unsigned>, 4> Fields;
+  if (isa<ShuffleVectorInst>(DI)) {
+    for (auto *Usr : DIV->users()) {
+      auto *FieldI = dyn_cast<Instruction>(Usr);
+      if (!FieldI)
+        continue;
+      auto [V, Index] = isDeinterleaveShuffle(FieldI);
+      if (V != DIV)
+        continue;
+      assert(Index < 2);
+      Fields.push_back({FieldI, Index});
+    }
+  } else {
+    // llvm.vector.deinterleave2.
+    for (User *Field : DI->users()) {
+      auto *FieldI = cast<ExtractValueInst>(Field);
+      unsigned FieldIdx = *FieldI->idx_begin();
+      assert(FieldIdx < 2);
+      Fields.push_back({FieldI, FieldIdx});
+    }
+  }
+
+  // We commit the transformation only if all the field users can be replaced,
+  // otherwise the primary de-interleaving construction, regardless of
+  // llvm.vector.deinterleave2 or shufflevectors, will still be there.
+  SmallVector<Instruction *, 4> Field0Replacements;
+  SmallVector<Instruction *, 4> Field1Replacements;
+  for (auto [Field, FieldIdx] : Fields) {
+    for (User *FieldUsr : Field->users()) {
+      auto *ZExt = dyn_cast<ZExtInst>(FieldUsr);
+      if (!ZExt)
+        return false;
+      // Only if it's doubling the element size.
+      if (ZExt->getDestTy() != ZExt->getSrcTy()->getExtendedType())
+        return false;
+      if (FieldIdx)
+        Field1Replacements.push_back(ZExt);
+      else
+        Field0Replacements.push_back(ZExt);
+    }
+  }
+
+  // Double the element size but half the vector length.
+  auto *BitcastedTy = VectorType::getExtendedElementVectorType(InputVecTy);
+  BitcastedTy = VectorType::getHalfElementsVectorType(BitcastedTy);
+  Value *Bitcast = Builder.CreateBitCast(DIV, BitcastedTy);
+  APInt Mask = InElementTy->getMask();
+  Value *NewField0 =
+      Builder.CreateAnd(Bitcast, Mask.zext(Mask.getBitWidth() * 2));
+  Value *NewField1 = Builder.CreateLShr(Bitcast, InElementTy->getBitWidth());
+
+  for (Instruction *I : Field0Replacements)
+    replaceInstUsesWith(*I, NewField0);
+  for (Instruction *I : Field1Replacements)
+    replaceInstUsesWith(*I, NewField1);
+
+  return true;
 }
