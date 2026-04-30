@@ -78,7 +78,8 @@ def FTZFlag : OperandWithDefaultOps<i1, (ops (getFTZFlag (i1 0)))> {
   let PrintMethod = "printFTZFlag";
 }
 
-def BranchFlag : OperandWithDefaultOps<i32, (ops (i1 0))> {
+// Flag to indicate predicate negation (@!p) for conditional branches.
+def BranchFlag : OperandWithDefaultOps<i1, (ops (i1 0))> {
   let PrintMethod = "printNegatedPredicate";
 }
 
