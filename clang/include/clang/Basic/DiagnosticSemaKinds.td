@@ -12856,12 +12856,14 @@ def err_extern_def_in_header_unit : Error<
 
 def warn_meaningless_export : Warning<
   "%select{an explicit instantiation|a specialization}0 cannot be "
-  "marked 'export'">;
+  "marked 'export'">,
+  InGroup<DiagGroup<"meaningless-export">>;
 def note_meaningless_export_explanation : Note<
   "it is exported if the primary template is exported">;
 def warn_invalid_decl_in_linkage_spec : Warning<
   "language linkage cannot be specified for "
-  "%select{an explicit instantiation|a specialization|an export declaration}0">;
+  "%select{an explicit instantiation|a specialization|an export declaration}0">,
+  InGroup<DiagGroup<"meaningless-language-linkage">>;
 
 def warn_exposure : Warning <
   "TU local entity %0 is exposed">,
