@@ -2977,28 +2977,28 @@ define i32 @sink_into_replication_region_multiple(ptr %x, i32 %y) {
 ; UNROLL-NO-IC-NEXT:    store i32 [[TMP6]], ptr [[TMP62]], align 4
 ; UNROLL-NO-IC-NEXT:    br label [[PRED_STORE_CONTINUE23]]
 ; UNROLL-NO-IC:       pred.store.continue28:
-; UNROLL-NO-IC-NEXT:    [[TMP70:%.*]] = extractelement <4 x i1> [[TMP11]], i64 1
-; UNROLL-NO-IC-NEXT:    br i1 [[TMP70]], label [[PRED_STORE_IF29:%.*]], label [[PRED_STORE_CONTINUE30:%.*]]
+; UNROLL-NO-IC-NEXT:    [[TMP63:%.*]] = extractelement <4 x i1> [[TMP11]], i64 1
+; UNROLL-NO-IC-NEXT:    br i1 [[TMP63]], label [[PRED_STORE_IF24:%.*]], label [[PRED_STORE_CONTINUE25:%.*]]
 ; UNROLL-NO-IC:       pred.store.if29:
-; UNROLL-NO-IC-NEXT:    [[TMP71:%.*]] = add i32 [[INDEX]], 5
-; UNROLL-NO-IC-NEXT:    [[TMP84:%.*]] = getelementptr inbounds i32, ptr [[X]], i32 [[TMP71]]
-; UNROLL-NO-IC-NEXT:    store i32 [[TMP7]], ptr [[TMP84]], align 4
-; UNROLL-NO-IC-NEXT:    br label [[PRED_STORE_CONTINUE30]]
+; UNROLL-NO-IC-NEXT:    [[TMP64:%.*]] = add i32 [[INDEX]], 5
+; UNROLL-NO-IC-NEXT:    [[TMP65:%.*]] = getelementptr inbounds i32, ptr [[X]], i32 [[TMP64]]
+; UNROLL-NO-IC-NEXT:    store i32 [[TMP7]], ptr [[TMP65]], align 4
+; UNROLL-NO-IC-NEXT:    br label [[PRED_STORE_CONTINUE25]]
 ; UNROLL-NO-IC:       pred.store.continue30:
-; UNROLL-NO-IC-NEXT:    [[TMP85:%.*]] = extractelement <4 x i1> [[TMP11]], i64 2
-; UNROLL-NO-IC-NEXT:    br i1 [[TMP85]], label [[PRED_STORE_IF31:%.*]], label [[PRED_STORE_CONTINUE32:%.*]]
+; UNROLL-NO-IC-NEXT:    [[TMP66:%.*]] = extractelement <4 x i1> [[TMP11]], i64 2
+; UNROLL-NO-IC-NEXT:    br i1 [[TMP66]], label [[PRED_STORE_IF26:%.*]], label [[PRED_STORE_CONTINUE27:%.*]]
 ; UNROLL-NO-IC:       pred.store.if31:
-; UNROLL-NO-IC-NEXT:    [[TMP86:%.*]] = add i32 [[INDEX]], 6
-; UNROLL-NO-IC-NEXT:    [[TMP87:%.*]] = getelementptr inbounds i32, ptr [[X]], i32 [[TMP86]]
-; UNROLL-NO-IC-NEXT:    store i32 [[TMP8]], ptr [[TMP87]], align 4
-; UNROLL-NO-IC-NEXT:    br label [[PRED_STORE_CONTINUE32]]
+; UNROLL-NO-IC-NEXT:    [[TMP67:%.*]] = add i32 [[INDEX]], 6
+; UNROLL-NO-IC-NEXT:    [[TMP68:%.*]] = getelementptr inbounds i32, ptr [[X]], i32 [[TMP67]]
+; UNROLL-NO-IC-NEXT:    store i32 [[TMP8]], ptr [[TMP68]], align 4
+; UNROLL-NO-IC-NEXT:    br label [[PRED_STORE_CONTINUE27]]
 ; UNROLL-NO-IC:       pred.store.continue32:
-; UNROLL-NO-IC-NEXT:    [[TMP88:%.*]] = extractelement <4 x i1> [[TMP11]], i64 3
-; UNROLL-NO-IC-NEXT:    br i1 [[TMP88]], label [[PRED_STORE_IF33:%.*]], label [[PRED_STORE_CONTINUE29]]
+; UNROLL-NO-IC-NEXT:    [[TMP69:%.*]] = extractelement <4 x i1> [[TMP11]], i64 3
+; UNROLL-NO-IC-NEXT:    br i1 [[TMP69]], label [[PRED_STORE_IF28:%.*]], label [[PRED_STORE_CONTINUE29]]
 ; UNROLL-NO-IC:       pred.store.if33:
-; UNROLL-NO-IC-NEXT:    [[TMP89:%.*]] = add i32 [[INDEX]], 7
-; UNROLL-NO-IC-NEXT:    [[TMP90:%.*]] = getelementptr inbounds i32, ptr [[X]], i32 [[TMP89]]
-; UNROLL-NO-IC-NEXT:    store i32 [[TMP9]], ptr [[TMP90]], align 4
+; UNROLL-NO-IC-NEXT:    [[TMP70:%.*]] = add i32 [[INDEX]], 7
+; UNROLL-NO-IC-NEXT:    [[TMP71:%.*]] = getelementptr inbounds i32, ptr [[X]], i32 [[TMP70]]
+; UNROLL-NO-IC-NEXT:    store i32 [[TMP9]], ptr [[TMP71]], align 4
 ; UNROLL-NO-IC-NEXT:    br label [[PRED_STORE_CONTINUE29]]
 ; UNROLL-NO-IC:       pred.store.continue34:
 ; UNROLL-NO-IC-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
@@ -3150,16 +3150,16 @@ define i32 @sink_into_replication_region_multiple(ptr %x, i32 %y) {
 ; SINK-AFTER-NEXT:    store i32 [[TMP3]], ptr [[TMP30]], align 4
 ; SINK-AFTER-NEXT:    br label [[PRED_STORE_CONTINUE8]]
 ; SINK-AFTER:       pred.store.continue8:
-; SINK-AFTER-NEXT:    [[TMP34:%.*]] = extractelement <4 x i1> [[TMP6]], i64 2
-; SINK-AFTER-NEXT:    br i1 [[TMP34]], label [[PRED_STORE_IF9:%.*]], label [[PRED_STORE_CONTINUE10:%.*]]
+; SINK-AFTER-NEXT:    [[TMP31:%.*]] = extractelement <4 x i1> [[TMP6]], i64 2
+; SINK-AFTER-NEXT:    br i1 [[TMP31]], label [[PRED_STORE_IF9:%.*]], label [[PRED_STORE_CONTINUE10:%.*]]
 ; SINK-AFTER:       pred.store.if9:
-; SINK-AFTER-NEXT:    [[TMP44:%.*]] = add i32 [[INDEX]], 2
-; SINK-AFTER-NEXT:    [[TMP45:%.*]] = getelementptr inbounds i32, ptr [[X]], i32 [[TMP44]]
-; SINK-AFTER-NEXT:    store i32 [[TMP4]], ptr [[TMP45]], align 4
+; SINK-AFTER-NEXT:    [[TMP32:%.*]] = add i32 [[INDEX]], 2
+; SINK-AFTER-NEXT:    [[TMP33:%.*]] = getelementptr inbounds i32, ptr [[X]], i32 [[TMP32]]
+; SINK-AFTER-NEXT:    store i32 [[TMP4]], ptr [[TMP33]], align 4
 ; SINK-AFTER-NEXT:    br label [[PRED_STORE_CONTINUE10]]
 ; SINK-AFTER:       pred.store.continue10:
-; SINK-AFTER-NEXT:    [[TMP46:%.*]] = extractelement <4 x i1> [[TMP6]], i64 3
-; SINK-AFTER-NEXT:    br i1 [[TMP46]], label [[PRED_STORE_IF11:%.*]], label [[PRED_STORE_CONTINUE12]]
+; SINK-AFTER-NEXT:    [[TMP34:%.*]] = extractelement <4 x i1> [[TMP6]], i64 3
+; SINK-AFTER-NEXT:    br i1 [[TMP34]], label [[PRED_STORE_IF11:%.*]], label [[PRED_STORE_CONTINUE12]]
 ; SINK-AFTER:       pred.store.if11:
 ; SINK-AFTER-NEXT:    [[TMP35:%.*]] = add i32 [[INDEX]], 3
 ; SINK-AFTER-NEXT:    [[TMP36:%.*]] = getelementptr inbounds i32, ptr [[X]], i32 [[TMP35]]

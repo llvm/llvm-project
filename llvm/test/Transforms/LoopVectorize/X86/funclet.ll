@@ -1,6 +1,8 @@
-; RUN: opt -S -passes=loop-vectorize < %s | FileCheck %s
+; RUN: opt -S -passes=loop-vectorize -force-vector-width=16 < %s | FileCheck %s
 target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
 target triple = "i686-pc-windows-msvc18.0.0"
+
+@sink = external global double
 
 define void @test1() #0 personality ptr @__CxxFrameHandler3 {
 entry:
@@ -15,11 +17,15 @@ catch:
   br label %for.body
 
 for.cond.cleanup:
+  %sum.lcssa = phi double [ %sum.next, %for.body ]
+  store double %sum.lcssa, ptr @sink
   catchret from %1 to label %try.cont
 
 for.body:
   %i.07 = phi i32 [ 0, %catch ], [ %inc, %for.body ]
+  %sum = phi double [ 0.0, %catch ], [ %sum.next, %for.body ]
   %call = call double @floor(double 1.0) #1 [ "funclet"(token %1) ]
+  %sum.next = fadd reassoc double %sum, %call
   %inc = add nuw nsw i32 %i.07, 1
   %exitcond = icmp eq i32 %inc, 1024
   br i1 %exitcond, label %for.cond.cleanup, label %for.body

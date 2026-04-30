@@ -86,13 +86,13 @@ define void @pr45679(ptr %A) {
 ; VF2UF2-NEXT:    store i32 13, ptr [[TMP7]], align 1
 ; VF2UF2-NEXT:    br label [[PRED_STORE_CONTINUE3]]
 ; VF2UF2:       pred.store.continue2:
-; VF2UF2-NEXT:    [[TMP10:%.*]] = extractelement <2 x i1> [[TMP1]], i64 0
-; VF2UF2-NEXT:    br i1 [[TMP10]], label [[PRED_STORE_IF3:%.*]], label [[PRED_STORE_CONTINUE4:%.*]]
+; VF2UF2-NEXT:    [[TMP8:%.*]] = extractelement <2 x i1> [[TMP1]], i64 0
+; VF2UF2-NEXT:    br i1 [[TMP8]], label [[PRED_STORE_IF4:%.*]], label [[PRED_STORE_CONTINUE5:%.*]]
 ; VF2UF2:       pred.store.if3:
-; VF2UF2-NEXT:    [[TMP8:%.*]] = add i32 [[INDEX]], 2
-; VF2UF2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP8]]
-; VF2UF2-NEXT:    store i32 13, ptr [[TMP9]], align 1
-; VF2UF2-NEXT:    br label [[PRED_STORE_CONTINUE4]]
+; VF2UF2-NEXT:    [[TMP9:%.*]] = add i32 [[INDEX]], 2
+; VF2UF2-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP9]]
+; VF2UF2-NEXT:    store i32 13, ptr [[TMP10]], align 1
+; VF2UF2-NEXT:    br label [[PRED_STORE_CONTINUE5]]
 ; VF2UF2:       pred.store.continue4:
 ; VF2UF2-NEXT:    [[TMP11:%.*]] = extractelement <2 x i1> [[TMP1]], i64 1
 ; VF2UF2-NEXT:    br i1 [[TMP11]], label [[PRED_STORE_IF6:%.*]], label [[PRED_STORE_CONTINUE7]]
@@ -185,13 +185,13 @@ define void @load_variant(ptr noalias %a, ptr noalias %b) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i1> [[TMP0]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr [[TMP2]], align 8
-; CHECK-NEXT:    store i64 [[TMP3]], ptr [[B:%.*]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr [[TMP3]], align 8
+; CHECK-NEXT:    store i64 [[TMP4]], ptr [[B:%.*]], align 8
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; CHECK:       pred.store.continue:
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i1> [[TMP0]], i64 1
-; CHECK-NEXT:    br i1 [[TMP4]], label [[PRED_STORE_IF1:%.*]], label [[PRED_STORE_CONTINUE2:%.*]]
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP0]], i64 1
+; CHECK-NEXT:    br i1 [[TMP6]], label [[PRED_STORE_IF1:%.*]], label [[PRED_STORE_CONTINUE2:%.*]]
 ; CHECK:       pred.store.if1:
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP7]]
@@ -254,14 +254,14 @@ define void @load_variant(ptr noalias %a, ptr noalias %b) {
 ; VF2UF2-NEXT:    store i64 [[TMP10]], ptr [[B]], align 8
 ; VF2UF2-NEXT:    br label [[PRED_STORE_CONTINUE3]]
 ; VF2UF2:       pred.store.continue2:
-; VF2UF2-NEXT:    [[TMP13:%.*]] = extractelement <2 x i1> [[TMP1]], i64 0
-; VF2UF2-NEXT:    br i1 [[TMP13]], label [[PRED_STORE_IF3:%.*]], label [[PRED_STORE_CONTINUE4:%.*]]
+; VF2UF2-NEXT:    [[TMP12:%.*]] = extractelement <2 x i1> [[TMP1]], i64 0
+; VF2UF2-NEXT:    br i1 [[TMP12]], label [[PRED_STORE_IF4:%.*]], label [[PRED_STORE_CONTINUE5:%.*]]
 ; VF2UF2:       pred.store.if3:
-; VF2UF2-NEXT:    [[TMP14:%.*]] = add i64 [[INDEX]], 2
-; VF2UF2-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP14]]
-; VF2UF2-NEXT:    [[TMP12:%.*]] = load i64, ptr [[TMP11]], align 8
-; VF2UF2-NEXT:    store i64 [[TMP12]], ptr [[B]], align 8
-; VF2UF2-NEXT:    br label [[PRED_STORE_CONTINUE4]]
+; VF2UF2-NEXT:    [[TMP13:%.*]] = add i64 [[INDEX]], 2
+; VF2UF2-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP13]]
+; VF2UF2-NEXT:    [[TMP15:%.*]] = load i64, ptr [[TMP14]], align 8
+; VF2UF2-NEXT:    store i64 [[TMP15]], ptr [[B]], align 8
+; VF2UF2-NEXT:    br label [[PRED_STORE_CONTINUE5]]
 ; VF2UF2:       pred.store.continue4:
 ; VF2UF2-NEXT:    [[TMP17:%.*]] = extractelement <2 x i1> [[TMP1]], i64 1
 ; VF2UF2-NEXT:    br i1 [[TMP17]], label [[PRED_STORE_IF6:%.*]], label [[PRED_STORE_CONTINUE7]]

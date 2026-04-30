@@ -965,18 +965,18 @@ define void @update_2_uses_in_same_recipe_in_merged_block(i32 %k) {
 ; CHECK-NEXT:  vp<[[VP5:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION vp<[[VP5]]>
-; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = icmp ule vp<[[VP6]]>, vp<[[VP3]]>
+; CHECK-NEXT:      EMIT vp<[[VP_CAN:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION vp<[[VP5]]>
+; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = icmp ule vp<[[VP_CAN]]>, vp<[[VP3]]>
 ; CHECK-NEXT:    Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    <xVFxUF> pred.store: {
 ; CHECK-NEXT:      pred.store.entry:
-; CHECK-NEXT:        BRANCH-ON-MASK vp<[[VP7]]>
+; CHECK-NEXT:        BRANCH-ON-MASK vp<[[VP6]]>
 ; CHECK-NEXT:      Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      pred.store.if:
-; CHECK-NEXT:        vp<[[VP8:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:        REPLICATE ir<%gep.a> = getelementptr inbounds ir<@a>, ir<0>, vp<[[VP8]]>
+; CHECK-NEXT:        vp<[[VP7:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:        REPLICATE ir<%gep.a> = getelementptr inbounds ir<@a>, ir<0>, vp<[[VP7]]>
 ; CHECK-NEXT:        REPLICATE ir<%lv.a> = load ir<%gep.a>
 ; CHECK-NEXT:        REPLICATE ir<%div> = sdiv ir<%lv.a>, ir<%lv.a>
 ; CHECK-NEXT:        REPLICATE store ir<%div>, ir<%gep.a>
@@ -1055,16 +1055,16 @@ define void @recipe_in_merge_candidate_used_by_first_order_recurrence(i32 %k) {
 ; CHECK-NEXT:  vp<[[VP5:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      FIRST-ORDER-RECURRENCE-PHI ir<%for> = phi ir<0>, vp<[[VP9:%[0-9]+]]>
+; CHECK-NEXT:      FIRST-ORDER-RECURRENCE-PHI ir<%for> = phi ir<0>, vp<%{{[0-9]+}}>
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION vp<[[VP5]]>
-; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = icmp ule vp<[[VP7]]>, vp<[[VP3]]>
+; CHECK-NEXT:      EMIT vp<[[VP_CAN:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION vp<[[VP5]]>
+; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = icmp ule vp<[[VP_CAN]]>, vp<[[VP3]]>
 ; CHECK-NEXT:      REPLICATE ir<%gep.a> = getelementptr inbounds ir<@a>, ir<0>, vp<[[VP6]]>
 ; CHECK-NEXT:    Successor(s): pred.load
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    <xVFxUF> pred.load: {
 ; CHECK-NEXT:      pred.load.entry:
-; CHECK-NEXT:        BRANCH-ON-MASK vp<[[VP8]]>
+; CHECK-NEXT:        BRANCH-ON-MASK vp<[[VP7]]>
 ; CHECK-NEXT:      Successor(s): pred.load.if, pred.load.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      pred.load.if:
@@ -1072,22 +1072,22 @@ define void @recipe_in_merge_candidate_used_by_first_order_recurrence(i32 %k) {
 ; CHECK-NEXT:      Successor(s): pred.load.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      pred.load.continue:
-; CHECK-NEXT:        PHI-PREDICATED-INSTRUCTION vp<[[VP9]]> = ir<%lv.a>
+; CHECK-NEXT:        PHI-PREDICATED-INSTRUCTION vp<[[VP8:%[0-9]+]]> = ir<%lv.a>
 ; CHECK-NEXT:      No successors
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    Successor(s): loop.0
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    loop.0:
-; CHECK-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = first-order splice ir<%for>, vp<[[VP9]]>
+; CHECK-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = first-order splice ir<%for>, vp<[[VP8]]>
 ; CHECK-NEXT:    Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    <xVFxUF> pred.store: {
 ; CHECK-NEXT:      pred.store.entry:
-; CHECK-NEXT:        BRANCH-ON-MASK vp<[[VP8]]>
+; CHECK-NEXT:        BRANCH-ON-MASK vp<[[VP7]]>
 ; CHECK-NEXT:      Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      pred.store.if:
-; CHECK-NEXT:        REPLICATE ir<%div> = sdiv vp<[[VP10]]>, vp<[[VP9]]>
+; CHECK-NEXT:        REPLICATE ir<%div> = sdiv vp<[[VP9]]>, vp<[[VP8]]>
 ; CHECK-NEXT:        REPLICATE store ir<%div>, ir<%gep.a>
 ; CHECK-NEXT:      Successor(s): pred.store.continue
 ; CHECK-EMPTY:

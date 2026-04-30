@@ -425,7 +425,6 @@ define i32 @findlast_wider_iv_only_scalar_users(ptr %a, i64 %n) {
 ; CHECK:       [[DONE]]:
 ; CHECK-NEXT:    [[SEL_LCSSA:%.*]] = phi i32 [ [[SEL]], %[[LOOP]] ], [ [[TMP9]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i32 [[SEL_LCSSA]]
->>>>>>> origin/main
 ;
 entry:
   br label %loop
