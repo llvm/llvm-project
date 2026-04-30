@@ -449,6 +449,11 @@ void RegReAssign::setupConservativePass(
 }
 
 Error RegReAssign::runOnFunctions(BinaryContext &BC) {
+  if (!BC.isX86()) {
+    BC.errs() << "BOLT-ERROR: reg-reassign is supported only on X86\n";
+    exit(1);
+  }
+
   RegScore = std::vector<int64_t>(BC.MRI->getNumRegs(), 0);
   RankedRegs = std::vector<size_t>(BC.MRI->getNumRegs(), 0);
 
