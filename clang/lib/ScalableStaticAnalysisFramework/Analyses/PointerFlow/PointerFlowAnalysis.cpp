@@ -31,7 +31,8 @@ using namespace llvm;
 namespace {
 
 //===----------------------------------------------------------------------===//
-// PointerFlowAnalysis---a no-op analysis
+// PointerFlowAnalysis---converts PointerFlowEntitySummary(s) in an LUSummary to
+// a PointerFlowAnalysisResult
 //===----------------------------------------------------------------------===//
 
 // Serialized as a flat array of alternating [EntityId, EdgesArray, ...] pairs.
@@ -109,8 +110,7 @@ public:
                   const PointerFlowEntitySummary &Summary) override {
     auto EdgesOfEntity = getEdges(Summary);
 
-    this->getResult().Edges[Id] =
-        EdgeSet(EdgesOfEntity.begin(), EdgesOfEntity.end());
+    getResult().Edges[Id] = EdgeSet(EdgesOfEntity.begin(), EdgesOfEntity.end());
     return llvm::Error::success();
   }
 };
@@ -186,8 +186,7 @@ class UnsafeBufferReachableAnalysis
 
       if (I != SubGraph.end()) {
         for (const auto &EPL : I->second) {
-          auto [Ignored, Inserted] =
-              this->getResult().Reachables[Id].insert(EPL);
+          auto [Ignored, Inserted] = getResult().Reachables[Id].insert(EPL);
           if (Inserted)
             WorkList.push_back(&EPL);
         }
@@ -200,13 +199,13 @@ public:
   initialize(const PointerFlowAnalysisResult &Graph,
              const UnsafeBufferUsageAnalysisResult &Starter) override {
     this->Graph = &Graph.Edges;
-    assert(this->getResult().Reachables.empty());
-    this->getResult().Reachables.insert(Starter.begin(), Starter.end());
+    assert(getResult().Reachables.empty());
+    getResult().Reachables.insert(Starter.begin(), Starter.end());
     return llvm::Error::success();
   }
 
   llvm::Expected<bool> step() override {
-    auto &Reachables = this->getResult().Reachables;
+    auto &Reachables = getResult().Reachables;
     // Simple DFS:
     std::vector<EPLPtr> Worklist;
 
@@ -220,6 +219,7 @@ public:
 
       updateReachablesWithOutgoings(Node, Worklist);
     }
+    // This is not an iterative algorithm so stop iteration by retruning false:
     return false;
   }
 };
