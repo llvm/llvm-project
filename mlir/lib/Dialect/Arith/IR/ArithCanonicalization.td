@@ -433,6 +433,24 @@ def UIToFPOfExtUI :
         (Arith_UIToFPOp $x, $nneg1)>;
 
 //===----------------------------------------------------------------------===//
+// SubFOp
+//===----------------------------------------------------------------------===//
+
+// Match a constant (scalar or splat) -0.0 float.
+def IsNegZeroFloat :
+    Constraint<CPred<"m_NegZeroFloat().match($0)">,
+               "is negative-zero float constant">;
+
+// subf(-0, x) -> negf(x)
+// TODO: Verify if this canonicalization is safe when a rounding mode is
+// specified. For the moment, bail on custom rounding modes.
+def SubFOfNegZero :
+    Pat<(Arith_SubFOp (ConstantLikeMatcher AnyAttr:$c), $x, $fmf, $rm),
+        (Arith_NegFOp $x, $fmf),
+        [(IsNegZeroFloat $c),
+         (Constraint<CPred<"$0 == nullptr">, "default rounding mode"> $rm)]>;
+
+//===----------------------------------------------------------------------===//
 // MulFOp
 //===----------------------------------------------------------------------===//
 

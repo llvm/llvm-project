@@ -13,6 +13,7 @@ from lldbsuite.test import lldbtest
 import dummy_scripted_process
 
 
+@skipIfTargetDoesNotSupportThreads()
 class ScriptedProcesTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 

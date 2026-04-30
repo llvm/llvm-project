@@ -25,7 +25,6 @@
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
-#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -263,12 +262,13 @@ CodeExtractor::CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
                              bool AggregateArgs, BlockFrequencyInfo *BFI,
                              BranchProbabilityInfo *BPI, AssumptionCache *AC,
                              bool AllowVarArgs, bool AllowAlloca,
-                             BasicBlock *AllocationBlock, std::string Suffix,
-                             bool ArgsInZeroAddressSpace,
+                             BasicBlock *AllocationBlock,
+                             ArrayRef<BasicBlock *> DeallocationBlocks,
+                             std::string Suffix, bool ArgsInZeroAddressSpace,
                              bool VoidReturnWithSingleOutput)
     : DT(DT), AggregateArgs(AggregateArgs || AggregateArgsOpt), BFI(BFI),
       BPI(BPI), AC(AC), AllocationBlock(AllocationBlock),
-      AllowVarArgs(AllowVarArgs),
+      DeallocationBlocks(DeallocationBlocks), AllowVarArgs(AllowVarArgs),
       Blocks(buildExtractionBlockSet(BBs, DT, AllowVarArgs, AllowAlloca)),
       Suffix(Suffix), ArgsInZeroAddressSpace(ArgsInZeroAddressSpace),
       VoidReturnWithSingleOutput(VoidReturnWithSingleOutput) {}
@@ -443,6 +443,28 @@ CodeExtractor::findOrCreateBlockForHoisting(BasicBlock *CommonExitBlock) {
   // Now add the old exit block to the outline region.
   Blocks.insert(CommonExitBlock);
   return CommonExitBlock;
+}
+
+Instruction *CodeExtractor::allocateVar(IRBuilder<>::InsertPoint AllocaIP,
+                                        Type *VarType, const Twine &Name,
+                                        AddrSpaceCastInst **CastedAlloc) {
+  const DataLayout &DL = AllocaIP.getBlock()->getModule()->getDataLayout();
+  Instruction *Alloca = new AllocaInst(VarType, DL.getAllocaAddrSpace(),
+                                       nullptr, Name, AllocaIP.getPoint());
+
+  if (CastedAlloc && ArgsInZeroAddressSpace && DL.getAllocaAddrSpace() != 0) {
+    *CastedAlloc = new AddrSpaceCastInst(
+        Alloca, PointerType::get(AllocaIP.getBlock()->getContext(), 0),
+        Name + ".ascast");
+    (*CastedAlloc)->insertAfter(Alloca->getIterator());
+  }
+  return Alloca;
+}
+
+Instruction *CodeExtractor::deallocateVar(IRBuilder<>::InsertPoint, Value *,
+                                          Type *) {
+  // Default alloca instructions created by allocateVar are released implicitly.
+  return nullptr;
 }
 
 // Find the pair of life time markers for address 'Addr' that are either
@@ -1834,7 +1856,6 @@ CallInst *CodeExtractor::emitReplacerCall(
     std::vector<Value *> &Reloads) {
   LLVMContext &Context = oldFunction->getContext();
   Module *M = oldFunction->getParent();
-  const DataLayout &DL = M->getDataLayout();
 
   // This takes place of the original loop
   BasicBlock *codeReplacer =
@@ -1865,25 +1886,24 @@ CallInst *CodeExtractor::emitReplacerCall(
     if (StructValues.contains(output))
       continue;
 
-    AllocaInst *alloca = new AllocaInst(
-        output->getType(), DL.getAllocaAddrSpace(), nullptr,
-        output->getName() + ".loc", AllocaBlock->getFirstInsertionPt());
-    params.push_back(alloca);
-    ReloadOutputs.push_back(alloca);
+    Value *OutAlloc =
+        allocateVar(IRBuilder<>::InsertPoint(
+                        AllocaBlock, AllocaBlock->getFirstInsertionPt()),
+                    output->getType(), output->getName() + ".loc");
+    params.push_back(OutAlloc);
+    ReloadOutputs.push_back(OutAlloc);
   }
 
-  AllocaInst *Struct = nullptr;
+  Instruction *Struct = nullptr;
   if (!StructValues.empty()) {
-    Struct = new AllocaInst(StructArgTy, DL.getAllocaAddrSpace(), nullptr,
-                            "structArg", AllocaBlock->getFirstInsertionPt());
-    if (ArgsInZeroAddressSpace && DL.getAllocaAddrSpace() != 0) {
-      auto *StructSpaceCast = new AddrSpaceCastInst(
-          Struct, PointerType ::get(Context, 0), "structArg.ascast");
-      StructSpaceCast->insertAfter(Struct->getIterator());
+    AddrSpaceCastInst *StructSpaceCast = nullptr;
+    Struct = allocateVar(IRBuilder<>::InsertPoint(
+                             AllocaBlock, AllocaBlock->getFirstInsertionPt()),
+                         StructArgTy, "structArg", &StructSpaceCast);
+    if (StructSpaceCast)
       params.push_back(StructSpaceCast);
-    } else {
+    else
       params.push_back(Struct);
-    }
 
     unsigned AggIdx = 0;
     for (Value *input : inputs) {
@@ -2025,6 +2045,28 @@ CallInst *CodeExtractor::emitReplacerCall(
   // input objects in the extraction region by placing markers around the call.
   insertLifetimeMarkersSurroundingCall(oldFunction->getParent(), LifetimesStart,
                                        {}, call);
+
+  // Deallocate intermediate variables if they need explicit deallocation.
+  auto deallocVars = [&](BasicBlock *DeallocBlock,
+                         BasicBlock::iterator DeallocIP) {
+    int Index = 0;
+    for (Value *Output : outputs) {
+      if (!StructValues.contains(Output))
+        deallocateVar(IRBuilder<>::InsertPoint(DeallocBlock, DeallocIP),
+                      ReloadOutputs[Index++], Output->getType());
+    }
+
+    if (Struct)
+      deallocateVar(IRBuilder<>::InsertPoint(DeallocBlock, DeallocIP), Struct,
+                    StructArgTy);
+  };
+
+  if (DeallocationBlocks.empty()) {
+    deallocVars(codeReplacer, codeReplacer->end());
+  } else {
+    for (BasicBlock *DeallocationBlock : DeallocationBlocks)
+      deallocVars(DeallocationBlock, DeallocationBlock->getFirstInsertionPt());
+  }
 
   return call;
 }

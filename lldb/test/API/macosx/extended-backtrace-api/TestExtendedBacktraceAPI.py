@@ -4,6 +4,7 @@ import os
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test.lldbplatformutil import findBacktraceRecordingDylib
 from lldbsuite.test import lldbutil
 
 
@@ -21,25 +22,10 @@ class TestExtendedBacktraceAPI(TestBase):
         self.build()
         exe = self.getBuildArtifact("a.out")
 
-        # Get Xcode developer directory path.
-        # Try DEVELOPER_DIR environment variable first, then fall back to xcode-select.
-        xcode_dev_path = os.environ.get("DEVELOPER_DIR")
-
-        if not xcode_dev_path:
-            import subprocess
-
-            xcode_dev_path = (
-                subprocess.check_output(["xcode-select", "-p"]).decode("utf-8").strip()
-            )
-
-        # Check for libBacktraceRecording.dylib.
-        libbtr_path = os.path.join(
-            xcode_dev_path, "usr/lib/libBacktraceRecording.dylib"
-        )
-
+        libbtr_path = findBacktraceRecordingDylib()
         self.assertTrue(
-            os.path.isfile(libbtr_path),
-            f"libBacktraceRecording.dylib is not present at {libbtr_path}",
+            libbtr_path,
+            "libBacktraceRecording.dylib was not found on the system.",
         )
 
         self.assertTrue(

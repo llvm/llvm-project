@@ -2364,7 +2364,7 @@ protected:
 /// VPWidenPointerInductionRecipe), providing shared functionality, including
 /// retrieving the step value, induction descriptor and original phi node.
 class VPWidenInductionRecipe : public VPHeaderPHIRecipe {
-  const InductionDescriptor &IndDesc;
+  InductionDescriptor IndDesc;
 
 public:
   VPWidenInductionRecipe(unsigned char Kind, PHINode *IV, VPValue *Start,
@@ -2586,23 +2586,15 @@ class LLVM_ABI_FOR_TEST VPWidenPHIRecipe : public VPSingleDefRecipe,
   std::string Name;
 
 public:
-  /// Create a new VPWidenPHIRecipe for \p Phi with start value \p Start and
-  /// debug location \p DL.
-  VPWidenPHIRecipe(PHINode *Phi, VPValue *Start = nullptr,
+  /// Create a new VPWidenPHIRecipe with incoming values \p IncomingvValues,
+  /// debug location \p DL and \p Name.
+  VPWidenPHIRecipe(ArrayRef<VPValue *> IncomingValues,
                    DebugLoc DL = DebugLoc::getUnknown(), const Twine &Name = "")
-      : VPSingleDefRecipe(VPRecipeBase::VPWidenPHISC, {}, Phi, DL),
-        Name(Name.str()) {
-    if (Start)
-      addOperand(Start);
-  }
+      : VPSingleDefRecipe(VPRecipeBase::VPWidenPHISC, IncomingValues, DL),
+        Name(Name.str()) {}
 
   VPWidenPHIRecipe *clone() override {
-    auto *C =
-        new VPWidenPHIRecipe(cast_if_present<PHINode>(getUnderlyingValue()),
-                             getOperand(0), getDebugLoc(), Name);
-    for (VPValue *Op : llvm::drop_begin(operands()))
-      C->addOperand(Op);
-    return C;
+    return new VPWidenPHIRecipe(operands(), getDebugLoc(), Name);
   }
 
   ~VPWidenPHIRecipe() override = default;
@@ -3921,22 +3913,19 @@ class VPDerivedIVRecipe : public VPSingleDefRecipe {
   /// for floating point inductions.
   const FPMathOperator *FPBinOp;
 
-  /// Name to use for the generated IR instruction for the derived IV.
-  std::string Name;
-
 public:
   VPDerivedIVRecipe(const InductionDescriptor &IndDesc, VPIRValue *Start,
-                    VPValue *CanonicalIV, VPValue *Step, const Twine &Name = "")
+                    VPValue *CanonicalIV, VPValue *Step)
       : VPDerivedIVRecipe(
             IndDesc.getKind(),
             dyn_cast_or_null<FPMathOperator>(IndDesc.getInductionBinOp()),
-            Start, CanonicalIV, Step, Name) {}
+            Start, CanonicalIV, Step) {}
 
   VPDerivedIVRecipe(InductionDescriptor::InductionKind Kind,
                     const FPMathOperator *FPBinOp, VPIRValue *Start,
-                    VPValue *IV, VPValue *Step, const Twine &Name = "")
+                    VPValue *IV, VPValue *Step)
       : VPSingleDefRecipe(VPRecipeBase::VPDerivedIVSC, {Start, IV, Step}),
-        Kind(Kind), FPBinOp(FPBinOp), Name(Name.str()) {}
+        Kind(Kind), FPBinOp(FPBinOp) {}
 
   ~VPDerivedIVRecipe() override = default;
 
@@ -3947,9 +3936,9 @@ public:
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPDerivedIVSC)
 
-  /// Generate the transformed value of the induction at offset StartValue (1.
-  /// operand) + IV (2. operand) * StepValue (3, operand).
-  void execute(VPTransformState &State) override;
+  void execute(VPTransformState &State) override {
+    llvm_unreachable("Expected prior expansion of this recipe");
+  }
 
   /// Return the cost of this VPDerivedIVRecipe.
   InstructionCost computeCost(ElementCount VF,
@@ -3961,7 +3950,10 @@ public:
   Type *getScalarType() const { return getStartValue()->getType(); }
 
   VPIRValue *getStartValue() const { return cast<VPIRValue>(getOperand(0)); }
+  VPValue *getIndex() const { return getOperand(1); }
   VPValue *getStepValue() const { return getOperand(2); }
+  const FPMathOperator *getFPBinOp() const { return FPBinOp; }
+  InductionDescriptor::InductionKind getInductionKind() const { return Kind; }
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool usesFirstLaneOnly(const VPValue *Op) const override {

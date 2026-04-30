@@ -12,7 +12,7 @@ RWStructuredBuffer<float> Out;
 float foo(RWBuffer<float> Arr[3][2]) {
 // CHECK-NEXT: %[[Arr_1_Ptr:.*]] = getelementptr inbounds [3 x [2 x %"class.hlsl::RWBuffer"]], ptr %Arr, i32 0, i32 1
 // CHECK-NEXT: %[[Arr_1_0_Ptr:.*]] = getelementptr inbounds [2 x %"class.hlsl::RWBuffer"], ptr %[[Arr_1_Ptr]], i32 0, i32 0
-// CHECK-NEXT: %[[BufPtr:.*]] = call {{.*}} ptr @hlsl::RWBuffer<float>::operator[](unsigned int)(ptr {{.*}} %[[Arr_1_0_Ptr]], i32 noundef 0)
+// CHECK-NEXT: %[[BufPtr:.*]] = call {{.*}} ptr @hlsl::RWBuffer<float>::operator[](unsigned int) const(ptr {{.*}} %[[Arr_1_0_Ptr]], i32 noundef 0)
 // CHECK-NEXT: %[[Value:.*]] = load float, ptr %[[BufPtr]], align 4
 // CHECK-NEXT: ret float %[[Value]]
   return Arr[1][0][0];
@@ -70,7 +70,7 @@ void main(uint GI : SV_GroupThreadID) {
 
 // CHECK: %[[Ptr_Sub_2:.*]] = getelementptr inbounds  [3 x [2 x %"class.hlsl::RWBuffer"]], ptr %Sub, i32 0, i32 2
 // CHECK: %[[Ptr_Sub_2_1:.*]] = getelementptr inbounds [2 x %"class.hlsl::RWBuffer"], ptr %[[Ptr_Sub_2]], i32 0, i32 1
-// CHECK-NEXT: %[[BufPtr:.*]] = call {{.*}} ptr @hlsl::RWBuffer<float>::operator[](unsigned int)(ptr {{.*}} %[[Ptr_Sub_2_1]], i32 noundef 0)
+// CHECK-NEXT: %[[BufPtr:.*]] = call {{.*}} ptr @hlsl::RWBuffer<float>::operator[](unsigned int) const(ptr {{.*}} %[[Ptr_Sub_2_1]], i32 noundef 0)
 // CHECK-NEXT: %[[Sub_2_1_0_Value:.*]] = load float, ptr %[[BufPtr]], align 4
 // CHECK-NEXT: store float %[[Sub_2_1_0_Value]], ptr %a, align 4
   float a = Sub[2][1][0];

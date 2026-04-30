@@ -681,3 +681,101 @@ define void @vf_ordering_issue(ptr %pl, ptr %ps) {
 
   ret void
 }
+
+define void @constant_stride_reorder_data(ptr %pl, ptr %ps) {
+; CHECK-LABEL: define void @constant_stride_reorder_data(
+; CHECK-SAME: ptr [[PL:%.*]], ptr [[PS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[GEP_L0:%.*]] = getelementptr i8, ptr [[PL]], i64 0
+; CHECK-NEXT:    [[GEP_S0:%.*]] = getelementptr i8, ptr [[PS]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, ptr [[GEP_L0]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> poison, <8 x i32> <i32 0, i32 2, i32 1, i32 4, i32 7, i32 5, i32 6, i32 3>
+; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.v8i8.p0.i64(<8 x i8> [[TMP2]], ptr align 1 [[GEP_S0]], i64 2, <8 x i1> splat (i1 true), i32 8)
+; CHECK-NEXT:    ret void
+;
+  %gep_l0 = getelementptr i8, ptr %pl, i64 0
+  %gep_l1 = getelementptr i8, ptr %pl, i64 1
+  %gep_l2 = getelementptr i8, ptr %pl, i64 2
+  %gep_l3 = getelementptr i8, ptr %pl, i64 3
+  %gep_l4 = getelementptr i8, ptr %pl, i64 4
+  %gep_l5 = getelementptr i8, ptr %pl, i64 5
+  %gep_l6 = getelementptr i8, ptr %pl, i64 6
+  %gep_l7 = getelementptr i8, ptr %pl, i64 7
+
+  %load0  = load i8, ptr %gep_l0
+  %load1  = load i8, ptr %gep_l1
+  %load2  = load i8, ptr %gep_l2
+  %load3  = load i8, ptr %gep_l3
+  %load4  = load i8, ptr %gep_l4
+  %load5  = load i8, ptr %gep_l5
+  %load6  = load i8, ptr %gep_l6
+  %load7  = load i8, ptr %gep_l7
+
+  %gep_s0 = getelementptr i8, ptr %ps, i64 0
+  %gep_s1 = getelementptr i8, ptr %ps, i64 2
+  %gep_s2 = getelementptr i8, ptr %ps, i64 4
+  %gep_s3 = getelementptr i8, ptr %ps, i64 6
+  %gep_s4 = getelementptr i8, ptr %ps, i64 8
+  %gep_s5 = getelementptr i8, ptr %ps, i64 10
+  %gep_s6 = getelementptr i8, ptr %ps, i64 12
+  %gep_s7 = getelementptr i8, ptr %ps, i64 14
+
+  store i8 %load0, ptr %gep_s0
+  store i8 %load2, ptr %gep_s1
+  store i8 %load1, ptr %gep_s2
+  store i8 %load7, ptr %gep_s3
+  store i8 %load3, ptr %gep_s4
+  store i8 %load5, ptr %gep_s5
+  store i8 %load6, ptr %gep_s6
+  store i8 %load4, ptr %gep_s7
+
+  ret void
+}
+
+define void @constant_stride_reorder_geps(ptr %pl, ptr %ps) {
+; CHECK-LABEL: define void @constant_stride_reorder_geps(
+; CHECK-SAME: ptr [[PL:%.*]], ptr [[PS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[GEP_L0:%.*]] = getelementptr i8, ptr [[PL]], i64 0
+; CHECK-NEXT:    [[GEP_S0:%.*]] = getelementptr i8, ptr [[PS]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, ptr [[GEP_L0]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> poison, <8 x i32> <i32 0, i32 2, i32 1, i32 7, i32 3, i32 5, i32 6, i32 4>
+; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.v8i8.p0.i64(<8 x i8> [[TMP2]], ptr align 1 [[GEP_S0]], i64 2, <8 x i1> splat (i1 true), i32 8)
+; CHECK-NEXT:    ret void
+;
+  %gep_l0 = getelementptr i8, ptr %pl, i64 0
+  %gep_l1 = getelementptr i8, ptr %pl, i64 1
+  %gep_l2 = getelementptr i8, ptr %pl, i64 2
+  %gep_l3 = getelementptr i8, ptr %pl, i64 3
+  %gep_l4 = getelementptr i8, ptr %pl, i64 4
+  %gep_l5 = getelementptr i8, ptr %pl, i64 5
+  %gep_l6 = getelementptr i8, ptr %pl, i64 6
+  %gep_l7 = getelementptr i8, ptr %pl, i64 7
+
+  %load0  = load i8, ptr %gep_l0
+  %load1  = load i8, ptr %gep_l1
+  %load2  = load i8, ptr %gep_l2
+  %load3  = load i8, ptr %gep_l3
+  %load4  = load i8, ptr %gep_l4
+  %load5  = load i8, ptr %gep_l5
+  %load6  = load i8, ptr %gep_l6
+  %load7  = load i8, ptr %gep_l7
+
+  %gep_s0 = getelementptr i8, ptr %ps, i64 0
+  %gep_s1 = getelementptr i8, ptr %ps, i64 2
+  %gep_s2 = getelementptr i8, ptr %ps, i64 4
+  %gep_s3 = getelementptr i8, ptr %ps, i64 6
+  %gep_s4 = getelementptr i8, ptr %ps, i64 8
+  %gep_s5 = getelementptr i8, ptr %ps, i64 10
+  %gep_s6 = getelementptr i8, ptr %ps, i64 12
+  %gep_s7 = getelementptr i8, ptr %ps, i64 14
+
+  store i8 %load0, ptr %gep_s0
+  store i8 %load1, ptr %gep_s2
+  store i8 %load2, ptr %gep_s1
+  store i8 %load3, ptr %gep_s7
+  store i8 %load4, ptr %gep_s3
+  store i8 %load5, ptr %gep_s5
+  store i8 %load6, ptr %gep_s6
+  store i8 %load7, ptr %gep_s4
+
+  ret void
+}

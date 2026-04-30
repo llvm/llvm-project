@@ -24,12 +24,7 @@
 #define LIBC_COPT_RWLOCK_DEFAULT_SPIN_COUNT 100
 #endif
 
-#ifndef LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY
-#define LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY 1
-#warning "LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY is not defined, defaulting to 1"
-#endif
-
-#if LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY
+#ifdef LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY
 #include "src/__support/time/monotonicity.h"
 #endif
 
@@ -361,7 +356,7 @@ private:
   LIBC_INLINE LockResult
   lock_slow(cpp::optional<Futex::Timeout> timeout = cpp::nullopt,
             unsigned spin_count = LIBC_COPT_RWLOCK_DEFAULT_SPIN_COUNT) {
-#if LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY
+#ifdef LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY
     // Phase 2: convert the timeout if necessary.
     if (timeout)
       ensure_monotonicity(*timeout);
