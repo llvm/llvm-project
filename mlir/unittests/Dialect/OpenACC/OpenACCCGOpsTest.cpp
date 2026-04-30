@@ -114,10 +114,11 @@ protected:
 // ComputeRegionOp::isEffectivelySerial
 //===----------------------------------------------------------------------===//
 
-TEST_F(OpenACCCGOpsTest, IsEffectivelySerialNoLaunchArgs) {
+TEST_F(OpenACCCGOpsTest, IsEffectivelySerialFalseWhenNoLaunchArgs) {
   HostContext host(context, loc, b);
   ComputeRegionOp cr = makeComputeRegion(host, {});
-  EXPECT_TRUE(cr.isEffectivelySerial());
+  // No launch configuration yet - not treated as effectively serial.
+  EXPECT_FALSE(cr.isEffectivelySerial());
   EXPECT_TRUE(succeeded(host.module->verify()));
 }
 

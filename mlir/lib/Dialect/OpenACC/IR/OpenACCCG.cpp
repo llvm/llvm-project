@@ -502,6 +502,11 @@ ComputeRegionOp::wireHoistedValueThroughIns(Value value) {
 bool ComputeRegionOp::isEffectivelySerial() {
   auto *ctx = getContext();
 
+  // If there are no launch arguments, the compute region's parallelism
+  // has not yet been planned - and thus return NOT effectively serial.
+  if (getLaunchArgs().empty())
+    return false;
+
   if (getLaunchArg(GPUParallelDimAttr::seqDim(ctx)))
     return true;
 
