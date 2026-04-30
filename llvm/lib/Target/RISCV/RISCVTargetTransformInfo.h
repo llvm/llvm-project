@@ -121,7 +121,7 @@ public:
   bool enableScalableVectorization() const override {
     return ST->hasVInstructions();
   }
-  bool preferPredicateOverEpilogue(TailFoldingInfo *TFI) const override {
+  bool preferTailFoldingOverEpilogue(TailFoldingInfo *TFI) const override {
     return ST->hasVInstructions();
   }
   TailFoldingStyle getPreferredTailFoldingStyle() const override {
@@ -223,6 +223,11 @@ public:
   InstructionCost
   getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty, FastMathFlags FMF,
                          TTI::TargetCostKind CostKind) const override;
+
+  std::optional<InstructionCost> getCombinedArithmeticInstructionCost(
+      unsigned ISDOpcode, Type *Ty, TTI::TargetCostKind CostKind,
+      TTI::OperandValueInfo Opd1Info, TTI::OperandValueInfo Opd2Info,
+      ArrayRef<const Value *> Args, const Instruction *CxtI) const;
 
   InstructionCost
   getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
@@ -364,11 +369,43 @@ public:
   TargetTransformInfo::VPLegalization
   getVPLegalizationStrategy(const VPIntrinsic &PI) const override {
     using VPLegalization = TargetTransformInfo::VPLegalization;
+    static const Intrinsic::ID Supported[] = {
+        Intrinsic::experimental_vp_strided_load,
+        Intrinsic::experimental_vp_strided_store,
+        Intrinsic::experimental_vp_reverse,
+        Intrinsic::experimental_vp_splice,
+        Intrinsic::vp_cttz_elts,
+        Intrinsic::vp_gather,
+        Intrinsic::vp_load,
+        Intrinsic::vp_load_ff,
+        Intrinsic::vp_merge,
+        Intrinsic::vp_reduce_add,
+        Intrinsic::vp_reduce_and,
+        Intrinsic::vp_reduce_fadd,
+        Intrinsic::vp_reduce_fmax,
+        Intrinsic::vp_reduce_fmaximum,
+        Intrinsic::vp_reduce_fmin,
+        Intrinsic::vp_reduce_fminimum,
+        Intrinsic::vp_reduce_fmul,
+        Intrinsic::vp_reduce_mul,
+        Intrinsic::vp_reduce_or,
+        Intrinsic::vp_reduce_smax,
+        Intrinsic::vp_reduce_smin,
+        Intrinsic::vp_reduce_umax,
+        Intrinsic::vp_reduce_umin,
+        Intrinsic::vp_reduce_xor,
+        Intrinsic::vp_scatter,
+        Intrinsic::vp_sdiv,
+        Intrinsic::vp_srem,
+        Intrinsic::vp_store,
+        Intrinsic::vp_udiv,
+        Intrinsic::vp_urem};
     if (!ST->hasVInstructions() ||
         (PI.getIntrinsicID() == Intrinsic::vp_reduce_mul &&
          cast<VectorType>(PI.getArgOperand(1)->getType())
                  ->getElementType()
-                 ->getIntegerBitWidth() != 1))
+                 ->getIntegerBitWidth() != 1) ||
+        !is_contained(Supported, PI.getIntrinsicID()))
       return VPLegalization(VPLegalization::Discard, VPLegalization::Convert);
     return VPLegalization(VPLegalization::Legal, VPLegalization::Legal);
   }
@@ -395,6 +432,7 @@ public:
     case RecurKind::UMax:
     case RecurKind::FMin:
     case RecurKind::FMax:
+    case RecurKind::FindLast:
       return true;
     case RecurKind::AnyOf:
     case RecurKind::FAdd:

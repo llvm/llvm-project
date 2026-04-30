@@ -668,7 +668,8 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       std::make_pair(SanitizerKind::KCFI, SanitizerKind::Function),
       std::make_pair(SanitizerKind::Realtime,
                      SanitizerKind::Address | SanitizerKind::Thread |
-                         SanitizerKind::Undefined | SanitizerKind::Memory),
+                         SanitizerKind::Undefined | SanitizerKind::Memory |
+                         SanitizerKind::Type),
       std::make_pair(SanitizerKind::AllocToken,
                      SanitizerKind::Address | SanitizerKind::HWAddress |
                          SanitizerKind::KernelAddress |

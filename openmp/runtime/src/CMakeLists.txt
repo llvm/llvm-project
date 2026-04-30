@@ -86,6 +86,7 @@ else()
     kmp_csupport.cpp
     kmp_debug.cpp
     kmp_itt.cpp
+    kmp_invoke_microtask.cpp
     kmp_environment.cpp
     kmp_error.cpp
     kmp_global.cpp

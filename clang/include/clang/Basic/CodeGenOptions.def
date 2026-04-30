@@ -78,6 +78,8 @@ CODEGENOPT(CallGraphSection, 1, 0, Benign) ///< Emit a call graph section into t
                                            ///< object file.
 CODEGENOPT(EmitCallSiteInfo, 1, 0, Benign) ///< Emit call site info only in the case of
                                            ///< '-g' + 'O>0' level.
+/// Show inlining chain notes for [[gnu::warning/error]] diagnostics.
+CODEGENOPT(ShowInliningChain, 1, 0, Benign)
 CODEGENOPT(IndirectTlsSegRefs, 1, 0, Benign) ///< Set when -mno-tls-direct-seg-refs
                                              ///< is specified.
 CODEGENOPT(DisableTailCalls  , 1, 0, Benign) ///< Do not emit tail calls.
@@ -334,6 +336,7 @@ CODEGENOPT(SoftFloat         , 1, 0, Benign) ///< -soft-float.
 CODEGENOPT(SpeculativeLoadHardening, 1, 0, Benign) ///< Enable speculative load hardening.
 CODEGENOPT(FineGrainedBitfieldAccesses, 1, 0, Benign) ///< Enable fine-grained bitfield accesses.
 CODEGENOPT(StrictEnums       , 1, 0, Benign) ///< Optimize based on strict enum definition.
+ENUM_CODEGENOPT(LoadBoolFromMem, BoolFromMem, 2, BoolFromMem::Strict, Benign) ///> Optimize based on in-memory bool values being 0 or 1.
 CODEGENOPT(StrictVTablePointers, 1, 0, Benign) ///< Optimize based on the strict vtable pointers
 CODEGENOPT(TimePasses        , 1, 0, Benign) ///< Set when -ftime-report, -ftime-report=, -ftime-report-json, or -stats-file-timers is enabled.
 CODEGENOPT(TimePassesPerRun  , 1, 0, Benign) ///< Set when -ftime-report=per-pass-run is enabled.
@@ -514,6 +517,10 @@ CODEGENOPT(AllResourcesBound, 1, 0, Benign)
 /// Windows.
 ENUM_CODEGENOPT(WinX64EHUnwindV2, WinX64EHUnwindV2Mode,
                 2, WinX64EHUnwindV2Mode::Disabled, Benign)
+
+/// Controls the mechanism used for Control Flow Guard (CFG) on Windows.
+ENUM_CODEGENOPT(WinControlFlowGuardMechanism, ControlFlowGuardMechanism,
+                2, ControlFlowGuardMechanism::Automatic, Benign)
 
 /// Adds attributes that prevent outlining (`-mno-outline`)
 CODEGENOPT(DisableOutlining, 1, 0, Benign)

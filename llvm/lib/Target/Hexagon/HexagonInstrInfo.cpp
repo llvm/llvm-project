@@ -4631,7 +4631,7 @@ unsigned HexagonInstrInfo::getSize(const MachineInstr &MI) const {
   if (BranchRelaxAsmLarge && MI.getOpcode() == Hexagon::INLINEASM) {
     const MachineBasicBlock &MBB = *MI.getParent();
     const MachineFunction *MF = MBB.getParent();
-    const MCAsmInfo *MAI = MF->getTarget().getMCAsmInfo();
+    const MCAsmInfo &MAI = MF->getTarget().getMCAsmInfo();
 
     // Count the number of register definitions to find the asm string.
     unsigned NumDefs = 0;
@@ -4642,7 +4642,7 @@ unsigned HexagonInstrInfo::getSize(const MachineInstr &MI) const {
     assert(MI.getOperand(NumDefs).isSymbol() && "No asm string?");
     // Disassemble the AsmStr and approximate number of instructions.
     const char *AsmStr = MI.getOperand(NumDefs).getSymbolName();
-    Size = getInlineAsmLength(AsmStr, *MAI);
+    Size = getInlineAsmLength(AsmStr, MAI);
   }
 
   return Size;
@@ -4909,9 +4909,10 @@ bool HexagonInstrInfo::usesQF32Operand(MachineInstr *MI, unsigned Index) const {
     return Info.Input1 == HexagonII::RegType::QF32 ||
            Info.Input2 == HexagonII::RegType::QF32 ||
            Info.Input3 == HexagonII::RegType::QF32;
-  default:
-    llvm_unreachable("Incorrect input machine operand index encountered!");
+  default: // No instruction with more than 3 operands uses QF32.
+    return false;
   }
+  return false;
 }
 
 bool HexagonInstrInfo::usesQF16Operand(MachineInstr *MI, unsigned Index) const {
@@ -4927,9 +4928,10 @@ bool HexagonInstrInfo::usesQF16Operand(MachineInstr *MI, unsigned Index) const {
     return Info.Input1 == HexagonII::RegType::QF16 ||
            Info.Input2 == HexagonII::RegType::QF16 ||
            Info.Input3 == HexagonII::RegType::QF16;
-  default:
-    llvm_unreachable("Incorrect input machine operand index encountered!");
+  default: // No instruction with more than 3 operands uses QF16.
+    return false;
   }
+  return false;
 }
 
 bool HexagonInstrInfo::usesQFOperand(MachineInstr *MI, unsigned Index) const {

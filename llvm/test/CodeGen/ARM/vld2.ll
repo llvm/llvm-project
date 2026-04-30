@@ -194,13 +194,12 @@ define <4 x float> @vld2Qf(ptr %A) nounwind {
   ret <4 x float> %tmp4
 }
 
-; FIXME: Do not update with an invalid increment
 define ptr @test_or_update(ptr %p, ptr %q) {
 ; CHECK-LABEL: test_or_update:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    orr r0, r0, #3
-; CHECK-NEXT:    mov r2, #2
-; CHECK-NEXT:    vld2.32 {d16, d17}, [r0], r2
+; CHECK-NEXT:    orr r2, r0, #3
+; CHECK-NEXT:    add r0, r0, #2
+; CHECK-NEXT:    vld2.32 {d16, d17}, [r2]
 ; CHECK-NEXT:    vstr d16, [r1]
 ; CHECK-NEXT:    mov pc, lr
   %p1 = ptrtoint ptr %p to i32

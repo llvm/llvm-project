@@ -1640,7 +1640,7 @@ bool SIFoldOperandsImpl::tryConstantFoldOp(MachineInstr *MI) const {
       TII->mutateAndCleanupImplicit(*MI, TII->get(AMDGPU::COPY));
     } else if (Src1Val == -1) {
       // y = or x, -1 => y = v_mov_b32 -1
-      MI->removeOperand(Src1Idx);
+      MI->removeOperand(Src0Idx);
       TII->mutateAndCleanupImplicit(
           *MI, TII->get(getMovOpc(Opc == AMDGPU::S_OR_B32)));
     } else

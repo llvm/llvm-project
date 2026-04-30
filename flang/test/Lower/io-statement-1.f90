@@ -1,4 +1,4 @@
-! RUN: bbc %s -emit-fir -hlfir=false -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck %s
 ! UNSUPPORTED: system-windows
 
  logical :: existsvar
@@ -6,75 +6,76 @@
  real :: a(100)
 
   ! CHECK-LABEL: _QQmain
-  ! CHECK: call {{.*}}BeginOpenUnit
-  ! CHECK-DAG: call {{.*}}SetFile
-  ! CHECK-DAG: call {{.*}}SetAccess
-  ! CHECK: call {{.*}}EndIoStatement
+  ! CHECK: fir.call @_FortranAioBeginOpenUnit
+  ! CHECK-DAG: fir.call @_FortranAioSetFile
+  ! CHECK-DAG: fir.call @_FortranAioSetAccess
+  ! CHECK: fir.call @_FortranAioEndIoStatement
   open(8, file="foo", access="sequential")
 
-  ! CHECK: call {{.*}}BeginBackspace
-  ! CHECK: call {{.*}}EndIoStatement
+  ! CHECK: fir.call @_FortranAioBeginBackspace
+  ! CHECK: fir.call @_FortranAioEndIoStatement
   backspace(8)
 
-  ! CHECK: call {{.*}}BeginFlush
-  ! CHECK: call {{.*}}EndIoStatement
+  ! CHECK: fir.call @_FortranAioBeginFlush
+  ! CHECK: fir.call @_FortranAioEndIoStatement
   flush(8)
 
-  ! CHECK: call {{.*}}BeginRewind
-  ! CHECK: call {{.*}}EndIoStatement
+  ! CHECK: fir.call @_FortranAioBeginRewind
+  ! CHECK: fir.call @_FortranAioEndIoStatement
   rewind(8)
 
-  ! CHECK: call {{.*}}BeginEndfile
-  ! CHECK: call {{.*}}EndIoStatement
+  ! CHECK: fir.call @_FortranAioBeginEndfile
+  ! CHECK: fir.call @_FortranAioEndIoStatement
   endfile(8)
 
-  ! CHECK: call {{.*}}BeginWaitAll(%{{.*}}, %{{.*}}, %{{.*}})
-  ! CHECK: call {{.*}}EndIoStatement
+  ! CHECK: fir.call @_FortranAioBeginWaitAll(%{{.*}}, %{{.*}}, %{{.*}})
+  ! CHECK: fir.call @_FortranAioEndIoStatement
   wait(unit=8)
 
-  ! CHECK: call {{.*}}BeginExternalListInput
-  ! CHECK: call {{.*}}InputInteger
-  ! CHECK: call {{.*}}InputReal32
-  ! CHECK: call {{.*}}EndIoStatement
+  ! CHECK: fir.call @_FortranAioBeginExternalListInput
+  ! CHECK: fir.call @_FortranAioInputInteger
+  ! CHECK: fir.call @_FortranAioInputReal32
+  ! CHECK: fir.call @_FortranAioEndIoStatement
   read (8,*) i, f
 
-  ! CHECK: call {{.*}}BeginExternalListOutput
-  ! CHECK: call {{.*}}OutputInteger32
-  ! CHECK: call {{.*}}OutputReal32
-  ! CHECK: call {{.*}}EndIoStatement
+  ! CHECK: fir.call @_FortranAioBeginExternalListOutput
+  ! CHECK: fir.call @_FortranAioOutputInteger32
+  ! CHECK: fir.call @_FortranAioOutputReal32
+  ! CHECK: fir.call @_FortranAioEndIoStatement
   write (8,*) i, f
 
-  ! CHECK: call {{.*}}BeginClose
-  ! CHECK: call {{.*}}EndIoStatement
+  ! CHECK: fir.call @_FortranAioBeginClose
+  ! CHECK: fir.call @_FortranAioEndIoStatement
   close(8)
 
-  ! CHECK: call {{.*}}BeginExternalListOutput
-  ! CHECK: call {{.*}}OutputAscii
-  ! CHECK: call {{.*}}EndIoStatement
+  ! CHECK: fir.call @_FortranAioBeginExternalListOutput
+  ! CHECK: fir.call @_FortranAioOutputAscii
+  ! CHECK: fir.call @_FortranAioEndIoStatement
   print *, "A literal string"
 
-  ! CHECK: call {{.*}}BeginInquireUnit
-  ! CHECK: call {{.*}}EndIoStatement
+  ! CHECK: fir.call @_FortranAioBeginInquireUnit
+  ! CHECK: fir.call @_FortranAioEndIoStatement
   inquire(4, EXIST=existsvar)
 
-  ! CHECK: call {{.*}}BeginInquireFile
-  ! CHECK: call {{.*}}EndIoStatement
+  ! CHECK: fir.call @_FortranAioBeginInquireFile
+  ! CHECK: fir.call @_FortranAioEndIoStatement
   inquire(FILE="fail.f90", EXIST=existsvar)
 
-  ! CHECK: call {{.*}}BeginInquireIoLength
-  ! CHECK-COUNT-3: call {{.*}}OutputDescriptor
-  ! CHECK: call {{.*}}EndIoStatement
+  ! CHECK: fir.call @_FortranAioBeginInquireIoLength
+  ! CHECK-COUNT-3: fir.call @_FortranAioOutputDescriptor
+  ! CHECK: fir.call @_FortranAioEndIoStatement
   inquire (iolength=length) existsvar, length, a
 end
 
 ! CHECK-LABEL: internalnamelistio
 subroutine internalNamelistIO()
-  ! CHECK: %[[internal:[0-9]+]] = fir.alloca !fir.char<1,12> {bindc_name = "internal"
+  ! CHECK: %[[internal_var:.*]] = fir.alloca !fir.char<1,12> {bindc_name = "internal"
+  ! CHECK: %[[internal_decl:.*]]:2 = hlfir.declare %[[internal_var]]
   character(12) :: internal
   integer :: x = 123
   namelist /nml/x
-  ! CHECK: %[[internal_:[0-9]+]] = fir.convert %[[internal]] : (!fir.ref<!fir.char<1,12>>) -> !fir.ref<i8>
-  ! CHECK: %[[cookie:[0-9]+]] = fir.call @_FortranAioBeginInternalListOutput(%[[internal_]]
+  ! CHECK: %[[internal_ptr:.*]] = fir.convert %[[internal_decl]]#0 : (!fir.ref<!fir.char<1,12>>) -> !fir.ref<i8>
+  ! CHECK: %[[cookie:.*]] = fir.call @_FortranAioBeginInternalListOutput(%[[internal_ptr]]
   ! CHECK: fir.call @_FortranAioOutputNamelist(%[[cookie]]
   ! CHECK: fir.call @_FortranAioEndIoStatement(%[[cookie]]
   write(internal,nml=nml)
@@ -89,28 +90,28 @@ subroutine inquire_test(ch, i, b)
   integer :: id_func
 
   ! CHARACTER
-  ! CHECK: %[[sugar:.*]] = fir.call {{.*}}BeginInquireUnit
-  ! CHECK: call {{.*}}InquireCharacter(%[[sugar]], %c{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<i8>, i64, !fir.ref<i8>, i64) -> i1
-  ! CHECK: call {{.*}}EndIoStatement
+  ! CHECK: %[[sugar:.*]] = fir.call @_FortranAioBeginInquireUnit
+  ! CHECK: fir.call @_FortranAioInquireCharacter(%[[sugar]], %c{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<i8>, i64, !fir.ref<i8>, i64) -> i1
+  ! CHECK: fir.call @_FortranAioEndIoStatement
   inquire(88, name=ch)
 
   ! INTEGER
-  ! CHECK: %[[oatmeal:.*]] = fir.call {{.*}}BeginInquireUnit
-  ! CHECK: call @_FortranAioInquireInteger64(%[[oatmeal]], %c{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<i8>, i64, !fir.ref<i64>, i32) -> i1
-  ! CHECK: call {{.*}}EndIoStatement
+  ! CHECK: %[[oatmeal:.*]] = fir.call @_FortranAioBeginInquireUnit
+  ! CHECK: fir.call @_FortranAioInquireInteger64(%[[oatmeal]], %{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<i8>, i64, !fir.ref<i64>, i32) -> i1
+  ! CHECK: fir.call @_FortranAioEndIoStatement
   inquire(89, pos=i)
 
   ! LOGICAL
-  ! CHECK: %[[snicker:.*]] = fir.call {{.*}}BeginInquireUnit
-  ! CHECK: call @_FortranAioInquireLogical(%[[snicker]], %c{{.*}}, %[[b:.*]]) {{.*}}: (!fir.ref<i8>, i64, !fir.ref<i1>) -> i1
-  ! CHECK: call {{.*}}EndIoStatement
+  ! CHECK: %[[snicker:.*]] = fir.call @_FortranAioBeginInquireUnit
+  ! CHECK: fir.call @_FortranAioInquireLogical(%[[snicker]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<i8>, i64, !fir.ref<i1>) -> i1
+  ! CHECK: fir.call @_FortranAioEndIoStatement
   inquire(90, opened=b)
 
   ! PENDING with ID
-  ! CHECK-DAG: %[[chip:.*]] = fir.call {{.*}}BeginInquireUnit
+  ! CHECK-DAG: %[[chip:.*]] = fir.call @_FortranAioBeginInquireUnit
   ! CHECK-DAG: fir.call @_QPid_func
-  ! CHECK: call @_FortranAioInquirePendingId(%[[chip]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<i8>, i32, !fir.ref<i1>) -> i1
-  ! CHECK: call {{.*}}EndIoStatement
+  ! CHECK: fir.call @_FortranAioInquirePendingId(%[[chip]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<i8>, i32, !fir.ref<i1>) -> i1
+  ! CHECK: fir.call @_FortranAioEndIoStatement
   inquire(91, id=id_func(), pending=b)
 end subroutine inquire_test
 

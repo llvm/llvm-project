@@ -1858,9 +1858,9 @@ class ImageDimIntrinsicInfo<AMDGPUImageDimIntrinsic I> {
   bits<8> CachePolicyIndex = DimEval.CachePolicyArgIndex;
 
   bits<8> BiasTyArg = !add(I.P.NumRetAndDataAnyTypes,
-    !if(!eq(NumOffsetArgs, 0), 0, I.P.ExtraAddrArgs[0].Type.isAny));
+    !if(!eq(NumOffsetArgs, 0), 0, !isa<LLVMAnyType>(I.P.ExtraAddrArgs[0].Type)));
   bits<8> GradientTyArg = !add(I.P.NumRetAndDataAnyTypes,
-    !foldl(0, I.P.ExtraAddrArgs, cnt, arg, !add(cnt, arg.Type.isAny)));
+    !foldl(0, I.P.ExtraAddrArgs, cnt, arg, !add(cnt, !isa<LLVMAnyType>(arg.Type))));
   bits<8> CoordTyArg = !add(GradientTyArg, !if(I.P.Gradients, 1, 0));
 }
 

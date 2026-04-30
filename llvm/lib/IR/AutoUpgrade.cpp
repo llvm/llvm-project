@@ -1047,14 +1047,17 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
               cast<VectorType>(F->getReturnType())->getElementType();
           ElementCount EC =
               cast<VectorType>(F->arg_begin()->getType())->getElementCount();
+          assert(F->arg_size() == 2 &&
+                 "Expected 2 arguments for ld* intrinsic.");
+          Type *PtrTy = F->getArg(1)->getType();
           Type *Ty = VectorType::get(ScalarTy, EC);
           static const Intrinsic::ID LoadIDs[] = {
               Intrinsic::aarch64_sve_ld2_sret,
               Intrinsic::aarch64_sve_ld3_sret,
               Intrinsic::aarch64_sve_ld4_sret,
           };
-          NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(),
-                                                    LoadIDs[Name[0] - '2'], Ty);
+          NewFn = Intrinsic::getOrInsertDeclaration(
+              F->getParent(), LoadIDs[Name[0] - '2'], {Ty, PtrTy});
           return true;
         }
         return false; // No other 'aarch64.sve.ld*'.
@@ -1307,16 +1310,28 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         break; // No other 'amdgcn.atomic.*'
       }
 
+      switch (F->getIntrinsicID()) {
+      default:
+        break;
       // Legacy wmma iu intrinsics without the optional clamp operand.
-      if (F->getIntrinsicID() == Intrinsic::amdgcn_wmma_i32_16x16x64_iu8 &&
-          F->arg_size() == 7) {
-        NewFn = nullptr;
-        return true;
-      }
-      if (F->getIntrinsicID() == Intrinsic::amdgcn_swmmac_i32_16x16x128_iu8 &&
-          F->arg_size() == 8) {
-        NewFn = nullptr;
-        return true;
+      case Intrinsic::amdgcn_wmma_i32_16x16x64_iu8:
+        if (F->arg_size() == 7) {
+          NewFn = nullptr;
+          return true;
+        }
+        break;
+      case Intrinsic::amdgcn_swmmac_i32_16x16x128_iu8:
+      case Intrinsic::amdgcn_wmma_f32_16x16x4_f32:
+      case Intrinsic::amdgcn_wmma_f32_16x16x32_bf16:
+      case Intrinsic::amdgcn_wmma_f32_16x16x32_f16:
+      case Intrinsic::amdgcn_wmma_f16_16x16x32_f16:
+      case Intrinsic::amdgcn_wmma_bf16_16x16x32_bf16:
+      case Intrinsic::amdgcn_wmma_bf16f32_16x16x32_bf16:
+        if (F->arg_size() == 8) {
+          NewFn = nullptr;
+          return true;
+        }
+        break;
       }
 
       if (Name.consume_front("ds.") || Name.consume_front("global.atomic.") ||
@@ -4715,6 +4730,48 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
     return UpgradeLegacyWMMAIUIntrinsicCall(F, CI, Builder, {T1, T2, T3, T4});
   }
 
+  switch (F->getIntrinsicID()) {
+  default:
+    break;
+  case Intrinsic::amdgcn_wmma_f32_16x16x4_f32:
+  case Intrinsic::amdgcn_wmma_f32_16x16x32_bf16:
+  case Intrinsic::amdgcn_wmma_f32_16x16x32_f16:
+  case Intrinsic::amdgcn_wmma_f16_16x16x32_f16:
+  case Intrinsic::amdgcn_wmma_bf16_16x16x32_bf16:
+  case Intrinsic::amdgcn_wmma_bf16f32_16x16x32_bf16: {
+    // Drop src0 and src1 modifiers.
+    const Value *Op0 = CI->getArgOperand(0);
+    const Value *Op2 = CI->getArgOperand(2);
+    assert(Op0->getType()->isIntegerTy() && Op2->getType()->isIntegerTy());
+    const ConstantInt *ModA = dyn_cast<ConstantInt>(Op0);
+    const ConstantInt *ModB = dyn_cast<ConstantInt>(Op2);
+    if (!ModA->isZero() || !ModB->isZero())
+      reportFatalUsageError(Name + " matrix A and B modifiers shall be zero");
+
+    SmallVector<Value *, 8> Args{CI->getArgOperand(1), CI->getArgOperand(3)};
+    for (int I = 4, E = CI->arg_size(); I < E; ++I)
+      Args.push_back(CI->getArgOperand(I));
+
+    SmallVector<Type *, 3> Overloads{F->getReturnType(), Args[0]->getType()};
+    if (F->getIntrinsicID() == Intrinsic::amdgcn_wmma_bf16f32_16x16x32_bf16)
+      Overloads.push_back(Args[3]->getType());
+    Function *NewDecl = Intrinsic::getOrInsertDeclaration(
+        F->getParent(), F->getIntrinsicID(), Overloads);
+
+    SmallVector<OperandBundleDef, 1> Bundles;
+    CI->getOperandBundlesAsDefs(Bundles);
+
+    auto *NewCall = cast<CallInst>(Builder.CreateCall(NewDecl, Args, Bundles));
+    NewCall->setTailCallKind(cast<CallInst>(CI)->getTailCallKind());
+    NewCall->setCallingConv(CI->getCallingConv());
+    NewCall->setAttributes(CI->getAttributes());
+    NewCall->setDebugLoc(CI->getDebugLoc());
+    NewCall->copyMetadata(*CI);
+    NewCall->takeName(CI);
+    return NewCall;
+  }
+  }
+
   AtomicRMWInst::BinOp RMWOp =
       StringSwitch<AtomicRMWInst::BinOp>(Name)
           .StartsWith("ds.fadd", AtomicRMWInst::FAdd)
@@ -5048,6 +5105,12 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
   case Intrinsic::aarch64_sve_ld3_sret:
   case Intrinsic::aarch64_sve_ld4_sret:
   case Intrinsic::aarch64_sve_ld2_sret: {
+    // Is this a trivial remangle of the name to support ptr address spaces?
+    if (isa<StructType>(F->getReturnType())) {
+      DefaultCase();
+      return;
+    }
+
     StringRef Name = F->getName();
     Name = Name.substr(5);
     unsigned N = StringSwitch<unsigned>(Name)

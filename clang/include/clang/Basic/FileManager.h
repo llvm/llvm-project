@@ -207,9 +207,10 @@ public:
   /// Get a FileEntryRef if it exists, without doing anything on error.
   OptionalFileEntryRef getOptionalFileRef(StringRef Filename,
                                           bool OpenFile = false,
-                                          bool CacheFailure = true) {
+                                          bool CacheFailure = true,
+                                          bool IsText = true) {
     return llvm::expectedToOptional(
-        getFileRef(Filename, OpenFile, CacheFailure));
+        getFileRef(Filename, OpenFile, CacheFailure, IsText));
   }
 
   /// Returns the current file system options

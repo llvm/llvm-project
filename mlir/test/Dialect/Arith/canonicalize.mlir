@@ -724,6 +724,113 @@ func.func @indexCastUIFoldVectorIndexToInt() -> vector<3xi32> {
   return %int : vector<3xi32>
 }
 
+// CHECK-LABEL: @indexCastOfIndexCast_lossless
+// The intermediate index type (64 bits) is at least as wide as i64 (64 bits),
+// so the round-trip is lossless and the chain folds away.
+//       CHECK:   return %arg0
+func.func @indexCastOfIndexCast_lossless(%arg0: i64) -> i64 {
+  %0 = arith.index_cast %arg0 : i64 to index
+  %1 = arith.index_cast %0 : index to i64
+  return %1 : i64
+}
+
+// -----
+
+// CHECK-LABEL: @indexCastOfIndexCast_lossy
+// The intermediate i8 type (8 bits) is narrower than index (64 bits), so
+// folding would drop the truncation — must be preserved.
+//       CHECK:   %[[a:.+]] = arith.index_cast %arg0 : index to i8
+//       CHECK:   %[[b:.+]] = arith.index_cast %[[a]] : i8 to index
+//       CHECK:   return %[[b]]
+func.func @indexCastOfIndexCast_lossy(%arg0: index) -> index {
+  %0 = arith.index_cast %arg0 : index to i8
+  %1 = arith.index_cast %0 : i8 to index
+  return %1 : index
+}
+
+// -----
+
+// CHECK-LABEL: @indexCastUIOfIndexCastUI_lossless
+// The intermediate index type is at least as wide as i64, so the chain folds.
+//       CHECK:   return %arg0
+func.func @indexCastUIOfIndexCastUI_lossless(%arg0: i64) -> i64 {
+  %0 = arith.index_castui %arg0 : i64 to index
+  %1 = arith.index_castui %0 : index to i64
+  return %1 : i64
+}
+
+// -----
+
+// CHECK-LABEL: @indexCastUIOfIndexCastUI_lossy
+// The intermediate i8 is narrower than index, so the truncation must be kept.
+//       CHECK:   %[[a:.+]] = arith.index_castui %arg0 : index to i8
+//       CHECK:   %[[b:.+]] = arith.index_castui %[[a]] : i8 to index
+//       CHECK:   return %[[b]]
+func.func @indexCastUIOfIndexCastUI_lossy(%arg0: index) -> index {
+  %0 = arith.index_castui %arg0 : index to i8
+  %1 = arith.index_castui %0 : i8 to index
+  return %1 : index
+}
+
+// -----
+
+// CHECK-LABEL: @indexCastUIOfIndexCastUI_3way_lossy
+// Regression test for the original bug: a 3-element chain where the outermost
+// cast pair would be incorrectly folded away, dropping the i8 truncation.
+//       CHECK:   %[[a:.*]] = arith.index_castui %arg0 : i64 to index
+//       CHECK:   %[[b:.*]] = arith.index_castui %[[a]] : index to i8
+//       CHECK:   %[[c:.*]] = arith.index_castui %[[b]] : i8 to index
+//       CHECK:   return %[[c]]
+func.func @indexCastUIOfIndexCastUI_3way_lossy(%arg0: i64) -> index {
+  %0 = arith.index_castui %arg0 : i64 to index
+  %1 = arith.index_castui %0 : index to i8
+  %2 = arith.index_castui %1 : i8 to index
+  return %2 : index
+}
+
+// -----
+
+// CHECK-LABEL: @indexCastOfIndexCast_3way_lossy
+// Signed 3-way chain where the outermost pair folds (i64->index is lossless
+// since 64 >= 64) but the inner i8 truncation is preserved.  The net result
+// is that %2 becomes %0 directly, collapsing the last two casts.
+//       CHECK:   %[[a:.*]] = arith.index_cast %arg0 : i8 to index
+//       CHECK:   return %[[a]]
+func.func @indexCastOfIndexCast_3way_lossy(%arg0: i8) -> index {
+  %0 = arith.index_cast %arg0 : i8 to index
+  %1 = arith.index_cast %0 : index to i64
+  %2 = arith.index_cast %1 : i64 to index
+  return %2 : index
+}
+
+// -----
+
+// CHECK-LABEL: @indexCastOfIndexCast_i8_roundtrip
+// i8 -> index -> i8: the intermediate index is at least as wide as i8 (64 >= 8),
+// so the round-trip is lossless and the chain folds away.
+//       CHECK:   return %arg0
+func.func @indexCastOfIndexCast_i8_roundtrip(%arg0: i8) -> i8 {
+  %0 = arith.index_cast %arg0 : i8 to index
+  %1 = arith.index_cast %0 : index to i8
+  return %1 : i8
+}
+
+// -----
+
+// CHECK-LABEL: @indexCastOfIndexCast_vector_lossy
+// vector<3xi128> -> vector<3xindex> -> vector<3xi128>: i128 (128 bits) is wider
+// than the 64-bit index, so the cast is lossy and must NOT fold.
+//       CHECK:   %[[a:.+]] = arith.index_cast %arg0 : vector<3xi128> to vector<3xindex>
+//       CHECK:   %[[b:.+]] = arith.index_cast %[[a]] : vector<3xindex> to vector<3xi128>
+//       CHECK:   return %[[b]]
+func.func @indexCastOfIndexCast_vector_lossy(%arg0: vector<3xi128>) -> vector<3xi128> {
+  %0 = arith.index_cast %arg0 : vector<3xi128> to vector<3xindex>
+  %1 = arith.index_cast %0 : vector<3xindex> to vector<3xi128>
+  return %1 : vector<3xi128>
+}
+
+// -----
+
 // CHECK-LABEL: @signExtendConstant
 //       CHECK:   %[[cres:.+]] = arith.constant -2 : i16
 //       CHECK:   return %[[cres]]
@@ -1259,6 +1366,16 @@ func.func @tripleSubAdd1(%arg0: index) -> index {
 func.func @subSub0(%arg0: index, %arg1: index) -> index {
   %sub1 = arith.subi %arg0, %arg1 : index
   %sub2 = arith.subi %sub1, %arg0 : index
+  return %sub2 : index
+}
+
+// CHECK-LABEL: @subSub1
+// CHECK-SAME:    %[[ARG0:.*]]: index,
+// CHECK-SAME:    %[[ARG1:.*]]: index)
+//      CHECK:    return %[[ARG1]] : index
+func.func @subSub1(%arg0: index, %arg1: index) -> index {
+  %sub1 = arith.subi %arg0, %arg1 : index
+  %sub2 = arith.subi %arg0, %sub1 : index
   return %sub2 : index
 }
 
@@ -2447,6 +2564,81 @@ func.func @test_divf1(%arg0 : f32, %arg1 : f32) -> (f32) {
 
 // -----
 
+// Verify that constant folding respects rounding modes. 1.0000001 + 1.0 is not
+// exactly representable in f32. With upward rounding, the result is rounded up,
+// and with downward rounding it is rounded down.
+// CHECK-LABEL: @test_addf_rounding_mode(
+// CHECK-SAME: %[[ARG0:.+]]: f32
+func.func @test_addf_rounding_mode(%arg0 : f32) -> (f32, f32, f32) {
+  // CHECK-DAG:  %[[UP:.+]] = arith.constant 2.00000024 : f32
+  // CHECK-DAG:  %[[DOWN:.+]] = arith.constant 2.000000e+00 : f32
+  // CHECK-NEXT: return %[[ARG0]], %[[UP]], %[[DOWN]]
+  %a = arith.constant 1.0000001 : f32
+  %b = arith.constant 1.0 : f32
+  // addf(x, -0) folds even with a rounding mode.
+  %c_neg0 = arith.constant -0.0 : f32
+  %0 = arith.addf %arg0, %c_neg0 to_nearest_even : f32
+  %1 = arith.addf %a, %b upward : f32
+  %2 = arith.addf %a, %b downward : f32
+  return %0, %1, %2 : f32, f32, f32
+}
+
+// -----
+
+// CHECK-LABEL: @test_subf_rounding_mode(
+// CHECK-SAME: %[[ARG0:.+]]: f32
+func.func @test_subf_rounding_mode(%arg0 : f32) -> (f32, f32, f32) {
+  // CHECK-DAG:  %[[UP:.+]] = arith.constant 2.00000024 : f32
+  // CHECK-DAG:  %[[DOWN:.+]] = arith.constant 2.000000e+00 : f32
+  // CHECK-NEXT: return %[[ARG0]], %[[UP]], %[[DOWN]]
+  %a = arith.constant 1.0000001 : f32
+  %b = arith.constant -1.0 : f32
+  // subf(x, +0) folds even with a rounding mode.
+  %c0 = arith.constant 0.0 : f32
+  %0 = arith.subf %arg0, %c0 downward : f32
+  %1 = arith.subf %a, %b upward : f32
+  %2 = arith.subf %a, %b downward : f32
+  return %0, %1, %2 : f32, f32, f32
+}
+
+// -----
+
+// CHECK-LABEL: @test_mulf_rounding_mode(
+// CHECK-SAME: %[[ARG0:.+]]: f32
+func.func @test_mulf_rounding_mode(%arg0 : f32) -> (f32, f32, f32) {
+  // CHECK-DAG:  %[[UP:.+]] = arith.constant 3.00000048 : f32
+  // CHECK-DAG:  %[[DOWN:.+]] = arith.constant 3.00000024 : f32
+  // CHECK-NEXT: return %[[ARG0]], %[[UP]], %[[DOWN]]
+  %a = arith.constant 1.0000001 : f32
+  %b = arith.constant 3.0 : f32
+  // mulf(x, 1) folds even with a rounding mode.
+  %c1 = arith.constant 1.0 : f32
+  %0 = arith.mulf %arg0, %c1 upward : f32
+  %1 = arith.mulf %a, %b upward : f32
+  %2 = arith.mulf %a, %b downward : f32
+  return %0, %1, %2 : f32, f32, f32
+}
+
+// -----
+
+// CHECK-LABEL: @test_divf_rounding_mode(
+// CHECK-SAME: %[[ARG0:.+]]: f32
+func.func @test_divf_rounding_mode(%arg0 : f32) -> (f32, f32, f32) {
+  // CHECK-DAG:  %[[UP:.+]] = arith.constant 0.333333343 : f32
+  // CHECK-DAG:  %[[DOWN:.+]] = arith.constant 0.333333313 : f32
+  // CHECK-NEXT: return %[[ARG0]], %[[UP]], %[[DOWN]]
+  %a = arith.constant 1.0 : f32
+  %b = arith.constant 3.0 : f32
+  // divf(x, 1) folds even with a rounding mode.
+  %c1 = arith.constant 1.0 : f32
+  %0 = arith.divf %arg0, %c1 toward_zero : f32
+  %1 = arith.divf %a, %b upward : f32
+  %2 = arith.divf %a, %b downward : f32
+  return %0, %1, %2 : f32, f32, f32
+}
+
+// -----
+
 func.func @fold_divui_of_muli_0(%arg0 : index, %arg1 : index) -> index {
   %0 = arith.muli %arg0, %arg1 overflow<nuw> : index
   %1 = arith.divui %0, %arg0 : index
@@ -2908,6 +3100,29 @@ func.func @test_negf1(%f : f32) -> (f32) {
   %0 = arith.negf %f : f32
   %1 = arith.negf %0 : f32
   return %1: f32
+}
+
+// -----
+
+// CHECK-LABEL: @test_flush_denormals_const(
+// CHECK: %[[res:.+]] = arith.constant 0.000000e+00 : f32
+// CHECK: return %[[res]]
+func.func @test_flush_denormals_const() -> (f32) {
+  %c = arith.constant 1.0e-40 : f32
+  %0 = arith.flush_denormals %c : f32
+  return %0 : f32
+}
+
+// -----
+
+// CHECK-LABEL: @test_flush_denormals_idempotent(
+// CHECK-SAME: %[[arg0:.+]]:
+// CHECK: %[[res:.+]] = arith.flush_denormals %[[arg0]] : f32
+// CHECK: return %[[res]]
+func.func @test_flush_denormals_idempotent(%f : f32) -> (f32) {
+  %0 = arith.flush_denormals %f : f32
+  %1 = arith.flush_denormals %0 : f32
+  return %1 : f32
 }
 
 // -----
@@ -3551,5 +3766,16 @@ func.func @truncf_neg_inf_to_finite_only_no_fold() -> f4E2M1FN {
   %neg_inf = arith.constant 0xFF800000 : f32
   %result = arith.truncf %neg_inf : f32 to f4E2M1FN
   return %result : f4E2M1FN
+}
+
+// -----
+
+// CHECK-LABEL: @convertf_fold_f8
+//       CHECK:   %[[C:.*]] = arith.constant 2.000000e+00 : f8E5M2
+//       CHECK:   return %[[C]]
+func.func @convertf_fold_f8() -> f8E5M2 {
+  %c = arith.constant 2.0 : f8E4M3FN
+  %result = arith.convertf %c : f8E4M3FN to f8E5M2
+  return %result : f8E5M2
 }
 

@@ -987,4 +987,53 @@ TEST_F(ScalarEvolutionExpanderTest, GEPFlags) {
   EXPECT_EQ(GEP->getNoWrapFlags(), GEPNoWrapFlags::none());
 }
 
+// Test that InsertBinop scans existing instructions in the block.
+TEST_F(ScalarEvolutionExpanderTest, InsertBinopReuseShlWithMatchingFlags) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString("define void @f(i64 %n) { "
+                                                  "  ret void "
+                                                  "}",
+                                                  Err, C);
+
+  assert(M && "Could not parse module?");
+  assert(!verifyModule(*M) && "Must have been well formed!");
+
+  Function *F = M->getFunction("f");
+  ASSERT_NE(F, nullptr);
+
+  ScalarEvolution SE = buildSE(*F);
+
+  auto *I64Ty = Type::getInt64Ty(C);
+  const SCEV *N = SE.getSCEV(F->getArg(0));
+  const SCEV *Four = SE.getConstant(I64Ty, 4);
+  const SCEV *Mul = SE.getMulExpr(N, Four, SCEV::FlagNUW | SCEV::FlagNSW);
+  const SCEV *Expr1 = SE.getAddExpr(Mul, SE.getConstant(I64Ty, 8));
+  const SCEV *Expr2 = SE.getAddExpr(Mul, SE.getConstant(I64Ty, 16));
+
+  // Expand with separate expanders so the InsertedExpressions cache doesn't
+  // apply.
+  auto *InsertBefore = F->getEntryBlock().getTerminator();
+  SCEVExpander Exp1(SE, "expander");
+  Value *V1 = Exp1.expandCodeFor(Expr1, nullptr, InsertBefore);
+  SCEVExpander Exp2(SE, "expander");
+  Value *V2 = Exp2.expandCodeFor(Expr2, nullptr, InsertBefore);
+
+  // Both expansions produce different values (different constants added).
+  EXPECT_NE(V1, V2);
+
+  // Both should share the same shl sub-expression via pattern match.
+  Value *Shl1 = nullptr, *Shl2 = nullptr;
+  Value *Arg = F->getArg(0);
+  EXPECT_TRUE(match(V1, m_Add(m_Value(Shl1), m_SpecificInt(8))));
+  EXPECT_TRUE(match(V2, m_Add(m_Value(Shl2), m_SpecificInt(16))));
+  EXPECT_EQ(Shl1, Shl2) << "Expected the shl to be reused";
+
+  // Verify the shared shl has the expected form and flags.
+  auto *ShlInst = cast<Instruction>(Shl1);
+  EXPECT_TRUE(match(ShlInst, m_Shl(m_Specific(Arg), m_SpecificInt(2))));
+  EXPECT_TRUE(ShlInst->hasNoUnsignedWrap());
+  EXPECT_TRUE(ShlInst->hasNoSignedWrap());
+}
+
 } // end namespace llvm

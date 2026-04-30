@@ -138,7 +138,8 @@ private:
   void insertReadVL(MachineBasicBlock &MBB);
 
   bool canMutatePriorConfig(const MachineInstr &PrevMI, const MachineInstr &MI,
-                            const DemandedFields &Used) const;
+                            const DemandedFields &Used,
+                            MachineInstr *&AVLDefToMove) const;
   void coalesceVSETVLIs(MachineBasicBlock &MBB) const;
   bool insertVSETMTK(MachineBasicBlock &MBB, TKTMMode Mode) const;
 };
@@ -179,7 +180,7 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
     return;
   }
 
-  if (PrevInfo.isValid() && !PrevInfo.isUnknown()) {
+  if (PrevInfo.isKnown()) {
     // Use X0, X0 form if the AVL is the same and the SEW+LMUL gives the same
     // VLMAX.
     if (Info.hasSameAVL(PrevInfo) && Info.hasSameVLMAX(PrevInfo)) {
@@ -281,7 +282,7 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
 bool RISCVInsertVSETVLI::needVSETVLI(const DemandedFields &Used,
                                      const VSETVLIInfo &Require,
                                      const VSETVLIInfo &CurInfo) const {
-  if (!CurInfo.isValid() || CurInfo.isUnknown() || CurInfo.hasSEWLMULRatioOnly())
+  if (!CurInfo.isKnown() || CurInfo.hasSEWLMULRatioOnly())
     return true;
 
   if (CurInfo.isCompatible(Used, Require, LIS))
@@ -298,8 +299,7 @@ static VSETVLIInfo adjustIncoming(const VSETVLIInfo &PrevInfo,
                                   DemandedFields &Demanded) {
   VSETVLIInfo Info = NewInfo;
 
-  if (!Demanded.LMUL && !Demanded.SEWLMULRatio && PrevInfo.isValid() &&
-      !PrevInfo.isUnknown()) {
+  if (!Demanded.LMUL && !Demanded.SEWLMULRatio && PrevInfo.isKnown()) {
     if (auto NewVLMul = RISCVVType::getSameRatioLMUL(PrevInfo.getSEWLMULRatio(),
                                                      Info.getSEW()))
       Info.setVLMul(*NewVLMul);
@@ -314,8 +314,9 @@ static VSETVLIInfo adjustIncoming(const VSETVLIInfo &PrevInfo,
 // legal for MI, but may not be the state requested by MI.
 void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
                                         const MachineInstr &MI) const {
-  if (RISCV::isVectorCopy(ST->getRegisterInfo(), MI) &&
-      (Info.isUnknown() || !Info.isValid() || Info.hasSEWLMULRatioOnly())) {
+  if (EnsureWholeVectorRegisterMoveValidVTYPE &&
+      RISCV::isVectorCopy(ST->getRegisterInfo(), MI) &&
+      (!Info.isKnown() || Info.hasSEWLMULRatioOnly())) {
     // Use an arbitrary but valid AVL and VTYPE so vill will be cleared. It may
     // be coalesced into another vsetvli since we won't demand any fields.
     VSETVLIInfo NewInfo; // Need a new VSETVLIInfo to clear SEWLMULRatioOnly
@@ -332,12 +333,12 @@ void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
   DemandedFields Demanded = getDemanded(MI, ST);
 
   const VSETVLIInfo NewInfo = VIA.computeInfoForInstr(MI);
-  assert(NewInfo.isValid() && !NewInfo.isUnknown());
+  assert(NewInfo.isKnown());
   if (Info.isValid() && !needVSETVLI(Demanded, NewInfo, Info))
     return;
 
   const VSETVLIInfo PrevInfo = Info;
-  if (!Info.isValid() || Info.isUnknown())
+  if (!Info.isKnown())
     Info = NewInfo;
 
   const VSETVLIInfo IncomingInfo = adjustIncoming(PrevInfo, NewInfo, Demanded);
@@ -360,18 +361,21 @@ void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
     RatiolessInfo.setAVL(Info);
     Info = RatiolessInfo;
   } else {
+    unsigned SEW =
+        ((Demanded.SEW || Demanded.SEWLMULRatio) ? IncomingInfo : Info)
+            .getSEW();
     Info.setVTYPE(
         ((Demanded.LMUL || Demanded.SEWLMULRatio) ? IncomingInfo : Info)
             .getVLMUL(),
-        ((Demanded.SEW || Demanded.SEWLMULRatio) ? IncomingInfo : Info)
-            .getSEW(),
+        SEW,
         // Prefer tail/mask agnostic since it can be relaxed to undisturbed
         // later if needed.
         (Demanded.TailPolicy ? IncomingInfo : Info).getTailAgnostic() ||
             IncomingInfo.getTailAgnostic(),
         (Demanded.MaskPolicy ? IncomingInfo : Info).getMaskAgnostic() ||
             IncomingInfo.getMaskAgnostic(),
-        (Demanded.AltFmt ? IncomingInfo : Info).getAltFmt(),
+        // AltFmt requires SEW < 32.
+        (Demanded.AltFmt ? IncomingInfo : Info).getAltFmt() && SEW < 32,
         Demanded.TWiden ? IncomingInfo.getTWiden() : 0);
   }
 }
@@ -743,9 +747,12 @@ void RISCVInsertVSETVLI::doPRE(MachineBasicBlock &MBB) {
 
 // Return true if we can mutate PrevMI to match MI without changing any the
 // fields which would be observed.
+// If AVLDefToMove is non-null after the call, it points to an ADDI
+// instruction that needs to be moved before PrevMI.
 bool RISCVInsertVSETVLI::canMutatePriorConfig(
     const MachineInstr &PrevMI, const MachineInstr &MI,
-    const DemandedFields &Used) const {
+    const DemandedFields &Used, MachineInstr *&AVLDefToMove) const {
+  AVLDefToMove = nullptr;
   // If the VL values aren't equal, return false if either a) the former is
   // demanded, or b) we can't rewrite the former to be the later for
   // implementation reasons.
@@ -768,8 +775,20 @@ bool RISCVInsertVSETVLI::canMutatePriorConfig(
     if (AVL.isReg() && AVL.getReg() != RISCV::X0) {
       VNInfo *VNI = getVNInfoFromReg(AVL.getReg(), MI, LIS);
       VNInfo *PrevVNI = getVNInfoFromReg(AVL.getReg(), PrevMI, LIS);
-      if (!VNI || !PrevVNI || VNI != PrevVNI)
-        return false;
+      if (!VNI || !PrevVNI || VNI != PrevVNI) {
+        // If the AVL is defined by a load immediate instruction (ADDI x0, imm),
+        // it can be moved earlier since it has no register dependencies.
+        if (!AVL.getReg().isVirtual())
+          return false;
+
+        MachineInstr *DefMI = MRI->getUniqueVRegDef(AVL.getReg());
+        if (!DefMI || !RISCVInstrInfo::isLoadImmediate(*DefMI) ||
+            DefMI->getParent() != PrevMI.getParent()) {
+          return false;
+        }
+        // Mark that this ADDI needs to be moved.
+        AVLDefToMove = DefMI;
+      }
     }
 
     // If we define VL and need to move the definition up, check we can extend
@@ -842,7 +861,8 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
         continue;
       }
 
-      if (canMutatePriorConfig(MI, *NextMI, Used)) {
+      MachineInstr *AVLDefToMove = nullptr;
+      if (canMutatePriorConfig(MI, *NextMI, Used, AVLDefToMove)) {
         if (!RISCVInstrInfo::isVLPreservingConfig(*NextMI)) {
           Register DefReg = NextMI->getOperand(0).getReg();
 
@@ -853,9 +873,18 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
           dropAVLUse(MI.getOperand(1));
           if (NextMI->getOperand(1).isImm())
             MI.getOperand(1).ChangeToImmediate(NextMI->getOperand(1).getImm());
-          else
+          else {
             MI.getOperand(1).ChangeToRegister(NextMI->getOperand(1).getReg(),
                                               false);
+
+            // If canMutatePriorConfig indicated that an ADDI needs to be moved,
+            // move it now.
+            if (AVLDefToMove) {
+              AVLDefToMove->moveBefore(&MI);
+              if (LIS)
+                LIS->handleMove(*AVLDefToMove);
+            }
+          }
           dropAVLUse(NextMI->getOperand(1));
 
           // The def of DefReg moved to MI, so extend the LiveInterval up to
@@ -947,20 +976,17 @@ bool RISCVInsertVSETVLI::insertVSETMTK(MachineBasicBlock &MBB,
 
     VSETVLIInfo CurrInfo = VIA.computeInfoForInstr(MI);
 
-    if (Mode == VSETTK && !RISCVII::hasTKOp(TSFlags))
-      continue;
-
-    if (Mode == VSETTM && !RISCVII::hasTMOp(TSFlags))
-      continue;
-
-    unsigned OpNum = 0;
-    unsigned Opcode = 0;
+    unsigned Opcode = 0, OpNum = 0;
     switch (Mode) {
     case VSETTK:
+      if (!RISCVII::hasTKOp(TSFlags))
+        continue;
       OpNum = RISCVII::getTKOpNum(MI.getDesc());
       Opcode = RISCV::PseudoSF_VSETTK;
       break;
     case VSETTM:
+      if (!RISCVII::hasTMOp(TSFlags))
+        continue;
       OpNum = RISCVII::getTMOpNum(MI.getDesc());
       Opcode = RISCV::PseudoSF_VSETTM;
       break;

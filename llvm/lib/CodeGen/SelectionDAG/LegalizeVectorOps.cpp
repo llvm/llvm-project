@@ -139,6 +139,7 @@ class VectorLegalizer {
   SDValue ExpandVP_FABS(SDNode *Node);
   SDValue ExpandVP_FCOPYSIGN(SDNode *Node);
   SDValue ExpandLOOP_DEPENDENCE_MASK(SDNode *N);
+  SDValue ExpandMaskedBinOp(SDNode *N);
   SDValue ExpandSELECT(SDNode *Node);
   std::pair<SDValue, SDValue> ExpandLoad(SDNode *N);
   SDValue ExpandStore(SDNode *N);
@@ -307,7 +308,8 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
     EVT StVT = ST->getMemoryVT();
     MVT ValVT = ST->getValue().getSimpleValueType();
     if (StVT.isVector() && ST->isTruncatingStore())
-      Action = TLI.getTruncStoreAction(ValVT, StVT);
+      Action = TLI.getTruncStoreAction(ValVT, StVT, ST->getAlign(),
+                                       ST->getAddressSpace());
     break;
   }
   case ISD::MERGE_VALUES:
@@ -481,6 +483,10 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::UCMP:
   case ISD::LOOP_DEPENDENCE_WAR_MASK:
   case ISD::LOOP_DEPENDENCE_RAW_MASK:
+  case ISD::MASKED_UDIV:
+  case ISD::MASKED_SDIV:
+  case ISD::MASKED_UREM:
+  case ISD::MASKED_SREM:
     Action = TLI.getOperationAction(Node->getOpcode(), Node->getValueType(0));
     break;
   case ISD::SMULFIX:
@@ -517,6 +523,8 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::VECREDUCE_FMIN:
   case ISD::VECREDUCE_FMINIMUM:
   case ISD::VECREDUCE_FMUL:
+  case ISD::CTTZ_ELTS:
+  case ISD::CTTZ_ELTS_ZERO_POISON:
   case ISD::VECTOR_FIND_LAST_ACTIVE:
     Action = TLI.getOperationAction(Node->getOpcode(),
                                     Node->getOperand(0).getValueType());
@@ -772,6 +780,7 @@ void VectorLegalizer::Promote(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     PromoteSTRICT(Node, Results);
     return;
   case ISD::VECREDUCE_FADD:
+  case ISD::VECREDUCE_FMUL:
     PromoteFloatVECREDUCE(Node, Results, /*NonArithmetic=*/false);
     return;
   case ISD::VECREDUCE_FMAX:
@@ -1073,6 +1082,21 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
       return;
     }
     break;
+  case ISD::FCANONICALIZE: {
+    // If the scalar element type has a
+    // Legal/Custom FCANONICALIZE, don't
+    // mess with the vector, fall back.
+    EVT VT = Node->getValueType(0);
+    EVT EltVT = VT.getVectorElementType();
+    if (!VT.isScalableVector() &&
+        TLI.getOperationAction(ISD::FCANONICALIZE, EltVT.getSimpleVT()) !=
+            TargetLowering::Expand)
+      break;
+    // Otherwise canonicalize the whole vector.
+    SDValue Mul = TLI.expandFCANONICALIZE(Node, DAG);
+    Results.push_back(Mul);
+    return;
+  }
   case ISD::FSUB:
     ExpandFSUB(Node, Results);
     return;
@@ -1354,6 +1378,10 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::VECTOR_COMPRESS:
     Results.push_back(TLI.expandVECTOR_COMPRESS(Node, DAG));
     return;
+  case ISD::CTTZ_ELTS:
+  case ISD::CTTZ_ELTS_ZERO_POISON:
+    Results.push_back(TLI.expandCttzElts(Node, DAG));
+    return;
   case ISD::VECTOR_FIND_LAST_ACTIVE:
     Results.push_back(TLI.expandVectorFindLastActive(Node, DAG));
     return;
@@ -1383,6 +1411,12 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
       return;
     }
     break;
+  case ISD::MASKED_UDIV:
+  case ISD::MASKED_SDIV:
+  case ISD::MASKED_UREM:
+  case ISD::MASKED_SREM:
+    Results.push_back(ExpandMaskedBinOp(Node));
+    return;
   }
 
   SDValue Unrolled = DAG.UnrollVectorOp(Node);
@@ -1872,42 +1906,19 @@ SDValue VectorLegalizer::ExpandVP_FCOPYSIGN(SDNode *Node) {
 }
 
 SDValue VectorLegalizer::ExpandLOOP_DEPENDENCE_MASK(SDNode *N) {
-  SDLoc DL(N);
+  return TLI.expandLoopDependenceMask(N, DAG);
+}
+
+SDValue VectorLegalizer::ExpandMaskedBinOp(SDNode *N) {
+  // Masked bin ops don't have undefined behaviour when dividing by zero
+  // on disabled lanes and produce poison instead. Replace the divisor on the
+  // disabled lanes with 1 to avoid division by zero or overflow.
+  SDLoc dl(N);
   EVT VT = N->getValueType(0);
-  SDValue SourceValue = N->getOperand(0);
-  SDValue SinkValue = N->getOperand(1);
-  SDValue EltSizeInBytes = N->getOperand(2);
-
-  // Note: The lane offset is scalable if the mask is scalable.
-  ElementCount LaneOffsetEC =
-      ElementCount::get(N->getConstantOperandVal(3), VT.isScalableVT());
-
-  EVT PtrVT = SourceValue->getValueType(0);
-  bool IsReadAfterWrite = N->getOpcode() == ISD::LOOP_DEPENDENCE_RAW_MASK;
-
-  // Take the difference between the pointers and divided by the element size,
-  // to see how many lanes separate them.
-  SDValue Diff = DAG.getNode(ISD::SUB, DL, PtrVT, SinkValue, SourceValue);
-  if (IsReadAfterWrite)
-    Diff = DAG.getNode(ISD::ABS, DL, PtrVT, Diff);
-  Diff = DAG.getNode(ISD::SDIV, DL, PtrVT, Diff, EltSizeInBytes);
-
-  // The pointers do not alias if:
-  //  * Diff <= 0 (WAR_MASK)
-  //  * Diff == 0 (RAW_MASK)
-  EVT CmpVT =
-      TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), PtrVT);
-  SDValue Zero = DAG.getConstant(0, DL, PtrVT);
-  SDValue Cmp = DAG.getSetCC(DL, CmpVT, Diff, Zero,
-                             IsReadAfterWrite ? ISD::SETEQ : ISD::SETLE);
-
-  // The pointers do not alias if:
-  // Lane + LaneOffset < Diff (WAR/RAW_MASK)
-  SDValue LaneOffset = DAG.getElementCount(DL, PtrVT, LaneOffsetEC);
-  SDValue MaskN =
-      DAG.getSelect(DL, PtrVT, Cmp, DAG.getConstant(-1, DL, PtrVT), Diff);
-
-  return DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, VT, LaneOffset, MaskN);
+  SDValue SafeDivisor = DAG.getSelect(
+      dl, VT, N->getOperand(2), N->getOperand(1), DAG.getConstant(1, dl, VT));
+  return DAG.getNode(ISD::getUnmaskedBinOpOpcode(N->getOpcode()), dl, VT,
+                     N->getOperand(0), SafeDivisor);
 }
 
 void VectorLegalizer::ExpandFP_TO_UINT(SDNode *Node,

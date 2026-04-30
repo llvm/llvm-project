@@ -79,6 +79,18 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: asinpi
+    standards:
+      - stdc
+    return_type: double
+    arguments:
+      - type: double
+  - name: asinpif
+    standards:
+      - stdc
+    return_type: float
+    arguments:
+      - type: float
   - name: asinpif16
     standards:
       - stdc
@@ -397,6 +409,13 @@ functions:
     arguments:
       - type: float
   - name: erff16
+    standards:
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: erfcf16
     standards:
       - stdc
     return_type: _Float16
@@ -1785,6 +1804,13 @@ functions:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
   - name: log10p1f16
+    standards:
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: log2p1f16
     standards:
       - stdc
     return_type: _Float16

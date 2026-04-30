@@ -42,8 +42,8 @@ define amdgpu_kernel void @v_test_umin3_ult_i32(ptr addrspace(1) %out, ptr addrs
 }
 
 ; GCN-LABEL: {{^}}v_test_umin_umin_umin:
-; GCN: v_min_i32
 ; GCN: v_min3_i32
+; GCN: v_min_i32
 define amdgpu_kernel void @v_test_umin_umin_umin(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid2 = mul i32 %tid, 2

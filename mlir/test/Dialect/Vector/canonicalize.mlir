@@ -1816,6 +1816,61 @@ func.func @transfer_folding_1(%t0: tensor<2x3x4xf32>, %t1: tensor<2x3x4xf32>)
 
 // -----
 
+// CHECK-LABEL: func @negative_transfer_folding_masked_read
+//       CHECK:   vector.transfer_read {{.*}}, {{.*}}, %[[MASK:.*]]
+//       CHECK:   %[[R:.*]] = vector.transfer_write
+//       CHECK:   return %[[R]]
+func.func @negative_transfer_folding_masked_read(
+    %t0: tensor<2x3x4xf32>, %t1: tensor<2x3x4xf32>,
+    %mask: vector<2x3x4xi1>) -> tensor<2x3x4xf32> {
+  %c0 = arith.constant 0 : index
+  %pad = arith.constant 0.0 : f32
+  %v = vector.transfer_read %t0[%c0, %c0, %c0], %pad, %mask {in_bounds = [true, true, true]} :
+    tensor<2x3x4xf32>, vector<2x3x4xf32>
+  %r = vector.transfer_write %v, %t1[%c0, %c0, %c0] {in_bounds = [true, true, true]} :
+    vector<2x3x4xf32>, tensor<2x3x4xf32>
+  return %r : tensor<2x3x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @negative_transfer_folding_masked_write
+//       CHECK:   vector.transfer_read
+//       CHECK:   %[[R:.*]] = vector.transfer_write {{.*}}, {{.*}}, %[[MASK:.*]]
+//       CHECK:   return %[[R]]
+func.func @negative_transfer_folding_masked_write(
+    %t0: tensor<2x3x4xf32>, %t1: tensor<2x3x4xf32>,
+    %mask: vector<2x3x4xi1>) -> tensor<2x3x4xf32> {
+  %c0 = arith.constant 0 : index
+  %pad = arith.constant 0.0 : f32
+  %v = vector.transfer_read %t0[%c0, %c0, %c0], %pad {in_bounds = [true, true, true]} :
+    tensor<2x3x4xf32>, vector<2x3x4xf32>
+  %r = vector.transfer_write %v, %t1[%c0, %c0, %c0], %mask {in_bounds = [true, true, true]} :
+    vector<2x3x4xf32>, tensor<2x3x4xf32>
+  return %r : tensor<2x3x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @negative_transfer_folding_masked_read_and_write
+//  CHECK-SAME:   %[[MASK:[0-9a-zA-Z_]+]]: vector<2x3x4xi1>
+//       CHECK:   %[[V:.*]] = vector.transfer_read {{.*}}, {{.*}}, %[[MASK]]
+//       CHECK:   %[[R:.*]] = vector.transfer_write %[[V]], {{.*}}, %[[MASK]]
+//       CHECK:   return %[[R]]
+func.func @negative_transfer_folding_masked_read_and_write(
+    %t0: tensor<2x3x4xf32>, %t1: tensor<2x3x4xf32>,
+    %mask: vector<2x3x4xi1>) -> tensor<2x3x4xf32> {
+  %c0 = arith.constant 0 : index
+  %pad = arith.constant 0.0 : f32
+  %v = vector.transfer_read %t0[%c0, %c0, %c0], %pad, %mask {in_bounds = [true, true, true]} :
+    tensor<2x3x4xf32>, vector<2x3x4xf32>
+  %r = vector.transfer_write %v, %t1[%c0, %c0, %c0], %mask {in_bounds = [true, true, true]} :
+    vector<2x3x4xf32>, tensor<2x3x4xf32>
+  return %r : tensor<2x3x4xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @store_after_load_tensor
 //  CHECK-SAME: (%[[ARG:.*]]: tensor<4x4xf32>)
 //   CHECK-NOT:   vector.transfer_read
@@ -2198,6 +2253,26 @@ func.func @masked_vector_multi_reduction_single_parallel(%arg0: vector<2xf32>, %
     %0 = vector.mask %mask { vector.multi_reduction <mul>, %arg0, %acc [] : vector<2xf32> to vector<2xf32> } : vector<2xi1> -> vector<2xf32>
 //       CHECK:   return %[[VAL_0]] : vector<2xf32>
     return %0 : vector<2xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @vector_multi_reduction_no_reduction_dims_nd(
+//  CHECK-SAME:     %[[v:.*]]: vector<2x3xf32>,
+func.func @vector_multi_reduction_no_reduction_dims_nd(%arg0: vector<2x3xf32>, %acc: vector<2x3xf32>) -> vector<2x3xf32> {
+    %0 = vector.multi_reduction <add>, %arg0, %acc [] : vector<2x3xf32> to vector<2x3xf32>
+//       CHECK:   return %[[v]] : vector<2x3xf32>
+    return %0 : vector<2x3xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @masked_vector_multi_reduction_no_reduction_dims_nd(
+//  CHECK-SAME:     %[[VAL_0:.*]]: vector<2x3xf32>, %{{.*}}: vector<2x3xf32>,
+func.func @masked_vector_multi_reduction_no_reduction_dims_nd(%arg0: vector<2x3xf32>, %acc: vector<2x3xf32>, %mask: vector<2x3xi1>) -> vector<2x3xf32> {
+    %0 = vector.mask %mask { vector.multi_reduction <add>, %arg0, %acc [] : vector<2x3xf32> to vector<2x3xf32> } : vector<2x3xi1> -> vector<2x3xf32>
+//       CHECK:   return %[[VAL_0]] : vector<2x3xf32>
+    return %0 : vector<2x3xf32>
 }
 
 // -----
@@ -2732,6 +2807,99 @@ func.func @shuffle_fold4(%v0 : vector<4x5x6xi32>, %v1 : vector<2x5x6xi32>) -> ve
 func.func @shuffle_nofold1(%v0 : vector<4xi32>, %v1 : vector<2xi32>) -> vector<5xi32> {
   %shuffle = vector.shuffle %v0, %v1 [0, 1, 2, 3, 4] : vector<4xi32>, vector<2xi32>
   return %shuffle : vector<5xi32>
+}
+
+// -----
+
+// All mask elements are poison: replace shuffle with poison.
+// CHECK-LABEL: func @shuffle_all_poison_mask
+//   CHECK-NOT:   vector.shuffle
+//       CHECK:   %[[P:.*]] = ub.poison : vector<2xi32>
+//       CHECK:   return %[[P]]
+func.func @shuffle_all_poison_mask(%v0 : vector<3xi32>, %v1 : vector<3xi32>) -> vector<2xi32> {
+  %shuffle = vector.shuffle %v0, %v1 [-1, -1] : vector<3xi32>, vector<3xi32>
+  return %shuffle : vector<2xi32>
+}
+
+// -----
+
+// V1 is unused: replace V1 operand with poison.
+// CHECK-LABEL: func @shuffle_unused_v1
+//  CHECK-SAME:   %[[A:.*]]: vector<3xi32>, %[[B:.*]]: vector<3xi32>
+//       CHECK:   %[[P:.*]] = ub.poison : vector<3xi32>
+//       CHECK:   vector.shuffle %[[P]], %[[B]] [4, 3] : vector<3xi32>, vector<3xi32>
+func.func @shuffle_unused_v1(%v0 : vector<3xi32>, %v1 : vector<3xi32>) -> vector<2xi32> {
+  %shuffle = vector.shuffle %v0, %v1 [4, 3] : vector<3xi32>, vector<3xi32>
+  return %shuffle : vector<2xi32>
+}
+
+// -----
+
+// V2 is unused: replace V2 operand with poison.
+// CHECK-LABEL: func @shuffle_unused_v2
+//  CHECK-SAME:   %[[A:.*]]: vector<3xi32>, %[[B:.*]]: vector<3xi32>
+//       CHECK:   %[[P:.*]] = ub.poison : vector<3xi32>
+//       CHECK:   vector.shuffle %[[A]], %[[P]] [2, 0] : vector<3xi32>, vector<3xi32>
+func.func @shuffle_unused_v2(%v0 : vector<3xi32>, %v1 : vector<3xi32>) -> vector<2xi32> {
+  %shuffle = vector.shuffle %v0, %v1 [2, 0] : vector<3xi32>, vector<3xi32>
+  return %shuffle : vector<2xi32>
+}
+
+// -----
+
+// V1 is unused (mask has poison indices mixed with V2 references).
+// CHECK-LABEL: func @shuffle_unused_v1_with_poison_idx
+//  CHECK-SAME:   %[[A:.*]]: vector<3xi32>, %[[B:.*]]: vector<3xi32>
+//       CHECK:   %[[P:.*]] = ub.poison : vector<3xi32>
+//       CHECK:   vector.shuffle %[[P]], %[[B]] [4, -1, 3] : vector<3xi32>, vector<3xi32>
+func.func @shuffle_unused_v1_with_poison_idx(%v0 : vector<3xi32>, %v1 : vector<3xi32>) -> vector<3xi32> {
+  %shuffle = vector.shuffle %v0, %v1 [4, -1, 3] : vector<3xi32>, vector<3xi32>
+  return %shuffle : vector<3xi32>
+}
+
+// -----
+
+// V2 is unused (multidimensional vectors).
+// CHECK-LABEL: func @shuffle_unused_v2_multidim
+//  CHECK-SAME:   %[[A:.*]]: vector<4x2xf32>, %[[B:.*]]: vector<3x2xf32>
+//       CHECK:   %[[P:.*]] = ub.poison : vector<3x2xf32>
+//       CHECK:   vector.shuffle %[[A]], %[[P]] [2, 0, 3] : vector<4x2xf32>, vector<3x2xf32>
+func.func @shuffle_unused_v2_multidim(%v0 : vector<4x2xf32>, %v1 : vector<3x2xf32>) -> vector<3x2xf32> {
+  %shuffle = vector.shuffle %v0, %v1 [2, 0, 3] : vector<4x2xf32>, vector<3x2xf32>
+  return %shuffle : vector<3x2xf32>
+}
+
+// -----
+
+// Both operands are used: no folding.
+// CHECK-LABEL: func @shuffle_both_operands_used
+//  CHECK-SAME:   %[[A:.*]]: vector<3xi32>, %[[B:.*]]: vector<3xi32>
+//       CHECK:   vector.shuffle %[[A]], %[[B]] [0, 3, 1, 4] : vector<3xi32>, vector<3xi32>
+func.func @shuffle_both_operands_used(%v0 : vector<3xi32>, %v1 : vector<3xi32>) -> vector<4xi32> {
+  %shuffle = vector.shuffle %v0, %v1 [0, 3, 1, 4] : vector<3xi32>, vector<3xi32>
+  return %shuffle : vector<4xi32>
+}
+
+// -----
+
+// One operand is poison, the other one is not used.
+// CHECK-LABEL: func @shuffle_poison_unused
+//       CHECK:   %[[r:.*]] = ub.poison : vector<4xi32>
+//       CHECK:   return %[[r]]
+func.func @shuffle_poison_unused(%1: vector<2xi32>) -> vector<4xi32> {
+  %0 = ub.poison : vector<2xi32>
+  %r = vector.shuffle %0, %1 [0, 1, -1, -1] : vector<2xi32>, vector<2xi32>
+  return %r : vector<4xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @fold_poison_into_mask
+//       CHECK:   vector.shuffle %{{.*}}, %{{.*}} [-1, -1, 2, -1] : vector<2xi32>, vector<2xi32>
+func.func @fold_poison_into_mask(%1: vector<2xi32>) -> vector<4xi32> {
+  %0 = ub.poison : vector<2xi32>
+  %r = vector.shuffle %0, %1 [0, 1, 2, 1] : vector<2xi32>, vector<2xi32>
+  return %r : vector<4xi32>
 }
 
 // -----
@@ -3803,6 +3971,25 @@ func.func @insert_vector_poison_idx_non_cst(%a: vector<4x5xf32>, %b: vector<5xf3
   %c_neg_1 = arith.constant -1 : index
   %0 = vector.insert %b, %a[%c_neg_1] : vector<5xf32> into vector<4x5xf32>
   return %0 : vector<4x5xf32>
+}
+
+// -----
+
+// Similar to the test above, but with a dense constant destination. This exercises
+// foldDenseElementsAttrDestInsertOp, which must not crash when the dynamic index
+// constant is -1 (the poison sentinel). The IR should instead fold to ub.poison.
+// Regression test for https://github.com/llvm/llvm-project/issues/188404
+
+// CHECK-LABEL: @insert_scalar_poison_idx_dense_dest
+func.func @insert_scalar_poison_idx_dense_dest() -> vector<2xf16> {
+  // CHECK-NEXT: %[[UB:.*]] = ub.poison : vector<2xf16>
+  //  CHECK-NOT: vector.insert
+  // CHECK-NEXT: return %[[UB]] : vector<2xf16>
+  %cst = arith.constant dense<0.0> : vector<2xf16>
+  %idx = arith.constant -1 : index
+  %val = arith.constant 2.5 : f16
+  %0 = vector.insert %val, %cst [%idx] : f16 into vector<2xf16>
+  return %0 : vector<2xf16>
 }
 
 // -----

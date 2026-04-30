@@ -17,8 +17,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %v1:_(<8 x s8>) = COPY $d0
     ; CHECK-NEXT: %v2:_(<8 x s8>) = COPY $d1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
-    ; CHECK-NEXT: %shuf:_(<8 x s8>) = G_EXT %v1, %v2, [[C]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 3
+    ; CHECK-NEXT: %shuf:_(<8 x s8>) = G_EXT %v1, %v2, [[C]](i32)
     ; CHECK-NEXT: $d0 = COPY %shuf(<8 x s8>)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %v1:_(<8 x s8>) = COPY $d0
@@ -40,8 +40,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %v1:_(<8 x s8>) = COPY $d0
     ; CHECK-NEXT: %v2:_(<8 x s8>) = COPY $d1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 5
-    ; CHECK-NEXT: %shuf:_(<8 x s8>) = G_EXT %v2, %v1, [[C]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 5
+    ; CHECK-NEXT: %shuf:_(<8 x s8>) = G_EXT %v2, %v1, [[C]](i32)
     ; CHECK-NEXT: $d0 = COPY %shuf(<8 x s8>)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %v1:_(<8 x s8>) = COPY $d0
@@ -63,8 +63,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %v1:_(<16 x s8>) = COPY $q0
     ; CHECK-NEXT: %v2:_(<16 x s8>) = COPY $q1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
-    ; CHECK-NEXT: %shuf:_(<16 x s8>) = G_EXT %v1, %v2, [[C]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 3
+    ; CHECK-NEXT: %shuf:_(<16 x s8>) = G_EXT %v1, %v2, [[C]](i32)
     ; CHECK-NEXT: $q0 = COPY %shuf(<16 x s8>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %v1:_(<16 x s8>) = COPY $q0
@@ -86,8 +86,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %v1:_(<16 x s8>) = COPY $q0
     ; CHECK-NEXT: %v2:_(<16 x s8>) = COPY $q1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 7
-    ; CHECK-NEXT: %shuf:_(<16 x s8>) = G_EXT %v2, %v1, [[C]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 7
+    ; CHECK-NEXT: %shuf:_(<16 x s8>) = G_EXT %v2, %v1, [[C]](i32)
     ; CHECK-NEXT: $q0 = COPY %shuf(<16 x s8>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %v1:_(<16 x s8>) = COPY $q0
@@ -109,8 +109,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %v1:_(<4 x s16>) = COPY $d0
     ; CHECK-NEXT: %v2:_(<4 x s16>) = COPY $d1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 6
-    ; CHECK-NEXT: %shuf:_(<4 x s16>) = G_EXT %v1, %v2, [[C]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 6
+    ; CHECK-NEXT: %shuf:_(<4 x s16>) = G_EXT %v1, %v2, [[C]](i32)
     ; CHECK-NEXT: $d0 = COPY %shuf(<4 x s16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %v1:_(<4 x s16>) = COPY $d0
@@ -132,8 +132,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %v1:_(<4 x s32>) = COPY $q0
     ; CHECK-NEXT: %v2:_(<4 x s32>) = COPY $q1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
-    ; CHECK-NEXT: %shuf:_(<4 x s32>) = G_EXT %v1, %v2, [[C]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 12
+    ; CHECK-NEXT: %shuf:_(<4 x s32>) = G_EXT %v1, %v2, [[C]](i32)
     ; CHECK-NEXT: $q0 = COPY %shuf(<4 x s32>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %v1:_(<4 x s32>) = COPY $q0
@@ -157,8 +157,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %v1:_(<8 x s8>) = COPY $d0
     ; CHECK-NEXT: %v2:_(<8 x s8>) = COPY $d1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
-    ; CHECK-NEXT: %shuf:_(<8 x s8>) = G_EXT %v1, %v2, [[C]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 3
+    ; CHECK-NEXT: %shuf:_(<8 x s8>) = G_EXT %v1, %v2, [[C]](i32)
     ; CHECK-NEXT: $d0 = COPY %shuf(<8 x s8>)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %v1:_(<8 x s8>) = COPY $d0
@@ -182,8 +182,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %v1:_(<8 x s8>) = COPY $d0
     ; CHECK-NEXT: %v2:_(<8 x s8>) = COPY $d1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 6
-    ; CHECK-NEXT: %shuf:_(<8 x s8>) = G_EXT %v2, %v1, [[C]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 6
+    ; CHECK-NEXT: %shuf:_(<8 x s8>) = G_EXT %v2, %v1, [[C]](i32)
     ; CHECK-NEXT: $d0 = COPY %shuf(<8 x s8>)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %v1:_(<8 x s8>) = COPY $d0
@@ -207,8 +207,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %v1:_(<16 x s8>) = COPY $q0
     ; CHECK-NEXT: %v2:_(<16 x s8>) = COPY $q1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 7
-    ; CHECK-NEXT: %shuf:_(<16 x s8>) = G_EXT %v2, %v1, [[C]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 7
+    ; CHECK-NEXT: %shuf:_(<16 x s8>) = G_EXT %v2, %v1, [[C]](i32)
     ; CHECK-NEXT: $q0 = COPY %shuf(<16 x s8>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %v1:_(<16 x s8>) = COPY $q0
@@ -232,8 +232,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %v1:_(<8 x s16>) = COPY $q0
     ; CHECK-NEXT: %v2:_(<8 x s16>) = COPY $q1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
-    ; CHECK-NEXT: %shuf:_(<8 x s16>) = G_EXT %v2, %v1, [[C]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
+    ; CHECK-NEXT: %shuf:_(<8 x s16>) = G_EXT %v2, %v1, [[C]](i32)
     ; CHECK-NEXT: $q0 = COPY %shuf(<8 x s16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %v1:_(<8 x s16>) = COPY $q0
@@ -255,8 +255,8 @@ body:             |
     ; CHECK: liveins: $q0, $q1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %v1:_(<8 x s16>) = COPY $q0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK-NEXT: %shuf:_(<8 x s16>) = G_DUPLANE16 %v1, [[C]](s64)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %shuf:_(<8 x s16>) = G_DUPLANE16 %v1, [[C]](i64)
     ; CHECK-NEXT: $q0 = COPY %shuf(<8 x s16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %v1:_(<8 x s16>) = COPY $q0
@@ -277,8 +277,8 @@ body:             |
     ; CHECK: liveins: $q0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %v1:_(<2 x s64>) = COPY $q0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; CHECK-NEXT: %shuf:_(<2 x s64>) = G_EXT %v1, %v1, [[C]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 8
+    ; CHECK-NEXT: %shuf:_(<2 x s64>) = G_EXT %v1, %v1, [[C]](i32)
     ; CHECK-NEXT: $q0 = COPY %shuf(<2 x s64>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %v1:_(<2 x s64>) = COPY $q0
@@ -299,8 +299,8 @@ body:             |
     ; CHECK: liveins: $q0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %v1:_(<2 x s64>) = COPY $q0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK-NEXT: %shuf:_(<2 x s64>) = G_DUPLANE64 %v1, [[C]](s64)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %shuf:_(<2 x s64>) = G_DUPLANE64 %v1, [[C]](i64)
     ; CHECK-NEXT: $q0 = COPY %shuf(<2 x s64>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %v1:_(<2 x s64>) = COPY $q0
@@ -321,8 +321,8 @@ body:             |
     ; CHECK: liveins: $q0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %v1:_(<2 x s64>) = COPY $q0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    ; CHECK-NEXT: %shuf:_(<2 x s64>) = G_DUPLANE64 %v1, [[C]](s64)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: %shuf:_(<2 x s64>) = G_DUPLANE64 %v1, [[C]](i64)
     ; CHECK-NEXT: $q0 = COPY %shuf(<2 x s64>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %v1:_(<2 x s64>) = COPY $q0

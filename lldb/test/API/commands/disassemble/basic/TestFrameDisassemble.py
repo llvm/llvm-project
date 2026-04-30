@@ -18,39 +18,11 @@ class FrameDisassembleTestCase(TestBase):
 
     def frame_disassemble_test(self):
         """Sample test to ensure SBFrame::Disassemble produces SOME output"""
-        # Create a target by the debugger.
-        target = self.createTestTarget()
-
-        # Now create a breakpoint in main.c at the source matching
-        # "Set a breakpoint here"
-        breakpoint = target.BreakpointCreateBySourceRegex(
-            "Set a breakpoint here", lldb.SBFileSpec("main.cpp")
-        )
-        self.assertTrue(
-            breakpoint and breakpoint.GetNumLocations() >= 1, VALID_BREAKPOINT
+        _, _, thread, _ = lldbutil.run_to_source_breakpoint(
+            self, "Set a breakpoint here", lldb.SBFileSpec("main.cpp")
         )
 
-        error = lldb.SBError()
-        # This is the launch info.  If you want to launch with arguments or
-        # environment variables, add them using SetArguments or
-        # SetEnvironmentEntries
-
-        launch_info = target.GetLaunchInfo()
-        process = target.Launch(launch_info, error)
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        # Did we hit our breakpoint?
-        from lldbsuite.test.lldbutil import get_threads_stopped_at_breakpoint
-
-        threads = get_threads_stopped_at_breakpoint(process, breakpoint)
-        self.assertEqual(
-            len(threads), 1, "There should be a thread stopped at our breakpoint"
-        )
-
-        # The hit count for the breakpoint should be 1.
-        self.assertEqual(breakpoint.GetHitCount(), 1)
-
-        frame = threads[0].GetFrameAtIndex(0)
+        frame = thread.GetFrameAtIndex(0)
         disassembly = frame.Disassemble()
         self.assertNotEqual(disassembly, "")
         self.assertNotIn("error", disassembly)

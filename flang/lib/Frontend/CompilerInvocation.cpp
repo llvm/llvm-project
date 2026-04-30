@@ -170,16 +170,19 @@ static bool parseDebugArgs(Fortran::frontend::CodeGenOptions &opts,
           args.getLastArg(clang::options::OPT_dwarf_debug_flags))
     opts.DwarfDebugFlags = arg->getValue();
 
+  opts.DebugInfoForProfiling =
+      args.hasArg(clang::options::OPT_fdebug_info_for_profiling);
+
   return true;
 }
 
-static void parseDoConcurrentMapping(Fortran::frontend::CodeGenOptions &opts,
+static bool parseDoConcurrentMapping(Fortran::frontend::CodeGenOptions &opts,
                                      llvm::opt::ArgList &args,
                                      clang::DiagnosticsEngine &diags) {
   llvm::opt::Arg *arg =
       args.getLastArg(clang::options::OPT_fdo_concurrent_to_openmp_EQ);
   if (!arg)
-    return;
+    return true;
 
   using DoConcurrentMappingKind =
       Fortran::frontend::CodeGenOptions::DoConcurrentMappingKind;
@@ -194,9 +197,11 @@ static void parseDoConcurrentMapping(Fortran::frontend::CodeGenOptions &opts,
   if (!val.has_value()) {
     diags.Report(clang::diag::err_drv_invalid_value)
         << arg->getAsString(args) << arg->getValue();
+    return false;
   }
 
   opts.setDoConcurrentMapping(val.value());
+  return true;
 }
 
 static bool parseVectorLibArg(Fortran::frontend::CodeGenOptions &opts,
@@ -349,6 +354,11 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   if (args.hasArg(clang::options::OPT_finstrument_functions))
     opts.InstrumentFunctions = 1;
 
+  // -fno-integrated-as: emit GNU Assembler compatible assembly.
+  if (!args.hasFlag(clang::options::OPT_fintegrated_as,
+                    clang::options::OPT_fno_integrated_as, true))
+    opts.DisableIntegratedAS = 1;
+
   if (const llvm::opt::Arg *a =
           args.getLastArg(clang::options::OPT_mcode_object_version_EQ)) {
     llvm::StringRef s = a->getValue();
@@ -466,6 +476,9 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
     opts.ProfileInstrumentUsePath = A->getValue();
   }
 
+  opts.SampleProfileFile =
+      args.getLastArgValue(clang::options::OPT_fprofile_sample_use_EQ);
+
   // -mcmodel option.
   if (const llvm::opt::Arg *a =
           args.getLastArg(clang::options::OPT_mcmodel_EQ)) {
@@ -494,8 +507,6 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
                    clang::options::OPT_funderscoring, false)) {
     opts.Underscoring = 0;
   }
-
-  parseDoConcurrentMapping(opts, args, diags);
 
   if (const llvm::opt::Arg *arg =
           args.getLastArg(clang::options::OPT_complex_range_EQ)) {
@@ -1037,14 +1048,27 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   // this has to change when other -W<opt>'s are supported.
   if (args.hasArg(clang::options::OPT_W_Joined)) {
     const auto &wArgs = args.getAllArgValues(clang::options::OPT_W_Joined);
-    for (const auto &wArg : wArgs) {
+    // TODO: Consider using std::string_view instead of llvm::StringRef
+    // when moving to C++20:
+    for (const llvm::StringRef wArg : wArgs) {
       if (wArg == "error") {
         res.setWarnAsErr(true);
         // -Wfatal-errors
       } else if (wArg == "fatal-errors") {
         res.setMaxErrors(1);
         // -W[no-]<feature>
-      } else if (!features.EnableWarning(wArg)) {
+      } else if (features.EnableWarning(wArg)) {
+        if (auto canonical{features.CheckDeprecatedSpelling(wArg)}) {
+          std::string suggestion{*canonical};
+          if (wArg.starts_with("no-")) {
+            suggestion = "no-" + suggestion;
+          }
+          const unsigned diagID =
+              diags.getCustomDiagID(clang::DiagnosticsEngine::Warning,
+                                    "-W%0 is deprecated; use -W%1 instead");
+          diags.Report(diagID) << wArg << suggestion;
+        }
+      } else {
         const unsigned diagID = diags.getCustomDiagID(
             clang::DiagnosticsEngine::Error, "Unknown diagnostic option: -W%0");
         diags.Report(diagID) << wArg;
@@ -1650,8 +1674,10 @@ bool CompilerInvocation::createFromArgs(
 
   // -frealloc-lhs is the default.
   if (!args.hasFlag(clang::options::OPT_frealloc_lhs,
-                    clang::options::OPT_fno_realloc_lhs, true))
+                    clang::options::OPT_fno_realloc_lhs, true)) {
     invoc.loweringOpts.setReallocateLHS(false);
+    invoc.getLangOpts().NoReallocateLHS = true;
+  }
 
   invoc.loweringOpts.setRepackArrays(args.hasFlag(
       clang::options::OPT_frepack_arrays, clang::options::OPT_fno_repack_arrays,
@@ -1675,6 +1701,7 @@ bool CompilerInvocation::createFromArgs(
   parseTargetArgs(invoc.getTargetOpts(), args);
   parsePreprocessorArgs(invoc.getPreprocessorOpts(), args);
   parseCodeGenArgs(invoc.getCodeGenOpts(), args, diags);
+  success &= parseDoConcurrentMapping(invoc.getCodeGenOpts(), args, diags);
   success &= parseDebugArgs(invoc.getCodeGenOpts(), args, diags);
 
   // Enable USE statement preservation for debug info if debug level is above

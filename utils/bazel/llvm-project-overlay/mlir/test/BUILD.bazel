@@ -317,6 +317,14 @@ gentbl_cc_library(
             "-gen-typedef-defs",
             "-typedefs-dialect=transform",
         ],
+        "lib/Dialect/Transform/TestTransformDialectExtensionAttrs.h.inc": [
+            "-gen-attrdef-decls",
+            "-attrdefs-dialect=transform",
+        ],
+        "lib/Dialect/Transform/TestTransformDialectExtensionAttrs.cpp.inc": [
+            "-gen-attrdef-defs",
+            "-attrdefs-dialect=transform",
+        ],
     },
     tblgen = "//mlir:mlir-tblgen",
     td_file = "lib/Dialect/Transform/TestTransformDialectExtension.td",
@@ -385,6 +393,7 @@ cc_library(
         "//mlir:ArithDialect",
         "//mlir:BufferizationDialect",
         "//mlir:BufferizationInterfaces",
+        "//mlir:BytecodeDialectInterfaceIncGen",
         "//mlir:BytecodeOpInterface",
         "//mlir:CallOpInterfaces",
         "//mlir:CommonFolders",

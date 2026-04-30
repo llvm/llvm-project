@@ -9,10 +9,14 @@
 ;    }
 ;
 ; FIXME: The truncated value should be a parameter.
+; CHECK:         {{^ *}}Context:
+; CHECK-NEXT:    [N, tmp, M] -> { : -2147483648 <= N <= 2147483647 and -2147483648 <= tmp <= 2147483647 and -2147483648 <= M <= 2147483647 }
 ; CHECK:         Assumed Context:
 ; CHECK-NEXT:    [N, tmp, M] -> { : }
-; CHECK-NEXT:    Invalid Context:
-; CHECK-NEXT:    [N, tmp, M] -> { : N < 0 or (N > 0 and tmp >= 128) or (N > 0 and tmp < 0) or (N > 0 and M < 0) }
+; CHECK:         Invalid Context:
+; CHECK-NEXT:    [N, tmp, M] -> { : tmp <= -129 or tmp >= 128 or N < 0 or (N > 0 and tmp < 0) or (N > 0 and M < 0) }
+; CHECK:         Defined Behavior Context:
+; CHECK-NEXT:    [N, tmp, M] -> { : -128 <= tmp <= 127 and -2147483648 <= M <= 2147483647 and ((0 < N <= 2147483647 and tmp >= 0 and M >= 0) or N = 0) }
 ;
 ; CHECK:         Domain :=
 ; CHECK-NEXT:    [N, tmp, M] -> { Stmt_if_then[i0] : tmp >= 0 and M > tmp and 0 <= i0 < N };

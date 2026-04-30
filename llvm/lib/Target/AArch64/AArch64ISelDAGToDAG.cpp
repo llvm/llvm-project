@@ -496,6 +496,14 @@ private:
   bool SelectCVTFixedPosRecipOperand(SDValue N, SDValue &FixedPos,
                                      unsigned Width);
 
+  template <unsigned FloatWidth>
+  bool SelectCVTFixedPosRecipOperandVec(SDValue N, SDValue &FixedPos) {
+    return SelectCVTFixedPosRecipOperandVec(N, FixedPos, FloatWidth);
+  }
+
+  bool SelectCVTFixedPosRecipOperandVec(SDValue N, SDValue &FixedPos,
+                                        unsigned Width);
+
   bool SelectCMP_SWAP(SDNode *N);
 
   bool SelectSVEAddSubImm(SDValue N, MVT VT, SDValue &Imm, SDValue &Shift,
@@ -570,7 +578,7 @@ static SDValue addBitcastHints(SelectionDAG &DAG, SDNode &N) {
 }
 
 /// isIntImmediate - This method tests to see if the node is a constant
-/// operand. If so Imm will receive the 32-bit value.
+/// operand. If so Imm will receive the 64-bit value.
 static bool isIntImmediate(const SDNode *N, uint64_t &Imm) {
   if (const ConstantSDNode *C = dyn_cast<const ConstantSDNode>(N)) {
     Imm = C->getZExtValue();
@@ -613,17 +621,14 @@ static APInt DecodeFMOVImm(uint64_t Imm, unsigned RegWidth) {
   return APInt(RegWidth, AArch64_AM::decodeAdvSIMDModImmType12(Imm));
 }
 
-// Decodes the integer splat value from a NEON splat operation.
+// Decodes the raw integer splat value from a NEON splat operation.
 static std::optional<APInt> DecodeNEONSplat(SDValue N) {
   assert(N.getValueType().isInteger() && "Only integers are supported");
+  if (N->getOpcode() == AArch64ISD::NVCAST)
+    N = N->getOperand(0);
   unsigned SplatWidth = N.getScalarValueSizeInBits();
-  if (N->getOpcode() == AArch64ISD::NVCAST) {
-    SDValue Op = N->getOperand(0);
-    if (Op.getOpcode() != AArch64ISD::FMOV ||
-        Op.getScalarValueSizeInBits() != N.getScalarValueSizeInBits())
-      return std::nullopt;
-    return DecodeFMOVImm(Op.getConstantOperandVal(0), SplatWidth);
-  }
+  if (N.getOpcode() == AArch64ISD::FMOV)
+    return DecodeFMOVImm(N.getConstantOperandVal(0), SplatWidth);
   if (N->getOpcode() == AArch64ISD::MOVI)
     return APInt(SplatWidth, N.getConstantOperandVal(0));
   if (N->getOpcode() == AArch64ISD::MOVIshift)
@@ -632,17 +637,33 @@ static std::optional<APInt> DecodeNEONSplat(SDValue N) {
   if (N->getOpcode() == AArch64ISD::MVNIshift)
     return ~APInt(SplatWidth, N.getConstantOperandVal(0)
                                   << N.getConstantOperandVal(1));
+  if (N->getOpcode() == AArch64ISD::MOVIedit)
+    return APInt(SplatWidth, AArch64_AM::decodeAdvSIMDModImmType10(
+                                 N.getConstantOperandVal(0)));
   if (N->getOpcode() == AArch64ISD::DUP)
     if (auto *Const = dyn_cast<ConstantSDNode>(N->getOperand(0)))
       return Const->getAPIntValue().trunc(SplatWidth);
   // TODO: Recognize more splat-like NEON operations. See ConstantBuildVector
-  // in AArch64ISelLowering. AArch64ISD::MOVIedit support will allow more folds.
+  // in AArch64ISelLowering.
+  return std::nullopt;
+}
+
+// If \p N is a NEON splat operation (movi, fmov, etc), return the splat value
+// matching the element size of N.
+static std::optional<APInt> GetNEONSplatValue(SDValue N) {
+  unsigned SplatWidth = N.getScalarValueSizeInBits();
+  if (std::optional<APInt> SplatVal = DecodeNEONSplat(N)) {
+    if (SplatVal->getBitWidth() <= SplatWidth)
+      return APInt::getSplat(SplatWidth, *SplatVal);
+    if (SplatVal->isSplat(SplatWidth))
+      return SplatVal->trunc(SplatWidth);
+  }
   return std::nullopt;
 }
 
 bool AArch64DAGToDAGISel::SelectNEONSplatOfSVELogicalImm(SDValue N,
                                                          SDValue &Imm) {
-  std::optional<APInt> ImmVal = DecodeNEONSplat(N);
+  std::optional<APInt> ImmVal = GetNEONSplatValue(N);
   if (!ImmVal)
     return false;
   uint64_t Encoding;
@@ -656,7 +677,7 @@ bool AArch64DAGToDAGISel::SelectNEONSplatOfSVELogicalImm(SDValue N,
 
 bool AArch64DAGToDAGISel::SelectNEONSplatOfSVEAddSubImm(SDValue N, SDValue &Imm,
                                                         SDValue &Shift) {
-  if (std::optional<APInt> ImmVal = DecodeNEONSplat(N))
+  if (std::optional<APInt> ImmVal = GetNEONSplatValue(N))
     return SelectSVEAddSubImm(SDLoc(N), *ImmVal,
                               N.getValueType().getScalarType().getSimpleVT(),
                               Imm, Shift,
@@ -666,7 +687,7 @@ bool AArch64DAGToDAGISel::SelectNEONSplatOfSVEAddSubImm(SDValue N, SDValue &Imm,
 
 bool AArch64DAGToDAGISel::SelectNEONSplatOfSVEArithSImm(SDValue N,
                                                         SDValue &Imm) {
-  if (std::optional<APInt> ImmVal = DecodeNEONSplat(N))
+  if (std::optional<APInt> ImmVal = GetNEONSplatValue(N))
     return SelectSVESignedArithImm(SDLoc(N), *ImmVal, Imm);
   return false;
 }
@@ -4134,14 +4155,11 @@ static bool checkCVTFixedPointOperandWithFBits(SelectionDAG *CurDAG, SDValue N,
   return false;
 }
 
-bool AArch64DAGToDAGISel::SelectCVTFixedPosOperand(SDValue N, SDValue &FixedPos,
-                                                   unsigned RegWidth) {
-  return checkCVTFixedPointOperandWithFBits(CurDAG, N, FixedPos, RegWidth,
-                                            /*isReciprocal*/ false);
-}
-
-bool AArch64DAGToDAGISel::SelectCVTFixedPointVec(SDValue N, SDValue &FixedPos,
-                                                 unsigned RegWidth) {
+static bool checkCVTFixedPointOperandWithFBitsForVectors(SelectionDAG *CurDAG,
+                                                         SDValue N,
+                                                         SDValue &FixedPos,
+                                                         unsigned RegWidth,
+                                                         bool isReciprocal) {
   if ((N.getOpcode() == AArch64ISD::NVCAST || N.getOpcode() == ISD::BITCAST) &&
       N.getValueType().getScalarSizeInBits() ==
           N.getOperand(0).getValueType().getScalarSizeInBits())
@@ -4179,13 +4197,32 @@ bool AArch64DAGToDAGISel::SelectCVTFixedPointVec(SDValue N, SDValue &FixedPos,
     return false;
   }
 
-  if (unsigned FBits = CheckFixedPointOperandConstant(FVal, RegWidth,
-                                                      /*isReciprocal*/ false)) {
+  if (unsigned FBits =
+          CheckFixedPointOperandConstant(FVal, RegWidth, isReciprocal)) {
     FixedPos = CurDAG->getTargetConstant(FBits, SDLoc(N), MVT::i32);
     return true;
   }
 
   return false;
+}
+
+bool AArch64DAGToDAGISel::SelectCVTFixedPosOperand(SDValue N, SDValue &FixedPos,
+                                                   unsigned RegWidth) {
+  return checkCVTFixedPointOperandWithFBits(CurDAG, N, FixedPos, RegWidth,
+                                            /*isReciprocal*/ false);
+}
+
+bool AArch64DAGToDAGISel::SelectCVTFixedPointVec(SDValue N, SDValue &FixedPos,
+                                                 unsigned RegWidth) {
+  return checkCVTFixedPointOperandWithFBitsForVectors(
+      CurDAG, N, FixedPos, RegWidth, /*isReciprocal*/ false);
+}
+
+bool AArch64DAGToDAGISel::SelectCVTFixedPosRecipOperandVec(SDValue N,
+                                                           SDValue &FixedPos,
+                                                           unsigned RegWidth) {
+  return checkCVTFixedPointOperandWithFBitsForVectors(
+      CurDAG, N, FixedPos, RegWidth, /*isReciprocal*/ true);
 }
 
 bool AArch64DAGToDAGISel::SelectCVTFixedPosRecipOperand(SDValue N,

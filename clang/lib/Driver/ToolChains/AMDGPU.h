@@ -152,7 +152,8 @@ public:
                           Action::OffloadKind DeviceOffloadingKind) const;
 
   SanitizerMask getSupportedSanitizers() const override {
-    return SanitizerKind::Address;
+    return SanitizerKind::Address | SanitizerKind::Undefined |
+           SanitizerKind::UndefinedGroup;
   }
 
   bool diagnoseUnsupportedOption(const llvm::opt::Arg *A,
@@ -202,12 +203,16 @@ public:
     SmallVector<const char *, 4> SupportedSanitizers;
     SmallVector<const char *, 4> UnSupportedSanitizers;
 
+    SanitizerMask Supported = ROCMToolChain::getSupportedSanitizers();
+    SanitizerMask SupportedMask;
     for (const char *Value : A->getValues()) {
-      SanitizerMask K = parseSanitizerValue(Value, /*Allow Groups*/ false);
-      if (K & ROCMToolChain::getSupportedSanitizers())
+      SanitizerMask K = parseSanitizerValue(Value, /*Allow Groups*/ true);
+      if (K & Supported) {
         SupportedSanitizers.push_back(Value);
-      else
+        SupportedMask |= K;
+      } else {
         UnSupportedSanitizers.push_back(Value);
+      }
     }
 
     // If there are no supported sanitizers, drop the whole argument.
@@ -221,8 +226,9 @@ public:
         diagnoseUnsupportedOption(A, DAL, DriverArgs, Value);
       }
     }
-    // If we know the target arch, check if the sanitizer is supported for it.
-    if (shouldSkipSanitizeOption(TC, DriverArgs, TargetID, A))
+    // The xnack+ feature is only required for ASan on AMDGPU.
+    if ((SupportedMask & SanitizerKind::Address) &&
+        shouldSkipSanitizeOption(TC, DriverArgs, TargetID, A))
       return true;
 
     // Add a new argument with only the supported sanitizers.

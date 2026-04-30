@@ -18,6 +18,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SPIRVPrepareFunctions.h"
 #include "SPIRV.h"
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
@@ -40,24 +41,30 @@ using namespace llvm;
 
 namespace {
 
-class SPIRVPrepareFunctions : public ModulePass {
+class SPIRVPrepareFunctionsImpl {
   const SPIRVTargetMachine &TM;
   bool substituteIntrinsicCalls(Function *F);
   Function *removeAggregateTypesFromSignature(Function *F);
   bool removeAggregateTypesFromCalls(Function *F);
 
 public:
+  SPIRVPrepareFunctionsImpl(const SPIRVTargetMachine &TM) : TM(TM) {}
+  bool runOnModule(Module &M);
+};
+
+class SPIRVPrepareFunctionsLegacy : public ModulePass {
+  const SPIRVTargetMachine &TM;
+
+public:
   static char ID;
-  SPIRVPrepareFunctions(const SPIRVTargetMachine &TM)
+  SPIRVPrepareFunctionsLegacy(const SPIRVTargetMachine &TM)
       : ModulePass(ID), TM(TM) {}
 
-  bool runOnModule(Module &M) override;
+  bool runOnModule(Module &M) override {
+    return SPIRVPrepareFunctionsImpl(TM).runOnModule(M);
+  }
 
   StringRef getPassName() const override { return "SPIRV prepare functions"; }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    ModulePass::getAnalysisUsage(AU);
-  }
 };
 
 static cl::list<std::string> SPVAllowUnknownIntrinsics(
@@ -69,9 +76,9 @@ static cl::list<std::string> SPVAllowUnknownIntrinsics(
     cl::value_desc("intrinsic_prefix_0,intrinsic_prefix_1"), cl::ValueOptional);
 } // namespace
 
-char SPIRVPrepareFunctions::ID = 0;
+char SPIRVPrepareFunctionsLegacy::ID = 0;
 
-INITIALIZE_PASS(SPIRVPrepareFunctions, "prepare-functions",
+INITIALIZE_PASS(SPIRVPrepareFunctionsLegacy, "spirv-prepare-functions",
                 "SPIRV prepare functions", false, false)
 
 static std::string lowerLLVMIntrinsicName(IntrinsicInst *II) {
@@ -425,7 +432,7 @@ lowerConstrainedFmuladd(IntrinsicInst *II,
 
 // Substitutes calls to LLVM intrinsics with either calls to SPIR-V intrinsics
 // or calls to proper generated functions. Returns True if F was modified.
-bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
+bool SPIRVPrepareFunctionsImpl::substituteIntrinsicCalls(Function *F) {
   bool Changed = false;
   const SPIRVSubtarget &STI = TM.getSubtarget<SPIRVSubtarget>(*F);
   SmallVector<Instruction *> EraseFromParent;
@@ -439,6 +446,9 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
       if (!CF || !CF->isIntrinsic())
         continue;
       auto *II = cast<IntrinsicInst>(Call);
+      if (Intrinsic::isTargetIntrinsic(II->getIntrinsicID()) &&
+          II->getCalledOperand()->getName().starts_with("llvm.spv"))
+        continue;
       switch (II->getIntrinsicID()) {
       case Intrinsic::memset:
       case Intrinsic::bswap:
@@ -507,7 +517,7 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
 static void
 addFunctionTypeMutation(NamedMDNode *NMD,
                         SmallVector<std::pair<int, Type *>> ChangedTys,
-                        StringRef Name) {
+                        StringRef Name, StringRef AsmConstraints = "") {
 
   LLVMContext &Ctx = NMD->getParent()->getContext();
   Type *I32Ty = IntegerType::getInt32Ty(Ctx);
@@ -519,13 +529,16 @@ addFunctionTypeMutation(NamedMDNode *NMD,
         Ctx, {ConstantAsMetadata::get(ConstantInt::get(I32Ty, CTy.first, true)),
               ValueAsMetadata::get(Constant::getNullValue(CTy.second))});
   });
+  if (!AsmConstraints.empty())
+    MDArgs.push_back(MDNode::get(Ctx, MDString::get(Ctx, AsmConstraints)));
   NMD->addOperand(MDNode::get(Ctx, MDArgs));
 }
+
 // Returns F if aggregate argument/return types are not present or cloned F
 // function with the types replaced by i32 types. The change in types is
 // noted in 'spv.cloned_funcs' metadata for later restoration.
 Function *
-SPIRVPrepareFunctions::removeAggregateTypesFromSignature(Function *F) {
+SPIRVPrepareFunctionsImpl::removeAggregateTypesFromSignature(Function *F) {
   bool IsRetAggr = F->getReturnType()->isAggregateType();
   // Allow intrinsics with aggregate return type to reach GlobalISel
   if (F->isIntrinsic() && IsRetAggr)
@@ -592,10 +605,27 @@ SPIRVPrepareFunctions::removeAggregateTypesFromSignature(Function *F) {
   return NewF;
 }
 
-// Mutates indirect callsites iff if aggregate argument/return types are present
-// with the types replaced by i32 types. The change in types is noted in
-// 'spv.mutated_callsites' metadata for later restoration.
-bool SPIRVPrepareFunctions::removeAggregateTypesFromCalls(Function *F) {
+static std::string fixMultiOutputConstraintString(StringRef Constraints) {
+  // We should only have one =r return for the made up ASM type.
+  SmallVector<StringRef> Tmp;
+  SplitString(Constraints, Tmp, ",");
+  std::string SafeConstraints("=r,");
+  for (unsigned I = 0u; I != Tmp.size() - 1; ++I) {
+    if (Tmp[I].starts_with('=') && (Tmp[I][1] == '&' || isalnum(Tmp[I][1])))
+      continue;
+    SafeConstraints.append(Tmp[I]).append({','});
+  }
+  SafeConstraints.append(Tmp.back());
+
+  return SafeConstraints;
+}
+
+// Mutates indirect and inline ASM callsites iff aggregate argument/return types
+// are present with the types replaced by i32 types. The change in types is
+// noted in 'spv.mutated_callsites' metadata for later restoration. For ASM we
+// also have to mutate the constraint string as IRTranslator tries to handle
+// multiple outputs and expects an aggregate return type in their presence.
+bool SPIRVPrepareFunctionsImpl::removeAggregateTypesFromCalls(Function *F) {
   if (F->isDeclaration() || F->isIntrinsic())
     return false;
 
@@ -643,9 +673,19 @@ bool SPIRVPrepareFunctions::removeAggregateTypesFromCalls(Function *F) {
       CB->setName("spv.named_mutated_callsite." + F->getName() + "." +
                   CB->getName());
 
+    std::string Constraints;
+    if (auto *ASM = dyn_cast<InlineAsm>(CB->getCalledOperand())) {
+      Constraints = ASM->getConstraintString();
+
+      CB->setCalledOperand(InlineAsm::get(
+          NewFnTy, ASM->getAsmString(),
+          fixMultiOutputConstraintString(Constraints), ASM->hasSideEffects(),
+          ASM->isAlignStack(), ASM->getDialect(), ASM->canThrow()));
+    }
+
     addFunctionTypeMutation(
         F->getParent()->getOrInsertNamedMetadata("spv.mutated_callsites"),
-        std::move(ChangedTypes), CB->getName());
+        std::move(ChangedTypes), CB->getName(), Constraints);
   }
 
   for (auto &&[CB, NewFTy] : Calls) {
@@ -658,7 +698,7 @@ bool SPIRVPrepareFunctions::removeAggregateTypesFromCalls(Function *F) {
   return true;
 }
 
-bool SPIRVPrepareFunctions::runOnModule(Module &M) {
+bool SPIRVPrepareFunctionsImpl::runOnModule(Module &M) {
   // Resolve the SPIR-V environment from module content before any
   // function-level processing. This must happen before legalization so that
   // isShader()/isKernel() return correct values.
@@ -700,7 +740,14 @@ bool SPIRVPrepareFunctions::runOnModule(Module &M) {
   return Changed;
 }
 
+PreservedAnalyses SPIRVPrepareFunctions::run(Module &M,
+                                             ModuleAnalysisManager &AM) {
+  return SPIRVPrepareFunctionsImpl(TM).runOnModule(M)
+             ? PreservedAnalyses::none()
+             : PreservedAnalyses::all();
+}
+
 ModulePass *
 llvm::createSPIRVPrepareFunctionsPass(const SPIRVTargetMachine &TM) {
-  return new SPIRVPrepareFunctions(TM);
+  return new SPIRVPrepareFunctionsLegacy(TM);
 }

@@ -277,11 +277,15 @@ static void testDebugInfoAttributes(MlirContext ctx) {
   mlirAttributeDump(file);
 
   MlirAttribute compile_unit = mlirLLVMDICompileUnitAttrGet(
-      ctx, id, LLVMDWARFSourceLanguageC99, file, foo, false,
-      MlirLLVMDIEmissionKindFull, MlirLLVMDINameTableKindDefault, bar);
+      ctx, recId0, false, id, LLVMDWARFSourceLanguageC99, file, foo, false,
+      MlirLLVMDIEmissionKindFull, false, MlirLLVMDINameTableKindDefault, bar, 0,
+      NULL);
 
   // CHECK: #llvm.di_compile_unit<{{.*}}>
   mlirAttributeDump(compile_unit);
+
+  // CHECK: #llvm.di_compile_unit<recId = {{.*}}, isRecSelf = true>
+  mlirAttributeDump(mlirLLVMDICompileUnitAttrGetRecSelf(recId1));
 
   MlirAttribute di_module = mlirLLVMDIModuleAttrGet(
       ctx, file, compile_unit, foo,

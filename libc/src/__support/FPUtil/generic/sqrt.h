@@ -9,7 +9,6 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_SQRT_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_SQRT_H
 
-#include "sqrt_80_bit_long_double.h"
 #include "src/__support/CPP/bit.h" // countl_zero
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
@@ -21,6 +20,10 @@
 #include "src/__support/uint128.h"
 
 #include "hdr/fenv_macros.h"
+
+#ifdef LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
+#include "sqrt_80_bit_long_double.h"
+#endif // !LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
@@ -52,7 +55,7 @@ template <>
 LIBC_INLINE void normalize<long double>(int &exponent, uint64_t &mantissa) {
   normalize<double>(exponent, mantissa);
 }
-#elif !defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
+#elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128)
 template <>
 LIBC_INLINE void normalize<long double>(int &exponent, UInt128 &mantissa) {
   const uint64_t hi_bits = static_cast<uint64_t>(mantissa >> 64);
@@ -76,8 +79,10 @@ LIBC_INLINE static constexpr cpp::enable_if_t<
 sqrt(InType x) {
   if constexpr (internal::SpecialLongDouble<OutType>::VALUE &&
                 internal::SpecialLongDouble<InType>::VALUE) {
+#ifdef LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
     // Special 80-bit long double.
     return x86::sqrt(x);
+#endif // !LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
   } else {
     // IEEE floating points formats.
     using OutFPBits = FPBits<OutType>;

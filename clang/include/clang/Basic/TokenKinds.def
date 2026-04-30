@@ -288,6 +288,7 @@ PUNCTUATOR(greatergreatergreater, ">>>")
 //   KEYOPENCLC   - This is a keyword in OpenCL C
 //   KEYOPENCLCXX - This is a keyword in C++ for OpenCL
 //   KEYNOOPENCL  - This is a keyword that is not supported in OpenCL
+//   KEYNOHLSL    - This is a keyword that is not supported in HLSL
 //   KEYALTIVEC - This is a keyword in AltiVec
 //   KEYZVECTOR - This is a keyword for the System z vector extensions,
 //                which are heavily based on AltiVec
@@ -335,7 +336,7 @@ KEYWORD(typedef                     , KEYALL)
 KEYWORD(union                       , KEYALL)
 KEYWORD(unsigned                    , KEYALL)
 KEYWORD(void                        , KEYALL)
-KEYWORD(volatile                    , KEYALL)
+KEYWORD(volatile                    , KEYALL|KEYNOHLSL)
 KEYWORD(while                       , KEYALL)
 KEYWORD(_Alignas                    , KEYALL)
 KEYWORD(_Alignof                    , KEYALL)
@@ -680,6 +681,8 @@ KEYWORD(groupshared                 , KEYHLSL)
 KEYWORD(in                          , KEYHLSL)
 KEYWORD(inout                       , KEYHLSL)
 KEYWORD(out                         , KEYHLSL)
+KEYWORD(row_major                   , KEYHLSL)
+KEYWORD(column_major                , KEYHLSL)
 // HLSL Intangible Types
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) KEYWORD(Name, KEYHLSL)
 #include "clang/Basic/HLSLIntangibleTypes.def"

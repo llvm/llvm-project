@@ -99,9 +99,29 @@ std::string mangle(StringRef baseName, ArrayRef<Type> types,
   return os.str();
 }
 
+std::string builtinElemType(ElemType elemType) {
+  switch (elemType) {
+  case ElemType::BF8:
+    return "bf8";
+  case ElemType::F8:
+    return "hf8";
+  case ElemType::BF16:
+    return "bf";
+  case ElemType::F16:
+    return "hf";
+  case ElemType::F32:
+    return "f";
+  default:
+    return stringifyElemType(elemType).str();
+  }
+}
+
 static int32_t getL1CacheControl(LoadCacheControl cc) {
   int32_t control = 0;
   switch (cc) {
+  case LoadCacheControl::USE_DEFAULT:
+    control = -1;
+    break;
   case LoadCacheControl::L1C_L2UC_L3UC:
   case LoadCacheControl::L1C_L2UC_L3C:
   case LoadCacheControl::L1C_L2C_L3UC:
@@ -126,6 +146,9 @@ static int32_t getL1CacheControl(LoadCacheControl cc) {
 static int32_t getL1CacheControl(StoreCacheControl cc) {
   int32_t control = 0;
   switch (cc) {
+  case StoreCacheControl::USE_DEFAULT:
+    control = -1;
+    break;
   case StoreCacheControl::L1WT_L2UC_L3UC:
   case StoreCacheControl::L1WT_L2UC_L3WB:
   case StoreCacheControl::L1WT_L2WB_L3UC:
@@ -152,6 +175,9 @@ static int32_t getL1CacheControl(StoreCacheControl cc) {
 static int32_t getL3CacheControl(LoadCacheControl cc) {
   int32_t control = 0;
   switch (cc) {
+  case LoadCacheControl::USE_DEFAULT:
+    control = -1;
+    break;
   case LoadCacheControl::L1UC_L2UC_L3C:
   case LoadCacheControl::L1UC_L2C_L3C:
   case LoadCacheControl::L1C_L2UC_L3C:
@@ -172,6 +198,9 @@ static int32_t getL3CacheControl(LoadCacheControl cc) {
 static int32_t getL3CacheControl(StoreCacheControl cc) {
   int32_t control = 0;
   switch (cc) {
+  case StoreCacheControl::USE_DEFAULT:
+    control = -1;
+    break;
   case StoreCacheControl::L1UC_L2UC_L3WB:
   case StoreCacheControl::L1UC_L2WB_L3WB:
   case StoreCacheControl::L1WT_L2UC_L3WB:
@@ -246,6 +275,7 @@ static std::optional<ArrayAttr>
 getCacheControlMetadata(ConversionPatternRewriter &rewriter, OpType op) {
   if (!getCacheControl(op))
     return {};
+
   constexpr int32_t decorationCacheControlArity{3};
   constexpr int32_t loadCacheControlKey{6442};
   constexpr int32_t storeCacheControlKey{6443};
@@ -254,6 +284,19 @@ getCacheControlMetadata(ConversionPatternRewriter &rewriter, OpType op) {
                           std::is_same_v<OpType, LLVM::LoadOp> ||
                           std::is_same_v<OpType, BlockLoadOp> ||
                           std::is_same_v<OpType, PrefetchOp>;
+
+  // If the cache control is USE_DEFAULT, then we don’t emit any metadata.
+  // Assert that if one of the L1 or L3 cache control values is USE_DEFAULT
+  // (represented as -1), then both must be USE_DEFAULT; otherwise there is a
+  // bug.
+  assert(((getL1CacheControl<OpType>(op) == -1) ==
+          (getL3CacheControl<OpType>(op) == -1)) &&
+         "If one of L1 or L3 cache control is USE_DEFAULT, both must be "
+         "USE_DEFAULT");
+
+  if (getL1CacheControl<OpType>(op) == -1 &&
+      getL3CacheControl<OpType>(op) == -1)
+    return {};
   const int32_t controlKey{isLoad ? loadCacheControlKey : storeCacheControlKey};
   SmallVector<int32_t, decorationCacheControlArity> decorationsL1{
       controlKey, 0, getL1CacheControl<OpType>(op)};
@@ -306,10 +349,10 @@ buildCacheControlPayloads(ArrayRef<Attribute> attrs) {
 
     // Produce: {SPIR-V decoration token:"L1 cache control,L3 cache control"}
     // The quote char (0x22) is embedded literally; LLVM IR prints it as \22.
-    std::string entry = llvm::formatv("'{'{0}:\"{1},{2}\"'}'",
-                                      tokenAttr.getValue().getZExtValue(),
-                                      secondAttr.getValue().getZExtValue(),
-                                      thirdAttr.getValue().getZExtValue());
+    std::string entry =
+        llvm::formatv("{{{0}:\"{1},{2}\"}", tokenAttr.getValue().getZExtValue(),
+                      secondAttr.getValue().getZExtValue(),
+                      thirdAttr.getValue().getZExtValue());
 
     // Deduplicate identical annotations.
     if (!seen.insert({entry, true}).second)
@@ -495,6 +538,28 @@ static LLVM::CallOp createDeviceFunctionCall(
   return callOp;
 }
 
+static unsigned getNumOperandsPerDword(xevm::ElemType pTy) {
+  switch (pTy) {
+  case xevm::ElemType::F32:
+  case xevm::ElemType::TF32:
+    return 1;
+  case xevm::ElemType::BF16:
+  case xevm::ElemType::F16:
+    return 2;
+  case xevm::ElemType::U8:
+  case xevm::ElemType::S8:
+  case xevm::ElemType::BF8:
+  case xevm::ElemType::F8:
+    return 4;
+  case xevm::ElemType::E2M1:
+  case xevm::ElemType::U4:
+  case xevm::ElemType::S4:
+    return 8;
+  default:
+    llvm_unreachable("unsupported xevm::ElemType");
+  }
+}
+
 class MMAToOCLPattern : public OpConversionPattern<xevm::MMAOp> {
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
@@ -597,22 +662,6 @@ class MMAToOCLPattern : public OpConversionPattern<xevm::MMAOp> {
 
     rewriter.replaceOp(op, result);
     return success();
-  }
-
-private:
-  static unsigned getNumOperandsPerDword(xevm::ElemType pTy) {
-    switch (pTy) {
-    case xevm::ElemType::TF32:
-      return 1;
-    case xevm::ElemType::BF16:
-    case xevm::ElemType::F16:
-      return 2;
-    case xevm::ElemType::U8:
-    case xevm::ElemType::S8:
-      return 4;
-    default:
-      llvm_unreachable("unsupported xevm::ElemType");
-    }
   }
 };
 
@@ -915,7 +964,7 @@ class LLVMLoadStoreToOCLPattern : public OpConversionPattern<OpType> {
     std::optional<ArrayAttr> optCacheControls =
         getCacheControlMetadata(rewriter, op);
     if (!optCacheControls) {
-      op->removeAttr("cache_control");
+      rewriter.modifyOpInPlace(op, [&]() { op->removeAttr("cache_control"); });
       return success();
     }
 
@@ -929,8 +978,10 @@ class LLVMLoadStoreToOCLPattern : public OpConversionPattern<OpType> {
         rewriter, op->getLoc(), ptr, *optCacheControls, moduleOp);
 
     // Replace the pointer operand with the annotated one.
-    op->setOperand(ptrIdx, annotatedPtr);
-    op->removeAttr("cache_control");
+    rewriter.modifyOpInPlace(op, [&]() {
+      op->setOperand(ptrIdx, annotatedPtr);
+      op->removeAttr("cache_control");
+    });
     return success();
   }
 };
@@ -1066,6 +1117,157 @@ class SubgroupOpWorkitemOpToOCLPattern : public OpConversionPattern<OpType> {
         /*targetMem1=*/noModRef);
     call.setMemoryEffectsAttr(memAttr);
     rewriter.replaceOp(op, call);
+    return success();
+  }
+};
+
+class TruncfToOCLPattern : public OpConversionPattern<TruncfOp> {
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(TruncfOp op, TruncfOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    // Supported source and result types are resticted for now.
+    auto srcEtype = op.getSrcEtype().getEtype();
+    auto dstEtype = op.getDstEtype().getEtype();
+    if (auto vecSrcTy = dyn_cast<VectorType>(op.getSrc().getType())) {
+      if (vecSrcTy.getNumElements() != 16)
+        return rewriter.notifyMatchFailure(
+            op, "Only vector src of 16 elements is supported");
+    } else {
+      return rewriter.notifyMatchFailure(op, "Scalar src is not supported.");
+    }
+    if (auto vecDstTy = dyn_cast<VectorType>(op.getDst().getType())) {
+      if (vecDstTy.getNumElements() != 16)
+        return rewriter.notifyMatchFailure(
+            op, "Only vector dst of 16 elements is supported");
+    } else {
+      return rewriter.notifyMatchFailure(op, "Scalar dst is not supported.");
+    }
+    if (srcEtype == TruncfSrcElemTypes::F16 &&
+        dstEtype == TruncfDstElemTypes::BF8) {
+      // BF8 is just F16 with lower 8 bits of mantessa discard.
+      //     Signbit Exponent Mantessa
+      // BF8 1       5        2
+      // F16 1       5        10
+      // Xe arch is Little Endian so BF8 is just the second byte of the two
+      // byte representation used for F16
+      auto firstHalf =
+          LLVM::ShuffleVectorOp::create(rewriter, op.getLoc(), op.getSrc(),
+                                        op.getSrc(), {0, 1, 2, 3, 4, 5, 6, 7});
+      auto secondHalf = LLVM::ShuffleVectorOp::create(
+          rewriter, op.getLoc(), op.getSrc(), op.getSrc(),
+          {8, 9, 10, 11, 12, 13, 14, 15});
+      auto firstHalfCasted = LLVM::BitcastOp::create(
+          rewriter, op.getLoc(), VectorType::get(16, rewriter.getI8Type()),
+          firstHalf);
+      auto secondHalfCasted = LLVM::BitcastOp::create(
+          rewriter, op.getLoc(), VectorType::get(16, rewriter.getI8Type()),
+          secondHalf);
+      // Gather just the second bytes from every two byte F16 values
+      auto resFirstHalf = LLVM::ShuffleVectorOp::create(
+          rewriter, op.getLoc(), firstHalfCasted, firstHalfCasted,
+          {1, 3, 5, 7, 9, 11, 13, 15});
+      auto resSecondHalf = LLVM::ShuffleVectorOp::create(
+          rewriter, op.getLoc(), secondHalfCasted, secondHalfCasted,
+          {1, 3, 5, 7, 9, 11, 13, 15});
+      auto res = LLVM::ShuffleVectorOp::create(
+          rewriter, op.getLoc(), resFirstHalf, resSecondHalf,
+          {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15});
+      rewriter.replaceOp(op, res);
+    } else {
+      return rewriter.notifyMatchFailure(
+          op, "Unsupported src, dst element type pair.");
+    }
+    return success();
+  }
+};
+
+class MMAMxToOCLPattern : public OpConversionPattern<MMAMxOp> {
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(MMAMxOp op, MMAMxOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (!op.getC()) {
+      return rewriter.notifyMatchFailure(op, "OCL requires C operand");
+    }
+    auto precisionC = op.getTypes().getC();
+    auto precisionD = op.getTypes().getD();
+    if (precisionC != precisionD) {
+      return rewriter.notifyMatchFailure(op, "type of C and D need to match");
+    }
+
+    constexpr uint32_t bitWidthPackedA{16};
+    constexpr uint32_t bitWidthPackedB{32};
+    auto loc = op.getLoc();
+
+    auto castIfNeeded = [&](Value val, Type packedType) -> Value {
+      VectorType origTy = cast<VectorType>(val.getType());
+      const uint32_t vecBitSize =
+          origTy.getNumElements() *
+          origTy.getElementType().getIntOrFloatBitWidth();
+      VectorType newTy = VectorType::get(
+          vecBitSize / packedType.getIntOrFloatBitWidth(), packedType);
+      if (origTy != newTy)
+        val = LLVM::BitcastOp::create(rewriter, loc, newTy, val);
+      return val;
+    };
+
+    Value a = op.getA();
+    Type packedAType = (op.getTypes().getA() == xevm::ElemType::TF32)
+                           ? cast<Type>(rewriter.getF32Type())
+                           : rewriter.getIntegerType(bitWidthPackedA);
+    a = castIfNeeded(a, packedAType);
+
+    Value b = op.getB();
+    Type packedBType = (op.getTypes().getB() == xevm::ElemType::TF32)
+                           ? cast<Type>(rewriter.getF32Type())
+                           : rewriter.getIntegerType(bitWidthPackedB);
+    b = castIfNeeded(b, packedBType);
+
+    Value c = op.getC();
+    VectorType cOrigTy = cast<VectorType>(c.getType());
+    VectorType resOrigTy = cast<VectorType>(op->getResultTypes()[0]);
+    assert(cOrigTy == resOrigTy && "Accumulator and result type mismatch");
+    // OCL builtins encode bfloat16 as int16
+    VectorType cTy =
+        cOrigTy.getElementType().isBF16()
+            ? VectorType::get(cOrigTy.getShape(), rewriter.getIntegerType(16))
+            : cOrigTy;
+    VectorType resTy = cTy;
+    if (cOrigTy != cTy)
+      c = LLVM::BitcastOp::create(rewriter, loc, cTy, c);
+
+    std::string fnName =
+        llvm::formatv("__builtin_IB_sub_group16_bdpas_{0}_{1}_{2}_{3}_8_8",
+                      builtinElemType(op.getTypes().getD()),
+                      builtinElemType(op.getTypes().getC()),
+                      builtinElemType(op.getTypes().getA()),
+                      builtinElemType(op.getTypes().getB()))
+            .str();
+    auto scaleA = op.getScaleA();
+    auto scaleB = op.getScaleB();
+    SmallVector<Type> argTypes{cTy, a.getType(), b.getType(), scaleA.getType(),
+                               scaleB.getType()};
+    SmallVector<Value> args{c, a, b, scaleA, scaleB};
+
+    auto memAttr = rewriter.getAttr<LLVM::MemoryEffectsAttr>(
+        /*other=*/LLVM::ModRefInfo::NoModRef,
+        /*argMem=*/LLVM::ModRefInfo::NoModRef,
+        /*inaccessibleMem=*/LLVM::ModRefInfo::NoModRef,
+        /*errnoMem=*/LLVM::ModRefInfo::NoModRef,
+        /*targetMem0=*/LLVM::ModRefInfo::NoModRef,
+        /*targetMem1=*/LLVM::ModRefInfo::NoModRef);
+    auto funcAttrs = convergentNoUnwindWillReturnAttrs;
+    funcAttrs.memEffectsAttr = memAttr;
+    Value result =
+        createDeviceFunctionCall(rewriter, fnName, resTy, argTypes, args, {},
+                                 funcAttrs, op.getOperation())
+            ->getResult(0);
+
+    if (resOrigTy != resTy)
+      result = LLVM::BitcastOp::create(rewriter, loc, resOrigTy, result);
+
+    rewriter.replaceOp(op, result);
     return success();
   }
 };
@@ -1247,6 +1449,9 @@ class HandleVectorExtractPattern
         // 3. Merge with load as a smaller load
         auto loadOp = cast<LLVM::LoadOp>(srcOp);
         auto loadPtr = loadOp.getAddr();
+        auto loadAddrSpace = loadPtr.getType().getAddressSpace();
+        if (loadAddrSpace != 0)
+          return failure();
         auto loadTy = dyn_cast<VectorType>(loadOp.getType());
         auto elemTy = loadTy.getElementType();
         auto firstIndex = mask[0];
@@ -1255,8 +1460,7 @@ class HandleVectorExtractPattern
         if (firstIndex) {
           auto newPtr = LLVM::GEPOp::create(
               rewriter, loc,
-              LLVM::LLVMPointerType::get(rewriter.getContext(),
-                                         loadPtr.getType().getAddressSpace()),
+              LLVM::LLVMPointerType::get(rewriter.getContext(), loadAddrSpace),
               elemTy, loadPtr, ArrayRef<LLVM::GEPArg>{firstIndex});
           auto newLoad = LLVM::LoadOp::create(rewriter, loc, newVecTy, newPtr);
           rewriter.replaceOp(op, newLoad);
@@ -1267,6 +1471,9 @@ class HandleVectorExtractPattern
       } else {
         return failure();
       }
+    } else {
+      // No defining op (e.g. function argument): nothing to hoist/merge.
+      return failure();
     }
     return success();
   }
@@ -1355,5 +1562,6 @@ void ::mlir::populateXeVMToLLVMConversionPatterns(ConversionTarget &target,
                SubgroupOpWorkitemOpToOCLPattern<LaneIdOp>,
                SubgroupOpWorkitemOpToOCLPattern<SubgroupIdOp>,
                SubgroupOpWorkitemOpToOCLPattern<SubgroupSizeOp>,
-               AllocaToGlobalPattern>(patterns.getContext());
+               TruncfToOCLPattern, MMAMxToOCLPattern, AllocaToGlobalPattern>(
+      patterns.getContext());
 }

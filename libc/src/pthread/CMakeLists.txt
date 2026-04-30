@@ -192,6 +192,113 @@ add_entrypoint_object(
 )
 
 add_header_library(
+  pthread_cond_utils
+  HDRS
+    pthread_cond_utils.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.time_macros
+    libc.include.llvm-libc-types.clockid_t
+    libc.include.llvm-libc-types.pthread_cond_t
+    libc.include.llvm-libc-types.pthread_mutex_t
+    libc.include.llvm-libc-types.struct_timespec
+    libc.src.__support.CPP.optional
+    libc.src.__support.macros.null_check
+    libc.src.__support.macros.optimization
+    libc.src.__support.threads.CndVar
+    libc.src.__support.threads.mutex
+    libc.src.__support.time.abs_timeout
+)
+
+add_entrypoint_object(
+  pthread_cond_broadcast
+  SRCS
+    pthread_cond_broadcast.cpp
+  HDRS
+    pthread_cond_broadcast.h
+  DEPENDS
+    .pthread_cond_utils
+)
+
+add_entrypoint_object(
+  pthread_cond_clockwait
+  SRCS
+    pthread_cond_clockwait.cpp
+  HDRS
+    pthread_cond_clockwait.h
+  DEPENDS
+    .pthread_cond_utils
+    libc.hdr.errno_macros
+    libc.include.llvm-libc-types.clockid_t
+    libc.include.llvm-libc-types.pthread_cond_t
+    libc.include.llvm-libc-types.pthread_mutex_t
+    libc.include.llvm-libc-types.struct_timespec
+)
+
+add_entrypoint_object(
+  pthread_cond_destroy
+  SRCS
+    pthread_cond_destroy.cpp
+  HDRS
+    pthread_cond_destroy.h
+  DEPENDS
+    .pthread_cond_utils
+)
+
+add_entrypoint_object(
+  pthread_cond_init
+  SRCS
+    pthread_cond_init.cpp
+  HDRS
+    pthread_cond_init.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.time_macros
+    libc.include.llvm-libc-macros.pthread_macros
+    libc.include.llvm-libc-types.pthread_cond_t
+    libc.include.llvm-libc-types.pthread_condattr_t
+    libc.src.__support.CPP.new
+    libc.src.__support.macros.null_check
+    libc.src.__support.threads.CndVar
+)
+
+add_entrypoint_object(
+  pthread_cond_signal
+  SRCS
+    pthread_cond_signal.cpp
+  HDRS
+    pthread_cond_signal.h
+  DEPENDS
+    .pthread_cond_utils
+)
+
+add_entrypoint_object(
+  pthread_cond_timedwait
+  SRCS
+    pthread_cond_timedwait.cpp
+  HDRS
+    pthread_cond_timedwait.h
+  DEPENDS
+    .pthread_cond_utils
+    libc.include.llvm-libc-types.pthread_cond_t
+    libc.include.llvm-libc-types.pthread_mutex_t
+    libc.include.llvm-libc-types.struct_timespec
+)
+
+add_entrypoint_object(
+  pthread_cond_wait
+  SRCS
+    pthread_cond_wait.cpp
+  HDRS
+    pthread_cond_wait.h
+  DEPENDS
+    .pthread_cond_utils
+    libc.src.__support.CPP.optional
+    libc.include.llvm-libc-types.pthread_cond_t
+    libc.include.llvm-libc-types.pthread_mutex_t
+)
+
+add_header_library(
   pthread_mutexattr
   HDRS
     pthread_mutexattr.h
@@ -356,6 +463,17 @@ add_entrypoint_object(
     pthread_mutex_lock.cpp
   HDRS
     pthread_mutex_lock.h
+  DEPENDS
+    libc.include.pthread
+    libc.src.__support.threads.mutex
+)
+
+add_entrypoint_object(
+  pthread_mutex_trylock
+  SRCS
+    pthread_mutex_trylock.cpp
+  HDRS
+    pthread_mutex_trylock.h
   DEPENDS
     libc.include.pthread
     libc.src.__support.threads.mutex
@@ -591,7 +709,7 @@ add_entrypoint_object(
     pthread_rwlock_init.h
   DEPENDS
     libc.include.pthread
-    libc.src.__support.threads.linux.rwlock
+    libc.src.__support.threads.unix_rwlock
     libc.src.__support.CPP.new
 )
 
@@ -603,7 +721,7 @@ add_entrypoint_object(
     pthread_rwlock_tryrdlock.h
   DEPENDS
     libc.include.pthread
-    libc.src.__support.threads.linux.rwlock
+    libc.src.__support.threads.unix_rwlock
 )
 
 add_entrypoint_object(
@@ -614,7 +732,7 @@ add_entrypoint_object(
     pthread_rwlock_trywrlock.h
   DEPENDS
     libc.include.pthread
-    libc.src.__support.threads.linux.rwlock
+    libc.src.__support.threads.unix_rwlock
     libc.src.errno.errno
 )
 
@@ -626,7 +744,7 @@ add_entrypoint_object(
     pthread_rwlock_clockrdlock.h
   DEPENDS
     libc.include.pthread
-    libc.src.__support.threads.linux.rwlock
+    libc.src.__support.threads.unix_rwlock
 )
 
 add_entrypoint_object(
@@ -637,7 +755,7 @@ add_entrypoint_object(
     pthread_rwlock_clockwrlock.h
   DEPENDS
     libc.include.pthread
-    libc.src.__support.threads.linux.rwlock
+    libc.src.__support.threads.unix_rwlock
 )
 
 add_entrypoint_object(
@@ -648,7 +766,7 @@ add_entrypoint_object(
     pthread_rwlock_timedrdlock.h
   DEPENDS
     libc.include.pthread
-    libc.src.__support.threads.linux.rwlock
+    libc.src.__support.threads.unix_rwlock
     libc.src.errno.errno
 )
 
@@ -660,7 +778,7 @@ add_entrypoint_object(
     pthread_rwlock_timedwrlock.h
   DEPENDS
     libc.include.pthread
-    libc.src.__support.threads.linux.rwlock
+    libc.src.__support.threads.unix_rwlock
 )
 
 add_entrypoint_object(
@@ -671,7 +789,7 @@ add_entrypoint_object(
     pthread_rwlock_rdlock.h
   DEPENDS
     libc.include.pthread
-    libc.src.__support.threads.linux.rwlock
+    libc.src.__support.threads.unix_rwlock
 )
 
 add_entrypoint_object(
@@ -682,7 +800,7 @@ add_entrypoint_object(
     pthread_rwlock_wrlock.h
   DEPENDS
     libc.include.pthread
-    libc.src.__support.threads.linux.rwlock
+    libc.src.__support.threads.unix_rwlock
 )
 
 add_entrypoint_object(
@@ -693,7 +811,7 @@ add_entrypoint_object(
     pthread_rwlock_unlock.h
   DEPENDS
     libc.include.pthread
-    libc.src.__support.threads.linux.rwlock
+    libc.src.__support.threads.unix_rwlock
     libc.src.errno.errno
 )
 
@@ -705,7 +823,7 @@ add_entrypoint_object(
     pthread_rwlock_destroy.h
   DEPENDS
     libc.include.pthread
-    libc.src.__support.threads.linux.rwlock
+    libc.src.__support.threads.unix_rwlock
 )
 
 add_entrypoint_object(

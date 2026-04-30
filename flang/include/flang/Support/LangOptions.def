@@ -60,6 +60,10 @@ LANGOPT(OpenMPNoThreadState, 1, 0)
 LANGOPT(OpenMPNoNestedParallelism, 1, 0)
 /// Use SIMD only OpenMP support.
 LANGOPT(OpenMPSimd, 1, false)
+/// -fno-realloc-lhs: disable reallocation of allocatable LHS on assignment.
+/// When set, polymorphic allocatable LHS still requires reallocation (F2003+);
+/// a warning is emitted in that case.
+LANGOPT(NoReallocateLHS, 1, false)
 /// Enable fast MOD operations for REAL
 LANGOPT(FastRealMod, 1, false)
 LANGOPT(VScaleMin, 32, 0)  ///< Minimum vscale range value
