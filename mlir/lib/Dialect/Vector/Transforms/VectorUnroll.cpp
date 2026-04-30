@@ -1390,10 +1390,10 @@ private:
 };
 
 // Unroll vector::BitCastOp into smaller slice-based bitcast operations.
-// Tiles the result vector into target shape chunks and bitcasts corresponding
-// source slices, accounting for element bitwidth ratios.
+// Decomposes the result vector into target shape chunks and bitcasts
+// corresponding source slices, accounting for element bitwidth ratios.
 /// Example:
-///   Given a deinterleave Op:
+///   Given a bitcast Op:
 ///
 ///     vector.bitcast %src : vector<4x8xf32>
 ///
