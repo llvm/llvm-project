@@ -4818,10 +4818,11 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     if (isUnifiedSharedMemory && !IsXnackEnabled) {
       MESSAGE0(
           "Running a program that requires XNACK on a system where XNACK is "
-          "disabled. This may cause problems when using an OS-allocated "
-          "pointer "
-          "inside a target region. "
-          "Re-run with HSA_XNACK=1 to remove this warning.");
+          "disabled or not supported. If your device supports XNACK, "
+          "re-run with HSA_XNACK=1. If your device does not support XNACK, "
+          "remove USM pragma and use map clauses instead. "
+          "Set OMPX_EAGER_ZERO_COPY_MAPS=1 for optimal zero-copy "
+          "performance on non-XNACK shared-memory devices.");
       if (OMPX_StrictSanityChecks)
         llvm_unreachable("User-requested hard stop on sanity check errors.");
     }
