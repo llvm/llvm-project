@@ -69,6 +69,11 @@ else()
     message(FATAL_ERROR "Clang is not enabled, but is required to build libclc in-tree")
   endif()
 
+  # The package version is required to find the resource directory.
+  if( LLVM_PACKAGE_VERSION AND NOT PACKAGE_VERSION )
+    set( PACKAGE_VERSION "${LLVM_PACKAGE_VERSION}" )
+  endif()
+
   get_host_tool_path( llvm-link LLVM_LINK llvm-link_exe llvm-link_target )
   get_host_tool_path( opt OPT opt_exe opt_target )
 
