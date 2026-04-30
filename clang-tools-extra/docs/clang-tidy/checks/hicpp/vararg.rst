@@ -1,6 +1,4 @@
 .. title:: clang-tidy - hicpp-vararg
-.. meta::
-   :http-equiv=refresh: 5;URL=../cppcoreguidelines/pro-type-vararg.html
 
 hicpp-vararg
 ============

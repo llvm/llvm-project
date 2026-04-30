@@ -11455,10 +11455,6 @@ StmtResult SemaOpenMP::ActOnOpenMPErrorDirective(ArrayRef<OMPClause *> Clauses,
   return OMPErrorDirective::Create(getASTContext(), StartLoc, EndLoc, Clauses);
 }
 
-static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
-    OpenMPDirectiveKind DKind, OpenMPClauseKind CKind, unsigned OpenMPVersion,
-    OpenMPDirectiveKind NameModifier = OMPD_unknown);
-
 StmtResult
 SemaOpenMP::ActOnOpenMPTaskwaitDirective(ArrayRef<OMPClause *> Clauses,
                                          SourceLocation StartLoc,
@@ -17022,7 +17018,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind,
 // be captured.
 static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     OpenMPDirectiveKind DKind, OpenMPClauseKind CKind, unsigned OpenMPVersion,
-    OpenMPDirectiveKind NameModifier) {
+    OpenMPDirectiveKind NameModifier = OMPD_unknown) {
   assert(isAllowedClauseForDirective(DKind, CKind, OpenMPVersion) &&
          "Invalid directive with CKind-clause");
 
@@ -22422,11 +22418,35 @@ OMPClause *SemaOpenMP::ActOnOpenMPDeviceClause(
   Expr *ValExpr = Device;
   Stmt *HelperValStmt = nullptr;
 
-  // OpenMP [2.9.1, Restrictions]
-  // The device expression must evaluate to a non-negative integer value.
-  ErrorFound = !isNonNegativeIntegerValue(ValExpr, SemaRef, OMPC_device,
-                                          /*StrictlyPositive=*/false) ||
-               ErrorFound;
+  // OpenMP 5.2 [1.3, Execution Model]: a conforming device number is either
+  // a non-negative integer that is less than or equal to omp_get_num_devices()
+  // or equal to omp_initial_device or omp_invalid_device. The predefined
+  // identifiers were introduced in OpenMP 5.2; earlier versions require a
+  // non-negative integer.
+  if (getLangOpts().OpenMP >= 52) {
+    if (!ValExpr->isTypeDependent() && !ValExpr->isValueDependent() &&
+        !ValExpr->isInstantiationDependent()) {
+      SourceLocation Loc = ValExpr->getExprLoc();
+      ExprResult Value = PerformOpenMPImplicitIntegerConversion(Loc, ValExpr);
+      if (Value.isInvalid()) {
+        ErrorFound = true;
+      } else {
+        ValExpr = Value.get();
+        if (std::optional<llvm::APSInt> Result =
+                ValExpr->getIntegerConstantExpr(getASTContext())) {
+          if (Result->isSigned() && Result->slt(-2)) {
+            Diag(Loc, diag::err_omp_device_expression_invalid)
+                << ValExpr->getSourceRange();
+            ErrorFound = true;
+          }
+        }
+      }
+    }
+  } else {
+    ErrorFound = !isNonNegativeIntegerValue(ValExpr, SemaRef, OMPC_device,
+                                            /*StrictlyPositive=*/false) ||
+                 ErrorFound;
+  }
   if (ErrorFound)
     return nullptr;
 
