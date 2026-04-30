@@ -1896,6 +1896,18 @@ bool AMDGPUAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
   return true;
 }
 
+bool AMDGPUAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
+                                             unsigned OpNo,
+                                             const char *ExtraCode,
+                                             raw_ostream &OS) {
+  const MachineOperand &MO = MI->getOperand(OpNo);
+  if (!MO.isReg())
+    return true;
+  AMDGPUInstPrinter::printRegOperand(MO.getReg(), OS,
+                                     *MF->getSubtarget().getRegisterInfo());
+  return false;
+}
+
 void AMDGPUAsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<AMDGPUResourceUsageAnalysisWrapperPass>();
   AU.addPreserved<AMDGPUResourceUsageAnalysisWrapperPass>();
