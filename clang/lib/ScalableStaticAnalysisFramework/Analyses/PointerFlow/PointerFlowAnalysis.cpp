@@ -23,7 +23,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
 #include <memory>
-#include <unordered_set>
 
 using namespace clang::ssaf;
 using namespace llvm;
@@ -172,9 +171,6 @@ class UnsafeBufferReachableAnalysis
   // Use pointers for efficiency. Both `Graph` and `Reachables` in the result
   // are tree-based containers that only grow. So pointers to them are stable.
   using EPLPtr = const EntityPointerLevel *;
-  using EPLPtrSet = std::unordered_set<EPLPtr>;
-  // The analysis needs to track EPLs with their contributor IDs:
-  using EPLPtrSetWithId = std::map<EntityId, std::unordered_set<EPLPtr>>;
 
   // Find all outgoing edges from `EPL` in the `Graph`, insert their
   // destination nodes into `Reachables`, and add newly discovered nodes to

@@ -7,10 +7,11 @@
 //===----------------------------------------------------------------------===//
 //
 // Defines
-// - PointerFlowAnalysisResult---the plain PointerFlow info collected from
-//   the whole program.
-// - PointerFlowReachableAnalysisResult---the set of reachable pointers
-//   in the pointer flow graph from a provided starting set.
+// - PointerFlowAnalysisResult
+//     - the plain PointerFlow info collected from the whole program.
+// - PointerFlowReachableAnalysisResult
+//     - the set of reachable pointers in the pointer flow graph from a provided
+//       starting set.
 //
 //===----------------------------------------------------------------------===//
 
