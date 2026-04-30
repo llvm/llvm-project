@@ -83,7 +83,7 @@ public:
   AtomicExpansionKind
   shouldCastAtomicRMWIInIR(AtomicRMWInst *RMWI) const override;
 
-   bool shouldIssueAtomicLoadForAtomicEmulationLoop() const override {
+  bool shouldIssueAtomicLoadForAtomicEmulationLoop() const override {
     return false;
   }
 };
