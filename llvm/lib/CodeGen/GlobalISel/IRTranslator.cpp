@@ -174,8 +174,8 @@ void IRTranslator::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<StackProtector>();
   AU.addRequired<TargetPassConfig>();
   AU.addRequired<GISelCSEAnalysisWrapperPass>();
-  AU.addRequired<AssumptionCacheTracker>();
   if (OptLevel != CodeGenOptLevel::None) {
+    AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<BranchProbabilityInfoWrapperPass>();
     AU.addRequired<AAResultsWrapperPass>();
   }
@@ -4221,13 +4221,13 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   if (EnableOpts) {
     AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
     FuncInfo.BPI = &getAnalysis<BranchProbabilityInfoWrapperPass>().getBPI();
+    AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(
+        MF->getFunction());
   } else {
     AA = nullptr;
     FuncInfo.BPI = nullptr;
+    AC = nullptr;
   }
-
-  AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(
-      MF->getFunction());
   LibInfo = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
   Libcalls = &getAnalysis<LibcallLoweringInfoWrapper>().getLibcallLowering(
       *F.getParent(), Subtarget);
