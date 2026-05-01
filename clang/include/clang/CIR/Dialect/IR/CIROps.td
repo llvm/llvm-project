@@ -7632,6 +7632,59 @@ def CIR_EndCatchOp : CIR_Op<"end_catch"> {
 }
 
 //===----------------------------------------------------------------------===//
+// EH Operations: InitCatchParamOp
+//===----------------------------------------------------------------------===//
+
+def CIR_InitCatchKind : CIR_I32EnumAttr<
+  "InitCatchKind", "", [
+    I32EnumAttrCase<"Reference", 0, "reference">,
+    I32EnumAttrCase<"Pointer", 1, "pointer">,
+    I32EnumAttrCase<"Scalar", 2, "scalar">,
+    I32EnumAttrCase<"Objc", 3, "objc">,
+    I32EnumAttrCase<"TrivialCopy", 4, "trivial_copy">,
+    I32EnumAttrCase<"NonTrivialCopy", 5, "non_trivial_copy">,
+]>;
+
+def CIR_InitCatchParamOp : CIR_Op<"init_catch_param"> {
+  let summary = "Initialize a catch parameter from the exception pointer";
+  let description = [{
+    `cir.init_catch_param` represents copying or otherwise materializing the
+    caught exception object into the local catch parameter variable. It takes
+    the exception pointer returned by `cir.begin_catch` and the address of
+    the alloca created for the catch parameter, and has no result.
+
+    This operation is target-independent. It is replaced during EHABI
+    lowering with the appropriate target/ABI-specific sequence (for example,
+    the Itanium C++ ABI may emit a load and store for scalar/pointer catch
+    types, an aggregate copy for record types, or a call to a copy
+    constructor when one is required).
+
+    Example:
+
+    ```
+    %catch_token, %exn_ptr = cir.begin_catch %eh_token
+      : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+    %param_addr = cir.alloca !s32i, !cir.ptr<!s32i>, ["e", init]
+    cir.init_catch_param %exn_ptr to %param_addr
+      : !cir.ptr<!void>, !cir.ptr<!s32i>
+    ```
+  }];
+
+  let arguments = (ins
+      CIR_PointerType:$exn_ptr,
+      CIR_PointerType:$param_addr,
+      CIR_InitCatchKind:$kind
+  );
+
+  let assemblyFormat = [{
+    $kind $exn_ptr `to` $param_addr `:`
+      qualified(type($exn_ptr)) `,` qualified(type($param_addr)) attr-dict
+  }];
+
+  let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
 // Atomic operations
 //===----------------------------------------------------------------------===//
 
