@@ -27,7 +27,6 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
-#include "llvm/DebugInfo/PDB/PDBTypes.h"
 #include "llvm/IR/Instructions.h"
 
 #define GET_GICOMBINER_DEPS
