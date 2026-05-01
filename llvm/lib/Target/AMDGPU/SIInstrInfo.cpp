@@ -7109,30 +7109,18 @@ static void emitLoadScalarOpsFromVGPRLoop(
     unsigned NumSubRegs = RegSize / 32;
     Register VScalarOp = ScalarOp->getReg();
 
-    auto LaneClassOf = [&](const TargetRegisterClass *RC) {
-      if (TRI->getRegSizeInBits(*RC) <= 32)
-        return RC;
-      const TargetRegisterClass *Sub =
-          TRI->getSubRegisterClass(RC, AMDGPU::sub0);
-      return Sub ? Sub : RC;
-    };
-    const TargetRegisterClass *VScalarOpRC = MRI.getRegClass(VScalarOp);
-    const TargetRegisterClass *RFLSrcRC = TRI->getRegClass(TII.getOpRegClassID(
-        TII.get(AMDGPU::V_READFIRSTLANE_B32).operands()[1]));
-    const TargetRegisterClass *LaneRC = LaneClassOf(VScalarOpRC);
-    if (RFLSrcRC && TRI->getCommonSubClass(LaneRC, RFLSrcRC) != LaneRC) {
-      const TargetRegisterClass *DemoteRC =
-          TRI->getEquivalentVGPRClass(VScalarOpRC);
-      assert(DemoteRC &&
-             TRI->getCommonSubClass(LaneClassOf(DemoteRC), RFLSrcRC) ==
-                 LaneClassOf(DemoteRC) &&
-             "demote target lane class incompatible with V_READFIRSTLANE_B32");
-      Register VRReg = MRI.createVirtualRegister(DemoteRC);
-      BuildMI(LoopBB, I, DL, TII.get(AMDGPU::COPY), VRReg).addReg(VScalarOp);
-      VScalarOp = VRReg;
-    }
+    const TargetRegisterClass *RFLSrcRC =
+        TII.getRegClass(TII.get(AMDGPU::V_READFIRSTLANE_B32), 1);
 
     if (NumSubRegs == 1) {
+      const TargetRegisterClass *VScalarOpRC = MRI.getRegClass(VScalarOp);
+      if (const TargetRegisterClass *Common =
+              TRI->getCommonSubClass(VScalarOpRC, RFLSrcRC);
+          Common && Common != VScalarOpRC) {
+        Register VRReg = MRI.createVirtualRegister(Common);
+        BuildMI(LoopBB, I, DL, TII.get(AMDGPU::COPY), VRReg).addReg(VScalarOp);
+        VScalarOp = VRReg;
+      }
       Register CurReg = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
 
       BuildMI(LoopBB, I, DL, TII.get(AMDGPU::V_READFIRSTLANE_B32), CurReg)
