@@ -1445,8 +1445,7 @@ void TextNodeDumper::dumpFormalLinkage(const NamedDecl *ND) {
     OS << " module-linkage";
     break;
   case Linkage::Invalid:
-    OS << " invalid-linkage";
-    break;
+    llvm_unreachable("Linkage hasn't been computed!");
   case Linkage::UniqueExternal:
   case Linkage::VisibleNone:
     llvm_unreachable("Not a formal linkage!");
