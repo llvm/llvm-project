@@ -1457,7 +1457,7 @@ def AMDGPU_GlobalTransposeLoadOp :
   let summary = "MLIR wrapper for RDNA4 global memory transpose load instructions";
   let description = [{
     The `amdgpu.global_transpose_load` op is a wrapper around the
-    `global_load_tr` family of instructions introduced in RDNA4 (gfx1250+).
+    `global_load_tr` family of instructions introduced in RDNA4 (gfx1200+).
 
     Each thread reads a column of a matrix stored in global memory and receives
     the corresponding row of the transposed matrix in its result register.
@@ -1480,7 +1480,7 @@ def AMDGPU_GlobalTransposeLoadOp :
     * (8, 8)   -> global_load_tr_b64
     * (16, 8)  -> global_load_tr_b128
 
-    Note: Lowering is only supported on gfx1250 and up.
+    Note: Lowering is only supported on gfx1200 and up.
   }];
   let assemblyFormat = [{
     $src `[` $srcIndices `]` attr-dict `:` type($src) `->` type($result)

@@ -48,6 +48,7 @@ constexpr Chipset kGfx908 = Chipset(9, 0, 8);
 constexpr Chipset kGfx90a = Chipset(9, 0, 0xa);
 constexpr Chipset kGfx942 = Chipset(9, 4, 2);
 constexpr Chipset kGfx950 = Chipset(9, 5, 0);
+constexpr Chipset kGfx1200 = Chipset(12, 0, 0);
 constexpr Chipset kGfx1250 = Chipset(12, 5, 0);
 
 // Predicates mirroring the LLVM AMDGPU `HasDot{N}Insts` features that gate
@@ -2239,9 +2240,9 @@ struct GlobalTransposeLoadOpLowering
   matchAndRewrite(GlobalTransposeLoadOp op,
                   GlobalTransposeLoadOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (chipset < kGfx1250)
+    if (chipset < kGfx1200)
       return op.emitOpError(
-          "global_transpose_load is only supported on gfx1250+");
+          "global_transpose_load is only supported on gfx1200+");
 
     Location loc = op.getLoc();
     auto srcMemRefType = cast<MemRefType>(op.getSrc().getType());
