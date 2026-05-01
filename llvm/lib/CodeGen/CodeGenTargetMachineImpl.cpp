@@ -174,7 +174,7 @@ CodeGenTargetMachineImpl::createMCStreamer(raw_pwrite_stream &Out,
                                            MCContext &Context,
                                            raw_pwrite_stream *CasIDOS) {
   const MCSubtargetInfo &STI = *getMCSubtargetInfo();
-  const MCAsmInfo &MAI = *getMCAsmInfo();
+  const MCAsmInfo &MAI = getMCAsmInfo();
   const MCRegisterInfo &MRI = *getMCRegisterInfo();
   const MCInstrInfo &MII = *getMCInstrInfo();
 
