@@ -676,12 +676,21 @@ static bool parseAddress(StringRef Str, uint64_t &Addr, bool HasPrefix,
 }
 
 /// Return the build ID to use for filtering perfscript addresses.
-/// If --filter-build-id is specified, use it as an override.
+/// If --filter-build-id is specified, use it as an override (with a warning
+/// if it doesn't match the binary's auto-detected build ID).
 /// Otherwise, use the auto-detected value from the binary.
 static StringRef getFilterBuildID(const ProfiledBinary *Binary) {
-  if (FilterBuildID.getNumOccurrences() > 0)
-    return FilterBuildID;
-  return Binary->getFilterBuildID();
+  StringRef BinaryBuildID = Binary->getFilterBuildID();
+  if (FilterBuildID.getNumOccurrences() == 0)
+    return BinaryBuildID;
+  static bool Warned = false;
+  if (!Warned && !BinaryBuildID.empty() && FilterBuildID != BinaryBuildID) {
+    WithColor::warning() << "--filter-build-id=" << FilterBuildID
+                         << " does not match binary build ID " << BinaryBuildID
+                         << "\n";
+    Warned = true;
+  }
+  return FilterBuildID;
 }
 
 bool PerfScriptReader::extractLBRStack(TraceStream &TraceIt,
