@@ -561,7 +561,8 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
       AffineMap readMap = readOp.getPermutationMap();
       if (!readMap.isMinorIdentity())
         return rewriter.notifyMatchFailure(
-            readOp, "Transpose not supported for SLM loads");
+            readOp,
+            "Non identity transposition is not supported for SLM loads.");
       // Out of bounds case is not supported for SLM loads.
       if (isOutOfBounds)
         return rewriter.notifyMatchFailure(
@@ -613,16 +614,33 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
           readOp, "Unsupported non-zero padded out-of-bounds read");
 
     AffineMap readMap = readOp.getPermutationMap();
-    bool isTransposeLoad = !readMap.isMinorIdentity();
+    // Check if this is a transpose: the map must have exactly 2 results,
+    // and those 2 results must be the last 2 input dimensions interchanged.
+    // Examples:
+    //   (d0, d1) -> (d1, d0)      // transpose
+    //   (d0, d1) -> (d0, d1)      // not a transpose
+    //   (d0, d1, d2) -> (d2, d1)  // transpose (last 2 dims swapped)
+    bool isTransposeLoad = false;
+    if (readMap.getNumResults() == 2) {
+      auto results = readMap.getResults();
+      unsigned numInputs = readMap.getNumInputs();
+      if (numInputs >= 2) {
+        auto lastDim = getAffineDimExpr(numInputs - 1, readMap.getContext());
+        auto secondLastDim =
+            getAffineDimExpr(numInputs - 2, readMap.getContext());
+        isTransposeLoad =
+            (results[0] == lastDim && results[1] == secondLastDim);
+      }
+    }
     auto elementType = loadedVecTy.getElementType();
 
     SmallVector<int64_t> descShape(loadedVecTy.getShape());
     if (isTransposeLoad) {
-      // If load is transposed, then the shape of the source-descriptor
-      // is the opposite from the result-shape. Applying the permutation
-      // to get the reversive shape.
-      auto inversedMap = inversePermutation(readMap);
-      descShape = applyPermutationMap(inversedMap, loadedVecTy.getShape());
+      // If load is transposed, simply swap the last two dimensions of the
+      // loaded vector type to get the descriptor shape.
+      size_t rank = descShape.size();
+      assert(rank >= 2 && "Transpose requires at least 2 dimensions");
+      std::swap(descShape[rank - 1], descShape[rank - 2]);
       loadedVecTy = VectorType::get(descShape, elementType);
     }
     auto descType = xegpu::TensorDescType::get(
@@ -646,10 +664,10 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
       // Transposing the loaded vector with a separate vector.transpose
       // operation
       auto range = llvm::seq<int64_t>(0, readMap.getResults().size());
-      SmallVector<int64_t> perm(range.begin(), range.end());
-      auto permApplied = applyPermutationMap<int64_t>(readMap, perm);
-      loadedOp = vector::TransposeOp::create(
-          rewriter, loc, loadedOp->getResult(0), permApplied);
+      SmallVector<int64_t> perm(
+          range.rbegin(), range.rend()); // reverse the range for transpose
+      loadedOp = vector::TransposeOp::create(rewriter, loc,
+                                             loadedOp->getResult(0), perm);
     }
     rewriter.replaceOp(readOp, loadedOp);
 

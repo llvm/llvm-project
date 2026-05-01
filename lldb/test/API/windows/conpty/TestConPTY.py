@@ -63,6 +63,7 @@ class ConPTYTestCase(TestBase):
 
     @skipUnlessWindows
     @skipUnlessWindowsConPTY2022
+    @skipIf(oslist=["windows"], archs=["aarch64"], bugnumber="#194069")
     def test_stdout_delivery(self):
         """ConPTY delivers the inferior's stdout to LLDB."""
         import re
@@ -73,6 +74,7 @@ class ConPTYTestCase(TestBase):
 
     @skipUnlessWindows
     @skipUnlessWindowsConPTY2022
+    @skipIf(oslist=["windows"], archs=["aarch64"], bugnumber="#194069")
     def test_large_output(self):
         """ConPTY delivers all output lines when output spans multiple reads."""
         import re
@@ -90,6 +92,7 @@ class ConPTYTestCase(TestBase):
 
     @skipUnlessWindows
     @skipUnlessWindowsConPTY
+    @skipIf(oslist=["windows"], archs=["aarch64"], bugnumber="#194069")
     def test_basic_output_without_vt_check(self):
         """ConPTY delivers the inferior's stdout on all supported Windows versions.
 
@@ -106,6 +109,7 @@ class ConPTYTestCase(TestBase):
 
     @skipUnlessWindows
     @skipUnlessWindowsConPTY2022
+    @skipIf(oslist=["windows"], archs=["aarch64"], bugnumber="#194069")
     def test_no_screen_clear_on_init(self):
         """PSEUDOCONSOLE_INHERIT_CURSOR prevents ConPTY from emitting
         screen-clearing sequences that would overwrite existing terminal output.
