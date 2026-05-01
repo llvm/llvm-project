@@ -42,7 +42,7 @@ void MCATestBase::SetUp() {
   MAI.reset(TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
   ASSERT_TRUE(MAI);
 
-  Ctx = std::make_unique<MCContext>(TheTriple, MAI.get(), MRI.get(), STI.get());
+  Ctx = std::make_unique<MCContext>(TheTriple, *MAI, MRI.get(), STI.get());
   MOFI.reset(TheTarget->createMCObjectFileInfo(*Ctx, /*PIC=*/false));
   Ctx->setObjectFileInfo(MOFI.get());
 

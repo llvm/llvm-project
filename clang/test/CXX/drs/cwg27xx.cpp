@@ -194,6 +194,16 @@ int j = f('a', 2);
 #endif
 } // namespace cwg2770
 
+namespace cwg2780 { // cwg2780: 2.7
+
+void f();
+
+void g() {
+  (void)reinterpret_cast<void(&)(int)>(f);
+}
+
+} // namespace cwg2780
+
 namespace cwg2789 { // cwg2789: 18
 #if __cplusplus >= 202302L
 template <typename T = int>

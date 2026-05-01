@@ -743,7 +743,7 @@ define void @sink_multiple_store_groups_noalias_via_scev(ptr %dst, ptr %src) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE3:.*]] ]
-; CHECK-NEXT:    [[INDEX:%.*]] = mul i64 [[INDEX1]], 16
+; CHECK-NEXT:    [[INDEX:%.*]] = shl i64 [[INDEX1]], 4
 ; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr double, ptr [[SRC]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr double, ptr [[SRC]], i64 [[TMP17]]
@@ -839,7 +839,7 @@ define void @sink_multiple_store_groups_alias_via_scev(ptr %dst, ptr %src) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE7:.*]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 16
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 16
 ; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr double, ptr [[SRC]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr double, ptr [[SRC]], i64 [[TMP1]]

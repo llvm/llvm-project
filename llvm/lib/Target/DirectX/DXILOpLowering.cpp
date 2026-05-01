@@ -107,6 +107,26 @@ public:
     return Error::success();
   }
 
+  bool isFast(FastMathFlags Flags) {
+    // HLSL Fast Math doesn't enable AllowContract flag; This can be
+    // removed when we enable it in the future.
+    return Flags.allowReassoc() && Flags.noNaNs() && Flags.noInfs() &&
+           Flags.noSignedZeros() && Flags.allowReciprocal() &&
+           Flags.approxFunc();
+  }
+
+  void setDxPrecise(CallInst *CI) {
+    const StringRef Key = "dx.precise";
+    Module *M = CI->getModule();
+
+    LLVMContext &Ctx = M->getContext();
+    MDNode *One =
+        llvm::MDNode::get(Ctx, ConstantAsMetadata::get(ConstantInt::get(
+                                   llvm::Type::getInt32Ty(Ctx), 1)));
+
+    CI->setMetadata(Key, One);
+  }
+
   [[nodiscard]] bool
   replaceFunctionWithOp(Function &F, dxil::OpCode DXILOp,
                         ArrayRef<IntrinArgSelect> ArgSelects) {
@@ -135,6 +155,10 @@ public:
           OpBuilder.tryCreateOp(DXILOp, Args, CI->getName(), F.getReturnType());
       if (Error E = OpCall.takeError())
         return E;
+
+      if (isa<FPMathOperator>(CI) &&
+          !isFast(cast<FPMathOperator>(CI)->getFastMathFlags()))
+        setDxPrecise(*OpCall);
 
       if (isa<StructType>(CI->getType())) {
         if (Error E = replaceNamedStructUses(CI, *OpCall))

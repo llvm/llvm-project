@@ -632,12 +632,11 @@ def LifetimeSafetyPermissive : DiagGroup<"lifetime-safety-permissive",
                                          LifetimeSafetyUseAfterFree]>;
 
 def LifetimeSafetyStrict : DiagGroup<"lifetime-safety-strict",
-                                    [LifetimeSafetyUseAfterScopeMoved,
+                                    [LifetimeSafetyPermissive,
+                                    LifetimeSafetyUseAfterScopeMoved,
                                     LifetimeSafetyReturnStackAddrMoved,
                                     LifetimeSafetyDanglingFieldMoved,
-                                    LifetimeSafetyDanglingGlobal,
-                                    LifetimeSafetyInvalidation,
-                                    LifetimeSafetyUseAfterFree]>;
+                                    LifetimeSafetyInvalidation]>;
 
 def LifetimeSafety : DiagGroup<"lifetime-safety",
                                [LifetimeSafetyPermissive, LifetimeSafetyStrict]> {

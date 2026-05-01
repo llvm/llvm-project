@@ -882,6 +882,7 @@ namespace llvm {
 
     TargetLoweringBase::AtomicExpansionKind
     shouldExpandAtomicLoadInIR(LoadInst *LI) const override;
+
     TargetLoweringBase::AtomicExpansionKind
     shouldExpandAtomicStoreInIR(StoreInst *SI) const override;
     TargetLoweringBase::AtomicExpansionKind
@@ -893,6 +894,10 @@ namespace llvm {
 
     LoadInst *
     lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const override;
+
+    bool shouldIssueAtomicLoadForAtomicEmulationLoop() const override {
+      return false;
+    }
 
     bool needsCmpXchgNb(Type *MemType) const;
 

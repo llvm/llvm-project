@@ -130,6 +130,7 @@ private:
   void lowerDispatch(cir::EhDispatchOp dispatch, mlir::Value exnPtr,
                      mlir::Value typeId,
                      SmallVectorImpl<mlir::Operation *> &deadOps);
+  void lowerInitCatchParam(cir::InitCatchParamOp op);
 };
 
 /// Lower all EH operations in the module to the Itanium-specific form.
@@ -277,6 +278,14 @@ mlir::LogicalResult ItaniumEHLowering::lowerFunc(cir::FuncOp funcOp) {
         block.eraseArgument(i);
     }
   }
+
+  // Lower any cir.init_catch_param ops in this function. These materialize
+  // the catch parameter local from the (already lowered) begin_catch result,
+  // and are independent of the eh_token graph traversal above.
+  SmallVector<cir::InitCatchParamOp> initCatchOps;
+  funcOp.walk([&](cir::InitCatchParamOp op) { initCatchOps.push_back(op); });
+  for (cir::InitCatchParamOp op : initCatchOps)
+    lowerInitCatchParam(op);
 
   return mlir::success();
 }
@@ -529,6 +538,88 @@ void ItaniumEHLowering::lowerDispatch(
   deadOps.push_back(dispatch);
 }
 
+/// Lower a cir.init_catch_param into the Itanium-specific sequence that
+/// materializes the catch parameter's local variable from the exception
+/// pointer returned by __cxa_begin_catch. The shape of the lowering
+/// depends on the init catch kind:
+///
+///   - Reference: the begin_catch result is
+///     the pointer value itself, so just bitcast and store it into the alloca
+///     except if it reference of pointer of record.
+///   - Pointer: the begin_catch result is
+///     the pointer value itself, so just bitcast and store it into the
+///     alloca.
+///   - Scalar (any other by-value catch): treat the begin_catch result as a
+///     pointer to the value, load it, and store it into the alloca.
+///   - Objc: Handle pointer representation with ObjCLifetime.
+///   - TrivialCopy: copy the exception
+///     object's bytes into the alloca via cir.copy.
+///   - NonTrivialCopy: copy the exception
+///     object's bytes into the alloca via copy constructor.
+///
+void ItaniumEHLowering::lowerInitCatchParam(cir::InitCatchParamOp op) {
+  builder.setInsertionPoint(op);
+  mlir::Location loc = op.getLoc();
+  mlir::Value exnPtr = op.getExnPtr();
+  mlir::Value paramAddr = op.getParamAddr();
+  auto paramAddrType = mlir::cast<cir::PointerType>(paramAddr.getType());
+  mlir::Type elementType = paramAddrType.getPointee();
+  cir::InitCatchKind kind = op.getKind();
+
+  switch (kind) {
+  case InitCatchKind::Reference: {
+    // We have no way to tell the personality function that we're
+    // catching by reference, so if we're catching a pointer,
+    // __cxa_begin_catch will actually return that pointer by value.
+    if (const auto ref = mlir::dyn_cast<cir::PointerType>(elementType)) {
+      // When catching by reference, generally we should just ignore
+      // this by-value pointer and use the exception object instead.
+      if (auto ptr = mlir::dyn_cast<cir::PointerType>(ref.getPointee()))
+        if (!mlir::isa<cir::RecordType>(ptr.getPointee()))
+          llvm_unreachable(
+              "InitCatchParam: reference of pointer or non-record is NYI");
+    }
+
+    mlir::Value casted = cir::CastOp::create(builder, loc, elementType,
+                                             cir::CastKind::bitcast, exnPtr);
+    cir::StoreOp::create(builder, loc, casted, paramAddr, {}, {}, {}, {});
+    break;
+  }
+  case InitCatchKind::TrivialCopy: {
+    mlir::Value srcPtr = cir::CastOp::create(builder, loc, paramAddrType,
+                                             cir::CastKind::bitcast, exnPtr);
+    cir::CopyOp::create(builder, loc, paramAddr, srcPtr, {}, {});
+    break;
+  }
+  case InitCatchKind::NonTrivialCopy: {
+    llvm_unreachable("InitCatchParam: non-trivial-copy is NYI");
+    break;
+  }
+  case InitCatchKind::Scalar: {
+    // Scalar by-value catch (integer, float, complex, etc.). The begin_catch
+    // result points into the exception object; load the value through a
+    // typed pointer and store it into the alloca.
+    mlir::Value srcPtr = cir::CastOp::create(builder, loc, paramAddrType,
+                                             cir::CastKind::bitcast, exnPtr);
+    auto loadOp = cir::LoadOp::create(builder, loc, elementType, srcPtr);
+    cir::StoreOp::create(builder, loc, loadOp.getResult(), paramAddr, {}, {},
+                         {}, {});
+    break;
+  }
+  case InitCatchKind::Pointer: {
+    mlir::Value casted = cir::CastOp::create(builder, loc, elementType,
+                                             cir::CastKind::bitcast, exnPtr);
+    cir::StoreOp::create(builder, loc, casted, paramAddr, {}, {}, {}, {});
+    break;
+  }
+  case InitCatchKind::Objc:
+    llvm_unreachable("InitCatchParam: ObjCLifetime is NYI");
+    break;
+  }
+
+  op.erase();
+}
+
 //===----------------------------------------------------------------------===//
 // The Pass
 //===----------------------------------------------------------------------===//
@@ -542,9 +633,9 @@ struct CIREHABILoweringPass
 void CIREHABILoweringPass::runOnOperation() {
   auto mod = mlir::cast<mlir::ModuleOp>(getOperation());
 
-  // The target triple is attached to the module as the "cir.triple" attribute.
-  // If it is absent (e.g. a CIR module parsed from text without a triple) we
-  // cannot determine the ABI and must skip the pass.
+  // The target triple is attached to the module as the "cir.triple"
+  // attribute. If it is absent (e.g. a CIR module parsed from text without a
+  // triple) we cannot determine the ABI and must skip the pass.
   auto tripleAttr = mlir::dyn_cast_if_present<mlir::StringAttr>(
       mod->getAttr(cir::CIRDialect::getTripleAttrName()));
   if (!tripleAttr) {

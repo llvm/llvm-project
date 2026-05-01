@@ -54,11 +54,21 @@ CIRGenFunction::emitRISCVBuiltinExpr(unsigned builtinID, const CallExpr *e) {
 
   // Zbc
   case RISCV::BI__builtin_riscv_clmul_32:
-  case RISCV::BI__builtin_riscv_clmul_64:
+  case RISCV::BI__builtin_riscv_clmul_64: {
+    intrinsicName = "clmul";
+    break;
+  }
   case RISCV::BI__builtin_riscv_clmulh_32:
-  case RISCV::BI__builtin_riscv_clmulh_64:
+  case RISCV::BI__builtin_riscv_clmulh_64: {
+    intrinsicName = "riscv.clmulh";
+    break;
+  }
   case RISCV::BI__builtin_riscv_clmulr_32:
-  case RISCV::BI__builtin_riscv_clmulr_64:
+  case RISCV::BI__builtin_riscv_clmulr_64: {
+    intrinsicName = "riscv.clmulr";
+    break;
+  }
+
   // Zbkx
   case RISCV::BI__builtin_riscv_xperm4_32:
   case RISCV::BI__builtin_riscv_xperm4_64:

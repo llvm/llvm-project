@@ -175,7 +175,8 @@ bool isCtorOfCheckedPtr(const clang::FunctionDecl *F) {
 bool isCtorOfRetainPtrOrOSPtr(const clang::FunctionDecl *F) {
   const std::string &FunctionName = safeGetName(F);
   return FunctionName == "RetainPtr" || FunctionName == "adoptNS" ||
-         FunctionName == "adoptCF" || FunctionName == "retainPtr" ||
+         FunctionName == "adoptNSNullable" || FunctionName == "adoptCF" ||
+         FunctionName == "adoptCFNullable" || FunctionName == "retainPtr" ||
          FunctionName == "RetainPtrArc" || FunctionName == "adoptNSArc" ||
          FunctionName == "adoptOSObject" || FunctionName == "adoptOSObjectArc";
 }

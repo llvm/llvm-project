@@ -83,12 +83,12 @@ export float TestLoad() {
 }
 
 // CHECK: define noundef nofpclass(nan inf) float @TestLoad()()
-// CHECK: call {{.*}} float @hlsl::RWStructuredBuffer<float>::Load(unsigned int)(ptr {{.*}} @RWSB1, i32 noundef 1)
-// CHECK: call {{.*}} float @hlsl::StructuredBuffer<float>::Load(unsigned int)(ptr {{.*}} @SB1, i32 noundef 2)
+// CHECK: call {{.*}} float @hlsl::RWStructuredBuffer<float>::Load(unsigned int) const(ptr {{.*}} @RWSB1, i32 noundef 1)
+// CHECK: call {{.*}} float @hlsl::StructuredBuffer<float>::Load(unsigned int) const(ptr {{.*}} @SB1, i32 noundef 2)
 // CHECK: add
 // CHECK: ret float
 
-// CHECK: define {{.*}} float @hlsl::RWStructuredBuffer<float>::Load(unsigned int)(ptr {{.*}} %this, i32 noundef %Index)
+// CHECK: define {{.*}} float @hlsl::RWStructuredBuffer<float>::Load(unsigned int) const(ptr {{.*}} %this, i32 noundef %Index)
 // CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::RWStructuredBuffer", ptr %{{.*}}, i32 0, i32 0
 // DXIL-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", float, 1, 0), ptr %__handle
 // CHECK-NEXT: %[[INDEX:.*]] = load i32, ptr %Index.addr
@@ -96,7 +96,7 @@ export float TestLoad() {
 // CHECK-NEXT: %[[VAL:.*]] = load float, ptr %[[PTR]]
 // CHECK-NEXT: ret float %[[VAL]]
 
-// CHECK: define {{.*}} float @hlsl::StructuredBuffer<float>::Load(unsigned int)(ptr {{.*}} %this, i32 noundef %Index)
+// CHECK: define {{.*}} float @hlsl::StructuredBuffer<float>::Load(unsigned int) const(ptr {{.*}} %this, i32 noundef %Index)
 // CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::StructuredBuffer", ptr %{{.*}}, i32 0, i32 0
 // DXIL-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", float, 0, 0), ptr %__handle
 // CHECK-NEXT: %[[INDEX:.*]] = load i32, ptr %Index.addr
@@ -113,12 +113,12 @@ export float TestLoadWithStatus() {
 }
 
 // CHECK: define noundef nofpclass(nan inf) float @TestLoadWithStatus()()
-// CHECK: call {{.*}} float @hlsl::RWStructuredBuffer<float>::Load(unsigned int, unsigned int&)(ptr {{.*}} @RWSB1, i32 noundef 1, ptr {{.*}} %tmp)
-// CHECK: call {{.*}} float @hlsl::StructuredBuffer<float>::Load(unsigned int, unsigned int&)(ptr {{.*}} @SB1, i32 noundef 2, ptr {{.*}} %tmp1)
+// CHECK: call {{.*}} float @hlsl::RWStructuredBuffer<float>::Load(unsigned int, unsigned int&) const(ptr {{.*}} @RWSB1, i32 noundef 1, ptr {{.*}} %tmp)
+// CHECK: call {{.*}} float @hlsl::StructuredBuffer<float>::Load(unsigned int, unsigned int&) const(ptr {{.*}} @SB1, i32 noundef 2, ptr {{.*}} %tmp1)
 // CHECK: add
 // CHECK: ret float
 
-// CHECK: define {{.*}} float @hlsl::RWStructuredBuffer<float>::Load(unsigned int, unsigned int&)(ptr {{.*}} %this, i32 noundef %Index, ptr {{.*}} %Status)
+// CHECK: define {{.*}} float @hlsl::RWStructuredBuffer<float>::Load(unsigned int, unsigned int&) const(ptr {{.*}} %this, i32 noundef %Index, ptr {{.*}} %Status)
 // CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::RWStructuredBuffer", ptr %{{.*}}, i32 0, i32 0
 // DXIL-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", float, 1, 0), ptr %__handle
 // CHECK-NEXT: %[[INDEX:.*]] = load i32, ptr %Index.addr
@@ -130,7 +130,7 @@ export float TestLoadWithStatus() {
 // CHECK-NEXT: store i32 %[[STATUS_EXT]], ptr %[[LOADED_STATUS_ADDR]], align 4
 // CHECK-NEXT: ret float %[[VALUE]]
 
-// CHECK: define {{.*}} float @hlsl::StructuredBuffer<float>::Load(unsigned int, unsigned int&)(ptr {{.*}} %this, i32 noundef %Index, ptr {{.*}} %Status)
+// CHECK: define {{.*}} float @hlsl::StructuredBuffer<float>::Load(unsigned int, unsigned int&) const(ptr {{.*}} %this, i32 noundef %Index, ptr {{.*}} %Status)
 // CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::StructuredBuffer", ptr %{{.*}}, i32 0, i32 0
 // DXIL-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", float, 0, 0), ptr %__handle
 // CHECK-NEXT: %[[INDEX:.*]] = load i32, ptr %Index.addr

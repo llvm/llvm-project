@@ -477,7 +477,7 @@ private:
 
   /// Event threads.
   /// @{
-  void ProgressEventThread();
+  void ProgressEventThread(lldb::SBListener listener);
 
   /// Event thread is a shared pointer in case we have a multiple
   /// DAP instances sharing the same event thread.

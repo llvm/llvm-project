@@ -1770,7 +1770,9 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
     bool queue_vars_valid, // Set to true if queue_name, queue_kind and
                            // queue_serial are valid
     LazyBool associated_with_dispatch_queue, addr_t dispatch_queue_t,
-    std::string &queue_name, QueueKind queue_kind, uint64_t queue_serial) {
+    std::string &queue_name, QueueKind queue_kind, uint64_t queue_serial,
+    std::vector<lldb::addr_t> &added_binaries,
+    StructuredData::ObjectSP &detailed_binaries_info) {
 
   if (tid == LLDB_INVALID_THREAD_ID)
     return nullptr;
@@ -1828,6 +1830,9 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
   if (dispatch_queue_t != LLDB_INVALID_ADDRESS)
     gdb_thread->SetQueueLibdispatchQueueAddress(dispatch_queue_t);
 
+  gdb_thread->SetNewlyAddedBinaries(added_binaries);
+  gdb_thread->SetDetailedBinariesInfo(detailed_binaries_info);
+
   // Make sure we update our thread stop reason just once, but don't overwrite
   // the stop info for threads that haven't moved:
   StopInfoSP current_stop_info_sp = thread_sp->GetPrivateStopInfo(false);
@@ -1843,7 +1848,7 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
     addr_t pc = thread_sp->GetRegisterContext()->GetPC();
     BreakpointSiteSP bp_site_sp =
         thread_sp->GetProcess()->GetBreakpointSiteList().FindByAddress(pc);
-    if (bp_site_sp && bp_site_sp->IsEnabled())
+    if (bp_site_sp && IsBreakpointSitePhysicallyEnabled(*bp_site_sp))
       thread_sp->SetThreadStoppedAtUnexecutedBP(pc);
 
     if (exc_type != 0) {
@@ -2027,7 +2032,7 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
           // BreakpointSites in any other location, but we can't know for
           // sure what happened so it's a reasonable default.
           if (bp_site_sp) {
-            if (bp_site_sp->IsEnabled())
+            if (IsBreakpointSitePhysicallyEnabled(*bp_site_sp))
               thread_sp->SetThreadHitBreakpointSite();
 
             if (bp_site_sp->ValidForThisThread(*thread_sp)) {
@@ -2120,6 +2125,9 @@ ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
   static constexpr llvm::StringLiteral g_key_memory("memory");
   static constexpr llvm::StringLiteral g_key_description("description");
   static constexpr llvm::StringLiteral g_key_signal("signal");
+  static constexpr llvm::StringLiteral g_key_added_binaries("added-binaries");
+  static constexpr llvm::StringLiteral g_key_detailed_binaries_info(
+      "detailed-binaries-info");
 
   // Stop with signal and thread info
   lldb::tid_t tid = LLDB_INVALID_THREAD_ID;
@@ -2137,6 +2145,8 @@ ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
   std::string queue_name;
   QueueKind queue_kind = eQueueKindUnknown;
   uint64_t queue_serial_number = 0;
+  std::vector<addr_t> added_binaries;
+  StructuredData::ObjectSP detailed_binaries_info;
   // Iterate through all of the thread dictionary key/value pairs from the
   // structured data dictionary
 
@@ -2145,7 +2155,8 @@ ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
                         &signo, &reason, &description, &exc_type, &exc_data,
                         &thread_dispatch_qaddr, &queue_vars_valid,
                         &associated_with_dispatch_queue, &dispatch_queue_t,
-                        &queue_name, &queue_kind, &queue_serial_number](
+                        &queue_name, &queue_kind, &queue_serial_number,
+                        &added_binaries, &detailed_binaries_info](
                            llvm::StringRef key,
                            StructuredData::Object *object) -> bool {
     if (key == g_key_tid) {
@@ -2244,17 +2255,43 @@ ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
           return true; // Keep iterating through all array items
         });
       }
-
     } else if (key == g_key_signal)
       signo = object->GetUnsignedIntegerValue(LLDB_INVALID_SIGNAL_NUMBER);
+    else if (key == g_key_added_binaries) {
+      StructuredData::Array *array = object->GetAsArray();
+      if (array) {
+        array->ForEach([&added_binaries](
+                           StructuredData::Object *object) -> bool {
+          StructuredData::UnsignedInteger *addr =
+              object->GetAsUnsignedInteger();
+          if (addr) {
+            addr_t value = addr->GetUnsignedIntegerValue(LLDB_INVALID_ADDRESS);
+            if (value != LLDB_INVALID_ADDRESS)
+              added_binaries.push_back(value);
+          }
+          return true; // Keep iterating through all array items
+        });
+      }
+    } else if (key == g_key_detailed_binaries_info) {
+      // Get a string representation and then parse it into
+      // StructuredData to get a separate copy of this part of
+      // the response.  We only have an Object* here, not the
+      // original shared pointer, to increase the ref count.
+      if (object->GetAsDictionary()) {
+        StreamString json_str;
+        object->Dump(json_str);
+        detailed_binaries_info =
+            StructuredData::ParseJSON(json_str.GetString());
+      }
+    }
     return true; // Keep iterating through all dictionary key/value pairs
   });
 
-  return SetThreadStopInfo(tid, expedited_register_map, signo, thread_name,
-                           reason, description, exc_type, exc_data,
-                           thread_dispatch_qaddr, queue_vars_valid,
-                           associated_with_dispatch_queue, dispatch_queue_t,
-                           queue_name, queue_kind, queue_serial_number);
+  return SetThreadStopInfo(
+      tid, expedited_register_map, signo, thread_name, reason, description,
+      exc_type, exc_data, thread_dispatch_qaddr, queue_vars_valid,
+      associated_with_dispatch_queue, dispatch_queue_t, queue_name, queue_kind,
+      queue_serial_number, added_binaries, detailed_binaries_info);
 }
 
 StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
@@ -2286,6 +2323,8 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
     std::string thread_name;
     std::string reason;
     std::string description;
+    std::vector<addr_t> added_binaries;
+    StructuredData::ObjectSP detailed_binaries_info;
     uint32_t exc_type = 0;
     std::vector<addr_t> exc_data;
     addr_t thread_dispatch_qaddr = LLDB_INVALID_ADDRESS;
@@ -2456,6 +2495,25 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         if (!value.getAsInteger(0, addressing_bits)) {
           addressable_bits.SetHighmemAddressableBits(addressing_bits);
         }
+      } else if (key == "added-binaries") {
+        // A comma separated list of all threads in the current
+        // process that includes the thread for this stop reply packet
+        lldb::addr_t pc;
+        while (!value.empty()) {
+          llvm::StringRef pc_str;
+          std::tie(pc_str, value) = value.split(',');
+          if (pc_str.getAsInteger(16, pc))
+            pc = LLDB_INVALID_ADDRESS;
+          added_binaries.push_back(pc);
+        }
+      } else if (key == "detailed-binaries-info") {
+        StringExtractor json_extractor(value);
+        std::string json;
+        // Now convert the HEX bytes into a string value.
+        json_extractor.GetHexByteString(json);
+
+        // This JSON contains detailed information about binares.
+        detailed_binaries_info = StructuredData::ParseJSON(json);
       } else if (key.size() == 2 && ::isxdigit(key[0]) && ::isxdigit(key[1])) {
         uint32_t reg = UINT32_MAX;
         if (!key.getAsInteger(16, reg))
@@ -2492,7 +2550,8 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         tid, expedited_register_map, signo, thread_name, reason, description,
         exc_type, exc_data, thread_dispatch_qaddr, queue_vars_valid,
         associated_with_dispatch_queue, dispatch_queue_t, queue_name,
-        queue_kind, queue_serial_number);
+        queue_kind, queue_serial_number, added_binaries,
+        detailed_binaries_info);
 
     return eStateStopped;
   } break;
@@ -3269,12 +3328,11 @@ size_t ProcessGDBRemote::PutSTDIN(const char *src, size_t src_len,
 
 /// Enable a single breakpoint site by trying Z0 (software), then Z1
 /// (hardware), then manual memory write as a last resort.
-static llvm::Error DoEnableBreakpointSite(ProcessGDBRemote &proc,
-                                          BreakpointSite &bp_site) {
+llvm::Error ProcessGDBRemote::DoEnableBreakpointSite(BreakpointSite &bp_site) {
   Log *log = GetLog(GDBRLog::Breakpoints);
   const addr_t addr = bp_site.GetLoadAddress();
-  const size_t bp_op_size = proc.GetSoftwareBreakpointTrapOpcode(&bp_site);
-  auto &gdb_comm = proc.GetGDBRemote();
+  const size_t bp_op_size = GetSoftwareBreakpointTrapOpcode(&bp_site);
+  auto &gdb_comm = GetGDBRemote();
 
   // SupportsGDBStoppointPacket always returns true unless a previously sent
   // packet failed. As such, query the function before AND after sending the
@@ -3282,10 +3340,9 @@ static llvm::Error DoEnableBreakpointSite(ProcessGDBRemote &proc,
   if (gdb_comm.SupportsGDBStoppointPacket(eBreakpointSoftware) &&
       !bp_site.HardwareRequired()) {
     uint8_t error_no = gdb_comm.SendGDBStoppointTypePacket(
-        eBreakpointSoftware, true, addr, bp_op_size,
-        proc.GetInterruptTimeout());
+        eBreakpointSoftware, true, addr, bp_op_size, GetInterruptTimeout());
     if (error_no == 0) {
-      bp_site.SetEnabled(true);
+      SetBreakpointSiteEnabled(bp_site);
       bp_site.SetType(BreakpointSite::eExternal);
       return llvm::Error::success();
     }
@@ -3301,10 +3358,9 @@ static llvm::Error DoEnableBreakpointSite(ProcessGDBRemote &proc,
   // Like above, this is also queried twice.
   if (gdb_comm.SupportsGDBStoppointPacket(eBreakpointHardware)) {
     uint8_t error_no = gdb_comm.SendGDBStoppointTypePacket(
-        eBreakpointHardware, true, addr, bp_op_size,
-        proc.GetInterruptTimeout());
+        eBreakpointHardware, true, addr, bp_op_size, GetInterruptTimeout());
     if (error_no == 0) {
-      bp_site.SetEnabled(true);
+      SetBreakpointSiteEnabled(bp_site);
       bp_site.SetType(BreakpointSite::eHardware);
       return llvm::Error::success();
     }
@@ -3324,38 +3380,35 @@ static llvm::Error DoEnableBreakpointSite(ProcessGDBRemote &proc,
   if (bp_site.HardwareRequired())
     return llvm::createStringError("hardware breakpoints are not supported");
 
-  return proc.EnableSoftwareBreakpoint(&bp_site).takeError();
+  return EnableSoftwareBreakpoint(&bp_site).takeError();
 }
 
 /// Disable a single breakpoint site directly by sending the appropriate
 /// z packet or restoring the original instruction.
-static llvm::Error DoDisableBreakpointSite(ProcessGDBRemote &proc,
-                                           BreakpointSite &bp_site) {
+llvm::Error ProcessGDBRemote::DoDisableBreakpointSite(BreakpointSite &bp_site) {
   const addr_t addr = bp_site.GetLoadAddress();
-  const size_t bp_op_size = proc.GetSoftwareBreakpointTrapOpcode(&bp_site);
-  auto &gdb_comm = proc.GetGDBRemote();
+  const size_t bp_op_size = GetSoftwareBreakpointTrapOpcode(&bp_site);
+  auto &gdb_comm = GetGDBRemote();
 
   switch (bp_site.GetType()) {
   case BreakpointSite::eSoftware: {
-    Status error = proc.DisableSoftwareBreakpoint(&bp_site);
+    Status error = DisableSoftwareBreakpoint(&bp_site);
     if (error.Fail())
       return error.takeError();
     break;
   }
   case BreakpointSite::eHardware:
     if (gdb_comm.SendGDBStoppointTypePacket(eBreakpointHardware, false, addr,
-                                            bp_op_size,
-                                            proc.GetInterruptTimeout()))
+                                            bp_op_size, GetInterruptTimeout()))
       return llvm::createStringError("unknown error");
     break;
   case BreakpointSite::eExternal:
     if (gdb_comm.SendGDBStoppointTypePacket(eBreakpointSoftware, false, addr,
-                                            bp_op_size,
-                                            proc.GetInterruptTimeout()))
+                                            bp_op_size, GetInterruptTimeout()))
       return llvm::createStringError("unknown error");
     break;
   }
-  bp_site.SetEnabled(false);
+  SetBreakpointSiteEnabled(bp_site, false);
   return llvm::Error::success();
 }
 
@@ -3376,7 +3429,7 @@ Status ProcessGDBRemote::EnableBreakpointSite(BreakpointSite *bp_site) {
             site_id, (uint64_t)addr);
 
   // Breakpoint already exists and is enabled
-  if (bp_site->IsEnabled()) {
+  if (IsBreakpointSitePhysicallyEnabled(*bp_site)) {
     LLDB_LOGF(log,
               "ProcessGDBRemote::EnableBreakpointSite (size_id = %" PRIu64
               ") address = 0x%" PRIx64 " -- SUCCESS (already enabled)",
@@ -3384,7 +3437,7 @@ Status ProcessGDBRemote::EnableBreakpointSite(BreakpointSite *bp_site) {
     return Status();
   }
 
-  return Status::FromError(DoEnableBreakpointSite(*this, *bp_site));
+  return Status::FromError(DoEnableBreakpointSite(*bp_site));
 }
 
 Status ProcessGDBRemote::DisableBreakpointSite(BreakpointSite *bp_site) {
@@ -3397,7 +3450,7 @@ Status ProcessGDBRemote::DisableBreakpointSite(BreakpointSite *bp_site) {
             ") addr = 0x%8.8" PRIx64,
             site_id, (uint64_t)addr);
 
-  if (!bp_site->IsEnabled()) {
+  if (!IsBreakpointSitePhysicallyEnabled(*bp_site)) {
     LLDB_LOGF(log,
               "ProcessGDBRemote::DisableBreakpointSite (site_id = %" PRIu64
               ") addr = 0x%8.8" PRIx64 " -- SUCCESS (already disabled)",
@@ -3405,7 +3458,7 @@ Status ProcessGDBRemote::DisableBreakpointSite(BreakpointSite *bp_site) {
     return Status();
   }
 
-  return Status::FromError(DoDisableBreakpointSite(*this, *bp_site));
+  return Status::FromError(DoDisableBreakpointSite(*bp_site));
 }
 
 // Pre-requisite: wp != NULL.
@@ -6054,12 +6107,12 @@ void ProcessGDBRemote::DidForkSwitchSoftwareBreakpoints(
   lldb::addr_t entry_addr = LLDB_INVALID_ADDRESS;
   if (!enable && is_expression_fork) {
     if (auto entry = GetTarget().GetEntryPointAddress())
-      entry_addr = entry->GetLoadAddress(&GetTarget());
+      entry_addr = entry->GetOpcodeLoadAddress(&GetTarget());
   }
 
   GetBreakpointSiteList().ForEach([this, enable, entry_addr,
                                    log](BreakpointSite *bp_site) {
-    if (bp_site->IsEnabled() &&
+    if (IsBreakpointSitePhysicallyEnabled(*bp_site) &&
         (bp_site->GetType() == BreakpointSite::eSoftware ||
          bp_site->GetType() == BreakpointSite::eExternal)) {
       // During expression evaluation, retain the expression-return trap
@@ -6083,7 +6136,7 @@ void ProcessGDBRemote::DidForkSwitchSoftwareBreakpoints(
 void ProcessGDBRemote::DidForkSwitchHardwareTraps(bool enable) {
   if (m_gdb_comm.SupportsGDBStoppointPacket(eBreakpointHardware)) {
     GetBreakpointSiteList().ForEach([this, enable](BreakpointSite *bp_site) {
-      if (bp_site->IsEnabled() &&
+      if (IsBreakpointSitePhysicallyEnabled(*bp_site) &&
           bp_site->GetType() == BreakpointSite::eHardware) {
         m_gdb_comm.SendGDBStoppointTypePacket(
             eBreakpointHardware, enable, bp_site->GetLoadAddress(),

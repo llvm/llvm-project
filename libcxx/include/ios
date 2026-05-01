@@ -361,7 +361,7 @@ public:
   }
 
 protected:
-  _LIBCPP_HIDE_FROM_ABI ios_base() : __loc_(nullptr) {
+  _LIBCPP_HIDE_FROM_ABI ios_base() : __loc_(__private_constructor_tag(), nullptr) {
     // Purposefully does no initialization
     //
     // Except for the locale, this is a sentinel to avoid destroying
@@ -386,14 +386,21 @@ protected:
   _LIBCPP_HIDE_FROM_ABI void set_rdbuf(void* __sb) { __rdbuf_ = __sb; }
 
 private:
-  // All data members must be scalars
   fmtflags __fmtflags_;
   streamsize __precision_;
   streamsize __width_;
   iostate __rdstate_;
   iostate __exceptions_;
   void* __rdbuf_;
-  void* __loc_;
+#    ifndef _LIBCPP_CXX03_LANG
+  union {
+    locale __loc_;
+  };
+#    else
+  // We only care about the union above to implement the destructor correctly, which we do in C++26 anyways. No need to
+  // handle C++03 shenanigans.
+  locale __loc_;
+#    endif
   event_callback* __fn_;
   int* __index_;
   size_t __event_size_;

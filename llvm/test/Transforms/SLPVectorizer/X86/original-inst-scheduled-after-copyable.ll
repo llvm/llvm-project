@@ -24,7 +24,7 @@ define void @test(ptr %0, i32 %1, i32 %2) {
 ; CHECK-NEXT:    [[TMP25:%.*]] = or <2 x i64> [[TMP35]], [[TMP22]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = trunc <2 x i64> [[TMP25]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP27:%.*]] = trunc <2 x i64> [[TMP25]] to <2 x i32>
-; CHECK-NEXT:    [[TMP24:%.*]] = tail call i32 asm sideeffect "", "=r,0,~{dirflag},~{fpsr},~{flags}"(i32 0)
+; CHECK-NEXT:    [[TMP21:%.*]] = tail call i32 asm sideeffect "", "=r,0,~{dirflag},~{fpsr},~{flags}"(i32 0)
 ; CHECK-NEXT:    [[TMP29:%.*]] = shufflevector <2 x i32> [[TMP32]], <2 x i32> poison, <2 x i32> <i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP30:%.*]] = and <2 x i32> [[TMP29]], [[TMP26]]
 ; CHECK-NEXT:    [[TMP31:%.*]] = or <2 x i32> [[TMP30]], [[TMP27]]

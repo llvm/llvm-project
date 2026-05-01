@@ -67,6 +67,35 @@ entry:
   ASSERT_TRUE(CI->equalsInt(42));
 }
 
+// Test the load and store pointers reach the same base value through different
+// address spaces with different index widths (here AS=0 has 64-bit pointers and
+// AS=5 has 32-bit pointers)
+TEST(LoadsTest, FindAvailableLoadedValueMixedAddrSpaceNullAA) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C, R"IR(
+target datalayout = "e-p:64:64-p5:32:32-i64:64-n32:64-S32-A5"
+
+define ptr @f() {
+entry:
+  %a = alloca [16 x i8], align 8, addrspace(5)
+  %ac = addrspacecast ptr addrspace(5) %a to ptr
+  store ptr null, ptr %ac, align 8
+  %q = getelementptr inbounds i8, ptr addrspace(5) %a, i32 8
+  store i64 42, ptr addrspace(5) %q, align 8
+  %v = load ptr, ptr %ac, align 8
+  ret ptr %v
+}
+)IR");
+  auto *F = cast<Function>(M->getNamedValue("f"));
+  ASSERT_TRUE(F);
+  auto *LI = cast<LoadInst>(&*++F->front().rbegin());
+  ASSERT_TRUE(LI);
+  BasicBlock::iterator BBI(LI);
+  Value *Loaded =
+      FindAvailableLoadedValue(LI, LI->getParent(), BBI, 0, nullptr, nullptr);
+  EXPECT_EQ(Loaded, nullptr);
+}
+
 TEST(LoadsTest, CanReplacePointersIfEqual) {
   LLVMContext C;
   std::unique_ptr<Module> M = parseIR(C,

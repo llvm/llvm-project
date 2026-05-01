@@ -26,7 +26,9 @@ const MCAsmInfo::AtSpecifier atSpecifiers[] = {
 
 void CSKYMCAsmInfo::anchor() {}
 
-CSKYMCAsmInfo::CSKYMCAsmInfo(const Triple &TargetTriple) {
+CSKYMCAsmInfo::CSKYMCAsmInfo(const Triple &TargetTriple,
+                             const MCTargetOptions &Options)
+    : MCAsmInfoELF(Options) {
   AlignmentIsInBytes = false;
   SupportsDebugInformation = true;
   CommentString = "#";

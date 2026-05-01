@@ -10,8 +10,8 @@ define void @test() {
 ; CHECK:       [[BB2]]:
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i32 0, -51345
 ; CHECK-NEXT:    [[ADD3:%.*]] = add i32 0, 1
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> <i32 1, i32 1, i32 poison, i32 0>, i32 [[MUL]], i32 2
-; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i32> <i32 0, i32 0, i32 0, i32 1>, [[TMP0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> <i32 0, i32 0, i32 poison, i32 1>, i32 [[MUL]], i32 2
+; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[TMP0]], <i32 1, i32 1, i32 0, i32 0>
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 [[ADD3]] to i64
 ; CHECK-NEXT:    br i1 false, label %[[BB5]], label %[[BB5]]
 ; CHECK:       [[BB5]]:

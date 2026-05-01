@@ -1105,8 +1105,8 @@ bool PartialInlinerImpl::FunctionCloner::doMultiRegionFunctionOutlining() {
                      ClonedFuncBFI.get(), &BPI,
                      LookupAC(*RegionInfo.EntryBlock->getParent()),
                      /* AllowVarargs */ false, /* AllowAlloca */ false,
-                     /* AllocaBlock */ nullptr, /* Suffix */ "",
-                     /* ArgsInZeroAddressSpace */ false,
+                     /* AllocaBlock */ nullptr, /* DeallocationBlocks */ {},
+                     /* Suffix */ "", /* ArgsInZeroAddressSpace */ false,
                      /* VoidReturnWithSingleOutput */ false);
 
     CE.findInputsOutputs(Inputs, Outputs, Sinks);
@@ -1189,8 +1189,8 @@ PartialInlinerImpl::FunctionCloner::doSingleRegionFunctionOutlining() {
       CodeExtractor(ToExtract, &DT, /*AggregateArgs*/ false,
                     ClonedFuncBFI.get(), &BPI, LookupAC(*ClonedFunc),
                     /* AllowVarargs */ true, /* AllowAlloca */ false,
-                    /* AllocaBlock */ nullptr, /* Suffix */ "",
-                    /* ArgsInZeroAddressSpace */ false,
+                    /* AllocaBlock */ nullptr, /* DeallocationBlocks */ {},
+                    /* Suffix */ "", /* ArgsInZeroAddressSpace */ false,
                     /* VoidReturnWithSingleOutput */ false)
           .extractCodeRegion(CEAC);
 

@@ -163,6 +163,36 @@ static std::optional<spirv::Scope> getAtomicOpScope(MemRefType type) {
   return {};
 }
 
+/// Returns the MemorySemantics storage-class bit corresponding to `sc`.
+/// Per SPIR-V spec section 3.32 (Memory Semantics) this bit must be OR'd
+/// with the ordering bits (Acquire/Release/...) on atomic operations.
+static spirv::MemorySemantics
+getMemorySemanticsForStorageClass(spirv::StorageClass sc) {
+  switch (sc) {
+  case spirv::StorageClass::StorageBuffer:
+  case spirv::StorageClass::Uniform:
+    return spirv::MemorySemantics::UniformMemory;
+  case spirv::StorageClass::Workgroup:
+    return spirv::MemorySemantics::WorkgroupMemory;
+  case spirv::StorageClass::CrossWorkgroup:
+    return spirv::MemorySemantics::CrossWorkgroupMemory;
+  case spirv::StorageClass::AtomicCounter:
+    return spirv::MemorySemantics::AtomicCounterMemory;
+  case spirv::StorageClass::Image:
+    return spirv::MemorySemantics::ImageMemory;
+  default:
+    return spirv::MemorySemantics::None;
+  }
+}
+
+/// Returns the AcquireRelease memory semantics OR'd with the storage-class
+/// bit derived from the memory space of `type`.
+static spirv::MemorySemantics getAtomicAcqRelMemorySemantics(MemRefType type) {
+  auto sc = cast<spirv::StorageClassAttr>(type.getMemorySpace()).getValue();
+  return spirv::MemorySemantics::AcquireRelease |
+         getMemorySemanticsForStorageClass(sc);
+}
+
 /// Extracts the element type from a SPIR-V pointer type pointing to storage.
 ///
 /// For Kernel capability, the pointer points directly to the element type
@@ -467,14 +497,15 @@ AtomicRMWOpPattern::matchAndRewrite(memref::AtomicRMWOp atomicOp,
   int dstBits = static_cast<int>(dstType.getWidth());
   assert(dstBits % srcBits == 0);
 
+  spirv::MemorySemantics memSem = getAtomicAcqRelMemorySemantics(memrefType);
+
   // When the source and destination bitwidths match, emit the atomic operation
   // directly.
   if (srcBits == dstBits) {
 #define ATOMIC_CASE(kind, spirvOp)                                             \
   case arith::AtomicRMWKind::kind:                                             \
     rewriter.replaceOpWithNewOp<spirv::spirvOp>(                               \
-        atomicOp, resultType, ptr, *scope,                                     \
-        spirv::MemorySemantics::AcquireRelease, adaptor.getValue());           \
+        atomicOp, resultType, ptr, *scope, memSem, adaptor.getValue());        \
     break
 
     switch (atomicOp.getKind()) {
@@ -535,9 +566,8 @@ AtomicRMWOpPattern::matchAndRewrite(memref::AtomicRMWOp atomicOp,
         loc, dstType, rewriter.getIntegerAttr(dstType, (1uLL << srcBits) - 1));
     Value storeVal =
         shiftValue(loc, adaptor.getValue(), offset, elemMask, rewriter);
-    result = spirv::AtomicOrOp::create(
-        rewriter, loc, dstType, adjustedPtr, *scope,
-        spirv::MemorySemantics::AcquireRelease, storeVal);
+    result = spirv::AtomicOrOp::create(rewriter, loc, dstType, adjustedPtr,
+                                       *scope, memSem, storeVal);
     break;
   }
   case arith::AtomicRMWKind::andi: {
@@ -554,9 +584,8 @@ AtomicRMWOpPattern::matchAndRewrite(memref::AtomicRMWOp atomicOp,
         rewriter.createOrFold<spirv::NotOp>(loc, dstType, shiftedElemMask);
     Value mask = rewriter.createOrFold<spirv::BitwiseOrOp>(loc, storeVal,
                                                            invertedElemMask);
-    result = spirv::AtomicAndOp::create(
-        rewriter, loc, dstType, adjustedPtr, *scope,
-        spirv::MemorySemantics::AcquireRelease, mask);
+    result = spirv::AtomicAndOp::create(rewriter, loc, dstType, adjustedPtr,
+                                        *scope, memSem, mask);
     break;
   }
   default:
@@ -1029,12 +1058,11 @@ IntStoreOpPattern::matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor,
   if (!scope)
     return rewriter.notifyMatchFailure(storeOp, "atomic scope not available");
 
-  Value result = spirv::AtomicAndOp::create(
-      rewriter, loc, dstType, adjustedPtr, *scope,
-      spirv::MemorySemantics::AcquireRelease, clearBitsMask);
-  result = spirv::AtomicOrOp::create(
-      rewriter, loc, dstType, adjustedPtr, *scope,
-      spirv::MemorySemantics::AcquireRelease, storeVal);
+  spirv::MemorySemantics memSem = getAtomicAcqRelMemorySemantics(memrefType);
+  Value result = spirv::AtomicAndOp::create(rewriter, loc, dstType, adjustedPtr,
+                                            *scope, memSem, clearBitsMask);
+  result = spirv::AtomicOrOp::create(rewriter, loc, dstType, adjustedPtr,
+                                     *scope, memSem, storeVal);
 
   // The AtomicOrOp has no side effect. Since it is already inserted, we can
   // just remove the original StoreOp. Note that rewriter.replaceOp()

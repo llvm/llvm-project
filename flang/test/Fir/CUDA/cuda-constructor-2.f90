@@ -10,7 +10,20 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
     fir.has_value %1 : !fir.box<!fir.heap<!fir.array<?xi32>>>
   }
 
+  // A kernel and the device globals must be present in the gpu.module
+  // for the constructor to register them (it skips modules without kernels
+  // and globals not in the gpu.module's symbol table).
   gpu.module @cuda_device_mod {
+    gpu.func @_QMmtestsPkernel() kernel {
+      gpu.return
+    }
+    fir.global @_QMmtestsEn(dense<[3, 4, 5, 6, 7]> : tensor<5xi32>) {data_attr = #cuf.cuda<device>} : !fir.array<5xi32>
+    fir.global @_QMmtestsEndev {data_attr = #cuf.cuda<device>} : !fir.box<!fir.heap<!fir.array<?xi32>>> {
+      %c0 = arith.constant 0 : index
+      %0 = fir.zero_bits !fir.heap<!fir.array<?xi32>>
+      %1 = fircg.ext_embox %0(%c0) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?xi32>>, index) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
+      fir.has_value %1 : !fir.box<!fir.heap<!fir.array<?xi32>>>
+    }
   }
 }
 
@@ -71,7 +84,19 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<i8 = dense<8> : vector<2xi64>, i
     %2 = fir.embox %0(%1) {allocator_idx = 3 : i32} : (!fir.heap<!fir.array<?x?x?x?x?xf64>>, !fir.shape<5>) -> !fir.box<!fir.heap<!fir.array<?x?x?x?x?xf64>>>
     fir.has_value %2 : !fir.box<!fir.heap<!fir.array<?x?x?x?x?xf64>>>
   }
+  // A kernel and the managed global must be in the gpu.module for
+  // the constructor to register them.
   gpu.module @cuda_device_mod {
+    gpu.func @_QMmPkernel() kernel {
+      gpu.return
+    }
+    fir.global @_QMmEa00 {data_attr = #cuf.cuda<managed>} : !fir.box<!fir.heap<!fir.array<?x?x?x?x?xf64>>> {
+      %c0 = arith.constant 0 : index
+      %0 = fir.zero_bits !fir.heap<!fir.array<?x?x?x?x?xf64>>
+      %1 = fir.shape %c0, %c0, %c0, %c0, %c0 : (index, index, index, index, index) -> !fir.shape<5>
+      %2 = fir.embox %0(%1) {allocator_idx = 3 : i32} : (!fir.heap<!fir.array<?x?x?x?x?xf64>>, !fir.shape<5>) -> !fir.box<!fir.heap<!fir.array<?x?x?x?x?xf64>>>
+      fir.has_value %2 : !fir.box<!fir.heap<!fir.array<?x?x?x?x?xf64>>>
+    }
   }
 }
 
@@ -100,7 +125,16 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
     fir.has_value %0 : !fir.array<100xi32>
   }
 
+  // A kernel and the managed global must be in the gpu.module for
+  // the constructor to register them.
   gpu.module @cuda_device_mod {
+    gpu.func @_QMtestPkernel() kernel {
+      gpu.return
+    }
+    fir.global @_QMtestEmanx {data_attr = #cuf.cuda<managed>} : !fir.array<100xi32> {
+      %0 = fir.zero_bits !fir.array<100xi32>
+      fir.has_value %0 : !fir.array<100xi32>
+    }
   }
 }
 
@@ -113,3 +147,55 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
 // CHECK: fir.address_of(@_QMtestEmanx.managed.ptr) : !fir.ref<!fir.llvm_ptr<i8>>
 // CHECK: fir.call @_FortranACUFRegisterManagedVariable
 // CHECK: fir.call @_FortranACUFInitModule
+
+// -----
+
+// Test that when the gpu.module has no kernels (e.g., host TU that USEs
+// a kernel module), the constructor returns early without registering.
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<271>, dense<32> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<270>, dense<32> : vector<4xi64>>, #dlti.dl_entry<f128, dense<128> : vector<2xi64>>, #dlti.dl_entry<f64, dense<64> : vector<2xi64>>, #dlti.dl_entry<f80, dense<128> : vector<2xi64>>, #dlti.dl_entry<f16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i128, dense<128> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr<272>, dense<64> : vector<4xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>, fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", gpu.container_module, llvm.data_layout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128", llvm.target_triple = "x86_64-unknown-linux-gnu"} {
+
+  fir.global @_QMkernels_mEdev_var {data_attr = #cuf.cuda<device>} : f32 {
+    %0 = arith.constant 0.0 : f32
+    fir.has_value %0 : f32
+  }
+
+  gpu.module @cuda_device_mod {
+    gpu.func @_QMkernels_mPnot_a_kernel() {
+      gpu.return
+    }
+  }
+}
+
+// CHECK: llvm.func internal @__cudaFortranConstructor()
+// CHECK-NEXT: llvm.call @_FortranACUFRegisterAllocator()
+// CHECK-NEXT: llvm.return
+
+// -----
+
+// Test that when the gpu.module has no kernels but a device global, the
+// constructor registers the global.
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<271>, dense<32> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<270>, dense<32> : vector<4xi64>>, #dlti.dl_entry<f128, dense<128> : vector<2xi64>>, #dlti.dl_entry<f64, dense<64> : vector<2xi64>>, #dlti.dl_entry<f80, dense<128> : vector<2xi64>>, #dlti.dl_entry<f16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i128, dense<128> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr<272>, dense<64> : vector<4xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>, fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", gpu.container_module, llvm.data_layout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128", llvm.target_triple = "x86_64-unknown-linux-gnu"} {
+
+  fir.global @_QMkernels_mEdev_var {data_attr = #cuf.cuda<device>} : f32 {
+    %0 = arith.constant 0.0 : f32
+    fir.has_value %0 : f32
+  }
+
+  gpu.module @cuda_device_mod {
+    gpu.func @_QMkernels_mPnot_a_kernel() {
+      gpu.return
+    }
+    fir.global @_QMkernels_mEdev_var {data_attr = #cuf.cuda<device>} : f32 {
+      %0 = arith.constant 0.0 : f32
+      fir.has_value %0 : f32
+    }
+  }
+}
+
+// CHECK: llvm.func internal @__cudaFortranConstructor()
+// CHECK: llvm.call @_FortranACUFRegisterAllocator()
+// CHECK: cuf.register_module @cuda_device_mod -> !llvm.ptr 
+// CHECK: fir.address_of(@_QMkernels_mEdev_var) : !fir.ref<f32> 
+// CHECK: fir.call @_FortranACUFRegisterVariable(%3, %4, %5, %6) : (!fir.ref<!fir.llvm_ptr<i8>>, !fir.ref<i8>, !fir.ref<i8>, i64) -> () 

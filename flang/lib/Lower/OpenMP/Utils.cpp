@@ -702,9 +702,13 @@ pft::Evaluation *getNestedDoConstruct(pft::Evaluation &eval) {
     //     <<DoConstruct>> -> 7
     if (nested.getIf<parser::NonLabelDoStmt>())
       continue;
-    assert(nested.getIf<parser::DoConstruct>() &&
-           "Unexpected construct in the nested evaluations");
-    return &nested;
+    if (nested.getIf<parser::DoConstruct>())
+      return &nested;
+    // Loop transformations can introduce nested OpenMP
+    // constructs between the directive and the actual do-loop nest.
+    if (nested.getIf<parser::OpenMPConstruct>())
+      return getNestedDoConstruct(nested);
+    assert(false && "Unexpected construct in the nested evaluations");
   }
   llvm_unreachable("Expected do loop to be in the nested evaluations");
 }

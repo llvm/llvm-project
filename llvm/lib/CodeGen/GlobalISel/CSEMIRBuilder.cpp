@@ -282,26 +282,22 @@ MachineInstrBuilder CSEMIRBuilder::buildInstr(unsigned Opc,
     break;
   }
   case TargetOpcode::G_CTLZ:
-  case TargetOpcode::G_CTTZ: {
+  case TargetOpcode::G_CTLZ_ZERO_UNDEF:
+  case TargetOpcode::G_CTTZ:
+  case TargetOpcode::G_CTTZ_ZERO_UNDEF:
+  case TargetOpcode::G_CTPOP:
+  case TargetOpcode::G_ABS:
+  case TargetOpcode::G_BSWAP:
+  case TargetOpcode::G_BITREVERSE: {
     assert(SrcOps.size() == 1 && "Expected one source");
     assert(DstOps.size() == 1 && "Expected one dest");
-    std::function<unsigned(APInt)> CB;
-    if (Opc == TargetOpcode::G_CTLZ)
-      CB = [](APInt V) -> unsigned { return V.countl_zero(); };
-    else
-      CB = [](APInt V) -> unsigned { return V.countTrailingZeros(); };
-    auto MaybeCsts = ConstantFoldCountZeros(SrcOps[0].getReg(), *getMRI(), CB);
-    if (!MaybeCsts)
+    auto Csts = ConstantFoldUnaryIntOp(Opc, DstOps[0].getLLTTy(*getMRI()),
+                                       SrcOps[0].getReg(), *getMRI());
+    if (Csts.empty())
       break;
-    if (MaybeCsts->size() == 1)
-      return buildConstant(DstOps[0], (*MaybeCsts)[0]);
-    // This was a vector constant. Build a G_BUILD_VECTOR for them.
-    SmallVector<Register> ConstantRegs;
-    LLT VecTy = DstOps[0].getLLTTy(*getMRI());
-    for (unsigned Cst : *MaybeCsts)
-      ConstantRegs.emplace_back(
-          buildConstant(VecTy.getScalarType(), Cst).getReg(0));
-    return buildBuildVector(DstOps[0], ConstantRegs);
+    if (Csts.size() == 1)
+      return buildConstant(DstOps[0], Csts[0]);
+    return buildBuildVectorConstant(DstOps[0], Csts);
   }
   }
   bool CanCopy = checkCopyToDefsPossible(DstOps);

@@ -333,6 +333,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  wcscoll
+  SRCS
+    wcscoll.cpp
+  HDRS
+    wcscoll.h
+  DEPENDS
+    libc.hdr.wchar_macros
+)
+
+add_entrypoint_object(
   wcsdup
   SRCS
     wcsdup.cpp

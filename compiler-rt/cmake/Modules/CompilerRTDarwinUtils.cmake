@@ -526,9 +526,9 @@ endmacro()
 macro(darwin_add_embedded_builtin_libraries)
   # this is a hacky opt-out. If you can't target both intel and arm
   # architectures we bail here.
-  set(DARWIN_SOFT_FLOAT_ARCHS armv6m armv7m armv7em armv7)
-  set(DARWIN_HARD_FLOAT_ARCHS armv7em armv7)
-  if(COMPILER_RT_SUPPORTED_ARCH MATCHES ".*armv.*")
+  set(DARWIN_SOFT_FLOAT_ARCHS armv6m armv7m armv7em armv7 armv8m.main armv8.1m.main)
+  set(DARWIN_HARD_FLOAT_ARCHS armv7em armv7 armv8m.main armv8.1m.main)
+  if(COMPILER_RT_SUPPORTED_ARCH MATCHES ".*arm.*")
     list(FIND COMPILER_RT_SUPPORTED_ARCH i386 i386_idx)
     if(i386_idx GREATER -1)
       list(APPEND DARWIN_HARD_FLOAT_ARCHS i386)
@@ -553,7 +553,7 @@ macro(darwin_add_embedded_builtin_libraries)
     set(PIC_FLAG -fPIC)
     set(STATIC_FLAG -static)
 
-    set(DARWIN_macho_embedded_ARCHS armv6m armv7m armv7em armv7 i386 x86_64)
+    set(DARWIN_macho_embedded_ARCHS armv6m armv7m armv7em armv7 armv8m.main armv8.1m.main i386 x86_64)
 
     set(DARWIN_macho_embedded_LIBRARY_OUTPUT_DIR
       ${COMPILER_RT_OUTPUT_LIBRARY_DIR}/macho_embedded)
@@ -574,6 +574,8 @@ macro(darwin_add_embedded_builtin_libraries)
     set(armv7m_FUNCTIONS ${common_FUNCTIONS} ${arm_FUNCTIONS} ${thumb2_FUNCTIONS})
     set(armv7em_FUNCTIONS ${common_FUNCTIONS} ${arm_FUNCTIONS} ${thumb2_FUNCTIONS})
     set(armv7_FUNCTIONS ${common_FUNCTIONS} ${arm_FUNCTIONS} ${thumb2_FUNCTIONS} ${thumb2_64_FUNCTIONS})
+    set(armv8m.main_FUNCTIONS ${common_FUNCTIONS} ${arm_FUNCTIONS} ${thumb2_FUNCTIONS} ${thumb2_64_FUNCTIONS})
+    set(armv8.1m.main_FUNCTIONS ${common_FUNCTIONS} ${arm_FUNCTIONS} ${thumb2_FUNCTIONS} ${thumb2_64_FUNCTIONS})
     set(i386_FUNCTIONS ${common_FUNCTIONS} ${i386_FUNCTIONS})
     set(x86_64_FUNCTIONS ${common_FUNCTIONS})
 

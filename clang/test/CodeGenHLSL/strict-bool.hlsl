@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -O1 -load-bool-from-mem=truncate -emit-llvm -o - %s | FileCheck %s -check-prefixes=CHECK-TRUNCATE
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -O1 -load-bool-from-mem=nonzero -emit-llvm -o - %s | FileCheck %s -check-prefixes=CHECK-NONZERO
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -O0 -emit-llvm -o - %s | FileCheck %s -check-prefixes=CHECK-NONZERO
 
 typedef bool bool8_t __attribute__((ext_vector_type(8)));
 extern bool8_t vec;

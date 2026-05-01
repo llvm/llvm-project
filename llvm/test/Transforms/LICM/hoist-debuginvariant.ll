@@ -16,8 +16,8 @@ define void @fn1() !dbg !6 {
 ; CHECK-NEXT: [[_TMP2:%.*]] = load i32, ptr @a, align 4
 ; CHECK-NEXT: [[_TMP3:%.*]] = load i32, ptr @b, align 4
 ; CHECK-NEXT: [[_TMP4:%.*]] = sdiv i32 [[_TMP2]], [[_TMP3]]
+; CHECK-NEXT: store i32 [[_TMP4]], ptr @c, align 4
 ; CHECK-NEXT: br label [[BB3:%.*]]
-
   br label %bb3
 
 bb3:                                              ; preds = %bb3, %0

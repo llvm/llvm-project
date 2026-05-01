@@ -5286,6 +5286,13 @@ def HLSLVkLocation : HLSLAnnotationAttr {
   let Documentation = [HLSLVkLocationDocs];
 }
 
+def HLSLMatrixLayout : InheritableAttr {
+  let Spellings = [CustomKeyword<"row_major">, CustomKeyword<"column_major">];
+  let Subjects = SubjectList<[Var, TypedefName, Field, Function]>;
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLMatrixLayoutDocs];
+}
+
 def RandomizeLayout : InheritableAttr {
   let Spellings = [GCC<"randomize_layout">];
   let Subjects = SubjectList<[Record]>;

@@ -873,20 +873,22 @@ DIEnumerator *DIEnumerator::getImpl(LLVMContext &Context, const APInt &Value,
 }
 
 DIBasicType *DIBasicType::getImpl(LLVMContext &Context, unsigned Tag,
-                                  MDString *Name, Metadata *SizeInBits,
-                                  uint32_t AlignInBits, unsigned Encoding,
+                                  MDString *Name, Metadata *File,
+                                  unsigned LineNo, Metadata *Scope,
+                                  Metadata *SizeInBits, uint32_t AlignInBits,
+                                  unsigned Encoding,
                                   uint32_t NumExtraInhabitants,
                                   uint32_t DataSizeInBits, DIFlags Flags,
                                   StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
-  DEFINE_GETIMPL_LOOKUP(DIBasicType,
-                        (Tag, Name, SizeInBits, AlignInBits, Encoding,
-                         NumExtraInhabitants, DataSizeInBits, Flags));
-  Metadata *Ops[] = {nullptr, nullptr, Name, SizeInBits, nullptr};
-  DEFINE_GETIMPL_STORE(
-      DIBasicType,
-      (Tag, AlignInBits, Encoding, NumExtraInhabitants, DataSizeInBits, Flags),
-      Ops);
+  DEFINE_GETIMPL_LOOKUP(
+      DIBasicType, (Tag, Name, File, LineNo, Scope, SizeInBits, AlignInBits,
+                    Encoding, NumExtraInhabitants, DataSizeInBits, Flags));
+  Metadata *Ops[] = {File, Scope, Name, SizeInBits, nullptr};
+  DEFINE_GETIMPL_STORE(DIBasicType,
+                       (Tag, LineNo, AlignInBits, Encoding, NumExtraInhabitants,
+                        DataSizeInBits, Flags),
+                       Ops);
 }
 
 std::optional<DIBasicType::Signedness> DIBasicType::getSignedness() const {
@@ -906,18 +908,20 @@ std::optional<DIBasicType::Signedness> DIBasicType::getSignedness() const {
 
 DIFixedPointType *
 DIFixedPointType::getImpl(LLVMContext &Context, unsigned Tag, MDString *Name,
+                          Metadata *File, unsigned LineNo, Metadata *Scope,
                           Metadata *SizeInBits, uint32_t AlignInBits,
                           unsigned Encoding, DIFlags Flags, unsigned Kind,
                           int Factor, APInt Numerator, APInt Denominator,
                           StorageType Storage, bool ShouldCreate) {
   DEFINE_GETIMPL_LOOKUP(DIFixedPointType,
-                        (Tag, Name, SizeInBits, AlignInBits, Encoding, Flags,
-                         Kind, Factor, Numerator, Denominator));
-  Metadata *Ops[] = {nullptr, nullptr, Name, SizeInBits, nullptr};
-  DEFINE_GETIMPL_STORE(
-      DIFixedPointType,
-      (Tag, AlignInBits, Encoding, Flags, Kind, Factor, Numerator, Denominator),
-      Ops);
+                        (Tag, Name, File, LineNo, Scope, SizeInBits,
+                         AlignInBits, Encoding, Flags, Kind, Factor, Numerator,
+                         Denominator));
+  Metadata *Ops[] = {File, Scope, Name, SizeInBits, nullptr};
+  DEFINE_GETIMPL_STORE(DIFixedPointType,
+                       (Tag, LineNo, AlignInBits, Encoding, Flags, Kind, Factor,
+                        Numerator, Denominator),
+                       Ops);
 }
 
 bool DIFixedPointType::isSigned() const {

@@ -5,11 +5,12 @@
 define void @strided_load_and_store(ptr %in, ptr %out) {
 ; CHECK-LABEL: @strided_load_and_store(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[IN:%.*]], i64 16
-; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, ptr [[IN]], align 2
-; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr [[TMP0]], align 2
+; CHECK-NEXT:    [[TMP0:%.*]] = call <2 x i64> @llvm.experimental.vp.strided.load.v2i64.p0.i64(ptr align 2 [[IN:%.*]], i64 16, <2 x i1> splat (i1 true), i32 2)
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i64> [[TMP0]] to <16 x i8>
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[OUT:%.*]], i64 16
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> [[TMP4]], <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    store <8 x i8> [[TMP1]], ptr [[OUT]], align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i8> [[TMP4]], <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    store <8 x i8> [[TMP2]], ptr [[TMP3]], align 2
 ; CHECK-NEXT:    ret void
 ;

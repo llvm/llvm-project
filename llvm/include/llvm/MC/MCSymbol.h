@@ -356,6 +356,7 @@ public:
 
   /// print - Print the value to the stream \p OS.
   LLVM_ABI void print(raw_ostream &OS, const MCAsmInfo *MAI) const;
+  void print(raw_ostream &OS, const MCAsmInfo &MAI) const { print(OS, &MAI); }
 
   /// dump - Print the value to stderr.
   LLVM_ABI void dump() const;

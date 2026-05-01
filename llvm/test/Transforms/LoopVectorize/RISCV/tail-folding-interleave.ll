@@ -493,30 +493,23 @@ define void @store_factor_4_with_tail_gap(i32 %n, ptr noalias %a) {
 ;
 ; NO-VP-LABEL: @store_factor_4_with_tail_gap(
 ; NO-VP-NEXT:  entry:
-; NO-VP-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
-; NO-VP-NEXT:    [[TMP1:%.*]] = shl nuw i32 [[TMP0]], 2
-; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N:%.*]], [[TMP1]]
+; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N:%.*]], 8
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; NO-VP:       vector.ph:
-; NO-VP-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vscale.i32()
-; NO-VP-NEXT:    [[TMP9:%.*]] = shl nuw i32 [[TMP2]], 2
-; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], [[TMP9]]
+; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 8
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
-; NO-VP-NEXT:    [[TMP7:%.*]] = call <vscale x 4 x i32> @llvm.stepvector.nxv4i32()
-; NO-VP-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP9]], i64 0
-; NO-VP-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT2]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; NO-VP-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; NO-VP:       vector.body:
 ; NO-VP-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; NO-VP-NEXT:    [[VEC_IND4:%.*]] = phi <vscale x 4 x i32> [ [[TMP7]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT5:%.*]], [[VECTOR_BODY]] ]
-; NO-VP-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [4 x i32], ptr [[A:%.*]], <vscale x 4 x i32> [[VEC_IND4]], i32 0
-; NO-VP-NEXT:    call void @llvm.masked.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> [[VEC_IND4]], <vscale x 4 x ptr> align 4 [[TMP11]], <vscale x 4 x i1> splat (i1 true))
-; NO-VP-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], <vscale x 4 x i32> [[VEC_IND4]], i32 1
-; NO-VP-NEXT:    call void @llvm.masked.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> [[VEC_IND4]], <vscale x 4 x ptr> align 4 [[TMP12]], <vscale x 4 x i1> splat (i1 true))
-; NO-VP-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], <vscale x 4 x i32> [[VEC_IND4]], i32 2
-; NO-VP-NEXT:    call void @llvm.masked.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> [[VEC_IND4]], <vscale x 4 x ptr> align 4 [[TMP13]], <vscale x 4 x i1> splat (i1 true))
-; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP9]]
-; NO-VP-NEXT:    [[VEC_IND_NEXT5]] = add nuw nsw <vscale x 4 x i32> [[VEC_IND4]], [[BROADCAST_SPLAT3]]
+; NO-VP-NEXT:    [[VEC_IND:%.*]] = phi <8 x i32> [ <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; NO-VP-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [4 x i32], ptr [[A:%.*]], i32 [[INDEX]], i32 0
+; NO-VP-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[VEC_IND]], <8 x i32> [[VEC_IND]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; NO-VP-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[VEC_IND]], <8 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; NO-VP-NEXT:    [[TMP3:%.*]] = shufflevector <16 x i32> [[TMP1]], <16 x i32> [[TMP2]], <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+; NO-VP-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[TMP3]], <32 x i32> poison, <32 x i32> <i32 0, i32 8, i32 16, i32 24, i32 1, i32 9, i32 17, i32 25, i32 2, i32 10, i32 18, i32 26, i32 3, i32 11, i32 19, i32 27, i32 4, i32 12, i32 20, i32 28, i32 5, i32 13, i32 21, i32 29, i32 6, i32 14, i32 22, i32 30, i32 7, i32 15, i32 23, i32 31>
+; NO-VP-NEXT:    call void @llvm.masked.store.v32i32.p0(<32 x i32> [[INTERLEAVED_VEC]], ptr align 4 [[TMP0]], <32 x i1> <i1 true, i1 true, i1 true, i1 false, i1 true, i1 true, i1 true, i1 false, i1 true, i1 true, i1 true, i1 false, i1 true, i1 true, i1 true, i1 false, i1 true, i1 true, i1 true, i1 false, i1 true, i1 true, i1 true, i1 false, i1 true, i1 true, i1 true, i1 false, i1 true, i1 true, i1 true, i1 false>)
+; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
+; NO-VP-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <8 x i32> [[VEC_IND]], splat (i32 8)
 ; NO-VP-NEXT:    [[TMP14:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; NO-VP:       middle.block:

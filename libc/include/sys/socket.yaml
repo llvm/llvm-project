@@ -9,6 +9,7 @@ types:
   - type_name: struct_sockaddr_storage
   - type_name: socklen_t
   - type_name: sa_family_t
+  - type_name: struct_cmsghdr
   - type_name: struct_msghdr
   - type_name: struct_iovec
   - type_name: struct_linger

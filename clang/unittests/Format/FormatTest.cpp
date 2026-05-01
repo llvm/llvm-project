@@ -12094,6 +12094,7 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
   verifyFormat("int *f(int *a) {}");
   verifyFormat("int main(int argc, char **argv) {}");
   verifyFormat("Test::Test(int b) : a(b * b) {}");
+  verifyIndependentOfContext("a = {x * x, x * x};");
   verifyIndependentOfContext("f(a, *a);");
   verifyFormat("void g() { f(*a); }");
   verifyIndependentOfContext("int a = b * 10;");
@@ -14684,10 +14685,13 @@ TEST_F(FormatTest, FormatsBracedListsInColumnLayout) {
                getLLVMStyleWithColumns(39));
 
   // Trailing comment in the first line.
+  auto Style = getLLVMStyle();
+  Style.Cpp11BracedListStyle = FormatStyle::BLS_FunctionCall;
   verifyFormat("vector<int> iiiiiiiiiiiiiii = {                      //\n"
                "    1111111111, 2222222222, 33333333333, 4444444444, //\n"
                "    111111111,  222222222,  3333333333,  444444444,  //\n"
-               "    11111111,   22222222,   333333333,   44444444};");
+               "    11111111,   22222222,   333333333,   44444444};",
+               Style);
   // Trailing comment in the last line.
   verifyFormat("int aaaaa[] = {\n"
                "    1, 2, 3, // comment\n"

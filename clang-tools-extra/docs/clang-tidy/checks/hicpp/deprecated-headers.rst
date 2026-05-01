@@ -1,6 +1,4 @@
 .. title:: clang-tidy - hicpp-deprecated-headers
-.. meta::
-   :http-equiv=refresh: 5;URL=../modernize/deprecated-headers.html
 
 hicpp-deprecated-headers
 ========================

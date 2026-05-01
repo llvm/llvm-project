@@ -1146,7 +1146,7 @@ EmitArrayConstant(CodeGenModule &CGM, llvm::ArrayType *DesiredType,
 // handled by constant folding.
 //
 // Constant folding is currently missing support for a few features supported
-// here: CK_ToUnion, CK_ReinterpretMemberPointer, and DesignatedInitUpdateExpr.
+// here: CK_ReinterpretMemberPointer, and DesignatedInitUpdateExpr.
 class ConstExprEmitter
     : public ConstStmtVisitor<ConstExprEmitter, llvm::Constant *, QualType> {
   CodeGenModule &CGM;

@@ -1,6 +1,4 @@
 .. title:: clang-tidy - hicpp-exception-baseclass
-.. meta::
-   :http-equiv=refresh: 5;URL=../bugprone/std-exception-baseclass.html
 
 hicpp-exception-baseclass
 =========================

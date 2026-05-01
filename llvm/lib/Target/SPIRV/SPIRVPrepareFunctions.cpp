@@ -18,6 +18,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SPIRVPrepareFunctions.h"
 #include "SPIRV.h"
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
@@ -40,24 +41,30 @@ using namespace llvm;
 
 namespace {
 
-class SPIRVPrepareFunctions : public ModulePass {
+class SPIRVPrepareFunctionsImpl {
   const SPIRVTargetMachine &TM;
   bool substituteIntrinsicCalls(Function *F);
   Function *removeAggregateTypesFromSignature(Function *F);
   bool removeAggregateTypesFromCalls(Function *F);
 
 public:
+  SPIRVPrepareFunctionsImpl(const SPIRVTargetMachine &TM) : TM(TM) {}
+  bool runOnModule(Module &M);
+};
+
+class SPIRVPrepareFunctionsLegacy : public ModulePass {
+  const SPIRVTargetMachine &TM;
+
+public:
   static char ID;
-  SPIRVPrepareFunctions(const SPIRVTargetMachine &TM)
+  SPIRVPrepareFunctionsLegacy(const SPIRVTargetMachine &TM)
       : ModulePass(ID), TM(TM) {}
 
-  bool runOnModule(Module &M) override;
+  bool runOnModule(Module &M) override {
+    return SPIRVPrepareFunctionsImpl(TM).runOnModule(M);
+  }
 
   StringRef getPassName() const override { return "SPIRV prepare functions"; }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    ModulePass::getAnalysisUsage(AU);
-  }
 };
 
 static cl::list<std::string> SPVAllowUnknownIntrinsics(
@@ -69,9 +76,9 @@ static cl::list<std::string> SPVAllowUnknownIntrinsics(
     cl::value_desc("intrinsic_prefix_0,intrinsic_prefix_1"), cl::ValueOptional);
 } // namespace
 
-char SPIRVPrepareFunctions::ID = 0;
+char SPIRVPrepareFunctionsLegacy::ID = 0;
 
-INITIALIZE_PASS(SPIRVPrepareFunctions, "prepare-functions",
+INITIALIZE_PASS(SPIRVPrepareFunctionsLegacy, "spirv-prepare-functions",
                 "SPIRV prepare functions", false, false)
 
 static std::string lowerLLVMIntrinsicName(IntrinsicInst *II) {
@@ -425,7 +432,7 @@ lowerConstrainedFmuladd(IntrinsicInst *II,
 
 // Substitutes calls to LLVM intrinsics with either calls to SPIR-V intrinsics
 // or calls to proper generated functions. Returns True if F was modified.
-bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
+bool SPIRVPrepareFunctionsImpl::substituteIntrinsicCalls(Function *F) {
   bool Changed = false;
   const SPIRVSubtarget &STI = TM.getSubtarget<SPIRVSubtarget>(*F);
   SmallVector<Instruction *> EraseFromParent;
@@ -531,7 +538,7 @@ addFunctionTypeMutation(NamedMDNode *NMD,
 // function with the types replaced by i32 types. The change in types is
 // noted in 'spv.cloned_funcs' metadata for later restoration.
 Function *
-SPIRVPrepareFunctions::removeAggregateTypesFromSignature(Function *F) {
+SPIRVPrepareFunctionsImpl::removeAggregateTypesFromSignature(Function *F) {
   bool IsRetAggr = F->getReturnType()->isAggregateType();
   // Allow intrinsics with aggregate return type to reach GlobalISel
   if (F->isIntrinsic() && IsRetAggr)
@@ -618,7 +625,7 @@ static std::string fixMultiOutputConstraintString(StringRef Constraints) {
 // noted in 'spv.mutated_callsites' metadata for later restoration. For ASM we
 // also have to mutate the constraint string as IRTranslator tries to handle
 // multiple outputs and expects an aggregate return type in their presence.
-bool SPIRVPrepareFunctions::removeAggregateTypesFromCalls(Function *F) {
+bool SPIRVPrepareFunctionsImpl::removeAggregateTypesFromCalls(Function *F) {
   if (F->isDeclaration() || F->isIntrinsic())
     return false;
 
@@ -691,7 +698,7 @@ bool SPIRVPrepareFunctions::removeAggregateTypesFromCalls(Function *F) {
   return true;
 }
 
-bool SPIRVPrepareFunctions::runOnModule(Module &M) {
+bool SPIRVPrepareFunctionsImpl::runOnModule(Module &M) {
   // Resolve the SPIR-V environment from module content before any
   // function-level processing. This must happen before legalization so that
   // isShader()/isKernel() return correct values.
@@ -733,7 +740,14 @@ bool SPIRVPrepareFunctions::runOnModule(Module &M) {
   return Changed;
 }
 
+PreservedAnalyses SPIRVPrepareFunctions::run(Module &M,
+                                             ModuleAnalysisManager &AM) {
+  return SPIRVPrepareFunctionsImpl(TM).runOnModule(M)
+             ? PreservedAnalyses::none()
+             : PreservedAnalyses::all();
+}
+
 ModulePass *
 llvm::createSPIRVPrepareFunctionsPass(const SPIRVTargetMachine &TM) {
-  return new SPIRVPrepareFunctions(TM);
+  return new SPIRVPrepareFunctionsLegacy(TM);
 }

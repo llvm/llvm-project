@@ -60,27 +60,27 @@ public:
   }
   void Post(const parser::OpenMPThreadprivate &) { currStmt_ = std::nullopt; }
 
-  bool Pre(const parser::OpenMPDeclareMapperConstruct &x) {
+  bool Pre(const parser::OmpDeclareMapperDirective &x) {
     currStmt_ = x.source;
     return true;
   }
-  void Post(const parser::OpenMPDeclareMapperConstruct &) {
+  void Post(const parser::OmpDeclareMapperDirective &) {
     currStmt_ = std::nullopt;
   }
 
-  bool Pre(const parser::OpenMPDeclareReductionConstruct &x) {
+  bool Pre(const parser::OmpDeclareReductionDirective &x) {
     currStmt_ = x.source;
     return true;
   }
-  void Post(const parser::OpenMPDeclareReductionConstruct &) {
+  void Post(const parser::OmpDeclareReductionDirective &) {
     currStmt_ = std::nullopt;
   }
 
-  bool Pre(const parser::OpenMPDeclareTargetConstruct &x) {
+  bool Pre(const parser::OmpDeclareTargetDirective &x) {
     currStmt_ = x.source;
     return true;
   }
-  void Post(const parser::OpenMPDeclareTargetConstruct &) {
+  void Post(const parser::OmpDeclareTargetDirective &) {
     currStmt_ = std::nullopt;
   }
 

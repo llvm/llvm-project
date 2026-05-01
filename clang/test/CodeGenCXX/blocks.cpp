@@ -155,7 +155,7 @@ namespace test5 {
   // CHECK-NEXT: store i8 [[T0]], ptr [[COND]], align 1
   // CHECK-NEXT: call void @_ZN5test51AC1Ev(ptr {{[^,]*}} [[X]])
   // CHECK-NEXT: [[T0:%.*]] = load i8, ptr [[COND]], align 1
-  // CHECK-NEXT: [[T1:%.*]] = trunc i8 [[T0]] to i1
+  // CHECK-NEXT: [[T1:%.*]] = icmp ne i8 [[T0]], 0
   // CHECK-NEXT: store i1 false, ptr [[CLEANUP_ACTIVE]]
   // CHECK-NEXT: br i1 [[T1]],
 

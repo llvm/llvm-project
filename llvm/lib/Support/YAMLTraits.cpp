@@ -397,6 +397,18 @@ void Input::releaseHNodeBuffers() {
   MapHNodeAllocator.DestroyAll();
 }
 
+void Input::saveAliasHNode(Node *N, HNode *HN) {
+  StringRef Anchor = N->getAnchor();
+  if (!Anchor.empty())
+    // YAML 1.2.2 - 3.2.2.2. Anchors and Aliases:
+    //
+    // An alias event refers to the most recent event in the serialization
+    // having the specified anchor. Therefore, anchors need not be unique within
+    // a serialization. In addition, an anchor need not have an alias node
+    // referring to it.
+    AliasMap[Anchor] = HN;
+}
+
 Input::HNode *Input::createHNodes(Node *N) {
   SmallString<128> StringStorage;
   switch (N->getType()) {
@@ -407,12 +419,17 @@ Input::HNode *Input::createHNodes(Node *N) {
       // Copy string to permanent storage
       KeyStr = StringStorage.str().copy(StringAllocator);
     }
-    return new (ScalarHNodeAllocator.Allocate()) ScalarHNode(N, KeyStr);
+    auto *SHNode = new (ScalarHNodeAllocator.Allocate()) ScalarHNode(N, KeyStr);
+    saveAliasHNode(SN, SHNode);
+    return SHNode;
   }
   case Node::NK_BlockScalar: {
     BlockScalarNode *BSN = dyn_cast<BlockScalarNode>(N);
     StringRef ValueCopy = BSN->getValue().copy(StringAllocator);
-    return new (ScalarHNodeAllocator.Allocate()) ScalarHNode(N, ValueCopy);
+    auto *BSHNode =
+        new (ScalarHNodeAllocator.Allocate()) ScalarHNode(N, ValueCopy);
+    saveAliasHNode(BSN, BSHNode);
+    return BSHNode;
   }
   case Node::NK_Sequence: {
     SequenceNode *SQ = dyn_cast<SequenceNode>(N);
@@ -423,6 +440,7 @@ Input::HNode *Input::createHNodes(Node *N) {
         break;
       SQHNode->Entries.push_back(Entry);
     }
+    saveAliasHNode(SQ, SQHNode);
     return SQHNode;
   }
   case Node::NK_Mapping: {
@@ -456,10 +474,23 @@ Input::HNode *Input::createHNodes(Node *N) {
       mapHNode->Mapping[KeyStr] =
           std::make_pair(std::move(ValueHNode), KeyNode->getSourceRange());
     }
+    saveAliasHNode(Map, mapHNode);
     return std::move(mapHNode);
   }
   case Node::NK_Null:
+    // TODO: Anchor is not set for NullNode in the parser. Update the parser to
+    // faithfully preserve anchors.
     return new (EmptyHNodeAllocator.Allocate()) EmptyHNode(N);
+  case Node::NK_Alias: {
+    AliasNode *AN = dyn_cast<AliasNode>(N);
+    auto AliasName = AN->getName();
+    auto AHN = AliasMap.find(AliasName);
+    if (AHN == AliasMap.end()) {
+      setError(AN, Twine("undefined alias '" + AliasName + "'"));
+      return nullptr;
+    }
+    return AHN->second;
+  }
   default:
     setError(N, "unknown node kind");
     return nullptr;

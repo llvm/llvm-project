@@ -86,7 +86,10 @@ Clang Frontend Potentially Breaking Changes
   libraries will need to be recompiled, or used with
   (`--no-offload-new-driver`). This option will be removed in the next release.
 
-
+- Clang no longer defines the ``__cpp_impl_coroutine`` feature test macro under the 32-bit x86 Microsoft ABI,
+  as support for coroutines on this target is incomplete.
+  When using coroutines on this target a warning is emmitted to indicate the lack of full support.
+  That warning can be disabled with ``-Wno-coroutines-unsupported-target``. (see #GH59382)
 
 Clang Python Bindings Potentially Breaking Changes
 --------------------------------------------------
@@ -308,6 +311,16 @@ Attribute Changes in Clang
   foreign language personality with a given function. Note that this does not
   perform any ABI validation for the personality routine.
 
+- The ``__attribute__((flatten))`` attribute behavior has changed to match
+  GCC. Previously, Clang only inlined direct callees of the attributed
+  function. Now, all calls are inlined transitively, including calls
+  introduced by inlining. Calls that cannot be inlined are left as-is:
+  this includes callees marked ``noinline``, callees with incompatible ABI
+  attributes (e.g. SME), callees without a visible definition, and
+  recursive calls where a function already appears in the inlining chain.
+  Flatten also works across ThinLTO module boundaries when callee
+  definitions are available.
+
 - The :doc:`ThreadSafetyAnalysis` attributes ``guarded_by`` and
   ``pt_guarded_by`` now accept multiple capability arguments with refined
   access semantics: *writing* requires all listed capabilities to be held
@@ -333,6 +346,8 @@ Attribute Changes in Clang
   deprecated. Clang emits a ``-Wdeprecated-declarations`` warning when they
   are used. Use ``amdgpu_waves_per_eu`` instead to control SGPR and VGPR
   usage.
+
+- Clang now allows GNU attributes between a member declarator and bit-field width. (#GH184954)
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -502,12 +517,17 @@ Bug Fixes in This Version
 - Fixed incorrect rejection of ``auto`` with reordered declaration specifiers in C23. (#GH164121)
 - Fixed a crash where constexpr evaluation encountered invalid overrides. (#GH183290)
 - Fixed a crash when assigning to an element of an ``ext_vector_type`` with ``bool`` element type. (#GH189260)
+- Fixed a crash caused by declaring multiple ``ownership_returns`` attributes with mismatched or missing arguments. (#GH188733)
 - Clang now emits an error for friend declarations of lambda members. (#GH26540)
+- Fixed a crash caused by lambda capture handling in delayed default arguments. (#GH176534)
+- Fixed a crash when parsing invalid ``static_assert`` declarations with string-literal messages (#GH187690).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fix a crash when passing an unresolved overload set to ``__builtin_classify_type``. (#GH175589)
 - Fixed a crash when calling `__builtin_allow_sanitize_check` with no arguments. (#GH183927)
+- ``__annotation`` is now diagnosed as unsupported on non-Windows/UEFI targets, fixing a
+  crash when using it with ``-fms-extensions`` on other platforms. (#GH184318)
 
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -516,6 +536,7 @@ Bug Fixes to Attribute Support
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
+- Fixed a preprocessor assertion failure triggered when parsing an invalid template-id starting with ``::template operator``. (#GH186582)
 - Fixed a crash when a function template is defined as a non-template friend with a global scope qualifier. (#GH185341)
 - Clang now rejects constant template parameters with block pointer types, since these are not implemented anyway and would lead to crashes. (#GH189247)
 - Fixed a crash on error recovery when dealing with invalid templates. (#GH183075)
@@ -549,6 +570,8 @@ Bug Fixes to C++ Support
 - We no longer consider conversion operators when copy-initializing from the same type. This was non
   conforming and could lead to recursive constraint satisfaction checking. (#GH149443)
 - Fixed a crash in Itanium C++ name mangling for a lambda in a local class field initializer inside a constructor/destructor. (#GH176395)
+- Fixed crashes in Itanium C++ name mangling for lambdas with trailing requires-clauses involving requires-expressions. (#GH100774) (#GH123854)
+- Fixed an invalid rejection and assertion failure while generating ``operator=`` for fields with the ``__restrict`` qualifier. (#GH37979)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -570,6 +593,8 @@ Miscellaneous Clang Crashes Fixed
 - Fixed a crash related to missing source locations (#GH186655)
 - Fixed a crash when casting a parenthesized unresolved template-id or array section. (#GH183505)
 - Fixed a crash when initializing a ``constexpr`` pointer with a floating-point literal in C23. (#GH180313)
+- Fixed a lack of diagnostic for substitution failures in base classes when using `std::void_t`-like types.
+- Fixed a crash when emitting debug info for base classes with instantiation-dependent-only types (#GH193932)
 - Fixed an assertion when diagnosing address-space qualified ``new``/``delete`` in language-defined address spaces such as OpenCL ``__local``. (#GH178319)
 - Fixed an assertion failure in ObjC++ ARC when binding a rvalue reference to reference with different lifetimes (#GH178524)
 - Fixed a crash when subscripting a vector type with large unsigned integer values. (#GH180563)

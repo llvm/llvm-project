@@ -33,6 +33,7 @@ add_object_library(
     libc.config.app_h
     libc.include.sys_syscall
     libc.hdr.fcntl_macros
+    libc.hdr.errno_macros
     libc.src.errno.errno
     libc.src.__support.CPP.atomic
     libc.src.__support.CPP.stringstream

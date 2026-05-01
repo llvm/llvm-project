@@ -77,9 +77,10 @@ public:
 
   ArrayRef<const char *> getGCCRegNames() const override {
     static const char *const GCCRegNames[] = {
-        "r0",  "r1",  "r2",  "r3",  "r4",  "r5",  "r6",  "r7",  "r8",  "r9",
-        "r10", "r11", "r12", "r13", "r14", "r15", "r16", "r17", "r18", "r19",
-        "r20", "r21", "r22", "r23", "r24", "r25", "X",   "Y",   "Z",   "SP"};
+        "r0",  "r1",  "r2",  "r3",  "r4",  "r5",       "r6",      "r7",  "r8",
+        "r9",  "r10", "r11", "r12", "r13", "r14",      "r15",     "r16", "r17",
+        "r18", "r19", "r20", "r21", "r22", "r23",      "r24",     "r25", "r26",
+        "r27", "r28", "r29", "r30", "r31", "__SP_L__", "__SP_H__"};
     return llvm::ArrayRef(GCCRegNames);
   }
 
@@ -89,11 +90,8 @@ public:
 
   ArrayRef<TargetInfo::AddlRegName> getGCCAddlRegNames() const override {
     static const TargetInfo::AddlRegName AddlRegNames[] = {
-        {{"r26", "r27"}, 26},
-        {{"r28", "r29"}, 27},
-        {{"r30", "r31"}, 28},
-        {{"SPL", "SPH"}, 29},
-    };
+        {{"xl", "X"}, 26}, {{"xh"}, 27},      {{"yl", "Y"}, 28},
+        {{"yh"}, 29},      {{"zl", "Z"}, 30}, {{"zh"}, 31}};
     return llvm::ArrayRef(AddlRegNames);
   }
 

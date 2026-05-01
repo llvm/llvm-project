@@ -19,7 +19,9 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE float16 fmaxf16(float16 x, float16 y) { return fputil::fmax(x, y); }
+LIBC_INLINE constexpr float16 fmaxf16(float16 x, float16 y) {
+  return fputil::fmax(x, y);
+}
 
 } // namespace math
 } // namespace LIBC_NAMESPACE_DECL

@@ -1664,7 +1664,7 @@ bool AArch64LoadStoreOpt::findMatchingStore(
 }
 
 static bool needsWinCFI(const MachineFunction *MF) {
-  return MF->getTarget().getMCAsmInfo()->usesWindowsCFI() &&
+  return MF->getTarget().getMCAsmInfo().usesWindowsCFI() &&
          MF->getFunction().needsUnwindTableEntry();
 }
 

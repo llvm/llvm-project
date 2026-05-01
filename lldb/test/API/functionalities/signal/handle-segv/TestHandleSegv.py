@@ -7,8 +7,8 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfNoSignals
 class HandleSegvTestCase(TestBase):
-    @skipIfWindows  # signals do not exist on Windows
     @skipIfDarwin
     @expectedFailureNetBSD
     def test_inferior_handle_sigsegv(self):

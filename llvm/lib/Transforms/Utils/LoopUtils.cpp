@@ -353,6 +353,18 @@ bool llvm::hasDisableLICMTransformsHint(const Loop *L) {
   return getBooleanLoopAttribute(L, LLVMLoopDisableLICM);
 }
 
+StringRef llvm::getLoopVectorizeKindPrefix(const Loop *L) {
+  bool IsVectorBody = getBooleanLoopAttribute(L, "llvm.loop.vectorize.body");
+  bool IsEpilogue = getBooleanLoopAttribute(L, "llvm.loop.vectorize.epilogue");
+  if (IsVectorBody && IsEpilogue)
+    return "vectorized epilogue ";
+  if (IsVectorBody)
+    return "vectorized ";
+  if (IsEpilogue)
+    return "epilogue ";
+  return "";
+}
+
 TransformationMode llvm::hasUnrollTransformation(const Loop *L) {
   if (getBooleanLoopAttribute(L, "llvm.loop.unroll.disable"))
     return TM_SuppressedByUser;

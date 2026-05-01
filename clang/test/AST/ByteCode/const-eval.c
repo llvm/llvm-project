@@ -179,3 +179,9 @@ void f0(void) { static intptr_t l0 = (unsigned)(intptr_t) f0;} // both-error {{i
 #else
 #error :(
 #endif
+
+struct ToUnion_X { int a; };
+union ToUnion_U { struct ToUnion_X x; double y; int z : 3; };
+_Static_assert(((union ToUnion_U)(struct ToUnion_X){67}).x.a == 67, "");
+_Static_assert(((union ToUnion_U)1.0).y == 1.0, "");
+_Static_assert(((union ToUnion_U)9).z == 1, "");

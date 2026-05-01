@@ -469,8 +469,19 @@ public:
   }
 
   template <typename A> void Walk(const A &x) { parser::Walk(x, *this); }
-  template <typename A> bool Pre(const A &) { return true; }
-  template <typename A> void Post(const A &) {}
+  // Normally the catch-all Pre/Post functions are templates taking
+  // "const T &". For a class D derived from B, and an explicit overload
+  // of Pre(const B &), a call to Pre(D) will select the template instead
+  // of the base clase overload.
+  // Force user-defined conversion from any const-reference, to make sure
+  // that the Pre(AbsorbAnyReference) and Post(AbsorbAnyReference) overloads
+  // will be worse than derived-to-base conversions. This will, for example,
+  // invoke Pre(const OmpBlockConstruct &) for directives derived from it.
+  struct AbsorbAnyReference {
+    template <typename T> AbsorbAnyReference(const T &) {}
+  };
+  bool Pre(AbsorbAnyReference) { return true; }
+  void Post(AbsorbAnyReference) {}
 
   bool Pre(const parser::SpecificationPart &) {
     partStack_.push_back(PartKind::SpecificationPart);
@@ -585,24 +596,22 @@ public:
   bool Pre(const parser::OpenMPCriticalConstruct &critical);
   void Post(const parser::OpenMPCriticalConstruct &) { PopContext(); }
 
-  bool Pre(const parser::OpenMPDeclareSimdConstruct &x) {
+  bool Pre(const parser::OmpDeclareSimdDirective &x) {
     PushContext(x.source, llvm::omp::Directive::OMPD_declare_simd);
     for (const parser::OmpArgument &arg : x.v.Arguments().v) {
-      if (auto *object{omp::GetArgumentObject(arg)}) {
+      if (auto *object{parser::omp::GetArgumentObject(arg)}) {
         ResolveOmpObject(*object, Symbol::Flag::OmpDeclareSimd);
       }
     }
     return true;
   }
-  void Post(const parser::OpenMPDeclareSimdConstruct &) { PopContext(); }
+  void Post(const parser::OmpDeclareSimdDirective &) { PopContext(); }
 
   bool Pre(const parser::OpenMPDepobjConstruct &x) {
     PushContext(x.source, llvm::omp::Directive::OMPD_depobj);
     for (auto &arg : x.v.Arguments().v) {
-      if (auto *locator{std::get_if<parser::OmpLocator>(&arg.u)}) {
-        if (auto *object{std::get_if<parser::OmpObject>(&locator->u)}) {
-          ResolveOmpObject(*object, Symbol::Flag::OmpDependObject);
-        }
+      if (auto *object{parser::omp::GetArgumentObject(arg)}) {
+        ResolveOmpObject(*object, Symbol::Flag::OmpDependObject);
       }
     }
     return true;
@@ -612,15 +621,13 @@ public:
   bool Pre(const parser::OpenMPFlushConstruct &x) {
     PushContext(x.source, llvm::omp::Directive::OMPD_flush);
     for (auto &arg : x.v.Arguments().v) {
-      if (auto *locator{std::get_if<parser::OmpLocator>(&arg.u)}) {
-        if (auto *object{std::get_if<parser::OmpObject>(&locator->u)}) {
-          if (auto *name{std::get_if<parser::Name>(&object->u)}) {
-            // ResolveOmpCommonBlockName resolves the symbol as a side effect
-            if (!ResolveOmpCommonBlockName(name)) {
-              context_.Say(name->source, // 2.15.3
-                  "COMMON block must be declared in the same scoping unit "
-                  "in which the OpenMP directive or clause appears"_err_en_US);
-            }
+      if (auto *object{parser::omp::GetArgumentObject(arg)}) {
+        if (auto *name{std::get_if<parser::Name>(&object->u)}) {
+          // ResolveOmpCommonBlockName resolves the symbol as a side effect
+          if (!ResolveOmpCommonBlockName(name)) {
+            context_.Say(name->source, // 2.15.3
+                "COMMON block must be declared in the same scoping unit "
+                "in which the OpenMP directive or clause appears"_err_en_US);
           }
         }
       }
@@ -684,14 +691,14 @@ public:
   }
   void Post(const parser::OpenMPRequiresConstruct &) { PopContext(); }
 
-  bool Pre(const parser::OpenMPDeclareTargetConstruct &);
-  void Post(const parser::OpenMPDeclareTargetConstruct &) { PopContext(); }
+  bool Pre(const parser::OmpDeclareTargetDirective &);
+  void Post(const parser::OmpDeclareTargetDirective &) { PopContext(); }
 
-  bool Pre(const parser::OpenMPDeclareMapperConstruct &);
-  void Post(const parser::OpenMPDeclareMapperConstruct &) { PopContext(); }
+  bool Pre(const parser::OmpDeclareMapperDirective &);
+  void Post(const parser::OmpDeclareMapperDirective &) { PopContext(); }
 
-  bool Pre(const parser::OpenMPDeclareReductionConstruct &);
-  void Post(const parser::OpenMPDeclareReductionConstruct &) { PopContext(); }
+  bool Pre(const parser::OmpDeclareReductionDirective &);
+  void Post(const parser::OmpDeclareReductionDirective &) { PopContext(); }
 
   bool Pre(const parser::OpenMPThreadprivate &);
   void Post(const parser::OpenMPThreadprivate &) { PopContext(); }
@@ -1677,34 +1684,68 @@ void AccAttributeVisitor::CheckAssociatedLoop(
 
   Symbol::Flag flag = Symbol::Flag::AccPrivate;
   llvm::SmallVector<Symbol *> ivs;
-  using Bounds = parser::LoopControl::Bounds;
+
+  // Iterate the index variables of one DoConstruct, calling fn(name, lower,
+  // upper) for each: once for a regular do loop, once per control variable for
+  // a do concurrent loop.  Null pointers signal a loop without valid bounds
+  // (e.g. do while); the level must still be consumed.
+  auto forEachIndex = [this](const parser::DoConstruct &loop, auto &&fn) {
+    if (loop.IsDoConcurrent()) {
+      const auto &loopControl{*loop.GetLoopControl()};
+      const auto &concurrent{
+          std::get<parser::LoopControl::Concurrent>(loopControl.u)};
+      const auto &header{std::get<parser::ConcurrentHeader>(concurrent.t)};
+      for (const auto &control :
+          std::get<std::list<parser::ConcurrentControl>>(header.t)) {
+        fn(&std::get<parser::Name>(control.t),
+            &parser::UnwrapRef<parser::Expr>(std::get<1>(control.t)),
+            &parser::UnwrapRef<parser::Expr>(std::get<2>(control.t)));
+      }
+    } else {
+      auto bounds{GetLoopBounds(loop)};
+      const parser::ScalarExpr *lower{std::get<1>(bounds)};
+      const parser::ScalarExpr *upper{std::get<2>(bounds)};
+      fn(std::get<0>(bounds),
+          lower ? &parser::UnwrapRef<parser::Expr>(*lower) : nullptr,
+          upper ? &parser::UnwrapRef<parser::Expr>(*upper) : nullptr);
+    }
+  };
+
   for (const parser::DoConstruct *loop{&outerDoConstruct}; loop && level > 0;) {
-    // Go through all nested loops to ensure index variable exists.
-    if (const parser::Name *ivName{GetLoopIndex(*loop)}) {
-      if (auto *symbol{ResolveAcc(*ivName, flag, currScope())}) {
-        if (auto &control{loop->GetLoopControl()}) {
-          if (const Bounds *b{std::get_if<Bounds>(&control->u)}) {
-            if (auto lowerExpr{semantics::AnalyzeExpr(context_, b->Lower())}) {
-              semantics::UnorderedSymbolSet lowerSyms =
-                  evaluate::CollectSymbols(*lowerExpr);
-              checkExprHasSymbols(ivs, lowerSyms);
-            }
-            if (auto upperExpr{semantics::AnalyzeExpr(context_, b->Upper())}) {
-              semantics::UnorderedSymbolSet upperSyms =
-                  evaluate::CollectSymbols(*upperExpr);
-              checkExprHasSymbols(ivs, upperSyms);
+    forEachIndex(*loop,
+        [&](const parser::Name *ivName, const parser::Expr *lower,
+            const parser::Expr *upper) {
+          if (level <= 0)
+            return;
+          if (ivName && lower && upper) {
+            if (auto *symbol{ResolveAcc(*ivName, flag, currScope())}) {
+              if (auto lowerExpr{semantics::AnalyzeExpr(context_, *lower)}) {
+                semantics::UnorderedSymbolSet lowerSyms =
+                    evaluate::CollectSymbols(*lowerExpr);
+                checkExprHasSymbols(ivs, lowerSyms);
+              }
+              if (auto upperExpr{semantics::AnalyzeExpr(context_, *upper)}) {
+                semantics::UnorderedSymbolSet upperSyms =
+                    evaluate::CollectSymbols(*upperExpr);
+                checkExprHasSymbols(ivs, upperSyms);
+              }
+              ivs.push_back(symbol);
             }
           }
-        }
-        ivs.push_back(symbol);
-      }
-    }
+          --level;
+        });
 
     const auto &block{std::get<parser::Block>(loop->t)};
-    --level;
     loop = getNextDoConstruct(block, level);
   }
-  CHECK(level == 0);
+
+  if (level != 0) {
+    context_.Say(GetContext().directiveSource,
+        "Not enough %s for COLLAPSE(%jd) clause, found %jd, expected %jd more"_err_en_US,
+        forceCollapsed ? "nested loops" : "perfectly nested loops",
+        GetContext().associatedLoopLevel,
+        GetContext().associatedLoopLevel - level, level);
+  }
 }
 
 void AccAttributeVisitor::EnsureAllocatableOrPointer(
@@ -2073,16 +2114,6 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndex(
     ivDSA = Symbol::Flag::OmpLastPrivate;
   }
 
-  auto checkThreadprivate{[&](const parser::Name &iv) {
-    if (const auto *details{iv.symbol->detailsIf<HostAssocDetails>()}) {
-      if (details->symbol().test(Symbol::Flag::OmpThreadprivate)) {
-        context_.Say(iv.source,
-            "Loop iteration variable %s is not allowed in THREADPRIVATE."_err_en_US,
-            iv.ToString());
-      }
-    }
-  }};
-
   Scope &scope{currScope()};
 
   if (auto doLoops{omp::CollectAffectedDoLoops(x, version, &context_)}) {
@@ -2091,9 +2122,7 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndex(
       if (!iv || (iv->symbol && IsLocalInsideScope(*iv->symbol, scope))) {
         continue;
       }
-
       if (auto *symbol{ResolveOmp(*iv, ivDSA, scope)}) {
-        checkThreadprivate(*iv);
         SetSymbolDSA(*symbol, {Symbol::Flag::OmpPreDetermined, ivDSA});
         iv->symbol = symbol; // adjust the symbol within region
         AddToContextObjectWithDSA(*symbol, ivDSA);
@@ -2105,10 +2134,8 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndex(
 bool OmpAttributeVisitor::Pre(const parser::OpenMPGroupprivate &x) {
   PushContext(x.source, llvm::omp::Directive::OMPD_groupprivate);
   for (const parser::OmpArgument &arg : x.v.Arguments().v) {
-    if (auto *locator{std::get_if<parser::OmpLocator>(&arg.u)}) {
-      if (auto *object{std::get_if<parser::OmpObject>(&locator->u)}) {
-        ResolveOmpObject(*object, Symbol::Flag::OmpGroupPrivate);
-      }
+    if (auto *object{parser::omp::GetArgumentObject(arg)}) {
+      ResolveOmpObject(*object, Symbol::Flag::OmpGroupPrivate);
     }
   }
   return true;
@@ -2143,11 +2170,11 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPCriticalConstruct &x) {
   return true;
 }
 
-bool OmpAttributeVisitor::Pre(const parser::OpenMPDeclareTargetConstruct &x) {
+bool OmpAttributeVisitor::Pre(const parser::OmpDeclareTargetDirective &x) {
   PushContext(x.source, llvm::omp::Directive::OMPD_declare_target);
 
   for (const parser::OmpArgument &arg : x.v.Arguments().v) {
-    if (auto *object{omp::GetArgumentObject(arg)}) {
+    if (auto *object{parser::omp::GetArgumentObject(arg)}) {
       ResolveOmpObject(*object, Symbol::Flag::OmpDeclareTarget);
     }
   }
@@ -2162,14 +2189,13 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPDeclareTargetConstruct &x) {
   return true;
 }
 
-bool OmpAttributeVisitor::Pre(const parser::OpenMPDeclareMapperConstruct &x) {
+bool OmpAttributeVisitor::Pre(const parser::OmpDeclareMapperDirective &x) {
   const parser::OmpDirectiveName &dirName{x.v.DirName()};
   PushContext(dirName.source, dirName.v);
   return true;
 }
 
-bool OmpAttributeVisitor::Pre(
-    const parser::OpenMPDeclareReductionConstruct &x) {
+bool OmpAttributeVisitor::Pre(const parser::OmpDeclareReductionDirective &x) {
   PushContext(x.source, llvm::omp::Directive::OMPD_declare_reduction);
   return true;
 }
@@ -2179,7 +2205,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPThreadprivate &x) {
   PushContext(dirName.source, dirName.v);
 
   for (const parser::OmpArgument &arg : x.v.Arguments().v) {
-    if (auto *object{omp::GetArgumentObject(arg)}) {
+    if (auto *object{parser::omp::GetArgumentObject(arg)}) {
       ResolveOmpObject(*object, Symbol::Flag::OmpThreadprivate);
     }
   }
@@ -2197,7 +2223,7 @@ bool OmpAttributeVisitor::Pre(const parser::OmpAllocateDirective &x) {
   parser::omp::OmpAllocateInfo info{parser::omp::SplitOmpAllocate(x)};
   for (const parser::OmpAllocateDirective *ad : info.dirs) {
     for (const parser::OmpArgument &arg : ad->BeginDir().Arguments().v) {
-      if (auto *object{omp::GetArgumentObject(arg)}) {
+      if (auto *object{parser::omp::GetArgumentObject(arg)}) {
         ResolveOmpObject(*object, ompFlag);
       }
     }

@@ -75,7 +75,7 @@ public:
 
   StreamerContext createStreamer(raw_pwrite_stream &OS) {
     StreamerContext Res;
-    Res.Ctx = std::make_unique<MCContext>(TT, MAI.get(), MRI.get(),
+    Res.Ctx = std::make_unique<MCContext>(TT, *MAI, MRI.get(),
                                           /*MSTI=*/nullptr);
     Res.MOFI.reset(TheTarget->createMCObjectFileInfo(*Res.Ctx, /*PIC=*/false));
     Res.Ctx->setObjectFileInfo(Res.MOFI.get());

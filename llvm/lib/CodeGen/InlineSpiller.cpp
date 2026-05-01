@@ -482,6 +482,14 @@ bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
   --MII; // Point to store instruction.
   LLVM_DEBUG(dbgs() << "\thoisted: " << SrcVNI->def << '\t' << *MII);
 
+  // When the def is a PHI, SkipPHIsLabelsAndDebug may place the store past
+  // prologue instructions. Therefore if that copy was the end of a segment
+  // we need to extend it to the store.
+  if (SrcVNI->isPHIDef()) {
+    SlotIndex StoreUseIdx = LIS.getInstructionIndex(*MII).getRegSlot(true);
+    SrcLI.extendInBlock(LIS.getMBBStartIdx(MBB), StoreUseIdx);
+  }
+
   // If there is only 1 store instruction is required for spill, add it
   // to mergeable list. In X86 AMX, 2 intructions are required to store.
   // We disable the merge for this case.

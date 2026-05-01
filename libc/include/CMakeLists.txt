@@ -476,6 +476,14 @@ if(LIBC_TARGET_ARCHITECTURE STREQUAL "x86_64")
       .llvm-libc-types.sigset_t
       .llvm-libc-types.stack_t
   )
+
+  add_header_macro(
+    sys_ucontext
+    ../libc/include/sys/ucontext.yaml
+    sys/ucontext.h
+    DEPENDS
+      .ucontext
+  )
 endif()
 
 add_header_macro(
@@ -740,6 +748,7 @@ add_header_macro(
     .llvm-libc-macros.sys_socket_macros
     .llvm-libc-types.sa_family_t
     .llvm-libc-types.socklen_t
+    .llvm-libc-types.struct_cmsghdr
     .llvm-libc-types.struct_iovec
     .llvm-libc-types.struct_linger
     .llvm-libc-types.struct_msghdr

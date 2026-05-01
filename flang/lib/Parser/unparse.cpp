@@ -1908,11 +1908,11 @@ public:
               Word("!DIR$ NOINLINE");
             },
             [&](const CompilerDirective::IVDep &) { Word("!DIR$ IVDEP"); },
-            [&](const CompilerDirective::InlineAlways &InlineAlways) {
+            [&](const CompilerDirective::InlineAlways &inlineAlways) {
               Word("!DIR$ INLINEALWAYS");
-              if (InlineAlways.v.has_value()) {
+              if (inlineAlways.v.has_value()) {
                 Word(" ");
-                Word(InlineAlways.v->ToString());
+                Word(inlineAlways.v->ToString());
               }
             },
             [&](const CompilerDirective::Simd &) { Word("!DIR$ SIMD"); },
@@ -2201,6 +2201,10 @@ public:
   void Unparse(const OmpBeginDirective &x) {
     BeginOpenMP();
     Word("!$OMP ");
+    auto flags{std::get<OmpDirectiveSpecification::Flags>(x.t)};
+    if (flags.test(OmpDirectiveSpecification::Flag::ExplicitBegin)) {
+      Word("BEGIN ");
+    }
     Walk(static_cast<const OmpDirectiveSpecification &>(x));
     Put("\n");
     EndOpenMP();
@@ -2661,28 +2665,28 @@ public:
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OpenMPDeclareMapperConstruct &x) {
+  void Unparse(const OmpDeclareMapperDirective &x) {
     BeginOpenMP();
     Word("!$OMP ");
     Walk(x.v);
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OpenMPDeclareReductionConstruct &x) {
+  void Unparse(const OmpDeclareReductionDirective &x) {
     BeginOpenMP();
     Word("!$OMP ");
     Walk(x.v);
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OpenMPDeclareSimdConstruct &x) {
+  void Unparse(const OmpDeclareSimdDirective &x) {
     BeginOpenMP();
     Word("!$OMP ");
     Walk(x.v);
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OpenMPDeclareTargetConstruct &x) {
+  void Unparse(const OmpDeclareTargetDirective &x) {
     BeginOpenMP();
     Word("!$OMP ");
     Walk(x.v);

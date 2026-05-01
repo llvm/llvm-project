@@ -184,24 +184,24 @@ exit:
 }
 
 ; Hoisting the store is actually valid here, as it dominates the load.
-define void @neg_ref(ptr %loc) {
-; CHECK-LABEL: define void @neg_ref(
+define void @ref(ptr %loc) {
+; CHECK-LABEL: define void @ref(
 ; CHECK-SAME: ptr [[LOC:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    store i32 0, ptr [[LOC]], align 4
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[LOC]], align 4
+; CHECK-NEXT:    [[EARLYCND:%.*]] = icmp eq i32 [[V]], 198
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[BACKEDGE:.*]] ]
-; CHECK-NEXT:    [[EARLYCND:%.*]] = icmp eq i32 0, 198
 ; CHECK-NEXT:    br i1 [[EARLYCND]], label %[[EXIT1:.*]], label %[[BACKEDGE]]
 ; CHECK:       [[BACKEDGE]]:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[IV]], 200
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT2:.*]]
 ; CHECK:       [[EXIT1]]:
-; CHECK-NEXT:    store i32 0, ptr [[LOC]], align 4
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[EXIT2]]:
-; CHECK-NEXT:    store i32 0, ptr [[LOC]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -583,15 +583,14 @@ exit:
 
 declare void @readonly() readonly
 
-; TODO: can legally hoist since value read by call is known
 define void @test_dominated_readonly(ptr %loc) {
 ; CHECK-LABEL: define void @test_dominated_readonly(
 ; CHECK-SAME: ptr [[LOC:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    store i32 0, ptr [[LOC]], align 4
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    store i32 0, ptr [[LOC]], align 4
 ; CHECK-NEXT:    call void @readonly()
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[IV]], 200

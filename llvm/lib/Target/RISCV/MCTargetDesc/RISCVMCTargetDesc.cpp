@@ -63,9 +63,9 @@ static MCAsmInfo *createRISCVMCAsmInfo(const MCRegisterInfo &MRI,
                                        const MCTargetOptions &Options) {
   MCAsmInfo *MAI = nullptr;
   if (TT.isOSBinFormatELF())
-    MAI = new RISCVMCAsmInfo(TT);
+    MAI = new RISCVMCAsmInfo(TT, Options);
   else if (TT.isOSBinFormatMachO())
-    MAI = new RISCVMCAsmInfoDarwin();
+    MAI = new RISCVMCAsmInfoDarwin(Options);
   else
     reportFatalUsageError("unsupported object format");
 

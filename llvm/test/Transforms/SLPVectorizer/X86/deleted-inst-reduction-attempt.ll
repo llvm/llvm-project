@@ -10,10 +10,9 @@ define double @test(ptr %0, double %1) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = tail call double @llvm.exp.f64(double 0x7FF8000000000000)
 ; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x double>, ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x double> [[TMP7]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> poison, <4 x i32> <i32 poison, i32 poison, i32 0, i32 poison>
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 poison>
 ; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x double> poison, double [[TMP6]], i32 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x double> [[TMP10]], <4 x double> poison, <4 x i32> <i32 poison, i32 poison, i32 poison, i32 0>
-; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <4 x double> [[TMP12]], <4 x double> [[TMP11]], <4 x i32> <i32 poison, i32 poison, i32 0, i32 7>
 ; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <2 x double> [[TMP8]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <4 x double> [[TMP13]], <4 x double> [[TMP14]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>

@@ -97,13 +97,6 @@ public:
   /// Called once with the fixed dependency results before the step() loop.
   virtual llvm::Error initialize(const DepResultTs &...) = 0;
 
-  /// Performs one step. Returns true if another step is needed; false when
-  /// converged. Single-step analyses always return false.
-  virtual llvm::Expected<bool> step() override = 0;
-
-  /// Called after the step() loop converges. Override for post-processing.
-  virtual llvm::Error finalize() override { return llvm::Error::success(); }
-
 protected:
   /// Read-only access to the result being built.
   const ResultT &getResult() const & { return *Result; }

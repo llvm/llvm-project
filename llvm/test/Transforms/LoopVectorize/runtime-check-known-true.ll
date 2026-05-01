@@ -30,15 +30,13 @@ define void @test_runtime_check_known_false_after_construction(ptr %start.1, ptr
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP4]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = mul i64 [[N_VEC]], -8
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[START_1]], i64 [[TMP9]]
-; CHECK-NEXT:    [[TMP11:%.*]] = mul i64 [[N_VEC]], -8
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[START_2_DIFF]], i64 [[TMP11]]
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[START_2_DIFF]], i64 [[TMP9]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], -8
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START_1]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[OFFSET_IDX2:%.*]] = mul i64 [[INDEX]], -8
-; CHECK-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[START_2_DIFF]], i64 [[OFFSET_IDX2]]
+; CHECK-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[START_2_DIFF]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i64, ptr [[NEXT_GEP3]], i64 -3
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP14]], align 8
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i64> [[WIDE_LOAD]], <4 x i64> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
@@ -53,11 +51,11 @@ define void @test_runtime_check_known_false_after_construction(ptr %start.1, ptr
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[TMP10]], %[[MIDDLE_BLOCK]] ], [ [[START_1]], %[[ENTRY]] ], [ [[START_1]], %[[VECTOR_SCEVCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi ptr [ [[TMP12]], %[[MIDDLE_BLOCK]] ], [ [[START_2_DIFF]], %[[ENTRY]] ], [ [[START_2_DIFF]], %[[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL4:%.*]] = phi ptr [ [[TMP11]], %[[MIDDLE_BLOCK]] ], [ [[START_2_DIFF]], %[[ENTRY]] ], [ [[START_2_DIFF]], %[[VECTOR_SCEVCHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[PTR_IV_1:%.*]] = phi ptr [ [[PTR_IV_1_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[PTR_IV_2:%.*]] = phi ptr [ [[PTR_IV_2_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL5]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[PTR_IV_2:%.*]] = phi ptr [ [[PTR_IV_2_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL4]], %[[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[PTR_IV_2_NEXT]] = getelementptr i8, ptr [[PTR_IV_2]], i64 -8
 ; CHECK-NEXT:    [[PTR_IV_1_NEXT]] = getelementptr i8, ptr [[PTR_IV_1]], i64 -8
 ; CHECK-NEXT:    [[L:%.*]] = load i64, ptr [[PTR_IV_2]], align 8

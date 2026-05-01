@@ -51,3 +51,9 @@ bool MCLFIRewriter::mayModifyRegister(const MCInst &Inst,
                                       MCRegister Reg) const {
   return InstInfo->get(Inst.getOpcode()).hasDefOfPhysReg(Inst, Reg, *RegInfo);
 }
+
+bool MCLFIRewriter::explicitlyModifiesRegister(const MCInst &Inst,
+                                               MCRegister Reg) const {
+  return InstInfo->get(Inst.getOpcode())
+      .hasExplicitDefOfPhysReg(Inst, Reg, *RegInfo);
+}

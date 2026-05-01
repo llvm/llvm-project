@@ -496,6 +496,14 @@ private:
   bool SelectCVTFixedPosRecipOperand(SDValue N, SDValue &FixedPos,
                                      unsigned Width);
 
+  template <unsigned FloatWidth>
+  bool SelectCVTFixedPosRecipOperandVec(SDValue N, SDValue &FixedPos) {
+    return SelectCVTFixedPosRecipOperandVec(N, FixedPos, FloatWidth);
+  }
+
+  bool SelectCVTFixedPosRecipOperandVec(SDValue N, SDValue &FixedPos,
+                                        unsigned Width);
+
   bool SelectCMP_SWAP(SDNode *N);
 
   bool SelectSVEAddSubImm(SDValue N, MVT VT, SDValue &Imm, SDValue &Shift,
@@ -4147,14 +4155,11 @@ static bool checkCVTFixedPointOperandWithFBits(SelectionDAG *CurDAG, SDValue N,
   return false;
 }
 
-bool AArch64DAGToDAGISel::SelectCVTFixedPosOperand(SDValue N, SDValue &FixedPos,
-                                                   unsigned RegWidth) {
-  return checkCVTFixedPointOperandWithFBits(CurDAG, N, FixedPos, RegWidth,
-                                            /*isReciprocal*/ false);
-}
-
-bool AArch64DAGToDAGISel::SelectCVTFixedPointVec(SDValue N, SDValue &FixedPos,
-                                                 unsigned RegWidth) {
+static bool checkCVTFixedPointOperandWithFBitsForVectors(SelectionDAG *CurDAG,
+                                                         SDValue N,
+                                                         SDValue &FixedPos,
+                                                         unsigned RegWidth,
+                                                         bool isReciprocal) {
   if ((N.getOpcode() == AArch64ISD::NVCAST || N.getOpcode() == ISD::BITCAST) &&
       N.getValueType().getScalarSizeInBits() ==
           N.getOperand(0).getValueType().getScalarSizeInBits())
@@ -4192,13 +4197,32 @@ bool AArch64DAGToDAGISel::SelectCVTFixedPointVec(SDValue N, SDValue &FixedPos,
     return false;
   }
 
-  if (unsigned FBits = CheckFixedPointOperandConstant(FVal, RegWidth,
-                                                      /*isReciprocal*/ false)) {
+  if (unsigned FBits =
+          CheckFixedPointOperandConstant(FVal, RegWidth, isReciprocal)) {
     FixedPos = CurDAG->getTargetConstant(FBits, SDLoc(N), MVT::i32);
     return true;
   }
 
   return false;
+}
+
+bool AArch64DAGToDAGISel::SelectCVTFixedPosOperand(SDValue N, SDValue &FixedPos,
+                                                   unsigned RegWidth) {
+  return checkCVTFixedPointOperandWithFBits(CurDAG, N, FixedPos, RegWidth,
+                                            /*isReciprocal*/ false);
+}
+
+bool AArch64DAGToDAGISel::SelectCVTFixedPointVec(SDValue N, SDValue &FixedPos,
+                                                 unsigned RegWidth) {
+  return checkCVTFixedPointOperandWithFBitsForVectors(
+      CurDAG, N, FixedPos, RegWidth, /*isReciprocal*/ false);
+}
+
+bool AArch64DAGToDAGISel::SelectCVTFixedPosRecipOperandVec(SDValue N,
+                                                           SDValue &FixedPos,
+                                                           unsigned RegWidth) {
+  return checkCVTFixedPointOperandWithFBitsForVectors(
+      CurDAG, N, FixedPos, RegWidth, /*isReciprocal*/ true);
 }
 
 bool AArch64DAGToDAGISel::SelectCVTFixedPosRecipOperand(SDValue N,

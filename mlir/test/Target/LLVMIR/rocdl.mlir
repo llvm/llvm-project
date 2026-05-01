@@ -1363,6 +1363,19 @@ llvm.func @rocdl.global.load.async.to.lds(%src : !llvm.ptr<1>, %dst: !llvm.ptr<3
   llvm.return
 }
 
+// CHECK-LABEL: rocdl.global.store.async.from.lds
+llvm.func @rocdl.global.store.async.from.lds(%dst : !llvm.ptr<1>, %src: !llvm.ptr<3>) {
+  // CHECK: call void @llvm.amdgcn.global.store.async.from.lds.b8
+  rocdl.global.store.async.from.lds.b8 %dst, %src, 0, 0 : !llvm.ptr<1>, !llvm.ptr<3>
+  // CHECK: call void @llvm.amdgcn.global.store.async.from.lds.b32
+  rocdl.global.store.async.from.lds.b32 %dst, %src, 0, 0 : !llvm.ptr<1>, !llvm.ptr<3>
+  // CHECK: call void @llvm.amdgcn.global.store.async.from.lds.b64
+  rocdl.global.store.async.from.lds.b64 %dst, %src, 0, 0 : !llvm.ptr<1>, !llvm.ptr<3>
+  // CHECK: call void @llvm.amdgcn.global.store.async.from.lds.b128
+  rocdl.global.store.async.from.lds.b128 %dst, %src, 0, 0 : !llvm.ptr<1>, !llvm.ptr<3>
+  llvm.return
+}
+
 // CHECK-LABEL: rocdl.cluster.load.async.to.lds
 llvm.func @rocdl.cluster.load.async.to.lds(%src : !llvm.ptr<1>, %dst: !llvm.ptr<3>, %mask: i32) {
   // CHECK: call void @llvm.amdgcn.cluster.load.async.to.lds.b8

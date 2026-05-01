@@ -47,7 +47,7 @@ const MCExpr *SystemZTargetHLASMStreamer::createWordDiffExpr(
   OS << Temp->getName() << " EQU ";
   const MCBinaryExpr *TempExpr = MCBinaryExpr::createSub(
       MCSymbolRefExpr::create(Hi, Ctx), MCSymbolRefExpr::create(Lo, Ctx), Ctx);
-  Ctx.getAsmInfo()->printExpr(OS, *TempExpr);
+  Ctx.getAsmInfo().printExpr(OS, *TempExpr);
   OS << "\n";
   return MCBinaryExpr::createLShr(MCSymbolRefExpr::create(Temp, Ctx),
                                   MCConstantExpr::create(1, Ctx), Ctx);

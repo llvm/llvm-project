@@ -468,6 +468,14 @@ public:
   LLVM_ABI static KnownBits ashr(const KnownBits &LHS, const KnownBits &RHS,
                                  bool ShAmtNonZero = false, bool Exact = false);
 
+  /// Compute known bits for fshl(LHS, RHS, Amt).
+  LLVM_ABI static KnownBits fshl(const KnownBits &LHS, const KnownBits &RHS,
+                                 const APInt &Amt);
+
+  /// Compute known bits for fshr(LHS, RHS, Amt).
+  LLVM_ABI static KnownBits fshr(const KnownBits &LHS, const KnownBits &RHS,
+                                 const APInt &Amt);
+
   /// Compute known bits for clmul(LHS, RHS).
   LLVM_ABI static KnownBits clmul(const KnownBits &LHS, const KnownBits &RHS);
 

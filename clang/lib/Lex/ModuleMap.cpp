@@ -46,6 +46,8 @@
 
 using namespace clang;
 
+static constexpr llvm::StringRef kPrivateModuleSuffix = "_Private";
+
 void ModuleMapCallbacks::anchor() {}
 
 void ModuleMap::resolveLinkAsDependencies(Module *Mod) {
@@ -498,10 +500,31 @@ void ModuleMap::diagnoseHeaderInclusion(Module *RequestingModule,
 
   // No errors for indirect modules. This may be a bit of a problem for modules
   // with no source files.
-  if (getTopLevelOrNull(RequestingModule) != getTopLevelOrNull(SourceModule))
-    return;
+  Module *TopLevelRequestingModule = getTopLevelOrNull(RequestingModule);
+  Module *TopLevelSourceModule = getTopLevelOrNull(SourceModule);
+  bool IsPublicForMainPrivateModule = false;
+  if (TopLevelRequestingModule != TopLevelSourceModule) {
+    // Suppose we have a pair of files foo.cpp / foo.h.
+    // Our build system may want to verify that foo.cpp only uses things
+    // declared in the implementation_deps of foo, while foo.h only uses things
+    // declared in interface_deps. This requires them to be two seperate
+    // modules, foo_Private and foo. This check is required to ensure that foo.h
+    // is still checked. Otherwise, foo.h would never be checked, since it will
+    // never be the top-level module.
+    if (TopLevelRequestingModule && TopLevelSourceModule &&
+        llvm::StringRef(TopLevelSourceModule->Name)
+            .ends_with(kPrivateModuleSuffix) &&
+        llvm::StringRef(TopLevelSourceModule->Name)
+                .drop_back(kPrivateModuleSuffix.size()) ==
+            TopLevelRequestingModule->Name) {
+      IsPublicForMainPrivateModule = true;
+    } else {
+      return;
+    }
+  }
 
   bool Excluded = false;
+  bool UsedByPrivateModule = false;
   Module *Private = nullptr;
   Module *NotUsed = nullptr;
 
@@ -524,6 +547,9 @@ void ModuleMap::diagnoseHeaderInclusion(Module *RequestingModule,
       if (RequestingModule && LangOpts.ModulesDeclUse &&
           !RequestingModule->directlyUses(Header.getModule())) {
         NotUsed = Header.getModule();
+        if (IsPublicForMainPrivateModule) {
+          UsedByPrivateModule = SourceModule->directlyUses(Header.getModule());
+        }
         continue;
       }
 
@@ -543,9 +569,15 @@ void ModuleMap::diagnoseHeaderInclusion(Module *RequestingModule,
 
   // We have found a module, but we don't use it.
   if (NotUsed) {
-    Diags.Report(FilenameLoc, diag::err_undeclared_use_of_module_indirect)
-        << RequestingModule->getTopLevelModule()->Name << Filename
-        << NotUsed->Name;
+    if (UsedByPrivateModule) {
+      Diags.Report(FilenameLoc, diag::err_undeclared_use_of_module_private)
+          << RequestingModule->getTopLevelModule()->Name << Filename
+          << NotUsed->Name;
+    } else {
+      Diags.Report(FilenameLoc, diag::err_undeclared_use_of_module_indirect)
+          << RequestingModule->getTopLevelModule()->Name << Filename
+          << NotUsed->Name;
+    }
     return;
   }
 
@@ -1626,7 +1658,7 @@ bool ModuleMap::resolveExports(Module *Mod, bool Complain) {
   Mod->UnresolvedExports.clear();
   for (auto &UE : Unresolved) {
     Module::ExportDecl Export = resolveExport(Mod, UE, Complain);
-    if (Export.getPointer() || Export.getInt())
+    if (Export.first || Export.second)
       Mod->Exports.push_back(Export);
     else
       Mod->UnresolvedExports.push_back(UE);
@@ -2006,6 +2038,13 @@ void ModuleMapLoader::handleExternModuleDecl(
   if (llvm::sys::path::is_relative(FileNameRef)) {
     ModuleMapFileName += Directory.getName();
     llvm::sys::path::append(ModuleMapFileName, EMD.Path);
+    // As extern module declarations are parsed recursively, relative paths
+    // to those modules can become arbitrarily long.
+    // If the OS name length limit is exceeded when trying to get the file ref
+    // we can silently fail to find an extern module that exists.
+    // To mitigate this, collapse relative paths containing '../' for when
+    // constructing the name of each module file referenced as an extern module.
+    llvm::sys::path::remove_dots(ModuleMapFileName, /*remove_dot_dot=*/true);
     FileNameRef = ModuleMapFileName;
   }
   if (auto File = SourceMgr.getFileManager().getOptionalFileRef(FileNameRef))

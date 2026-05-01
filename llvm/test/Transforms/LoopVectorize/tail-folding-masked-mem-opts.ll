@@ -21,15 +21,14 @@ define void @simple_memcpy(ptr noalias %dst, ptr noalias %src, i64 %n)  {
 ; CHECK-MASKED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-MASKED:       [[VECTOR_BODY]]:
 ; CHECK-MASKED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-MASKED-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x i64> poison, i64 [[INDEX]], i64 0
-; CHECK-MASKED-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT1]], <2 x i64> poison, <2 x i32> zeroinitializer
-; CHECK-MASKED-NEXT:    [[VEC_IV:%.*]] = add <2 x i64> [[BROADCAST_SPLAT2]], <i64 0, i64 1>
+; CHECK-MASKED-NEXT:    [[VEC_IV:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-MASKED-NEXT:    [[TMP0:%.*]] = icmp ule <2 x i64> [[VEC_IV]], [[BROADCAST_SPLAT]]
 ; CHECK-MASKED-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[INDEX]]
 ; CHECK-MASKED-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <2 x i32> @llvm.masked.load.v2i32.p0(ptr align 4 [[TMP1]], <2 x i1> [[TMP0]], <2 x i32> poison)
 ; CHECK-MASKED-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-MASKED-NEXT:    call void @llvm.masked.store.v2i32.p0(<2 x i32> [[WIDE_MASKED_LOAD]], ptr align 4 [[TMP2]], <2 x i1> [[TMP0]])
 ; CHECK-MASKED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
+; CHECK-MASKED-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IV]], splat (i64 2)
 ; CHECK-MASKED-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-MASKED-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-MASKED:       [[MIDDLE_BLOCK]]:

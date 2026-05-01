@@ -139,7 +139,9 @@ static bool evaluate(const MCSpecifierExpr &Expr, MCValue &Res,
   return !Res.getSubSym();
 }
 
-AArch64MCAsmInfoDarwin::AArch64MCAsmInfoDarwin(bool IsILP32) {
+AArch64MCAsmInfoDarwin::AArch64MCAsmInfoDarwin(bool IsILP32,
+                                               const MCTargetOptions &Options)
+    : MCAsmInfoDarwin(Options) {
   // We prefer NEON instructions to be printed in the short, Apple-specific
   // form when targeting Darwin.
   AssemblerDialect = AsmWriterVariant == Default ? Apple : AsmWriterVariant;
@@ -203,7 +205,9 @@ bool AArch64MCAsmInfoDarwin::evaluateAsRelocatableImpl(
   return evaluate(Expr, Res, Asm);
 }
 
-AArch64MCAsmInfoELF::AArch64MCAsmInfoELF(const Triple &T) {
+AArch64MCAsmInfoELF::AArch64MCAsmInfoELF(const Triple &T,
+                                         const MCTargetOptions &Options)
+    : MCAsmInfoELF(Options) {
   if (T.getArch() == Triple::aarch64_be)
     IsLittleEndian = false;
 
@@ -257,7 +261,9 @@ bool AArch64MCAsmInfoELF::evaluateAsRelocatableImpl(
   return evaluate(Expr, Res, Asm);
 }
 
-AArch64MCAsmInfoMicrosoftCOFF::AArch64MCAsmInfoMicrosoftCOFF() {
+AArch64MCAsmInfoMicrosoftCOFF::AArch64MCAsmInfoMicrosoftCOFF(
+    const MCTargetOptions &Options)
+    : MCAsmInfoMicrosoft(Options) {
   InternalSymbolPrefix = ".L";
   PrivateLabelPrefix = ".L";
 
@@ -287,7 +293,8 @@ bool AArch64MCAsmInfoMicrosoftCOFF::evaluateAsRelocatableImpl(
   return evaluate(Expr, Res, Asm);
 }
 
-AArch64MCAsmInfoGNUCOFF::AArch64MCAsmInfoGNUCOFF() {
+AArch64MCAsmInfoGNUCOFF::AArch64MCAsmInfoGNUCOFF(const MCTargetOptions &Options)
+    : MCAsmInfoGNUCOFF(Options) {
   InternalSymbolPrefix = ".L";
   PrivateLabelPrefix = ".L";
 

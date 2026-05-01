@@ -88,6 +88,17 @@ add_libc_test(
 )
 
 add_libc_test(
+  sched_test
+  UNIT_TEST_ONLY
+  SUITE
+    libc_include_tests
+  SRCS
+    sched_test.cpp
+  DEPENDS
+    libc.include.sched
+)
+
+add_libc_test(
   issubnormal_test
   SUITE
     libc_include_tests

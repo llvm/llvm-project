@@ -250,10 +250,14 @@ void RVVType::initClangBuiltinStr() {
     ClangBuiltinStr += "int";
     break;
   case ScalarTypeKind::UnsignedInteger:
-  case ScalarTypeKind::FloatE4M3:
-  case ScalarTypeKind::FloatE5M2:
     ClangBuiltinStr += "uint";
     break;
+  case ScalarTypeKind::FloatE4M3:
+    ClangBuiltinStr += "float8e4m3" + LMUL.str() + "_t";
+    return;
+  case ScalarTypeKind::FloatE5M2:
+    ClangBuiltinStr += "float8e5m2" + LMUL.str() + "_t";
+    return;
   default:
     llvm_unreachable("ScalarTypeKind is invalid");
   }
@@ -327,9 +331,13 @@ void RVVType::initTypeStr() {
     Str += getTypeString("int");
     break;
   case ScalarTypeKind::UnsignedInteger:
-  case ScalarTypeKind::FloatE4M3:
-  case ScalarTypeKind::FloatE5M2:
     Str += getTypeString("uint");
+    break;
+  case ScalarTypeKind::FloatE4M3:
+    Str += "vfloat8e4m3" + LMUL.str() + "_t";
+    break;
+  case ScalarTypeKind::FloatE5M2:
+    Str += "vfloat8e5m2" + LMUL.str() + "_t";
     break;
   default:
     llvm_unreachable("ScalarType is invalid!");

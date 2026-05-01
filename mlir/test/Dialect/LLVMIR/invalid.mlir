@@ -2115,3 +2115,19 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
     %0 = llvm.ptrtoaddr %arg0 : !llvm.ptr to i64
   }
 }
+
+// -----
+
+func.func @nvvm_read_sreg_tid_x_wrong_type() {
+  // expected-error@+1 {{'nvvm.read.ptx.sreg.tid.x' op result #0 must be 32-bit signless integer, but got 'i64'}}
+  %0 = nvvm.read.ptx.sreg.tid.x : i64
+  return
+}
+
+// -----
+
+func.func @nvvm_read_sreg_clock64_wrong_type() {
+  // expected-error@+1 {{'nvvm.read.ptx.sreg.clock64' op result #0 must be 64-bit signless integer, but got 'i32'}}
+  %0 = nvvm.read.ptx.sreg.clock64 : i32
+  return
+}

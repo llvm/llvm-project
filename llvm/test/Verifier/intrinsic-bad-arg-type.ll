@@ -1,6 +1,6 @@
 ; RUN: not opt -S -passes=verify 2>&1 < %s | FileCheck %s
 
-; CHECK: Intrinsic has incorrect argument type!
+; CHECK: intrinsic has incorrect argument type!
 ; CHECK-NEXT: ptr @llvm.masked.load.nxv4i32.p0
 
 define <vscale x 4 x i32> @masked_load(ptr %addr, <4 x i1> %mask, <vscale x 4 x i32> %dst) {

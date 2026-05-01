@@ -83,9 +83,9 @@ class LanaiAsmParser : public MCTargetAsmParser {
 
 public:
   LanaiAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
-                 const MCInstrInfo &MII, const MCTargetOptions &Options)
-      : MCTargetAsmParser(Options, STI, MII), Parser(Parser),
-        Lexer(Parser.getLexer()), SubtargetInfo(STI) {
+                 const MCInstrInfo &MII)
+      : MCTargetAsmParser(STI, MII), Parser(Parser), Lexer(Parser.getLexer()),
+        SubtargetInfo(STI) {
     setAvailableFeatures(
         ComputeAvailableFeatures(SubtargetInfo.getFeatureBits()));
   }

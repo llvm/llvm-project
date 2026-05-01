@@ -14,9 +14,7 @@ Navigate to the links below for information on the respective topics:
    source_tree_layout
    entrypoints
    implementing_a_function
-   cmake_build_rules
    config_options
-   clang_tidy_checks
    fuzzing
    header_generation
    implementation_standard

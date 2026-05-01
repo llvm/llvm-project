@@ -4,8 +4,6 @@
 math.h
 ======
 
-.. include:: ../../check.rst
-
 .. raw:: html
 
     <style> .green {color:green} </style>

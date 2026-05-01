@@ -217,18 +217,17 @@ func.func @gather_memref_2d(%base: memref<?x?xf32>, %v: vector<2x3xindex>, %mask
 
 // CHECK: gpu.func @test_kernel(%[[A:.*]]: memref<8x16xf16>, %[[B:.*]]: memref<16x16xf16>, %[[C:.*]]: memref<8x16xf32>) kernel {
 // CHECK: %[[POISON_F32:.*]] = ub.poison : vector<128xf32>
-// CHECK: %[[C0:.*]] = arith.constant 0 : index
 // CHECK: %[[CST_A:.*]] = arith.constant dense<0.000000e+00> : vector<64xf16>
 // CHECK: %[[CST_C:.*]] = arith.constant dense<5.000000e+00> : vector<64xf32>
 
-// CHECK: %[[A_TDESC:.*]] = xegpu.create_nd_tdesc %[[A]][%[[C0]], %[[C0]]]
-// CHECK: %[[A_VAL:.*]] = xegpu.load_nd %[[A_TDESC]]
+// CHECK: %[[A_TDESC:.*]] = xegpu.create_nd_tdesc %[[A]]
+// CHECK: %[[A_VAL:.*]] = xegpu.load_nd %[[A_TDESC]][0, 0]
 // CHECK: %[[A_CAST:.*]] = vector.shape_cast %[[A_VAL]] : vector<8x16xf16> to vector<128xf16>
 // CHECK: %[[A_SHUFFLE:.*]] = vector.shuffle %[[A_CAST]], %[[CST_A]] {{.*}} : vector<128xf16>, vector<64xf16>
 // CHECK: %[[A_RESULT:.*]] = vector.shape_cast %[[A_SHUFFLE]] : vector<128xf16> to vector<8x16xf16>
 
-// CHECK: %[[B_TDESC:.*]] = xegpu.create_nd_tdesc %[[B]][%[[C0]], %[[C0]]]
-// CHECK: %[[B_VAL:.*]] = xegpu.load_nd %[[B_TDESC]]
+// CHECK: %[[B_TDESC:.*]] = xegpu.create_nd_tdesc %[[B]]
+// CHECK: %[[B_VAL:.*]] = xegpu.load_nd %[[B_TDESC]][0, 0]
 // CHECK: %[[B_CAST:.*]] = vector.shape_cast %[[B_VAL]] : vector<16x16xf16> to vector<256xf16>
 // CHECK: %[[B_SHUFFLE:.*]] = vector.shuffle %[[B_CAST]], %[[CST_A]] {{.*}} : vector<256xf16>, vector<64xf16>
 // CHECK: %[[B_RESULT:.*]] = vector.shape_cast %[[B_SHUFFLE]] : vector<256xf16> to vector<16x16xf16>
@@ -240,8 +239,8 @@ func.func @gather_memref_2d(%base: memref<?x?xf32>, %v: vector<2x3xindex>, %mask
 // CHECK: %[[INSERT_SHUFFLE:.*]] = vector.shuffle %[[DPAS_CAST]], %[[ADDF]] {{.*}} : vector<128xf32>, vector<64xf32>
 // CHECK: %[[C_RESULT:.*]] = vector.shape_cast %[[INSERT_SHUFFLE]] : vector<128xf32> to vector<8x16xf32>
 
-// CHECK: %[[C_TDESC:.*]] = xegpu.create_nd_tdesc %[[C]][%[[C0]], %[[C0]]]
-// CHECK: xegpu.store_nd %[[C_RESULT]], %[[C_TDESC]]
+// CHECK: %[[C_TDESC:.*]] = xegpu.create_nd_tdesc %[[C]]
+// CHECK: xegpu.store_nd %[[C_RESULT]], %[[C_TDESC]][0, 0]
 // CHECK: gpu.return
 
 gpu.module @test_kernel {
@@ -250,19 +249,19 @@ gpu.module @test_kernel {
     %cst_vec_0 = arith.constant dense<0.000000e+00> : vector<8x8xf16>
     %cst_vec_1 = arith.constant dense<0.000000e+00> : vector<8x8xf16>
     %cst_vec_2 = arith.constant dense<5.000000e+00> : vector<8x8xf32>
-    %a_tdesc = xegpu.create_nd_tdesc %A[%c0, %c0] : memref<8x16xf16> -> !xegpu.tensor_desc<8x16xf16, #xegpu.block_tdesc_attr<array_length = 1>>
-    %a_val = xegpu.load_nd %a_tdesc : !xegpu.tensor_desc<8x16xf16, #xegpu.block_tdesc_attr<array_length = 1>> -> vector<8x16xf16>
+    %a_tdesc = xegpu.create_nd_tdesc %A : memref<8x16xf16> -> !xegpu.tensor_desc<8x16xf16, #xegpu.block_tdesc_attr<array_length = 1>>
+    %a_val = xegpu.load_nd %a_tdesc[0, 0] : !xegpu.tensor_desc<8x16xf16, #xegpu.block_tdesc_attr<array_length = 1>> -> vector<8x16xf16>
     %a_val_0 = vector.insert_strided_slice %cst_vec_0, %a_val{offsets = [0, 0], sizes = [8, 8], strides = [1, 1]}: vector<8x8xf16> into vector<8x16xf16>
-    %b_tdesc = xegpu.create_nd_tdesc %B[%c0, %c0] : memref<16x16xf16> -> !xegpu.tensor_desc<16x16xf16, #xegpu.block_tdesc_attr<array_length = 1>>
+    %b_tdesc = xegpu.create_nd_tdesc %B : memref<16x16xf16> -> !xegpu.tensor_desc<16x16xf16, #xegpu.block_tdesc_attr<array_length = 1>>
 
-    %b_val = xegpu.load_nd  %b_tdesc : !xegpu.tensor_desc<16x16xf16, #xegpu.block_tdesc_attr<array_length = 1>> -> vector<16x16xf16>
+    %b_val = xegpu.load_nd  %b_tdesc[0, 0] : !xegpu.tensor_desc<16x16xf16, #xegpu.block_tdesc_attr<array_length = 1>> -> vector<16x16xf16>
     %b_val_0 = vector.insert_strided_slice %cst_vec_1, %b_val{offsets = [0, 0], sizes = [8, 8], strides = [1, 1]}: vector<8x8xf16> into vector<16x16xf16>
     %c_val = xegpu.dpas %a_val_0, %b_val_0 : vector<8x16xf16>, vector<16x16xf16> -> vector<8x16xf32>
     %c_val_0 = vector.extract_strided_slice %c_val {offsets = [0, 0], sizes = [8, 8], strides = [1, 1]} : vector<8x16xf32> to vector<8x8xf32>
     %c_addf = arith.addf %c_val_0, %cst_vec_2 : vector<8x8xf32>
     %c_result = vector.insert_strided_slice %c_addf, %c_val {offsets = [0, 0], sizes = [8, 8], strides = [1, 1]} : vector<8x8xf32> into vector<8x16xf32>
-    %c_tdesc = xegpu.create_nd_tdesc %C[%c0, %c0] : memref<8x16xf32> -> !xegpu.tensor_desc<8x16xf32, #xegpu.block_tdesc_attr<array_length = 1>>
-    xegpu.store_nd %c_result, %c_tdesc : vector<8x16xf32>, !xegpu.tensor_desc<8x16xf32>
+    %c_tdesc = xegpu.create_nd_tdesc %C : memref<8x16xf32> -> !xegpu.tensor_desc<8x16xf32, #xegpu.block_tdesc_attr<array_length = 1>>
+    xegpu.store_nd %c_result, %c_tdesc[0, 0] : vector<8x16xf32>, !xegpu.tensor_desc<8x16xf32>
     gpu.return
   }
 }

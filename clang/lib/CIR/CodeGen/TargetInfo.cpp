@@ -56,6 +56,8 @@ public:
   AMDGPUTargetCIRGenInfo(CIRGenTypes &cgt)
       : TargetCIRGenInfo(std::make_unique<AMDGPUABIInfo>(cgt)) {}
 
+  bool supportsLibCall() const override { return false; }
+
   void setTargetAttributes(const clang::Decl *decl, mlir::Operation *global,
                            CIRGenModule &cgm) const override {
     if (auto func = mlir::dyn_cast<cir::FuncOp>(global)) {

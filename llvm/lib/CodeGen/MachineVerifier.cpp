@@ -769,13 +769,12 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
     }
   }
 
-  const MCAsmInfo *AsmInfo = TM->getMCAsmInfo();
+  const MCAsmInfo &AsmInfo = TM->getMCAsmInfo();
   const BasicBlock *BB = MBB->getBasicBlock();
   const Function &F = MF->getFunction();
   if (LandingPadSuccs.size() > 1 &&
-      !(AsmInfo &&
-        AsmInfo->getExceptionHandlingType() == ExceptionHandling::SjLj &&
-        BB && isa<SwitchInst>(BB->getTerminator())) &&
+      !(AsmInfo.getExceptionHandlingType() == ExceptionHandling::SjLj && BB &&
+        isa<SwitchInst>(BB->getTerminator())) &&
       !isScopedEHPersonality(classifyEHPersonality(F.getPersonalityFn())))
     report("MBB has more than one landing pad successor", MBB);
 

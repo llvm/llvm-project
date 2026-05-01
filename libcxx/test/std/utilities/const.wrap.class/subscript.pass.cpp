@@ -85,6 +85,18 @@ static_assert(!HasNothrowSubscript<std::constant_wrapper<ThrowingSubscript{}>, i
 static_assert(HasNothrowSubscript<std::constant_wrapper<ThrowingSubscript{}>, std::constant_wrapper<1>>,
               "the subscript expression is still nothrow because the constexpr path is taken");
 
+template <class T>
+struct MustBeInt {
+  static_assert(std::same_as<T, int>);
+};
+
+struct Poison {
+  template <class T>
+  constexpr auto operator[](T) const noexcept -> MustBeInt<T> {
+    return {};
+  }
+};
+
 constexpr bool test() {
   {
     // with runtime param
@@ -170,6 +182,12 @@ constexpr bool test() {
     using T                                                      = std::constant_wrapper<arr>;
     std::same_as<std::constant_wrapper<2>> decltype(auto) result = T::operator[](std::integral_constant<int, 1>{});
     static_assert(result == 2);
+  }
+
+  {
+    using T = std::constant_wrapper<Poison{}>;
+    [[maybe_unused]] std::same_as<std::constant_wrapper<MustBeInt<int>{}>> decltype(auto) result =
+        T::operator[](std::cw<5>);
   }
 
   return true;

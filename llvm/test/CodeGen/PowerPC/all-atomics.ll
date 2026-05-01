@@ -907,11 +907,17 @@ define dso_local void @test_op_ignore() local_unnamed_addr #0 {
 ; AIX32-NEXT:    nop
 ; AIX32-NEXT:    lwz 31, L..C8(2) # @u128
 ; AIX32-NEXT:    addi 30, 1, 72
+; AIX32-NEXT:    li 3, 16
+; AIX32-NEXT:    mr 5, 30
+; AIX32-NEXT:    li 6, 0
+; AIX32-NEXT:    mr 4, 31
+; AIX32-NEXT:    bl .__atomic_load[PR]
+; AIX32-NEXT:    nop
+; AIX32-NEXT:    lwz 5, 84(1)
+; AIX32-NEXT:    lwz 4, 80(1)
+; AIX32-NEXT:    lwz 6, 76(1)
+; AIX32-NEXT:    lwz 7, 72(1)
 ; AIX32-NEXT:    addi 29, 1, 56
-; AIX32-NEXT:    lwz 5, 12(31)
-; AIX32-NEXT:    lwz 4, 8(31)
-; AIX32-NEXT:    lwz 6, 4(31)
-; AIX32-NEXT:    lwz 7, 0(31)
 ; AIX32-NEXT:    .align 4
 ; AIX32-NEXT:  L..BB0_49: # %atomicrmw.start2
 ; AIX32-NEXT:    #
@@ -941,11 +947,17 @@ define dso_local void @test_op_ignore() local_unnamed_addr #0 {
 ; AIX32-NEXT:  # %bb.50: # %atomicrmw.end1
 ; AIX32-NEXT:    lwz 31, L..C9(2) # @s128
 ; AIX32-NEXT:    addi 30, 1, 72
+; AIX32-NEXT:    li 3, 16
+; AIX32-NEXT:    mr 5, 30
+; AIX32-NEXT:    li 6, 0
+; AIX32-NEXT:    mr 4, 31
+; AIX32-NEXT:    bl .__atomic_load[PR]
+; AIX32-NEXT:    nop
+; AIX32-NEXT:    lwz 5, 84(1)
+; AIX32-NEXT:    lwz 4, 80(1)
+; AIX32-NEXT:    lwz 6, 76(1)
+; AIX32-NEXT:    lwz 7, 72(1)
 ; AIX32-NEXT:    addi 29, 1, 56
-; AIX32-NEXT:    lwz 5, 12(31)
-; AIX32-NEXT:    lwz 4, 8(31)
-; AIX32-NEXT:    lwz 6, 4(31)
-; AIX32-NEXT:    lwz 7, 0(31)
 ; AIX32-NEXT:    .align 4
 ; AIX32-NEXT:  L..BB0_51: # %atomicrmw.start
 ; AIX32-NEXT:    #
@@ -3853,15 +3865,21 @@ define dso_local void @test_op_and_fetch() local_unnamed_addr #0 {
 ; AIX32-NEXT:    nop
 ; AIX32-NEXT:    nand 3, 4, 29
 ; AIX32-NEXT:    lwz 29, L..C8(2) # @u128
-; AIX32-NEXT:    lbz 23, 0(26)
 ; AIX32-NEXT:    addi 28, 1, 80
-; AIX32-NEXT:    addi 27, 1, 64
+; AIX32-NEXT:    lbz 23, 0(26)
+; AIX32-NEXT:    li 6, 0
 ; AIX32-NEXT:    stw 17, 0(30)
-; AIX32-NEXT:    lwz 4, 12(29)
-; AIX32-NEXT:    lwz 5, 8(29)
-; AIX32-NEXT:    lwz 6, 4(29)
-; AIX32-NEXT:    lwz 7, 0(29)
+; AIX32-NEXT:    mr 5, 28
 ; AIX32-NEXT:    stw 3, 4(30)
+; AIX32-NEXT:    li 3, 16
+; AIX32-NEXT:    mr 4, 29
+; AIX32-NEXT:    bl .__atomic_load[PR]
+; AIX32-NEXT:    nop
+; AIX32-NEXT:    lwz 4, 92(1)
+; AIX32-NEXT:    lwz 5, 88(1)
+; AIX32-NEXT:    lwz 6, 84(1)
+; AIX32-NEXT:    lwz 7, 80(1)
+; AIX32-NEXT:    addi 27, 1, 64
 ; AIX32-NEXT:    .align 4
 ; AIX32-NEXT:  L..BB2_61: # %atomicrmw.start2
 ; AIX32-NEXT:    #
@@ -3891,19 +3909,25 @@ define dso_local void @test_op_and_fetch() local_unnamed_addr #0 {
 ; AIX32-NEXT:    beq 0, L..BB2_61
 ; AIX32-NEXT:  # %bb.62: # %atomicrmw.end1
 ; AIX32-NEXT:    and 3, 4, 23
+; AIX32-NEXT:    lwz 28, L..C9(2) # @s128
 ; AIX32-NEXT:    stw 17, 0(29)
-; AIX32-NEXT:    lbz 23, 0(26)
 ; AIX32-NEXT:    stw 17, 4(29)
 ; AIX32-NEXT:    stw 17, 8(29)
 ; AIX32-NEXT:    xor 3, 3, 17
-; AIX32-NEXT:    addi 28, 1, 80
-; AIX32-NEXT:    addi 27, 1, 64
+; AIX32-NEXT:    lbz 23, 0(26)
+; AIX32-NEXT:    li 6, 0
+; AIX32-NEXT:    mr 4, 28
 ; AIX32-NEXT:    stw 3, 12(29)
-; AIX32-NEXT:    lwz 29, L..C9(2) # @s128
-; AIX32-NEXT:    lwz 4, 12(29)
-; AIX32-NEXT:    lwz 5, 8(29)
-; AIX32-NEXT:    lwz 6, 4(29)
-; AIX32-NEXT:    lwz 7, 0(29)
+; AIX32-NEXT:    addi 29, 1, 80
+; AIX32-NEXT:    mr 5, 29
+; AIX32-NEXT:    li 3, 16
+; AIX32-NEXT:    bl .__atomic_load[PR]
+; AIX32-NEXT:    nop
+; AIX32-NEXT:    lwz 4, 92(1)
+; AIX32-NEXT:    lwz 5, 88(1)
+; AIX32-NEXT:    lwz 6, 84(1)
+; AIX32-NEXT:    lwz 7, 80(1)
+; AIX32-NEXT:    addi 27, 1, 64
 ; AIX32-NEXT:    .align 4
 ; AIX32-NEXT:  L..BB2_63: # %atomicrmw.start
 ; AIX32-NEXT:    #
@@ -3915,8 +3939,8 @@ define dso_local void @test_op_and_fetch() local_unnamed_addr #0 {
 ; AIX32-NEXT:    stw 6, 84(1)
 ; AIX32-NEXT:    stw 5, 88(1)
 ; AIX32-NEXT:    stw 4, 92(1)
-; AIX32-NEXT:    mr 4, 29
-; AIX32-NEXT:    mr 5, 28
+; AIX32-NEXT:    mr 4, 28
+; AIX32-NEXT:    mr 5, 29
 ; AIX32-NEXT:    mr 6, 27
 ; AIX32-NEXT:    stw 3, 76(1)
 ; AIX32-NEXT:    li 3, 16
@@ -3935,11 +3959,11 @@ define dso_local void @test_op_and_fetch() local_unnamed_addr #0 {
 ; AIX32-NEXT:    and 3, 4, 23
 ; AIX32-NEXT:    li 5, 255
 ; AIX32-NEXT:    xor 3, 3, 17
-; AIX32-NEXT:    stw 17, 0(29)
-; AIX32-NEXT:    stw 17, 4(29)
-; AIX32-NEXT:    stw 17, 8(29)
+; AIX32-NEXT:    stw 17, 0(28)
+; AIX32-NEXT:    stw 17, 4(28)
+; AIX32-NEXT:    stw 17, 8(28)
 ; AIX32-NEXT:    slw 5, 5, 24
-; AIX32-NEXT:    stw 3, 12(29)
+; AIX32-NEXT:    stw 3, 12(28)
 ; AIX32-NEXT:    lbz 3, 0(26)
 ; AIX32-NEXT:    sync
 ; AIX32-NEXT:    slw 4, 3, 24
@@ -5884,41 +5908,43 @@ define dso_local i64 @atommax8(ptr nocapture noundef %ptr, i64 noundef %val) loc
 ; AIX32-NEXT:    stwu 1, -80(1)
 ; AIX32-NEXT:    stw 0, 88(1)
 ; AIX32-NEXT:    stw 30, 72(1) # 4-byte Folded Spill
+; AIX32-NEXT:    mr 30, 4
+; AIX32-NEXT:    li 4, 0
+; AIX32-NEXT:    stw 28, 64(1) # 4-byte Folded Spill
+; AIX32-NEXT:    stw 29, 68(1) # 4-byte Folded Spill
 ; AIX32-NEXT:    stw 31, 76(1) # 4-byte Folded Spill
 ; AIX32-NEXT:    mr 31, 5
-; AIX32-NEXT:    mr 30, 4
-; AIX32-NEXT:    lwz 4, 4(3)
-; AIX32-NEXT:    lwz 5, 0(3)
-; AIX32-NEXT:    stw 28, 64(1) # 4-byte Folded Spill
-; AIX32-NEXT:    addi 28, 1, 56
-; AIX32-NEXT:    stw 29, 68(1) # 4-byte Folded Spill
 ; AIX32-NEXT:    mr 29, 3
+; AIX32-NEXT:    bl .__atomic_load_8[PR]
+; AIX32-NEXT:    nop
+; AIX32-NEXT:    addi 28, 1, 56
 ; AIX32-NEXT:    .align 4
 ; AIX32-NEXT:  L..BB7_1: # %atomicrmw.start
 ; AIX32-NEXT:    #
-; AIX32-NEXT:    cmplw 5, 30
-; AIX32-NEXT:    cmpw 1, 5, 30
+; AIX32-NEXT:    cmplw 3, 30
+; AIX32-NEXT:    cmpw 1, 3, 30
 ; AIX32-NEXT:    li 7, 5
 ; AIX32-NEXT:    li 8, 5
-; AIX32-NEXT:    stw 5, 56(1)
-; AIX32-NEXT:    mr 3, 29
+; AIX32-NEXT:    stw 3, 56(1)
 ; AIX32-NEXT:    crandc 20, 5, 2
 ; AIX32-NEXT:    cmplw 1, 4, 31
 ; AIX32-NEXT:    crand 21, 2, 5
 ; AIX32-NEXT:    stw 4, 60(1)
 ; AIX32-NEXT:    cror 20, 21, 20
-; AIX32-NEXT:    isel 5, 5, 30, 20
+; AIX32-NEXT:    isel 5, 3, 30, 20
 ; AIX32-NEXT:    isel 6, 4, 31, 20
+; AIX32-NEXT:    mr 3, 29
 ; AIX32-NEXT:    mr 4, 28
 ; AIX32-NEXT:    bl .__atomic_compare_exchange_8[PR]
 ; AIX32-NEXT:    nop
+; AIX32-NEXT:    mr 5, 3
 ; AIX32-NEXT:    lwz 4, 60(1)
-; AIX32-NEXT:    lwz 5, 56(1)
-; AIX32-NEXT:    cmplwi 3, 0
+; AIX32-NEXT:    lwz 3, 56(1)
+; AIX32-NEXT:    cmplwi 5, 0
 ; AIX32-NEXT:    beq 0, L..BB7_1
 ; AIX32-NEXT:  # %bb.2: # %atomicrmw.end
-; AIX32-NEXT:    cmplw 5, 30
-; AIX32-NEXT:    cmpw 1, 5, 30
+; AIX32-NEXT:    cmplw 3, 30
+; AIX32-NEXT:    cmpw 1, 3, 30
 ; AIX32-NEXT:    li 3, 55
 ; AIX32-NEXT:    lwz 30, 72(1) # 4-byte Folded Reload
 ; AIX32-NEXT:    lwz 29, 68(1) # 4-byte Folded Reload

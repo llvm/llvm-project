@@ -28,7 +28,6 @@
 #include <functional>
 #include <optional>
 #include <string>
-#include <unistd.h>
 
 namespace llvm {
 namespace omp {
@@ -83,7 +82,7 @@ class ErrorReporter {
   [[gnu::format(__printf__, 1, 2)]]
 #endif
   static void print(const char *Format, ArgsTy &&...Args) {
-    raw_fd_ostream OS(STDERR_FILENO, false);
+    auto &OS = llvm::errs();
     OS << llvm::format(Format, Args...);
   }
 
@@ -94,7 +93,7 @@ class ErrorReporter {
   [[gnu::format(__printf__, 2, 3)]]
 #endif
   static void print(ColorTy Color, const char *Format, ArgsTy &&...Args) {
-    raw_fd_ostream OS(STDERR_FILENO, false);
+    auto &OS = llvm::errs();
     WithColor(OS, HighlightColor(Color)) << llvm::format(Format, Args...);
   }
 

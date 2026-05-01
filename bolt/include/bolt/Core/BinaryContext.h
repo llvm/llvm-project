@@ -679,8 +679,6 @@ public:
 
   std::unique_ptr<MCObjectFileInfo> MOFI;
 
-  MCTargetOptions MCOptions;
-
   std::unique_ptr<const MCAsmInfo> AsmInfo;
 
   std::unique_ptr<const MCInstrInfo> MII;
@@ -1548,7 +1546,7 @@ public:
   IndependentCodeEmitter createIndependentMCCodeEmitter() const {
     IndependentCodeEmitter MCEInstance;
     MCEInstance.LocalCtx.reset(
-        new MCContext(*TheTriple, AsmInfo.get(), MRI.get(), STI.get()));
+        new MCContext(*TheTriple, *AsmInfo, MRI.get(), STI.get()));
     MCEInstance.LocalMOFI.reset(
         TheTarget->createMCObjectFileInfo(*MCEInstance.LocalCtx,
                                           /*PIC=*/!HasFixedLoadAddress));

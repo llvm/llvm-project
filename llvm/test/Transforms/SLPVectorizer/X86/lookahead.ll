@@ -300,9 +300,9 @@ define void @lookahead_limit_users_budget(ptr %A, ptr %B, ptr %C, ptr %D, ptr %S
 ; CHECK-NEXT:    [[IDXS1:%.*]] = getelementptr inbounds double, ptr [[S:%.*]], i64 1
 ; CHECK-NEXT:    store double [[ADD0]], ptr [[S]], align 8
 ; CHECK-NEXT:    store double [[ADD1]], ptr [[IDXS1]], align 8
-; CHECK-NEXT:    store double [[A1]], ptr [[EXT3:%.*]], align 8
+; CHECK-NEXT:    store double [[A1]], ptr [[EXT1:%.*]], align 8
 ; CHECK-NEXT:    store double [[A1]], ptr [[EXT2:%.*]], align 8
-; CHECK-NEXT:    store double [[A1]], ptr [[EXT6:%.*]], align 8
+; CHECK-NEXT:    store double [[A1]], ptr [[EXT3:%.*]], align 8
 ; CHECK-NEXT:    store double [[B1]], ptr [[EXT4:%.*]], align 8
 ; CHECK-NEXT:    store double [[B1]], ptr [[EXT5:%.*]], align 8
 ; CHECK-NEXT:    ret void

@@ -1,6 +1,4 @@
 .. title:: clang-tidy - cert-msc54-cpp
-.. meta::
-   :http-equiv=refresh: 5;URL=../bugprone/signal-handler.html
 
 cert-msc54-cpp
 ==============

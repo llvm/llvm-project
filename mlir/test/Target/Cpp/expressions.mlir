@@ -374,6 +374,26 @@ func.func @expression_with_address_taken(%arg0: i32, %arg1: i32, %arg2: !emitc.p
   return %c : i1
 }
 
+// CPP-DEFAULT: int32_t expression_with_subscript(int32_t [[VAL_1:v.+]][4][8], int32_t [[VAL_2:v.+]], int32_t [[VAL_3:v.+]])
+// CPP-DEFAULT-NEXT:   int32_t [[VAL_4:v.+]] = [[VAL_1]][[[VAL_2]] + [[VAL_3]]][([[VAL_2]] + [[VAL_3]]) * [[VAL_3]]];
+// CPP-DEFAULT-NEXT:   return [[VAL_4]];
+
+// CPP-DECLTOP: int32_t expression_with_subscript(int32_t [[VAL_1:v.+]][4][8], int32_t [[VAL_2:v.+]], int32_t [[VAL_3:v.+]])
+// CPP-DECLTOP-NEXT:   int32_t [[VAL_4:v.+]];
+// CPP-DECLTOP-NEXT:   [[VAL_4]] = [[VAL_1]][[[VAL_2]] + [[VAL_3]]][([[VAL_2]] + [[VAL_3]]) * [[VAL_3]]];
+// CPP-DECLTOP-NEXT:   return [[VAL_4]];
+
+func.func @expression_with_subscript(%arg0: !emitc.array<4x8xi32>, %arg1: i32, %arg2: i32) -> i32 {
+  %res = emitc.expression %arg0, %arg1, %arg2 : (!emitc.array<4x8xi32>, i32, i32) -> i32 {
+    %0 = add %arg1, %arg2 : (i32, i32) -> i32
+    %1 = mul %0, %arg2 : (i32, i32) -> i32
+    %2 = subscript %arg0[%0, %1] : (!emitc.array<4x8xi32>, i32, i32) -> !emitc.lvalue<i32>
+    %3 = emitc.load %2 : !emitc.lvalue<i32>
+    yield %3 : i32
+  }
+  return %res : i32
+}
+
 // CPP-DEFAULT: int32_t expression_with_subscript_user(void* [[VAL_1:v.+]])
 // CPP-DEFAULT-NEXT:   int64_t [[VAL_2:v.+]] = 0;
 // CPP-DEFAULT-NEXT:   int32_t* [[VAL_3:v.+]] = (int32_t*) [[VAL_1]];
@@ -671,4 +691,164 @@ func.func @inline_side_effects_into_switch(%arg0: i32, %arg1: i32, %arg2: i32) {
     emitc.yield
   }
   return
+}
+
+// CPP-DEFAULT: void member(mystruct [[VAL_1:v[0-9]+]], int32_t [[VAL_2:v[0-9]+]], size_t [[VAL_3:v[0-9]+]]) {
+// CPP-DEFAULT-NEXT:   mystruct [[VAL_4:v[0-9]+]];
+// CPP-DEFAULT-NEXT:   [[VAL_4]] = [[VAL_1]];
+// CPP-DEFAULT-NEXT:   [[VAL_4]].a = [[VAL_2]];
+// CPP-DEFAULT-NEXT:   int32_t [[VAL_5:v[0-9]+]] = [[VAL_4]].b;
+// CPP-DEFAULT-NEXT:   int32_t [[VAL_6:v[0-9]+]];
+// CPP-DEFAULT-NEXT:   [[VAL_6]] = [[VAL_5]];
+// CPP-DEFAULT-NEXT:   [[VAL_6]] = ([[VAL_4]].c)[[[VAL_3]]];
+// CPP-DEFAULT-NEXT:   ([[VAL_4]].d)[[[VAL_3]]] = [[VAL_2]];
+// CPP-DEFAULT-NEXT:   return;
+// CPP-DEFAULT-NEXT: }
+
+// CPP-DECLTOP: void member(mystruct [[VAL_1:v[0-9]+]], int32_t [[VAL_2:v[0-9]+]], size_t [[VAL_3:v[0-9]+]]) {
+// CPP-DECLTOP-NEXT:   mystruct [[VAL_4:v[0-9]+]];
+// CPP-DECLTOP-NEXT:   int32_t [[VAL_5:v[0-9]+]];
+// CPP-DECLTOP-NEXT:   int32_t [[VAL_6:v[0-9]+]];
+// CPP-DECLTOP-NEXT:   ;
+// CPP-DECLTOP-NEXT:   [[VAL_4]] = [[VAL_1]];
+// CPP-DECLTOP-NEXT:   [[VAL_4]].a = [[VAL_2]];
+// CPP-DECLTOP-NEXT:   [[VAL_5]] = [[VAL_4]].b;
+// CPP-DECLTOP-NEXT:   ;
+// CPP-DECLTOP-NEXT:   [[VAL_6]] = [[VAL_5]];
+// CPP-DECLTOP-NEXT:   [[VAL_6]] = ([[VAL_4]].c)[[[VAL_3]]];
+// CPP-DECLTOP-NEXT:   ([[VAL_4]].d)[[[VAL_3]]] = [[VAL_2]];
+// CPP-DECLTOP-NEXT:   return;
+// CPP-DECLTOP-NEXT: }
+
+func.func @member(%arg0: !emitc.opaque<"mystruct">, %arg1: i32, %arg2: index) {
+  %0 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<!emitc.opaque<"mystruct">>
+  emitc.assign %arg0 : !emitc.opaque<"mystruct"> to %0 : <!emitc.opaque<"mystruct">>
+  %1 = emitc.expression %0 : (!emitc.lvalue<!emitc.opaque<"mystruct">>) -> !emitc.lvalue<i32> {
+    %6 = "emitc.member"(%0) <{member = "a"}> : (!emitc.lvalue<!emitc.opaque<"mystruct">>) -> !emitc.lvalue<i32>
+    yield %6 : !emitc.lvalue<i32>
+  }
+  emitc.assign %arg1 : i32 to %1 : <i32>
+  %2 = emitc.expression %0 : (!emitc.lvalue<!emitc.opaque<"mystruct">>) -> i32 {
+    %6 = "emitc.member"(%0) <{member = "b"}> : (!emitc.lvalue<!emitc.opaque<"mystruct">>) -> !emitc.lvalue<i32>
+    %7 = load %6 : <i32>
+    yield %7 : i32
+  }
+  %3 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
+  emitc.assign %2 : i32 to %3 : <i32>
+  %4 = emitc.expression %arg2, %0 : (index, !emitc.lvalue<!emitc.opaque<"mystruct">>) -> i32 {
+    %6 = "emitc.member"(%0) <{member = "c"}> : (!emitc.lvalue<!emitc.opaque<"mystruct">>) -> !emitc.array<2xi32>
+    %7 = subscript %6[%arg2] : (!emitc.array<2xi32>, index) -> !emitc.lvalue<i32>
+    %8 = load %7 : <i32>
+    yield %8 : i32
+  }
+  emitc.assign %4 : i32 to %3 : <i32>
+  %5 = emitc.expression %arg2, %0 : (index, !emitc.lvalue<!emitc.opaque<"mystruct">>) -> !emitc.lvalue<i32> {
+    %6 = "emitc.member"(%0) <{member = "d"}> : (!emitc.lvalue<!emitc.opaque<"mystruct">>) -> !emitc.array<2xi32>
+    %7 = subscript %6[%arg2] : (!emitc.array<2xi32>, index) -> !emitc.lvalue<i32>
+    yield %7 : !emitc.lvalue<i32>
+  }
+  emitc.assign %arg1 : i32 to %5 : <i32>
+  return
+}
+
+// CPP-DEFAULT: void member_of_pointer(mystruct* [[VAL_1:v[0-9]+]], int32_t [[VAL_2:v[0-9]+]], size_t [[VAL_3:v[0-9]+]]) {
+// CPP-DEFAULT-NEXT:   mystruct* [[VAL_4:v[0-9]+]];
+// CPP-DEFAULT-NEXT:   [[VAL_4]] = [[VAL_1]];
+// CPP-DEFAULT-NEXT:   [[VAL_4]]->a = [[VAL_2]];
+// CPP-DEFAULT-NEXT:   int32_t [[VAL_5:v[0-9]+]] = [[VAL_4]]->b;
+// CPP-DEFAULT-NEXT:   int32_t [[VAL_6:v[0-9]+]];
+// CPP-DEFAULT-NEXT:   [[VAL_6]] = [[VAL_5]];
+// CPP-DEFAULT-NEXT:   [[VAL_6]] = ([[VAL_4]]->c)[[[VAL_3]]];
+// CPP-DEFAULT-NEXT:   ([[VAL_4]]->d)[[[VAL_3]]] = [[VAL_2]];
+// CPP-DEFAULT-NEXT:   return;
+// CPP-DEFAULT-NEXT: }
+
+// CPP-DECLTOP: void member_of_pointer(mystruct* [[VAL_1:v[0-9]+]], int32_t [[VAL_2:v[0-9]+]], size_t [[VAL_3:v[0-9]+]]) {
+// CPP-DECLTOP-NEXT:   mystruct* [[VAL_4:v[0-9]+]];
+// CPP-DECLTOP-NEXT:   int32_t [[VAL_5:v[0-9]+]];
+// CPP-DECLTOP-NEXT:   int32_t [[VAL_6:v[0-9]+]];
+// CPP-DECLTOP-NEXT:   ;
+// CPP-DECLTOP-NEXT:   [[VAL_4]] = [[VAL_1]];
+// CPP-DECLTOP-NEXT:   [[VAL_4]]->a = [[VAL_2]];
+// CPP-DECLTOP-NEXT:   [[VAL_5]] = [[VAL_4]]->b;
+// CPP-DECLTOP-NEXT:   ;
+// CPP-DECLTOP-NEXT:   [[VAL_6]] = [[VAL_5]];
+// CPP-DECLTOP-NEXT:   [[VAL_6]] = ([[VAL_4]]->c)[[[VAL_3]]];
+// CPP-DECLTOP-NEXT:   ([[VAL_4]]->d)[[[VAL_3]]] = [[VAL_2]];
+// CPP-DECLTOP-NEXT:   return;
+// CPP-DECLTOP-NEXT: }
+
+func.func @member_of_pointer(%arg0: !emitc.ptr<!emitc.opaque<"mystruct">>, %arg1: i32, %arg2: index) {
+  %0 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>
+  emitc.assign %arg0 : !emitc.ptr<!emitc.opaque<"mystruct">> to %0 : <!emitc.ptr<!emitc.opaque<"mystruct">>>
+  %1 = emitc.expression %0 : (!emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>) -> !emitc.lvalue<i32> {
+    %6 = "emitc.member_of_ptr"(%0) <{member = "a"}> : (!emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>) -> !emitc.lvalue<i32>
+    yield %6 : !emitc.lvalue<i32>
+  }
+  emitc.assign %arg1 : i32 to %1 : <i32>
+  %2 = emitc.expression %0 : (!emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>) -> i32 {
+    %6 = "emitc.member_of_ptr"(%0) <{member = "b"}> : (!emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>) -> !emitc.lvalue<i32>
+    %7 = load %6 : <i32>
+    yield %7 : i32
+  }
+  %3 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
+  emitc.assign %2 : i32 to %3 : <i32>
+  %4 = emitc.expression %arg2, %0 : (index, !emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>) -> i32 {
+    %6 = "emitc.member_of_ptr"(%0) <{member = "c"}> : (!emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>) -> !emitc.array<2xi32>
+    %7 = subscript %6[%arg2] : (!emitc.array<2xi32>, index) -> !emitc.lvalue<i32>
+    %8 = load %7 : <i32>
+    yield %8 : i32
+  }
+  emitc.assign %4 : i32 to %3 : <i32>
+  %5 = emitc.expression %arg2, %0 : (index, !emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>) -> !emitc.lvalue<i32> {
+    %6 = "emitc.member_of_ptr"(%0) <{member = "d"}> : (!emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>) -> !emitc.array<2xi32>
+    %7 = subscript %6[%arg2] : (!emitc.array<2xi32>, index) -> !emitc.lvalue<i32>
+    yield %7 : !emitc.lvalue<i32>
+  }
+  emitc.assign %arg1 : i32 to %5 : <i32>
+  return
+}
+
+// CPP-DEFAULT: float expression_with_literal(float [[VAL_1:v[0-9]+]]) {
+// CPP-DEFAULT-NEXT:   return [[VAL_1]] + M_PI;
+// CPP-DEFAULT-NEXT: }
+
+// CPP-DECLTOP: float expression_with_literal(float [[VAL_1:v[0-9]+]]) {
+// CPP-DECLTOP-NEXT:   return [[VAL_1]] + M_PI;
+// CPP-DECLTOP-NEXT: }
+
+func.func @expression_with_literal(%arg0: f32) -> f32 {
+  %0 = emitc.expression %arg0 : (f32) -> f32 {
+    %1 = literal "M_PI" : f32
+    %2 = add %arg0, %1 : (f32, f32) -> f32
+    yield %2 : f32
+  }
+  return %0 : f32
+}
+
+// CPP-DEFAULT: bool expression_tree(int32_t [[VAL_1:v[0-9]+]][2000], int32_t [[VAL_2:v[0-9]+]], int32_t [[VAL_3:v[0-9]+]], size_t [[VAL_4:v[0-9]+]]) {
+// CPP-DEFAULT-NEXT: bool [[VAL_5:v[0-9]+]] = [[VAL_1]][[[VAL_4]] * 42] - [[VAL_2]] < [[VAL_3]];
+// CPP-DEFAULT-NEXT: return [[VAL_5]];
+// CPP-DEFAULT-NEXT: }
+
+// CPP-DECLTOP: bool expression_tree(int32_t [[VAL_1:v[0-9]+]][2000], int32_t [[VAL_2:v[0-9]+]], int32_t [[VAL_3:v[0-9]+]], size_t [[VAL_4:v[0-9]+]]) {
+// CPP-DECLTOP-NEXT: bool [[VAL_5:v[0-9]+]];
+// CPP-DECLTOP-NEXT: [[VAL_5]] = [[VAL_1]][[[VAL_4]] * 42] - [[VAL_2]] < [[VAL_3]];
+// CPP-DECLTOP-NEXT: return [[VAL_5]];
+// CPP-DECLTOP-NEXT: }
+
+func.func @expression_tree(%arg0: !emitc.array<2000xi32>, %arg1: i32, %arg2: i32, %arg4: index) -> i1 {
+  %e1 = emitc.expression %arg0, %arg4 : (!emitc.array<2000xi32>, index) -> !emitc.lvalue<i32> {
+    %c42 = "emitc.constant"(){value = 42 : index} : () -> index
+    %i = mul %arg4, %c42 : (index, index) -> index
+    %k = subscript %arg0[%i] : (!emitc.array<2000xi32>, index) -> !emitc.lvalue<i32>
+    yield %k : !emitc.lvalue<i32>
+  }
+  %e2 = emitc.expression %e1, %arg1, %arg2 : (!emitc.lvalue<i32>, i32, i32) -> i1 {
+    %a = load %e1: !emitc.lvalue<i32>
+    %b = sub %a, %arg1 : (i32, i32) -> i32
+    %c = cmp lt, %b, %arg2 :(i32, i32) -> i1
+    yield %c : i1
+  }
+  return %e2 : i1
 }

@@ -69,6 +69,33 @@ static constexpr inline bool isPrivatizingClause(Clause C, unsigned Version) {
   }
 }
 
+static constexpr inline bool isDataSharingAttributeClause(Clause C,
+                                                          unsigned Version) {
+  // The "Version" parameter is in case the result is version-depenent
+  // in the future.
+  (void)Version;
+  switch (C) {
+  case OMPC_detach:
+  case OMPC_firstprivate:
+  case OMPC_has_device_addr:
+  case OMPC_induction:
+  case OMPC_in_reduction:
+  case OMPC_is_device_ptr:
+  case OMPC_lastprivate:
+  case OMPC_linear:
+  case OMPC_private:
+  case OMPC_reduction:
+  case OMPC_shared:
+  case OMPC_task_reduction:
+  case OMPC_use_device_addr:
+  case OMPC_use_device_ptr:
+  case OMPC_uses_allocators:
+    return true;
+  default:
+    return false;
+  }
+}
+
 static constexpr unsigned FallbackVersion = 52;
 LLVM_ABI ArrayRef<unsigned> getOpenMPVersions();
 

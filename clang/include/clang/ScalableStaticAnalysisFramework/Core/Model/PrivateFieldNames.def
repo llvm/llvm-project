@@ -9,7 +9,7 @@
 //  This file defines a list of non-static data members of the SSAF objects.
 //  These are used for granting access for:
 //   - SerializationFormat
-//   - TextFixture
+//   - TestFixture
 //
 //===----------------------------------------------------------------------===//
 

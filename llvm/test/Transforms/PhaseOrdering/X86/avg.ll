@@ -248,9 +248,9 @@ define { i64, i64 } @avgr_16_u8(i64 %a.coerce0, i64 %a.coerce1, i64 %b.coerce0, 
 ; AVX-NEXT:    [[TMP13:%.*]] = and <8 x i64> [[TMP12]], <i64 -1, i64 255, i64 255, i64 255, i64 255, i64 255, i64 0, i64 0>
 ; AVX-NEXT:    [[RETVAL_SROA_2_0_INSERT_SHIFT_MASKED:%.*]] = zext i16 [[TMP9]] to i64
 ; AVX-NEXT:    [[TMP14:%.*]] = insertelement <8 x i64> poison, i64 [[B_COERCE0]], i64 0
-; AVX-NEXT:    [[TMP15:%.*]] = insertelement <8 x i64> [[TMP14]], i64 [[ADD5]], i64 6
-; AVX-NEXT:    [[TMP16:%.*]] = insertelement <8 x i64> [[TMP15]], i64 [[RETVAL_SROA_2_0_INSERT_SHIFT_MASKED]], i64 7
-; AVX-NEXT:    [[TMP17:%.*]] = shufflevector <8 x i64> [[TMP16]], <8 x i64> poison, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 6, i32 7>
+; AVX-NEXT:    [[TMP15:%.*]] = insertelement <8 x i64> [[TMP14]], i64 [[ADD5]], i64 1
+; AVX-NEXT:    [[TMP16:%.*]] = insertelement <8 x i64> [[TMP15]], i64 [[RETVAL_SROA_2_0_INSERT_SHIFT_MASKED]], i64 2
+; AVX-NEXT:    [[TMP17:%.*]] = shufflevector <8 x i64> [[TMP16]], <8 x i64> poison, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 2>
 ; AVX-NEXT:    [[TMP18:%.*]] = lshr <8 x i64> [[TMP17]], <i64 56, i64 48, i64 40, i64 32, i64 24, i64 16, i64 1, i64 0>
 ; AVX-NEXT:    [[TMP19:%.*]] = and <8 x i64> [[TMP18]], <i64 -1, i64 255, i64 255, i64 255, i64 255, i64 255, i64 -1, i64 -1>
 ; AVX-NEXT:    [[TMP20:%.*]] = add nuw nsw <8 x i64> [[TMP13]], <i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 0, i64 0>
@@ -267,9 +267,9 @@ define { i64, i64 } @avgr_16_u8(i64 %a.coerce0, i64 %a.coerce1, i64 %b.coerce0, 
 ; AVX-NEXT:    [[TMP30:%.*]] = and <8 x i64> [[TMP29]], <i64 -1, i64 255, i64 255, i64 255, i64 255, i64 255, i64 0, i64 0>
 ; AVX-NEXT:    [[RETVAL_SROA_11_8_INSERT_SHIFT_MASKED:%.*]] = zext i16 [[TMP26]] to i64
 ; AVX-NEXT:    [[TMP31:%.*]] = insertelement <8 x i64> poison, i64 [[B_COERCE1]], i64 0
-; AVX-NEXT:    [[TMP32:%.*]] = insertelement <8 x i64> [[TMP31]], i64 [[ADD5_8]], i64 6
-; AVX-NEXT:    [[TMP33:%.*]] = insertelement <8 x i64> [[TMP32]], i64 [[RETVAL_SROA_11_8_INSERT_SHIFT_MASKED]], i64 7
-; AVX-NEXT:    [[TMP34:%.*]] = shufflevector <8 x i64> [[TMP33]], <8 x i64> poison, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 6, i32 7>
+; AVX-NEXT:    [[TMP32:%.*]] = insertelement <8 x i64> [[TMP31]], i64 [[ADD5_8]], i64 1
+; AVX-NEXT:    [[TMP33:%.*]] = insertelement <8 x i64> [[TMP32]], i64 [[RETVAL_SROA_11_8_INSERT_SHIFT_MASKED]], i64 2
+; AVX-NEXT:    [[TMP34:%.*]] = shufflevector <8 x i64> [[TMP33]], <8 x i64> poison, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 2>
 ; AVX-NEXT:    [[TMP35:%.*]] = lshr <8 x i64> [[TMP34]], <i64 56, i64 48, i64 40, i64 32, i64 24, i64 16, i64 1, i64 0>
 ; AVX-NEXT:    [[TMP36:%.*]] = and <8 x i64> [[TMP35]], <i64 -1, i64 255, i64 255, i64 255, i64 255, i64 255, i64 -1, i64 -1>
 ; AVX-NEXT:    [[TMP37:%.*]] = add nuw nsw <8 x i64> [[TMP30]], <i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 0, i64 0>

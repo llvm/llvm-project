@@ -2092,7 +2092,7 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
         clang::Module *M = Worklist.back();
         Worklist.pop_back();
         M->IsFromModuleFile = true;
-        for (auto *SubM : M->submodules())
+        for (clang::Module *SubM : M->submodules())
           Worklist.push_back(SubM);
       }
     }

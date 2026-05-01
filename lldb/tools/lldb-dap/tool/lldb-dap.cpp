@@ -592,6 +592,8 @@ static llvm::Error serveConnection(
               client_name, transport, loop);
 
       if (auto Err = dap.ConfigureIO()) {
+        DAP_LOG(client_log, "error: Failed to configure stdout redirect: {}",
+                llvm::toStringWithoutConsuming(Err));
         llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
                                     "Failed to configure stdout redirect: ");
         return;
@@ -601,6 +603,7 @@ static llvm::Error serveConnection(
       DAPSessionManager::GetInstance().RegisterSession(&loop, &dap);
 
       if (auto Err = dap.Loop()) {
+        DAP_LOG(client_log, "error: {}", llvm::toStringWithoutConsuming(Err));
         llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
                                     "DAP session (" + client_name +
                                         ") error: ");
@@ -842,6 +845,8 @@ int main(int argc, char *argv[]) {
   if (!connection.empty()) {
     auto maybeProtoclAndName = validateConnection(connection);
     if (auto Err = maybeProtoclAndName.takeError()) {
+      DAP_LOG(log, "Connection Failed: {}",
+              llvm::toStringWithoutConsuming(Err));
       llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
                                   "Invalid connection: ");
       return EXIT_FAILURE;

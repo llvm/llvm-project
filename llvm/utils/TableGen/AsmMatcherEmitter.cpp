@@ -1585,7 +1585,7 @@ void AsmMatcherInfo::buildInfo() {
         continue;
 
       // Ignore "codegen only" instructions.
-      if (CGI->TheDef->getValueAsBit("isCodeGenOnly"))
+      if (CGI->isCodeGenOnly)
         continue;
 
       // Ignore instructions for different instructions
@@ -2617,7 +2617,8 @@ static void emitValidateOperandClass(const CodeGenTarget &Target,
     OS << indent(4)
        << "const unsigned HwMode = "
           "STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo);\n"
-          "Kind = RegClassByHwModeMatchTable[HwMode][Kind - (MCK_LAST_REGISTER "
+       << indent(4)
+       << "Kind = RegClassByHwModeMatchTable[HwMode][Kind - (MCK_LAST_REGISTER "
           "+ 1)];\n"
           "  }\n\n";
   }
@@ -3831,7 +3832,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   OS << "      if (ActualIdx < Operands.size())\n";
   OS << "        DEBUG_WITH_TYPE(\"asm-matcher\", dbgs() << \" (\";\n";
   OS << "                        Operands[ActualIdx]->print(dbgs(), "
-        "*getContext().getAsmInfo()); dbgs() << "
+        "getContext().getAsmInfo()); dbgs() << "
         "\"): \");\n";
   OS << "      else\n";
   OS << "        DEBUG_WITH_TYPE(\"asm-matcher\", dbgs() << \": \");\n";

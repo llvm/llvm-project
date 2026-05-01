@@ -16,6 +16,7 @@
 #include <cstring>
 #include <ctime>
 #if _LIBCPP_HAS_WIDE_CHARACTERS
+#  include <cwchar>
 #  include <cwctype>
 #endif
 

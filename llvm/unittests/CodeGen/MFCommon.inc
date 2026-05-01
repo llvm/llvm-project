@@ -118,9 +118,7 @@ public:
         ST(*this) {
     // With an empty Triple, `initAsmInfo` cannot be called. Provide a
     // default MCAsmInfo so that MCContext can be created.
-    auto MAI = std::make_unique<MCAsmInfo>();
-    MAI->setTargetOptions(Options.MCOptions);
-    AsmInfo = std::move(MAI);
+    AsmInfo = std::make_unique<MCAsmInfo>(Options.MCOptions);
   }
 
   ~BogusTargetMachine() override = default;

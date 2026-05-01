@@ -4631,7 +4631,7 @@ unsigned HexagonInstrInfo::getSize(const MachineInstr &MI) const {
   if (BranchRelaxAsmLarge && MI.getOpcode() == Hexagon::INLINEASM) {
     const MachineBasicBlock &MBB = *MI.getParent();
     const MachineFunction *MF = MBB.getParent();
-    const MCAsmInfo *MAI = MF->getTarget().getMCAsmInfo();
+    const MCAsmInfo &MAI = MF->getTarget().getMCAsmInfo();
 
     // Count the number of register definitions to find the asm string.
     unsigned NumDefs = 0;
@@ -4642,7 +4642,7 @@ unsigned HexagonInstrInfo::getSize(const MachineInstr &MI) const {
     assert(MI.getOperand(NumDefs).isSymbol() && "No asm string?");
     // Disassemble the AsmStr and approximate number of instructions.
     const char *AsmStr = MI.getOperand(NumDefs).getSymbolName();
-    Size = getInlineAsmLength(AsmStr, *MAI);
+    Size = getInlineAsmLength(AsmStr, MAI);
   }
 
   return Size;

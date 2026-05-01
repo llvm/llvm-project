@@ -9361,7 +9361,7 @@ ScalarEvolution::computeExitLimitFromCondFromBinOp(
     bool ControlsOnlyExit, bool AllowPredicates) {
   // Check if the controlling expression for this loop is an And or Or.
   Value *Op0, *Op1;
-  bool IsAnd = false;
+  bool IsAnd;
   if (match(ExitCond, m_LogicalAnd(m_Value(Op0), m_Value(Op1))))
     IsAnd = true;
   else if (match(ExitCond, m_LogicalOr(m_Value(Op0), m_Value(Op1))))
@@ -9369,23 +9369,25 @@ ScalarEvolution::computeExitLimitFromCondFromBinOp(
   else
     return std::nullopt;
 
+  // Be robust against unsimplified IR for the form "op i1 X, NeutralElement".
+  const Constant *NeutralElement = ConstantInt::get(ExitCond->getType(), IsAnd);
+  if (Op0 == NeutralElement)
+    std::swap(Op0, Op1);
+  if (Op1 == NeutralElement)
+    return computeExitLimitFromCondCached(Cache, L, Op0, ExitIfTrue,
+                                          ControlsOnlyExit, AllowPredicates);
+
+  // A sub-condition of a non-trivial binop never solely controls the exit,
+  // whether we exit always depends on both conditions.
+  ExitLimit EL0 = computeExitLimitFromCondCached(
+      Cache, L, Op0, ExitIfTrue, /*ControlsOnlyExit=*/false, AllowPredicates);
+  ExitLimit EL1 = computeExitLimitFromCondCached(
+      Cache, L, Op1, ExitIfTrue, /*ControlsOnlyExit=*/false, AllowPredicates);
+
   // EitherMayExit is true in these two cases:
   //   br (and Op0 Op1), loop, exit
   //   br (or  Op0 Op1), exit, loop
   bool EitherMayExit = IsAnd ^ ExitIfTrue;
-  ExitLimit EL0 = computeExitLimitFromCondCached(
-      Cache, L, Op0, ExitIfTrue, ControlsOnlyExit && !EitherMayExit,
-      AllowPredicates);
-  ExitLimit EL1 = computeExitLimitFromCondCached(
-      Cache, L, Op1, ExitIfTrue, ControlsOnlyExit && !EitherMayExit,
-      AllowPredicates);
-
-  // Be robust against unsimplified IR for the form "op i1 X, NeutralElement"
-  const Constant *NeutralElement = ConstantInt::get(ExitCond->getType(), IsAnd);
-  if (isa<ConstantInt>(Op1))
-    return Op1 == NeutralElement ? EL0 : EL1;
-  if (isa<ConstantInt>(Op0))
-    return Op0 == NeutralElement ? EL1 : EL0;
 
   const SCEV *BECount = getCouldNotCompute();
   const SCEV *ConstantMaxBECount = getCouldNotCompute();

@@ -140,6 +140,9 @@ public:
     eCore_arm_armv7k,
     eCore_arm_armv7m,
     eCore_arm_armv7em,
+    eCore_arm_armv8m_base,
+    eCore_arm_armv8m_main,
+    eCore_arm_armv8_1m_main,
     eCore_arm_xscale,
 
     eCore_thumb,

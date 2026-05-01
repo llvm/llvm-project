@@ -1148,7 +1148,7 @@ bool Thumb2SizeReduce::runOnMachineFunction(MachineFunction &MF) {
   // predecessors.
   ReversePostOrderTraversal<MachineFunction*> RPOT(&MF);
   bool Modified = false;
-  bool NeedsWinCFI = MF.getTarget().getMCAsmInfo()->usesWindowsCFI() &&
+  bool NeedsWinCFI = MF.getTarget().getMCAsmInfo().usesWindowsCFI() &&
                      MF.getFunction().needsUnwindTableEntry();
   for (MachineBasicBlock *MBB : RPOT)
     Modified |= ReduceMBB(*MBB, /*SkipPrologueEpilogue=*/NeedsWinCFI);

@@ -817,10 +817,14 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
   llvm::Constant *FatBinStr;
   unsigned FatMagic;
   if (IsHIP) {
-    FatbinConstantName = ".hip_fatbin";
-    FatbinSectionName = ".hipFatBinSegment";
+    // On macOS (Mach-O), section names must be in "segment,section" format.
+    FatbinConstantName =
+        CGM.getTriple().isMacOSX() ? "__HIP,__hip_fatbin" : ".hip_fatbin";
+    FatbinSectionName =
+        CGM.getTriple().isMacOSX() ? "__HIP,__fatbin" : ".hipFatBinSegment";
 
-    ModuleIDSectionName = "__hip_module_id";
+    ModuleIDSectionName =
+        CGM.getTriple().isMacOSX() ? "__HIP,__module_id" : "__hip_module_id";
     ModuleIDPrefix = "__hip_";
 
     if (CudaGpuBinary) {
@@ -884,6 +888,7 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
       addUnderscoredPrefixToName("_fatbin_wrapper"), CGM.getPointerAlign(),
       /*constant*/ true);
   FatbinWrapper->setSection(FatbinSectionName);
+  CGM.getSanitizerMetadata()->disableSanitizerForGlobal(FatbinWrapper);
 
   // There is only one HIP fat binary per linked module, however there are
   // multiple constructor functions. Make sure the fat binary is registered

@@ -21,7 +21,8 @@ using namespace llvm;
 void MipsELFMCAsmInfo::anchor() {}
 
 MipsELFMCAsmInfo::MipsELFMCAsmInfo(const Triple &TheTriple,
-                                   const MCTargetOptions &Options) {
+                                   const MCTargetOptions &Options)
+    : MCAsmInfoELF(Options) {
   IsLittleEndian = TheTriple.isLittleEndian();
 
   MipsABIInfo ABI =
@@ -50,7 +51,8 @@ MipsELFMCAsmInfo::MipsELFMCAsmInfo(const Triple &TheTriple,
 
 void MipsCOFFMCAsmInfo::anchor() {}
 
-MipsCOFFMCAsmInfo::MipsCOFFMCAsmInfo() {
+MipsCOFFMCAsmInfo::MipsCOFFMCAsmInfo(const MCTargetOptions &Options)
+    : MCAsmInfoGNUCOFF(Options) {
   HasSingleParameterDotFile = true;
   WinEHEncodingType = WinEH::EncodingType::Itanium;
 

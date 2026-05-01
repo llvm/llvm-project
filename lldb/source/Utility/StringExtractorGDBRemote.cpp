@@ -330,6 +330,8 @@ StringExtractorGDBRemote::GetServerPacketType() const {
       return eServerPacketType_jLLDBTraceGetState;
     if (PACKET_STARTS_WITH("jLLDBTraceGetBinaryData:"))
       return eServerPacketType_jLLDBTraceGetBinaryData;
+    if (PACKET_STARTS_WITH("jMultiBreakpoint:"))
+      return eServerPacketType_jMultiBreakpoint;
     break;
 
   case 'v':

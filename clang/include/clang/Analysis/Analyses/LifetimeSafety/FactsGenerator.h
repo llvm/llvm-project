@@ -104,6 +104,10 @@ private:
   void handleInvalidatingCall(const Expr *Call, const FunctionDecl *FD,
                               ArrayRef<const Expr *> Args);
 
+  // Detect explicit destructor calls/`std::destroy_at`
+  void handleDestructiveCall(const Expr *Call, const FunctionDecl *FD,
+                             ArrayRef<const Expr *> Args);
+
   template <typename Destination, typename Source>
   void flowOrigin(const Destination &D, const Source &S) {
     flow(getOriginsList(D), getOriginsList(S), /*Kill=*/false);

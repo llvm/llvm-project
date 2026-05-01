@@ -8634,8 +8634,8 @@ LegalizerHelper::lowerFPTRUNC_F64_TO_F16(MachineInstr &MI) {
   const LLT S32 = LLT::scalar(32);
 
   auto [Dst, Src] = MI.getFirst2Regs();
-  assert(MRI.getType(Dst).getScalarType() == LLT::scalar(16) &&
-         MRI.getType(Src).getScalarType() == LLT::scalar(64));
+  assert(MRI.getType(Dst).getScalarType() == LLT::float16() &&
+         MRI.getType(Src).getScalarType() == LLT::float64());
 
   if (MRI.getType(Src).isVector()) // TODO: Handle vectors directly.
     return UnableToLegalize;
@@ -8743,14 +8743,55 @@ LegalizerHelper::lowerFPTRUNC_F64_TO_F16(MachineInstr &MI) {
   return Legalized;
 }
 
+// f32 -> bf16 conversion using round-to-nearest-even rounding mode.
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerFPTRUNC_F32_TO_BF16(MachineInstr &MI) {
+  auto [DstReg, DstTy, SrcReg, SrcTy] = MI.getFirst2RegLLTs();
+  assert(DstTy.getScalarType() == LLT::bfloat16() &&
+         SrcTy.getScalarType() == LLT::float32());
+
+  LLT I1Ty = SrcTy.changeElementType(LLT::integer(1));
+  LLT I16Ty = SrcTy.changeElementType(LLT::integer(16));
+  LLT I32Ty = SrcTy.changeElementType(LLT::integer(32));
+
+  auto IsNaN = MIRBuilder.buildFCmp(CmpInst::FCMP_UNO, I1Ty, SrcReg,
+                                    MIRBuilder.buildFConstant(SrcTy, 0));
+  auto SrcI = MIRBuilder.buildBitcast(I32Ty, SrcReg);
+
+  // Conversions should set NaN's quiet bit. This also prevents NaNs from
+  // turning into infinities.
+  auto NaN = MIRBuilder.buildOr(I32Ty, SrcI,
+                                MIRBuilder.buildConstant(I32Ty, 0x400000));
+
+  // Factor in the contribution of the low 16 bits.
+  auto Lsb =
+      MIRBuilder.buildLShr(I32Ty, SrcI, MIRBuilder.buildConstant(I32Ty, 16));
+  Lsb = MIRBuilder.buildAnd(I32Ty, Lsb, MIRBuilder.buildConstant(I32Ty, 1));
+  auto RoundingBias =
+      MIRBuilder.buildAdd(I32Ty, Lsb, MIRBuilder.buildConstant(I32Ty, 0x7fff));
+  auto Add = MIRBuilder.buildAdd(I32Ty, SrcI, RoundingBias);
+
+  // Don't round if we had a NaN, we don't want to turn 0x7fffffff into
+  // 0x80000000.
+  auto Sel = MIRBuilder.buildSelect(I32Ty, IsNaN, NaN, Add);
+
+  // Now that we have rounded, shift the bits into position.
+  auto Srl =
+      MIRBuilder.buildLShr(I32Ty, Sel, MIRBuilder.buildConstant(I32Ty, 16));
+  auto Trunc = MIRBuilder.buildTrunc(I16Ty, Srl);
+  MIRBuilder.buildBitcast(DstReg, Trunc);
+  MI.eraseFromParent();
+  return Legalized;
+}
+
 LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerFPTRUNC(MachineInstr &MI) {
   auto [DstTy, SrcTy] = MI.getFirst2LLTs();
-  const LLT S64 = LLT::scalar(64);
-  const LLT S16 = LLT::scalar(16);
-
-  if (DstTy.getScalarType() == S16 && SrcTy.getScalarType() == S64)
+  if (DstTy.getScalarType().isFloat16() && SrcTy.getScalarType().isFloat64())
     return lowerFPTRUNC_F64_TO_F16(MI);
+
+  if (DstTy.getScalarType().isBFloat16() && SrcTy.getScalarType().isFloat32())
+    return lowerFPTRUNC_F32_TO_BF16(MI);
 
   return UnableToLegalize;
 }

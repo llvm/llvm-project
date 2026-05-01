@@ -641,3 +641,43 @@ func.func @unsupported_fp_type(%arg0: f4E2M1FN, %arg1: f4E2M1FN, %arg2: f4E2M1FN
   %2 = math.fma %arg1, %arg1, %arg2 : f4E2M1FN
   return
 }
+
+// -----
+
+// CHECK-LABEL: func @experimental_constrained_fma
+func.func @experimental_constrained_fma(%a : f64, %b : f64, %c : f64) {
+  // CHECK-NEXT: llvm.intr.experimental.constrained.fma %{{.*}}, %{{.*}}, %{{.*}} tonearest ignore : f64
+  %0 = math.fma %a, %b, %c to_nearest_even : f64
+  // CHECK-NEXT: llvm.intr.experimental.constrained.fma %{{.*}}, %{{.*}}, %{{.*}} downward ignore : f64
+  %1 = math.fma %a, %b, %c downward : f64
+  // CHECK-NEXT: llvm.intr.experimental.constrained.fma %{{.*}}, %{{.*}}, %{{.*}} upward ignore : f64
+  %2 = math.fma %a, %b, %c upward : f64
+  // CHECK-NEXT: llvm.intr.experimental.constrained.fma %{{.*}}, %{{.*}}, %{{.*}} towardzero ignore : f64
+  %3 = math.fma %a, %b, %c toward_zero : f64
+  // CHECK-NEXT: llvm.intr.experimental.constrained.fma %{{.*}}, %{{.*}}, %{{.*}} tonearestaway ignore : f64
+  %4 = math.fma %a, %b, %c to_nearest_away : f64
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @experimental_constrained_fma_vector
+func.func @experimental_constrained_fma_vector(%a : vector<4xf32>,
+                                                %b : vector<4xf32>,
+                                                %c : vector<4xf32>) {
+  // CHECK: llvm.intr.experimental.constrained.fma {{.*}} tonearest ignore : vector<4xf32>
+  %0 = math.fma %a, %b, %c to_nearest_even : vector<4xf32>
+  return
+}
+
+// -----
+
+// Constrained intrinsics do not carry fastmath flags. The fastmath attribute
+// is dropped during the lowering.
+// CHECK-LABEL: func @constrained_fma_with_fastmath
+func.func @constrained_fma_with_fastmath(%a : f64, %b : f64, %c : f64) {
+  // CHECK-NEXT: llvm.intr.experimental.constrained.fma %{{.*}}, %{{.*}}, %{{.*}} tonearest ignore : f64
+  // CHECK-NOT: fastmath
+  %0 = math.fma %a, %b, %c to_nearest_even fastmath<fast> : f64
+  return
+}

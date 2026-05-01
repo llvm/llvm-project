@@ -2629,8 +2629,8 @@ multiclass VOP3P_Real_with_name_gfx1170<bits<8> op,
                           string asmName = !cast<VOP3P_Pseudo>(NAME).Mnemonic> :
   VOP3P_Real_with_name<GFX1170Gen, op, backing_ps_name, asmName>;
 
-defm V_PK_MAX_NUM_F16 : VOP3P_Real_with_name_gfx1170<0x11, "V_PK_MAX_F16", "v_pk_max_num_f16">;
-defm V_PK_MIN_NUM_F16 : VOP3P_Real_with_name_gfx1170<0x12, "V_PK_MIN_F16", "v_pk_min_num_f16">;
+defm V_PK_MIN_NUM_F16 : VOP3P_Real_with_name_gfx1170<0x11, "V_PK_MIN_F16", "v_pk_min_num_f16">;
+defm V_PK_MAX_NUM_F16 : VOP3P_Real_with_name_gfx1170<0x12, "V_PK_MAX_F16", "v_pk_max_num_f16">;
 
 defm V_PK_MINIMUM_F16 : VOP3P_Real_gfx11_gfx12<0x1d>;
 defm V_PK_MAXIMUM_F16 : VOP3P_Real_gfx11_gfx12<0x1e>;

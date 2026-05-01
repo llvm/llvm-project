@@ -34,6 +34,25 @@ createLinkGraphFromCOFFObject(MemoryBufferRef ObjectBuffer,
 void link_COFF(std::unique_ptr<LinkGraph> G,
                std::unique_ptr<JITLinkContext> Ctx);
 
+/// GetImageBaseSymbol is a function object that finds the __ImageBase symbol
+/// in the given graph if one is present.
+///
+/// The result is cached across calls, and can be reset by calling the reset
+/// method.
+class GetImageBaseSymbol {
+public:
+  GetImageBaseSymbol(StringRef ImageBaseName = "__ImageBase")
+      : ImageBaseName(ImageBaseName) {}
+  Symbol *operator()(LinkGraph &G);
+  void reset(std::optional<Symbol *> CacheValue = std::nullopt) {
+    ImageBase = CacheValue;
+  }
+
+private:
+  StringRef ImageBaseName;
+  std::optional<Symbol *> ImageBase;
+};
+
 } // end namespace jitlink
 } // end namespace llvm
 

@@ -93,6 +93,8 @@ struct DependencyScanningServiceOptions {
   ScanningOptimizations OptimizeArgs = ScanningOptimizations::Default;
   /// Whether to make reported file paths absolute.
   bool ReportAbsolutePaths = true;
+  /// Whether to report modules visible from modules that are imported directly.
+  bool ReportVisibleModules = false;
   /// Whether the resulting command lines should load explicit PCMs eagerly.
   bool EagerLoadModules = false;
   /// Whether to trace VFS accesses during the scan.
@@ -101,6 +103,9 @@ struct DependencyScanningServiceOptions {
   bool AsyncScanModules = false;
   /// The build session timestamp for validate-once-per-build-session logic.
   std::time_t BuildSessionTimestamp; // = std::chrono::system_clock::now();
+  /// Whether to automatically flush the module cache from memory to disk at the
+  /// end of the service lifetime.
+  bool FlushModuleCache = true;
 };
 
 /// The dependency scanning service contains shared configuration and state that
@@ -109,6 +114,11 @@ class DependencyScanningService {
 public:
   explicit DependencyScanningService(DependencyScanningServiceOptions Opts)
       : Opts(std::move(Opts)) {}
+
+  ~DependencyScanningService() {
+    if (Opts.FlushModuleCache)
+      ModCacheEntries.flush();
+  }
 
   const DependencyScanningServiceOptions &getOpts() const { return Opts; }
 

@@ -84,6 +84,7 @@ add_llvm_unittest(ADTTests
   SparseBitVectorTest.cpp
   SparseMultiSetTest.cpp
   SparseSetTest.cpp
+  StableHashingTest.cpp
   StatisticTest.cpp
   StringExtrasTest.cpp
   StringMapTest.cpp

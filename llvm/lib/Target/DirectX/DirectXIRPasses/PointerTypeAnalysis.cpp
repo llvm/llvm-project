@@ -81,8 +81,12 @@ Type *classifyPointerType(const Value *V, PointerTypeMap &Map) {
     }
   }
   // If we were unable to determine the pointee type, set to i8
+  // If we were able to determine the pointee type as ptr, set to i8*
   if (!PointeeTy)
     PointeeTy = Type::getInt8Ty(V->getContext());
+  if (PointeeTy->isPointerTy())
+    PointeeTy = TypedPointerType::get(Type::getInt8Ty(V->getContext()),
+                                      PointeeTy->getPointerAddressSpace());
   auto *TypedPtrTy =
       TypedPointerType::get(PointeeTy, V->getType()->getPointerAddressSpace());
 

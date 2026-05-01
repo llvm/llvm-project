@@ -505,6 +505,48 @@ def SPIRV_CLFmaOp : SPIRV_CLTernaryArithmeticOp<"fma", 26, SPIRV_Float> {
 
 // -----
 
+def SPIRV_CLLdexpOp : SPIRV_CLOp<"ldexp", 34, [Pure, AllTypesMatch<["x", "y"]>]> {
+  let summary = "Builds y such that y = significand * 2^exponent.";
+
+  let description = [{
+    Builds a floating-point number from x and the corresponding
+    integral exponent of two in exp:
+
+    significand * 2^exponent
+
+    The operand x must be a scalar or vector whose component type is
+    floating-point.
+
+    The exp operand must be a scalar or vector with integer component type.
+    The number of components in x and exp must be the same.
+
+    Result Type must be the same type as the type of x. Results are computed
+    per component.
+
+    #### Example:
+
+    ```mlir
+    %y = spirv.CL.ldexp %x, %exp : f32, i32 -> f32
+    %y = spirv.CL.ldexp %x, %exp : vector<3xf32>, vector<3xi32> -> vector<3xf32>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_ScalarOrVectorOf<SPIRV_Float>:$x,
+    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$exp
+  );
+
+  let results = (outs
+    SPIRV_ScalarOrVectorOf<SPIRV_Float>:$y
+  );
+
+  let assemblyFormat = [{
+    attr-dict $x `,` $exp `:` type($x) `,` type($exp) `->` type($y)
+  }];
+}
+
+// -----
+
 def SPIRV_CLLogOp : SPIRV_CLUnaryArithmeticOp<"log", 37, SPIRV_Float> {
   let summary = "Compute the natural logarithm of x.";
 
@@ -571,6 +613,45 @@ def SPIRV_CLPowOp : SPIRV_CLBinaryArithmeticOp<"pow", 48, SPIRV_Float> {
 
 // -----
 
+def SPIRV_CLPownOp : SPIRV_CLOp<"pown", 49, [Pure, AllTypesMatch<["x", "result"]>]> {
+  let summary = "Compute x to the power y, where y is an integer.";
+
+  let description = [{
+    Result is x raised to the power y, where y is an integer.
+
+    The operand x must be a scalar or vector whose component type is
+    floating-point.
+
+    The y operand must be a scalar or vector with integer component type.
+    The number of components in x and y must be the same.
+
+    Result Type must be the same type as the type of x. Results are computed
+    per component.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.CL.pown %0, %1 : f32, i32 -> f32
+    %2 = spirv.CL.pown %0, %1 : vector<3xf32>, vector<3xi32> -> vector<3xf32>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_ScalarOrVectorOf<SPIRV_Float>:$x,
+    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$y
+  );
+
+  let results = (outs
+    SPIRV_ScalarOrVectorOf<SPIRV_Float>:$result
+  );
+
+  let assemblyFormat = [{
+    attr-dict $x `,` $y `:` type($x) `,` type($y) `->` type($result)
+  }];
+}
+
+// -----
+
 def SPIRV_CLRintOp : SPIRV_CLUnaryArithmeticOp<"rint", 53, SPIRV_Float> {
   let summary = [{
     Round x to integral value (using round to nearest even rounding mode) in
@@ -590,6 +671,45 @@ def SPIRV_CLRintOp : SPIRV_CLUnaryArithmeticOp<"rint", 53, SPIRV_Float> {
     %0 = spirv.CL.rint %0 : f32
     %1 = spirv.CL.rint %1 : vector<3xf16>
     ```
+  }];
+}
+
+// -----
+
+def SPIRV_CLRootnOp : SPIRV_CLOp<"rootn", 54, [Pure, AllTypesMatch<["x", "result"]>]> {
+  let summary = "Compute the n-th root of x, where n is an integer.";
+
+  let description = [{
+    Result is the n-th root of x, where n is an integer.
+
+    The operand x must be a scalar or vector whose component type is
+    floating-point.
+
+    The n operand must be a scalar or vector with integer component type.
+    The number of components in x and n must be the same.
+
+    Result Type must be the same type as the type of x. Results are computed
+    per component.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.CL.rootn %0, %1 : f32, i32 -> f32
+    %2 = spirv.CL.rootn %0, %1 : vector<3xf32>, vector<3xi32> -> vector<3xf32>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_ScalarOrVectorOf<SPIRV_Float>:$x,
+    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$n
+  );
+
+  let results = (outs
+    SPIRV_ScalarOrVectorOf<SPIRV_Float>:$result
+  );
+
+  let assemblyFormat = [{
+    attr-dict $x `,` $n `:` type($x) `,` type($n) `->` type($result)
   }];
 }
 

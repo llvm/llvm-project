@@ -1983,7 +1983,7 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
       Opcode == TargetOpcode::INLINEASM_BR) {
     const MachineFunction &MF = *MI.getParent()->getParent();
     return getInlineAsmLength(MI.getOperand(0).getSymbolName(),
-                              *MF.getTarget().getMCAsmInfo());
+                              MF.getTarget().getMCAsmInfo());
   }
 
   if (requiresNTLHint(MI)) {
@@ -2086,12 +2086,8 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     const Function &F = MF.getFunction();
     if (Opcode == TargetOpcode::PATCHABLE_FUNCTION_ENTER &&
         F.hasFnAttribute("patchable-function-entry")) {
-      unsigned Num;
-      if (F.getFnAttribute("patchable-function-entry")
-              .getValueAsString()
-              .getAsInteger(10, Num))
-        return get(Opcode).getSize();
-
+      unsigned Num =
+          F.getFnAttributeAsParsedInteger("patchable-function-entry");
       // Number of C.NOP or NOP
       return (STI.hasStdExtZca() ? 2 : 4) * Num;
     }
@@ -5475,8 +5471,8 @@ bool RISCVInstrInfo::requiresNTLHint(const MachineInstr &MI) const {
 }
 
 bool RISCVInstrInfo::isSafeToMove(const MachineInstr &From,
-                                  const MachineInstr &To) {
-  assert(From.getParent() == To.getParent());
+                                  const MachineBasicBlock::iterator &To) {
+  assert(To == From.getParent()->end() || From.getParent() == To->getParent());
   SmallVector<Register> PhysUses, PhysDefs;
   for (const MachineOperand &MO : From.all_uses())
     if (MO.getReg().isPhysical())
@@ -5485,7 +5481,7 @@ bool RISCVInstrInfo::isSafeToMove(const MachineInstr &From,
     if (MO.getReg().isPhysical())
       PhysDefs.push_back(MO.getReg());
   bool SawStore = false;
-  for (auto II = std::next(From.getIterator()); II != To.getIterator(); II++) {
+  for (auto II = std::next(From.getIterator()); II != To; II++) {
     for (Register PhysReg : PhysUses)
       if (II->definesRegister(PhysReg, nullptr))
         return false;

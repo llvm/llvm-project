@@ -11518,7 +11518,9 @@ SDValue TargetLowering::expandAddSubSat(SDNode *Node, SelectionDAG &DAG) const {
   }
 
   // usub.sat(a, 1) -> sub(a, zext(a != 0))
-  if (Opcode == ISD::USUBSAT && isOneOrOneSplat(RHS)) {
+  // Prefer this on targets without legal/cost-effective overflow-carry nodes.
+  if (Opcode == ISD::USUBSAT && isOneOrOneSplat(RHS) &&
+      !isOperationLegalOrCustom(ISD::USUBO_CARRY, VT)) {
     LHS = DAG.getFreeze(LHS);
     SDValue Zero = DAG.getConstant(0, dl, VT);
     EVT BoolVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
@@ -12238,16 +12240,52 @@ bool TargetLowering::expandMULO(SDNode *Node, SDValue &Result,
 
 SDValue TargetLowering::expandVecReduce(SDNode *Node, SelectionDAG &DAG) const {
   SDLoc dl(Node);
-  unsigned BaseOpcode = ISD::getVecReduceBaseOpcode(Node->getOpcode());
+  ISD::NodeType BaseOpcode = ISD::getVecReduceBaseOpcode(Node->getOpcode());
   SDValue Op = Node->getOperand(0);
   EVT VT = Op.getValueType();
 
   // Try to use a shuffle reduction for power of two vectors.
   if (VT.isPow2VectorType()) {
+    // See if the reduction opcode is safe to use with widened types.
+    bool WidenSrc = false;
+    switch (Node->getOpcode()) {
+    case ISD::VECREDUCE_FADD:
+    case ISD::VECREDUCE_FMUL:
+    case ISD::VECREDUCE_ADD:
+    case ISD::VECREDUCE_MUL:
+    case ISD::VECREDUCE_AND:
+    case ISD::VECREDUCE_OR:
+    case ISD::VECREDUCE_XOR:
+    case ISD::VECREDUCE_SMAX:
+    case ISD::VECREDUCE_SMIN:
+    case ISD::VECREDUCE_UMAX:
+    case ISD::VECREDUCE_UMIN:
+      WidenSrc = VT.isFixedLengthVector();
+      break;
+    }
+
     while (VT.getVectorElementCount().isKnownMultipleOf(2)) {
       EVT HalfVT = VT.getHalfNumVectorElementsVT(*DAG.getContext());
-      if (!isOperationLegalOrCustom(BaseOpcode, HalfVT))
+      if (!isOperationLegalOrCustom(BaseOpcode, HalfVT)) {
+        if (WidenSrc && Op.getOpcode() != ISD::BUILD_VECTOR) {
+          // Attempt to widen the source vectors to a legal op.
+          EVT WideVT = getTypeToTransformTo(*DAG.getContext(), HalfVT);
+          if (WideVT.isVector() &&
+              WideVT.getScalarType() == HalfVT.getScalarType() &&
+              WideVT.getVectorNumElements() >= HalfVT.getVectorNumElements() &&
+              isOperationLegalOrCustom(BaseOpcode, WideVT)) {
+            SDValue Lo, Hi;
+            std::tie(Lo, Hi) = DAG.SplitVector(Op, dl);
+            Lo = DAG.getInsertSubvector(dl, DAG.getPOISON(WideVT), Lo, 0);
+            Hi = DAG.getInsertSubvector(dl, DAG.getPOISON(WideVT), Hi, 0);
+            Op = DAG.getNode(BaseOpcode, dl, WideVT, Lo, Hi, Node->getFlags());
+            Op = DAG.getExtractSubvector(dl, HalfVT, Op, 0);
+            VT = HalfVT;
+            continue;
+          }
+        }
         break;
+      }
 
       SDValue Lo, Hi;
       std::tie(Lo, Hi) = DAG.SplitVector(Op, dl);
@@ -13201,8 +13239,8 @@ SDValue TargetLowering::expandVectorNaryOpBySplitting(SDNode *Node,
     HiOps.push_back(Hi);
   }
 
-  SDValue SplitOpLo = DAG.getNode(Opcode, DL, LoVT, LoOps);
-  SDValue SplitOpHi = DAG.getNode(Opcode, DL, HiVT, HiOps);
+  SDValue SplitOpLo = DAG.getNode(Opcode, DL, LoVT, LoOps, Node->getFlags());
+  SDValue SplitOpHi = DAG.getNode(Opcode, DL, HiVT, HiOps, Node->getFlags());
   return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, SplitOpLo, SplitOpHi);
 }
 

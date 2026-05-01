@@ -1,6 +1,4 @@
 .. title:: clang-tidy - hicpp-member-init
-.. meta::
-   :http-equiv=refresh: 5;URL=../cppcoreguidelines/pro-type-member-init.html
 
 hicpp-member-init
 =================

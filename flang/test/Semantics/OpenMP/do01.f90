@@ -3,16 +3,31 @@
 ! 2.7.1 Loop Construct
 ! The loop iteration variable may not appear in a firstprivate directive.
 
-program omp_do
+subroutine f00
   integer i, j, k
 
-  !ERROR: DO iteration variable i is not allowed in FIRSTPRIVATE clause.
+  !ERROR: Loop iteration variable with a predetermined data sharing attribute cannot appear in a FIRSTPRIVATE clause
   !$omp do firstprivate(k,i)
+  !BECAUSE: 'i' is an iteration variable of an affected loop
   do i = 1, 10
     do j = 1, 10
       print *, "Hello"
     end do
   end do
   !$omp end do
+end
 
-end program omp_do
+! Check multiple DSA clauses
+subroutine f01
+  integer :: i
+  !ERROR: Loop iteration variable with a predetermined data sharing attribute cannot appear in a FIRSTPRIVATE clause
+  !ERROR: 'i' appears in more than one data-sharing clause on the same OpenMP directive
+  !ERROR: Loop iteration variable with a predetermined data sharing attribute cannot appear in a LINEAR clause
+  !$omp do firstprivate(i) lastprivate(i) linear(i)
+  block
+    !BECAUSE: 'i' is an iteration variable of an affected loop
+    !BECAUSE: 'i' is an iteration variable of an affected loop
+    do i = 1, 10
+    end do
+  end block
+end

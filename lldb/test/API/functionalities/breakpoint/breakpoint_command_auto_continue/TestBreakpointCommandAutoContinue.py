@@ -22,7 +22,7 @@ class BreakpointCommandAutoContinueTestCase(PExpectTest):
         exe = self.getBuildArtifact("a.out")
         bpcmd = os.path.join(self.getSourceDir(), "bpcmd.py")
 
-        self.launch(executable=exe, timeout=60, dimensions=(25, 80))
+        self.launch(executable=exe, dimensions=(25, 80))
 
         self.expect("breakpoint set --name break_here", substrs=["Breakpoint 1"])
         self.expect(
@@ -38,4 +38,4 @@ class BreakpointCommandAutoContinueTestCase(PExpectTest):
         # for the statusline, causing the memory writes to fail and the
         # program to abort.
         self.child.sendline("run")
-        self.child.expect("PASSED", timeout=30)
+        self.child.expect("PASSED")

@@ -127,6 +127,10 @@ public:
 
     void AddItem(ObjectSP item) { m_items.push_back(item); }
 
+    void AddIntegerItem(uint64_t value) {
+      AddItem(ObjectSP(new Integer(value)));
+    }
+
     void Dump(std::ostream &s) const override {
       s << "[";
       const size_t arrsize = m_items.size();
@@ -161,6 +165,8 @@ public:
     virtual ~Integer() {}
 
     void SetValue(uint64_t value) { m_value = value; }
+
+    uint64_t GetValue() const { return m_value; }
 
     void Dump(std::ostream &s) const override { s << m_value; }
 
@@ -288,6 +294,13 @@ public:
 
     void AddBooleanItem(std::string key, bool value) {
       AddItem(key, ObjectSP(new Boolean(value)));
+    }
+
+    ObjectSP GetValueForKey(const std::string &key) const {
+      for (const auto &kv : m_dict)
+        if (kv.first == key)
+          return kv.second;
+      return {};
     }
 
     void Dump(std::ostream &s) const override {

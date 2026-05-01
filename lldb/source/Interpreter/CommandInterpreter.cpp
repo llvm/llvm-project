@@ -1883,7 +1883,7 @@ CommandObject *CommandInterpreter::BuildAliasResult(
 
       result.AppendErrorWithFormat("Not enough arguments provided; you "
                                    "need at least %d arguments to use "
-                                   "this alias.",
+                                   "this alias",
                                    index);
       return nullptr;
     } else {
@@ -2520,7 +2520,7 @@ void CommandInterpreter::BuildAliasCommandArgs(CommandObject *alias_cmd_obj,
       } else if (static_cast<size_t>(index) >= cmd_args.GetArgumentCount()) {
         result.AppendErrorWithFormat("Not enough arguments provided; you "
                                      "need at least %d arguments to use "
-                                     "this alias.",
+                                     "this alias",
                                      index);
         return;
       } else {
@@ -2889,7 +2889,7 @@ void CommandInterpreter::HandleCommands(
         if (idx != num_lines - 1)
           result.AppendErrorWithFormat(
               "Aborting reading of commands after command #%" PRIu64
-              ": '%s' continued the target.",
+              ": '%s' continued the target",
               (uint64_t)idx + 1, cmd);
         else
           result.AppendMessageWithFormatv(
@@ -2909,7 +2909,7 @@ void CommandInterpreter::HandleCommands(
       if (idx != num_lines - 1)
         result.AppendErrorWithFormat(
             "Aborting reading of commands after command #%" PRIu64
-            ": '%s' stopped with a signal or exception.",
+            ": '%s' stopped with a signal or exception",
             (uint64_t)idx + 1, cmd);
       else
         result.AppendMessageWithFormatv(
@@ -2953,7 +2953,7 @@ void CommandInterpreter::HandleCommandsFromFile(
     CommandReturnObject &result) {
   if (!FileSystem::Instance().Exists(cmd_file)) {
     result.AppendErrorWithFormat(
-        "Error reading commands from file %s - file not found.",
+        "Error reading commands from file %s - file not found",
         cmd_file.GetFilename().AsCString("<Unknown>"));
     return;
   }
@@ -3100,14 +3100,24 @@ void CommandInterpreter::SetSynchronous(bool value) {
   m_synchronous_execution = value;
 }
 
-void CommandInterpreter::OutputFormattedHelpText(Stream &strm,
-                                                 llvm::StringRef prefix,
-                                                 llvm::StringRef help_text) {
+void CommandInterpreter::OutputFormattedHelpText(
+    Stream &strm, llvm::StringRef prefix, llvm::StringRef help_text,
+    std::optional<Stream::HighlightSettings> highlight) {
   const uint32_t max_columns = m_debugger.GetTerminalWidth();
 
   size_t line_width_max = max_columns - prefix.size();
   if (line_width_max < 16)
     line_width_max = help_text.size() + prefix.size();
+
+  // Apply highlighting to the full text before line splitting so that matches
+  // spanning a line break are highlighted on both lines.
+  std::string highlighted_storage;
+  if (highlight) {
+    StreamString ss;
+    ss.PutCStringColorHighlighted(help_text, highlight);
+    highlighted_storage = std::string(ss.GetString());
+    help_text = highlighted_storage;
+  }
 
   strm.IndentMore(prefix.size());
   bool prefixed_yet = false;
@@ -3117,7 +3127,7 @@ void CommandInterpreter::OutputFormattedHelpText(Stream &strm,
   while (!help_text.empty()) {
     // Prefix the first line, indent subsequent lines to line up
     if (!prefixed_yet) {
-      strm << prefix;
+      strm.PutCStringColorHighlighted(prefix, highlight);
       prefixed_yet = true;
     } else
       strm.Indent();
@@ -3144,15 +3154,15 @@ void CommandInterpreter::OutputFormattedHelpText(Stream &strm,
   strm.IndentLess(prefix.size());
 }
 
-void CommandInterpreter::OutputFormattedHelpText(Stream &strm,
-                                                 llvm::StringRef word_text,
-                                                 llvm::StringRef separator,
-                                                 llvm::StringRef help_text,
-                                                 size_t max_word_len) {
+void CommandInterpreter::OutputFormattedHelpText(
+    Stream &strm, llvm::StringRef word_text, llvm::StringRef separator,
+    llvm::StringRef help_text, size_t max_word_len,
+    std::optional<Stream::HighlightSettings> highlight) {
   StreamString prefix_stream;
   prefix_stream.Printf("  %-*s %*s ", (int)max_word_len, word_text.data(),
                        (int)separator.size(), separator.data());
-  OutputFormattedHelpText(strm, prefix_stream.GetString(), help_text);
+  OutputFormattedHelpText(strm, prefix_stream.GetString(), help_text,
+                          highlight);
 }
 
 void CommandInterpreter::OutputHelpText(Stream &strm, llvm::StringRef word_text,
@@ -3818,7 +3828,7 @@ CommandInterpreter::ResolveCommandImpl(std::string &command_line,
       } else {
         // We didn't have only one match, otherwise we wouldn't get here.
         lldbassert(num_matches == 0);
-        result.AppendErrorWithFormat("'%s' is not a valid command.",
+        result.AppendErrorWithFormat("'%s' is not a valid command",
                                      next_word.c_str());
       }
       if (!done)
@@ -3829,7 +3839,7 @@ CommandInterpreter::ResolveCommandImpl(std::string &command_line,
       if (!suffix.empty()) {
         result.AppendErrorWithFormat(
             "command '%s' did not recognize '%s%s%s' as valid (subcommand "
-            "might be invalid).",
+            "might be invalid)",
             cmd_obj->GetCommandName().str().c_str(),
             next_word.empty() ? "" : next_word.c_str(),
             next_word.empty() ? " -- " : " ", suffix.c_str());

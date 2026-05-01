@@ -356,7 +356,7 @@ static int AssembleInput(const char *ProgName, const Target *TheTarget,
   std::unique_ptr<MCAsmParser> Parser(
       createMCAsmParser(SrcMgr, Ctx, Str, MAI));
   std::unique_ptr<MCTargetAsmParser> TAP(
-      TheTarget->createMCAsmParser(STI, *Parser, MCII, MCOptions));
+      TheTarget->createMCAsmParser(STI, *Parser, MCII));
 
   if (!TAP) {
     WithColor::error(errs(), ProgName)
@@ -491,7 +491,7 @@ int main(int argc, char **argv) {
 
   // FIXME: This is not pretty. MCContext has a ptr to MCObjectFileInfo and
   // MCObjectFileInfo needs a MCContext reference in order to initialize itself.
-  MCContext Ctx(TheTriple, MAI.get(), MRI.get(), STI.get(), &SrcMgr);
+  MCContext Ctx(TheTriple, *MAI, MRI.get(), STI.get(), &SrcMgr);
   std::unique_ptr<MCObjectFileInfo> MOFI(
       TheTarget->createMCObjectFileInfo(Ctx, PIC, LargeCodeModel));
   Ctx.setObjectFileInfo(MOFI.get());

@@ -33,6 +33,30 @@ using namespace clang;
 using namespace clang::CIRGen;
 using namespace llvm;
 
+static bool shouldEmitBuiltinAsIR(unsigned builtinID,
+                                  const Builtin::Context &bi,
+                                  const CIRGenFunction &cgf) {
+  if (!cgf.cgm.getLangOpts().MathErrno &&
+      cgf.curFPFeatures.getExceptionMode() ==
+          LangOptions::FPExceptionModeKind::FPE_Ignore &&
+      !cgf.cgm.getTargetCIRGenInfo().supportsLibCall()) {
+    switch (builtinID) {
+    default:
+      return false;
+    case Builtin::BIlogbf:
+    case Builtin::BI__builtin_logbf:
+    case Builtin::BIlogb:
+    case Builtin::BI__builtin_logb:
+    case Builtin::BIscalbnf:
+    case Builtin::BI__builtin_scalbnf:
+    case Builtin::BIscalbn:
+    case Builtin::BI__builtin_scalbn:
+      return true;
+    }
+  }
+  return false;
+}
+
 static RValue emitLibraryCall(CIRGenFunction &cgf, const FunctionDecl *fd,
                               const CallExpr *e, mlir::Operation *calleeValue) {
   CIRGenCallee callee = CIRGenCallee::forDirect(calleeValue, GlobalDecl(fd));
@@ -1381,24 +1405,82 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return RValue::getIgnored();
   case Builtin::BI__builtin_powi:
   case Builtin::BI__builtin_powif:
-  case Builtin::BI__builtin_powil:
+  case Builtin::BI__builtin_powil: {
+    mlir::Value src0 = emitScalarExpr(e->getArg(0));
+    mlir::Value src1 = emitScalarExpr(e->getArg(1));
+    return RValue::get(builder.emitIntrinsicCallOp(
+        getLoc(e->getExprLoc()), "powi", src0.getType(),
+        mlir::ValueRange{src0, src1}));
+  }
   case Builtin::BI__builtin_frexpl:
   case Builtin::BI__builtin_frexp:
   case Builtin::BI__builtin_frexpf:
   case Builtin::BI__builtin_frexpf128:
-  case Builtin::BI__builtin_frexpf16:
+  case Builtin::BI__builtin_frexpf16: {
+    mlir::Value val = emitScalarExpr(e->getArg(0));
+    mlir::Value ptr = emitScalarExpr(e->getArg(1));
+    mlir::Type fpTy = val.getType();
+    QualType intQualTy = e->getArg(1)->getType()->getPointeeType();
+    mlir::Type intTy = convertType(intQualTy);
+    mlir::Location callLoc = getLoc(e->getExprLoc());
+    auto frexpOp = cir::FrexpOp::create(builder, callLoc, fpTy, intTy, val);
+    LValue lv = makeNaturalAlignAddrLValue(ptr, intQualTy);
+    emitStoreOfScalar(frexpOp.getExp(), lv, /*isInit=*/false);
+    return RValue::get(frexpOp.getResult());
+  }
   case Builtin::BImodf:
   case Builtin::BImodff:
   case Builtin::BImodfl:
   case Builtin::BI__builtin_modf:
   case Builtin::BI__builtin_modff:
-  case Builtin::BI__builtin_modfl:
+  case Builtin::BI__builtin_modfl: {
+    mlir::Value val = emitScalarExpr(e->getArg(0));
+    mlir::Value ptr = emitScalarExpr(e->getArg(1));
+    mlir::Type fpTy = val.getType();
+    mlir::Location callLoc = getLoc(e->getExprLoc());
+    auto modfOp = cir::ModfOp::create(builder, callLoc, fpTy, fpTy, val);
+    QualType destPtrTy = e->getArg(1)->getType()->getPointeeType();
+    LValue lv = makeNaturalAlignAddrLValue(ptr, destPtrTy);
+    emitStoreOfScalar(modfOp.getIntegral(), lv, /*isInit=*/false);
+    return RValue::get(modfOp.getFractional());
+  }
   case Builtin::BI__builtin_isgreater:
   case Builtin::BI__builtin_isgreaterequal:
   case Builtin::BI__builtin_isless:
   case Builtin::BI__builtin_islessequal:
   case Builtin::BI__builtin_islessgreater:
-  case Builtin::BI__builtin_isunordered:
+  case Builtin::BI__builtin_isunordered: {
+    CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(*this, e);
+    mlir::Value lhs = emitScalarExpr(e->getArg(0));
+    mlir::Value rhs = emitScalarExpr(e->getArg(1));
+    mlir::Location loc = getLoc(e->getBeginLoc());
+    mlir::Type intTy = convertType(e->getType());
+
+    mlir::Value cmpResult;
+    switch (builtinID) {
+    case Builtin::BI__builtin_isgreater:
+      cmpResult = builder.createCompare(loc, cir::CmpOpKind::gt, lhs, rhs);
+      break;
+    case Builtin::BI__builtin_isgreaterequal:
+      cmpResult = builder.createCompare(loc, cir::CmpOpKind::ge, lhs, rhs);
+      break;
+    case Builtin::BI__builtin_isless:
+      cmpResult = builder.createCompare(loc, cir::CmpOpKind::lt, lhs, rhs);
+      break;
+    case Builtin::BI__builtin_islessequal:
+      cmpResult = builder.createCompare(loc, cir::CmpOpKind::le, lhs, rhs);
+      break;
+    case Builtin::BI__builtin_islessgreater:
+      cmpResult = builder.createCompare(loc, cir::CmpOpKind::one, lhs, rhs);
+      break;
+    case Builtin::BI__builtin_isunordered:
+      cmpResult = builder.createCompare(loc, cir::CmpOpKind::uno, lhs, rhs);
+      break;
+    default:
+      llvm_unreachable("Unknown ordered comparison");
+    }
+    return RValue::get(builder.createBoolToInt(cmpResult, intTy));
+  }
   // From https://clang.llvm.org/docs/LanguageExtensions.html#builtin-isfpclass
   //
   //  The `__builtin_isfpclass()` builtin is a generalization of functions
@@ -2328,7 +2410,8 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   // If this is an alias for a lib function (e.g. __builtin_sin), emit
   // the call using the normal call path, but using the unmangled
   // version of the function name.
-  if (getContext().BuiltinInfo.isLibFunction(builtinID))
+  if (!shouldEmitBuiltinAsIR(builtinID, getContext().BuiltinInfo, *this) &&
+      getContext().BuiltinInfo.isLibFunction(builtinID))
     return emitLibraryCall(*this, fd, e,
                            cgm.getBuiltinLibFunction(fd, builtinID));
 

@@ -143,30 +143,6 @@ __gpu_shuffle_idx_u32(uint64_t __lane_mask, uint32_t __idx, uint32_t __x,
   return __builtin_spirv_subgroup_shuffle(__x, __lane);
 }
 
-// Returns a bitmask marking all lanes that have the same value of __x.
-_DEFAULT_FN_ATTRS static __inline__ uint64_t
-__gpu_match_any_u32(uint64_t __lane_mask, uint32_t __x) {
-  return __gpu_match_any_u32_impl(__lane_mask, __x);
-}
-
-// Returns a bitmask marking all lanes that have the same value of __x.
-_DEFAULT_FN_ATTRS static __inline__ uint64_t
-__gpu_match_any_u64(uint64_t __lane_mask, uint64_t __x) {
-  return __gpu_match_any_u64_impl(__lane_mask, __x);
-}
-
-// Returns the current lane mask if every lane contains __x.
-_DEFAULT_FN_ATTRS static __inline__ uint64_t
-__gpu_match_all_u32(uint64_t __lane_mask, uint32_t __x) {
-  return __gpu_match_all_u32_impl(__lane_mask, __x);
-}
-
-// Returns the current lane mask if every lane contains __x.
-_DEFAULT_FN_ATTRS static __inline__ uint64_t
-__gpu_match_all_u64(uint64_t __lane_mask, uint64_t __x) {
-  return __gpu_match_all_u64_impl(__lane_mask, __x);
-}
-
 // SPIR-V does not expose this, always return false.
 _DEFAULT_FN_ATTRS static __inline__ bool __gpu_is_ptr_local(void *ptr) {
   return 0;

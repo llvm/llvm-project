@@ -571,7 +571,9 @@ cc_library(
             "include/lldb/Host/common/*.h",
         ],
         exclude = ["include/lldb/Host/Editline.h"],
-    ) + select({
+    ) + [
+        "include/lldb/Host/windows/ConPTYUtils.h",
+    ] + select({
         "@platforms//os:macos": glob([
             "include/lldb/Host/macosx/*.h",
             "include/lldb/Host/posix/*.h",

@@ -22,6 +22,7 @@
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/CodeGen/CommandFlags.h"
+#include "llvm/Frontend/Offloading/Utility.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IRReader/IRReader.h"
@@ -35,6 +36,7 @@
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/InitLLVM.h"
@@ -487,14 +489,14 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
     if (!ModOrErr)
       return ModOrErr.takeError();
 
-    SmallString<0> SymbolData;
+    SmallVector<StringRef> KernelNames;
     for (Function &F : **ModOrErr) {
       // TODO: Consider using LLVM-IR metadata to identify globals of interest
-      if (F.hasKernelCallingConv()) {
-        SymbolData.append(F.getName());
-        SymbolData.push_back('\0');
-      }
+      if (F.hasKernelCallingConv())
+        KernelNames.push_back(F.getName());
     }
+    SmallString<0> SymbolData;
+    llvm::offloading::sycl::writeSymbolTable(KernelNames, SymbolData);
     SymbolTable.emplace_back(std::move(SymbolData));
   }
 
@@ -520,13 +522,11 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
     }
   }
 
-  // Write the final output into file.
-  int FD = -1;
-  if (std::error_code EC = sys::fs::openFileForWrite(OutputFile, FD))
-    return errorCodeToError(EC);
-  llvm::raw_fd_ostream FS(FD, /*shouldClose=*/true);
-
+  // Collect all images to be packed into a single OffloadBinary.
+  SmallVector<OffloadingImage> Images;
   for (size_t I = 0, E = SplitModules.size(); I != E; ++I) {
+    if (SymbolTable[I].empty())
+      continue;
     auto File = SplitModules[I];
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> FileOrErr =
         llvm::MemoryBuffer::getFileOrSTDIN(File);
@@ -545,13 +545,18 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
         Args.MakeArgString(Args.getLastArgValue(OPT_arch_EQ));
     TheImage.StringData["symbols"] = SymbolTable[I];
     TheImage.Image = std::move(*FileOrErr);
-
-    llvm::SmallString<0> Buffer = OffloadBinary::write(TheImage);
-    if (Buffer.size() % OffloadBinary::getAlignment() != 0)
-      return createStringError("Offload binary has invalid size alignment");
-    FS << Buffer;
+    Images.emplace_back(std::move(TheImage));
   }
-  return Error::success();
+
+  llvm::SmallString<0> Buffer = OffloadBinary::write(Images);
+  if (Buffer.size() % OffloadBinary::getAlignment() != 0)
+    return createStringError("Offload binary has invalid size alignment");
+
+  auto OutputOrErr = FileOutputBuffer::create(OutputFile, Buffer.size());
+  if (!OutputOrErr)
+    return OutputOrErr.takeError();
+  llvm::copy(Buffer, (*OutputOrErr)->getBufferStart());
+  return (*OutputOrErr)->commit();
 }
 
 } // namespace

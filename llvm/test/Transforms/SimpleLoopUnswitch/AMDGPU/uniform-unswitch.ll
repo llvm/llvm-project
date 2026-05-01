@@ -41,7 +41,7 @@ define amdgpu_kernel void @uniform_unswitch(ptr nocapture %out, i32 %n, i32 %x) 
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_07]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop !0
 ;
 entry:
   %cmp6 = icmp sgt i32 %n, 0
@@ -69,9 +69,12 @@ if.then:                                          ; preds = %for.body
 for.inc:                                          ; preds = %for.body, %if.then
   %inc = add nuw nsw i32 %i.07, 1
   %exitcond = icmp eq i32 %inc, %n
-  br i1 %exitcond, label %for.cond.cleanup.loopexit, label %for.body
+  br i1 %exitcond, label %for.cond.cleanup.loopexit, label %for.body, !llvm.loop !0
 }
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 
 attributes #0 = { nounwind readnone }
+
+!0 = distinct !{!0, !1}
+!1 = !{!"llvm.loop.unroll.disable"}

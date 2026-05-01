@@ -6,6 +6,11 @@
 // RUN: %clang_cc1 -std=c++23 -fcxx-exceptions -verify %s
 // RUN: %clang_cc1 -std=c++2c -fcxx-exceptions -verify %s
 
+// RUN: %clang_cc1 -std=c++20 -fcxx-exceptions -verify -triple i686-unknown-windows-msvc -DX86_MSVC_TARGET %s
+// RUN: %clang_cc1 -std=c++23 -fcxx-exceptions -verify -triple i686-unknown-windows-msvc -DX86_MSVC_TARGET %s
+// RUN: %clang_cc1 -std=c++2c -fcxx-exceptions -verify -triple i686-unknown-windows-msvc -DX86_MSVC_TARGET %s
+
+
 //
 // RUN: %clang_cc1 -std=c++17 -fcxx-exceptions -DCONCEPTS_TS=1 -verify %s
 // RUN: %clang_cc1 -std=c++14 -fno-rtti -fno-threadsafe-statics -verify %s -DNO_EXCEPTIONS -DNO_RTTI -DNO_THREADSAFE_STATICS
@@ -142,8 +147,13 @@
 #error "wrong value for __cpp_impl_three_way_comparison"
 #endif
 
-#if check(impl_coroutine, 0, 0, 0, 0, 201902L, 201902L, 201902L)
-#error "wrong value for __cpp_impl_coroutine"
+
+#if X86_MSVC_TARGET
+#   if check(impl_coroutine, 0, 0, 0, 0, 0, 0, 0)
+#       error "wrong value for __cpp_impl_coroutine"
+#   endif
+#elif !(__i386__ && _WIN32) &&  check(impl_coroutine, 0, 0, 0, 0, 201902, 201902, 201902)
+#   error "wrong value for __cpp_impl_coroutine" __cpp_impl_coroutine
 #endif
 
 // init_captures checked below

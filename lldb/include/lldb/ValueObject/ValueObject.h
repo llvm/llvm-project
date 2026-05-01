@@ -1012,6 +1012,35 @@ protected:
     size_t m_children_count = 0;
   };
 
+  using ValueObjectManagerSP = std::shared_ptr<ValueObjectManager>;
+
+  /// The following two functions are helpers for Create methods
+  /// for ValueObject subclasses that need to optionally receive
+  /// a parent or external manager.
+  /// This returns a ValueObjectManagerSP that is either the SP of the
+  /// parent - if it is non-null, or a new manager if null.
+  static ValueObjectManagerSP ReuseManagerIfParent(ValueObject *parent) {
+    ValueObjectManagerSP manager_sp;
+    if (parent)
+      manager_sp = parent->GetManager()->shared_from_this();
+    else
+      manager_sp = ValueObjectManager::Create();
+    return manager_sp;
+  }
+
+  /// If manager is null, makes a new ValueObjectManager and sets
+  /// manager to the new ValueObjectManager.  It also returns the
+  /// shared pointer which is necessary to keep the new manager alive.
+  static ValueObjectManagerSP
+  CreateManagerIfEmpty(ValueObjectManager *&manager) {
+    ValueObjectManagerSP manager_sp;
+    if (!manager) {
+      manager_sp = ValueObjectManager::Create();
+      manager = manager_sp.get();
+    }
+    return manager_sp;
+  }
+
   // Classes that inherit from ValueObject can see and modify these
 
   /// The parent value object, or nullptr if this has no parent.

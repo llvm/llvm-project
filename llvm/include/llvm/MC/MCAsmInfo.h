@@ -433,18 +433,17 @@ protected:
   llvm::StringMap<uint32_t> NameToAtSpecifier;
   void initializeAtSpecifiers(ArrayRef<AtSpecifier>);
 
-  const MCTargetOptions *TargetOptions = nullptr;
+  const MCTargetOptions &TargetOptions;
 
 public:
-  explicit MCAsmInfo();
+  explicit MCAsmInfo(const MCTargetOptions &Options);
   virtual ~MCAsmInfo();
 
   // Explicitly non-copyable.
   MCAsmInfo(MCAsmInfo const &) = delete;
   MCAsmInfo &operator=(MCAsmInfo const &) = delete;
 
-  const MCTargetOptions *getTargetOptions() const { return TargetOptions; }
-  void setTargetOptions(const MCTargetOptions &TO) { TargetOptions = &TO; }
+  const MCTargetOptions &getTargetOptions() const { return TargetOptions; }
 
   /// Get the code pointer size in bytes.
   unsigned getCodePointerSize() const { return CodePointerSize; }
@@ -568,7 +567,7 @@ public:
   // Return the assembler dialect that output printing should use. Used by
   // createMCInstPrinter.
   unsigned getOutputAssemblerDialect() const {
-    return TargetOptions->OutputAsmVariant.value_or(AssemblerDialect);
+    return TargetOptions.OutputAsmVariant.value_or(AssemblerDialect);
   }
   bool doesAllowAtInName() const { return AllowAtInName; }
   void setAllowAtInName(bool V) { AllowAtInName = V; }

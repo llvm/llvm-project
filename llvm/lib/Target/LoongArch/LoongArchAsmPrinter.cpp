@@ -164,7 +164,7 @@ bool LoongArchAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
   else if (OffsetMO.isGlobal() || OffsetMO.isBlockAddress() ||
            OffsetMO.isMCSymbol() || OffsetMO.isCPI()) {
     OS << ", ";
-    MAI->printExpr(OS, *MCO.getExpr());
+    MAI.printExpr(OS, *MCO.getExpr());
   } else
     return true;
 
@@ -215,11 +215,7 @@ void LoongArchAsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(
     const MachineInstr &MI) {
   const Function &F = MF->getFunction();
   if (F.hasFnAttribute("patchable-function-entry")) {
-    unsigned Num;
-    if (F.getFnAttribute("patchable-function-entry")
-            .getValueAsString()
-            .getAsInteger(10, Num))
-      return;
+    unsigned Num = F.getFnAttributeAsParsedInteger("patchable-function-entry");
     emitNops(Num);
     return;
   }

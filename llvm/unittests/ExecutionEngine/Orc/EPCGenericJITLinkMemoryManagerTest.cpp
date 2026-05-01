@@ -162,7 +162,7 @@ TEST(EPCGenericJITLinkMemoryManagerTest, CreateFromSymbolNames) {
       {ES.intern("allocator_release"), {ReleaseAddr, JITSymbolFlags::Exported}},
   })));
 
-  EPCGenericJITLinkMemoryManager::SymbolNames SNs;
+  rt::SimpleExecutorMemoryManagerSymbolNames SNs;
   SNs.AllocatorName = "allocator_instance";
   SNs.ReserveName = "allocator_reserve";
   SNs.InitializeName = "allocator_init";
@@ -189,7 +189,7 @@ TEST(EPCGenericJITLinkMemoryManagerTest, CreateFailsOnMissingSymbol) {
        {ExecutorAddr(1), JITSymbolFlags::Exported}},
   })));
 
-  EPCGenericJITLinkMemoryManager::SymbolNames SNs;
+  rt::SimpleExecutorMemoryManagerSymbolNames SNs;
   SNs.AllocatorName = "allocator_instance";
   SNs.ReserveName = "allocator_reserve";     // missing
   SNs.InitializeName = "allocator_init";     // missing
@@ -214,8 +214,7 @@ TEST(EPCGenericJITLinkMemoryManagerTest, CreateFromExecutionSession) {
     }
   };
 
-  auto &SNs =
-      EPCGenericJITLinkMemoryManager::orc_rt_SimpleNativeMemoryMapSPSSymbols;
+  auto &SNs = rt::orc_rt_SimpleNativeMemoryMapSPSSymbols;
 
   ExecutorAddr AllocatorAddr(1), ReserveAddr(2), InitAddr(3), DeinitAddr(4),
       ReleaseAddr(5);

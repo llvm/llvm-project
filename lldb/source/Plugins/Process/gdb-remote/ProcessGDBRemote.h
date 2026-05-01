@@ -396,7 +396,9 @@ protected:
                     lldb::addr_t thread_dispatch_qaddr, bool queue_vars_valid,
                     lldb_private::LazyBool associated_with_libdispatch_queue,
                     lldb::addr_t dispatch_queue_t, std::string &queue_name,
-                    lldb::QueueKind queue_kind, uint64_t queue_serial);
+                    lldb::QueueKind queue_kind, uint64_t queue_serial,
+                    std::vector<lldb::addr_t> &added_binaries,
+                    StructuredData::ObjectSP &detailed_binaries_info);
 
   void ClearThreadIDList();
 
@@ -451,6 +453,14 @@ private:
   std::string m_partial_profile_data;
   std::map<uint64_t, uint32_t> m_thread_id_to_used_usec_map;
   uint64_t m_last_signals_version = 0;
+
+  /// Enable a single breakpoint site by trying Z0 (software), then Z1
+  /// (hardware), then manual memory write as a last resort.
+  llvm::Error DoEnableBreakpointSite(BreakpointSite &bp_site);
+
+  /// Disable a single breakpoint site directly by sending the appropriate
+  /// z packet or restoring the original instruction.
+  llvm::Error DoDisableBreakpointSite(BreakpointSite &bp_site);
 
   static bool NewThreadNotifyBreakpointHit(void *baton,
                                            StoppointCallbackContext *context,

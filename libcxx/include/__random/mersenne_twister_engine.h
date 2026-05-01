@@ -184,7 +184,25 @@ public:
   }
   template <class _Sseq, __enable_if_t<__is_seed_sequence<_Sseq, mersenne_twister_engine>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI void seed(_Sseq& __q) {
-    __seed(__q, integral_constant<unsigned, 1 + (__w - 1) / 32>());
+    const unsigned __k = 1 + (__w - 1) / 32;
+    static_assert(__k <= 2);
+    uint32_t __ar[__n * __k];
+    __q.generate(__ar, __ar + __n * __k);
+    for (size_t __i = 0; __i < __n; ++__i) {
+      if _LIBCPP_CONSTEXPR (__k == 1) {
+        __x_[__i] = static_cast<result_type>(__ar[__i] & _Max);
+      } else {
+        __x_[__i] = static_cast<result_type>((__ar[2 * __i] + ((uint64_t)__ar[2 * __i + 1] << 32)) & _Max);
+      }
+    }
+    const result_type __mask = __r == _Dt ? result_type(~0) : (result_type(1) << __r) - result_type(1);
+    __i_                     = 0;
+    if ((__x_[0] & ~__mask) == 0) {
+      for (size_t __i = 1; __i < __n; ++__i)
+        if (__x_[__i] != 0)
+          return;
+      __x_[0] = result_type(1) << (__w - 1);
+    }
   }
 
   // generating functions
@@ -265,58 +283,22 @@ public:
              mersenne_twister_engine<_UInt, _Wp, _Np, _Mp, _Rp, _Ap, _Up, _Dp, _Sp, _Bp, _Tp, _Cp, _Lp, _Fp>& __x);
 
 private:
-  template <class _Sseq>
-  _LIBCPP_HIDE_FROM_ABI void __seed(_Sseq& __q, integral_constant<unsigned, 1>) {
-    const unsigned __k = 1;
-    uint32_t __ar[__n * __k];
-    __q.generate(__ar, __ar + __n * __k);
-    for (size_t __i = 0; __i < __n; ++__i)
-      __x_[__i] = static_cast<result_type>(__ar[__i] & _Max);
-    const result_type __mask = __r == _Dt ? result_type(~0) : (result_type(1) << __r) - result_type(1);
-    __i_                     = 0;
-    if ((__x_[0] & ~__mask) == 0) {
-      for (size_t __i = 1; __i < __n; ++__i)
-        if (__x_[__i] != 0)
-          return;
-      __x_[0] = result_type(1) << (__w - 1);
+  template <size_t __count>
+  _LIBCPP_HIDE_FROM_ABI static result_type __lshift(result_type __x) {
+    if _LIBCPP_CONSTEXPR (__count < __w) {
+      return (__x << __count) & _Max;
+    } else {
+      return result_type(0);
     }
   }
 
-  template <class _Sseq>
-  _LIBCPP_HIDE_FROM_ABI void __seed(_Sseq& __q, integral_constant<unsigned, 2>) {
-    const unsigned __k = 2;
-    uint32_t __ar[__n * __k];
-    __q.generate(__ar, __ar + __n * __k);
-    for (size_t __i = 0; __i < __n; ++__i)
-      __x_[__i] = static_cast<result_type>((__ar[2 * __i] + ((uint64_t)__ar[2 * __i + 1] << 32)) & _Max);
-    const result_type __mask = __r == _Dt ? result_type(~0) : (result_type(1) << __r) - result_type(1);
-    __i_                     = 0;
-    if ((__x_[0] & ~__mask) == 0) {
-      for (size_t __i = 1; __i < __n; ++__i)
-        if (__x_[__i] != 0)
-          return;
-      __x_[0] = result_type(1) << (__w - 1);
+  template <size_t __count>
+  _LIBCPP_HIDE_FROM_ABI static result_type __rshift(result_type __x) {
+    if _LIBCPP_CONSTEXPR (__count < _Dt) {
+      return __x >> __count;
+    } else {
+      return result_type(0);
     }
-  }
-
-  template <size_t __count,
-            __enable_if_t<__count< __w, int> = 0> _LIBCPP_HIDE_FROM_ABI static result_type __lshift(result_type __x) {
-    return (__x << __count) & _Max;
-  }
-
-  template <size_t __count, __enable_if_t<(__count >= __w), int> = 0>
-  _LIBCPP_HIDE_FROM_ABI static result_type __lshift(result_type) {
-    return result_type(0);
-  }
-
-  template <size_t __count,
-            __enable_if_t<__count< _Dt, int> = 0> _LIBCPP_HIDE_FROM_ABI static result_type __rshift(result_type __x) {
-    return __x >> __count;
-  }
-
-  template <size_t __count, __enable_if_t<(__count >= _Dt), int> = 0>
-  _LIBCPP_HIDE_FROM_ABI static result_type __rshift(result_type) {
-    return result_type(0);
   }
 };
 

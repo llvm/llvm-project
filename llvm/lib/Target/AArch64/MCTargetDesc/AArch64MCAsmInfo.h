@@ -26,7 +26,7 @@ class MCValue;
 class Triple;
 
 struct AArch64MCAsmInfoDarwin : public MCAsmInfoDarwin {
-  explicit AArch64MCAsmInfoDarwin(bool IsILP32);
+  explicit AArch64MCAsmInfoDarwin(bool IsILP32, const MCTargetOptions &Options);
   const MCExpr *
   getExprForPersonalitySymbol(const MCSymbol *Sym, unsigned Encoding,
                               MCStreamer &Streamer) const override;
@@ -37,7 +37,7 @@ struct AArch64MCAsmInfoDarwin : public MCAsmInfoDarwin {
 };
 
 struct AArch64MCAsmInfoELF : public MCAsmInfoELF {
-  explicit AArch64MCAsmInfoELF(const Triple &T);
+  explicit AArch64MCAsmInfoELF(const Triple &T, const MCTargetOptions &Options);
   void printSpecifierExpr(raw_ostream &OS,
                           const MCSpecifierExpr &Expr) const override;
   bool evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr, MCValue &Res,
@@ -45,7 +45,7 @@ struct AArch64MCAsmInfoELF : public MCAsmInfoELF {
 };
 
 struct AArch64MCAsmInfoMicrosoftCOFF : public MCAsmInfoMicrosoft {
-  explicit AArch64MCAsmInfoMicrosoftCOFF();
+  explicit AArch64MCAsmInfoMicrosoftCOFF(const MCTargetOptions &Options);
   void printSpecifierExpr(raw_ostream &OS,
                           const MCSpecifierExpr &Expr) const override;
   bool evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr, MCValue &Res,
@@ -53,7 +53,7 @@ struct AArch64MCAsmInfoMicrosoftCOFF : public MCAsmInfoMicrosoft {
 };
 
 struct AArch64MCAsmInfoGNUCOFF : public MCAsmInfoGNUCOFF {
-  explicit AArch64MCAsmInfoGNUCOFF();
+  explicit AArch64MCAsmInfoGNUCOFF(const MCTargetOptions &Options);
   void printSpecifierExpr(raw_ostream &OS,
                           const MCSpecifierExpr &Expr) const override;
   bool evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr, MCValue &Res,

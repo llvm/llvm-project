@@ -612,9 +612,11 @@ add_entrypoint_object(
   HDRS
     ../sysconf.h
   DEPENDS
-    libc.include.unistd
-    libc.include.sys_auxv
+    libc.hdr.unistd_macros
+    libc.hdr.sys_auxv_macros
     libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.linux.sysinfo
     libc.src.__support.OSUtil.linux.auxv
 )
 

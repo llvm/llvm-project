@@ -193,8 +193,8 @@ public:
                                 LoongArchMCExpr::Specifier &Kind);
 
   LoongArchAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
-                     const MCInstrInfo &MII, const MCTargetOptions &Options)
-      : MCTargetAsmParser(Options, STI, MII) {
+                     const MCInstrInfo &MII)
+      : MCTargetAsmParser(STI, MII) {
     Parser.addAliasForDirective(".half", ".2byte");
     Parser.addAliasForDirective(".hword", ".2byte");
     Parser.addAliasForDirective(".word", ".4byte");

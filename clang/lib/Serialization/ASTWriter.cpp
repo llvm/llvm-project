@@ -221,7 +221,7 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
       if (auto UniqF = MM.getModuleMapFileIDForUniquing(Mod); UniqF.isValid())
         AssignMostImportant(ModuleMaps[UniqF], Reason);
 
-      for (auto *SubM : Mod->submodules())
+      for (Module *SubM : Mod->submodules())
         Q.push(SubM);
     }
   };
@@ -241,7 +241,7 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
     for (const Module *UndeclaredModule : CurrentModule->UndeclaredUses)
       CollectModuleMapsForHierarchy(UndeclaredModule, AR_ImportOrTextualHeader);
 
-    for (auto *M : CurrentModule->submodules())
+    for (Module *M : CurrentModule->submodules())
       Q.push(M);
   }
 
@@ -2987,7 +2987,7 @@ unsigned ASTWriter::getSubmoduleID(Module *Mod) {
 /// given module).
 static unsigned getNumberOfModules(Module *Mod) {
   unsigned ChildModules = 0;
-  for (auto *Submodule : Mod->submodules())
+  for (Module *Submodule : Mod->submodules())
     ChildModules += getNumberOfModules(Submodule);
 
   return ChildModules + 1;
@@ -3189,7 +3189,7 @@ void ASTWriter::WriteSubmodules(Module *WritingModule, ASTContext *Context) {
     // Emit the imports.
     if (!Mod->Imports.empty()) {
       RecordData Record;
-      for (auto *I : Mod->Imports)
+      for (Module *I : Mod->Imports)
         Record.push_back(getSubmoduleID(I));
       Stream.EmitRecord(SUBMODULE_IMPORTS, Record);
     }
@@ -3197,7 +3197,7 @@ void ASTWriter::WriteSubmodules(Module *WritingModule, ASTContext *Context) {
     // Emit the modules affecting compilation that were not imported.
     if (!Mod->AffectingClangModules.empty()) {
       RecordData Record;
-      for (auto *I : Mod->AffectingClangModules)
+      for (Module *I : Mod->AffectingClangModules)
         Record.push_back(getSubmoduleID(I));
       Stream.EmitRecord(SUBMODULE_AFFECTING_MODULES, Record);
     }
@@ -3208,8 +3208,8 @@ void ASTWriter::WriteSubmodules(Module *WritingModule, ASTContext *Context) {
       for (const auto &E : Mod->Exports) {
         // FIXME: This may fail; we don't require that all exported modules
         // are local or imported.
-        Record.push_back(getSubmoduleID(E.getPointer()));
-        Record.push_back(E.getInt());
+        Record.push_back(getSubmoduleID(E.first));
+        Record.push_back(E.second);
       }
       Stream.EmitRecord(SUBMODULE_EXPORTS, Record);
     }
@@ -3260,7 +3260,7 @@ void ASTWriter::WriteSubmodules(Module *WritingModule, ASTContext *Context) {
     }
 
     // Queue up the submodules of this module.
-    for (auto *M : Mod->submodules())
+    for (Module *M : Mod->submodules())
       Q.push(M);
   }
 

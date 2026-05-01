@@ -605,6 +605,7 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                   D.getLTOMode() == LTOK_Thin);
 
   AddLinkerInputs(TC, Inputs, Args, CmdArgs, JA);
+  TC.addProfileRTLibs(Args, CmdArgs);
 
   if (TC.ShouldLinkCXXStdlib(Args)) {
     bool OnlyLibstdcxxStatic = Args.hasArg(options::OPT_static_libstdcxx) &&

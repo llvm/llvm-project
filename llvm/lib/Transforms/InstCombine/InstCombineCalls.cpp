@@ -3314,7 +3314,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       if (DS != OtherDS)
         break;
 
-      BasePtr = CI->getArgOperand(0);
       if (CI->getIntrinsicID() == Intrinsic::ptrauth_sign) {
         if (CI->getArgOperand(1) != Key || CI->getArgOperand(2) != Disc)
           break;
@@ -3327,6 +3326,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         AuthDisc = CI->getArgOperand(2);
       } else
         break;
+      BasePtr = CI->getArgOperand(0);
     } else if (const auto *PtrToInt = dyn_cast<PtrToIntOperator>(Ptr)) {
       // ptrauth constants are equivalent to a call to @llvm.ptrauth.sign for
       // our purposes, so check for that too.

@@ -1,6 +1,4 @@
 .. title:: clang-tidy - cert-dcl54-cpp
-.. meta::
-   :http-equiv=refresh: 5;URL=../misc/new-delete-overloads.html
 
 cert-dcl54-cpp
 ==============

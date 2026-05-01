@@ -1,6 +1,4 @@
 .. title:: clang-tidy - hicpp-uppercase-literal-suffix
-.. meta::
-   :http-equiv=refresh: 5;URL=../readability/uppercase-literal-suffix.html
 
 hicpp-uppercase-literal-suffix
 ==============================

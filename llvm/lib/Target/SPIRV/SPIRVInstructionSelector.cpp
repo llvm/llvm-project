@@ -200,6 +200,9 @@ private:
   bool selectBitreverse16(Register ResVReg, SPIRVTypeInst ResType,
                           MachineInstr &I, Register Op) const;
 
+  bool selectBitreverse64(Register ResVReg, SPIRVTypeInst ResType,
+                          MachineInstr &I, Register SrcReg) const;
+
   bool selectBitreverseNative(Register ResVReg, SPIRVTypeInst ResType,
                               MachineInstr &I, Register Op) const;
 
@@ -1704,29 +1707,29 @@ bool SPIRVInstructionSelector::selectPopCount64(Register ResVReg,
   SPIRVTypeInst VecI32Type = GR.getOrCreateSPIRVVectorType(
       I32Type, 2 * ComponentCount, MIRBuilder, /*IsSigned=*/false);
 
-  // ---- Stage 1: 64-bit → 2x32-bit ----
+  // Converts 64 bit into and array of 32 bit, containing 2 elements.
   Register Vec32 = MRI->createVirtualRegister(GR.getRegClass(VecI32Type));
   if (!selectOpWithSrcs(Vec32, VecI32Type, I, {SrcReg}, SPIRV::OpBitcast))
     return false;
 
-  // ---- Stage 2: popcount per 32-bit lane ----
+  // Apply popcount on each 32 bit lane
   Register Pop32 = MRI->createVirtualRegister(GR.getRegClass(VecI32Type));
   if (!selectPopCount32(Pop32, VecI32Type, I, Vec32, Opcode))
     return false;
 
-  // ---- Stage 3: split even (low) / odd (high) lanes ----
+  // Splits result into highbit lane and lowbit lane
   auto MaybeParts = splitEvenOddLanes(Pop32, ComponentCount, I, I32Type);
   if (!MaybeParts)
     return false;
   SplitParts &Parts = *MaybeParts;
 
-  // ---- Stage 4: sum high + low ----
+  // Sum high part and low part
   unsigned OpAdd = Parts.IsScalar ? SPIRV::OpIAddS : SPIRV::OpIAddV;
   Register Sum = MRI->createVirtualRegister(GR.getRegClass(Parts.Type));
   if (!selectOpWithSrcs(Sum, Parts.Type, I, {Parts.High, Parts.Low}, OpAdd))
     return false;
 
-  // ---- Stage 5: convert i32 sum to the final result type ----
+  // Convert 32 bit sum into 64 bit scalar
   bool IsSigned = GR.isScalarOrVectorSigned(ResType);
   unsigned ConvOp = IsSigned ? SPIRV::OpSConvert : SPIRV::OpUConvert;
   return selectOpWithSrcs(ResVReg, ResType, I, {Sum}, ConvOp);
@@ -3651,6 +3654,51 @@ bool SPIRVInstructionSelector::handle64BitOverflow(
                           SPIRV::OpCompositeConstruct);
 }
 
+bool SPIRVInstructionSelector::selectBitreverse64(Register ResVReg,
+                                                  SPIRVTypeInst ResType,
+                                                  MachineInstr &I,
+                                                  Register SrcReg) const {
+  unsigned ComponentCount = GR.getScalarOrVectorComponentCount(ResType);
+  if (ComponentCount > 2)
+    return handle64BitOverflow(
+        ResVReg, ResType, I, SrcReg, SPIRV::OpBitReverse,
+        [this](Register R, SPIRVTypeInst T, MachineInstr &I, Register S,
+               unsigned O) { return this->selectBitreverse64(R, T, I, S); });
+
+  MachineIRBuilder MIRBuilder(I);
+
+  SPIRVTypeInst I32Type = GR.getOrCreateSPIRVIntegerType(32, MIRBuilder);
+  SPIRVTypeInst VecI32Type = GR.getOrCreateSPIRVVectorType(
+      I32Type, 2 * ComponentCount, MIRBuilder, /*IsSigned=*/false);
+
+  // Converts 64 bit into and array of 32 bit, containing 2 elements.
+  Register Vec32 = MRI->createVirtualRegister(GR.getRegClass(VecI32Type));
+  if (!selectOpWithSrcs(Vec32, VecI32Type, I, {SrcReg}, SPIRV::OpBitcast))
+    return false;
+
+  // Apply bitreverse  on each 32 bit lane
+  Register Reverse32 = MRI->createVirtualRegister(GR.getRegClass(VecI32Type));
+  if (!selectBitreverseNative(Reverse32, VecI32Type, I, Vec32))
+    return false;
+
+  // Splits result into highbit lane and lowbit lane
+  auto MaybeParts = splitEvenOddLanes(Reverse32, ComponentCount, I, I32Type);
+  if (!MaybeParts)
+    return false;
+  SplitParts &Parts = *MaybeParts;
+
+  // Reversing a 64-bit value = reverse each 32-bit half AND swap them,
+  // so the old High word becomes lane 0 (low) and old Low becomes lane 1
+  // (high).
+  Register SwappedVec = MRI->createVirtualRegister(GR.getRegClass(VecI32Type));
+  if (!selectOpWithSrcs(SwappedVec, VecI32Type, I, {Parts.High, Parts.Low},
+                        SPIRV::OpCompositeConstruct))
+    return false;
+
+  // Groups 32 bit vector back to 64 bit scalar.
+  return selectOpWithSrcs(ResVReg, ResType, I, {SwappedVec}, SPIRV::OpBitcast);
+}
+
 bool SPIRVInstructionSelector::selectBitreverseNative(Register ResVReg,
                                                       SPIRVTypeInst ResType,
                                                       MachineInstr &I,
@@ -3673,11 +3721,16 @@ bool SPIRVInstructionSelector::selectBitreverse(Register ResVReg,
   if (STI.isShader()) {
     SPIRVTypeInst OpType = GR.getSPIRVTypeForVReg(OpReg);
     switch (GR.getScalarOrVectorBitWidth(OpType)) {
+    case 8:
     case 16:
       return selectBitreverse16(ResVReg, ResType, I, OpReg);
-    default:
+    case 32:
       return selectBitreverseNative(ResVReg, ResType, I, OpReg);
+    case 64:
+      return selectBitreverse64(ResVReg, ResType, I, OpReg);
     }
+    return SPIRVInstructionSelector::diagnoseUnsupported(
+        I, "G_BITREVERSE only support 16,32,64 bits.");
   }
 
   if (STI.canUseExtension(SPIRV::Extension::SPV_KHR_bit_instructions))

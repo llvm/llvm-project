@@ -673,6 +673,41 @@ TEST(KnownBitsTest, UnaryExhaustive) {
       [](const APInt &N) { return N * N; }, /*CheckOptimality=*/false);
 }
 
+TEST(KnownBitsTest, FunnelShiftExhaustive) {
+  unsigned Bits = 4;
+  ForeachKnownBits(Bits, [&](const KnownBits &Known1) {
+    ForeachKnownBits(Bits, [&](const KnownBits &Known2) {
+      if (Known1.hasConflict() || Known2.hasConflict())
+        return;
+
+      for (unsigned ShAmt = 0; ShAmt < Bits; ShAmt++) {
+        KnownBits FSHLResult(Bits), FSHRResult(Bits);
+        FSHLResult.setAllConflict();
+        FSHRResult.setAllConflict();
+
+        ForeachNumInKnownBits(Known1, [&](const APInt &N1) {
+          ForeachNumInKnownBits(Known2, [&](const APInt &N2) {
+            APInt FSHL = APIntOps::fshl(N1, N2, APInt(Bits, ShAmt));
+            FSHLResult.One &= FSHL;
+            FSHLResult.Zero &= ~FSHL;
+            APInt FSHR = APIntOps::fshr(N1, N2, APInt(Bits, ShAmt));
+            FSHRResult.One &= FSHR;
+            FSHRResult.Zero &= ~FSHR;
+          });
+        });
+
+        const APInt Amt(Bits, ShAmt);
+        KnownBits ComputeFSHL = KnownBits::fshl(Known1, Known2, Amt);
+        KnownBits ComputeFSHR = KnownBits::fshr(Known1, Known2, Amt);
+        EXPECT_TRUE(FSHLResult.Zero.isSubsetOf(ComputeFSHL.Zero) &&
+                    FSHLResult.One.isSubsetOf(ComputeFSHL.One));
+        EXPECT_TRUE(FSHRResult.Zero.isSubsetOf(ComputeFSHR.Zero) &&
+                    FSHRResult.One.isSubsetOf(ComputeFSHR.One));
+      }
+    });
+  });
+}
+
 TEST(KnownBitsTest, WideShifts) {
   unsigned BitWidth = 128;
   KnownBits Unknown(BitWidth);

@@ -681,6 +681,8 @@ KEYWORD(groupshared                 , KEYHLSL)
 KEYWORD(in                          , KEYHLSL)
 KEYWORD(inout                       , KEYHLSL)
 KEYWORD(out                         , KEYHLSL)
+KEYWORD(row_major                   , KEYHLSL)
+KEYWORD(column_major                , KEYHLSL)
 // HLSL Intangible Types
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) KEYWORD(Name, KEYHLSL)
 #include "clang/Basic/HLSLIntangibleTypes.def"

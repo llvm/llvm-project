@@ -91,7 +91,7 @@ private:
                                "no subtarget info for target %s",
                                TripleName.c_str());
 
-    MC.reset(new MCContext(TheTriple, MAI.get(), MRI.get(), MSTI.get(), nullptr,
+    MC.reset(new MCContext(TheTriple, *MAI, MRI.get(), MSTI.get(), nullptr,
                            true, "__DWARF"));
 
     return Error::success();

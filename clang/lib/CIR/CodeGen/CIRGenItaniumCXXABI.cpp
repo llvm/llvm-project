@@ -82,9 +82,6 @@ public:
   void emitRethrow(CIRGenFunction &cgf, bool isNoReturn) override;
   void emitThrow(CIRGenFunction &cgf, const CXXThrowExpr *e) override;
 
-  void emitBeginCatch(CIRGenFunction &cgf, const CXXCatchStmt *catchStmt,
-                      mlir::Value ehToken) override;
-
   bool useThunkForDtorVariant(const CXXDestructorDecl *dtor,
                               CXXDtorType dt) const override {
     // Itanium does not emit any destructor variant as an inline thunk.
@@ -1198,8 +1195,7 @@ CIRGenItaniumRTTIBuilder::getAddrOfExternalRTTIDescriptor(mlir::Location loc,
   CIRGenBuilderTy &builder = cgm.getBuilder();
 
   // Look for an existing global.
-  cir::GlobalOp gv = dyn_cast_or_null<cir::GlobalOp>(
-      mlir::SymbolTable::lookupSymbolIn(cgm.getModule(), name));
+  cir::GlobalOp gv = dyn_cast_or_null<cir::GlobalOp>(cgm.getGlobalValue(name));
 
   if (!gv) {
     // Create a new global variable.
@@ -1428,8 +1424,7 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(mlir::Location loc,
   llvm::raw_svector_ostream out(name);
   cgm.getCXXABI().getMangleContext().mangleCXXRTTI(ty, out);
 
-  auto oldGV = dyn_cast_or_null<cir::GlobalOp>(
-      mlir::SymbolTable::lookupSymbolIn(cgm.getModule(), name));
+  auto oldGV = dyn_cast_or_null<cir::GlobalOp>(cgm.getGlobalValue(name));
 
   if (oldGV && !oldGV.isDeclaration()) {
     assert(!oldGV.hasAvailableExternallyLinkage() &&
@@ -1604,8 +1599,7 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(
   cgm.getCXXABI().getMangleContext().mangleCXXRTTI(ty, out);
 
   // Create new global and search for an existing global.
-  auto oldGV = dyn_cast_or_null<cir::GlobalOp>(
-      mlir::SymbolTable::lookupSymbolIn(cgm.getModule(), name));
+  auto oldGV = dyn_cast_or_null<cir::GlobalOp>(cgm.getGlobalValue(name));
 
   cir::GlobalOp gv =
       CIRGenModule::createGlobalOp(cgm, loc, name, init.getType(),
@@ -1627,6 +1621,7 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(
       cgm.errorNYI("buildTypeInfo: old GV !use_empty");
       return {};
     }
+    cgm.eraseGlobalSymbol(oldGV);
     oldGV->erase();
   }
 
@@ -1762,11 +1757,6 @@ void CIRGenItaniumCXXABI::registerGlobalDtor(const VarDecl *vd,
                                              mlir::Value addr) {
   if (vd->isNoDestroy(cgm.getASTContext()))
     return;
-
-  if (vd->getTLSKind()) {
-    cgm.errorNYI(vd->getSourceRange(), "registerGlobalDtor: TLS");
-    return;
-  }
 
   // HLSL doesn't support atexit.
   if (cgm.getLangOpts().HLSL) {
@@ -2454,9 +2444,10 @@ Address CIRGenItaniumCXXABI::initializeArrayCookie(CIRGenFunction &cgf,
       std::max(sizeSize, ctx.getPreferredTypeAlignInChars(elementType));
   assert(cookieSize == getArrayCookieSizeImpl(elementType));
 
+  mlir::Type u8Ty = cgf.getBuilder().getUInt8Ty();
   cir::PointerType u8PtrTy = cgf.getBuilder().getUInt8PtrTy();
   mlir::Value baseBytePtr =
-      cgf.getBuilder().createPtrBitcast(newPtr.getPointer(), u8PtrTy);
+      cgf.getBuilder().createBitcast(newPtr.getPointer(), u8PtrTy);
 
   // Compute an offset to the cookie.
   CharUnits cookieOffset = cookieSize - sizeSize;
@@ -2470,7 +2461,7 @@ Address CIRGenItaniumCXXABI::initializeArrayCookie(CIRGenFunction &cgf,
 
   CharUnits baseAlignment = newPtr.getAlignment();
   CharUnits cookiePtrAlignment = baseAlignment.alignmentAtOffset(cookieOffset);
-  Address cookiePtr(cookiePtrValue, u8PtrTy, cookiePtrAlignment);
+  Address cookiePtr(cookiePtrValue, u8Ty, cookiePtrAlignment);
 
   // Write the number of elements into the appropriate slot.
   Address numElementsPtr =
@@ -2488,242 +2479,6 @@ Address CIRGenItaniumCXXABI::initializeArrayCookie(CIRGenFunction &cgf,
       cgf.getBuilder().createPtrBitcast(dataPtr, newPtr.getElementType());
   CharUnits finalAlignment = baseAlignment.alignmentAtOffset(cookieSize);
   return Address(finalPtr, newPtr.getElementType(), finalAlignment);
-}
-
-namespace {
-/// From traditional LLVM, useful info for LLVM lowering support:
-/// A cleanup to call __cxa_end_catch.  In many cases, the caught
-/// exception type lets us state definitively that the thrown exception
-/// type does not have a destructor.  In particular:
-///   - Catch-alls tell us nothing, so we have to conservatively
-///     assume that the thrown exception might have a destructor.
-///   - Catches by reference behave according to their base types.
-///   - Catches of non-record types will only trigger for exceptions
-///     of non-record types, which never have destructors.
-///   - Catches of record types can trigger for arbitrary subclasses
-///     of the caught type, so we have to assume the actual thrown
-///     exception type might have a throwing destructor, even if the
-///     caught type's destructor is trivial or nothrow.
-struct CallEndCatch final : EHScopeStack::Cleanup {
-  CallEndCatch(bool mightThrow, mlir::Value catchToken)
-      : mightThrow(mightThrow), catchToken(catchToken) {}
-  bool mightThrow;
-  mlir::Value catchToken;
-
-  void emit(CIRGenFunction &cgf, Flags flags) override {
-    // Traditional LLVM codegen would emit a call to __cxa_end_catch
-    // here. For CIR, just let it pass since the cleanup is going
-    // to be emitted on a later pass when lowering the catch region.
-    // CGF.EmitRuntimeCallOrTryCall(getEndCatchFn(CGF.CGM));
-    cir::EndCatchOp::create(cgf.getBuilder(), *cgf.currSrcLoc, catchToken);
-    cir::YieldOp::create(cgf.getBuilder(), *cgf.currSrcLoc);
-  }
-};
-} // namespace
-
-static mlir::Value callBeginCatch(CIRGenFunction &cgf, mlir::Value ehToken,
-                                  mlir::Type exnPtrTy, bool endMightThrow) {
-  auto catchTokenTy = cir::CatchTokenType::get(cgf.getBuilder().getContext());
-  auto beginCatch = cir::BeginCatchOp::create(cgf.getBuilder(),
-                                              cgf.getBuilder().getUnknownLoc(),
-                                              catchTokenTy, exnPtrTy, ehToken);
-
-  cgf.ehStack.pushCleanup<CallEndCatch>(
-      NormalAndEHCleanup,
-      endMightThrow && !cgf.cgm.getLangOpts().AssumeNothrowExceptionDtor,
-      beginCatch.getCatchToken());
-
-  return beginCatch.getExnPtr();
-}
-
-/// A "special initializer" callback for initializing a catch
-/// parameter during catch initialization.
-static void initCatchParam(CIRGenFunction &cgf, mlir::Value ehToken,
-                           const VarDecl &catchParam, Address paramAddr,
-                           SourceLocation loc) {
-  CanQualType catchType =
-      cgf.cgm.getASTContext().getCanonicalType(catchParam.getType());
-  mlir::Type cirCatchTy = cgf.convertTypeForMem(catchType);
-
-  // If we're catching by reference, we can just cast the object
-  // pointer to the appropriate pointer.
-  if (isa<ReferenceType>(catchType)) {
-    QualType caughtType = cast<ReferenceType>(catchType)->getPointeeType();
-    bool endCatchMightThrow = caughtType->isRecordType();
-
-    mlir::Value adjustedExn =
-        callBeginCatch(cgf, ehToken, cirCatchTy, endCatchMightThrow);
-
-    // We have no way to tell the personality function that we're
-    // catching by reference, so if we're catching a pointer,
-    // __cxa_begin_catch will actually return that pointer by value.
-    if (const PointerType *pt = dyn_cast<PointerType>(caughtType)) {
-      QualType pointeeType = pt->getPointeeType();
-      // When catching by reference, generally we should just ignore
-      // this by-value pointer and use the exception object instead.
-      if (!pointeeType->isRecordType()) {
-        cgf.cgm.errorNYI(loc,
-                         "initCatchParam: catching a pointer of non-record");
-      } else {
-        // Pull the pointer for the reference type off.
-        mlir::Type ptrTy = cgf.convertTypeForMem(caughtType);
-
-        // Create the temporary and write the adjusted pointer into it.
-        Address exnPtrTmp = cgf.createTempAlloca(
-            ptrTy, cgf.getPointerAlign(), cgf.getLoc(loc), "exn.byref.tmp");
-        mlir::Value casted = cgf.getBuilder().createBitcast(adjustedExn, ptrTy);
-        cgf.getBuilder().createStore(cgf.getLoc(loc), casted, exnPtrTmp);
-
-        // Bind the reference to the temporary.
-        adjustedExn = exnPtrTmp.emitRawPointer();
-      }
-    }
-
-    mlir::Value exnCast =
-        cgf.getBuilder().createBitcast(adjustedExn, cirCatchTy);
-    cgf.getBuilder().createStore(cgf.getLoc(loc), exnCast, paramAddr);
-    return;
-  }
-
-  // Scalars and complexes.
-  cir::TypeEvaluationKind tek = cgf.getEvaluationKind(catchType);
-  if (tek != cir::TEK_Aggregate) {
-    // Notes for LLVM lowering:
-    // If the catch type is a pointer type, __cxa_begin_catch returns
-    // the pointer by value.
-    if (catchType->hasPointerRepresentation()) {
-      mlir::Value catchParam =
-          callBeginCatch(cgf, ehToken, cirCatchTy, /*endMightThrow=*/false);
-      switch (catchType.getQualifiers().getObjCLifetime()) {
-      case Qualifiers::OCL_Strong:
-        cgf.cgm.errorNYI(loc,
-                         "initCatchParam: PointerRepresentation OCL_Strong");
-        return;
-
-      case Qualifiers::OCL_ExplicitNone:
-      case Qualifiers::OCL_Autoreleasing:
-        cgf.cgm.errorNYI(loc, "initCatchParam: PointerRepresentation "
-                              "OCL_ExplicitNone & OCL_Autoreleasing");
-        return;
-
-      case Qualifiers::OCL_None:
-        cgf.getBuilder().createStore(cgf.getLoc(loc), catchParam, paramAddr);
-        return;
-
-      case Qualifiers::OCL_Weak:
-        cgf.cgm.errorNYI(loc, "initCatchParam: PointerRepresentation OCL_Weak");
-        return;
-      }
-
-      llvm_unreachable("bad ownership qualifier!");
-    }
-
-    // Otherwise, it returns a pointer into the exception object.
-    mlir::Type cirCatchTy = cgf.convertTypeForMem(catchType);
-    mlir::Value catchParam =
-        callBeginCatch(cgf, ehToken, cgf.getBuilder().getPointerTo(cirCatchTy),
-                       /*endMightThrow=*/false);
-    LValue srcLV = cgf.makeNaturalAlignAddrLValue(catchParam, catchType);
-    LValue destLV = cgf.makeAddrLValue(paramAddr, catchType);
-    switch (tek) {
-    case cir::TEK_Complex: {
-      mlir::Value load = cgf.emitLoadOfComplex(srcLV, loc);
-      cgf.emitStoreOfComplex(cgf.getLoc(loc), load, destLV, /*isInit=*/true);
-      return;
-    }
-    case cir::TEK_Scalar: {
-      mlir::Value exnLoad = cgf.emitLoadOfScalar(srcLV, loc);
-      cgf.emitStoreOfScalar(exnLoad, destLV, /*isInit=*/true);
-      return;
-    }
-    case cir::TEK_Aggregate:
-      llvm_unreachable("evaluation kind filtered out!");
-    }
-
-    llvm_unreachable("bad evaluation kind");
-  }
-
-  assert(isa<RecordType>(catchType) && "unexpected catch type!");
-  auto *catchRD = catchType->getAsCXXRecordDecl();
-  CharUnits caughtExnAlignment = cgf.cgm.getClassPointerAlignment(catchRD);
-
-  // Check for a copy expression.  If we don't have a copy expression,
-  // that means a trivial copy is okay.
-  const Expr *copyExpr = catchParam.getInit();
-  if (!copyExpr) {
-    mlir::Type cirCatchPtrTy = cgf.getBuilder().getPointerTo(cirCatchTy);
-    mlir::Value rawAdjustedExn =
-        callBeginCatch(cgf, ehToken, cirCatchPtrTy, /*endMightThrow=*/true);
-    Address adjustedExn(rawAdjustedExn, cirCatchTy, caughtExnAlignment);
-    LValue dest = cgf.makeAddrLValue(paramAddr, catchType);
-    LValue src = cgf.makeAddrLValue(adjustedExn, catchType);
-    cgf.emitAggregateCopy(dest, src, catchType, AggValueSlot::DoesNotOverlap);
-    return;
-  }
-
-  cgf.cgm.errorNYI(loc, "initCatchParam: cir::TEK_Aggregate non-trivial copy");
-}
-
-/// Begins a catch statement by initializing the catch variable and
-/// calling __cxa_begin_catch.
-void CIRGenItaniumCXXABI::emitBeginCatch(CIRGenFunction &cgf,
-                                         const CXXCatchStmt *catchStmt,
-                                         mlir::Value ehToken) {
-  // We have to be very careful with the ordering of cleanups here:
-  //   C++ [except.throw]p4:
-  //     The destruction [of the exception temporary] occurs
-  //     immediately after the destruction of the object declared in
-  //     the exception-declaration in the handler.
-  //
-  // So the precise ordering is:
-  //   1.  Construct catch variable.
-  //   2.  __cxa_begin_catch
-  //   3.  Enter __cxa_end_catch cleanup
-  //   4.  Enter dtor cleanup
-  //
-  // We do this by using a slightly abnormal initialization process.
-  // Delegation sequence:
-  //   - ExitCXXTryStmt opens a RunCleanupsScope
-  //     - EmitAutoVarAlloca creates the variable and debug info
-  //       - InitCatchParam initializes the variable from the exception
-  //       - CallBeginCatch calls __cxa_begin_catch
-  //       - CallBeginCatch enters the __cxa_end_catch cleanup
-  //     - EmitAutoVarCleanups enters the variable destructor cleanup
-  //   - EmitCXXTryStmt emits the code for the catch body
-  //   - EmitCXXTryStmt close the RunCleanupsScope
-
-  VarDecl *catchParam = catchStmt->getExceptionDecl();
-  if (!catchParam) {
-    callBeginCatch(cgf, ehToken, cgf.getBuilder().getVoidPtrTy(),
-                   /*endMightThrow=*/true);
-    return;
-  }
-
-  auto getCatchParamAllocaIP = [&]() {
-    cir::CIRBaseBuilderTy::InsertPoint currIns =
-        cgf.getBuilder().saveInsertionPoint();
-    mlir::Operation *currParent = currIns.getBlock()->getParentOp();
-
-    mlir::Block *insertBlock = nullptr;
-    if (auto scopeOp = currParent->getParentOfType<cir::ScopeOp>()) {
-      insertBlock = &scopeOp.getScopeRegion().getBlocks().back();
-    } else if (auto fnOp = currParent->getParentOfType<cir::FuncOp>()) {
-      insertBlock = &fnOp.getRegion().getBlocks().back();
-    } else {
-      llvm_unreachable("unknown outermost scope-like parent");
-    }
-    return cgf.getBuilder().getBestAllocaInsertPoint(insertBlock);
-  };
-
-  // Emit the local. Make sure the alloca's superseed the current scope, since
-  // these are going to be consumed by `cir.catch`, which is not within the
-  // current scope.
-
-  CIRGenFunction::AutoVarEmission var =
-      cgf.emitAutoVarAlloca(*catchParam, getCatchParamAllocaIP());
-  initCatchParam(cgf, ehToken, *catchParam, var.getObjectAddress(cgf),
-                 catchStmt->getBeginLoc());
-  cgf.emitAutoVarCleanups(var);
 }
 
 bool CIRGenItaniumCXXABI::hasAnyUnusedVirtualInlineFunction(

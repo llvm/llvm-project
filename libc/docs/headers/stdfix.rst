@@ -2,8 +2,6 @@
 stdfix.h
 ========
 
-.. include:: ../check.rst
-
 Standards and Goals
 -------------------
 

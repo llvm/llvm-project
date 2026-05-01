@@ -146,7 +146,7 @@ void dwarfgen::DIE::addStrOffsetsBaseAttribute() {
   const MCExpr *Expr =
       MCSymbolRefExpr::create(DG.getStringOffsetsStartSym(), MC);
 
-  if (!Asm->MAI->doesDwarfUseRelocationsAcrossSections())
+  if (!Asm->MAI.doesDwarfUseRelocationsAcrossSections())
     Expr = MCBinaryExpr::createSub(
         Expr, MCSymbolRefExpr::create(SectionStart, MC), MC);
 
@@ -164,7 +164,7 @@ void dwarfgen::DIE::addAddrBaseAttribute() {
 
   const MCExpr *Expr = MCSymbolRefExpr::create(DG.getAddrTableStartSym(), MC);
 
-  if (!Asm->MAI->doesDwarfUseRelocationsAcrossSections())
+  if (!Asm->MAI.doesDwarfUseRelocationsAcrossSections())
     Expr = MCBinaryExpr::createSub(
         Expr, MCSymbolRefExpr::create(SectionStart, MC), MC);
 
@@ -488,7 +488,7 @@ llvm::Error dwarfgen::Generator::init(Triple TheTriple, uint16_t V) {
     return make_error<StringError>("no target machine for target " + TripleName,
                                    inconvertibleErrorCode());
 
-  MC.reset(new MCContext(TheTriple, MAI.get(), MRI.get(), MSTI.get()));
+  MC.reset(new MCContext(TheTriple, *MAI, MRI.get(), MSTI.get()));
   TLOF = TM->getObjFileLowering();
   TLOF->Initialize(*MC, *TM);
   MC->setObjectFileInfo(TLOF);

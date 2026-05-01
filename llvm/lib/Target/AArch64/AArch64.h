@@ -22,7 +22,9 @@
 #include "llvm/PassRegistry.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Target/TargetMachine.h"
+#include <map>
 #include <memory>
+#include <unordered_map>
 
 struct AArch64O0PreLegalizerCombinerImplRuleConfig;
 struct AArch64PreLegalizerCombinerImplRuleConfig;
@@ -133,7 +135,7 @@ FunctionPass *createAArch64PostLegalizerCombiner(bool IsOptNone);
 FunctionPass *createAArch64PostLegalizerLowering();
 FunctionPass *createAArch64PostSelectOptimize();
 FunctionPass *createAArch64StackTaggingPass(bool IsOptNone);
-FunctionPass *createAArch64StackTaggingPreRAPass();
+FunctionPass *createAArch64StackTaggingPreRALegacyPass();
 ModulePass *createAArch64Arm64ECCallLoweringPass();
 
 void initializeAArch64A53Fix835769LegacyPass(PassRegistry &);
@@ -163,11 +165,11 @@ void initializeAArch64PreLegalizerCombinerLegacyPass(PassRegistry &);
 void initializeAArch64PromoteConstantPass(PassRegistry&);
 void initializeAArch64RedundantCopyEliminationLegacyPass(PassRegistry &);
 void initializeAArch64RedundantCondBranchLegacyPass(PassRegistry &);
-void initializeAArch64SIMDInstrOptPass(PassRegistry &);
+void initializeAArch64SIMDInstrOptLegacyPass(PassRegistry &);
 void initializeAArch64SLSHardeningPass(PassRegistry &);
 void initializeAArch64SpeculationHardeningPass(PassRegistry &);
 void initializeAArch64StackTaggingPass(PassRegistry &);
-void initializeAArch64StackTaggingPreRAPass(PassRegistry &);
+void initializeAArch64StackTaggingPreRALegacyPass(PassRegistry &);
 void initializeAArch64StorePairSuppressPass(PassRegistry&);
 void initializeFalkorHWPFFixPass(PassRegistry&);
 void initializeFalkorMarkStridedAccessesLegacyPass(PassRegistry&);
@@ -177,6 +179,13 @@ void initializeMachineSMEABIPass(PassRegistry &);
 void initializeAArch64SRLTDefineSuperRegsPass(PassRegistry &);
 void initializeSVEIntrinsicOptsPass(PassRegistry &);
 void initializeAArch64Arm64ECCallLoweringPass(PassRegistry &);
+
+class AArch64StackTaggingPreRAPass
+    : public PassInfoMixin<AArch64StackTaggingPreRAPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
 
 class AArch64A57FPLoadBalancingPass
     : public PassInfoMixin<AArch64A57FPLoadBalancingPass> {
@@ -253,6 +262,15 @@ public:
 
 class AArch64ConditionOptimizerPass
     : public PassInfoMixin<AArch64ConditionOptimizerPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class AArch64SIMDInstrOptPass : public PassInfoMixin<AArch64SIMDInstrOptPass> {
+  std::map<std::pair<unsigned, std::string>, bool> SIMDInstrTable;
+  std::unordered_map<std::string, bool> InterlEarlyExit;
+
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

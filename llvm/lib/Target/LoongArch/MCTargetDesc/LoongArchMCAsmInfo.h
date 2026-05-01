@@ -42,7 +42,8 @@ class LoongArchMCAsmInfo : public MCAsmInfoELF {
   void anchor() override;
 
 public:
-  explicit LoongArchMCAsmInfo(const Triple &TargetTriple);
+  explicit LoongArchMCAsmInfo(const Triple &TargetTriple,
+                              const MCTargetOptions &Options);
   void printSpecifierExpr(raw_ostream &OS,
                           const MCSpecifierExpr &Expr) const override;
 };

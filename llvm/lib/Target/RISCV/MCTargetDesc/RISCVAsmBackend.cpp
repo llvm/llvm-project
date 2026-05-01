@@ -373,7 +373,7 @@ bool RISCVAsmBackend::relaxDwarfLineAddr(MCFragment &F) const {
   // value is therefore 65535.  Set a conservative upper bound for relaxation.
   unsigned PCBytes;
   if (Value > 60000) {
-    PCBytes = getContext().getAsmInfo()->getCodePointerSize();
+    PCBytes = getContext().getAsmInfo().getCodePointerSize();
     OS << uint8_t(dwarf::DW_LNS_extended_op) << uint8_t(PCBytes + 1)
        << uint8_t(dwarf::DW_LNE_set_address);
     OS.write_zeros(PCBytes);
@@ -408,7 +408,7 @@ bool RISCVAsmBackend::relaxDwarfCFA(MCFragment &F) const {
       AddrDelta.evaluateKnownAbsolute(Value, *Asm);
   assert(IsAbsolute && "CFA with invalid expression");
 
-  assert(getContext().getAsmInfo()->getMinInstAlignment() == 1 &&
+  assert(getContext().getAsmInfo().getMinInstAlignment() == 1 &&
          "expected 1-byte alignment");
   if (Value == 0) {
     F.clearVarContents();

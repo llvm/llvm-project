@@ -418,33 +418,33 @@ define void @fadd_strict_interleave(ptr noalias nocapture readonly %a, ptr noali
 ; CHECK-UNORDERED-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 2
 ; CHECK-UNORDERED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], [[TMP6]]
 ; CHECK-UNORDERED-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
-; CHECK-UNORDERED-NEXT:    [[TMP7:%.*]] = mul i64 [[N_VEC]], 2
+; CHECK-UNORDERED-NEXT:    [[TMP7:%.*]] = shl i64 [[N_VEC]], 1
 ; CHECK-UNORDERED-NEXT:    [[TMP8:%.*]] = insertelement <vscale x 4 x float> splat (float -0.000000e+00), float [[A2]], i32 0
 ; CHECK-UNORDERED-NEXT:    [[TMP9:%.*]] = insertelement <vscale x 4 x float> splat (float -0.000000e+00), float [[A1]], i32 0
 ; CHECK-UNORDERED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-UNORDERED:       vector.body:
 ; CHECK-UNORDERED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-UNORDERED-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x float> [ [[TMP8]], [[VECTOR_PH]] ], [ [[TMP14:%.*]], [[VECTOR_BODY]] ]
-; CHECK-UNORDERED-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 4 x float> [ [[TMP9]], [[VECTOR_PH]] ], [ [[TMP13:%.*]], [[VECTOR_BODY]] ]
-; CHECK-UNORDERED-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
-; CHECK-UNORDERED-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[OFFSET_IDX]]
-; CHECK-UNORDERED-NEXT:    [[WIDE_VEC:%.*]] = load <vscale x 8 x float>, ptr [[TMP10]], align 4
+; CHECK-UNORDERED-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x float> [ [[TMP8]], [[VECTOR_PH]] ], [ [[TMP15:%.*]], [[VECTOR_BODY]] ]
+; CHECK-UNORDERED-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 4 x float> [ [[TMP9]], [[VECTOR_PH]] ], [ [[TMP14:%.*]], [[VECTOR_BODY]] ]
+; CHECK-UNORDERED-NEXT:    [[TMP10:%.*]] = shl i64 [[INDEX]], 1
+; CHECK-UNORDERED-NEXT:    [[TMP11:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP10]]
+; CHECK-UNORDERED-NEXT:    [[WIDE_VEC:%.*]] = load <vscale x 8 x float>, ptr [[TMP11]], align 4
 ; CHECK-UNORDERED-NEXT:    [[STRIDED_VEC:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> [[WIDE_VEC]])
-; CHECK-UNORDERED-NEXT:    [[TMP11:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 0
-; CHECK-UNORDERED-NEXT:    [[TMP12:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 1
-; CHECK-UNORDERED-NEXT:    [[TMP13]] = fadd <vscale x 4 x float> [[TMP11]], [[VEC_PHI1]]
-; CHECK-UNORDERED-NEXT:    [[TMP14]] = fadd <vscale x 4 x float> [[TMP12]], [[VEC_PHI]]
+; CHECK-UNORDERED-NEXT:    [[TMP12:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 0
+; CHECK-UNORDERED-NEXT:    [[TMP13:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 1
+; CHECK-UNORDERED-NEXT:    [[TMP14]] = fadd <vscale x 4 x float> [[TMP12]], [[VEC_PHI1]]
+; CHECK-UNORDERED-NEXT:    [[TMP15]] = fadd <vscale x 4 x float> [[TMP13]], [[VEC_PHI]]
 ; CHECK-UNORDERED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP6]]
-; CHECK-UNORDERED-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-UNORDERED-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-UNORDERED-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-UNORDERED-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK-UNORDERED:       middle.block:
-; CHECK-UNORDERED-NEXT:    [[TMP16:%.*]] = call float @llvm.vector.reduce.fadd.nxv4f32(float -0.000000e+00, <vscale x 4 x float> [[TMP14]])
-; CHECK-UNORDERED-NEXT:    [[TMP17:%.*]] = call float @llvm.vector.reduce.fadd.nxv4f32(float -0.000000e+00, <vscale x 4 x float> [[TMP13]])
+; CHECK-UNORDERED-NEXT:    [[TMP17:%.*]] = call float @llvm.vector.reduce.fadd.nxv4f32(float -0.000000e+00, <vscale x 4 x float> [[TMP15]])
+; CHECK-UNORDERED-NEXT:    [[TMP18:%.*]] = call float @llvm.vector.reduce.fadd.nxv4f32(float -0.000000e+00, <vscale x 4 x float> [[TMP14]])
 ; CHECK-UNORDERED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
 ; CHECK-UNORDERED-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; CHECK-UNORDERED:       scalar.ph:
-; CHECK-UNORDERED-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP16]], [[MIDDLE_BLOCK]] ], [ [[A2]], [[ENTRY:%.*]] ]
-; CHECK-UNORDERED-NEXT:    [[BC_MERGE_RDX2:%.*]] = phi float [ [[TMP17]], [[MIDDLE_BLOCK]] ], [ [[A1]], [[ENTRY]] ]
+; CHECK-UNORDERED-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP17]], [[MIDDLE_BLOCK]] ], [ [[A2]], [[ENTRY:%.*]] ]
+; CHECK-UNORDERED-NEXT:    [[BC_MERGE_RDX2:%.*]] = phi float [ [[TMP18]], [[MIDDLE_BLOCK]] ], [ [[A1]], [[ENTRY]] ]
 ; CHECK-UNORDERED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP7]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
 ; CHECK-UNORDERED-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK-UNORDERED:       for.body:
@@ -452,18 +452,18 @@ define void @fadd_strict_interleave(ptr noalias nocapture readonly %a, ptr noali
 ; CHECK-UNORDERED-NEXT:    [[ADD_PHI2:%.*]] = phi float [ [[BC_MERGE_RDX2]], [[SCALAR_PH]] ], [ [[ADD1:%.*]], [[FOR_BODY]] ]
 ; CHECK-UNORDERED-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-UNORDERED-NEXT:    [[ARRAYIDXB1:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[IV]]
-; CHECK-UNORDERED-NEXT:    [[TMP18:%.*]] = load float, ptr [[ARRAYIDXB1]], align 4
-; CHECK-UNORDERED-NEXT:    [[ADD1]] = fadd float [[TMP18]], [[ADD_PHI2]]
+; CHECK-UNORDERED-NEXT:    [[TMP19:%.*]] = load float, ptr [[ARRAYIDXB1]], align 4
+; CHECK-UNORDERED-NEXT:    [[ADD1]] = fadd float [[TMP19]], [[ADD_PHI2]]
 ; CHECK-UNORDERED-NEXT:    [[OR:%.*]] = or disjoint i64 [[IV]], 1
 ; CHECK-UNORDERED-NEXT:    [[ARRAYIDXB2:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[OR]]
-; CHECK-UNORDERED-NEXT:    [[TMP19:%.*]] = load float, ptr [[ARRAYIDXB2]], align 4
-; CHECK-UNORDERED-NEXT:    [[ADD2]] = fadd float [[TMP19]], [[ADD_PHI1]]
+; CHECK-UNORDERED-NEXT:    [[TMP20:%.*]] = load float, ptr [[ARRAYIDXB2]], align 4
+; CHECK-UNORDERED-NEXT:    [[ADD2]] = fadd float [[TMP20]], [[ADD_PHI1]]
 ; CHECK-UNORDERED-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 2
 ; CHECK-UNORDERED-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
 ; CHECK-UNORDERED-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK-UNORDERED:       for.end:
-; CHECK-UNORDERED-NEXT:    [[ADD1_LCSSA:%.*]] = phi float [ [[ADD1]], [[FOR_BODY]] ], [ [[TMP17]], [[MIDDLE_BLOCK]] ]
-; CHECK-UNORDERED-NEXT:    [[ADD2_LCSSA:%.*]] = phi float [ [[ADD2]], [[FOR_BODY]] ], [ [[TMP16]], [[MIDDLE_BLOCK]] ]
+; CHECK-UNORDERED-NEXT:    [[ADD1_LCSSA:%.*]] = phi float [ [[ADD1]], [[FOR_BODY]] ], [ [[TMP18]], [[MIDDLE_BLOCK]] ]
+; CHECK-UNORDERED-NEXT:    [[ADD2_LCSSA:%.*]] = phi float [ [[ADD2]], [[FOR_BODY]] ], [ [[TMP17]], [[MIDDLE_BLOCK]] ]
 ; CHECK-UNORDERED-NEXT:    store float [[ADD1_LCSSA]], ptr [[A]], align 4
 ; CHECK-UNORDERED-NEXT:    store float [[ADD2_LCSSA]], ptr [[ARRAYIDXA]], align 4
 ; CHECK-UNORDERED-NEXT:    ret void
@@ -486,29 +486,29 @@ define void @fadd_strict_interleave(ptr noalias nocapture readonly %a, ptr noali
 ; CHECK-ORDERED-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 2
 ; CHECK-ORDERED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], [[TMP6]]
 ; CHECK-ORDERED-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
-; CHECK-ORDERED-NEXT:    [[TMP7:%.*]] = mul i64 [[N_VEC]], 2
+; CHECK-ORDERED-NEXT:    [[TMP7:%.*]] = shl i64 [[N_VEC]], 1
 ; CHECK-ORDERED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-ORDERED:       vector.body:
 ; CHECK-ORDERED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-ORDERED-NEXT:    [[VEC_PHI:%.*]] = phi float [ [[A2]], [[VECTOR_PH]] ], [ [[TMP11:%.*]], [[VECTOR_BODY]] ]
-; CHECK-ORDERED-NEXT:    [[VEC_PHI1:%.*]] = phi float [ [[A1]], [[VECTOR_PH]] ], [ [[TMP12:%.*]], [[VECTOR_BODY]] ]
-; CHECK-ORDERED-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
-; CHECK-ORDERED-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[OFFSET_IDX]]
-; CHECK-ORDERED-NEXT:    [[WIDE_VEC:%.*]] = load <vscale x 8 x float>, ptr [[TMP8]], align 4
+; CHECK-ORDERED-NEXT:    [[VEC_PHI:%.*]] = phi float [ [[A2]], [[VECTOR_PH]] ], [ [[TMP12:%.*]], [[VECTOR_BODY]] ]
+; CHECK-ORDERED-NEXT:    [[VEC_PHI1:%.*]] = phi float [ [[A1]], [[VECTOR_PH]] ], [ [[TMP13:%.*]], [[VECTOR_BODY]] ]
+; CHECK-ORDERED-NEXT:    [[TMP8:%.*]] = shl i64 [[INDEX]], 1
+; CHECK-ORDERED-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP8]]
+; CHECK-ORDERED-NEXT:    [[WIDE_VEC:%.*]] = load <vscale x 8 x float>, ptr [[TMP9]], align 4
 ; CHECK-ORDERED-NEXT:    [[STRIDED_VEC:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> [[WIDE_VEC]])
-; CHECK-ORDERED-NEXT:    [[TMP9:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 0
-; CHECK-ORDERED-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 1
-; CHECK-ORDERED-NEXT:    [[TMP11]] = call float @llvm.vector.reduce.fadd.nxv4f32(float [[VEC_PHI]], <vscale x 4 x float> [[TMP10]])
-; CHECK-ORDERED-NEXT:    [[TMP12]] = call float @llvm.vector.reduce.fadd.nxv4f32(float [[VEC_PHI1]], <vscale x 4 x float> [[TMP9]])
+; CHECK-ORDERED-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 0
+; CHECK-ORDERED-NEXT:    [[TMP11:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 1
+; CHECK-ORDERED-NEXT:    [[TMP12]] = call float @llvm.vector.reduce.fadd.nxv4f32(float [[VEC_PHI]], <vscale x 4 x float> [[TMP11]])
+; CHECK-ORDERED-NEXT:    [[TMP13]] = call float @llvm.vector.reduce.fadd.nxv4f32(float [[VEC_PHI1]], <vscale x 4 x float> [[TMP10]])
 ; CHECK-ORDERED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP6]]
-; CHECK-ORDERED-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-ORDERED-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-ORDERED-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-ORDERED-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK-ORDERED:       middle.block:
 ; CHECK-ORDERED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
 ; CHECK-ORDERED-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; CHECK-ORDERED:       scalar.ph:
-; CHECK-ORDERED-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP11]], [[MIDDLE_BLOCK]] ], [ [[A2]], [[ENTRY:%.*]] ]
-; CHECK-ORDERED-NEXT:    [[BC_MERGE_RDX2:%.*]] = phi float [ [[TMP12]], [[MIDDLE_BLOCK]] ], [ [[A1]], [[ENTRY]] ]
+; CHECK-ORDERED-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP12]], [[MIDDLE_BLOCK]] ], [ [[A2]], [[ENTRY:%.*]] ]
+; CHECK-ORDERED-NEXT:    [[BC_MERGE_RDX2:%.*]] = phi float [ [[TMP13]], [[MIDDLE_BLOCK]] ], [ [[A1]], [[ENTRY]] ]
 ; CHECK-ORDERED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP7]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
 ; CHECK-ORDERED-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK-ORDERED:       for.body:
@@ -516,18 +516,18 @@ define void @fadd_strict_interleave(ptr noalias nocapture readonly %a, ptr noali
 ; CHECK-ORDERED-NEXT:    [[ADD_PHI2:%.*]] = phi float [ [[BC_MERGE_RDX2]], [[SCALAR_PH]] ], [ [[ADD1:%.*]], [[FOR_BODY]] ]
 ; CHECK-ORDERED-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-ORDERED-NEXT:    [[ARRAYIDXB1:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[IV]]
-; CHECK-ORDERED-NEXT:    [[TMP14:%.*]] = load float, ptr [[ARRAYIDXB1]], align 4
-; CHECK-ORDERED-NEXT:    [[ADD1]] = fadd float [[TMP14]], [[ADD_PHI2]]
+; CHECK-ORDERED-NEXT:    [[TMP15:%.*]] = load float, ptr [[ARRAYIDXB1]], align 4
+; CHECK-ORDERED-NEXT:    [[ADD1]] = fadd float [[TMP15]], [[ADD_PHI2]]
 ; CHECK-ORDERED-NEXT:    [[OR:%.*]] = or disjoint i64 [[IV]], 1
 ; CHECK-ORDERED-NEXT:    [[ARRAYIDXB2:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[OR]]
-; CHECK-ORDERED-NEXT:    [[TMP15:%.*]] = load float, ptr [[ARRAYIDXB2]], align 4
-; CHECK-ORDERED-NEXT:    [[ADD2]] = fadd float [[TMP15]], [[ADD_PHI1]]
+; CHECK-ORDERED-NEXT:    [[TMP16:%.*]] = load float, ptr [[ARRAYIDXB2]], align 4
+; CHECK-ORDERED-NEXT:    [[ADD2]] = fadd float [[TMP16]], [[ADD_PHI1]]
 ; CHECK-ORDERED-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 2
 ; CHECK-ORDERED-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
 ; CHECK-ORDERED-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK-ORDERED:       for.end:
-; CHECK-ORDERED-NEXT:    [[ADD1_LCSSA:%.*]] = phi float [ [[ADD1]], [[FOR_BODY]] ], [ [[TMP12]], [[MIDDLE_BLOCK]] ]
-; CHECK-ORDERED-NEXT:    [[ADD2_LCSSA:%.*]] = phi float [ [[ADD2]], [[FOR_BODY]] ], [ [[TMP11]], [[MIDDLE_BLOCK]] ]
+; CHECK-ORDERED-NEXT:    [[ADD1_LCSSA:%.*]] = phi float [ [[ADD1]], [[FOR_BODY]] ], [ [[TMP13]], [[MIDDLE_BLOCK]] ]
+; CHECK-ORDERED-NEXT:    [[ADD2_LCSSA:%.*]] = phi float [ [[ADD2]], [[FOR_BODY]] ], [ [[TMP12]], [[MIDDLE_BLOCK]] ]
 ; CHECK-ORDERED-NEXT:    store float [[ADD1_LCSSA]], ptr [[A]], align 4
 ; CHECK-ORDERED-NEXT:    store float [[ADD2_LCSSA]], ptr [[ARRAYIDXA]], align 4
 ; CHECK-ORDERED-NEXT:    ret void
@@ -550,29 +550,29 @@ define void @fadd_strict_interleave(ptr noalias nocapture readonly %a, ptr noali
 ; CHECK-ORDERED-TF:       vector.body:
 ; CHECK-ORDERED-TF-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-ORDERED-TF-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 4 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-ORDERED-TF-NEXT:    [[VEC_PHI:%.*]] = phi float [ [[A2]], [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[VECTOR_BODY]] ]
-; CHECK-ORDERED-TF-NEXT:    [[VEC_PHI1:%.*]] = phi float [ [[A1]], [[VECTOR_PH]] ], [ [[TMP11:%.*]], [[VECTOR_BODY]] ]
-; CHECK-ORDERED-TF-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
-; CHECK-ORDERED-TF-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[OFFSET_IDX]]
+; CHECK-ORDERED-TF-NEXT:    [[VEC_PHI:%.*]] = phi float [ [[A2]], [[VECTOR_PH]] ], [ [[TMP10:%.*]], [[VECTOR_BODY]] ]
+; CHECK-ORDERED-TF-NEXT:    [[VEC_PHI1:%.*]] = phi float [ [[A1]], [[VECTOR_PH]] ], [ [[TMP12:%.*]], [[VECTOR_BODY]] ]
+; CHECK-ORDERED-TF-NEXT:    [[TMP5:%.*]] = shl i64 [[INDEX]], 1
+; CHECK-ORDERED-TF-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP5]]
 ; CHECK-ORDERED-TF-NEXT:    [[INTERLEAVED_MASK:%.*]] = call <vscale x 8 x i1> @llvm.vector.interleave2.nxv8i1(<vscale x 4 x i1> [[ACTIVE_LANE_MASK]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK]])
-; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_VEC:%.*]] = call <vscale x 8 x float> @llvm.masked.load.nxv8f32.p0(ptr align 4 [[TMP5]], <vscale x 8 x i1> [[INTERLEAVED_MASK]], <vscale x 8 x float> poison)
+; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_VEC:%.*]] = call <vscale x 8 x float> @llvm.masked.load.nxv8f32.p0(ptr align 4 [[TMP6]], <vscale x 8 x i1> [[INTERLEAVED_MASK]], <vscale x 8 x float> poison)
 ; CHECK-ORDERED-TF-NEXT:    [[STRIDED_VEC:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> [[WIDE_MASKED_VEC]])
-; CHECK-ORDERED-TF-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 0
-; CHECK-ORDERED-TF-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 1
-; CHECK-ORDERED-TF-NEXT:    [[TMP8:%.*]] = select <vscale x 4 x i1> [[ACTIVE_LANE_MASK]], <vscale x 4 x float> [[TMP7]], <vscale x 4 x float> splat (float -0.000000e+00)
-; CHECK-ORDERED-TF-NEXT:    [[TMP9]] = call float @llvm.vector.reduce.fadd.nxv4f32(float [[VEC_PHI]], <vscale x 4 x float> [[TMP8]])
-; CHECK-ORDERED-TF-NEXT:    [[TMP10:%.*]] = select <vscale x 4 x i1> [[ACTIVE_LANE_MASK]], <vscale x 4 x float> [[TMP6]], <vscale x 4 x float> splat (float -0.000000e+00)
-; CHECK-ORDERED-TF-NEXT:    [[TMP11]] = call float @llvm.vector.reduce.fadd.nxv4f32(float [[VEC_PHI1]], <vscale x 4 x float> [[TMP10]])
+; CHECK-ORDERED-TF-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 0
+; CHECK-ORDERED-TF-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 1
+; CHECK-ORDERED-TF-NEXT:    [[TMP9:%.*]] = select <vscale x 4 x i1> [[ACTIVE_LANE_MASK]], <vscale x 4 x float> [[TMP8]], <vscale x 4 x float> splat (float -0.000000e+00)
+; CHECK-ORDERED-TF-NEXT:    [[TMP10]] = call float @llvm.vector.reduce.fadd.nxv4f32(float [[VEC_PHI]], <vscale x 4 x float> [[TMP9]])
+; CHECK-ORDERED-TF-NEXT:    [[TMP11:%.*]] = select <vscale x 4 x i1> [[ACTIVE_LANE_MASK]], <vscale x 4 x float> [[TMP7]], <vscale x 4 x float> splat (float -0.000000e+00)
+; CHECK-ORDERED-TF-NEXT:    [[TMP12]] = call float @llvm.vector.reduce.fadd.nxv4f32(float [[VEC_PHI1]], <vscale x 4 x float> [[TMP11]])
 ; CHECK-ORDERED-TF-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP4]]
 ; CHECK-ORDERED-TF-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX_NEXT]], i64 [[TMP2]])
-; CHECK-ORDERED-TF-NEXT:    [[TMP12:%.*]] = extractelement <vscale x 4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
-; CHECK-ORDERED-TF-NEXT:    [[TMP13:%.*]] = xor i1 [[TMP12]], true
-; CHECK-ORDERED-TF-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-ORDERED-TF-NEXT:    [[TMP13:%.*]] = extractelement <vscale x 4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
+; CHECK-ORDERED-TF-NEXT:    [[TMP14:%.*]] = xor i1 [[TMP13]], true
+; CHECK-ORDERED-TF-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK-ORDERED-TF:       middle.block:
 ; CHECK-ORDERED-TF-NEXT:    br label [[FOR_END:%.*]]
 ; CHECK-ORDERED-TF:       for.end:
-; CHECK-ORDERED-TF-NEXT:    store float [[TMP11]], ptr [[A]], align 4
-; CHECK-ORDERED-TF-NEXT:    store float [[TMP9]], ptr [[ARRAYIDXA]], align 4
+; CHECK-ORDERED-TF-NEXT:    store float [[TMP12]], ptr [[A]], align 4
+; CHECK-ORDERED-TF-NEXT:    store float [[TMP10]], ptr [[ARRAYIDXA]], align 4
 ; CHECK-ORDERED-TF-NEXT:    ret void
 ;
 

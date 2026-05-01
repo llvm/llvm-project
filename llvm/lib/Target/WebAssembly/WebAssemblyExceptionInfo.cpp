@@ -39,7 +39,7 @@ bool WebAssemblyExceptionInfo::runOnMachineFunction(MachineFunction &MF) {
                        "********** Function: "
                     << MF.getName() << '\n');
   releaseMemory();
-  if (MF.getTarget().getMCAsmInfo()->getExceptionHandlingType() !=
+  if (MF.getTarget().getMCAsmInfo().getExceptionHandlingType() !=
           ExceptionHandling::Wasm ||
       !MF.getFunction().hasPersonalityFn())
     return false;

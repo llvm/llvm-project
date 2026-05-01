@@ -6692,14 +6692,14 @@ multiclass SIMDThreeSameVectorMLAL<bit Q, bits<2> sz, string asm, SDPatternOpera
                                          V128, v4f32, v16i8, op>;
 }
 
-multiclass SIMDThreeSameVectorFMLA<string asm> {
+multiclass SIMDThreeSameVectorFMLA<string asm, SDPatternOperator OpNode = null_frag> {
   def v8f16_v8f16 : BaseSIMDThreeSameVectorDot<0b1, 0b0, 0b11, 0b1101, asm, ".8h", ".8h",
-                                          V128, v8f16, v8f16, null_frag>;
+                                          V128, v8f16, v8f16, OpNode>;
 }
 
-multiclass SIMDThreeSameVectorFMLAWiden<string asm> {
+multiclass SIMDThreeSameVectorFMLAWiden<string asm, SDPatternOperator OpNode = null_frag> {
   def v8f16_v4f32 : BaseSIMDThreeSameVectorDot<0b1, 0b0, 0b01, 0b1101, asm, ".4s", ".8h",
-                                          V128, v4f32, v8f16, null_frag>;
+                                          V128, v4f32, v8f16, OpNode>;
 }
 
 multiclass SIMDThreeSameVectorFDot<string asm, SDPatternOperator OpNode = null_frag> {

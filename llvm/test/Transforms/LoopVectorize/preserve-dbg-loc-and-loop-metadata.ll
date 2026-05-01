@@ -82,7 +82,7 @@ define void @widen_ptr_induction_dbg(ptr %start, ptr %end) {
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], 8
+; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP4]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -124,7 +124,7 @@ define void @widen_ptr_induction_dbg(ptr %start, ptr %end) {
 ; DEBUGLOC:       [[VECTOR_PH]]:
 ; DEBUGLOC-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 4
 ; DEBUGLOC-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
-; DEBUGLOC-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], 8
+; DEBUGLOC-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 3
 ; DEBUGLOC-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP4]]
 ; DEBUGLOC-NEXT:    br label %[[VECTOR_BODY:.*]], !dbg [[DBG34]]
 ; DEBUGLOC:       [[VECTOR_BODY]]:

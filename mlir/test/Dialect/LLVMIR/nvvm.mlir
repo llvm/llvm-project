@@ -133,6 +133,14 @@ func.func @nvvm_vote(%arg0 : i32, %arg1 : i1) -> i32 {
   llvm.return %0 : i32
 }
 
+// CHECK-LABEL: @nvvm_movmatrix
+func.func @nvvm_movmatrix(%src : i32) -> i32 {
+  // CHECK: nvvm.movmatrix %{{.*}} {eltType = #nvvm.ld_st_matrix_elt_type<b16>, shape = #nvvm.ld_st_matrix_shape<m = 8, n = 8>} : i32
+  %dst = nvvm.movmatrix %src {shape = #nvvm.ld_st_matrix_shape<m = 8, n = 8>,
+                              eltType = #nvvm.ld_st_matrix_elt_type<b16>} : i32
+  llvm.return %dst : i32
+}
+
 // CHECK-LABEL: @llvm_nvvm_bar_warp_sync
 func.func @llvm_nvvm_bar_warp_sync(%mask : i32) {
   // CHECK: nvvm.bar.warp.sync %{{.*}}

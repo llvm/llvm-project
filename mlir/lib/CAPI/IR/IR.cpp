@@ -403,6 +403,14 @@ MlirLocation mlirLocationUnknownGet(MlirContext context) {
   return wrap(Location(UnknownLoc::get(unwrap(context))));
 }
 
+MlirTypeID mlirLocationUnknownGetTypeID() {
+  return wrap(UnknownLoc::getTypeID());
+}
+
+bool mlirLocationIsAUnknown(MlirLocation location) {
+  return isa<UnknownLoc>(unwrap(location));
+}
+
 bool mlirLocationEqual(MlirLocation l1, MlirLocation l2) {
   return unwrap(l1) == unwrap(l2);
 }

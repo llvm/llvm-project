@@ -49,13 +49,13 @@ define void @wrap_around_scev_check(ptr noalias %a, ptr noalias %b, i8 %x, i8 %y
 ; CHECK-NEXT:    [[TMP7:%.*]] = select i1 [[TMP6]], i64 4, i64 [[N_MOD_VF]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[TMP7]]
 ; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC]] to i8
-; CHECK-NEXT:    [[TMP8:%.*]] = mul i8 [[DOTCAST]], 2
+; CHECK-NEXT:    [[TMP8:%.*]] = shl i8 [[DOTCAST]], 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i8 [[X]], [[TMP8]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[DOTCAST2:%.*]] = trunc i64 [[INDEX]] to i8
-; CHECK-NEXT:    [[TMP10:%.*]] = mul i8 [[DOTCAST2]], 2
+; CHECK-NEXT:    [[TMP10:%.*]] = shl i8 [[DOTCAST2]], 1
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i8 [[X]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = zext i8 [[OFFSET_IDX]] to i64
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP11]]
@@ -71,11 +71,11 @@ define void @wrap_around_scev_check(ptr noalias %a, ptr noalias %b, i8 %x, i8 %y
 ; CHECK-NEXT:    br label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[LOOP_PREHEADER]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i8 [ [[TMP9]], %[[MIDDLE_BLOCK]] ], [ [[X]], %[[LOOP_PREHEADER]] ], [ [[X]], %[[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i8 [ [[TMP9]], %[[MIDDLE_BLOCK]] ], [ [[X]], %[[LOOP_PREHEADER]] ], [ [[X]], %[[VECTOR_SCEVCHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[INDEX_011:%.*]] = phi i8 [ [[BC_RESUME_VAL3]], %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[INDEX_011:%.*]] = phi i8 [ [[BC_RESUME_VAL2]], %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i8 [[INDEX_011]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IDXPROM]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
@@ -122,7 +122,7 @@ exit:
 define void @wrap_predicate_for_interleave_group_wraps_for_known_trip_count(ptr noalias %x, ptr noalias %out) {
 ; CHECK-LABEL: define void @wrap_predicate_for_interleave_group_wraps_for_known_trip_count(
 ; CHECK-SAME: ptr noalias [[X:%.*]], ptr noalias [[OUT:%.*]]) {
-; CHECK-NEXT:  [[START:.*]]:
+; CHECK-NEXT:  [[START:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:
 ; CHECK-NEXT:    [[MUL:%.*]] = call { i4, i1 } @llvm.umul.with.overflow.i4(i4 5, i4 -1)

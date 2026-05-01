@@ -534,7 +534,8 @@ define <32 x half> @vfnmsac_vf_v26f16_unmasked(<32 x half> %a, half %b, <32 x ha
 define <32 x half> @vfnmsac_vv_v26f16_ta(<32 x half> %a, <32 x half> %b, <32 x half> %c, <32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmsac_vv_v26f16_ta:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 26, e16, m4, ta, mu
+; CHECK-NEXT:    li a0, 32
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, mu
 ; CHECK-NEXT:    vfnmsac.vv v16, v8, v12, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v16
 ; CHECK-NEXT:    ret
@@ -547,7 +548,8 @@ define <32 x half> @vfnmsac_vv_v26f16_ta(<32 x half> %a, <32 x half> %b, <32 x h
 define <32 x half> @vfnmsac_vf_v26f16_ta(<32 x half> %a, half %b, <32 x half> %c, <32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmsac_vf_v26f16_ta:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 26, e16, m4, ta, mu
+; CHECK-NEXT:    li a0, 32
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, mu
 ; CHECK-NEXT:    vfnmsac.vf v12, fa0, v8, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v12
 ; CHECK-NEXT:    ret
@@ -562,7 +564,8 @@ define <32 x half> @vfnmsac_vf_v26f16_ta(<32 x half> %a, half %b, <32 x half> %c
 define <32 x half> @vfnmsac_vf_v26f16_commute_ta(<32 x half> %a, half %b, <32 x half> %c, <32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmsac_vf_v26f16_commute_ta:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 26, e16, m4, ta, mu
+; CHECK-NEXT:    li a0, 32
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, mu
 ; CHECK-NEXT:    vfnmsac.vf v12, fa0, v8, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v12
 ; CHECK-NEXT:    ret

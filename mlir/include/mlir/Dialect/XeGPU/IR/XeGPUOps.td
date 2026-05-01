@@ -77,11 +77,6 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
        For the case of dynamic memrefs or pointer, the shape and layout information of the
        memory region should be explicitly passed via `shape` and `strides` parameters.
 
-    - `offsets`: [optional] index values represents offsets from the "source" at the each dimension
-        at which the subview of the target memory will be created. It is encoded via
-        "offsets" and "const_offsets", such that it can accept various forms, such as,
-        operands (e.g., [%c0, %c]) and attributes (e.g., [2, 4]). Offsets is optional and may be set at load_nd, store_nd, and prefetch_nd.
-
     - `shape`: the shape information of the memory region pointed by the "source". It is
          typically encoded via the MemRefType of the source, e.g., memref<4096x4096xf16>.
         But if "source" is simply a pointer represented as uint64_t type, or a memref
@@ -100,41 +95,34 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
     Example 1 (suppose the tensor shape inferred by the compiler is 8x16):
     ```mlir
     %0 = memref.alloc() : memref<1024x1024xf32>
-    %c0 = arith.constant 0 : index
-    %c1 = arith.constant 1 : index
-    %1 = xegpu.create_nd_tdesc %0[%c0, %c0]: memref<1024x1024xf32> -> TensorDesc<8x16xf32>
+    %1 = xegpu.create_nd_tdesc %0 : memref<1024x1024xf32> -> TensorDesc<8x16xf32>
     ```
 
     Example 2 (suppose the tensor shape inferred by the compiler is 8x16):
     ```mlir
     %0 = memref.alloc(%h, %w) : memref<?x?xf32>
-    %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
-    %1 = xegpu.create_nd_tdesc %0[%c0, %c0], [%h, %w], [%w, %c1]: memref<?x?xf32> -> TensorDesc<8x16xf32>
+    %1 = xegpu.create_nd_tdesc %0, shape:[%h, %w], strides:[%w, %c1]: memref<?x?xf32> -> TensorDesc<8x16xf32>
     ```
 
     Example 3 (suppose the tensor shape inferred by the compiler is 8x16):
     ```mlir
     %0 = ... : ui64
-    %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
-    %1 = xegpu.create_nd_tdesc %0[%c0, %c0], [%h, %w], [%w, %c1]: ui64 -> TensorDesc<8x16xf32>
+    %1 = xegpu.create_nd_tdesc %0, shape:[%h, %w], strides:[%w, %c1]: ui64 -> TensorDesc<8x16xf32>
     ```
   }];
 
   let arguments = (ins
     XeGPU_BaseAddrType: $source,
-    Variadic<Index>: $offsets,
     Variadic<Index>: $shape,
     Variadic<Index>: $strides,
-    OptionalAttr<DenseI64ArrayAttr>: $const_offsets,
     OptionalAttr<DenseI64ArrayAttr>: $const_shape,
     OptionalAttr<DenseI64ArrayAttr>: $const_strides
   );
 
   let assemblyFormat = [{
     $source ``
-    custom<OptionalDynamicIndexList>($offsets, $const_offsets)
     (`,` `shape` `:` custom<DynamicIndexList>($shape, $const_shape)^
      `,` `strides``:` custom<DynamicIndexList>($strides, $const_strides))?
     attr-dict `:` type($source) `->` qualified(type($TensorDesc))
@@ -148,14 +136,6 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
     OpBuilder<(ins "Type": $tdesc, "TypedValue<MemRefType>": $source)>,
 
     OpBuilder<(ins "Type": $tdesc, "Value ": $source,
-                   "llvm::ArrayRef<OpFoldResult>": $shape,
-                   "llvm::ArrayRef<OpFoldResult>": $strides)>,
-
-    OpBuilder<(ins "Type": $tdesc, "TypedValue<MemRefType>": $source,
-                   "llvm::ArrayRef<OpFoldResult>": $offsets)>,
-
-    OpBuilder<(ins "Type": $tdesc, "Value": $source,
-                   "llvm::ArrayRef<OpFoldResult>": $offsets,
                    "llvm::ArrayRef<OpFoldResult>": $shape,
                    "llvm::ArrayRef<OpFoldResult>": $strides)>
   ];
@@ -179,14 +159,6 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
     /// Return the shape of the TensorDesc
     llvm::ArrayRef<int64_t> getTensorDescShape() {
       return getType().getShape();
-    }
-
-    SmallVector<OpFoldResult> getMixedOffsets() {
-      auto statics = getConstOffsets().value_or(SmallVector<int64_t>());
-      auto dynamics = getOffsets();
-      if (statics.size() == 0 && dynamics.size() == 0)
-        return {};
-      return getMixedValues(statics, dynamics, getContext());
     }
 
     SmallVector<OpFoldResult> getMixedSizes() {
@@ -261,7 +233,7 @@ def XeGPU_PrefetchNdOp : XeGPU_Op<"prefetch_nd", [AnchorLayoutInterface]> {
     - `TensorDesc`: A tensor descriptor specifying the base nd-region of
       memory and tensor tile to be prefetched.
 
-    - `offsets`: [optional] index values representing per-dimension offsets from the
+    - `offsets`: index values representing per-dimension offsets from the
       base position encoded in `TensorDesc`. It is encoded via "offsets"
       and "const_offsets".
 
@@ -286,7 +258,7 @@ def XeGPU_PrefetchNdOp : XeGPU_Op<"prefetch_nd", [AnchorLayoutInterface]> {
 
   let arguments = (ins XeGPU_TensorDesc: $TensorDesc,
                        Variadic<Index>: $offsets,
-                       OptionalAttr<DenseI64ArrayAttr>: $const_offsets,
+                       DenseI64ArrayAttr: $const_offsets,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint,
@@ -306,11 +278,7 @@ def XeGPU_PrefetchNdOp : XeGPU_Op<"prefetch_nd", [AnchorLayoutInterface]> {
     }
 
    SmallVector<OpFoldResult> getMixedOffsets() {
-      auto statics = getConstOffsets().value_or(SmallVector<int64_t>());
-      auto dynamics = getOffsets();
-      if (statics.size() == 0 && dynamics.size() == 0)
-        return {};
-      return getMixedValues(statics, dynamics, getContext());
+      return getMixedValues(getConstOffsets(), getOffsets(), getContext());
     }
 
     xegpu::DistributeLayoutAttr getDescLayoutAttr() {
@@ -325,15 +293,11 @@ def XeGPU_PrefetchNdOp : XeGPU_Op<"prefetch_nd", [AnchorLayoutInterface]> {
 
   let assemblyFormat = [{
     $TensorDesc ``
-    custom<OptionalDynamicIndexList>($offsets, $const_offsets)
+    custom<DynamicIndexList>($offsets, $const_offsets)
     prop-dict attr-dict `:` qualified(type($TensorDesc))
   }];
 
   let builders = [
-    OpBuilder<(ins "Value": $TensorDesc,
-                   "xegpu::CachePolicyAttr": $l1_hint,
-                   "xegpu::CachePolicyAttr": $l2_hint,
-                   "xegpu::CachePolicyAttr": $l3_hint)>,
     OpBuilder<(ins "Value": $TensorDesc,
                    "ArrayRef<OpFoldResult>": $offsets,
                    "xegpu::CachePolicyAttr": $l1_hint,
@@ -409,7 +373,7 @@ def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [
 
   let arguments = (ins XeGPU_TensorDesc: $TensorDesc,
                        Variadic<Index>: $offsets,
-                       OptionalAttr<DenseI64ArrayAttr>: $const_offsets,
+                       DenseI64ArrayAttr: $const_offsets,
                        OptionalAttr<UnitAttr>: $packed,
                        OptionalAttr<DenseI64ArrayAttr>: $transpose,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
@@ -437,11 +401,7 @@ def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [
     }
 
     SmallVector<OpFoldResult> getMixedOffsets() {
-      auto statics = getConstOffsets().value_or(SmallVector<int64_t>());
-      auto dynamics = getOffsets();
-      if (statics.size() == 0 && dynamics.size() == 0)
-        return {};
-      return getMixedValues(statics, dynamics, getContext());
+      return getMixedValues(getConstOffsets(), getOffsets(), getContext());
     }
 
     xegpu::DistributeLayoutAttr getDescLayoutAttr() {
@@ -456,16 +416,11 @@ def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [
 
   let assemblyFormat = [{
     $TensorDesc ``
-    custom<OptionalDynamicIndexList>($offsets, $const_offsets)
+    custom<DynamicIndexList>($offsets, $const_offsets)
     prop-dict attr-dict `:` qualified(type($TensorDesc)) `->` type($value)
   }];
 
   let builders = [
-    OpBuilder<(ins "Type": $value, "Value": $TensorDesc,
-                    "UnitAttr": $packed, "DenseI64ArrayAttr": $transpose,
-                    "xegpu::CachePolicyAttr": $l1_hint,
-                    "xegpu::CachePolicyAttr": $l2_hint,
-                    "xegpu::CachePolicyAttr": $l3_hint)>,
     OpBuilder<(ins "Type": $value, "Value": $TensorDesc,
                     "ArrayRef<OpFoldResult>": $offsets,
                     "UnitAttr": $packed, "DenseI64ArrayAttr": $transpose,
@@ -534,7 +489,7 @@ def XeGPU_StoreNdOp : XeGPU_Op<"store_nd", [
   let arguments = (ins XeGPU_ValueType: $value,
                        XeGPU_TensorDesc: $TensorDesc,
                        Variadic<Index>: $offsets,
-                       OptionalAttr<DenseI64ArrayAttr>: $const_offsets,
+                       DenseI64ArrayAttr: $const_offsets,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint,
@@ -558,11 +513,7 @@ def XeGPU_StoreNdOp : XeGPU_Op<"store_nd", [
     }
 
     SmallVector<OpFoldResult> getMixedOffsets() {
-      auto statics = getConstOffsets().value_or(SmallVector<int64_t>());
-      auto dynamics = getOffsets();
-      if (statics.size() == 0 && dynamics.size() == 0)
-        return {};
-      return getMixedValues(statics, dynamics, getContext());
+      return getMixedValues(getConstOffsets(), getOffsets(), getContext());
     }
 
     xegpu::DistributeLayoutAttr getDescLayoutAttr() {
@@ -578,15 +529,11 @@ def XeGPU_StoreNdOp : XeGPU_Op<"store_nd", [
    let assemblyFormat = [{
     $value `,`
     $TensorDesc ``
-    custom<OptionalDynamicIndexList>($offsets, $const_offsets)
+    custom<DynamicIndexList>($offsets, $const_offsets)
     prop-dict attr-dict `:`  type($value) `,` qualified(type($TensorDesc))
   }];
 
   let builders = [
-    OpBuilder<(ins "Value": $value, "Value": $TensorDesc,
-                   "xegpu::CachePolicyAttr": $l1_hint,
-                   "xegpu::CachePolicyAttr": $l2_hint,
-                   "xegpu::CachePolicyAttr": $l3_hint)>,
     OpBuilder<(ins "Value": $value, "Value": $TensorDesc,
                   "ArrayRef<OpFoldResult>": $offsets,
                   "xegpu::CachePolicyAttr": $l1_hint,
@@ -595,55 +542,6 @@ def XeGPU_StoreNdOp : XeGPU_Op<"store_nd", [
                   "xegpu::DistributeLayoutAttr": $layout)>
   ];
 
-
-  let hasVerifier = 1;
-}
-
-def XeGPU_UpdateNdOffsetOp : XeGPU_Op<"update_nd_offset",
-                [Pure, AllTypesMatch<["TensorDesc", "result"]>]> {
-  let summary = "It updates the offsets for the TensorDesc.";
-  let description = [{The op updates the offset of the given TensorDesc.
-    The offsets are relative offset to the current position in the number
-    of elements. It will result in a same type TensorDesc as the input.
-
-  Example:
-  ```
-    %2 = xegpu.update_nd_offset %1, [0, 16]: !xegpu.tensor_desc<8x16xf32>
-  ```
-  }];
-
-  let arguments = (ins
-    XeGPU_TensorDesc: $TensorDesc,
-    Variadic<Index>: $offsets,
-    DenseI64ArrayAttr: $const_offsets);
-
-  let results = (outs XeGPU_TensorDesc: $result);
-
-  let extraClassDeclaration = extraBaseClassDeclaration # [{
-    xegpu::TensorDescType getTensorDescType() {
-      return getTensorDesc().getType();
-    }
-
-    SmallVector<OpFoldResult> getMixedOffsets() {
-      Builder b(getContext());
-      return getMixedValues(getConstOffsets(), getOffsets(), b);
-    }
-
-    size_t getNumOffsets() {
-      return getMixedOffsets().size();
-    }
-
-    OpFoldResult getOffset(unsigned idx) {
-      assert(idx < getNumOffsets() && "Invalid out of bound access.");
-      return getMixedOffsets()[idx];
-    }
-  }];
-
-  let assemblyFormat = [{
-    $TensorDesc `,`
-    custom<DynamicIndexList>($offsets, $const_offsets)
-    attr-dict `:` qualified(type($result))
-  }];
 
   let hasVerifier = 1;
 }
@@ -679,12 +577,14 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", [AnchorLayoutInterface]> {
 
     Example 1 (Workgroup level):
     ```mlir
-      xegpu.prefetch %tdesc {l1_hint = #xegpu.cache_hint<cached>,
+      %a = memref.alloc() : memref<256xf16>
+      %offsets = arith.constant dense<[0, 1, ..., 255]> : vector<256xindex>
+      xegpu.prefetch %a[%offsets] {l1_hint = #xegpu.cache_hint<cached>,
                              l2_hint = #xegpu.cache_hint<cached>,
                              l3_hint = #xegpu.cache_hint<cached>,
                              layout = #xegpu.layout<sg_layout = [8], sg_data = [32]>
                              }
-        : !xegpu.tensor_desc<256xf16>
+        : memref<256xf16>, vector<256xindex>
     ```
 
     Example 2 (lane level):
@@ -720,8 +620,8 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", [AnchorLayoutInterface]> {
 
   }];
 
-  let arguments = (ins XeGPU_GatherScatterSourceType:$source,
-      Optional<AnyTypeOf<[XeGPU_OffsetType, Index]>>:$offsets,
+  let arguments = (ins XeGPU_GatherScatterBaseAddrType:$source,
+      AnyTypeOf<[XeGPU_OffsetType, Index]>:$offsets,
       OptionalAttr<XeGPU_CacheHintAttr>:$l1_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l2_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l3_hint,
@@ -741,32 +641,13 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", [AnchorLayoutInterface]> {
       setLayoutAttr(anchorLayout);
     }
 
-    TypedValue<xegpu::TensorDescType> getTensorDesc() {
-      if (auto tdescType = getTensorDescType()) {
-        return llvm::cast<TypedValue<xegpu::TensorDescType>>(getSource());
-      }
-      return TypedValue<xegpu::TensorDescType>();
-    }
-
-    xegpu::TensorDescType getTensorDescType() {
-      return dyn_cast<xegpu::TensorDescType>(getSourceType());
-    }
-
   }];
 
   let assemblyFormat = [{
-    $source
-    (`[` $offsets^ `]`)?
+    $source `[` $offsets `]`
     prop-dict
     attr-dict `:` type(operands)
   }];
-
-  let builders = [
-    OpBuilder<(ins "Value": $source,
-                    "xegpu::CachePolicyAttr": $l1_hint,
-                    "xegpu::CachePolicyAttr": $l2_hint,
-                    "xegpu::CachePolicyAttr": $l3_hint)>
-  ];
 
   let hasVerifier = 1;
 }
@@ -837,8 +718,8 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>, AnchorLayou
 
   }];
 
-  let arguments = (ins XeGPU_GatherScatterSourceType:$source,
-      Optional<AnyTypeOf<[XeGPU_OffsetType, Index]>>:$offsets,
+  let arguments = (ins XeGPU_GatherScatterBaseAddrType:$source,
+      AnyTypeOf<[XeGPU_OffsetType, Index]>:$offsets,
       AnyTypeOf<[XeGPU_MaskType, I1]>:$mask, OptionalAttr<I64Attr>:$chunk_size,
       OptionalAttr<XeGPU_CacheHintAttr>:$l1_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l2_hint,
@@ -860,17 +741,6 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>, AnchorLayou
       setLayoutAttr(anchorLayout);
     }
 
-    TypedValue<xegpu::TensorDescType> getTensorDesc() {
-      if (auto tdescType = getTensorDescType()) {
-        return llvm::cast<TypedValue<xegpu::TensorDescType>>(getSource());
-      }
-      return TypedValue<xegpu::TensorDescType>();
-    }
-
-    xegpu::TensorDescType getTensorDescType() {
-       return dyn_cast<xegpu::TensorDescType>(getSourceType());
-    }
-
     mlir::Type getElementType() {
       auto type = getValue().getType();
       return getElementTypeOrSelf(type);
@@ -887,17 +757,12 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>, AnchorLayou
   }];
 
   let assemblyFormat = [{
-    $source
-    (`[` $offsets^ `]`)? `,`
+    $source `[` $offsets `]` `,`
     $mask prop-dict
     attr-dict `:` type(operands) `->` type($value)
   }];
 
   let builders = [
-    OpBuilder<(ins "Type": $value, "Value": $source, "Value": $mask,
-                    "xegpu::CachePolicyAttr": $l1_hint,
-                    "xegpu::CachePolicyAttr": $l2_hint,
-                    "xegpu::CachePolicyAttr": $l3_hint)>,
     OpBuilder<(ins "Type": $value, "Value": $source,
                     "ArrayRef<OpFoldResult>": $offsets, "Value": $mask,
                     "IntegerAttr": $chunk_size,
@@ -983,8 +848,8 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>, AnchorL
   }];
 
   let arguments = (ins XeGPU_ValueOrScalarType:$value,
-      XeGPU_GatherScatterSourceType:$dest,
-      Optional<AnyTypeOf<[XeGPU_OffsetType, Index]>>:$offsets,
+      XeGPU_GatherScatterBaseAddrType:$dest,
+      AnyTypeOf<[XeGPU_OffsetType, Index]>:$offsets,
       AnyTypeOf<[XeGPU_MaskType, I1]>:$mask, OptionalAttr<I64Attr>:$chunk_size,
       OptionalAttr<XeGPU_CacheHintAttr>:$l1_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l2_hint,
@@ -1004,17 +869,6 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>, AnchorL
       setLayoutAttr(anchorLayout);
     }
 
-    TypedValue<xegpu::TensorDescType> getTensorDesc() {
-      if (auto tdescType = getTensorDescType()) {
-        return llvm::cast<TypedValue<xegpu::TensorDescType>>(getDest());
-      }
-      return TypedValue<xegpu::TensorDescType>();
-    }
-
-    xegpu::TensorDescType getTensorDescType() {
-      return dyn_cast<xegpu::TensorDescType>(getDestType());
-    }
-
     mlir::Type getElementType() {
       auto type = getValue().getType();
       return getElementTypeOrSelf(type);
@@ -1031,18 +885,13 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>, AnchorL
 
   let assemblyFormat = [{
     $value `,`
-    $dest
-    (`[` $offsets^ `]`)? `,`
+    $dest `[` $offsets `]` `,`
     $mask
     prop-dict
     attr-dict `:`  type(operands)
   }];
 
   let builders = [
-    OpBuilder<(ins "Value": $value, "Value": $dest, "Value": $mask,
-                    "xegpu::CachePolicyAttr": $l1_hint,
-                    "xegpu::CachePolicyAttr": $l2_hint,
-                    "xegpu::CachePolicyAttr": $l3_hint)>,
     OpBuilder<(ins "Value": $value, "Value": $dest,
                     "ArrayRef<OpFoldResult>": $offsets, "Value": $mask,
                     "IntegerAttr": $chunk_size,
@@ -1554,7 +1403,6 @@ def XeGPU_TruncfOp
 }
 
 def XeGPU_DpasMxOp : XeGPU_Op<"dpas_mx", [Pure, AttrSizedOperandSegments,
-                                          AllElementTypesMatch<["a", "b"]>,
                                           AnchorLayoutInterface]> {
   let summary = "It performs scaled mma computation";
 
@@ -1601,7 +1449,9 @@ def XeGPU_DpasMxOp : XeGPU_Op<"dpas_mx", [Pure, AttrSizedOperandSegments,
                           VectorOfRankAndType<[1, 2], [F8E8M0FNU]>]>>:$scale_b,
       OptionalAttr<DistributeLayoutAttr>:$layout_a,
       OptionalAttr<DistributeLayoutAttr>:$layout_b,
-      OptionalAttr<DistributeLayoutAttr>:$layout_cd);
+      OptionalAttr<DistributeLayoutAttr>:$layout_cd,
+      OptionalAttr<DistributeLayoutAttr>:$layout_a_scale,
+      OptionalAttr<DistributeLayoutAttr>:$layout_b_scale);
   let results = (outs XeGPU_DpasResType:$result);
   let extraClassDeclaration = [{
 

@@ -9,6 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfWasm  # no expression evaluation
 class Radar9531204TestCase(TestBase):
     # rdar://problem/9531204
     def test_expr_commands(self):

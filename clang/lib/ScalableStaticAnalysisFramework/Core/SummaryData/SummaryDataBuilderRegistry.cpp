@@ -12,7 +12,7 @@ using namespace clang;
 using namespace ssaf;
 
 using RegistryT = llvm::Registry<SummaryDataBuilderBase>;
-LLVM_INSTANTIATE_REGISTRY(RegistryT)
+LLVM_DEFINE_REGISTRY(RegistryT)
 
 namespace {
 const RegistryT::entry *findEntry(llvm::StringRef Name) {

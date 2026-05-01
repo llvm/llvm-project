@@ -552,8 +552,16 @@ static inline Type *restoreMutatedType(SPIRVGlobalRegistry *GR, Instruction *I,
 Type *SPIRVEmitIntrinsics::reconstructType(Value *Op, bool UnknownElemTypeI8,
                                            bool IsPostprocessing) {
   Type *Ty = Op->getType();
-  if (auto *OpI = dyn_cast<Instruction>(Op))
+  if (auto *OpI = dyn_cast<Instruction>(Op)) {
     Ty = restoreMutatedType(GR, OpI, Ty);
+    // Aggregate undef/constant values are lowered to spv_undef/
+    // spv_const_composite intrinsics whose return type is i32; recover the
+    // original aggregate type so downstream pointee deduction sees it.
+    if (match(OpI, m_CombineOr(m_Intrinsic<Intrinsic::spv_undef>(),
+                               m_Intrinsic<Intrinsic::spv_const_composite>())))
+      if (auto It = AggrConstTypes.find(OpI); It != AggrConstTypes.end())
+        Ty = It->second;
+  }
   if (!isUntypedPointerTy(Ty))
     return Ty;
   // try to find the pointee type
@@ -2039,6 +2047,15 @@ void SPIRVEmitIntrinsics::insertPtrCastOrAssignTypeInstr(Instruction *I,
     Type *OpTy = Op->getType();
     if (auto *OpI = dyn_cast<Instruction>(Op))
       OpTy = restoreMutatedType(GR, OpI, OpTy);
+    // Aggregate undef/constant values were lowered by preprocessUndefs/
+    // preprocessCompositeConstants to spv_undef/spv_const_composite calls
+    // returning i32; recover the original aggregate type so the pointee type
+    // assigned to the store's pointer operand reflects the value being stored.
+    if (match(Op, m_CombineOr(m_Intrinsic<Intrinsic::spv_undef>(),
+                              m_Intrinsic<Intrinsic::spv_const_composite>())))
+      if (auto It = AggrConstTypes.find(cast<Instruction>(Op));
+          It != AggrConstTypes.end())
+        OpTy = It->second;
     if (OpTy == Op->getType())
       OpTy = deduceElementTypeByValueDeep(OpTy, Op, false);
     replacePointerOperandWithPtrCast(I, Pointer, OpTy, 1, B);

@@ -37,8 +37,8 @@
 #      warning "Libc++ only supports Clang 21 and later"
 #    endif
 #  elif defined(_LIBCPP_APPLE_CLANG_VER)
-#    if _LIBCPP_APPLE_CLANG_VER < 1700
-#      warning "Libc++ only supports AppleClang 26 and later"
+#    if _LIBCPP_APPLE_CLANG_VER < 2100
+#      warning "Libc++ only supports AppleClang 26.4 and later"
 #    endif
 #  elif defined(_LIBCPP_GCC_VER)
 #    if _LIBCPP_GCC_VER < 1500

@@ -244,7 +244,7 @@ void EHStreamer::computeCallSiteTable(
   // Whether the last CallSite entry was for an invoke.
   bool PreviousIsInvoke = false;
 
-  bool IsSJLJ = Asm->MAI->getExceptionHandlingType() == ExceptionHandling::SjLj;
+  bool IsSJLJ = Asm->MAI.getExceptionHandlingType() == ExceptionHandling::SjLj;
 
   // Visit all instructions in order of address.
   for (const auto &MBB : *Asm->MF) {
@@ -291,8 +291,8 @@ void EHStreamer::computeCallSiteTable(
       // throw, create a call-site entry with no landing pad for the region
       // between the try-ranges.
       if (SawPotentiallyThrowing &&
-          (Asm->MAI->usesCFIForEH() ||
-           Asm->MAI->getExceptionHandlingType() == ExceptionHandling::AIX)) {
+          (Asm->MAI.usesCFIForEH() ||
+           Asm->MAI.getExceptionHandlingType() == ExceptionHandling::AIX)) {
         CallSites.push_back({LastLabel, BeginLabel, nullptr, 0});
         PreviousIsInvoke = false;
       }
@@ -415,9 +415,9 @@ MCSymbol *EHStreamer::emitExceptionTable() {
   SmallVector<CallSiteRange, 4> CallSiteRanges;
   computeCallSiteTable(CallSites, CallSiteRanges, LandingPads, FirstActions);
 
-  bool IsSJLJ = Asm->MAI->getExceptionHandlingType() == ExceptionHandling::SjLj;
-  bool IsWasm = Asm->MAI->getExceptionHandlingType() == ExceptionHandling::Wasm;
-  bool HasLEB128Directives = Asm->MAI->hasLEB128Directives();
+  bool IsSJLJ = Asm->MAI.getExceptionHandlingType() == ExceptionHandling::SjLj;
+  bool IsWasm = Asm->MAI.getExceptionHandlingType() == ExceptionHandling::Wasm;
+  bool HasLEB128Directives = Asm->MAI.hasLEB128Directives();
   unsigned CallSiteEncoding =
       IsSJLJ ? static_cast<unsigned>(dwarf::DW_EH_PE_udata4) :
                Asm->getObjFileLowering().getCallSiteEncoding();
@@ -684,7 +684,7 @@ MCSymbol *EHStreamer::emitExceptionTable() {
         // For non-PIC we can simply use the absolute value.
         Asm->emitEncodingByte(dwarf::DW_EH_PE_absptr, "@LPStart");
         Asm->OutStreamer->emitSymbolValue(LandingPadRange->FragmentBeginLabel,
-                                          Asm->MAI->getCodePointerSize());
+                                          Asm->MAI.getCodePointerSize());
       } else {
         // For PIC mode, we Emit a PC-relative address for LPStart.
         Asm->emitEncodingByte(dwarf::DW_EH_PE_pcrel, "@LPStart");
@@ -696,7 +696,7 @@ MCSymbol *EHStreamer::emitExceptionTable() {
                 MCSymbolRefExpr::create(LandingPadRange->FragmentBeginLabel,
                                         Context),
                 MCSymbolRefExpr::create(Dot, Context), Context),
-            Asm->MAI->getCodePointerSize());
+            Asm->MAI.getCodePointerSize());
       }
 
       if (HasLEB128Directives)

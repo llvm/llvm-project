@@ -372,7 +372,9 @@ private:
 /// FunctionArgList - Type for representing both the decl and type
 /// of parameters to a function. The decl must be either a
 /// ParmVarDecl or ImplicitParamDecl.
-class FunctionArgList : public SmallVector<const VarDecl *, 16> {};
+class FunctionArgList : public SmallVector<const VarDecl *, 16> {
+  using SmallVector::SmallVector;
+};
 
 /// ReturnValueSlot - Contains the address where the return value of a
 /// function can be stored, and whether the address is volatile or not.

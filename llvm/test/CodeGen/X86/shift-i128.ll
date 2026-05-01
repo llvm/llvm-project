@@ -16,7 +16,7 @@ define void @test_lshr_i128(i128 %x, i128 %a, ptr nocapture %r) nounwind {
 ; i686-NEXT:    pushl %esi
 ; i686-NEXT:    andl $-16, %esp
 ; i686-NEXT:    subl $48, %esp
-; i686-NEXT:    movl 24(%ebp), %ecx
+; i686-NEXT:    movzbl 24(%ebp), %ecx
 ; i686-NEXT:    movl 8(%ebp), %eax
 ; i686-NEXT:    movl 12(%ebp), %edx
 ; i686-NEXT:    movl 16(%ebp), %esi
@@ -42,7 +42,6 @@ define void @test_lshr_i128(i128 %x, i128 %a, ptr nocapture %r) nounwind {
 ; i686-NEXT:    shrdl %cl, %edi, %eax
 ; i686-NEXT:    shrdl %cl, %ebx, %esi
 ; i686-NEXT:    movl 40(%ebp), %ebx
-; i686-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; i686-NEXT:    shrl %cl, %edi
 ; i686-NEXT:    movl %edi, 12(%ebx)
 ; i686-NEXT:    movl %eax, 8(%ebx)
@@ -83,7 +82,7 @@ define void @test_ashr_i128(i128 %x, i128 %a, ptr nocapture %r) nounwind {
 ; i686-NEXT:    pushl %esi
 ; i686-NEXT:    andl $-16, %esp
 ; i686-NEXT:    subl $48, %esp
-; i686-NEXT:    movl 24(%ebp), %ecx
+; i686-NEXT:    movzbl 24(%ebp), %ecx
 ; i686-NEXT:    movl 8(%ebp), %eax
 ; i686-NEXT:    movl 12(%ebp), %edx
 ; i686-NEXT:    movl 16(%ebp), %esi
@@ -110,7 +109,6 @@ define void @test_ashr_i128(i128 %x, i128 %a, ptr nocapture %r) nounwind {
 ; i686-NEXT:    shrdl %cl, %edi, %eax
 ; i686-NEXT:    shrdl %cl, %ebx, %esi
 ; i686-NEXT:    movl 40(%ebp), %ebx
-; i686-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; i686-NEXT:    sarl %cl, %edi
 ; i686-NEXT:    movl %edi, 12(%ebx)
 ; i686-NEXT:    movl %eax, 8(%ebx)
@@ -152,7 +150,7 @@ define void @test_shl_i128(i128 %x, i128 %a, ptr nocapture %r) nounwind {
 ; i686-NEXT:    pushl %esi
 ; i686-NEXT:    andl $-16, %esp
 ; i686-NEXT:    subl $48, %esp
-; i686-NEXT:    movl 24(%ebp), %ecx
+; i686-NEXT:    movzbl 24(%ebp), %ecx
 ; i686-NEXT:    movl 8(%ebp), %eax
 ; i686-NEXT:    movl 12(%ebp), %edx
 ; i686-NEXT:    movl 16(%ebp), %esi
@@ -182,7 +180,6 @@ define void @test_shl_i128(i128 %x, i128 %a, ptr nocapture %r) nounwind {
 ; i686-NEXT:    movl %esi, 8(%ebx)
 ; i686-NEXT:    movl %edx, %esi
 ; i686-NEXT:    shll %cl, %esi
-; i686-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; i686-NEXT:    shldl %cl, %edx, %eax
 ; i686-NEXT:    movl %eax, 4(%ebx)
 ; i686-NEXT:    movl %esi, (%ebx)

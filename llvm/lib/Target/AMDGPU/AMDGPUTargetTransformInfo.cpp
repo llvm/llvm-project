@@ -127,7 +127,10 @@ void AMDGPUTTIImpl::getUnrollingPreferences(
   // We want to run unroll even for the loops which have been vectorized.
   UP.UnrollVectorizedLoop = true;
 
-  // TODO: Do we want runtime unrolling?
+  // Enable runtime unrolling for loops whose trip count is not known at
+  // compile time.  Use a reduced PartialThreshold to limit code-size growth.
+  UP.Runtime = true;
+  UP.PartialThreshold = UP.Threshold / 4;
 
   // Maximum alloca size than can fit registers. Reserve 16 registers.
   const unsigned MaxAlloca = (256 - 16) * 4;

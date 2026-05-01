@@ -23,7 +23,7 @@ class MCAsmInfoGOFF : public MCAsmInfo {
                             raw_ostream &) const final;
 
 protected:
-  MCAsmInfoGOFF();
+  MCAsmInfoGOFF(const MCTargetOptions &Options);
 };
 } // end namespace llvm
 
