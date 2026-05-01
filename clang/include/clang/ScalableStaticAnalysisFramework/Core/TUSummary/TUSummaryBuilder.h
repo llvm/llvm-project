@@ -63,7 +63,7 @@ TUSummaryBuilder::addSummary(EntityId Entity,
   // Otherwise it doesn't touch the `TypeErasedData`.
   auto [It, Inserted] = addSummaryImpl(Entity, std::move(TypeErasedData));
 
-  // Move it back on failue to keep the `Data` unconsumed.
+  // Move it back on failure to keep the `Data` unconsumed.
   if (!Inserted) {
     Data = std::unique_ptr<ConcreteEntitySummary>(
         static_cast<ConcreteEntitySummary *>(TypeErasedData.release()));
