@@ -1330,7 +1330,6 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
   Opts.AsyncScanModules = AsyncScanModules;
   Opts.FlushModuleCache = !NoFlushModuleCache;
   Opts.CacheNegativeStats = CacheNegativeStats;
-  DependencyScanningService Service(std::move(Opts));
 
   llvm::Timer T;
   T.startTimer();
