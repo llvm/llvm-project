@@ -1418,7 +1418,7 @@ __device__ void nvvm_abs_neg_bf16_bf16x2_sm80() {
 
   // CHECK_PTX70_SM80: call bfloat @llvm.nvvm.fabs.bf16(bfloat 0xR3DCD)
   __nvvm_abs_bf16(BF16);
-  // CHECK_PTX70_SM80: call <2 x bfloat> @llvm.nvvm.fabs.v2bf16(<2 x bfloat> splat (bfloat 0xR3DCD))
+  // CHECK_PTX70_SM80: call <2 x bfloat> @llvm.nvvm.fabs.bf16x2(<2 x bfloat> splat (bfloat 0xR3DCD))
   __nvvm_abs_bf16x2(BF16X2);
 
   // CHECK_PTX70_SM80: call bfloat @llvm.nvvm.neg.bf16(bfloat 0xR3DCD)
@@ -1446,13 +1446,13 @@ __device__ void nvvm_min_max_sm80() {
   __nvvm_fmin_nan_bf16(BF16, NANBF16);
   // CHECK_PTX70_SM80: call bfloat @llvm.nvvm.fmin.ftz.nan.bf16
   __nvvm_fmin_ftz_nan_bf16(BF16, NANBF16);
-  // CHECK_PTX70_SM80: call <2 x bfloat> @llvm.nvvm.fmin.bf16x2
+  // CHECK_PTX70_SM80: call <2 x bfloat> @llvm.nvvm.fmin.v2bf16
   __nvvm_fmin_bf16x2(BF16X2, BF16X2_2);
-  // CHECK_PTX70_SM80: call <2 x bfloat> @llvm.nvvm.fmin.ftz.bf16x2
+  // CHECK_PTX70_SM80: call <2 x bfloat> @llvm.nvvm.fmin.ftz.v2bf16
   __nvvm_fmin_ftz_bf16x2(BF16X2, BF16X2_2);
-  // CHECK_PTX70_SM80: call <2 x bfloat> @llvm.nvvm.fmin.nan.bf16x2
+  // CHECK_PTX70_SM80: call <2 x bfloat> @llvm.nvvm.fmin.nan.v2bf16
   __nvvm_fmin_nan_bf16x2(BF16X2, NANBF16X2);
-  // CHECK_PTX70_SM80: call <2 x bfloat> @llvm.nvvm.fmin.ftz.nan.bf16x2
+  // CHECK_PTX70_SM80: call <2 x bfloat> @llvm.nvvm.fmin.ftz.nan.v2bf16
   __nvvm_fmin_ftz_nan_bf16x2(BF16X2, NANBF16X2);
   // CHECK_PTX70_SM80: call float @llvm.nvvm.fmax.nan.f
   __nvvm_fmax_nan_f(0.1f, 0.11f);
@@ -1471,13 +1471,13 @@ __device__ void nvvm_min_max_sm80() {
   __nvvm_fmax_nan_bf16(BF16, NANBF16);
   // CHECK_PTX70_SM80: call bfloat @llvm.nvvm.fmax.ftz.nan.bf16
   __nvvm_fmax_ftz_nan_bf16(BF16, NANBF16);
-  // CHECK_PTX70_SM80: call <2 x bfloat> @llvm.nvvm.fmax.bf16x2
+  // CHECK_PTX70_SM80: call <2 x bfloat> @llvm.nvvm.fmax.v2bf16
   __nvvm_fmax_bf16x2(BF16X2, BF16X2_2);
-  // CHECK_PTX70_SM80: call <2 x bfloat> @llvm.nvvm.fmax.ftz.bf16x2
+  // CHECK_PTX70_SM80: call <2 x bfloat> @llvm.nvvm.fmax.ftz.v2bf16
   __nvvm_fmax_ftz_bf16x2(BF16X2, BF16X2_2);
-  // CHECK_PTX70_SM80: call <2 x bfloat> @llvm.nvvm.fmax.nan.bf16x2
+  // CHECK_PTX70_SM80: call <2 x bfloat> @llvm.nvvm.fmax.nan.v2bf16
   __nvvm_fmax_nan_bf16x2(NANBF16X2, BF16X2);
-  // CHECK_PTX70_SM80: call <2 x bfloat> @llvm.nvvm.fmax.ftz.nan.bf16x2
+  // CHECK_PTX70_SM80: call <2 x bfloat> @llvm.nvvm.fmax.ftz.nan.v2bf16
   __nvvm_fmax_ftz_nan_bf16x2(NANBF16X2, BF16X2);
   // CHECK_PTX70_SM80: call float @llvm.nvvm.fmax.nan.f
   __nvvm_fmax_nan_f(0.1f, (float)NAN32);
@@ -1511,9 +1511,9 @@ __device__ void nvvm_min_max_sm86() {
   __nvvm_fmin_xorsign_abs_bf16(BF16, BF16_2);
   // CHECK_PTX72_SM86: call bfloat @llvm.nvvm.fmin.nan.xorsign.abs.bf16
   __nvvm_fmin_nan_xorsign_abs_bf16(BF16, NANBF16);
-  // CHECK_PTX72_SM86: call <2 x bfloat> @llvm.nvvm.fmin.xorsign.abs.bf16x2
+  // CHECK_PTX72_SM86: call <2 x bfloat> @llvm.nvvm.fmin.xorsign.abs.v2bf16
   __nvvm_fmin_xorsign_abs_bf16x2(BF16X2, BF16X2_2);
-  // CHECK_PTX72_SM86: call <2 x bfloat> @llvm.nvvm.fmin.nan.xorsign.abs.bf16x2
+  // CHECK_PTX72_SM86: call <2 x bfloat> @llvm.nvvm.fmin.nan.xorsign.abs.v2bf16
   __nvvm_fmin_nan_xorsign_abs_bf16x2(BF16X2, NANBF16X2);
   // CHECK_PTX72_SM86: call float @llvm.nvvm.fmin.xorsign.abs.f
   __nvvm_fmin_xorsign_abs_f(-0.1f, 0.1f);
@@ -1528,9 +1528,9 @@ __device__ void nvvm_min_max_sm86() {
   __nvvm_fmax_xorsign_abs_bf16(BF16, BF16_2);
   // CHECK_PTX72_SM86: call bfloat @llvm.nvvm.fmax.nan.xorsign.abs.bf16
   __nvvm_fmax_nan_xorsign_abs_bf16(BF16, NANBF16);
-  // CHECK_PTX72_SM86: call <2 x bfloat> @llvm.nvvm.fmax.xorsign.abs.bf16x2
+  // CHECK_PTX72_SM86: call <2 x bfloat> @llvm.nvvm.fmax.xorsign.abs.v2bf16
   __nvvm_fmax_xorsign_abs_bf16x2(BF16X2, BF16X2_2);
-  // CHECK_PTX72_SM86: call <2 x bfloat> @llvm.nvvm.fmax.nan.xorsign.abs.bf16x2
+  // CHECK_PTX72_SM86: call <2 x bfloat> @llvm.nvvm.fmax.nan.xorsign.abs.v2bf16
   __nvvm_fmax_nan_xorsign_abs_bf16x2(BF16X2, NANBF16X2);
   // CHECK_PTX72_SM86: call float @llvm.nvvm.fmax.xorsign.abs.f
   __nvvm_fmax_xorsign_abs_f(-0.1f, 0.1f);
