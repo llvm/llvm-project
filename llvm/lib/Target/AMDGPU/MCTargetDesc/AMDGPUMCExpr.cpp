@@ -516,6 +516,8 @@ static void targetOpKnownBitsMapHelper(const MCExpr *Expr, KnownBitsMap &KBM,
       // The result is clamped to (1 << FieldWidth) - 1, so upper bits are
       // known zero. FieldWidth is derived from the subtarget.
       if (const MCSubtargetInfo *STI = AGVK->getCtx().getSubtargetInfo()) {
+        assert(STI && "Subtarget info should be available in MCContext");
+
         unsigned FieldWidth = getInstPrefSizeFieldWidth(*STI);
         KnownBits KB(BitWidth);
         KB.Zero.setBitsFrom(FieldWidth);
