@@ -138,19 +138,19 @@ private:
     }
 
     OffsetListT *insertOffsets(const Value &V) {
-      assert(!TypeToOffsets.contains(V.getType()) && "Type already exists");
-
       auto *OffsetList = new (OffsetAlloc.Allocate()) OffsetListT();
-      TypeToOffsets[V.getType()] = OffsetList;
-      return OffsetList;
+      auto [It, Inserted] = TypeToOffsets.insert({V.getType(), OffsetList});
+      if (!Inserted)
+        llvm_unreachable("Type already exists");
+      return It->second;
     }
 
     SplitTypeListT *insertSplitTys(const Value &V) {
-      assert(!TypeToSplitTys.contains(V.getType()) && "Type already exists");
-
       auto *SplitTyList = new (SplitTyAlloc.Allocate()) SplitTypeListT();
-      TypeToSplitTys[V.getType()] = SplitTyList;
-      return SplitTyList;
+      auto [It, Inserted] = TypeToSplitTys.insert({V.getType(), SplitTyList});
+      if (!Inserted)
+        llvm_unreachable("Type already exists");
+      return It->second;
     }
     SpecificBumpPtrAllocator<VRegListT> VRegAlloc;
     SpecificBumpPtrAllocator<OffsetListT> OffsetAlloc;
