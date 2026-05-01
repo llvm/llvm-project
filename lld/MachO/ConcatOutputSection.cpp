@@ -232,13 +232,13 @@ void TextOutputSection::finalize() {
 
   for (auto *isec : inputs) {
     while (!branchesToProcess.empty()) {
-      auto &[callerIsec, r] = branchesToProcess.front();
+      auto [callerIsec, r] = branchesToProcess.front();
       assert(callerIsec->isFinal);
       auto *funcSym = cast<Symbol *>(r->referent);
       auto &thunkInfo = thunkMap[{funcSym, r->addend}];
       if (isTargetKnownInRange(*callerIsec, *r)) {
-        branchesToProcess.pop_front();
         markBranchAsResolved(r, thunkInfo);
+        branchesToProcess.pop_front();
         continue;
       }
       if (auto *thunk = getThunkInRange(*callerIsec, *r, thunkInfo)) {
@@ -330,10 +330,10 @@ void TextOutputSection::finalize() {
         alignToPowerOf2(estimatedStubsEnd, in.objcStubs->align) +
         in.objcStubs->getSize();
 
-  for (auto [callerIsec, r, thunk] : deferredBranchRedirects) {
-    if (isTargetKnownInRange(*callerIsec, *r))
+  for (auto [isec, r, thunk] : deferredBranchRedirects) {
+    if (isTargetKnownInRange(*isec, *r))
       continue;
-    if (isTargetStubsAndInRange(*callerIsec, *r, estimatedStubsEnd))
+    if (isTargetStubsAndInRange(*isec, *r, estimatedStubsEnd))
       continue;
     updateBranchTargetToThunk(*r, thunk);
   }
