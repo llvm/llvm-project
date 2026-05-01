@@ -518,7 +518,8 @@ splitDeviceCode(std::unique_ptr<Module> M, StringRef LinkedBitcodeFile,
   SmallVector<SplitModule> SplitModules;
 
   if (Mode == SPLIT_NONE) {
-    SplitModules.push_back({SmallString<256>(LinkedBitcodeFile), collectSymbols(*M)});
+    SplitModules.push_back(
+        {SmallString<256>(LinkedBitcodeFile), collectSymbols(*M)});
     return SplitModules;
   }
 
@@ -530,7 +531,8 @@ splitDeviceCode(std::unique_ptr<Module> M, StringRef LinkedBitcodeFile,
   // as a single image.
   bool HasKernel = llvm::any_of(M->functions(), isEntryPoint);
   if (!HasKernel) {
-    SplitModules.push_back({SmallString<256>(LinkedBitcodeFile), collectSymbols(*M)});
+    SplitModules.push_back(
+        {SmallString<256>(LinkedBitcodeFile), collectSymbols(*M)});
     return SplitModules;
   }
 
@@ -587,9 +589,8 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
     std::optional<IRSplitMode> ModeOrNone =
         convertStringToSplitMode(A->getValue());
     if (!ModeOrNone)
-      return createStringError(
-          formatv("sycl-module-split-mode value isn't recognized: {0}",
-                  A->getValue()));
+      return createStringError(formatv(
+          "sycl-module-split-mode value isn't recognized: {0}", A->getValue()));
     SplitMode = *ModeOrNone;
   }
 
@@ -603,10 +604,9 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
     SmallVector<StringRef> SplitFiles;
     for (const SplitModule &SI : SplitModules)
       SplitFiles.push_back(SI.ModuleFilePath);
-    errs() << formatv(
-        "sycl-module-split: input: {0}, output: {1}, mode: {2}\n", LinkedFile,
-        llvm::join(SplitFiles, ", "),
-        SplitMode == SPLIT_PER_KERNEL ? "kernel" : "none");
+    errs() << formatv("sycl-module-split: input: {0}, output: {1}, mode: {2}\n",
+                      LinkedFile, llvm::join(SplitFiles, ", "),
+                      SplitMode == SPLIT_PER_KERNEL ? "kernel" : "none");
   }
 
   bool IsAOTCompileNeeded = IsIntelOffloadArch(
@@ -619,7 +619,8 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
     StringRef Stem = OutputFile.rsplit('.').first;
     std::string CodeGenFile = (Stem + "_" + Twine(I) + OutputFileNameExt).str();
 
-    if (Error Err = runCodeGen(SplitModules[I].ModuleFilePath, Args, CodeGenFile, C))
+    if (Error Err =
+            runCodeGen(SplitModules[I].ModuleFilePath, Args, CodeGenFile, C))
       return Err;
 
     SplitModules[I].ModuleFilePath = CodeGenFile;
