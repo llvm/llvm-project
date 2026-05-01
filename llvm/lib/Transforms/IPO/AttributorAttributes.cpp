@@ -1093,13 +1093,24 @@ struct AAPointerInfoImpl
 
     SmallPtrSet<const Access *, 8> DominatingWrites;
 
-    // All Accesses are not equal. AccessCB partitions them into two groups.
-    // IntraFnAccesses: When RemoteI is in the same function as I (Scope).
-    // See CanSkipAccessBatch below (Batch Reachability Optimization)
-    // InterFnAccesses: When RemoteI is in a different function as I. Processed
-    // by CanSkipAccess.
-    SmallVector<std::pair<const Access *, bool>, 8> IntraFnAccesses;
-    SmallVector<std::pair<const Access *, bool>, 8> InterFnAccesses;
+    // AccessCB collects all accesses into InterferingAccesses in insertion
+    // order. Each entry carries an IsIntraFn tag set at insertion time;
+    // the dispatch loop later reads the tag to route to CanSkipAccessBatch
+    // (intra) or CanSkipAccess (inter):
+    //   IntraFn: RemoteI is in Scope and LocalI == RemoteI. Eligible for
+    //            CanSkipAccessBatch (Batch Reachability Optimization).
+    //   InterFn: everything else (RemoteI in a different function, or an
+    //            imported access from translateAndAddStateFromCallee).
+    //            Processed by CanSkipAccess.
+    // The single-vector layout (rather than separate vectors per kind)
+    // ensures UserCB observes accesses in insertion order regardless of
+    // the per-element dispatch.
+    struct InterferingAccess {
+      const Access *Acc;
+      bool Exact;
+      bool IsIntraFn;
+    };
+    SmallVector<InterferingAccess, 8> InterferingAccesses;
 
     Function &Scope = *I.getFunction();
     bool IsKnownNoSync;
@@ -1261,19 +1272,18 @@ struct AAPointerInfoImpl
       // the given instruction.
       AllInSameNoSyncFn &= AccInSameScope;
 
-      // Only truly local accesses (LocalI == RemoteI) use the batch BFS path.
-      // Imported accesses (from translateAndAddStateFromCallee) have
-      // LocalI != RemoteI: LocalI is the call site, RemoteI is the actual
-      // instruction in the callee. For recursive calls, RemoteI is in the
-      // same function but at a different invocation context. The batch BFS
-      // would incorrectly check block-level reachability between I and
-      // RemoteI, missing the call-site indirection. These must go through
-      // CanSkipAccess with isPotentiallyReachable, which correctly handles
-      // cross-invocation reachability via the call graph.
-      if (AccInSameScope && Acc.getLocalInst() == Acc.getRemoteInst())
-        IntraFnAccesses.push_back({&Acc, Exact});
-      else
-        InterFnAccesses.push_back({&Acc, Exact});
+      // Only truly local accesses (LocalI == RemoteI) are eligible for the
+      // batch BFS path. Imported accesses (from translateAndAddStateFromCallee)
+      // have LocalI != RemoteI: LocalI is the call site, RemoteI is the
+      // actual instruction in the callee. For recursive calls, RemoteI is
+      // in the same function but at a different invocation context. The
+      // batch BFS would incorrectly check block-level reachability between
+      // I and RemoteI, missing the call-site indirection. These must go
+      // through CanSkipAccess with isPotentiallyReachable, which correctly
+      // handles cross-invocation reachability via the call graph.
+      bool IsIntraFn =
+          AccInSameScope && Acc.getLocalInst() == Acc.getRemoteInst();
+      InterferingAccesses.push_back({&Acc, Exact, IsIntraFn});
       return true;
     };
     if (!State::forallInterferingAccesses(I, AccessCB, Range))
@@ -1625,22 +1635,17 @@ struct AAPointerInfoImpl
         return LeastDominatingWriteInst != Acc.getRemoteInst();
       };
 
-      // Process intra-function accesses.
-      for (auto &It : IntraFnAccesses) {
-        if ((!AllInSameNoSyncFn && !IsThreadLocalObj && !ExecDomainAA) ||
-            !CanSkipAccessBatch(*It.first, It.second)) {
-          if (!UserCB(*It.first, It.second))
-            return false;
-        }
-      }
-
-      // Process cross-function accesses.
-      for (auto &It : InterFnAccesses) {
-        if ((!AllInSameNoSyncFn && !IsThreadLocalObj && !ExecDomainAA) ||
-            !CanSkipAccess(*It.first, It.second)) {
-          if (!UserCB(*It.first, It.second))
-            return false;
-        }
+      // Iterate InterferingAccesses in insertion order, dispatching each
+      // entry per-element to CanSkipAccessBatch (intra) or CanSkipAccess
+      // (inter) based on the IsIntraFn tag set by AccessCB.
+      for (const InterferingAccess &IA : InterferingAccesses) {
+        bool Skip = (AllInSameNoSyncFn || IsThreadLocalObj || ExecDomainAA) &&
+                    (IA.IsIntraFn ? CanSkipAccessBatch(*IA.Acc, IA.Exact)
+                                  : CanSkipAccess(*IA.Acc, IA.Exact));
+        if (Skip)
+          continue;
+        if (!UserCB(*IA.Acc, IA.Exact))
+          return false;
       }
     }
     return true;
