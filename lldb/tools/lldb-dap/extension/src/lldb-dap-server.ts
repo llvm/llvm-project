@@ -2,7 +2,6 @@ import { FSWatcher, watch as chokidarWatch } from "chokidar";
 import * as child_process from "node:child_process";
 import { isDeepStrictEqual } from "util";
 import * as vscode from "vscode";
-import * as os from "os";
 
 /**
  * Represents a running lldb-dap process that is accepting connections (i.e. in "server mode").
@@ -58,22 +57,6 @@ export class LLDBDapServer implements vscode.Disposable {
 
     if (this.serverInfo) {
       return this.serverInfo;
-    }
-
-    if (os.platform() === "win32") {
-      const pythonCheckProcess = child_process.spawnSync(dapPath, [
-        "--check-python",
-      ]);
-      if (pythonCheckProcess.status !== 0) {
-        await vscode.window.showErrorMessage(
-          "Python is not installed correctly. Please install it to use lldb-dap.",
-          {
-            modal: true,
-            detail: pythonCheckProcess.stderr?.toString() ?? "",
-          },
-        );
-        return undefined;
-      }
     }
 
     this.serverInfo = new Promise((resolve, reject) => {
