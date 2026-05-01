@@ -12694,12 +12694,6 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
             break;
           ++CommonLen;
         }
-        if (!CurrentLoopNest.empty() && CommonLen == 0) {
-          // No shared outer loop at all.
-          LLVM_DEBUG(dbgs() << "SLP: Different loop nest.\n");
-          newGatherTreeEntry(VL, S, UserTreeIdx, ReuseShuffleIndices);
-          return;
-        }
         if (CurrentLoopNest.empty()) {
           CurrentLoopNest.assign(NewLoopNest);
         } else if (CommonLen < CurrentLoopNest.size() &&
