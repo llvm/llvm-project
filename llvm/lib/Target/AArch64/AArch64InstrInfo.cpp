@@ -119,12 +119,29 @@ static std::optional<unsigned> getLFIInstSizeInBytes(const MachineInstr &MI) {
   case AArch64::SVC:
     // SVC expands to 4 instructions.
     return 16;
+  case AArch64::BR:
+  case AArch64::BLR:
+    // Indirect branches/calls expand to 2 instructions (guard + br/blr).
+    return 8;
+  case AArch64::RET:
+    // RET through LR is not rewritten, but RET through another register
+    // expands to 2 instructions (guard + ret).
+    if (MI.getOperand(0).getReg() != AArch64::LR)
+      return 8;
+    return 4;
   default:
-    // Default case: instructions that don't cause expansion.
-    // - TP accesses in LFI are a single load/store, so no expansion.
-    // - All remaining instructions are not rewritten.
-    return std::nullopt;
+    break;
   }
+
+  // Instructions that explicitly modify LR expand to 2 instructions.
+  for (const MachineOperand &MO : MI.explicit_operands())
+    if (MO.isReg() && MO.isDef() && MO.getReg() == AArch64::LR)
+      return 8;
+
+  // Default case: instructions that don't cause expansion.
+  // - TP accesses in LFI are a single load/store, so no expansion.
+  // - All remaining instructions are not rewritten.
+  return std::nullopt;
 }
 
 /// GetInstSize - Return the number of bytes of code the specified
