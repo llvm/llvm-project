@@ -6096,6 +6096,9 @@ matchExtendedReductionOperand(VPWidenRecipe *UpdateR, VPValue *Op,
       // by widening the inner extends to match it. See
       // optimizeExtendsForPartialReduction.
       Op = CastSource;
+      // FIXME: createPartialReductionExpression can't handle sub(ext(mul(...)))
+      if (UpdateR->getOpcode() == Instruction::Sub)
+        return std::nullopt;
     } else if (UpdateR->getOpcode() == Instruction::Add ||
                UpdateR->getOpcode() == Instruction::FAdd) {
       // Match: UpdateR(PrevValue, ext(...))
