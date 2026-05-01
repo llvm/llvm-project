@@ -63,9 +63,9 @@ jobs:
 
       - name: Install Doxygen
         run: |
-          curl -L https://github.com/vtjnash/doxygen/releases/download/Dev_1_17_0/Ubuntu.Latest.GCC.Release.Intel.build.artifacts.zip -o doxygen.zip
-          unzip doxygen.zip -d doxygen-install
-          sudo install -m 755 doxygen-install/doxygen /usr/local/bin/doxygen
+          curl -L https://github.com/doxygen/doxygen/releases/download/Release_1_17_0/doxygen-1.17.0.linux.bin.tar.gz -o doxygen.tar.gz
+          tar -xf doxygen.tar.gz
+          sudo install -m 755 doxygen-1.17.0/bin/doxygen /usr/local/bin/doxygen
 
       - name: Build Doxygen
         run: |
