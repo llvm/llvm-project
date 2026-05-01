@@ -22,3 +22,22 @@ define i32 @test_knownbits_identity(<16 x i8> %a) {
   %ret = zext i8 %bit7 to i32
   ret i32 %ret
 }
+
+define i32 @test_knownbits_srl4(<16 x i8> %a) {
+  ; _GFNI_DEMO_SRL(4): logical shift right by 4 within each byte.
+  ; Packed i64: 0x1020408000000000
+; CHECK-LABEL: test_knownbits_srl4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    retq
+  %matrix = bitcast <2 x i64>
+      <i64 1161999622361579520, i64 1161999622361579520> to <16 x i8>
+
+  %res = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(
+      <16 x i8> %a, <16 x i8> %matrix, i8 0)
+
+  %elt = extractelement <16 x i8> %res, i32 0
+  %bit7 = and i8 %elt, -128
+  %ret = zext i8 %bit7 to i32
+  ret i32 %ret
+}
