@@ -11609,9 +11609,7 @@ let Predicates = [HasRCPC3, HasNEON] in {
 //===----------------------------------------------------------------------===//
 // 128-bit System Instructions (FEAT_SYSINSTR128)
 //===----------------------------------------------------------------------===//
-def SYSPxt  : SystemPXtI<0, "sysp"> {
-  let DecoderMethod = "DecodeSyspInstruction";
-}
+def SYSPxt  : SystemPXtI<0, "sysp">;
 
 def : InstAlias<"sysp $op1, $Cn, $Cm, $op2",
                 (SYSPxt imm0_7:$op1, sys_cr_op:$Cn, sys_cr_op:$Cm, imm0_7:$op2, XZR)>;

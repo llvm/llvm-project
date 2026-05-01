@@ -279,14 +279,8 @@ private:
   ParseStatus tryParseGPR64sp0Operand(OperandVector &Operands);
   bool tryParseNeonVectorRegister(OperandVector &Operands);
   ParseStatus tryParseVectorIndex(OperandVector &Operands);
-  ParseStatus tryParseGPRSeqPair(OperandVector &Operands);
-  ParseStatus tryParseSyspPair(OperandVector &Operands);
-  ParseStatus tryParseConsecutiveGPRSeqPair(OperandVector &Operands,
-                                            std::optional<unsigned> WPairClass,
-                                            unsigned XPairClass,
-                                            bool AllowXZRPair,
-                                            StringRef FirstRegExpected,
-                                            StringRef SecondRegExpected);
+  template <bool AllowXZRPair>
+  ParseStatus tryParseConsecutiveGPRSeqPair(OperandVector &Operands);
   template <bool ParseShiftExtend,
             RegConstraintEqualityTy EqTy = RegConstraintEqualityTy::EqualsReg>
   ParseStatus tryParseGPROperand(OperandVector &Operands);
@@ -1561,12 +1555,7 @@ public:
   bool isTokenEqual(StringRef Str) const {
     return Kind == k_Token && getToken() == Str;
   }
-  template <unsigned low, unsigned high> bool isSysCRInRange() const {
-    if (Kind != k_SysCR)
-      return false;
-    unsigned Val = getSysCR();
-    return Val >= low && Val <= high;
-  }
+  bool isSysCR() const { return Kind == k_SysCR; }
   bool isPrefetch() const { return Kind == k_Prefetch; }
   bool isPSBHint() const { return Kind == k_PSBHint; }
   bool isPHint() const { return Kind == k_PHint; }
@@ -3314,15 +3303,6 @@ ParseStatus AArch64AsmParser::tryParsePSBHint(OperandVector &Operands) {
   return ParseStatus::Success;
 }
 
-ParseStatus AArch64AsmParser::tryParseSyspPair(OperandVector &Operands) {
-  return tryParseConsecutiveGPRSeqPair(
-      Operands, std::nullopt, AArch64::XSeqPairsClassRegClassID,
-      /*AllowXZRPair=*/true,
-      "expected xzr/xzr or the first even register of a consecutive 64-bit "
-      "register pair",
-      "expected second odd register of a consecutive 64-bit register pair");
-}
-
 /// tryParseBTIHint - Try to parse a BTI operand, mapped to Hint command
 ParseStatus AArch64AsmParser::tryParseBTIHint(OperandVector &Operands) {
   SMLoc S = getLoc();
@@ -4254,7 +4234,7 @@ bool AArch64AsmParser::parseSyspAlias(StringRef Name, SMLoc NameLoc,
 
   if (Tok.isNot(AsmToken::Identifier))
     return TokError("expected register identifier");
-  auto Result = tryParseSyspPair(Operands);
+  auto Result = tryParseConsecutiveGPRSeqPair</*AllowXZRPair=*/true>(Operands);
   if (Result.isFailure())
     return true;
   if (!Result.isSuccess())
@@ -8680,20 +8660,19 @@ unsigned AArch64AsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
   }
 }
 
-ParseStatus AArch64AsmParser::tryParseGPRSeqPair(OperandVector &Operands) {
-  return tryParseConsecutiveGPRSeqPair(
-      Operands, AArch64::WSeqPairsClassRegClassID,
-      AArch64::XSeqPairsClassRegClassID, /*AllowXZRPair=*/false,
-      "expected first even register of a consecutive same-size even/odd "
-      "register pair",
-      "expected second odd register of a consecutive same-size even/odd "
-      "register pair");
-}
-
-ParseStatus AArch64AsmParser::tryParseConsecutiveGPRSeqPair(
-    OperandVector &Operands, std::optional<unsigned> WPairClass,
-    unsigned XPairClass, bool AllowXZRPair, StringRef FirstRegExpected,
-    StringRef SecondRegExpected) {
+template <bool AllowXZRPair>
+ParseStatus
+AArch64AsmParser::tryParseConsecutiveGPRSeqPair(OperandVector &Operands) {
+  const char *FirstRegExpected =
+      AllowXZRPair ? "expected xzr/xzr or the first even register of a "
+                     "consecutive 64-bit register pair"
+                   : "expected first even register of a consecutive same-size "
+                     "even/odd register pair";
+  const char *SecondRegExpected =
+      AllowXZRPair ? "expected second odd register of a consecutive 64-bit "
+                     "register pair"
+                   : "expected second odd register of a consecutive same-size "
+                     "even/odd register pair";
 
   SMLoc S = getLoc();
 
@@ -8712,7 +8691,7 @@ ParseStatus AArch64AsmParser::tryParseConsecutiveGPRSeqPair(
 
   bool IsXZRPair = AllowXZRPair && FirstReg == AArch64::XZR;
   bool IsXReg = XRegClass.contains(FirstReg);
-  bool IsWReg = WPairClass && WRegClass.contains(FirstReg);
+  bool IsWReg = !AllowXZRPair && WRegClass.contains(FirstReg);
   if (!IsXZRPair && !IsXReg && !IsWReg)
     return Error(S, FirstRegExpected);
 
