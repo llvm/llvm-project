@@ -14965,6 +14965,11 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
 
       auto [Lo, Hi] = DAG.SplitScalar(LHS, DL, MVT::i32, MVT::i32);
 
+      // If the shift amount operand is coming from a vector legalization it may
+      // have an illegal type.
+      if (ShAmt.getValueType() != MVT::i32)
+        ShAmt = DAG.getZExtOrTrunc(ShAmt, DL, MVT::i32);
+
       SDValue LoRes, HiRes;
       if (N->getOpcode() == ISD::SHL) {
         // Lo = slli Lo, shamt
@@ -16423,9 +16428,12 @@ static SDValue combinePExtTruncate(SDNode *N, SelectionDAG &DAG,
   if (N0.getOpcode() != ISD::SRL)
     return SDValue();
 
-  MVT VecVT = VT.getSimpleVT();
-  if (VecVT != MVT::v4i16 && VecVT != MVT::v2i16 && VecVT != MVT::v8i8 &&
-      VecVT != MVT::v4i8 && VecVT != MVT::v2i32)
+  if (VT != MVT::v4i16 && VT != MVT::v2i16 && VT != MVT::v8i8 &&
+      VT != MVT::v4i8 && VT != MVT::v2i32)
+    return SDValue();
+
+  // We only support XLen or smaller vectors.
+  if (VT.getSizeInBits() > Subtarget.getXLen())
     return SDValue();
 
   // Check if shift amount is a splat constant
@@ -16445,7 +16453,7 @@ static SDValue combinePExtTruncate(SDNode *N, SelectionDAG &DAG,
 
   SDValue Op = N0.getOperand(0);
   unsigned ShAmtVal = C->getZExtValue();
-  unsigned EltBits = VecVT.getScalarSizeInBits();
+  unsigned EltBits = VT.getScalarSizeInBits();
 
   // Check for rounding pattern: (add (mul ...), round_const)
   bool IsRounding = false;
