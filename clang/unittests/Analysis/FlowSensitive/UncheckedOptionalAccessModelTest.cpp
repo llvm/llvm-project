@@ -3000,7 +3000,7 @@ TEST_P(UncheckedOptionalAccessTest, TestCustomAttributeBalik) {
     #include "unchecked_optional_access_test.h"
 
     template <typename T>
-    class __attribute__((analyse_as_class("std::optional"))) MyOptional {
+    class __attribute__((analyze_as_class("std::optional"))) MyOptional {
     public:
       bool has_value() const;
       T& value();
@@ -3021,11 +3021,11 @@ TEST_P(UncheckedOptionalAccessTest, TestCustomAttributeHicketts) {
     #include "unchecked_optional_access_test.h"
 
     template <typename T>
-    class __attribute__((analyse_as_class("std::optional"))) MyOptional {
+    class __attribute__((analyze_as_class("std::optional"))) MyOptional {
     public:
-      __attribute__((analyse_as_method("has_value"))) bool isNotNull() const;
-      __attribute__((analyse_as_method("value"))) T& unwrap();
-      __attribute__((analyse_as_method("value"))) const T& unwrap() const;
+      __attribute__((analyze_as_method("has_value"))) bool isNotNull() const;
+      __attribute__((analyze_as_method("value"))) T& unwrap();
+      __attribute__((analyze_as_method("value"))) const T& unwrap() const;
     };
 
     void target(MyOptional<int> opt) {

@@ -385,15 +385,15 @@ void foo() {
     vec[0].x = 0;
 }
 
-// Custom optional-like type using analyse_as_class / analyse_as_method attributes.
+// Custom optional-like type using analyze_as_class / analyze_as_method attributes.
 template <typename T>
-class [[clang::analyse_as_class("std::optional")]] CustomOptional {
+class [[clang::analyze_as_class("std::optional")]] CustomOptional {
 public:
-  [[clang::analyse_as_method("has_value")]] bool isEngaged() const;
-  [[clang::analyse_as_method("value")]] T &retrieve();
-  [[clang::analyse_as_method("value")]] const T &retrieve() const;
-  [[clang::analyse_as_method("emplace")]] T &fill(T val);
-  [[clang::analyse_as_method("reset")]] void clear();
+  [[clang::analyze_as_method("has_value")]] bool isEngaged() const;
+  [[clang::analyze_as_method("value")]] T &retrieve();
+  [[clang::analyze_as_method("value")]] const T &retrieve() const;
+  [[clang::analyze_as_method("emplace")]] T &fill(T val);
+  [[clang::analyze_as_method("reset")]] void clear();
 };
 
 void custom_unchecked_access(CustomOptional<int> opt) {
@@ -420,9 +420,9 @@ void custom_clear_then_access(CustomOptional<int> opt) {
 }
 
 // Custom optional-like type using standard method names — recognised via
-// analyse_as_class alone, without analyse_as_method attributes.
+// analyze_as_class alone, without analyze_as_method attributes.
 template <typename T>
-class [[clang::analyse_as_class("std::optional")]] StdNamedOptional {
+class [[clang::analyze_as_class("std::optional")]] StdNamedOptional {
 public:
   bool has_value() const;
   T &value();

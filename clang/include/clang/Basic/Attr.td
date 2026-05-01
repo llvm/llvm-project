@@ -921,16 +921,16 @@ def AlignValue : Attr {
   let Documentation = [AlignValueDocs];
 }
 
-def AnalyseAsClass : InheritableAttr {
-  let Spellings = [Clang<"analyse_as_class">];
+def AnalyzeAsClass : InheritableAttr {
+  let Spellings = [Clang<"analyze_as_class">];
   let Args = [StringArgument<"ClassName">];
   let Subjects = SubjectList<[Record],
                              ErrorDiag>;
   let Documentation = [Undocumented];
 }
 
-def AnalyseAsMethod : InheritableAttr {
-  let Spellings = [Clang<"analyse_as_method">];
+def AnalyzeAsMethod : InheritableAttr {
+  let Spellings = [Clang<"analyze_as_method">];
   let Args = [StringArgument<"MethodName">];
   let Subjects = SubjectList<[CXXMethod],
                              ErrorDiag>;

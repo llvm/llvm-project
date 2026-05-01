@@ -72,7 +72,7 @@ static bool hasOptionalClassName(const CXXRecordDecl &RD) {
   }
 
   // this code could be removed if base::Optional and folly::Optional used
-  // [[clang::analyse_as_class("std::optional")]]
+  // [[clang::analyze_as_class("std::optional")]]
   if (RD.getName() == "Optional") {
     // Check whether namespace is "::base" or "::folly".
     const auto *N = dyn_cast_or_null<NamespaceDecl>(RD.getDeclContext());
@@ -81,7 +81,7 @@ static bool hasOptionalClassName(const CXXRecordDecl &RD) {
   }
 
   // this code could be removed if Optional_Base used
-  // [[clang::analyse_as_class("std::optional")]]
+  // [[clang::analyze_as_class("std::optional")]]
   if (RD.getName() == "Optional_Base") {
     const auto *N = dyn_cast_or_null<NamespaceDecl>(RD.getDeclContext());
     return N != nullptr &&
@@ -89,14 +89,14 @@ static bool hasOptionalClassName(const CXXRecordDecl &RD) {
   }
 
   // this code could be removed if NullableValue used
-  // [[clang::analyse_as_class("std::optional")]]
+  // [[clang::analyze_as_class("std::optional")]]
   if (RD.getName() == "NullableValue") {
     const auto *N = dyn_cast_or_null<NamespaceDecl>(RD.getDeclContext());
     return N != nullptr &&
            isFullyQualifiedNamespaceEqualTo(*N, "bdlb", "BloombergLP");
   }
 
-  if (RD.hasAttr<AnalyseAsClassAttr>())
+  if (RD.hasAttr<AnalyzeAsClassAttr>())
     return true;
 
   return false;
@@ -236,9 +236,9 @@ AST_MATCHER(CXXOperatorCallExpr, hasOptionalOperatorObjectType) {
   return hasReceiverTypeDesugaringToOptional(Node.getArg(0));
 }
 
-AST_MATCHER_P(NamedDecl, hasAnalyseAsMethodName, std::string, MethodName) {
+AST_MATCHER_P(NamedDecl, hasAnalyzeAsMethodName, std::string, MethodName) {
   if (const auto *MD = dyn_cast<CXXMethodDecl>(&Node)) {
-    if (const auto *Attr = MD->getAttr<AnalyseAsMethodAttr>()) {
+    if (const auto *Attr = MD->getAttr<AnalyzeAsMethodAttr>()) {
       StringRef AttrValue = Attr->getMethodName();
       return AttrValue == MethodName;
     }
@@ -360,7 +360,7 @@ auto isValueOrStringEmptyCall() {
       callee(cxxMethodDecl(hasName("empty"))),
       onImplicitObjectArgument(ignoringImplicit(
           cxxMemberCallExpr(on(expr(unless(cxxThisExpr()))),
-                            callee(cxxMethodDecl(anyOf(hasName("value_or"), hasAnalyseAsMethodName("value_or")),
+                            callee(cxxMethodDecl(anyOf(hasName("value_or"), hasAnalyzeAsMethodName("value_or")),
                                                  ofClass(optionalClass()))),
                             hasArgument(0, stringLiteral(hasSize(0))))
               .bind(ValueOrCallID))));
@@ -999,7 +999,7 @@ ignorableOptional(const UncheckedOptionalAccessModelOptions &Options) {
 StatementMatcher
 valueCall(const std::optional<StatementMatcher> &IgnorableOptional) {
   return isOptionalMemberCallWithNameMatcher(
-      anyOf(hasName("value"), hasAnalyseAsMethodName("value")),
+      anyOf(hasName("value"), hasAnalyzeAsMethodName("value")),
       IgnorableOptional);
 }
 
@@ -1072,11 +1072,11 @@ auto buildTransferMatchSwitch() {
       // Of the supported optionals only folly::Optional uses hasValue, but this
       // will also pass for other types
       // "hasValue" could be removed if folly::Optional used
-      // [[clang::analyse_as_method("has_value")]] on hasValue()
+      // [[clang::analyze_as_method("has_value")]] on hasValue()
       .CaseOfCFGStmt<CXXMemberCallExpr>(
           isOptionalMemberCallWithNameMatcher(
               anyOf(hasAnyName("has_value", "hasValue"),
-              hasAnalyseAsMethodName("has_value"))),
+              hasAnalyzeAsMethodName("has_value"))),
           transferOptionalHasValueCall)
 
       // optional::operator bool
@@ -1085,7 +1085,7 @@ auto buildTransferMatchSwitch() {
           transferOptionalHasValueCall)
 
       // this code could be removed if NullableValue used
-      // [[clang::analyse_as_inverse_method("std::optional::has_value")]] on isNull() *NYI
+      // [[clang::analyze_as_inverse_method("std::optional::has_value")]] on isNull() *NYI
       // NullableValue::isNull
       // Only NullableValue has isNull
       .CaseOfCFGStmt<CXXMemberCallExpr>(
@@ -1093,7 +1093,7 @@ auto buildTransferMatchSwitch() {
           transferOptionalIsNullCall)
 
       // this code could be removed if NullableValue used
-      // [[clang::analyse_as_method("emplace")]] on makeValue() and makeValueInplace()
+      // [[clang::analyze_as_method("emplace")]] on makeValue() and makeValueInplace()
       // NullableValue::makeValue, NullableValue::makeValueInplace
       // Only NullableValue has these methods, but this
       // will also pass for other types
@@ -1110,7 +1110,7 @@ auto buildTransferMatchSwitch() {
 
       // optional::emplace
       .CaseOfCFGStmt<CXXMemberCallExpr>(
-          isOptionalMemberCallWithNameMatcher(anyOf(hasName("emplace"), hasAnalyseAsMethodName("emplace"))),
+          isOptionalMemberCallWithNameMatcher(anyOf(hasName("emplace"), hasAnalyzeAsMethodName("emplace"))),
           [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &,
              LatticeTransferState &State) {
             if (RecordStorageLocation *Loc =
@@ -1121,7 +1121,7 @@ auto buildTransferMatchSwitch() {
 
       // optional::reset
       .CaseOfCFGStmt<CXXMemberCallExpr>(
-          isOptionalMemberCallWithNameMatcher(anyOf(hasName("reset"), hasAnalyseAsMethodName("reset"))),
+          isOptionalMemberCallWithNameMatcher(anyOf(hasName("reset"), hasAnalyzeAsMethodName("reset"))),
           [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &,
              LatticeTransferState &State) {
             if (RecordStorageLocation *Loc =
@@ -1133,7 +1133,7 @@ auto buildTransferMatchSwitch() {
 
       // optional::swap
       .CaseOfCFGStmt<CXXMemberCallExpr>(
-          isOptionalMemberCallWithNameMatcher(anyOf(hasName("swap"), hasAnalyseAsMethodName("swap"))),
+          isOptionalMemberCallWithNameMatcher(anyOf(hasName("swap"), hasAnalyzeAsMethodName("swap"))),
           transferSwapCall)
 
       // std::swap
