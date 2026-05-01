@@ -78,6 +78,7 @@ private:
 
     using VRegListT = SmallVector<Register, 1>;
     using OffsetListT = SmallVector<uint64_t, 1>;
+    using SplitTypeListT = SmallVector<LLT, 1>;
 
     using const_vreg_iterator =
         DenseMap<const Value *, VRegListT *>::const_iterator;
@@ -102,6 +103,14 @@ private:
       return insertOffsets(V);
     }
 
+    SplitTypeListT *getSplitTys(const Value &V) {
+      auto It = TypeToSplitTys.find(V.getType());
+      if (It != TypeToSplitTys.end())
+        return It->second;
+
+      return insertSplitTys(V);
+    }
+
     const_vreg_iterator findVRegs(const Value &V) const {
       return ValToVRegs.find(&V);
     }
@@ -111,8 +120,10 @@ private:
     void reset() {
       ValToVRegs.clear();
       TypeToOffsets.clear();
+      TypeToSplitTys.clear();
       VRegAlloc.DestroyAll();
       OffsetAlloc.DestroyAll();
+      SplitTyAlloc.DestroyAll();
     }
 
   private:
@@ -133,13 +144,23 @@ private:
       TypeToOffsets[V.getType()] = OffsetList;
       return OffsetList;
     }
+
+    SplitTypeListT *insertSplitTys(const Value &V) {
+      assert(!TypeToSplitTys.contains(V.getType()) && "Type already exists");
+
+      auto *SplitTyList = new (SplitTyAlloc.Allocate()) SplitTypeListT();
+      TypeToSplitTys[V.getType()] = SplitTyList;
+      return SplitTyList;
+    }
     SpecificBumpPtrAllocator<VRegListT> VRegAlloc;
     SpecificBumpPtrAllocator<OffsetListT> OffsetAlloc;
+    SpecificBumpPtrAllocator<SplitTypeListT> SplitTyAlloc;
 
     // We store pointers to vectors here since references may be invalidated
     // while we hold them if we stored the vectors directly.
     DenseMap<const Value *, VRegListT*> ValToVRegs;
     DenseMap<const Type *, OffsetListT*> TypeToOffsets;
+    DenseMap<const Type *, SplitTypeListT *> TypeToSplitTys;
   };
 
   /// Mapping of the values of the current LLVM IR function to the related
@@ -744,6 +765,9 @@ private:
   /// Allocate some vregs and offsets in the VMap. Then populate just the
   /// offsets while leaving the vregs empty.
   ValueToVRegInfo::VRegListT &allocateVRegs(const Value &Val);
+
+  /// Get the cached split LLTs for \p Val.
+  ValueToVRegInfo::SplitTypeListT &getOrCreateSplitTys(const Value &Val);
 
   /// Get the frame index that represents \p Val.
   /// If such VReg does not exist, it is created.
