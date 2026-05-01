@@ -2201,6 +2201,10 @@ public:
   void Unparse(const OmpBeginDirective &x) {
     BeginOpenMP();
     Word("!$OMP ");
+    auto flags{std::get<OmpDirectiveSpecification::Flags>(x.t)};
+    if (flags.test(OmpDirectiveSpecification::Flag::ExplicitBegin)) {
+      Word("BEGIN ");
+    }
     Walk(static_cast<const OmpDirectiveSpecification &>(x));
     Put("\n");
     EndOpenMP();
