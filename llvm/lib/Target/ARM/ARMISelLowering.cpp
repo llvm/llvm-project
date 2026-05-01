@@ -118,6 +118,7 @@ using namespace llvm;
 #define DEBUG_TYPE "arm-isel"
 
 STATISTIC(NumTailCalls, "Number of tail calls");
+STATISTIC(NumOptimizedImms, "Number of times immediates were optimized");
 STATISTIC(NumMovwMovt, "Number of GAs materialized with movw + movt");
 STATISTIC(NumLoopByVals, "Number of loops generated for byval arguments");
 STATISTIC(NumConstpoolPromoted,
@@ -1271,9 +1272,6 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::STRICT_FSETCC,  MVT::f64, Custom);
     setOperationAction(ISD::STRICT_FSETCCS, MVT::f64, Custom);
   }
-
-  setOperationAction(ISD::FSINCOS, MVT::f64, Expand);
-  setOperationAction(ISD::FSINCOS, MVT::f32, Expand);
 
   // FP-ARMv8 implements a lot of rounding-like FP operations.
   if (Subtarget->hasFPARMv8Base()) {
@@ -4908,11 +4906,6 @@ SDValue ARMTargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
                        Cond.getOperand(3), DAG);
     }
   }
-
-  // ARM's BooleanContents value is UndefinedBooleanContent. Mask out the
-  // undefined bits before doing a full-word comparison with zero.
-  Cond = DAG.getNode(ISD::AND, dl, Cond.getValueType(), Cond,
-                     DAG.getConstant(1, dl, Cond.getValueType()));
 
   return DAG.getSelectCC(dl, Cond,
                          DAG.getConstant(0, dl, Cond.getValueType()),
@@ -20171,16 +20164,126 @@ void ARMTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
   }
 }
 
+static bool isLegalLogicalImmediate(unsigned Imm,
+                                    const ARMSubtarget *Subtarget) {
+  if (!Subtarget->isThumb())
+    return ARM_AM::getSOImmVal(Imm) != -1;
+  if (Subtarget->isThumb2())
+    return ARM_AM::getT2SOImmVal(Imm) != -1;
+  // Thumb1 only has 8-bit unsigned immediate.
+  return Imm <= 255;
+}
+
+/// Refine i32 AND/OR/XOR with a constant RHS using demanded bits: replace the
+/// immediate with an equivalent constant that ARM/Thumb can encode as a
+/// logical immediate (or that selects better lowering), without changing the
+/// computed result on those demanded bits.
+static bool optimizeLogicalImm(SDValue Op, unsigned Imm,
+                               const APInt &DemandedBits,
+                               const ARMSubtarget *Subtarget,
+                               TargetLowering::TargetLoweringOpt &TLO) {
+
+  if (Imm == 0 || Imm == ~0U)
+    return false;
+
+  unsigned Opc = Op.getOpcode();
+  unsigned Demanded = DemandedBits.getZExtValue();
+  EVT VT = Op.getValueType();
+
+  unsigned ShrunkImm = Imm & Demanded;
+  unsigned ExpandedImm = Imm | ~Demanded;
+
+  auto IsLegalImm = [ShrunkImm, ExpandedImm](unsigned CandidateImm) -> bool {
+    return (ShrunkImm & CandidateImm) == ShrunkImm &&
+           (~ExpandedImm & CandidateImm) == 0;
+  };
+  auto UseImm = [Imm, Opc, Op, VT, &TLO](unsigned NewImm) -> bool {
+    if (NewImm == Imm)
+      return true;
+    SDLoc DL(Op);
+    SDValue NewC = TLO.DAG.getConstant(NewImm, DL, VT);
+    SDValue NewOp =
+        TLO.DAG.getNode(Opc, DL, VT, Op.getOperand(0), NewC, Op->getFlags());
+    return TLO.CombineTo(Op, NewOp);
+  };
+
+  // Shrunk immediate is 0: AND becomes zero; OR/XOR with 0 leaves the other
+  // operand (still valid on demanded bits).
+  if (ShrunkImm == 0) {
+    ++NumOptimizedImms;
+    return UseImm(ShrunkImm);
+  }
+
+  // If the immediate is all ones: for AND this removes the operation; for
+  // OR/XOR it remains a transform valid on demanded bits. (Target-independent
+  // shrink may not fold this, so keep it to avoid obscure combine loops.)
+  if (ExpandedImm == ~0U) {
+    ++NumOptimizedImms;
+    return UseImm(ExpandedImm);
+  }
+
+  // Thumb1: prefer 0xFF / 0xFFFF when they fit the demanded-bit envelope so
+  // lowering can match uxtb / uxth (AND immediates only; OR/XOR do not use
+  // that). Run this before strict ShrunkImm: a tight 8-bit ShrunkImm can be
+  // legal while 0xFF still matches the envelope and yields better isel (uxtb).
+  if (Opc == ISD::AND && Subtarget->hasV6Ops()) {
+    if (IsLegalImm(0xFF)) {
+      ++NumOptimizedImms;
+      return UseImm(0xFF);
+    }
+
+    if (IsLegalImm(0xFFFF)) {
+      ++NumOptimizedImms;
+      return UseImm(0xFFFF);
+    }
+  }
+
+  // Don't optimize if it is legal.
+  if (isLegalLogicalImmediate(Imm, Subtarget))
+    return false;
+
+  // FIXME: Check for BIC being legal causes infinite loop due to target
+  // independent DAG combine undoing this.
+
+  // Prefer strict shrink when ShrunkImm encodes for this target, before
+  // complement expansion.
+  if (isLegalLogicalImmediate(ShrunkImm, Subtarget)) {
+    ++NumOptimizedImms;
+    return UseImm(ShrunkImm);
+  }
+
+  // Complement expansion: if all undemanded bits are already one, ExpandedImm
+  // is Imm with every non-demanded bit set. When (~ExpandedImm) < 256, the
+  // complement fits in an 8-bit unsigned value, i.e. bits 8–31 of ExpandedImm
+  // are all ones; only the low byte may differ from ~0. Use that expanded
+  // constant so isel sees a mask shape that fits logical-immediate patterns.
+  if ((~ExpandedImm) < 256) {
+    ++NumOptimizedImms;
+    return UseImm(ExpandedImm);
+  }
+
+  // FIXME: The check for v6 is because this interferes with some ubfx
+  // optimizations.
+  if (Opc == ISD::AND && isLegalLogicalImmediate(~ExpandedImm, Subtarget) &&
+      !Subtarget->hasV6Ops()) {
+    ++NumOptimizedImms;
+    return UseImm(ExpandedImm);
+  }
+
+  // Potential improvements:
+  //
+  // We could try to recognize lsls+lsrs or lsrs+lsls pairs here.
+  // We could try to prefer Thumb1 immediates which can be lowered to a
+  // two-instruction sequence.
+
+  return false;
+}
+
 bool ARMTargetLowering::targetShrinkDemandedConstant(
     SDValue Op, const APInt &DemandedBits, const APInt &DemandedElts,
     TargetLoweringOpt &TLO) const {
-  // Delay optimization, so we don't have to deal with illegal types, or block
-  // optimizations.
+  // Delay this optimization to as late as possible.
   if (!TLO.LegalOps)
-    return false;
-
-  // Only optimize AND for now.
-  if (Op.getOpcode() != ISD::AND)
     return false;
 
   EVT VT = Op.getValueType();
@@ -20189,68 +20292,28 @@ bool ARMTargetLowering::targetShrinkDemandedConstant(
   if (VT.isVector())
     return false;
 
-  assert(VT == MVT::i32 && "Unexpected integer type");
+  unsigned Size = VT.getSizeInBits();
 
-  // Make sure the RHS really is a constant.
+  if (Size != 32)
+    return false;
+
+  // Exit early if we demand all bits.
+  if (DemandedBits.isAllOnes())
+    return false;
+
+  switch (Op.getOpcode()) {
+  default:
+    return false;
+  case ISD::AND:
+  case ISD::OR:
+  case ISD::XOR:
+    break;
+  }
   ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op.getOperand(1));
   if (!C)
     return false;
-
-  unsigned Mask = C->getZExtValue();
-
-  unsigned Demanded = DemandedBits.getZExtValue();
-  unsigned ShrunkMask = Mask & Demanded;
-  unsigned ExpandedMask = Mask | ~Demanded;
-
-  // If the mask is all zeros, let the target-independent code replace the
-  // result with zero.
-  if (ShrunkMask == 0)
-    return false;
-
-  // If the mask is all ones, erase the AND. (Currently, the target-independent
-  // code won't do this, so we have to do it explicitly to avoid an infinite
-  // loop in obscure cases.)
-  if (ExpandedMask == ~0U)
-    return TLO.CombineTo(Op, Op.getOperand(0));
-
-  auto IsLegalMask = [ShrunkMask, ExpandedMask](unsigned Mask) -> bool {
-    return (ShrunkMask & Mask) == ShrunkMask && (~ExpandedMask & Mask) == 0;
-  };
-  auto UseMask = [Mask, Op, VT, &TLO](unsigned NewMask) -> bool {
-    if (NewMask == Mask)
-      return true;
-    SDLoc DL(Op);
-    SDValue NewC = TLO.DAG.getConstant(NewMask, DL, VT);
-    SDValue NewOp = TLO.DAG.getNode(ISD::AND, DL, VT, Op.getOperand(0), NewC);
-    return TLO.CombineTo(Op, NewOp);
-  };
-
-  // Prefer uxtb mask.
-  if (IsLegalMask(0xFF))
-    return UseMask(0xFF);
-
-  // Prefer uxth mask.
-  if (IsLegalMask(0xFFFF))
-    return UseMask(0xFFFF);
-
-  // [1, 255] is Thumb1 movs+ands, legal immediate for ARM/Thumb2.
-  // FIXME: Prefer a contiguous sequence of bits for other optimizations.
-  if (ShrunkMask < 256)
-    return UseMask(ShrunkMask);
-
-  // [-256, -2] is Thumb1 movs+bics, legal immediate for ARM/Thumb2.
-  // FIXME: Prefer a contiguous sequence of bits for other optimizations.
-  if ((int)ExpandedMask <= -2 && (int)ExpandedMask >= -256)
-    return UseMask(ExpandedMask);
-
-  // Potential improvements:
-  //
-  // We could try to recognize lsls+lsrs or lsrs+lsls pairs here.
-  // We could try to prefer Thumb1 immediates which can be lowered to a
-  // two-instruction sequence.
-  // We could try to recognize more legal ARM/Thumb2 immediates here.
-
-  return false;
+  unsigned Imm = C->getZExtValue();
+  return optimizeLogicalImm(Op, Imm, DemandedBits, Subtarget, TLO);
 }
 
 bool ARMTargetLowering::SimplifyDemandedBitsForTargetNode(
