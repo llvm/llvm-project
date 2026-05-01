@@ -1176,12 +1176,12 @@ static llvm::Error Evaluate_DW_OP_piece(EvalContext &eval_ctx,
       }
     } else {
       // If this is the second or later piece there should be a value on
-      // the eval_ctx.stack.
+      // the stack.
       if (eval_ctx.pieces.GetBuffer().GetByteSize() !=
           eval_ctx.op_piece_offset) {
         return llvm::createStringError(
             "DW_OP_piece for offset %" PRIu64
-            " but top of eval_ctx.stack is of size %" PRIu64,
+            " but top of stack is of size %" PRIu64,
             eval_ctx.op_piece_offset,
             eval_ctx.pieces.GetBuffer().GetByteSize());
       }
