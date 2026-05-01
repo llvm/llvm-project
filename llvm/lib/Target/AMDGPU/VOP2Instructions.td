@@ -1217,8 +1217,8 @@ let SubtargetPredicate = isGFX8GFX9 in {
 } // End isCommutable = 1
 } // End isReMaterializable = 1
 
-// FIXME: Missing FPDPRounding
 let Constraints = "$vdst = $src2",
+    FPDPRounding = 1,
     isConvertibleToThreeAddress = 1, isCommutable = 1 in {
 defm V_MAC_F16 : VOP2Inst <"v_mac_f16", VOP_MAC_F16>;
 }
