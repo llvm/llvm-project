@@ -2,6 +2,7 @@
 ;; Test jump table generation with Indirect Branch Tracking on x86.
 ; RUN: opt -S -passes=lowertypetests -mtriple=i686 %s | FileCheck --check-prefixes=X86_32 %s
 ; RUN: opt -S -passes=lowertypetests -mtriple=x86_64 %s | FileCheck --check-prefixes=X86_64 %s
+; RUN: opt -S -passes=lowertypetests -mtriple=x86_64 %s | FileCheck --check-prefixes=X86_64-OFF %s
 
 @0 = private unnamed_addr constant [2 x ptr] [ptr @f, ptr @g], align 16
 
@@ -37,6 +38,11 @@ define i1 @foo(ptr %p) {
 ; X86_64: @[[GLOB1:[0-9]+]] = private constant [0 x i8] zeroinitializer
 ; X86_64: @f = alias [16 x i8], ptr @.cfi.jumptable
 ; X86_64: @g = internal alias [16 x i8], getelementptr inbounds ([2 x [16 x i8]], ptr @.cfi.jumptable, i64 0, i64 1)
+;.
+; X86_64-OFF: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [2 x ptr] [ptr @f, ptr @g], align 16
+; X86_64-OFF: @[[GLOB1:[0-9]+]] = private constant [0 x i8] zeroinitializer
+; X86_64-OFF: @f = alias [16 x i8], ptr @.cfi.jumptable
+; X86_64-OFF: @g = internal alias [16 x i8], getelementptr inbounds ([2 x [16 x i8]], ptr @.cfi.jumptable, i64 0, i64 1)
 ;.
 ; X86_32-LABEL: @f.cfi(
 ; X86_32-NEXT:    ret void
@@ -83,6 +89,29 @@ define i1 @foo(ptr %p) {
 ; X86_64-NEXT:    call void asm sideeffect "endbr64\0Ajmp ${0:c}@plt\0A.balign 16, 0xcc\0A", "s"(ptr @g.cfi)
 ; X86_64-NEXT:    unreachable
 ;
+;
+; X86_64-OFF-LABEL: @f.cfi(
+; X86_64-OFF-NEXT:    ret void
+;
+;
+; X86_64-OFF-LABEL: @g.cfi(
+; X86_64-OFF-NEXT:    ret void
+;
+;
+; X86_64-OFF-LABEL: @foo(
+; X86_64-OFF-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P:%.*]] to i64
+; X86_64-OFF-NEXT:    [[TMP2:%.*]] = sub i64 ptrtoint (ptr getelementptr (i8, ptr @.cfi.jumptable, i64 16) to i64), [[TMP1]]
+; X86_64-OFF-NEXT:    [[TMP3:%.*]] = call i64 @llvm.fshr.i64(i64 [[TMP2]], i64 [[TMP2]], i64 4)
+; X86_64-OFF-NEXT:    [[TMP4:%.*]] = icmp ule i64 [[TMP3]], 1
+; X86_64-OFF-NEXT:    ret i1 [[TMP4]]
+;
+;
+; X86_64-OFF-LABEL: @.cfi.jumptable(
+; X86_64-OFF-NEXT:  entry:
+; X86_64-OFF-NEXT:    call void asm sideeffect "endbr64\0Ajmp ${0:c}@plt\0A.balign 16, 0xcc\0A", "s"(ptr @f.cfi)
+; X86_64-OFF-NEXT:    call void asm sideeffect "endbr64\0Ajmp ${0:c}@plt\0A.balign 16, 0xcc\0A", "s"(ptr @g.cfi)
+; X86_64-OFF-NEXT:    unreachable
+;
 ;.
 ; X86_32: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ; X86_32: attributes #[[ATTR1:[0-9]+]] = { naked nocf_check noinline }
@@ -91,6 +120,10 @@ define i1 @foo(ptr %p) {
 ; X86_64: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ; X86_64: attributes #[[ATTR1:[0-9]+]] = { naked nocf_check noinline }
 ; X86_64: attributes #[[ATTR2:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
+;.
+; X86_64-OFF: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; X86_64-OFF: attributes #[[ATTR1:[0-9]+]] = { naked nocf_check noinline }
+; X86_64-OFF: attributes #[[ATTR2:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
 ; X86_32: [[META0:![0-9]+]] = !{i32 8, !"cf-protection-branch", i32 1}
 ; X86_32: [[META1:![0-9]+]] = !{i32 7, !"Dwarf Version", i32 5}
@@ -101,4 +134,9 @@ define i1 @foo(ptr %p) {
 ; X86_64: [[META1:![0-9]+]] = !{i32 7, !"Dwarf Version", i32 5}
 ; X86_64: [[META2:![0-9]+]] = !{i32 2, !"Debug Info Version", i32 3}
 ; X86_64: [[META3:![0-9]+]] = !{i32 0, !"typeid1"}
+;.
+; X86_64-OFF: [[META0:![0-9]+]] = !{i32 8, !"cf-protection-branch", i32 1}
+; X86_64-OFF: [[META1:![0-9]+]] = !{i32 7, !"Dwarf Version", i32 5}
+; X86_64-OFF: [[META2:![0-9]+]] = !{i32 2, !"Debug Info Version", i32 3}
+; X86_64-OFF: [[META3:![0-9]+]] = !{i32 0, !"typeid1"}
 ;.
