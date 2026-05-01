@@ -1080,6 +1080,43 @@ LogicalResult TransposeLoadOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// GlobalTransposeLoadOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult GlobalTransposeLoadOp::verify() {
+  MemRefType srcType = cast<MemRefType>(getSrc().getType());
+
+  if (!hasGlobalMemorySpace(srcType.getMemorySpace()))
+    return emitOpError("source memory address space must be Global");
+
+  auto resultType = cast<VectorType>(getType());
+  size_t numElements = resultType.getNumElements();
+  size_t elementTypeSize =
+      resultType.getElementType().getIntOrFloatBitWidth();
+
+  // ElementSize -> NumElements (matches global_load_tr* ISA variants)
+  const llvm::SmallDenseMap<size_t, size_t> kValidLoadSizeMap = {
+      {4, 16},  // global_load_tr4_b64
+      {6, 16},  // global_load_tr6_b96
+      {8, 8},   // global_load_tr8_b64
+      {16, 8},  // global_load_tr.b128
+  };
+
+  auto validNumElems = kValidLoadSizeMap.find(elementTypeSize);
+  if (validNumElems == kValidLoadSizeMap.end())
+    return emitOpError(
+               "unsupported element type size for global transpose load: ")
+           << elementTypeSize << " bits";
+
+  if (numElements != validNumElems->second)
+    return emitOpError(
+               "transferring type size mismatch: expected num of elements: ")
+           << validNumElems->second;
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // MakeDmaBaseOp
 //===----------------------------------------------------------------------===//
 
