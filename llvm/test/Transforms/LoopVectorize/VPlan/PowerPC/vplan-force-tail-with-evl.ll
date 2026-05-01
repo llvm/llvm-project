@@ -22,8 +22,8 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; CHECK-NEXT:   vp<[[CAN_IV:%.+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   vector.body:
-; CHECK-NEXT:     EMIT vp<[[WIDEN_CAN_IV:%.+]]> = WIDEN-CANONICAL-INDUCTION vp<[[CAN_IV]]>
-; CHECK-NEXT:     EMIT vp<[[CMP:%.+]]> = icmp ule vp<[[WIDEN_CAN_IV]]>, vp<[[BTC]]>
+; CHECK-NEXT:     ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VF]]>
+; CHECK-NEXT:     EMIT vp<[[CMP:%.+]]> = icmp ule ir<%iv>, vp<[[BTC]]>
 ; CHECK-NEXT:   Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <xVFxUF> pred.store: {
@@ -32,7 +32,7 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; CHECK-NEXT:    Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    pred.store.if:
-; CHECK-NEXT:      vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
+; CHECK-NEXT:      vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:      REPLICATE ir<%arrayidx> = getelementptr inbounds ir<%b>, vp<[[STEPS]]>
 ; CHECK-NEXT:      REPLICATE ir<%0> = load ir<%arrayidx>
 ; CHECK-NEXT:      REPLICATE ir<%arrayidx2> = getelementptr inbounds ir<%c>, vp<[[STEPS]]>
@@ -98,7 +98,7 @@ define void @safe_dep(ptr %p) {
 ; CHECK-NEXT:     CLONE ir<%a2> = getelementptr ir<%p>, ir<%offset>
 ; CHECK-NEXT:     vp<[[VPTR2:%.+]]> = vector-pointer ir<%a2>
 ; CHECK-NEXT:     WIDEN store vp<[[VPTR2]]>, ir<%v>
-; CHECK-NEXT:     EMIT vp<[[CAN_INC:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
+; CHECK-NEXT:     EMIT vp<[[CAN_INC]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_INC]]>, vp<[[VTC]]>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }

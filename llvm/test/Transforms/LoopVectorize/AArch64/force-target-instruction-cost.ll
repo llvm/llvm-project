@@ -641,7 +641,7 @@ define void @forced_scalar_instr(ptr %gep.dst) {
 ; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
 ; COMMON:       [[PRED_STORE_CONTINUE6]]:
 ; COMMON-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; COMMON-NEXT:    [[VEC_IND_NEXT]] = add nuw <4 x i8> [[VEC_IND]], splat (i8 4)
+; COMMON-NEXT:    [[VEC_IND_NEXT]] = add <4 x i8> [[VEC_IND]], splat (i8 4)
 ; COMMON-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[INDEX_NEXT]], 8
 ; COMMON-NEXT:    br i1 [[TMP22]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; COMMON:       [[MIDDLE_BLOCK]]:
