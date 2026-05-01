@@ -64,6 +64,13 @@ int64_t test_vqshld_n_s64(int64_t a) {
   return (int64_t)vqshld_n_s64(a, 63);
 }
 
+//===------------------------------------------------------===//
+// 2.1.7.1 Negate
+// https://arm-software.github.io/acle/neon_intrinsics/advsimd.html#negate
+//
+// TODO: Implement the remaining intrinsics in this group
+//===------------------------------------------------------===//
+
 // LLVM-LABEL: @test_vnegd_s64
 // CIR-LABEL: @vnegd_s64
 int64_t test_vnegd_s64(int64_t a) {
