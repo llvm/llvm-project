@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Dialect/FIROps.h"
+#include "flang/Optimizer/Dialect/CUDAKernelOpInterface.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
@@ -594,6 +595,15 @@ struct SimplifyArrayCoorOp : public mlir::OpRewritePattern<fir::ArrayCoorOp> {
           llvm::any_of(memref.getUsers(), [](mlir::Operation *u) {
             return mlir::isa<ACC_DATA_ENTRY_OPS>(u);
           }))
+        return mlir::failure();
+      // Don't pull in rebox defined outside a CUDA kernel boundary when the
+      // array_coor is inside that kernel. CUF lowering converts such a rebox
+      // into a managed-memory descriptor that the kernel needs to receive as
+      // its argument; folding the rebox away would leave the kernel capturing
+      // the host-side descriptor directly, causing illegal device dereferences
+      // at runtime.
+      if (op->getParentOfType<fir::CUDAKernelOpInterface>() !=
+          reboxOp->getParentOfType<fir::CUDAKernelOpInterface>())
         return mlir::failure();
       boxedMemref = reboxOp.getBox();
       boxedShape = reboxOp.getShape();
