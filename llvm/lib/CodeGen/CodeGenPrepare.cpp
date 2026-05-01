@@ -22,11 +22,10 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/BlockFrequencyInfo.h"
-#include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/FloatingPointPredicateUtils.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/LazyBlockFrequencyInfo.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
@@ -307,6 +306,7 @@ class TypePromotionTransaction;
 
 class CodeGenPrepare {
   friend class CodeGenPrepareLegacyPass;
+  friend class llvm::CodeGenPreparePass;
   const TargetMachine *TM = nullptr;
   const TargetSubtargetInfo *SubtargetInfo = nullptr;
   const TargetLowering *TLI = nullptr;
@@ -316,8 +316,7 @@ class CodeGenPrepare {
   const TargetLibraryInfo *TLInfo = nullptr;
   DomTreeUpdater *DTU = nullptr;
   LoopInfo *LI = nullptr;
-  BlockFrequencyInfo *BFI;
-  BranchProbabilityInfo *BPI;
+  BlockFrequencyInfo *BFI = nullptr;
   ProfileSummaryInfo *PSI = nullptr;
 
   /// As we scan instructions optimizing them, this is the next instruction
@@ -385,18 +384,16 @@ public:
     FreshBBs.clear();
   }
 
-  bool run(Function &F, FunctionAnalysisManager &AM);
-
 private:
-  template <typename F>
-  void resetIteratorIfInvalidatedWhileCalling(BasicBlock *BB, F f) {
+  template <typename CallableT>
+  void resetIteratorIfInvalidatedWhileCalling(BasicBlock *BB, CallableT &&Fn) {
     // Substituting can cause recursive simplifications, which can invalidate
     // our iterator.  Use a WeakTrackingVH to hold onto it in case this
     // happens.
     Value *CurValue = &*CurInstIterator;
     WeakTrackingVH IterHandle(CurValue);
 
-    f();
+    Fn();
 
     // If the iterator instruction was recursively deleted, start over at the
     // start of the block.
@@ -471,7 +468,7 @@ private:
   bool combineToUAddWithOverflow(CmpInst *Cmp, ModifyDT &ModifiedDT);
   bool unfoldPowerOf2Test(CmpInst *Cmp);
   void verifyBFIUpdates(Function &F);
-  bool _run(Function &F);
+  bool runImpl(Function &F);
 };
 
 class CodeGenPrepareLegacyPass : public FunctionPass {
@@ -492,8 +489,7 @@ public:
     AU.addRequired<TargetTransformInfoWrapperPass>();
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<LoopInfoWrapperPass>();
-    AU.addRequired<BranchProbabilityInfoWrapperPass>();
-    AU.addRequired<BlockFrequencyInfoWrapperPass>();
+    LazyBlockFrequencyInfoPass::getLazyBFIAnalysisUsage(AU);
     AU.addUsedIfAvailable<BasicBlockSectionsProfileReaderWrapperPass>();
   }
 };
@@ -514,9 +510,8 @@ bool CodeGenPrepareLegacyPass::runOnFunction(Function &F) {
   CGP.TLInfo = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
   CGP.TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
   CGP.LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-  CGP.BPI = &getAnalysis<BranchProbabilityInfoWrapperPass>().getBPI();
-  CGP.BFI = &getAnalysis<BlockFrequencyInfoWrapperPass>().getBFI();
   CGP.PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
+  CGP.BFI = &getAnalysis<LazyBlockFrequencyInfoPass>().getBFI();
   auto BBSPRWP =
       getAnalysisIfAvailable<BasicBlockSectionsProfileReaderWrapperPass>();
   CGP.BBSectionsProfileReader = BBSPRWP ? &BBSPRWP->getBBSPR() : nullptr;
@@ -525,13 +520,14 @@ bool CodeGenPrepareLegacyPass::runOnFunction(Function &F) {
       DomTreeUpdater::UpdateStrategy::Lazy);
   CGP.DTU = &DTUpdater;
 
-  return CGP._run(F);
+  return CGP.runImpl(F);
 }
 
 INITIALIZE_PASS_BEGIN(CodeGenPrepareLegacyPass, DEBUG_TYPE,
                       "Optimize for code generation", false, false)
 INITIALIZE_PASS_DEPENDENCY(BasicBlockSectionsProfileReaderWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LazyBlockFrequencyInfoPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
@@ -547,8 +543,23 @@ FunctionPass *llvm::createCodeGenPrepareLegacyPass() {
 PreservedAnalyses CodeGenPreparePass::run(Function &F,
                                           FunctionAnalysisManager &AM) {
   CodeGenPrepare CGP(TM);
+  CGP.DL = &F.getDataLayout();
+  CGP.SubtargetInfo = TM->getSubtargetImpl(F);
+  CGP.TLI = CGP.SubtargetInfo->getTargetLowering();
+  CGP.TRI = CGP.SubtargetInfo->getRegisterInfo();
+  CGP.TLInfo = &AM.getResult<TargetLibraryAnalysis>(F);
+  CGP.TTI = &AM.getResult<TargetIRAnalysis>(F);
+  CGP.LI = &AM.getResult<LoopAnalysis>(F);
+  auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
+  CGP.PSI = MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
+  CGP.BFI = &AM.getResult<BlockFrequencyAnalysis>(F);
+  CGP.BBSectionsProfileReader =
+      AM.getCachedResult<BasicBlockSectionsProfileReaderAnalysis>(F);
+  DomTreeUpdater DTUpdater(&AM.getResult<DominatorTreeAnalysis>(F),
+                           DomTreeUpdater::UpdateStrategy::Lazy);
+  CGP.DTU = &DTUpdater;
 
-  bool Changed = CGP.run(F, AM);
+  bool Changed = CGP.runImpl(F);
   if (!Changed)
     return PreservedAnalyses::all();
 
@@ -558,27 +569,7 @@ PreservedAnalyses CodeGenPreparePass::run(Function &F,
   return PA;
 }
 
-bool CodeGenPrepare::run(Function &F, FunctionAnalysisManager &AM) {
-  DL = &F.getDataLayout();
-  SubtargetInfo = TM->getSubtargetImpl(F);
-  TLI = SubtargetInfo->getTargetLowering();
-  TRI = SubtargetInfo->getRegisterInfo();
-  TLInfo = &AM.getResult<TargetLibraryAnalysis>(F);
-  TTI = &AM.getResult<TargetIRAnalysis>(F);
-  LI = &AM.getResult<LoopAnalysis>(F);
-  BPI = &AM.getResult<BranchProbabilityAnalysis>(F);
-  BFI = &AM.getResult<BlockFrequencyAnalysis>(F);
-  auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
-  PSI = MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
-  BBSectionsProfileReader =
-      AM.getCachedResult<BasicBlockSectionsProfileReaderAnalysis>(F);
-  DomTreeUpdater DTUpdater(&AM.getResult<DominatorTreeAnalysis>(F),
-                           DomTreeUpdater::UpdateStrategy::Lazy);
-  DTU = &DTUpdater;
-  return _run(F);
-}
-
-bool CodeGenPrepare::_run(Function &F) {
+bool CodeGenPrepare::runImpl(Function &F) {
   bool EverMadeChange = false;
 
   OptSize = F.hasOptSize();
@@ -597,8 +588,8 @@ bool CodeGenPrepare::_run(Function &F) {
     // If PSI shows this function is not hot, we will placed the function
     // into unlikely section if (1) PSI shows this is a cold function, or
     // (2) the function has a attribute of cold.
-    else if (PSI->isFunctionColdInCallGraph(&F, *BFI) ||
-             F.hasFnAttribute(Attribute::Cold))
+    else if (F.hasFnAttribute(Attribute::Cold) ||
+             PSI->isFunctionColdInCallGraph(&F, *BFI))
       (void)F.setSectionPrefix("unlikely");
     else if (ProfileUnknownInSpecialSection && PSI->hasPartialSampleProfile() &&
              PSI->isFunctionHotnessUnknown(F))
