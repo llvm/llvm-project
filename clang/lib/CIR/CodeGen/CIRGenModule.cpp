@@ -2702,9 +2702,77 @@ static bool shouldAssumeDSOLocal(const CIRGenModule &cgm,
   return false;
 }
 
-void CIRGenModule::setGlobalVisibility(mlir::Operation *gv,
+static void setGlobalVisibilityHelper(const CIRGenModule &cgm,
+                                      cir::CIRGlobalValueInterface gv,
+                                      cir::VisibilityKind visibility) {
+  gv.setGlobalVisibility(cir::VisibilityKind::Default);
+  // Also update MLIR symbol visibility to match linkage
+  if (auto globalOp = dyn_cast<cir::GlobalOp>(gv.getOperation()))
+    mlir::SymbolTable::setSymbolVisibility(globalOp,
+                                           cgm.getMLIRVisibility(globalOp));
+  else if (auto funcOp = dyn_cast<cir::FuncOp>(gv.getOperation()))
+    mlir::SymbolTable::setSymbolVisibility(
+        funcOp, cgm.getMLIRVisibilityFromCIRLinkage(funcOp.getLinkage()));
+}
+
+void CIRGenModule::setGlobalVisibility(cir::CIRGlobalValueInterface gv,
                                        const NamedDecl *d) const {
-  assert(!cir::MissingFeatures::opGlobalVisibility());
+  // Internal definitions always have default visibility.
+  if (gv.hasLocalLinkage()) {
+    setGlobalVisibilityHelper(*this, gv, cir::VisibilityKind::Default);
+    return;
+  }
+  if (!d)
+    return;
+
+  // Set visibility for definitions, and for declarations if requested globally
+  // or set explicitly.
+  LinkageInfo lv = d->getLinkageAndVisibility();
+
+  // OpenMP declare target variables must be visible to the host so they can
+  // be registered. We require protected visibility unless the variable has
+  // the DT_nohost modifier and does not need to be registered.
+  if (getASTContext().getLangOpts().OpenMP &&
+      getASTContext().getLangOpts().OpenMPIsTargetDevice && isa<VarDecl>(d) &&
+      d->hasAttr<OMPDeclareTargetDeclAttr>() &&
+      d->getAttr<OMPDeclareTargetDeclAttr>()->getDevType() !=
+          OMPDeclareTargetDeclAttr::DT_NoHost &&
+      lv.getVisibility() == HiddenVisibility) {
+    gv.setGlobalVisibility(cir::VisibilityKind::Protected);
+    return;
+  }
+
+  // CUDA/HIP device kernels and global variables must be visible to the host
+  // so they can be registered / initialized. We require protected visibility
+  // unless the user explicitly requested hidden via an attribute.
+  if (getASTContext().getLangOpts().CUDAIsDevice &&
+      lv.getVisibility() == HiddenVisibility && !lv.isVisibilityExplicit() &&
+      !d->hasAttr<OMPDeclareTargetDeclAttr>()) {
+    bool needsProtected = false;
+    if (isa<FunctionDecl>(d)) {
+      needsProtected =
+          d->hasAttr<CUDAGlobalAttr>() || d->hasAttr<DeviceKernelAttr>();
+    } else if (const auto *vd = dyn_cast<VarDecl>(d))
+      needsProtected = vd->hasAttr<CUDADeviceAttr>() ||
+                       vd->hasAttr<CUDAConstantAttr>() ||
+                       vd->getType()->isCUDADeviceBuiltinSurfaceType() ||
+                       vd->getType()->isCUDADeviceBuiltinTextureType();
+    if (needsProtected) {
+      gv.setGlobalVisibility(cir::VisibilityKind::Protected);
+      return;
+    }
+  }
+
+  if (getASTContext().getLangOpts().HLSL && !d->isInExportDeclContext()) {
+    gv.setGlobalVisibility(cir::VisibilityKind::Hidden);
+    return;
+  }
+
+  assert(!cir::MissingFeatures::opGlobalDLLImportExport());
+
+  if (lv.isVisibilityExplicit() || getLangOpts().SetVisibilityForExternDecls ||
+      !gv.isDeclarationForLinker())
+    gv.setGlobalVisibility(getCIRVisibilityKind(lv.getVisibility()));
 }
 
 void CIRGenModule::setDSOLocal(cir::CIRGlobalValueInterface gv) const {
@@ -2724,7 +2792,7 @@ void CIRGenModule::setGVProperties(mlir::Operation *op,
 
 void CIRGenModule::setGVPropertiesAux(mlir::Operation *op,
                                       const NamedDecl *d) const {
-  setGlobalVisibility(op, d);
+  setGlobalVisibility(cast<cir::CIRGlobalValueInterface>(op), d);
   setDSOLocal(op);
   assert(!cir::MissingFeatures::opGlobalPartition());
 }

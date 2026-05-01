@@ -145,6 +145,18 @@ let cppNamespace = "::cir" in {
       }]
       >,
       InterfaceMethod<"",
+      "void", "setGlobalVisibility", (ins "cir::VisibilityKind":$val), [{}],
+      /*defaultImplementation=*/[{
+        $_op.setGlobalVisibility(val);
+      }]
+      >,
+      InterfaceMethod<"",
+      "void", "setLinkage", (ins "cir::GlobalLinkageKind":$val), [{}],
+      /*defaultImplementation=*/[{
+        $_op.setLinkage(val);
+      }]
+      >,
+      InterfaceMethod<"",
       "bool", "isDSOLocal", (ins), [{}],
       /*defaultImplementation=*/[{
         return $_op.getDsoLocal();
