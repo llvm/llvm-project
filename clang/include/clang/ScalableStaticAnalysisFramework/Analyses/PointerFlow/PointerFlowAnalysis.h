@@ -1,4 +1,4 @@
-//===- PointerFlowAnalysis.h ------------------------------------*- C++-*-===//
+//===- PointerFlowAnalysis.h ------------------------------------*- C++- *-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 // Defines
-// - PointerFlowAnalysisResult---the plain PointerFlow info collected from
-//   the whole program.
+// - PointerFlowAnalysisResult
+//     - the plain PointerFlow info collected from the whole program.
 //
 //===----------------------------------------------------------------------===//
 
@@ -27,6 +27,16 @@ namespace clang::ssaf {
 constexpr llvm::StringLiteral PointerFlowAnalysisResultName =
     "PointerFlowAnalysisResult";
 
+/// A PointerFlowAnalysisResult is a set of pointer-flow edges, i.e.,
+/// a pointer-flow graph. A directed edge src -> dest corresponds to an
+/// assignment (of any of various kinds, e.g., assignment operator or
+/// argument-passing) of pointer dest to pointer src in the source code.
+/// The edge's direction is the opposite of how pointer values flow. This
+/// is because PointerFlowAnalysisResult is used for analyzing property
+/// propagation between pointers. For an assignment `src = dest`, the
+/// propagation works such that if `src` has a property, `dest` must also
+/// have that property; otherwise, the property would not be preserved
+/// across the assignment.
 struct PointerFlowAnalysisResult final : AnalysisResult {
   static AnalysisName analysisName() {
     return AnalysisName(PointerFlowAnalysisResultName.str());

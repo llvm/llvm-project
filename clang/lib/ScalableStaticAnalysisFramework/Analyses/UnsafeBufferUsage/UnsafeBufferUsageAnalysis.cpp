@@ -137,9 +137,6 @@ class UnsafeBufferReachableAnalysis
   // Use pointers for efficiency. Both `Graph` and `Reachables` in the result
   // are tree-based containers that only grow. So pointers to them are stable.
   using EPLPtr = const EntityPointerLevel *;
-  using EPLPtrSet = std::unordered_set<EPLPtr>;
-  // The analysis needs to track EPLs with their contributor IDs:
-  using EPLPtrSetWithId = std::map<EntityId, std::unordered_set<EPLPtr>>;
 
   // Find all outgoing edges from `EPL` in the `Graph`, insert their
   // destination nodes into `Reachables`, and add newly discovered nodes to
@@ -151,8 +148,7 @@ class UnsafeBufferReachableAnalysis
 
       if (I != SubGraph.end()) {
         for (const auto &EPL : I->second) {
-          auto [Ignored, Inserted] =
-              this->getResult().Reachables[Id].insert(EPL);
+          auto [Ignored, Inserted] = getResult().Reachables[Id].insert(EPL);
           if (Inserted)
             WorkList.push_back(&EPL);
         }
@@ -165,13 +161,13 @@ public:
   initialize(const PointerFlowAnalysisResult &Graph,
              const UnsafeBufferUsageAnalysisResult &Starter) override {
     this->Graph = &Graph.Edges;
-    assert(this->getResult().Reachables.empty());
-    this->getResult().Reachables.insert(Starter.begin(), Starter.end());
+    assert(getResult().Reachables.empty());
+    getResult().Reachables.insert(Starter.begin(), Starter.end());
     return llvm::Error::success();
   }
 
   llvm::Expected<bool> step() override {
-    auto &Reachables = this->getResult().Reachables;
+    auto &Reachables = getResult().Reachables;
     // Simple DFS:
     std::vector<EPLPtr> Worklist;
 
@@ -185,13 +181,14 @@ public:
 
       updateReachablesWithOutgoings(Node, Worklist);
     }
+    // This is not an iterative algorithm so stop iteration by retruning false:
     return false;
   }
 };
 
 AnalysisRegistry::Add<UnsafeBufferReachableAnalysis>
     RegisterUnsafeBufferReachableAnalysis(
-        "Propagate unsafe buffer usages throughout the program");
+        "Reachable pointers from unsafe buffer usage in pointer flow graph");
 
 } // namespace
 

@@ -1,4 +1,4 @@
-//===- PointerFlow.h -------------------------------------------*- C++ -*-===//
+//===- PointerFlow.h --------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -25,13 +25,11 @@ using EdgeSet = std::map<EntityPointerLevel, EntityPointerLevelSet>;
 class PointerFlowEntitySummary final : public EntitySummary {
   EdgeSet Edges;
 
-  friend class PointerFlowTUSummaryExtractor;
   friend PointerFlowEntitySummary buildPointerFlowEntitySummary(EdgeSet Edges);
   friend llvm::iterator_range<EdgeSet::const_iterator>
   getEdges(const PointerFlowEntitySummary &);
 
-  PointerFlowEntitySummary(EdgeSet Edges)
-      : EntitySummary(), Edges(std::move(Edges)) {}
+  explicit PointerFlowEntitySummary(EdgeSet Edges) : Edges(std::move(Edges)) {}
 
 public:
   static constexpr llvm::StringLiteral Name = "PointerFlow";

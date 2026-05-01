@@ -27,7 +27,8 @@ using namespace llvm;
 namespace {
 
 //===----------------------------------------------------------------------===//
-// PointerFlowAnalysis---a no-op analysis
+// PointerFlowAnalysis---converts PointerFlowEntitySummary(s) in an LUSummary to
+// a PointerFlowAnalysisResult
 //===----------------------------------------------------------------------===//
 
 // Serialized as a flat array of alternating [EntityId, EdgesArray, ...] pairs.
@@ -105,8 +106,7 @@ public:
                   const PointerFlowEntitySummary &Summary) override {
     auto EdgesOfEntity = getEdges(Summary);
 
-    this->getResult().Edges[Id] =
-        EdgeSet(EdgesOfEntity.begin(), EdgesOfEntity.end());
+    getResult().Edges[Id] = EdgeSet(EdgesOfEntity.begin(), EdgesOfEntity.end());
     return llvm::Error::success();
   }
 };

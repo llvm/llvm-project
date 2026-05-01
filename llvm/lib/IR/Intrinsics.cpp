@@ -400,9 +400,6 @@ DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
                                              /*Lo=*/OverloadIndex));
     return;
   }
-  case IIT_EMPTYSTRUCT:
-    OutputTable.push_back(IITDescriptor::get(IITDescriptor::Struct, 0));
-    return;
   case IIT_STRUCT: {
     unsigned StructElts = Infos[NextElt++] + 2;
 

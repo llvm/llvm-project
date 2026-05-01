@@ -7,14 +7,16 @@
 //===----------------------------------------------------------------------===//
 //
 // Defines:
-// - UnsafeBufferUsageAnalysisResult, the whole-program analysis result
-//   type for UnsafeBufferUsageAnalysis. It collects unsafe buffer usages
-//   throughout the whole program.
+// - UnsafeBufferUsageAnalysisResult
+//     - the whole-program analysis result
+//       type for UnsafeBufferUsageAnalysis. It collects unsafe buffer usages
+//       throughout the whole program.
 //
-// - UnsafeBufferReachableAnalysisResult, the whole-program analysis result
-//   type for UnsafeBufferReachableAnalysis. It propagates unsafe buffer usages
-//   through the pointer flow graph, starting from the initial set collected by
-//   UnsafeBufferUsageAnalysis.
+// - UnsafeBufferReachableAnalysisResult
+//     - the whole-program analysis result
+//       type for UnsafeBufferReachableAnalysis. It propagates unsafe buffer
+//       usages through the pointer flow graph, starting from the initial set
+//       collected by UnsafeBufferUsageAnalysis.
 //
 //===----------------------------------------------------------------------===//
 
