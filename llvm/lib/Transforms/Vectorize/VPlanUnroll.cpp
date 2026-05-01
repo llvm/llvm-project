@@ -80,7 +80,7 @@ public:
   void unrollBlock(VPBlockBase *VPB);
 
   VPValue *getValueForPart(VPValue *V, unsigned Part) {
-    if (Part == 0 || isa<VPIRValue, VPSymbolicValue>(V))
+    if (Part == 0 || isa<VPIRValue, VPSymbolicValue, VPRegionValue>(V))
       return V;
     assert((VPV2Parts.contains(V) && VPV2Parts[V].size() >= Part) &&
            "accessed value does not exist");
@@ -433,11 +433,6 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
       addUniformForAllParts(cast<VPInstruction>(&R));
       for (unsigned Part = 1; Part != UF; ++Part)
         R.addOperand(getValueForPart(Op1, Part));
-      continue;
-    }
-    if (match(&R,
-              m_ComputeAnyOfResult(m_VPValue(), m_VPValue(), m_VPValue()))) {
-      addUniformForAllParts(cast<VPInstruction>(&R));
       continue;
     }
     VPValue *Op0;

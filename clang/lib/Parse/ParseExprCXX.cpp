@@ -287,8 +287,8 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
         // we already annotated the template-id.
         if (ParseUnqualifiedIdOperator(SS, EnteringContext, ObjectType,
                                        TemplateName)) {
-          TPA.Commit();
-          break;
+          TPA.Revert();
+          return true;
         }
 
         if (TemplateName.getKind() != UnqualifiedIdKind::IK_OperatorFunctionId &&
@@ -296,8 +296,8 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
           Diag(TemplateName.getSourceRange().getBegin(),
                diag::err_id_after_template_in_nested_name_spec)
             << TemplateName.getSourceRange();
-          TPA.Commit();
-          break;
+          TPA.Revert();
+          return true;
         }
       } else {
         TPA.Revert();
@@ -566,8 +566,7 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
 }
 
 ExprResult Parser::tryParseCXXIdExpression(CXXScopeSpec &SS,
-                                           bool isAddressOfOperand,
-                                           Token &Replacement) {
+                                           bool isAddressOfOperand) {
   ExprResult E;
 
   // We may have already annotated this id-expression.
@@ -620,8 +619,7 @@ ExprResult Parser::tryParseCXXIdExpression(CXXScopeSpec &SS,
 
     E = Actions.ActOnIdExpression(
         getCurScope(), SS, TemplateKWLoc, Name, Tok.is(tok::l_paren),
-        isAddressOfOperand, /*CCC=*/nullptr, /*IsInlineAsmIdentifier=*/false,
-        &Replacement);
+        isAddressOfOperand, /*CCC=*/nullptr, /*IsInlineAsmIdentifier=*/false);
     break;
   }
 
@@ -667,15 +665,7 @@ ExprResult Parser::ParseCXXIdExpression(bool isAddressOfOperand) {
                                  /*ObjectHasErrors=*/false,
                                  /*EnteringContext=*/false);
 
-  Token Replacement;
-  ExprResult Result =
-      tryParseCXXIdExpression(SS, isAddressOfOperand, Replacement);
-  if (Result.isUnset()) {
-    // If the ExprResult is valid but null, then typo correction suggested a
-    // keyword replacement that needs to be reparsed.
-    UnconsumeToken(Replacement);
-    Result = tryParseCXXIdExpression(SS, isAddressOfOperand, Replacement);
-  }
+  ExprResult Result = tryParseCXXIdExpression(SS, isAddressOfOperand);
   assert(!Result.isUnset() && "Typo correction suggested a keyword replacement "
                               "for a previous keyword suggestion");
   return Result;

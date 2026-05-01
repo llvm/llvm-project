@@ -3,7 +3,7 @@
 
 %struct.foo = type { i32, i64 }
 
-; CHECK: LV: Found an estimated cost of 0 for VF 2 For instruction:   %0 = bitcast ptr %b to ptr
+; CHECK: Cost of 0 for VF 2: WIDEN-CAST ir<%0> = bitcast ir<%b> to ptr
 
 ; The bitcast below will be scalarized due to the predication in the loop. Bitcasts
 ; between pointer types should be treated as free, despite the scalarization.

@@ -169,7 +169,7 @@ DecodeStatus BPFDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
                                              ArrayRef<uint8_t> Bytes,
                                              uint64_t Address,
                                              raw_ostream &CStream) const {
-  bool IsLittleEndian = getContext().getAsmInfo()->isLittleEndian();
+  bool IsLittleEndian = getContext().getAsmInfo().isLittleEndian();
   uint64_t Insn, Hi;
   DecodeStatus Result;
 
