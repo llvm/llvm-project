@@ -1060,7 +1060,7 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
           AggBuffer aggBuffer(ElementSize, *this);
           bufferAggregateConstant(Initializer, &aggBuffer);
           if (aggBuffer.numSymbols()) {
-            const unsigned int ptrSize = MAI->getCodePointerSize();
+            const unsigned int ptrSize = MAI.getCodePointerSize();
             if (ElementSize % ptrSize ||
                 !aggBuffer.allSymbolsAligned(ptrSize)) {
               // Print in bytes and use the mask() operator for pointers.
@@ -1132,7 +1132,7 @@ void NVPTXAsmPrinter::AggBuffer::printSymbol(unsigned nSym, raw_ostream &os) {
 }
 
 void NVPTXAsmPrinter::AggBuffer::printBytes(raw_ostream &os) {
-  unsigned int ptrSize = AP.MAI->getCodePointerSize();
+  unsigned int ptrSize = AP.MAI.getCodePointerSize();
   // Do not emit trailing zero initializers. They will be zero-initialized by
   // ptxas. This saves on both space requirements for the generated PTX and on
   // memory use by ptxas. (See:
@@ -1174,7 +1174,7 @@ void NVPTXAsmPrinter::AggBuffer::printBytes(raw_ostream &os) {
 }
 
 void NVPTXAsmPrinter::AggBuffer::printWords(raw_ostream &os) {
-  unsigned int ptrSize = AP.MAI->getCodePointerSize();
+  unsigned int ptrSize = AP.MAI.getCodePointerSize();
   symbolPosInBuffer.push_back(Size);
   unsigned int nSym = 0;
   unsigned int nextSymbolPos = symbolPosInBuffer[nSym];
