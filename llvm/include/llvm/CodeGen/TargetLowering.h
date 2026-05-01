@@ -466,10 +466,10 @@ public:
     return MachineMemOperand::MONone;
   }
 
-  MachineMemOperand::Flags
-  getLoadMemOperandFlags(const LoadInst &LI, const DataLayout &DL,
-                         AssumptionCache *AC = nullptr,
-                         const TargetLibraryInfo *LibInfo = nullptr) const;
+  MachineMemOperand::Flags getLoadMemOperandFlags(
+      const LoadInst &LI, const DataLayout &DL, AssumptionCache *AC = nullptr,
+      const TargetLibraryInfo *LibInfo = nullptr,
+      CodeGenOptLevel OptLevel = CodeGenOptLevel::Default) const;
   MachineMemOperand::Flags getStoreMemOperandFlags(const StoreInst &SI,
                                                    const DataLayout &DL) const;
   MachineMemOperand::Flags getAtomicMemOperandFlags(const Instruction &AI,
