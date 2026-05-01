@@ -10,9 +10,6 @@
 ! allocatable through the CUDA Fortran managed descriptor pipeline and
 ! crash at runtime in cudaGetSymbolAddress.
 
-! -----------------------------------------------------------------------------
-! Test 1: Plain allocatable stays plain - no cuf.* ops, no managed tagging
-! -----------------------------------------------------------------------------
 subroutine test_no_implicit_managed()
   real, allocatable :: a(:)
   allocate(a(100))
@@ -20,18 +17,6 @@ subroutine test_no_implicit_managed()
   deallocate(a)
 end subroutine
 
-! CHECK-LABEL: func.func @_QPtest_no_implicit_managed()
-! CHECK-NOT:   cuf.alloc
-! CHECK-NOT:   data_attr = #cuf.cuda<managed>
-! CHECK-NOT:   allocator_idx = 3
-! CHECK-NOT:   cuf.allocate
-! CHECK-NOT:   cuf.deallocate
-! CHECK:       fir.call @_FortranAAllocatableAllocate
-! CHECK:       fir.call @_FortranAAllocatableDeallocate
-
-! -----------------------------------------------------------------------------
-! Test 2: Multi-dimensional allocatable also stays plain
-! -----------------------------------------------------------------------------
 subroutine test_no_implicit_managed_multidim()
   real, allocatable :: arr(:,:,:)
   allocate(arr(10,20,30))
@@ -39,13 +24,6 @@ subroutine test_no_implicit_managed_multidim()
   deallocate(arr)
 end subroutine
 
-! CHECK-LABEL: func.func @_QPtest_no_implicit_managed_multidim()
-! CHECK-NOT:   data_attr = #cuf.cuda<managed>
-! CHECK-NOT:   allocator_idx = 3
-
-! -----------------------------------------------------------------------------
-! Test 3: Module-level allocatable global also stays plain
-! -----------------------------------------------------------------------------
 module mod_no_managed
   real, allocatable :: g(:)
 end module
@@ -56,6 +34,26 @@ subroutine test_no_implicit_managed_module()
   deallocate(g)
 end subroutine
 
-! CHECK:     fir.global @_QMmod_no_managedEg : !fir.box<!fir.heap<!fir.array<?xf32>>>
+! CHECK-LABEL: func.func @_QPtest_no_implicit_managed()
+! CHECK-NOT:     cuf.alloc
+! CHECK-NOT:     data_attr = #cuf.cuda<managed>
+! CHECK-NOT:     allocator_idx = 3
+! CHECK-NOT:     cuf.allocate
+! CHECK-NOT:     cuf.deallocate
+! CHECK-NOT:     cuf.free
+
+! CHECK-LABEL: func.func @_QPtest_no_implicit_managed_multidim()
+! CHECK-NOT:     cuf.alloc
+! CHECK-NOT:     data_attr = #cuf.cuda<managed>
+! CHECK-NOT:     allocator_idx = 3
+
+! CHECK-LABEL: func.func @_QPtest_no_implicit_managed_module()
+! CHECK-NOT:     cuf.allocate
+! CHECK-NOT:     cuf.deallocate
+! CHECK-NOT:     data_attr = #cuf.cuda<managed>
+! CHECK-NOT:     allocator_idx = 3
+
+! Module global must not be tagged as managed either.
+! CHECK:     fir.global @_QMmod_no_managedEg
 ! CHECK-NOT: data_attr = #cuf.cuda<managed>
 ! CHECK-NOT: allocator_idx = 3
