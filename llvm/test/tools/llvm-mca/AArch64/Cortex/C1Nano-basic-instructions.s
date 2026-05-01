@@ -1267,7 +1267,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT: 260.50 214.50 27.00  64.00  186.00 336.00 89.00   -     122.50 177.50 8.50   8.50   67.00
+# CHECK-NEXT: 260.50 260.50 27.00  64.00  186.00 336.00 89.00   -     192.50 192.50 8.50   8.50   67.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
@@ -1467,14 +1467,14 @@
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     adc	xzr, x3, x4
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     adc	x9, xzr, x10
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     adc	x20, x0, xzr
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     adcs	w29, w27, w25
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     adcs	wzr, w3, w4
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     adcs	w9, wzr, w10
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     adcs	w20, w0, wzr
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     adcs	x29, x27, x25
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     adcs	xzr, x3, x4
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     adcs	x9, xzr, x10
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     adcs	x20, x0, xzr
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -     adcs	w29, w27, w25
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -     adcs	wzr, w3, w4
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -     adcs	w9, wzr, w10
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -     adcs	w20, w0, wzr
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -     adcs	x29, x27, x25
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -     adcs	xzr, x3, x4
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -     adcs	x9, xzr, x10
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -     adcs	x20, x0, xzr
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     sbc	w29, w27, w25
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     sbc	wzr, w3, w4
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     ngc	w9, w10
@@ -1483,26 +1483,26 @@
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     sbc	xzr, x3, x4
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     ngc	x9, x10
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     sbc	x20, x0, xzr
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     sbcs	w29, w27, w25
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     sbcs	wzr, w3, w4
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     ngcs	w9, w10
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     sbcs	w20, w0, wzr
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     sbcs	x29, x27, x25
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     sbcs	xzr, x3, x4
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     ngcs	x9, x10
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     sbcs	x20, x0, xzr
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -     sbcs	w29, w27, w25
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -     sbcs	wzr, w3, w4
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -     ngcs	w9, w10
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -     sbcs	w20, w0, wzr
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -     sbcs	x29, x27, x25
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -     sbcs	xzr, x3, x4
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -     ngcs	x9, x10
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -     sbcs	x20, x0, xzr
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     ngc	w3, w12
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     ngc	wzr, w9
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     ngc	w23, wzr
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     ngc	x29, x30
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     ngc	xzr, x0
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     ngc	x0, xzr
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     ngcs	w3, w12
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     ngcs	wzr, w9
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     ngcs	w23, wzr
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     ngcs	x29, x30
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     ngcs	xzr, x0
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     ngcs	x0, xzr
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -     ngcs	w3, w12
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -     ngcs	wzr, w9
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -     ngcs	w23, wzr
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -     ngcs	x29, x30
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -     ngcs	xzr, x0
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -     ngcs	x0, xzr
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     sbfx	x1, x2, #3, #2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     asr	x3, x4, #63
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     asr	wzr, wzr, #31
@@ -1583,30 +1583,30 @@
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -     b.ne	#4
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -     b.ge	#1048572
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -     b.ge	#-4
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     ccmp	w1, #31, #0, eq
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     ccmp	w3, #0, #15, hs
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     ccmp	wzr, #15, #13, hs
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     ccmp	x9, #31, #0, le
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     ccmp	x3, #0, #15, gt
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     ccmp	xzr, #5, #7, ne
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     ccmn	w1, #31, #0, eq
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     ccmn	w3, #0, #15, hs
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     ccmn	wzr, #15, #13, hs
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     ccmn	x9, #31, #0, le
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     ccmn	x3, #0, #15, gt
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     ccmn	xzr, #5, #7, ne
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     ccmp	w1, wzr, #0, eq
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     ccmp	w3, w0, #15, hs
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     ccmp	wzr, w15, #13, hs
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     ccmp	x9, xzr, #0, le
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     ccmp	x3, x0, #15, gt
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     ccmp	xzr, x5, #7, ne
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     ccmn	w1, wzr, #0, eq
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     ccmn	w3, w0, #15, hs
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     ccmn	wzr, w15, #13, hs
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     ccmn	x9, xzr, #0, le
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     ccmn	x3, x0, #15, gt
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     ccmn	xzr, x5, #7, ne
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -     ccmp	w1, #31, #0, eq
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -     ccmp	w3, #0, #15, hs
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -     ccmp	wzr, #15, #13, hs
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -     ccmp	x9, #31, #0, le
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -     ccmp	x3, #0, #15, gt
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -     ccmp	xzr, #5, #7, ne
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -     ccmn	w1, #31, #0, eq
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -     ccmn	w3, #0, #15, hs
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -     ccmn	wzr, #15, #13, hs
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -     ccmn	x9, #31, #0, le
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -     ccmn	x3, #0, #15, gt
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -     ccmn	xzr, #5, #7, ne
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -     ccmp	w1, wzr, #0, eq
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -     ccmp	w3, w0, #15, hs
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -     ccmp	wzr, w15, #13, hs
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -     ccmp	x9, xzr, #0, le
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -     ccmp	x3, x0, #15, gt
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -     ccmp	xzr, x5, #7, ne
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -     ccmn	w1, wzr, #0, eq
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -     ccmn	w3, w0, #15, hs
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -     ccmn	wzr, w15, #13, hs
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -     ccmn	x9, xzr, #0, le
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -     ccmn	x3, x0, #15, gt
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -     ccmn	xzr, x5, #7, ne
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     csel	w1, w0, w19, ne
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     csel	wzr, w5, w9, eq
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     csel	w9, wzr, w30, gt
@@ -1766,35 +1766,35 @@
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     ror	x19, x23, #24
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     ror	x29, xzr, #63
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     ror	w9, w13, #31
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -     fcmp	h5, h21
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -     fcmp	h5, #0.0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -     fcmpe	h22, h21
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -     fcmpe	h13, #0.0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -     fcmp	s3, s5
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -     fcmp	s31, #0.0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -     fcmpe	s29, s30
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -     fcmpe	s15, #0.0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -     fcmp	d4, d12
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -     fcmp	d23, #0.0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -     fcmpe	d26, d22
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -     fcmpe	d29, #0.0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     5.00    -      -      -     fccmp	s1, s31, #0, eq
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     5.00    -      -      -     fccmp	s3, s0, #15, hs
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     5.00    -      -      -     fccmp	s31, s15, #13, hs
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     5.00    -      -      -     fccmp	d9, d31, #0, le
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     5.00    -      -      -     fccmp	d3, d0, #15, gt
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     5.00    -      -      -     fccmp	d31, d5, #7, ne
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     5.00    -      -      -     fccmp	h31, h3, #11, hs
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     5.00    -      -      -     fccmpe	h6, h1, #12, ne
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     5.00    -      -      -     fccmpe	s1, s31, #0, eq
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     5.00    -      -      -     fccmpe	s3, s0, #15, hs
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     5.00    -      -      -     fccmpe	s31, s15, #13, hs
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     5.00    -      -      -     fccmpe	d9, d31, #0, le
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     5.00    -      -      -     fccmpe	d3, d0, #15, gt
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     5.00    -      -      -     fccmpe	d31, d5, #7, ne
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -     fcsel	s3, s20, s9, pl
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -     fcsel	d9, d10, d11, mi
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -     fcsel	h26, h2, h11, hs
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmp	h5, h21
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmp	h5, #0.0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmpe	h22, h21
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmpe	h13, #0.0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmp	s3, s5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmp	s31, #0.0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmpe	s29, s30
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmpe	s15, #0.0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmp	d4, d12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmp	d23, #0.0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmpe	d26, d22
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmpe	d29, #0.0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     5.00   5.00    -      -      -     fccmp	s1, s31, #0, eq
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     5.00   5.00    -      -      -     fccmp	s3, s0, #15, hs
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     5.00   5.00    -      -      -     fccmp	s31, s15, #13, hs
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     5.00   5.00    -      -      -     fccmp	d9, d31, #0, le
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     5.00   5.00    -      -      -     fccmp	d3, d0, #15, gt
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     5.00   5.00    -      -      -     fccmp	d31, d5, #7, ne
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     5.00   5.00    -      -      -     fccmp	h31, h3, #11, hs
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     5.00   5.00    -      -      -     fccmpe	h6, h1, #12, ne
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     5.00   5.00    -      -      -     fccmpe	s1, s31, #0, eq
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     5.00   5.00    -      -      -     fccmpe	s3, s0, #15, hs
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     5.00   5.00    -      -      -     fccmpe	s31, s15, #13, hs
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     5.00   5.00    -      -      -     fccmpe	d9, d31, #0, le
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     5.00   5.00    -      -      -     fccmpe	d3, d0, #15, gt
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     5.00   5.00    -      -      -     fccmpe	d31, d5, #7, ne
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcsel	s3, s20, s9, pl
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcsel	d9, d10, d11, mi
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcsel	h26, h2, h11, hs
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fmov	h18, h28
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fmov	s0, s1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fabs	s2, s3

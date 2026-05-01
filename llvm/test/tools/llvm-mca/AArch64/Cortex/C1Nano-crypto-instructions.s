@@ -59,7 +59,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     5.50   4.50    -      -     109.00
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     6.50   6.50    -      -     109.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
@@ -67,7 +67,7 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     aese	z0.b, z0.b, z31.b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     aesimc	z0.b, z0.b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     aesmc	z0.b, z0.b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     sha1h	s0, s1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     sha1h	s0, s1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     2.00   sha1su1	v0.4s, v1.4s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     2.00   sha256su0	v0.4s, v1.4s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     2.00   sha1c	q0, s1, v2.4s
@@ -82,7 +82,7 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     7.00   sha512su0	v11.2d, v12.2d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     7.00   sha512su1	v11.2d, v13.2d, v14.2d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     eor3	v25.16b, v12.16b, v7.16b, v2.16b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     2.00    -      -      -      -     rax1	v30.2d, v29.2d, v26.2d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     2.00   2.00    -      -      -     rax1	v30.2d, v29.2d, v26.2d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     xar	v26.2d, v21.2d, v27.2d, #63
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     bcax	v31.16b, v26.16b, v2.16b, v1.16b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     7.00   sm3ss1	v20.4s, v23.4s, v21.4s, v22.4s

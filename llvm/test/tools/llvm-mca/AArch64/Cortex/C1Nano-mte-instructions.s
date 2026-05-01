@@ -133,15 +133,15 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT: 25.00  10.00   -      -     1.50   113.50  -      -      -      -      -      -      -
+# CHECK-NEXT: 25.00  25.00   -      -     13.50  113.50  -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
-# CHECK-NEXT: 3.00    -      -      -      -      -      -      -      -      -      -      -      -     irg	x0, x1
-# CHECK-NEXT: 3.00    -      -      -      -      -      -      -      -      -      -      -      -     irg	sp, x1
-# CHECK-NEXT: 3.00    -      -      -      -      -      -      -      -      -      -      -      -     irg	x0, sp
-# CHECK-NEXT: 3.00    -      -      -      -      -      -      -      -      -      -      -      -     irg	x0, x1, x2
-# CHECK-NEXT: 3.00    -      -      -      -      -      -      -      -      -      -      -      -     irg	sp, x1, x2
+# CHECK-NEXT: 3.00   3.00    -      -      -      -      -      -      -      -      -      -      -     irg	x0, x1
+# CHECK-NEXT: 3.00   3.00    -      -      -      -      -      -      -      -      -      -      -     irg	sp, x1
+# CHECK-NEXT: 3.00   3.00    -      -      -      -      -      -      -      -      -      -      -     irg	x0, sp
+# CHECK-NEXT: 3.00   3.00    -      -      -      -      -      -      -      -      -      -      -     irg	x0, x1, x2
+# CHECK-NEXT: 3.00   3.00    -      -      -      -      -      -      -      -      -      -      -     irg	sp, x1, x2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     addg	x0, x1, #0, #1
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     addg	sp, x2, #32, #3
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     addg	x0, sp, #64, #5
@@ -233,9 +233,9 @@
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldg	x0, [x1]
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldg	x2, [sp, #-4096]
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldg	x3, [x4, #4080]
-# CHECK-NEXT:  -      -      -      -      -     4.00    -      -      -      -      -      -      -     ldgm	x0, [x1]
-# CHECK-NEXT:  -      -      -      -      -     4.00    -      -      -      -      -      -      -     ldgm	x1, [sp]
-# CHECK-NEXT:  -      -      -      -      -     4.00    -      -      -      -      -      -      -     ldgm	xzr, [x2]
+# CHECK-NEXT:  -      -      -      -     4.00   4.00    -      -      -      -      -      -      -     ldgm	x0, [x1]
+# CHECK-NEXT:  -      -      -      -     4.00   4.00    -      -      -      -      -      -      -     ldgm	x1, [sp]
+# CHECK-NEXT:  -      -      -      -     4.00   4.00    -      -      -      -      -      -      -     ldgm	xzr, [x2]
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     stgm	x0, [x1]
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     stgm	x1, [sp]
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     stgm	xzr, [x2]

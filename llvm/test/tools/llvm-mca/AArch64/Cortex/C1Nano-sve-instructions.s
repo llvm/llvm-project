@@ -3442,7 +3442,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT: 437.00 54.00  9.00    -     156.00 2269.00  -     -     981.00 1080.00 208.00 197.00 690.00
+# CHECK-NEXT: 437.00 54.00  9.00    -     221.00 2425.00  -     -     1177.00 1258.00 215.00 215.00 690.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
@@ -3624,7 +3624,7 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     bfmlalt	z0.s, z1.h, z2.h[7]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     bfmlalt	z0.s, z1.h, z7.h[7]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     bfmlalt	z14.s, z10.h, z21.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     bfmmla	z0.s, z1.h, z2.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00   1.00   1.00    -     bfmmla	z0.s, z1.h, z2.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     11.00  bgrp	z0.b, z1.b, z31.b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     66.00  bgrp	z0.d, z1.d, z31.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     19.00  bgrp	z0.h, z1.h, z31.h
@@ -3682,10 +3682,10 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     clasta	d0, p7, d0, z31.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     clasta	h0, p7, h0, z31.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     clasta	s0, p7, s0, z31.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -     clasta	w0, p7, w0, z31.b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -     clasta	w0, p7, w0, z31.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -     clasta	w0, p7, w0, z31.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -     clasta	x0, p7, x0, z31.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00   4.00    -      -      -     clasta	w0, p7, w0, z31.b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00   4.00    -      -      -     clasta	w0, p7, w0, z31.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00   4.00    -      -      -     clasta	w0, p7, w0, z31.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00   4.00    -      -      -     clasta	x0, p7, x0, z31.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     clasta	z0.b, p7, z0.b, z31.b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     clasta	z0.d, p7, z0.d, z31.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     clasta	z0.h, p7, z0.h, z31.h
@@ -3694,10 +3694,10 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     clastb	d0, p7, d0, z31.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     clastb	h0, p7, h0, z31.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     clastb	s0, p7, s0, z31.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -     clastb	w0, p7, w0, z31.b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -     clastb	w0, p7, w0, z31.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -     clastb	w0, p7, w0, z31.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -     clastb	x0, p7, x0, z31.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00   4.00    -      -      -     clastb	w0, p7, w0, z31.b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00   4.00    -      -      -     clastb	w0, p7, w0, z31.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00   4.00    -      -      -     clastb	w0, p7, w0, z31.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00   4.00    -      -      -     clastb	x0, p7, x0, z31.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     clastb	z0.b, p7, z0.b, z31.b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     clastb	z0.d, p7, z0.d, z31.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     clastb	z0.h, p7, z0.h, z31.h
@@ -3885,9 +3885,9 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     cnot	z31.h, p7/m, z31.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     cnot	z31.s, p7/m, z31.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     cnt	z31.b, p7/m, z31.b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     7.00    -      -      -     cnt	z31.d, p7/m, z31.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     7.00   7.00    -      -      -     cnt	z31.d, p7/m, z31.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     cnt	z31.h, p7/m, z31.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00    -      -      -      -     cnt	z31.s, p7/m, z31.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00   4.00    -      -      -     cnt	z31.s, p7/m, z31.s
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     cntb	x0
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     cntb	x0, #28
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     cntb	x0, all, mul #16
@@ -3992,18 +3992,18 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fabs	z31.d, p7/m, z31.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fabs	z31.h, p7/m, z31.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fabs	z31.s, p7/m, z31.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     facge	p0.d, p0/z, z0.d, z1.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     facge	p0.d, p0/z, z1.d, z0.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     facge	p0.h, p0/z, z0.h, z1.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     facge	p0.h, p0/z, z1.h, z0.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     facge	p0.s, p0/z, z0.s, z1.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     facge	p0.s, p0/z, z1.s, z0.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     facgt	p0.d, p0/z, z0.d, z1.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     facgt	p0.d, p0/z, z1.d, z0.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     facgt	p0.h, p0/z, z0.h, z1.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     facgt	p0.h, p0/z, z1.h, z0.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     facgt	p0.s, p0/z, z0.s, z1.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     facgt	p0.s, p0/z, z1.s, z0.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     facge	p0.d, p0/z, z0.d, z1.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     facge	p0.d, p0/z, z1.d, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     facge	p0.h, p0/z, z0.h, z1.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     facge	p0.h, p0/z, z1.h, z0.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     facge	p0.s, p0/z, z0.s, z1.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     facge	p0.s, p0/z, z1.s, z0.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     facgt	p0.d, p0/z, z0.d, z1.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     facgt	p0.d, p0/z, z1.d, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     facgt	p0.h, p0/z, z0.h, z1.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     facgt	p0.h, p0/z, z1.h, z0.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     facgt	p0.s, p0/z, z0.s, z1.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     facgt	p0.s, p0/z, z1.s, z0.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fadd	z0.d, p0/m, z0.d, #0.5
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fadd	z0.d, p7/m, z0.d, z31.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fadd	z0.d, z1.d, z31.d
@@ -4016,9 +4016,9 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fadd	z31.d, p7/m, z31.d, #1.0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fadd	z31.h, p7/m, z31.h, #1.0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fadd	z31.s, p7/m, z31.s, #1.0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00    -      -      -      -     fadda	d0, p7, d0, z31.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     25.00   -      -      -      -     fadda	h0, p7, h0, z31.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     9.00    -      -      -     fadda	s0, p7, s0, z31.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     fadda	d0, p7, d0, z31.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     25.00  25.00   -      -      -     fadda	h0, p7, h0, z31.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     9.00   9.00    -      -      -     fadda	s0, p7, s0, z31.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     faddp	z0.h, p0/m, z0.h, z1.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     faddp	z29.s, p3/m, z29.s, z30.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     faddp	z31.d, p7/m, z31.d, z30.d
@@ -4031,30 +4031,30 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     fcadd	z31.d, p7/m, z31.d, z31.d, #270
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     fcadd	z31.h, p7/m, z31.h, z31.h, #270
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     fcadd	z31.s, p7/m, z31.s, z31.s, #270
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcmeq	p0.d, p0/z, z0.d, #0.0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcmeq	p0.d, p0/z, z0.d, z1.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcmeq	p0.h, p0/z, z0.h, #0.0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcmeq	p0.h, p0/z, z0.h, z1.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcmeq	p0.s, p0/z, z0.s, #0.0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcmeq	p0.s, p0/z, z0.s, z1.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcmge	p0.d, p0/z, z0.d, #0.0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcmge	p0.d, p0/z, z0.d, z1.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcmge	p0.d, p0/z, z1.d, z0.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcmge	p0.h, p0/z, z0.h, #0.0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcmge	p0.h, p0/z, z0.h, z1.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcmge	p0.h, p0/z, z1.h, z0.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcmge	p0.s, p0/z, z0.s, #0.0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcmge	p0.s, p0/z, z0.s, z1.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcmge	p0.s, p0/z, z1.s, z0.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcmgt	p0.d, p0/z, z0.d, #0.0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcmgt	p0.d, p0/z, z0.d, z1.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcmgt	p0.d, p0/z, z1.d, z0.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcmgt	p0.h, p0/z, z0.h, #0.0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcmgt	p0.h, p0/z, z0.h, z1.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcmgt	p0.h, p0/z, z1.h, z0.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcmgt	p0.s, p0/z, z0.s, #0.0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcmgt	p0.s, p0/z, z0.s, z1.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcmgt	p0.s, p0/z, z1.s, z0.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmeq	p0.d, p0/z, z0.d, #0.0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmeq	p0.d, p0/z, z0.d, z1.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmeq	p0.h, p0/z, z0.h, #0.0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmeq	p0.h, p0/z, z0.h, z1.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmeq	p0.s, p0/z, z0.s, #0.0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmeq	p0.s, p0/z, z0.s, z1.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmge	p0.d, p0/z, z0.d, #0.0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmge	p0.d, p0/z, z0.d, z1.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmge	p0.d, p0/z, z1.d, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmge	p0.h, p0/z, z0.h, #0.0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmge	p0.h, p0/z, z0.h, z1.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmge	p0.h, p0/z, z1.h, z0.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmge	p0.s, p0/z, z0.s, #0.0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmge	p0.s, p0/z, z0.s, z1.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmge	p0.s, p0/z, z1.s, z0.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmgt	p0.d, p0/z, z0.d, #0.0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmgt	p0.d, p0/z, z0.d, z1.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmgt	p0.d, p0/z, z1.d, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmgt	p0.h, p0/z, z0.h, #0.0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmgt	p0.h, p0/z, z0.h, z1.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmgt	p0.h, p0/z, z1.h, z0.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmgt	p0.s, p0/z, z0.s, #0.0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmgt	p0.s, p0/z, z0.s, z1.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmgt	p0.s, p0/z, z1.s, z0.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     fcmla	z0.d, p0/m, z0.d, z0.d, #0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     fcmla	z0.d, p0/m, z1.d, z2.d, #90
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     fcmla	z0.h, p0/m, z0.h, z0.h, #0
@@ -4071,21 +4071,21 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     fcmla	z31.h, p7/m, z31.h, z31.h, #270
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     fcmla	z31.h, z31.h, z7.h[3], #270
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     fcmla	z31.s, p7/m, z31.s, z31.s, #270
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcmle	p0.d, p0/z, z0.d, #0.0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcmle	p0.h, p0/z, z0.h, #0.0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcmle	p0.s, p0/z, z0.s, #0.0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcmlt	p0.d, p0/z, z0.d, #0.0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcmlt	p0.h, p0/z, z0.h, #0.0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcmlt	p0.s, p0/z, z0.s, #0.0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcmne	p0.d, p0/z, z0.d, #0.0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcmne	p0.d, p0/z, z0.d, z1.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcmne	p0.h, p0/z, z0.h, #0.0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcmne	p0.h, p0/z, z0.h, z1.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcmne	p0.s, p0/z, z0.s, #0.0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcmne	p0.s, p0/z, z0.s, z1.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcmuo	p0.d, p0/z, z0.d, z1.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcmuo	p0.h, p0/z, z0.h, z1.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcmuo	p0.s, p0/z, z0.s, z1.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmle	p0.d, p0/z, z0.d, #0.0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmle	p0.h, p0/z, z0.h, #0.0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmle	p0.s, p0/z, z0.s, #0.0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmlt	p0.d, p0/z, z0.d, #0.0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmlt	p0.h, p0/z, z0.h, #0.0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmlt	p0.s, p0/z, z0.s, #0.0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmne	p0.d, p0/z, z0.d, #0.0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmne	p0.d, p0/z, z0.d, z1.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmne	p0.h, p0/z, z0.h, #0.0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmne	p0.h, p0/z, z0.h, z1.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmne	p0.s, p0/z, z0.s, #0.0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmne	p0.s, p0/z, z0.s, z1.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmuo	p0.d, p0/z, z0.d, z1.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmuo	p0.h, p0/z, z0.h, z1.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmuo	p0.s, p0/z, z0.s, z1.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcvt	z0.d, p0/m, z0.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcvt	z0.d, p0/m, z0.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcvt	z0.h, p0/m, z0.d
@@ -4375,35 +4375,35 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     index	z0.b, #0, #0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     index	z0.d, #0, #0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     index	z0.h, #0, #0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -     index	z0.h, w0, w0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   1.00    -     index	z0.h, w0, w0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     index	z0.s, #0, #0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -     index	z21.b, w10, w21
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     index	z21.d, x10, x21
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -     index	z21.s, w10, w21
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -     index	z23.b, #13, w8
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -     index	z23.b, w13, #8
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     index	z23.d, #13, x8
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     index	z23.d, x13, #8
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -     index	z23.h, #13, w8
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -     index	z23.h, w13, #8
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -     index	z23.s, #13, w8
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -     index	z23.s, w13, #8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   1.00    -     index	z21.b, w10, w21
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   1.00    -     index	z21.d, x10, x21
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   1.00    -     index	z21.s, w10, w21
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   1.00    -     index	z23.b, #13, w8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   1.00    -     index	z23.b, w13, #8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   1.00    -     index	z23.d, #13, x8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   1.00    -     index	z23.d, x13, #8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   1.00    -     index	z23.h, #13, w8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   1.00    -     index	z23.h, w13, #8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   1.00    -     index	z23.s, #13, w8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   1.00    -     index	z23.s, w13, #8
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     index	z31.b, #-1, #-1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -     index	z31.b, #-1, wzr
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -     index	z31.b, wzr, #-1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -     index	z31.b, wzr, wzr
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   1.00    -     index	z31.b, #-1, wzr
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   1.00    -     index	z31.b, wzr, #-1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   1.00    -     index	z31.b, wzr, wzr
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     index	z31.d, #-1, #-1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     index	z31.d, #-1, xzr
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     index	z31.d, xzr, #-1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     index	z31.d, xzr, xzr
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   1.00    -     index	z31.d, #-1, xzr
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   1.00    -     index	z31.d, xzr, #-1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   1.00    -     index	z31.d, xzr, xzr
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     index	z31.h, #-1, #-1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -     index	z31.h, #-1, wzr
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -     index	z31.h, wzr, #-1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -     index	z31.h, wzr, wzr
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   1.00    -     index	z31.h, #-1, wzr
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   1.00    -     index	z31.h, wzr, #-1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   1.00    -     index	z31.h, wzr, wzr
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     index	z31.s, #-1, #-1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -     index	z31.s, #-1, wzr
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -     index	z31.s, wzr, #-1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -     index	z31.s, wzr, wzr
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   1.00    -     index	z31.s, #-1, wzr
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   1.00    -     index	z31.s, wzr, #-1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   1.00    -     index	z31.s, wzr, wzr
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     insr	z0.b, w0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     insr	z0.d, x0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     insr	z0.h, w0
@@ -4420,213 +4420,213 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     lasta	d0, p7, z31.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     lasta	h0, p7, z31.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     lasta	s0, p7, z31.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00    -      -      -      -     lasta	w0, p7, z31.b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00    -      -      -      -     lasta	w0, p7, z31.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00    -      -      -      -     lasta	w0, p7, z31.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00    -      -      -      -     lasta	x0, p7, z31.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00   4.00    -      -      -     lasta	w0, p7, z31.b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00   4.00    -      -      -     lasta	w0, p7, z31.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00   4.00    -      -      -     lasta	w0, p7, z31.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00   4.00    -      -      -     lasta	x0, p7, z31.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     lastb	b0, p7, z31.b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     lastb	d0, p7, z31.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     lastb	h0, p7, z31.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     lastb	s0, p7, z31.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00    -      -      -      -     lastb	w0, p7, z31.b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00    -      -      -      -     lastb	w0, p7, z31.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00    -      -      -      -     lastb	w0, p7, z31.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00    -      -      -      -     lastb	x0, p7, z31.d
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ld1b	{ z0.b }, p0/z, [sp, x0]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ld1b	{ z0.b }, p0/z, [x0, x0]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1b	{ z0.b }, p0/z, [x0]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1b	{ z0.d }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00   4.00    -      -      -     lastb	w0, p7, z31.b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00   4.00    -      -      -     lastb	w0, p7, z31.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00   4.00    -      -      -     lastb	w0, p7, z31.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00   4.00    -      -      -     lastb	x0, p7, z31.d
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1b	{ z0.b }, p0/z, [sp, x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1b	{ z0.b }, p0/z, [x0, x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1b	{ z0.b }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1b	{ z0.d }, p0/z, [x0]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1b	{ z0.d }, p0/z, [z0.d]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1b	{ z0.h }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1b	{ z0.h }, p0/z, [x0]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1b	{ z0.s }, p0/z, [x0, z0.s, sxtw]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1b	{ z0.s }, p0/z, [x0, z0.s, uxtw]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1b	{ z0.s }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1b	{ z0.s }, p0/z, [x0]
 # CHECK-NEXT:  -      -      -      -      -     7.00    -      -      -      -      -      -      -     ld1b	{ z0.s }, p0/z, [z0.s]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1b	{ z21.b }, p5/z, [x10, #5, mul vl]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1b	{ z21.d }, p5/z, [x10, #5, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1b	{ z21.b }, p5/z, [x10, #5, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1b	{ z21.d }, p5/z, [x10, #5, mul vl]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1b	{ z21.d }, p5/z, [x10, z21.d, sxtw]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1b	{ z21.d }, p5/z, [x10, z21.d, uxtw]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1b	{ z21.h }, p5/z, [x10, #5, mul vl]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1b	{ z21.s }, p5/z, [x10, #5, mul vl]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ld1b	{ z21.s }, p5/z, [x10, x21]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ld1b	{ z23.d }, p3/z, [x13, x8]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1b	{ z31.b }, p7/z, [sp, #-1, mul vl]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1b	{ z31.d }, p7/z, [sp, #-1, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1b	{ z21.h }, p5/z, [x10, #5, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1b	{ z21.s }, p5/z, [x10, #5, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1b	{ z21.s }, p5/z, [x10, x21]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1b	{ z23.d }, p3/z, [x13, x8]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1b	{ z31.b }, p7/z, [sp, #-1, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1b	{ z31.d }, p7/z, [sp, #-1, mul vl]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1b	{ z31.d }, p7/z, [sp, z31.d]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1b	{ z31.d }, p7/z, [z31.d, #31]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1b	{ z31.h }, p7/z, [sp, #-1, mul vl]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1b	{ z31.s }, p7/z, [sp, #-1, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1b	{ z31.h }, p7/z, [sp, #-1, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1b	{ z31.s }, p7/z, [sp, #-1, mul vl]
 # CHECK-NEXT:  -      -      -      -      -     7.00    -      -      -      -      -      -      -     ld1b	{ z31.s }, p7/z, [z31.s, #31]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ld1b	{ z5.h }, p3/z, [x17, x16]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1b	{ z5.h }, p3/z, [x17, x16]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1d	{ z0.d }, p0/z, [x0, z0.d, sxtw #3]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1d	{ z0.d }, p0/z, [x0, z0.d, uxtw #3]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1d	{ z0.d }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1d	{ z0.d }, p0/z, [x0]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1d	{ z0.d }, p0/z, [z0.d]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1d	{ z21.d }, p5/z, [x10, #5, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1d	{ z21.d }, p5/z, [x10, #5, mul vl]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1d	{ z21.d }, p5/z, [x10, z21.d, sxtw]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1d	{ z21.d }, p5/z, [x10, z21.d, uxtw]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ld1d	{ z23.d }, p3/z, [sp, x8, lsl #3]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ld1d	{ z23.d }, p3/z, [x13, x8, lsl #3]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1d	{ z23.d }, p3/z, [sp, x8, lsl #3]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1d	{ z23.d }, p3/z, [x13, x8, lsl #3]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1d	{ z23.d }, p3/z, [x13, z8.d, lsl #3]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1d	{ z31.d }, p7/z, [sp, #-1, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1d	{ z31.d }, p7/z, [sp, #-1, mul vl]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1d	{ z31.d }, p7/z, [sp, z31.d]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1d	{ z31.d }, p7/z, [z31.d, #248]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1h	{ z0.d }, p0/z, [x0, z0.d, sxtw #1]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1h	{ z0.d }, p0/z, [x0, z0.d, uxtw #1]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1h	{ z0.d }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1h	{ z0.d }, p0/z, [x0]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1h	{ z0.d }, p0/z, [z0.d]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1h	{ z0.h }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1h	{ z0.h }, p0/z, [x0]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1h	{ z0.s }, p0/z, [x0, z0.s, sxtw]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1h	{ z0.s }, p0/z, [x0, z0.s, uxtw]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1h	{ z0.s }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1h	{ z0.s }, p0/z, [x0]
 # CHECK-NEXT:  -      -      -      -      -     7.00    -      -      -      -      -      -      -     ld1h	{ z0.s }, p0/z, [z0.s]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1h	{ z21.d }, p5/z, [x10, #5, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1h	{ z21.d }, p5/z, [x10, #5, mul vl]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1h	{ z21.d }, p5/z, [x10, z21.d, sxtw]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1h	{ z21.d }, p5/z, [x10, z21.d, uxtw]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1h	{ z21.h }, p5/z, [x10, #5, mul vl]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1h	{ z21.s }, p5/z, [x10, #5, mul vl]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ld1h	{ z21.s }, p5/z, [x10, x21, lsl #1]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ld1h	{ z23.d }, p3/z, [x13, x8, lsl #1]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1h	{ z21.h }, p5/z, [x10, #5, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1h	{ z21.s }, p5/z, [x10, #5, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1h	{ z21.s }, p5/z, [x10, x21, lsl #1]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1h	{ z23.d }, p3/z, [x13, x8, lsl #1]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1h	{ z23.d }, p3/z, [x13, z8.d, lsl #1]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1h	{ z31.d }, p7/z, [sp, #-1, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1h	{ z31.d }, p7/z, [sp, #-1, mul vl]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1h	{ z31.d }, p7/z, [sp, z31.d]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1h	{ z31.d }, p7/z, [z31.d, #62]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1h	{ z31.h }, p7/z, [sp, #-1, mul vl]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1h	{ z31.s }, p7/z, [sp, #-1, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1h	{ z31.h }, p7/z, [sp, #-1, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1h	{ z31.s }, p7/z, [sp, #-1, mul vl]
 # CHECK-NEXT:  -      -      -      -      -     7.00    -      -      -      -      -      -      -     ld1h	{ z31.s }, p7/z, [sp, z31.s, sxtw #1]
 # CHECK-NEXT:  -      -      -      -      -     7.00    -      -      -      -      -      -      -     ld1h	{ z31.s }, p7/z, [sp, z31.s, uxtw #1]
 # CHECK-NEXT:  -      -      -      -      -     7.00    -      -      -      -      -      -      -     ld1h	{ z31.s }, p7/z, [z31.s, #62]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ld1h	{ z5.h }, p3/z, [sp, x16, lsl #1]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ld1h	{ z5.h }, p3/z, [x17, x16, lsl #1]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1rb	{ z0.b }, p0/z, [x0]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1rb	{ z0.d }, p0/z, [x0]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1rb	{ z0.h }, p0/z, [x0]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1rb	{ z0.s }, p0/z, [x0]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1rb	{ z31.b }, p7/z, [sp, #63]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1rb	{ z31.d }, p7/z, [sp, #63]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1rb	{ z31.h }, p7/z, [sp, #63]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1rb	{ z31.s }, p7/z, [sp, #63]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1rd	{ z0.d }, p0/z, [x0]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1rd	{ z31.d }, p7/z, [sp, #504]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1rh	{ z0.d }, p0/z, [x0]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1rh	{ z0.h }, p0/z, [x0]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1rh	{ z0.s }, p0/z, [x0]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1rh	{ z31.d }, p7/z, [sp, #126]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1rh	{ z31.h }, p7/z, [sp, #126]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1rh	{ z31.s }, p7/z, [sp, #126]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ld1rqb	{ z0.b }, p0/z, [x0, x0]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1rqb	{ z0.b }, p0/z, [x0]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1rqb	{ z21.b }, p5/z, [x10, #112]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1rqb	{ z23.b }, p3/z, [x13, #-128]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1rqb	{ z31.b }, p7/z, [sp, #-16]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ld1rqd	{ z0.d }, p0/z, [x0, x0, lsl #3]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1rqd	{ z0.d }, p0/z, [x0]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1rqd	{ z23.d }, p3/z, [x13, #-128]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1rqd	{ z23.d }, p3/z, [x13, #112]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1rqd	{ z31.d }, p7/z, [sp, #-16]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ld1rqh	{ z0.h }, p0/z, [x0, x0, lsl #1]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1rqh	{ z0.h }, p0/z, [x0]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1rqh	{ z23.h }, p3/z, [x13, #-128]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1rqh	{ z23.h }, p3/z, [x13, #112]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1rqh	{ z31.h }, p7/z, [sp, #-16]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ld1rqw	{ z0.s }, p0/z, [x0, x0, lsl #2]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1rqw	{ z0.s }, p0/z, [x0]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1rqw	{ z23.s }, p3/z, [x13, #-128]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1rqw	{ z23.s }, p3/z, [x13, #112]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1rqw	{ z31.s }, p7/z, [sp, #-16]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1rsb	{ z0.d }, p0/z, [x0]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1rsb	{ z0.h }, p0/z, [x0]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1rsb	{ z0.s }, p0/z, [x0]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1rsb	{ z31.d }, p7/z, [sp, #63]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1rsb	{ z31.h }, p7/z, [sp, #63]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1rsb	{ z31.s }, p7/z, [sp, #63]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1rsh	{ z0.d }, p0/z, [x0]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1rsh	{ z0.s }, p0/z, [x0]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1rsh	{ z31.d }, p7/z, [sp, #126]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1rsh	{ z31.s }, p7/z, [sp, #126]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1rsw	{ z0.d }, p0/z, [x0]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1rsw	{ z31.d }, p7/z, [sp, #252]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1rw	{ z0.d }, p0/z, [x0]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1rw	{ z0.s }, p0/z, [x0]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1rw	{ z31.d }, p7/z, [sp, #252]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1rw	{ z31.s }, p7/z, [sp, #252]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1sb	{ z0.d }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1h	{ z5.h }, p3/z, [sp, x16, lsl #1]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1h	{ z5.h }, p3/z, [x17, x16, lsl #1]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rb	{ z0.b }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rb	{ z0.d }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rb	{ z0.h }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rb	{ z0.s }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rb	{ z31.b }, p7/z, [sp, #63]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rb	{ z31.d }, p7/z, [sp, #63]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rb	{ z31.h }, p7/z, [sp, #63]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rb	{ z31.s }, p7/z, [sp, #63]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rd	{ z0.d }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rd	{ z31.d }, p7/z, [sp, #504]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rh	{ z0.d }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rh	{ z0.h }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rh	{ z0.s }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rh	{ z31.d }, p7/z, [sp, #126]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rh	{ z31.h }, p7/z, [sp, #126]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rh	{ z31.s }, p7/z, [sp, #126]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rqb	{ z0.b }, p0/z, [x0, x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rqb	{ z0.b }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rqb	{ z21.b }, p5/z, [x10, #112]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rqb	{ z23.b }, p3/z, [x13, #-128]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rqb	{ z31.b }, p7/z, [sp, #-16]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rqd	{ z0.d }, p0/z, [x0, x0, lsl #3]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rqd	{ z0.d }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rqd	{ z23.d }, p3/z, [x13, #-128]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rqd	{ z23.d }, p3/z, [x13, #112]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rqd	{ z31.d }, p7/z, [sp, #-16]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rqh	{ z0.h }, p0/z, [x0, x0, lsl #1]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rqh	{ z0.h }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rqh	{ z23.h }, p3/z, [x13, #-128]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rqh	{ z23.h }, p3/z, [x13, #112]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rqh	{ z31.h }, p7/z, [sp, #-16]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rqw	{ z0.s }, p0/z, [x0, x0, lsl #2]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rqw	{ z0.s }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rqw	{ z23.s }, p3/z, [x13, #-128]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rqw	{ z23.s }, p3/z, [x13, #112]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rqw	{ z31.s }, p7/z, [sp, #-16]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rsb	{ z0.d }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rsb	{ z0.h }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rsb	{ z0.s }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rsb	{ z31.d }, p7/z, [sp, #63]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rsb	{ z31.h }, p7/z, [sp, #63]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rsb	{ z31.s }, p7/z, [sp, #63]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rsh	{ z0.d }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rsh	{ z0.s }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rsh	{ z31.d }, p7/z, [sp, #126]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rsh	{ z31.s }, p7/z, [sp, #126]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rsw	{ z0.d }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rsw	{ z31.d }, p7/z, [sp, #252]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rw	{ z0.d }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rw	{ z0.s }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rw	{ z31.d }, p7/z, [sp, #252]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1rw	{ z31.s }, p7/z, [sp, #252]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1sb	{ z0.d }, p0/z, [x0]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1sb	{ z0.d }, p0/z, [z0.d]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ld1sb	{ z0.h }, p0/z, [sp, x0]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ld1sb	{ z0.h }, p0/z, [x0, x0]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1sb	{ z0.h }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1sb	{ z0.h }, p0/z, [sp, x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1sb	{ z0.h }, p0/z, [x0, x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1sb	{ z0.h }, p0/z, [x0]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1sb	{ z0.s }, p0/z, [x0, z0.s, sxtw]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1sb	{ z0.s }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1sb	{ z0.s }, p0/z, [x0]
 # CHECK-NEXT:  -      -      -      -      -     7.00    -      -      -      -      -      -      -     ld1sb	{ z0.s }, p0/z, [z0.s]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1sb	{ z21.d }, p5/z, [x10, #5, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1sb	{ z21.d }, p5/z, [x10, #5, mul vl]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1sb	{ z21.d }, p5/z, [x10, z21.d, sxtw]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1sb	{ z21.d }, p5/z, [x10, z21.d, uxtw]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1sb	{ z21.h }, p5/z, [x10, #5, mul vl]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1sb	{ z21.s }, p5/z, [x10, #5, mul vl]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ld1sb	{ z21.s }, p5/z, [x10, x21]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ld1sb	{ z23.d }, p3/z, [x13, x8]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1sb	{ z31.d }, p7/z, [sp, #-1, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1sb	{ z21.h }, p5/z, [x10, #5, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1sb	{ z21.s }, p5/z, [x10, #5, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1sb	{ z21.s }, p5/z, [x10, x21]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1sb	{ z23.d }, p3/z, [x13, x8]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1sb	{ z31.d }, p7/z, [sp, #-1, mul vl]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1sb	{ z31.d }, p7/z, [sp, z31.d]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1sb	{ z31.d }, p7/z, [z31.d, #31]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1sb	{ z31.h }, p7/z, [sp, #-1, mul vl]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1sb	{ z31.s }, p7/z, [sp, #-1, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1sb	{ z31.h }, p7/z, [sp, #-1, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1sb	{ z31.s }, p7/z, [sp, #-1, mul vl]
 # CHECK-NEXT:  -      -      -      -      -     7.00    -      -      -      -      -      -      -     ld1sb	{ z31.s }, p7/z, [z31.s, #31]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1sh	{ z0.d }, p0/z, [x0, z0.d, sxtw #1]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1sh	{ z0.d }, p0/z, [x0, z0.d, uxtw #1]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1sh	{ z0.d }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1sh	{ z0.d }, p0/z, [x0]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1sh	{ z0.d }, p0/z, [z0.d]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1sh	{ z0.s }, p0/z, [x0, z0.s, sxtw]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1sh	{ z0.s }, p0/z, [x0, z0.s, uxtw]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1sh	{ z0.s }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1sh	{ z0.s }, p0/z, [x0]
 # CHECK-NEXT:  -      -      -      -      -     7.00    -      -      -      -      -      -      -     ld1sh	{ z0.s }, p0/z, [z0.s]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1sh	{ z21.d }, p5/z, [x10, #5, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1sh	{ z21.d }, p5/z, [x10, #5, mul vl]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1sh	{ z21.d }, p5/z, [x10, z21.d, sxtw]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1sh	{ z21.d }, p5/z, [x10, z21.d, uxtw]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ld1sh	{ z21.s }, p5/z, [sp, x21, lsl #1]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1sh	{ z21.s }, p5/z, [x10, #5, mul vl]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ld1sh	{ z21.s }, p5/z, [x10, x21, lsl #1]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ld1sh	{ z23.d }, p3/z, [x13, x8, lsl #1]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1sh	{ z21.s }, p5/z, [sp, x21, lsl #1]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1sh	{ z21.s }, p5/z, [x10, #5, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1sh	{ z21.s }, p5/z, [x10, x21, lsl #1]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1sh	{ z23.d }, p3/z, [x13, x8, lsl #1]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1sh	{ z23.d }, p3/z, [x13, z8.d, lsl #1]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1sh	{ z31.d }, p7/z, [sp, #-1, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1sh	{ z31.d }, p7/z, [sp, #-1, mul vl]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1sh	{ z31.d }, p7/z, [sp, z31.d]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1sh	{ z31.d }, p7/z, [z31.d, #62]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1sh	{ z31.s }, p7/z, [sp, #-1, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1sh	{ z31.s }, p7/z, [sp, #-1, mul vl]
 # CHECK-NEXT:  -      -      -      -      -     7.00    -      -      -      -      -      -      -     ld1sh	{ z31.s }, p7/z, [sp, z31.s, sxtw #1]
 # CHECK-NEXT:  -      -      -      -      -     7.00    -      -      -      -      -      -      -     ld1sh	{ z31.s }, p7/z, [sp, z31.s, uxtw #1]
 # CHECK-NEXT:  -      -      -      -      -     7.00    -      -      -      -      -      -      -     ld1sh	{ z31.s }, p7/z, [z31.s, #62]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1sw	{ z0.d }, p0/z, [x0, z0.d, sxtw #2]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1sw	{ z0.d }, p0/z, [x0, z0.d, uxtw #2]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1sw	{ z0.d }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1sw	{ z0.d }, p0/z, [x0]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1sw	{ z0.d }, p0/z, [z0.d]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1sw	{ z21.d }, p5/z, [x10, #5, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1sw	{ z21.d }, p5/z, [x10, #5, mul vl]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1sw	{ z21.d }, p5/z, [x10, z21.d, sxtw]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1sw	{ z21.d }, p5/z, [x10, z21.d, uxtw]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ld1sw	{ z23.d }, p3/z, [sp, x8, lsl #2]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ld1sw	{ z23.d }, p3/z, [x13, x8, lsl #2]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1sw	{ z23.d }, p3/z, [sp, x8, lsl #2]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1sw	{ z23.d }, p3/z, [x13, x8, lsl #2]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1sw	{ z23.d }, p3/z, [x13, z8.d, lsl #2]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1sw	{ z31.d }, p7/z, [sp, #-1, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1sw	{ z31.d }, p7/z, [sp, #-1, mul vl]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1sw	{ z31.d }, p7/z, [sp, z31.d]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1sw	{ z31.d }, p7/z, [z31.d, #124]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1w	{ z0.d }, p0/z, [x0, z0.d, sxtw #2]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1w	{ z0.d }, p0/z, [x0, z0.d, uxtw #2]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1w	{ z0.d }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1w	{ z0.d }, p0/z, [x0]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1w	{ z0.d }, p0/z, [z0.d]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1w	{ z0.s }, p0/z, [x0, z0.s, sxtw]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1w	{ z0.s }, p0/z, [x0, z0.s, uxtw]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1w	{ z0.s }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1w	{ z0.s }, p0/z, [x0]
 # CHECK-NEXT:  -      -      -      -      -     7.00    -      -      -      -      -      -      -     ld1w	{ z0.s }, p0/z, [z0.s]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1w	{ z21.d }, p5/z, [x10, #5, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1w	{ z21.d }, p5/z, [x10, #5, mul vl]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1w	{ z21.d }, p5/z, [x10, z21.d, sxtw]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1w	{ z21.d }, p5/z, [x10, z21.d, uxtw]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ld1w	{ z21.s }, p5/z, [sp, x21, lsl #2]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1w	{ z21.s }, p5/z, [x10, #5, mul vl]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ld1w	{ z21.s }, p5/z, [x10, x21, lsl #2]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ld1w	{ z23.d }, p3/z, [x13, x8, lsl #2]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1w	{ z21.s }, p5/z, [sp, x21, lsl #2]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1w	{ z21.s }, p5/z, [x10, #5, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1w	{ z21.s }, p5/z, [x10, x21, lsl #2]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1w	{ z23.d }, p3/z, [x13, x8, lsl #2]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1w	{ z23.d }, p3/z, [x13, z8.d, lsl #2]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1w	{ z31.d }, p7/z, [sp, #-1, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1w	{ z31.d }, p7/z, [sp, #-1, mul vl]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1w	{ z31.d }, p7/z, [sp, z31.d]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ld1w	{ z31.d }, p7/z, [z31.d, #124]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ld1w	{ z31.s }, p7/z, [sp, #-1, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1w	{ z31.s }, p7/z, [sp, #-1, mul vl]
 # CHECK-NEXT:  -      -      -      -      -     7.00    -      -      -      -      -      -      -     ld1w	{ z31.s }, p7/z, [sp, z31.s, sxtw #2]
 # CHECK-NEXT:  -      -      -      -      -     7.00    -      -      -      -      -      -      -     ld1w	{ z31.s }, p7/z, [sp, z31.s, uxtw #2]
 # CHECK-NEXT:  -      -      -      -      -     7.00    -      -      -      -      -      -      -     ld1w	{ z31.s }, p7/z, [z31.s, #124]
@@ -4690,23 +4690,23 @@
 # CHECK-NEXT:  -      -      -      -      -     3.00    -      -      -      -      -      -      -     ld4w	{ z21.s - z24.s }, p5/z, [x10, #20, mul vl]
 # CHECK-NEXT:  -      -      -      -      -     3.00    -      -      -      -      -      -      -     ld4w	{ z23.s - z26.s }, p3/z, [x13, #-32, mul vl]
 # CHECK-NEXT:  -      -      -      -      -     4.00    -      -      -      -      -      -      -     ld4w	{ z5.s - z8.s }, p3/z, [x17, x16, lsl #2]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ldff1b	{ z0.d }, p0/z, [x0, x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldff1b	{ z0.d }, p0/z, [x0, x0]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1b	{ z0.d }, p0/z, [z0.d]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ldff1b	{ z0.h }, p0/z, [x0, x0]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ldff1b	{ z0.s }, p0/z, [x0, x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldff1b	{ z0.h }, p0/z, [x0, x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldff1b	{ z0.s }, p0/z, [x0, x0]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1b	{ z0.s }, p0/z, [x0, z0.s, sxtw]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1b	{ z0.s }, p0/z, [x0, z0.s, uxtw]
 # CHECK-NEXT:  -      -      -      -      -     7.00    -      -      -      -      -      -      -     ldff1b	{ z0.s }, p0/z, [z0.s]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1b	{ z21.d }, p5/z, [x10, z21.d, sxtw]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1b	{ z21.d }, p5/z, [x10, z21.d, uxtw]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ldff1b	{ z31.b }, p7/z, [sp]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldff1b	{ z31.b }, p7/z, [sp]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1b	{ z31.d }, p7/z, [sp, z31.d]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ldff1b	{ z31.d }, p7/z, [sp]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldff1b	{ z31.d }, p7/z, [sp]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1b	{ z31.d }, p7/z, [z31.d, #31]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ldff1b	{ z31.h }, p7/z, [sp]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ldff1b	{ z31.s }, p7/z, [sp]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldff1b	{ z31.h }, p7/z, [sp]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldff1b	{ z31.s }, p7/z, [sp]
 # CHECK-NEXT:  -      -      -      -      -     7.00    -      -      -      -      -      -      -     ldff1b	{ z31.s }, p7/z, [z31.s, #31]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ldff1d	{ z0.d }, p0/z, [x0, x0, lsl #3]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldff1d	{ z0.d }, p0/z, [x0, x0, lsl #3]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1d	{ z0.d }, p0/z, [x0, z0.d, sxtw #3]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1d	{ z0.d }, p0/z, [x0, z0.d, uxtw #3]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1d	{ z0.d }, p0/z, [z0.d]
@@ -4714,14 +4714,14 @@
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1d	{ z21.d }, p5/z, [x10, z21.d, uxtw]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1d	{ z23.d }, p3/z, [x13, z8.d, lsl #3]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1d	{ z31.d }, p7/z, [sp, z31.d]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ldff1d	{ z31.d }, p7/z, [sp]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldff1d	{ z31.d }, p7/z, [sp]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1d	{ z31.d }, p7/z, [z31.d, #248]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ldff1h	{ z0.d }, p0/z, [x0, x0, lsl #1]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldff1h	{ z0.d }, p0/z, [x0, x0, lsl #1]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1h	{ z0.d }, p0/z, [x0, z0.d, sxtw #1]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1h	{ z0.d }, p0/z, [x0, z0.d, uxtw #1]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1h	{ z0.d }, p0/z, [z0.d]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ldff1h	{ z0.h }, p0/z, [x0, x0, lsl #1]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ldff1h	{ z0.s }, p0/z, [x0, x0, lsl #1]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldff1h	{ z0.h }, p0/z, [x0, x0, lsl #1]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldff1h	{ z0.s }, p0/z, [x0, x0, lsl #1]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1h	{ z0.s }, p0/z, [x0, z0.s, sxtw]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1h	{ z0.s }, p0/z, [x0, z0.s, uxtw]
 # CHECK-NEXT:  -      -      -      -      -     7.00    -      -      -      -      -      -      -     ldff1h	{ z0.s }, p0/z, [z0.s]
@@ -4729,33 +4729,33 @@
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1h	{ z21.d }, p5/z, [x10, z21.d, uxtw]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1h	{ z23.d }, p3/z, [x13, z8.d, lsl #1]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1h	{ z31.d }, p7/z, [sp, z31.d]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ldff1h	{ z31.d }, p7/z, [sp]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldff1h	{ z31.d }, p7/z, [sp]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1h	{ z31.d }, p7/z, [z31.d, #62]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ldff1h	{ z31.h }, p7/z, [sp]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldff1h	{ z31.h }, p7/z, [sp]
 # CHECK-NEXT:  -      -      -      -      -     7.00    -      -      -      -      -      -      -     ldff1h	{ z31.s }, p7/z, [sp, z31.s, sxtw #1]
 # CHECK-NEXT:  -      -      -      -      -     7.00    -      -      -      -      -      -      -     ldff1h	{ z31.s }, p7/z, [sp, z31.s, uxtw #1]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ldff1h	{ z31.s }, p7/z, [sp]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldff1h	{ z31.s }, p7/z, [sp]
 # CHECK-NEXT:  -      -      -      -      -     7.00    -      -      -      -      -      -      -     ldff1h	{ z31.s }, p7/z, [z31.s, #62]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ldff1sb	{ z0.d }, p0/z, [x0, x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldff1sb	{ z0.d }, p0/z, [x0, x0]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1sb	{ z0.d }, p0/z, [z0.d]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ldff1sb	{ z0.h }, p0/z, [x0, x0]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ldff1sb	{ z0.s }, p0/z, [x0, x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldff1sb	{ z0.h }, p0/z, [x0, x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldff1sb	{ z0.s }, p0/z, [x0, x0]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1sb	{ z0.s }, p0/z, [x0, z0.s, sxtw]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1sb	{ z0.s }, p0/z, [x0, z0.s, uxtw]
 # CHECK-NEXT:  -      -      -      -      -     7.00    -      -      -      -      -      -      -     ldff1sb	{ z0.s }, p0/z, [z0.s]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1sb	{ z21.d }, p5/z, [x10, z21.d, sxtw]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1sb	{ z21.d }, p5/z, [x10, z21.d, uxtw]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1sb	{ z31.d }, p7/z, [sp, z31.d]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ldff1sb	{ z31.d }, p7/z, [sp]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldff1sb	{ z31.d }, p7/z, [sp]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1sb	{ z31.d }, p7/z, [z31.d, #31]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ldff1sb	{ z31.h }, p7/z, [sp]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ldff1sb	{ z31.s }, p7/z, [sp]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldff1sb	{ z31.h }, p7/z, [sp]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldff1sb	{ z31.s }, p7/z, [sp]
 # CHECK-NEXT:  -      -      -      -      -     7.00    -      -      -      -      -      -      -     ldff1sb	{ z31.s }, p7/z, [z31.s, #31]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ldff1sh	{ z0.d }, p0/z, [x0, x0, lsl #1]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldff1sh	{ z0.d }, p0/z, [x0, x0, lsl #1]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1sh	{ z0.d }, p0/z, [x0, z0.d, sxtw #1]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1sh	{ z0.d }, p0/z, [x0, z0.d, uxtw #1]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1sh	{ z0.d }, p0/z, [z0.d]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ldff1sh	{ z0.s }, p0/z, [x0, x0, lsl #1]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldff1sh	{ z0.s }, p0/z, [x0, x0, lsl #1]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1sh	{ z0.s }, p0/z, [x0, z0.s, sxtw]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1sh	{ z0.s }, p0/z, [x0, z0.s, uxtw]
 # CHECK-NEXT:  -      -      -      -      -     7.00    -      -      -      -      -      -      -     ldff1sh	{ z0.s }, p0/z, [z0.s]
@@ -4763,13 +4763,13 @@
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1sh	{ z21.d }, p5/z, [x10, z21.d, uxtw]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1sh	{ z23.d }, p3/z, [x13, z8.d, lsl #1]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1sh	{ z31.d }, p7/z, [sp, z31.d]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ldff1sh	{ z31.d }, p7/z, [sp]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldff1sh	{ z31.d }, p7/z, [sp]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1sh	{ z31.d }, p7/z, [z31.d, #62]
 # CHECK-NEXT:  -      -      -      -      -     7.00    -      -      -      -      -      -      -     ldff1sh	{ z31.s }, p7/z, [sp, z31.s, sxtw #1]
 # CHECK-NEXT:  -      -      -      -      -     7.00    -      -      -      -      -      -      -     ldff1sh	{ z31.s }, p7/z, [sp, z31.s, uxtw #1]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ldff1sh	{ z31.s }, p7/z, [sp]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldff1sh	{ z31.s }, p7/z, [sp]
 # CHECK-NEXT:  -      -      -      -      -     7.00    -      -      -      -      -      -      -     ldff1sh	{ z31.s }, p7/z, [z31.s, #62]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ldff1sw	{ z0.d }, p0/z, [x0, x0, lsl #2]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldff1sw	{ z0.d }, p0/z, [x0, x0, lsl #2]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1sw	{ z0.d }, p0/z, [x0, z0.d, sxtw #2]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1sw	{ z0.d }, p0/z, [x0, z0.d, uxtw #2]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1sw	{ z0.d }, p0/z, [z0.d]
@@ -4777,13 +4777,13 @@
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1sw	{ z21.d }, p5/z, [x10, z21.d, uxtw]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1sw	{ z23.d }, p3/z, [x13, z8.d, lsl #2]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1sw	{ z31.d }, p7/z, [sp, z31.d]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ldff1sw	{ z31.d }, p7/z, [sp]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldff1sw	{ z31.d }, p7/z, [sp]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1sw	{ z31.d }, p7/z, [z31.d, #124]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ldff1w	{ z0.d }, p0/z, [x0, x0, lsl #2]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldff1w	{ z0.d }, p0/z, [x0, x0, lsl #2]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1w	{ z0.d }, p0/z, [x0, z0.d, sxtw #2]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1w	{ z0.d }, p0/z, [x0, z0.d, uxtw #2]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1w	{ z0.d }, p0/z, [z0.d]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ldff1w	{ z0.s }, p0/z, [x0, x0, lsl #2]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldff1w	{ z0.s }, p0/z, [x0, x0, lsl #2]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1w	{ z0.s }, p0/z, [x0, z0.s, sxtw]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1w	{ z0.s }, p0/z, [x0, z0.s, uxtw]
 # CHECK-NEXT:  -      -      -      -      -     7.00    -      -      -      -      -      -      -     ldff1w	{ z0.s }, p0/z, [z0.s]
@@ -4791,83 +4791,83 @@
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1w	{ z21.d }, p5/z, [x10, z21.d, uxtw]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1w	{ z23.d }, p3/z, [x13, z8.d, lsl #2]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1w	{ z31.d }, p7/z, [sp, z31.d]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ldff1w	{ z31.d }, p7/z, [sp]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldff1w	{ z31.d }, p7/z, [sp]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1w	{ z31.d }, p7/z, [z31.d, #124]
 # CHECK-NEXT:  -      -      -      -      -     7.00    -      -      -      -      -      -      -     ldff1w	{ z31.s }, p7/z, [sp, z31.s, sxtw #2]
 # CHECK-NEXT:  -      -      -      -      -     7.00    -      -      -      -      -      -      -     ldff1w	{ z31.s }, p7/z, [sp, z31.s, uxtw #2]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ldff1w	{ z31.s }, p7/z, [sp]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldff1w	{ z31.s }, p7/z, [sp]
 # CHECK-NEXT:  -      -      -      -      -     7.00    -      -      -      -      -      -      -     ldff1w	{ z31.s }, p7/z, [z31.s, #124]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnf1b	{ z0.b }, p0/z, [x0]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnf1b	{ z0.d }, p0/z, [x0]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnf1b	{ z0.h }, p0/z, [x0]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnf1b	{ z0.s }, p0/z, [x0]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnf1b	{ z21.b }, p5/z, [x10, #5, mul vl]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnf1b	{ z21.d }, p5/z, [x10, #5, mul vl]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnf1b	{ z21.h }, p5/z, [x10, #5, mul vl]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnf1b	{ z21.s }, p5/z, [x10, #5, mul vl]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnf1b	{ z31.b }, p7/z, [sp, #-1, mul vl]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnf1b	{ z31.d }, p7/z, [sp, #-1, mul vl]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnf1b	{ z31.h }, p7/z, [sp, #-1, mul vl]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnf1b	{ z31.s }, p7/z, [sp, #-1, mul vl]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnf1d	{ z0.d }, p0/z, [x0]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnf1d	{ z21.d }, p5/z, [x10, #5, mul vl]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnf1d	{ z31.d }, p7/z, [sp, #-1, mul vl]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnf1h	{ z0.d }, p0/z, [x0]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnf1h	{ z0.h }, p0/z, [x0]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnf1h	{ z0.s }, p0/z, [x0]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnf1h	{ z21.d }, p5/z, [x10, #5, mul vl]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnf1h	{ z21.h }, p5/z, [x10, #5, mul vl]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnf1h	{ z21.s }, p5/z, [x10, #5, mul vl]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnf1h	{ z31.d }, p7/z, [sp, #-1, mul vl]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnf1h	{ z31.h }, p7/z, [sp, #-1, mul vl]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnf1h	{ z31.s }, p7/z, [sp, #-1, mul vl]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnf1sb	{ z0.d }, p0/z, [x0]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnf1sb	{ z0.h }, p0/z, [x0]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnf1sb	{ z0.s }, p0/z, [x0]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnf1sb	{ z21.d }, p5/z, [x10, #5, mul vl]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnf1sb	{ z21.h }, p5/z, [x10, #5, mul vl]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnf1sb	{ z21.s }, p5/z, [x10, #5, mul vl]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnf1sb	{ z31.d }, p7/z, [sp, #-1, mul vl]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnf1sb	{ z31.h }, p7/z, [sp, #-1, mul vl]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnf1sb	{ z31.s }, p7/z, [sp, #-1, mul vl]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnf1sh	{ z0.d }, p0/z, [x0]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnf1sh	{ z0.s }, p0/z, [x0]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnf1sh	{ z21.d }, p5/z, [x10, #5, mul vl]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnf1sh	{ z21.s }, p5/z, [x10, #5, mul vl]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnf1sh	{ z31.d }, p7/z, [sp, #-1, mul vl]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnf1sh	{ z31.s }, p7/z, [sp, #-1, mul vl]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnf1sw	{ z0.d }, p0/z, [x0]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnf1sw	{ z21.d }, p5/z, [x10, #5, mul vl]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnf1sw	{ z31.d }, p7/z, [sp, #-1, mul vl]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnf1w	{ z0.d }, p0/z, [x0]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnf1w	{ z0.s }, p0/z, [x0]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnf1w	{ z21.d }, p5/z, [x10, #5, mul vl]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnf1w	{ z21.s }, p5/z, [x10, #5, mul vl]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnf1w	{ z31.d }, p7/z, [sp, #-1, mul vl]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnf1w	{ z31.s }, p7/z, [sp, #-1, mul vl]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ldnt1b	{ z0.b }, p0/z, [x0, x0]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnt1b	{ z0.b }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnf1b	{ z0.b }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnf1b	{ z0.d }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnf1b	{ z0.h }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnf1b	{ z0.s }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnf1b	{ z21.b }, p5/z, [x10, #5, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnf1b	{ z21.d }, p5/z, [x10, #5, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnf1b	{ z21.h }, p5/z, [x10, #5, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnf1b	{ z21.s }, p5/z, [x10, #5, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnf1b	{ z31.b }, p7/z, [sp, #-1, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnf1b	{ z31.d }, p7/z, [sp, #-1, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnf1b	{ z31.h }, p7/z, [sp, #-1, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnf1b	{ z31.s }, p7/z, [sp, #-1, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnf1d	{ z0.d }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnf1d	{ z21.d }, p5/z, [x10, #5, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnf1d	{ z31.d }, p7/z, [sp, #-1, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnf1h	{ z0.d }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnf1h	{ z0.h }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnf1h	{ z0.s }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnf1h	{ z21.d }, p5/z, [x10, #5, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnf1h	{ z21.h }, p5/z, [x10, #5, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnf1h	{ z21.s }, p5/z, [x10, #5, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnf1h	{ z31.d }, p7/z, [sp, #-1, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnf1h	{ z31.h }, p7/z, [sp, #-1, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnf1h	{ z31.s }, p7/z, [sp, #-1, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnf1sb	{ z0.d }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnf1sb	{ z0.h }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnf1sb	{ z0.s }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnf1sb	{ z21.d }, p5/z, [x10, #5, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnf1sb	{ z21.h }, p5/z, [x10, #5, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnf1sb	{ z21.s }, p5/z, [x10, #5, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnf1sb	{ z31.d }, p7/z, [sp, #-1, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnf1sb	{ z31.h }, p7/z, [sp, #-1, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnf1sb	{ z31.s }, p7/z, [sp, #-1, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnf1sh	{ z0.d }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnf1sh	{ z0.s }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnf1sh	{ z21.d }, p5/z, [x10, #5, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnf1sh	{ z21.s }, p5/z, [x10, #5, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnf1sh	{ z31.d }, p7/z, [sp, #-1, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnf1sh	{ z31.s }, p7/z, [sp, #-1, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnf1sw	{ z0.d }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnf1sw	{ z21.d }, p5/z, [x10, #5, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnf1sw	{ z31.d }, p7/z, [sp, #-1, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnf1w	{ z0.d }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnf1w	{ z0.s }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnf1w	{ z21.d }, p5/z, [x10, #5, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnf1w	{ z21.s }, p5/z, [x10, #5, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnf1w	{ z31.d }, p7/z, [sp, #-1, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnf1w	{ z31.s }, p7/z, [sp, #-1, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnt1b	{ z0.b }, p0/z, [x0, x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnt1b	{ z0.b }, p0/z, [x0]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldnt1b	{ z0.d }, p0/z, [z1.d]
 # CHECK-NEXT:  -      -      -      -      -     7.00    -      -      -      -      -      -      -     ldnt1b	{ z0.s }, p0/z, [z1.s]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnt1b	{ z21.b }, p5/z, [x10, #7, mul vl]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnt1b	{ z23.b }, p3/z, [x13, #-8, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnt1b	{ z21.b }, p5/z, [x10, #7, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnt1b	{ z23.b }, p3/z, [x13, #-8, mul vl]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldnt1b	{ z31.d }, p7/z, [z31.d, x0]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldnt1b	{ z31.d }, p7/z, [z31.d]
 # CHECK-NEXT:  -      -      -      -      -     7.00    -      -      -      -      -      -      -     ldnt1b	{ z31.s }, p7/z, [z31.s, x0]
 # CHECK-NEXT:  -      -      -      -      -     7.00    -      -      -      -      -      -      -     ldnt1b	{ z31.s }, p7/z, [z31.s]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ldnt1d	{ z0.d }, p0/z, [x0, x0, lsl #3]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnt1d	{ z0.d }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnt1d	{ z0.d }, p0/z, [x0, x0, lsl #3]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnt1d	{ z0.d }, p0/z, [x0]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldnt1d	{ z0.d }, p0/z, [z1.d]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnt1d	{ z21.d }, p5/z, [x10, #7, mul vl]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnt1d	{ z23.d }, p3/z, [x13, #-8, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnt1d	{ z21.d }, p5/z, [x10, #7, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnt1d	{ z23.d }, p3/z, [x13, #-8, mul vl]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldnt1d	{ z31.d }, p7/z, [z31.d, x0]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldnt1d	{ z31.d }, p7/z, [z31.d]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldnt1h	{ z0.d }, p0/z, [z1.d]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ldnt1h	{ z0.h }, p0/z, [x0, x0, lsl #1]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnt1h	{ z0.h }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnt1h	{ z0.h }, p0/z, [x0, x0, lsl #1]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnt1h	{ z0.h }, p0/z, [x0]
 # CHECK-NEXT:  -      -      -      -      -     7.00    -      -      -      -      -      -      -     ldnt1h	{ z0.s }, p0/z, [z1.s]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnt1h	{ z21.h }, p5/z, [x10, #7, mul vl]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnt1h	{ z23.h }, p3/z, [x13, #-8, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnt1h	{ z21.h }, p5/z, [x10, #7, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnt1h	{ z23.h }, p3/z, [x13, #-8, mul vl]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldnt1h	{ z31.d }, p7/z, [z31.d, x0]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldnt1h	{ z31.d }, p7/z, [z31.d]
 # CHECK-NEXT:  -      -      -      -      -     7.00    -      -      -      -      -      -      -     ldnt1h	{ z31.s }, p7/z, [z31.s, x0]
@@ -4888,11 +4888,11 @@
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldnt1sw	{ z31.d }, p7/z, [z31.d, x0]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldnt1sw	{ z31.d }, p7/z, [z31.d]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldnt1w	{ z0.d }, p0/z, [z1.d]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ldnt1w	{ z0.s }, p0/z, [x0, x0, lsl #2]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnt1w	{ z0.s }, p0/z, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnt1w	{ z0.s }, p0/z, [x0, x0, lsl #2]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnt1w	{ z0.s }, p0/z, [x0]
 # CHECK-NEXT:  -      -      -      -      -     7.00    -      -      -      -      -      -      -     ldnt1w	{ z0.s }, p0/z, [z1.s]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnt1w	{ z21.s }, p5/z, [x10, #7, mul vl]
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     ldnt1w	{ z23.s }, p3/z, [x13, #-8, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnt1w	{ z21.s }, p5/z, [x10, #7, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldnt1w	{ z23.s }, p3/z, [x13, #-8, mul vl]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldnt1w	{ z31.d }, p7/z, [z31.d, x0]
 # CHECK-NEXT:  -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldnt1w	{ z31.d }, p7/z, [z31.d]
 # CHECK-NEXT:  -      -      -      -      -     7.00    -      -      -      -      -      -      -     ldnt1w	{ z31.s }, p7/z, [z31.s, x0]
@@ -4900,9 +4900,9 @@
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ldr	p0, [x0]
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ldr	p5, [x10, #255, mul vl]
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ldr	p7, [x13, #-256, mul vl]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ldr	z0, [x0]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ldr	z23, [x13, #255, mul vl]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     ldr	z31, [sp, #-256, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldr	z0, [x0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldr	z23, [x13, #255, mul vl]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldr	z31, [sp, #-256, mul vl]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     lsl	z0.b, p0/m, z0.b, #0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     lsl	z0.b, p0/m, z0.b, z0.b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     lsl	z0.b, p0/m, z0.b, z1.d
@@ -4967,10 +4967,10 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     mad	z0.d, p7/m, z1.d, z31.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     mad	z0.h, p7/m, z1.h, z31.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     mad	z0.s, p7/m, z1.s, z31.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00    -      -      -      -     match	p0.b, p0/z, z0.b, z0.b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00    -      -      -      -     match	p0.h, p0/z, z0.h, z0.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00    -      -      -      -     match	p15.b, p7/z, z30.b, z31.b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00    -      -      -      -     match	p15.h, p7/z, z30.h, z31.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00   4.00    -      -      -     match	p0.b, p0/z, z0.b, z0.b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00   4.00    -      -      -     match	p0.h, p0/z, z0.h, z0.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00   4.00    -      -      -     match	p15.b, p7/z, z30.b, z31.b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00   4.00    -      -      -     match	p15.h, p7/z, z30.h, z31.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     mla	z0.b, p7/m, z1.b, z31.b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     mla	z0.d, p7/m, z1.d, z31.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     mla	z0.d, z1.d, z7.d[1]
@@ -5137,10 +5137,10 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     neg	z31.d, p7/m, z31.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     neg	z31.h, p7/m, z31.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     neg	z31.s, p7/m, z31.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00    -      -      -      -     nmatch	p0.b, p0/z, z0.b, z0.b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00    -      -      -      -     nmatch	p0.h, p0/z, z0.h, z0.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00    -      -      -      -     nmatch	p15.b, p7/z, z30.b, z31.b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00    -      -      -      -     nmatch	p15.h, p7/z, z30.h, z31.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00   4.00    -      -      -     nmatch	p0.b, p0/z, z0.b, z0.b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00   4.00    -      -      -     nmatch	p0.h, p0/z, z0.h, z0.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00   4.00    -      -      -     nmatch	p15.b, p7/z, z30.b, z31.b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00   4.00    -      -      -     nmatch	p15.h, p7/z, z30.h, z31.h
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     nor	p0.b, p0/z, p0.b, p0.b
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     nor	p15.b, p15/z, p15.b, p15.b
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     nors	p0.b, p0/z, p0.b, p0.b
@@ -5384,12 +5384,12 @@
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     punpkhi	p15.h, p15.b
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     punpklo	p0.h, p0.b
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     punpklo	p15.h, p15.b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     3.00    -      -      -     raddhnb	z0.b, z1.h, z31.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     3.00    -      -      -     raddhnb	z0.h, z1.s, z31.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     3.00    -      -      -     raddhnb	z0.s, z1.d, z31.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     3.00    -      -      -     raddhnt	z0.b, z1.h, z31.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     3.00    -      -      -     raddhnt	z0.h, z1.s, z31.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     3.00    -      -      -     raddhnt	z0.s, z1.d, z31.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     raddhnb	z0.b, z1.h, z31.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     raddhnb	z0.h, z1.s, z31.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     raddhnb	z0.s, z1.d, z31.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     raddhnt	z0.b, z1.h, z31.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     raddhnt	z0.h, z1.s, z31.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     raddhnt	z0.s, z1.d, z31.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     rax1	z0.d, z1.d, z31.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     rbit	z0.b, p7/m, z31.b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     rbit	z0.d, p7/m, z31.d
@@ -5431,22 +5431,22 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     rshrnt	z31.b, z31.h, #8
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     rshrnt	z31.h, z31.s, #16
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     rshrnt	z31.s, z31.d, #32
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     3.00    -      -      -     rsubhnb	z0.b, z1.h, z31.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     3.00    -      -      -     rsubhnb	z0.h, z1.s, z31.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     3.00    -      -      -     rsubhnb	z0.s, z1.d, z31.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     3.00    -      -      -     rsubhnt	z0.b, z1.h, z31.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     3.00    -      -      -     rsubhnt	z0.h, z1.s, z31.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     3.00    -      -      -     rsubhnt	z0.s, z1.d, z31.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00    -      -      -      -     saba	z0.b, z1.b, z31.b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00    -      -      -      -     saba	z0.d, z1.d, z31.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00    -      -      -      -     saba	z0.h, z1.h, z31.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00    -      -      -      -     saba	z0.s, z1.s, z31.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     3.00    -      -      -     sabalb	z0.d, z1.s, z31.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     3.00    -      -      -     sabalb	z0.h, z1.b, z31.b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     3.00    -      -      -     sabalb	z0.s, z1.h, z31.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     3.00    -      -      -     sabalt	z0.d, z1.s, z31.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     3.00    -      -      -     sabalt	z0.h, z1.b, z31.b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     3.00    -      -      -     sabalt	z0.s, z1.h, z31.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     rsubhnb	z0.b, z1.h, z31.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     rsubhnb	z0.h, z1.s, z31.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     rsubhnb	z0.s, z1.d, z31.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     rsubhnt	z0.b, z1.h, z31.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     rsubhnt	z0.h, z1.s, z31.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     rsubhnt	z0.s, z1.d, z31.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     saba	z0.b, z1.b, z31.b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     saba	z0.d, z1.d, z31.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     saba	z0.h, z1.h, z31.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     saba	z0.s, z1.s, z31.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     sabalb	z0.d, z1.s, z31.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     sabalb	z0.h, z1.b, z31.b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     sabalb	z0.s, z1.h, z31.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     sabalt	z0.d, z1.s, z31.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     sabalt	z0.h, z1.b, z31.b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     sabalt	z0.s, z1.h, z31.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sabd	z31.b, p7/m, z31.b, z31.b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sabd	z31.d, p7/m, z31.d, z31.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sabd	z31.h, p7/m, z31.h, z31.h
@@ -5457,9 +5457,9 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sabdlt	z0.h, z1.b, z2.b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sabdlt	z29.s, z30.h, z31.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sabdlt	z31.d, z31.s, z31.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -     sadalp	z0.h, p0/m, z1.b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -     sadalp	z29.s, p0/m, z30.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -     sadalp	z30.d, p7/m, z31.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00   4.00    -      -      -     sadalp	z0.h, p0/m, z1.b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00   4.00    -      -      -     sadalp	z29.s, p0/m, z30.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00   4.00    -      -      -     sadalp	z30.d, p7/m, z31.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     saddlb	z0.h, z1.b, z2.b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     saddlb	z29.s, z30.h, z31.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     saddlb	z31.d, z31.s, z31.s
@@ -6004,14 +6004,14 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     srshr	z31.d, p0/m, z31.d, #64
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     srshr	z31.h, p0/m, z31.h, #16
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     srshr	z31.s, p0/m, z31.s, #32
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00    -      -      -      -     srsra	z0.b, z0.b, #1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00    -      -      -      -     srsra	z0.d, z0.d, #1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00    -      -      -      -     srsra	z0.h, z0.h, #1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00    -      -      -      -     srsra	z0.s, z0.s, #1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00    -      -      -      -     srsra	z31.b, z31.b, #8
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00    -      -      -      -     srsra	z31.d, z31.d, #64
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00    -      -      -      -     srsra	z31.h, z31.h, #16
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00    -      -      -      -     srsra	z31.s, z31.s, #32
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     srsra	z0.b, z0.b, #1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     srsra	z0.d, z0.d, #1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     srsra	z0.h, z0.h, #1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     srsra	z0.s, z0.s, #1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     srsra	z31.b, z31.b, #8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     srsra	z31.d, z31.d, #64
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     srsra	z31.h, z31.h, #16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     srsra	z31.s, z31.s, #32
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sshllb	z0.d, z0.s, #0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sshllb	z0.h, z0.b, #0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sshllb	z0.s, z0.h, #0
@@ -6325,11 +6325,11 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sxtw	z0.d, p0/m, z0.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sxtw	z31.d, p7/m, z31.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     tbl	z28.b, { z29.b, z30.b }, z31.b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     5.00    -      -      -      -     tbl	z28.d, { z29.d, z30.d }, z31.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     5.00   5.00    -      -      -     tbl	z28.d, { z29.d, z30.d }, z31.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     tbl	z28.h, { z29.h, z30.h }, z31.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     tbl	z28.s, { z29.s, z30.s }, z31.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     tbl	z31.b, { z31.b }, z31.b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     5.00    -      -      -      -     tbl	z31.d, { z31.d }, z31.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     5.00   5.00    -      -      -     tbl	z31.d, { z31.d }, z31.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     tbl	z31.h, { z31.h }, z31.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     tbl	z31.s, { z31.s }, z31.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     tbx	z31.b, z31.b, z31.b
@@ -6352,16 +6352,16 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     trn2	z31.d, z31.d, z31.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     trn2	z31.h, z31.h, z31.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     trn2	z31.s, z31.s, z31.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00    -      -      -      -     uaba	z0.b, z1.b, z31.b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00    -      -      -      -     uaba	z0.d, z1.d, z31.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00    -      -      -      -     uaba	z0.h, z1.h, z31.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00    -      -      -      -     uaba	z0.s, z1.s, z31.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     3.00    -      -      -     uabalb	z0.d, z1.s, z31.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     3.00    -      -      -     uabalb	z0.h, z1.b, z31.b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     3.00    -      -      -     uabalb	z0.s, z1.h, z31.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     3.00    -      -      -     uabalt	z0.d, z1.s, z31.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     3.00    -      -      -     uabalt	z0.h, z1.b, z31.b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     3.00    -      -      -     uabalt	z0.s, z1.h, z31.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     uaba	z0.b, z1.b, z31.b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     uaba	z0.d, z1.d, z31.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     uaba	z0.h, z1.h, z31.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     uaba	z0.s, z1.s, z31.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     uabalb	z0.d, z1.s, z31.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     uabalb	z0.h, z1.b, z31.b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     uabalb	z0.s, z1.h, z31.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     uabalt	z0.d, z1.s, z31.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     uabalt	z0.h, z1.b, z31.b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     uabalt	z0.s, z1.h, z31.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     uabd	z31.b, p7/m, z31.b, z31.b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     uabd	z31.d, p7/m, z31.d, z31.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     uabd	z31.h, p7/m, z31.h, z31.h
@@ -6372,9 +6372,9 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     uabdlt	z0.h, z1.b, z2.b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     uabdlt	z29.s, z30.h, z31.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     uabdlt	z31.d, z31.s, z31.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -     uadalp	z0.h, p0/m, z1.b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -     uadalp	z29.s, p0/m, z30.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -     uadalp	z30.d, p7/m, z31.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00   4.00    -      -      -     uadalp	z0.h, p0/m, z1.b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00   4.00    -      -      -     uadalp	z29.s, p0/m, z30.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00   4.00    -      -      -     uadalp	z30.d, p7/m, z31.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     uaddlb	z0.h, z1.b, z2.b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     uaddlb	z29.s, z30.h, z31.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     uaddlb	z31.d, z31.s, z31.s
@@ -6721,14 +6721,14 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     urshr	z31.h, p0/m, z31.h, #16
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     urshr	z31.s, p0/m, z31.s, #32
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     ursqrte	z31.s, p7/m, z31.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00    -      -      -      -     ursra	z0.b, z0.b, #1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00    -      -      -      -     ursra	z0.d, z0.d, #1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00    -      -      -      -     ursra	z0.h, z0.h, #1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00    -      -      -      -     ursra	z0.s, z0.s, #1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00    -      -      -      -     ursra	z31.b, z31.b, #8
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00    -      -      -      -     ursra	z31.d, z31.d, #64
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00    -      -      -      -     ursra	z31.h, z31.h, #16
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00    -      -      -      -     ursra	z31.s, z31.s, #32
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     ursra	z0.b, z0.b, #1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     ursra	z0.d, z0.d, #1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     ursra	z0.h, z0.h, #1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     ursra	z0.s, z0.s, #1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     ursra	z31.b, z31.b, #8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     ursra	z31.d, z31.d, #64
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     ursra	z31.h, z31.h, #16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     ursra	z31.s, z31.s, #32
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     ushllb	z0.d, z0.s, #0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     ushllb	z0.h, z0.b, #0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     ushllb	z0.s, z0.h, #0
