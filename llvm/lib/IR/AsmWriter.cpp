@@ -2239,6 +2239,9 @@ static void writeDIBasicType(raw_ostream &Out, const DIBasicType *N,
   if (N->getTag() != dwarf::DW_TAG_base_type)
     Printer.printTag(N);
   Printer.printString("name", N->getName());
+  Printer.printMetadata("scope", N->getRawScope());
+  Printer.printMetadata("file", N->getRawFile());
+  Printer.printInt("line", N->getLine());
   Printer.printMetadataOrInt("size", N->getRawSizeInBits(), true);
   Printer.printInt("align", N->getAlignInBits());
   Printer.printInt("dataSize", N->getDataSizeInBits());
@@ -2256,6 +2259,9 @@ static void writeDIFixedPointType(raw_ostream &Out, const DIFixedPointType *N,
   if (N->getTag() != dwarf::DW_TAG_base_type)
     Printer.printTag(N);
   Printer.printString("name", N->getName());
+  Printer.printMetadata("scope", N->getRawScope());
+  Printer.printMetadata("file", N->getRawFile());
+  Printer.printInt("line", N->getLine());
   Printer.printMetadataOrInt("size", N->getRawSizeInBits(), true);
   Printer.printInt("align", N->getAlignInBits());
   Printer.printDwarfEnum("encoding", N->getEncoding(),
