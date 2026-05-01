@@ -22,6 +22,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
@@ -319,6 +320,7 @@ class CodeGenPrepare {
   BlockFrequencyInfo *BFI;
   BranchProbabilityInfo *BPI;
   ProfileSummaryInfo *PSI = nullptr;
+  AssumptionCache *AC = nullptr;
 
   /// As we scan instructions optimizing them, this is the next instruction
   /// to optimize. Transforms that can invalidate this should update it.
@@ -487,6 +489,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     // FIXME: When we can selectively preserve passes, preserve the domtree.
     AU.addRequired<ProfileSummaryInfoWrapperPass>();
+    AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<TargetLibraryInfoWrapperPass>();
     AU.addRequired<TargetPassConfig>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
@@ -517,6 +520,7 @@ bool CodeGenPrepareLegacyPass::runOnFunction(Function &F) {
   CGP.BPI = &getAnalysis<BranchProbabilityInfoWrapperPass>().getBPI();
   CGP.BFI = &getAnalysis<BlockFrequencyInfoWrapperPass>().getBFI();
   CGP.PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
+  CGP.AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
   auto BBSPRWP =
       getAnalysisIfAvailable<BasicBlockSectionsProfileReaderWrapperPass>();
   CGP.BBSectionsProfileReader = BBSPRWP ? &BBSPRWP->getBBSPR() : nullptr;
@@ -534,6 +538,7 @@ INITIALIZE_PASS_DEPENDENCY(BasicBlockSectionsProfileReaderWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
@@ -570,6 +575,7 @@ bool CodeGenPrepare::run(Function &F, FunctionAnalysisManager &AM) {
   BFI = &AM.getResult<BlockFrequencyAnalysis>(F);
   auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
   PSI = MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
+  AC = &AM.getResult<AssumptionAnalysis>(F);
   BBSectionsProfileReader =
       AM.getCachedResult<BasicBlockSectionsProfileReaderAnalysis>(F);
   DomTreeUpdater DTUpdater(&AM.getResult<DominatorTreeAnalysis>(F),
@@ -615,8 +621,10 @@ bool CodeGenPrepare::_run(Function &F) {
       // bypassSlowDivision may create new BBs, but we don't want to reapply the
       // optimization to those blocks.
       BasicBlock *Next = BB->getNextNode();
-      if (!llvm::shouldOptimizeForSize(BB, PSI, BFI))
-        EverMadeChange |= bypassSlowDivision(BB, BypassWidths, DTU, LI);
+      if (!llvm::shouldOptimizeForSize(BB, PSI, BFI)) {
+        SimplifyQuery SQ(*DL, &DTU->getDomTree(), AC);
+        EverMadeChange |= bypassSlowDivision(BB, BypassWidths, DTU, LI, SQ);
+      }
       BB = Next;
     }
   }

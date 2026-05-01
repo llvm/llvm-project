@@ -19,6 +19,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/Analysis/SimplifyQuery.h"
 #include "llvm/IR/ValueHandle.h"
 #include <cstdint>
 
@@ -70,7 +71,8 @@ template <> struct DenseMapInfo<DivRemMapKey> {
 /// reasons, you shouldn't pass those blocks to bypassSlowDivision.
 bool bypassSlowDivision(BasicBlock *BB,
                         const DenseMap<unsigned int, unsigned int> &BypassWidth,
-                        DomTreeUpdater *DTU = nullptr, LoopInfo *LI = nullptr);
+                        DomTreeUpdater *DTU, LoopInfo *LI,
+                        const SimplifyQuery &SQ);
 
 } // end namespace llvm
 

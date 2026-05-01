@@ -386,34 +386,14 @@ define void @PR43514(i32 %x, i32 %y) {
 
 ; dividend > U32_MAX, bypass emits divq only
 define i32 @udiv_i64_i32_assume_dividend_gt_u32_max(i64 %n, i32 %d) {
-; FAST-DIVQ-LABEL: udiv_i64_i32_assume_dividend_gt_u32_max:
-; FAST-DIVQ:       # %bb.0:
-; FAST-DIVQ-NEXT:    movq %rdi, %rax
-; FAST-DIVQ-NEXT:    movl %esi, %ecx
-; FAST-DIVQ-NEXT:    xorl %edx, %edx
-; FAST-DIVQ-NEXT:    divq %rcx
-; FAST-DIVQ-NEXT:    # kill: def $eax killed $eax killed $rax
-; FAST-DIVQ-NEXT:    retq
-;
-; SLOW-DIVQ-LABEL: udiv_i64_i32_assume_dividend_gt_u32_max:
-; SLOW-DIVQ:       # %bb.0:
-; SLOW-DIVQ-DAG:     movq %rdi, %rax
-; SLOW-DIVQ-DAG:     movl %esi, %ecx
-; SLOW-DIVQ-DAG:     movq %rdi, %rdx
-; SLOW-DIVQ-DAG:     shrq $32, %rdx
-; SLOW-DIVQ-NEXT:    je .LBB19_1
-; SLOW-DIVQ-NEXT:  # %bb.2:
-; SLOW-DIVQ-NEXT:    xorl %edx, %edx
-; SLOW-DIVQ-NEXT:    divq %rcx
-; SLOW-DIVQ-NEXT:    # kill: def $eax killed $eax killed $rax
-; SLOW-DIVQ-NEXT:    retq
-; SLOW-DIVQ-NEXT:  .LBB19_1:
-; SLOW-DIVQ-DAG:     # kill: def $eax killed $eax killed $rax
-; SLOW-DIVQ-DAG:     xorl %edx, %edx
-; SLOW-DIVQ-NEXT:    divl %ecx
-; SLOW-DIVQ-NEXT:    # kill: def $eax killed $eax def $rax
-; SLOW-DIVQ-NEXT:    # kill: def $eax killed $eax killed $rax
-; SLOW-DIVQ-NEXT:    retq
+; CHECK-LABEL: udiv_i64_i32_assume_dividend_gt_u32_max:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    movl %esi, %ecx
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    divq %rcx
+; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
+; CHECK-NEXT:    retq
   %cmp = icmp ugt i64 %n, 4294967295
   call void @llvm.assume(i1 %cmp)
   %d.ext = zext i32 %d to i64
@@ -424,36 +404,15 @@ define i32 @udiv_i64_i32_assume_dividend_gt_u32_max(i64 %n, i32 %d) {
 
 ; dividend > U32_MAX, bypass emits divq only
 define i32 @urem_i64_i32_assume_dividend_gt_u32_max(i64 %n, i32 %d) {
-; FAST-DIVQ-LABEL: urem_i64_i32_assume_dividend_gt_u32_max:
-; FAST-DIVQ:       # %bb.0:
-; FAST-DIVQ-NEXT:    movq %rdi, %rax
-; FAST-DIVQ-NEXT:    movl %esi, %ecx
-; FAST-DIVQ-NEXT:    xorl %edx, %edx
-; FAST-DIVQ-NEXT:    divq %rcx
-; FAST-DIVQ-NEXT:    movq %rdx, %rax
-; FAST-DIVQ-NEXT:    # kill: def $eax killed $eax killed $rax
-; FAST-DIVQ-NEXT:    retq
-;
-; SLOW-DIVQ-LABEL: urem_i64_i32_assume_dividend_gt_u32_max:
-; SLOW-DIVQ:       # %bb.0:
-; SLOW-DIVQ-DAG:     movq %rdi, %rax
-; SLOW-DIVQ-DAG:     movl %esi, %ecx
-; SLOW-DIVQ-DAG:     movq %rdi, %rdx
-; SLOW-DIVQ-DAG:     shrq $32, %rdx
-; SLOW-DIVQ-NEXT:    je .LBB20_1
-; SLOW-DIVQ-NEXT:  # %bb.2:
-; SLOW-DIVQ-NEXT:    xorl %edx, %edx
-; SLOW-DIVQ-NEXT:    divq %rcx
-; SLOW-DIVQ-NEXT:    movq %rdx, %rax
-; SLOW-DIVQ-NEXT:    # kill: def $eax killed $eax killed $rax
-; SLOW-DIVQ-NEXT:    retq
-; SLOW-DIVQ-NEXT:  .LBB20_1:
-; SLOW-DIVQ-DAG:     # kill: def $eax killed $eax killed $rax
-; SLOW-DIVQ-DAG:     xorl %edx, %edx
-; SLOW-DIVQ-NEXT:    divl %ecx
-; SLOW-DIVQ-NEXT:    movl %edx, %eax
-; SLOW-DIVQ-NEXT:    # kill: def $eax killed $eax killed $rax
-; SLOW-DIVQ-NEXT:    retq
+; CHECK-LABEL: urem_i64_i32_assume_dividend_gt_u32_max:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    movl %esi, %ecx
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    divq %rcx
+; CHECK-NEXT:    movq %rdx, %rax
+; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
+; CHECK-NEXT:    retq
   %cmp = icmp ugt i64 %n, 4294967295
   call void @llvm.assume(i1 %cmp)
   %d.ext = zext i32 %d to i64
@@ -464,35 +423,14 @@ define i32 @urem_i64_i32_assume_dividend_gt_u32_max(i64 %n, i32 %d) {
 
 ; dividend > U32_MAX, bypass emits idivq only
 define i32 @sdiv_i64_i32_assume_dividend_gt_u32_max(i64 %n, i32 %d) {
-; FAST-DIVQ-LABEL: sdiv_i64_i32_assume_dividend_gt_u32_max:
-; FAST-DIVQ:       # %bb.0:
-; FAST-DIVQ-NEXT:    movq %rdi, %rax
-; FAST-DIVQ-NEXT:    movslq %esi, %rcx
-; FAST-DIVQ-NEXT:    cqto
-; FAST-DIVQ-NEXT:    idivq %rcx
-; FAST-DIVQ-NEXT:    # kill: def $eax killed $eax killed $rax
-; FAST-DIVQ-NEXT:    retq
-;
-; SLOW-DIVQ-LABEL: sdiv_i64_i32_assume_dividend_gt_u32_max:
-; SLOW-DIVQ:       # %bb.0:
-; SLOW-DIVQ-DAG:     movq %rdi, %rax
-; SLOW-DIVQ-DAG:     movslq %esi, %rcx
-; SLOW-DIVQ-DAG:     movq %rdi, %rdx
-; SLOW-DIVQ-DAG:     orq %rcx, %rdx
-; SLOW-DIVQ-DAG:     shrq $32, %rdx
-; SLOW-DIVQ-NEXT:    je .LBB21_1
-; SLOW-DIVQ-NEXT:  # %bb.2:
-; SLOW-DIVQ-NEXT:    cqto
-; SLOW-DIVQ-NEXT:    idivq %rcx
-; SLOW-DIVQ-NEXT:    # kill: def $eax killed $eax killed $rax
-; SLOW-DIVQ-NEXT:    retq
-; SLOW-DIVQ-NEXT:  .LBB21_1:
-; SLOW-DIVQ-DAG:     # kill: def $eax killed $eax killed $rax
-; SLOW-DIVQ-DAG:     xorl %edx, %edx
-; SLOW-DIVQ-NEXT:    divl %esi
-; SLOW-DIVQ-NEXT:    # kill: def $eax killed $eax def $rax
-; SLOW-DIVQ-NEXT:    # kill: def $eax killed $eax killed $rax
-; SLOW-DIVQ-NEXT:    retq
+; CHECK-LABEL: sdiv_i64_i32_assume_dividend_gt_u32_max:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    movslq %esi, %rcx
+; CHECK-NEXT:    cqto
+; CHECK-NEXT:    idivq %rcx
+; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
+; CHECK-NEXT:    retq
   %cmp = icmp sgt i64 %n, 4294967295
   call void @llvm.assume(i1 %cmp)
   %d.ext = sext i32 %d to i64
@@ -503,37 +441,15 @@ define i32 @sdiv_i64_i32_assume_dividend_gt_u32_max(i64 %n, i32 %d) {
 
 ; dividend > U32_MAX, bypass emits idivq only
 define i32 @srem_i64_i32_assume_dividend_gt_u32_max(i64 %n, i32 %d) {
-; FAST-DIVQ-LABEL: srem_i64_i32_assume_dividend_gt_u32_max:
-; FAST-DIVQ:       # %bb.0:
-; FAST-DIVQ-NEXT:    movq %rdi, %rax
-; FAST-DIVQ-NEXT:    movslq %esi, %rcx
-; FAST-DIVQ-NEXT:    cqto
-; FAST-DIVQ-NEXT:    idivq %rcx
-; FAST-DIVQ-NEXT:    movq %rdx, %rax
-; FAST-DIVQ-NEXT:    # kill: def $eax killed $eax killed $rax
-; FAST-DIVQ-NEXT:    retq
-;
-; SLOW-DIVQ-LABEL: srem_i64_i32_assume_dividend_gt_u32_max:
-; SLOW-DIVQ:       # %bb.0:
-; SLOW-DIVQ-DAG:     movq %rdi, %rax
-; SLOW-DIVQ-DAG:     movslq %esi, %rcx
-; SLOW-DIVQ-DAG:     movq %rdi, %rdx
-; SLOW-DIVQ-DAG:     orq %rcx, %rdx
-; SLOW-DIVQ-DAG:     shrq $32, %rdx
-; SLOW-DIVQ-NEXT:    je .LBB22_1
-; SLOW-DIVQ-NEXT:  # %bb.2:
-; SLOW-DIVQ-NEXT:    cqto
-; SLOW-DIVQ-NEXT:    idivq %rcx
-; SLOW-DIVQ-NEXT:    movq %rdx, %rax
-; SLOW-DIVQ-NEXT:    # kill: def $eax killed $eax killed $rax
-; SLOW-DIVQ-NEXT:    retq
-; SLOW-DIVQ-NEXT:  .LBB22_1:
-; SLOW-DIVQ-DAG:     # kill: def $eax killed $eax killed $rax
-; SLOW-DIVQ-DAG:     xorl %edx, %edx
-; SLOW-DIVQ-NEXT:    divl %esi
-; SLOW-DIVQ-NEXT:    movl %edx, %eax
-; SLOW-DIVQ-NEXT:    # kill: def $eax killed $eax killed $rax
-; SLOW-DIVQ-NEXT:    retq
+; CHECK-LABEL: srem_i64_i32_assume_dividend_gt_u32_max:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    movslq %esi, %rcx
+; CHECK-NEXT:    cqto
+; CHECK-NEXT:    idivq %rcx
+; CHECK-NEXT:    movq %rdx, %rax
+; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
+; CHECK-NEXT:    retq
   %cmp = icmp sgt i64 %n, 4294967295
   call void @llvm.assume(i1 %cmp)
   %d.ext = sext i32 %d to i64
