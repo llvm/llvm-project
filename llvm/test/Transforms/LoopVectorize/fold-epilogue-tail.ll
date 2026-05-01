@@ -28,7 +28,6 @@ exit:
 define void @epilogue_is_disabled(ptr %a, i64 %n) {
 ; CHECK-DISABLED-EPILOG: LV: Checking a loop in 'epilogue_is_disabled'
 ; CHECK-DISABLED-EPILOG: LV: Options conflict, epilogue vectorization is disallowed while epilogue tail-folding allowed!
-; CHECK-DISABLED-EPILOG-NEXT: LV: Fallback to a normal epilogue
 entry:
   %cmp1 = icmp sgt i64 %n, 0
   br i1 %cmp1, label %for.body, label %for.end
