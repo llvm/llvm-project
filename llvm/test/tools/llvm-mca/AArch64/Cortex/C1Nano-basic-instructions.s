@@ -855,12 +855,12 @@
 # CHECK-NEXT:  2      2     0.50    *                   ldrh	w9, [x2], #255
 # CHECK-NEXT:  2      2     0.50    *                   ldrh	w9, [x2], #1
 # CHECK-NEXT:  2      2     0.50    *                   ldrh	w10, [x3], #-256
-# CHECK-NEXT:  2      2     0.50    *                   ldr	w19, [sp], #255
-# CHECK-NEXT:  2      2     0.50    *                   ldr	w20, [x30], #1
-# CHECK-NEXT:  2      2     0.50    *                   ldr	w21, [x12], #-256
-# CHECK-NEXT:  2      2     0.50    *                   ldr	xzr, [x9], #255
-# CHECK-NEXT:  2      2     0.50    *                   ldr	x2, [x3], #1
-# CHECK-NEXT:  2      2     0.50    *                   ldr	x19, [x12], #-256
+# CHECK-NEXT:  3      2     1.00    *                   ldr	w19, [sp], #255
+# CHECK-NEXT:  3      2     1.00    *                   ldr	w20, [x30], #1
+# CHECK-NEXT:  3      2     1.00    *                   ldr	w21, [x12], #-256
+# CHECK-NEXT:  3      2     1.00    *                   ldr	xzr, [x9], #255
+# CHECK-NEXT:  3      2     1.00    *                   ldr	x2, [x3], #1
+# CHECK-NEXT:  3      2     1.00    *                   ldr	x19, [x12], #-256
 # CHECK-NEXT:  2      2     0.50    *                   ldrsb	xzr, [x9], #255
 # CHECK-NEXT:  2      2     0.50    *                   ldrsb	x2, [x3], #1
 # CHECK-NEXT:  2      2     0.50    *                   ldrsb	x19, [x12], #-256
@@ -888,25 +888,25 @@
 # CHECK-NEXT:  2      1     1.00           *            str	d20, [x20], #255
 # CHECK-NEXT:  2      1     1.00           *            str	d23, [x23], #1
 # CHECK-NEXT:  2      1     1.00           *            str	d25, [x0], #-256
-# CHECK-NEXT:  2      3     0.50    *                   ldr	b0, [x0], #255
-# CHECK-NEXT:  2      3     0.50    *                   ldr	b3, [x3], #1
-# CHECK-NEXT:  2      3     0.50    *                   ldr	b5, [sp], #-256
-# CHECK-NEXT:  2      3     0.50    *                   ldr	h10, [x10], #255
-# CHECK-NEXT:  2      3     0.50    *                   ldr	h13, [x23], #1
-# CHECK-NEXT:  2      3     0.50    *                   ldr	h15, [sp], #-256
-# CHECK-NEXT:  2      3     0.50    *                   ldr	s20, [x20], #255
-# CHECK-NEXT:  2      3     0.50    *                   ldr	s23, [x23], #1
-# CHECK-NEXT:  2      3     0.50    *                   ldr	s25, [x0], #-256
-# CHECK-NEXT:  2      3     0.50    *                   ldr	d20, [x20], #255
-# CHECK-NEXT:  2      3     0.50    *                   ldr	d23, [x23], #1
-# CHECK-NEXT:  2      3     0.50    *                   ldr	d25, [x0], #-256
-# CHECK-NEXT:  2      3     0.50    *                   ldr	q20, [x1], #255
-# CHECK-NEXT:  2      3     0.50    *                   ldr	q23, [x9], #1
-# CHECK-NEXT:  2      3     0.50    *                   ldr	q25, [x20], #-256
+# CHECK-NEXT:  3      3     1.00    *                   ldr	b0, [x0], #255
+# CHECK-NEXT:  3      3     1.00    *                   ldr	b3, [x3], #1
+# CHECK-NEXT:  3      3     1.00    *                   ldr	b5, [sp], #-256
+# CHECK-NEXT:  3      3     1.00    *                   ldr	h10, [x10], #255
+# CHECK-NEXT:  3      3     1.00    *                   ldr	h13, [x23], #1
+# CHECK-NEXT:  3      3     1.00    *                   ldr	h15, [sp], #-256
+# CHECK-NEXT:  3      3     1.00    *                   ldr	s20, [x20], #255
+# CHECK-NEXT:  3      3     1.00    *                   ldr	s23, [x23], #1
+# CHECK-NEXT:  3      3     1.00    *                   ldr	s25, [x0], #-256
+# CHECK-NEXT:  3      3     1.00    *                   ldr	d20, [x20], #255
+# CHECK-NEXT:  3      3     1.00    *                   ldr	d23, [x23], #1
+# CHECK-NEXT:  3      3     1.00    *                   ldr	d25, [x0], #-256
+# CHECK-NEXT:  3      3     1.00    *                   ldr	q20, [x1], #255
+# CHECK-NEXT:  3      3     1.00    *                   ldr	q23, [x9], #1
+# CHECK-NEXT:  3      3     1.00    *                   ldr	q25, [x20], #-256
 # CHECK-NEXT:  2      1     1.00           *            str	q10, [x1], #255
 # CHECK-NEXT:  2      1     1.00           *            str	q22, [sp], #1
 # CHECK-NEXT:  2      1     1.00           *            str	q21, [x20], #-256
-# CHECK-NEXT:  2      2     0.50    *                   ldr	x3, [x4, #0]!
+# CHECK-NEXT:  3      2     1.00    *                   ldr	x3, [x4, #0]!
 # CHECK-NEXT:  2      1     1.00           *            strb	w9, [x2, #255]!
 # CHECK-NEXT:  2      1     1.00           *            strb	w10, [x3, #1]!
 # CHECK-NEXT:  2      1     1.00           *            strb	w10, [x3, #-256]!
@@ -925,12 +925,12 @@
 # CHECK-NEXT:  2      2     0.50    *                   ldrh	w9, [x2, #255]!
 # CHECK-NEXT:  2      2     0.50    *                   ldrh	w9, [x2, #1]!
 # CHECK-NEXT:  2      2     0.50    *                   ldrh	w10, [x3, #-256]!
-# CHECK-NEXT:  2      2     0.50    *                   ldr	w19, [sp, #255]!
-# CHECK-NEXT:  2      2     0.50    *                   ldr	w20, [x30, #1]!
-# CHECK-NEXT:  2      2     0.50    *                   ldr	w21, [x12, #-256]!
-# CHECK-NEXT:  2      2     0.50    *                   ldr	xzr, [x9, #255]!
-# CHECK-NEXT:  2      2     0.50    *                   ldr	x2, [x3, #1]!
-# CHECK-NEXT:  2      2     0.50    *                   ldr	x19, [x12, #-256]!
+# CHECK-NEXT:  3      2     1.00    *                   ldr	w19, [sp, #255]!
+# CHECK-NEXT:  3      2     1.00    *                   ldr	w20, [x30, #1]!
+# CHECK-NEXT:  3      2     1.00    *                   ldr	w21, [x12, #-256]!
+# CHECK-NEXT:  3      2     1.00    *                   ldr	xzr, [x9, #255]!
+# CHECK-NEXT:  3      2     1.00    *                   ldr	x2, [x3, #1]!
+# CHECK-NEXT:  3      2     1.00    *                   ldr	x19, [x12, #-256]!
 # CHECK-NEXT:  2      2     0.50    *                   ldrsb	xzr, [x9, #255]!
 # CHECK-NEXT:  2      2     0.50    *                   ldrsb	x2, [x3, #1]!
 # CHECK-NEXT:  2      2     0.50    *                   ldrsb	x19, [x12, #-256]!
@@ -958,21 +958,21 @@
 # CHECK-NEXT:  2      1     1.00           *            str	d20, [x20, #255]!
 # CHECK-NEXT:  2      1     1.00           *            str	d23, [x23, #1]!
 # CHECK-NEXT:  2      1     1.00           *            str	d25, [x0, #-256]!
-# CHECK-NEXT:  2      3     0.50    *                   ldr	b0, [x0, #255]!
-# CHECK-NEXT:  2      3     0.50    *                   ldr	b3, [x3, #1]!
-# CHECK-NEXT:  2      3     0.50    *                   ldr	b5, [sp, #-256]!
-# CHECK-NEXT:  2      3     0.50    *                   ldr	h10, [x10, #255]!
-# CHECK-NEXT:  2      3     0.50    *                   ldr	h13, [x23, #1]!
-# CHECK-NEXT:  2      3     0.50    *                   ldr	h15, [sp, #-256]!
-# CHECK-NEXT:  2      3     0.50    *                   ldr	s20, [x20, #255]!
-# CHECK-NEXT:  2      3     0.50    *                   ldr	s23, [x23, #1]!
-# CHECK-NEXT:  2      3     0.50    *                   ldr	s25, [x0, #-256]!
-# CHECK-NEXT:  2      3     0.50    *                   ldr	d20, [x20, #255]!
-# CHECK-NEXT:  2      3     0.50    *                   ldr	d23, [x23, #1]!
-# CHECK-NEXT:  2      3     0.50    *                   ldr	d25, [x0, #-256]!
-# CHECK-NEXT:  2      3     0.50    *                   ldr	q20, [x1, #255]!
-# CHECK-NEXT:  2      3     0.50    *                   ldr	q23, [x9, #1]!
-# CHECK-NEXT:  2      3     0.50    *                   ldr	q25, [x20, #-256]!
+# CHECK-NEXT:  3      3     1.00    *                   ldr	b0, [x0, #255]!
+# CHECK-NEXT:  3      3     1.00    *                   ldr	b3, [x3, #1]!
+# CHECK-NEXT:  3      3     1.00    *                   ldr	b5, [sp, #-256]!
+# CHECK-NEXT:  3      3     1.00    *                   ldr	h10, [x10, #255]!
+# CHECK-NEXT:  3      3     1.00    *                   ldr	h13, [x23, #1]!
+# CHECK-NEXT:  3      3     1.00    *                   ldr	h15, [sp, #-256]!
+# CHECK-NEXT:  3      3     1.00    *                   ldr	s20, [x20, #255]!
+# CHECK-NEXT:  3      3     1.00    *                   ldr	s23, [x23, #1]!
+# CHECK-NEXT:  3      3     1.00    *                   ldr	s25, [x0, #-256]!
+# CHECK-NEXT:  3      3     1.00    *                   ldr	d20, [x20, #255]!
+# CHECK-NEXT:  3      3     1.00    *                   ldr	d23, [x23, #1]!
+# CHECK-NEXT:  3      3     1.00    *                   ldr	d25, [x0, #-256]!
+# CHECK-NEXT:  3      3     1.00    *                   ldr	q20, [x1, #255]!
+# CHECK-NEXT:  3      3     1.00    *                   ldr	q23, [x9, #1]!
+# CHECK-NEXT:  3      3     1.00    *                   ldr	q25, [x20, #-256]!
 # CHECK-NEXT:  2      1     1.00           *            str	q10, [x1, #255]!
 # CHECK-NEXT:  2      1     1.00           *            str	q22, [sp, #1]!
 # CHECK-NEXT:  2      1     1.00           *            str	q21, [x20, #-256]!
@@ -1267,7 +1267,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT: 260.50 214.50 27.00  64.00  164.50 314.50 89.00   -     122.50 177.50 8.50   8.50   67.00
+# CHECK-NEXT: 260.50 214.50 27.00  64.00  186.00 336.00 89.00   -     122.50 177.50 8.50   8.50   67.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
@@ -2116,12 +2116,12 @@
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldrh	w9, [x2], #255
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldrh	w9, [x2], #1
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldrh	w10, [x3], #-256
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldr	w19, [sp], #255
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldr	w20, [x30], #1
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldr	w21, [x12], #-256
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldr	xzr, [x9], #255
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldr	x2, [x3], #1
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldr	x19, [x12], #-256
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldr	w19, [sp], #255
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldr	w20, [x30], #1
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldr	w21, [x12], #-256
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldr	xzr, [x9], #255
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldr	x2, [x3], #1
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldr	x19, [x12], #-256
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldrsb	xzr, [x9], #255
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldrsb	x2, [x3], #1
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldrsb	x19, [x12], #-256
@@ -2149,25 +2149,25 @@
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     str	d20, [x20], #255
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     str	d23, [x23], #1
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     str	d25, [x0], #-256
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldr	b0, [x0], #255
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldr	b3, [x3], #1
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldr	b5, [sp], #-256
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldr	h10, [x10], #255
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldr	h13, [x23], #1
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldr	h15, [sp], #-256
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldr	s20, [x20], #255
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldr	s23, [x23], #1
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldr	s25, [x0], #-256
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldr	d20, [x20], #255
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldr	d23, [x23], #1
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldr	d25, [x0], #-256
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldr	q20, [x1], #255
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldr	q23, [x9], #1
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldr	q25, [x20], #-256
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldr	b0, [x0], #255
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldr	b3, [x3], #1
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldr	b5, [sp], #-256
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldr	h10, [x10], #255
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldr	h13, [x23], #1
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldr	h15, [sp], #-256
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldr	s20, [x20], #255
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldr	s23, [x23], #1
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldr	s25, [x0], #-256
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldr	d20, [x20], #255
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldr	d23, [x23], #1
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldr	d25, [x0], #-256
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldr	q20, [x1], #255
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldr	q23, [x9], #1
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldr	q25, [x20], #-256
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     str	q10, [x1], #255
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     str	q22, [sp], #1
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     str	q21, [x20], #-256
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldr	x3, [x4, #0]!
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldr	x3, [x4, #0]!
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     strb	w9, [x2, #255]!
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     strb	w10, [x3, #1]!
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     strb	w10, [x3, #-256]!
@@ -2186,12 +2186,12 @@
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldrh	w9, [x2, #255]!
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldrh	w9, [x2, #1]!
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldrh	w10, [x3, #-256]!
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldr	w19, [sp, #255]!
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldr	w20, [x30, #1]!
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldr	w21, [x12, #-256]!
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldr	xzr, [x9, #255]!
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldr	x2, [x3, #1]!
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldr	x19, [x12, #-256]!
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldr	w19, [sp, #255]!
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldr	w20, [x30, #1]!
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldr	w21, [x12, #-256]!
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldr	xzr, [x9, #255]!
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldr	x2, [x3, #1]!
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldr	x19, [x12, #-256]!
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldrsb	xzr, [x9, #255]!
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldrsb	x2, [x3, #1]!
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldrsb	x19, [x12, #-256]!
@@ -2219,21 +2219,21 @@
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     str	d20, [x20, #255]!
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     str	d23, [x23, #1]!
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     str	d25, [x0, #-256]!
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldr	b0, [x0, #255]!
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldr	b3, [x3, #1]!
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldr	b5, [sp, #-256]!
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldr	h10, [x10, #255]!
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldr	h13, [x23, #1]!
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldr	h15, [sp, #-256]!
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldr	s20, [x20, #255]!
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldr	s23, [x23, #1]!
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldr	s25, [x0, #-256]!
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldr	d20, [x20, #255]!
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldr	d23, [x23, #1]!
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldr	d25, [x0, #-256]!
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldr	q20, [x1, #255]!
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldr	q23, [x9, #1]!
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldr	q25, [x20, #-256]!
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldr	b0, [x0, #255]!
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldr	b3, [x3, #1]!
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldr	b5, [sp, #-256]!
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldr	h10, [x10, #255]!
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldr	h13, [x23, #1]!
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldr	h15, [sp, #-256]!
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldr	s20, [x20, #255]!
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldr	s23, [x23, #1]!
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldr	s25, [x0, #-256]!
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldr	d20, [x20, #255]!
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldr	d23, [x23, #1]!
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldr	d25, [x0, #-256]!
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldr	q20, [x1, #255]!
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldr	q23, [x9, #1]!
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldr	q25, [x20, #-256]!
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     str	q10, [x1, #255]!
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     str	q22, [sp, #1]!
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     str	q21, [x20, #-256]!

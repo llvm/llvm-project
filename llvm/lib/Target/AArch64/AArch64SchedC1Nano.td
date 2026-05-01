@@ -411,7 +411,11 @@ def C1NanoWriteLDPFP : SchedWriteRes<[C1NanoUnitLd]> { let Latency = 3; }
 def : InstRW<[C1NanoWr_LDR, C1NanoRd_LDR], (instregex "^LDR[WX]ui$")>;
 def : InstRW<[C1NanoWr_LDR, C1NanoRd_LDR], (instregex "^LDR[WX]ro[WX]$")>;
 
-def : InstRW<[WriteAdr, C1NanoWrite<3, C1NanoUnitLd>], (instregex "LDR[BHSDQ](pre|post)")>;
+// Load register, immediate pre-index / post-index
+def : InstRW<[WriteAdr, C1NanoWr_LDR, C1NanoWr_LDR], (instregex "LDR[WX](pre|post)")>;
+
+// Load vector register, immediate pre-index / post-index
+def : InstRW<[WriteAdr, C1NanoWriteLDPFP, C1NanoWriteLDPFP], (instregex "LDR[BHSDQ](pre|post)")>;
 
 def : InstRW<[C1NanoWriteLDP1, C1NanoWriteLDP1], (instregex "LDPSWi")>;
 def : InstRW<[WriteAdr, C1NanoWriteLDP1, C1NanoWriteLDP1],
