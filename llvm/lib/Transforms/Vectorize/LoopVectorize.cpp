@@ -844,7 +844,8 @@ public:
   /// \return An upper bound for the vectorization factors (both fixed and
   /// scalable). If the factors are 0, vectorization and interleaving should be
   /// avoided up front.
-  FixedScalableVFPair computeMaxVF(ElementCount UserVF, unsigned UserIC);
+  FixedScalableVFPair computeMaxVF(ElementCount UserVF, unsigned UserIC,
+                                   ElementCount TC, unsigned MaxTC);
 
   /// Memory access instruction may be vectorized in more than one way.
   /// Form of instruction after vectorization depends on cost.
@@ -2886,52 +2887,12 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
 }
 
 FixedScalableVFPair
-LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
+LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC,
+                                         ElementCount TC, unsigned MaxTC) {
   // For outer loops, use simple type-based heuristic VF. No cost model or
   // memory dependence analysis is available.
   if (!TheLoop->isInnermost()) {
     return Config.computeVPlanOuterloopVF(UserVF);
-  }
-
-  if (Legal->getRuntimePointerChecking()->Need && TTI.hasBranchDivergence()) {
-    // TODO: It may be useful to do since it's still likely to be dynamically
-    // uniform if the target can skip.
-    reportVectorizationFailure(
-        "Not inserting runtime ptr check for divergent target",
-        "runtime pointer checks needed. Not enabled for divergent target",
-        "CantVersionLoopWithDivergentTarget", ORE, TheLoop);
-    return FixedScalableVFPair::getNone();
-  }
-
-  ScalarEvolution *SE = PSE.getSE();
-  ElementCount TC = getSmallConstantTripCount(SE, TheLoop);
-  unsigned MaxTC = PSE.getSmallConstantMaxTripCount();
-  if (!MaxTC && EpilogueLoweringStatus == CM_EpilogueAllowed)
-    MaxTC = getMaxTCFromNonZeroRange(PSE, TheLoop);
-  LLVM_DEBUG(dbgs() << "LV: Found trip count: " << TC << '\n');
-  if (TC != ElementCount::getFixed(MaxTC))
-    LLVM_DEBUG(dbgs() << "LV: Found maximum trip count: " << MaxTC << '\n');
-  if (TC.isScalar()) {
-    reportVectorizationFailure("Single iteration (non) loop",
-        "loop trip count is one, irrelevant for vectorization",
-        "SingleIterationLoop", ORE, TheLoop);
-    return FixedScalableVFPair::getNone();
-  }
-
-  // If BTC matches the widest induction type and is -1 then the trip count
-  // computation will wrap to 0 and the vector trip count will be 0. Do not try
-  // to vectorize.
-  const SCEV *BTC = SE->getBackedgeTakenCount(TheLoop);
-  if (!isa<SCEVCouldNotCompute>(BTC) &&
-      BTC->getType()->getScalarSizeInBits() >=
-          Legal->getWidestInductionType()->getScalarSizeInBits() &&
-      SE->isKnownPredicate(CmpInst::ICMP_EQ, BTC,
-                           SE->getMinusOne(BTC->getType()))) {
-    reportVectorizationFailure(
-        "Trip count computation wrapped",
-        "backedge-taken count is -1, loop trip count wrapped to 0",
-        "TripCountWrapped", ORE, TheLoop);
-    return FixedScalableVFPair::getNone();
   }
 
   assert(WideningDecisions.empty() && CallWideningDecisions.empty() &&
@@ -2993,14 +2954,14 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
       MaxPowerOf2RuntimeVF = std::nullopt; // Stick with tail-folding for now.
   }
 
-  auto NoScalarEpilogueNeeded = [this, &UserIC](unsigned MaxVF) {
+  ScalarEvolution *SE = PSE.getSE();
+  auto NoScalarEpilogueNeeded = [this, &UserIC, SE](unsigned MaxVF) {
     // Return false if the loop is neither a single-latch-exit loop nor an
     // early-exit loop as tail-folding is not supported in that case.
     if (TheLoop->getExitingBlock() != TheLoop->getLoopLatch() &&
         !Legal->hasUncountableEarlyExit())
       return false;
     unsigned MaxVFtimesIC = UserIC ? MaxVF * UserIC : MaxVF;
-    ScalarEvolution *SE = PSE.getSE();
     // Calling getSymbolicMaxBackedgeTakenCount enables support for loops
     // with uncountable exits. For countable loops, the symbolic maximum must
     // remain identical to the known back-edge taken count.
@@ -5612,8 +5573,31 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
 void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
   CM.collectValuesToIgnore();
   Config.collectElementTypesForWidening(&CM.ValuesToIgnore);
+  ElementCount TC;
+  unsigned MaxTC = 0;
+  // For outer loops, use simple type-based heuristic VF. No cost model or
+  // memory dependence analysis is available.
+  if (OrigLoop->isInnermost()) {
+    if (!Config.checkVectorizationPreconditions())
+      return;
 
-  FixedScalableVFPair MaxFactors = CM.computeMaxVF(UserVF, UserIC);
+    TC = getSmallConstantTripCount(PSE.getSE(), OrigLoop);
+    LLVM_DEBUG(dbgs() << "LV: Found trip count: " << TC << '\n');
+    MaxTC = PSE.getSmallConstantMaxTripCount();
+    if (!MaxTC && CM.isEpilogueAllowed())
+      MaxTC = getMaxTCFromNonZeroRange(PSE, OrigLoop);
+    if (TC != ElementCount::getFixed(MaxTC))
+      LLVM_DEBUG(dbgs() << "LV: Found maximum trip count: " << MaxTC << '\n');
+    if (TC.isScalar()) {
+      reportVectorizationFailure(
+          "Single iteration (non) loop",
+          "loop trip count is one, irrelevant for vectorization",
+          "SingleIterationLoop", ORE, OrigLoop);
+      return;
+    }
+  }
+
+  FixedScalableVFPair MaxFactors = CM.computeMaxVF(UserVF, UserIC, TC, MaxTC);
   if (!MaxFactors) // Cases that should not to be vectorized nor interleaved.
     return;
 

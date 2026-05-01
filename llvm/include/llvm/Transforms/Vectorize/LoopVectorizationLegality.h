@@ -340,7 +340,7 @@ public:
   RecurrenceSet &getFixedOrderRecurrences() { return FixedOrderRecurrences; }
 
   /// Returns the widest induction type.
-  IntegerType *getWidestInductionType() { return WidestIndTy; }
+  IntegerType *getWidestInductionType() const { return WidestIndTy; }
 
   /// Returns True if given store is a final invariant store of one of the
   /// reductions found in the loop.

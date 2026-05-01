@@ -571,6 +571,37 @@ void VFSelectionContext::computeMinimalBitwidths() {
   MinBWs = computeMinimumValueSizes(TheLoop->getBlocks(), *DB, &TTI);
 }
 
+bool VFSelectionContext::checkVectorizationPreconditions() {
+  if (Legal->getRuntimePointerChecking()->Need && TTI.hasBranchDivergence()) {
+    // TODO: It may be useful to do since it's still likely to be dynamically
+    // uniform if the target can skip.
+    reportVectorizationFailure(
+        "Not inserting runtime ptr check for divergent target",
+        "runtime pointer checks needed. Not enabled for divergent target",
+        "CantVersionLoopWithDivergentTarget", ORE, const_cast<Loop *>(TheLoop));
+    return false;
+  }
+
+  // If BTC matches the widest induction type and is -1 then the trip count
+  // computation will wrap to 0 and the vector trip count will be 0. Do not try
+  // to vectorize.
+  ScalarEvolution *SE = PSE.getSE();
+  const SCEV *BTC = SE->getBackedgeTakenCount(TheLoop);
+  if (!isa<SCEVCouldNotCompute>(BTC) &&
+      (BTC->getType()->getScalarSizeInBits() >=
+       Legal->getWidestInductionType()->getScalarSizeInBits()) &&
+      SE->isKnownPredicate(CmpInst::ICMP_EQ, BTC,
+                           SE->getMinusOne(BTC->getType()))) {
+    reportVectorizationFailure(
+        "Trip count computation wrapped",
+        "backedge-taken count is -1, loop trip count wrapped to 0",
+        "TripCountWrapped", ORE, const_cast<Loop *>(TheLoop));
+    return false;
+  }
+
+  return true;
+}
+
 void VFSelectionContext::collectInLoopReductions() {
   // Avoid duplicating work finding in-loop reductions.
   if (!InLoopReductions.empty())
