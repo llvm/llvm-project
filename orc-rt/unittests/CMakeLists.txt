@@ -27,6 +27,7 @@ add_orc_rt_unittest(CoreTests
   IntervalSetTest.cpp
   LockedAccessTest.cpp
   MathTest.cpp
+  MemoryAccessSPSCITest.cpp
   MemoryFlagsTest.cpp
   NativeDylibManagerTest.cpp
   NativeDylibManagerSPSCITest.cpp
