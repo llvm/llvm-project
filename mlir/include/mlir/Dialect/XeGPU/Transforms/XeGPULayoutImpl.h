@@ -117,6 +117,16 @@ inferInsertStridedSliceSourceLayout(DistributeLayoutAttr resLayout,
                                     ArrayRef<int64_t> resShape,
                                     ArrayRef<int64_t> srcShape);
 
+/// Infers the source layout attribute for an insert operation.
+/// using same logic as inferInsertStridedSliceSourceLayout
+DistributeLayoutAttr inferInsertSourceLayout(DistributeLayoutAttr resLayout,
+                                             ArrayRef<int64_t> resShape,
+                                             ArrayRef<int64_t> srcShape);
+
+DistributeLayoutAttr inferExtractSourceLayout(DistributeLayoutAttr resLayout,
+                                              ArrayRef<int64_t> resShape,
+                                              ArrayRef<int64_t> srcShape);
+
 /// Infers the layout attribute for mask and offset operand for Chunked load
 /// and store, given the anchor layout attribute for the value being load/store.
 DistributeLayoutAttr

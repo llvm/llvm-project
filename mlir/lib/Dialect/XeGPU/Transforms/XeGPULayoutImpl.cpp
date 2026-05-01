@@ -286,6 +286,11 @@ bool xegpu::recoverTemporaryLayouts(Operation *rootOp) {
   rootOp->walk([&](gpu::GPUFuncOp func) {
     processFunc(func.getBody(), func.getName());
   });
+  // dump out the root op here for debug purpose
+
+  llvm::dbgs() << "After recovering temporary layout attributes for function: "
+               << rootOp->getName() << "\n";
+  rootOp->dump();
 
   return true;
 }
@@ -466,6 +471,88 @@ xegpu::DistributeLayoutAttr xegpu::inferInsertStridedSliceSourceLayout(
              "Leading dimensions being sliced off must not be distributed");
     }
     return resLayout.dropDims(llvm::to_vector(llvm::seq<int64_t>(0, dimDiff)));
+  }
+  return resLayout;
+}
+
+/// Infers the source layout attribute for an insert operation
+/// given the result layout attribute, result shape, and source shape. Removes
+/// leading dimensions from the result layout to match the source shape size.
+xegpu::DistributeLayoutAttr
+xegpu::inferInsertSourceLayout(xegpu::DistributeLayoutAttr resLayout,
+                               ArrayRef<int64_t> resShape,
+                               ArrayRef<int64_t> srcShape) {
+
+  int srcShapeSize = srcShape.size();
+  int resShapeSize = resShape.size();
+  int dimDiff = resShapeSize - srcShapeSize;
+
+  if (dimDiff > 0) {
+    // assert that the leading dimensions being sliced off are not distributed
+    // (i.e. sg_layout and lane_layout for those dimensions are all 1)
+    auto resSgLayout = resLayout.getEffectiveSgLayoutAsInt();
+    auto resLaneLayout = resLayout.getEffectiveLaneLayoutAsInt();
+    for (int i = 0; i < dimDiff; i++) {
+      assert((resSgLayout.size() == 0 || resSgLayout[i] == 1) &&
+             (resLaneLayout.size() == 0 || resLaneLayout[i] == 1) &&
+             "Leading dimensions being sliced off must not be distributed");
+    }
+    return resLayout.dropDims(llvm::to_vector(llvm::seq<int64_t>(0, dimDiff)));
+  }
+  return resLayout;
+}
+
+/// Infers the source layout attribute for extract operation
+/// given the result layout attribute, result shape, and source shape. Adds
+/// leading dimensions to the source layout to match the source shape size.
+xegpu::DistributeLayoutAttr
+xegpu::inferExtractSourceLayout(xegpu::DistributeLayoutAttr resLayout,
+                                ArrayRef<int64_t> resShape,
+                                ArrayRef<int64_t> srcShape) {
+
+  int srcShapeSize = srcShape.size();
+  int resShapeSize = resShape.size();
+  int dimDiff = srcShapeSize - resShapeSize;
+  auto context = resLayout.getContext();
+  // construct the source layout by adding unit dimensions to the front of
+  // result layout
+
+  SmallVector<int64_t> sgLayout(srcShapeSize, 1);
+  SmallVector<int64_t> sgData(srcShapeSize, 1);
+  SmallVector<int64_t> instData(srcShapeSize, 1);
+  SmallVector<int64_t> laneLayout(srcShapeSize, 1);
+  SmallVector<int64_t> laneData(srcShapeSize, 1);
+
+  if (dimDiff > 0) {
+    auto resSgLayout = resLayout.getEffectiveSgLayoutAsInt();
+    auto resSgData = resLayout.getEffectiveSgDataAsInt();
+    auto resInstData = resLayout.getEffectiveInstDataAsInt();
+    auto resLaneLayout = resLayout.getEffectiveLaneLayoutAsInt();
+    auto resLaneData = resLayout.getEffectiveLaneDataAsInt();
+
+    for (int i = 0; i < resShapeSize; i++) {
+      sgLayout[dimDiff + i] = (resSgLayout.size() == 0) ? 1 : resSgLayout[i];
+      sgData[dimDiff + i] = (resSgData.size() == 0) ? 1 : resSgData[i];
+      instData[dimDiff + i] = (resInstData.size() == 0) ? 1 : resInstData[i];
+      laneLayout[dimDiff + i] =
+          (resLaneLayout.size() == 0) ? 1 : resLaneLayout[i];
+      laneData[dimDiff + i] = (resLaneData.size() == 0) ? 1 : resLaneData[i];
+    }
+
+    auto toAttr = [&](ArrayRef<int64_t> v) -> DenseI32ArrayAttr {
+      if (v.empty())
+        return DenseI32ArrayAttr();
+      SmallVector<int32_t> v32(v.begin(), v.end());
+      return DenseI32ArrayAttr::get(context, v32);
+    };
+    auto srcLayout = xegpu::LayoutAttr::get(
+        context, resSgLayout.empty() ? nullptr : toAttr(sgLayout),
+        resSgData.empty() ? nullptr : toAttr(sgData),
+        resInstData.empty() ? nullptr : toAttr(instData),
+        resLaneLayout.empty() ? nullptr : toAttr(laneLayout),
+        resLaneData.empty() ? nullptr : toAttr(laneData), nullptr);
+    // TODO: add layout attribute interface: expandDims
+    return srcLayout;
   }
   return resLayout;
 }
@@ -1571,6 +1658,32 @@ xegpu::inferSourceLayoutFromResult(OpOperand &operand,
     }
     if (idx == 1)
       return resLayout;
+  }
+
+  // For vector::Insert Op, infer source layout from result layout using
+  // shapes.
+  if (auto insert = dyn_cast<vector::InsertOp>(op)) {
+    VectorType resVecTy = dyn_cast<VectorType>(insert.getResult().getType());
+    VectorType valueToStoreTy =
+        dyn_cast<VectorType>(insert.getValueToStore().getType());
+
+    if (idx == 0) {
+      return xegpu::inferInsertSourceLayout(resLayout, resVecTy.getShape(),
+                                            valueToStoreTy.getShape());
+    }
+    if (idx == 1)
+      return resLayout;
+  }
+
+  // For vector::Extract Op, infer source layout from result layout using
+  // shapes.
+  if (auto extract = dyn_cast<vector::ExtractOp>(op)) {
+    VectorType srcVecTy = dyn_cast<VectorType>(extract.getSource().getType());
+    VectorType resVecTy = dyn_cast<VectorType>(extract.getResult().getType());
+    if (!srcVecTy || !resVecTy)
+      return nullptr;
+    return xegpu::inferExtractSourceLayout(resLayout, resVecTy.getShape(),
+                                           srcVecTy.getShape());
   }
 
   // For vector::TransposeOp, infer source layout from result layout using

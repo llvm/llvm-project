@@ -125,7 +125,12 @@ gpu.module @test_distribution {
     // CHECK-DAG: %[[T15:.*]] = arith.addi %[[T13]], %[[T14]] : index
     // CHECK-DAG: %[[T16:.*]] = vector.broadcast %[[T15]] : index to vector<2x1xindex>
     // CHECK-DAG: %[[T17:.*]] = arith.addi %[[CST]], %[[T16]] : vector<2x1xindex>
-    %cst_2 = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [8, 1], sg_data = [2, 1]>} dense<[[0], [16], [32], [48], [64], [80], [96], [112], [128], [144], [160], [176], [192], [208], [224], [240], [256], [272], [288], [304], [320], [336], [352], [368], [384], [400], [416], [432], [448], [464], [480], [496]]> : vector<32x1xindex>
+    %cst_2 = arith.constant dense<[[0], [16], [32], [48], [64], [80], [96], [112], [128], [144], [160], [176], [192], [208], [224], [240], [256], [272], [288], [304], [320], [336], [352], [368], [384], [400], [416], [432], [448], [464], [480], [496]]> : vector<32x1xindex>
+    %anchor = xegpu.convert_layout %cst_2
+      <{
+        input_layout = #xegpu.layout<sg_layout = [8, 1], sg_data = [2, 1]>,
+        target_layout = #xegpu.layout<sg_layout = [8, 1], sg_data = [2, 1]>
+      }> : vector<32x1xindex>    
     gpu.return
   }
 
@@ -250,7 +255,12 @@ gpu.module @test_distribution {
   // CHECK-LABEL: splat_constant
   gpu.func @splat_constant() {
     // CHECK-COUNT-2: %[[CST:.*]] = arith.constant dense<0> : vector<4xindex>
-    %cst_2 = arith.constant {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [16, 1], sg_data = [16, 4], order = [0, 1]>, dims = [0]>}  dense<0> : vector<8xindex>
+    %cst_2 = arith.constant dense<0> : vector<8xindex>
+    %anchor = xegpu.convert_layout %cst_2
+      <{
+        input_layout =  #xegpu.slice<#xegpu.layout<sg_layout = [16, 1], sg_data = [16, 4], order = [0, 1]>, dims = [0]>,
+        target_layout =  #xegpu.slice<#xegpu.layout<sg_layout = [16, 1], sg_data = [16, 4], order = [0, 1]>, dims = [0]>
+      }> : vector<8xindex>
     gpu.return
   }
 

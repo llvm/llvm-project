@@ -292,11 +292,11 @@ gpu.module @test_kernel  {
     %m = arith.muli %block_id_x, %c32 : index
     %0 = xegpu.create_nd_tdesc %a : memref<512xf32> -> !xegpu.tensor_desc<32xf32, #r>
     %1 = xegpu.load_nd %0[0] {layout = #r}: !xegpu.tensor_desc<32xf32, #r> -> vector<32xf32>
-    %11 = vector.shape_cast %1 {layout_result_0 = #l} :  vector<32xf32> to vector<32x1xf32>
+    %11 = vector.shape_cast %1 :  vector<32xf32> to vector<32x1xf32>
     // CHECK-COUNT-8: vector.broadcast {{.*}}: vector<16x1xf32> to vector<16x16xf32>
-    %2 = vector.broadcast  %11 {layout_result_0 = #l} : vector<32x1xf32> to vector<32x64xf32>
+    %2 = vector.broadcast  %11 : vector<32x1xf32> to vector<32x64xf32>
     %3 = xegpu.create_nd_tdesc %b : memref<16x512xf32> -> !xegpu.tensor_desc<32x64xf32, #l>
-    xegpu.store_nd %2, %3[0, 0] : vector<32x64xf32>, !xegpu.tensor_desc<32x64xf32, #l>
+    xegpu.store_nd %2, %3[0, 0] {layout = #l} : vector<32x64xf32>, !xegpu.tensor_desc<32x64xf32, #l>
     gpu.return
   }
 }
@@ -480,7 +480,8 @@ gpu.module @test_kernel {
 
   gpu.func @convert_layout(%B: vector<8x32x2xf16>) -> vector<8x32x2xf16> {
     %b = xegpu.convert_layout %B <{input_layout = #lb, target_layout = #b}> : vector<8x32x2xf16>
-    %e = math.exp %b {layout_result_0 = #b} : vector<8x32x2xf16>
+    %e = math.exp %b : vector<8x32x2xf16>
+    %anchor = xegpu.convert_layout %e <{input_layout = #b, target_layout = #b}> : vector<8x32x2xf16>
     gpu.return %e : vector<8x32x2xf16>
   }
 }
