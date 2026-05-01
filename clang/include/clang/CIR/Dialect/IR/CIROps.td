@@ -599,7 +599,7 @@ def CIR_AllocaOp : CIR_Op<"alloca", [
     UnitAttr:$constant,
     UnitAttr:$cleanup_dest_slot,
     ConfinedAttr<I64Attr, [IntMinValue<1>]>:$alignment,
-    OptionalAttr<ArrayAttr>:$annotations
+    OptionalAttr<CIR_AnnotationArrayAttr>:$annotations
   );
 
   let results = (outs Res<CIR_PointerType, "",
@@ -2862,7 +2862,8 @@ def CIR_GlobalOp : CIR_Op<"global", [
                        OptionalAttr<CIR_StaticLocalGuardAttr>:$static_local_guard,
                        OptionalAttr<I64Attr>:$alignment,
                        OptionalAttr<ASTVarDeclInterface>:$ast,
-                       OptionalAttr<StrAttr>:$section
+                       OptionalAttr<StrAttr>:$section,
+                       OptionalAttr<CIR_AnnotationArrayAttr>:$annotations
                        );
 
   let regions = (region AnyRegion:$ctorRegion,
@@ -2881,6 +2882,7 @@ def CIR_GlobalOp : CIR_Op<"global", [
     $sym_name
     custom<GlobalOpTypeAndInitialValue>($sym_type, $initial_value,
                                         $ctorRegion, $dtorRegion)
+    ($annotations^)?
     attr-dict
   }];
 
@@ -3717,7 +3719,8 @@ def CIR_FuncOp : CIR_Op<"func", [
     OptionalAttr<FlatSymbolRefAttr>:$personality,
     CIR_OptionalPriorityAttr:$global_ctor_priority,
     CIR_OptionalPriorityAttr:$global_dtor_priority,
-    OptionalAttr<CIR_CXXSpecialMemberAttr>:$cxx_special_member
+    OptionalAttr<CIR_CXXSpecialMemberAttr>:$cxx_special_member,
+    OptionalAttr<CIR_AnnotationArrayAttr>:$annotations
   );
 
   let regions = (region AnyRegion:$body);
