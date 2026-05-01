@@ -2707,7 +2707,7 @@ template <PrimType TIn, PrimType TOut> bool Cast(InterpState &S, CodePtr OpPC) {
   if constexpr (isIntegralOrPointer<T>()) {
     if (In.getKind() != IntegralKind::Number &&
         In.getKind() != IntegralKind::AddrLabelDiff) {
-      if (!CheckIntegralAddressCast(S, OpPC, In.bitWidth()))
+      if (!CheckIntegralAddressCast(S, OpPC, U::bitWidth()))
         return Invalid(S, OpPC);
     } else if (In.getKind() == IntegralKind::AddrLabelDiff) {
       // Allow casts of address-of-label differences if they are no-ops
