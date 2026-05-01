@@ -152,7 +152,6 @@ if (FLANG_RT_INCLUDE_CUF)
   find_package(CUDAToolkit REQUIRED)
 endif()
 
-option(FLANG_RT_INCLUDE_AMD "Build Fortran runtime with special support for AMD GPUs" OFF)
 
 ########################
 # System Introspection #

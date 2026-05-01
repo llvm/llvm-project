@@ -609,7 +609,7 @@ public:
             getFoldingContext().languageFeatures().IsEnabled(
                 Fortran::common::LanguageFeature::CUDA),
             getFoldingContext().languageFeatures().IsEnabled(
-                Fortran::common::LanguageFeature::AmdMemoryAllocator),
+                Fortran::common::LanguageFeature::OpenMPDefaultAllocator),
             getFoldingContext().languageFeatures().IsEnabled(
                 Fortran::common::LanguageFeature::Coarray));
       });

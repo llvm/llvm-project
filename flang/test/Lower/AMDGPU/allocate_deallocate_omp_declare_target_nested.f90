@@ -1,12 +1,12 @@
-! RUN: %flang -ffast-amd-memory-allocator -S -emit-llvm -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa --offload-arch=gfx90a -o - %s | FileCheck %s --check-prefix=CHECK-OMP
-! RUN: %flang -ffast-amd-memory-allocator -S -emit-llvm -target amdgcn-- -o - %s | FileCheck %s --check-prefix=CHECK
+! RUN: %flang -fopenmp-default-allocate=target -S -emit-llvm -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa --offload-arch=gfx90a -o - %s | FileCheck %s --check-prefix=CHECK-OMP
+! RUN: %flang -fopenmp-default-allocate=target -S -emit-llvm -target amdgcn-- -o - %s | FileCheck %s --check-prefix=CHECK
 !REQUIRES: AFAR
 subroutine func_t_device()
   !$omp declare target enter(func_t_device) device_type(nohost)
     integer, ALLOCATABLE :: poly
     do j=1,10
-! CHECK-OMP-NOT: call void @_FortranAAMDAllocatableSetAllocIdx({{.*}}, i32 1)
-! CHECK: call void @_FortranAAMDAllocatableSetAllocIdx({{.*}}, i32 1)
+! CHECK-OMP-NOT: call void @_FortranAOpenMPAllocatableSetAllocIdx({{.*}}, i32 1)
+! CHECK: call void @_FortranAOpenMPAllocatableSetAllocIdx({{.*}}, i32 1)
 ! CHECK-OMP: call i32 @_FortranAAllocatableAllocate
 ! CHECK: call i32 @_FortranAAllocatableAllocate
       ALLOCATE(poly)

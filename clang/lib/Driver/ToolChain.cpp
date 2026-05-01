@@ -963,9 +963,11 @@ void ToolChain::addFortranRuntimeLibs(const ArgList &Args,
       CmdArgs.push_back("-lexecinfo");
   }
 
-  // libomp needs libatomic for atomic operations if using libgcc
   if (Args.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
                    options::OPT_fno_openmp, false)) {
+    CmdArgs.push_back("-lflang_rt.openmp");
+
+    // libomp needs libatomic for atomic operations if using libgcc
     Driver::OpenMPRuntimeKind OMPRuntime = getDriver().getOpenMPRuntime(Args);
     ToolChain::RuntimeLibType RuntimeLib = GetRuntimeLibType(Args);
     if ((OMPRuntime == Driver::OMPRT_OMP &&

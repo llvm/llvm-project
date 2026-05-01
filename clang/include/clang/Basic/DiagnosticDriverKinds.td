@@ -174,6 +174,9 @@ def warn_drv_unsupported_openmp_library : Warning<
 def warn_openacc_experimental : Warning<
 "OpenACC is NOT supported for AMDGPU">;
 
+def warn_openmp_default_allocate_experimental : Warning<
+  "-fopenmp-default-allocate= is an experimental feature">;
+
 def err_drv_invalid_thread_model_for_target : Error<
   "invalid thread model '%0' in '%1' for this target">;
 def err_drv_invalid_linker_name : Error<

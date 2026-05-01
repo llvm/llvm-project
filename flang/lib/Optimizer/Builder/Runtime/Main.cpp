@@ -25,7 +25,7 @@ using namespace Fortran::runtime;
 void fir::runtime::genMain(
     fir::FirOpBuilder &builder, mlir::Location loc,
     const std::vector<Fortran::lower::EnvironmentDefault> &defs, bool initCuda,
-    bool enableAmdAllocator,
+    bool enableOpenMPAllocator,
     bool initCoarrayEnv) {
   auto *context = builder.getContext();
   auto argcTy = builder.getDefaultIntegerType();
@@ -75,10 +75,9 @@ void fir::runtime::genMain(
   if (initCoarrayEnv)
     mif::InitOp::create(builder, loc);
 
-  if (enableAmdAllocator) {
-    // void AMDRegisterAllocator()
+  if (enableOpenMPAllocator) {
     auto registerFn =
-        builder.createFunction(loc, RTNAME_STRING(AMDRegisterAllocator),
+        builder.createFunction(loc, RTNAME_STRING(OpenMPRegisterAllocator),
                                mlir::FunctionType::get(context, {}, {}));
     builder.create<fir::CallOp>(loc, registerFn);
   }

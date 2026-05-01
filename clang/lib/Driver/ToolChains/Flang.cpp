@@ -1095,10 +1095,19 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
   addFortranDialectOptions(Args, CmdArgs);
 
-  if (Args.hasArg(options::OPT_ffast_amd_memory_allocator)) {
-    CmdArgs.push_back("-ffast-amd-memory-allocator");
-    CmdArgs.push_back("-mmlir");
-    CmdArgs.push_back("-use-alloc-runtime");
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_fopenmp_default_allocate_EQ)) {
+    StringRef Val(A->getValue());
+    if (Val != "target" && Val != "host") {
+      D.Diag(diag::err_drv_invalid_value) << A->getAsString(Args) << Val;
+    } else {
+      D.Diag(diag::warn_openmp_default_allocate_experimental);
+      CmdArgs.push_back(Args.MakeArgString("-fopenmp-default-allocate=" + Val));
+      if (Val == "target") {
+        CmdArgs.push_back("-mmlir");
+        CmdArgs.push_back("-use-alloc-runtime");
+      }
+    }
   }
 
   // 'flang -E' always produces output that is suitable for use as fixed form

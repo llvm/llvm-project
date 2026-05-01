@@ -1,4 +1,4 @@
-#===-- lib/amd/CMakeLists.txt ----------------------------------------------===#
+#===-- lib/openmp/CMakeLists.txt --------------------------------------------===#
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
@@ -12,15 +12,16 @@
 #set(umpire_DIR ${FLANG_RT_UMPIRE_DIR})
 #find_package(umpire REQUIRED PATHS ${FLANG_RT_UMPIRE_DIR}/lib/cmake/umpire)
 
-add_flangrt_library(flang_rt.amd STATIC SHARED
-  amd_alloc.cpp
+add_flangrt_library(flang_rt.openmp STATIC SHARED
+  omp_alloc.cpp
+  omp_util.cpp
   INSTALL_WITH_TOOLCHAIN
 )
 
-#if (TARGET flang_rt.amd.static)
-#  target_include_directories(flang_rt.amd.static PRIVATE ${FLANG_RT_UMPIRE_DIR}/include)
+#if (TARGET flang_rt.openmp.static)
+#  target_include_directories(flang_rt.openmp.static PRIVATE ${FLANG_RT_UMPIRE_DIR}/include)
 #endif()
 #
-#if (TARGET flang_rt.amd.shared)
-#  target_include_directories(flang_rt.amd.shared PRIVATE ${FLANG_RT_UMPIRE_DIR}/include)
+#if (TARGET flang_rt.openmp.shared)
+#  target_include_directories(flang_rt.openmp.shared PRIVATE ${FLANG_RT_UMPIRE_DIR}/include)
 #endif()
