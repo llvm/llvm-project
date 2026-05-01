@@ -1763,11 +1763,6 @@ void CIRGenItaniumCXXABI::registerGlobalDtor(const VarDecl *vd,
   if (vd->isNoDestroy(cgm.getASTContext()))
     return;
 
-  if (vd->getTLSKind()) {
-    cgm.errorNYI(vd->getSourceRange(), "registerGlobalDtor: TLS");
-    return;
-  }
-
   // HLSL doesn't support atexit.
   if (cgm.getLangOpts().HLSL) {
     cgm.errorNYI(vd->getSourceRange(), "registerGlobalDtor: HLSL");
