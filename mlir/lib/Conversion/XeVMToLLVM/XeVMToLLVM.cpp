@@ -1266,7 +1266,7 @@ class TruncfToOCLPattern : public OpConversionPattern<TruncfOp> {
                                    truncArgs, {}, funcAttrs, op.getOperation())
               ->getResult(0);
     }
-    if (dstEtype == TruncfDstElemTypes::BF8) {
+    if (dstEtype == TruncfDstElemTypes::BF8) { // Float8E5M2Type
       // Use char16 __builtin_IB_hftobf8_16(half16)
       std::string fnName = "__builtin_IB_hftobf8_16";
       SmallVector<Type> argTypes{src.getType()};
@@ -1277,7 +1277,7 @@ class TruncfToOCLPattern : public OpConversionPattern<TruncfOp> {
               ->getResult(0);
 
       rewriter.replaceOp(op, result);
-    } else if (dstEtype == TruncfDstElemTypes::F8) {
+    } else if (dstEtype == TruncfDstElemTypes::F8) { // Float8E4M3FNType
       // Use char16 __builtin_IB_hftohf8_16(half16)
       std::string fnName = "__builtin_IB_hftohf8_16";
       SmallVector<Type> argTypes{src.getType()};
