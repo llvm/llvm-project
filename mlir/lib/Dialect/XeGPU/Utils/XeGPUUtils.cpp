@@ -859,14 +859,17 @@ void xegpu::addContextAwareVectorTypeConversion(
     (*whileArgTypeMap)[arg] = std::move(types);
   };
   topLevelOp->walk([&](scf::WhileOp whileOp) {
-    // "before" region block arguments.
+    // "before" region block arguments correspond to the `inits` operands.
     for (auto [init, arg] :
          llvm::zip(whileOp.getInits(), whileOp.getBeforeArguments()))
       recordBlockArgTypes(init, arg);
-    // "after" region block arguments.
-    for (auto [init, arg] :
-         llvm::zip(whileOp.getInits(), whileOp.getAfterArguments()))
-      recordBlockArgTypes(init, arg);
+    // "after" region block arguments correspond to the operands of the
+    // embedded `scf.condition` op (not the `inits`). In general the two
+    // type lists may differ.
+    scf::ConditionOp condOp = whileOp.getConditionOp();
+    for (auto [condArg, arg] :
+         llvm::zip(condOp.getArgs(), whileOp.getAfterArguments()))
+      recordBlockArgTypes(condArg, arg);
   });
 
   // Context-aware 1:N conversion for VectorType. For scf.while block

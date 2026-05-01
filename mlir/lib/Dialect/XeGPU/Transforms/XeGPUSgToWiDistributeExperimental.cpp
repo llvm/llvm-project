@@ -1544,6 +1544,7 @@ void XeGPUSgToWiDistributeExperimentalPass::runOnOperation() {
   }
   // Fold cancelling cast chains and erase dead casts.
   xegpu::cleanupUnrealizedConversionCasts(root, existingCasts);
+  xegpu::removeTemporaryLayoutAttrs(getOperation());
 }
 
 void xegpu::populateXeGPUSgToWiDistributeTypeConversions(
