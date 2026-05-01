@@ -3064,6 +3064,15 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   }
 
   auto ExpectedTC = getSmallBestKnownTC(PSE, TheLoop);
+  auto ApplyVectorWidth = [](FixedScalableVFPair &MaxFactors,
+                             unsigned int FixedVF, unsigned int ScalableVF) {
+    MaxFactors.FixedVF = ElementCount::getFixed(FixedVF);
+    MaxFactors.ScalableVF = ElementCount::getScalable(ScalableVF);
+  };
+  unsigned EffectiveIC = UserIC > 0 ? UserIC : 1;
+  auto HasOneScalarIterationRemainder = [EffectiveIC](ElementCount &ExactTC, unsigned int VF)-> bool {
+    return ExactTC.getFixedValue() == ((VF * EffectiveIC) + 1);
+  };
   if (ExpectedTC && ExpectedTC->isFixed() &&
       ExpectedTC->getFixedValue() <=
           TTI.getMinTripCountTailFoldingThreshold()) {
@@ -3075,8 +3084,35 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
           NoScalarEpilogueNeeded(MaxFactors.FixedVF.getFixedValue())) {
         LLVM_DEBUG(dbgs() << "LV: Picking a fixed-width so that no tail will "
                              "remain for any chosen VF.\n");
-        MaxFactors.ScalableVF = ElementCount::getScalable(0);
+        ApplyVectorWidth(MaxFactors, MaxFactors.FixedVF.getFixedValue(), 0);
         return MaxFactors;
+      }
+      // Allow cases where the ExactTC == VF + 1. VF can be any power of
+      // 2 between 2 and MaxVF.
+      //
+      // This produces 1 vector iteration, and 1 scalar iteration with
+      // no remainder. Later passes will eliminate the loop and leave
+      // straight-line code as the both iteration counts are statically known.
+      ElementCount ExactTC = getSmallConstantTripCount(PSE.getSE(), TheLoop);
+      if (EpilogueLoweringStatus == CM_EpilogueNotAllowedLowTripLoop &&
+          ExactTC && ExactTC.isFixed()) {
+        if (HasOneScalarIterationRemainder(ExactTC, MaxFactors.FixedVF.getFixedValue())) {
+          LLVM_DEBUG(dbgs() << "LV: Picking a fixed-width with 1 scalar "
+                               "iteration remainder.\n");
+          ApplyVectorWidth(MaxFactors, MaxFactors.FixedVF.getFixedValue(), 0);
+          return MaxFactors;
+        }
+        // If the maximum VF cannot produce 1 vector iteration + 1 scalar
+        // iteration, step down VF's to find one that can.
+        for (unsigned VF = MaxFactors.FixedVF.getFixedValue(); VF >= 2;
+             VF /= 2) {
+          if (HasOneScalarIterationRemainder(ExactTC, VF)) {
+            LLVM_DEBUG(dbgs() << "LV: Picking VF=" << VF
+                              << " with 1 scalar iteration remainder.\n");
+            ApplyVectorWidth(MaxFactors, VF, 0);
+            return MaxFactors;
+          }
+        }
       }
     }
 
