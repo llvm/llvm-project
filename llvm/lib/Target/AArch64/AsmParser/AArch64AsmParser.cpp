@@ -8733,11 +8733,14 @@ ParseStatus AArch64AsmParser::tryParseConsecutiveGPRSeqPair(
 
   if (getTok().isNot(AsmToken::Comma))
     return Error(getLoc(), "expected comma");
+  // Eat the comma
   Lex();
 
   SMLoc E = getLoc();
   MCRegister SecondReg;
   Res = tryParseScalarRegister(SecondReg);
+  // SYSP accepts either no register pair or `xzr, xzr`. The omitted form
+  // is changed to `xzr, xzr` during assembly.
   if (!Res.isSuccess())
     return Error(E, IsXZRPair ? "expected second xzr in xzr/xzr register pair"
                               : SecondRegExpected);
