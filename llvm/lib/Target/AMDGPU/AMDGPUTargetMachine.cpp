@@ -49,6 +49,7 @@
 #include "GCNVOPDUtils.h"
 #include "R600.h"
 #include "R600TargetMachine.h"
+#include "SIFixPhysicalRegisterLiveInfo.h"
 #include "SIFixSGPRCopies.h"
 #include "SIFixVGPRCopies.h"
 #include "SIFoldOperands.h"
@@ -678,6 +679,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSIShrinkInstructionsLegacyPass(*PR);
   initializeSIOptimizeExecMaskingPreRALegacyPass(*PR);
   initializeSIOptimizeVGPRLiveRangeLegacyPass(*PR);
+  initializeSIFixPhysicalRegisterLiveInfoLegacyPass(*PR);
   initializeAMDGPUNextUseAnalysisLegacyPassPass(*PR);
   initializeAMDGPUNextUseAnalysisPrinterLegacyPassPass(*PR);
   initializeSILoadStoreOptimizerLegacyPass(*PR);
@@ -1614,6 +1616,8 @@ bool GCNPassConfig::addPreISel() {
 }
 
 void GCNPassConfig::addMachineSSAOptimization() {
+  addPass(&SIFixPhysicalRegisterLiveInfoLegacyID);
+
   TargetPassConfig::addMachineSSAOptimization();
 
   // We want to fold operands after PeepholeOptimizer has run (or as part of
@@ -2419,6 +2423,9 @@ void AMDGPUCodeGenPassBuilder::addPreRewrite(PassManagerWrapper &PMW) const {
 
 void AMDGPUCodeGenPassBuilder::addMachineSSAOptimization(
     PassManagerWrapper &PMW) const {
+
+  // Just after finalize-isel
+  addMachineFunctionPass(SIFixPhysicalRegisterLiveInfoPass(), PMW);
   Base::addMachineSSAOptimization(PMW);
 
   addMachineFunctionPass(SIFoldOperandsPass(), PMW);

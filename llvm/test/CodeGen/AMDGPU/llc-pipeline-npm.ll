@@ -165,6 +165,7 @@
 ; GCN-O2-NEXT: si-fix-sgpr-copies
 ; GCN-O2-NEXT: si-i1-copies
 ; GCN-O2-NEXT: finalize-isel
+; GCN-O2-NEXT: si-fix-physical-register-live-info
 ; GCN-O2-NEXT: early-tailduplication
 ; GCN-O2-NEXT: opt-phis
 ; GCN-O2-NEXT: stack-coloring
@@ -334,6 +335,7 @@
 ; GCN-O3-NEXT: si-fix-sgpr-copies
 ; GCN-O3-NEXT: si-i1-copies
 ; GCN-O3-NEXT: finalize-isel
+; GCN-O3-NEXT: si-fix-physical-register-live-info
 ; GCN-O3-NEXT: early-tailduplication
 ; GCN-O3-NEXT: opt-phis
 ; GCN-O3-NEXT: stack-coloring

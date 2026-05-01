@@ -318,6 +318,8 @@
 ; GCN-O1-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O1-NEXT:        SI Lower i1 Copies
 ; GCN-O1-NEXT:        Finalize ISel and expand pseudo-instructions
+; GCN-O1-NEXT:        MachineDominator Tree Construction
+; GCN-O1-NEXT:        SI Fix Physical Register Live Info
 ; GCN-O1-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O1-NEXT:        Early Tail Duplication
 ; GCN-O1-NEXT:        Optimize machine instruction PHIs
@@ -629,6 +631,8 @@
 ; GCN-O1-OPTS-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O1-OPTS-NEXT:        SI Lower i1 Copies
 ; GCN-O1-OPTS-NEXT:        Finalize ISel and expand pseudo-instructions
+; GCN-O1-OPTS-NEXT:        MachineDominator Tree Construction
+; GCN-O1-OPTS-NEXT:        SI Fix Physical Register Live Info
 ; GCN-O1-OPTS-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O1-OPTS-NEXT:        Early Tail Duplication
 ; GCN-O1-OPTS-NEXT:        Optimize machine instruction PHIs
@@ -951,6 +955,8 @@
 ; GCN-O2-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O2-NEXT:        SI Lower i1 Copies
 ; GCN-O2-NEXT:        Finalize ISel and expand pseudo-instructions
+; GCN-O2-NEXT:        MachineDominator Tree Construction
+; GCN-O2-NEXT:        SI Fix Physical Register Live Info
 ; GCN-O2-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O2-NEXT:        Early Tail Duplication
 ; GCN-O2-NEXT:        Optimize machine instruction PHIs
@@ -1287,6 +1293,8 @@
 ; GCN-O3-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O3-NEXT:        SI Lower i1 Copies
 ; GCN-O3-NEXT:        Finalize ISel and expand pseudo-instructions
+; GCN-O3-NEXT:        MachineDominator Tree Construction
+; GCN-O3-NEXT:        SI Fix Physical Register Live Info
 ; GCN-O3-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O3-NEXT:        Early Tail Duplication
 ; GCN-O3-NEXT:        Optimize machine instruction PHIs
