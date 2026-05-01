@@ -120,8 +120,11 @@ static ConstantRange getRange(Value *Op, SCCPSolver &Solver,
 /// If no such range preserves the active semantics under KnownCR, keep CmpCR.
 static ConstantRange simplifyCmpRange(const ConstantRange &CmpCR,
                                       const ConstantRange &KnownCR) {
-  assert((!CmpCR.isFullSet() && !CmpCR.isEmptySet()) && "Unexpected CmpCR");
   assert(!KnownCR.isEmptySet() && "Unexpected KnownCR");
+
+  // Empty and full ranges already lower to a single icmp.
+  if (CmpCR.isEmptySet() || CmpCR.isFullSet())
+    return CmpCR;
 
   // If KnownCR is full, bail out early.
   if (KnownCR.isFullSet())

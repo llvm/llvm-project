@@ -161,6 +161,30 @@ define i1 @range_check_to_icmp_sge(i8 range(i8 -56, 20) %x) {
   ret i1 %cmp
 }
 
+define i1 @range_check_to_icmp_empty(i8 range(i8 2, 10) %x) {
+; CHECK-LABEL: define i1 @range_check_to_icmp_empty(
+; CHECK-SAME: i8 range(i8 2, 10) [[X:%.*]]) {
+; CHECK-NEXT:    [[OFF:%.*]] = add nuw nsw i8 [[X]], -2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[X]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %off = add nuw i8 %x, -2
+  %cmp = icmp ult i8 %off, 0
+  ret i1 %cmp
+}
+
+define i1 @range_check_to_icmp_full(i8 range(i8 2, 10) %x) {
+; CHECK-LABEL: define i1 @range_check_to_icmp_full(
+; CHECK-SAME: i8 range(i8 2, 10) [[X:%.*]]) {
+; CHECK-NEXT:    [[OFF:%.*]] = add nuw nsw i8 [[X]], -2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[X]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %off = add nuw i8 %x, -2
+  %cmp = icmp uge i8 %off, 0
+  ret i1 %cmp
+}
+
 ; Cover the early exit when ActiveCmpCR is already a one-icmp check.
 
 define i1 @range_check_intersection_to_icmp_eq(i32 range(i32 0, 4) %x) {
