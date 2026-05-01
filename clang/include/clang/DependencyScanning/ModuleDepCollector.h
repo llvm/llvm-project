@@ -42,11 +42,10 @@ struct PrebuiltModuleDep {
   std::string ModuleMapFile;
   std::optional<std::string> ModuleCacheKey;
 
-  explicit PrebuiltModuleDep(const Module *M)
-      : ModuleName(M->getTopLevelModuleName()),
-        PCMFile(M->getASTFileName()->str()),
-        ModuleMapFile(M->PresumedModuleMapFile),
-        ModuleCacheKey(M->getModuleCacheKey()) {}
+  explicit PrebuiltModuleDep(const serialization::ModuleFile *MF)
+      : ModuleName(MF->ModuleName), PCMFile(MF->FileName.str()),
+        ModuleMapFile(MF->ModuleMapPath),
+        ModuleCacheKey(MF->ModuleCacheKey){}
 };
 
 /// Attributes loaded from AST files of prebuilt modules collected prior to
@@ -265,34 +264,12 @@ private:
 
   void handleImport(const Module *Imported);
 
-  /// Adds direct modular dependencies that have already been built to the
-  /// ModuleDeps instance.
-  void
-  addAllSubmodulePrebuiltDeps(const Module *M, ModuleDeps &MD,
-                              llvm::DenseSet<const Module *> &SeenSubmodules);
-  void addModulePrebuiltDeps(const Module *M, ModuleDeps &MD,
-                             llvm::DenseSet<const Module *> &SeenSubmodules);
-
-  /// Traverses the previously collected direct modular dependencies to discover
-  /// transitive modular dependencies and fills the parent \c ModuleDepCollector
-  /// with both.
   /// Returns the ID or nothing if the dependency is spurious and is ignored.
-  std::optional<ModuleID> handleTopLevelModule(const Module *M);
-  void addAllSubmoduleDeps(const Module *M, ModuleDeps &MD,
-                           llvm::DenseSet<const Module *> &AddedModules);
-  void addModuleDep(const Module *M, ModuleDeps &MD,
-                    llvm::DenseSet<const Module *> &AddedModules);
+  std::optional<ModuleID> handleTopLevelModule(serialization::ModuleFile *MF);
 
-  /// Traverses the affecting modules and updates \c MD with references to the
-  /// parent \c ModuleDepCollector info.
-  void
-  addAllAffectingClangModules(const Module *M, ModuleDeps &MD,
-                              llvm::DenseSet<const Module *> &AddedModules);
-  void addAffectingClangModule(const Module *M, ModuleDeps &MD,
-                               llvm::DenseSet<const Module *> &AddedModules);
-
-  /// Add discovered module dependency for the given module.
-  void addOneModuleDep(const Module *M, const ModuleID ID, ModuleDeps &MD);
+  /// Adds direct module dependencies to the ModuleDeps instance. This includes
+  /// prebuilt module and implicitly-built modules.
+  void addAllModuleDeps(serialization::ModuleFile &MF, ModuleDeps &MD);
 };
 
 /// Collects modular and non-modular dependencies of the main file by attaching
@@ -339,14 +316,16 @@ private:
   /// textually included header files.
   std::vector<std::string> FileDeps;
   /// Direct and transitive modular dependencies of the main source file.
-  llvm::MapVector<const Module *, std::unique_ptr<ModuleDeps>> ModularDeps;
+  llvm::MapVector<serialization::ModuleFile *, std::unique_ptr<ModuleDeps>>
+      ModularDeps;
   /// Secondary mapping for \c ModularDeps allowing lookup by ModuleID without
   /// a preprocessor. Storage owned by \c ModularDeps.
   llvm::DenseMap<ModuleID, ModuleDeps *> ModuleDepsByID;
   /// Direct modular dependencies that have already been built.
-  llvm::MapVector<const Module *, PrebuiltModuleDep> DirectPrebuiltModularDeps;
+  llvm::MapVector<serialization::ModuleFile *, PrebuiltModuleDep>
+      DirectPrebuiltModularDeps;
   /// Working set of direct modular dependencies.
-  llvm::SetVector<const Module *> DirectModularDeps;
+  llvm::SetVector<serialization::ModuleFile *> DirectModularDeps;
   /// Working set of direct modular dependencies, as they were imported.
   llvm::SmallPtrSet<const Module *, 32> DirectImports;
   /// All direct and transitive visible modules.
@@ -369,7 +348,7 @@ private:
   ModuleDepCollectorPP *CollectorPPPtr = nullptr;
 
   /// Checks whether the module is known as being prebuilt.
-  bool isPrebuiltModule(const Module *M);
+  bool isPrebuiltModule(const serialization::ModuleFile *MF);
 
   /// Computes all visible modules resolved from direct imports.
   void addVisibleModules();
