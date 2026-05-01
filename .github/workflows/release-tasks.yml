@@ -48,8 +48,8 @@ jobs:
       - id: app-token
         uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3  # v3.1.1
         with:
-          app-id: ${{ inputs.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
-          private-key: ${{ inputs.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
+          app-id: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
+          private-key: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           permission-members: read
 
