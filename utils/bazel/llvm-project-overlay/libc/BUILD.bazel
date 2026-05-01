@@ -12149,6 +12149,8 @@ libc_function(
         ":__support_macros_config",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_sys_mman_macros",
+        ":types_size_t",
     ],
 )
 
@@ -12162,6 +12164,8 @@ libc_function(
         ":__support_macros_config",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_sys_mman_macros",
+        ":types_size_t",
     ],
 )
 
@@ -12175,6 +12179,8 @@ libc_function(
         ":__support_macros_config",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_sys_mman_macros",
+        ":types_size_t",
     ],
 )
 
@@ -12188,6 +12194,8 @@ libc_function(
         ":__support_macros_config",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_sys_mman_macros",
+        ":types_size_t",
     ],
 )
 
@@ -12201,6 +12209,7 @@ libc_function(
         ":__support_macros_config",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_sys_mman_macros",
     ],
 )
 
@@ -12216,6 +12225,8 @@ libc_function(
         ":__support_osutil_syscall",
         ":errno",
         ":hdr_sys_mman_macros",
+        ":types_off_t",
+        ":types_size_t",
     ],
 )
 
@@ -12231,6 +12242,8 @@ libc_function(
         ":__support_osutil_linux_syscall_wrappers_mprotect",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_sys_mman_macros",
+        ":types_size_t",
     ],
 )
 
@@ -12244,6 +12257,8 @@ libc_function(
         ":__support_macros_config",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_sys_mman_macros",
+        ":types_size_t",
     ],
 )
 
@@ -12257,6 +12272,8 @@ libc_function(
         ":__support_macros_config",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_sys_mman_macros",
+        ":types_size_t",
     ],
 )
 
@@ -12270,6 +12287,8 @@ libc_function(
         ":__support_macros_config",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_sys_mman_macros",
+        ":types_size_t",
     ],
 )
 
@@ -12283,6 +12302,7 @@ libc_function(
         ":__support_macros_config",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_sys_mman_macros",
     ],
 )
 
@@ -12297,6 +12317,8 @@ libc_function(
         ":__support_osutil_linux_syscall_wrappers_munmap",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_sys_mman_macros",
+        ":types_size_t",
     ],
 )
 
@@ -12404,6 +12426,8 @@ libc_function(
         ":__support_macros_config",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_sys_mman_macros",
+        ":types_size_t",
     ],
 )
 
@@ -12417,6 +12441,8 @@ libc_function(
         ":__support_macros_config",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_sys_mman_macros",
+        ":types_size_t",
     ],
 )
 
