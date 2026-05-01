@@ -30,6 +30,9 @@ class X86Subtarget;
 enum X86MachineCombinerPattern : unsigned {
   // X86 VNNI
   DPWSSD = MachineCombinerPattern::TARGET_PATTERN_START,
+  // Unfold SHD
+  USHD_OR,
+  USHD_LEA,
 };
 
 namespace X86 {
@@ -673,6 +676,8 @@ protected:
   bool getMachineCombinerPatterns(MachineInstr &Root,
                                   SmallVectorImpl<unsigned> &Patterns,
                                   bool DoRegPressureReduce) const override;
+
+  CombinerObjective getCombinerObjective(unsigned Pattern) const override;
 
   /// When getMachineCombinerPatterns() finds potential patterns,
   /// this function generates the instructions that could replace the

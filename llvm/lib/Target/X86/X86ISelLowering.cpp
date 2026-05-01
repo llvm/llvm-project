@@ -228,14 +228,12 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
   // Funnel shifts.
   for (auto ShiftOp : {ISD::FSHL, ISD::FSHR}) {
-    // For slow shld targets we only lower for code size.
-    LegalizeAction ShiftDoubleAction = Subtarget.isSHLDSlow() ? Custom : Legal;
 
     setOperationAction(ShiftOp             , MVT::i8   , Custom);
     setOperationAction(ShiftOp             , MVT::i16  , Custom);
-    setOperationAction(ShiftOp             , MVT::i32  , ShiftDoubleAction);
+    setOperationAction(ShiftOp, MVT::i32, Legal);
     if (Subtarget.is64Bit())
-      setOperationAction(ShiftOp           , MVT::i64  , ShiftDoubleAction);
+      setOperationAction(ShiftOp, MVT::i64, Legal);
   }
 
   if (!Subtarget.useSoftFloat()) {

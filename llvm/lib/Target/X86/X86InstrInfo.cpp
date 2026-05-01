@@ -10695,6 +10695,16 @@ void X86InstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
   }
 }
 
+CombinerObjective X86InstrInfo::getCombinerObjective(unsigned Pattern) const {
+  switch (Pattern) {
+  case X86MachineCombinerPattern::USHD_OR:
+  case X86MachineCombinerPattern::USHD_LEA:
+    return CombinerObjective::MustReduceLatency;
+  default:
+    return TargetInstrInfo::getCombinerObjective(Pattern);
+  }
+}
+
 bool X86InstrInfo::getMachineCombinerPatterns(
     MachineInstr &Root, SmallVectorImpl<unsigned> &Patterns,
     bool DoRegPressureReduce) const {
@@ -10722,9 +10732,251 @@ bool X86InstrInfo::getMachineCombinerPatterns(
     }
     break;
   }
+  // We do not support CL variant, as it requires a lot of bookkeeping.
+  case X86::SHLD32rri8:
+  case X86::SHLD64rri8:
+  case X86::SHRD32rri8:
+  case X86::SHRD64rri8:
+    // Only offer LEA variant for register operands
+    Patterns.push_back(X86MachineCombinerPattern::USHD_LEA);
+    [[fallthrough]];
+  case X86::SHLD32mri8:
+  case X86::SHLD64mri8:
+  case X86::SHRD32mri8:
+  case X86::SHRD64mri8:
+    Patterns.push_back(X86MachineCombinerPattern::USHD_OR);
+    return true;
   }
   return TargetInstrInfo::getMachineCombinerPatterns(Root,
                                                      Patterns, DoRegPressureReduce);
+}
+
+static void genShdOrSequence(MachineInstr &Root, const TargetInstrInfo &TII,
+                             SmallVectorImpl<MachineInstr *> &InsInstrs,
+                             SmallVectorImpl<MachineInstr *> &DelInstrs,
+                             DenseMap<Register, unsigned> &InstrIdxForVirtReg) {
+  auto *MF = Root.getMF();
+  auto OpCode = Root.getOpcode();
+
+  MachineRegisterInfo &RegInfo = MF->getRegInfo();
+  const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
+  auto GetRC = [&](Register Reg) {
+    return Reg.isVirtual() ? RegInfo.getRegClass(Reg)
+                           : TRI->getMinimalPhysRegClass(Reg);
+  };
+
+  // SHLD: dst = (dst << imm) | (src >> (BW-imm))  — direct=SHL, complement=SHR
+  // SHRD: dst = (dst >> imm) | (src << (BW-imm))  — direct=SHR, complement=SHL
+  unsigned BW = 0;
+  bool IsShrd = false;
+  bool IsMem = false;
+  switch (OpCode) {
+  case X86::SHRD32rri8:
+    IsShrd = true;
+    [[fallthrough]];
+  case X86::SHLD32rri8:
+    BW = 32;
+    break;
+  case X86::SHRD64rri8:
+    IsShrd = true;
+    [[fallthrough]];
+  case X86::SHLD64rri8:
+    BW = 64;
+    break;
+  case X86::SHRD32mri8:
+    IsShrd = true;
+    [[fallthrough]];
+  case X86::SHLD32mri8:
+    BW = 32;
+    IsMem = true;
+    break;
+  case X86::SHRD64mri8:
+    IsShrd = true;
+    [[fallthrough]];
+  case X86::SHLD64mri8:
+    BW = 64;
+    IsMem = true;
+    break;
+  default:
+    llvm_unreachable("Unexpected opcode in genShdOrSequence");
+  }
+
+  unsigned ShlOpc = (BW == 64) ? X86::SHL64ri : X86::SHL32ri;
+  unsigned ShrOpc = (BW == 64) ? X86::SHR64ri : X86::SHR32ri;
+  unsigned DirectOpc = IsShrd ? ShrOpc : ShlOpc;
+  unsigned ComplOpc = IsShrd ? ShlOpc : ShrOpc;
+
+  if (!IsMem) {
+    const TargetRegisterClass *RC = GetRC(Root.getOperand(0).getReg());
+    Register Reg1 = RegInfo.createVirtualRegister(RC);
+    Register Reg2 = RegInfo.createVirtualRegister(RC);
+    unsigned OrOpc = (BW == 64) ? X86::OR64rr : X86::OR32rr;
+    int64_t Imm = Root.getOperand(3).getImm();
+    MachineInstr *MI1 =
+        BuildMI(*MF, MIMetadata(Root), TII.get(DirectOpc), Reg1)
+            .addReg(Root.getOperand(1).getReg(),
+                    getKillRegState(Root.getOperand(1).isKill()))
+            .addImm(Imm);
+    MachineInstr *MI2 =
+        BuildMI(*MF, MIMetadata(Root), TII.get(ComplOpc), Reg2)
+            .addReg(Root.getOperand(2).getReg(),
+                    getKillRegState(Root.getOperand(2).isKill()))
+            .addImm(BW - Imm);
+    MachineInstr *Or = BuildMI(*MF, MIMetadata(Root), TII.get(OrOpc),
+                               Root.getOperand(0).getReg())
+                           .addReg(Reg1, RegState::Kill)
+                           .addReg(Reg2, RegState::Kill);
+    InstrIdxForVirtReg.insert({Reg1, 0});
+    InstrIdxForVirtReg.insert({Reg2, 1});
+    InsInstrs.push_back(MI1);
+    InsInstrs.push_back(MI2);
+    InsInstrs.push_back(Or);
+  } else {
+    const TargetRegisterClass *RC = GetRC(Root.getOperand(5).getReg());
+    Register RegSrc = RegInfo.createVirtualRegister(RC);
+    unsigned MemOpc = IsShrd ? ((BW == 64) ? X86::SHR64mi : X86::SHR32mi)
+                             : ((BW == 64) ? X86::SHL64mi : X86::SHL32mi);
+    unsigned OrOpc = (BW == 64) ? X86::OR64mr : X86::OR32mr;
+    int64_t Imm = Root.getOperand(6).getImm();
+    MachineInstr *MemShift = BuildMI(*MF, MIMetadata(Root), TII.get(MemOpc))
+                                 .add(Root.getOperand(0 + X86::AddrBaseReg))
+                                 .add(Root.getOperand(0 + X86::AddrScaleAmt))
+                                 .add(Root.getOperand(0 + X86::AddrIndexReg))
+                                 .add(Root.getOperand(0 + X86::AddrDisp))
+                                 .add(Root.getOperand(0 + X86::AddrSegmentReg))
+                                 .addImm(Imm);
+    MachineInstr *RegShift =
+        BuildMI(*MF, MIMetadata(Root), TII.get(ComplOpc), RegSrc)
+            .addReg(Root.getOperand(5).getReg(),
+                    getKillRegState(Root.getOperand(5).isKill()))
+            .addImm(BW - Imm);
+    MachineInstr *Or = BuildMI(*MF, MIMetadata(Root), TII.get(OrOpc))
+                           .add(Root.getOperand(0 + X86::AddrBaseReg))
+                           .add(Root.getOperand(0 + X86::AddrScaleAmt))
+                           .add(Root.getOperand(0 + X86::AddrIndexReg))
+                           .add(Root.getOperand(0 + X86::AddrDisp))
+                           .add(Root.getOperand(0 + X86::AddrSegmentReg))
+                           .addReg(RegSrc, RegState::Kill);
+    InstrIdxForVirtReg.insert({RegSrc, 1});
+    InsInstrs.push_back(MemShift);
+    InsInstrs.push_back(RegShift);
+    InsInstrs.push_back(Or);
+  }
+  DelInstrs.push_back(&Root);
+}
+
+// Expand SHD op using LEA as the OR node. Either to:
+// - incorporate one of the shifts into the lea
+// - allow less copying
+static void
+genShdLeaSequence(MachineInstr &Root, const TargetInstrInfo &TII,
+                  SmallVectorImpl<MachineInstr *> &InsInstrs,
+                  SmallVectorImpl<MachineInstr *> &DelInstrs,
+                  DenseMap<Register, unsigned> &InstrIdxForVirtReg) {
+  auto *MF = Root.getMF();
+  MachineRegisterInfo &RegInfo = MF->getRegInfo();
+  const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
+  auto GetRC = [&](Register Reg) {
+    return Reg.isVirtual() ? RegInfo.getRegClass(Reg)
+                           : TRI->getMinimalPhysRegClass(Reg);
+  };
+
+  unsigned BW = 0;
+  bool IsShrd = false;
+  switch (Root.getOpcode()) {
+  case X86::SHRD32rri8:
+    IsShrd = true;
+    [[fallthrough]];
+  case X86::SHLD32rri8:
+    BW = 32;
+    break;
+  case X86::SHRD64rri8:
+    IsShrd = true;
+    [[fallthrough]];
+  case X86::SHLD64rri8:
+    BW = 64;
+    break;
+  default:
+    llvm_unreachable("Unexpected opcode in genShdLeaSequence");
+  }
+
+  int64_t Imm = Root.getOperand(3).getImm();
+  int64_t ScaleBits = IsShrd ? (BW - Imm) : Imm;
+
+  unsigned ShlOpc = (BW == 64) ? X86::SHL64ri : X86::SHL32ri;
+  unsigned ShrOpc = (BW == 64) ? X86::SHR64ri : X86::SHR32ri;
+  unsigned LeaOpc = (BW == 64) ? X86::LEA64r : X86::LEA32r;
+  const TargetRegisterClass *RC = GetRC(Root.getOperand(0).getReg());
+  Register OutReg = Root.getOperand(0).getReg();
+
+  if (ScaleBits >= 1 && ScaleBits <= 3) {
+    // One of the shifts can be done in LEA
+    Register Reg1 = RegInfo.createVirtualRegister(RC);
+    if (!IsShrd) {
+      MachineInstr *Shr =
+          BuildMI(*MF, MIMetadata(Root), TII.get(ShrOpc), Reg1)
+              .addReg(Root.getOperand(2).getReg(),
+                      getKillRegState(Root.getOperand(2).isKill()))
+              .addImm(BW - Imm);
+      MachineInstr *Lea =
+          BuildMI(*MF, MIMetadata(Root), TII.get(LeaOpc), OutReg)
+              .addReg(Reg1, RegState::Kill)
+              .addImm(1 << Imm)
+              .addReg(Root.getOperand(1).getReg(),
+                      getKillRegState(Root.getOperand(1).isKill()))
+              .addImm(0)
+              .addReg(0);
+      InstrIdxForVirtReg.insert({Reg1, 0});
+      InsInstrs.push_back(Shr);
+      InsInstrs.push_back(Lea);
+    } else {
+      MachineInstr *Shr =
+          BuildMI(*MF, MIMetadata(Root), TII.get(ShrOpc), Reg1)
+              .addReg(Root.getOperand(1).getReg(),
+                      getKillRegState(Root.getOperand(1).isKill()))
+              .addImm(Imm);
+      MachineInstr *Lea =
+          BuildMI(*MF, MIMetadata(Root), TII.get(LeaOpc), OutReg)
+              .addReg(Reg1, RegState::Kill)
+              .addImm(1 << (BW - Imm))
+              .addReg(Root.getOperand(2).getReg(),
+                      getKillRegState(Root.getOperand(2).isKill()))
+              .addImm(0)
+              .addReg(0);
+      InstrIdxForVirtReg.insert({Reg1, 0});
+      InsInstrs.push_back(Shr);
+      InsInstrs.push_back(Lea);
+    }
+  } else {
+    // Neither shift fits a LEA scale. Make shifts
+    // explicit and emit LEA as OR.
+    unsigned DirectOpc = IsShrd ? ShrOpc : ShlOpc;
+    unsigned ComplOpc = IsShrd ? ShlOpc : ShrOpc;
+    Register Reg1 = RegInfo.createVirtualRegister(RC);
+    Register Reg2 = RegInfo.createVirtualRegister(RC);
+    MachineInstr *MI1 =
+        BuildMI(*MF, MIMetadata(Root), TII.get(DirectOpc), Reg1)
+            .addReg(Root.getOperand(1).getReg(),
+                    getKillRegState(Root.getOperand(1).isKill()))
+            .addImm(Imm);
+    MachineInstr *MI2 =
+        BuildMI(*MF, MIMetadata(Root), TII.get(ComplOpc), Reg2)
+            .addReg(Root.getOperand(2).getReg(),
+                    getKillRegState(Root.getOperand(2).isKill()))
+            .addImm(BW - Imm);
+    MachineInstr *Lea = BuildMI(*MF, MIMetadata(Root), TII.get(LeaOpc), OutReg)
+                            .addReg(Reg1, RegState::Kill)
+                            .addImm(1)
+                            .addReg(Reg2, RegState::Kill)
+                            .addImm(0)
+                            .addReg(0);
+    InstrIdxForVirtReg.insert({Reg1, 0});
+    InstrIdxForVirtReg.insert({Reg2, 1});
+    InsInstrs.push_back(MI1);
+    InsInstrs.push_back(MI2);
+    InsInstrs.push_back(Lea);
+  }
+  DelInstrs.push_back(&Root);
 }
 
 static void
@@ -10832,6 +11084,11 @@ void X86InstrInfo::genAlternativeCodeSequence(
     genAlternativeDpCodeSequence(Root, *this, InsInstrs, DelInstrs,
                                  InstrIdxForVirtReg);
     return;
+  case X86MachineCombinerPattern::USHD_OR:
+    genShdOrSequence(Root, *this, InsInstrs, DelInstrs, InstrIdxForVirtReg);
+    return;
+  case X86MachineCombinerPattern::USHD_LEA:
+    genShdLeaSequence(Root, *this, InsInstrs, DelInstrs, InstrIdxForVirtReg);
   }
 }
 

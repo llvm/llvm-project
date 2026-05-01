@@ -126,10 +126,13 @@ define i64 @shl64(i64 %x, i64 %shamt) nounwind uwtable readnone {
 define i64 @shl64i(i64 %x) nounwind uwtable readnone {
 ; BMI2-LABEL: shl64i:
 ; BMI2:       # %bb.0:
-; BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; BMI2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; BMI2-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; BMI2-NEXT:    shldl $7, %eax, %edx
+; BMI2-NEXT:    movl %ecx, %eax
 ; BMI2-NEXT:    shll $7, %eax
+; BMI2-NEXT:    shll $7, %edx
+; BMI2-NEXT:    shrl $25, %ecx
+; BMI2-NEXT:    addl %ecx, %edx
 ; BMI2-NEXT:    retl
 ;
 ; BMI264-LABEL: shl64i:
@@ -184,11 +187,14 @@ define i64 @shl64p(ptr %p, i64 %shamt) nounwind uwtable readnone {
 define i64 @shl64pi(ptr %p) nounwind uwtable readnone {
 ; BMI2-LABEL: shl64pi:
 ; BMI2:       # %bb.0:
-; BMI2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; BMI2-NEXT:    movl (%ecx), %eax
-; BMI2-NEXT:    movl 4(%ecx), %edx
-; BMI2-NEXT:    shldl $7, %eax, %edx
+; BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; BMI2-NEXT:    movl (%eax), %ecx
+; BMI2-NEXT:    movl 4(%eax), %edx
+; BMI2-NEXT:    movl %ecx, %eax
 ; BMI2-NEXT:    shll $7, %eax
+; BMI2-NEXT:    shll $7, %edx
+; BMI2-NEXT:    shrl $25, %ecx
+; BMI2-NEXT:    addl %ecx, %edx
 ; BMI2-NEXT:    retl
 ;
 ; BMI264-LABEL: shl64pi:

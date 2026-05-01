@@ -396,13 +396,23 @@ bool MachineCombiner::improvesCriticalPathLen(
                     << "\n\tNewRootDepth + NewRootLatency = " << NewCycleCount
                     << "\n\tRootDepth + RootLatency + RootSlack = "
                     << OldCycleCount);
-  LLVM_DEBUG(NewCycleCount <= OldCycleCount
-                 ? dbgs() << "\n\t  It IMPROVES PathLen because"
-                 : dbgs() << "\n\t  It DOES NOT improve PathLen because");
-  LLVM_DEBUG(dbgs() << "\n\t\tNewCycleCount = " << NewCycleCount
-                    << ", OldCycleCount = " << OldCycleCount << "\n");
 
-  return NewCycleCount <= OldCycleCount;
+  bool IsMustReduceLatency =
+      getCombinerObjective(Pattern) == CombinerObjective::MustReduceLatency;
+  unsigned CompareAgainst =
+      IsMustReduceLatency ? RootDepth + RootLatency : OldCycleCount;
+  bool Improves = IsMustReduceLatency ? NewCycleCount < CompareAgainst
+                                      : NewCycleCount <= CompareAgainst;
+
+  if (IsMustReduceLatency)
+    LLVM_DEBUG(dbgs() << "\n\t  (MustReduceLatency: chain must be strictly "
+                         "shorter, slack excluded)");
+  LLVM_DEBUG(Improves ? dbgs() << "\n\t  It IMPROVES PathLen because"
+                      : dbgs() << "\n\t  It DOES NOT improve PathLen because");
+  LLVM_DEBUG(dbgs() << "\n\t\tNewCycleCount = " << NewCycleCount
+                    << ", OldCycleCount = " << CompareAgainst << "\n");
+
+  return Improves;
 }
 
 /// helper routine to convert instructions into SC
