@@ -1,4 +1,4 @@
-// RUN: %clang %s -O2 -o %t && %run %t
+// RUN: %clang %s -O2 -o %t && %t
 //===-- atomic_fp_minmax_test.c - Test FP atomic min/max operations -------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
