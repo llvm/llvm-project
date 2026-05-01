@@ -228,11 +228,8 @@ private:
 
 } // namespace clang::ssaf
 
-namespace llvm {
-extern template class CLANG_TEMPLATE_ABI
-    Registry<clang::ssaf::JSONFormat::FormatInfo>;
-extern template class CLANG_TEMPLATE_ABI
-    Registry<clang::ssaf::JSONFormat::AnalysisResultRegistry::Codec>;
-} // namespace llvm
+LLVM_DECLARE_REGISTRY(llvm::Registry<clang::ssaf::JSONFormat::FormatInfo>)
+LLVM_DECLARE_REGISTRY(
+    llvm::Registry<clang::ssaf::JSONFormat::AnalysisResultRegistry::Codec>)
 
 #endif // LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_SERIALIZATION_JSONFORMAT_H
