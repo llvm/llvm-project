@@ -211,7 +211,7 @@ bool WindowScheduler::initialize() {
   };
   auto PLI = TII->analyzeLoopForPipelining(MBB);
   for (auto &MI : *MBB) {
-    if (MI.isMetaInstruction() || MI.isTerminator())
+    if (MI.isDebugOrPseudoInstr() || MI.isTerminator())
       continue;
     if (MI.isPHI()) {
       if (IsLoopCarried(MI)) {
@@ -297,7 +297,7 @@ void WindowScheduler::generateTripleMBB() {
   // DefPairs hold the old and new define register pairs.
   DenseMap<Register, Register> DefPairs;
   for (auto *MI : OriMIs) {
-    if (MI->isMetaInstruction() || MI->isTerminator())
+    if (MI->isDebugOrPseudoInstr() || MI->isTerminator())
       continue;
     if (MI->isPHI())
       if (Register AntiReg = getAntiRegister(MI))
@@ -312,7 +312,7 @@ void WindowScheduler::generateTripleMBB() {
   // are updated accordingly.
   for (size_t Cnt = 1; Cnt < DuplicateNum; ++Cnt) {
     for (auto *MI : OriMIs) {
-      if (MI->isPHI() || MI->isMetaInstruction() ||
+      if (MI->isPHI() || MI->isDebugOrPseudoInstr() ||
           (MI->isTerminator() && Cnt < DuplicateNum - 1))
         continue;
       auto *NewMI = MF->CloneMachineInstr(MI);
@@ -687,7 +687,7 @@ unsigned WindowScheduler::getOriStage(MachineInstr *OriMI, unsigned Offset) {
   // while the rest are set to 1.
   unsigned Id = 0;
   for (auto *MI : OriMIs) {
-    if (MI->isMetaInstruction())
+    if (MI->isDebugOrPseudoInstr())
       continue;
     if (MI == OriMI)
       break;
