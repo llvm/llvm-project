@@ -792,12 +792,9 @@ bool CursorVisitor::VisitEnumConstantDecl(EnumConstantDecl *D) {
 }
 
 bool CursorVisitor::VisitDeclaratorDecl(DeclaratorDecl *DD) {
-  unsigned NumParamList = DD->getNumTemplateParameterLists();
-  for (unsigned i = 0; i < NumParamList; i++) {
-    TemplateParameterList *Params = DD->getTemplateParameterList(i);
-    if (VisitTemplateParameters(Params))
+  for (TemplateParameterList *TPL : DD->getTemplateParameterLists())
+    if (VisitTemplateParameters(TPL))
       return true;
-  }
 
   if (TypeSourceInfo *TSInfo = DD->getTypeSourceInfo())
     if (Visit(TSInfo->getTypeLoc()))
@@ -828,12 +825,9 @@ static int CompareCXXCtorInitializers(CXXCtorInitializer *const *X,
 }
 
 bool CursorVisitor::VisitFunctionDecl(FunctionDecl *ND) {
-  unsigned NumParamList = ND->getNumTemplateParameterLists();
-  for (unsigned i = 0; i < NumParamList; i++) {
-    TemplateParameterList *Params = ND->getTemplateParameterList(i);
-    if (VisitTemplateParameters(Params))
+  for (TemplateParameterList *TPL : ND->getTemplateParameterLists())
+    if (VisitTemplateParameters(TPL))
       return true;
-  }
 
   if (TypeSourceInfo *TSInfo = ND->getTypeSourceInfo()) {
     // Visit the function declaration's syntactic components in the order
