@@ -9203,25 +9203,20 @@ static bool isExtendedBUILD_VECTOR(SDNode *N, SelectionDAG &DAG,
   return true;
 }
 
-/// isSignExtended - Check if a node is a vector value that is sign-extended
-/// or a constant BUILD_VECTOR with sign-extended elements.
+/// isSignExtended - Check if a node is a vector value that is sign-extended (or
+/// any-extended) or a constant BUILD_VECTOR with sign-extended elements.
 static bool isSignExtended(SDNode *N, SelectionDAG &DAG) {
-  if (N->getOpcode() == ISD::SIGN_EXTEND || ISD::isSEXTLoad(N))
-    return true;
-  if (isExtendedBUILD_VECTOR(N, DAG, true))
-    return true;
-  return false;
+  return N->getOpcode() == ISD::SIGN_EXTEND ||
+         N->getOpcode() == ISD::ANY_EXTEND || ISD::isSEXTLoad(N) ||
+         isExtendedBUILD_VECTOR(N, DAG, true);
 }
 
 /// isZeroExtended - Check if a node is a vector value that is zero-extended (or
 /// any-extended) or a constant BUILD_VECTOR with zero-extended elements.
 static bool isZeroExtended(SDNode *N, SelectionDAG &DAG) {
-  if (N->getOpcode() == ISD::ZERO_EXTEND || N->getOpcode() == ISD::ANY_EXTEND ||
-      ISD::isZEXTLoad(N))
-    return true;
-  if (isExtendedBUILD_VECTOR(N, DAG, false))
-    return true;
-  return false;
+  return N->getOpcode() == ISD::ZERO_EXTEND ||
+         N->getOpcode() == ISD::ANY_EXTEND || ISD::isZEXTLoad(N) ||
+         isExtendedBUILD_VECTOR(N, DAG, false);
 }
 
 static EVT getExtensionTo64Bits(const EVT &OrigVT) {
