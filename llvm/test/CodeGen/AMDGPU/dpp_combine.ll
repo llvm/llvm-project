@@ -129,6 +129,42 @@ entry:
   ret float %max4
 }
 
+; GCN-LABEL: {{^}}dpp_fminimum_f32:
+; GCN: v_min{{(_num)?}}_f32_dpp v0, v0, v0 row_shr:1 row_mask:0xf bank_mask:0xf{{$}}
+; GCN: v_min{{(_num)?}}_f32_dpp v0, v0, v0 row_shr:2 row_mask:0xf bank_mask:0xf{{$}}
+; GCN: v_min{{(_num)?}}_f32_dpp v0, v0, v0 row_shr:4 row_mask:0xf bank_mask:0xf{{$}}
+; GCN: v_min{{(_num)?}}_f32_dpp v0, v0, v0 row_shr:8 row_mask:0xf bank_mask:0xf{{$}}
+define nofpclass(nan) float @dpp_fminimum_f32(float nofpclass(nan) %x) {
+entry:
+  %dpp.shr1 = tail call float @llvm.amdgcn.update.dpp.f32(float 0x7FF0000000000000, float %x, i32 273, i32 15, i32 15, i1 false)
+  %min1 = tail call nnan float @llvm.minimumnum.f32(float %x, float %dpp.shr1)
+  %dpp.shr2 = tail call float @llvm.amdgcn.update.dpp.f32(float 0x7FF0000000000000, float %min1, i32 274, i32 15, i32 15, i1 false)
+  %min2 = tail call nnan float @llvm.minimumnum.f32(float %min1, float %dpp.shr2)
+  %dpp.shr4 = tail call float @llvm.amdgcn.update.dpp.f32(float 0x7FF0000000000000, float %min2, i32 276, i32 15, i32 15, i1 false)
+  %min3 = tail call nnan float @llvm.minimumnum.f32(float %min2, float %dpp.shr4)
+  %dpp.shr8 = tail call float @llvm.amdgcn.update.dpp.f32(float 0x7FF0000000000000, float %min3, i32 280, i32 15, i32 15, i1 false)
+  %min4 = tail call nnan float @llvm.minimumnum.f32(float %min3, float %dpp.shr8)
+  ret float %min4
+}
+
+; GCN-LABEL: {{^}}dpp_fmaximum_f32:
+; GCN: v_max{{(_num)?}}_f32_dpp v0, v0, v0 row_shr:1 row_mask:0xf bank_mask:0xf{{$}}
+; GCN: v_max{{(_num)?}}_f32_dpp v0, v0, v0 row_shr:2 row_mask:0xf bank_mask:0xf{{$}}
+; GCN: v_max{{(_num)?}}_f32_dpp v0, v0, v0 row_shr:4 row_mask:0xf bank_mask:0xf{{$}}
+; GCN: v_max{{(_num)?}}_f32_dpp v0, v0, v0 row_shr:8 row_mask:0xf bank_mask:0xf{{$}}
+define nofpclass(nan) float @dpp_fmaximum_f32(float nofpclass(nan) %x) #0 {
+entry:
+  %dpp.shr1 = tail call float @llvm.amdgcn.update.dpp.f32(float 0xFFF0000000000000, float %x, i32 273, i32 15, i32 15, i1 false)
+  %max1 = tail call nnan float @llvm.maximumnum.f32(float %x, float %dpp.shr1)
+  %dpp.shr2 = tail call float @llvm.amdgcn.update.dpp.f32(float 0xFFF0000000000000, float %max1, i32 274, i32 15, i32 15, i1 false)
+  %max2 = tail call nnan float @llvm.maximumnum.f32(float %max1, float %dpp.shr2)
+  %dpp.shr4 = tail call float @llvm.amdgcn.update.dpp.f32(float 0xFFF0000000000000, float %max2, i32 276, i32 15, i32 15, i1 false)
+  %max3 = tail call nnan float @llvm.maximumnum.f32(float %max2, float %dpp.shr4)
+  %dpp.shr8 = tail call float @llvm.amdgcn.update.dpp.f32(float 0xFFF0000000000000, float %max3, i32 280, i32 15, i32 15, i1 false)
+  %max4 = tail call nnan float @llvm.maximumnum.f32(float %max3, float %dpp.shr8)
+  ret float %max4
+}
+
 ; GCN-LABEL: {{^}}dpp_fmin_f16:
 ; GFX9GFX10: v_min_f16_dpp v0, v0, v0 row_shr:1 row_mask:0xf bank_mask:0xf{{$}}
 ; GFX9GFX10: v_min_f16_dpp v0, v0, v0 row_shr:2 row_mask:0xf bank_mask:0xf{{$}}
