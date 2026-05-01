@@ -352,7 +352,7 @@ public:
     requires(indirectly_swappable<iterator_t<__maybe_const<_IsConst, _First>>> && ... &&
              indirectly_swappable<iterator_t<__maybe_const<_IsConst, _Vs>>>)
   {
-    __iter_swap_impl(__l, __r);
+    ranges::__tuple_zip_for_each(ranges::iter_swap, __l.__current_, __r.__current_);
   }
 
 private:
@@ -457,12 +457,6 @@ private:
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator(_Parent& __parent, _MultiIter __current)
       : __parent_(std::addressof(__parent)), __current_(std::move(__current)) {}
 
-  template <auto _Np = sizeof...(_Vs)>
-  _LIBCPP_HIDE_FROM_ABI static constexpr void __iter_swap_impl(const __iterator& __l, const __iterator& __r) {
-    ranges::iter_swap(std::get<_Np>(__l.__current_), std::get<_Np>(__r.__current_));
-    if constexpr (_Np > 0)
-      __iter_swap_impl<_Np - 1>(__l, __r);
-  }
 };
 
 namespace views {
