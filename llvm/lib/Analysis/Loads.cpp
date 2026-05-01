@@ -580,6 +580,8 @@ static bool areNonOverlapSameBaseLoadAndStore(const Value *LoadPtr,
       DL, StoreOffset, /* AllowNonInbounds */ false);
   if (LoadBase != StoreBase)
     return false;
+  if (LoadOffset.getBitWidth() != StoreOffset.getBitWidth())
+    return false;
   auto LoadAccessSize = LocationSize::precise(DL.getTypeStoreSize(LoadTy));
   auto StoreAccessSize = LocationSize::precise(DL.getTypeStoreSize(StoreTy));
   ConstantRange LoadRange(LoadOffset,
