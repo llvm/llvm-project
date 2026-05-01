@@ -1403,6 +1403,25 @@ struct AAPointerInfoImpl
       for (const Instruction *ExclI : ExclusionSet)
         ExcludedBlockInsts[ExclI->getParent()].push_back(ExclI);
 
+      // Same-block fast path: returns true iff From and To are in the same
+      // basic block, From comes before To, and some ExclusionSet instruction
+      // sits strictly between them. Note: Instruction::comesBefore asserts
+      // (and is meaningful only) when both instructions live in the same
+      // block, so the block-equality check has to come first.
+      auto HasSameBlockBarrierBetween = [&](const Instruction &From,
+                                            const Instruction &To) {
+        if (From.getParent() != To.getParent())
+          return false;
+        if (!From.comesBefore(&To))
+          return false;
+        auto It = ExcludedBlockInsts.find(From.getParent());
+        if (It == ExcludedBlockInsts.end())
+          return false;
+        return llvm::any_of(It->second, [&](const Instruction *ExclI) {
+          return From.comesBefore(ExclI) && ExclI->comesBefore(&To);
+        });
+      };
+
       // Lazily compute forward reachability from I's block.
       // BFS over successor edges within Scope, skipping dead edges (AAIsDead)
       // and not traversing past ExclusionSet blocks (must-write barriers).
@@ -1534,35 +1553,13 @@ struct AAPointerInfoImpl
               // BFS-safe negative filter: the BFS is a complete model of
               // reachability for allocas in norecurse functions.
               ReadChecked = true;
-            } else if (I.getParent() == Acc.getRemoteInst()->getParent() &&
-                       I.comesBefore(Acc.getRemoteInst())) {
-              // Same-block optimization.
-              auto It = ExcludedBlockInsts.find(I.getParent());
-              if (It != ExcludedBlockInsts.end()) {
-                for (const Instruction *ExclI : It->second) {
-                  if (I.comesBefore(ExclI) &&
-                      ExclI->comesBefore(Acc.getRemoteInst())) {
-                    ReadChecked = true;
-                    break;
-                  }
-                }
-              }
+            } else if (HasSameBlockBarrierBetween(I, *Acc.getRemoteInst())) {
+              ReadChecked = true;
             }
           } else {
             // Not BFS-safe: only apply same-block optimization.
-            if (I.getParent() == Acc.getRemoteInst()->getParent() &&
-                I.comesBefore(Acc.getRemoteInst())) {
-              auto It = ExcludedBlockInsts.find(I.getParent());
-              if (It != ExcludedBlockInsts.end()) {
-                for (const Instruction *ExclI : It->second) {
-                  if (I.comesBefore(ExclI) &&
-                      ExclI->comesBefore(Acc.getRemoteInst())) {
-                    ReadChecked = true;
-                    break;
-                  }
-                }
-              }
-            }
+            if (HasSameBlockBarrierBetween(I, *Acc.getRemoteInst()))
+              ReadChecked = true;
           }
 
           if (!ReadChecked) {
@@ -1583,33 +1580,12 @@ struct AAPointerInfoImpl
 
             if (!BlockReachable) {
               WriteChecked = true;
-            } else if (I.getParent() == Acc.getRemoteInst()->getParent() &&
-                       Acc.getRemoteInst()->comesBefore(&I)) {
-              auto It = ExcludedBlockInsts.find(I.getParent());
-              if (It != ExcludedBlockInsts.end()) {
-                for (const Instruction *ExclI : It->second) {
-                  if (Acc.getRemoteInst()->comesBefore(ExclI) &&
-                      ExclI->comesBefore(&I)) {
-                    WriteChecked = true;
-                    break;
-                  }
-                }
-              }
+            } else if (HasSameBlockBarrierBetween(*Acc.getRemoteInst(), I)) {
+              WriteChecked = true;
             }
           } else {
-            if (I.getParent() == Acc.getRemoteInst()->getParent() &&
-                Acc.getRemoteInst()->comesBefore(&I)) {
-              auto It = ExcludedBlockInsts.find(I.getParent());
-              if (It != ExcludedBlockInsts.end()) {
-                for (const Instruction *ExclI : It->second) {
-                  if (Acc.getRemoteInst()->comesBefore(ExclI) &&
-                      ExclI->comesBefore(&I)) {
-                    WriteChecked = true;
-                    break;
-                  }
-                }
-              }
-            }
+            if (HasSameBlockBarrierBetween(*Acc.getRemoteInst(), I))
+              WriteChecked = true;
           }
 
           if (!WriteChecked) {
