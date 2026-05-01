@@ -64,6 +64,82 @@ static AnyValue mulNoWrap(const APInt &LHS, const APInt &RHS, bool HasNSW,
   return Res;
 }
 
+/// Visit the scalar values recursively. The callback function may modify the
+/// value in-place.
+static void forEachScalarValue(AnyValue &V,
+                               function_ref<void(AnyValue &)> Visit) {
+  if (V.isNone())
+    return;
+
+  if (V.isAggregate()) {
+    for (auto &SubValue : V.asAggregate()) {
+      forEachScalarValue(SubValue, Visit);
+    }
+    return;
+  }
+
+  Visit(V);
+}
+
+static void applyRangeAttr(AnyValue &V, const ConstantRange &CR) {
+  forEachScalarValue(V, [&](AnyValue &Scalar) {
+    if (Scalar.isInteger() && !CR.contains(Scalar.asInteger()))
+      Scalar = AnyValue::poison();
+  });
+}
+
+static void applyNoFPClassAttr(AnyValue &V, FPClassTest NoFPClass) {
+  forEachScalarValue(V, [NoFPClass](AnyValue &Scalar) {
+    if (Scalar.isFloat() && (Scalar.asFloat().classify() & NoFPClass))
+      Scalar = AnyValue::poison();
+  });
+}
+
+static void applyNonNullAttr(AnyValue &V) {
+  forEachScalarValue(V, [](AnyValue &Scalar) {
+    if (Scalar.isPointer() && Scalar.asPointer().address().isZero())
+      Scalar = AnyValue::poison();
+  });
+}
+
+static void applyAlignAttr(AnyValue &V, Align Alignment) {
+  forEachScalarValue(V, [Alignment](AnyValue &Scalar) {
+    if (Scalar.isPointer() &&
+        Scalar.asPointer().address().countr_zero() >= Log2(Alignment))
+      Scalar = AnyValue::poison();
+  });
+}
+
+static bool applyNoUndefAttr(AnyValue &V) {
+  bool ContainsPoison = false;
+  forEachScalarValue(
+      V, [&](AnyValue &Scalar) { ContainsPoison |= Scalar.isPoison(); });
+  return ContainsPoison;
+}
+
+/// Assumes V is either a poison or a pointer.
+static bool applyDereferenceableBytesAttr(AnyValue &V, uint64_t Bytes,
+                                          bool OrNull) {
+  if (V.isPoison())
+    return true;
+
+  auto &Ptr = V.asPointer();
+  const APInt &PtrAddr = Ptr.address();
+  if (PtrAddr.isZero()) {
+    if (OrNull)
+      return false;
+    return true;
+  }
+  auto *MO = Ptr.getMemoryObject();
+  if (!MO)
+    return true;
+
+  // TODO: check read_provenance
+
+  return Bytes > MO->getSize() || PtrAddr.ult(MO->getAddress()) ||
+         PtrAddr.ugt(MO->getAddress() + MO->getSize() - Bytes);
+}
+
 /// Instruction executor using the visitor pattern.
 /// Unlike the Context class that manages the global state,
 /// InstExecutor only maintains the state for call frames.
@@ -462,12 +538,18 @@ public:
   }
 
   void returnFromCallee() {
-    // TODO: handle retval attributes (Attributes from known callee should be
-    // applied if available).
-    // TODO: handle metadata
     auto &CB = cast<CallBase>(*CurrentFrame->PC);
     CurrentFrame->CalleeArgs.clear();
     AnyValue &RetVal = CurrentFrame->CalleeRetVal;
+    if (Type *RetTy = CB.getType(); !RetTy->isVoidTy()) {
+      // Handle attributes on the return value (Attributes from resolved callee
+      // should be applied if available).
+      AttributeSet AttrsAtCallSite = CB.getRetAttributes();
+      AttributeSet AttrsAtCallee =
+          CurrentFrame->ResolvedCallee->getAttributes().getRetAttrs();
+      handleAttributes(RetTy, RetVal, AttrsAtCallSite, AttrsAtCallee);
+      handleMetadata(RetTy, RetVal, CB);
+    }
     setResult(CB, std::move(RetVal));
 
     if (auto *II = dyn_cast<InvokeInst>(&CB))
@@ -924,10 +1006,105 @@ public:
     return AnyValue();
   }
 
+  /// Handle both poison-generating and UB-implying attributes for parameters
+  /// and return values.
+  void handleAttributes(Type *Ty, AnyValue &V, AttributeSet AttrsAtCallSite,
+                        AttributeSet AttrsAtCallee) {
+    if (Ty->isIntOrIntVectorTy()) {
+      if (auto CRAttr = AttrsAtCallSite.getAttribute(Attribute::Range);
+          CRAttr.isValid())
+        applyRangeAttr(V, CRAttr.getRange());
+      if (auto CRAttr = AttrsAtCallee.getAttribute(Attribute::Range);
+          CRAttr.isValid())
+        applyRangeAttr(V, CRAttr.getRange());
+    }
+    if (AttributeFuncs::isNoFPClassCompatibleType(Ty)) {
+      if (auto CRAttr = AttrsAtCallSite.getAttribute(Attribute::NoFPClass);
+          CRAttr.isValid())
+        applyNoFPClassAttr(V, CRAttr.getNoFPClass());
+      if (auto CRAttr = AttrsAtCallee.getAttribute(Attribute::NoFPClass);
+          CRAttr.isValid())
+        applyNoFPClassAttr(V, CRAttr.getNoFPClass());
+    }
+    if (Ty->isPtrOrPtrVectorTy()) {
+      if (AttrsAtCallSite.hasAttribute(Attribute::NonNull) ||
+          AttrsAtCallee.hasAttribute(Attribute::NonNull))
+        applyNonNullAttr(V);
+      if (MaybeAlign Align = AttrsAtCallSite.getAlignment())
+        applyAlignAttr(V, *Align);
+      if (MaybeAlign Align = AttrsAtCallee.getAlignment())
+        applyAlignAttr(V, *Align);
+    }
+    if ((AttrsAtCallSite.hasAttribute(Attribute::NoUndef) ||
+         AttrsAtCallee.hasAttribute(Attribute::NoUndef)) &&
+        applyNoUndefAttr(V)) {
+      reportImmediateUB("The value violates noundef attribute.");
+      return;
+    }
+    if (Ty->isPointerTy()) {
+      if (uint64_t DereferenceableBytes =
+              std::max(AttrsAtCallSite.getDereferenceableBytes(),
+                       AttrsAtCallee.getDereferenceableBytes())) {
+        if (applyDereferenceableBytesAttr(V, DereferenceableBytes,
+                                          /*OrNull=*/false))
+          reportImmediateUB("The value violates dereferenceable attribute.");
+      } else if (uint64_t DereferenceableOrNullBytes =
+                     std::max(AttrsAtCallSite.getDereferenceableOrNullBytes(),
+                              AttrsAtCallee.getDereferenceableOrNullBytes())) {
+        if (applyDereferenceableBytesAttr(V, DereferenceableOrNullBytes,
+                                          /*OrNull=*/true))
+          reportImmediateUB("The value violates "
+                            "dereferenceable_or_null attribute.");
+      }
+    }
+  }
+
+  /// Handle both poison-generating and UB-implying metadata on instructions.
+  void handleMetadata(Type *Ty, AnyValue &V, Instruction &I) {
+    auto ExtractFirstIntOperand = [](const MDNode *Node) {
+      return mdconst::extract<ConstantInt>(Node->getOperand(0))->getZExtValue();
+    };
+
+    if (Ty->isIntOrIntVectorTy()) {
+      if (MDNode *Ranges = I.getMetadata(LLVMContext::MD_range))
+        applyRangeAttr(V, getConstantRangeFromMetadata(*Ranges));
+    }
+    if (AttributeFuncs::isNoFPClassCompatibleType(Ty)) {
+      if (const MDNode *NoFPClass = I.getMetadata(LLVMContext::MD_nofpclass)) {
+        applyNoFPClassAttr(
+            V, static_cast<FPClassTest>(ExtractFirstIntOperand(NoFPClass)));
+      }
+    }
+    if (Ty->isPtrOrPtrVectorTy()) {
+      if (I.hasMetadata(LLVMContext::MD_nonnull))
+        applyNonNullAttr(V);
+      if (const MDNode *Alignment = I.getMetadata(LLVMContext::MD_align))
+        applyAlignAttr(V, Align(ExtractFirstIntOperand(Alignment)));
+    }
+    if (I.hasMetadata(LLVMContext::MD_noundef) && applyNoUndefAttr(V)) {
+      reportImmediateUB("The value violates !noundef metadata.");
+      return;
+    }
+    if (Ty->isPointerTy()) {
+      if (const MDNode *DereferenceableBytes =
+              I.getMetadata(LLVMContext::MD_dereferenceable)) {
+        if (applyDereferenceableBytesAttr(
+                V, ExtractFirstIntOperand(DereferenceableBytes),
+                /*OrNull=*/false))
+          reportImmediateUB("The value violates !dereferenceable metadata.");
+      } else if (const MDNode *DereferenceableOrNullBytes =
+                     I.getMetadata(LLVMContext::MD_dereferenceable_or_null)) {
+        if (applyDereferenceableBytesAttr(
+                V, ExtractFirstIntOperand(DereferenceableOrNullBytes),
+                /*OrNull=*/true))
+          reportImmediateUB("The value violates "
+                            "!dereferenceable_or_null metadata.");
+      }
+    }
+  }
+
   void enterCall(CallBase &CB) {
     Function *Callee = CB.getCalledFunction();
-    // TODO: handle parameter attributes (Attributes from known callee should be
-    // applied if available).
     // TODO: handle byval/initializes
     auto &CalleeArgs = CurrentFrame->CalleeArgs;
     assert(CalleeArgs.empty() &&
@@ -973,6 +1150,19 @@ public:
     assert(
         Callee->getFunctionType() == CB.getFunctionType() &&
         "Expected the callee function type to match the call site signature.");
+
+    // Handle parameter attributes (Attributes from resolved callee should be
+    // applied if available).
+    for (auto [I, Arg] : enumerate(CB.args())) {
+      Type *ArgTy = Arg->getType();
+      AnyValue &ArgVal = CalleeArgs[I];
+      // CallBase::paramHasAttr also checks parameter attributes at known
+      // callee. We do it explicitly to avoid duplication.
+      AttributeSet AttrsAtCallSite = CB.getParamAttributes(I);
+      AttributeSet AttrsAtCallee = Callee->getAttributes().getParamAttrs(I);
+      handleAttributes(ArgTy, ArgVal, AttrsAtCallSite, AttrsAtCallee);
+    }
+
     CurrentFrame->ResolvedCallee = Callee;
     if (Callee->isIntrinsic()) {
       CurrentFrame->CalleeRetVal = callIntrinsic(CB, CalleeArgs);
@@ -1395,7 +1585,7 @@ public:
     auto RetVal =
         load(getValue(LI.getPointerOperand()), LI.getAlign(), LI.getType());
     // TODO: track volatile loads
-    // TODO: handle metadata
+    handleMetadata(LI.getType(), RetVal, LI);
     setResult(LI, std::move(RetVal));
   }
 
