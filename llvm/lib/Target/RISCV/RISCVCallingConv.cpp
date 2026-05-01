@@ -400,7 +400,7 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
 
   // Any return value split in to more than two values can't be returned
   // directly. Vectors are returned via the available vector registers.
-  if ((!LocVT.isVector() || Subtarget.isPExtPackedType(ValVT)) && IsRet &&
+  if ((!LocVT.isVector() || Subtarget.isPExtPackedType(LocVT)) && IsRet &&
       ValNo > 1)
     return true;
 
@@ -452,14 +452,14 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
     }
   }
 
-  if ((ValVT == MVT::f16 && Subtarget.hasStdExtZhinxmin())) {
+  if ((LocVT == MVT::f16 && Subtarget.hasStdExtZhinxmin())) {
     if (MCRegister Reg = State.AllocateReg(getArgGPR16s(ABI))) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
   }
 
-  if (ValVT == MVT::f32 && Subtarget.hasStdExtZfinx()) {
+  if (LocVT == MVT::f32 && Subtarget.hasStdExtZfinx()) {
     if (MCRegister Reg = State.AllocateReg(getArgGPR32s(ABI))) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
@@ -555,7 +555,7 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
 
   // If the split argument only had two elements, it should be passed directly
   // in registers or on the stack.
-  if ((ValVT.isScalarInteger() || Subtarget.isPExtPackedType(ValVT)) &&
+  if ((LocVT.isScalarInteger() || Subtarget.isPExtPackedType(LocVT)) &&
       ArgFlags.isSplitEnd() && PendingLocs.size() <= 1) {
     assert(PendingLocs.size() == 1 && "Unexpected PendingLocs.size()");
     // Apply the normal calling convention rules to the first half of the
@@ -572,7 +572,7 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
   // values. Split vectors excluding P extension packed vectors(see
   // isPExtPackedType) are passed via a mix of registers and indirectly, so
   // treat them as we would any other argument.
-  if ((ValVT.isScalarInteger() || Subtarget.isPExtPackedType(ValVT)) &&
+  if ((LocVT.isScalarInteger() || Subtarget.isPExtPackedType(LocVT)) &&
       (ArgFlags.isSplit() || !PendingLocs.empty())) {
     PendingLocs.push_back(
         CCValAssign::getPending(ValNo, ValVT, LocVT, LocInfo));
@@ -589,13 +589,13 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
 
   // FIXME: If P extension and V extension are enabled at the same time,
   // who should go first?
-  if (!Subtarget.isPExtPackedType(ValVT) &&
-      (ValVT.isVector() || ValVT.isRISCVVectorTuple())) {
-    Reg = allocateRVVReg(ValVT, ValNo, State, TLI);
+  if (!Subtarget.isPExtPackedType(LocVT) &&
+      (LocVT.isVector() || LocVT.isRISCVVectorTuple())) {
+    Reg = allocateRVVReg(LocVT, ValNo, State, TLI);
     if (Reg) {
       // Fixed-length vectors are located in the corresponding scalable-vector
       // container types.
-      if (ValVT.isFixedLengthVector()) {
+      if (LocVT.isFixedLengthVector()) {
         LocVT = TLI.getContainerForFixedLengthVector(LocVT);
         State.addLoc(
             CCValAssign::getCustomReg(ValNo, ValVT, Reg, LocVT, LocInfo));
@@ -610,14 +610,14 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
       if ((Reg = State.AllocateReg(ArgGPRs))) {
         LocVT = XLenVT;
         LocInfo = CCValAssign::Indirect;
-      } else if (ValVT.isScalableVector()) {
+      } else if (LocVT.isScalableVector()) {
         LocVT = XLenVT;
         LocInfo = CCValAssign::Indirect;
       } else {
-        StoreSizeBytes = ValVT.getStoreSize();
+        StoreSizeBytes = LocVT.getStoreSize();
         // Align vectors to their element sizes, being careful for vXi1
         // vectors.
-        StackAlign = MaybeAlign(ValVT.getScalarSizeInBits() / 8).valueOrOne();
+        StackAlign = MaybeAlign(LocVT.getScalarSizeInBits() / 8).valueOrOne();
       }
     }
   } else {
@@ -647,10 +647,10 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
     return false;
   }
 
-  assert(((ValVT.isFloatingPoint() && !ValVT.isVector()) || LocVT == XLenVT ||
+  assert(((LocVT.isFloatingPoint() && !LocVT.isVector()) || LocVT == XLenVT ||
           Subtarget.isPExtPackedType(LocVT) ||
           (TLI.getSubtarget().hasVInstructions() &&
-           (ValVT.isVector() || ValVT.isRISCVVectorTuple()))) &&
+           (LocVT.isVector() || LocVT.isRISCVVectorTuple()))) &&
          "Expected an XLenVT or vector types at this stage");
 
   if (Reg) {
