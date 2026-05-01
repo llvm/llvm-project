@@ -1411,7 +1411,7 @@ bool IRTranslator::translateLoad(const User &U, MachineIRBuilder &MIRBuilder) {
 
   // Fast-path the common single-register load.
   if (Regs.size() == 1) {
-    auto MMO = MF->getMachineMemOperand(
+    auto *MMO = MF->getMachineMemOperand(
         MachinePointerInfo(LI.getPointerOperand()), Flags,
         MRI->getType(Regs[0]), getMemOpAlign(LI), AAInfo,
         LI.getMetadata(LLVMContext::MD_range), LI.getSyncScopeID(),
@@ -1429,10 +1429,10 @@ bool IRTranslator::translateLoad(const User &U, MachineIRBuilder &MIRBuilder) {
 
     MachinePointerInfo Ptr(LI.getPointerOperand(), Offsets[i]);
     Align BaseAlign = getMemOpAlign(LI);
-    auto MMO = MF->getMachineMemOperand(Ptr, Flags, MRI->getType(Regs[i]),
-                                        commonAlignment(BaseAlign, Offsets[i]),
-                                        AAInfo, nullptr, LI.getSyncScopeID(),
-                                        LI.getOrdering());
+    auto *MMO = MF->getMachineMemOperand(Ptr, Flags, MRI->getType(Regs[i]),
+                                         commonAlignment(BaseAlign, Offsets[i]),
+                                         AAInfo, nullptr, LI.getSyncScopeID(),
+                                         LI.getOrdering());
     MIRBuilder.buildLoad(Regs[i], Addr, *MMO);
   }
 
@@ -1459,7 +1459,7 @@ bool IRTranslator::translateStore(const User &U, MachineIRBuilder &MIRBuilder) {
   MachineMemOperand::Flags Flags = TLI->getStoreMemOperandFlags(SI, *DL);
   // Fast-path the common single-register store.
   if (Vals.size() == 1) {
-    auto MMO = MF->getMachineMemOperand(
+    auto *MMO = MF->getMachineMemOperand(
         MachinePointerInfo(SI.getPointerOperand()), Flags,
         MRI->getType(Vals[0]), getMemOpAlign(SI), SI.getAAMetadata(), nullptr,
         SI.getSyncScopeID(), SI.getOrdering());
@@ -1476,10 +1476,10 @@ bool IRTranslator::translateStore(const User &U, MachineIRBuilder &MIRBuilder) {
 
     MachinePointerInfo Ptr(SI.getPointerOperand(), Offsets[i]);
     Align BaseAlign = getMemOpAlign(SI);
-    auto MMO = MF->getMachineMemOperand(Ptr, Flags, MRI->getType(Vals[i]),
-                                        commonAlignment(BaseAlign, Offsets[i]),
-                                        SI.getAAMetadata(), nullptr,
-                                        SI.getSyncScopeID(), SI.getOrdering());
+    auto *MMO = MF->getMachineMemOperand(Ptr, Flags, MRI->getType(Vals[i]),
+                                         commonAlignment(BaseAlign, Offsets[i]),
+                                         SI.getAAMetadata(), nullptr,
+                                         SI.getSyncScopeID(), SI.getOrdering());
     MIRBuilder.buildStore(Vals[i], Addr, *MMO);
   }
   return true;
