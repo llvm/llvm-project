@@ -20,6 +20,17 @@
 
 #include "gtest/gtest.h"
 
+static void add_via_function(orc_rt::move_only_function<void(int32_t)> Return,
+                             int32_t X, int32_t Y) {
+  Return(X + Y);
+}
+
+// Note: This macro use has been deliberately moved above the
+// "using namespace orc_rt;" statement below to check that its expansion works
+// from other namespaces.
+ORC_RT_SPS_WRAPPER(add_via_function_sps_wrapper, int32_t(int32_t, int32_t),
+                   add_via_function);
+
 using namespace orc_rt;
 
 static void void_noop_sps_wrapper(orc_rt_SessionRef S, uint64_t CallId,
@@ -56,19 +67,6 @@ TEST(SPSWrapperFunctionUtilsTest, BinaryOpViaLambda) {
       DirectCaller(nullptr, add_via_lambda_sps_wrapper),
       [&](Expected<int32_t> R) { Result = cantFail(std::move(R)); }, 41, 1);
   EXPECT_EQ(Result, 42);
-}
-
-static void add_via_function(move_only_function<void(int32_t)> Return,
-                             int32_t X, int32_t Y) {
-  Return(X + Y);
-}
-
-static void
-add_via_function_sps_wrapper(orc_rt_SessionRef S, uint64_t CallId,
-                             orc_rt_WrapperFunctionReturn Return,
-                             orc_rt_WrapperFunctionBuffer ArgBytes) {
-  SPSWrapperFunction<int32_t(int32_t, int32_t)>::handle(
-      S, CallId, Return, ArgBytes, add_via_function);
 }
 
 TEST(SPSWrapperFunctionUtilsTest, BinaryOpViaFunction) {

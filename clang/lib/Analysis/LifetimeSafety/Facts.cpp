@@ -103,6 +103,13 @@ void TestPointFact::dump(llvm::raw_ostream &OS, const LoanManager &,
   OS << "TestPoint (Annotation: \"" << getAnnotation() << "\")\n";
 }
 
+void KillOriginFact::dump(llvm::raw_ostream &OS, const LoanManager &,
+                          const OriginManager &OM) const {
+  OS << "KillOrigin (";
+  OM.dump(getKilledOrigin(), OS);
+  OS << ")\n";
+}
+
 llvm::StringMap<ProgramPoint> FactManager::getTestPoints() const {
   llvm::StringMap<ProgramPoint> AnnotationToPointMap;
   for (const auto &BlockFacts : BlockToFacts) {

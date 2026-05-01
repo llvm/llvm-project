@@ -83,12 +83,12 @@ body:             |
 ...
 
 ---
-# Case 2: Size > 12 (size=16), imm32[12:19] already matches VGPR MSBs
+# Case 2a: Size > 12 (size=16), imm32[12:19] already matches VGPR MSBs
 # vgpr256/257: S_SET_VGPR_MSB mode = 65, MODE register mode = 5
 # imm32 = 0x5ABC = 23228 (bits 12:19 = 5), no modification needed
 
 # ASM-LABEL: {{^}}setreg_size_gt_12_match:
-# ASM: _setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 0, 16), 0x5abc ;  msbs: dst=1 src0=1 src1=0 src2=0
+# ASM: s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 0, 16), 0xabc ;  msbs: dst=0 src0=0 src1=0 src2=0
 
 # DIS-LABEL: <setreg_size_gt_12_match>:
 
@@ -99,7 +99,7 @@ body:             |
     ; CHECK-LABEL: name: setreg_size_gt_12_match
     ; CHECK: S_SET_VGPR_MSB 65, implicit-def $mode
     ; CHECK-NEXT: $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
-    ; CHECK-NEXT: S_SETREG_IMM32_B32 23228, 30721, implicit-def $mode, implicit $mode
+    ; CHECK-NEXT: S_SETREG_IMM32_B32 2748, 30721, implicit-def $mode, implicit $mode
     ; CHECK-NEXT: S_ENDPGM 0
     $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
     ; size=16, offset=0, hwreg=MODE: simm16 = 0x7801 = 30721
@@ -109,12 +109,34 @@ body:             |
 ...
 
 ---
+# Case 2b: Size > 12 (size=16), imm32[12:19] already matches VGPR MSBs, offset is non-zero
+# vgpr256/257: S_SET_VGPR_MSB mode = 65, MODE register mode = 5
+# imm32 = 0x5ABC = 23228 (bits 12:19 = 5), no modification needed
+
+
+# DIS-LABEL: <setreg_size_gt_12_offset_1_match>:
+
+name:            setreg_size_gt_12_offset_1_match
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: setreg_size_gt_12_offset_1_match
+    ; CHECK: S_SET_VGPR_MSB 65, implicit-def $mode
+    ; CHECK-NEXT: $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
+    ; CHECK-NEXT: S_SETREG_IMM32_B32 23228, 30785, implicit-def $mode, implicit $mode
+    ; CHECK-NEXT: S_ENDPGM 0
+    $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
+    ; size=16, offset=1, hwreg=MODE: simm16 = 0x7841 = 30785
+    ; imm32 = 0x5ABC = 23228 (bits 12:19 = 5 = MODE register mode for vgpr256/257)
+    S_SETREG_IMM32_B32 23228, 30785, implicit-def $mode, implicit $mode
+    S_ENDPGM 0
+...
+
+---
 # Case 3: Size > 12 (size=16), imm32[12:19] doesn't match VGPR MSBs
 # vgpr256/257: S_SET_VGPR_MSB mode = 65, MODE register mode = 5
-# imm32 = 0x23ABC = 146108 (bits 12:19 = 0x23 != 5), must insert s_set_vgpr_msb after
+# imm32 = 0x23ABC = 146108 (bits 12:19 = 0x23 != 5), update mode bits
 
-# ASM-LABEL: {{^}}setreg_size_gt_12_mismatch:
-# ASM: s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 0, 16), 0x23abc ;  msbs: dst=3 src0=0 src1=2 src2=0
 
 # DIS-LABEL: <setreg_size_gt_12_mismatch>:
 
@@ -125,14 +147,38 @@ body:             |
     ; CHECK-LABEL: name: setreg_size_gt_12_mismatch
     ; CHECK: S_SET_VGPR_MSB 65, implicit-def $mode
     ; CHECK-NEXT: $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
-    ; CHECK-NEXT: S_SETREG_IMM32_B32 146108, 30721, implicit-def $mode, implicit $mode
-    ; CHECK-NEXT: S_NOP 0
-    ; CHECK-NEXT: S_SET_VGPR_MSB 65, implicit-def $mode
+    ; CHECK-NEXT: S_SETREG_IMM32_B32 2748, 30721, implicit-def $mode, implicit $mode
     ; CHECK-NEXT: S_ENDPGM 0
     $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
     ; size=16, offset=0, hwreg=MODE: simm16 = 0x7801 = 30721
     ; imm32 = 0x23ABC = 146108 (bits 12:19 = 0x23 != 5)
     S_SETREG_IMM32_B32 146108, 30721, implicit-def $mode, implicit $mode
+    S_ENDPGM 0
+...
+
+---
+# Case 3: Size > 12 (size=16), imm32[12:19] doesn't match VGPR MSBs, offset is non-zero
+# vgpr256/257: S_SET_VGPR_MSB mode = 65, MODE register mode = 5
+# imm32 = 0x23ABC = 146108 (bits 12:19 = 0x23 != 5), must insert s_set_vgpr_msb after
+
+
+# DIS-LABEL: <setreg_size_gt_12_mismatch_offset_1>:
+
+name:            setreg_size_gt_12_mismatch_offset_1
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: setreg_size_gt_12_mismatch_offset_1
+    ; CHECK: S_SET_VGPR_MSB 65, implicit-def $mode
+    ; CHECK-NEXT: $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
+    ; CHECK-NEXT: S_SETREG_IMM32_B32 146108, 30785, implicit-def $mode, implicit $mode
+    ; CHECK-NEXT: S_NOP 0
+    ; CHECK-NEXT: S_SET_VGPR_MSB 16705, implicit-def $mode
+    ; CHECK-NEXT: S_ENDPGM 0
+    $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
+    ; size=16, offset=1, hwreg=MODE: simm16 = 0x7841 = 30785
+    ; imm32 = 0x23ABC = 146108 (bits 12:19 = 0x23 != 5)
+    S_SETREG_IMM32_B32 146108, 30785, implicit-def $mode, implicit $mode
     S_ENDPGM 0
 ...
 
@@ -292,7 +338,7 @@ body:             |
 # New s_set_vgpr_msb imm = NewMode | (OldMode << 8) = 130 | (65 << 8) = 16770
 
 # ASM-LABEL: {{^}}setreg_size_gt_12_match_then_different_vgpr:
-# ASM: s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 0, 16), 0x5abc ;  msbs: dst=1 src0=1 src1=0 src2=0
+# ASM: s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 0, 16), 0xaabc ;  msbs: dst=2 src0=2 src1=0 src2=0
 
 # DIS-LABEL: <setreg_size_gt_12_match_then_different_vgpr>:
 
@@ -303,9 +349,7 @@ body:             |
     ; CHECK-LABEL: name: setreg_size_gt_12_match_then_different_vgpr
     ; CHECK: S_SET_VGPR_MSB 65, implicit-def $mode
     ; CHECK-NEXT: $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
-    ; CHECK-NEXT: S_SETREG_IMM32_B32 23228, 30721, implicit-def $mode, implicit $mode
-    ; CHECK-NEXT: S_NOP 0
-    ; CHECK-NEXT: S_SET_VGPR_MSB 16770, implicit-def $mode
+    ; CHECK-NEXT: S_SETREG_IMM32_B32 43708, 30721, implicit-def $mode, implicit $mode
     ; CHECK-NEXT: $vgpr512 = V_MOV_B32_e32 $vgpr513, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0
     $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
@@ -315,6 +359,55 @@ body:             |
     $vgpr512 = V_MOV_B32_e32 $vgpr513, implicit $exec
     S_ENDPGM 0
 ...
+
+---
+# S_SET_VGPR_MSB format: (src0_msb[0-1], src1_msb[2-3], src2_msb[4-5], dst_msb[6-7])
+# MODE register format:  (dst_msb[0-1], src0_msb[2-3], src1_msb[4-5], src2_msb[6-7])
+# vgpr256/257 (both MSB=1): S_SET_VGPR_MSB mode = (1 << 0) | (1 << 6) = 65
+#                           MODE register mode = (1 << 0) | (1 << 2) = 5
+# New setreg imm = 0x5 | (5 << 12) = 0x5005 = 20485
+
+
+# DIS-LABEL: <setreg_offset_8>:
+
+name:            setreg_offset_8
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: setreg_offset_8
+    ; CHECK: S_SET_VGPR_MSB 65, implicit-def $mode
+    ; CHECK-NEXT: $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
+    ; CHECK-NEXT: S_SETREG_IMM32_B32 5, 6657, implicit-def $mode, implicit $mode
+    ; CHECK-NEXT: S_ENDPGM 0
+    $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
+    ; size=4, offset=8, hwreg=MODE: simm16 = 0x1801 = 6145
+    S_SETREG_IMM32_B32 5, 6657, implicit-def $mode, implicit $mode
+    S_ENDPGM 0
+...
+
+---
+
+# New imm = 1 | (5 << 12) = 0x5001 = 20481
+
+
+# DIS-LABEL: <setreg_offset_25>:
+
+name:            setreg_offset_25
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: setreg_offset_25
+    ; CHECK: S_SET_VGPR_MSB 65, implicit-def $mode
+    ; CHECK-NEXT: $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
+    ; CHECK-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
+    ; CHECK-NEXT: S_ENDPGM 0
+    $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
+    ; size=1, offset=25, hwreg=MODE: simm16 = 0x641 = 1601
+    S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
+    S_ENDPGM 0
+...
+
+# Update multiple SETREG instructions back to the first S_SET_VGPR_MSB
 
 # ASM-LABEL: {{^}}multiple_setreg:
 # ASM: s_set_vgpr_msb 0x41                     ;  msbs: dst=1 src0=1 src1=0 src2=0

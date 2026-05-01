@@ -810,6 +810,9 @@ public:
     SymSize[Sym] = Size;
   }
 
+  /// Whether to emit .debug_pubnames / .debug_pubtypes. Default true;
+  virtual bool shouldEmitDwarfPubSections() const { return true; }
+
   /// Returns whether we should emit all DW_AT_[MIPS_]linkage_name.
   /// If not, we still might emit certain cases.
   bool useAllLinkageNames() const { return UseAllLinkageNames; }

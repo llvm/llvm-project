@@ -74,9 +74,13 @@ Instruction::~Instruction() {
   if (isUsedByMetadata())
     ValueAsMetadata::handleRAUW(this, PoisonValue::get(getType()));
 
-  // Explicitly remove DIAssignID metadata to clear up ID -> Instruction(s)
-  // mapping in LLVMContext.
-  setMetadata(LLVMContext::MD_DIAssignID, nullptr);
+  // Remove associated metadata from context.
+  if (hasMetadata()) {
+    // Explicitly remove DIAssignID metadata to clear up ID -> Instruction(s)
+    // mapping in LLVMContext.
+    updateDIAssignIDMapping(nullptr);
+    clearMetadata();
+  }
 }
 
 const Module *Instruction::getModule() const {
@@ -534,7 +538,8 @@ bool Instruction::hasPoisonGeneratingReturnAttributes() const {
     AttributeSet RetAttrs = CB->getAttributes().getRetAttrs();
     return RetAttrs.hasAttribute(Attribute::Range) ||
            RetAttrs.hasAttribute(Attribute::Alignment) ||
-           RetAttrs.hasAttribute(Attribute::NonNull);
+           RetAttrs.hasAttribute(Attribute::NonNull) ||
+           RetAttrs.hasAttribute(Attribute::NoFPClass);
   }
   return false;
 }
@@ -545,6 +550,7 @@ void Instruction::dropPoisonGeneratingReturnAttributes() {
     AM.addAttribute(Attribute::Range);
     AM.addAttribute(Attribute::Alignment);
     AM.addAttribute(Attribute::NonNull);
+    AM.addAttribute(Attribute::NoFPClass);
     CB->removeRetAttrs(AM);
   }
   assert(!hasPoisonGeneratingReturnAttributes() && "must be kept in sync");
@@ -1250,9 +1256,9 @@ bool Instruction::isSafeToRemove() const {
 }
 
 bool Instruction::willReturn() const {
-  // Volatile store isn't guaranteed to return; see LangRef.
-  if (auto *SI = dyn_cast<StoreInst>(this))
-    return !SI->isVolatile();
+  // Volatile operations are not guaranteed to return.
+  if (isVolatile())
+    return false;
 
   if (const auto *CB = dyn_cast<CallBase>(this))
     return CB->hasFnAttr(Attribute::WillReturn);

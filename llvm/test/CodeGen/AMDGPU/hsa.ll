@@ -96,15 +96,18 @@
 ; PRE-GFX10: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}
 ; GFX10: global_store_{{dword|b32}} v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}, off
 
+; HSA: s_endpgm
+; HSA-NEXT: .Lfunc_end0:
+; HSA-NEXT: .size   simple, .Lfunc_end0-simple
+
+; HSA: .section .rodata,"a",@progbits
+
 ; HSA: .amdhsa_user_sgpr_private_segment_buffer 1
 ; HSA: .amdhsa_user_sgpr_kernarg_segment_ptr 1
 
 ; PRE-GFX10-NOT: .amdhsa_wavefront_size32
 ; GFX10-W32: .amdhsa_wavefront_size32 1
 ; GFX10-W64: .amdhsa_wavefront_size32 0
-
-; HSA: .Lfunc_end0:
-; HSA: .size   simple, .Lfunc_end0-simple
 
 define amdgpu_kernel void @simple(ptr addrspace(1) %out) #0 {
 entry:

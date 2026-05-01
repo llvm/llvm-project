@@ -114,13 +114,10 @@ bool AVRAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
 
   const MachineOperand &MO = MI->getOperand(OpNum);
 
-  if (ExtraCode && ExtraCode[0]) {
+  // Operand must be a register when using 'A' ~ 'Z' extra code.
+  if (ExtraCode && ExtraCode[0] && MO.isReg()) {
     // Unknown extra code.
     if (ExtraCode[1] != 0 || ExtraCode[0] < 'A' || ExtraCode[0] > 'Z')
-      return true;
-
-    // Operand must be a register when using 'A' ~ 'Z' extra code.
-    if (!MO.isReg())
       return true;
 
     Register Reg = MO.getReg();

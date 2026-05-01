@@ -220,7 +220,7 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(SourceInfo Info) {
 
   // Implicitly convert lvalue to rvalue, if requested.
   if (ConvertResultToRValue) {
-    if (!Ptr.isZero() && !Ptr.isDereferencable())
+    if (Ptr.isPastEnd())
       return false;
 
     if (Ptr.pointsToStringLiteral() && Ptr.isArrayRoot())
@@ -291,6 +291,14 @@ bool EvalEmitter::emitGetPtrLocal(uint32_t I, SourceInfo Info) {
   return true;
 }
 
+bool EvalEmitter::emitGetRefLocal(uint32_t I, SourceInfo Info) {
+  if (!isActive())
+    return true;
+
+  Block *B = getLocal(I);
+  return handleReference(S, OpPC, B);
+}
+
 template <PrimType OpType>
 bool EvalEmitter::emitGetLocal(uint32_t I, SourceInfo Info) {
   if (!isActive())
@@ -318,6 +326,7 @@ bool EvalEmitter::emitSetLocal(uint32_t I, SourceInfo Info) {
   B->deref<T>() = S.Stk.pop<T>();
   auto &Desc = B->getBlockDesc<InlineDescriptor>();
   Desc.IsInitialized = true;
+  Desc.LifeState = Lifetime::Started;
 
   return true;
 }

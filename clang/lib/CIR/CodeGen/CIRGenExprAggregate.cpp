@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CIRGenBuilder.h"
+#include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
 #include "CIRGenValue.h"
 #include "mlir/IR/Builders.h"
@@ -272,6 +273,19 @@ public:
              "Implicit cast types must be compatible");
       Visit(e->getSubExpr());
       break;
+    case CK_ToUnion: {
+      if (dest.isIgnored()) {
+        cgf.emitAnyExpr(e->getSubExpr(), AggValueSlot::ignored(),
+                        /*ignoreResult=*/true);
+        break;
+      }
+      QualType ty = e->getSubExpr()->getType();
+      Address castPtr = dest.getAddress().withElementType(cgf.getBuilder(),
+                                                          cgf.convertType(ty));
+      emitInitializationToLValue(e->getSubExpr(),
+                                 cgf.makeAddrLValue(castPtr, ty));
+      break;
+    }
     default:
       cgf.cgm.errorNYI(e->getSourceRange(),
                        std::string("AggExprEmitter: VisitCastExpr: ") +
@@ -303,17 +317,26 @@ public:
                      "AggExprEmitter: VisitSubstNonTypeTemplateParmExpr");
   }
   void VisitConstantExpr(ConstantExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitConstantExpr");
+    ensureDest(cgf.getLoc(e->getSourceRange()), e->getType());
+
+    if (mlir::Attribute result = ConstantEmitter(cgf).tryEmitConstantExpr(e)) {
+      mlir::Value resultVal = cgf.getBuilder().getConstant(
+          cgf.getLoc(e->getSourceRange()), mlir::cast<mlir::TypedAttr>(result));
+      LValue destLVal = cgf.makeAddrLValue(dest.getAddress(), e->getType());
+      cgf.emitStoreThroughLValue(RValue::get(resultVal), destLVal);
+      return;
+    }
+
+    // It isn't clear that it is possible to get to here,  but this branch is
+    // present in classic codegen, so we leave it here too.
+    return Visit(e->getSubExpr());
   }
   void VisitMemberExpr(MemberExpr *e) { emitAggLoadOfLValue(e); }
   void VisitUnaryDeref(UnaryOperator *e) { emitAggLoadOfLValue(e); }
   void VisitStringLiteral(StringLiteral *e) { emitAggLoadOfLValue(e); }
   void VisitCompoundLiteralExpr(CompoundLiteralExpr *e);
 
-  void VisitPredefinedExpr(const PredefinedExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "AggExprEmitter: VisitPredefinedExpr");
-  }
+  void VisitPredefinedExpr(const PredefinedExpr *e) { emitAggLoadOfLValue(e); }
   void VisitBinaryOperator(const BinaryOperator *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),
                      "AggExprEmitter: VisitBinaryOperator");
@@ -471,11 +494,26 @@ public:
                                     e->getArrayFiller());
   }
 
-  void VisitArrayInitLoopExpr(const ArrayInitLoopExpr *e,
-                              llvm::Value *outerBegin = nullptr) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "AggExprEmitter: VisitArrayInitLoopExpr");
+  void VisitArrayInitLoopExpr(const ArrayInitLoopExpr *e) {
+    CIRGenFunction::OpaqueValueMapping binding(cgf, e->getCommonExpr());
+    uint64_t numElements = e->getArraySize().getZExtValue();
+
+    if (!numElements)
+      return;
+
+    const mlir::Location loc = cgf.getLoc(e->getSourceRange());
+
+    if (!e->getType()->isConstantArrayType())
+      cgf.cgm.errorNYI(e->getSourceRange(),
+                       "VisitArrayInitLoopExpr: Non-constant array");
+
+    Address dest = ensureSlot(loc, e->getType()).getAddress();
+    cir::ArrayType arrayTy = cast<cir::ArrayType>(dest.getElementType());
+
+    emitArrayInit(dest, arrayTy, e->getType(),
+                  const_cast<ArrayInitLoopExpr *>(e), {}, e->getSubExpr());
   }
+
   void VisitImplicitValueInitExpr(ImplicitValueInitExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),
                      "AggExprEmitter: VisitImplicitValueInitExpr");
@@ -488,8 +526,11 @@ public:
     Visit(dae->getExpr());
   }
   void VisitCXXInheritedCtorInitExpr(const CXXInheritedCtorInitExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "AggExprEmitter: VisitCXXInheritedCtorInitExpr");
+    AggValueSlot slot =
+        ensureSlot(cgf.getLoc(e->getSourceRange()), e->getType());
+    cgf.emitInheritedCXXConstructorCall(e->getConstructor(),
+                                        e->constructsVBase(), slot.getAddress(),
+                                        e->inheritedFromVBase(), e);
   }
 
   /// Emit the initializer for a std::initializer_list initialized with a
@@ -658,13 +699,10 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
 
   const uint64_t numInitElements = args.size();
 
+  bool setArrayInitLoopExprScope = isa<ArrayInitLoopExpr>(e);
+
   const QualType elementType =
       cgf.getContext().getAsArrayType(arrayQTy)->getElementType();
-
-  if (elementType.isDestructedType() && cgf.cgm.getLangOpts().Exceptions) {
-    cgf.cgm.errorNYI(loc, "initialized array requires destruction");
-    return;
-  }
 
   const QualType elementPtrType = cgf.getContext().getPointerType(elementType);
 
@@ -680,6 +718,22 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
       cgf.getContext().getTypeSizeInChars(elementType);
   const CharUnits elementAlign =
       destPtr.getAlignment().alignmentOfArrayElement(elementSize);
+
+  // Exception safety requires us to destroy all the already-constructed
+  // members if an initializer throws. For that, we'll need an EH cleanup.
+  QualType::DestructionKind dtorKind = elementType.isDestructedType();
+  Address endOfInit = Address::invalid();
+  assert(!cir::MissingFeatures::cleanupDeactivationScope());
+
+  if (dtorKind && cgf.getLangOpts().Exceptions) {
+    endOfInit = cgf.createTempAlloca(cirElementPtrType, cgf.getPointerAlign(),
+                                     loc, "arrayinit.endOfInit");
+    builder.createStore(loc, begin, endOfInit);
+
+    cgf.pushIrregularPartialArrayCleanup(begin, endOfInit, elementType,
+                                         elementAlign,
+                                         cgf.getDestroyer(dtorKind));
+  }
 
   // The 'current element to initialize'.  The invariants on this
   // variable are complicated.  Essentially, after each iteration of
@@ -698,6 +752,10 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
     if (i > 0) {
       one = builder.getConstantInt(loc, cgf.ptrDiffTy, i);
       element = builder.createPtrStride(loc, begin, one);
+
+      // Tell the cleanup that it needs to destroy up to this element.
+      if (endOfInit.isValid())
+        builder.createStore(loc, element, endOfInit);
     }
 
     const Address address = Address(element, cirElementType, elementAlign);
@@ -721,6 +779,9 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
       one = builder.getConstantInt(loc, cgf.ptrDiffTy, 1);
       element = cir::PtrStrideOp::create(builder, loc, cirElementPtrType,
                                          element, one);
+
+      if (endOfInit.isValid())
+        builder.createStore(loc, element, endOfInit);
     }
 
     // Allocate the temporary variable
@@ -749,28 +810,34 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
         [&](mlir::OpBuilder &b, mlir::Location loc) {
           cir::LoadOp currentElement = builder.createLoad(loc, tmpAddr);
 
-          assert(!cir::MissingFeatures::requiresCleanups());
-
           // Emit the actual filler expression.
           LValue elementLV = cgf.makeAddrLValue(
               Address(currentElement, cirElementType, elementAlign),
               elementType);
+
+          mlir::Value idx;
+          if (setArrayInitLoopExprScope)
+            idx = cir::PtrDiffOp::create(b, loc, cgf.ptrDiffTy, currentElement,
+                                         begin);
+
+          CIRGenFunction::ArrayInitLoopExprScope loopExprScope(
+              cgf, setArrayInitLoopExprScope, idx);
+
           if (arrayFiller)
             emitInitializationToLValue(arrayFiller, elementLV);
           else
             emitNullInitializationToLValue(loc, elementLV);
-
-          // Tell the EH cleanup that we finished with the last element.
-          if (cgf.cgm.getLangOpts().Exceptions) {
-            cgf.cgm.errorNYI(loc, "update destructed array element for EH");
-            return;
-          }
 
           // Advance pointer and store them to temporary variable
           cir::ConstantOp one = builder.getConstInt(
               loc, mlir::cast<cir::IntType>(cgf.ptrDiffTy), 1);
           auto nextElement = cir::PtrStrideOp::create(
               builder, loc, cirElementPtrType, currentElement, one);
+
+          // Tell the EH cleanup that we finished with the last element.
+          if (endOfInit.isValid())
+            builder.createStore(loc, nextElement, endOfInit);
+
           cgf.emitStoreThroughLValue(RValue::get(nextElement), tmpLV);
 
           builder.createYield(loc);
@@ -907,12 +974,11 @@ void AggExprEmitter::emitNullInitializationToLValue(mlir::Location loc,
 void AggExprEmitter::VisitLambdaExpr(LambdaExpr *e) {
   CIRGenFunction::SourceLocRAIIObject loc{cgf, cgf.getLoc(e->getSourceRange())};
   AggValueSlot slot = ensureSlot(cgf.getLoc(e->getSourceRange()), e->getType());
-  [[maybe_unused]] LValue slotLV =
-      cgf.makeAddrLValue(slot.getAddress(), e->getType());
+  LValue slotLV = cgf.makeAddrLValue(slot.getAddress(), e->getType());
 
   // We'll need to enter cleanup scopes in case any of the element
   // initializers throws an exception or contains branch out of the expressions.
-  assert(!cir::MissingFeatures::opScopeCleanupRegion());
+  CIRGenFunction::CleanupDeactivationScope deactivationScope(cgf);
 
   for (auto [curField, capture, captureInit] : llvm::zip(
            e->getLambdaClass()->fields(), e->captures(), e->capture_inits())) {
@@ -939,36 +1005,19 @@ void AggExprEmitter::VisitLambdaExpr(LambdaExpr *e) {
     emitInitializationToLValue(captureInit, lv);
 
     // Push a destructor if necessary.
-    if ([[maybe_unused]] QualType::DestructionKind DtorKind =
-            curField->getType().isDestructedType())
-      cgf.cgm.errorNYI(e->getSourceRange(), "lambda with destructed field");
+    if (QualType::DestructionKind dtorKind =
+            curField->getType().isDestructedType()) {
+      assert(lv.isSimple());
+      cgf.pushDestroyAndDeferDeactivation(NormalAndEHCleanup, lv.getAddress(),
+                                          curField->getType(),
+                                          cgf.getDestroyer(dtorKind), false);
+    }
   }
 }
 
 void AggExprEmitter::VisitExprWithCleanups(ExprWithCleanups *e) {
-  CIRGenFunction::RunCleanupsScope cleanups(cgf);
-  CIRGenBuilderTy &builder = cgf.getBuilder();
-  mlir::Location scopeLoc = cgf.getLoc(e->getSourceRange());
-  mlir::OpBuilder::InsertPoint scopeBegin;
-
-  // Explicitly introduce a scope for cleanup expressions, even though this
-  // overlaps with the RunCleanupsScope above.
-  //
-  // CIR does not yet model cleanup scopes explicitly, so a lexical scope is
-  // used as a temporary approximation. This is expected to be revisited once
-  // cleanup handling is redesigned.
-  cir::ScopeOp::create(builder, scopeLoc, /*scopeBuilder=*/
-                       [&](mlir::OpBuilder &b, mlir::Location loc) {
-                         scopeBegin = b.saveInsertionPoint();
-                       });
-
-  {
-    mlir::OpBuilder::InsertionGuard guard(builder);
-    builder.restoreInsertionPoint(scopeBegin);
-    CIRGenFunction::LexicalScope lexScope{cgf, scopeLoc,
-                                          builder.getInsertionBlock()};
-    Visit(e->getSubExpr());
-  }
+  CIRGenFunction::FullExprCleanupScope fullExprScope(cgf, e->getSubExpr());
+  Visit(e->getSubExpr());
 }
 
 void AggExprEmitter::VisitCallExpr(const CallExpr *e) {
@@ -1056,7 +1105,7 @@ void AggExprEmitter::visitCXXParenListOrInitListExpr(
 
   // We'll need to enter cleanup scopes in case any of the element
   // initializers throws an exception.
-  assert(!cir::MissingFeatures::requiresCleanups());
+  CIRGenFunction::CleanupDeactivationScope deactivateCleanups(cgf);
 
   unsigned curInitIndex = 0;
 
@@ -1090,8 +1139,35 @@ void AggExprEmitter::visitCXXParenListOrInitListExpr(
   LValue destLV = cgf.makeAddrLValue(dest.getAddress(), e->getType());
 
   if (record->isUnion()) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "visitCXXParenListOrInitListExpr union type");
+    // Only initialize one field of a union. The field itself is
+    // specified by the initializer list.
+    if (!initializedFieldInUnion) {
+      // Empty union; we have nothing to do.
+
+      // Make sure that it's really an empty and not a failure of
+      // semantic analysis.
+      assert(llvm::all_of(record->fields(),
+                          [](const FieldDecl *f) {
+                            return f->isUnnamedBitField() ||
+                                   f->isAnonymousStructOrUnion();
+                          }) &&
+             "Only unnamed bitfields or anonymous class allowed");
+      return;
+    }
+
+    // FIXME: volatility
+    FieldDecl *initedField = initializedFieldInUnion;
+
+    LValue fieldLV = cgf.emitLValueForFieldInitialization(
+        destLV, initedField, initedField->getName());
+
+    if (numInitElements) {
+      // Store the initializer into the field
+      emitInitializationToLValue(args[0], fieldLV);
+    } else {
+      // Default-initialize to null.
+      emitNullInitializationToLValue(loc, fieldLV);
+    }
     return;
   }
 
@@ -1130,10 +1206,12 @@ void AggExprEmitter::visitCXXParenListOrInitListExpr(
     // Push a destructor if necessary.
     // FIXME: if we have an array of structures, all explicitly
     // initialized, we can end up pushing a linear number of cleanups.
-    if (field->getType().isDestructedType()) {
-      cgf.cgm.errorNYI(e->getSourceRange(),
-                       "visitCXXParenListOrInitListExpr destructor");
-      return;
+    if (QualType::DestructionKind dtorKind =
+            field->getType().isDestructedType()) {
+      assert(lv.isSimple());
+      cgf.pushDestroyAndDeferDeactivation(NormalAndEHCleanup, lv.getAddress(),
+                                          field->getType(),
+                                          cgf.getDestroyer(dtorKind), false);
     }
 
     // From classic codegen, maybe not useful for CIR:
@@ -1217,16 +1295,21 @@ void CIRGenFunction::emitAggregateCopy(LValue dest, LValue src, QualType ty,
 
   assert(!cir::MissingFeatures::aggValueSlotVolatile());
 
-  // NOTE(cir): original codegen would normally convert destPtr and srcPtr to
-  // i8* since memcpy operates on bytes. We don't need that in CIR because
-  // cir.copy will operate on any CIR pointer that points to a sized type.
-
   // Don't do any of the memmove_collectable tests if GC isn't set.
   if (cgm.getLangOpts().getGC() != LangOptions::NonGC)
     cgm.errorNYI("emitAggregateCopy: GC");
 
-  [[maybe_unused]] cir::CopyOp copyOp =
-      builder.createCopy(destPtr.getPointer(), srcPtr.getPointer(), isVolatile);
+  // If the data size (excluding tail padding) differs from the full type size,
+  // use skip_tail_padding to avoid clobbering tail padding that may be occupied
+  // by other objects (e.g. fields marked with [[no_unique_address]]).
+  CharUnits dataSize = typeInfo.Width;
+  bool skipTailPadding =
+      mayOverlap && dataSize != getContext().getTypeSizeInChars(ty);
+  // NOTE(cir): original codegen would normally convert destPtr and srcPtr to
+  // i8* since memcpy operates on bytes. We don't need that in CIR because
+  // cir.copy will operate on any CIR pointer that points to a sized type.
+  builder.createCopy(destPtr.getPointer(), srcPtr.getPointer(), isVolatile,
+                     skipTailPadding);
 
   assert(!cir::MissingFeatures::opTBAA());
 }

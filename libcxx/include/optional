@@ -893,6 +893,10 @@ private:
   template <class _Up>
   constexpr static bool __libcpp_opt_ref_ctor_deleted =
       is_lvalue_reference_v<_Tp> && reference_constructs_from_temporary_v<_Tp, _Up>;
+
+  template <class _Up>
+  constexpr static bool __ref_ctor_enabled =
+      is_lvalue_reference_v<_Tp> && !reference_constructs_from_temporary_v<_Tp, _Up>;
 #    endif
 
   // LWG2756: conditionally explicit conversion from _Up
@@ -1000,7 +1004,7 @@ public:
   template <class _Up, enable_if_t<_CheckOptionalLikeCtor<_Up, _Up const&>::template __enable_implicit<_Up>(), int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 optional(const optional<_Up>& __v)
 #    if _LIBCPP_STD_VER >= 26
-      noexcept(is_lvalue_reference_v<_Tp> && is_nothrow_constructible_v<_Tp&, _Up&>)
+      noexcept(is_lvalue_reference_v<_Tp> && is_nothrow_constructible_v<_Tp&, const _Up&>)
 #    endif
   {
     this->__construct_from(__v);
@@ -1008,7 +1012,7 @@ public:
   template <class _Up, enable_if_t<_CheckOptionalLikeCtor<_Up, _Up const&>::template __enable_explicit<_Up>(), int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit optional(const optional<_Up>& __v)
 #    if _LIBCPP_STD_VER >= 26
-      noexcept(is_lvalue_reference_v<_Tp> && is_nothrow_constructible_v<_Tp&, _Up&>)
+      noexcept(is_lvalue_reference_v<_Tp> && is_nothrow_constructible_v<_Tp&, const _Up&>)
 #    endif
   {
     this->__construct_from(__v);
@@ -1046,25 +1050,25 @@ public:
 
   // optional(optional<U>& rhs)
   template <class _Up>
-    requires(!__libcpp_opt_ref_ctor_deleted<_Up>) && (!is_same_v<remove_cvref_t<_Tp>, optional<_Up>>) &&
-            (!is_same_v<_Tp&, _Up>) && is_constructible_v<_Tp&, _Up&>
+    requires __ref_ctor_enabled<_Up&> && (!is_same_v<remove_cvref_t<_Tp>, optional<_Up>>) && (!is_same_v<_Tp&, _Up>) &&
+             is_constructible_v<_Tp&, _Up&>
   _LIBCPP_HIDE_FROM_ABI constexpr explicit(!is_convertible_v<_Up&, _Tp&>)
       optional(optional<_Up>& __rhs) noexcept(is_nothrow_constructible_v<_Tp&, _Up&>) {
     this->__construct_from(__rhs);
   }
 
   template <class _Up>
-    requires __libcpp_opt_ref_ctor_deleted<_Up> && (!is_same_v<remove_cvref_t<_Tp>, optional<_Up>>) &&
+    requires __libcpp_opt_ref_ctor_deleted<_Up&> && (!is_same_v<remove_cvref_t<_Tp>, optional<_Up>>) &&
                  (!is_same_v<_Tp&, _Up>) && is_constructible_v<_Tp&, _Up&>
   constexpr explicit optional(optional<_Up>& __rhs) noexcept = delete;
 
   // optional(const optional<U>&)
   template <class _Up, enable_if_t<_CheckOptionalLikeCtor<_Up, _Up const&>::template __enable_implicit<_Up>(), int> = 0>
-    requires __libcpp_opt_ref_ctor_deleted<_Up>
+    requires __libcpp_opt_ref_ctor_deleted<const _Up&>
   optional(const optional<_Up>&) = delete;
 
   template <class _Up, enable_if_t<_CheckOptionalLikeCtor<_Up, _Up const&>::template __enable_explicit<_Up>(), int> = 0>
-    requires __libcpp_opt_ref_ctor_deleted<_Up>
+    requires __libcpp_opt_ref_ctor_deleted<const _Up&>
   explicit optional(const optional<_Up>&) = delete;
 
   // optional(optional<U>&&)
@@ -1078,16 +1082,16 @@ public:
 
   // optional(const optional<U>&&)
   template <class _Up>
-    requires(!__libcpp_opt_ref_ctor_deleted<_Up>) && (!is_same_v<remove_cvref_t<_Tp>, optional<_Up>>) &&
-            (!is_same_v<_Tp&, _Up>) && is_constructible_v<_Tp&, _Up>
+    requires __ref_ctor_enabled<const _Up> && (!is_same_v<remove_cvref_t<_Tp>, optional<_Up>>) &&
+             (!is_same_v<_Tp&, _Up>) && is_constructible_v<_Tp&, const _Up>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit(!is_convertible_v<const _Up, _Tp&>)
       optional(const optional<_Up>&& __v) noexcept(is_nothrow_constructible_v<_Tp&, const _Up>) {
     this->__construct_from(std::move(__v));
   }
 
   template <class _Up>
-    requires __libcpp_opt_ref_ctor_deleted<_Up> && (!is_same_v<remove_cvref_t<_Tp>, optional<_Up>>) &&
-                 (!is_same_v<_Tp&, _Up>) && is_constructible_v<_Tp&, _Up>
+    requires __libcpp_opt_ref_ctor_deleted<const _Up> && (!is_same_v<remove_cvref_t<_Tp>, optional<_Up>>) &&
+                 (!is_same_v<_Tp&, _Up>) && is_constructible_v<_Tp&, const _Up>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 optional(const optional<_Up>&& __v) noexcept = delete;
 #    endif
 

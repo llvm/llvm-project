@@ -1,3 +1,4 @@
+; REQUIRES: x86_64-linux
 ; RUN: llvm-profdata merge %S/Inputs/memprof.memprofraw --profiled-binary %S/Inputs/memprof.exe -o %t.memprofdata
 ; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pass-remarks-analysis=memprof -S 2>&1 | FileCheck %s
 
