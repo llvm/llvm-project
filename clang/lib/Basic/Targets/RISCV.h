@@ -189,8 +189,7 @@ public:
       return true;
     }
 
-    if (Name == "ilp32" || Name == "ilp32f" || Name == "ilp32d" ||
-        Name == "ilp32q") {
+    if (Name == "ilp32" || Name == "ilp32f" || Name == "ilp32d") {
       ABI = Name;
       return true;
     }
