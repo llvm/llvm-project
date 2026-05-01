@@ -243,13 +243,13 @@
 # CHECK-NEXT:  1      1     1.00                        ngcs	xzr, x0
 # CHECK-NEXT:  1      1     1.00                        ngcs	x0, xzr
 # CHECK-NEXT:  1      2     0.50                        sbfx	x1, x2, #3, #2
-# CHECK-NEXT:  1      2     0.50                        asr	x3, x4, #63
-# CHECK-NEXT:  1      2     0.50                        asr	wzr, wzr, #31
+# CHECK-NEXT:  1      1     0.50                        asr	x3, x4, #63
+# CHECK-NEXT:  1      1     0.50                        asr	wzr, wzr, #31
 # CHECK-NEXT:  1      2     0.50                        sbfx	w12, w9, #0, #1
 # CHECK-NEXT:  1      2     0.50                        ubfiz	x4, x5, #52, #11
 # CHECK-NEXT:  1      2     0.50                        ubfx	xzr, x4, #0, #1
 # CHECK-NEXT:  1      2     0.50                        ubfiz	x4, xzr, #1, #6
-# CHECK-NEXT:  1      2     0.50                        lsr	x5, x6, #12
+# CHECK-NEXT:  1      1     0.50                        lsr	x5, x6, #12
 # CHECK-NEXT:  1      2     0.50                        bfi	x4, x5, #52, #11
 # CHECK-NEXT:  1      2     0.50                        bfxil	xzr, x4, #0, #1
 # CHECK-NEXT:  1      2     0.50                        bfc	x4, #1, #6
@@ -259,32 +259,32 @@
 # CHECK-NEXT:  1      2     0.50                        sxth	w9, w10
 # CHECK-NEXT:  1      2     0.50                        sxth	x0, w1
 # CHECK-NEXT:  1      2     0.50                        sxtw	x3, w30
-# CHECK-NEXT:  1      2     0.50                        uxtb	w1, w2
+# CHECK-NEXT:  1      1     0.50                        uxtb	w1, w2
 # CHECK-NEXT:  1      2     0.50                        uxth	w9, w10
 # CHECK-NEXT:  1      2     0.50                        ubfx	x3, x30, #0, #32
-# CHECK-NEXT:  1      2     0.50                        asr	w3, w2, #0
-# CHECK-NEXT:  1      2     0.50                        asr	w9, w10, #31
-# CHECK-NEXT:  1      2     0.50                        asr	x20, x21, #63
-# CHECK-NEXT:  1      2     0.50                        asr	w1, wzr, #3
-# CHECK-NEXT:  1      2     0.50                        lsr	w3, w2, #0
-# CHECK-NEXT:  1      2     0.50                        lsr	w9, w10, #31
-# CHECK-NEXT:  1      2     0.50                        lsr	x20, x21, #63
-# CHECK-NEXT:  1      2     0.50                        lsr	wzr, wzr, #3
-# CHECK-NEXT:  1      2     0.50                        lsl	w9, w10, #31
-# CHECK-NEXT:  1      2     0.50                        lsl	x20, x21, #63
-# CHECK-NEXT:  1      2     0.50                        lsl	w1, wzr, #3
+# CHECK-NEXT:  1      1     0.50                        asr	w3, w2, #0
+# CHECK-NEXT:  1      1     0.50                        asr	w9, w10, #31
+# CHECK-NEXT:  1      1     0.50                        asr	x20, x21, #63
+# CHECK-NEXT:  1      1     0.50                        asr	w1, wzr, #3
+# CHECK-NEXT:  1      1     0.50                        lsr	w3, w2, #0
+# CHECK-NEXT:  1      1     0.50                        lsr	w9, w10, #31
+# CHECK-NEXT:  1      1     0.50                        lsr	x20, x21, #63
+# CHECK-NEXT:  1      1     0.50                        lsr	wzr, wzr, #3
+# CHECK-NEXT:  1      1     0.50                        lsl	w9, w10, #31
+# CHECK-NEXT:  1      1     0.50                        lsl	x20, x21, #63
+# CHECK-NEXT:  1      1     0.50                        lsl	w1, wzr, #3
 # CHECK-NEXT:  1      2     0.50                        sbfiz	x2, x3, #63, #1
 # CHECK-NEXT:  1      2     0.50                        sbfiz	x9, x10, #5, #59
 # CHECK-NEXT:  1      2     0.50                        sbfiz	w11, w12, #31, #1
 # CHECK-NEXT:  1      2     0.50                        sbfiz	w13, w14, #29, #3
 # CHECK-NEXT:  1      2     0.50                        sbfiz	xzr, xzr, #10, #11
 # CHECK-NEXT:  1      2     0.50                        sbfx	w9, w10, #0, #1
-# CHECK-NEXT:  1      2     0.50                        asr	x2, x3, #63
-# CHECK-NEXT:  1      2     0.50                        asr	x19, x20, #0
-# CHECK-NEXT:  1      2     0.50                        asr	x9, x10, #5
-# CHECK-NEXT:  1      2     0.50                        asr	w9, w10, #0
-# CHECK-NEXT:  1      2     0.50                        asr	w11, w12, #31
-# CHECK-NEXT:  1      2     0.50                        asr	w13, w14, #29
+# CHECK-NEXT:  1      1     0.50                        asr	x2, x3, #63
+# CHECK-NEXT:  1      1     0.50                        asr	x19, x20, #0
+# CHECK-NEXT:  1      1     0.50                        asr	x9, x10, #5
+# CHECK-NEXT:  1      1     0.50                        asr	w9, w10, #0
+# CHECK-NEXT:  1      1     0.50                        asr	w11, w12, #31
+# CHECK-NEXT:  1      1     0.50                        asr	w13, w14, #29
 # CHECK-NEXT:  1      2     0.50                        sbfx	xzr, xzr, #10, #11
 # CHECK-NEXT:  1      2     0.50                        bfi	x2, x3, #63, #1
 # CHECK-NEXT:  1      2     0.50                        bfi	x9, x10, #5, #59
@@ -299,18 +299,18 @@
 # CHECK-NEXT:  1      2     0.50                        bfxil	w11, w12, #31, #1
 # CHECK-NEXT:  1      2     0.50                        bfxil	w13, w14, #29, #3
 # CHECK-NEXT:  1      2     0.50                        bfxil	xzr, xzr, #10, #11
-# CHECK-NEXT:  1      2     0.50                        lsl	x2, x3, #63
-# CHECK-NEXT:  1      2     0.50                        lsl	x9, x10, #5
-# CHECK-NEXT:  1      2     0.50                        lsl	w11, w12, #31
-# CHECK-NEXT:  1      2     0.50                        lsl	w13, w14, #29
+# CHECK-NEXT:  1      1     0.50                        lsl	x2, x3, #63
+# CHECK-NEXT:  1      1     0.50                        lsl	x9, x10, #5
+# CHECK-NEXT:  1      1     0.50                        lsl	w11, w12, #31
+# CHECK-NEXT:  1      1     0.50                        lsl	w13, w14, #29
 # CHECK-NEXT:  1      2     0.50                        ubfiz	xzr, xzr, #10, #11
 # CHECK-NEXT:  1      2     0.50                        ubfx	w9, w10, #0, #1
-# CHECK-NEXT:  1      2     0.50                        lsr	x2, x3, #63
-# CHECK-NEXT:  1      2     0.50                        lsr	x19, x20, #0
-# CHECK-NEXT:  1      2     0.50                        lsr	x9, x10, #5
-# CHECK-NEXT:  1      2     0.50                        lsr	w9, w10, #0
-# CHECK-NEXT:  1      2     0.50                        lsr	w11, w12, #31
-# CHECK-NEXT:  1      2     0.50                        lsr	w13, w14, #29
+# CHECK-NEXT:  1      1     0.50                        lsr	x2, x3, #63
+# CHECK-NEXT:  1      1     0.50                        lsr	x19, x20, #0
+# CHECK-NEXT:  1      1     0.50                        lsr	x9, x10, #5
+# CHECK-NEXT:  1      1     0.50                        lsr	w9, w10, #0
+# CHECK-NEXT:  1      1     0.50                        lsr	w11, w12, #31
+# CHECK-NEXT:  1      1     0.50                        lsr	w13, w14, #29
 # CHECK-NEXT:  1      2     0.50                        ubfx	xzr, xzr, #10, #11
 # CHECK-NEXT:  1      1     1.00                        cbz	w5, #4
 # CHECK-NEXT:  1      1     1.00                        cbz	x5, #0

@@ -291,12 +291,27 @@ def : InstRW<[C1NanoWriteALU0], (instregex "^(CCMN|CCMP)(W|X)(r|i)$")>;
 
 // Variable shift
 def : InstRW<[WriteI], (instregex "(ASR|LSL|LSR|ROR)V[WX]r")>;
+
 // ROR (immediate) is implemented as an EXTR (EXTR Rd, Rs, Rs, #Imm).
 // Keep EXTR's base latency, but model the ROR (immediate) as 1-cycle.
 def C1NanoWriteExtrRORImm : SchedWriteVariant<[
        SchedVar<IsRORImmIdiomPred, [WriteI]>,
        SchedVar<NoSchedPred, [WriteExtr]>]>;
 def : InstRW<[C1NanoWriteExtrRORImm], (instrs EXTRWrri, EXTRXrri)>;
+
+// LSL/LSR (immediate) and UXTB are implemented as UBFM aliases.
+// Keep UBFM's base latency, but model these aliases as 1-cycle.
+def C1NanoWriteISFastUBFMImm : SchedWriteVariant<[
+       SchedVar<IsFastUBFMImmPred, [WriteI]>,
+       SchedVar<NoSchedPred, [WriteIS]>]>;
+def : InstRW<[C1NanoWriteISFastUBFMImm], (instrs UBFMWri, UBFMXri)>;
+
+// ASR (immediate) is implemented as an SBFM alias.
+// Keep SBFM's base latency, but model ASR (immediate) as 1-cycle.
+def C1NanoWriteISFastSBFMImm : SchedWriteVariant<[
+       SchedVar<IsFastSBFMImmPred, [WriteI]>,
+       SchedVar<NoSchedPred, [WriteIS]>]>;
+def : InstRW<[C1NanoWriteISFastSBFMImm], (instrs SBFMWri, SBFMXri)>;
 
 // FP conditional compare
 def : InstRW<[C1NanoMC2Write<5, 5, C1NanoUnitVALU>], (instregex "FCCMP")>;
