@@ -18332,44 +18332,53 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
   SmallDenseMap<const TreeEntry *, InstructionCost> ExtractCosts;
   LLVM_DEBUG(dbgs() << "SLP: Calculating cost for tree of size "
                     << VectorizableTree.size() << ".\n");
+  // The V-only-dependent part of the predicate. Same V is commonly seen in
+  // multiple TEs (shared scalars), so cache the result across calls.
+  // DeletedNodes is read-only during this cost loop, so caching is safe.
+  const size_t NumVectScalars = ScalarToTreeEntries.size() + 1;
+  SmallDenseMap<Value *, bool> ExternalUseVCache;
+  auto IsExternallyUsedV = [&](Value *V) {
+    auto [It, Inserted] = ExternalUseVCache.try_emplace(V);
+    if (!Inserted)
+      return It->second;
+    bool Res = false;
+    if (V->hasOneUse() || V->getType()->isVoidTy()) {
+      // Res stays false.
+    } else if (V->hasNUsesOrMore(NumVectScalars)) {
+      Res = true;
+    } else if (auto *I = dyn_cast<Instruction>(V)) {
+      Res = any_of(I->users(), [&](const User *U) {
+        // store/insertelt v, [cast]U will likely be vectorized.
+        if (match(U,
+                  m_InsertElt(m_Value(), m_OneUse(m_CastOrSelf(m_Specific(I))),
+                              m_ConstantInt())))
+          return false;
+        if (match(U, m_InsertElt(m_Value(), m_Specific(I), m_ConstantInt())))
+          return false;
+        if (match(U, m_Store(m_OneUse(m_CastOrSelf(m_Specific(I))), m_Value())))
+          return false;
+        if (match(U, m_Store(m_Specific(I), m_Value())))
+          return false;
+        ArrayRef<TreeEntry *> Entries = getTreeEntries(U);
+        if (Entries.empty() && !MustGather.contains(U))
+          return true;
+        if (any_of(Entries,
+                   [&](TreeEntry *TE) { return DeletedNodes.contains(TE); }))
+          return true;
+        return any_of(ValueToGatherNodes.lookup(U), [&](const TreeEntry *TE) {
+          return DeletedNodes.contains(TE);
+        });
+      });
+    }
+    It->second = Res;
+    return Res;
+  };
   auto IsExternallyUsed = [&](const TreeEntry &TE, Value *V) {
     assert(TE.hasState() && !TE.isGather() &&
            TE.State != TreeEntry::SplitVectorize && "Expected vector node.");
-    if (V->hasOneUse() || V->getType()->isVoidTy())
-      return false;
     if (TE.hasCopyableElements() && TE.isCopyableElement(V))
       return false;
-    const size_t NumVectScalars = ScalarToTreeEntries.size() + 1;
-    if (V->hasNUsesOrMore(NumVectScalars))
-      return true;
-    auto *I = dyn_cast<Instruction>(V);
-    // Check if any user is used outside of the tree.
-    return I && any_of(I->users(), [&](const User *U) {
-             // store/insertelt v, [cast]U will likely be vectorized.
-             if (match(U, m_InsertElt(m_Value(),
-                                      m_OneUse(m_CastOrSelf(m_Specific(I))),
-                                      m_ConstantInt())))
-               return false;
-             if (match(U,
-                       m_InsertElt(m_Value(), m_Specific(I), m_ConstantInt())))
-               return false;
-             if (match(U, m_Store(m_OneUse(m_CastOrSelf(m_Specific(I))),
-                                  m_Value())))
-               return false;
-             if (match(U, m_Store(m_Specific(I), m_Value())))
-               return false;
-             ArrayRef<TreeEntry *> Entries = getTreeEntries(U);
-             if (Entries.empty() && !MustGather.contains(U))
-               return true;
-             if (any_of(Entries, [&](TreeEntry *TE) {
-                   return DeletedNodes.contains(TE);
-                 }))
-               return true;
-             return any_of(ValueToGatherNodes.lookup(U),
-                           [&](const TreeEntry *TE) {
-                             return DeletedNodes.contains(TE);
-                           });
-           });
+    return IsExternallyUsedV(V);
   };
   constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   InstructionCost Cost = 0;
