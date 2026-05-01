@@ -101,14 +101,12 @@ __host__ void g() { t<f><<<1,1>>>(); }
 namespace template_if_constexpr {
   template<bool B>
   __host__ __device__ void fn() {
-    if constexpr (!B)
-      device_fn();
-
     if constexpr (B)
-      device_fn(); // expected-error {{reference to __device__ function 'device_fn' in __host__ __device__ function}}
+      device_fn();
   }
 
   void call() {
-    fn<true>();
+    fn<false>();
+    fn<true>(); // expected-error@-5 {{reference to __device__ function 'device_fn' in __host__ __device__ function}}
   }
 }

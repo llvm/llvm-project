@@ -142,14 +142,12 @@ __device__ void double_specialization() { TmplStruct<int>().fn<int>(); }
 namespace template_if_constexpr {
   template<bool B>
   __host__ __device__ void fn() {
-    if constexpr (!B)
-      host_fn();
-
     if constexpr (B)
-      host_fn(); // expected-error {{reference to __host__ function 'host_fn' in __host__ __device__ function}}
+      host_fn();
   }
 
   __device__ void call() {
-    fn<true>();
+    fn<false>();
+    fn<true>(); // expected-error@-5 {{reference to __host__ function 'host_fn' in __host__ __device__ function}}
   }
 }
