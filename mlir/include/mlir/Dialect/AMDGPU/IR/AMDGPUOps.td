@@ -1453,7 +1453,10 @@ def AMDGPU_GlobalTransposeLoadOp :
     AMDGPU_Op<"global_transpose_load", [SameVariadicOperandSize]>,
     Arguments<(ins Arg<AnyMemRef, "buffer to transpose load from", [MemRead]>:$src,
                       Variadic<Index>:$srcIndices)>,
-    Results<(outs AnyTypeOf<[AnyVectorOfNonZeroRank]>:$result)> {
+    Results<(outs AnyTypeOf<[
+      FixedVectorOfLengthAndType<[8], [I8, F16, BF16, I16]>,
+      FixedVectorOfLengthAndType<[16], [I<4>, I<6>]>
+    ]>:$result)> {
   let summary = "MLIR wrapper for RDNA4 global memory transpose load instructions";
   let description = [{
     The `amdgpu.global_transpose_load` op is a wrapper around the
@@ -1473,14 +1476,19 @@ def AMDGPU_GlobalTransposeLoadOp :
     ```
     Operands:
     * `$src`: Global address space memref to read from.
-    * `$srcIndices`: indices into `$src` for this thread.
+    * `$srcIndices`: indices into `$src` for this thread. Indices must be
+      non-negative and in-bounds for the corresponding dimension of `$src`,
+      matching the constraints of `memref.load`.
     * `$result`: register this transpose load instruction writes to.
 
     Valid (element bits, num elements) pairs:
-    * (8, 8)   -> global_load_tr_b64
-    * (16, 8)  -> global_load_tr_b128
+    * (4, 16)  -> global_load_tr4_b64  (gfx1250+)
+    * (6, 16)  -> global_load_tr6_b96  (gfx1250+)
+    * (8, 8)   -> global_load_tr_b64   (gfx1200+)
+    * (16, 8)  -> global_load_tr_b128  (gfx1200+)
 
-    Note: Lowering is only supported on gfx1200 and up.
+    Note: 8-bit and 16-bit element lowering requires gfx1200+.
+          4-bit and 6-bit element lowering requires gfx1250+.
   }];
   let assemblyFormat = [{
     $src `[` $srcIndices `]` attr-dict `:` type($src) `->` type($result)
