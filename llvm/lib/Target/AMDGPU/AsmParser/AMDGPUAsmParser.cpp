@@ -6404,7 +6404,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
       COMPUTE_PGM_RSRC1_GRANULATED_WAVEFRONT_SGPR_COUNT, getContext());
 
   if (ExplicitUserSGPRCount && ImpliedUserSGPRCount > *ExplicitUserSGPRCount)
-    return TokError("amdgpu_user_sgpr_count smaller than than implied by "
+    return TokError("amdgpu_user_sgpr_count smaller than implied by "
                     "enabled user SGPRs");
 
   if (isGFX1250Plus()) {
