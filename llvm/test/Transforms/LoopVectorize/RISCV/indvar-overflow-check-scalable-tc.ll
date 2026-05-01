@@ -21,7 +21,7 @@ define void @foo(ptr noalias %a, ptr noalias %b) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw float, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    call void @llvm.vp.store.nxv4f32.p0(<vscale x 4 x float> [[VP_OP_LOAD]], ptr align 4 [[TMP2]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP0]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP0]] to i64
-; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP3]], [[INDEX]]
+; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add nuw i64 [[TMP3]], [[INDEX]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
