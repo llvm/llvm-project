@@ -3570,14 +3570,14 @@ CIRGenModule::getAddrOfGlobalTemporary(const MaterializeTemporaryExpr *mte,
   return cv;
 }
 
-cir::GetGlobalOp
+cir::GlobalOp
 CIRGenModule::getAddrOfTemplateParamObject(const TemplateParamObjectDecl *tpo) {
   StringRef name = getMangledName(tpo);
   CharUnits alignment = getNaturalTypeAlignment(tpo->getType());
 
   if (auto globalOp =
           mlir::dyn_cast_or_null<cir::GlobalOp>(getGlobalValue(name)))
-    return builder.createGetGlobal(globalOp);
+    return globalOp;
 
   ConstantEmitter emitter(*this);
   assert(!cir::MissingFeatures::addressSpace() &&
@@ -3610,7 +3610,7 @@ CIRGenModule::getAddrOfTemplateParamObject(const TemplateParamObjectDecl *tpo) {
 
   insertGlobalSymbol(globalOp);
 
-  return builder.createGetGlobal(globalOp);
+  return globalOp;
 }
 
 //===----------------------------------------------------------------------===//
