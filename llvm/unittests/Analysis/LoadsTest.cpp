@@ -67,9 +67,9 @@ entry:
   ASSERT_TRUE(CI->equalsInt(42));
 }
 
-// Test the load and store pointers reach the same base value through different address spaces
-// with different index widths (here AS=0 has 64-bit pointers and AS=5 has
-// 32-bit pointers)
+// Test the load and store pointers reach the same base value through different
+// address spaces with different index widths (here AS=0 has 64-bit pointers and
+// AS=5 has 32-bit pointers)
 TEST(LoadsTest, FindAvailableLoadedValueMixedAddrSpaceNullAA) {
   LLVMContext C;
   std::unique_ptr<Module> M = parseIR(C, R"IR(
